@@ -1,0 +1,39 @@
+title: "テスト実行方法"
+layers:
+  - name: 単体テスト（バック）
+    description: pytest で実行する。外部サービスに依存しない。
+    prerequisites:
+      - '`dev-docs` の配布を入れた環境で実行する（`--version` のテストが配布のメタデータを読む。`uv run` が同期する）'
+    run_all: |-
+      ```bash
+      uv run pytest tests/unit/
+      ```
+    run_one:
+      label: ファイル
+      command: |-
+        ```bash
+        uv run pytest {単体テストファイルパス}
+        ```
+    parallel: true
+  - name: 結合テスト（バック）
+    run_all: 未確定
+  - name: 結合テスト（フロント）
+    run_all: 未確定
+  - name: 外部疎通テスト
+    run_all: 未確定
+  - name: 非機能要件テスト
+    run_all: 未確定
+  - name: E2E テスト
+    run_all: 未確定
+  - name: lint
+    description: ruff で linter と formatter の check を、mypy で型検査を、`claude plugin validate` でマーケットプレイスとプラグインの定義の構造を検査する。型検査はプロジェクト全体に回す。
+    prerequisites:
+      - 検査の設定は `pyproject.toml` が持つ
+      - '`claude` コマンドが使えること'
+    run_all: |-
+      ```bash
+      (rc=0; uv run ruff check . || rc=1; uv run ruff format --check . || rc=1; uv run mypy . || rc=1; claude plugin validate . || rc=1; exit $rc)
+      ```
+lead: dev-docs のテスト種別ごとの実行コマンド。
+prerequisites:
+  - Python 3.14 と uv

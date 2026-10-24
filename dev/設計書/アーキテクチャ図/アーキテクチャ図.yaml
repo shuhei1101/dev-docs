@@ -1,0 +1,108 @@
+title: "アーキテクチャ図"
+overview:
+  direction: LR
+  nodes:
+    - id: U
+      label: 利用者
+      kind: actor
+    - id: CC
+      label: Claude Code
+      kind: external
+    - id: SRV
+      label: 開発ドキュメントサーバー
+      kind: system
+    - id: PLG
+      label: 管理用プラグイン
+      kind: system
+    - id: REPO
+      label: 各リポジトリの文書と設定
+      kind: external
+    - id: SCR
+      label: 各リポジトリの検査・変換のスクリプト
+      kind: external
+    - id: GIT
+      label: git
+      kind: external
+  edges:
+    - from: U
+      to: SRV
+      label: HTTP
+    - from: CC
+      to: SRV
+      label: MCP
+    - from: CC
+      to: PLG
+      label: SessionStart
+    - from: PLG
+      to: SRV
+      label: 起動
+      line: dotted
+    - from: SRV
+      to: REPO
+      label: 読み書き
+    - from: SRV
+      to: SCR
+      label: 子プロセス
+    - from: SRV
+      to: GIT
+      label: 子プロセス
+  subgraphs:
+    - id: D
+      label: dev-docs
+      nodes:
+        - SRV
+        - PLG
+repository:
+  style: モノレポ
+  repositories:
+    - name: shuhei1101/dev-docs
+  layout: |-
+    ```tree
+    dev-docs/
+    ├── src/dev_docs/            # 開発ドキュメントサーバー
+    ├── schemas/                 # dev-docs.yaml と端末の設定のスキーマ
+    ├── plugins/dev-docs/        # 管理用プラグイン
+    ├── templates/               # 各リポジトリに置く雛形
+    ├── .claude-plugin/marketplace.json
+    ├── dev/
+    ├── docs/
+    └── tests/
+    ```
+subsystems:
+  - name: 開発ドキュメントサーバー
+    scope: server
+    role: 端末の設定に並べたプロジェクトを 1 プロセス・1 ポートで配り、YAML の文書を画面・文書の MCP・管理の MCP で出す
+    runtime: Python 3.14
+    runs_on: 利用者の端末（`127.0.0.1`）
+    implementation: src/dev_docs/__main__.py
+    status: planned
+  - name: 管理用プラグイン
+    scope: plugin
+    role: SessionStart のフックで落ちているサーバーを起動し、管理の MCP の接続先を Claude Code に渡す
+    runtime: Claude Code のプラグイン（フックは Python 3.14）
+    runs_on: 利用者の端末の Claude Code（ユーザースコープ）
+    implementation: plugins/dev-docs/.claude-plugin/plugin.json
+    status: planned
+lead: dev-docs のサブシステムと、境界を越えて通信する外部システム。
+external_systems:
+  - name: Claude Code
+    purpose: 文書の MCP（`/{name}/mcp`）と管理の MCP（`/_admin/mcp`）の要求を受ける
+    direction: 受信のみ
+    protocol: MCP（Streamable HTTP）
+    status: planned
+    notes:
+      事前確認: '要否: 不要（受ける側で、こちらから到達を確かめる相手ではない）'
+  - name: git
+    purpose: リビジョン（`@{ref}`）の書き出し・区間の差分・ref の解決
+    direction: 双方向
+    protocol: CLI（子プロセス）
+    status: planned
+    notes:
+      事前確認: '要否: 要。時点: 起動時に `git` が実行できるかを確かめ、無ければ起動を止める'
+  - name: 各リポジトリの検査・変換のスクリプト
+    purpose: '`dev-docs.yaml` が指す検査・変換・書き込み後の生成'
+    direction: 双方向
+    protocol: CLI（子プロセス。標準入力に YAML、標準出力に Markdown）
+    status: planned
+    notes:
+      事前確認: '要否: 要。時点: 起動時・再読込時と管理の MCP の `check_project` で実行できるかを確かめ、失敗したプロジェクトは配信しない'

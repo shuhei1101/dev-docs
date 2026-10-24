@@ -1,0 +1,46 @@
+title: "開発コマンド"
+categories:
+  - name: 環境構築（クローン直後）
+    commands: 未確定
+  - name: 取り込み後の追従（pull 後）
+    commands: |-
+      ```bash
+      uv sync --frozen
+      ```
+    verification:
+      state: 済
+      date: '2026-10-25'
+      detail: worktree で実行し、終了コード 0 で依存が `uv.lock` どおりにそろうことを確かめた。
+  - name: 依存の追加・更新・削除
+    commands: |-
+      1. 本番依存を追加する
+         ```bash
+         uv add {パッケージ}
+         ```
+      2. 開発用の依存を追加する
+         ```bash
+         uv add --dev {パッケージ}
+         ```
+      3. 依存を削除する
+         ```bash
+         uv remove {パッケージ}
+         ```
+    verification:
+      state: 済
+      date: '2026-10-25'
+      detail: 作業ツリーの外の一時コピーで追加・開発用の追加・削除を実行し、終了コード 0 で `pyproject.toml` と `uv.lock` が更新されることを確かめた。
+  - name: 起動・停止
+    commands: 未確定
+  - name: テスト
+    refs:
+      - dev/設計書/テスト/テスト実行方法#
+  - name: 静的検査
+    refs:
+      - dev/設計書/テスト/テスト実行方法#layers[lint]
+  - name: ビルド・生成
+    commands: 未確定
+  - name: 取り込み前の検査
+    commands: 未確定
+  - name: 管理作業
+    commands: 未確定
+lead: dev-docs の開発で使うコマンド。
