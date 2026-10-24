@@ -72,14 +72,14 @@ subsystems:
   - name: 開発ドキュメントサーバー
     scope: server
     role: 端末の設定に並べたプロジェクトを 1 プロセス・1 ポートで配り、YAML の文書を画面・文書の MCP・管理の MCP で出す
-    runtime: Python 3.13
+    runtime: Python 3.14
     runs_on: 利用者の端末（`127.0.0.1`）
     implementation: src/dev_docs/__main__.py
     status: planned
   - name: 管理用プラグイン
     scope: plugin
     role: SessionStart のフックで落ちているサーバーを起動し、管理の MCP の接続先を Claude Code に渡す
-    runtime: Claude Code のプラグイン（フックは Python 3.13）
+    runtime: Claude Code のプラグイン（フックは Python 3.14）
     runs_on: 利用者の端末の Claude Code（ユーザースコープ）
     implementation: plugins/dev-docs/.claude-plugin/plugin.json
     status: planned
