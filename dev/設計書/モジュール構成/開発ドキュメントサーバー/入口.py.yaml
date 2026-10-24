@@ -33,7 +33,7 @@ functions:
       description: '`prog` が `PROG` の解析器'
     process: |-
       1. `prog` を `PROG` にして解析器を作る
-      2. `--version` を足す。表示は `{PROG} {バージョン}` で、バージョンは `DIST_NAME` の配布のメタデータから引く（`importlib.metadata.version`）
+      2. `--version` を足す。表示は `{PROG} {バージョン}` で、バージョンは `DIST_NAME` の配布のメタデータから引く（`importlib.metadata.version`。`uv sync` で配布を入れた環境で動かす前提で、入っていないときの `PackageNotFoundError` はそのまま伝える）
       3. サブコマンドの登録先を `dest="cmd"`・`required=True` で作る。各サブコマンドは `handler`（`argparse.Namespace` を受けて終了コードを返す関数）を既定値に持つ
       4. 解析器を返す
     unit_tests:
