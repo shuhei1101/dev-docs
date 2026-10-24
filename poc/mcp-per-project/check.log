@@ -1,0 +1,6 @@
+OK  2 つの MCP が応答する: {"alpha": [200, "dev-docs-alpha", "PROJECT=alpha: alpha の開発ドキュメントを配信する MCP サーバー"], "beta": [200, "dev-docs-beta", "PROJECT=beta: beta の開発ドキュメントを配信する MCP サーバー"]}
+OK  ツールの説明文が別: {"alpha": [["search", "alpha の開発ドキュメントを検索する"]], "beta": [["search", "beta の開発ドキュメントを検索する"]]}
+OK  呼び先が混ざらない: [{"text": "project=alpha query=x", "type": "text"}]
+OK  起動した後に足せる: running=['alpha', 'beta', 'gamma'] gamma=200 {'name': 'dev-docs-gamma', 'version': ''} alpha_ping=200
+OK  起動した後に止められる: beta=404 running=['alpha', 'gamma']
+OK  ref のパス: status=200 {'name': 'dev-docs-alpha@feature-x', 'version': ''} running=['alpha', 'alpha@feature-x', 'gamma']
