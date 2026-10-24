@@ -1,0 +1,110 @@
+title: "dev-docsで文書を配信して読み書きする"
+scenarios:
+  - name: 正常シナリオ
+    setup:
+      - name: Mock
+        description: なし（実環境で実行。Claude Code は `claude -p` で動かす）
+      - name: dev-docs のクローン
+        description: テスト用の一時フォルダにクローンした dev-docs
+        notes: ポート 8781 が空き
+      - name: 端末の設定
+        description: '`DEV_DOCS_CONFIG` が指す `settings.yaml`'
+        notes: '`projects: []`'
+      - name: サンプルのリポジトリ
+        description: 文書の種類を 1 つ（スキーマと YAML 2 件）持つ git リポジトリと、その worktree
+        notes: '`name: sample`、`default_ref: develop`'
+    flow: |-
+      ```mermaid
+      flowchart TD
+        subgraph P1["導入"]
+          S0["dev-docs を入れる:正常シナリオ"]
+        end
+        subgraph P2["起動と登録"]
+          S2["起動する:正常シナリオ"]
+          S1["リポジトリに入れる:正常シナリオ"]
+        end
+        subgraph P3["読み書き"]
+          S3["エージェントが調べる:正常シナリオ"]
+          S4["エージェントが書き込む:正常シナリオ"]
+          S5["変更をレビューする:正常シナリオ"]
+          S6["利用者が画面で読む:正常シナリオ"]
+        end
+        subgraph P4["保守"]
+          S7["YAML を直接編集した:正常シナリオ"]
+          S8["設定・スクリプトを変える:正常シナリオ"]
+          S9["dev-docs を更新する:正常シナリオ"]
+        end
+        S0 --> S2 --> S1 --> S3 --> S4 --> S5 --> S6 --> S7 --> S8 --> S9
+      ```
+    expected:
+      - '`127.0.0.1:8781` を待ち受ける dev-docs のプロセスが 1 つだけある'
+      - 管理の MCP の `status` が `sample` を配信中として返す
+      - '`/sample/mcp` の `initialize` が sample の instructions を返し、ツールの `kind` の選択肢が sample のスキーマの種類になる'
+      - '`write_doc` で書いた項目が worktree の YAML に入り、commit はされていない（`git status` に変更として出る）'
+      - '`list_changes` が `write_doc` の変更を返し、画面の `/sample/@{ref}/{パス}?diff={コミット}` が変わった項目を強調する'
+      - 画面の `/sample/` がタブ・サイドバー・本文を返し、本文は YAML を変換して描いたものになる
+      - 直接編集した YAML の内容を、次の `get_docs` が返す
+      - '`dev-docs.yaml` で変えた MCP の説明文が、`reload` の後の `initialize` に出る'
+      - '`update` の後、`status` が新しいバージョンを返し、`sample` を配信している'
+    test: test_normal
+    notes:
+      順序: S1 の `check_project` と `reload` は管理の MCP を呼ぶため、A-23 の番号と違い、S2（起動）を S1 の前に置く。
+      起動したセッション: フックがサーバーを起動したそのセッションでは MCP の接続が間に合わず、`/mcp` でつなぎ直す（PoC 2 の結果）。
+  - name: 異常シナリオ（配信できないプロジェクトがある）
+    setup:
+      - name: Mock
+        description: なし（実環境で実行）
+      - name: dev-docs のクローン
+        description: テスト用の一時フォルダにクローンした dev-docs
+        notes: ポート 8781 が空き
+      - name: サンプルのリポジトリ
+        description: 正常シナリオと同じ、検証に通るリポジトリ
+        notes: '`name: sample`'
+      - name: 壊れたリポジトリ
+        description: '`dev-docs.yaml` がスキーマに違反するリポジトリ'
+        notes: '`name: broken`、`documents[].type` に `yaml`・`markdown` 以外の値'
+      - name: 端末の設定
+        description: '`DEV_DOCS_CONFIG` が指す `settings.yaml`'
+        notes: '`projects` に sample と broken の 2 つ'
+    flow: |-
+      ```mermaid
+      flowchart TD
+        subgraph P1["起動"]
+          S2["起動する:異常シナリオ（設定の検証に失敗する）"]
+        end
+        subgraph P2["読み書き"]
+          S3["エージェントが調べる:正常シナリオ"]
+        end
+        subgraph P3["直す"]
+          S8["設定・スクリプトを変える:正常シナリオ"]
+        end
+        S2 --> S3 --> S8
+      ```
+    expected:
+      - 起動の直後、`/broken/mcp` と `/broken/` が 404 を返し、`/sample/mcp` と `/sample/` は応答する
+      - 管理の MCP の `status` が broken を配信していないプロジェクトとして、違反したキーのパスと理由つきで返す
+      - エラーログに broken の違反が残る
+      - broken の `dev-docs.yaml` を直して `reload` した後、`/broken/mcp` の `initialize` が broken の instructions を返す
+      - '`reload` の前後で `/sample/mcp` のセッションが切れない'
+    test: test_error_when_project_config_invalid
+lead: 利用者が dev-docs を入れてリポジトリを登録し、エージェントが MCP で、利用者が画面で、そのリポジトリの YAML の文書を読み書きする。設定・スクリプトの変更と dev-docs の更新を経ても配信が続く。
+issue: 2
+primary_actor: 利用者
+stakeholders:
+  - name: 利用者
+    interest: 手元のリポジトリの文書を画面で読み、エージェントの変更を差分でレビューできる
+  - name: エージェント（Claude Code）
+    interest: プロジェクトごとの MCP で文書を探して読み、作業ツリーの YAML を検査に通してから書き換えられる
+  - name: 各リポジトリ
+    interest: サーバーのコードを持たず、`dev-docs.yaml`・スキーマ・検査と変換のスクリプト・`{リポジトリ}-docs` のプラグインだけで配信される
+trigger: 利用者が dev-docs をクローンする
+preconditions:
+  - 端末に uv・git・Claude Code がある
+  - 配信するリポジトリが、YAML の文書とそのスキーマを持つ git リポジトリである
+success_guarantee: 利用者が登録したリポジトリの文書が、`/{name}/mcp` の MCP と `/{name}/` の画面で読め、エージェントの書き込みが呼んだセッションの作業ツリーにだけ反映される。
+minimal_guarantee: 設定・スクリプトの検証に失敗したプロジェクトがあっても、他のプロジェクトの配信と管理の MCP は止まらない。検査に通らない書き込みは作業ツリーを書き換えない。
+frequency: 導入は端末ごとに 1 回。起動はセッションごと。読み書きは作業のたび
+priority: 高
+notes:
+  単一ユースケース: '箱が指す単一ユースケース（S0〜S9）は #3（サーバー本体）と #4（管理用のプラグイン）が書く。書いた時点で各箱に `click` と `uses` を付ける。'
+  E2E テスト: 'テストのファイルは、通す機能が #3・#4 でそろってから作り、その時点で `test_file` を付ける。'
