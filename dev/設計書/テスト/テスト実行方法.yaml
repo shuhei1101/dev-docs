@@ -1,7 +1,20 @@
 title: "テスト実行方法"
 layers:
   - name: 単体テスト（バック）
-    run_all: 未確定
+    description: pytest で実行する。外部サービスに依存しない。
+    prerequisites:
+      - '`dev-docs` の配布を入れた環境で実行する（`--version` のテストが配布のメタデータを読む。`uv run` が同期する）'
+    run_all: |-
+      ```bash
+      uv run pytest tests/unit/
+      ```
+    run_one:
+      label: ファイル
+      command: |-
+        ```bash
+        uv run pytest {単体テストファイルパス}
+        ```
+    parallel: true
   - name: 結合テスト（バック）
     run_all: 未確定
   - name: 結合テスト（フロント）
@@ -13,5 +26,13 @@ layers:
   - name: E2E テスト
     run_all: 未確定
   - name: lint
-    run_all: 未確定
+    description: ruff で linter と formatter の check を、mypy で型検査を回す。型検査はプロジェクト全体に回す。
+    prerequisites:
+      - 検査の設定は `pyproject.toml` が持つ
+    run_all: |-
+      ```bash
+      (rc=0; uv run ruff check . || rc=1; uv run ruff format --check . || rc=1; uv run mypy . || rc=1; exit $rc)
+      ```
 lead: dev-docs のテスト種別ごとの実行コマンド。
+prerequisites:
+  - Python 3.14 と uv
