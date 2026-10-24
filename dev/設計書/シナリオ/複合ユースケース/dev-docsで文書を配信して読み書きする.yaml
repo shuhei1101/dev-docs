@@ -40,8 +40,8 @@ scenarios:
       - '`127.0.0.1:8781` を待ち受ける dev-docs のプロセスが 1 つだけある'
       - 管理の MCP の `status` が `sample` を配信中として返す
       - '`/sample/mcp` の `initialize` が sample の instructions を返し、ツールの `kind` の選択肢が sample のスキーマの種類になる'
-      - '`write_doc` で書いた項目が worktree の YAML に入り、commit はされていない（`git status` に変更として出る）'
-      - '`list_changes` が `write_doc` の変更を返し、画面の `/sample/@{ref}/{パス}?diff={コミット}` が変わった項目を強調する'
+      - dev-docs は commit しない（worktree に增えた commit は、`write_doc` の変更をエージェントが commit した 1 件だけ）
+      - '`list_changes` がエージェントの commit の変更を返し、画面の `/sample/@{その commit}/{パス}?diff={親の commit}` が変わった項目を強調する'
       - 画面の `/sample/` がタブ・サイドバー・本文を返し、本文は YAML を変換して描いたものになる
       - 直接編集した YAML の内容を、次の `get_docs` が返す
       - '`dev-docs.yaml` で変えた MCP の説明文が、`reload` の後の `initialize` に出る'
@@ -49,6 +49,7 @@ scenarios:
     test: test_normal
     notes:
       順序: S1 の `check_project` と `reload` は管理の MCP を呼ぶため、A-23 の番号と違い、S2（起動）を S1 の前に置く。
+      commit: S4 と S5 の間で、エージェントが `write_doc` の変更を worktree で `git commit` する。dev-docs は commit しない（D-105）。
       起動したセッション: フックがサーバーを起動したそのセッションでは MCP の接続が間に合わず、`/mcp` でつなぎ直す（PoC 2 の結果）。
   - name: 異常シナリオ（配信できないプロジェクトがある）
     setup:
