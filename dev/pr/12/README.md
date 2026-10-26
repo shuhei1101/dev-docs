@@ -24,7 +24,7 @@
 - [x] ~~初期構築~~（PR #6 で済んでいる）
 - [x] ~~リバースエンジニアリング~~（dev-docs の設計書は PR #6 でそろっている。土台の ai-monitor の機能は R-36 で洗い出し済み）
 - [x] ~~方針決め~~（方針決めを依頼する Issue ではない）
-- [ ] PoC 検証（PreToolUse のフックの `updatedInput` で HTTP の MCP ツールの引数に `cwd`・`session_id`・`agent_id` を入れられるか。Claude Code が `$ref` で再帰する入力スキーマのツールを呼べるか）
+- [x] PoC 検証（PreToolUse のフックの `updatedInput` で HTTP の MCP ツールの引数に `cwd`・`session_id`・`agent_id` を入れられるか。Claude Code が `$ref` で再帰する入力スキーマのツールを呼べるか）
 - [x] 複合ユースケース設計
 - [ ] デザインスタイル選定
 - [ ] 画面一覧・画面遷移
