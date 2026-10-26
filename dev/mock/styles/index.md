@@ -5,6 +5,6 @@
 
 | スタイル | 概要 |
 | --- | --- |
-| [developer-tool](./developer-tool/index.html) | 開発者ツール。無彩色を基調に中くらいの密度で、強い色は操作・選択・差分にだけ使う |
+| [developer-tool](./developer-tool/index.html) `badge:採用` | 開発者ツール。無彩色を基調に中くらいの密度で、強い色は操作・選択・差分にだけ使う |
 | [editorial](./editorial/index.html) | エディトリアル。見出しと本文を明朝で組み、紙の地に朱の差し色 1 色。読み物として読む |
 | [terminal](./terminal/index.html) | ターミナル風。全て等幅で角を立て、見出しの前に `#` を置く。強い色は緑 1 色 |
