@@ -202,11 +202,6 @@ svg {
   flex: 1;
 }
 
-/* スマホ幅でだけ出すドロワーのボタン */
-.topbar__menu {
-  display: none;
-}
-
 /* アイコンだけのボタン */
 .icon-button {
   display: inline-grid;
@@ -230,6 +225,11 @@ svg {
     background: var(--accent);
     border-color: var(--accent);
   }
+}
+
+/* スマホ幅でだけ出すドロワーのボタン */
+.topbar__menu {
+  display: none;
 }
 
 /* 配信元・リビジョンを選ぶボタン */
@@ -533,11 +533,11 @@ svg {
 
 /* ドキュメントの一覧 */
 .sidebar {
+  inset: auto;
   position: sticky;
   top: calc(var(--topbar-height) + var(--tabs-height));
   align-self: start;
   display: block;
-  inset: auto;
   width: auto;
   height: auto;
   max-height: calc(100dvh - var(--topbar-height) - var(--tabs-height));
@@ -726,6 +726,10 @@ svg {
   & tbody tr:last-child td {
     border-bottom: 0;
   }
+
+  & td:first-child code {
+    white-space: nowrap;
+  }
 }
 
 /* 表の上の件数と操作 */
@@ -774,7 +778,6 @@ svg {
 
 /* 差分で消えた行 */
 .is-removed td {
-  color: var(--fg-muted);
   background: var(--removed-bg);
   text-decoration: line-through;
   text-decoration-color: var(--removed-line);
@@ -797,7 +800,6 @@ svg {
 
 /* 変わる前の値 */
 del {
-  color: var(--fg-muted);
   text-decoration-color: var(--removed-line);
 }
 
@@ -935,13 +937,22 @@ pre {
   }
 
   /* ドロワーのボタンを出す */
-  .topbar__menu {
+  .icon-button.topbar__menu {
     display: inline-grid;
   }
 
   /* サイト名は畳む */
   .topbar__brand {
     display: none;
+  }
+
+  /* 配信元・リビジョンのボタンは先頭のアイコンを畳んで名前を残す */
+  .select-button {
+    padding: 0 8px;
+
+    & > svg:first-child {
+      display: none;
+    }
   }
 
   /* 検索はアイコンだけにする */
@@ -985,6 +996,12 @@ pre {
     min-height: 44px;
     align-items: center;
     display: flex;
+  }
+
+  /* 表の列を潰さず、表の枠の中で横にスクロールさせる */
+  .table-wrap th,
+  .table-wrap td {
+    min-width: 8em;
   }
 
   /* タイトルを少し小さくする */
