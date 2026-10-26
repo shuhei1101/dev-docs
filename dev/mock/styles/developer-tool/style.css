@@ -1,0 +1,1014 @@
+/*
+ * スタイル候補: 開発者ツール
+ * 中くらいの密度。色は無彩色を基調にし、強い色は操作・選択・差分にだけ使う。明暗の両方を持つ。
+ */
+
+/* ===== デザイントークン ===== */
+
+/* 色・文字・余白・角丸の値 */
+:root {
+  --bg: light-dark(#ffffff, #0d1117);
+  --chrome-bg: light-dark(#f6f8fa, #151b23);
+  --surface: light-dark(#ffffff, #151b23);
+  --control-bg: light-dark(#ffffff, #212830);
+  --fg: light-dark(#1f2328, #f0f6fc);
+  --fg-muted: light-dark(#59636e, #9198a1);
+  --border: light-dark(#d1d9e0, #3d444d);
+  --border-strong: light-dark(#818b98, #656c76);
+  --link: light-dark(#0969da, #4493f8);
+  --accent: light-dark(#0969da, #1f6feb);
+  --accent-fg: #ffffff;
+  --focus: light-dark(#0969da, #4493f8);
+  --hover-bg: light-dark(rgb(129 139 152 / 0.12), rgb(101 108 118 / 0.2));
+  --selected-bg: light-dark(rgb(129 139 152 / 0.2), rgb(101 108 118 / 0.35));
+  --count-bg: light-dark(rgb(129 139 152 / 0.2), rgb(101 108 118 / 0.35));
+  --code-bg: light-dark(rgb(129 139 152 / 0.15), rgb(101 108 118 / 0.3));
+  --pre-bg: light-dark(#f6f8fa, #151b23);
+  --pre-fg: var(--fg);
+  --table-head-bg: light-dark(#f6f8fa, #151b23);
+  --callout-bg: light-dark(#f6f8fa, #151b23);
+  --info-bg: light-dark(#ddf4ff, rgb(56 139 253 / 0.1));
+  --info-border: light-dark(#80ccff, rgb(56 139 253 / 0.4));
+  --added-bg: light-dark(#dafbe1, rgb(46 160 67 / 0.15));
+  --changed-bg: light-dark(#fff8c5, rgb(187 128 9 / 0.15));
+  --removed-bg: light-dark(#ffebe9, rgb(248 81 73 / 0.1));
+  --removed-line: light-dark(#cf222e, #f85149);
+  --mark-bg: light-dark(#fff8c5, rgb(187 128 9 / 0.4));
+  --tok-key: light-dark(#0550ae, #79c0ff);
+  --tok-str: light-dark(#0a3069, #a5d6ff);
+  --shadow: 0 8px 24px light-dark(rgb(140 149 159 / 0.2), rgb(1 4 9 / 0.6));
+
+  --font-body: system-ui, "Segoe UI", "Hiragino Sans", "Noto Sans JP", "Meiryo", sans-serif;
+  --font-heading: var(--font-body);
+  --font-mono: ui-monospace, "SFMono-Regular", "Cascadia Mono", Consolas, "BIZ UDGothic", monospace;
+  --heading-weight: 600;
+  --text-xs: 12px;
+  --text-sm: 14px;
+  --text-base: 15px;
+  --text-xl: 21px;
+  --text-2xl: 24px;
+  --text-3xl: 30px;
+  --leading: 1.7;
+  --measure: 860px;
+
+  --radius-sm: 4px;
+  --radius: 6px;
+  --radius-lg: 8px;
+  --control-height: 32px;
+  --topbar-height: 56px;
+  --tabs-height: 42px;
+  --sidebar-width: 240px;
+  --toc-width: 200px;
+}
+
+/* ===== 明暗の指定 ===== */
+
+/* 既定はシステムの設定に従い、固定したときだけ片方にする */
+:root {
+  color-scheme: light dark;
+  accent-color: var(--accent);
+}
+
+/* 利用者がライトに固定したとき */
+:root[data-scheme="light"] {
+  color-scheme: light;
+}
+
+/* 利用者がダークに固定したとき */
+:root[data-scheme="dark"] {
+  color-scheme: dark;
+}
+
+/* ===== 土台 ===== */
+
+/* 余白と幅の計算を枠の内側に揃える */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+/* ページ全体の文字と背景 */
+body {
+  margin: 0;
+  font-family: var(--font-body);
+  font-size: var(--text-base);
+  line-height: var(--leading);
+  color: var(--fg);
+  background: var(--bg);
+  overflow-wrap: anywhere;
+}
+
+/* 本文の中のリンク */
+a {
+  color: var(--link);
+}
+
+/* 等幅で出す識別子 */
+code,
+kbd,
+pre,
+.mono {
+  font-family: var(--font-mono);
+}
+
+/* 本文の中の短いコード */
+code {
+  font-size: 0.875em;
+  padding: 0.1em 0.35em;
+  border-radius: var(--radius-sm);
+  background: var(--code-bg);
+}
+
+/* アイコンの色を文字に合わせる */
+svg {
+  fill: currentColor;
+  flex: none;
+}
+
+/* フォーカスの表示 */
+:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+/* ===== モック専用の操作列 ===== */
+
+/* 実画面と見分けるため背景を変えた帯 */
+.mockbar {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 16px;
+  font-family: system-ui, sans-serif;
+  font-size: 13px;
+  line-height: 1.5;
+  color: #fff;
+  background: #6d28d9;
+  overflow-x: auto;
+}
+
+/* 帯の見出し */
+.mockbar__label {
+  margin-right: 8px;
+  opacity: 0.85;
+  white-space: nowrap;
+}
+
+/* スタイル候補のタブ */
+.mockbar__tab {
+  padding: 2px 10px;
+  border-radius: 4px;
+  color: #fff;
+  text-decoration: none;
+  white-space: nowrap;
+
+  &:hover {
+    background: rgb(255 255 255 / 0.15);
+  }
+
+  &.is-current {
+    color: #6d28d9;
+    background: #fff;
+  }
+}
+
+/* ===== トップバー ===== */
+
+/* 画面の最上部に留める帯 */
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: var(--topbar-height);
+  padding: 0 16px;
+  background: var(--chrome-bg);
+  border-bottom: 1px solid var(--border);
+}
+
+/* サイト名 */
+.topbar__brand {
+  margin-right: 8px;
+  font-weight: 600;
+  color: var(--fg);
+  text-decoration: none;
+}
+
+/* 右寄せのための余白 */
+.topbar__spacer {
+  flex: 1;
+}
+
+/* スマホ幅でだけ出すドロワーのボタン */
+.topbar__menu {
+  display: none;
+}
+
+/* アイコンだけのボタン */
+.icon-button {
+  display: inline-grid;
+  place-items: center;
+  width: var(--control-height);
+  height: var(--control-height);
+  padding: 0;
+  color: var(--fg-muted);
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  cursor: pointer;
+
+  &:hover {
+    color: var(--fg);
+    background: var(--hover-bg);
+  }
+
+  &[aria-pressed="true"] {
+    color: var(--accent-fg);
+    background: var(--accent);
+    border-color: var(--accent);
+  }
+}
+
+/* 配信元・リビジョンを選ぶボタン */
+.select-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: var(--control-height);
+  min-width: 0;
+  padding: 0 10px;
+  font: inherit;
+  font-size: var(--text-sm);
+  color: var(--fg);
+  background: var(--control-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  cursor: pointer;
+
+  &:hover {
+    background: var(--hover-bg);
+  }
+
+  & span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+/* 選ぶボタンの開閉の向き */
+.select-button__chevron {
+  color: var(--fg-muted);
+}
+
+/* 検索を開くボタン */
+.search-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: var(--control-height);
+  min-width: 200px;
+  padding: 0 8px 0 10px;
+  font: inherit;
+  font-size: var(--text-sm);
+  color: var(--fg-muted);
+  background: var(--control-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  cursor: pointer;
+
+  &:hover {
+    background: var(--hover-bg);
+  }
+}
+
+/* 検索ボタンの文言 */
+.search-button__label {
+  flex: 1;
+  text-align: left;
+}
+
+/* 検索のショートカットキー */
+.search-button__key {
+  padding: 0 6px;
+  font-size: 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+
+/* ===== ポップオーバー（メニュー・検索） ===== */
+
+/* ボタンの下に出すメニュー */
+.menu {
+  min-width: 220px;
+  margin: 0;
+  padding: 6px;
+  color: var(--fg);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow);
+  position-area: bottom span-right;
+  position-try-fallbacks: flip-inline;
+  inset: auto;
+  margin-top: 4px;
+}
+
+/* 長い名前を並べるメニュー */
+.menu--wide {
+  min-width: 300px;
+}
+
+/* メニューの見出し */
+.menu__heading {
+  margin: 4px 8px 6px;
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: var(--fg-muted);
+}
+
+/* メニューの 1 行 */
+.menu__item {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 6px 8px;
+  font-size: var(--text-sm);
+  color: var(--fg);
+  text-decoration: none;
+  border-radius: var(--radius);
+
+  &:hover {
+    background: var(--hover-bg);
+  }
+
+  &.is-current {
+    background: var(--selected-bg);
+  }
+}
+
+/* メニューの行の補足 */
+.menu__note {
+  color: var(--fg-muted);
+  font-size: var(--text-xs);
+  white-space: nowrap;
+}
+
+/* 列の表示を切り替えるチェックボックスの行 */
+.menu__check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 32px;
+  padding: 0 8px;
+  font-size: var(--text-sm);
+}
+
+/* 列の表示を既定に戻すボタン */
+.menu__reset {
+  width: 100%;
+  margin-top: 6px;
+  padding: 6px 8px;
+  font: inherit;
+  font-size: var(--text-sm);
+  color: var(--link);
+  text-align: left;
+  background: transparent;
+  border: 0;
+  border-top: 1px solid var(--border);
+  cursor: pointer;
+}
+
+/* 検索のパネル */
+.search {
+  width: min(560px, calc(100% - 32px));
+  margin: 72px auto auto;
+  padding: 12px;
+  color: var(--fg);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow);
+
+  &::backdrop {
+    background: rgb(0 0 0 / 0.3);
+  }
+}
+
+/* 検索欄のラベル */
+.search__label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+/* 検索欄 */
+.search__input {
+  width: 100%;
+  height: 40px;
+  padding: 0 12px;
+  font: inherit;
+  font-size: 16px;
+  color: var(--fg);
+  background: var(--control-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+/* 検索の件数 */
+.search__count {
+  margin: 8px 0 4px;
+  font-size: var(--text-xs);
+  color: var(--fg-muted);
+}
+
+/* 検索の結果の一覧 */
+.search__results {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+
+  & a {
+    display: grid;
+    gap: 2px;
+    padding: 8px;
+    color: var(--fg);
+    text-decoration: none;
+    border-radius: var(--radius);
+
+    &:hover {
+      background: var(--hover-bg);
+    }
+  }
+}
+
+/* 結果のドキュメントの場所 */
+.search__path {
+  font-weight: 600;
+  font-size: var(--text-sm);
+}
+
+/* 結果の当たった見出し */
+.search__hit {
+  font-size: var(--text-xs);
+  color: var(--fg-muted);
+
+  & mark {
+    color: var(--fg);
+    background: var(--mark-bg);
+  }
+}
+
+/* ===== 種類ごとのタブ ===== */
+
+/* トップバーの直下に留めるタブの帯 */
+.tabs {
+  position: sticky;
+  top: var(--topbar-height);
+  z-index: 9;
+  display: flex;
+  gap: 4px;
+  padding: 0 16px;
+  background: var(--chrome-bg);
+  border-bottom: 1px solid var(--border);
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+
+/* タブ 1 つ */
+.tabs__item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 6px 0;
+  padding: 4px 10px;
+  font-size: var(--text-sm);
+  color: var(--fg-muted);
+  text-decoration: none;
+  white-space: nowrap;
+  border-radius: var(--radius);
+
+  &:hover {
+    color: var(--fg);
+    background: var(--hover-bg);
+  }
+
+  &.is-current {
+    color: var(--fg);
+    font-weight: 600;
+    background: var(--selected-bg);
+  }
+}
+
+/* タブの件数 */
+.count {
+  min-width: 20px;
+  padding: 0 6px;
+  font-size: var(--text-xs);
+  font-weight: 400;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  color: var(--fg-muted);
+  background: var(--count-bg);
+  border-radius: 999px;
+}
+
+/* ===== 3 列のレイアウト ===== */
+
+/* サイドバー・本文・目次 */
+.layout {
+  display: grid;
+  grid-template-columns: var(--sidebar-width) minmax(0, 1fr) var(--toc-width);
+  gap: 32px;
+  max-width: 1440px;
+  margin: 0 auto;
+  padding: 0 24px;
+}
+
+/* ===== サイドバー ===== */
+
+/* ドキュメントの一覧 */
+.sidebar {
+  position: sticky;
+  top: calc(var(--topbar-height) + var(--tabs-height));
+  align-self: start;
+  display: block;
+  inset: auto;
+  width: auto;
+  height: auto;
+  max-height: calc(100dvh - var(--topbar-height) - var(--tabs-height));
+  margin: 0;
+  padding: 20px 0;
+  overflow-y: auto;
+  color: var(--fg);
+  background: transparent;
+  border: 0;
+}
+
+/* 一覧のまとまりの見出し */
+.sidebar__heading {
+  margin: 16px 8px 4px;
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: var(--fg-muted);
+
+  &:first-child {
+    margin-top: 0;
+  }
+}
+
+/* 一覧の並び */
+.sidebar__list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* 一覧の 1 行 */
+.sidebar__item {
+  display: block;
+  padding: 6px 8px;
+  font-size: var(--text-sm);
+  color: var(--fg);
+  text-decoration: none;
+  border-radius: var(--radius);
+
+  &:hover {
+    background: var(--hover-bg);
+  }
+
+  &.is-current {
+    font-weight: 600;
+    background: var(--selected-bg);
+  }
+}
+
+/* ===== 本文 ===== */
+
+/* 本文の列 */
+.content {
+  min-width: 0;
+  padding: 20px 0 80px;
+}
+
+/* パンくず */
+.breadcrumb {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  font-size: var(--text-sm);
+  color: var(--fg-muted);
+
+  & a {
+    color: var(--fg-muted);
+  }
+}
+
+/* パンくずの区切り */
+.breadcrumb__sep {
+  color: var(--border-strong);
+}
+
+/* ドキュメントのタイトル */
+.doc-title {
+  margin: 12px 0 8px;
+  font-family: var(--font-heading);
+  font-size: var(--text-3xl);
+  font-weight: var(--heading-weight);
+  line-height: 1.3;
+}
+
+/* タイトルの下の付帯情報 */
+.doc-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 16px;
+  margin: 0 0 20px;
+  font-size: var(--text-sm);
+  color: var(--fg-muted);
+}
+
+/* 種類などの短いラベル */
+.badge {
+  padding: 0 8px;
+  font-size: var(--text-xs);
+  line-height: 20px;
+  color: var(--fg);
+  border: 1px solid var(--border-strong);
+  border-radius: 999px;
+}
+
+/* 差分を強調していることの案内 */
+.diff-banner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  margin-bottom: 24px;
+  padding: 10px 14px;
+  font-size: var(--text-sm);
+  color: var(--fg);
+  background: var(--info-bg);
+  border: 1px solid var(--info-border);
+  border-radius: var(--radius-lg);
+
+  & p {
+    flex: 1;
+    min-width: 200px;
+    margin: 0;
+  }
+}
+
+/* 差分の強調を解除するリンク */
+.diff-banner__close {
+  white-space: nowrap;
+}
+
+/* スマホ幅でだけ出す目次 */
+.toc-inline {
+  display: none;
+}
+
+/* 変換した本文 */
+.doc {
+  max-width: var(--measure);
+
+  & h2 {
+    margin: 2.2em 0 0.7em;
+    padding-bottom: 0.3em;
+    font-family: var(--font-heading);
+    font-size: var(--text-xl);
+    font-weight: var(--heading-weight);
+    line-height: 1.4;
+    border-bottom: 1px solid var(--border);
+    scroll-margin-top: calc(var(--topbar-height) + var(--tabs-height) + 16px);
+  }
+
+  & p,
+  & ul {
+    margin: 0 0 1em;
+  }
+}
+
+/* 表の横スクロールの枠 */
+.table-wrap {
+  margin: 0 0 1.25em;
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+
+  & table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: var(--text-sm);
+    line-height: 1.6;
+  }
+
+  & th,
+  & td {
+    padding: 8px 12px;
+    text-align: left;
+    vertical-align: top;
+    border-bottom: 1px solid var(--border);
+  }
+
+  & th {
+    font-weight: 600;
+    white-space: nowrap;
+    background: var(--table-head-bg);
+  }
+
+  & tbody tr:last-child td {
+    border-bottom: 0;
+  }
+}
+
+/* 表の上の件数と操作 */
+.table-tools {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+/* 表の件数 */
+.table-tools__count {
+  font-size: var(--text-sm);
+  color: var(--fg-muted);
+}
+
+/* 表の操作のボタン */
+.tool-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: var(--control-height);
+  padding: 0 10px;
+  font: inherit;
+  font-size: var(--text-sm);
+  color: var(--fg);
+  background: var(--control-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  cursor: pointer;
+
+  &:hover {
+    background: var(--hover-bg);
+  }
+}
+
+/* 差分で追加された行 */
+.is-added td {
+  background: var(--added-bg);
+}
+
+/* 差分で変わった行 */
+.is-changed td {
+  background: var(--changed-bg);
+}
+
+/* 差分で消えた行 */
+.is-removed td {
+  color: var(--fg-muted);
+  background: var(--removed-bg);
+  text-decoration: line-through;
+  text-decoration-color: var(--removed-line);
+}
+
+/* 差分の種類を文字で示すラベル */
+.diff-mark {
+  display: inline-block;
+  margin-right: 6px;
+  padding: 0 6px;
+  font-size: var(--text-xs);
+  font-weight: 600;
+  line-height: 18px;
+  color: var(--fg);
+  text-decoration: none;
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+}
+
+/* 変わる前の値 */
+del {
+  color: var(--fg-muted);
+  text-decoration-color: var(--removed-line);
+}
+
+/* 変わった後の値 */
+ins {
+  font-weight: 600;
+  text-decoration: none;
+}
+
+/* 補足の囲み */
+.callout {
+  margin: 0 0 1.25em;
+  padding: 12px 16px;
+  font-size: var(--text-sm);
+  background: var(--callout-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+
+  & p {
+    margin: 0;
+  }
+}
+
+/* 補足の見出し */
+.callout__title {
+  margin-bottom: 4px !important;
+  font-weight: 600;
+}
+
+/* コードブロック */
+pre {
+  margin: 0 0 1.25em;
+  padding: 14px 16px;
+  font-size: var(--text-sm);
+  line-height: 1.6;
+  color: var(--pre-fg);
+  background: var(--pre-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  overflow-x: auto;
+
+  & code {
+    padding: 0;
+    font-size: inherit;
+    background: transparent;
+  }
+}
+
+/* YAML のキー */
+.tok-key {
+  color: var(--tok-key);
+}
+
+/* YAML の文字列 */
+.tok-str {
+  color: var(--tok-str);
+}
+
+/* ===== 目次 ===== */
+
+/* 本文の右に留める目次 */
+.toc {
+  position: sticky;
+  top: calc(var(--topbar-height) + var(--tabs-height));
+  align-self: start;
+  padding: 20px 0;
+  font-size: var(--text-sm);
+
+  & ul {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  & a {
+    display: block;
+    padding: 4px 8px;
+    color: var(--fg-muted);
+    text-decoration: none;
+    border-radius: var(--radius);
+
+    &:hover {
+      color: var(--fg);
+      background: var(--hover-bg);
+    }
+
+    &.is-current {
+      color: var(--fg);
+      background: var(--selected-bg);
+    }
+  }
+}
+
+/* 目次の見出し */
+.toc__heading {
+  margin: 0 8px 6px;
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: var(--fg-muted);
+}
+
+/* ===== 中くらいの幅 ===== */
+
+/* 目次を畳んで本文を広げる */
+@media (max-width: 1100px) {
+  /* サイドバーと本文の 2 列 */
+  .layout {
+    grid-template-columns: var(--sidebar-width) minmax(0, 1fr);
+  }
+
+  /* 右の目次は出さない */
+  .toc {
+    display: none;
+  }
+
+  /* 本文の上に目次を出す */
+  .toc-inline {
+    display: block;
+  }
+}
+
+/* ===== スマホ幅 ===== */
+
+@media (max-width: 768px) {
+  /* 本文 1 列 */
+  .layout {
+    display: block;
+    padding: 0 16px;
+  }
+
+  /* トップバーの余白を詰める */
+  .topbar {
+    gap: 6px;
+    padding: 0 12px;
+  }
+
+  /* ドロワーのボタンを出す */
+  .topbar__menu {
+    display: inline-grid;
+  }
+
+  /* サイト名は畳む */
+  .topbar__brand {
+    display: none;
+  }
+
+  /* 検索はアイコンだけにする */
+  .search-button {
+    min-width: 0;
+    width: var(--control-height);
+    padding: 0;
+    justify-content: center;
+  }
+
+  /* 検索ボタンの文言とキーは出さない */
+  .search-button__label,
+  .search-button__key {
+    display: none;
+  }
+
+  /* サイドバーを左から出すドロワーにする */
+  .sidebar {
+    position: fixed;
+    inset: 0 auto 0 0;
+    width: min(20em, 80%);
+    height: 100dvh;
+    max-height: none;
+    padding: 20px 12px;
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    box-shadow: var(--shadow);
+
+    &:not(:popover-open) {
+      display: none;
+    }
+
+    &::backdrop {
+      background: rgb(0 0 0 / 0.4);
+    }
+  }
+
+  /* タップしやすい高さにする */
+  .sidebar__item,
+  .menu__item {
+    min-height: 44px;
+    align-items: center;
+    display: flex;
+  }
+
+  /* タイトルを少し小さくする */
+  .doc-title {
+    font-size: var(--text-2xl);
+  }
+
+  /* 本文の上の目次 */
+  .toc-inline {
+    margin-bottom: 20px;
+    padding: 8px 12px;
+    font-size: var(--text-sm);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+
+    & summary {
+      min-height: 32px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    & ul {
+      margin: 4px 0 0;
+      padding-left: 1.2em;
+    }
+  }
+}
