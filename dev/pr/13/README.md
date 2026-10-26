@@ -1,0 +1,1 @@
+# PoC: フックの updatedInput で MCP ツールの引数に cwd・session_id・agent_id を入れる
