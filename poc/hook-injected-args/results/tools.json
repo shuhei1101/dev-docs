@@ -1,0 +1,234 @@
+{
+  "probe": {
+    "$defs": {
+      "Condition": {
+        "description": "1 つの項目を比べる条件。",
+        "properties": {
+          "field": {
+            "description": "比べる項目の名前",
+            "title": "Field",
+            "type": "string"
+          },
+          "op": {
+            "description": "比べ方",
+            "enum": [
+              "eq",
+              "ne"
+            ],
+            "title": "Op",
+            "type": "string"
+          },
+          "value": {
+            "description": "比べる値",
+            "title": "Value",
+            "type": "string"
+          }
+        },
+        "required": [
+          "field",
+          "op",
+          "value"
+        ],
+        "title": "Condition",
+        "type": "object"
+      },
+      "Group": {
+        "description": "条件と群を and / or で束ねる群。",
+        "properties": {
+          "op": {
+            "description": "束ね方",
+            "enum": [
+              "and",
+              "or"
+            ],
+            "title": "Op",
+            "type": "string"
+          },
+          "items": {
+            "description": "束ねる条件と群",
+            "items": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/Group"
+                },
+                {
+                  "$ref": "#/$defs/Condition"
+                }
+              ]
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "op",
+          "items"
+        ],
+        "title": "Group",
+        "type": "object"
+      }
+    },
+    "properties": {
+      "filter": {
+        "$ref": "#/$defs/Group"
+      },
+      "cwd": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Cwd"
+      },
+      "session_id": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Session Id"
+      },
+      "agent_id": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Agent Id"
+      }
+    },
+    "required": [
+      "filter"
+    ],
+    "title": "probeArguments",
+    "type": "object"
+  },
+  "probe_delete": {
+    "$defs": {
+      "Condition": {
+        "description": "1 つの項目を比べる条件。",
+        "properties": {
+          "field": {
+            "description": "比べる項目の名前",
+            "title": "Field",
+            "type": "string"
+          },
+          "op": {
+            "description": "比べ方",
+            "enum": [
+              "eq",
+              "ne"
+            ],
+            "title": "Op",
+            "type": "string"
+          },
+          "value": {
+            "description": "比べる値",
+            "title": "Value",
+            "type": "string"
+          }
+        },
+        "required": [
+          "field",
+          "op",
+          "value"
+        ],
+        "title": "Condition",
+        "type": "object"
+      },
+      "Group": {
+        "description": "条件と群を and / or で束ねる群。",
+        "properties": {
+          "op": {
+            "description": "束ね方",
+            "enum": [
+              "and",
+              "or"
+            ],
+            "title": "Op",
+            "type": "string"
+          },
+          "items": {
+            "description": "束ねる条件と群",
+            "items": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/Group"
+                },
+                {
+                  "$ref": "#/$defs/Condition"
+                }
+              ]
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "op",
+          "items"
+        ],
+        "title": "Group",
+        "type": "object"
+      }
+    },
+    "properties": {
+      "filter": {
+        "$ref": "#/$defs/Group"
+      },
+      "cwd": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Cwd"
+      },
+      "session_id": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Session Id"
+      },
+      "agent_id": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Agent Id"
+      }
+    },
+    "required": [
+      "filter"
+    ],
+    "title": "probe_deleteArguments",
+    "type": "object"
+  }
+}

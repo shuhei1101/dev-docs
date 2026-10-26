@@ -1,0 +1,16 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "mcp__plugin_pocdocs_docs__.*",
+        "hooks": [
+          {
+            "type": "command",
+            "_description": "入力の cwd・session_id・agent_id を MCP ツールの引数へ重ねる",
+            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/inject.py\""
+          }
+        ]
+      }
+    ]
+  }
+}

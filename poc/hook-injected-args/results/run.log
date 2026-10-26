@@ -1,0 +1,18 @@
+CLAUDE_BASH_MAINTAIN_PROJECT_WORKING_DIR=(なし)
+OK cwd（launch-root）: expected=/tmp/tmptld361ou/repo args=/tmp/tmptld361ou/repo hook=/tmp/tmptld361ou/repo
+OK cwd（launch-sub）: expected=/tmp/tmptld361ou/repo/sub args=/tmp/tmptld361ou/repo/sub hook=/tmp/tmptld361ou/repo/sub
+OK cwd（cd-sub）: expected=/tmp/tmptld361ou/repo/sub args=/tmp/tmptld361ou/repo/sub hook=/tmp/tmptld361ou/repo/sub
+OK cwd（cd-worktree）: expected=/tmp/tmptld361ou/repo/.claude/worktrees/x args=/tmp/tmptld361ou/repo/.claude/worktrees/x hook=/tmp/tmptld361ou/repo/.claude/worktrees/x
+OK cwd（cd-outside・記録）: args.cwd=/tmp/tmptld361ou/repo hook.cwd=/tmp/tmptld361ou/repo CLAUDE_PROJECT_DIR=/tmp/tmptld361ou/repo
+OK session_id がフックの入力と一致: [["4c561e6f-ddde-4eaa-9fbb-3a04ffd28db1", "4c561e6f-ddde-4eaa-9fbb-3a04ffd28db1"], ["73a570b5-7f50-40ec-b575-61c15a293b09", "73a570b5-7f50-40ec-b575-61c15a293b09"], ["1fc669e3-05e1-4e83-93be-25513755cad2", "1fc669e3-05e1-4e83-93be-25513755cad2"], ["f64dc88a-a779-49ce-ba77-1d088249e276", "f64dc88a-a779-49ce-ba77-1d088249e276"], ["1881960c-7345-4482-89cf-1485b7042999", "1881960c-7345-4482-89cf-1485b7042999"], ["e889e074-5d18-4833-a17d-b1ddffa9cfc3", "e889e074-5d18-4833-a17d-b1ddffa9cfc3"], ["5132a09b-27b2-43b7-bd53-e4616fa2a6a7", "5132a09b-27b2-43b7-bd53-e4616fa2a6a7"]]
+OK agent_id（メインは空・サブエージェントは値）: main=['', '', '', '', '', ''] sub.args=aac1d575d6e3c1d0a sub.hook=aac1d575d6e3c1d0a agent_type=general-purpose
+OK モデルが渡した値を上書き: model={'cwd': '/tmp/fake', 'session_id': 'fake-session', 'agent_id': 'fake-agent'} args={'cwd': '/tmp/tmptld361ou/repo', 'session_id': 'e889e074-5d18-4833-a17d-b1ddffa9cfc3', 'agent_id': ''}
+OK 許可していない probe_delete が届かない: server_rows=0 hook_rows=1
+OK filter の 3 段の木（launch-root）: {"op": "and", "items": [{"field": "case", "op": "eq", "value": "launch-root"}, {"op": "or", "items": [{"field": "tag", "op": "eq", "value": "a"}, {"field": "tag", "op": "ne", "value": "b"}]}]}
+OK filter の 3 段の木（launch-sub）: {"op": "and", "items": [{"field": "case", "op": "eq", "value": "launch-sub"}, {"op": "or", "items": [{"field": "tag", "op": "eq", "value": "a"}, {"field": "tag", "op": "ne", "value": "b"}]}]}
+OK filter の 3 段の木（cd-sub）: {"op": "and", "items": [{"field": "case", "op": "eq", "value": "cd-sub"}, {"op": "or", "items": [{"field": "tag", "op": "eq", "value": "a"}, {"field": "tag", "op": "ne", "value": "b"}]}]}
+OK filter の 3 段の木（cd-worktree）: {"op": "and", "items": [{"field": "case", "op": "eq", "value": "cd-worktree"}, {"op": "or", "items": [{"field": "tag", "op": "eq", "value": "a"}, {"field": "tag", "op": "ne", "value": "b"}]}]}
+OK filter の 3 段の木（cd-outside）: {"op": "and", "items": [{"field": "case", "op": "eq", "value": "cd-outside"}, {"op": "or", "items": [{"field": "tag", "op": "eq", "value": "a"}, {"field": "tag", "op": "ne", "value": "b"}]}]}
+OK filter の 3 段の木（override）: {"op": "and", "items": [{"field": "case", "op": "eq", "value": "override"}, {"op": "or", "items": [{"field": "tag", "op": "eq", "value": "a"}, {"field": "tag", "op": "ne", "value": "b"}]}]}
+OK filter の 3 段の木（subagent）: {"op": "and", "items": [{"field": "case", "op": "eq", "value": "subagent"}, {"op": "or", "items": [{"field": "tag", "op": "eq", "value": "a"}, {"field": "tag", "op": "ne", "value": "b"}]}]}
+OK 入力スキーマが $ref で再帰する: {"description": "条件と群を and / or で束ねる群。", "properties": {"op": {"description": "束ね方", "enum": ["and", "or"], "title": "Op", "type": "string"}, "items": {"description": "束ねる条件と群", "items": {"anyOf": [{"$ref": "#/$defs/Group"}, {"$ref": "#/$defs/Condition"}]}, "title": "Items", "type": "array"}}, "required": ["op", "items"], "title": "Group", "type": "object"}
