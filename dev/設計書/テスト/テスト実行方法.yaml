@@ -15,6 +15,21 @@ layers:
         uv run pytest {単体テストファイルパス}
         ```
     parallel: true
+  - name: 単体テスト（フロント）
+    description: 画面のスクリプトの `.ts` を `tsc` で同じフォルダの `.js` に変換してから、`tests/` の `.test.ts` を `node --test` で実行する。`.test.ts` は変換した `.js` を import し、Node.js の型の削除でそのまま動かす。
+    prerequisites:
+      - 'Node.js 24 以上と `npm ci` で入れた typescript がある'
+    run_all: |-
+      ```bash
+      npx tsc -p tsconfig.build.json && node --test tests/unit/server/static/*.test.ts
+      ```
+    run_one:
+      label: ファイル
+      command: |-
+        ```bash
+        npx tsc -p tsconfig.build.json && node --test {単体テストファイルパス}
+        ```
+    parallel: true
   - name: 結合テスト（バック）
     run_all: 未確定
   - name: 結合テスト（フロント）

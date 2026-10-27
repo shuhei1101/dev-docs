@@ -6,6 +6,7 @@ from pathlib import Path
 import pytest
 
 from dev_docs.__main__ import build_parser, main
+from dev_docs.main import run_serve
 
 PYPROJECT_PATH = Path(__file__).parents[3] / "pyproject.toml"
 
@@ -16,6 +17,17 @@ def test_build_parser() -> None:
     parser = build_parser()
     # 検証
     assert parser.prog == "dev-docs"
+
+
+def test_build_parser_when_serve() -> None:
+    """serve の処理を引く（正常系）。"""
+    # 準備
+    parser = build_parser()
+    # 実行
+    args = parser.parse_args(["serve"])
+    # 検証
+    assert args.cmd == "serve"
+    assert args.handler is run_serve
 
 
 def test_main_when_version(capsys: pytest.CaptureFixture[str]) -> None:

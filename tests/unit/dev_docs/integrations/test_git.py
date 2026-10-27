@@ -1,0 +1,68 @@
+from __future__ import annotations
+
+import subprocess
+from collections.abc import Callable
+from pathlib import Path
+
+import pytest
+
+from dev_docs.integrations import git as git_module
+from dev_docs.integrations.git import GitError, repo_root, run_git
+
+
+def test_run_git(git_repo: Callable[..., Path]) -> None:
+    """標準出力を返す（正常系）。"""
+    # 準備
+    root = git_repo({"a.yaml": "a: 1\n"})
+    # 実行
+    result = run_git(["rev-parse", "--is-inside-work-tree"], cwd=root)
+    # 検証
+    assert result == "true\n"
+
+
+def test_run_git_when_failed(git_repo: Callable[..., Path]) -> None:
+    """失敗を例外にする（異常系）。"""
+    # 準備
+    root = git_repo({"a.yaml": "a: 1\n"})
+    # 実行・検証
+    with pytest.raises(GitError) as exc_info:
+        run_git(["rev-parse", "nope"], cwd=root)
+    assert exc_info.value.returncode != 0
+    assert "nope" in exc_info.value.stderr
+
+
+def test_run_git_when_timeout(
+    git_repo: Callable[..., Path], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """待ち時間の上限を超える（異常系）。"""
+    # 準備
+    root = git_repo({"a.yaml": "a: 1\n"})
+    monkeypatch.setattr(git_module, "GIT_TIMEOUT_SEC", 0.1)
+    monkeypatch.setenv("GIT_EDITOR", "sleep 1")
+    monkeypatch.setenv("GIT_AUTHOR_NAME", "tester")
+    monkeypatch.setenv("GIT_AUTHOR_EMAIL", "tester@example.com")
+    monkeypatch.setenv("GIT_COMMITTER_NAME", "tester")
+    monkeypatch.setenv("GIT_COMMITTER_EMAIL", "tester@example.com")
+    # 実行・検証
+    with pytest.raises(GitError) as exc_info:
+        run_git(["commit", "--allow-empty"], cwd=root)
+    assert exc_info.value.timed_out is True
+    assert subprocess.run(["pgrep", "-x", "git"], check=False).returncode == 1
+
+
+def test_repo_root(git_repo: Callable[..., Path]) -> None:
+    """リポジトリの中のフォルダ（正常系）。"""
+    # 準備
+    root = git_repo({"docs/a.yaml": "a: 1\n"})
+    # 実行
+    result = repo_root(root / "docs")
+    # 検証
+    assert result == root
+
+
+def test_repo_root_when_not_git(tmp_path: Path) -> None:
+    """Git の管理外（正常系）。"""
+    # 実行
+    result = repo_root(tmp_path)
+    # 検証
+    assert result is None
