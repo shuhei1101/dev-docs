@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import difflib
+import logging
 import threading
 from collections.abc import Iterable, Sequence
 from pathlib import Path
@@ -9,9 +11,17 @@ from typing import Any
 
 from dev_docs.features.access.types import Target
 from dev_docs.features.documents.loader import collect_files, load_file
+from dev_docs.features.documents.schema import resolve_schema_refs
 from dev_docs.features.documents.types import Document, LoadProblem, LoadResult
+from dev_docs.features.history.query import file_dates, resolve_ref
 from dev_docs.features.history.snapshot import SnapshotStore
 from dev_docs.features.history.types import FileDates
+from dev_docs.features.sources.types import DocumentTable
+from dev_docs.integrations.git import GitError, run_git
+from dev_docs.shared.errors import DocumentNotFoundError
+from dev_docs.shared.yaml_io import YamlLoadError, load_yaml
+
+logger = logging.getLogger(__name__)
 
 CANDIDATE_COUNT = 5
 CANDIDATE_CUTOFF = 0.6
@@ -35,24 +45,187 @@ class DocumentStore:
         self._dates: dict[tuple[Path, str], dict[str, FileDates]] = {}
         self._lock = threading.Lock()
 
+    def _read_root(self, target: Target) -> Path:
+        """読むフォルダを決める（`ref` があればリビジョンを書き出す）。"""
+        if target.ref is None:
+            return target.base
+        source = target.source
+        repo_root = source.repo_root or source.root
+        resolved = resolve_ref(repo_root, target.ref, date_base=source.config.default_ref)
+        checkout = self.snapshots.checkout(repo_root, resolved.commit)
+        return checkout / source.root.relative_to(repo_root)
+
+    def _file_dates(self, target: Target) -> dict[str, FileDates]:
+        """Git の配信元のファイルの日時を、配信元の直下からのパスで返す。"""
+        source = target.source
+        if not source.is_git:
+            return {}
+        repo_root = source.repo_root or source.root
+        work_root = target.worktree or repo_root
+        try:
+            if target.ref is not None:
+                commit = resolve_ref(
+                    repo_root, target.ref, date_base=source.config.default_ref
+                ).commit
+            else:
+                output = run_git(["rev-parse", "HEAD"], cwd=work_root)
+                commit = (output if isinstance(output, str) else output.decode("utf-8")).strip()
+        except GitError:
+            # commit がまだ 1 つも無いリポジトリ
+            return {}
+        key = (work_root, commit)
+        with self._lock:
+            cached = self._dates.get(key)
+        if cached is None:
+            prefix = source.root.relative_to(repo_root).as_posix()
+            raw = file_dates(work_root, commit=commit)
+            cached = {
+                path if prefix == "." else path.removeprefix(f"{prefix}/"): dates
+                for path, dates in raw.items()
+                if prefix == "." or path.startswith(f"{prefix}/")
+            }
+            with self._lock:
+                self._dates[key] = cached
+        return cached
+
+    def _tables(self, target: Target, kinds: Sequence[str] | None) -> list[DocumentTable]:
+        """読む文書の行を決める。"""
+        source = target.source
+        if kinds is not None:
+            return [source.table(kind) for kind in kinds]
+        return [row for row in source.config.documents if row.enabled]
+
+    def _load_table(
+        self, root: Path, table: DocumentTable, source_id: str, dates: dict[str, FileDates]
+    ) -> tuple[list[Document], list[LoadProblem], set[tuple[Path, str]]]:
+        """1 つの文書の行のファイルを集め、変わったファイルだけ読み直す。"""
+        documents: list[Document] = []
+        problems: list[LoadProblem] = []
+        seen: set[tuple[Path, str]] = set()
+        for path in collect_files(root, table.paths):
+            absolute = root / path
+            key = (absolute, table.id)
+            seen.add(key)
+            try:
+                stat = absolute.stat()
+            except OSError:
+                continue
+            with self._lock:
+                cached = self._files.get(key)
+            if cached is not None and cached[:2] == (stat.st_mtime_ns, stat.st_size):
+                found, issues = cached[2], cached[3]
+            else:
+                found, issues = load_file(root, path, table, source_id=source_id, dates=dates)
+                with self._lock:
+                    self._files[key] = (stat.st_mtime_ns, stat.st_size, found, issues)
+            documents.extend(found)
+            problems.extend(issues)
+        return documents, problems, seen
+
     def load(self, target: Target, *, kinds: Sequence[str] | None = None) -> LoadResult:
         """読む場所の文書を、文書の行ごとに集めて返す。"""
-        raise NotImplementedError
+        root = self._read_root(target)
+        tables = self._tables(target, kinds)
+        dates = self._file_dates(target)
+        documents: list[Document] = []
+        problems: list[LoadProblem] = []
+        kind_ids = {table.id for table in tables}
+        seen_keys: set[tuple[Path, str]] = set()
+        for table in tables:
+            found, issues, seen = self._load_table(root, table, target.source.id, dates)
+            documents.extend(found)
+            problems.extend(issues)
+            seen_keys |= seen
+        # 削除されたファイルのキャッシュを捨てる
+        with self._lock:
+            for key in [
+                key
+                for key in self._files
+                if key[1] in kind_ids and key not in seen_keys and key[0].is_relative_to(root)
+            ]:
+                del self._files[key]
+        first: dict[str, Document] = {}
+        unique: list[Document] = []
+        for document in documents:
+            earlier = first.get(document.id)
+            if earlier is None:
+                first[document.id] = document
+                unique.append(document)
+            else:
+                problems.append(
+                    LoadProblem(
+                        path=document.path,
+                        reason="duplicate_id",
+                        detail=f"ID {document.id} は先の文書（{earlier.path}）と重なります",
+                    )
+                )
+        problems.sort(key=lambda problem: problem.path)
+        for problem in problems:
+            logger.debug("%s: %s: %s", target.source.id, problem.path, problem.reason)
+        return LoadResult(documents=unique, problems=problems)
 
     def get(
         self, target: Target, ids: Sequence[str], *, kinds: Sequence[str] | None = None
     ) -> list[Document]:
         """ID の並びの順に文書を返す。"""
-        raise NotImplementedError
+        by_id = {document.id: document for document in self.load(target, kinds=kinds).documents}
+        missing = [document_id for document_id in ids if document_id not in by_id]
+        if missing:
+            raise DocumentNotFoundError(
+                message=f"{target.source.id}: 文書 {', '.join(missing)} はありません",
+                missing=missing,
+                candidates={
+                    document_id: difflib.get_close_matches(
+                        document_id, list(by_id), n=CANDIDATE_COUNT, cutoff=CANDIDATE_CUTOFF
+                    )
+                    for document_id in missing
+                },
+                next_steps=["search_docs で ID を探してください"],
+            )
+        return [by_id[document_id] for document_id in ids]
 
     def schema(self, target: Target, kind: str) -> dict[str, Any]:
         """読む場所に合わせた種類のスキーマを返す。"""
-        raise NotImplementedError
+        source = target.source
+        table = source.table(kind)
+        if table.schema_path is None:
+            return {}
+        startup = source.schemas.get(kind, {})
+        base = source.root / table.schema_path
+        if target.ref is None and target.worktree is None:
+            return resolve_schema_refs(startup, base)
+        path = self._read_root(target) / table.schema_path
+        try:
+            stat = path.stat()
+        except OSError:
+            return resolve_schema_refs(startup, base)
+        with self._lock:
+            cached = self._schemas.get(path)
+        if cached is not None and cached[:2] == (stat.st_mtime_ns, stat.st_size):
+            return cached[2]
+        try:
+            raw = load_yaml(path.read_text(encoding="utf-8"), file=str(path))
+        except OSError, UnicodeDecodeError, YamlLoadError:
+            return resolve_schema_refs(startup, base)
+        if not isinstance(raw, dict):
+            return resolve_schema_refs(startup, base)
+        resolved = resolve_schema_refs(raw, path)
+        with self._lock:
+            self._schemas[path] = (stat.st_mtime_ns, stat.st_size, resolved)
+        return resolved
 
     def invalidate(self, paths: Iterable[Path]) -> None:
         """書き込んだファイルのキャッシュを捨てる。"""
-        raise NotImplementedError
+        targets = set(paths)
+        with self._lock:
+            for key in [key for key in self._files if key[0] in targets]:
+                del self._files[key]
+            for path in [path for path in self._schemas if path in targets]:
+                del self._schemas[path]
 
     def clear(self) -> None:
         """全てのキャッシュを捨てる。"""
-        raise NotImplementedError
+        with self._lock:
+            self._files.clear()
+            self._schemas.clear()
+            self._dates.clear()
