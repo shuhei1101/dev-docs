@@ -1,0 +1,428 @@
+title: "文書の画面"
+elements:
+  - name: ページのタイトル
+    kind: label
+    position: head > title
+    description: ブラウザのタブに出すタイトル
+    label: '`{文書の名前} | {配信元の ID} | dev-docs`（文書の無いタブは `{タブ名} | {配信元の ID} | dev-docs`）'
+    visible_when: 常時
+    source: 文書の画面.本文
+  - name: 文書の一覧を開くボタン
+    kind: button
+    position: トップバー
+    description: ドロワーにしたサイドバーを開く
+    label: 三本線のアイコン
+    visible_when: スマホ幅のとき
+    action: クリックでサイドバーをドロワーで開く
+    notes:
+      読み上げ名: '`文書の一覧を開く`'
+  - name: 画面名
+    kind: link
+    position: トップバー
+    description: 開いている配信元のトップへ戻る
+    label: '`dev-docs`'
+    visible_when: 常時
+    action: クリックで開いている配信元のトップを開く
+    action_ref: dev/設計書/インターフェース定義/開発ドキュメントサーバー/文書の画面#
+  - name: 配信元の切り替え
+    kind: button
+    position: トップバー
+    description: 配信元のメニューを開く
+    label: 開いている配信元の ID
+    visible_when: 常時
+    source: 文書の画面.画面の状態
+    action: クリックで配信元のメニューを開く
+    notes:
+      読み上げ名: '`配信元を切り替える`'
+  - name: 配信元のメニュー
+    kind: menu
+    position: トップバー > 配信元の切り替え
+    description: 配信中の配信元と設定画面への入口
+    label: 見出し `配信元`。配信中の配信元の ID と補足（`読み書き` / `Git 管理外`）を並べ、末尾に `設定`
+    visible_when: 配信元の切り替えを押したとき
+    source: 文書の画面.本文
+    action: 行のクリックでその配信元のトップを開く（`設定` は設定画面）
+    action_ref: dev/設計書/インターフェース定義/開発ドキュメントサーバー/文書の画面#
+  - name: リビジョンの切り替え
+    kind: button
+    position: トップバー
+    description: リビジョンのメニューを開く
+    label: 開いているリビジョン（指定が無いときは `作業ツリー`）
+    visible_when: Git で管理している配信元のとき
+    source: 文書の画面.画面の状態
+    action: クリックでリビジョンのメニューを開く
+    notes:
+      読み上げ名: '`リビジョンを切り替える`'
+  - name: リビジョンのメニュー
+    kind: menu
+    position: トップバー > リビジョンの切り替え
+    description: 開けるリビジョンの一覧
+    label: 見出し `リビジョン`。先頭に `作業ツリー`（補足 `既定`）、続けてブランチ（補足 `ブランチ`）・タグ（補足 `タグ`）・最近の commit（補足は `MM/DD HH:mm JST` の日時）
+    visible_when: リビジョンの切り替えを押したとき
+    source: リビジョンの一覧.branches[].name・リビジョンの一覧.tags[].name・リビジョンの一覧.commits[].commit・リビジョンの一覧.commits[].date
+    action: 開いたときにリビジョンの一覧を取り、行のクリックでそのリビジョンの同じ文書を開く
+    action_ref: dev/設計書/インターフェース定義/開発ドキュメントサーバー/リビジョンの一覧#
+  - name: 検索ボタン
+    kind: button
+    position: トップバー
+    description: 検索のポップオーバーを開く
+    label: 虫眼鏡のアイコンと `検索`、キーの表示 `/`
+    visible_when: 常時
+    action: クリックか `/` キーで検索のポップオーバーを開く
+    notes:
+      読み上げ名: '`検索`'
+  - name: 検索欄
+    kind: input
+    position: トップバー > 検索のポップオーバー
+    description: 検索する語
+    label: '`{配信元の ID} の文書を検索`'
+    type: 文字列
+    visible_when: 検索のポップオーバーを開いたとき
+    autofocus: true
+    constraints: 1〜200 文字
+    target: 画面の検索.q（開いているリビジョンを ref に渡す）
+    action: 入力で検索し、件数と結果を描き直す
+    action_ref: dev/設計書/インターフェース定義/開発ドキュメントサーバー/画面の検索#
+  - name: 検索の件数
+    kind: label
+    position: トップバー > 検索のポップオーバー
+    description: 一致した文書の数
+    label: '`{件数} 件`'
+    type: 数値
+    visible_when: 検索欄に語があるとき
+    source: 画面の検索.total_count
+  - name: 検索の結果
+    kind: list
+    position: トップバー > 検索のポップオーバー
+    description: 一致した文書と一致した箇所
+    label: 文書のパス（`{種類} / {名前}`）と、一致した箇所（語を強調）
+    visible_when: 検索欄に語があり、1 件以上一致したとき
+    source: 画面の検索.items[].path・画面の検索.items[].name・画面の検索.items[].snippets
+    action: クリックで開いているリビジョンのその文書を開く
+    action_ref: dev/設計書/インターフェース定義/開発ドキュメントサーバー/文書の画面#
+  - name: コメントのボタン
+    kind: button
+    position: トップバー
+    description: コメントのパネルを開閉する
+    label: 吹き出しのアイコンと溜めたコメントの数
+    type: 数値
+    visible_when: 常時
+    initial_value: ブラウザのタブに溜めたコメントの数（無ければ `0`）
+    action: クリックでコメントのパネルを開閉する
+    notes:
+      読み上げ名: '`コメント（{件数} 件）`。開閉を `aria-expanded` で伝える'
+  - name: 設定ボタン
+    kind: link
+    position: トップバー
+    description: 設定画面を開く
+    label: 歯車のアイコン
+    visible_when: 常時
+    action: クリックで設定画面を開く
+    action_ref: dev/設計書/インターフェース定義/開発ドキュメントサーバー/設定画面の表示#
+    notes:
+      読み上げ名: '`設定`'
+  - name: 明暗の切り替え
+    kind: button
+    position: トップバー
+    description: ライトとダークを切り替える
+    label: 半分を塗った円のアイコン
+    visible_when: 常時
+    action: クリックで明暗を切り替え、ブラウザに保存する（次に開いたときも当てる）
+    notes:
+      読み上げ名: '`明暗を切り替える`'
+  - name: 種類のタブ
+    kind: tab
+    position: トップバーの下
+    description: 配信元の文書の種類を選ぶ
+    label: 配信元の設定の文書の種類の名前（設定の並び順）
+    visible_when: 常時
+    initial_value: 開いている文書の種類を現在地（`aria-current="page"`）にする
+    source: 文書の画面.本文
+    action: クリックでそのタブのサイドバーの一番上の文書を開く（文書が無ければそのタブの空の画面）
+    action_ref: dev/設計書/インターフェース定義/開発ドキュメントサーバー/文書の画面#
+    notes:
+      件数: タブに件数は出さない
+  - name: サイドバーの見出し
+    kind: label
+    position: サイドバー
+    description: 選んでいるタブの名前
+    label: '`{タブ名}`'
+    visible_when: 常時
+    source: 文書の画面.本文
+  - name: サイドバーの文書
+    kind: link
+    position: サイドバー
+    description: 選んでいるタブの文書の一覧
+    label: 文書の名前
+    visible_when: タブに文書があるとき
+    initial_value: 開いている文書を現在地（`aria-current="page"`）にする
+    source: 文書の画面.本文
+    action: クリックで開いているリビジョンのその文書を開く
+    action_ref: dev/設計書/インターフェース定義/開発ドキュメントサーバー/文書の画面#
+    notes:
+      スマホ幅: サイドバーはドロワーにし、文書の一覧を開くボタンで開く
+  - name: パンくず
+    kind: nav
+    position: 本文の上
+    description: 開いている文書の階層
+    label: '`{配信元の ID}`（リビジョンを指定したときは `{配信元の ID}@{ref}`）/ `{タブ名}` / `{文書の名前}`'
+    visible_when: 常時（文書の無いタブでは `{配信元の ID}` / `{タブ名}`）
+    source: 文書の画面.本文
+    action: クリックでその階層を開く（末尾はリンクにしない）
+    action_ref: dev/設計書/インターフェース定義/開発ドキュメントサーバー/文書の画面#
+  - name: 文書のタイトル
+    kind: label
+    position: 本文の上
+    description: 文書の名前。文書の無いタブではタブ名
+    label: '`{変換した Markdown の最初の見出し}`'
+    visible_when: 常時
+    source: 文書の画面.本文
+  - name: 文書の情報
+    kind: label
+    position: 本文の上 > 文書のタイトルの下
+    description: 種類・更新日時・開いているリビジョン
+    label: 種類のバッジ、`更新 {MM/DD HH:mm JST}`、リビジョンを指定したときは `リビジョン {短い commit}`
+    visible_when: 文書があるとき
+    display_format: 更新日時は `MM/DD HH:mm JST`（例 `10/26 23:40 JST`）。`time` 要素の `datetime` に ISO 8601 を持つ
+    source: 文書の画面.本文
+  - name: 差分の案内
+    kind: banner
+    position: 本文の上 > 文書の情報の下
+    description: 差分を強調していることと、比べているリビジョン
+    label: '`{diff のリビジョン} から {開いているリビジョン} への変更を強調しています。`'
+    visible_when: '`diff` があり、Git で管理している配信元のとき'
+    source: 文書の画面.画面の状態
+  - name: 差分の強調を解除
+    kind: link
+    position: 差分の案内
+    description: 差分の強調をやめて通常の本文を開く
+    label: '`差分の強調を解除`'
+    visible_when: 差分の案内を出しているとき
+    action: クリックで `diff` を外した同じ文書を開く
+    action_ref: dev/設計書/インターフェース定義/開発ドキュメントサーバー/文書の画面#
+  - name: 変換の失敗
+    kind: section
+    component: dev/設計書/部品設計/エラーの囲み.html#
+    args:
+      - name: label
+        value: '`変換の失敗`'
+      - name: title
+        value: '`この文書を変換できませんでした`'
+      - name: rows
+        value: '`種類`（文書の種類）・`スクリプト`（変換のスクリプトのパス）・`原因`（制限時間の超過は `制限時間（{秒} 秒）を超えたため、スクリプトを止めました。`、異常終了は `終了コード {コード} で終わりました。` と標準エラーの末尾の行）。YAML を読めないときは `ファイル`・`場所`（`{行} 行 {列} 列`）・`原因`'
+      - name: next
+        value: '`スクリプトを修正して保存すると、次に開いたときに変換し直します。同じ配信元の他の文書は読めます。`（YAML を読めないときは `ファイルを修正して保存すると、次に開いたときに読み直します。同じ配信元の他の文書は読めます。`）'
+    position: 本文
+    description: 本文の代わりに、変換できなかった理由を出す
+    visible_when: 変換に失敗したとき・YAML を読めないとき
+    source: 文書の画面.本文の領域
+    notes:
+      読み上げ: 画面を開いたときに読み上げるよう、囲みに `role="alert"` を付ける
+  - name: 文書が無いことの表示
+    kind: label
+    position: 本文
+    description: 選んだタブに文書が無いこと
+    label: '`{タブ名}の文書はありません。`'
+    visible_when: タブに文書が無いとき
+  - name: 本文
+    kind: article
+    position: 本文
+    description: 変換した Markdown を mdmark で描いた文書の中身
+    visible_when: 文書があり、変換に成功したとき
+    source: 文書の画面.本文の領域
+    action: 本文の中のリンクのクリックで、開いているリビジョンを保ったその文書を開く（無い文書は見つからない画面）
+    action_ref: dev/設計書/インターフェース定義/開発ドキュメントサーバー/文書の画面#
+    notes:
+      差分: '`diff` があるときは、そのリビジョンから変わった行・表の行を mdmark の差分の表示で強調する'
+  - name: 表の件数
+    kind: label
+    position: 本文 > 表の上
+    description: 表の行数
+    label: '`{件数} 件`'
+    type: 数値
+    visible_when: 本文に配列を表にした表があるとき（表ごとに置く）
+    source: 文書の画面.本文の領域
+  - name: 列の表示ボタン
+    kind: button
+    position: 本文 > 表の上
+    description: 表の列のメニューを開く
+    label: 列のアイコンと `列の表示`
+    visible_when: 表の件数を出すとき
+    action: クリックで列のメニューを開く
+  - name: 列のメニュー
+    kind: menu
+    position: 本文 > 表の上 > 列の表示ボタン
+    description: 表に出す列を選ぶ
+    label: 見出し `表示する列`。列ごとのチェックボックスと、末尾に `既定に戻す`
+    type: 真偽値
+    visible_when: 列の表示ボタンを押したとき
+    initial_value: 表の列の設定で隠した列だけチェックを外した状態。先頭の列は外せない（非活性）
+    source: 文書の画面.画面の状態
+    target: 表の列の設定の保存.hidden（`table` はその表のキー）
+    action: チェックの切り替えでその列をその場で出し入れし、隠す列を保存する。`既定に戻す` は全ての列を出し、空の `hidden` を保存する
+    action_ref: dev/設計書/インターフェース定義/開発ドキュメントサーバー/表の列の設定の保存#
+  - name: 目次
+    kind: nav
+    position: 本文の右
+    description: 本文の見出しの一覧
+    label: 見出し `目次` と、本文の見出しを階層どおりに並べたリンク
+    visible_when: 本文があり、スマホ幅でないとき
+    source: 文書の画面.本文の領域
+    action: クリックでその見出しへ移る
+  - name: 本文の上の目次
+    kind: details
+    position: 本文の上
+    description: スマホ幅で本文の上に置く開閉できる目次
+    label: '`目次`'
+    visible_when: 本文があり、スマホ幅のとき
+    source: 文書の画面.本文の領域
+    action: クリックで開閉し、見出しのクリックでその見出しへ移る
+  - name: コメントを追加ボタン
+    kind: button
+    position: 本文 > 選んだ文字列の下
+    description: 選んだ文字列へのコメントを書き始める
+    label: '`コメントを追加`'
+    visible_when: 本文の文字列を選んだとき
+    action: クリックでコメントのパネルを開き、選んだ文字列と直前の見出しを入れた書く枠を出す
+    notes:
+      位置: 画面の右端にかかるときは内側へずらす
+  - name: コメントのパネルのタイトル
+    kind: label
+    position: コメントのパネル
+    description: パネルの見出し
+    label: '`コメント`'
+    visible_when: コメントのパネルを開いたとき
+  - name: コメントのパネルを閉じる
+    kind: button
+    position: コメントのパネル
+    description: パネルを閉じる
+    label: バツのアイコン
+    visible_when: コメントのパネルを開いたとき
+    action: クリックでパネルを閉じ、コメントのボタンへフォーカスを戻す
+    notes:
+      読み上げ名: '`閉じる`'
+  - name: すべて選択
+    kind: checkbox
+    position: コメントのパネル > 操作の列
+    description: 溜めたコメントをまとめて選ぶ
+    label: '`すべて選択（{選んだ数} / {全体の数}）`'
+    type: 真偽値
+    visible_when: 溜めたコメントがあるとき
+    initial_value: 全て選んでいればオン、一部なら途中の状態
+    action: 切り替えで全てのコメントの選択をそろえる
+  - name: Issue を起票
+    kind: button
+    position: コメントのパネル > 操作の列
+    description: 選んだコメントで GitHub の Issue を起票する
+    label: '`Issue を起票`'
+    visible_when: 溜めたコメントがあり、配信元の設定に GitHub のリポジトリがあるとき
+    source: 文書の画面.画面の状態
+    action: クリックで選んだコメントをコピーしてから、文書のパスとコメントを載せた GitHub の Issue の起票画面を別のタブで開く（ラベルは配信元の設定の起票のラベル）
+    notes:
+      長さ: URL が 8,000 文字を超えるときは本文の末尾を切り詰め、`…（長さの上限を超えたため、本文の末尾を切り詰めました。全文はクリップボードにコピーしています）` を付ける
+  - name: コピー
+    kind: button
+    position: コメントのパネル > 操作の列
+    description: 選んだコメントをまとめてクリップボードへコピーする
+    label: '`コピー`（プライマリ）'
+    visible_when: 溜めたコメントがあるとき
+    action: クリックで選んだコメントを一覧の順に、場所・引用・本文をまとめてコピーし、結果を通知で出す
+  - name: コメントの選択
+    kind: checkbox
+    position: コメントのパネル > コメント
+    description: コピー・起票に含めるか
+    type: 真偽値
+    visible_when: 溜めたコメントごと
+    initial_value: 追加したときはオン
+    action: 切り替えでそのコメントの選択を変える
+    notes:
+      読み上げ名: '`選択`'
+  - name: コメントの場所
+    kind: label
+    position: コメントのパネル > コメント
+    description: コメントした文書と直前の見出し
+    label: '`{文書のパス} › {見出し}`（見出しが無いときは `{文書のパス}`）'
+    visible_when: 溜めたコメントごと・書く枠
+  - name: 見出しへ移動
+    kind: button
+    position: コメントのパネル > コメント
+    description: コメントした見出しへ本文を移す
+    label: 矢印のアイコン
+    visible_when: 溜めたコメントごと
+    action: クリックでその見出しへ本文をスクロールする
+    notes:
+      読み上げ名: '`見出しへ移動`'
+  - name: コメントの引用
+    kind: label
+    position: コメントのパネル > コメント
+    description: 選んだ文字列
+    label: 選んだ文字列（30 文字を超えるときは先頭と末尾の 12 文字ずつを `…` でつなぐ）
+    visible_when: 溜めたコメントごと・書く枠
+  - name: コメントの本文
+    kind: label
+    position: コメントのパネル > コメント
+    description: 書いたコメント
+    visible_when: 溜めたコメントごと（修正中はコメントの入力欄）
+  - name: 修正
+    kind: button
+    position: コメントのパネル > コメント
+    description: コメントの本文を修正する
+    label: '`修正`'
+    visible_when: 溜めたコメントごと（修正中を除く）
+    action: クリックで本文を入力欄に替え、`キャンセル`・`保存` を出す
+  - name: 削除
+    kind: button
+    position: コメントのパネル > コメント
+    description: コメントを削除する
+    label: '`削除`'
+    visible_when: 溜めたコメントごと（修正中を除く）
+    action: クリックでそのコメントを削除する
+  - name: コメントの入力欄
+    kind: textarea
+    position: コメントのパネル > 書く枠・修正中のコメント
+    description: コメントの本文
+    type: 文字列
+    visible_when: 書く枠を出したとき・修正中
+    required: true
+    autofocus: true
+    initial_value: 書く枠は空、修正中はそのコメントの本文
+    notes:
+      読み上げ名: '`コメント`'
+      置き場所: コメントはブラウザのタブの中だけに溜め、サーバーへは送信しない
+  - name: コメントのキャンセル
+    kind: button
+    position: コメントのパネル > 書く枠・修正中のコメント
+    description: 書きかけ・修正を捨てる
+    label: '`キャンセル`'
+    visible_when: 書く枠を出したとき・修正中
+    action: クリックで書く枠を閉じる（修正中は元の本文に戻す）
+  - name: コメントの追加・保存
+    kind: button
+    position: コメントのパネル > 書く枠・修正中のコメント
+    description: コメントを溜める
+    label: 書く枠は `追加`、修正中は `保存`（プライマリ）
+    visible_when: 書く枠を出したとき・修正中
+    action: クリックでコメントをブラウザのタブに溜め、一覧とコメントのボタンの数を描き直す
+  - name: コメントが無いことの表示
+    kind: label
+    position: コメントのパネル
+    description: 溜めたコメントが無いこと
+    label: '`コメントはありません`'
+    visible_when: 溜めたコメントも書く枠も無いとき
+  - name: 通知
+    kind: toast
+    position: 画面の下
+    description: コピー・起票の結果
+    label: '`コピーしました` / `コピーできませんでした` / `コメントを選択してください`'
+    visible_when: コピー・Issue を起票を押したとき（選んだコメントが無ければ `コメントを選択してください`）
+    notes:
+      消え方: 2.4 秒で消える。`role="status"` で読み上げる
+screen: src/dev_docs/server/templates/doc_view.html
+mock: dev/mock/pages/doc-view/12/default/
+lead: '`/{配信元の ID}[@{ref}]/{パス}[?diff={ref}]` で、1 文書の本文を目次・タブ・サイドバーと一緒に読む画面。本文の文字列にコメントを溜め、まとめてコピー・起票できる。'
+input_checks:
+  - element: コメントの入力欄
+    violation: 空白だけか空
+    trigger: コメントの追加・保存のクリック
+    message: '`コメントを入力してください`'
+    position: 入力欄の下
