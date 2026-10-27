@@ -7,6 +7,7 @@ from collections import OrderedDict
 from typing import Literal
 
 from dev_docs.features.access.types import Target
+from dev_docs.features.documents.loader import document_text
 from dev_docs.features.documents.store import DocumentStore
 from dev_docs.features.documents.types import Document
 from dev_docs.features.validation.rules import (
@@ -18,18 +19,10 @@ from dev_docs.features.validation.rules import (
 from dev_docs.features.validation.scripts import parse_validator_output
 from dev_docs.integrations.scripts import ScriptError, run_script
 from dev_docs.shared.errors import Violation
-from dev_docs.shared.yaml_io import dump_roundtrip
 
 VALIDATOR_ON_READ_CACHE = 4096
 
 __all__ = ["VALIDATOR_ON_READ_CACHE", "DocumentChecker", "run_script"]
-
-
-def _script_input(document: Document, kind_type: str) -> str:
-    """検査のスクリプトの標準入力（YAML は本文、Markdown は front matter を付けた全文）。"""
-    if kind_type == "yaml" or not document.data:
-        return document.body
-    return f"---\n{dump_roundtrip(document.data)}---\n{document.body}"  # type: ignore[arg-type]
 
 
 class DocumentChecker:
@@ -42,7 +35,7 @@ class DocumentChecker:
         self._lock = threading.Lock()
 
     def _run_validator(
-        self, target: Target, document: Document, validator_id: str, kind_type: str
+        self, target: Target, document: Document, validator_id: str
     ) -> tuple[list[Violation], bool]:
         """検査のスクリプト 1 つを動かし、違反と、動かせたかを返す。"""
         entry = target.source.script("validators", validator_id)
@@ -50,7 +43,7 @@ class DocumentChecker:
             result = run_script(
                 entry.run,
                 cwd=target.base,
-                stdin=_script_input(document, kind_type),
+                stdin=document_text(document),
                 timeout_sec=self.timeout_sec,
             )
         except ScriptError as error:
@@ -92,7 +85,7 @@ class DocumentChecker:
                 if cached is not None:
                     violations.extend(cached)
                     continue
-            found, ran = self._run_validator(target, document, validator_id, table.type)
+            found, ran = self._run_validator(target, document, validator_id)
             violations.extend(found)
             # 動かせなかった結果は控えない
             if on == "read" and ran:

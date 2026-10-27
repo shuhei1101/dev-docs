@@ -18,6 +18,7 @@ from dev_docs.shared.yaml_io import YamlLoadError, dump_roundtrip, load_yaml
 
 SKIP_DIRS = frozenset({".git", "node_modules", "__pycache__", ".venv"})
 FRONT_MATTER_FENCE = "---"
+YAML_SUFFIXES = (".yaml", ".yml")
 
 
 def collect_files(root: Path, patterns: Sequence[str]) -> list[str]:
@@ -63,6 +64,13 @@ def split_front_matter(text: str, *, file: str | None = None) -> tuple[dict[str,
     if not isinstance(data, dict):
         raise YamlLoadError("front matter が辞書ではありません", file=file)
     return data, "".join(lines[closing + 1 :])
+
+
+def document_text(document: Document) -> str:
+    """文書のファイルの内容（YAML は本文、Markdown は front matter を付けた全文）を返す。"""
+    if PurePosixPath(document.path).suffix in YAML_SUFFIXES or not document.data:
+        return document.body
+    return f"{FRONT_MATTER_FENCE}\n{dump_roundtrip(document.data)}{FRONT_MATTER_FENCE}\n{document.body}"  # type: ignore[arg-type]
 
 
 def _as_datetime(value: Any) -> datetime | None:

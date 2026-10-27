@@ -22,7 +22,9 @@ class SessionKey:
     @classmethod
     def of(cls, session_id: str | None, agent_id: str | None) -> SessionKey | None:
         """ツールの引数から会話キーを作る。"""
-        raise NotImplementedError
+        if not session_id:
+            return None
+        return cls(session_id, agent_id or "")
 
 
 @dataclass(frozen=True)
