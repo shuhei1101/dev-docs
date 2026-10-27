@@ -288,6 +288,12 @@ response:
     type: str
     description: git と同じ `+`・`-` の差分の行
     notes: '`view: full` のときだけ'
+  - name: truncated
+    type: bool
+    description: '`max_chars` で打ち切ったか'
+  - name: notes
+    type: list[str]
+    description: 丸めた・打ち切った知らせと次の手
 response_example: |-
   ```markdown
   sample: 3f2a9c1（2026-10-26 10:00）→ 8b1d4e0（2026-10-26 11:30）・変わった文書 1 件
@@ -321,6 +327,9 @@ constraints:
     constraint: '`search_docs` が `state_dir` に記録した、文書ごとの最後に返した内容と比べる。`/clear`・圧縮の後はフックが記録を捨てる'
   - item: タイムアウト
     constraint: 制限なし
+  - item: 配信元・ワークツリーの解決
+    constraint: '`search_docs` と同じ（配信していない配信元・当たらないワークツリーのエラーも同じ）'
+    notes: 共通の処理で解決するため、結合テストは [文書の検索](./文書の検索.yaml) が持つ
 refs:
   - dev/設計書/シナリオ/単一ユースケース/変更をレビューする#scenarios[正常シナリオ]
   - dev/設計書/シナリオ/単一ユースケース/変更をレビューする#scenarios[正常シナリオ（前回読んだ時点から）]

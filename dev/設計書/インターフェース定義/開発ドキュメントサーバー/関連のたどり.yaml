@@ -348,6 +348,9 @@ constraints:
     constraint: '`readOnlyHint: true`'
   - item: タイムアウト
     constraint: 制限なし
+  - item: 配信元・ワークツリーの解決
+    constraint: '`search_docs` と同じ（配信していない配信元・当たらないワークツリーのエラーも同じ）'
+    notes: 共通の処理で解決するため、結合テストは [文書の検索](./文書の検索.yaml) が持つ
 refs:
   - dev/設計書/シナリオ/単一ユースケース/エージェントが調べる#scenarios[正常シナリオ]
   - dev/設計書/シナリオ/単一ユースケース/エージェントが調べる#scenarios[正常シナリオ（同じ本文を 2 回取る）]
