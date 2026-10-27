@@ -2,23 +2,212 @@
 
 from __future__ import annotations
 
-from collections.abc import Mapping, Sequence
-from datetime import date
+import difflib
+import re
+import unicodedata
+from collections.abc import Callable, Mapping, Sequence
+from datetime import UTC, date, datetime, timedelta
 from typing import Any
 
 from dev_docs.features.documents.types import Document
+from dev_docs.features.search.fields import as_datetime, field_values
 from dev_docs.features.search.types import Condition, Group, SearchRequest
 from dev_docs.shared.errors import Violation
 
+COMPARE_OPS = ("gt", "gte", "lt", "lte")
+NO_VALUE_OPS = ("exists", "not_exists")
+RELATIVE_DAYS = re.compile(r"^(?P<sign>[+-])(?P<days>\d+)d$")
+CLOSE_FIELDS = 3
 
-def check_filter(request: SearchRequest, fields: Mapping[str, str]) -> list[Violation]:
-    """条件・並べ替え・集計の項目と値が使えるかを確かめる。"""
-    raise NotImplementedError
+
+def normalize(text: str) -> str:
+    """NFKC と `casefold` をした文字列にする。"""
+    return unicodedata.normalize("NFKC", text).casefold()
+
+
+def _midnight(day: date) -> datetime:
+    """日付の 0 時（UTC）にする。"""
+    return datetime(day.year, day.month, day.day, tzinfo=UTC)
 
 
 def parse_compare_value(value: str, field_type: str, *, today: date) -> Any:
     """条件の値を項目の型で解釈する。"""
-    raise NotImplementedError
+    try:
+        if field_type == "date":
+            if value == "today":
+                return _midnight(today)
+            if relative := RELATIVE_DAYS.match(value):
+                days = int(relative.group("days"))
+                return _midnight(
+                    today + timedelta(days=days if relative.group("sign") == "+" else -days)
+                )
+            parsed = datetime.fromisoformat(value)
+            return parsed if parsed.tzinfo else parsed.replace(tzinfo=UTC)
+        if field_type == "number":
+            return float(value)
+    except ValueError as error:
+        raise ValueError(f"{value} を {field_type} として読めません") from error
+    return value
+
+
+def _walk(node: Condition | Group, path: str) -> list[tuple[str, Condition | Group]]:
+    """条件の木をたどり、(引数のパス, 節) を上から並べる。"""
+    nodes: list[tuple[str, Condition | Group]] = [(path, node)]
+    if isinstance(node, Group):
+        for key, children in (("and", node.all_of), ("or", node.any_of)):
+            for index, child in enumerate(children or []):
+                nodes.extend(_walk(child, f"{path}.{key}[{index}]"))
+    return nodes
+
+
+def _unknown_field(path: str, field: str, fields: Mapping[str, str]) -> Violation:
+    """知らない項目の違反を、近い項目を添えて作る。"""
+    close = difflib.get_close_matches(field, list(fields), n=CLOSE_FIELDS)
+    fix = f"近い項目: {', '.join(close)}" if close else "describe で使える項目を見てください"
+    return Violation(path=path, rule=f"知らない項目です（{field}）", fix=fix)
+
+
+def _check_condition(condition: Condition, path: str, fields: Mapping[str, str]) -> list[Violation]:
+    """条件 1 つの項目と値を確かめる。"""
+    violations: list[Violation] = []
+    if condition.field not in fields:
+        violations.append(_unknown_field(f"{path}.field", condition.field, fields))
+    if condition.op in NO_VALUE_OPS:
+        return violations
+    if not condition.values:
+        violations.append(
+            Violation(
+                path=f"{path}.values",
+                rule="値が 1 つ以上要ります",
+                fix="values に値を渡してください",
+            )
+        )
+    for index, value in enumerate(condition.values):
+        if condition.op == "regex":
+            try:
+                re.compile(value)
+            except re.error as error:
+                violations.append(
+                    Violation(
+                        path=f"{path}.values[{index}]", rule=f"正規表現として読めません（{error}）"
+                    )
+                )
+        elif condition.op in COMPARE_OPS and condition.field in fields:
+            try:
+                parse_compare_value(value, fields[condition.field], today=date.today())  # noqa: DTZ011
+            except ValueError as error:
+                violations.append(
+                    Violation(
+                        path=f"{path}.values[{index}]",
+                        rule=str(error),
+                        fix=f"{fields[condition.field]} の値にしてください",
+                    )
+                )
+    return violations
+
+
+def check_filter(request: SearchRequest, fields: Mapping[str, str]) -> list[Violation]:
+    """条件・並べ替え・集計の項目と値が使えるかを確かめる。"""
+    violations: list[Violation] = []
+    if request.filter is not None:
+        for path, node in _walk(request.filter, "filter"):
+            if isinstance(node, Condition):
+                violations.extend(_check_condition(node, path, fields))
+            elif (node.all_of is None) == (node.any_of is None):
+                violations.append(
+                    Violation(
+                        path=path,
+                        rule="and か or のどちらか 1 つだけを持ってください",
+                        fix="条件を and か or の中に並べてください",
+                    )
+                )
+    for index, key in enumerate(request.order_by):
+        if key.field not in fields:
+            violations.append(_unknown_field(f"order_by[{index}].field", key.field, fields))
+    if request.group_by is not None and request.group_by not in fields:
+        violations.append(_unknown_field("group_by", request.group_by, fields))
+    return violations
+
+
+def _text(value: Any) -> str:
+    """比べる値を文字列にする。"""
+    if isinstance(value, datetime):
+        return value.isoformat()
+    if isinstance(value, bool):
+        return "true" if value else "false"
+    return str(value)
+
+
+def _comparable(value: Any, field_type: str) -> Any:
+    """文書の値を項目の型にそろえる（そろえられなければ `None`）。"""
+    try:
+        if field_type == "date":
+            parsed = as_datetime(value)
+            if parsed is None:
+                return None
+            return parsed if parsed.tzinfo else parsed.replace(tzinfo=UTC)
+        if field_type == "number":
+            return float(value)
+    except TypeError, ValueError:
+        return None
+    return _text(value)
+
+
+def _test(
+    condition: Condition, values: list[Any], expected: str, field_type: str, today: date
+) -> bool:
+    """比べる値 1 つが、文書の値の並びのどれかに当たるかを返す。"""
+    op = condition.op
+    fold: Callable[[str], str] = (lambda text: text) if condition.case_sensitive else normalize
+    if op == "regex":
+        flags = 0 if condition.case_sensitive else re.IGNORECASE
+        pattern = re.compile(expected if condition.case_sensitive else normalize(expected), flags)
+        return any(pattern.search(fold(_text(value))) for value in values)
+    if op in COMPARE_OPS:
+        target = parse_compare_value(expected, field_type, today=today)
+        for value in values:
+            current = _comparable(value, field_type)
+            if current is None:
+                continue
+            if (
+                (op == "gt" and current > target)
+                or (op == "gte" and current >= target)
+                or (op == "lt" and current < target)
+                or (op == "lte" and current <= target)
+            ):
+                return True
+        return False
+    wanted = fold(expected)
+    texts = [fold(_text(value)) for value in values]
+    positive = (
+        op
+        if op in ("eq", "prefix", "suffix", "contains")
+        else {"ne": "eq", "not_contains": "contains"}[op]
+    )
+    checks: dict[str, Callable[[str], bool]] = {
+        "eq": lambda text: text == wanted,
+        "prefix": lambda text: text.startswith(wanted),
+        "suffix": lambda text: text.endswith(wanted),
+        "contains": lambda text: wanted in text,
+    }
+    found = any(checks[positive](text) for text in texts)
+    return not found if op in ("ne", "not_contains") else found
+
+
+def _match_condition(
+    condition: Condition, document: Document, fields: Mapping[str, str], today: date
+) -> bool:
+    """条件 1 つに当たるかを判定する。"""
+    values = field_values(document, condition.field)
+    if condition.op == "exists":
+        return bool(values)
+    if condition.op == "not_exists":
+        return not values
+    field_type = fields.get(condition.field, "string")
+    results = (
+        _test(condition, values, expected, field_type, today) for expected in condition.values
+    )
+    return all(results) if condition.match == "all" else any(results)
 
 
 def match_filter(
@@ -29,16 +218,42 @@ def match_filter(
     today: date,
 ) -> bool:
     """文書が条件の木に当たるかを判定する。"""
-    raise NotImplementedError
+    if node is None:
+        return True
+    if isinstance(node, Group):
+        if node.all_of is not None:
+            return all(
+                match_filter(child, document, fields=fields, today=today) for child in node.all_of
+            )
+        if node.any_of is not None:
+            return any(
+                match_filter(child, document, fields=fields, today=today) for child in node.any_of
+            )
+        return True
+    return _match_condition(node, document, fields, today)
 
 
 def match_words(document: Document, words: Sequence[str]) -> bool:
     """空白で区切った語を全て含む文書かを判定する。"""
-    raise NotImplementedError
+    haystack = "\n".join(
+        normalize(_text(value)) for value in [*field_values(document, "*"), document.id]
+    )
+    return all(word in haystack for word in words)
 
 
 def snippet_lines(
     text: str, words: Sequence[str], *, context_lines: int, max_count: int
 ) -> list[str]:
     """本文から語を含む行と前後の行を抜き出す。"""
-    raise NotImplementedError
+    lines = text.splitlines()
+    hits = [
+        index for index, line in enumerate(lines) if any(word in normalize(line) for word in words)
+    ]
+    ranges: list[list[int]] = []
+    for index in hits:
+        start, end = max(index - context_lines, 0), min(index + context_lines, len(lines) - 1)
+        if ranges and start <= ranges[-1][1]:
+            ranges[-1][1] = max(ranges[-1][1], end)
+        else:
+            ranges.append([start, end])
+    return ["\n".join(lines[start : end + 1]) for start, end in ranges[:max_count]]

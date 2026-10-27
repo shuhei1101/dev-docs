@@ -104,6 +104,8 @@ class SearchItem:
     source: str | None
     values: dict[str, Any]
     snippets: list[str] = field(default_factory=list)
+    # 本文の描き方（Markdown の文書はそのまま、YAML の文書はコードブロック）を決める。JSON には出さない
+    markdown: bool = field(default=False, metadata={"internal": True})
 
 
 @dataclass(frozen=True)
