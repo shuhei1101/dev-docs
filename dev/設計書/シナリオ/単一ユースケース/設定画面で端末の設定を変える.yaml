@@ -140,7 +140,7 @@ scenarios:
         actor U as 利用者
         participant UI as dev-docs の画面
 
-        U->>UI: 配信元を追加し、id を Sample Docs、scope.read を空で保存する
+        U->>UI: 配信元を追加し、id を Sample Docs、scope.read に空の行を含めて保存する
         UI->>UI: 追加した後の端末の設定をスキーマで検証して失敗する
         UI-->>U: 違反したキーと理由
       ```
