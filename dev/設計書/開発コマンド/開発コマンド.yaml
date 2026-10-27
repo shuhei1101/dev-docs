@@ -30,7 +30,17 @@ categories:
       date: '2026-10-25'
       detail: 作業ツリーの外の一時コピーで追加・開発用の追加・削除を実行し、終了コード 0 で `pyproject.toml` と `uv.lock` が更新されることを確かめた。
   - name: 起動・停止
-    commands: 未確定
+    prerequisites:
+      - 取り込み後の追従（pull 後）を流してある
+      - 端末の設定（既定 `~/.config/dev-docs/settings.yaml`。別の場所は環境変数 `DEV_DOCS_CONFIG` で渡す）がある
+    commands: |-
+      ```bash
+      uv run dev-docs serve
+      ```
+    effects: 127.0.0.1 の `DEV_DOCS_PORT`（既定 8781）で待ち受け、止めるまで終わらない。実行している端末で Ctrl+C を押すと止まる。ポートが使用中のときは終了コード 3、端末の設定が無いか違反するときは終了コード 2 で終わる。
+    verification:
+      state: 未確認
+      detail: '`dev-docs serve` はこの作業 PR の実装で追加するサブコマンドで、今の入口（`src/dev_docs/__main__.py`）には無く走らせられない。実装の担当が走らせて確かめる。'
   - name: テスト
     refs:
       - dev/設計書/テスト/テスト実行方法#
@@ -38,7 +48,16 @@ categories:
     refs:
       - dev/設計書/テスト/テスト実行方法#layers[lint]
   - name: ビルド・生成
-    commands: 未確定
+    prerequisites:
+      - Node.js と typescript（`package.json` の devDependencies）が入っている
+    commands: |-
+      ```bash
+      npx tsc -p tsconfig.build.json
+      ```
+    effects: '`src/dev_docs/server/static/*.ts` を同じフォルダの `.js` に変換する。生成した `.js` はコミットする。'
+    verification:
+      state: 未確認
+      detail: '`package.json`・`tsconfig.build.json` と変換元の `.ts` はこの作業 PR の実装で追加するため、今は走らせられない。実装の担当が走らせて確かめる。'
   - name: 取り込み前の検査
     commands: 未確定
   - name: 管理作業
