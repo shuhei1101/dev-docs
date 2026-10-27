@@ -297,6 +297,34 @@ scenarios:
       - 応答が 404 で、本文に `broken` を配信していないことと、起動時の検証で外した理由（`documents[0]` に必須のキー `paths` が無い）が出る
       - 配信元の切り替えに sample が出て、設定画面 `/_settings/` へのリンクがある
     test: test_error_when_source_not_served
+  - name: 正常シナリオ（Issue の本文が長い）
+    setup:
+      - name: Mock
+        description: なし（実環境で実行。クリップボードを読めるブラウザで開き、GitHub の画面は開いた URL だけを確かめる）
+      - name: GitHub のリポジトリを持つ配信元
+        description: 正常シナリオ（コメントで Issue を作成する）と同じ sample
+      - name: 長いコメント
+        description: まとめた本文を載せると、作成画面の URL が非機能要件の URL の長さの上限を超えるコメント
+        notes: 上限を 1 文字以上超える長さにする
+      - name: dev-docs
+        description: sample を配信している dev-docs
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        actor U as 利用者
+        participant UI as dev-docs の画面
+        participant GH as GitHub の Issue の作成画面
+
+        U->>UI: 長いコメントを選んで Issue を作成する
+        UI->>UI: まとめた全文をクリップボードに書く
+        UI->>UI: URL が上限に収まるまで本文の末尾を切り詰め、切り詰めたことを書き添える
+        UI->>GH: 別のタブで作成画面を開く
+      ```
+    expected:
+      - 開いた URL の長さが上限以下
+      - '`body` がまとめた全文の先頭から始まり、末尾に切り詰めたことと全文をクリップボードにコピーしたことがある'
+      - クリップボードの文字列が、切り詰めていない全文
+    test: test_normal_when_issue_body_truncated
 lead: 利用者がブラウザで `/{配信元の id}/` を開き、タブ・サイドバー・検索・リビジョンの切り替えで配信元の文書を読む。
 issue: 3
 primary_actor: 利用者
