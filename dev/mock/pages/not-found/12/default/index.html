@@ -21,7 +21,7 @@
   <script type="module" src="../../../../refs/12/assets/mock.js"></script>
 </head>
 <body>
-  <!-- モック専用の操作列（モックの階層・案・状態の切り替え） -->
+  <!-- モック専用の操作列（モックの階層・状態の切り替え） -->
   <nav class="mockbar" aria-label="モックの操作">
     <span class="mockbar__crumbs"><a href="../../../">pages</a> / <a href="../../">not-found</a> / <a href="../">12</a> / default</span>
     <span class="mockbar__divider"></span>
@@ -35,26 +35,27 @@
   </nav>
   <!-- トップバー -->
   <header class="topbar">
-    <a class="topbar__brand" href="../../../source-list/12/a-source-list/index.html">dev-docs</a>
+    <a class="topbar__brand" href="../../../doc-view/12/default/index.html">dev-docs</a>
 
     <!-- 配信元の切り替え -->
-    <button class="select-button" data-states="doc revision" type="button" commandfor="source-menu" command="toggle-popover" aria-label="配信元を切り替える">
+    <button class="select-button" type="button" commandfor="source-menu" command="toggle-popover" aria-label="配信元を切り替える">
       <svg aria-hidden="true" viewBox="0 0 16 16" width="16" height="16"><path d="M2 2.5A1.5 1.5 0 0 1 3.5 1h9A1.5 1.5 0 0 1 14 2.5v11a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 2 13.5zm1.5 0v11h9v-11zM5 4h6v1.5H5zm0 3h6v1.5H5z"/></svg>
-      <span>sample</span>
+      <span class="select-button__label" data-states="doc revision">sample</span>
+      <span class="select-button__label" data-states="source">配信元を選ぶ</span>
       <svg class="select-button__chevron" aria-hidden="true" viewBox="0 0 16 16" width="12" height="12"><path d="M3.2 5.7 8 10.5l4.8-4.8-1.06-1.06L8 8.38 4.26 4.64z"/></svg>
     </button>
     <div id="source-menu" class="menu" popover>
       <p class="menu__heading">配信元</p>
-      <a class="menu__item is-current" href="../../../doc-index/12/default/index.html" aria-current="true"><span>sample</span><span class="menu__note">読み書き</span></a>
-      <a class="menu__item" href="../../../doc-index/12/default/index.html"><span>notes</span><span class="menu__note">読み取りだけ</span></a>
-      <a class="menu__item" href="../../../source-list/12/a-source-list/index.html"><span>配信元の一覧</span></a>
+      <a class="menu__item" href="../../../doc-view/12/default/index.html"><span>sample</span><span class="menu__note">読み書き</span></a>
+      <a class="menu__item" href="../../../doc-view/12/default/index.html?state=comments-local"><span>notes</span><span class="menu__note">Git 管理外</span></a>
+      <a class="menu__item" href="../../../settings/12/default/index.html"><span>設定</span></a>
     </div>
 
-    <!-- リビジョンの切り替え -->
+    <!-- リビジョンの切り替え（Git 管理外の配信元では出さない） -->
     <button class="select-button" data-states="doc revision" type="button" commandfor="revision-menu" command="toggle-popover" aria-label="リビジョンを切り替える">
       <svg aria-hidden="true" viewBox="0 0 16 16" width="16" height="16"><path d="M5 3.25a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0M3.5 5.37a2.25 2.25 0 1 1 1.5 0v.63c0 .55.45 1 1 1h4c.17 0 .34.03.5.08V5.37a2.25 2.25 0 1 1 1.5 0V8.5A2.5 2.5 0 0 1 10 11H6c-.17 0-.34-.03-.5-.08v.71a2.25 2.25 0 1 1-1.5 0zm8.5-1.37a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5M4.25 13.5a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5"/></svg>
-      <span class="mono" data-states="doc">作業ツリー</span>
-      <span class="mono" data-states="revision">no-such-branch</span>
+      <span class="select-button__label mono" data-states="doc">作業ツリー</span>
+      <span class="select-button__label mono" data-states="revision">no-such-branch</span>
       <svg class="select-button__chevron" aria-hidden="true" viewBox="0 0 16 16" width="12" height="12"><path d="M3.2 5.7 8 10.5l4.8-4.8-1.06-1.06L8 8.38 4.26 4.64z"/></svg>
     </button>
     <div id="revision-menu" class="menu menu--wide" popover>
@@ -85,12 +86,15 @@
       </ul>
     </div>
 
+    <!-- 設定画面を開く -->
+    <a class="icon-button" href="../../../settings/12/default/index.html" aria-label="設定">
+      <svg aria-hidden="true" viewBox="0 0 16 16" width="16" height="16"><path d="M8 0c.24 0 .47.01.7.03.74.07 1.29.62 1.46 1.26l.29 1.11c.02.07.08.16.21.22.23.12.45.24.67.39.12.08.23.09.3.07l1.1-.3c.64-.18 1.39.02 1.82.63.27.38.5.79.7 1.22.32.67.11 1.42-.36 1.89l-.81.8c-.05.05-.1.15-.09.3a6 6 0 0 1 0 .77c-.01.15.04.25.09.3l.81.8c.47.47.68 1.22.36 1.89-.2.43-.43.84-.7 1.22-.43.61-1.18.81-1.82.63l-1.1-.3c-.07-.02-.18-.01-.3.07-.22.15-.44.27-.67.39-.13.06-.19.15-.21.22l-.29 1.11c-.17.64-.72 1.19-1.46 1.26a8 8 0 0 1-1.4 0c-.74-.07-1.29-.62-1.46-1.26l-.29-1.11c-.02-.07-.08-.16-.21-.22a5.7 5.7 0 0 1-.67-.39c-.12-.08-.23-.09-.3-.07l-1.1.3c-.64.18-1.39-.02-1.82-.63a8 8 0 0 1-.7-1.22c-.32-.67-.11-1.42.36-1.89l.81-.8c.05-.05.1-.15.09-.3a6 6 0 0 1 0-.77c.01-.15-.04-.25-.09-.3l-.81-.8C.64 6.05.43 5.3.75 4.62c.2-.43.43-.84.7-1.22.43-.61 1.18-.81 1.82-.63l1.1.3c.07.02.18.01.3-.07.22-.15.44-.27.67-.39.13-.06.19-.15.21-.22l.29-1.11C6.01.65 6.56.1 7.3.03 7.53.01 7.76 0 8 0m-.57 1.53c-.04 0-.11.04-.14.15l-.29 1.1c-.15.56-.55.97-1 1.19q-.26.13-.5.29c-.42.28-.97.42-1.53.27l-1.1-.3c-.11-.03-.18.02-.2.05-.22.31-.41.64-.57.99-.01.03-.02.11.06.19l.81.81c.41.4.56.95.53 1.45a5 5 0 0 0 0 .58c.03.5-.12 1.05-.53 1.46l-.81.8c-.08.08-.07.16-.06.19.16.35.35.68.57.99.02.03.09.08.2.05l1.1-.3c.56-.15 1.11-.01 1.53.27q.24.16.5.29c.45.22.85.63 1 1.19l.29 1.1c.03.11.1.15.14.15a7 7 0 0 0 1.14 0c.04 0 .11-.04.14-.15l.29-1.1c.15-.56.55-.97 1-1.19q.26-.13.5-.29c.42-.28.97-.42 1.53-.27l1.1.3c.11.03.18-.02.2-.05.22-.31.41-.64.57-.99.01-.03.02-.11-.06-.19l-.81-.81c-.41-.4-.56-.95-.53-1.45a5 5 0 0 0 0-.58c-.03-.5.12-1.05.53-1.46l.81-.8c.08-.08.07-.16.06-.19a6.5 6.5 0 0 0-.57-.99c-.02-.03-.09-.08-.2-.05l-1.1.3c-.56.15-1.11.01-1.53-.27a4 4 0 0 0-.5-.29c-.45-.22-.85-.63-1-1.19l-.29-1.1c-.03-.11-.1-.14-.14-.15a7 7 0 0 0-1.14 0M11 8a3 3 0 1 1-6 0 3 3 0 0 1 6 0M9.5 8a1.5 1.5 0 1 0-3 0 1.5 1.5 0 0 0 3 0"/></svg>
+    </a>
 
     <!-- 明暗の切り替え -->
     <button class="icon-button" type="button" id="scheme-toggle" aria-label="明暗を切り替える" aria-pressed="false">
       <svg aria-hidden="true" viewBox="0 0 16 16" width="16" height="16"><path d="M8 1.5a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13M8 3a5 5 0 0 1 0 10z"/></svg>
     </button>
-
   </header>
   <div class="layout layout--single">
     <main class="content">
@@ -105,7 +109,8 @@
           </dl>
         </section>
         <ul class="next-links">
-          <li><a href="../../../doc-index/12/default/index.html">sample のトップ</a></li>
+          <li><a href="../../../doc-view/12/default/index.html">sample のトップ</a></li>
+          <li><a href="../../../settings/12/default/index.html">設定</a></li>
         </ul>
       </div>
 
@@ -118,7 +123,8 @@
           </dl>
         </section>
         <ul class="next-links">
-          <li><a href="../../../doc-index/12/default/index.html">sample のトップ（作業ツリー）</a></li>
+          <li><a href="../../../doc-view/12/default/index.html">sample のトップ（作業ツリー）</a></li>
+          <li><a href="../../../settings/12/default/index.html">設定</a></li>
         </ul>
       </div>
 
@@ -131,7 +137,7 @@
           </dl>
         </section>
         <ul class="next-links">
-          <li><a href="../../../source-list/12/a-source-list/index.html">配信元の一覧</a></li>
+          <li><a href="../../../settings/12/default/index.html">設定で配信元を確かめる</a></li>
         </ul>
       </div>
     </main>

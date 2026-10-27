@@ -1,0 +1,245 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <!-- 狭い幅でも等倍で描く -->
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <!-- ライトとダークの両方に対応することを描画の前にブラウザへ伝える -->
+  <meta name="color-scheme" content="light dark">
+  <title>設定 | dev-docs</title>
+  <!-- 利用者が固定した明暗を、描画の前に当てる -->
+  <script>
+    {
+      const scheme = localStorage.getItem("dev-docs-color-scheme");
+      if (scheme) {
+        document.querySelector('meta[name="color-scheme"]').content = scheme;
+        document.documentElement.dataset.scheme = scheme;
+      }
+    }
+  </script>
+  <link rel="stylesheet" href="../../../../assets/style.css">
+  <script type="module" src="../../../../refs/12/assets/mock.js"></script>
+</head>
+<body>
+  <!-- モック専用の操作列（モックの階層・状態の切り替え） -->
+  <nav class="mockbar" aria-label="モックの操作">
+    <span class="mockbar__crumbs"><a href="../../../">pages</a> / <a href="../../">settings</a> / <a href="../">12</a> / default</span>
+    <span class="mockbar__divider"></span>
+    <span class="mockbar__label">状態</span>
+    <a class="mockbar__tab" href="?state=list" data-state="list">通常</a>
+    <a class="mockbar__tab" href="?state=add" data-state="add">配信元の追加</a>
+    <a class="mockbar__tab" href="?state=edit" data-state="edit">編集</a>
+    <a class="mockbar__tab" href="?state=invalid" data-state="invalid">保存の失敗</a>
+    <a class="mockbar__tab" href="?state=delete" data-state="delete">削除の確認</a>
+    <span class="mockbar__url mono">/_settings/</span>
+  </nav>
+  <!-- トップバー -->
+  <header class="topbar">
+    <a class="topbar__brand" href="../../../doc-view/12/default/index.html">dev-docs</a>
+
+    <span class="topbar__spacer"></span>
+
+    <!-- 設定画面を開く -->
+    <a class="icon-button" href="../../../settings/12/default/index.html" aria-label="設定" aria-current="page">
+      <svg aria-hidden="true" viewBox="0 0 16 16" width="16" height="16"><path d="M8 0c.24 0 .47.01.7.03.74.07 1.29.62 1.46 1.26l.29 1.11c.02.07.08.16.21.22.23.12.45.24.67.39.12.08.23.09.3.07l1.1-.3c.64-.18 1.39.02 1.82.63.27.38.5.79.7 1.22.32.67.11 1.42-.36 1.89l-.81.8c-.05.05-.1.15-.09.3a6 6 0 0 1 0 .77c-.01.15.04.25.09.3l.81.8c.47.47.68 1.22.36 1.89-.2.43-.43.84-.7 1.22-.43.61-1.18.81-1.82.63l-1.1-.3c-.07-.02-.18-.01-.3.07-.22.15-.44.27-.67.39-.13.06-.19.15-.21.22l-.29 1.11c-.17.64-.72 1.19-1.46 1.26a8 8 0 0 1-1.4 0c-.74-.07-1.29-.62-1.46-1.26l-.29-1.11c-.02-.07-.08-.16-.21-.22a5.7 5.7 0 0 1-.67-.39c-.12-.08-.23-.09-.3-.07l-1.1.3c-.64.18-1.39-.02-1.82-.63a8 8 0 0 1-.7-1.22c-.32-.67-.11-1.42.36-1.89l.81-.8c.05-.05.1-.15.09-.3a6 6 0 0 1 0-.77c.01-.15-.04-.25-.09-.3l-.81-.8C.64 6.05.43 5.3.75 4.62c.2-.43.43-.84.7-1.22.43-.61 1.18-.81 1.82-.63l1.1.3c.07.02.18.01.3-.07.22-.15.44-.27.67-.39.13-.06.19-.15.21-.22l.29-1.11C6.01.65 6.56.1 7.3.03 7.53.01 7.76 0 8 0m-.57 1.53c-.04 0-.11.04-.14.15l-.29 1.1c-.15.56-.55.97-1 1.19q-.26.13-.5.29c-.42.28-.97.42-1.53.27l-1.1-.3c-.11-.03-.18.02-.2.05-.22.31-.41.64-.57.99-.01.03-.02.11.06.19l.81.81c.41.4.56.95.53 1.45a5 5 0 0 0 0 .58c.03.5-.12 1.05-.53 1.46l-.81.8c-.08.08-.07.16-.06.19.16.35.35.68.57.99.02.03.09.08.2.05l1.1-.3c.56-.15 1.11-.01 1.53.27q.24.16.5.29c.45.22.85.63 1 1.19l.29 1.1c.03.11.1.15.14.15a7 7 0 0 0 1.14 0c.04 0 .11-.04.14-.15l.29-1.1c.15-.56.55-.97 1-1.19q.26-.13.5-.29c.42-.28.97-.42 1.53-.27l1.1.3c.11.03.18-.02.2-.05.22-.31.41-.64.57-.99.01-.03.02-.11-.06-.19l-.81-.81c-.41-.4-.56-.95-.53-1.45a5 5 0 0 0 0-.58c-.03-.5.12-1.05.53-1.46l.81-.8c.08-.08.07-.16.06-.19a6.5 6.5 0 0 0-.57-.99c-.02-.03-.09-.08-.2-.05l-1.1.3c-.56.15-1.11.01-1.53-.27a4 4 0 0 0-.5-.29c-.45-.22-.85-.63-1-1.19l-.29-1.1c-.03-.11-.1-.14-.14-.15a7 7 0 0 0-1.14 0M11 8a3 3 0 1 1-6 0 3 3 0 0 1 6 0M9.5 8a1.5 1.5 0 1 0-3 0 1.5 1.5 0 0 0 3 0"/></svg>
+    </a>
+
+    <!-- 明暗の切り替え -->
+    <button class="icon-button" type="button" id="scheme-toggle" aria-label="明暗を切り替える" aria-pressed="false">
+      <svg aria-hidden="true" viewBox="0 0 16 16" width="16" height="16"><path d="M8 1.5a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13M8 3a5 5 0 0 1 0 10z"/></svg>
+    </button>
+  </header>
+  <div class="layout layout--single">
+    <main class="content">
+      <a class="back-link" href="../../../doc-view/12/default/index.html"><svg aria-hidden="true" viewBox="0 0 16 16" width="16" height="16"><path d="M7.78 12.53 3.25 8l4.53-4.53 1.06 1.06-2.72 2.72H13v1.5H6.12l2.72 2.72z"/></svg>sample のトップへ戻る</a>
+      <h1 class="doc-title">設定</h1>
+      <p class="page-lead">端末の設定 <code>~/.config/dev-docs/settings.yaml</code> の <code>sources[]</code> です。保存するとスキーマに通してから書き換え、配信元を読み直します。</p>
+
+      <div class="table-tools">
+        <span class="table-tools__count">配信元 5 件</span>
+        <button class="tool-button" type="button" commandfor="add-dialog" command="show-modal">
+          <svg aria-hidden="true" viewBox="0 0 16 16" width="16" height="16"><path d="M7.25 2h1.5v5.25H14v1.5H8.75V14h-1.5V8.75H2v-1.5h5.25z"/></svg>
+          配信元を追加
+        </button>
+      </div>
+      <div class="table-wrap" tabindex="0" role="region" aria-label="配信元の一覧">
+        <table class="sources-table">
+          <thead><tr><th>配信元</th><th>設定ファイル</th><th>状態</th><th class="col-actions">操作</th></tr></thead>
+          <tbody>
+            <tr>
+              <td><a href="../../../doc-view/12/default/index.html">sample</a></td>
+              <td><code>~/repo/sample/dev-docs.yaml</code><br><code>~/repo/sample/dev-docs.local.yaml</code></td>
+              <td class="col-status"><span class="status status--ok">配信中</span></td>
+              <td class="col-actions">
+                <button class="tool-button" type="button" commandfor="edit-dialog" command="show-modal" aria-label="sample を編集">編集</button>
+                <button class="tool-button tool-button--danger" type="button" commandfor="delete-dialog" command="show-modal" aria-label="sample を削除">削除</button>
+              </td>
+            </tr>
+            <tr>
+              <td><a href="../../../doc-view/12/default/index.html">notes</a></td>
+              <td><code>~/notes/dev-docs.yaml</code></td>
+              <td class="col-status"><span class="status status--ok">配信中</span><span class="status-note">Git 管理外</span></td>
+              <td class="col-actions">
+                <button class="tool-button" type="button" commandfor="edit-dialog" command="show-modal" aria-label="notes を編集">編集</button>
+                <button class="tool-button tool-button--danger" type="button" commandfor="delete-dialog" command="show-modal" aria-label="notes を削除">削除</button>
+              </td>
+            </tr>
+            <tr>
+              <td><code>broken</code></td>
+              <td><code>~/repo/broken/dev-docs.yaml</code></td>
+              <td class="col-status"><span class="status status--error">配信していません</span><span class="status-note">起動時の検証で外しました（<code>dev-docs.yaml</code> の <code>documents[0]</code> に必須のキー <code>paths</code> がありません）</span></td>
+              <td class="col-actions">
+                <button class="tool-button" type="button" commandfor="edit-dialog" command="show-modal" aria-label="broken を編集">編集</button>
+                <button class="tool-button tool-button--danger" type="button" commandfor="delete-dialog" command="show-modal" aria-label="broken を削除">削除</button>
+              </td>
+            </tr>
+            <tr>
+              <td><code>legacy</code></td>
+              <td><code>~/repo/legacy/dev-docs.yaml</code></td>
+              <td class="col-status"><span class="status status--error">設定のバージョンが古い</span><span class="status-note"><code>dev-docs.yaml</code> の <code>version</code> は 1 です。このサーバーは 2 を読みます</span></td>
+              <td class="col-actions">
+                <button class="tool-button" type="button" commandfor="edit-dialog" command="show-modal" aria-label="legacy を編集">編集</button>
+                <button class="tool-button tool-button--danger" type="button" commandfor="delete-dialog" command="show-modal" aria-label="legacy を削除">削除</button>
+              </td>
+            </tr>
+            <tr>
+              <td><code>archive</code></td>
+              <td><code>~/repo/archive/dev-docs.yaml</code></td>
+              <td class="col-status"><span class="status status--muted">無効</span><span class="status-note"><code>enabled</code> が <code>false</code> です</span></td>
+              <td class="col-actions">
+                <button class="tool-button" type="button" commandfor="edit-dialog" command="show-modal" aria-label="archive を編集">編集</button>
+                <button class="tool-button tool-button--danger" type="button" commandfor="delete-dialog" command="show-modal" aria-label="archive を削除">削除</button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </main>
+  </div>
+
+  <dialog id="add-dialog" class="dialog" aria-labelledby="add-dialog-title" data-open-states="add">
+    <form method="dialog" class="dialog__form">
+      <h2 class="dialog__title" id="add-dialog-title">配信元を追加</h2>
+        <div class="field">
+          <label class="field__label" for="add-id">配信元の ID<span class="field__required">※必須</span></label>
+          <p class="field__hint" id="add-id-hint">英小文字・数字・ハイフン。画面の URL に使います。</p>
+          <input class="field__input mono" id="add-id" type="text" pattern="[a-z0-9\-]+" aria-describedby="add-id-hint" autocomplete="off" spellcheck="false" required>
+        </div>
+        <div class="field">
+          <label class="field__label" for="add-config">設定ファイル（<code>config</code>）<span class="field__required">※必須</span></label>
+          <p class="field__hint" id="add-config-hint">1 行に 1 つ。上から順にマージします。</p>
+          <textarea class="field__input mono" id="add-config" rows="2" spellcheck="false" aria-describedby="add-config-hint"></textarea>
+        </div>
+        <div class="field">
+          <p class="field__label">配信（<code>enabled</code>）</p>
+          <label class="switch"><input type="checkbox" role="switch" id="add-enabled" checked> 配信する</label>
+        </div>
+        <div class="field">
+          <label class="field__label" for="add-read">読み取りの範囲（<code>scope.read</code>）<span class="field__required">※必須</span></label>
+          <p class="field__hint" id="add-read-hint">1 行に 1 つの glob。</p>
+          <textarea class="field__input mono" id="add-read" rows="2" spellcheck="false" aria-describedby="add-read-hint"></textarea>
+        </div>
+        <div class="field">
+          <label class="field__label" for="add-write">書き込みの範囲（<code>scope.write</code>）</label>
+          <p class="field__hint" id="add-write-hint">1 行に 1 つの glob。空なら書き込みを断ります。</p>
+          <textarea class="field__input mono" id="add-write" rows="2" spellcheck="false" aria-describedby="add-write-hint"></textarea>
+        </div>
+      <div class="dialog__actions">
+        <button class="button" type="submit" value="cancel" formnovalidate>キャンセル</button>
+        <button class="button button--primary" type="submit" value="ok">追加</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="edit-dialog" class="dialog" aria-labelledby="edit-dialog-title" data-open-states="edit">
+    <form method="dialog" class="dialog__form">
+      <h2 class="dialog__title" id="edit-dialog-title">sample を編集</h2>
+        <div class="field">
+          <p class="field__label">配信元の ID</p>
+          <p class="field__value mono">sample</p>
+        </div>
+        <div class="field">
+          <label class="field__label" for="edit-config">設定ファイル（<code>config</code>）<span class="field__required">※必須</span></label>
+          <p class="field__hint" id="edit-config-hint">1 行に 1 つ。上から順にマージします。</p>
+          <textarea class="field__input mono" id="edit-config" rows="2" spellcheck="false" aria-describedby="edit-config-hint">~/repo/sample/dev-docs.yaml
+~/repo/sample/dev-docs.local.yaml</textarea>
+        </div>
+        <div class="field">
+          <p class="field__label">配信（<code>enabled</code>）</p>
+          <label class="switch"><input type="checkbox" role="switch" id="edit-enabled" checked> 配信する</label>
+        </div>
+        <div class="field">
+          <label class="field__label" for="edit-read">読み取りの範囲（<code>scope.read</code>）<span class="field__required">※必須</span></label>
+          <p class="field__hint" id="edit-read-hint">1 行に 1 つの glob。</p>
+          <textarea class="field__input mono" id="edit-read" rows="2" spellcheck="false" aria-describedby="edit-read-hint">~/repo/**</textarea>
+        </div>
+        <div class="field">
+          <label class="field__label" for="edit-write">書き込みの範囲（<code>scope.write</code>）</label>
+          <p class="field__hint" id="edit-write-hint">1 行に 1 つの glob。空なら書き込みを断ります。</p>
+          <textarea class="field__input mono" id="edit-write" rows="2" spellcheck="false" aria-describedby="edit-write-hint">~/repo/sample/**</textarea>
+        </div>
+      <div class="dialog__actions">
+        <button class="button" type="submit" value="cancel" formnovalidate>キャンセル</button>
+        <button class="button button--primary" type="submit" value="ok">保存</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="invalid-dialog" class="dialog" aria-labelledby="invalid-dialog-title" data-open-states="invalid">
+    <form method="dialog" class="dialog__form">
+      <h2 class="dialog__title" id="invalid-dialog-title">sample を編集</h2>
+        <!-- 保存できなかったときのまとめ（項目へのリンク） -->
+        <div class="error-summary" role="alert">
+          <p class="error-summary__title"><svg aria-hidden="true" viewBox="0 0 16 16" width="16" height="16"><path d="M6.46 1.95a1.75 1.75 0 0 1 3.08 0l5.25 9.5A1.75 1.75 0 0 1 13.25 14H2.75a1.75 1.75 0 0 1-1.54-2.55zM8 5a.75.75 0 0 0-.75.75v3a.75.75 0 0 0 1.5 0v-3A.75.75 0 0 0 8 5m0 7a1 1 0 1 0 0-2 1 1 0 0 0 0 2"/></svg>保存できませんでした。2 件の項目がスキーマに合いません。</p>
+          <ul>
+            <li><a href="#invalid-config"><code>sources[0].config</code>: 設定ファイルが見つかりません</a></li>
+            <li><a href="#invalid-write"><code>sources[0].scope.write</code>: 読み取りの範囲の外です</a></li>
+          </ul>
+        </div>
+        <div class="field">
+          <p class="field__label">配信元の ID</p>
+          <p class="field__value mono">sample</p>
+        </div>
+        <div class="field is-invalid">
+          <label class="field__label" for="invalid-config">設定ファイル（<code>config</code>）<span class="field__required">※必須</span></label>
+          <p class="field__hint" id="invalid-config-hint">1 行に 1 つ。上から順にマージします。</p>
+          <textarea class="field__input mono" id="invalid-config" rows="2" spellcheck="false" aria-describedby="invalid-config-hint invalid-config-error" aria-invalid="true">~/repo/sample/dev-docs.yaml
+~/repo/sample/dev-docs.locl.yaml</textarea>
+          <p class="field__error" id="invalid-config-error">設定ファイルが見つかりません（<code>~/repo/sample/dev-docs.locl.yaml</code>）。</p>
+        </div>
+        <div class="field">
+          <p class="field__label">配信（<code>enabled</code>）</p>
+          <label class="switch"><input type="checkbox" role="switch" id="invalid-enabled" checked> 配信する</label>
+        </div>
+        <div class="field">
+          <label class="field__label" for="invalid-read">読み取りの範囲（<code>scope.read</code>）<span class="field__required">※必須</span></label>
+          <p class="field__hint" id="invalid-read-hint">1 行に 1 つの glob。</p>
+          <textarea class="field__input mono" id="invalid-read" rows="2" spellcheck="false" aria-describedby="invalid-read-hint">~/repo/**</textarea>
+        </div>
+        <div class="field is-invalid">
+          <label class="field__label" for="invalid-write">書き込みの範囲（<code>scope.write</code>）</label>
+          <p class="field__hint" id="invalid-write-hint">1 行に 1 つの glob。空なら書き込みを断ります。</p>
+          <textarea class="field__input mono" id="invalid-write" rows="2" spellcheck="false" aria-describedby="invalid-write-hint invalid-write-error" aria-invalid="true">~/repo/sample/**
+~/work/**</textarea>
+          <p class="field__error" id="invalid-write-error"><code>~/work/**</code> は読み取りの範囲の外です。読み取りの範囲に含まれる glob にしてください。</p>
+        </div>
+      <div class="dialog__actions">
+        <button class="button" type="submit" value="cancel" formnovalidate>キャンセル</button>
+        <button class="button button--primary" type="submit" value="ok">保存</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="delete-dialog" class="dialog" aria-labelledby="delete-dialog-title" data-open-states="delete">
+    <form method="dialog" class="dialog__form">
+      <h2 class="dialog__title" id="delete-dialog-title">notes を削除しますか？</h2>
+        <p class="dialog__text">端末の設定から <code>notes</code> の行を削除し、配信を止めます。<code>~/notes</code> のフォルダと文書は削除しません。</p>
+      <div class="dialog__actions">
+        <button class="button" type="submit" value="cancel" formnovalidate>キャンセル</button>
+        <button class="button button--danger" type="submit" value="ok">削除</button>
+      </div>
+    </form>
+  </dialog>
+
+</body>
+</html>

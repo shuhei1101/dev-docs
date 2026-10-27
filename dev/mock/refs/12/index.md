@@ -4,12 +4,10 @@
 
 | 画面 | 案 |
 | --- | --- |
-| source-list | [案リスト](../../pages/source-list/12/) |
-| doc-index | [default](../../pages/doc-index/12/default/index.html) |
 | doc-view | [default](../../pages/doc-view/12/default/index.html) |
+| settings | [default](../../pages/settings/12/default/index.html) |
 | not-found | [default](../../pages/not-found/12/default/index.html) |
 
 | 部品 | カタログ |
 | --- | --- |
 | error-panel | [error-panel](../../components/error-panel/index.html) |
-| sort-button | [sort-button](../../components/sort-button/index.html) |
