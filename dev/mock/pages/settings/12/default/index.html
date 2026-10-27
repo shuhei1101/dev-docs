@@ -121,9 +121,9 @@
     <form method="dialog" class="dialog__form">
       <h2 class="dialog__title" id="add-dialog-title">配信元を追加</h2>
         <div class="field">
-          <label class="field__label" for="add-id">配信元の ID<span class="field__required">※必須</span></label>
-          <p class="field__hint" id="add-id-hint">英小文字・数字・ハイフン。画面の URL に使います。</p>
-          <input class="field__input mono" id="add-id" type="text" pattern="[a-z0-9\-]+" aria-describedby="add-id-hint" autocomplete="off" spellcheck="false" required value="">
+          <label class="field__label" for="add-id">配信元の ID<span class="field__required">※任意</span></label>
+          <p class="field__hint" id="add-id-hint">英小文字・数字・ハイフン。画面の URL に使います。空なら配信元の設定の <code>name</code> を使います。</p>
+          <input class="field__input mono" id="add-id" type="text" pattern="[a-z0-9\-]+" aria-describedby="add-id-hint" autocomplete="off" spellcheck="false" value="">
         </div>
         <div class="field">
           <label class="field__label" for="add-config">設定ファイル（<code>config</code>）<span class="field__required">※必須</span></label>
@@ -135,13 +135,13 @@
           <label class="switch"><input type="checkbox" role="switch" id="add-enabled" checked> 配信する</label>
         </div>
         <div class="field">
-          <label class="field__label" for="add-read">読み取りの範囲（<code>scope.read</code>）<span class="field__required">※必須</span></label>
-          <p class="field__hint" id="add-read-hint">1 行に 1 つの glob。</p>
+          <label class="field__label" for="add-read">読み取りの範囲（<code>scope.read</code>）<span class="field__required">※任意</span></label>
+          <p class="field__hint" id="add-read-hint">1 行に 1 つの glob。空なら、どの作業場所からも読めません。</p>
           <textarea class="field__input mono" id="add-read" rows="2" spellcheck="false" aria-describedby="add-read-hint"></textarea>
         </div>
         <div class="field">
-          <label class="field__label" for="add-write">書き込みの範囲（<code>scope.write</code>）</label>
-          <p class="field__hint" id="add-write-hint">1 行に 1 つの glob。空なら書き込みを断ります。</p>
+          <label class="field__label" for="add-write">書き込みの範囲（<code>scope.write</code>）<span class="field__required">※任意</span></label>
+          <p class="field__hint" id="add-write-hint">1 行に 1 つの glob。空なら配信元のフォルダの中からだけ書き込めます。</p>
           <textarea class="field__input mono" id="add-write" rows="2" spellcheck="false" aria-describedby="add-write-hint"></textarea>
         </div>
       <div class="dialog__actions">
@@ -169,13 +169,13 @@
           <label class="switch"><input type="checkbox" role="switch" id="edit-enabled" checked> 配信する</label>
         </div>
         <div class="field">
-          <label class="field__label" for="edit-read">読み取りの範囲（<code>scope.read</code>）<span class="field__required">※必須</span></label>
-          <p class="field__hint" id="edit-read-hint">1 行に 1 つの glob。</p>
+          <label class="field__label" for="edit-read">読み取りの範囲（<code>scope.read</code>）<span class="field__required">※任意</span></label>
+          <p class="field__hint" id="edit-read-hint">1 行に 1 つの glob。空なら、どの作業場所からも読めません。</p>
           <textarea class="field__input mono" id="edit-read" rows="2" spellcheck="false" aria-describedby="edit-read-hint">~/repo/**</textarea>
         </div>
         <div class="field">
-          <label class="field__label" for="edit-write">書き込みの範囲（<code>scope.write</code>）</label>
-          <p class="field__hint" id="edit-write-hint">1 行に 1 つの glob。空なら書き込みを断ります。</p>
+          <label class="field__label" for="edit-write">書き込みの範囲（<code>scope.write</code>）<span class="field__required">※任意</span></label>
+          <p class="field__hint" id="edit-write-hint">1 行に 1 つの glob。空なら配信元のフォルダの中からだけ書き込めます。</p>
           <textarea class="field__input mono" id="edit-write" rows="2" spellcheck="false" aria-describedby="edit-write-hint">~/repo/sample/**</textarea>
         </div>
       <div class="dialog__actions">
@@ -193,13 +193,13 @@
           <p class="error-summary__title"><svg aria-hidden="true" viewBox="0 0 16 16" width="16" height="16"><path d="M6.46 1.95a1.75 1.75 0 0 1 3.08 0l5.25 9.5A1.75 1.75 0 0 1 13.25 14H2.75a1.75 1.75 0 0 1-1.54-2.55zM8 5a.75.75 0 0 0-.75.75v3a.75.75 0 0 0 1.5 0v-3A.75.75 0 0 0 8 5m0 7a1 1 0 1 0 0-2 1 1 0 0 0 0 2"/></svg>保存できませんでした。2 件の項目がスキーマに合いません。</p>
           <ul>
             <li><a href="#invalid-id"><code>sources[5].id</code>: 英小文字・数字・ハイフン以外の文字があります</a></li>
-            <li><a href="#invalid-read"><code>sources[5].scope.read</code>: 1 つ以上必要です</a></li>
+            <li><a href="#invalid-read"><code>sources[5].scope.read</code>: 空の行を含みます</a></li>
           </ul>
         </div>
         <div class="field is-invalid">
-          <label class="field__label" for="invalid-id">配信元の ID<span class="field__required">※必須</span></label>
-          <p class="field__hint" id="invalid-id-hint">英小文字・数字・ハイフン。画面の URL に使います。</p>
-          <input class="field__input mono" id="invalid-id" type="text" pattern="[a-z0-9\-]+" aria-describedby="invalid-id-hint invalid-id-error" autocomplete="off" spellcheck="false" required value="Sample Docs" aria-invalid="true">
+          <label class="field__label" for="invalid-id">配信元の ID<span class="field__required">※任意</span></label>
+          <p class="field__hint" id="invalid-id-hint">英小文字・数字・ハイフン。画面の URL に使います。空なら配信元の設定の <code>name</code> を使います。</p>
+          <input class="field__input mono" id="invalid-id" type="text" pattern="[a-z0-9\-]+" aria-describedby="invalid-id-hint invalid-id-error" autocomplete="off" spellcheck="false" value="Sample Docs" aria-invalid="true">
           <p class="field__error" id="invalid-id-error"><code>Sample Docs</code> は使えません。英小文字・数字・ハイフンで入力してください。</p>
         </div>
         <div class="field">
@@ -212,14 +212,16 @@
           <label class="switch"><input type="checkbox" role="switch" id="invalid-enabled" checked> 配信する</label>
         </div>
         <div class="field is-invalid">
-          <label class="field__label" for="invalid-read">読み取りの範囲（<code>scope.read</code>）<span class="field__required">※必須</span></label>
-          <p class="field__hint" id="invalid-read-hint">1 行に 1 つの glob。</p>
-          <textarea class="field__input mono" id="invalid-read" rows="2" spellcheck="false" aria-describedby="invalid-read-hint invalid-read-error" aria-invalid="true"></textarea>
-          <p class="field__error" id="invalid-read-error">読み取りの範囲を 1 つ以上入力してください。</p>
+          <label class="field__label" for="invalid-read">読み取りの範囲（<code>scope.read</code>）<span class="field__required">※任意</span></label>
+          <p class="field__hint" id="invalid-read-hint">1 行に 1 つの glob。空なら、どの作業場所からも読めません。</p>
+          <textarea class="field__input mono" id="invalid-read" rows="3" spellcheck="false" aria-describedby="invalid-read-hint invalid-read-error" aria-invalid="true">~/repo/**
+
+~/work/**</textarea>
+          <p class="field__error" id="invalid-read-error">2 行目が空です。空の行を削除してください。</p>
         </div>
         <div class="field">
-          <label class="field__label" for="invalid-write">書き込みの範囲（<code>scope.write</code>）</label>
-          <p class="field__hint" id="invalid-write-hint">1 行に 1 つの glob。空なら書き込みを断ります。</p>
+          <label class="field__label" for="invalid-write">書き込みの範囲（<code>scope.write</code>）<span class="field__required">※任意</span></label>
+          <p class="field__hint" id="invalid-write-hint">1 行に 1 つの glob。空なら配信元のフォルダの中からだけ書き込めます。</p>
           <textarea class="field__input mono" id="invalid-write" rows="2" spellcheck="false" aria-describedby="invalid-write-hint"></textarea>
         </div>
       <div class="dialog__actions">
