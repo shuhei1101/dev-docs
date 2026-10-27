@@ -6,11 +6,11 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Literal
 
-from dev_docs.shared.errors import Violation
+from dev_docs.shared.errors import UnknownKindError, Violation
 
 SOURCE_CONFIG_VERSION = "1"
 
-SourceStatusKind = Literal["serving", "not_served", "disabled"]
+type SourceStatusKind = Literal["serving", "not_served", "disabled"]
 
 
 @dataclass(frozen=True)
@@ -49,6 +49,13 @@ class DocumentTable:
     body_file: str | None = None
     metadata: dict[str, MetadataMapping] = field(default_factory=dict)
     defaults: list[DocumentDefaults] = field(default_factory=list)
+
+    @property
+    def is_writable(self) -> bool:
+        """`write_docs`・`delete_docs` を許すか（`writable` が無ければ yaml だけ許す）。"""
+        if self.writable is not None:
+            return self.writable
+        return self.type == "yaml"
 
 
 @dataclass(frozen=True)
@@ -105,13 +112,24 @@ class ServedSource:
 
     def table(self, kind: str) -> DocumentTable:
         """種類から有効な文書の行を引く。"""
-        raise NotImplementedError
+        enabled = [row for row in self.config.documents if row.enabled]
+        for row in enabled:
+            if row.id == kind:
+                return row
+        raise UnknownKindError(
+            message=f"{self.id}: 種類 {kind} はありません",
+            kinds=[row.id for row in enabled],
+            next_steps=["describe(source) で種類の一覧を見てください"],
+        )
 
     def script(
         self, table: Literal["validators", "converters", "generators"], script_id: str
     ) -> ScriptEntry:
         """検査・変換・生成の行を ID で引く。"""
-        raise NotImplementedError
+        for row in getattr(self.config, table):
+            if row.id == script_id:
+                return row  # type: ignore[no-any-return]
+        raise KeyError(f"{table}[{script_id}]")
 
 
 @dataclass(frozen=True)
