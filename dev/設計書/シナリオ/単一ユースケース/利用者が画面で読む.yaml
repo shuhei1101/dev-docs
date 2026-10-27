@@ -14,17 +14,13 @@ scenarios:
       sequenceDiagram
         actor U as 利用者
         participant UI as dev-docs の画面
-        participant CV as 変換
-        participant MD as mdmark
 
         U->>UI: GET /sample/
         UI->>UI: nav からタブとサイドバーを組み立て、最初のタブを開く
-        UI->>CV: タブに属する文書の一覧を Markdown の表にする
-        UI->>MD: 描く
+        UI->>UI: タブに属する文書の一覧を Markdown の表にし、mdmark で描く
         UI-->>U: doc-index（タブ・サイドバー・一覧の本文）
         U->>UI: サイドバーで文書 1 を選ぶ
-        UI->>CV: 文書 1 の YAML をスキーマ駆動で Markdown にする
-        UI->>MD: 描く
+        UI->>UI: 文書 1 の YAML をスキーマ駆動で Markdown にし、mdmark で描く
         UI-->>U: doc-view（文書 1 の本文と目次）
       ```
     expected:
@@ -149,16 +145,14 @@ scenarios:
         actor U as 利用者
         participant UI as dev-docs の画面
         participant SC as 配信元のスクリプト
-        participant MD as mdmark
 
         U->>UI: converters を指す種類の文書を開く
         UI->>SC: 標準入力に YAML を渡す
         SC-->>UI: 標準出力の Markdown
-        UI->>MD: 描く
+        UI->>UI: mdmark で描く
         UI-->>U: スクリプトの Markdown を描いた本文
         U->>UI: 埋め込みのマーカーを持つ Markdown の文書を開く
-        UI->>UI: マーカーを YAML の表の Markdown に置き換える
-        UI->>MD: 描く
+        UI->>UI: マーカーを YAML の表の Markdown に置き換え、mdmark で描く
         UI-->>U: 表を含む本文
       ```
     expected:
