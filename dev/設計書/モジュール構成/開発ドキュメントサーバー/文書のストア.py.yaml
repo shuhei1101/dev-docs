@@ -1,0 +1,1039 @@
+title: "開発ドキュメントサーバー / 文書のストア"
+lead: |-
+  配信元の `documents[]` の行ごとにファイルを集め、ファイルか `records` の要素を 1 件の文書にして、メタデータ・バージョン・日時を付けて返す。
+  読んだ文書はファイルの更新日時と大きさでキャッシュし、変わったファイルだけを読み直す。
+directory: |-
+  ```text
+  src/dev_docs/features/documents/
+  ├─ __init__.py   # 公開する型と関数の再エクスポート
+  ├─ types.py      # Document / LoadProblem / LoadResult
+  ├─ fields.py     # get_field / set_field / delete_field / resolve_metadata / apply_defaults
+  ├─ loader.py     # collect_files / load_file（ファイルから文書を作る）
+  └─ store.py      # DocumentStore（キャッシュ・ID の引き当て・種類のスキーマ）
+  ```
+diagrams:
+  - name: 全体
+    diagram: |-
+      classDiagram
+        direction TD
+        文書のストア ..> ファイルの収集
+        文書のストア ..> ファイルの読み込み
+        文書のストア ..> 文書 : 返す
+        文書のストア ..> 読み込みの結果 : 返す
+        ファイルの読み込み ..> メタデータの解決
+        ファイルの読み込み ..> 既定の重ね合わせ
+        メタデータの解決 ..> 項目の取得
+        読み込みの結果 o-- 文書
+        読み込みの結果 o-- 読めなかったファイル
+        class 文書のストア {
+          <<class>>
+        }
+        class ファイルの収集 {
+          <<function>>
+        }
+        class ファイルの読み込み {
+          <<function>>
+        }
+        class メタデータの解決 {
+          <<function>>
+        }
+        class 既定の重ね合わせ {
+          <<function>>
+        }
+        class 項目の取得 {
+          <<function>>
+        }
+        class 文書 {
+          <<dataclass>>
+        }
+        class 読み込みの結果 {
+          <<dataclass>>
+        }
+        class 読めなかったファイル {
+          <<dataclass>>
+        }
+data_models:
+  - name: Document
+    title: 文書
+    container: features/documents/types.py
+    usecase: 共通
+    role: DTO
+    summary: ファイル 1 つか `records` の要素 1 つから作った 1 件の文書
+    description: '`dataclass(frozen=True)`。`data` は読み込みの結果を共有するので、書き換えるときは複製してから書き換える。'
+    properties:
+      - name: id
+        title: 文書の ID
+        type: str
+        access: 公開
+        description: メタデータの `id`。無ければ文書のファイルの配信元の直下からのパスから拡張子を除いた値
+      - name: kind
+        title: 種類
+        type: str
+        access: 公開
+        description: 文書の行の ID（`documents[].id`）
+      - name: source_id
+        title: 配信元の ID
+        type: str
+        access: 公開
+        description: '`ServedSource.id`'
+      - name: path
+        title: ファイル
+        type: str
+        access: 公開
+        description: 文書を持つファイルの配信元の直下からのパス（`/` 区切り）
+      - name: record_index
+        title: 要素の位置
+        type: int | None
+        access: 公開
+        description: '`records` の配列の中の位置。ファイル 1 つで 1 件の文書は `None`'
+      - name: data
+        title: 内容
+        type: dict[str, Any]
+        access: 公開
+        description: YAML の文書はファイルか要素の内容、Markdown の文書は front matter（無ければ空）
+      - name: body
+        title: 本文
+        type: str
+        access: 公開
+        description: YAML の文書はファイルか要素を YAML に書き出した文字列、Markdown の文書は front matter を除いた本文、`body_file` のある要素は指したファイルの内容
+      - name: body_path
+        title: 本文のファイル
+        type: str | None
+        access: 公開
+        description: '`body_file` が指したファイルの配信元の直下からのパス。無ければ `None`'
+      - name: metadata
+        title: メタデータ
+        type: dict[str, Any]
+        access: 公開
+        description: '`metadata` の対応で取り、`defaults[]` を重ねた後の共通のキーの値（`METADATA_KEYS` のうち値のあるキー）'
+      - name: version
+        title: バージョン
+        type: str
+        access: 公開
+        description: ファイル 1 つの文書はファイルの内容の『内容のハッシュ』、`records` の要素は要素の『値のハッシュ』
+      - name: created
+        title: 作成日時
+        type: datetime | None
+        access: 公開
+        description: git の最初の commit の日時、無ければ文書の `created` の項目。どちらも無ければ `None`（並べ替えの末尾）
+      - name: updated
+        title: 更新日時
+        type: datetime | None
+        access: 公開
+        description: git の最後の commit の日時、無ければ文書の `updated` の項目。どちらも無ければ `None`（並べ替えの末尾）
+  - name: LoadProblem
+    title: 読めなかったファイル
+    container: features/documents/types.py
+    usecase: 共通
+    role: DTO
+    summary: 文書にできなかったファイルと理由
+    description: '`dataclass(frozen=True)`。検索・画面は `notes` と画面の知らせに出し、処理は止めない。'
+    properties:
+      - name: path
+        title: ファイル
+        type: str
+        access: 公開
+        description: 配信元の直下からのパス
+      - name: reason
+        title: 理由
+        type: Literal['unreadable', 'duplicate_id', 'missing_body_file', 'not_mapping']
+        access: 公開
+        description: '`unreadable` は YAML として読めない、`duplicate_id` は先に読んだ文書と ID が重なる、`missing_body_file` は `body_file` の指すファイルが無い、`not_mapping` は文書にする値が辞書でない'
+      - name: detail
+        title: 詳細
+        type: str
+        access: 公開
+        description: '`YamlLoadError` の位置と理由、重なった ID と先の文書のファイルなど'
+  - name: LoadResult
+    title: 読み込みの結果
+    container: features/documents/types.py
+    usecase: 共通
+    role: DTO
+    summary: 読めた文書と読めなかったファイル
+    description: '`dataclass(frozen=True)`。'
+    properties:
+      - name: documents
+        title: 文書
+        type: list[Document]
+        access: 公開
+        description: '`documents[]` の行の順、行の中はファイルのパスの昇順、ファイルの中は要素の順'
+      - name: problems
+        title: 読めなかったファイル
+        type: list[LoadProblem]
+        access: 公開
+        description: ファイルのパスの昇順
+constants:
+  - name: METADATA_KEYS
+    title: 共通のキー
+    container: features/documents/fields.py
+    usecase: 共通
+    summary: '`documents[].metadata` で値の取り方を決める共通のキー（エイリアスのキーを含む）'
+    value: ("id", "name", "description", "tags", "related", "status", "alias_type", "aliases", "command", "cwd", "url", "avoid", "skill", "tool", "path", "port", "replacement")
+  - name: UNION_KEYS
+    title: 和集合で重ねるキー
+    container: features/documents/fields.py
+    usecase: 共通
+    summary: '`defaults[]` を重ねるときに値を置き換えず和集合にするキー'
+    value: ("tags", "related")
+  - name: CANDIDATE_COUNT
+    title: 近い ID の候補の数
+    container: features/documents/store.py
+    usecase: 共通
+    summary: 無い ID ごとに添える近い ID の数の上限
+    value: '5'
+  - name: CANDIDATE_CUTOFF
+    title: 近さの下限
+    container: features/documents/store.py
+    usecase: 共通
+    summary: 近い ID とみなす `difflib.get_close_matches` の `cutoff`
+    value: '0.6'
+  - name: SKIP_DIRS
+    title: たどらないフォルダ
+    container: features/documents/loader.py
+    usecase: 共通
+    summary: 文書のファイルを集めるときに中をたどらないフォルダ名
+    value: frozenset({".git", "node_modules", "__pycache__", ".venv"})
+functions:
+  - name: parse_field_path
+    title: 項目のパスの分解
+    kind: 関数
+    container: features/documents/fields.py
+    usecase: 共通
+    role: 変換
+    summary: ドット記法と `[n]` の項目のパスをキーと位置の並びにする
+    scope: public
+    thread_safe: true
+    args:
+      - name: path
+        title: 項目のパス
+        type: str
+        required: true
+        passing: positional
+        description: '`a.b[0].c` の形の項目のパス'
+    returns:
+      type: list[str | int]
+      description: 辞書のキーは `str`、配列の位置は `int`
+    process: |-
+      1. `.` で区切り、各区切りの末尾の `[n]` を位置として切り出す（`b[0][1]` は `b`・`0`・`1`）
+      2. 空のキー・閉じていない `[`・数字でない位置がある場合、`InvalidArgumentError` を送る
+      3. 並びを返す
+    exceptions:
+      - name: InvalidArgumentError
+        condition: パスの書式が誤っている
+        message: 項目のパス {path} の書き方が誤っています（例 `a.b[0].c`）
+    unit_tests:
+      - name: test_parse_field_path
+        case: 正常
+        summary: キーと位置
+        condition: '`a.b[0][1].c`'
+        mock: なし
+        expected: '`["a", "b", 0, 1, "c"]`'
+        exception: '-'
+      - name: test_parse_field_path_when_invalid
+        case: 異常
+        summary: 空のキー
+        condition: '`a..b` と `a[x]`'
+        mock: なし
+        expected: どちらも `InvalidArgumentError` で、`violations[0].path` が渡したパス
+        exception: パスの書式が誤っている
+  - name: get_field
+    title: 項目の取得
+    kind: 関数
+    container: features/documents/fields.py
+    usecase: 共通
+    role: 読み取り
+    summary: 項目のパスで指した値を返す
+    scope: public
+    thread_safe: true
+    args:
+      - name: data
+        title: 内容
+        type: Mapping[str, Any]
+        required: true
+        passing: positional
+        description: 文書の内容
+      - name: path
+        title: 項目のパス
+        type: str
+        required: true
+        passing: positional
+        description: ドット記法と `[n]`
+      - name: default
+        title: 無いときの値
+        type: Any
+        required: false
+        default: None
+        passing: keyword
+        description: 途中のキーが無い・位置が範囲の外・型が辞書や配列でないときに返す値
+    returns:
+      type: Any
+      description: 指した値か `default`
+    process: |-
+      1. 『項目のパスの分解』で分ける
+      2. 先頭からたどり、キーは辞書から、位置は配列から引く。たどれない場合は `default` を返す
+      3. たどり着いた値を返す
+    exceptions:
+      - name: InvalidArgumentError
+        condition: パスの書式が誤っている
+        message: 『項目のパスの分解』のまま
+    unit_tests:
+      - name: test_get_field
+        case: 正常
+        summary: 入れ子と位置
+        condition: '`{"a": {"b": [{"c": 1}]}}` を `a.b[0].c`'
+        mock: なし
+        expected: '`1`'
+        exception: '-'
+      - name: test_get_field_when_missing
+        case: 正常
+        summary: たどれない
+        condition: 同じ内容を `a.x`・`a.b[3].c`・`a.b.c`
+        mock: なし
+        expected: どれも `None`
+        exception: '-'
+  - name: set_field
+    title: 項目の書き込み
+    kind: 関数
+    container: features/documents/fields.py
+    usecase: 共通
+    role: 書き込み
+    summary: 項目のパスで指した場所へ値を書く
+    scope: public
+    thread_safe: false
+    side_effects: '`data` を書き換える'
+    args:
+      - name: data
+        title: 内容
+        type: MutableMapping[str, Any]
+        required: true
+        passing: positional
+        description: 書き換える内容（往復編集の `CommentedMap` も受ける）
+      - name: path
+        title: 項目のパス
+        type: str
+        required: true
+        passing: positional
+        description: ドット記法と `[n]`
+      - name: value
+        title: 値
+        type: Any
+        required: true
+        passing: positional
+        description: 書く値
+    returns:
+      type: None
+      description: '-'
+    process: |-
+      1. 『項目のパスの分解』で分ける
+      2. 最後の手前までたどり、途中のキーが無ければ空の辞書を作って進む
+      3. 途中の値が辞書でない（キーのとき）・配列でない（位置のとき）場合、`InvalidArgumentError` を送る
+      4. 位置が配列の長さと同じなら末尾へ追加し、長さより大きければ `InvalidArgumentError` を送る
+      5. 最後のキーか位置へ値を書く
+    exceptions:
+      - name: InvalidArgumentError
+        condition: 途中の値の型が合わない
+        message: '{path}: {途中のパス} は {辞書 / 配列} ではありません'
+      - name: InvalidArgumentError
+        condition: 位置が配列の長さを超える
+        message: '{path}: 位置 {n} は配列の長さ {length} を超えています'
+    unit_tests:
+      - name: test_set_field
+        case: 正常
+        summary: 途中の辞書を作る
+        condition: '`{}` へ `a.b.c` = `1`'
+        mock: なし
+        expected: '`{"a": {"b": {"c": 1}}}`'
+        exception: '-'
+      - name: test_set_field_when_append
+        case: 正常
+        summary: 末尾へ追加
+        condition: '`{"a": [1]}` へ `a[1]` = `2`'
+        mock: なし
+        expected: '`{"a": [1, 2]}`'
+        exception: '-'
+      - name: test_set_field_when_type_mismatch
+        case: 異常
+        summary: 途中が文字列
+        condition: '`{"a": "x"}` へ `a.b` = `1`'
+        mock: なし
+        expected: '`InvalidArgumentError`'
+        exception: 途中の値の型が合わない
+      - name: test_set_field_when_out_of_range
+        case: 異常
+        summary: 飛んだ位置
+        condition: '`{"a": [1]}` へ `a[3]` = `2`'
+        mock: なし
+        expected: '`InvalidArgumentError`'
+        exception: 位置が配列の長さを超える
+  - name: delete_field
+    title: 項目の削除
+    kind: 関数
+    container: features/documents/fields.py
+    usecase: 共通
+    role: 書き込み
+    summary: 項目のパスで指した値を削除する
+    scope: public
+    thread_safe: false
+    side_effects: '`data` を書き換える'
+    args:
+      - name: data
+        title: 内容
+        type: MutableMapping[str, Any]
+        required: true
+        passing: positional
+        description: 書き換える内容
+      - name: path
+        title: 項目のパス
+        type: str
+        required: true
+        passing: positional
+        description: ドット記法と `[n]`
+    returns:
+      type: bool
+      description: 削除したら `True`、指した値が無ければ `False`
+    process: |-
+      1. 『項目のパスの分解』で分ける
+      2. 最後の手前までたどり、たどれない場合は `False` を返す
+      3. 最後がキーなら辞書から、位置なら配列から削除して `True` を返す
+    exceptions:
+      - name: InvalidArgumentError
+        condition: パスの書式が誤っている
+        message: 『項目のパスの分解』のまま
+    unit_tests:
+      - name: test_delete_field
+        case: 正常
+        summary: キーと位置
+        condition: '`{"a": {"b": 1}, "c": [1, 2]}` から `a.b` と `c[0]`'
+        mock: なし
+        expected: 'どちらも `True` で、`{"a": {}, "c": [2]}`'
+        exception: '-'
+      - name: test_delete_field_when_missing
+        case: 正常
+        summary: 無い値
+        condition: '`{}` から `a.b`'
+        mock: なし
+        expected: '`False` で内容は変わらない'
+        exception: '-'
+  - name: resolve_metadata
+    title: メタデータの解決
+    kind: 関数
+    container: features/documents/fields.py
+    usecase: 共通
+    role: 変換
+    summary: 文書の行の `metadata` の対応で、文書の内容から共通のキーの値を取る
+    scope: public
+    thread_safe: true
+    args:
+      - name: data
+        title: 内容
+        type: Mapping[str, Any]
+        required: true
+        passing: positional
+        description: 文書の内容（Markdown は front matter）
+      - name: table
+        title: 文書の行
+        type: DocumentTable
+        required: true
+        passing: positional
+        description: 文書の行
+    returns:
+      type: dict[str, Any]
+      description: 共通のキー → 値。値が無いキーは含まない
+    process: |-
+      1. `METADATA_KEYS` のキーごとに、`table.metadata` の対応を引く。書かれていないキーは同じ名前の列の `ref` とする
+      2. `ref` は『項目の取得』で `field` の値を取り、`custom` は `value` をそのまま使う
+      3. 値が `None` のキーを除いて返す
+    unit_tests:
+      - name: test_resolve_metadata
+        case: 正常
+        summary: 対応と既定の ref
+        condition: '`metadata` が `{name: {type: ref, field: title}, alias_type: {type: custom, value: term}}`、内容が `{"id": "a", "title": "A", "tags": ["x"]}`'
+        mock: なし
+        expected: '`{"id": "a", "name": "A", "tags": ["x"], "alias_type": "term"}`'
+        exception: '-'
+      - name: test_resolve_metadata_when_nested_field
+        case: 正常
+        summary: 入れ子の列
+        condition: '`metadata` が `{description: {type: ref, field: meta.summary}}`、内容が `{"meta": {"summary": "s"}}`'
+        mock: なし
+        expected: '`description` が `s`'
+        exception: '-'
+  - name: apply_defaults
+    title: 既定の重ね合わせ
+    kind: 関数
+    container: features/documents/fields.py
+    usecase: 共通
+    role: 変換
+    summary: '`defaults[]` のうちパスの当たる行を上から重ね、最後に文書自身のメタデータを重ねる'
+    scope: public
+    thread_safe: true
+    args:
+      - name: metadata
+        title: 文書のメタデータ
+        type: Mapping[str, Any]
+        required: true
+        passing: positional
+        description: 『メタデータの解決』の結果
+      - name: defaults
+        title: メタデータの既定
+        type: Sequence[DocumentDefaults]
+        required: true
+        passing: positional
+        description: 文書の行の `defaults`
+      - name: path
+        title: 照らすパス
+        type: str
+        required: true
+        passing: positional
+        description: 配信元の直下からのパス（`records` の行は `body_file` が指すファイル、無ければ YAML のファイル）
+    returns:
+      type: dict[str, Any]
+      description: 重ねた後のメタデータ（新しい辞書）
+    process: |-
+      1. 空の辞書から始める
+      2. `defaults` を上から順に見て、`paths` のどれかに `PurePosixPath(path).full_match` で当たる行の `model_extra` を重ねる
+      3. 最後に `metadata` を重ねる
+      4. 重ねるとき、`UNION_KEYS` のキーは先の値の後ろへ、まだ無い要素だけを追加する（順序を保つ）。ほかのキーは後の値で置き換える
+      5. 結果を返す
+    unit_tests:
+      - name: test_apply_defaults
+        case: 正常
+        summary: 和集合と上書き
+        condition: '`defaults` が `[{paths: [src/**], tags: [a], status: draft}, {paths: [src/x/**], tags: [b]}]`、`metadata` が `{tags: [a, c], status: done}`、`path` が `src/x/y.md`'
+        mock: なし
+        expected: '`{"tags": ["a", "b", "c"], "status": "done"}`'
+        exception: '-'
+      - name: test_apply_defaults_when_not_matched
+        case: 正常
+        summary: 当たらない行
+        condition: '`defaults` が `[{paths: [docs/**], tags: [a]}]`、`path` が `src/y.md`、`metadata` が `{}`'
+        mock: なし
+        expected: '`{}`'
+        exception: '-'
+  - name: collect_files
+    title: ファイルの収集
+    kind: 関数
+    container: features/documents/loader.py
+    usecase: 共通
+    role: 読み取り
+    summary: 文書の行の `paths` に当たるファイルを配信元の直下から集める
+    scope: public
+    thread_safe: true
+    args:
+      - name: root
+        title: 読むフォルダ
+        type: Path
+        required: true
+        passing: positional
+        description: 配信元の直下に当たるフォルダ（作業ツリー・ワークツリー・リビジョンの書き出し）
+      - name: patterns
+        title: glob の並び
+        type: Sequence[str]
+        required: true
+        passing: positional
+        description: '`documents[].paths`'
+    returns:
+      type: list[str]
+      description: '`root` からのパス（`/` 区切り）の昇順。重複は含まない'
+    process: |-
+      1. `os.walk` で `root` をたどる。`SKIP_DIRS` の名前のフォルダと、シンボリックリンクのフォルダは中をたどらない
+      2. ファイルごとに `root` からのパスを作り、`patterns` のどれかに `PurePosixPath.full_match` で当たれば加える（`**` は 0 個以上のフォルダ、`*` は 1 つの名前の中だけ）
+      3. 昇順に並べて返す
+    unit_tests:
+      - name: test_collect_files
+        case: 正常
+        summary: glob で集める
+        condition: '`a/x.yaml`・`a/b/y.yaml`・`a/z.md`・`.git/c.yaml` を置き、`["a/**/*.yaml"]`'
+        mock: なし（`tmp_path`）
+        expected: '`["a/b/y.yaml", "a/x.yaml"]`'
+        exception: '-'
+      - name: test_collect_files_when_overlapping_patterns
+        case: 正常
+        summary: 重なる glob
+        condition: '`a/x.yaml` を置き、`["a/*.yaml", "**/x.yaml"]`'
+        mock: なし（`tmp_path`）
+        expected: '`["a/x.yaml"]`'
+        exception: '-'
+  - name: split_front_matter
+    title: front matter の分離
+    kind: 関数
+    container: features/documents/loader.py
+    usecase: 共通
+    role: 変換
+    summary: Markdown の先頭の front matter と本文を分ける
+    scope: public
+    thread_safe: true
+    args:
+      - name: text
+        title: 文字列
+        type: str
+        required: true
+        passing: positional
+        description: Markdown のファイルの内容
+      - name: file
+        title: ファイル
+        type: str | None
+        required: false
+        default: None
+        passing: keyword
+        description: 誤りに載せるファイルのパス
+    returns:
+      type: tuple[dict[str, Any], str]
+      description: front matter（無ければ空の辞書）と、front matter を除いた本文
+    process: |-
+      1. 1 行目が `---` でない場合、空の辞書と `text` を返す
+      2. 2 行目以降で最初の `---` の行までを front matter として『YAMLの読み込み』で読む。閉じる行が無い場合は front matter が無いものとして扱う
+      3. front matter が辞書でない場合、`YamlLoadError` を送る
+      4. 閉じる行の次の行からを本文にして返す
+    exceptions:
+      - name: YamlLoadError
+        condition: front matter が YAML として読めない
+        message: '`{file}:{line}:{column}: {reason}`'
+      - name: YamlLoadError
+        condition: front matter が辞書でない
+        message: '`{file}: front matter が辞書ではありません`'
+    unit_tests:
+      - name: test_split_front_matter
+        case: 正常
+        summary: front matter と本文
+        condition: '`---\nid: a\n---\n# T\n`'
+        mock: なし
+        expected: '`({"id": "a"}, "# T\n")`'
+        exception: '-'
+      - name: test_split_front_matter_when_absent
+        case: 正常
+        summary: front matter が無い
+        condition: '`# T\n` と、閉じる行の無い `---\nid: a\n`'
+        mock: なし
+        expected: どちらも空の辞書と元の文字列
+        exception: '-'
+      - name: test_split_front_matter_when_not_mapping
+        case: 異常
+        summary: front matter が配列
+        condition: '`---\n- a\n---\n`'
+        mock: なし
+        expected: '`YamlLoadError`'
+        exception: front matter が辞書でない
+  - name: load_file
+    title: ファイルの読み込み
+    kind: 関数
+    container: features/documents/loader.py
+    usecase: 共通
+    role: 読み取り
+    summary: 1 つのファイルを読み、文書の行に従って 1 件以上の文書にする
+    scope: public
+    thread_safe: true
+    args:
+      - name: root
+        title: 読むフォルダ
+        type: Path
+        required: true
+        passing: positional
+        description: 配信元の直下に当たるフォルダ
+      - name: path
+        title: ファイル
+        type: str
+        required: true
+        passing: positional
+        description: '`root` からのパス'
+      - name: table
+        title: 文書の行
+        type: DocumentTable
+        required: true
+        passing: positional
+        description: ファイルが当たった文書の行
+      - name: source_id
+        title: 配信元の ID
+        type: str
+        required: true
+        passing: keyword
+        description: 文書に載せる配信元の ID
+      - name: dates
+        title: git の日時
+        type: Mapping[str, FileDates]
+        required: false
+        default: '{}'
+        passing: keyword
+        description: '`root` からのパス → 履歴の『ファイルの日時』。Git の管理外は空'
+    returns:
+      type: tuple[list[Document], list[LoadProblem]]
+      description: 作った文書と、文書にできなかった理由
+    process: |-
+      1. ファイルを UTF-8 で読む
+      2. 文字列からの文書の組み立てに渡し、その結果を返す
+    unit_tests:
+      - name: test_load_file_when_yaml
+        case: 正常
+        summary: YAML の 1 ファイル 1 文書
+        condition: '`rules/a.yaml` が `id: rule-a\ntitle: A\n`、行の `metadata` が `{name: {type: ref, field: title}}`'
+        mock: なし（`tmp_path`）
+        expected: 1 件で、`id` が `rule-a`、`metadata.name` が `A`、`version` が内容の『内容のハッシュ』、`record_index` が `None`
+        exception: '-'
+      - name: test_load_file_when_markdown
+        case: 正常
+        summary: front matter の無い Markdown
+        condition: '`notes/x.md` が `# X\n`、行の `type` が `markdown`'
+        mock: なし（`tmp_path`）
+        expected: '`id` が `notes/x`、`body` が `# X\n`、`data` が空'
+        exception: '-'
+      - name: test_load_file_when_records
+        case: 正常
+        summary: records と body_file
+        condition: '`src/files.yaml` が `files: [{path: a.py, tags: [x]}, {path: b.py}]`、`src/a.py`・`src/b.py` を置き、行は `records: files`・`body_file: path`'
+        mock: なし（`tmp_path`）
+        expected: 2 件で、`id` が `src/a`・`src/b`、`body` が各ファイルの内容、`body_path` が `src/a.py`・`src/b.py`、`record_index` が 0・1、`version` が要素の『値のハッシュ』
+        exception: '-'
+      - name: test_load_file_when_dates
+        case: 正常
+        summary: 日時の優先順位
+        condition: '`a.yaml` と `b.yaml` がどちらも `updated: 2026-01-02T00:00:00+09:00` を持ち、`dates` は `a.yaml` だけが `created` 2025-12-01・`updated` 2025-12-05。`c.yaml` はどちらも無い'
+        mock: なし（`tmp_path`）
+        expected: '`a.yaml` は 2025-12-01・2025-12-05、`b.yaml` は `created` が `None`・`updated` が 2026-01-02、`c.yaml` はどちらも `None`'
+        exception: '-'
+      - name: test_load_file_when_unreadable
+        case: 異常
+        summary: 読めない YAML
+        condition: '`a.yaml` が `a: [1`'
+        mock: なし（`tmp_path`）
+        expected: 文書は 0 件で、`LoadProblem` の `reason` が `unreadable`、`detail` に行と列
+        exception: '-'
+      - name: test_load_file_when_missing_body_file
+        case: 異常
+        summary: 無い本文のファイル
+        condition: '`records` の要素が `{path: none.py}` と `{path: ../../x.py}`'
+        mock: なし（`tmp_path`）
+        expected: 文書は 0 件で、`missing_body_file` が 2 件
+        exception: '-'
+  - name: documents_from_text
+    title: 文字列からの文書の組み立て
+    kind: 関数
+    container: features/documents/loader.py
+    usecase: 共通
+    role: 読み取り
+    summary: 1 つのファイルの内容の文字列を、文書の行に従って 1 件以上の文書にする
+    description: ファイルの読み込みと、書き込みが変更を当てた後の内容から検査用の文書を作るときに使う。
+    scope: public
+    thread_safe: true
+    args:
+      - name: text
+        title: 内容
+        type: str
+        required: true
+        passing: positional
+        description: ファイルの内容
+      - name: root
+        title: 読むフォルダ
+        type: Path
+        required: true
+        passing: positional
+        description: 配信元の直下に当たるフォルダ（`body_file` を解く）
+      - name: path
+        title: ファイル
+        type: str
+        required: true
+        passing: positional
+        description: '`root` からのパス'
+      - name: table
+        title: 文書の行
+        type: DocumentTable
+        required: true
+        passing: positional
+        description: ファイルが当たった文書の行
+      - name: source_id
+        title: 配信元の ID
+        type: str
+        required: true
+        passing: keyword
+        description: 文書に載せる配信元の ID
+      - name: dates
+        title: git の日時
+        type: Mapping[str, FileDates]
+        required: false
+        default: '{}'
+        passing: keyword
+        description: ファイルの読み込みと同じ
+    returns:
+      type: tuple[list[Document], list[LoadProblem]]
+      description: 作った文書と、文書にできなかった理由
+    process: |-
+      1. `table.type` が `yaml` の場合、『YAMLの読み込み』で読む。`markdown` の場合、『front matter の分離』で内容と本文に分ける
+         - `YamlLoadError` の場合、`unreadable` の `LoadProblem` だけを返す
+      2. `table.records` が無い場合、1 件の文書を作る
+         - YAML の内容が辞書でない場合、`not_mapping` を返す
+         - 本文は YAML ならファイルの内容、Markdown なら分けた本文。バージョンはファイルの内容の『内容のハッシュ』
+      3. `table.records` がある場合、『項目の取得』で配列を取り、要素ごとに文書を作る（配列が無ければ 0 件）
+         - 要素が辞書でない場合、その要素は `not_mapping` にして飛ばす
+         - `table.body_file` があれば、要素のその列のパスを YAML のファイルのフォルダから解いて読み、本文と `body_path` にする。無いファイル・`root` の外を指す場合、その要素は `missing_body_file` にして飛ばす
+         - `body_file` が無ければ、要素を YAML に書き出した文字列を本文にする
+         - バージョンは要素の『値のハッシュ』
+      4. 文書ごとに、『メタデータの解決』の後、『既定の重ね合わせ』を `body_path`（無ければ `path`）で当てる
+      5. ID はメタデータの `id`。無ければ、`body_path` か `path` から拡張子を除いた値（`records` で `body_file` が無ければ末尾に `#{位置}`）にする
+      6. `created` / `updated` は、`dates` の `body_path`（無ければ `path`）の値、内容の同じ名前の項目（ISO 8601 の文字列か日時）の順に最初にある値を使う。どちらも無ければ `None`
+      7. 文書と理由を返す
+classes:
+  - name: DocumentStore
+    title: 文書のストア
+    container: features/documents/store.py
+    usecase: 共通
+    role: キャッシュ
+    summary: 読む場所（`Target`）ごとに文書を集め、ファイルごとに結果をキャッシュする
+    description: |-
+      キャッシュのキーはファイルの絶対パスと文書の行の ID。更新日時（`st_mtime_ns`）と大きさが変わったファイルだけを読み直す。
+      リビジョンの書き出しは書き換わらないので、同じ仕組みでそのままキャッシュに当たる。
+      配信元の読み直しで文書の行が変わったときは、行の内容がキーに含まれないので、起動の設定の読み直しで `clear` を呼ぶ。
+    kind: クラス
+    properties:
+      - name: snapshots
+        title: リビジョンの書き出し
+        type: SnapshotStore
+        access: 公開
+        description: '`ref` のある `Target` を読むときに使う'
+      - name: _files
+        title: ファイルのキャッシュ
+        type: dict[tuple[Path, str], tuple[int, int, list[Document], list[LoadProblem]]]
+        access: 内部 (_)
+        description: (絶対パス, 文書の行の ID) → (更新日時, 大きさ, 文書, 理由)
+      - name: _schemas
+        title: スキーマのキャッシュ
+        type: dict[Path, tuple[int, int, dict[str, Any]]]
+        access: 内部 (_)
+        description: スキーマの絶対パス → (更新日時, 大きさ, 読んだスキーマ)
+      - name: _dates
+        title: 日時のキャッシュ
+        type: dict[tuple[Path, str], dict[str, FileDates]]
+        access: 内部 (_)
+        description: (作業ツリー, 解いた commit) → 履歴の『ファイルの日時』の結果。commit が変わればキーが変わる
+      - name: _lock
+        title: 排他
+        type: threading.Lock
+        access: 内部 (_)
+        description: キャッシュの辞書の読み書きを守る（ファイルの読み込みはロックの外で行う）
+    methods:
+      - name: load
+        title: 文書を集める
+        summary: 読む場所の文書を、文書の行ごとに集めて返す
+        kind: メソッド
+        scope: public
+        thread_safe: true
+        side_effects: キャッシュを更新する。`ref` があればリビジョンを書き出す
+        args:
+          - name: target
+            title: 読む場所
+            type: Target
+            required: true
+            passing: positional
+            description: 権限と作業場所の『読む場所の解決』の結果
+          - name: kinds
+            title: 種類
+            type: Sequence[str] | None
+            required: false
+            default: None
+            passing: keyword
+            description: 絞る文書の行の ID。`None` は有効な全ての行
+        returns:
+          type: LoadResult
+          description: 集めた文書と読めなかったファイル
+        process: |-
+          1. 読むフォルダを決める
+             - `target.ref` が `None` の場合、`target.base`
+             - `target.ref` がある場合、履歴の『リビジョンの解決』（`date_base` は配信元の `default_ref`）で解いた commit を `snapshots.checkout` で書き出し、その下に `source.root` の `repo_root` からの相対パスをつなぐ
+          2. 文書の行を決める。`kinds` があれば `source.table` で引き（無い種類は `UnknownKindError`）、無ければ `enabled` の全ての行
+          3. Git の配信元の場合、履歴の『ファイルの日時』を `_dates` から引く。無ければ、作業ツリー（ワークツリーか `repo_root`）と commit（`ref` の commit、無ければ作業ツリーの `HEAD` を解いた SHA）で呼び、配信元の直下からのパスに直して控える
+          4. 行ごとに『ファイルの収集』でファイルを集め、ファイルごとに `stat` を取る
+             - `_files` の更新日時と大きさが同じなら控えた結果を使う
+             - 違えば『ファイルの読み込み』で読み、`_files` を置き換える
+          5. 収集で当たらなかった `_files` のキーのうち、読むフォルダの下にあるものを削除する（削除されたファイル）
+          6. 行の順に文書を並べ、先に現れた ID を残して、後に現れた同じ ID の文書を `duplicate_id` にする（`detail` に ID と先の文書のファイル）
+          7. `LoadResult` を返す
+        exceptions:
+          - name: UnknownKindError
+            condition: '`kinds` に有効な文書の行に無い種類がある'
+            message: 配信元の『文書の行を引く』のまま
+          - name: RefNotFoundError
+            condition: '`target.ref` を commit に解けない'
+            message: 履歴の『リビジョンの解決』のまま
+        unit_tests:
+          - name: test_document_store_load
+            case: 正常
+            summary: 行ごとに集める
+            condition: 行 `rules`（`rules/*.yaml`）と `notes`（`notes/*.md`）に 2 件ずつ、Git の管理外の配信元
+            mock: なし（`tmp_path`）
+            expected: '`rules` の 2 件、`notes` の 2 件の順で、`problems` が空'
+            exception: '-'
+          - name: test_document_store_load_when_cached
+            case: 正常
+            summary: 変わったファイルだけ読み直す
+            condition: 2 回呼ぶ間に `rules/a.yaml` だけを書き換える
+            mock: '`load_file`（本物を包んで呼ばれたパスを記録する）'
+            expected: 2 回目に `load_file` が呼ばれたのは `rules/a.yaml` だけで、結果に書き換えた内容が載る
+            exception: '-'
+          - name: test_document_store_load_when_deleted
+            case: 正常
+            summary: 削除されたファイル
+            condition: 2 回呼ぶ間に `rules/b.yaml` を削除する
+            mock: なし（`tmp_path`）
+            expected: 2 回目の結果に `rules/b.yaml` の文書が無い
+            exception: '-'
+          - name: test_document_store_load_when_duplicate_id
+            case: 正常
+            summary: 重なった ID
+            condition: '`rules/a.yaml` と `rules/b.yaml` がどちらも `id: x`'
+            mock: なし（`tmp_path`）
+            expected: 文書は `rules/a.yaml` の 1 件で、`problems` に `rules/b.yaml` の `duplicate_id`
+            exception: '-'
+          - name: test_document_store_load_when_ref
+            case: 正常
+            summary: 過去のリビジョン
+            condition: Git の配信元で `rules/a.yaml` を commit した後、作業ツリーで書き換え、`ref` に最初の commit を渡す
+            mock: なし（`tmp_path` に `git init`）
+            expected: commit した内容を返し、`updated` が commit の日時
+            exception: '-'
+          - name: test_document_store_load_when_unknown_kind
+            case: 異常
+            summary: 無い種類
+            condition: '`kinds=["x"]`'
+            mock: なし
+            expected: '`UnknownKindError`'
+            exception: '`kinds` に有効な文書の行に無い種類がある'
+      - name: get
+        title: ID で引く
+        summary: ID の並びの順に文書を返す
+        kind: メソッド
+        scope: public
+        thread_safe: true
+        args:
+          - name: target
+            title: 読む場所
+            type: Target
+            required: true
+            passing: positional
+            description: 読む場所
+          - name: ids
+            title: 文書の ID
+            type: Sequence[str]
+            required: true
+            passing: positional
+            description: 引く ID の並び
+          - name: kinds
+            title: 種類
+            type: Sequence[str] | None
+            required: false
+            default: None
+            passing: keyword
+            description: 絞る文書の行の ID
+        returns:
+          type: list[Document]
+          description: '`ids` の順の文書（同じ ID を 2 回渡すと 2 回返す）'
+        process: |-
+          1. `load` で文書を集め、ID → 文書の辞書を作る
+          2. `ids` の順に引く
+          3. 無い ID がある場合、ID ごとに `difflib.get_close_matches`（`n=CANDIDATE_COUNT`、`cutoff=CANDIDATE_CUTOFF`）で近い ID を引き、`DocumentNotFoundError` を送る
+          4. 文書の並びを返す
+        exceptions:
+          - name: DocumentNotFoundError
+            condition: 無い ID がある
+            message: '`{source}: 文書 {missing} はありません`。`candidates` に無い ID ごとの近い ID'
+          - name: UnknownKindError
+            condition: '`kinds` に無い種類がある'
+            message: '`load` のまま'
+        unit_tests:
+          - name: test_document_store_get
+            case: 正常
+            summary: 渡した順
+            condition: '`a`・`b` があり、`["b", "a"]`'
+            mock: なし（`tmp_path`）
+            expected: '`b`・`a` の順'
+            exception: '-'
+          - name: test_document_store_get_when_missing
+            case: 異常
+            summary: 無い ID と近い候補
+            condition: '`rule-auth` があり、`["rule-auht", "zzz"]`'
+            mock: なし（`tmp_path`）
+            expected: '`DocumentNotFoundError` の `missing` が 2 件、`candidates["rule-auht"]` が `["rule-auth"]`、`candidates["zzz"]` が空'
+            exception: 無い ID がある
+      - name: schema
+        title: 種類のスキーマ
+        summary: 読む場所に合わせた種類のスキーマを返す
+        kind: メソッド
+        scope: public
+        thread_safe: true
+        args:
+          - name: target
+            title: 読む場所
+            type: Target
+            required: true
+            passing: positional
+            description: 読む場所
+          - name: kind
+            title: 種類
+            type: str
+            required: true
+            passing: positional
+            description: 文書の行の ID
+        returns:
+          type: dict[str, Any]
+          description: JSON Schema。`markdown` の行と `schema` が無い行は空の辞書
+        process: |-
+          1. `source.table(kind)` で行を引く
+          2. `schema_path` が無ければ空の辞書を返す
+          3. `target.ref` と `target.worktree` がどちらも `None` の場合、起動時に読んだ `source.schemas[kind]` を返す
+          4. それ以外は、`load` と同じ読むフォルダの `schema_path` を `_schemas` から引き、更新日時か大きさが違えば『YAMLの読み込み』で読み直す
+             - ファイルが無い・読めない場合、`source.schemas[kind]` を返す
+          5. スキーマを返す
+        exceptions:
+          - name: UnknownKindError
+            condition: '`kind` が有効な文書の行に無い'
+            message: 配信元の『文書の行を引く』のまま
+        unit_tests:
+          - name: test_document_store_schema_when_worktree
+            case: 正常
+            summary: ワークツリーのスキーマ
+            condition: ワークツリーで `schemas/rule.schema.yaml` の `required` を書き換えた
+            mock: なし（`tmp_path`）
+            expected: 書き換えたスキーマを返し、クローン本体では起動時のスキーマを返す
+            exception: '-'
+          - name: test_document_store_schema_when_markdown
+            case: 正常
+            summary: スキーマの無い行
+            condition: '`markdown` の行'
+            mock: なし
+            expected: '`{}`'
+            exception: '-'
+      - name: invalidate
+        title: キャッシュを捨てる
+        summary: 書き込んだファイルのキャッシュを捨てる
+        description: 更新日時の分解能より短い間に同じ大きさで書き換えたときも、書き込みの直後の読み取りで古い内容を返さないように、書き込みが呼ぶ。
+        kind: メソッド
+        scope: public
+        thread_safe: true
+        side_effects: '`_files` と `_schemas` から該当のキーを削除する'
+        args:
+          - name: paths
+            title: ファイル
+            type: Iterable[Path]
+            required: true
+            passing: positional
+            description: 書き込んだ・削除したファイルの絶対パス
+        returns:
+          type: None
+          description: '-'
+        process: 1. 渡されたパスを持つ `_files` のキー（全ての文書の行）と `_schemas` のキーを削除する
+        unit_tests:
+          - name: test_document_store_invalidate
+            case: 正常
+            summary: 同じ大きさ・同じ更新日時の書き換え
+            condition: '`load` の後、`rules/a.yaml` を同じ大きさで書き換えて `os.utime` で更新日時を戻し、`invalidate` してから `load`'
+            mock: なし（`tmp_path`）
+            expected: 書き換えた内容を返す
+            exception: '-'
+      - name: clear
+        title: 全て捨てる
+        summary: 全てのキャッシュを捨てる
+        kind: メソッド
+        scope: public
+        thread_safe: true
+        side_effects: '`_files`・`_schemas`・`_dates` を空にする'
+        returns:
+          type: None
+          description: '-'
+        process: 1. 3 つのキャッシュを空にする（配信元の読み直しで呼ぶ）

@@ -1,0 +1,563 @@
+title: "開発ドキュメントサーバー / 端末の設定"
+lead: |-
+  端末の設定 `settings.yaml` をスキーマで検証して読み、設定画面から送られた `sources[]` を、他のキーとコメントを保って書き換える。
+  設定画面・端末の設定の保存・トップの転送の入口も持つ。
+directory: |-
+  ```text
+  src/dev_docs/features/settings/
+  ├─ __init__.py   # 公開する型と関数の再エクスポート
+  ├─ types.py      # TerminalConfig / SourceEntry / SourceScope / SettingsSourcesRequest / SettingsSourcesResponse
+  ├─ query.py      # config_path / load_terminal_config / listen_port
+  ├─ service.py    # save_sources
+  └─ route.py      # build_settings_router（GET / ・GET /_settings/ ・PUT /_api/settings/sources）
+  schemas/
+  └─ settings.schema.yaml   # 端末の設定のスキーマ（JSON Schema 2020-12）
+  ```
+diagrams:
+  - name: 全体
+    diagram: |-
+      classDiagram
+        direction TD
+        端末の設定の入口 ..> 配信元の保存 : PUT
+        端末の設定の入口 ..> 同じオリジンの確認 : PUT の前
+        配信元の保存 ..> 端末の設定の検証 : 書く前
+        端末の設定の読み込み ..> 端末の設定の検証 : 読んだ後
+        配信元の保存 ..> 配信元の一覧 : 読み直す
+        端末の設定の読み込み ..> 端末の設定 : 返す
+        class 端末の設定の入口 {
+          <<function>>
+        }
+        class 配信元の保存 {
+          <<function>>
+        }
+        class 端末の設定の読み込み {
+          <<function>>
+        }
+        class 端末の設定の検証 {
+          <<function>>
+        }
+        class 同じオリジンの確認 {
+          <<function>>
+        }
+        class 配信元の一覧 {
+          +読み直す(端末の設定) list
+        }
+        class 端末の設定 {
+          +配信元: list
+          +状態の置き場所: Path
+        }
+        click 同じオリジンの確認 href "./共通.py.yaml#同じオリジンの確認"
+        click 配信元の一覧 href "./配信元.py.yaml#配信元の一覧"
+data_models:
+  - name: SourceScope
+    title: 配信元の権限の範囲
+    container: features/settings/types.py
+    usecase: 端末の設定
+    role: DTO
+    summary: '`sources[].scope` の `read`・`write`'
+    description: '`pydantic.BaseModel`（`extra="forbid"`）。'
+    properties:
+      - name: read
+        title: 読める作業場所
+        type: list[str]
+        access: 公開
+        default: '[]'
+        description: この配信元を読める作業場所の glob
+      - name: write
+        title: 読み書きできる作業場所
+        type: list[str] | None
+        access: 公開
+        default: None
+        description: この配信元を読み書きできる作業場所の glob。`None` は配信元のフォルダだけ（配信元の『配信元の読み込み』が解く）
+  - name: SourceEntry
+    title: 配信元の行
+    container: features/settings/types.py
+    usecase: 端末の設定
+    role: DTO
+    summary: 端末の設定の `sources[]` の 1 行
+    description: '`pydantic.BaseModel`（`extra="forbid"`）。端末の設定の保存の要求の `sources[]` もこの形。'
+    properties:
+      - name: id
+        title: 配信元の ID
+        type: str | None
+        access: 公開
+        default: None
+        description: 主キー。`None` は配信元の設定の `name`（配信元の『配信元の読み込み』が解く）
+        notes: 英小文字・数字・`-` だけ（スキーマの `pattern`）
+      - name: config
+        title: 配信元の設定のパス
+        type: list[str]
+        access: 公開
+        description: 配信元の設定の YAML の絶対パスの並び。文字列 1 つで書かれたときも配列にする（`field_validator`）
+      - name: enabled
+        title: 配信するか
+        type: bool
+        access: 公開
+        default: 'True'
+        description: '`False` で行を消さずに配信を止める'
+      - name: scope
+        title: 権限の範囲
+        type: SourceScope
+        access: 公開
+        default: SourceScope()
+        description: 読める・読み書きできる作業場所
+  - name: TerminalConfig
+    title: 端末の設定
+    container: features/settings/types.py
+    usecase: 端末の設定
+    role: DTO
+    summary: 検証を通して既定値を埋めた端末の設定
+    description: '`pydantic.BaseModel`（`frozen=True`）。キーの意味と既定値は Issue #3 の資料 A-25 のキー一覧。'
+    properties:
+      - name: file
+        title: 設定のファイル
+        type: Path
+        access: 公開
+        description: 読んだ `settings.yaml` の絶対パス
+      - name: version
+        title: 設定のバージョン
+        type: str
+        access: 公開
+        description: '`version` の値'
+      - name: clone
+        title: クローンの場所
+        type: Path
+        access: 公開
+        description: dev-docs のクローン（フックが使う。サーバーは読むだけ）
+      - name: port
+        title: 待ち受けのポート
+        type: int
+        access: 公開
+        default: '8781'
+        description: 非機能要件の `listen_port`
+      - name: bind
+        title: 待ち受けのアドレス
+        type: str
+        access: 公開
+        default: '"127.0.0.1"'
+        description: 非機能要件の `bind_address`
+      - name: sources
+        title: 配信元
+        type: list[SourceEntry]
+        access: 公開
+        default: '[]'
+        description: 配信元のテーブル
+      - name: state_dir
+        title: 状態の置き場所
+        type: Path
+        access: 公開
+        default: ~/.local/state/dev-docs
+        description: 会話の記録・変換の結果・リビジョンの書き出し・表の列の設定を置くフォルダ（`~` を展開した絶対パス）
+      - name: log_dir
+        title: ログの置き場所
+        type: Path
+        access: 公開
+        default: '{state_dir}/logs'
+        description: 検証の失敗と警告のログを書くフォルダ
+      - name: seen_retention_days
+        title: 返し済みの記録の保持日数
+        type: int
+        access: 公開
+        default: '7'
+        description: この日数を過ぎた会話の記録を消す
+      - name: script_timeout_sec
+        title: スクリプトの制限時間
+        type: int
+        access: 公開
+        default: 非機能要件の `script_timeout` の決定値
+        description: 検査・変換・生成のスクリプト 1 回の上限（秒）
+  - name: SettingsSourcesRequest
+    title: 配信元の保存の要求
+    container: features/settings/types.py
+    usecase: 端末の設定
+    role: DTO
+    summary: PUT `/_api/settings/sources` の本文
+    description: '`pydantic.BaseModel`。型の合わない本文は FastAPI が 422 にする前に、起動の『例外の変換の登録』で problem+json の `errors[]` に揃える。'
+    properties:
+      - name: sources
+        title: 配信元
+        type: list[SourceEntry]
+        access: 公開
+        description: 保存する `sources[]` の全行
+  - name: SettingsSourcesResponse
+    title: 配信元の保存の応答
+    container: features/settings/types.py
+    usecase: 端末の設定
+    role: DTO
+    summary: 読み直した後の配信元ごとの状態
+    description: '`pydantic.BaseModel`。`from_statuses(statuses)` で配信元の状態の並びから作る。'
+    properties:
+      - name: sources
+        title: 配信元
+        type: list[SourceStatusItem]
+        access: 公開
+        description: '`id`・`status`（`serving` / `not_served` / `disabled`）・`errors[]`（`{path, reason}`。`not_served` のときだけ）・`config_version`（`{config, server}`。設定のバージョンが古いときだけ）'
+constants:
+  - name: DEFAULT_CONFIG_PATH
+    title: 端末の設定の既定のパス
+    container: features/settings/query.py
+    usecase: 端末の設定
+    summary: '`DEV_DOCS_CONFIG` が無いときに読むパス'
+    value: '"~/.config/dev-docs/settings.yaml"'
+  - name: CONFIG_ENV
+    title: 端末の設定の環境変数
+    container: features/settings/query.py
+    usecase: 端末の設定
+    summary: 端末の設定のパスを渡す環境変数の名前
+    value: '"DEV_DOCS_CONFIG"'
+  - name: PORT_ENV
+    title: ポートの環境変数
+    container: features/settings/query.py
+    usecase: 端末の設定
+    summary: 待ち受けのポートを上書きする環境変数の名前
+    value: '"DEV_DOCS_PORT"'
+  - name: SETTINGS_SCHEMA
+    title: 端末の設定のスキーマ
+    container: features/settings/query.py
+    usecase: 端末の設定
+    summary: 配布に同梱する端末の設定のスキーマのパス（`importlib.resources` で引く）
+    value: '"schemas/settings.schema.yaml"'
+  - name: SETTINGS_VERSION
+    title: 端末の設定の読めるバージョン
+    container: features/settings/query.py
+    usecase: 端末の設定
+    summary: このサーバーが読める端末の設定の `version`
+    value: '"1"'
+functions:
+  - name: config_path
+    title: 端末の設定のパス
+    kind: 関数
+    container: features/settings/query.py
+    usecase: 起動
+    role: 読み取り
+    summary: 環境変数から端末の設定のパスを決める
+    scope: public
+    args:
+      - name: env
+        title: 環境変数
+        type: Mapping[str, str]
+        required: true
+        passing: positional
+        description: '`os.environ`'
+    returns:
+      type: Path
+      description: '`CONFIG_ENV` の値、無ければ `DEFAULT_CONFIG_PATH` を正規化した絶対パス'
+    process: 1. `CONFIG_ENV` が空でなければその値、無ければ `DEFAULT_CONFIG_PATH` を『パスの正規化』にかけて返す（パスの正規化）
+    unit_tests:
+      - name: test_config_path
+        case: 正常
+        summary: 環境変数の値
+        condition: '`{"DEV_DOCS_CONFIG": "/tmp/x/settings.yaml"}`'
+        mock: なし
+        expected: '`Path("/tmp/x/settings.yaml")`'
+      - name: test_config_path_when_unset
+        case: 正常
+        summary: 環境変数が無い
+        condition: '`{"HOME": "/home/u"}`（`HOME` を monkeypatch）'
+        mock: なし
+        expected: '`Path("/home/u/.config/dev-docs/settings.yaml")`'
+  - name: load_terminal_config
+    title: 端末の設定の読み込み
+    kind: 関数
+    container: features/settings/query.py
+    usecase: 起動
+    role: 読み込み
+    summary: '`settings.yaml` を読み、スキーマの違反を全て集めてから端末の設定にする'
+    scope: public
+    thread_safe: true
+    args:
+      - name: path
+        title: 設定のファイル
+        type: Path
+        required: true
+        passing: positional
+        description: 端末の設定のパス
+    returns:
+      type: TerminalConfig
+      description: 既定値を埋めた端末の設定
+    process: |-
+      1. ファイルを UTF-8 で読む
+         - 無い場合、`TerminalConfigInvalidError` を送る
+      2. YAML として読む（YAMLの読み込み）
+         - 読めない場合、行と列を `Violation` にして `TerminalConfigInvalidError` を送る
+      3. 端末の設定の値を検証する（端末の設定の検証）
+         - 違反が 1 つでもある場合、全ての違反を載せた `TerminalConfigInvalidError` を送る
+      4. `TerminalConfig` を作る。`state_dir` と `log_dir` は『パスの正規化』にかけ、`log_dir` が無ければ `{state_dir}/logs` にする
+    exceptions:
+      - name: TerminalConfigInvalidError
+        condition: ファイルが無い
+        message: '`{path}: 端末の設定が見つかりません`'
+      - name: TerminalConfigInvalidError
+        condition: YAML として読めない
+        message: '`{path}:{line}:{column}: {reason}`'
+      - name: TerminalConfigInvalidError
+        condition: スキーマに違反する
+        message: '違反ごとに `{path}: {キーのパス}: {理由}`'
+    unit_tests:
+      - name: test_load_terminal_config
+        case: 正常
+        summary: 既定値を埋める
+        condition: '`version`・`clone` と `sources` 1 行（`config` は文字列）だけの設定'
+        mock: なし（一時フォルダ）
+        expected: '`port` が 8781、`bind` が `127.0.0.1`、`sources[0].config` が配列、`log_dir` が `{state_dir}/logs`'
+      - name: test_load_terminal_config_when_missing
+        case: 異常
+        summary: ファイルが無い
+        condition: 無いパス
+        mock: なし
+        expected: '`TerminalConfigInvalidError` の本文にそのパス'
+        exception: ファイルが無い
+      - name: test_load_terminal_config_when_yaml_broken
+        case: 異常
+        summary: YAML として読めない
+        condition: '`sources: [`'
+        mock: なし
+        expected: '`TerminalConfigInvalidError` の違反に行と列'
+        exception: YAML として読めない
+      - name: test_load_terminal_config_when_schema_invalid
+        case: 異常
+        summary: 違反を全て集める
+        condition: '`sources[0]` に `config` が無く、`port` が文字列'
+        mock: なし
+        expected: '`TerminalConfigInvalidError` の違反に `sources[0].config` と `port` の 2 つ'
+        exception: スキーマに違反する
+  - name: validate_terminal_config
+    title: 端末の設定の検証
+    kind: 関数
+    container: features/settings/query.py
+    usecase: 端末の設定
+    role: 検証
+    summary: 端末の設定の値をスキーマと行の間の決まりで確かめ、違反を全て返す
+    scope: public
+    thread_safe: true
+    args:
+      - name: value
+        title: 設定の値
+        type: Any
+        required: true
+        passing: positional
+        description: YAML として読んだ素の値
+    returns:
+      type: list[Violation]
+      description: 違反の並び。無ければ空
+    process: |-
+      1. `SETTINGS_SCHEMA` を読み、Draft 2020-12 で `iter_errors` を全て集め、誤りの場所を `sources[0].config` の形のパスにした `Violation` にする（必須のキーが無い誤りは、無いキーまでをパスにする）
+      2. `sources[].id` が行の間で重なる場合、後の行の `sources[{n}].id` に重複の違反を加える（`id` を省いた行はここでは比べず、配信元の読み込みで比べる）
+      3. `scope.read`・`scope.write` に空の文字列がある場合、その要素のパスに違反を加える
+      4. `version` が `SETTINGS_VERSION` より新しい場合、`version` に「このサーバーより新しい設定」の違反を加える
+    unit_tests:
+      - name: test_validate_terminal_config
+        case: 正常
+        summary: 違反が無い
+        condition: 必須のキーを持つ設定
+        mock: なし
+        expected: 空
+      - name: test_validate_terminal_config_when_duplicate_id
+        case: 正常
+        summary: 行の ID が重なる
+        condition: '`sources` の 2 行がどちらも `id: a`'
+        mock: なし
+        expected: '`sources[1].id` の違反 1 つ'
+      - name: test_validate_terminal_config_when_empty_glob
+        case: 正常
+        summary: 空の glob
+        condition: '`scope.read: [""]`'
+        mock: なし
+        expected: '`sources[0].scope.read[0]` の違反'
+      - name: test_validate_terminal_config_when_newer_version
+        case: 正常
+        summary: 新しいバージョンの設定
+        condition: '`version: "2"`'
+        mock: なし
+        expected: '`version` の違反'
+  - name: listen_port
+    title: 待ち受けのポート
+    kind: 関数
+    container: features/settings/query.py
+    usecase: 起動
+    role: 読み取り
+    summary: '`DEV_DOCS_PORT` を優先して待ち受けのポートを決める'
+    scope: public
+    args:
+      - name: config
+        title: 端末の設定
+        type: TerminalConfig
+        required: true
+        passing: positional
+        description: 読んだ端末の設定
+      - name: env
+        title: 環境変数
+        type: Mapping[str, str]
+        required: true
+        passing: positional
+        description: '`os.environ`'
+    returns:
+      type: int
+      description: 待ち受けるポート
+    process: |-
+      1. `PORT_ENV` が空でなければ整数にして返す
+         - 1〜65535 の整数でない場合、`TerminalConfigInvalidError` を送る
+      2. 無ければ端末の設定の `port` を返す
+    exceptions:
+      - name: TerminalConfigInvalidError
+        condition: '`DEV_DOCS_PORT` が 1〜65535 の整数でない'
+        message: '`DEV_DOCS_PORT: 1〜65535 の整数にしてください（{value}）`'
+    unit_tests:
+      - name: test_listen_port
+        case: 正常
+        summary: 環境変数が優先
+        condition: '`port: 9000`、`DEV_DOCS_PORT=9100`'
+        mock: なし
+        expected: '9100'
+      - name: test_listen_port_when_unset
+        case: 正常
+        summary: 設定の値
+        condition: '`port: 9000`、環境変数なし'
+        mock: なし
+        expected: '9000'
+      - name: test_listen_port_when_invalid
+        case: 異常
+        summary: 整数でない
+        condition: '`DEV_DOCS_PORT=abc`'
+        mock: なし
+        expected: '`TerminalConfigInvalidError`'
+        exception: '`DEV_DOCS_PORT` が整数でない'
+  - name: save_sources
+    title: 配信元の保存
+    kind: 関数
+    container: features/settings/service.py
+    usecase: 設定画面で端末の設定を変える
+    role: サービス
+    summary: '`settings.yaml` の `sources` だけを書き換え、検証に通ったら書いて配信元を読み直す'
+    scope: public
+    thread_safe: true
+    side_effects: 端末の設定のファイルを書き換え、配信元の一覧を入れ替える
+    args:
+      - name: sources
+        title: 配信元
+        type: Sequence[SourceEntry]
+        required: true
+        passing: positional
+        description: 保存する `sources[]` の全行
+      - name: path
+        title: 設定のファイル
+        type: Path
+        required: true
+        passing: injected
+        description: 端末の設定のパス
+      - name: registry
+        title: 配信元の一覧
+        type: SourceRegistry
+        required: true
+        passing: injected
+        description: 読み直す配信元の一覧
+      - name: lock
+        title: 端末の設定の排他
+        type: threading.Lock
+        required: true
+        passing: injected
+        description: 端末の設定の読み書きと読み直しの排他
+    returns:
+      type: list[SourceStatus]
+      description: 読み直した後の配信元ごとの状態（配信元の『配信元の状態』）
+    process: |-
+      1. `lock` を取る
+      2. 端末の設定を往復編集の形で読み（往復編集の読み込み）、`sources` だけを送られた行に置き換える。既定値と同じキー（`enabled: true`・空の `scope.read` など）は書かない
+      3. 置き換えた値を検証する（端末の設定の検証）
+         - 違反がある場合、ファイルを書かずに `TerminalConfigInvalidError` を送る
+      4. 一時ファイルに書いてから置き換える（往復編集の書き出し・ファイルの置き換え）
+         - `[info]` 端末の設定の sources を保存した（パス・行数）
+      5. 端末の設定を読み直し（端末の設定の読み込み）、配信元の一覧を読み直して状態を返す（配信元の一覧.読み直し）
+    exceptions:
+      - name: TerminalConfigInvalidError
+        condition: 置き換えた後の端末の設定がスキーマに通らない
+        message: '違反ごとに `{キーのパス}: {理由}`'
+        notes: 入口が 422 にする
+    unit_tests:
+      - name: test_save_sources
+        case: 正常
+        summary: sources だけを書き換えコメントを保つ
+        condition: '`port` にコメントを持つ設定に、行を 1 つ足した `sources`'
+        mock: 配信元の一覧（`reload` が `serving` を 2 つ返す関数を持つ偽物）
+        expected: ファイルの `sources` が 2 行で、`port` の行とコメントはそのまま。`reload` が書いた後の設定で 1 回呼ばれる
+      - name: test_save_sources_when_defaults
+        case: 正常
+        summary: 既定値のキーを書かない
+        condition: '`enabled: true`・`scope.read: []` の行'
+        mock: 配信元の一覧（偽物）
+        expected: ファイルの行に `enabled` と `scope` が無い
+      - name: test_save_sources_when_invalid
+        case: 異常
+        summary: 検証に通らない
+        condition: '2 行とも `id: a`'
+        mock: 配信元の一覧（偽物）
+        expected: '`TerminalConfigInvalidError` で、ファイルは元のまま、`reload` は呼ばれない'
+        exception: 置き換えた後がスキーマに通らない
+  - name: build_settings_router
+    title: 端末の設定の入口
+    kind: 関数
+    container: features/settings/route.py
+    usecase: 設定画面で端末の設定を変える
+    role: 入口
+    summary: トップの転送・設定画面・端末の設定の保存のルートを持つ `APIRouter` を作る
+    scope: public
+    args:
+      - name: handlers
+        title: 配線済みの関数
+        type: Handlers
+        required: true
+        passing: positional
+        description: 起動の『配線済みの関数』。`save_sources`・配信元の状態・画面のテンプレートを引く
+    returns:
+      type: fastapi.APIRouter
+      description: 3 つのルートを持つルーター
+    process: |-
+      1. GET `/` は `/_settings/` への 302 を返す
+      2. GET `/_settings/` は、端末の設定のパスと `sources[]` の各行に配信元の状態を重ねた画面の状態を作り、`settings.html` を描いて返す（配信元の一覧.状態の一覧）
+      3. PUT `/_api/settings/sources` は、同じオリジンの確認を依存に持ち（同じオリジンの確認）、本文を `SettingsSourcesRequest` で受けて『配信元の保存』を `asyncio.to_thread` で呼び、`SettingsSourcesResponse` を返す（配信元の保存）
+         - `TerminalConfigInvalidError` は例外の変換で 422 の problem+json になる
+    unit_tests:
+      - name: test_build_settings_router_when_root
+        case: 正常
+        summary: トップを転送する
+        condition: GET `/`
+        mock: 配線済みの関数（偽物）
+        expected: 302 で `Location` が `/_settings/`
+      - name: test_build_settings_router_when_settings_page
+        case: 正常
+        summary: 設定画面に状態を埋め込む
+        condition: GET `/_settings/`、状態は `serving` 1 つと `not_served` 1 つ
+        mock: 配線済みの関数（偽物）
+        expected: 200 で、埋め込んだ状態に 2 行と `not_served` の `errors`
+      - name: test_build_settings_router_when_put
+        case: 正常
+        summary: 保存して状態を返す
+        condition: 'PUT `/_api/settings/sources` を `Sec-Fetch-Site: same-origin` で'
+        mock: 配線済みの関数（`save_sources` が状態を返す偽物）
+        expected: 200 で `sources[].status`。`save_sources` に送った行が渡る
+refs:
+  - dev/設計書/インターフェース定義/開発ドキュメントサーバー/端末の設定の保存#
+  - dev/設計書/インターフェース定義/開発ドキュメントサーバー/設定画面の表示#
+  - dev/設計書/インターフェース定義/開発ドキュメントサーバー/トップの転送#
+classes:
+  - name: TerminalConfigInvalidError
+    title: 端末の設定の違反
+    container: features/settings/types.py
+    usecase: 端末の設定
+    role: 例外
+    summary: 端末の設定が無い・YAML として読めない・スキーマに違反することを、違反の並びで表す
+    description: '`DevDocsError` の子で HTTP 422。起動では標準エラーに違反ごとに `{file}: {path}: {rule}` を出して終了コード 2 で終わり、画面の API では problem+json の `errors[]`（`{path, reason}`）にする。'
+    kind: クラス
+    inherits: DevDocsError
+    properties:
+      - name: file
+        title: 設定のファイル
+        type: Path
+        access: 公開
+        description: 端末の設定のパス
+      - name: violations
+        title: 違反
+        type: list[Violation]
+        access: 公開
+        default: '[]'
+        description: 違反の並び。ファイルが無いときは空

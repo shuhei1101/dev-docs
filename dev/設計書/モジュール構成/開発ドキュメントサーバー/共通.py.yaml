@@ -1,0 +1,610 @@
+title: "開発ドキュメントサーバー / 共通"
+lead: どの分類からも使う例外の階層・YAML の読み書き・内容のハッシュ・パスの照合と、画面の書き込みの要求のオリジンの確認。
+directory: |-
+  ```text
+  src/dev_docs/
+  ├─ shared/
+  │  ├─ errors.py    # DevDocsError と MCP・画面が返すエラーの階層
+  │  ├─ yaml_io.py   # YAML の読み込み・往復編集の読み書き・YamlLoadError
+  │  ├─ hashing.py   # 内容のハッシュ（文書のバージョン）
+  │  ├─ paths.py     # 作業場所の glob の照合・パスの正規化
+  │  └─ files.py     # 一時ファイルからのファイルの置き換え
+  └─ server/
+     └─ origin.py    # 画面と同じオリジンからの要求かの確認
+  ```
+diagrams:
+  - name: 全体
+    diagram: |-
+      classDiagram
+        direction TD
+        開発ドキュメントサーバーのエラー <|-- 読めない配信元
+        開発ドキュメントサーバーのエラー <|-- 書き込めない配信元
+        開発ドキュメントサーバーのエラー <|-- 配信していない配信元
+        開発ドキュメントサーバーのエラー <|-- 引数の誤り
+        開発ドキュメントサーバーのエラー <|-- 検査の不合格
+        開発ドキュメントサーバーのエラー <|-- バージョンの不一致
+        YAMLの読み込み ..> YAMLを読めない : 送る
+        往復編集の読み込み ..> YAMLを読めない : 送る
+        class 開発ドキュメントサーバーのエラー {
+          +エラーの名前: str
+          +本文: str
+          +次の手: list
+        }
+        class YAMLの読み込み {
+          <<function>>
+        }
+        class 往復編集の読み込み {
+          <<function>>
+        }
+data_models:
+  - name: Violation
+    title: 違反
+    container: shared/errors.py
+    usecase: 共通
+    role: DTO
+    summary: 違反 1 件の項目のパス・決まり・直し方
+    description: '`@dataclass(frozen=True, slots=True, kw_only=True)`。検査・設定の検証・書き込みの失敗が返す違反の 1 件。'
+    properties:
+      - name: path
+        title: 項目のパス
+        type: str
+        access: 公開
+        description: 違反した項目のパス（`documents[0].paths`・`operations[1].set.name` の形）
+        example: documents[0].paths
+      - name: rule
+        title: 決まり
+        type: str
+        access: 公開
+        description: 違反した決まり（必須のキーが無い・型が違う・検査の名前など）
+        example: 必須のキーが無い
+      - name: fix
+        title: 直し方
+        type: str
+        access: 公開
+        default: '""'
+        description: 直し方の案内。分からないときは空
+      - name: index
+        title: 操作の添字
+        type: int | None
+        access: 公開
+        default: None
+        description: '`write_docs` の `operations` の添字。操作に結び付かない違反は `None`'
+classes:
+  - name: DevDocsError
+    title: 開発ドキュメントサーバーのエラー
+    container: shared/errors.py
+    usecase: 共通
+    role: 例外
+    summary: MCP の `isError` と画面の problem+json に変換するエラーの基底
+    kind: クラス
+    inherits: Exception
+    description: |-
+      文書の MCP はこの例外を `isError: true` の本文に、画面の API は RFC 9457 の problem+json に変換する（文書の MCP の『ツールのエラーの変換』・起動の『例外の変換の登録』）。
+      下の表の子クラスはどれもこの基底を継承し、プロパティを足さない限り `name` と `message` だけを持つ。
+
+      | 子クラス | 論理名 | 追加のプロパティ | HTTP |
+      | --- | --- | --- | --- |
+      | `UnknownSourceError` | 無い配信元 | `source_id` | 404 |
+      | `SourceNotReadableError` | 読めない配信元 | `available: list[SourceAccess]` | 403 |
+      | `SourceNotWritableError` | 書き込めない配信元 | `available: list[SourceAccess]` | 403 |
+      | `SourceNotServedError` | 配信していない配信元 | `violations: list[Violation]`・`disabled: bool` | 404 |
+      | `WorktreeNotMatchedError` | ワークツリーに当たらない | `given: str`・`patterns: list[str]` | 400 |
+      | `TargetIsCloneError` | 書く先がクローン本体 | `clone: str` | 409 |
+      | `InvalidArgumentError` | 引数の誤り | `violations: list[Violation]` | 400 |
+      | `RefNotFoundError` | 無いリビジョン | `argument: str`・`value: str` | 404 |
+      | `UnknownKindError` | 知らない種類 | `kinds: list[str]` | 400 |
+      | `DocumentNotFoundError` | 無い文書 | `missing: list[str]`・`candidates: dict[str, list[str]]` | 404 |
+      | `ValidationFailedError` | 検査の不合格 | `violations: list[Violation]` | 422 |
+      | `VersionMismatchError` | バージョンの不一致 | `doc_id: str`・`current: str`・`diff: str` | 409 |
+      | `DocumentReferencedError` | 参照されている | `doc_id: str`・`referrers: list[str]` | 409 |
+      | `DeleteNotAllowedError` | 削除を許していない種類 | `kind: str` | 403 |
+      | `LastReadNotFoundError` | 前回読んだ記録が無い | - | 400 |
+      | `CrossOriginError` | 別のオリジンからの要求 | - | 403 |
+
+      `SourceAccess` は権限と作業場所の『使える配信元』。
+    properties:
+      - name: name
+        title: エラーの名前
+        type: str
+        access: 公開
+        description: クラスの名前（`SourceNotReadableError` など）。MCP の本文の先頭と problem+json の `type` の末尾に出す
+      - name: message
+        title: 本文
+        type: str
+        access: 公開
+        description: 原因を 1〜2 文で書いた本文
+      - name: next_steps
+        title: 次の手
+        type: list[str]
+        access: 公開
+        default: '[]'
+        description: 呼び出し側が次にできること（`describe()` で使える配信元を見る・`worktree` を渡す など）
+      - name: status
+        title: HTTP のステータス
+        type: int
+        access: 公開
+        description: 画面の API で返すステータス（説明の表の HTTP の列）。クラスの属性で持つ
+    methods:
+      - name: details
+        title: 詳細
+        kind: メソッド
+        summary: 子クラスが持つ追加のプロパティを辞書で返す
+        scope: public
+        returns:
+          type: dict[str, Any]
+          description: 追加のプロパティ名 → 値。`Violation` と `SourceAccess` は辞書にする
+        process: |-
+          1. `dataclasses.fields` で子クラスの追加のプロパティを並べ、名前 → 値の辞書にして返す
+          2. 値が `Violation`・`SourceAccess` のときは `dataclasses.asdict` で辞書にする
+        unit_tests:
+          - name: test_dev_docs_error_details
+            case: 正常
+            summary: 追加のプロパティを辞書にする
+            condition: '`SourceNotServedError(violations=[Violation(path="documents[0].paths", rule="必須のキーが無い")], disabled=False)`'
+            mock: なし
+            expected: '`{"violations": [{"path": "documents[0].paths", "rule": "必須のキーが無い", "fix": "", "index": None}], "disabled": False}`'
+          - name: test_dev_docs_error_details_when_no_extra
+            case: 正常
+            summary: 追加のプロパティが無い
+            condition: '`LastReadNotFoundError(message="…")`'
+            mock: なし
+            expected: '`{}`'
+  - name: YamlLoadError
+    title: YAMLを読めない
+    container: shared/yaml_io.py
+    usecase: 共通
+    role: 例外
+    summary: YAML として読めないことを、ファイル・行・列・理由で表す
+    kind: クラス
+    inherits: ValueError
+    properties:
+      - name: file
+        title: ファイル
+        type: str | None
+        access: 公開
+        default: None
+        description: 読んだファイルのパス。文字列から読んだときは `None`
+      - name: line
+        title: 行
+        type: int | None
+        access: 公開
+        default: None
+        description: 1 始まりの行。分からないときは `None`
+      - name: column
+        title: 列
+        type: int | None
+        access: 公開
+        default: None
+        description: 1 始まりの列
+      - name: reason
+        title: 理由
+        type: str
+        access: 公開
+        description: ruamel.yaml の誤りの 1 行目。キーの重複は重なったキーの名前を添える
+constants:
+  - name: VERSION_LENGTH
+    title: バージョンの長さ
+    container: shared/hashing.py
+    usecase: 共通
+    summary: 文書のバージョン（内容のハッシュ）の 16 進の桁数
+    value: '6'
+    reason: 文書のバージョンは同じ文書の前後を比べるだけに使い、6 桁で取り違えが起きない。インターフェース定義の例（`9d0e11`）と揃える
+  - name: YAML_WIDTH
+    title: YAMLの折り返しの幅
+    container: shared/yaml_io.py
+    usecase: 共通
+    summary: 往復編集で書き出す YAML の 1 行の幅（折り返さない）
+    value: '4096'
+  - name: YAML_INDENT
+    title: YAMLの字下げ
+    container: shared/yaml_io.py
+    usecase: 共通
+    summary: 往復編集で書き出す YAML の字下げ
+    entries:
+      - key: mapping
+        value: '2'
+      - key: sequence
+        value: '4'
+      - key: offset
+        value: '2'
+  - name: SAME_ORIGIN
+    title: 同じオリジン
+    container: server/origin.py
+    usecase: 共通
+    summary: '`Sec-Fetch-Site` で同じオリジンを表す値'
+    value: '"same-origin"'
+functions:
+  - name: load_yaml
+    title: YAMLの読み込み
+    kind: 関数
+    container: shared/yaml_io.py
+    usecase: 共通
+    role: 読み込み
+    summary: YAML の文字列を素の値（dict・list・str 等）で読む
+    scope: public
+    thread_safe: true
+    args:
+      - name: text
+        title: 文字列
+        type: str
+        required: true
+        passing: positional
+        description: YAML の文字列
+      - name: file
+        title: ファイル
+        type: str | None
+        required: false
+        default: None
+        passing: keyword
+        description: 誤りに載せるファイルのパス
+    returns:
+      type: Any
+      description: 読んだ値。空の文字列は `None`
+    process: |-
+      1. ruamel.yaml の安全なローダー（`typ="safe"`、Python 実装）で読む
+      2. 読めない場合、誤りの位置（`problem_mark`）から行と列を 1 始まりで取り、`YamlLoadError` を送る。キーの重複は重なったキーの名前を理由に添える
+    exceptions:
+      - name: YamlLoadError
+        condition: YAML として読めない（構文の誤り・キーの重複）
+        message: '`{file}:{line}:{column}: {reason}`'
+    unit_tests:
+      - name: test_load_yaml
+        case: 正常
+        summary: 素の値で読む
+        condition: '`a: [1, 2]`'
+        mock: なし
+        expected: '`{"a": [1, 2]}`'
+      - name: test_load_yaml_when_syntax_error
+        case: 異常
+        summary: 構文の誤り
+        condition: '`a: [1, 2` を `file="x.yaml"` で'
+        mock: なし
+        expected: '`YamlLoadError` で、`file` が `x.yaml`、`line` が 1'
+        exception: YAML として読めない
+      - name: test_load_yaml_when_duplicate_key
+        case: 異常
+        summary: キーの重複
+        condition: '`a: 1` と `a: 2` の 2 行'
+        mock: なし
+        expected: '`YamlLoadError` の `reason` に `a` が載る'
+        exception: YAML として読めない
+  - name: load_roundtrip
+    title: 往復編集の読み込み
+    kind: 関数
+    container: shared/yaml_io.py
+    usecase: 共通
+    role: 読み込み
+    summary: コメントと順序を保つ往復編集の形で YAML を読む
+    scope: public
+    thread_safe: true
+    args:
+      - name: text
+        title: 文字列
+        type: str
+        required: true
+        passing: positional
+        description: YAML の文字列
+      - name: file
+        title: ファイル
+        type: str | None
+        required: false
+        default: None
+        passing: keyword
+        description: 誤りに載せるファイルのパス
+    returns:
+      type: CommentedMap
+      description: コメントと順序を持つ辞書。空の文字列は空の `CommentedMap`
+    process: |-
+      1. 往復編集の YAML（`typ="rt"`、Python 実装。`ruamel.yaml.clib` ではコメントが残らない）で読む
+      2. 読めない場合、『YAMLの読み込み』と同じ形の `YamlLoadError` を送る
+      3. 最上位が辞書でない場合、`YamlLoadError` を送る
+    exceptions:
+      - name: YamlLoadError
+        condition: YAML として読めない
+        message: '`{file}:{line}:{column}: {reason}`'
+      - name: YamlLoadError
+        condition: 最上位が辞書でない
+        message: '`{file}: 最上位が辞書ではありません`'
+    unit_tests:
+      - name: test_load_roundtrip
+        case: 正常
+        summary: コメントを保つ
+        condition: '`# c\na: 1  # x` を読んで『往復編集の書き出し』で書く'
+        mock: なし
+        expected: 元の文字列と同じ
+      - name: test_load_roundtrip_when_not_mapping
+        case: 異常
+        summary: 最上位が配列
+        condition: '`- 1`'
+        mock: なし
+        expected: '`YamlLoadError`'
+        exception: 最上位が辞書でない
+  - name: dump_roundtrip
+    title: 往復編集の書き出し
+    kind: 関数
+    container: shared/yaml_io.py
+    usecase: 共通
+    role: 書き出し
+    summary: 往復編集の値を、コメント・順序・字下げを保って文字列にする
+    scope: public
+    thread_safe: true
+    args:
+      - name: doc
+        title: 文書
+        type: CommentedMap
+        required: true
+        passing: positional
+        description: 書き出す値
+    returns:
+      type: str
+      description: YAML の文字列（末尾は改行 1 つ）
+    process: |-
+      1. 幅を `YAML_WIDTH`、字下げを `YAML_INDENT` にした往復編集の YAML で書き出す
+      2. 改行を含む文字列の値は、ブロックのリテラル（`|-`）にして書く
+    unit_tests:
+      - name: test_dump_roundtrip
+        case: 正常
+        summary: 改行を含む値をリテラルにする
+        condition: '`{"a": "x\ny"}`'
+        mock: なし
+        expected: '`a: |-\n  x\n  y\n`'
+  - name: content_hash
+    title: 内容のハッシュ
+    kind: 関数
+    container: shared/hashing.py
+    usecase: 共通
+    role: 計算
+    summary: 内容の SHA-256 の先頭 `VERSION_LENGTH` 桁を文書のバージョンにする
+    scope: public
+    thread_safe: true
+    args:
+      - name: data
+        title: 内容
+        type: str | bytes
+        required: true
+        passing: positional
+        description: ハッシュを取る内容。文字列は UTF-8 にする
+    returns:
+      type: str
+      description: 16 進の小文字 `VERSION_LENGTH` 桁
+    process: 1. 文字列なら UTF-8 のバイト列にし、SHA-256 の 16 進の先頭 `VERSION_LENGTH` 桁を返す
+    unit_tests:
+      - name: test_content_hash
+        case: 正常
+        summary: 文字列とバイト列で同じ
+        condition: '`"a"` と `b"a"`'
+        mock: なし
+        expected: どちらも `ca9781`
+  - name: value_hash
+    title: 値のハッシュ
+    kind: 関数
+    container: shared/hashing.py
+    usecase: 共通
+    role: 計算
+    summary: 項目の値を正規化した JSON にしてハッシュを取る（項目ごとのバージョン）
+    scope: public
+    thread_safe: true
+    args:
+      - name: value
+        title: 値
+        type: Any
+        required: true
+        passing: positional
+        description: 素の値
+    returns:
+      type: str
+      description: 『内容のハッシュ』と同じ桁の 16 進
+    process: |-
+      1. キーを並べ替え、`ensure_ascii=False`・区切りに空白を入れない JSON にする
+      2. その文字列の『内容のハッシュ』を返す（内容のハッシュ）
+    unit_tests:
+      - name: test_value_hash
+        case: 正常
+        summary: キーの順によらない
+        condition: '`{"a": 1, "b": 2}` と `{"b": 2, "a": 1}`'
+        mock: なし
+        expected: 同じ値
+  - name: match_glob
+    title: globの照合
+    kind: 関数
+    container: shared/paths.py
+    usecase: 共通
+    role: 照合
+    summary: 作業場所のパスが `scope` の glob の 1 つに当たるかを返す
+    scope: public
+    thread_safe: true
+    args:
+      - name: path
+        title: パス
+        type: Path
+        required: true
+        passing: positional
+        description: 照らすパス（絶対パス）
+      - name: patterns
+        title: globの並び
+        type: Sequence[str]
+        required: true
+        passing: positional
+        description: '`scope.read`・`scope.write`・`worktrees` の値'
+      - name: base
+        title: 相対パスの基準
+        type: Path | None
+        required: false
+        default: None
+        passing: keyword
+        description: 相対パスの glob を解く基準（配信元の直下）。`None` なら相対パスの glob は当たらない
+    returns:
+      type: bool
+      description: どれかに当たれば `True`
+    process: |-
+      1. パスを『パスの正規化』にかける
+      2. glob ごとに、`~` を展開し、相対パスなら `base` と結合して正規化する
+      3. `**` を含む glob は 0 個以上のフォルダに、`*` は 1 つのフォルダ名の中だけに当たるとして照らす（`PurePosixPath.full_match`）。`/**` で終わる glob はそのフォルダ自身にも当たる
+      4. 1 つでも当たれば `True`
+    callees:
+      - dev/設計書/モジュール構成/開発ドキュメントサーバー/共通.py#functions[normalize_path]
+    unit_tests:
+      - name: test_match_glob
+        case: 正常
+        summary: '`/**` の無いパスはそのフォルダだけ'
+        condition: '`/r/a` と `/r/a/b` を `["/r/a"]` に'
+        mock: なし
+        expected: '`/r/a` は `True`、`/r/a/b` は `False`'
+      - name: test_match_glob_when_recursive
+        case: 正常
+        summary: '`/**` は自分と中に当たる'
+        condition: '`/r/a` と `/r/a/b/c` を `["/r/a/**"]` に'
+        mock: なし
+        expected: どちらも `True`
+      - name: test_match_glob_when_relative
+        case: 正常
+        summary: 相対パスを基準で解く
+        condition: '`/r/.claude/worktrees/x` を `["./.claude/worktrees/*"]`、`base=/r` に'
+        mock: なし
+        expected: '`True`'
+      - name: test_match_glob_when_relative_without_base
+        case: 正常
+        summary: 基準が無い相対パス
+        condition: 同じパスと glob、`base=None`
+        mock: なし
+        expected: '`False`'
+  - name: normalize_path
+    title: パスの正規化
+    kind: 関数
+    container: shared/paths.py
+    usecase: 共通
+    role: 変換
+    summary: '`~` の展開・`..` の解決・末尾の `/` の除去をした絶対パスにする'
+    scope: public
+    thread_safe: true
+    args:
+      - name: path
+        title: パス
+        type: str | Path
+        required: true
+        passing: positional
+        description: 正規化するパス
+    returns:
+      type: Path
+      description: 絶対パス。シンボリックリンクは解かない
+    process: 1. `expanduser` で `~` を展開し、`os.path.abspath` で `..` を解いた `Path` を返す
+    unit_tests:
+      - name: test_normalize_path
+        case: 正常
+        summary: '`..` と末尾の `/` を除く'
+        condition: '`/r/a/../b/`'
+        mock: なし
+        expected: '`Path("/r/b")`'
+  - name: require_same_origin
+    title: 同じオリジンの確認
+    kind: 関数
+    container: server/origin.py
+    usecase: 共通
+    role: 依存
+    summary: 画面と別のオリジンからの書き込みの要求を断る（FastAPI の依存）
+    scope: public
+    args:
+      - name: request
+        title: 要求
+        type: fastapi.Request
+        required: true
+        passing: positional
+        description: 受けた要求
+    returns:
+      type: None
+      description: 同じオリジンなら何も返さない
+    process: |-
+      1. `Origin` があれば、要求の `scheme://host:port` と比べ、違えば `CrossOriginError` を送る
+      2. `Origin` が無ければ、`Sec-Fetch-Site` が `SAME_ORIGIN` でなければ `CrossOriginError` を送る（どちらも無いときも断る）
+    exceptions:
+      - name: CrossOriginError
+        condition: '`Origin` が画面のオリジンと違う'
+        message: '`画面と別のオリジン（{origin}）からの要求は受けません`'
+        notes: '`DevDocsError` の子で HTTP 403'
+      - name: CrossOriginError
+        condition: '`Origin` が無く、`Sec-Fetch-Site` が `same-origin` でない'
+        message: '`画面と同じオリジンからの要求か確かめられません`'
+    unit_tests:
+      - name: test_require_same_origin
+        case: 正常
+        summary: 同じオリジン
+        condition: '`Origin: http://127.0.0.1:8781` を `http://127.0.0.1:8781/_api/...` へ'
+        mock: なし（Starlette の Request を組み立てる）
+        expected: 送らない
+      - name: test_require_same_origin_when_fetch_site
+        case: 正常
+        summary: '`Origin` が無く `Sec-Fetch-Site` が same-origin'
+        condition: '`Sec-Fetch-Site: same-origin` だけ'
+        mock: なし
+        expected: 送らない
+      - name: test_require_same_origin_when_cross_origin
+        case: 異常
+        summary: 別のオリジン
+        condition: '`Origin: http://evil.example`'
+        mock: なし
+        expected: '`CrossOriginError`'
+        exception: '`Origin` が違う'
+      - name: test_require_same_origin_when_unknown
+        case: 異常
+        summary: どちらのヘッダーも無い
+        condition: ヘッダーなし
+        mock: なし
+        expected: '`CrossOriginError`'
+        exception: '`Sec-Fetch-Site` が same-origin でない'
+  - name: replace_file
+    title: ファイルの置き換え
+    kind: 関数
+    container: shared/files.py
+    usecase: 共通
+    role: 書き込み
+    summary: 同じフォルダの一時ファイルに書いてから置き換え、読み手に書きかけの内容を見せない
+    scope: public
+    side_effects: '`path` を書き換える。フォルダが無ければ作る'
+    args:
+      - name: path
+        title: 書く先
+        type: Path
+        required: true
+        passing: positional
+        description: 置き換えるファイルの絶対パス
+      - name: content
+        title: 内容
+        type: str
+        required: true
+        passing: positional
+        description: 書く文字列（UTF-8、改行は `\n` のまま）
+    returns:
+      type: None
+      description: 何も返さない
+    process: |-
+      1. `path` の親フォルダを `mkdir(parents=True, exist_ok=True)` で作る
+      2. 同じフォルダに `tempfile.NamedTemporaryFile(delete=False, prefix=".{名前}.", suffix=".tmp")` で一時ファイルを作り、`content` を書いて `flush` と `os.fsync` をする
+      3. 既に `path` があれば、そのパーミッションを一時ファイルへ写す
+      4. `os.replace` で `path` に置き換える
+         - 書き込みか置き換えで `OSError` が起きた場合、一時ファイルを削除してからそのまま送る
+    exceptions:
+      - name: OSError
+        condition: 書き込みか置き換えに失敗する
+        message: OS の誤りのまま
+    unit_tests:
+      - name: test_replace_file
+        case: 正常
+        summary: 内容とパーミッションを保って置き換える
+        condition: 'パーミッション 0600 の既存のファイルへ `"a: 1\n"`'
+        mock: なし（一時フォルダ）
+        expected: '内容が `a: 1\n`、パーミッションが 0600、フォルダに `.tmp` のファイルが残らない'
+      - name: test_replace_file_when_new_folder
+        case: 正常
+        summary: フォルダを作る
+        condition: 無いフォルダの下のパス
+        mock: なし
+        expected: フォルダとファイルができる
+      - name: test_replace_file_when_replace_fails
+        case: 異常
+        summary: 置き換えに失敗すると一時ファイルを残さない
+        condition: 任意の内容
+        mock: '`os.replace`（`OSError` を送る）'
+        expected: '`OSError` が伝わり、元のファイルは変わらず、`.tmp` のファイルが残らない'
+        exception: 書き込みか置き換えに失敗する
+notes:
+  例外の置き場所: どの分類の関数も、呼び出し側へ返す失敗は `shared/errors.py` の子クラスで送る。スクリプトの実行の失敗（スクリプトの実行の分類）と YAML を読めないことは、それぞれの分類の例外で送り、呼び出し側が `Violation` か本文の誤りに変える。

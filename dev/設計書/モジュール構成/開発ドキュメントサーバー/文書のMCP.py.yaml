@@ -1,0 +1,266 @@
+title: "開発ドキュメントサーバー / 文書のMCP"
+lead: |-
+  文書の MCP（`/mcp`）と管理の MCP（`/_admin/mcp`）の組み立て。
+  6 つのツールの引数を要求のモデルで受け、サービスを呼んで `format` の形で返し、`DevDocsError` を `isError` の結果にする。
+directory: |-
+  ```text
+  src/dev_docs/server/mcp/
+  ├─ __init__.py   # build_docs_mcp / build_admin_mcp の再エクスポート
+  ├─ docs.py       # build_docs_mcp（6 つのツールの登録）
+  ├─ admin.py      # build_admin_mcp
+  └─ result.py     # to_tool_result / tool_error / TOOL_ANNOTATIONS
+  ```
+diagrams:
+  - name: 全体
+    diagram: |-
+      classDiagram
+        direction TD
+        文書の MCP の組み立て ..> ツールの結果
+        文書の MCP の組み立て ..> ツールのエラーの変換
+        文書の MCP の組み立て ..> 文書の検索
+        文書の MCP の組み立て ..> 文書の書き込み
+        文書の MCP の組み立て ..> 文書の削除
+        文書の MCP の組み立て ..> 変更の一覧
+        文書の MCP の組み立て ..> 関連のたどり
+        文書の MCP の組み立て ..> 配信元の説明
+        ツールのエラーの変換 ..> 開発ドキュメントサーバーのエラー
+        class 文書の MCP の組み立て {
+          <<function>>
+        }
+        class 管理の MCP の組み立て {
+          <<function>>
+        }
+        class ツールの結果 {
+          <<function>>
+        }
+        class ツールのエラーの変換 {
+          <<function>>
+        }
+        class 文書の検索 {
+          <<function>>
+        }
+        class 文書の書き込み {
+          <<function>>
+        }
+        class 文書の削除 {
+          <<function>>
+        }
+        class 変更の一覧 {
+          <<function>>
+        }
+        class 関連のたどり {
+          <<function>>
+        }
+        class 配信元の説明 {
+          <<function>>
+        }
+        class 開発ドキュメントサーバーのエラー {
+          <<class>>
+        }
+        click 文書の検索 href "./検索.py.yaml#文書の検索"
+        click 文書の書き込み href "./書き込み.py.yaml#文書の書き込み"
+        click 文書の削除 href "./書き込み.py.yaml#文書の削除"
+        click 変更の一覧 href "./変更.py.yaml#変更の一覧"
+        click 関連のたどり href "./関連.py.yaml#関連のたどり"
+        click 配信元の説明 href "./説明.py.yaml#配信元の説明"
+        click 開発ドキュメントサーバーのエラー href "./共通.py.yaml#開発ドキュメントサーバーのエラー"
+constants:
+  - name: DOCS_MCP_NAME
+    title: 文書の MCP の名前
+    container: server/mcp/docs.py
+    usecase: 共通
+    summary: '`initialize` で返すサーバーの名前'
+    value: '"dev-docs"'
+  - name: ADMIN_MCP_NAME
+    title: 管理の MCP の名前
+    container: server/mcp/admin.py
+    usecase: 共通
+    summary: '`initialize` で返すサーバーの名前'
+    value: '"dev-docs-admin"'
+  - name: TOOL_ANNOTATIONS
+    title: ツールの注釈
+    container: server/mcp/result.py
+    usecase: 共通
+    summary: ツールごとの `ToolAnnotations`
+    entries:
+      - key: search_docs
+        value: '`readOnlyHint=True`'
+        description: インターフェース定義『文書の検索』
+      - key: describe
+        value: '`readOnlyHint=True`'
+        description: インターフェース定義『配信元の説明』
+      - key: list_changes
+        value: '`readOnlyHint=True`'
+        description: インターフェース定義『変更の一覧』
+      - key: trace_related
+        value: '`readOnlyHint=True`'
+        description: インターフェース定義『関連のたどり』
+      - key: write_docs
+        value: '`readOnlyHint=False`・`destructiveHint=False`'
+        description: インターフェース定義『文書の書き込み』
+      - key: delete_docs
+        value: '`readOnlyHint=False`・`destructiveHint=True`'
+        description: インターフェース定義『文書の削除』
+functions:
+  - name: to_tool_result
+    title: ツールの結果
+    kind: 関数
+    container: server/mcp/result.py
+    usecase: 共通
+    role: 変換
+    summary: サービスの結果を `format` に合わせて MCP の `CallToolResult` にする
+    scope: public
+    thread_safe: true
+    args:
+      - name: result
+        title: 結果
+        type: Any
+        required: true
+        passing: positional
+        description: サービスの結果（dataclass）
+      - name: fmt
+        title: 形式
+        type: Literal['markdown', 'json']
+        required: true
+        passing: positional
+        description: 要求の `format`
+      - name: render
+        title: Markdown の組み立て
+        type: Callable[[Any], str] | None
+        required: true
+        passing: positional
+        description: '`render_*_markdown`。`None` は常に JSON（書き込み・削除）'
+    returns:
+      type: mcp.types.CallToolResult
+      description: ツールの結果
+    process: |-
+      1. `fmt` が `markdown` で `render` がある場合、`content` に `render(result)` の text を 1 つ入れ、`structuredContent` を持たない結果を返す
+      2. それ以外は、結果を JSON にできる辞書にし（`dataclasses.asdict`、`None` のキーは落とす。`from_` などの別名は別名のキーで出す）、`structuredContent` にその辞書を、`content` に同じ JSON の text を入れる
+    unit_tests:
+      - name: test_to_tool_result
+        case: 正常
+        summary: markdown
+        condition: '`fmt="markdown"`、`render` が `"# x"` を返す'
+        mock: なし
+        expected: '`content[0].text` が `"# x"`、`structuredContent` が無い'
+      - name: test_to_tool_result_when_json
+        case: 正常
+        summary: json
+        condition: '`fmt="json"`'
+        mock: なし
+        expected: '`structuredContent` と `json.loads(content[0].text)` が同じ'
+  - name: tool_error
+    title: ツールのエラーの変換
+    kind: 関数
+    container: server/mcp/result.py
+    usecase: 共通
+    role: 変換
+    summary: '`DevDocsError` と要求のモデルの検証の誤りを `isError: true` の結果にする'
+    scope: public
+    thread_safe: true
+    args:
+      - name: error
+        title: エラー
+        type: DevDocsError | pydantic.ValidationError
+        required: true
+        passing: positional
+        description: サービスか要求のモデルが送った例外
+    returns:
+      type: mcp.types.CallToolResult
+      description: '`isError: true` の結果'
+    process: |-
+      1. `DevDocsError` の場合、text の 1 行目を `{name}: {message}`、次に `details()` を YAML で、最後に `next_steps` を `- ` の行で並べる
+      2. `pydantic.ValidationError` の場合、`InvalidArgumentError` として、誤りごとに `{loc を . で繋いだパス}: {msg}` の行と、`describe` で使い方を見ることを並べる
+      3. どちらも `isError=True` で返す（`ToolError` は送らない。内容を text に残すため）
+    unit_tests:
+      - name: test_tool_error
+        case: 正常
+        summary: DevDocsError
+        condition: '`SourceNotReadableError(available=[...])`'
+        mock: なし
+        expected: '`isError` が `True`、text の 1 行目が `SourceNotReadableError: ...`、使える配信元の一覧を含む'
+      - name: test_tool_error_when_validation
+        case: 正常
+        summary: 引数の誤り
+        condition: '`SearchRequest(limit="x")` の検証の誤り'
+        mock: なし
+        expected: text に `limit:` の行と `describe` の案内
+  - name: build_docs_mcp
+    title: 文書の MCP の組み立て
+    kind: 関数
+    container: server/mcp/docs.py
+    usecase: 共通
+    role: 入口
+    summary: 6 つのツールを持つ文書の MCP を作る
+    scope: public
+    args:
+      - name: handlers
+        title: 配線済みの関数
+        type: Handlers
+        required: true
+        passing: positional
+        description: 起動の『配線済みの関数』
+    returns:
+      type: mcp.server.mcpserver.MCPServer
+      description: 文書の MCP（`stateless_http=True`・`json_response=True`）
+    process: |-
+      1. `MCPServer(DOCS_MCP_NAME)` を作る
+      2. `search_docs`・`describe`・`list_changes`・`trace_related`・`write_docs`・`delete_docs` を `TOOL_ANNOTATIONS` の注釈で登録する。引数はインターフェース定義の `request` をキーワード引数で受ける（`list_changes` の `from` は `from_` で受け、ツールの入力のスキーマでは `from` を出す）
+      3. 各ツールは次の順で処理する
+         - 引数で要求のモデル（`SearchRequest` など）を作る
+         - サービスを `asyncio.to_thread` で呼ぶ（引数は `handlers` の属性）
+         - 結果をツールの結果にする（`write_docs`・`delete_docs` の `render` は `None`）
+         - `DevDocsError` と `pydantic.ValidationError` はツールのエラーの変換で返す。それ以外の例外は `[error]` ツールの処理に失敗した（ツール名・例外）を書いて MCP の既定に任せる
+      4. 作った MCP を返す
+    unit_tests:
+      - name: test_build_docs_mcp
+        case: 正常
+        summary: ツールと注釈
+        condition: '`list_tools` を呼ぶ'
+        mock: 配線済みの関数（偽物）
+        expected: 6 つのツールが並び、`delete_docs` の `destructiveHint` が `True`、`search_docs` の `readOnlyHint` が `True`
+      - name: test_build_docs_mcp_when_call
+        case: 正常
+        summary: サービスへの受け渡し
+        condition: '`search_docs(source="sample", format="json")` を呼ぶ'
+        mock: '`search_docs`（結果を返す偽物）'
+        expected: サービスに `SearchRequest(source="sample")` が渡り、`structuredContent` を返す
+      - name: test_build_docs_mcp_when_error
+        case: 正常
+        summary: エラーの変換
+        condition: サービスが `UnknownKindError` を送る
+        mock: '`write_docs`（送る偽物）'
+        expected: '`isError` が `True`'
+  - name: build_admin_mcp
+    title: 管理の MCP の組み立て
+    kind: 関数
+    container: server/mcp/admin.py
+    usecase: 共通
+    role: 入口
+    summary: 管理の MCP を作る（ツールは #4 で足す）
+    scope: public
+    args:
+      - name: handlers
+        title: 配線済みの関数
+        type: Handlers
+        required: true
+        passing: positional
+        description: 起動の『配線済みの関数』
+    returns:
+      type: mcp.server.mcpserver.MCPServer
+      description: ツールを持たない管理の MCP
+    process: 1. `MCPServer(ADMIN_MCP_NAME)` を作って返す
+    unit_tests:
+      - name: test_build_admin_mcp
+        case: 正常
+        summary: ツールが無い
+        condition: '`list_tools` を呼ぶ'
+        mock: 配線済みの関数（偽物）
+        expected: ツールが 0 件
+refs:
+  - dev/設計書/インターフェース定義/開発ドキュメントサーバー/文書の検索#
+  - dev/設計書/インターフェース定義/開発ドキュメントサーバー/文書の書き込み#
+  - dev/設計書/インターフェース定義/開発ドキュメントサーバー/文書の削除#
+  - dev/設計書/インターフェース定義/開発ドキュメントサーバー/変更の一覧#
+  - dev/設計書/インターフェース定義/開発ドキュメントサーバー/関連のたどり#
+  - dev/設計書/インターフェース定義/開発ドキュメントサーバー/配信元の説明#

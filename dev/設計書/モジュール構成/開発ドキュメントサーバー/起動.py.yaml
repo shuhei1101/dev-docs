@@ -1,0 +1,453 @@
+title: "開発ドキュメントサーバー / 起動"
+lead: |-
+  `dev-docs serve` の処理。端末の設定と配信元を読み、部品を配線して、画面・文書の MCP・管理の MCP を 1 つのアプリとして待ち受ける。
+  例外から problem+json への変換もここで登録する。
+directory: |-
+  ```text
+  src/dev_docs/
+  ├─ main.py                    # Handlers / build_handlers / run_serve / PortInUseError
+  └─ server/
+     ├─ app.py                  # build_app（ルートと MCP のマウント）
+     ├─ lifespan.py             # build_lifespan（MCP のセッションの管理と記録の削除）
+     └─ error_handlers.py       # register_error_handlers（problem+json）
+  ```
+diagrams:
+  - name: 全体
+    diagram: |-
+      classDiagram
+        direction TD
+        待ち受けの開始 ..> 端末の設定の読み込み
+        待ち受けの開始 ..> ポートの確かめ
+        待ち受けの開始 ..> 部品の配線
+        待ち受けの開始 ..> アプリの組み立て
+        部品の配線 ..> 配信元の一覧 : 読み直す
+        部品の配線 ..> 配線済みの関数 : 作る
+        アプリの組み立て ..> 文書の MCP の組み立て
+        アプリの組み立て ..> 管理の MCP の組み立て
+        アプリの組み立て ..> 端末の設定の入口
+        アプリの組み立て ..> 画面の入口
+        アプリの組み立て ..> 例外の変換の登録
+        アプリの組み立て ..> アプリの寿命
+        class 待ち受けの開始 {
+          <<function>>
+        }
+        class 端末の設定の読み込み {
+          <<function>>
+        }
+        class ポートの確かめ {
+          <<function>>
+        }
+        class 部品の配線 {
+          <<function>>
+        }
+        class アプリの組み立て {
+          <<function>>
+        }
+        class 配信元の一覧 {
+          +読み直す(端末の設定) list
+        }
+        class 配線済みの関数 {
+          +端末の設定: TerminalConfig
+          +配信元の一覧: SourceRegistry
+        }
+        class 文書の MCP の組み立て {
+          <<function>>
+        }
+        class 管理の MCP の組み立て {
+          <<function>>
+        }
+        class 端末の設定の入口 {
+          <<function>>
+        }
+        class 画面の入口 {
+          <<function>>
+        }
+        class 例外の変換の登録 {
+          <<function>>
+        }
+        class アプリの寿命 {
+          <<function>>
+        }
+        click 端末の設定の読み込み href "./端末の設定.py.yaml#端末の設定の読み込み"
+        click 端末の設定の入口 href "./端末の設定.py.yaml#端末の設定の入口"
+        click 配信元の一覧 href "./配信元.py.yaml#配信元の一覧"
+        click 文書の MCP の組み立て href "./文書のMCP.py.yaml#文書の MCP の組み立て"
+        click 管理の MCP の組み立て href "./文書のMCP.py.yaml#管理の MCP の組み立て"
+        click 画面の入口 href "./画面.py.yaml#画面の入口"
+data_models:
+  - name: Handlers
+    title: 配線済みの関数
+    container: main.py
+    usecase: 共通
+    role: 合成の起点
+    summary: 入口（画面・MCP）が使う部品を 1 回だけ作って束ねたもの
+    description: |-
+      `dataclass(frozen=True)`。入口はこの属性から部品を引き、部品を自分で作らない。
+      サービスは同期の関数で、入口は `asyncio.to_thread` で呼ぶ。テストは属性を偽物に差し替えた `Handlers` を作る。
+    properties:
+      - name: terminal
+        title: 端末の設定
+        type: TerminalConfig
+        access: 公開
+        description: 起動時に読んだ端末の設定（`sources` の保存後は `registry` が新しい値で動く。`port` など再起動が要るキーはこの値のまま）
+      - name: registry
+        title: 配信元の一覧
+        type: SourceRegistry
+        access: 公開
+        description: 配信中の配信元
+      - name: store
+        title: 文書のストア
+        type: DocumentStore
+        access: 公開
+        description: 文書を読む（文書のストア）
+      - name: snapshots
+        title: リビジョンの書き出し
+        type: SnapshotStore
+        access: 公開
+        description: リビジョンを `state_dir` へ書き出す（履歴）
+      - name: converter
+        title: 変換
+        type: ConvertService
+        access: 公開
+        description: 文書を Markdown にする（変換）
+      - name: seen
+        title: 会話の記録
+        type: SeenStore
+        access: 公開
+        description: 会話ごとの返し済み・前回読んだ内容（会話の記録）
+      - name: locks
+        title: 配信元ごとの排他
+        type: SourceLocks
+        access: 公開
+        description: 書き込み・削除を配信元ごとに 1 つずつにする（書き込み）
+      - name: settings_lock
+        title: 端末の設定の排他
+        type: threading.Lock
+        access: 公開
+        description: 端末の設定の保存と読み直しを 1 つずつにする
+      - name: templates
+        title: 画面のテンプレート
+        type: fastapi.templating.Jinja2Templates
+        access: 公開
+        description: '`server/templates/` を読む Jinja2 の環境（`autoescape` あり）'
+      - name: checker
+        title: 文書の検査
+        type: DocumentChecker
+        access: 公開
+        description: 検索の検査の結果と、書き込み・削除の検査（検査）
+      - name: columns
+        title: 表の列の設定
+        type: ColumnSettings
+        access: 公開
+        description: 画面の表の隠す列（画面）
+classes:
+  - name: PortInUseError
+    title: ポートが使用中
+    container: main.py
+    usecase: 起動
+    role: 例外
+    summary: 待ち受けのアドレスとポートで待ち受けられないことを表す
+    kind: クラス
+    inherits: OSError
+    properties:
+      - name: bind
+        title: 待ち受けのアドレス
+        type: str
+        access: 公開
+        description: 待ち受けようとしたアドレス
+      - name: port
+        title: ポート
+        type: int
+        access: 公開
+        description: 待ち受けようとしたポート
+constants:
+  - name: EXIT_CONFIG_INVALID
+    title: 設定の違反の終了コード
+    container: main.py
+    usecase: 起動
+    summary: 端末の設定が無い・違反するときの終了コード
+    value: '2'
+  - name: EXIT_PORT_IN_USE
+    title: ポート使用中の終了コード
+    container: main.py
+    usecase: 起動
+    summary: ポートで待ち受けられないときの終了コード
+    value: '3'
+  - name: DOCS_MCP_PATH
+    title: 文書の MCP のパス
+    container: server/app.py
+    usecase: 起動
+    summary: 文書の MCP をマウントするパス
+    value: '"/mcp"'
+  - name: ADMIN_MCP_PATH
+    title: 管理の MCP のパス
+    container: server/app.py
+    usecase: 起動
+    summary: 管理の MCP をマウントするパス
+    value: '"/_admin/mcp"'
+  - name: STATIC_PATH
+    title: 静的ファイルのパス
+    container: server/app.py
+    usecase: 起動
+    summary: 画面の CSS・JS を配信するパス（mdmark は jsDelivr から読む）
+    value: '"/_static"'
+  - name: PROBLEM_TYPE_BASE
+    title: problem+json の type の頭
+    container: server/error_handlers.py
+    usecase: 共通
+    summary: problem+json の `type` に置く URI の頭（末尾にエラーの名前を付ける）
+    value: '"urn:dev-docs:error:"'
+functions:
+  - name: run_serve
+    title: 待ち受けの開始
+    kind: 関数
+    container: main.py
+    usecase: 起動
+    role: 入口
+    summary: 端末の設定を読み、配信元を配線して待ち受け、停止の合図まで動く
+    scope: public
+    side_effects: ポートで待ち受ける。`log_dir` にログを書く。標準出力・標準エラーに書く
+    args:
+      - name: args
+        title: 解析結果
+        type: argparse.Namespace
+        required: true
+        passing: positional
+        description: '`serve` の解析結果（使う値は無い）'
+    returns:
+      type: int
+      description: 終了コード。停止の合図で止まったとき 0
+    process: |-
+      1. 端末の設定のパスを決め（端末の設定のパス）、端末の設定を読み（端末の設定の読み込み）、待ち受けのポートを決める（待ち受けのポート）
+         - `TerminalConfigInvalidError` の場合、違反ごとに `{ファイル}: {パス}: {理由}`（違反が無ければ例外の本文）を標準エラーに出し、`EXIT_CONFIG_INVALID` を返す
+      2. `log_dir` を作り、`logging` を設定する。ログは標準エラーと `{log_dir}/dev-docs.log`（`RotatingFileHandler`）に書く
+      3. ポートで待ち受けられるか確かめる（ポートの確かめ）
+         - `PortInUseError` の場合、`{bind}:{port} は使用中です。DEV_DOCS_PORT で別のポートを指定できます` を標準エラーに出し、`EXIT_PORT_IN_USE` を返す
+      4. 部品を配線し（部品の配線）、アプリを組み立てる（アプリの組み立て）
+      5. 標準出力に `http://{bind}:{port}/` と配信中の配信元の ID を 1 行ずつ出す
+      6. `uvicorn.Server(uvicorn.Config(app, host=bind, port=port, log_config=None))` を `run()` する。止まったら 0 を返す
+         - 確かめた後に他のプロセスがポートを取り、uvicorn が待ち受けに失敗して止まった場合（`server.started` が `False`）、手順 3 と同じ本文を出して `EXIT_PORT_IN_USE` を返す
+    exceptions:
+      - name: なし（終了コード 2）
+        condition: 端末の設定が無い・違反する
+        message: '標準エラーに `{ファイル}: {パス}: {理由}` を全て'
+      - name: なし（終了コード 3）
+        condition: ポートで待ち受けられない
+        message: '`{bind}:{port} は使用中です。DEV_DOCS_PORT で別のポートを指定できます`'
+    unit_tests:
+      - name: test_run_serve
+        case: 正常
+        summary: 待ち受けて配信元を出す
+        condition: 配信できる配信元 1 つの端末の設定を `DEV_DOCS_CONFIG` に入れる
+        mock: '`uvicorn.Server.run`（何もせず戻る。`started` を `True` にする）'
+        expected: 0 を返し、標準出力に `http://127.0.0.1:{port}/` と配信元の ID、`uvicorn.Config` の `host` が `127.0.0.1`
+      - name: test_run_serve_when_config_invalid
+        case: 異常
+        summary: 端末の設定が違反する
+        condition: '`sources[0]` に `config` が無く `port` が文字列'
+        mock: なし
+        expected: 2 を返し、標準エラーに `sources[0].config` と `port` の 2 行
+        exception: 端末の設定が違反する
+      - name: test_run_serve_when_port_in_use
+        case: 異常
+        summary: ポートが使用中
+        condition: テストが先に待ち受けたポートを `DEV_DOCS_PORT` に入れる
+        mock: なし
+        expected: 3 を返し、標準エラーにポートの番号と `DEV_DOCS_PORT`
+        exception: ポートで待ち受けられない
+  - name: check_port
+    title: ポートの確かめ
+    kind: 関数
+    container: main.py
+    usecase: 起動
+    role: 検証
+    summary: 待ち受けのアドレスとポートで待ち受けられるかを、一度 bind して確かめる
+    scope: public
+    args:
+      - name: bind
+        title: 待ち受けのアドレス
+        type: str
+        required: true
+        passing: positional
+        description: 端末の設定の `bind`
+      - name: port
+        title: ポート
+        type: int
+        required: true
+        passing: positional
+        description: 待ち受けのポート
+    returns:
+      type: None
+      description: 待ち受けられるときは何も返さない
+    process: |-
+      1. `socket.socket(AF_INET, SOCK_STREAM)` を `SO_REUSEADDR` を付けずに `(bind, port)` へ bind し、すぐに閉じる
+         - `OSError`（`EADDRINUSE`・`EACCES`）の場合、`PortInUseError` を送る
+    exceptions:
+      - name: PortInUseError
+        condition: bind に失敗する
+        message: '`{bind}:{port} は使用中です`'
+    unit_tests:
+      - name: test_check_port
+        case: 正常
+        summary: 空いているポート
+        condition: OS が払い出して閉じたポート
+        mock: なし
+        expected: 送らない
+      - name: test_check_port_when_in_use
+        case: 異常
+        summary: 使用中のポート
+        condition: テストが `listen` しているポート
+        mock: なし
+        expected: '`PortInUseError` の `port` がそのポート'
+        exception: bind に失敗する
+  - name: build_handlers
+    title: 部品の配線
+    kind: 関数
+    container: main.py
+    usecase: 起動
+    role: 合成の起点
+    summary: 端末の設定から部品を 1 回だけ作り、配信元を読んで配線済みの関数にする
+    scope: public
+    side_effects: '`state_dir` の下にフォルダを作る。配信元を読む'
+    args:
+      - name: terminal
+        title: 端末の設定
+        type: TerminalConfig
+        required: true
+        passing: positional
+        description: 読んだ端末の設定
+    returns:
+      type: Handlers
+      description: 配線済みの関数
+    process: |-
+      1. `state_dir` を作る
+      2. 配信元の一覧を作り、端末の設定で読み直す（配信元の一覧.読み直す）。検証で外した配信元があっても続ける
+      3. リビジョンの書き出し（`{state_dir}/snapshots`）・文書のストア・変換（`{state_dir}/converted`、制限時間は `script_timeout_sec`）・会話の記録（`{state_dir}/seen.sqlite3`、保持日数は `seen_retention_days`）・文書の検査（制限時間は `script_timeout_sec`）・配信元ごとの排他・表の列の設定（`{state_dir}/columns`）・画面のテンプレートを作る
+      4. これらを持つ `Handlers` を返す
+    unit_tests:
+      - name: test_build_handlers
+        case: 正常
+        summary: 部品を作り配信元を読む
+        condition: '`state_dir` が無い一時フォルダの下、配信できる配信元 1 つと検証に失敗する配信元 1 つ'
+        mock: なし
+        expected: '`state_dir` ができ、`registry.served()` が 1 つ、`registry.statuses()` が 2 つ'
+  - name: build_app
+    title: アプリの組み立て
+    kind: 関数
+    container: server/app.py
+    usecase: 起動
+    role: 合成の起点
+    summary: 画面のルート・文書の MCP・管理の MCP・静的ファイルを 1 つの FastAPI のアプリにまとめる
+    scope: public
+    args:
+      - name: handlers
+        title: 配線済みの関数
+        type: Handlers
+        required: true
+        passing: positional
+        description: 部品の配線の結果
+    returns:
+      type: fastapi.FastAPI
+      description: 組み立てたアプリ
+    process: |-
+      1. 文書の MCP と管理の MCP を組み立てる（文書の MCP の組み立て・管理の MCP の組み立て）
+      2. 2 つの MCP と会話の記録を渡して寿命を作り（アプリの寿命）、`FastAPI(lifespan=..., docs_url=None, redoc_url=None, openapi_url=None)` を作る
+      3. 例外の変換を登録する（例外の変換の登録）
+      4. `DOCS_MCP_PATH` に文書の MCP、`ADMIN_MCP_PATH` に管理の MCP の Streamable HTTP のアプリをマウントする（MCP 側のパスは `/`）
+      5. `STATIC_PATH` に配布に同梱する `server/static/` を `StaticFiles` でマウントする
+      6. 端末の設定の入口、画面の入口の順にルーターを登録する（画面の `/{source}/...` より `/_settings/`・`/_api/` を先に当てる）
+      7. アプリを返す
+    unit_tests:
+      - name: test_build_app
+        case: 正常
+        summary: 入口を全て持つ
+        condition: 配線済みの関数を渡して `TestClient` で GET `/`
+        mock: 配線済みの関数（配信元が空の偽物）
+        expected: 302 で `/_settings/`、アプリのルートに `/mcp`・`/_admin/mcp`・`/_static` のマウントがある
+      - name: test_build_app_when_openapi
+        case: 正常
+        summary: OpenAPI の画面を出さない
+        condition: GET `/docs`
+        mock: 配線済みの関数（偽物）
+        expected: 画面の入口の『配信元が無い』404
+  - name: build_lifespan
+    title: アプリの寿命
+    kind: 関数
+    container: server/lifespan.py
+    usecase: 起動
+    role: 寿命
+    summary: マウントした MCP のセッションの管理を親のアプリの寿命で動かし、起動時に古い会話の記録を削除する
+    scope: public
+    args:
+      - name: mcps
+        title: MCP
+        type: Sequence[MCPServer]
+        required: true
+        passing: positional
+        description: 文書の MCP と管理の MCP
+      - name: seen
+        title: 会話の記録
+        type: SeenStore
+        required: true
+        passing: keyword
+        description: 保持日数を過ぎた記録を削除する
+    returns:
+      type: Callable[[FastAPI], AbstractAsyncContextManager[None]]
+      description: FastAPI の `lifespan` に渡す関数
+    process: |-
+      1. 返す関数は、`contextlib.AsyncExitStack` に各 MCP の `session_manager.run()` を入れる（マウントした子のアプリの寿命は動かないため）
+      2. 会話の記録の古い記録を `asyncio.to_thread` で削除する（会話の記録.古い記録の削除）
+         - `[info]` 古い会話の記録を削除した（件数）
+      3. `yield` し、止まるときにスタックを閉じる
+    unit_tests:
+      - name: test_build_lifespan
+        case: 正常
+        summary: MCP のセッションの管理を動かす
+        condition: 2 つの MCP を渡して寿命に入る
+        mock: MCP（`session_manager.run()` が入った・出たを記録する偽物）・会話の記録（偽物）
+        expected: 入ると 2 つとも run が入り、古い記録の削除が 1 回呼ばれ、出ると 2 つとも出る
+  - name: register_error_handlers
+    title: 例外の変換の登録
+    kind: 関数
+    container: server/error_handlers.py
+    usecase: 共通
+    role: 入口
+    summary: 画面の API の例外を RFC 9457 の problem+json にするハンドラを登録する
+    scope: public
+    side_effects: アプリに例外のハンドラを登録する
+    args:
+      - name: app
+        title: アプリ
+        type: fastapi.FastAPI
+        required: true
+        passing: positional
+        description: 登録先
+    returns:
+      type: None
+      description: 何も返さない
+    process: |-
+      1. `DevDocsError` は、`application/problem+json` で `{type: PROBLEM_TYPE_BASE + name, title: name, status, detail: message, next_steps, ...details()}` を返す。`violations` を持つときは `errors[]`（`{path, reason}`、`reason` は `rule`）にも並べる
+      2. `RequestValidationError` は、400 で `type` が `InvalidArgumentError` の problem+json を返す。`errors[]` は誤りごとに `loc` の `body` を除いたパス（`sources[1].id` の形）と `msg`
+      3. 画面（`Accept` に `text/html` を含む GET）の `DevDocsError` は problem+json でなく、画面の『エラーの画面』で返す（404 は見つからない画面）
+      4. これら以外の例外は FastAPI の既定の 500 に任せ、`[error]` 要求の処理に失敗した（メソッド・パス・例外）を書く
+    unit_tests:
+      - name: test_register_error_handlers
+        case: 正常
+        summary: DevDocsError を problem+json にする
+        condition: '`ValidationFailedError(violations=[Violation(path="name", rule="必須")])` を送る API のルートを POST'
+        mock: なし（テスト用のルート）
+        expected: '422、`Content-Type` が `application/problem+json`、`type` が `urn:dev-docs:error:ValidationFailedError`、`errors` が `[{path: name, reason: 必須}]`'
+      - name: test_register_error_handlers_when_request_invalid
+        case: 正常
+        summary: 本文の型の誤りを 400 にする
+        condition: '`hidden: "x"`（配列でない）を PUT'
+        mock: なし（テスト用のルート）
+        expected: 400、`errors[0].path` が `hidden`
+      - name: test_register_error_handlers_when_html
+        case: 正常
+        summary: 画面は HTML で返す
+        condition: '`Accept: text/html` で `UnknownSourceError` を送る GET'
+        mock: 画面のテンプレート（偽物）
+        expected: 404 で見つからない画面の HTML
+refs:
+  - dev/設計書/インターフェース定義/開発ドキュメントサーバー/起動#

@@ -1,0 +1,487 @@
+title: "開発ドキュメントサーバー / 変更"
+lead: |-
+  `list_changes` の処理。区間（commit・日時・ブランチ・タグ）か、この会話で前回読んだ時点から今までに変わった文書・変わったキー・差分の行を返す。
+  変わったキーと差分の行は、書き込みの差分と画面の `?diff=` も使う。
+directory: |-
+  ```text
+  src/dev_docs/features/changes/
+  ├─ __init__.py   # 公開する型と関数の再エクスポート
+  ├─ types.py      # ChangesRequest / RangePoint / ChangeItem / ChangesResult
+  ├─ compare.py    # changed_keys / diff_lines
+  ├─ render.py     # render_changes_markdown
+  └─ service.py    # list_changes
+  ```
+diagrams:
+  - name: 全体
+    diagram: |-
+      classDiagram
+        direction TD
+        変更の一覧 ..> 読む場所の解決
+        変更の一覧 ..> リビジョンの解決 : from・to
+        変更の一覧 ..> 変わったファイル
+        変更の一覧 ..> リビジョンのファイル
+        変更の一覧 ..> 会話の記録 : 前回読んだ内容
+        変更の一覧 ..> 文字列からの文書の組み立て
+        変更の一覧 ..> 条件の照合
+        変更の一覧 ..> 変わったキー
+        変更の一覧 ..> 差分の行
+        変更の一覧 ..> 変更の結果 : 返す
+        class 変更の一覧 {
+          <<function>>
+        }
+        class 読む場所の解決 {
+          <<function>>
+        }
+        class リビジョンの解決 {
+          <<function>>
+        }
+        class 変わったファイル {
+          <<function>>
+        }
+        class リビジョンのファイル {
+          <<function>>
+        }
+        class 会話の記録 {
+          <<class>>
+        }
+        class 文字列からの文書の組み立て {
+          <<function>>
+        }
+        class 条件の照合 {
+          <<function>>
+        }
+        class 変わったキー {
+          <<function>>
+        }
+        class 差分の行 {
+          <<function>>
+        }
+        class 変更の結果 {
+          +区間
+          +文書: list
+        }
+        click 読む場所の解決 href "./権限と作業場所.py.yaml#読む場所の解決"
+        click リビジョンの解決 href "./履歴.py.yaml#リビジョンの解決"
+        click 変わったファイル href "./履歴.py.yaml#変わったファイル"
+        click リビジョンのファイル href "./履歴.py.yaml#リビジョンのファイル"
+        click 会話の記録 href "./会話の記録.py.yaml#会話の記録"
+        click 文字列からの文書の組み立て href "./文書のストア.py.yaml#文字列からの文書の組み立て"
+        click 条件の照合 href "./検索.py.yaml#条件の照合"
+constants:
+  - name: LAST_READ_LABEL
+    title: 前回読んだ時点の表示
+    container: features/changes/types.py
+    usecase: 変更
+    summary: '`from` を省いたときの `range.from.input`'
+    value: '"前回読んだ時点"'
+  - name: WORKTREE_LABEL
+    title: 作業ツリーの表示
+    container: features/changes/types.py
+    usecase: 変更
+    summary: '`to` を省いたときの `range.to.input`'
+    value: '"作業ツリー"'
+data_models:
+  - name: ChangesRequest
+    title: 変更の一覧の要求
+    container: features/changes/types.py
+    usecase: 変更
+    role: DTO
+    summary: '`list_changes` の引数'
+    description: '`pydantic.BaseModel`（`extra="forbid"`）。キーの意味と既定値はインターフェース定義『変更の一覧』の `request`。`from` は Python の属性を `from_` にした別名。`limit`・`max_chars` の既定と上限は検索の定数を使う。'
+    properties:
+      - name: source
+        title: 配信元
+        type: str | list[str] | None
+        access: 公開
+        default: None
+        description: '`*` も受ける'
+      - name: worktree
+        title: ワークツリー
+        type: str | None
+        access: 公開
+        default: None
+        description: '`to` を省いたときに読むワークツリー'
+      - name: from_
+        title: 始点
+        type: str | None
+        access: 公開
+        default: None
+        description: 別名 `from`。`None` は前回読んだ時点
+      - name: to
+        title: 終点
+        type: str | None
+        access: 公開
+        default: None
+        description: '`None` は今の作業ツリー'
+      - name: filter
+        title: 条件
+        type: Condition | Group | None
+        access: 公開
+        default: None
+        description: 検索と同じ条件
+      - name: view
+        title: 返す量
+        type: Literal['summary', 'full']
+        access: 公開
+        default: '"summary"'
+        description: '`full` は差分の行まで'
+      - name: limit
+        title: 件数
+        type: int
+        access: 公開
+        default: LIMIT_DEFAULT
+        description: 返す文書の数
+      - name: cursor
+        title: 続きの位置
+        type: str | None
+        access: 公開
+        default: None
+        description: 前回の `next_cursor`
+      - name: max_chars
+        title: 文字数
+        type: int
+        access: 公開
+        default: MAX_CHARS_DEFAULT
+        description: 結果全体の文字数の上限
+      - name: format
+        title: 形式
+        type: Literal['markdown', 'json']
+        access: 公開
+        default: '"markdown"'
+        description: 返す形式
+      - name: cwd
+        title: 作業場所
+        type: str | None
+        access: 公開
+        default: None
+        description: フックが入れる
+      - name: session_id
+        title: セッションの ID
+        type: str | None
+        access: 公開
+        default: None
+        description: フックが入れる
+      - name: agent_id
+        title: エージェントの ID
+        type: str | None
+        access: 公開
+        default: None
+        description: フックが入れる
+  - name: RangePoint
+    title: 区間の端
+    container: features/changes/types.py
+    usecase: 変更
+    role: DTO
+    summary: 区間の始点か終点
+    description: '`dataclass(frozen=True)`。'
+    properties:
+      - name: input
+        title: 渡した値
+        type: str
+        access: 公開
+        description: 引数の値か `LAST_READ_LABEL`・`WORKTREE_LABEL`
+      - name: commit
+        title: commit
+        type: str | None
+        access: 公開
+        description: 解決した commit（短縮）。作業ツリー・前回読んだ時点は `None`
+      - name: date
+        title: 日時
+        type: datetime | None
+        access: 公開
+        description: commit の日時。前回読んだ時点は最も古い読んだ日時
+  - name: ChangeItem
+    title: 変わった文書
+    container: features/changes/types.py
+    usecase: 変更
+    role: DTO
+    summary: 変わった文書 1 件
+    description: '`dataclass(frozen=True)`。'
+    properties:
+      - name: id
+        title: 文書の ID
+        type: str
+        access: 公開
+        description: 文書の ID
+      - name: source
+        title: 配信元
+        type: str | None
+        access: 公開
+        description: 複数の配信元を指したときだけ
+      - name: change
+        title: 変更の種類
+        type: Literal['added', 'modified', 'deleted']
+        access: 公開
+        description: 足した・変えた・消した
+      - name: keys
+        title: 変わったキー
+        type: list[str]
+        access: 公開
+        description: 変わったキーのパス
+      - name: values
+        title: 前後の値
+        type: dict[str, tuple[Any, Any]]
+        access: 公開
+        description: 'キーのパス → (前の値, 後の値)。`format: json` で返す'
+      - name: diff
+        title: 差分の行
+        type: str | None
+        access: 公開
+        default: None
+        description: '`view: full` のときだけ'
+  - name: ChangesResult
+    title: 変更の結果
+    container: features/changes/types.py
+    usecase: 変更
+    role: DTO
+    summary: '`list_changes` が返すもの'
+    description: '`dataclass(frozen=True)`。複数の配信元を指したときの区間は配信元ごとに `notes` の先頭へ並べ、`range_from`・`range_to` は最初の配信元のもの。'
+    properties:
+      - name: range_from
+        title: 始点
+        type: RangePoint
+        access: 公開
+        description: JSON では `range.from`
+      - name: range_to
+        title: 終点
+        type: RangePoint
+        access: 公開
+        description: JSON では `range.to`
+      - name: total_count
+        title: 総件数
+        type: int
+        access: 公開
+        description: 変わった文書の数
+      - name: items
+        title: 変わった文書
+        type: list[ChangeItem]
+        access: 公開
+        description: 配信元の順・`id` の昇順
+      - name: next_cursor
+        title: 続きの位置
+        type: str | None
+        access: 公開
+        description: 続きがあるときだけ
+      - name: truncated
+        title: 打ち切ったか
+        type: bool
+        access: 公開
+        description: '`max_chars` で打ち切ったか'
+      - name: notes
+        title: 知らせ
+        type: list[str]
+        access: 公開
+        description: 丸めた・打ち切った知らせと次の手
+functions:
+  - name: changed_keys
+    title: 変わったキー
+    kind: 関数
+    container: features/changes/compare.py
+    usecase: 共通
+    role: 判定
+    summary: 2 つの内容を比べ、変わったキーのパスと前後の値を返す
+    scope: public
+    thread_safe: true
+    args:
+      - name: before
+        title: 前
+        type: Mapping[str, Any]
+        required: true
+        passing: positional
+        description: 前の内容（足した文書は空）
+      - name: after
+        title: 後
+        type: Mapping[str, Any]
+        required: true
+        passing: positional
+        description: 後の内容（消した文書は空）
+      - name: ignore
+        title: 無視するキー
+        type: Collection[str]
+        required: false
+        default: ()
+        passing: keyword
+        description: '`diff.ignore_keys`。最上位のキーの名前'
+    returns:
+      type: dict[str, tuple[Any, Any]]
+      description: キーのパス → (前の値, 後の値)。パスの出る順
+    process: |-
+      1. 辞書は両方のキーの和を、後の内容の順（前にだけあるキーは末尾）でたどる。`ignore` の最上位のキーは飛ばす
+      2. 両方が辞書なら再帰する
+      3. 両方がリストで、要素が全て `id` か `name` を持つ辞書なら、そのキーで要素を突き合わせて `a[{キー}].b` のパスで再帰する。それ以外のリストは丸ごと比べる
+      4. 値が違えば、そのパスと前後の値を入れる
+    unit_tests:
+      - name: test_changed_keys
+        case: 正常
+        summary: 入れ子と要素の突き合わせ
+        condition: '`{name: a, items: [{id: x, v: 1}], updated: d1}` と `{name: b, items: [{id: x, v: 2}], updated: d2}`、`ignore=["updated"]`'
+        mock: なし
+        expected: '`{"name": ("a", "b"), "items[x].v": (1, 2)}`'
+  - name: diff_lines
+    title: 差分の行
+    kind: 関数
+    container: features/changes/compare.py
+    usecase: 共通
+    role: 変換
+    summary: 2 つの文字列の違う行を、git と同じ `-`・`+` の行にする
+    scope: public
+    thread_safe: true
+    args:
+      - name: before
+        title: 前
+        type: str
+        required: true
+        passing: positional
+        description: 前の文字列
+      - name: after
+        title: 後
+        type: str
+        required: true
+        passing: positional
+        description: 後の文字列
+    returns:
+      type: str
+      description: '`- {行}`・`+ {行}` の並び。違いが無ければ空'
+    process: |-
+      1. `difflib.unified_diff(n=0)` の結果から `---`・`+++` の行を除く
+      2. `@@` の行は 2 つ目以降のかたまりの区切りとして `…` の行にし、`-`・`+` の行は記号の後に空白を入れて並べる
+    unit_tests:
+      - name: test_diff_lines
+        case: 正常
+        summary: 変えた行
+        condition: '`"name: 文書 1\nx: 1\n"` と `"name: 新しい名前\nx: 1\n"`'
+        mock: なし
+        expected: '`"- name: 文書 1\n+ name: 新しい名前"`'
+  - name: list_changes
+    title: 変更の一覧
+    kind: 関数
+    container: features/changes/service.py
+    usecase: 変更
+    role: サービス
+    summary: '`list_changes` の要求を処理して変更の結果を返す'
+    scope: public
+    thread_safe: true
+    args:
+      - name: request
+        title: 変更の一覧の要求
+        type: ChangesRequest
+        required: true
+        passing: positional
+        description: ツールの引数
+      - name: registry
+        title: 配信元の一覧
+        type: SourceRegistry
+        required: true
+        passing: injected
+        description: 配信中の配信元
+      - name: store
+        title: 文書のストア
+        type: DocumentStore
+        required: true
+        passing: injected
+        description: 今の文書を読む
+      - name: seen
+        title: 会話の記録
+        type: SeenStore
+        required: true
+        passing: injected
+        description: 前回読んだ内容
+    returns:
+      type: ChangesResult
+      description: 変更の結果
+    process: |-
+      1. `to` があって `from_` が無い場合、`InvalidArgumentError`（`to` には `from` が要ります）を送る
+      2. 読む場所を解く（読む場所の解決。`ref` は渡さない）。`from_` があり Git 管理外の配信元を含む場合、`InvalidArgumentError` を送る
+      3. 配信元ごとに前と後の文書を作る
+         - `from_` がある場合、始点・終点をリビジョンの解決（`argument` は `from`・`to`）で commit にし、変わったファイルを引く。文書の行の `paths` に当たるファイルごとに、前はリビジョンのファイル、後は終点の commit のリビジョンのファイルか作業ツリーのファイルを、文字列からの文書の組み立てで文書にする
+         - `from_` が無い場合、会話の記録.前回読んだ内容を引く（会話キーが無い・全ての配信元で空なら `LastReadNotFoundError`）。前は記録の内容（`doc_kind` の行が YAML なら YAML として、Markdown なら front matter と本文として読む）、後は今の文書（文書のストア.ID で引く。無ければ消した）
+      4. ID で突き合わせ、前にだけある文書を `deleted`、後にだけある文書を `added`、両方にあって変わったキー（無視するキーは `diff_ignore_keys`、Markdown の文書は `body` も 1 つのキーとして比べる）が空でない文書を `modified` にする
+      5. `filter` があれば、後（消した文書は前）の文書を条件の照合にかけ、当たる文書だけを残す（条件の確かめは検索と同じ）
+      6. 配信元の順・`id` の昇順に並べ、検索と同じ `limit` の丸め・続きの位置・`max_chars` の打ち切りをする
+      7. `view` が `full` の場合、前と後の本文の差分の行を入れる
+      8. 区間の端を入れて返す
+    exceptions:
+      - name: RefNotFoundError
+        condition: '`from`・`to` を解決できない'
+        message: '`{argument} の {value} を解決できません`'
+      - name: LastReadNotFoundError
+        condition: '`from` を省き、この会話で本文を読んだ記録が無い'
+        message: '`この会話で読んだ記録がありません。from を渡してください`'
+      - name: InvalidArgumentError
+        condition: Git 管理外の配信元への区間・`from` の無い `to`・知らない項目
+        message: '`引数が正しくありません: {違反の数} 件`'
+      - name: SourceNotReadableError
+        condition: 読む場所の解決が送る
+        message: '`{id} はこの作業場所（{cwd}）から読めません`'
+    unit_tests:
+      - name: test_list_changes
+        case: 正常
+        summary: 2 つの commit の間
+        condition: '文書 1 の `name` を変えた commit とその親を `from`・`to` に、`view: full`'
+        mock: なし（一時フォルダの git リポジトリ）
+        expected: '`range` に 2 つの commit と日時、`items` が文書 1 だけで `modified`・`keys: [name]`、`diff` に `-`・`+` の行'
+      - name: test_list_changes_when_last_read
+        case: 正常
+        summary: 前回読んだ時点から
+        condition: '`search_docs` で本文を返した後、文書 1 のファイルを直接書き換えて `from` を省く'
+        mock: なし
+        expected: '`range.from.input` が `前回読んだ時点`、`items` が文書 1 だけ'
+      - name: test_list_changes_when_added_and_deleted
+        case: 正常
+        summary: 足した文書と消した文書
+        condition: 区間の中で文書 3 を足し、文書 2 を消す
+        mock: なし
+        expected: 文書 2 が `deleted`、文書 3 が `added`
+      - name: test_list_changes_when_no_last_read
+        case: 異常
+        summary: 読んだ記録が無い
+        condition: '`session_id` のある新しい会話で `from` を省く'
+        mock: なし
+        expected: '`LastReadNotFoundError`'
+        exception: '`from` を省き、この会話で本文を読んだ記録が無い'
+      - name: test_list_changes_when_to_without_from
+        case: 異常
+        summary: '`from` の無い `to`'
+        condition: '`to: HEAD` だけ'
+        mock: なし
+        expected: '`InvalidArgumentError` の違反の `path` が `to`'
+        exception: Git 管理外の配信元への区間・`from` の無い `to`・知らない項目
+  - name: render_changes_markdown
+    title: 変更の結果の Markdown
+    kind: 関数
+    container: features/changes/render.py
+    usecase: 変更
+    role: 変換
+    summary: '`format: markdown` の本文を作る'
+    scope: public
+    thread_safe: true
+    args:
+      - name: result
+        title: 変更の結果
+        type: ChangesResult
+        required: true
+        passing: positional
+        description: 描く結果
+      - name: source_label
+        title: 配信元の表示
+        type: str
+        required: true
+        passing: keyword
+        description: 先頭の行に出す配信元
+    returns:
+      type: str
+      description: Markdown
+    process: |-
+      1. 先頭の行に `{配信元}: {始点}（{日時}）→ {終点}（{日時}）・変わった文書 {total_count} 件` を置く（始点・終点は commit、無ければ渡した値）
+      2. `| id | 変更 | 変わったキー |` の表を置く
+      3. 差分の行があれば、文書ごとに `## {id}` と ```diff のかたまりを置く
+      4. `notes` と `next_cursor` を検索と同じに置く
+    unit_tests:
+      - name: test_render_changes_markdown
+        case: 正常
+        summary: 区間と表
+        condition: 文書 1 が `modified` の結果
+        mock: なし
+        expected: '`sample: 3f2a9c1（...）→ 8b1d4e0（...）・変わった文書 1 件` と表の行 `| doc-1 | modified | name |`'
+refs:
+  - dev/設計書/インターフェース定義/開発ドキュメントサーバー/変更の一覧#

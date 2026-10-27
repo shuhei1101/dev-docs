@@ -1,0 +1,974 @@
+title: "開発ドキュメントサーバー / 配信元"
+lead: |-
+  端末の設定の `sources[]` の行ごとに、配信元の設定の YAML をマージして検証し、配信する配信元の一覧を作る。
+  読み直しは新しい一覧を作ってから差し替え、その間の要求には古い一覧で応える。
+directory: |-
+  ```text
+  src/dev_docs/features/sources/
+  ├─ __init__.py   # 公開する型と関数の再エクスポート
+  ├─ types.py      # SourceConfig / DocumentTable / ScriptEntry / ServedSource / SourceStatus
+  ├─ merge.py      # merge_configs（設定の YAML のマージ）
+  ├─ service.py    # load_source / validate_source_config / check_scripts / compare_config_version
+  └─ registry.py   # SourceRegistry（配信元の一覧と読み直し）
+  schemas/
+  └─ dev-docs.schema.yaml   # 配信元の設定のスキーマ（JSON Schema 2020-12）
+  ```
+diagrams:
+  - name: 全体
+    diagram: |-
+      classDiagram
+        direction TD
+        配信元の一覧 ..> 配信元の読み込み : 行ごとに
+        配信元の読み込み ..> 設定のマージ : config の並び
+        配信元の読み込み ..> 配信元の設定の検証
+        配信元の読み込み ..> スクリプトの確かめ
+        配信元の読み込み ..> 設定のバージョンの比較
+        スクリプトの確かめ ..> 実行できるかの確かめ
+        配信元の読み込み ..> 配信中の配信元 : 作る
+        配信元の読み込み ..> 配信元の状態 : 作る
+        配信中の配信元 o-- 配信元の設定
+        配信元の設定 o-- 文書の行
+        配信元の設定 o-- スクリプトの行
+        class 配信元の一覧 {
+          +読み直す(端末の設定) list
+          +引く(配信元の ID) 配信中の配信元
+          +配信中() list
+          +状態の一覧() list
+        }
+        class 配信元の読み込み {
+          <<function>>
+        }
+        class 設定のマージ {
+          <<function>>
+        }
+        class 配信元の設定の検証 {
+          <<function>>
+        }
+        class スクリプトの確かめ {
+          <<function>>
+        }
+        class 設定のバージョンの比較 {
+          <<function>>
+        }
+        class 実行できるかの確かめ {
+          <<function>>
+        }
+        class 配信中の配信元 {
+          +ID: str
+          +直下: Path
+        }
+        class 配信元の状態 {
+          +状態: str
+          +違反: list
+        }
+        class 配信元の設定 {
+          +名前: str
+          +文書: list
+        }
+        class 文書の行 {
+          +ID: str
+          +ファイル: list
+        }
+        class スクリプトの行 {
+          +ID: str
+          +コマンド: list
+        }
+        click 実行できるかの確かめ href "./スクリプトの実行.py.yaml#実行できるかの確かめ"
+data_models:
+  - name: MetadataMapping
+    title: メタデータの対応
+    container: features/sources/types.py
+    usecase: 共通
+    role: DTO
+    summary: '`documents[].metadata` の 1 キーの値の取り方'
+    description: '`pydantic.BaseModel`（`extra="forbid"`、`frozen=True`）。'
+    properties:
+      - name: type
+        title: 取り方
+        type: Literal['ref', 'custom']
+        access: 公開
+        description: '`ref` は文書の列から、`custom` は行の全文書に同じ値'
+      - name: field
+        title: 列
+        type: str | None
+        access: 公開
+        default: None
+        description: '`ref` のときの列名（ドット記法）'
+      - name: value
+        title: 値
+        type: Any
+        access: 公開
+        default: None
+        description: '`custom` のときの値'
+  - name: DocumentDefaults
+    title: メタデータの既定
+    container: features/sources/types.py
+    usecase: 共通
+    role: DTO
+    summary: '`documents[].defaults[]` の 1 行'
+    description: '`pydantic.BaseModel`（`extra="allow"`、`frozen=True`）。`paths` 以外のキーは重ねるメタデータとして `model_extra` に入る。'
+    properties:
+      - name: paths
+        title: ファイル
+        type: list[str]
+        access: 公開
+        description: 文書のファイルのパスと照らす glob（配信元の直下から）
+  - name: DocumentTable
+    title: 文書の行
+    container: features/sources/types.py
+    usecase: 共通
+    role: DTO
+    summary: 配信元の設定の `documents[]` の 1 行（同じ形式・スキーマ・検査で扱う文書のまとまり）
+    description: '`pydantic.BaseModel`（`frozen=True`）。既定値は Issue #3 の資料 A-25 の `documents[]` のキー一覧。行の ID は MCP の `kind` になる。'
+    properties:
+      - name: id
+        title: 文書の行の ID
+        type: str
+        access: 公開
+        description: 主キー
+      - name: type
+        title: 文書の形式
+        type: Literal['yaml', 'markdown']
+        access: 公開
+        description: 判別子
+      - name: paths
+        title: ファイル
+        type: list[str]
+        access: 公開
+        description: ファイルのパスか glob の並び
+      - name: title
+        title: 名前
+        type: str | None
+        access: 公開
+        default: None
+        description: 画面・MCP に出す名前
+      - name: enabled
+        title: 配信するか
+        type: bool
+        access: 公開
+        default: 'True'
+        description: '`False` で配信も検索もしない'
+      - name: schema_path
+        title: スキーマ
+        type: str | None
+        access: 公開
+        default: None
+        description: '`schema` の値（pydantic の属性と重なるので `alias="schema"`）。`yaml` のとき必須'
+      - name: validators
+        title: 検査
+        type: list[str]
+        access: 公開
+        default: '[]'
+        description: 通す `validators[].id`
+      - name: converter
+        title: 変換
+        type: str | None
+        access: 公開
+        default: None
+        description: 使う `converters[].id`。`None` は既定の変換
+      - name: writable
+        title: 書き込めるか
+        type: bool | None
+        access: 公開
+        default: None
+        description: '`None` は `yaml` で `True`、`markdown` で `False`（`is_writable` が解く）'
+      - name: after_write
+        title: 書き込み後の生成
+        type: list[str]
+        access: 公開
+        default: '[]'
+        description: 書いた後に走らせる `generators[].id`
+      - name: search
+        title: 検索に入れるか
+        type: bool
+        access: 公開
+        default: 'True'
+        description: '`False` で検索の対象にしない'
+      - name: records
+        title: 文書にする配列
+        type: str | None
+        access: 公開
+        default: None
+        description: ファイルの中のこの配列の各要素を 1 件の文書にする
+      - name: body_file
+        title: 本文のファイルの列
+        type: str | None
+        access: 公開
+        default: None
+        description: '`records` の各要素で本文のファイルのパスを持つ列'
+      - name: metadata
+        title: メタデータの対応
+        type: dict[str, MetadataMapping]
+        access: 公開
+        default: '{}'
+        description: 共通のキー → 値の取り方。書かれていないキーは同じ名前の列の `ref`
+      - name: defaults
+        title: メタデータの既定
+        type: list[DocumentDefaults]
+        access: 公開
+        default: '[]'
+        description: 上から順に重ねるメタデータ
+  - name: ScriptEntry
+    title: スクリプトの行
+    container: features/sources/types.py
+    usecase: 共通
+    role: DTO
+    summary: '`validators[]`・`converters[]`・`generators[]` の 1 行'
+    description: '`pydantic.BaseModel`（`frozen=True`）。'
+    properties:
+      - name: id
+        title: ID
+        type: str
+        access: 公開
+        description: 主キー
+      - name: run
+        title: コマンド
+        type: list[str]
+        access: 公開
+        description: 配信元の直下で実行するコマンド
+      - name: 'on'
+        title: 通す時点
+        type: list[Literal['read', 'write']]
+        access: 公開
+        default: '["write"]'
+        description: '`validators[]` だけが使う'
+  - name: SourceConfig
+    title: 配信元の設定
+    container: features/sources/types.py
+    usecase: 共通
+    role: DTO
+    summary: マージして検証を通した配信元の設定
+    description: '`pydantic.BaseModel`（`frozen=True`）。キーの意味と既定値は Issue #3 の資料 A-25 のキー一覧。ドットを含むキー（`ids.format`・`related.types`・`diff.ignore_keys`・`github.repository`・`github.issue_labels`）は入れ子のモデルで持つ。'
+    properties:
+      - name: version
+        title: 設定のバージョン
+        type: str
+        access: 公開
+        default: SOURCE_CONFIG_VERSION
+        description: 設定を書いたときのスキーマのバージョン
+      - name: name
+        title: 配信元の名前
+        type: str
+        access: 公開
+        description: '`sources[].id` の既定'
+      - name: enabled
+        title: 配信するか
+        type: bool
+        access: 公開
+        default: 'True'
+        description: 端末の設定の `sources[].enabled` と両方が `True` のときだけ配信する
+      - name: default_ref
+        title: 既定のリビジョン
+        type: str
+        access: 公開
+        default: '"develop"'
+        description: リビジョンを指さないときに読むリビジョン
+      - name: tags
+        title: タグのマスター
+        type: str | None
+        access: 公開
+        default: None
+        description: タグのマスターのファイル
+      - name: visibility
+        title: 公開範囲
+        type: dict[str, Any] | None
+        access: 公開
+        default: None
+        description: Pages に出す文書の条件
+      - name: worktrees
+        title: ワークツリーの場所
+        type: list[str]
+        access: 公開
+        default: '["./.claude/worktrees/*"]'
+        description: ワークツリーの glob
+      - name: documents
+        title: 文書
+        type: list[DocumentTable]
+        access: 公開
+        description: 配信する文書の行
+      - name: validators
+        title: 検査
+        type: list[ScriptEntry]
+        access: 公開
+        default: '[]'
+        description: 検査のスクリプト
+      - name: converters
+        title: 変換
+        type: list[ScriptEntry]
+        access: 公開
+        default: '[]'
+        description: 変換のスクリプト
+      - name: generators
+        title: 生成
+        type: list[ScriptEntry]
+        access: 公開
+        default: '[]'
+        description: 書き込み後の生成のスクリプト
+      - name: nav
+        title: 画面の構成
+        type: dict[str, Any] | None
+        access: 公開
+        default: None
+        description: タブとサイドバー。`None` は文書の行ごとにタブを作る（画面の『タブとサイドバーの組み立て』）
+      - name: ids_format
+        title: ID の付け方
+        type: str | None
+        access: 公開
+        default: None
+        description: '`ids.format`'
+      - name: related_types
+        title: 関連の種類
+        type: list[str]
+        access: 公開
+        default: '["references", "depends_on", "see_also"]'
+        description: '`related.types`'
+      - name: diff_ignore_keys
+        title: 差分で無視するキー
+        type: list[str]
+        access: 公開
+        default: '["updated"]'
+        description: '`diff.ignore_keys`'
+      - name: github_repository
+        title: GitHub のリポジトリ
+        type: str | None
+        access: 公開
+        default: None
+        description: '`github.repository`（`owner/name`）。`None` の配信元は画面で Issue を作成するボタンを出さない'
+      - name: github_issue_labels
+        title: 起票のラベル
+        type: list[str]
+        access: 公開
+        default: '[]'
+        description: '`github.issue_labels`。Issue の作成画面の URL の `labels` に渡す'
+      - name: description
+        title: 配信元の説明
+        type: str
+        access: 公開
+        default: '""'
+        description: '`describe()` に出す 1 文'
+      - name: instructions
+        title: 説明書
+        type: str
+        access: 公開
+        default: '""'
+        description: '`describe(source)` で返す使い方'
+  - name: ServedSource
+    title: 配信中の配信元
+    container: features/sources/types.py
+    usecase: 共通
+    role: DTO
+    summary: 検証を通した 1 つの配信元と、読み書きに要る解いた値
+    description: '`dataclass(frozen=True)`。読み直しでは作り直し、書き換えない。'
+    properties:
+      - name: id
+        title: 配信元の ID
+        type: str
+        access: 公開
+        description: '`sources[].id`、無ければ設定の `name`'
+      - name: root
+        title: 配信元の直下
+        type: Path
+        access: 公開
+        description: 先頭の設定の YAML のフォルダ（クローン本体か Git の管理外のフォルダ）
+      - name: config_files
+        title: 設定のファイル
+        type: list[Path]
+        access: 公開
+        description: マージした YAML の並び
+      - name: config
+        title: 配信元の設定
+        type: SourceConfig
+        access: 公開
+        description: マージして検証した設定
+      - name: is_git
+        title: Git の配信元か
+        type: bool
+        access: 公開
+        description: '`root` が Git の作業ツリーの中か。`False` のときはリビジョンを使えない'
+      - name: repo_root
+        title: リポジトリの直下
+        type: Path | None
+        access: 公開
+        description: Git の配信元のとき、クローンの直下（`root` がリポジトリの中のフォルダのときに違う）
+      - name: scope_read
+        title: 読める作業場所
+        type: list[str]
+        access: 公開
+        description: '`sources[].scope.read`'
+      - name: scope_write
+        title: 読み書きできる作業場所
+        type: list[str]
+        access: 公開
+        description: '`sources[].scope.write`。無ければ `[str(root)]`'
+      - name: worktree_globs
+        title: ワークツリーの glob
+        type: list[str]
+        access: 公開
+        description: 設定の `worktrees` を `repo_root` からの絶対パスにしたもの
+      - name: schemas
+        title: 種類のスキーマ
+        type: dict[str, dict[str, Any]]
+        access: 公開
+        description: '`documents[].id` → 読んだスキーマ（配信元の直下のファイルを起動時に読む。作業中のワークツリーを読むときは文書のストアが読み直す）'
+      - name: tag_master
+        title: タグのマスター
+        type: dict[str, str]
+        access: 公開
+        description: タグ → 説明。`tags` が無ければ空
+    methods:
+      - name: table
+        title: 文書の行を引く
+        kind: メソッド
+        summary: 種類から文書の行を引く
+        scope: public
+        args:
+          - name: kind
+            title: 種類
+            type: str
+            required: true
+            passing: positional
+            description: '`documents[].id`'
+        returns:
+          type: DocumentTable
+          description: 有効な文書の行
+        process: |-
+          1. `enabled` の文書の行から `id` が `kind` の行を返す
+             - 無い場合、有効な行の ID を `kinds` に載せた `UnknownKindError` を送る
+        exceptions:
+          - name: UnknownKindError
+            condition: '`kind` が有効な文書の行に無い'
+            message: '`{source}: 種類 {kind} はありません`'
+        unit_tests:
+          - name: test_served_source_table
+            case: 正常
+            summary: 行を引く
+            condition: '`documents` に `rules`・`notes`、`table("notes")`'
+            mock: なし
+            expected: '`notes` の行'
+          - name: test_served_source_table_when_unknown
+            case: 異常
+            summary: 無い種類
+            condition: '`table("x")`、`notes` は `enabled: false`'
+            mock: なし
+            expected: '`UnknownKindError` の `kinds` が `["rules"]`'
+            exception: 無い種類
+      - name: script
+        title: スクリプトを引く
+        kind: メソッド
+        summary: 検査・変換・生成の行を ID で引く
+        scope: public
+        args:
+          - name: table
+            title: 表
+            type: Literal['validators', 'converters', 'generators']
+            required: true
+            passing: positional
+            description: 引く表
+          - name: script_id
+            title: ID
+            type: str
+            required: true
+            passing: positional
+            description: 行の ID
+        returns:
+          type: ScriptEntry
+          description: その行（参照は検証で確かめてあるので必ずある）
+        process: 1. `config` の `table` の表から `id` が `script_id` の行を返す
+  - name: SourceStatus
+    title: 配信元の状態
+    container: features/sources/types.py
+    usecase: 共通
+    role: DTO
+    summary: 端末の設定の 1 行が配信中か、外したならその理由
+    description: '`dataclass(frozen=True)`。設定画面・端末の設定の保存・起動のログが使う。'
+    properties:
+      - name: id
+        title: 配信元の ID
+        type: str
+        access: 公開
+        description: '`sources[].id`。設定を読めず `id` も無いときは `sources[{n}]`'
+      - name: index
+        title: 行の位置
+        type: int
+        access: 公開
+        description: '`sources[]` の中の 0 始まりの位置'
+      - name: status
+        title: 状態
+        type: SourceStatusKind
+        access: 公開
+        description: 配信中・検証で外した・無効
+      - name: errors
+        title: 違反
+        type: list[Violation]
+        access: 公開
+        default: '[]'
+        description: '`not_served` のときの理由。パスは設定のキーのパス（`documents[0].paths`）'
+      - name: config_version
+        title: 設定のバージョン
+        type: tuple[str, str] | None
+        access: 公開
+        default: None
+        description: 設定のバージョンがサーバーの読めるバージョンより古いとき、`(設定, サーバー)`
+enums:
+  - name: SourceStatusKind
+    title: 配信元の状態の種類
+    container: features/sources/types.py
+    usecase: 共通
+    summary: 配信元の状態
+    description: '`Literal` の型エイリアス。'
+    values:
+      - value: serving
+        title: 配信中
+        description: 検証を通って配信している
+      - value: not_served
+        title: 配信していない
+        description: 起動時か読み直しの検証で外した
+      - value: disabled
+        title: 無効
+        description: '端末の設定か配信元の設定で `enabled: false`'
+constants:
+  - name: SOURCE_SCHEMA
+    title: 配信元の設定のスキーマ
+    container: features/sources/service.py
+    usecase: 共通
+    summary: 配布に同梱する配信元の設定のスキーマのパス（`importlib.resources` で引く）
+    value: '"schemas/dev-docs.schema.yaml"'
+  - name: SOURCE_CONFIG_VERSION
+    title: 配信元の設定の読めるバージョン
+    container: features/sources/types.py
+    usecase: 共通
+    summary: このサーバーが読める配信元の設定の `version`（整数の文字列。大きいほど新しい）
+    value: '"1"'
+  - name: TABLE_KEYS
+    title: テーブルのキー
+    container: features/sources/merge.py
+    usecase: 共通
+    summary: マージで `id` ごとに行を重ねる最上位のキー
+    value: frozenset({"documents", "validators", "converters", "generators"})
+functions:
+  - name: merge_configs
+    title: 設定のマージ
+    kind: 関数
+    container: features/sources/merge.py
+    usecase: 起動
+    role: 変換
+    summary: 配信元の設定の YAML の値を上から順に重ねる
+    scope: public
+    thread_safe: true
+    args:
+      - name: values
+        title: 設定の値
+        type: Sequence[dict[str, Any]]
+        required: true
+        passing: positional
+        description: '`sources[].config` の順に読んだ値'
+    returns:
+      type: dict[str, Any]
+      description: 重ねた値（引数は書き換えない）
+    process: |-
+      1. 先頭の値の深いコピーを結果にし、続く値を順に重ねる
+      2. 重ねるときはキーごとに次のように扱う
+         - 最上位の `TABLE_KEYS` のキーは、`id` が同じ行を後の行で置き換え、新しい `id` の行を末尾に追加する（並びは先に現れた順）。`id` を持たない行はそのまま追加し、検証で誤りにする
+         - 両方が辞書の値は、キーごとに再帰して重ねる
+         - それ以外（値・値の配列・形の違う値）は後の値で置き換える
+      3. 重ねた値を返す
+    unit_tests:
+      - name: test_merge_configs
+        case: 正常
+        summary: 値を上書きしテーブルを行ごとに重ねる
+        condition: '`[{description: a, documents: [{id: x, paths: [a/*]}]}, {description: b, documents: [{id: x, paths: [b/*]}, {id: y, paths: [c]}]}]`'
+        mock: なし
+        expected: '`description` が `b`、`documents` が `x`（`paths: [b/*]`）・`y` の順'
+      - name: test_merge_configs_when_nested_object
+        case: 正常
+        summary: オブジェクトを再帰で重ねる
+        condition: '`[{visibility: {key: v, public: [p]}}, {visibility: {public: [q]}}]`'
+        mock: なし
+        expected: '`visibility` が `{key: v, public: [q]}`'
+      - name: test_merge_configs_when_value_array
+        case: 正常
+        summary: 値の配列は置き換える
+        condition: '`[{worktrees: [a, b]}, {worktrees: [c]}]`'
+        mock: なし
+        expected: '`worktrees` が `[c]`'
+      - name: test_merge_configs_when_single
+        case: 正常
+        summary: 1 つだけはそのまま
+        condition: 値 1 つ
+        mock: なし
+        expected: 同じ値で、引数とは別のオブジェクト
+  - name: validate_source_config
+    title: 配信元の設定の検証
+    kind: 関数
+    container: features/sources/service.py
+    usecase: 起動
+    role: 検証
+    summary: マージした設定をスキーマ・行の参照・ファイルの有無で確かめ、違反を全て返す
+    scope: public
+    thread_safe: true
+    args:
+      - name: value
+        title: 設定の値
+        type: dict[str, Any]
+        required: true
+        passing: positional
+        description: マージした値
+      - name: root
+        title: 配信元の直下
+        type: Path
+        required: true
+        passing: keyword
+        description: 相対パスを解くフォルダ
+    returns:
+      type: list[Violation]
+      description: 違反の並び。無ければ空
+    process: |-
+      1. `SOURCE_SCHEMA` で `iter_errors` を全て集め、`documents[0].paths` の形のパスの `Violation` にする（必須のキーが無い誤りは `必須のキーが無い`、表に無いキーは `知らないキー`）。スキーマの違反があれば、ここで返す
+      2. テーブル（`TABLE_KEYS`）ごとに `id` の重なりを確かめ、後の行の `{テーブル}[{n}].id` に違反を加える
+      3. 行の参照を確かめる。`documents[].validators[]`・`documents[].converter`・`documents[].after_write[]` が、それぞれ `validators[]`・`converters[]`・`generators[]` に無い ID を指す場合、その要素のパスに `存在しない ID` の違反を加える
+      4. `type: yaml` の行に `schema` が無い場合、`documents[{n}].schema` に違反を加える。`markdown` の行の `schema`・`records`・`body_file` も違反にする
+      5. `body_file` を `records` なしで書いた行は `documents[{n}].body_file` に違反を加える
+      6. `documents[].schema` と `tags` のファイルが `root` の下に無いか YAML として読めない場合、そのキーに違反を加える（YAMLの読み込み）。スキーマは Draft 2020-12 の `check_schema` も通す
+      7. パス（`documents[].paths[]`・`schema`・`tags`）が `..` で `root` の外を指す場合、その要素に違反を加える
+      8. 違反を返す
+    unit_tests:
+      - name: test_validate_source_config
+        case: 正常
+        summary: 違反が無い
+        condition: '`name` と yaml の行 1 つ（`schema` のファイルあり）'
+        mock: なし（一時フォルダ）
+        expected: 空
+      - name: test_validate_source_config_when_required_missing
+        case: 正常
+        summary: 必須のキーが無い
+        condition: '`documents[0]` に `paths` が無い'
+        mock: なし
+        expected: '`Violation(path="documents[0].paths", rule="必須のキーが無い")` だけ'
+      - name: test_validate_source_config_when_unknown_key
+        case: 正常
+        summary: 表に無いキー
+        condition: 最上位に `mcp`
+        mock: なし
+        expected: '`mcp` の `知らないキー`'
+      - name: test_validate_source_config_when_duplicate_id
+        case: 正常
+        summary: 行の ID が重なる
+        condition: '`documents` に `id: a` が 2 行'
+        mock: なし
+        expected: '`documents[1].id` の違反'
+      - name: test_validate_source_config_when_dangling_reference
+        case: 正常
+        summary: 無い ID を指す
+        condition: '`documents[0].validators: [nope]`、`validators` は空'
+        mock: なし
+        expected: '`documents[0].validators[0]` の `存在しない ID`'
+      - name: test_validate_source_config_when_schema_missing
+        case: 正常
+        summary: スキーマのファイルが無い
+        condition: '`documents[0].schema: schemas/none.yaml`'
+        mock: なし
+        expected: '`documents[0].schema` の違反'
+      - name: test_validate_source_config_when_outside_root
+        case: 正常
+        summary: 配信元の外を指す
+        condition: '`documents[0].paths: [../x/*.md]`'
+        mock: なし
+        expected: '`documents[0].paths[0]` の違反'
+  - name: check_scripts
+    title: スクリプトの確かめ
+    kind: 関数
+    container: features/sources/service.py
+    usecase: 起動
+    role: 検証
+    summary: 検査・変換・生成の行のコマンドを動かさずに確かめる
+    scope: public
+    thread_safe: true
+    args:
+      - name: config
+        title: 配信元の設定
+        type: SourceConfig
+        required: true
+        passing: positional
+        description: 検証を通した設定
+      - name: root
+        title: 配信元の直下
+        type: Path
+        required: true
+        passing: keyword
+        description: コマンドを実行する場所
+    returns:
+      type: list[Violation]
+      description: 確かめられなかった行の違反
+    process: |-
+      1. `validators[]`・`converters[]`・`generators[]` の行ごとに実行できるかを確かめる（実行できるかの確かめ）
+         - `ScriptNotFoundError` の場合、`{テーブル}[{n}]` のパスに、例外の理由を持つ違反を加える
+      2. 違反を返す
+    unit_tests:
+      - name: test_check_scripts
+        case: 正常
+        summary: 全て実行できる
+        condition: '`converters: [{id: c, run: [python3, scripts/c.py]}]`、`scripts/c.py` あり'
+        mock: なし（一時フォルダ）
+        expected: 空
+      - name: test_check_scripts_when_missing
+        case: 正常
+        summary: スクリプトが無い
+        condition: '`converters[0].run: [python3, scripts/none.py]`'
+        mock: なし
+        expected: '`converters[0]` の違反で、理由に `scripts/none.py`'
+  - name: compare_config_version
+    title: 設定のバージョンの比較
+    kind: 関数
+    container: features/sources/service.py
+    usecase: 起動
+    role: 検証
+    summary: 配信元の設定のバージョンをサーバーの読めるバージョンと比べる
+    scope: public
+    args:
+      - name: version
+        title: 設定のバージョン
+        type: str
+        required: true
+        passing: positional
+        description: 設定の `version`
+    returns:
+      type: Literal['same', 'older', 'newer']
+      description: 設定のほうが同じ・古い・新しい
+    process: 1. 両方を整数にして `SOURCE_CONFIG_VERSION` と比べ、結果を返す（整数にならない値はスキーマの `pattern` で断っている）
+    unit_tests:
+      - name: test_compare_config_version
+        case: 正常
+        summary: 同じ・古い・新しい
+        condition: '`SOURCE_CONFIG_VERSION` を `"2"` に monkeypatch し、`"2"`・`"1"`・`"3"`'
+        mock: なし
+        expected: '`same`・`older`・`newer`'
+  - name: load_source
+    title: 配信元の読み込み
+    kind: 関数
+    container: features/sources/service.py
+    usecase: 起動
+    role: サービス
+    summary: 端末の設定の 1 行から配信元の設定を読んで検証し、配信中の配信元と状態を作る
+    scope: public
+    thread_safe: true
+    args:
+      - name: entry
+        title: 配信元の行
+        type: SourceEntry
+        required: true
+        passing: positional
+        description: 端末の設定の `sources[]` の行
+      - name: index
+        title: 行の位置
+        type: int
+        required: true
+        passing: keyword
+        description: '`sources[]` の中の位置'
+    returns:
+      type: tuple[ServedSource | None, SourceStatus]
+      description: 配信するときは配信中の配信元と `serving` の状態、配信しないときは `None` と `not_served` か `disabled` の状態
+    process: |-
+      1. `entry.enabled` が `False` の場合、`disabled` を返す（設定は読まない。ID は `entry.id`、無ければ `sources[{index}]`）
+      2. `entry.config` の各ファイルを順に読む（YAMLの読み込み）
+         - 無い・読めない・辞書でない場合、`config[{n}]` のパスの違反を持つ `not_served` を返す
+      3. 読んだ値をマージする（設定のマージ）。`root` は先頭のファイルのフォルダにする
+      4. マージした値を検証する（配信元の設定の検証）
+         - 違反がある場合、その違反を持つ `not_served` を返す
+      5. `SourceConfig` にする。設定の `enabled` が `False` の場合、`disabled` を返す
+      6. スクリプトを確かめる（スクリプトの確かめ）
+         - 違反がある場合、その違反を持つ `not_served` を返す
+      7. 設定のバージョンを比べる（設定のバージョンの比較）
+         - `newer` の場合、`version` に「このサーバーより新しい設定」の違反を持つ `not_served` を返す
+         - `older` の場合、状態の `config_version` に `(設定, SOURCE_CONFIG_VERSION)` を入れる
+         - `[warning]` 配信元の設定のバージョンが古い（ID・設定のバージョン・サーバーが読めるバージョン）
+      8. `root` が Git の作業ツリーかとその直下を引く（履歴の『リポジトリの直下』）
+      9. 種類ごとのスキーマとタグのマスターを読み、`worktrees` を `repo_root`（Git でなければ `root`）からの絶対パスにして、`ServedSource` を作る。ID は `entry.id`、無ければ `config.name`
+      10. `ServedSource` と `serving` を返す
+
+      違反で返すときは `[error]` 配信元を配信しない（違反ごとに `{id}: {パス}: {理由}`）を書く。
+    unit_tests:
+      - name: test_load_source
+        case: 正常
+        summary: 配信する
+        condition: Git の一時リポジトリの `dev-docs.yaml`（yaml の行 1 つ）、`entry.id` なし
+        mock: なし（一時フォルダで `git init`）
+        expected: '`ServedSource` の ID が設定の `name`、`is_git` が `True`、`schemas` に行の ID、状態が `serving`'
+      - name: test_load_source_when_merged
+        case: 正常
+        summary: 複数の YAML を重ねる
+        condition: '`config` が 2 つで、後が `description` を上書きする'
+        mock: なし
+        expected: '`config.description` が後の値、`root` が先頭のファイルのフォルダ'
+      - name: test_load_source_when_disabled
+        case: 正常
+        summary: 端末の設定で無効
+        condition: '`entry.enabled: false`、`config` は無いパス'
+        mock: なし
+        expected: '`None` と `disabled`（ファイルを読まない）'
+      - name: test_load_source_when_config_missing
+        case: 正常
+        summary: 設定のファイルが無い
+        condition: '`config: [/tmp/none.yaml]`'
+        mock: なし
+        expected: '`None` と `not_served`、違反のパスが `config[0]`'
+      - name: test_load_source_when_invalid
+        case: 正常
+        summary: 検証に失敗する
+        condition: '`documents[0]` に `paths` が無い'
+        mock: なし
+        expected: '`None` と `not_served`、違反が `documents[0].paths`。エラーログに `{id}: documents[0].paths: 必須のキーが無い`'
+      - name: test_load_source_when_script_missing
+        case: 正常
+        summary: スクリプトが無い
+        condition: '`converters[0]` が無いファイルを指す'
+        mock: なし
+        expected: '`None` と `not_served`、違反が `converters[0]`'
+      - name: test_load_source_when_version_old
+        case: 正常
+        summary: 設定のバージョンが古い
+        condition: '`SOURCE_CONFIG_VERSION` を `"2"` に monkeypatch、設定は `version: "1"`'
+        mock: なし
+        expected: '`ServedSource` と `serving`、`config_version` が `("1", "2")`、警告のログが 1 行'
+      - name: test_load_source_when_not_git
+        case: 正常
+        summary: Git の管理外のフォルダ
+        condition: '`git init` していない一時フォルダ'
+        mock: なし
+        expected: '`is_git` が `False`、`repo_root` が `None`'
+classes:
+  - name: SourceRegistry
+    title: 配信元の一覧
+    container: features/sources/registry.py
+    usecase: 共通
+    role: レジストリ
+    summary: 配信中の配信元と状態を持ち、読み直しで一覧ごと差し替える
+    description: |-
+      一覧は `dict[str, ServedSource]` と `list[SourceStatus]` の組を 1 つの属性で持ち、読み直しは新しい組を作り終えてから属性を入れ替える。
+      読む側は入れ替えの前後どちらかの組だけを見るので、ロックを取らない。読み直し同士は `_reload_lock` で順にする。
+    kind: クラス
+    properties:
+      - name: _snapshot
+        title: 一覧
+        type: tuple[dict[str, ServedSource], list[SourceStatus]]
+        access: 内部 (_)
+        default: ({}, [])
+        description: 配信中の配信元（ID → 配信元）と、`sources[]` の順の状態
+      - name: _reload_lock
+        title: 読み直しの排他
+        type: threading.Lock
+        access: 内部 (_)
+        description: 読み直しを 1 つずつにする
+    methods:
+      - name: reload
+        title: 読み直す
+        kind: メソッド
+        summary: 端末の設定の全行を読み直し、一覧を差し替える
+        scope: public
+        thread_safe: true
+        side_effects: 一覧を入れ替える
+        args:
+          - name: terminal
+            title: 端末の設定
+            type: TerminalConfig
+            required: true
+            passing: positional
+            description: 読んだ端末の設定
+        returns:
+          type: list[SourceStatus]
+          description: '`sources[]` の順の状態'
+        process: |-
+          1. `_reload_lock` を取る
+          2. `sources[]` の行ごとに配信元を読む（配信元の読み込み）
+          3. 配信する配信元の ID が先の行と重なる場合（`id` を省いて設定の `name` が同じなど）、後の行を `sources[{n}].id` の重複の違反を持つ `not_served` にする
+          4. 新しい組を作り、`_snapshot` を入れ替える
+             - `[info]` 配信元を読み直した（配信中の ID の並び・外した数）
+          5. 状態を返す
+        unit_tests:
+          - name: test_source_registry_reload
+            case: 正常
+            summary: 状態を行の順に返す
+            condition: '`sources` に配信できる行・検証に失敗する行・無効の行'
+            mock: 配信元の読み込み（行ごとに決めた結果を返す偽物）
+            expected: 状態が `serving`・`not_served`・`disabled` の順で、`served()` は 1 つ
+          - name: test_source_registry_reload_when_duplicate_name
+            case: 正常
+            summary: 既定の ID が重なる
+            condition: '`id` を省いた 2 行の設定の `name` がどちらも `a`'
+            mock: 配信元の読み込み（偽物）
+            expected: 後の行が `not_served` で違反が `sources[1].id`
+          - name: test_source_registry_reload_when_reading
+            case: 正常
+            summary: 読み直しの間は古い一覧で応える
+            condition: 読み込みの偽物が `threading.Event` で止まっている間に別のスレッドから `get("a")`
+            mock: 配信元の読み込み（止められる偽物）
+            expected: '`get` が待たずに古い配信元を返し、読み直しの後は新しい配信元を返す'
+      - name: get
+        title: 引く
+        kind: メソッド
+        summary: 配信中の配信元を ID で引く
+        scope: public
+        thread_safe: true
+        args:
+          - name: source_id
+            title: 配信元の ID
+            type: str
+            required: true
+            passing: positional
+            description: 引く ID
+        returns:
+          type: ServedSource
+          description: 配信中の配信元
+        process: |-
+          1. `_snapshot` を 1 回だけ読み、配信中にあれば返す
+          2. 状態の一覧にその ID が `not_served` か `disabled` である場合、`SourceNotServedError`（`violations` に状態の違反、`disabled` に無効か）を送る
+          3. どちらにも無い場合、`UnknownSourceError` を送る
+        exceptions:
+          - name: SourceNotServedError
+            condition: 検証で外したか無効の配信元
+            message: '`{id} は配信していません（{理由}）`'
+          - name: UnknownSourceError
+            condition: 端末の設定に無い ID
+            message: '`配信元 {id} はありません`'
+        unit_tests:
+          - name: test_source_registry_get
+            case: 正常
+            summary: 配信中を引く
+            condition: '`a` が配信中'
+            mock: なし（`_snapshot` を直に入れる）
+            expected: '`a` の配信元'
+          - name: test_source_registry_get_when_not_served
+            case: 異常
+            summary: 外した配信元
+            condition: '`b` が `not_served`'
+            mock: なし
+            expected: '`SourceNotServedError` の `violations` が `b` の違反、`disabled` が `False`'
+            exception: 検証で外した
+          - name: test_source_registry_get_when_unknown
+            case: 異常
+            summary: 無い配信元
+            condition: '`get("z")`'
+            mock: なし
+            expected: '`UnknownSourceError`'
+            exception: 無い ID
+      - name: served
+        title: 配信中
+        kind: メソッド
+        summary: 配信中の配信元を `sources[]` の順に返す
+        scope: public
+        thread_safe: true
+        returns:
+          type: list[ServedSource]
+          description: 配信中の配信元
+        process: 1. `_snapshot` を 1 回だけ読み、状態の順に `serving` の配信元を返す
+      - name: statuses
+        title: 状態の一覧
+        kind: メソッド
+        summary: '`sources[]` の順の状態を返す'
+        scope: public
+        thread_safe: true
+        returns:
+          type: list[SourceStatus]
+          description: 状態の並び
+        process: 1. `_snapshot` の状態を返す
+refs:
+  - dev/設計書/インターフェース定義/開発ドキュメントサーバー/起動#

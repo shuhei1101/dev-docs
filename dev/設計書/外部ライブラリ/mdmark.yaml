@@ -1,0 +1,46 @@
+title: "mdmark"
+kind: "CDN の JS"
+version:
+  current: v0.8.0
+  latest: v0.8.0
+  checked_on: '2026-10-28'
+  source: https://cdn.jsdelivr.net/gh/shuhei1101/mdmark@v0.8.0/dist/index.js
+  pinning: GitHub のタグを URL に固定して jsDelivr から読む（画面の `MDMARK_URL`）
+catalogs:
+  - name: API
+    version: v0.8.0
+    entries:
+      - name: mount
+        kind: 関数
+        purpose: 要素に Markdown を描く。差分の元を渡すとリビジョン間の差分を強調する
+        params:
+          - name: element
+            type: HTMLElement
+            required: true
+            description: 描く先
+          - name: options.markdown
+            type: string
+            required: true
+            description: 描く Markdown
+          - name: options.diffSource.revisions
+            type: '() => Promise<{id: string, at: string, label: string}[]>'
+            required: false
+            description: 比べるリビジョンの一覧
+          - name: options.diffSource.content
+            type: ({revisionId}) => Promise<string | undefined>
+            required: false
+            description: リビジョンの Markdown
+          - name: options.docId
+            type: string
+            required: false
+            description: 差分の元を持つときの文書の識別子
+lead: Markdown 文書の表示（拡張記法・図・差分・部品）を各アプリで共通に使うブラウザのライブラリ。
+dependency_scope: 必須
+adoption: 採用
+upstream: shuhei1101/mdmark
+official_url: https://github.com/shuhei1101/mdmark
+used_in:
+  - src/dev_docs/server/static/doc_view.ts
+verification:
+  state: 未確認
+  detail: モックで `mount` を呼んで描けることは見たが、配信する画面ではまだ動かしていない

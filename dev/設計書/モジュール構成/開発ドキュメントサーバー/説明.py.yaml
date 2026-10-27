@@ -1,0 +1,273 @@
+title: "開発ドキュメントサーバー / 説明"
+lead: '`describe` の処理。引数の数で、今の作業場所から使える配信元の一覧・配信元の説明書と種類の一覧・種類のスキーマを返す。'
+directory: |-
+  ```text
+  src/dev_docs/features/describe/
+  ├─ __init__.py   # 公開する型と関数の再エクスポート
+  ├─ types.py      # DescribeRequest / KindSummary / SourceListResult / SourceGuideResult / KindSchemaResult
+  ├─ render.py     # render_describe_markdown
+  └─ service.py    # describe
+  ```
+diagrams:
+  - name: 全体
+    diagram: |-
+      classDiagram
+        direction TD
+        配信元の説明 ..> 作業場所の説明 : 引数なし
+        配信元の説明 ..> 使える配信元 : 引数なし
+        配信元の説明 ..> 読む場所の解決 : source
+        配信元の説明 ..> 文書の行を引く : kind
+        class 配信元の説明 {
+          <<function>>
+        }
+        class 作業場所の説明 {
+          <<function>>
+        }
+        class 使える配信元 {
+          <<function>>
+        }
+        class 読む場所の解決 {
+          <<function>>
+        }
+        class 文書の行を引く {
+          <<method>>
+        }
+        click 作業場所の説明 href "./権限と作業場所.py.yaml#作業場所の説明"
+        click 使える配信元 href "./権限と作業場所.py.yaml#使える配信元"
+        click 読む場所の解決 href "./権限と作業場所.py.yaml#読む場所の解決"
+        click 文書の行を引く href "./配信元.py.yaml#配信中の配信元"
+data_models:
+  - name: DescribeRequest
+    title: 説明の要求
+    container: features/describe/types.py
+    usecase: 説明
+    role: DTO
+    summary: '`describe` の引数'
+    description: '`pydantic.BaseModel`（`extra="forbid"`）。キーの意味はインターフェース定義『配信元の説明』の `request`。'
+    properties:
+      - name: source
+        title: 配信元
+        type: str | None
+        access: 公開
+        default: None
+        description: '`None` は使える配信元の一覧'
+      - name: kind
+        title: 種類
+        type: str | None
+        access: 公開
+        default: None
+        description: '`source` を渡したときだけ'
+      - name: worktree
+        title: ワークツリー
+        type: str | None
+        access: 公開
+        default: None
+        description: 設定とスキーマを読むワークツリー
+      - name: format
+        title: 形式
+        type: Literal['markdown', 'json']
+        access: 公開
+        default: '"markdown"'
+        description: 返す形式
+      - name: cwd
+        title: 作業場所
+        type: str | None
+        access: 公開
+        default: None
+        description: フックが入れる
+  - name: KindSummary
+    title: 種類の概要
+    container: features/describe/types.py
+    usecase: 説明
+    role: DTO
+    summary: 種類の一覧の 1 行
+    description: '`dataclass(frozen=True)`。'
+    properties:
+      - name: id
+        title: 種類の ID
+        type: str
+        access: 公開
+        description: '`documents[].id`'
+      - name: description
+        title: 説明
+        type: str
+        access: 公開
+        description: スキーマの `description`。無ければ行の `title`、どちらも無ければ空
+  - name: SourceListResult
+    title: 使える配信元の一覧
+    container: features/describe/types.py
+    usecase: 説明
+    role: DTO
+    summary: 引数なしの結果
+    description: '`dataclass(frozen=True)`。SessionStart で注入する一覧（#4）と同じ中身。'
+    properties:
+      - name: workplace
+        title: 作業場所
+        type: Workplace
+        access: 公開
+        description: 作業場所の説明の結果
+      - name: sources
+        title: 配信元
+        type: list[SourceAccess]
+        access: 公開
+        description: 使える配信元の結果
+  - name: SourceGuideResult
+    title: 配信元の説明書
+    container: features/describe/types.py
+    usecase: 説明
+    role: DTO
+    summary: '`source` だけの結果'
+    description: '`dataclass(frozen=True)`。'
+    properties:
+      - name: source_id
+        title: 配信元の ID
+        type: str
+        access: 公開
+        description: 配信元の ID
+      - name: instructions
+        title: 説明書
+        type: str
+        access: 公開
+        description: 配信元の設定の `instructions` をそのまま
+      - name: kinds
+        title: 種類
+        type: list[KindSummary]
+        access: 公開
+        description: 有効な文書の行の順
+  - name: KindSchemaResult
+    title: 種類のスキーマ
+    container: features/describe/types.py
+    usecase: 説明
+    role: DTO
+    summary: '`source`・`kind` の結果'
+    description: '`dataclass(frozen=True)`。'
+    properties:
+      - name: source_id
+        title: 配信元の ID
+        type: str
+        access: 公開
+        description: 配信元の ID
+      - name: kind
+        title: 種類
+        type: str
+        access: 公開
+        description: 種類の ID
+      - name: schema_text
+        title: スキーマの YAML
+        type: str
+        access: 公開
+        description: スキーマのファイルの内容そのまま（`markdown` で返す）
+      - name: schema
+        title: スキーマ
+        type: dict[str, Any]
+        access: 公開
+        description: 読んだスキーマ（`json` で返す）
+functions:
+  - name: describe
+    title: 配信元の説明
+    kind: 関数
+    container: features/describe/service.py
+    usecase: 説明
+    role: サービス
+    summary: '`describe` の要求を処理して結果を返す'
+    scope: public
+    thread_safe: true
+    args:
+      - name: request
+        title: 説明の要求
+        type: DescribeRequest
+        required: true
+        passing: positional
+        description: ツールの引数
+      - name: registry
+        title: 配信元の一覧
+        type: SourceRegistry
+        required: true
+        passing: injected
+        description: 配信中の配信元
+      - name: store
+        title: 文書のストア
+        type: DocumentStore
+        required: true
+        passing: injected
+        description: 種類のスキーマを読む
+    returns:
+      type: SourceListResult | SourceGuideResult | KindSchemaResult
+      description: 引数の数で決まる結果
+    process: |-
+      1. `kind` があって `source` が無い場合、`InvalidArgumentError`（`kind` には `source` が要ります）を送る
+      2. `source` が無い場合、作業場所の説明と使える配信元を返す（使える配信元が 0 件でも返す）
+      3. `source` がある場合、読む場所を解く（読む場所の解決。`source`・`worktree`・`cwd`）。作業中の配信元の作業ツリーかワークツリーを読むときは、その場所の設定を読み直した配信元を使う
+      4. `kind` が無い場合、`instructions` と、有効な文書の行ごとの種類の概要（スキーマは文書のストア.種類のスキーマ）を返す
+      5. `kind` がある場合、文書の行を引き（無ければ `UnknownKindError`）、`target.base` の `schema` のファイルの内容と読んだスキーマを返す
+    exceptions:
+      - name: InvalidArgumentError
+        condition: '`source` の無い `kind`'
+        message: '`kind には source が要ります`'
+      - name: SourceNotReadableError
+        condition: 読む場所の解決が送る
+        message: '`{id} はこの作業場所（{cwd}）から読めません`'
+      - name: SourceNotServedError
+        condition: 配信していない配信元を指した
+        message: '`{id} は配信していません`'
+      - name: UnknownKindError
+        condition: '`kind` が配信元の種類に無い'
+        message: '`{source}: 種類 {kind} はありません`'
+    unit_tests:
+      - name: test_describe
+        case: 正常
+        summary: 使える配信元の一覧
+        condition: '`cwd` が sample のクローン本体で、notes は `scope.read` に当たり、other は当たらない'
+        mock: なし（一時フォルダの配信元）
+        expected: '`workplace` が sample のクローン本体、`sources` が sample（write・作業中）と notes（read）で、other が無い'
+      - name: test_describe_when_source
+        case: 正常
+        summary: 説明書と種類
+        condition: '`source: sample`'
+        mock: なし
+        expected: '`instructions` が設定の値、`kinds` に sample の種類とスキーマの `description`'
+      - name: test_describe_when_kind
+        case: 正常
+        summary: 種類のスキーマ
+        condition: '`source: sample`・`kind: sample`'
+        mock: なし
+        expected: '`schema_text` がスキーマのファイルと同じ文字列'
+      - name: test_describe_when_unknown_kind
+        case: 異常
+        summary: 知らない種類
+        condition: '`kind: no-such-kind`'
+        mock: なし
+        expected: '`UnknownKindError` の `kinds` に sample の種類'
+        exception: '`kind` が配信元の種類に無い'
+  - name: render_describe_markdown
+    title: 説明の Markdown
+    kind: 関数
+    container: features/describe/render.py
+    usecase: 説明
+    role: 変換
+    summary: '`format: markdown` の本文を作る'
+    scope: public
+    thread_safe: true
+    args:
+      - name: result
+        title: 結果
+        type: SourceListResult | SourceGuideResult | KindSchemaResult
+        required: true
+        passing: positional
+        description: 描く結果
+    returns:
+      type: str
+      description: Markdown
+    process: |-
+      1. 使える配信元の一覧は、`作業場所: {cwd}（{配信元} のクローン本体 / ワークツリー）` の行と `| source | 権限 | description |` の表（作業中の配信元は権限に `（作業中）`）
+      2. 配信元の説明書は、`instructions` をそのまま置き、`| kind | description |` の表を続ける
+      3. 種類のスキーマは、```yaml でスキーマの YAML を囲む
+    unit_tests:
+      - name: test_render_describe_markdown
+        case: 正常
+        summary: 一覧の表
+        condition: sample（write・作業中）と notes（read）
+        mock: なし
+        expected: '`| sample | write（作業中） | ... |` と `| notes | read | ... |` の行'
+refs:
+  - dev/設計書/インターフェース定義/開発ドキュメントサーバー/配信元の説明#

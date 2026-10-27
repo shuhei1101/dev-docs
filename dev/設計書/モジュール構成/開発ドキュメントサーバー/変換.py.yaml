@@ -1,0 +1,496 @@
+title: "開発ドキュメントサーバー / 変換"
+lead: |-
+  文書を画面に出す Markdown にする。既定はスキーマ駆動（`x-heading`・`x-shape`・`x-key`・`x-diagram`・列の `title`）で、`converters[]` を指す種類だけ配信元のスクリプトに替える。
+  Markdown の中の埋め込みのマーカーは、mdmark に渡す前に YAML の表へ置き換える。
+directory: |-
+  ```text
+  src/dev_docs/features/convert/
+  ├─ __init__.py   # 公開する型と関数の再エクスポート
+  ├─ types.py      # Converted / ConvertFailure / Shape / DiagramKind
+  ├─ markdown.py   # schema_to_markdown / render_table（スキーマ駆動の変換）
+  ├─ diagrams.py   # render_diagram（x-diagram の Mermaid）
+  ├─ embed.py      # expand_embeds（埋め込みのマーカーを表へ）
+  └─ service.py    # ConvertService（変換の選択・converters[] の実行・結果の控え）
+  ```
+diagrams:
+  - name: 全体
+    diagram: |-
+      classDiagram
+        direction TD
+        変換 ..> スキーマ駆動の変換 : converter が無い
+        変換 ..> スクリプトの実行 : converters[]
+        変換 ..> 埋め込みの展開
+        スキーマ駆動の変換 ..> 表の組み立て
+        スキーマ駆動の変換 ..> 図の組み立て
+        埋め込みの展開 ..> 表の組み立て
+        変換 ..> 変換の結果 : 返す
+        変換の結果 o-- 変換の失敗
+        class 変換 {
+          +変換する(読み書きの場所, 文書) 変換の結果
+          +控えを捨てる() None
+        }
+        class スキーマ駆動の変換 {
+          <<function>>
+        }
+        class 表の組み立て {
+          <<function>>
+        }
+        class 図の組み立て {
+          <<function>>
+        }
+        class 埋め込みの展開 {
+          <<function>>
+        }
+        class スクリプトの実行 {
+          <<function>>
+        }
+        class 変換の結果 {
+          +Markdown: str
+        }
+        class 変換の失敗 {
+          +理由: str
+        }
+        click スクリプトの実行 href "./スクリプトの実行.py.yaml#スクリプトの実行"
+constants:
+  - name: EMBED_PATTERN
+    title: 埋め込みのマーカー
+    container: features/convert/embed.py
+    usecase: 画面
+    summary: '埋め込みのマーカーに当てる正規表現（mdmark の `<!-- 名前: 引数 -->` の書式で、名前は mdmark の予約名と重ならない `embed`）'
+    value: '`r"<!--\s*embed:\s*(?P<path>[^#\s]+)(?:#(?P<item>\S+))?\s*-->"`'
+  - name: TABLE_KEY_PATTERN
+    title: 表のキーのマーカー
+    container: features/convert/service.py
+    usecase: 画面
+    summary: 表の組み立てが表の前に置き、変換の最後に取り除く行に当てる正規表現
+    value: '`r"^<!-- dev-docs-table: (?P<key>.+) -->$"`'
+  - name: MAX_HEADING_LEVEL
+    title: 見出しの深さの上限
+    container: features/convert/markdown.py
+    usecase: 画面
+    summary: これより深い見出しは `######` で止める
+    value: '6'
+  - name: CONVERT_CACHE_KEEP
+    title: 変換の結果を残す数
+    container: features/convert/service.py
+    usecase: 画面
+    summary: '`{state_dir}/converted` に残すファイルの数。超えたら更新日時が古いものから消す'
+    value: '2000'
+enums:
+  - name: Shape
+    title: 節の形
+    container: features/convert/types.py
+    usecase: 画面
+    summary: スキーマの `x-shape` に書く、項目を Markdown にする形（ai-monitor の生成と同じ）
+    description: '`Literal` の型エイリアス。`x-shape` が無い文字列は `body`、オブジェクトは子を順に組み立てる。'
+    values:
+      - value: body
+        title: 本文
+        description: 文字列をそのまま段落にする
+      - value: table
+        title: 表
+        description: オブジェクトのリストを表にする。列は要素のスキーマの `properties` の順で、列名は `title`
+      - value: sections
+        title: 節
+        description: 要素・子を 1 つ深い見出しの節にする。要素の見出しは `x-key` の値
+      - value: list
+        title: 並び
+        description: 文字列のリストを箇条書きにする
+      - value: diagram
+        title: 図
+        description: 値から Mermaid の図を組み立て、続けて同じ値の表を置く
+      - value: attributes
+        title: 引用行
+        description: '子のスカラーを `> {title}: {値}` の行にする'
+  - name: DiagramKind
+    title: 図の種類
+    container: features/convert/types.py
+    usecase: 画面
+    summary: スキーマの `x-diagram`
+    description: '`Literal` の型エイリアス。'
+    values:
+      - value: flowchart
+        title: フローチャート
+        description: '`nodes`・`edges`・`subgraphs`・`clicks` から `flowchart`'
+      - value: dataflow
+        title: データフロー
+        description: '`flowchart` と同じ値から、ノードの `kind` で形を変えた `flowchart LR`'
+      - value: architecture
+        title: アーキテクチャ
+        description: '`dataflow` と同じ'
+      - value: state
+        title: 状態遷移
+        description: '`states`・`transitions` から `stateDiagram-v2`'
+      - value: er
+        title: ER 図
+        description: '`entities`・`relations` から `erDiagram`'
+data_models:
+  - name: ConvertFailure
+    title: 変換の失敗
+    container: features/convert/types.py
+    usecase: 画面
+    role: DTO
+    summary: 本文の場所にエラーの囲みで出す、変換できなかった理由
+    description: '`dataclass(frozen=True)`。画面は部品『エラーの囲み』で出す。'
+    properties:
+      - name: reason
+        title: 理由
+        type: Literal['timeout', 'exit', 'not_runnable', 'invalid_yaml']
+        access: 公開
+        description: 制限時間を超えた・0 以外で終わった・実行できない・YAML を読めない
+      - name: kind
+        title: 種類
+        type: str
+        access: 公開
+        description: 文書の行の ID
+      - name: script
+        title: スクリプト
+        type: str | None
+        access: 公開
+        default: None
+        description: '`converters[].run` を空白で繋いだもの。YAML を読めないときは `None`'
+      - name: detail
+        title: 詳細
+        type: str
+        access: 公開
+        description: 制限時間の秒数・終了コードと標準エラーの末尾・読めなかった理由
+      - name: file
+        title: ファイル
+        type: str | None
+        access: 公開
+        default: None
+        description: YAML を読めないときのファイルのパス（配信元の直下から）
+      - name: line
+        title: 行
+        type: int | None
+        access: 公開
+        default: None
+        description: YAML を読めないときの行（1 始まり）
+      - name: column
+        title: 列
+        type: int | None
+        access: 公開
+        default: None
+        description: YAML を読めないときの列（1 始まり）
+  - name: Converted
+    title: 変換の結果
+    container: features/convert/types.py
+    usecase: 画面
+    role: DTO
+    summary: 画面に渡す Markdown か、変換の失敗
+    description: '`dataclass(frozen=True)`。`failure` があるときの `markdown` は空。'
+    properties:
+      - name: markdown
+        title: Markdown
+        type: str
+        access: 公開
+        description: mdmark に渡す Markdown（埋め込みを展開し、表のキーのマーカーを取り除いた後）
+      - name: table_keys
+        title: 表のキー
+        type: list[str]
+        access: 公開
+        default: '[]'
+        description: 本文の表の出る順の表のキー。画面の列の表示が、隠す列の設定を表に当てるときに使う
+      - name: failure
+        title: 変換の失敗
+        type: ConvertFailure | None
+        access: 公開
+        default: None
+        description: 失敗したときだけ
+functions:
+  - name: schema_to_markdown
+    title: スキーマ駆動の変換
+    kind: 関数
+    container: features/convert/markdown.py
+    usecase: 画面
+    role: 変換
+    summary: YAML の文書をスキーマの `x-heading`・`x-shape`・`x-key`・`x-diagram`・`title` に沿って Markdown にする
+    description: 表示の順はスキーマの `properties` の順、見出しと表の列名はスキーマの `title`。スキーマに無いキーは末尾に `title` 無しのキーの名前で出す。
+    scope: public
+    thread_safe: true
+    args:
+      - name: document
+        title: 文書
+        type: Document
+        required: true
+        passing: positional
+        description: YAML の文書（`records` の行は要素）
+      - name: schema
+        title: スキーマ
+        type: Mapping[str, Any]
+        required: true
+        passing: positional
+        description: 種類のスキーマ（`$ref` は文書のストアが解いた後のもの）。空なら全ての値を `x-shape` 無しとして組み立てる
+    returns:
+      type: str
+      description: Markdown
+    process: |-
+      1. 先頭に `# {name}`（無ければ `id`）の見出しを置き、`description` があれば段落にする
+      2. スキーマの `properties` の順に値を組み立てる（`name`・`description` と、値が空のキーは飛ばす）
+         - `x-heading` を持つ値は、深さ 2 から始まる見出し（`x-heading` の文字列、要素なら `x-key` の値）を置く。深さは `MAX_HEADING_LEVEL` で止める
+         - `x-shape` で本文を組み立てる（`Shape`）。`table` は表の組み立て、`diagram` は図の組み立ての ```mermaid と同じ値の表、`sections` は子を 1 つ深い見出しで再帰、`attributes` は `> {title}: {値}<br>` の行
+         - `x-shape` が無いスカラーは `**{title}**: {値}` の段落、文字列のリストは箇条書き、オブジェクトは子を順に組み立てる
+      3. 行を空行で繋いで返す
+    unit_tests:
+      - name: test_schema_to_markdown
+        case: 正常
+        summary: 見出しと表
+        condition: '`x-heading: 一覧`・`x-shape: table` の `items`（要素の `properties` が `id`・`name`、`title` が `ID`・`名前`）を持つ文書'
+        mock: なし
+        expected: '`# {name}`、`## 一覧`、列名が `ID`・`名前` の表がこの順にある'
+      - name: test_schema_to_markdown_when_sections
+        case: 正常
+        summary: 節の見出しの深さ
+        condition: '`x-shape: sections`・`x-key: name` のリストの中に、さらに `x-heading` を持つ項目'
+        mock: なし
+        expected: 要素の見出しが `###`、その中の見出しが `####`
+      - name: test_schema_to_markdown_when_no_schema
+        case: 正常
+        summary: スキーマが無い
+        condition: スキーマが空で、文字列・リスト・オブジェクトを持つ文書
+        mock: なし
+        expected: キーの名前の段落と箇条書きで全ての値が出る
+  - name: render_table
+    title: 表の組み立て
+    kind: 関数
+    container: features/convert/markdown.py
+    usecase: 画面
+    role: 変換
+    summary: オブジェクトのリストを、mdmark の表のマーカーつきの Markdown の表にする
+    scope: public
+    thread_safe: true
+    args:
+      - name: rows
+        title: 行
+        type: Sequence[Mapping[str, Any]]
+        required: true
+        passing: positional
+        description: 表にする要素
+      - name: item_schema
+        title: 要素のスキーマ
+        type: Mapping[str, Any]
+        required: true
+        passing: positional
+        description: 列の順と列名を決める。空なら要素のキーの出た順で、列名はキーの名前
+      - name: table_key
+        title: 表のキー
+        type: str
+        required: true
+        passing: keyword
+        description: '`{種類}:{項目のパス}`。表の列の設定の保存の `table`'
+    returns:
+      type: str
+      description: '表のキーのマーカーと、`<!-- table: data -->` で囲んだ表'
+    process: |-
+      1. 列をスキーマの `properties` の順に決める（要素のどれも値を持たない列は除く）
+      2. セルは、スカラーはそのまま（`|` はエスケープ、改行は `<br>`）、文字列のリストは `・` で繋ぎ、オブジェクトと入れ子のリストは `{n} 件` にする
+      3. `<!-- dev-docs-table: {table_key} -->`・`<!-- table: data -->`・見出しの行・区切りの行・データの行・`<!-- /table -->` の順に置いて返す
+    unit_tests:
+      - name: test_render_table
+        case: 正常
+        summary: セルの書き方
+        condition: '`|` と改行を含む文字列・文字列のリスト・入れ子のリストを持つ 2 行'
+        mock: なし
+        expected: '`\|`・`<br>`・`a・b`・`2 件` のセルと、表の前の `<!-- dev-docs-table: {表のキー} -->`'
+  - name: render_diagram
+    title: 図の組み立て
+    kind: 関数
+    container: features/convert/diagrams.py
+    usecase: 画面
+    role: 変換
+    summary: '`x-diagram` の種類で、値から Mermaid の図を組み立てる'
+    scope: public
+    thread_safe: true
+    args:
+      - name: value
+        title: 値
+        type: Mapping[str, Any]
+        required: true
+        passing: positional
+        description: 図の値
+      - name: kind
+        title: 図の種類
+        type: DiagramKind
+        required: true
+        passing: positional
+        description: スキーマの `x-diagram`
+    returns:
+      type: str
+      description: Mermaid のコード（```mermaid の中身）
+    process: |-
+      1. `flowchart`・`dataflow`・`architecture` は、`flowchart {direction}`（既定は `flowchart` が `TD`、他は `LR`）、ノードを `id[label]`（`shape` と `kind` で括弧を替える）、辺を `from -->|label| to`（`line` で `-.->`・`==>`・`---`）、`subgraph`、`click id href "..."` の順に並べる
+      2. `state` は `stateDiagram-v2` に、`[*] --> {initial}`、遷移を `from --> to : きっかけ [条件]`、終了状態から `[*]` を並べる
+      3. `er` は `erDiagram` に、実体と列、関連を `from {多重度} to : label` で並べる
+      4. ラベルの `"` は `#quot;` に替える
+    exceptions:
+      - name: ValueError
+        condition: 知らない図の種類
+        message: '`x-diagram {kind} は描けません`'
+    unit_tests:
+      - name: test_render_diagram
+        case: 正常
+        summary: フローチャート
+        condition: '`nodes` 2 つ・ラベルつきの `edges` 1 つ・`direction` 無し'
+        mock: なし
+        expected: '`flowchart TD`、`a[A]`、`a -->|x| b` の行'
+      - name: test_render_diagram_when_state
+        case: 正常
+        summary: 状態遷移
+        condition: '`initial` と `transitions` 2 つ'
+        mock: なし
+        expected: '`stateDiagram-v2`、`[*] --> 下書き` と遷移の行'
+      - name: test_render_diagram_when_unknown
+        case: 異常
+        summary: 知らない種類
+        condition: '`kind="gantt"`'
+        mock: なし
+        expected: '`ValueError`'
+        exception: 知らない図の種類
+  - name: expand_embeds
+    title: 埋め込みの展開
+    kind: 関数
+    container: features/convert/embed.py
+    usecase: 画面
+    role: 変換
+    summary: Markdown の中の埋め込みのマーカーを、指した YAML の値の表に置き換える
+    scope: public
+    thread_safe: true
+    args:
+      - name: markdown
+        title: Markdown
+        type: str
+        required: true
+        passing: positional
+        description: 変換した Markdown
+      - name: base
+        title: 読む場所
+        type: Path
+        required: true
+        passing: positional
+        description: '`Target.base`（リビジョンを開いているときは書き出したフォルダ）。マーカーのパスはここからの相対'
+    returns:
+      type: str
+      description: マーカーを置き換えた Markdown
+    process: |-
+      1. コードブロックの外の `EMBED_PATTERN` に当たる行ごとに置き換える
+      2. `path` を `base` と結合し、`base` の外を指す・ファイルが無い・YAML を読めない場合は `> [!WARNING]` の囲みに `埋め込めません: {path}（{理由}）` を置く
+      3. `item` があれば項目の取得で値を取り出す（無ければ同じ囲みで `{path}#{item} がありません`）
+      4. 値がオブジェクトのリストなら表の組み立て（表のキーは `embed:{path}#{item}`）、オブジェクトならキーと値の 2 列の表、スカラーならその値を置く
+      5. 埋め込んだ値の中のマーカーは展開しない
+    unit_tests:
+      - name: test_expand_embeds
+        case: 正常
+        summary: 表に置き換える
+        condition: '`<!-- embed: data/list.yaml#items -->` と、`items` が 2 行の YAML'
+        mock: なし（一時フォルダ）
+        expected: 2 行の表があり、マーカーの文字列が無い
+      - name: test_expand_embeds_when_in_code_block
+        case: 正常
+        summary: コードブロックの中は置き換えない
+        condition: '```text の中のマーカー'
+        mock: なし
+        expected: そのまま残る
+      - name: test_expand_embeds_when_missing
+        case: 正常
+        summary: 無いファイルと配信元の外
+        condition: '`<!-- embed: none.yaml -->` と `<!-- embed: ../x.yaml -->`'
+        mock: なし
+        expected: どちらも `埋め込めません` の囲み
+classes:
+  - name: ConvertService
+    title: 変換
+    container: features/convert/service.py
+    usecase: 画面
+    role: サービス
+    summary: 文書の行の設定で変換を選び、埋め込みを展開した Markdown を返す
+    description: '`converters[]` の結果は (配信元, 種類, 変換の ID, 文書のバージョン, `run` の値のハッシュ) を名前にしたファイルで `{state_dir}/converted` に控え、同じ文書・バージョンは 1 回だけ変換する。'
+    kind: クラス
+    properties:
+      - name: cache_dir
+        title: 控えの場所
+        type: Path
+        access: 公開
+        description: '`{state_dir}/converted`'
+      - name: store
+        title: 文書のストア
+        type: DocumentStore
+        access: 公開
+        description: 種類のスキーマを引く
+      - name: timeout_sec
+        title: 制限時間
+        type: float
+        access: 公開
+        description: 端末の設定の `script_timeout_sec`
+    methods:
+      - name: convert
+        title: 変換する
+        summary: 1 件の文書を Markdown にする
+        kind: メソッド
+        scope: public
+        thread_safe: true
+        side_effects: '`converters[]` のスクリプトを動かす。`cache_dir` に書く'
+        args:
+          - name: target
+            title: 読み書きの場所
+            type: Target
+            required: true
+            passing: positional
+            description: スクリプトを動かす場所とスキーマを読む場所
+          - name: document
+            title: 文書
+            type: Document
+            required: true
+            passing: positional
+            description: 変換する文書
+        returns:
+          type: Converted
+          description: Markdown か変換の失敗
+        process: |-
+          1. 文書の行を引く（`target.source.table(document.kind)`）
+          2. 行の `type` で Markdown を作る
+             - `markdown` の場合、`document.body` をそのまま使う
+             - `converter` がある場合、`cache_dir` の控えがあればそれを使う。無ければスクリプトの実行（`cwd=target.base`・`stdin` に文書の YAML・制限時間 `timeout_sec`）の標準出力を使い、一時ファイルから置き換えて控える。控えが `CONVERT_CACHE_KEEP` を超えたら古いものを消す
+               - `ScriptTimeoutError`・`ScriptFailedError`・実行できない `ScriptError` の場合、`reason` が `timeout`・`exit`・`not_runnable` の `ConvertFailure` を返す
+             - それ以外は、スキーマ駆動の変換（スキーマは `store.schema(target, kind)`）
+          3. 埋め込みの展開（`target.base`）をする
+          4. コードブロックの外の表を出る順にたどり、直前に `TABLE_KEY_PATTERN` の行があればそのキー、無ければ `{種類}:table[{n}]`（`n` は本文の中の 0 始まりの順）を表のキーにする。マーカーの行を取り除いた Markdown と表のキーを返す
+        unit_tests:
+          - name: test_convert_service_convert
+            case: 正常
+            summary: スキーマ駆動
+            condition: '`converter` の無い YAML の行の文書'
+            mock: なし（一時フォルダの配信元）
+            expected: '`failure` が無く、`markdown` が `# {name}` で始まり、`dev-docs-table` の行が無く、`table_keys` が `[{種類}:items]`'
+          - name: test_convert_service_convert_when_converter
+            case: 正常
+            summary: スクリプトで変換し、2 回目は控えを使う
+            condition: '`converters[]` を指す行の同じ文書を 2 回'
+            mock: '`run_script`（`# 変換した` を返し、呼ばれた数を数える）'
+            expected: 2 回とも `# 変換した` で、スクリプトは 1 回だけ呼ばれる
+          - name: test_convert_service_convert_when_timeout
+            case: 異常
+            summary: 制限時間を超える
+            condition: '`timeout_sec=1` で 5 秒眠るスクリプト'
+            mock: なし
+            expected: '`failure.reason` が `timeout`、`script` がスクリプトの `run`、`detail` に 1 秒'
+            exception: 制限時間を超えた
+          - name: test_convert_service_convert_when_markdown
+            case: 正常
+            summary: Markdown の文書
+            condition: '`type: markdown` の行の文書'
+            mock: なし
+            expected: '`markdown` が文書の本文と同じ'
+      - name: clear
+        title: 控えを捨てる
+        summary: '`cache_dir` の控えを全て消す'
+        kind: メソッド
+        scope: public
+        thread_safe: true
+        side_effects: '`cache_dir` のファイルを消す'
+        returns:
+          type: None
+          description: '-'
+        process: 1. `cache_dir` の下のファイルを消す（配信元の読み直しで変換のスクリプトが変わったときに呼ぶ）
+refs:
+  - dev/設計書/インターフェース定義/開発ドキュメントサーバー/文書の画面#
+  - dev/設計書/部品設計/エラーの囲み#

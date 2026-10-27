@@ -1,0 +1,35 @@
+title: "typescript"
+kind: "CLI"
+version:
+  current: 7.0.2
+  latest: 7.0.2
+  checked_on: '2026-10-28'
+  source: package.json・package-lock.json
+  pinning: package.json の devDependencies に完全一致の版、package-lock.json で固定
+catalogs:
+  - name: コマンド
+    version: 7.0.2
+    entries:
+      - name: tsc -p tsconfig.build.json
+        kind: コマンド
+        purpose: '`server/static/*.ts` を同じフォルダの `.js` に変換する（生成した `.js` はコミットする）'
+      - name: tsc -p tsconfig.json --noEmit
+        kind: コマンド
+        purpose: 型の検査だけを行う
+lead: JavaScript に型を付ける言語と、型の検査と `.js` への変換を行うコンパイラ `tsc`。
+purl: pkg:npm/typescript
+dependency_scope: 開発のみ
+adoption: 採用
+upstream: microsoft/TypeScript
+license: Apache-2.0
+official_url: https://www.typescriptlang.org/
+docs_url: https://www.typescriptlang.org/tsconfig/
+used_in:
+  - src/dev_docs/server/static/
+verification:
+  state: 未確認
+  detail: モジュール構成設計で使い方を決めた段階で、まだ動かしていない
+install: |-
+  ```bash
+  npm install --save-dev --save-exact typescript@7.0.2
+  ```
