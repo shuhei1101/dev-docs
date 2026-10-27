@@ -727,6 +727,7 @@ svg {
   & td {
     padding: 8px 12px;
     text-align: left;
+    min-width: 8em;
     vertical-align: top;
     border-bottom: 1px solid var(--border);
   }
@@ -932,6 +933,22 @@ pre {
   /* 本文の上に目次を出す */
   .toc-inline {
     display: block;
+    margin-bottom: 20px;
+    padding: 8px 12px;
+    font-size: var(--text-sm);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+
+    & summary {
+      min-height: 32px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    & ul {
+      margin: 4px 0 0;
+      padding-left: 1.2em;
+    }
   }
 }
 
@@ -1012,35 +1029,9 @@ pre {
     display: flex;
   }
 
-  /* 表の列を潰さず、表の枠の中で横にスクロールさせる */
-  .table-wrap th,
-  .table-wrap td {
-    min-width: 8em;
-  }
-
   /* タイトルを少し小さくする */
   .doc-title {
     font-size: var(--text-2xl);
-  }
-
-  /* 本文の上の目次 */
-  .toc-inline {
-    margin-bottom: 20px;
-    padding: 8px 12px;
-    font-size: var(--text-sm);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-lg);
-
-    & summary {
-      min-height: 32px;
-      font-weight: 600;
-      cursor: pointer;
-    }
-
-    & ul {
-      margin: 4px 0 0;
-      padding-left: 1.2em;
-    }
   }
 }
 
