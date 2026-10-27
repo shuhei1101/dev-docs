@@ -64,4 +64,17 @@ requirements:
     rationale: '設定の資料 A-25 の既定値は 30 秒。画面と MCP を待たせる上限から逆算して #3 の設計で決める'
     overflow: 制限時間を超えたスクリプトを止め、検査・変換の失敗として返す
     status: planned
+  - name: Issue の作成画面の URL の長さ
+    english_name: issue_url_length
+    category: 動作環境
+    external_constraint: 未確定
+    source_kind: 外部 API の制限
+    source: GitHub の Issue の作成画面（`/issues/new` のクエリ）
+    value: '8000'
+    unit: 文字
+    rationale: GitHub は作成画面が受ける URL の長さの上限を公開していない。モックの `ISSUE_URL_MAX` の値をとり、上限が公開されたらその値から差し引いて決め直す
+    overflow: '`body` の末尾を上限に収まるまで切り詰め、切り詰めたことと全文をクリップボードへコピーしたことを書き添える。クリップボードには切り詰めていない全文を入れる'
+    refs:
+      - dev/設計書/シナリオ/単一ユースケース/利用者が画面で読む#scenarios[正常シナリオ（Issue の本文が長い）]
+    status: planned
 lead: 外部の制約から逆算した dev-docs の決定値。
