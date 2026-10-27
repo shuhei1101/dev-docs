@@ -1,0 +1,92 @@
+title: "設定画面の表示"
+entry:
+  kind: endpoint
+  value: GET `/_settings/`
+flows:
+  - name: 正常系
+    summary: 配信元の一覧を配信中で返す
+    setup:
+      - name: Mock
+        description: なし（一時フォルダに端末の設定と配信元を作り、dev-docs のアプリを HTTP のテストのクライアントで呼ぶ）
+      - name: 端末の設定
+        description: '`sources` に sample の 1 行'
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        participant C as クライアント
+        participant E as GET /_settings/
+        participant CF as 端末の設定
+
+        C->>E: GET /_settings/
+        E-->>CF: 端末の設定と配信元の状態を読む
+        E-->>C: 200 settings
+      ```
+    expected:
+      - 200 で、一覧に sample が `serving` で並ぶ
+      - 画面の状態に端末の設定のパスと sample の `config`・`scope` がある
+    test: test_normal
+  - name: 正常系（配信していない配信元がある）
+    summary: 配信していない・無効・設定が古い配信元を状態と理由つきで返す
+    setup:
+      - name: Mock
+        description: なし
+      - name: 検証に失敗する配信元
+        description: '`documents[0]` に必須のキー `paths` が無い配信元'
+        notes: id `broken`
+      - name: 設定のバージョンが古い配信元
+        description: '`version` がサーバーが読めるバージョンより古い配信元'
+        notes: id `legacy`
+      - name: 無効の配信元
+        description: '端末の設定で `enabled: false` の配信元'
+        notes: id `archive`
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        participant C as クライアント
+        participant E as GET /_settings/
+
+        C->>E: GET /_settings/
+        E-->>C: 200 settings（配信元ごとの状態）
+      ```
+    expected:
+      - sample と legacy が `serving`
+      - broken が `not_served` で、`errors` に `documents[0].paths` と必須のキーが無いことがある
+      - legacy の `config_version` に設定のバージョンとサーバーが読めるバージョンがある
+      - archive が `disabled`
+    test: test_normal_when_source_not_served
+lead: 端末の設定の配信元の一覧と、配信元ごとの状態（配信中・配信していない・無効）を settings の HTML で返す。
+identifier: get_settings_page
+permissions: なし（`127.0.0.1` でだけ待ち受ける）
+idempotent: true
+side_effects: なし
+callers:
+  - dev/設計書/シナリオ/単一ユースケース/設定画面で端末の設定を変える#scenarios[正常シナリオ]
+exclusivity: 排他しない
+response:
+  - name: 本文
+    type: text/html
+    description: settings の HTML（配信元の一覧・追加・編集・削除の操作）
+  - name: 画面の状態
+    type: application/json（埋め込み）
+    description: 端末の設定のパスと `sources[]` の各行（`id`・`config`・`enabled`・`scope`）と状態
+  - name: 状態.status
+    type: Literal['serving', 'not_served', 'disabled']
+    description: '配信中・起動時か読み直しの検証で外した・`enabled: false`'
+  - name: 状態.errors
+    type: 'list[{path: str, reason: str}]'
+    description: 検証で外した理由
+    notes: '`not_served` のときだけ'
+  - name: 状態.config_version
+    type: '{config: str, server: str}'
+    description: 設定のバージョンとサーバーが読めるバージョン
+    notes: 設定のバージョンが古いときだけ
+status_codes:
+  - code: '200'
+    condition: 返した（配信元が 0 件でも 200）
+constraints:
+  - item: 認可
+    constraint: 制限なし（`127.0.0.1` でだけ待ち受ける）
+  - item: 表示するキー
+    constraint: '`sources[]` だけ。`port`・`bind`・`state_dir` など再起動が要るキーは画面では変えない'
+refs:
+  - dev/設計書/シナリオ/単一ユースケース/設定画面で端末の設定を変える#scenarios[正常シナリオ（配信していない配信元がある）]

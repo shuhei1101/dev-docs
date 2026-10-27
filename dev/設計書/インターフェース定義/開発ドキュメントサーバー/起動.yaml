@@ -1,0 +1,220 @@
+title: "起動"
+entry:
+  kind: operation
+  value: '`dev-docs serve`（CLI）'
+flows:
+  - name: 正常系
+    summary: 端末の設定の 2 つの配信元を配信し始める
+    setup:
+      - name: Mock
+        description: なし（`dev-docs serve` を子プロセスで起動し、空きポートを `DEV_DOCS_PORT` に入れる）
+      - name: 配信元
+        description: git リポジトリの sample と、Git 管理外のフォルダの notes
+      - name: 端末の設定
+        description: '`DEV_DOCS_CONFIG` が指す一時フォルダの `settings.yaml`。`sources` に 2 行'
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        participant U as クライアント
+        participant T as dev-docs serve
+        participant CF as 端末の設定・配信元の設定
+
+        U->>T: dev-docs serve
+        T-->>CF: 端末の設定を読み、スキーマで検証する
+        loop sources の各行
+          T-->>CF: config を上から順に読んでマージする
+          T->>T: スキーマとスクリプトを検証し、配信元に加える
+        end
+        T->>T: 127.0.0.1 で待ち受ける
+        T-->>U: 待ち受けたアドレスと配信元を標準出力に出す
+      ```
+    expected:
+      - '`127.0.0.1` で待ち受け、`0.0.0.0` では待ち受けない'
+      - '`/sample/` と `/notes/` が 200 を返す'
+      - '`/mcp` のツールが `search_docs`・`write_docs`・`delete_docs`・`describe`・`list_changes`・`trace_related` の 6 つ'
+      - '`/_admin/mcp` に MCP のセッションを張れる'
+      - 標準出力に待ち受けたアドレスと sample・notes が出る
+    test: test_normal
+  - name: 正常系（設定の YAML を重ねる）
+    summary: '`config` の複数の YAML を上から順にマージする'
+    setup:
+      - name: Mock
+        description: なし
+      - name: サンプルの配信元
+        description: '`dev-docs.yaml` と `dev-docs.local.yaml` を持つ sample。後の YAML が `description` を上書きし、`documents[]` に `id` が同じ行（`paths` を変える）と新しい行を持つ'
+      - name: 端末の設定
+        description: sample の `config` が `[dev-docs.yaml, dev-docs.local.yaml]`
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        participant U as クライアント
+        participant T as dev-docs serve
+        participant CF as 配信元の設定
+
+        U->>T: dev-docs serve
+        T-->>CF: dev-docs.yaml と dev-docs.local.yaml を読む
+        T->>T: 同じキーを上書きし、documents を id で行ごとに上書き・追加する
+        T-->>U: sample を配信する
+      ```
+    expected:
+      - '`describe(source: sample)` の説明が後の YAML の `description` になる'
+      - '`id` が同じ `documents[]` の行は後の YAML の `paths` の文書だけを返す'
+      - 後の YAML で追加した行の文書を `search_docs` が返す
+    test: test_normal_when_configs_merged
+  - name: 正常系（設定のバージョンが古い）
+    summary: 古いバージョンの設定の配信元も配信し、警告を残す
+    setup:
+      - name: Mock
+        description: なし
+      - name: 古い配信元
+        description: '`version` がサーバーが読めるバージョンより古く、今のスキーマは満たす配信元'
+        notes: id `old`
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        participant U as クライアント
+        participant T as dev-docs serve
+
+        U->>T: dev-docs serve
+        T->>T: old の設定の version をサーバーが読めるバージョンと比べる
+        T-->>U: old を配信し、警告のログを残す
+      ```
+    expected:
+      - '`/old/` が 200 を返す'
+      - 警告のログに old の id・設定のバージョン・サーバーが読めるバージョンがある
+    test: test_normal_when_config_version_old
+  - name: 正常系（配信元の検証に失敗する）
+    summary: 設定がスキーマに違反する配信元と、スクリプトを実行できない配信元を外して配信する
+    setup:
+      - name: Mock
+        description: なし
+      - name: 壊れた配信元
+        description: '`documents[]` の必須のキー `paths` が無い配信元'
+        notes: id `broken`
+      - name: スクリプトの無い配信元
+        description: '`converters[]` が無いファイルを指す配信元'
+        notes: id `noscript`
+      - name: 端末の設定
+        description: '`sources` に sample・broken・noscript の 3 行'
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        participant U as クライアント
+        participant T as dev-docs serve
+
+        U->>T: dev-docs serve
+        T->>T: broken のスキーマと noscript のスクリプトの検証に失敗する
+        T->>T: 2 つを配信せず、エラーログに残す
+        T-->>U: sample だけを配信する
+      ```
+    expected:
+      - '`/broken/` と `/noscript/` が 404、`/sample/` と `/mcp` は応答する'
+      - 'エラーログに `broken: documents[0].paths: 必須のキーが無い` と、noscript の `converters[0]` とスクリプトが見つからない理由がある'
+      - '`/_admin/mcp` に MCP のセッションを張れる'
+    test: test_normal_when_source_invalid
+  - name: 異常系（端末の設定が違反する・TerminalConfigInvalidError）
+    summary: 端末の設定がスキーマに違反すると待ち受けずに終わる
+    setup:
+      - name: Mock
+        description: なし
+      - name: 端末の設定
+        description: '`sources[0]` に必須のキー `config` が無く、`port` が文字列'
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        participant U as クライアント
+        participant T as dev-docs serve
+
+        U->>T: dev-docs serve
+        T->>T: 端末の設定の検証に失敗する
+        T-->>U: 違反を標準エラーに出して終わる
+      ```
+    expected:
+      - 終了コードが 2 で、ポートを待ち受けない
+      - '標準エラーに `{ファイル}: sources[0].config` と `{ファイル}: port` の違反が両方並ぶ'
+      - '`DEV_DOCS_CONFIG` が無いファイルを指すときも、そのパスを出して終了コード 2 で終わる'
+    test: test_error_when_terminal_config_invalid
+  - name: 異常系（ポートが使用中・PortInUseError）
+    summary: ポートで待ち受けられないと終わる
+    setup:
+      - name: Mock
+        description: なし
+      - name: 使用中のポート
+        description: テストが先に待ち受けたポートを `DEV_DOCS_PORT` に入れる
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        participant U as クライアント
+        participant T as dev-docs serve
+
+        U->>T: dev-docs serve
+        T->>T: ポートで待ち受けられない
+        T-->>U: ポートと DEV_DOCS_PORT を標準エラーに出して終わる
+      ```
+    expected:
+      - 終了コードが 3
+      - 標準エラーに使用中のポートの番号と、`DEV_DOCS_PORT` で変えられることが出る
+    test: test_error_when_port_in_use
+lead: 端末の設定を読み、検証に通った配信元を 1 プロセス・1 ポートで画面・`/mcp`・`/_admin/mcp` に配信し始める。
+identifier: serve
+permissions: なし
+idempotent: false
+side_effects: '`bind`:`port` で待ち受ける。`log_dir` に検証の失敗と警告のログを書く'
+callers:
+  - dev/設計書/シナリオ/単一ユースケース/起動する#scenarios[正常シナリオ]
+exclusivity: 同じポートで待ち受けるプロセスは 1 つだけ（後からの起動はポート使用中で終わる）
+request:
+  - name: DEV_DOCS_CONFIG
+    type: str
+    required: false
+    default: '`~/.config/dev-docs/settings.yaml`'
+    description: 端末の設定のパス
+    notes: 環境変数で渡す
+  - name: DEV_DOCS_PORT
+    type: int
+    required: false
+    default: 端末の設定の `port`（既定 8781）
+    description: 待ち受けのポート。設定の `port` より優先
+    notes: 環境変数で渡す
+request_example: |-
+  ```bash
+  DEV_DOCS_CONFIG=/tmp/x/settings.yaml DEV_DOCS_PORT=8781 dev-docs serve
+  ```
+response:
+  - name: 標準出力
+    type: str
+    description: 待ち受けたアドレスと、配信している配信元の ID
+  - name: エラーログ
+    type: str
+    description: '検証に失敗した配信元ごとに `{id}: {キーのパス}: {理由}`'
+  - name: 警告のログ
+    type: str
+    description: 設定のバージョンが古い配信元の ID・設定のバージョン・サーバーが読めるバージョン
+  - name: 終了コード
+    type: int
+    description: 起動できないとき 0 以外
+    notes: 待ち受けた後は停止の合図まで終わらない
+exceptions:
+  - name: なし（正常終了）
+    condition: 待ち受けを始めた（検証に失敗した配信元があっても、その配信元を外して待ち受ける）
+  - name: TerminalConfigInvalidError
+    condition: 端末の設定が無い・スキーマに違反する
+    notes: '標準エラーに `{ファイル}: {キーのパス}: {理由}` を全て出し、終了コード 2 で終わる'
+  - name: PortInUseError
+    condition: ポートで待ち受けられない
+    notes: 標準エラーにポートの番号と `DEV_DOCS_PORT` で変えられることを出し、終了コード 3 で終わる
+constraints:
+  - item: 待ち受けのアドレス
+    constraint: '`127.0.0.1`'
+    decided_by: dev/設計書/非機能要件/非機能要件#requirements[待ち受けのアドレス]
+  - item: 待ち受けのポート
+    constraint: 既定 8781
+    decided_by: dev/設計書/非機能要件/非機能要件#requirements[待ち受けのポート]
+  - item: 配信する入口
+    constraint: '画面 `/{配信元の id}/`・`/_settings/`・`/_api/`、文書の MCP `/mcp`（ツール 6 つ）、管理の MCP `/_admin/mcp`（ツールは #4）'
+  - item: 設定のマージ
+    constraint: '`sources[].config` を上から順に読み、同じキーは後が優先、`documents[]` は `id` で行ごとに上書き・追加する'
+  - item: タイムアウト
+    constraint: 制限なし
+refs:
+  - dev/設計書/シナリオ/単一ユースケース/起動する#scenarios[正常シナリオ]

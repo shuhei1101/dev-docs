@@ -1,0 +1,256 @@
+title: "文書の画面"
+entry:
+  kind: endpoint
+  value: GET `/{source}[@{ref}]/{path}`
+flows:
+  - name: 正常系
+    summary: 配信元のトップで一番左のタブの一番上の文書を描き、文書のパスでその文書を描く
+    setup:
+      - name: Mock
+        description: なし（一時フォルダに配信元を作り、dev-docs のアプリを HTTP のテストのクライアントで呼ぶ）
+      - name: サンプルの配信元
+        description: 文書の種類を 1 つ（スキーマと YAML 2 件）と、`nav` を持つ `dev-docs.yaml` を持つ git リポジトリ
+        notes: id `sample`。`nav.tabs[]` は 2 つ（最初のタブに YAML 2 件）
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        participant C as クライアント
+        participant E as GET /{source}/{path}
+        participant ST as 配信元のファイル
+
+        C->>E: GET /sample/
+        E-->>ST: nav と文書を読む
+        E->>E: 一番左のタブの一番上の文書 1 をスキーマ駆動で Markdown にし、mdmark で描く
+        E-->>C: 200 doc-view（文書 1）
+        C->>E: GET /sample/{文書 2 のパス}
+        E-->>C: 200 doc-view（文書 2）
+      ```
+    expected:
+      - '`/sample/` が 200 で、`nav` の 2 つのタブを出し、一番左のタブを選んだ状態にする'
+      - タブに文書の件数を出さない
+      - 本文に、スキーマの `x-heading` の項目が見出し、`x-key` の配列が表になった文書 1 と、その見出しの目次がある
+      - '`/sample/{文書 2 のパス}` が 200 で文書 2 の本文を返す'
+      - 本文の HTML が mdmark の描画の要素でできている
+    test: test_normal
+  - name: 正常系（nav が無い）
+    summary: '`nav` が無い配信元は種類ごとにタブを作る'
+    setup:
+      - name: Mock
+        description: なし
+      - name: nav の無い配信元
+        description: 文書の種類を 2 つ持ち、`nav` を持たない配信元
+        notes: id `plain`
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        participant C as クライアント
+        participant E as GET /{source}/{path}
+
+        C->>E: GET /plain/
+        E->>E: 種類ごとにタブを作る
+        E-->>C: 200 doc-view（1 つ目の種類のタブの一番上の文書）
+      ```
+    expected:
+      - タブが `documents[]` の 2 つの種類ごとに 1 つずつ並ぶ
+      - 各タブのサイドバーにその種類の文書だけが並ぶ
+    test: test_normal_when_nav_missing
+  - name: 正常系（リビジョンを指す）
+    summary: '`@{ref}` のリビジョンの文書を描き、リンクも同じリビジョンを指す'
+    setup:
+      - name: Mock
+        description: なし
+      - name: 古い commit
+        description: sample の文書 1 の `name` を変える前の commit
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        participant C as クライアント
+        participant E as GET /{source}@{ref}/{path}
+        participant G as sample の Git の履歴
+
+        C->>E: GET /sample@{古い commit}/{文書 1 のパス}
+        E-->>G: そのリビジョンを書き出して読む
+        E-->>C: 200 doc-view（古い commit の文書 1）
+      ```
+    expected:
+      - 本文の `name` が古い commit の値になる
+      - トップバーに開いているリビジョンとして古い commit が出る
+      - サイドバー・本文の中のリンクが `/sample@{古い commit}/` で始まる
+    test: test_normal_when_ref_given
+  - name: 正常系（差分を強調する）
+    summary: '`?diff=` のリビジョンから変わった項目を強調する'
+    setup:
+      - name: Mock
+        description: なし
+      - name: 変更の commit
+        description: 文書 1 の `name` を変えた commit とその親の commit
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        participant C as クライアント
+        participant E as GET /{source}@{ref}/{path}
+        participant G as sample の Git の履歴
+
+        C->>E: GET /sample@{変更の commit}/{文書 1 のパス}?diff={親の commit}
+        E-->>G: 両端の文書を読んで変わった項目を求める
+        E-->>C: 200 doc-view（変わった項目を強調）
+      ```
+    expected:
+      - 本文の `name` の項目だけが変わった項目として強調される
+      - 強調を解除するリンクが `?diff=` の無い同じ文書の URL を指す
+    test: test_normal_when_diff_given
+  - name: 正常系（配信元の変換を使う）
+    summary: '`converters[]` のスクリプトの Markdown と、埋め込みのマーカーの表を描く'
+    setup:
+      - name: Mock
+        description: なし
+      - name: 変換を持つ配信元
+        description: '`converters[]` に、標準入力の YAML から決まった見出しの Markdown を出すスクリプトを持ち、種類の 1 つがそれを指す配信元'
+        notes: id `custom`
+      - name: 埋め込みのマーカー
+        description: custom の Markdown の文書。本文に別の YAML を表として入れるマーカーを置く
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        participant C as クライアント
+        participant E as GET /{source}/{path}
+        participant SC as 配信元のスクリプト
+
+        C->>E: GET /custom/{converters を指す種類の文書}
+        E->>SC: 標準入力に YAML を渡す
+        SC-->>E: 標準出力の Markdown
+        E-->>C: 200 doc-view
+        C->>E: GET /custom/{埋め込みのマーカーを持つ文書}
+        E->>E: マーカーを YAML の表の Markdown に置き換える
+        E-->>C: 200 doc-view
+      ```
+    expected:
+      - converters を指す種類の文書の本文に、スクリプトが出した見出しがある
+      - 埋め込みのマーカーの場所に指した YAML の表があり、マーカーの文字列は無い
+    test: test_normal_when_custom_converter
+  - name: 正常系（変換に失敗する）
+    summary: 制限時間を超えたスクリプトを止め、本文の場所に失敗を出す
+    setup:
+      - name: Mock
+        description: なし
+      - name: 止まらないスクリプト
+        description: custom の `converters[]` のスクリプトを、制限時間より長く待つものに差し替える
+        notes: 制限時間はテストで短くしてよい
+      - name: 壊れた YAML
+        description: sample の文書 1 の YAML を、YAML として読めない内容にする
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        participant C as クライアント
+        participant E as GET /{source}/{path}
+        participant SC as 配信元のスクリプト
+
+        C->>E: GET /custom/{converters を指す種類の文書}
+        E->>SC: 標準入力に YAML を渡す
+        E->>SC: 制限時間を超えたので止める
+        E-->>C: 200 doc-view（本文の場所に変換の失敗）
+      ```
+    expected:
+      - 本文の場所に、変換に失敗したこと・種類・スクリプトのパス・制限時間を超えたことがある
+      - スクリプトのプロセスが残っていない
+      - 同じ配信元のスキーマ駆動で変換する文書は 200 で描ける
+      - 壊れた YAML の文書 1 は、本文の場所にファイルのパスと読めなかった行と列を出して 200 を返す
+    test: test_normal_when_conversion_failed
+  - name: 異常系（無い配信元・リビジョン・文書・404）
+    summary: 無いものを開くと 404 の not-found で何が無いかを出す
+    setup:
+      - name: Mock
+        description: なし
+      - name: 検証に失敗する配信元
+        description: '`documents[0]` に必須のキー `paths` が無い配信元'
+        notes: id `broken`
+      - name: 入力
+        description: '`/sample/no-such-doc`・`/sample@no-such-branch/`・`/broken/`・`/unknown/`'
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        participant C as クライアント
+        participant E as GET /{source}@{ref}/{path}
+
+        C->>E: GET /sample/no-such-doc
+        E-->>C: 404 not-found（無いのは文書）
+        C->>E: GET /broken/
+        E-->>C: 404 not-found（配信していない配信元と外した理由）
+      ```
+    expected:
+      - '`/sample/no-such-doc` が 404 で、無いのが文書であること・開こうとしたパス・`/sample/` へのリンクがある'
+      - '`/sample@no-such-branch/` が 404 で、無いのがリビジョン `no-such-branch` であることがある'
+      - '`/broken/` が 404 で、broken を配信していないこと・`documents[0]` に必須のキー `paths` が無いこと・`/_settings/` へのリンクがある'
+      - '`/unknown/` が 404 で、無いのが配信元であることがある'
+    test: test_error_when_not_found
+lead: 配信元の文書を、変換した Markdown を mdmark で描いた doc-view の HTML で返す。`path` を省くと一番左のタブのサイドバーの一番上の文書を返す。
+identifier: get_document_page
+permissions: なし（`127.0.0.1` でだけ待ち受ける）
+idempotent: true
+side_effects: なし。変換の結果は `state_dir` に保存し、文書が変わるまで使い回す
+callers:
+  - dev/設計書/シナリオ/単一ユースケース/利用者が画面で読む#scenarios[正常シナリオ]
+  - dev/設計書/シナリオ/単一ユースケース/変更をレビューする#scenarios[正常シナリオ]
+exclusivity: 読み取りだけで排他しない。同じ文書・同じバージョンの変換が同時に来たときは 1 回だけ変換する
+request:
+  - name: source
+    type: str
+    required: true
+    location: path
+    description: 配信元の ID
+  - name: ref
+    type: str
+    required: false
+    default: なし（配信元の `default_ref`。Git 管理外の配信元は今のフォルダ）
+    location: path
+    description: 開くリビジョン（ブランチ・コミット・タグ）。`@` の後らに置く
+    constraints: Git 管理外の配信元では持たない
+  - name: path
+    type: str
+    required: false
+    default: なし（一番左のタブのサイドバーの一番上の文書）
+    location: path
+    description: 文書のパス（配信元の直下から、拡張子を落とした形）
+  - name: diff
+    type: str
+    required: false
+    default: なし（差分を強調しない）
+    location: query
+    description: 比べるリビジョン。このリビジョンから変わった項目を強調する
+    constraints: Git 管理外の配信元では無視して通常の本文を返す
+request_example: |-
+  ```text
+  GET /sample@8b1d4e0/docs/doc-1?diff=3f2a9c1
+  ```
+response:
+  - name: 本文
+    type: text/html
+    description: doc-view の HTML（トップバー・タブ・サイドバー・本文・目次）
+  - name: 本文の領域
+    type: text/html
+    description: 変換した Markdown を mdmark で描いた要素
+    notes: 変換に失敗したときは、失敗したこと・種類・スクリプトのパス・原因。YAML を読めないときはファイルのパスと行と列
+  - name: 画面の状態
+    type: application/json（埋め込み）
+    description: 配信元の ID・開いているリビジョン・GitHub のリポジトリと起票のラベル・表の列の設定
+    notes: コメント・検索・リビジョンの切り替えのスクリプトが読む
+response_notes: 画面の中のリンクは、開いている `@{ref}` を保った URL を指す。コメントはブラウザの中だけで扱い、サーバーへは送信しない。
+status_codes:
+  - code: '200'
+    condition: 文書を返した（変換に失敗したとき・YAML を読めないときも、本文の場所に原因を出して 200）
+  - code: '404'
+    condition: 配信元が無い・配信していない、リビジョンを解決できない、文書が無い
+    notes: not-found の画面で、無いもの（配信元・リビジョン・文書）と、配信していない配信元は外した理由を出す
+constraints:
+  - item: 変換の制限時間
+    constraint: '`converters[]` のスクリプトを制限時間で止める'
+    decided_by: dev/設計書/非機能要件/非機能要件#requirements[スクリプトの制限時間]
+  - item: 認可
+    constraint: 制限なし（`127.0.0.1` でだけ待ち受ける）
+    decided_by: dev/設計書/非機能要件/非機能要件#requirements[待ち受けのアドレス]
+  - item: 読み直し
+    constraint: ファイルの更新日時か大きさが変わった文書は、次の要求で読み直す
+refs:
+  - dev/設計書/シナリオ/単一ユースケース/利用者が画面で読む#scenarios[正常シナリオ]
+  - dev/設計書/シナリオ/単一ユースケース/変更をレビューする#scenarios[正常シナリオ]
+  - dev/設計書/シナリオ/単一ユースケース/YAMLを直接編集した#scenarios[異常シナリオ（YAML を壊した）]

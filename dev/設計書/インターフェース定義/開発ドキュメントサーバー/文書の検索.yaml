@@ -1,0 +1,575 @@
+title: "文書の検索"
+entry:
+  kind: mcp_tool
+  value: '`search_docs`'
+flows:
+  - name: 正常系
+    summary: '`source` を省いて作業中の配信元の一覧を返す'
+    setup:
+      - name: Mock
+        description: なし（一時フォルダに配信元を作り、dev-docs のアプリをテストのクライアントで呼ぶ）
+      - name: サンプルの配信元
+        description: 文書の種類を 1 つ（スキーマと YAML 2 件）と `dev-docs.yaml` を持つ git リポジトリ
+        notes: id `sample`。`scope.read` は sample のフォルダ
+      - name: 入力
+        description: '`cwd` に sample のクローン本体を入れ、`source` を省く'
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        participant C as クライアント
+        participant T as search_docs
+        participant ST as 配信元のファイル
+
+        C->>T: filter（kind）, view: summary, cwd
+        T->>T: cwd を含む一番深い配信元 sample を作業中の配信元にし、scope.read を確かめる
+        T-->>ST: 文書を読む
+        T-->>C: 総件数と id・name・description・chars・version の表
+      ```
+    expected:
+      - '先頭に `sample: 該当 2 件・返した 2 件` がある'
+      - 表に 2 件が `id` 昇順で並び、各行に `version` がある
+      - structuredContent を返さない
+    test: test_normal
+  - name: 正常系（本文を返す）
+    summary: 'ID で絞って `view: full` で本文を返す'
+    setup:
+      - name: Mock
+        description: なし
+      - name: サンプルの配信元
+        description: 正常系と同じ sample
+      - name: 入力
+        description: '`filter` は `id` が文書 2・文書 1 の順、`view: full`'
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        participant C as クライアント
+        participant T as search_docs
+        participant ST as 配信元のファイル
+
+        C->>T: filter（id）, view: full
+        T-->>ST: 文書を読む
+        T-->>C: <document> で包んだ 2 件の YAML
+      ```
+    expected:
+      - 文書 2・文書 1 の順に、それぞれの YAML が `<document>` で包まれて返る
+      - '`format: json` では文書のオブジェクトの配列を structuredContent と text の両方に入れる'
+    test: test_normal_when_full
+  - name: 正常系（件数と集計）
+    summary: '`view: count` と `group_by` で件数と値ごとの件数だけを返す'
+    setup:
+      - name: Mock
+        description: なし
+      - name: サンプルの配信元
+        description: 正常系と同じ sample。文書 1 のタグは `a`、文書 2 のタグは `a`・`b`
+      - name: 入力
+        description: '`view: count`, `group_by: tags`'
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        participant C as クライアント
+        participant T as search_docs
+
+        C->>T: view: count, group_by: tags
+        T-->>C: 総件数とタグごとの件数
+      ```
+    expected:
+      - '`total_count` が 2'
+      - '`groups` が `a: 2`・`b: 1`'
+      - 文書の行を返さない
+    test: test_normal_when_count_grouped
+  - name: 正常系（並べ替えと上限）
+    summary: '`order_by` の複数キーで並べ、`limit` を丸め、`max_chars` で打ち切る'
+    setup:
+      - name: Mock
+        description: なし
+      - name: 多くの文書
+        description: sample に文書を 120 件置く。`updated` が同じ文書を含む
+      - name: 入力
+        description: '`order_by: [{updated, desc}, {@chars, asc}]`, `limit: 150`、2 回目は `max_chars: 500`'
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        participant C as クライアント
+        participant T as search_docs
+
+        C->>T: order_by, limit: 150
+        T-->>C: 100 件と next_cursor、丸めた知らせ
+        C->>T: 同じ引数と max_chars: 500
+        T-->>C: 打ち切った結果と next_cursor
+      ```
+    expected:
+      - 1 回目が 100 件を `updated` の降順、同じ日時は文字数の昇順で返し、`notes` に `limit` を 100 に丸めたことがある
+      - '2 回目が `truncated: true` と `next_cursor` を返し、`notes` に `fields` を絞るか `view: ids` で取り直すことがある'
+      - '`next_cursor` で呼ぶと続きの文書から返る'
+    test: test_normal_when_ordered_and_limited
+  - name: 正常系（複数の配信元）
+    summary: '`source: *` で読める全配信元を横断する'
+    setup:
+      - name: Mock
+        description: なし
+      - name: 読み取りだけの配信元
+        description: Git 管理外のフォルダ。`scope.read` は sample のフォルダ
+        notes: id `notes`
+      - name: 読めない配信元
+        description: '`scope.read` が other のフォルダだけの配信元'
+        notes: id `other`
+      - name: 入力
+        description: '`source: *`、`cwd` は sample のクローン本体'
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        participant C as クライアント
+        participant T as search_docs
+
+        C->>T: source: *
+        T->>T: scope.read に当たる sample と notes を対象にする
+        T-->>C: 各行に source が付いた結果と配信元ごとの総件数
+      ```
+    expected:
+      - 結果の各行に `source`（sample か notes）が付く
+      - 総件数を配信元ごとに返す
+      - other の文書を返さない
+    test: test_normal_when_source_all
+  - name: 正常系（ワークツリー）
+    summary: '`worktree` か `cwd` で指したワークツリーの文書を返す'
+    setup:
+      - name: Mock
+        description: なし
+      - name: ワークツリー
+        description: sample の `.claude/worktrees/x`。文書 1 の `name` をクローン本体と変えてある
+      - name: 入力
+        description: 1 回目は `worktree` に x のパス、2 回目は `cwd` を x の中にして `worktree` を省く
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        participant C as クライアント
+        participant T as search_docs
+        participant WT as ワークツリー x
+
+        C->>T: worktree: x, filter（id が文書 1）
+        T->>T: worktree が worktrees に当たる
+        T-->>WT: 同じ相対パスの設定と文書を読む
+        T-->>C: ワークツリーの文書 1
+      ```
+    expected:
+      - どちらの呼び出しもワークツリーの文書 1 の `name` を返す
+      - '`cwd` がクローン本体で `worktree` を省くと、クローン本体の文書 1 を返す'
+    test: test_normal_when_worktree
+  - name: 正常系（返し済みの本文）
+    summary: 同じ会話で同じバージョンの本文を 2 回目は省く
+    setup:
+      - name: Mock
+        description: なし（`state_dir` は一時フォルダ）
+      - name: 入力
+        description: '`session_id: s1` で文書 1 を `view: full` で 2 回呼び、3 回目は `repeat_seen: true`'
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        participant C as クライアント
+        participant T as search_docs
+        participant SD as state_dir
+
+        C->>T: filter（id が文書 1）, view: full, session_id: s1
+        T->>SD: 返した文書の id とハッシュを記録する
+        T-->>C: 文書 1 の本文
+        C->>T: 同じ引数
+        T-->>SD: 記録を読む
+        T-->>C: 文書 1 は（この会話で返し済み）
+        C->>T: 同じ引数と repeat_seen: true
+        T-->>C: 文書 1 の本文
+      ```
+    expected:
+      - 2 回目の本文が `（この会話で返し済み）` だけになる
+      - 3 回目は本文を返す
+      - '`session_id: s2` の呼び出しは本文を返す'
+      - 文書 1 のファイルが変わった後の呼び出しは、`s1` でも本文を返す
+      - '`view: summary` の各行の `description` は 2 回目も省かない'
+    test: test_normal_when_seen
+  - name: 正常系（読めないファイルがある）
+    summary: YAML として読めないファイルを除いて返し、`notes` で知らせる
+    setup:
+      - name: Mock
+        description: なし
+      - name: 壊れた YAML
+        description: 文書 1 のファイルを YAML として読めない内容にする
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        participant C as クライアント
+        participant T as search_docs
+        participant ST as 配信元のファイル
+
+        C->>T: view: summary
+        T-->>ST: 文書を読み、文書 1 のファイルを読めない
+        T-->>C: 文書 2 と、読めなかったファイルの知らせ
+      ```
+    expected:
+      - 結果に文書 2 があり、文書 1 は無い
+      - '`notes` に文書 1 のファイルのパスと、読めなかった行と列がある'
+      - '`isError` ではない'
+    test: test_normal_when_file_unreadable
+  - name: 異常系（読めない配信元・SourceNotReadableError）
+    summary: '`scope.read` に当たらない配信元を指すと断る'
+    setup:
+      - name: Mock
+        description: なし
+      - name: 読めない配信元
+        description: 正常系（複数の配信元）と同じ other
+      - name: 入力
+        description: '`source: other`、`cwd` は sample のクローン本体。2 回目は `cwd` を省く'
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        participant C as クライアント
+        participant T as search_docs
+
+        C->>T: source: other, cwd
+        T->>T: other の scope に cwd が当たらない
+        T-->>C: isError（読めない配信元と、使える配信元の一覧）
+      ```
+    expected:
+      - '`isError: true` で、other を読めないことと、今の作業場所から使える配信元の一覧（`describe()` と同じ）を返す'
+      - other の文書を返さない
+      - '`cwd` を省いた呼び出しも同じエラーを返す'
+    test: test_error_when_source_not_readable
+  - name: 異常系（配信していない配信元・SourceNotServedError）
+    summary: 起動時の検証で外した配信元を指すと、外した理由を返す
+    setup:
+      - name: Mock
+        description: なし
+      - name: 検証に失敗する配信元
+        description: '`documents[0]` に必須のキー `paths` が無い配信元。`scope.read` は sample のフォルダ'
+        notes: id `broken`
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        participant C as クライアント
+        participant T as search_docs
+
+        C->>T: source: broken
+        T-->>C: isError（配信していない配信元、違反したキーのパスと理由）
+      ```
+    expected:
+      - '`isError: true` で、broken を配信していないことと `documents[0].paths` の違反を返す'
+    test: test_error_when_source_not_served
+  - name: 異常系（ワークツリーに当たらない・WorktreeNotMatchedError）
+    summary: '`worktrees` に当たらない `worktree` を断る'
+    setup:
+      - name: Mock
+        description: なし
+      - name: 入力
+        description: '`worktree` に、`worktrees` に当たらない一時フォルダのパス'
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        participant C as クライアント
+        participant T as search_docs
+
+        C->>T: worktree: 当たらないパス
+        T-->>C: isError（渡したパスと worktrees の値）
+      ```
+    expected:
+      - '`isError: true` で、渡したパスと sample の `worktrees` の値を返す'
+    test: test_error_when_worktree_not_matched
+  - name: 異常系（知らない項目・InvalidArgumentError）
+    summary: スキーマに無い項目や型の合わない値を、直し方を添えて断る
+    setup:
+      - name: Mock
+        description: なし
+      - name: 入力
+        description: 1 回目は `filter.field` にスキーマに無い `nme`、2 回目は数値の項目に `gt` で `abc`
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        participant C as クライアント
+        participant T as search_docs
+
+        C->>T: filter（field: nme）
+        T->>T: 項目を配信元のスキーマと照らす
+        T-->>C: isError（項目のパス・期待する型・実際の値・describe の案内）
+      ```
+    expected:
+      - '`isError: true` で、`filter.field` のパス・`nme` と、`describe(source, kind)` でスキーマを見ることを返す'
+      - 2 回目は期待する型（数値）と実際の値 `abc` を返す
+    test: test_error_when_invalid_argument
+  - name: 異常系（無いリビジョン・RefNotFoundError）
+    summary: 解決できない `ref` を断る
+    setup:
+      - name: Mock
+        description: なし
+      - name: 入力
+        description: '`ref: no-such-branch`'
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        participant C as クライアント
+        participant T as search_docs
+
+        C->>T: ref: no-such-branch
+        T-->>C: isError（解決できなかった ref）
+      ```
+    expected:
+      - '`isError: true` で、`ref` の `no-such-branch` を解決できなかったことを返す'
+      - Git 管理外の配信元に `ref` を渡すと、`ref` を使えないことを返す
+    test: test_error_when_ref_not_found
+lead: '条件に当たる文書を、指定した項目・量・順で返す。ID で絞れば取得、`view: summary` で一覧、`view: count` で件数、`group_by` で集計になる。'
+identifier: search_docs
+permissions: 対象の配信元の `scope.read` か `scope.write` に `cwd` が当たること
+idempotent: true
+side_effects: 会話キー（`session_id`・`agent_id`）ごとに、本文を返した文書の id・ハッシュ・返した時点の内容を `state_dir` に記録する（`list_changes` の前回読んだ時点に使う）。文書のファイルは変えない。
+callers:
+  - dev/設計書/シナリオ/単一ユースケース/エージェントが調べる#scenarios[正常シナリオ]
+exclusivity: '読み取りだけで排他しない（`readOnlyHint: true` で並列に呼ばれる）'
+request:
+  - name: source
+    type: str | list[str]
+    required: false
+    default: なし（作業中の配信元）
+    location: argument
+    description: 配信元の ID（端末の設定の `sources[].id`）
+    notes: 配列か `*`（読める全配信元）も受ける
+  - name: ref
+    type: str
+    required: false
+    default: なし（配信元の `default_ref`。作業中の配信元は作業ツリー）
+    location: argument
+    description: 読むリビジョン（ブランチ・コミット・タグ）
+    constraints: Git 管理外の配信元と、複数の配信元を指したときは渡せない
+  - name: worktree
+    type: str
+    required: false
+    default: なし（`cwd` がワークツリーの中ならそのワークツリー）
+    location: argument
+    description: 読むワークツリーのパス
+    constraints: 配信元の設定の `worktrees` に当たるパスだけ
+  - name: filter
+    type: Group | Condition
+    required: false
+    default: なし（全件）
+    location: argument
+    description: '条件の木。`Group` は `{and: [...]}` か `{or: [...]}`、`Condition` は `{field, op, values, match, case_sensitive}`'
+    constraints: 入れ子の深さは制限しない
+  - name: filter.field
+    type: str
+    required: true
+    location: argument
+    description: メタデータのキー・種類ごとの項目・`body`・`*`（全項目）・計算項目（`@chars`・`@path`・`@sections`）
+  - name: filter.op
+    type: Literal['eq', 'ne', 'prefix', 'suffix', 'contains', 'not_contains', 'regex', 'gt', 'gte', 'lt', 'lte', 'exists', 'not_exists']
+    required: true
+    location: argument
+    description: 比べ方
+  - name: filter.values
+    type: list[str]
+    required: false
+    default: なし（`exists`・`not_exists` だけ省ける）
+    location: argument
+    description: 比べる値。数値・日付は項目の型で解釈する
+    notes: 日付は `today`・`-7d` も受ける
+  - name: filter.match
+    type: Literal['any', 'all']
+    required: false
+    default: '`any`'
+    location: argument
+    description: '`values` の複数を OR（`any`）か AND（`all`）で比べる'
+  - name: filter.case_sensitive
+    type: bool
+    required: false
+    default: '`false`'
+    location: argument
+    description: 大文字小文字と全角半角（NFKC）を区別するか
+  - name: view
+    type: Literal['ids', 'summary', 'full', 'count']
+    required: false
+    default: '`summary`'
+    location: argument
+    description: '`ids` は ID だけ、`summary` は共通のメタデータ、`full` は本文込み、`count` は件数だけ'
+  - name: fields
+    type: list[str]
+    required: false
+    default: なし（`view` に従う）
+    location: argument
+    description: 返す項目に加える項目
+  - name: exclude_fields
+    type: list[str]
+    required: false
+    default: なし
+    location: argument
+    description: 返す項目から除く項目
+  - name: order_by
+    type: "list[{field: str, direction: Literal['asc', 'desc']}]"
+    required: false
+    default: '`[{field: id, direction: asc}]`'
+    location: argument
+    description: 並べ替え。先のキーが優先
+    notes: '`@chars` で文字数順。日時が空の文書は末尾'
+  - name: group_by
+    type: str
+    required: false
+    default: なし
+    location: argument
+    description: 指定した項目の値ごとの件数を返す
+    notes: 配列の項目は要素ごとに数える
+  - name: limit
+    type: int
+    required: false
+    default: '`20`'
+    location: argument
+    description: 返す件数
+    constraints: 1〜100。100 を超えたら 100 に丸めて `notes` で知らせる
+  - name: cursor
+    type: str
+    required: false
+    default: なし
+    location: argument
+    description: 前回の `next_cursor`。ほかの引数は前回と同じにする
+  - name: skip
+    type: int
+    required: false
+    default: '`0`'
+    location: argument
+    description: 先頭から飛ばす件数
+  - name: max_chars
+    type: int
+    required: false
+    default: '`20000`'
+    location: argument
+    description: 結果全体の文字数の上限
+    constraints: 上限 40,000
+  - name: max_chars_per_field
+    type: int
+    required: false
+    default: '`2000`（`view: full` は `10000`）'
+    location: argument
+    description: 長い値を末尾で切り、残りの文字数を添える
+  - name: snippets
+    type: '{context_lines: int, max_per_doc: int}'
+    required: false
+    default: なし
+    location: argument
+    description: 一致した行の前後だけを返す
+  - name: repeat_seen
+    type: bool
+    required: false
+    default: '`false`'
+    location: argument
+    description: この会話で返し済みの本文も返す
+  - name: format
+    type: Literal['markdown', 'json']
+    required: false
+    default: '`markdown`'
+    location: argument
+    description: 返す形式
+  - name: cwd
+    type: str
+    required: false
+    default: なし（作業場所なし。どの `scope` にも当たらない）
+    location: argument
+    description: 作業場所
+    notes: PreToolUse のフック（#4）が入れる
+  - name: session_id
+    type: str
+    required: false
+    default: なし（返し済みの記録をしない）
+    location: argument
+    description: 会話キー
+    notes: フックが入れる
+  - name: agent_id
+    type: str
+    required: false
+    default: なし（メインの会話）
+    location: argument
+    description: 会話キー（サブエージェント）
+    notes: フックが入れる
+request_example: |-
+  ```json
+  {
+    "source": "sample",
+    "filter": {"and": [
+      {"field": "kind", "op": "eq", "values": ["rule"]},
+      {"or": [
+        {"field": "tags", "op": "eq", "values": ["mcp"]},
+        {"field": "body", "op": "contains", "values": ["ページング"]}
+      ]}
+    ]},
+    "view": "full",
+    "limit": 3
+  }
+  ```
+response:
+  - name: total_count
+    type: int
+    description: 条件に当たった総件数
+    notes: 常に返す。複数の配信元では配信元ごとにも返す
+  - name: returned
+    type: int
+    description: 返した件数
+  - name: next_cursor
+    type: str
+    description: 続きがあるときだけ
+  - name: truncated
+    type: bool
+    description: '`max_chars` で打ち切ったか'
+  - name: notes
+    type: list[str]
+    description: 丸めた・打ち切った・読めなかったファイルの知らせと次の手
+  - name: groups
+    type: 'list[{value: str, count: int}]'
+    description: '`group_by` のときの値ごとの件数'
+  - name: items[].id
+    type: str
+    description: 文書の ID
+    notes: ID で絞ったときは指定した順
+  - name: items[].source
+    type: str
+    description: 文書の配信元の ID
+    notes: 複数の配信元を指したときだけ
+  - name: items[].version
+    type: str
+    description: 内容のハッシュ（短縮）
+  - name: items[].body
+    type: str
+    description: 本文。YAML の文書は YAML、Markdown の文書は Markdown
+    notes: 返し済みなら `（この会話で返し済み）`
+response_example: |-
+  ```markdown
+  sample: 該当 2 件・返した 2 件
+
+  | id | kind | name | description | chars | version |
+  | --- | --- | --- | --- | --- | --- |
+  | doc-1 | sample | 文書 1 | 1 件目 | 320 | 9d0e11 |
+  | doc-2 | sample | 文書 2 | 2 件目 | 410 | c1aa02 |
+  ```
+response_notes: '`format: markdown` のときは structuredContent を返さない。`format: json` のときは structuredContent と text に同じ JSON を入れる。'
+exceptions:
+  - name: なし（正常終了）
+    condition: 検索できた（読めなかったファイルがあっても `notes` で知らせて正常終了）
+  - name: SourceNotReadableError
+    condition: '`cwd` が配信元の `scope.read`・`scope.write` に当たらない、または `cwd` が無い'
+    notes: 今の作業場所から使える配信元の一覧を添える
+  - name: SourceNotServedError
+    condition: '端末の設定にあるが、起動時の検証で外したか `enabled: false` の配信元を指した'
+    notes: 違反したキーのパスと理由を添える
+  - name: WorktreeNotMatchedError
+    condition: '`worktree` が配信元の `worktrees` に当たらない'
+  - name: InvalidArgumentError
+    condition: 知らない項目・型の合わない値を条件・並べ替え・`group_by` に渡した
+    notes: 項目のパス・期待する型・実際の値と、`describe(source, kind)` でスキーマを見ることを添える
+  - name: RefNotFoundError
+    condition: '`ref` を commit に解決できない'
+constraints:
+  - item: 件数
+    constraint: '`limit` は最大 100'
+  - item: 文字数
+    constraint: '`max_chars` は最大 40,000。達したら `truncated` と `next_cursor` を返す'
+  - item: 注釈
+    constraint: '`readOnlyHint: true`'
+  - item: 引数の検証
+    constraint: strict tool use は使わず、サーバーが検証して直し方を返す
+  - item: 読み直し
+    constraint: ファイルの更新日時か大きさが変わった文書は、次の呼び出しで読み直す
+  - item: タイムアウト
+    constraint: 制限なし
+refs:
+  - dev/設計書/シナリオ/単一ユースケース/エージェントが調べる#scenarios[正常シナリオ]
+  - dev/設計書/シナリオ/単一ユースケース/YAMLを直接編集した#scenarios[正常シナリオ]
