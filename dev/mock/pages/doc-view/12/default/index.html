@@ -1,0 +1,272 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <!-- 狭い幅でも等倍で描く -->
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <!-- ライトとダークの両方に対応することを描画の前にブラウザへ伝える -->
+  <meta name="color-scheme" content="light dark">
+  <title>開発ドキュメントサーバー | 設定 | sample | dev-docs</title>
+  <!-- 利用者が固定した明暗を、描画の前に当てる -->
+  <script>
+    {
+      const scheme = localStorage.getItem("dev-docs-color-scheme");
+      if (scheme) {
+        document.querySelector('meta[name="color-scheme"]').content = scheme;
+        document.documentElement.dataset.scheme = scheme;
+      }
+    }
+  </script>
+  <link rel="stylesheet" href="../../../../assets/style.css">
+  <script type="module" src="../../../../refs/12/assets/mock.js"></script>
+</head>
+<body>
+  <!-- モック専用の操作列（モックの階層・案・状態の切り替え） -->
+  <nav class="mockbar" aria-label="モックの操作">
+    <span class="mockbar__crumbs"><a href="../../../">pages</a> / <a href="../../">doc-view</a> / <a href="../">12</a> / default</span>
+    <span class="mockbar__divider"></span>
+    <span class="mockbar__label">状態</span>
+    <a class="mockbar__tab" href="?state=default" data-state="default">通常</a>
+    <a class="mockbar__tab" href="?state=revision" data-state="revision">リビジョン指定</a>
+    <a class="mockbar__tab" href="?state=diff" data-state="diff">差分の強調</a>
+    <a class="mockbar__tab" href="?state=convert-error" data-state="convert-error">変換の失敗</a>
+    <span class="mockbar__url mono" data-states="default">/sample/設定/開発ドキュメントサーバー</span>
+    <span class="mockbar__url mono" data-states="revision">/sample@3f9c2ab/設定/開発ドキュメントサーバー</span>
+    <span class="mockbar__url mono" data-states="diff">/sample@3f9c2ab/設定/開発ドキュメントサーバー?diff=8d41e07</span>
+    <span class="mockbar__url mono" data-states="convert-error">/sample/設定/開発ドキュメントサーバー</span>
+  </nav>
+  <!-- トップバー -->
+  <header class="topbar">
+    <!-- スマホ幅でサイドバーを開くボタン -->
+    <button class="icon-button topbar__menu" type="button" commandfor="sidebar" command="toggle-popover" aria-label="文書の一覧を開く">
+      <svg aria-hidden="true" viewBox="0 0 16 16" width="16" height="16"><path d="M1 3h14v1.5H1zm0 4.25h14v1.5H1zM1 11.5h14V13H1z"/></svg>
+    </button>
+    <a class="topbar__brand" href="../../../source-list/12/a-source-list/index.html">dev-docs</a>
+
+    <!-- 配信元の切り替え -->
+    <button class="select-button" type="button" commandfor="source-menu" command="toggle-popover" aria-label="配信元を切り替える">
+      <svg aria-hidden="true" viewBox="0 0 16 16" width="16" height="16"><path d="M2 2.5A1.5 1.5 0 0 1 3.5 1h9A1.5 1.5 0 0 1 14 2.5v11a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 2 13.5zm1.5 0v11h9v-11zM5 4h6v1.5H5zm0 3h6v1.5H5z"/></svg>
+      <span>sample</span>
+      <svg class="select-button__chevron" aria-hidden="true" viewBox="0 0 16 16" width="12" height="12"><path d="M3.2 5.7 8 10.5l4.8-4.8-1.06-1.06L8 8.38 4.26 4.64z"/></svg>
+    </button>
+    <div id="source-menu" class="menu" popover>
+      <p class="menu__heading">配信元</p>
+      <a class="menu__item is-current" href="../../../doc-index/12/default/index.html" aria-current="true"><span>sample</span><span class="menu__note">読み書き</span></a>
+      <a class="menu__item" href="../../../doc-index/12/default/index.html"><span>notes</span><span class="menu__note">読み取りだけ</span></a>
+      <a class="menu__item" href="../../../source-list/12/a-source-list/index.html"><span>配信元の一覧</span></a>
+    </div>
+
+    <!-- リビジョンの切り替え -->
+    <button class="select-button" type="button" commandfor="revision-menu" command="toggle-popover" aria-label="リビジョンを切り替える">
+      <svg aria-hidden="true" viewBox="0 0 16 16" width="16" height="16"><path d="M5 3.25a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0M3.5 5.37a2.25 2.25 0 1 1 1.5 0v.63c0 .55.45 1 1 1h4c.17 0 .34.03.5.08V5.37a2.25 2.25 0 1 1 1.5 0V8.5A2.5 2.5 0 0 1 10 11H6c-.17 0-.34-.03-.5-.08v.71a2.25 2.25 0 1 1-1.5 0zm8.5-1.37a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5M4.25 13.5a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5"/></svg>
+      <span class="mono" data-states="default convert-error">作業ツリー</span>
+      <span class="mono" data-states="revision diff">3f9c2ab</span>
+      <svg class="select-button__chevron" aria-hidden="true" viewBox="0 0 16 16" width="12" height="12"><path d="M3.2 5.7 8 10.5l4.8-4.8-1.06-1.06L8 8.38 4.26 4.64z"/></svg>
+    </button>
+    <div id="revision-menu" class="menu menu--wide" popover>
+      <p class="menu__heading">リビジョン</p>
+      <a class="menu__item" href="?state=default"><span>作業ツリー</span><span class="menu__note">既定</span></a>
+      <a class="menu__item" href="?state=revision"><span class="mono">develop</span><span class="menu__note">ブランチ</span></a>
+      <a class="menu__item" href="?state=revision"><span class="mono">feat/server/dev-docs-server</span><span class="menu__note">ブランチ</span></a>
+      <a class="menu__item" href="?state=revision"><span class="mono">3f9c2ab</span><span class="menu__note">10/26 23:40 JST</span></a>
+      <a class="menu__item" href="?state=revision"><span class="mono">8d41e07</span><span class="menu__note">10/26 21:12 JST</span></a>
+    </div>
+
+    <span class="topbar__spacer"></span>
+
+    <!-- 検索 -->
+    <button class="search-button" type="button" commandfor="search" command="toggle-popover" aria-label="検索">
+      <svg aria-hidden="true" viewBox="0 0 16 16" width="16" height="16"><path d="M10.68 11.74a6 6 0 1 1 1.06-1.06l3.04 3.04-1.06 1.06zM11.5 7a4.5 4.5 0 1 0-9 0 4.5 4.5 0 0 0 9 0"/></svg>
+      <span class="search-button__label">検索</span>
+      <kbd class="search-button__key">/</kbd>
+    </button>
+    <div id="search" class="search" popover>
+      <label class="search__label" for="search-input">sample の文書を検索</label>
+      <input id="search-input" class="search__input" type="search" value="worktrees" autocomplete="off">
+      <p class="search__count">3 件</p>
+      <ul class="search__results">
+        <li><a href="../../../doc-view/12/default/index.html"><span class="search__path">設定 / 開発ドキュメントサーバー</span><span class="search__hit">キー一覧 › <mark>worktrees</mark> に当たるパスなら読み書きをそのワークツリーへ向ける</span></a></li>
+        <li><a href="../../../doc-view/12/default/index.html"><span class="search__path">シナリオ / エージェントが書き込む</span><span class="search__hit">正常シナリオ › 書き込む先が <mark>worktrees</mark> に当たる</span></a></li>
+        <li><a href="../../../doc-view/12/default/index.html"><span class="search__path">インターフェース定義 / write_docs</span><span class="search__hit">リクエスト › <code>worktree</code> は <mark>worktrees</mark> に当たるパスだけを受ける</span></a></li>
+      </ul>
+    </div>
+
+
+    <!-- 明暗の切り替え -->
+    <button class="icon-button" type="button" id="scheme-toggle" aria-label="明暗を切り替える" aria-pressed="false">
+      <svg aria-hidden="true" viewBox="0 0 16 16" width="16" height="16"><path d="M8 1.5a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13M8 3a5 5 0 0 1 0 10z"/></svg>
+    </button>
+
+  </header>
+  <!-- 種類ごとのタブ -->
+  <nav class="tabs" aria-label="種類">
+    <a class="tabs__item" href="../../../doc-index/12/default/index.html">シナリオ <span class="count">7</span></a>
+    <a class="tabs__item" href="../../../doc-index/12/default/index.html">インターフェース定義 <span class="count">6</span></a>
+    <a class="tabs__item" href="../../../doc-index/12/default/index.html">モジュール構成 <span class="count">4</span></a>
+    <a class="tabs__item is-current" href="../../../doc-index/12/default/index.html" aria-current="page" data-states="default revision diff convert-error">設定 <span class="count">2</span></a>
+    <a class="tabs__item" href="../../../doc-index/12/default/index.html">外部ライブラリ <span class="count">3</span></a>
+    <a class="tabs__item" href="../../../doc-index/12/default/index.html">画面設計 <span class="count">0</span></a>
+    <a class="tabs__item" href="../../../doc-index/12/default/index.html">非機能要件 <span class="count">1</span></a>
+  </nav>
+  <div class="layout">
+    <!-- サイドバー（スマホ幅ではドロワー） -->
+    <nav id="sidebar" class="sidebar" popover aria-label="文書の一覧">
+      <p class="sidebar__heading">設定</p>
+      <ul class="sidebar__list">
+        <li><a class="sidebar__item is-current" href="../../../doc-view/12/default/index.html" aria-current="page">開発ドキュメントサーバー</a></li>
+        <li><a class="sidebar__item" href="../../../doc-view/12/default/index.html">端末の設定</a></li>
+      </ul>
+    </nav>
+
+    <!-- 本文 -->
+    <main class="content">
+      <nav class="breadcrumb" aria-label="パンくず">
+        <a href="../../../doc-index/12/default/index.html"><span data-states="default convert-error">sample</span><span data-states="revision diff">sample@3f9c2ab</span></a><span class="breadcrumb__sep">/</span><a href="../../../doc-index/12/default/index.html">設定</a><span class="breadcrumb__sep">/</span><span aria-current="page">開発ドキュメントサーバー</span>
+      </nav>
+
+      <h1 class="doc-title">設定: 開発ドキュメントサーバー</h1>
+      <p class="doc-meta">
+        <span class="badge">設定</span>
+        <span>更新 <time datetime="2026-10-26T14:40:00Z">10/26 23:40 JST</time></span>
+        <span data-states="revision diff">リビジョン <code>3f9c2ab</code></span>
+      </p>
+
+      <!-- ?diff= の差分の案内 -->
+      <section class="diff-banner" aria-label="差分" data-states="diff">
+        <svg aria-hidden="true" viewBox="0 0 16 16" width="16" height="16"><path d="M8.75 1.75V5H12v1.5H8.75v3.25h-1.5V6.5H4V5h3.25V1.75zM4 13h8v1.5H4z"/></svg>
+        <p><code>8d41e07</code> から <code>3f9c2ab</code> への変更を強調しています。変更 1 件。</p>
+        <a class="diff-banner__close" href="?state=revision">差分の強調を解除</a>
+      </section>
+
+      <!-- 変換のスクリプトが失敗したときの理由 -->
+      <section class="error-panel" role="alert" data-states="convert-error">
+        <p class="error-panel__title"><svg aria-hidden="true" viewBox="0 0 16 16" width="16" height="16"><path d="M6.46 1.95a1.75 1.75 0 0 1 3.08 0l5.25 9.5A1.75 1.75 0 0 1 13.25 14H2.75a1.75 1.75 0 0 1-1.54-2.55zM8 5a.75.75 0 0 0-.75.75v3a.75.75 0 0 0 1.5 0v-3A.75.75 0 0 0 8 5m0 7a1 1 0 1 0 0-2 1 1 0 0 0 0 2"/></svg>この文書を変換できませんでした</p>
+        <dl class="error-panel__details">
+          <dt>種類</dt><dd>設定</dd>
+          <dt>スクリプト</dt><dd><code>scripts/convert/settings.py</code></dd>
+          <dt>原因</dt><dd>制限時間（10 秒）を超えたため、スクリプトを止めました。</dd>
+        </dl>
+        <p class="error-panel__next">スクリプトを修正して保存すると、次に開いたときに変換し直します。同じ配信元の他の文書は読めます。</p>
+      </section>
+
+      <div data-states="default revision diff">
+        <!-- スマホ幅の目次 -->
+        <details class="toc-inline">
+          <summary>目次</summary>
+          <ul>
+          <li><a href="#files">ファイル一覧</a></li>
+          <li><a href="#keys">キー一覧</a></li>
+          <li><a href="#overrides">環境ごとの差分</a></li>
+          <li><a href="#refs">関連</a></li>
+          </ul>
+        </details>
+
+        <article class="doc">
+          <p>開発ドキュメントサーバーが起動時に読む設定の一覧。実装は <code>dev_docs/settings.py</code>、サンプルは <code>examples/settings.yaml</code>。</p>
+
+          <h2 id="files">ファイル一覧</h2>
+          <div class="table-wrap" tabindex="0" role="region" aria-label="ファイル一覧の表">
+            <table>
+              <thead><tr><th>ファイル</th><th>管理する値</th></tr></thead>
+              <tbody>
+                <tr><td><code>~/.config/dev-docs/settings.yaml</code></td><td>端末の設定（配信元の一覧と権限）</td></tr>
+                <tr><td><code>dev-docs.yaml</code></td><td>配信元の設定（文書の種類・検査・変換）</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <h2 id="keys">キー一覧</h2>
+        <div data-states="default revision">
+          <div class="table-tools">
+            <span class="table-tools__count">5 件</span>
+            <button class="tool-button" type="button" commandfor="columns-menu" command="toggle-popover">
+              <svg aria-hidden="true" viewBox="0 0 16 16" width="16" height="16"><path d="M1.75 2h12.5c.41 0 .75.34.75.75v10.5a.75.75 0 0 1-.75.75H1.75a.75.75 0 0 1-.75-.75V2.75c0-.41.34-.75.75-.75M2.5 3.5v9h3v-9zm4.5 0v9h2v-9zm3.5 0v9h3v-9z"/></svg>
+              列の表示
+            </button>
+            <div id="columns-menu" class="menu" popover data-columns-for="key-table">
+              <p class="menu__heading">表示する列</p>
+              <label class="menu__check"><input type="checkbox" checked disabled data-column="key"> キー</label>
+              <label class="menu__check"><input type="checkbox" checked data-column="title"> 論理名</label>
+              <label class="menu__check"><input type="checkbox" checked data-column="type"> 型</label>
+              <label class="menu__check"><input type="checkbox" checked data-column="default"> 既定値</label>
+              <label class="menu__check"><input type="checkbox" checked data-column="description"> 説明</label>
+              <button class="menu__reset" type="button">既定に戻す</button>
+            </div>
+          </div>
+          <div class="table-wrap" tabindex="0" role="region" aria-label="キー一覧の表">
+            <table id="key-table">
+              <thead><tr><th data-column="key">キー</th><th data-column="title">論理名</th><th data-column="type">型</th><th data-column="default">既定値</th><th data-column="description">説明</th></tr></thead>
+              <tbody>
+              <tr><td data-column="key"><code>version</code></td><td data-column="title">設定のバージョン</td><td data-column="type">整数</td><td data-column="default">—</td><td data-column="description">サーバーが読めるバージョンと比べる</td></tr>
+              <tr><td data-column="key"><code>sources[].id</code></td><td data-column="title">配信元の ID</td><td data-column="type">文字列</td><td data-column="default">—</td><td data-column="description">画面の URL と <code>source</code> 引数に使う</td></tr>
+              <tr><td data-column="key"><code>sources[].name</code></td><td data-column="title">配信元の名前</td><td data-column="type">文字列</td><td data-column="default">—</td><td data-column="description">配信元の切り替えに出す名前</td></tr>
+              <tr><td data-column="key"><code>worktrees</code></td><td data-column="title">ワークツリーの場所</td><td data-column="type">glob の配列</td><td data-column="default"><code>[./.claude/worktrees/*]</code></td><td data-column="description">当たるパスなら読み書きをそのワークツリーへ向ける</td></tr>
+              <tr><td data-column="key"><code>port</code></td><td data-column="title">待ち受けるポート</td><td data-column="type">整数</td><td data-column="default"><code>8781</code></td><td data-column="description"><code>DEV_DOCS_PORT</code> で上書きする</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <div data-states="diff">
+          <div class="table-tools">
+            <span class="table-tools__count">5 件</span>
+            <button class="tool-button" type="button" commandfor="columns-menu-diff" command="toggle-popover">
+              <svg aria-hidden="true" viewBox="0 0 16 16" width="16" height="16"><path d="M1.75 2h12.5c.41 0 .75.34.75.75v10.5a.75.75 0 0 1-.75.75H1.75a.75.75 0 0 1-.75-.75V2.75c0-.41.34-.75.75-.75M2.5 3.5v9h3v-9zm4.5 0v9h2v-9zm3.5 0v9h3v-9z"/></svg>
+              列の表示
+            </button>
+            <div id="columns-menu-diff" class="menu" popover data-columns-for="key-table-diff">
+              <p class="menu__heading">表示する列</p>
+              <label class="menu__check"><input type="checkbox" checked disabled data-column="key"> キー</label>
+              <label class="menu__check"><input type="checkbox" checked data-column="title"> 論理名</label>
+              <label class="menu__check"><input type="checkbox" checked data-column="type"> 型</label>
+              <label class="menu__check"><input type="checkbox" checked data-column="default"> 既定値</label>
+              <label class="menu__check"><input type="checkbox" checked data-column="description"> 説明</label>
+              <button class="menu__reset" type="button">既定に戻す</button>
+            </div>
+          </div>
+          <div class="table-wrap" tabindex="0" role="region" aria-label="キー一覧の表">
+            <table id="key-table-diff">
+              <thead><tr><th data-column="key">キー</th><th data-column="title">論理名</th><th data-column="type">型</th><th data-column="default">既定値</th><th data-column="description">説明</th></tr></thead>
+              <tbody>
+              <tr><td data-column="key"><code>version</code></td><td data-column="title">設定のバージョン</td><td data-column="type">整数</td><td data-column="default">—</td><td data-column="description">サーバーが読めるバージョンと比べる</td></tr>
+              <tr><td data-column="key"><code>sources[].id</code></td><td data-column="title">配信元の ID</td><td data-column="type">文字列</td><td data-column="default">—</td><td data-column="description">画面の URL と <code>source</code> 引数に使う</td></tr>
+              <tr class="is-changed"><td data-column="key"><span class="diff-mark">変更</span><code>sources[].name</code></td><td data-column="title"><del>表示名</del> <ins>配信元の名前</ins></td><td data-column="type">文字列</td><td data-column="default">—</td><td data-column="description">配信元の切り替えに出す名前</td></tr>
+              <tr><td data-column="key"><code>worktrees</code></td><td data-column="title">ワークツリーの場所</td><td data-column="type">glob の配列</td><td data-column="default"><code>[./.claude/worktrees/*]</code></td><td data-column="description">当たるパスなら読み書きをそのワークツリーへ向ける</td></tr>
+              <tr><td data-column="key"><code>port</code></td><td data-column="title">待ち受けるポート</td><td data-column="type">整数</td><td data-column="default"><code>8781</code></td><td data-column="description"><code>DEV_DOCS_PORT</code> で上書きする</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+          <h2 id="overrides">環境ごとの差分</h2>
+<pre tabindex="0" aria-label="環境ごとの差分の例"><code><span class="tok-key">sources</span>:
+  - <span class="tok-key">id</span>: sample
+    <span class="tok-key">config</span>: [./dev-docs.yaml, ./dev-docs.local.yaml]
+    <span class="tok-key">scope</span>:
+      <span class="tok-key">read</span>: [<span class="tok-str">"~/repo/**"</span>]
+      <span class="tok-key">write</span>: [<span class="tok-str">"~/repo/sample/**"</span>]</code></pre>
+
+          <h2 id="refs">関連</h2>
+          <ul>
+            <li><a href="../../../doc-view/12/default/index.html">シナリオ / エージェントが書き込む</a></li>
+            <li><a href="../../../not-found/12/default/index.html">インターフェース定義 / write_docs</a>（無い文書へのリンクの例）</li>
+          </ul>
+        </article>
+      </div>
+    </main>
+
+    <!-- 目次 -->
+    <nav class="toc" aria-label="目次">
+      <div data-states="default revision diff">
+        <p class="toc__heading">目次</p>
+        <ul>
+        <li><a href="#files">ファイル一覧</a></li>
+        <li><a class="is-current" aria-current="location" href="#keys">キー一覧</a></li>
+        <li><a href="#overrides">環境ごとの差分</a></li>
+        <li><a href="#refs">関連</a></li>
+        </ul>
+      </div>
+    </nav>
+  </div>
+
+</body>
+</html>

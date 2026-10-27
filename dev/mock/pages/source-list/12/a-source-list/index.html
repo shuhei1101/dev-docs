@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <!-- 狭い幅でも等倍で描く -->
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <!-- ライトとダークの両方に対応することを描画の前にブラウザへ伝える -->
+  <meta name="color-scheme" content="light dark">
+  <title>配信元 | dev-docs</title>
+  <!-- 利用者が固定した明暗を、描画の前に当てる -->
+  <script>
+    {
+      const scheme = localStorage.getItem("dev-docs-color-scheme");
+      if (scheme) {
+        document.querySelector('meta[name="color-scheme"]').content = scheme;
+        document.documentElement.dataset.scheme = scheme;
+      }
+    }
+  </script>
+  <link rel="stylesheet" href="../../../../assets/style.css">
+  <script type="module" src="../../../../refs/12/assets/mock.js"></script>
+</head>
+<body>
+  <!-- モック専用の操作列（モックの階層・案・状態の切り替え） -->
+  <nav class="mockbar" aria-label="モックの操作">
+    <span class="mockbar__crumbs"><a href="../../../">pages</a> / <a href="../../">source-list</a> / <a href="../">12</a> / a-source-list</span>
+    <span class="mockbar__divider"></span>
+    <span class="mockbar__label">案</span>
+    <a class="mockbar__tab" href="../a-source-list/index.html" data-variant="a-source-list">A 配信元の一覧</a>
+    <a class="mockbar__tab" href="../b-redirect/index.html" data-variant="b-redirect">B 最初の配信元へ転送</a>
+    <span class="mockbar__url mono">/</span>
+  </nav>
+  <!-- トップバー -->
+  <header class="topbar">
+    <a class="topbar__brand" href="../../../source-list/12/a-source-list/index.html">dev-docs</a>
+    <span class="topbar__spacer"></span>
+
+    <!-- 明暗の切り替え -->
+    <button class="icon-button" type="button" id="scheme-toggle" aria-label="明暗を切り替える" aria-pressed="false">
+      <svg aria-hidden="true" viewBox="0 0 16 16" width="16" height="16"><path d="M8 1.5a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13M8 3a5 5 0 0 1 0 10z"/></svg>
+    </button>
+  </header>
+
+  <div class="layout layout--single">
+    <main class="content">
+      <h1 class="doc-title">配信元</h1>
+      <p class="page-lead">この dev-docs が配信している配信元です。端末の設定 <code>~/.config/dev-docs/settings.yaml</code> の <code>sources[]</code> から読みます。</p>
+      <div class="table-wrap" tabindex="0" role="region" aria-label="配信元の一覧">
+        <table>
+          <thead><tr><th>配信元</th><th>場所</th><th>権限</th><th class="col-num">文書</th></tr></thead>
+          <tbody>
+            <tr><td><a href="../../../doc-index/12/default/index.html">sample</a></td><td><code>~/repo/sample</code></td><td><span class="badge">読み書き</span></td><td class="col-num">23 件</td></tr>
+            <tr><td><a href="../../../doc-index/12/default/index.html">notes</a></td><td><code>~/repo/notes</code></td><td><span class="badge badge--muted">読み取りだけ</span></td><td class="col-num">48 件</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h2 class="doc-subtitle">配信していない配信元</h2>
+      <div class="table-wrap" tabindex="0" role="region" aria-label="配信していない配信元の一覧">
+        <table>
+          <thead><tr><th>配信元</th><th>場所</th><th>理由</th></tr></thead>
+          <tbody>
+            <tr><td><code>broken</code></td><td><code>~/repo/broken</code></td><td>起動時の検証で外しました（<code>dev-docs.yaml</code> の <code>kinds[0].schema</code> のファイルがありません）</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </main>
+  </div>
+
+</body>
+</html>

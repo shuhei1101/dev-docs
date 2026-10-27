@@ -33,6 +33,9 @@
   --changed-bg: light-dark(#fff8c5, rgb(187 128 9 / 0.15));
   --removed-bg: light-dark(#ffebe9, rgb(248 81 73 / 0.1));
   --removed-line: light-dark(#cf222e, #f85149);
+  --error-fg: light-dark(#d1242f, #f85149);
+  --error-bg: light-dark(#ffebe9, rgb(248 81 73 / 0.1));
+  --error-border: light-dark(#ff8182, rgb(248 81 73 / 0.4));
   --mark-bg: light-dark(#fff8c5, rgb(187 128 9 / 0.4));
   --tok-key: light-dark(#0550ae, #79c0ff);
   --tok-str: light-dark(#0a3069, #a5d6ff);
@@ -323,9 +326,9 @@ svg {
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow);
   position-area: bottom span-right;
-  position-try-fallbacks: flip-inline;
+  position-try-fallbacks: flip-inline, flip-block, flip-block flip-inline;
   inset: auto;
-  margin-top: 4px;
+  margin-block: 4px;
 }
 
 /* 長い名前を並べるメニュー */
@@ -1037,6 +1040,219 @@ pre {
     & ul {
       margin: 4px 0 0;
       padding-left: 1.2em;
+    }
+  }
+}
+
+/* ===== 画面ごとの部品 ===== */
+
+/* hidden 属性を display の指定より優先する */
+[hidden] {
+  display: none !important;
+}
+
+/* モック専用: 帯の中のまとまりの区切り */
+.mockbar__divider {
+  width: 1px;
+  height: 16px;
+  margin: 0 8px;
+  background: rgb(255 255 255 / 0.4);
+}
+
+/* モック専用: 帯の中のボタン（タブと同じ見た目） */
+button.mockbar__tab {
+  font: inherit;
+  background: none;
+  border: 0;
+  cursor: pointer;
+}
+
+/* モック専用: モックの階層のパンくず */
+.mockbar__crumbs {
+  white-space: nowrap;
+
+  & a {
+    color: #fff;
+  }
+}
+
+/* モック専用: 状態に対応する画面の URL */
+.mockbar__url {
+  margin-left: auto;
+  padding-left: 12px;
+  white-space: nowrap;
+  opacity: 0.85;
+}
+
+/* 目次を持たない画面のサイドバーと本文の 2 列 */
+.layout--no-toc {
+  grid-template-columns: var(--sidebar-width) minmax(0, 1fr);
+}
+
+/* サイドバーを持たない画面の 1 列 */
+.layout--single {
+  display: block;
+  max-width: calc(var(--measure) + 48px);
+}
+
+/* 本文の上の補足の文 */
+.page-lead {
+  margin: 0 0 20px;
+  font-size: var(--text-sm);
+  color: var(--fg-muted);
+}
+
+/* 並べ替えられる列見出しのボタン */
+.sort-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 24px;
+  padding: 0;
+  font: inherit;
+  font-weight: 600;
+  color: var(--fg);
+  background: none;
+  border: 0;
+  cursor: pointer;
+
+  &:hover {
+    color: var(--link);
+  }
+}
+
+/* 並べ替えの向きのアイコン（並べ替えていない列は上下の両向き） */
+.sort-button__icon {
+  color: var(--fg-muted);
+}
+
+/* 並べ替えていない列の両向きのアイコン */
+.sort-button__icon--dir {
+  display: none;
+}
+
+/* 並べ替え中の列は向きのアイコンだけを出す */
+[aria-sort] .sort-button {
+  & .sort-button__icon--none {
+    display: none;
+  }
+
+  & .sort-button__icon--dir {
+    display: inline;
+    color: var(--accent);
+  }
+}
+
+/* 降順は向きのアイコンを逆さにする */
+[aria-sort="descending"] .sort-button__icon--dir {
+  rotate: 180deg;
+}
+
+/* 本文の中の 2 つ目以降のまとまりの見出し */
+.doc-subtitle {
+  margin: 2em 0 0.7em;
+  font-size: var(--text-xl);
+  font-weight: var(--heading-weight);
+  line-height: 1.4;
+}
+
+/* 数値の列（右揃え・等幅数字） */
+.table-wrap .col-num {
+  text-align: right;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+/* 一覧の更新日時の列 */
+.col-date {
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+/* 一覧・タブの中身が無いときの文 */
+.empty-state {
+  margin: 0 0 1.25em;
+  padding: 32px 16px;
+  font-size: var(--text-sm);
+  color: var(--fg-muted);
+  text-align: center;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+}
+
+/* 変換の失敗・404 の理由を出す囲み */
+.error-panel {
+  margin: 16px 0 24px;
+  padding: 14px 16px;
+  font-size: var(--text-sm);
+  background: var(--error-bg);
+  border: 1px solid var(--error-border);
+  border-radius: var(--radius-lg);
+}
+
+/* 囲みの見出し */
+.error-panel__title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 8px;
+  font-size: var(--text-base);
+  font-weight: 600;
+  color: var(--error-fg);
+}
+
+/* 失敗の中身（項目名と値の組） */
+.error-panel__details {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: 4px 16px;
+  margin: 0;
+
+  & dt {
+    color: var(--fg-muted);
+  }
+
+  & dd {
+    margin: 0;
+    overflow-wrap: anywhere;
+  }
+}
+
+/* 囲みの下の次の操作 */
+.error-panel__next {
+  margin: 12px 0 0;
+}
+
+/* 404 の次に開く先の一覧 */
+.next-links {
+  margin: 0;
+  padding-left: 1.2em;
+  font-size: var(--text-sm);
+
+  & li {
+    margin-bottom: 4px;
+  }
+}
+
+/* 配信元の権限のラベル */
+.badge--muted {
+  color: var(--fg-muted);
+  border-color: var(--border);
+}
+
+/* スマホ幅の画面ごとの部品 */
+@media (max-width: 768px) {
+  /* 一覧の概要の列を潰さず、表の枠の中で横にスクロールさせる */
+  .table-wrap .col-summary {
+    min-width: 16em;
+  }
+
+  /* 項目名と値を縦に積む */
+  .error-panel__details {
+    grid-template-columns: minmax(0, 1fr);
+
+    & dd {
+      margin-bottom: 6px;
     }
   }
 }
