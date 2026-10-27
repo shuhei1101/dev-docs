@@ -608,3 +608,10 @@ functions:
         exception: 書き込みか置き換えに失敗する
 notes:
   例外の置き場所: どの分類の関数も、呼び出し側へ返す失敗は `shared/errors.py` の子クラスで送る。スクリプトの実行の失敗（スクリプトの実行の分類）と YAML を読めないことは、それぞれの分類の例外で送り、呼び出し側が `Violation` か本文の誤りに変える。
+test_files:
+  - tests/unit/dev_docs/shared/test_errors.py
+  - tests/unit/dev_docs/shared/test_yaml_io.py
+  - tests/unit/dev_docs/shared/test_hashing.py
+  - tests/unit/dev_docs/shared/test_paths.py
+  - tests/unit/dev_docs/shared/test_files.py
+  - tests/unit/dev_docs/server/test_origin.py
