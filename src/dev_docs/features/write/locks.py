@@ -3,7 +3,8 @@
 from __future__ import annotations
 
 import threading
-from contextlib import AbstractContextManager
+from collections.abc import Iterator
+from contextlib import AbstractContextManager, contextmanager
 
 
 class SourceLocks:
@@ -15,4 +16,13 @@ class SourceLocks:
 
     def hold(self, source_id: str) -> AbstractContextManager[None]:
         """配信元の排他を握るコンテキストマネージャを返す。"""
-        raise NotImplementedError
+        with self._guard:
+            lock = self._locks.setdefault(source_id, threading.Lock())
+        return self._hold(lock)
+
+    @staticmethod
+    @contextmanager
+    def _hold(lock: threading.Lock) -> Iterator[None]:
+        """排他を握り、抜けるときに放す。"""
+        with lock:
+            yield

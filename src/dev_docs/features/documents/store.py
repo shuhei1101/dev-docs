@@ -35,6 +35,21 @@ __all__ = [
 ]
 
 
+def not_found_error(source_id: str, missing: list[str], known: list[str]) -> DocumentNotFoundError:
+    """無い ID ごとに近い ID を添えた `DocumentNotFoundError` を作る。"""
+    return DocumentNotFoundError(
+        message=f"{source_id}: 文書 {', '.join(missing)} はありません",
+        missing=missing,
+        candidates={
+            document_id: difflib.get_close_matches(
+                document_id, known, n=CANDIDATE_COUNT, cutoff=CANDIDATE_CUTOFF
+            )
+            for document_id in missing
+        },
+        next_steps=["search_docs で ID を探してください"],
+    )
+
+
 class DocumentStore:
     """読む場所ごとに文書を集め、ファイルごとに結果をキャッシュする。"""
 
@@ -171,17 +186,7 @@ class DocumentStore:
         by_id = {document.id: document for document in self.load(target, kinds=kinds).documents}
         missing = [document_id for document_id in ids if document_id not in by_id]
         if missing:
-            raise DocumentNotFoundError(
-                message=f"{target.source.id}: 文書 {', '.join(missing)} はありません",
-                missing=missing,
-                candidates={
-                    document_id: difflib.get_close_matches(
-                        document_id, list(by_id), n=CANDIDATE_COUNT, cutoff=CANDIDATE_CUTOFF
-                    )
-                    for document_id in missing
-                },
-                next_steps=["search_docs で ID を探してください"],
-            )
+            raise not_found_error(target.source.id, missing, list(by_id))
         return [by_id[document_id] for document_id in ids]
 
     def schema(self, target: Target, kind: str) -> dict[str, Any]:
