@@ -125,6 +125,9 @@ const QUOTE_MAX = 30;
 const QUOTE_KEEP = 12;
 // 通知を出しておく時間
 const TOAST_MS = 2400;
+// 起票画面の URL の長さの上限と、本文を切り詰めたときに末尾へ付ける文
+const ISSUE_URL_MAX = 8000;
+const ISSUE_TRUNCATED = "\n\n…（長さの上限を超えたため、本文の末尾を切り詰めました。全文はクリップボードにコピーしています）";
 // 選択の下に出すボタンの、画面の右端から離す幅
 const ADD_BUTTON_ROOM = 160;
 
@@ -384,6 +387,11 @@ function closeCommentPanel() {
   openButton.focus();
 }
 
+/** 選んだコメントを一覧の順にまとめた文字列にする */
+function formatComments(comments) {
+  return comments.map((c) => `${formatLocation(c)}\n> ${c.quote}\n\n${c.body}`).join("\n\n---\n\n");
+}
+
 /** 選んだコメントを一覧の順にまとめてクリップボードへ書く */
 async function copyComments() {
   const selected = loadComments().filter((c) => c.selected);
@@ -391,7 +399,7 @@ async function copyComments() {
     showToast(COMMENT_LABELS.noSelection);
     return false;
   }
-  const text = selected.map((c) => `${formatLocation(c)}\n> ${c.quote}\n\n${c.body}`).join("\n\n---\n\n");
+  const text = formatComments(selected);
   try {
     await navigator.clipboard.writeText(text);
   } catch {
@@ -402,11 +410,33 @@ async function copyComments() {
   return true;
 }
 
-/** 選んだコメントをコピーしてから、GitHub の Issue の起票画面を別のタブで開く */
+/** 起票画面の URL を組み立てる */
+function buildIssueUrl(title, body) {
+  const params = new URLSearchParams({ title, body, labels: document.body.dataset.issueLabels });
+  return `https://github.com/${document.body.dataset.issueRepo}/issues/new?${params}`;
+}
+
+/** 長さの上限に収まるまで本文の末尾を切り詰めた URL を返す */
+function fitIssueUrl(title, body) {
+  const full = buildIssueUrl(title, body);
+  if (full.length <= ISSUE_URL_MAX) return full;
+  let lo = 0;
+  let hi = body.length;
+  // 収まる本文の長さを二分探索で求める
+  while (lo < hi) {
+    const mid = Math.ceil((lo + hi) / 2);
+    if (buildIssueUrl(title, body.slice(0, mid) + ISSUE_TRUNCATED).length <= ISSUE_URL_MAX) lo = mid;
+    else hi = mid - 1;
+  }
+  return buildIssueUrl(title, body.slice(0, lo) + ISSUE_TRUNCATED);
+}
+
+/** 選んだコメントをコピーしてから、文書のパスとコメントを載せた GitHub の Issue の起票画面を別のタブで開く */
 async function openIssue() {
   if (!(await copyComments())) return;
-  const params = new URLSearchParams({ labels: document.body.dataset.issueLabels });
-  window.open(`https://github.com/${document.body.dataset.issueRepo}/issues/new?${params}`, "_blank", "noopener");
+  const selected = loadComments().filter((c) => c.selected);
+  const title = [...new Set(selected.map((c) => c.file))].join("、");
+  window.open(fitIssueUrl(title, formatComments(selected)), "_blank", "noopener");
 }
 
 if (panel) {

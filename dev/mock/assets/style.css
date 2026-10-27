@@ -1569,7 +1569,12 @@ button.mockbar__tab {
 
 /* 状態の列（理由を読める幅にする） */
 .table-wrap .col-status {
-  min-width: 16em;
+  min-width: 12em;
+}
+
+/* 設定ファイルの列（パスを途中で折り返さない） */
+.table-wrap .col-config {
+  white-space: nowrap;
 }
 
 /* 行の操作の列 */
@@ -1837,9 +1842,15 @@ button.mockbar__tab {
       border: 0;
     }
 
-    & td:nth-child(2),
+    & .col-config,
     & .col-status {
       grid-column: 1 / -1;
+    }
+
+    /* 1 枚の幅に収まらないパスは折り返す */
+    & .col-config {
+      white-space: normal;
+      overflow-wrap: anywhere;
     }
 
     & .col-actions {
