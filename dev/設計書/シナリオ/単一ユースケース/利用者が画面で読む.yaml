@@ -1,0 +1,252 @@
+title: "利用者が画面で読む"
+scenarios:
+  - name: 正常シナリオ
+    setup:
+      - name: Mock
+        description: なし（実環境で実行。ブラウザで画面を開く）
+      - name: サンプルの配信元
+        description: 文書の種類を 1 つ（スキーマと YAML 2 件）と、`nav` を持つ `dev-docs.yaml` を持つ git リポジトリ
+        notes: id `sample`。`nav.tabs[]` は 2 つ（最初のタブに YAML 2 件を並べる）
+      - name: dev-docs
+        description: sample を配信している dev-docs
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        actor U as 利用者
+        participant UI as dev-docs の画面
+        participant CV as 変換
+        participant MD as mdmark
+
+        U->>UI: GET /sample/
+        UI->>UI: nav からタブとサイドバーを組み立て、最初のタブを開く
+        UI->>CV: タブに属する文書の一覧を Markdown の表にする
+        UI->>MD: 描く
+        UI-->>U: doc-index（タブ・サイドバー・一覧の本文）
+        U->>UI: サイドバーで文書 1 を選ぶ
+        UI->>CV: 文書 1 の YAML をスキーマ駆動で Markdown にする
+        UI->>MD: 描く
+        UI-->>U: doc-view（文書 1 の本文と目次）
+      ```
+    expected:
+      - '`/sample/` が 200 で、`nav` の 2 つのタブを出し、最初のタブを選んだ状態にする'
+      - タブに属する文書の件数がタブに出る
+      - 本文に、最初のタブの文書のタイトル・概要・更新日時の表がある
+      - 文書 1 を選ぶと `/sample/{文書 1 のパス}` へ移り、スキーマの `x-heading` の項目が見出し、`x-key` の配列が表になった本文と、その見出しの目次を出す
+      - 本文の HTML が mdmark の描画の要素でできている
+    test: test_normal
+  - name: 正常シナリオ（nav が無い）
+    setup:
+      - name: Mock
+        description: なし（実環境で実行）
+      - name: nav の無い配信元
+        description: 文書の種類を 2 つ持ち、`dev-docs.yaml` に `nav` を持たない配信元
+        notes: id `plain`
+      - name: dev-docs
+        description: plain を配信している dev-docs
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        actor U as 利用者
+        participant UI as dev-docs の画面
+
+        U->>UI: GET /plain/
+        UI->>UI: nav が無いので、種類ごとにタブを作る
+        UI-->>U: doc-index（種類ごとのタブ）
+      ```
+    expected:
+      - タブが `documents[]` の 2 つの種類ごとに 1 つずつ並ぶ
+      - 各タブにその種類の文書だけが並ぶ
+    test: test_normal_when_nav_missing
+  - name: 正常シナリオ（リビジョンを切り替える）
+    setup:
+      - name: Mock
+        description: なし（実環境で実行）
+      - name: 古い commit
+        description: sample の文書 1 の `name` を変える前の commit
+        notes: 今の `default_ref` では `name` が変わっている
+      - name: dev-docs
+        description: sample を配信している dev-docs
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        actor U as 利用者
+        participant UI as dev-docs の画面
+        participant G as sample の Git の履歴
+
+        U->>UI: リビジョンの切り替えで古い commit を選ぶ
+        UI->>G: そのリビジョンを書き出して読む
+        UI-->>U: /sample@{古い commit}/{文書 1 のパス} の本文
+      ```
+    expected:
+      - URL が `/sample@{古い commit}/{文書 1 のパス}` になり、本文の `name` が古い commit の値になる
+      - トップバーに今開いているリビジョンとして古い commit が出る
+      - その画面のサイドバー・本文の中のリンクは、同じ `@{古い commit}` の URL を指す
+    test: test_normal_when_ref_switched
+  - name: 正常シナリオ（検索する）
+    setup:
+      - name: Mock
+        description: なし（実環境で実行）
+      - name: dev-docs
+        description: 正常シナリオと同じ sample を配信している dev-docs
+        notes: 文書 2 の本文だけが含む語を検索する
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        actor U as 利用者
+        participant UI as dev-docs の画面
+
+        U->>UI: トップバーの検索に語を入れる
+        UI-->>U: 一致した文書と一致した箇所の結果
+        U->>UI: 結果の文書 2 を選ぶ
+        UI-->>U: doc-view（文書 2）
+      ```
+    expected:
+      - 結果に文書 2 だけが一致した箇所つきで並ぶ
+      - 結果を選ぶと `/sample/{文書 2 のパス}` を開く
+    test: test_normal_when_searched
+  - name: 正常シナリオ（表の列を隠す）
+    setup:
+      - name: Mock
+        description: なし（実環境で実行）
+      - name: 端末の設定
+        description: '`state_dir` をテスト用の一時フォルダにした `settings.yaml`'
+      - name: dev-docs
+        description: 正常シナリオと同じ sample を配信している dev-docs
+        notes: 文書 1 の本文に 3 列の表がある
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        actor U as 利用者
+        participant UI as dev-docs の画面
+        participant SD as state_dir
+
+        U->>UI: 表の上の列の表示から 2 列目を外す
+        UI->>SD: 配信元・表ごとの列の設定を書く
+        UI-->>U: 2 列目を隠した表
+        U->>UI: 同じ文書を開き直す
+        UI->>SD: 列の設定を読む
+        UI-->>U: 2 列目を隠した表
+      ```
+    expected:
+      - 表の 2 列目が表示されない
+      - 開き直しても 2 列目が表示されない
+      - '`state_dir` に列の設定のファイルがあり、配信元のフォルダは変わらない'
+    test: test_normal_when_column_hidden
+  - name: 正常シナリオ（配信元の変換を使う）
+    setup:
+      - name: Mock
+        description: なし（実環境で実行）
+      - name: 変換を持つ配信元
+        description: '`converters[]` に、標準入力の YAML から決まった見出しの Markdown を出すスクリプトを持ち、文書の種類の 1 つがそれを指す配信元'
+        notes: id `custom`
+      - name: 埋め込みのマーカー
+        description: custom の Markdown の文書。本文に、別の YAML を表として入れる埋め込みのマーカーを置く
+      - name: dev-docs
+        description: custom を配信している dev-docs
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        actor U as 利用者
+        participant UI as dev-docs の画面
+        participant SC as 配信元のスクリプト
+        participant MD as mdmark
+
+        U->>UI: converters を指す種類の文書を開く
+        UI->>SC: 標準入力に YAML を渡す
+        SC-->>UI: 標準出力の Markdown
+        UI->>MD: 描く
+        UI-->>U: スクリプトの Markdown を描いた本文
+        U->>UI: 埋め込みのマーカーを持つ Markdown の文書を開く
+        UI->>UI: マーカーを YAML の表の Markdown に置き換える
+        UI->>MD: 描く
+        UI-->>U: 表を含む本文
+      ```
+    expected:
+      - converters を指す種類の文書の本文に、スクリプトが出した見出しが出る
+      - その他の種類の文書はスキーマ駆動の変換で描かれる
+      - 埋め込みのマーカーの場所に、指した YAML の内容の表が出て、マーカーの文字列は出ない
+    test: test_normal_when_custom_converter
+  - name: 異常シナリオ（無い文書を開く）
+    setup:
+      - name: Mock
+        description: なし（実環境で実行）
+      - name: dev-docs
+        description: 正常シナリオと同じ sample を配信している dev-docs
+        notes: '`/sample/no-such-doc` を開く'
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        actor U as 利用者
+        participant UI as dev-docs の画面
+
+        U->>UI: GET /sample/no-such-doc
+        UI-->>U: 404 の not-found（無いのは文書）
+      ```
+    expected:
+      - 応答が 404 で、本文に無いのが文書であることと、開こうとしたパスが出る
+      - 配信元のトップ `/sample/` へのリンクがある
+    test: test_error_when_doc_not_found
+  - name: 異常シナリオ（無いリビジョンを開く）
+    setup:
+      - name: Mock
+        description: なし（実環境で実行）
+      - name: dev-docs
+        description: 正常シナリオと同じ sample を配信している dev-docs
+        notes: '`/sample@no-such-branch/` を開く'
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        actor U as 利用者
+        participant UI as dev-docs の画面
+
+        U->>UI: GET /sample@no-such-branch/
+        UI-->>U: 404 の not-found（無いのはリビジョン）
+      ```
+    expected:
+      - 応答が 404 で、本文に無いのがリビジョン `no-such-branch` であることが出る
+    test: test_error_when_ref_not_found
+  - name: 異常シナリオ（変換のスクリプトが失敗する）
+    setup:
+      - name: Mock
+        description: なし（実環境で実行）
+      - name: 止まらないスクリプト
+        description: custom の `converters[]` のスクリプトを、制限時間より長く待つものに差し替える
+        notes: 制限時間は非機能要件の値
+      - name: dev-docs
+        description: custom を配信している dev-docs
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        actor U as 利用者
+        participant UI as dev-docs の画面
+        participant SC as 配信元のスクリプト
+
+        U->>UI: converters を指す種類の文書を開く
+        UI->>SC: 標準入力に YAML を渡す
+        UI->>SC: 制限時間を超えたので止める
+        UI-->>U: 本文の場所に変換の失敗を出す
+      ```
+    expected:
+      - 本文の場所に、変換に失敗したこと・種類・スクリプトのパス・制限時間を超えたことが出る
+      - スクリプトのプロセスが残っていない
+      - 同じ配信元の、スキーマ駆動で変換する文書は描ける
+    test: test_error_when_converter_timed_out
+lead: 利用者がブラウザで `/{配信元の id}/` を開き、タブ・サイドバー・検索・リビジョンの切り替えで配信元の文書を読む。
+issue: 3
+primary_actor: 利用者
+stakeholders:
+  - name: 利用者
+    interest: YAML の正本の文書が、表・見出し・図に描かれた本文で読める。過去のリビジョンも同じ画面で開ける
+  - name: 各配信元
+    interest: '`nav` と `converters[]` を書けば、画面の構成と本文の変換を配信元の設定だけで決められる'
+trigger: 利用者がブラウザで配信元の URL を開く
+preconditions:
+  - dev-docs が起動し、配信元を配信している
+success_guarantee: 開いた配信元・リビジョンの文書が、変換した Markdown を mdmark で描いた本文で出る。
+minimal_guarantee: 無い配信元・文書・リビジョンは 404 で、何が無いかを出す。変換に失敗した文書は、失敗したことと原因を出し、他の文書は読める。
+frequency: 作業のたび
+priority: 高
+refs:
+  - dev/設計書/シナリオ/複合ユースケース/dev-docsで文書を配信して読み書きする#scenarios[正常シナリオ]
+notes:
+  / の画面: '`/` に何を出すか（配信元の一覧 `source-list` か、`not-found`）はモック作成で決める。決まったら、このユースケースにそのシナリオを置く。'

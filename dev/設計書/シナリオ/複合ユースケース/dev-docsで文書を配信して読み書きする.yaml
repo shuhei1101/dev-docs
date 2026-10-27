@@ -38,6 +38,12 @@ scenarios:
           S9["dev-docs を更新する:正常シナリオ"]
         end
         S0 --> S2 --> S1 --> S3 --> S4 --> S5 --> S6 --> S7 --> S8 --> S9
+        click S2 "../単一ユースケース/起動する.yaml#正常シナリオ"
+        click S3 "../単一ユースケース/エージェントが調べる.yaml#正常シナリオ"
+        click S4 "../単一ユースケース/エージェントが書き込む.yaml#正常シナリオ"
+        click S5 "../単一ユースケース/変更をレビューする.yaml#正常シナリオ"
+        click S6 "../単一ユースケース/利用者が画面で読む.yaml#正常シナリオ"
+        click S7 "../単一ユースケース/YAMLを直接編集した.yaml#正常シナリオ"
       ```
     expected:
       - '`127.0.0.1:8781` を待ち受ける dev-docs のプロセスが 1 つだけある'
@@ -57,6 +63,13 @@ scenarios:
       順序: S1 の `check_project` と `reload` は管理の MCP を呼ぶため、A-23 の番号と違い、S2（起動）を S1 の前に置く。
       commit: S4 と S5 の間で、エージェントが `write_docs` の変更をワークツリーで `git commit` する。dev-docs は commit しない（D-105）。
       起動したセッション: フックがサーバーを起動したそのセッションでは MCP の接続が間に合わず、`/mcp` でつなぎ直す（PoC 2 の結果）。
+    uses:
+      - dev/設計書/シナリオ/単一ユースケース/起動する#scenarios[正常シナリオ]
+      - dev/設計書/シナリオ/単一ユースケース/エージェントが調べる#scenarios[正常シナリオ]
+      - dev/設計書/シナリオ/単一ユースケース/エージェントが書き込む#scenarios[正常シナリオ]
+      - dev/設計書/シナリオ/単一ユースケース/変更をレビューする#scenarios[正常シナリオ]
+      - dev/設計書/シナリオ/単一ユースケース/利用者が画面で読む#scenarios[正常シナリオ]
+      - dev/設計書/シナリオ/単一ユースケース/YAMLを直接編集した#scenarios[正常シナリオ]
   - name: 異常シナリオ（配信できない配信元がある）
     setup:
       - name: Mock
@@ -86,6 +99,8 @@ scenarios:
           S8["設定・スクリプトを変える:正常シナリオ"]
         end
         S2 --> S3 --> S8
+        click S2 "../単一ユースケース/起動する.yaml#異常シナリオ設定の検証に失敗する"
+        click S3 "../単一ユースケース/エージェントが調べる.yaml#正常シナリオ"
       ```
     expected:
       - 起動の直後、画面の `/broken/` が 404 を返し、`/sample/` と `/mcp` は応答する
@@ -95,6 +110,10 @@ scenarios:
       - 'broken の `dev-docs.yaml` を直して `reload` した後、`source: broken` の `search_docs` が文書を返す'
       - '`reload` の前後で `/mcp` のセッションが切れない'
     test: test_error_when_source_config_invalid
+    uses:
+      - dev/設計書/シナリオ/単一ユースケース/起動する#scenarios[異常シナリオ（設定の検証に失敗する）]
+      - dev/設計書/シナリオ/単一ユースケース/エージェントが調べる#scenarios[正常シナリオ]
+      - dev/設計書/シナリオ/単一ユースケース/エージェントが調べる#scenarios[異常シナリオ（配信していない配信元を指す）]
 lead: 利用者が dev-docs を入れて端末の設定に配信元を並べ、エージェントが文書の MCP で、利用者が画面で、その配信元の YAML の文書を読み書きする。設定・スクリプトの変更と dev-docs の更新を経ても配信が続く。
 issue: 2
 primary_actor: 利用者
