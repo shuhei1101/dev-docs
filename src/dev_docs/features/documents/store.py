@@ -45,7 +45,7 @@ class DocumentStore:
         self._dates: dict[tuple[Path, str], dict[str, FileDates]] = {}
         self._lock = threading.Lock()
 
-    def _read_root(self, target: Target) -> Path:
+    def read_root(self, target: Target) -> Path:
         """読むフォルダを決める（`ref` があればリビジョンを書き出す）。"""
         if target.ref is None:
             return target.base
@@ -124,7 +124,7 @@ class DocumentStore:
 
     def load(self, target: Target, *, kinds: Sequence[str] | None = None) -> LoadResult:
         """読む場所の文書を、文書の行ごとに集めて返す。"""
-        root = self._read_root(target)
+        root = self.read_root(target)
         tables = self._tables(target, kinds)
         dates = self._file_dates(target)
         documents: list[Document] = []
@@ -194,7 +194,7 @@ class DocumentStore:
         base = source.root / table.schema_path
         if target.ref is None and target.worktree is None:
             return resolve_schema_refs(startup, base)
-        path = self._read_root(target) / table.schema_path
+        path = self.read_root(target) / table.schema_path
         try:
             stat = path.stat()
         except OSError:
