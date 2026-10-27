@@ -18,7 +18,7 @@ directory: |-
   ├─ doc_view.html                # 文書の画面
   ├─ not_found.html               # 見つからない画面
   ├─ settings.html                # 設定画面（端末の設定の入口が描く）
-  └─ components/error_panel.html  # error_panel マクロ（変換の失敗・保存の失敗のまとめ）
+  └─ components/error_panel.html  # error_panel マクロ（部品『エラーの囲み』）
   ```
 diagrams:
   - name: 全体
@@ -96,6 +96,12 @@ constants:
     usecase: 文書の画面
     summary: 画面のスクリプトが読む mdmark の配布物（GitHub のタグを固定した jsDelivr）
     value: '"https://cdn.jsdelivr.net/gh/shuhei1101/mdmark@v0.8.0/dist/index.js"'
+  - name: MDMARK_CSS_URL
+    title: mdmark のスタイルの読み込み元
+    container: features/view/page.py
+    usecase: 文書の画面
+    summary: '`base.html` が読む mdmark のスタイル（`MDMARK_URL` と同じタグ）'
+    value: '"https://cdn.jsdelivr.net/gh/shuhei1101/mdmark@v0.8.0/dist/index.css"'
   - name: SEARCH_QUERY_MAX
     title: 検索の語の文字数の上限
     container: features/view/search.py
@@ -808,7 +814,7 @@ functions:
          - `page` があれば文書のページの特定。無ければ `DocumentNotFoundError`（`missing` に `page`）を送る
       4. 文書を変換する（変換.変換する）。失敗は `converted.failure` として本文の場所に出す
       5. `diff_ref` があり Git の配信元なら、そのリビジョンの読む場所で同じ ID の文書を引いて変換し、差分の元にする（無い文書は空の Markdown）。Git 管理外は無視する
-      6. `doc_view.html` を、タブ（開いた文書を含むタブを選ぶ）・サイドバー・パンくず・文書の情報（種類・ID・`updated`）・本文・差分の元・画面の状態・`MDMARK_URL` で描く
+      6. `doc_view.html` を、タブ（開いた文書を含むタブを選ぶ）・サイドバー・パンくず・文書の情報（種類・ID・`updated`）・本文・差分の元・画面の状態・`MDMARK_URL`・`MDMARK_CSS_URL` で描く
     exceptions:
       - name: DocumentNotFoundError
         condition: 無い文書
@@ -874,11 +880,11 @@ functions:
       description: '`error.status` の not-found'
     process: |-
       1. パスを画面のパスの分解で分け、配信元が配信中なら、その配信元を見つからなかったものの文脈にする
-      2. 見つからなかったものを次のように決める
-         - `UnknownSourceError`・`SourceNotServedError` は配信元（配信していない配信元は違反の理由も）
-         - `RefNotFoundError` はリビジョン
-         - `DocumentNotFoundError` は文書
-         - それ以外はエラーの名前と `message`
+      2. 見つからなかったものの行（`{label, value}`）を、画面設計『見つからない画面』の『見つからなかったもの』の `rows` のとおりに作る
+         - `UnknownSourceError`・`SourceNotServedError` は `配信元`（配信していない配信元は `理由` も）
+         - `RefNotFoundError` は `配信元` と `リビジョン`
+         - `DocumentNotFoundError` は `配信元` と `文書`
+         - それ以外は `エラー`（エラーの名前と `message`）
       3. 次のリンクに、配信中の配信元のトップと設定画面を並べる
       4. `not_found.html` を画面の状態と描く
     unit_tests:
@@ -887,7 +893,7 @@ functions:
         summary: 無い配信元
         condition: '`UnknownSourceError("none")`、配信中は sample'
         mock: 画面のテンプレート（偽物）
-        expected: 404 で、見つからなかったものが配信元の none、次のリンクに sample と設定
+        expected: 404 で、見つからなかったものの行が `配信元` の 1 行（値 `` `none` は配信していません。``）、次のリンクに sample と設定
   - name: build_view_router
     title: 画面の入口
     kind: 関数
@@ -957,7 +963,9 @@ components:
     usecase: 文書の画面
     kind: 画面
     summary: トップバー・タブ・サイドバー・本文・目次・コメントのパネルを描く
-    description: '`base.html` を継ぐ。本文は `<textarea hidden data-mdmark-source>`、差分の元は `<textarea hidden data-mdmark-diff-source>` に入れ、画面のスクリプトが mdmark で描く。要素は画面設計『文書の画面』。'
+    description: |-
+      `base.html` を継ぐ。本文は `<textarea hidden data-mdmark-source>`、差分の元は `<textarea hidden data-mdmark-diff-source>` に入れ、画面のスクリプトが mdmark で描く。要素は画面設計『文書の画面』。
+      変換の失敗は `error_panel` で、`label` を `変換の失敗（{理由}）`、`title` を `この文書を変換できませんでした`、`rows` を `種類`・`スクリプト`（`script` が `None` のときは `ファイル`）・`原因`（`ConvertFailure.detail`。終了コードと標準エラーの末尾は改行で繋ぐ）にして描く。
     props:
       - name: tabs
         type: list[NavTab]
@@ -991,18 +999,22 @@ components:
         type: str
         required: true
         description: '`MDMARK_URL`'
+      - name: mdmark_css_url
+        type: str
+        required: true
+        description: '`MDMARK_CSS_URL`。`base.html` の `head` に `<link rel="stylesheet">` で読む'
   - name: not_found.html
     title: 見つからない画面のテンプレート
     container: server/templates/not_found.html
     usecase: 共通
     kind: 画面
     summary: 何が見つからなかったかと次のリンクを描く
-    description: '`base.html` を継ぐ。要素は画面設計『見つからない画面』。'
+    description: '`base.html` を継ぐ。見つからなかったものは `error_panel` に `label` を `見つからなかったもの`、`rows` を `missing_rows` で渡して描く。要素は画面設計『見つからない画面』。'
     props:
-      - name: missing
-        type: dict[str, str]
+      - name: missing_rows
+        type: list[dict[str, str]]
         required: true
-        description: '`{kind, value, reason}`（`kind` は source・ref・document・error）'
+        description: '`{label, value}` の並び（エラーの画面の手順 2）'
       - name: links
         type: list[tuple[str, str]]
         required: true
@@ -1028,25 +1040,30 @@ components:
         required: true
         description: '`sources[]` の各行に配信元の状態（`status`・`errors`・`config_version`）を重ねたもの。画面の状態にも同じ値を埋め込む'
   - name: error_panel
-    title: エラーのパネル
+    title: エラーの囲み
     container: server/templates/components/error_panel.html
     usecase: 共通
     kind: コンポーネント
-    summary: 見出しと違反の行の並びを描く Jinja2 のマクロ（変換の失敗・保存の失敗のまとめ）
+    summary: 項目と値の組を並べる Jinja2 のマクロ。引数と状態は部品設計『エラーの囲み』
     props:
-      - name: title
+      - name: label
         type: str
         required: true
-        description: 見出し
-      - name: rows
-        type: list[dict[str, str]]
-        required: true
-        description: '`{path, reason}` の並び。`path` は省ける'
-      - name: detail
+        description: 囲みの読み上げ名（`aria-label`）
+      - name: title
         type: str | None
         required: false
         default: None
-        description: 標準エラーの末尾など `<pre>` で出す補足
+        description: 見出し（`None` は出さない）
+      - name: rows
+        type: list[dict[str, str]]
+        required: true
+        description: '`{label, value}` の並び。`value` の改行はそのまま折り返して出す'
+      - name: next
+        type: str | None
+        required: false
+        default: None
+        description: 次にできることの案内（`None` は出さない）
 refs:
   - dev/設計書/インターフェース定義/開発ドキュメントサーバー/文書の画面#
   - dev/設計書/インターフェース定義/開発ドキュメントサーバー/画面の検索#
@@ -1054,3 +1071,4 @@ refs:
   - dev/設計書/インターフェース定義/開発ドキュメントサーバー/表の列の設定の保存#
   - dev/設計書/画面設計/文書の画面.html#
   - dev/設計書/画面設計/見つからない画面.html#
+  - dev/設計書/部品設計/エラーの囲み.html#

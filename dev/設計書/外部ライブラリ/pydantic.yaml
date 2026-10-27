@@ -37,9 +37,15 @@ used_in:
   - src/dev_docs/features/
   - src/dev_docs/server/mcp/
 verification:
-  state: 未確認
-  detail: モジュール構成設計で使い方を決めた段階で、まだ動かしていない
+  state: 済
+  date: '2026-10-28'
+  detail: 'pydantic 2.14.1・mcp 2.3.0・Python 3.14 で、`ConfigDict(extra="forbid")` のモデルが余計なキーを `extra_forbidden` で弾くこと、`MCPServer` のツールの引数を `Annotated[str | None, Field(validation_alias="from")]` にすると入力のスキーマに `from` が出て関数には `from_` で渡ること、`Literal` の引数が `enum` になり外れた値が検証の誤りになることを確かめた'
 install: |-
   ```bash
   uv add 'pydantic>=2.14.1'
   ```
+limitations:
+  - item: ツールの引数の `alias`
+    content: mcp 2.3.0 は引数を `alias` の名前で関数へ渡すため、`Field(alias="from")` は関数の呼び出しで `TypeError` になる。`validation_alias` を使う
+  - item: ツールの余計な引数
+    content: 'mcp 2.3.0 が関数の引数から作るモデルは `additionalProperties: false` を持たず、知らないキーを黙って捨てる'

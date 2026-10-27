@@ -16,6 +16,7 @@ diagrams:
         配信元の説明 ..> 作業場所の説明 : 引数なし
         配信元の説明 ..> 使える配信元 : 引数なし
         配信元の説明 ..> 読む場所の解決 : source
+        配信元の説明 ..> 作業場所の配信元の読み込み : 作業ツリー・ワークツリー
         配信元の説明 ..> 文書の行を引く : kind
         class 配信元の説明 {
           <<function>>
@@ -29,12 +30,16 @@ diagrams:
         class 読む場所の解決 {
           <<function>>
         }
+        class 作業場所の配信元の読み込み {
+          <<function>>
+        }
         class 文書の行を引く {
           <<method>>
         }
         click 作業場所の説明 href "./権限と作業場所.py.yaml#作業場所の説明"
         click 使える配信元 href "./権限と作業場所.py.yaml#使える配信元"
         click 読む場所の解決 href "./権限と作業場所.py.yaml#読む場所の解決"
+        click 作業場所の配信元の読み込み href "./配信元.py.yaml#作業場所の配信元の読み込み"
         click 文書の行を引く href "./配信元.py.yaml#配信中の配信元"
 data_models:
   - name: DescribeRequest
@@ -197,7 +202,7 @@ functions:
     process: |-
       1. `kind` があって `source` が無い場合、`InvalidArgumentError`（`kind` には `source` が要ります）を送る
       2. `source` が無い場合、作業場所の説明と使える配信元を返す（使える配信元が 0 件でも返す）
-      3. `source` がある場合、読む場所を解く（読む場所の解決。`source`・`worktree`・`cwd`）。作業中の配信元の作業ツリーかワークツリーを読むときは、その場所の設定を読み直した配信元を使う
+      3. `source` がある場合、読む場所を解く（読む場所の解決。`source`・`worktree`・`cwd`）。作業中の配信元の作業ツリーかワークツリーを読むときは、その場所の設定を読み直した配信元を使う（作業場所の配信元の読み込み）
       4. `kind` が無い場合、`instructions` と、有効な文書の行ごとの種類の概要（スキーマは文書のストア.種類のスキーマ）を返す
       5. `kind` がある場合、文書の行を引き（無ければ `UnknownKindError`）、`target.base` の `schema` のファイルの内容と読んだスキーマを返す
     exceptions:
@@ -210,6 +215,9 @@ functions:
       - name: SourceNotServedError
         condition: 配信していない配信元を指した
         message: '`{id} は配信していません`'
+      - name: ValidationFailedError
+        condition: 作業場所の配信元の読み込みが送る（作業ツリーかワークツリーの設定が無い・検証に通らない）
+        message: '違反ごとに `{id}: {パス}: {理由}`'
       - name: UnknownKindError
         condition: '`kind` が配信元の種類に無い'
         message: '`{source}: 種類 {kind} はありません`'
@@ -239,6 +247,19 @@ functions:
         mock: なし
         expected: '`UnknownKindError` の `kinds` に sample の種類'
         exception: '`kind` が配信元の種類に無い'
+      - name: test_describe_when_worktree
+        case: 正常
+        summary: ワークツリーの設定で説明する
+        condition: '`cwd` が sample のワークツリーで、ワークツリーの `dev-docs.yaml` の `instructions` を書き換えた'
+        mock: なし（一時フォルダで `git worktree add`）
+        expected: '`instructions` がワークツリーの値'
+      - name: test_describe_when_worktree_config_invalid
+        case: 異常
+        summary: ワークツリーの設定が検証に通らない
+        condition: '`cwd` が sample のワークツリーで、ワークツリーの `documents[0]` に `paths` が無い'
+        mock: なし
+        expected: '`ValidationFailedError` で違反が `documents[0].paths`'
+        exception: 作業場所の配信元の読み込みが送る
   - name: render_describe_markdown
     title: 説明の Markdown
     kind: 関数

@@ -22,7 +22,7 @@ diagrams:
         端末の設定の入口 ..> 同じオリジンの確認 : PUT の前
         配信元の保存 ..> 端末の設定の検証 : 書く前
         端末の設定の読み込み ..> 端末の設定の検証 : 読んだ後
-        配信元の保存 ..> 配信元の一覧 : 読み直す
+        配信元の保存 ..> 配信元の読み直し : 書いた後
         端末の設定の読み込み ..> 端末の設定 : 返す
         class 端末の設定の入口 {
           <<function>>
@@ -39,15 +39,15 @@ diagrams:
         class 同じオリジンの確認 {
           <<function>>
         }
-        class 配信元の一覧 {
-          +読み直す(端末の設定) list
+        class 配信元の読み直し {
+          <<function>>
         }
         class 端末の設定 {
           +配信元: list
           +状態の置き場所: Path
         }
         click 同じオリジンの確認 href "./共通.py.yaml#同じオリジンの確認"
-        click 配信元の一覧 href "./配信元.py.yaml#配信元の一覧"
+        click 配信元の読み直し href "./起動.py.yaml#配信元の読み直し"
 data_models:
   - name: SourceScope
     title: 配信元の権限の範囲
@@ -445,12 +445,12 @@ functions:
         required: true
         passing: injected
         description: 端末の設定のパス
-      - name: registry
-        title: 配信元の一覧
-        type: SourceRegistry
+      - name: reload
+        title: 配信元の読み直し
+        type: Callable[[TerminalConfig], list[SourceStatus]]
         required: true
         passing: injected
-        description: 読み直す配信元の一覧
+        description: 起動の『配線済みの関数』の `reload_sources`
       - name: lock
         title: 端末の設定の排他
         type: threading.Lock
@@ -467,7 +467,7 @@ functions:
          - 違反がある場合、ファイルを書かずに `TerminalConfigInvalidError` を送る
       4. 一時ファイルに書いてから置き換える（往復編集の書き出し・ファイルの置き換え）
          - `[info]` 端末の設定の sources を保存した（パス・行数）
-      5. 端末の設定を読み直し（端末の設定の読み込み）、配信元の一覧を読み直して状態を返す（配信元の一覧.読み直し）
+      5. 端末の設定を読み直し（端末の設定の読み込み）、`reload` で配信元を読み直して状態を返す（起動の『配信元の読み直し』）
     exceptions:
       - name: TerminalConfigInvalidError
         condition: 置き換えた後の端末の設定がスキーマに通らない
@@ -478,19 +478,19 @@ functions:
         case: 正常
         summary: sources だけを書き換えコメントを保つ
         condition: '`port` にコメントを持つ設定に、行を 1 つ足した `sources`'
-        mock: 配信元の一覧（`reload` が `serving` を 2 つ返す関数を持つ偽物）
+        mock: 配信元の読み直し（`serving` を 2 つ返す偽物）
         expected: ファイルの `sources` が 2 行で、`port` の行とコメントはそのまま。`reload` が書いた後の設定で 1 回呼ばれる
       - name: test_save_sources_when_defaults
         case: 正常
         summary: 既定値のキーを書かない
         condition: '`enabled: true`・`scope.read: []` の行'
-        mock: 配信元の一覧（偽物）
+        mock: 配信元の読み直し（偽物）
         expected: ファイルの行に `enabled` と `scope` が無い
       - name: test_save_sources_when_invalid
         case: 異常
         summary: 検証に通らない
         condition: '2 行とも `id: a`'
-        mock: 配信元の一覧（偽物）
+        mock: 配信元の読み直し（偽物）
         expected: '`TerminalConfigInvalidError` で、ファイルは元のまま、`reload` は呼ばれない'
         exception: 置き換えた後がスキーマに通らない
   - name: build_settings_router
@@ -507,14 +507,14 @@ functions:
         type: Handlers
         required: true
         passing: positional
-        description: 起動の『配線済みの関数』。`save_sources`・配信元の状態・画面のテンプレートを引く
+        description: 起動の『配線済みの関数』。配信元の状態・画面のテンプレート・`reload_sources`・`settings_lock` を引く
     returns:
       type: fastapi.APIRouter
       description: 3 つのルートを持つルーター
     process: |-
       1. GET `/` は `/_settings/` への 302 を返す
       2. GET `/_settings/` は、端末の設定のパスと `sources[]` の各行に配信元の状態を重ねた画面の状態を作り、`settings.html` を描いて返す（配信元の一覧.状態の一覧）
-      3. PUT `/_api/settings/sources` は、同じオリジンの確認を依存に持ち（同じオリジンの確認）、本文を `SettingsSourcesRequest` で受けて『配信元の保存』を `asyncio.to_thread` で呼び、`SettingsSourcesResponse` を返す（配信元の保存）
+      3. PUT `/_api/settings/sources` は、同じオリジンの確認を依存に持ち（同じオリジンの確認）、本文を `SettingsSourcesRequest` で受けて『配信元の保存』を `reload=handlers.reload_sources`・`lock=handlers.settings_lock` で `asyncio.to_thread` で呼び、`SettingsSourcesResponse` を返す（配信元の保存）
          - `TerminalConfigInvalidError` は例外の変換で 422 の problem+json になる
     unit_tests:
       - name: test_build_settings_router_when_root

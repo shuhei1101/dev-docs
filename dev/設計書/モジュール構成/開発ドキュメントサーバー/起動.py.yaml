@@ -5,7 +5,7 @@ lead: |-
 directory: |-
   ```text
   src/dev_docs/
-  ├─ main.py                    # Handlers / build_handlers / run_serve / PortInUseError
+  ├─ main.py                    # Handlers / build_handlers / reload_sources / run_serve / PortInUseError
   └─ server/
      ├─ app.py                  # build_app（ルートと MCP のマウント）
      ├─ lifespan.py             # build_lifespan（MCP のセッションの管理と記録の削除）
@@ -22,6 +22,8 @@ diagrams:
         待ち受けの開始 ..> アプリの組み立て
         部品の配線 ..> 配信元の一覧 : 読み直す
         部品の配線 ..> 配線済みの関数 : 作る
+        部品の配線 ..> 配信元の読み直し : 束ねる
+        配信元の読み直し ..> 配信元の一覧 : 読み直す
         アプリの組み立て ..> 文書の MCP の組み立て
         アプリの組み立て ..> 管理の MCP の組み立て
         アプリの組み立て ..> 端末の設定の入口
@@ -41,6 +43,9 @@ diagrams:
           <<function>>
         }
         class アプリの組み立て {
+          <<function>>
+        }
+        class 配信元の読み直し {
           <<function>>
         }
         class 配信元の一覧 {
@@ -140,6 +145,11 @@ data_models:
         type: ColumnSettings
         access: 公開
         description: 画面の表の隠す列（画面）
+      - name: reload_sources
+        title: 配信元の読み直し
+        type: Callable[[TerminalConfig], list[SourceStatus]]
+        access: 公開
+        description: '『配信元の読み直し』をこの `Handlers` の部品で束ねたもの。配信元の保存が呼ぶ'
 classes:
   - name: PortInUseError
     title: ポートが使用中
@@ -323,7 +333,7 @@ functions:
       1. `state_dir` を作る
       2. 配信元の一覧を作り、端末の設定で読み直す（配信元の一覧.読み直す）。検証で外した配信元があっても続ける
       3. リビジョンの書き出し（`{state_dir}/snapshots`）・文書のストア・変換（`{state_dir}/converted`、制限時間は `script_timeout_sec`）・会話の記録（`{state_dir}/seen.sqlite3`、保持日数は `seen_retention_days`）・文書の検査（制限時間は `script_timeout_sec`）・配信元ごとの排他・表の列の設定（`{state_dir}/columns`）・画面のテンプレートを作る
-      4. これらを持つ `Handlers` を返す
+      4. これらと、『配信元の読み直し』をこれらの部品で束ねた関数を持つ `Handlers` を返す
     unit_tests:
       - name: test_build_handlers
         case: 正常
@@ -331,6 +341,61 @@ functions:
         condition: '`state_dir` が無い一時フォルダの下、配信できる配信元 1 つと検証に失敗する配信元 1 つ'
         mock: なし
         expected: '`state_dir` ができ、`registry.served()` が 1 つ、`registry.statuses()` が 2 つ'
+  - name: reload_sources
+    title: 配信元の読み直し
+    kind: 関数
+    container: main.py
+    usecase: 設定画面で端末の設定を変える
+    role: 合成の起点
+    summary: 配信元の一覧を読み直し、配信元の内容を控えた部品の控えを捨てる
+    scope: public
+    thread_safe: true
+    side_effects: 配信元の一覧を入れ替え、文書のストア・文書の検査・変換の控えを捨てる
+    args:
+      - name: terminal
+        title: 端末の設定
+        type: TerminalConfig
+        required: true
+        passing: positional
+        description: 読み直す端末の設定
+      - name: registry
+        title: 配信元の一覧
+        type: SourceRegistry
+        required: true
+        passing: injected
+        description: 読み直す配信元の一覧
+      - name: store
+        title: 文書のストア
+        type: DocumentStore
+        required: true
+        passing: injected
+        description: 控えを捨てる
+      - name: checker
+        title: 文書の検査
+        type: DocumentChecker
+        required: true
+        passing: injected
+        description: 控えを捨てる
+      - name: converter
+        title: 変換
+        type: ConvertService
+        required: true
+        passing: injected
+        description: 控えを捨てる
+    returns:
+      type: list[SourceStatus]
+      description: 読み直した後の配信元ごとの状態
+    process: |-
+      1. 配信元の一覧を読み直す（配信元の一覧.読み直す）
+      2. 文書のストア・文書の検査・変換の控えを捨てる（文書のストア.全て捨てる・文書の検査.控えを捨てる・変換.控えを捨てる）
+      3. 手順 1 の状態を返す
+    unit_tests:
+      - name: test_reload_sources
+        case: 正常
+        summary: 読み直してから控えを捨てる
+        condition: 配信元 1 つの端末の設定
+        mock: 配信元の一覧・文書のストア・文書の検査・変換（呼ばれた順を記録する偽物）
+        expected: '`registry.reload` が端末の設定で 1 回呼ばれた後に `store.clear`・`checker.clear`・`converter.clear` が 1 回ずつ呼ばれ、`reload` の状態を返す'
   - name: build_app
     title: アプリの組み立て
     kind: 関数
@@ -353,7 +418,7 @@ functions:
       1. 文書の MCP と管理の MCP を組み立てる（文書の MCP の組み立て・管理の MCP の組み立て）
       2. 2 つの MCP と会話の記録を渡して寿命を作り（アプリの寿命）、`FastAPI(lifespan=..., docs_url=None, redoc_url=None, openapi_url=None)` を作る
       3. 例外の変換を登録する（例外の変換の登録）
-      4. `DOCS_MCP_PATH` に文書の MCP、`ADMIN_MCP_PATH` に管理の MCP の Streamable HTTP のアプリをマウントする（MCP 側のパスは `/`）
+      4. `DOCS_MCP_PATH` に文書の MCP、`ADMIN_MCP_PATH` に管理の MCP の `streamable_http_app(streamable_http_path="/", stateless_http=True, json_response=True)` をマウントする
       5. `STATIC_PATH` に配布に同梱する `server/static/` を `StaticFiles` でマウントする
       6. 端末の設定の入口、画面の入口の順にルーターを登録する（画面の `/{source}/...` より `/_settings/`・`/_api/` を先に当てる）
       7. アプリを返す

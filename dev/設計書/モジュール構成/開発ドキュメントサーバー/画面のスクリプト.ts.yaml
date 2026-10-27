@@ -2,6 +2,9 @@ title: "開発ドキュメントサーバー / 画面のスクリプト"
 lead: |-
   画面のブラウザ側の振る舞い。手本はモック `dev/mock/refs/12/assets/mock.js`（モック専用の状態の切り替えは持たない）。
   `.ts` を `tsc` で同じフォルダの `.js` にし、配布に同梱するため生成した `.js` もコミットする（コミットする生成物はディレクトリ構成の `.js` の行に限る）。
+  単体テストは `tests/` の `.test.ts` が生成した `.js` を import し、`node --test` で動かす（`tsconfig.json` の `include` に入れない）。
+test_files:
+  - tests/unit/server/static/comments.test.ts
 directory: |-
   ```text
   src/dev_docs/server/static/
@@ -284,6 +287,7 @@ functions:
     process: |-
       1. `article.markdown-body` が無ければ何もしない（文書が無い・変換の失敗）
       2. `import(MDMARK_URL)` で mdmark を読む（URL は `data-mdmark-url` から取る）
+         - 読めない場合、`console.error` に URL と例外を出して終える
       3. `data-mdmark-diff-source` があれば、`revisions` が `current`（`diff.current_commit`・`diff.current_date`）と `previous`（`diff.commit`・`diff.date`）を返し、`content` が各 Markdown を返す差分の元で `mount` する。無ければ `markdown` だけで `mount` する
       4. 描いた後、目次の組み立てと列の表示を呼ぶ
   - name: buildToc

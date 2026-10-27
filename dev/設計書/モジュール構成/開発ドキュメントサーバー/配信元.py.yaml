@@ -8,7 +8,7 @@ directory: |-
   ├─ __init__.py   # 公開する型と関数の再エクスポート
   ├─ types.py      # SourceConfig / DocumentTable / ScriptEntry / ServedSource / SourceStatus
   ├─ merge.py      # merge_configs（設定の YAML のマージ）
-  ├─ service.py    # load_source / validate_source_config / check_scripts / compare_config_version
+  ├─ service.py    # load_source / load_source_at / validate_source_config / check_scripts / compare_config_version
   └─ registry.py   # SourceRegistry（配信元の一覧と読み直し）
   schemas/
   └─ dev-docs.schema.yaml   # 配信元の設定のスキーマ（JSON Schema 2020-12）
@@ -835,6 +835,61 @@ functions:
         condition: '`git init` していない一時フォルダ'
         mock: なし
         expected: '`is_git` が `False`、`repo_root` が `None`'
+  - name: load_source_at
+    title: 作業場所の配信元の読み込み
+    kind: 関数
+    container: features/sources/service.py
+    usecase: 説明
+    role: サービス
+    summary: 配信中の配信元の設定を、作業ツリーかワークツリーの同じ場所から読み直した配信元を作る
+    scope: public
+    thread_safe: true
+    args:
+      - name: source
+        title: 配信中の配信元
+        type: ServedSource
+        required: true
+        passing: positional
+        description: 読み直す配信元
+      - name: root
+        title: 読む場所の直下
+        type: Path
+        required: true
+        passing: positional
+        description: 作業ツリーかワークツリーの直下
+    returns:
+      type: ServedSource
+      description: '`root` の設定で作った配信元（ID・`scope_read`・`scope_write` は `source` のまま）'
+    process: |-
+      1. `source.config_files` を `source.repo_root`（無ければ `source.root`）からの相対パスにし、`root` の下の同じパスにする
+      2. 配信元の読み込みの手順 2〜6・8〜9 を、配信元の読み込みと同じ内部の関数で行う（設定のバージョンは比べない）
+         - 違反がある場合、その違反を持つ `ValidationFailedError` を送る
+      3. 作った配信元を返す
+    exceptions:
+      - name: ValidationFailedError
+        condition: '`root` の設定が無い・読めない・検証に通らない・スクリプトが無い'
+        message: '違反ごとに `{id}: {パス}: {理由}`（無い設定は `config[{n}]`）'
+    unit_tests:
+      - name: test_load_source_at
+        case: 正常
+        summary: ワークツリーの設定
+        condition: ワークツリーの `dev-docs.yaml` に `documents` の行を 1 つ足した
+        mock: なし（一時フォルダで `git init` と `git worktree add`）
+        expected: '`config.documents` に足した行があり、`root` がワークツリーの直下、ID はクローン本体の配信元のまま'
+      - name: test_load_source_at_when_config_missing
+        case: 異常
+        summary: 設定のファイルが無い
+        condition: ワークツリーで `dev-docs.yaml` を削除した
+        mock: なし
+        expected: '`ValidationFailedError` で違反のパスが `config[0]`'
+        exception: 設定が無い
+      - name: test_load_source_at_when_invalid
+        case: 異常
+        summary: 検証に通らない
+        condition: ワークツリーの `documents[0]` に `paths` が無い
+        mock: なし
+        expected: '`ValidationFailedError` で違反が `documents[0].paths`'
+        exception: 検証に通らない
 classes:
   - name: SourceRegistry
     title: 配信元の一覧

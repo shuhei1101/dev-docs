@@ -69,7 +69,7 @@ classes:
     container: integrations/git.py
     usecase: 共通
     role: 例外
-    summary: git が 0 以外で終わったことを、引数・終了コード・標準エラーで表す
+    summary: git が 0 以外で終わったか待ち時間の上限を超えたことを、引数・終了コード・標準エラーで表す
     kind: クラス
     inherits: Exception
     properties:
@@ -88,6 +88,12 @@ classes:
         type: str
         access: 公開
         description: 標準エラーの末尾 `STDERR_TAIL_LINES` 行
+      - name: timed_out
+        title: 待ち時間の超過
+        type: bool
+        access: 公開
+        default: 'False'
+        description: '`GIT_TIMEOUT_SEC` を超えて止めたか。`True` のとき `returncode` は `-1`'
   - name: SnapshotStore
     title: リビジョンの書き出し
     container: features/history/snapshot.py
@@ -283,6 +289,14 @@ constants:
     usecase: 共通
     summary: 画面と MCP に出す commit の桁数
     value: '7'
+  - name: GIT_TIMEOUT_SEC
+    title: git の待ち時間の上限
+    container: integrations/git.py
+    usecase: 共通
+    summary: git を 1 回呼んで待つ秒数の上限
+    value: '8'
+    notes:
+      導き方: 規約『資源の値の決め方』の下流を待つタイムアウト。dev-docs のクローン（WSL の `/mnt/c` の下）で各 30 回測った最長は `git archive HEAD` が 5.2 秒、`git log --name-status -n 500` が 4.4 秒。最長を p99.9 の代わりに置き、その 50% の余裕を足して切り上げた。実装後に p99.9 を測り直す
   - name: GIT_ENV
     title: git の環境変数
     container: integrations/git.py
@@ -335,13 +349,18 @@ functions:
       type: str | bytes
       description: 標準出力（`binary` が `False` なら UTF-8 で読んだ文字列）
     process: |-
-      1. `["git", *args]` を `subprocess.run(cwd=cwd, env={**os.environ, **GIT_ENV}, stdin=DEVNULL, capture_output=True)` で実行する
+      1. `["git", *args]` を `subprocess.run(cwd=cwd, env={**os.environ, **GIT_ENV}, stdin=DEVNULL, capture_output=True, timeout=GIT_TIMEOUT_SEC)` で実行する
+         - `subprocess.TimeoutExpired` の場合（`subprocess.run` が子プロセスを止める）、`timed_out=True` の `GitError` を送る
+         - `[warning]` git が待ち時間の上限を超えた（引数・`cwd`・秒数）
       2. 終了コードが 0 以外の場合、`GitError` を送る
       3. 標準出力を返す
     exceptions:
       - name: GitError
         condition: git が 0 以外で終わる
         message: '`git {args}: {標準エラーの末尾}`'
+      - name: GitError
+        condition: '`GIT_TIMEOUT_SEC` を超える'
+        message: '`git {args}: {GIT_TIMEOUT_SEC} 秒を超えたため止めました`'
     unit_tests:
       - name: test_run_git
         case: 正常
@@ -356,6 +375,13 @@ functions:
         mock: なし
         expected: '`GitError` の `returncode` が 0 以外、`stderr` に `nope`'
         exception: git が 0 以外で終わる
+      - name: test_run_git_when_timeout
+        case: 異常
+        summary: 待ち時間の上限を超える
+        condition: '`GIT_TIMEOUT_SEC` を `0.1` に monkeypatch し、`GIT_EDITOR` で 1 秒止まる `["commit", "--allow-empty"]`'
+        mock: なし
+        expected: '`GitError` の `timed_out` が `True`、git のプロセスが残らない'
+        exception: '`GIT_TIMEOUT_SEC` を超える'
   - name: repo_root
     title: リポジトリの直下
     kind: 関数

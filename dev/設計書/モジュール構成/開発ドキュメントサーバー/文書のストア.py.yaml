@@ -9,6 +9,7 @@ directory: |-
   ├─ types.py      # Document / LoadProblem / LoadResult
   ├─ fields.py     # get_field / set_field / delete_field / resolve_metadata / apply_defaults
   ├─ loader.py     # collect_files / load_file（ファイルから文書を作る）
+  ├─ schema.py     # resolve_schema_refs（種類のスキーマの $ref を解く）
   └─ store.py      # DocumentStore（キャッシュ・ID の引き当て・種類のスキーマ）
   ```
 diagrams:
@@ -21,12 +22,16 @@ diagrams:
         文書のストア ..> 文書 : 返す
         文書のストア ..> 読み込みの結果 : 返す
         ファイルの読み込み ..> メタデータの解決
+        文書のストア ..> スキーマの参照の解決
         ファイルの読み込み ..> 既定の重ね合わせ
         メタデータの解決 ..> 項目の取得
         読み込みの結果 o-- 文書
         読み込みの結果 o-- 読めなかったファイル
         class 文書のストア {
           <<class>>
+        }
+        class スキーマの参照の解決 {
+          <<function>>
         }
         class ファイルの収集 {
           <<function>>
@@ -770,6 +775,56 @@ functions:
       5. ID はメタデータの `id`。無ければ、`body_path` か `path` から拡張子を除いた値（`records` で `body_file` が無ければ末尾に `#{位置}`）にする
       6. `created` / `updated` は、`dates` の `body_path`（無ければ `path`）の値、内容の同じ名前の項目（ISO 8601 の文字列か日時）の順に最初にある値を使う。どちらも無ければ `None`
       7. 文書と理由を返す
+  - name: resolve_schema_refs
+    title: スキーマの参照の解決
+    kind: 関数
+    container: features/documents/schema.py
+    usecase: 共通
+    role: 変換
+    summary: 種類のスキーマの `$ref` を参照先の中身で置き換えたスキーマを返す
+    scope: public
+    args:
+      - name: schema
+        title: スキーマ
+        type: Mapping[str, Any]
+        required: true
+        passing: positional
+        description: 読んだ種類のスキーマ
+      - name: base
+        title: スキーマのファイル
+        type: Path
+        required: true
+        passing: positional
+        description: '相対の `$ref`（`共通.schema.yaml#/$defs/markdown` など）を解く基準のファイル'
+    returns:
+      type: dict[str, Any]
+      description: '`$ref` を解いたスキーマ（`$defs` はそのまま残す）'
+    process: |-
+      1. `referencing.Registry` に `base` の URI でスキーマを載せ、参照先のファイルは `retrieve` で `base` のフォルダから『YAMLの読み込み』で読む
+      2. 値を先頭からたどり、`$ref` を持つオブジェクトは参照先の中身に、`$ref` 以外のキーを重ねたものに置き換えて続けてたどる
+      3. たどっている途中の `$ref` に戻る（循環する）場合、その `$ref` は解かずに残す
+         - `[warning]` スキーマの循環する参照を解かずに残した（ファイル・`$ref`）
+      4. 参照先が無い・読めない場合、その `$ref` は解かずに残す
+         - `[warning]` スキーマの参照を解けなかった（ファイル・`$ref`・理由）
+    unit_tests:
+      - name: test_resolve_schema_refs
+        case: 正常
+        summary: 同じファイルと別のファイルの参照
+        condition: '`properties.a` が `#/$defs/x`、`properties.b` が `共通.schema.yaml#/$defs/markdown` で `title: B` を重ねる'
+        mock: なし（`tmp_path`）
+        expected: '`a` が `$defs.x` の中身、`b` が `markdown` の中身に `title: B` を重ねたもの'
+      - name: test_resolve_schema_refs_when_cycle
+        case: 正常
+        summary: 循環する参照
+        condition: '`$defs.node.properties.children.items` が `#/$defs/node`'
+        mock: なし
+        expected: '`children.items` が `$ref` のまま残り、`[warning]` が 1 件'
+      - name: test_resolve_schema_refs_when_missing
+        case: 正常
+        summary: 参照先が無い
+        condition: '`無い.schema.yaml#/$defs/x`'
+        mock: なし
+        expected: '`$ref` のまま残り、`[warning]` が 1 件'
 classes:
   - name: DocumentStore
     title: 文書のストア
@@ -976,10 +1031,10 @@ classes:
         process: |-
           1. `source.table(kind)` で行を引く
           2. `schema_path` が無ければ空の辞書を返す
-          3. `target.ref` と `target.worktree` がどちらも `None` の場合、起動時に読んだ `source.schemas[kind]` を返す
+          3. `target.ref` と `target.worktree` がどちらも `None` の場合、起動時に読んだ `source.schemas[kind]` を使う
           4. それ以外は、`load` と同じ読むフォルダの `schema_path` を `_schemas` から引き、更新日時か大きさが違えば『YAMLの読み込み』で読み直す
-             - ファイルが無い・読めない場合、`source.schemas[kind]` を返す
-          5. スキーマを返す
+             - ファイルが無い・読めない場合、手順 3 のスキーマを使う
+          5. `$ref` を解いたスキーマを返す（スキーマの参照の解決。基準は手順 3・4 で使った `schema_path`）。解いた結果も `_schemas` に控える
         exceptions:
           - name: UnknownKindError
             condition: '`kind` が有効な文書の行に無い'
@@ -991,6 +1046,13 @@ classes:
             condition: ワークツリーで `schemas/rule.schema.yaml` の `required` を書き換えた
             mock: なし（`tmp_path`）
             expected: 書き換えたスキーマを返し、クローン本体では起動時のスキーマを返す
+            exception: '-'
+          - name: test_document_store_schema_when_ref
+            case: 正常
+            summary: '`$ref` を解いて返す'
+            condition: '`schemas/rule.schema.yaml` の `properties.body` が `共通.schema.yaml#/$defs/markdown`'
+            mock: なし（`tmp_path`）
+            expected: '`properties.body` が `$ref` を持たず `markdown` の中身'
             exception: '-'
           - name: test_document_store_schema_when_markdown
             case: 正常
@@ -1036,4 +1098,4 @@ classes:
         returns:
           type: None
           description: '-'
-        process: 1. 3 つのキャッシュを空にする（配信元の読み直しで呼ぶ）
+        process: 1. 3 つのキャッシュを空にする（起動の『配信元の読み直し』が呼ぶ）

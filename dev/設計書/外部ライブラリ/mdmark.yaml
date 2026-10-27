@@ -5,7 +5,7 @@ version:
   latest: v0.8.0
   checked_on: '2026-10-28'
   source: https://cdn.jsdelivr.net/gh/shuhei1101/mdmark@v0.8.0/dist/index.js
-  pinning: GitHub のタグを URL に固定して jsDelivr から読む（画面の `MDMARK_URL`）
+  pinning: GitHub のタグを URL に固定して jsDelivr から読む（画面の `MDMARK_URL`・`MDMARK_CSS_URL`）
 catalogs:
   - name: API
     version: v0.8.0
@@ -42,5 +42,13 @@ official_url: https://github.com/shuhei1101/mdmark
 used_in:
   - src/dev_docs/server/static/doc_view.ts
 verification:
-  state: 未確認
-  detail: モックで `mount` を呼んで描けることは見たが、配信する画面ではまだ動かしていない
+  state: 済
+  date: '2026-10-28'
+  detail: Edge 154 で、jsDelivr の `@v0.8.0/dist/index.js` を `import()` し `dist/index.css` を読んだページで `mount(element, {markdown, docId, diffSource})` を呼び、見出し・表が描かれ、`変更を見る` で 2 つのリビジョンの差分（削除した行・追加した行）が出ることを確かめた
+install: |-
+  ```html
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/shuhei1101/mdmark@v0.8.0/dist/index.css">
+  <script type="module">
+    const mdmark = await import("https://cdn.jsdelivr.net/gh/shuhei1101/mdmark@v0.8.0/dist/index.js");
+  </script>
+  ```

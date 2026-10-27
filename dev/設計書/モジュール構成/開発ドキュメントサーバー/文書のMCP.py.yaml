@@ -202,15 +202,16 @@ functions:
         description: 起動の『配線済みの関数』
     returns:
       type: mcp.server.mcpserver.MCPServer
-      description: 文書の MCP（`stateless_http=True`・`json_response=True`）
+      description: 文書の MCP（`stateless_http`・`json_response` はアプリの組み立てが `streamable_http_app()` の引数で渡す）
     process: |-
       1. `MCPServer(DOCS_MCP_NAME)` を作る
-      2. `search_docs`・`describe`・`list_changes`・`trace_related`・`write_docs`・`delete_docs` を `TOOL_ANNOTATIONS` の注釈で登録する。引数はインターフェース定義の `request` をキーワード引数で受ける（`list_changes` の `from` は `from_` で受け、ツールの入力のスキーマでは `from` を出す）
+      2. `search_docs`・`describe`・`list_changes`・`trace_related`・`write_docs`・`delete_docs` を `TOOL_ANNOTATIONS` の注釈で登録する。引数はインターフェース定義の `request` をキーワード引数で受ける（`list_changes` の `from` は `from_: Annotated[str | None, Field(validation_alias="from")]` で受け、ツールの入力のスキーマでは `from` を出す。`alias` は関数の呼び出しで `TypeError` になるため使わない）
+         - 引数の型の誤り・`Literal` に無い値は、SDK が関数を呼ぶ前に `isError` の結果にする。入力のスキーマに無いキーは SDK が捨てる
       3. 各ツールは次の順で処理する
          - 引数で要求のモデル（`SearchRequest` など）を作る
          - サービスを `asyncio.to_thread` で呼ぶ（引数は `handlers` の属性）
-         - 結果をツールの結果にする（`write_docs`・`delete_docs` の `render` は `None`）
-         - `DevDocsError` と `pydantic.ValidationError` はツールのエラーの変換で返す。それ以外の例外は `[error]` ツールの処理に失敗した（ツール名・例外）を書いて MCP の既定に任せる
+         - 結果をツールの結果にする（`write_docs`・`delete_docs` の `render` は `None`。`search_docs` は `functools.partial(render_search_markdown, source_label=",".join(result.per_source))`、`list_changes` は `functools.partial(render_changes_markdown, source_label=request.source or "作業中の配信元")` を渡す）
+         - `DevDocsError` と `pydantic.ValidationError` はツールのエラーの変換の `CallToolResult(is_error=True)` をそのまま返す。それ以外の例外は `[error]` ツールの処理に失敗した（ツール名・例外）を書いて MCP の既定に任せる
       4. 作った MCP を返す
     unit_tests:
       - name: test_build_docs_mcp
@@ -237,7 +238,7 @@ functions:
     container: server/mcp/admin.py
     usecase: 共通
     role: 入口
-    summary: 管理の MCP を作る（ツールは #4 で足す）
+    summary: '管理の MCP を作る（ツールは #4 で追加する）'
     scope: public
     args:
       - name: handlers

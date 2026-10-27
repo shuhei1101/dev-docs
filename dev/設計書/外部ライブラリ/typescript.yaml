@@ -27,9 +27,13 @@ docs_url: https://www.typescriptlang.org/tsconfig/
 used_in:
   - src/dev_docs/server/static/
 verification:
-  state: 未確認
-  detail: モジュール構成設計で使い方を決めた段階で、まだ動かしていない
+  state: 済
+  date: '2026-10-28'
+  detail: 'Node.js 24.14.0 で `npm install --save-dev --save-exact typescript@7.0.2` の `tsc` が 7.0.2 を返し、`tsc -p tsconfig.json --noEmit` と `tsc -p tsconfig.build.json`（同じフォルダへ `.js` を出す）が通り、その `.js` を import する `tests/*.test.ts` を `node --test` で動かして pass することを確かめた'
 install: |-
   ```bash
   npm install --save-dev --save-exact typescript@7.0.2
   ```
+limitations:
+  - item: テストの型の検査
+    content: '`node:test`・`node:assert` の型は `@types/node` が要るため、テストの `.ts` は `tsconfig.json` の `include` に入れず、Node.js の型の削除でそのまま動かす'
