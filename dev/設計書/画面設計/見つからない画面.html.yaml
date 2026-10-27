@@ -36,7 +36,7 @@ elements:
     kind: button
     position: トップバー
     description: リビジョンのメニューを開く
-    label: 開いていたリビジョン（指定が無いときは `作業ツリー`）
+    label: 開いていたリビジョン（`@{ref}` が無いときは配信元の `default_ref` の名前。例 `develop`）
     visible_when: 配信元があり、Git で管理している配信元のとき
     action: クリックでリビジョンのメニューを開く
     notes:
@@ -45,9 +45,9 @@ elements:
     kind: menu
     position: トップバー > リビジョンの切り替え
     description: 開けるリビジョンの一覧
-    label: 見出し `リビジョン`。先頭に `作業ツリー`（補足 `既定`）、続けてブランチ（補足 `ブランチ`）・タグ（補足 `タグ`）・最近の commit（補足は `MM/DD HH:mm JST` の日時）
+    label: 見出し `リビジョン`。先頭に `default_ref` の名前（補足 `既定`）、続けて `default_ref` 以外のブランチ（補足 `ブランチ`）・タグ（補足 `タグ`）・最近の commit（補足は `MM/DD HH:mm JST` の日時）
     visible_when: リビジョンの切り替えを押したとき
-    source: リビジョンの一覧.branches[].name・リビジョンの一覧.tags[].name・リビジョンの一覧.commits[].commit・リビジョンの一覧.commits[].date
+    source: リビジョンの一覧.default_ref・リビジョンの一覧.branches[].name・リビジョンの一覧.tags[].name・リビジョンの一覧.commits[].commit・リビジョンの一覧.commits[].date
     action: 開いたときにリビジョンの一覧を取り、行のクリックでそのリビジョンの配信元のトップを開く
     action_ref: dev/設計書/インターフェース定義/開発ドキュメントサーバー/リビジョンの一覧#
   - name: 検索ボタン
@@ -129,7 +129,7 @@ elements:
     kind: list
     position: 本文 > 見つからなかったものの下
     description: 次に開ける画面へのリンク
-    label: '無い文書: `{配信元の ID} のトップ`・`設定`。無いリビジョン: `{配信元の ID} のトップ（作業ツリー）`・`設定`。無い配信元: `設定で配信元を確かめる`'
+    label: '無い文書: `{配信元の ID} のトップ`・`設定`。無いリビジョン: `{配信元の ID} のトップ（{default_ref}）`・`設定`。無い配信元: `設定で配信元を確かめる`'
     visible_when: 常時
     action: クリックでリンク先を開く（配信元のトップは文書の画面、`設定` は設定画面）
     action_ref: dev/設計書/インターフェース定義/開発ドキュメントサーバー/設定画面の表示#

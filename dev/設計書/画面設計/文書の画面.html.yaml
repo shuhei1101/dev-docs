@@ -47,7 +47,7 @@ elements:
     kind: button
     position: トップバー
     description: リビジョンのメニューを開く
-    label: 開いているリビジョン（指定が無いときは `作業ツリー`）
+    label: 開いているリビジョン（`@{ref}` が無いときは配信元の `default_ref` の名前。例 `develop`）
     visible_when: Git で管理している配信元のとき
     source: 文書の画面.画面の状態
     action: クリックでリビジョンのメニューを開く
@@ -57,9 +57,9 @@ elements:
     kind: menu
     position: トップバー > リビジョンの切り替え
     description: 開けるリビジョンの一覧
-    label: 見出し `リビジョン`。先頭に `作業ツリー`（補足 `既定`）、続けてブランチ（補足 `ブランチ`）・タグ（補足 `タグ`）・最近の commit（補足は `MM/DD HH:mm JST` の日時）
+    label: 見出し `リビジョン`。先頭に `default_ref` の名前（補足 `既定`）、続けて `default_ref` 以外のブランチ（補足 `ブランチ`）・タグ（補足 `タグ`）・最近の commit（補足は `MM/DD HH:mm JST` の日時）
     visible_when: リビジョンの切り替えを押したとき
-    source: リビジョンの一覧.branches[].name・リビジョンの一覧.tags[].name・リビジョンの一覧.commits[].commit・リビジョンの一覧.commits[].date
+    source: リビジョンの一覧.default_ref・リビジョンの一覧.branches[].name・リビジョンの一覧.tags[].name・リビジョンの一覧.commits[].commit・リビジョンの一覧.commits[].date
     action: 開いたときにリビジョンの一覧を取り、行のクリックでそのリビジョンの同じ文書を開く
     action_ref: dev/設計書/インターフェース定義/開発ドキュメントサーバー/リビジョンの一覧#
   - name: 検索ボタン
