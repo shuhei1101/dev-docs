@@ -16,18 +16,18 @@ scenarios:
         participant UI as dev-docs の画面
 
         U->>UI: GET /sample/
-        UI->>UI: nav からタブとサイドバーを組み立て、最初のタブを開く
-        UI->>UI: タブに属する文書の一覧を Markdown の表にし、mdmark で描く
-        UI-->>U: doc-index（タブ・サイドバー・一覧の本文）
-        U->>UI: サイドバーで文書 1 を選ぶ
-        UI->>UI: 文書 1 の YAML をスキーマ駆動で Markdown にし、mdmark で描く
+        UI->>UI: nav からタブとサイドバーを組み立て、一番左のタブを開く
+        UI->>UI: そのタブのサイドバーの一番上の文書 1 の YAML をスキーマ駆動で Markdown にし、mdmark で描く
         UI-->>U: doc-view（文書 1 の本文と目次）
+        U->>UI: サイドバーで文書 2 を選ぶ
+        UI->>UI: 文書 2 の YAML をスキーマ駆動で Markdown にし、mdmark で描く
+        UI-->>U: doc-view（文書 2 の本文と目次）
       ```
     expected:
-      - '`/sample/` が 200 で、`nav` の 2 つのタブを出し、最初のタブを選んだ状態にする'
-      - タブに属する文書の件数がタブに出る
-      - 本文に、最初のタブの文書のタイトル・概要・更新日時の表がある
-      - 文書 1 を選ぶと `/sample/{文書 1 のパス}` へ移り、スキーマの `x-heading` の項目が見出し、`x-key` の配列が表になった本文と、その見出しの目次を出す
+      - '`/sample/` が 200 で、`nav` の 2 つのタブを出し、一番左のタブを選んだ状態にする'
+      - タブに文書の件数を出さない
+      - '`/sample/` の本文に、一番左のタブのサイドバーの一番上の文書 1 を、スキーマの `x-heading` の項目が見出し、`x-key` の配列が表になった本文と、その見出しの目次で出す'
+      - 文書 2 を選ぶと `/sample/{文書 2 のパス}` へ移り、文書 2 の本文と目次を出す
       - 本文の HTML が mdmark の描画の要素でできている
     test: test_normal
   - name: 正常シナリオ（nav が無い）
@@ -47,11 +47,11 @@ scenarios:
 
         U->>UI: GET /plain/
         UI->>UI: nav が無いので、種類ごとにタブを作る
-        UI-->>U: doc-index（種類ごとのタブ）
+        UI-->>U: doc-view（1 つ目の種類のタブの一番上の文書）
       ```
     expected:
       - タブが `documents[]` の 2 つの種類ごとに 1 つずつ並ぶ
-      - 各タブにその種類の文書だけが並ぶ
+      - 各タブのサイドバーにその種類の文書だけが並ぶ
     test: test_normal_when_nav_missing
   - name: 正常シナリオ（リビジョンを切り替える）
     setup:
@@ -225,6 +225,78 @@ scenarios:
       - スクリプトのプロセスが残っていない
       - 同じ配信元の、スキーマ駆動で変換する文書は描ける
     test: test_error_when_converter_timed_out
+  - name: 正常シナリオ（コメントをまとめてコピーする）
+    setup:
+      - name: Mock
+        description: なし（実環境で実行。クリップボードを読めるブラウザで画面を開く）
+      - name: 読み取りだけの配信元
+        description: 文書の種類を 1 つと、GitHub のリポジトリを書いていない `dev-docs.yaml` を持つ Git 管理外のフォルダ
+        notes: id `notes`。文書 1 に見出しが 2 つある
+      - name: dev-docs
+        description: notes を配信している dev-docs
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        actor U as 利用者
+        participant UI as dev-docs の画面
+
+        U->>UI: 文書 1 の 1 つ目の見出しの下の文字列を選び、コメントを書いて追加する
+        U->>UI: 2 つ目の見出しの下の文字列を選び、コメントを書いて追加する
+        U->>UI: トップバーのコメントを開き、2 件を選んでまとめてコピーする
+        UI-->>U: 2 件をまとめた文字列をクリップボードに書き、コピーしたことを通知する
+      ```
+    expected:
+      - トップバーのコメントのボタンに件数 2 が出る
+      - クリップボードの文字列に 2 件が追加した順に並び、各件に文書のパスと直前の見出し・選んだ文字列の引用・コメントがある
+      - コメントのパネルに Issue を作成するボタンが無い
+    test: test_normal_when_comments_copied
+  - name: 正常シナリオ（コメントで Issue を作成する）
+    setup:
+      - name: Mock
+        description: なし（実環境で実行。GitHub の画面は開いた URL だけを確かめる）
+      - name: GitHub のリポジトリを持つ配信元
+        description: sample の `dev-docs.yaml` に GitHub のリポジトリと起票のラベルを書く
+        notes: リポジトリ `example/sample`、ラベル `review`
+      - name: dev-docs
+        description: sample を配信している dev-docs
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        actor U as 利用者
+        participant UI as dev-docs の画面
+        participant GH as GitHub の Issue の作成画面
+
+        U->>UI: 文書 1 の文字列を選び、コメントを書いて追加する
+        U->>UI: コメントのパネルで、そのコメントを選んで Issue を作成する
+        UI->>GH: 別のタブで作成画面を開く
+        GH-->>U: タイトル・本文・ラベルを入れた作成画面
+      ```
+    expected:
+      - 開いた URL が `https://github.com/example/sample/issues/new` で、`title` が文書 1 のパス、`body` がまとめてコピーと同じ書式のコメント、`labels` が `review`
+      - dev-docs の画面は元のタブに残る
+    test: test_normal_when_issue_created
+  - name: 異常シナリオ（配信していない配信元を開く）
+    setup:
+      - name: Mock
+        description: なし（実環境で実行）
+      - name: 検証に失敗する配信元
+        description: '`dev-docs.yaml` の `documents[0]` に必須のキー `paths` が無い配信元'
+        notes: id `broken`。起動時の検証で配信から外れる
+      - name: dev-docs
+        description: sample と broken を端末の設定に並べて起動した dev-docs
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        actor U as 利用者
+        participant UI as dev-docs の画面
+
+        U->>UI: GET /broken/
+        UI-->>U: 404 の not-found（無いのは配信元）
+      ```
+    expected:
+      - 応答が 404 で、本文に `broken` を配信していないことと、起動時の検証で外した理由（`documents[0]` に必須のキー `paths` が無い）が出る
+      - 配信元の切り替えに sample が出て、設定画面 `/_settings/` へのリンクがある
+    test: test_error_when_source_not_served
 lead: 利用者がブラウザで `/{配信元の id}/` を開き、タブ・サイドバー・検索・リビジョンの切り替えで配信元の文書を読む。
 issue: 3
 primary_actor: 利用者
@@ -242,5 +314,3 @@ frequency: 作業のたび
 priority: 高
 refs:
   - dev/設計書/シナリオ/複合ユースケース/dev-docsで文書を配信して読み書きする#scenarios[正常シナリオ]
-notes:
-  / の画面: '`/` に何を出すか（配信元の一覧 `source-list` か、`not-found`）はモック作成で決める。決まったら、このユースケースにそのシナリオを置く。'
