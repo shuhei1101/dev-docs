@@ -3,6 +3,7 @@ from __future__ import annotations
 import subprocess
 from collections.abc import Callable
 from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -43,11 +44,22 @@ def test_run_git_when_timeout(
     monkeypatch.setenv("GIT_AUTHOR_EMAIL", "tester@example.com")
     monkeypatch.setenv("GIT_COMMITTER_NAME", "tester")
     monkeypatch.setenv("GIT_COMMITTER_EMAIL", "tester@example.com")
+    started: list[subprocess.Popen[Any]] = []
+    real_popen = subprocess.Popen
+
+    def recording_popen(*args: Any, **kwargs: Any) -> subprocess.Popen[Any]:
+        """起こした子プロセスを控えて返す。"""
+        process = real_popen(*args, **kwargs)
+        started.append(process)
+        return process
+
+    monkeypatch.setattr(subprocess, "Popen", recording_popen)
     # 実行・検証
     with pytest.raises(GitError) as exc_info:
         run_git(["commit", "--allow-empty"], cwd=root)
     assert exc_info.value.timed_out is True
-    assert subprocess.run(["pgrep", "-x", "git"], check=False).returncode == 1
+    assert started
+    assert all(process.poll() is not None for process in started)
 
 
 def test_repo_root(git_repo: Callable[..., Path]) -> None:
