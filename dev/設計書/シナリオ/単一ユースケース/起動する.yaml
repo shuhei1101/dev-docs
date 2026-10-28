@@ -195,6 +195,39 @@ scenarios:
       - プロセスが 0 以外の終了コードで終わる
       - 標準エラーに使用中のポートの番号と、`DEV_DOCS_PORT` で変えられることが出る
     test: test_error_when_port_in_use
+  - name: 正常シナリオ（文書のメタデータと管理用の YAML がずれている）
+    setup:
+      - name: Mock
+        description: なし（実環境で実行）
+        notes: '-'
+      - name: 列の欠けた文書
+        description: '配信元 sample の文書の行 `rules` が `metadata: {name: {type: ref, field: title}}` を持ち、2 件のうち 1 件に `title` が無い'
+        notes: 書いていないキー（既定の `ref`）の列の欠けは数えない
+      - name: ずれた管理用の YAML
+        description: 'sample の `src/files.yaml` が `a.py` と `c.py` の 2 行を持ち、`src/` には `a.py` と `d.py` を置く。行 `src` は `records: files`・`body_file: path`'
+        notes: '`c.py` はファイルが無い行、`d.py` は索引に無いファイル'
+      - name: 端末の設定
+        description: '`DEV_DOCS_CONFIG` が指す `settings.yaml`'
+        notes: '`sources` に sample の 1 行'
+    flow: |-
+      sequenceDiagram
+        actor U as 利用者
+        participant DD as dev-docs
+        participant ST as 配信元の文書
+
+        U->>DD: dev-docs serve
+        DD->>DD: sample の設定を検証して配信元に加える
+        DD->>ST: 文書を読む
+        DD->>DD: metadata に書いた ref の列が無い文書を数える
+        DD->>DD: 管理用の YAML のフォルダの配下のファイルと files の行を突き合わせて数える
+        DD->>DD: 件数を配信元の状態に持ち、警告のログに残す
+        DD-->>U: sample を配信する
+    expected:
+      - '`/_api/sources/sample/docs` が 200 を返す'
+      - 警告のログに sample の id と、行 `rules` の `ref` の列の欠け 1 件（`name` の `title`）が残る
+      - 警告のログに行 `src` の索引に無いファイル 1 件（`src/d.py`）とファイルが無い行 1 件（`c.py`）が残る
+      - '`search_docs` が `title` の無い文書も返し、その `name` はファイル名から拡張子を除いた名前になる'
+    test: test_normal_when_metadata_out_of_sync
 lead: 利用者が `dev-docs serve` を実行し、端末の設定に並べた配信元を 1 プロセス・1 ポートで配信し始める。
 issue: 3
 primary_actor: 利用者
