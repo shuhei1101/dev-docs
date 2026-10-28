@@ -1,0 +1,151 @@
+title: "試しの変換"
+entry:
+  kind: mcp_tool
+  value: try_convert
+flows:
+  - name: 正常系
+    summary: 変換スクリプトで変換した Markdown を返す
+    setup:
+      - name: Mock
+        description: なし
+      - name: 配信元
+        description: 文書の種類 note と、その変換スクリプトを持つ sample
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        participant C as クライアント
+        participant T as try_convert
+        participant F as 配信元のフォルダ
+
+        C->>T: path・file
+        T-->>F: dev-docs.yaml・ファイルを読む
+        T->>T: 変換スクリプトを実行する
+        T-->>C: kind・converter・markdown
+      ```
+    expected:
+      - '`kind` が `note`、`converter` が変換スクリプトのパス'
+      - '`markdown` がスクリプトの出力と同じ'
+      - 配信元のフォルダと変換の控えのフォルダが変わらない
+    test: test_normal
+  - name: 異常系（ファイルが範囲に無い・DocumentNotFoundError）
+    summary: どの文書の種類にも当たらないファイルを指すと断る
+    setup:
+      - name: Mock
+        description: なし
+      - name: file
+        description: '`documents[].paths` の外にある `README.md`'
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        participant C as クライアント
+        participant T as try_convert
+
+        C->>T: path・file
+        T-->>C: isError（DocumentNotFoundError）
+      ```
+    expected:
+      - '`isError: true` で当たる文書の種類が無いことを返す'
+    test: test_error_when_document_not_found
+  - name: 異常系（変換スクリプトが失敗する・ConvertScriptError）
+    summary: 変換スクリプトが 0 以外で終わると、終了コードと stderr を返す
+    setup:
+      - name: Mock
+        description: なし
+      - name: 変換スクリプト
+        description: stderr に 1 行を出して終了コード 1 で終わる
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        participant C as クライアント
+        participant T as try_convert
+
+        C->>T: path・file
+        T->>T: 変換スクリプトを実行する（終了コード 1）
+        T-->>C: isError（ConvertScriptError）
+      ```
+    expected:
+      - '`isError: true` で終了コード 1 と stderr の行を返す'
+    test: test_error_when_convert_script_fails
+  - name: 異常系（設定が無い・ConfigNotFoundError）
+    summary: '`dev-docs.yaml` の無いフォルダを指すと断る'
+    setup:
+      - name: Mock
+        description: なし
+      - name: フォルダ
+        description: 空の一時フォルダ
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        participant C as クライアント
+        participant T as try_convert
+
+        C->>T: path・file
+        T-->>C: isError（ConfigNotFoundError）
+      ```
+    expected:
+      - '`isError: true` で `dev-docs.yaml` が無いことを返す'
+    test: test_error_when_config_not_found
+lead: 配信元の 1 つのファイルを、配信するときと同じ変換で Markdown にして返す。書き込まず、変換の控えも残さない。
+identifier: try_convert
+permissions: なし（`127.0.0.1` でだけ待ち受ける）
+idempotent: true
+side_effects: なし（変換スクリプトを実行するが、ファイルと変換の控えは書かない）
+callers:
+  - dev/設計書/シナリオ/単一ユースケース/設定・スクリプトを変える#scenarios[正常シナリオ]
+exclusivity: '読み取りだけで排他しない（`readOnlyHint: true`）'
+request:
+  - name: path
+    type: str
+    required: true
+    location: argument
+    description: 配信元のフォルダか、その `dev-docs.yaml` の絶対パス
+  - name: file
+    type: str
+    required: true
+    location: argument
+    description: 変換するファイルの配信元からの相対パス
+  - name: config
+    type: str
+    required: false
+    default: なし（`path` の `dev-docs.yaml` を読む）
+    location: argument
+    description: ファイルに書く前の `dev-docs.yaml` の中身（YAML の文字列）
+request_example: |-
+  ```json
+  {"path": "/home/u/repo/sample", "file": "docs/a.yaml"}
+  ```
+response:
+  - name: kind
+    type: str
+    description: 当たった文書の種類
+  - name: converter
+    type: str
+    description: 使った変換（`builtin:markdown` か変換スクリプトのパス）
+  - name: markdown
+    type: str
+    description: 変換した Markdown
+response_example: |-
+  ```json
+  {"kind": "note", "converter": "scripts/convert_note.py", "markdown": "# A\n\n本文"}
+  ```
+exceptions:
+  - name: なし（正常終了）
+    condition: 変換できた
+  - name: DocumentNotFoundError
+    condition: '`file` が無い、またはどの文書の種類の範囲にも当たらない'
+    notes: '`isError: true`'
+  - name: ConvertScriptError
+    condition: 変換スクリプトが 0 以外で終わった、または `script_timeout_sec` を超えた
+    notes: '`isError: true` で終了コードと stderr を返す'
+  - name: ConfigNotFoundError
+    condition: '`path` に `dev-docs.yaml` が無く、`config` も渡していない'
+    notes: '`isError: true`'
+constraints:
+  - item: 注釈
+    constraint: '`readOnlyHint: true`'
+  - item: 変換
+    constraint: '`search_docs` の本文と同じ関数で変換する'
+  - item: パス
+    constraint: '`file` が配信元のフォルダの外を指したら `DocumentNotFoundError`'
+  - item: タイムアウト
+    constraint: 変換スクリプトは `script_timeout_sec`

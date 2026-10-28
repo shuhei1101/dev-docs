@@ -45,19 +45,20 @@ scenarios:
         participant CF as 端末の設定
 
         U->>AD: update
-        AD-->>U: 新しいバージョンと、端末の設定が古いこと
+        AD-->>U: 新しいバージョンと、移し替えが要ること（再起動しない）
         U->>MG: dev-docs migrate --plan
         MG-->>U: 当てる手順の一覧
         U->>MG: dev-docs migrate
         MG->>CF: バックアップを取り、手順を古い順に当て、version を書き換える
         MG-->>U: 当てた手順
-        U->>AD: reload
+        U->>AD: restart
       ```
     expected:
+      - '`update` が移し替えが要ることを返し、dev-docs は再起動しない'
       - '`migrate --plan` は端末の設定を変えず、当てる手順を返す'
       - '`migrate` の後、端末の設定の `version` が新しいバージョンになり、改名したキーが新しい名前で元の値を持つ'
       - 当てる前の端末の設定のバックアップがある
-      - '`reload` の後、`sample` と `notes` を配信している'
+      - '`restart` の後、`status` が新しいバージョンを返し、`sample` と `notes` を配信している'
     test: test_normal_when_terminal_config_old
   - name: 異常シナリオ（移し替えの手順が失敗する）
     setup:
