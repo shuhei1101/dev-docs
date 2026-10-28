@@ -4,6 +4,9 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 from pathlib import PurePosixPath
+from urllib.parse import unquote
+
+from fastapi import Request
 
 from dev_docs.features.access.types import Target
 from dev_docs.features.documents.types import Document
@@ -57,3 +60,11 @@ def breadcrumbs(page: str, pages: Sequence[str]) -> list[tuple[str, str | None]]
         link = next((candidate for candidate in pages if candidate.startswith(f"{prefix}/")), None)
         crumbs.append((name, link))
     return crumbs
+
+
+def screen_path_of(request: Request) -> ScreenPath:
+    """要求の元のパスから画面のパスを作る（リビジョン名の `%2F` を階層の区切りと取り違えない）。"""
+    raw = request.scope.get("raw_path")
+    text = raw.decode("ascii", errors="replace") if isinstance(raw, bytes) else request.url.path
+    source_part, _, rest = text.lstrip("/").partition("/")
+    return parse_screen_path(unquote(source_part), unquote(rest))

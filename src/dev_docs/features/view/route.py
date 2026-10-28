@@ -12,7 +12,7 @@ from fastapi.responses import HTMLResponse, Response
 from dev_docs.features.history.query import list_refs
 from dev_docs.features.view.columns import ColumnSettings
 from dev_docs.features.view.page import render_doc_view, render_error_page
-from dev_docs.features.view.paths import parse_screen_path, screen_target
+from dev_docs.features.view.paths import screen_path_of, screen_target
 from dev_docs.features.view.search import (
     SEARCH_LIMIT_DEFAULT,
     SEARCH_LIMIT_MAX,
@@ -73,8 +73,8 @@ def build_view_router(handlers: Handlers) -> APIRouter:
         await asyncio.to_thread(settings.save, source, body.table, body.hidden)
         return body
 
-    async def page(request: Request, source_part: str, page_path: str = "") -> Response:
-        screen = parse_screen_path(source_part, page_path)
+    async def page(request: Request) -> Response:
+        screen = screen_path_of(request)
         diff_ref = request.query_params.get("diff")
         try:
             return await asyncio.to_thread(
@@ -87,10 +87,10 @@ def build_view_router(handlers: Handlers) -> APIRouter:
 
     @router.get("/{source_part}", response_class=HTMLResponse)
     async def source_top(request: Request, source_part: str) -> Response:
-        return await page(request, source_part)
+        return await page(request)
 
     @router.get("/{source_part}/{page_path:path}", response_class=HTMLResponse)
     async def source_page(request: Request, source_part: str, page_path: str) -> Response:
-        return await page(request, source_part, page_path)
+        return await page(request)
 
     return router

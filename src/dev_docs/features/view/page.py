@@ -20,7 +20,7 @@ from dev_docs.features.view.nav import build_nav, first_page
 from dev_docs.features.view.paths import (
     find_page,
     page_path,
-    parse_screen_path,
+    screen_path_of,
     screen_target,
 )
 from dev_docs.features.view.types import NavGroup, NavTab, PageState, ScreenPath
@@ -296,9 +296,7 @@ def _missing_rows(error: DevDocsError, screen: ScreenPath) -> list[dict[str, str
 
 def render_error_page(request: Request, error: DevDocsError, *, handlers: Handlers) -> HTMLResponse:
     """画面の GET の `DevDocsError` を見つからない画面の HTML にする。"""
-    path = request.url.path.lstrip("/")
-    source_part, _, rest = path.partition("/")
-    screen = parse_screen_path(source_part, rest)
+    screen = screen_path_of(request)
     served = {item.id: item for item in handlers.registry.served()}
     source = served.get(screen.source_id)
     links = [(item.id, f"/{item.id}/") for item in served.values()]
