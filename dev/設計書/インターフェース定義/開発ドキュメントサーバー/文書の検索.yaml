@@ -356,7 +356,8 @@ flows:
       - name: 入力
         description: '`filter` は `body` の `regex` `^## `、`view: full`、`snippets: {before: 0, after: 1}`。2 回目は同じ引数で `format: json`。3 回目は `filter` を `body` の `contains` `手順`、`snippets: {context_lines: 1}`。4 回目は `filter` を `body` の `regex` `\A\S`（`case_sensitive` は省く）'
         notes: '`^## ` は 3 行目にだけ当たり、8 行目（行の途中の `## `）には当たらない'
-    flow: |
+    flow: |-
+      ```mermaid
       sequenceDiagram
         participant C as クライアント
         participant T as search_docs
@@ -366,6 +367,7 @@ flows:
         T-->>ST: 文書を読む
         T->>T: 本文の各行に正規表現を当て、当たった行と後ろ 1 行を行番号つきで切り出す
         T-->>C: <document> の中の 3:## 手順 と 4-{4 行目}
+      ```
     expected:
       - 結果が文書 1 だけで、`<document>` の中に `3:## 手順` と `4-{4 行目}` があり、2 行目と 8 行目は無い
       - '`format: json` の `items[0].snippets` が 1 要素で、`lines` が `{line: 3, text: "## 手順", hit: true}` と `{line: 4, hit: false}`'
