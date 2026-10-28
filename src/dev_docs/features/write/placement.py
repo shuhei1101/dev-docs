@@ -47,6 +47,9 @@ def new_document_path(table: DocumentTable, doc_id: str) -> tuple[str, bool]:
     if table.records is not None:
         if has_glob or not first:
             raise _undecided(table)
+        # 管理用の YAML の名前が除外の名前に当たると、要素を足しても文書にならない
+        if table.excludes(first):
+            raise _excluded(table, first)
         return first, True
     if not has_glob:
         raise _undecided(table)
