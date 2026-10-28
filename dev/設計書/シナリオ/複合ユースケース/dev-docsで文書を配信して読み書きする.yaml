@@ -23,10 +23,10 @@ scenarios:
       ```mermaid
       flowchart TD
         subgraph P1["導入"]
-          S0["dev-docs を入れる:正常シナリオ"]
+          S0["dev-docsを入れる:正常シナリオ"]
         end
         subgraph P2["起動と登録"]
-          S2["起動する:正常シナリオ"]
+          S2["起動する:正常シナリオ（SessionStart で起動する）"]
           S1["配信元を追加する:正常シナリオ"]
         end
         subgraph P3["読み書き"]
@@ -38,14 +38,18 @@ scenarios:
         subgraph P4["保守"]
           S7["YAMLを直接編集した:正常シナリオ"]
           S8["設定・スクリプトを変える:正常シナリオ"]
-          S9["dev-docs を更新する:正常シナリオ"]
+          S9["dev-docsを更新する:正常シナリオ"]
         end
         S0 --> S2 --> S1 --> S3 --> S4 --> S5 --> S6 --> S7 --> S8 --> S9
-        click S2 "../単一ユースケース/起動する.yaml#正常シナリオ"
+        click S0 "../単一ユースケース/dev-docsを入れる.yaml#正常シナリオ"
+        click S2 "../単一ユースケース/起動する.yaml#正常シナリオsessionstart-で起動する"
+        click S1 "../単一ユースケース/配信元を追加する.yaml#正常シナリオ"
         click S3 "../単一ユースケース/エージェントが調べる.yaml#正常シナリオ"
         click S4 "../単一ユースケース/エージェントが書き込む.yaml#正常シナリオ"
         click S5 "../単一ユースケース/変更をレビューする.yaml#正常シナリオ"
         click S7 "../単一ユースケース/YAMLを直接編集した.yaml#正常シナリオ"
+        click S8 "../単一ユースケース/設定・スクリプトを変える.yaml#正常シナリオ"
+        click S9 "../単一ユースケース/dev-docsを更新する.yaml#正常シナリオ"
       ```
     expected:
       - '`DEV_DOCS_CONFIG` が指す `settings.yaml` が `version`・`clone` を持ち、Claude Code の設定の場所の `settings.json` の env に `DEV_DOCS_CONFIG` が入っている'
@@ -70,11 +74,15 @@ scenarios:
       commit: S4 と S5 の間で、エージェントが `write_docs` の変更をワークツリーで `git commit` する。dev-docs は commit しない（D-105）。
       起動したセッション: フックがサーバーを起動したそのセッションでは MCP の接続が間に合わず、`/mcp` でつなぎ直す（PoC 2 の結果）。
     uses:
-      - dev/設計書/シナリオ/単一ユースケース/起動する#scenarios[正常シナリオ]
+      - dev/設計書/シナリオ/単一ユースケース/dev-docsを入れる#scenarios[正常シナリオ]
+      - dev/設計書/シナリオ/単一ユースケース/起動する#scenarios[正常シナリオ（SessionStart で起動する）]
+      - dev/設計書/シナリオ/単一ユースケース/配信元を追加する#scenarios[正常シナリオ]
       - dev/設計書/シナリオ/単一ユースケース/エージェントが調べる#scenarios[正常シナリオ]
       - dev/設計書/シナリオ/単一ユースケース/エージェントが書き込む#scenarios[正常シナリオ]
       - dev/設計書/シナリオ/単一ユースケース/変更をレビューする#scenarios[正常シナリオ]
       - dev/設計書/シナリオ/単一ユースケース/YAMLを直接編集した#scenarios[正常シナリオ]
+      - dev/設計書/シナリオ/単一ユースケース/設定・スクリプトを変える#scenarios[正常シナリオ]
+      - dev/設計書/シナリオ/単一ユースケース/dev-docsを更新する#scenarios[正常シナリオ]
   - name: 異常シナリオ（配信できない配信元がある）
     setup:
       - name: Mock
@@ -106,6 +114,7 @@ scenarios:
         S2 --> S3 --> S8
         click S2 "../単一ユースケース/起動する.yaml#異常シナリオ設定の検証に失敗する"
         click S3 "../単一ユースケース/エージェントが調べる.yaml#異常シナリオ配信していない配信元を指す"
+        click S8 "../単一ユースケース/設定・スクリプトを変える.yaml#正常シナリオ"
       ```
     expected:
       - 起動の直後、`/_api/sources/broken/docs` が 404 を返し、`/_api/sources/sample/docs` と `/mcp` は応答する
@@ -119,6 +128,7 @@ scenarios:
       - dev/設計書/シナリオ/単一ユースケース/起動する#scenarios[異常シナリオ（設定の検証に失敗する）]
       - dev/設計書/シナリオ/単一ユースケース/エージェントが調べる#scenarios[正常シナリオ]
       - dev/設計書/シナリオ/単一ユースケース/エージェントが調べる#scenarios[異常シナリオ（配信していない配信元を指す）]
+      - dev/設計書/シナリオ/単一ユースケース/設定・スクリプトを変える#scenarios[正常シナリオ]
 lead: 利用者が dev-docs を入れて端末の設定に配信元を並べ、エージェントが文書の MCP で、利用者が画面で、その配信元の YAML の文書を読み書きする。設定・スクリプトの変更と dev-docs の更新を経ても配信が続く。
 issue: 2
 primary_actor: 利用者
@@ -139,5 +149,5 @@ minimal_guarantee: 設定・スクリプトの検証に失敗した配信元が�
 frequency: 導入は端末ごとに 1 回。起動はセッションごと。読み書きは作業のたび
 priority: 高
 notes:
-  単一ユースケース: '箱が指す単一ユースケースのうち、S2〜S5・S7 は #3（サーバー本体）、S6 は #17（画面）、S0・S1・S8・S9 は #4（管理用のプラグイン）が書く。書いた時点で各箱に `click` と `uses` を付ける。'
+  単一ユースケース: '箱が指す単一ユースケースのうち、S6 は #17（画面）が書く。書いた時点で箱に `click` と `uses` を付ける。'
   E2E テスト: 'テストのファイルは、通す機能が #3・#4 でそろってから作り、その時点で `test_file` を付ける。'
