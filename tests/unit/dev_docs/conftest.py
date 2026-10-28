@@ -156,25 +156,20 @@ def make_script() -> Callable[..., ScriptEntry]:
 @pytest.fixture
 def make_handlers(make_terminal_config: Callable[..., TerminalConfig]) -> Callable[..., Any]:
     """指定した部品だけ偽物にした配線済みの関数を作る関数を返す。"""
+    import dataclasses
     import threading
 
     from dev_docs.main import Handlers
 
     def _make(**overrides: Any) -> Handlers:
-        values: dict[str, Any] = {
-            "terminal": make_terminal_config(),
-            "registry": None,
-            "store": None,
-            "snapshots": None,
-            "converter": None,
-            "seen": None,
-            "locks": None,
-            "settings_lock": threading.Lock(),
-            "templates": None,
-            "checker": None,
-            "columns": None,
-            "reload_sources": lambda terminal: [],
-        }
+        values: dict[str, Any] = {field.name: None for field in dataclasses.fields(Handlers)}
+        values.update(
+            {
+                "terminal": make_terminal_config(),
+                "settings_lock": threading.Lock(),
+                "reload_sources": lambda terminal: [],
+            }
+        )
         values.update(overrides)
         return Handlers(**values)
 

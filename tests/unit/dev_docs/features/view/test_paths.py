@@ -7,16 +7,7 @@ from dev_docs.features.access.types import Target
 from dev_docs.features.documents.types import Document
 from dev_docs.features.sources.registry import SourceRegistry
 from dev_docs.features.sources.types import ServedSource, SourceConfig
-from dev_docs.features.view.paths import page_path, parse_screen_path, screen_target
-from dev_docs.features.view.types import ScreenPath
-
-
-def test_parse_screen_path() -> None:
-    """リビジョンつき（正常系）。"""
-    # 実行
-    result = parse_screen_path("sample@feat/a", "docs/x/")
-    # 検証
-    assert result == ScreenPath("sample", "feat/a", "docs/x")
+from dev_docs.features.view.paths import page_path, screen_target
 
 
 def test_page_path(make_document: Callable[..., Document]) -> None:

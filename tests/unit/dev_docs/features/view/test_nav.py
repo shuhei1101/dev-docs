@@ -53,9 +53,17 @@ def test_build_nav(
     tabs = build_nav(source, documents)
     # 検証
     assert [tab.title for tab in tabs] == ["規約", "設計書", "プロンプト"]
-    assert [group.title for group in tabs[0].sidebar.groups] == ["python", "typescript"]
-    assert tabs[1].sidebar.groups[0].title == "アーキテクチャ"
-    assert tabs[1].sidebar.groups[0].links[0].page == "docs/design/architecture"
+    assert [(item.kind, item.title) for item in tabs[0].items] == [
+        ("group", "python"),
+        ("group", "typescript"),
+    ]
+    architecture = tabs[1].items[0]
+    assert (architecture.kind, architecture.title) == ("group", "アーキテクチャ")
+    assert (architecture.items[0].kind, architecture.items[0].path) == (
+        "page",
+        "docs/design/architecture",
+    )
+    assert [tab.active for tab in tabs] == [False, False, False]
 
 
 def test_build_nav_when_no_nav(

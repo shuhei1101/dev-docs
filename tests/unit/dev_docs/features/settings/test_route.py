@@ -2,11 +2,11 @@ from __future__ import annotations
 
 import threading
 from collections.abc import Callable
+from pathlib import Path
 from typing import Any
 
 import pytest
 from fastapi import FastAPI
-from fastapi.responses import HTMLResponse
 from fastapi.testclient import TestClient
 
 from dev_docs.features.settings import route as route_module
@@ -16,16 +16,15 @@ from dev_docs.features.sources.registry import SourceRegistry
 from dev_docs.features.sources.types import SourceStatus
 from dev_docs.shared.errors import Violation
 
-
-class FakeTemplates:
-    """描いたテンプレートの名前と値を記録する画面のテンプレートの偽物。"""
-
-    def __init__(self) -> None:
-        self.calls: list[tuple[str, dict[str, Any]]] = []
-
-    def TemplateResponse(self, request: Any, name: str, context: dict[str, Any]) -> HTMLResponse:
-        self.calls.append((name, context))
-        return HTMLResponse("ok")
+SETTINGS = (
+    'version: "1"\n'
+    "clone: /tmp/clone\n"
+    "sources:\n"
+    "  - id: a\n"
+    "    config: /tmp/a/dev-docs.yaml\n"
+    "  - id: b\n"
+    "    config: /tmp/b/dev-docs.yaml\n"
+)
 
 
 class FakeRegistry(SourceRegistry):
@@ -39,33 +38,16 @@ class FakeRegistry(SourceRegistry):
         return self._statuses
 
 
-def test_build_settings_router_when_root(make_handlers: Callable[..., Any]) -> None:
-    """トップを転送する（正常系）。"""
-    # 準備
-    app = FastAPI()
-    app.include_router(build_settings_router(make_handlers()))
-    client = TestClient(app, follow_redirects=False)
-    # 実行
-    response = client.get("/")
-    # 検証
-    assert response.status_code == 302
-    assert response.headers["location"] == "/_settings/"
-
-
-def test_build_settings_router_when_settings_page(
+def test_build_settings_router_when_get(
+    tmp_path: Path,
+    write_files: Callable[[Path, dict[str, str]], None],
     make_handlers: Callable[..., Any],
     make_terminal_config: Callable[..., TerminalConfig],
-    make_entry: Callable[..., SourceEntry],
     make_status: Callable[..., SourceStatus],
 ) -> None:
-    """設定画面に状態を埋め込む（正常系）。"""
+    """行に状態を重ねる（正常系）。"""
     # 準備
-    terminal = make_terminal_config(
-        sources=[
-            make_entry("/tmp/a/dev-docs.yaml", source_id="a"),
-            make_entry("/tmp/b/dev-docs.yaml", source_id="b"),
-        ]
-    )
+    write_files(tmp_path, {"settings.yaml": SETTINGS})
     statuses = [
         make_status("a", 0),
         make_status(
@@ -75,23 +57,22 @@ def test_build_settings_router_when_settings_page(
             errors=[Violation(path="documents[0].paths", rule="必須のキーが無い")],
         ),
     ]
-    templates = FakeTemplates()
-    handlers = make_handlers(
-        terminal=terminal, registry=FakeRegistry(statuses), templates=templates
-    )
+    terminal = make_terminal_config(file=tmp_path / "settings.yaml")
+    handlers = make_handlers(terminal=terminal, registry=FakeRegistry(statuses))
     app = FastAPI()
     app.include_router(build_settings_router(handlers))
     client = TestClient(app)
     # 実行
-    response = client.get("/_settings/")
+    response = client.get("/_api/settings/sources")
     # 検証
-    name, context = templates.calls[0]
+    body = response.json()
     assert response.status_code == 200
-    assert name == "settings.html"
-    assert context["config_path"] == str(terminal.file)
-    assert len(context["sources"]) == 2
-    assert context["sources"][1]["status"] == "not_served"
-    assert context["sources"][1]["errors"] == [
+    assert body["settings_path"] == str(terminal.file)
+    assert [row["id"] for row in body["sources"]] == ["a", "b"]
+    assert body["sources"][0]["config"] == ["/tmp/a/dev-docs.yaml"]
+    assert body["sources"][0]["status"] == "serving"
+    assert body["sources"][1]["status"] == "not_served"
+    assert body["sources"][1]["errors"] == [
         {"path": "documents[0].paths", "reason": "必須のキーが無い"}
     ]
 

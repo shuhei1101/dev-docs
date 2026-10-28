@@ -19,6 +19,36 @@ def _client(handlers: Any) -> TestClient:
     return TestClient(app)
 
 
+def test_build_view_router_when_document(make_view_env: Callable[..., SimpleNamespace]) -> None:
+    """文書の取得（正常系）。"""
+    # 準備
+    client = _client(make_view_env().handlers)
+    # 実行
+    response = client.get("/_api/sources/sample/docs")
+    # 検証
+    body = response.json()
+    assert response.status_code == 200
+    assert body["path"] == "docs/a"
+    assert "# A" in body["markdown"]
+    assert body["tabs"][0]["active"] is True
+
+
+def test_build_view_router_when_document_missing(
+    make_view_env: Callable[..., SimpleNamespace],
+) -> None:
+    """無い文書（異常系）。"""
+    # 準備
+    client = _client(make_view_env().handlers)
+    # 実行
+    response = client.get("/_api/sources/sample/docs/no-such-doc")
+    # 検証
+    body = response.json()
+    assert response.status_code == 404
+    assert response.headers["content-type"].startswith("application/problem+json")
+    assert body["missing"] == "doc"
+    assert body["value"] == "no-such-doc"
+
+
 def test_build_view_router_when_search(make_view_env: Callable[..., SimpleNamespace]) -> None:
     """画面の検索（正常系）。"""
     # 準備
@@ -59,10 +89,7 @@ def test_build_view_router_when_refs(
     assert response.json()["git"] is False
 
 
-def test_build_view_router_when_columns(
-    make_view_env: Callable[..., SimpleNamespace],
-    read_page_state: Callable[[str], dict[str, Any]],
-) -> None:
+def test_build_view_router_when_columns(make_view_env: Callable[..., SimpleNamespace]) -> None:
     """列の設定の保存（正常系）。"""
     # 準備
     client = _client(make_view_env().handlers)
@@ -72,10 +99,10 @@ def test_build_view_router_when_columns(
         json={"table": "rules:items", "hidden": ["a"]},
         headers={"Sec-Fetch-Site": "same-origin"},
     )
-    page = client.get("/sample/", headers={"Accept": "text/html"})
+    document = client.get("/_api/sources/sample/docs")
     # 検証
     assert saved.status_code == 200
-    assert read_page_state(page.text)["hidden_columns"] == {"rules:items": ["a"]}
+    assert document.json()["columns"] == {"rules:items": ["a"]}
 
 
 def test_build_view_router_when_cross_origin(
@@ -94,16 +121,3 @@ def test_build_view_router_when_cross_origin(
     # 検証
     assert response.status_code == 403
     assert not (env.columns_dir / "sample.json").exists()
-
-
-def test_build_view_router_when_unknown_source(
-    make_view_env: Callable[..., SimpleNamespace],
-) -> None:
-    """配信元が無い（異常系）。"""
-    # 準備
-    client = _client(make_view_env().handlers)
-    # 実行
-    response = client.get("/none/", headers={"Accept": "text/html"})
-    # 検証
-    assert response.status_code == 404
-    assert response.headers["content-type"].startswith("text/html")

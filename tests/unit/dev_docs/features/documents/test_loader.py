@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import re
 from collections.abc import Callable
 from datetime import datetime
 from pathlib import Path
@@ -184,7 +183,11 @@ def test_load_file_when_unreadable(
     # 検証
     assert documents == []
     assert problems[0].reason == "unreadable"
-    assert re.search(r"\d+:\d+", problems[0].detail) is not None
+    assert problems[0].detail != ""
+    assert problems[0].line is not None
+    assert problems[0].line >= 1
+    assert problems[0].column is not None
+    assert problems[0].column >= 1
 
 
 def test_load_file_when_missing_body_file(
