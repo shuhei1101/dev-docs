@@ -6,9 +6,10 @@ directory: |-
   ```text
   src/dev_docs/features/search/
   ├─ __init__.py   # 公開する型と関数の再エクスポート
-  ├─ types.py      # Condition / Group / OrderKey / Snippets / SearchRequest / SearchItem / GroupCount / SearchResult
+  ├─ types.py      # Condition / Group / OrderKey / Snippets / SearchRequest / Snippet / SnippetLine / SearchItem / GroupCount / SearchResult
   ├─ fields.py     # field_values / known_fields（項目の値・計算項目・使える項目）
-  ├─ filters.py    # check_filter / match_filter / match_words / snippet_lines / parse_compare_value
+  ├─ filters.py    # check_filter / match_filter / match_words / compile_regex / parse_compare_value
+  ├─ snippets.py   # find_snippets / snippet_lines（抜粋の検索・一致した箇所の抜き出し）
   ├─ cursor.py     # encode_cursor / decode_cursor
   ├─ render.py     # render_search_markdown
   └─ service.py    # search_docs
@@ -29,6 +30,11 @@ diagrams:
         条件の確かめ ..> 使える項目
         条件の照合 ..> 項目の値
         条件の照合 ..> 比べる値の解釈
+        条件の照合 ..> 正規表現の組み立て
+        条件の確かめ ..> 正規表現の組み立て
+        文書の検索 ..> 抜粋の検索
+        抜粋の検索 ..> 正規表現の組み立て
+        一致した箇所の抜き出し ..> 抜粋の検索
         検索の結果の Markdown ..> 検索の結果
         class 文書の検索 {
           <<function>>
@@ -52,6 +58,15 @@ diagrams:
           <<function>>
         }
         class 比べる値の解釈 {
+          <<function>>
+        }
+        class 正規表現の組み立て {
+          <<function>>
+        }
+        class 抜粋の検索 {
+          <<function>>
+        }
+        class 一致した箇所の抜き出し {
           <<function>>
         }
         class 続きの位置 {
@@ -147,7 +162,8 @@ data_models:
         title: 比べ方
         type: Literal['eq', 'ne', 'prefix', 'suffix', 'contains', 'not_contains', 'regex', 'gt', 'gte', 'lt', 'lte', 'exists', 'not_exists']
         access: 公開
-        description: 比べ方
+        description: 比べ方。`regex` は値の各行に当たる（`^`・`$` は各行の先頭・末尾。値全体の先頭・末尾は `\A`・`\Z`）
+        notes: 説明は `Field(description=...)` で入力のスキーマに出す
       - name: values
         title: 値
         type: list[str]
@@ -210,21 +226,33 @@ data_models:
     container: features/search/types.py
     usecase: 検索
     role: DTO
-    summary: 本文の代わりに一致した行の前後だけを返す指定
-    description: '`pydantic.BaseModel`（`extra="forbid"`）。'
+    summary: 本文の代わりに条件に当たった行と前後の行だけを行番号つきで返す指定
+    description: '`pydantic.BaseModel`（`extra="forbid"`）。各項目の説明は `Field(description=...)` で入力のスキーマに出す。'
     properties:
       - name: context_lines
         title: 前後の行数
         type: int
         access: 公開
         default: '1'
-        description: 一致した行の前後に添える行数（0〜10）
+        description: '`before`・`after` を省いたときの前と後ろの行の数（0〜10）'
       - name: max_per_doc
         title: 1 件の箇所の数
         type: int
         access: 公開
         default: '3'
         description: 1 つの文書で返す箇所の数（1〜20）
+      - name: before
+        title: 前の行数
+        type: int | None
+        access: 公開
+        default: None
+        description: 当たった行の前に返す行の数（`Field(ge=0)`）。`None` は `context_lines`
+      - name: after
+        title: 後ろの行数
+        type: int | None
+        access: 公開
+        default: None
+        description: 当たった行の後ろに返す行の数（`Field(ge=0)`）。`None` は `context_lines`
   - name: SearchRequest
     title: 検索の要求
     container: features/search/types.py
@@ -378,7 +406,7 @@ data_models:
         description: 返す項目 → 値（長い文字列は末尾を切って `…（残り {n} 文字）` を付けたもの）。`body` は返し済みなら `SEEN_MARK`
       - name: snippets
         title: 一致した箇所
-        type: list[str]
+        type: list[Snippet]
         access: 公開
         default: '[]'
         description: '`snippets` を指定したときだけ'
@@ -471,6 +499,42 @@ data_models:
         access: 公開
         default: '""'
         description: Markdown の先頭の行に出す、読んだ配信元の ID（複数なら `,` で繋ぐ）。JSON には出さない
+  - name: SnippetLine
+    title: 抜粋の行
+    container: features/search/types.py
+    usecase: 検索
+    role: DTO
+    summary: 抜粋の 1 行
+    description: '`dataclass(frozen=True)`。'
+    properties:
+      - name: line
+        title: 行番号
+        type: int
+        access: 公開
+        description: 本文の行番号（1 始まり）
+      - name: text
+        title: 行
+        type: str
+        access: 公開
+        description: 行の文字列（改行を含まない）
+      - name: hit
+        title: 当たった行か
+        type: bool
+        access: 公開
+        description: '`False` は前後の行'
+  - name: Snippet
+    title: 抜粋
+    container: features/search/types.py
+    usecase: 検索
+    role: DTO
+    summary: 重なる範囲をまとめた 1 つの抜粋
+    description: '`dataclass(frozen=True)`。'
+    properties:
+      - name: lines
+        title: 行
+        type: list[SnippetLine]
+        access: 公開
+        description: 本文の順の行
 functions:
   - name: field_values
     title: 項目の値
@@ -563,7 +627,7 @@ functions:
       type: list[Violation]
       description: 違反。項目のパスは引数のパス（`filter.and[1].field`）
     process: |-
-      1. 条件の木をたどり、`field` が `fields` に無い・`exists` 以外で `values` が空・`regex` が正規表現にならない・`gt` などで値が項目の型に合わない（比べる値の解釈）を違反にする。`fix` には近い項目（`difflib.get_close_matches`）か期待する型
+      1. 条件の木をたどり、`field` が `fields` に無い・`exists` 以外で `values` が空・`regex` が正規表現にならない（正規表現の組み立て）・`gt` などで値が項目の型に合わない（比べる値の解釈）を違反にする。`fix` には近い項目（`difflib.get_close_matches`）か期待する型
       2. `order_by[].field`・`group_by` が `fields` に無いものを違反にする
       3. `Group` が `and`・`or` を両方持つ・どちらも持たないものを違反にする
   - name: parse_compare_value
@@ -661,7 +725,7 @@ functions:
       2. `Condition` は項目の値を引き、`values` の各値と比べる（`match` が `any` ならどれか、`all` なら全て）
          - `exists`・`not_exists` は値の並びが空でないか
          - `eq`・`ne`・`prefix`・`suffix`・`contains`・`not_contains` は、値の並びのどれかとの文字列の比較（`case_sensitive` が `False` なら両方を NFKC と `casefold`）。`ne`・`not_contains` は値の並びのどれとも当たらないとき `True`
-         - `regex` は `re.search`（`case_sensitive` が `False` なら `re.IGNORECASE` で NFKC の後）
+         - `regex` は正規表現の組み立ての `search`。`case_sensitive` が `False` なら文書の値を NFKC にして比べる（パターンには正規化をかけない）
          - `gt`・`gte`・`lt`・`lte` は比べる値の解釈で型をそろえて比べ、解釈できない文書の値は当たらない
     unit_tests:
       - name: test_match_filter
@@ -682,6 +746,12 @@ functions:
         condition: '`{field: name, op: eq, values: [Doc], case_sensitive: true}`'
         mock: なし
         expected: '`name: doc` が `False`'
+      - name: test_match_filter_when_regex_lines
+        case: 正常
+        summary: 正規表現は各行に当たる
+        condition: '`{field: body, op: regex, values: ["^## "]}` と `{field: body, op: regex, values: ["\\A## "]}`'
+        mock: なし
+        expected: 本文 `# x\n## y` の文書が 1 つ目で `True`、2 つ目で `False`
   - name: match_words
     title: 語の照合
     kind: 関数
@@ -711,10 +781,10 @@ functions:
   - name: snippet_lines
     title: 一致した箇所の抜き出し
     kind: 関数
-    container: features/search/filters.py
+    container: features/search/snippets.py
     usecase: 共通
     role: 変換
-    summary: 本文から語を含む行と前後の行を抜き出す
+    summary: 本文から語を含む行と前後の行を抜き出す（画面の検索）
     scope: public
     thread_safe: true
     args:
@@ -746,8 +816,8 @@ functions:
       type: list[str]
       description: 箇所ごとに前後の行を改行で繋いだもの。重なる箇所は 1 つにまとめる
     process: |-
-      1. 行ごとに NFKC と `casefold` をして、語のどれかを含む行の番号を集める
-      2. 前後 `context_lines` の範囲を作り、重なる範囲をまとめ、先頭から `max_count` 個を元の行で返す
+      1. 語を `values` にした `{field: body, op: contains}` の条件で抜粋の検索をする（`before`・`after` は `context_lines`）
+      2. 抜粋ごとに行の `text` を改行で繋いで返す
     unit_tests:
       - name: test_snippet_lines
         case: 正常
@@ -892,11 +962,11 @@ functions:
       10. 文書ごとに返す項目を作る
           - `ids` は `id`、`summary` は `id` と `SUMMARY_FIELDS`、`full` はさらに `body` と全てのメタデータ。`fields` を足し `exclude_fields` を除く
           - 本文を返す場合、`repeat_seen` が `False` なら会話の記録.返し済みに当たる文書の `body` を `SEEN_MARK` にする
-          - `snippets` がある場合、条件の `body`・`*` の値で一致した箇所の抜き出しをし、`body` を返さない
+          - `snippets` がある場合、条件の木から `field` が `body`・`*` の条件を集めて抜粋の検索をし（`before`・`after` は `None` なら `context_lines`、`max_count` は `max_per_doc`）、`body` を返さない
           - 文字列の値が項目の文字数を超えたら切る
           - `view` が `summary`・`full` で `ref` が無く、`body` を `SEEN_MARK` にしていない場合、`path` を文書の場所（文書のストア.文書の場所）にし、`scope` を次のとおり決める。`body` を返さない（`snippets` も無い）なら `summary`、`snippets` を返すか `body` を切ったか `records` の要素で `body_path` が無いなら `section`、それ以外は `full`
       11. 返した文書を順に読み取りの検査（文書の検査.検査する、`on="read"`）にかけ、違反を `{id}: {rule}（{path}）` で `notes` に足す
-      12. 文書を足すごとに結果の文字数を数え、`max_chars` を超える文書の手前で止める。止めたら `truncated` を `True` にし、`notes` に打ち切ったことと、`cursor` で続きを取るか `fields` を絞るか `view: ids` で取り直すことを足す
+      12. 文書を足すごとに結果の文字数（抜粋は各行の `{行番号}:{行}` の文字数）を数え、`max_chars` を超える文書の手前で止める。止めたら `truncated` を `True` にし、`notes` に打ち切ったことと、`cursor` で続きを取るか `fields` を絞るか `view: ids` で取り直すことを足す
       13. 返していない文書が残れば、続きの位置を作る（`next_cursor`）
       14. 本文を返した文書（`SEEN_MARK` にしたものを除く）を会話の記録に `body` で残す（会話キーは `session_id`・`agent_id`）
       15. 検索の結果を返す
@@ -991,6 +1061,13 @@ functions:
         mock: なし（一時フォルダの git リポジトリ）
         expected: '`path` が文書の絶対パスで、`scope` が順に `full`（`records` の要素は `section`）・`section`・`section`・`summary`。`ids` と `ref` では `path`・`scope` が `None`'
         exception: '-'
+      - name: test_search_docs_when_snippets_regex
+        case: 正常
+        summary: 正規表現で当てた文書の抜粋
+        condition: '本文の 2 行目が `# TODO x` の文書に `filter: {field: body, op: regex, values: ["^#\\s*TODO"]}`、`snippets: {before: 0, after: 0}`'
+        mock: なし
+        expected: '`items[0].snippets` が 1 つで、行が `(2, "# TODO x", True)`'
+        exception: '-'
   - name: render_search_markdown
     title: 検索の結果の Markdown
     kind: 関数
@@ -1019,7 +1096,7 @@ functions:
     process: |-
       1. 先頭の行に `{配信元}: 該当 {total_count} 件・返した {returned} 件` を置く（複数の配信元は配信元ごとの件数も添える）
       2. `groups` があれば `| 値 | 件数 |` の表を置く
-      3. `view` が `full` の場合、文書ごとに `<document path="{path}" scope="{scope}">`（`path` が `None` なら属性の無い `<document>`）と `</document>` で包み、中に項目の箇条書きと本文（YAML の文書は YAML、Markdown の文書は Markdown のまま）を置く。それ以外は項目を列にした表にする（列名は項目の名前。`@chars` は `chars`）
+      3. `view` が `full` の場合、文書ごとに `<document path="{path}" scope="{scope}">`（`path` が `None` なら属性の無い `<document>`）と `</document>` で包み、中に項目の箇条書きと本文（YAML の文書は YAML、Markdown の文書は Markdown のまま）を置く。抜粋は、当たった行を `{行番号}:{行}`、前後の行を `{行番号}-{行}` で出し、抜粋の間に `--` の行を置く。それ以外は項目を列にした表にする（列名は項目の名前。`@chars` は `chars`）
       4. `notes` があれば末尾に `> ` の行で並べ、`next_cursor` があれば `続き: cursor={next_cursor}` を置く
     unit_tests:
       - name: test_render_search_markdown
@@ -1035,6 +1112,125 @@ functions:
         mock: なし
         expected: 1 件目が `<document path="{path}" scope="full">`、2 件目が属性の無い `<document>` で包まれる
         exception: '-'
+      - name: test_render_search_markdown_when_snippets
+        case: 正常
+        summary: 抜粋の書式
+        condition: '`view: full` で抜粋 2 つ（`(3, "## a", True)`・`(4, "b", False)` と `(9, "## c", True)`）を持つ項目'
+        mock: なし
+        expected: '`<document>` の中に `3:## a`・`4-b`・`--`・`9:## c` の順の行'
+        exception: '-'
+  - name: compile_regex
+    title: 正規表現の組み立て
+    kind: 関数
+    container: features/search/filters.py
+    usecase: 検索
+    role: 変換
+    summary: '`regex` の値を、各行に当たる正規表現にする'
+    scope: public
+    thread_safe: true
+    args:
+      - name: value
+        title: 値
+        type: str
+        required: true
+        passing: positional
+        description: 条件の `values` の 1 つ
+      - name: case_sensitive
+        title: 区別するか
+        type: bool
+        required: true
+        passing: keyword
+        description: 条件の `case_sensitive`
+    returns:
+      type: re.Pattern[str]
+      description: コンパイルした正規表現
+    process: 1. フラグを `re.MULTILINE` にし、`case_sensitive` が `False` なら `re.IGNORECASE` を加えて `re.compile(value, flags)` を返す（`re.error` はそのまま送る）
+    exceptions:
+      - name: re.error
+        condition: 正規表現にならない値
+        message: '`re` の既定'
+    unit_tests:
+      - name: test_compile_regex
+        case: 正常
+        summary: 各行と大文字小文字
+        condition: '`compile_regex("^b", case_sensitive=False)` と `compile_regex("^B", case_sensitive=True)` を `a\nb` に `search`'
+        mock: なし
+        expected: 1 つ目が当たり、2 つ目は当たらない
+  - name: find_snippets
+    title: 抜粋の検索
+    kind: 関数
+    container: features/search/snippets.py
+    usecase: 共通
+    role: 変換
+    summary: 本文から条件に当たる行と前後の行を、行番号つきの抜粋にする
+    scope: public
+    thread_safe: true
+    args:
+      - name: text
+        title: 本文
+        type: str
+        required: true
+        passing: positional
+        description: 抜き出す元
+      - name: conditions
+        title: 条件
+        type: Sequence[Condition]
+        required: true
+        passing: positional
+        description: 抜粋を探す条件
+      - name: before
+        title: 前の行数
+        type: int
+        required: true
+        passing: keyword
+        description: 当たった行の前に添える行数
+      - name: after
+        title: 後ろの行数
+        type: int
+        required: true
+        passing: keyword
+        description: 当たった行の後ろに添える行数
+      - name: max_count
+        title: 抜粋の数
+        type: int
+        required: true
+        passing: keyword
+        description: 返す抜粋の上限
+    returns:
+      type: list[Snippet]
+      description: 本文の先頭からの抜粋。重なる範囲は 1 つにまとめる
+    process: |-
+      1. 本文を `\n` で行に分け、行末の `\r` を除く（本文が改行で終わるときの最後の空の要素は除く）。行番号は 1 始まり
+      2. 条件ごとに、`values` のどれかに当たった行を集める
+         - `regex` は正規表現の組み立てで本文全体に `finditer` をかけ、当たった範囲の始まりの行から終わりの行までを当たった行にする。`case_sensitive` が `False` なら行ごとに NFKC をした本文にかける
+         - `eq`・`prefix`・`suffix`・`contains` は値を含む行（`case_sensitive` が `False` なら行と値に NFKC と `casefold`）
+         - それ以外の `op` は飛ばす
+      3. 当たった行ごとに前 `before`・後ろ `after` の範囲を作り、重なる範囲をまとめ、先頭から `max_count` 個を `Snippet` にして返す（`hit` は当たった行か）
+    unit_tests:
+      - name: test_find_snippets
+        case: 正常
+        summary: 正規表現は行の頭に当たる
+        condition: '3 行目が `## 手順`、8 行目が `a ## b` の本文に `{field: body, op: regex, values: ["^## "]}`、`before=0`・`after=1`・`max_count=3`'
+        mock: なし
+        expected: 1 つの抜粋で、行が `(3, "## 手順", True)`・`(4, …, False)`
+      - name: test_find_snippets_when_anchor
+        case: 正常
+        summary: 値全体の先頭
+        condition: '1 行目・3 行目が空白で始まらない本文に `{field: body, op: regex, values: ["\\A\\S"]}`、`before=0`・`after=0`'
+        mock: なし
+        expected: 行番号 1 の抜粋だけ
+      - name: test_find_snippets_when_overlap
+        case: 正常
+        summary: 重なりと上限
+        condition: '10 行のうち 3・4・9 行目に `foo` の本文に `{field: body, op: contains, values: [ＦＯＯ]}`、`before=1`・`after=1`・`max_count=1`'
+        mock: なし
+        expected: 2〜5 行目の 1 つの抜粋で、`hit` が 3・4 行目だけ `True`
+      - name: test_find_snippets_when_trailing_newline
+        case: 正常
+        summary: 末尾の改行と CRLF
+        condition: 本文 `a\r\nfoo\r\n` に `contains` の `foo`、`before=0`・`after=5`
+        mock: なし
+        expected: 行が `(2, "foo", True)` だけ
 refs:
   - dev/設計書/インターフェース定義/開発ドキュメントサーバー/文書の検索#
 test_files:
