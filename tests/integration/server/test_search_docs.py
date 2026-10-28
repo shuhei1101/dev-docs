@@ -426,3 +426,50 @@ def test_error_when_ref_not_found(
     assert "no-such-branch" in no_ref.text
     assert non_git.is_error
     assert "ref" in non_git.text
+
+
+def test_normal_when_excluded_name(
+    make_source: Callable[..., Any],
+    make_server: Callable[..., Any],
+    sample_file_set: Callable[..., dict[str, str]],
+    sample_config_text: Callable[..., str],
+) -> None:
+    """行の exclude に当たるファイルをその行の文書にせず、他の行に当たればその行の文書として返す（正常系）。"""
+    # 準備
+    rows = (
+        "  - id: rule\n"
+        "    type: markdown\n"
+        "    paths: [docs/rule/*.md]\n"
+        "    exclude: [README.md]\n"
+        "  - id: index\n"
+        "    type: markdown\n"
+        "    paths: [docs/**/README.md]\n"
+    )
+    files = sample_file_set(
+        **{
+            "dev-docs.yaml": sample_config_text(rows),
+            "docs/rule/a.md": "# a\n",
+            "docs/rule/Rb.md": "# Rb\n",
+            "docs/rule/README.md": "# 目次\n",
+        }
+    )
+    source = make_source("sample", files)
+    env = make_server(source)
+    # 実行
+    rule = env.call(
+        "search_docs",
+        cwd=str(source.folder),
+        filter={"field": "kind", "op": "eq", "values": ["rule"]},
+        view="summary",
+        format="json",
+    )
+    index = env.call(
+        "search_docs",
+        cwd=str(source.folder),
+        filter={"field": "kind", "op": "eq", "values": ["index"]},
+        view="summary",
+        format="json",
+    )
+    # 検証
+    assert [item["id"] for item in rule.data["items"]] == ["docs/rule/a", "docs/rule/Rb"]
+    assert [item["id"] for item in index.data["items"]] == ["docs/rule/README"]
