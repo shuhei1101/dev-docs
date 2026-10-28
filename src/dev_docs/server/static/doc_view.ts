@@ -37,9 +37,17 @@ export async function renderBody(state: PageState): Promise<HTMLElement | null> 
   } else {
     await mdmark.mount(article, { markdown });
   }
+  dropDuplicateTitle(article);
   buildToc(article);
   initColumns(article, state);
   return article;
+}
+
+/** 画面のタイトルと同じ本文の先頭の見出しは、重ねて出さないよう外す。 */
+function dropDuplicateTitle(article: HTMLElement): void {
+  const title = document.querySelector(".doc-title")?.textContent?.trim();
+  const first = article.querySelector("h1");
+  if (first && title && first.textContent?.trim() === title) first.remove();
 }
 
 /** 本文の `h2[id]` から右の目次と本文の上の目次を作る。 */

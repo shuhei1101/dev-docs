@@ -57,13 +57,14 @@ requirements:
   - name: スクリプトの制限時間
     english_name: script_timeout
     category: 耐障害
-    external_constraint: 未確定
-    source_kind: 未確定
-    value: 未確定
+    external_constraint: 制限なし
+    source_kind: 制限なし
+    value: '30'
     unit: 秒
-    rationale: '設定の資料 A-25 の既定値は 30 秒。画面と MCP を待たせる上限から逆算して #3 の設計で決める'
+    rationale: '検査・変換・生成のスクリプトは配信元の利用者が書くため、外部の上限は無い。画面と MCP を待たせすぎず、通常の検査・変換が終わる時間として、設定の資料 A-25 の既定値 30 秒をそのまま採用した。端末の設定の `script_timeout_sec` で変えられる'
     overflow: 制限時間を超えたスクリプトを止め、検査・変換の失敗として返す
     status: planned
+    source: 設定の資料 A-25（`script_timeout_sec` の既定値）
   - name: Issue の作成画面の URL の長さ
     english_name: issue_url_length
     category: 動作環境
@@ -77,4 +78,31 @@ requirements:
     refs:
       - dev/設計書/シナリオ/単一ユースケース/利用者が画面で読む#scenarios[正常シナリオ（Issue の本文が長い）]
     status: planned
+  - name: 検索の件数の上限
+    english_name: search_limit
+    category: 性能
+    external_constraint: 制限なし
+    source_kind: 制限なし
+    value: '100'
+    unit: 件
+    rationale: エージェントの文脈に載せる量を抑えるため。`search_docs`・`list_changes` の `limit` の上限で、既定は 20
+    overflow: 100 を超えた値は 100 に丸め、`notes` で知らせる。黙って切り捨てない
+  - name: 結果全体の文字数の上限
+    english_name: result_max_chars
+    category: 性能
+    external_constraint: 制限なし
+    source_kind: 制限なし
+    value: '40000'
+    unit: 文字
+    rationale: エージェントの文脈に載せる量を抑えるため。`search_docs`・`list_changes` の `max_chars` の上限で、既定は 20,000
+    overflow: 上限を超える手前で打ち切り、`truncated` と、続きを取る `next_cursor` を返す
+  - name: 1 回の操作の件数の上限
+    english_name: operations_max
+    category: 性能
+    external_constraint: 制限なし
+    source_kind: 制限なし
+    value: '50'
+    unit: 件
+    rationale: 1 回の書き込み・削除で配信元の排他を握る時間と、検査の実行の時間を抑えるため。`write_docs` の `operations`・`delete_docs` の `targets` の件数の上限
+    overflow: 50 件を超える要求は `InvalidArgumentError` で断り、何も書かない
 lead: 外部の制約から逆算した dev-docs の決定値。

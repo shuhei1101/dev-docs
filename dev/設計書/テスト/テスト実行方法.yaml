@@ -41,13 +41,14 @@ layers:
   - name: E2E テスト
     run_all: 未確定
   - name: lint
-    description: ruff で linter と formatter の check を、mypy で型検査を、`claude plugin validate` でマーケットプレイスとプラグインの定義の構造を検査する。型検査はプロジェクト全体に回す。
+    description: ruff で linter と formatter の check を、mypy で Python の型検査を、tsc で画面のスクリプトの型検査を、`claude plugin validate` でマーケットプレイスとプラグインの定義の構造を検査する。型検査はプロジェクト全体に回す。
     prerequisites:
-      - 検査の設定は `pyproject.toml` が持つ
+      - 検査の設定は `pyproject.toml` と `tsconfig.json` が持つ
       - '`claude` コマンドが使えること'
+      - Node.js 24 以上と `npm ci` で入れた typescript がある
     run_all: |-
       ```bash
-      (rc=0; uv run ruff check . || rc=1; uv run ruff format --check . || rc=1; uv run mypy . || rc=1; claude plugin validate . || rc=1; exit $rc)
+      (rc=0; uv run ruff check . || rc=1; uv run ruff format --check . || rc=1; uv run mypy . || rc=1; npx tsc -p tsconfig.json --noEmit || rc=1; claude plugin validate . || rc=1; exit $rc)
       ```
 lead: dev-docs のテスト種別ごとの実行コマンド。
 prerequisites:
