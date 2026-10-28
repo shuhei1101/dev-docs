@@ -19,6 +19,8 @@ from dev_docs.features.search.types import (
     OrderKey,
     SearchRequest,
     SearchResult,
+    Snippet,
+    SnippetLine,
     Snippets,
 )
 from dev_docs.features.seen.store import SeenStore
@@ -186,6 +188,19 @@ def test_search_docs_when_order_by_dates(make_env: Callable[..., SearchEnv]) -> 
     result = env.search(order_by=[OrderKey(field="updated", direction="desc")])
     # 検証
     assert [item.id for item in result.items] == ["doc-3", "doc-1", "doc-2"]
+
+
+def test_search_docs_when_snippets_regex(make_env: Callable[..., SearchEnv]) -> None:
+    """正規表現で当てた文書の抜粋（正常系）。"""
+    # 準備
+    env = make_env({"docs/doc-1.yaml": "id: doc-1\n# TODO x\nname: 文書 1\n"})
+    condition = Condition(field="body", op="regex", values=["^#\\s*TODO"])
+    # 実行
+    result = env.search(filter=condition, view="full", snippets=Snippets(before=0, after=0))
+    # 検証
+    assert result.items[0].snippets == [
+        Snippet(lines=[SnippetLine(line=2, text="# TODO x", hit=True)])
+    ]
 
 
 def test_search_docs_when_id_values(make_env: Callable[..., SearchEnv]) -> None:

@@ -135,7 +135,7 @@ functions:
       description: ツールの結果
     process: |-
       1. `fmt` が `markdown` で `render` がある場合、`content` に `render(result)` の text を 1 つ入れ、`structuredContent` を持たない結果を返す
-      2. それ以外は、結果を JSON にできる辞書にし（`dataclasses.asdict`、`None` のキーは落とす。`from_` などの別名は別名のキーで出す）、`structuredContent` にその辞書を、`content` に同じ JSON の text を入れる
+      2. それ以外は、結果を JSON にできる辞書にし（`dataclasses.asdict`、`None` のキーは落とす。`from_` などの別名は別名のキーで出す。`SnippetLine` は `text` が空でも `line`・`text`・`hit` を全て出す）、`structuredContent` にその辞書を、`content` に同じ JSON の text を入れる
     unit_tests:
       - name: test_to_tool_result
         case: 正常
@@ -155,6 +155,13 @@ functions:
         condition: '`fmt="json"` で、`path`・`scope: full`・`values: {path: a.py}` を持つ検索の項目と、`path`・`scope` が `None` の項目'
         mock: なし
         expected: 1 件目は `path`・`scope` が `values` の外にあり `values.path` が `a.py` のまま、2 件目は `path`・`scope` のキーを持たない
+        exception: '-'
+      - name: test_to_tool_result_when_snippet_empty_line
+        case: 正常
+        summary: 抜粋の空の行
+        condition: '`fmt="json"` で、抜粋の行に `SnippetLine(line=2, text="", hit=False)` を持つ検索の項目'
+        mock: なし
+        expected: '`snippets[0].lines` の要素が `{line: 2, text: "", hit: false}`'
         exception: '-'
   - name: tool_error
     title: ツールのエラーの変換
@@ -213,6 +220,7 @@ functions:
     process: |-
       1. `MCPServer(DOCS_MCP_NAME)` を作る
       2. `search_docs`・`describe`・`list_changes`・`trace_related`・`write_docs`・`delete_docs` を `TOOL_ANNOTATIONS` の注釈で登録する。引数はインターフェース定義の `request` をキーワード引数で受ける（`list_changes` の `from` は `from_: Annotated[str | None, Field(validation_alias="from")]` で受け、ツールの入力のスキーマでは `from` を出す。`alias` は関数の呼び出しで `TypeError` になるため使わない）
+         - `search_docs` の説明は、インターフェース定義の冒頭リードに続けて `op: regex は値の各行に当たる（値全体の先頭・末尾は \A・\Z）。snippets は本文の代わりに、当たった行と前後の行（before・after。省けば context_lines）を行番号つきで返す。` を置く
          - 引数の型の誤り・`Literal` に無い値は、SDK が関数を呼ぶ前に `isError` の結果にする。入力のスキーマに無いキーは SDK が捨てる
       3. 各ツールは次の順で処理する
          - 引数で要求のモデル（`SearchRequest` など）を作る

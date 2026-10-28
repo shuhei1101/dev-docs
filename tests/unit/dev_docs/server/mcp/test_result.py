@@ -8,7 +8,13 @@ from mcp.types import TextContent
 from pydantic import ValidationError
 
 from dev_docs.features.access.types import SourceAccess
-from dev_docs.features.search.types import SearchItem, SearchRequest, SearchResult
+from dev_docs.features.search.types import (
+    SearchItem,
+    SearchRequest,
+    SearchResult,
+    Snippet,
+    SnippetLine,
+)
 from dev_docs.server.mcp.result import to_tool_result, tool_error
 from dev_docs.shared.errors import SourceNotReadableError
 
@@ -70,6 +76,20 @@ def test_to_tool_result_when_location() -> None:
     assert "path" not in second
     assert "scope" not in second
     assert "path" not in second["values"]
+
+
+def test_to_tool_result_when_snippet_empty_line() -> None:
+    """抜粋の空の行（正常系）。"""
+    # 準備
+    snippets = [Snippet(lines=[SnippetLine(line=2, text="", hit=False)])]
+    items = [SearchItem(id="doc-1", source=None, values={}, snippets=snippets)]
+    search = SearchResult(total_count=1, returned=1, view="full", items=items)
+    # 実行
+    result = to_tool_result(search, "json", None)
+    # 検証
+    assert result.structured_content is not None
+    line = result.structured_content["items"][0]["snippets"][0]["lines"][0]
+    assert line == {"line": 2, "text": "", "hit": False}
 
 
 def test_tool_error() -> None:
