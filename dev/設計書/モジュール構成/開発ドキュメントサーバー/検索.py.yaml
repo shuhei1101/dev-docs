@@ -453,6 +453,12 @@ data_models:
         type: str
         access: 公開
         description: 描き方を決めるために要求の `view` を持つ
+      - name: source_label
+        title: 配信元の表示
+        type: str
+        access: 公開
+        default: '""'
+        description: Markdown の先頭の行に出す、読んだ配信元の ID（複数なら `,` で繋ぐ）。JSON には出さない
 functions:
   - name: field_values
     title: 項目の値
@@ -866,7 +872,7 @@ functions:
       3. 集めた種類のスキーマで使える項目を作り、条件の確かめをする
          - 違反がある場合、違反と `describe(source, kind)` でスキーマを見ることを添えた `InvalidArgumentError` を送る
       4. `limit` が `LIMIT_MAX` を超えれば丸め、`max_chars` が `MAX_CHARS_LIMIT` を超えれば丸めて、それぞれ `notes` で知らせる。`limit` が 1 未満なら `InvalidArgumentError` を送る
-      5. 条件の照合で当たった文書を集め、`total_count` と（複数の配信元なら）`per_source` を数える
+      5. 条件の照合で当たった文書を集め、`total_count` と（複数の配信元なら）`per_source` を数える。読んだ配信元の ID を `,` で繋いで `source_label` にする
       6. `group_by` がある場合、当たった文書の値ごとの件数を `groups` にする（配列は要素ごとに数え、値が無い文書は `（なし）`）
       7. `view` が `count` の場合、ここで返す
       8. `order_by` のキーの順に並べる（`order_by` が `None` なら `id` の昇順。日時の項目の空と値が無い文書は向きによらず末尾。同じ順位は配信元の順・`id` の昇順）。`order_by` が `None` で、`filter` が `id` の `eq` の条件 1 つのときは、その `values` の順に並べる

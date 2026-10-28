@@ -210,7 +210,7 @@ functions:
       3. 各ツールは次の順で処理する
          - 引数で要求のモデル（`SearchRequest` など）を作る
          - サービスを `asyncio.to_thread` で呼ぶ（引数は `handlers` の属性）
-         - 結果をツールの結果にする（`write_docs`・`delete_docs` の `render` は `None`。`search_docs` は `functools.partial(render_search_markdown, source_label=",".join(result.per_source))`、`list_changes` は `functools.partial(render_changes_markdown, source_label=request.source or "作業中の配信元")` を渡す）
+         - 結果をツールの結果にする（`write_docs`・`delete_docs` の `render` は `None`。`search_docs` は `functools.partial(render_search_markdown, source_label=result.source_label)`、`list_changes` は `functools.partial(render_changes_markdown, source_label=request.source or "作業中の配信元")` を渡す）
          - `DevDocsError` と `pydantic.ValidationError` はツールのエラーの変換の `CallToolResult(is_error=True)` をそのまま返す。それ以外の例外は `[error]` ツールの処理に失敗した（ツール名・例外）を書いて MCP の既定に任せる
       4. 作った MCP を返す
     unit_tests:
