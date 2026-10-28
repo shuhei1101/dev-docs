@@ -21,5 +21,6 @@
 | 設定・起動 | [端末の設定の取得](./端末の設定の取得.yaml) | GET /_api/settings/sources |
 | 設定・起動 | [端末の設定の保存](./端末の設定の保存.yaml) | PUT /_api/settings/sources |
 | 設定・起動 | [起動](./起動.yaml) | dev-docs serve |
+| 画面の API | [APIのスキーマ](./APIのスキーマ.yaml) | GET /_api/openapi.json |
 
 <!-- /table -->

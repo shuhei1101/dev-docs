@@ -30,7 +30,7 @@ flows:
       ```
     expected:
       - '`127.0.0.1` で待ち受け、`0.0.0.0` では待ち受けない'
-      - '`/sample/` と `/notes/` が 200 を返す'
+      - '`/_api/sources/sample/docs` と `/_api/sources/notes/docs` が 200 を返す'
       - '`/mcp` のツールが `search_docs`・`write_docs`・`delete_docs`・`describe`・`list_changes`・`trace_related` の 6 つ'
       - '`/_admin/mcp` に MCP のセッションを張れる'
       - 標準出力に待ち受けたアドレスと sample・notes が出る
@@ -80,7 +80,7 @@ flows:
         T-->>U: old を配信し、警告のログを残す
       ```
     expected:
-      - '`/old/` が 200 を返す'
+      - '`/_api/sources/old/docs` が 200 を返す'
       - 警告のログに old の id・設定のバージョン・サーバーが読めるバージョンがある
     test: test_normal_when_config_version_old
   - name: 正常系（配信元の検証に失敗する）
@@ -108,7 +108,7 @@ flows:
         T-->>U: sample だけを配信する
       ```
     expected:
-      - '`/broken/` と `/noscript/` が 404、`/sample/` と `/mcp` は応答する'
+      - '`/_api/sources/broken/docs` と `/_api/sources/noscript/docs` が 404、`/_api/sources/sample/docs` と `/mcp` は応答する'
       - 'エラーログに `broken: documents[0].paths: 必須のキーが無い` と、noscript の `converters[0]` とスクリプトが見つからない理由がある'
       - '`/_admin/mcp` に MCP のセッションを張れる'
     test: test_normal_when_source_invalid
@@ -211,7 +211,7 @@ constraints:
     constraint: 既定 8781
     decided_by: dev/設計書/非機能要件/非機能要件#requirements[待ち受けのポート]
   - item: 配信する入口
-    constraint: '画面の API `/_api/`、文書の MCP `/mcp`（ツール 6 つ）、管理の MCP `/_admin/mcp`（ツールは #4）'
+    constraint: '画面の API `/_api/`（そのスキーマ `/_api/openapi.json`）、文書の MCP `/mcp`（ツール 6 つ）、管理の MCP `/_admin/mcp`（ツールは #4）'
   - item: 設定のマージ
     constraint: '`sources[].config` を上から順に読み、同じキーは後が優先、`documents[]` は `id` で行ごとに上書き・追加する'
   - item: タイムアウト

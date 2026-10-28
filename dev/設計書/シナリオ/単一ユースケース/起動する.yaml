@@ -25,14 +25,14 @@ scenarios:
         loop sources の各行
           DD->>CF: config の YAML を上から順に読んでマージする
           DD->>DD: マージした設定をスキーマで検証し、検査・変換・生成のスクリプトを実行できるか確かめる
-          DD->>DD: 画面と文書の MCP の配信元に加える
+          DD->>DD: 画面の API と文書の MCP の配信元に加える
         end
         DD->>DD: 127.0.0.1:8781 で待ち受ける
         DD-->>U: 待ち受けたアドレスと配信している配信元を標準出力に出す
       ```
     expected:
       - '`127.0.0.1:8781` で待ち受け、`0.0.0.0` では待ち受けない'
-      - 画面の `/sample/` と `/notes/` が 200 を返す
+      - '`/_api/sources/sample/docs` と `/_api/sources/notes/docs` が 200 を返す'
       - '`/mcp` のツールが `search_docs`・`write_docs`・`delete_docs`・`describe`・`list_changes`・`trace_related` の 6 つ'
       - '`/_admin/mcp` に MCP のセッションを張れる（ツールは #4）'
       - 標準出力に待ち受けたアドレスと、配信している配信元の id（sample・notes）が出る
@@ -87,7 +87,7 @@ scenarios:
         DD-->>U: old を配信する
       ```
     expected:
-      - 画面の `/old/` が 200 を返す
+      - '`/_api/sources/old/docs` が 200 を返す'
       - 警告のログに old の id・設定のバージョン・サーバーが読めるバージョンが残る
     test: test_normal_when_config_version_old
     notes:
@@ -118,7 +118,7 @@ scenarios:
         DD-->>U: sample だけを配信する
       ```
     expected:
-      - 画面の `/broken/` が 404 を返し、`/sample/` と `/mcp` は応答する
+      - '`/_api/sources/broken/docs` が 404 を返し、`/_api/sources/sample/docs` と `/mcp` は応答する'
       - 'エラーログに `broken: documents[0].paths: 必須のキーが無い` の形で、配信元の id・違反したキーのパス・理由が残る'
       - '`/_admin/mcp` に MCP のセッションを張れる'
     test: test_error_when_source_config_invalid
@@ -147,7 +147,7 @@ scenarios:
         DD-->>U: sample だけを配信する
       ```
     expected:
-      - 画面の `/noscript/` が 404 を返し、`/sample/` は応答する
+      - '`/_api/sources/noscript/docs` が 404 を返し、`/_api/sources/sample/docs` は応答する'
       - エラーログに noscript の id・`converters[0]` のキーのパス・スクリプトが見つからない理由が残る
     test: test_error_when_script_not_executable
   - name: 異常シナリオ（端末の設定がスキーマに違反する）
@@ -207,7 +207,7 @@ trigger: '利用者が `dev-docs serve` を実行する（SessionStart のフッ
 preconditions:
   - '`DEV_DOCS_CONFIG`（既定 `~/.config/dev-docs/settings.yaml`）に端末の設定がある'
   - '`DEV_DOCS_PORT`（既定 8781）のポートが空いている'
-success_guarantee: 検証に通った配信元が `/{配信元の id}/` の画面と `/mcp` の文書の MCP で読める。`/mcp` のツールは配信元の数によらず 6 つ。
+success_guarantee: 検証に通った配信元が `/_api/sources/{配信元の id}/docs` の画面の API と `/mcp` の文書の MCP で読める。`/mcp` のツールは配信元の数によらず 6 つ。
 minimal_guarantee: 検証に失敗した配信元があっても、他の配信元と `/_admin/mcp` は配信する。失敗した配信元の id・違反したキーのパス・理由がエラーログに残る。
 frequency: 端末の起動ごと・dev-docs の更新ごと
 priority: 高
