@@ -14,12 +14,8 @@ from dev_docs.features.documents.store import DocumentStore
 from dev_docs.features.documents.types import Document
 from dev_docs.features.search.cursor import decode_cursor, encode_cursor
 from dev_docs.features.search.fields import field_values, known_fields
-from dev_docs.features.search.filters import (
-    check_filter,
-    match_filter,
-    normalize,
-    snippet_lines,
-)
+from dev_docs.features.search.filters import check_filter, match_filter
+from dev_docs.features.search.snippets import find_snippets
 from dev_docs.features.search.types import (
     FIELD_CHARS_DEFAULT,
     FIELD_CHARS_FULL,
@@ -33,6 +29,7 @@ from dev_docs.features.search.types import (
     SearchItem,
     SearchRequest,
     SearchResult,
+    Snippet,
 )
 from dev_docs.features.seen.store import SeenStore
 from dev_docs.features.seen.types import SEEN_MARK, SessionKey
@@ -66,15 +63,17 @@ def _invalid(violations: list[Violation]) -> InvalidArgumentError:
     )
 
 
-def _leaf_words(node: Condition | Group | None) -> list[str]:
-    """条件の木から、本文を探す語（`body`・`*` の条件の値）を集める。"""
+def _body_conditions(node: Condition | Group | None) -> list[Condition]:
+    """条件の木から、本文を探す条件（`body`・`*` の条件）を集める。"""
     if node is None:
         return []
     if isinstance(node, Group):
-        return [word for child in node.all_of or node.any_of or [] for word in _leaf_words(child)]
-    if node.field in (BODY, "*") and node.op in ("eq", "prefix", "suffix", "contains", "regex"):
-        return [normalize(value) for value in node.values]
-    return []
+        return [
+            condition
+            for child in node.all_of or node.any_of or []
+            for condition in _body_conditions(child)
+        ]
+    return [node] if node.field in (BODY, "*") else []
 
 
 def _sort_value(document: Document, field: str) -> Any:
@@ -168,7 +167,7 @@ def _field_names(request: SearchRequest, document: Document) -> list[str]:
 
 
 def _scope(
-    document: Document, values: dict[str, Any], snippets: list[str], field_chars: int
+    document: Document, values: dict[str, Any], snippets: list[Snippet], field_chars: int
 ) -> Literal["full", "section", "summary"]:
     """返した範囲を決める（本文を切らずに返したら `full`）。"""
     if snippets:
@@ -186,7 +185,9 @@ def _item_size(item: SearchItem) -> int:
     return (
         len(item.id)
         + sum(len(str(value)) for value in item.values.values())
-        + sum(len(snippet) for snippet in item.snippets)
+        + sum(
+            len(f"{line.line}:{line.text}") for snippet in item.snippets for line in snippet.lines
+        )
     )
 
 
@@ -270,7 +271,7 @@ def search_docs(
     field_chars = request.max_chars_per_field or (
         FIELD_CHARS_FULL if request.view == "full" else FIELD_CHARS_DEFAULT
     )
-    words = _leaf_words(request.filter)
+    body_conditions = _body_conditions(request.filter)
     returns_body = request.view == "full" or BODY in request.fields
     seen_ids: dict[str, set[str]] = {}
     if returns_body and not request.repeat_seen and request.snippets is None:
@@ -289,14 +290,18 @@ def search_docs(
     for hit in window:
         document = hit.document
         values: dict[str, Any] = {}
-        snippets: list[str] = []
+        snippets: list[Snippet] = []
         for name in _field_names(request, document):
             if name == BODY:
                 if request.snippets is not None:
-                    snippets = snippet_lines(
+                    context = request.snippets.context_lines
+                    before, after = request.snippets.before, request.snippets.after
+                    snippets = find_snippets(
                         document.body,
-                        words,
-                        context_lines=request.snippets.context_lines,
+                        body_conditions,
+                        # 省いた前後の行数は context_lines にする
+                        before=context if before is None else before,
+                        after=context if after is None else after,
                         max_count=request.snippets.max_per_doc,
                     )
                     continue
