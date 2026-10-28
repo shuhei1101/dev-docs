@@ -607,6 +607,12 @@ functions:
         condition: '`paths: [docs/rule/*.yaml]`・`exclude: [index.yaml]` で `doc_id` が `index`'
         mock: なし
         expected: '`InvalidArgumentError` の違反の `path` が `kind`、`rule` に `docs/rule/index.yaml` を含む'
+      - name: test_new_document_path_when_records_excluded
+        case: 異常
+        summary: 管理用の YAML の名前が除外の名前に当たる
+        condition: '`paths: [src/files.yaml]`・`records: files`・`body_file: path`・`exclude: [files.yaml]`'
+        mock: なし
+        expected: '`InvalidArgumentError` の違反の `path` が `kind`、`rule` に `src/files.yaml` を含む'
   - name: check_version
     title: バージョンの確かめ
     kind: 関数
