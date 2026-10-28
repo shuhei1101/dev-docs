@@ -771,7 +771,7 @@ functions:
       2. タブとサイドバーを組み立てる
       3. 返す文書を決める
          - `path` が無ければ、一番左のタブのタブの最初の文書。文書が 1 つも無ければ `DocumentNotFoundError`
-         - `path` があれば文書のページの特定。無く、集めたときの `unreadable` の読めなかったファイルのうち拡張子を落としたパスが `path` と同じものがあれば、`markdown` を `None`、`conversion_error` を `reason` が `invalid_yaml`（`kind` はファイルのパスが当たる文書の行、`file`・`line`・`column`・`detail` は読めなかったファイルの値）にして 6 へ進む。どちらにも無ければ `DocumentNotFoundError`（`missing` に `path`）
+         - `path` があれば文書のページの特定。無く、集めたときの `unreadable` の読めなかったファイルのうち拡張子を落としたパスが `path` と同じものがあれば、`markdown` を `None`、`conversion_error` を `reason` が `invalid_yaml`（`kind` は文書の行.行に当たるかが `True` になる最初の行、`file`・`line`・`column`・`detail` は読めなかったファイルの値）にして 6 へ進む。どちらにも無ければ `DocumentNotFoundError`（`missing` に `path`）
       4. 文書を変換する（変換.変換する）。`failure` があれば `markdown` を `None`、`conversion_error` を同じフィールドの `ConversionError` にする
       5. `diff_ref` があり Git の配信元なら、`diff_ref` の画面の読む場所で同じ ID の文書を引き（無い文書は空の内容）、変わったキー（`ignore` は `diff_ignore_keys`）のパスを `changed_items` にする。Git 管理外は `None` にする
       6. 返した文書を含むタブの `active` を `True` にする

@@ -583,13 +583,17 @@ functions:
       type: tuple[str, bool]
       description: (配信元の直下からのパス, `records` の配列へ足すか)
     process: |-
-      1. `records` がある場合、`paths[0]` が glob を含まなければ `(paths[0], True)` を返し、含めば違反にする
+      1. `records` がある場合、`paths[0]` が glob を含まなければ `(paths[0], True)` とし、含めば違反にする
       2. `records` が無い場合、`paths[0]` の最後の段の `*` を `doc_id` に置き換え、`**/` を除いたパスにする（例 `docs/**/*.yaml` → `docs/{doc_id}.yaml`）。glob を含まないパスは違反にする
-      3. 違反は `path` が `operations[{i}].kind`、`fix` が `documents[].paths の先頭を glob にしてください` の `InvalidArgumentError` で送る
+      3. 決めたパスに文書の行.除外の名前に当たるかが `True` なら違反にする。当たらなければ返す
+      4. 違反は `path` が `operations[{i}].kind` の `InvalidArgumentError` で送る。置き場所を決められないときは `fix` が `documents[].paths の先頭を glob にしてください`、除外の名前に当たるときは `rule` が `置き場所 {パス} が {kind} の exclude に当たります`、`fix` が `id を変えるか、documents[].exclude から外してください`
     exceptions:
       - name: InvalidArgumentError
         condition: 置き場所を決められない
         message: '`{kind} の新しい文書の置き場所を決められません`'
+      - name: InvalidArgumentError
+        condition: 置き場所のファイル名が `exclude` に当たる
+        message: '`置き場所 {パス} が {kind} の exclude に当たります`'
     unit_tests:
       - name: test_new_document_path
         case: 正常
@@ -597,6 +601,12 @@ functions:
         condition: '`paths: [docs/**/*.yaml]` と `paths: [data/list.yaml]`・`records: items`'
         mock: なし
         expected: '`("docs/sample-doc.yaml", False)` と `("data/list.yaml", True)`'
+      - name: test_new_document_path_when_excluded
+        case: 異常
+        summary: 置き場所が除外の名前に当たる
+        condition: '`paths: [docs/rule/*.yaml]`・`exclude: [index.yaml]` で `doc_id` が `index`'
+        mock: なし
+        expected: '`InvalidArgumentError` の違反の `path` が `kind`、`rule` に `docs/rule/index.yaml` を含む'
   - name: check_version
     title: バージョンの確かめ
     kind: 関数

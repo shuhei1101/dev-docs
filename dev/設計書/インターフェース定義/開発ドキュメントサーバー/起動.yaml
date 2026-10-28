@@ -184,31 +184,6 @@ flows:
       - 警告のログに行 `src` の索引に無いファイル 2 件（`src/d.py`・`src/sub/e.py`）とファイルが無い行 1 件（`c.py`）があり、`src/files.yaml` 自身は数えない
       - ずれが無い配信元では件数の警告を残さない
     test: test_normal_when_metadata_out_of_sync
-  - name: 正常系（exclude の要素が / を含む）
-    summary: '`documents[].exclude[]` に `/` を含む要素を持つ配信元を外して配信する'
-    setup:
-      - name: Mock
-        description: なし
-      - name: 除外を誤った配信元
-        description: '`documents[0].exclude` が `[docs/rule/README.md]` の配信元'
-        notes: id `slash`
-      - name: 端末の設定
-        description: '`sources` に sample・slash の 2 行'
-    flow: |-
-      ```mermaid
-      sequenceDiagram
-        participant U as クライアント
-        participant T as dev-docs serve
-
-        U->>T: dev-docs serve
-        T->>T: slash のスキーマの検証で exclude[0] が違反になる
-        T->>T: slash を配信せず、エラーログに残す
-        T-->>U: sample だけを配信する
-      ```
-    expected:
-      - '`/_api/sources/slash/docs` が 404、`/_api/sources/sample/docs` は応答する'
-      - エラーログに、配信元 `slash`・キーのパス `documents[0].exclude[0]`・違反の理由がある
-    test: test_normal_when_exclude_has_slash
 lead: 端末の設定を読み、検証に通った配信元を 1 プロセス・1 ポートで画面の API・`/mcp`・`/_admin/mcp` に配信し始める。
 identifier: serve
 permissions: なし
