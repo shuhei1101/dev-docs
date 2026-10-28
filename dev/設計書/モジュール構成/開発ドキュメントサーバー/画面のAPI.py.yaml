@@ -843,11 +843,18 @@ functions:
         required: true
         passing: positional
         description: 開こうとしたパス
+      - name: source_id
+        title: 配信元の ID
+        type: str
+        required: false
+        default: '""'
+        passing: keyword
+        description: 開こうとした配信元。`SourceNotServedError` の `value` に使う
     returns:
       type: dict[str, str] | None
       description: '`{missing, value}`。404 にしない例外は `None`'
     process: |-
-      1. `UnknownSourceError` は `source` と配信元の ID、`SourceNotServedError` は `not_served` と配信元の ID、`RefNotFoundError` は `ref` と `value`、`DocumentNotFoundError` は `doc` と `path`（`None` なら空）を返す
+      1. `UnknownSourceError` は `source` と配信元の ID、`SourceNotServedError` は `not_served` と `source_id`、`RefNotFoundError` は `ref` と `value`、`DocumentNotFoundError` は `doc` と `path`（`None` なら空）を返す
       2. それ以外は `None` を返す
     unit_tests:
       - name: test_not_found_fields
