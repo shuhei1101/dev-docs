@@ -1,0 +1,162 @@
+title: "開発ドキュメントサーバー / セッションの文脈 / service.py"
+lead: SessionStart のフックが文脈に入れる文（使える配信元・使い方・警告）を組み立て、`/clear`・圧縮の後は返し済みの記録を削除する。
+functions:
+  - name: build_session_context
+    title: セッションの文脈の組み立て
+    kind: 関数
+    container: features/session_context/service.py
+    usecase: セッションの文脈
+    role: サービス
+    summary: 作業場所から使える配信元と警告を集めて文脈の文を作る
+    scope: public
+    is_async: false
+    thread_safe: true
+    side_effects: '`reason` が `FORGET_REASONS` で `session_id` があれば、その会話キーの返し済みの記録を削除する'
+    args:
+      - name: request
+        title: 要求
+        type: SessionContextRequest
+        required: true
+        passing: positional
+        description: 検証済みの本文
+      - name: handlers
+        title: 部品
+        type: Handlers
+        required: true
+        passing: keyword
+        description: 登録簿・文書のストア・会話の記録を使う
+    returns:
+      type: SessionContextResponse
+      description: 文脈の文と内訳
+    process: |-
+      1. `reason` が `FORGET_REASONS` で `SessionKey.of(session_id, agent_id)` が `None` でなければ、記録を削除し `forgotten` を `True` にする（`SeenStore.forget`）
+         - `[INFO]` 返し済みの記録を削除した（セッション ID・件数）
+      2. 作業場所から使える配信元と権限を引く（`available_sources`）
+      3. 警告を集める（警告の収集）
+      4. 使える配信元に応じて文を作る
+         - 0 件の場合、`SETUP_GUIDE` だけにする
+         - それ以外の場合、配信元の行・`SESSION_USAGE`・警告をつなぐ（文脈の文）
+    unit_tests:
+      - name: test_build_session_context
+        case: 正常
+        summary: 使える配信元・使い方・警告を返す
+        condition: 書ける sample（管理用の YAML に無いファイル 1 件）と読める notes、`reason` は `startup`
+        mock: なし（一時ディレクトリ）
+        expected: '`sources` が sample（`read_write`）と notes（`read`）、`context` に `SESSION_USAGE` を含む、`warnings` が 1 件、`forgotten` が `False`'
+      - name: test_build_session_context_when_cleared
+        case: 正常
+        summary: '`/clear` の後は返し済みの記録を削除する'
+        condition: '`reason` が `clear`、`session_id` の記録がある'
+        mock: なし
+        expected: '`forgotten` が `True`、その会話キーの記録が 0 件'
+      - name: test_build_session_context_when_resumed
+        case: 正常
+        summary: 再開では記録を削除しない
+        condition: '`reason` が `resume`、`session_id` の記録がある'
+        mock: なし
+        expected: '`forgotten` が `False`、記録が残る'
+      - name: test_build_session_context_when_no_source_available
+        case: 正常
+        summary: 使える配信元が無い
+        condition: '`cwd` がどの配信元の範囲にも当たらない'
+        mock: なし
+        expected: '`sources` が空、`context` が `SETUP_GUIDE`'
+    callers:
+      - dev/設計書/モジュール構成/開発ドキュメントサーバー/features/session_context/route.py#functions[build_session_context_router]
+    callees:
+      - '#functions[_collect_warnings]'
+      - '#functions[_context_text]'
+  - name: _collect_warnings
+    title: 警告の収集
+    kind: 関数
+    container: features/session_context/service.py
+    usecase: セッションの文脈
+    role: 組み立て
+    summary: 使える配信元の同期のずれ・古い設定と、配信していない配信元を警告の文にする
+    scope: internal
+    is_async: false
+    thread_safe: true
+    args:
+      - name: available
+        title: 使える配信元
+        type: list[SourceAccess]
+        required: true
+        passing: positional
+        description: '`available_sources` の結果'
+      - name: handlers
+        title: 部品
+        type: Handlers
+        required: true
+        passing: keyword
+        description: 登録簿・文書のストア・端末の設定を使う
+    returns:
+      type: list[str]
+      description: 警告の文
+    process: |-
+      1. 使える配信元ごとに索引の同期を求め、件数が 0 でない並びごとに `{id}: {並びの名前}が {件数} 件あります（check_project で確かめられます）` を加える（`check_sync`）
+      2. 使える配信元の設定のバージョンが `old` なら `{id}: 設定のバージョンが古い（{設定}・読める {現在}）。dev-docs migrate で移し替えます` を加える（バージョンの新旧）
+      3. 端末の設定のバージョンが `old` なら同じ形の文を加える
+      4. `not_served` の配信元ごとに `{id}: 配信していません（{先頭の理由}）。check_project で確かめられます` を加える
+    unit_tests:
+      - name: test_collect_warnings
+        case: 正常
+        summary: 同期のずれ・古い設定・配信していない配信元を並べる
+        condition: 使える配信元 a（ファイルが無い行 2 件・古い設定）、`not_served` の b
+        mock: なし
+        expected: 警告が 3 件（a の同期・a の古い設定・b の配信していない）
+      - name: test_collect_warnings_when_unavailable_source
+        case: 正常
+        summary: 使えない配信元の同期のずれは載せない
+        condition: 配信中だが `available` に無い配信元に同期のずれ 1 件
+        mock: なし
+        expected: 警告が空
+    callers:
+      - '#functions[build_session_context]'
+    callees:
+      - dev/設計書/モジュール構成/開発ドキュメントサーバー/features/admin/service.py#functions[version_state]
+  - name: _context_text
+    title: 文脈の文
+    kind: 関数
+    container: features/session_context/service.py
+    usecase: セッションの文脈
+    role: 表示
+    summary: 配信元の行・使い方・警告を `CONTEXT_MAX_CHARS` 字以内の文にする
+    scope: internal
+    is_async: false
+    thread_safe: true
+    args:
+      - name: available
+        title: 使える配信元
+        type: list[SourceAccess]
+        required: true
+        passing: positional
+        description: 1 件以上
+      - name: warnings
+        title: 警告
+        type: list[str]
+        required: true
+        passing: positional
+        description: 警告の収集の結果
+    returns:
+      type: str
+      description: 文脈の文
+    process: |-
+      1. 先頭に `dev-docs の文書の MCP（dev-docs）で、次の配信元を使えます。` を置き、配信元ごとに `- {id}（読み書き|読み取りだけ）: {description}` を並べる
+      2. `SESSION_USAGE` を続け、警告があれば `注意:` の下に `- {警告}` を並べる
+      3. `CONTEXT_MAX_CHARS` を超える場合、配信元の行の `description` を省く
+      4. それでも超える場合、収まるまで配信元の行を末尾から削除し、`- ほか {件数} 件` を置く
+    unit_tests:
+      - name: test_context_text
+        case: 正常
+        summary: 配信元の行・使い方・警告をつなぐ
+        condition: 配信元 2 件・警告 1 件
+        mock: なし
+        expected: 配信元の行 2 つ・`SESSION_USAGE`・`注意:` の下の警告をこの順で含む
+      - name: test_context_text_when_too_long
+        case: 正常
+        summary: 上限を超えるときは説明を省き、行を切る
+        condition: '`description` が 500 字の配信元 100 件'
+        mock: なし
+        expected: 2,000 字以内で `description` を含まず、`- ほか {件数} 件` を含む
+    callers:
+      - '#functions[build_session_context]'

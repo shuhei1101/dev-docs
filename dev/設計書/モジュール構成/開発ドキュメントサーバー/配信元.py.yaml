@@ -896,6 +896,77 @@ functions:
         mock: なし
         expected: '`ValidationFailedError` で違反が `documents[0].paths`'
         exception: 検証に通らない
+  - name: assemble_source
+    title: 配信元の組み立て
+    kind: 関数
+    container: features/sources/service.py
+    usecase: 共通
+    role: 読み込み
+    summary: 設定のファイルを読み、マージ・検証・スクリプトの確かめをして配信中の配信元を作る
+    description: 内部の `_assemble` を公開にして名前を変える。端末の設定に無い配信元を管理の MCP の `check_project`・`try_convert` が同じ手順で組み立てるため。
+    scope: public
+    is_async: false
+    thread_safe: true
+    args:
+      - name: files
+        title: 設定のファイル
+        type: list[Path]
+        required: true
+        passing: positional
+        description: マージする順の `dev-docs.yaml`
+      - name: source_id
+        title: 配信元の ID
+        type: str | None
+        required: true
+        passing: keyword
+        description: '`None` は設定の `name`'
+      - name: scope_read
+        title: 読める範囲
+        type: list[str]
+        required: true
+        passing: keyword
+        description: 端末の設定の `scope.read`
+      - name: scope_write
+        title: 書ける範囲
+        type: list[str] | None
+        required: true
+        passing: keyword
+        description: '`None` は配信元のフォルダだけ'
+      - name: root_override
+        title: 配信元のフォルダ
+        type: Path | None
+        default: None
+        passing: keyword
+        description: '`None` は先頭のファイルのフォルダ'
+    returns:
+      type: tuple[ServedSource | None, SourceConfig | None, list[Violation]]
+      description: 配信中の配信元・設定・違反。読めないか検証に失敗したら `(None, None, 違反)`、スクリプトの確かめに失敗したら `(None, 設定, 違反)`
+    process: |-
+      1. 設定のファイルを順に読む。無い・読めない・辞書でないファイルは違反にする
+      2. マージして検証する（`merge_configs`・`validate_source_config`）
+      3. 設定を作り、スクリプトを確かめる（`check_scripts`）
+      4. スキーマ・タグのマスター・ワークツリーの glob を解いて配信中の配信元を作る
+    unit_tests:
+      - name: test_assemble_source
+        case: 正常
+        summary: '`root_override` のフォルダを配信元のフォルダにする'
+        condition: 別のフォルダに置いた設定と、配信元のフォルダを指す `root_override`
+        mock: なし（一時ディレクトリ）
+        expected: 配信元の `root` が `root_override`、違反が空
+      - name: test_assemble_source_when_script_missing
+        case: 正常
+        summary: スクリプトの確かめの失敗は設定を残す
+        condition: '`converters[0].run` が無いファイルを指す'
+        mock: なし
+        expected: '`(None, 設定, 違反 1 件)`'
+    callers:
+      - '#functions[load_source]'
+      - '#functions[load_source_at]'
+      - dev/設計書/モジュール構成/開発ドキュメントサーバー/features/admin/service.py#functions[_load_candidate]
+    callees:
+      - '#functions[merge_configs]'
+      - '#functions[validate_source_config]'
+      - '#functions[check_scripts]'
 classes:
   - name: SourceRegistry
     title: 配信元の一覧
