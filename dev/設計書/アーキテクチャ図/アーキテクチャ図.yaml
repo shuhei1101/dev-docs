@@ -71,7 +71,7 @@ repository:
 subsystems:
   - name: 開発ドキュメントサーバー
     scope: server
-    role: 端末の設定に並べた配信元を 1 プロセス・1 ポートで配り、YAML の文書を画面・文書の MCP・管理の MCP で出す
+    role: 端末の設定に並べた配信元を 1 プロセス・1 ポートで配り、YAML の文書を画面の API・文書の MCP・管理の MCP で出す
     runtime: Python 3.14
     runs_on: 利用者の端末（`127.0.0.1`）
     implementation: src/dev_docs/__main__.py
@@ -106,11 +106,3 @@ external_systems:
     status: planned
     notes:
       事前確認: '要否: 要。時点: 起動時・再読込時と管理の MCP の `check_project` で実行できるかを確かめ、失敗した配信元は配信しない'
-  - name: mdmark（jsDelivr）
-    purpose: 文書の画面のブラウザが、変換した Markdown を描くライブラリを読む
-    direction: 受信のみ
-    protocol: HTTPS（ES Modules の `import()`）
-    detail: dev/設計書/外部ライブラリ/mdmark#
-    status: planned
-    notes:
-      事前確認: '要否: 不要（ブラウザが読む相手で、サーバーからは到達を確かめない。読めないときは本文の描画がブラウザのコンソールにエラーを出す）'

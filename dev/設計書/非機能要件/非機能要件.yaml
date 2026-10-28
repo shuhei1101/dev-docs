@@ -6,7 +6,7 @@ requirements:
     external_constraint: 制限なし
     source_kind: 制限なし
     value: '3.14'
-    rationale: '新規のプロジェクトは最新安定版か 1 つ下を使う規約に従い、最新安定版 3.15 の 1 つ下を選んだ。依存する mdmark・MCP の Python SDK・FastAPI が対応しているかを #3 で確かめる'
+    rationale: '新規のプロジェクトは最新安定版か 1 つ下を使う規約に従い、最新安定版 3.15 の 1 つ下を選んだ。依存する MCP の Python SDK・FastAPI が対応しているかを #3 で確かめる'
     status: planned
   - name: 対応 OS
     english_name: supported_os
@@ -23,7 +23,7 @@ requirements:
     external_constraint: 未確定
     source_kind: 未確定
     value: 未確定
-    rationale: '画面は mdmark で描くため、mdmark の対応ブラウザを #3 の設計で確かめて決める'
+    rationale: '画面を作る #17 の設計で決める'
     measurement: 決めたブラウザで一覧・本文・差分の画面を開く
     status: planned
   - name: 対応する画面サイズ
@@ -32,7 +32,7 @@ requirements:
     external_constraint: 未確定
     source_kind: 未確定
     value: 未確定
-    rationale: 画面の設計（#3）で、スマホ幅を扱うかを含めて決める
+    rationale: 画面の設計（#17）で、スマホ幅を扱うかを含めて決める
     measurement: 決めた幅で画面を開き、横スクロールが出ないことを確かめる
     status: planned
   - name: 待ち受けのアドレス
@@ -65,19 +65,6 @@ requirements:
     overflow: 制限時間を超えたスクリプトを止め、検査・変換の失敗として返す
     status: planned
     source: 設定の資料 A-25（`script_timeout_sec` の既定値）
-  - name: Issue の作成画面の URL の長さ
-    english_name: issue_url_length
-    category: 動作環境
-    external_constraint: 未確定
-    source_kind: 外部 API の制限
-    source: GitHub の Issue の作成画面（`/issues/new` のクエリ）
-    value: '8000'
-    unit: 文字
-    rationale: GitHub は作成画面が受ける URL の長さの上限を公開していない。モックの `ISSUE_URL_MAX` の値をとり、上限が公開されたらその値から差し引いて決め直す
-    overflow: '`body` の末尾を上限に収まるまで切り詰め、切り詰めたことと全文をクリップボードへコピーしたことを書き添える。クリップボードには切り詰めていない全文を入れる'
-    refs:
-      - dev/設計書/シナリオ/単一ユースケース/利用者が画面で読む#scenarios[正常シナリオ（Issue の本文が長い）]
-    status: planned
   - name: 検索の件数の上限
     english_name: search_limit
     category: 性能

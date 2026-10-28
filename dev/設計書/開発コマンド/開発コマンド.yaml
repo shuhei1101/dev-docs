@@ -41,7 +41,7 @@ categories:
     verification:
       state: 済
       date: '2026-10-28'
-      detail: '`DEV_DOCS_CONFIG` に配信元 1 つの端末の設定を入れて `uv run dev-docs serve` を走らせ、127.0.0.1 の `DEV_DOCS_PORT` で待ち受けて標準出力に URL と配信元の ID を出すことを確かめた。設定画面・文書の画面・`/mcp` の `search_docs`・`describe`・`write_docs`・`trace_related` が応答し、SIGTERM で止まった。ポートの使用中（終了コード 3）と設定の違反（終了コード 2）は単体テストで確かめた'
+      detail: '`DEV_DOCS_CONFIG` に配信元 1 つの端末の設定を入れて `uv run dev-docs serve` を走らせ、127.0.0.1 の `DEV_DOCS_PORT` で待ち受けて標準出力に URL と配信元の ID を出すことを確かめた。`/mcp` の `search_docs`・`describe`・`write_docs`・`trace_related` が応答し、SIGTERM で止まった。ポートの使用中（終了コード 3）と設定の違反（終了コード 2）は単体テストで確かめた'
   - name: テスト
     refs:
       - dev/設計書/テスト/テスト実行方法#
@@ -49,17 +49,8 @@ categories:
     refs:
       - dev/設計書/テスト/テスト実行方法#layers[lint]
   - name: ビルド・生成
-    prerequisites:
-      - Node.js と typescript（`package.json` の devDependencies）が入っている
     commands: |-
-      ```bash
-      npx tsc -p tsconfig.build.json
-      ```
-    effects: '`src/dev_docs/server/static/*.ts` を同じフォルダの `.js` に変換する。生成した `.js` はコミットする。'
-    verification:
-      state: 済
-      date: '2026-10-28'
-      detail: worktree で `npx tsc -p tsconfig.build.json` を走らせ、終了コード 0 で `src/dev_docs/server/static/*.ts` と同じフォルダに `.js` ができることを確かめた
+      未確定
   - name: 取り込み前の検査
     commands: 未確定
   - name: 管理作業
