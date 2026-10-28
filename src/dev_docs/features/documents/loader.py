@@ -178,7 +178,15 @@ def documents_from_text(
             ], []
         loaded = load_yaml(text, file=path)
     except YamlLoadError as error:
-        return [], [LoadProblem(path=path, reason="unreadable", detail=str(error))]
+        return [], [
+            LoadProblem(
+                path=path,
+                reason="unreadable",
+                detail=str(error),
+                line=error.line,
+                column=error.column,
+            )
+        ]
     if table.records is None:
         if not isinstance(loaded, dict):
             return [], [

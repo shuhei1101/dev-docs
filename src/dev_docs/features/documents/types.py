@@ -32,6 +32,8 @@ class LoadProblem:
     path: str
     reason: Literal["unreadable", "duplicate_id", "missing_body_file", "not_mapping"]
     detail: str
+    line: int | None = None
+    column: int | None = None
 
 
 @dataclass(frozen=True)

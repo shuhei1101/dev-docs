@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, ClassVar
+from typing import TYPE_CHECKING, Any, ClassVar, Literal
 
 from pydantic import BaseModel, ConfigDict, field_validator
 
@@ -83,6 +83,25 @@ class SettingsSourcesResponse(BaseModel):
                 item["config_version"] = {"config": config, "server": server}
             items.append(item)
         return cls(sources=items)
+
+
+class SettingsSourceRow(BaseModel):
+    """端末の設定の取得の `sources[]` の 1 行（行の値に配信元の状態を重ねたもの）。"""
+
+    id: str
+    config: list[str]
+    enabled: bool
+    scope: SourceScope
+    status: Literal["serving", "not_served", "disabled"]
+    errors: list[dict[str, str]] = []
+    config_version: dict[str, str] | None = None
+
+
+class SettingsSourcesView(BaseModel):
+    """GET `/_api/settings/sources` の応答。"""
+
+    settings_path: str
+    sources: list[SettingsSourceRow]
 
 
 @dataclass(kw_only=True)

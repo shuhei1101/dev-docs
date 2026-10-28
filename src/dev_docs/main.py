@@ -16,7 +16,6 @@ from logging.handlers import RotatingFileHandler
 from pathlib import Path
 from typing import Any
 
-import dev_docs
 from dev_docs.features.settings.query import config_path, listen_port, load_terminal_config
 from dev_docs.features.settings.types import TerminalConfig, TerminalConfigInvalidError
 from dev_docs.features.sources.registry import SourceRegistry
@@ -54,7 +53,6 @@ class Handlers:
     seen: Any
     locks: Any
     settings_lock: threading.Lock
-    templates: Any
     checker: Any
     columns: Any
     reload_sources: Callable[[TerminalConfig], list[SourceStatus]]
@@ -143,8 +141,6 @@ def check_port(bind: str, port: int) -> None:
 
 def build_handlers(terminal: TerminalConfig) -> Handlers:
     """端末の設定から部品を 1 回だけ作り、配信元を読んで配線済みの関数にする。"""
-    from fastapi.templating import Jinja2Templates
-
     from dev_docs.features.convert.service import ConvertService
     from dev_docs.features.documents.store import DocumentStore
     from dev_docs.features.history.snapshot import SnapshotStore
@@ -162,9 +158,6 @@ def build_handlers(terminal: TerminalConfig) -> Handlers:
     seen = SeenStore(state_dir / "seen.sqlite3", terminal.seen_retention_days)
     checker = DocumentChecker(store, terminal.script_timeout_sec)
     columns = ColumnSettings(state_dir / COLUMNS_DIR)
-    templates = Jinja2Templates(
-        directory=str(Path(dev_docs.__file__).parent / "server" / "templates")
-    )
 
     def reload(new_terminal: TerminalConfig) -> list[SourceStatus]:
         statuses = reload_sources(
@@ -184,7 +177,6 @@ def build_handlers(terminal: TerminalConfig) -> Handlers:
         seen=seen,
         locks=SourceLocks(),
         settings_lock=threading.Lock(),
-        templates=templates,
         checker=checker,
         columns=columns,
         reload_sources=reload,

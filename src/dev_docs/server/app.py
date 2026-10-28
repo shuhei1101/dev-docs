@@ -1,12 +1,10 @@
-"""画面のルート・文書の MCP・管理の MCP・静的ファイルを 1 つのアプリにまとめる。"""
+"""画面の API・文書の MCP・管理の MCP を 1 つのアプリにまとめる。"""
 
 from __future__ import annotations
 
-from pathlib import Path
 from typing import TYPE_CHECKING
 
 from fastapi import FastAPI
-from fastapi.staticfiles import StaticFiles
 
 from dev_docs.features.settings.route import build_settings_router
 from dev_docs.features.view.route import build_view_router
@@ -20,19 +18,18 @@ if TYPE_CHECKING:
 
 DOCS_MCP_PATH = "/mcp"
 ADMIN_MCP_PATH = "/_admin/mcp"
-STATIC_PATH = "/_static"
-STATIC_DIR = Path(__file__).parent / "static"
+OPENAPI_PATH = "/_api/openapi.json"
 
 
 def build_app(handlers: Handlers) -> FastAPI:
-    """画面のルート・文書の MCP・管理の MCP・静的ファイルを 1 つの FastAPI のアプリにまとめる。"""
+    """画面の API・文書の MCP・管理の MCP を 1 つの FastAPI のアプリにまとめる。"""
     docs_mcp = build_docs_mcp(handlers)
     admin_mcp = build_admin_mcp(handlers)
     app = FastAPI(
         lifespan=build_lifespan([docs_mcp, admin_mcp], seen=handlers.seen),
         docs_url=None,
         redoc_url=None,
-        openapi_url=None,
+        openapi_url=OPENAPI_PATH,
     )
     app.state.handlers = handlers
     register_error_handlers(app)
@@ -43,8 +40,6 @@ def build_app(handlers: Handlers) -> FastAPI:
                 streamable_http_path="/", stateless_http=True, json_response=True
             ),
         )
-    app.mount(STATIC_PATH, StaticFiles(directory=STATIC_DIR), name="static")
-    # 画面の /{source}/... より先に /_settings/・/_api/ を当てる
     app.include_router(build_settings_router(handlers))
     app.include_router(build_view_router(handlers))
     return app

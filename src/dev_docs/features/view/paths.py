@@ -1,25 +1,15 @@
-"""画面のパスの分解と読む場所。"""
+"""文書のページのパスと読む場所。"""
 
 from __future__ import annotations
 
 from collections.abc import Sequence
 from pathlib import PurePosixPath
-from urllib.parse import unquote
-
-from fastapi import Request
 
 from dev_docs.features.access.types import Target
 from dev_docs.features.documents.types import Document
 from dev_docs.features.history.query import resolve_ref
 from dev_docs.features.history.types import ResolvedRef
 from dev_docs.features.sources.registry import SourceRegistry
-from dev_docs.features.view.types import ScreenPath
-
-
-def parse_screen_path(source_part: str, page: str) -> ScreenPath:
-    """ルートの `{source_part}` と `{page}` を画面のパスにする。"""
-    source_id, _, ref = source_part.partition("@")
-    return ScreenPath(source_id=source_id, ref=ref or None, page=page.strip("/"))
 
 
 def page_path(document: Document) -> str:
@@ -46,25 +36,3 @@ def screen_target(
     default_ref = source.config.default_ref
     resolved = resolve_ref(source.repo_root, ref or default_ref, date_base=default_ref)
     return Target(source, source.root, resolved.commit, None, "read"), resolved
-
-
-def breadcrumbs(page: str, pages: Sequence[str]) -> list[tuple[str, str | None]]:
-    """文書のページのパスを階層ごとの名前とリンク先にする。"""
-    segments = page.split("/") if page else []
-    crumbs: list[tuple[str, str | None]] = []
-    for depth, name in enumerate(segments, start=1):
-        if depth == len(segments):
-            crumbs.append((name, None))
-            continue
-        prefix = "/".join(segments[:depth])
-        link = next((candidate for candidate in pages if candidate.startswith(f"{prefix}/")), None)
-        crumbs.append((name, link))
-    return crumbs
-
-
-def screen_path_of(request: Request) -> ScreenPath:
-    """要求の元のパスから画面のパスを作る（リビジョン名の `%2F` を階層の区切りと取り違えない）。"""
-    raw = request.scope.get("raw_path")
-    text = raw.decode("ascii", errors="replace") if isinstance(raw, bytes) else request.url.path
-    source_part, _, rest = text.lstrip("/").partition("/")
-    return parse_screen_path(unquote(source_part), unquote(rest))

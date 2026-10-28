@@ -9,7 +9,6 @@ from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse, PlainTextResponse, Response
 
-from dev_docs.features.view.page import render_error_page
 from dev_docs.shared.errors import DevDocsError, InvalidArgumentError
 from dev_docs.shared.schema_check import format_path
 
@@ -33,24 +32,25 @@ def _problem(name: str, status: int, detail: str, extra: dict[str, Any]) -> JSON
     return JSONResponse(body, status_code=status, media_type=PROBLEM_JSON)
 
 
+def problem_of(error: DevDocsError, fields: dict[str, Any] | None = None) -> JSONResponse:
+    """`DevDocsError` を problem+json の応答にする（`fields` は本文に足す値）。"""
+    extra: dict[str, Any] = {"next_steps": error.next_steps, **error.details()}
+    violations = getattr(error, "violations", None)
+    if violations:
+        extra["errors"] = [
+            {"path": item.path, "reason": item.rule, **({"fix": item.fix} if item.fix else {})}
+            for item in violations
+        ]
+    return _problem(error.name, error.status, error.message, {**extra, **(fields or {})})
+
+
 def register_error_handlers(app: FastAPI) -> None:
     """画面の API の例外を RFC 9457 の problem+json にするハンドラを登録する。"""
 
     @app.exception_handler(DevDocsError)
     async def dev_docs_error(request: Request, error: Exception) -> Response:
         assert isinstance(error, DevDocsError)  # noqa: S101
-        handlers = getattr(request.app.state, "handlers", None)
-        wants_html = request.method == "GET" and "text/html" in request.headers.get("accept", "")
-        if wants_html and handlers is not None:
-            return render_error_page(request, error, handlers=handlers)
-        extra: dict[str, Any] = {"next_steps": error.next_steps, **error.details()}
-        violations = getattr(error, "violations", None)
-        if violations:
-            extra["errors"] = [
-                {"path": item.path, "reason": item.rule, **({"fix": item.fix} if item.fix else {})}
-                for item in violations
-            ]
-        return _problem(error.name, error.status, error.message, extra)
+        return problem_of(error)
 
     @app.exception_handler(RequestValidationError)
     async def request_invalid(request: Request, error: Exception) -> Response:
