@@ -121,7 +121,7 @@ def check_filter(request: SearchRequest, fields: Mapping[str, str]) -> list[Viol
                         fix="条件を and か or の中に並べてください",
                     )
                 )
-    for index, key in enumerate(request.order_by):
+    for index, key in enumerate(request.order_by or []):
         if key.field not in fields:
             violations.append(_unknown_field(f"order_by[{index}].field", key.field, fields))
     if request.group_by is not None and request.group_by not in fields:

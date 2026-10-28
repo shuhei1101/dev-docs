@@ -183,6 +183,28 @@ def test_search_docs_when_order_by_dates(make_env: Callable[..., SearchEnv]) -> 
     assert [item.id for item in result.items] == ["doc-3", "doc-1", "doc-2"]
 
 
+def test_search_docs_when_id_values(make_env: Callable[..., SearchEnv]) -> None:
+    """`order_by` なしで `id` の `eq` で絞ると、`values` の順に返す（正常系）。"""
+    # 準備
+    env = make_env(TWO_DOCS)
+    condition = Condition(field="id", op="eq", values=["doc-2", "doc-1"])
+    # 実行
+    result = env.search(filter=condition)
+    # 検証
+    assert [item.id for item in result.items] == ["doc-2", "doc-1"]
+
+
+def test_search_docs_when_id_values_and_order_by(make_env: Callable[..., SearchEnv]) -> None:
+    """`order_by` を明示した `id` の `eq` は、`id` の昇順で返す（正常系）。"""
+    # 準備
+    env = make_env(TWO_DOCS)
+    condition = Condition(field="id", op="eq", values=["doc-2", "doc-1"])
+    # 実行
+    result = env.search(filter=condition, order_by=[OrderKey(field="id")])
+    # 検証
+    assert [item.id for item in result.items] == ["doc-1", "doc-2"]
+
+
 def test_search_docs_when_unreadable_file(make_env: Callable[..., SearchEnv]) -> None:
     """読めないファイル（正常系）。"""
     # 準備

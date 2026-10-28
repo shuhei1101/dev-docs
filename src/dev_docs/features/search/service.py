@@ -93,7 +93,9 @@ def _sort_value(document: Document, field: str) -> Any:
 def _order(hits: list[_Hit], request: SearchRequest) -> list[_Hit]:
     """`order_by` の順に並べる（値が無い文書は向きによらず末尾）。"""
     ordered = sorted(hits, key=lambda hit: (hit.source_index, hit.document.id))
-    for key in reversed(request.order_by):
+    # 渡していないときは `id` の昇順
+    keys = [OrderKey(field="id")] if request.order_by is None else request.order_by
+    for key in reversed(keys):
         present = [hit for hit in ordered if _sort_value(hit.document, key.field) is not None]
         missing = [hit for hit in ordered if _sort_value(hit.document, key.field) is None]
         present.sort(
@@ -111,7 +113,7 @@ def _id_ordered(ordered: list[_Hit], request: SearchRequest) -> list[_Hit]:
     """`order_by` が無く `filter` が `id` の `eq` の条件 1 つのときは、その `values` の順にする。"""
     condition = request.filter
     if (
-        request.order_by != [OrderKey(field="id")]
+        request.order_by is not None
         or not isinstance(condition, Condition)
         or condition.field != "id"
         or condition.op != "eq"

@@ -81,7 +81,7 @@ class SearchRequest(BaseModel):
     view: Literal["ids", "summary", "full", "count"] = "summary"
     fields: list[str] = Field(default_factory=list)
     exclude_fields: list[str] = Field(default_factory=list)
-    order_by: list[OrderKey] = Field(default_factory=lambda: [OrderKey(field="id")])
+    order_by: list[OrderKey] | None = None
     group_by: str | None = None
     limit: int = LIMIT_DEFAULT
     cursor: str | None = None
