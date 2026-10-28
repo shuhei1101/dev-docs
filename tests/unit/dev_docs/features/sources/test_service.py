@@ -139,6 +139,23 @@ def test_validate_source_config_when_outside_root(source_root: Path) -> None:
     assert [v.path for v in result] == ["documents[0].paths[0]"]
 
 
+def test_validate_source_config_when_exclude_has_slash(source_root: Path) -> None:
+    """除外の名前に `/` を含む（正常系）。"""
+    # 準備
+    row = {
+        "id": "rules",
+        "type": "yaml",
+        "paths": ["docs/rule/*.yaml"],
+        "schema": "schemas/rule.schema.yaml",
+        "exclude": ["a/README.md"],
+    }
+    value = _config_value(documents=[row])
+    # 実行
+    result = validate_source_config(value, root=source_root)
+    # 検証
+    assert [v.path for v in result] == ["documents[0].exclude[0]"]
+
+
 def test_check_scripts(
     tmp_path: Path,
     write_files: Callable[[Path, dict[str, str]], None],

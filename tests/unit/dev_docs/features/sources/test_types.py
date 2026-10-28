@@ -40,3 +40,53 @@ def test_served_source_table_when_unknown(
     with pytest.raises(UnknownKindError) as exc_info:
         source.table("x")
     assert exc_info.value.kinds == ["rules"]
+
+
+def test_document_table_excludes() -> None:
+    """ファイル名で当てる（正常系）。"""
+    # 準備
+    table = DocumentTable(
+        id="rules", type="markdown", paths=["docs/**/*"], exclude=["README.md", "_*.yaml"]
+    )
+    # 実行
+    by_name = table.excludes("docs/a/README.md")
+    by_glob = table.excludes("docs/_x.yaml")
+    by_folder = table.excludes("docs/README.md/a.md")
+    # 検証
+    assert by_name is True
+    assert by_glob is True
+    assert by_folder is False
+
+
+def test_document_table_matches() -> None:
+    """paths に当たる（正常系）。"""
+    # 準備
+    table = DocumentTable(id="notes", type="markdown", paths=["docs/**/*.md"], exclude=[])
+    # 実行
+    result = table.matches("docs/a/b.md")
+    # 検証
+    assert result is True
+
+
+def test_document_table_matches_when_excluded() -> None:
+    """除外の名前に当たる（正常系）。"""
+    # 準備
+    table = DocumentTable(
+        id="notes", type="markdown", paths=["docs/**/*.md"], exclude=["README.md"]
+    )
+    # 実行
+    excluded = table.matches("docs/a/README.md")
+    kept = table.matches("docs/a/b.md")
+    # 検証
+    assert excluded is False
+    assert kept is True
+
+
+def test_document_table_matches_when_outside_paths() -> None:
+    """paths に当たらない（正常系）。"""
+    # 準備
+    table = DocumentTable(id="notes", type="markdown", paths=["docs/*.md"])
+    # 実行
+    result = table.matches("src/a.md")
+    # 検証
+    assert result is False
