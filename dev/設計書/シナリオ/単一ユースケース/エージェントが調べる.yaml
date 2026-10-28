@@ -223,6 +223,36 @@ scenarios:
       - '`view: full` の本文が `src/a.py` の内容で、`<document path="{sample のクローン本体}/src/a.py" scope="full">` で包まれる'
       - '`format: json` の項目の直下（`id`・`source` と同じ階層で `values` の外）が `path`（`src/a.py` の絶対パス）と `scope: full` を持ち、`values.path` は管理用の YAML の `path` 列の値 `a.py` のまま'
     test: test_normal_when_files_index
+  - name: 正常シナリオ（除外の名前に当たるファイルを外す）
+    setup:
+      - name: Mock
+        description: なし（実環境で実行。`cwd` はテストが引数に入れる）
+      - name: 文書
+        description: sample の `docs/rule/` に `a.md`・`Rb.md`・`README.md` を置く
+        notes: '`Rb.md` は `R` で始まる文書'
+      - name: 文書の行
+        description: 'sample の `dev-docs.yaml` の行 `rule`（`type: markdown`・`paths: [docs/rule/*.md]`・`exclude: [README.md]`）と行 `index`（`type: markdown`・`paths: [docs/**/README.md]`）'
+      - name: dev-docs
+        description: sample を配信している dev-docs
+        notes: '`cwd` は sample のクローン本体'
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        actor A as エージェント
+        participant M as 文書の MCP（/mcp）
+        participant ST as 配信元の文書
+
+        A->>M: search_docs(filter: kind が rule, view: summary)
+        M->>ST: rule の paths に当たり exclude に当たらないファイルを読む
+        M-->>A: docs/rule/a と docs/rule/Rb
+        A->>M: search_docs(filter: kind が index, view: summary)
+        M-->>A: docs/rule/README
+      ```
+    expected:
+      - '`kind` が `rule` の `search_docs` が `docs/rule/a` と `docs/rule/Rb` の 2 件だけを返し、`docs/rule/README` を返さない'
+      - '`kind` が `index` の `search_docs` が `docs/rule/README` を返す'
+      - '`exclude` を持たない行の文書の出方は変わらない'
+    test: test_normal_when_excluded_name
 lead: エージェントが文書の MCP の `describe`・`search_docs`・`trace_related` で、今の作業場所から読める配信元の文書を探して読む。
 issue: 3
 primary_actor: エージェント（Claude Code）
