@@ -100,6 +100,11 @@ classes:
       | `DeleteNotAllowedError` | 削除を許していない種類 | `kind: str` | 403 |
       | `LastReadNotFoundError` | 前回読んだ記録が無い | - | 400 |
       | `CrossOriginError` | 別のオリジンからの要求 | - | 403 |
+      | `ConfigNotFoundError` | 配信元の設定が無い | `path: str` | 404 |
+      | `ConfigParseError` | 配信元の設定が読めない | `line: int \| None`・`column: int \| None` | 400 |
+      | `ConvertScriptError` | 変換スクリプトの失敗 | `script: str` | 422 |
+      | `RestartInProgressError` | 再起動か更新の途中 | - | 409 |
+      | `UpdateFailedError` | 更新のコマンドの失敗 | `command: list[str]`・`stderr: str` | 500 |
 
       `SourceAccess` は権限と作業場所の『使える配信元』。
     properties:

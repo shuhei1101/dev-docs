@@ -423,7 +423,7 @@ classes:
       - name: forget
         title: 会話の記録を消す
         summary: 1 つの会話キーの記録を全て消す
-        description: '`/clear`・圧縮の後に #4 のフックが管理の MCP を通して呼ぶ。'
+        description: '`/clear`・圧縮の後に SessionStart のフックが `POST /_admin/session-context` を通して呼ぶ（セッションの文脈の組み立て）。'
         kind: メソッド
         scope: public
         thread_safe: true

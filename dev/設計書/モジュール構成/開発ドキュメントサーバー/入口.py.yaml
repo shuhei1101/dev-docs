@@ -36,6 +36,7 @@ functions:
       2. `--version` を足す。表示は `{PROG} {バージョン}` で、バージョンは `DIST_NAME` の配布のメタデータから引く（`importlib.metadata.version`。`uv sync` で配布を入れた環境で動かす前提で、入っていないときの `PackageNotFoundError` はそのまま伝える）
       3. サブコマンドの登録先を `dest="cmd"`・`required=True` で作る。各サブコマンドは `handler`（`argparse.Namespace` を受けて終了コードを返す関数）を既定値に持つ
          - `serve` を登録する。引数は持たず（設定は環境変数で渡す）、`handler` は起動の『待ち受けの開始』（`main.run_serve`）
+         - `migrate` を登録する。`--plan` と `--record` は排他のグループ（`store_true`）、`--source`（配信元の `dev-docs.yaml` のパス、既定 `None`）、`--allow-destructive`（`store_true`）を持ち、`handler` は起動の『設定の移し替えの実行』（`main.run_migrate`）
       4. 解析器を返す
     unit_tests:
       - name: test_build_parser
@@ -50,6 +51,18 @@ functions:
         condition: '`["serve"]` を解析する'
         mock: なし
         expected: '`cmd` が `"serve"`、`handler` が `dev_docs.main.run_serve`'
+      - name: test_build_parser_when_migrate
+        case: 正常
+        summary: migrate の引数と処理を引く
+        condition: '`["migrate", "--plan", "--source", "/tmp/a/dev-docs.yaml"]` を解析する'
+        mock: なし
+        expected: '`cmd` が `"migrate"`、`plan` が `True`、`record`・`allow_destructive` が `False`、`source` が `/tmp/a/dev-docs.yaml`、`handler` が `dev_docs.main.run_migrate`'
+      - name: test_build_parser_when_plan_and_record
+        case: 異常
+        summary: --plan と --record は同時に渡せない
+        condition: '`["migrate", "--plan", "--record"]` を解析する'
+        mock: なし
+        expected: '`SystemExit` のコードが 2'
   - name: main
     title: 入口
     kind: 関数
@@ -101,6 +114,6 @@ functions:
         mock: なし
         expected: '`SystemExit` のコードが 2、標準エラーに `cmd` が要る旨が出る'
 notes:
-  サブコマンド: サブコマンドは `serve` だけで、処理は起動の『待ち受けの開始』が持つ。`__main__.py` は `if __name__ == "__main__":` で `sys.exit(main())` を呼ぶ。
+  サブコマンド: サブコマンドは `serve` と `migrate` で、処理は起動の『待ち受けの開始』と『設定の移し替えの実行』が持つ。`__main__.py` は `if __name__ == "__main__":` で `sys.exit(main())` を呼ぶ。
 test_files:
   - tests/unit/dev_docs/test_main.py
