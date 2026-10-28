@@ -43,12 +43,40 @@
 | ツールの種類 | `markdown`（既定） | `json` |
 | --- | --- | --- |
 | 一覧・件数・集計 | Markdown の表。先頭に総件数 | 行の配列と総件数などを持つオブジェクト |
-| 本文 | YAML が正本の文書は YAML のまま、Markdown の文書は Markdown。複数なら `<document>` で包む | 文書のオブジェクトの配列 |
-| 差分 | git と同じ `+`・`-` の行 | 変わったキーと前後の値 |
+| 本文 | YAML が正本の文書は YAML のまま、Markdown の文書は Markdown。複数なら `<document>` で包む。包みに文書ごとの `path`・`scope` を付ける | 文書のオブジェクトの配列。各項目に `path`・`scope` |
+| 差分 | git と同じ `+`・`-` の行。`view: full` は文書ごとに `<document>` で包み、`path`・`scope` を付ける | 変わったキーと前後の値。各項目に `path`・`scope` |
 | 書き込み・削除 | JSON | JSON |
 
 `markdown` のときは structuredContent を返しません。
 `json` のときと書き込み・削除は、structuredContent と text に同じ JSON を入れます。
+
+### 文書の場所と範囲
+
+`search_docs`・`trace_related`・`list_changes` は、返した文書ごとに場所（`path`）と返した範囲（`scope`）を載せます。
+`markdown` は `<document path="..." scope="...">` の属性、`json` は各項目の直下（`id`・`source` と同じ階層で `values` の外）の `path`・`scope` です。
+rule-inject は、この `path` と `scope` で文書を既読にします。
+
+`path` は、配信元（ワークツリーを指したときはワークツリー）の直下と文書のパスを結んだ絶対パスです。
+`body_file` のある `records` の要素は、`body_file` が指すファイルのパスになります。
+メタデータのキー `path`（`values` の中。管理用の YAML では `files[].path` の値）とは別の項目です。
+
+<!-- table: data -->
+
+| `scope` | 返したもの | 該当する呼び出し |
+| --- | --- | --- |
+| `full` | 本文を切らずに返した | `search_docs` の `view: full` で、`max_chars_per_field` に収まり、`snippets` を渡さなかったとき |
+| `section` | 本文の一部を返した | `max_chars_per_field` で切った本文、`snippets`、`body_file` の無い `records` の要素、`list_changes` の `view: full` の差分 |
+| `summary` | 本文を返さなかった | `view: summary`、`exclude_fields` で `body` を除いた `view: full`、`trace_related`、`list_changes` の `view: summary` |
+
+<!-- /table -->
+
+次の文書には `path`・`scope` を載せません。
+`markdown` の `<document>` は属性の無い包みになり、`json` の項目は `path`・`scope` を持ちません。
+
+- `ref` を渡して読んだ文書。既読は今のルールの本文を読んだことを表すため
+- `list_changes` で `to` を渡したときの文書、`change` が `deleted` の文書
+- 返し済みにした文書
+- `view: ids`・`view: count` の結果と、読めない配信元の文書
 
 ### 1 セッション 1 回
 
@@ -127,6 +155,7 @@ Condition = {"field": str, "op": enum, "values": [str, ...], "match": "any" | "a
 | `notes` | 丸めた・打ち切った・読めなかったファイルの知らせと次の手 |
 | `groups` | `group_by` のときの値ごとの件数 |
 | `items[]` | 文書。ID で絞ったときは指定した順。各文書に `id`・`version`、`view: full` で `body`。複数の配信元を指したときは `source` が付く |
+| `items[].path`・`items[].scope` | 文書の場所と返した範囲。[文書の場所と範囲](#文書の場所と範囲)のとおり。`view: ids`・`count` では持たない |
 
 YAML として読めないファイルがあっても、そのファイルを除いて返し、`notes` で知らせます。
 
@@ -209,7 +238,7 @@ Git 管理外の配信元では、種類の `documents[].writable` が削除を�
 
 <!-- /table -->
 
-レスポンスは、解決した始点・終点（`range.from`・`range.to` の入力値・commit・日時）、`total_count`、`items[]`（`id`・`change` の `added` / `modified` / `deleted`・`keys`・`view: full` の `diff`）、`truncated`、`notes` です。
+レスポンスは、解決した始点・終点（`range.from`・`range.to` の入力値・commit・日時）、`total_count`、`items[]`（`id`・`change` の `added` / `modified` / `deleted`・`keys`・`view: full` の `diff`・今の作業ツリーが終点のときの `path`・`scope`）、`truncated`、`notes` です。
 前回読んだ時点は、`search_docs` が `state_dir` に記録した、文書ごとの最後に返した内容と比べます。
 
 ## trace_related
@@ -226,6 +255,7 @@ Git 管理外の配信元では、種類の `documents[].writable` が削除を�
 | `repeat_seen` | bool | `false` | この会話で返し済みの相手の名前・概要文も返す |
 
 一度たどった文書はたどりません。
+`json` の各項目は、たどった文書の `path` と `scope: summary` を持ちます。
 候補は `related` に書き込まないので、採用するときは `write_docs` で `related` に追加します。
 たどった先が読めない配信元の文書は、ID だけを返します。
 
