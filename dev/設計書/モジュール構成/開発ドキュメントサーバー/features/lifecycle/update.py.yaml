@@ -31,19 +31,19 @@ functions:
     process: |-
       1. `control.update_lock` を非ブロッキングで取る
          - 取れない場合、または `control.requested` が `True` の場合、`RestartInProgressError` を送出する
-      2. `previous_version` を `importlib.metadata.version(DIST_NAME)` で得る
-      3. `git rev-parse HEAD` を実行して前の HEAD を控え、`git pull --ff-only` を実行する（コマンドの実行）
+      2. 手順 3〜9 を `try` に入れ、`finally` で `update_lock` を放す（返す経路・`UpdateFailedError` の経路を含む）
+      3. `previous_version` を `importlib.metadata.version(DIST_NAME)` で得る
+      4. `git rev-parse HEAD` を実行して前の HEAD を控え、`git pull --ff-only` を実行する（コマンドの実行）
          - `[INFO]` クローンを更新する（clone）
-      4. もう一度 `git rev-parse HEAD` を実行する
+      5. もう一度 `git rev-parse HEAD` を実行する
          - 前の HEAD と同じ場合、`updated`・`migration_needed`・`restarting` を `False`、`version` を `previous_version` にして返す
-      5. `uv sync` を実行する（コマンドの実行）
-      6. `version` を `{clone}/pyproject.toml` の `project.version` から `tomllib` で読む
-      7. `{clone}/.venv/bin/python -m dev_docs migrate --plan` を実行し、標準出力が空でなければ `migration_needed` を `True` にする（コマンドの実行、終了コード 0 だけを成功とする）
-      8. `migration_needed` に応じて分ける
+      6. `uv sync` を実行する（コマンドの実行）
+      7. `version` を `{clone}/pyproject.toml` の `project.version` から `tomllib` で読む
+      8. `{clone}/.venv/bin/python -m dev_docs migrate --plan` を実行し、標準出力が空でなければ `migration_needed` を `True` にする（コマンドの実行、終了コード 0 だけを成功とする）
+      9. `migration_needed` に応じて分ける
          - `True` の場合、`restarting` を `False` にする
            - `[WARNING]` 移し替えが要るため再起動しない（version）
          - `False` の場合、再起動を要求し `restarting` を `True` にする（`RestartControl.request`）
-      9. `update_lock` を放す
     exceptions:
       - name: RestartInProgressError
         condition: 他の `update` が進んでいる、または再起動を要求済み
@@ -77,6 +77,18 @@ functions:
         mock: '`subprocess.run`（呼ばれないことを確かめる）'
         expected: '`RestartInProgressError`。`subprocess.run` を呼ばない'
         exception: 再起動の途中
+      - name: test_update_clone_when_up_to_date_then_again
+        case: 正常
+        summary: 新しい commit が無くて返した後にもう一度呼べる
+        condition: '`git pull` の前後で HEAD が同じ状態で 2 回呼ぶ'
+        mock: '`subprocess.run`'
+        expected: 2 回目も `RestartInProgressError` にならず、`updated` が `False`
+      - name: test_update_clone_when_failed_then_again
+        case: 異常
+        summary: 取り込みに失敗した後にもう一度呼べる
+        condition: 1 回目は `git pull --ff-only` が終了コード 1、2 回目は HEAD が同じ
+        mock: '`subprocess.run`（呼ぶごとに応答を変える）'
+        expected: 1 回目が `UpdateFailedError`、2 回目は `RestartInProgressError` にならず `updated` が `False`
     callers:
       - dev/設計書/モジュール構成/開発ドキュメントサーバー/文書のMCP.py#functions[build_admin_mcp]
     callees:

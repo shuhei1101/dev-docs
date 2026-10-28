@@ -7,7 +7,7 @@ classes:
     usecase: 再起動
     role: 制御
     summary: 再起動の要求を 1 回だけ受け、uvicorn に停止を伝える
-    description: '`build_handlers` が 1 つ作り、`run_serve` が uvicorn の `Server` を `attach` する。`update` は `update_lock` を取っている間、他の `restart`・`update` を断る。'
+    description: '`build_handlers` が 1 つ作り、`run_serve` が uvicorn の `Server` を `attach` する。`update` は `update_lock` を取っている間、他の `update` を断る。'
     properties:
       - name: _server
         title: uvicorn のサーバー
@@ -84,7 +84,7 @@ classes:
             summary: 停止を伝えて結果を返す
             condition: 未要求の制御
             mock: uvicorn のサーバー（スタブ）
-            expected: '`pid` が `os.getpid()`、`requested` が `True`'
+            expected: '戻り値の `pid` が `os.getpid()` で `restarting` が `True`、制御の `requested` が `True`'
           - name: test_request_when_in_progress
             case: 異常
             summary: 2 回目の要求を断る

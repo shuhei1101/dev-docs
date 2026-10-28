@@ -329,7 +329,7 @@ functions:
       type: None
       description: 待ち受けられるときは何も返さない
     process: |-
-      1. `socket.socket(AF_INET, SOCK_STREAM)` を `SO_REUSEADDR` を付けずに `(bind, port)` へ bind し、すぐに閉じる
+      1. `socket.socket(AF_INET, SOCK_STREAM)` に uvicorn と同じく `SO_REUSEADDR` を付けて `(bind, port)` へ bind し、すぐに閉じる
          - `OSError`（`EADDRINUSE`・`EACCES`）の場合、`PortInUseError` を送る
     exceptions:
       - name: PortInUseError
@@ -349,6 +349,12 @@ functions:
         mock: なし
         expected: '`PortInUseError` の `port` がそのポート'
         exception: bind に失敗する
+      - name: test_check_port_when_time_wait
+        case: 正常
+        summary: 閉じたばかりの接続が残るポート
+        condition: '`SO_REUSEADDR` 付きで待ち受けて 1 本受け、サーバー側から接続と待ち受けを閉じた直後のポート'
+        mock: なし
+        expected: 送らない
   - name: build_handlers
     title: 部品の配線
     kind: 関数
