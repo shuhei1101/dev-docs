@@ -56,6 +56,26 @@ flows:
       - legacy の `config_version` に設定のバージョンとサーバーが読めるバージョンがある
       - archive が `disabled`
     test: test_normal_when_source_not_served
+  - name: 正常系（読み直していない行がある）
+    summary: 手で直して読み直していない行を `pending_reload` で返し、他の行は自分の状態で返す
+    setup:
+      - name: Mock
+        description: なし
+      - name: 端末の設定
+        description: sample と notes の 2 行で起動した後、ファイルを fresh・notes・sample の順に書き換え、読み直さない
+        notes: fresh は `id` を省いた新しい行
+    flow: |-
+      sequenceDiagram
+        participant C as クライアント
+        participant E as GET /_api/settings/sources
+
+        C->>E: GET /_api/settings/sources
+        E-->>C: 200（ファイルの行の順と状態）
+    expected:
+      - 200 で、`sources` がファイルの順（fresh・notes・sample）に並ぶ
+      - fresh が `pending_reload` で、`id` が `null`
+      - notes と sample がそれぞれ自分の `id` で `serving`
+    test: test_normal_when_pending_reload
 lead: '#17 の設定画面が呼ぶ。端末の設定の配信元の一覧と、配信元ごとの状態（配信中・配信していない・無効）を JSON で返す。'
 identifier: get_settings_sources
 permissions: なし（`127.0.0.1` でだけ待ち受ける）
@@ -67,8 +87,8 @@ response:
     type: str
     description: '`DEV_DOCS_CONFIG` が指す端末の設定のパス'
   - name: sources[].id
-    type: str
-    description: 配信元の ID
+    type: str | None
+    description: 配信元の ID。`pending_reload` で `id` を省いた行は `null`
   - name: sources[].config
     type: list[str]
     description: 配信元の設定の YAML の配列
@@ -79,8 +99,8 @@ response:
     type: '{read: list[str], write: list[str]}'
     description: 読める・書ける作業場所の glob
   - name: sources[].status
-    type: Literal['serving', 'not_served', 'disabled']
-    description: '配信中・起動時か読み直しの検証で外した・`enabled: false`'
+    type: Literal['serving', 'not_served', 'disabled', 'pending_reload']
+    description: '配信中・起動時か読み直しの検証で外した・`enabled: false`・ファイルにあるが読み直していない行。行は `config`（`id` を書いた行は `id` も）が同じ配信元の状態と突き合わせる'
   - name: sources[].errors
     type: 'list[{path: str, reason: str}]'
     description: 検証で外した理由

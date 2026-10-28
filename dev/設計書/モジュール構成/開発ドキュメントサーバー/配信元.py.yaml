@@ -509,6 +509,12 @@ data_models:
         access: 公開
         default: None
         description: 設定のバージョンがサーバーの読めるバージョンより古いとき、`(設定, サーバー)`
+      - name: config
+        title: 配信元の設定のパス
+        type: tuple[str, ...]
+        access: 公開
+        default: ()
+        description: 読み直したときの行の `config`。端末の設定の取得が行と状態を突き合わせる
 enums:
   - name: SourceStatusKind
     title: 配信元の状態の種類
