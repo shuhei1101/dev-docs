@@ -53,7 +53,7 @@ scenarios:
       - '`write_docs` の変更は sample のワークツリーの YAML だけに入り、sample のクローン本体は変わらない。dev-docs は commit しない（ワークツリーに増えた commit は、エージェントが commit した 1 件だけ）'
       - '`notes` を指した `write_docs` は断られ、notes のフォルダは変わらない'
       - '`list_changes` がエージェントの commit の変更を返し、`/_api/sources/sample/docs/{パス}?ref={その commit}&diff={親の commit}` の `changed_items` が変わった項目を返す'
-      - 画面の `/sample/` がタブ・サイドバー・本文を返し、本文は YAML を変換して mdmark で描いたものになる
+      - '`/_api/sources/sample/docs` が `tabs` と、YAML を変換した `markdown` を返す'
       - 直接編集した YAML の内容と新しいバージョンを、次の `search_docs` が返す
       - '`dev-docs.yaml` で変えた配信元の説明が、`reload` の後の `describe` に出る'
       - '`update` の後、`status` が新しいバージョンを返し、`sample` と `notes` を配信している'
@@ -126,7 +126,7 @@ trigger: 利用者が dev-docs をクローンする
 preconditions:
   - 端末に uv・git・Claude Code がある
   - 配信する配信元が、YAML の文書とそのスキーマを持つフォルダ（git リポジトリか Git 管理外のフォルダ）である
-success_guarantee: 端末の設定に並べた配信元の文書が、`/mcp` の文書の MCP と `/{配信元の id}/` の画面で読める。エージェントの書き込みは、`scope.write` に当たる作業場所から呼んだセッションの作業ツリーにだけ反映される。
+success_guarantee: 端末の設定に並べた配信元の文書が、`/mcp` の文書の MCP と `/_api/sources/{配信元の id}/docs` の画面の API で読める。エージェントの書き込みは、`scope.write` に当たる作業場所から呼んだセッションの作業ツリーにだけ反映される。
 minimal_guarantee: 設定・スクリプトの検証に失敗した配信元があっても、他の配信元の配信と管理の MCP は止まらない。検査に通らない書き込みと、`scope` に当たらない作業場所からの呼び出しは、ファイルを書き換えない。
 frequency: 導入は端末ごとに 1 回。起動はセッションごと。読み書きは作業のたび
 priority: 高

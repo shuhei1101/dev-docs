@@ -24,7 +24,7 @@ flows:
     expected:
       - '`total_count` が 1 で、`items` が文書 2 だけ'
       - '`snippets` に語を含む行がある'
-      - '`items[0].path` を `/sample/` に続けた URL が文書 2 の画面を返す'
+      - '`items[0].path` を `path` に渡した文書の取得が文書 2 を返す'
     test: test_normal
   - name: 異常系（語の誤り・400）
     summary: 空の語と長すぎる語を断る
@@ -107,7 +107,7 @@ response:
     description: 一致した文書の総件数
   - name: items[].path
     type: str
-    description: 文書のパス（`/{source}[@{ref}]/` に続ける形）
+    description: 文書のパス（文書の取得の `path` に渡す形）
   - name: items[].name
     type: str
     description: 文書の名前
