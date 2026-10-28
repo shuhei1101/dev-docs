@@ -111,7 +111,7 @@ def _id_ordered(ordered: list[_Hit], request: SearchRequest) -> list[_Hit]:
     """`order_by` が無く `filter` が `id` の `eq` の条件 1 つのときは、その `values` の順にする。"""
     condition = request.filter
     if (
-        request.order_by != [OrderKey(field="id")]
+        "order_by" in request.model_fields_set
         or not isinstance(condition, Condition)
         or condition.field != "id"
         or condition.op != "eq"
