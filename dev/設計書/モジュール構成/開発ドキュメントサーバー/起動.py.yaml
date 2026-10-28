@@ -320,9 +320,9 @@ functions:
       description: 配線済みの関数
     process: |-
       1. `state_dir` を作る
-      2. 配信元の一覧を作り、端末の設定で読み直す（配信元の一覧.読み直す）。検証で外した配信元があっても続ける
-      3. リビジョンの書き出し（`{state_dir}/snapshots`）・文書のストア・変換（`{state_dir}/converted`、制限時間は `script_timeout_sec`）・会話の記録（`{state_dir}/seen.sqlite3`、保持日数は `seen_retention_days`）・文書の検査（制限時間は `script_timeout_sec`）・配信元ごとの排他・表の列の設定（`{state_dir}/columns`）を作る
-      4. これらと、『配信元の読み直し』をこれらの部品で束ねた関数を持つ `Handlers` を返す
+      2. 配信元の一覧・リビジョンの書き出し（`{state_dir}/snapshots`）・文書のストア・変換（`{state_dir}/converted`、制限時間は `script_timeout_sec`）・会話の記録（`{state_dir}/seen.sqlite3`、保持日数は `seen_retention_days`）・文書の検査（制限時間は `script_timeout_sec`）・配信元ごとの排他・表の列の設定（`{state_dir}/columns`）を作る
+      3. 『配信元の読み直し』をこれらの部品で束ねた関数を作り、端末の設定で 1 回呼ぶ（配信元を読み、メタデータのずれを警告のログに書く）。検証で外した配信元があっても続ける
+      4. これらと手順 3 の関数を持つ `Handlers` を返す
     unit_tests:
       - name: test_build_handlers
         case: 正常
@@ -330,6 +330,13 @@ functions:
         condition: '`state_dir` が無い一時フォルダの下、配信できる配信元 1 つと検証に失敗する配信元 1 つ'
         mock: なし
         expected: '`state_dir` ができ、`registry.served()` が 1 つ、`registry.statuses()` が 2 つ'
+      - name: test_build_handlers_when_out_of_sync
+        case: 正常
+        summary: 初回の読み込みでもずれを警告のログに書く
+        condition: 行 `rules` に `title` の無い文書が 1 件ある配信元 `sample` 1 つ
+        mock: なし（一時フォルダの配信元と `caplog`）
+        expected: '`sample` の `ref` の列の欠けの警告が 1 件あり、`registry.served()` が 1 つ'
+        exception: '-'
   - name: reload_sources
     title: 配信元の読み直し
     kind: 関数
