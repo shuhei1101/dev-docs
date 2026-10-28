@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import contextlib
 import sqlite3
 from collections.abc import Callable
 from datetime import UTC, datetime, timedelta
@@ -101,7 +102,7 @@ def test_seen_store_forget(seen_store: SeenStore, make_document: Callable[..., D
 
 def _insert_session(path: Path, session_id: str, at: datetime) -> None:
     """会話 1 つの記録を、決めた日時で 2 つの表に直接入れる。"""
-    with sqlite3.connect(path) as conn:
+    with contextlib.closing(sqlite3.connect(path)) as conn, conn:
         conn.execute(
             "INSERT INTO returned VALUES (?, '', 'sample', 'body', 'doc-1', 'v1', 'rules', 'x', ?)",
             (session_id, at.isoformat()),

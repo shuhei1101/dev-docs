@@ -193,7 +193,7 @@ def test_file_dates(git_repo: Callable[..., Path], commit_all: Callable[..., str
 def test_co_changed_files(git_repo: Callable[..., Path], commit_all: Callable[..., str]) -> None:
     """一緒に変わった回数を数える（正常系）。"""
     # 準備
-    root = git_repo({"a": "0\n", "b": "0\n", "c": "0\n"})
+    root = git_repo({"a": "0\n"})
     commit_all(root, {"a": "1\n", "b": "1\n"})
     commit_all(root, {"a": "2\n", "b": "2\n"})
     commit_all(root, {"a": "3\n", "c": "1\n"})

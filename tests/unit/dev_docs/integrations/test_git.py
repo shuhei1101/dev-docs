@@ -39,7 +39,7 @@ def test_run_git_when_timeout(
     # 準備
     root = git_repo({"a.yaml": "a: 1\n"})
     monkeypatch.setattr(git_module, "GIT_TIMEOUT_SEC", 0.1)
-    monkeypatch.setenv("GIT_EDITOR", "sleep 1")
+    monkeypatch.setenv("GIT_EDITOR", "sleep 1; true")
     monkeypatch.setenv("GIT_AUTHOR_NAME", "tester")
     monkeypatch.setenv("GIT_AUTHOR_EMAIL", "tester@example.com")
     monkeypatch.setenv("GIT_COMMITTER_NAME", "tester")
