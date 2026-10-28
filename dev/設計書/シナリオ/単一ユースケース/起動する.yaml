@@ -156,7 +156,7 @@ scenarios:
         description: なし（実環境で実行）
       - name: 端末の設定
         description: '`DEV_DOCS_CONFIG` が指す `settings.yaml`'
-        notes: '`sources[0]` に必須のキー `id` が無い'
+        notes: '`sources[0]` に必須のキー `config` が無く、`port` が整数でない'
     flow: |-
       ```mermaid
       sequenceDiagram
@@ -169,7 +169,7 @@ scenarios:
       ```
     expected:
       - プロセスが 0 以外の終了コードで終わり、ポートを待ち受けない
-      - '標準エラーに `{ファイル}: sources[0].id: 必須のキーが無い` の形で違反が全て並ぶ'
+      - '標準エラーに `{ファイル}: sources[0].config: 必須のキーが無い` の形で違反が全て並ぶ'
     test: test_error_when_terminal_config_invalid
   - name: 異常シナリオ（ポートが使用中）
     setup:
