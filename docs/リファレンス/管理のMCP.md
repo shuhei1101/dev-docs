@@ -74,7 +74,7 @@ http://127.0.0.1:8781/ dev-docs 0.2.0（pid 4242）
 | source | 状態 | 設定のバージョン | 索引の同期 |
 | --- | --- | --- | --- |
 | sample | serving | 1（current） | 0 |
-| broken | not_served（documents[0].paths: 必須のキーが無い） | 1 | - |
+| broken | not_served（documents[0].paths: 必須のキーが無い） | - | - |
 ```
 
 配信元が 0 件のときは、空の一覧を返します。
@@ -86,7 +86,7 @@ http://127.0.0.1:8781/ dev-docs 0.2.0（pid 4242）
 `/mcp`・`/_admin/mcp` の接続は切れません。
 
 `bind`・`port`・`state_dir` など、反映が「再起動」のキーは読み直しません。
-読み直しは、端末の設定の保存と同じ錠で一度に 1 つだけ行います。
+読み直しは、端末の設定の保存と同じロックで一度に 1 つだけ行います。
 
 | 引数 | 型 | 既定 | 説明 |
 | --- | --- | --- | --- |
@@ -220,4 +220,6 @@ http://127.0.0.1:8781/ dev-docs 0.2.0（pid 4242）
 | --- | --- |
 | `DocumentNotFoundError` | `file` が無い、どの文書の種類の範囲にも当たらない、または配信元のフォルダの外を指している |
 | `ConvertScriptError` | 変換スクリプトが 0 以外で終わった、または `script_timeout_sec` を超えた。終了コードと標準エラーを返す |
+| `ValidationFailedError` | 配信元の設定に違反か動かないスクリプトがある。`check_project` で確かめる |
 | `ConfigNotFoundError` | `path` に `dev-docs.yaml` が無く、`config` も渡していない |
+| `ConfigParseError` | `dev-docs.yaml` か `config` が YAML として読めない。読めなかった行と理由を返す |

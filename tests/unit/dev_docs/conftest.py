@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any
@@ -8,6 +9,7 @@ import pytest
 
 from dev_docs.features.access.types import Target
 from dev_docs.features.documents.types import Document
+from dev_docs.features.settings.query import load_terminal_config
 from dev_docs.features.settings.types import SourceEntry, SourceScope, TerminalConfig
 from dev_docs.features.sources.registry import SourceRegistry
 from dev_docs.features.sources.types import (
@@ -17,6 +19,7 @@ from dev_docs.features.sources.types import (
     SourceConfig,
     SourceStatus,
 )
+from dev_docs.main import Handlers, build_handlers
 from dev_docs.shared.errors import UnknownSourceError
 
 SAMPLE_SCHEMA = (
@@ -252,3 +255,121 @@ def make_document() -> Callable[..., Document]:
         return Document(**values)
 
     return _make
+
+
+FILES_SCHEMA = "title: file\ntype: object\n"
+
+SOURCE_CONFIG_TEMPLATE = (
+    "name: {name}\n"
+    "{version}"
+    "documents:\n"
+    "  - id: rules\n"
+    "    type: yaml\n"
+    "    paths: [docs/rule/*.yaml]\n"
+    "    schema: schemas/rule.schema.yaml\n"
+)
+
+FILES_ROW = (
+    "  - id: src\n"
+    "    type: yaml\n"
+    "    paths: [src/files.yaml]\n"
+    "    schema: schemas/files.schema.yaml\n"
+    "    records: files\n"
+    "    body_file: path\n"
+)
+
+
+@pytest.fixture
+def make_source_dir(
+    tmp_path: Path, write_files: Callable[[Path, dict[str, str]], None]
+) -> Callable[..., Path]:
+    """検証を通る配信元のフォルダを作り、`dev-docs.yaml` のパスを返す関数を返す。
+
+    `unindexed` は管理用の YAML に無いファイルの数、`version` は設定の `version`。
+    """
+
+    def _make(name: str, *, unindexed: int = 0, version: str | None = None) -> Path:
+        root = tmp_path / name
+        version_line = "" if version is None else f'version: "{version}"\n'
+        config = SOURCE_CONFIG_TEMPLATE.format(name=name, version=version_line)
+        files = {
+            "schemas/rule.schema.yaml": SAMPLE_SCHEMA,
+            "docs/rule/doc-1.yaml": "id: doc-1\nname: 文書 1\n",
+        }
+        if unindexed:
+            config += FILES_ROW
+            files["schemas/files.schema.yaml"] = FILES_SCHEMA
+            files["src/files.yaml"] = "files:\n  - path: a.py\n"
+            files["src/a.py"] = "a = 1\n"
+            files.update({f"src/u{index}.py": "x = 1\n" for index in range(unindexed)})
+        files["dev-docs.yaml"] = config
+        write_files(root, files)
+        return root / "dev-docs.yaml"
+
+    return _make
+
+
+@pytest.fixture
+def write_settings(tmp_path: Path) -> Callable[..., Path]:
+    """端末の設定をファイルに書き、そのパスを返す関数を返す（JSON は YAML として読める）。"""
+
+    def _write(sources: list[dict[str, Any]], **top: Any) -> Path:
+        values: dict[str, Any] = {
+            "version": "1",
+            "clone": str(tmp_path / "clone"),
+            "state_dir": str(tmp_path / "state"),
+            "sources": sources,
+        }
+        values.update(top)
+        path = tmp_path / "settings.yaml"
+        path.write_text(json.dumps(values, ensure_ascii=False), encoding="utf-8")
+        return path
+
+    return _write
+
+
+@pytest.fixture
+def make_real_handlers() -> Callable[[Path], Handlers]:
+    """端末の設定のファイルを読み、部品を本物で配線した配線済みの関数を作る関数を返す。"""
+
+    def _make(settings: Path) -> Handlers:
+        return build_handlers(load_terminal_config(settings))
+
+    return _make
+
+
+@pytest.fixture
+def migrations_root(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
+    """移し替えの手順の置き場所を一時のフォルダに差し替え、そのフォルダを返す。
+
+    絶対パスを手順のフォルダの名前に差し替えると、パッケージのフォルダにつないでも絶対パスが残る。
+    """
+    root = tmp_path / "migrations"
+    root.mkdir()
+    monkeypatch.setattr("dev_docs.features.migrate.types.MIGRATIONS_DIR", str(root))
+    monkeypatch.setattr("dev_docs.features.migrate.steps.MIGRATIONS_DIR", str(root), raising=False)
+    return root
+
+
+@pytest.fixture
+def write_steps(migrations_root: Path) -> Callable[..., None]:
+    """移し替えの手順のファイル（`{kind}/{バージョン}/steps.yaml`）を書く関数を返す。"""
+
+    def _write(kind: str, version: str, steps: list[dict[str, Any]]) -> None:
+        target = migrations_root / kind / version / "steps.yaml"
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(json.dumps({"steps": steps}, ensure_ascii=False), encoding="utf-8")
+
+    return _write
+
+
+@pytest.fixture
+def settings_version_2(monkeypatch: pytest.MonkeyPatch) -> None:
+    """dev-docs が読める端末の設定のバージョンを `2` に差し替える。"""
+    monkeypatch.setattr("dev_docs.features.settings.query.SETTINGS_VERSION", "2")
+    for target in (
+        "dev_docs.features.migrate.service.SETTINGS_VERSION",
+        "dev_docs.features.admin.service.SETTINGS_VERSION",
+        "dev_docs.main.SETTINGS_VERSION",
+    ):
+        monkeypatch.setattr(target, "2", raising=False)
