@@ -18,6 +18,14 @@ TOOL_NAMES = [
     "trace_related",
     "write_docs",
 ]
+ADMIN_TOOL_NAMES = [
+    "check_project",
+    "reload",
+    "restart",
+    "status",
+    "try_convert",
+    "update",
+]
 MCP_HEADERS = {
     "Accept": "application/json, text/event-stream",
     "Content-Type": "application/json",
@@ -90,6 +98,12 @@ def test_normal(
     notes_docs = httpx.get(f"http://127.0.0.1:{port}/_api/sources/notes/docs", timeout=10)
     tools = _mcp(port, "/mcp/", {"jsonrpc": "2.0", "id": 2, "method": "tools/list"})
     admin = _mcp(port, "/_admin/mcp/", INITIALIZE)
+    admin_tools = _mcp(port, "/_admin/mcp/", {"jsonrpc": "2.0", "id": 3, "method": "tools/list"})
+    context = httpx.post(
+        f"http://127.0.0.1:{port}/_admin/session-context",
+        json={"cwd": str(sample.folder)},
+        timeout=10,
+    )
     addresses = _listening_addresses(port)
     process.terminate()
     process.wait(timeout=15)
@@ -101,6 +115,11 @@ def test_normal(
     assert sorted(tool["name"] for tool in tools.json()["result"]["tools"]) == TOOL_NAMES
     assert admin.status_code == 200
     assert admin.json()["result"]["serverInfo"]
+    assert (
+        sorted(tool["name"] for tool in admin_tools.json()["result"]["tools"]) == ADMIN_TOOL_NAMES
+    )
+    assert context.status_code == 200
+    assert [item["id"] for item in context.json()["sources"]] == ["sample"]
     assert f"http://127.0.0.1:{port}/" in output
     assert "sample" in output
     assert "notes" in output
