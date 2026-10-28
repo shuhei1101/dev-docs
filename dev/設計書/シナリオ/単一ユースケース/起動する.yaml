@@ -1,0 +1,217 @@
+title: "起動する"
+scenarios:
+  - name: 正常シナリオ
+    setup:
+      - name: Mock
+        description: なし（実環境で実行。`dev-docs serve` を子プロセスで起動する）
+      - name: サンプルの配信元
+        description: 文書の種類を 1 つ（スキーマと YAML 2 件）と `dev-docs.yaml` を持つ git リポジトリ
+        notes: id `sample`
+      - name: 読み取りだけの配信元
+        description: 文書の種類を 1 つと `dev-docs.yaml` を持つ Git 管理外のフォルダ
+        notes: id `notes`
+      - name: 端末の設定
+        description: '`DEV_DOCS_CONFIG` が指す `settings.yaml`'
+        notes: '`sources` に sample と notes の 2 行'
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        actor U as 利用者
+        participant DD as dev-docs
+        participant CF as 端末の設定・配信元の設定
+
+        U->>DD: dev-docs serve
+        DD->>CF: 端末の設定を読み、スキーマで検証する
+        loop sources の各行
+          DD->>CF: config の YAML を上から順に読んでマージする
+          DD->>DD: マージした設定をスキーマで検証し、検査・変換・生成のスクリプトを実行できるか確かめる
+          DD->>DD: 画面の API と文書の MCP の配信元に加える
+        end
+        DD->>DD: 127.0.0.1:8781 で待ち受ける
+        DD-->>U: 待ち受けたアドレスと配信している配信元を標準出力に出す
+      ```
+    expected:
+      - '`127.0.0.1:8781` で待ち受け、`0.0.0.0` では待ち受けない'
+      - '`/_api/sources/sample/docs` と `/_api/sources/notes/docs` が 200 を返す'
+      - '`/mcp` のツールが `search_docs`・`write_docs`・`delete_docs`・`describe`・`list_changes`・`trace_related` の 6 つ'
+      - '`/_admin/mcp` に MCP のセッションを張れる（ツールは #4）'
+      - 標準出力に待ち受けたアドレスと、配信している配信元の id（sample・notes）が出る
+    test: test_normal
+  - name: 正常シナリオ（設定の YAML を重ねる）
+    setup:
+      - name: Mock
+        description: なし（実環境で実行）
+      - name: サンプルの配信元
+        description: '`dev-docs.yaml` と、その環境だけの設定の YAML（`dev-docs.local.yaml`）を持つ git リポジトリ'
+        notes: 後の YAML が `description` を上書きし、`documents[]` に `id` が同じ行（`paths` を変える）と新しい行を 1 つずつ持つ
+      - name: 端末の設定
+        description: '`DEV_DOCS_CONFIG` が指す `settings.yaml`'
+        notes: sample の `config` が `[dev-docs.yaml, dev-docs.local.yaml]` の順
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        actor U as 利用者
+        participant DD as dev-docs
+        participant CF as 配信元の設定
+
+        U->>DD: dev-docs serve
+        DD->>CF: dev-docs.yaml を読む
+        DD->>CF: dev-docs.local.yaml を読み、同じキーを上書きし、documents を id で行ごとに上書き・追加する
+        DD->>DD: マージした設定をスキーマで検証する
+        DD-->>U: sample を配信する
+      ```
+    expected:
+      - '`describe(source: sample)` の説明が後の YAML の `description` になる'
+      - '`id` が同じ `documents[]` の行は後の YAML の `paths` の文書を返し、前の YAML だけにある `paths` の文書は返さない'
+      - 後の YAML で追加した `documents[]` の行の文書を `search_docs` が返す
+    test: test_normal_when_configs_merged
+  - name: 正常シナリオ（設定のバージョンが古い）
+    setup:
+      - name: Mock
+        description: なし（実環境で実行）
+      - name: 古い配信元
+        description: '`version` がサーバーが読めるバージョンより古い `dev-docs.yaml` を持つ配信元'
+        notes: id `old`。マージした設定は今のスキーマを満たす
+      - name: 端末の設定
+        description: '`DEV_DOCS_CONFIG` が指す `settings.yaml`'
+        notes: '`sources` に old の 1 行'
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        actor U as 利用者
+        participant DD as dev-docs
+
+        U->>DD: dev-docs serve
+        DD->>DD: old の設定の version をサーバーが読めるバージョンと比べる
+        DD->>DD: 古い設定の配信元として状態に持つ
+        DD-->>U: old を配信する
+      ```
+    expected:
+      - '`/_api/sources/old/docs` が 200 を返す'
+      - 警告のログに old の id・設定のバージョン・サーバーが読めるバージョンが残る
+    test: test_normal_when_config_version_old
+    notes:
+      知らせる経路: '古い設定の配信元を管理の MCP の `check_project` と SessionStart で知らせるのは #4。'
+  - name: 異常シナリオ（設定の検証に失敗する）
+    setup:
+      - name: Mock
+        description: なし（実環境で実行）
+      - name: サンプルの配信元
+        description: 検証に通る配信元
+        notes: id `sample`
+      - name: 壊れた配信元
+        description: '`dev-docs.yaml` がスキーマに違反する配信元'
+        notes: id `broken`。`documents[]` の必須のキー `paths` が無い
+      - name: 端末の設定
+        description: '`DEV_DOCS_CONFIG` が指す `settings.yaml`'
+        notes: '`sources` に sample と broken の 2 行'
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        actor U as 利用者
+        participant DD as dev-docs
+
+        U->>DD: dev-docs serve
+        DD->>DD: sample の設定を検証して配信元に加える
+        DD->>DD: broken の設定の検証に失敗する
+        DD->>DD: broken を配信せず、エラーログに残す
+        DD-->>U: sample だけを配信する
+      ```
+    expected:
+      - '`/_api/sources/broken/docs` が 404 を返し、`/_api/sources/sample/docs` と `/mcp` は応答する'
+      - 'エラーログに `broken: documents[0].paths: 必須のキーが無い` の形で、配信元の id・違反したキーのパス・理由が残る'
+      - '`/_admin/mcp` に MCP のセッションを張れる'
+    test: test_error_when_source_config_invalid
+  - name: 異常シナリオ（スクリプトを実行できない）
+    setup:
+      - name: Mock
+        description: なし（実環境で実行）
+      - name: サンプルの配信元
+        description: 検証に通る配信元
+        notes: id `sample`
+      - name: スクリプトの無い配信元
+        description: '`converters[]` が無いファイルを指す配信元'
+        notes: id `noscript`
+      - name: 端末の設定
+        description: '`DEV_DOCS_CONFIG` が指す `settings.yaml`'
+        notes: '`sources` に sample と noscript の 2 行'
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        actor U as 利用者
+        participant DD as dev-docs
+
+        U->>DD: dev-docs serve
+        DD->>DD: noscript の converters のスクリプトを実行できるか確かめ、失敗する
+        DD->>DD: noscript を配信せず、エラーログに残す
+        DD-->>U: sample だけを配信する
+      ```
+    expected:
+      - '`/_api/sources/noscript/docs` が 404 を返し、`/_api/sources/sample/docs` は応答する'
+      - エラーログに noscript の id・`converters[0]` のキーのパス・スクリプトが見つからない理由が残る
+    test: test_error_when_script_not_executable
+  - name: 異常シナリオ（端末の設定がスキーマに違反する）
+    setup:
+      - name: Mock
+        description: なし（実環境で実行）
+      - name: 端末の設定
+        description: '`DEV_DOCS_CONFIG` が指す `settings.yaml`'
+        notes: '`sources[0]` に必須のキー `config` が無く、`port` が整数でない'
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        actor U as 利用者
+        participant DD as dev-docs
+
+        U->>DD: dev-docs serve
+        DD->>DD: 端末の設定の検証に失敗する
+        DD-->>U: 違反を標準エラーに出して終わる
+      ```
+    expected:
+      - プロセスが 0 以外の終了コードで終わり、ポートを待ち受けない
+      - '標準エラーに `{ファイル}: sources[0].config: 必須のキーが無い` の形で違反が全て並ぶ'
+    test: test_error_when_terminal_config_invalid
+  - name: 異常シナリオ（ポートが使用中）
+    setup:
+      - name: Mock
+        description: なし（実環境で実行）
+      - name: 使用中のポート
+        description: テストが先に待ち受けたポート
+        notes: '`DEV_DOCS_PORT` にそのポートを入れる'
+      - name: 端末の設定
+        description: '`DEV_DOCS_CONFIG` が指す `settings.yaml`'
+        notes: '`sources` に検証に通る 1 行'
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        actor U as 利用者
+        participant DD as dev-docs
+
+        U->>DD: dev-docs serve
+        DD->>DD: ポートで待ち受けられない
+        DD-->>U: ポートと DEV_DOCS_PORT を標準エラーに出して終わる
+      ```
+    expected:
+      - プロセスが 0 以外の終了コードで終わる
+      - 標準エラーに使用中のポートの番号と、`DEV_DOCS_PORT` で変えられることが出る
+    test: test_error_when_port_in_use
+lead: 利用者が `dev-docs serve` を実行し、端末の設定に並べた配信元を 1 プロセス・1 ポートで配信し始める。
+issue: 3
+primary_actor: 利用者
+stakeholders:
+  - name: 利用者
+    interest: 1 つのコマンドで全ての配信元が配信され、配信できなかった配信元とその理由が分かる
+  - name: エージェント（Claude Code）
+    interest: 起動の後、`/mcp` の 1 つにつなげば使える配信元の文書を読める
+trigger: '利用者が `dev-docs serve` を実行する（SessionStart のフックが起動する部分は #4）'
+preconditions:
+  - '`DEV_DOCS_CONFIG`（既定 `~/.config/dev-docs/settings.yaml`）に端末の設定がある'
+  - '`DEV_DOCS_PORT`（既定 8781）のポートが空いている'
+success_guarantee: 検証に通った配信元が `/_api/sources/{配信元の id}/docs` の画面の API と `/mcp` の文書の MCP で読める。`/mcp` のツールは配信元の数によらず 6 つ。
+minimal_guarantee: 検証に失敗した配信元があっても、他の配信元と `/_admin/mcp` は配信する。失敗した配信元の id・違反したキーのパス・理由がエラーログに残る。
+frequency: 端末の起動ごと・dev-docs の更新ごと
+priority: 高
+refs:
+  - dev/設計書/シナリオ/複合ユースケース/dev-docsで文書を配信して読み書きする#scenarios[正常シナリオ]
+  - dev/設計書/シナリオ/複合ユースケース/dev-docsで文書を配信して読み書きする#scenarios[異常シナリオ（配信できない配信元がある）]
+test_file: tests/e2e/単一ユースケース/test_起動する.py

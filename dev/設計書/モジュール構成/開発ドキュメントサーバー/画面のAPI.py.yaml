@@ -1,0 +1,877 @@
+title: "開発ドキュメントサーバー / 画面のAPI"
+lead: |-
+  #17 の画面が呼ぶ画面の API（文書の取得・画面の検索・リビジョンの一覧・表の列の設定の保存）。
+  端末の設定の取得・保存は端末の設定の入口が持つ。
+directory: |-
+  ```text
+  src/dev_docs/features/view/
+  ├─ __init__.py   # 公開する型と関数の再エクスポート
+  ├─ types.py      # NavItem / NavTab / ConversionError / GitHubTarget / DocumentResponse / ScreenSearchItem / ScreenSearchResult / ColumnsRequest
+  ├─ paths.py      # page_path / find_page / screen_target
+  ├─ nav.py        # build_nav / first_page
+  ├─ columns.py    # ColumnSettings
+  ├─ search.py     # screen_search
+  ├─ document.py   # get_document / not_found_fields
+  └─ route.py      # build_view_router（/_api/sources/{source}/docs・search・refs・columns）
+  ```
+diagrams:
+  - name: 全体
+    diagram: |-
+      classDiagram
+        direction TD
+        画面の入口 ..> 文書の取得
+        画面の入口 ..> 見つからなかったもの
+        画面の入口 ..> 画面の読む場所
+        画面の入口 ..> 画面の検索
+        画面の入口 ..> 表の列の設定
+        画面の入口 ..> リビジョンの一覧
+        文書の取得 ..> 画面の読む場所
+        文書の取得 ..> タブとサイドバーの組み立て
+        文書の取得 ..> タブの最初の文書
+        文書の取得 ..> 文書のページの特定
+        文書の取得 ..> 変換
+        文書の取得 ..> 変わったキー
+        文書の取得 ..> 表の列の設定
+        画面の検索 ..> 語の照合
+        画面の検索 ..> 一致した箇所の抜き出し
+        class 画面の入口 {
+          <<function>>
+        }
+        class 文書の取得 {
+          <<function>>
+        }
+        class 見つからなかったもの {
+          <<function>>
+        }
+        class 画面の読む場所 {
+          <<function>>
+        }
+        class 画面の検索 {
+          <<function>>
+        }
+        class 表の列の設定 {
+          <<class>>
+        }
+        class リビジョンの一覧 {
+          <<function>>
+        }
+        class タブとサイドバーの組み立て {
+          <<function>>
+        }
+        class タブの最初の文書 {
+          <<function>>
+        }
+        class 文書のページの特定 {
+          <<function>>
+        }
+        class 変換 {
+          <<class>>
+        }
+        class 変わったキー {
+          <<function>>
+        }
+        class 語の照合 {
+          <<function>>
+        }
+        class 一致した箇所の抜き出し {
+          <<function>>
+        }
+        click リビジョンの一覧 href "./履歴.py.yaml#リビジョンの一覧"
+        click 変換 href "./変換.py.yaml#変換"
+        click 変わったキー href "./変更.py.yaml#変わったキー"
+        click 語の照合 href "./検索.py.yaml#語の照合"
+        click 一致した箇所の抜き出し href "./検索.py.yaml#一致した箇所の抜き出し"
+constants:
+  - name: SEARCH_QUERY_MAX
+    title: 検索の語の文字数の上限
+    container: features/view/search.py
+    usecase: 画面の検索
+    summary: '`q` の文字数の上限'
+    value: '200'
+  - name: SEARCH_LIMIT_DEFAULT
+    title: 画面の検索の件数の既定
+    container: features/view/search.py
+    usecase: 画面の検索
+    summary: '`limit` を省いたときの件数'
+    value: '20'
+  - name: SEARCH_LIMIT_MAX
+    title: 画面の検索の件数の上限
+    container: features/view/search.py
+    usecase: 画面の検索
+    summary: '`limit` の上限'
+    value: '100'
+  - name: SNIPPETS_PER_DOC
+    title: 文書ごとの一致した箇所の数
+    container: features/view/search.py
+    usecase: 画面の検索
+    summary: '`items[].snippets` の上限'
+    value: '3'
+  - name: REFS_COMMITS_DEFAULT
+    title: 最近の commit の数の既定
+    container: features/view/route.py
+    usecase: リビジョンの一覧
+    summary: '`commits` を省いたときの数'
+    value: '20'
+  - name: REFS_COMMITS_MAX
+    title: 最近の commit の数の上限
+    container: features/view/route.py
+    usecase: リビジョンの一覧
+    summary: '`commits` の上限'
+    value: '100'
+  - name: COLUMNS_DIR
+    title: 表の列の設定のフォルダ
+    container: features/view/columns.py
+    usecase: 表の列の設定の保存
+    summary: '`state_dir` の下の、配信元ごとの列の設定（`{source}.json`）を置くフォルダ'
+    value: '"columns"'
+data_models:
+  - name: NavTab
+    title: 種類のタブ
+    container: features/view/types.py
+    usecase: 文書の取得
+    role: DTO
+    summary: 上のタブ 1 つとそのサイドバー
+    description: '`pydantic.BaseModel`。文書の取得の `tabs[]`。'
+    properties:
+      - name: title
+        title: タブの名前
+        type: str
+        access: 公開
+        description: '`nav.tabs[].title`。nav が無ければ文書の行の `title`（無ければ `id`）'
+      - name: active
+        title: 選んだタブ
+        type: bool
+        access: 公開
+        description: 返した文書を含むタブか
+      - name: items
+        title: サイドバーの項目
+        type: list[NavItem]
+        access: 公開
+        description: 見出しと文書の入れ子
+  - name: ScreenSearchItem
+    title: 画面の検索の結果の文書
+    container: features/view/types.py
+    usecase: 画面の検索
+    role: DTO
+    summary: '`items[]` の 1 件'
+    description: '`pydantic.BaseModel`。'
+    properties:
+      - name: path
+        title: 文書のページのパス
+        type: str
+        access: 公開
+        description: '文書の取得の `path` に渡す形'
+      - name: name
+        title: 名前
+        type: str
+        access: 公開
+        description: メタデータの `name`、無ければ ID
+      - name: snippets
+        title: 一致した箇所
+        type: list[str]
+        access: 公開
+        description: '`SNIPPETS_PER_DOC` 件まで'
+  - name: ScreenSearchResult
+    title: 画面の検索の結果
+    container: features/view/types.py
+    usecase: 画面の検索
+    role: DTO
+    summary: GET `/_api/sources/{source}/search` の応答
+    description: '`pydantic.BaseModel`。'
+    properties:
+      - name: total_count
+        title: 総件数
+        type: int
+        access: 公開
+        description: 一致した文書の数
+      - name: items
+        title: 文書
+        type: list[ScreenSearchItem]
+        access: 公開
+        description: '`limit` 件まで'
+  - name: ColumnsRequest
+    title: 表の列の設定の保存の要求
+    container: features/view/types.py
+    usecase: 表の列の設定の保存
+    role: DTO
+    summary: PUT `/_api/sources/{source}/columns` の本文と応答
+    description: '`pydantic.BaseModel`（`extra="forbid"`）。応答も同じ形。'
+    properties:
+      - name: table
+        title: 表のキー
+        type: str
+        access: 公開
+        description: '`{種類}:{項目のパス}` か `{種類}:table[{n}]`（変換の『表の組み立て』）。1 文字以上'
+      - name: hidden
+        title: 隠す列
+        type: list[str]
+        access: 公開
+        description: 空なら全ての列を出す
+  - name: NavItem
+    title: サイドバーの項目
+    container: features/view/types.py
+    usecase: 文書の取得
+    role: DTO
+    summary: サイドバーの見出しか文書の 1 行
+    description: '`pydantic.BaseModel`。文書の取得の `tabs[].items`。'
+    properties:
+      - name: kind
+        title: 項目の種類
+        type: Literal['group', 'page']
+        access: 公開
+        description: '`group` は見出し、`page` は文書'
+      - name: title
+        title: 名前
+        type: str
+        access: 公開
+        description: '`title` の上書きか、見出しの名前・文書のメタデータの `name`、無ければ ID'
+      - name: path
+        title: 文書のページのパス
+        type: str | None
+        access: 公開
+        default: None
+        description: '`page` の文書のページのパス。`group` は `None`'
+      - name: items
+        title: 入れ子の項目
+        type: list[NavItem]
+        access: 公開
+        default: '[]'
+        description: '`group` の下の項目（`group` の入れ子と `auto` の `group_by`）。`page` は空'
+  - name: ConversionError
+    title: 変換の失敗の応答
+    container: features/view/types.py
+    usecase: 文書の取得
+    role: DTO
+    summary: 文書の取得の `conversion_error`
+    description: '`pydantic.BaseModel`。変換の『変換の失敗』と同じフィールドを持つ。'
+    properties:
+      - name: reason
+        title: 理由
+        type: Literal['timeout', 'exit', 'not_runnable', 'invalid_yaml']
+        access: 公開
+        description: 制限時間を超えた・0 以外で終わった・実行できない・YAML を読めない
+      - name: kind
+        title: 種類
+        type: str
+        access: 公開
+        description: 文書の行の ID
+      - name: script
+        title: スクリプト
+        type: str | None
+        access: 公開
+        default: None
+        description: '`converters[].run` を空白で繋いだもの。YAML を読めないときは `None`'
+      - name: detail
+        title: 詳細
+        type: str
+        access: 公開
+        description: 制限時間の秒数・終了コードと標準エラーの末尾・読めなかった理由
+      - name: file
+        title: ファイル
+        type: str | None
+        access: 公開
+        default: None
+        description: YAML を読めないときのファイルのパス（配信元の直下から）
+      - name: line
+        title: 行
+        type: int | None
+        access: 公開
+        default: None
+        description: YAML を読めないときの行（1 始まり）
+      - name: column
+        title: 列
+        type: int | None
+        access: 公開
+        default: None
+        description: YAML を読めないときの列（1 始まり）
+  - name: GitHubTarget
+    title: 起票先
+    container: features/view/types.py
+    usecase: 文書の取得
+    role: DTO
+    summary: 文書の取得の `github`
+    description: '`pydantic.BaseModel`。'
+    properties:
+      - name: repository
+        title: GitHub のリポジトリ
+        type: str
+        access: 公開
+        description: 配信元の `github_repository`（`owner/name`）
+      - name: issue_labels
+        title: 起票のラベル
+        type: list[str]
+        access: 公開
+        description: 配信元の `github_issue_labels`
+  - name: DocumentResponse
+    title: 文書の取得の応答
+    container: features/view/types.py
+    usecase: 文書の取得
+    role: DTO
+    summary: GET `/_api/sources/{source}/docs[/{path}]` の応答
+    description: '`pydantic.BaseModel`。'
+    properties:
+      - name: source
+        title: 配信元の ID
+        type: str
+        access: 公開
+        description: 配信元の ID
+      - name: ref
+        title: リビジョン
+        type: str | None
+        access: 公開
+        description: '`ref` の値。省いたときは `default_ref` の名前。Git 管理外は `None`'
+      - name: path
+        title: 文書のページのパス
+        type: str
+        access: 公開
+        description: 返した文書のページのパス
+      - name: markdown
+        title: Markdown
+        type: str | None
+        access: 公開
+        description: 変換の結果の `markdown`。失敗したときは `None`
+      - name: conversion_error
+        title: 変換の失敗
+        type: ConversionError | None
+        access: 公開
+        description: 失敗したときだけ
+      - name: tabs
+        title: タブ
+        type: list[NavTab]
+        access: 公開
+        description: タブとサイドバーの組み立ての結果
+      - name: changed_items
+        title: 変わった項目
+        type: list[str] | None
+        access: 公開
+        description: '`diff` のリビジョンから変わったキーのパス。`diff` を省いたときは `None`'
+      - name: github
+        title: 起票先
+        type: GitHubTarget | None
+        access: 公開
+        description: '`github_repository` が無い配信元は `None`'
+      - name: columns
+        title: 隠す列
+        type: dict[str, list[str]]
+        access: 公開
+        description: 表のキー → 隠す列（表の列の設定.列の設定を読む）
+      - name: table_keys
+        title: 表のキー
+        type: list[str]
+        access: 公開
+        description: 変換の結果の `table_keys`。失敗したときは空
+classes:
+  - name: ColumnSettings
+    title: 表の列の設定
+    container: features/view/columns.py
+    usecase: 表の列の設定の保存
+    role: リポジトリ
+    summary: 配信元・表ごとの隠す列を `state_dir` の JSON に読み書きする
+    properties:
+      - name: dir
+        title: フォルダ
+        type: Path
+        access: 公開
+        description: '`{state_dir}/{COLUMNS_DIR}`'
+      - name: _lock
+        title: 書き込みの排他
+        type: threading.Lock
+        access: 内部 (_)
+        description: 読んで書き戻す間を 1 つずつにする
+    methods:
+      - name: get
+        title: 列の設定を読む
+        kind: メソッド
+        summary: 配信元の表のキー → 隠す列を返す
+        scope: public
+        thread_safe: true
+        args:
+          - name: source_id
+            title: 配信元の ID
+            type: str
+            required: true
+            passing: positional
+            description: 配信元
+        returns:
+          type: dict[str, list[str]]
+          description: ファイルが無い・読めないときは空（読めないときは `[warning]` 列の設定を読めない（パス・理由）を書く）
+        process: 1. `{dir}/{source_id}.json` を読んで返す
+      - name: save
+        title: 列の設定を書く
+        kind: メソッド
+        summary: 1 つの表の隠す列を書き、他の表の設定は残す
+        scope: public
+        thread_safe: true
+        side_effects: '`{dir}/{source_id}.json` を書き換える'
+        args:
+          - name: source_id
+            title: 配信元の ID
+            type: str
+            required: true
+            passing: positional
+            description: 配信元
+          - name: table
+            title: 表のキー
+            type: str
+            required: true
+            passing: positional
+            description: 書く表
+          - name: hidden
+            title: 隠す列
+            type: list[str]
+            required: true
+            passing: positional
+            description: 空なら表のキーを消す
+        returns:
+          type: None
+          description: '-'
+        process: |-
+          1. ロックを握り、今の設定を読む
+          2. `hidden` が空なら表のキーを消し、そうでなければ重複を除いて置く
+          3. フォルダを作り、ファイルの置き換え（共通）で書く
+        unit_tests:
+          - name: test_save
+            case: 正常
+            summary: 他の表を残す
+            condition: '`a:x` を書いた後に `a:y` を書き、`a:x` を空で書く'
+            mock: なし（一時フォルダ）
+            expected: '`get` が `{"a:y": [...]}`'
+functions:
+  - name: page_path
+    title: 文書のページのパス
+    kind: 関数
+    container: features/view/paths.py
+    usecase: 文書の取得
+    role: 変換
+    summary: 文書を URL のパスにする
+    scope: public
+    thread_safe: true
+    args:
+      - name: document
+        title: 文書
+        type: Document
+        required: true
+        passing: positional
+        description: 文書
+    returns:
+      type: str
+      description: '`path` から拡張子を落とした形。`records` の文書は `{拡張子を落とした path}/{id}`'
+    process: 1. `PurePosixPath(path).with_suffix("")` にし、`record_index` があれば `/{id}` を続ける
+    unit_tests:
+      - name: test_page_path
+        case: 正常
+        summary: ファイルと records
+        condition: '`docs/a.yaml` の文書と、`docs/rules.yaml` の `records` の `r-1`'
+        mock: なし
+        expected: '`docs/a` と `docs/rules/r-1`'
+  - name: find_page
+    title: 文書のページの特定
+    kind: 関数
+    container: features/view/paths.py
+    usecase: 文書の取得
+    role: 判定
+    summary: 文書のページのパスに当たる文書を探す
+    scope: public
+    thread_safe: true
+    args:
+      - name: documents
+        title: 文書
+        type: Sequence[Document]
+        required: true
+        passing: positional
+        description: 配信元の文書
+      - name: page
+        title: 文書のページのパス
+        type: str
+        required: true
+        passing: positional
+        description: 探すパス
+    returns:
+      type: Document | None
+      description: 無ければ `None`
+    process: 1. 文書のページのパスが `page` と同じ文書を返す
+  - name: screen_target
+    title: 画面の読む場所
+    kind: 関数
+    container: features/view/paths.py
+    usecase: 共通
+    role: 判定
+    summary: 配信元とリビジョンから読む場所を作る
+    scope: public
+    thread_safe: true
+    args:
+      - name: registry
+        title: 配信元の一覧
+        type: SourceRegistry
+        required: true
+        passing: injected
+        description: 配信中の配信元
+      - name: source_id
+        title: 配信元の ID
+        type: str
+        required: true
+        passing: positional
+        description: 開く配信元
+      - name: ref
+        title: リビジョン
+        type: str | None
+        required: true
+        passing: positional
+        description: '`ref`・`diff` の値'
+    returns:
+      type: tuple[Target, ResolvedRef | None]
+      description: 読む場所と、Git の配信元のとき解いたリビジョン
+    process: |-
+      1. 配信元を引く（配信元の一覧.引く。`UnknownSourceError`・`SourceNotServedError` はそのまま伝える）
+      2. Git 管理外の配信元は `ref` を無視し、`root` を `ref` なしで読む場所にする（`access` は `read`。画面は `127.0.0.1` だけで待ち受けるので作業場所の権限を見ない）
+      3. Git の配信元は、`ref`（無ければ `default_ref`）をリビジョンの解決で解き、`root` をその commit で読む場所にする
+    exceptions:
+      - name: UnknownSourceError
+        condition: 無い配信元
+        message: '`配信元がありません: {id}`'
+      - name: SourceNotServedError
+        condition: 配信していない配信元
+        message: '`{id} は配信していません`'
+      - name: RefNotFoundError
+        condition: 解決できないリビジョン
+        message: '`ref を解決できません: {value}`'
+    unit_tests:
+      - name: test_screen_target
+        case: 正常
+        summary: 既定のリビジョン
+        condition: Git の配信元で `ref=None`
+        mock: なし（一時フォルダのリポジトリ）
+        expected: '`Target.ref` が `default_ref` の commit'
+      - name: test_screen_target_when_not_git
+        case: 正常
+        summary: Git 管理外
+        condition: Git 管理外の配信元で `ref="main"`
+        mock: なし
+        expected: '`Target.ref` が `None` で、解いたリビジョンが `None`'
+  - name: build_nav
+    title: タブとサイドバーの組み立て
+    kind: 関数
+    container: features/view/nav.py
+    usecase: 文書の取得
+    role: 変換
+    summary: 配信元の `nav` と文書から、上のタブとサイドバーを作る
+    scope: public
+    thread_safe: true
+    args:
+      - name: source
+        title: 配信中の配信元
+        type: ServedSource
+        required: true
+        passing: positional
+        description: '`config.nav` と文書の行を読む'
+      - name: documents
+        title: 文書
+        type: Sequence[Document]
+        required: true
+        passing: positional
+        description: 読む場所の文書
+    returns:
+      type: list[NavTab]
+      description: タブの並び
+    process: |-
+      1. `nav` が無い場合、有効な文書の行ごとに 1 つのタブを作り、`auto: {document: 行の id}` と同じ並びにする
+      2. `nav.tabs[]` ごとに `items[]` を上から次のように読む
+         - `group` は `kind` が `group` の項目を作り、子の `items[]` を同じ読み方で入れ子にする
+         - `page` は、文書の行が 1 ファイルだけならその文書、`{行の id}/{文書の ID}` ならその文書の `kind` が `page` の項目にする。無い文書は飛ばし、`[warning]` nav の文書が無い（配信元・値）を書く
+         - `auto` は `document` の行の文書を文書のページのパスの昇順で `page` の項目にする。`group_by` があれば、その項目のパスの値（配列は要素ごと、無ければ `その他`）ごとの `group` の項目にする
+         - `title` があれば行の名前を上書きする
+      3. `active` を全て `False` にしたタブの並びを返す
+    unit_tests:
+      - name: test_build_nav
+        case: 正常
+        summary: group・page・auto
+        condition: 'A-25 の例の `nav`（`auto: {document: rules, group_by: tags.lang}`・`group: アーキテクチャ`・`page: architecture`）'
+        mock: なし
+        expected: 3 つのタブ。規約のタブは `tags.lang` の値ごとの `group` の項目、設計書のタブは `group` の項目 `アーキテクチャ` の下に architecture の `page` の項目
+      - name: test_build_nav_when_no_nav
+        case: 正常
+        summary: nav が無い
+        condition: 文書の行が 2 つで `nav` が無い
+        mock: なし
+        expected: 行ごとに 2 つのタブ
+  - name: first_page
+    title: タブの最初の文書
+    kind: 関数
+    container: features/view/nav.py
+    usecase: 文書の取得
+    role: 判定
+    summary: タブのサイドバーの一番上の文書のページのパスを返す
+    scope: public
+    thread_safe: true
+    args:
+      - name: tab
+        title: タブ
+        type: NavTab
+        required: true
+        passing: positional
+        description: 調べるタブ
+    returns:
+      type: str | None
+      description: 文書が無いタブは `None`
+    process: 1. `items` を上から深さ優先でたどり、最初の `page` の項目の `path` を返す
+  - name: screen_search
+    title: 画面の検索
+    kind: 関数
+    container: features/view/search.py
+    usecase: 画面の検索
+    role: サービス
+    summary: 語を全て含む文書と一致した箇所を返す
+    scope: public
+    thread_safe: true
+    args:
+      - name: documents
+        title: 文書
+        type: Sequence[Document]
+        required: true
+        passing: positional
+        description: '読む場所の文書（`search: false` の行の文書を除いたもの）'
+      - name: q
+        title: 検索する語
+        type: str
+        required: true
+        passing: positional
+        description: 1〜`SEARCH_QUERY_MAX` 文字（入口が確かめる）
+      - name: limit
+        title: 件数
+        type: int
+        required: true
+        passing: positional
+        description: 1〜`SEARCH_LIMIT_MAX`
+    returns:
+      type: ScreenSearchResult
+      description: 文書のページのパスの昇順
+    process: |-
+      1. `q` を NFKC と `casefold` をして空白で分ける
+      2. 語の照合に当たる文書を文書のページのパスの昇順に並べ、総件数を数える
+      3. 先頭から `limit` 件を、本文の一致した箇所の抜き出し（前後 1 行、`SNIPPETS_PER_DOC` 件）つきで返す
+    unit_tests:
+      - name: test_screen_search
+        case: 正常
+        summary: 全ての語を含む文書だけ
+        condition: '`q="foo bar"`、foo と bar を含む文書 1 つと foo だけの文書 1 つ'
+        mock: なし
+        expected: '`total_count` が 1、`snippets` に foo か bar を含む行'
+  - name: build_view_router
+    title: 画面の入口
+    kind: 関数
+    container: features/view/route.py
+    usecase: 共通
+    role: 入口
+    summary: 画面の API のルートを持つ `APIRouter` を作る
+    scope: public
+    args:
+      - name: handlers
+        title: 配線済みの関数
+        type: Handlers
+        required: true
+        passing: positional
+        description: 起動の『配線済みの関数』
+    returns:
+      type: fastapi.APIRouter
+      description: 5 つのルートを持つルーター
+    process: |-
+      1. GET `/_api/sources/{source}/docs` と `/_api/sources/{source}/docs/{path:path}` は、`ref`・`diff` を受け、文書の取得を `DocumentResponse` で返す。文書の取得の例外は、例外の変換の登録と同じ problem+json に見つからなかったものを加えて 404 で返す（`SourceNotServedError` の `errors[]` もそのまま）
+      2. GET `/_api/sources/{source}/search` は、`q`（1〜`SEARCH_QUERY_MAX` 文字）・`ref`・`limit`（1〜`SEARCH_LIMIT_MAX`）を受け、画面の読む場所の文書で画面の検索を返す
+      3. GET `/_api/sources/{source}/refs` は、`commits`（0〜`REFS_COMMITS_MAX`）を受け、リビジョンの一覧を返す（無い配信元は 404）
+      4. PUT `/_api/sources/{source}/columns` は、同じオリジンの確認を依存に持ち、配信元を引いてから、本文を `ColumnsRequest` で受けて表の列の設定.列の設定を書く を呼び、同じ値を返す
+      5. 各ルートの `operation_id` は、`/docs` が `get_document_default`、`/docs/{path:path}` が `get_document`、search が `search_page`、refs が `list_refs`、columns が `put_columns`
+      6. サービスは `asyncio.to_thread` で呼ぶ
+    unit_tests:
+      - name: test_build_view_router_when_document
+        case: 正常
+        summary: 文書の取得
+        condition: GET `/_api/sources/sample/docs`
+        mock: なし（一時フォルダの配信元）
+        expected: 200 で `path`・`markdown`・`tabs`
+      - name: test_build_view_router_when_document_missing
+        case: 異常
+        summary: 無い文書
+        condition: GET `/_api/sources/sample/docs/no-such-doc`
+        mock: なし
+        expected: 404 の problem+json で、`missing` が `doc`、`value` が `no-such-doc`
+      - name: test_build_view_router_when_search
+        case: 正常
+        summary: 画面の検索
+        condition: GET `/_api/sources/sample/search?q=foo`
+        mock: なし（一時フォルダの配信元）
+        expected: 200 で `total_count` と `items[].path`
+      - name: test_build_view_router_when_query_too_long
+        case: 異常
+        summary: 長すぎる語
+        condition: '`q` が 201 文字'
+        mock: なし
+        expected: 400 の problem+json
+      - name: test_build_view_router_when_refs
+        case: 正常
+        summary: Git 管理外のリビジョンの一覧
+        condition: Git 管理外の配信元で GET `/_api/sources/notes/refs`
+        mock: なし
+        expected: 200 で `git` が `false`
+      - name: test_build_view_router_when_columns
+        case: 正常
+        summary: 列の設定の保存
+        condition: 'PUT `/_api/sources/sample/columns` を `Sec-Fetch-Site: same-origin` で'
+        mock: なし
+        expected: 200 で、次の文書の取得の `columns` に入る
+      - name: test_build_view_router_when_cross_origin
+        case: 異常
+        summary: 別のオリジン
+        condition: '`Origin: http://evil.example`'
+        mock: なし
+        expected: 403 で、ファイルを書かない
+  - name: get_document
+    title: 文書の取得
+    kind: 関数
+    container: features/view/document.py
+    usecase: 文書の取得
+    role: サービス
+    summary: 配信元の文書を変換した Markdown と、タブ・差分の項目・列の設定を返す
+    scope: public
+    args:
+      - name: handlers
+        title: 配線済みの関数
+        type: Handlers
+        required: true
+        passing: injected
+        description: 配信元の一覧・文書のストア・変換・表の列の設定
+      - name: source_id
+        title: 配信元の ID
+        type: str
+        required: true
+        passing: positional
+        description: 開く配信元
+      - name: path
+        title: 文書のページのパス
+        type: str | None
+        required: true
+        passing: positional
+        description: '`None` は一番左のタブの最初の文書'
+      - name: ref
+        title: リビジョン
+        type: str | None
+        required: true
+        passing: keyword
+        description: '`ref` の値'
+      - name: diff_ref
+        title: 比べるリビジョン
+        type: str | None
+        required: true
+        passing: keyword
+        description: '`diff` の値'
+    returns:
+      type: DocumentResponse
+      description: 文書の取得の応答
+    process: |-
+      1. 画面の読む場所で読む場所を作り、文書を集める（文書のストア.文書を集める）
+      2. タブとサイドバーを組み立てる
+      3. 返す文書を決める
+         - `path` が無ければ、一番左のタブのタブの最初の文書。文書が 1 つも無ければ `DocumentNotFoundError`
+         - `path` があれば文書のページの特定。無く、集めたときの `unreadable` の読めなかったファイルのうち拡張子を落としたパスが `path` と同じものがあれば、`markdown` を `None`、`conversion_error` を `reason` が `invalid_yaml`（`kind` はファイルのパスが当たる文書の行、`file`・`line`・`column`・`detail` は読めなかったファイルの値）にして 6 へ進む。どちらにも無ければ `DocumentNotFoundError`（`missing` に `path`）
+      4. 文書を変換する（変換.変換する）。`failure` があれば `markdown` を `None`、`conversion_error` を同じフィールドの `ConversionError` にする
+      5. `diff_ref` があり Git の配信元なら、`diff_ref` の画面の読む場所で同じ ID の文書を引き（無い文書は空の内容）、変わったキー（`ignore` は `diff_ignore_keys`）のパスを `changed_items` にする。Git 管理外は `None` にする
+      6. 返した文書を含むタブの `active` を `True` にする
+      7. `ref` は `ref` の値、省いたときは `default_ref` の名前（Git 管理外は `None`）、`github` は `github_repository` があれば `github_repository`・`github_issue_labels`、`columns` は表の列の設定.列の設定を読む の結果、`table_keys` は変換の結果の値にして返す
+    exceptions:
+      - name: UnknownSourceError
+        condition: 無い配信元
+        message: '`配信元がありません: {id}`'
+      - name: SourceNotServedError
+        condition: 配信していない配信元
+        message: '`{id} は配信していません`'
+      - name: RefNotFoundError
+        condition: '`ref` か `diff` を解決できない'
+        message: '`ref を解決できません: {value}`'
+      - name: DocumentNotFoundError
+        condition: 無い文書
+        message: '`文書がありません: {path}`'
+    unit_tests:
+      - name: test_get_document
+        case: 正常
+        summary: 配信元のトップ
+        condition: '`path=None`、`nav` のタブが 2 つ'
+        mock: なし（一時フォルダの配信元）
+        expected: 一番左のタブの一番上の文書の `markdown` と `path`、一番左のタブだけが `active`
+      - name: test_get_document_when_diff
+        case: 正常
+        summary: 変わった項目
+        condition: '`name` を変えた commit を `ref`、親の commit を `diff_ref`'
+        mock: なし（一時フォルダのリポジトリ）
+        expected: '`changed_items` が `["name"]`'
+      - name: test_get_document_when_convert_failed
+        case: 正常
+        summary: 変換の失敗
+        condition: 制限時間を超えるスクリプトの行の文書
+        mock: なし
+        expected: '`markdown` が `None` で、`conversion_error.reason` が `timeout`'
+      - name: test_get_document_when_yaml_unreadable
+        case: 正常
+        summary: YAML を読めない
+        condition: YAML として読めない `docs/a.yaml` を `path="docs/a"`
+        mock: なし
+        expected: '`conversion_error` が `invalid_yaml` で、`file` が `docs/a.yaml`、`line`・`column` が読めなかった位置'
+      - name: test_get_document_when_missing
+        case: 異常
+        summary: 無い文書
+        condition: '`path="docs/none"`'
+        mock: なし
+        expected: '`DocumentNotFoundError`'
+        exception: 無い文書
+  - name: not_found_fields
+    title: 見つからなかったもの
+    kind: 関数
+    container: features/view/document.py
+    usecase: 文書の取得
+    role: 変換
+    summary: 文書の取得の 404 の problem+json に加える `missing` と `value` を作る
+    scope: public
+    thread_safe: true
+    args:
+      - name: error
+        title: エラー
+        type: DevDocsError
+        required: true
+        passing: positional
+        description: 文書の取得が送った例外
+      - name: path
+        title: 文書のページのパス
+        type: str | None
+        required: true
+        passing: positional
+        description: 開こうとしたパス
+      - name: source_id
+        title: 配信元の ID
+        type: str
+        required: false
+        default: '""'
+        passing: keyword
+        description: 開こうとした配信元。`SourceNotServedError` の `value` に使う
+    returns:
+      type: dict[str, str] | None
+      description: '`{missing, value}`。404 にしない例外は `None`'
+    process: |-
+      1. `UnknownSourceError` は `source` と配信元の ID、`SourceNotServedError` は `not_served` と `source_id`、`RefNotFoundError` は `ref` と `value`、`DocumentNotFoundError` は `doc` と `path`（`None` なら空）を返す
+      2. それ以外は `None` を返す
+    unit_tests:
+      - name: test_not_found_fields
+        case: 正常
+        summary: 例外ごとの値
+        condition: '`RefNotFoundError(argument="ref", value="no-such-branch")` と、`DocumentNotFoundError` を `path="no-such-doc"` で'
+        mock: なし
+        expected: '`{missing: ref, value: no-such-branch}` と `{missing: doc, value: no-such-doc}`'
+refs:
+  - dev/設計書/インターフェース定義/開発ドキュメントサーバー/文書の取得#
+  - dev/設計書/インターフェース定義/開発ドキュメントサーバー/画面の検索#
+  - dev/設計書/インターフェース定義/開発ドキュメントサーバー/リビジョンの一覧#
+  - dev/設計書/インターフェース定義/開発ドキュメントサーバー/表の列の設定の保存#
+test_files:
+  - tests/unit/dev_docs/features/view/test_columns.py
+  - tests/unit/dev_docs/features/view/test_paths.py
+  - tests/unit/dev_docs/features/view/test_nav.py
+  - tests/unit/dev_docs/features/view/test_search.py
+  - tests/unit/dev_docs/features/view/test_document.py
+  - tests/unit/dev_docs/features/view/test_route.py

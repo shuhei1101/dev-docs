@@ -1,0 +1,206 @@
+title: "エージェントが調べる"
+scenarios:
+  - name: 正常シナリオ
+    setup:
+      - name: Mock
+        description: なし（実環境で実行。フックが入れる `cwd`・`session_id`・`agent_id` はテストが引数に入れる）
+      - name: サンプルの配信元
+        description: 文書の種類を 1 つ（スキーマと YAML 2 件。片方の `related` がもう片方を指す）と `dev-docs.yaml` を持つ git リポジトリ
+        notes: id `sample`。`scope.read`・`scope.write` は sample のフォルダ
+      - name: 読み取りだけの配信元
+        description: 文書の種類を 1 つと `dev-docs.yaml` を持つ Git 管理外のフォルダ
+        notes: id `notes`。`scope.read` は sample のフォルダ
+      - name: dev-docs
+        description: 上の 2 つを配信している dev-docs
+        notes: '`cwd` は sample のクローン本体'
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        actor A as エージェント
+        participant M as 文書の MCP（/mcp）
+        participant ST as 配信元の文書
+
+        A->>M: describe()
+        M-->>A: 使える配信元の一覧（sample は読み書き、notes は読み取りだけ）
+        A->>M: describe(source: sample)
+        M-->>A: 説明書と種類の一覧
+        A->>M: search_docs(filter: kind が sample の種類, view: summary)
+        M->>M: source を省いたので作業中の配信元 sample を指し、scope.read を確かめる
+        M->>ST: 文書を読む
+        M-->>A: id・name・概要文・文字数・version の表と総件数
+        A->>M: search_docs(filter: id が文書 1, view: full)
+        M-->>A: 文書 1 の本文
+        A->>M: trace_related(from_ids: 文書 1)
+        M-->>A: 文書 1 から related でたどった文書 2
+      ```
+    expected:
+      - '`describe()` が sample を読み書き、notes を読み取りだけとして返す'
+      - '`describe(source: sample)` が説明書と種類の一覧を返す'
+      - '`source` を省いた `search_docs` が sample の 2 件を、総件数 2 と各行の `version` つきで返す'
+      - '`view: full` の `search_docs` が文書 1 の YAML を返す'
+      - '`trace_related` が文書 1 の `related` の相手として文書 2 を返す'
+    test: test_normal
+  - name: 正常シナリオ（複数の配信元を横断する）
+    setup:
+      - name: Mock
+        description: なし（実環境で実行。`cwd` はテストが引数に入れる）
+      - name: dev-docs
+        description: 正常シナリオと同じ sample と notes を配信している dev-docs
+        notes: '`cwd` は sample のクローン本体'
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        actor A as エージェント
+        participant M as 文書の MCP（/mcp）
+
+        A->>M: search_docs(source: *, view: summary)
+        M->>M: scope.read に当たる配信元 sample と notes を対象にする
+        M-->>A: 両方の結果（各行に source、配信元ごとの総件数）
+      ```
+    expected:
+      - 結果の各行に `source`（sample か notes）が付く
+      - 総件数を配信元ごとに返す
+      - '`source: [sample]` は sample の行だけを返す'
+    test: test_normal_when_source_all
+  - name: 正常シナリオ（ワークツリーを指す）
+    setup:
+      - name: Mock
+        description: なし（実環境で実行。`cwd` はテストが引数に入れる）
+      - name: ワークツリー
+        description: sample の `.claude/worktrees/x`。文書 1 の `name` をクローン本体と変えてある
+        notes: 配信元の設定の `worktrees` は既定（`[./.claude/worktrees/*]`）
+      - name: dev-docs
+        description: sample を配信している dev-docs
+        notes: '`cwd` は sample のクローン本体'
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        actor A as エージェント
+        participant M as 文書の MCP（/mcp）
+        participant WT as ワークツリー x
+
+        A->>M: search_docs(worktree: ワークツリー x のパス, filter: id が文書 1)
+        M->>M: worktree が worktrees に当たる
+        M->>WT: 同じ相対パスの設定と文書を読む
+        M-->>A: ワークツリーの文書 1
+      ```
+    expected:
+      - '`worktree` を渡した `search_docs` がワークツリーの文書 1 の `name` を返す'
+      - '`worktree` を省き `cwd` をワークツリー x の中にした `search_docs` も、ワークツリーの文書 1 を返す'
+      - '`worktree` も省き `cwd` がクローン本体の `search_docs` は、クローン本体の文書 1 を返す'
+    test: test_normal_when_worktree_given
+  - name: 正常シナリオ（同じ本文を 2 回取る）
+    setup:
+      - name: Mock
+        description: なし（実環境で実行。`session_id`・`agent_id` はテストが引数に入れる）
+      - name: dev-docs
+        description: sample を配信している dev-docs
+        notes: '`session_id` は `s1`、`agent_id` は空'
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        actor A as エージェント
+        participant M as 文書の MCP（/mcp）
+
+        A->>M: search_docs(filter: id が文書 1, view: full)
+        M->>M: 会話キーごとに返した文書の id とハッシュを記録する
+        M-->>A: 文書 1 の本文
+        A->>M: 同じ search_docs をもう一度
+        M-->>A: 文書 1 は（この会話で返し済み）
+        A->>M: search_docs(..., repeat_seen: true)
+        M-->>A: 文書 1 の本文
+      ```
+    expected:
+      - 2 回目の結果で文書 1 の本文が `（この会話で返し済み）` だけになる
+      - '`repeat_seen: true` で本文を返す'
+      - '`session_id` を `s2` に変えた呼び出しは本文を返す'
+      - '`trace_related` の 2 回目は、関連の相手の名前・概要文を `（この会話で返し済み）` にする'
+      - '`view: summary` の一覧の各行の概要文は 2 回目も省かない'
+    test: test_normal_when_same_doc_twice
+  - name: 異常シナリオ（読めない配信元を指す）
+    setup:
+      - name: Mock
+        description: なし（実環境で実行。`cwd` はテストが引数に入れる）
+      - name: 別の配信元
+        description: 文書の種類を 1 つ持つ配信元
+        notes: id `other`。`scope.read` は other のフォルダだけ
+      - name: dev-docs
+        description: sample と other を配信している dev-docs
+        notes: '`cwd` は sample のクローン本体'
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        actor A as エージェント
+        participant M as 文書の MCP（/mcp）
+
+        A->>M: search_docs(source: other)
+        M->>M: other の scope.read に cwd が当たらない
+        M-->>A: エラー（読めない配信元。今の作業場所から使える配信元の一覧）
+      ```
+    expected:
+      - '`isError: true` で、other を読めないことと、今の作業場所から使える配信元の一覧（`describe()` と同じ）を返す'
+      - other の文書を返さない
+      - '`source: *` は other を対象に含めない'
+      - '`cwd` を持たない呼び出しは、どの配信元も読めないとして同じエラーを返す'
+    test: test_error_when_source_not_readable
+  - name: 異常シナリオ（配信していない配信元を指す）
+    setup:
+      - name: Mock
+        description: なし（実環境で実行）
+      - name: dev-docs
+        description: sample と、起動時の検証に失敗した broken を端末の設定に持つ dev-docs
+        notes: '`cwd` は sample のクローン本体。broken の `scope.read` は sample のフォルダ'
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        actor A as エージェント
+        participant M as 文書の MCP（/mcp）
+
+        A->>M: search_docs(source: broken)
+        M-->>A: エラー（配信していない配信元。起動時の検証の違反）
+      ```
+    expected:
+      - '`isError: true` で、broken を配信していないことと、違反したキーのパス・理由を返す'
+      - '`source: sample` の `search_docs` は文書を返す'
+    test: test_error_when_source_not_served
+  - name: 異常シナリオ（ワークツリーに当たらないパスを指す）
+    setup:
+      - name: Mock
+        description: なし（実環境で実行）
+      - name: dev-docs
+        description: sample を配信している dev-docs
+        notes: '`worktree` に、`worktrees` に当たらない一時フォルダのパスを渡す'
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        actor A as エージェント
+        participant M as 文書の MCP（/mcp）
+
+        A->>M: search_docs(worktree: 当たらないパス)
+        M->>M: worktree が sample の worktrees に当たらない
+        M-->>A: エラー（当たらないパスと worktrees の値）
+      ```
+    expected:
+      - '`isError: true` で、渡したパスと sample の `worktrees` の値を返す'
+      - 文書を返さない
+    test: test_error_when_worktree_not_matched
+lead: エージェントが文書の MCP の `describe`・`search_docs`・`trace_related` で、今の作業場所から読める配信元の文書を探して読む。
+issue: 3
+primary_actor: エージェント（Claude Code）
+stakeholders:
+  - name: エージェント（Claude Code）
+    interest: 何も分からないところから、使える配信元・種類・文書を少ない文字数で順に絞って読める
+  - name: 利用者
+    interest: '`scope.read` に当たらない作業場所から、その配信元の文書が読まれない'
+trigger: エージェントが作業に要る文書を探す
+preconditions:
+  - dev-docs が起動し、配信元を配信している
+  - 呼び出しの引数に、フック（#4）が作業場所 `cwd` と会話キー `session_id`・`agent_id` を入れている
+success_guarantee: '`scope.read` に当たる配信元の文書だけが返る。同じ会話で同じバージョンの本文は 2 回返らない。'
+minimal_guarantee: '読めない配信元・配信していない配信元・誤った条件を指した呼び出しは、`isError: true` で原因と次の手を返し、他の配信元の文書を返さない。'
+frequency: 作業のたび
+priority: 高
+refs:
+  - dev/設計書/シナリオ/複合ユースケース/dev-docsで文書を配信して読み書きする#scenarios[正常シナリオ]
+  - dev/設計書/シナリオ/複合ユースケース/dev-docsで文書を配信して読み書きする#scenarios[異常シナリオ（配信できない配信元がある）]
+test_file: tests/e2e/単一ユースケース/test_エージェントが調べる.py

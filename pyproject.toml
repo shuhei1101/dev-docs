@@ -3,15 +3,25 @@ name = "dev-docs"
 version = "0.0.0"
 description = "各リポジトリの YAML の開発ドキュメントを、人には画面で、AI には MCP で出すサーバー"
 requires-python = ">=3.14"
+dependencies = [
+    "fastapi>=0.162.0",
+    "jsonschema>=4.26.0",
+    "mcp>=2.3.0",
+    "pydantic>=2.14.1",
+    "ruamel-yaml==0.19.1",
+    "uvicorn>=0.54.0",
+]
 
 [project.scripts]
 dev-docs = "dev_docs.__main__:main"
 
 [dependency-groups]
 dev = [
+    "httpx>=0.28.1",
     "mypy",
     "pytest",
     "ruff",
+    "types-jsonschema>=4.26.0.20261006",
 ]
 
 [build-system]
@@ -62,3 +72,5 @@ indent-style = "space"
 python_version = "3.14"
 strict = true
 pretty = true
+mypy_path = "src"
+explicit_package_bases = true

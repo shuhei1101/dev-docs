@@ -1,0 +1,744 @@
+title: "開発ドキュメントサーバー / 履歴"
+lead: |-
+  git を子プロセスで呼び、リビジョン（ブランチ・タグ・commit・日時）の解決・一覧・変わったファイル・ファイルの日時を返す。
+  過去のリビジョンは `git archive` で `state_dir` に書き出し、作業ツリーと同じ読み方で読めるようにする。
+directory: |-
+  ```text
+  src/dev_docs/
+  ├─ integrations/
+  │  └─ git.py               # run_git / repo_root / GitError
+  └─ features/history/
+     ├─ __init__.py          # 公開する型と関数の再エクスポート
+     ├─ types.py             # ResolvedRef / RefList / FileChange / FileDates
+     ├─ query.py             # resolve_ref / list_refs / changed_files / file_dates / co_changed_files / read_file_at
+     └─ snapshot.py          # SnapshotStore（リビジョンの書き出し）
+  ```
+diagrams:
+  - name: 全体
+    diagram: |-
+      classDiagram
+        direction TD
+        リビジョンの解決 ..> gitの実行
+        リビジョンの一覧 ..> gitの実行
+        変わったファイル ..> gitの実行
+        ファイルの日時 ..> gitの実行
+        一緒に変わったファイル ..> gitの実行
+        リビジョンのファイル ..> gitの実行
+        リポジトリの直下 ..> gitの実行
+        リビジョンの書き出し ..> gitの実行 : git archive
+        リビジョンの解決 ..> 解いたリビジョン : 返す
+        gitの実行 ..> gitの失敗 : 送る
+        class gitの実行 {
+          <<function>>
+        }
+        class リポジトリの直下 {
+          <<function>>
+        }
+        class リビジョンの解決 {
+          <<function>>
+        }
+        class リビジョンの一覧 {
+          <<function>>
+        }
+        class 変わったファイル {
+          <<function>>
+        }
+        class ファイルの日時 {
+          <<function>>
+        }
+        class 一緒に変わったファイル {
+          <<function>>
+        }
+        class リビジョンのファイル {
+          <<function>>
+        }
+        class リビジョンの書き出し {
+          +書き出す(リポジトリ, commit) Path
+        }
+        class 解いたリビジョン {
+          +渡した値: str
+          +commit: str
+          +日時: datetime
+        }
+        class gitの失敗 {
+          +終了コード: int
+        }
+classes:
+  - name: GitError
+    title: gitの失敗
+    container: integrations/git.py
+    usecase: 共通
+    role: 例外
+    summary: git が 0 以外で終わったか待ち時間の上限を超えたことを、引数・終了コード・標準エラーで表す
+    kind: クラス
+    inherits: Exception
+    properties:
+      - name: args_
+        title: 引数
+        type: list[str]
+        access: 公開
+        description: git に渡した引数（`git` を含まない）
+      - name: returncode
+        title: 終了コード
+        type: int
+        access: 公開
+        description: git の終了コード
+      - name: stderr
+        title: 標準エラー
+        type: str
+        access: 公開
+        description: 標準エラーの末尾 `STDERR_TAIL_LINES` 行
+      - name: timed_out
+        title: 待ち時間の超過
+        type: bool
+        access: 公開
+        default: 'False'
+        description: '`GIT_TIMEOUT_SEC` を超えて止めたか。`True` のとき `returncode` は `-1`'
+  - name: SnapshotStore
+    title: リビジョンの書き出し
+    container: features/history/snapshot.py
+    usecase: 共通
+    role: キャッシュ
+    summary: commit のファイルを `state_dir` の下に書き出し、同じ commit は書き出したフォルダを返す
+    description: |-
+      書き出し先は `{dir}/{repo_root の SHA-256 の先頭 12 桁}/{commit}/`。書き出し中は `{commit}.tmp` に書いてから名前を変えるので、出来上がったフォルダだけが見える。
+      commit は変わらないので、書き出したフォルダを書き換えない。
+    kind: クラス
+    properties:
+      - name: dir
+        title: 書き出しの置き場所
+        type: Path
+        access: 公開
+        description: '`{state_dir}/snapshots`'
+      - name: keep
+        title: 残す数
+        type: int
+        access: 公開
+        default: SNAPSHOT_KEEP
+        description: リポジトリごとに残す書き出しの数。超えたら使った時刻が古いものから削除する
+      - name: _locks
+        title: commit ごとの排他
+        type: dict[Path, threading.Lock]
+        access: 内部 (_)
+        description: 同じ commit の書き出しを 1 回にする
+    methods:
+      - name: checkout
+        title: 書き出す
+        kind: メソッド
+        summary: commit のファイルを書き出したフォルダを返す
+        scope: public
+        thread_safe: true
+        side_effects: '`dir` の下にフォルダを作る・削除する。使ったフォルダの更新日時を今にする'
+        args:
+          - name: repo_root
+            title: リポジトリの直下
+            type: Path
+            required: true
+            passing: positional
+            description: クローンの直下
+          - name: commit
+            title: commit
+            type: str
+            required: true
+            passing: positional
+            description: 解いた commit の完全な SHA
+        returns:
+          type: Path
+          description: リポジトリの直下に当たる書き出しのフォルダ
+        process: |-
+          1. 書き出し先があれば更新日時を今にして返す
+          2. commit ごとの排他を取り、取った後にもう一度書き出し先を確かめる
+          3. `{commit}.tmp` を空にして作り、`git archive --format=tar {commit}` の出力を `tarfile`（`filter="data"`）で展開する（gitの実行）
+          4. `{commit}.tmp` を `{commit}` に名前を変える
+             - `[info]` リビジョンを書き出した（リポジトリ・commit・ファイル数）
+          5. リポジトリの書き出しが `keep` を超えたら、更新日時が古いものから `shutil.rmtree` する（今書き出したものは残す）
+          6. 書き出し先を返す
+        exceptions:
+          - name: GitError
+            condition: '`git archive` が失敗する'
+            message: git の標準エラー
+            notes: '`{commit}.tmp` を削除してから伝える'
+        unit_tests:
+          - name: test_snapshot_store_checkout
+            case: 正常
+            summary: commit の内容を書き出す
+            condition: '`a.yaml` を 2 回 commit した一時リポジトリの 1 つ目の commit'
+            mock: なし（一時フォルダで `git init`）
+            expected: 返したフォルダの `a.yaml` が 1 つ目の内容、`.tmp` が残らない
+          - name: test_snapshot_store_checkout_when_cached
+            case: 正常
+            summary: 2 回目は git を呼ばない
+            condition: 同じ commit で 2 回
+            mock: gitの実行（呼ばれた回数を数える包み）
+            expected: '`git archive` は 1 回だけ'
+          - name: test_snapshot_store_checkout_when_concurrent
+            case: 正常
+            summary: 同時の書き出しは 1 回
+            condition: 同じ commit を 4 スレッドから同時に
+            mock: gitの実行（数える包み）
+            expected: 全て同じフォルダ、`git archive` は 1 回
+          - name: test_snapshot_store_checkout_when_over_keep
+            case: 正常
+            summary: 古い書き出しを削除する
+            condition: '`keep=2` で 3 つの commit を順に'
+            mock: なし
+            expected: 最初の commit のフォルダが無く、後の 2 つが残る
+data_models:
+  - name: ResolvedRef
+    title: 解いたリビジョン
+    container: features/history/types.py
+    usecase: 共通
+    role: DTO
+    summary: 渡されたリビジョンと、解いた commit とその日時
+    description: '`dataclass(frozen=True)`。`list_changes` の `range.from`・`range.to` になる。'
+    properties:
+      - name: input
+        title: 渡した値
+        type: str
+        access: 公開
+        description: ブランチ・タグ・commit・日時
+      - name: commit
+        title: commit
+        type: str
+        access: 公開
+        description: 完全な SHA
+      - name: date
+        title: 日時
+        type: datetime
+        access: 公開
+        description: commit の日時（タイムゾーン付き）
+  - name: RefList
+    title: リビジョンの一覧
+    container: features/history/types.py
+    usecase: リビジョンの一覧
+    role: DTO
+    summary: GET `/_api/sources/{source}/refs` の応答
+    description: '`pydantic.BaseModel`。フィールドはインターフェース定義『リビジョンの一覧』のレスポンス。'
+    properties:
+      - name: git
+        title: Git の配信元か
+        type: bool
+        access: 公開
+        description: '`False` のときは配列が空'
+      - name: default_ref
+        title: 既定のリビジョン
+        type: str
+        access: 公開
+        description: 配信元の `default_ref`
+      - name: branches
+        title: ブランチ
+        type: list[NamedRef]
+        access: 公開
+        description: '`{name, commit}`（commit は 7 桁）'
+      - name: tags
+        title: タグ
+        type: list[NamedRef]
+        access: 公開
+        description: '`{name, commit}`'
+      - name: commits
+        title: 最近の commit
+        type: list[CommitSummary]
+        access: 公開
+        description: '`{commit, date, subject}`'
+  - name: FileChange
+    title: 変わったファイル
+    container: features/history/types.py
+    usecase: 変更を調べる
+    role: DTO
+    summary: 区間で変わったファイル 1 つ
+    description: '`dataclass(frozen=True)`。名前の変更は削除と追加の 2 つにする（`--no-renames`）。'
+    properties:
+      - name: path
+        title: パス
+        type: str
+        access: 公開
+        description: リポジトリの直下からのパス（`/` 区切り）
+      - name: change
+        title: 変更の種類
+        type: Literal['added', 'modified', 'deleted']
+        access: 公開
+        description: git の `A`・`M`・`D`。`T`（種類の変更）は `modified`
+  - name: FileDates
+    title: ファイルの日時
+    container: features/history/types.py
+    usecase: 共通
+    role: DTO
+    summary: ファイルが最初に入った commit と最後に変わった commit の日時
+    description: '`dataclass(frozen=True)`。文書の `created`・`updated` の既定になる。'
+    properties:
+      - name: created
+        title: 作った日時
+        type: datetime
+        access: 公開
+        description: 最初の commit の日時
+      - name: updated
+        title: 更新日時
+        type: datetime
+        access: 公開
+        description: 最後の commit の日時
+constants:
+  - name: SNAPSHOT_KEEP
+    title: 残す書き出しの数
+    container: features/history/snapshot.py
+    usecase: 共通
+    summary: リポジトリごとに残すリビジョンの書き出しの数
+    value: '20'
+  - name: SHORT_SHA_LENGTH
+    title: 短縮した commit の桁数
+    container: features/history/query.py
+    usecase: 共通
+    summary: 画面と MCP に出す commit の桁数
+    value: '7'
+  - name: GIT_TIMEOUT_SEC
+    title: git の待ち時間の上限
+    container: integrations/git.py
+    usecase: 共通
+    summary: git を 1 回呼んで待つ秒数の上限
+    value: '8'
+    notes:
+      導き方: 規約『資源の値の決め方』の下流を待つタイムアウト。dev-docs のクローン（WSL の `/mnt/c` の下）で各 30 回測った最長は `git archive HEAD` が 5.2 秒、`git log --name-status -n 500` が 4.4 秒。最長を p99.9 の代わりに置き、その 50% の余裕を足して切り上げた。実装後に p99.9 を測り直す
+  - name: GIT_ENV
+    title: git の環境変数
+    container: integrations/git.py
+    usecase: 共通
+    summary: git を呼ぶときに重ねる環境変数（対話と言語で出力が変わらないようにする）
+    entries:
+      - key: GIT_TERMINAL_PROMPT
+        value: '"0"'
+      - key: LC_ALL
+        value: '"C"'
+      - key: GIT_OPTIONAL_LOCKS
+        value: '"0"'
+  - name: CO_CHANGE_COMMITS
+    title: たどる commit の数
+    container: features/history/query.py
+    usecase: 共通
+    summary: 一緒に変わったファイルを数えるときにたどる、対象のファイルを変えた最近の commit の数
+    value: '50'
+functions:
+  - name: run_git
+    title: gitの実行
+    kind: 関数
+    container: integrations/git.py
+    usecase: 共通
+    role: 外部の呼び出し
+    summary: git を子プロセスで 1 回呼び、標準出力を返す
+    scope: public
+    thread_safe: true
+    args:
+      - name: args
+        title: 引数
+        type: Sequence[str]
+        required: true
+        passing: positional
+        description: git に渡す引数（`git` を含まない）
+      - name: cwd
+        title: 実行する場所
+        type: Path
+        required: true
+        passing: keyword
+        description: git を実行するフォルダ
+      - name: binary
+        title: バイナリで返すか
+        type: bool
+        required: false
+        default: 'False'
+        passing: keyword
+        description: '`True` で標準出力を `bytes` のまま返す（`git archive`・`git show`）'
+    returns:
+      type: str | bytes
+      description: 標準出力（`binary` が `False` なら UTF-8 で読んだ文字列）
+    process: |-
+      1. `["git", *args]` を `subprocess.run(cwd=cwd, env={**os.environ, **GIT_ENV}, stdin=DEVNULL, capture_output=True, timeout=GIT_TIMEOUT_SEC)` で実行する
+         - `subprocess.TimeoutExpired` の場合（`subprocess.run` が子プロセスを止める）、`timed_out=True` の `GitError` を送る
+         - `[warning]` git が待ち時間の上限を超えた（引数・`cwd`・秒数）
+      2. 終了コードが 0 以外の場合、`GitError` を送る
+      3. 標準出力を返す
+    exceptions:
+      - name: GitError
+        condition: git が 0 以外で終わる
+        message: '`git {args}: {標準エラーの末尾}`'
+      - name: GitError
+        condition: '`GIT_TIMEOUT_SEC` を超える'
+        message: '`git {args}: {GIT_TIMEOUT_SEC} 秒を超えたため止めました`'
+    unit_tests:
+      - name: test_run_git
+        case: 正常
+        summary: 標準出力を返す
+        condition: 一時リポジトリで `["rev-parse", "--is-inside-work-tree"]`
+        mock: なし
+        expected: '`"true\n"`'
+      - name: test_run_git_when_failed
+        case: 異常
+        summary: 失敗を例外にする
+        condition: '`["rev-parse", "nope"]`'
+        mock: なし
+        expected: '`GitError` の `returncode` が 0 以外、`stderr` に `nope`'
+        exception: git が 0 以外で終わる
+      - name: test_run_git_when_timeout
+        case: 異常
+        summary: 待ち時間の上限を超える
+        condition: '`GIT_TIMEOUT_SEC` を `0.1` に monkeypatch し、`GIT_EDITOR` で 1 秒止まる `["commit", "--allow-empty"]`'
+        mock: なし
+        expected: '`GitError` の `timed_out` が `True`、git のプロセスが残らない'
+        exception: '`GIT_TIMEOUT_SEC` を超える'
+  - name: repo_root
+    title: リポジトリの直下
+    kind: 関数
+    container: integrations/git.py
+    usecase: 起動
+    role: 読み取り
+    summary: フォルダが Git の作業ツリーの中なら、その直下を返す
+    scope: public
+    thread_safe: true
+    args:
+      - name: path
+        title: フォルダ
+        type: Path
+        required: true
+        passing: positional
+        description: 確かめるフォルダ
+    returns:
+      type: Path | None
+      description: 作業ツリーの直下。Git の管理外なら `None`
+    process: |-
+      1. `rev-parse --show-toplevel` を呼ぶ（gitの実行）
+         - `GitError` の場合、`None` を返す
+      2. 出力の末尾の改行を除いて正規化したパスを返す
+    unit_tests:
+      - name: test_repo_root
+        case: 正常
+        summary: リポジトリの中のフォルダ
+        condition: 一時リポジトリの `docs/`
+        mock: なし
+        expected: 一時リポジトリの直下
+      - name: test_repo_root_when_not_git
+        case: 正常
+        summary: Git の管理外
+        condition: '`git init` していない一時フォルダ'
+        mock: なし
+        expected: '`None`'
+  - name: resolve_ref
+    title: リビジョンの解決
+    kind: 関数
+    container: features/history/query.py
+    usecase: 共通
+    role: 読み取り
+    summary: ブランチ・タグ・commit・日時を commit とその日時に解く
+    scope: public
+    thread_safe: true
+    args:
+      - name: repo_root
+        title: リポジトリの直下
+        type: Path
+        required: true
+        passing: positional
+        description: クローンの直下
+      - name: ref
+        title: リビジョン
+        type: str
+        required: true
+        passing: positional
+        description: 渡された値
+      - name: date_base
+        title: 日時の基準
+        type: str
+        required: true
+        passing: keyword
+        description: 日時を解くときにたどるブランチ（配信元の `default_ref`）
+      - name: argument
+        title: 引数名
+        type: str
+        required: false
+        default: '"ref"'
+        passing: keyword
+        description: '`RefNotFoundError` に載せる引数名（`ref`・`from`・`to`）'
+    returns:
+      type: ResolvedRef
+      description: 解いたリビジョン
+    process: |-
+      1. `ref` が ISO 8601 の日付か日時（`datetime.fromisoformat` で読める。タイムゾーンが無ければ端末のタイムゾーン、日付だけならその日の終わり）の場合、`rev-list -1 --before={日時} {date_base}` でその時点の最後の commit にする
+         - 空の場合（それより前に commit が無い）、`RefNotFoundError` を送る
+      2. それ以外は `rev-parse --verify --quiet {ref}^{commit}` で解く
+         - `GitError` の場合、`RefNotFoundError` を送る
+      3. `show -s --format=%cI {commit}` で日時を引き、`ResolvedRef` を返す
+    exceptions:
+      - name: RefNotFoundError
+        condition: commit に解けない・その日時より前に commit が無い
+        message: '`{argument}={ref} を commit に解決できません`'
+        notes: '`next_steps` に画面のリビジョンの一覧か `git log` で確かめること'
+    unit_tests:
+      - name: test_resolve_ref
+        case: 正常
+        summary: ブランチを解く
+        condition: '`main` に commit 2 つの一時リポジトリで `main`'
+        mock: なし
+        expected: '`commit` が 2 つ目の SHA、`input` が `main`'
+      - name: test_resolve_ref_when_date
+        case: 正常
+        summary: 日時をその時点の最後の commit に解く
+        condition: '`GIT_COMMITTER_DATE` を 2026-10-01 と 2026-10-05 にした 2 つの commit、`2026-10-03`'
+        mock: なし
+        expected: 1 つ目の commit
+      - name: test_resolve_ref_when_not_found
+        case: 異常
+        summary: 無いリビジョン
+        condition: '`nope`、`argument="from"`'
+        mock: なし
+        expected: '`RefNotFoundError` の `argument` が `from`、`value` が `nope`'
+        exception: commit に解けない
+      - name: test_resolve_ref_when_before_first
+        case: 異常
+        summary: 最初の commit より前の日時
+        condition: '`2000-01-01`'
+        mock: なし
+        expected: '`RefNotFoundError`'
+        exception: その日時より前に commit が無い
+  - name: list_refs
+    title: リビジョンの一覧
+    kind: 関数
+    container: features/history/query.py
+    usecase: リビジョンの一覧
+    role: 読み取り
+    summary: 配信元のブランチ・タグ・`default_ref` の最近の commit を返す
+    scope: public
+    thread_safe: true
+    args:
+      - name: source
+        title: 配信元
+        type: ServedSource
+        required: true
+        passing: positional
+        description: 配信中の配信元
+      - name: commits
+        title: commit の数
+        type: int
+        required: false
+        default: '20'
+        passing: keyword
+        description: 返す最近の commit の数（0〜100。範囲の検証は入口がする）
+    returns:
+      type: RefList
+      description: リビジョンの一覧
+    process: |-
+      1. Git の配信元でなければ `git: false` と空の配列を返す
+      2. `for-each-ref --format=%(refname:short)%00%(objectname:short=7)%00%(*objectname:short=7) refs/heads refs/tags` でブランチとタグを並べる（注釈付きタグは指す commit）
+      3. `log -n {commits} --format=%h%x00%cI%x00%s {default_ref}` で最近の commit を並べる
+         - `default_ref` が無い場合、`commits` を空にして `[warning]` 既定のリビジョンが無い（配信元・`default_ref`）を書く
+      4. `RefList` を返す
+    unit_tests:
+      - name: test_list_refs
+        case: 正常
+        summary: ブランチ・タグ・commit を返す
+        condition: ブランチ `main`・`feat/x`、注釈付きタグ `v0.1.0`、`main` に commit 3 つ、`commits=2`
+        mock: なし
+        expected: '`branches` が 2 つ、`tags[0].commit` がタグの指す commit、`commits` が新しい順に 2 つ'
+      - name: test_list_refs_when_not_git
+        case: 正常
+        summary: Git の管理外
+        condition: '`is_git` が `False` の配信元'
+        mock: なし
+        expected: '`git` が `False` で配列が空'
+  - name: changed_files
+    title: 変わったファイル
+    kind: 関数
+    container: features/history/query.py
+    usecase: 変更を調べる
+    role: 読み取り
+    summary: 2 つの commit の間、または commit と作業ツリーの間で変わったファイルを返す
+    scope: public
+    thread_safe: true
+    args:
+      - name: work_root
+        title: 作業ツリー
+        type: Path
+        required: true
+        passing: positional
+        description: git を実行する作業ツリー（クローンかワークツリーの直下）
+      - name: from_commit
+        title: 始点
+        type: str
+        required: true
+        passing: positional
+        description: 始点の commit
+      - name: to_commit
+        title: 終点
+        type: str | None
+        required: false
+        default: None
+        passing: positional
+        description: 終点の commit。`None` は作業ツリー
+      - name: pathspec
+        title: 絞るパス
+        type: str | None
+        required: false
+        default: None
+        passing: keyword
+        description: 配信元の直下（`repo_root` からのパス）。配信元がリポジトリの中のフォルダのときに絞る
+    returns:
+      type: list[FileChange]
+      description: パスの順
+    process: |-
+      1. `diff --name-status --no-renames -z {from} [{to}] [-- {pathspec}]` を呼ぶ
+      2. `to_commit` が `None` の場合、`ls-files --others --exclude-standard -z [-- {pathspec}]` の未追跡のファイルを `added` で加える
+      3. `A`・`M`・`T`・`D` を `FileChange` にしてパスの順に返す
+    unit_tests:
+      - name: test_changed_files
+        case: 正常
+        summary: commit の間
+        condition: '`a.yaml` を変え、`b.yaml` を追加し、`c.yaml` を削除した 2 つの commit'
+        mock: なし
+        expected: '`a.yaml` modified・`b.yaml` added・`c.yaml` deleted'
+      - name: test_changed_files_when_work_tree
+        case: 正常
+        summary: 作業ツリーとの間。未追跡も含む
+        condition: '`HEAD` から `a.yaml` を編集し、未追跡の `n.yaml` を置く、`to_commit=None`'
+        mock: なし
+        expected: '`a.yaml` modified・`n.yaml` added'
+      - name: test_changed_files_when_pathspec
+        case: 正常
+        summary: 配信元のフォルダで絞る
+        condition: '`docs/a.yaml` と `src/x.py` が変わり、`pathspec="docs"`'
+        mock: なし
+        expected: '`docs/a.yaml` だけ'
+  - name: file_dates
+    title: ファイルの日時
+    kind: 関数
+    container: features/history/query.py
+    usecase: 共通
+    role: 読み取り
+    summary: ファイルごとに最初と最後の commit の日時を 1 回の git で引く
+    scope: public
+    thread_safe: true
+    args:
+      - name: work_root
+        title: 作業ツリー
+        type: Path
+        required: true
+        passing: positional
+        description: git を実行する作業ツリー
+      - name: commit
+        title: commit
+        type: str
+        required: false
+        default: '"HEAD"'
+        passing: keyword
+        description: たどる始点（リビジョンを読むときはその commit）
+      - name: pathspec
+        title: 絞るパス
+        type: str | None
+        required: false
+        default: None
+        passing: keyword
+        description: 配信元の直下
+    returns:
+      type: dict[str, FileDates]
+      description: リポジトリの直下からのパス → 日時。commit されていないファイルは含まない
+    process: |-
+      1. `log --format=%x00%cI --name-only --no-renames {commit} [-- {pathspec}]` を呼ぶ
+      2. 新しい commit から順に読み、パスごとに最初に現れた日時を `updated`、最後に現れた日時を `created` にする
+      3. 辞書を返す
+    unit_tests:
+      - name: test_file_dates
+        case: 正常
+        summary: 最初と最後の commit
+        condition: '`a.yaml` を 10-01 に追加し 10-05 に変えた。`b.yaml` は 10-03 に追加だけ'
+        mock: なし（`GIT_COMMITTER_DATE` を渡す）
+        expected: '`a.yaml` が `created` 10-01・`updated` 10-05、`b.yaml` がどちらも 10-03'
+  - name: co_changed_files
+    title: 一緒に変わったファイル
+    kind: 関数
+    container: features/history/query.py
+    usecase: 関連をたどる
+    role: 読み取り
+    summary: 起点のファイルと同じ commit で変わったファイルを、一緒に変わった回数で数える
+    scope: public
+    thread_safe: true
+    args:
+      - name: work_root
+        title: 作業ツリー
+        type: Path
+        required: true
+        passing: positional
+        description: git を実行する作業ツリー
+      - name: paths
+        title: 起点のファイル
+        type: Sequence[str]
+        required: true
+        passing: positional
+        description: リポジトリの直下からのパス
+      - name: max_commits
+        title: たどる commit の数
+        type: int
+        required: false
+        default: CO_CHANGE_COMMITS
+        passing: keyword
+        description: 起点のファイルを変えた最近の commit の数
+    returns:
+      type: dict[str, int]
+      description: パス → 一緒に変わった commit の数（起点のファイル自身は含まない）
+    process: |-
+      1. `log -n {max_commits} --format=%x00%H --name-only --no-renames -- {paths}` で起点を変えた commit を引く（パスを絞ると他のファイルが出ないので、commit だけを採る）
+      2. その commit をまとめて `show --format= --name-only --no-renames {commit...}` で変わったファイルを引き、パスごとに数える
+      3. 起点のパスを除いた辞書を返す
+    unit_tests:
+      - name: test_co_changed_files
+        case: 正常
+        summary: 一緒に変わった回数を数える
+        condition: '`a` と `b` を 2 回、`a` と `c` を 1 回一緒に commit、起点 `a`'
+        mock: なし
+        expected: '`{b: 2, c: 1}`'
+  - name: read_file_at
+    title: リビジョンのファイル
+    kind: 関数
+    container: features/history/query.py
+    usecase: 変更を調べる
+    role: 読み取り
+    summary: commit のあるファイルを書き出さずに読む
+    scope: public
+    thread_safe: true
+    args:
+      - name: work_root
+        title: 作業ツリー
+        type: Path
+        required: true
+        passing: positional
+        description: git を実行する作業ツリー
+      - name: commit
+        title: commit
+        type: str
+        required: true
+        passing: positional
+        description: 読む commit
+      - name: path
+        title: パス
+        type: str
+        required: true
+        passing: positional
+        description: リポジトリの直下からのパス
+    returns:
+      type: str | None
+      description: ファイルの中身。その commit に無ければ `None`
+    process: |-
+      1. `show {commit}:{path}` を `binary=True` で呼び、UTF-8 で読んで返す
+         - `GitError` の場合、`None` を返す
+    unit_tests:
+      - name: test_read_file_at
+        case: 正常
+        summary: 前の内容を読む
+        condition: '`a.yaml` を 2 回 commit、最初の commit'
+        mock: なし
+        expected: 最初の内容
+      - name: test_read_file_at_when_missing
+        case: 正常
+        summary: その commit に無い
+        condition: 後で追加したファイルを最初の commit で
+        mock: なし
+        expected: '`None`'
+refs:
+  - dev/設計書/インターフェース定義/開発ドキュメントサーバー/リビジョンの一覧#
+  - dev/設計書/インターフェース定義/開発ドキュメントサーバー/変更の一覧#
+test_files:
+  - tests/unit/dev_docs/integrations/test_git.py
+  - tests/unit/dev_docs/features/history/test_query.py
+  - tests/unit/dev_docs/features/history/test_snapshot.py

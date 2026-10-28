@@ -1,0 +1,245 @@
+title: "配信元の説明"
+entry:
+  kind: mcp_tool
+  value: '`describe`'
+flows:
+  - name: 正常系
+    summary: 引数なしで、今の作業場所から使える配信元の一覧を返す
+    setup:
+      - name: Mock
+        description: なし（一時フォルダに配信元を作り、dev-docs のアプリをテストのクライアントで呼ぶ）
+      - name: 配信元
+        description: sample（`scope.read`・`scope.write` は sample のフォルダ）、notes（`scope.read` は sample のフォルダ）、other（`scope.read` は other のフォルダだけ）
+      - name: 入力
+        description: 引数なし。`cwd` は sample のクローン本体
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        participant C as クライアント
+        participant T as describe
+
+        C->>T: 引数なし, cwd
+        T->>T: 各配信元の scope に cwd を照らす
+        T-->>C: 作業場所と、使える配信元の表
+      ```
+    expected:
+      - 先頭に作業場所と、sample のクローン本体であることがある
+      - sample を `write（作業中）`、notes を `read` として返す
+      - other を返さない
+    test: test_normal
+  - name: 正常系（配信元の説明書）
+    summary: '`source` で配信元の説明書と種類の一覧を返す'
+    setup:
+      - name: Mock
+        description: なし
+      - name: 説明書
+        description: sample の設定に `instructions` と種類 1 つを持たせる
+      - name: 入力
+        description: '`source: sample`'
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        participant C as クライアント
+        participant T as describe
+        participant CF as 配信元の設定
+
+        C->>T: source: sample
+        T-->>CF: マージした設定を読む
+        T-->>C: 説明書と種類の表
+      ```
+    expected:
+      - '`instructions` の本文がそのままある'
+      - 種類の表に sample の種類の `id` と説明がある
+    test: test_normal_when_source
+  - name: 正常系（種類のスキーマ）
+    summary: '`source` と `kind` で種類のスキーマを YAML のまま返す'
+    setup:
+      - name: Mock
+        description: なし
+      - name: 入力
+        description: '`source: sample`, `kind` は sample の種類'
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        participant C as クライアント
+        participant T as describe
+        participant ST as 配信元のファイル
+
+        C->>T: source: sample, kind
+        T-->>ST: 種類のスキーマを読む
+        T-->>C: スキーマの YAML
+      ```
+    expected:
+      - 種類のスキーマのファイルと同じ YAML を返す
+      - '`format: json` ではスキーマを JSON のオブジェクトで structuredContent と text に入れる'
+    test: test_normal_when_kind
+  - name: 異常系（読めない配信元・SourceNotReadableError）
+    summary: '`scope` に当たらない配信元の説明を断る'
+    setup:
+      - name: Mock
+        description: なし
+      - name: 入力
+        description: '`source: other`、`cwd` は sample のクローン本体'
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        participant C as クライアント
+        participant T as describe
+
+        C->>T: source: other
+        T-->>C: isError（読めない配信元と、使える配信元の一覧）
+      ```
+    expected:
+      - '`isError: true` で、other を読めないことと、引数なしと同じ配信元の一覧を返す'
+      - other の説明書を返さない
+    test: test_error_when_source_not_readable
+  - name: 異常系（配信していない配信元・SourceNotServedError）
+    summary: 起動時の検証で外した配信元の説明を断る
+    setup:
+      - name: Mock
+        description: なし
+      - name: 検証に失敗する配信元
+        description: '`documents[0].paths` が無い配信元。`scope.read` は sample のフォルダ'
+        notes: id `broken`
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        participant C as クライアント
+        participant T as describe
+
+        C->>T: source: broken
+        T-->>C: isError（配信していない配信元、違反したキーのパスと理由）
+      ```
+    expected:
+      - '`isError: true` で、broken を配信していないことと `documents[0].paths` の違反を返す'
+      - 引数なしの一覧に broken が出ない
+    test: test_error_when_source_not_served
+  - name: 異常系（知らない種類・UnknownKindError）
+    summary: 配信元に無い `kind` を断る
+    setup:
+      - name: Mock
+        description: なし
+      - name: 入力
+        description: '`source: sample`, `kind: no-such-kind`'
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        participant C as クライアント
+        participant T as describe
+
+        C->>T: source: sample, kind: no-such-kind
+        T-->>C: isError（知らない種類と、種類の一覧）
+      ```
+    expected:
+      - '`isError: true` で、`no-such-kind` と sample の種類の一覧を返す'
+    test: test_error_when_unknown_kind
+lead: 引数の数で、使える配信元の一覧・配信元の説明書と種類の一覧・種類のスキーマを返す。
+identifier: describe
+permissions: 引数なしは不要。`source` を渡すときはその配信元の `scope.read` か `scope.write` に `cwd` が当たること
+idempotent: true
+side_effects: なし
+callers:
+  - dev/設計書/シナリオ/単一ユースケース/エージェントが調べる#scenarios[正常シナリオ]
+  - dev/設計書/シナリオ/単一ユースケース/エージェントが書き込む#scenarios[正常シナリオ]
+exclusivity: '読み取りだけで排他しない（`readOnlyHint: true`）'
+request:
+  - name: source
+    type: str
+    required: false
+    default: なし（使える配信元の一覧を返す）
+    location: argument
+    description: 配信元の ID
+  - name: kind
+    type: str
+    required: false
+    default: なし（説明書と種類の一覧を返す）
+    location: argument
+    description: 種類（`documents[].id`）
+    constraints: '`source` を渡したときだけ'
+  - name: worktree
+    type: str
+    required: false
+    default: なし（`cwd` がワークツリーの中ならそのワークツリー）
+    location: argument
+    description: 設定とスキーマを読むワークツリーのパス
+  - name: format
+    type: Literal['markdown', 'json']
+    required: false
+    default: '`markdown`'
+    location: argument
+    description: 返す形式
+  - name: cwd
+    type: str
+    required: false
+    default: なし（使える配信元が無い）
+    location: argument
+    description: 作業場所
+    notes: フック（#4）が入れる
+request_example: |-
+  ```json
+  {"source": "sample", "kind": "sample"}
+  ```
+response:
+  - name: workplace
+    type: str
+    description: 作業場所と、それがどの配信元のクローン本体かワークツリーか
+    notes: 引数なしのとき
+  - name: sources[].id
+    type: str
+    description: 配信元の ID
+    notes: 引数なしのとき
+  - name: sources[].access
+    type: Literal['read', 'write']
+    description: 今の作業場所からの権限
+  - name: sources[].current
+    type: bool
+    description: 作業中の配信元か
+  - name: sources[].description
+    type: str
+    description: 配信元の設定の `description`
+  - name: instructions
+    type: str
+    description: 配信元の設定の `instructions` をそのまま
+    notes: '`source` だけのとき'
+  - name: kinds[].id
+    type: str
+    description: 種類の ID
+    notes: '`source` だけのとき'
+  - name: kinds[].description
+    type: str
+    description: 種類の説明
+  - name: schema
+    type: str
+    description: 種類のスキーマ（YAML のまま）
+    notes: '`source`・`kind` のとき'
+response_example: |-
+  ```markdown
+  作業場所: /path/to/sample（sample のクローン本体）
+
+  | source | 権限 | description |
+  | --- | --- | --- |
+  | sample | write（作業中） | サンプルの文書 |
+  | notes | read | 読み取りだけのメモ |
+  ```
+response_notes: '説明書には配信元に固有のことだけが書かれている。タグの一覧・文書の件数は `search_docs` の `group_by`・`view: count` で取る。'
+exceptions:
+  - name: なし（正常終了）
+    condition: 返せた（引数なしで使える配信元が 0 件のときも、空の一覧を返して正常終了）
+  - name: SourceNotReadableError
+    condition: '`cwd` が配信元の `scope.read`・`scope.write` に当たらない'
+    notes: 今の作業場所から使える配信元の一覧を添える
+  - name: SourceNotServedError
+    condition: '起動時の検証で外したか `enabled: false` の配信元を指した'
+  - name: UnknownKindError
+    condition: '`kind` が配信元の種類に無い'
+    notes: その配信元の種類の一覧を添える
+constraints:
+  - item: 注釈
+    constraint: '`readOnlyHint: true`'
+  - item: 一覧の中身
+    constraint: 引数なしの結果は SessionStart で注入する配信元の一覧と同じ
+  - item: タイムアウト
+    constraint: 制限なし
+refs:
+  - dev/設計書/シナリオ/単一ユースケース/エージェントが調べる#scenarios[正常シナリオ]
+test_file: tests/integration/server/test_describe.py

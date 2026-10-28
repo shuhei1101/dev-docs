@@ -1,0 +1,120 @@
+title: "端末の設定の取得"
+entry:
+  kind: endpoint
+  value: GET `/_api/settings/sources`
+flows:
+  - name: 正常系
+    summary: 配信元の一覧を配信中で返す
+    setup:
+      - name: Mock
+        description: なし（一時フォルダに端末の設定と配信元を作り、dev-docs のアプリを HTTP のテストのクライアントで呼ぶ）
+      - name: 端末の設定
+        description: '`sources` に sample の 1 行'
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        participant C as クライアント
+        participant E as GET /_api/settings/sources
+        participant CF as 端末の設定
+
+        C->>E: GET /_api/settings/sources
+        E-->>CF: 端末の設定と配信元の状態を読む
+        E-->>C: 200
+      ```
+    expected:
+      - 200 で、`sources` に sample が `serving` で並ぶ
+      - '`settings_path` に端末の設定のパス、sample の行に `config`・`scope` がある'
+      - 配信元が 0 件の端末の設定でも 200 で、`sources` が空
+    test: test_normal
+  - name: 正常系（配信していない配信元がある）
+    summary: 配信していない・無効・設定が古い配信元を状態と理由つきで返す
+    setup:
+      - name: Mock
+        description: なし
+        notes: '-'
+      - name: 検証に失敗する配信元
+        description: '`documents[0]` に必須のキー `paths` が無い配信元'
+        notes: id `broken`
+      - name: 設定のバージョンが古い配信元
+        description: '`version` がサーバーが読めるバージョンより古い配信元'
+        notes: id `legacy`
+      - name: 無効の配信元
+        description: '端末の設定で `enabled: false` の配信元'
+        notes: id `archive`
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        participant C as クライアント
+        participant E as GET /_api/settings/sources
+
+        C->>E: GET /_api/settings/sources
+        E-->>C: 200（配信元ごとの状態）
+      ```
+    expected:
+      - sample と legacy が `serving`
+      - broken が `not_served` で、`errors` に `documents[0].paths` と必須のキーが無いことがある
+      - legacy の `config_version` に設定のバージョンとサーバーが読めるバージョンがある
+      - archive が `disabled`
+    test: test_normal_when_source_not_served
+  - name: 正常系（読み直していない行がある）
+    summary: 手で直して読み直していない行を `pending_reload` で返し、他の行は自分の状態で返す
+    setup:
+      - name: Mock
+        description: なし
+      - name: 端末の設定
+        description: sample と notes の 2 行で起動した後、ファイルを fresh・notes・sample の順に書き換え、読み直さない
+        notes: fresh は `id` を省いた新しい行
+    flow: |-
+      sequenceDiagram
+        participant C as クライアント
+        participant E as GET /_api/settings/sources
+
+        C->>E: GET /_api/settings/sources
+        E-->>C: 200（ファイルの行の順と状態）
+    expected:
+      - 200 で、`sources` がファイルの順（fresh・notes・sample）に並ぶ
+      - fresh が `pending_reload` で、`id` が `null`
+      - notes と sample がそれぞれ自分の `id` で `serving`
+    test: test_normal_when_pending_reload
+lead: '#17 の設定画面が呼ぶ。端末の設定の配信元の一覧と、配信元ごとの状態（配信中・配信していない・無効）を JSON で返す。'
+identifier: get_settings_sources
+permissions: なし（`127.0.0.1` でだけ待ち受ける）
+idempotent: true
+side_effects: なし
+exclusivity: 排他しない
+response:
+  - name: settings_path
+    type: str
+    description: '`DEV_DOCS_CONFIG` が指す端末の設定のパス'
+  - name: sources[].id
+    type: str | None
+    description: 配信元の ID。`pending_reload` で `id` を省いた行は `null`
+  - name: sources[].config
+    type: list[str]
+    description: 配信元の設定の YAML の配列
+  - name: sources[].enabled
+    type: bool
+    description: 配信するか
+  - name: sources[].scope
+    type: '{read: list[str], write: list[str]}'
+    description: 読める・書ける作業場所の glob
+  - name: sources[].status
+    type: Literal['serving', 'not_served', 'disabled', 'pending_reload']
+    description: '配信中・起動時か読み直しの検証で外した・`enabled: false`・ファイルにあるが読み直していない行。行は `config`（`id` を書いた行は `id` も）が同じ配信元の状態と突き合わせる'
+  - name: sources[].errors
+    type: 'list[{path: str, reason: str}]'
+    description: 検証で外した理由
+    notes: '`not_served` のときだけ'
+  - name: sources[].config_version
+    type: '{config: str, server: str} | None'
+    description: 設定のバージョンとサーバーが読めるバージョン
+    notes: 設定のバージョンが古いときだけ
+status_codes:
+  - code: '200'
+    condition: 返した（配信元が 0 件でも 200）
+constraints:
+  - item: 認可
+    constraint: 制限なし（`127.0.0.1` でだけ待ち受ける）
+  - item: 返すキー
+    constraint: '`sources[]` だけ。`port`・`bind`・`state_dir` など再起動が要るキーは返さない'
+test_file: tests/integration/server/test_get_settings_sources.py

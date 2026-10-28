@@ -1,0 +1,253 @@
+title: "エージェントが書き込む"
+scenarios:
+  - name: 正常シナリオ
+    setup:
+      - name: Mock
+        description: なし（実環境で実行。フックが入れる `cwd`・`session_id`・`agent_id` はテストが引数に入れる）
+      - name: サンプルの配信元
+        description: 文書の種類を 1 つ（スキーマと YAML 2 件）と `dev-docs.yaml` を持つ git リポジトリと、そのワークツリー（`.claude/worktrees/x`）
+        notes: id `sample`。`scope.read`・`scope.write` は sample のフォルダ
+      - name: dev-docs
+        description: sample を配信している dev-docs
+        notes: '`cwd` は sample のクローン本体。`worktree` にワークツリー x のパスを渡す'
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        actor A as エージェント
+        participant M as 文書の MCP（/mcp）
+        participant WT as ワークツリー x
+
+        A->>M: describe(source: sample, kind: 種類)
+        M-->>A: 種類のスキーマ
+        A->>M: write_docs(worktree: x, operations: update 文書 1・expected_version・set)
+        M->>M: scope.write と書く先がワークツリーであることを確かめる
+        M->>M: 配信元ごとの排他ロックを取り、バージョンを比べる
+        M->>M: 変更を当てた文書をスキーマと validators に通す
+        M->>WT: 一時ファイルに書いてから置き換える
+        M-->>A: 新しい version と差分
+      ```
+    expected:
+      - '結果が `applied: true` で、文書 1 の `status` が `updated`、`version` が書き込み前と違う'
+      - ワークツリー x の文書 1 の YAML が `set` の値になり、他の項目は変わらない
+      - sample のクローン本体のファイルは変わらない
+      - ワークツリー x の commit が増えていない（`git status` に文書 1 の変更が出る）
+      - 次の `search_docs` が書いた値と新しい `version` を返す
+    test: test_normal
+  - name: 正常シナリオ（文書を作る）
+    setup:
+      - name: Mock
+        description: なし（実環境で実行）
+      - name: サンプルの配信元
+        description: 正常シナリオと同じ配信元に、`ids.format` と、文書の一覧を書き出す `generators[]` を足したもの
+        notes: '`ids.format` は `{kind}-{slug}`'
+      - name: dev-docs
+        description: sample を配信している dev-docs
+        notes: '`worktree` にワークツリー x のパスを渡す'
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        actor A as エージェント
+        participant M as 文書の MCP（/mcp）
+        participant WT as ワークツリー x
+
+        A->>M: write_docs(operations: create・kind・data)
+        M->>M: id が ids.format に合い、重複しないことを確かめる
+        M->>M: スキーマと validators に通す
+        M->>WT: kind の documents の置き場所に YAML を書く
+        M->>WT: generators のスクリプトを流す
+        M-->>A: 作った文書の id と version
+      ```
+    expected:
+      - 結果の `status` が `created` で、`id` と `version` を返す
+      - ワークツリー x の `documents[].paths` に当たる場所に新しい YAML ができる
+      - '`generators[]` が書き出す文書の一覧に、作った文書の行が入る'
+      - '`ids.format` に合わない `id` の create は、何も書かずに `id` の形の違反を返す'
+    test: test_normal_when_create
+  - name: 正常シナリオ（試しに書く）
+    setup:
+      - name: Mock
+        description: なし（実環境で実行）
+      - name: dev-docs
+        description: 正常シナリオと同じ sample を配信している dev-docs
+        notes: '`dry_run: true`'
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        actor A as エージェント
+        participant M as 文書の MCP（/mcp）
+
+        A->>M: write_docs(operations: update 文書 1, dry_run: true)
+        M->>M: 本番と同じ検証とバージョンの確認
+        M-->>A: 書いた場合の結果と差分
+      ```
+    expected:
+      - 結果に差分があり、`applied` が `false`
+      - ワークツリー x のファイルは変わらない
+    test: test_normal_when_dry_run
+  - name: 正常シナリオ（Git 管理外の配信元に書く）
+    setup:
+      - name: Mock
+        description: なし（実環境で実行）
+      - name: 書ける配信元
+        description: 文書の種類を 1 つと `dev-docs.yaml` を持つ Git 管理外のフォルダ
+        notes: id `memo`。`scope.write` は sample のフォルダ
+      - name: dev-docs
+        description: sample と memo を配信している dev-docs
+        notes: '`cwd` は sample のクローン本体'
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        actor A as エージェント
+        participant M as 文書の MCP（/mcp）
+        participant MF as memo のフォルダ
+
+        A->>M: write_docs(source: memo, operations: create)
+        M->>M: memo の scope.write に cwd が当たる
+        M->>M: スキーマと validators に通し、created・updated を付ける
+        M->>MF: YAML を書く
+        M-->>A: id と version
+      ```
+    expected:
+      - memo のフォルダに新しい YAML ができ、メタデータの `created`・`updated` に書いた日時が入る
+      - 続けて update したとき、`updated` だけが新しい日時になり、`created` は変わらない
+      - '`search_docs` の `order_by: updated` がその日時で並べる'
+    test: test_normal_when_non_git_source
+  - name: 正常シナリオ（参照も外して消す）
+    setup:
+      - name: Mock
+        description: なし（実環境で実行）
+      - name: 参照されている文書
+        description: ワークツリー x の文書 2。文書 1 の `related` が文書 2 を指す
+      - name: dev-docs
+        description: sample を配信している dev-docs
+        notes: '`on_referenced: unlink`'
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        actor A as エージェント
+        participant M as 文書の MCP（/mcp）
+        participant WT as ワークツリー x
+
+        A->>M: delete_docs(targets: 文書 2, on_referenced: unlink)
+        M->>M: 文書 1 の related から文書 2 を外した後の文書を検査に通す
+        M->>WT: 文書 1 を書き換え、文書 2 のファイルを消す
+        M-->>A: 消した文書と参照を外した文書
+      ```
+    expected:
+      - ワークツリー x の文書 2 のファイルが無い
+      - 文書 1 の `related` に文書 2 が無い
+      - 結果が参照を外した文書 1 の `id` と新しい `version` を返す
+    test: test_normal_when_delete_unlink
+  - name: 異常シナリオ（検査に通らない）
+    setup:
+      - name: Mock
+        description: なし（実環境で実行）
+      - name: dev-docs
+        description: 正常シナリオと同じ sample を配信している dev-docs
+        notes: '`operations` は 2 件。0 番目は通る update、1 番目はスキーマの必須の項目を `unset` する update。`atomic` は既定（`true`）'
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        actor A as エージェント
+        participant M as 文書の MCP（/mcp）
+
+        A->>M: write_docs(operations: 2 件)
+        M->>M: 全ての操作を当ててから検査し、1 番目が通らない
+        M-->>A: エラー（添字 1・違反したパス・決まり・直し方）
+      ```
+    expected:
+      - '`isError: true` で、添字 1 の違反のパス・決まり・直し方を返す'
+      - 0 番目の文書も書き換わらない
+      - '`atomic: false` では 0 番目だけを書き、1 番目を添字つきの失敗として返す'
+    test: test_error_when_validation_failed
+  - name: 異常シナリオ（書き込めない配信元を指す）
+    setup:
+      - name: Mock
+        description: なし（実環境で実行）
+      - name: 読み取りだけの配信元
+        description: 文書の種類を 1 つと `dev-docs.yaml` を持つ Git 管理外のフォルダ
+        notes: id `notes`。`scope.read` は sample のフォルダ、`scope.write` は持たない
+      - name: dev-docs
+        description: sample と notes を配信している dev-docs
+        notes: '`cwd` は sample のクローン本体'
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        actor A as エージェント
+        participant M as 文書の MCP（/mcp）
+
+        A->>M: write_docs(source: notes, operations: update)
+        M->>M: notes の scope.write に cwd が当たらない
+        M-->>A: エラー（notes は読み取りだけ。今の作業場所から使える配信元の一覧）
+      ```
+    expected:
+      - '`isError: true` で、notes には書き込めないことと、今の作業場所から使える配信元の一覧を返す'
+      - notes のフォルダのファイルは変わらない
+      - '`delete_docs` も同じエラーを返す'
+    test: test_error_when_source_not_writable
+  - name: 異常シナリオ（書く先がクローン本体）
+    setup:
+      - name: Mock
+        description: なし（実環境で実行）
+      - name: dev-docs
+        description: 正常シナリオと同じ sample を配信している dev-docs
+        notes: '`cwd` は sample のクローン本体。`worktree` を渡さない'
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        actor A as エージェント
+        participant M as 文書の MCP（/mcp）
+
+        A->>M: write_docs(operations: update 文書 1)
+        M->>M: Git の配信元で、書く先がクローン本体になる
+        M-->>A: エラー（クローン本体には書かない。worktree でワークツリーを指すこと）
+      ```
+    expected:
+      - '`isError: true` で、クローン本体には書かないことと、`worktree` でワークツリーを指すことを返す'
+      - sample のクローン本体のファイルは変わらない
+    test: test_error_when_target_is_clone
+  - name: 異常シナリオ（参照されている文書を消す）
+    setup:
+      - name: Mock
+        description: なし（実環境で実行）
+      - name: 参照されている文書
+        description: ワークツリー x の文書 2。文書 1 の `related` が文書 2 を指す
+      - name: dev-docs
+        description: sample を配信している dev-docs
+        notes: '`on_referenced` は既定（`fail`）'
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        actor A as エージェント
+        participant M as 文書の MCP（/mcp）
+
+        A->>M: delete_docs(targets: 文書 2)
+        M->>M: 文書 1 の related が文書 2 を指している
+        M-->>A: エラー（参照元の id と on_referenced: unlink）
+      ```
+    expected:
+      - '`isError: true` で、参照元の文書 1 の `id` と `on_referenced: unlink` で消せることを返す'
+      - 文書 2 のファイルも文書 1 も変わらない
+    test: test_error_when_delete_referenced
+lead: エージェントが文書の MCP の `write_docs`・`delete_docs` で、作業ツリーの YAML の文書を検査に通してから作る・直す・消す。
+issue: 3
+primary_actor: エージェント（Claude Code）
+stakeholders:
+  - name: エージェント（Claude Code）
+    interest: 変える項目だけを渡して、スキーマと検査に通る文書だけを書ける。通らないときは直し方が分かる
+  - name: 利用者
+    interest: 書き込みが作業中のワークツリーと `scope.write` に当たる配信元にだけ入り、クローン本体は変わらない。dev-docs は commit しない
+trigger: エージェントが文書を作る・直す・消す
+preconditions:
+  - dev-docs が起動し、配信元を配信している
+  - 呼び出しの引数に、フック（#4）が作業場所 `cwd` と会話キーを入れている
+  - エージェントが直す文書を `search_docs` で読み、`version` を持っている
+success_guarantee: 変更を当てた後の文書が配信元のスキーマと `validators[]` に通り、作業ツリー（Git 管理外の配信元はそのフォルダ）のファイルだけが書き換わる。新しいバージョンが返る。
+minimal_guarantee: '検査に通らない書き込み、`scope.write` に当たらない作業場所からの書き込み、クローン本体への書き込みは、ファイルを 1 つも書き換えない（`atomic: true` のときは他の操作も書かない）。'
+frequency: 作業のたび
+priority: 高
+refs:
+  - dev/設計書/シナリオ/複合ユースケース/dev-docsで文書を配信して読み書きする#scenarios[正常シナリオ]
+notes:
+  バージョンの不一致: 読んだ後に文書が変わっていたときの書き込みは、[YAMLを直接編集した](./YAMLを直接編集した.yaml) の異常シナリオが持つ。
+test_file: tests/e2e/単一ユースケース/test_エージェントが書き込む.py

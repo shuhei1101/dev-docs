@@ -35,6 +35,7 @@ functions:
       1. `prog` を `PROG` にして解析器を作る
       2. `--version` を足す。表示は `{PROG} {バージョン}` で、バージョンは `DIST_NAME` の配布のメタデータから引く（`importlib.metadata.version`。`uv sync` で配布を入れた環境で動かす前提で、入っていないときの `PackageNotFoundError` はそのまま伝える）
       3. サブコマンドの登録先を `dest="cmd"`・`required=True` で作る。各サブコマンドは `handler`（`argparse.Namespace` を受けて終了コードを返す関数）を既定値に持つ
+         - `serve` を登録する。引数は持たず（設定は環境変数で渡す）、`handler` は起動の『待ち受けの開始』（`main.run_serve`）
       4. 解析器を返す
     unit_tests:
       - name: test_build_parser
@@ -43,6 +44,12 @@ functions:
         condition: 引数なしで呼ぶ
         mock: なし
         expected: 戻り値の `prog` が `"dev-docs"`
+      - name: test_build_parser_when_serve
+        case: 正常
+        summary: serve の処理を引く
+        condition: '`["serve"]` を解析する'
+        mock: なし
+        expected: '`cmd` が `"serve"`、`handler` が `dev_docs.main.run_serve`'
   - name: main
     title: 入口
     kind: 関数
@@ -94,6 +101,6 @@ functions:
         mock: なし
         expected: '`SystemExit` のコードが 2、標準エラーに `cmd` が要る旨が出る'
 notes:
-  サブコマンド: '`serve` などのサブコマンドは #3 で登録先に追加する。`__main__.py` は `if __name__ == "__main__":` で `sys.exit(main())` を呼ぶ。'
+  サブコマンド: サブコマンドは `serve` だけで、処理は起動の『待ち受けの開始』が持つ。`__main__.py` は `if __name__ == "__main__":` で `sys.exit(main())` を呼ぶ。
 test_files:
   - tests/unit/dev_docs/test_main.py

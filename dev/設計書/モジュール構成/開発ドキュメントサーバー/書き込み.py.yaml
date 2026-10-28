@@ -1,0 +1,925 @@
+title: "開発ドキュメントサーバー / 書き込み"
+lead: |-
+  `write_docs`・`delete_docs` の処理。操作を全て当てた後の文書を検査に通し、通ったときだけ作業ツリー（Git 管理外の配信元はそのフォルダ）のファイルを書き換える。
+  書き込み・削除は配信元ごとに 1 つずつ行い、commit はしない。
+directory: |-
+  ```text
+  src/dev_docs/features/write/
+  ├─ __init__.py    # 公開する型と関数の再エクスポート
+  ├─ types.py       # Operation / TextEdit / WriteRequest / WriteResult / DeleteTarget / DeleteRequest / DeleteResult
+  ├─ apply.py       # apply_operation（項目の操作を当てる）
+  ├─ ids.py         # generate_id（ids.format から ID を作る）
+  ├─ placement.py   # new_document_path（新しい文書の置き場所）
+  ├─ locks.py       # SourceLocks（配信元ごとの排他）
+  └─ service.py     # write_docs / delete_docs / check_version
+  ```
+diagrams:
+  - name: 全体
+    diagram: |-
+      classDiagram
+        direction TD
+        文書の書き込み ..> 書く場所の解決
+        文書の書き込み ..> 配信元ごとの排他
+        文書の書き込み ..> 文書を集める
+        文書の書き込み ..> バージョンの確かめ
+        文書の書き込み ..> 操作を当てる
+        文書の書き込み ..> IDを作る
+        文書の書き込み ..> 新しい文書の置き場所
+        文書の書き込み ..> 文字列からの文書の組み立て
+        文書の書き込み ..> 文書の検査
+        文書の書き込み ..> ファイルの置き換え
+        文書の書き込み ..> スクリプトの実行 : generators[]
+        文書の書き込み ..> 会話の記録 : edited
+        文書の削除 ..> 書く場所の解決
+        文書の削除 ..> 配信元ごとの排他
+        文書の削除 ..> バージョンの確かめ
+        文書の削除 ..> 操作を当てる : related を外す
+        文書の削除 ..> 文書の検査
+        class 文書の書き込み {
+          <<function>>
+        }
+        class 文書の削除 {
+          <<function>>
+        }
+        class 書く場所の解決 {
+          <<function>>
+        }
+        class 配信元ごとの排他 {
+          +握る(配信元の ID) ContextManager
+        }
+        class 文書を集める {
+          <<method>>
+        }
+        class バージョンの確かめ {
+          <<function>>
+        }
+        class 操作を当てる {
+          <<function>>
+        }
+        class IDを作る {
+          <<function>>
+        }
+        class 新しい文書の置き場所 {
+          <<function>>
+        }
+        class 文字列からの文書の組み立て {
+          <<function>>
+        }
+        class 文書の検査 {
+          <<class>>
+        }
+        class ファイルの置き換え {
+          <<function>>
+        }
+        class スクリプトの実行 {
+          <<function>>
+        }
+        class 会話の記録 {
+          <<class>>
+        }
+        click 書く場所の解決 href "./権限と作業場所.py.yaml#書く場所の解決"
+        click 文書を集める href "./文書のストア.py.yaml#文書のストア"
+        click 文字列からの文書の組み立て href "./文書のストア.py.yaml#文字列からの文書の組み立て"
+        click 文書の検査 href "./検査.py.yaml#文書の検査"
+        click ファイルの置き換え href "./共通.py.yaml#ファイルの置き換え"
+        click スクリプトの実行 href "./スクリプトの実行.py.yaml#スクリプトの実行"
+        click 会話の記録 href "./会話の記録.py.yaml#会話の記録"
+constants:
+  - name: OPERATIONS_MAX
+    title: 1 回の操作の上限
+    container: features/write/types.py
+    usecase: 書き込み
+    summary: '`operations`・`targets` の件数の上限'
+    value: '50'
+  - name: ID_FALLBACK_SLUG
+    title: slug の代わり
+    container: features/write/ids.py
+    usecase: 書き込み
+    summary: '`name` から slug を作れないときに使う語'
+    value: '"doc"'
+data_models:
+  - name: TextEdit
+    title: 文字列の置き換え
+    container: features/write/types.py
+    usecase: 書き込み
+    role: DTO
+    summary: 文字列の項目の一部を置き換える操作
+    description: '`pydantic.BaseModel`（`extra="forbid"`）。'
+    properties:
+      - name: field
+        title: 項目
+        type: str
+        access: 公開
+        description: 文字列の項目のパス
+      - name: old
+        title: 置き換える前
+        type: str
+        access: 公開
+        description: 空の文字列は受けない
+      - name: new
+        title: 置き換えた後
+        type: str
+        access: 公開
+        description: 置き換えた後の文字列
+      - name: replace_all
+        title: 全て置き換えるか
+        type: bool
+        access: 公開
+        default: 'False'
+        description: '`False` のときは `old` が 1 か所だけ一致すること'
+  - name: Operation
+    title: 書き込みの操作
+    container: features/write/types.py
+    usecase: 書き込み
+    role: DTO
+    summary: '`write_docs` の `operations` の 1 件'
+    description: '`pydantic.BaseModel`（`extra="forbid"`）。`op` ごとの必須のキーは書き込みが確かめ、添字つきの違反にする。'
+    properties:
+      - name: op
+        title: 操作
+        type: Literal['create', 'update', 'replace']
+        access: 公開
+        description: 作る・部分更新・置き換え
+      - name: kind
+        title: 種類
+        type: str | None
+        access: 公開
+        default: None
+        description: '`create` で必須'
+      - name: id
+        title: 文書の ID
+        type: str | None
+        access: 公開
+        default: None
+        description: '`update`・`replace` で必須。`create` で省くと `ids.format` から作る'
+      - name: expected_version
+        title: 読んだときのバージョン
+        type: str | dict[str, str] | None
+        access: 公開
+        default: None
+        description: '`update`・`replace` で必須。`update` は項目のパス → 値のハッシュも受ける'
+      - name: data
+        title: 全項目
+        type: dict[str, Any] | None
+        access: 公開
+        default: None
+        description: '`create`・`replace` で必須'
+      - name: set
+        title: 入れる値
+        type: dict[str, Any]
+        access: 公開
+        default: '{}'
+        description: 項目のパス → 値（`update` だけ）
+      - name: unset
+        title: 消す項目
+        type: list[str]
+        access: 公開
+        default: '[]'
+        description: '`update` だけ'
+      - name: add_to
+        title: 配列への追加
+        type: dict[str, list[Any]]
+        access: 公開
+        default: '{}'
+        description: '`update` だけ'
+      - name: remove_from
+        title: 配列からの削除
+        type: dict[str, list[Any]]
+        access: 公開
+        default: '{}'
+        description: '`update` だけ'
+      - name: text_edits
+        title: 文字列の置き換え
+        type: list[TextEdit]
+        access: 公開
+        default: '[]'
+        description: '`update` だけ'
+  - name: WriteRequest
+    title: 書き込みの要求
+    container: features/write/types.py
+    usecase: 書き込み
+    role: DTO
+    summary: '`write_docs` の引数'
+    description: '`pydantic.BaseModel`（`extra="forbid"`）。キーの意味はインターフェース定義『文書の書き込み』の `request`。'
+    properties:
+      - name: source
+        title: 配信元
+        type: str | None
+        access: 公開
+        default: None
+        description: '`None` は作業中の配信元'
+      - name: worktree
+        title: ワークツリー
+        type: str | None
+        access: 公開
+        default: None
+        description: 書くワークツリー
+      - name: operations
+        title: 操作
+        type: list[Operation]
+        access: 公開
+        description: 並べた順に当てる
+      - name: atomic
+        title: まとめて書くか
+        type: bool
+        access: 公開
+        default: 'True'
+        description: '`True` は 1 件でも失敗したら何も書かない'
+      - name: dry_run
+        title: 試しに書くか
+        type: bool
+        access: 公開
+        default: 'False'
+        description: '`True` は書かずに結果と差分を返す'
+      - name: cwd
+        title: 作業場所
+        type: str | None
+        access: 公開
+        default: None
+        description: フックが入れる
+      - name: session_id
+        title: セッションの ID
+        type: str | None
+        access: 公開
+        default: None
+        description: フックが入れる
+      - name: agent_id
+        title: エージェントの ID
+        type: str | None
+        access: 公開
+        default: None
+        description: フックが入れる
+  - name: WriteResultItem
+    title: 書き込みの結果の行
+    container: features/write/types.py
+    usecase: 書き込み
+    role: DTO
+    summary: 操作 1 件の結果
+    description: '`dataclass(frozen=True)`。JSON にするときは `None` の項目を落とす。'
+    properties:
+      - name: index
+        title: 添字
+        type: int
+        access: 公開
+        description: '`operations` の添字'
+      - name: id
+        title: 文書の ID
+        type: str | None
+        access: 公開
+        description: 作れなかった ID は `None`
+      - name: status
+        title: 結果
+        type: Literal['created', 'updated', 'replaced', 'failed']
+        access: 公開
+        description: 操作の結果
+      - name: version
+        title: バージョン
+        type: str | None
+        access: 公開
+        default: None
+        description: 書いた後のバージョン（`failed` は `None`）
+      - name: diff
+        title: 差分
+        type: str | None
+        access: 公開
+        default: None
+        description: '`updated`・`replaced` と `dry_run` のとき'
+      - name: errors
+        title: 違反
+        type: list[Violation]
+        access: 公開
+        default: '[]'
+        description: '`failed` のときだけ'
+  - name: WriteResult
+    title: 書き込みの結果
+    container: features/write/types.py
+    usecase: 書き込み
+    role: DTO
+    summary: '`write_docs` が返すもの'
+    description: '`dataclass(frozen=True)`。'
+    properties:
+      - name: applied
+        title: 書いたか
+        type: bool
+        access: 公開
+        description: 1 件以上をファイルへ書いたか
+      - name: results
+        title: 結果
+        type: list[WriteResultItem]
+        access: 公開
+        description: '`operations` の順'
+  - name: DeleteTarget
+    title: 消す文書
+    container: features/write/types.py
+    usecase: 書き込み
+    role: DTO
+    summary: '`delete_docs` の `targets` の 1 件'
+    description: '`pydantic.BaseModel`（`extra="forbid"`）。'
+    properties:
+      - name: id
+        title: 文書の ID
+        type: str
+        access: 公開
+        description: 消す文書
+      - name: expected_version
+        title: 読んだときのバージョン
+        type: str
+        access: 公開
+        description: 読んだときのバージョン
+  - name: DeleteRequest
+    title: 削除の要求
+    container: features/write/types.py
+    usecase: 書き込み
+    role: DTO
+    summary: '`delete_docs` の引数'
+    description: '`pydantic.BaseModel`（`extra="forbid"`）。キーの意味はインターフェース定義『文書の削除』の `request`。'
+    properties:
+      - name: source
+        title: 配信元
+        type: str | None
+        access: 公開
+        default: None
+        description: '`None` は作業中の配信元'
+      - name: worktree
+        title: ワークツリー
+        type: str | None
+        access: 公開
+        default: None
+        description: 消すワークツリー
+      - name: targets
+        title: 消す文書
+        type: list[DeleteTarget]
+        access: 公開
+        description: 消す文書
+      - name: on_referenced
+        title: 参照されているとき
+        type: Literal['fail', 'unlink']
+        access: 公開
+        default: '"fail"'
+        description: '`unlink` は参照元の `related` からも外す'
+      - name: atomic
+        title: まとめて消すか
+        type: bool
+        access: 公開
+        default: 'True'
+        description: 書き込みと同じ
+      - name: dry_run
+        title: 試しに消すか
+        type: bool
+        access: 公開
+        default: 'False'
+        description: 書き込みと同じ
+      - name: cwd
+        title: 作業場所
+        type: str | None
+        access: 公開
+        default: None
+        description: フックが入れる
+  - name: DeleteResult
+    title: 削除の結果
+    container: features/write/types.py
+    usecase: 書き込み
+    role: DTO
+    summary: '`delete_docs` が返すもの'
+    description: '`dataclass(frozen=True)`。`results[].status` は `deleted` か `failed`。'
+    properties:
+      - name: applied
+        title: 消したか
+        type: bool
+        access: 公開
+        description: 1 件以上を消したか
+      - name: results
+        title: 結果
+        type: list[WriteResultItem]
+        access: 公開
+        description: '`targets` の順（`status` は `deleted`・`failed`）'
+      - name: unlinked
+        title: 参照を外した文書
+        type: list[tuple[str, str]]
+        access: 公開
+        default: '[]'
+        description: (ID, 外した後のバージョン)。JSON では `{id, version}`
+classes:
+  - name: SourceLocks
+    title: 配信元ごとの排他
+    container: features/write/locks.py
+    usecase: 書き込み
+    role: 排他
+    summary: 書き込み・削除を配信元ごとに 1 つずつにする
+    description: プロセスの中だけの排他。dev-docs の外からの直接の編集は、バージョンの確かめで防ぐ。
+    kind: クラス
+    properties:
+      - name: _locks
+        title: 排他
+        type: dict[str, threading.Lock]
+        access: 内部 (_)
+        description: 配信元の ID → 排他
+      - name: _guard
+        title: 辞書の排他
+        type: threading.Lock
+        access: 内部 (_)
+        description: '`_locks` を守る'
+    methods:
+      - name: hold
+        title: 握る
+        summary: 配信元の排他を握るコンテキストマネージャを返す
+        kind: メソッド
+        scope: public
+        thread_safe: true
+        args:
+          - name: source_id
+            title: 配信元の ID
+            type: str
+            required: true
+            passing: positional
+            description: 書く配信元
+        returns:
+          type: ContextManager[None]
+          description: 抜けるときに放す
+        process: 1. `_guard` の中で配信元の排他を引き（無ければ作り）、それを握って返す
+        unit_tests:
+          - name: test_source_locks_hold
+            case: 正常
+            summary: 同じ配信元は待つ
+            condition: 2 つのスレッドが同じ配信元を握り、片方が 0.2 秒眠る
+            mock: なし
+            expected: もう片方は眠り終わるまで入らない。別の配信元は待たない
+functions:
+  - name: apply_operation
+    title: 操作を当てる
+    kind: 関数
+    container: features/write/apply.py
+    usecase: 書き込み
+    role: 変換
+    summary: 文書の内容に 1 件の操作を当てた新しい内容を返す
+    scope: public
+    thread_safe: true
+    args:
+      - name: current
+        title: 今の内容
+        type: Mapping[str, Any] | None
+        required: true
+        passing: positional
+        description: '`create` は `None`'
+      - name: operation
+        title: 操作
+        type: Operation
+        required: true
+        passing: positional
+        description: 当てる操作
+    returns:
+      type: dict[str, Any]
+      description: 新しい内容（`current` は書き換えない）
+    process: |-
+      1. `create`・`replace` は `data` の深いコピーを返す
+      2. `update` は `current` の深いコピーに順に当てる
+         - `set` の値は、オブジェクトなら今の値へ再帰でマージし、配列とスカラーは置き換える（項目の書き込み）
+         - `unset` は項目の削除。無い項目は飛ばす
+         - `add_to` は配列の末尾へ足す（無ければ作る。配列でなければ違反）
+         - `remove_from` は等しい要素を全て除く
+         - `text_edits` は文字列の項目の `old` を `new` にする。`replace_all` が `False` で一致が 1 か所でない場合は違反
+      3. 違反は `Violation`（`path` は `set.a.b`・`text_edits[0].old` など。`fix` に一致した数と、`replace_all` か前後の文字を含めること）を集めて `InvalidArgumentError` で送る
+    exceptions:
+      - name: InvalidArgumentError
+        condition: 配列でない項目への追加・削除、文字列でない項目への置き換え、`old` の一致が 1 か所でない
+        message: '`操作を当てられません`'
+    unit_tests:
+      - name: test_apply_operation
+        case: 正常
+        summary: 部分更新の組み合わせ
+        condition: '`{a: {b: 1, c: 2}, tags: [a, b], d: x}` に `set: {a: {b: 9}}`・`unset: [d]`・`add_to: {tags: [c]}`・`remove_from: {tags: [a]}`'
+        mock: なし
+        expected: '`{a: {b: 9, c: 2}, tags: [b, c]}`。`current` は変わらない'
+      - name: test_apply_operation_when_text_edit_ambiguous
+        case: 異常
+        summary: 一致が 2 か所
+        condition: '`description: "aXbXc"` に `{field: description, old: X, new: Y}`'
+        mock: なし
+        expected: '`InvalidArgumentError` の違反の `path` が `text_edits[0].old`、`fix` に `2`'
+        exception: '`old` の一致が 1 か所でない'
+      - name: test_apply_operation_when_replace
+        case: 正常
+        summary: 置き換え
+        condition: '`{a: 1, b: 2}` に `replace` の `data: {a: 3}`'
+        mock: なし
+        expected: '`{a: 3}`'
+  - name: generate_id
+    title: IDを作る
+    kind: 関数
+    container: features/write/ids.py
+    usecase: 書き込み
+    role: 変換
+    summary: '`ids.format` の `{kind}`・`{slug}` を埋めて、配信元の中で重ならない ID を作る'
+    scope: public
+    thread_safe: true
+    args:
+      - name: fmt
+        title: ID の付け方
+        type: str
+        required: true
+        passing: positional
+        description: '`SourceConfig.ids_format`'
+      - name: kind
+        title: 種類
+        type: str
+        required: true
+        passing: keyword
+        description: '`{kind}` に入れる'
+      - name: data
+        title: 内容
+        type: Mapping[str, Any]
+        required: true
+        passing: keyword
+        description: '`name` から slug を作る'
+      - name: existing
+        title: 使われている ID
+        type: Collection[str]
+        required: true
+        passing: keyword
+        description: 配信元の ID（同じ呼び出しで先に作った ID を含む）
+    returns:
+      type: str
+      description: 作った ID
+    process: |-
+      1. slug は `name` を NFKC と小文字にし、`[a-z0-9]` 以外の並びを `-` にして前後の `-` を除いたもの。空なら `ID_FALLBACK_SLUG`
+      2. `fmt` の `{kind}`・`{slug}` を置き換える
+      3. `existing` にあれば、末尾に `-2`・`-3`… を付けて重ならない最初の ID にする
+    unit_tests:
+      - name: test_generate_id
+        case: 正常
+        summary: slug と重なり
+        condition: '`{kind}-{slug}`、`kind="sample"`、`name: "Doc Three!"`、`existing` に `sample-doc-three`'
+        mock: なし
+        expected: '`sample-doc-three-2`'
+      - name: test_generate_id_when_no_ascii
+        case: 正常
+        summary: slug を作れない
+        condition: '`name: 文書`'
+        mock: なし
+        expected: '`sample-doc`'
+  - name: new_document_path
+    title: 新しい文書の置き場所
+    kind: 関数
+    container: features/write/placement.py
+    usecase: 書き込み
+    role: 判定
+    summary: '`create` の文書を書くファイルを、文書の行の `paths` の先頭から決める'
+    scope: public
+    thread_safe: true
+    args:
+      - name: table
+        title: 文書の行
+        type: DocumentTable
+        required: true
+        passing: positional
+        description: 作る種類の行
+      - name: doc_id
+        title: 文書の ID
+        type: str
+        required: true
+        passing: positional
+        description: 作る文書の ID
+    returns:
+      type: tuple[str, bool]
+      description: (配信元の直下からのパス, `records` の配列へ足すか)
+    process: |-
+      1. `records` がある場合、`paths[0]` が glob を含まなければ `(paths[0], True)` を返し、含めば違反にする
+      2. `records` が無い場合、`paths[0]` の最後の段の `*` を `doc_id` に置き換え、`**/` を除いたパスにする（例 `docs/**/*.yaml` → `docs/{doc_id}.yaml`）。glob を含まないパスは違反にする
+      3. 違反は `path` が `operations[{i}].kind`、`fix` が `documents[].paths の先頭を glob にしてください` の `InvalidArgumentError` で送る
+    exceptions:
+      - name: InvalidArgumentError
+        condition: 置き場所を決められない
+        message: '`{kind} の新しい文書の置き場所を決められません`'
+    unit_tests:
+      - name: test_new_document_path
+        case: 正常
+        summary: glob から決める
+        condition: '`paths: [docs/**/*.yaml]` と `paths: [data/list.yaml]`・`records: items`'
+        mock: なし
+        expected: '`("docs/sample-doc.yaml", False)` と `("data/list.yaml", True)`'
+  - name: check_version
+    title: バージョンの確かめ
+    kind: 関数
+    container: features/write/service.py
+    usecase: 書き込み
+    role: 検証
+    summary: '`expected_version` が今の文書と同じかを確かめる'
+    scope: public
+    thread_safe: true
+    args:
+      - name: document
+        title: 今の文書
+        type: Document
+        required: true
+        passing: positional
+        description: 今の文書
+      - name: expected
+        title: 読んだときのバージョン
+        type: str | Mapping[str, str]
+        required: true
+        passing: positional
+        description: バージョンか、項目のパス → 値のハッシュ
+      - name: last_read
+        title: 前回読んだ内容
+        type: LastRead | None
+        required: true
+        passing: keyword
+        description: 差分を作る元（無ければ差分を空にする）
+    returns:
+      type: None
+      description: 同じなら何も返さない
+    process: |-
+      1. 文字列なら `document.version` と比べる。辞書なら項目ごとに今の値の値のハッシュと比べる
+      2. 違う場合、今のバージョンと、`last_read` があればその内容と今の本文の差分の行（変更.差分の行）を添えた `VersionMismatchError` を送る（`next_steps` に読み直して呼び直すこと）
+    exceptions:
+      - name: VersionMismatchError
+        condition: バージョンが違う
+        message: '`{id} は読んだ後に変わっています（今のバージョン {version}）`'
+    unit_tests:
+      - name: test_check_version_when_fields
+        case: 正常
+        summary: 項目ごとのハッシュ
+        condition: '`name` だけを変えた文書に、`{description: 今の値のハッシュ}`'
+        mock: なし
+        expected: 送らない
+      - name: test_check_version_when_mismatch
+        case: 異常
+        summary: 違うバージョン
+        condition: 古いバージョンと、その内容の前回読んだ内容
+        mock: なし
+        expected: '`VersionMismatchError` の `current` が今のバージョン、`diff` に `-`・`+` の行'
+        exception: バージョンが違う
+  - name: write_docs
+    title: 文書の書き込み
+    kind: 関数
+    container: features/write/service.py
+    usecase: 書き込み
+    role: サービス
+    summary: '`write_docs` の要求を処理して書き込みの結果を返す'
+    scope: public
+    thread_safe: true
+    side_effects: 作業ツリーのファイルを作る・書き換える。`generators[]` を動かす。会話の記録に編集を残す
+    args:
+      - name: request
+        title: 書き込みの要求
+        type: WriteRequest
+        required: true
+        passing: positional
+        description: ツールの引数
+      - name: registry
+        title: 配信元の一覧
+        type: SourceRegistry
+        required: true
+        passing: injected
+        description: 配信中の配信元
+      - name: store
+        title: 文書のストア
+        type: DocumentStore
+        required: true
+        passing: injected
+        description: 今の文書を読み、書いた後にキャッシュを捨てる
+      - name: checker
+        title: 文書の検査
+        type: DocumentChecker
+        required: true
+        passing: injected
+        description: 書き込みの検査
+      - name: seen
+        title: 会話の記録
+        type: SeenStore
+        required: true
+        passing: injected
+        description: 前回読んだ内容と編集の記録
+      - name: locks
+        title: 配信元ごとの排他
+        type: SourceLocks
+        required: true
+        passing: injected
+        description: 書き込みを 1 つずつにする
+      - name: timeout_sec
+        title: 制限時間
+        type: float
+        required: true
+        passing: keyword
+        description: '`generators[]` の制限時間（`script_timeout_sec`）'
+      - name: now
+        title: 今
+        type: datetime | None
+        required: false
+        default: None
+        passing: keyword
+        description: テスト用。`created`・`updated` に入れる日時
+    returns:
+      type: WriteResult
+      description: 書き込みの結果
+    process: |-
+      1. `operations` が 1〜`OPERATIONS_MAX` 件でない・`op` ごとの必須のキーが無い場合、添字つきの違反で `InvalidArgumentError` を送る
+      2. 書く場所を解く（書く場所の解決）
+      3. 配信元の排他を握る（配信元ごとの排他.握る）
+      4. 今の文書を集め（文書のストア.文書を集める）、ID → 文書の辞書にする。変更を当てるファイルは、パス → 往復編集の読み込みの内容で持つ
+      5. 操作を順に当てる。失敗した操作は `failed` の行にして次へ進む
+         - `create` の場合、種類の行を引き（無ければ `UnknownKindError`）、`writable` でなければ `documents[].writable` の違反にする。ID が無ければ IDを作る（`ids.format` も無ければ `id` が必須の違反）。ID が既にあれば違反。置き場所は新しい文書の置き場所。Git 管理外の配信元では `created`・`updated` に `now` を入れる
+         - `update`・`replace` の場合、文書が無ければ近い ID を添えた `DocumentNotFoundError`。バージョンの確かめ（前回読んだ内容は会話の記録）。Git 管理外の配信元では `updated` に `now` を入れ、`replace` は `created` を引き継ぐ
+         - 操作を当てる。`records` の文書は配列の要素を、それ以外はファイルの内容を置き換える
+         - 変更を当てた後のファイルの内容を往復編集の書き出しで文字列にし、文字列からの文書の組み立てで文書にして、文書の検査.検査する（`on="write"`、`create` は `new=True`）。違反は添字を付けて `failed` の行に入れる
+         - 後の操作が同じファイルに当たるときは、当てた後の内容に重ねる
+      6. `atomic` が `True` で `failed` があれば、最初の失敗の例外（`ValidationFailedError` は全ての違反を添字つきで）を送り、何も書かない
+      7. 成功した行の `version` は組み立てた文書のバージョン、`diff` は今の本文との差分の行（変更.差分の行）にする
+      8. `dry_run` なら `applied=False` で返す
+      9. 変わったファイルをファイルの置き換えで書き、文書のストア.キャッシュを捨てる
+      10. 書いた種類の `after_write` の生成を、ID の重なりを除いて順にスクリプトの実行（`cwd=target.base`・引数に書いたファイルのパス・`timeout_sec`）で動かす。`ScriptError` は `[warning]` 書き込み後の生成に失敗した（配信元・生成の ID・理由）を書き、結果は変えない
+      11. 会話の記録に書いた文書を `edited` で残す
+      12. `applied=True` で返す
+    exceptions:
+      - name: InvalidArgumentError
+        condition: 件数・必須のキー・`text_edits` の一致
+        message: '`引数が正しくありません: {違反の数} 件`'
+      - name: ValidationFailedError
+        condition: '`atomic` で検査に通らない操作がある'
+        message: '`検査に通らない操作があります: {違反の数} 件`'
+      - name: VersionMismatchError
+        condition: '`atomic` でバージョンが違う'
+        message: '`{id} は読んだ後に変わっています（今のバージョン {version}）`'
+      - name: DocumentNotFoundError
+        condition: '`atomic` で無い文書を指した'
+        message: '`文書がありません: {id}`'
+      - name: UnknownKindError
+        condition: '`create` の種類が無い'
+        message: '`{source}: 種類 {kind} はありません`'
+      - name: SourceNotWritableError
+        condition: 書く場所の解決が送る
+        message: '`{id} はこの作業場所（{cwd}）から書き込めません`'
+      - name: TargetIsCloneError
+        condition: 書く場所の解決が送る
+        message: '`{id} のクローン本体には書き込みません`'
+    unit_tests:
+      - name: test_write_docs
+        case: 正常
+        summary: ワークツリーへの部分更新
+        condition: 'ワークツリー x の `cwd` で、文書 1 に `set: {name: 新しい名前}`'
+        mock: なし（一時フォルダの配信元とワークツリー）
+        expected: '`applied` が `True`、`status` が `updated`、ワークツリー x のファイルの `name` だけが変わり、クローン本体と commit は変わらない'
+      - name: test_write_docs_when_create
+        case: 正常
+        summary: ID を作って生成を動かす
+        condition: '`ids.format: {kind}-{slug}`・`after_write: [index]` の行に `create`'
+        mock: なし
+        expected: '`status` が `created`、`id` が `sample-...`、置き場所にファイルができ、`index` の生成が 1 回動く'
+      - name: test_write_docs_when_dry_run
+        case: 正常
+        summary: 試しに書く
+        condition: '`dry_run: true` で `set`'
+        mock: なし
+        expected: '`applied` が `False`、`diff` があり、ファイルは変わらない'
+      - name: test_write_docs_when_partial
+        case: 正常
+        summary: 一部だけ書く
+        condition: '`atomic: false` で通る操作と、スキーマに通らない操作'
+        mock: なし
+        expected: 0 番目が `updated`、1 番目が `failed` で `errors` に違反、0 番目のファイルだけ変わる
+      - name: test_write_docs_when_not_git
+        case: 正常
+        summary: Git 管理外の日時
+        condition: Git 管理外の配信元に `create`、続けて `update`
+        mock: '`now` に 2 つの日時'
+        expected: '`created` は 1 つ目の日時のまま、`updated` が 2 つ目の日時'
+      - name: test_write_docs_when_invalid
+        case: 異常
+        summary: 検査に通らない
+        condition: '`atomic: true` で 1 番目がスキーマに通らない'
+        mock: なし
+        expected: '`ValidationFailedError` の違反の `index` が 1、どのファイルも変わらない'
+        exception: '`atomic` で検査に通らない操作がある'
+      - name: test_write_docs_when_version_mismatch
+        case: 異常
+        summary: 読んだ後に変わった
+        condition: 読んだ後に直接編集した文書へ、読んだときのバージョンで `set`
+        mock: なし
+        expected: '`VersionMismatchError` の `diff` に直接編集した行、ファイルは直接編集したまま'
+        exception: '`atomic` でバージョンが違う'
+      - name: test_write_docs_when_too_many
+        case: 異常
+        summary: 件数の上限
+        condition: 51 件の操作
+        mock: なし
+        expected: '`InvalidArgumentError` の違反の `path` が `operations`'
+        exception: 件数・必須のキー・`text_edits` の一致
+  - name: delete_docs
+    title: 文書の削除
+    kind: 関数
+    container: features/write/service.py
+    usecase: 書き込み
+    role: サービス
+    summary: '`delete_docs` の要求を処理して削除の結果を返す'
+    scope: public
+    thread_safe: true
+    side_effects: 作業ツリーのファイルを消す。`unlink` のときは参照元の文書を書き換える。`generators[]` を動かす
+    args:
+      - name: request
+        title: 削除の要求
+        type: DeleteRequest
+        required: true
+        passing: positional
+        description: ツールの引数
+      - name: registry
+        title: 配信元の一覧
+        type: SourceRegistry
+        required: true
+        passing: injected
+        description: 配信中の配信元
+      - name: store
+        title: 文書のストア
+        type: DocumentStore
+        required: true
+        passing: injected
+        description: 今の文書を読む
+      - name: checker
+        title: 文書の検査
+        type: DocumentChecker
+        required: true
+        passing: injected
+        description: 参照を外した文書の検査
+      - name: locks
+        title: 配信元ごとの排他
+        type: SourceLocks
+        required: true
+        passing: injected
+        description: 削除を 1 つずつにする
+      - name: timeout_sec
+        title: 制限時間
+        type: float
+        required: true
+        passing: keyword
+        description: '`generators[]` の制限時間'
+    returns:
+      type: DeleteResult
+      description: 削除の結果
+    process: |-
+      1. `targets` が 1〜`OPERATIONS_MAX` 件でなければ `InvalidArgumentError` を送る
+      2. 書く場所を解き、配信元の排他を握り、今の文書を集める（文書の書き込みと同じ）
+      3. 対象ごとに確かめる。失敗した対象は `failed` の行にする
+         - 文書が無ければ近い ID を添えた `DocumentNotFoundError`
+         - Git 管理外の配信元で種類の行が `writable` でなければ `DeleteNotAllowedError`
+         - バージョンの確かめ（前回読んだ内容は無し）
+         - 同じ配信元の残る文書のうち、メタデータの `related` に `to` が消す文書の ID で `source` の無い行を持つ文書を集める。あれば `on_referenced` が `fail` なら参照元を添えた `DocumentReferencedError`、`unlink` なら参照元の `related` の列（種類の行の `metadata.related` が指す列。無ければ `related`）からその行を除く操作を作る（`defaults[]` から付いた行は外せないので、`fix` に `defaults[]` を直すことを書いた違反にする）
+      4. `atomic` が `True` で `failed` があれば、最初の失敗の例外を送る
+      5. 参照を外した文書を文書の検査に通す（違反は `ValidationFailedError`）
+      6. `dry_run` なら `applied=False` で、`unlinked` に参照を外す文書と外した後のバージョンを入れて返す
+      7. ファイル 1 つの文書はファイルを消し、`records` の文書は配列から要素を除いてファイルを置き換える（`body_file` の指すファイルは消さない）。参照を外した文書を書き、文書のストア.キャッシュを捨てる
+      8. 消した種類の `after_write` の生成を、文書の書き込みと同じに動かす（引数は消したファイルのパス）
+      9. `applied=True` で、`unlinked` に参照を外した文書と新しいバージョンを入れて返す
+    exceptions:
+      - name: DocumentReferencedError
+        condition: '`on_referenced: fail` で参照されている'
+        message: '`{id} は {参照元} から参照されています`'
+      - name: DeleteNotAllowedError
+        condition: Git 管理外の配信元で `writable` でない種類
+        message: '`{kind} は削除を許していません（documents[].writable）`'
+      - name: VersionMismatchError
+        condition: バージョンが違う
+        message: '`{id} は読んだ後に変わっています（今のバージョン {version}）`'
+      - name: DocumentNotFoundError
+        condition: 無い文書を指した
+        message: '`文書がありません: {id}`'
+    unit_tests:
+      - name: test_delete_docs
+        case: 正常
+        summary: ワークツリーから消す
+        condition: 参照されていない文書 2 を消す
+        mock: なし
+        expected: '`status` が `deleted`、ワークツリーのファイルが無く、クローン本体のファイルは残る'
+      - name: test_delete_docs_when_unlink
+        case: 正常
+        summary: 参照も外す
+        condition: '文書 1 の `related` が指す文書 2 を `on_referenced: unlink` で消す'
+        mock: なし
+        expected: 文書 2 のファイルが無く、文書 1 の `related` に文書 2 が無く、`unlinked` に文書 1 と新しいバージョン
+      - name: test_delete_docs_when_records
+        case: 正常
+        summary: 配列の要素を消す
+        condition: '`records` の行の 2 件目を消す'
+        mock: なし
+        expected: ファイルの配列が 1 件になり、`body_file` の指すファイルは残る
+      - name: test_delete_docs_when_referenced
+        case: 異常
+        summary: 参照されている
+        condition: '同じ削除を `on_referenced: fail` で'
+        mock: なし
+        expected: '`DocumentReferencedError` の `referrers` が文書 1、どのファイルも変わらない'
+        exception: '`on_referenced: fail` で参照されている'
+      - name: test_delete_docs_when_not_allowed
+        case: 異常
+        summary: 削除を許していない
+        condition: 'Git 管理外の配信元で `writable: false` の種類の文書'
+        mock: なし
+        expected: '`DeleteNotAllowedError` の `kind` が種類の ID'
+        exception: Git 管理外の配信元で `writable` でない種類
+refs:
+  - dev/設計書/インターフェース定義/開発ドキュメントサーバー/文書の書き込み#
+  - dev/設計書/インターフェース定義/開発ドキュメントサーバー/文書の削除#
+test_files:
+  - tests/unit/dev_docs/features/write/test_apply.py
+  - tests/unit/dev_docs/features/write/test_ids.py
+  - tests/unit/dev_docs/features/write/test_placement.py
+  - tests/unit/dev_docs/features/write/test_locks.py
+  - tests/unit/dev_docs/features/write/test_service.py

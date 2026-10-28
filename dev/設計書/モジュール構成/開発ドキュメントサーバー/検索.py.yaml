@@ -1,0 +1,1018 @@
+title: "開発ドキュメントサーバー / 検索"
+lead: |-
+  `search_docs` の処理。条件の木で文書を絞り、並べ替え・集計・量の上限をかけて、指定した項目だけを返す。
+  語で探す部分（`match_words`・`snippet_lines`）は画面の検索も使う。
+directory: |-
+  ```text
+  src/dev_docs/features/search/
+  ├─ __init__.py   # 公開する型と関数の再エクスポート
+  ├─ types.py      # Condition / Group / OrderKey / Snippets / SearchRequest / SearchItem / GroupCount / SearchResult
+  ├─ fields.py     # field_values / known_fields（項目の値・計算項目・使える項目）
+  ├─ filters.py    # check_filter / match_filter / match_words / snippet_lines / parse_compare_value
+  ├─ cursor.py     # encode_cursor / decode_cursor
+  ├─ render.py     # render_search_markdown
+  └─ service.py    # search_docs
+  ```
+diagrams:
+  - name: 全体
+    diagram: |-
+      classDiagram
+        direction TD
+        文書の検索 ..> 読む場所の解決
+        文書の検索 ..> 文書を集める
+        文書の検索 ..> 条件の確かめ
+        文書の検索 ..> 条件の照合
+        文書の検索 ..> 続きの位置
+        文書の検索 ..> 文書の検査 : on read
+        文書の検索 ..> 会話の記録 : 返し済み
+        文書の検索 ..> 検索の結果 : 返す
+        条件の確かめ ..> 使える項目
+        条件の照合 ..> 項目の値
+        条件の照合 ..> 比べる値の解釈
+        検索の結果の Markdown ..> 検索の結果
+        class 文書の検索 {
+          <<function>>
+        }
+        class 読む場所の解決 {
+          <<function>>
+        }
+        class 文書を集める {
+          <<method>>
+        }
+        class 条件の確かめ {
+          <<function>>
+        }
+        class 条件の照合 {
+          <<function>>
+        }
+        class 使える項目 {
+          <<function>>
+        }
+        class 項目の値 {
+          <<function>>
+        }
+        class 比べる値の解釈 {
+          <<function>>
+        }
+        class 続きの位置 {
+          <<function>>
+        }
+        class 文書の検査 {
+          <<class>>
+        }
+        class 会話の記録 {
+          <<class>>
+        }
+        class 検索の結果 {
+          +総件数: int
+          +文書: list
+        }
+        class 検索の結果の Markdown {
+          <<function>>
+        }
+        click 読む場所の解決 href "./権限と作業場所.py.yaml#読む場所の解決"
+        click 文書を集める href "./文書のストア.py.yaml#文書のストア"
+        click 文書の検査 href "./検査.py.yaml#文書の検査"
+        click 会話の記録 href "./会話の記録.py.yaml#会話の記録"
+constants:
+  - name: LIMIT_DEFAULT
+    title: 件数の既定
+    container: features/search/types.py
+    usecase: 検索
+    summary: '`limit` を省いたときの件数'
+    value: '20'
+  - name: LIMIT_MAX
+    title: 件数の上限
+    container: features/search/types.py
+    usecase: 検索
+    summary: '`limit` の上限。超えた値は丸めて `notes` で知らせる'
+    value: '100'
+  - name: MAX_CHARS_DEFAULT
+    title: 文字数の既定
+    container: features/search/types.py
+    usecase: 検索
+    summary: '`max_chars` を省いたときの結果全体の文字数'
+    value: '20000'
+  - name: MAX_CHARS_LIMIT
+    title: 文字数の上限
+    container: features/search/types.py
+    usecase: 検索
+    summary: '`max_chars` の上限。超えた値は丸めて `notes` で知らせる'
+    value: '40000'
+  - name: FIELD_CHARS_DEFAULT
+    title: 項目の文字数の既定
+    container: features/search/types.py
+    usecase: 検索
+    summary: '`max_chars_per_field` を省いたときの 1 項目の文字数'
+    value: '2000'
+  - name: FIELD_CHARS_FULL
+    title: 本文込みの項目の文字数の既定
+    container: features/search/types.py
+    usecase: 検索
+    summary: '`view: full` で `max_chars_per_field` を省いたときの 1 項目の文字数'
+    value: '10000'
+  - name: SUMMARY_FIELDS
+    title: 一覧の項目
+    container: features/search/types.py
+    usecase: 検索
+    summary: '`view: summary` で返す項目（`id`・`source` の後ろに並べる）'
+    value: '("kind", "name", "description", "@chars", "version")'
+  - name: COMPUTED_FIELDS
+    title: 計算項目
+    container: features/search/fields.py
+    usecase: 検索
+    summary: 文書から計算する項目
+    value: '("@chars", "@path", "@sections")'
+  - name: DATE_FIELDS
+    title: 日時の項目
+    container: features/search/fields.py
+    usecase: 検索
+    summary: 値を日時として比べ、空なら並べ替えの末尾にする項目
+    value: '("created", "updated")'
+data_models:
+  - name: Condition
+    title: 条件
+    container: features/search/types.py
+    usecase: 検索
+    role: DTO
+    summary: 1 つの項目を比べる条件
+    description: '`pydantic.BaseModel`（`extra="forbid"`）。MCP の入力スキーマもこのモデルから作る。'
+    properties:
+      - name: field
+        title: 項目
+        type: str
+        access: 公開
+        description: メタデータのキー・種類ごとの項目のパス・`body`・`*`・計算項目
+      - name: op
+        title: 比べ方
+        type: Literal['eq', 'ne', 'prefix', 'suffix', 'contains', 'not_contains', 'regex', 'gt', 'gte', 'lt', 'lte', 'exists', 'not_exists']
+        access: 公開
+        description: 比べ方
+      - name: values
+        title: 値
+        type: list[str]
+        access: 公開
+        default: '[]'
+        description: '比べる値。`exists`・`not_exists` 以外では 1 つ以上'
+      - name: match
+        title: 複数の値の扱い
+        type: Literal['any', 'all']
+        access: 公開
+        default: '"any"'
+        description: '`values` を OR か AND で比べる'
+      - name: case_sensitive
+        title: 区別するか
+        type: bool
+        access: 公開
+        default: 'False'
+        description: '`False` は NFKC と `casefold` をした後に比べる'
+  - name: Group
+    title: 条件のまとまり
+    container: features/search/types.py
+    usecase: 検索
+    role: DTO
+    summary: 条件を AND か OR で束ねる
+    description: '`pydantic.BaseModel`（`extra="forbid"`）。`and` と `or` のどちらか 1 つだけを持つ（Python の属性は `all_of`・`any_of`、別名が `and`・`or`）。'
+    properties:
+      - name: all_of
+        title: AND
+        type: list[Condition | Group] | None
+        access: 公開
+        default: None
+        description: 別名 `and`
+      - name: any_of
+        title: OR
+        type: list[Condition | Group] | None
+        access: 公開
+        default: None
+        description: 別名 `or`
+  - name: OrderKey
+    title: 並べ替えのキー
+    container: features/search/types.py
+    usecase: 検索
+    role: DTO
+    summary: 並べ替えの 1 つのキー
+    description: '`pydantic.BaseModel`（`extra="forbid"`）。'
+    properties:
+      - name: field
+        title: 項目
+        type: str
+        access: 公開
+        description: 並べる項目
+      - name: direction
+        title: 向き
+        type: Literal['asc', 'desc']
+        access: 公開
+        default: '"asc"'
+        description: 昇順か降順
+  - name: Snippets
+    title: 一致した箇所
+    container: features/search/types.py
+    usecase: 検索
+    role: DTO
+    summary: 本文の代わりに一致した行の前後だけを返す指定
+    description: '`pydantic.BaseModel`（`extra="forbid"`）。'
+    properties:
+      - name: context_lines
+        title: 前後の行数
+        type: int
+        access: 公開
+        default: '1'
+        description: 一致した行の前後に添える行数（0〜10）
+      - name: max_per_doc
+        title: 1 件の箇所の数
+        type: int
+        access: 公開
+        default: '3'
+        description: 1 つの文書で返す箇所の数（1〜20）
+  - name: SearchRequest
+    title: 検索の要求
+    container: features/search/types.py
+    usecase: 検索
+    role: DTO
+    summary: '`search_docs` の引数'
+    description: '`pydantic.BaseModel`（`extra="forbid"`）。キーの意味と既定値はインターフェース定義『文書の検索』の `request`。`limit` と `max_chars` は丸めるので型だけを確かめる。'
+    properties:
+      - name: source
+        title: 配信元
+        type: str | list[str] | None
+        access: 公開
+        default: None
+        description: '`*` も受ける'
+      - name: ref
+        title: リビジョン
+        type: str | None
+        access: 公開
+        default: None
+        description: 読むリビジョン
+      - name: worktree
+        title: ワークツリー
+        type: str | None
+        access: 公開
+        default: None
+        description: 読むワークツリー
+      - name: filter
+        title: 条件
+        type: Condition | Group | None
+        access: 公開
+        default: None
+        description: 条件の木
+      - name: view
+        title: 返す量
+        type: Literal['ids', 'summary', 'full', 'count']
+        access: 公開
+        default: '"summary"'
+        description: 返す量
+      - name: fields
+        title: 加える項目
+        type: list[str]
+        access: 公開
+        default: '[]'
+        description: 返す項目に加える
+      - name: exclude_fields
+        title: 除く項目
+        type: list[str]
+        access: 公開
+        default: '[]'
+        description: 返す項目から除く
+      - name: order_by
+        title: 並べ替え
+        type: list[OrderKey] | None
+        access: 公開
+        default: None
+        description: 先のキーが優先。`None`（渡していない）は `id` の昇順
+      - name: group_by
+        title: 集計の項目
+        type: str | None
+        access: 公開
+        default: None
+        description: 値ごとの件数を返す
+      - name: limit
+        title: 件数
+        type: int
+        access: 公開
+        default: LIMIT_DEFAULT
+        description: 返す件数
+      - name: cursor
+        title: 続きの位置
+        type: str | None
+        access: 公開
+        default: None
+        description: 前回の `next_cursor`
+      - name: skip
+        title: 飛ばす件数
+        type: int
+        access: 公開
+        default: '0'
+        description: 先頭から飛ばす件数
+      - name: max_chars
+        title: 文字数
+        type: int
+        access: 公開
+        default: MAX_CHARS_DEFAULT
+        description: 結果全体の文字数の上限
+      - name: max_chars_per_field
+        title: 項目の文字数
+        type: int | None
+        access: 公開
+        default: None
+        description: '`None` は `view` で決める（`FIELD_CHARS_DEFAULT`・`FIELD_CHARS_FULL`）'
+      - name: snippets
+        title: 一致した箇所
+        type: Snippets | None
+        access: 公開
+        default: None
+        description: 一致した行の前後だけを返す
+      - name: repeat_seen
+        title: 返し済みも返す
+        type: bool
+        access: 公開
+        default: 'False'
+        description: '`True` で会話の記録の省略をしない'
+      - name: format
+        title: 形式
+        type: Literal['markdown', 'json']
+        access: 公開
+        default: '"markdown"'
+        description: 返す形式
+      - name: cwd
+        title: 作業場所
+        type: str | None
+        access: 公開
+        default: None
+        description: フックが入れる
+      - name: session_id
+        title: セッションの ID
+        type: str | None
+        access: 公開
+        default: None
+        description: フックが入れる
+      - name: agent_id
+        title: エージェントの ID
+        type: str | None
+        access: 公開
+        default: None
+        description: フックが入れる
+  - name: SearchItem
+    title: 検索の結果の文書
+    container: features/search/types.py
+    usecase: 検索
+    role: DTO
+    summary: 返す 1 件の文書の項目
+    description: '`dataclass(frozen=True)`。'
+    properties:
+      - name: id
+        title: 文書の ID
+        type: str
+        access: 公開
+        description: 文書の ID
+      - name: source
+        title: 配信元
+        type: str | None
+        access: 公開
+        description: 複数の配信元を指したときだけ
+      - name: values
+        title: 項目
+        type: dict[str, Any]
+        access: 公開
+        description: 返す項目 → 値（長い文字列は末尾を切って `…（残り {n} 文字）` を付けたもの）。`body` は返し済みなら `SEEN_MARK`
+      - name: snippets
+        title: 一致した箇所
+        type: list[str]
+        access: 公開
+        default: '[]'
+        description: '`snippets` を指定したときだけ'
+  - name: GroupCount
+    title: 集計の行
+    container: features/search/types.py
+    usecase: 検索
+    role: DTO
+    summary: '`group_by` の値ごとの件数'
+    description: '`dataclass(frozen=True)`。'
+    properties:
+      - name: value
+        title: 値
+        type: str
+        access: 公開
+        description: 項目の値。値が無い文書は `（なし）`
+      - name: count
+        title: 件数
+        type: int
+        access: 公開
+        description: その値を持つ文書の数
+  - name: SearchResult
+    title: 検索の結果
+    container: features/search/types.py
+    usecase: 検索
+    role: DTO
+    summary: '`search_docs` が返すもの'
+    description: '`dataclass(frozen=True)`。JSON にするときは `None` と空の項目を落とす。'
+    properties:
+      - name: total_count
+        title: 総件数
+        type: int
+        access: 公開
+        description: 条件に当たった数
+      - name: per_source
+        title: 配信元ごとの件数
+        type: dict[str, int]
+        access: 公開
+        description: 複数の配信元を指したときだけ中身を持つ
+      - name: returned
+        title: 返した件数
+        type: int
+        access: 公開
+        description: '`items` の数'
+      - name: next_cursor
+        title: 続きの位置
+        type: str | None
+        access: 公開
+        description: 続きがあるときだけ
+      - name: truncated
+        title: 打ち切ったか
+        type: bool
+        access: 公開
+        description: '`max_chars` で打ち切ったか'
+      - name: notes
+        title: 知らせ
+        type: list[str]
+        access: 公開
+        description: 丸めた・打ち切った・読めなかったファイル・読み取りの検査の警告と次の手
+      - name: groups
+        title: 集計
+        type: list[GroupCount]
+        access: 公開
+        description: '`group_by` のときだけ。件数の降順・値の昇順'
+      - name: items
+        title: 文書
+        type: list[SearchItem]
+        access: 公開
+        description: '`view: count` では空'
+      - name: view
+        title: 返す量
+        type: str
+        access: 公開
+        description: 描き方を決めるために要求の `view` を持つ
+      - name: source_label
+        title: 配信元の表示
+        type: str
+        access: 公開
+        default: '""'
+        description: Markdown の先頭の行に出す、読んだ配信元の ID（複数なら `,` で繋ぐ）。JSON には出さない
+functions:
+  - name: field_values
+    title: 項目の値
+    kind: 関数
+    container: features/search/fields.py
+    usecase: 検索
+    role: 読み取り
+    summary: 文書から項目の値を引き、比べられる値の並びにする
+    scope: public
+    thread_safe: true
+    args:
+      - name: document
+        title: 文書
+        type: Document
+        required: true
+        passing: positional
+        description: 引く文書
+      - name: field
+        title: 項目
+        type: str
+        required: true
+        passing: positional
+        description: 項目
+    returns:
+      type: list[Any]
+      description: 値の並び。配列の項目は要素、値が無ければ空
+    process: |-
+      1. 項目で引き方を決める
+         - `id`・`kind` の場合、文書の属性
+         - `created`・`updated` の場合、文書の日時（無ければ空）
+         - メタデータのキー（`METADATA_KEYS`）の場合、`document.metadata`
+         - `body` の場合、本文
+         - `*` の場合、`data` の全ての文字列の葉と本文
+         - `@chars` は本文の文字数、`@path` は `document.path`（`records` の行は `{path}#{record_index}`）、`@sections` は Markdown の文書なら本文の見出しの文字列、YAML の文書なら `data` の最上位のキーの並び
+         - それ以外は `data` を項目の取得で引く
+      2. 値が配列なら要素を、`None` なら空、それ以外は 1 要素の並びを返す
+    unit_tests:
+      - name: test_field_values
+        case: 正常
+        summary: 項目の種類ごとの値
+        condition: '`tags: [a, b]`・`data.owner.name: x`・本文 `# 見出し`'
+        mock: なし
+        expected: '`tags` が `[a, b]`、`owner.name` が `[x]`、`@chars` が本文の文字数、`missing` が `[]`'
+  - name: known_fields
+    title: 使える項目
+    kind: 関数
+    container: features/search/fields.py
+    usecase: 検索
+    role: 読み取り
+    summary: 配信元の種類のスキーマから、条件・並べ替え・集計に使える項目の一覧を作る
+    scope: public
+    thread_safe: true
+    args:
+      - name: schemas
+        title: 種類のスキーマ
+        type: Iterable[Mapping[str, Any]]
+        required: true
+        passing: positional
+        description: 読む種類のスキーマ
+    returns:
+      type: dict[str, str]
+      description: 項目のパス → 型（`string`・`number`・`boolean`・`array`・`object`・`date`）
+    process: |-
+      1. `id`・`kind`・`created`・`updated`・`METADATA_KEYS`・`body`・`*`・`COMPUTED_FIELDS` を入れる
+      2. スキーマの `properties` を再帰でたどり、`a.b` のパスと `type`（`format: date`・`date-time` は `date`）を足す。配列の要素の `properties` は `a.b` の形で足す
+      3. 型の食い違う同じパスは `string` にする
+  - name: check_filter
+    title: 条件の確かめ
+    kind: 関数
+    container: features/search/filters.py
+    usecase: 検索
+    role: 検証
+    summary: 条件・並べ替え・集計の項目と値が使えるかを確かめる
+    scope: public
+    thread_safe: true
+    args:
+      - name: request
+        title: 検索の要求
+        type: SearchRequest
+        required: true
+        passing: positional
+        description: 確かめる要求
+      - name: fields
+        title: 使える項目
+        type: Mapping[str, str]
+        required: true
+        passing: positional
+        description: 使える項目の結果
+    returns:
+      type: list[Violation]
+      description: 違反。項目のパスは引数のパス（`filter.and[1].field`）
+    process: |-
+      1. 条件の木をたどり、`field` が `fields` に無い・`exists` 以外で `values` が空・`regex` が正規表現にならない・`gt` などで値が項目の型に合わない（比べる値の解釈）を違反にする。`fix` には近い項目（`difflib.get_close_matches`）か期待する型
+      2. `order_by[].field`・`group_by` が `fields` に無いものを違反にする
+      3. `Group` が `and`・`or` を両方持つ・どちらも持たないものを違反にする
+  - name: parse_compare_value
+    title: 比べる値の解釈
+    kind: 関数
+    container: features/search/filters.py
+    usecase: 検索
+    role: 変換
+    summary: 条件の値を項目の型で解釈する
+    scope: public
+    thread_safe: true
+    args:
+      - name: value
+        title: 値
+        type: str
+        required: true
+        passing: positional
+        description: 条件の値
+      - name: field_type
+        title: 項目の型
+        type: str
+        required: true
+        passing: positional
+        description: 使える項目の型
+      - name: today
+        title: 今日
+        type: date
+        required: true
+        passing: keyword
+        description: '`today`・`-7d` の基準'
+    returns:
+      type: Any
+      description: '`date` は `datetime`（UTC）、`number` は `float`、それ以外は文字列'
+    process: |-
+      1. `date` の場合、`today` は今日の 0 時、`-{n}d`・`+{n}d` は今日から `n` 日、それ以外は `datetime.fromisoformat`（タイムゾーンが無ければ UTC）
+      2. `number` の場合、`float`
+      3. 解釈できない場合、`ValueError` を送る
+    exceptions:
+      - name: ValueError
+        condition: 型に合わない値
+        message: '`{value} を {field_type} として読めません`'
+    unit_tests:
+      - name: test_parse_compare_value
+        case: 正常
+        summary: 日付の相対の値
+        condition: '`today=2026-10-28` で `today`・`-7d`・`2026-10-01`'
+        mock: なし
+        expected: 10-28・10-21・10-01 の 0 時（UTC）
+      - name: test_parse_compare_value_when_invalid
+        case: 異常
+        summary: 読めない値
+        condition: '`("x", "number")`'
+        mock: なし
+        expected: '`ValueError`'
+        exception: 型に合わない値
+  - name: match_filter
+    title: 条件の照合
+    kind: 関数
+    container: features/search/filters.py
+    usecase: 検索
+    role: 判定
+    summary: 文書が条件の木に当たるかを判定する
+    scope: public
+    thread_safe: true
+    args:
+      - name: node
+        title: 条件
+        type: Condition | Group | None
+        required: true
+        passing: positional
+        description: '`None` は全てに当たる'
+      - name: document
+        title: 文書
+        type: Document
+        required: true
+        passing: positional
+        description: 判定する文書
+      - name: fields
+        title: 使える項目
+        type: Mapping[str, str]
+        required: true
+        passing: keyword
+        description: 値を解釈する型
+      - name: today
+        title: 今日
+        type: date
+        required: true
+        passing: keyword
+        description: 日付の相対の値の基準
+    returns:
+      type: bool
+      description: 当たるか
+    process: |-
+      1. `Group` は `all_of` なら全て、`any_of` ならどれかが当たるとき `True`
+      2. `Condition` は項目の値を引き、`values` の各値と比べる（`match` が `any` ならどれか、`all` なら全て）
+         - `exists`・`not_exists` は値の並びが空でないか
+         - `eq`・`ne`・`prefix`・`suffix`・`contains`・`not_contains` は、値の並びのどれかとの文字列の比較（`case_sensitive` が `False` なら両方を NFKC と `casefold`）。`ne`・`not_contains` は値の並びのどれとも当たらないとき `True`
+         - `regex` は `re.search`（`case_sensitive` が `False` なら `re.IGNORECASE` で NFKC の後）
+         - `gt`・`gte`・`lt`・`lte` は比べる値の解釈で型をそろえて比べ、解釈できない文書の値は当たらない
+    unit_tests:
+      - name: test_match_filter
+        case: 正常
+        summary: AND と OR の入れ子
+        condition: '`{and: [{field: tags, op: eq, values: [mcp]}, {or: [{field: name, op: contains, values: [ＭＣＰ]}, {field: updated, op: gte, values: [-7d]}]}]}`'
+        mock: なし
+        expected: '`tags: [mcp]` で `name` が `mcp の決まり` の文書が `True`、`tags: [x]` の文書が `False`'
+      - name: test_match_filter_when_match_all
+        case: 正常
+        summary: 複数の値の AND
+        condition: '`{field: tags, op: eq, values: [a, b], match: all}`'
+        mock: なし
+        expected: '`tags: [a, b, c]` が `True`、`tags: [a]` が `False`'
+      - name: test_match_filter_when_case_sensitive
+        case: 正常
+        summary: 区別する
+        condition: '`{field: name, op: eq, values: [Doc], case_sensitive: true}`'
+        mock: なし
+        expected: '`name: doc` が `False`'
+  - name: match_words
+    title: 語の照合
+    kind: 関数
+    container: features/search/filters.py
+    usecase: 画面
+    role: 判定
+    summary: 空白で区切った語を全て含む文書かを判定する（画面の検索）
+    scope: public
+    thread_safe: true
+    args:
+      - name: document
+        title: 文書
+        type: Document
+        required: true
+        passing: positional
+        description: 判定する文書
+      - name: words
+        title: 語
+        type: Sequence[str]
+        required: true
+        passing: positional
+        description: NFKC と `casefold` をした語
+    returns:
+      type: bool
+      description: 全ての語が `*` の値か ID のどれかに含まれるか
+    process: 1. `*` の値と ID を NFKC と `casefold` をして改行で繋ぎ、全ての語を含むかを返す
+  - name: snippet_lines
+    title: 一致した箇所の抜き出し
+    kind: 関数
+    container: features/search/filters.py
+    usecase: 共通
+    role: 変換
+    summary: 本文から語を含む行と前後の行を抜き出す
+    scope: public
+    thread_safe: true
+    args:
+      - name: text
+        title: 本文
+        type: str
+        required: true
+        passing: positional
+        description: 抜き出す元
+      - name: words
+        title: 語
+        type: Sequence[str]
+        required: true
+        passing: positional
+        description: NFKC と `casefold` をした語
+      - name: context_lines
+        title: 前後の行数
+        type: int
+        required: true
+        passing: keyword
+        description: 添える行数
+      - name: max_count
+        title: 箇所の数
+        type: int
+        required: true
+        passing: keyword
+        description: 返す箇所の上限
+    returns:
+      type: list[str]
+      description: 箇所ごとに前後の行を改行で繋いだもの。重なる箇所は 1 つにまとめる
+    process: |-
+      1. 行ごとに NFKC と `casefold` をして、語のどれかを含む行の番号を集める
+      2. 前後 `context_lines` の範囲を作り、重なる範囲をまとめ、先頭から `max_count` 個を元の行で返す
+    unit_tests:
+      - name: test_snippet_lines
+        case: 正常
+        summary: 前後の行と重なり
+        condition: 10 行のうち 3・4 行目に語、`context_lines=1`、`max_count=3`
+        mock: なし
+        expected: 2〜5 行目の 1 箇所
+  - name: encode_cursor
+    title: 続きの位置を作る
+    kind: 関数
+    container: features/search/cursor.py
+    usecase: 共通
+    role: 変換
+    summary: 次の位置と要求の指紋を `next_cursor` の文字列にする
+    scope: public
+    thread_safe: true
+    args:
+      - name: offset
+        title: 位置
+        type: int
+        required: true
+        passing: positional
+        description: 次に返す文書の、並べ替えた後の位置
+      - name: fingerprint
+        title: 要求の指紋
+        type: str
+        required: true
+        passing: positional
+        description: '`cursor`・`limit`・`max_chars` を除いた要求の値のハッシュ'
+    returns:
+      type: str
+      description: '`{"o": offset, "f": fingerprint}` の JSON を URL セーフの Base64 にしたもの'
+    process: 1. JSON にして Base64 にする
+  - name: decode_cursor
+    title: 続きの位置を読む
+    kind: 関数
+    container: features/search/cursor.py
+    usecase: 共通
+    role: 検証
+    summary: '`cursor` から位置を取り出し、要求が前回と同じかを確かめる'
+    scope: public
+    thread_safe: true
+    args:
+      - name: cursor
+        title: 続きの位置
+        type: str
+        required: true
+        passing: positional
+        description: 前回の `next_cursor`
+      - name: fingerprint
+        title: 要求の指紋
+        type: str
+        required: true
+        passing: positional
+        description: 今回の要求の指紋
+    returns:
+      type: int
+      description: 位置
+    process: |-
+      1. Base64 と JSON を読む。読めない場合、`InvalidArgumentError`（`cursor` を読めません）を送る
+      2. 指紋が違う場合、`InvalidArgumentError`（`cursor` は前回と同じ引数で渡してください）を送る
+    exceptions:
+      - name: InvalidArgumentError
+        condition: 読めない・前回と引数が違う
+        message: '`cursor は前回と同じ引数で渡してください`'
+    unit_tests:
+      - name: test_decode_cursor
+        case: 正常
+        summary: 往復
+        condition: '`encode_cursor(40, "f1")` を `"f1"` で読む'
+        mock: なし
+        expected: '40'
+      - name: test_decode_cursor_when_other_request
+        case: 異常
+        summary: 引数が違う
+        condition: 同じ `cursor` を `"f2"` で読む
+        mock: なし
+        expected: '`InvalidArgumentError` の違反の `path` が `cursor`'
+        exception: 前回と引数が違う
+  - name: search_docs
+    title: 文書の検索
+    kind: 関数
+    container: features/search/service.py
+    usecase: 検索
+    role: サービス
+    summary: '`search_docs` の要求を処理して検索の結果を返す'
+    scope: public
+    thread_safe: true
+    side_effects: 本文を返した文書を会話の記録に残す。読み取りの `validators[]` を動かす
+    args:
+      - name: request
+        title: 検索の要求
+        type: SearchRequest
+        required: true
+        passing: positional
+        description: ツールの引数
+      - name: registry
+        title: 配信元の一覧
+        type: SourceRegistry
+        required: true
+        passing: injected
+        description: 配信中の配信元
+      - name: store
+        title: 文書のストア
+        type: DocumentStore
+        required: true
+        passing: injected
+        description: 文書を読む
+      - name: checker
+        title: 文書の検査
+        type: DocumentChecker
+        required: true
+        passing: injected
+        description: 読み取りの `validators[]`
+      - name: seen
+        title: 会話の記録
+        type: SeenStore
+        required: true
+        passing: injected
+        description: 返し済みの省略と記録
+      - name: today
+        title: 今日
+        type: date | None
+        required: false
+        default: None
+        passing: keyword
+        description: テスト用。`None` は今日（ローカル）
+    returns:
+      type: SearchResult
+      description: 検索の結果
+    process: |-
+      1. 読む場所を解く（読む場所の解決。`source`・`ref`・`worktree`・`cwd`）
+      2. 場所ごとに文書を集める（文書のストア.文書を集める）。`problems` は `notes` に `{path} を読めないので除きました（{detail}）` で足す
+      3. 集めた種類のスキーマで使える項目を作り、条件の確かめをする
+         - 違反がある場合、違反と `describe(source, kind)` でスキーマを見ることを添えた `InvalidArgumentError` を送る
+      4. `limit` が `LIMIT_MAX` を超えれば丸め、`max_chars` が `MAX_CHARS_LIMIT` を超えれば丸めて、それぞれ `notes` で知らせる。`limit` が 1 未満なら `InvalidArgumentError` を送る
+      5. 条件の照合で当たった文書を集め、`total_count` と（複数の配信元なら）`per_source` を数える。読んだ配信元の ID を `,` で繋いで `source_label` にする
+      6. `group_by` がある場合、当たった文書の値ごとの件数を `groups` にする（配列は要素ごとに数え、値が無い文書は `（なし）`）
+      7. `view` が `count` の場合、ここで返す
+      8. `order_by` のキーの順に並べる（`order_by` が `None` なら `id` の昇順。日時の項目の空と値が無い文書は向きによらず末尾。同じ順位は配信元の順・`id` の昇順）。`order_by` が `None` で、`filter` が `id` の `eq` の条件 1 つのときは、その `values` の順に並べる
+      9. 始まりの位置を `skip` と、`cursor` があれば続きの位置を読む（指紋は要求のハッシュ）の和にし、`limit` 件を取り出す
+      10. 文書ごとに返す項目を作る
+          - `ids` は `id`、`summary` は `id` と `SUMMARY_FIELDS`、`full` はさらに `body` と全てのメタデータ。`fields` を足し `exclude_fields` を除く
+          - 本文を返す場合、`repeat_seen` が `False` なら会話の記録.返し済みに当たる文書の `body` を `SEEN_MARK` にする
+          - `snippets` がある場合、条件の `body`・`*` の値で一致した箇所の抜き出しをし、`body` を返さない
+          - 文字列の値が項目の文字数を超えたら切る
+      11. 返した文書を順に読み取りの検査（文書の検査.検査する、`on="read"`）にかけ、違反を `{id}: {rule}（{path}）` で `notes` に足す
+      12. 文書を足すごとに結果の文字数を数え、`max_chars` を超える文書の手前で止める。止めたら `truncated` を `True` にし、`notes` に打ち切ったことと、`cursor` で続きを取るか `fields` を絞るか `view: ids` で取り直すことを足す
+      13. 返していない文書が残れば、続きの位置を作る（`next_cursor`）
+      14. 本文を返した文書（`SEEN_MARK` にしたものを除く）を会話の記録に `body` で残す（会話キーは `session_id`・`agent_id`）
+      15. 検索の結果を返す
+    exceptions:
+      - name: SourceNotReadableError
+        condition: 読む場所の解決が送る
+        message: '`{id} はこの作業場所（{cwd}）から読めません`'
+      - name: SourceNotServedError
+        condition: 読む場所の解決が送る
+        message: '`{id} は配信していません`'
+      - name: WorktreeNotMatchedError
+        condition: 読む場所の解決が送る
+        message: '`{worktree} は {id} のワークツリーに当たりません`'
+      - name: RefNotFoundError
+        condition: 文書のストアが送る
+        message: '`ref {value} を解決できません`'
+      - name: InvalidArgumentError
+        condition: 知らない項目・型の合わない値・読めない `cursor`・`limit` が 1 未満
+        message: '`引数が正しくありません: {違反の数} 件`'
+    unit_tests:
+      - name: test_search_docs
+        case: 正常
+        summary: 作業中の配信元の一覧
+        condition: '`cwd` が sample のクローンで、引数なし'
+        mock: なし（一時フォルダの配信元）
+        expected: '`total_count` が 2、`items` の `values` が `SUMMARY_FIELDS`、`id` の昇順'
+      - name: test_search_docs_when_full_and_seen
+        case: 正常
+        summary: 本文と返し済み
+        condition: '`view: full`・`session_id` ありで 2 回、3 回目は `repeat_seen: true`'
+        mock: なし
+        expected: 1 回目と 3 回目は本文、2 回目は `SEEN_MARK`
+      - name: test_search_docs_when_count_grouped
+        case: 正常
+        summary: 件数と集計
+        condition: '`view: count`・`group_by: tags`（`[a, b]`・`[a]`・無し）'
+        mock: なし
+        expected: '`items` が空、`groups` が `a: 2`・`b: 1`・`（なし）: 1`'
+      - name: test_search_docs_when_limited
+        case: 正常
+        summary: 上限と打ち切りと続き
+        condition: '`limit: 150` と、本文が 9,000 文字の文書 5 件を `view: full`・`max_chars: 20000`'
+        mock: なし
+        expected: '`notes` に 100 に丸めたこと、`returned` が 2、`truncated` が `True`、`next_cursor` で残りの 3 件のうち 2 件が返る'
+      - name: test_search_docs_when_order_by_dates
+        case: 正常
+        summary: 日時の空は末尾
+        condition: '`order_by: [{field: updated, direction: desc}]` で `updated` が無い文書を含む'
+        mock: なし
+        expected: 日時の降順の後ろに `updated` の無い文書
+      - name: test_search_docs_when_unreadable_file
+        case: 正常
+        summary: 読めないファイル
+        condition: 壊れた YAML を 1 つ含む配信元
+        mock: なし
+        expected: 残りの文書を返し、`notes` に壊れたファイルのパス
+      - name: test_search_docs_when_read_validator
+        case: 正常
+        summary: 読み取りの検査の警告
+        condition: '`on: [read]` の検査が違反を 1 件出す'
+        mock: なし
+        expected: 文書を返し、`notes` に違反
+      - name: test_search_docs_when_unknown_field
+        case: 異常
+        summary: 知らない項目
+        condition: '`{field: nmae, op: eq, values: [x]}`'
+        mock: なし
+        expected: '`InvalidArgumentError` の違反の `path` が `filter.field`、`fix` に `name`'
+        exception: 知らない項目
+      - name: test_search_docs_when_sources_all
+        case: 正常
+        summary: 全ての配信元
+        condition: '`source: "*"` で、sample と notes は読め、other は読めない'
+        mock: なし
+        expected: '`per_source` が sample と notes だけで、`items` に `source` がある'
+      - name: test_search_docs_when_id_values
+        case: 正常
+        summary: '`id` の `eq` の `values` の順'
+        condition: '`order_by` なしで `filter: {field: id, op: eq, values: [b, a]}`'
+        mock: なし
+        expected: '`items` の `id` が `b`・`a` の順'
+      - name: test_search_docs_when_id_values_and_order_by
+        case: 正常
+        summary: '`order_by` を明示した `id` の `eq`'
+        condition: '`order_by: [{field: id}]` と `filter: {field: id, op: eq, values: [b, a]}`'
+        mock: なし
+        expected: '`items` の `id` が `a`・`b` の順'
+  - name: render_search_markdown
+    title: 検索の結果の Markdown
+    kind: 関数
+    container: features/search/render.py
+    usecase: 検索
+    role: 変換
+    summary: '`format: markdown` の本文を作る'
+    scope: public
+    thread_safe: true
+    args:
+      - name: result
+        title: 検索の結果
+        type: SearchResult
+        required: true
+        passing: positional
+        description: 描く結果
+      - name: source_label
+        title: 配信元の表示
+        type: str
+        required: true
+        passing: keyword
+        description: 先頭の行に出す配信元の ID（複数なら `,` で繋ぐ）
+    returns:
+      type: str
+      description: Markdown
+    process: |-
+      1. 先頭の行に `{配信元}: 該当 {total_count} 件・返した {returned} 件` を置く（複数の配信元は配信元ごとの件数も添える）
+      2. `groups` があれば `| 値 | 件数 |` の表を置く
+      3. `view` が `full` の場合、文書ごとに `<document>` と `</document>` で包み、中に項目の箇条書きと本文（YAML の文書は YAML、Markdown の文書は Markdown のまま）を置く。それ以外は項目を列にした表にする（列名は項目の名前。`@chars` は `chars`）
+      4. `notes` があれば末尾に `> ` の行で並べ、`next_cursor` があれば `続き: cursor={next_cursor}` を置く
+    unit_tests:
+      - name: test_render_search_markdown
+        case: 正常
+        summary: 一覧の表
+        condition: '`view: summary` の 2 件'
+        mock: なし
+        expected: '`sample: 該当 2 件・返した 2 件` の行と、`| id | kind | name | description | chars | version |` の表'
+refs:
+  - dev/設計書/インターフェース定義/開発ドキュメントサーバー/文書の検索#
+test_files:
+  - tests/unit/dev_docs/features/search/test_fields.py
+  - tests/unit/dev_docs/features/search/test_filters.py
+  - tests/unit/dev_docs/features/search/test_cursor.py
+  - tests/unit/dev_docs/features/search/test_render.py
+  - tests/unit/dev_docs/features/search/test_service.py

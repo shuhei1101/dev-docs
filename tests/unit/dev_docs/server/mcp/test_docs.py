@@ -1,0 +1,80 @@
+from __future__ import annotations
+
+import asyncio
+from collections.abc import Callable
+from typing import Any
+
+import pytest
+from mcp.types import CallToolResult, TextContent
+
+from dev_docs.features.search.types import SearchRequest, SearchResult
+from dev_docs.server.mcp import docs as docs_module
+from dev_docs.server.mcp.docs import build_docs_mcp
+from dev_docs.shared.errors import UnknownKindError
+
+TOOL_NAMES = {
+    "search_docs",
+    "write_docs",
+    "delete_docs",
+    "describe",
+    "list_changes",
+    "trace_related",
+}
+
+
+def test_build_docs_mcp(make_handlers: Callable[..., Any]) -> None:
+    """ツールと注釈（正常系）。"""
+    # 準備
+    mcp = build_docs_mcp(make_handlers())
+    # 実行
+    tools = asyncio.run(mcp.list_tools())
+    # 検証
+    by_name = {tool.name: tool for tool in tools}
+    assert set(by_name) == TOOL_NAMES
+    assert by_name["delete_docs"].annotations is not None
+    assert by_name["delete_docs"].annotations.destructive_hint is True
+    assert by_name["search_docs"].annotations is not None
+    assert by_name["search_docs"].annotations.read_only_hint is True
+
+
+def test_build_docs_mcp_when_call(
+    make_handlers: Callable[..., Any], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """サービスへの受け渡し（正常系）。"""
+    # 準備
+    received: list[SearchRequest] = []
+
+    def fake_search_docs(request: SearchRequest, **kwargs: Any) -> SearchResult:
+        received.append(request)
+        return SearchResult(total_count=0, returned=0, view="summary")
+
+    monkeypatch.setattr(docs_module, "search_docs", fake_search_docs)
+    mcp = build_docs_mcp(make_handlers())
+    # 実行
+    result = asyncio.run(mcp.call_tool("search_docs", {"source": "sample", "format": "json"}))
+    # 検証
+    assert isinstance(result, CallToolResult)
+    assert received[0].source == "sample"
+    assert result.is_error is False
+    assert result.structured_content is not None
+
+
+def test_build_docs_mcp_when_error(
+    make_handlers: Callable[..., Any], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """エラーの変換（正常系）。"""
+
+    # 準備
+    def failing_write_docs(*args: Any, **kwargs: Any) -> Any:
+        raise UnknownKindError(message="種類がありません", kinds=["rules"])
+
+    monkeypatch.setattr(docs_module, "write_docs", failing_write_docs)
+    mcp = build_docs_mcp(make_handlers())
+    arguments = {"operations": [{"op": "create", "kind": "x", "data": {}}]}
+    # 実行
+    result = asyncio.run(mcp.call_tool("write_docs", arguments))
+    # 検証
+    assert isinstance(result, CallToolResult)
+    assert result.is_error is True
+    assert isinstance(result.content[0], TextContent)
+    assert "UnknownKindError" in result.content[0].text

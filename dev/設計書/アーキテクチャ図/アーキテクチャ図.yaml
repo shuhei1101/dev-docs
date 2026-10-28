@@ -71,11 +71,11 @@ repository:
 subsystems:
   - name: 開発ドキュメントサーバー
     scope: server
-    role: 端末の設定に並べたプロジェクトを 1 プロセス・1 ポートで配り、YAML の文書を画面・文書の MCP・管理の MCP で出す
+    role: 端末の設定に並べた配信元を 1 プロセス・1 ポートで配り、YAML の文書を画面の API・文書の MCP・管理の MCP で出す
     runtime: Python 3.14
     runs_on: 利用者の端末（`127.0.0.1`）
     implementation: src/dev_docs/__main__.py
-    status: planned
+    status: implemented
   - name: 管理用プラグイン
     scope: plugin
     role: SessionStart のフックで落ちているサーバーを起動し、管理の MCP の接続先を Claude Code に渡す
@@ -86,7 +86,7 @@ subsystems:
 lead: dev-docs のサブシステムと、境界を越えて通信する外部システム。
 external_systems:
   - name: Claude Code
-    purpose: 文書の MCP（`/{name}/mcp`）と管理の MCP（`/_admin/mcp`）の要求を受ける
+    purpose: 文書の MCP（`/mcp`）と管理の MCP（`/_admin/mcp`）の要求を受ける
     direction: 受信のみ
     protocol: MCP（Streamable HTTP）
     status: planned
@@ -105,4 +105,4 @@ external_systems:
     protocol: CLI（子プロセス。標準入力に YAML、標準出力に Markdown）
     status: planned
     notes:
-      事前確認: '要否: 要。時点: 起動時・再読込時と管理の MCP の `check_project` で実行できるかを確かめ、失敗したプロジェクトは配信しない'
+      事前確認: '要否: 要。時点: 起動時・再読込時と管理の MCP の `check_project` で実行できるかを確かめ、失敗した配信元は配信しない'
