@@ -7,9 +7,9 @@ import pytest
 
 from dev_docs.features.documents.types import Document
 from dev_docs.features.search.filters import (
+    compile_regex,
     match_filter,
     parse_compare_value,
-    snippet_lines,
 )
 from dev_docs.features.search.types import Condition, Group
 
@@ -93,24 +93,27 @@ def test_match_filter_when_case_sensitive(make_document: Callable[..., Document]
     assert result is False
 
 
-def test_snippet_lines() -> None:
-    """前後の行と重なり（正常系）。"""
+def test_match_filter_when_regex_lines(make_document: Callable[..., Document]) -> None:
+    """正規表現は各行に当たる（正常系）。"""
     # 準備
-    text = "\n".join(
-        [
-            "line1",
-            "line2",
-            "line3 foo",
-            "line4 foo",
-            "line5",
-            "line6",
-            "line7",
-            "line8",
-            "line9",
-            "line10",
-        ]
-    )
+    line_head = Condition(field="body", op="regex", values=["^## "])
+    text_head = Condition(field="body", op="regex", values=["\\A## "])
+    document = make_document(body="# x\n## y")
     # 実行
-    result = snippet_lines(text, ["foo"], context_lines=1, max_count=3)
+    line_head_result = match_filter(line_head, document, fields=FIELDS, today=TODAY)
+    text_head_result = match_filter(text_head, document, fields=FIELDS, today=TODAY)
     # 検証
-    assert result == ["line2\nline3 foo\nline4 foo\nline5"]
+    assert line_head_result is True
+    assert text_head_result is False
+
+
+def test_compile_regex() -> None:
+    """各行と大文字小文字（正常系）。"""
+    # 準備
+    text = "a\nb"
+    # 実行
+    insensitive = compile_regex("^b", case_sensitive=False).search(text)
+    sensitive = compile_regex("^B", case_sensitive=True).search(text)
+    # 検証
+    assert insensitive is not None
+    assert sensitive is None
