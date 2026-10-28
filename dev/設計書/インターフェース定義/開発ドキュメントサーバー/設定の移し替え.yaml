@@ -7,7 +7,7 @@ flows:
     summary: 古い端末の設定に手順を当て、バックアップを残して `version` を上げる
     setup:
       - name: Mock
-        description: なし（一時フォルダの端末の設定を `DEV_DOCS_CONFIG` で指し、子プロセスとして実行する）
+        description: 手順の置き場所をテスト用のフォルダに、`SETTINGS_VERSION`・`SOURCE_CONFIG_VERSION` を `2` に monkeypatch で差し替え、`main(["migrate", ...])` を同じプロセスで呼ぶ。端末の設定は一時フォルダに置き `DEV_DOCS_CONFIG` で指す
       - name: 移し替えの手順
         description: テスト用の手順のフォルダに、`version` 1 → 2 でキーを改名する手順を 1 つ置く
       - name: 端末の設定
@@ -37,7 +37,7 @@ flows:
     summary: '`--record` で手順を当てずに `version` だけを書き換える'
     setup:
       - name: Mock
-        description: なし
+        description: 正常系と同じ差し替え
       - name: 端末の設定
         description: 正常系と同じ
     flow: |-
@@ -58,7 +58,7 @@ flows:
     summary: '`--source` で配信元の `dev-docs.yaml` に手順を当てる'
     setup:
       - name: Mock
-        description: なし
+        description: 正常系と同じ差し替え
       - name: 配信元
         description: '`version: "1"` の `dev-docs.yaml` を持つ sample と、配信元の設定の 1 → 2 の手順'
     flow: |-
@@ -80,7 +80,7 @@ flows:
     summary: '`version` の無い設定は移し替えずに終了コード 2 で止める'
     setup:
       - name: Mock
-        description: なし
+        description: 正常系と同じ差し替え
       - name: 端末の設定
         description: '`version` のキーを持たない'
     flow: |-
@@ -100,7 +100,7 @@ flows:
     summary: 当てた結果が新しいスキーマに違反すると、バックアップから戻して終了コード 4 で止める
     setup:
       - name: Mock
-        description: なし
+        description: 正常系と同じ差し替え
       - name: 移し替えの手順
         description: 必須のキーを消す誤った手順（破壊的でないと宣言する）
     flow: |-
@@ -124,7 +124,7 @@ flows:
     summary: 破壊的な手順を `--allow-destructive` なしで当てようとすると、触らずに終了コード 5 で止める
     setup:
       - name: Mock
-        description: なし
+        description: 正常系と同じ差し替え
       - name: 移し替えの手順
         description: キーを削除する破壊的な手順
     flow: |-
@@ -145,7 +145,7 @@ flows:
     summary: dev-docs より新しい `version` の設定は移し替えずに終了コード 6 で止める
     setup:
       - name: Mock
-        description: なし
+        description: 正常系と同じ差し替え
       - name: 端末の設定
         description: '`version: "99"`'
     flow: |-
@@ -206,7 +206,7 @@ response:
     description: '`--plan` は当てる手順を 1 行ずつ（`{バージョン}: {手順の説明}`。破壊的な手順には `[destructive]`）。適用は当てた手順とバックアップのパス'
   - name: 終了コード
     type: int
-    description: 0 正常（当てる手順が無いときも 0）・2 設定の違反・4 失敗してバックアップから戻した・5 破壊的な手順で止めた・6 設定のバージョンが dev-docs より新しい
+    description: 0 正常（当てる手順が無いときも 0）・2 設定の違反・4 失敗して書き換えなかった・5 破壊的な手順で止めた・6 設定のバージョンが dev-docs より新しい
     notes: 2 は `dev-docs serve` の EXIT_CONFIG_INVALID と同じ値。3 は `serve` のポートが使用中に使っているため使わない
 exceptions:
   - name: なし（正常終了）
@@ -215,7 +215,7 @@ exceptions:
     condition: 対象の設定が無い・YAML として読めない・`version` が無い（終了コード 2）
   - name: MigrationFailed
     condition: 手順の途中で失敗した、または当てた結果が新しいバージョンのスキーマに違反した（終了コード 4）
-    notes: バックアップから戻し、失敗した手順と理由を stderr に出す
+    notes: 全ての手順を当てて新しいスキーマで検証してから書き込むため、ファイルには触らない。失敗した手順と理由を stderr に出す
   - name: DestructiveStepBlocked
     condition: 当てる手順に破壊的なものがあり、`--allow-destructive` が無い（終了コード 5）
     notes: ファイルに触らず、破壊的な手順を stderr に出す
@@ -224,7 +224,7 @@ exceptions:
     notes: dev-docs の更新を案内する
 constraints:
   - item: 手順の置き場所
-    constraint: 未確定（モジュール構成設計で決める。推奨は `src/dev_docs/migrations/{バージョン}/steps.yaml`）
+    constraint: '`src/dev_docs/migrations/{settings|dev-docs}/{バージョン}/steps.yaml`。パッケージに同梱し、`importlib.resources` で読む'
   - item: 当てる順
     constraint: 対象の `version` より新しく、dev-docs が読めるバージョン以下の手順を古い順に全て当てる。途中で止めず、全て当ててから 1 回だけ書き込む
   - item: バックアップ
