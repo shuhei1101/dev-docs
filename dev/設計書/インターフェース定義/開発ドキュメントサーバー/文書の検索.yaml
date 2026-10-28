@@ -616,7 +616,7 @@ constraints:
   - item: タイムアウト
     constraint: 制限なし
   - item: 範囲の決め方
-    constraint: '本文を切らずに返したら `full`。`max_chars_per_field` で切った本文・`snippets`・`body_file` の無い `records` の要素（本文が管理用の YAML の 1 要素）は `section`。本文を返さない `view: summary`（`exclude_fields` で `body` を除いたときを含む）は `summary`'
+    constraint: '本文を切らずに返したら `full`。`max_chars_per_field` で切った本文・`snippets`・`body_file` の無い `records` の要素（本文が管理用の YAML の 1 要素）は `section`。本文を返さない呼び出し（`view: summary`、`exclude_fields` で `body` を除いた `view: full`）は `summary`'
     notes: rule-inject は `full` だけを既読にする（D-125）
   - item: 名前の既定
     constraint: メタデータの `name` が空なら、ファイル名から拡張子を除いた名前にする。`records` の要素は `body_file` が指すファイルの名前、`body_file` が無ければ文書の `id`
