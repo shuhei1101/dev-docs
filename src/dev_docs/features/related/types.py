@@ -53,6 +53,9 @@ class RelatedItem:
     via_direction: Literal["out", "in"]
     name: str
     description: str
+    # 文書の場所と返した範囲。`ref` を渡した呼び出し・返し済みの相手・読めない配信元の文書では `None`
+    path: str | None = None
+    scope: Literal["summary"] | None = None
 
 
 @dataclass(frozen=True)

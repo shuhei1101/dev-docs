@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import logging
 import socket
 from collections.abc import Callable, Iterator
 from contextlib import closing, contextmanager
@@ -10,8 +11,13 @@ from typing import Any
 import pytest
 import uvicorn
 
+from dev_docs.features.convert.service import ConvertService
+from dev_docs.features.documents.store import DocumentStore
+from dev_docs.features.history.snapshot import SnapshotStore
 from dev_docs.features.settings.types import SourceEntry, TerminalConfig
+from dev_docs.features.sources.registry import SourceRegistry
 from dev_docs.features.sources.types import SourceStatus
+from dev_docs.features.validation.service import DocumentChecker
 from dev_docs.main import PortInUseError, build_handlers, check_port, reload_sources, run_serve
 
 
@@ -161,6 +167,61 @@ def test_build_handlers(
     assert len(handlers.registry.statuses()) == 2
 
 
+SYNC_SCHEMA = "title: rule\ntype: object\nproperties:\n  id: {type: string}\nrequired: [id]\n"
+SYNC_RULES_CONFIG = (
+    "name: {name}\n"
+    "documents:\n"
+    "  - id: rules\n"
+    "    type: yaml\n"
+    "    paths: [docs/rule/*.yaml]\n"
+    "    schema: schemas/rule.schema.yaml\n"
+    "    metadata:\n"
+    "      name: {{type: ref, field: title}}\n"
+)
+SYNC_SRC_CONFIG = (
+    "  - id: src\n"
+    "    type: yaml\n"
+    "    paths: [src/files.yaml]\n"
+    "    schema: schemas/rule.schema.yaml\n"
+    "    records: files\n"
+    "    body_file: path\n"
+)
+
+
+def _warnings(caplog: pytest.LogCaptureFixture) -> list[str]:
+    """記録した警告のログの本文を返す。"""
+    return [record.getMessage() for record in caplog.records if record.levelno == logging.WARNING]
+
+
+def test_build_handlers_when_out_of_sync(
+    tmp_path: Path,
+    write_files: Callable[[Path, dict[str, str]], None],
+    make_terminal_config: Callable[..., TerminalConfig],
+    make_entry: Callable[..., SourceEntry],
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """初回の読み込みでもずれを警告のログに書く（正常系）。"""
+    # 準備
+    write_files(
+        tmp_path / "ws",
+        {
+            "dev-docs.yaml": SYNC_RULES_CONFIG.format(name="sample"),
+            "schemas/rule.schema.yaml": SYNC_SCHEMA,
+            "docs/rule/doc-1.yaml": "id: doc-1\ntitle: 文書 1\n",
+            "docs/rule/doc-2.yaml": "id: doc-2\n",
+        },
+    )
+    terminal = make_terminal_config(sources=[make_entry(str(tmp_path / "ws" / "dev-docs.yaml"))])
+    # 実行
+    with caplog.at_level(logging.WARNING):
+        handlers = build_handlers(terminal)
+    # 検証
+    warnings = [message for message in _warnings(caplog) if "sample" in message]
+    assert len(warnings) == 1
+    assert "name（title）" in warnings[0]
+    assert len(handlers.registry.served()) == 1
+
+
 class _Recorder:
     """呼ばれた順を共有の記録へ残す部品の偽物。"""
 
@@ -174,6 +235,9 @@ class _Recorder:
     def reload(self, terminal: TerminalConfig) -> list[SourceStatus]:
         self._calls.append(f"{self._name}.reload")
         return self._statuses
+
+    def served(self) -> list[object]:
+        return []
 
     def clear(self) -> None:
         self._calls.append(f"{self._name}.clear")
@@ -200,3 +264,64 @@ def test_reload_sources(
     assert calls[0] == "registry.reload"
     assert sorted(calls[1:]) == ["checker.clear", "converter.clear", "store.clear"]
     assert result == statuses
+
+
+def test_reload_sources_when_out_of_sync(
+    tmp_path: Path,
+    write_files: Callable[[Path, dict[str, str]], None],
+    make_terminal_config: Callable[..., TerminalConfig],
+    make_entry: Callable[..., SourceEntry],
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """メタデータのずれを警告のログに書く（正常系）。"""
+    # 準備
+    write_files(
+        tmp_path / "sample",
+        {
+            "dev-docs.yaml": SYNC_RULES_CONFIG.format(name="sample") + SYNC_SRC_CONFIG,
+            "schemas/rule.schema.yaml": SYNC_SCHEMA,
+            "docs/rule/doc-1.yaml": "id: doc-1\ntitle: 文書 1\n",
+            "docs/rule/doc-2.yaml": "id: doc-2\n",
+            "src/files.yaml": "files:\n  - path: a.py\n  - path: c.py\n",
+            "src/a.py": "a = 1\n",
+            "src/d.py": "d = 4\n",
+            "src/sub/e.py": "e = 5\n",
+        },
+    )
+    write_files(
+        tmp_path / "clean",
+        {
+            "dev-docs.yaml": SYNC_RULES_CONFIG.format(name="clean"),
+            "schemas/rule.schema.yaml": SYNC_SCHEMA,
+            "docs/rule/doc-1.yaml": "id: doc-1\ntitle: 文書 1\n",
+        },
+    )
+    terminal = make_terminal_config(
+        sources=[
+            make_entry(str(tmp_path / "sample" / "dev-docs.yaml")),
+            make_entry(str(tmp_path / "clean" / "dev-docs.yaml")),
+        ]
+    )
+    snapshots = SnapshotStore(tmp_path / "snapshots")
+    store = DocumentStore(snapshots)
+    # 実行
+    with caplog.at_level(logging.WARNING):
+        statuses = reload_sources(
+            terminal,
+            registry=SourceRegistry(),
+            store=store,
+            checker=DocumentChecker(store, timeout_sec=10),
+            converter=ConvertService(tmp_path / "converted", store, 10),
+        )
+    # 検証
+    warnings = _warnings(caplog)
+    sample = [message for message in warnings if "sample" in message]
+    assert len(sample) == 3
+    assert any("name（title）" in message and "1" in message for message in sample)
+    assert any(
+        "src: src/d.py" in message and "src: src/sub/e.py" in message and "2" in message
+        for message in sample
+    )
+    assert any("c.py" in message and "1" in message for message in sample)
+    assert [message for message in warnings if "clean" in message] == []
+    assert [status.status for status in statuses] == ["serving", "serving"]

@@ -51,8 +51,12 @@ flows:
         T-->>C: <document> で包んだ 2 件の YAML
       ```
     expected:
-      - 文書 2・文書 1 の順に、それぞれの YAML が `<document>` で包まれて返る
-      - '`format: json` では文書のオブジェクトの配列を structuredContent と text の両方に入れる'
+      - 文書 2・文書 1 の順に、それぞれの YAML が `<document path="{sample のクローン本体}/{文書のパス}" scope="full">` で包まれて返る
+      - '`format: json` では文書のオブジェクトの配列を structuredContent と text の両方に入れ、各項目の直下（`values` の外）に `path`（文書の絶対パス）と `scope: full` がある'
+      - '`max_chars_per_field: 10` で本文を切ると `scope` が `section` になる'
+      - '`snippets` を渡すと `scope` が `section` になる'
+      - '`view: summary` の `format: json` では各項目の `scope` が `summary` になる'
+      - '`ref` に HEAD の commit を渡すと、`<document>` に属性が無く、json の項目に `path`・`scope` が無い'
     test: test_normal_when_full
   - name: 正常系（件数と集計）
     summary: '`view: count` と `group_by` で件数と値ごとの件数だけを返す'
@@ -154,6 +158,7 @@ flows:
     expected:
       - どちらの呼び出しもワークツリーの文書 1 の `name` を返す
       - '`cwd` がクローン本体で `worktree` を省くと、クローン本体の文書 1 を返す'
+      - 'ワークツリーの文書 1 の `view: full` は、`path` がワークツリー x の中の絶対パスになる'
     test: test_normal_when_worktree
   - name: 正常系（返し済みの本文）
     summary: 同じ会話で同じバージョンの本文を 2 回目は省く
@@ -179,7 +184,7 @@ flows:
         T-->>C: 文書 1 の本文
       ```
     expected:
-      - 2 回目の本文が `（この会話で返し済み）` だけになる
+      - 2 回目の本文が `（この会話で返し済み）` だけになり、`<document>` に属性が無く、json の項目に `path`・`scope` が無い
       - 3 回目は本文を返す
       - '`session_id: s2` の呼び出しは本文を返す'
       - 文書 1 のファイルが変わった後の呼び出しは、`s1` でも本文を返す
@@ -312,6 +317,35 @@ flows:
       - '`isError: true` で、`ref` の `no-such-branch` を解決できなかったことを返す'
       - Git 管理外の配信元に `ref` を渡すと、`ref` を使えないことを返す
     test: test_error_when_ref_not_found
+  - name: 正常系（管理用の YAML の文書）
+    summary: 管理用の YAML の各行を文書にし、名前の既定と `body_file` のファイルの場所を返す
+    setup:
+      - name: Mock
+        description: なし
+      - name: 管理用の YAML
+        description: 'sample の `src/files.yaml`。`files[]` に `a.py`（`tags: [auth]`、`name` なし）と `b.py`（`name: 部品 B`）の 2 行。`src/a.py`・`src/b.py` を置く'
+        notes: '行 `src` は `records: files`・`body_file: path`、`defaults[]` に `{paths: [src/**], tags: [code]}`'
+      - name: 名前の無い文書
+        description: sample の文書 2 から `name` を除く
+      - name: 入力
+        description: '`filter` は `id` が `src/a`、`view: full`、`format: json`。2 回目は `view: summary` で全件'
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        participant C as クライアント
+        participant T as search_docs
+        participant ST as 配信元のファイル
+
+        C->>T: filter（id が src/a）, view: full, format: json
+        T-->>ST: src/files.yaml を読み、files の各行の body_file を読む
+        T->>T: defaults と行のメタデータを重ね、name が空なら body_file のファイル名にする
+        T-->>C: src/a.py の本文と、path・scope を持つ項目
+      ```
+    expected:
+      - 項目の `values.name` が `a`、`values.tags` が `code` と `auth`、`values.path` が `a.py` になる
+      - 項目の直下の `path` が `{sample のクローン本体}/src/a.py`、`scope` が `full` になる
+      - 2 回目の `b` の `name` が `部品 B`、文書 2 の `name` が文書 2 のファイル名から拡張子を除いた名前になる
+    test: test_normal_when_files_index
 lead: '条件に当たる文書を、指定した項目・量・順で返す。ID で絞れば取得、`view: summary` で一覧、`view: count` で件数、`group_by` で集計になる。'
 identifier: search_docs
 permissions: 対象の配信元の `scope.read` か `scope.write` に `cwd` が当たること
@@ -531,6 +565,14 @@ response:
     type: str
     description: 本文。YAML の文書は YAML、Markdown の文書は Markdown
     notes: 返し済みなら `（この会話で返し済み）`
+  - name: items[].path
+    type: str
+    description: 文書の場所。配信元（ワークツリーを指したときはワークツリー）の直下と文書のパスを結んだ絶対パス。`body_file` のある `records` の要素は指したファイル
+    notes: '`values` の外に置く（メタデータのキー `path` と別）。`view: ids`・`count`、`ref` を渡した呼び出し、返し済みの文書では持たない'
+  - name: items[].scope
+    type: Literal['full', 'section', 'summary']
+    description: 返した範囲。`full` は本文を切らずに返した、`section` は本文の一部を返した、`summary` は本文を返さなかった
+    notes: 決め方は制約の「範囲の決め方」。`items[].path` と同じ条件で持たない
 response_example: |-
   ```markdown
   sample: 該当 2 件・返した 2 件
@@ -540,7 +582,10 @@ response_example: |-
   | doc-1 | sample | 文書 1 | 1 件目 | 320 | 9d0e11 |
   | doc-2 | sample | 文書 2 | 2 件目 | 410 | c1aa02 |
   ```
-response_notes: '`format: markdown` のときは structuredContent を返さない。`format: json` のときは structuredContent と text に同じ JSON を入れる。'
+response_notes: '`format: markdown` のときは structuredContent を返さない。`format: json` のときは structuredContent と text に同じ JSON を入れる。
+
+
+  `format: markdown` の `view: full` は文書ごとに `<document path="{items[].path}" scope="{items[].scope}">` で包む（shuhei1101/rule-inject#46 の書式）。`path` を持たない文書は属性の無い `<document>` で包む。'
 exceptions:
   - name: なし（正常終了）
     condition: 検索できた（読めなかったファイルがあっても `notes` で知らせて正常終了）
@@ -570,6 +615,12 @@ constraints:
     constraint: ファイルの更新日時か大きさが変わった文書は、次の呼び出しで読み直す
   - item: タイムアウト
     constraint: 制限なし
+  - item: 範囲の決め方
+    constraint: '本文を切らずに返したら `full`。`max_chars_per_field` で切った本文・`snippets`・`body_file` の無い `records` の要素（本文が管理用の YAML の 1 要素）は `section`。本文を返さない呼び出し（`view: summary`、`exclude_fields` で `body` を除いた `view: full`）は `summary`'
+    notes: rule-inject は `full` だけを既読にする（D-125）
+  - item: 名前の既定
+    constraint: メタデータの `name` が空なら、ファイル名から拡張子を除いた名前にする。`records` の要素は `body_file` が指すファイルの名前、`body_file` が無ければ文書の `id`
+    notes: '`defaults[]` と行の `metadata` を重ねた後に当てる'
 refs:
   - dev/設計書/シナリオ/単一ユースケース/エージェントが調べる#scenarios[正常シナリオ]
   - dev/設計書/シナリオ/単一ユースケース/YAMLを直接編集した#scenarios[正常シナリオ]

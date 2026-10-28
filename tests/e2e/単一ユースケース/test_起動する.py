@@ -5,6 +5,7 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
+FILES_SCHEMA = Path(__file__).parents[3] / "templates" / "files.schema.yaml"
 BROKEN_CONFIG = "name: broken\ndocuments:\n  - id: sample\n    type: yaml\n"
 TOOL_NAMES = [
     "delete_docs",
@@ -125,6 +126,62 @@ def test_normal_when_config_version_old(
     ]
     assert response.status_code == 200
     assert any("0" in line and "1" in line for line in warnings)
+
+
+def test_normal_when_metadata_out_of_sync(
+    make_source: Callable[..., Any],
+    serve: Callable[..., Any],
+    sample_file_set: Callable[..., dict[str, str]],
+    sample_config_text: Callable[..., str],
+) -> None:
+    """文書のメタデータと管理用の YAML がずれていても配信し、件数を警告のログに残す（正常系）。"""
+    # 準備
+    rows = (
+        "    metadata:\n"
+        "      name: {type: ref, field: title}\n"
+        "  - id: src\n"
+        "    type: yaml\n"
+        "    paths: [src/files.yaml]\n"
+        "    schema: schemas/files.schema.yaml\n"
+        "    records: files\n"
+        "    body_file: path\n"
+    )
+    files = sample_file_set(
+        **{
+            "dev-docs.yaml": sample_config_text(rows),
+            "schemas/files.schema.yaml": FILES_SCHEMA.read_text(encoding="utf-8"),
+            "docs/doc-1.yaml": "id: doc-1\nname: 文書 1\ntitle: 文書 1\n",
+            "docs/doc-2.yaml": "id: doc-2\n",
+            "src/files.yaml": "files:\n  - path: a.py\n  - path: c.py\n",
+            "src/a.py": "a = 1\n",
+            "src/d.py": "d = 4\n",
+        }
+    )
+    sample = make_source("sample", files)
+    # 実行
+    served = serve(sample)
+    docs = served.get("/_api/sources/sample/docs")
+    found = served.call(
+        "search_docs",
+        cwd=str(sample.folder),
+        filter={"field": "id", "op": "eq", "values": ["doc-2"]},
+        view="summary",
+        format="json",
+    )
+    # 検証
+    warnings = [
+        line
+        for line in served.stderr().splitlines()
+        if "WARNING" in line and "dev_docs.main: sample:" in line
+    ]
+    assert docs.status_code == 200
+    assert len(warnings) == 3
+    assert any("ref の列の欠け 1 件" in line and "name（title）" in line for line in warnings)
+    assert any(
+        "管理用の YAML に無いファイル 1 件" in line and "src/d.py" in line for line in warnings
+    )
+    assert any("ファイルが無い行 1 件" in line and "c.py" in line for line in warnings)
+    assert found.data["items"][0]["values"]["name"] == "doc-2"
 
 
 def test_error_when_source_config_invalid(

@@ -229,6 +229,18 @@ data_models:
         access: 公開
         default: None
         description: '`view: full` のときだけ'
+      - name: path
+        title: 文書の場所
+        type: str | None
+        access: 公開
+        default: None
+        description: 変わった文書の今の場所（文書のストア.文書の場所）。終点が今の作業ツリーのときだけ持ち、`deleted` では `None`
+      - name: scope
+        title: 返した範囲
+        type: Literal['section', 'summary'] | None
+        access: 公開
+        default: None
+        description: '`view: full` は `section`、`view: summary` は `summary`。`path` が `None` のときは `None`'
   - name: ChangesResult
     title: 変更の結果
     container: features/changes/types.py
@@ -399,7 +411,8 @@ functions:
       5. `filter` があれば、後（消した文書は前）の文書を条件の照合にかけ、当たる文書だけを残す（条件の確かめは検索と同じ）
       6. 配信元の順・`id` の昇順に並べ、検索と同じ `limit` の丸め・続きの位置・`max_chars` の打ち切りをする
       7. `view` が `full` の場合、前と後の本文の差分の行を入れる
-      8. 区間の端を入れて返す
+      8. `to` が無く（終点が今の作業ツリー）、`deleted` でない文書は、`path` を後の文書の場所（文書のストア.文書の場所）にし、`scope` を `view` が `full` なら `section`、それ以外は `summary` にする
+      9. 区間の端を入れて返す
     exceptions:
       - name: RefNotFoundError
         condition: '`from`・`to` を解決できない'
@@ -419,19 +432,19 @@ functions:
         summary: 2 つの commit の間
         condition: '文書 1 の `name` を変えた commit とその親を `from`・`to` に、`view: full`'
         mock: なし（一時フォルダの git リポジトリ）
-        expected: '`range` に 2 つの commit と日時、`items` が文書 1 だけで `modified`・`keys: [name]`、`diff` に `-`・`+` の行'
+        expected: '`range` に 2 つの commit と日時、`items` が文書 1 だけで `modified`・`keys: [name]`、`diff` に `-`・`+` の行。`to` を渡したため `path`・`scope` が `None`'
       - name: test_list_changes_when_last_read
         case: 正常
         summary: 前回読んだ時点から
         condition: '`search_docs` で本文を返した後、文書 1 のファイルを直接書き換えて `from` を省く'
         mock: なし
-        expected: '`range.from.input` が `前回読んだ時点`、`items` が文書 1 だけ'
+        expected: '`range.from.input` が `前回読んだ時点`、`items` が文書 1 だけで、`path` が文書 1 の絶対パス、`scope` が `summary`'
       - name: test_list_changes_when_added_and_deleted
         case: 正常
         summary: 足した文書と消した文書
         condition: 区間の中で文書 3 を足し、文書 2 を消す
         mock: なし
-        expected: 文書 2 が `deleted`、文書 3 が `added`
+        expected: 文書 2 が `deleted`、文書 3 が `added`。`to` を省いたとき、文書 2 は `path` が `None`、文書 3 は `path` を持つ
       - name: test_list_changes_when_no_last_read
         case: 異常
         summary: 読んだ記録が無い
@@ -474,7 +487,7 @@ functions:
     process: |-
       1. 先頭の行に `{配信元}: {始点}（{日時}）→ {終点}（{日時}）・変わった文書 {total_count} 件` を置く（始点・終点は commit、無ければ渡した値）
       2. `| id | 変更 | 変わったキー |` の表を置く
-      3. 差分の行があれば、文書ごとに `## {id}` と ```diff のかたまりを置く
+      3. 差分の行があれば、文書ごとに `## {id}` と ```diff のかたまりを置く。`path` を持つ文書は ```diff のかたまりを `<document path="{path}" scope="section">` と `</document>` で包む
       4. `notes` と `next_cursor` を検索と同じに置く
     unit_tests:
       - name: test_render_changes_markdown
@@ -483,6 +496,13 @@ functions:
         condition: 文書 1 が `modified` の結果
         mock: なし
         expected: '`sample: 3f2a9c1（...）→ 8b1d4e0（...）・変わった文書 1 件` と表の行 `| doc-1 | modified | name |`'
+      - name: test_render_changes_markdown_when_location
+        case: 正常
+        summary: 場所を持つ差分を包む
+        condition: '`diff` を持つ 2 件で、文書 1 は `path`・`scope: section` を持ち、文書 2 は `path` が `None`'
+        mock: なし
+        expected: 文書 1 の差分だけが `<document path="{path}" scope="section">` で包まれる
+        exception: '-'
 refs:
   - dev/設計書/インターフェース定義/開発ドキュメントサーバー/変更の一覧#
 test_files:

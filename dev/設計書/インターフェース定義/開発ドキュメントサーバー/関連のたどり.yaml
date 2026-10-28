@@ -28,6 +28,7 @@ flows:
       - 文書 2 を深さ 1、文書 3 を深さ 2 で返す
       - 各行にたどった `related` の元と関係の種類がある
       - '`depth: 1` では文書 2 だけを返す'
+      - '`format: json` の各項目に `path`（文書の絶対パス）と `scope: summary` がある'
     test: test_normal
   - name: 正常系（逆向きにたどる）
     summary: '`direction: in` で起点を指す文書を返し、循環をたどらない'
@@ -124,7 +125,7 @@ flows:
         T-->>C: ID と（この会話で返し済み）
       ```
     expected:
-      - 2 回目の文書 2・3 の `name`・`description` が `（この会話で返し済み）` になる
+      - 2 回目の文書 2・3 の `name`・`description` が `（この会話で返し済み）` になり、json の項目に `path`・`scope` が無い
       - 3 回目は名前と概要文を返す
     test: test_normal_when_seen
   - name: 異常系（無い起点・DocumentNotFoundError）
@@ -318,6 +319,14 @@ response:
   - name: notes
     type: list[str]
     description: 丸めた・読めなかった文書の知らせ
+  - name: items[].path
+    type: str
+    description: たどった文書の場所。`search_docs` の `items[].path` と同じ決め方の絶対パス
+    notes: '`ref` を渡した呼び出し、返し済みの相手、読めない配信元の文書では持たない'
+  - name: items[].scope
+    type: Literal['summary']
+    description: 返した範囲。名前と概要文だけを返すため常に `summary`
+    notes: '`items[].path` と同じ条件で持たない'
 response_example: |-
   ```markdown
   doc-1 から 2 件

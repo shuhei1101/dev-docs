@@ -31,6 +31,7 @@ flows:
       - 先頭に解決した 2 つの commit と日時がある
       - 変わった文書が文書 1 だけで、`change` が `modified`、`keys` が `name`
       - '`view: full` が `name` の前後の値を `-`・`+` の行で返す'
+      - '`to` を渡したため、json の項目に `path`・`scope` が無く、markdown の差分を `<document>` で包まない'
     test: test_normal
   - name: 正常系（日時とブランチで区間を指す）
     summary: 日時とブランチ名を commit に解決して比べる
@@ -76,6 +77,7 @@ flows:
       - 文書 1 だけを、変わったキーつきで返す
       - 文書 2 は返さない
       - Git 管理外の配信元でも同じように比べられる
+      - '`format: json` の文書 1 の項目に `path`（文書 1 の絶対パス）と `scope: summary` があり、`view: full` では `scope` が `section` になる'
     test: test_normal_when_since_last_read
   - name: 異常系（無いリビジョン・RefNotFoundError）
     summary: 解決できない区間を断る
@@ -294,6 +296,14 @@ response:
   - name: notes
     type: list[str]
     description: 丸めた・打ち切った知らせと次の手
+  - name: items[].path
+    type: str
+    description: 変わった文書の今の場所。`search_docs` の `items[].path` と同じ決め方の絶対パス
+    notes: '終点が今の作業ツリーのときだけ持つ。`to` を渡した呼び出しと `change: deleted` の文書では持たない'
+  - name: items[].scope
+    type: Literal['section', 'summary']
+    description: '返した範囲。`view: full` の差分の行は `section`、`view: summary` は `summary`'
+    notes: '`items[].path` と同じ条件で持たない。`format: markdown` の `view: full` は、`path` を持つ文書の差分だけを `<document path="..." scope="section">` で包む'
 response_example: |-
   ```markdown
   sample: 3f2a9c1（2026-10-26 10:00）→ 8b1d4e0（2026-10-26 11:30）・変わった文書 1 件

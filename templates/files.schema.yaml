@@ -1,0 +1,55 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+title: 管理用の YAML
+description: 'ソースコードなど YAML でない文書のメタデータを持つ YAML。文書の行の `records: files`・`body_file: path` で指す。'
+type: object
+required:
+  - files
+properties:
+  files:
+    type: array
+    title: 配信するファイル
+    description: 1 行が 1 つの文書。
+    items:
+      type: object
+      title: ファイルの行
+      required:
+        - path
+      properties:
+        path:
+          type: string
+          title: ファイルのパス
+          description: 管理用の YAML のフォルダからの相対パス。
+          minLength: 1
+        name:
+          type: string
+          title: 名前
+          description: 無ければファイル名から拡張子を除いた名前。
+        description:
+          type: string
+          title: 概要文
+        tags:
+          type: array
+          title: タグ
+          items:
+            type: string
+        related:
+          type: array
+          title: 関連
+          items:
+            type: object
+            required:
+              - to
+              - type
+            properties:
+              to:
+                type: string
+                title: 関連先の文書の ID
+              type:
+                type: string
+                title: 関係の種類
+              source:
+                type: string
+                title: 関連先の配信元の ID
+        status:
+          type: string
+          title: 状態

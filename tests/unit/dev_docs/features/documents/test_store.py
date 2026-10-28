@@ -11,8 +11,14 @@ import pytest
 from dev_docs.features.access.types import Target
 from dev_docs.features.documents import store as store_module
 from dev_docs.features.documents.store import DocumentStore
+from dev_docs.features.documents.types import Document
 from dev_docs.features.history.snapshot import SnapshotStore
-from dev_docs.features.sources.types import DocumentTable, ServedSource, SourceConfig
+from dev_docs.features.sources.types import (
+    DocumentTable,
+    MetadataMapping,
+    ServedSource,
+    SourceConfig,
+)
 from dev_docs.shared.errors import DocumentNotFoundError, UnknownKindError
 
 OCT_01 = "2026-10-01T12:00:00+09:00"
@@ -286,3 +292,136 @@ def test_document_store_invalidate(document_store: DocumentStore, workspace: Tar
     result = document_store.load(workspace)
     # 検証
     assert result.documents[0].data["name"] == "Z"
+
+
+def test_document_store_location(
+    document_store: DocumentStore,
+    workspace: Target,
+    tmp_path: Path,
+    make_document: Callable[..., Document],
+) -> None:
+    """作業ツリーと body_file（正常系）。"""
+    # 準備
+    plain = make_document(path="rules/a.yaml", body_path=None)
+    code = make_document(id="src/a", path="src/files.yaml", body_path="src/a.py")
+    # 実行
+    plain_location = document_store.location(workspace, plain)
+    code_location = document_store.location(workspace, code)
+    # 検証
+    assert plain_location == str(tmp_path / "ws" / "rules" / "a.yaml")
+    assert code_location == str(tmp_path / "ws" / "src" / "a.py")
+
+
+def test_document_store_location_when_worktree(
+    document_store: DocumentStore,
+    workspace: Target,
+    tmp_path: Path,
+    make_target: Callable[..., Target],
+    make_document: Callable[..., Document],
+) -> None:
+    """ワークツリー（正常系）。"""
+    # 準備
+    worktree = tmp_path / "ws" / ".claude" / "worktrees" / "x"
+    target = make_target(workspace.source, base=worktree, worktree=worktree)
+    document = make_document(path="rules/a.yaml", body_path=None)
+    # 実行
+    result = document_store.location(target, document)
+    # 検証
+    assert result == str(worktree / "rules" / "a.yaml")
+
+
+def test_document_store_location_when_ref(
+    document_store: DocumentStore,
+    workspace: Target,
+    make_target: Callable[..., Target],
+    make_document: Callable[..., Document],
+) -> None:
+    """リビジョン（正常系）。"""
+    # 準備
+    target = make_target(workspace.source, ref="HEAD")
+    document = make_document(path="rules/a.yaml", body_path=None)
+    # 実行
+    result = document_store.location(target, document)
+    # 検証
+    assert result is None
+
+
+def _sync_source(
+    root: Path,
+    make_source_config: Callable[..., SourceConfig],
+    make_served_source: Callable[..., ServedSource],
+) -> ServedSource:
+    """`ref` の列の欠けを数える行 rules と、管理用の YAML の行 src を持つ配信元を返す。"""
+    documents = [
+        DocumentTable(
+            id="rules",
+            type="yaml",
+            paths=["rules/*.yaml"],
+            metadata={"name": MetadataMapping(type="ref", field="title")},
+        ),
+        DocumentTable(
+            id="src", type="yaml", paths=["src/files.yaml"], records="files", body_file="path"
+        ),
+    ]
+    return make_served_source(root=root, config=make_source_config(documents=documents))
+
+
+def test_check_sync(
+    document_store: DocumentStore,
+    tmp_path: Path,
+    write_files: Callable[[Path, dict[str, str]], None],
+    make_source_config: Callable[..., SourceConfig],
+    make_served_source: Callable[..., ServedSource],
+) -> None:
+    """3 種のずれ（正常系）。"""
+    # 準備
+    root = tmp_path / "ws"
+    write_files(
+        root,
+        {
+            "rules/a.yaml": "id: a\ntitle: A\n",
+            "rules/b.yaml": "id: b\n",
+            "src/files.yaml": "files:\n  - path: a.py\n  - path: c.py\n",
+            "src/a.py": "a = 1\n",
+            "src/d.py": "d = 4\n",
+        },
+    )
+    source = _sync_source(root, make_source_config, make_served_source)
+    # 実行
+    report = store_module.check_sync(document_store, source)
+    # 検証
+    assert report.source_id == "sample"
+    assert report.missing_refs == ["rules: b: name（title）"]
+    assert report.unindexed_files == ["src: src/d.py"]
+    assert len(report.missing_body_files) == 1
+    assert report.missing_body_files[0].startswith("src/files.yaml: ")
+    assert "c.py" in report.missing_body_files[0]
+
+
+def test_check_sync_when_clean(
+    document_store: DocumentStore,
+    tmp_path: Path,
+    write_files: Callable[[Path, dict[str, str]], None],
+    make_source_config: Callable[..., SourceConfig],
+    make_served_source: Callable[..., ServedSource],
+) -> None:
+    """ずれが無い（正常系）。"""
+    # 準備
+    root = tmp_path / "ws"
+    write_files(
+        root,
+        {
+            "rules/a.yaml": "id: a\ntitle: A\n",
+            "rules/b.yaml": "id: b\ntitle: B\n",
+            "src/files.yaml": "files:\n  - path: a.py\n  - path: d.py\n",
+            "src/a.py": "a = 1\n",
+            "src/d.py": "d = 4\n",
+        },
+    )
+    source = _sync_source(root, make_source_config, make_served_source)
+    # 実行
+    report = store_module.check_sync(document_store, source)
+    # 検証
+    assert report.missing_refs == []
+    assert report.unindexed_files == []
+    assert report.missing_body_files == []

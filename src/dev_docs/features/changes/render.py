@@ -31,7 +31,12 @@ def render_changes_markdown(result: ChangesResult, *, source_label: str) -> str:
         lines.append("")
         for item in result.items:
             if item.diff:
-                lines.extend([f"## {item.id}", "", "```diff", item.diff, "```", ""])
+                lines.extend([f"## {item.id}", ""])
+                block = ["```diff", item.diff, "```"]
+                if item.path:
+                    block = [f'<document path="{item.path}" scope="{item.scope}">', *block]
+                    block.append("</document>")
+                lines.extend([*block, ""])
     lines.extend(f"> {note}" for note in result.notes)
     if result.next_cursor:
         lines.append(f"続き: cursor={result.next_cursor}")

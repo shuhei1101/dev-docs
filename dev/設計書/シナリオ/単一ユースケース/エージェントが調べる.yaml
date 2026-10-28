@@ -38,6 +38,7 @@ scenarios:
       - '`describe(source: sample)` が説明書と種類の一覧を返す'
       - '`source` を省いた `search_docs` が sample の 2 件を、総件数 2 と各行の `version` つきで返す'
       - '`view: full` の `search_docs` が文書 1 の YAML を返す'
+      - '`view: full` の `search_docs` の文書 1 が `<document path="{sample のクローン本体}/{文書 1 のパス}" scope="full">` で包まれる'
       - '`trace_related` が文書 1 の `related` の相手として文書 2 を返す'
     test: test_normal
   - name: 正常シナリオ（複数の配信元を横断する）
@@ -86,6 +87,7 @@ scenarios:
       ```
     expected:
       - '`worktree` を渡した `search_docs` がワークツリーの文書 1 の `name` を返す'
+      - '`worktree` を渡した `view: full` の `search_docs` の `path` が、ワークツリー x の中の文書 1 の絶対パスになる'
       - '`worktree` を省き `cwd` をワークツリー x の中にした `search_docs` も、ワークツリーの文書 1 を返す'
       - '`worktree` も省き `cwd` がクローン本体の `search_docs` は、クローン本体の文書 1 を返す'
     test: test_normal_when_worktree_given
@@ -112,6 +114,7 @@ scenarios:
       ```
     expected:
       - 2 回目の結果で文書 1 の本文が `（この会話で返し済み）` だけになる
+      - 2 回目の結果の文書 1 は `path`・`scope` を持たない
       - '`repeat_seen: true` で本文を返す'
       - '`session_id` を `s2` に変えた呼び出しは本文を返す'
       - '`trace_related` の 2 回目は、関連の相手の名前・概要文を `（この会話で返し済み）` にする'
@@ -184,6 +187,42 @@ scenarios:
       - '`isError: true` で、渡したパスと sample の `worktrees` の値を返す'
       - 文書を返さない
     test: test_error_when_worktree_not_matched
+  - name: 正常シナリオ（管理用の YAML の文書を引く）
+    setup:
+      - name: Mock
+        description: なし（実環境で実行。`cwd` はテストが引数に入れる）
+        notes: '-'
+      - name: 管理用の YAML
+        description: 'sample の `src/files.yaml`。`files[]` に `a.py`（`tags: [auth]`、`name` なし）と `b.py`（`name: 部品 B`）の 2 行。`src/a.py`・`src/b.py` を置く'
+        notes: スキーマは `templates/files.schema.yaml`
+      - name: 文書の行
+        description: 'sample の `dev-docs.yaml` の行 `src`（`paths: [src/files.yaml]`・`records: files`・`body_file: path`）。`defaults[]` に `{paths: [src/**], tags: [code]}`'
+        notes: '-'
+      - name: dev-docs
+        description: sample を配信している dev-docs
+        notes: '`cwd` は sample のクローン本体'
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        actor A as エージェント
+        participant M as 文書の MCP（/mcp）
+        participant ST as 配信元の文書
+
+        A->>M: search_docs(filter: tags が auth, view: summary)
+        M->>ST: src/files.yaml を読み、files の各行を 1 件の文書にする
+        M->>M: defaults を重ね、最後に行のメタデータを重ねる。name が空なら body_file のファイル名
+        M-->>A: a の行（name は a、tags は code と auth）
+        A->>M: search_docs(filter: id が src/a, view: full)
+        M-->>A: src/a.py の内容を path と scope つきの document で包んだ本文
+        A->>M: search_docs(filter: id が src/a, view: full, format: json)
+        M-->>A: 項目の直下に path と scope を持つ JSON
+      ```
+    expected:
+      - '`tags` が `auth` の `search_docs` が id `src/a`（`body_file` が指すファイルの拡張子を除いたパス）の 1 件を返し、`name` が `a`、`tags` が `code` と `auth` になる'
+      - '`b` の `name` は `部品 B` のまま'
+      - '`view: full` の本文が `src/a.py` の内容で、`<document path="{sample のクローン本体}/src/a.py" scope="full">` で包まれる'
+      - '`format: json` の項目の直下（`id`・`source` と同じ階層で `values` の外）が `path`（`src/a.py` の絶対パス）と `scope: full` を持ち、`values.path` は管理用の YAML の `path` 列の値 `a.py` のまま'
+    test: test_normal_when_files_index
 lead: エージェントが文書の MCP の `describe`・`search_docs`・`trace_related` で、今の作業場所から読める配信元の文書を探して読む。
 issue: 3
 primary_actor: エージェント（Claude Code）

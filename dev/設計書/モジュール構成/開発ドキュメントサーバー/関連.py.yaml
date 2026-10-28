@@ -245,6 +245,16 @@ data_models:
         type: str
         access: 公開
         description: 返し済みなら `SEEN_MARK`
+      - name: path
+        title: 文書の場所
+        type: str | None
+        access: 公開
+        description: たどった文書の場所（文書のストア.文書の場所）。`ref` を渡した呼び出し、返し済みの相手、読めない配信元の文書では `None`
+      - name: scope
+        title: 返した範囲
+        type: Literal['summary'] | None
+        access: 公開
+        description: '`path` があれば `summary`、無ければ `None`'
   - name: Suggestion
     title: 関連の候補
     container: features/related/types.py
@@ -486,6 +496,7 @@ functions:
          - `code_paths` の場合、正規化したパスと `body_path` が同じ文書。文書の無いパスがあれば `DocumentNotFoundError`（`missing` にパス）
       5. 関連をたどる。別の配信元の文書は、その配信元を読む場所の解決（同じ `cwd`）で解き、ID で引く（`SourceNotReadableError` など解けないときは `None`）
       6. `repeat_seen` が `False` なら、会話の記録.返し済み（`related`）に当たる相手の名前・概要文を `SEEN_MARK` にする
+         - `SEEN_MARK` にしなかった相手は、その文書を読んだ場所で `path` を文書の場所（文書のストア.文書の場所）にし、`path` があれば `scope` を `summary` にする
       7. `suggest` なら、起点の `body_path`（無ければ `path`）で一緒に変わったファイル（Git の配信元だけ）と、会話の記録.閲覧と編集を引き、関連の候補を選ぶ（`exclude` は起点とたどった文書）
       8. 名前・概要文を返した相手を会話の記録に `related` で残す
       9. 結果を返す
@@ -505,7 +516,7 @@ functions:
         summary: 起点からたどる
         condition: '文書 1 → 文書 2 → 文書 3、`from_ids: [doc-1]`'
         mock: なし（一時フォルダの配信元）
-        expected: 文書 2（深さ 1、`via.from` が doc-1）と文書 3（深さ 2）
+        expected: 文書 2（深さ 1、`via.from` が doc-1）と文書 3（深さ 2）。どちらも `path` が文書の絶対パス、`scope` が `summary`
       - name: test_trace_related_when_code_paths
         case: 正常
         summary: コードのパスから
@@ -517,7 +528,7 @@ functions:
         summary: 返し済みの相手
         condition: '同じ `session_id` で 2 回、3 回目は `repeat_seen: true`'
         mock: なし
-        expected: 2 回目の名前・概要文が `SEEN_MARK`、3 回目は名前
+        expected: 2 回目の名前・概要文が `SEEN_MARK` で `path`・`scope` が `None`、3 回目は名前
       - name: test_trace_related_when_depth_over
         case: 正常
         summary: 深さの丸め

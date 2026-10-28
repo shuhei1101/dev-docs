@@ -45,6 +45,7 @@ LOCAL_CONFIG_ROWS = (
 NO_SCRIPT_EXTRA = (
     "    converter: md\nconverters:\n  - id: md\n    run: [python3, scripts/missing.py]\n"
 )
+FILES_SCHEMA = Path(__file__).parents[3] / "templates" / "files.schema.yaml"
 LISTEN_STATE = "0A"
 TCP_TABLES = ("/proc/net/tcp", "/proc/net/tcp6")
 LOOPBACK_V4 = "0100007F"
@@ -195,6 +196,59 @@ def test_normal_when_source_invalid(
     assert "noscript: converters[0]" in logs
     assert "scripts/missing.py" in logs
     assert env.client.post("/_admin/mcp/", headers=MCP_HEADERS, json=INITIALIZE).status_code == 200
+
+
+def test_normal_when_metadata_out_of_sync(
+    make_source: Callable[..., Any],
+    make_server: Callable[..., Any],
+    sample_file_set: Callable[..., dict[str, str]],
+    sample_config_text: Callable[..., str],
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """ref の列の欠けと管理用の YAML のずれがあっても配信し、件数を警告のログに残す（正常系）。"""
+    # 準備
+    rows = (
+        "    metadata:\n"
+        "      name: {type: ref, field: title}\n"
+        "  - id: src\n"
+        "    type: yaml\n"
+        "    paths: [src/files.yaml]\n"
+        "    schema: schemas/files.schema.yaml\n"
+        "    records: files\n"
+        "    body_file: path\n"
+    )
+    files = sample_file_set(
+        **{
+            "dev-docs.yaml": sample_config_text(rows),
+            "schemas/files.schema.yaml": FILES_SCHEMA.read_text(encoding="utf-8"),
+            "docs/doc-1.yaml": "id: doc-1\nname: 文書 1\ntitle: 文書 1\n",
+            "docs/doc-2.yaml": "id: doc-2\nname: 文書 2\n",
+            "src/files.yaml": "files:\n  - path: a.py\n  - path: c.py\n",
+            "src/a.py": "a = 1\n",
+            "src/d.py": "d = 4\n",
+            "src/sub/e.py": "e = 5\n",
+        }
+    )
+    sample = make_source("sample", files)
+    clean = make_source(
+        "clean", sample_file_set(**{"dev-docs.yaml": sample_config_text(name="clean")})
+    )
+    caplog.set_level(logging.WARNING)
+    # 実行
+    env = make_server(sample, clean)
+    # 検証
+    warnings = [record.getMessage() for record in caplog.records]
+    sample_warnings = [message for message in warnings if message.startswith("sample:")]
+    assert env.client.get("/_api/sources/sample/docs").status_code == 200
+    assert len(sample_warnings) == 3
+    assert any("ref の列の欠け 1 件" in m and "name（title）" in m for m in sample_warnings)
+    assert any(
+        "管理用の YAML に無いファイル 2 件" in m and "src/d.py" in m and "src/sub/e.py" in m
+        for m in sample_warnings
+    )
+    assert any("ファイルが無い行 1 件" in m and "c.py" in m for m in sample_warnings)
+    assert not any("src: src/files.yaml" in m for m in sample_warnings)
+    assert [message for message in warnings if message.startswith("clean:")] == []
 
 
 def test_error_when_terminal_config_invalid(

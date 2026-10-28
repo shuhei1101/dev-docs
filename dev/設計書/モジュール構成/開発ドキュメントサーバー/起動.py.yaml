@@ -320,9 +320,9 @@ functions:
       description: 配線済みの関数
     process: |-
       1. `state_dir` を作る
-      2. 配信元の一覧を作り、端末の設定で読み直す（配信元の一覧.読み直す）。検証で外した配信元があっても続ける
-      3. リビジョンの書き出し（`{state_dir}/snapshots`）・文書のストア・変換（`{state_dir}/converted`、制限時間は `script_timeout_sec`）・会話の記録（`{state_dir}/seen.sqlite3`、保持日数は `seen_retention_days`）・文書の検査（制限時間は `script_timeout_sec`）・配信元ごとの排他・表の列の設定（`{state_dir}/columns`）を作る
-      4. これらと、『配信元の読み直し』をこれらの部品で束ねた関数を持つ `Handlers` を返す
+      2. 配信元の一覧・リビジョンの書き出し（`{state_dir}/snapshots`）・文書のストア・変換（`{state_dir}/converted`、制限時間は `script_timeout_sec`）・会話の記録（`{state_dir}/seen.sqlite3`、保持日数は `seen_retention_days`）・文書の検査（制限時間は `script_timeout_sec`）・配信元ごとの排他・表の列の設定（`{state_dir}/columns`）を作る
+      3. 『配信元の読み直し』をこれらの部品で束ねた関数を作り、端末の設定で 1 回呼ぶ（配信元を読み、メタデータのずれを警告のログに書く）。検証で外した配信元があっても続ける
+      4. これらと手順 3 の関数を持つ `Handlers` を返す
     unit_tests:
       - name: test_build_handlers
         case: 正常
@@ -330,6 +330,13 @@ functions:
         condition: '`state_dir` が無い一時フォルダの下、配信できる配信元 1 つと検証に失敗する配信元 1 つ'
         mock: なし
         expected: '`state_dir` ができ、`registry.served()` が 1 つ、`registry.statuses()` が 2 つ'
+      - name: test_build_handlers_when_out_of_sync
+        case: 正常
+        summary: 初回の読み込みでもずれを警告のログに書く
+        condition: 行 `rules` に `title` の無い文書が 1 件ある配信元 `sample` 1 つ
+        mock: なし（一時フォルダの配信元と `caplog`）
+        expected: '`sample` の `ref` の列の欠けの警告が 1 件あり、`registry.served()` が 1 つ'
+        exception: '-'
   - name: reload_sources
     title: 配信元の読み直し
     kind: 関数
@@ -339,7 +346,7 @@ functions:
     summary: 配信元の一覧を読み直し、配信元の内容を控えた部品の控えを捨てる
     scope: public
     thread_safe: true
-    side_effects: 配信元の一覧を入れ替え、文書のストア・文書の検査・変換の控えを捨てる
+    side_effects: 配信元の一覧を入れ替え、文書のストア・文書の検査・変換の控えを捨てる。メタデータのずれを警告のログに書く
     args:
       - name: terminal
         title: 端末の設定
@@ -377,7 +384,8 @@ functions:
     process: |-
       1. 配信元の一覧を読み直す（配信元の一覧.読み直す）
       2. 文書のストア・文書の検査・変換の控えを捨てる（文書のストア.全て捨てる・文書の検査.控えを捨てる・変換.控えを捨てる）
-      3. 手順 1 の状態を返す
+      3. 配信中の配信元ごとにメタデータのずれを確かめ（文書のストア.メタデータのずれの確かめ）、3 つの並びのうち 0 件でないものを、配信元の ID・ずれの種類・件数・並びの値で警告のログに書く。結果は状態に持たない
+      4. 手順 1 の状態を返す
     unit_tests:
       - name: test_reload_sources
         case: 正常
@@ -385,6 +393,13 @@ functions:
         condition: 配信元 1 つの端末の設定
         mock: 配信元の一覧・文書のストア・文書の検査・変換（呼ばれた順を記録する偽物）
         expected: '`registry.reload` が端末の設定で 1 回呼ばれた後に `store.clear`・`checker.clear`・`converter.clear` が 1 回ずつ呼ばれ、`reload` の状態を返す'
+      - name: test_reload_sources_when_out_of_sync
+        case: 正常
+        summary: メタデータのずれを警告のログに書く
+        condition: 配信元 `sample` の行 `rules` に `title` の無い文書が 1 件、行 `src` の管理用の YAML に無いファイルが 2 件、ファイルが無い行が 1 件。配信元 `clean` はずれが無い
+        mock: なし（一時フォルダの配信元と `caplog`）
+        expected: '`sample` の警告が 3 件（件数と並びの値を含む）、`clean` の警告は無い。両方の配信元が `serving`'
+        exception: '-'
   - name: build_app
     title: アプリの組み立て
     kind: 関数

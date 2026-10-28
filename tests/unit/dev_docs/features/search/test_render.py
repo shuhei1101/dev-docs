@@ -27,3 +27,26 @@ def test_render_search_markdown() -> None:
     # 検証
     assert markdown.splitlines()[0] == "sample: 該当 2 件・返した 2 件"
     assert "| id | kind | name | description | chars | version |" in markdown
+
+
+def test_render_search_markdown_when_full() -> None:
+    """場所と範囲を属性にする（正常系）。"""
+    # 準備
+    items = [
+        SearchItem(
+            id="doc-1",
+            source=None,
+            values={"body": "id: doc-1\n"},
+            path="/ws/docs/doc-1.yaml",
+            scope="full",
+        ),
+        SearchItem(id="doc-2", source=None, values={"body": "id: doc-2\n"}),
+    ]
+    result = SearchResult(total_count=2, returned=2, view="full", items=items)
+    # 実行
+    markdown = render_search_markdown(result, source_label="sample")
+    # 検証
+    lines = markdown.splitlines()
+    assert lines.count('<document path="/ws/docs/doc-1.yaml" scope="full">') == 1
+    assert lines.count("<document>") == 1
+    assert lines.count("</document>") == 2

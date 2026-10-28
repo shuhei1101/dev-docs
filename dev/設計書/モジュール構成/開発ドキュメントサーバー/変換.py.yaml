@@ -225,7 +225,7 @@ functions:
       type: str
       description: Markdown
     process: |-
-      1. 先頭に `# {name}`（無ければ `id`）の見出しを置き、`description` があれば段落にする
+      1. 先頭に `# {name}`（内容に `name` が無ければ文書のメタデータの `name`。名前の既定で空にはならない）の見出しを置き、`description` があれば段落にする
       2. スキーマの `properties` の順に値を組み立てる（`name`・`description` と、値が空のキーは飛ばす）
          - `x-heading` を持つ値は、深さ 2 から始まる見出し（`x-heading` の文字列、要素なら `x-key` の値）を置く。深さは `MAX_HEADING_LEVEL` で止める
          - `x-shape` で本文を組み立てる（`Shape`）。`table` は表の組み立て、`diagram` は図の組み立ての ```mermaid と同じ値の表、`sections` は子を 1 つ深い見出しで再帰、`attributes` は `> {title}: {値}<br>` の行

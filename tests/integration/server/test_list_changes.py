@@ -46,6 +46,7 @@ def test_normal(
     summary = env.call("list_changes", format="json", **arguments)
     markdown = env.call("list_changes", **arguments)
     full = env.call("list_changes", view="full", format="json", **arguments)
+    full_markdown = env.call("list_changes", view="full", **arguments)
     # 検証
     items = summary.data["items"]
     assert parent.startswith(summary.data["range"]["from"]["commit"])
@@ -57,6 +58,10 @@ def test_normal(
     assert changed[:SHORT_SHA] in markdown.text
     assert "- name: 文書 1" in full.data["items"][0]["diff"]
     assert "+ name: 新しい名前" in full.data["items"][0]["diff"]
+    assert "path" not in full.data["items"][0]
+    assert "scope" not in full.data["items"][0]
+    assert "+ name: 新しい名前" in full_markdown.text
+    assert "<document" not in full_markdown.text
 
 
 def test_normal_when_range_by_date_and_branch(
@@ -128,8 +133,19 @@ def test_normal_when_since_last_read(
     in_notes = env.call(
         "list_changes", cwd=str(sample.folder), source="notes", session_id="s1", format="json"
     )
+    in_git_full = env.call(
+        "list_changes",
+        cwd=str(sample.folder),
+        worktree=str(worktree),
+        session_id="s1",
+        view="full",
+        format="json",
+    )
     # 検証
     assert [(item["id"], item["keys"]) for item in in_git.data["items"]] == [("doc-1", ["name"])]
+    assert in_git.data["items"][0]["path"] == f"{worktree}/docs/doc-1.yaml"
+    assert in_git.data["items"][0]["scope"] == "summary"
+    assert in_git_full.data["items"][0]["scope"] == "section"
     assert [item["id"] for item in in_notes.data["items"]] == ["doc-2"]
 
 

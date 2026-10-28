@@ -25,7 +25,7 @@ def screen_search(documents: Sequence[Document], q: str, limit: int) -> ScreenSe
     items = [
         ScreenSearchItem(
             path=page_path(document),
-            name=str(document.metadata.get("name") or document.id),
+            name=str(document.metadata["name"]),
             snippets=snippet_lines(
                 document.body, words, context_lines=CONTEXT_LINES, max_count=SNIPPETS_PER_DOC
             ),

@@ -149,6 +149,13 @@ functions:
         condition: '`fmt="json"`'
         mock: なし
         expected: '`structuredContent` と `json.loads(content[0].text)` が同じ'
+      - name: test_to_tool_result_when_location
+        case: 正常
+        summary: 場所と範囲は項目の直下
+        condition: '`fmt="json"` で、`path`・`scope: full`・`values: {path: a.py}` を持つ検索の項目と、`path`・`scope` が `None` の項目'
+        mock: なし
+        expected: 1 件目は `path`・`scope` が `values` の外にあり `values.path` が `a.py` のまま、2 件目は `path`・`scope` のキーを持たない
+        exception: '-'
   - name: tool_error
     title: ツールのエラーの変換
     kind: 関数

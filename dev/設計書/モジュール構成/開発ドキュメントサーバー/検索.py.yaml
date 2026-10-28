@@ -382,6 +382,18 @@ data_models:
         access: 公開
         default: '[]'
         description: '`snippets` を指定したときだけ'
+      - name: path
+        title: 文書の場所
+        type: str | None
+        access: 公開
+        default: None
+        description: '文書の場所（文書のストア.文書の場所）。`view: ids`・`count`、`ref` を渡した呼び出し、返し済みの文書では `None`'
+      - name: scope
+        title: 返した範囲
+        type: Literal['full', 'section', 'summary'] | None
+        access: 公開
+        default: None
+        description: '`path` が `None` のときは `None`'
   - name: GroupCount
     title: 集計の行
     container: features/search/types.py
@@ -882,6 +894,7 @@ functions:
           - 本文を返す場合、`repeat_seen` が `False` なら会話の記録.返し済みに当たる文書の `body` を `SEEN_MARK` にする
           - `snippets` がある場合、条件の `body`・`*` の値で一致した箇所の抜き出しをし、`body` を返さない
           - 文字列の値が項目の文字数を超えたら切る
+          - `view` が `summary`・`full` で `ref` が無く、`body` を `SEEN_MARK` にしていない場合、`path` を文書の場所（文書のストア.文書の場所）にし、`scope` を次のとおり決める。`body` を返さない（`snippets` も無い）なら `summary`、`snippets` を返すか `body` を切ったか `records` の要素で `body_path` が無いなら `section`、それ以外は `full`
       11. 返した文書を順に読み取りの検査（文書の検査.検査する、`on="read"`）にかけ、違反を `{id}: {rule}（{path}）` で `notes` に足す
       12. 文書を足すごとに結果の文字数を数え、`max_chars` を超える文書の手前で止める。止めたら `truncated` を `True` にし、`notes` に打ち切ったことと、`cursor` で続きを取るか `fields` を絞るか `view: ids` で取り直すことを足す
       13. 返していない文書が残れば、続きの位置を作る（`next_cursor`）
@@ -915,7 +928,7 @@ functions:
         summary: 本文と返し済み
         condition: '`view: full`・`session_id` ありで 2 回、3 回目は `repeat_seen: true`'
         mock: なし
-        expected: 1 回目と 3 回目は本文、2 回目は `SEEN_MARK`
+        expected: 1 回目と 3 回目は本文で `scope` が `full`、2 回目は `SEEN_MARK` で `path`・`scope` が `None`
       - name: test_search_docs_when_count_grouped
         case: 正常
         summary: 件数と集計
@@ -971,6 +984,13 @@ functions:
         condition: '`order_by: [{field: id}]` と `filter: {field: id, op: eq, values: [b, a]}`'
         mock: なし
         expected: '`items` の `id` が `a`・`b` の順'
+      - name: test_search_docs_when_location
+        case: 正常
+        summary: 文書の場所と範囲
+        condition: '同じ配信元を `view: full`、`view: full`・`max_chars_per_field: 10`、`snippets` あり、`view: summary`、`view: ids`、`ref: HEAD` で呼ぶ。`body_file` の無い `records` の要素を含む'
+        mock: なし（一時フォルダの git リポジトリ）
+        expected: '`path` が文書の絶対パスで、`scope` が順に `full`（`records` の要素は `section`）・`section`・`section`・`summary`。`ids` と `ref` では `path`・`scope` が `None`'
+        exception: '-'
   - name: render_search_markdown
     title: 検索の結果の Markdown
     kind: 関数
@@ -999,7 +1019,7 @@ functions:
     process: |-
       1. 先頭の行に `{配信元}: 該当 {total_count} 件・返した {returned} 件` を置く（複数の配信元は配信元ごとの件数も添える）
       2. `groups` があれば `| 値 | 件数 |` の表を置く
-      3. `view` が `full` の場合、文書ごとに `<document>` と `</document>` で包み、中に項目の箇条書きと本文（YAML の文書は YAML、Markdown の文書は Markdown のまま）を置く。それ以外は項目を列にした表にする（列名は項目の名前。`@chars` は `chars`）
+      3. `view` が `full` の場合、文書ごとに `<document path="{path}" scope="{scope}">`（`path` が `None` なら属性の無い `<document>`）と `</document>` で包み、中に項目の箇条書きと本文（YAML の文書は YAML、Markdown の文書は Markdown のまま）を置く。それ以外は項目を列にした表にする（列名は項目の名前。`@chars` は `chars`）
       4. `notes` があれば末尾に `> ` の行で並べ、`next_cursor` があれば `続き: cursor={next_cursor}` を置く
     unit_tests:
       - name: test_render_search_markdown
@@ -1008,6 +1028,13 @@ functions:
         condition: '`view: summary` の 2 件'
         mock: なし
         expected: '`sample: 該当 2 件・返した 2 件` の行と、`| id | kind | name | description | chars | version |` の表'
+      - name: test_render_search_markdown_when_full
+        case: 正常
+        summary: 場所と範囲を属性にする
+        condition: '`view: full` で `path`・`scope: full` を持つ項目と、`path` が `None` の項目'
+        mock: なし
+        expected: 1 件目が `<document path="{path}" scope="full">`、2 件目が属性の無い `<document>` で包まれる
+        exception: '-'
 refs:
   - dev/設計書/インターフェース定義/開発ドキュメントサーバー/文書の検索#
 test_files:
