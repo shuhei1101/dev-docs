@@ -27,7 +27,7 @@ def test_build_app(make_handlers: Callable[..., Any], make_registry: Callable[..
     assert "/_api/settings/sources" in response.json()["paths"]
     assert "/mcp" in mounted
     assert "/_admin/mcp" in mounted
-    assert "/_admin/session-context" in mounted
+    assert client.post("/_admin/session-context", json={"cwd": "/"}).status_code == 200
 
 
 def test_build_app_when_openapi(

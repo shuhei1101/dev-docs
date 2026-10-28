@@ -219,7 +219,9 @@ def test_context_text_when_too_long() -> None:
     """上限を超えるときは説明を省き、行を切る（正常系）。"""
     # 準備
     description = "説明" * 250
-    available = [_access(f"s{index:03d}", "write", description) for index in range(100)]
+    available = [
+        _access("source-" + "x" * 30 + f"{index:03d}", "write", description) for index in range(100)
+    ]
     # 実行
     result = _context_text(available, [])
     # 検証
