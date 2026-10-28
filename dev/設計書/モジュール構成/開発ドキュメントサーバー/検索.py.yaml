@@ -277,10 +277,10 @@ data_models:
         description: 返す項目から除く
       - name: order_by
         title: 並べ替え
-        type: list[OrderKey]
+        type: list[OrderKey] | None
         access: 公開
-        default: '[OrderKey(field="id")]'
-        description: 先のキーが優先
+        default: None
+        description: 先のキーが優先。`None`（渡していない）は `id` の昇順
       - name: group_by
         title: 集計の項目
         type: str | None
@@ -869,7 +869,7 @@ functions:
       5. 条件の照合で当たった文書を集め、`total_count` と（複数の配信元なら）`per_source` を数える
       6. `group_by` がある場合、当たった文書の値ごとの件数を `groups` にする（配列は要素ごとに数え、値が無い文書は `（なし）`）
       7. `view` が `count` の場合、ここで返す
-      8. `order_by` のキーの順に並べる（日時の項目の空と値が無い文書は向きによらず末尾。同じ順位は配信元の順・`id` の昇順）。`order_by` を渡さず、`filter` が `id` の `eq` の条件 1 つのときは、その `values` の順に並べる
+      8. `order_by` のキーの順に並べる（`order_by` が `None` なら `id` の昇順。日時の項目の空と値が無い文書は向きによらず末尾。同じ順位は配信元の順・`id` の昇順）。`order_by` が `None` で、`filter` が `id` の `eq` の条件 1 つのときは、その `values` の順に並べる
       9. 始まりの位置を `skip` と、`cursor` があれば続きの位置を読む（指紋は要求のハッシュ）の和にし、`limit` 件を取り出す
       10. 文書ごとに返す項目を作る
           - `ids` は `id`、`summary` は `id` と `SUMMARY_FIELDS`、`full` はさらに `body` と全てのメタデータ。`fields` を足し `exclude_fields` を除く
@@ -953,6 +953,18 @@ functions:
         condition: '`source: "*"` で、sample と notes は読め、other は読めない'
         mock: なし
         expected: '`per_source` が sample と notes だけで、`items` に `source` がある'
+      - name: test_search_docs_when_id_values
+        case: 正常
+        summary: '`id` の `eq` の `values` の順'
+        condition: '`order_by` なしで `filter: {field: id, op: eq, values: [b, a]}`'
+        mock: なし
+        expected: '`items` の `id` が `b`・`a` の順'
+      - name: test_search_docs_when_id_values_and_order_by
+        case: 正常
+        summary: '`order_by` を明示した `id` の `eq`'
+        condition: '`order_by: [{field: id}]` と `filter: {field: id, op: eq, values: [b, a]}`'
+        mock: なし
+        expected: '`items` の `id` が `a`・`b` の順'
   - name: render_search_markdown
     title: 検索の結果の Markdown
     kind: 関数

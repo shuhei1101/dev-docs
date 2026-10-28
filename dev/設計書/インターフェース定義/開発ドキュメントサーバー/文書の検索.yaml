@@ -399,7 +399,7 @@ request:
   - name: order_by
     type: "list[{field: str, direction: Literal['asc', 'desc']}]"
     required: false
-    default: '`[{field: id, direction: asc}]`'
+    default: 'なし（`id` の昇順。`filter` が `id` の `eq` の条件 1 つなら、その `values` の順）'
     location: argument
     description: 並べ替え。先のキーが優先
     notes: '`@chars` で文字数順。日時が空の文書は末尾'
