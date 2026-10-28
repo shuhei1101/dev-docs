@@ -350,6 +350,32 @@ flows:
       - '`isError: true` で、渡したパスと sample の `worktrees` の値を返す'
       - 一時フォルダにファイルを書かない
     test: test_error_when_worktree_not_matched
+  - name: 異常系（置き場所が除外の名前に当たる・InvalidArgumentError）
+    summary: '`create` で決めた置き場所のファイル名が行の `exclude[]` に当たるとき、何も書かずに断る'
+    setup:
+      - name: Mock
+        description: なし
+      - name: 文書の行
+        description: 'sample の行 `rule`（`type: yaml`・`paths: [docs/rule/*.yaml]`・`exclude: [index.yaml]`）'
+      - name: 入力
+        description: '`operations` は `create`・`kind: rule`・`id: index` の 1 件。`worktree` にワークツリー x'
+        notes: 置き場所は `docs/rule/index.yaml` になる
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        participant C as クライアント
+        participant T as write_docs
+
+        C->>T: operations: create・kind rule・id index
+        T->>T: 置き場所 docs/rule/index.yaml のファイル名が exclude に当たる
+        T-->>C: isError（operations[0].kind・置き場所が exclude に当たる）
+      ```
+    expected:
+      - '`isError: true` で、違反の `path` が `operations[0].kind`、決まりに置き場所 `docs/rule/index.yaml` が行 `rule` の `exclude` に当たること、`fix` に `id` を変えるか `exclude` から外すことを返す'
+      - ワークツリー x に `docs/rule/index.yaml` が作られない
+    test: test_error_when_placement_excluded
+    refs:
+      - dev/設計書/シナリオ/単一ユースケース/エージェントが書き込む#scenarios[異常シナリオ（置き場所が除外の名前に当たる）]
 lead: 文書の作成・部分更新・置き換えを配列で受け、変更を当てた後の文書を配信元のスキーマと `validators[]` に通してから書き込む。dev-docs は commit しない。
 identifier: write_docs
 permissions: 対象の配信元の `scope.write` に `cwd` が当たること。Git の配信元はワークツリーにだけ書く
@@ -545,7 +571,7 @@ exceptions:
     condition: '`update`・`replace` の `id` の文書が無い'
     notes: 見つからなかった ID と近い ID の候補を添える
   - name: InvalidArgumentError
-    condition: 操作が 50 件を超える・`op` ごとの必須のキーが無い・`text_edits` の `old` が 1 か所に一致しない
+    condition: 操作が 50 件を超える・`op` ごとの必須のキーが無い・`text_edits` の `old` が 1 か所に一致しない・`create` の置き場所のファイル名が行の `exclude[]` に当たる
   - name: SourceNotServedError
     condition: '起動時の検証で外したか `enabled: false` の配信元を指した'
   - name: WorktreeNotMatchedError
