@@ -38,7 +38,74 @@ layers:
   - name: 非機能要件テスト
     run_all: 未確定
   - name: E2E テスト
-    run_all: 未確定
+    description: pytest で実行する。一時フォルダに配信元と端末の設定を作り、`dev-docs serve` を子プロセスで起動して、HTTP で `/mcp`・`/_admin/mcp`・`/_api/` を呼ぶ。1 ケース = 1 テスト関数で、対象は `dev/設計書/シナリオ/単一ユースケース/` の各ファイル（各ファイルの `test_file` が指すテストファイルと 1:1）。
+    prerequisites:
+      - '`git` と、`PATH` の `python3`（配信元のスクリプトに使う）が使えること'
+      - Linux の `/proc/net/tcp` を読めること（待ち受けのアドレスの確認）
+      - '`127.0.0.1` の空きポートが使えること（テストごとに子プロセスが待ち受ける）'
+      - 誤実行を防ぐため `--run-e2e` を必須にする（無いと全件 skip する）
+      - 外部サービスに依存せず、料金は発生しない
+    run_all: |-
+      ```bash
+      uv run pytest tests/e2e/ --run-e2e
+      ```
+    run_one:
+      label: ケース
+      command: |-
+        ```bash
+        uv run pytest {E2Eテストファイルパス}::{テスト関数名} --run-e2e
+        ```
+    carry_over: |-
+      対象ケースの実行が 1 ターンより長くかかる場合に使う。
+      結果の退避先と中断の合図の場所は `DEV_DOCS_RUN_DIR=$RUN_DIR` を渡して固定する。
+      引き継ぎのときは、申し送りが指す既存の `RUN_DIR` を渡して同じ退避先を使う。
+      前回が中断で終わっている場合、合図ファイル（`$RUN_DIR/abort`）は自動で消えないため、渡す前に手で消す。
+
+      ```bash
+      RUN_DIR=${RUN_DIR:-.e2e/carry/$(date +%Y%m%d%H%M%S)}
+      mkdir -p "$RUN_DIR"
+      [ -f "$RUN_DIR/release_head" ] || { H=$(git rev-parse HEAD) && echo "$H" > "$RUN_DIR/release_head"; }
+      rm -f "$RUN_DIR/abort"
+      cat > "$RUN_DIR/run.sh" <<EOF
+      env DEV_DOCS_RUN_DIR="$RUN_DIR" \\
+        uv run pytest --run-e2e {テストファイルパス}::{関数名} ...
+      echo done > "$RUN_DIR/done"
+      EOF
+      rm -f "$RUN_DIR/done"
+      setsid nohup bash "$RUN_DIR/run.sh" >> "$RUN_DIR/pytest.log" 2>&1 < /dev/null &
+      disown
+      ```
+
+      結果は `$RUN_DIR/results.jsonl`（1 行 = テスト 1 件の `test_id`・`phase`・`outcome`・`duration_sec`・`reason`）、完了合図は `$RUN_DIR/done`、release の位置の控えは `$RUN_DIR/release_head` に置く。
+      中断の合図で畳んだテストの `outcome` は `not_run` になり、同じ `RUN_DIR` で再開するときの回し直す分になる。
+      release PR への申し送りに `RUN_DIR` を含める。
+    monitoring: |-
+      10 分ごとに、`$RUN_DIR/results.jsonl` の結果の内訳と、完了合図（`$RUN_DIR/done`）の有無を出す。
+      Claude Code からは `Monitor` ツールへ渡す（`persistent: true`）。
+      `RUN_DIR` の代入は `while` の前に別の文として置く。
+
+      ```bash
+      RUN_DIR=.e2e/carry/…
+      while true; do
+        echo "== $(date +%H:%M) done=$([ -f "$RUN_DIR/done" ] && echo yes || echo no) $(python3 -c 'import json,collections as C;print(*[f"{k}={v}" for k,v in sorted(C.Counter(json.loads(l)["outcome"] for l in open("'"$RUN_DIR"'/results.jsonl",encoding="utf-8")).items())])' 2>/dev/null) =="
+        [ -f "$RUN_DIR/done" ] && break
+        sleep 600
+      done
+      ```
+
+      完了の判定は `$RUN_DIR/done` の有無と `$RUN_DIR/results.jsonl` の累積の内訳で行う。
+    abort: |-
+      合図ファイル `$RUN_DIR/abort` を作る。作った後に始まるテストは実行せず、`not_run` として `results.jsonl` に積む（実行中のテストは終わるまで走る）。
+
+      ```bash
+      touch "$RUN_DIR/abort"
+      ```
+
+      同じ `RUN_DIR` を渡して再開するときは、合図ファイルを手で消す。
+    duration: 全 30 ケースの直列で約 5 分
+    parallel: false
+    external_cost: なし（外部サービスに依存せず、料金は発生しない）
+    results: 全件実行は標準出力。セッションを跨いで走らせる形は `$RUN_DIR/results.jsonl`
   - name: lint
     description: ruff で linter と formatter の check を、mypy で型検査を、`claude plugin validate` でマーケットプレイスとプラグインの定義の構造を検査する。型検査はプロジェクト全体に回す。
     prerequisites:
