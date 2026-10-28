@@ -70,7 +70,6 @@
 ```markdown
 http://127.0.0.1:8781/ dev-docs 0.2.0（pid 4242）
 端末の設定: /home/u/.config/dev-docs/settings.yaml（current）
-
 | source | 状態 | 設定のバージョン | 索引の同期 |
 | --- | --- | --- | --- |
 | sample | serving | 1（current） | 0 |
