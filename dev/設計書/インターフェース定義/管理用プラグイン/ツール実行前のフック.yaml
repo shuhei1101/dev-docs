@@ -113,7 +113,7 @@ constraints:
     notes: 作業場所を偽って `scope` の外を書き換えさせないため
   - item: 許可の判定
     constraint: '`permissionDecision` を返さず、利用者の許可の設定を変えない'
-    notes: '`permissionDecision` なしの `updatedInput` が入力に反映されるかは実装で確かめる。反映されなければ `permissionDecision: ask` で許可の確認を変えずに渡す'
+    notes: 'Claude Code 2.1.312 で、`permissionDecision` を返さず `updatedInput` だけを返すと入力が書き換わり、deny のルールもフックの後に効くことを確かめた'
   - item: タイムアウト
     constraint: '`hooks.json` の `timeout` は 5 秒'
     notes: 外への通信が無く Python の起動だけで終わるため

@@ -1,32 +1,33 @@
 title: "セッション開始のフック"
 entry:
   kind: trigger
-  value: Claude Code の SessionStart（startup・resume・clear・compact）
+  value: Claude Code の SessionStart（startup・resume・clear・compact・fork）
 flows:
   - name: 正常系（待ち受けている）
-    summary: つながったサーバーの `session_context` の文を文脈に入れる
+    summary: つながったサーバーの `POST /_admin/session-context` の文を文脈に入れる
     setup:
       - name: Mock
-        description: 管理の MCP を真似る HTTP サーバーを一時のポートで立て、`session_context` に決まった `context` を返す
+        description: '`POST /_admin/session-context` を真似る HTTP サーバーを一時のポートで立て、決まった `context` を返す'
         notes: '`DEV_DOCS_PORT` にそのポートを渡す'
       - name: 入力
         description: '`source: clear` と `session_id`・`cwd` の JSON を stdin に渡す'
+        notes: '-'
     flow: |-
       ```mermaid
       sequenceDiagram
         participant C as Claude Code
         participant H as セッション開始のフック
-        participant A as 管理の MCP
+        participant A as POST /_admin/session-context
 
         C->>H: stdin（session_id・cwd・source）
         H-->>A: ポートへの接続
-        H->>A: tools/call session_context
+        H->>A: POST（cwd・session_id・reason）
         A-->>H: context
         H-->>C: additionalContext（終了コード 0）
       ```
     expected:
       - stdout の `additionalContext` が Mock の `context` と同じ
-      - 'Mock が受けた `session_context` の引数が `cwd`・`session_id`・`reason: clear`'
+      - 'Mock が受けた本文が `cwd`・`session_id`・`reason: clear` の JSON'
       - 終了コード 0、プロセスを起動していない
     test: test_normal_when_server_listening
   - name: 正常系（落ちている）
@@ -81,19 +82,19 @@ flows:
       - プロセスを起動していない
     test: test_normal_when_terminal_config_missing
   - name: 正常系（文脈を取れない）
-    summary: '`session_context` が 3 秒で返らなければ、理由を文脈に入れて終了コード 0 で戻る'
+    summary: '`POST /_admin/session-context` が 3 秒で返らなければ、理由を文脈に入れて終了コード 0 で戻る'
     setup:
       - name: Mock
-        description: 接続は受けるが `session_context` に 5 秒応答しない HTTP サーバー
+        description: 接続は受けるが `POST /_admin/session-context` に 5 秒応答しない HTTP サーバー
     flow: |-
       ```mermaid
       sequenceDiagram
         participant C as Claude Code
         participant H as セッション開始のフック
-        participant A as 管理の MCP
+        participant A as POST /_admin/session-context
 
         C->>H: stdin
-        H->>A: tools/call session_context
+        H->>A: POST（cwd・session_id・reason）
         H->>H: 3 秒で打ち切る
         H-->>C: additionalContext（理由と status の案内）
       ```
@@ -102,11 +103,11 @@ flows:
       - '`additionalContext` に文脈を取れなかったことと `status` の案内がある'
       - プロセスを起動していない
     test: test_normal_when_context_timeout
-lead: ポートにつながらなければ `dev-docs serve` を切り離して起動し、つながれば管理の MCP の `session_context` で使える配信元と使い方を取って、セッションの文脈に入れる。入力は stdin の JSON と環境変数。
+lead: ポートにつながらなければ `dev-docs serve` を切り離して起動し、つながれば `POST /_admin/session-context` で使える配信元と使い方を取って、セッションの文脈に入れる。入力は stdin の JSON と環境変数。
 identifier: hooks/session_start.py
 permissions: 利用者の権限で動く
 idempotent: true
-side_effects: サーバーが待ち受けていなければ `dev-docs serve` のプロセスを 1 つ起動する。`clear`・`compact` ではサーバーがそのセッションの返し済みの記録を消す
+side_effects: サーバーが待ち受けていなければ `dev-docs serve` のプロセスを 1 つ起動する。`clear`・`compact` ではサーバーがそのセッションの返し済みの記録を削除する
 callers:
   - dev/設計書/シナリオ/単一ユースケース/起動する#scenarios[正常シナリオ（SessionStart で起動する）]
   - dev/設計書/シナリオ/単一ユースケース/起動する#scenarios[正常シナリオ（待ち受けているサーバーの文脈を追加する）]
@@ -126,7 +127,7 @@ request:
     description: セッションの作業場所
     notes: stdin の JSON
   - name: source
-    type: Literal['startup', 'resume', 'clear', 'compact']
+    type: Literal['startup', 'resume', 'clear', 'compact', 'fork']
     required: true
     location: argument
     description: セッションが始まった理由
@@ -160,7 +161,7 @@ response:
     description: 常に `SessionStart`
   - name: hookSpecificOutput.additionalContext
     type: str
-    description: つながったときは `session_context` の `context`。起動したときは `/mcp` のつなぎ直しの案内。失敗したときは理由と直し方
+    description: つながったときは `POST /_admin/session-context` の `context`。起動したときは `/mcp` のつなぎ直しの案内。失敗したときは理由と直し方
   - name: 終了コード
     type: int
     description: 常に 0
@@ -175,7 +176,7 @@ exceptions:
     condition: 端末の設定が無い・`clone` が無い・`{clone}/.venv/bin/python` が無い
     notes: 終了コード 0 で、理由と `/dev-docs:global-setup` の案内を文脈に入れる
   - name: なし（文脈を取れない）
-    condition: つながったが `session_context` がタイムアウト・エラーになった
+    condition: つながったが `POST /_admin/session-context` がタイムアウト・200 以外になった
     notes: 終了コード 0 で、理由と `status` で確かめる案内を文脈に入れる
 constraints:
   - item: 言語
@@ -189,8 +190,7 @@ constraints:
     constraint: '`{clone}/.venv/bin/python -m dev_docs serve` を `start_new_session=True`・入出力を `DEVNULL` で起動し、待たずに戻る'
     notes: 'PR #9 の PoC のとおり'
   - item: 文脈の取得
-    constraint: '`/_admin/mcp` へ JSON-RPC の `tools/call`（`session_context`）を 1 回の POST で送り、3 秒で打ち切る'
-    notes: 管理の MCP は stateless・JSON 応答でマウントしているため `initialize` を省ける見込み。省けなければ `initialize` を先に送り、合計で 3 秒に収める
+    constraint: '`urllib.request` で `POST /_admin/session-context` に JSON（`cwd`・`session_id`・`agent_id`・`reason` に `source`）を 1 回送信し、3 秒で打ち切る'
   - item: タイムアウト
     constraint: '`hooks.json` の `timeout` は 6 秒'
     notes: 内側の待ちの合計 3.5 秒に 50% を乗せた値。未実測で、結合テストで測って見直す

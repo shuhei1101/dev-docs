@@ -20,7 +20,6 @@
 | 管理の MCP | [更新](./更新.yaml) | update |
 | 管理の MCP | [配信元の検査](./配信元の検査.yaml) | check_project |
 | 管理の MCP | [試しの変換](./試しの変換.yaml) | try_convert |
-| 管理の MCP | [セッションの文脈](./セッションの文脈.yaml) | session_context |
 | 画面の API | [文書の取得](./文書の取得.yaml) | GET /_api/sources/{source}/docs[/{path}] |
 | 画面の API | [画面の検索](./画面の検索.yaml) | GET /_api/sources/{source}/search |
 | 画面の API | [リビジョンの一覧](./リビジョンの一覧.yaml) | GET /_api/sources/{source}/refs |
@@ -30,5 +29,6 @@
 | 設定・起動 | [端末の設定の保存](./端末の設定の保存.yaml) | PUT /_api/settings/sources |
 | 設定・起動 | [起動](./起動.yaml) | dev-docs serve |
 | 設定・起動 | [設定の移し替え](./設定の移し替え.yaml) | dev-docs migrate |
+| 設定・起動 | [セッションの文脈](./セッションの文脈.yaml) | POST /_admin/session-context |
 
 <!-- /table -->

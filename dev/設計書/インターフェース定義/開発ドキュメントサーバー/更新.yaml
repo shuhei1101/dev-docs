@@ -146,7 +146,7 @@ response:
     description: 新しい commit を取り込んだか
   - name: migration_needed
     type: bool
-    description: 新しいバージョンで端末の設定か配信元の設定の移し替えが要るか
+    description: 新しいバージョンで端末の設定の移し替えが要るか（新しいコードの `dev-docs migrate --plan` で判定する）
     notes: '`true` のときは再起動しない'
   - name: restarting
     type: bool
@@ -155,7 +155,7 @@ response_example: |-
   ```json
   {"previous_version": "0.2.0", "version": "0.3.0", "updated": true, "migration_needed": false, "restarting": true}
   ```
-response_notes: '配信できなかった配信元は、起動し直した後の `status` で確かめる。`migration_needed: true` のときは、利用者が `dev-docs migrate` を実行してから `restart` を呼ぶ。'
+response_notes: '配信できなかった配信元と、配信元の設定のバージョンの新旧は、起動し直した後の `status` の `version_state` で確かめる。`migration_needed: true` のときは、利用者が `dev-docs migrate` を実行してから `restart` を呼ぶ。'
 exceptions:
   - name: なし（正常終了）
     condition: 新しい commit が無い、または取り込んで依存を入れ直せた
