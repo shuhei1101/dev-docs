@@ -14,10 +14,11 @@ argument-hint: "[path]"
 
 1. 端末の設定を確かめる。
    - 端末の設定が無ければ、`/dev-docs:global-setup` を案内して止まる
+   - 端末の設定の `clone` の値を以降 `{clone}` と呼ぶ
 
 2. 配信元の設定を決める。
-   - `{path}/dev-docs.yaml` がある場合、`check_project` を呼ぶ。`version_state` が `old` なら、`dev-docs migrate --source {path}/dev-docs.yaml --plan` で手順を示し、了承されたら `dev-docs migrate --source ...` で当てる。`newer` なら、管理の MCP の `update` で dev-docs を更新するよう案内して止まる。違反があれば、キーのパスと理由を示して止まる。端末の設定は書き換えない
-   - `{path}/dev-docs.yaml` が無い場合、手順 3 以降で `{dev-docs のクローン}/templates/dev-docs.yaml` から作る（YAML でない範囲の配信元）
+   - `{path}/dev-docs.yaml` がある場合、`check_project` を呼ぶ。`version_state` が `old` なら、`{clone}/.venv/bin/python -m dev_docs migrate --source {path}/dev-docs.yaml --plan` で手順を示し、了承されたら `{clone}/.venv/bin/python -m dev_docs migrate --source ...` で当てる。`newer` なら、管理の MCP の `update` で dev-docs を更新するよう案内して止まる。違反があれば、キーのパスと理由を示して止まる。端末の設定は書き換えない
+   - `{path}/dev-docs.yaml` が無い場合、手順 3 以降で `{clone}/templates/dev-docs.yaml` から作る（YAML でない範囲の配信元）
 
 3. 権限と範囲を聞く。端末の設定の `sources[]` に同じ配信元の行が既にあるときは、今の値を示して変えるかだけを聞く。
 
@@ -41,7 +42,7 @@ argument-hint: "[path]"
    - 追加・削除・改名と仮のメタデータを表で示し、書いてよいかを聞く。断られたら何も書き換えずに止まる
 
 5. 確認が済んだものを書く。
-   - `dev-docs.yaml` が無い場合、`{クローン}/templates/dev-docs.yaml` から `dev-docs.yaml` を作り、`name`・`description`・`documents[].paths` を決めた値にする。`{クローン}/templates/files.schema.yaml` を `{path}/schemas/files.schema.yaml` にコピーする
+   - `dev-docs.yaml` が無い場合、`{clone}/templates/dev-docs.yaml` から `dev-docs.yaml` を作り、`name`・`description`・`documents[].paths` を決めた値にする。`{clone}/templates/files.schema.yaml` を `{path}/schemas/files.schema.yaml` にコピーする
    - 管理用の YAML の行は、`write_docs` で書く（配信元が登録済みのとき）。登録前の配信元は、`templates/files.schema.yaml` に沿って `files.yaml` を直接書く
    - `check_project`（`path` は配信元のフォルダ）を呼び、違反が無いことを確かめる。違反があれば示して止まり、端末の設定は書き換えない
 
