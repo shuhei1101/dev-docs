@@ -85,6 +85,43 @@ flows:
     expected:
       - '`isError: true` で `dev-docs.yaml` が無いことを返す'
     test: test_error_when_config_not_found
+  - name: 異常系（設定が違反する・ValidationFailedError）
+    summary: 違反のある設定では変換せず断る
+    setup:
+      - name: Mock
+        description: なし
+      - name: 配信元
+        description: 一時フォルダに `a.md` を置く
+        notes: '`config` に `name` の無い設定を渡す'
+    flow: |-
+      sequenceDiagram
+        participant C as クライアント
+        participant T as try_convert
+
+        C->>T: path・file・config
+        T-->>C: isError（ValidationFailedError）
+    expected:
+      - '`isError: true` で違反の件数と `check_project` の案内を返す'
+      - 配信元のフォルダが変わらない
+    test: test_error_when_invalid_config
+  - name: 異常系（設定が読めない・ConfigParseError）
+    summary: YAML として読めない設定では断る
+    setup:
+      - name: Mock
+        description: なし
+      - name: 配信元
+        description: 一時フォルダに `a.md` を置く
+        notes: '`config` に `name: [` を渡す'
+    flow: |-
+      sequenceDiagram
+        participant C as クライアント
+        participant T as try_convert
+
+        C->>T: path・file・config
+        T-->>C: isError（ConfigParseError）
+    expected:
+      - '`isError: true` で読めなかった行・列・理由を返す'
+    test: test_error_when_config_parse_error
 lead: 配信元の 1 つのファイルを、配信するときと同じ変換で Markdown にして返す。書き込まず、変換の控えも残さない。
 identifier: try_convert
 permissions: なし（`127.0.0.1` でだけ待ち受ける）
@@ -140,6 +177,12 @@ exceptions:
   - name: ConfigNotFoundError
     condition: '`path` に `dev-docs.yaml` が無く、`config` も渡していない'
     notes: '`isError: true`'
+  - name: ValidationFailedError
+    condition: 配信元の設定に違反か動かないスクリプトがある
+    notes: '`isError: true` で違反の件数を返し、`check_project` で確かめるよう示す'
+  - name: ConfigParseError
+    condition: '`dev-docs.yaml` か `config` が YAML として読めない'
+    notes: '`isError: true` で読めなかった行・列・理由を返す'
 constraints:
   - item: 注釈
     constraint: '`readOnlyHint: true`'

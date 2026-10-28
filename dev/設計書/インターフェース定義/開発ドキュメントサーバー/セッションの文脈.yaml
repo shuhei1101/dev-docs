@@ -95,7 +95,7 @@ idempotent: true
 side_effects: '`reason` が `clear`・`compact` のとき、`session_id`（と `agent_id`）の返し済みの記録を削除する'
 callers:
   - dev/設計書/シナリオ/単一ユースケース/起動する#scenarios[正常シナリオ（待ち受けているサーバーの文脈を追加する）]
-exclusivity: 返し済みの記録の削除は記録の書き込みと同じ錠で行う
+exclusivity: 返し済みの記録の削除は記録の書き込みと同じロックで行う
 request:
   - name: cwd
     type: str
