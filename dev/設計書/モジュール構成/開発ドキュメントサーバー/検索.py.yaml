@@ -181,7 +181,7 @@ data_models:
         type: bool
         access: 公開
         default: 'False'
-        description: '`False` は NFKC と `casefold` をした後に比べる'
+        description: '`False` は NFKC と `casefold` をした後に比べる（`regex` はパターンに正規化をかけず、`re.IGNORECASE` と NFKC にした値で比べる）'
   - name: Group
     title: 条件のまとまり
     container: features/search/types.py
