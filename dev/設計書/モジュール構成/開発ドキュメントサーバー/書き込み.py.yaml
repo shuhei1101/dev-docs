@@ -864,7 +864,7 @@ functions:
          - 同じ配信元の残る文書のうち、メタデータの `related` に `to` が消す文書の ID で `source` の無い行を持つ文書を集める。あれば `on_referenced` が `fail` なら参照元を添えた `DocumentReferencedError`、`unlink` なら参照元の `related` の列（種類の行の `metadata.related` が指す列。無ければ `related`）からその行を除く操作を作る（`defaults[]` から付いた行は外せないので、`fix` に `defaults[]` を直すことを書いた違反にする）
       4. `atomic` が `True` で `failed` があれば、最初の失敗の例外を送る
       5. 参照を外した文書を文書の検査に通す（違反は `ValidationFailedError`）
-      6. `dry_run` なら `applied=False` で返す
+      6. `dry_run` なら `applied=False` で、`unlinked` に参照を外す文書と外した後のバージョンを入れて返す
       7. ファイル 1 つの文書はファイルを消し、`records` の文書は配列から要素を除いてファイルを置き換える（`body_file` の指すファイルは消さない）。参照を外した文書を書き、文書のストア.キャッシュを捨てる
       8. 消した種類の `after_write` の生成を、文書の書き込みと同じに動かす（引数は消したファイルのパス）
       9. `applied=True` で、`unlinked` に参照を外した文書と新しいバージョンを入れて返す

@@ -115,10 +115,10 @@ flows:
 
         C->>T: targets: 文書 2・読んだときの expected_version
         T->>T: 今のバージョンと違う
-        T-->>C: isError（今のバージョンと差分）
+        T-->>C: isError（今のバージョン）
       ```
     expected:
-      - '`isError: true` で、今のバージョンと読んだときとの差分を返す'
+      - '`isError: true` で、今のバージョンを返す'
       - 文書 2 のファイルが残る
     test: test_error_when_version_mismatch
   - name: 異常系（書き込めない配信元・SourceNotWritableError）
@@ -168,7 +168,7 @@ flows:
       - name: Mock
         description: なし
       - name: 書ける配信元
-        description: Git 管理外の配信元で、種類の `documents[].writable` が作成と更新だけを許す
+        description: Git 管理外の配信元で、種類の `documents[].writable` が `false`
         notes: id `memo`。`scope.write` は sample のフォルダ
     flow: |-
       ```mermaid
