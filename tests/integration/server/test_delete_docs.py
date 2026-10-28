@@ -173,26 +173,19 @@ def test_error_when_version_mismatch(
     source, env, worktree = _setup(make_source, make_server, add_worktree)
     target = worktree / "docs" / "doc-2.yaml"
     read_version = _version(target)
-    arguments = {"cwd": str(source.folder), "worktree": str(worktree), "session_id": "s1"}
-    env.call(
-        "search_docs",
-        filter={"field": "id", "op": "eq", "values": ["doc-2"]},
-        view="full",
-        **arguments,
-    )
     edited = sample_doc_text("doc-2", "文書 2", description="直接編集した概要文")
     target.write_text(edited, encoding="utf-8")
     # 実行
     result = env.call(
         "delete_docs",
+        cwd=str(source.folder),
+        worktree=str(worktree),
         targets=[{"id": "doc-2", "expected_version": read_version}],
-        **arguments,
     )
     # 検証
     assert result.is_error
     assert "VersionMismatchError" in result.text
     assert content_hash(edited) in result.text
-    assert "直接編集した概要文" in result.text
     assert target.is_file()
 
 

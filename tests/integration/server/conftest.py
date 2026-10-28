@@ -356,8 +356,6 @@ def start_serve() -> Iterator[Callable[..., subprocess.Popen[str]]]:
             **os.environ,
             "DEV_DOCS_CONFIG": str(settings),
             "DEV_DOCS_PORT": str(port),
-            # 端末ではなくパイプへ出す標準出力を、停止の合図で失わないよう行ごとに出す
-            "PYTHONUNBUFFERED": "1",
         }
         process = subprocess.Popen(
             [sys.executable, "-m", "dev_docs", "serve"],

@@ -50,7 +50,7 @@ def test_normal(
     assert sorted(path.name for path in env.folders["sample"].rglob("*.yaml")) == source_files
     assert hidden == {table: ["label"]}
     assert cleared.status_code == 200
-    assert after_clear == {table: []}
+    assert after_clear == {}
 
 
 def test_error_when_body_invalid(

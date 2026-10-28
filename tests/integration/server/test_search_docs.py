@@ -49,7 +49,7 @@ def test_normal_when_full(make_source: Callable[..., Any], make_server: Callable
     assert as_json.structured is not None
     assert as_json.structured == as_json.data
     assert [item["id"] for item in as_json.data["items"]] == ["doc-2", "doc-1"]
-    assert "id: doc-2" in as_json.data["items"][0]["body"]
+    assert "id: doc-2" in as_json.data["items"][0]["values"]["body"]
 
 
 def test_normal_when_count_grouped(
