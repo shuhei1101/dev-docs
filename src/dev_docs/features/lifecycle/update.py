@@ -5,13 +5,12 @@ from __future__ import annotations
 import logging
 import subprocess
 import tomllib
-from importlib.metadata import version as installed_version
 from pathlib import Path
 
-from dev_docs import DIST_NAME
 from dev_docs.features.lifecycle.control import RestartControl
 from dev_docs.features.lifecycle.types import COMMAND_TIMEOUT_SEC, UpdateResult
 from dev_docs.shared.errors import RestartInProgressError, UpdateFailedError
+from dev_docs.shared.version import RUNNING_VERSION
 
 logger = logging.getLogger(__name__)
 
@@ -64,7 +63,7 @@ def update_clone(clone: Path, *, control: RestartControl) -> UpdateResult:
 
 def _update(clone: Path, control: RestartControl) -> UpdateResult:
     """更新の本体（`update_lock` を取った中で呼ぶ）。"""
-    previous_version = installed_version(DIST_NAME)
+    previous_version = RUNNING_VERSION
     before = _run(["git", "rev-parse", "HEAD"], cwd=clone).strip()
     logger.info("クローンを更新する（%s）", clone)
     _run(["git", "pull", "--ff-only"], cwd=clone)

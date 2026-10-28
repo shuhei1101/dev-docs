@@ -6,11 +6,9 @@ import logging
 import os
 import tempfile
 from collections.abc import Mapping
-from importlib.metadata import version as installed_version
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from dev_docs import DIST_NAME
 from dev_docs.features.access.types import Target
 from dev_docs.features.admin.types import (
     SYNC_ITEMS_LIMIT,
@@ -49,6 +47,7 @@ from dev_docs.shared.errors import (
     Violation,
 )
 from dev_docs.shared.paths import match_glob, normalize_path
+from dev_docs.shared.version import RUNNING_VERSION
 from dev_docs.shared.yaml_io import YamlLoadError, load_yaml
 
 if TYPE_CHECKING:
@@ -107,7 +106,7 @@ def get_status(handlers: Handlers, *, env: Mapping[str, str]) -> ServerStatus:
     port = listen_port(handlers.terminal, env)
     return ServerStatus(
         address=f"http://{handlers.terminal.bind}:{port}/",
-        version=installed_version(DIST_NAME),
+        version=RUNNING_VERSION,
         pid=os.getpid(),
         terminal=TerminalState(
             file=str(handlers.terminal.file),
