@@ -35,6 +35,7 @@ class SourceRegistry:
                         id=served.id,
                         index=index,
                         status="not_served",
+                        config=tuple(entry.config),
                         errors=[
                             Violation(
                                 path=f"sources[{index}].id",

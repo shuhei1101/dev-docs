@@ -49,11 +49,12 @@ def test_build_settings_router_when_get(
     # 準備
     write_files(tmp_path, {"settings.yaml": SETTINGS})
     statuses = [
-        make_status("a", 0),
+        make_status("a", 0, config=("/tmp/a/dev-docs.yaml",)),
         make_status(
             "b",
             1,
             "not_served",
+            config=("/tmp/b/dev-docs.yaml",),
             errors=[Violation(path="documents[0].paths", rule="必須のキーが無い")],
         ),
     ]
@@ -74,6 +75,48 @@ def test_build_settings_router_when_get(
     assert body["sources"][1]["status"] == "not_served"
     assert body["sources"][1]["errors"] == [
         {"path": "documents[0].paths", "reason": "必須のキーが無い"}
+    ]
+
+
+def test_build_settings_router_when_pending_reload(
+    tmp_path: Path,
+    write_files: Callable[[Path, dict[str, str]], None],
+    make_handlers: Callable[..., Any],
+    make_terminal_config: Callable[..., TerminalConfig],
+    make_status: Callable[..., SourceStatus],
+) -> None:
+    """読み直していない行を pending_reload で返す（正常系）。"""
+    # 準備
+    settings = (
+        'version: "1"\n'
+        "clone: /tmp/clone\n"
+        "sources:\n"
+        "  - id: b\n"
+        "    config: /tmp/b/dev-docs.yaml\n"
+        "  - id: a\n"
+        "    config: /tmp/a/dev-docs.yaml\n"
+        "  - id: fresh\n"
+        "    config: /tmp/fresh/dev-docs.yaml\n"
+    )
+    write_files(tmp_path, {"settings.yaml": settings})
+    statuses = [
+        make_status("a", 0, config=("/tmp/a/dev-docs.yaml",)),
+        make_status("b", 1, config=("/tmp/b/dev-docs.yaml",)),
+    ]
+    terminal = make_terminal_config(file=tmp_path / "settings.yaml")
+    handlers = make_handlers(terminal=terminal, registry=FakeRegistry(statuses))
+    app = FastAPI()
+    app.include_router(build_settings_router(handlers))
+    client = TestClient(app)
+    # 実行
+    response = client.get("/_api/settings/sources")
+    # 検証
+    rows = response.json()["sources"]
+    assert response.status_code == 200
+    assert [(row["id"], row["status"]) for row in rows] == [
+        ("b", "serving"),
+        ("a", "serving"),
+        ("fresh", "pending_reload"),
     ]
 
 

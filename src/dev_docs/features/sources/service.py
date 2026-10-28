@@ -352,9 +352,12 @@ def _log_violations(source_id: str, violations: list[Violation]) -> None:
 def load_source(entry: SourceEntry, *, index: int) -> tuple[ServedSource | None, SourceStatus]:
     """端末の設定の 1 行から配信元の設定を読んで検証し、配信中の配信元と状態を作る。"""
     fallback_id = entry.id or f"sources[{index}]"
+    config_files = tuple(entry.config)
     # 端末の設定で無効な行は、設定を読まない
     if not entry.enabled:
-        return None, SourceStatus(id=fallback_id, index=index, status="disabled")
+        return None, SourceStatus(
+            id=fallback_id, index=index, status="disabled", config=config_files
+        )
     files = [Path(item).expanduser() for item in entry.config]
     served, config, violations = _assemble(
         files,
@@ -365,17 +368,21 @@ def load_source(entry: SourceEntry, *, index: int) -> tuple[ServedSource | None,
     source_id = entry.id or (config.name if config else fallback_id)
     if violations:
         _log_violations(source_id, violations)
-        return None, SourceStatus(id=source_id, index=index, status="not_served", errors=violations)
+        return None, SourceStatus(
+            id=source_id, index=index, status="not_served", errors=violations, config=config_files
+        )
     assert served is not None and config is not None  # noqa: S101
     # 配信元の設定で無効
     if not config.enabled:
-        return None, SourceStatus(id=source_id, index=index, status="disabled")
+        return None, SourceStatus(id=source_id, index=index, status="disabled", config=config_files)
     # 設定のバージョンを比べる
     comparison = compare_config_version(config.version)
     if comparison == "newer":
         violations = [Violation(path="version", rule="このサーバーより新しい設定です")]
         _log_violations(source_id, violations)
-        return None, SourceStatus(id=source_id, index=index, status="not_served", errors=violations)
+        return None, SourceStatus(
+            id=source_id, index=index, status="not_served", errors=violations, config=config_files
+        )
     config_version: tuple[str, str] | None = None
     if comparison == "older":
         config_version = (config.version, SOURCE_CONFIG_VERSION)
@@ -386,7 +393,11 @@ def load_source(entry: SourceEntry, *, index: int) -> tuple[ServedSource | None,
             SOURCE_CONFIG_VERSION,
         )
     return served, SourceStatus(
-        id=source_id, index=index, status="serving", config_version=config_version
+        id=source_id,
+        index=index,
+        status="serving",
+        config_version=config_version,
+        config=config_files,
     )
 
 

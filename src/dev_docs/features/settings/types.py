@@ -88,11 +88,11 @@ class SettingsSourcesResponse(BaseModel):
 class SettingsSourceRow(BaseModel):
     """端末の設定の取得の `sources[]` の 1 行（行の値に配信元の状態を重ねたもの）。"""
 
-    id: str
+    id: str | None
     config: list[str]
     enabled: bool
     scope: SourceScope
-    status: Literal["serving", "not_served", "disabled"]
+    status: Literal["serving", "not_served", "disabled", "pending_reload"]
     errors: list[dict[str, str]] = []
     config_version: dict[str, str] | None = None
 

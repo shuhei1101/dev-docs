@@ -141,3 +141,4 @@ class SourceStatus:
     status: SourceStatusKind
     errors: list[Violation] = field(default_factory=list)
     config_version: tuple[str, str] | None = None
+    config: tuple[str, ...] = ()
