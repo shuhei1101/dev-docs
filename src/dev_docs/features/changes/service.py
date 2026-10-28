@@ -71,11 +71,7 @@ def _range_documents(
             continue
         relative = change.path if prefix == "." else change.path.removeprefix(f"{prefix}/")
         table = next(
-            (
-                row
-                for row in source.config.documents
-                if row.enabled and row.matches(relative)
-            ),
+            (row for row in source.config.documents if row.enabled and row.matches(relative)),
             None,
         )
         if table is None:
