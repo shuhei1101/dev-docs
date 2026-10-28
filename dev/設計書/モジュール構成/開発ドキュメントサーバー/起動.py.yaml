@@ -422,7 +422,7 @@ functions:
         summary: OpenAPI の画面を出さない
         condition: GET `/docs` と `/_api/openapi.json`
         mock: 配線済みの関数（偽物）
-        expected: '`/docs` は 404、`/_api/openapi.json` の `paths` が全て `/_api/` で始まる'
+        expected: '`/docs` は 404、`/_api/openapi.json` の `paths` が全て `/_api/` で始まり、各入口の `operationId` が識別子（`get_document_default`・`get_document`・`search_page`・`list_refs`・`put_columns`・`get_settings_sources`・`put_settings_sources`）と同じで重複が無い'
   - name: build_lifespan
     title: アプリの寿命
     kind: 関数

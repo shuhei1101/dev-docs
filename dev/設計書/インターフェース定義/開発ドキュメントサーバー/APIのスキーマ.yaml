@@ -23,7 +23,7 @@ flows:
     expected:
       - 200 で、`paths` に文書の取得・画面の検索・リビジョンの一覧・表の列の設定の保存・端末の設定の取得・端末の設定の保存の入口が全てある
       - '`paths` に `/mcp`・`/_admin/mcp`・`/_api/openapi.json` が無い'
-      - 各入口の `operationId` がインターフェース定義の識別子と同じ
+      - 各入口の `operationId` がインターフェース定義の識別子と同じ（`path` を省く文書の取得は `get_document_default`）で、重複が無い
     test: test_normal
 lead: '#17 が API クライアントを作るときに読む。画面の API（`/_api/` の入口）だけを載せた OpenAPI のスキーマを返す。'
 identifier: get_openapi

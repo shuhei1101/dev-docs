@@ -679,7 +679,8 @@ functions:
       2. GET `/_api/sources/{source}/search` は、`q`（1〜`SEARCH_QUERY_MAX` 文字）・`ref`・`limit`（1〜`SEARCH_LIMIT_MAX`）を受け、画面の読む場所の文書で画面の検索を返す
       3. GET `/_api/sources/{source}/refs` は、`commits`（0〜`REFS_COMMITS_MAX`）を受け、リビジョンの一覧を返す（無い配信元は 404）
       4. PUT `/_api/sources/{source}/columns` は、同じオリジンの確認を依存に持ち、配信元を引いてから、本文を `ColumnsRequest` で受けて表の列の設定.列の設定を書く を呼び、同じ値を返す
-      5. サービスは `asyncio.to_thread` で呼ぶ
+      5. 各ルートの `operation_id` は、`/docs` が `get_document_default`、`/docs/{path:path}` が `get_document`、search が `search_page`、refs が `list_refs`、columns が `put_columns`
+      6. サービスは `asyncio.to_thread` で呼ぶ
     unit_tests:
       - name: test_build_view_router_when_document
         case: 正常

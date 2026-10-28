@@ -285,5 +285,7 @@ constraints:
     decided_by: dev/設計書/非機能要件/非機能要件#requirements[待ち受けのアドレス]
   - item: 読み直し
     constraint: ファイルの更新日時か大きさが変わった文書は、次の要求で読み直す
+  - item: operationId
+    constraint: '`path` を含む入口は `get_document`、`path` を省く入口は `get_document_default`'
 refs:
   - dev/設計書/シナリオ/単一ユースケース/YAMLを直接編集した#scenarios[異常シナリオ（YAML を壊した）]
