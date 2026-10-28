@@ -5,6 +5,7 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
+FILES_SCHEMA = Path(__file__).parents[3] / "templates" / "files.schema.yaml"
 BROKEN_CONFIG = "name: broken\ndocuments:\n  - id: sample\n    type: yaml\n"
 DOC_1 = {"field": "id", "op": "eq", "values": ["doc-1"]}
 SEEN = "（この会話で返し済み）"
@@ -59,6 +60,7 @@ def test_normal(
     assert all(re.search(r"\| [0-9a-f]{6} \|$", row) for row in rows)
     assert "id: doc-1" in full.text
     assert "name: 文書 1" in full.text
+    assert f'<document path="{sample.folder}/docs/doc-1.yaml" scope="full">' in full.text
     assert [item["id"] for item in related.data["items"]] == ["doc-2"]
 
 
@@ -106,6 +108,7 @@ def test_normal_when_worktree_given(
     assert "name: ワークツリーの名前" in by_cwd.text
     assert "name: 文書 1" in by_clone.text
     assert "ワークツリーの名前" not in by_clone.text
+    assert f'<document path="{worktree}/docs/doc-1.yaml" scope="full">' in by_worktree.text
 
 
 def test_normal_when_same_doc_twice(
@@ -135,12 +138,79 @@ def test_normal_when_same_doc_twice(
     assert body in first.text
     assert SEEN in second.text
     assert body not in second.text
+    assert "<document>" in second.text
+    assert "path=" not in second.text
     assert body in repeated.text
     assert body in other_session.text
     assert first_related.data["items"][0]["name"] == "文書 2"
     assert second_related.data["items"][0]["name"] == SEEN
     assert second_related.data["items"][0]["description"] == SEEN
     assert "1 件目" in second_summary.text
+
+
+def test_normal_when_files_index(
+    make_source: Callable[..., Any],
+    serve: Callable[..., Any],
+    sample_file_set: Callable[..., dict[str, str]],
+    sample_config_text: Callable[..., str],
+) -> None:
+    """管理用の YAML で配信したソースコードを検索で引く（正常系）。"""
+    # 準備
+    src_row = (
+        "  - id: src\n"
+        "    type: yaml\n"
+        "    paths: [src/files.yaml]\n"
+        "    schema: schemas/files.schema.yaml\n"
+        "    records: files\n"
+        "    body_file: path\n"
+        "    defaults:\n"
+        "      - paths: [src/**]\n"
+        "        tags: [code]\n"
+    )
+    files = sample_file_set(
+        **{
+            "dev-docs.yaml": sample_config_text(src_row),
+            "schemas/files.schema.yaml": FILES_SCHEMA.read_text(encoding="utf-8"),
+            "src/files.yaml": (
+                "files:\n  - path: a.py\n    tags: [auth]\n  - path: b.py\n    name: 部品 B\n"
+            ),
+            "src/a.py": "a = 1\n",
+            "src/b.py": "b = 2\n",
+        }
+    )
+    sample = make_source("sample", files)
+    served = serve(sample)
+    by_id = {"cwd": str(sample.folder), "filter": {"field": "id", "op": "eq", "values": ["src/a"]}}
+    # 実行
+    tagged = served.call(
+        "search_docs",
+        cwd=str(sample.folder),
+        filter={"field": "tags", "op": "eq", "values": ["auth"]},
+        view="summary",
+        fields=["tags"],
+        format="json",
+    )
+    other = served.call(
+        "search_docs",
+        cwd=str(sample.folder),
+        filter={"field": "id", "op": "eq", "values": ["src/b"]},
+        view="summary",
+        format="json",
+    )
+    markdown = served.call("search_docs", view="full", **by_id)
+    as_json = served.call("search_docs", view="full", format="json", **by_id)
+    # 検証
+    item = tagged.data["items"][0]
+    located = as_json.data["items"][0]
+    assert [row["id"] for row in tagged.data["items"]] == ["src/a"]
+    assert item["values"]["name"] == "a"
+    assert item["values"]["tags"] == ["code", "auth"]
+    assert other.data["items"][0]["values"]["name"] == "部品 B"
+    assert "a = 1" in markdown.text
+    assert f'<document path="{sample.folder}/src/a.py" scope="full">' in markdown.text
+    assert located["path"] == f"{sample.folder}/src/a.py"
+    assert located["scope"] == "full"
+    assert located["values"]["path"] == "a.py"
 
 
 def test_error_when_source_not_readable(
