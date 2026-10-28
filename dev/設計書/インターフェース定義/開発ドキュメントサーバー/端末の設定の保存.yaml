@@ -154,13 +154,11 @@ flows:
       - 422 で、`errors` に `sources[1].id` と `sources[1].scope.read` がそれぞれの理由つきである
       - '`settings.yaml` が変わらず、`/sample/` は 200 を返す'
     test: test_error_when_schema_invalid
-lead: 設定画面が配信元の追加・編集・削除の後の `sources[]` を丸ごと送信する。スキーマに通ったときだけ `settings.yaml` を書き換え、配信元を読み直す。
+lead: '#17 の設定画面が配信元の追加・編集・削除の後の `sources[]` を丸ごと送信する。スキーマに通ったときだけ `settings.yaml` を書き換え、配信元を読み直す。'
 identifier: put_settings_sources
 permissions: 画面と同じオリジンからの要求だけ
 idempotent: true
 side_effects: '`DEV_DOCS_CONFIG` が指す `settings.yaml` の `sources` を書き換え、配信元を読み直す。配信元のフォルダのファイルは変えない'
-callers:
-  - dev/設計書/シナリオ/単一ユースケース/設定画面で端末の設定を変える#scenarios[正常シナリオ]
 exclusivity: 端末の設定の排他ロックの中で、検証・書き込み・読み直しを行う。読み直しの間の要求は、読み直す前の配信元で応える
 request:
   - name: sources
@@ -251,6 +249,3 @@ constraints:
     constraint: 制限なし（`127.0.0.1` でだけ待ち受ける）
   - item: タイムアウト
     constraint: 制限なし
-refs:
-  - dev/設計書/シナリオ/単一ユースケース/設定画面で端末の設定を変える#scenarios[正常シナリオ]
-  - dev/設計書/シナリオ/単一ユースケース/設定画面で端末の設定を変える#scenarios[異常シナリオ（別のオリジンから書き込む）]

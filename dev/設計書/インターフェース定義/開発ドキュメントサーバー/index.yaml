@@ -1,4 +1,4 @@
-summary: "開発ドキュメントサーバーの MCP ツール・画面と API・起動のインターフェース"
+summary: "開発ドキュメントサーバーの MCP ツール・画面の API・起動のインターフェース"
 docs_index: true
 items:
   - page: 文書の検索.yaml
@@ -19,23 +19,20 @@ items:
   - page: 関連のたどり.yaml
     summary: trace_related
     group: MCP
-  - page: 文書の画面.yaml
-    summary: GET /{source}[@{ref}]/{path}
-    group: 画面
+  - page: 文書の取得.yaml
+    summary: GET /_api/sources/{source}/docs[/{path}]
+    group: 画面の API
   - page: 画面の検索.yaml
     summary: GET /_api/sources/{source}/search
-    group: 画面
+    group: 画面の API
   - page: リビジョンの一覧.yaml
     summary: GET /_api/sources/{source}/refs
-    group: 画面
+    group: 画面の API
   - page: 表の列の設定の保存.yaml
     summary: PUT /_api/sources/{source}/columns
-    group: 画面
-  - page: トップの転送.yaml
-    summary: GET /
-    group: 設定・起動
-  - page: 設定画面の表示.yaml
-    summary: GET /_settings/
+    group: 画面の API
+  - page: 端末の設定の取得.yaml
+    summary: GET /_api/settings/sources
     group: 設定・起動
   - page: 端末の設定の保存.yaml
     summary: PUT /_api/settings/sources

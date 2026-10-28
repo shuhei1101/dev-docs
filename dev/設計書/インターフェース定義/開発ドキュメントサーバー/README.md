@@ -1,6 +1,6 @@
 # 開発ドキュメントサーバー
 
-開発ドキュメントサーバーの MCP ツール・画面と API・起動のインターフェース
+開発ドキュメントサーバーの MCP ツール・画面の API・起動のインターフェース
 
 ## 目次
 
@@ -14,12 +14,11 @@
 | MCP | [配信元の説明](./配信元の説明.yaml) | describe |
 | MCP | [変更の一覧](./変更の一覧.yaml) | list_changes |
 | MCP | [関連のたどり](./関連のたどり.yaml) | trace_related |
-| 画面 | [文書の画面](./文書の画面.yaml) | GET /{source}[@{ref}]/{path} |
-| 画面 | [画面の検索](./画面の検索.yaml) | GET /_api/sources/{source}/search |
-| 画面 | [リビジョンの一覧](./リビジョンの一覧.yaml) | GET /_api/sources/{source}/refs |
-| 画面 | [表の列の設定の保存](./表の列の設定の保存.yaml) | PUT /_api/sources/{source}/columns |
-| 設定・起動 | [トップの転送](./トップの転送.yaml) | GET / |
-| 設定・起動 | [設定画面の表示](./設定画面の表示.yaml) | GET /_settings/ |
+| 画面の API | [文書の取得](./文書の取得.yaml) | GET /_api/sources/{source}/docs[/{path}] |
+| 画面の API | [画面の検索](./画面の検索.yaml) | GET /_api/sources/{source}/search |
+| 画面の API | [リビジョンの一覧](./リビジョンの一覧.yaml) | GET /_api/sources/{source}/refs |
+| 画面の API | [表の列の設定の保存](./表の列の設定の保存.yaml) | PUT /_api/sources/{source}/columns |
+| 設定・起動 | [端末の設定の取得](./端末の設定の取得.yaml) | GET /_api/settings/sources |
 | 設定・起動 | [端末の設定の保存](./端末の設定の保存.yaml) | PUT /_api/settings/sources |
 | 設定・起動 | [起動](./起動.yaml) | dev-docs serve |
 
