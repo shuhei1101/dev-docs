@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from datetime import date
-from pathlib import PurePosixPath
 from typing import Any
 
 from dev_docs.features.access.service import resolve_read_targets
@@ -75,7 +74,7 @@ def _range_documents(
             (
                 row
                 for row in source.config.documents
-                if row.enabled and any(PurePosixPath(relative).full_match(p) for p in row.paths)
+                if row.enabled and row.matches(relative)
             ),
             None,
         )

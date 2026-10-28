@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import Any, Literal
 
 from dev_docs.shared.errors import UnknownKindError, Violation
@@ -49,6 +49,7 @@ class DocumentTable:
     body_file: str | None = None
     metadata: dict[str, MetadataMapping] = field(default_factory=dict)
     defaults: list[DocumentDefaults] = field(default_factory=list)
+    exclude: list[str] = field(default_factory=list)
 
     @property
     def is_writable(self) -> bool:
@@ -56,6 +57,17 @@ class DocumentTable:
         if self.writable is not None:
             return self.writable
         return self.type == "yaml"
+
+    def excludes(self, path: str) -> bool:
+        """ファイル名（パスの末尾の要素）が `exclude` のどれかに当たるか。"""
+        name = PurePosixPath(PurePosixPath(path).name)
+        return any(name.full_match(pattern) for pattern in self.exclude)
+
+    def matches(self, path: str) -> bool:
+        """ファイルがこの行の文書になるか（`paths` に当たり、`exclude` に当たらない）。"""
+        target = PurePosixPath(path)
+        in_paths = any(target.full_match(pattern) for pattern in self.paths)
+        return in_paths and not self.excludes(path)
 
 
 @dataclass(frozen=True)
