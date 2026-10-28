@@ -16,7 +16,21 @@ layers:
         ```
     parallel: true
   - name: 結合テスト（バック）
-    run_all: 未確定
+    run_all: |-
+      ```bash
+      uv run pytest tests/integration/
+      ```
+    description: pytest で実行する。一時フォルダに配信元と端末の設定を作り、dev-docs のアプリを HTTP のテストのクライアントで呼ぶ。起動のテストだけは `dev-docs serve` を子プロセスで起動する。
+    prerequisites:
+      - '`git` と、`PATH` の `python3`（配信元のスクリプトに使う）が使えること'
+      - Linux の `/proc/net/tcp` を読めること（待ち受けのアドレスの確認）
+      - '`127.0.0.1` の空きポートが使えること（起動のテストが子プロセスで待ち受ける）'
+    run_one:
+      label: ファイル
+      command: |-
+        ```bash
+        uv run pytest {結合テストファイルパス}
+        ```
   - name: 結合テスト（フロント）
     run_all: 未確定
   - name: 外部疎通テスト
