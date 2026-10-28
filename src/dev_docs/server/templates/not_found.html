@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% from "components/error_panel.html" import error_panel %}
+{% from "components/topbar_menus.html" import topbar_menus, search_box %}
+
+{% block title %}見つかりません | dev-docs{% endblock %}
+{% block brand_href %}{% if state.source_id %}/{{ state.source_id }}/{% else %}/_settings/{% endif %}{% endblock %}
+{% block topbar_menus %}{{ topbar_menus(state, state.source_id or "配信元を選ぶ") }}{% endblock %}
+{% block topbar_tools %}{% if state.source_id %}{{ search_box(state) }}{% endif %}{% endblock %}
+
+{% block main %}
+<div class="layout layout--single">
+  <main class="content">
+    <h1 class="doc-title">見つかりません</h1>
+    {{ error_panel("見つからなかったもの", missing_rows) }}
+    <ul class="next-links">
+      {%- for name, url in links %}
+      <li><a href="{{ url }}">{{ name }}</a></li>
+      {%- endfor %}
+    </ul>
+  </main>
+</div>
+{% endblock %}

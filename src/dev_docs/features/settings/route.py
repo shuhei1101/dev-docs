@@ -11,7 +11,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from dev_docs.features.settings.service import save_sources
 from dev_docs.features.settings.types import SettingsSourcesRequest, SettingsSourcesResponse
 from dev_docs.features.sources.types import SourceStatus
-from dev_docs.features.view.types import PageState
+from dev_docs.features.view.page import PAGE_STATE_ID, embed_json
 from dev_docs.server.origin import require_same_origin
 
 if TYPE_CHECKING:
@@ -57,12 +57,11 @@ def build_settings_router(handlers: Handlers) -> APIRouter:
     def settings_page(request: Request) -> HTMLResponse:
         rows = _settings_rows(handlers)
         config_path = str(handlers.terminal.file)
-        state = PageState(sources=[])
         context = {
             "config_path": config_path,
             "sources": rows,
-            "state": state,
-            "page_state": {"config_path": config_path, "sources": rows},
+            "state_json": embed_json({"config_path": config_path, "sources": rows}),
+            "page_state_id": PAGE_STATE_ID,
         }
         response: HTMLResponse = handlers.templates.TemplateResponse(
             request, "settings.html", context

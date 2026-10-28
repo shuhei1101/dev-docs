@@ -1,0 +1,39 @@
+{# 配信元とリビジョンの切り替え（メニューの中身は画面のスクリプトが描く） #}
+{% from "components/icons.html" import icon %}
+
+{% macro topbar_menus(state, source_label) -%}
+{# 配信元の切り替え #}
+<button class="select-button" type="button" commandfor="source-menu" command="toggle-popover" aria-label="配信元を切り替える">
+  {{ icon("source") }}
+  <span class="select-button__label">{{ source_label }}</span>
+  {{ icon("chevron", 12) }}
+</button>
+<div id="source-menu" class="menu" popover data-source-menu>
+  <p class="menu__heading">配信元</p>
+</div>
+{# リビジョンの切り替え（Git 管理外の配信元では出さない） #}
+{% if state.git -%}
+<button class="select-button" type="button" commandfor="revision-menu" command="toggle-popover" aria-label="リビジョンを切り替える" data-revision-open>
+  {{ icon("revision") }}
+  <span class="select-button__label mono">{{ state.ref }}</span>
+  {{ icon("chevron", 12) }}
+</button>
+<div id="revision-menu" class="menu menu--wide" popover data-revision-menu>
+  <p class="menu__heading">リビジョン</p>
+</div>
+{%- endif %}
+{%- endmacro %}
+
+{% macro search_box(state) -%}
+<button class="search-button" type="button" commandfor="search" command="toggle-popover" aria-label="検索">
+  {{ icon("search") }}
+  <span class="search-button__label">検索</span>
+  <kbd class="search-button__key">/</kbd>
+</button>
+<div id="search" class="search" popover>
+  <label class="search__label" for="search-input">{{ state.source_id }} の文書を検索</label>
+  <input id="search-input" class="search__input" type="search" autocomplete="off" maxlength="200">
+  <p class="search__count" data-search-count hidden></p>
+  <ul class="search__results" data-search-results></ul>
+</div>
+{%- endmacro %}

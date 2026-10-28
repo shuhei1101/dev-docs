@@ -1,0 +1,42 @@
+{# 画面の土台。トップバー・明暗の切り替え・画面の状態の埋め込み #}
+{% from "components/icons.html" import icon %}
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  {# 狭い幅でも等倍で描く #}
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  {# ライトとダークの両方に対応することを描画の前にブラウザへ伝える #}
+  <meta name="color-scheme" content="light dark">
+  <title>{% block title %}dev-docs{% endblock %}</title>
+  {# 利用者が固定した明暗を、描画の前に当てる #}
+  <script>
+    {
+      const scheme = localStorage.getItem("dev-docs-color-scheme");
+      if (scheme) {
+        document.querySelector('meta[name="color-scheme"]').content = scheme;
+        document.documentElement.dataset.scheme = scheme;
+      }
+    }
+  </script>
+  {% block head %}{% endblock %}
+  <link rel="stylesheet" href="/_static/style.css">
+  <script type="module" src="/_static/{% block script %}shared{% endblock %}.js"></script>
+</head>
+<body{% block body_attrs %}{% endblock %}>
+  <header class="topbar">
+    {% block topbar_start %}{% endblock %}
+    <a class="topbar__brand" href="{% block brand_href %}/_settings/{% endblock %}">dev-docs</a>
+    {% block topbar_menus %}{% endblock %}
+    <span class="topbar__spacer"></span>
+    {% block topbar_tools %}{% endblock %}
+    {# 設定画面を開く #}
+    <a class="icon-button" href="/_settings/" aria-label="設定"{% block settings_current %}{% endblock %}>{{ icon("gear") }}</a>
+    {# 明暗の切り替え #}
+    <button class="icon-button" type="button" id="scheme-toggle" aria-label="明暗を切り替える" aria-pressed="false">{{ icon("scheme") }}</button>
+  </header>
+  {% block main %}{% endblock %}
+  {# サーバーが埋め込む画面の状態（画面のスクリプトが読む） #}
+  <script type="application/json" id="{{ page_state_id }}">{{ state_json | safe }}</script>
+</body>
+</html>
