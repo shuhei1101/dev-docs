@@ -7,6 +7,8 @@ import sys
 from collections.abc import Callable
 from importlib.metadata import version
 
+from dev_docs.main import run_serve
+
 PROG = "dev-docs"
 DIST_NAME = "dev-docs"
 
@@ -17,7 +19,9 @@ def build_parser() -> argparse.ArgumentParser:
     # バージョンは配布のメタデータから引く（配布が入っていなければ PackageNotFoundError を伝える）
     parser.add_argument("--version", action="version", version=f"{PROG} {version(DIST_NAME)}")
     # 各サブコマンドは handler を既定値に持つ
-    parser.add_subparsers(dest="cmd", required=True)
+    subparsers = parser.add_subparsers(dest="cmd", required=True)
+    serve = subparsers.add_parser("serve", help="開発ドキュメントサーバーを起動する")
+    serve.set_defaults(handler=run_serve)
     return parser
 
 
