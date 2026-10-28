@@ -34,7 +34,7 @@
 - [x] 部品設計（画面の部品を外す）
 - [x] 画面設計（`dev/設計書/画面設計/`・`dev/mock/pages/*`・`dev/mock/components/*`・`dev/mock/styles/*`・画面だけが使う外部ライブラリの設計書を外す）
 - [x] モジュール構成設計（画面のスクリプト・テンプレートを外す）
-- [ ] ドキュメント修正（画面の記述を外す。README.md・docs/はじめに/コアコンセプト/配信元と権限.md・docs/使い方/配信元を配信する.md・docs/リファレンス/文書のMCP.md・docs/リファレンス/設定.md・docs/リファレンス/用語集.md）
+- [x] ドキュメント修正（画面の記述を外す。README.md・docs/はじめに/コアコンセプト/配信元と権限.md・docs/使い方/配信元を配信する.md・docs/リファレンス/文書のMCP.md・docs/リファレンス/設定.md・docs/リファレンス/用語集.md）
 - [ ] 単体テスト作成（`tests/unit/server/static/` と直下の `package.json` を外す）
 - [ ] 実装
 - [ ] 結合テスト作成
