@@ -272,7 +272,7 @@ Git 管理外の配信元では、種類の `documents[].writable` が削除を�
 | SourceNotServedError | 起動時の検証で外したか `enabled: false` の配信元を指した | 違反したキーのパスと理由 |
 | WorktreeNotMatchedError | `worktree` が配信元の `worktrees` に当たらない | 渡したパスと `worktrees` の値 |
 | TargetIsCloneError | Git の配信元で、書く先がクローン本体になる | `worktree` でワークツリーを指すこと |
-| InvalidArgumentError | `filter`・`order_by`・`group_by`・Operation の中の知らない項目・型の合わない値、50 件を超える操作、必須のキーの欠け、`text_edits` の `old` が 1 か所に一致しない、`ref` を渡せない配信元に `ref`・`from`・`to` を渡した | 項目のパス・期待する型・実際の値と、`describe(source, kind)` でスキーマを見ること |
+| InvalidArgumentError | `filter`・`order_by`・`group_by`・Operation の中の知らない項目・型の合わない値、50 件を超える操作、必須のキーの欠け、`text_edits` の `old` が 1 か所に一致しない、`ref` を渡せない配信元に `ref`・`from`・`to` を渡した、`create` の置き場所のファイル名が `documents[].exclude[]` に当たる | 項目のパス・期待する型・実際の値と、`describe(source, kind)` でスキーマを見ること |
 | RefNotFoundError | `ref`・`from`・`to` を commit に解決できない | 解決できなかった値 |
 | UnknownKindError | `kind` が配信元の種類に無い | その配信元の種類の一覧 |
 | DocumentNotFoundError | 指した ID の文書が無い | 見つからなかった ID と、近い ID の候補 |
