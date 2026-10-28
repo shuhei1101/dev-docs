@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import dataclasses
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Any, ClassVar
 
 
@@ -45,13 +46,15 @@ class DevDocsError(Exception):
 
 
 def _plain(value: Any) -> Any:
-    """違反と権限の dataclass を辞書にし、配列と辞書は中身を再帰で直す。"""
+    """違反と権限の dataclass を辞書に、パスを文字列にし、配列と辞書は中身を再帰で直す。"""
     if dataclasses.is_dataclass(value) and not isinstance(value, type):
         return dataclasses.asdict(value)
     if isinstance(value, list):
         return [_plain(item) for item in value]
     if isinstance(value, dict):
         return {key: _plain(item) for key, item in value.items()}
+    if isinstance(value, Path):
+        return str(value)
     return value
 
 

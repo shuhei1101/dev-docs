@@ -29,6 +29,7 @@ from dev_docs.features.search.types import (
     Condition,
     Group,
     GroupCount,
+    OrderKey,
     SearchItem,
     SearchRequest,
     SearchResult,
@@ -104,6 +105,20 @@ def _order(hits: list[_Hit], request: SearchRequest) -> list[_Hit]:
         )
         ordered = [*present, *missing]
     return ordered
+
+
+def _id_ordered(ordered: list[_Hit], request: SearchRequest) -> list[_Hit]:
+    """`order_by` が無く `filter` が `id` の `eq` の条件 1 つのときは、その `values` の順にする。"""
+    condition = request.filter
+    if (
+        request.order_by != [OrderKey(field="id")]
+        or not isinstance(condition, Condition)
+        or condition.field != "id"
+        or condition.op != "eq"
+    ):
+        return ordered
+    position = {document_id: index for index, document_id in enumerate(condition.values)}
+    return sorted(ordered, key=lambda hit: position.get(hit.document.id, len(position)))
 
 
 def _groups(hits: Sequence[_Hit], field: str) -> list[GroupCount]:
@@ -213,6 +228,7 @@ def search_docs(
         if match_filter(request.filter, document, fields=fields, today=today)
     ]
     multi = len(targets) >= MULTI_SOURCE_MIN
+    source_label = ",".join(target.source.id for target in targets)
     per_source: dict[str, int] = {}
     if multi:
         per_source = {target.source.id: 0 for target in targets}
@@ -228,8 +244,9 @@ def search_docs(
             per_source=per_source,
             notes=notes,
             groups=groups,
+            source_label=source_label,
         )
-    ordered = _order(hits, request)
+    ordered = _id_ordered(_order(hits, request), request)
     fingerprint = value_hash(request.model_dump(mode="json", exclude=FINGERPRINT_EXCLUDED))
     base = request.skip + (decode_cursor(request.cursor, fingerprint) if request.cursor else 0)
     window = ordered[base : base + limit]
@@ -278,7 +295,6 @@ def search_docs(
             source=hit.target.source.id if multi else None,
             values=values,
             snippets=snippets,
-            markdown=hit.target.source.table(document.kind).type == "markdown",
         )
         item_size = _item_size(item)
         if items and size + item_size > max_chars:
@@ -299,7 +315,10 @@ def search_docs(
     ):
         next_cursor = encode_cursor(next_position - request.skip, fingerprint)
     if truncated:
-        notes.append(f"max_chars {max_chars} で打ち切りました。cursor を渡すと続きを取れます")
+        notes.append(
+            f"max_chars {max_chars} で打ち切りました。cursor を渡して続きを取るか、"
+            "fields を絞るか view: ids で取り直してください"
+        )
     for target in targets:
         documents = [
             hit.document for hit in returned_bodies if hit.target.source.id == target.source.id
@@ -315,4 +334,5 @@ def search_docs(
         notes=notes,
         groups=groups,
         items=items,
+        source_label=source_label,
     )

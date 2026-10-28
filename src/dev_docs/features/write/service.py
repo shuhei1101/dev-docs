@@ -693,10 +693,11 @@ def delete_docs(
                     violations=violations,
                 )
             session.commit(path, text, table)
-        if request.dry_run or not accepted:
-            return DeleteResult(applied=False, results=results)
-        _remove_documents(session, accepted)
+        # 参照を外した文書と、外した後のバージョン
         unlinked = [(referrer_id, session.docs[referrer_id].version) for referrer_id in unlink_plan]
+        if request.dry_run or not accepted:
+            return DeleteResult(applied=False, results=results, unlinked=unlinked)
+        _remove_documents(session, accepted)
         touched = session.write_pending()
         _run_generators(
             target,

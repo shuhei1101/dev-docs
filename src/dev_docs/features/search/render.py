@@ -5,7 +5,6 @@ from __future__ import annotations
 from typing import Any
 
 from dev_docs.features.search.types import SearchItem, SearchResult
-from dev_docs.features.seen.types import SEEN_MARK
 
 COLUMN_TITLES = {"@chars": "chars"}
 BODY_FIELD = "body"
@@ -43,9 +42,10 @@ def _table(result: SearchResult) -> list[str]:
 
 
 def _full(item: SearchItem) -> list[str]:
-    """`view: full` の文書 1 件を、項目の箇条書きと本文にする。"""
-    heading = f"## {item.id}" + (f"（{item.source}）" if item.source else "")
-    lines = [heading, ""]
+    """`view: full` の文書 1 件を、`<document>` で包んだ項目の箇条書きと本文にする。"""
+    lines = ["<document>", f"- id: {item.id}"]
+    if item.source:
+        lines.append(f"- source: {item.source}")
     body = item.values.get(BODY_FIELD)
     lines.extend(
         f"- {_title(name)}: {_cell(value)}"
@@ -57,10 +57,8 @@ def _full(item: SearchItem) -> list[str]:
         lines.extend(snippet for snippet in item.snippets)
     if isinstance(body, str):
         lines.append("")
-        if body == SEEN_MARK or item.markdown:
-            lines.append(body)
-        else:
-            lines.extend(["```yaml", body.rstrip("\n"), "```"])
+        lines.append(body.rstrip("\n"))
+    lines.append("</document>")
     return lines
 
 

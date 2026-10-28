@@ -104,8 +104,6 @@ class SearchItem:
     source: str | None
     values: dict[str, Any]
     snippets: list[str] = field(default_factory=list)
-    # 本文の描き方（Markdown の文書はそのまま、YAML の文書はコードブロック）を決める。JSON には出さない
-    markdown: bool = field(default=False, metadata={"internal": True})
 
 
 @dataclass(frozen=True)
@@ -129,3 +127,5 @@ class SearchResult:
     notes: list[str] = field(default_factory=list)
     groups: list[GroupCount] = field(default_factory=list)
     items: list[SearchItem] = field(default_factory=list)
+    # Markdown の先頭に出す配信元の ID。JSON には出さない
+    source_label: str = field(default="", metadata={"internal": True})

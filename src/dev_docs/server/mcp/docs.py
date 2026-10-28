@@ -116,9 +116,7 @@ def build_docs_mcp(handlers: Handlers) -> MCPServer:
             checker=handlers.checker,
             seen=handlers.seen,
         ),
-        lambda result, request: render_search_markdown(
-            result, source_label=",".join(result.per_source) or request.source or "作業中の配信元"
-        ),
+        lambda result, request: render_search_markdown(result, source_label=result.source_label),
     )
     _register(
         mcp,

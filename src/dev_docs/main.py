@@ -111,9 +111,9 @@ def run_serve(args: argparse.Namespace) -> int:
             return EXIT_PORT_IN_USE
         handlers = build_handlers(terminal)
         app = build_app(handlers)
-        print(f"http://{terminal.bind}:{port}/")
+        print(f"http://{terminal.bind}:{port}/", flush=True)
         for source in handlers.registry.served():
-            print(source.id)
+            print(source.id, flush=True)
         server = uvicorn.Server(uvicorn.Config(app, host=terminal.bind, port=port, log_config=None))
         server.run()
         if not server.started:
