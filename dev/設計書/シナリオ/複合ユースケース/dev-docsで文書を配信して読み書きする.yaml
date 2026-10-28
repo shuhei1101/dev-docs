@@ -6,16 +6,16 @@ scenarios:
         description: なし（実環境で実行。Claude Code は `claude -p` で動かす）
       - name: dev-docs のクローン
         description: テスト用の一時フォルダにクローンした dev-docs
-        notes: ポート 8781 が空き
+        notes: ポート 8781 が空き。S0 の `/dev-docs:global-setup` にこのパスを渡す
       - name: 端末の設定
-        description: '`DEV_DOCS_CONFIG` が指す `settings.yaml`'
-        notes: '`version` と `sources: []`'
+        description: '`DEV_DOCS_CONFIG` が指す場所（テスト用の一時フォルダの `settings.yaml`）'
+        notes: ファイルは無い。S0 が作る
       - name: サンプルの配信元
         description: 文書の種類を 1 つ（スキーマと YAML 2 件）と `dev-docs.yaml` を持つ git リポジトリと、そのワークツリー（`.claude/worktrees/x`）
-        notes: id `sample`。`scope.read`・`scope.write` は sample のフォルダ
+        notes: id `sample`。S1 の `/dev-docs:setup` で `scope.read`・`scope.write` に sample のフォルダを答える
       - name: 読み取りだけの配信元
         description: 文書の種類を 1 つと `dev-docs.yaml` を持つ Git 管理外のフォルダ
-        notes: id `notes`。`scope.read` は sample のフォルダ、`scope.write` は持たない
+        notes: id `notes`。S1 の `/dev-docs:setup` で `scope.read` に sample のフォルダを答え、`scope.write` は答えない
     flow: |-
       ```mermaid
       flowchart TD
@@ -45,7 +45,11 @@ scenarios:
         click S7 "../単一ユースケース/YAMLを直接編集した.yaml#正常シナリオ"
       ```
     expected:
+      - 'S0 の後、`DEV_DOCS_CONFIG` が指す `settings.yaml` が `version`・`clone`・`sources: []` を持ち、Claude Code の env に `DEV_DOCS_CONFIG` が入っている'
       - '`127.0.0.1:8781` を待ち受ける dev-docs のプロセスが 1 つだけある'
+      - sample のワークツリーで始めたセッションの文脈に、使える配信元 `sample`（読み書き）・`notes`（読み取りだけ）と短い使い方が入る
+      - S1 の後、端末の設定の `sources` に sample と notes の行があり、`check_project` が違反と索引の同期の件数を 0 で返す
+      - '`try_convert` が sample の文書を変換した Markdown を返し、sample のフォルダは変わらない'
       - 管理の MCP の `status` が `sample` と `notes` を配信中として返す
       - '`/mcp` のツールは `search_docs`・`write_docs`・`delete_docs`・`describe`・`list_changes`・`trace_related` の 6 つで、配信元を追加しても変わらない'
       - sample のワークツリーで呼んだ `describe` が、使える配信元として `sample`（読み書き）と `notes`（読み取りだけ）を返す
@@ -122,9 +126,10 @@ stakeholders:
     interest: 1 つの文書の MCP で、今の作業場所から使える配信元の文書を探して読み、作業ツリーの YAML を検査に通してから書き換えられる
   - name: 各配信元
     interest: サーバーのコードもプラグインも持たず、`dev-docs.yaml`・スキーマ・検査と変換のスクリプトだけで配信される
-trigger: 利用者が dev-docs をクローンする
+trigger: 利用者が dev-docs のプラグインを入れ、`/dev-docs:global-setup` を実行する
 preconditions:
   - 端末に uv・git・Claude Code がある
+  - dev-docs のマーケットプレイスを追加し、プラグイン `dev-docs` をユーザースコープで入れてある
   - 配信する配信元が、YAML の文書とそのスキーマを持つフォルダ（git リポジトリか Git 管理外のフォルダ）である
 success_guarantee: 端末の設定に並べた配信元の文書が、`/mcp` の文書の MCP と `/_api/sources/{配信元の id}/docs` の画面の API で読める。エージェントの書き込みは、`scope.write` に当たる作業場所から呼んだセッションの作業ツリーにだけ反映される。
 minimal_guarantee: 設定・スクリプトの検証に失敗した配信元があっても、他の配信元の配信と管理の MCP は止まらない。検査に通らない書き込みと、`scope` に当たらない作業場所からの呼び出しは、ファイルを書き換えない。
