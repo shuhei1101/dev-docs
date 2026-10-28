@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import os
 import posixpath
-from collections.abc import Mapping, Sequence
+from collections.abc import Collection, Mapping, Sequence
 from datetime import date, datetime, time
 from pathlib import Path, PurePosixPath
 from typing import Any
@@ -132,10 +132,17 @@ def _build(
     """内容・本文・バージョンから 1 件の文書を作る。"""
     key_path = body_path or path
     metadata = apply_defaults(resolve_metadata(data, table), table.defaults, key_path)
-    document_id = metadata.get("id")
+    document_id = str(metadata["id"]) if metadata.get("id") is not None else fallback_id
+    if not metadata.get("name"):
+        # `records` の要素で `body_file` が無ければ、指すファイルが無いので ID にする
+        metadata["name"] = (
+            document_id
+            if index is not None and body_path is None
+            else posixpath.splitext(posixpath.basename(key_path))[0]
+        )
     file_dates = dates.get(key_path)
     return Document(
-        id=str(document_id) if document_id is not None else fallback_id,
+        id=document_id,
         kind=table.id,
         source_id=source_id,
         path=path,
@@ -266,3 +273,22 @@ def load_file(
     except (OSError, UnicodeDecodeError) as error:
         return [], [LoadProblem(path=path, reason="unreadable", detail=str(error))]
     return documents_from_text(text, root, path, table, source_id=source_id, dates=dates)
+
+
+def unindexed_files(root: Path, index_path: str, body_paths: Collection[str]) -> list[str]:
+    """管理用の YAML のフォルダの配下で、どの行も指していないファイルを `root` からのパスで返す。"""
+    start = root / posixpath.dirname(index_path)
+    excluded = {index_path, *body_paths}
+    found: list[str] = []
+    for folder, dirnames, filenames in os.walk(start):
+        dirnames[:] = [
+            name
+            for name in dirnames
+            if name not in SKIP_DIRS and not os.path.islink(os.path.join(folder, name))
+        ]
+        relative_folder = Path(folder).relative_to(root).as_posix()
+        for name in filenames:
+            relative = name if relative_folder == "." else f"{relative_folder}/{name}"
+            if relative not in excluded:
+                found.append(relative)
+    return sorted(found)

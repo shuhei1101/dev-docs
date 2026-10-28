@@ -53,6 +53,9 @@ class ChangeItem:
     keys: list[str]
     values: dict[str, tuple[Any, Any]] = field(default_factory=dict)
     diff: str | None = None
+    # 変わった文書の今の場所と返した範囲。`to` を渡した呼び出しと `deleted` では `None`
+    path: str | None = None
+    scope: Literal["section", "summary"] | None = None
 
 
 @dataclass(frozen=True)

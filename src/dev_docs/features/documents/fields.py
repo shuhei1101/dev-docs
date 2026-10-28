@@ -177,3 +177,15 @@ def apply_defaults(
             _overlay(result, row.model_extra)
     _overlay(result, metadata)
     return result
+
+
+def missing_ref_fields(data: Mapping[str, Any], table: DocumentTable) -> list[tuple[str, str]]:
+    """`metadata` に明示した `ref` のうち、文書の内容に値が無い列を `(キー, field)` で返す。"""
+    missing: list[tuple[str, str]] = []
+    for key, mapping in table.metadata.items():
+        if mapping.type != "ref":
+            continue
+        field = mapping.field or key
+        if get_field(data, field) is None:
+            missing.append((key, field))
+    return missing

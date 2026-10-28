@@ -230,7 +230,7 @@ class _Builder:
 def schema_to_markdown(document: Document, schema: Mapping[str, Any]) -> str:
     """YAML の文書をスキーマの `x-heading`・`x-shape`・`x-key`・`x-diagram`・`title` に沿って Markdown にする。"""
     data = document.data
-    name = data.get("name") or document.metadata.get("name") or data.get("id") or document.id
+    name = data.get("name") or document.metadata["name"]
     builder = _Builder(document.kind)
     builder.blocks.append(f"# {name}")
     description = data.get("description") or document.metadata.get("description")

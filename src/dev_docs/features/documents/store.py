@@ -10,13 +10,14 @@ from pathlib import Path
 from typing import Any
 
 from dev_docs.features.access.types import Target
-from dev_docs.features.documents.loader import collect_files, load_file
+from dev_docs.features.documents.fields import missing_ref_fields
+from dev_docs.features.documents.loader import collect_files, load_file, unindexed_files
 from dev_docs.features.documents.schema import resolve_schema_refs
-from dev_docs.features.documents.types import Document, LoadProblem, LoadResult
+from dev_docs.features.documents.types import Document, LoadProblem, LoadResult, SyncReport
 from dev_docs.features.history.query import file_dates, resolve_ref
 from dev_docs.features.history.snapshot import SnapshotStore
 from dev_docs.features.history.types import FileDates
-from dev_docs.features.sources.types import DocumentTable
+from dev_docs.features.sources.types import DocumentTable, ServedSource
 from dev_docs.integrations.git import GitError, run_git
 from dev_docs.shared.errors import DocumentNotFoundError
 from dev_docs.shared.yaml_io import YamlLoadError, load_yaml
@@ -30,6 +31,7 @@ __all__ = [
     "CANDIDATE_COUNT",
     "CANDIDATE_CUTOFF",
     "DocumentStore",
+    "check_sync",
     "collect_files",
     "load_file",
 ]
@@ -69,6 +71,12 @@ class DocumentStore:
         resolved = resolve_ref(repo_root, target.ref, date_base=source.config.default_ref)
         checkout = self.snapshots.checkout(repo_root, resolved.commit)
         return checkout / source.root.relative_to(repo_root)
+
+    def location(self, target: Target, document: Document) -> str | None:
+        """文書のファイルの絶対パスを返す（リビジョンを読んだ文書は `None`）。"""
+        if target.ref is not None:
+            return None
+        return str(self.read_root(target) / (document.body_path or document.path))
 
     def _file_dates(self, target: Target) -> dict[str, FileDates]:
         """Git の配信元のファイルの日時を、配信元の直下からのパスで返す。"""
@@ -234,3 +242,38 @@ class DocumentStore:
             self._files.clear()
             self._schemas.clear()
             self._dates.clear()
+
+
+def check_sync(store: DocumentStore, source: ServedSource) -> SyncReport:
+    """配信元の文書を読み、`ref` の列の欠けと管理用の YAML のずれを求める。"""
+    result = store.load(Target(source, source.root, None, None, "read"))
+    missing_refs = [
+        f"{document.kind}: {document.id}: {key}（{field}）"
+        for document in result.documents
+        for key, field in missing_ref_fields(document.data, source.table(document.kind))
+    ]
+    unindexed: list[str] = []
+    for table in source.config.documents:
+        if not table.enabled or table.records is None or table.body_file is None:
+            continue
+        for index_path in collect_files(source.root, table.paths):
+            body_paths = {
+                document.body_path
+                for document in result.documents
+                if document.kind == table.id and document.path == index_path and document.body_path
+            }
+            unindexed.extend(
+                f"{table.id}: {path}"
+                for path in unindexed_files(source.root, index_path, body_paths)
+            )
+    missing_body_files = [
+        f"{problem.path}: {problem.detail}"
+        for problem in result.problems
+        if problem.reason == "missing_body_file"
+    ]
+    return SyncReport(
+        source_id=source.id,
+        missing_refs=missing_refs,
+        unindexed_files=unindexed,
+        missing_body_files=missing_body_files,
+    )

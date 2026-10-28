@@ -37,6 +37,16 @@ class LoadProblem:
 
 
 @dataclass(frozen=True)
+class SyncReport:
+    """1 つの配信元の `ref` の列の欠けと、管理用の YAML とファイルのずれ。"""
+
+    source_id: str
+    missing_refs: list[str] = field(default_factory=list)
+    unindexed_files: list[str] = field(default_factory=list)
+    missing_body_files: list[str] = field(default_factory=list)
+
+
+@dataclass(frozen=True)
 class LoadResult:
     """読めた文書と読めなかったファイル。"""
 

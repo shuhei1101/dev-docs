@@ -6,7 +6,7 @@ import unicodedata
 from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import UTC, date, datetime
-from typing import Any
+from typing import Any, Literal
 
 from dev_docs.features.access.service import resolve_read_targets
 from dev_docs.features.access.types import Target
@@ -167,6 +167,20 @@ def _field_names(request: SearchRequest, document: Document) -> list[str]:
     return [name for name in names if name not in request.exclude_fields and name != "id"]
 
 
+def _scope(
+    document: Document, values: dict[str, Any], snippets: list[str], field_chars: int
+) -> Literal["full", "section", "summary"]:
+    """返した範囲を決める（本文を切らずに返したら `full`）。"""
+    if snippets:
+        return "section"
+    if not isinstance(values.get(BODY), str):
+        return "summary"
+    cut = len(document.body) > field_chars
+    if cut or (document.record_index is not None and document.body_path is None):
+        return "section"
+    return "full"
+
+
 def _item_size(item: SearchItem) -> int:
     """結果の文字数に数える項目の長さ。"""
     return (
@@ -292,11 +306,18 @@ def search_docs(
                 values[name] = _cut(document.body, field_chars)
                 continue
             values[name] = _cut(_field_value(document, name), field_chars)
+        located = (
+            request.view in ("summary", "full")
+            and request.ref is None
+            and values.get(BODY) != SEEN_MARK
+        )
         item = SearchItem(
             id=document.id,
             source=hit.target.source.id if multi else None,
             values=values,
             snippets=snippets,
+            path=store.location(hit.target, document) if located else None,
+            scope=_scope(document, values, snippets, field_chars) if located else None,
         )
         item_size = _item_size(item)
         if items and size + item_size > max_chars:

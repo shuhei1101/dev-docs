@@ -99,6 +99,7 @@ def trace_related(
             )
         start = [by_path[path] for path in wanted]
     other_cache: dict[str, dict[str, Document]] = {}
+    other_targets: dict[str, Target] = {}
 
     def resolve_other(source_id: str, doc_id: str) -> Document | None:
         """別の配信元の文書を、同じ作業場所の権限で引く。"""
@@ -108,6 +109,7 @@ def trace_related(
                     0
                 ]
                 other_cache[source_id] = {d.id: d for d in store.load(other).documents}
+                other_targets[source_id] = other
             except DevDocsError:
                 other_cache[source_id] = {}
         return other_cache[source_id].get(doc_id)
@@ -122,12 +124,25 @@ def trace_related(
         for source_id in {document.source_id for document, *_ in found}:
             versions = {d.id: d.version for d, *_ in found if d.source_id == source_id}
             seen_ids[source_id] = seen.returned(key, source_id, "related", versions)
+
+    def _location(document: Document) -> str | None:
+        """たどった文書を読んだ場所での絶対パスを返す（`ref` を渡した呼び出しは `None`）。"""
+        if request.ref is not None:
+            return None
+        read_target = (
+            target
+            if document.source_id == target.source.id
+            else other_targets.get(document.source_id)
+        )
+        return store.location(read_target, document) if read_target is not None else None
+
     items: list[RelatedItem] = []
     returned: dict[str, list[Document]] = {}
     for document, level, via_from, via_type, via_direction in found:
         already = document.id in seen_ids.get(document.source_id, set())
         name = str(document.metadata.get("name", ""))
         description = str(document.metadata.get("description", ""))
+        path = None if already else _location(document)
         items.append(
             RelatedItem(
                 id=document.id,
@@ -138,6 +153,8 @@ def trace_related(
                 via_direction=via_direction,
                 name=SEEN_MARK if already else name,
                 description=SEEN_MARK if already else description,
+                path=path,
+                scope="summary" if path else None,
             )
         )
         if not already:

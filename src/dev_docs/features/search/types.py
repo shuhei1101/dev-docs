@@ -104,6 +104,9 @@ class SearchItem:
     source: str | None
     values: dict[str, Any]
     snippets: list[str] = field(default_factory=list)
+    # 文書の場所と返した範囲。`ref` を渡した呼び出し・返し済み・本文を扱わない view では `None`
+    path: str | None = None
+    scope: Literal["full", "section", "summary"] | None = None
 
 
 @dataclass(frozen=True)

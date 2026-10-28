@@ -16,6 +16,7 @@ from logging.handlers import RotatingFileHandler
 from pathlib import Path
 from typing import Any
 
+from dev_docs.features.documents.store import check_sync
 from dev_docs.features.settings.query import config_path, listen_port, load_terminal_config
 from dev_docs.features.settings.types import TerminalConfig, TerminalConfigInvalidError
 from dev_docs.features.sources.registry import SourceRegistry
@@ -196,4 +197,15 @@ def reload_sources(
     store.clear()
     checker.clear()
     converter.clear()
+    for source in registry.served():
+        report = check_sync(store, source)
+        for label, values in (
+            ("ref の列の欠け", report.missing_refs),
+            ("管理用の YAML に無いファイル", report.unindexed_files),
+            ("ファイルが無い行", report.missing_body_files),
+        ):
+            if values:
+                logger.warning(
+                    "%s: %s %d 件: %s", report.source_id, label, len(values), "、".join(values)
+                )
     return statuses

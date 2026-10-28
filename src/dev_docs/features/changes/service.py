@@ -201,6 +201,9 @@ def list_changes(
                 if request.view == "full"
                 else None
             )
+            location = (
+                store.location(target, new) if request.to is None and new is not None else None
+            )
             item = ChangeItem(
                 id=doc_id,
                 source=source.id if len(targets) >= MULTI_SOURCE_MIN else None,
@@ -208,6 +211,8 @@ def list_changes(
                 keys=keys,
                 values=values,
                 diff=diff,
+                path=location,
+                scope=(("section" if request.view == "full" else "summary") if location else None),
             )
             entries.append((index, target, item, judged))
     if request.from_ is None and not any_last_read:
