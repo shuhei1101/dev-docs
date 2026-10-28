@@ -19,6 +19,7 @@ from dev_docs.features.search.types import (
     OrderKey,
     SearchRequest,
     SearchResult,
+    Snippets,
 )
 from dev_docs.features.seen.store import SeenStore
 from dev_docs.features.seen.types import SEEN_MARK
@@ -122,8 +123,12 @@ def test_search_docs_when_full_and_seen(make_env: Callable[..., SearchEnv]) -> N
     third = env.search(filter=condition, view="full", session_id="s1", repeat_seen=True)
     # 検証
     assert first.items[0].values["body"] == body
+    assert first.items[0].scope == "full"
     assert second.items[0].values["body"] == SEEN_MARK
+    assert second.items[0].path is None
+    assert second.items[0].scope is None
     assert third.items[0].values["body"] == body
+    assert third.items[0].scope == "full"
 
 
 def test_search_docs_when_count_grouped(make_env: Callable[..., SearchEnv]) -> None:
@@ -269,3 +274,67 @@ def test_search_docs_when_sources_all(
     # 検証
     assert result.per_source == {"sample": 2, "notes": 1}
     assert {item.source for item in result.items} == {"sample", "notes"}
+
+
+def test_search_docs_when_location(
+    tmp_path: Path,
+    git_repo: Callable[..., Path],
+    make_source_config: Callable[..., SourceConfig],
+    make_served_source: Callable[..., ServedSource],
+    make_registry: Callable[..., SourceRegistry],
+) -> None:
+    """文書の場所と範囲（正常系）。"""
+    # 準備
+    root = git_repo(
+        {
+            "docs/doc-1.yaml": "id: doc-1\nname: 文書 1\ndescription: 1 件目\n",
+            "data/list.yaml": "items:\n  - id: item-1\n    name: 項目 1\n",
+        }
+    )
+    documents = [
+        DocumentTable(id="rules", type="yaml", paths=["docs/*.yaml"]),
+        DocumentTable(id="items", type="yaml", paths=["data/list.yaml"], records="items"),
+    ]
+    source = make_served_source(
+        id="sample",
+        root=root,
+        config=make_source_config(documents=documents),
+        is_git=True,
+        repo_root=root,
+    )
+    store = DocumentStore(SnapshotStore(tmp_path / "snapshots"))
+    env = SearchEnv(
+        make_registry(source),
+        store,
+        DocumentChecker(store, timeout_sec=10),
+        SeenStore(tmp_path / "seen.sqlite3", retention_days=7),
+        root,
+    )
+    doc_1 = Condition(field="id", op="eq", values=["doc-1"])
+    # 実行
+    full = env.search(view="full")
+    cut = env.search(filter=doc_1, view="full", max_chars_per_field=10)
+    snippets = env.search(
+        filter=Condition(field="body", op="contains", values=["文書"]),
+        view="full",
+        snippets=Snippets(context_lines=1, max_per_doc=3),
+    )
+    summary = env.search(filter=doc_1, view="summary")
+    ids = env.search(filter=doc_1, view="ids")
+    revision = env.search(filter=doc_1, view="full", ref="HEAD")
+    # 検証
+    assert [(item.id, item.path, item.scope) for item in full.items] == [
+        ("doc-1", str(root / "docs" / "doc-1.yaml"), "full"),
+        ("item-1", str(root / "data" / "list.yaml"), "section"),
+    ]
+    assert [(item.path, item.scope) for item in cut.items] == [
+        (str(root / "docs" / "doc-1.yaml"), "section")
+    ]
+    assert [(item.path, item.scope) for item in snippets.items] == [
+        (str(root / "docs" / "doc-1.yaml"), "section")
+    ]
+    assert [(item.path, item.scope) for item in summary.items] == [
+        (str(root / "docs" / "doc-1.yaml"), "summary")
+    ]
+    assert [(item.path, item.scope) for item in ids.items] == [(None, None)]
+    assert [(item.path, item.scope) for item in revision.items] == [(None, None)]

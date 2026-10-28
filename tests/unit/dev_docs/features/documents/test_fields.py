@@ -4,6 +4,7 @@ from typing import Any
 
 import pytest
 
+from dev_docs.features.documents import fields as fields_module
 from dev_docs.features.documents.fields import (
     apply_defaults,
     delete_field,
@@ -175,3 +176,22 @@ def test_apply_defaults_when_not_matched() -> None:
     result = apply_defaults({}, defaults, "src/y.md")
     # 検証
     assert result == {}
+
+
+def test_missing_ref_fields() -> None:
+    """明示した ref だけを数える（正常系）。"""
+    # 準備
+    table = DocumentTable(
+        id="rules",
+        type="yaml",
+        paths=["docs/*.yaml"],
+        metadata={
+            "name": MetadataMapping(type="ref", field="title"),
+            "description": MetadataMapping(type="ref", field="summary"),
+        },
+    )
+    data = {"summary": "s"}
+    # 実行
+    result = fields_module.missing_ref_fields(data, table)
+    # 検証
+    assert result == [("name", "title")]

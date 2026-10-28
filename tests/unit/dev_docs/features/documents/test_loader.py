@@ -6,6 +6,7 @@ from pathlib import Path
 
 import pytest
 
+from dev_docs.features.documents import loader as loader_module
 from dev_docs.features.documents.loader import (
     collect_files,
     load_file,
@@ -207,3 +208,54 @@ def test_load_file_when_missing_body_file(
     # 検証
     assert documents == []
     assert [problem.reason for problem in problems] == ["missing_body_file"] * 2
+
+
+def test_load_file_when_default_name(
+    tmp_path: Path, write_files: Callable[[Path, dict[str, str]], None]
+) -> None:
+    """名前の既定（正常系）。"""
+    # 準備
+    write_files(
+        tmp_path,
+        {
+            "rules/a.yaml": "id: rule-a\n",
+            "src/files.yaml": "files:\n  - path: a.py\n  - path: b.py\n    name: 部品 B\n",
+            "src/a.py": "a = 1\n",
+            "src/b.py": "b = 2\n",
+            "list.yaml": "items:\n  - x: 1\n",
+        },
+    )
+    rules = DocumentTable(id="rules", type="yaml", paths=["rules/*.yaml"])
+    src = DocumentTable(
+        id="src", type="yaml", paths=["src/files.yaml"], records="files", body_file="path"
+    )
+    items = DocumentTable(id="items", type="yaml", paths=["list.yaml"], records="items")
+    # 実行
+    rule_docs = load_file(tmp_path, "rules/a.yaml", rules, source_id="sample")[0]
+    src_docs = load_file(tmp_path, "src/files.yaml", src, source_id="sample")[0]
+    item_docs = load_file(tmp_path, "list.yaml", items, source_id="sample")[0]
+    # 検証
+    assert [doc.metadata["name"] for doc in rule_docs] == ["a"]
+    assert [doc.metadata["name"] for doc in src_docs] == ["a", "部品 B"]
+    assert [doc.metadata["name"] for doc in item_docs] == ["list#0"]
+
+
+def test_unindexed_files(
+    tmp_path: Path, write_files: Callable[[Path, dict[str, str]], None]
+) -> None:
+    """配下の未記載のファイル（正常系）。"""
+    # 準備
+    write_files(
+        tmp_path,
+        {
+            "src/files.yaml": "files:\n  - path: a.py\n",
+            "src/a.py": "a = 1\n",
+            "src/d.py": "d = 4\n",
+            "src/sub/e.py": "e = 5\n",
+            "src/node_modules/x.js": "x\n",
+        },
+    )
+    # 実行
+    result = loader_module.unindexed_files(tmp_path, "src/files.yaml", ["src/a.py"])
+    # 検証
+    assert result == ["src/d.py", "src/sub/e.py"]

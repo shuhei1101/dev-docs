@@ -78,6 +78,10 @@ def test_trace_related(make_env: Callable[..., RelatedEnv]) -> None:
     # 検証
     assert [(item.id, item.depth) for item in result.items] == [("doc-2", 1), ("doc-3", 2)]
     assert result.items[0].via_from == "doc-1"
+    assert [(item.path, item.scope) for item in result.items] == [
+        (str(env.root / "docs" / "doc-2.yaml"), "summary"),
+        (str(env.root / "docs" / "doc-3.yaml"), "summary"),
+    ]
 
 
 def test_trace_related_when_code_paths(make_env: Callable[..., RelatedEnv]) -> None:
@@ -117,6 +121,8 @@ def test_trace_related_when_seen(make_env: Callable[..., RelatedEnv]) -> None:
     assert first.items[0].name == "文書 2"
     assert second.items[0].name == SEEN_MARK
     assert second.items[0].description == SEEN_MARK
+    assert second.items[0].path is None
+    assert second.items[0].scope is None
     assert third.items[0].name == "文書 2"
 
 

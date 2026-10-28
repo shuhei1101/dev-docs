@@ -88,6 +88,8 @@ def test_list_changes(
     assert result.items[0].diff is not None
     assert "- name: 文書 1" in result.items[0].diff
     assert "+ name: 新しい名前" in result.items[0].diff
+    assert result.items[0].path is None
+    assert result.items[0].scope is None
 
 
 def test_list_changes_when_last_read(env: ChangesEnv, make_target: Callable[..., Target]) -> None:
@@ -101,6 +103,8 @@ def test_list_changes_when_last_read(env: ChangesEnv, make_target: Callable[...,
     # 検証
     assert result.range_from.input == LAST_READ_LABEL
     assert [item.id for item in result.items] == ["doc-1"]
+    assert result.items[0].path == str(env.clone / "docs" / "doc-1.yaml")
+    assert result.items[0].scope == "summary"
 
 
 def test_list_changes_when_added_and_deleted(
@@ -109,16 +113,21 @@ def test_list_changes_when_added_and_deleted(
     """足した文書と消した文書（正常系）。"""
     # 準備
     first = run_git(env.clone, "rev-parse", "HEAD").strip()
-    second = commit_all(
+    commit_all(
         env.clone, {"docs/doc-3.yaml": "id: doc-3\nname: 文書 3\n"}, delete=("docs/doc-2.yaml",)
     )
     # 実行
-    result = env.list(**{"from": first, "to": second})
+    result = env.list(**{"from": first, "view": "full"})
     # 検証
     assert [(item.id, item.change) for item in result.items] == [
         ("doc-2", "deleted"),
         ("doc-3", "added"),
     ]
+    assert (result.items[0].path, result.items[0].scope) == (None, None)
+    assert (result.items[1].path, result.items[1].scope) == (
+        str(env.clone / "docs" / "doc-3.yaml"),
+        "section",
+    )
 
 
 def test_list_changes_when_no_last_read(env: ChangesEnv) -> None:
