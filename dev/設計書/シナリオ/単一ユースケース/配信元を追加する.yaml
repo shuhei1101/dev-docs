@@ -15,16 +15,15 @@ scenarios:
         actor U as 利用者
         participant SK as setup のスキル
         participant AD as 管理の MCP
-        participant CF as 端末の設定・配信元の設定
+        participant CF as 端末の設定
 
         U->>SK: /dev-docs:setup {sample のパス}
-        SK->>AD: status（バージョンを比べる。同じ）
-        SK->>U: scope.write・scope.read・範囲・仮のメタデータを既定の値つきで聞く
+        SK->>AD: check_project（sample のパス）
+        AD-->>SK: 設定のバージョンの新旧（同じ）・違反 0 件・索引の同期の件数
+        SK->>U: scope.write・scope.read を既定の値つきで聞く
         U-->>SK: 既定の値（scope.write は sample のパス、scope.read は {path}/**）
         SK-->>U: 書き込む行を表で示して確かめる
         U-->>SK: 了承
-        SK->>AD: check_project（sample のパス）
-        AD-->>SK: 違反 0 件・索引の同期の件数
         SK->>CF: sources に sample の行を書く
         SK->>AD: reload
         SK-->>U: 追加した配信元と check_project の結果を出す
@@ -43,33 +42,35 @@ scenarios:
       - name: dev-docs
         description: 正常シナリオと同じ
       - name: Markdown を持つ配信元
-        description: '`docs/` に Markdown 2 件を持ち、管理用の YAML が無い git リポジトリ'
+        description: '`docs/` に Markdown 2 件を持ち、`dev-docs.yaml` も管理用の YAML も無い git リポジトリ'
         notes: 範囲の質問に既定の `**/*.md` を答える
     flow: |-
       ```mermaid
       sequenceDiagram
         actor U as 利用者
         participant SK as setup のスキル
-        participant DM as 文書の MCP
+        participant FS as 配信元のフォルダ
         participant AD as 管理の MCP
         participant CF as 端末の設定
 
         U->>SK: /dev-docs:setup {配信元のパス}
+        SK->>FS: dev-docs.yaml が無いことを確かめる（バージョンの比較を飛ばす）
         SK->>U: scope・範囲・仮のメタデータを聞く
         U-->>SK: 既定の値
-        SK-->>U: 管理用の YAML の行と sources の行を表で示して確かめる
+        SK-->>U: dev-docs.yaml・管理用の YAML・sources の行を表で示して確かめる
         U-->>SK: 了承
-        SK->>DM: write_docs（templates/files.schema.yaml に沿った管理用の YAML の行）
-        SK->>AD: check_project
+        SK->>FS: 雛形から dev-docs.yaml を作る（管理用の YAML を読む documents の行。type: yaml・records: files）
+        SK->>FS: templates/files.schema.yaml に沿って管理用の YAML を書く
+        SK->>AD: check_project（配信元のパス）
         AD-->>SK: 違反 0 件・索引の同期の件数 0
         SK->>CF: sources に行を書く
         SK->>AD: reload
         SK-->>U: 追加した配信元と結果を出す
       ```
     expected:
-      - 配信元に管理用の YAML ができ、Markdown 2 件の行が仮のメタデータつきで並ぶ
+      - 配信元に `dev-docs.yaml` と管理用の YAML ができ、管理用の YAML に Markdown 2 件の行が仮のメタデータつきで並ぶ
       - 管理用の YAML の行が `templates/files.schema.yaml` の検証に通る
-      - '`search_docs` が Markdown 2 件を返す'
+      - '`reload` の後、`search_docs` が Markdown 2 件を返す'
       - 範囲から `.git`・`node_modules`・`.claude/worktrees` の下のファイルは除かれる
     test: test_normal_when_non_yaml_range
   - name: 正常シナリオ（2 回目以降）

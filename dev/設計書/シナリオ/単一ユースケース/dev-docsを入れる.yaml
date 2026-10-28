@@ -72,6 +72,8 @@ scenarios:
     setup:
       - name: Mock
         description: なし（実環境で実行）
+      - name: Claude Code の設定の場所
+        description: '`CLAUDE_CONFIG_DIR` が指すテスト用の一時フォルダ。env の `DEV_DOCS_CONFIG` がテスト用の一時フォルダの端末の設定を指す'
       - name: 端末の設定
         description: '`version` が dev-docs より 1 つ前のバージョンの `settings.yaml`'
         notes: そのバージョンからの移し替えの手順がキーを 1 つ改名する（破壊的な手順を持たない）
@@ -102,6 +104,8 @@ scenarios:
     setup:
       - name: Mock
         description: なし（実環境で実行）
+      - name: Claude Code の設定の場所
+        description: '`CLAUDE_CONFIG_DIR` が指すテスト用の一時フォルダ。env の `DEV_DOCS_CONFIG` がテスト用の一時フォルダの端末の設定を指す'
       - name: 端末の設定
         description: '`version` が dev-docs より新しいバージョンの `settings.yaml`'
     flow: |-
@@ -116,7 +120,7 @@ scenarios:
         SK-->>U: dev-docs の更新を案内して止まる
       ```
     expected:
-      - '`settings.yaml` と Claude Code の `settings.json` は変わらない'
+      - '`settings.yaml` と、Claude Code の設定の場所の `settings.json` は変わらない'
       - スキルの応答に、設定のバージョン・dev-docs のバージョンと、管理の MCP の `update` で dev-docs を更新する案内がある
     test: test_error_when_terminal_config_newer
 lead: 利用者が `/dev-docs:global-setup` で、端末に dev-docs のクローン・依存・端末の設定・Claude Code の env を用意し、`/mcp` につながることを確かめる。
