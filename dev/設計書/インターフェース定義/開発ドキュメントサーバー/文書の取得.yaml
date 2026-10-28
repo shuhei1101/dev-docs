@@ -263,8 +263,12 @@ response:
     description: '`dev-docs.yaml` に書いた GitHub のリポジトリと起票のラベル'
     notes: 書いていない配信元は `null`
   - name: columns
-    type: dict[str, list[int]]
+    type: dict[str, list[str]]
     description: 表ごとの隠す列（表の列の設定の保存で書いたもの）
+  - name: table_keys
+    type: list[str]
+    description: '`markdown` の表の出る順の表のキー。`columns` を表に当てるときと、表の列の設定の保存の `table` に使う'
+    notes: 変換に失敗したときは空
 response_notes: '本文の描画（mdmark）・リンクの組み立て・コメントは #17 の画面が持つ。'
 status_codes:
   - code: '200'

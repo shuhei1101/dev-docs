@@ -149,6 +149,18 @@ data_models:
         type: str
         access: 公開
         description: '`YamlLoadError` の位置と理由、重なった ID と先の文書のファイルなど'
+      - name: line
+        title: 行
+        type: int | None
+        access: 公開
+        default: None
+        description: '`unreadable` のときの `YamlLoadError.line`'
+      - name: column
+        title: 列
+        type: int | None
+        access: 公開
+        default: None
+        description: '`unreadable` のときの `YamlLoadError.column`'
   - name: LoadResult
     title: 読み込みの結果
     container: features/documents/types.py
@@ -700,7 +712,7 @@ functions:
         summary: 読めない YAML
         condition: '`a.yaml` が `a: [1`'
         mock: なし（`tmp_path`）
-        expected: 文書は 0 件で、`LoadProblem` の `reason` が `unreadable`、`detail` に行と列
+        expected: 文書は 0 件で、`LoadProblem` の `reason` が `unreadable`、`detail` に理由、`line`・`column` に行と列
         exception: '-'
       - name: test_load_file_when_missing_body_file
         case: 異常

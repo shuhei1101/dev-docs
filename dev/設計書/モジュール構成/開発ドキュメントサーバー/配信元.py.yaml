@@ -309,7 +309,7 @@ data_models:
         type: dict[str, Any] | None
         access: 公開
         default: None
-        description: タブとサイドバー。`None` は文書の行ごとにタブを作る（画面の『タブとサイドバーの組み立て』）
+        description: タブとサイドバー。`None` は文書の行ごとにタブを作る（画面のAPIの『タブとサイドバーの組み立て』）
       - name: ids_format
         title: ID の付け方
         type: str | None
@@ -480,7 +480,7 @@ data_models:
     usecase: 共通
     role: DTO
     summary: 端末の設定の 1 行が配信中か、外したならその理由
-    description: '`dataclass(frozen=True)`。設定画面・端末の設定の保存・起動のログが使う。'
+    description: '`dataclass(frozen=True)`。端末の設定の取得・保存・起動のログが使う。'
     properties:
       - name: id
         title: 配信元の ID

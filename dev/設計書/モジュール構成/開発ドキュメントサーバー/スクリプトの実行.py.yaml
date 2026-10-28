@@ -35,7 +35,7 @@ classes:
     inherits: Exception
     description: |-
       子クラスは `ScriptNotFoundError`（コマンドが見つからない）・`ScriptTimeoutError`（制限時間を超えた）・`ScriptFailedError`（終了コードが 0 以外）。
-      呼び出し側（検査・変換・書き込み）は、この例外をエラーの囲みの行か `Violation` に変える。
+      呼び出し側（検査・変換・書き込み）は、この例外を変換の失敗か `Violation` に変える。
     properties:
       - name: run
         title: コマンド

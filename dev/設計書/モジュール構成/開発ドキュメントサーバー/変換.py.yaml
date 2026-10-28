@@ -1,7 +1,7 @@
 title: "開発ドキュメントサーバー / 変換"
 lead: |-
-  文書を画面に出す Markdown にする。既定はスキーマ駆動（`x-heading`・`x-shape`・`x-key`・`x-diagram`・列の `title`）で、`converters[]` を指す種類だけ配信元のスクリプトに替える。
-  Markdown の中の埋め込みのマーカーは、mdmark に渡す前に YAML の表へ置き換える。
+  文書を文書の取得で返す Markdown にする。既定はスキーマ駆動（`x-heading`・`x-shape`・`x-key`・`x-diagram`・列の `title`）で、`converters[]` を指す種類だけ配信元のスクリプトに替える。
+  Markdown の中の埋め込みのマーカーは、返す前に YAML の表へ置き換える。
 directory: |-
   ```text
   src/dev_docs/features/convert/
@@ -55,32 +55,32 @@ constants:
   - name: EMBED_PATTERN
     title: 埋め込みのマーカー
     container: features/convert/embed.py
-    usecase: 画面
+    usecase: 文書の取得
     summary: '埋め込みのマーカーに当てる正規表現（mdmark の `<!-- 名前: 引数 -->` の書式で、名前は mdmark の予約名と重ならない `embed`）'
     value: '`r"<!--\s*embed:\s*(?P<path>[^#\s]+)(?:#(?P<item>\S+))?\s*-->"`'
   - name: TABLE_KEY_PATTERN
     title: 表のキーのマーカー
     container: features/convert/service.py
-    usecase: 画面
+    usecase: 文書の取得
     summary: 表の組み立てが表の前に置き、変換の最後に取り除く行に当てる正規表現
     value: '`r"^<!-- dev-docs-table: (?P<key>.+) -->$"`'
   - name: MAX_HEADING_LEVEL
     title: 見出しの深さの上限
     container: features/convert/markdown.py
-    usecase: 画面
+    usecase: 文書の取得
     summary: これより深い見出しは `######` で止める
     value: '6'
   - name: CONVERT_CACHE_KEEP
     title: 変換の結果を残す数
     container: features/convert/service.py
-    usecase: 画面
+    usecase: 文書の取得
     summary: '`{state_dir}/converted` に残すファイルの数。超えたら更新日時が古いものから消す'
     value: '2000'
 enums:
   - name: Shape
     title: 節の形
     container: features/convert/types.py
-    usecase: 画面
+    usecase: 文書の取得
     summary: スキーマの `x-shape` に書く、項目を Markdown にする形（ai-monitor の生成と同じ）
     description: '`Literal` の型エイリアス。`x-shape` が無い文字列は `body`、オブジェクトは子を順に組み立てる。'
     values:
@@ -105,7 +105,7 @@ enums:
   - name: DiagramKind
     title: 図の種類
     container: features/convert/types.py
-    usecase: 画面
+    usecase: 文書の取得
     summary: スキーマの `x-diagram`
     description: '`Literal` の型エイリアス。'
     values:
@@ -128,10 +128,10 @@ data_models:
   - name: ConvertFailure
     title: 変換の失敗
     container: features/convert/types.py
-    usecase: 画面
+    usecase: 文書の取得
     role: DTO
-    summary: 本文の場所にエラーの囲みで出す、変換できなかった理由
-    description: '`dataclass(frozen=True)`。画面は部品『エラーの囲み』で出す。'
+    summary: 変換できなかった理由
+    description: '`dataclass(frozen=True)`。文書の取得は同じフィールドの `conversion_error` で返す。'
     properties:
       - name: reason
         title: 理由
@@ -175,16 +175,16 @@ data_models:
   - name: Converted
     title: 変換の結果
     container: features/convert/types.py
-    usecase: 画面
+    usecase: 文書の取得
     role: DTO
-    summary: 画面に渡す Markdown か、変換の失敗
+    summary: 文書の取得で返す Markdown か、変換の失敗
     description: '`dataclass(frozen=True)`。`failure` があるときの `markdown` は空。'
     properties:
       - name: markdown
         title: Markdown
         type: str
         access: 公開
-        description: mdmark に渡す Markdown（埋め込みを展開し、表のキーのマーカーを取り除いた後）
+        description: 返す Markdown（埋め込みを展開し、表のキーのマーカーを取り除いた後）
       - name: table_keys
         title: 表のキー
         type: list[str]
@@ -202,7 +202,7 @@ functions:
     title: スキーマ駆動の変換
     kind: 関数
     container: features/convert/markdown.py
-    usecase: 画面
+    usecase: 文書の取得
     role: 変換
     summary: YAML の文書をスキーマの `x-heading`・`x-shape`・`x-key`・`x-diagram`・`title` に沿って Markdown にする
     description: 表示の順はスキーマの `properties` の順、見出しと表の列名はスキーマの `title`。スキーマに無いキーは末尾に `title` 無しのキーの名前で出す。
@@ -254,7 +254,7 @@ functions:
     title: 表の組み立て
     kind: 関数
     container: features/convert/markdown.py
-    usecase: 画面
+    usecase: 文書の取得
     role: 変換
     summary: オブジェクトのリストを、mdmark の表のマーカーつきの Markdown の表にする
     scope: public
@@ -296,7 +296,7 @@ functions:
     title: 図の組み立て
     kind: 関数
     container: features/convert/diagrams.py
-    usecase: 画面
+    usecase: 文書の取得
     role: 変換
     summary: '`x-diagram` の種類で、値から Mermaid の図を組み立てる'
     scope: public
@@ -350,7 +350,7 @@ functions:
     title: 埋め込みの展開
     kind: 関数
     container: features/convert/embed.py
-    usecase: 画面
+    usecase: 文書の取得
     role: 変換
     summary: Markdown の中の埋め込みのマーカーを、指した YAML の値の表に置き換える
     scope: public
@@ -400,7 +400,7 @@ classes:
   - name: ConvertService
     title: 変換
     container: features/convert/service.py
-    usecase: 画面
+    usecase: 文書の取得
     role: サービス
     summary: 文書の行の設定で変換を選び、埋め込みを展開した Markdown を返す
     description: '`converters[]` の結果は (配信元, 種類, 変換の ID, 文書のバージョン, `run` の値のハッシュ) を名前にしたファイルで `{state_dir}/converted` に控え、同じ文書・バージョンは 1 回だけ変換する。'
@@ -492,8 +492,7 @@ classes:
           description: '-'
         process: 1. `cache_dir` の下のファイルを削除する（起動の『配信元の読み直し』が呼ぶ）
 refs:
-  - dev/設計書/インターフェース定義/開発ドキュメントサーバー/文書の画面#
-  - dev/設計書/部品設計/エラーの囲み.html#
+  - dev/設計書/インターフェース定義/開発ドキュメントサーバー/文書の取得#
 test_files:
   - tests/unit/dev_docs/features/convert/test_markdown.py
   - tests/unit/dev_docs/features/convert/test_diagrams.py

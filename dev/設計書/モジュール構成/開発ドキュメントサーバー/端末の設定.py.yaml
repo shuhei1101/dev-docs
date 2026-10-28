@@ -1,15 +1,15 @@
 title: "開発ドキュメントサーバー / 端末の設定"
 lead: |-
   端末の設定 `settings.yaml` をスキーマで検証して読み、設定画面から送られた `sources[]` を、他のキーとコメントを保って書き換える。
-  設定画面・端末の設定の保存・トップの転送の入口も持つ。
+  端末の設定の取得・保存の入口も持つ。
 directory: |-
   ```text
   src/dev_docs/features/settings/
   ├─ __init__.py   # 公開する型と関数の再エクスポート
-  ├─ types.py      # TerminalConfig / SourceEntry / SourceScope / SettingsSourcesRequest / SettingsSourcesResponse
+  ├─ types.py      # TerminalConfig / SourceEntry / SourceScope / SettingsSourceRow / SettingsSourcesView / SettingsSourcesRequest / SettingsSourcesResponse
   ├─ query.py      # config_path / load_terminal_config / listen_port
   ├─ service.py    # save_sources
-  └─ route.py      # build_settings_router（GET / ・GET /_settings/ ・PUT /_api/settings/sources）
+  └─ route.py      # build_settings_router（GET・PUT /_api/settings/sources）
   schemas/
   └─ settings.schema.yaml   # 端末の設定のスキーマ（JSON Schema 2020-12）
   ```
@@ -192,6 +192,69 @@ data_models:
         type: list[SourceStatusItem]
         access: 公開
         description: '`id`・`status`（`serving` / `not_served` / `disabled`）・`errors[]`（`{path, reason}`。`not_served` のときだけ）・`config_version`（`{config, server}`。設定のバージョンが古いときだけ）'
+  - name: SettingsSourceRow
+    title: 配信元の行と状態
+    container: features/settings/types.py
+    usecase: 端末の設定の取得
+    role: DTO
+    summary: 端末の設定の取得の `sources[]` の 1 行
+    description: '`pydantic.BaseModel`。'
+    properties:
+      - name: id
+        title: 配信元の ID
+        type: str
+        access: 公開
+        description: 配信元の状態の `id`（行で省いたときは配信元の設定の `name`）
+      - name: config
+        title: 配信元の設定のパス
+        type: list[str]
+        access: 公開
+        description: 行の `config`
+      - name: enabled
+        title: 配信するか
+        type: bool
+        access: 公開
+        description: 行の `enabled`
+      - name: scope
+        title: 権限の範囲
+        type: SourceScope
+        access: 公開
+        description: 行の `scope`
+      - name: status
+        title: 状態
+        type: Literal['serving', 'not_served', 'disabled']
+        access: 公開
+        description: 配信元の状態の `status`
+      - name: errors
+        title: 外した理由
+        type: list[dict[str, str]]
+        access: 公開
+        default: '[]'
+        description: '`{path, reason}`。`not_served` のときだけ'
+      - name: config_version
+        title: 設定のバージョン
+        type: dict[str, str] | None
+        access: 公開
+        default: None
+        description: '`{config, server}`。設定のバージョンが古いときだけ'
+  - name: SettingsSourcesView
+    title: 端末の設定の取得の応答
+    container: features/settings/types.py
+    usecase: 端末の設定の取得
+    role: DTO
+    summary: GET `/_api/settings/sources` の応答
+    description: '`pydantic.BaseModel`。'
+    properties:
+      - name: settings_path
+        title: 端末の設定のパス
+        type: str
+        access: 公開
+        description: 端末の設定の `file`
+      - name: sources
+        title: 配信元
+        type: list[SettingsSourceRow]
+        access: 公開
+        description: '`sources[]` の行の順'
 constants:
   - name: DEFAULT_CONFIG_PATH
     title: 端末の設定の既定のパス
@@ -426,7 +489,7 @@ functions:
     title: 配信元の保存
     kind: 関数
     container: features/settings/service.py
-    usecase: 設定画面で端末の設定を変える
+    usecase: 端末の設定の保存
     role: サービス
     summary: '`settings.yaml` の `sources` だけを書き換え、検証に通ったら書いて配信元を読み直す'
     scope: public
@@ -497,9 +560,9 @@ functions:
     title: 端末の設定の入口
     kind: 関数
     container: features/settings/route.py
-    usecase: 設定画面で端末の設定を変える
+    usecase: 共通
     role: 入口
-    summary: トップの転送・設定画面・端末の設定の保存のルートを持つ `APIRouter` を作る
+    summary: 端末の設定の取得・保存のルートを持つ `APIRouter` を作る
     scope: public
     args:
       - name: handlers
@@ -507,28 +570,21 @@ functions:
         type: Handlers
         required: true
         passing: positional
-        description: 起動の『配線済みの関数』。配信元の状態・画面のテンプレート・`reload_sources`・`settings_lock` を引く
+        description: 起動の『配線済みの関数』。端末の設定・配信元の状態・`reload_sources`・`settings_lock` を引く
     returns:
       type: fastapi.APIRouter
-      description: 3 つのルートを持つルーター
+      description: 2 つのルートを持つルーター
     process: |-
-      1. GET `/` は `/_settings/` への 302 を返す
-      2. GET `/_settings/` は、端末の設定のパスと `sources[]` の各行に配信元の状態を重ねた画面の状態を作り、`settings.html` を描いて返す（配信元の一覧.状態の一覧）
-      3. PUT `/_api/settings/sources` は、同じオリジンの確認を依存に持ち（同じオリジンの確認）、本文を `SettingsSourcesRequest` で受けて『配信元の保存』を `reload=handlers.reload_sources`・`lock=handlers.settings_lock` で `asyncio.to_thread` で呼び、`SettingsSourcesResponse` を返す（配信元の保存）
+      1. GET `/_api/settings/sources` は、`handlers.terminal.file` を `settings_path` にし、`sources[]` の各行に同じ順の配信元の状態の `id`・`status`・`errors`・`config_version` を重ねた `SettingsSourcesView` を返す（配信元の一覧.状態の一覧）。`sources[]` は `handlers.terminal.file` を端末の設定の読み込みで読み直した値（配信元の保存の後も新しい行を返す）
+      2. PUT `/_api/settings/sources` は、同じオリジンの確認を依存に持ち（同じオリジンの確認）、本文を `SettingsSourcesRequest` で受けて『配信元の保存』を `reload=handlers.reload_sources`・`lock=handlers.settings_lock` で `asyncio.to_thread` で呼び、`SettingsSourcesResponse` を返す（配信元の保存）
          - `TerminalConfigInvalidError` は例外の変換で 422 の problem+json になる
     unit_tests:
-      - name: test_build_settings_router_when_root
+      - name: test_build_settings_router_when_get
         case: 正常
-        summary: トップを転送する
-        condition: GET `/`
+        summary: 行に状態を重ねる
+        condition: GET `/_api/settings/sources`、状態は `serving` 1 つと `not_served` 1 つ
         mock: 配線済みの関数（偽物）
-        expected: 302 で `Location` が `/_settings/`
-      - name: test_build_settings_router_when_settings_page
-        case: 正常
-        summary: 設定画面に状態を埋め込む
-        condition: GET `/_settings/`、状態は `serving` 1 つと `not_served` 1 つ
-        mock: 配線済みの関数（偽物）
-        expected: 200 で、埋め込んだ状態に 2 行と `not_served` の `errors`
+        expected: 200 で `settings_path` と `sources` の 2 行、`not_served` の行に `errors`
       - name: test_build_settings_router_when_put
         case: 正常
         summary: 保存して状態を返す
@@ -536,9 +592,8 @@ functions:
         mock: 配線済みの関数（`save_sources` が状態を返す偽物）
         expected: 200 で `sources[].status`。`save_sources` に送った行が渡る
 refs:
+  - dev/設計書/インターフェース定義/開発ドキュメントサーバー/端末の設定の取得#
   - dev/設計書/インターフェース定義/開発ドキュメントサーバー/端末の設定の保存#
-  - dev/設計書/インターフェース定義/開発ドキュメントサーバー/設定画面の表示#
-  - dev/設計書/インターフェース定義/開発ドキュメントサーバー/トップの転送#
 classes:
   - name: TerminalConfigInvalidError
     title: 端末の設定の違反

@@ -1,6 +1,6 @@
 title: "開発ドキュメントサーバー / 起動"
 lead: |-
-  `dev-docs serve` の処理。端末の設定と配信元を読み、部品を配線して、画面・文書の MCP・管理の MCP を 1 つのアプリとして待ち受ける。
+  `dev-docs serve` の処理。端末の設定と配信元を読み、部品を配線して、画面の API・文書の MCP・管理の MCP を 1 つのアプリとして待ち受ける。
   例外から problem+json への変換もここで登録する。
 directory: |-
   ```text
@@ -78,14 +78,14 @@ diagrams:
         click 配信元の一覧 href "./配信元.py.yaml#配信元の一覧"
         click 文書の MCP の組み立て href "./文書のMCP.py.yaml#文書の MCP の組み立て"
         click 管理の MCP の組み立て href "./文書のMCP.py.yaml#管理の MCP の組み立て"
-        click 画面の入口 href "./画面.py.yaml#画面の入口"
+        click 画面の入口 href "./画面のAPI.py.yaml#画面の入口"
 data_models:
   - name: Handlers
     title: 配線済みの関数
     container: main.py
     usecase: 共通
     role: 合成の起点
-    summary: 入口（画面・MCP）が使う部品を 1 回だけ作って束ねたもの
+    summary: 入口（画面の API・MCP）が使う部品を 1 回だけ作って束ねたもの
     description: |-
       `dataclass(frozen=True)`。入口はこの属性から部品を引き、部品を自分で作らない。
       サービスは同期の関数で、入口は `asyncio.to_thread` で呼ぶ。テストは属性を偽物に差し替えた `Handlers` を作る。
@@ -130,11 +130,6 @@ data_models:
         type: threading.Lock
         access: 公開
         description: 端末の設定の保存と読み直しを 1 つずつにする
-      - name: templates
-        title: 画面のテンプレート
-        type: fastapi.templating.Jinja2Templates
-        access: 公開
-        description: '`server/templates/` を読む Jinja2 の環境（`autoescape` あり）'
       - name: checker
         title: 文書の検査
         type: DocumentChecker
@@ -144,7 +139,7 @@ data_models:
         title: 表の列の設定
         type: ColumnSettings
         access: 公開
-        description: 画面の表の隠す列（画面）
+        description: 画面の表の隠す列（画面のAPI）
       - name: reload_sources
         title: 配信元の読み直し
         type: Callable[[TerminalConfig], list[SourceStatus]]
@@ -195,12 +190,6 @@ constants:
     usecase: 起動
     summary: 管理の MCP をマウントするパス
     value: '"/_admin/mcp"'
-  - name: STATIC_PATH
-    title: 静的ファイルのパス
-    container: server/app.py
-    usecase: 起動
-    summary: 画面の CSS・JS を配信するパス（mdmark は jsDelivr から読む）
-    value: '"/_static"'
   - name: PROBLEM_TYPE_BASE
     title: problem+json の type の頭
     container: server/error_handlers.py
@@ -332,7 +321,7 @@ functions:
     process: |-
       1. `state_dir` を作る
       2. 配信元の一覧を作り、端末の設定で読み直す（配信元の一覧.読み直す）。検証で外した配信元があっても続ける
-      3. リビジョンの書き出し（`{state_dir}/snapshots`）・文書のストア・変換（`{state_dir}/converted`、制限時間は `script_timeout_sec`）・会話の記録（`{state_dir}/seen.sqlite3`、保持日数は `seen_retention_days`）・文書の検査（制限時間は `script_timeout_sec`）・配信元ごとの排他・表の列の設定（`{state_dir}/columns`）・画面のテンプレートを作る
+      3. リビジョンの書き出し（`{state_dir}/snapshots`）・文書のストア・変換（`{state_dir}/converted`、制限時間は `script_timeout_sec`）・会話の記録（`{state_dir}/seen.sqlite3`、保持日数は `seen_retention_days`）・文書の検査（制限時間は `script_timeout_sec`）・配信元ごとの排他・表の列の設定（`{state_dir}/columns`）を作る
       4. これらと、『配信元の読み直し』をこれらの部品で束ねた関数を持つ `Handlers` を返す
     unit_tests:
       - name: test_build_handlers
@@ -345,7 +334,7 @@ functions:
     title: 配信元の読み直し
     kind: 関数
     container: main.py
-    usecase: 設定画面で端末の設定を変える
+    usecase: 端末の設定の保存
     role: 合成の起点
     summary: 配信元の一覧を読み直し、配信元の内容を控えた部品の控えを捨てる
     scope: public
@@ -402,7 +391,7 @@ functions:
     container: server/app.py
     usecase: 起動
     role: 合成の起点
-    summary: 画面のルート・文書の MCP・管理の MCP・静的ファイルを 1 つの FastAPI のアプリにまとめる
+    summary: 画面の API・文書の MCP・管理の MCP を 1 つの FastAPI のアプリにまとめる
     scope: public
     args:
       - name: handlers
@@ -416,25 +405,24 @@ functions:
       description: 組み立てたアプリ
     process: |-
       1. 文書の MCP と管理の MCP を組み立てる（文書の MCP の組み立て・管理の MCP の組み立て）
-      2. 2 つの MCP と会話の記録を渡して寿命を作り（アプリの寿命）、`FastAPI(lifespan=..., docs_url=None, redoc_url=None, openapi_url=None)` を作る
+      2. 2 つの MCP と会話の記録を渡して寿命を作り（アプリの寿命）、`FastAPI(lifespan=..., docs_url=None, redoc_url=None, openapi_url="/_api/openapi.json")` を作る
       3. 例外の変換を登録する（例外の変換の登録）
       4. `DOCS_MCP_PATH` に文書の MCP、`ADMIN_MCP_PATH` に管理の MCP の `streamable_http_app(streamable_http_path="/", stateless_http=True, json_response=True)` をマウントする
-      5. `STATIC_PATH` に配布に同梱する `server/static/` を `StaticFiles` でマウントする
-      6. 端末の設定の入口、画面の入口の順にルーターを登録する（画面の `/{source}/...` より `/_settings/`・`/_api/` を先に当てる）
-      7. アプリを返す
+      5. 端末の設定の入口と画面の入口のルーターを登録する
+      6. アプリを返す
     unit_tests:
       - name: test_build_app
         case: 正常
         summary: 入口を全て持つ
-        condition: 配線済みの関数を渡して `TestClient` で GET `/`
+        condition: 配線済みの関数を渡して `TestClient` で GET `/_api/openapi.json`
         mock: 配線済みの関数（配信元が空の偽物）
-        expected: 302 で `/_settings/`、アプリのルートに `/mcp`・`/_admin/mcp`・`/_static` のマウントがある
+        expected: 200 で `paths` に `/_api/sources/{source}/docs`・`/_api/settings/sources` があり、アプリのルートに `/mcp`・`/_admin/mcp` のマウントがある
       - name: test_build_app_when_openapi
         case: 正常
         summary: OpenAPI の画面を出さない
-        condition: GET `/docs`
+        condition: GET `/docs` と `/_api/openapi.json`
         mock: 配線済みの関数（偽物）
-        expected: 画面の入口の『配信元が無い』404
+        expected: '`/docs` は 404、`/_api/openapi.json` の `paths` が全て `/_api/` で始まる'
   - name: build_lifespan
     title: アプリの寿命
     kind: 関数
@@ -493,8 +481,7 @@ functions:
     process: |-
       1. `DevDocsError` は、`application/problem+json` で `{type: PROBLEM_TYPE_BASE + name, title: name, status, detail: message, next_steps, ...details()}` を返す。`violations` を持つときは `errors[]`（`{path, reason}`、`reason` は `rule`）にも並べる
       2. `RequestValidationError` は、400 で `type` が `InvalidArgumentError` の problem+json を返す。`errors[]` は誤りごとに `loc` の `body` を除いたパス（`sources[1].id` の形）と `msg`
-      3. 画面（`Accept` に `text/html` を含む GET）の `DevDocsError` は problem+json でなく、画面の『エラーの画面』で返す（404 は見つからない画面）
-      4. これら以外の例外は FastAPI の既定の 500 に任せ、`[error]` 要求の処理に失敗した（メソッド・パス・例外）を書く
+      3. これら以外の例外は FastAPI の既定の 500 に任せ、`[error]` 要求の処理に失敗した（メソッド・パス・例外）を書く
     unit_tests:
       - name: test_register_error_handlers
         case: 正常
@@ -508,12 +495,6 @@ functions:
         condition: '`hidden: "x"`（配列でない）を PUT'
         mock: なし（テスト用のルート）
         expected: 400、`errors[0].path` が `hidden`
-      - name: test_register_error_handlers_when_html
-        case: 正常
-        summary: 画面は HTML で返す
-        condition: '`Accept: text/html` で `UnknownSourceError` を送る GET'
-        mock: 画面のテンプレート（偽物）
-        expected: 404 で見つからない画面の HTML
 refs:
   - dev/設計書/インターフェース定義/開発ドキュメントサーバー/起動#
 test_files:
