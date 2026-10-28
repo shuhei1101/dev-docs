@@ -5,6 +5,7 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
+FILES_SCHEMA = Path(__file__).parents[3] / "templates" / "files.schema.yaml"
 BROKEN_CONFIG = "name: broken\ndocuments:\n  - id: sample\n    type: yaml\n"
 BY_ID = {"field": "id", "op": "eq", "values": ["doc-2", "doc-1"]}
 DOC_1 = {"field": "id", "op": "eq", "values": ["doc-1"]}
@@ -31,25 +32,54 @@ def test_normal(make_source: Callable[..., Any], make_server: Callable[..., Any]
     assert result.structured is None
 
 
-def test_normal_when_full(make_source: Callable[..., Any], make_server: Callable[..., Any]) -> None:
+def test_normal_when_full(
+    make_source: Callable[..., Any],
+    make_server: Callable[..., Any],
+    run_git: Callable[..., str],
+) -> None:
     """ID で絞って view: full で本文を返す（正常系）。"""
     # 準備
     source = make_source("sample")
     env = make_server(source)
+    head = run_git(source.folder, "rev-parse", "HEAD").strip()
+    folder = source.folder
+    arguments = {"cwd": str(folder), "filter": BY_ID, "view": "full"}
     # 実行
-    markdown = env.call("search_docs", cwd=str(source.folder), filter=BY_ID, view="full")
-    as_json = env.call(
-        "search_docs", cwd=str(source.folder), filter=BY_ID, view="full", format="json"
+    markdown = env.call("search_docs", **arguments)
+    as_json = env.call("search_docs", format="json", **arguments)
+    cut = env.call("search_docs", format="json", max_chars_per_field=10, **arguments)
+    snippets = env.call(
+        "search_docs",
+        cwd=str(folder),
+        filter={"field": "body", "op": "contains", "values": ["文書 1"]},
+        view="full",
+        snippets={"context_lines": 1, "max_per_doc": 3},
+        format="json",
     )
+    summary = env.call("search_docs", cwd=str(folder), view="summary", format="json")
+    revision = env.call("search_docs", ref=head, **arguments)
+    revision_json = env.call("search_docs", ref=head, format="json", **arguments)
     # 検証
     documents = re.findall(r"<document[^>]*>(.*?)</document>", markdown.text, flags=re.S)
     assert len(documents) == 2
     assert "id: doc-2" in documents[0]
     assert "id: doc-1" in documents[1]
+    assert f'<document path="{folder}/docs/doc-2.yaml" scope="full">' in markdown.text
+    assert f'<document path="{folder}/docs/doc-1.yaml" scope="full">' in markdown.text
     assert as_json.structured is not None
     assert as_json.structured == as_json.data
     assert [item["id"] for item in as_json.data["items"]] == ["doc-2", "doc-1"]
     assert "id: doc-2" in as_json.data["items"][0]["values"]["body"]
+    assert [(item["path"], item["scope"]) for item in as_json.data["items"]] == [
+        (f"{folder}/docs/doc-2.yaml", "full"),
+        (f"{folder}/docs/doc-1.yaml", "full"),
+    ]
+    assert [item["scope"] for item in cut.data["items"]] == ["section", "section"]
+    assert [item["scope"] for item in snippets.data["items"]] == ["section"]
+    assert [item["scope"] for item in summary.data["items"]] == ["summary", "summary"]
+    assert "<document>" in revision.text
+    assert "path=" not in revision.text
+    assert all("path" not in item and "scope" not in item for item in revision_json.data["items"])
 
 
 def test_normal_when_count_grouped(
@@ -168,6 +198,9 @@ def test_normal_when_worktree(
     assert "name: ワークツリーの名前" in by_cwd.text
     assert "name: 文書 1" in by_clone.text
     assert "ワークツリーの名前" not in by_clone.text
+    assert f'<document path="{worktree}/docs/doc-1.yaml" scope="full">' in by_worktree.text
+    assert f'<document path="{worktree}/docs/doc-1.yaml" scope="full">' in by_cwd.text
+    assert f'<document path="{source.folder}/docs/doc-1.yaml" scope="full">' in by_clone.text
 
 
 def test_normal_when_seen(
@@ -184,6 +217,7 @@ def test_normal_when_seen(
     # 実行
     first = env.call("search_docs", session_id="s1", **arguments)
     second = env.call("search_docs", session_id="s1", **arguments)
+    second_json = env.call("search_docs", session_id="s1", format="json", **arguments)
     repeated = env.call("search_docs", session_id="s1", repeat_seen=True, **arguments)
     other_session = env.call("search_docs", session_id="s2", **arguments)
     summary = env.call(
@@ -197,10 +231,77 @@ def test_normal_when_seen(
     assert body in first.text
     assert "（この会話で返し済み）" in second.text
     assert body not in second.text
+    assert "<document>" in second.text
+    assert "path=" not in second.text
+    assert "path" not in second_json.data["items"][0]
+    assert "scope" not in second_json.data["items"][0]
     assert body in repeated.text
     assert body in other_session.text
     assert "1 件目" in summary.text
     assert "id: doc-1\nname: 変更後の名前" in changed.text
+
+
+def test_normal_when_files_index(
+    make_source: Callable[..., Any],
+    make_server: Callable[..., Any],
+    sample_file_set: Callable[..., dict[str, str]],
+    sample_config_text: Callable[..., str],
+) -> None:
+    """管理用の YAML の各行を文書にし、名前の既定と本文のファイルの場所を返す（正常系）。"""
+    # 準備
+    src_row = (
+        "  - id: src\n"
+        "    type: yaml\n"
+        "    paths: [src/files.yaml]\n"
+        "    schema: schemas/files.schema.yaml\n"
+        "    records: files\n"
+        "    body_file: path\n"
+        "    defaults:\n"
+        "      - paths: [src/**]\n"
+        "        tags: [code]\n"
+    )
+    files = sample_file_set(
+        **{
+            "dev-docs.yaml": sample_config_text(src_row),
+            "schemas/files.schema.yaml": FILES_SCHEMA.read_text(encoding="utf-8"),
+            "docs/doc-2.yaml": "id: doc-2\n",
+            "src/files.yaml": (
+                "files:\n  - path: a.py\n    tags: [auth]\n  - path: b.py\n    name: 部品 B\n"
+            ),
+            "src/a.py": "a = 1\n",
+            "src/b.py": "b = 2\n",
+        }
+    )
+    source = make_source("sample", files)
+    env = make_server(source)
+    # 実行
+    one = env.call(
+        "search_docs",
+        cwd=str(source.folder),
+        filter={"field": "id", "op": "eq", "values": ["src/a"]},
+        view="full",
+        format="json",
+    )
+    markdown = env.call(
+        "search_docs",
+        cwd=str(source.folder),
+        filter={"field": "id", "op": "eq", "values": ["src/a"]},
+        view="full",
+    )
+    everything = env.call("search_docs", cwd=str(source.folder), view="summary", format="json")
+    # 検証
+    item = one.data["items"][0]
+    names = {row["id"]: row["values"]["name"] for row in everything.data["items"]}
+    assert item["id"] == "src/a"
+    assert item["values"]["name"] == "a"
+    assert item["values"]["tags"] == ["code", "auth"]
+    assert item["values"]["path"] == "a.py"
+    assert item["path"] == f"{source.folder}/src/a.py"
+    assert item["scope"] == "full"
+    assert item["values"]["body"] == "a = 1\n"
+    assert f'<document path="{source.folder}/src/a.py" scope="full">' in markdown.text
+    assert names["src/b"] == "部品 B"
+    assert names["doc-2"] == "doc-2"
 
 
 def test_normal_when_file_unreadable(

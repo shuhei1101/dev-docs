@@ -72,6 +72,10 @@ def test_normal(
     assert items[0]["via"]["type"] == "references"
     assert items[1]["via"]["from"] == "doc-2"
     assert [item["id"] for item in shallow.data["items"]] == ["doc-2"]
+    assert [(item["path"], item["scope"]) for item in items] == [
+        (f"{source.folder}/docs/doc-2.yaml", "summary"),
+        (f"{source.folder}/docs/doc-3.yaml", "summary"),
+    ]
 
 
 def test_normal_when_direction_in(
@@ -205,6 +209,7 @@ def test_normal_when_seen(
     assert [item["name"] for item in first.data["items"]] == ["文書 2", "文書 3"]
     assert [item["name"] for item in second.data["items"]] == [SEEN_MARK, SEEN_MARK]
     assert [item["description"] for item in second.data["items"]] == [SEEN_MARK, SEEN_MARK]
+    assert all("path" not in item and "scope" not in item for item in second.data["items"])
     assert [item["name"] for item in repeated.data["items"]] == ["文書 2", "文書 3"]
 
 
