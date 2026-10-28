@@ -7,10 +7,10 @@ import sys
 from collections.abc import Callable
 from importlib.metadata import version
 
-from dev_docs.main import run_serve
+from dev_docs import DIST_NAME
+from dev_docs.main import run_migrate, run_serve
 
 PROG = "dev-docs"
-DIST_NAME = "dev-docs"
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -22,6 +22,18 @@ def build_parser() -> argparse.ArgumentParser:
     subparsers = parser.add_subparsers(dest="cmd", required=True)
     serve = subparsers.add_parser("serve", help="開発ドキュメントサーバーを起動する")
     serve.set_defaults(handler=run_serve)
+    migrate = subparsers.add_parser("migrate", help="設定のバージョンを今のバージョンに移し替える")
+    # --plan は書き換えず手順だけを出し、--record は手順を当てずにバージョンだけを書き換える
+    mode = migrate.add_mutually_exclusive_group()
+    mode.add_argument("--plan", action="store_true", help="当てる手順を出して終わる")
+    mode.add_argument("--record", action="store_true", help="version だけを今のバージョンにする")
+    migrate.add_argument(
+        "--source", default=None, help="移し替える配信元の dev-docs.yaml（省くと端末の設定）"
+    )
+    migrate.add_argument(
+        "--allow-destructive", action="store_true", help="キーの削除など値を捨てる手順も当てる"
+    )
+    migrate.set_defaults(handler=run_migrate)
     return parser
 
 

@@ -1,4 +1,4 @@
-"""画面の API・文書の MCP・管理の MCP を 1 つのアプリにまとめる。"""
+"""画面の API・文書の MCP・管理の MCP・セッションの文脈を 1 つのアプリにまとめる。"""
 
 from __future__ import annotations
 
@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING
 
 from fastapi import FastAPI
 
+from dev_docs.features.session_context.route import build_session_context_router
 from dev_docs.features.settings.route import build_settings_router
 from dev_docs.features.view.route import build_view_router
 from dev_docs.server.error_handlers import register_error_handlers
@@ -22,7 +23,7 @@ OPENAPI_PATH = "/_api/openapi.json"
 
 
 def build_app(handlers: Handlers) -> FastAPI:
-    """画面の API・文書の MCP・管理の MCP を 1 つの FastAPI のアプリにまとめる。"""
+    """画面の API・文書の MCP・管理の MCP・セッションの文脈を 1 つの FastAPI のアプリにまとめる。"""
     docs_mcp = build_docs_mcp(handlers)
     admin_mcp = build_admin_mcp(handlers)
     app = FastAPI(
@@ -41,5 +42,6 @@ def build_app(handlers: Handlers) -> FastAPI:
             ),
         )
     app.include_router(build_settings_router(handlers))
+    app.include_router(build_session_context_router(handlers))
     app.include_router(build_view_router(handlers))
     return app

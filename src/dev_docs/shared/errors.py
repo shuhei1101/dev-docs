@@ -189,3 +189,44 @@ class CrossOriginError(DevDocsError):
     """別のオリジンからの要求。"""
 
     status: ClassVar[int] = 403
+
+
+@dataclass(kw_only=True)
+class ConfigNotFoundError(DevDocsError):
+    """配信元の設定が無い。"""
+
+    status: ClassVar[int] = 404
+    path: str = ""
+
+
+@dataclass(kw_only=True)
+class ConfigParseError(DevDocsError):
+    """配信元の設定が YAML として読めない。"""
+
+    status: ClassVar[int] = 400
+    line: int | None = None
+    column: int | None = None
+
+
+@dataclass(kw_only=True)
+class ConvertScriptError(DevDocsError):
+    """変換スクリプトの失敗。"""
+
+    status: ClassVar[int] = 422
+    script: str = ""
+
+
+@dataclass(kw_only=True)
+class RestartInProgressError(DevDocsError):
+    """再起動か更新の途中。"""
+
+    status: ClassVar[int] = 409
+
+
+@dataclass(kw_only=True)
+class UpdateFailedError(DevDocsError):
+    """更新のコマンドの失敗。"""
+
+    status: ClassVar[int] = 500
+    command: list[str] = field(default_factory=list)
+    stderr: str = ""
