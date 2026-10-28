@@ -346,6 +346,34 @@ flows:
       - 項目の直下の `path` が `{sample のクローン本体}/src/a.py`、`scope` が `full` になる
       - 2 回目の `b` の `name` が `部品 B`、文書 2 の `name` が文書 2 のファイル名から拡張子を除いた名前になる
     test: test_normal_when_files_index
+  - name: 正常系（正規表現と抜粋）
+    summary: '`regex` を行単位で当て、当たった行を行番号つきの抜粋で返す'
+    setup:
+      - name: Mock
+        description: なし
+      - name: サンプルの配信元
+        description: '正常系と同じ sample。文書 1 の本文の 3 行目を `## 手順`、8 行目を `本文の途中の ## は当たらない` にする'
+      - name: 入力
+        description: '`filter` は `body` の `regex` `^## `、`view: full`、`snippets: {before: 0, after: 1}`。2 回目は同じ引数で `format: json`。3 回目は `filter` を `body` の `contains` `手順`、`snippets: {context_lines: 1}`'
+        notes: '`^## ` は 3 行目にだけ当たり、8 行目（行の途中の `## `）には当たらない'
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        participant C as クライアント
+        participant T as search_docs
+        participant ST as 配信元のファイル
+
+        C->>T: filter（body の regex ^## ）, view: full, snippets: {before: 0, after: 1}
+        T-->>ST: 文書を読む
+        T->>T: 本文の各行に正規表現を当て、当たった行と後ろ 1 行を行番号つきで切り出す
+        T-->>C: <document> の中の 3:## 手順 と 4-{4 行目}
+      ```
+    expected:
+      - 結果が文書 1 だけで、`<document>` の中に `3:## 手順` と `4-{4 行目}` があり、2 行目と 8 行目は無い
+      - '`format: json` の `items[0].snippets` が 1 要素で、`lines` が `{line: 3, text: "## 手順", hit: true}` と `{line: 4, hit: false}`'
+      - '`scope` が `section` になる'
+      - '3 回目（`contains`、`context_lines: 1`）は `2-`・`3:`・`4-` の 3 行を返す'
+    test: test_normal_when_snippets
 lead: '条件に当たる文書を、指定した項目・量・順で返す。ID で絞れば取得、`view: summary` で一覧、`view: count` で件数、`group_by` で集計になる。'
 identifier: search_docs
 permissions: 対象の配信元の `scope.read` か `scope.write` に `cwd` が当たること
@@ -393,6 +421,7 @@ request:
     required: true
     location: argument
     description: 比べ方
+    notes: '`regex` は値の各行に当たる（`^`・`$` は各行の先頭・末尾。値全体の先頭・末尾は `\A`・`\Z`）'
   - name: filter.values
     type: list[str]
     required: false
@@ -477,11 +506,12 @@ request:
     location: argument
     description: 長い値を末尾で切り、残りの文字数を添える
   - name: snippets
-    type: '{context_lines: int, max_per_doc: int}'
+    type: '{context_lines: int, before: int, after: int, max_per_doc: int}'
     required: false
     default: なし
     location: argument
-    description: 一致した行の前後だけを返す
+    description: 本文の代わりに、条件に当たった行と前後の行だけを行番号つきで返す
+    notes: 当たった行は、条件の `body`・`*` の `eq`・`prefix`・`suffix`・`contains`・`regex` と同じ判定で行ごとに探す（`eq`・`prefix`・`suffix` は行の部分一致。`case_sensitive` も条件と同じ）
   - name: repeat_seen
     type: bool
     required: false
@@ -515,6 +545,33 @@ request:
     location: argument
     description: 会話キー（サブエージェント）
     notes: フックが入れる
+  - name: snippets.context_lines
+    type: int
+    required: false
+    default: '`1`'
+    location: argument
+    description: '`before`・`after` を省いたときの前と後ろの行の数'
+  - name: snippets.before
+    type: int
+    required: false
+    default: なし（`context_lines`）
+    location: argument
+    description: 当たった行の前に返す行の数
+    constraints: 0 以上
+  - name: snippets.after
+    type: int
+    required: false
+    default: なし（`context_lines`）
+    location: argument
+    description: 当たった行の後ろに返す行の数
+    constraints: 0 以上
+  - name: snippets.max_per_doc
+    type: int
+    required: false
+    default: '`3`'
+    location: argument
+    description: 文書ごとに返す抜粋の数
+    notes: 重なる範囲は 1 つの抜粋にまとめ、本文の先頭から数える
 request_example: |-
   ```json
   {
@@ -573,6 +630,19 @@ response:
     type: Literal['full', 'section', 'summary']
     description: 返した範囲。`full` は本文を切らずに返した、`section` は本文の一部を返した、`summary` は本文を返さなかった
     notes: 決め方は制約の「範囲の決め方」。`items[].path` と同じ条件で持たない
+  - name: items[].snippets
+    type: 'list[{lines: list[{line: int, text: str, hit: bool}]}]'
+    description: 抜粋。重なる範囲をまとめた 1 つが 1 要素
+    notes: '`snippets` を渡したときだけ'
+  - name: items[].snippets[].lines[].line
+    type: int
+    description: 本文の行番号（1 始まり）
+  - name: items[].snippets[].lines[].text
+    type: str
+    description: 行の文字列（改行を含まない）
+  - name: items[].snippets[].lines[].hit
+    type: bool
+    description: 条件に当たった行か（`false` は前後の行）
 response_example: |-
   ```markdown
   sample: 該当 2 件・返した 2 件
@@ -621,6 +691,9 @@ constraints:
   - item: 名前の既定
     constraint: メタデータの `name` が空なら、ファイル名から拡張子を除いた名前にする。`records` の要素は `body_file` が指すファイルの名前、`body_file` が無ければ文書の `id`
     notes: '`defaults[]` と行の `metadata` を重ねた後に当てる'
+  - item: 抜粋の書式
+    constraint: '`format: markdown` は grep の `-n` と同じく、当たった行を `{行番号}:{行}`、前後の行を `{行番号}-{行}` で出し、抜粋の間に `--` の行を置く'
+    notes: 行番号を Read の `offset` や `write_docs` の `text_edits` へそのまま渡せる
 refs:
   - dev/設計書/シナリオ/単一ユースケース/エージェントが調べる#scenarios[正常シナリオ]
   - dev/設計書/シナリオ/単一ユースケース/YAMLを直接編集した#scenarios[正常シナリオ]
