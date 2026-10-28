@@ -14,4 +14,4 @@ ADMIN_MCP_NAME = "dev-docs-admin"
 
 def build_admin_mcp(handlers: Handlers) -> MCPServer:
     """ツールを持たない管理の MCP を作る。"""
-    raise NotImplementedError
+    return MCPServer(ADMIN_MCP_NAME)
