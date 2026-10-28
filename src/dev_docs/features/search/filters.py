@@ -25,6 +25,13 @@ def normalize(text: str) -> str:
     return unicodedata.normalize("NFKC", text).casefold()
 
 
+def compile_regex(value: str, *, case_sensitive: bool) -> re.Pattern[str]:
+    """`regex` の値を、各行に当たる正規表現にする。"""
+    # ^・$ を各行の先頭・末尾に当てる。大文字小文字を区別しないときは IGNORECASE を加える
+    flags = re.MULTILINE if case_sensitive else re.MULTILINE | re.IGNORECASE
+    return re.compile(value, flags)
+
+
 def _midnight(day: date) -> datetime:
     """日付の 0 時（UTC）にする。"""
     return datetime(day.year, day.month, day.day, tzinfo=UTC)
@@ -85,7 +92,7 @@ def _check_condition(condition: Condition, path: str, fields: Mapping[str, str])
     for index, value in enumerate(condition.values):
         if condition.op == "regex":
             try:
-                re.compile(value)
+                compile_regex(value, case_sensitive=condition.case_sensitive)
             except re.error as error:
                 violations.append(
                     Violation(
@@ -153,6 +160,11 @@ def _comparable(value: Any, field_type: str) -> Any:
     return _text(value)
 
 
+def _nfkc_unless(condition: Condition, text: str) -> str:
+    """区別しない条件なら NFKC にした文字列を返す。"""
+    return text if condition.case_sensitive else unicodedata.normalize("NFKC", text)
+
+
 def _test(
     condition: Condition, values: list[Any], expected: str, field_type: str, today: date
 ) -> bool:
@@ -160,9 +172,9 @@ def _test(
     op = condition.op
     fold: Callable[[str], str] = (lambda text: text) if condition.case_sensitive else normalize
     if op == "regex":
-        flags = 0 if condition.case_sensitive else re.IGNORECASE
-        pattern = re.compile(expected if condition.case_sensitive else normalize(expected), flags)
-        return any(pattern.search(fold(_text(value))) for value in values)
+        pattern = compile_regex(expected, case_sensitive=condition.case_sensitive)
+        # パターンには正規化をかけず、区別しないときは文書の値だけを NFKC にする
+        return any(pattern.search(_nfkc_unless(condition, _text(value))) for value in values)
     if op in COMPARE_OPS:
         target = parse_compare_value(expected, field_type, today=today)
         for value in values:
@@ -239,21 +251,3 @@ def match_words(document: Document, words: Sequence[str]) -> bool:
         normalize(_text(value)) for value in [*field_values(document, "*"), document.id]
     )
     return all(word in haystack for word in words)
-
-
-def snippet_lines(
-    text: str, words: Sequence[str], *, context_lines: int, max_count: int
-) -> list[str]:
-    """本文から語を含む行と前後の行を抜き出す。"""
-    lines = text.splitlines()
-    hits = [
-        index for index, line in enumerate(lines) if any(word in normalize(line) for word in words)
-    ]
-    ranges: list[list[int]] = []
-    for index in hits:
-        start, end = max(index - context_lines, 0), min(index + context_lines, len(lines) - 1)
-        if ranges and start <= ranges[-1][1]:
-            ranges[-1][1] = max(ranges[-1][1], end)
-        else:
-            ranges.append([start, end])
-    return ["\n".join(lines[start : end + 1]) for start, end in ranges[:max_count]]

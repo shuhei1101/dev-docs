@@ -82,6 +82,69 @@ def test_normal_when_full(
     assert all("path" not in item and "scope" not in item for item in revision_json.data["items"])
 
 
+def test_normal_when_snippets(
+    make_source: Callable[..., Any],
+    make_server: Callable[..., Any],
+    sample_file_set: Callable[..., dict[str, str]],
+) -> None:
+    """regex を行単位で当て、当たった行を行番号つきの抜粋で返す（正常系）。"""
+    # 準備
+    doc_1 = "\n".join(
+        [
+            "id: doc-1",
+            "name: 文書 1",
+            "## 手順",
+            "description: 1 件目",
+            "tags: [a]",
+            "# 補足",
+            "# 補足 2",
+            "# 本文の途中の ## は当たらない",
+        ]
+    )
+    source = make_source("sample", sample_file_set(**{"docs/doc-1.yaml": doc_1 + "\n"}))
+    env = make_server(source)
+    arguments = {
+        "cwd": str(source.folder),
+        "filter": {"field": "body", "op": "regex", "values": ["^## "]},
+        "view": "full",
+        "snippets": {"before": 0, "after": 1},
+    }
+    # 実行
+    markdown = env.call("search_docs", **arguments)
+    as_json = env.call("search_docs", format="json", **arguments)
+    contains = env.call(
+        "search_docs",
+        cwd=str(source.folder),
+        filter={"field": "body", "op": "contains", "values": ["手順"]},
+        view="full",
+        snippets={"context_lines": 1},
+    )
+    anchor = env.call(
+        "search_docs",
+        **{**arguments, "filter": {"field": "body", "op": "regex", "values": ["\\A\\S"]}},
+    )
+    # 検証
+    lines = markdown.text.splitlines()
+    item = as_json.data["items"][0]
+    assert markdown.text.startswith("sample: 該当 1 件・返した 1 件")
+    assert "3:## 手順" in lines
+    assert "4-description: 1 件目" in lines
+    assert not any(line.startswith(("2-", "2:", "8-", "8:")) for line in lines)
+    assert [entry["id"] for entry in as_json.data["items"]] == ["doc-1"]
+    assert len(item["snippets"]) == 1
+    assert item["snippets"][0]["lines"] == [
+        {"line": 3, "text": "## 手順", "hit": True},
+        {"line": 4, "text": "description: 1 件目", "hit": False},
+    ]
+    assert item["scope"] == "section"
+    context_lines = contains.text.splitlines()
+    assert context_lines.count("2-name: 文書 1") == 1
+    assert context_lines.count("3:## 手順") == 1
+    assert context_lines.count("4-description: 1 件目") == 1
+    assert "<document" in anchor.text
+    assert "1:id: doc-1" in anchor.text.splitlines()
+
+
 def test_normal_when_count_grouped(
     make_source: Callable[..., Any], make_server: Callable[..., Any]
 ) -> None:

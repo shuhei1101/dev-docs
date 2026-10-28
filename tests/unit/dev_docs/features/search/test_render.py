@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dev_docs.features.search.render import render_search_markdown
-from dev_docs.features.search.types import SearchItem, SearchResult
+from dev_docs.features.search.types import SearchItem, SearchResult, Snippet, SnippetLine
 
 
 def test_render_search_markdown() -> None:
@@ -50,3 +50,27 @@ def test_render_search_markdown_when_full() -> None:
     assert lines.count('<document path="/ws/docs/doc-1.yaml" scope="full">') == 1
     assert lines.count("<document>") == 1
     assert lines.count("</document>") == 2
+
+
+def test_render_search_markdown_when_snippets() -> None:
+    """抜粋の書式（正常系）。"""
+    # 準備
+    snippets = [
+        Snippet(
+            lines=[
+                SnippetLine(line=3, text="## a", hit=True),
+                SnippetLine(line=4, text="b", hit=False),
+            ]
+        ),
+        Snippet(lines=[SnippetLine(line=9, text="## c", hit=True)]),
+    ]
+    items = [SearchItem(id="doc-1", source=None, values={}, snippets=snippets)]
+    result = SearchResult(total_count=1, returned=1, view="full", items=items)
+    # 実行
+    markdown = render_search_markdown(result, source_label="sample")
+    # 検証
+    lines = markdown.splitlines()
+    first = lines.index("3:## a")
+    assert lines[first : first + 4] == ["3:## a", "4-b", "--", "9:## c"]
+    assert lines.index("<document>") < first
+    assert first + 3 < lines.index("</document>")
