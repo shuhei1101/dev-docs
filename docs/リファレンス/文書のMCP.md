@@ -137,7 +137,7 @@ Condition = {"field": str, "op": enum, "values": [str, ...], "match": "any" | "a
 | --- | --- |
 | 入れ子 | 深さの制限は無い |
 | `field` | メタデータのキー（`id`・`kind`・`name`・`tags`・`updated` など）、種類ごとの項目、`body`（本文）、`*`（全項目）、計算項目（`@chars` 文字数・`@path` ファイルのパス・`@sections` セクションの一覧） |
-| `op` | `eq`・`ne`・`prefix`・`suffix`・`contains`・`not_contains`・`regex`・`gt`・`gte`・`lt`・`lte`・`exists`・`not_exists`。`regex` は値の各行に当たる（`^`・`$` は各行の先頭・末尾。値全体の先頭・末尾は `\A`・`\Z`） |
+| `op` | `eq`・`ne`・`prefix`・`suffix`・`contains`・`not_contains`・`regex`・`gt`・`gte`・`lt`・`lte`・`exists`・`not_exists`。`regex` は値の各行に当たる（`^`・`$` は各行の先頭・末尾。値全体の先頭・末尾は `\A`・`\Z`）。パターンには正規化をかけず、`case_sensitive: false` は `re.IGNORECASE` と NFKC にした値で比べる |
 | `values` | 文字列の配列。数値・日付は項目の型で解釈し、日付は `today`・`-7d` も受ける。`exists`・`not_exists` だけ省ける |
 | `match` | `values` の複数を OR（`any`、既定）か AND（`all`）で比べる |
 | `case_sensitive` | 既定 `false`。大文字小文字と全角半角（NFKC）を区別しない |
