@@ -1,0 +1,1 @@
+# search_docs・list_changes に、文書ごとの当たった数・本文の一部の取得・not・glob・変更の中身での検索を加える
