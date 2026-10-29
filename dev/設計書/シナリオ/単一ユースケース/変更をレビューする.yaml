@@ -111,14 +111,16 @@ scenarios:
         description: sample を配信している dev-docs
         notes: '`cwd` は sample のクローン本体'
     flow: |-
+      ```mermaid
       sequenceDiagram
         actor R as レビュアー
         participant M as 文書の MCP（/mcp）
         participant G as sample の Git の履歴
 
         R->>M: list_changes(from: commit 1 の親, to: commit 3, contains: 廃止予定)
-        M->>G: 区間の中の commit ごとに、差分の追加・削除の行から語を探す
+        M->>G: 区間の中の commit ごとに、文書の前後で語の出現数を比べる
         M-->>R: 語が入った・消えた文書 1 と、語が入った区間・消えた区間
+      ```
     expected:
       - 文書 1 だけを返し、文書 2 を返さない
       - 文書 1 に、語が入った区間（commit 1 の親から commit 1）と消えた区間（commit 2 から commit 3）を返す
