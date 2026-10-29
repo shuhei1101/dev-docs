@@ -105,6 +105,39 @@ scenarios:
       - '`update` が git のエラーを返す'
       - dev-docs は再起動せず、`status` が前のバージョンを返す
     test: test_error_when_pull_fails
+  - name: 正常シナリオ（配信元の設定が古くなる）
+    setup:
+      - name: Mock
+        description: なし（実環境で実行）
+        notes: '-'
+      - name: dev-docs のクローン
+        description: 正常シナリオと同じ
+        notes: 新しいバージョンが配信元の設定の移し替えの手順を持つ
+      - name: 前の形式の配信元
+        description: '`version: "1"` の `dev-docs.yaml` を持ち、`documents[0]` が `type: yaml`・`metadata: {name: {type: ref, field: title}}`、`documents[1]` が `type: markdown`・`defaults: [{paths: [docs/**], tags: [doc]}]` を持つ配信元'
+        notes: '`documents[1]` は移し替えで直せない設定'
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        actor U as 利用者
+        participant MG as dev-docs migrate
+        participant SC as 配信元の dev-docs.yaml
+        participant SK as setup のスキル
+
+        U->>MG: dev-docs migrate --source {配信元のパス} --plan
+        MG-->>U: 当てる手順と、直せない設定の違反
+        U->>MG: dev-docs migrate --source {配信元のパス}
+        MG->>SC: バックアップを取り、type を消し、ref の metadata を列名の文字列にし、version を書き換える
+        MG-->>U: 当てた手順と、直せない設定の違反
+        U->>SK: /dev-docs:setup {配信元のパス}
+        SK-->>U: 違反の設定の移し方を候補の表で示す
+      ```
+    expected:
+      - '`migrate --source --plan` は `dev-docs.yaml` を変えず、当てる手順と違反を返す'
+      - '`migrate --source` の後、`documents[0]` が `type` を持たず、`metadata` が `{name: title}` になる'
+      - '`version` が新しいバージョンになり、当てる前の `dev-docs.yaml` のバックアップがある'
+      - 標準出力に `documents[1].type`（Markdown の範囲）と `documents[1].defaults` の違反が、`/dev-docs:setup` で移すことと一緒に出る
+    test: test_normal_when_source_config_old
 lead: 利用者が管理の MCP の `update` で dev-docs のクローンを新しいバージョンにし、端末の設定が古くなったら `dev-docs migrate` で移し替える。
 issue: 4
 primary_actor: 利用者
