@@ -114,24 +114,25 @@ scenarios:
         description: 正常シナリオと同じ
         notes: 新しいバージョンが配信元の設定の移し替えの手順を持つ
       - name: 前の形式の配信元
-        description: '`version: "1"` の `dev-docs.yaml` を持ち、`documents[0]` が `type: yaml`・`metadata: {name: {type: ref, field: title}}` を持つ配信元'
-        notes: 機械的に移せる設定だけを持つ
+        description: '`version: "1"` の `dev-docs.yaml` を持ち、最上位にタグのマスター `tags: tags.yaml`、`documents[0]` が `type: yaml`・`metadata: {name: {type: ref, field: title}}` を持つ配信元'
+        notes: 機械的に移せる設定だけを持つ。`tags.yaml` を置く
     flow: |-
-      ```mermaid
       sequenceDiagram
         actor U as 利用者
         participant MG as dev-docs migrate
         participant SC as 配信元の dev-docs.yaml
 
         U->>MG: dev-docs migrate --source {配信元の dev-docs.yaml} --plan
-        MG-->>U: 当てる手順の一覧
+        MG-->>U: 当てる手順の一覧（tags の削除は破壊的な手順）
         U->>MG: dev-docs migrate --source {配信元の dev-docs.yaml}
-        MG->>SC: バックアップを取り、type を消し、ref の metadata を列名の文字列にし、version を書き換える
+        MG-->>U: 破壊的な手順があるので当てずに止まる
+        U->>MG: dev-docs migrate --source {配信元の dev-docs.yaml} --allow-destructive
+        MG->>SC: バックアップを取り、type を消し、ref の metadata を列名の文字列にし、tags を消し、version を書き換える
         MG-->>U: 当てた手順
-      ```
     expected:
-      - '`migrate --source --plan` は `dev-docs.yaml` を変えず、当てる手順を返す'
-      - '`migrate --source` の後、`documents[0]` が `type` を持たず、`metadata` が `{name: title}` になる'
+      - '`migrate --source --plan` は `dev-docs.yaml` を変えず、当てる手順と、`tags` の削除が破壊的な手順であることを返す'
+      - '`--allow-destructive` を付けない `migrate --source` は `dev-docs.yaml` を変えず、終了コード 5 で終わる'
+      - '`--allow-destructive` を付けた `migrate --source` の後、`tags` が無くなり、`documents[0]` が `type` を持たず、`metadata` が `{name: title}` になる。`tags.yaml` は残る'
       - '`version` が新しいバージョンになり、当てる前の `dev-docs.yaml` のバックアップがある'
     test: test_normal_when_source_config_old
   - name: 異常シナリオ（配信元の設定に移せない設定がある）
@@ -151,7 +152,7 @@ scenarios:
         actor U as 利用者
         participant MG as dev-docs migrate
 
-        U->>MG: dev-docs migrate --source {配信元の dev-docs.yaml}
+        U->>MG: dev-docs migrate --source {配信元の dev-docs.yaml} --allow-destructive
         MG->>MG: 手順を当てた結果を新しいスキーマで検証し、違反が残る
         MG-->>U: 違反と、/dev-docs:setup で移す案内
       ```
