@@ -213,7 +213,7 @@ functions:
       description: ツールの結果
     process: |-
       1. `fmt` が `markdown` で `render` がある場合、`content` に `render(result)` の text を 1 つ入れ、`structuredContent` を持たない結果を返す
-      2. それ以外は、結果を JSON にできる辞書にし（`dataclasses.asdict`、`None` のキーは落とす。`from_` などの別名は別名のキーで出す。`SnippetLine` は `text` が空でも `line`・`text`・`hit` を全て出す）、`structuredContent` にその辞書を、`content` に同じ JSON の text を入れる
+      2. それ以外は、結果を JSON にできる辞書にし（`dataclasses.asdict`、`None` のキーは落とす。`from_` などの別名は別名のキーで出す。`SnippetLine` は `text` が空でも `line`・`text`・`hit` を全て出す。`total_lines` を持つ検索の項目は `ranges` が空でも `ranges: []` を出す。`ContainsChange` は `from_` を `from` のキーで出し、commit の端は `input` が空なので `{commit, date}` になる）、`structuredContent` にその辞書を、`content` に同じ JSON の text を入れる
     unit_tests:
       - name: test_to_tool_result
         case: 正常
@@ -241,6 +241,18 @@ functions:
         mock: なし
         expected: '`snippets[0].lines` の要素が `{line: 2, text: "", hit: false}`'
         exception: '-'
+      - name: test_to_tool_result_when_empty_ranges
+        case: 正常
+        summary: 返す行の無い本文の範囲
+        condition: '`fmt="json"` で、`ranges=[]`・`total_lines=10` の検索の項目と、`ranges`・`total_lines` が `None` の項目'
+        mock: なし
+        expected: '1 件目が `ranges: []`・`total_lines: 10` を持ち、2 件目は `ranges`・`total_lines` のキーを持たない'
+      - name: test_to_tool_result_when_contains_changes
+        case: 正常
+        summary: 語の増減の区間
+        condition: '`fmt="json"` で、`contains_changes` に commit の端の `added` と、`to` が `RangePoint(WORKTREE_LABEL)` の `removed` を持つ変更の項目'
+        mock: なし
+        expected: '1 つ目が `{kind: added, from: {commit, date}, to: {commit, date}, count_before, count_after}`（`from_`・`input` のキーを持たない）、2 つ目の `to` が `{input: 作業ツリー}`'
   - name: tool_error
     title: ツールのエラーの変換
     kind: 関数
@@ -298,7 +310,9 @@ functions:
     process: |-
       1. `MCPServer(DOCS_MCP_NAME)` を作る
       2. `search_docs`・`describe`・`list_changes`・`trace_related`・`write_docs`・`delete_docs` を `TOOL_ANNOTATIONS` の注釈で登録する。引数はインターフェース定義の `request` をキーワード引数で受ける（`list_changes` の `from` は `from_: Annotated[str | None, Field(validation_alias="from")]` で受け、ツールの入力のスキーマでは `from` を出す。`alias` は関数の呼び出しで `TypeError` になるため使わない）
-         - `search_docs` の説明は、インターフェース定義の冒頭リードに続けて `op: regex は値の各行に当たる（値全体の先頭・末尾は \A・\Z）。snippets は本文の代わりに、当たった行と前後の行（before・after。省けば context_lines）を行番号つきで返す。` を置く
+         - 要求のモデルのフィールドが `description` を持つ場合、その説明を入力のスキーマの項目の説明に出す（`Annotated[型, Field(description=...)]`）
+         - `search_docs` の説明は、インターフェース定義の冒頭リードに続けて `op: regex は値の各行に当たる（値全体の先頭・末尾は \A・\Z）。snippets は本文の代わりに、当たった行と前後の行（before・after。省けば context_lines）を行番号つきで返す。` と `filter の not は中の条件か束に当たらない文書、op: glob は **・*・? のパターンに当たる。fields・order_by の @matches は文書ごとの本文の条件に当たった行の数。sections（Markdown の見出し）・lines（offset・limit）は view: full の本文の一部だけを返す。` を置く
+         - `list_changes` の説明は、今の説明に続けて `contains は語（regex で正規表現）の出現数が変わった文書と、語が入った・消えた commit を返す（git log -S と同じくマージ commit は見ない）。` を置く
          - 引数の型の誤り・`Literal` に無い値は、SDK が関数を呼ぶ前に `isError` の結果にする。入力のスキーマに無いキーは SDK が捨てる
       3. 各ツールは次の順で処理する
          - 引数で要求のモデル（`SearchRequest` など）を作る
@@ -325,6 +339,12 @@ functions:
         condition: サービスが `UnknownKindError` を送る
         mock: '`write_docs`（送る偽物）'
         expected: '`isError` が `True`'
+      - name: test_build_docs_mcp_when_descriptions
+        case: 正常
+        summary: 追加した引数の説明
+        condition: '`list_tools` を呼ぶ'
+        mock: 配線済みの関数（偽物）
+        expected: '`search_docs` の説明に `not`・`glob`・`@matches`・`sections`・`lines`、`list_changes` の説明に `contains` があり、入力のスキーマの `sections`・`lines`・`contains` の項目が `description` を持つ'
   - name: build_admin_mcp
     title: 管理の MCP の組み立て
     kind: 関数

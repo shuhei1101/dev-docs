@@ -9,6 +9,20 @@ FILES_SCHEMA = Path(__file__).parents[3] / "templates" / "files.schema.yaml"
 BROKEN_CONFIG = "name: broken\ndocuments:\n  - id: sample\n    type: yaml\n"
 BY_ID = {"field": "id", "op": "eq", "values": ["doc-2", "doc-1"]}
 DOC_1 = {"field": "id", "op": "eq", "values": ["doc-1"]}
+NOTES_ROWS = "  - id: notes\n    type: markdown\n    paths: [notes/**/*.md]\n"
+SEARCH_WORD = {"field": "body", "op": "contains", "values": ["検索"]}
+IN_ARCHIVE = {"field": "@path", "op": "glob", "values": ["notes/archive/**"]}
+NOTES_A = {"field": "id", "op": "eq", "values": ["notes/a"]}
+
+
+def _notes_files(
+    sample_file_set: Callable[..., dict[str, str]],
+    sample_config_text: Callable[..., str],
+    notes: dict[str, str],
+) -> dict[str, str]:
+    """sample の文書 2 件を除き、Markdown の文書の行 `notes` と notes の文書を持つファイル一式を作る。"""
+    files = sample_file_set(**{"dev-docs.yaml": sample_config_text(NOTES_ROWS), **notes})
+    return {name: text for name, text in files.items() if not name.startswith("docs/")}
 
 
 def test_normal(make_source: Callable[..., Any], make_server: Callable[..., Any]) -> None:
@@ -461,6 +475,26 @@ def test_error_when_invalid_argument(
         cwd=str(source.folder),
         filter={"field": "weight", "op": "gt", "values": ["abc"]},
     )
+    both_keys = env.call(
+        "search_docs",
+        cwd=str(source.folder),
+        filter={"and": [DOC_1], "not": {"field": "tags", "op": "eq", "values": ["x"]}},
+    )
+    matches_condition = env.call(
+        "search_docs",
+        cwd=str(source.folder),
+        filter={"field": "@matches", "op": "gt", "values": ["1"]},
+    )
+    sections_and_lines = env.call(
+        "search_docs",
+        cwd=str(source.folder),
+        view="full",
+        sections=["a"],
+        lines={"offset": 1},
+    )
+    sections_in_summary = env.call(
+        "search_docs", cwd=str(source.folder), view="summary", sections=["a"]
+    )
     # 検証
     assert unknown_field.is_error
     assert "InvalidArgumentError" in unknown_field.text
@@ -470,6 +504,14 @@ def test_error_when_invalid_argument(
     assert bad_value.is_error
     assert "abc" in bad_value.text
     assert "number" in bad_value.text
+    assert both_keys.is_error
+    assert "and・or・not のどれか 1 つだけを持ってください" in both_keys.text
+    assert matches_condition.is_error
+    assert "@matches は条件に使えません" in matches_condition.text
+    assert sections_and_lines.is_error
+    assert "sections と lines は同時に渡せません" in sections_and_lines.text
+    assert sections_in_summary.is_error
+    assert "view: full のときだけ渡せます" in sections_in_summary.text
 
 
 def test_error_when_ref_not_found(
@@ -536,3 +578,120 @@ def test_normal_when_excluded_name(
     # 検証
     assert [item["id"] for item in rule.data["items"]] == ["docs/rule/a", "docs/rule/Rb"]
     assert [item["id"] for item in index.data["items"]] == ["docs/rule/README"]
+
+
+def test_normal_when_ordered_by_matches(
+    make_source: Callable[..., Any],
+    make_server: Callable[..., Any],
+    sample_file_set: Callable[..., dict[str, str]],
+    sample_config_text: Callable[..., str],
+) -> None:
+    """not・glob で絞り、@matches を返してよく当たる順に並べる（正常系）。"""
+    # 準備
+    notes = {
+        "notes/a.md": "---\ntags: [x]\n---\n検索 1\n検索 2\n検索 3\n他\n",
+        "notes/b.md": "検索 1\n他\n",
+        "notes/archive/c.md": "検索 1\n検索 2\n他\n",
+    }
+    source = make_source("sample", _notes_files(sample_file_set, sample_config_text, notes))
+    env = make_server(source)
+    cwd = str(source.folder)
+    exclude_archive = {"and": [SEARCH_WORD, {"not": IN_ARCHIVE}]}
+    by_matches = {"fields": ["@matches"], "order_by": [{"field": "@matches", "direction": "desc"}]}
+    # 実行
+    ordered = env.call("search_docs", cwd=cwd, filter=exclude_archive, format="json", **by_matches)
+    without_not = env.call("search_docs", cwd=cwd, filter=SEARCH_WORD, format="json", **by_matches)
+    direct_only = env.call(
+        "search_docs",
+        cwd=cwd,
+        filter={"field": "@path", "op": "glob", "values": ["notes/*.md"]},
+        format="json",
+    )
+    under_not = env.call(
+        "search_docs",
+        cwd=cwd,
+        filter={"not": {"and": [SEARCH_WORD, {"field": "tags", "op": "eq", "values": ["x"]}]}},
+        fields=["@matches"],
+        format="json",
+    )
+    without_fields = env.call("search_docs", cwd=cwd, filter=exclude_archive, format="json")
+    # 検証
+    assert [(item["id"], item["values"]["@matches"]) for item in ordered.data["items"]] == [
+        ("notes/a", 3),
+        ("notes/b", 1),
+    ]
+    assert [(item["id"], item["values"]["@matches"]) for item in without_not.data["items"]] == [
+        ("notes/a", 3),
+        ("notes/archive/c", 2),
+        ("notes/b", 1),
+    ]
+    assert [item["id"] for item in direct_only.data["items"]] == ["notes/a", "notes/b"]
+    assert [(item["id"], item["values"]["@matches"]) for item in under_not.data["items"]] == [
+        ("notes/archive/c", 0),
+        ("notes/b", 0),
+    ]
+    assert all("@matches" not in item["values"] for item in without_fields.data["items"])
+
+
+def test_normal_when_part_of_body(
+    make_source: Callable[..., Any],
+    make_server: Callable[..., Any],
+    sample_file_set: Callable[..., dict[str, str]],
+    sample_config_text: Callable[..., str],
+) -> None:
+    """sections・lines で本文の一部を返し、返し済みに記録しない（正常系）。"""
+    # 準備
+    lines = [
+        "# a",
+        "2 行目 検索",
+        "## 経緯",
+        "経緯の本文",
+        "",
+        "## 決まったこと",
+        "7 行目 検索",
+        "詳細",
+        "## 残り",
+        "残りの本文",
+    ]
+    text = "\n".join(lines) + "\n"
+    files = _notes_files(sample_file_set, sample_config_text, {"notes/a.md": text})
+    source = make_source("sample", files)
+    env = make_server(source)
+    request = {"cwd": str(source.folder), "filter": NOTES_A, "view": "full", "session_id": "s1"}
+    decided = "## 決まったこと\n7 行目 検索\n詳細"
+    # 実行
+    by_section = env.call("search_docs", format="json", sections=["決まったこと"], **request)
+    by_lines = env.call("search_docs", format="json", lines={"offset": 3, "limit": 2}, **request)
+    whole = env.call("search_docs", format="json", **request)
+    again = env.call("search_docs", format="json", sections=["決まったこと"], **request)
+    snippeted = env.call(
+        "search_docs",
+        cwd=str(source.folder),
+        filter=SEARCH_WORD,
+        view="full",
+        sections=["決まったこと"],
+        snippets={"context_lines": 0},
+        format="json",
+    )
+    missing = env.call("search_docs", format="json", sections=["無い見出し"], **request)
+    markdown = env.call("search_docs", sections=["決まったこと"], **request)
+    # 検証
+    first = by_section.data["items"][0]
+    assert first["values"]["body"] == decided
+    assert first["scope"] == "section"
+    assert first["ranges"] == [{"start_line": 6, "end_line": 8}]
+    assert first["total_lines"] == 10
+    assert by_lines.data["items"][0]["values"]["body"] == "## 経緯\n経緯の本文"
+    assert by_lines.data["items"][0]["ranges"] == [{"start_line": 3, "end_line": 4}]
+    assert whole.data["items"][0]["values"]["body"] == text
+    assert whole.data["items"][0]["scope"] == "full"
+    assert "ranges" not in whole.data["items"][0]
+    assert "total_lines" not in whole.data["items"][0]
+    assert again.data["items"][0]["values"]["body"] == decided
+    assert snippeted.data["items"][0]["snippets"][0]["lines"] == [
+        {"line": 7, "text": "7 行目 検索", "hit": True}
+    ]
+    assert missing.data["items"][0]["values"].get("body", "") == ""
+    assert missing.data["items"][0]["ranges"] == []
+    assert any("無い見出し" in note for note in missing.data["notes"])
+    assert "notes/a: 6-8 行目 / 全 10 行" in markdown.text

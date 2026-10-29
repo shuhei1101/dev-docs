@@ -10,6 +10,7 @@ SHORT_SHA = 7
 PARENT_DATE = "2026-01-01T00:00:00+09:00"
 CHANGED_DATE = "2026-02-01T00:00:00+09:00"
 BOTH_DOCS = {"field": "kind", "op": "eq", "values": ["sample"]}
+WORD = "廃止予定"
 
 
 def _version(path: Path) -> str:
@@ -34,6 +35,30 @@ def _rename_doc_1(served: Any, source: Any, worktree: Path, *, name: str) -> Non
         ],
     )
     assert not result.is_error
+
+
+def _set_and_commit(
+    served: Any,
+    source: Any,
+    worktree: Path,
+    run_git: Callable[..., str],
+    doc_id: str,
+    fields: dict[str, str],
+) -> str:
+    """ワークツリーの文書の項目を `write_docs` で変えて commit し、その commit を返す。"""
+    target = worktree / "docs" / f"{doc_id}.yaml"
+    result = served.call(
+        "write_docs",
+        cwd=str(source.folder),
+        worktree=str(worktree),
+        operations=[
+            {"op": "update", "id": doc_id, "expected_version": _version(target), "set": fields}
+        ],
+    )
+    assert not result.is_error
+    run_git(worktree, "add", "-A")
+    run_git(worktree, "commit", "-m", f"docs: {doc_id} を変える")
+    return run_git(worktree, "rev-parse", "HEAD").strip()
 
 
 def _changed_range(
@@ -151,3 +176,40 @@ def test_error_when_ref_not_found(
     assert "no-such-branch" in result.text
     assert "from" in result.text
     assert "doc-1" not in result.text
+
+
+def test_normal_when_contains(
+    make_source: Callable[..., Any],
+    serve: Callable[..., Any],
+    add_worktree: Callable[..., Path],
+    run_git: Callable[..., str],
+) -> None:
+    """語が入った・消えた変更を引く（正常系）。"""
+    # 準備
+    source = make_source("sample")
+    worktree = add_worktree(source.folder, "x")
+    served = serve(source)
+    parent = run_git(worktree, "rev-parse", "HEAD").strip()
+    added = _set_and_commit(served, source, worktree, run_git, "doc-1", {"description": WORD})
+    middle = _set_and_commit(served, source, worktree, run_git, "doc-2", {"name": "文書 2 改"})
+    removed = _set_and_commit(served, source, worktree, run_git, "doc-1", {"description": "1 件目"})
+    arguments = {
+        "cwd": str(source.folder),
+        "source": "sample",
+        "from": parent,
+        "to": removed,
+        "format": "json",
+    }
+    # 実行
+    result = served.call("list_changes", contains={"value": WORD}, **arguments)
+    without_contains = served.call("list_changes", **arguments)
+    # 検証
+    changes = result.data["items"][0]["contains_changes"]
+    assert [item["id"] for item in result.data["items"]] == ["doc-1"]
+    assert [
+        (change["kind"], change["from"]["commit"], change["to"]["commit"]) for change in changes
+    ] == [
+        ("added", parent[:SHORT_SHA], added[:SHORT_SHA]),
+        ("removed", middle[:SHORT_SHA], removed[:SHORT_SHA]),
+    ]
+    assert [item["id"] for item in without_contains.data["items"]] == ["doc-2"]
