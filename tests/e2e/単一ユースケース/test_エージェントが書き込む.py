@@ -364,3 +364,38 @@ def test_error_when_delete_referenced(
     assert "doc-1" in result.text
     assert "unlink" in result.text
     assert (target.read_text(encoding="utf-8"), referrer.read_text(encoding="utf-8")) == before
+
+
+def test_error_when_placement_excluded(
+    make_source: Callable[..., Any],
+    serve: Callable[..., Any],
+    add_worktree: Callable[..., Path],
+    sample_file_set: Callable[..., dict[str, str]],
+    sample_config_text: Callable[..., str],
+) -> None:
+    """置き場所のファイル名が exclude に当たる create を断る（異常系）。"""
+    # 準備
+    rule_row = (
+        "  - id: rule\n"
+        "    type: yaml\n"
+        "    paths: [docs/rule/*.yaml]\n"
+        "    schema: schemas/sample.schema.yaml\n"
+        "    exclude: [index.yaml]\n"
+    )
+    files = sample_file_set(**{"dev-docs.yaml": sample_config_text(rule_row)})
+    source, served, worktree = _setup(make_source, serve, add_worktree, files)
+    # 実行
+    result = served.call(
+        "write_docs",
+        cwd=str(source.folder),
+        worktree=str(worktree),
+        operations=[{"op": "create", "kind": "rule", "id": "index", "data": {"name": "目次"}}],
+    )
+    # 検証
+    assert result.is_error
+    assert "InvalidArgumentError" in result.text
+    assert "operations[0].kind" in result.text
+    assert "docs/rule/index.yaml" in result.text
+    assert "exclude" in result.text
+    assert "fix" in result.text
+    assert not (worktree / "docs" / "rule" / "index.yaml").exists()

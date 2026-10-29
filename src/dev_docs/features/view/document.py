@@ -57,9 +57,8 @@ def _unreadable(problems: Sequence[LoadProblem], path: str) -> LoadProblem | Non
 
 def _kind_of(source: ServedSource, file: str) -> str:
     """ファイルのパスが当たる文書の行の ID を返す（当たる行が無ければ空）。"""
-    target = PurePosixPath(file)
     for row in source.config.documents:
-        if any(target.full_match(pattern) for pattern in row.paths):
+        if row.matches(file):
             return row.id
     return ""
 

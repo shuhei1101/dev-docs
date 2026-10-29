@@ -68,6 +68,8 @@ diagrams:
         class 文書の行 {
           +ID: str
           +ファイル: list
+          +除外する名前: list
+          +行に当たるか(ファイルのパス) bool
         }
         class スクリプトの行 {
           +ID: str
@@ -208,6 +210,76 @@ data_models:
         access: 公開
         default: '[]'
         description: 上から順に重ねるメタデータ
+      - name: exclude
+        title: 除外する名前
+        type: list[str]
+        access: 公開
+        default: '[]'
+        description: '`paths` に当たったファイルのうち、ファイル名（最後の段）が当たれば行の文書にしない glob の並び'
+    methods:
+      - name: excludes
+        title: 除外の名前に当たるか
+        kind: メソッド
+        scope: public
+        summary: ファイル名が `exclude` のどれかに当たるかを返す
+        args:
+          - name: path
+            title: ファイルのパス
+            type: str
+            required: true
+            passing: positional
+            description: 配信元の直下からのパス（`/` 区切り）
+        returns:
+          type: bool
+          description: 当たれば `True`
+        process: 1. `PurePosixPath(PurePosixPath(path).name)` が `exclude` のどれかに `full_match` で当たれば `True` を返す（`*` は名前の中だけに当たる）
+        unit_tests:
+          - name: test_document_table_excludes
+            case: 正常
+            summary: ファイル名で当てる
+            condition: '`exclude: [README.md, "_*.yaml"]` で `docs/a/README.md`・`docs/_x.yaml`・`docs/README.md/a.md`'
+            mock: なし
+            expected: '`True`・`True`・`False`'
+            exception: '-'
+      - name: matches
+        title: 行に当たるか
+        kind: メソッド
+        scope: public
+        summary: ファイルがこの行の文書になるか（`paths` に当たり、除外の名前に当たらない）を返す
+        description: '`paths` で行を判定する箇所（ファイルの収集・変更の一覧・文書のページ）は全てこのメソッドで判定する。新しい文書の置き場所は `excludes` で判定する。'
+        args:
+          - name: path
+            title: ファイルのパス
+            type: str
+            required: true
+            passing: positional
+            description: 配信元の直下からのパス（`/` 区切り）
+        returns:
+          type: bool
+          description: 行の文書になれば `True`
+        process: 1. `PurePosixPath(path)` が `paths` のどれかに `full_match` で当たり（`**` は 0 個以上のフォルダ、`*` は 1 つの名前の中だけ）、除外の名前に当たるかが `False` なら `True` を返す
+        unit_tests:
+          - name: test_document_table_matches
+            case: 正常
+            summary: paths に当たる
+            condition: '`paths: [docs/**/*.md]`・`exclude: []` で `docs/a/b.md`'
+            mock: なし
+            expected: '`True`'
+            exception: '-'
+          - name: test_document_table_matches_when_excluded
+            case: 正常
+            summary: 除外の名前に当たる
+            condition: '`paths: [docs/**/*.md]`・`exclude: [README.md]` で `docs/a/README.md` と `docs/a/b.md`'
+            mock: なし
+            expected: '`False` と `True`'
+            exception: '-'
+          - name: test_document_table_matches_when_outside_paths
+            case: 正常
+            summary: paths に当たらない
+            condition: '`paths: [docs/*.md]` で `src/a.md`'
+            mock: なし
+            expected: '`False`'
+            exception: '-'
   - name: ScriptEntry
     title: スクリプトの行
     container: features/sources/types.py
@@ -680,6 +752,12 @@ functions:
         condition: '`documents[0].paths: [../x/*.md]`'
         mock: なし
         expected: '`documents[0].paths[0]` の違反'
+      - name: test_validate_source_config_when_exclude_has_slash
+        case: 正常
+        summary: 除外の名前に `/` を含む
+        condition: '`documents[0].exclude: [a/README.md]`'
+        mock: なし
+        expected: '`documents[0].exclude[0]` の違反'
   - name: check_scripts
     title: スクリプトの確かめ
     kind: 関数
