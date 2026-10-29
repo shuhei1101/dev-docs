@@ -24,7 +24,7 @@ LOCATION_PATTERN = r"場所|パス|settings\.yaml"
 WRITE_PATTERN = r"scope\.write|書き込める"
 READ_PATTERN = r"scope\.read|読める"
 NOT_ANSWERED = "なし（scope.write は答えない）"
-BROKEN_CONFIG = "name: broken\ndocuments:\n  - id: sample\n    type: yaml\n"
+BROKEN_CONFIG = "name: broken\ndocuments:\n  - id: sample\n    schema: schemas/sample.schema.yaml\n"
 DOC_URL = "http://127.0.0.1:{port}/_api/sources/sample/docs/docs/doc-1"
 LIST_URL = "http://127.0.0.1:{port}/_api/sources/sample/docs"
 

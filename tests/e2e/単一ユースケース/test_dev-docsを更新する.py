@@ -25,6 +25,25 @@ FAILING_STEPS = (
     "    description: 2 つ目の手順\n"
 )
 OLD_SETTINGS_EXTRA = "script_timeout_sec: 20"
+LEGACY_ROWS = (
+    "  - id: sample\n"
+    "    type: yaml\n"
+    "    paths: [docs/*.yaml]\n"
+    "    schema: schemas/sample.schema.yaml\n"
+    "    metadata:\n"
+    "      name: {type: ref, field: title}\n"
+)
+LEGACY_CONFIG = 'version: "1"\nname: legacy\ndefault_ref: develop\ndocuments:\n' + LEGACY_ROWS
+UNMIGRATABLE_CONFIG = (
+    LEGACY_CONFIG
+    + "  - id: notes\n"
+    + "    type: markdown\n"
+    + "    paths: [docs/**/*.md]\n"
+    + "    schema: schemas/sample.schema.yaml\n"
+    + "    defaults:\n"
+    + "      - paths: [docs/**]\n"
+    + "        tags: [doc]\n"
+)
 
 
 def _served_ids(status: dict[str, Any]) -> set[str]:
@@ -162,3 +181,58 @@ def test_error_when_pull_fails(
     assert serve_pid_count(served.port) == 1
     assert clone.head() == head
     assert (clone.clone / "pyproject.toml").read_text(encoding="utf-8") == local
+
+
+def test_normal_when_source_config_old(
+    make_clone: Callable[..., Any],
+    make_source: Callable[..., Any],
+    write_settings: Callable[..., Path],
+    sample_file_set: Callable[..., dict[str, str]],
+    load_yaml_file: Callable[[Path], Any],
+) -> None:
+    """配信元の設定が古くなると、`dev-docs migrate --source` で書き方を移し替える（正常系）。"""
+    # 準備
+    clone = make_clone()
+    legacy = make_source("legacy", sample_file_set(**{"dev-docs.yaml": LEGACY_CONFIG}), git=False)
+    config = legacy.folder / "dev-docs.yaml"
+    settings = write_settings()
+    # 実行
+    plan = clone.migrate(settings, "--source", str(config), "--plan")
+    after_plan = config.read_text(encoding="utf-8")
+    migrated = clone.migrate(settings, "--source", str(config))
+    saved = load_yaml_file(config)
+    # 検証
+    backups = sorted(legacy.folder.glob("dev-docs.yaml.bak-*"))
+    assert plan.returncode == 0
+    assert "documents[].type の yaml を削除する" in plan.stdout
+    assert after_plan == LEGACY_CONFIG
+    assert migrated.returncode == 0
+    assert "type" not in saved["documents"][0]
+    assert saved["documents"][0]["metadata"] == {"name": "title"}
+    assert saved["version"] == "2"
+    assert [backup.read_text(encoding="utf-8") for backup in backups] == [LEGACY_CONFIG]
+
+
+def test_error_when_source_config_unmigratable(
+    make_clone: Callable[..., Any],
+    make_source: Callable[..., Any],
+    write_settings: Callable[..., Path],
+    sample_file_set: Callable[..., dict[str, str]],
+) -> None:
+    """配信元の設定に移せない設定があると、書き換えず終了コード 4 で止めて移す案内を出す（異常系）。"""
+    # 準備
+    clone = make_clone()
+    legacy = make_source(
+        "legacy", sample_file_set(**{"dev-docs.yaml": UNMIGRATABLE_CONFIG}), git=False
+    )
+    config = legacy.folder / "dev-docs.yaml"
+    settings = write_settings()
+    # 実行
+    migrated = clone.migrate(settings, "--source", str(config))
+    # 検証
+    assert migrated.returncode == 4
+    assert config.read_text(encoding="utf-8") == UNMIGRATABLE_CONFIG
+    assert "documents[1].type" in migrated.stderr
+    assert "documents[1].defaults" in migrated.stderr
+    assert "/dev-docs:setup" in migrated.stderr
+    assert list(legacy.folder.glob("dev-docs.yaml.bak-*")) == []
