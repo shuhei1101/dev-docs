@@ -8,12 +8,12 @@ from collections.abc import Sequence
 from itertools import accumulate
 
 from dev_docs.features.search.filters import compile_regex, normalize
-from dev_docs.features.search.types import Condition, Snippet, SnippetLine
+from dev_docs.features.search.types import BodyRange, Condition, Snippet, SnippetLine
 
 TEXT_OPS = ("eq", "prefix", "suffix", "contains")
 
 
-def _split_lines(text: str) -> list[str]:
+def split_lines(text: str) -> list[str]:
     """本文を行に分ける（行末の `\r` と、改行で終わる本文の最後の空の要素は除く）。"""
     lines = [line.removesuffix("\r") for line in text.split("\n")]
     # 本文が改行で終わるときの最後の空の要素は行に数えない
@@ -51,6 +51,22 @@ def _text_hits(lines: list[str], condition: Condition) -> set[int]:
     return {index for index, line in enumerate(lines) if any(word in fold(line) for word in wanted)}
 
 
+def _hit_lines(lines: list[str], conditions: Sequence[Condition]) -> set[int]:
+    """条件のどれかに当たった行の番号（0 始まり）を集める。"""
+    hits: set[int] = set()
+    for condition in conditions:
+        if condition.op == "regex":
+            hits |= _regex_hits(lines, condition)
+        elif condition.op in TEXT_OPS:
+            hits |= _text_hits(lines, condition)
+    return hits
+
+
+def count_matches(text: str, conditions: Sequence[Condition]) -> int:
+    """本文のうち、条件のどれかに当たった行の数を返す（同じ行が複数の条件に当たっても 1）。"""
+    return len(_hit_lines(split_lines(text), conditions))
+
+
 def find_snippets(
     text: str,
     conditions: Sequence[Condition],
@@ -58,23 +74,28 @@ def find_snippets(
     before: int,
     after: int,
     max_count: int,
+    ranges: Sequence[BodyRange] | None = None,
 ) -> list[Snippet]:
     """本文から条件に当たる行と前後の行を、行番号つきの抜粋にする。"""
-    lines = _split_lines(text)
-    hits: set[int] = set()
-    for condition in conditions:
-        if condition.op == "regex":
-            hits |= _regex_hits(lines, condition)
-        elif condition.op in TEXT_OPS:
-            hits |= _text_hits(lines, condition)
-    # 当たった行ごとに前後の範囲を作り、重なる範囲は 1 つにまとめる
-    ranges: list[list[int]] = []
+    lines = split_lines(text)
+    hits = _hit_lines(lines, conditions)
+    # 切り出した範囲の行番号（0 始まり、終わりを含む）。範囲を指さないときは本文の全体
+    bounds = (
+        [(item.start_line - 1, item.end_line - 1) for item in ranges]
+        if ranges is not None
+        else [(0, len(lines) - 1)]
+    )
+    # 範囲の外の当たりは捨てる
+    hits = {index for index in hits if any(low <= index <= high for low, high in bounds)}
+    # 当たった行ごとに前後の範囲を、その行を含む範囲の中に切り詰めて作り、重なる範囲は 1 つにまとめる
+    spans: list[list[int]] = []
     for index in sorted(hits):
-        start, end = max(index - before, 0), min(index + after, len(lines) - 1)
-        if ranges and start <= ranges[-1][1]:
-            ranges[-1][1] = max(ranges[-1][1], end)
+        low, high = next((low, high) for low, high in bounds if low <= index <= high)
+        start, end = max(index - before, low), min(index + after, high, len(lines) - 1)
+        if spans and start <= spans[-1][1]:
+            spans[-1][1] = max(spans[-1][1], end)
         else:
-            ranges.append([start, end])
+            spans.append([start, end])
     return [
         Snippet(
             lines=[
@@ -82,7 +103,7 @@ def find_snippets(
                 for index in range(start, end + 1)
             ]
         )
-        for start, end in ranges[:max_count]
+        for start, end in spans[:max_count]
     ]
 
 

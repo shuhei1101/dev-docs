@@ -57,10 +57,20 @@ def _snippet_lines(snippets: list[Snippet]) -> list[str]:
     return lines
 
 
+def _range_line(item: SearchItem) -> str:
+    """切り出した範囲と本文の全体の行数を `<document>` の前の行にする。"""
+    if not item.ranges:
+        return f"{item.id}: 返す行なし / 全 {item.total_lines} 行"
+    spans = "・".join(f"{span.start_line}-{span.end_line} 行目" for span in item.ranges)
+    return f"{item.id}: {spans} / 全 {item.total_lines} 行"
+
+
 def _full(item: SearchItem) -> list[str]:
     """`view: full` の文書 1 件を、`<document>` で包んだ項目の箇条書きと本文にする。"""
     attributes = f' path="{item.path}" scope="{item.scope}"' if item.path else ""
     lines = [f"<document{attributes}>", f"- id: {item.id}"]
+    if item.total_lines is not None:
+        lines.insert(0, _range_line(item))
     if item.source:
         lines.append(f"- source: {item.source}")
     body = item.values.get(BODY_FIELD)

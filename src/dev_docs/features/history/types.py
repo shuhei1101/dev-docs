@@ -53,6 +53,16 @@ class FileChange:
 
 
 @dataclass(frozen=True)
+class CommitStep:
+    """区間の中の commit 1 つと、最初の親。"""
+
+    commit: str
+    date: datetime
+    parent: str
+    parent_date: datetime
+
+
+@dataclass(frozen=True)
 class FileDates:
     """ファイルが最初に入った commit と最後に変わった commit の日時。"""
 

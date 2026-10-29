@@ -7,6 +7,7 @@ import re
 import unicodedata
 from collections.abc import Callable, Mapping, Sequence
 from datetime import UTC, date, datetime, timedelta
+from pathlib import PurePosixPath
 from typing import Any
 
 from dev_docs.features.documents.types import Document
@@ -16,8 +17,11 @@ from dev_docs.shared.errors import Violation
 
 COMPARE_OPS = ("gt", "gte", "lt", "lte")
 NO_VALUE_OPS = ("exists", "not_exists")
+MATCHES_FIELD = "@matches"
 RELATIVE_DAYS = re.compile(r"^(?P<sign>[+-])(?P<days>\d+)d$")
 CLOSE_FIELDS = 3
+# 束が持つ `and`・`or`・`not` のうち、値を持たないキーの数（持つのは 1 つだけ）
+GROUP_EMPTY_KEYS = 2
 
 
 def normalize(text: str) -> str:
@@ -64,6 +68,8 @@ def _walk(node: Condition | Group, path: str) -> list[tuple[str, Condition | Gro
         for key, children in (("and", node.all_of), ("or", node.any_of)):
             for index, child in enumerate(children or []):
                 nodes.extend(_walk(child, f"{path}.{key}[{index}]"))
+        if node.not_ is not None:
+            nodes.extend(_walk(node.not_, f"{path}.not"))
     return nodes
 
 
@@ -77,6 +83,15 @@ def _unknown_field(path: str, field: str, fields: Mapping[str, str]) -> Violatio
 def _check_condition(condition: Condition, path: str, fields: Mapping[str, str]) -> list[Violation]:
     """条件 1 つの項目と値を確かめる。"""
     violations: list[Violation] = []
+    if condition.field == MATCHES_FIELD:
+        # 文書ごとの数なので、条件ではなく fields・order_by に渡す
+        return [
+            Violation(
+                path=f"{path}.field",
+                rule="@matches は条件に使えません",
+                fix="fields か order_by に渡してください",
+            )
+        ]
     if condition.field not in fields:
         violations.append(_unknown_field(f"{path}.field", condition.field, fields))
     if condition.op in NO_VALUE_OPS:
@@ -120,19 +135,50 @@ def check_filter(request: SearchRequest, fields: Mapping[str, str]) -> list[Viol
         for path, node in _walk(request.filter, "filter"):
             if isinstance(node, Condition):
                 violations.extend(_check_condition(node, path, fields))
-            elif (node.all_of is None) == (node.any_of is None):
+            elif [node.all_of, node.any_of, node.not_].count(None) != GROUP_EMPTY_KEYS:
                 violations.append(
                     Violation(
                         path=path,
-                        rule="and か or のどちらか 1 つだけを持ってください",
-                        fix="条件を and か or の中に並べてください",
+                        rule="and・or・not のどれか 1 つだけを持ってください",
+                        fix="条件を and・or・not の中に並べてください",
                     )
                 )
     for index, key in enumerate(request.order_by or []):
         if key.field not in fields:
             violations.append(_unknown_field(f"order_by[{index}].field", key.field, fields))
-    if request.group_by is not None and request.group_by not in fields:
+    if request.group_by == MATCHES_FIELD:
+        violations.append(
+            Violation(
+                path="group_by",
+                rule="@matches は集計に使えません",
+                fix="fields か order_by に渡してください",
+            )
+        )
+    elif request.group_by is not None and request.group_by not in fields:
         violations.append(_unknown_field("group_by", request.group_by, fields))
+    violations.extend(_check_body_range(request))
+    return violations
+
+
+def _check_body_range(request: SearchRequest) -> list[Violation]:
+    """本文の一部を返す引数（sections・lines）の組み合わせを確かめる。"""
+    violations: list[Violation] = []
+    if request.sections is not None and request.lines is not None:
+        violations.append(
+            Violation(
+                path="sections",
+                rule="sections と lines は同時に渡せません",
+                fix="どちらか一方にしてください",
+            )
+        )
+    if request.view != "full" and (request.sections is not None or request.lines is not None):
+        violations.append(
+            Violation(
+                path="sections" if request.sections is not None else "lines",
+                rule="view: full のときだけ渡せます",
+                fix="view に full を渡してください",
+            )
+        )
     return violations
 
 
@@ -191,6 +237,8 @@ def _test(
         return False
     wanted = fold(expected)
     texts = [fold(_text(value)) for value in values]
+    if op == "glob":
+        return any(PurePosixPath(text).full_match(wanted) for text in texts)
     positive = (
         op
         if op in ("eq", "prefix", "suffix", "contains")
@@ -241,6 +289,8 @@ def match_filter(
             return any(
                 match_filter(child, document, fields=fields, today=today) for child in node.any_of
             )
+        if node.not_ is not None:
+            return not match_filter(node.not_, document, fields=fields, today=today)
         return True
     return _match_condition(node, document, fields, today)
 

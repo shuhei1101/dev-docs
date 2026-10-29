@@ -9,6 +9,7 @@ from datetime import datetime, time
 from pathlib import Path
 
 from dev_docs.features.history.types import (
+    CommitStep,
     CommitSummary,
     FileChange,
     FileDates,
@@ -199,3 +200,37 @@ def read_file_at(work_root: Path, commit: str, path: str) -> str | None:
     except GitError:
         return None
     return output.decode("utf-8") if isinstance(output, bytes) else output
+
+
+def list_commits(work_root: Path, from_commit: str, to_ref: str) -> list[CommitStep]:
+    """区間の中の commit（マージ commit を除く）を、最初の親と一緒に古い順に並べる。"""
+    log = _text(
+        [
+            "log",
+            "--no-merges",
+            "--reverse",
+            "--format=%H%x00%cI%x00%P",
+            f"{from_commit}..{to_ref}",
+        ],
+        work_root,
+    )
+    rows = [line.split("\0") for line in log.splitlines() if line]
+    # 親が無い root の commit は、親と比べられないので除く
+    rows = [row for row in rows if row[2].strip()]
+    if not rows:
+        return []
+    parents = {row[2].split()[0] for row in rows}
+    shown = _text(["show", "-s", "--format=%H%x00%cI", *sorted(parents)], work_root)
+    parent_dates = {
+        commit: datetime.fromisoformat(moment)
+        for commit, moment in (line.split("\0") for line in shown.splitlines() if line)
+    }
+    return [
+        CommitStep(
+            commit=row[0],
+            date=datetime.fromisoformat(row[1]),
+            parent=row[2].split()[0],
+            parent_date=parent_dates[row[2].split()[0]],
+        )
+        for row in rows
+    ]

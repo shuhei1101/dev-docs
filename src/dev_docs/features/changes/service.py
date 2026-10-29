@@ -2,27 +2,36 @@
 
 from __future__ import annotations
 
+import re
 from datetime import date
 from typing import Any
 
 from dev_docs.features.access.service import resolve_read_targets
 from dev_docs.features.access.types import Target
-from dev_docs.features.changes.compare import changed_keys, diff_lines
+from dev_docs.features.changes.compare import changed_keys, count_occurrences, diff_lines
 from dev_docs.features.changes.types import (
     LAST_READ_LABEL,
     WORKTREE_LABEL,
     ChangeItem,
     ChangesRequest,
     ChangesResult,
+    ContainsChange,
+    ContainsQuery,
     RangePoint,
 )
 from dev_docs.features.documents.loader import documents_from_text
 from dev_docs.features.documents.store import DocumentStore
 from dev_docs.features.documents.types import Document
-from dev_docs.features.history.query import changed_files, read_file_at, resolve_ref
+from dev_docs.features.history.query import (
+    changed_files,
+    list_commits,
+    read_file_at,
+    resolve_ref,
+)
+from dev_docs.features.history.types import ResolvedRef
 from dev_docs.features.search.cursor import decode_cursor, encode_cursor
 from dev_docs.features.search.fields import known_fields
-from dev_docs.features.search.filters import check_filter, match_filter
+from dev_docs.features.search.filters import check_filter, compile_regex, match_filter
 from dev_docs.features.search.types import LIMIT_MAX, MAX_CHARS_LIMIT, SearchRequest
 from dev_docs.features.seen.store import SeenStore
 from dev_docs.features.seen.types import SessionKey
@@ -47,23 +56,15 @@ def _content(document: Document, markdown: bool) -> dict[str, Any]:
     return {**document.data, BODY: document.body} if markdown else dict(document.data)
 
 
-def _range_documents(
-    target: Target, request: ChangesRequest
-) -> tuple[dict[str, Document], dict[str, Document], RangePoint, RangePoint]:
-    """区間の前と後の文書を、ID → 文書で作る。"""
+def _documents_between(
+    target: Target, start_commit: str, end_commit: str | None
+) -> tuple[dict[str, Document], dict[str, Document]]:
+    """2 つの commit（終点が無ければ作業ツリー）の間の前と後の文書を、ID → 文書で作る。"""
     source = target.source
     repo_root = source.repo_root or source.root
     work_root = target.worktree or repo_root
     prefix = source.root.relative_to(repo_root).as_posix()
-    default_ref = source.config.default_ref
-    assert request.from_ is not None  # noqa: S101
-    start = resolve_ref(repo_root, request.from_, date_base=default_ref, argument="from")
-    end = (
-        resolve_ref(repo_root, request.to, date_base=default_ref, argument="to")
-        if request.to is not None
-        else None
-    )
-    changes = changed_files(work_root, start.commit, end.commit if end else None)
+    changes = changed_files(work_root, start_commit, end_commit)
     before: dict[str, Document] = {}
     after: dict[str, Document] = {}
     for change in changes:
@@ -76,9 +77,9 @@ def _range_documents(
         )
         if table is None:
             continue
-        old_text = read_file_at(work_root, start.commit, change.path)
-        if end is not None:
-            new_text = read_file_at(work_root, end.commit, change.path)
+        old_text = read_file_at(work_root, start_commit, change.path)
+        if end_commit is not None:
+            new_text = read_file_at(work_root, end_commit, change.path)
         else:
             current = work_root / change.path
             new_text = current.read_text(encoding="utf-8") if current.is_file() else None
@@ -89,6 +90,24 @@ def _range_documents(
                 text, source.root, relative, table, source_id=source.id
             )
             bucket.update({document.id: document for document in documents})
+    return before, after
+
+
+def _range_documents(
+    target: Target, request: ChangesRequest
+) -> tuple[dict[str, Document], dict[str, Document], RangePoint, RangePoint]:
+    """区間の前と後の文書を、ID → 文書で作る。"""
+    source = target.source
+    repo_root = source.repo_root or source.root
+    default_ref = source.config.default_ref
+    assert request.from_ is not None  # noqa: S101
+    start = resolve_ref(repo_root, request.from_, date_base=default_ref, argument="from")
+    end = (
+        resolve_ref(repo_root, request.to, date_base=default_ref, argument="to")
+        if request.to is not None
+        else None
+    )
+    before, after = _documents_between(target, start.commit, end.commit if end else None)
     from_point = RangePoint(request.from_, start.commit[:SHORT_COMMIT], start.date)
     to_point = (
         RangePoint(request.to or "", end.commit[:SHORT_COMMIT], end.date)
@@ -96,6 +115,79 @@ def _range_documents(
         else RangePoint(WORKTREE_LABEL)
     )
     return before, after, from_point, to_point
+
+
+def _word_change(
+    before: dict[str, Document],
+    after: dict[str, Document],
+    query: ContainsQuery,
+    from_point: RangePoint,
+    to_point: RangePoint,
+    found: dict[str, list[ContainsChange]],
+    last_seen: dict[str, Document],
+) -> None:
+    """前と後の文書の語の出現数を比べ、違う文書へ区間の語の増減を足す。"""
+    for doc_id in sorted({*before, *after}):
+        old, new = before.get(doc_id), after.get(doc_id)
+        count_before = count_occurrences(old.body, query) if old else 0
+        count_after = count_occurrences(new.body, query) if new else 0
+        judged = new or old
+        assert judged is not None  # noqa: S101
+        last_seen[doc_id] = judged
+        if count_before != count_after:
+            found.setdefault(doc_id, []).append(
+                ContainsChange(
+                    kind="added" if count_after > count_before else "removed",
+                    from_=from_point,
+                    to=to_point,
+                    count_before=count_before,
+                    count_after=count_after,
+                )
+            )
+
+
+def _commit_point(commit: str, moment: Any) -> RangePoint:
+    """commit の端（`input` を空にして、commit（短縮）と日時を持つ）を作る。"""
+    return RangePoint("", commit[:SHORT_COMMIT], moment)
+
+
+def _word_changes_in_range(
+    target: Target,
+    query: ContainsQuery,
+    start: ResolvedRef,
+    end: ResolvedRef | None,
+) -> tuple[dict[str, list[ContainsChange]], dict[str, Document]]:
+    """区間の commit ごとに、親との文書の語の出現数を比べる（マージ commit は見ない）。"""
+    source = target.source
+    work_root = target.worktree or source.repo_root or source.root
+    found: dict[str, list[ContainsChange]] = {}
+    last_seen: dict[str, Document] = {}
+    steps = list_commits(work_root, start.commit, end.commit if end else "HEAD")
+    for step in steps:
+        before, after = _documents_between(target, step.parent, step.commit)
+        _word_change(
+            before,
+            after,
+            query,
+            _commit_point(step.parent, step.parent_date),
+            _commit_point(step.commit, step.date),
+            found,
+            last_seen,
+        )
+    if end is None:
+        # 終点が作業ツリーのときは、最後に HEAD と作業ツリーの間も比べる
+        head = resolve_ref(work_root, "HEAD", date_base=source.config.default_ref)
+        before, after = _documents_between(target, head.commit, None)
+        _word_change(
+            before,
+            after,
+            query,
+            _commit_point(head.commit, head.date),
+            RangePoint(WORKTREE_LABEL),
+            found,
+            last_seen,
+        )
+    return found, last_seen
 
 
 def list_changes(
@@ -110,6 +202,20 @@ def list_changes(
         raise _invalid(
             [Violation(path="to", rule="to には from が要ります", fix="from も渡してください")]
         )
+    query = request.contains
+    if query is not None and query.regex:
+        try:
+            compile_regex(query.value, case_sensitive=query.case_sensitive)
+        except re.error as error:
+            raise _invalid(
+                [
+                    Violation(
+                        path="contains.value",
+                        rule=f"正規表現として読めません（{error}）",
+                        fix="正規表現として正しい値にしてください",
+                    )
+                ]
+            ) from error
     targets = resolve_read_targets(
         registry=registry,
         source=request.source,
@@ -145,8 +251,21 @@ def list_changes(
     for index, target in enumerate(targets):
         source = target.source
         markdown_of = {row.id: row.type == "markdown" for row in source.config.documents}
+        word_changes: dict[str, list[ContainsChange]] = {}
+        word_documents: dict[str, Document] = {}
         if request.from_ is not None:
             before, after, from_point, to_point = _range_documents(target, request)
+            if query is not None:
+                repo_root = source.repo_root or source.root
+                default_ref = source.config.default_ref
+                word_changes, word_documents = _word_changes_in_range(
+                    target,
+                    query,
+                    resolve_ref(repo_root, request.from_, date_base=default_ref, argument="from"),
+                    resolve_ref(repo_root, request.to, date_base=default_ref, argument="to")
+                    if request.to is not None
+                    else None,
+                )
         else:
             last = seen.last_read(key, source.id)
             any_last_read = any_last_read or bool(last)
@@ -166,11 +285,18 @@ def list_changes(
             earliest = min((record.read_at for record in last.values()), default=None)
             from_point = RangePoint(LAST_READ_LABEL, None, earliest)
             to_point = RangePoint(WORKTREE_LABEL)
+            if query is not None:
+                # 前回読んだ時点から比べる呼び出しは、比べた区間全体を 1 つの区間にする
+                _word_change(
+                    before, after, query, from_point, to_point, word_changes, word_documents
+                )
         points.append((from_point, to_point))
-        for doc_id in sorted({*before, *after}):
+        for doc_id in sorted({*before, *after, *word_changes}):
             old, new = before.get(doc_id), after.get(doc_id)
-            kind_source = new or old
-            assert kind_source is not None  # noqa: S101
+            if query is not None and doc_id not in word_changes:
+                # 語の増減を持たない文書は残さない
+                continue
+            kind_source = new or old or word_documents[doc_id]
             markdown = markdown_of.get(kind_source.kind, False)
             ignore = source.config.diff_ignore_keys
             values = changed_keys(
@@ -178,17 +304,21 @@ def list_changes(
                 _content(new, markdown) if new else {},
                 ignore=ignore,
             )
-            if old is None:
+            if old is None and new is None:
+                # 区間の中で語が入って消え、両端に文書が無い
+                change = "unchanged"
+            elif old is None:
                 change = "added"
             elif new is None:
                 change = "deleted"
             elif values:
                 change = "modified"
+            elif query is not None:
+                change = "unchanged"
             else:
                 continue
             keys = list(values)
-            judged = new or old
-            assert judged is not None  # noqa: S101
+            judged = new or old or word_documents[doc_id]
             if not match_filter(request.filter, judged, fields=fields, today=date.today()):  # noqa: DTZ011
                 continue
             diff = (
@@ -208,6 +338,7 @@ def list_changes(
                 diff=diff,
                 path=location,
                 scope=(("section" if request.view == "full" else "summary") if location else None),
+                contains_changes=word_changes.get(doc_id) if query is not None else None,
             )
             entries.append((index, target, item, judged))
     if request.from_ is None and not any_last_read:

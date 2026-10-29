@@ -22,11 +22,25 @@ def render_changes_markdown(result: ChangesResult, *, source_label: str) -> str:
     ]
     if result.items:
         has_source = any(item.source for item in result.items)
-        head = ["id", *(["source"] if has_source else []), "変更", "変わったキー"]
+        has_words = any(item.contains_changes for item in result.items)
+        head = [
+            "id",
+            *(["source"] if has_source else []),
+            "変更",
+            "変わったキー",
+            *(["語の増減"] if has_words else []),
+        ]
         lines.extend([f"| {' | '.join(head)} |", f"| {' | '.join('---' for _ in head)} |"])
         for item in result.items:
             cells = [item.id, *([item.source or ""] if has_source else []), item.change]
             cells.append(", ".join(item.keys))
+            if has_words:
+                cells.append(
+                    "・".join(
+                        f"{change.kind} {change.to.commit or change.to.input}"
+                        for change in item.contains_changes or []
+                    )
+                )
             lines.append(f"| {' | '.join(cells)} |")
         lines.append("")
         for item in result.items:

@@ -3,22 +3,23 @@
 from __future__ import annotations
 
 import re
-from collections.abc import Iterable, Mapping
+from collections.abc import Iterable, Mapping, Sequence
 from datetime import date, datetime
 from pathlib import PurePosixPath
 from typing import Any
 
 from dev_docs.features.documents.fields import METADATA_KEYS, get_field
 from dev_docs.features.documents.types import Document
+from dev_docs.features.search.types import Heading
 from dev_docs.shared.errors import InvalidArgumentError
 
-COMPUTED_FIELDS = ("@chars", "@path", "@sections")
+COMPUTED_FIELDS = ("@chars", "@path", "@sections", "@matches")
 DATE_FIELDS = ("created", "updated")
 
 ARRAY_METADATA = ("tags", "related", "aliases", "avoid")
 NUMBER_METADATA = ("port",)
 YAML_SUFFIXES = (".yaml", ".yml")
-HEADING = re.compile(r"^\s{0,3}#{1,6}\s+(?P<text>.+?)\s*#*\s*$")
+HEADING = re.compile(r"^\s{0,3}(?P<level>#{1,6})\s+(?P<text>.+?)\s*#*\s*$")
 FENCE = re.compile(r"^\s{0,3}(`{3,}|~{3,})")
 SCHEMA_TYPES = {"string", "number", "boolean", "array", "object"}
 
@@ -34,19 +35,26 @@ def _leaves(value: Any) -> list[str]:
     return []
 
 
-def _headings(body: str) -> list[str]:
-    """Markdown の本文の見出しの文字列を集める（コードブロックの中は除く）。"""
-    result: list[str] = []
+def heading_lines(lines: Sequence[str]) -> list[Heading]:
+    """Markdown の行の並びから、見出しの行番号・階層・文字列を集める（コードブロックの中は除く）。"""
+    result: list[Heading] = []
     fenced = False
-    for line in body.splitlines():
+    for number, line in enumerate(lines, start=1):
         if FENCE.match(line):
             fenced = not fenced
         elif not fenced and (matched := HEADING.match(line)):
-            result.append(matched.group("text"))
+            result.append(
+                Heading(line=number, level=len(matched.group("level")), text=matched.group("text"))
+            )
     return result
 
 
-def _is_yaml(document: Document) -> bool:
+def _headings(body: str) -> list[str]:
+    """Markdown の本文の見出しの文字列を集める。"""
+    return [heading.text for heading in heading_lines(body.splitlines())]
+
+
+def is_yaml(document: Document) -> bool:
     """YAML のファイルから作った文書かを返す。"""
     return PurePosixPath(document.path).suffix in YAML_SUFFIXES
 
@@ -70,8 +78,11 @@ def _raw_values(document: Document, field: str) -> Any:
     if field == "@path":
         suffix = "" if document.record_index is None else f"#{document.record_index}"
         return f"{document.path}{suffix}"
+    if field == "@matches":
+        # 条件で決まり文書だけでは決まらないので、値を持たない（検索が当たった行の数で数える）
+        return None
     if field == "@sections":
-        return list(document.data) if _is_yaml(document) else _headings(document.body)
+        return list(document.data) if is_yaml(document) else _headings(document.body)
     if field in METADATA_KEYS:
         return document.metadata.get(field)
     try:
@@ -99,7 +110,9 @@ def _base_fields() -> dict[str, str]:
         else:
             fields[key] = "string"
     fields.update({"body": "string", "*": "string", "version": "string"})
-    fields.update({"@chars": "number", "@path": "string", "@sections": "array"})
+    fields.update(
+        {"@chars": "number", "@path": "string", "@sections": "array", "@matches": "number"}
+    )
     return fields
 
 
