@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import re
+from collections.abc import Callable
 from datetime import date
+from pathlib import Path
 from typing import Any
 
 from dev_docs.features.access.service import resolve_read_targets
@@ -28,7 +30,7 @@ from dev_docs.features.history.query import (
     read_file_at,
     resolve_ref,
 )
-from dev_docs.features.history.types import ResolvedRef
+from dev_docs.features.history.types import FileChange, ResolvedRef
 from dev_docs.features.search.cursor import decode_cursor, encode_cursor
 from dev_docs.features.search.fields import known_fields
 from dev_docs.features.search.filters import check_filter, compile_regex, match_filter
@@ -56,8 +58,30 @@ def _content(document: Document, markdown: bool) -> dict[str, Any]:
     return {**document.data, BODY: document.body} if markdown else dict(document.data)
 
 
+def _index_files(store: DocumentStore, target: Target) -> dict[str, str]:
+    """今の文書の `body_path` → 索引のファイル（`path`）を、`root` からのパスで集める。"""
+    return {
+        document.body_path: document.path
+        for document in store.load(target).documents
+        if document.body_path is not None
+    }
+
+
+def _file_reader(work_root: Path, prefix: str, commit: str | None) -> Callable[[str], str | None]:
+    """`root` からのパスのファイルを、commit のリビジョン（無ければ作業ツリー）から読む関数を作る。"""
+
+    def read(relative: str) -> str | None:
+        git_path = relative if prefix == "." else f"{prefix}/{relative}"
+        if commit is not None:
+            return read_file_at(work_root, commit, git_path)
+        current = work_root / git_path
+        return current.read_text(encoding="utf-8") if current.is_file() else None
+
+    return read
+
+
 def _documents_between(
-    target: Target, start_commit: str, end_commit: str | None
+    store: DocumentStore, target: Target, start_commit: str, end_commit: str | None
 ) -> tuple[dict[str, Document], dict[str, Document]]:
     """2 つの commit（終点が無ければ作業ツリー）の間の前と後の文書を、ID → 文書で作る。"""
     source = target.source
@@ -65,6 +89,20 @@ def _documents_between(
     work_root = target.worktree or repo_root
     prefix = source.root.relative_to(repo_root).as_posix()
     changes = changed_files(work_root, start_commit, end_commit)
+    # 本文のファイルが変わったときは、それを指す索引のファイルも変わったものとして加える
+    indexes = _index_files(store, target)
+    changed = {change.path for change in changes}
+    for change in list(changes):
+        relative = change.path if prefix == "." else change.path.removeprefix(f"{prefix}/")
+        index_path = indexes.get(relative)
+        if index_path is None:
+            continue
+        git_index = index_path if prefix == "." else f"{prefix}/{index_path}"
+        if git_index not in changed:
+            changed.add(git_index)
+            changes.append(FileChange(path=git_index, change="modified"))
+    before_reader = _file_reader(work_root, prefix, start_commit)
+    after_reader = _file_reader(work_root, prefix, end_commit)
     before: dict[str, Document] = {}
     after: dict[str, Document] = {}
     for change in changes:
@@ -77,24 +115,20 @@ def _documents_between(
         )
         if table is None:
             continue
-        old_text = read_file_at(work_root, start_commit, change.path)
-        if end_commit is not None:
-            new_text = read_file_at(work_root, end_commit, change.path)
-        else:
-            current = work_root / change.path
-            new_text = current.read_text(encoding="utf-8") if current.is_file() else None
-        for text, bucket in ((old_text, before), (new_text, after)):
+        for reader, bucket in ((before_reader, before), (after_reader, after)):
+            text = reader(relative)
             if text is None:
                 continue
+            # 本文のファイルも、索引のファイルと同じ端から読む
             documents, _ = documents_from_text(
-                text, source.root, relative, table, source_id=source.id
+                text, source.root, relative, table, source_id=source.id, read_body=reader
             )
             bucket.update({document.id: document for document in documents})
     return before, after
 
 
 def _range_documents(
-    target: Target, request: ChangesRequest
+    store: DocumentStore, target: Target, request: ChangesRequest
 ) -> tuple[dict[str, Document], dict[str, Document], RangePoint, RangePoint]:
     """区間の前と後の文書を、ID → 文書で作る。"""
     source = target.source
@@ -107,7 +141,7 @@ def _range_documents(
         if request.to is not None
         else None
     )
-    before, after = _documents_between(target, start.commit, end.commit if end else None)
+    before, after = _documents_between(store, target, start.commit, end.commit if end else None)
     from_point = RangePoint(request.from_, start.commit[:SHORT_COMMIT], start.date)
     to_point = (
         RangePoint(request.to or "", end.commit[:SHORT_COMMIT], end.date)
@@ -152,6 +186,7 @@ def _commit_point(commit: str, moment: Any) -> RangePoint:
 
 
 def _word_changes_in_range(
+    store: DocumentStore,
     target: Target,
     query: ContainsQuery,
     start: ResolvedRef,
@@ -164,7 +199,7 @@ def _word_changes_in_range(
     last_seen: dict[str, Document] = {}
     steps = list_commits(work_root, start.commit, end.commit if end else "HEAD")
     for step in steps:
-        before, after = _documents_between(target, step.parent, step.commit)
+        before, after = _documents_between(store, target, step.parent, step.commit)
         _word_change(
             before,
             after,
@@ -177,7 +212,7 @@ def _word_changes_in_range(
     if end is None:
         # 終点が作業ツリーのときは、最後に HEAD と作業ツリーの間も比べる
         head = resolve_ref(work_root, "HEAD", date_base=source.config.default_ref)
-        before, after = _documents_between(target, head.commit, None)
+        before, after = _documents_between(store, target, head.commit, None)
         _word_change(
             before,
             after,
@@ -254,11 +289,12 @@ def list_changes(
         word_changes: dict[str, list[ContainsChange]] = {}
         word_documents: dict[str, Document] = {}
         if request.from_ is not None:
-            before, after, from_point, to_point = _range_documents(target, request)
+            before, after, from_point, to_point = _range_documents(store, target, request)
             if query is not None:
                 repo_root = source.repo_root or source.root
                 default_ref = source.config.default_ref
                 word_changes, word_documents = _word_changes_in_range(
+                    store,
                     target,
                     query,
                     resolve_ref(repo_root, request.from_, date_base=default_ref, argument="from"),
