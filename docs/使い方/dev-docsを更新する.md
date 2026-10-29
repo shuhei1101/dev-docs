@@ -46,6 +46,30 @@ update と dev-docs migrate で dev-docs を更新し、端末の設定を移し
 手で移し替えた設定は、`--record` で `version` だけを今のバージョンに書き換えます。
 オプションと終了コードは [CLI](../リファレンス/CLI.md) にあります。
 
+## 配信元の設定を移し替える
+
+`dev-docs.yaml` の `version` が古い配信元は、起動時の警告のログと、管理の MCP の `status`・`check_project` に出ます。
+
+<!-- steps -->
+
+1. 当てる手順を確かめる。
+   `dev-docs.yaml` は書き換わらない。
+   ```bash
+   dev-docs migrate --source {配信元の dev-docs.yaml} --plan
+   ```
+2. 手順を当てる。
+   当てる前に、同じフォルダへ `{ファイル名}.bak-{時刻}` のバックアップを取る。
+   ```bash
+   dev-docs migrate --source {配信元の dev-docs.yaml}
+   ```
+3. 管理の MCP の `reload` を呼ぶ。
+4. `/dev-docs:setup {配信元のパス}` を実行し、`dev-docs.yaml` の 1 行目のスキーマの行のタグを dev-docs のバージョンに書き換える。
+
+<!-- /steps -->
+
+機械的に移せない設定が残るときは、終了コード 4 で止まり、`dev-docs.yaml` は書き換わりません。
+標準エラーの違反と案内のとおり、`/dev-docs:setup` で管理用の YAML の行へ移します。
+
 ## 失敗したとき
 
 | 事象 | 動き |

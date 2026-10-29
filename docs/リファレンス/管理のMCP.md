@@ -35,7 +35,7 @@
 
 | フィールド | 内容 |
 | --- | --- |
-| `missing_refs` | `metadata` に明示した `ref` の列が無い文書の件数 |
+| `missing_refs` | `metadata` に書いた列が無い文書の件数 |
 | `unindexed_files` | 管理用の YAML に無いファイルの件数 |
 | `missing_body_files` | ファイルが無い行の件数 |
 
@@ -177,7 +177,7 @@ http://127.0.0.1:8781/ dev-docs 0.2.0（pid 4242）
 | `missing_paths[]` | list[str] | `documents[].paths` などが指して無いフォルダ・ファイル |
 | `script_errors[].script` | str | 確かめに失敗したスクリプトのパス |
 | `script_errors[].reason` | str | 終了コードと標準エラーの要約 |
-| `sync` | obj | 索引の同期の件数。`ref` の列の欠け・索引に無いファイル・ファイルが無い行 |
+| `sync` | obj | 索引の同期の件数。`metadata` の列の欠け・索引に無いファイル・ファイルが無い行 |
 | `sync.items[]` | list | 件数の内訳（種類とパス）。先頭 50 件まで。件数は全件を数える |
 
 <!-- /table -->

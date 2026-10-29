@@ -91,3 +91,12 @@ dev-docs migrate --source ~/repo/sample/dev-docs.yaml
 
 `rename` は同じ位置で改名し、コメントを残します。
 改名先のキーが既にあるときは失敗とします。
+
+### 配信元の設定の移し替え
+
+`--source` は、配信元の `dev-docs.yaml` を `version: "2"` の書き方へ移し替えます。
+前の書き方の `type: yaml` を削除し、`metadata` の列の指定を列名の文字列にし、`metadata` の `alias_type` を行の `alias_type` にします。
+どの手順も破壊的ではありません。
+
+機械的に移せない設定（`type: markdown` の行・`defaults[]`・`alias_type` 以外の値を固定した `metadata`）が残るときは、`dev-docs.yaml` を書き換えず、終了コード 4 で止めます。
+違反したキーのパスと、`/dev-docs:setup` で管理用の YAML の行へ移す案内を標準エラーに出します。
