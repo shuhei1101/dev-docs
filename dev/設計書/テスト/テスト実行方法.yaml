@@ -38,13 +38,13 @@ layers:
   - name: 非機能要件テスト
     run_all: 未確定
   - name: E2E テスト
-    description: pytest で実行する。一時フォルダに配信元と端末の設定を作り、`dev-docs serve` を子プロセスで起動して、HTTP で `/mcp`・`/_admin/mcp`・`/_api/` を呼ぶ。1 ケース = 1 テスト関数で、対象は `dev/設計書/シナリオ/単一ユースケース/` の各ファイル（各ファイルの `test_file` が指すテストファイルと 1:1）。
+    description: pytest で実行する。一時フォルダに配信元と端末の設定を作り、`dev-docs serve` を子プロセスで起動して、HTTP で `/mcp`・`/_admin/mcp`・`/_api/` を呼ぶ。1 ケース = 1 テスト関数で、対象は `dev/設計書/シナリオ/単一ユースケース/` と `複合ユースケース/` の各ファイル（各ファイルの `test_file` が指すテストファイルと 1:1）。シナリオに「`claude -p` で動かす」とあるケースは、`CLAUDE_CONFIG_DIR` と `HOME` を一時フォルダにして Claude Code を動かし、プラグイン `dev-docs` のスキルとフックを実行する。
     prerequisites:
       - '`git` と、`PATH` の `python3`（配信元のスクリプトに使う）が使えること'
       - Linux の `/proc/net/tcp` を読めること（待ち受けのアドレスの確認）
       - '`127.0.0.1` の空きポートが使えること（テストごとに子プロセスが待ち受ける）'
       - 誤実行を防ぐため `--run-e2e` を必須にする（無いと全件 skip する）
-      - 外部サービスに依存せず、料金は発生しない
+      - Claude Code を動かすケースは、`claude` と `uv`（オフラインのキャッシュを使う）が使え、環境変数 `CLAUDE_CODE_OAUTH_TOKEN`（`claude setup-token`）か `ANTHROPIC_API_KEY` を渡すこと。端末の `~/.claude` の認証は使わない。モデルは `DEV_DOCS_E2E_CLAUDE_MODEL`（既定 `sonnet`）で変えられる
     run_all: |-
       ```bash
       uv run pytest tests/e2e/ --run-e2e
@@ -102,9 +102,9 @@ layers:
       ```
 
       同じ `RUN_DIR` を渡して再開するときは、合図ファイルを手で消す。
-    duration: 全 30 ケースの直列で約 5 分
+    duration: 全 30 ケースの直列で約 5 分。これに Claude Code を動かす 13 ケースが加わり、こちらは 1 ケース数分かかる見込み（未計測）
     parallel: false
-    external_cost: なし（外部サービスに依存せず、料金は発生しない）
+    external_cost: Claude Code を動かすケースは Claude の利用量を使う（`ANTHROPIC_API_KEY` を渡したときは従量課金）。ほかのケースは外部サービスに依存せず、料金は発生しない
     results: 全件実行は標準出力。セッションを跨いで走らせる形は `$RUN_DIR/results.jsonl`
   - name: lint
     description: ruff で linter と formatter の check を、mypy で型検査を、`claude plugin validate` でマーケットプレイスとプラグインの定義の構造を検査する。型検査はプロジェクト全体に回す。
