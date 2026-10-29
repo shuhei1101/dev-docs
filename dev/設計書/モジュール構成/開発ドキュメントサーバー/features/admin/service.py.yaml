@@ -29,7 +29,7 @@ functions:
       description: サーバーの状態
     process: |-
       1. アドレスを `http://{terminal.bind}:{ポート}/` にする（待ち受けのポートの決定）
-      2. バージョンを `importlib.metadata.version(DIST_NAME)`、プロセス ID を `os.getpid()` で得る
+      2. バージョンを 起動時に読んだ値（`shared/version.py` の `RUNNING_VERSION`。更新で配布のメタデータが入れ替わっても変わらない）、プロセス ID を `os.getpid()` で得る
       3. 端末の設定の `version` を `SETTINGS_VERSION` と比べる（バージョンの新旧）
       4. 配信元ごとの状態を作る（配信元の状態の一覧）
     exceptions:

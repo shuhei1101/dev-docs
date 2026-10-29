@@ -28,7 +28,7 @@ flows:
       - 応答の `pid` が子プロセスの PID と同じ
       - '`/mcp` の接続を張ったまま `restart` を呼んでも、起動し直した子プロセスがポートの確かめで止まらず待ち受ける'
       - 起動し直した後の `status` の `pid` が同じで、sample が `serving`
-      - 起動し直す前の `/mcp` のセッション ID は使えず、張り直すと呼べる
+      - 起動し直した後に `/mcp` を張り直すと呼べる
     test: test_normal
   - name: 異常系（再起動の途中で呼ばれる・RestartInProgressError）
     summary: 停止を待っている間に 2 回目の `restart` を呼ぶと断る
@@ -95,3 +95,4 @@ constraints:
     constraint: '`dev-docs serve` の終了コードで止まり、次のセッションの SessionStart のフックが起動し直す'
   - item: タイムアウト
     constraint: 制限なし
+test_file: tests/integration/server/test_restart.py

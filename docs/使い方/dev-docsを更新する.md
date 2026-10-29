@@ -10,7 +10,6 @@ update と dev-docs migrate で dev-docs を更新し、端末の設定を移し
    クローンで `git pull --ff-only` と `uv sync` を実行し、新しいバージョンのコードで `dev-docs migrate --plan` を実行して移し替えの要否を確かめる。
 2. 応答の `updated`・`migration_needed`・`restarting` で次の動きを決める（下の表）。
 3. 起動し直したら、`/mcp` でつなぎ直す。
-   起動し直す前のセッション ID は使えない。
 4. 管理の MCP の `status` で、新しいバージョンと配信元が `serving` であることを確かめる。
 
 <!-- /steps -->
