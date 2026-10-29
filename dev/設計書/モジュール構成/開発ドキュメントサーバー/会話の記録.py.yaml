@@ -169,7 +169,7 @@ data_models:
         title: 内容
         type: str
         access: 公開
-        description: 返したときのファイルの内容（YAML の文書は YAML、Markdown の文書は front matter を含む全文）
+        description: 返したときの文書の `body`
       - name: read_at
         title: 読んだ日時
         type: datetime
@@ -320,7 +320,7 @@ classes:
         process: |-
           1. `key` が `None` か `documents` が空なら何もしない
           2. 1 つのトランザクションで、文書ごとに `returned` の行を `INSERT OR REPLACE` する（`doc_kind` は `document.kind`、`at` は今の UTC の ISO 8601）
-             - `body` の場合、`content` に文書の内容（YAML の文書は `body`、Markdown の文書は front matter を付けた全文）を入れ、`activity` に `viewed` の行を `INSERT OR REPLACE` する
+             - `body` の場合、`content` に文書の `body`を入れ、`activity` に `viewed` の行を `INSERT OR REPLACE` する
              - `related` の場合、`content` は `NULL`
         unit_tests:
           - name: test_seen_store_mark_returned

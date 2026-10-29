@@ -312,6 +312,7 @@ functions:
       2. `search_docs`・`describe`・`list_changes`・`trace_related`・`write_docs`・`delete_docs` を `TOOL_ANNOTATIONS` の注釈で登録する。引数はインターフェース定義の `request` をキーワード引数で受ける（`list_changes` の `from` は `from_: Annotated[str | None, Field(validation_alias="from")]` で受け、ツールの入力のスキーマでは `from` を出す。`alias` は関数の呼び出しで `TypeError` になるため使わない）
          - 要求のモデルのフィールドが `description` を持つ場合、その説明を入力のスキーマの項目の説明に出す（`Annotated[型, Field(description=...)]`）
          - `search_docs` の説明は、インターフェース定義の冒頭リードに続けて `op: regex は値の各行に当たる（値全体の先頭・末尾は \A・\Z）。snippets は本文の代わりに、当たった行と前後の行（before・after。省けば context_lines）を行番号つきで返す。` と `filter の not は中の条件か束に当たらない文書、op: glob は **・*・? のパターンに当たる。fields・order_by の @matches は文書ごとの本文の条件に当たった行の数。sections（Markdown の見出し）・lines（offset・limit）は view: full の本文の一部だけを返す。` を置く
+         - `write_docs` の説明は、今の説明に続けて `set・unset・add_to・remove_from・text_edits のキーには共通のキー（id・name・description・tags・alias_type など）も使え、種類の列名へ読み替えて書く。対応は describe(source, kind) で見る。` を置く
          - `list_changes` の説明は、今の説明に続けて `contains は語（regex で正規表現）の出現数が変わった文書と、語が入った・消えた commit を返す（git log -S と同じくマージ commit は見ない）。` を置く
          - 引数の型の誤り・`Literal` に無い値は、SDK が関数を呼ぶ前に `isError` の結果にする。入力のスキーマに無いキーは SDK が捨てる
       3. 各ツールは次の順で処理する
@@ -344,7 +345,7 @@ functions:
         summary: 追加した引数の説明
         condition: '`list_tools` を呼ぶ'
         mock: 配線済みの関数（偽物）
-        expected: '`search_docs` の説明に `not`・`glob`・`@matches`・`sections`・`lines`、`list_changes` の説明に `contains` があり、入力のスキーマの `sections`・`lines`・`contains` の項目が `description` を持つ'
+        expected: '`search_docs` の説明に `not`・`glob`・`@matches`・`sections`・`lines`、`list_changes` の説明に `contains`、`write_docs` の説明に `describe(source, kind)` があり、入力のスキーマの `sections`・`lines`・`contains` の項目が `description` を持つ'
   - name: build_admin_mcp
     title: 管理の MCP の組み立て
     kind: 関数

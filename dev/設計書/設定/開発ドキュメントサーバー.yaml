@@ -1,0 +1,275 @@
+title: "設定: 開発ドキュメントサーバー"
+lead: 配信元の設定 `dev-docs.yaml` のキーの一覧。正本のスキーマは `src/dev_docs/schemas/dev-docs.schema.yaml`、配布の JSON Schema は `schemas/dev-docs.schema.json`、雛形は `templates/dev-docs.yaml`。
+files:
+  - file: dev-docs.yaml
+    manages: 配信元の値（配信する文書の行・検査・変換・生成・画面の構成・説明）
+    notes: 'ファイル名は任意。1 行目に `# yaml-language-server: $schema=https://raw.githubusercontent.com/shuhei1101/dev-docs/v{バージョン}/schemas/dev-docs.schema.json` を置くと、エディターで補完と検証が効く（`/dev-docs:setup` が書く）'
+  - file: schemas/dev-docs.schema.json
+    manages: 配布の JSON Schema
+    notes: '`source_schema_json` の出力。正本のスキーマを変えたら作り直す（単体テスト `test_source_schema_json` が食い違いを落とす）'
+settings:
+  - key: version
+    title: 設定のバージョン
+    file: dev-docs.yaml
+    type: str
+    default: サーバーが読めるバージョン
+    description: 設定を記載したときのスキーマのバージョン。古い設定の配信元を検出する
+    reload: reload
+    allowed: 整数の文字列。`SOURCE_CONFIG_VERSION`（`"2"`）以下
+  - key: name
+    title: 配信元の名前
+    file: dev-docs.yaml
+    type: str
+    required: true
+    description: 画面の API のパスと、端末の設定の `sources[].id` の既定に使う
+    missing: 検証で違反
+    reload: reload
+  - key: enabled
+    title: 配信元の有効
+    file: dev-docs.yaml
+    type: bool
+    default: 'true'
+    description: '`false` でこの配信元を配信しない'
+    reload: reload
+  - key: default_ref
+    title: 既定のリビジョン
+    file: dev-docs.yaml
+    type: str
+    default: develop
+    description: リビジョンを指さないときに読むリビジョン
+    reload: reload
+  - key: tags
+    title: タグのマスター
+    file: dev-docs.yaml
+    type: str
+    description: 'タグの検査と `group_by: tags` の語彙に使うファイル'
+    reload: reload
+  - key: visibility
+    title: 公開の条件
+    file: dev-docs.yaml
+    type: object
+    description: Pages に出す文書の条件
+    reload: reload
+  - key: worktrees
+    title: ワークツリーの場所
+    file: dev-docs.yaml
+    type: list[str]
+    default: '[./.claude/worktrees/*]'
+    description: ワークツリーの場所の glob。配信元のフォルダからの相対パスか絶対パス
+    reload: reload
+  - key: description
+    title: 配信元の説明
+    file: dev-docs.yaml
+    type: str
+    default: 空
+    description: '`describe()` の一覧に出す 1 文'
+    reload: reload
+  - key: instructions
+    title: 配信元の使い方
+    file: dev-docs.yaml
+    type: str
+    default: 空
+    description: '`describe(source)` で返す、その配信元に固有の使い方'
+    reload: reload
+  - key: ids.format
+    title: ID の形
+    file: dev-docs.yaml
+    type: str
+    default: 制約なし
+    description: '`write_docs` で新しい文書を作るときの ID の形（`{kind}-{slug}` など）'
+    reload: reload
+  - key: related.types
+    title: 関連の種類
+    file: dev-docs.yaml
+    type: list[str]
+    default: '[references, depends_on, see_also]'
+    description: 文書の `related` の各行の `type` に使ってよい語
+    reload: reload
+  - key: diff.ignore_keys
+    title: 差分で見ないキー
+    file: dev-docs.yaml
+    type: list[str]
+    default: '[updated]'
+    description: 差分と `list_changes` に出さないキー
+    reload: reload
+  - key: github.repository
+    title: GitHub のリポジトリ
+    file: dev-docs.yaml
+    type: str
+    description: '`owner/name`。記載した配信元は画面に Issue を作成するボタンを出す'
+    reload: reload
+  - key: github.issue_labels
+    title: Issue のラベル
+    file: dev-docs.yaml
+    type: list[str]
+    default: '[]'
+    description: Issue の作成画面の URL の `labels` に渡すラベル
+    reload: reload
+  - key: nav.tabs
+    title: 画面のタブ
+    file: dev-docs.yaml
+    type: list
+    description: 画面上部のタブとサイドバーの項目（`title`・`items[]`）。無ければ文書の行ごとにタブを作る
+    reload: reload
+  - key: documents[].id
+    title: 文書の行の ID
+    file: dev-docs.yaml
+    type: str
+    required: true
+    description: 主キー。文書の MCP の `kind` になる
+    missing: 検証で違反
+    reload: reload
+  - key: documents[].paths
+    title: 文書の範囲
+    file: dev-docs.yaml
+    type: list[str]
+    required: true
+    description: YAML のファイルのパスか glob の並び。当たった各ファイル（`records` があればその配列の各要素）が 1 つの文書
+    missing: 検証で違反
+    reload: reload
+  - key: documents[].exclude
+    title: 除くファイル名
+    file: dev-docs.yaml
+    type: list[str]
+    default: '[]'
+    description: '`paths` に当たったファイルのうち、ファイル名が当たる glob の並び。`/` を含む要素は違反'
+    reload: reload
+  - key: documents[].title
+    title: 文書の行の名前
+    file: dev-docs.yaml
+    type: str
+    default: 1 ファイルなら文書の `name`、glob なら `id`
+    description: 画面・MCP に出す名前
+    reload: reload
+  - key: documents[].enabled
+    title: 文書の行の有効
+    file: dev-docs.yaml
+    type: bool
+    default: 'true'
+    description: '`false` で配信も検索もしない'
+    reload: reload
+  - key: documents[].schema
+    title: 文書のスキーマ
+    file: dev-docs.yaml
+    type: str
+    required: true
+    description: この行の文書（`records` があれば要素）を検査する JSON Schema のファイル。スキーマの `title` が種類の名前になる
+    missing: 検証で違反
+    reload: reload
+  - key: documents[].validators
+    title: 通す検査
+    file: dev-docs.yaml
+    type: list[str]
+    default: '[]'
+    description: 通す `validators[].id`。スキーマの検査は常に通す
+    reload: reload
+  - key: documents[].converter
+    title: 使う変換
+    file: dev-docs.yaml
+    type: str
+    default: 既定の変換（`body_file` が `.md` を指す文書は本文をそのまま返す）
+    description: 使う `converters[].id`
+    reload: reload
+  - key: documents[].writable
+    title: 書き込みの可否
+    file: dev-docs.yaml
+    type: bool
+    default: 'true'
+    description: '`write_docs`・`delete_docs` を許すか'
+    reload: reload
+  - key: documents[].after_write
+    title: 書いた後の生成
+    file: dev-docs.yaml
+    type: list[str]
+    default: '[]'
+    description: 書いた後に流す `generators[].id`
+    reload: reload
+  - key: documents[].search
+    title: 検索の対象
+    file: dev-docs.yaml
+    type: bool
+    default: 'true'
+    description: '`false` で検索の対象にしない'
+    reload: reload
+  - key: documents[].records
+    title: レコードの配列
+    file: dev-docs.yaml
+    type: str
+    description: ファイルの中のこの配列の各要素を 1 件の文書にする
+    reload: reload
+  - key: documents[].body_file
+    title: 本文のファイルの列
+    file: dev-docs.yaml
+    type: str
+    description: '`records` の各要素で、本文として返すファイルのパスを持つ列。パスは YAML のファイルからの相対。Markdown の文書はこの列で配信する'
+    reload: reload
+  - key: documents[].metadata
+    title: メタデータの対応
+    file: dev-docs.yaml
+    type: dict[str, str]
+    default: '{}'
+    description: 共通のキー（`id`・`name`・`description`・`tags`・`related`・`status` と、エイリアスのキー `alias_type`・`aliases`・`command`・`cwd`・`url`・`avoid`・`skill`・`tool`・`path`・`port`・`replacement`）→ 列名。入れ子の列は `.` で結ぶ。書いていないキーは同じ名前の列から読む。`write_docs` は共通のキーをこの列へ読み替えて書き、`describe(source, kind)` が対応を表で出す
+    reload: reload
+    allowed: '値は文字列だけ。`{type: ref}`・`{type: custom}` の辞書は違反（`dev-docs migrate --source` が列名へ移す）'
+    introduced:
+      pr: 33
+  - key: documents[].alias_type
+    title: エイリアスの種類
+    file: dev-docs.yaml
+    type: Literal['term', 'doc', 'command', 'url', 'skill', 'tool', 'path', 'env', 'avoid']
+    description: 行の全文書のメタデータの `alias_type` になる値。列から読んだ値より優先する
+    reload: reload
+    allowed: alias-inject の `schemas/aliases.schema.yaml` の `alias_type` の列挙
+    introduced:
+      pr: 33
+  - key: validators[].id
+    title: 検査の ID
+    file: dev-docs.yaml
+    type: str
+    required: true
+    description: 主キー
+    reload: reload
+  - key: validators[].run
+    title: 検査のコマンド
+    file: dev-docs.yaml
+    type: list[str]
+    required: true
+    description: 配信元のフォルダで実行するコマンド。標準入力に文書の内容、終了コードと標準出力の JSON で結果を返す
+    reload: reload
+  - key: validators[].on
+    title: 検査を通す時点
+    file: dev-docs.yaml
+    type: list[Literal['read', 'write']]
+    default: '[write]'
+    description: '`read`（不合格は警告）・`write`（不合格なら書かない）'
+    reload: reload
+  - key: converters[].id
+    title: 変換の ID
+    file: dev-docs.yaml
+    type: str
+    required: true
+    description: 主キー
+    reload: reload
+  - key: converters[].run
+    title: 変換のコマンド
+    file: dev-docs.yaml
+    type: list[str]
+    required: true
+    description: 標準入力に文書の内容、標準出力に Markdown を返すコマンド
+    reload: reload
+  - key: generators[].id
+    title: 生成の ID
+    file: dev-docs.yaml
+    type: str
+    required: true
+    description: 主キー
+    reload: reload
+  - key: generators[].run
+    title: 生成のコマンド
+    file: dev-docs.yaml
+    type: list[str]
+    required: true
+    description: 書き込んだ文書のパスを引数に受けるコマンド
+    reload: reload
+refs:
+  - dev/設計書/モジュール構成/開発ドキュメントサーバー/配信元.py#

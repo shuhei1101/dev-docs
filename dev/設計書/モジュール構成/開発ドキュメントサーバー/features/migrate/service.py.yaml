@@ -165,7 +165,7 @@ functions:
       3. 手順を順に当てる（手順の適用）
       4. `version` を `target.current` にする
       5. 新しいスキーマで検証する（`settings` は `validate_terminal_config`、`dev-docs` は `validate_source_config`）
-         - 違反がある場合、`MigrationFailedError` を送出する（ファイルには書かない）
+         - 違反がある場合、`MigrationFailedError` を送出する（ファイルには書かない）。`dev-docs` は末尾に `手順で移せない設定です。/dev-docs:setup で移し替えてください` の行を置く
       6. ファイルを読み直してハッシュを比べる
          - 変わっている場合、`MigrationFailedError` を送出する
       7. 同じフォルダに `BACKUP_FORMAT` の名前で元の内容を保存する
@@ -177,7 +177,7 @@ functions:
         message: '破壊的な手順を `{バージョン}: {説明}` で 1 行ずつ並べ、`--allow-destructive` を案内する'
       - name: MigrationFailedError
         condition: 当てた結果が新しいスキーマに違反する
-        message: '違反を `{キーのパス}: {理由}` で 1 行ずつ並べる'
+        message: '違反を `{キーのパス}: {理由}` で 1 行ずつ並べる（`dev-docs` は `/dev-docs:setup` の案内を続ける）'
       - name: MigrationFailedError
         condition: 読んだ後に対象のファイルが変わった
         message: '`{ファイル}: 読んだ後に変わったため書き換えません`'
@@ -215,6 +215,13 @@ functions:
         mock: 新しいスキーマの検証
         expected: '`MigrationFailedError`。対象は書き換えた内容のまま'
         exception: 読んだ後に変わった
+      - name: test_apply_migration_when_source_needs_setup
+        case: 異常
+        summary: 手順で移せない配信元の設定
+        condition: '`version: "1"` で `type: markdown` の行を持つ `dev-docs.yaml` に `2/steps.yaml` の手順'
+        mock: なし
+        expected: '`MigrationFailedError` のメッセージに `documents[0].type` の違反と `/dev-docs:setup`。対象は元の内容のまま'
+        exception: 新しいスキーマの違反
     callers:
       - dev/設計書/モジュール構成/開発ドキュメントサーバー/起動.py#functions[run_migrate]
     callees:

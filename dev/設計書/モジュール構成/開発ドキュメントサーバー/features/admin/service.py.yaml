@@ -215,7 +215,7 @@ functions:
       5. 一時フォルダを控えの場所にした `ConvertService` で文書ごとに変換する（`ConvertService.convert`）
          - 変換が `failure` を返した場合、`ConvertScriptError` を送出する
       6. 文書が複数なら Markdown を `\n\n---\n\n` でつなぐ
-      7. `converter` を、行の `type` が `markdown` か変換の行が無ければ `builtin:markdown`、あればその行の `run` の最後の要素にする
+      7. `converter` を、変換の行が無ければ `builtin:markdown`、あればその行の `run` の最後の要素にする
     exceptions:
       - name: ValidationFailedError
         condition: 配信元の設定に違反か動かないスクリプトがある
@@ -233,7 +233,7 @@ functions:
       - name: test_try_convert
         case: 正常
         summary: 組み込みの変換で Markdown にする
-        condition: '`type: markdown` の行に当たる `docs/a.md`'
+        condition: '`body_file` が `docs/a.md` の文書を持つ行に当たる `docs/a.md`'
         mock: なし（一時ディレクトリ）
         expected: '`kind` が行の ID、`converter` が `builtin:markdown`、`markdown` が本文'
       - name: test_try_convert_when_script

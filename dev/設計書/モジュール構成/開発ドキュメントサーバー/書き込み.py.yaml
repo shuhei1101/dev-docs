@@ -7,7 +7,7 @@ directory: |-
   src/dev_docs/features/write/
   ├─ __init__.py    # 公開する型と関数の再エクスポート
   ├─ types.py       # Operation / TextEdit / WriteRequest / WriteResult / DeleteTarget / DeleteRequest / DeleteResult
-  ├─ apply.py       # apply_operation（項目の操作を当てる）
+  ├─ apply.py       # apply_operation（項目の操作を当てる）/ to_columns（共通のキーを列名へ読み替える）
   ├─ ids.py         # generate_id（ids.format から ID を作る）
   ├─ placement.py   # new_document_path（新しい文書の置き場所）
   ├─ locks.py       # SourceLocks（配信元ごとの排他）
@@ -22,6 +22,7 @@ diagrams:
         文書の書き込み ..> 配信元ごとの排他
         文書の書き込み ..> 文書を集める
         文書の書き込み ..> バージョンの確かめ
+        文書の書き込み ..> 列名への読み替え
         文書の書き込み ..> 操作を当てる
         文書の書き込み ..> IDを作る
         文書の書き込み ..> 新しい文書の置き場所
@@ -51,6 +52,9 @@ diagrams:
           <<method>>
         }
         class バージョンの確かめ {
+          <<function>>
+        }
+        class 列名への読み替え {
           <<function>>
         }
         class 操作を当てる {
@@ -736,6 +740,7 @@ functions:
       5. 操作を順に当てる。失敗した操作は `failed` の行にして次へ進む
          - `create` の場合、種類の行を引き（無ければ `UnknownKindError`）、`writable` でなければ `documents[].writable` の違反にする。ID が無ければ IDを作る（`ids.format` も無ければ `id` が必須の違反）。ID が既にあれば違反。置き場所は新しい文書の置き場所。Git 管理外の配信元では `created`・`updated` に `now` を入れる
          - `update`・`replace` の場合、文書が無ければ近い ID を添えた `DocumentNotFoundError`。バージョンの確かめ（前回読んだ内容は会話の記録）。Git 管理外の配信元では `updated` に `now` を入れ、`replace` は `created` を引き継ぐ
+         - 操作を、`create` は `kind` の行、`update`・`replace` は文書の種類の行で列名への読み替えにかける。`create` の ID は行の `metadata.id` の列（無ければ `id`）に入れる
          - 操作を当てる。`records` の文書は配列の要素を、それ以外はファイルの内容を置き換える
          - 変更を当てた後のファイルの内容を往復編集の書き出しで文字列にし、文字列からの文書の組み立てで文書にして、文書の検査.検査する（`on="write"`、`create` は `new=True`）。違反は添字を付けて `failed` の行に入れる
          - 後の操作が同じファイルに当たるときは、当てた後の内容に重ねる
@@ -748,7 +753,7 @@ functions:
       12. `applied=True` で返す
     exceptions:
       - name: InvalidArgumentError
-        condition: 件数・必須のキー・`text_edits` の一致
+        condition: 件数・必須のキー・`text_edits` の一致・共通のキーと列名の重なり
         message: '`引数が正しくありません: {違反の数} 件`'
       - name: ValidationFailedError
         condition: '`atomic` で検査に通らない操作がある'
@@ -820,6 +825,13 @@ functions:
         mock: なし
         expected: '`InvalidArgumentError` の違反の `path` が `operations`'
         exception: 件数・必須のキー・`text_edits` の一致
+      - name: test_write_docs_when_metadata_mapped
+        case: 正常
+        summary: 共通のキー名で元の列に書く
+        condition: '行 `decisions` が `metadata: {name: title}`。文書 `d1` に `set: {name: 新しい名前}`、続けて `create`（`data: {name: 決定 2}`）'
+        mock: なし
+        expected: '`d1` のファイルの `title` だけが変わり `name` の列が無い。作ったファイルが `title: 決定 2` を持ち `name` を持たない'
+        exception: '-'
   - name: delete_docs
     title: 文書の削除
     kind: 関数
@@ -877,7 +889,7 @@ functions:
          - 文書が無ければ近い ID を添えた `DocumentNotFoundError`
          - Git 管理外の配信元で種類の行が `writable` でなければ `DeleteNotAllowedError`
          - バージョンの確かめ（前回読んだ内容は無し）
-         - 同じ配信元の残る文書のうち、メタデータの `related` に `to` が消す文書の ID で `source` の無い行を持つ文書を集める。あれば `on_referenced` が `fail` なら参照元を添えた `DocumentReferencedError`、`unlink` なら参照元の `related` の列（種類の行の `metadata.related` が指す列。無ければ `related`）からその行を除く操作を作る（`defaults[]` から付いた行は外せないので、`fix` に `defaults[]` を直すことを書いた違反にする）
+         - 同じ配信元の残る文書のうち、メタデータの `related` に `to` が消す文書の ID で `source` の無い行を持つ文書を集める。あれば `on_referenced` が `fail` なら参照元を添えた `DocumentReferencedError`、`unlink` なら参照元の `related` の列（種類の行の `metadata.related` の列名。無ければ `related`）からその行を除く操作を作る
       4. `atomic` が `True` で `failed` があれば、最初の失敗の例外を送る
       5. 参照を外した文書を文書の検査に通す（違反は `ValidationFailedError`）
       6. `dry_run` なら `applied=False` で、`unlinked` に参照を外す文書と外した後のバージョンを入れて返す
@@ -930,6 +942,76 @@ functions:
         mock: なし
         expected: '`DeleteNotAllowedError` の `kind` が種類の ID'
         exception: Git 管理外の配信元で `writable` でない種類
+  - name: to_columns
+    title: 列名への読み替え
+    kind: 関数
+    container: features/write/apply.py
+    usecase: 書き込み
+    role: 変換
+    summary: 操作のキーのうち、種類の行の `metadata` に書いた共通のキーを列名へ読み替えた操作を返す
+    scope: public
+    thread_safe: true
+    args:
+      - name: operation
+        title: 操作
+        type: Operation
+        required: true
+        passing: positional
+        description: 読み替える操作
+      - name: table
+        title: 文書の行
+        type: DocumentTable
+        required: true
+        passing: positional
+        description: '`create` は `kind` の行、`update`・`replace` は文書の種類の行'
+      - name: index
+        title: 操作の添字
+        type: int
+        required: true
+        passing: keyword
+        description: 違反の `path` に付ける `operations` の位置
+    returns:
+      type: Operation
+      description: 読み替えた新しい操作（`operation` は書き換えない）
+    process: |-
+      1. `table.metadata` が空なら `operation` をそのまま返す
+      2. `set`・`add_to`・`remove_from` のキー、`unset` の要素、`text_edits[].field` の項目のパスは、先頭のキー（『項目のパスの分解』の最初の要素）が `metadata` のキーなら、そのキーを列名に置き換えたパスにする（`name.x` と `name: title` なら `title.x`、入れ子の列名は `.` でつなぐ）
+      3. `data` は、`metadata` のキーでないキーをそのまま複製し、`metadata` のキーの値を列名のパスへ『項目の書き込み』で入れた辞書にする
+      4. 読み替えたパスが、同じ操作の同じ項目（`set`・`data` など）の読み替えなかったキーと同じ列を指す場合、`path` が `operations[{index}].{項目}.{共通のキー}`、`rule` が `{共通のキー} と {列名} は同じ列を指します`、`fix` がどちらか 1 つだけを渡すことの違反で `InvalidArgumentError` を送る
+      5. 読み替えた操作を返す
+    exceptions:
+      - name: InvalidArgumentError
+        condition: 共通のキーとその列名を同じ操作に両方渡した
+        message: '`引数が正しくありません: {違反の数} 件`'
+    unit_tests:
+      - name: test_to_columns
+        case: 正常
+        summary: update の項目のパスを読み替える
+        condition: '`metadata` が `{name: title, description: meta.summary}`、`update` の `set: {name: A, tags: [x]}`・`unset: [description]`・`text_edits: [{field: name, old: a, new: b}]`'
+        mock: なし
+        expected: '`set` が `{title: A, tags: [x]}`、`unset` が `[meta.summary]`、`text_edits[0].field` が `title`。元の操作は変わらない'
+        exception: '-'
+      - name: test_to_columns_when_data
+        case: 正常
+        summary: create の data を列へ入れる
+        condition: '同じ `metadata` で `create` の `data: {name: A, description: d, tags: [x]}`'
+        mock: なし
+        expected: '`data` が `{title: A, meta: {summary: d}, tags: [x]}`'
+        exception: '-'
+      - name: test_to_columns_when_column_name
+        case: 正常
+        summary: 列名をそのまま渡す
+        condition: '同じ `metadata` で `set: {title: A}`、もう 1 つは `metadata` が空の行で `set: {name: A}`'
+        mock: なし
+        expected: どちらも `set` が渡したまま
+        exception: '-'
+      - name: test_to_columns_when_both
+        case: 異常
+        summary: 共通のキーと列名を両方渡す
+        condition: '同じ `metadata` で `index=2`、`set: {name: a, title: b}`'
+        mock: なし
+        expected: '`InvalidArgumentError` の違反の `path` が `operations[2].set.name`、`rule` に `title`'
+        exception: 共通のキーとその列名を同じ操作に両方渡した
 refs:
   - dev/設計書/インターフェース定義/開発ドキュメントサーバー/文書の書き込み#
   - dev/設計書/インターフェース定義/開発ドキュメントサーバー/文書の削除#

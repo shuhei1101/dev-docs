@@ -447,10 +447,10 @@ classes:
           description: Markdown か変換の失敗
         process: |-
           1. 文書の行を引く（`target.source.table(document.kind)`）
-          2. 行の `type` で Markdown を作る
-             - `markdown` の場合、`document.body` をそのまま使う
+          2. Markdown を作る
              - `converter` がある場合、`cache_dir` の控えがあればそれを使う。無ければスクリプトの実行（`cwd=target.base`・`stdin` に文書の YAML・制限時間 `timeout_sec`）の標準出力を使い、一時ファイルから置き換えて控える。控えが `CONVERT_CACHE_KEEP` を超えたら古いものを消す
                - `ScriptTimeoutError`・`ScriptFailedError`・実行できない `ScriptError` の場合、`reason` が `timeout`・`exit`・`not_runnable` の `ConvertFailure` を返す
+             - `converter` が無く Markdownの本文かが `True` の場合、`document.body` をそのまま使う
              - それ以外は、スキーマ駆動の変換（スキーマは `store.schema(target, kind)`）
           3. 埋め込みの展開（`target.base`）をする
           4. コードブロックの外の表を出る順にたどり、直前に `TABLE_KEY_PATTERN` の行があればそのキー、無ければ `{種類}:table[{n}]`（`n` は本文の中の 0 始まりの順）を表のキーにする。マーカーの行を取り除いた Markdown と表のキーを返す
@@ -476,10 +476,11 @@ classes:
             exception: 制限時間を超えた
           - name: test_convert_service_convert_when_markdown
             case: 正常
-            summary: Markdown の文書
-            condition: '`type: markdown` の行の文書'
+            summary: Markdown の本文
+            condition: '`records: files`・`body_file: path` の行の、`body_path` が `.md` の文書と `.py` の文書（`converter` なし）'
             mock: なし
-            expected: '`markdown` が文書の本文と同じ'
+            expected: '`.md` の文書の `markdown` が本文と同じ。`.py` の文書はスキーマ駆動の変換（`# {name}` で始まる）'
+            exception: '-'
       - name: clear
         title: 控えを捨てる
         summary: '`cache_dir` の控えを全て消す'
