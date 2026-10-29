@@ -229,8 +229,8 @@ scenarios:
         description: なし（実環境で実行。`cwd` はテストが引数に入れる）
         notes: '-'
       - name: Markdown の文書
-        description: sample の `notes/` に Markdown の文書を 3 件置き、`notes/files.yaml` の `files[]` に `a.md`・`b.md`・`archive/c.md` の 3 行を載せる。`a.md` は本文に語 `検索` を含む行を 3 行、`b.md` は 1 行、`archive/c.md` は 2 行持つ
-        notes: 'sample の `dev-docs.yaml` に行 `notes`（`paths: [notes/files.yaml]`・`records: files`・`body_file: path`）を持つ'
+        description: sample の `notes/` に Markdown の文書を 3 件置き、`notes/files.yaml` の `files[]` に `a.md`・`b.md` の 2 行、`notes/archive/files.yaml` の `files[]` に `c.md` の 1 行を載せる。`a.md` は本文に語 `検索` を含む行を 3 行、`b.md` は 1 行、`archive/c.md` は 2 行持つ
+        notes: 'sample の `dev-docs.yaml` に行 `notes`（`paths: [notes/**/files.yaml]`・`records: files`・`body_file: path`）を持つ'
       - name: dev-docs
         description: sample を配信している dev-docs
         notes: '`cwd` は sample のクローン本体'
