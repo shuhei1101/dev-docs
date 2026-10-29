@@ -40,6 +40,16 @@ NO_SCRIPT_EXTRA = (
 )
 LOOPBACK_V4 = "0100007F"
 EXIT_TIMEOUT_SEC = 30
+DOCS_TOOL_PREFIX = "mcp__plugin_dev-docs_dev-docs__"
+SESSION_PROMPT = "このセッションでは何も実行せず、「了解」とだけ答えてください。"
+FILES_ROW = (
+    "  - id: src\n"
+    "    type: yaml\n"
+    "    paths: [src/files.yaml]\n"
+    "    schema: schemas/files.schema.yaml\n"
+    "    records: files\n"
+    "    body_file: path\n"
+)
 
 
 def test_normal(make_source: Callable[..., Any], serve: Callable[..., Any], tmp_path: Path) -> None:
@@ -270,3 +280,117 @@ def test_error_when_port_in_use(
     assert code != 0
     assert str(port) in served.stderr()
     assert "DEV_DOCS_PORT" in served.stderr()
+
+
+def test_normal_when_started_by_session_start(
+    tmp_path: Path,
+    claude_home: Any,
+    make_clone: Callable[..., Any],
+    make_source: Callable[..., Any],
+    add_worktree: Callable[..., Path],
+    write_settings: Callable[..., Path],
+    wait_for_server: Callable[..., None],
+    list_mcp_tools: Callable[..., list[str]],
+    serve_pid_count: Callable[[int], int],
+) -> None:
+    """SessionStart のフックが落ちている dev-docs を切り離して起動し、つなぎ直しを案内する（正常系）。"""
+    # 準備
+    clone = make_clone()
+    sample = make_source("sample")
+    sample.scope_write = [sample.folder]
+    notes = make_source("notes", git=False, scope_read=[sample.folder, sample.folder / "**"])
+    worktree = add_worktree(sample.folder, "x")
+    settings = write_settings(sample, notes, clone=clone.clone)
+    claude_home.set_env(DEV_DOCS_CONFIG=str(settings))
+    port = claude_home.port
+    before = serve_pid_count(port)
+    # 実行
+    first = claude_home.run(SESSION_PROMPT, cwd=worktree)
+    wait_for_server(port)
+    after_exit = serve_pid_count(port)
+    second = claude_home.run(SESSION_PROMPT, cwd=worktree)
+    # 検証
+    exit_code, context = first.session_start_context()
+    reconnected = sorted(name for name in second.init["tools"] if name.startswith(DOCS_TOOL_PREFIX))
+    assert before == 0
+    assert exit_code == 0
+    assert "/mcp" in context
+    assert "つなぎ直" in context
+    assert after_exit == 1
+    assert sorted(list_mcp_tools(port)) == TOOL_NAMES
+    assert reconnected == [DOCS_TOOL_PREFIX + name for name in TOOL_NAMES]
+
+
+def test_normal_when_session_context_added(
+    claude_home: Any,
+    make_clone: Callable[..., Any],
+    make_source: Callable[..., Any],
+    add_worktree: Callable[..., Path],
+    serve: Callable[..., Any],
+    serve_pid_count: Callable[[int], int],
+    sample_file_set: Callable[..., dict[str, str]],
+    sample_config_text: Callable[..., str],
+) -> None:
+    """待ち受けているサーバーから、使える配信元・使い方・警告を取ってセッションの文脈に入れる（正常系）。"""
+    # 準備
+    clone = make_clone()
+    sample_files = sample_file_set(
+        **{
+            "dev-docs.yaml": sample_config_text(FILES_ROW, description="サンプルの配信元"),
+            "schemas/files.schema.yaml": FILES_SCHEMA.read_text(encoding="utf-8"),
+            "src/files.yaml": "files:\n  - path: a.py\n",
+            "src/a.py": "a = 1\n",
+            "src/extra.py": "x = 1\n",
+        }
+    )
+    sample = make_source("sample", sample_files)
+    sample.scope_write = [sample.folder]
+    readable = [sample.folder, sample.folder / "**"]
+    notes_files = sample_file_set(
+        **{"dev-docs.yaml": sample_config_text(name="notes", description="メモの配信元")}
+    )
+    notes = make_source("notes", notes_files, git=False, scope_read=readable)
+    old_files = sample_file_set(**{"dev-docs.yaml": sample_config_text(name="old", version="0")})
+    old = make_source("old", old_files, git=False, scope_read=readable)
+    worktree = add_worktree(sample.folder, "x")
+    served = serve(sample, notes, old, clone=clone.clone, port=claude_home.port)
+    claude_home.set_env(DEV_DOCS_CONFIG=str(served.settings))
+    # 実行
+    run = claude_home.run(SESSION_PROMPT, cwd=worktree)
+    # 検証
+    exit_code, context = run.session_start_context()
+    assert exit_code == 0
+    assert "- sample（読み書き）: サンプルの配信元" in context
+    assert "- notes（読み取りだけ）: メモの配信元" in context
+    for usage in (
+        "describe(source)",
+        "search_docs",
+        'group_by="tags"',
+        'source="*"',
+        'view="full"',
+        "list_changes",
+        "管理用の YAML の行",
+    ):
+        assert usage in context
+    assert "sample: 管理用の YAML に無いファイルが 1 件あります" in context
+    assert "old: 設定のバージョンが古い" in context
+    assert "つなぎ直" not in context
+    assert serve_pid_count(claude_home.port) == 1
+
+
+def test_error_when_session_start_cannot_start(
+    tmp_path: Path, claude_home: Any, serve_pid_count: Callable[[int], int]
+) -> None:
+    """端末の設定を読めないと、dev-docs を起動せず、理由と global-setup の案内を文脈に入れる（異常系）。"""
+    # 準備
+    missing = tmp_path / "missing" / "settings.yaml"
+    claude_home.set_env(DEV_DOCS_CONFIG=str(missing))
+    # 実行
+    run = claude_home.run(SESSION_PROMPT, cwd=tmp_path)
+    # 検証
+    exit_code, context = run.session_start_context()
+    assert exit_code == 0
+    assert not run.result["is_error"]
+    assert str(missing) in context
+    assert "/dev-docs:global-setup" in context
+    assert serve_pid_count(claude_home.port) == 0
