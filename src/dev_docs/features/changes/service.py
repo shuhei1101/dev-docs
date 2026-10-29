@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import re
 from collections.abc import Callable
+from dataclasses import replace
 from datetime import date
 from pathlib import Path
 from typing import Any
@@ -38,8 +39,10 @@ from dev_docs.features.search.types import LIMIT_MAX, MAX_CHARS_LIMIT, SearchReq
 from dev_docs.features.seen.store import SeenStore
 from dev_docs.features.seen.types import SessionKey
 from dev_docs.features.sources.registry import SourceRegistry
+from dev_docs.features.sources.types import DocumentTable
 from dev_docs.shared.errors import InvalidArgumentError, LastReadNotFoundError, Violation
 from dev_docs.shared.hashing import value_hash
+from dev_docs.shared.yaml_io import YamlLoadError, load_yaml
 
 SHORT_COMMIT = 7
 MULTI_SOURCE_MIN = 2
@@ -53,9 +56,11 @@ def _invalid(violations: list[Violation]) -> InvalidArgumentError:
     )
 
 
-def _content(document: Document, markdown: bool) -> dict[str, Any]:
-    """比べる内容（Markdown の文書は `body` も 1 つのキーにする）。"""
-    return {**document.data, BODY: document.body} if markdown else dict(document.data)
+def _content(document: Document) -> dict[str, Any]:
+    """比べる内容（`body_path` のある文書は `body` も 1 つのキーにする）。"""
+    if document.body_path is None:
+        return dict(document.data)
+    return {**document.data, BODY: document.body}
 
 
 def _index_files(store: DocumentStore, target: Target) -> dict[str, str]:
@@ -125,6 +130,47 @@ def _documents_between(
             )
             bucket.update({document.id: document for document in documents})
     return before, after
+
+
+def _recorded_document(
+    target: Target, table: DocumentTable, doc_id: str, content: str, current: dict[str, Document]
+) -> Document | None:
+    """前回読んだ内容（`body`）から、比べる前の文書を作る。"""
+    source = target.source
+    if table.records is None:
+        found, _ = documents_from_text(
+            content, target.base, f"{doc_id}.yaml", table, source_id=source.id
+        )
+        return found[0] if found else None
+    now = current.get(doc_id)
+    if now is None:
+        # 今は無い文書は、記録の内容だけを本文にした文書にする
+        return Document(
+            id=doc_id,
+            kind=table.id,
+            source_id=source.id,
+            path=doc_id,
+            record_index=None,
+            data={},
+            body=content,
+            body_path=None,
+            metadata={"id": doc_id},
+            version="",
+            created=None,
+            updated=None,
+        )
+    # 本文のファイルを持つ行は本文だけが変わる。持たない行の本文は要素を書き出した YAML
+    data = now.data if table.body_file is not None else _element_data(content, now.data)
+    return replace(now, data=data, body=content)
+
+
+def _element_data(content: str, fallback: dict[str, Any]) -> dict[str, Any]:
+    """要素を書き出した YAML を辞書に戻す（読めなければ今の内容）。"""
+    try:
+        value = load_yaml(content)
+    except YamlLoadError:
+        return fallback
+    return value if isinstance(value, dict) else fallback
 
 
 def _range_documents(
@@ -275,7 +321,7 @@ def list_changes(
         store.schema(target, table.id)
         for target in targets
         for table in target.source.config.documents
-        if table.enabled and table.type == "yaml"
+        if table.enabled
     )
     violations = check_filter(SearchRequest(filter=request.filter, order_by=[]), fields)
     if violations:
@@ -285,7 +331,6 @@ def list_changes(
     any_last_read = False
     for index, target in enumerate(targets):
         source = target.source
-        markdown_of = {row.id: row.type == "markdown" for row in source.config.documents}
         word_changes: dict[str, list[ContainsChange]] = {}
         word_documents: dict[str, Document] = {}
         if request.from_ is not None:
@@ -305,18 +350,15 @@ def list_changes(
         else:
             last = seen.last_read(key, source.id)
             any_last_read = any_last_read or bool(last)
+            current = {document.id: document for document in store.load(target).documents}
             before = {}
             for doc_id, record in last.items():
                 table = next((r for r in source.config.documents if r.id == record.doc_kind), None)
                 if table is None:
                     continue
-                path = f"{doc_id}.md" if table.type == "markdown" else f"{doc_id}.yaml"
-                found, _ = documents_from_text(
-                    record.content, target.base, path, table, source_id=source.id
-                )
                 # 記録の文書の ID は、読んだときの ID に合わせる
-                before.update({doc_id: found[0]} if found else {})
-            current = {document.id: document for document in store.load(target).documents}
+                found = _recorded_document(target, table, doc_id, record.content, current)
+                before.update({doc_id: found} if found else {})
             after = {doc_id: current[doc_id] for doc_id in last if doc_id in current}
             earliest = min((record.read_at for record in last.values()), default=None)
             from_point = RangePoint(LAST_READ_LABEL, None, earliest)
@@ -332,12 +374,10 @@ def list_changes(
             if query is not None and doc_id not in word_changes:
                 # 語の増減を持たない文書は残さない
                 continue
-            kind_source = new or old or word_documents[doc_id]
-            markdown = markdown_of.get(kind_source.kind, False)
             ignore = source.config.diff_ignore_keys
             values = changed_keys(
-                _content(old, markdown) if old else {},
-                _content(new, markdown) if new else {},
+                _content(old) if old else {},
+                _content(new) if new else {},
                 ignore=ignore,
             )
             if old is None and new is None:

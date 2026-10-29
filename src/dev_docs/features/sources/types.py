@@ -8,26 +8,9 @@ from typing import Any, Literal
 
 from dev_docs.shared.errors import UnknownKindError, Violation
 
-SOURCE_CONFIG_VERSION = "1"
+SOURCE_CONFIG_VERSION = "2"
 
 type SourceStatusKind = Literal["serving", "not_served", "disabled"]
-
-
-@dataclass(frozen=True)
-class MetadataMapping:
-    """`documents[].metadata` の 1 キーの値の取り方。"""
-
-    type: Literal["ref", "custom"]
-    field: str | None = None
-    value: Any = None
-
-
-class DocumentDefaults:
-    """`documents[].defaults[]` の 1 行。`paths` 以外のキーは重ねるメタデータ。"""
-
-    def __init__(self, paths: list[str], **extra: Any) -> None:
-        self.paths = paths
-        self.model_extra = extra
 
 
 @dataclass(frozen=True)
@@ -35,11 +18,10 @@ class DocumentTable:
     """配信元の設定の `documents[]` の 1 行。"""
 
     id: str
-    type: Literal["yaml", "markdown"]
     paths: list[str]
+    schema_path: str
     title: str | None = None
     enabled: bool = True
-    schema_path: str | None = None
     validators: list[str] = field(default_factory=list)
     converter: str | None = None
     writable: bool | None = None
@@ -47,16 +29,14 @@ class DocumentTable:
     search: bool = True
     records: str | None = None
     body_file: str | None = None
-    metadata: dict[str, MetadataMapping] = field(default_factory=dict)
-    defaults: list[DocumentDefaults] = field(default_factory=list)
+    metadata: dict[str, str] = field(default_factory=dict)
     exclude: list[str] = field(default_factory=list)
+    alias_type: str | None = None
 
     @property
     def is_writable(self) -> bool:
-        """`write_docs`・`delete_docs` を許すか（`writable` が無ければ yaml だけ許す）。"""
-        if self.writable is not None:
-            return self.writable
-        return self.type == "yaml"
+        """`write_docs`・`delete_docs` を許すか（`writable` が無ければ許す）。"""
+        return True if self.writable is None else self.writable
 
     def excludes(self, path: str) -> bool:
         """ファイル名（パスの末尾の要素）が `exclude` のどれかに当たるか。"""

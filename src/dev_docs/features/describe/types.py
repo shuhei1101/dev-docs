@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict
@@ -55,3 +55,4 @@ class KindSchemaResult:
     kind: str
     schema_text: str
     schema: dict[str, Any]
+    metadata: dict[str, str] = field(default_factory=dict)

@@ -7,7 +7,6 @@ from collections import OrderedDict
 from typing import Literal
 
 from dev_docs.features.access.types import Target
-from dev_docs.features.documents.loader import document_text
 from dev_docs.features.documents.store import DocumentStore
 from dev_docs.features.documents.types import Document
 from dev_docs.features.validation.rules import (
@@ -43,7 +42,7 @@ class DocumentChecker:
             result = run_script(
                 entry.run,
                 cwd=target.base,
-                stdin=document_text(document),
+                stdin=document.body,
                 timeout_sec=self.timeout_sec,
             )
         except ScriptError as error:
@@ -64,8 +63,7 @@ class DocumentChecker:
         source = target.source
         table = source.table(document.kind)
         violations: list[Violation] = []
-        if table.type == "yaml":
-            violations.extend(check_schema(document.data, self.store.schema(target, document.kind)))
+        violations.extend(check_schema(document.data, self.store.schema(target, document.kind)))
         if new:
             violations.extend(
                 check_id_format(document.id, source.config.ids_format, kind=document.kind)

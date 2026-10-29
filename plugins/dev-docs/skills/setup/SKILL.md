@@ -15,9 +15,10 @@ argument-hint: "[path]"
 1. 端末の設定を確かめる。
    - 端末の設定が無ければ、`/dev-docs:global-setup` を案内して止まる
    - 端末の設定の `clone` の値を以降 `{clone}` と呼ぶ
+   - `{clone}/.venv/bin/python -m dev_docs --version` の番号に `v` を付けた値を以降 `{tag}` と呼ぶ（`dev-docs 0.2.0` なら `v0.2.0`）
 
 2. 配信元の設定を決める。
-   - `{path}/dev-docs.yaml` がある場合、`check_project` を呼ぶ。`version_state` が `old` なら、`{clone}/.venv/bin/python -m dev_docs migrate --source {path}/dev-docs.yaml --plan` で手順を示し、了承されたら `{clone}/.venv/bin/python -m dev_docs migrate --source ...` で当てる。`newer` なら、管理の MCP の `update` で dev-docs を更新するよう案内して止まる。違反があれば、キーのパスと理由を示して止まる。端末の設定は書き換えない
+   - `{path}/dev-docs.yaml` がある場合、`check_project` を呼ぶ。`version_state` が `old` なら、`{clone}/.venv/bin/python -m dev_docs migrate --source {path}/dev-docs.yaml --plan` で手順を示し、了承されたら `{clone}/.venv/bin/python -m dev_docs migrate --source ...` で当てる。`newer` なら、管理の MCP の `update` で dev-docs を更新するよう案内して止まる。違反があれば、キーのパスと理由を示す。違反が `type`・`defaults`・`metadata` の値（`migrate` で移せない設定）なら手順 3 以降で移し、それ以外の違反では止まる。端末の設定は書き換えない
    - `{path}/dev-docs.yaml` が無い場合、手順 3 以降で `{clone}/templates/dev-docs.yaml` から作る（YAML でない範囲の配信元）
 
 3. 権限と範囲を聞く。端末の設定の `sources[]` に同じ配信元の行が既にあるときは、今の値を示して変えるかだけを聞く。
@@ -38,11 +39,18 @@ argument-hint: "[path]"
      | ファイルが無い行 | 行を削除 |
      | 名前が変わったファイル | 行のパスを新しくし、メタデータは残す。Git の配信元は `git diff --name-status -M` のリネームの検出、Git 管理外は内容のハッシュの一致で見つける |
 
+   - `dev-docs.yaml` があるときは、次の候補も加える
+
+     | 状況 | 候補 |
+     | --- | --- |
+     | 1 行目が `# yaml-language-server: $schema=https://raw.githubusercontent.com/shuhei1101/dev-docs/{tag}/schemas/dev-docs.schema.json` でない（行が無い・タグが `{tag}` と違う） | 1 行目をその行にする（行が無ければ 1 行目に入れる） |
+     | `type: markdown` の行・`defaults[]`・`alias_type` 以外の固定値の `metadata` | 範囲の Markdown のフロントマターと `defaults[]` の値を管理用の YAML の行へ移し、`documents` の行を管理用の YAML を読む行（`records: files`・`body_file: path`）にする。Markdown からフロントマターを削除し、`version` を新しくする |
+
    - 仮のメタデータは、見出しと冒頭から `name` と `description` を付ける。`tags` は付けるタグがあるときだけ付ける。管理用の YAML の行が既にメタデータを持つファイルには付けない
    - 追加・削除・改名と仮のメタデータを表で示し、書いてよいかを聞く。断られたら何も書き換えずに止まる
 
 5. 確認が済んだものを書く。
-   - `dev-docs.yaml` が無い場合、`{clone}/templates/dev-docs.yaml` から `dev-docs.yaml` を作り、`name`・`description`・`documents[].paths` を決めた値にする。`{clone}/templates/files.schema.yaml` を `{path}/schemas/files.schema.yaml` にコピーする
+   - `dev-docs.yaml` が無い場合、`{clone}/templates/dev-docs.yaml` から `dev-docs.yaml` を作り、1 行目のスキーマの行のタグを `{tag}` に、`name`・`description`・`documents[].paths` を決めた値にする。`{clone}/templates/files.schema.yaml` を `{path}/schemas/files.schema.yaml` にコピーする
    - 管理用の YAML の行は、`write_docs` で書く（配信元が登録済みのとき）。登録前の配信元は、`templates/files.schema.yaml` に沿って `files.yaml` を直接書く
    - `check_project`（`path` は配信元のフォルダ）を呼び、違反が無いことを確かめる。違反があれば示して止まり、端末の設定は書き換えない
 

@@ -1,0 +1,277 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "配信元の設定",
+  "description": "配信元の設定 `dev-docs.yaml`（複数の YAML に分けたときはマージした結果）。",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "name"
+  ],
+  "properties": {
+    "version": {
+      "type": "string",
+      "title": "設定のバージョン",
+      "pattern": "^[0-9]+$"
+    },
+    "name": {
+      "type": "string",
+      "title": "配信元の名前",
+      "minLength": 1
+    },
+    "enabled": {
+      "type": "boolean",
+      "title": "配信するか"
+    },
+    "default_ref": {
+      "type": "string",
+      "title": "既定のリビジョン",
+      "minLength": 1
+    },
+    "tags": {
+      "type": "string",
+      "title": "タグのマスターのファイル",
+      "minLength": 1
+    },
+    "visibility": {
+      "type": "object",
+      "title": "公開範囲"
+    },
+    "worktrees": {
+      "type": "array",
+      "title": "ワークツリーの場所",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "description": {
+      "type": "string",
+      "title": "配信元の説明"
+    },
+    "instructions": {
+      "type": "string",
+      "title": "説明書"
+    },
+    "ids": {
+      "type": "object",
+      "title": "ID の付け方",
+      "additionalProperties": false,
+      "properties": {
+        "format": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "related": {
+      "type": "object",
+      "title": "関連",
+      "additionalProperties": false,
+      "properties": {
+        "types": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "diff": {
+      "type": "object",
+      "title": "差分",
+      "additionalProperties": false,
+      "properties": {
+        "ignore_keys": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "github": {
+      "type": "object",
+      "title": "GitHub",
+      "additionalProperties": false,
+      "properties": {
+        "repository": {
+          "type": "string",
+          "pattern": "^[^/\\s]+/[^/\\s]+$"
+        },
+        "issue_labels": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "nav": {
+      "type": "object",
+      "title": "画面の構成",
+      "additionalProperties": false,
+      "properties": {
+        "tabs": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "title",
+              "items"
+            ],
+            "properties": {
+              "title": {
+                "type": "string",
+                "minLength": 1
+              },
+              "items": {
+                "type": "array"
+              }
+            }
+          }
+        }
+      }
+    },
+    "documents": {
+      "type": "array",
+      "title": "配信する文書",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "paths",
+          "schema"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "paths": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "exclude": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "pattern": "^[^/]+$"
+            }
+          },
+          "title": {
+            "type": "string"
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "schema": {
+            "type": "string",
+            "minLength": 1
+          },
+          "validators": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "converter": {
+            "type": "string"
+          },
+          "writable": {
+            "type": "boolean"
+          },
+          "after_write": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "search": {
+            "type": "boolean"
+          },
+          "records": {
+            "type": "string",
+            "minLength": 1
+          },
+          "body_file": {
+            "type": "string",
+            "minLength": 1
+          },
+          "metadata": {
+            "type": "object",
+            "title": "共通のキーと列名の対応",
+            "additionalProperties": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "alias_type": {
+            "enum": [
+              "term",
+              "doc",
+              "command",
+              "url",
+              "skill",
+              "tool",
+              "path",
+              "env",
+              "avoid"
+            ]
+          }
+        }
+      }
+    },
+    "validators": {
+      "$ref": "#/$defs/scripts"
+    },
+    "converters": {
+      "$ref": "#/$defs/scripts"
+    },
+    "generators": {
+      "$ref": "#/$defs/scripts"
+    }
+  },
+  "$defs": {
+    "scripts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "run"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "run": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "string"
+            }
+          },
+          "on": {
+            "type": "array",
+            "items": {
+              "enum": [
+                "read",
+                "write"
+              ]
+            }
+          }
+        }
+      }
+    }
+  }
+}

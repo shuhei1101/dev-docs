@@ -10,11 +10,12 @@ from typing import Any, Literal
 
 from dev_docs.features.access.service import resolve_read_targets
 from dev_docs.features.access.types import Target
+from dev_docs.features.documents.fields import is_markdown_body
 from dev_docs.features.documents.store import DocumentStore
 from dev_docs.features.documents.types import Document
 from dev_docs.features.search.body_parts import join_ranges, select_ranges
 from dev_docs.features.search.cursor import decode_cursor, encode_cursor
-from dev_docs.features.search.fields import field_values, is_yaml, known_fields
+from dev_docs.features.search.fields import field_values, known_fields
 from dev_docs.features.search.filters import check_filter, match_filter
 from dev_docs.features.search.snippets import count_matches, find_snippets, split_lines
 from dev_docs.features.search.types import (
@@ -208,15 +209,15 @@ def _cut_body(
 ) -> tuple[str, list[BodyRange], int]:
     """sections・lines で本文を切り出し、本文・範囲・本文の全体の行数を返す。"""
     lines = split_lines(document.body)
-    # YAML の文書には sections を渡さず、空の範囲にする
-    yaml_document = is_yaml(document)
+    # Markdown の本文でない文書には sections を渡さず、空の範囲にする
+    plain_document = not is_markdown_body(document)
     ranges = select_ranges(
         lines,
-        sections=None if yaml_document else request.sections,
+        sections=None if plain_document else request.sections,
         line_range=request.lines,
     )
     if request.sections is not None and not ranges:
-        if yaml_document:
+        if plain_document:
             notes.append(
                 f"{document.id}: YAML の文書は sections で切り出せません。lines を使ってください"
             )
@@ -259,7 +260,7 @@ def search_docs(
         schemas.extend(
             store.schema(target, table.id)
             for table in target.source.config.documents
-            if table.enabled and table.type == "yaml"
+            if table.enabled
         )
     fields = known_fields(schemas)
     violations = check_filter(request, fields)

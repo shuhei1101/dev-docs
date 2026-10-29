@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import logging
 import os
 from importlib import resources
@@ -15,9 +16,7 @@ from dev_docs.features.settings.types import SourceEntry
 from dev_docs.features.sources.merge import merge_configs
 from dev_docs.features.sources.types import (
     SOURCE_CONFIG_VERSION,
-    DocumentDefaults,
     DocumentTable,
-    MetadataMapping,
     ScriptEntry,
     ServedSource,
     SourceConfig,
@@ -43,6 +42,7 @@ __all__ = [
     "compare_config_version",
     "load_source",
     "load_source_at",
+    "source_schema_json",
     "validate_source_config",
 ]
 
@@ -52,6 +52,11 @@ def _source_schema() -> dict[str, Any]:
     text = resources.files("dev_docs").joinpath(SOURCE_SCHEMA).read_text(encoding="utf-8")
     schema: dict[str, Any] = load_yaml(text)
     return schema
+
+
+def source_schema_json() -> str:
+    """配信元の設定のスキーマを、配布する JSON Schema の文字列にする。"""
+    return json.dumps(_source_schema(), ensure_ascii=False, indent=2) + "\n"
 
 
 def _outside_root(pattern: str) -> bool:
@@ -114,17 +119,6 @@ def validate_source_config(value: dict[str, Any], *, root: Path) -> list[Violati
                             fix=f"{table}[] の ID を指してください: {ref}",
                         )
                     )
-        # 種類ごとのキーの組み合わせ
-        if row["type"] == "yaml" and "schema" not in row:
-            violations.append(Violation(path=f"documents[{index}].schema", rule="必須のキーが無い"))
-        if row["type"] == "markdown":
-            for key in ("schema", "records", "body_file"):
-                if key in row:
-                    violations.append(
-                        Violation(
-                            path=f"documents[{index}].{key}", rule="markdown の行には書けません"
-                        )
-                    )
         if "body_file" in row and "records" not in row:
             violations.append(
                 Violation(
@@ -140,12 +134,11 @@ def validate_source_config(value: dict[str, Any], *, root: Path) -> list[Violati
                         rule=f"配信元の外を指しています: {pattern}",
                     )
                 )
-        if "schema" in row:
-            found = _file_violation(root, f"documents[{index}].schema", row["schema"], "スキーマ")
-            if found is None:
-                found = _check_schema_file(root, f"documents[{index}].schema", row["schema"])
-            if found is not None:
-                violations.append(found)
+        found = _file_violation(root, f"documents[{index}].schema", row["schema"], "スキーマ")
+        if found is None:
+            found = _check_schema_file(root, f"documents[{index}].schema", row["schema"])
+        if found is not None:
+            violations.append(found)
     if "tags" in value:
         found = _file_violation(root, "tags", value["tags"], "タグのマスター")
         if found is not None:
@@ -222,21 +215,12 @@ def _build_script(row: dict[str, Any]) -> ScriptEntry:
 
 def _build_table(row: dict[str, Any]) -> DocumentTable:
     """文書の行を作る。"""
-    metadata = {
-        key: MetadataMapping(type=item["type"], field=item.get("field"), value=item.get("value"))
-        for key, item in row.get("metadata", {}).items()
-    }
-    defaults = [
-        DocumentDefaults(item["paths"], **{k: v for k, v in item.items() if k != "paths"})
-        for item in row.get("defaults", [])
-    ]
     return DocumentTable(
         id=row["id"],
-        type=row["type"],
         paths=list(row["paths"]),
+        schema_path=row["schema"],
         title=row.get("title"),
         enabled=row.get("enabled", True),
-        schema_path=row.get("schema"),
         validators=list(row.get("validators", [])),
         converter=row.get("converter"),
         writable=row.get("writable"),
@@ -244,9 +228,9 @@ def _build_table(row: dict[str, Any]) -> DocumentTable:
         search=row.get("search", True),
         records=row.get("records"),
         body_file=row.get("body_file"),
-        metadata=metadata,
-        defaults=defaults,
+        metadata=dict(row.get("metadata", {})),
         exclude=list(row.get("exclude", [])),
+        alias_type=row.get("alias_type"),
     )
 
 
@@ -327,7 +311,6 @@ def assemble_source(
     schemas = {
         row.id: load_yaml((root / row.schema_path).read_text(encoding="utf-8"))
         for row in config.documents
-        if row.schema_path
     }
     served = ServedSource(
         id=source_id or config.name,
@@ -351,6 +334,15 @@ def _log_violations(source_id: str, violations: list[Violation]) -> None:
         logger.error("%s: %s: %s", source_id, violation.path, violation.rule)
 
 
+def _declared_version(files: list[Path]) -> str | None:
+    """マージした設定が書いている `version`。読めない・書いていなければ `None`。"""
+    values, violations = _read_configs(files)
+    if violations:
+        return None
+    version = merge_configs(values).get("version")
+    return version if isinstance(version, str) and version.isdecimal() else None
+
+
 def load_source(entry: SourceEntry, *, index: int) -> tuple[ServedSource | None, SourceStatus]:
     """端末の設定の 1 行から配信元の設定を読んで検証し、配信中の配信元と状態を作る。"""
     fallback_id = entry.id or f"sources[{index}]"
@@ -370,6 +362,13 @@ def load_source(entry: SourceEntry, *, index: int) -> tuple[ServedSource | None,
     source_id = entry.id or (config.name if config else fallback_id)
     if violations:
         _log_violations(source_id, violations)
+        declared = _declared_version(files)
+        if declared is not None and compare_config_version(declared) == "older":
+            logger.error(
+                "%s: 設定のバージョンが古いので、dev-docs migrate --source %s で移し替えられます",
+                source_id,
+                files[0],
+            )
         return None, SourceStatus(
             id=source_id, index=index, status="not_served", errors=violations, config=config_files
         )

@@ -106,14 +106,12 @@ properties:
       additionalProperties: false
       required:
         - id
-        - type
         - paths
+        - schema
       properties:
         id:
           type: string
           minLength: 1
-        type:
-          enum: [yaml, markdown]
         paths:
           type: array
           minItems: 1
@@ -155,29 +153,12 @@ properties:
           minLength: 1
         metadata:
           type: object
+          title: 共通のキーと列名の対応
           additionalProperties:
-            type: object
-            additionalProperties: false
-            required:
-              - type
-            properties:
-              type:
-                enum: [ref, custom]
-              field:
-                type: string
-              value: {}
-        defaults:
-          type: array
-          items:
-            type: object
-            required:
-              - paths
-            properties:
-              paths:
-                type: array
-                minItems: 1
-                items:
-                  type: string
+            type: string
+            minLength: 1
+        alias_type:
+          enum: [term, doc, command, url, skill, tool, path, env, avoid]
   validators:
     $ref: "#/$defs/scripts"
   converters:

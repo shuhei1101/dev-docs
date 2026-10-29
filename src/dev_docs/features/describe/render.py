@@ -33,4 +33,12 @@ def render_describe_markdown(
         lines = [result.instructions, "", "| kind | description |", "| --- | --- |"]
         lines.extend(f"| {_cell(kind.id)} | {_cell(kind.description)} |" for kind in result.kinds)
         return "\n".join(lines) + "\n"
-    return f"```yaml\n{result.schema_text.rstrip(chr(10))}\n```\n"
+    lines = []
+    if result.metadata:
+        lines = ["| 共通のキー | 列名 |", "| --- | --- |"]
+        lines.extend(
+            f"| {_cell(key)} | {_cell(column)} |" for key, column in result.metadata.items()
+        )
+        lines.append("")
+    lines.append(f"```yaml\n{result.schema_text.rstrip(chr(10))}\n```")
+    return "\n".join(lines) + "\n"

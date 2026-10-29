@@ -306,13 +306,28 @@ def try_convert(request: TryConvertRequest, *, handlers: Handlers) -> TryConvert
     not_matched = DocumentNotFoundError(
         message=f"{request.file}: 文書の種類の範囲に当たる文書がありません", missing=[request.file]
     )
+    target = Target(source, candidate.root, None, None, "read")
+    if table is None:
+        # 当たる行が無ければ、本文のファイルが `file` の文書を持つ最初の行を引く
+        table = next(
+            (
+                row
+                for row in source.config.documents
+                if row.enabled
+                and row.body_file is not None
+                and any(
+                    document.body_path == relative
+                    for document in handlers.store.load(target, kinds=[row.id]).documents
+                )
+            ),
+            None,
+        )
     if table is None:
         raise not_matched
-    target = Target(source, candidate.root, None, None, "read")
     documents = [
         document
         for document in handlers.store.load(target, kinds=[table.id]).documents
-        if document.path == relative
+        if relative in (document.path, document.body_path)
     ]
     if not documents:
         raise not_matched
@@ -329,7 +344,7 @@ def try_convert(request: TryConvertRequest, *, handlers: Handlers) -> TryConvert
                 script=item.failure.script or "",
             )
     used = BUILTIN_CONVERTER
-    if table.type != "markdown" and table.converter is not None:
+    if table.converter is not None:
         used = source.script("converters", table.converter).run[-1]
     return TryConvertResult(
         kind=table.id,

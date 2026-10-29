@@ -7,7 +7,8 @@ from collections.abc import Mapping, MutableMapping, Sequence
 from pathlib import PurePosixPath
 from typing import Any
 
-from dev_docs.features.sources.types import DocumentDefaults, DocumentTable, MetadataMapping
+from dev_docs.features.documents.types import Document
+from dev_docs.features.sources.types import DocumentTable
 from dev_docs.shared.errors import InvalidArgumentError, Violation
 
 METADATA_KEYS = (
@@ -29,7 +30,6 @@ METADATA_KEYS = (
     "port",
     "replacement",
 )
-UNION_KEYS = ("tags", "related")
 
 PART_PATTERN = re.compile(r"^([^.\[\]]+)((?:\[\d+\])*)$")
 INDEX_PATTERN = re.compile(r"\[(\d+)\]")
@@ -141,51 +141,26 @@ def delete_field(data: MutableMapping[str, Any], path: str) -> bool:
 
 
 def resolve_metadata(data: Mapping[str, Any], table: DocumentTable) -> dict[str, Any]:
-    """文書の行の `metadata` の対応で、文書の内容から共通のキーの値を取る。"""
+    """文書の行の `metadata` の列名の対応で、文書の内容から共通のキーの値を取る。"""
     result: dict[str, Any] = {}
     for key in METADATA_KEYS:
-        mapping = table.metadata.get(key) or MetadataMapping(type="ref", field=key)
-        value = mapping.value if mapping.type == "custom" else get_field(data, mapping.field or key)
+        value = get_field(data, table.metadata.get(key, key))
         if value is not None:
             result[key] = value
-    return result
-
-
-def _overlay(base: dict[str, Any], layer: Mapping[str, Any]) -> None:
-    """`base` へ `layer` を重ねる（和集合のキーは先の値の後ろへ、まだ無い要素だけを足す）。"""
-    for key, value in layer.items():
-        if key in UNION_KEYS:
-            merged = list(base.get(key) or [])
-            merged.extend(
-                item
-                for item in (value if isinstance(value, list) else [value])
-                if item not in merged
-            )
-            base[key] = merged
-        else:
-            base[key] = value
-
-
-def apply_defaults(
-    metadata: Mapping[str, Any], defaults: Sequence[DocumentDefaults], path: str
-) -> dict[str, Any]:
-    """`defaults[]` のうちパスの当たる行を上から重ね、最後に文書自身のメタデータを重ねる。"""
-    result: dict[str, Any] = {}
-    target = PurePosixPath(path)
-    for row in defaults:
-        if any(target.full_match(pattern) for pattern in row.paths):
-            _overlay(result, row.model_extra)
-    _overlay(result, metadata)
+    if table.alias_type is not None:
+        result["alias_type"] = table.alias_type
     return result
 
 
 def missing_ref_fields(data: Mapping[str, Any], table: DocumentTable) -> list[tuple[str, str]]:
-    """`metadata` に明示した `ref` のうち、文書の内容に値が無い列を `(キー, field)` で返す。"""
-    missing: list[tuple[str, str]] = []
-    for key, mapping in table.metadata.items():
-        if mapping.type != "ref":
-            continue
-        field = mapping.field or key
-        if get_field(data, field) is None:
-            missing.append((key, field))
-    return missing
+    """`metadata` に書いた列のうち、文書の内容に値が無い列を `(キー, 列名)` で返す。"""
+    return [
+        (key, column) for key, column in table.metadata.items() if get_field(data, column) is None
+    ]
+
+
+def is_markdown_body(document: Document) -> bool:
+    """文書の本文が Markdown のファイルか（`body_path` の拡張子が `.md`）。"""
+    return (
+        document.body_path is not None and PurePosixPath(document.body_path).suffix.lower() == ".md"
+    )

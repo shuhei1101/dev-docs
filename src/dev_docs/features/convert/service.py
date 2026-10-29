@@ -11,6 +11,7 @@ from dev_docs.features.access.types import Target
 from dev_docs.features.convert.embed import expand_embeds
 from dev_docs.features.convert.markdown import schema_to_markdown
 from dev_docs.features.convert.types import Converted, ConvertFailure
+from dev_docs.features.documents.fields import is_markdown_body
 from dev_docs.features.documents.store import DocumentStore
 from dev_docs.features.documents.types import Document
 from dev_docs.integrations.scripts import (
@@ -136,13 +137,13 @@ class ConvertService:
     def convert(self, target: Target, document: Document) -> Converted:
         """1 件の文書を Markdown にする。"""
         table = target.source.table(document.kind)
-        if table.type == "markdown":
-            markdown = document.body
-        elif table.converter is not None:
+        if table.converter is not None:
             produced = self._run_converter(target, document, table.converter)
             if isinstance(produced, ConvertFailure):
                 return Converted(markdown="", failure=produced)
             markdown = produced
+        elif is_markdown_body(document):
+            markdown = document.body
         else:
             markdown = schema_to_markdown(document, self.store.schema(target, document.kind))
         base = target.base if target.ref is None else self.store.read_root(target)
