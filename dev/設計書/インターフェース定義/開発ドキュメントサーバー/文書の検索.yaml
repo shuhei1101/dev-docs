@@ -443,7 +443,7 @@ lead: '条件に当たる文書を、指定した項目・量・順で返す。I
 identifier: search_docs
 permissions: 対象の配信元の `scope.read` か `scope.write` に `cwd` が当たること
 idempotent: true
-side_effects: '会話キー（`session_id`・`agent_id`）ごとに、本文を切らずに返した（`scope: full`）文書の id・ハッシュ・返した時点の内容を `state_dir` に記録する（`list_changes` の前回読んだ時点に使う）。文書のファイルは変えない。'
+side_effects: '会話キー（`session_id`・`agent_id`）ごとに、本文を返した文書（`sections`・`lines` を渡した呼び出しを除く）の id・ハッシュ・返した時点の内容を `state_dir` に記録する（`list_changes` の前回読んだ時点に使う）。文書のファイルは変えない。'
 callers:
   - dev/設計書/シナリオ/単一ユースケース/エージェントが調べる#scenarios[正常シナリオ]
 exclusivity: '読み取りだけで排他しない（`readOnlyHint: true` で並列に呼ばれる）'
@@ -823,8 +823,8 @@ constraints:
     constraint: '`sections`・`lines` で切り出し → 切り出した範囲の中で `snippets` の抜粋を探す → `max_chars_per_field` で切る、の順に当てる。抜粋の行番号は本文の行番号のまま'
     notes: 抜粋の行番号を続けて `lines` に渡せる
   - item: 返し済みの記録
-    constraint: '`scope: full` で返した文書だけを記録し、返し済みの本文を省くのも `scope: full` で返す呼び出しだけ。`sections`・`lines` を渡した呼び出しは、返し済みでも切り出した本文を返す'
-    notes: rule-inject の既読と `list_changes` の前回読んだ時点を、全文を読んだことと揃える
+    constraint: '`sections`・`lines` を渡した呼び出しは、返した文書を記録せず、返し済みでも切り出した本文を返す。ほかの呼び出しは `scope` によらず本文を返した文書を記録し、返し済みの本文を省く'
+    notes: 既存の呼び出し（`max_chars_per_field` で切った本文・`body_file` の無い `records` の要素を含む）の記録は変えない
 refs:
   - dev/設計書/シナリオ/単一ユースケース/エージェントが調べる#scenarios[正常シナリオ]
   - dev/設計書/シナリオ/単一ユースケース/YAMLを直接編集した#scenarios[正常シナリオ]
