@@ -296,6 +296,7 @@ flows:
     expected:
       - '`isError: true` で、`filter.field` のパス・`nme` と、`describe(source, kind)` でスキーマを見ることを返す'
       - 2 回目は期待する型（数値）と実際の値 `abc` を返す
+      - '`sections` と `lines` の同時指定、`view: summary` での `sections`、`{and: [...], not: {...}}` のように 2 つのキーを持つ束、`filter.field` の `@matches` は、それぞれ `isError: true` で引数のパスと直し方を返す'
     test: test_error_when_invalid_argument
   - name: 異常系（無いリビジョン・RefNotFoundError）
     summary: 解決できない `ref` を断る
@@ -375,11 +376,74 @@ flows:
       - '3 回目（`contains`、`context_lines: 1`）は `2-`・`3:`・`4-` の 3 行を返す'
       - 4 回目（`case_sensitive` を省いた `\A\S`）の結果に文書 1 が含まれ、抜粋が `1:` の行になる
     test: test_normal_when_snippets
+  - name: 正常系（当たった数で並べる）
+    summary: '`not`・`glob` で絞り、`@matches` を返してよく当たる順に並べる'
+    setup:
+      - name: Mock
+        description: なし
+      - name: Markdown の文書
+        description: sample の `notes/` に `a.md`（語 `検索` を含む行が 3 行、タグ `x`）・`b.md`（同 1 行）・`archive/c.md`（同 2 行）を置く
+        notes: 'sample の `dev-docs.yaml` に `paths: [notes/**/*.md]` の行を持つ'
+      - name: 入力
+        description: '`filter` は `and[body の contains 検索, not(@path の glob notes/archive/**)]`、`fields: [@matches]`、`order_by: [{@matches, desc}]`、`format: json`。他の呼び出しは期待値のとおり'
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        participant C as クライアント
+        participant T as search_docs
+        participant ST as 配信元のファイル
+
+        C->>T: filter（and[body contains 検索, not(@path glob notes/archive/**)]）, fields: [@matches], order_by: @matches desc
+        T-->>ST: 文書を読む
+        T->>T: not の下を除いた本文の条件で、文書ごとに当たった行を数える
+        T-->>C: a（@matches 3）・b（@matches 1）
+      ```
+    expected:
+      - 結果が `notes/a`（`values.@matches` 3）・`notes/b`（同 1）の順で、`notes/archive/c` が無い
+      - '`not` を外すと a（3）・c（2）・b（1）の順になる'
+      - '`@path` の `glob` `notes/*.md` は a・b に当たり、c（`/` をまたぐ）には当たらない'
+      - 本文の条件が `not(and[body の contains 検索, tags の eq x])` の下にしか無い `filter` では、当たった b・c の `@matches` が 0
+      - '`@matches` を渡さない呼び出しは `values` に `@matches` を持たない'
+    test: test_normal_when_ordered_by_matches
+  - name: 正常系（本文の一部）
+    summary: '`sections`・`lines` で本文の一部を返し、返し済みに記録しない'
+    setup:
+      - name: Mock
+        description: なし（`state_dir` は一時フォルダ）
+      - name: Markdown の文書
+        description: sample の `notes/a.md` を 10 行にする。1 行目 `# a`、3 行目 `## 経緯`、6 行目 `## 決まったこと`、7 行目に語 `検索`、9 行目 `## 残り`
+        notes: 「決まったこと」の節は 6〜8 行目
+      - name: 入力
+        description: '`session_id: s1`、`filter` は `id` が `notes/a`、`view: full`、`format: json`。1 回目 `sections: [決まったこと]`、2 回目 `lines: {offset: 3, limit: 2}`、3 回目はどちらも省く'
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        participant C as クライアント
+        participant T as search_docs
+        participant SD as state_dir
+
+        C->>T: filter（id が notes/a）, view: full, sections: [決まったこと], session_id: s1
+        T-->>C: 6〜8 行目の本文（scope: section）
+        C->>T: 同じ filter, lines: {offset: 3, limit: 2}
+        T-->>C: 3〜4 行目の本文（scope: section）
+        C->>T: 同じ filter（sections・lines なし）
+        T->>SD: 全文を返した文書を記録する
+        T-->>C: 全文（scope: full）
+      ```
+    expected:
+      - '1 回目の `values.body` が 6〜8 行目だけで、`scope` が `section`、`ranges` が `[{start_line: 6, end_line: 8}]`、`total_lines` が 10'
+      - '2 回目の `values.body` が 3〜4 行目だけで、`ranges` が `[{start_line: 3, end_line: 4}]`'
+      - '3 回目は全文を `scope: full` で返し、`（この会話で返し済み）` にならない'
+      - 3 回目の後に 1 回目と同じ引数で呼ぶと、返し済みでも 6〜8 行目を返す
+      - '`sections: [決まったこと]` と `snippets: {context_lines: 0}`、`filter` に `body` の `contains` `検索` を渡すと、抜粋が `7:` の行（本文の行番号）になる'
+      - '`sections: [無い見出し]` は本文を空で返し、`ranges` が空で、`notes` に当たる見出しが無いことがある'
+      - '`format: markdown` では `<document>` の前の行に `notes/a: 6-8 行目 / 全 10 行` がある'
+    test: test_normal_when_part_of_body
 lead: '条件に当たる文書を、指定した項目・量・順で返す。ID で絞れば取得、`view: summary` で一覧、`view: count` で件数、`group_by` で集計になる。'
 identifier: search_docs
 permissions: 対象の配信元の `scope.read` か `scope.write` に `cwd` が当たること
 idempotent: true
-side_effects: 会話キー（`session_id`・`agent_id`）ごとに、本文を返した文書の id・ハッシュ・返した時点の内容を `state_dir` に記録する（`list_changes` の前回読んだ時点に使う）。文書のファイルは変えない。
+side_effects: '会話キー（`session_id`・`agent_id`）ごとに、本文を切らずに返した（`scope: full`）文書の id・ハッシュ・返した時点の内容を `state_dir` に記録する（`list_changes` の前回読んだ時点に使う）。文書のファイルは変えない。'
 callers:
   - dev/設計書/シナリオ/単一ユースケース/エージェントが調べる#scenarios[正常シナリオ]
 exclusivity: '読み取りだけで排他しない（`readOnlyHint: true` で並列に呼ばれる）'
@@ -410,7 +474,7 @@ request:
     required: false
     default: なし（全件）
     location: argument
-    description: '条件の木。`Group` は `{and: [...]}` か `{or: [...]}`、`Condition` は `{field, op, values, match, case_sensitive}`'
+    description: '条件の木。`Group` は `{and: [...]}`・`{or: [...]}`・`{not: Group | Condition}` のどれか 1 つのキーだけを持つ、`Condition` は `{field, op, values, match, case_sensitive}`'
     constraints: 入れ子の深さは制限しない
   - name: filter.field
     type: str
@@ -418,11 +482,11 @@ request:
     location: argument
     description: メタデータのキー・種類ごとの項目・`body`・`*`（全項目）・計算項目（`@chars`・`@path`・`@sections`）
   - name: filter.op
-    type: Literal['eq', 'ne', 'prefix', 'suffix', 'contains', 'not_contains', 'regex', 'gt', 'gte', 'lt', 'lte', 'exists', 'not_exists']
+    type: Literal['eq', 'ne', 'prefix', 'suffix', 'contains', 'not_contains', 'regex', 'glob', 'gt', 'gte', 'lt', 'lte', 'exists', 'not_exists']
     required: true
     location: argument
     description: 比べ方
-    notes: '`regex` は値の各行に当たる（`^`・`$` は各行の先頭・末尾。値全体の先頭・末尾は `\A`・`\Z`）。パターンには正規化をかけず、`case_sensitive: false` は `re.IGNORECASE` と NFKC にした値で比べる'
+    notes: '`regex` は値の各行に当たる（`^`・`$` は各行の先頭・末尾。値全体の先頭・末尾は `\A`・`\Z`）。パターンには正規化をかけず、`case_sensitive: false` は `re.IGNORECASE` と NFKC にした値で比べる。`glob` は値全体に当て、`**` は `/` をまたぎ、`*`・`?` は `/` をまたがない'
   - name: filter.values
     type: list[str]
     required: false
@@ -466,7 +530,7 @@ request:
     default: 'なし（`id` の昇順。`filter` が `id` の `eq` の条件 1 つなら、その `values` の順）'
     location: argument
     description: 並べ替え。先のキーが優先
-    notes: '`@chars` で文字数順。日時が空の文書は末尾'
+    notes: '`@chars` で文字数順、`@matches` でよく当たる順。日時が空の文書は末尾'
   - name: group_by
     type: str
     required: false
@@ -573,6 +637,48 @@ request:
     location: argument
     description: 文書ごとに返す抜粋の数
     notes: 重なる範囲は 1 つの抜粋にまとめ、本文の先頭から数える
+  - name: filter.not
+    type: Group | Condition
+    required: false
+    default: なし
+    location: argument
+    description: 中の条件か束に当たらない文書に当たる
+    notes: '`and`・`or` の中にも置ける。中の `body`・`*` の条件は `@matches`・抜粋の判定に使わない'
+    status: planned
+  - name: sections
+    type: list[str]
+    required: false
+    default: なし（本文の全文）
+    location: argument
+    description: Markdown の本文から返す節の見出しの文字列。見出しの行から、次の同じか上の階層の見出しの前の行までを返す
+    constraints: '`view: full` のときだけ。`lines` と同時に渡せない'
+    notes: 見出しの `#` と前後の空白を除いた文字列と完全一致で当てる。当たる見出しが複数あれば全て返す。YAML の文書と当たる見出しの無い文書は本文を空で返し、`notes` で知らせる
+    status: planned
+  - name: lines
+    type: '{offset: int, limit: int}'
+    required: false
+    default: なし（本文の全文）
+    location: argument
+    description: 本文から返す行の範囲
+    constraints: '`view: full` のときだけ。`sections` と同時に渡せない'
+    notes: 文書の種類を問わない
+    status: planned
+  - name: lines.offset
+    type: int
+    required: false
+    default: '`1`'
+    location: argument
+    description: 返す最初の行の行番号（1 始まり）
+    constraints: 1 以上
+    status: planned
+  - name: lines.limit
+    type: int
+    required: false
+    default: なし（本文の末尾まで）
+    location: argument
+    description: 返す行の数
+    constraints: 1 以上
+    status: planned
 request_example: |-
   ```json
   {
@@ -644,6 +750,18 @@ response:
   - name: items[].snippets[].lines[].hit
     type: bool
     description: 条件に当たった行か（`false` は前後の行）
+  - name: items[].values.@matches
+    type: int
+    description: '`filter` の本文の条件に当たった本文の行の数'
+    notes: '`fields` に `@matches` を渡したときだけ。数え方は制約の「当たった数の数え方」'
+  - name: items[].ranges
+    type: 'list[{start_line: int, end_line: int}]'
+    description: '`sections`・`lines` で切り出した本文の行の範囲（本文の行番号、1 始まり）'
+    notes: '`sections`・`lines` を渡したときだけ。切り出す範囲が無ければ空の配列'
+  - name: items[].total_lines
+    type: int
+    description: 本文の全体の行数
+    notes: '`items[].ranges` と同じ条件で持つ'
 response_example: |-
   ```markdown
   sample: 該当 2 件・返した 2 件
@@ -656,7 +774,10 @@ response_example: |-
 response_notes: '`format: markdown` のときは structuredContent を返さない。`format: json` のときは structuredContent と text に同じ JSON を入れる。
 
 
-  `format: markdown` の `view: full` は文書ごとに `<document path="{items[].path}" scope="{items[].scope}">` で包む（shuhei1101/rule-inject#46 の書式）。`path` を持たない文書は属性の無い `<document>` で包む。'
+  `format: markdown` の `view: full` は文書ごとに `<document path="{items[].path}" scope="{items[].scope}">` で包む（shuhei1101/rule-inject#46 の書式）。`path` を持たない文書は属性の無い `<document>` で包む。
+
+
+  `sections`・`lines` を渡した `format: markdown` は、`<document>` の前の行に `{id}: {start_line}-{end_line} 行目 / 全 {total_lines} 行` を出す（範囲が複数なら `・` で並べる）。'
 exceptions:
   - name: なし（正常終了）
     condition: 検索できた（読めなかったファイルがあっても `notes` で知らせて正常終了）
@@ -669,7 +790,7 @@ exceptions:
   - name: WorktreeNotMatchedError
     condition: '`worktree` が配信元の `worktrees` に当たらない'
   - name: InvalidArgumentError
-    condition: 知らない項目・型の合わない値を条件・並べ替え・`group_by` に渡した
+    condition: '知らない項目・型の合わない値を条件・並べ替え・`group_by` に渡した、束に `and`・`or`・`not` のキーを 2 つ以上持たせた、`@matches` を条件に使った、`sections` と `lines` を同時に渡した、`view: full` 以外で `sections`・`lines` を渡した、`lines` の `offset`・`limit` が 1 未満'
     notes: 項目のパス・期待する型・実際の値と、`describe(source, kind)` でスキーマを見ることを添える
   - name: RefNotFoundError
     condition: '`ref` を commit に解決できない'
@@ -687,7 +808,7 @@ constraints:
   - item: タイムアウト
     constraint: 制限なし
   - item: 範囲の決め方
-    constraint: '本文を切らずに返したら `full`。`max_chars_per_field` で切った本文・`snippets`・`body_file` の無い `records` の要素（本文が管理用の YAML の 1 要素）は `section`。本文を返さない呼び出し（`view: summary`、`exclude_fields` で `body` を除いた `view: full`）は `summary`'
+    constraint: '本文を切らずに返したら `full`。`max_chars_per_field` で切った本文・`snippets`・`sections`・`lines` で切り出した本文・`body_file` の無い `records` の要素（本文が管理用の YAML の 1 要素）は `section`。本文を返さない呼び出し（`view: summary`、`exclude_fields` で `body` を除いた `view: full`）は `summary`'
     notes: rule-inject は `full` だけを既読にする（D-125）
   - item: 名前の既定
     constraint: メタデータの `name` が空なら、ファイル名から拡張子を除いた名前にする。`records` の要素は `body_file` が指すファイルの名前、`body_file` が無ければ文書の `id`
@@ -695,7 +816,18 @@ constraints:
   - item: 抜粋の書式
     constraint: '`format: markdown` は grep の `-n` と同じく、当たった行を `{行番号}:{行}`、前後の行を `{行番号}-{行}` で出し、抜粋の間に `--` の行を置く'
     notes: 行番号を Read の `offset` や `write_docs` の `text_edits` へそのまま渡せる
+  - item: 当たった数の数え方
+    constraint: '`@matches` は、`filter` の `body`・`*` の条件（`not` の下を除く）のどれかに当たった本文の全文の行を数える。行の判定は抜粋と同じ。本文の条件が無ければ 0'
+    notes: '`fields`・`order_by` でだけ使える'
+  - item: 本文の切り出しの順序
+    constraint: '`sections`・`lines` で切り出し → 切り出した範囲の中で `snippets` の抜粋を探す → `max_chars_per_field` で切る、の順に当てる。抜粋の行番号は本文の行番号のまま'
+    notes: 抜粋の行番号を続けて `lines` に渡せる
+  - item: 返し済みの記録
+    constraint: '`scope: full` で返した文書だけを記録し、返し済みの本文を省くのも `scope: full` で返す呼び出しだけ。`sections`・`lines` を渡した呼び出しは、返し済みでも切り出した本文を返す'
+    notes: rule-inject の既読と `list_changes` の前回読んだ時点を、全文を読んだことと揃える
 refs:
   - dev/設計書/シナリオ/単一ユースケース/エージェントが調べる#scenarios[正常シナリオ]
   - dev/設計書/シナリオ/単一ユースケース/YAMLを直接編集した#scenarios[正常シナリオ]
+  - dev/設計書/シナリオ/単一ユースケース/エージェントが調べる#scenarios[正常シナリオ（当たった数で並べて絞る）]
+  - dev/設計書/シナリオ/単一ユースケース/エージェントが調べる#scenarios[正常シナリオ（本文の一部を読む）]
 test_file: tests/integration/server/test_search_docs.py
