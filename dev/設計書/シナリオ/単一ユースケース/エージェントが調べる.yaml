@@ -342,6 +342,38 @@ scenarios:
       - '`describe(source: sample, kind: decisions)` が、`metadata` に書いた対応（`name` は `title`、`description` は `meta.summary`）と、書かない共通のキーは同じ名前の列であることを返す'
       - '`name` が `設定の置き場所` の `search_docs` が d1 を返し、概要文が `meta.summary` の値になる'
     test: test_normal_when_metadata_mapped
+  - name: 正常シナリオ（設計書を実装するコードを引く）
+    setup:
+      - name: Mock
+        description: なし（実環境で実行。`cwd` はテストが引数に入れる）
+        notes: '-'
+      - name: 設計書
+        description: sample の YAML の文書 `design/repo`（タスクのリポジトリの設計書）
+        notes: '-'
+      - name: 管理用の YAML
+        description: 'sample の `src/files.yaml`。`repo.py` の行が `related: [{to: design/repo, type: implements}]`、`test_repo.py` の行が `related: [{to: src/repo, type: tests}]` を持つ。`src/repo.py`・`src/test_repo.py` を置く'
+        notes: '`dev-docs.yaml` は `related.types[]` を書かず、既定の関連の種類で検査する'
+      - name: dev-docs
+        description: sample を配信している dev-docs
+        notes: '`cwd` は sample のクローン本体'
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        actor A as エージェント
+        participant M as 文書の MCP（/mcp）
+        participant ST as 配信元の文書
+
+        A->>M: trace_related(from_ids: design/repo, direction: in, depth: 1)
+        M->>ST: related で design/repo を指す文書を引く
+        M-->>A: src/repo（via_type は implements）
+        A->>M: trace_related(from_ids: src/repo, direction: in, depth: 1)
+        M-->>A: src/test_repo（via_type は tests）
+      ```
+    expected:
+      - '`design/repo` を起点にした `direction: in` の `trace_related` が `src/repo` の 1 件を返し、`via_type` が `implements` になる'
+      - '`src/repo` を起点にした `direction: in` の `trace_related` が `src/test_repo` の 1 件を返し、`via_type` が `tests` になる'
+      - '`related.types[]` を書いていない sample でも `implements`・`tests` の行が検査の違反にならない'
+    test: test_normal_when_implementing_code_traced
 lead: エージェントが文書の MCP の `describe`・`search_docs`・`trace_related` で、今の作業場所から読める配信元の文書を探して読む。
 issue: 3
 primary_actor: エージェント（Claude Code）
