@@ -16,7 +16,7 @@ argument-hint: "[クローンのパス]"
    - ファイルがあるかを確かめる
 
 2. 端末の設定がある場合、バージョンを確かめる。
-   - `{clone}/.venv/bin/python -m dev_docs migrate --plan` を実行する（`clone` は端末の設定の値）
+   - `{clone}/.venv/bin/python -m dev_docs migrate --plan` を実行する（`clone` は端末の設定の値。端末の設定に `clone` が無いときは `$ARGUMENTS`、空ならクローンの場所を聞いた値。聞いた値は、スキーマの検証で足りないキーを書き足すときに聞き直さずに書く）
    - 終了コード 6（設定が新しい）の場合、設定のバージョンと dev-docs のバージョンを示し、管理の MCP の `update` で dev-docs を更新するよう案内して止まる。端末の設定も env も書き換えない
    - 標準出力が空の場合、手順 3 へ進む
    - 標準出力に手順がある場合、手順を示す。`[destructive]` の行があるときは、当ててよいかを聞き、断られたら止まる

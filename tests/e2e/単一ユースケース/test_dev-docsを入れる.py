@@ -101,7 +101,7 @@ def test_normal_when_terminal_config_lacks_keys(
     before = load_yaml_file(settings)
     # 実行
     run = claude_home.run(
-        SETUP_PROMPT.format(clone=clone.clone),
+        "/dev-docs:global-setup",
         cwd=tmp_path,
         answers=[(r"clone|クローン", str(clone.clone))],
     )
