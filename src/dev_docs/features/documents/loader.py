@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import os
 import posixpath
-from collections.abc import Collection, Mapping, Sequence
+from collections.abc import Collection, Mapping
 from datetime import date, datetime, time
 from pathlib import Path, PurePosixPath
 from typing import Any
@@ -21,8 +21,8 @@ FRONT_MATTER_FENCE = "---"
 YAML_SUFFIXES = (".yaml", ".yml")
 
 
-def collect_files(root: Path, patterns: Sequence[str]) -> list[str]:
-    """文書の行の `paths` に当たるファイルを配信元の直下から集める。"""
+def collect_files(root: Path, table: DocumentTable) -> list[str]:
+    """文書の行に当たるファイルを配信元の直下から集める。"""
     found: set[str] = set()
     for folder, dirnames, filenames in os.walk(root):
         # シンボルリンクのフォルダは中をたどらない
@@ -34,8 +34,7 @@ def collect_files(root: Path, patterns: Sequence[str]) -> list[str]:
         relative_folder = Path(folder).relative_to(root).as_posix()
         for name in filenames:
             relative = name if relative_folder == "." else f"{relative_folder}/{name}"
-            target = PurePosixPath(relative)
-            if any(target.full_match(pattern) for pattern in patterns):
+            if table.matches(relative):
                 found.add(relative)
     return sorted(found)
 
@@ -275,8 +274,13 @@ def load_file(
     return documents_from_text(text, root, path, table, source_id=source_id, dates=dates)
 
 
-def unindexed_files(root: Path, index_path: str, body_paths: Collection[str]) -> list[str]:
-    """管理用の YAML のフォルダの配下で、どの行も指していないファイルを `root` からのパスで返す。"""
+def unindexed_files(
+    root: Path, index_path: str, body_paths: Collection[str], table: DocumentTable
+) -> list[str]:
+    """管理用の YAML のフォルダの配下で、どの行も指していないファイルを `root` からのパスで返す。
+
+    行の `exclude` に当たるファイルは数えない。
+    """
     start = root / posixpath.dirname(index_path)
     excluded = {index_path, *body_paths}
     found: list[str] = []
@@ -289,6 +293,6 @@ def unindexed_files(root: Path, index_path: str, body_paths: Collection[str]) ->
         relative_folder = Path(folder).relative_to(root).as_posix()
         for name in filenames:
             relative = name if relative_folder == "." else f"{relative_folder}/{name}"
-            if relative not in excluded:
+            if relative not in excluded and not table.excludes(relative):
                 found.append(relative)
     return sorted(found)

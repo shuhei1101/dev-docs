@@ -491,7 +491,7 @@ functions:
       2. `contains.regex` が真で `contains.value` を `compile_regex` で読めない場合、`InvalidArgumentError`（`path` は `contains.value`、`rule` は `正規表現として読めません（{エラー}）`）を送る
       3. 読む場所を解く（読む場所の解決。`ref` は渡さない）。`from_` があり Git 管理外の配信元を含む場合、`InvalidArgumentError` を送る
       4. 配信元ごとに前と後の文書を作る
-         - `from_` がある場合、始点・終点をリビジョンの解決（`argument` は `from`・`to`）で commit にし、2 つの commit（終点が無ければ作業ツリー）の間の前後の文書を作る。文書の行の `paths` に当たる変わったファイルごとに、前はリビジョンのファイル、後は終点の commit のリビジョンのファイルか作業ツリーのファイルを、文字列からの文書の組み立てで文書にする（この組み立ては次の `contains` の commit ごとの比較でも使う）
+         - `from_` がある場合、始点・終点をリビジョンの解決（`argument` は `from`・`to`）で commit にし、2 つの commit（終点が無ければ作業ツリー）の間の前後の文書を作る。文書の行に当たる変わったファイル（`enabled` の行を上から見て、文書の行.行に当たるかが `True` の最初の行）ごとに、前はリビジョンのファイル、後は終点の commit のリビジョンのファイルか作業ツリーのファイルを、文字列からの文書の組み立てで文書にする（この組み立ては次の `contains` の commit ごとの比較でも使う）
          - `from_` が無い場合、会話の記録.前回読んだ内容を引く（会話キーが無い・全ての配信元で空なら `LastReadNotFoundError`）。前は記録の内容（`doc_kind` の行が YAML なら YAML として、Markdown なら front matter と本文として読む）、後は今の文書（文書のストア.ID で引く。無ければ消した）
       5. `contains` がある場合、文書ごとに語の増減を集める
          - `from_` がある場合、区間の commit（`to` が無ければ終点は作業ツリーの `HEAD`）の commit ごとに、親とその commit の間の前後の文書を作り、両方の文書の本文（`Document.body`）の語の出現数が違う文書へ `ContainsChange` を足す。`to` が無い場合、最後に `HEAD` と作業ツリーの間も比べる（後の端は `RangePoint(WORKTREE_LABEL)`）
@@ -586,6 +586,13 @@ functions:
         mock: なし
         expected: '`InvalidArgumentError` の違反の `path` が `contains.value`'
         exception: Git 管理外の配信元への区間・`from` の無い `to`・知らない項目・正規表現として読めない `contains.value`
+      - name: test_list_changes_when_excluded
+        case: 正常
+        summary: 除外の名前に当たるファイルは次の行へ進む
+        condition: '行 `rule`（`paths: [docs/rule/*.md]`・`exclude: [README.md]`）と行 `index`（`paths: [docs/**/README.md]`）。区間の中で `docs/rule/README.md` を足す'
+        mock: なし（一時フォルダの git リポジトリ）
+        expected: '`items` が `docs/rule/README.md` の文書 1 件だけで、`kind` が `index`・`added`'
+        exception: '-'
   - name: render_changes_markdown
     title: 変更の結果の Markdown
     kind: 関数

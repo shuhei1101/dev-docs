@@ -30,8 +30,9 @@ def test_collect_files(tmp_path: Path, write_files: Callable[[Path, dict[str, st
             ".git/c.yaml": "c: 1\n",
         },
     )
+    table = DocumentTable(id="rules", type="yaml", paths=["a/**/*.yaml"])
     # 実行
-    result = collect_files(tmp_path, ["a/**/*.yaml"])
+    result = collect_files(tmp_path, table)
     # 検証
     assert result == ["a/b/y.yaml", "a/x.yaml"]
 
@@ -42,10 +43,31 @@ def test_collect_files_when_overlapping_patterns(
     """重なる glob（正常系）。"""
     # 準備
     write_files(tmp_path, {"a/x.yaml": "x: 1\n"})
+    table = DocumentTable(id="rules", type="yaml", paths=["a/*.yaml", "**/x.yaml"])
     # 実行
-    result = collect_files(tmp_path, ["a/*.yaml", "**/x.yaml"])
+    result = collect_files(tmp_path, table)
     # 検証
     assert result == ["a/x.yaml"]
+
+
+def test_collect_files_when_excluded(
+    tmp_path: Path, write_files: Callable[[Path, dict[str, str]], None]
+) -> None:
+    """除外の名前に当たるファイルを外す（正常系）。"""
+    # 準備
+    write_files(
+        tmp_path,
+        {
+            "a/x.md": "# x\n",
+            "a/README.md": "# a\n",
+            "a/b/README.md": "# b\n",
+        },
+    )
+    table = DocumentTable(id="notes", type="markdown", paths=["a/**/*.md"], exclude=["README.md"])
+    # 実行
+    result = collect_files(tmp_path, table)
+    # 検証
+    assert result == ["a/x.md"]
 
 
 def test_split_front_matter() -> None:
@@ -255,7 +277,38 @@ def test_unindexed_files(
             "src/node_modules/x.js": "x\n",
         },
     )
+    table = DocumentTable(
+        id="src", type="yaml", paths=["src/files.yaml"], records="files", body_file="path"
+    )
     # 実行
-    result = loader_module.unindexed_files(tmp_path, "src/files.yaml", ["src/a.py"])
+    result = loader_module.unindexed_files(tmp_path, "src/files.yaml", ["src/a.py"], table)
     # 検証
     assert result == ["src/d.py", "src/sub/e.py"]
+
+
+def test_unindexed_files_when_excluded(
+    tmp_path: Path, write_files: Callable[[Path, dict[str, str]], None]
+) -> None:
+    """除外の名前に当たるファイルは数えない（正常系）。"""
+    # 準備
+    write_files(
+        tmp_path,
+        {
+            "src/files.yaml": "files:\n  - path: a.py\n",
+            "src/a.py": "a = 1\n",
+            "src/README.md": "# src\n",
+            "src/d.py": "d = 4\n",
+        },
+    )
+    table = DocumentTable(
+        id="src",
+        type="yaml",
+        paths=["src/files.yaml"],
+        records="files",
+        body_file="path",
+        exclude=["README.md"],
+    )
+    # 実行
+    result = loader_module.unindexed_files(tmp_path, "src/files.yaml", ["src/a.py"], table)
+    # 検証
+    assert result == ["src/d.py"]

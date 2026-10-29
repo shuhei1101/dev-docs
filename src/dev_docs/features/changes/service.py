@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from datetime import date
-from pathlib import PurePosixPath
 from typing import Any
 
 from dev_docs.features.access.service import resolve_read_targets
@@ -72,11 +71,7 @@ def _range_documents(
             continue
         relative = change.path if prefix == "." else change.path.removeprefix(f"{prefix}/")
         table = next(
-            (
-                row
-                for row in source.config.documents
-                if row.enabled and any(PurePosixPath(relative).full_match(p) for p in row.paths)
-            ),
+            (row for row in source.config.documents if row.enabled and row.matches(relative)),
             None,
         )
         if table is None:

@@ -69,6 +69,36 @@ def env(
     )
 
 
+@pytest.fixture
+def excluded_env(
+    tmp_path: Path,
+    git_repo: Callable[..., Path],
+    make_source_config: Callable[..., SourceConfig],
+    make_served_source: Callable[..., ServedSource],
+    make_registry: Callable[..., SourceRegistry],
+) -> ChangesEnv:
+    """README を除外する行 `rule` と、README を集める行 `index` を持つ git リポジトリの配信元を返す。"""
+    clone = git_repo({"docs/note.txt": "メモ\n"})
+    # 除外が効かないと README を最初の行 `rule` が YAML として読み、文書にならない
+    rule = DocumentTable(id="rule", type="yaml", paths=["docs/rule/*.md"], exclude=["README.md"])
+    index = DocumentTable(id="index", type="markdown", paths=["docs/**/README.md"])
+    source = make_served_source(
+        id="sample",
+        root=clone,
+        config=make_source_config(documents=[rule, index]),
+        is_git=True,
+        repo_root=clone,
+        scope_write=[str(clone)],
+    )
+    return ChangesEnv(
+        registry=make_registry(source),
+        store=DocumentStore(SnapshotStore(tmp_path / "snapshots")),
+        seen=SeenStore(tmp_path / "seen.sqlite3", retention_days=7),
+        source=source,
+        clone=clone,
+    )
+
+
 def test_list_changes(
     env: ChangesEnv, commit_all: Callable[..., str], run_git: Callable[..., str]
 ) -> None:
@@ -143,3 +173,16 @@ def test_list_changes_when_to_without_from(env: ChangesEnv) -> None:
     with pytest.raises(InvalidArgumentError) as exc_info:
         env.list(to="HEAD")
     assert exc_info.value.violations[0].path == "to"
+
+
+def test_list_changes_when_excluded(
+    excluded_env: ChangesEnv, commit_all: Callable[..., str], run_git: Callable[..., str]
+) -> None:
+    """除外の名前に当たるファイルは次の行へ進む（正常系）。"""
+    # 準備
+    first = run_git(excluded_env.clone, "rev-parse", "HEAD").strip()
+    commit_all(excluded_env.clone, {"docs/rule/README.md": "# 目次\n"})
+    # 実行
+    result = excluded_env.list(**{"from": first})
+    # 検証
+    assert [(item.id, item.change) for item in result.items] == [("docs/rule/README", "added")]

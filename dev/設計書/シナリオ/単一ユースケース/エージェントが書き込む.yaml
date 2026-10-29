@@ -229,6 +229,31 @@ scenarios:
       - '`isError: true` で、参照元の文書 1 の `id` と `on_referenced: unlink` で消せることを返す'
       - 文書 2 のファイルも文書 1 も変わらない
     test: test_error_when_delete_referenced
+  - name: 異常シナリオ（置き場所が除外の名前に当たる）
+    setup:
+      - name: Mock
+        description: なし（実環境で実行）
+      - name: 文書の行
+        description: 'sample の `dev-docs.yaml` の行 `rule`（`type: yaml`・`paths: [docs/rule/*.yaml]`・`exclude: [index.yaml]`）'
+        notes: '`docs/rule/index.yaml` は目次で、行 `rule` の文書ではない'
+      - name: dev-docs
+        description: sample を配信している dev-docs
+        notes: '`worktree` にワークツリー x のパスを渡す'
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        actor A as エージェント
+        participant M as 文書の MCP（/mcp）
+        participant WT as ワークツリー x
+
+        A->>M: write_docs(operations: create・kind rule・id index)
+        M->>M: 置き場所 docs/rule/index.yaml のファイル名が rule の exclude に当たる
+        M-->>A: エラー（添字 0・置き場所が exclude に当たること・直し方）
+      ```
+    expected:
+      - '`isError: true` で、添字 0 の `kind` の違反として、置き場所 `docs/rule/index.yaml` が行 `rule` の `exclude` に当たることと直し方を返す'
+      - ワークツリー x の `docs/rule/index.yaml` は変わらない（無ければ作られない）
+    test: test_error_when_placement_excluded
 lead: エージェントが文書の MCP の `write_docs`・`delete_docs` で、作業ツリーの YAML の文書を検査に通してから作る・直す・消す。
 issue: 3
 primary_actor: エージェント（Claude Code）
