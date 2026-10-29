@@ -244,7 +244,7 @@ response:
     description: 待ち受けたアドレスと、配信している配信元の ID
   - name: エラーログ
     type: str
-    description: '検証に失敗した配信元ごとに `{id}: {キーのパス}: {理由}`'
+    description: '検証に失敗した配信元ごとに `{id}: {キーのパス}: {理由}`。その配信元の設定の `version` が古いときは、`dev-docs migrate --source` で移し替えられることも出す'
   - name: 警告のログ
     type: str
     description: 設定のバージョンが古い配信元の ID・設定のバージョン・サーバーが読めるバージョン。配信元と documents の行ごとに、`metadata` に書いた列が無い文書の件数・管理用の YAML に無いファイル・ファイルが無い行（`missing_body_file`）が 0 件でなければ、その件数とパス
