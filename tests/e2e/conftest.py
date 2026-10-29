@@ -1,18 +1,26 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import os
+import queue
+import re
+import shutil
+import signal
 import socket
 import subprocess
 import sys
+import threading
 import time
-from collections.abc import Callable, Iterator
+from collections.abc import Callable, Iterator, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
 import httpx
 import pytest
+from jsonschema import Draft202012Validator
+from ruamel.yaml import YAML
 
 RUN_DIR_ENV = "DEV_DOCS_RUN_DIR"
 NOT_RUN = "not_run"
@@ -25,6 +33,10 @@ MCP_HEADERS = {
 }
 LISTEN_STATE = "0A"
 TCP_TABLES = ("/proc/net/tcp", "/proc/net/tcp6")
+UPDATE_TIMEOUT_SEC = 300
+RESTART_WAIT_SEC = 90
+START_WAIT_SEC = 60
+POLL_INTERVAL_SEC = 0.5
 
 SAMPLE_SCHEMA = """\
 type: object
@@ -125,6 +137,44 @@ class ToolResult:
         return json.loads(self.text)
 
 
+def call_tool(
+    port: int,
+    path: str,
+    name: str,
+    arguments: dict[str, Any],
+    *,
+    timeout_sec: float = HTTP_TIMEOUT_SEC,
+) -> ToolResult:
+    """`127.0.0.1:{port}` の MCP のツールを JSON-RPC の `tools/call` で呼ぶ。"""
+    response = httpx.post(
+        f"http://127.0.0.1:{port}{path}",
+        headers=MCP_HEADERS,
+        json={
+            "jsonrpc": "2.0",
+            "id": 1,
+            "method": "tools/call",
+            "params": {"name": name, "arguments": arguments},
+        },
+        timeout=timeout_sec,
+    )
+    result = response.json()["result"]
+    return ToolResult(
+        is_error=bool(result.get("isError")),
+        text="".join(part["text"] for part in result["content"] if part["type"] == "text"),
+    )
+
+
+def list_tools(port: int, path: str = "/mcp/") -> list[str]:
+    """`127.0.0.1:{port}` の MCP のツールの名前を並べる。"""
+    response = httpx.post(
+        f"http://127.0.0.1:{port}{path}",
+        headers=MCP_HEADERS,
+        json={"jsonrpc": "2.0", "id": 1, "method": "tools/list"},
+        timeout=HTTP_TIMEOUT_SEC,
+    )
+    return [tool["name"] for tool in response.json()["result"]["tools"]]
+
+
 @dataclass
 class SourceSpec:
     """端末の設定に並べる配信元 1 つ（フォルダと権限）。"""
@@ -168,20 +218,15 @@ class Served:
 
     def call(self, name: str, **arguments: Any) -> ToolResult:
         """`/mcp` のツールを HTTP で呼ぶ。"""
-        response = self._post(
-            "/mcp/",
-            {
-                "jsonrpc": "2.0",
-                "id": 1,
-                "method": "tools/call",
-                "params": {"name": name, "arguments": arguments},
-            },
-        )
-        result = response.json()["result"]
-        return ToolResult(
-            is_error=bool(result.get("isError")),
-            text="".join(part["text"] for part in result["content"] if part["type"] == "text"),
-        )
+        return call_tool(self.port, "/mcp/", name, arguments)
+
+    def call_admin(self, name: str, **arguments: Any) -> ToolResult:
+        """`/_admin/mcp` のツールを HTTP で呼ぶ。"""
+        return call_tool(self.port, "/_admin/mcp/", name, arguments)
+
+    def update(self) -> ToolResult:
+        """`/_admin/mcp` の `update` を呼ぶ（`git pull` と `uv sync` を待つため長く待つ）。"""
+        return call_tool(self.port, "/_admin/mcp/", "update", {}, timeout_sec=UPDATE_TIMEOUT_SEC)
 
     def stdout(self) -> str:
         """ここまでの標準出力を返す。"""
@@ -319,14 +364,23 @@ def add_worktree(run_git: Callable[..., str]) -> Callable[..., Path]:
     return _add
 
 
-def _settings_text(root: Path, specs: list[SourceSpec]) -> str:
+def _settings_text(
+    root: Path,
+    specs: list[SourceSpec],
+    *,
+    clone: Path | None = None,
+    version: str = "1",
+    extra: str = "",
+) -> str:
     """端末の設定の YAML を組み立てる。"""
     lines = [
-        'version: "1"',
-        f"clone: {root / 'clone'}",
+        f'version: "{version}"',
+        f"clone: {clone if clone is not None else root / 'clone'}",
         f"state_dir: {root / 'state'}",
-        "sources:" if specs else "sources: []",
     ]
+    if extra:
+        lines.append(extra.rstrip("\n"))
+    lines.append("sources:" if specs else "sources: []")
     for spec in specs:
         lines.append(f"  - id: {spec.id}")
         lines.append("    config:")
@@ -344,9 +398,16 @@ def _settings_text(root: Path, specs: list[SourceSpec]) -> str:
 def write_settings(tmp_path: Path) -> Callable[..., Path]:
     """端末の設定の YAML を書いて、そのパスを返す関数を返す。"""
 
-    def _write(*specs: SourceSpec, name: str = "settings.yaml") -> Path:
+    def _write(
+        *specs: SourceSpec,
+        name: str = "settings.yaml",
+        clone: Path | None = None,
+        version: str = "1",
+        extra: str = "",
+    ) -> Path:
         path = tmp_path / name
-        path.write_text(_settings_text(tmp_path, list(specs)), encoding="utf-8")
+        text = _settings_text(tmp_path, list(specs), clone=clone, version=version, extra=extra)
+        path.write_text(text, encoding="utf-8")
         return path
 
     return _write
@@ -370,14 +431,17 @@ def launch(tmp_path: Path) -> Iterator[Callable[..., Served]]:
     started: list[Served] = []
     counter = iter(range(1000))
 
-    def _launch(settings: Path, port: int) -> Served:
+    def _launch(
+        settings: Path, port: int, *, python: Path | None = None, cwd: Path | None = None
+    ) -> Served:
         number = next(counter)
         stdout_path = tmp_path / f"serve-{number}.stdout"
         stderr_path = tmp_path / f"serve-{number}.stderr"
         env = {**os.environ, "DEV_DOCS_CONFIG": str(settings), "DEV_DOCS_PORT": str(port)}
+        interpreter = str(python) if python is not None else sys.executable
         with stdout_path.open("wb") as out, stderr_path.open("wb") as err:
             process = subprocess.Popen(
-                [sys.executable, "-m", "dev_docs", "serve"], env=env, stdout=out, stderr=err
+                [interpreter, "-m", "dev_docs", "serve"], env=env, cwd=cwd, stdout=out, stderr=err
             )
         served = Served(process, port, settings, stdout_path, stderr_path)
         started.append(served)
@@ -414,10 +478,662 @@ def serve(
 ) -> Callable[..., Served]:
     """配信元を並べた端末の設定で `dev-docs serve` を起動し、応答するまで待つ関数を返す。"""
 
-    def _serve(*specs: SourceSpec) -> Served:
-        served = launch(write_settings(*specs), free_port())
+    def _serve(
+        *specs: SourceSpec, clone: Path | None = None, extra: str = "", port: int | None = None
+    ) -> Served:
+        settings = write_settings(*specs, clone=clone, extra=extra)
+        served = launch(settings, port if port is not None else free_port())
         served.folders.update({spec.id: spec.folder for spec in specs})
         _wait_until_serving(served)
         return served
 
     return _serve
+
+
+# === 状態の確かめと待ちの道具 ===
+
+
+def serve_pids(port: int) -> list[int]:
+    """`DEV_DOCS_PORT` が `port` の `dev-docs serve` のプロセス ID を /proc から集める。"""
+    marker = f"DEV_DOCS_PORT={port}".encode()
+    found: list[int] = []
+    for entry in Path("/proc").iterdir():
+        if not entry.name.isdigit():
+            continue
+        try:
+            command = (entry / "cmdline").read_bytes().split(b"\0")
+            environment = (entry / "environ").read_bytes().split(b"\0")
+        except OSError:
+            continue
+        if b"dev_docs" in command and b"serve" in command and marker in environment:
+            found.append(int(entry.name))
+    return sorted(found)
+
+
+def wait_for_port(port: int, timeout_sec: float = START_WAIT_SEC) -> None:
+    """`127.0.0.1:{port}` の画面の API が応答するまで待つ。"""
+    deadline = time.monotonic() + timeout_sec
+    while time.monotonic() < deadline:
+        try:
+            if httpx.get(f"http://127.0.0.1:{port}/_api/openapi.json", timeout=1).is_success:
+                return
+        except httpx.TransportError:
+            pass
+        time.sleep(POLL_INTERVAL_SEC)
+    message = f"{port} の待ち受けが始まらなかった"
+    raise AssertionError(message)
+
+
+def wait_for_version(port: int, version: str, timeout_sec: float = RESTART_WAIT_SEC) -> Any:
+    """管理の MCP の `status` が `version` を返すまで待ち、その結果（JSON）を返す。"""
+    deadline = time.monotonic() + timeout_sec
+    seen = "応答なし"
+    while time.monotonic() < deadline:
+        try:
+            data = call_tool(port, "/_admin/mcp/", "status", {"format": "json"}).data
+        except httpx.HTTPError, ValueError, KeyError:
+            data = None
+        if data is not None:
+            if data["version"] == version:
+                return data
+            seen = data["version"]
+        time.sleep(POLL_INTERVAL_SEC)
+    message = f"status が {version} を返さなかった（最後に見たバージョン: {seen}）"
+    raise AssertionError(message)
+
+
+def stop_servers(port: int) -> None:
+    """`port` で動く `dev-docs serve` を止める。"""
+    for pid in serve_pids(port):
+        try:
+            os.kill(pid, signal.SIGTERM)
+        except ProcessLookupError:
+            continue
+    deadline = time.monotonic() + SERVE_TIMEOUT_SEC
+    while serve_pids(port) and time.monotonic() < deadline:
+        time.sleep(POLL_INTERVAL_SEC)
+    for pid in serve_pids(port):
+        os.kill(pid, signal.SIGKILL)
+
+
+@pytest.fixture
+def list_mcp_tools() -> Callable[..., list[str]]:
+    """ポートで待ち受ける MCP のツールの名前を並べる関数を返す。"""
+    return list_tools
+
+
+@pytest.fixture
+def serve_pid_count() -> Callable[[int], int]:
+    """ポートで動く `dev-docs serve` のプロセスの数を返す関数を返す。"""
+
+    def _count(port: int) -> int:
+        return len(serve_pids(port))
+
+    return _count
+
+
+@pytest.fixture
+def wait_for_server() -> Callable[..., None]:
+    """ポートの画面の API が応答するまで待つ関数を返す。"""
+    return wait_for_port
+
+
+@pytest.fixture
+def wait_for_new_version() -> Callable[..., Any]:
+    """管理の MCP の `status` が指したバージョンを返すまで待つ関数を返す。"""
+    return wait_for_version
+
+
+@pytest.fixture
+def call_mcp_tool() -> Callable[..., ToolResult]:
+    """ポートの MCP のツールを呼ぶ関数を返す（`call_mcp_tool(port, path, name, **引数)`）。"""
+
+    def _call(port: int, path: str, name: str, **arguments: Any) -> ToolResult:
+        return call_tool(port, path, name, arguments)
+
+    return _call
+
+
+@pytest.fixture
+def update_server() -> Callable[[int], ToolResult]:
+    """ポートの管理の MCP の `update` を、`git pull` と `uv sync` を待つ長さで呼ぶ関数を返す。"""
+
+    def _update(port: int) -> ToolResult:
+        return call_tool(port, "/_admin/mcp/", "update", {}, timeout_sec=UPDATE_TIMEOUT_SEC)
+
+    return _update
+
+
+@pytest.fixture
+def snapshot() -> Callable[[Path], dict[str, bytes]]:
+    """フォルダの下のファイルのパスと中身を集める関数を返す（`.git` の下は除く）。"""
+
+    def _snapshot(folder: Path) -> dict[str, bytes]:
+        return {
+            str(path.relative_to(folder)): path.read_bytes()
+            for path in sorted(folder.rglob("*"))
+            if path.is_file() and ".git" not in path.relative_to(folder).parts
+        }
+
+    return _snapshot
+
+
+@pytest.fixture
+def load_yaml_file() -> Callable[[Path], Any]:
+    """YAML のファイルを読んだ値を返す関数を返す。"""
+
+    def _load(path: Path) -> Any:
+        return YAML(typ="safe").load(path.read_text(encoding="utf-8"))
+
+    return _load
+
+
+@pytest.fixture
+def schema_errors() -> Callable[[Path, Any], list[str]]:
+    """YAML のスキーマで値を検証し、違反の文を並べる関数を返す。"""
+
+    def _errors(schema_file: Path, value: Any) -> list[str]:
+        schema = YAML(typ="safe").load(schema_file.read_text(encoding="utf-8"))
+        validator = Draft202012Validator(schema)
+        return [error.message for error in validator.iter_errors(value)]
+
+    return _errors
+
+
+# === dev-docs のクローン ===
+
+REPO_ROOT = Path(__file__).parents[2]
+CLONE_FILES = (
+    "src",
+    "templates",
+    "plugins",
+    ".claude-plugin",
+    "pyproject.toml",
+    "uv.lock",
+    ".python-version",
+)
+SETTINGS_QUERY = "src/dev_docs/features/settings/query.py"
+SETTINGS_SCHEMA_FILE = "src/dev_docs/schemas/settings.schema.yaml"
+NEXT_SETTINGS_PROPERTY = """\
+  script_timeout_seconds:
+    type: integer
+    title: スクリプトの制限時間（秒）
+    minimum: 1
+"""
+
+
+@dataclass
+class DevDocsClone:
+    """上流の bare リポジトリと、その dev-docs のクローン。"""
+
+    root: Path
+    work: Path
+    bare: Path
+    clone: Path
+    run_git: Callable[..., str]
+
+    @property
+    def python(self) -> Path:
+        """クローンの `.venv` の Python。"""
+        return self.clone / ".venv" / "bin" / "python"
+
+    def head(self) -> str:
+        """クローンの HEAD の SHA を返す。"""
+        return self.run_git(self.clone, "rev-parse", "HEAD").strip()
+
+    def push_upstream(self, files: dict[str, str], message: str = "upstream") -> str:
+        """上流の作業ツリーでファイルを書き換えて commit し、bare へ push して commit の SHA を返す。"""
+        for name, content in files.items():
+            target = self.work / name
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_text(content, encoding="utf-8")
+        self.run_git(self.work, "add", "-A")
+        self.run_git(self.work, "commit", "-m", message)
+        self.run_git(self.work, "push", str(self.bare), "develop")
+        return self.run_git(self.work, "rev-parse", "HEAD").strip()
+
+    def bump_version(self, version: str) -> dict[str, str]:
+        """`pyproject.toml` と `uv.lock` の dev-docs のバージョンを書き換えた内容を返す。"""
+        pyproject = (self.work / "pyproject.toml").read_text(encoding="utf-8")
+        lock = (self.work / "uv.lock").read_text(encoding="utf-8")
+        old = next(
+            line.split('"')[1] for line in pyproject.splitlines() if line.startswith("version = ")
+        )
+        return {
+            "pyproject.toml": pyproject.replace(f'version = "{old}"', f'version = "{version}"', 1),
+            "uv.lock": lock.replace(
+                f'name = "dev-docs"\nversion = "{old}"',
+                f'name = "dev-docs"\nversion = "{version}"',
+                1,
+            ),
+        }
+
+    def next_settings_version(self, steps: str, root: Path | None = None) -> dict[str, str]:
+        """端末の設定のバージョンを 1 つ上げ、`steps` の移し替えの手順を持つファイル一式を返す。
+
+        `script_timeout_sec` を `script_timeout_seconds` に改名できるよう、スキーマに新しいキーを追加する。
+        """
+        base = root if root is not None else self.work
+        query = (base / SETTINGS_QUERY).read_text(encoding="utf-8")
+        schema = (base / SETTINGS_SCHEMA_FILE).read_text(encoding="utf-8")
+        assert 'SETTINGS_VERSION = "1"' in query
+        assert schema.endswith("    minimum: 1\n")
+        return {
+            SETTINGS_QUERY: query.replace('SETTINGS_VERSION = "1"', 'SETTINGS_VERSION = "2"'),
+            SETTINGS_SCHEMA_FILE: schema + NEXT_SETTINGS_PROPERTY,
+            "src/dev_docs/migrations/settings/2/steps.yaml": steps,
+        }
+
+    def write_local(self, files: dict[str, str]) -> None:
+        """クローンの作業ツリーにファイルを書く（commit しない）。"""
+        for name, content in files.items():
+            target = self.clone / name
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_text(content, encoding="utf-8")
+
+    def migrate(self, settings: Path, *args: str) -> subprocess.CompletedProcess[str]:
+        """クローンの Python で `dev-docs migrate` を実行する。"""
+        return subprocess.run(
+            [str(self.python), "-m", "dev_docs", "migrate", *args],
+            cwd=self.clone,
+            env={**os.environ, "DEV_DOCS_CONFIG": str(settings)},
+            capture_output=True,
+            text=True,
+            timeout=SERVE_TIMEOUT_SEC,
+            check=False,
+        )
+
+
+@pytest.fixture
+def make_clone(
+    tmp_path: Path, run_git: Callable[..., str], monkeypatch: pytest.MonkeyPatch
+) -> Callable[..., DevDocsClone]:
+    """dev-docs 自身の小さなコピーを上流にしたクローンを `{tmp}/clone` に作る関数を返す。"""
+    # 依存はキャッシュから入れる（ネットワークを使わない。`update` の `uv sync` も同じ）
+    monkeypatch.setenv("UV_OFFLINE", "1")
+
+    def _make(*, sync: bool = True) -> DevDocsClone:
+        work = tmp_path / "upstream-work"
+        work.mkdir()
+        for name in CLONE_FILES:
+            source = REPO_ROOT / name
+            if source.is_dir():
+                shutil.copytree(source, work / name, ignore=shutil.ignore_patterns("__pycache__"))
+            else:
+                shutil.copy2(source, work / name)
+        run_git(work, "init", "-b", "develop")
+        run_git(work, "add", "-A")
+        run_git(work, "commit", "-m", "init")
+        bare = tmp_path / "upstream.git"
+        run_git(tmp_path, "clone", "--bare", str(work), str(bare))
+        clone = tmp_path / "clone"
+        run_git(tmp_path, "clone", str(bare), str(clone))
+        if sync:
+            subprocess.run(["uv", "sync"], cwd=clone, check=True, capture_output=True)
+        return DevDocsClone(tmp_path, work, bare, clone, run_git)
+
+    return _make
+
+
+@pytest.fixture
+def serve_from_clone(
+    write_settings: Callable[..., Path],
+    free_port: Callable[[], int],
+    launch: Callable[..., Served],
+) -> Callable[..., Served]:
+    """クローンの `.venv` の Python で `dev-docs serve` を起動し、応答するまで待つ関数を返す。"""
+
+    def _serve(
+        clone: DevDocsClone, *specs: SourceSpec, extra: str = "", port: int | None = None
+    ) -> Served:
+        settings = write_settings(*specs, clone=clone.clone, extra=extra)
+        served = launch(
+            settings,
+            port if port is not None else free_port(),
+            python=clone.python,
+            cwd=clone.clone,
+        )
+        served.folders.update({spec.id: spec.folder for spec in specs})
+        _wait_until_serving(served)
+        return served
+
+    return _serve
+
+
+# === Claude Code（claude -p）を動かす道具 ===
+
+CLAUDE_BIN = "claude"
+CLAUDE_MODEL_ENV = "DEV_DOCS_E2E_CLAUDE_MODEL"
+DEFAULT_CLAUDE_MODEL = "sonnet"
+CLAUDE_AUTH_ENVS = ("CLAUDE_CODE_OAUTH_TOKEN", "ANTHROPIC_API_KEY")
+CLAUDE_RUN_TIMEOUT_SEC = 900
+CLAUDE_COMMAND_TIMEOUT_SEC = 180
+CLAUDE_EXIT_TIMEOUT_SEC = 60
+MARKETPLACE_SOURCE = REPO_ROOT
+PLUGIN_ID = "dev-docs@dev-docs"
+DOCS_TOOL_PREFIX = "mcp__plugin_dev-docs_dev-docs__"
+ENV_MARKER = ("E2E_KEEP", "keep")
+REAL_FILES = (
+    "settings.json",
+    "plugins/installed_plugins.json",
+    "plugins/known_marketplaces.json",
+)
+
+
+def _fingerprint(path: Path) -> str:
+    """ファイルの中身のハッシュを返す（ファイルが無ければ空の文字列）。"""
+    return hashlib.sha256(path.read_bytes()).hexdigest() if path.is_file() else ""
+
+
+def real_fingerprints() -> dict[str, str]:
+    """テストが変えてはいけない、端末の `~/.claude` と `~/.config/dev-docs` の中身のハッシュを集める。"""
+    found: dict[str, str] = {}
+    config_dirs = [Path.home() / ".claude"]
+    if os.environ.get("CLAUDE_CONFIG_DIR"):
+        config_dirs.append(Path(os.environ["CLAUDE_CONFIG_DIR"]).expanduser())
+    for directory in config_dirs:
+        for name in REAL_FILES:
+            found[str(directory / name)] = _fingerprint(directory / name)
+    dev_docs_dir = Path.home() / ".config" / "dev-docs"
+    if dev_docs_dir.is_dir():
+        for path in sorted(dev_docs_dir.rglob("*")):
+            found[str(path)] = _fingerprint(path)
+    else:
+        found[str(dev_docs_dir)] = ""
+    return found
+
+
+def _uv_directory(*command: str) -> str:
+    """`uv` の置き場所を `uv cache dir` などで引く。"""
+    result = subprocess.run(
+        ["uv", *command], capture_output=True, text=True, timeout=30, check=False
+    )
+    return result.stdout.strip()
+
+
+@dataclass
+class ClaudeRun:
+    """`claude -p` を 1 回動かした結果。"""
+
+    events: list[dict[str, Any]]
+    returncode: int
+    stderr: str
+    questions: list[dict[str, Any]] = field(default_factory=list)
+
+    @property
+    def result(self) -> dict[str, Any]:
+        """最後の `result` のイベント。"""
+        results = [event for event in self.events if event.get("type") == "result"]
+        assert results, f"claude の result が無い\n{self.stderr}"
+        return results[-1]
+
+    @property
+    def text(self) -> str:
+        """スキルの最後の応答。"""
+        return str(self.result.get("result", ""))
+
+    @property
+    def init(self) -> dict[str, Any]:
+        """セッションの `system` の `init` のイベント。"""
+        inits = [
+            event
+            for event in self.events
+            if event.get("type") == "system" and event.get("subtype") == "init"
+        ]
+        assert inits, f"claude の init が無い\n{self.stderr}"
+        return inits[0]
+
+    @property
+    def tool_uses(self) -> list[tuple[str, dict[str, Any]]]:
+        """モデルが呼んだツールの名前と入力。"""
+        calls: list[tuple[str, dict[str, Any]]] = []
+        for event in self.events:
+            if event.get("type") != "assistant":
+                continue
+            for block in event.get("message", {}).get("content", []):
+                if isinstance(block, dict) and block.get("type") == "tool_use":
+                    calls.append((block["name"], block.get("input", {})))
+        return calls
+
+    @property
+    def question_texts(self) -> list[str]:
+        """利用者に聞かれた質問の文。"""
+        return [str(question.get("question", "")) for question in self.questions]
+
+    def hook_responses(self, hook_event: str) -> list[dict[str, Any]]:
+        """`hook_event` のフックの結果のイベント。"""
+        return [
+            event
+            for event in self.events
+            if event.get("type") == "system"
+            and event.get("subtype") == "hook_response"
+            and event.get("hook_event") == hook_event
+        ]
+
+    def session_start_context(self) -> tuple[int | None, str]:
+        """SessionStart のフックの終了コードと、セッションの文脈に入れた文を返す。"""
+        responses = self.hook_responses("SessionStart")
+        assert responses, f"SessionStart のフックの結果が無い\n{self.stderr}"
+        response = responses[-1]
+        output = str(response.get("stdout") or response.get("output") or "")
+        context = ""
+        try:
+            parsed = json.loads(output)
+        except ValueError:
+            parsed = None
+        if isinstance(parsed, dict):
+            context = str(parsed.get("hookSpecificOutput", {}).get("additionalContext", ""))
+        return response.get("exit_code"), context
+
+
+def _choose(question: dict[str, Any], rules: Sequence[tuple[str, str]]) -> str:
+    """質問への答えを決める。`rules` の正規表現に当たればその答え、無ければ先頭の選択肢。"""
+    text = f"{question.get('header', '')} {question.get('question', '')}"
+    for pattern, answer in rules:
+        if re.search(pattern, text):
+            return answer
+    options = question.get("options") or []
+    return str(options[0]["label"]) if options else ""
+
+
+def _send(process: subprocess.Popen[str], message: dict[str, Any]) -> None:
+    """標準入力へ JSON の 1 行を送る。"""
+    assert process.stdin is not None
+    process.stdin.write(json.dumps(message, ensure_ascii=False) + "\n")
+    process.stdin.flush()
+
+
+def _respond(
+    process: subprocess.Popen[str],
+    event: dict[str, Any],
+    rules: Sequence[tuple[str, str]],
+    questions: list[dict[str, Any]],
+) -> None:
+    """ツールの許可の要求に答える。AskUserQuestion は `rules` か先頭の選択肢で答える。"""
+    request = event.get("request", {})
+    request_id = event.get("request_id")
+    if request.get("subtype") != "can_use_tool":
+        reply: dict[str, Any] = {
+            "subtype": "error",
+            "request_id": request_id,
+            "error": f"未対応の要求: {request.get('subtype')}",
+        }
+    else:
+        tool_input = dict(request.get("input") or {})
+        if request.get("tool_name") == "AskUserQuestion":
+            asked = tool_input.get("questions", [])
+            questions.extend(asked)
+            tool_input["answers"] = {item["question"]: _choose(item, rules) for item in asked}
+        reply = {
+            "subtype": "success",
+            "request_id": request_id,
+            "response": {"behavior": "allow", "updatedInput": tool_input},
+        }
+    _send(process, {"type": "control_response", "response": reply})
+
+
+@dataclass
+class ClaudeHome:
+    """テスト用の一時フォルダに作った Claude Code の設定の場所（プラグイン `dev-docs` をユーザースコープに入れてある）。"""
+
+    root: Path
+    config_dir: Path
+    home: Path
+    port: int
+    env: dict[str, str]
+    before: dict[str, str]
+
+    def settings_json(self) -> dict[str, Any]:
+        """設定の場所の `settings.json` を読む。"""
+        path = self.config_dir / "settings.json"
+        return dict(json.loads(path.read_text(encoding="utf-8"))) if path.exists() else {}
+
+    def set_env(self, **values: str) -> None:
+        """`settings.json` の `env` に値を追加する。ほかのキーは変えない。"""
+        data = self.settings_json()
+        data.setdefault("env", {}).update(values)
+        (self.config_dir / "settings.json").write_text(
+            json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8"
+        )
+
+    def real_changes(self) -> list[str]:
+        """テストを流した端末の `~/.claude` と `~/.config/dev-docs` で、変わったファイルを返す。"""
+        after = real_fingerprints()
+        return sorted(path for path in after if after[path] != self.before.get(path))
+
+    def run(
+        self,
+        prompt: str,
+        *,
+        cwd: Path,
+        answers: Sequence[tuple[str, str]] = (),
+        timeout_sec: float = CLAUDE_RUN_TIMEOUT_SEC,
+    ) -> ClaudeRun:
+        """`claude -p` で 1 回動かす。AskUserQuestion には `answers` か先頭の選択肢で答える。"""
+        argv = [
+            CLAUDE_BIN,
+            "-p",
+            "--input-format",
+            "stream-json",
+            "--output-format",
+            "stream-json",
+            "--verbose",
+            "--include-hook-events",
+            "--permission-prompt-tool",
+            "stdio",
+            "--model",
+            os.environ.get(CLAUDE_MODEL_ENV, DEFAULT_CLAUDE_MODEL),
+            "--no-session-persistence",
+        ]
+        stderr_path = self.root / f"claude-{len(list(self.root.glob('claude-*.stderr')))}.stderr"
+        with stderr_path.open("w", encoding="utf-8") as err:
+            process = subprocess.Popen(
+                argv,
+                cwd=cwd,
+                env=self.env,
+                stdin=subprocess.PIPE,
+                stdout=subprocess.PIPE,
+                stderr=err,
+                text=True,
+                encoding="utf-8",
+            )
+        lines: queue.Queue[str | None] = queue.Queue()
+
+        def _read() -> None:
+            assert process.stdout is not None
+            for line in process.stdout:
+                lines.put(line)
+            lines.put(None)
+
+        reader = threading.Thread(target=_read, daemon=True)
+        reader.start()
+        _send(process, {"type": "user", "message": {"role": "user", "content": prompt}})
+        events: list[dict[str, Any]] = []
+        questions: list[dict[str, Any]] = []
+        deadline = time.monotonic() + timeout_sec
+        while True:
+            if time.monotonic() > deadline:
+                process.kill()
+                message = f"claude が {timeout_sec} 秒で終わらなかった\n{stderr_path.read_text(encoding='utf-8')}"
+                raise AssertionError(message)
+            try:
+                line = lines.get(timeout=5)
+            except queue.Empty:
+                continue
+            if line is None:
+                break
+            try:
+                event = json.loads(line)
+            except ValueError:
+                continue
+            events.append(event)
+            if event.get("type") == "control_request":
+                _respond(process, event, answers, questions)
+            elif event.get("type") == "result":
+                break
+        assert process.stdin is not None
+        process.stdin.close()
+        try:
+            returncode = process.wait(timeout=CLAUDE_EXIT_TIMEOUT_SEC)
+        except subprocess.TimeoutExpired:
+            process.kill()
+            returncode = process.wait()
+        # 読み取りを終えてから標準出力を閉じる（開きっぱなしの警告を残さない）
+        reader.join(timeout=CLAUDE_EXIT_TIMEOUT_SEC)
+        assert process.stdout is not None
+        process.stdout.close()
+        return ClaudeRun(events, returncode, stderr_path.read_text(encoding="utf-8"), questions)
+
+
+@pytest.fixture
+def claude_home(tmp_path: Path, free_port: Callable[[], int]) -> Iterator[ClaudeHome]:
+    """`CLAUDE_CONFIG_DIR` と `HOME` を一時フォルダにした Claude Code の環境を作る（終了時に dev-docs を止める）。"""
+    if not any(os.environ.get(name) for name in CLAUDE_AUTH_ENVS):
+        pytest.fail(
+            "claude -p の認証が無い。環境変数 CLAUDE_CODE_OAUTH_TOKEN（claude setup-token）か"
+            " ANTHROPIC_API_KEY を渡す（端末の ~/.claude の認証は一時フォルダへコピーしない）",
+            pytrace=False,
+        )
+    root = tmp_path / "claude"
+    config_dir = root / "config"
+    home = root / "home"
+    config_dir.mkdir(parents=True)
+    home.mkdir()
+    (config_dir / ".claude.json").write_text(
+        json.dumps({"hasCompletedOnboarding": True}), encoding="utf-8"
+    )
+    port = free_port()
+    env = {
+        key: value
+        for key, value in os.environ.items()
+        if not key.startswith(("CLAUDE", "DEV_DOCS_")) or key == "CLAUDE_CODE_OAUTH_TOKEN"
+    }
+    env.update(
+        {
+            "HOME": str(home),
+            "CLAUDE_CONFIG_DIR": str(config_dir),
+            "DEV_DOCS_PORT": str(port),
+            "UV_OFFLINE": "1",
+            "UV_CACHE_DIR": _uv_directory("cache", "dir"),
+            "UV_PYTHON_INSTALL_DIR": _uv_directory("python", "dir"),
+        }
+    )
+    before = real_fingerprints()
+    for command in (
+        ["plugin", "marketplace", "add", str(MARKETPLACE_SOURCE), "--scope", "user"],
+        ["plugin", "install", PLUGIN_ID, "--scope", "user"],
+    ):
+        result = subprocess.run(
+            [CLAUDE_BIN, *command],
+            cwd=root,
+            env=env,
+            capture_output=True,
+            text=True,
+            timeout=CLAUDE_COMMAND_TIMEOUT_SEC,
+            check=False,
+        )
+        assert result.returncode == 0, f"claude {' '.join(command)}\n{result.stdout}{result.stderr}"
+    claude = ClaudeHome(root, config_dir, home, port, env, before)
+    claude.set_env(**{ENV_MARKER[0]: ENV_MARKER[1]})
+    yield claude
+    stop_servers(port)

@@ -1,11 +1,12 @@
 title: "開発ドキュメントサーバー / 起動"
 lead: |-
-  `dev-docs serve` の処理。端末の設定と配信元を読み、部品を配線して、画面の API・文書の MCP・管理の MCP を 1 つのアプリとして待ち受ける。
+  `dev-docs serve` と `dev-docs migrate` の処理。端末の設定と配信元を読み、部品を配線して、画面の API・文書の MCP・管理の MCP・セッションの文脈を 1 つのアプリとして待ち受ける。
+  再起動を要求されて止まったときは、同じプロセスを `serve` で置き換える。
   例外から problem+json への変換もここで登録する。
 directory: |-
   ```text
   src/dev_docs/
-  ├─ main.py                    # Handlers / build_handlers / reload_sources / run_serve / PortInUseError
+  ├─ main.py                    # Handlers / build_handlers / reload_sources / run_serve / run_migrate / PortInUseError
   └─ server/
      ├─ app.py                  # build_app（ルートと MCP のマウント）
      ├─ lifespan.py             # build_lifespan（MCP のセッションの管理と記録の削除）
@@ -20,7 +21,9 @@ diagrams:
         待ち受けの開始 ..> ポートの確かめ
         待ち受けの開始 ..> 部品の配線
         待ち受けの開始 ..> アプリの組み立て
+        待ち受けの開始 ..> 再起動の制御 : 取り付ける
         部品の配線 ..> 配信元の一覧 : 読み直す
+        部品の配線 ..> 再起動の制御 : 作る
         部品の配線 ..> 配線済みの関数 : 作る
         部品の配線 ..> 配信元の読み直し : 束ねる
         配信元の読み直し ..> 配信元の一覧 : 読み直す
@@ -28,6 +31,7 @@ diagrams:
         アプリの組み立て ..> 管理の MCP の組み立て
         アプリの組み立て ..> 端末の設定の入口
         アプリの組み立て ..> 画面の入口
+        アプリの組み立て ..> セッションの文脈のルーター
         アプリの組み立て ..> 例外の変換の登録
         アプリの組み立て ..> アプリの寿命
         class 待ち受けの開始 {
@@ -51,9 +55,14 @@ diagrams:
         class 配信元の一覧 {
           +読み直す(端末の設定) list
         }
+        class 再起動の制御 {
+          +サーバーの取り付け(サーバー) None
+          +要求済み bool
+        }
         class 配線済みの関数 {
           +端末の設定: TerminalConfig
           +配信元の一覧: SourceRegistry
+          +再起動の制御: RestartControl
         }
         class 文書の MCP の組み立て {
           <<function>>
@@ -67,6 +76,9 @@ diagrams:
         class 画面の入口 {
           <<function>>
         }
+        class セッションの文脈のルーター {
+          <<function>>
+        }
         class 例外の変換の登録 {
           <<function>>
         }
@@ -76,9 +88,33 @@ diagrams:
         click 端末の設定の読み込み href "./端末の設定.py.yaml#端末の設定の読み込み"
         click 端末の設定の入口 href "./端末の設定.py.yaml#端末の設定の入口"
         click 配信元の一覧 href "./配信元.py.yaml#配信元の一覧"
+        click 再起動の制御 href "./features/lifecycle/control.py.yaml#再起動の制御"
         click 文書の MCP の組み立て href "./文書のMCP.py.yaml#文書の MCP の組み立て"
         click 管理の MCP の組み立て href "./文書のMCP.py.yaml#管理の MCP の組み立て"
         click 画面の入口 href "./画面のAPI.py.yaml#画面の入口"
+        click セッションの文脈のルーター href "./features/session_context/route.py.yaml#セッションの文脈のルーター"
+  - name: 設定の移し替え
+    diagram: |-
+      classDiagram
+        direction TD
+        設定の移し替えの実行 ..> 対象の決定
+        設定の移し替えの実行 ..> 当てる手順の一覧
+        設定の移し替えの実行 ..> 移し替えの適用
+        class 設定の移し替えの実行 {
+          <<function>>
+        }
+        class 対象の決定 {
+          <<function>>
+        }
+        class 当てる手順の一覧 {
+          <<function>>
+        }
+        class 移し替えの適用 {
+          <<function>>
+        }
+        click 対象の決定 href "./features/migrate/service.py.yaml#対象の決定"
+        click 当てる手順の一覧 href "./features/migrate/service.py.yaml#当てる手順の一覧"
+        click 移し替えの適用 href "./features/migrate/service.py.yaml#移し替えの適用"
 data_models:
   - name: Handlers
     title: 配線済みの関数
@@ -145,6 +181,11 @@ data_models:
         type: Callable[[TerminalConfig], list[SourceStatus]]
         access: 公開
         description: '『配信元の読み直し』をこの `Handlers` の部品で束ねたもの。配信元の保存が呼ぶ'
+      - name: restart
+        title: 再起動の制御
+        type: RestartControl
+        access: 公開
+        description: 再起動と更新の要求を 1 つずつにし、`run_serve` が止まった後に同じプロセスを置き換えるかを持つ（再起動と更新）
 classes:
   - name: PortInUseError
     title: ポートが使用中
@@ -203,9 +244,9 @@ functions:
     container: main.py
     usecase: 起動
     role: 入口
-    summary: 端末の設定を読み、配信元を配線して待ち受け、停止の合図まで動く
+    summary: 端末の設定を読み、配信元を配線して待ち受け、停止の合図まで動く。再起動を要求されて止まったときは同じプロセスを置き換える
     scope: public
-    side_effects: ポートで待ち受ける。`log_dir` にログを書く。標準出力・標準エラーに書く
+    side_effects: ポートで待ち受ける。`log_dir` にログを書く。標準出力・標準エラーに書く。再起動のときはプロセスを `os.execv` で置き換える
     args:
       - name: args
         title: 解析結果
@@ -224,8 +265,11 @@ functions:
          - `PortInUseError` の場合、`{bind}:{port} は使用中です。DEV_DOCS_PORT で別のポートを指定できます` を標準エラーに出し、`EXIT_PORT_IN_USE` を返す
       4. 部品を配線し（部品の配線）、アプリを組み立てる（アプリの組み立て）
       5. 標準出力に `http://{bind}:{port}/` と配信中の配信元の ID を 1 行ずつ出す
-      6. `uvicorn.Server(uvicorn.Config(app, host=bind, port=port, log_config=None))` を `run()` する。止まったら 0 を返す
+      6. `uvicorn.Server(uvicorn.Config(app, host=bind, port=port, log_config=None, timeout_graceful_shutdown=script_timeout_sec * SHUTDOWN_WAIT_FACTOR))` を作り、再起動の制御に取り付けて（サーバーの取り付け）`run()` する
          - 確かめた後に他のプロセスがポートを取り、uvicorn が待ち受けに失敗して止まった場合（`server.started` が `False`）、手順 3 と同じ本文を出して `EXIT_PORT_IN_USE` を返す
+      7. 止まった後、再起動を要求済み（`handlers.restart.requested`）かで分ける
+         - 要求済みの場合、ログのハンドラーを閉じ、`os.execv(sys.executable, [sys.executable, *SERVE_ARGV])` で同じプロセスを置き換える
+         - 要求が無い場合、0 を返す
     exceptions:
       - name: なし（終了コード 2）
         condition: 端末の設定が無い・違反する
@@ -254,6 +298,12 @@ functions:
         mock: なし
         expected: 3 を返し、標準エラーにポートの番号と `DEV_DOCS_PORT`
         exception: ポートで待ち受けられない
+      - name: test_run_serve_when_restart
+        case: 正常
+        summary: 再起動の要求で同じプロセスを置き換える
+        condition: 配信できる配信元 1 つの端末の設定。`uvicorn.Server.run` の中で `handlers.restart.request()` を呼ぶ
+        mock: '`uvicorn.Server.run`（`started` を `True` にして再起動を要求して戻る）・`os.execv`（呼ばれた引数を記録する偽物）'
+        expected: '`os.execv` が `sys.executable` と `[sys.executable, "-m", "dev_docs", "serve"]` で 1 回呼ばれる。`uvicorn.Config` の `timeout_graceful_shutdown` が `script_timeout_sec * 1.5`'
   - name: check_port
     title: ポートの確かめ
     kind: 関数
@@ -279,7 +329,7 @@ functions:
       type: None
       description: 待ち受けられるときは何も返さない
     process: |-
-      1. `socket.socket(AF_INET, SOCK_STREAM)` を `SO_REUSEADDR` を付けずに `(bind, port)` へ bind し、すぐに閉じる
+      1. `socket.socket(AF_INET, SOCK_STREAM)` に uvicorn と同じく `SO_REUSEADDR` を付けて `(bind, port)` へ bind し、すぐに閉じる
          - `OSError`（`EADDRINUSE`・`EACCES`）の場合、`PortInUseError` を送る
     exceptions:
       - name: PortInUseError
@@ -299,6 +349,12 @@ functions:
         mock: なし
         expected: '`PortInUseError` の `port` がそのポート'
         exception: bind に失敗する
+      - name: test_check_port_when_time_wait
+        case: 正常
+        summary: 閉じたばかりの接続が残るポート
+        condition: '`SO_REUSEADDR` 付きで待ち受けて 1 本受け、サーバー側から接続と待ち受けを閉じた直後のポート'
+        mock: なし
+        expected: 送らない
   - name: build_handlers
     title: 部品の配線
     kind: 関数
@@ -320,7 +376,7 @@ functions:
       description: 配線済みの関数
     process: |-
       1. `state_dir` を作る
-      2. 配信元の一覧・リビジョンの書き出し（`{state_dir}/snapshots`）・文書のストア・変換（`{state_dir}/converted`、制限時間は `script_timeout_sec`）・会話の記録（`{state_dir}/seen.sqlite3`、保持日数は `seen_retention_days`）・文書の検査（制限時間は `script_timeout_sec`）・配信元ごとの排他・表の列の設定（`{state_dir}/columns`）を作る
+      2. 配信元の一覧・リビジョンの書き出し（`{state_dir}/snapshots`）・文書のストア・変換（`{state_dir}/converted`、制限時間は `script_timeout_sec`）・会話の記録（`{state_dir}/seen.sqlite3`、保持日数は `seen_retention_days`）・文書の検査（制限時間は `script_timeout_sec`）・配信元ごとの排他・表の列の設定（`{state_dir}/columns`）・再起動の制御を作る
       3. 『配信元の読み直し』をこれらの部品で束ねた関数を作り、端末の設定で 1 回呼ぶ（配信元を読み、メタデータのずれを警告のログに書く）。検証で外した配信元があっても続ける
       4. これらと手順 3 の関数を持つ `Handlers` を返す
     unit_tests:
@@ -406,7 +462,7 @@ functions:
     container: server/app.py
     usecase: 起動
     role: 合成の起点
-    summary: 画面の API・文書の MCP・管理の MCP を 1 つの FastAPI のアプリにまとめる
+    summary: 画面の API・文書の MCP・管理の MCP・セッションの文脈を 1 つの FastAPI のアプリにまとめる
     scope: public
     args:
       - name: handlers
@@ -423,7 +479,7 @@ functions:
       2. 2 つの MCP と会話の記録を渡して寿命を作り（アプリの寿命）、`FastAPI(lifespan=..., docs_url=None, redoc_url=None, openapi_url="/_api/openapi.json")` を作る
       3. 例外の変換を登録する（例外の変換の登録）
       4. `DOCS_MCP_PATH` に文書の MCP、`ADMIN_MCP_PATH` に管理の MCP の `streamable_http_app(streamable_http_path="/", stateless_http=True, json_response=True)` をマウントする
-      5. 端末の設定の入口と画面の入口のルーターを登録する
+      5. 端末の設定の入口・画面の入口・セッションの文脈（セッションの文脈のルーター）のルーターを登録する
       6. アプリを返す
     unit_tests:
       - name: test_build_app
@@ -431,7 +487,7 @@ functions:
         summary: 入口を全て持つ
         condition: 配線済みの関数を渡して `TestClient` で GET `/_api/openapi.json`
         mock: 配線済みの関数（配信元が空の偽物）
-        expected: 200 で `paths` に `/_api/sources/{source}/docs`・`/_api/settings/sources` があり、アプリのルートに `/mcp`・`/_admin/mcp` のマウントがある
+        expected: 200 で `paths` に `/_api/sources/{source}/docs`・`/_api/settings/sources` があり、アプリのルートに `/mcp`・`/_admin/mcp` のマウントと `POST /_admin/session-context` がある
       - name: test_build_app_when_openapi
         case: 正常
         summary: OpenAPI の画面を出さない
@@ -510,6 +566,95 @@ functions:
         condition: '`hidden: "x"`（配列でない）を PUT'
         mock: なし（テスト用のルート）
         expected: 400、`errors[0].path` が `hidden`
+  - name: run_migrate
+    title: 設定の移し替えの実行
+    container: main.py
+    usecase: 設定の移し替え
+    role: 入口
+    summary: '`dev-docs migrate` の解析結果で対象を決め、当てる手順を表示するか当てる'
+    kind: 関数
+    scope: public
+    side_effects: 対象の設定とバックアップを書く。標準出力・標準エラーに書く
+    args:
+      - name: args
+        title: 解析結果
+        type: argparse.Namespace
+        required: true
+        passing: positional
+        description: '`migrate` の解析結果（`plan`・`record`・`source`・`allow_destructive`）'
+    returns:
+      type: int
+      description: 終了コード。移し替えた・要らなかった・表示したとき 0
+    process: |-
+      1. 対象を決め（対象の決定。`env` は `os.environ`）、当てる手順を求める（当てる手順の一覧）
+      2. `plan` の場合、手順ごとに `{version}: {description}` を標準出力に 1 行ずつ出し（破壊的な手順は末尾に ` [destructive]`）、0 を返す。手順が空なら何も出さない
+      3. `record` の場合、手順を空にして適用し（移し替えの適用）、`{ファイル} の version を {current} にしました（バックアップ: {パス}）` を標準出力に出して 0 を返す
+      4. それ以外で手順が空の場合、`移し替えは要りません（version {current}）` を標準出力に出して 0 を返す
+      5. 手順を当て（移し替えの適用。`allow_destructive` は解析結果、`now` は現在時刻）、`{ファイル} を version {current} に移し替えました（バックアップ: {パス}）` を標準出力に出して 0 を返す
+         - 手順 1〜5 で `MigrationError` の場合、本文を標準エラーに出し、例外の `exit_code` を返す
+    exceptions:
+      - name: なし（終了コード 2）
+        condition: 対象が無い・読めない・`version` が無い（`MigrationConfigInvalidError`）
+        message: '`{ファイル}: {理由}`'
+      - name: なし（終了コード 4）
+        condition: 当てた結果が新しいスキーマに違反する・読んだ後に変わった（`MigrationFailedError`）
+        message: '違反を `{キーのパス}: {理由}` で 1 行ずつ'
+      - name: なし（終了コード 5）
+        condition: 破壊的な手順があり `--allow-destructive` が無い（`DestructiveStepBlockedError`）
+        message: 破壊的な手順と `--allow-destructive` の案内
+      - name: なし（終了コード 6）
+        condition: 対象の `version` が dev-docs の読めるバージョンより新しい（`ConfigNewerError`）
+        message: '`{ファイル}: 設定のバージョン {対象} が dev-docs の読める {現在} より新しい。dev-docs を更新してください`'
+    unit_tests:
+      - name: test_run_migrate_when_plan
+        case: 正常
+        summary: 当てる手順を表示するだけで書き換えない
+        condition: '`version: "1"` の端末の設定。`2` の手順に `rename` と `delete`。`--plan`'
+        mock: 手順の置き場所（一時フォルダ）・`SETTINGS_VERSION`（`2`）
+        expected: '0 を返し、標準出力が `2: ` で始まる 2 行で `delete` の行だけ末尾が `[destructive]`。対象は変わらない'
+      - name: test_run_migrate
+        case: 正常
+        summary: 手順を当ててバックアップを取る
+        condition: '`version: "1"` の端末の設定。`2` の手順に `rename` だけ'
+        mock: 手順の置き場所・`SETTINGS_VERSION`（`2`）
+        expected: '0 を返し、対象が改名後で `version: "2"`。標準出力にバックアップのパス'
+      - name: test_run_migrate_when_current
+        case: 正常
+        summary: 同じバージョンなら何もしない
+        condition: '`version` が `SETTINGS_VERSION` と同じ'
+        mock: なし
+        expected: 0 を返し、標準出力に `移し替えは要りません`。バックアップを作らない
+      - name: test_run_migrate_when_record
+        case: 正常
+        summary: '`--record` は version だけを書き換える'
+        condition: '`version: "1"`、`--record`'
+        mock: 手順の置き場所・`SETTINGS_VERSION`（`2`）
+        expected: 0 を返し、`version` だけが `2` に変わる
+      - name: test_run_migrate_when_destructive
+        case: 異常
+        summary: 破壊的な手順で止める
+        condition: '`2` の手順に `delete`。`--allow-destructive` なし'
+        mock: 手順の置き場所・`SETTINGS_VERSION`（`2`）
+        expected: 5 を返し、標準エラーに `--allow-destructive`。対象は変わらない
+        exception: なし（終了コード 5）
+      - name: test_run_migrate_when_newer
+        case: 異常
+        summary: 新しすぎる設定を書き換えない
+        condition: '`version: "9"` の端末の設定'
+        mock: なし
+        expected: 6 を返し、標準エラーに `dev-docs を更新してください`
+        exception: なし（終了コード 6）
+      - name: test_run_migrate_when_config_invalid
+        case: 異常
+        summary: 対象が無い
+        condition: '`--source` に無いファイル'
+        mock: なし
+        expected: 2 を返し、標準エラーにファイルのパス
+        exception: なし（終了コード 2）
+    callees:
+      - dev/設計書/モジュール構成/開発ドキュメントサーバー/features/migrate/service.py#functions[resolve_target]
+      - dev/設計書/モジュール構成/開発ドキュメントサーバー/features/migrate/service.py#functions[plan_migration]
+      - dev/設計書/モジュール構成/開発ドキュメントサーバー/features/migrate/service.py#functions[apply_migration]
 refs:
   - dev/設計書/インターフェース定義/開発ドキュメントサーバー/起動#
 test_files:

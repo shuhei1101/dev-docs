@@ -1,0 +1,199 @@
+title: "セッション開始のフック"
+entry:
+  kind: trigger
+  value: Claude Code の SessionStart（startup・resume・clear・compact・fork）
+flows:
+  - name: 正常系（待ち受けている）
+    summary: つながったサーバーの `POST /_admin/session-context` の文を文脈に入れる
+    setup:
+      - name: Mock
+        description: '`POST /_admin/session-context` を真似る HTTP サーバーを一時のポートで立て、決まった `context` を返す'
+        notes: '`DEV_DOCS_PORT` にそのポートを渡す'
+      - name: 入力
+        description: '`source: clear` と `session_id`・`cwd` の JSON を stdin に渡す'
+        notes: '-'
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        participant C as Claude Code
+        participant H as セッション開始のフック
+        participant A as POST /_admin/session-context
+
+        C->>H: stdin（session_id・cwd・source）
+        H-->>A: ポートへの接続
+        H->>A: POST（cwd・session_id・reason）
+        A-->>H: context
+        H-->>C: additionalContext（終了コード 0）
+      ```
+    expected:
+      - stdout の `additionalContext` が Mock の `context` と同じ
+      - 'Mock が受けた本文が `cwd`・`session_id`・`reason: clear` の JSON'
+      - 終了コード 0、プロセスを起動していない
+    test: test_normal_when_server_listening
+  - name: 正常系（落ちている）
+    summary: つながらなければ `dev-docs serve` を切り離して起動し、つなぎ直しを案内する
+    setup:
+      - name: Mock
+        description: '`{clone}/.venv/bin/python` を、受けた引数をファイルに書いて終わるスクリプトに差し替える'
+      - name: 端末の設定
+        description: '`clone:` にその一時フォルダを持つ `settings.yaml` を `DEV_DOCS_CONFIG` で指す'
+      - name: ポート
+        description: 空いているポートを `DEV_DOCS_PORT` に渡す
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        participant C as Claude Code
+        participant H as セッション開始のフック
+        participant S as dev-docs serve
+
+        C->>H: stdin
+        H->>H: ポートにつながらない
+        H-->>H: 端末の設定の clone を読む
+        H->>S: 切り離して起動する
+        H-->>C: additionalContext（つなぎ直しの案内）
+      ```
+    expected:
+      - Mock が `-m dev_docs serve` を受けている
+      - '`additionalContext` が `/mcp` のつなぎ直しの案内'
+      - フックが起動したプロセスの終了を待たずに終了コード 0 で戻る
+    test: test_normal_when_server_down
+  - name: 正常系（端末の設定が無い）
+    summary: 起動できない理由と `/dev-docs:global-setup` の案内を文脈に入れ、終了コード 0 で戻る
+    setup:
+      - name: Mock
+        description: なし
+      - name: 端末の設定
+        description: '`DEV_DOCS_CONFIG` が無いファイルを指す'
+      - name: ポート
+        description: 空いているポート
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        participant C as Claude Code
+        participant H as セッション開始のフック
+
+        C->>H: stdin
+        H->>H: ポートにつながらず、端末の設定も無い
+        H-->>C: additionalContext（理由と global-setup の案内）
+      ```
+    expected:
+      - 終了コード 0
+      - '`additionalContext` に端末の設定のパスと `/dev-docs:global-setup` がある'
+      - プロセスを起動していない
+    test: test_normal_when_terminal_config_missing
+  - name: 正常系（文脈を取れない）
+    summary: '`POST /_admin/session-context` が 3 秒で返らなければ、理由を文脈に入れて終了コード 0 で戻る'
+    setup:
+      - name: Mock
+        description: 接続は受けるが `POST /_admin/session-context` に 5 秒応答しない HTTP サーバー
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        participant C as Claude Code
+        participant H as セッション開始のフック
+        participant A as POST /_admin/session-context
+
+        C->>H: stdin
+        H->>A: POST（cwd・session_id・reason）
+        H->>H: 3 秒で打ち切る
+        H-->>C: additionalContext（理由と status の案内）
+      ```
+    expected:
+      - 4 秒以内に終了コード 0 で戻る
+      - '`additionalContext` に文脈を取れなかったことと `status` の案内がある'
+      - プロセスを起動していない
+    test: test_normal_when_context_timeout
+lead: ポートにつながらなければ `dev-docs serve` を切り離して起動し、つながれば `POST /_admin/session-context` で使える配信元と使い方を取って、セッションの文脈に入れる。入力は stdin の JSON と環境変数。
+identifier: hooks/session_start.py
+permissions: 利用者の権限で動く
+idempotent: true
+side_effects: サーバーが待ち受けていなければ `dev-docs serve` のプロセスを 1 つ起動する。`clear`・`compact` ではサーバーがそのセッションの返し済みの記録を削除する
+callers:
+  - dev/設計書/シナリオ/単一ユースケース/起動する#scenarios[正常シナリオ（SessionStart で起動する）]
+  - dev/設計書/シナリオ/単一ユースケース/起動する#scenarios[正常シナリオ（待ち受けているサーバーの文脈を追加する）]
+  - dev/設計書/シナリオ/単一ユースケース/起動する#scenarios[異常シナリオ（SessionStart で起動できない）]
+exclusivity: 同時に開いた複数のセッションがどれも起動してもよい。後から起動した `dev-docs serve` はポートが使用中（終了コード 3）で止まり、待ち受けるのは 1 つだけ
+request:
+  - name: session_id
+    type: str
+    required: true
+    location: argument
+    description: Claude Code のセッション ID
+    notes: stdin の JSON
+  - name: cwd
+    type: str
+    required: true
+    location: argument
+    description: セッションの作業場所
+    notes: stdin の JSON
+  - name: source
+    type: Literal['startup', 'resume', 'clear', 'compact', 'fork']
+    required: true
+    location: argument
+    description: セッションが始まった理由
+    notes: stdin の JSON
+  - name: agent_id
+    type: str
+    required: false
+    default: なし（メインのセッション）
+    location: argument
+    description: サブエージェントの ID
+    notes: stdin の JSON
+  - name: DEV_DOCS_PORT
+    type: int
+    required: false
+    default: '`8781`'
+    description: サーバーのポート
+    notes: 環境変数
+  - name: DEV_DOCS_CONFIG
+    type: str
+    required: false
+    default: '`~/.config/dev-docs/settings.yaml`'
+    description: 端末の設定のパス
+    notes: 環境変数
+request_example: |-
+  ```json
+  {"session_id": "8f1c...", "cwd": "/home/u/repo/sample/.claude/worktrees/x", "source": "startup", "hook_event_name": "SessionStart"}
+  ```
+response:
+  - name: hookSpecificOutput.hookEventName
+    type: Literal['SessionStart']
+    description: 常に `SessionStart`
+  - name: hookSpecificOutput.additionalContext
+    type: str
+    description: つながったときは `POST /_admin/session-context` の `context`。起動したときは `/mcp` のつなぎ直しの案内。失敗したときは理由と直し方
+  - name: 終了コード
+    type: int
+    description: 常に 0
+response_example: |-
+  ```json
+  {"hookSpecificOutput": {"hookEventName": "SessionStart", "additionalContext": "dev-docs を起動しました。このセッションで文書の MCP を使うには /mcp で dev-docs につなぎ直してください。"}}
+  ```
+exceptions:
+  - name: なし（正常終了）
+    condition: 文脈を入れた、または起動してつなぎ直しを案内した
+  - name: なし（起動できない）
+    condition: 端末の設定が無い・`clone` が無い・`{clone}/.venv/bin/python` が無い
+    notes: 終了コード 0 で、理由と `/dev-docs:global-setup` の案内を文脈に入れる
+  - name: なし（文脈を取れない）
+    condition: つながったが `POST /_admin/session-context` がタイムアウト・200 以外になった
+    notes: 終了コード 0 で、理由と `status` で確かめる案内を文脈に入れる
+constraints:
+  - item: 言語
+    constraint: Python 3.14 の標準ライブラリだけ。`uv` を前提にしない
+  - item: 接続の確かめ
+    constraint: '`127.0.0.1:${DEV_DOCS_PORT}` への TCP 接続を 0.5 秒で打ち切る'
+  - item: 端末の設定の読み方
+    constraint: トップレベルの `clone:` の行だけを読む（`~` を展開し、引用符を外す）
+    notes: 標準ライブラリに YAML のパーサーが無いため
+  - item: 起動
+    constraint: '`{clone}/.venv/bin/python -m dev_docs serve` を `start_new_session=True`・入出力を `DEVNULL` で起動し、待たずに戻る'
+    notes: 'PR #9 の PoC のとおり'
+  - item: 文脈の取得
+    constraint: '`urllib.request` で `POST /_admin/session-context` に JSON（`cwd`・`session_id`・`agent_id`・`reason` に `source`）を 1 回送信し、3 秒で打ち切る'
+  - item: タイムアウト
+    constraint: '`hooks.json` の `timeout` は 6 秒'
+    notes: 内側の待ちの合計 3.5 秒に 50% を乗せた値。未実測で、結合テストで測って見直す
+  - item: 失敗の扱い
+    constraint: どの失敗でも終了コード 0 で戻り、セッションを止めない
+test_file: tests/integration/plugin/test_session_start.py

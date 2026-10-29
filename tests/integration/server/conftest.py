@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import shutil
 import socket
 import subprocess
 import sys
@@ -200,6 +201,31 @@ def sample_files(**overrides: str) -> dict[str, str]:
     return files
 
 
+FILES_ROW = (
+    "  - id: src\n"
+    "    type: yaml\n"
+    "    paths: [src/files.yaml]\n"
+    "    schema: schemas/sample.schema.yaml\n"
+    "    records: files\n"
+    "    body_file: path\n"
+)
+
+
+def sample_sync_files(unindexed: int = 1, *, version: str = "1") -> dict[str, str]:
+    """管理用の YAML に無いファイルを `unindexed` 件持つ、配信元のファイル一式を返す。"""
+    files = sample_files(**{"dev-docs.yaml": sample_config(FILES_ROW, version=version)})
+    files["src/files.yaml"] = "files:\n  - path: a.py\n"
+    files["src/a.py"] = "a = 1\n"
+    files.update({f"src/extra{index}.py": "x = 1\n" for index in range(unindexed)})
+    return files
+
+
+@pytest.fixture
+def sample_sync_file_set() -> Callable[..., dict[str, str]]:
+    """管理用の YAML に無いファイルを持つ配信元のファイル一式を作る関数を返す。"""
+    return sample_sync_files
+
+
 @pytest.fixture
 def sample_config_text() -> Callable[..., str]:
     """配信元の設定の YAML を作る関数を返す。"""
@@ -394,6 +420,202 @@ def wait_until_serving() -> Callable[..., None]:
             if response.status_code == 200:
                 return
         message = "dev-docs serve が待ち受けを始めなかった"
+        raise AssertionError(message)
+
+    return _wait
+
+
+@pytest.fixture
+def migrations_root(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
+    """移し替えの手順の置き場所を一時のフォルダに差し替え、そのフォルダを返す。"""
+    root = tmp_path / "migrations"
+    root.mkdir()
+    monkeypatch.setattr("dev_docs.features.migrate.types.MIGRATIONS_DIR", str(root))
+    monkeypatch.setattr("dev_docs.features.migrate.steps.MIGRATIONS_DIR", str(root), raising=False)
+    return root
+
+
+@pytest.fixture
+def write_steps(migrations_root: Path) -> Callable[..., None]:
+    """移し替えの手順のファイル（`{kind}/{バージョン}/steps.yaml`）を書く関数を返す。"""
+
+    def _write(kind: str, version: str, steps: list[dict[str, Any]]) -> None:
+        target = migrations_root / kind / version / "steps.yaml"
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(json.dumps({"steps": steps}, ensure_ascii=False), encoding="utf-8")
+
+    return _write
+
+
+@pytest.fixture
+def versions_2(monkeypatch: pytest.MonkeyPatch) -> None:
+    """dev-docs が読める端末の設定と配信元の設定のバージョンを `2` に差し替える。"""
+    for name in ("SETTINGS_VERSION", "SOURCE_CONFIG_VERSION"):
+        for module in (
+            "dev_docs.features.settings.query",
+            "dev_docs.features.sources.types",
+            "dev_docs.features.sources.service",
+            "dev_docs.features.migrate.service",
+            "dev_docs.features.admin.service",
+            "dev_docs.main",
+        ):
+            monkeypatch.setattr(f"{module}.{name}", "2", raising=False)
+
+
+REPO_ROOT = Path(__file__).parents[3]
+CLONE_FILES = ("src", "pyproject.toml", "uv.lock", ".python-version")
+
+
+@dataclass
+class DevDocsClone:
+    """上流の bare リポジトリと、その dev-docs のクローン（`.venv` つき）。"""
+
+    root: Path
+    work: Path
+    bare: Path
+    clone: Path
+    run_git: Callable[..., str]
+
+    def push_upstream(self, files: dict[str, str], message: str = "upstream") -> str:
+        """上流の作業ツリーでファイルを書き換えて commit し、bare へ push して commit の SHA を返す。"""
+        for name, content in files.items():
+            target = self.work / name
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_text(content, encoding="utf-8")
+        self.run_git(self.work, "add", "-A")
+        self.run_git(self.work, "commit", "-m", message)
+        self.run_git(self.work, "push", str(self.bare), "develop")
+        return self.run_git(self.work, "rev-parse", "HEAD").strip()
+
+    def bump_version(self, version: str) -> dict[str, str]:
+        """`pyproject.toml` と `uv.lock` の dev-docs のバージョンを書き換えた内容を返す。"""
+        pyproject = (self.work / "pyproject.toml").read_text(encoding="utf-8")
+        lock = (self.work / "uv.lock").read_text(encoding="utf-8")
+        old = next(
+            line.split('"')[1] for line in pyproject.splitlines() if line.startswith("version = ")
+        )
+        return {
+            "pyproject.toml": pyproject.replace(f'version = "{old}"', f'version = "{version}"', 1),
+            "uv.lock": lock.replace(
+                f'name = "dev-docs"\nversion = "{old}"',
+                f'name = "dev-docs"\nversion = "{version}"',
+                1,
+            ),
+        }
+
+    def head(self) -> str:
+        """クローンの HEAD の SHA を返す。"""
+        return self.run_git(self.clone, "rev-parse", "HEAD").strip()
+
+
+@pytest.fixture
+def dev_docs_clone(
+    tmp_path: Path, run_git: Callable[..., str], monkeypatch: pytest.MonkeyPatch
+) -> DevDocsClone:
+    """dev-docs 自身の小さなコピーを上流にして、`.venv` を作ったクローンを `{tmp}/clone` に作る。"""
+    # 依存はキャッシュから入れる（ネットワークを使わない）
+    monkeypatch.setenv("UV_OFFLINE", "1")
+    work = tmp_path / "work"
+    work.mkdir()
+    for name in CLONE_FILES:
+        source = REPO_ROOT / name
+        if source.is_dir():
+            shutil.copytree(source, work / name, ignore=shutil.ignore_patterns("__pycache__"))
+        else:
+            shutil.copy2(source, work / name)
+    run_git(work, "init", "-b", "develop")
+    run_git(work, "add", "-A")
+    run_git(work, "commit", "-m", "init")
+    bare = tmp_path / "bare.git"
+    run_git(tmp_path, "clone", "--bare", str(work), str(bare))
+    clone = tmp_path / "clone"
+    run_git(tmp_path, "clone", str(bare), str(clone))
+    subprocess.run(["uv", "sync"], cwd=clone, check=True, capture_output=True)
+    return DevDocsClone(tmp_path, work, bare, clone, run_git)
+
+
+@pytest.fixture
+def start_serve_from_clone() -> Iterator[Callable[..., subprocess.Popen[str]]]:
+    """クローンの `.venv` の Python で `dev-docs serve` を起動する関数を返す（終了時に止める）。"""
+    processes: list[subprocess.Popen[str]] = []
+
+    def _start(clone: Path, settings: Path, port: int) -> subprocess.Popen[str]:
+        env = {**os.environ, "DEV_DOCS_CONFIG": str(settings), "DEV_DOCS_PORT": str(port)}
+        process = subprocess.Popen(
+            [str(clone / ".venv" / "bin" / "python"), "-m", "dev_docs", "serve"],
+            env=env,
+            cwd=clone,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            text=True,
+        )
+        processes.append(process)
+        return process
+
+    yield _start
+    for process in processes:
+        if process.poll() is None:
+            process.terminate()
+            process.wait(timeout=15)
+
+
+STARTED_LINE = "Started server process"
+RESTART_WAIT_SEC = 90
+
+
+@pytest.fixture
+def call_tool() -> Callable[..., dict[str, Any]]:
+    """起動した子プロセスの MCP のツールを JSON-RPC で呼び、結果の辞書を返す関数を返す。"""
+    import httpx
+
+    def _call(
+        client: httpx.Client, port: int, endpoint: str, name: str, **arguments: Any
+    ) -> dict[str, Any]:
+        response = client.post(
+            f"http://127.0.0.1:{port}{endpoint}",
+            headers=MCP_HEADERS,
+            json={
+                "jsonrpc": "2.0",
+                "id": 2,
+                "method": "tools/call",
+                "params": {"name": name, "arguments": arguments},
+            },
+        )
+        result: dict[str, Any] = response.json()["result"]
+        return result
+
+    return _call
+
+
+@pytest.fixture
+def started_count() -> Callable[[Path], int]:
+    """ログに出た「Started server process」の行数を数える関数を返す。"""
+
+    def _count(state_dir: Path) -> int:
+        log = state_dir / "logs" / "dev-docs.log"
+        return log.read_text(encoding="utf-8").count(STARTED_LINE) if log.exists() else 0
+
+    return _count
+
+
+@pytest.fixture
+def wait_for_restart(started_count: Callable[[Path], int]) -> Callable[..., None]:
+    """起動の行が増え、画面の API が応答するまで待つ関数を返す。"""
+    import httpx
+
+    def _wait(state_dir: Path, port: int, started: int) -> None:
+        deadline = time.monotonic() + RESTART_WAIT_SEC
+        while time.monotonic() < deadline:
+            if started_count(state_dir) > started:
+                try:
+                    if httpx.get(
+                        f"http://127.0.0.1:{port}/_api/openapi.json", timeout=1
+                    ).is_success:
+                        return
+                except httpx.TransportError:
+                    pass
+            time.sleep(0.3)
+        message = "再起動の後に待ち受けを始めなかった"
         raise AssertionError(message)
 
     return _wait

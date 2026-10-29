@@ -8,10 +8,14 @@
 
 | ページ | 概要 |
 | --- | --- |
-| [起動する](./起動する.yaml) | `dev-docs serve` の待ち受けと、配信元ごとの起動時の検証 |
+| [起動する](./起動する.yaml) | `dev-docs serve` の待ち受けと配信元ごとの起動時の検証、SessionStart のフックでの起動と文脈の追加 |
 | [エージェントが調べる](./エージェントが調べる.yaml) | `describe`・`search_docs`・`trace_related` と、権限・ワークツリー・横断検索・1 セッション 1 回 |
 | [エージェントが書き込む](./エージェントが書き込む.yaml) | `write_docs`・`delete_docs` と、検査・書き込む作業ツリー・参照されている文書の削除 |
 | [変更をレビューする](./変更をレビューする.yaml) | `list_changes` の区間の解決と変わった文書・差分の行 |
 | [YAMLを直接編集した](./YAMLを直接編集した.yaml) | 直接編集した YAML の読み直しと、読んだ後に変わった文書への書き込み |
+| [dev-docsを入れる](./dev-docsを入れる.yaml) | `/dev-docs:global-setup` の端末の設定・env の用意と、2 回目以降のバージョンの確認 |
+| [配信元を追加する](./配信元を追加する.yaml) | `/dev-docs:setup` の配信元の登録と、2 回目以降の管理用の YAML の突き合わせ |
+| [設定・スクリプトを変える](./設定・スクリプトを変える.yaml) | `check_project`・`try_convert` での確認と `reload` での反映 |
+| [dev-docsを更新する](./dev-docsを更新する.yaml) | `update` での更新と `dev-docs migrate` での端末の設定の移し替え |
 
 <!-- /table -->

@@ -1,0 +1,61 @@
+title: "開発ドキュメントサーバー / セッションの文脈 / route.py"
+lead: '`POST /_admin/session-context` のルート。画面の API のスキーマ（`/_api/openapi.json`）に載せない。'
+functions:
+  - name: build_session_context_router
+    title: セッションの文脈のルーター
+    kind: 関数
+    container: features/session_context/route.py
+    usecase: セッションの文脈
+    role: ルート
+    summary: '`POST /_admin/session-context` を持つルーターを作る'
+    description: |-
+      フックは Origin も Sec-Fetch-Site も送信しないため `require_same_origin` を掛けない。本文は `application/json` だけを受けるので、別のオリジンの画面からの要求は CORS の事前の問い合わせで止まる。
+      既存のハンドラーは `RequestValidationError` を 400 にするため、本文は `dict` で受け、検証の失敗を `ValidationFailedError`（422）で返す。
+    scope: public
+    is_async: false
+    thread_safe: true
+    args:
+      - name: handlers
+        title: 部品
+        type: Handlers
+        required: true
+        passing: positional
+        description: 起動時に作った部品
+    returns:
+      type: APIRouter
+      description: '`POST /_admin/session-context`（`include_in_schema=False`）を持つルーター'
+    process: |-
+      1. `POST /_admin/session-context` を登録する
+      2. 要求ごとに、本文を `SessionContextRequest.model_validate` で検証する
+         - 検証に失敗した場合、違反を `{キー}: {理由}` にして `ValidationFailedError` を送出する
+      3. 文脈を組み立て、応答にする（セッションの文脈の組み立て、`asyncio.to_thread`）
+    exceptions:
+      - name: ValidationFailedError
+        condition: '`cwd` が無い、型が違う、`reason` が選択肢の外'
+        message: '`セッションの文脈の入力に違反が {件数} 件あります`'
+    unit_tests:
+      - name: test_build_session_context_router
+        case: 正常
+        summary: 本文を検証して組み立てた文脈を返す
+        condition: '`{"cwd": 配信元のフォルダ}` を `TestClient` で送信する'
+        mock: なし（一時ディレクトリの配信元）
+        expected: 200 で `sources` に配信元が 1 件
+      - name: test_build_session_context_router_when_invalid
+        case: 異常
+        summary: 入力の違反を 422 で返す
+        condition: '`reason` が `unknown`'
+        mock: なし
+        expected: 422 の Problem Details で `reason` の違反を含む
+        exception: 入力の違反
+      - name: test_build_session_context_router_when_schema
+        case: 正常
+        summary: 画面の API のスキーマに載らない
+        condition: '`/_api/openapi.json` を取得する'
+        mock: なし
+        expected: '`paths` に `/_admin/session-context` が無い'
+    callers:
+      - dev/設計書/モジュール構成/開発ドキュメントサーバー/起動.py#functions[build_app]
+    callees:
+      - dev/設計書/モジュール構成/開発ドキュメントサーバー/features/session_context/service.py#functions[build_session_context]
+test_files:
+  - tests/unit/dev_docs/features/session_context/test_route.py

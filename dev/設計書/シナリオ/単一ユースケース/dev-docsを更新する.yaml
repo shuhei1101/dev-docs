@@ -1,0 +1,126 @@
+title: "dev-docsを更新する"
+scenarios:
+  - name: 正常シナリオ
+    setup:
+      - name: Mock
+        description: なし（実環境で実行）
+      - name: dev-docs のクローン
+        description: テスト用の bare リポジトリを上流にしたクローン
+        notes: 上流に 1 つ新しいバージョンの commit がある。端末の設定の移し替えの手順は無い
+      - name: 端末の設定
+        description: '`sources` に sample と notes の 2 行'
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        actor U as 利用者
+        participant AD as 管理の MCP
+        participant DD as dev-docs
+
+        U->>AD: update
+        AD->>DD: クローンで git pull
+        AD->>DD: 依存を入れ直す（uv sync）
+        AD-->>U: 新しいバージョン
+        AD->>DD: 再起動する
+        U->>AD: status
+        AD-->>U: 新しいバージョンと配信中の配信元
+      ```
+    expected:
+      - '`update` が新しいバージョンを返す'
+      - 再起動の後の `status` が新しいバージョンを返し、`sample` と `notes` を配信している
+      - '`127.0.0.1:8781` を待ち受ける dev-docs のプロセスが 1 つだけある'
+    test: test_normal
+  - name: 正常シナリオ（端末の設定が古くなる）
+    setup:
+      - name: Mock
+        description: なし（実環境で実行）
+      - name: dev-docs のクローン
+        description: 正常シナリオと同じ
+        notes: 新しいバージョンが端末の設定のキーを 1 つ改名する移し替えの手順を持つ
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        actor U as 利用者
+        participant AD as 管理の MCP
+        participant MG as dev-docs migrate
+        participant CF as 端末の設定
+
+        U->>AD: update
+        AD-->>U: 新しいバージョンと、移し替えが要ること（再起動しない）
+        U->>MG: dev-docs migrate --plan
+        MG-->>U: 当てる手順の一覧
+        U->>MG: dev-docs migrate
+        MG->>CF: バックアップを取り、手順を古い順に当て、version を書き換える
+        MG-->>U: 当てた手順
+        U->>AD: restart
+      ```
+    expected:
+      - '`update` が移し替えが要ることを返し、dev-docs は再起動しない'
+      - '`migrate --plan` は端末の設定を変えず、当てる手順を返す'
+      - '`migrate` の後、端末の設定の `version` が新しいバージョンになり、改名したキーが新しい名前で元の値を持つ'
+      - 当てる前の端末の設定のバックアップがある
+      - '`restart` の後、`status` が新しいバージョンを返し、`sample` と `notes` を配信している'
+    test: test_normal_when_terminal_config_old
+  - name: 異常シナリオ（移し替えの手順が失敗する）
+    setup:
+      - name: Mock
+        description: なし（実環境で実行）
+      - name: dev-docs のクローン
+        description: 移し替えの手順を 2 つ持つ新しいバージョン
+        notes: 2 つ目の手順が例外を出す
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        actor U as 利用者
+        participant MG as dev-docs migrate
+        participant CF as 端末の設定
+
+        U->>MG: dev-docs migrate
+        MG->>CF: バックアップを取り、1 つ目の手順を当てる
+        MG->>MG: 2 つ目の手順が失敗する
+        MG->>CF: バックアップから戻す
+        MG-->>U: 失敗した手順と理由
+      ```
+    expected:
+      - 端末の設定が `migrate` の前と同じ中身になる
+      - 0 以外の終了コードで終わり、標準エラーに失敗した手順の名前と理由が出る
+    test: test_error_when_migration_fails
+  - name: 異常シナリオ（クローンを更新できない）
+    setup:
+      - name: Mock
+        description: なし（実環境で実行）
+      - name: dev-docs のクローン
+        description: 上流の新しい commit と同じファイルを手元で書き換え、commit していないクローン
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        actor U as 利用者
+        participant AD as 管理の MCP
+        participant DD as dev-docs
+
+        U->>AD: update
+        AD->>DD: クローンで git pull が失敗する
+        AD-->>U: git のエラー
+      ```
+    expected:
+      - '`update` が git のエラーを返す'
+      - dev-docs は再起動せず、`status` が前のバージョンを返す
+    test: test_error_when_pull_fails
+lead: 利用者が管理の MCP の `update` で dev-docs のクローンを新しいバージョンにし、端末の設定が古くなったら `dev-docs migrate` で移し替える。
+issue: 4
+primary_actor: 利用者
+stakeholders:
+  - name: 利用者
+    interest: 1 つの操作で dev-docs を更新でき、端末の設定の移し替えは中身を確かめてから当てられる。失敗しても元に戻る
+  - name: エージェント（Claude Code）
+    interest: 更新の後も、同じ配信元を `/mcp` で使える
+trigger: 利用者が管理の MCP の `update` を呼ぶ
+preconditions:
+  - dev-docs が待ち受けている
+  - クローンの上流に新しいバージョンの commit がある
+success_guarantee: dev-docs が新しいバージョンで待ち受け、端末の設定の `version` がそのバージョンになり、配信元を配信している。
+minimal_guarantee: '`git pull` に失敗したときは、前のバージョンのまま配信を続ける。移し替えの手順が失敗したときは、端末の設定をバックアップから戻す。'
+frequency: dev-docs の新しいバージョンが出るたび
+priority: 中
+refs:
+  - dev/設計書/シナリオ/複合ユースケース/dev-docsで文書を配信して読み書きする#scenarios[正常シナリオ]
+test_file: tests/e2e/単一ユースケース/test_dev-docsを更新する.py

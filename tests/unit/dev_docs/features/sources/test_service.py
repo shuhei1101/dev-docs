@@ -10,6 +10,7 @@ import pytest
 from dev_docs.features.settings.types import SourceEntry
 from dev_docs.features.sources import service as service_module
 from dev_docs.features.sources.service import (
+    assemble_source,
     check_scripts,
     compare_config_version,
     load_source,
@@ -410,3 +411,51 @@ def test_load_source_at_when_invalid(cloned_source: ServedSource, worktree: Path
     with pytest.raises(ValidationFailedError) as exc_info:
         load_source_at(cloned_source, worktree)
     assert [v.path for v in exc_info.value.violations] == ["documents[0].paths"]
+
+
+def test_assemble_source(
+    tmp_path: Path,
+    write_files: Callable[[Path, dict[str, str]], None],
+    sample_files: dict[str, str],
+) -> None:
+    """`root_override` のフォルダを配信元のフォルダにする（正常系）。"""
+    # 準備
+    root = tmp_path / "root"
+    write_files(root, {key: value for key, value in sample_files.items() if key != "dev-docs.yaml"})
+    config_dir = tmp_path / "cfg"
+    write_files(config_dir, {"dev-docs.yaml": sample_files["dev-docs.yaml"]})
+    # 実行
+    served, config, violations = assemble_source(
+        [config_dir / "dev-docs.yaml"],
+        source_id=None,
+        scope_read=[],
+        scope_write=None,
+        root_override=root,
+    )
+    # 検証
+    assert served is not None
+    assert config is not None
+    assert served.root == root
+    assert violations == []
+
+
+def test_assemble_source_when_script_missing(
+    tmp_path: Path,
+    write_files: Callable[[Path, dict[str, str]], None],
+    sample_files: dict[str, str],
+) -> None:
+    """スクリプトの確かめの失敗は設定を残す（正常系）。"""
+    # 準備
+    config_text = (
+        sample_files["dev-docs.yaml"]
+        + "converters:\n  - id: conv\n    run: [python3, scripts/none.py]\n"
+    )
+    write_files(tmp_path, {**sample_files, "dev-docs.yaml": config_text})
+    # 実行
+    served, config, violations = assemble_source(
+        [tmp_path / "dev-docs.yaml"], source_id=None, scope_read=[], scope_write=None
+    )
+    # 検証
+    assert served is None
+    assert config is not None
+    assert len(violations) == 1

@@ -167,7 +167,8 @@ def build_docs_mcp(handlers: Handlers) -> MCPServer:
         mcp,
         "write_docs",
         "文書を作る・部分更新する・置き換える。操作を全て当てた後の文書を検査に通し、"
-        "通ったときだけ作業ツリーのファイルを書き換える（commit はしない）。",
+        "通ったときだけ作業ツリーのファイルを書き換える（commit はしない）。"
+        "範囲のファイルを作った・消した・改名したら、管理用の YAML の行を修正する。",
         WriteRequest,
         lambda request: write_docs(
             request,

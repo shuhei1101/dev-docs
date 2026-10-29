@@ -2,7 +2,9 @@ from __future__ import annotations
 
 import argparse
 import logging
+import os
 import socket
+import sys
 from collections.abc import Callable, Iterator
 from contextlib import closing, contextmanager
 from pathlib import Path
@@ -11,6 +13,7 @@ from typing import Any
 import pytest
 import uvicorn
 
+from dev_docs import main as main_module
 from dev_docs.features.convert.service import ConvertService
 from dev_docs.features.documents.store import DocumentStore
 from dev_docs.features.history.snapshot import SnapshotStore
@@ -18,7 +21,15 @@ from dev_docs.features.settings.types import SourceEntry, TerminalConfig
 from dev_docs.features.sources.registry import SourceRegistry
 from dev_docs.features.sources.types import SourceStatus
 from dev_docs.features.validation.service import DocumentChecker
-from dev_docs.main import PortInUseError, build_handlers, check_port, reload_sources, run_serve
+from dev_docs.main import (
+    PortInUseError,
+    build_handlers,
+    check_port,
+    reload_sources,
+    run_migrate,
+    run_serve,
+)
+from dev_docs.shared.yaml_io import load_yaml
 
 
 def _free_port() -> int:
@@ -121,10 +132,64 @@ def test_run_serve_when_port_in_use(
     assert "DEV_DOCS_PORT" in error
 
 
+def test_run_serve_when_restart(serve_settings: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """再起動の要求で同じプロセスを置き換える（正常系）。"""
+    # 準備
+    monkeypatch.setenv("DEV_DOCS_PORT", str(_free_port()))
+    captured: dict[str, Any] = {}
+    real_build_handlers = main_module.build_handlers
+
+    def spy_build_handlers(terminal: TerminalConfig) -> Any:
+        captured["handlers"] = real_build_handlers(terminal)
+        return captured["handlers"]
+
+    configs: list[dict[str, Any]] = []
+    real_config = uvicorn.Config
+
+    def recording_config(*args: Any, **kwargs: Any) -> uvicorn.Config:
+        configs.append(kwargs)
+        return real_config(*args, **kwargs)
+
+    def fake_run(self: uvicorn.Server, *args: Any, **kwargs: Any) -> None:
+        self.started = True
+        captured["handlers"].restart.request()
+
+    executed: list[tuple[str, list[str]]] = []
+
+    def fake_execv(path: str, argv: list[str]) -> None:
+        executed.append((path, argv))
+
+    monkeypatch.setattr(main_module, "build_handlers", spy_build_handlers)
+    monkeypatch.setattr(uvicorn, "Config", recording_config)
+    monkeypatch.setattr(uvicorn.Server, "run", fake_run)
+    monkeypatch.setattr(os, "execv", fake_execv)
+    # 実行
+    run_serve(argparse.Namespace())
+    # 検証
+    assert executed == [(sys.executable, [sys.executable, "-m", "dev_docs", "serve"])]
+    assert configs[0]["timeout_graceful_shutdown"] == 30 * 1.5
+
+
 def test_check_port() -> None:
     """空いているポート（正常系）。"""
     # 準備
     port = _free_port()
+    # 実行・検証
+    check_port("127.0.0.1", port)
+
+
+def test_check_port_when_time_wait() -> None:
+    """閉じたばかりの接続が残るポート（正常系）。"""
+    # 準備
+    with closing(socket.socket(socket.AF_INET, socket.SOCK_STREAM)) as server:
+        server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        server.bind(("127.0.0.1", 0))
+        server.listen()
+        port = int(server.getsockname()[1])
+        with closing(socket.create_connection(("127.0.0.1", port))):
+            connection, _ = server.accept()
+            # サーバー側から先に閉じて、サーバー側のポートに TIME_WAIT を残す
+            connection.close()
     # 実行・検証
     check_port("127.0.0.1", port)
 
@@ -325,3 +390,163 @@ def test_reload_sources_when_out_of_sync(
     assert any("c.py" in message and "1" in message for message in sample)
     assert [message for message in warnings if "clean" in message] == []
     assert [status.status for status in statuses] == ["serving", "serving"]
+
+
+def _write_settings_file(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, text: str) -> Path:
+    """端末の設定を書いて `DEV_DOCS_CONFIG` に入れ、そのパスを返す。"""
+    path = tmp_path / "settings.yaml"
+    path.write_text(text, encoding="utf-8")
+    monkeypatch.setenv("DEV_DOCS_CONFIG", str(path))
+    return path
+
+
+def _migrate_args(**overrides: Any) -> argparse.Namespace:
+    """`migrate` の解析結果を作る。"""
+    values: dict[str, Any] = {
+        "plan": False,
+        "record": False,
+        "source": None,
+        "allow_destructive": False,
+    }
+    values.update(overrides)
+    return argparse.Namespace(**values)
+
+
+SETTINGS_V1 = 'version: "1"\nclone: /x\nlog_dir: /logs\n'
+
+
+@pytest.mark.usefixtures("settings_version_2")
+def test_run_migrate_when_plan(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    write_steps: Callable[..., None],
+) -> None:
+    """当てる手順を表示するだけで書き換えない（正常系）。"""
+    # 準備
+    settings = _write_settings_file(tmp_path, monkeypatch, SETTINGS_V1)
+    write_steps(
+        "settings",
+        "2",
+        [
+            {"op": "rename", "path": "log_dir", "to": "state_dir", "description": "改名"},
+            {"op": "delete", "path": "legacy", "description": "削除"},
+        ],
+    )
+    # 実行
+    code = run_migrate(_migrate_args(plan=True))
+    # 検証
+    assert code == 0
+    assert capsys.readouterr().out.splitlines() == ["2: 改名", "2: 削除 [destructive]"]
+    assert settings.read_text(encoding="utf-8") == SETTINGS_V1
+
+
+@pytest.mark.usefixtures("settings_version_2")
+def test_run_migrate(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    write_steps: Callable[..., None],
+) -> None:
+    """手順を当ててバックアップを取る（正常系）。"""
+    # 準備
+    settings = _write_settings_file(tmp_path, monkeypatch, SETTINGS_V1)
+    write_steps(
+        "settings",
+        "2",
+        [{"op": "rename", "path": "log_dir", "to": "state_dir", "description": "改名"}],
+    )
+    # 実行
+    code = run_migrate(_migrate_args())
+    # 検証
+    assert code == 0
+    assert load_yaml(settings.read_text(encoding="utf-8")) == {
+        "version": "2",
+        "clone": "/x",
+        "state_dir": "/logs",
+    }
+    assert "settings.yaml.bak-" in capsys.readouterr().out
+
+
+def test_run_migrate_when_current(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """同じバージョンなら何もしない（正常系）。"""
+    # 準備
+    settings = _write_settings_file(tmp_path, monkeypatch, SETTINGS_V1)
+    # 実行
+    code = run_migrate(_migrate_args())
+    # 検証
+    assert code == 0
+    assert "移し替えは要りません" in capsys.readouterr().out
+    assert list(settings.parent.glob("*.bak-*")) == []
+
+
+@pytest.mark.usefixtures("settings_version_2")
+def test_run_migrate_when_record(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, write_steps: Callable[..., None]
+) -> None:
+    """`--record` は version だけを書き換える（正常系）。"""
+    # 準備
+    settings = _write_settings_file(tmp_path, monkeypatch, SETTINGS_V1)
+    write_steps(
+        "settings",
+        "2",
+        [{"op": "rename", "path": "log_dir", "to": "state_dir", "description": "改名"}],
+    )
+    # 実行
+    code = run_migrate(_migrate_args(record=True))
+    # 検証
+    assert code == 0
+    assert load_yaml(settings.read_text(encoding="utf-8")) == {
+        "version": "2",
+        "clone": "/x",
+        "log_dir": "/logs",
+    }
+
+
+@pytest.mark.usefixtures("settings_version_2")
+def test_run_migrate_when_destructive(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    write_steps: Callable[..., None],
+) -> None:
+    """破壊的な手順で止める（異常系）。"""
+    # 準備
+    settings = _write_settings_file(tmp_path, monkeypatch, SETTINGS_V1)
+    write_steps("settings", "2", [{"op": "delete", "path": "log_dir", "description": "削除"}])
+    # 実行
+    code = run_migrate(_migrate_args())
+    # 検証
+    assert code == 5
+    assert "--allow-destructive" in capsys.readouterr().err
+    assert settings.read_text(encoding="utf-8") == SETTINGS_V1
+
+
+def test_run_migrate_when_newer(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """新しすぎる設定を書き換えない（異常系）。"""
+    # 準備
+    text = 'version: "9"\nclone: /x\n'
+    settings = _write_settings_file(tmp_path, monkeypatch, text)
+    # 実行
+    code = run_migrate(_migrate_args())
+    # 検証
+    assert code == 6
+    assert "dev-docs を更新してください" in capsys.readouterr().err
+    assert settings.read_text(encoding="utf-8") == text
+
+
+def test_run_migrate_when_config_invalid(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """対象が無い（異常系）。"""
+    # 準備
+    missing = tmp_path / "missing" / "dev-docs.yaml"
+    # 実行
+    code = run_migrate(_migrate_args(source=str(missing)))
+    # 検証
+    assert code == 2
+    assert str(missing) in capsys.readouterr().err

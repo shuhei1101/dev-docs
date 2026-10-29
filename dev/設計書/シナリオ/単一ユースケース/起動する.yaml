@@ -34,7 +34,7 @@ scenarios:
       - '`127.0.0.1:8781` で待ち受け、`0.0.0.0` では待ち受けない'
       - '`/_api/sources/sample/docs` と `/_api/sources/notes/docs` が 200 を返す'
       - '`/mcp` のツールが `search_docs`・`write_docs`・`delete_docs`・`describe`・`list_changes`・`trace_related` の 6 つ'
-      - '`/_admin/mcp` に MCP のセッションを張れる（ツールは #4）'
+      - '`/_admin/mcp` のツールが `status`・`reload`・`restart`・`update`・`check_project`・`try_convert` の 6 つ'
       - 標準出力に待ち受けたアドレスと、配信している配信元の id（sample・notes）が出る
     test: test_normal
   - name: 正常シナリオ（設定の YAML を重ねる）
@@ -91,7 +91,7 @@ scenarios:
       - 警告のログに old の id・設定のバージョン・サーバーが読めるバージョンが残る
     test: test_normal_when_config_version_old
     notes:
-      知らせる経路: '古い設定の配信元を管理の MCP の `check_project` と SessionStart で知らせるのは #4。'
+      知らせる経路: '古い設定の配信元は、管理の MCP の `check_project` と、正常シナリオ（待ち受けているサーバーの文脈を追加する）の SessionStart の文脈でも知らせる。'
   - name: 異常シナリオ（設定の検証に失敗する）
     setup:
       - name: Mock
@@ -230,6 +230,87 @@ scenarios:
       - 警告のログに行 `src` の索引に無いファイル 1 件（`src/d.py`）とファイルが無い行 1 件（`c.py`）が残る
       - '`search_docs` が `title` の無い文書も返し、その `name` はファイル名から拡張子を除いた名前になる'
     test: test_normal_when_metadata_out_of_sync
+  - name: 正常シナリオ（SessionStart で起動する）
+    setup:
+      - name: Mock
+        description: なし（実環境で実行。Claude Code は `claude -p` で動かす）
+      - name: Claude Code の設定の場所
+        description: '`CLAUDE_CONFIG_DIR` が指すテスト用の一時フォルダ。プラグイン `dev-docs` をユーザースコープに入れ、env の `DEV_DOCS_CONFIG` が端末の設定を指す'
+      - name: 端末の設定
+        description: '`clone` がテスト用のクローン、`sources` に sample（読み書き）と notes（読み取りだけ）の 2 行'
+        notes: dev-docs は待ち受けていない。ポート 8781 が空き
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        actor U as 利用者
+        participant CC as Claude Code
+        participant HK as SessionStart のフック
+        participant DD as dev-docs
+
+        U->>CC: sample のワークツリーでセッションを始める
+        CC->>HK: SessionStart
+        HK->>DD: ポートにつながるか確かめる（つながらない）
+        HK->>DD: 端末の設定の clone で dev-docs serve を切り離して起動する
+        HK-->>CC: 待たずに戻り、/mcp のつなぎ直しの案内を文脈に追加する
+        U->>CC: /mcp でつなぎ直す
+        CC->>DD: /mcp のツールの一覧を取る
+      ```
+    expected:
+      - フックが 0 の終了コードで戻り、セッションの文脈に `/mcp` のつなぎ直しの案内が入る
+      - '`127.0.0.1:8781` を待ち受ける dev-docs のプロセスが 1 つだけあり、セッションを終えても残る'
+      - つなぎ直した後、`/mcp` のツールが 6 つ返る
+    test: test_normal_when_started_by_session_start
+  - name: 正常シナリオ（待ち受けているサーバーの文脈を追加する）
+    setup:
+      - name: Mock
+        description: なし（実環境で実行。Claude Code は `claude -p` で動かす）
+      - name: dev-docs
+        description: SessionStart で起動する正常シナリオと同じ端末の設定で待ち受けている dev-docs
+        notes: sample のワークツリーで、管理用の YAML の `files` に無いファイルを 1 件置き、配信元 old（設定が古い）も `sources` に並べる
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        actor U as 利用者
+        participant CC as Claude Code
+        participant HK as SessionStart のフック
+        participant DD as dev-docs
+
+        U->>CC: sample のワークツリーでセッションを始める
+        CC->>HK: SessionStart
+        HK->>DD: ポートにつながる
+        HK->>DD: cwd で使える配信元・索引の同期の件数・設定のバージョンの新旧を取る
+        HK-->>CC: 配信元の一覧と短い使い方を文脈に追加する
+        CC->>DD: /mcp につながる
+      ```
+    expected:
+      - セッションの文脈に、使える配信元 `sample`（読み書き）・`notes`（読み取りだけ）の名前・権限・`description` が 1 行ずつ入る
+      - 文脈に `describe(source)`・`search_docs` の `group_by="tags"`・`source="*"`・`view="full"`・`list_changes` の使い方と、範囲のファイルを作った・消した・改名したら管理用の YAML の行を直す 1 文が入る
+      - 文脈に sample の索引の同期の件数 1 と、old の設定が古いことが入る
+      - dev-docs のプロセスは増えず、つなぎ直しの案内は入らない
+    test: test_normal_when_session_context_added
+  - name: 異常シナリオ（SessionStart で起動できない）
+    setup:
+      - name: Mock
+        description: なし（実環境で実行。Claude Code は `claude -p` で動かす）
+      - name: Claude Code の設定の場所
+        description: env の `DEV_DOCS_CONFIG` が無いファイルを指す
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        actor U as 利用者
+        participant CC as Claude Code
+        participant HK as SessionStart のフック
+
+        U->>CC: セッションを始める
+        CC->>HK: SessionStart
+        HK->>HK: ポートにつながらず、端末の設定を読めない
+        HK-->>CC: 0 の終了コードで戻り、理由と /dev-docs:global-setup の案内を文脈に追加する
+      ```
+    expected:
+      - フックが 0 の終了コードで戻り、セッションは続く
+      - セッションの文脈に、端末の設定を読めなかった理由と `/dev-docs:global-setup` の案内が入る
+      - dev-docs のプロセスは起動しない
+    test: test_error_when_session_start_cannot_start
 lead: 利用者が `dev-docs serve` を実行し、端末の設定に並べた配信元を 1 プロセス・1 ポートで配信し始める。
 issue: 3
 primary_actor: 利用者
@@ -238,7 +319,7 @@ stakeholders:
     interest: 1 つのコマンドで全ての配信元が配信され、配信できなかった配信元とその理由が分かる
   - name: エージェント（Claude Code）
     interest: 起動の後、`/mcp` の 1 つにつなげば使える配信元の文書を読める
-trigger: '利用者が `dev-docs serve` を実行する（SessionStart のフックが起動する部分は #4）'
+trigger: '利用者が `dev-docs serve` を実行するか、ポートにつながらないときに SessionStart のフックが切り離して起動する'
 preconditions:
   - '`DEV_DOCS_CONFIG`（既定 `~/.config/dev-docs/settings.yaml`）に端末の設定がある'
   - '`DEV_DOCS_PORT`（既定 8781）のポートが空いている'

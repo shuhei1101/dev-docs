@@ -1,0 +1,100 @@
+title: "開発ドキュメントサーバー / セッションの文脈 / types.py"
+lead: '`POST /_admin/session-context` の本文と応答の型と、文脈に入れる使い方の文。'
+data_models:
+  - name: SessionContextRequest
+    title: セッションの文脈の要求
+    container: features/session_context/types.py
+    usecase: セッションの文脈
+    role: DTO
+    summary: SessionStart のフックが送信する本文
+    description: '`pydantic.BaseModel`（`extra="ignore"`）。フックの入力に増えたキーを断らないため、知らないキーは捨てる。'
+    properties:
+      - name: cwd
+        title: 作業場所
+        type: str
+        description: セッションの作業場所の絶対パス
+      - name: session_id
+        title: セッション ID
+        type: str | None
+        default: None
+        description: Claude Code のセッション ID
+      - name: agent_id
+        title: サブエージェントの ID
+        type: str | None
+        default: None
+        description: メインのセッションは `None`
+      - name: reason
+        title: 始まった理由
+        type: Literal['startup', 'resume', 'clear', 'compact', 'fork']
+        default: "'startup'"
+        description: SessionStart の入力の `source`
+  - name: ContextSource
+    title: 使える配信元
+    container: features/session_context/types.py
+    usecase: セッションの文脈
+    role: DTO
+    summary: 応答の `sources[]` の 1 行
+    description: '`pydantic.BaseModel`。'
+    properties:
+      - name: id
+        title: 配信元の ID
+        type: str
+        description: '`SourceAccess.source_id`'
+      - name: access
+        title: 権限
+        type: Literal['read_write', 'read']
+        description: '`SourceAccess.access` が `write` なら `read_write`'
+  - name: SessionContextResponse
+    title: セッションの文脈の応答
+    container: features/session_context/types.py
+    usecase: セッションの文脈
+    role: DTO
+    summary: フックが文脈に入れる文と内訳
+    description: '`pydantic.BaseModel`。'
+    properties:
+      - name: context
+        title: 文脈の文
+        type: str
+        description: '`CONTEXT_MAX_CHARS` 字以内'
+      - name: sources
+        title: 使える配信元
+        type: list[ContextSource]
+        description: 作業場所から使える配信元
+      - name: warnings
+        title: 警告
+        type: list[str]
+        description: 同期のずれ・古い設定・配信していない配信元
+      - name: forgotten
+        title: 記録を削除したか
+        type: bool
+        description: 返し済みの記録を削除したら `True`
+constants:
+  - name: CONTEXT_MAX_CHARS
+    title: 文脈の文の上限
+    container: features/session_context/types.py
+    usecase: セッションの文脈
+    summary: '`context` の字数の上限'
+    value: '2000'
+  - name: FORGET_REASONS
+    title: 記録を削除する理由
+    container: features/session_context/types.py
+    usecase: セッションの文脈
+    summary: 返し済みの記録を削除する `reason`
+    value: frozenset({'clear', 'compact'})
+  - name: SESSION_USAGE
+    title: 使い方の文
+    container: features/session_context/types.py
+    usecase: セッションの文脈
+    summary: 配信元の一覧の後に置く場面ごとの短い使い方（A-32 の「1. SessionStart で注入する文」）
+    value: |-
+      使い方:
+      - 始めに `describe(source)` で種類・タグ・書き方を確かめる
+      - 探すときは `search_docs`。全体を見るときは `group_by="tags"`、配信元をまたぐときは `source="*"`、本文まで読むときは `view="full"`
+      - 前に読んだ後の変更は `list_changes` で確かめる
+      - 範囲のファイルを作った・消した・改名したら、管理用の YAML の行を修正する
+  - name: SETUP_GUIDE
+    title: 登録の案内
+    container: features/session_context/types.py
+    usecase: セッションの文脈
+    summary: 使える配信元が 0 件のときの文
+    value: この作業場所から使える dev-docs の配信元はありません。配信元にするときは `/dev-docs:setup` を実行します。

@@ -37,6 +37,7 @@ SCRIPT_TABLES = ("validators", "converters", "generators")
 __all__ = [
     "SOURCE_CONFIG_VERSION",
     "SOURCE_SCHEMA",
+    "assemble_source",
     "build_source_config",
     "check_scripts",
     "compare_config_version",
@@ -300,7 +301,7 @@ def _worktree_globs(patterns: list[str], base: Path) -> list[str]:
     return result
 
 
-def _assemble(
+def assemble_source(
     files: list[Path],
     *,
     source_id: str | None,
@@ -360,7 +361,7 @@ def load_source(entry: SourceEntry, *, index: int) -> tuple[ServedSource | None,
             id=fallback_id, index=index, status="disabled", config=config_files
         )
     files = [Path(item).expanduser() for item in entry.config]
-    served, config, violations = _assemble(
+    served, config, violations = assemble_source(
         files,
         source_id=entry.id,
         scope_read=entry.scope.read,
@@ -413,7 +414,7 @@ def load_source_at(source: ServedSource, root: Path) -> ServedSource:
             # 配信元のリポジトリの外のファイルはそのまま使う
             files.append(file)
     relative_root = source.root.relative_to(base) if source.root.is_relative_to(base) else Path()
-    served, _, violations = _assemble(
+    served, _, violations = assemble_source(
         files,
         source_id=source.id,
         scope_read=source.scope_read,

@@ -591,3 +591,26 @@ def test_error_when_placement_excluded(
     assert "docs/rule/index.yaml" in result.text
     assert "exclude" in result.text
     assert not (worktree / "docs" / "rule" / "index.yaml").exists()
+
+
+def test_normal_when_tool_description(
+    make_source: Callable[..., Any], make_server: Callable[..., Any]
+) -> None:
+    """ツールの説明に、範囲のファイルの増減・改名で管理用の YAML の行を修正することを含める（正常系）。"""
+    # 準備
+    env = make_server(make_source("sample"))
+    # 実行
+    response = env.client.post(
+        "/mcp/",
+        headers={
+            "Accept": "application/json, text/event-stream",
+            "Content-Type": "application/json",
+        },
+        json={"jsonrpc": "2.0", "id": 1, "method": "tools/list"},
+    )
+    # 検証
+    tools = {tool["name"]: tool for tool in response.json()["result"]["tools"]}
+    assert (
+        "範囲のファイルを作った・消した・改名したら、管理用の YAML の行を修正する"
+        in tools["write_docs"]["description"]
+    )

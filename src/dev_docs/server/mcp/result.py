@@ -27,6 +27,12 @@ TOOL_ANNOTATIONS = {
     "trace_related": ToolAnnotations(read_only_hint=True),
     "write_docs": ToolAnnotations(read_only_hint=False, destructive_hint=False),
     "delete_docs": ToolAnnotations(read_only_hint=False, destructive_hint=True),
+    "status": ToolAnnotations(read_only_hint=True),
+    "reload": ToolAnnotations(read_only_hint=False, destructive_hint=False),
+    "restart": ToolAnnotations(read_only_hint=False, destructive_hint=True),
+    "update": ToolAnnotations(read_only_hint=False, destructive_hint=True),
+    "check_project": ToolAnnotations(read_only_hint=True),
+    "try_convert": ToolAnnotations(read_only_hint=True),
 }
 
 DESCRIBE_HINT = "describe で使い方（使える配信元・種類・スキーマ）を見てください"

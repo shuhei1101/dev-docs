@@ -6,7 +6,7 @@ from pathlib import Path
 import pytest
 
 from dev_docs.__main__ import build_parser, main
-from dev_docs.main import run_serve
+from dev_docs.main import run_migrate, run_serve
 
 PYPROJECT_PATH = Path(__file__).parents[3] / "pyproject.toml"
 
@@ -28,6 +28,31 @@ def test_build_parser_when_serve() -> None:
     # 検証
     assert args.cmd == "serve"
     assert args.handler is run_serve
+
+
+def test_build_parser_when_migrate() -> None:
+    """migrate の引数と処理を引く（正常系）。"""
+    # 準備
+    parser = build_parser()
+    # 実行
+    args = parser.parse_args(["migrate", "--plan", "--source", "/tmp/a/dev-docs.yaml"])
+    # 検証
+    assert args.cmd == "migrate"
+    assert args.plan is True
+    assert args.record is False
+    assert args.allow_destructive is False
+    assert args.source == "/tmp/a/dev-docs.yaml"
+    assert args.handler is run_migrate
+
+
+def test_build_parser_when_plan_and_record() -> None:
+    """--plan と --record は同時に渡せない（異常系）。"""
+    # 準備
+    parser = build_parser()
+    # 実行・検証
+    with pytest.raises(SystemExit) as exc_info:
+        parser.parse_args(["migrate", "--plan", "--record"])
+    assert exc_info.value.code == 2
 
 
 def test_main_when_version(capsys: pytest.CaptureFixture[str]) -> None:

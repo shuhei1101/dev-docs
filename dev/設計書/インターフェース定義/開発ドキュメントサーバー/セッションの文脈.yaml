@@ -1,0 +1,167 @@
+title: "セッションの文脈"
+entry:
+  kind: endpoint
+  value: POST /_admin/session-context
+flows:
+  - name: 正常系
+    summary: ワークツリーから使える配信元と使い方・警告を返す
+    setup:
+      - name: Mock
+        description: なし（dev-docs のアプリをテストのクライアントで呼ぶ）
+      - name: 端末の設定
+        description: sample（`scope.write` に sample）と notes（`scope.read` だけに sample）。sample は管理用の YAML に無いファイルを 1 件持つ
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        participant C as クライアント
+        participant T as POST /_admin/session-context
+
+        C->>T: cwd（sample のワークツリー）・reason: startup
+        T->>T: cwd から使える配信元と同期の件数を求める
+        T-->>C: context・sources・warnings
+      ```
+    expected:
+      - '`sources` が sample（`read_write`）と notes（`read`）'
+      - '`context` に両方の配信元の行と、管理用の YAML の行を修正する使い方がある'
+      - '`warnings` に sample の管理用の YAML に無いファイル 1 件がある'
+      - '`forgotten` が `false`'
+    test: test_normal
+  - name: 正常系（/clear の後）
+    summary: '`reason: clear` で呼ぶと、そのセッションの返し済みの記録を削除する'
+    setup:
+      - name: Mock
+        description: なし
+      - name: 返し済みの記録
+        description: 同じ `session_id` で `search_docs` を呼び、文書を 1 件返した状態
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        participant C as クライアント
+        participant T as POST /_admin/session-context
+        participant M as 返し済みの記録
+
+        C->>T: cwd・session_id・reason: clear
+        T->>M: session_id の記録を削除する
+        T-->>C: context・forgotten: true
+      ```
+    expected:
+      - '`forgotten` が `true`'
+      - 同じ `session_id` で続けて呼んだ `search_docs` が、前に返した文書の本文を省かずに返す
+    test: test_normal_when_cleared
+  - name: 正常系（使える配信元が無い）
+    summary: どの `scope` にも当たらない作業場所では、setup の案内だけを返す
+    setup:
+      - name: Mock
+        description: なし
+      - name: cwd
+        description: どの配信元の `scope` にも当たらない一時フォルダ
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        participant C as クライアント
+        participant T as POST /_admin/session-context
+
+        C->>T: cwd
+        T-->>C: context（setup の案内）・sources: []
+      ```
+    expected:
+      - '`sources` が空'
+      - '`context` が `/dev-docs:setup` の案内を含み、使い方を含まない'
+    test: test_normal_when_no_source_available
+  - name: 異常系（入力が不正・422）
+    summary: '`reason` が選択肢の外だと 422 を返し、記録を削除しない'
+    setup:
+      - name: Mock
+        description: なし
+      - name: 入力
+        description: '`reason: restart` と `session_id`'
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        participant C as クライアント
+        participant T as POST /_admin/session-context
+
+        C->>T: cwd・session_id・reason: restart
+        T-->>C: 422（Problem Details）
+      ```
+    expected:
+      - 422 で `reason` の違反を返す
+      - 同じ `session_id` の返し済みの記録が残っている
+    test: test_error_when_input_invalid
+lead: SessionStart のフックが呼ぶ。cwd から使える配信元と使い方・索引の同期の件数・古い設定の警告を、セッションの文脈に入れる文として返す。`/clear`・圧縮の後は、そのセッションの返し済みの記録を捨てる。
+identifier: post_session_context
+permissions: なし（`127.0.0.1` でだけ待ち受ける）
+idempotent: true
+side_effects: '`reason` が `clear`・`compact` のとき、`session_id`（と `agent_id`）の返し済みの記録を削除する'
+callers:
+  - dev/設計書/シナリオ/単一ユースケース/起動する#scenarios[正常シナリオ（待ち受けているサーバーの文脈を追加する）]
+exclusivity: 返し済みの記録の削除は記録の書き込みと同じロックで行う
+request:
+  - name: cwd
+    type: str
+    required: true
+    location: body
+    description: セッションの作業場所の絶対パス（SessionStart の入力の `cwd`）
+  - name: session_id
+    type: str
+    required: false
+    default: なし（記録を削除しない）
+    location: body
+    description: Claude Code のセッション ID
+  - name: agent_id
+    type: str
+    required: false
+    default: なし（メインのセッション）
+    location: body
+    description: サブエージェントの ID
+  - name: reason
+    type: Literal['startup', 'resume', 'clear', 'compact', 'fork']
+    required: false
+    default: '`startup`'
+    location: body
+    description: SessionStart の入力の `source`
+request_example: |-
+  ```json
+  {"cwd": "/home/u/repo/sample/.claude/worktrees/x", "session_id": "8f1c...", "reason": "clear"}
+  ```
+response:
+  - name: context
+    type: str
+    description: 文脈に入れる文。使える配信元ごとの 1 行（ID・読み書きか読み取りだけか・`description`）、場面ごとの短い使い方、警告
+    notes: 使い方には「範囲のファイルを作った・消した・改名したら、管理用の YAML の行を修正する」を含める
+  - name: sources[].id
+    type: str
+    description: 使える配信元の ID
+  - name: sources[].access
+    type: Literal['read_write', 'read']
+    description: '`scope.write` に当たれば `read_write`'
+  - name: warnings[]
+    type: str
+    description: 索引の同期の件数が 0 でない配信元、設定のバージョンが古い配信元・端末の設定、配信していない配信元
+  - name: forgotten
+    type: bool
+    description: 返し済みの記録を削除したか
+response_example: |-
+  ```json
+  {"context": "dev-docs の文書の MCP（dev-docs）で、次の配信元を使えます。\n- sample（読み書き）: サンプルの配信元\n...", "sources": [{"id": "sample", "access": "read_write"}], "warnings": ["sample: 管理用の YAML に無いファイルが 1 件あります（check_project で確かめられます）"], "forgotten": false}
+  ```
+constraints:
+  - item: 公開範囲
+    constraint: 管理の MCP のツールにしない。`/_api/openapi.json` にも載せない
+    notes: フックだけが呼ぶ操作で、エージェントのツール一覧に出さないため
+  - item: 文の長さ
+    constraint: '`context` は 2,000 字以内。超えるときは配信元の `description` を省き、それでも超えるときは配信元の行を切って残りの件数を添える'
+    notes: 毎セッションの文脈に入るため短く保つ
+  - item: 同期の件数
+    constraint: '`status` と同じ関数で求め、使える配信元だけを警告に載せる'
+  - item: 記録の削除
+    constraint: '`reason` が `clear`・`compact` で `session_id` があるときだけ削除する。`startup`・`resume`・`fork` では削除しない'
+  - item: タイムアウト
+    constraint: 制限なし（呼ぶ側のフックが 3 秒で打ち切る）
+status_codes:
+  - code: '200'
+    condition: 文脈を組み立てた（使える配信元が 0 件のときも `/dev-docs:setup` の案内を返す）
+  - code: '422'
+    condition: '`cwd` が無い、または `reason` が選択肢の外'
+error_format: 画面の API と同じ RFC 9457 の Problem Details（`application/problem+json`）
+test_file: tests/integration/server/test_session_context.py

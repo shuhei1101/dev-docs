@@ -1,4 +1,4 @@
-summary: "開発ドキュメントサーバーの MCP ツール・画面の API・起動のインターフェース"
+summary: "開発ドキュメントサーバーの MCP ツール・管理の MCP・画面の API・設定と起動のインターフェース"
 docs_index: true
 items:
   - page: 文書の検索.yaml
@@ -19,6 +19,24 @@ items:
   - page: 関連のたどり.yaml
     summary: trace_related
     group: MCP
+  - page: 状態の取得.yaml
+    summary: status
+    group: 管理の MCP
+  - page: 設定の読み直し.yaml
+    summary: reload
+    group: 管理の MCP
+  - page: 再起動.yaml
+    summary: restart
+    group: 管理の MCP
+  - page: 更新.yaml
+    summary: update
+    group: 管理の MCP
+  - page: 配信元の検査.yaml
+    summary: check_project
+    group: 管理の MCP
+  - page: 試しの変換.yaml
+    summary: try_convert
+    group: 管理の MCP
   - page: 文書の取得.yaml
     summary: GET /_api/sources/{source}/docs[/{path}]
     group: 画面の API
@@ -31,6 +49,9 @@ items:
   - page: 表の列の設定の保存.yaml
     summary: PUT /_api/sources/{source}/columns
     group: 画面の API
+  - page: APIのスキーマ.yaml
+    summary: GET /_api/openapi.json
+    group: 画面の API
   - page: 端末の設定の取得.yaml
     summary: GET /_api/settings/sources
     group: 設定・起動
@@ -40,6 +61,9 @@ items:
   - page: 起動.yaml
     summary: dev-docs serve
     group: 設定・起動
-  - page: APIのスキーマ.yaml
-    summary: GET /_api/openapi.json
-    group: 画面の API
+  - page: 設定の移し替え.yaml
+    summary: dev-docs migrate
+    group: 設定・起動
+  - page: セッションの文脈.yaml
+    summary: POST /_admin/session-context
+    group: 設定・起動
