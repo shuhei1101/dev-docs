@@ -106,6 +106,36 @@ def word_history(
 
 
 @pytest.fixture
+def body_file_env(
+    tmp_path: Path,
+    git_repo: Callable[..., Path],
+    make_source_config: Callable[..., SourceConfig],
+    make_served_source: Callable[..., ServedSource],
+    make_registry: Callable[..., SourceRegistry],
+) -> ChangesEnv:
+    """`a.md` を指す索引 `index.yaml`（`records`・`body_file`）を持つ git リポジトリの配信元を返す。"""
+    clone = git_repo({"index.yaml": "items:\n  - path: a.md\n", "a.md": "a の本文\n"})
+    table = DocumentTable(
+        id="src", type="yaml", paths=["index.yaml"], records="items", body_file="path"
+    )
+    source = make_served_source(
+        id="sample",
+        root=clone,
+        config=make_source_config(documents=[table]),
+        is_git=True,
+        repo_root=clone,
+        scope_write=[str(clone)],
+    )
+    return ChangesEnv(
+        registry=make_registry(source),
+        store=DocumentStore(SnapshotStore(tmp_path / "snapshots")),
+        seen=SeenStore(tmp_path / "seen.sqlite3", retention_days=7),
+        source=source,
+        clone=clone,
+    )
+
+
+@pytest.fixture
 def excluded_env(
     tmp_path: Path,
     git_repo: Callable[..., Path],
@@ -327,3 +357,30 @@ def test_list_changes_when_invalid_regex(env: ChangesEnv) -> None:
     with pytest.raises(InvalidArgumentError) as exc_info:
         env.list(contains={"value": "(", "regex": True})
     assert exc_info.value.violations[0].path == "contains.value"
+
+
+def test_list_changes_when_contains_body_file(
+    body_file_env: ChangesEnv, commit_all: Callable[..., str], run_git: Callable[..., str]
+) -> None:
+    """`body_file` の文書の語（正常系）。"""
+    # 準備
+    base = run_git(body_file_env.clone, "rev-parse", "HEAD").strip()
+    first = commit_all(body_file_env.clone, {"a.md": "a の本文\n廃止予定\n"})
+    commit_all(
+        body_file_env.clone,
+        {
+            "index.yaml": "items:\n  - path: a.md\n  - path: b.md\n",
+            "b.md": "b の本文\n",
+        },
+    )
+    third = commit_all(body_file_env.clone, {"b.md": "b の本文\n廃止予定\n"})
+    # 実行
+    result = body_file_env.list(**{"from": base, "to": third, "contains": {"value": "廃止予定"}})
+    # 検証
+    assert [item.id for item in result.items] == ["a", "b"]
+    first_changes = result.items[0].contains_changes
+    second_changes = result.items[1].contains_changes
+    assert first_changes is not None
+    assert second_changes is not None
+    assert [(change.kind, change.to.commit) for change in first_changes] == [("added", first[:7])]
+    assert [(change.kind, change.to.commit) for change in second_changes] == [("added", third[:7])]

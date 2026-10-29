@@ -9,6 +9,7 @@ import pytest
 from dev_docs.features.documents import loader as loader_module
 from dev_docs.features.documents.loader import (
     collect_files,
+    documents_from_text,
     load_file,
     split_front_matter,
 )
@@ -158,6 +159,35 @@ def test_load_file_when_records(
     assert [doc.body_path for doc in documents] == ["src/a.py", "src/b.py"]
     assert [doc.record_index for doc in documents] == [0, 1]
     assert documents[0].version == value_hash({"path": "a.py", "tags": ["x"]})
+
+
+def test_documents_from_text_when_read_body(
+    tmp_path: Path, write_files: Callable[[Path, dict[str, str]], None]
+) -> None:
+    """`body_file` の本文の読み方（正常系）。"""
+    # 準備
+    write_files(tmp_path, {"a.md": "今の本文\n"})
+    text = "items:\n  - path: a.md\n"
+    table = DocumentTable(
+        id="src", type="yaml", paths=["index.yaml"], records="items", body_file="path"
+    )
+    # 実行
+    read, read_problems = documents_from_text(
+        text,
+        tmp_path,
+        "index.yaml",
+        table,
+        source_id="sample",
+        read_body={"a.md": "過去の本文"}.get,
+    )
+    missing, missing_problems = documents_from_text(
+        text, tmp_path, "index.yaml", table, source_id="sample", read_body=lambda path: None
+    )
+    # 検証
+    assert read_problems == []
+    assert [(doc.body, doc.body_path) for doc in read] == [("過去の本文", "a.md")]
+    assert missing == []
+    assert [problem.reason for problem in missing_problems] == ["missing_body_file"]
 
 
 def test_load_file_when_dates(
