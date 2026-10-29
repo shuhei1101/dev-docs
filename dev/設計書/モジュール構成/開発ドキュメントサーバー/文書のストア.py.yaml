@@ -972,9 +972,9 @@ classes:
         description: '`ref` のある `Target` を読むときに使う'
       - name: _files
         title: ファイルのキャッシュ
-        type: dict[tuple[Path, str], tuple[int, int, list[Document], list[LoadProblem]]]
+        type: dict[tuple[Path, str], tuple[int, int, list[Document], list[LoadProblem], tuple[tuple[str, int, int], ...]]]
         access: 内部 (_)
-        description: (絶対パス, 文書の行の ID) → (更新日時, 大きさ, 文書, 理由)
+        description: (絶対パス, 文書の行の ID) → (更新日時, 大きさ, 文書, 理由, 文書が指す本文のファイルの (パス, 更新日時, 大きさ) のパスの順の並び)
       - name: _schemas
         title: スキーマのキャッシュ
         type: dict[Path, tuple[int, int, dict[str, Any]]]
@@ -1022,8 +1022,8 @@ classes:
           2. 文書の行を決める。`kinds` があれば `source.table` で引き（無い種類は `UnknownKindError`）、無ければ `enabled` の全ての行
           3. Git の配信元の場合、履歴の『ファイルの日時』を `_dates` から引く。無ければ、作業ツリー（ワークツリーか `repo_root`）と commit（`ref` の commit、無ければ作業ツリーの `HEAD` を解いた SHA）で呼び、配信元の直下からのパスに直して控える
           4. 行ごとに『ファイルの収集』でファイルを集め、ファイルごとに `stat` を取る
-             - `_files` の更新日時と大きさが同じなら控えた結果を使う
-             - 違えば『ファイルの読み込み』で読み、`_files` を置き換える
+             - `_files` の更新日時と大きさが同じで、理由に `missing_body_file` が無く、本文のファイルの (パス, 更新日時, 大きさ) も同じなら控えた結果を使う
+             - それ以外は『ファイルの読み込み』で読み、`_files` を置き換える
           5. 収集で当たらなかった `_files` のキーのうち、読むフォルダの下にあるものを削除する（削除されたファイル）
           6. 行の順に文書を並べ、先に現れた ID を残して、後に現れた同じ ID の文書を `duplicate_id` にする（`detail` に ID と先の文書のファイル）
           7. `LoadResult` を返す
