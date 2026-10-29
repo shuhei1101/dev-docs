@@ -1,0 +1,1 @@
+# メタデータを列の対応だけにし、documents の行の type・custom・defaults[]・フロントマターをやめ、write_docs が対応を解いて書く
