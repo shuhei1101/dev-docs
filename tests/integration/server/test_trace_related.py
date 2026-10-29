@@ -8,7 +8,6 @@ from dev_docs.shared.yaml_io import load_yaml
 SEEN_MARK = "（この会話で返し済み）"
 CODE_ROW = (
     "  - id: code\n"
-    "    type: yaml\n"
     "    paths: [src/files.yaml]\n"
     "    schema: schemas/code.schema.yaml\n"
     "    records: files\n"

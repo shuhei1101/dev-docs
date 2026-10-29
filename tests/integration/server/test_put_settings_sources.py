@@ -7,7 +7,7 @@ from dev_docs.features.settings.query import load_terminal_config
 
 ORIGIN = {"Origin": "http://127.0.0.1:8781"}
 SETTINGS_EXTRA = "# 取り込みの保持日数（コメントは保つ）\nseen_retention_days: 5\n"
-BROKEN_CONFIG = "name: broken\ndocuments:\n  - id: sample\n    type: yaml\n"
+BROKEN_CONFIG = "name: broken\ndocuments:\n  - id: sample\n    schema: schemas/sample.schema.yaml\n"
 
 
 def _row(source: Any, **overrides: Any) -> dict[str, Any]:

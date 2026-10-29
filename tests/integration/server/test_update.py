@@ -18,7 +18,6 @@ SLOW_CONFIG = (
     "name: slow\n"
     "documents:\n"
     "  - id: note\n"
-    "    type: yaml\n"
     "    paths: [docs/*.yaml]\n"
     "    schema: schemas/sample.schema.yaml\n"
     "    converter: sleepy\n"

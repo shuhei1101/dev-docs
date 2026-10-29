@@ -74,35 +74,81 @@ def test_normal_when_record_only(settings_file: Path, write_steps: Callable[...,
     }
 
 
-@pytest.mark.usefixtures("versions_2")
-def test_normal_when_source_config(
-    tmp_path: Path, settings_file: Path, write_steps: Callable[..., None]
-) -> None:
+def test_normal_when_source_config(tmp_path: Path, settings_file: Path) -> None:
     """`--source` で配信元の `dev-docs.yaml` に手順を当てる（正常系）。"""
     # 準備
     folder = tmp_path / "sample"
-    folder.mkdir()
+    (folder / "schemas").mkdir(parents=True)
+    (folder / "schemas" / "rule.schema.yaml").write_text("type: object\n", encoding="utf-8")
     config = folder / "dev-docs.yaml"
     config.write_text(
         'version: "1"\nname: sample\ndescription: 説明\n'
-        "documents:\n  - id: rules\n    type: markdown\n    paths: [docs/*.md]\n",
+        "documents:\n"
+        "  - id: rules\n"
+        "    type: yaml\n"
+        "    paths: [docs/rule/*.yaml]\n"
+        "    schema: schemas/rule.schema.yaml\n"
+        "    metadata:\n"
+        "      name: {type: ref, field: title}\n"
+        "      alias_type: {type: custom, value: term}\n",
         encoding="utf-8",
-    )
-    (folder / "docs").mkdir()
-    write_steps(
-        "dev-docs",
-        "2",
-        [{"op": "rename", "path": "description", "to": "instructions", "description": "改名"}],
     )
     # 実行
     code = main(["migrate", "--source", str(config)])
     # 検証
     value = load_yaml(config.read_text(encoding="utf-8"))
+    row = value["documents"][0]
     assert code == 0
     assert value["version"] == "2"
-    assert value["instructions"] == "説明"
-    assert "description" not in value
+    assert "type" not in row
+    assert row["metadata"] == {"name": "title"}
+    assert row["alias_type"] == "term"
     assert settings_file.read_text(encoding="utf-8") == SETTINGS_V1
+
+
+def test_error_when_source_config_unmigratable(
+    tmp_path: Path, settings_file: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """配信元の設定に移せない設定があると、書き換えず終了コード 4 で止める（異常系）。"""
+    # 準備
+    folder = tmp_path / "sample"
+    (folder / "schemas").mkdir(parents=True)
+    (folder / "schemas" / "rule.schema.yaml").write_text("type: object\n", encoding="utf-8")
+    config = folder / "dev-docs.yaml"
+    text = (
+        'version: "1"\nname: sample\n'
+        "documents:\n"
+        "  - id: rules\n"
+        "    type: yaml\n"
+        "    paths: [docs/rule/*.yaml]\n"
+        "    schema: schemas/rule.schema.yaml\n"
+        "    metadata:\n"
+        "      name: {type: ref, field: title}\n"
+        "  - id: notes\n"
+        "    type: markdown\n"
+        "    paths: [docs/note/*.md]\n"
+        "    schema: schemas/rule.schema.yaml\n"
+        "    defaults:\n"
+        "      - paths: [docs/**]\n"
+        "        tags: [doc]\n"
+        "  - id: others\n"
+        "    paths: [docs/other/*.yaml]\n"
+        "    schema: schemas/rule.schema.yaml\n"
+        "    metadata:\n"
+        "      tags: {type: custom, value: [x]}\n"
+    )
+    config.write_text(text, encoding="utf-8")
+    # 実行
+    code = main(["migrate", "--source", str(config)])
+    # 検証
+    error = capsys.readouterr().err
+    assert code == 4
+    assert "documents[1].type" in error
+    assert "documents[1].defaults" in error
+    assert "documents[2].metadata.tags" in error
+    assert "/dev-docs:setup" in error
+    assert config.read_text(encoding="utf-8") == text
+    assert _backups(folder) == []
 
 
 def test_error_when_config_invalid(

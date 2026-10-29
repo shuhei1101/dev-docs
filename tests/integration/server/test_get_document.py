@@ -6,7 +6,7 @@ from typing import Any
 
 import pytest
 
-BROKEN_CONFIG = "name: broken\ndocuments:\n  - id: sample\n    type: yaml\n"
+BROKEN_CONFIG = "name: broken\ndocuments:\n  - id: sample\n    schema: schemas/sample.schema.yaml\n"
 NAV = (
     "nav:\n"
     "  tabs:\n"
@@ -35,13 +35,14 @@ CONVERT_SCRIPT = (
 SLEEP_SCRIPT = "import os, time\nopen('pid.txt', 'w').write(str(os.getpid()))\ntime.sleep(60)\n"
 CUSTOM_EXTRA = (
     "  - id: custom\n"
-    "    type: yaml\n"
     "    paths: [custom/*.yaml]\n"
     "    schema: schemas/sample.schema.yaml\n"
     "    converter: md\n"
     "  - id: guide\n"
-    "    type: markdown\n"
-    "    paths: [guide/*.md]\n"
+    "    paths: [guide/files.yaml]\n"
+    "    schema: schemas/sample.schema.yaml\n"
+    "    records: files\n"
+    "    body_file: path\n"
     "converters:\n"
     "  - id: md\n"
     "    run: [python3, scripts/convert.py]\n"
@@ -59,6 +60,7 @@ def _custom_files(
             "dev-docs.yaml": sample_config_text(CUSTOM_EXTRA, name="custom"),
             "scripts/convert.py": script,
             "custom/c-1.yaml": "id: c-1\nname: カスタム 1\n",
+            "guide/files.yaml": "files:\n  - path: intro.md\n",
             "guide/intro.md": "# 案内\n\n<!-- embed: data/rows.yaml#rows -->\n",
             "data/rows.yaml": "rows:\n  - {colA: 値A, colB: 値B}\n",
         }
@@ -105,7 +107,6 @@ def test_normal_when_nav_missing(
     # 準備
     memo = (
         "  - id: memo\n"
-        "    type: yaml\n"
         "    title: メモ\n"
         "    paths: [notes/*.yaml]\n"
         "    schema: schemas/sample.schema.yaml\n"
@@ -184,7 +185,7 @@ def test_normal_when_custom_converter(
     env = make_server(make_source("custom", files))
     # 実行
     converted = env.client.get("/_api/sources/custom/docs/custom/c-1")
-    embedded = env.client.get("/_api/sources/custom/docs/guide/intro")
+    embedded = env.client.get("/_api/sources/custom/docs/guide/files/guide/intro")
     # 検証
     assert converted.status_code == 200
     assert "# カスタム変換: カスタム 1" in converted.json()["markdown"]

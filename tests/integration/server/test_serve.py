@@ -9,7 +9,7 @@ from typing import Any
 import httpx
 import pytest
 
-BROKEN_CONFIG = "name: broken\ndocuments:\n  - id: sample\n    type: yaml\n"
+BROKEN_CONFIG = "name: broken\ndocuments:\n  - id: sample\n    schema: schemas/sample.schema.yaml\n"
 TOOL_NAMES = [
     "delete_docs",
     "describe",
@@ -42,11 +42,9 @@ INITIALIZE = {
 }
 LOCAL_CONFIG_ROWS = (
     "  - id: sample\n"
-    "    type: yaml\n"
     "    paths: [alt/*.yaml]\n"
     "    schema: schemas/sample.schema.yaml\n"
     "  - id: extra\n"
-    "    type: yaml\n"
     "    paths: [extra/*.yaml]\n"
     "    schema: schemas/sample.schema.yaml\n"
 )
@@ -186,7 +184,7 @@ def test_normal_when_config_version_old(
     # 検証
     warnings = [record.getMessage() for record in caplog.records if "old" in record.getMessage()]
     assert response.status_code == 200
-    assert any("0" in message and "1" in message for message in warnings)
+    assert any("0" in message and "2" in message for message in warnings)
 
 
 def test_normal_when_source_invalid(
@@ -224,13 +222,12 @@ def test_normal_when_metadata_out_of_sync(
     sample_config_text: Callable[..., str],
     caplog: pytest.LogCaptureFixture,
 ) -> None:
-    """ref の列の欠けと管理用の YAML のずれがあっても配信し、件数を警告のログに残す（正常系）。"""
+    """metadata の列の欠けと管理用の YAML のずれがあっても配信し、件数を警告のログに残す（正常系）。"""
     # 準備
     rows = (
         "    metadata:\n"
-        "      name: {type: ref, field: title}\n"
+        "      name: title\n"
         "  - id: src\n"
-        "    type: yaml\n"
         "    paths: [src/files.yaml]\n"
         "    schema: schemas/files.schema.yaml\n"
         "    records: files\n"
@@ -260,7 +257,7 @@ def test_normal_when_metadata_out_of_sync(
     sample_warnings = [message for message in warnings if message.startswith("sample:")]
     assert env.client.get("/_api/sources/sample/docs").status_code == 200
     assert len(sample_warnings) == 3
-    assert any("ref の列の欠け 1 件" in m and "name（title）" in m for m in sample_warnings)
+    assert any("metadata の列の欠け 1 件" in m and "name（title）" in m for m in sample_warnings)
     assert any(
         "管理用の YAML に無いファイル 2 件" in m and "src/d.py" in m and "src/sub/e.py" in m
         for m in sample_warnings
@@ -268,6 +265,47 @@ def test_normal_when_metadata_out_of_sync(
     assert any("ファイルが無い行 1 件" in m and "c.py" in m for m in sample_warnings)
     assert not any("src: src/files.yaml" in m for m in sample_warnings)
     assert [message for message in warnings if message.startswith("clean:")] == []
+
+
+def test_normal_when_source_config_legacy(
+    make_source: Callable[..., Any],
+    make_server: Callable[..., Any],
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """前の形式の配信元を外して配信し、違反と移し替えの案内をエラーログに残す（正常系）。"""
+    # 準備
+    sample = make_source("sample")
+    legacy_config = (
+        'version: "1"\n'
+        "name: legacy\n"
+        "documents:\n"
+        "  - id: notes\n"
+        "    paths: [docs/*.md]\n"
+        "    schema: schemas/sample.schema.yaml\n"
+        "    type: markdown\n"
+        "  - id: rules\n"
+        "    paths: [docs/*.yaml]\n"
+        "    schema: schemas/sample.schema.yaml\n"
+        "    type: yaml\n"
+        "    metadata:\n"
+        "      name: {type: ref, field: title}\n"
+        "    defaults:\n"
+        "      - paths: [docs/**]\n"
+        "        tags: [doc]\n"
+    )
+    legacy = make_source("legacy", {"dev-docs.yaml": legacy_config})
+    caplog.set_level(logging.ERROR)
+    # 実行
+    env = make_server(sample, legacy)
+    # 検証
+    logs = caplog.text
+    assert env.client.get("/_api/sources/legacy/docs").status_code == 404
+    assert env.client.get("/_api/sources/sample/docs").status_code == 200
+    assert "legacy: documents[0].type" in logs
+    assert "legacy: documents[1].type" in logs
+    assert "legacy: documents[1].defaults" in logs
+    assert "legacy: documents[1].metadata.name" in logs
+    assert "dev-docs migrate --source" in logs
 
 
 def test_error_when_terminal_config_invalid(

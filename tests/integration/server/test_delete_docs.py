@@ -10,7 +10,6 @@ from dev_docs.shared.yaml_io import load_yaml
 REFERENCING = {"to": "doc-2", "type": "references"}
 WRITABLE_FALSE_ROW = (
     "  - id: sample\n"
-    "    type: yaml\n"
     "    paths: [docs/*.yaml]\n"
     "    schema: schemas/sample.schema.yaml\n"
     "    writable: false\n"
@@ -245,8 +244,7 @@ def test_error_when_delete_not_allowed(
     # 準備
     sample = make_source("sample")
     config = sample_config_text().replace(
-        "  - id: sample\n    type: yaml\n    paths: [docs/*.yaml]\n"
-        "    schema: schemas/sample.schema.yaml\n",
+        "  - id: sample\n    paths: [docs/*.yaml]\n    schema: schemas/sample.schema.yaml\n",
         WRITABLE_FALSE_ROW,
     )
     memo = make_source(

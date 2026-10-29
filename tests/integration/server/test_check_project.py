@@ -44,16 +44,46 @@ def test_normal_when_config_has_violations(tmp_path: Path, make_server: Callable
     folder = tmp_path / "draft"
     folder.mkdir()
     (folder / "dev-docs.yaml").write_text(
-        "name: draft\ndocuments:\n  - id: sample\n    type: yaml\n    paths: [docs/*.yaml]\n"
+        "name: draft\ndocuments:\n  - id: sample\n    paths: [docs/*.yaml]\n"
         "    schema: schemas/none.schema.yaml\n",
         encoding="utf-8",
     )
-    broken = "name: draft\ndocuments:\n  - id: sample\n    type: yaml\n"
+    broken = "name: draft\ndocuments:\n  - id: sample\n    schema: schemas/sample.schema.yaml\n"
     # 実行
     result = env.call_admin("check_project", path=str(folder), config=broken, format="json")
     # 検証
     assert any(item["path"] == "documents[0].paths" for item in result.data["violations"])
     assert "sync" not in result.data
+
+
+def test_normal_when_config_legacy(tmp_path: Path, make_server: Callable[..., Any]) -> None:
+    """前の形式のキーを持つ設定の違反と、設定のバージョンが古いことを返す（正常系）。"""
+    # 準備
+    env = make_server()
+    legacy = (
+        'version: "1"\n'
+        "name: legacy\n"
+        "documents:\n"
+        "  - id: notes\n"
+        "    paths: [docs/*.md]\n"
+        "    schema: schemas/sample.schema.yaml\n"
+        "    type: markdown\n"
+        "    defaults:\n"
+        "      - paths: [docs/**]\n"
+        "        tags: [doc]\n"
+        "  - id: rules\n"
+        "    paths: [docs/*.yaml]\n"
+        "    schema: schemas/sample.schema.yaml\n"
+        "    metadata:\n"
+        "      name: {type: ref, field: title}\n"
+    )
+    # 実行
+    result = env.call_admin("check_project", path=str(tmp_path), config=legacy, format="json")
+    # 検証
+    paths = {item["path"] for item in result.data["violations"]}
+    assert {"documents[0].type", "documents[0].defaults", "documents[1].metadata.name"} <= paths
+    assert result.data["version_state"] == "old"
+    assert result.data["config_version"] == "1"
 
 
 def test_error_when_config_not_found(tmp_path: Path, make_server: Callable[..., Any]) -> None:

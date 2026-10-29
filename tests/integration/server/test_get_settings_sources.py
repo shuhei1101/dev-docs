@@ -3,7 +3,7 @@ from __future__ import annotations
 from collections.abc import Callable
 from typing import Any
 
-BROKEN_CONFIG = "name: broken\ndocuments:\n  - id: sample\n    type: yaml\n"
+BROKEN_CONFIG = "name: broken\ndocuments:\n  - id: sample\n    schema: schemas/sample.schema.yaml\n"
 
 
 def test_normal(make_source: Callable[..., Any], make_server: Callable[..., Any]) -> None:
@@ -47,7 +47,7 @@ def test_normal_when_source_not_served(
     assert response.status_code == 200
     assert rows["sample"]["status"] == "serving"
     assert rows["legacy"]["status"] == "serving"
-    assert rows["legacy"]["config_version"] == {"config": "0", "server": "1"}
+    assert rows["legacy"]["config_version"] == {"config": "0", "server": "2"}
     assert rows["broken"]["status"] == "not_served"
     assert any(
         error["path"] == "documents[0].paths" and "必須" in error["reason"]
