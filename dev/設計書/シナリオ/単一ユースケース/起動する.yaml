@@ -320,8 +320,8 @@ scenarios:
         description: 検証に通る配信元
         notes: id `sample`
       - name: 前の形式の配信元
-        description: '`version: "1"` の `dev-docs.yaml` を持ち、`documents[0]` が `type: markdown`、`documents[1]` が `type: yaml`・`metadata: {name: {type: ref, field: title}}`・`defaults: [{paths: [docs/**], tags: [doc]}]` を持つ配信元'
-        notes: id `legacy`
+        description: '`version: "1"` の `dev-docs.yaml` を持ち、`documents[0]` が `paths`・`schema`・`type: markdown`、`documents[1]` が `paths`・`schema`・`type: yaml`・`metadata: {name: {type: ref, field: title}}`・`defaults: [{paths: [docs/**], tags: [doc]}]` を持つ配信元'
+        notes: id `legacy`。違反は `type`・`defaults`・オブジェクトの `metadata` だけになる
       - name: 端末の設定
         description: '`DEV_DOCS_CONFIG` が指す `settings.yaml`'
         notes: '`sources` に sample と legacy の 2 行'
