@@ -8,6 +8,7 @@ from dev_docs.shared.hashing import content_hash
 
 DOC_1 = {"field": "id", "op": "eq", "values": ["doc-1"]}
 SHORT_SHA = 7
+WORD = "廃止予定"
 
 
 def _changed_source(
@@ -26,6 +27,33 @@ def _changed_source(
         source.folder, {"docs/doc-1.yaml": renamed}, "docs: 改名", date="2026-02-01T00:00:00+09:00"
     )
     return source, parent, changed
+
+
+def _word_history(
+    make_source: Callable[..., Any],
+    commit_all: Callable[..., str],
+    run_git: Callable[..., str],
+    sample_doc_text: Callable[..., str],
+) -> tuple[Any, str, str, str]:
+    """文書 1 に語が入り、書き換えられ、消えた 3 つの commit を持つ sample と、各 commit を返す。"""
+    source = make_source("sample")
+    base = run_git(source.folder, "rev-parse", "HEAD").strip()
+    with_word = sample_doc_text("doc-1", "文書 1", description=f"1 件目 {WORD}", tags=["a"])
+    rewritten = sample_doc_text("doc-1", "文書 1", description=f"1 件目 {WORD}です", tags=["a"])
+    original = sample_doc_text("doc-1", "文書 1", description="1 件目", tags=["a"])
+    added = commit_all(source.folder, {"docs/doc-1.yaml": with_word}, "docs: 語を足す")
+    commit_all(
+        source.folder,
+        {
+            "docs/doc-1.yaml": rewritten,
+            "docs/doc-2.yaml": sample_doc_text(
+                "doc-2", "文書 2 改", description="2 件目", tags=["a", "b"]
+            ),
+        },
+        "docs: 書き換える",
+    )
+    removed = commit_all(source.folder, {"docs/doc-1.yaml": original}, "docs: 語を消す")
+    return source, base, added, removed
 
 
 def test_normal(
@@ -193,6 +221,15 @@ def test_error_when_invalid_argument(
     # 実行
     non_git = env.call("list_changes", cwd=str(sample.folder), source="notes", **{"from": "HEAD~1"})
     only_to = env.call("list_changes", cwd=str(sample.folder), source="sample", to="develop")
+    empty_word = env.call(
+        "list_changes", cwd=str(sample.folder), source="sample", contains={"value": ""}
+    )
+    bad_regex = env.call(
+        "list_changes",
+        cwd=str(sample.folder),
+        source="sample",
+        contains={"value": "(", "regex": True},
+    )
     # 検証
     assert non_git.is_error
     assert "InvalidArgumentError" in non_git.text
@@ -200,6 +237,11 @@ def test_error_when_invalid_argument(
     assert only_to.is_error
     assert "InvalidArgumentError" in only_to.text
     assert "from" in only_to.text
+    assert empty_word.is_error
+    assert "contains.value" in empty_word.text
+    assert bad_regex.is_error
+    assert "InvalidArgumentError" in bad_regex.text
+    assert "contains.value" in bad_regex.text
 
 
 def test_error_when_source_not_readable(
@@ -232,3 +274,78 @@ def test_error_when_source_not_readable(
     assert "sample" in single.text
     assert not everything.is_error
     assert "other" not in everything.text
+
+
+def test_normal_when_contains(
+    make_source: Callable[..., Any],
+    make_server: Callable[..., Any],
+    commit_all: Callable[..., str],
+    run_git: Callable[..., str],
+    sample_doc_text: Callable[..., str],
+) -> None:
+    """contains で、区間の中で語の出現数が変わった文書と、入った・消えた区間を返す（正常系）。"""
+    # 準備
+    source, base, added, removed = _word_history(make_source, commit_all, run_git, sample_doc_text)
+    env = make_server(source)
+    cwd = str(source.folder)
+    range_arguments = {"cwd": cwd, "source": "sample", "from": base, "to": removed}
+    word = {"value": WORD}
+    # 実行
+    result = env.call("list_changes", format="json", contains=word, **range_arguments)
+    markdown = env.call("list_changes", contains=word, **range_arguments)
+    regex = env.call(
+        "list_changes",
+        format="json",
+        contains={"value": "廃止.定", "regex": True},
+        **range_arguments,
+    )
+    without_contains = env.call("list_changes", format="json", **range_arguments)
+    # 前回読んだ時点から比べる呼び出しの準備（文書 1 を読んでから、語を足す）
+    env.call("search_docs", cwd=cwd, filter=DOC_1, view="full", session_id="s1")
+    doc_1_path = source.folder / "docs" / "doc-1.yaml"
+    doc_1_path.write_text(
+        sample_doc_text("doc-1", "文書 1", description=f"1 件目 {WORD}", tags=["a"]),
+        encoding="utf-8",
+    )
+    since_last_read = env.call(
+        "list_changes", cwd=cwd, source="sample", session_id="s1", format="json", contains=word
+    )
+    # ブランチで文書 2 に語を足し、--no-ff でマージする。文書 1 の語は作業ツリーに残す
+    run_git(source.folder, "stash")
+    run_git(source.folder, "checkout", "-b", "feature")
+    doc_2 = sample_doc_text("doc-2", "文書 2 改", description=f"2 件目 {WORD}", tags=["a", "b"])
+    branch = commit_all(source.folder, {"docs/doc-2.yaml": doc_2}, "docs: ブランチで語を足す")
+    run_git(source.folder, "checkout", "develop")
+    run_git(source.folder, "merge", "--no-ff", "feature", "-m", "merge")
+    run_git(source.folder, "stash", "pop")
+    to_worktree = env.call(
+        "list_changes",
+        cwd=cwd,
+        source="sample",
+        format="json",
+        contains=word,
+        **{"from": base},
+    )
+    # 検証
+    item = result.data["items"][0]
+    assert [(entry["id"], entry["change"]) for entry in result.data["items"]] == [
+        ("doc-1", "unchanged")
+    ]
+    assert [
+        (change["kind"], change["to"]["commit"], change["count_before"], change["count_after"])
+        for change in item["contains_changes"]
+    ] == [("added", added[:SHORT_SHA], 0, 1), ("removed", removed[:SHORT_SHA], 1, 0)]
+    assert regex.data["items"] == result.data["items"]
+    assert [entry["id"] for entry in without_contains.data["items"]] == ["doc-2"]
+    assert "contains_changes" not in without_contains.data["items"][0]
+    assert f"added {added[:SHORT_SHA]}・removed {removed[:SHORT_SHA]}" in markdown.text
+    last_read_changes = since_last_read.data["items"][0]["contains_changes"]
+    assert [change["kind"] for change in last_read_changes] == ["added"]
+    assert last_read_changes[0]["from"] == since_last_read.data["range"]["from"]
+    assert last_read_changes[0]["to"] == since_last_read.data["range"]["to"]
+    by_id = {entry["id"]: entry["contains_changes"] for entry in to_worktree.data["items"]}
+    assert [(change["kind"], change["to"]["commit"]) for change in by_id["doc-2"]] == [
+        ("added", branch[:SHORT_SHA])
+    ]
+    assert by_id["doc-1"][-1]["kind"] == "added"
+    assert by_id["doc-1"][-1]["to"] == {"input": "作業ツリー"}
