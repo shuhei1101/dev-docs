@@ -6,8 +6,8 @@ directory: |-
   ```text
   src/dev_docs/features/changes/
   ├─ __init__.py   # 公開する型と関数の再エクスポート
-  ├─ types.py      # ChangesRequest / RangePoint / ChangeItem / ChangesResult
-  ├─ compare.py    # changed_keys / diff_lines
+  ├─ types.py      # ChangesRequest / ContainsQuery / RangePoint / ContainsChange / ChangeItem / ChangesResult
+  ├─ compare.py    # changed_keys / diff_lines / count_occurrences
   ├─ render.py     # render_changes_markdown
   └─ service.py    # list_changes
   ```
@@ -19,12 +19,15 @@ diagrams:
         変更の一覧 ..> 読む場所の解決
         変更の一覧 ..> リビジョンの解決 : from・to
         変更の一覧 ..> 変わったファイル
+        変更の一覧 ..> 区間の commit : contains
         変更の一覧 ..> リビジョンのファイル
         変更の一覧 ..> 会話の記録 : 前回読んだ内容
         変更の一覧 ..> 文字列からの文書の組み立て
         変更の一覧 ..> 条件の照合
         変更の一覧 ..> 変わったキー
         変更の一覧 ..> 差分の行
+        変更の一覧 ..> 語の出現数 : contains
+        語の出現数 ..> 正規表現の組み立て
         変更の一覧 ..> 変更の結果 : 返す
         class 変更の一覧 {
           <<function>>
@@ -36,6 +39,9 @@ diagrams:
           <<function>>
         }
         class 変わったファイル {
+          <<function>>
+        }
+        class 区間の commit {
           <<function>>
         }
         class リビジョンのファイル {
@@ -56,6 +62,12 @@ diagrams:
         class 差分の行 {
           <<function>>
         }
+        class 語の出現数 {
+          <<function>>
+        }
+        class 正規表現の組み立て {
+          <<function>>
+        }
         class 変更の結果 {
           +区間
           +文書: list
@@ -63,6 +75,7 @@ diagrams:
         click 読む場所の解決 href "./権限と作業場所.py.yaml#読む場所の解決"
         click リビジョンの解決 href "./履歴.py.yaml#リビジョンの解決"
         click 変わったファイル href "./履歴.py.yaml#変わったファイル"
+        click 区間の commit href "./履歴.py.yaml#区間の commit"
         click リビジョンのファイル href "./履歴.py.yaml#リビジョンのファイル"
         click 会話の記録 href "./会話の記録.py.yaml#会話の記録"
         click 文字列からの文書の組み立て href "./文書のストア.py.yaml#文字列からの文書の組み立て"
@@ -167,6 +180,12 @@ data_models:
         access: 公開
         default: None
         description: フックが入れる
+      - name: contains
+        title: 語
+        type: ContainsQuery | None
+        access: 公開
+        default: None
+        description: 語の出現数が変わった文書だけを返す。`None` は語で絞らない
   - name: RangePoint
     title: 区間の端
     container: features/changes/types.py
@@ -210,9 +229,9 @@ data_models:
         description: 複数の配信元を指したときだけ
       - name: change
         title: 変更の種類
-        type: Literal['added', 'modified', 'deleted']
+        type: Literal['added', 'modified', 'deleted', 'unchanged']
         access: 公開
-        description: 足した・変えた・消した
+        description: 足した・変えた・消した。`unchanged` は `contains` を渡し、区間の中で語が入って消えて両端の内容が同じ（両端に無い場合も含む）文書だけ
       - name: keys
         title: 変わったキー
         type: list[str]
@@ -241,6 +260,12 @@ data_models:
         access: 公開
         default: None
         description: '`view: full` は `section`、`view: summary` は `summary`。`path` が `None` のときは `None`'
+      - name: contains_changes
+        title: 語の増減
+        type: list[ContainsChange] | None
+        access: 公開
+        default: None
+        description: 語の出現数が変わった区間の古い順。`contains` を渡したときだけ
   - name: ChangesResult
     title: 変更の結果
     container: features/changes/types.py
@@ -284,6 +309,66 @@ data_models:
         type: list[str]
         access: 公開
         description: 丸めた・打ち切った知らせと次の手
+  - name: ContainsQuery
+    title: 変更の中身の語
+    container: features/changes/types.py
+    usecase: 変更
+    role: DTO
+    summary: '`list_changes` の `contains`'
+    description: '`pydantic.BaseModel`（`extra="forbid"`）。`value` の空文字は `Field(min_length=1)` で弾く（ツールの引数の検証のエラーになる）。'
+    properties:
+      - name: value
+        title: 語
+        type: str
+        access: 公開
+        description: 探す語か正規表現。1 文字以上
+      - name: regex
+        title: 正規表現
+        type: bool
+        access: 公開
+        default: 'False'
+        description: '`value` を正規表現として当てるか'
+      - name: case_sensitive
+        title: 区別する
+        type: bool
+        access: 公開
+        default: 'False'
+        description: 大文字小文字と全角半角（NFKC）を区別するか
+    status: planned
+  - name: ContainsChange
+    title: 語の増減
+    container: features/changes/types.py
+    usecase: 変更
+    role: DTO
+    summary: 語の出現数が変わった区間 1 つ
+    description: '`dataclass(frozen=True)`。commit の端は `RangePoint` の `input` を空にし、commit（短縮）と日時を持つ。作業ツリーの端は `RangePoint(WORKTREE_LABEL)`。前回読んだ時点と比べた呼び出しは `range` と同じ端を持つ。'
+    properties:
+      - name: kind
+        title: 増減
+        type: Literal['added', 'removed']
+        access: 公開
+        description: 出現数が増えた（`added`）か減った（`removed`）か
+      - name: from_
+        title: 前
+        type: RangePoint
+        access: 公開
+        description: 区間の前の端（親の commit）。JSON では `from`
+      - name: to
+        title: 後
+        type: RangePoint
+        access: 公開
+        description: 区間の後の端（語が入った・消えた commit か作業ツリー）
+      - name: count_before
+        title: 前の数
+        type: int
+        access: 公開
+        description: 前の端の文書の出現数（文書が無ければ 0）
+      - name: count_after
+        title: 後の数
+        type: int
+        access: 公開
+        description: 後の端の文書の出現数（文書が無ければ 0）
+    status: planned
 functions:
   - name: changed_keys
     title: 変わったキー
@@ -403,16 +488,21 @@ functions:
       description: 変更の結果
     process: |-
       1. `to` があって `from_` が無い場合、`InvalidArgumentError`（`to` には `from` が要ります）を送る
-      2. 読む場所を解く（読む場所の解決。`ref` は渡さない）。`from_` があり Git 管理外の配信元を含む場合、`InvalidArgumentError` を送る
-      3. 配信元ごとに前と後の文書を作る
-         - `from_` がある場合、始点・終点をリビジョンの解決（`argument` は `from`・`to`）で commit にし、変わったファイルを引く。文書の行の `paths` に当たるファイルごとに、前はリビジョンのファイル、後は終点の commit のリビジョンのファイルか作業ツリーのファイルを、文字列からの文書の組み立てで文書にする
+      2. `contains.regex` が真で `contains.value` を `compile_regex` で読めない場合、`InvalidArgumentError`（`path` は `contains.value`、`rule` は `正規表現として読めません（{エラー}）`）を送る
+      3. 読む場所を解く（読む場所の解決。`ref` は渡さない）。`from_` があり Git 管理外の配信元を含む場合、`InvalidArgumentError` を送る
+      4. 配信元ごとに前と後の文書を作る
+         - `from_` がある場合、始点・終点をリビジョンの解決（`argument` は `from`・`to`）で commit にし、2 つの commit（終点が無ければ作業ツリー）の間の前後の文書を作る。文書の行の `paths` に当たる変わったファイルごとに、前はリビジョンのファイル、後は終点の commit のリビジョンのファイルか作業ツリーのファイルを、文字列からの文書の組み立てで文書にする（この組み立ては次の `contains` の commit ごとの比較でも使う）
          - `from_` が無い場合、会話の記録.前回読んだ内容を引く（会話キーが無い・全ての配信元で空なら `LastReadNotFoundError`）。前は記録の内容（`doc_kind` の行が YAML なら YAML として、Markdown なら front matter と本文として読む）、後は今の文書（文書のストア.ID で引く。無ければ消した）
-      4. ID で突き合わせ、前にだけある文書を `deleted`、後にだけある文書を `added`、両方にあって変わったキー（無視するキーは `diff_ignore_keys`、Markdown の文書は `body` も 1 つのキーとして比べる）が空でない文書を `modified` にする
-      5. `filter` があれば、後（消した文書は前）の文書を条件の照合にかけ、当たる文書だけを残す（条件の確かめは検索と同じ）
-      6. 配信元の順・`id` の昇順に並べ、検索と同じ `limit` の丸め・続きの位置・`max_chars` の打ち切りをする
-      7. `view` が `full` の場合、前と後の本文の差分の行を入れる
-      8. `to` が無く（終点が今の作業ツリー）、`deleted` でない文書は、`path` を後の文書の場所（文書のストア.文書の場所）にし、`scope` を `view` が `full` なら `section`、それ以外は `summary` にする
-      9. 区間の端を入れて返す
+      5. `contains` がある場合、文書ごとに語の増減を集める
+         - `from_` がある場合、区間の commit（`to` が無ければ終点は作業ツリーの `HEAD`）の commit ごとに、親とその commit の間の前後の文書を作り、両方の文書の本文（`Document.body`）の語の出現数が違う文書へ `ContainsChange` を足す。`to` が無い場合、最後に `HEAD` と作業ツリーの間も比べる（後の端は `RangePoint(WORKTREE_LABEL)`）
+         - `from_` が無い場合、前と後の文書の出現数が違う文書へ、区間の端と同じ端の `ContainsChange` を 1 つ足す
+         - 出現数が増えたら `added`、減ったら `removed`。文書が無い側の数は 0
+      6. ID で突き合わせ、前にだけある文書を `deleted`、後にだけある文書を `added`、両方にあって変わったキー（無視するキーは `diff_ignore_keys`、Markdown の文書は `body` も 1 つのキーとして比べる）が空でない文書を `modified` にする。`contains` がある場合は語の増減を持つ文書だけを残し、`added`・`deleted`・`modified` のどれにも当たらない文書を `unchanged` にする
+      7. `filter` があれば、後の文書（無ければ前の文書、両方に無ければ語の増減を比べたときに最後に見た文書）を条件の照合にかけ、当たる文書だけを残す（条件の確かめは検索と同じ）
+      8. 配信元の順・`id` の昇順に並べ、検索と同じ `limit` の丸め・続きの位置・`max_chars` の打ち切りをする
+      9. `view` が `full` の場合、前と後の本文の差分の行を入れる
+      10. `to` が無く（終点が今の作業ツリー）、`deleted` でない文書は、`path` を後の文書の場所（文書のストア.文書の場所）にし、`scope` を `view` が `full` なら `section`、それ以外は `summary` にする
+      11. 区間の端を入れて返す
     exceptions:
       - name: RefNotFoundError
         condition: '`from`・`to` を解決できない'
@@ -421,7 +511,7 @@ functions:
         condition: '`from` を省き、この会話で本文を読んだ記録が無い'
         message: '`この会話で読んだ記録がありません。from を渡してください`'
       - name: InvalidArgumentError
-        condition: Git 管理外の配信元への区間・`from` の無い `to`・知らない項目
+        condition: Git 管理外の配信元への区間・`from` の無い `to`・知らない項目・正規表現として読めない `contains.value`
         message: '`引数が正しくありません: {違反の数} 件`'
       - name: SourceNotReadableError
         condition: 読む場所の解決が送る
@@ -458,7 +548,44 @@ functions:
         condition: '`to: HEAD` だけ'
         mock: なし
         expected: '`InvalidArgumentError` の違反の `path` が `to`'
-        exception: Git 管理外の配信元への区間・`from` の無い `to`・知らない項目
+        exception: Git 管理外の配信元への区間・`from` の無い `to`・知らない項目・正規表現として読めない `contains.value`
+      - name: test_list_changes_when_contains
+        case: 正常
+        summary: 語が入って消えた文書
+        condition: 'commit 1 で文書 1 に `廃止予定` を追加、commit 2 で文書 2 の `name` を変えて文書 1 の `廃止予定` を含む行を書き換え（出現数は同じ）、commit 3 で文書 1 から `廃止予定` を削除して commit 1 の親と同じ内容に戻す。commit 1 の親を `from`、commit 3 を `to`、`contains: {value: 廃止予定}`'
+        mock: なし（一時フォルダの git リポジトリ）
+        expected: '`items` が文書 1 だけで `unchanged`、`contains_changes` が `added`（`to.commit` が commit 1、数 0 → 1）と `removed`（`to.commit` が commit 3、数 1 → 0）の順'
+      - name: test_list_changes_when_contains_regex
+        case: 正常
+        summary: 正規表現の語
+        condition: '`test_list_changes_when_contains` と同じ commit で `contains: {value: 廃止.定, regex: true}`'
+        mock: なし（一時フォルダの git リポジトリ）
+        expected: '`test_list_changes_when_contains` と同じ結果'
+      - name: test_list_changes_when_contains_merge
+        case: 正常
+        summary: マージ commit を見ない
+        condition: ブランチの commit で文書 2 に `廃止予定` を追加し、`--no-ff` でマージした区間
+        mock: なし（一時フォルダの git リポジトリ）
+        expected: 文書 2 の `contains_changes` がブランチの commit の `added` 1 要素だけ
+      - name: test_list_changes_when_contains_worktree
+        case: 正常
+        summary: 作業ツリーの区間
+        condition: '`test_list_changes_when_contains` の commit の後、作業ツリーで文書 1 に `廃止予定` を戻し、`to` を省く'
+        mock: なし（一時フォルダの git リポジトリ）
+        expected: 文書 1 の `contains_changes` の最後が `added` で、`to.input` が `作業ツリー`
+      - name: test_list_changes_when_contains_last_read
+        case: 正常
+        summary: 前回読んだ時点からの語
+        condition: '`search_docs` で文書 1 の本文を返した後、文書 1 のファイルに `廃止予定` を追加して `from` を省き `contains: {value: 廃止予定}`'
+        mock: なし
+        expected: 文書 1 の `contains_changes` が `added` の 1 要素で、`from_`・`to` が `range_from`・`range_to` と同じ
+      - name: test_list_changes_when_invalid_regex
+        case: 異常
+        summary: 読めない正規表現
+        condition: '`contains: {value: "(", regex: true}`'
+        mock: なし
+        expected: '`InvalidArgumentError` の違反の `path` が `contains.value`'
+        exception: Git 管理外の配信元への区間・`from` の無い `to`・知らない項目・正規表現として読めない `contains.value`
   - name: render_changes_markdown
     title: 変更の結果の Markdown
     kind: 関数
@@ -486,7 +613,7 @@ functions:
       description: Markdown
     process: |-
       1. 先頭の行に `{配信元}: {始点}（{日時}）→ {終点}（{日時}）・変わった文書 {total_count} 件` を置く（始点・終点は commit、無ければ渡した値）
-      2. `| id | 変更 | 変わったキー |` の表を置く
+      2. `| id | 変更 | 変わったキー |` の表を置く。`contains_changes` を持つ文書があれば `語の増減` の列を加え、区間ごとに `{kind} {後の端の commit（無ければ渡した値）}` を `・` で並べる
       3. 差分の行があれば、文書ごとに `## {id}` と ```diff のかたまりを置く。`path` を持つ文書は ```diff のかたまりを `<document path="{path}" scope="section">` と `</document>` で包む
       4. `notes` と `next_cursor` を検索と同じに置く
     unit_tests:
@@ -503,6 +630,64 @@ functions:
         mock: なし
         expected: 文書 1 の差分だけが `<document path="{path}" scope="section">` で包まれる
         exception: '-'
+      - name: test_render_changes_markdown_when_contains
+        case: 正常
+        summary: 語の増減の列
+        condition: 文書 1 が `unchanged` で、`contains_changes` が commit `3f2a9c1` の `added` と commit `8b1d4e0` の `removed`
+        mock: なし
+        expected: 表の見出しに `語の増減` があり、文書 1 の行が `\| doc-1 \| unchanged \|  \| added 3f2a9c1・removed 8b1d4e0 \|`
+  - name: count_occurrences
+    title: 語の出現数
+    kind: 関数
+    container: features/changes/compare.py
+    usecase: 変更
+    role: 判定
+    summary: 文字列の中の語の出現数（正規表現なら当たった数）を返す
+    scope: public
+    thread_safe: true
+    args:
+      - name: text
+        title: 文字列
+        type: str
+        required: true
+        passing: positional
+        description: 文書の本文
+      - name: query
+        title: 語
+        type: ContainsQuery
+        required: true
+        passing: positional
+        description: '`list_changes` の `contains`'
+    returns:
+      type: int
+      description: 出現数
+    process: |-
+      1. `regex` が偽の場合、`case_sensitive` が真なら `text.count(value)`、偽なら両方を `normalize`（NFKC と `casefold`）にしてから数える
+      2. `regex` が真の場合、`compile_regex(value, case_sensitive=...)` の `finditer` の数を返す。区別しないときは `text` だけを NFKC にしてから当てる（検索の正規表現の条件と同じ）
+    exceptions:
+      - name: re.error
+        condition: '`value` が正規表現として読めない（呼び出し元が先に確かめる）'
+        message: re の既定
+    unit_tests:
+      - name: test_count_occurrences
+        case: 正常
+        summary: 大文字小文字と全角半角を区別しない
+        condition: '`"ＡＢＣ abc Abc"` と `{value: abc}`'
+        mock: なし
+        expected: '3'
+      - name: test_count_occurrences_when_case_sensitive
+        case: 正常
+        summary: 区別する
+        condition: '`"ＡＢＣ abc Abc"` と `{value: abc, case_sensitive: true}`'
+        mock: なし
+        expected: '1'
+      - name: test_count_occurrences_when_regex
+        case: 正常
+        summary: 正規表現の当たった数
+        condition: '`"廃止予定\n廃止の予定\n廃止予定"` と `{value: 廃止.定, regex: true}`'
+        mock: なし
+        expected: '2'
+    status: planned
 refs:
   - dev/設計書/インターフェース定義/開発ドキュメントサーバー/変更の一覧#
 test_files:

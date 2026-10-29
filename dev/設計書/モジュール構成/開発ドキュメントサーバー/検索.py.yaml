@@ -6,10 +6,11 @@ directory: |-
   ```text
   src/dev_docs/features/search/
   ├─ __init__.py   # 公開する型と関数の再エクスポート
-  ├─ types.py      # Condition / Group / OrderKey / Snippets / SearchRequest / Snippet / SnippetLine / SearchItem / GroupCount / SearchResult
-  ├─ fields.py     # field_values / known_fields（項目の値・計算項目・使える項目）
+  ├─ types.py      # Condition / Group / OrderKey / Snippets / LineRange / SearchRequest / Snippet / SnippetLine / BodyRange / Heading / SearchItem / GroupCount / SearchResult
+  ├─ fields.py     # field_values / known_fields / heading_lines（項目の値・計算項目・使える項目・見出しの行）
   ├─ filters.py    # check_filter / match_filter / match_words / compile_regex / parse_compare_value
-  ├─ snippets.py   # find_snippets / snippet_lines（抜粋の検索・一致した箇所の抜き出し）
+  ├─ snippets.py   # split_lines / find_snippets / count_matches / snippet_lines（行の分割・抜粋の検索・当たった行の数・一致した箇所の抜き出し）
+  ├─ body_parts.py # select_ranges / join_ranges（本文の切り出し）
   ├─ cursor.py     # encode_cursor / decode_cursor
   ├─ render.py     # render_search_markdown
   └─ service.py    # search_docs
@@ -33,7 +34,15 @@ diagrams:
         条件の照合 ..> 正規表現の組み立て
         条件の確かめ ..> 正規表現の組み立て
         文書の検索 ..> 抜粋の検索
+        文書の検索 ..> 当たった行の数 : @matches
+        文書の検索 ..> 本文の範囲の選択 : sections・lines
+        文書の検索 ..> 範囲の本文
+        本文の範囲の選択 ..> 見出しの行
+        本文の範囲の選択 ..> 行の分割
+        抜粋の検索 ..> 行の分割
+        当たった行の数 ..> 行の分割
         抜粋の検索 ..> 正規表現の組み立て
+        当たった行の数 ..> 正規表現の組み立て
         一致した箇所の抜き出し ..> 抜粋の検索
         検索の結果の Markdown ..> 検索の結果
         class 文書の検索 {
@@ -64,6 +73,21 @@ diagrams:
           <<function>>
         }
         class 抜粋の検索 {
+          <<function>>
+        }
+        class 当たった行の数 {
+          <<function>>
+        }
+        class 行の分割 {
+          <<function>>
+        }
+        class 見出しの行 {
+          <<function>>
+        }
+        class 本文の範囲の選択 {
+          <<function>>
+        }
+        class 範囲の本文 {
           <<function>>
         }
         class 一致した箇所の抜き出し {
@@ -137,7 +161,7 @@ constants:
     container: features/search/fields.py
     usecase: 検索
     summary: 文書から計算する項目
-    value: '("@chars", "@path", "@sections")'
+    value: '("@chars", "@path", "@sections", "@matches")'
   - name: DATE_FIELDS
     title: 日時の項目
     container: features/search/fields.py
@@ -160,9 +184,9 @@ data_models:
         description: メタデータのキー・種類ごとの項目のパス・`body`・`*`・計算項目
       - name: op
         title: 比べ方
-        type: Literal['eq', 'ne', 'prefix', 'suffix', 'contains', 'not_contains', 'regex', 'gt', 'gte', 'lt', 'lte', 'exists', 'not_exists']
+        type: Literal['eq', 'ne', 'prefix', 'suffix', 'contains', 'not_contains', 'regex', 'glob', 'gt', 'gte', 'lt', 'lte', 'exists', 'not_exists']
         access: 公開
-        description: 比べ方。`regex` は値の各行に当たる（`^`・`$` は各行の先頭・末尾。値全体の先頭・末尾は `\A`・`\Z`）
+        description: 比べ方。`regex` は値の各行に当たる（`^`・`$` は各行の先頭・末尾。値全体の先頭・末尾は `\A`・`\Z`）。`glob` は値全体に当て、`**` は `/` をまたぎ、`*`・`?` は `/` をまたがない
         notes: 説明は `Field(description=...)` で入力のスキーマに出す
       - name: values
         title: 値
@@ -187,8 +211,8 @@ data_models:
     container: features/search/types.py
     usecase: 検索
     role: DTO
-    summary: 条件を AND か OR で束ねる
-    description: '`pydantic.BaseModel`（`extra="forbid"`）。`and` と `or` のどちらか 1 つだけを持つ（Python の属性は `all_of`・`any_of`、別名が `and`・`or`）。'
+    summary: 条件を AND・OR で束ねるか、否定する
+    description: '`pydantic.BaseModel`（`extra="forbid"`）。`and`・`or`・`not` のどれか 1 つだけを持つ（Python の属性は `all_of`・`any_of`・`not_`、別名が `and`・`or`・`not`）。#16 の画面の `nav` のタグの式も同じスキーマで書く。'
     properties:
       - name: all_of
         title: AND
@@ -202,6 +226,12 @@ data_models:
         access: 公開
         default: None
         description: 別名 `or`
+      - name: not_
+        title: NOT
+        type: Condition | Group | None
+        access: 公開
+        default: None
+        description: 別名 `not`。中の条件か束に当たらない文書に当たる
   - name: OrderKey
     title: 並べ替えのキー
     container: features/search/types.py
@@ -381,6 +411,18 @@ data_models:
         access: 公開
         default: None
         description: フックが入れる
+      - name: sections
+        title: 返す節
+        type: list[str] | None
+        access: 公開
+        default: None
+        description: 'Markdown の本文から返す節の見出しの文字列。`view: full` のときだけ。`lines` と同時に渡せない'
+      - name: lines
+        title: 返す行
+        type: LineRange | None
+        access: 公開
+        default: None
+        description: '本文から返す行の範囲。`view: full` のときだけ。`sections` と同時に渡せない'
   - name: SearchItem
     title: 検索の結果の文書
     container: features/search/types.py
@@ -422,6 +464,18 @@ data_models:
         access: 公開
         default: None
         description: '`path` が `None` のときは `None`'
+      - name: ranges
+        title: 切り出した範囲
+        type: list[BodyRange] | None
+        access: 公開
+        default: None
+        description: '`sections`・`lines` で切り出した本文の行の範囲。`sections`・`lines` を渡さない呼び出しでは `None`。切り出す範囲が無ければ空の配列'
+      - name: total_lines
+        title: 本文の行数
+        type: int | None
+        access: 公開
+        default: None
+        description: 本文の全体の行数（行の分割の数）。`ranges` と同じ条件で持つ
   - name: GroupCount
     title: 集計の行
     container: features/search/types.py
@@ -535,6 +589,70 @@ data_models:
         type: list[SnippetLine]
         access: 公開
         description: 本文の順の行
+  - name: LineRange
+    title: 行の範囲の指定
+    container: features/search/types.py
+    usecase: 検索
+    role: DTO
+    summary: 本文から返す行の範囲（`lines` の引数）
+    description: '`pydantic.BaseModel`（`extra="forbid"`）。1 未満の値は要求のモデルの検証で断る（`InvalidArgumentError: 引数が正しくありません` と `lines.offset` などのパス）。'
+    properties:
+      - name: offset
+        title: 最初の行
+        type: int
+        access: 公開
+        default: '1'
+        description: 返す最初の行の行番号（1 始まり）。`Field(ge=1)`
+      - name: limit
+        title: 行の数
+        type: int | None
+        access: 公開
+        default: None
+        description: 返す行の数。`None` は本文の末尾まで。`Field(ge=1)`
+    status: planned
+  - name: BodyRange
+    title: 本文の範囲
+    container: features/search/types.py
+    usecase: 検索
+    role: DTO
+    summary: 本文の行の範囲 1 つ
+    description: '`dataclass(frozen=True)`。'
+    properties:
+      - name: start_line
+        title: 最初の行
+        type: int
+        access: 公開
+        description: 本文の行番号（1 始まり）
+      - name: end_line
+        title: 最後の行
+        type: int
+        access: 公開
+        description: 本文の行番号（1 始まり、この行を含む）
+    status: planned
+  - name: Heading
+    title: 見出しの行
+    container: features/search/types.py
+    usecase: 検索
+    role: DTO
+    summary: Markdown の本文の見出し 1 つ
+    description: '`dataclass(frozen=True)`。'
+    properties:
+      - name: line
+        title: 行番号
+        type: int
+        access: 公開
+        description: 本文の行番号（1 始まり）
+      - name: level
+        title: 階層
+        type: int
+        access: 公開
+        description: '`#` の数（1〜6）'
+      - name: text
+        title: 見出しの文字列
+        type: str
+        access: 公開
+        description: '`#` と前後の空白、末尾の閉じの `#` を除いた文字列'
+    status: planned
 functions:
   - name: field_values
     title: 項目の値
@@ -569,6 +687,7 @@ functions:
          - `body` の場合、本文
          - `*` の場合、`data` の全ての文字列の葉と本文
          - `@chars` は本文の文字数、`@path` は `document.path`（`records` の行は `{path}#{record_index}`）、`@sections` は Markdown の文書なら本文の見出しの文字列、YAML の文書なら `data` の最上位のキーの並び
+         - `@matches` は条件で決まり文書だけでは決まらないので、値を持たない（文書の検索が当たった行の数で数える）
          - それ以外は `data` を項目の取得で引く
       2. 値が配列なら要素を、`None` なら空、それ以外は 1 要素の並びを返す
     unit_tests:
@@ -607,7 +726,7 @@ functions:
     container: features/search/filters.py
     usecase: 検索
     role: 検証
-    summary: 条件・並べ替え・集計の項目と値が使えるかを確かめる
+    summary: 条件・並べ替え・集計の項目と値、本文の範囲の引数が使えるかを確かめる
     scope: public
     thread_safe: true
     args:
@@ -625,11 +744,39 @@ functions:
         description: 使える項目の結果
     returns:
       type: list[Violation]
-      description: 違反。項目のパスは引数のパス（`filter.and[1].field`）
+      description: 違反。項目のパスは引数のパス（`filter.and[1].field`・`filter.not.field`）
     process: |-
-      1. 条件の木をたどり、`field` が `fields` に無い・`exists` 以外で `values` が空・`regex` が正規表現にならない（正規表現の組み立て）・`gt` などで値が項目の型に合わない（比べる値の解釈）を違反にする。`fix` には近い項目（`difflib.get_close_matches`）か期待する型
-      2. `order_by[].field`・`group_by` が `fields` に無いものを違反にする
-      3. `Group` が `and`・`or` を両方持つ・どちらも持たないものを違反にする
+      1. 条件の木を `and`・`or`・`not` の下までたどり、`field` が `fields` に無い・`exists` 以外で `values` が空・`regex` が正規表現にならない（正規表現の組み立て）・`gt` などで値が項目の型に合わない（比べる値の解釈）を違反にする。`fix` には近い項目（`difflib.get_close_matches`）か期待する型
+      2. `field` が `@matches` の条件を違反にする（`rule`: `@matches は条件に使えません`、`fix`: `fields か order_by に渡してください`）
+      3. `Group` が `and`・`or`・`not` のうち 1 つだけを持たないものを違反にする（`rule`: `and・or・not のどれか 1 つだけを持ってください`）
+      4. `order_by[].field` が `fields` に無いもの、`group_by` が `fields` に無いか `@matches` のものを違反にする
+      5. `sections` と `lines` を両方持つ場合、`sections` のパスで違反にする（`rule`: `sections と lines は同時に渡せません`）
+      6. `view` が `full` 以外で `sections`・`lines` を持つ場合、そのパスで違反にする（`rule`: `view: full のときだけ渡せます`）
+    unit_tests:
+      - name: test_check_filter_when_group_keys
+        case: 異常
+        summary: 束のキーが 2 つ
+        condition: '`{and: [{field: name, op: eq, values: [a]}], not: {field: tags, op: eq, values: [x]}}`'
+        mock: なし
+        expected: 違反が 1 件で、`path` が `filter`、`rule` が `and・or・not のどれか 1 つだけを持ってください`
+      - name: test_check_filter_when_not_child
+        case: 異常
+        summary: '`not` の下の知らない項目'
+        condition: '`{not: {field: nmae, op: eq, values: [x]}}`'
+        mock: なし
+        expected: 違反の `path` が `filter.not.field`
+      - name: test_check_filter_when_matches
+        case: 異常
+        summary: '`@matches` を条件に使う'
+        condition: '`filter: {field: "@matches", op: gt, values: ["1"]}` と、`order_by: [{field: "@matches"}]` だけの要求'
+        mock: なし
+        expected: 1 つ目は違反の `path` が `filter.field`、2 つ目は違反が無い
+      - name: test_check_filter_when_body_range
+        case: 異常
+        summary: 本文の範囲の引数の組み合わせ
+        condition: '`view: full` で `sections: [a]` と `lines: {offset: 1}` を両方と、`view: summary` で `sections: [a]`'
+        mock: なし
+        expected: '1 つ目は違反の `path` が `sections`、2 つ目は `path` が `sections` で `rule` が `view: full のときだけ渡せます`'
   - name: parse_compare_value
     title: 比べる値の解釈
     kind: 関数
@@ -721,11 +868,12 @@ functions:
       type: bool
       description: 当たるか
     process: |-
-      1. `Group` は `all_of` なら全て、`any_of` ならどれかが当たるとき `True`
+      1. `Group` は `all_of` なら全て、`any_of` ならどれかが当たるとき、`not_` なら中が当たらないとき `True`
       2. `Condition` は項目の値を引き、`values` の各値と比べる（`match` が `any` ならどれか、`all` なら全て）
          - `exists`・`not_exists` は値の並びが空でないか
          - `eq`・`ne`・`prefix`・`suffix`・`contains`・`not_contains` は、値の並びのどれかとの文字列の比較（`case_sensitive` が `False` なら両方を NFKC と `casefold`）。`ne`・`not_contains` は値の並びのどれとも当たらないとき `True`
          - `regex` は正規表現の組み立ての `search`。`case_sensitive` が `False` なら文書の値を NFKC にして比べる（パターンには正規化をかけない）
+         - `glob` は値の並びのどれかに `PurePosixPath(値).full_match(パターン)` を当てる（`**` は `/` をまたぎ、`*`・`?` はまたがない）。`case_sensitive` が `False` なら値とパターンの両方を NFKC と `casefold` にしてから当てる
          - `gt`・`gte`・`lt`・`lte` は比べる値の解釈で型をそろえて比べ、解釈できない文書の値は当たらない
     unit_tests:
       - name: test_match_filter
@@ -752,6 +900,18 @@ functions:
         condition: '`{field: body, op: regex, values: ["^## "]}` と `{field: body, op: regex, values: ["\\A## "]}`'
         mock: なし
         expected: 本文 `# x\n## y` の文書が 1 つ目で `True`、2 つ目で `False`
+      - name: test_match_filter_when_not
+        case: 正常
+        summary: 束の否定と入れ子
+        condition: '`{and: [{field: tags, op: eq, values: [a]}, {not: {or: [{field: name, op: eq, values: [x]}, {field: name, op: eq, values: [y]}]}}]}`'
+        mock: なし
+        expected: '`tags: [a]`・`name: z` が `True`、`tags: [a]`・`name: y` が `False`'
+      - name: test_match_filter_when_glob
+        case: 正常
+        summary: パスの glob
+        condition: '`{field: "@path", op: glob, values: ["notes/*.md"]}` と `{field: "@path", op: glob, values: ["NOTES/**"]}`'
+        mock: なし
+        expected: 1 つ目は `notes/a.md` が `True`、`notes/archive/c.md` が `False`。2 つ目（`case_sensitive` を省く）はどちらも `True`
   - name: match_words
     title: 語の照合
     kind: 関数
@@ -906,7 +1066,7 @@ functions:
     summary: '`search_docs` の要求を処理して検索の結果を返す'
     scope: public
     thread_safe: true
-    side_effects: 本文を返した文書を会話の記録に残す。読み取りの `validators[]` を動かす
+    side_effects: 本文を返した文書を会話の記録に残す（`sections`・`lines` を渡した呼び出しを除く）。読み取りの `validators[]` を動かす
     args:
       - name: request
         title: 検索の要求
@@ -955,21 +1115,24 @@ functions:
          - 違反がある場合、違反と `describe(source, kind)` でスキーマを見ることを添えた `InvalidArgumentError` を送る
       4. `limit` が `LIMIT_MAX` を超えれば丸め、`max_chars` が `MAX_CHARS_LIMIT` を超えれば丸めて、それぞれ `notes` で知らせる。`limit` が 1 未満なら `InvalidArgumentError` を送る
       5. 条件の照合で当たった文書を集め、`total_count` と（複数の配信元なら）`per_source` を数える。読んだ配信元の ID を `,` で繋いで `source_label` にする
-      6. `group_by` がある場合、当たった文書の値ごとの件数を `groups` にする（配列は要素ごとに数え、値が無い文書は `（なし）`）
-      7. `view` が `count` の場合、ここで返す
-      8. `order_by` のキーの順に並べる（`order_by` が `None` なら `id` の昇順。日時の項目の空と値が無い文書は向きによらず末尾。同じ順位は配信元の順・`id` の昇順）。`order_by` が `None` で、`filter` が `id` の `eq` の条件 1 つのときは、その `values` の順に並べる
-      9. 始まりの位置を `skip` と、`cursor` があれば続きの位置を読む（指紋は要求のハッシュ）の和にし、`limit` 件を取り出す
-      10. 文書ごとに返す項目を作る
-          - `ids` は `id`、`summary` は `id` と `SUMMARY_FIELDS`、`full` はさらに `body` と全てのメタデータ。`fields` を足し `exclude_fields` を除く
-          - 本文を返す場合、`repeat_seen` が `False` なら会話の記録.返し済みに当たる文書の `body` を `SEEN_MARK` にする
-          - `snippets` がある場合、条件の木から `field` が `body`・`*` の条件を集めて抜粋の検索をし（`before`・`after` は `None` なら `context_lines`、`max_count` は `max_per_doc`）、`body` を返さない
-          - 文字列の値が項目の文字数を超えたら切る
-          - `view` が `summary`・`full` で `ref` が無く、`body` を `SEEN_MARK` にしていない場合、`path` を文書の場所（文書のストア.文書の場所）にし、`scope` を次のとおり決める。`body` を返さない（`snippets` も無い）なら `summary`、`snippets` を返すか `body` を切ったか `records` の要素で `body_path` が無いなら `section`、それ以外は `full`
-      11. 返した文書を順に読み取りの検査（文書の検査.検査する、`on="read"`）にかけ、違反を `{id}: {rule}（{path}）` で `notes` に足す
-      12. 文書を足すごとに結果の文字数（抜粋は各行の `{行番号}:{行}` の文字数）を数え、`max_chars` を超える文書の手前で止める。止めたら `truncated` を `True` にし、`notes` に打ち切ったことと、`cursor` で続きを取るか `fields` を絞るか `view: ids` で取り直すことを足す
-      13. 返していない文書が残れば、続きの位置を作る（`next_cursor`）
-      14. 本文を返した文書（`SEEN_MARK` にしたものを除く）を会話の記録に `body` で残す（会話キーは `session_id`・`agent_id`）
-      15. 検索の結果を返す
+      6. 条件の木から、`field` が `body`・`*` の条件を `and`・`or` の下だけたどって集める（`not` の下はたどらない。以下、本文の条件）
+      7. `fields` か `order_by` に `@matches` がある場合、当たった文書ごとに本文の全文と本文の条件で当たった行の数を数える（本文の条件が無ければ 0）
+      8. `group_by` がある場合、当たった文書の値ごとの件数を `groups` にする（配列は要素ごとに数え、値が無い文書は `（なし）`）
+      9. `view` が `count` の場合、ここで返す
+      10. `order_by` のキーの順に並べる（`order_by` が `None` なら `id` の昇順。`@matches` は 7 で数えた数。日時の項目の空と値が無い文書は向きによらず末尾。同じ順位は配信元の順・`id` の昇順）。`order_by` が `None` で、`filter` が `id` の `eq` の条件 1 つのときは、その `values` の順に並べる
+      11. 始まりの位置を `skip` と、`cursor` があれば続きの位置を読む（指紋は要求のハッシュ）の和にし、`limit` 件を取り出す
+      12. 文書ごとに返す項目を作る
+          - `ids` は `id`、`summary` は `id` と `SUMMARY_FIELDS`、`full` はさらに `body` と全てのメタデータ。`fields` を足し `exclude_fields` を除く。`@matches` は 7 で数えた数
+          - 本文を返す場合、`repeat_seen` が `False` で `sections`・`lines` が無いなら、会話の記録.返し済みに当たる文書の `body` を `SEEN_MARK` にする
+          - `sections`・`lines` がある場合、本文を行の分割で分け、本文の範囲の選択で範囲を決める（YAML の文書には `sections` を渡さず空の範囲にする）。`ranges` に範囲、`total_lines` に行数を入れ、本文を範囲の本文にする。`sections` で範囲が空の文書は、YAML なら `{id}: YAML の文書は sections で切り出せません。lines を使ってください`、Markdown なら `{id}: sections に当たる見出しがありません（{sections}）` を `notes` に足す
+          - `snippets` がある場合、本文の条件で抜粋の検索をし（`before`・`after` は `None` なら `context_lines`、`max_count` は `max_per_doc`、`ranges` は切り出した範囲）、`body` を返さない
+          - 文字列の値が項目の文字数を超えたら切る（切り出した本文は切り出した後に切る）
+          - `view` が `summary`・`full` で `ref` が無く、`body` を `SEEN_MARK` にしていない場合、`path` を文書の場所（文書のストア.文書の場所）にし、`scope` を次のとおり決める。`body` を返さない（`snippets` も無い）なら `summary`、`snippets` を返すか `sections`・`lines` で切り出したか `body` を切ったか `records` の要素で `body_path` が無いなら `section`、それ以外は `full`
+      13. 返した文書を順に読み取りの検査（文書の検査.検査する、`on="read"`）にかけ、違反を `{id}: {rule}（{path}）` で `notes` に足す
+      14. 文書を足すごとに結果の文字数（抜粋は各行の `{行番号}:{行}` の文字数）を数え、`max_chars` を超える文書の手前で止める。止めたら `truncated` を `True` にし、`notes` に打ち切ったことと、`cursor` で続きを取るか `fields` を絞るか `view: ids` で取り直すことを足す
+      15. 返していない文書が残れば、続きの位置を作る（`next_cursor`）
+      16. `sections`・`lines` が無い場合、本文を返した文書（`SEEN_MARK` にしたものを除く）を会話の記録に `body` で残す（会話キーは `session_id`・`agent_id`）
+      17. 検索の結果を返す
     exceptions:
       - name: SourceNotReadableError
         condition: 読む場所の解決が送る
@@ -984,7 +1147,7 @@ functions:
         condition: 文書のストアが送る
         message: '`ref {value} を解決できません`'
       - name: InvalidArgumentError
-        condition: 知らない項目・型の合わない値・読めない `cursor`・`limit` が 1 未満
+        condition: '知らない項目・型の合わない値・読めない `cursor`・`limit` が 1 未満・束のキーが 1 つでない・`@matches` を条件に使う・`sections` と `lines` を同時に渡す・`view: full` 以外で `sections`・`lines` を渡す'
         message: '`引数が正しくありません: {違反の数} 件`'
     unit_tests:
       - name: test_search_docs
@@ -1068,6 +1231,30 @@ functions:
         mock: なし
         expected: '`items[0].snippets` が 1 つで、行が `(2, "# TODO x", True)`'
         exception: '-'
+      - name: test_search_docs_when_ordered_by_matches
+        case: 正常
+        summary: 当たった数で並べる
+        condition: '`notes/a.md`（`検索` を含む行が 3 行）・`notes/b.md`（同 1 行）・`notes/archive/c.md`（同 2 行）に、`filter: {and: [{field: body, op: contains, values: [検索]}, {not: {field: "@path", op: glob, values: ["notes/archive/**"]}}]}`・`fields: ["@matches"]`・`order_by: [{field: "@matches", direction: desc}]`'
+        mock: なし
+        expected: '`items` が `notes/a`（`values["@matches"]` が 3）・`notes/b`（同 1）の順。`fields` に `@matches` を渡さない呼び出しの `values` は `@matches` を持たない'
+      - name: test_search_docs_when_matches_under_not
+        case: 正常
+        summary: '`not` の下の本文の条件は数えない'
+        condition: '同じ 3 件に `filter: {not: {and: [{field: body, op: contains, values: [検索]}, {field: tags, op: eq, values: [x]}]}}`・`fields: ["@matches"]`（`a` だけがタグ `x`）'
+        mock: なし
+        expected: '`items` が `b`・`c` で、`values["@matches"]` がどちらも 0'
+      - name: test_search_docs_when_part_of_body
+        case: 正常
+        summary: 本文の一部と返し済み
+        condition: '10 行の `notes/a.md`（6 行目 `## 決まったこと`、9 行目 `## 残り`）を `session_id: s1`・`view: full` で、`sections: [決まったこと]`、`lines: {offset: 3, limit: 2}`、どちらも無し、もう一度 `sections: [決まったこと]` の順に呼ぶ'
+        mock: なし
+        expected: '1 回目は `body` が 6〜8 行目で `scope` が `section`、`ranges` が `[BodyRange(6, 8)]`、`total_lines` が 10。2 回目は `ranges` が `[BodyRange(3, 4)]`。3 回目は全文を `scope: full` で返し `SEEN_MARK` にならず、`ranges`・`total_lines` が `None`。4 回目は返し済みでも 6〜8 行目を返す'
+      - name: test_search_docs_when_part_of_body_with_snippets
+        case: 正常
+        summary: 切り出した範囲の抜粋と当たる見出しの無い文書
+        condition: '同じ文書（7 行目と 2 行目に `検索`）に `filter: {field: body, op: contains, values: [検索]}`・`sections: [決まったこと]`・`snippets: {context_lines: 0}` と、YAML の文書と Markdown の文書に `sections: [無い見出し]`'
+        mock: なし
+        expected: 1 つ目は抜粋が行番号 7 の 1 行だけ。2 つ目はどちらも `body` が空で `ranges` が `[]`、`notes` に YAML の文書と当たる見出しが無いことの 2 行
   - name: render_search_markdown
     title: 検索の結果の Markdown
     kind: 関数
@@ -1096,7 +1283,7 @@ functions:
     process: |-
       1. 先頭の行に `{配信元}: 該当 {total_count} 件・返した {returned} 件` を置く（複数の配信元は配信元ごとの件数も添える）
       2. `groups` があれば `| 値 | 件数 |` の表を置く
-      3. `view` が `full` の場合、文書ごとに `<document path="{path}" scope="{scope}">`（`path` が `None` なら属性の無い `<document>`）と `</document>` で包み、中に項目の箇条書きと本文（YAML の文書は YAML、Markdown の文書は Markdown のまま）を置く。抜粋は、当たった行を `{行番号}:{行}`、前後の行を `{行番号}-{行}` で出し、抜粋の間に `--` の行を置く。それ以外は項目を列にした表にする（列名は項目の名前。`@chars` は `chars`）
+      3. `view` が `full` の場合、文書ごとに `<document path="{path}" scope="{scope}">`（`path` が `None` なら属性の無い `<document>`）と `</document>` で包み、中に項目の箇条書きと本文（YAML の文書は YAML、Markdown の文書は Markdown のまま）を置く。`total_lines` を持つ文書は、`<document>` の前の行に `{id}: {start_line}-{end_line} 行目 / 全 {total_lines} 行` を置く（範囲が複数なら `{start_line}-{end_line} 行目` を `・` で並べ、空なら `{id}: 返す行なし / 全 {total_lines} 行`）。抜粋は、当たった行を `{行番号}:{行}`、前後の行を `{行番号}-{行}` で出し、抜粋の間に `--` の行を置く。それ以外は項目を列にした表にする（列名は項目の名前。`@chars` は `chars`）
       4. `notes` があれば末尾に `> ` の行で並べ、`next_cursor` があれば `続き: cursor={next_cursor}` を置く
     unit_tests:
       - name: test_render_search_markdown
@@ -1119,6 +1306,12 @@ functions:
         mock: なし
         expected: '`<document>` の中に `3:## a`・`4-b`・`--`・`9:## c` の順の行'
         exception: '-'
+      - name: test_render_search_markdown_when_ranges
+        case: 正常
+        summary: 切り出した範囲の行
+        condition: '`view: full` で `ranges: [BodyRange(6, 8)]`・`total_lines: 10` の `notes/a` と、`ranges: [BodyRange(1, 2), BodyRange(5, 5)]`・`total_lines: 5` の `notes/b`'
+        mock: なし
+        expected: '`<document` の前の行が `notes/a: 6-8 行目 / 全 10 行` と `notes/b: 1-2 行目・5-5 行目 / 全 5 行`'
   - name: compile_regex
     title: 正規表現の組み立て
     kind: 関数
@@ -1196,16 +1389,25 @@ functions:
         required: true
         passing: keyword
         description: 返す抜粋の上限
+      - name: ranges
+        title: 探す範囲
+        type: Sequence[BodyRange] | None
+        required: false
+        default: None
+        passing: keyword
+        description: '`sections`・`lines` で切り出した範囲。`None` は本文の全文'
     returns:
       type: list[Snippet]
       description: 本文の先頭からの抜粋。重なる範囲は 1 つにまとめる
     process: |-
-      1. 本文を `\n` で行に分け、行末の `\r` を除く（本文が改行で終わるときの最後の空の要素は除く）。行番号は 1 始まり
-      2. 条件ごとに、`values` のどれかに当たった行を集める
+      1. 本文を行の分割で行に分ける。行番号は 1 始まり
+      2. 当たった行を集める（当たった行の数と共通の内部の関数 `_hit_lines`）
          - `regex` は正規表現の組み立てで本文全体に `finditer` をかけ、当たった範囲の始まりの行から終わりの行までを当たった行にする。`case_sensitive` が `False` なら行ごとに NFKC をした本文にかける
          - `eq`・`prefix`・`suffix`・`contains` は値を含む行（`case_sensitive` が `False` なら行と値に NFKC と `casefold`）
          - それ以外の `op` は飛ばす
-      3. 当たった行ごとに前 `before`・後ろ `after` の範囲を作り、重なる範囲をまとめ、先頭から `max_count` 個を `Snippet` にして返す（`hit` は当たった行か）
+      3. `ranges` がある場合、どれかの範囲の中の当たった行だけを残す
+      4. 当たった行ごとに前 `before`・後ろ `after` の範囲を作る。`ranges` がある場合は、その行を含む範囲の中に切り詰める
+      5. 重なる範囲をまとめ、先頭から `max_count` 個を `Snippet` にして返す（`hit` は当たった行か。行番号は本文の行番号）
     unit_tests:
       - name: test_find_snippets
         case: 正常
@@ -1231,6 +1433,196 @@ functions:
         condition: 本文 `a\r\nfoo\r\n` に `contains` の `foo`、`before=0`・`after=5`
         mock: なし
         expected: 行が `(2, "foo", True)` だけ
+      - name: test_find_snippets_when_ranges
+        case: 正常
+        summary: 切り出した範囲の中だけ
+        condition: 10 行のうち 2・7 行目に `foo` の本文に `contains` の `foo`、`before=2`・`after=2`、`ranges=[BodyRange(6, 8)]`
+        mock: なし
+        expected: 1 つの抜粋で、行番号が 6・7・8（2 行目と範囲の外の 5・9 行目を含まない）
+  - name: split_lines
+    title: 行の分割
+    kind: 関数
+    container: features/search/snippets.py
+    usecase: 検索
+    role: 変換
+    summary: 本文を行に分ける（抜粋・当たった行の数・本文の切り出しが同じ行番号を使う）
+    description: 今の `_split_lines` を公開にする。`str.splitlines` は `\n` 以外の区切りでも分けて行番号がずれるので使わない。
+    scope: public
+    thread_safe: true
+    args:
+      - name: text
+        title: 本文
+        type: str
+        required: true
+        passing: positional
+        description: 分ける本文
+    returns:
+      type: list[str]
+      description: 行の並び（改行を含まない）
+    process: |-
+      1. `\n` で分け、行末の `\r` を除く
+      2. 本文が改行で終わる場合、最後の空の要素を除く
+    status: planned
+  - name: count_matches
+    title: 当たった行の数
+    kind: 関数
+    container: features/search/snippets.py
+    usecase: 検索
+    role: 判定
+    summary: 本文のうち、条件のどれかに当たった行の数を返す（`@matches`）
+    scope: public
+    thread_safe: true
+    args:
+      - name: text
+        title: 本文
+        type: str
+        required: true
+        passing: positional
+        description: 数える本文の全文
+      - name: conditions
+        title: 条件
+        type: Sequence[Condition]
+        required: true
+        passing: positional
+        description: '`not` の下を除いた `body`・`*` の条件'
+    returns:
+      type: int
+      description: 当たった行の数。条件が空なら 0
+    process: 1. 本文を行の分割で分け、抜粋の検索と同じ `_hit_lines` で当たった行を集め、その数を返す（同じ行が複数の条件に当たっても 1 と数える）
+    unit_tests:
+      - name: test_count_matches
+        case: 正常
+        summary: 行の数と重なり
+        condition: 1・3・4 行目に `検索` を含み、4 行目は `^#` にも当たる本文に、`contains` の `検索` と `regex` の `^#`（4 行目だけが `#` で始まる）
+        mock: なし
+        expected: '3'
+      - name: test_count_matches_when_no_conditions
+        case: 正常
+        summary: 条件が無い
+        condition: 任意の本文と空の条件
+        mock: なし
+        expected: '0'
+    status: planned
+  - name: heading_lines
+    title: 見出しの行
+    kind: 関数
+    container: features/search/fields.py
+    usecase: 検索
+    role: 読み取り
+    summary: Markdown の行の並びから、見出しの行番号・階層・文字列を集める（コードブロックの中は除く）
+    description: '`@sections` の見出しの文字列（内部の `_headings`）もこの関数で作る。`HEADING` は `#` の並びを名前つきのグループで取り、階層にする。'
+    scope: public
+    thread_safe: true
+    args:
+      - name: lines
+        title: 行
+        type: Sequence[str]
+        required: true
+        passing: positional
+        description: 本文の行の並び
+    returns:
+      type: list[Heading]
+      description: 本文の先頭からの見出し
+    process: |-
+      1. 行を先頭からたどり、`FENCE` に当たる行でコードブロックの内外を切り替える
+      2. コードブロックの外で `HEADING` に当たる行を、行番号（1 始まり）・`#` の数・見出しの文字列の `Heading` にする
+    unit_tests:
+      - name: test_heading_lines
+        case: 正常
+        summary: 階層とコードブロック
+        condition: '`["# a", "", "## b ##", "```", "## c", "```", "### d"]`'
+        mock: なし
+        expected: '`Heading(1, 1, "a")`・`Heading(3, 2, "b")`・`Heading(7, 3, "d")`（`c` を含まない）'
+    status: planned
+  - name: select_ranges
+    title: 本文の範囲の選択
+    kind: 関数
+    container: features/search/body_parts.py
+    usecase: 検索
+    role: 変換
+    summary: '`sections`・`lines` から、本文の切り出す行の範囲を決める'
+    scope: public
+    thread_safe: true
+    args:
+      - name: lines
+        title: 行
+        type: Sequence[str]
+        required: true
+        passing: positional
+        description: 本文の行の並び（行の分割の結果）
+      - name: sections
+        title: 返す節
+        type: Sequence[str] | None
+        required: true
+        passing: keyword
+        description: 要求の `sections`。Markdown の文書のときだけ渡す
+      - name: line_range
+        title: 返す行
+        type: LineRange | None
+        required: true
+        passing: keyword
+        description: 要求の `lines`
+    returns:
+      type: list[BodyRange]
+      description: 本文の先頭からの、重ならない範囲。当たるものが無ければ空
+    process: |-
+      1. `sections` がある場合、見出しの行を引き、文字列が `sections` のどれかと完全一致する見出しごとに、見出しの行から、次の同じか上の階層の見出しの前の行（無ければ本文の最後の行）までを範囲にする
+      2. `line_range` がある場合、`offset` から `limit` 行（`None` なら本文の最後の行）までを、本文の行数で切り詰めて範囲にする。`offset` が行数を超えれば空
+      3. 始まりの行の順に並べ、重なる範囲（親と子の節を両方渡したときなど）を 1 つにまとめて返す
+    unit_tests:
+      - name: test_select_ranges_when_sections
+        case: 正常
+        summary: 節の範囲
+        condition: 1 行目 `# a`、3 行目 `## 経緯`、6 行目 `## 決まったこと`、7 行目 `### 細目`、9 行目 `## 残り` の 10 行に、`sections=["決まったこと", "細目"]`
+        mock: なし
+        expected: '`[BodyRange(6, 8)]`（子の `細目` は親の範囲にまとめる）'
+      - name: test_select_ranges_when_lines
+        case: 正常
+        summary: 行の範囲と末尾
+        condition: 10 行に `LineRange(offset=3, limit=2)`、`LineRange(offset=8)`、`LineRange(offset=11)`
+        mock: なし
+        expected: '`[BodyRange(3, 4)]`・`[BodyRange(8, 10)]`・`[]`'
+      - name: test_select_ranges_when_no_heading
+        case: 正常
+        summary: 当たる見出しが無い
+        condition: '`sections=["無い見出し"]`'
+        mock: なし
+        expected: '`[]`'
+    status: planned
+  - name: join_ranges
+    title: 範囲の本文
+    kind: 関数
+    container: features/search/body_parts.py
+    usecase: 検索
+    role: 変換
+    summary: 範囲の行をつないだ本文を作る
+    scope: public
+    thread_safe: true
+    args:
+      - name: lines
+        title: 行
+        type: Sequence[str]
+        required: true
+        passing: positional
+        description: 本文の行の並び
+      - name: ranges
+        title: 範囲
+        type: Sequence[BodyRange]
+        required: true
+        passing: positional
+        description: 本文の範囲の選択の結果
+    returns:
+      type: str
+      description: 範囲の行を先頭から `\n` でつないだ文字列。範囲が空なら空文字
+    process: 1. 範囲ごとに `start_line`〜`end_line` の行を取り出し、全ての行を `\n` でつなぐ
+    unit_tests:
+      - name: test_join_ranges
+        case: 正常
+        summary: 複数の範囲
+        condition: '`["a", "b", "c", "d"]` に `[BodyRange(1, 1), BodyRange(3, 4)]`'
+        mock: なし
+        expected: '`"a\nc\nd"`'
+    status: planned
 refs:
   - dev/設計書/インターフェース定義/開発ドキュメントサーバー/文書の検索#
 test_files:
