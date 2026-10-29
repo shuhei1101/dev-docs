@@ -1,0 +1,1 @@
+# 画面（文書・設定・見つからない画面）を React（Vite + shadcn/ui）の SPA で作る
