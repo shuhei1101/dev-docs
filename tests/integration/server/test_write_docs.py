@@ -638,6 +638,7 @@ def test_normal_when_metadata_mapped(
     assert created.data["results"][0]["status"] == "created"
     assert "title: 決定 2" in created_text
     assert "name:" not in created_text
+    assert by_column.data["results"][0]["status"] == "updated"
     assert "title: 別の名前" in by_column_text
     assert both.is_error
     assert "InvalidArgumentError" in both.text
