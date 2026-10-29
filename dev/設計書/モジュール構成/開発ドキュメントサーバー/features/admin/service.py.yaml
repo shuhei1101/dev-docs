@@ -209,8 +209,9 @@ functions:
          - `source` が `None` の場合、`ValidationFailedError` を送出する
       2. `root / file` を正規化し、`root` の外なら `DocumentNotFoundError` を送出する
       3. `documents[]` の有効な行のうち `file` がその行の文書になる最初の行を引く（`DocumentTable.matches`）
-         - 当たる行が無い場合、`DocumentNotFoundError` を送出する
-      4. その種類の文書を読み、`path` が `file` の文書だけを残す（`DocumentStore.load`）
+         - 当たる行が無い場合、`body_file` を持つ有効な行を上から読み、`body_path` が `file` の文書を持つ最初の行を引く（`DocumentStore.load`）
+         - それでも当たる行が無い場合、`DocumentNotFoundError` を送出する
+      4. その種類の文書を読み、`path` か `body_path` が `file` の文書だけを残す（`DocumentStore.load`）
          - 残らない場合、`DocumentNotFoundError` を送出する
       5. 一時フォルダを控えの場所にした `ConvertService` で文書ごとに変換する（`ConvertService.convert`）
          - 変換が `failure` を返した場合、`ConvertScriptError` を送出する
