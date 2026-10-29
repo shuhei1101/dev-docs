@@ -192,8 +192,8 @@ flows:
         description: なし
         notes: '-'
       - name: 前の形式の配信元
-        description: '`version: "1"` で、`documents[0]` が `paths`・`schema`・`type: markdown`、`documents[1]` が `paths`・`schema`・`type: yaml`・`metadata: {name: {type: ref, field: title}}`・`defaults: [{paths: [docs/**], tags: [doc]}]` を持つ配信元'
-        notes: id `legacy`
+        description: '`version: "1"` で、最上位にタグのマスター `tags: tags.yaml`、`documents[0]` が `paths`・`schema`・`type: markdown`、`documents[1]` が `paths`・`schema`・`type: yaml`・`metadata: {name: {type: ref, field: title}}`・`defaults: [{paths: [docs/**], tags: [doc]}]` を持つ配信元'
+        notes: id `legacy`。`tags.yaml` を置く
       - name: 端末の設定
         description: '`sources` に sample と legacy の 2 行'
         notes: '-'
@@ -204,13 +204,13 @@ flows:
         participant T as dev-docs serve
 
         U->>T: dev-docs serve
-        T->>T: legacy の設定が type・defaults・オブジェクトの metadata で検証に失敗する
+        T->>T: legacy の設定が tags・type・defaults・オブジェクトの metadata で検証に失敗する
         T->>T: legacy を配信せず、違反と移し替えの案内をエラーログに残す
         T-->>U: sample だけを配信する
       ```
     expected:
       - '`/_api/sources/legacy/docs` が 404、`/_api/sources/sample/docs` は応答する'
-      - 'エラーログに `legacy: documents[0].type`・`legacy: documents[1].type`・`legacy: documents[1].defaults`・`legacy: documents[1].metadata.name` の違反がある'
+      - 'エラーログに `legacy: tags`・`legacy: documents[0].type`・`legacy: documents[1].type`・`legacy: documents[1].defaults`・`legacy: documents[1].metadata.name` の違反がある'
       - エラーログに、legacy の設定のバージョンが古く `dev-docs migrate --source` で移し替えられることがある
     test: test_normal_when_source_config_legacy
 lead: 端末の設定を読み、検証に通った配信元を 1 プロセス・1 ポートで画面の API・`/mcp`・`/_admin/mcp` に配信し始める。

@@ -59,12 +59,12 @@ flows:
       - '`ref` に HEAD の commit を渡すと、`<document>` に属性が無く、json の項目に `path`・`scope` が無い'
     test: test_normal_when_full
   - name: 正常系（件数と集計）
-    summary: '`view: count` と `group_by` で件数と値ごとの件数だけを返す'
+    summary: '`view: count` と `group_by` で件数と正規化した値ごとの件数だけを返す'
     setup:
       - name: Mock
         description: なし
       - name: サンプルの配信元
-        description: 正常系と同じ sample。文書 1 のタグは `a`、文書 2 のタグは `a`・`b`
+        description: 正常系と同じ sample。文書 1 のタグは `a`、文書 2 のタグは `a`・`Ａ`（全角の大文字）・`b`
       - name: 入力
         description: '`view: count`, `group_by: tags`'
     flow: |-
@@ -74,11 +74,12 @@ flows:
         participant T as search_docs
 
         C->>T: view: count, group_by: tags
+        T->>T: タグを正規化してまとめ、文書ごとに 1 件と数える
         T-->>C: 総件数とタグごとの件数
       ```
     expected:
       - '`total_count` が 2'
-      - '`groups` が `a: 2`・`b: 1`'
+      - '`groups` が `a: 2`・`b: 1` で、`Ａ` の行が無い（文書 2 の `a`・`Ａ` を 1 件と数え、付いている文書が多い `a` の表記で返す）'
       - 文書の行を返さない
     test: test_normal_when_count_grouped
   - name: 正常系（並べ替えと上限）
@@ -509,6 +510,7 @@ idempotent: true
 side_effects: '会話キー（`session_id`・`agent_id`）ごとに、本文を返した文書（`sections`・`lines` を渡した呼び出しを除く）の id・ハッシュ・返した時点の内容を `state_dir` に記録する（`list_changes` の前回読んだ時点に使う）。文書のファイルは変えない。'
 callers:
   - dev/設計書/シナリオ/単一ユースケース/エージェントが調べる#scenarios[正常シナリオ]
+  - dev/設計書/シナリオ/単一ユースケース/エージェントが調べる#scenarios[正常シナリオ（使われているタグを数える）]
 exclusivity: '読み取りだけで排他しない（`readOnlyHint: true` で並列に呼ばれる）'
 request:
   - name: source
@@ -600,7 +602,7 @@ request:
     default: なし
     location: argument
     description: 指定した項目の値ごとの件数を返す
-    notes: 配列の項目は要素ごとに数える
+    notes: 配列の項目は要素ごとに数える。どの項目も、条件の比較と同じ正規化（NFKC と `casefold`）をした値でまとめ、表記だけが違う値を 1 つに数える。1 つの文書に付いた同じ値は 1 件と数える
   - name: limit
     type: int
     required: false
@@ -777,6 +779,7 @@ response:
   - name: groups
     type: 'list[{value: str, count: int}]'
     description: '`group_by` のときの値ごとの件数'
+    notes: '`value` はまとめた元の表記のうち付いている文書が最も多いもの（同数なら値の昇順で先のもの）。並びは件数の降順・値の昇順'
   - name: items[].id
     type: str
     description: 文書の ID

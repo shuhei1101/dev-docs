@@ -22,7 +22,7 @@ flows:
       ```
     expected:
       - '`sources` が sample（`read_write`）と notes（`read`）'
-      - '`context` に両方の配信元の行と、管理用の YAML の行を修正する使い方がある'
+      - '`context` に両方の配信元の行と、管理用の YAML の行を修正する使い方と、タグを `group_by="tags"` で使い回す使い方がある'
       - '`warnings` に sample の管理用の YAML に無いファイル 1 件がある'
       - '`forgotten` が `false`'
     test: test_normal
@@ -128,7 +128,7 @@ response:
   - name: context
     type: str
     description: 文脈に入れる文。使える配信元ごとの 1 行（ID・読み書きか読み取りだけか・`description`）、場面ごとの短い使い方、警告
-    notes: 使い方には「範囲のファイルを作った・消した・改名したら、管理用の YAML の行を修正する」を含める
+    notes: 使い方には「範囲のファイルを作った・消した・改名したら、管理用の YAML の行を修正する」と「`describe(source)` で種類と書き方を確かめ、タグは `search_docs` の `group_by="tags"` で使われているタグを見て同じ意味のタグを使い回す」を含める
   - name: sources[].id
     type: str
     description: 使える配信元の ID
