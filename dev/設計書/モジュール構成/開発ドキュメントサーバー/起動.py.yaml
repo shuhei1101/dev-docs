@@ -391,7 +391,7 @@ functions:
         summary: 初回の読み込みでもずれを警告のログに書く
         condition: 行 `rules` に `title` の無い文書が 1 件ある配信元 `sample` 1 つ
         mock: なし（一時フォルダの配信元と `caplog`）
-        expected: '`sample` の `ref` の列の欠けの警告が 1 件あり、`registry.served()` が 1 つ'
+        expected: '`sample` の `metadata` の列の欠けの警告が 1 件あり、`registry.served()` が 1 つ'
         exception: '-'
   - name: reload_sources
     title: 配信元の読み直し

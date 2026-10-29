@@ -75,7 +75,7 @@ flows:
       - 種類のスキーマのファイルと同じ YAML を返す
       - スキーマの前に、`name` → `title`・`description` → `meta.summary` の対応の表がある
       - '`format: json` ではスキーマを JSON のオブジェクトで、`metadata` を `{name: title, description: meta.summary}` で structuredContent と text に入れる'
-      - '`metadata` を持たない種類では対応の表を出さず、`format: json` の `metadata` が空になる'
+      - '`metadata` を持たない種類では対応の表を出さず、`format: json` の `metadata` が無いか空になる'
     test: test_normal_when_kind
   - name: 異常系（読めない配信元・SourceNotReadableError）
     summary: '`scope` に当たらない配信元の説明を断る'

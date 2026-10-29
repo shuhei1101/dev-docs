@@ -60,7 +60,7 @@ flows:
       - name: Mock
         description: 正常系と同じ差し替え
       - name: 配信元
-        description: '`version: "1"` の `dev-docs.yaml` を持つ sample。`documents[0]` が `type: yaml`・`metadata: {name: {type: ref, field: title}, alias_type: {type: custom, value: rule}}` を持つ'
+        description: '`version: "1"` の `dev-docs.yaml` を持つ sample。`documents[0]` が `type: yaml`・`metadata: {name: {type: ref, field: title}, alias_type: {type: custom, value: term}}` を持つ'
     flow: |-
       ```mermaid
       sequenceDiagram
@@ -74,7 +74,7 @@ flows:
       ```
     expected:
       - '`dev-docs.yaml` の `version` が `"2"`'
-      - '`documents[0]` が `type` を持たず、`metadata` が `{name: title}`、行の `alias_type` が `rule` になる'
+      - '`documents[0]` が `type` を持たず、`metadata` が `{name: title}`、行の `alias_type` が `term` になる'
       - 端末の設定が変わらない
     test: test_normal_when_source_config
   - name: 異常系（設定が読めない・ConfigInvalid）

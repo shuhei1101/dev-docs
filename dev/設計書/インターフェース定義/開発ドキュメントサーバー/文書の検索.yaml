@@ -386,8 +386,8 @@ flows:
         description: なし
         notes: '-'
       - name: 管理用の YAML
-        description: sample の `notes/files.yaml` に `a.md`（タグ `x`）・`b.md`・`archive/c.md` の 3 行。`notes/` に `a.md`（語 `検索` を含む行が 3 行）・`b.md`（同 1 行）・`archive/c.md`（同 2 行）を置く
-        notes: 'sample の `dev-docs.yaml` の行 `notes` は `paths: [notes/files.yaml]`・`records: files`・`body_file: path`'
+        description: sample の `notes/files.yaml` に `a.md`（タグ `x`）・`b.md` の 2 行、`notes/archive/files.yaml` に `c.md` の 1 行。`notes/` に `a.md`（語 `検索` を含む行が 3 行）・`b.md`（同 1 行）・`archive/c.md`（同 2 行）を置く
+        notes: 'sample の `dev-docs.yaml` の行 `notes` は `paths: [notes/**/files.yaml]`・`records: files`・`body_file: path`'
       - name: 入力
         description: '`filter` は `and[body の contains 検索, not(@path の glob notes/archive/**)]`、`fields: [@matches]`、`order_by: [{@matches, desc}]`、`format: json`。他の呼び出しは期待値のとおり'
         notes: '-'
@@ -406,7 +406,7 @@ flows:
     expected:
       - 結果が `notes/a`（`values.@matches` 3）・`notes/b`（同 1）の順で、`notes/archive/c` が無い
       - '`not` を外すと a（3）・c（2）・b（1）の順になる'
-      - '`@path` の `glob` `notes/*.md` は a・b に当たり、c（`/` をまたぐ）には当たらない'
+      - '`@path` の `glob` `notes/files.yaml#*` は a・b に当たり、c（`notes/archive/files.yaml#0`）には当たらない'
       - 本文の条件が `not(and[body の contains 検索, tags の eq x])` の下にしか無い `filter` では、当たった b・c の `@matches` が 0
       - '`@matches` を渡さない呼び出しは `values` に `@matches` を持たない'
     test: test_normal_when_ordered_by_matches
