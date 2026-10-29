@@ -119,7 +119,9 @@ def build_docs_mcp(handlers: Handlers) -> MCPServer:
         "を行番号つきで返す。"
         "filter の not は中の条件か束に当たらない文書、op: glob は **・*・? のパターンに当たる。"
         "fields・order_by の @matches は文書ごとの本文の条件に当たった行の数。"
-        "sections（Markdown の見出し）・lines（offset・limit）は view: full の本文の一部だけを返す。",
+        "sections（Markdown の見出し）・lines（offset・limit）は view: full の本文の一部だけを返す。"
+        "fields・filter・order_by のキーには共通のキー（id・name・description・tags など）も使える。"
+        "種類の列名との対応は describe(source, kind) で見る。",
         SearchRequest,
         lambda request: search_docs(
             request,

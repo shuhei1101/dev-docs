@@ -89,7 +89,7 @@ def test_build_docs_mcp_when_descriptions(make_handlers: Callable[..., Any]) -> 
     # 検証
     by_name = {tool.name: tool for tool in tools}
     search_description = by_name["search_docs"].description or ""
-    for word in ("not", "glob", "@matches", "sections", "lines"):
+    for word in ("not", "glob", "@matches", "sections", "lines", "describe(source, kind)"):
         assert word in search_description
     assert "contains" in (by_name["list_changes"].description or "")
     assert "describe(source, kind)" in (by_name["write_docs"].description or "")
