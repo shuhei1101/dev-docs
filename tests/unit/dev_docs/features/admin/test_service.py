@@ -270,7 +270,7 @@ def test_try_convert(
         },
     )
     handlers = _handlers(make_terminal_config)
-    request = TryConvertRequest(path=str(tmp_path), file="docs/files.yaml")
+    request = TryConvertRequest(path=str(tmp_path), file="docs/a.md")
     # 実行
     result = try_convert(request, handlers=handlers)
     # 検証
