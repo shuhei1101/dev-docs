@@ -1,0 +1,289 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <!-- 狭い幅でも等倍で描く -->
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <!-- ライトとダークの両方に対応することを描画の前にブラウザへ伝える -->
+  <meta name="color-scheme" content="light dark">
+  <title>モダン | スタイル候補 | dev-docs</title>
+  <!-- 利用者が固定した明暗を、描画の前に当てる -->
+  <script>
+    {
+      const scheme = localStorage.getItem("dev-docs-color-scheme");
+      if (scheme) {
+        document.querySelector('meta[name="color-scheme"]').content = scheme;
+        document.documentElement.dataset.scheme = scheme;
+      }
+    }
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap">
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+  <!-- モック専用の操作列（スタイル候補の切り替えと、ダイアログを開く操作） -->
+  <nav class="mockbar" aria-label="スタイル候補">
+    <span class="mockbar__label">スタイル候補</span>
+    <a class="mockbar__tab" href="../developer-tool/index.html">開発者ツール</a>
+    <a class="mockbar__tab" href="../modern/index.html" aria-current="page">モダン</a>
+    <a class="mockbar__tab" href="../editorial/index.html">エディトリアル</a>
+    <span class="mockbar__spacer"></span>
+    <button class="mockbar__open" type="button" commandfor="edit-dialog" command="show-modal" id="open-dialog">設定画面のダイアログを開く</button>
+  </nav>
+
+  <!-- トップバー -->
+  <header class="topbar">
+    <!-- スマホ幅でサイドバーを開くボタン -->
+    <button class="btn btn--ghost btn--icon only-narrow" type="button" commandfor="sidebar" command="toggle-popover" aria-label="文書の一覧を開く">
+      <svg aria-hidden="true" viewBox="0 0 16 16" fill="currentColor"><path d="M1 3h14v1.5H1zm0 4.25h14v1.5H1zM1 11.5h14V13H1z"/></svg>
+    </button>
+    <a class="brand" href="../../"><span class="brand__mark">dd</span><span class="only-wide">dev-docs</span></a>
+
+    <!-- 配信元の切り替え -->
+    <button class="btn btn--outline" type="button" commandfor="source-menu" command="toggle-popover" id="source-button" aria-label="配信元を切り替える">
+      <svg aria-hidden="true" viewBox="0 0 16 16" fill="currentColor"><path d="M2 2.5A1.5 1.5 0 0 1 3.5 1h9A1.5 1.5 0 0 1 14 2.5v11a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 2 13.5zm1.5 0v11h9v-11zM5 4h6v1.5H5zm0 3h6v1.5H5z"/></svg>
+      sample
+      <svg class="btn__chevron" aria-hidden="true" viewBox="0 0 16 16" fill="currentColor"><path d="M3.2 5.7 8 10.5l4.8-4.8-1.06-1.06L8 8.38 4.26 4.64z"/></svg>
+    </button>
+    <div id="source-menu" class="menu" popover>
+      <p class="menu__label">配信元</p>
+      <a class="menu__item" href="./index.html" aria-current="true">sample<span class="menu__note">読み書き</span></a>
+      <a class="menu__item" href="./index.html">notes<span class="menu__note">Git 管理外</span></a>
+      <div class="menu__sep"></div>
+      <a class="menu__item" href="./index.html">配信元の設定</a>
+    </div>
+
+    <!-- リビジョンの切り替え -->
+    <button class="btn btn--outline only-wide" type="button" commandfor="revision-menu" command="toggle-popover" aria-label="リビジョンを切り替える">
+      <svg aria-hidden="true" viewBox="0 0 16 16" fill="currentColor"><path d="M5 3.25a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0M3.5 5.37a2.25 2.25 0 1 1 1.5 0v.63c0 .55.45 1 1 1h4c.17 0 .34.03.5.08V5.37a2.25 2.25 0 1 1 1.5 0V8.5A2.5 2.5 0 0 1 10 11H6c-.17 0-.34-.03-.5-.08v.71a2.25 2.25 0 1 1-1.5 0zm8.5-1.37a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5M4.25 13.5a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5"/></svg>
+      <span class="mono">3f9c2ab</span>
+      <svg class="btn__chevron" aria-hidden="true" viewBox="0 0 16 16" fill="currentColor"><path d="M3.2 5.7 8 10.5l4.8-4.8-1.06-1.06L8 8.38 4.26 4.64z"/></svg>
+    </button>
+    <div id="revision-menu" class="menu" popover>
+      <p class="menu__label">リビジョン</p>
+      <a class="menu__item" href="./index.html"><span class="mono">develop</span><span class="menu__note">既定</span></a>
+      <a class="menu__item" href="./index.html" aria-current="true"><span class="mono">3f9c2ab</span><span class="menu__note">10/26 23:40 JST</span></a>
+      <a class="menu__item" href="./index.html"><span class="mono">8d41e07</span><span class="menu__note">10/26 21:12 JST</span></a>
+    </div>
+
+    <span class="spacer"></span>
+
+    <!-- 検索 -->
+    <button class="btn btn--outline search" type="button" aria-label="検索">
+      <svg aria-hidden="true" viewBox="0 0 16 16" fill="currentColor"><path d="M10.68 11.74a6 6 0 1 1 1.06-1.06l3.04 3.04-1.06 1.06zM11.5 7a4.5 4.5 0 1 0-9 0 4.5 4.5 0 0 0 9 0"/></svg>
+      <span>文書を検索</span>
+      <kbd>/</kbd>
+    </button>
+
+    <!-- 溜めたコメントのパネルを開く -->
+    <button class="btn btn--ghost" type="button" commandfor="comment-panel" command="toggle-popover" id="comment-button" aria-label="コメント（2 件）">
+      <svg aria-hidden="true" viewBox="0 0 16 16" fill="currentColor"><path d="M1 2.75C1 1.78 1.78 1 2.75 1h10.5c.97 0 1.75.78 1.75 1.75v7.5c0 .97-.78 1.75-1.75 1.75H8.06l-3.53 2.82A.75.75 0 0 1 3.3 14.2V12h-.55C1.78 12 1 11.22 1 10.25zm1.75-.25a.25.25 0 0 0-.25.25v7.5c0 .14.11.25.25.25h1.3c.41 0 .75.34.75.75v1.4l2.53-2.02a.75.75 0 0 1 .47-.13h5.45a.25.25 0 0 0 .25-.25v-7.5a.25.25 0 0 0-.25-.25z"/></svg>
+      <span class="btn__count">2</span>
+    </button>
+
+    <!-- 明暗の切り替え -->
+    <button class="btn btn--ghost btn--icon" type="button" id="scheme-toggle" aria-label="明暗を切り替える" aria-pressed="false">
+      <svg aria-hidden="true" viewBox="0 0 16 16" fill="currentColor"><path d="M8 1.5a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13M8 3a5 5 0 0 1 0 10z"/></svg>
+    </button>
+  </header>
+
+  <!-- 種類のタブ -->
+  <nav class="tabs" aria-label="種類">
+    <a class="tabs__item" href="./index.html">シナリオ</a>
+    <a class="tabs__item" href="./index.html">インターフェース定義</a>
+    <a class="tabs__item" href="./index.html">モジュール構成</a>
+    <a class="tabs__item" href="./index.html" aria-current="page">設定</a>
+    <a class="tabs__item" href="./index.html">外部ライブラリ</a>
+    <a class="tabs__item" href="./index.html">画面設計</a>
+    <a class="tabs__item" href="./index.html">非機能要件</a>
+  </nav>
+
+  <div class="layout">
+    <!-- サイドバー（スマホ幅ではドロワー） -->
+    <nav id="sidebar" class="sidebar" popover aria-label="文書の一覧">
+      <p class="sidebar__heading">設定</p>
+      <ul class="sidebar__list">
+        <li><a class="sidebar__item" href="./index.html" aria-current="page">開発ドキュメントサーバー</a></li>
+        <li><a class="sidebar__item" href="./index.html">端末の設定</a></li>
+        <li><a class="sidebar__item" href="./index.html">配信元の設定</a></li>
+      </ul>
+    </nav>
+
+    <!-- 本文 -->
+    <main class="content">
+      <nav class="breadcrumb" aria-label="パンくず">
+        <a href="./index.html">sample@3f9c2ab</a><span aria-hidden="true">/</span><a href="./index.html">設定</a><span aria-hidden="true">/</span><span aria-current="page">開発ドキュメントサーバー</span>
+      </nav>
+      <h1 class="doc-title">設定: 開発ドキュメントサーバー</h1>
+      <p class="doc-meta">
+        <span class="badge">設定</span>
+        <span>更新 <time datetime="2026-10-26T14:40:00Z">10/26 23:40 JST</time></span>
+        <span>リビジョン <code>3f9c2ab</code></span>
+      </p>
+
+      <!-- ?diff= の差分の案内 -->
+      <section class="alert" aria-label="差分">
+        <svg aria-hidden="true" viewBox="0 0 16 16" fill="currentColor"><path d="M8.75 1.75V5H12v1.5H8.75v3.25h-1.5V6.5H4V5h3.25V1.75zM4 13h8v1.5H4z"/></svg>
+        <p><code>8d41e07</code> から <code>3f9c2ab</code> への変更を強調しています。</p>
+        <a class="btn btn--outline" href="./index.html">差分の強調を解除</a>
+      </section>
+
+      <article class="prose">
+        <p>開発ドキュメントサーバーが起動時に読む設定の一覧。実装は <code>dev_docs/settings.py</code>、サンプルは <code>examples/settings.yaml</code>。</p>
+
+        <h2 id="files">ファイル一覧</h2>
+        <div class="table-wrap" tabindex="0" role="region" aria-label="ファイル一覧の表">
+          <table>
+            <thead><tr><th>ファイル</th><th>管理する値</th></tr></thead>
+            <tbody>
+              <tr><td><code>~/.config/dev-docs/settings.yaml</code></td><td>端末の設定（配信元の一覧と権限）</td></tr>
+              <tr><td><code>dev-docs.yaml</code></td><td>配信元の設定（文書の種類・検査・変換）</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h2 id="keys">キー一覧</h2>
+        <!-- 表の件数と列の表示 -->
+        <div class="table-tools">
+          <span class="table-tools__count">6 件</span>
+          <button class="btn btn--outline" type="button" commandfor="columns-menu" command="toggle-popover" id="columns-button">
+            <svg aria-hidden="true" viewBox="0 0 16 16" fill="currentColor"><path d="M1.75 2h12.5c.41 0 .75.34.75.75v10.5a.75.75 0 0 1-.75.75H1.75a.75.75 0 0 1-.75-.75V2.75c0-.41.34-.75.75-.75M2.5 3.5v9h3v-9zm4.5 0v9h2v-9zm3.5 0v9h3v-9z"/></svg>
+            列の表示
+          </button>
+          <div id="columns-menu" class="menu" popover>
+            <p class="menu__label">表示する列</p>
+            <label class="menu__item"><input type="checkbox" checked disabled> キー</label>
+            <label class="menu__item"><input type="checkbox" checked> 論理名</label>
+            <label class="menu__item"><input type="checkbox" checked> 型</label>
+            <label class="menu__item"><input type="checkbox" checked> 既定値</label>
+            <label class="menu__item"><input type="checkbox" checked> 説明</label>
+            <div class="menu__sep"></div>
+            <button class="btn btn--ghost" type="button">既定に戻す</button>
+          </div>
+        </div>
+        <div class="table-wrap" id="keys-table" tabindex="0" role="region" aria-label="キー一覧の表">
+          <table>
+            <thead><tr><th>キー</th><th>論理名</th><th>型</th><th>既定値</th><th>説明</th></tr></thead>
+            <tbody>
+              <tr><td><code>version</code></td><td>設定のバージョン</td><td>整数</td><td>—</td><td>サーバーが読めるバージョンと比べる</td></tr>
+              <tr><td><code>sources[].id</code></td><td>配信元の ID</td><td>文字列</td><td>—</td><td>画面の URL と <code>source</code> 引数に使う</td></tr>
+              <tr class="is-changed"><td><code>sources[].config</code></td><td>配信元の設定ファイル</td><td>パスの配列</td><td>—</td><td>上から順にマージ<span class="diff-del">する</span>し、同じキーは後のファイルで上書きする</td></tr>
+              <tr class="is-added"><td><code>sources[].enabled</code></td><td>配信するか</td><td>真偽値</td><td><code>true</code></td><td><code>false</code> の配信元は起動時に読まない</td></tr>
+              <tr><td><code>sources[].scope.read</code></td><td>読み取りの範囲</td><td>glob の配列</td><td>—</td><td>当たるパスなら文書の MCP で読める</td></tr>
+              <tr><td><code>sources[].scope.write</code></td><td>書き込みの範囲</td><td>glob の配列</td><td><code>[]</code></td><td>当たるパスなら文書の MCP で書き込める。<span class="selected-text"><code>worktrees</code> に当たるパスなら読み書きをそのワークツリーへ向ける</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h2 id="env">環境ごとの差分</h2>
+<pre tabindex="0" aria-label="環境ごとの差分の例"><code><span class="tok-key">sources</span>:
+  - <span class="tok-key">id</span>: <span class="tok-str">sample</span>
+    <span class="tok-key">config</span>: [<span class="tok-str">./dev-docs.yaml</span>, <span class="tok-str">./dev-docs.local.yaml</span>]
+    <span class="tok-key">scope</span>:
+      <span class="tok-key">read</span>: [<span class="tok-str">"~/repo/**"</span>]
+      <span class="tok-key">write</span>: [<span class="tok-str">"~/repo/sample/**"</span>]</code></pre>
+
+        <h2 id="links">関連</h2>
+        <ul>
+          <li><a href="./index.html">シナリオ / エージェントが書き込む</a></li>
+          <li><a href="./index.html">インターフェース定義 / write_docs</a></li>
+        </ul>
+      </article>
+    </main>
+
+    <!-- 目次 -->
+    <nav class="toc" aria-label="目次">
+      <p class="toc__heading">目次</p>
+      <ul>
+        <li><a href="#files">ファイル一覧</a></li>
+        <li><a href="#keys" aria-current="true">キー一覧</a></li>
+        <li><a href="#env">環境ごとの差分</a></li>
+        <li><a href="#links">関連</a></li>
+      </ul>
+    </nav>
+  </div>
+
+  <!-- 溜めたコメントのパネル -->
+  <aside id="comment-panel" class="comment-panel" popover aria-label="コメント">
+    <div class="comment-panel__head">
+      <p class="comment-panel__title">コメント（2 件）</p>
+      <button class="btn btn--ghost btn--icon" type="button" commandfor="comment-panel" command="hide-popover" aria-label="閉じる">
+        <svg aria-hidden="true" viewBox="0 0 16 16" fill="currentColor"><path d="M3.72 3.72a.75.75 0 0 1 1.06 0L8 6.94l3.22-3.22a.75.75 0 1 1 1.06 1.06L9.06 8l3.22 3.22a.75.75 0 1 1-1.06 1.06L8 9.06l-3.22 3.22a.75.75 0 0 1-1.06-1.06L6.94 8 3.72 4.78a.75.75 0 0 1 0-1.06"/></svg>
+      </button>
+    </div>
+    <div class="comment-panel__body">
+      <div class="comment">
+        <p class="comment__quote">キー一覧 › sources[].enabled</p>
+        <p>既定値が true なら、書かなかったときの挙動も説明に書いてほしい。</p>
+        <div class="actions">
+          <button class="btn btn--ghost" type="button">修正</button>
+          <button class="btn btn--ghost" type="button">削除</button>
+        </div>
+      </div>
+      <form class="comment" id="comment-form">
+        <p class="comment__quote">キー一覧 › worktrees に当たるパスなら読み書きをそのワークツリーへ向ける</p>
+        <div class="field">
+          <label for="comment-text">コメント</label>
+          <textarea id="comment-text" class="textarea">ワークツリーが無いときはどこへ書く？</textarea>
+        </div>
+        <div class="actions">
+          <button class="btn btn--ghost" type="button">キャンセル</button>
+          <button class="btn btn--primary" type="button">追加</button>
+        </div>
+      </form>
+      <div class="actions">
+        <button class="btn btn--outline" type="button">まとめてコピー</button>
+        <button class="btn btn--primary" type="button">Issue を起票</button>
+      </div>
+    </div>
+  </aside>
+
+  <!-- 設定画面の配信元の編集ダイアログ -->
+  <dialog id="edit-dialog" class="dialog" aria-labelledby="edit-dialog-title">
+    <form class="dialog__body" method="dialog">
+      <div>
+        <h2 class="dialog__title" id="edit-dialog-title">配信元を編集</h2>
+        <p class="dialog__desc">保存すると端末の設定をスキーマに通してから書き換え、配信元を読み直します。</p>
+      </div>
+      <div class="field">
+        <label for="source-id">配信元の ID</label>
+        <input id="source-id" class="input mono" value="sample">
+        <span class="hint">画面の URL と MCP の source 引数に使います。</span>
+      </div>
+      <div class="field">
+        <label for="source-config">設定ファイル（1 行に 1 つ）</label>
+        <textarea id="source-config" class="textarea mono">~/repo/sample/dev-docs.yaml
+~/repo/sample/dev-docs.local.yaml</textarea>
+      </div>
+      <label class="switch"><input type="checkbox" checked> 配信する</label>
+      <div class="actions">
+        <button class="btn btn--outline" type="button" commandfor="edit-dialog" command="close">キャンセル</button>
+        <button class="btn btn--primary" type="submit">保存</button>
+      </div>
+    </form>
+  </dialog>
+
+  <script type="module">
+    // 明暗の切り替え（押すたびにシステムの設定の反対へ固定し、もう一度押すと戻す）
+    const toggle = document.getElementById("scheme-toggle");
+    const meta = document.querySelector('meta[name="color-scheme"]');
+    const systemDark = matchMedia("(prefers-color-scheme: dark)");
+    toggle.setAttribute("aria-pressed", String(Boolean(localStorage.getItem("dev-docs-color-scheme"))));
+    toggle.addEventListener("click", () => {
+      const pinned = localStorage.getItem("dev-docs-color-scheme");
+      if (pinned) {
+        localStorage.removeItem("dev-docs-color-scheme");
+        meta.content = "light dark";
+        delete document.documentElement.dataset.scheme;
+      } else {
+        const scheme = systemDark.matches ? "light" : "dark";
+        localStorage.setItem("dev-docs-color-scheme", scheme);
+        meta.content = scheme;
+        document.documentElement.dataset.scheme = scheme;
+      }
+      toggle.setAttribute("aria-pressed", String(!pinned));
+    });
+  </script>
+</body>
+</html>
