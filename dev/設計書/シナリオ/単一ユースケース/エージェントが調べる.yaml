@@ -348,12 +348,13 @@ scenarios:
         description: なし（実環境で実行。`cwd` はテストが引数に入れる）
         notes: '-'
       - name: タグ
-        description: sample の文書 1 の `tags` を `[mcp]`、文書 2 を `[MCP, 設計]`、notes の文書 1 件を `[mcp]` にする
-        notes: 表記だけが違うタグ（`mcp`・`MCP`）を混ぜる。sample・notes の `dev-docs.yaml` はタグのマスター（`tags`）を持たない
+        description: sample の文書 1 の `tags` を `[mcp]`、文書 2 を `[MCP, mcp, 設計]`、notes の文書 1 件を `[mcp]` にする
+        notes: 表記だけが違うタグ（`mcp`・`MCP`）を混ぜ、文書 2 には両方を付ける。sample・notes の `dev-docs.yaml` はタグのマスター（`tags`）を持たない
       - name: dev-docs
         description: 正常シナリオと同じ sample と notes を配信している dev-docs
         notes: '`cwd` は sample のクローン本体'
     flow: |-
+      ```mermaid
       sequenceDiagram
         actor A as エージェント
         participant M as 文書の MCP（/mcp）
@@ -363,10 +364,11 @@ scenarios:
         M-->>A: タグごとの件数（mcp 3、設計 1）
         A->>M: search_docs(source: *, filter: tags が mcp, view: summary)
         M-->>A: タグを付けた 3 件
+      ```
     expected:
-      - '`group_by: tags` が、`mcp`・`MCP` を 1 つにまとめて件数 3 で返し、表記は付いている文書が最も多い `mcp` になる'
+      - '`group_by: tags` が、`mcp`・`MCP` を 1 つにまとめて件数 3 で返し（両方を付けた文書 2 は 1 件として数える）、表記は付いている文書が最も多い `mcp` になる'
       - '`設計` が件数 1 で返り、件数の降順・値の昇順に並ぶ'
-      - '`tags` が `mcp` の `search_docs` が、`MCP` を付けた文書 2 も含めて 3 件を返す'
+      - '`tags` が `mcp` の `search_docs` が、文書 2 も含めて 3 件を返す'
     test: test_normal_when_tags_grouped
 lead: エージェントが文書の MCP の `describe`・`search_docs`・`trace_related` で、今の作業場所から読める配信元の文書を探して読む。
 issue: 3

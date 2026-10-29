@@ -117,6 +117,7 @@ scenarios:
         description: '`version: "1"` の `dev-docs.yaml` を持ち、最上位にタグのマスター `tags: tags.yaml`、`documents[0]` が `type: yaml`・`metadata: {name: {type: ref, field: title}}` を持つ配信元'
         notes: 機械的に移せる設定だけを持つ。`tags.yaml` を置く
     flow: |-
+      ```mermaid
       sequenceDiagram
         actor U as 利用者
         participant MG as dev-docs migrate
@@ -129,6 +130,7 @@ scenarios:
         U->>MG: dev-docs migrate --source {配信元の dev-docs.yaml} --allow-destructive
         MG->>SC: バックアップを取り、type を消し、ref の metadata を列名の文字列にし、tags を消し、version を書き換える
         MG-->>U: 当てた手順
+      ```
     expected:
       - '`migrate --source --plan` は `dev-docs.yaml` を変えず、当てる手順と、`tags` の削除が破壊的な手順であることを返す'
       - '`--allow-destructive` を付けない `migrate --source` は `dev-docs.yaml` を変えず、終了コード 5 で終わる'
