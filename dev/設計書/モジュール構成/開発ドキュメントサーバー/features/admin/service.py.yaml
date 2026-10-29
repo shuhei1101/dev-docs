@@ -138,7 +138,7 @@ functions:
       4. 取り得た値に応じて分ける
          - `violations` がある場合、`missing_paths`・`script_errors` を空、`sync` を `None` にして返す
          - `script_violations` がある場合、`script_errors` に入れ、`sync` を `None` にする
-      5. `documents[].paths[]` のうち当たるファイルが無いものを `missing_paths` にする（`collect_files`）
+      5. `documents[].paths[]` のうち、そのパターンだけに絞った行（`exclude` は元の行のまま）で当たるファイルが無いものを `missing_paths` にする（`collect_files`）
       6. `source` があれば、索引の同期を求めて件数と先頭 `SYNC_ITEMS_LIMIT` 件の内訳にする（`check_sync`）
     unit_tests:
       - name: test_check_project
@@ -208,7 +208,7 @@ functions:
       1. 配信元を読む（検査する配信元の読み込み）
          - `source` が `None` の場合、`ValidationFailedError` を送出する
       2. `root / file` を正規化し、`root` の外なら `DocumentNotFoundError` を送出する
-      3. `documents[]` の有効な行のうち `paths` が `file` に当たる最初の行を引く（`match_glob`）
+      3. `documents[]` の有効な行のうち `file` がその行の文書になる最初の行を引く（`DocumentTable.matches`）
          - 当たる行が無い場合、`DocumentNotFoundError` を送出する
       4. その種類の文書を読み、`path` が `file` の文書だけを残す（`DocumentStore.load`）
          - 残らない場合、`DocumentNotFoundError` を送出する
