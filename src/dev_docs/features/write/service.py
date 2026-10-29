@@ -435,6 +435,13 @@ def write_docs(
                     violations=violations,
                     next_steps=["違反を直してから呼び直してください"],
                 )
+            # 最初に失敗した操作の違反を、添字つきのパスにして送る
+            if isinstance(first, InvalidArgumentError):
+                raise InvalidArgumentError(
+                    message=first.message,
+                    violations=_prefixed(failures[0][0], first),
+                    next_steps=first.next_steps,
+                )
             raise first
         succeeded = [item for item in results if item.status != "failed"]
         if request.dry_run or not succeeded:

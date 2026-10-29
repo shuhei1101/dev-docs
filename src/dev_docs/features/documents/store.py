@@ -125,7 +125,7 @@ class DocumentStore:
         documents: list[Document] = []
         problems: list[LoadProblem] = []
         seen: set[tuple[Path, str]] = set()
-        for path in collect_files(root, table.paths):
+        for path in collect_files(root, table):
             absolute = root / path
             key = (absolute, table.id)
             seen.add(key)
@@ -256,7 +256,7 @@ def check_sync(store: DocumentStore, source: ServedSource) -> SyncReport:
     for table in source.config.documents:
         if not table.enabled or table.records is None or table.body_file is None:
             continue
-        for index_path in collect_files(source.root, table.paths):
+        for index_path in collect_files(source.root, table):
             body_paths = {
                 document.body_path
                 for document in result.documents
@@ -264,7 +264,7 @@ def check_sync(store: DocumentStore, source: ServedSource) -> SyncReport:
             }
             unindexed.extend(
                 f"{table.id}: {path}"
-                for path in unindexed_files(source.root, index_path, body_paths)
+                for path in unindexed_files(source.root, index_path, body_paths, table)
             )
     missing_body_files = [
         f"{problem.path}: {problem.detail}"

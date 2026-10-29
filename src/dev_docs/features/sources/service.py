@@ -246,6 +246,7 @@ def _build_table(row: dict[str, Any]) -> DocumentTable:
         body_file=row.get("body_file"),
         metadata=metadata,
         defaults=defaults,
+        exclude=list(row.get("exclude", [])),
     )
 
 

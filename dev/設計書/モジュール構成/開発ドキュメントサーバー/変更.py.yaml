@@ -405,7 +405,7 @@ functions:
       1. `to` があって `from_` が無い場合、`InvalidArgumentError`（`to` には `from` が要ります）を送る
       2. 読む場所を解く（読む場所の解決。`ref` は渡さない）。`from_` があり Git 管理外の配信元を含む場合、`InvalidArgumentError` を送る
       3. 配信元ごとに前と後の文書を作る
-         - `from_` がある場合、始点・終点をリビジョンの解決（`argument` は `from`・`to`）で commit にし、変わったファイルを引く。文書の行の `paths` に当たるファイルごとに、前はリビジョンのファイル、後は終点の commit のリビジョンのファイルか作業ツリーのファイルを、文字列からの文書の組み立てで文書にする
+         - `from_` がある場合、始点・終点をリビジョンの解決（`argument` は `from`・`to`）で commit にし、変わったファイルを引く。文書の行に当るファイル（`enabled` の行を上から見て、文書の行.行に当たるかが `True` の最初の行）ごとに、前はリビジョンのファイル、後は終点の commit のリビジョンのファイルか作業ツリーのファイルを、文字列からの文書の組み立てで文書にする
          - `from_` が無い場合、会話の記録.前回読んだ内容を引く（会話キーが無い・全ての配信元で空なら `LastReadNotFoundError`）。前は記録の内容（`doc_kind` の行が YAML なら YAML として、Markdown なら front matter と本文として読む）、後は今の文書（文書のストア.ID で引く。無ければ消した）
       4. ID で突き合わせ、前にだけある文書を `deleted`、後にだけある文書を `added`、両方にあって変わったキー（無視するキーは `diff_ignore_keys`、Markdown の文書は `body` も 1 つのキーとして比べる）が空でない文書を `modified` にする
       5. `filter` があれば、後（消した文書は前）の文書を条件の照合にかけ、当たる文書だけを残す（条件の確かめは検索と同じ）
@@ -459,6 +459,13 @@ functions:
         mock: なし
         expected: '`InvalidArgumentError` の違反の `path` が `to`'
         exception: Git 管理外の配信元への区間・`from` の無い `to`・知らない項目
+      - name: test_list_changes_when_excluded
+        case: 正常
+        summary: 除外の名前に当たるファイルは次の行へ進む
+        condition: '行 `rule`（`paths: [docs/rule/*.md]`・`exclude: [README.md]`）と行 `index`（`paths: [docs/**/README.md]`）。区間の中で `docs/rule/README.md` を足す'
+        mock: なし（一時フォルダの git リポジトリ）
+        expected: '`items` が `docs/rule/README.md` の文書 1 件だけで、`kind` が `index`・`added`'
+        exception: '-'
   - name: render_changes_markdown
     title: 変更の結果の Markdown
     kind: 関数

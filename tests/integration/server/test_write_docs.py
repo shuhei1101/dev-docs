@@ -559,6 +559,40 @@ def test_error_when_worktree_not_matched(
     assert list(elsewhere.iterdir()) == []
 
 
+def test_error_when_placement_excluded(
+    make_source: Callable[..., Any],
+    make_server: Callable[..., Any],
+    add_worktree: Callable[..., Path],
+    sample_file_set: Callable[..., dict[str, str]],
+    sample_config_text: Callable[..., str],
+) -> None:
+    """create で決めた置き場所のファイル名が exclude に当たるとき、何も書かずに断る（異常系）。"""
+    # 準備
+    rule_row = (
+        "  - id: rule\n"
+        "    type: yaml\n"
+        "    paths: [docs/rule/*.yaml]\n"
+        "    schema: schemas/sample.schema.yaml\n"
+        "    exclude: [index.yaml]\n"
+    )
+    files = sample_file_set(**{"dev-docs.yaml": sample_config_text(rule_row)})
+    source, env, worktree = _setup(make_source, make_server, add_worktree, files)
+    # 実行
+    result = env.call(
+        "write_docs",
+        cwd=str(source.folder),
+        worktree=str(worktree),
+        operations=[{"op": "create", "kind": "rule", "id": "index", "data": {"name": "目次"}}],
+    )
+    # 検証
+    assert result.is_error
+    assert "InvalidArgumentError" in result.text
+    assert "operations[0].kind" in result.text
+    assert "docs/rule/index.yaml" in result.text
+    assert "exclude" in result.text
+    assert not (worktree / "docs" / "rule" / "index.yaml").exists()
+
+
 def test_normal_when_tool_description(
     make_source: Callable[..., Any], make_server: Callable[..., Any]
 ) -> None:

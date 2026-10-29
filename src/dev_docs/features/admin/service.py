@@ -6,6 +6,7 @@ import logging
 import os
 import tempfile
 from collections.abc import Mapping
+from dataclasses import replace
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -46,7 +47,7 @@ from dev_docs.shared.errors import (
     ValidationFailedError,
     Violation,
 )
-from dev_docs.shared.paths import match_glob, normalize_path
+from dev_docs.shared.paths import normalize_path
 from dev_docs.shared.version import RUNNING_VERSION
 from dev_docs.shared.yaml_io import YamlLoadError, load_yaml
 
@@ -253,7 +254,7 @@ def check_project(request: CheckProjectRequest, *, handlers: Handlers) -> CheckP
         pattern
         for table in source.config.documents
         for pattern in table.paths
-        if not collect_files(source.root, [pattern])
+        if not collect_files(source.root, replace(table, paths=[pattern]))
     ]
     report = check_sync(handlers.store, source)
     entries = (
@@ -297,16 +298,11 @@ def try_convert(request: TryConvertRequest, *, handlers: Handlers) -> TryConvert
         raise DocumentNotFoundError(
             message=f"{request.file}: 配信元の外です", missing=[request.file]
         )
-    # ファイルが範囲に当たる最初の文書の行を引く
-    table = next(
-        (
-            row
-            for row in source.config.documents
-            if row.enabled and match_glob(file, row.paths, base=candidate.root)
-        ),
-        None,
-    )
+    # ファイルが範囲に当たり、除外に当たらない最初の文書の行を引く
     relative = file.relative_to(candidate.root).as_posix()
+    table = next(
+        (row for row in source.config.documents if row.enabled and row.matches(relative)), None
+    )
     not_matched = DocumentNotFoundError(
         message=f"{request.file}: 文書の種類の範囲に当たる文書がありません", missing=[request.file]
     )
