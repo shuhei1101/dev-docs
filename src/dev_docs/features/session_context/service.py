@@ -70,7 +70,7 @@ def _collect_warnings(available: list[SourceAccess], *, handlers: Handlers) -> l
         source = handlers.registry.get(item.source_id)
         report = check_sync(handlers.store, source)
         for label, values in (
-            ("ref の列の欠け", report.missing_refs),
+            ("metadata の列の欠け", report.missing_refs),
             ("管理用の YAML に無いファイル", report.unindexed_files),
             ("ファイルが無い行", report.missing_body_files),
         ):

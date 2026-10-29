@@ -38,7 +38,7 @@ class LoadProblem:
 
 @dataclass(frozen=True)
 class SyncReport:
-    """1 つの配信元の `ref` の列の欠けと、管理用の YAML とファイルのずれ。"""
+    """1 つの配信元の `metadata` の列の欠けと、管理用の YAML とファイルのずれ。"""
 
     source_id: str
     missing_refs: list[str] = field(default_factory=list)

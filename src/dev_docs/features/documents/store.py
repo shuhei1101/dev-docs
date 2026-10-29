@@ -265,7 +265,7 @@ class DocumentStore:
 
 
 def check_sync(store: DocumentStore, source: ServedSource) -> SyncReport:
-    """配信元の文書を読み、`ref` の列の欠けと管理用の YAML のずれを求める。"""
+    """配信元の文書を読み、`metadata` の列の欠けと管理用の YAML のずれを求める。"""
     result = store.load(Target(source, source.root, None, None, "read"))
     missing_refs = [
         f"{document.kind}: {document.id}: {key}（{field}）"
