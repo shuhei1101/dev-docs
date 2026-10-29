@@ -39,5 +39,5 @@
 - [x] ドキュメント修正（docs/リファレンス/設定.md・docs/はじめに/コアコンセプト/文書のメタデータ.md・docs/使い方/documentsの行の判定.md・docs/使い方/配信元を配信する.md・docs/リファレンス/用語集.md・docs/リファレンス/管理のMCP.md・docs/リファレンス/文書のMCP.md・docs/リファレンス/CLI.md・docs/使い方/dev-docsを更新する.md）
 - [x] 単体テスト作成
 - [x] 実装
-- [ ] 結合テスト作成
+- [x] 結合テスト作成
 - [ ] E2E テスト作成
