@@ -79,7 +79,7 @@ scenarios:
         description: なし（実環境で実行）
       - name: 登録済みの配信元
         description: YAML でない範囲の正常シナリオを済ませた配信元
-        notes: その後に Markdown を 1 件追加・1 件削除し、1 件を `git mv` で改名して commit する
+        notes: その後に Markdown を 1 件追加・1 件削除し、1 件を `git mv` で改名して commit する。その commit でワークツリーを作る（クローン本体には `write_docs` で書き込めない）
     flow: |-
       ```mermaid
       sequenceDiagram
@@ -88,7 +88,7 @@ scenarios:
         participant DM as 文書の MCP
         participant AD as 管理の MCP
 
-        U->>SK: /dev-docs:setup {配信元のパス}
+        U->>SK: 配信元のワークツリーで /dev-docs:setup
         SK->>SK: 既にある sources の行と管理用の YAML を読む
         SK->>SK: 範囲のファイルと管理用の YAML の行を突き合わせる（Git はリネームを検出する）
         SK-->>U: 追加・削除・改名の行を表で示して確かめる

@@ -55,11 +55,11 @@ scenarios:
         participant SK as global-setup のスキル
         participant CF as 端末の設定
 
-        U->>SK: /dev-docs:global-setup {クローンのパス}
-        SK->>CF: 端末の設定の version を dev-docs のバージョンと比べる（同じ）
-        SK->>CF: スキーマで検証し、足りないキーを得る
+        U->>SK: /dev-docs:global-setup
+        SK->>CF: 端末の設定を読み、clone が無いことを得る
         SK->>U: 足りないキー clone だけを聞く
         U-->>SK: クローンのパス
+        SK->>CF: 端末の設定の version を dev-docs のバージョンと比べる（同じ）
         SK->>CF: clone を書き足す
         SK-->>U: 書き足したキーと、つながった結果を出す
       ```
