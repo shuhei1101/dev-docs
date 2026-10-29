@@ -35,7 +35,8 @@ def test_normal_when_source_becomes_invalid(
     sample = make_source("sample", sample_file_set(), git=False)
     env = make_server(sample)
     (sample.folder / "dev-docs.yaml").write_text(
-        "name: sample\ndocuments:\n  - id: sample\n    type: yaml\n", encoding="utf-8"
+        "name: sample\ndocuments:\n  - id: sample\n    schema: schemas/sample.schema.yaml\n",
+        encoding="utf-8",
     )
     # 実行
     result = env.call_admin("reload", format="json")

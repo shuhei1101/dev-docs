@@ -10,7 +10,6 @@ from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Literal, cast
 
-from dev_docs.features.documents.loader import document_text
 from dev_docs.features.documents.types import Document
 from dev_docs.features.seen.types import Activity, ActivityKind, LastRead, ReturnKind, SessionKey
 
@@ -88,7 +87,7 @@ class SeenStore:
         at = _now()
         with self._lock, self._conn:
             for document in documents:
-                content = document_text(document) if kind == "body" else None
+                content = document.body if kind == "body" else None
                 self._conn.execute(
                     "INSERT OR REPLACE INTO returned VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
                     (

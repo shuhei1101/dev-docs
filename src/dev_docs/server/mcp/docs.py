@@ -119,7 +119,9 @@ def build_docs_mcp(handlers: Handlers) -> MCPServer:
         "を行番号つきで返す。"
         "filter の not は中の条件か束に当たらない文書、op: glob は **・*・? のパターンに当たる。"
         "fields・order_by の @matches は文書ごとの本文の条件に当たった行の数。"
-        "sections（Markdown の見出し）・lines（offset・limit）は view: full の本文の一部だけを返す。",
+        "sections（Markdown の見出し）・lines（offset・limit）は view: full の本文の一部だけを返す。"
+        "fields・filter・order_by のキーには共通のキー（id・name・description・tags など）も使える。"
+        "種類の列名との対応は describe(source, kind) で見る。",
         SearchRequest,
         lambda request: search_docs(
             request,
@@ -168,7 +170,10 @@ def build_docs_mcp(handlers: Handlers) -> MCPServer:
         "write_docs",
         "文書を作る・部分更新する・置き換える。操作を全て当てた後の文書を検査に通し、"
         "通ったときだけ作業ツリーのファイルを書き換える（commit はしない）。"
-        "範囲のファイルを作った・消した・改名したら、管理用の YAML の行を修正する。",
+        "範囲のファイルを作った・消した・改名したら、管理用の YAML の行を修正する。"
+        "set・unset・add_to・remove_from・text_edits のキーには共通のキー"
+        "（id・name・description・tags・alias_type など）も使え、種類の列名へ読み替えて書く。"
+        "対応は describe(source, kind) で見る。",
         WriteRequest,
         lambda request: write_docs(
             request,

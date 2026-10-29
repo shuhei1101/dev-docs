@@ -174,7 +174,6 @@ def sample_config(
         "default_ref: develop\n"
         "documents:\n"
         "  - id: sample\n"
-        "    type: yaml\n"
         "    paths: [docs/*.yaml]\n"
         "    schema: schemas/sample.schema.yaml\n"
         f"{extra}"
@@ -203,7 +202,6 @@ def sample_files(**overrides: str) -> dict[str, str]:
 
 FILES_ROW = (
     "  - id: src\n"
-    "    type: yaml\n"
     "    paths: [src/files.yaml]\n"
     "    schema: schemas/sample.schema.yaml\n"
     "    records: files\n"
@@ -211,7 +209,7 @@ FILES_ROW = (
 )
 
 
-def sample_sync_files(unindexed: int = 1, *, version: str = "1") -> dict[str, str]:
+def sample_sync_files(unindexed: int = 1, *, version: str = "2") -> dict[str, str]:
     """管理用の YAML に無いファイルを `unindexed` 件持つ、配信元のファイル一式を返す。"""
     files = sample_files(**{"dev-docs.yaml": sample_config(FILES_ROW, version=version)})
     files["src/files.yaml"] = "files:\n  - path: a.py\n"

@@ -186,3 +186,31 @@ def test_apply_migration_when_changed(settings_file: Path) -> None:
     with pytest.raises(MigrationFailedError):
         apply_migration(_target(settings_file), data, steps, allow_destructive=False, now=NOW)
     assert settings_file.read_text(encoding="utf-8") == changed
+
+
+def test_apply_migration_when_source_needs_setup(
+    tmp_path: Path, write_files: Callable[[Path, dict[str, str]], None]
+) -> None:
+    """手順で移せない配信元の設定（異常系）。"""
+    # 準備
+    legacy = (
+        'version: "1"\n'
+        "name: sample\n"
+        "documents:\n"
+        "  - id: rules\n"
+        "    type: markdown\n"
+        "    paths: [docs/rule/*.yaml]\n"
+        "    schema: schemas/rule.schema.yaml\n"
+    )
+    write_files(
+        tmp_path,
+        {"dev-docs.yaml": legacy, "schemas/rule.schema.yaml": "title: rule\ntype: object\n"},
+    )
+    target = MigrationTarget(kind="dev-docs", file=tmp_path / "dev-docs.yaml", current="2")
+    data, steps = plan_migration(target)
+    # 実行・検証
+    with pytest.raises(MigrationFailedError) as exc_info:
+        apply_migration(target, data, steps, allow_destructive=False, now=NOW)
+    assert "documents[0].type" in str(exc_info.value)
+    assert "/dev-docs:setup" in str(exc_info.value)
+    assert target.file.read_text(encoding="utf-8") == legacy

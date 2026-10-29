@@ -13,12 +13,7 @@ from dev_docs.features.documents import store as store_module
 from dev_docs.features.documents.store import DocumentStore
 from dev_docs.features.documents.types import Document
 from dev_docs.features.history.snapshot import SnapshotStore
-from dev_docs.features.sources.types import (
-    DocumentTable,
-    MetadataMapping,
-    ServedSource,
-    SourceConfig,
-)
+from dev_docs.features.sources.types import DocumentTable, ServedSource, SourceConfig
 from dev_docs.shared.errors import DocumentNotFoundError, UnknownKindError
 
 OCT_01 = "2026-10-01T12:00:00+09:00"
@@ -38,20 +33,27 @@ def workspace(
     make_served_source: Callable[..., ServedSource],
     make_target: Callable[..., Target],
 ) -> Target:
-    """rules（YAML 2 件）と notes（Markdown 2 件）を持つ Git の管理外の配信元の読む場所を返す。"""
+    """rules（YAML 2 件）と notes（管理用の YAML で配信する Markdown 2 件）を持つ Git の管理外の配信元の読む場所を返す。"""
     root = tmp_path / "ws"
     write_files(
         root,
         {
             "rules/a.yaml": "id: a\nname: A\n",
             "rules/b.yaml": "id: b\nname: B\n",
+            "notes/files.yaml": "files:\n  - path: x.md\n  - path: y.md\n",
             "notes/x.md": "# X\n",
             "notes/y.md": "# Y\n",
         },
     )
     documents = [
-        DocumentTable(id="rules", type="yaml", paths=["rules/*.yaml"]),
-        DocumentTable(id="notes", type="markdown", paths=["notes/*.md"]),
+        DocumentTable(id="rules", paths=["rules/*.yaml"], schema_path="schemas/rule.schema.yaml"),
+        DocumentTable(
+            id="notes",
+            paths=["notes/files.yaml"],
+            schema_path="schemas/rule.schema.yaml",
+            records="files",
+            body_file="path",
+        ),
     ]
     source = make_served_source(root=root, config=make_source_config(documents=documents))
     return make_target(source)
@@ -140,7 +142,9 @@ def test_document_store_load_when_ref(
     root = git_repo({"rules/a.yaml": "id: a\nname: old\n"}, date=OCT_01)
     first = run_git(root, "rev-parse", "HEAD").strip()
     write_files(root, {"rules/a.yaml": "id: a\nname: new\n"})
-    documents = [DocumentTable(id="rules", type="yaml", paths=["rules/*.yaml"])]
+    documents = [
+        DocumentTable(id="rules", paths=["rules/*.yaml"], schema_path="schemas/rule.schema.yaml")
+    ]
     source = make_served_source(
         root=root,
         is_git=True,
@@ -184,7 +188,9 @@ def test_document_store_get_when_missing(
     # 準備
     root = tmp_path / "ws"
     write_files(root, {"rules/auth.yaml": "id: rule-auth\nname: Auth\n"})
-    documents = [DocumentTable(id="rules", type="yaml", paths=["rules/*.yaml"])]
+    documents = [
+        DocumentTable(id="rules", paths=["rules/*.yaml"], schema_path="schemas/rule.schema.yaml")
+    ]
     source = make_served_source(root=root, config=make_source_config(documents=documents))
     target = make_target(source)
     # 実行・検証
@@ -212,7 +218,6 @@ def test_document_store_schema_when_worktree(
     documents = [
         DocumentTable(
             id="rules",
-            type="yaml",
             paths=["rules/*.yaml"],
             schema_path="schemas/rule.schema.yaml",
         )
@@ -254,7 +259,6 @@ def test_document_store_schema_when_ref(
     documents = [
         DocumentTable(
             id="rules",
-            type="yaml",
             paths=["rules/*.yaml"],
             schema_path="schemas/rule.schema.yaml",
         )
@@ -267,16 +271,6 @@ def test_document_store_schema_when_ref(
     result = document_store.schema(make_target(source), "rules")
     # 検証
     assert result["properties"]["body"] == {"type": "string", "title": "Markdown"}
-
-
-def test_document_store_schema_when_markdown(
-    document_store: DocumentStore, workspace: Target
-) -> None:
-    """スキーマの無い行（正常系）。"""
-    # 実行
-    result = document_store.schema(workspace, "notes")
-    # 検証
-    assert result == {}
 
 
 def test_document_store_invalidate(document_store: DocumentStore, workspace: Target) -> None:
@@ -351,16 +345,20 @@ def _sync_source(
     make_source_config: Callable[..., SourceConfig],
     make_served_source: Callable[..., ServedSource],
 ) -> ServedSource:
-    """`ref` の列の欠けを数える行 rules と、管理用の YAML の行 src を持つ配信元を返す。"""
+    """`metadata` の列の欠けを数える行 rules と、管理用の YAML の行 src を持つ配信元を返す。"""
     documents = [
         DocumentTable(
             id="rules",
-            type="yaml",
             paths=["rules/*.yaml"],
-            metadata={"name": MetadataMapping(type="ref", field="title")},
+            schema_path="schemas/rule.schema.yaml",
+            metadata={"name": "title"},
         ),
         DocumentTable(
-            id="src", type="yaml", paths=["src/files.yaml"], records="files", body_file="path"
+            id="src",
+            paths=["src/files.yaml"],
+            schema_path="schemas/rule.schema.yaml",
+            records="files",
+            body_file="path",
         ),
     ]
     return make_served_source(root=root, config=make_source_config(documents=documents))

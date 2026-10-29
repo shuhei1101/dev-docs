@@ -226,7 +226,7 @@ def reload_sources(
     for source in registry.served():
         report = check_sync(store, source)
         for label, values in (
-            ("ref の列の欠け", report.missing_refs),
+            ("metadata の列の欠け", report.missing_refs),
             ("管理用の YAML に無いファイル", report.unindexed_files),
             ("ファイルが無い行", report.missing_body_files),
         ):

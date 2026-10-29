@@ -5,7 +5,7 @@ from collections.abc import Callable
 from importlib.metadata import version
 from typing import Any
 
-BROKEN_CONFIG = "name: broken\ndocuments:\n  - id: sample\n    type: yaml\n"
+BROKEN_CONFIG = "name: broken\ndocuments:\n  - id: sample\n    schema: schemas/sample.schema.yaml\n"
 
 
 def test_normal(

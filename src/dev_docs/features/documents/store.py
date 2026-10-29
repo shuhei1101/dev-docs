@@ -52,12 +52,28 @@ def not_found_error(source_id: str, missing: list[str], known: list[str]) -> Doc
     )
 
 
+type _BodyStamps = tuple[tuple[str, int, int], ...]
+type _CachedFile = tuple[int, int, list[Document], list[LoadProblem], _BodyStamps]
+
+
+def _body_stamps(root: Path, documents: Sequence[Document]) -> _BodyStamps:
+    """文書が指す本文のファイルの (パス, 更新日時, 大きさ) を、パスの順に返す。"""
+    stamps: list[tuple[str, int, int]] = []
+    for path in sorted({d.body_path for d in documents if d.body_path is not None}):
+        try:
+            stat = (root / path).stat()
+        except OSError:
+            continue
+        stamps.append((path, stat.st_mtime_ns, stat.st_size))
+    return tuple(stamps)
+
+
 class DocumentStore:
     """読む場所ごとに文書を集め、ファイルごとに結果をキャッシュする。"""
 
     def __init__(self, snapshots: SnapshotStore) -> None:
         self.snapshots = snapshots
-        self._files: dict[tuple[Path, str], tuple[int, int, list[Document], list[LoadProblem]]] = {}
+        self._files: dict[tuple[Path, str], _CachedFile] = {}
         self._schemas: dict[Path, tuple[int, int, dict[str, Any]]] = {}
         self._dates: dict[tuple[Path, str], dict[str, FileDates]] = {}
         self._lock = threading.Lock()
@@ -135,12 +151,18 @@ class DocumentStore:
                 continue
             with self._lock:
                 cached = self._files.get(key)
-            if cached is not None and cached[:2] == (stat.st_mtime_ns, stat.st_size):
+            if (
+                cached is not None
+                and cached[:2] == (stat.st_mtime_ns, stat.st_size)
+                and not any(issue.reason == "missing_body_file" for issue in cached[3])
+                and cached[4] == _body_stamps(root, cached[2])
+            ):
                 found, issues = cached[2], cached[3]
             else:
                 found, issues = load_file(root, path, table, source_id=source_id, dates=dates)
+                stamps = _body_stamps(root, found)
                 with self._lock:
-                    self._files[key] = (stat.st_mtime_ns, stat.st_size, found, issues)
+                    self._files[key] = (stat.st_mtime_ns, stat.st_size, found, issues, stamps)
             documents.extend(found)
             problems.extend(issues)
         return documents, problems, seen
@@ -201,8 +223,6 @@ class DocumentStore:
         """読む場所に合わせた種類のスキーマを返す。"""
         source = target.source
         table = source.table(kind)
-        if table.schema_path is None:
-            return {}
         startup = source.schemas.get(kind, {})
         base = source.root / table.schema_path
         if target.ref is None and target.worktree is None:
@@ -245,7 +265,7 @@ class DocumentStore:
 
 
 def check_sync(store: DocumentStore, source: ServedSource) -> SyncReport:
-    """配信元の文書を読み、`ref` の列の欠けと管理用の YAML のずれを求める。"""
+    """配信元の文書を読み、`metadata` の列の欠けと管理用の YAML のずれを求める。"""
     result = store.load(Target(source, source.root, None, None, "read"))
     missing_refs = [
         f"{document.kind}: {document.id}: {key}（{field}）"

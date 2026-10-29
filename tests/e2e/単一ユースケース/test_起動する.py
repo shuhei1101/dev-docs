@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Any
 
 FILES_SCHEMA = Path(__file__).parents[3] / "templates" / "files.schema.yaml"
-BROKEN_CONFIG = "name: broken\ndocuments:\n  - id: sample\n    type: yaml\n"
+BROKEN_CONFIG = "name: broken\ndocuments:\n  - id: sample\n    schema: schemas/sample.schema.yaml\n"
 TOOL_NAMES = [
     "delete_docs",
     "describe",
@@ -27,11 +27,9 @@ INITIALIZE = {
 }
 LOCAL_CONFIG_ROWS = (
     "  - id: sample\n"
-    "    type: yaml\n"
     "    paths: [alt/*.yaml]\n"
     "    schema: schemas/sample.schema.yaml\n"
     "  - id: extra\n"
-    "    type: yaml\n"
     "    paths: [extra/*.yaml]\n"
     "    schema: schemas/sample.schema.yaml\n"
 )
@@ -42,9 +40,26 @@ LOOPBACK_V4 = "0100007F"
 EXIT_TIMEOUT_SEC = 30
 DOCS_TOOL_PREFIX = "mcp__plugin_dev-docs_dev-docs__"
 SESSION_PROMPT = "このセッションでは何も実行せず、「了解」とだけ答えてください。"
+LEGACY_CONFIG = (
+    'version: "1"\n'
+    "name: legacy\n"
+    "documents:\n"
+    "  - id: notes\n"
+    "    paths: [docs/*.md]\n"
+    "    schema: schemas/sample.schema.yaml\n"
+    "    type: markdown\n"
+    "  - id: rules\n"
+    "    paths: [docs/*.yaml]\n"
+    "    schema: schemas/sample.schema.yaml\n"
+    "    type: yaml\n"
+    "    metadata:\n"
+    "      name: {type: ref, field: title}\n"
+    "    defaults:\n"
+    "      - paths: [docs/**]\n"
+    "        tags: [doc]\n"
+)
 FILES_ROW = (
     "  - id: src\n"
-    "    type: yaml\n"
     "    paths: [src/files.yaml]\n"
     "    schema: schemas/files.schema.yaml\n"
     "    records: files\n"
@@ -148,9 +163,8 @@ def test_normal_when_metadata_out_of_sync(
     # 準備
     rows = (
         "    metadata:\n"
-        "      name: {type: ref, field: title}\n"
+        "      name: title\n"
         "  - id: src\n"
-        "    type: yaml\n"
         "    paths: [src/files.yaml]\n"
         "    schema: schemas/files.schema.yaml\n"
         "    records: files\n"
@@ -186,12 +200,35 @@ def test_normal_when_metadata_out_of_sync(
     ]
     assert docs.status_code == 200
     assert len(warnings) == 3
-    assert any("ref の列の欠け 1 件" in line and "name（title）" in line for line in warnings)
+    assert any("metadata の列の欠け 1 件" in line and "name（title）" in line for line in warnings)
     assert any(
         "管理用の YAML に無いファイル 1 件" in line and "src/d.py" in line for line in warnings
     )
     assert any("ファイルが無い行 1 件" in line and "c.py" in line for line in warnings)
     assert found.data["items"][0]["values"]["name"] == "doc-2"
+
+
+def test_error_when_source_config_legacy(
+    make_source: Callable[..., Any], serve: Callable[..., Any]
+) -> None:
+    """前の形式の配信元を外し、違反と移し替えの案内をエラーログに残す（異常系）。"""
+    # 準備
+    sample = make_source("sample")
+    legacy = make_source("legacy", {"dev-docs.yaml": LEGACY_CONFIG})
+    # 実行
+    served = serve(sample, legacy)
+    legacy_docs = served.get("/_api/sources/legacy/docs")
+    sample_docs = served.get("/_api/sources/sample/docs")
+    # 検証
+    errors = served.stderr()
+    assert legacy_docs.status_code == 404
+    assert sample_docs.status_code == 200
+    assert "legacy: documents[0].type" in errors
+    assert "legacy: documents[1].type" in errors
+    assert "legacy: documents[1].defaults" in errors
+    assert "legacy: documents[1].metadata.name" in errors
+    assert "設定のバージョンが古い" in errors
+    assert "dev-docs migrate --source" in errors
 
 
 def test_error_when_source_config_invalid(

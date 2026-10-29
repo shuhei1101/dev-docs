@@ -323,13 +323,16 @@ flows:
     setup:
       - name: Mock
         description: なし
+        notes: '-'
       - name: 管理用の YAML
-        description: 'sample の `src/files.yaml`。`files[]` に `a.py`（`tags: [auth]`、`name` なし）と `b.py`（`name: 部品 B`）の 2 行。`src/a.py`・`src/b.py` を置く'
-        notes: '行 `src` は `records: files`・`body_file: path`、`defaults[]` に `{paths: [src/**], tags: [code]}`'
+        description: 'sample の `src/files.yaml`。`files[]` に `a.py`（`tags: [auth, code]`、`name` なし）と `b.py`（`name: 部品 B`）の 2 行。`src/a.py`・`src/b.py` を置く'
+        notes: '行 `src` は `records: files`・`body_file: path`'
       - name: 名前の無い文書
         description: sample の文書 2 から `name` を除く
+        notes: '-'
       - name: 入力
         description: '`filter` は `id` が `src/a`、`view: full`、`format: json`。2 回目は `view: summary` で全件'
+        notes: '-'
     flow: |-
       ```mermaid
       sequenceDiagram
@@ -339,7 +342,7 @@ flows:
 
         C->>T: filter（id が src/a）, view: full, format: json
         T-->>ST: src/files.yaml を読み、files の各行の body_file を読む
-        T->>T: defaults と行のメタデータを重ね、name が空なら body_file のファイル名にする
+        T->>T: 行の列から共通のメタデータを取り、name が空なら body_file のファイル名にする
         T-->>C: src/a.py の本文と、path・scope を持つ項目
       ```
     expected:
@@ -381,11 +384,13 @@ flows:
     setup:
       - name: Mock
         description: なし
-      - name: Markdown の文書
-        description: sample の `notes/` に `a.md`（語 `検索` を含む行が 3 行、タグ `x`）・`b.md`（同 1 行）・`archive/c.md`（同 2 行）を置く
-        notes: 'sample の `dev-docs.yaml` に `paths: [notes/**/*.md]` の行を持つ'
+        notes: '-'
+      - name: 管理用の YAML
+        description: sample の `notes/files.yaml` に `a.md`（タグ `x`）・`b.md` の 2 行、`notes/archive/files.yaml` に `c.md` の 1 行。`notes/` に `a.md`（語 `検索` を含む行が 3 行）・`b.md`（同 1 行）・`archive/c.md`（同 2 行）を置く
+        notes: 'sample の `dev-docs.yaml` の行 `notes` は `paths: [notes/**/files.yaml]`・`records: files`・`body_file: path`'
       - name: 入力
         description: '`filter` は `and[body の contains 検索, not(@path の glob notes/archive/**)]`、`fields: [@matches]`、`order_by: [{@matches, desc}]`、`format: json`。他の呼び出しは期待値のとおり'
+        notes: '-'
     flow: |-
       ```mermaid
       sequenceDiagram
@@ -401,7 +406,7 @@ flows:
     expected:
       - 結果が `notes/a`（`values.@matches` 3）・`notes/b`（同 1）の順で、`notes/archive/c` が無い
       - '`not` を外すと a（3）・c（2）・b（1）の順になる'
-      - '`@path` の `glob` `notes/*.md` は a・b に当たり、c（`/` をまたぐ）には当たらない'
+      - '`@path` の `glob` `notes/files.yaml#*` は a・b に当たり、c（`notes/archive/files.yaml#0`）には当たらない'
       - 本文の条件が `not(and[body の contains 検索, tags の eq x])` の下にしか無い `filter` では、当たった b・c の `@matches` が 0
       - '`@matches` を渡さない呼び出しは `values` に `@matches` を持たない'
     test: test_normal_when_ordered_by_matches
@@ -445,9 +450,9 @@ flows:
       - name: Mock
         description: なし
       - name: 文書
-        description: sample の `docs/rule/` に `a.md`・`Rb.md`・`README.md`
+        description: sample の `docs/rule/` に `a.yaml`（id `a`）・`Rb.yaml`（id `Rb`）・`index.yaml`（id `rule-index`）
       - name: 文書の行
-        description: '行 `rule`（`type: markdown`・`paths: [docs/rule/*.md]`・`exclude: [README.md]`）と行 `index`（`type: markdown`・`paths: [docs/**/README.md]`）'
+        description: '行 `rule`（`paths: [docs/rule/*.yaml]`・`exclude: [index.yaml]`）と行 `index`（`paths: [docs/**/index.yaml]`）'
       - name: 入力
         description: '1 回目は `filter` が `kind` が `rule`、2 回目は `kind` が `index`。どちらも `view: summary`'
     flow: |-
@@ -459,16 +464,44 @@ flows:
 
         C->>T: filter（kind が rule）
         T-->>ST: rule の paths に当たり exclude に当たらないファイルを読む
-        T-->>C: docs/rule/a・docs/rule/Rb
+        T-->>C: a・Rb
         C->>T: filter（kind が index）
-        T-->>C: docs/rule/README
+        T-->>C: rule-index
       ```
     expected:
-      - 1 回目が `docs/rule/a` と `docs/rule/Rb` の 2 件だけを返す
-      - 2 回目が `docs/rule/README` の 1 件を返し、その `kind` が `index` になる
+      - 1 回目が `a` と `Rb` の 2 件だけを返す
+      - 2 回目が `rule-index` の 1 件を返し、その `kind` が `index` になる
     test: test_normal_when_excluded_name
     refs:
       - dev/設計書/シナリオ/単一ユースケース/エージェントが調べる#scenarios[正常シナリオ（除外の名前に当たるファイルを外す）]
+  - name: 正常系（列名の違う種類を共通のキーで引く）
+    summary: 行の `metadata` の対応で、列名の違う文書を共通のキーで絞り、共通のキーで返す
+    setup:
+      - name: Mock
+        description: なし
+        notes: '-'
+      - name: 列名の違う種類
+        description: 'sample の `decisions/d1.yaml` が `title: 決定 1`・`meta.summary: 要約 1` を持ち、`name`・`description` の列を持たない'
+        notes: '行 `decisions` は `paths: [decisions/*.yaml]`・`metadata: {name: title, description: meta.summary}`'
+      - name: 入力
+        description: '`filter` は `name` の `eq` `決定 1`、`view: summary`、`format: json`。2 回目は `filter` を `title` の `eq` `決定 1`'
+        notes: '-'
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        participant C as クライアント
+        participant T as search_docs
+        participant ST as 配信元のファイル
+
+        C->>T: filter（name が 決定 1）
+        T-->>ST: decisions/d1.yaml を読む
+        T->>T: metadata の対応で name を title 列、description を meta.summary 列から取る
+        T-->>C: d1（values.name・values.description）
+      ```
+    expected:
+      - 1 回目が `d1` の 1 件を返し、`values.name` が `決定 1`、`values.description` が `要約 1` になる
+      - 2 回目（列名 `title` で絞る）も `d1` を返す
+    test: test_normal_when_metadata_mapped
 lead: '条件に当たる文書を、指定した項目・量・順で返す。ID で絞れば取得、`view: summary` で一覧、`view: count` で件数、`group_by` で集計になる。'
 identifier: search_docs
 permissions: 対象の配信元の `scope.read` か `scope.write` に `cwd` が当たること
@@ -842,7 +875,7 @@ constraints:
     notes: rule-inject は `full` だけを既読にする（D-125）
   - item: 名前の既定
     constraint: メタデータの `name` が空なら、ファイル名から拡張子を除いた名前にする。`records` の要素は `body_file` が指すファイルの名前、`body_file` が無ければ文書の `id`
-    notes: '`defaults[]` と行の `metadata` を重ねた後に当てる'
+    notes: '行の `metadata` の列名の対応で共通のキーを読んだ後に当てる'
   - item: 抜粋の書式
     constraint: '`format: markdown` は grep の `-n` と同じく、当たった行を `{行番号}:{行}`、前後の行を `{行番号}-{行}` で出し、抜粋の間に `--` の行を置く'
     notes: 行番号を Read の `offset` や `write_docs` の `text_edits` へそのまま渡せる

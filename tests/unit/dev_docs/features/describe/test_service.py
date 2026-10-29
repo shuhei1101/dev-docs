@@ -39,7 +39,10 @@ def folder_source(
     root = tmp_path / "sample"
     write_files(root, {"schemas/rule.schema.yaml": SCHEMA_TEXT})
     table = DocumentTable(
-        id="rules", type="yaml", paths=["docs/*.yaml"], schema_path="schemas/rule.schema.yaml"
+        id="rules",
+        paths=["docs/*.yaml"],
+        schema_path="schemas/rule.schema.yaml",
+        metadata={"name": "title"},
     )
     config = make_source_config(documents=[table], instructions="着手前に規約を引く")
     return make_served_source(
@@ -106,6 +109,7 @@ def test_describe_when_kind(
     # 検証
     assert isinstance(result, KindSchemaResult)
     assert result.schema_text == SCHEMA_TEXT
+    assert result.metadata == {"name": "title"}
 
 
 def test_describe_when_unknown_kind(
@@ -177,7 +181,8 @@ def test_describe_when_worktree_config_invalid(
     # 準備
     source, worktree = worktree_source
     (worktree / "dev-docs.yaml").write_text(
-        "name: sample\ndocuments:\n  - id: rules\n    type: yaml\n", encoding="utf-8"
+        "name: sample\ndocuments:\n  - id: rules\n    schema: schemas/rule.schema.yaml\n",
+        encoding="utf-8",
     )
     # 実行・検証
     with pytest.raises(ValidationFailedError) as exc_info:

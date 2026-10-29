@@ -201,8 +201,8 @@ scenarios:
         description: なし（実環境で実行）
         notes: '-'
       - name: 列の欠けた文書
-        description: '配信元 sample の文書の行 `rules` が `metadata: {name: {type: ref, field: title}}` を持ち、2 件のうち 1 件に `title` が無い'
-        notes: 書いていないキー（既定の `ref`）の列の欠けは数えない
+        description: '配信元 sample の文書の行 `rules` が `metadata: {name: title}` を持ち、2 件のうち 1 件に `title` が無い'
+        notes: '`metadata` に書いていないキー（同じ名前の列）の欠けは数えない'
       - name: ずれた管理用の YAML
         description: 'sample の `src/files.yaml` が `a.py` と `c.py` の 2 行を持ち、`src/` には `a.py` と `d.py` を置く。行 `src` は `records: files`・`body_file: path`'
         notes: '`c.py` はファイルが無い行、`d.py` は索引に無いファイル'
@@ -219,14 +219,14 @@ scenarios:
         U->>DD: dev-docs serve
         DD->>DD: sample の設定を検証して配信元に加える
         DD->>ST: 文書を読む
-        DD->>DD: metadata に書いた ref の列が無い文書を数える
+        DD->>DD: metadata に書いた列が無い文書を数える
         DD->>DD: 管理用の YAML のフォルダの配下で files に無いファイルを数え、読み込みの missing_body_file を数える
         DD->>DD: 件数を警告のログに残す（配信元の状態には持たない）
         DD-->>U: sample を配信する
       ```
     expected:
       - '`/_api/sources/sample/docs` が 200 を返す'
-      - 警告のログに sample の id と、行 `rules` の `ref` の列の欠け 1 件（`name` の `title`）が残る
+      - 警告のログに sample の id と、行 `rules` の `metadata` の列の欠け 1 件（`name` の `title`）が残る
       - 警告のログに行 `src` の索引に無いファイル 1 件（`src/d.py`）とファイルが無い行 1 件（`c.py`）が残る
       - '`search_docs` が `title` の無い文書も返し、その `name` はファイル名から拡張子を除いた名前になる'
     test: test_normal_when_metadata_out_of_sync
@@ -311,6 +311,37 @@ scenarios:
       - セッションの文脈に、端末の設定を読めなかった理由と `/dev-docs:global-setup` の案内が入る
       - dev-docs のプロセスは起動しない
     test: test_error_when_session_start_cannot_start
+  - name: 異常シナリオ（配信元の設定が前の形式）
+    setup:
+      - name: Mock
+        description: なし（実環境で実行）
+        notes: '-'
+      - name: サンプルの配信元
+        description: 検証に通る配信元
+        notes: id `sample`
+      - name: 前の形式の配信元
+        description: '`version: "1"` の `dev-docs.yaml` を持ち、`documents[0]` が `paths`・`schema`・`type: markdown`、`documents[1]` が `paths`・`schema`・`type: yaml`・`metadata: {name: {type: ref, field: title}}`・`defaults: [{paths: [docs/**], tags: [doc]}]` を持つ配信元'
+        notes: id `legacy`。違反は `type`・`defaults`・オブジェクトの `metadata` だけになる
+      - name: 端末の設定
+        description: '`DEV_DOCS_CONFIG` が指す `settings.yaml`'
+        notes: '`sources` に sample と legacy の 2 行'
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        actor U as 利用者
+        participant DD as dev-docs
+
+        U->>DD: dev-docs serve
+        DD->>DD: sample の設定を検証して配信元に加える
+        DD->>DD: legacy の設定が type・defaults・オブジェクトの metadata で検証に失敗する
+        DD->>DD: legacy を配信せず、違反と設定のバージョンが古いことをエラーログに残す
+        DD-->>U: sample だけを配信する
+      ```
+    expected:
+      - '`/_api/sources/legacy/docs` が 404 を返し、`/_api/sources/sample/docs` は応答する'
+      - エラーログに legacy の id と、`documents[0].type`・`documents[1].type`・`documents[1].defaults`・`documents[1].metadata.name` のそれぞれの違反が残る
+      - エラーログに、legacy の設定のバージョンが古く `dev-docs migrate --source` で移し替えられることが残る
+    test: test_error_when_source_config_legacy
 lead: 利用者が `dev-docs serve` を実行し、端末の設定に並べた配信元を 1 プロセス・1 ポートで配信し始める。
 issue: 3
 primary_actor: 利用者

@@ -167,6 +167,11 @@ data_models:
         type: dict[str, Any]
         access: 公開
         description: 読んだスキーマ（`json` で返す）
+      - name: metadata
+        title: メタデータの対応
+        type: dict[str, str]
+        access: 公開
+        description: 行の `metadata`（共通のキー → 列名）。持たない行は空
 functions:
   - name: describe
     title: 配信元の説明
@@ -204,7 +209,7 @@ functions:
       2. `source` が無い場合、作業場所の説明と使える配信元を返す（使える配信元が 0 件でも返す）
       3. `source` がある場合、読む場所を解く（読む場所の解決。`source`・`worktree`・`cwd`）。作業中の配信元の作業ツリーかワークツリーを読むときは、その場所の設定を読み直した配信元を使う（作業場所の配信元の読み込み）
       4. `kind` が無い場合、`instructions` と、有効な文書の行ごとの種類の概要（スキーマは文書のストア.種類のスキーマ）を返す
-      5. `kind` がある場合、文書の行を引き（無ければ `UnknownKindError`）、`target.base` の `schema` のファイルの内容と読んだスキーマを返す
+      5. `kind` がある場合、文書の行を引き（無ければ `UnknownKindError`）、`target.base` の `schema` のファイルの内容と読んだスキーマ、行の `metadata` を返す
     exceptions:
       - name: InvalidArgumentError
         condition: '`source` の無い `kind`'
@@ -239,7 +244,7 @@ functions:
         summary: 種類のスキーマ
         condition: '`source: sample`・`kind: sample`'
         mock: なし
-        expected: '`schema_text` がスキーマのファイルと同じ文字列'
+        expected: '`schema_text` がスキーマのファイルと同じ文字列、`metadata` が行の `metadata`'
       - name: test_describe_when_unknown_kind
         case: 異常
         summary: 知らない種類
@@ -282,7 +287,7 @@ functions:
     process: |-
       1. 使える配信元の一覧は、`作業場所: {cwd}（{配信元} のクローン本体 / ワークツリー）` の行と `| source | 権限 | description |` の表（作業中の配信元は権限に `（作業中）`）
       2. 配信元の説明書は、`instructions` をそのまま置き、`| kind | description |` の表を続ける
-      3. 種類のスキーマは、```yaml でスキーマの YAML を囲む
+      3. 種類のスキーマは、`metadata` が空でなければ `| 共通のキー | 列名 |` の表を置き、```yaml でスキーマの YAML を囲む
     unit_tests:
       - name: test_render_describe_markdown
         case: 正常
@@ -290,6 +295,12 @@ functions:
         condition: sample（write・作業中）と notes（read）
         mock: なし
         expected: '`| sample | write（作業中） | ... |` と `| notes | read | ... |` の行'
+      - name: test_render_describe_markdown_when_metadata
+        case: 正常
+        summary: メタデータの対応の表
+        condition: '`metadata` が `{name: title}` の種類のスキーマ'
+        mock: なし
+        expected: '`| name | title |` の行が YAML のコードブロックの前にある'
 refs:
   - dev/設計書/インターフェース定義/開発ドキュメントサーバー/配信元の説明#
 test_files:

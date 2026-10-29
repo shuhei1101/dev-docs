@@ -85,6 +85,27 @@ flows:
     expected:
       - '`isError: true` で読めなかった行と理由を返す'
     test: test_error_when_config_unparsable
+  - name: 正常系（前の形式の設定）
+    summary: 前の形式のキーを持つ設定の違反と、設定のバージョンが古いことを返す
+    setup:
+      - name: Mock
+        description: なし
+      - name: config
+        description: '`version: "1"` で、`documents[0]` が `paths`・`schema`・`type: markdown`・`defaults: [{paths: [docs/**], tags: [doc]}]`、`documents[1]` が `paths`・`schema`・`metadata: {name: {type: ref, field: title}}` を持つ YAML の文字列'
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        participant C as クライアント
+        participant T as check_project
+
+        C->>T: path・config
+        T->>T: 新しいバージョンのスキーマで検証する
+        T-->>C: violations・version_state
+      ```
+    expected:
+      - '`violations` に `documents[0].type`・`documents[0].defaults`・`documents[1].metadata.name` がそれぞれ理由と一緒にある'
+      - '`version_state` が `old` で、`config_version` が `1`'
+    test: test_normal_when_config_legacy
 lead: 配信元の `dev-docs.yaml` と管理用の YAML・スクリプトを検証し、違反・設定のバージョンの新旧・索引の同期の件数を返す。端末の設定に無い配信元も検査できる。
 identifier: check_project
 permissions: なし（`127.0.0.1` でだけ待ち受ける）
@@ -147,7 +168,7 @@ response:
     description: 終了コードと stderr の要約
   - name: sync.missing_refs
     type: int
-    description: '`ref` の列が無い文書の件数'
+    description: '種類の行の `metadata` に書いた列が無い文書の件数'
   - name: sync.unindexed_files
     type: int
     description: 管理用の YAML に無いファイルの件数

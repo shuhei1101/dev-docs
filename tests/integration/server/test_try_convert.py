@@ -8,7 +8,6 @@ NOTE_CONFIG = (
     "name: sample\n"
     "documents:\n"
     "  - id: note\n"
-    "    type: yaml\n"
     "    paths: [docs/*.yaml]\n"
     "    schema: schemas/sample.schema.yaml\n"
     "    converter: note_md\n"

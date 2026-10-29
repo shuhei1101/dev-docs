@@ -5,6 +5,7 @@ directory: |-
   src/dev_docs/migrations/
   ├── settings/{バージョン}/steps.yaml   # 端末の設定をそのバージョンへ上げる手順
   └── dev-docs/{バージョン}/steps.yaml   # 配信元の設定をそのバージョンへ上げる手順
+      └── 2/steps.yaml                  # documents[].type: yaml の削除 → metadata.alias_type（type: custom）を行の alias_type へ引き上げ → metadata.*（type: ref）を列名へ取り出し
   ```
 functions:
   - name: load_steps
@@ -43,10 +44,10 @@ functions:
       1. `importlib.resources.files("dev_docs") / MIGRATIONS_DIR / kind` の直下のフォルダのうち、名前が整数で `mine` より大きく `current` 以下のものを整数の順に並べる
          - フォルダが無い場合、空を返す
       2. 各フォルダの `STEPS_FILE` を読み、`steps` の行ごとに `MigrationStep` を作る（`load_yaml`）
-         - `op` が選択肢の外、`rename` に `to` が無い場合、`MigrationFailedError` を送出する
+         - `op` が選択肢の外、`rename`・`lift` に `to` が無い、`lift` に `take` が無い場合、`MigrationFailedError` を送出する
     exceptions:
       - name: MigrationFailedError
-        condition: 手順のファイルが読めない、`op` が選択肢の外、`rename` に `to` が無い
+        condition: 手順のファイルが読めない、`op` が選択肢の外、`rename`・`lift` に `to` が無い、`lift` に `take` が無い
         message: '`{バージョン}/steps.yaml: {理由}`'
     unit_tests:
       - name: test_load_steps
@@ -64,7 +65,7 @@ functions:
       - name: test_load_steps_when_invalid_op
         case: 異常
         summary: 知らない操作
-        condition: '`op: move` の行'
+        condition: '`op: copy` の行'
         mock: 手順の置き場所
         expected: '`MigrationFailedError`'
         exception: 操作が選択肢の外
@@ -98,15 +99,17 @@ functions:
       type: None
       description: なし
     process: |-
-      1. `path` を `.` で分け、末尾の手前までをたどって親の辞書を集める。`{キー}[]` は配列の要素ごとにたどる
+      1. `path` を `.` で分け、末尾の手前までをたどって親の辞書を集める。`{キー}[]` は配列の要素ごとにたどる（`lift` のために、親の辞書を持つ辞書も控える）
          - 途中のキーが無い親は飛ばす
-      2. 親ごとに操作を当てる
+      2. 親ごとに、末尾のキー（`*` なら親の全てのキー）へ操作を当てる
          - `rename` の場合、キーがあれば同じ位置で `to` に改名する。`to` が既にあれば `MigrationFailedError` を送出する
          - `add` の場合、キーが無ければ `value` を末尾に追加する
-         - `delete` の場合、キーがあれば削除する
+         - `delete` の場合、キーがあれば削除する。`value` があるときは値が `value` と等しいときだけ削除する
+         - `lift` の場合、値が `match` に当たる辞書なら、親の辞書を持つ辞書の `to` に値の `take` を置き、キーを削除する。親の辞書が空になったら親の辞書も削除する。`to` が既にあれば `MigrationFailedError` を送出する
+         - `unwrap` の場合、値が `match` に当たる辞書なら、値を辞書の `take` の値（無ければキー名）に置き換える
     exceptions:
       - name: MigrationFailedError
-        condition: '`rename` の `to` が既にある'
+        condition: '`rename`・`lift` の `to` が既にある'
         message: '`{バージョン}: {path} を {to} に改名できません（{to} があります）`'
     unit_tests:
       - name: test_apply_step_when_rename
@@ -131,6 +134,31 @@ functions:
         case: 異常
         summary: 改名先が既にある
         condition: '`a` と `b` を持つ設定に `a` → `b` の改名'
+        mock: なし
+        expected: '`MigrationFailedError`'
+        exception: 改名先がある
+      - name: test_apply_step_when_delete_value
+        case: 正常
+        summary: 値が一致するときだけ削除する
+        condition: '`documents[].type` を値 `yaml` で削除する手順を、`type: yaml` の行と `type: markdown` の行に当てる'
+        mock: なし
+        expected: '`yaml` の行だけ `type` が無く、`markdown` の行はそのまま'
+      - name: test_apply_step_when_lift
+        case: 正常
+        summary: 値を行へ引き上げる
+        condition: '`documents[].metadata.alias_type` を `match: {type: custom}`・`take: value`・`to: alias_type` で引き上げる手順を、`metadata` が `alias_type: {type: custom, value: term}` だけの行と、`name` も持つ行に当てる'
+        mock: なし
+        expected: '両方の行に `alias_type: term` があり、前の行は `metadata` が無く、後の行は `metadata` に `name` だけが残る'
+      - name: test_apply_step_when_unwrap
+        case: 正常
+        summary: 辞書の値を列名にする
+        condition: '`documents[].metadata.*` を `match: {type: ref}`・`take: field` で取り出す手順を、`name: {type: ref, field: title}`・`summary: {type: ref}`・`tags: {type: custom, value: [a]}` の `metadata` に当てる'
+        mock: なし
+        expected: '`name: title`・`summary: summary` になり、`tags` はそのまま'
+      - name: test_apply_step_when_lift_conflict
+        case: 異常
+        summary: 引き上げ先が既にある
+        condition: '`alias_type` を既に持つ行に `lift` の手順'
         mock: なし
         expected: '`MigrationFailedError`'
         exception: 改名先がある

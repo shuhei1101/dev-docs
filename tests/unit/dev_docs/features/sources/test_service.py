@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import logging
 from collections.abc import Callable
 from pathlib import Path
@@ -30,7 +31,6 @@ def _config_value(**overrides: Any) -> dict[str, Any]:
         "documents": [
             {
                 "id": "rules",
-                "type": "yaml",
                 "paths": ["docs/rule/*.yaml"],
                 "schema": "schemas/rule.schema.yaml",
             }
@@ -61,9 +61,7 @@ def test_validate_source_config(source_root: Path) -> None:
 def test_validate_source_config_when_required_missing(source_root: Path) -> None:
     """必須のキーが無い（正常系）。"""
     # 準備
-    value = _config_value(
-        documents=[{"id": "rules", "type": "yaml", "schema": "schemas/rule.schema.yaml"}]
-    )
+    value = _config_value(documents=[{"id": "rules", "schema": "schemas/rule.schema.yaml"}])
     # 実行
     result = validate_source_config(value, root=source_root)
     # 検証
@@ -85,7 +83,6 @@ def test_validate_source_config_when_duplicate_id(source_root: Path) -> None:
     # 準備
     row = {
         "id": "a",
-        "type": "yaml",
         "paths": ["docs/*.yaml"],
         "schema": "schemas/rule.schema.yaml",
     }
@@ -101,7 +98,6 @@ def test_validate_source_config_when_dangling_reference(source_root: Path) -> No
     # 準備
     row = {
         "id": "rules",
-        "type": "yaml",
         "paths": ["docs/*.yaml"],
         "schema": "schemas/rule.schema.yaml",
         "validators": ["nope"],
@@ -116,7 +112,7 @@ def test_validate_source_config_when_dangling_reference(source_root: Path) -> No
 def test_validate_source_config_when_schema_missing(source_root: Path) -> None:
     """スキーマのファイルが無い（正常系）。"""
     # 準備
-    row = {"id": "rules", "type": "yaml", "paths": ["docs/*.yaml"], "schema": "schemas/none.yaml"}
+    row = {"id": "rules", "paths": ["docs/*.yaml"], "schema": "schemas/none.yaml"}
     value = _config_value(documents=[row])
     # 実行
     result = validate_source_config(value, root=source_root)
@@ -129,7 +125,6 @@ def test_validate_source_config_when_outside_root(source_root: Path) -> None:
     # 準備
     row = {
         "id": "rules",
-        "type": "yaml",
         "paths": ["../x/*.md"],
         "schema": "schemas/rule.schema.yaml",
     }
@@ -145,7 +140,6 @@ def test_validate_source_config_when_exclude_has_slash(source_root: Path) -> Non
     # 準備
     row = {
         "id": "rules",
-        "type": "yaml",
         "paths": ["docs/rule/*.yaml"],
         "schema": "schemas/rule.schema.yaml",
         "exclude": ["a/README.md"],
@@ -155,6 +149,27 @@ def test_validate_source_config_when_exclude_has_slash(source_root: Path) -> Non
     result = validate_source_config(value, root=source_root)
     # 検証
     assert [v.path for v in result] == ["documents[0].exclude[0]"]
+
+
+def test_validate_source_config_when_legacy_keys(source_root: Path) -> None:
+    """前の形式のキー（正常系）。"""
+    # 準備
+    row = {
+        "id": "rules",
+        "type": "yaml",
+        "paths": ["docs/rule/*.yaml"],
+        "schema": "schemas/rule.schema.yaml",
+        "defaults": [{"paths": ["a/**"], "tags": ["x"]}],
+        "metadata": {"name": {"type": "ref", "field": "title"}},
+    }
+    value = _config_value(documents=[row])
+    # 実行
+    result = validate_source_config(value, root=source_root)
+    # 検証
+    by_path = {v.path: v.rule for v in result}
+    assert by_path["documents[0].type"] == "知らないキー"
+    assert by_path["documents[0].defaults"] == "知らないキー"
+    assert "documents[0].metadata.name" in by_path
 
 
 def test_check_scripts(
@@ -270,7 +285,10 @@ def test_load_source_when_invalid(
     """検証に失敗する（正常系）。"""
     # 準備
     write_files(
-        tmp_path, {"dev-docs.yaml": "name: sample\ndocuments:\n  - id: rules\n    type: yaml\n"}
+        tmp_path,
+        {
+            "dev-docs.yaml": "name: sample\ndocuments:\n  - id: rules\n    schema: schemas/rule.schema.yaml\n"
+        },
     )
     entry = make_entry(str(tmp_path / "dev-docs.yaml"), source_id="sample")
     # 実行
@@ -331,6 +349,37 @@ def test_load_source_when_version_old(
     assert len([r for r in caplog.records if r.levelno == logging.WARNING]) == 1
 
 
+def test_load_source_when_legacy(
+    tmp_path: Path,
+    write_files: Callable[[Path, dict[str, str]], None],
+    sample_files: dict[str, str],
+    make_entry: Callable[..., SourceEntry],
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """前の形式の設定（正常系）。"""
+    # 準備
+    legacy = (
+        'version: "1"\n'
+        "name: sample\n"
+        "documents:\n"
+        "  - id: rules\n"
+        "    type: markdown\n"
+        "    paths: [docs/rule/*.yaml]\n"
+        "    schema: schemas/rule.schema.yaml\n"
+    )
+    write_files(tmp_path, {**sample_files, "dev-docs.yaml": legacy})
+    entry = make_entry(str(tmp_path / "dev-docs.yaml"), source_id="sample")
+    # 実行
+    with caplog.at_level(logging.ERROR):
+        served, status = load_source(entry, index=0)
+    # 検証
+    assert served is None
+    assert status.status == "not_served"
+    assert [error.path for error in status.errors] == ["documents[0].type"]
+    assert "dev-docs migrate --source" in caplog.text
+    assert str(tmp_path / "dev-docs.yaml") in caplog.text
+
+
 def test_load_source_when_not_git(
     tmp_path: Path,
     write_files: Callable[[Path, dict[str, str]], None],
@@ -381,7 +430,7 @@ def test_load_source_at(
 ) -> None:
     """ワークツリーの設定（正常系）。"""
     # 準備
-    extra = "  - id: notes\n    type: markdown\n    paths: [docs/note/*.md]\n"
+    extra = "  - id: notes\n    paths: [docs/note/*.yaml]\n    schema: schemas/rule.schema.yaml\n"
     (worktree / "dev-docs.yaml").write_text(sample_files["dev-docs.yaml"] + extra, encoding="utf-8")
     # 実行
     result = load_source_at(cloned_source, worktree)
@@ -405,7 +454,8 @@ def test_load_source_at_when_invalid(cloned_source: ServedSource, worktree: Path
     """検証に通らない（異常系）。"""
     # 準備
     (worktree / "dev-docs.yaml").write_text(
-        "name: sample\ndocuments:\n  - id: rules\n    type: yaml\n", encoding="utf-8"
+        "name: sample\ndocuments:\n  - id: rules\n    schema: schemas/rule.schema.yaml\n",
+        encoding="utf-8",
     )
     # 実行・検証
     with pytest.raises(ValidationFailedError) as exc_info:
@@ -459,3 +509,47 @@ def test_assemble_source_when_script_missing(
     assert served is None
     assert config is not None
     assert len(violations) == 1
+
+
+def test_source_schema_json() -> None:
+    """配布のファイルと一致する（正常系）。"""
+    # 準備
+    from dev_docs.features.sources.service import source_schema_json
+
+    distributed = Path(__file__).resolve().parents[5] / "schemas" / "dev-docs.schema.json"
+    command = (
+        'uv run python -c "from dev_docs.features.sources.service import source_schema_json; '
+        "print(source_schema_json(), end='')\" > schemas/dev-docs.schema.json"
+    )
+    # 実行
+    result = source_schema_json()
+    # 検証
+    assert result == distributed.read_text(encoding="utf-8"), (
+        f"schemas/dev-docs.schema.json が正本のスキーマとずれています。書き直すには: {command}"
+    )
+
+
+def test_source_schema_json_when_metadata() -> None:
+    """新しい形式の documents の行（正常系）。"""
+    # 準備
+    from dev_docs.features.sources.service import source_schema_json
+
+    schema = json.loads(source_schema_json())
+    # 実行
+    row = schema["properties"]["documents"]["items"]
+    # 検証
+    assert "type" not in row["properties"]
+    assert "defaults" not in row["properties"]
+    assert row["properties"]["metadata"]["additionalProperties"]["type"] == "string"
+    assert row["properties"]["alias_type"]["enum"] == [
+        "term",
+        "doc",
+        "command",
+        "url",
+        "skill",
+        "tool",
+        "path",
+        "env",
+        "avoid",
+    ]
+    assert row["required"] == ["id", "paths", "schema"]

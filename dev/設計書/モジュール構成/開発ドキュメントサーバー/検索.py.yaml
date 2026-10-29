@@ -686,7 +686,7 @@ functions:
          - メタデータのキー（`METADATA_KEYS`）の場合、`document.metadata`
          - `body` の場合、本文
          - `*` の場合、`data` の全ての文字列の葉と本文
-         - `@chars` は本文の文字数、`@path` は `document.path`（`records` の行は `{path}#{record_index}`）、`@sections` は Markdown の文書なら本文の見出しの文字列、YAML の文書なら `data` の最上位のキーの並び
+         - `@chars` は本文の文字数、`@path` は `document.path`（`records` の行は `{path}#{record_index}`）、`@sections` は Markdownの本文かが `True` の文書なら本文の見出しの文字列、それ以外は `data` の最上位のキーの並び
          - `@matches` は条件で決まり文書だけでは決まらないので、値を持たない（文書の検索が当たった行の数で数える）
          - それ以外は `data` を項目の取得で引く
       2. 値が配列なら要素を、`None` なら空、それ以外は 1 要素の並びを返す
@@ -1124,7 +1124,7 @@ functions:
       12. 文書ごとに返す項目を作る
           - `ids` は `id`、`summary` は `id` と `SUMMARY_FIELDS`、`full` はさらに `body` と全てのメタデータ。`fields` を足し `exclude_fields` を除く。`@matches` は 7 で数えた数
           - 本文を返す場合、`repeat_seen` が `False` で `sections`・`lines` が無いなら、会話の記録.返し済みに当たる文書の `body` を `SEEN_MARK` にする
-          - `sections`・`lines` がある場合、本文を行の分割で分け、本文の範囲の選択で範囲を決める（YAML の文書には `sections` を渡さず空の範囲にする）。`ranges` に範囲、`total_lines` に行数を入れ、本文を範囲の本文にする。`sections` で範囲が空の文書は、YAML なら `{id}: YAML の文書は sections で切り出せません。lines を使ってください`、Markdown なら `{id}: sections に当たる見出しがありません（{sections}）` を `notes` に足す
+          - `sections`・`lines` がある場合、本文を行の分割で分け、本文の範囲の選択で範囲を決める（Markdownの本文かが `False` の文書には `sections` を渡さず空の範囲にする）。`ranges` に範囲、`total_lines` に行数を入れ、本文を範囲の本文にする。`sections` で範囲が空の文書は、`False` の文書なら `{id}: YAML の文書は sections で切り出せません。lines を使ってください`、`True` の文書なら `{id}: sections に当たる見出しがありません（{sections}）` を `notes` に足す
           - `snippets` がある場合、本文の条件で抜粋の検索をし（`before`・`after` は `None` なら `context_lines`、`max_count` は `max_per_doc`、`ranges` は切り出した範囲）、`body` を返さない
           - 文字列の値が項目の文字数を超えたら切る（切り出した本文は切り出した後に切る）
           - `view` が `summary`・`full` で `ref` が無く、`body` を `SEEN_MARK` にしていない場合、`path` を文書の場所（文書のストア.文書の場所）にし、`scope` を次のとおり決める。`body` を返さない（`snippets` も無い）なら `summary`、`snippets` を返すか `sections`・`lines` で切り出したか `body` を切ったか `records` の要素で `body_path` が無いなら `section`、それ以外は `full`
@@ -1252,7 +1252,7 @@ functions:
       - name: test_search_docs_when_part_of_body_with_snippets
         case: 正常
         summary: 切り出した範囲の抜粋と当たる見出しの無い文書
-        condition: '同じ文書（7 行目と 2 行目に `検索`）に `filter: {field: body, op: contains, values: [検索]}`・`sections: [決まったこと]`・`snippets: {context_lines: 0}` と、YAML の文書と Markdown の文書に `sections: [無い見出し]`'
+        condition: '同じ文書（7 行目と 2 行目に `検索`）に `filter: {field: body, op: contains, values: [検索]}`・`sections: [決まったこと]`・`snippets: {context_lines: 0}` と、YAML の文書と、`body_file` が `.md` を指す文書に `sections: [無い見出し]`'
         mock: なし
         expected: 1 つ目は抜粋が行番号 7 の 1 行だけ。2 つ目はどちらも `body` が空で `ranges` が `[]`、`notes` に YAML の文書と当たる見出しが無いことの 2 行
   - name: render_search_markdown
@@ -1283,7 +1283,7 @@ functions:
     process: |-
       1. 先頭の行に `{配信元}: 該当 {total_count} 件・返した {returned} 件` を置く（複数の配信元は配信元ごとの件数も添える）
       2. `groups` があれば `| 値 | 件数 |` の表を置く
-      3. `view` が `full` の場合、文書ごとに `<document path="{path}" scope="{scope}">`（`path` が `None` なら属性の無い `<document>`）と `</document>` で包み、中に項目の箇条書きと本文（YAML の文書は YAML、Markdown の文書は Markdown のまま）を置く。`total_lines` を持つ文書は、`<document>` の前の行に `{id}: {start_line}-{end_line} 行目 / 全 {total_lines} 行` を置く（範囲が複数なら `{start_line}-{end_line} 行目` を `・` で並べ、空なら `{id}: 返す行なし / 全 {total_lines} 行`）。抜粋は、当たった行を `{行番号}:{行}`、前後の行を `{行番号}-{行}` で出し、抜粋の間に `--` の行を置く。それ以外は項目を列にした表にする（列名は項目の名前。`@chars` は `chars`）
+      3. `view` が `full` の場合、文書ごとに `<document path="{path}" scope="{scope}">`（`path` が `None` なら属性の無い `<document>`）と `</document>` で包み、中に項目の箇条書きと本文を置く。`total_lines` を持つ文書は、`<document>` の前の行に `{id}: {start_line}-{end_line} 行目 / 全 {total_lines} 行` を置く（範囲が複数なら `{start_line}-{end_line} 行目` を `・` で並べ、空なら `{id}: 返す行なし / 全 {total_lines} 行`）。抜粋は、当たった行を `{行番号}:{行}`、前後の行を `{行番号}-{行}` で出し、抜粋の間に `--` の行を置く。それ以外は項目を列にした表にする（列名は項目の名前。`@chars` は `chars`）
       4. `notes` があれば末尾に `> ` の行で並べ、`next_cursor` があれば `続き: cursor={next_cursor}` を置く
     unit_tests:
       - name: test_render_search_markdown

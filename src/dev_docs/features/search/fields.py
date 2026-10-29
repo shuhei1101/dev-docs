@@ -5,10 +5,9 @@ from __future__ import annotations
 import re
 from collections.abc import Iterable, Mapping, Sequence
 from datetime import date, datetime
-from pathlib import PurePosixPath
 from typing import Any
 
-from dev_docs.features.documents.fields import METADATA_KEYS, get_field
+from dev_docs.features.documents.fields import METADATA_KEYS, get_field, is_markdown_body
 from dev_docs.features.documents.types import Document
 from dev_docs.features.search.types import Heading
 from dev_docs.shared.errors import InvalidArgumentError
@@ -18,7 +17,6 @@ DATE_FIELDS = ("created", "updated")
 
 ARRAY_METADATA = ("tags", "related", "aliases", "avoid")
 NUMBER_METADATA = ("port",)
-YAML_SUFFIXES = (".yaml", ".yml")
 HEADING = re.compile(r"^\s{0,3}(?P<level>#{1,6})\s+(?P<text>.+?)\s*#*\s*$")
 FENCE = re.compile(r"^\s{0,3}(`{3,}|~{3,})")
 SCHEMA_TYPES = {"string", "number", "boolean", "array", "object"}
@@ -54,11 +52,6 @@ def _headings(body: str) -> list[str]:
     return [heading.text for heading in heading_lines(body.splitlines())]
 
 
-def is_yaml(document: Document) -> bool:
-    """YAML のファイルから作った文書かを返す。"""
-    return PurePosixPath(document.path).suffix in YAML_SUFFIXES
-
-
 def _raw_values(document: Document, field: str) -> Any:
     """項目の値を、配列のまま引く。"""
     if field == "id":
@@ -82,7 +75,7 @@ def _raw_values(document: Document, field: str) -> Any:
         # 条件で決まり文書だけでは決まらないので、値を持たない（検索が当たった行の数で数える）
         return None
     if field == "@sections":
-        return list(document.data) if is_yaml(document) else _headings(document.body)
+        return _headings(document.body) if is_markdown_body(document) else list(document.data)
     if field in METADATA_KEYS:
         return document.metadata.get(field)
     try:

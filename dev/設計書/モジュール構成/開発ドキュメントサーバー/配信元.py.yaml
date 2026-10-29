@@ -8,7 +8,7 @@ directory: |-
   ├─ __init__.py   # 公開する型と関数の再エクスポート
   ├─ types.py      # SourceConfig / DocumentTable / ScriptEntry / ServedSource / SourceStatus
   ├─ merge.py      # merge_configs（設定の YAML のマージ）
-  ├─ service.py    # load_source / load_source_at / validate_source_config / check_scripts / compare_config_version
+  ├─ service.py    # load_source / load_source_at / validate_source_config / check_scripts / compare_config_version / source_schema_json
   └─ registry.py   # SourceRegistry（配信元の一覧と読み直し）
   schemas/
   └─ dev-docs.schema.yaml   # 配信元の設定のスキーマ（JSON Schema 2020-12）
@@ -77,44 +77,6 @@ diagrams:
         }
         click 実行できるかの確かめ href "./スクリプトの実行.py.yaml#実行できるかの確かめ"
 data_models:
-  - name: MetadataMapping
-    title: メタデータの対応
-    container: features/sources/types.py
-    usecase: 共通
-    role: DTO
-    summary: '`documents[].metadata` の 1 キーの値の取り方'
-    description: '`pydantic.BaseModel`（`extra="forbid"`、`frozen=True`）。'
-    properties:
-      - name: type
-        title: 取り方
-        type: Literal['ref', 'custom']
-        access: 公開
-        description: '`ref` は文書の列から、`custom` は行の全文書に同じ値'
-      - name: field
-        title: 列
-        type: str | None
-        access: 公開
-        default: None
-        description: '`ref` のときの列名（ドット記法）'
-      - name: value
-        title: 値
-        type: Any
-        access: 公開
-        default: None
-        description: '`custom` のときの値'
-  - name: DocumentDefaults
-    title: メタデータの既定
-    container: features/sources/types.py
-    usecase: 共通
-    role: DTO
-    summary: '`documents[].defaults[]` の 1 行'
-    description: '`pydantic.BaseModel`（`extra="allow"`、`frozen=True`）。`paths` 以外のキーは重ねるメタデータとして `model_extra` に入る。'
-    properties:
-      - name: paths
-        title: ファイル
-        type: list[str]
-        access: 公開
-        description: 文書のファイルのパスと照らす glob（配信元の直下から）
   - name: DocumentTable
     title: 文書の行
     container: features/sources/types.py
@@ -128,11 +90,6 @@ data_models:
         type: str
         access: 公開
         description: 主キー
-      - name: type
-        title: 文書の形式
-        type: Literal['yaml', 'markdown']
-        access: 公開
-        description: 判別子
       - name: paths
         title: ファイル
         type: list[str]
@@ -152,10 +109,9 @@ data_models:
         description: '`False` で配信も検索もしない'
       - name: schema_path
         title: スキーマ
-        type: str | None
+        type: str
         access: 公開
-        default: None
-        description: '`schema` の値（pydantic の属性と重なるので `alias="schema"`）。`yaml` のとき必須'
+        description: '`schema` の値（pydantic の属性と重なるので `alias="schema"`）。全ての行で必須'
       - name: validators
         title: 検査
         type: list[str]
@@ -173,7 +129,7 @@ data_models:
         type: bool | None
         access: 公開
         default: None
-        description: '`None` は `yaml` で `True`、`markdown` で `False`（`is_writable` が解く）'
+        description: '`None` は `True`（`is_writable` が解く）'
       - name: after_write
         title: 書き込み後の生成
         type: list[str]
@@ -200,22 +156,22 @@ data_models:
         description: '`records` の各要素で本文のファイルのパスを持つ列'
       - name: metadata
         title: メタデータの対応
-        type: dict[str, MetadataMapping]
+        type: dict[str, str]
         access: 公開
         default: '{}'
-        description: 共通のキー → 値の取り方。書かれていないキーは同じ名前の列の `ref`
-      - name: defaults
-        title: メタデータの既定
-        type: list[DocumentDefaults]
-        access: 公開
-        default: '[]'
-        description: 上から順に重ねるメタデータ
+        description: 共通のキー → 列名（入れ子の列は `.` でつないだパス）。書かれていないキーは同じ名前の列
       - name: exclude
         title: 除外する名前
         type: list[str]
         access: 公開
         default: '[]'
         description: '`paths` に当たったファイルのうち、ファイル名（最後の段）が当たれば行の文書にしない glob の並び'
+      - name: alias_type
+        title: 引用の種類
+        type: str | None
+        access: 公開
+        default: None
+        description: alias-inject の引用の種類。行の全文書のメタデータの `alias_type` になる
     methods:
       - name: excludes
         title: 除外の名前に当たるか
@@ -616,7 +572,7 @@ constants:
     container: features/sources/types.py
     usecase: 共通
     summary: このサーバーが読める配信元の設定の `version`（整数の文字列。大きいほど新しい）
-    value: '"1"'
+    value: '"2"'
   - name: TABLE_KEYS
     title: テーブルのキー
     container: features/sources/merge.py
@@ -704,11 +660,10 @@ functions:
       1. `SOURCE_SCHEMA` で `iter_errors` を全て集め、`documents[0].paths` の形のパスの `Violation` にする（必須のキーが無い誤りは `必須のキーが無い`、表に無いキーは `知らないキー`）。スキーマの違反があれば、ここで返す
       2. テーブル（`TABLE_KEYS`）ごとに `id` の重なりを確かめ、後の行の `{テーブル}[{n}].id` に違反を加える
       3. 行の参照を確かめる。`documents[].validators[]`・`documents[].converter`・`documents[].after_write[]` が、それぞれ `validators[]`・`converters[]`・`generators[]` に無い ID を指す場合、その要素のパスに `存在しない ID` の違反を加える
-      4. `type: yaml` の行に `schema` が無い場合、`documents[{n}].schema` に違反を加える。`markdown` の行の `schema`・`records`・`body_file` も違反にする
-      5. `body_file` を `records` なしで書いた行は `documents[{n}].body_file` に違反を加える
-      6. `documents[].schema` と `tags` のファイルが `root` の下に無いか YAML として読めない場合、そのキーに違反を加える（YAMLの読み込み）。スキーマは Draft 2020-12 の `check_schema` も通す
-      7. パス（`documents[].paths[]`・`schema`・`tags`）が `..` で `root` の外を指す場合、その要素に違反を加える
-      8. 違反を返す
+      4. `body_file` を `records` なしで書いた行は `documents[{n}].body_file` に違反を加える
+      5. `documents[].schema` と `tags` のファイルが `root` の下に無いか YAML として読めない場合、そのキーに違反を加える（YAMLの読み込み）。スキーマは Draft 2020-12 の `check_schema` も通す
+      6. パス（`documents[].paths[]`・`schema`・`tags`）が `..` で `root` の外を指す場合、その要素に違反を加える
+      7. 違反を返す
     unit_tests:
       - name: test_validate_source_config
         case: 正常
@@ -758,6 +713,12 @@ functions:
         condition: '`documents[0].exclude: [a/README.md]`'
         mock: なし
         expected: '`documents[0].exclude[0]` の違反'
+      - name: test_validate_source_config_when_legacy_keys
+        case: 正常
+        summary: 前の形式のキー
+        condition: '`documents[0]` に `type: yaml`・`defaults: [{paths: [a/**], tags: [x]}]`・`metadata: {name: {type: ref, field: title}}`'
+        mock: なし
+        expected: '`documents[0].type`・`documents[0].defaults` の `知らないキー` と、`documents[0].metadata.name` の違反'
   - name: check_scripts
     title: スクリプトの確かめ
     kind: 関数
@@ -857,7 +818,7 @@ functions:
          - 無い・読めない・辞書でない場合、`config[{n}]` のパスの違反を持つ `not_served` を返す
       3. 読んだ値をマージする（設定のマージ）。`root` は先頭のファイルのフォルダにする
       4. マージした値を検証する（配信元の設定の検証）
-         - 違反がある場合、その違反を持つ `not_served` を返す
+         - 違反がある場合、その違反を持つ `not_served` を返す。設定の `version` を設定のバージョンの比較にかけて `older` なら、エラーログに `dev-docs migrate --source {先頭の設定のファイル}` で移し替えられることを足す
       5. `SourceConfig` にする。設定の `enabled` が `False` の場合、`disabled` を返す
       6. スクリプトを確かめる（スクリプトの確かめ）
          - 違反がある場合、その違反を持つ `not_served` を返す
@@ -919,6 +880,12 @@ functions:
         condition: '`git init` していない一時フォルダ'
         mock: なし
         expected: '`is_git` が `False`、`repo_root` が `None`'
+      - name: test_load_source_when_legacy
+        case: 正常
+        summary: 前の形式の設定
+        condition: '`version: "1"` で `documents[0]` に `type: markdown` を持つ設定'
+        mock: なし
+        expected: '`None` と `not_served`、違反が `documents[0].type`。エラーログに `dev-docs migrate --source` と設定のファイルのパス'
   - name: load_source_at
     title: 作業場所の配信元の読み込み
     kind: 関数
@@ -1045,6 +1012,35 @@ functions:
       - '#functions[merge_configs]'
       - '#functions[validate_source_config]'
       - '#functions[check_scripts]'
+  - name: source_schema_json
+    title: 配布のスキーマの生成
+    kind: 関数
+    container: features/sources/service.py
+    usecase: 共通
+    role: 変換
+    summary: 配信元の設定のスキーマを、配布する JSON Schema の文字列にする
+    description: 正本は `SOURCE_SCHEMA`。リポジトリの直下の `schemas/dev-docs.schema.json` はこの関数の結果を commit したもので、書き直すときは `uv run python -c "from dev_docs.features.sources.service import source_schema_json; print(source_schema_json(), end='')" > schemas/dev-docs.schema.json` を流す。
+    scope: public
+    thread_safe: true
+    returns:
+      type: str
+      description: '`SOURCE_SCHEMA` と同じ内容の JSON'
+    process: |-
+      1. `SOURCE_SCHEMA` を読む（YAMLの読み込み）
+      2. `json.dumps(値, ensure_ascii=False, indent=2)` に改行を 1 つ続けた文字列を返す
+    unit_tests:
+      - name: test_source_schema_json
+        case: 正常
+        summary: 配布のファイルと一致する
+        condition: リポジトリの直下の `schemas/dev-docs.schema.json`
+        mock: なし
+        expected: ファイルの中身と戻り値が同じ。違うときの失敗のメッセージに書き直しのコマンド
+      - name: test_source_schema_json_when_metadata
+        case: 正常
+        summary: 新しい形式の documents の行
+        condition: 戻り値を JSON として読む
+        mock: なし
+        expected: '`documents.items.properties` が `type`・`defaults` を持たず、`metadata.additionalProperties` が文字列、`alias_type` が `term`・`doc`・`command`・`url`・`skill`・`tool`・`path`・`env`・`avoid` の列挙、`required` が `id`・`paths`・`schema`'
 classes:
   - name: SourceRegistry
     title: 配信元の一覧

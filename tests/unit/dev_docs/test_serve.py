@@ -214,7 +214,11 @@ def test_build_handlers(
     write_files(tmp_path / "ok", sample_files)
     write_files(
         tmp_path / "broken",
-        {"dev-docs.yaml": "name: broken\ndocuments:\n  - id: rules\n    type: yaml\n"},
+        {
+            "dev-docs.yaml": (
+                "name: broken\ndocuments:\n  - id: rules\n    schema: schemas/rule.schema.yaml\n"
+            )
+        },
     )
     state_dir = tmp_path / "new-state"
     terminal = make_terminal_config(
@@ -237,15 +241,13 @@ SYNC_RULES_CONFIG = (
     "name: {name}\n"
     "documents:\n"
     "  - id: rules\n"
-    "    type: yaml\n"
     "    paths: [docs/rule/*.yaml]\n"
     "    schema: schemas/rule.schema.yaml\n"
     "    metadata:\n"
-    "      name: {{type: ref, field: title}}\n"
+    "      name: title\n"
 )
 SYNC_SRC_CONFIG = (
     "  - id: src\n"
-    "    type: yaml\n"
     "    paths: [src/files.yaml]\n"
     "    schema: schemas/rule.schema.yaml\n"
     "    records: files\n"

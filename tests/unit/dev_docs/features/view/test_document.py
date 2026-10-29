@@ -15,8 +15,14 @@ def test_get_document(make_view_env: Callable[..., SimpleNamespace]) -> None:
     """配信元のトップ（正常系）。"""
     # 準備
     tables = [
-        DocumentTable(id="rules", type="yaml", paths=["docs/*.yaml"]),
-        DocumentTable(id="notes", type="markdown", paths=["notes/*.md"]),
+        DocumentTable(id="rules", paths=["docs/*.yaml"], schema_path="schemas/rule.schema.yaml"),
+        DocumentTable(
+            id="notes",
+            paths=["notes/files.yaml"],
+            schema_path="schemas/rule.schema.yaml",
+            records="files",
+            body_file="path",
+        ),
     ]
     nav = {
         "tabs": [
@@ -25,7 +31,13 @@ def test_get_document(make_view_env: Callable[..., SimpleNamespace]) -> None:
         ]
     }
     env = make_view_env(
-        {"docs/a.yaml": "id: a\nname: A\n", "notes/x.md": "# X\n"}, tables=tables, nav=nav
+        {
+            "docs/a.yaml": "id: a\nname: A\n",
+            "notes/files.yaml": "files:\n  - path: x.md\n",
+            "notes/x.md": "# X\n",
+        },
+        tables=tables,
+        nav=nav,
     )
     # 実行
     response = get_document("sample", None, handlers=env.handlers, ref=None, diff_ref=None)

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
+from dataclasses import dataclass
 from importlib import resources
 from typing import Any, Literal, cast
 
@@ -15,8 +17,9 @@ from dev_docs.features.migrate.types import (
 )
 from dev_docs.shared.yaml_io import YamlLoadError, load_yaml
 
-OPERATIONS = ("rename", "add", "delete")
+OPERATIONS = ("rename", "add", "delete", "lift", "unwrap")
 ARRAY_SUFFIX = "[]"
+WILDCARD = "*"
 
 
 def load_steps(
@@ -50,11 +53,15 @@ def _read_version(file: Any, version: str) -> list[MigrationStep]:
         raise MigrationFailedError(f"{label}: steps の並びがありません")
     steps: list[MigrationStep] = []
     for row in rows:
-        # 操作は選択肢の中だけ。改名は新しいキーを持つ
+        # 操作は選択肢の中だけ。改名と引き上げは新しいキーを持ち、引き上げは取り出すキーも持つ
         if not isinstance(row, dict) or row.get("op") not in OPERATIONS:
             raise MigrationFailedError(f"{label}: op は {'・'.join(OPERATIONS)} のどれかです")
-        if row["op"] == "rename" and not row.get("to"):
-            raise MigrationFailedError(f"{label}: rename には to が要ります（{row.get('path')}）")
+        if row["op"] in ("rename", "lift") and not row.get("to"):
+            raise MigrationFailedError(
+                f"{label}: {row['op']} には to が要ります（{row.get('path')}）"
+            )
+        if row["op"] == "lift" and not row.get("take"):
+            raise MigrationFailedError(f"{label}: lift には take が要ります（{row.get('path')}）")
         steps.append(
             MigrationStep(
                 version=version,
@@ -63,25 +70,38 @@ def _read_version(file: Any, version: str) -> list[MigrationStep]:
                 description=str(row.get("description", "")),
                 to=row.get("to"),
                 value=row.get("value"),
+                match=row.get("match"),
+                take=row.get("take"),
             )
         )
     return steps
 
 
-def _parents(data: CommentedMap, parts: list[str]) -> list[CommentedMap]:
+@dataclass(frozen=True)
+class _Parent:
+    """末尾のキーを持つ親の辞書と、その親の辞書を持つ辞書（`lift` が使う）。"""
+
+    node: CommentedMap
+    owner: CommentedMap | None = None
+    owner_key: str | None = None
+
+
+def _parents(data: CommentedMap, parts: list[str]) -> list[_Parent]:
     """キーのパスの末尾の手前までをたどり、末尾のキーを持つ親の辞書を集める。"""
-    parents: list[CommentedMap] = [data]
+    parents = [_Parent(data)]
     for part in parts:
-        next_parents: list[CommentedMap] = []
+        next_parents: list[_Parent] = []
         for parent in parents:
             # `{キー}[]` は配列の要素ごとにたどる
             key = part.removesuffix(ARRAY_SUFFIX)
-            child = parent.get(key)
+            child = parent.node.get(key)
             if part.endswith(ARRAY_SUFFIX):
                 if isinstance(child, list):
-                    next_parents.extend(item for item in child if isinstance(item, CommentedMap))
+                    next_parents.extend(
+                        _Parent(item) for item in child if isinstance(item, CommentedMap)
+                    )
             elif isinstance(child, CommentedMap):
-                next_parents.append(child)
+                next_parents.append(_Parent(child, parent.node, key))
         parents = next_parents
     return parents
 
@@ -101,16 +121,62 @@ def _rename(parent: CommentedMap, step: MigrationStep, key: str) -> None:
         parent.ca.items[to] = comment
 
 
+def _matches(value: Any, step: MigrationStep) -> bool:
+    """値が辞書で、`match` のキーと値を全て持つか（`match` が無ければ辞書なら当たる）。"""
+    if not isinstance(value, Mapping):
+        return False
+    return all(key in value and value[key] == item for key, item in (step.match or {}).items())
+
+
+def _lift(parent: _Parent, step: MigrationStep, key: str) -> None:
+    """値の `take` を、親の辞書を持つ辞書の `to` に置き、キーを削除する。"""
+    value = parent.node[key]
+    take = cast("str", step.take)
+    to = cast("str", step.to)
+    if parent.owner is None or not _matches(value, step) or take not in value:
+        return
+    if to in parent.owner:
+        raise MigrationFailedError(
+            f"{step.version}: {step.path} を {to} に引き上げられません（{to} があります）"
+        )
+    parent.owner[to] = value[take]
+    del parent.node[key]
+    # 親の辞書が空になったら、親の辞書も削除する
+    if not parent.node and parent.owner_key is not None:
+        del parent.owner[parent.owner_key]
+
+
+def _unwrap(parent: CommentedMap, step: MigrationStep, key: str) -> None:
+    """辞書の値を、`take` の値（無ければキー名）に置き換える。"""
+    value = parent[key]
+    if _matches(value, step):
+        parent[key] = value.get(step.take, key) if step.take is not None else key
+
+
+def _apply_key(parent: _Parent, step: MigrationStep, key: str) -> None:
+    """親の辞書の 1 つのキーに操作を当てる。"""
+    node = parent.node
+    if step.op == "rename":
+        if key in node:
+            _rename(node, step, key)
+    elif step.op == "add":
+        if key not in node:
+            node[key] = step.value
+    elif step.op == "delete":
+        if key in node and (step.value is None or node[key] == step.value):
+            del node[key]
+    elif key in node:
+        if step.op == "lift":
+            _lift(parent, step, key)
+        else:
+            _unwrap(node, step, key)
+
+
 def apply_step(data: CommentedMap, step: MigrationStep) -> None:
     """メモリの上の YAML に 1 つの手順を当てる。"""
     *parents_path, key = step.path.split(".")
     for parent in _parents(data, parents_path):
-        # 操作ごとに分ける（キーが無い親では何もしない）
-        if step.op == "rename":
-            if key in parent:
-                _rename(parent, step, key)
-        elif step.op == "add":
-            if key not in parent:
-                parent[key] = step.value
-        elif key in parent:
-            del parent[key]
+        # 末尾が `*` なら親の辞書の全てのキーに当てる（キーが無い親では何もしない）
+        keys = list(parent.node) if key == WILDCARD else [key]
+        for name in keys:
+            _apply_key(parent, step, name)

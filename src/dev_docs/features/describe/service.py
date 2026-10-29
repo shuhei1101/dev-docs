@@ -66,10 +66,13 @@ def describe(
     table = source.table(request.kind)
     schema = store.schema(target, table.id)
     schema_text = ""
-    if table.schema_path is not None:
-        schema_file = store.read_root(target) / table.schema_path
-        if schema_file.is_file():
-            schema_text = schema_file.read_text(encoding="utf-8")
+    schema_file = store.read_root(target) / table.schema_path
+    if schema_file.is_file():
+        schema_text = schema_file.read_text(encoding="utf-8")
     return KindSchemaResult(
-        source_id=source.id, kind=table.id, schema_text=schema_text, schema=schema
+        source_id=source.id,
+        kind=table.id,
+        schema_text=schema_text,
+        schema=schema,
+        metadata=dict(table.metadata),
     )

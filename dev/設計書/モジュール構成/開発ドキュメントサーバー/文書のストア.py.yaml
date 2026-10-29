@@ -7,7 +7,7 @@ directory: |
   src/dev_docs/features/documents/
   ├─ __init__.py   # 公開する型と関数の再エクスポート
   ├─ types.py      # Document / LoadProblem / LoadResult / SyncReport
-  ├─ fields.py     # get_field / set_field / delete_field / resolve_metadata / apply_defaults / missing_ref_fields
+  ├─ fields.py     # get_field / set_field / delete_field / resolve_metadata / missing_ref_fields / is_markdown_body
   ├─ loader.py     # collect_files / load_file / unindexed_files（ファイルから文書を作る）
   ├─ schema.py     # resolve_schema_refs（種類のスキーマの $ref を解く）
   └─ store.py      # DocumentStore（キャッシュ・ID の引き当て・種類のスキーマ・文書の場所）/ check_sync（メタデータのずれ）
@@ -23,18 +23,17 @@ diagrams:
         文書のストア ..> 読み込みの結果 : 返す
         ファイルの読み込み ..> メタデータの解決
         文書のストア ..> スキーマの参照の解決
-        ファイルの読み込み ..> 既定の重ね合わせ
         メタデータの解決 ..> 項目の取得
         読み込みの結果 o-- 文書
         読み込みの結果 o-- 読めなかったファイル
         メタデータのずれの確かめ ..> 文書のストア
-        メタデータのずれの確かめ ..> refの列の欠け
+        メタデータのずれの確かめ ..> metadataの列の欠け
         メタデータのずれの確かめ ..> 索引に無いファイル
         メタデータのずれの確かめ ..> メタデータのずれ : 返す
         class メタデータのずれの確かめ {
           <<function>>
         }
-        class refの列の欠け {
+        class metadataの列の欠け {
           <<function>>
         }
         class 索引に無いファイル {
@@ -56,9 +55,6 @@ diagrams:
           <<function>>
         }
         class メタデータの解決 {
-          <<function>>
-        }
-        class 既定の重ね合わせ {
           <<function>>
         }
         class 項目の取得 {
@@ -111,12 +107,12 @@ data_models:
         title: 内容
         type: dict[str, Any]
         access: 公開
-        description: YAML の文書はファイルか要素の内容、Markdown の文書は front matter（無ければ空）
+        description: ファイルか要素の内容
       - name: body
         title: 本文
         type: str
         access: 公開
-        description: YAML の文書はファイルか要素を YAML に書き出した文字列、Markdown の文書は front matter を除いた本文、`body_file` のある要素は指したファイルの内容
+        description: ファイルの内容か、要素を YAML に書き出した文字列。`body_file` のある要素は指したファイルの内容
       - name: body_path
         title: 本文のファイル
         type: str | None
@@ -126,7 +122,7 @@ data_models:
         title: メタデータ
         type: dict[str, Any]
         access: 公開
-        description: '`metadata` の対応で取り、`defaults[]` を重ねた後の共通のキーの値（`METADATA_KEYS` のうち値のあるキー）'
+        description: '`metadata` の列名の対応で取った共通のキーの値（`METADATA_KEYS` のうち値のあるキー。`alias_type` は行の属性があればその値）'
       - name: version
         title: バージョン
         type: str
@@ -200,7 +196,7 @@ data_models:
     container: features/documents/types.py
     usecase: 起動
     role: DTO
-    summary: 1 つの配信元の `ref` の列の欠けと、管理用の YAML とファイルのずれ
+    summary: 1 つの配信元の `metadata` の列の欠けと、管理用の YAML とファイルのずれ
     description: '`dataclass(frozen=True)`。配信元の状態には持たず、求めるたびに作る。'
     properties:
       - name: source_id
@@ -209,11 +205,11 @@ data_models:
         access: 公開
         description: '`ServedSource.id`'
       - name: missing_refs
-        title: '`ref` の列の欠け'
+        title: '`metadata` の列の欠け'
         type: list[str]
         access: 公開
         default: '[]'
-        description: '`{行の id}: {文書の id}: {キー}（{field}）` の並び。`metadata` に明示した `ref` だけを数える'
+        description: '`{行の id}: {文書の id}: {キー}（{列名}）` の並び。`metadata` に書いた列だけを数える'
       - name: unindexed_files
         title: 索引に無いファイル
         type: list[str]
@@ -231,14 +227,8 @@ constants:
     title: 共通のキー
     container: features/documents/fields.py
     usecase: 共通
-    summary: '`documents[].metadata` で値の取り方を決める共通のキー（エイリアスのキーを含む）'
+    summary: '`documents[].metadata` で列名を対応づける共通のキー（エイリアスのキーを含む）'
     value: ("id", "name", "description", "tags", "related", "status", "alias_type", "aliases", "command", "cwd", "url", "avoid", "skill", "tool", "path", "port", "replacement")
-  - name: UNION_KEYS
-    title: 和集合で重ねるキー
-    container: features/documents/fields.py
-    usecase: 共通
-    summary: '`defaults[]` を重ねるときに値を置き換えず和集合にするキー'
-    value: ("tags", "related")
   - name: CANDIDATE_COUNT
     title: 近い ID の候補の数
     container: features/documents/store.py
@@ -493,7 +483,7 @@ functions:
         type: Mapping[str, Any]
         required: true
         passing: positional
-        description: 文書の内容（Markdown は front matter）
+        description: 文書の内容
       - name: table
         title: 文書の行
         type: DocumentTable
@@ -504,75 +494,23 @@ functions:
       type: dict[str, Any]
       description: 共通のキー → 値。値が無いキーは含まない
     process: |-
-      1. `METADATA_KEYS` のキーごとに、`table.metadata` の対応を引く。書かれていないキーは同じ名前の列の `ref` とする
-      2. `ref` は『項目の取得』で `field` の値を取り、`custom` は `value` をそのまま使う
+      1. `METADATA_KEYS` のキーごとに、`table.metadata` の列名（書かれていないキーは同じ名前の列）の値を『項目の取得』で取る
+      2. `table.alias_type` がある場合、`alias_type` の値をその値にする
       3. 値が `None` のキーを除いて返す
     unit_tests:
       - name: test_resolve_metadata
         case: 正常
-        summary: 対応と既定の ref
-        condition: '`metadata` が `{name: {type: ref, field: title}, alias_type: {type: custom, value: term}}`、内容が `{"id": "a", "title": "A", "tags": ["x"]}`'
+        summary: 列名の対応と同じ名前の列
+        condition: '`metadata` が `{name: title}`、行の `alias_type` が `term`、内容が `{"id": "a", "title": "A", "tags": ["x"]}`'
         mock: なし
         expected: '`{"id": "a", "name": "A", "tags": ["x"], "alias_type": "term"}`'
         exception: '-'
       - name: test_resolve_metadata_when_nested_field
         case: 正常
         summary: 入れ子の列
-        condition: '`metadata` が `{description: {type: ref, field: meta.summary}}`、内容が `{"meta": {"summary": "s"}}`'
+        condition: '`metadata` が `{description: meta.summary}`、内容が `{"meta": {"summary": "s"}}`'
         mock: なし
         expected: '`description` が `s`'
-        exception: '-'
-  - name: apply_defaults
-    title: 既定の重ね合わせ
-    kind: 関数
-    container: features/documents/fields.py
-    usecase: 共通
-    role: 変換
-    summary: '`defaults[]` のうちパスの当たる行を上から重ね、最後に文書自身のメタデータを重ねる'
-    scope: public
-    thread_safe: true
-    args:
-      - name: metadata
-        title: 文書のメタデータ
-        type: Mapping[str, Any]
-        required: true
-        passing: positional
-        description: 『メタデータの解決』の結果
-      - name: defaults
-        title: メタデータの既定
-        type: Sequence[DocumentDefaults]
-        required: true
-        passing: positional
-        description: 文書の行の `defaults`
-      - name: path
-        title: 照らすパス
-        type: str
-        required: true
-        passing: positional
-        description: 配信元の直下からのパス（`records` の行は `body_file` が指すファイル、無ければ YAML のファイル）
-    returns:
-      type: dict[str, Any]
-      description: 重ねた後のメタデータ（新しい辞書）
-    process: |-
-      1. 空の辞書から始める
-      2. `defaults` を上から順に見て、`paths` のどれかに `PurePosixPath(path).full_match` で当たる行の `model_extra` を重ねる
-      3. 最後に `metadata` を重ねる
-      4. 重ねるとき、`UNION_KEYS` のキーは先の値の後ろへ、まだ無い要素だけを追加する（順序を保つ）。ほかのキーは後の値で置き換える
-      5. 結果を返す
-    unit_tests:
-      - name: test_apply_defaults
-        case: 正常
-        summary: 和集合と上書き
-        condition: '`defaults` が `[{paths: [src/**], tags: [a], status: draft}, {paths: [src/x/**], tags: [b]}]`、`metadata` が `{tags: [a, c], status: done}`、`path` が `src/x/y.md`'
-        mock: なし
-        expected: '`{"tags": ["a", "b", "c"], "status": "done"}`'
-        exception: '-'
-      - name: test_apply_defaults_when_not_matched
-        case: 正常
-        summary: 当たらない行
-        condition: '`defaults` が `[{paths: [docs/**], tags: [a]}]`、`path` が `src/y.md`、`metadata` が `{}`'
-        mock: なし
-        expected: '`{}`'
         exception: '-'
   - name: collect_files
     title: ファイルの収集
@@ -625,66 +563,6 @@ functions:
         mock: なし（`tmp_path`）
         expected: '`["a/x.md"]`'
         exception: '-'
-  - name: split_front_matter
-    title: front matter の分離
-    kind: 関数
-    container: features/documents/loader.py
-    usecase: 共通
-    role: 変換
-    summary: Markdown の先頭の front matter と本文を分ける
-    scope: public
-    thread_safe: true
-    args:
-      - name: text
-        title: 文字列
-        type: str
-        required: true
-        passing: positional
-        description: Markdown のファイルの内容
-      - name: file
-        title: ファイル
-        type: str | None
-        required: false
-        default: None
-        passing: keyword
-        description: 誤りに載せるファイルのパス
-    returns:
-      type: tuple[dict[str, Any], str]
-      description: front matter（無ければ空の辞書）と、front matter を除いた本文
-    process: |-
-      1. 1 行目が `---` でない場合、空の辞書と `text` を返す
-      2. 2 行目以降で最初の `---` の行までを front matter として『YAMLの読み込み』で読む。閉じる行が無い場合は front matter が無いものとして扱う
-      3. front matter が辞書でない場合、`YamlLoadError` を送る
-      4. 閉じる行の次の行からを本文にして返す
-    exceptions:
-      - name: YamlLoadError
-        condition: front matter が YAML として読めない
-        message: '`{file}:{line}:{column}: {reason}`'
-      - name: YamlLoadError
-        condition: front matter が辞書でない
-        message: '`{file}: front matter が辞書ではありません`'
-    unit_tests:
-      - name: test_split_front_matter
-        case: 正常
-        summary: front matter と本文
-        condition: '`---\nid: a\n---\n# T\n`'
-        mock: なし
-        expected: '`({"id": "a"}, "# T\n")`'
-        exception: '-'
-      - name: test_split_front_matter_when_absent
-        case: 正常
-        summary: front matter が無い
-        condition: '`# T\n` と、閉じる行の無い `---\nid: a\n`'
-        mock: なし
-        expected: どちらも空の辞書と元の文字列
-        exception: '-'
-      - name: test_split_front_matter_when_not_mapping
-        case: 異常
-        summary: front matter が配列
-        condition: '`---\n- a\n---\n`'
-        mock: なし
-        expected: '`YamlLoadError`'
-        exception: front matter が辞書でない
   - name: load_file
     title: ファイルの読み込み
     kind: 関数
@@ -736,16 +614,9 @@ functions:
       - name: test_load_file_when_yaml
         case: 正常
         summary: YAML の 1 ファイル 1 文書
-        condition: '`rules/a.yaml` が `id: rule-a\ntitle: A\n`、行の `metadata` が `{name: {type: ref, field: title}}`'
+        condition: '`rules/a.yaml` が `id: rule-a\ntitle: A\n`、行の `metadata` が `{name: title}`'
         mock: なし（`tmp_path`）
         expected: 1 件で、`id` が `rule-a`、`metadata.name` が `A`、`version` が内容の『内容のハッシュ』、`record_index` が `None`
-        exception: '-'
-      - name: test_load_file_when_markdown
-        case: 正常
-        summary: front matter の無い Markdown
-        condition: '`notes/x.md` が `# X\n`、行の `type` が `markdown`'
-        mock: なし（`tmp_path`）
-        expected: '`id` が `notes/x`、`body` が `# X\n`、`data` が空'
         exception: '-'
       - name: test_load_file_when_records
         case: 正常
@@ -841,17 +712,17 @@ functions:
       type: tuple[list[Document], list[LoadProblem]]
       description: 作った文書と、文書にできなかった理由
     process: |-
-      1. `table.type` が `yaml` の場合、『YAMLの読み込み』で読む。`markdown` の場合、『front matter の分離』で内容と本文に分ける
+      1. 『YAMLの読み込み』で読む
          - `YamlLoadError` の場合、`unreadable` の `LoadProblem` だけを返す
       2. `table.records` が無い場合、1 件の文書を作る
-         - YAML の内容が辞書でない場合、`not_mapping` を返す
-         - 本文は YAML ならファイルの内容、Markdown なら分けた本文。バージョンはファイルの内容の『内容のハッシュ』
+         - 内容が辞書でない場合、`not_mapping` を返す
+         - 本文はファイルの内容。バージョンはファイルの内容の『内容のハッシュ』
       3. `table.records` がある場合、『項目の取得』で配列を取り、要素ごとに文書を作る（配列が無ければ 0 件）
          - 要素が辞書でない場合、その要素は `not_mapping` にして飛ばす
          - `table.body_file` があれば、要素のその列のパスを YAML のファイルのフォルダから解き、`read_body`（`None` なら `root` のファイル）で読んで本文と `body_path` にする。無いファイル（`read_body` が `None` を返す）・`root` の外を指す場合、その要素は `missing_body_file` にして飛ばす
          - `body_file` が無ければ、要素を YAML に書き出した文字列を本文にする
          - バージョンは要素の『値のハッシュ』
-      4. 文書ごとに、『メタデータの解決』の後、『既定の重ね合わせ』を `body_path`（無ければ `path`）で当てる
+      4. 文書ごとに『メタデータの解決』を当てる
       5. ID はメタデータの `id`。無ければ、`body_path` か `path` から拡張子を除いた値（`records` で `body_file` が無ければ末尾に `#{位置}`）にする
          - メタデータの `name` が空なら、`body_path`（無ければ `path`）のファイル名から拡張子を除いた名前を入れる。`records` で `body_file` が無ければ ID を入れる
       6. `created` / `updated` は、`dates` の `body_path`（無ければ `path`）の値、内容の同じ名前の項目（ISO 8601 の文字列か日時）の順に最初にある値を使う。どちらも無ければ `None`
@@ -914,11 +785,11 @@ functions:
         mock: なし
         expected: '`$ref` のまま残り、`[warning]` が 1 件'
   - name: missing_ref_fields
-    title: '`ref` の列の欠け'
+    title: 'metadataの列の欠け'
     container: features/documents/fields.py
     usecase: 起動
     role: 判定
-    summary: 文書の行の `metadata` に明示した `ref` のうち、文書の内容に値が無い列を返す
+    summary: 文書の行の `metadata` に書いた列のうち、文書の内容に値が無い列を返す
     kind: 関数
     scope: public
     thread_safe: true
@@ -928,7 +799,7 @@ functions:
         type: Mapping[str, Any]
         required: true
         passing: positional
-        description: 文書の内容（Markdown は front matter）
+        description: 文書の内容
       - name: table
         title: 文書の行
         type: DocumentTable
@@ -937,16 +808,16 @@ functions:
         description: 文書の行
     returns:
       type: list[tuple[str, str]]
-      description: 値が無い `(メタデータのキー, field)` の並び（`table.metadata` の順）
+      description: 値が無い `(メタデータのキー, 列名)` の並び（`table.metadata` の順）
     process: |-
-      1. `table.metadata` の対応のうち `type` が `ref` のものを順に見る（書いていないキーの既定の `ref` は見ない）
-      2. 『項目の取得』で `field` の値が `None` なら、そのキーと `field` を加える
+      1. `table.metadata` の対応を順に見る（書いていないキーの同じ名前の列は見ない）
+      2. 『項目の取得』で列名の値が `None` なら、そのキーと列名を加える
       3. 並びを返す
     unit_tests:
       - name: test_missing_ref_fields
         case: 正常
-        summary: 明示した ref だけを数える
-        condition: '`metadata` が `{name: {type: ref, field: title}, description: {type: ref, field: summary}}`、内容が `{"summary": "s"}`（`tags` も無い）'
+        summary: metadata に書いた列だけを数える
+        condition: '`metadata` が `{name: title, description: summary}`、内容が `{"summary": "s"}`（`tags` も無い）'
         mock: なし
         expected: '`[("name", "title")]`'
         exception: '-'
@@ -1010,7 +881,7 @@ functions:
     container: features/documents/store.py
     usecase: 起動
     role: サービス
-    summary: 配信元のクローン本体の文書を読み、`ref` の列の欠けと管理用の YAML のずれを求める
+    summary: 配信元のクローン本体の文書を読み、`metadata` の列の欠けと管理用の YAML のずれを求める
     description: 起動時と読み直しのときに呼ぶ。#4 の `check_project` も呼ばれるたびにこの関数で求め直す。
     kind: 関数
     scope: public
@@ -1033,7 +904,7 @@ functions:
       description: ずれの並び（ずれが無ければ空）
     process: |-
       1. `Target(source, source.root, None, None, "read")` で文書を集める（文書のストア.文書を集める）
-      2. 文書ごとに、その行で `ref` の列の欠けを求め、`{行の id}: {文書の id}: {キー}（{field}）` で `missing_refs` に加える
+      2. 文書ごとに、その行で metadataの列の欠けを求め、`{行の id}: {文書の id}: {キー}（{列名}）` で `missing_refs` に加える
       3. `records` と `body_file` を持つ行ごとに、行に当たる管理用の YAML（ファイルの収集）ごとに、その YAML から作った文書の `body_path` と行を渡して索引に無いファイルを求め、`{行の id}: {パス}` で `unindexed_files` に加える
       4. 手順 1 の `problems` のうち `reason` が `missing_body_file` のものを `{path}: {detail}` で `missing_body_files` に加える
       5. `SyncReport` を返す
@@ -1041,7 +912,7 @@ functions:
       - name: test_check_sync
         case: 正常
         summary: 3 種のずれ
-        condition: '行 `rules` が `metadata: {name: {type: ref, field: title}}` で 2 件中 1 件に `title` が無い。行 `src` の `src/files.yaml` が `a.py`・`c.py` を持ち、`src/` に `a.py`・`d.py` を置く'
+        condition: '行 `rules` が `metadata: {name: title}` で 2 件中 1 件に `title` が無い。行 `src` の `src/files.yaml` が `a.py`・`c.py` を持ち、`src/` に `a.py`・`d.py` を置く'
         mock: なし（一時フォルダの配信元）
         expected: '`missing_refs` が 1 件（`name` の `title`）、`unindexed_files` が `["src: src/d.py"]`、`missing_body_files` が 1 件（`c.py`）'
         exception: '-'
@@ -1051,6 +922,35 @@ functions:
         condition: 全ての文書に `title` があり、管理用の YAML とファイルがそろう
         mock: なし
         expected: 3 つの並びが空
+        exception: '-'
+  - name: is_markdown_body
+    title: Markdownの本文か
+    kind: 関数
+    container: features/documents/fields.py
+    usecase: 共通
+    role: 判定
+    summary: 文書の本文が Markdown のファイルかを返す
+    description: 変換・検索の `sections`・`@sections` が、本文を Markdown として扱うかをこの関数で決める。
+    scope: public
+    thread_safe: true
+    args:
+      - name: document
+        title: 文書
+        type: Document
+        required: true
+        passing: positional
+        description: 調べる文書
+    returns:
+      type: bool
+      description: '`body_path` の拡張子が `.md` なら `True`'
+    process: 1. `document.body_path` があり、`PurePosixPath(body_path).suffix.lower()` が `.md` なら `True`、それ以外は `False` を返す
+    unit_tests:
+      - name: test_is_markdown_body
+        case: 正常
+        summary: 本文のファイルの拡張子
+        condition: '`body_path` が `docs/a.md`・`docs/B.MD`・`src/a.py`・`None`（`path` は `docs/x.md`）'
+        mock: なし
+        expected: '`True`・`True`・`False`・`False`'
         exception: '-'
 classes:
   - name: DocumentStore
@@ -1072,9 +972,9 @@ classes:
         description: '`ref` のある `Target` を読むときに使う'
       - name: _files
         title: ファイルのキャッシュ
-        type: dict[tuple[Path, str], tuple[int, int, list[Document], list[LoadProblem]]]
+        type: dict[tuple[Path, str], tuple[int, int, list[Document], list[LoadProblem], tuple[tuple[str, int, int], ...]]]
         access: 内部 (_)
-        description: (絶対パス, 文書の行の ID) → (更新日時, 大きさ, 文書, 理由)
+        description: (絶対パス, 文書の行の ID) → (更新日時, 大きさ, 文書, 理由, 文書が指す本文のファイルの (パス, 更新日時, 大きさ) のパスの順の並び)
       - name: _schemas
         title: スキーマのキャッシュ
         type: dict[Path, tuple[int, int, dict[str, Any]]]
@@ -1122,8 +1022,8 @@ classes:
           2. 文書の行を決める。`kinds` があれば `source.table` で引き（無い種類は `UnknownKindError`）、無ければ `enabled` の全ての行
           3. Git の配信元の場合、履歴の『ファイルの日時』を `_dates` から引く。無ければ、作業ツリー（ワークツリーか `repo_root`）と commit（`ref` の commit、無ければ作業ツリーの `HEAD` を解いた SHA）で呼び、配信元の直下からのパスに直して控える
           4. 行ごとに『ファイルの収集』でファイルを集め、ファイルごとに `stat` を取る
-             - `_files` の更新日時と大きさが同じなら控えた結果を使う
-             - 違えば『ファイルの読み込み』で読み、`_files` を置き換える
+             - `_files` の更新日時と大きさが同じで、理由に `missing_body_file` が無く、本文のファイルの (パス, 更新日時, 大きさ) も同じなら控えた結果を使う
+             - それ以外は『ファイルの読み込み』で読み、`_files` を置き換える
           5. 収集で当たらなかった `_files` のキーのうち、読むフォルダの下にあるものを削除する（削除されたファイル）
           6. 行の順に文書を並べ、先に現れた ID を残して、後に現れた同じ ID の文書を `duplicate_id` にする（`detail` に ID と先の文書のファイル）
           7. `LoadResult` を返す
@@ -1138,7 +1038,7 @@ classes:
           - name: test_document_store_load
             case: 正常
             summary: 行ごとに集める
-            condition: 行 `rules`（`rules/*.yaml`）と `notes`（`notes/*.md`）に 2 件ずつ、Git の管理外の配信元
+            condition: '行 `rules`（`rules/*.yaml`）と `notes`（`notes/files.yaml` の `records: files`・`body_file: path` で `.md`）に 2 件ずつ、Git の管理外の配信元'
             mock: なし（`tmp_path`）
             expected: '`rules` の 2 件、`notes` の 2 件の順で、`problems` が空'
             exception: '-'
@@ -1254,14 +1154,13 @@ classes:
             description: 文書の行の ID
         returns:
           type: dict[str, Any]
-          description: JSON Schema。`markdown` の行と `schema` が無い行は空の辞書
+          description: JSON Schema
         process: |-
           1. `source.table(kind)` で行を引く
-          2. `schema_path` が無ければ空の辞書を返す
-          3. `target.ref` と `target.worktree` がどちらも `None` の場合、起動時に読んだ `source.schemas[kind]` を使う
-          4. それ以外は、`load` と同じ読むフォルダの `schema_path` を `_schemas` から引き、更新日時か大きさが違えば『YAMLの読み込み』で読み直す
-             - ファイルが無い・読めない場合、手順 3 のスキーマを使う
-          5. `$ref` を解いたスキーマを返す（スキーマの参照の解決。基準は手順 3・4 で使った `schema_path`）。解いた結果も `_schemas` に控える
+          2. `target.ref` と `target.worktree` がどちらも `None` の場合、起動時に読んだ `source.schemas[kind]` を使う
+          3. それ以外は、`load` と同じ読むフォルダの `schema_path` を `_schemas` から引き、更新日時か大きさが違えば『YAMLの読み込み』で読み直す
+             - ファイルが無い・読めない場合、手順 2 のスキーマを使う
+          4. `$ref` を解いたスキーマを返す（スキーマの参照の解決。基準は手順 2・3 で使った `schema_path`）。解いた結果も `_schemas` に控える
         exceptions:
           - name: UnknownKindError
             condition: '`kind` が有効な文書の行に無い'
@@ -1280,13 +1179,6 @@ classes:
             condition: '`schemas/rule.schema.yaml` の `properties.body` が `共通.schema.yaml#/$defs/markdown`'
             mock: なし（`tmp_path`）
             expected: '`properties.body` が `$ref` を持たず `markdown` の中身'
-            exception: '-'
-          - name: test_document_store_schema_when_markdown
-            case: 正常
-            summary: スキーマの無い行
-            condition: '`markdown` の行'
-            mock: なし
-            expected: '`{}`'
             exception: '-'
       - name: invalidate
         title: キャッシュを捨てる

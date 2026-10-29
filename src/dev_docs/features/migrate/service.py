@@ -38,6 +38,8 @@ from dev_docs.shared.yaml_io import YamlLoadError, dump_roundtrip, load_roundtri
 
 logger = logging.getLogger(__name__)
 
+SETUP_GUIDE = "手順で移せない設定です。/dev-docs:setup で移し替えてください"
+
 
 def resolve_target(source: str | None, *, env: Mapping[str, str]) -> MigrationTarget:
     """`--source` の有無で移し替える設定を決める。"""
@@ -107,7 +109,10 @@ def apply_migration(
     violations = _violations(target, load_yaml(text))
     # 当てた結果が新しいスキーマに違反するときは書かない
     if violations:
-        raise MigrationFailedError("\n".join(f"{v.path}: {v.rule}" for v in violations))
+        lines = [f"{v.path}: {v.rule}" for v in violations]
+        if target.kind == "dev-docs":
+            lines.append(SETUP_GUIDE)
+        raise MigrationFailedError("\n".join(lines))
     if content_hash(target.file.read_text(encoding="utf-8")) != digest:
         raise MigrationFailedError(f"{target.file}: 読んだ後に変わったため書き換えません")
     backup = target.file.with_name(

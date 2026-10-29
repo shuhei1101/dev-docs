@@ -381,12 +381,12 @@ classes:
           type: list[Violation]
           description: 違反。検査の順に並ぶ
         process: |-
-          1. `document.kind` の行が `yaml` なら、`store.schema(target, kind)` でスキーマを引いて『スキーマの検査』を通す（`records` の行は要素を、それ以外はファイルの内容を検査する）
+          1. `store.schema(target, kind)` でスキーマを引いて『スキーマの検査』を通す（`records` の行は要素を、それ以外はファイルの内容を検査する）
           2. `new` なら『IDの形の検査』を通す
           3. 『関連の種類の検査』と『タグの検査』をメタデータに通す
           4. 行の `validators` の ID ごとに `source.script("validators", id)` を引き、`on` が行の `on` にあるものだけを通す
              - `on` が `read` の場合、`_read_cache` に控えがあればそれを使う
-             - スクリプトの実行の『スクリプトの実行』を `cwd=target.base`・`stdin`（YAML の文書は `body`、Markdown の文書は front matter を付けた全文）・`timeout_sec` で呼び、『検査の出力の解釈』で違反にする
+             - スクリプトの実行の『スクリプトの実行』を `cwd=target.base`・`stdin`（`body`）・`timeout_sec` で呼び、『検査の出力の解釈』で違反にする
              - `ScriptError` の場合、`path` が `$`、`rule` が `{id}: 検査を実行できませんでした（{メッセージ}）` の違反にする（控えない）
           5. 違反を返す
         unit_tests:

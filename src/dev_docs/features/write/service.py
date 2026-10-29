@@ -15,7 +15,7 @@ from dev_docs.features.access.service import resolve_write_target
 from dev_docs.features.access.types import Target
 from dev_docs.features.changes.compare import diff_lines
 from dev_docs.features.documents.fields import get_field, resolve_metadata, set_field
-from dev_docs.features.documents.loader import documents_from_text, split_front_matter
+from dev_docs.features.documents.loader import documents_from_text
 from dev_docs.features.documents.store import DocumentStore, not_found_error
 from dev_docs.features.documents.types import Document
 from dev_docs.features.seen.store import SeenStore
@@ -23,7 +23,7 @@ from dev_docs.features.seen.types import LastRead, SessionKey
 from dev_docs.features.sources.registry import SourceRegistry
 from dev_docs.features.sources.types import DocumentTable
 from dev_docs.features.validation.service import DocumentChecker
-from dev_docs.features.write.apply import apply_operation
+from dev_docs.features.write.apply import apply_operation, to_columns
 from dev_docs.features.write.ids import generate_id
 from dev_docs.features.write.locks import SourceLocks
 from dev_docs.features.write.placement import new_document_path
@@ -51,9 +51,6 @@ from dev_docs.shared.hashing import value_hash
 from dev_docs.shared.yaml_io import dump_roundtrip, load_roundtrip
 
 logger = logging.getLogger(__name__)
-
-BODY = "body"
-FRONT_MATTER_FENCE = "---"
 
 
 def check_version(
@@ -113,20 +110,9 @@ def _check_operations(operations: list[Operation]) -> None:
         raise _invalid(violations)
 
 
-def _render_markdown(front: Mapping[str, Any], body: str) -> str:
-    """front matter と本文を、Markdown のファイルの内容にする。"""
-    if not front:
-        return body
-    block = dump_roundtrip(CommentedMap(front))
-    return f"{FRONT_MATTER_FENCE}\n{block}{FRONT_MATTER_FENCE}\n{body}"
-
-
 def _related_column(table: DocumentTable) -> str:
-    """参照を持つ列（種類の行の `metadata.related` が指す列。無ければ `related`）。"""
-    mapping = table.metadata.get("related")
-    if mapping is not None and mapping.type == "ref" and mapping.field:
-        return mapping.field
-    return "related"
+    """参照を持つ列（種類の行の `metadata.related` の列名。無ければ `related`）。"""
+    return table.metadata.get("related", "related")
 
 
 @dataclass
@@ -230,9 +216,6 @@ def _content_for(
     table: DocumentTable, text: str, document: Document | None, path: str
 ) -> tuple[Any, Any]:
     """ファイルの内容から、操作を当てる対象（辞書）と、書き戻すための入れ物を返す。"""
-    if table.type == "markdown":
-        front, body = split_front_matter(text, file=path)
-        return {**front, BODY: body}, None
     file_map = load_roundtrip(text, file=path)
     if table.records is not None and document is not None:
         records = get_field(file_map, table.records)
@@ -242,9 +225,6 @@ def _content_for(
 
 def _finish(table: DocumentTable, content: Any, container: Any, document: Document | None) -> str:
     """操作を当てた内容を、ファイルの内容の文字列にする。"""
-    if table.type == "markdown":
-        body = content.pop(BODY, "")
-        return _render_markdown(content, body)
     if table.records is not None and document is not None and container is not None:
         records = get_field(container, table.records)
         records[document.record_index] = content
@@ -263,9 +243,9 @@ def _apply_existing(
     text = session.text(document.path)
     current, container = _content_for(table, text, document, document.path)
     new_content = apply_operation(current, operation)
-    if operation.op == "replace" and table.type == "yaml":
+    if operation.op == "replace":
         new_content = CommentedMap(new_content)
-    if not session.target.source.is_git and table.type == "yaml":
+    if not session.target.source.is_git:
         _stamp(new_content, operation.op, now, current)
     return document.path, _finish(table, new_content, container, document)
 
@@ -280,13 +260,9 @@ def _apply_create(
     """`create` を当てた、(ファイルのパス, 新しい内容, 配列への追加か) を返す。"""
     path, append = new_document_path(table, doc_id)
     data = apply_operation(None, operation)
-    id_field = table.metadata["id"].field if "id" in table.metadata else None
-    set_field(data, id_field or "id", doc_id)
-    if not session.target.source.is_git and table.type == "yaml":
+    set_field(data, table.metadata.get("id", "id"), doc_id)
+    if not session.target.source.is_git:
         _stamp(data, "create", now, None)
-    if table.type == "markdown":
-        body = data.pop(BODY, "")
-        return path, _render_markdown(data, body), False
     if append:
         text = session.text(path) if session.exists(path) else ""
         file_map = load_roundtrip(text, file=path) if text else CommentedMap()
@@ -476,8 +452,10 @@ def _apply_one(
                     )
                 ]
             )
+        operation = to_columns(operation, table, index=index)
         data = operation.data or {}
-        doc_id = operation.id or resolve_metadata(data, table).get("id")
+        columns = resolve_metadata(data, table)
+        doc_id = operation.id or columns.get("id")
         if doc_id is None:
             if source.config.ids_format is None:
                 raise _invalid(
@@ -492,7 +470,7 @@ def _apply_one(
             doc_id = generate_id(
                 source.config.ids_format,
                 kind=table.id,
-                data=data,
+                data=columns,
                 existing={*session.docs, *created_ids},
             )
         doc_id = str(doc_id)
@@ -537,6 +515,7 @@ def _apply_one(
                 )
             ]
         )
+    operation = to_columns(operation, table, index=index)
     assert operation.expected_version is not None  # noqa: S101
     check_version(existing, operation.expected_version, last_read=last_reads.get(existing.id))
     path, text = _apply_existing(session, operation, existing, table, now)
@@ -584,16 +563,7 @@ def _unlink(session: _Session, referrer: Document, removed: set[str]) -> tuple[s
     text = session.text(referrer.path)
     current, container = _content_for(table, text, referrer, referrer.path)
     rows = get_field(current, column)
-    if not isinstance(rows, list):
-        raise _invalid(
-            [
-                Violation(
-                    path=f"targets[{referrer.id}]",
-                    rule=f"{referrer.id} の related は defaults[] から付いた行なので外せません",
-                    fix="defaults[] を直してください",
-                )
-            ]
-        )
+    assert isinstance(rows, list)  # noqa: S101
     rows[:] = [
         row
         for row in rows

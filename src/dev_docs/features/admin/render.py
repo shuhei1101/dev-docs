@@ -11,7 +11,7 @@ from dev_docs.features.admin.types import (
 
 TABLE_HEADER = ("| source | 状態 | 設定のバージョン | 索引の同期 |", "| --- | --- | --- | --- |")
 SYNC_LABELS = {
-    "missing_refs": "ref の列の欠け",
+    "missing_refs": "metadata の列の欠け",
     "unindexed_files": "管理用の YAML に無いファイル",
     "missing_body_files": "ファイルが無い行",
 }

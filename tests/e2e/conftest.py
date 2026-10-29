@@ -272,7 +272,6 @@ def sample_config(
         "default_ref: develop\n"
         "documents:\n"
         "  - id: sample\n"
-        "    type: yaml\n"
         "    paths: [docs/*.yaml]\n"
         "    schema: schemas/sample.schema.yaml\n"
         f"{extra}"
@@ -676,6 +675,14 @@ class DevDocsClone:
     def python(self) -> Path:
         """クローンの `.venv` の Python。"""
         return self.clone / ".venv" / "bin" / "python"
+
+    @property
+    def version(self) -> str:
+        """クローンの `pyproject.toml` の dev-docs のバージョンを返す。"""
+        pyproject = (self.clone / "pyproject.toml").read_text(encoding="utf-8")
+        return next(
+            line.split('"')[1] for line in pyproject.splitlines() if line.startswith("version = ")
+        )
 
     def head(self) -> str:
         """クローンの HEAD の SHA を返す。"""

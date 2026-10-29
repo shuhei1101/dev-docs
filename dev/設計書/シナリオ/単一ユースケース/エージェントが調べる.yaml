@@ -193,10 +193,10 @@ scenarios:
         description: なし（実環境で実行。`cwd` はテストが引数に入れる）
         notes: '-'
       - name: 管理用の YAML
-        description: 'sample の `src/files.yaml`。`files[]` に `a.py`（`tags: [auth]`、`name` なし）と `b.py`（`name: 部品 B`）の 2 行。`src/a.py`・`src/b.py` を置く'
+        description: 'sample の `src/files.yaml`。`files[]` に `a.py`（`tags: [auth, code]`、`name` なし）と `b.py`（`name: 部品 B`）の 2 行。`src/a.py`・`src/b.py` を置く'
         notes: スキーマは `templates/files.schema.yaml`
       - name: 文書の行
-        description: 'sample の `dev-docs.yaml` の行 `src`（`paths: [src/files.yaml]`・`records: files`・`body_file: path`）。`defaults[]` に `{paths: [src/**], tags: [code]}`'
+        description: 'sample の `dev-docs.yaml` の行 `src`（`paths: [src/files.yaml]`・`records: files`・`body_file: path`）'
         notes: '-'
       - name: dev-docs
         description: sample を配信している dev-docs
@@ -210,7 +210,7 @@ scenarios:
 
         A->>M: search_docs(filter: tags が auth, view: summary)
         M->>ST: src/files.yaml を読み、files の各行を 1 件の文書にする
-        M->>M: defaults を重ね、最後に行のメタデータを重ねる。name が空なら body_file のファイル名
+        M->>M: 行の列から共通のメタデータを取る。name が空なら body_file のファイル名
         M-->>A: a の行（name は a、tags は code と auth）
         A->>M: search_docs(filter: id が src/a, view: full)
         M-->>A: src/a.py の内容を path と scope つきの document で包んだ本文
@@ -218,7 +218,7 @@ scenarios:
         M-->>A: 項目の直下に path と scope を持つ JSON
       ```
     expected:
-      - '`tags` が `auth` の `search_docs` が id `src/a`（`body_file` が指すファイルの拡張子を除いたパス）の 1 件を返し、`name` が `a`、`tags` が `code` と `auth` になる'
+      - '`tags` が `auth` の `search_docs` が id `src/a`（`body_file` が指すファイルの拡張子を除いたパス）の 1 件を返し、`name` が `a`、`tags` が `auth` と `code` になる'
       - '`b` の `name` は `部品 B` のまま'
       - '`view: full` の本文が `src/a.py` の内容で、`<document path="{sample のクローン本体}/src/a.py" scope="full">` で包まれる'
       - '`format: json` の項目の直下（`id`・`source` と同じ階層で `values` の外）が `path`（`src/a.py` の絶対パス）と `scope: full` を持ち、`values.path` は管理用の YAML の `path` 列の値 `a.py` のまま'
@@ -229,8 +229,8 @@ scenarios:
         description: なし（実環境で実行。`cwd` はテストが引数に入れる）
         notes: '-'
       - name: Markdown の文書
-        description: sample の `notes/` に Markdown の文書を 3 件置く。`a.md` は本文に語 `検索` を含む行を 3 行、`b.md` は 1 行、`archive/c.md` は 2 行持つ
-        notes: 'sample の `dev-docs.yaml` に Markdown の文書の行（`paths: [notes/**/*.md]`）を持つ'
+        description: sample の `notes/` に Markdown の文書を 3 件置き、`notes/files.yaml` の `files[]` に `a.md`・`b.md` の 2 行、`notes/archive/files.yaml` の `files[]` に `c.md` の 1 行を載せる。`a.md` は本文に語 `検索` を含む行を 3 行、`b.md` は 1 行、`archive/c.md` は 2 行持つ
+        notes: 'sample の `dev-docs.yaml` に行 `notes`（`paths: [notes/**/files.yaml]`・`records: files`・`body_file: path`）を持つ'
       - name: dev-docs
         description: sample を配信している dev-docs
         notes: '`cwd` は sample のクローン本体'
@@ -283,11 +283,13 @@ scenarios:
     setup:
       - name: Mock
         description: なし（実環境で実行。`cwd` はテストが引数に入れる）
+        notes: '-'
       - name: 文書
-        description: sample の `docs/rule/` に `a.md`・`Rb.md`・`README.md` を置く
-        notes: '`Rb.md` は `R` で始まる文書'
+        description: sample の `docs/rule/` に YAML の文書 `a.yaml`（id `a`）・`Rb.yaml`（id `Rb`）と目次 `index.yaml`（id `rule-index`）を置く
+        notes: '`Rb.yaml` は `R` で始まる文書'
       - name: 文書の行
-        description: 'sample の `dev-docs.yaml` の行 `rule`（`type: markdown`・`paths: [docs/rule/*.md]`・`exclude: [README.md]`）と行 `index`（`type: markdown`・`paths: [docs/**/README.md]`）'
+        description: 'sample の `dev-docs.yaml` の行 `rule`（`paths: [docs/rule/*.yaml]`・`exclude: [index.yaml]`）と行 `index`（`paths: [docs/**/index.yaml]`）'
+        notes: '-'
       - name: dev-docs
         description: sample を配信している dev-docs
         notes: '`cwd` は sample のクローン本体'
@@ -300,14 +302,46 @@ scenarios:
 
         A->>M: search_docs(filter: kind が rule, view: summary)
         M->>ST: rule の paths に当たり exclude に当たらないファイルを読む
-        M-->>A: docs/rule/a と docs/rule/Rb
+        M-->>A: a と Rb
         A->>M: search_docs(filter: kind が index, view: summary)
-        M-->>A: docs/rule/README
+        M-->>A: rule-index
       ```
     expected:
-      - '`kind` が `rule` の `search_docs` が `docs/rule/a` と `docs/rule/Rb` の 2 件だけを返し、`docs/rule/README` を返さない'
-      - '`kind` が `index` の `search_docs` が `docs/rule/README` を返す'
+      - '`kind` が `rule` の `search_docs` が `a` と `Rb` の 2 件だけを返し、`rule-index` を返さない'
+      - '`kind` が `index` の `search_docs` が `rule-index` を返す'
     test: test_normal_when_excluded_name
+  - name: 正常シナリオ（列名の違う種類を共通のキーで引く）
+    setup:
+      - name: Mock
+        description: なし（実環境で実行。`cwd` はテストが引数に入れる）
+        notes: '-'
+      - name: 文書
+        description: 'sample の `decisions/` に、名前を `title` 列、概要文を `meta.summary` 列に持つ YAML の文書 `d1.yaml`（`title: 設定の置き場所`）を置く'
+        notes: '`name`・`description` の列は持たない'
+      - name: 文書の行
+        description: 'sample の `dev-docs.yaml` の行 `decisions`（`paths: [decisions/*.yaml]`・`metadata: {name: title, description: meta.summary}`）'
+        notes: '-'
+      - name: dev-docs
+        description: sample を配信している dev-docs
+        notes: '`cwd` は sample のクローン本体'
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        actor A as エージェント
+        participant M as 文書の MCP（/mcp）
+        participant ST as 配信元の文書
+
+        A->>M: describe(source: sample, kind: decisions)
+        M-->>A: スキーマと、共通のキーと列名の対応（name は title、description は meta.summary）
+        A->>M: search_docs(filter: name が 設定の置き場所, view: summary)
+        M->>ST: decisions/d1.yaml を読む
+        M->>M: metadata の対応の列から name・description を取る
+        M-->>A: d1 の行（name と概要文）
+      ```
+    expected:
+      - '`describe(source: sample, kind: decisions)` が、`metadata` に書いた対応（`name` は `title`、`description` は `meta.summary`）と、書かない共通のキーは同じ名前の列であることを返す'
+      - '`name` が `設定の置き場所` の `search_docs` が d1 を返し、概要文が `meta.summary` の値になる'
+    test: test_normal_when_metadata_mapped
 lead: エージェントが文書の MCP の `describe`・`search_docs`・`trace_related` で、今の作業場所から読める配信元の文書を探して読む。
 issue: 3
 primary_actor: エージェント（Claude Code）

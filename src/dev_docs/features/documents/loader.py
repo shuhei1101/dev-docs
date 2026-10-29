@@ -6,10 +6,10 @@ import os
 import posixpath
 from collections.abc import Callable, Collection, Mapping
 from datetime import date, datetime, time
-from pathlib import Path, PurePosixPath
+from pathlib import Path
 from typing import Any
 
-from dev_docs.features.documents.fields import apply_defaults, get_field, resolve_metadata
+from dev_docs.features.documents.fields import get_field, resolve_metadata
 from dev_docs.features.documents.types import Document, LoadProblem
 from dev_docs.features.history.types import FileDates
 from dev_docs.features.sources.types import DocumentTable
@@ -17,8 +17,6 @@ from dev_docs.shared.hashing import content_hash, value_hash
 from dev_docs.shared.yaml_io import YamlLoadError, dump_roundtrip, load_yaml
 
 SKIP_DIRS = frozenset({".git", "node_modules", "__pycache__", ".venv"})
-FRONT_MATTER_FENCE = "---"
-YAML_SUFFIXES = (".yaml", ".yml")
 
 
 def collect_files(root: Path, table: DocumentTable) -> list[str]:
@@ -37,39 +35,6 @@ def collect_files(root: Path, table: DocumentTable) -> list[str]:
             if table.matches(relative):
                 found.add(relative)
     return sorted(found)
-
-
-def split_front_matter(text: str, *, file: str | None = None) -> tuple[dict[str, Any], str]:
-    """Markdown の先頭の front matter と本文を分ける。"""
-    lines = text.splitlines(keepends=True)
-    if not lines or lines[0].rstrip() != FRONT_MATTER_FENCE:
-        return {}, text
-    closing = next(
-        (index for index in range(1, len(lines)) if lines[index].rstrip() == FRONT_MATTER_FENCE),
-        None,
-    )
-    if closing is None:
-        return {}, text
-    try:
-        data = load_yaml("".join(lines[1:closing]), file=file)
-    except YamlLoadError as error:
-        # 行はファイル全体の中の位置にする（開きの `---` の 1 行を足す）
-        line = error.line + 1 if error.line else None
-        raise YamlLoadError(
-            error.reason, file=error.file, line=line, column=error.column
-        ) from error
-    if data is None:
-        data = {}
-    if not isinstance(data, dict):
-        raise YamlLoadError("front matter が辞書ではありません", file=file)
-    return data, "".join(lines[closing + 1 :])
-
-
-def document_text(document: Document) -> str:
-    """文書のファイルの内容（YAML は本文、Markdown は front matter を付けた全文）を返す。"""
-    if PurePosixPath(document.path).suffix in YAML_SUFFIXES or not document.data:
-        return document.body
-    return f"{FRONT_MATTER_FENCE}\n{dump_roundtrip(document.data)}{FRONT_MATTER_FENCE}\n{document.body}"  # type: ignore[arg-type]
 
 
 def _as_datetime(value: Any) -> datetime | None:
@@ -136,7 +101,7 @@ def _build(
 ) -> Document:
     """内容・本文・バージョンから 1 件の文書を作る。"""
     key_path = body_path or path
-    metadata = apply_defaults(resolve_metadata(data, table), table.defaults, key_path)
+    metadata = resolve_metadata(data, table)
     document_id = str(metadata["id"]) if metadata.get("id") is not None else fallback_id
     if not metadata.get("name"):
         # `records` の要素で `body_file` が無ければ、指すファイルが無いので ID にする
@@ -176,19 +141,6 @@ def documents_from_text(
     dates = dates or {}
     common: dict[str, Any] = {"path": path, "table": table, "source_id": source_id, "dates": dates}
     try:
-        if table.type == "markdown":
-            data, body = split_front_matter(text, file=path)
-            return [
-                _build(
-                    data=data,
-                    body=body,
-                    body_path=None,
-                    index=None,
-                    version=content_hash(text),
-                    fallback_id=_stem(path),
-                    **common,
-                )
-            ], []
         loaded = load_yaml(text, file=path)
     except YamlLoadError as error:
         return [], [

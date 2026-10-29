@@ -44,15 +44,17 @@ def make_converted_target(
     """変換の設定を持つ文書の行の読み書きの場所を作る関数を返す。"""
 
     def _make(
-        *, doc_type: str = "yaml", converter: str | None = None, converters: list[ScriptEntry]
+        *, body_file: bool = False, converter: str | None = None, converters: list[ScriptEntry]
     ) -> Target:
         root = tmp_path / "ws"
         root.mkdir(exist_ok=True)
         table = DocumentTable(
             id="rules",
-            type=doc_type,  # type: ignore[arg-type]
             paths=["rules/*.yaml"],
+            schema_path="schemas/rule.schema.yaml",
             converter=converter,
+            records="files" if body_file else None,
+            body_file="path" if body_file else None,
         )
         config = make_source_config(documents=[table], converters=converters)
         return make_target(make_served_source(root=root, config=config))
@@ -130,11 +132,17 @@ def test_convert_service_convert_when_markdown(
     make_converted_target: Callable[..., Target],
     make_document: Callable[..., Document],
 ) -> None:
-    """Markdown の文書（正常系）。"""
+    """Markdown の本文（正常系）。"""
     # 準備
-    target = make_converted_target(doc_type="markdown", converters=[])
-    document = make_document(body="# 本文\n\n段落\n")
+    target = make_converted_target(body_file=True, converters=[])
+    markdown = make_document(body="# 本文\n\n段落\n", body_path="docs/a.md")
+    code = make_document(
+        data={"name": "部品", "path": "a.py"}, body="a = 1\n", body_path="src/a.py"
+    )
+    service = _service(tmp_path, ITEMS_SCHEMA)
     # 実行
-    result = _service(tmp_path, {}).convert(target, document)
+    markdown_result = service.convert(target, markdown)
+    code_result = service.convert(target, code)
     # 検証
-    assert result.markdown == "# 本文\n\n段落\n"
+    assert markdown_result.markdown == "# 本文\n\n段落\n"
+    assert code_result.markdown.startswith("# 部品")

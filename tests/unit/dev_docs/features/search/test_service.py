@@ -84,8 +84,8 @@ def make_env(
         write_files(root, files)
         table = DocumentTable(
             id="rules",
-            type="yaml",
             paths=["docs/*.yaml"],
+            schema_path="schemas/rule.schema.yaml",
             validators=row_validators or [],
         )
         config = make_source_config(documents=documents or [table], validators=validators or [])
@@ -105,16 +105,32 @@ TWO_DOCS = {
 }
 
 
-NOTES_TABLE = DocumentTable(id="notes", type="markdown", paths=["notes/**/*.md"])
-YAML_TABLE = DocumentTable(id="rules", type="yaml", paths=["docs/*.yaml"])
+def _notes_table() -> DocumentTable:
+    """管理用の YAML で Markdown を配信する文書の行を返す。"""
+    return DocumentTable(
+        id="notes",
+        paths=["notes/**/files.yaml"],
+        schema_path="schemas/rule.schema.yaml",
+        records="files",
+        body_file="path",
+    )
+
+
+def _yaml_table() -> DocumentTable:
+    """YAML の文書の行を返す。"""
+    return DocumentTable(id="rules", paths=["docs/*.yaml"], schema_path="schemas/rule.schema.yaml")
+
 
 NOTES = {
-    "notes/a.md": "---\ntags: [x]\n---\n検索 1\n検索 2\n検索 3\n他\n",
+    "notes/files.yaml": "files:\n  - path: a.md\n    tags: [x]\n  - path: b.md\n",
+    "notes/archive/files.yaml": "files:\n  - path: c.md\n",
+    "notes/a.md": "検索 1\n検索 2\n検索 3\n他\n",
     "notes/b.md": "検索 1\n他\n",
     "notes/archive/c.md": "検索 1\n検索 2\n他\n",
 }
 
 PART_NOTES = {
+    "notes/files.yaml": "files:\n  - path: a.md\n",
     "notes/a.md": "\n".join(
         [
             "# a",
@@ -260,7 +276,7 @@ def test_search_docs_when_id_values_and_order_by(make_env: Callable[..., SearchE
 def test_search_docs_when_ordered_by_matches(make_env: Callable[..., SearchEnv]) -> None:
     """当たった数で並べる（正常系）。"""
     # 準備
-    env = make_env(NOTES, documents=[NOTES_TABLE])
+    env = make_env(NOTES, documents=[_notes_table()])
     body_condition = Condition(field="body", op="contains", values=["検索"])
     archive = Group.model_validate(
         {"not": {"field": "@path", "op": "glob", "values": ["notes/archive/**"]}}
@@ -284,7 +300,7 @@ def test_search_docs_when_ordered_by_matches(make_env: Callable[..., SearchEnv])
 def test_search_docs_when_matches_under_not(make_env: Callable[..., SearchEnv]) -> None:
     """`not` の下の本文の条件は数えない（正常系）。"""
     # 準備
-    env = make_env(NOTES, documents=[NOTES_TABLE])
+    env = make_env(NOTES, documents=[_notes_table()])
     node = Group.model_validate(
         {
             "not": {
@@ -307,7 +323,7 @@ def test_search_docs_when_matches_under_not(make_env: Callable[..., SearchEnv]) 
 def test_search_docs_when_part_of_body(make_env: Callable[..., SearchEnv]) -> None:
     """本文の一部と返し済み（正常系）。"""
     # 準備
-    env = make_env(PART_NOTES, documents=[NOTES_TABLE])
+    env = make_env(PART_NOTES, documents=[_notes_table()])
     condition = Condition(field="id", op="eq", values=["notes/a"])
     request = {"filter": condition, "view": "full", "session_id": "s1"}
     # 実行
@@ -335,7 +351,7 @@ def test_search_docs_when_part_of_body_with_snippets(make_env: Callable[..., Sea
     """切り出した範囲の抜粋と当たる見出しの無い文書（正常系）。"""
     # 準備
     files = {**PART_NOTES, "docs/doc-1.yaml": "id: doc-1\nname: 文書 1\n"}
-    env = make_env(files, documents=[NOTES_TABLE, YAML_TABLE])
+    env = make_env(files, documents=[_notes_table(), _yaml_table()])
     snippet_condition = Condition(field="body", op="contains", values=["検索"])
     # 実行
     snippeted = env.search(
@@ -414,7 +430,7 @@ def test_search_docs_when_sources_all(
 ) -> None:
     """全ての配信元（正常系）。"""
     # 準備
-    table = DocumentTable(id="rules", type="yaml", paths=["docs/*.yaml"])
+    table = DocumentTable(id="rules", paths=["docs/*.yaml"], schema_path="schemas/rule.schema.yaml")
     config = make_source_config(documents=[table])
     sample_root = tmp_path / "sample"
     notes_root = tmp_path / "notes"
@@ -451,8 +467,13 @@ def test_search_docs_when_location(
         }
     )
     documents = [
-        DocumentTable(id="rules", type="yaml", paths=["docs/*.yaml"]),
-        DocumentTable(id="items", type="yaml", paths=["data/list.yaml"], records="items"),
+        DocumentTable(id="rules", paths=["docs/*.yaml"], schema_path="schemas/rule.schema.yaml"),
+        DocumentTable(
+            id="items",
+            paths=["data/list.yaml"],
+            schema_path="schemas/rule.schema.yaml",
+            records="items",
+        ),
     ]
     source = make_served_source(
         id="sample",

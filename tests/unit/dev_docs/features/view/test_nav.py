@@ -6,11 +6,30 @@ from dev_docs.features.documents.types import Document
 from dev_docs.features.sources.types import DocumentTable, ServedSource, SourceConfig
 from dev_docs.features.view.nav import build_nav
 
-TABLES = [
-    DocumentTable(id="rules", type="yaml", paths=["docs/rule/*.yaml"], title="規約"),
-    DocumentTable(id="architecture", type="yaml", paths=["docs/design/architecture.yaml"]),
-    DocumentTable(id="prompts", type="markdown", paths=["prompts/**/*.md"], title="プロンプト"),
-]
+
+def _tables() -> list[DocumentTable]:
+    """文書の行を返す。"""
+    return [
+        DocumentTable(
+            id="rules",
+            paths=["docs/rule/*.yaml"],
+            schema_path="schemas/rule.schema.yaml",
+            title="規約",
+        ),
+        DocumentTable(
+            id="architecture",
+            paths=["docs/design/architecture.yaml"],
+            schema_path="schemas/rule.schema.yaml",
+        ),
+        DocumentTable(
+            id="prompts",
+            paths=["prompts/files.yaml"],
+            schema_path="schemas/rule.schema.yaml",
+            records="files",
+            body_file="path",
+            title="プロンプト",
+        ),
+    ]
 
 
 def test_build_nav(
@@ -30,7 +49,7 @@ def test_build_nav(
             {"title": "プロンプト", "items": [{"auto": {"document": "prompts"}}]},
         ]
     }
-    source = make_served_source(config=make_source_config(documents=TABLES, nav=nav))
+    source = make_served_source(config=make_source_config(documents=_tables(), nav=nav))
     documents = [
         make_document(
             id="rule-py",
@@ -73,7 +92,7 @@ def test_build_nav_when_no_nav(
 ) -> None:
     """nav が無い（正常系）。"""
     # 準備
-    source = make_served_source(config=make_source_config(documents=TABLES[:2]))
+    source = make_served_source(config=make_source_config(documents=_tables()[:2]))
     documents = [
         make_document(id="rule-py", kind="rules", path="docs/rule/py.yaml"),
         make_document(id="architecture", kind="architecture", path="docs/design/architecture.yaml"),

@@ -105,6 +105,61 @@ scenarios:
       - '`update` が git のエラーを返す'
       - dev-docs は再起動せず、`status` が前のバージョンを返す
     test: test_error_when_pull_fails
+  - name: 正常シナリオ（配信元の設定が古くなる）
+    setup:
+      - name: Mock
+        description: なし（実環境で実行）
+        notes: '-'
+      - name: dev-docs のクローン
+        description: 正常シナリオと同じ
+        notes: 新しいバージョンが配信元の設定の移し替えの手順を持つ
+      - name: 前の形式の配信元
+        description: '`version: "1"` の `dev-docs.yaml` を持ち、`documents[0]` が `type: yaml`・`metadata: {name: {type: ref, field: title}}` を持つ配信元'
+        notes: 機械的に移せる設定だけを持つ
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        actor U as 利用者
+        participant MG as dev-docs migrate
+        participant SC as 配信元の dev-docs.yaml
+
+        U->>MG: dev-docs migrate --source {配信元の dev-docs.yaml} --plan
+        MG-->>U: 当てる手順の一覧
+        U->>MG: dev-docs migrate --source {配信元の dev-docs.yaml}
+        MG->>SC: バックアップを取り、type を消し、ref の metadata を列名の文字列にし、version を書き換える
+        MG-->>U: 当てた手順
+      ```
+    expected:
+      - '`migrate --source --plan` は `dev-docs.yaml` を変えず、当てる手順を返す'
+      - '`migrate --source` の後、`documents[0]` が `type` を持たず、`metadata` が `{name: title}` になる'
+      - '`version` が新しいバージョンになり、当てる前の `dev-docs.yaml` のバックアップがある'
+    test: test_normal_when_source_config_old
+  - name: 異常シナリオ（配信元の設定に移せない設定がある）
+    setup:
+      - name: Mock
+        description: なし（実環境で実行）
+        notes: '-'
+      - name: dev-docs のクローン
+        description: 正常シナリオと同じ
+        notes: 新しいバージョンが配信元の設定の移し替えの手順を持つ
+      - name: 移せない設定を持つ配信元
+        description: '`version: "1"` の `dev-docs.yaml` を持ち、`documents[0]` が `type: yaml`・`metadata: {name: {type: ref, field: title}}`、`documents[1]` が `type: markdown`・`defaults: [{paths: [docs/**], tags: [doc]}]` を持つ配信元'
+        notes: '`documents[1]` は機械的に移せない'
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        actor U as 利用者
+        participant MG as dev-docs migrate
+
+        U->>MG: dev-docs migrate --source {配信元の dev-docs.yaml}
+        MG->>MG: 手順を当てた結果を新しいスキーマで検証し、違反が残る
+        MG-->>U: 違反と、/dev-docs:setup で移す案内
+      ```
+    expected:
+      - '`dev-docs.yaml` が `migrate` の前と同じ中身になる'
+      - 0 以外の終了コードで終わる
+      - 標準エラーに `documents[1].type`（Markdown の範囲）と `documents[1].defaults` の違反と、`/dev-docs:setup` で移す案内が出る
+    test: test_error_when_source_config_unmigratable
 lead: 利用者が管理の MCP の `update` で dev-docs のクローンを新しいバージョンにし、端末の設定が古くなったら `dev-docs migrate` で移し替える。
 issue: 4
 primary_actor: 利用者

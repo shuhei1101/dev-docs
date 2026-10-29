@@ -1,19 +1,20 @@
 from __future__ import annotations
 
+from collections.abc import Callable
 from typing import Any
 
 import pytest
 
 from dev_docs.features.documents import fields as fields_module
 from dev_docs.features.documents.fields import (
-    apply_defaults,
     delete_field,
     get_field,
     parse_field_path,
     resolve_metadata,
     set_field,
 )
-from dev_docs.features.sources.types import DocumentDefaults, DocumentTable, MetadataMapping
+from dev_docs.features.documents.types import Document
+from dev_docs.features.sources.types import DocumentTable
 from dev_docs.shared.errors import InvalidArgumentError
 
 
@@ -120,16 +121,14 @@ def test_delete_field_when_missing() -> None:
 
 
 def test_resolve_metadata() -> None:
-    """対応と既定の ref（正常系）。"""
+    """列名の対応と同じ名前の列（正常系）。"""
     # 準備
     table = DocumentTable(
         id="rules",
-        type="yaml",
         paths=["docs/*.yaml"],
-        metadata={
-            "name": MetadataMapping(type="ref", field="title"),
-            "alias_type": MetadataMapping(type="custom", value="term"),
-        },
+        schema_path="schemas/rule.schema.yaml",
+        metadata={"name": "title"},
+        alias_type="term",
     )
     data = {"id": "a", "title": "A", "tags": ["x"]}
     # 実行
@@ -143,9 +142,9 @@ def test_resolve_metadata_when_nested_field() -> None:
     # 準備
     table = DocumentTable(
         id="rules",
-        type="yaml",
         paths=["docs/*.yaml"],
-        metadata={"description": MetadataMapping(type="ref", field="meta.summary")},
+        schema_path="schemas/rule.schema.yaml",
+        metadata={"description": "meta.summary"},
     )
     data = {"meta": {"summary": "s"}}
     # 実行
@@ -154,44 +153,40 @@ def test_resolve_metadata_when_nested_field() -> None:
     assert result["description"] == "s"
 
 
-def test_apply_defaults() -> None:
-    """和集合と上書き（正常系）。"""
-    # 準備
-    defaults = [
-        DocumentDefaults(paths=["src/**"], tags=["a"], status="draft"),
-        DocumentDefaults(paths=["src/x/**"], tags=["b"]),
-    ]
-    metadata = {"tags": ["a", "c"], "status": "done"}
-    # 実行
-    result = apply_defaults(metadata, defaults, "src/x/y.md")
-    # 検証
-    assert result == {"tags": ["a", "b", "c"], "status": "done"}
-
-
-def test_apply_defaults_when_not_matched() -> None:
-    """当たらない行（正常系）。"""
-    # 準備
-    defaults = [DocumentDefaults(paths=["docs/**"], tags=["a"])]
-    # 実行
-    result = apply_defaults({}, defaults, "src/y.md")
-    # 検証
-    assert result == {}
-
-
 def test_missing_ref_fields() -> None:
-    """明示した ref だけを数える（正常系）。"""
+    """metadata に書いた列だけを数える（正常系）。"""
     # 準備
     table = DocumentTable(
         id="rules",
-        type="yaml",
         paths=["docs/*.yaml"],
-        metadata={
-            "name": MetadataMapping(type="ref", field="title"),
-            "description": MetadataMapping(type="ref", field="summary"),
-        },
+        schema_path="schemas/rule.schema.yaml",
+        metadata={"name": "title", "description": "summary"},
     )
     data = {"summary": "s"}
     # 実行
     result = fields_module.missing_ref_fields(data, table)
     # 検証
     assert result == [("name", "title")]
+
+
+@pytest.mark.parametrize(
+    ("body_path", "expected"),
+    [
+        pytest.param("docs/a.md", True, id="markdown"),
+        pytest.param("docs/B.MD", True, id="upper-case"),
+        pytest.param("src/a.py", False, id="source-code"),
+        pytest.param(None, False, id="no-body-file"),
+    ],
+)
+def test_is_markdown_body(
+    make_document: Callable[..., Document], body_path: str | None, expected: bool
+) -> None:
+    """本文のファイルの拡張子（正常系）。"""
+    # 準備
+    from dev_docs.features.documents.fields import is_markdown_body
+
+    document = make_document(path="docs/x.md", body_path=body_path)
+    # 実行
+    result = is_markdown_body(document)
+    # 検証
+    assert result is expected

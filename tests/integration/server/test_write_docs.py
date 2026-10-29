@@ -7,7 +7,7 @@ from typing import Any
 from dev_docs.shared.hashing import content_hash
 from dev_docs.shared.yaml_io import load_yaml
 
-BROKEN_CONFIG = "name: broken\ndocuments:\n  - id: sample\n    type: yaml\n"
+BROKEN_CONFIG = "name: broken\ndocuments:\n  - id: sample\n    schema: schemas/sample.schema.yaml\n"
 IDS_AND_GENERATOR = (
     "ids:\n"
     '  format: "{kind}-{slug}"\n'
@@ -24,7 +24,6 @@ LIST_SCRIPT = (
 )
 AFTER_WRITE_ROW = (
     "  - id: sample\n"
-    "    type: yaml\n"
     "    paths: [docs/*.yaml]\n"
     "    schema: schemas/sample.schema.yaml\n"
     "    after_write: [list]\n"
@@ -97,8 +96,7 @@ def test_normal_when_create(
     """create で ids.format の ID の文書を作り、generators を流す（正常系）。"""
     # 準備
     config = sample_config_text(IDS_AND_GENERATOR).replace(
-        "  - id: sample\n    type: yaml\n    paths: [docs/*.yaml]\n"
-        "    schema: schemas/sample.schema.yaml\n",
+        "  - id: sample\n    paths: [docs/*.yaml]\n    schema: schemas/sample.schema.yaml\n",
         AFTER_WRITE_ROW,
     )
     files = sample_file_set(**{"dev-docs.yaml": config, "scripts/list.py": LIST_SCRIPT})
@@ -570,7 +568,6 @@ def test_error_when_placement_excluded(
     # 準備
     rule_row = (
         "  - id: rule\n"
-        "    type: yaml\n"
         "    paths: [docs/rule/*.yaml]\n"
         "    schema: schemas/sample.schema.yaml\n"
         "    exclude: [index.yaml]\n"
@@ -591,6 +588,62 @@ def test_error_when_placement_excluded(
     assert "docs/rule/index.yaml" in result.text
     assert "exclude" in result.text
     assert not (worktree / "docs" / "rule" / "index.yaml").exists()
+
+
+def test_normal_when_metadata_mapped(
+    make_source: Callable[..., Any],
+    make_server: Callable[..., Any],
+    add_worktree: Callable[..., Path],
+    sample_file_set: Callable[..., dict[str, str]],
+    sample_config_text: Callable[..., str],
+) -> None:
+    """共通のキー名で書く（正常系）。"""
+    # 準備
+    decisions_row = (
+        "  - id: decisions\n"
+        "    paths: [decisions/*.yaml]\n"
+        "    schema: schemas/decision.schema.yaml\n"
+        "    metadata: {name: title}\n"
+    )
+    files = sample_file_set(
+        **{
+            "dev-docs.yaml": sample_config_text(decisions_row),
+            "schemas/decision.schema.yaml": "type: object\nrequired: [id, title]\n",
+            "decisions/d1.yaml": "id: d1\ntitle: 決定 1\n",
+        }
+    )
+    source, env, worktree = _setup(make_source, make_server, add_worktree, files)
+    target = worktree / "decisions" / "d1.yaml"
+
+    def write(*operations: dict[str, Any]) -> Any:
+        return env.call(
+            "write_docs",
+            cwd=str(source.folder),
+            worktree=str(worktree),
+            operations=list(operations),
+        )
+
+    # 実行
+    renamed = write(_update("d1", _version(target), set={"name": "新しい名前"}))
+    renamed_text = target.read_text(encoding="utf-8")
+    created = write({"op": "create", "kind": "decisions", "id": "d2", "data": {"name": "決定 2"}})
+    created_text = (worktree / "decisions" / "d2.yaml").read_text(encoding="utf-8")
+    by_column = write(_update("d1", _version(target), set={"title": "別の名前"}))
+    by_column_text = target.read_text(encoding="utf-8")
+    both = write(_update("d1", _version(target), set={"name": "a", "title": "b"}))
+    # 検証
+    assert renamed.data["results"][0]["status"] == "updated"
+    assert "title: 新しい名前" in renamed.data["results"][0]["diff"]
+    assert "name:" not in renamed_text
+    assert created.data["results"][0]["status"] == "created"
+    assert "title: 決定 2" in created_text
+    assert "name:" not in created_text
+    assert by_column.data["results"][0]["status"] == "updated"
+    assert "title: 別の名前" in by_column_text
+    assert both.is_error
+    assert "InvalidArgumentError" in both.text
+    assert "operations[0].set.name" in both.text
+    assert target.read_text(encoding="utf-8") == by_column_text
 
 
 def test_normal_when_tool_description(

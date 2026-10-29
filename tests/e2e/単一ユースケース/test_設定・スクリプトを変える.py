@@ -3,7 +3,7 @@ from __future__ import annotations
 from collections.abc import Callable
 from typing import Any
 
-BROKEN_CONFIG = "name: sample\ndocuments:\n  - id: sample\n    type: yaml\n    schema: schemas/sample.schema.yaml\n"
+BROKEN_CONFIG = "name: sample\ndocuments:\n  - id: sample\n    schema: schemas/sample.schema.yaml\n"
 CONVERT_OK = "import sys\nsys.stdin.read()\nprint('# 変換した')\n"
 CONVERT_FAILING = "import sys\nprint('変換に失敗した', file=sys.stderr)\nsys.exit(3)\n"
 CONVERTER_EXTRA = (

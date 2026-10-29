@@ -6,7 +6,7 @@ from typing import Any
 
 TEMPLATES = Path(__file__).parents[3] / "templates"
 FILES_SCHEMA = TEMPLATES / "files.schema.yaml"
-BROKEN_CONFIG = "name: broken\ndocuments:\n  - id: sample\n    type: yaml\n"
+BROKEN_CONFIG = "name: broken\ndocuments:\n  - id: sample\n    schema: schemas/sample.schema.yaml\n"
 SYNC_ZERO = {"missing_refs": 0, "unindexed_files": 0, "missing_body_files": 0}
 TOOL_COUNT = 6
 SETUP_PROMPT = "/dev-docs:setup {path}"
@@ -14,13 +14,28 @@ MARKDOWN_FILES = {
     "docs/a.md": "# A\n\nA の説明。\n",
     "docs/b.md": "# B\n\nB の説明。\n",
 }
-NOTES_CONFIG = """\
+UNMIGRATABLE_CONFIG = """\
 version: "1"
+name: notes
+documents:
+  - id: docs
+    type: markdown
+    paths: [docs/**/*.md]
+    schema: schemas/files.schema.yaml
+    defaults:
+      - paths: [docs/**]
+        tags: [doc]
+"""
+SCHEMA_LINE = (
+    "# yaml-language-server: $schema="
+    "https://raw.githubusercontent.com/shuhei1101/dev-docs/v{version}/schemas/dev-docs.schema.json\n"
+)
+NOTES_CONFIG = """\
+version: "2"
 name: notes
 description: メモの配信元
 documents:
   - id: files
-    type: yaml
     paths: [files.yaml]
     title: ファイル
     schema: schemas/files.schema.yaml
@@ -116,10 +131,13 @@ def test_normal_when_non_yaml_range(
         if "node_modules" not in path.parts and ".claude" not in path.parts
     ]
     loaded = load_yaml_file(managed[0])
+    config_text = (notes.folder / "dev-docs.yaml").read_text(encoding="utf-8")
+    config = load_yaml_file(notes.folder / "dev-docs.yaml")
     paths = [row["path"] for row in loaded["files"]]
     found = served.call("search_docs", cwd=str(notes.folder), view="ids", format="json")
     assert not run.result["is_error"]
-    assert (notes.folder / "dev-docs.yaml").is_file()
+    assert config_text.startswith(SCHEMA_LINE.format(version=clone.version))
+    assert all("type" not in row for row in config["documents"])
     assert len(managed) == 1
     assert sorted(Path(path).name for path in paths) == ["a.md", "b.md"]
     assert all(row.get("name") for row in loaded["files"])
@@ -211,3 +229,120 @@ def test_error_when_source_config_invalid(
     assert served.settings.read_bytes() == before
     assert served.get("/_api/sources/sample/docs").status_code == 200
     assert "documents[0].paths" in run.text
+
+
+def _run_setup_for_registered(
+    claude_home: Any,
+    make_clone: Callable[..., Any],
+    make_source: Callable[..., Any],
+    serve: Callable[..., Any],
+    config: str,
+) -> tuple[Any, Any, Any, Any]:
+    """`dev-docs.yaml` を `config` にした登録済みの配信元で `/dev-docs:setup` を動かし、必要な値を返す。"""
+    clone = make_clone()
+    files = {**_registered_files(), "dev-docs.yaml": config}
+    notes = make_source("notes", files, git=False)
+    notes.scope_write = [notes.folder]
+    served = serve(notes, clone=clone.clone, port=claude_home.port)
+    claude_home.set_env(DEV_DOCS_CONFIG=str(served.settings))
+    run = claude_home.run(SETUP_PROMPT.format(path=notes.folder), cwd=notes.folder)
+    return clone, notes, served, run
+
+
+def test_normal_when_schema_line_outdated(
+    claude_home: Any,
+    make_clone: Callable[..., Any],
+    make_source: Callable[..., Any],
+    serve: Callable[..., Any],
+) -> None:
+    """`dev-docs.yaml` の 1 行目のスキーマの行のタグが古いと、クローンのバージョンに書き換える（正常系）。"""
+    # 準備・実行
+    outdated = SCHEMA_LINE.format(version="0.0.1") + NOTES_CONFIG
+    clone, notes, served, run = _run_setup_for_registered(
+        claude_home, make_clone, make_source, serve, outdated
+    )
+    # 検証
+    lines = (notes.folder / "dev-docs.yaml").read_text(encoding="utf-8").splitlines(keepends=True)
+    checked = served.call_admin("check_project", path=str(notes.folder), format="json")
+    assert not run.result["is_error"]
+    assert lines[0] == SCHEMA_LINE.format(version=clone.version)
+    assert "".join(lines[1:]) == NOTES_CONFIG
+    assert checked.data.get("violations", []) == []
+
+
+def test_normal_when_schema_line_missing(
+    claude_home: Any,
+    make_clone: Callable[..., Any],
+    make_source: Callable[..., Any],
+    serve: Callable[..., Any],
+) -> None:
+    """`dev-docs.yaml` の 1 行目にスキーマの行が無いと、クローンのバージョンのタグで入れる（正常系）。"""
+    # 準備・実行
+    clone, notes, served, run = _run_setup_for_registered(
+        claude_home, make_clone, make_source, serve, NOTES_CONFIG
+    )
+    # 検証
+    text = (notes.folder / "dev-docs.yaml").read_text(encoding="utf-8")
+    checked = served.call_admin("check_project", path=str(notes.folder), format="json")
+    assert not run.result["is_error"]
+    assert text == SCHEMA_LINE.format(version=clone.version) + NOTES_CONFIG
+    assert checked.data.get("violations", []) == []
+
+
+def test_normal_when_source_config_unmigratable(
+    claude_home: Any,
+    make_clone: Callable[..., Any],
+    make_source: Callable[..., Any],
+    serve: Callable[..., Any],
+    load_yaml_file: Callable[[Path], Any],
+) -> None:
+    """`dev-docs migrate --source` が止まった移せない設定を、管理用の YAML の行へ移す（正常系）。"""
+    # 準備
+    clone = make_clone()
+    markdown = {
+        "docs/a.md": "---\nname: 文書 A\n---\n# A\n\nA の本文。\n",
+        "docs/b.md": "---\nname: 文書 B\n---\n# B\n\nB の本文。\n",
+    }
+    notes = make_source(
+        "notes",
+        {
+            "dev-docs.yaml": UNMIGRATABLE_CONFIG,
+            "schemas/files.schema.yaml": FILES_SCHEMA.read_text(encoding="utf-8"),
+            **markdown,
+        },
+        git=False,
+    )
+    notes.scope_write = [notes.folder]
+    served = serve(notes, clone=clone.clone, port=claude_home.port)
+    claude_home.set_env(DEV_DOCS_CONFIG=str(served.settings))
+    migrated = clone.migrate(served.settings, "--source", str(notes.folder / "dev-docs.yaml"))
+    # 実行
+    run = claude_home.run(SETUP_PROMPT.format(path=notes.folder), cwd=notes.folder)
+    # 検証
+    config_text = (notes.folder / "dev-docs.yaml").read_text(encoding="utf-8")
+    config = load_yaml_file(notes.folder / "dev-docs.yaml")
+    rows = {
+        row["path"]: row for row in load_yaml_file(next(notes.folder.rglob("files.yaml")))["files"]
+    }
+    checked = served.call_admin("check_project", path=str(notes.folder), format="json")
+    reloaded = served.call_admin("reload")
+    found = served.call("search_docs", cwd=str(notes.folder), view="summary", format="json")
+    assert migrated.returncode != 0
+    assert not run.result["is_error"]
+    assert sorted(Path(path).name for path in rows) == ["a.md", "b.md"]
+    assert {Path(path).name: row["name"] for path, row in rows.items()} == {
+        "a.md": "文書 A",
+        "b.md": "文書 B",
+    }
+    assert all(row["tags"] == ["doc"] for row in rows.values())
+    assert "type" not in config["documents"][0]
+    assert "defaults" not in config["documents"][0]
+    assert config["documents"][0]["records"] == "files"
+    assert config["documents"][0]["body_file"] == "path"
+    assert config["version"] == "2"
+    assert config_text.startswith(SCHEMA_LINE.format(version=clone.version))
+    for name, text in markdown.items():
+        assert (notes.folder / name).read_text(encoding="utf-8") == text.split("---\n", 2)[2]
+    assert checked.data.get("violations", []) == []
+    assert not reloaded.is_error
+    assert sorted(item["values"]["name"] for item in found.data["items"]) == ["文書 A", "文書 B"]

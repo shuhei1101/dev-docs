@@ -3,7 +3,7 @@ from __future__ import annotations
 from collections.abc import Callable
 from typing import Any
 
-BROKEN_CONFIG = "name: broken\ndocuments:\n  - id: sample\n    type: yaml\n"
+BROKEN_CONFIG = "name: broken\ndocuments:\n  - id: sample\n    schema: schemas/sample.schema.yaml\n"
 INSTRUCTIONS = "この配信元の文書は、まず概要を読んでから個別の文書を開く。"
 
 
@@ -43,10 +43,22 @@ def test_normal_when_source(
     assert "| sample |" in result.text
 
 
-def test_normal_when_kind(make_source: Callable[..., Any], make_server: Callable[..., Any]) -> None:
-    """source と kind で種類のスキーマを YAML のまま返す（正常系）。"""
+def test_normal_when_kind(
+    make_source: Callable[..., Any],
+    make_server: Callable[..., Any],
+    sample_file_set: Callable[..., dict[str, str]],
+    sample_config_text: Callable[..., str],
+) -> None:
+    """source と kind で種類のスキーマと、共通のキーと列名の対応を返す（正常系）。"""
     # 準備
-    sample = make_source("sample")
+    extra = (
+        "    metadata: {name: title, description: meta.summary}\n"
+        "  - id: plain\n"
+        "    paths: [plain/*.yaml]\n"
+        "    schema: schemas/sample.schema.yaml\n"
+    )
+    files = sample_file_set(**{"dev-docs.yaml": sample_config_text(extra)})
+    sample = make_source("sample", files)
     env = make_server(sample)
     schema = (sample.folder / "schemas" / "sample.schema.yaml").read_text(encoding="utf-8")
     # 実行
@@ -54,11 +66,21 @@ def test_normal_when_kind(make_source: Callable[..., Any], make_server: Callable
     as_json = env.call(
         "describe", cwd=str(sample.folder), source="sample", kind="sample", format="json"
     )
+    plain_markdown = env.call("describe", cwd=str(sample.folder), source="sample", kind="plain")
+    plain_json = env.call(
+        "describe", cwd=str(sample.folder), source="sample", kind="plain", format="json"
+    )
     # 検証
     assert schema.strip() in markdown.text
+    assert "| name | title |" in markdown.text
+    assert "| description | meta.summary |" in markdown.text
+    assert markdown.text.index("| name | title |") < markdown.text.index(schema.strip())
     assert as_json.structured is not None
     assert as_json.structured == as_json.data
     assert as_json.data["schema"]["properties"]["name"]["type"] == "string"
+    assert as_json.data["metadata"] == {"name": "title", "description": "meta.summary"}
+    assert "共通のキー" not in plain_markdown.text
+    assert plain_json.data.get("metadata", {}) == {}
 
 
 def test_error_when_source_not_readable(
@@ -71,7 +93,7 @@ def test_error_when_source_not_readable(
         "other",
         {
             "dev-docs.yaml": "name: other\ninstructions: 秘密の説明書\n"
-            "documents:\n  - id: sample\n    type: yaml\n    paths: [docs/*.yaml]\n"
+            "documents:\n  - id: sample\n    paths: [docs/*.yaml]\n"
             "    schema: schemas/sample.schema.yaml\n",
             "schemas/sample.schema.yaml": "type: object\n",
             "docs/doc-1.yaml": "id: doc-1\n",

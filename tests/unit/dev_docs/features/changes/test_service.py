@@ -17,6 +17,7 @@ from dev_docs.features.changes.types import (
 )
 from dev_docs.features.documents.store import DocumentStore
 from dev_docs.features.history.snapshot import SnapshotStore
+from dev_docs.features.search.types import Condition
 from dev_docs.features.seen.store import SeenStore
 from dev_docs.features.seen.types import SessionKey
 from dev_docs.features.sources.registry import SourceRegistry
@@ -59,7 +60,7 @@ def env(
 ) -> ChangesEnv:
     """文書 1・2 を commit した git リポジトリの配信元を持つ部品を返す。"""
     clone = git_repo({"docs/doc-1.yaml": DOC_1, "docs/doc-2.yaml": DOC_2})
-    table = DocumentTable(id="rules", type="yaml", paths=["docs/*.yaml"])
+    table = DocumentTable(id="rules", paths=["docs/*.yaml"], schema_path="schemas/rule.schema.yaml")
     source = make_served_source(
         id="sample",
         root=clone,
@@ -116,7 +117,11 @@ def body_file_env(
     """`a.md` を指す索引 `index.yaml`（`records`・`body_file`）を持つ git リポジトリの配信元を返す。"""
     clone = git_repo({"index.yaml": "items:\n  - path: a.md\n", "a.md": "a の本文\n"})
     table = DocumentTable(
-        id="src", type="yaml", paths=["index.yaml"], records="items", body_file="path"
+        id="src",
+        paths=["index.yaml"],
+        schema_path="schemas/rule.schema.yaml",
+        records="items",
+        body_file="path",
     )
     source = make_served_source(
         id="sample",
@@ -145,9 +150,16 @@ def excluded_env(
 ) -> ChangesEnv:
     """README を除外する行 `rule` と、README を集める行 `index` を持つ git リポジトリの配信元を返す。"""
     clone = git_repo({"docs/note.txt": "メモ\n"})
-    # 除外が効かないと README を最初の行 `rule` が YAML として読み、文書にならない
-    rule = DocumentTable(id="rule", type="yaml", paths=["docs/rule/*.md"], exclude=["README.md"])
-    index = DocumentTable(id="index", type="markdown", paths=["docs/**/README.md"])
+    # 除外が効かないと README を最初の行 `rule` が読み、種類が `rule` の文書になる
+    rule = DocumentTable(
+        id="rule",
+        paths=["docs/rule/*.md"],
+        schema_path="schemas/rule.schema.yaml",
+        exclude=["README.md"],
+    )
+    index = DocumentTable(
+        id="index", paths=["docs/**/README.md"], schema_path="schemas/rule.schema.yaml"
+    )
     source = make_served_source(
         id="sample",
         root=clone,
@@ -247,9 +259,11 @@ def test_list_changes_when_excluded(
     """除外の名前に当たるファイルは次の行へ進む（正常系）。"""
     # 準備
     first = run_git(excluded_env.clone, "rev-parse", "HEAD").strip()
-    commit_all(excluded_env.clone, {"docs/rule/README.md": "# 目次\n"})
+    commit_all(excluded_env.clone, {"docs/rule/README.md": "title: 目次\n"})
     # 実行
-    result = excluded_env.list(**{"from": first})
+    result = excluded_env.list(
+        **{"from": first, "filter": Condition(field="kind", op="eq", values=["index"])}
+    )
     # 検証
     assert [(item.id, item.change) for item in result.items] == [("docs/rule/README", "added")]
 
@@ -384,3 +398,50 @@ def test_list_changes_when_contains_body_file(
     assert second_changes is not None
     assert [(change.kind, change.to.commit) for change in first_changes] == [("added", first[:7])]
     assert [(change.kind, change.to.commit) for change in second_changes] == [("added", third[:7])]
+
+
+def test_list_changes_when_last_read_body_file(
+    tmp_path: Path,
+    write_files: Callable[[Path, dict[str, str]], None],
+    make_source_config: Callable[..., SourceConfig],
+    make_served_source: Callable[..., ServedSource],
+    make_registry: Callable[..., SourceRegistry],
+    make_target: Callable[..., Target],
+) -> None:
+    """前回読んだ Markdown の本文の変化（正常系）。"""
+    # 準備
+    root = tmp_path / "ws"
+    write_files(
+        root,
+        {
+            "notes/files.yaml": "files:\n  - path: a.md\n  - path: b.md\n",
+            "notes/a.md": "a の本文\n",
+            "notes/b.md": "b の本文\n",
+        },
+    )
+    table = DocumentTable(
+        id="notes",
+        paths=["notes/files.yaml"],
+        schema_path="schemas/rule.schema.yaml",
+        records="files",
+        body_file="path",
+    )
+    source = make_served_source(
+        id="sample", root=root, config=make_source_config(documents=[table])
+    )
+    env = ChangesEnv(
+        registry=make_registry(source),
+        store=DocumentStore(SnapshotStore(tmp_path / "snapshots")),
+        seen=SeenStore(tmp_path / "seen.sqlite3", retention_days=7),
+        source=source,
+        clone=root,
+    )
+    documents = env.store.get(make_target(source), ["notes/a", "notes/b"])
+    env.seen.mark_returned(SessionKey("s1"), "sample", "body", documents)
+    (root / "notes/a.md").write_text("a の本文を書き換えた\n", encoding="utf-8")
+    # 実行
+    result = env.list(session_id="s1")
+    # 検証
+    assert [(item.id, item.change, item.keys) for item in result.items] == [
+        ("notes/a", "modified", ["body"])
+    ]

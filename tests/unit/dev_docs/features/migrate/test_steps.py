@@ -55,7 +55,7 @@ def test_load_steps_when_none(write_steps: Callable[..., None]) -> None:
 def test_load_steps_when_invalid_op(write_steps: Callable[..., None]) -> None:
     """知らない操作（異常系）。"""
     # 準備
-    write_steps("settings", "2", [{"op": "move", "path": "a", "description": "動かす"}])
+    write_steps("settings", "2", [{"op": "copy", "path": "a", "description": "複製する"}])
     # 実行・検証
     with pytest.raises(MigrationFailedError, match=r"2/steps\.yaml"):
         load_steps("settings", mine="1", current="2")
@@ -109,3 +109,87 @@ def test_apply_step_when_rename_conflict() -> None:
     # 実行・検証
     with pytest.raises(MigrationFailedError):
         apply_step(data, _step("rename", "a", to="b"))
+
+
+def test_apply_step_when_delete_value() -> None:
+    """値が一致するときだけ削除する（正常系）。"""
+    # 準備
+    data = load_roundtrip("documents:\n  - id: a\n    type: yaml\n  - id: b\n    type: markdown\n")
+    step = _step("delete", "documents[].type", value="yaml")
+    # 実行
+    apply_step(data, step)
+    # 検証
+    assert "type" not in data["documents"][0]
+    assert data["documents"][1]["type"] == "markdown"
+
+
+def test_apply_step_when_lift() -> None:
+    """値を行へ引き上げる（正常系）。"""
+    # 準備
+    data = load_roundtrip(
+        "documents:\n"
+        "  - id: a\n"
+        "    metadata:\n"
+        "      alias_type: {type: custom, value: term}\n"
+        "  - id: b\n"
+        "    metadata:\n"
+        "      name: {type: ref, field: title}\n"
+        "      alias_type: {type: custom, value: term}\n"
+    )
+    step = _step(
+        "lift",
+        "documents[].metadata.alias_type",
+        to="alias_type",
+        match={"type": "custom"},
+        take="value",
+    )
+    # 実行
+    apply_step(data, step)
+    # 検証
+    rows = data["documents"]
+    assert [row["alias_type"] for row in rows] == ["term", "term"]
+    assert "metadata" not in rows[0]
+    assert list(rows[1]["metadata"]) == ["name"]
+
+
+def test_apply_step_when_unwrap() -> None:
+    """辞書の値を列名にする（正常系）。"""
+    # 準備
+    data = load_roundtrip(
+        "documents:\n"
+        "  - id: a\n"
+        "    metadata:\n"
+        "      name: {type: ref, field: title}\n"
+        "      summary: {type: ref}\n"
+        "      tags: {type: custom, value: [a]}\n"
+    )
+    step = _step("unwrap", "documents[].metadata.*", match={"type": "ref"}, take="field")
+    # 実行
+    apply_step(data, step)
+    # 検証
+    metadata = data["documents"][0]["metadata"]
+    assert metadata["name"] == "title"
+    assert metadata["summary"] == "summary"
+    assert metadata["tags"]["type"] == "custom"
+
+
+def test_apply_step_when_lift_conflict() -> None:
+    """引き上げ先が既にある（異常系）。"""
+    # 準備
+    data = load_roundtrip(
+        "documents:\n"
+        "  - id: a\n"
+        "    alias_type: doc\n"
+        "    metadata:\n"
+        "      alias_type: {type: custom, value: term}\n"
+    )
+    step = _step(
+        "lift",
+        "documents[].metadata.alias_type",
+        to="alias_type",
+        match={"type": "custom"},
+        take="value",
+    )
+    # 実行・検証
+    with pytest.raises(MigrationFailedError):
+        apply_step(data, step)

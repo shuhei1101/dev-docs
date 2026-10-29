@@ -243,6 +243,11 @@ YAML として読めないファイルがあっても、そのファイルを除
 
 <!-- /table -->
 
+`data`・`set`・`add_to`・`remove_from` のキーと、`unset`・`text_edits[].field` の項目のパスの先頭のキーは、種類の行の `metadata` に書いた共通のキー（`name` など）なら、対応する列名（入れ子は `.` でつないだパス）に読み替えてから当てます。
+列名をそのまま渡したキーと、`metadata` に書いていないキーは読み替えません。
+共通のキーとその列名を同じ操作に両方渡すと、`InvalidArgumentError` です。
+種類ごとの対応は `describe(source, kind)` で引けます。
+
 全ての操作を当ててから 1 回だけ検証し、通ったときだけ一時ファイルに書いてから置き換えます。
 読み込み・検査・書き込みは配信元ごとの排他ロックの中で行い、書いた後に `generators[]` を流します。
 
@@ -271,7 +276,12 @@ Git 管理外の配信元では、種類の `documents[].writable` が削除を�
 | --- | --- |
 | なし | 今の作業場所から使える配信元の一覧（`id`・権限 `read` / `write`・作業中か・`description`）と、作業場所 |
 | `source` | その配信元の説明書（`instructions`）と種類（`kinds[]`）の一覧 |
-| `source`・`kind` | その種類のスキーマ（YAML のまま） |
+| `source`・`kind` | その種類の共通のキーと列名の対応（`metadata`）と、スキーマ（YAML のまま） |
+
+`metadata` は、種類の行の `metadata` をそのまま返します。
+`markdown` ではスキーマの前に「共通のキー | 列名」の表で出し、`json` では `metadata` に `{name: title}` の形で入れます。
+対応を持たない種類では、表を出さず、`json` の `metadata` は空です。
+書いていないキーは、同じ名前の列を読みます。
 
 説明書には配信元に固有のことだけが記載されます。
 タグの一覧・文書の件数は `search_docs` の `group_by`・`view: count` で取ります。
@@ -350,7 +360,7 @@ Git 管理外の配信元では、種類の `documents[].writable` が削除を�
 | SourceNotServedError | 起動時の検証で外したか `enabled: false` の配信元を指した | 違反したキーのパスと理由 |
 | WorktreeNotMatchedError | `worktree` が配信元の `worktrees` に当たらない | 渡したパスと `worktrees` の値 |
 | TargetIsCloneError | Git の配信元で、書く先がクローン本体になる | `worktree` でワークツリーを指すこと |
-| InvalidArgumentError | `filter`・`order_by`・`group_by`・Operation の中の知らない項目・型の合わない値、50 件を超える操作、必須のキーの欠け、`text_edits` の `old` が 1 か所に一致しない、`ref` を渡せない配信元に `ref`・`from`・`to` を渡した、`create` の置き場所のファイル名が `documents[].exclude[]` に当たる、束が `and`・`or`・`not` のキーを 2 つ以上持つ、`@matches` を条件に使った、`sections` と `lines` を同時に渡した、`view: full` 以外で `sections`・`lines` を渡した、`lines` の `offset`・`limit` が 1 未満、`contains.value` が空、`contains.regex: true` で `value` が正規表現として読めない | 項目のパス・期待する型・実際の値と、`describe(source, kind)` でスキーマを見ること |
+| InvalidArgumentError | `filter`・`order_by`・`group_by`・Operation の中の知らない項目・型の合わない値、50 件を超える操作、必須のキーの欠け、`text_edits` の `old` が 1 か所に一致しない、`ref` を渡せない配信元に `ref`・`from`・`to` を渡した、`create` の置き場所のファイル名が `documents[].exclude[]` に当たる、共通のキーとその列名を同じ操作に両方渡した、束が `and`・`or`・`not` のキーを 2 つ以上持つ、`@matches` を条件に使った、`sections` と `lines` を同時に渡した、`view: full` 以外で `sections`・`lines` を渡した、`lines` の `offset`・`limit` が 1 未満、`contains.value` が空、`contains.regex: true` で `value` が正規表現として読めない | 項目のパス・期待する型・実際の値と、`describe(source, kind)` でスキーマを見ること |
 | RefNotFoundError | `ref`・`from`・`to` を commit に解決できない | 解決できなかった値 |
 | UnknownKindError | `kind` が配信元の種類に無い | その配信元の種類の一覧 |
 | DocumentNotFoundError | 指した ID の文書が無い | 見つからなかった ID と、近い ID の候補 |

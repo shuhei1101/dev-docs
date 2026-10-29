@@ -25,14 +25,16 @@ LIST_SCRIPT = (
 )
 AFTER_WRITE_ROW = (
     "  - id: sample\n"
-    "    type: yaml\n"
     "    paths: [docs/*.yaml]\n"
     "    schema: schemas/sample.schema.yaml\n"
     "    after_write: [list]\n"
 )
-SAMPLE_ROW = (
-    "  - id: sample\n    type: yaml\n    paths: [docs/*.yaml]\n"
-    "    schema: schemas/sample.schema.yaml\n"
+SAMPLE_ROW = "  - id: sample\n    paths: [docs/*.yaml]\n    schema: schemas/sample.schema.yaml\n"
+DECISIONS_ROW = (
+    "  - id: decisions\n"
+    "    paths: [decisions/*.yaml]\n"
+    "    schema: schemas/decision.schema.yaml\n"
+    "    metadata: {name: title}\n"
 )
 
 
@@ -377,7 +379,6 @@ def test_error_when_placement_excluded(
     # 準備
     rule_row = (
         "  - id: rule\n"
-        "    type: yaml\n"
         "    paths: [docs/rule/*.yaml]\n"
         "    schema: schemas/sample.schema.yaml\n"
         "    exclude: [index.yaml]\n"
@@ -399,3 +400,61 @@ def test_error_when_placement_excluded(
     assert "exclude" in result.text
     assert "fix" in result.text
     assert not (worktree / "docs" / "rule" / "index.yaml").exists()
+
+
+def test_normal_when_metadata_mapped(
+    make_source: Callable[..., Any],
+    serve: Callable[..., Any],
+    add_worktree: Callable[..., Path],
+    sample_file_set: Callable[..., dict[str, str]],
+    sample_config_text: Callable[..., str],
+) -> None:
+    """共通のキー名で書く（正常系）。"""
+    # 準備
+    files = sample_file_set(
+        **{
+            "dev-docs.yaml": sample_config_text(DECISIONS_ROW),
+            "schemas/decision.schema.yaml": "type: object\nrequired: [id, title]\n",
+            "decisions/d1.yaml": "id: d1\ntitle: 決定 1\n",
+        }
+    )
+    source, served, worktree = _setup(make_source, serve, add_worktree, files)
+    target = worktree / "decisions" / "d1.yaml"
+    arguments = {"cwd": str(source.folder), "worktree": str(worktree)}
+    # 実行
+    renamed = served.call(
+        "write_docs",
+        operations=[_update("d1", _version(target), set={"name": "新しい名前"})],
+        **arguments,
+    )
+    renamed_text = target.read_text(encoding="utf-8")
+    searched = served.call(
+        "search_docs",
+        filter={"field": "id", "op": "eq", "values": ["d1"]},
+        view="summary",
+        format="json",
+        **arguments,
+    )
+    created = served.call(
+        "write_docs",
+        operations=[{"op": "create", "kind": "decisions", "id": "d2", "data": {"name": "決定 2"}}],
+        **arguments,
+    )
+    created_text = (worktree / "decisions" / "d2.yaml").read_text(encoding="utf-8")
+    by_column = served.call(
+        "write_docs",
+        operations=[_update("d1", _version(target), set={"title": "別の名前"})],
+        **arguments,
+    )
+    by_column_text = target.read_text(encoding="utf-8")
+    # 検証
+    assert not renamed.is_error
+    assert "title: 新しい名前" in renamed_text
+    assert "name:" not in renamed_text
+    assert searched.data["items"][0]["values"]["name"] == "新しい名前"
+    assert not created.is_error
+    assert "title: 決定 2" in created_text
+    assert "name:" not in created_text
+    assert not by_column.is_error
+    assert "title: 別の名前" in by_column_text
+    assert "name:" not in by_column_text

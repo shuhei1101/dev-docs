@@ -3,10 +3,12 @@
 from __future__ import annotations
 
 import copy
-from collections.abc import Mapping, MutableMapping
+import re
+from collections.abc import Iterable, Mapping, MutableMapping
 from typing import Any, cast
 
 from dev_docs.features.documents.fields import delete_field, get_field, set_field
+from dev_docs.features.sources.types import DocumentTable
 from dev_docs.features.write.types import Operation
 from dev_docs.shared.errors import InvalidArgumentError, Violation
 
@@ -91,3 +93,66 @@ def apply_operation(current: Mapping[str, Any] | None, operation: Operation) -> 
     if violations:
         raise InvalidArgumentError(message="操作を当てられません", violations=violations)
     return content
+
+
+HEAD_PATTERN = re.compile(r"^([^.\[\]]+)(.*)$")
+
+
+def _to_column(path: str, metadata: Mapping[str, str]) -> str:
+    """項目のパスの先頭のキーが共通のキーなら、列名のパスに置き換える。"""
+    matched = HEAD_PATTERN.match(path)
+    if matched is None or matched.group(1) not in metadata:
+        return path
+    return metadata[matched.group(1)] + matched.group(2)
+
+
+def _check_overlap(
+    paths: Iterable[str], metadata: Mapping[str, str], *, item: str, index: int
+) -> None:
+    """共通のキーと、その列名を同じ項目に両方渡していないかを確かめる。"""
+    given = list(paths)
+    violations = [
+        Violation(
+            path=f"operations[{index}].{item}.{path}",
+            rule=f"{path} と {_to_column(path, metadata)} は同じ列を指します",
+            fix="どちらか 1 つだけを渡してください",
+        )
+        for path in given
+        if (column := _to_column(path, metadata)) != path and column in given
+    ]
+    if violations:
+        raise InvalidArgumentError(
+            message=f"引数が正しくありません: {len(violations)} 件", violations=violations
+        )
+
+
+def to_columns(operation: Operation, table: DocumentTable, *, index: int) -> Operation:
+    """操作のキーのうち、種類の行の `metadata` に書いた共通のキーを列名へ読み替えた操作を返す。"""
+    metadata = table.metadata
+    if not metadata:
+        return operation
+    for item in ("set", "add_to", "remove_from"):
+        _check_overlap(getattr(operation, item), metadata, item=item, index=index)
+    _check_overlap(operation.unset, metadata, item="unset", index=index)
+    update: dict[str, Any] = {
+        "set": {_to_column(path, metadata): value for path, value in operation.set.items()},
+        "add_to": {_to_column(path, metadata): value for path, value in operation.add_to.items()},
+        "remove_from": {
+            _to_column(path, metadata): value for path, value in operation.remove_from.items()
+        },
+        "unset": [_to_column(path, metadata) for path in operation.unset],
+        "text_edits": [
+            edit.model_copy(update={"field": _to_column(edit.field, metadata)})
+            for edit in operation.text_edits
+        ],
+    }
+    if operation.data is not None:
+        _check_overlap(operation.data, metadata, item="data", index=index)
+        data: dict[str, Any] = {}
+        for key, value in operation.data.items():
+            if key in metadata:
+                set_field(data, metadata[key], copy.deepcopy(value))
+            else:
+                data[key] = copy.deepcopy(value)
+        update["data"] = data
+    return operation.model_copy(update=update)

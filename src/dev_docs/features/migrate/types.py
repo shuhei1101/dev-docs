@@ -24,16 +24,18 @@ class MigrationStep:
     """`steps.yaml` の 1 行。"""
 
     version: str
-    op: Literal["rename", "add", "delete"]
+    op: Literal["rename", "add", "delete", "lift", "unwrap"]
     path: str
     description: str
     to: str | None = None
     value: Any = None
+    match: dict[str, Any] | None = None
+    take: str | None = None
 
     @property
     def destructive(self) -> bool:
-        """値を捨てる手順か。"""
-        return self.op == "delete"
+        """値を捨てる手順か（値を指さない削除）。"""
+        return self.op == "delete" and self.value is None
 
 
 @dataclass(frozen=True)

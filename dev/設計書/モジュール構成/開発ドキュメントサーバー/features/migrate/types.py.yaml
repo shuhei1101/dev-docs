@@ -7,7 +7,7 @@ data_models:
     usecase: 設定の移し替え
     role: DTO
     summary: '`steps.yaml` の 1 行'
-    description: '`dataclass(frozen=True)`。`steps.yaml` は `steps:` の下に `op`・`path`・`to`・`value`・`description` を持つ行を並べる。'
+    description: '`dataclass(frozen=True)`。`steps.yaml` は `steps:` の下に `op`・`path`・`to`・`value`・`match`・`take`・`description` を持つ行を並べる。'
     properties:
       - name: version
         title: バージョン
@@ -15,26 +15,36 @@ data_models:
         description: 手順を当てた後の `version`（手順のフォルダ名）
       - name: op
         title: 操作
-        type: Literal['rename', 'add', 'delete']
-        description: キーの改名・既定値つきの追加・削除
+        type: Literal['rename', 'add', 'delete', 'lift', 'unwrap']
+        description: キーの改名・既定値つきの追加・削除・値の引き上げ・値の取り出し
       - name: path
         title: キーのパス
         type: str
-        description: ドットで結ぶ。配列の要素の子は `sources[].scope`
+        description: ドットで結ぶ。配列の要素の子は `sources[].scope`。末尾の `*` は親の辞書の全てのキー
       - name: to
         title: 新しいキー
         type: str | None
         default: None
-        description: '`rename` のときだけ。同じ親の下のキー名'
+        description: '`rename` では同じ親の下のキー名、`lift` では親の辞書を持つ辞書の下のキー名'
       - name: value
-        title: 既定値
+        title: 値
         type: Any
         default: None
-        description: '`add` のときだけ。既にキーがあれば書き換えない'
+        description: '`add` では既定値（既にキーがあれば書き換えない）、`delete` では消す値（値が一致するときだけ消す）'
       - name: description
         title: 説明
         type: str
         description: '`--plan` に出す 1 行'
+      - name: match
+        title: 当てる値の条件
+        type: dict[str, Any] | None
+        default: None
+        description: '`lift`・`unwrap` で、値が辞書でこのキーと値を全て持つときだけ当てる。無ければ辞書の値に当てる'
+      - name: take
+        title: 取り出すキー
+        type: str | None
+        default: None
+        description: '`lift`・`unwrap` で、辞書の値から取り出すキー。`unwrap` で辞書がこのキーを持たないときは元のキー名を使う'
     methods:
       - name: destructive
         title: 破壊的か
@@ -43,8 +53,8 @@ data_models:
         scope: public
         returns:
           type: bool
-          description: '`op` が `delete` なら `True`'
-        process: 1. `op == "delete"` を返す
+          description: '`op` が `delete` で `value` が `None` なら `True`'
+        process: 1. `op == "delete" and value is None` を返す
   - name: MigrationTarget
     title: 移し替えの対象
     container: features/migrate/types.py

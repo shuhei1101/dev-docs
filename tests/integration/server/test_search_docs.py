@@ -6,10 +6,16 @@ from pathlib import Path
 from typing import Any
 
 FILES_SCHEMA = Path(__file__).parents[3] / "templates" / "files.schema.yaml"
-BROKEN_CONFIG = "name: broken\ndocuments:\n  - id: sample\n    type: yaml\n"
+BROKEN_CONFIG = "name: broken\ndocuments:\n  - id: sample\n    schema: schemas/sample.schema.yaml\n"
 BY_ID = {"field": "id", "op": "eq", "values": ["doc-2", "doc-1"]}
 DOC_1 = {"field": "id", "op": "eq", "values": ["doc-1"]}
-NOTES_ROWS = "  - id: notes\n    type: markdown\n    paths: [notes/**/*.md]\n"
+NOTES_ROWS = (
+    "  - id: notes\n"
+    "    paths: [notes/**/files.yaml]\n"
+    "    schema: schemas/sample.schema.yaml\n"
+    "    records: files\n"
+    "    body_file: path\n"
+)
 SEARCH_WORD = {"field": "body", "op": "contains", "values": ["検索"]}
 IN_ARCHIVE = {"field": "@path", "op": "glob", "values": ["notes/archive/**"]}
 NOTES_A = {"field": "id", "op": "eq", "values": ["notes/a"]}
@@ -19,9 +25,23 @@ def _notes_files(
     sample_file_set: Callable[..., dict[str, str]],
     sample_config_text: Callable[..., str],
     notes: dict[str, str],
+    tagged: tuple[str, ...] = (),
 ) -> dict[str, str]:
-    """sample の文書 2 件を除き、Markdown の文書の行 `notes` と notes の文書を持つファイル一式を作る。"""
-    files = sample_file_set(**{"dev-docs.yaml": sample_config_text(NOTES_ROWS), **notes})
+    """sample の文書 2 件を除き、管理用の YAML で Markdown を配信する行 `notes` と notes の文書を持つファイル一式を作る。
+
+    管理用の YAML はフォルダごとに `files.yaml` を置き、`tagged` に挙げたファイルにはタグ `x` を付ける。
+    """
+    indexes: dict[str, list[str]] = {}
+    for name in notes:
+        folder, _, base = name.rpartition("/")
+        tags = "    tags: [x]\n" if name in tagged else ""
+        indexes.setdefault(folder, []).append(f"  - path: {base}\n{tags}")
+    index_files = {
+        f"{folder}/files.yaml": "files:\n" + "".join(rows) for folder, rows in indexes.items()
+    }
+    files = sample_file_set(
+        **{"dev-docs.yaml": sample_config_text(NOTES_ROWS), **index_files, **notes}
+    )
     return {name: text for name, text in files.items() if not name.startswith("docs/")}
 
 
@@ -328,14 +348,10 @@ def test_normal_when_files_index(
     # 準備
     src_row = (
         "  - id: src\n"
-        "    type: yaml\n"
         "    paths: [src/files.yaml]\n"
         "    schema: schemas/files.schema.yaml\n"
         "    records: files\n"
         "    body_file: path\n"
-        "    defaults:\n"
-        "      - paths: [src/**]\n"
-        "        tags: [code]\n"
     )
     files = sample_file_set(
         **{
@@ -343,7 +359,7 @@ def test_normal_when_files_index(
             "schemas/files.schema.yaml": FILES_SCHEMA.read_text(encoding="utf-8"),
             "docs/doc-2.yaml": "id: doc-2\n",
             "src/files.yaml": (
-                "files:\n  - path: a.py\n    tags: [auth]\n  - path: b.py\n    name: 部品 B\n"
+                "files:\n  - path: a.py\n    tags: [auth, code]\n  - path: b.py\n    name: 部品 B\n"
             ),
             "src/a.py": "a = 1\n",
             "src/b.py": "b = 2\n",
@@ -371,7 +387,7 @@ def test_normal_when_files_index(
     names = {row["id"]: row["values"]["name"] for row in everything.data["items"]}
     assert item["id"] == "src/a"
     assert item["values"]["name"] == "a"
-    assert item["values"]["tags"] == ["code", "auth"]
+    assert item["values"]["tags"] == ["auth", "code"]
     assert item["values"]["path"] == "a.py"
     assert item["path"] == f"{source.folder}/src/a.py"
     assert item["scope"] == "full"
@@ -543,19 +559,19 @@ def test_normal_when_excluded_name(
     # 準備
     rows = (
         "  - id: rule\n"
-        "    type: markdown\n"
-        "    paths: [docs/rule/*.md]\n"
-        "    exclude: [README.md]\n"
+        "    paths: [docs/rule/*.yaml]\n"
+        "    schema: schemas/sample.schema.yaml\n"
+        "    exclude: [index.yaml]\n"
         "  - id: index\n"
-        "    type: markdown\n"
-        "    paths: [docs/**/README.md]\n"
+        "    paths: [docs/**/index.yaml]\n"
+        "    schema: schemas/sample.schema.yaml\n"
     )
     files = sample_file_set(
         **{
             "dev-docs.yaml": sample_config_text(rows),
-            "docs/rule/a.md": "# a\n",
-            "docs/rule/Rb.md": "# Rb\n",
-            "docs/rule/README.md": "# 目次\n",
+            "docs/rule/a.yaml": "id: a\nname: a\n",
+            "docs/rule/Rb.yaml": "id: Rb\nname: Rb\n",
+            "docs/rule/index.yaml": "id: rule-index\nname: 目次\n",
         }
     )
     source = make_source("sample", files)
@@ -576,8 +592,8 @@ def test_normal_when_excluded_name(
         format="json",
     )
     # 検証
-    assert [item["id"] for item in rule.data["items"]] == ["docs/rule/a", "docs/rule/Rb"]
-    assert [item["id"] for item in index.data["items"]] == ["docs/rule/README"]
+    assert [item["id"] for item in rule.data["items"]] == ["a", "Rb"]
+    assert [item["id"] for item in index.data["items"]] == ["rule-index"]
 
 
 def test_normal_when_ordered_by_matches(
@@ -589,11 +605,12 @@ def test_normal_when_ordered_by_matches(
     """not・glob で絞り、@matches を返してよく当たる順に並べる（正常系）。"""
     # 準備
     notes = {
-        "notes/a.md": "---\ntags: [x]\n---\n検索 1\n検索 2\n検索 3\n他\n",
+        "notes/a.md": "検索 1\n検索 2\n検索 3\n他\n",
         "notes/b.md": "検索 1\n他\n",
         "notes/archive/c.md": "検索 1\n検索 2\n他\n",
     }
-    source = make_source("sample", _notes_files(sample_file_set, sample_config_text, notes))
+    files = _notes_files(sample_file_set, sample_config_text, notes, tagged=("notes/a.md",))
+    source = make_source("sample", files)
     env = make_server(source)
     cwd = str(source.folder)
     exclude_archive = {"and": [SEARCH_WORD, {"not": IN_ARCHIVE}]}
@@ -604,7 +621,7 @@ def test_normal_when_ordered_by_matches(
     direct_only = env.call(
         "search_docs",
         cwd=cwd,
-        filter={"field": "@path", "op": "glob", "values": ["notes/*.md"]},
+        filter={"field": "@path", "op": "glob", "values": ["notes/files.yaml#*"]},
         format="json",
     )
     under_not = env.call(
@@ -695,3 +712,59 @@ def test_normal_when_part_of_body(
     assert missing.data["items"][0]["ranges"] == []
     assert any("無い見出し" in note for note in missing.data["notes"])
     assert "notes/a: 6-8 行目 / 全 10 行" in markdown.text
+
+
+def test_normal_when_metadata_mapped(
+    make_source: Callable[..., Any],
+    make_server: Callable[..., Any],
+    sample_file_set: Callable[..., dict[str, str]],
+    sample_config_text: Callable[..., str],
+) -> None:
+    """列名の違う種類を共通のキーで引く（正常系）。"""
+    # 準備
+    row = (
+        "  - id: decisions\n"
+        "    paths: [decisions/*.yaml]\n"
+        "    schema: schemas/decision.schema.yaml\n"
+        "    metadata: {name: title, description: meta.summary}\n"
+    )
+    schema = (
+        "type: object\n"
+        "properties:\n"
+        "  id: {type: string}\n"
+        "  title: {type: string}\n"
+        "  meta:\n"
+        "    type: object\n"
+        "    properties:\n"
+        "      summary: {type: string}\n"
+    )
+    files = sample_file_set(
+        **{
+            "dev-docs.yaml": sample_config_text(row),
+            "schemas/decision.schema.yaml": schema,
+            "decisions/d1.yaml": "id: d1\ntitle: 決定 1\nmeta:\n  summary: 要約 1\n",
+        }
+    )
+    source = make_source("sample", files)
+    env = make_server(source)
+    cwd = str(source.folder)
+    # 実行
+    by_name = env.call(
+        "search_docs",
+        cwd=cwd,
+        filter={"field": "name", "op": "eq", "values": ["決定 1"]},
+        view="summary",
+        format="json",
+    )
+    by_column = env.call(
+        "search_docs",
+        cwd=cwd,
+        filter={"field": "title", "op": "eq", "values": ["決定 1"]},
+        view="summary",
+        format="json",
+    )
+    # 検証
+    assert [item["id"] for item in by_name.data["items"]] == ["d1"]
+    assert by_name.data["items"][0]["values"]["name"] == "決定 1"
+    assert by_name.data["items"][0]["values"]["description"] == "要約 1"
+    assert [item["id"] for item in by_column.data["items"]] == ["d1"]
