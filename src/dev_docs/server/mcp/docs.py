@@ -107,7 +107,10 @@ def build_docs_mcp(handlers: Handlers) -> MCPServer:
         mcp,
         "search_docs",
         "条件に当たる文書を、指定した項目・量・順で返す。ID で絞れば取得、view: summary で一覧、"
-        "view: count で件数、group_by で集計になる。",
+        "view: count で件数、group_by で集計になる。"
+        "op: regex は値の各行に当たる（値全体の先頭・末尾は \\A・\\Z）。"
+        "snippets は本文の代わりに、当たった行と前後の行（before・after。省けば context_lines）"
+        "を行番号つきで返す。",
         SearchRequest,
         lambda request: search_docs(
             request,

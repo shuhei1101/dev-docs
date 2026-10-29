@@ -16,6 +16,7 @@ from ruamel.yaml import YAML
 
 from dev_docs.features.changes.types import ChangesResult
 from dev_docs.features.related.types import RelatedItem
+from dev_docs.features.search.types import SnippetLine
 from dev_docs.features.write.types import DeleteResult
 from dev_docs.shared.errors import DevDocsError
 
@@ -66,6 +67,9 @@ def _plain(value: Any) -> Any:
             {"id": doc_id, "version": version} for doc_id, version in value.unlinked
         ]
         return _plain(data)
+    if isinstance(value, SnippetLine):
+        # 空の行も `line`・`text`・`hit` を全て出す
+        return {"line": value.line, "text": value.text, "hit": value.hit}
     if dataclasses.is_dataclass(value) and not isinstance(value, type):
         return _plain(_fields(value))
     if isinstance(value, dict):

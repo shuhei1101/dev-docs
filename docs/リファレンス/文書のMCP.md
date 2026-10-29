@@ -119,7 +119,7 @@ ID で絞れば取得、`view: summary` で一覧、`view: count` で件数、`g
 | `skip` | int | 0 | 先頭から飛ばす件数 |
 | `max_chars` | int | 20,000 | 結果全体の文字数の上限。上限は 40,000 |
 | `max_chars_per_field` | int | 2,000（`view: full` は 10,000） | 長い値を末尾で切り、残りの文字数を添える |
-| `snippets` | {`context_lines`, `max_per_doc`} | なし | 一致した行の前後だけを返す |
+| `snippets` | {`context_lines`, `before`, `after`, `max_per_doc`} | なし | 本文の代わりに、条件に当たった行と前後の行だけを行番号つきで返す。下の「抜粋」 |
 | `repeat_seen` | bool | `false` | この会話で返し済みの本文も返す |
 
 <!-- /table -->
@@ -137,7 +137,7 @@ Condition = {"field": str, "op": enum, "values": [str, ...], "match": "any" | "a
 | --- | --- |
 | 入れ子 | 深さの制限は無い |
 | `field` | メタデータのキー（`id`・`kind`・`name`・`tags`・`updated` など）、種類ごとの項目、`body`（本文）、`*`（全項目）、計算項目（`@chars` 文字数・`@path` ファイルのパス・`@sections` セクションの一覧） |
-| `op` | `eq`・`ne`・`prefix`・`suffix`・`contains`・`not_contains`・`regex`・`gt`・`gte`・`lt`・`lte`・`exists`・`not_exists` |
+| `op` | `eq`・`ne`・`prefix`・`suffix`・`contains`・`not_contains`・`regex`・`gt`・`gte`・`lt`・`lte`・`exists`・`not_exists`。`regex` は値の各行に当たる（`^`・`$` は各行の先頭・末尾。値全体の先頭・末尾は `\A`・`\Z`）。パターンには正規化をかけず、`case_sensitive: false` は `re.IGNORECASE` と NFKC にした値で比べる |
 | `values` | 文字列の配列。数値・日付は項目の型で解釈し、日付は `today`・`-7d` も受ける。`exists`・`not_exists` だけ省ける |
 | `match` | `values` の複数を OR（`any`、既定）か AND（`all`）で比べる |
 | `case_sensitive` | 既定 `false`。大文字小文字と全角半角（NFKC）を区別しない |
@@ -156,8 +156,24 @@ Condition = {"field": str, "op": enum, "values": [str, ...], "match": "any" | "a
 | `groups` | `group_by` のときの値ごとの件数 |
 | `items[]` | 文書。ID で絞ったときは指定した順。各文書に `id`・`version`、`view: full` で `body`。複数の配信元を指したときは `source` が付く |
 | `items[].path`・`items[].scope` | 文書の場所と返した範囲。[文書の場所と範囲](#文書の場所と範囲)のとおり。`view: ids`・`count` では持たない |
+| `items[].snippets` | `snippets` を渡したときの抜粋。下の「抜粋」 |
 
 YAML として読めないファイルがあっても、そのファイルを除いて返し、`notes` で知らせます。
+
+### 抜粋
+
+`snippets` は、条件の `body`・`*` の `eq`・`prefix`・`suffix`・`contains`・`regex` と同じ判定で本文の行ごとに当たった行を探し、前後の行と合わせて返します。
+`eq`・`prefix`・`suffix` は行の部分一致で探し、`case_sensitive` は条件と同じです。
+
+| キー | 既定 | 説明 |
+| --- | --- | --- |
+| `context_lines` | 1 | `before`・`after` を省いたときの前と後ろの行の数 |
+| `before` | `context_lines` | 当たった行の前に返す行の数 |
+| `after` | `context_lines` | 当たった行の後ろに返す行の数 |
+| `max_per_doc` | 3 | 文書ごとに返す抜粋の数。重なる範囲は 1 つにまとめる |
+
+`markdown` は grep の `-n` と同じく、当たった行を `{行番号}:{行}`、前後の行を `{行番号}-{行}` で出し、抜粋の間に `--` を置きます。
+`json` は `items[].snippets[].lines[]` の各行に `line`（1 始まりの行番号）・`text`・`hit`（当たった行か）を持ちます。
 
 ## write_docs
 

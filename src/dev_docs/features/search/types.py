@@ -36,10 +36,21 @@ class Condition(BaseModel):
         "lte",
         "exists",
         "not_exists",
-    ]
+    ] = Field(
+        description=(
+            "比べ方。regex は値の各行に当たる"
+            "（^・$ は各行の先頭・末尾。値全体の先頭・末尾は \\A・\\Z）"
+        )
+    )
     values: list[str] = Field(default_factory=list)
     match: Literal["any", "all"] = "any"
-    case_sensitive: bool = False
+    case_sensitive: bool = Field(
+        default=False,
+        description=(
+            "False は NFKC と casefold をした後に比べる"
+            "（regex はパターンに正規化をかけず、re.IGNORECASE と NFKC にした値で比べる）"
+        ),
+    )
 
 
 class Group(BaseModel):
@@ -61,12 +72,20 @@ class OrderKey(BaseModel):
 
 
 class Snippets(BaseModel):
-    """本文の代わりに一致した行の前後だけを返す指定。"""
+    """本文の代わりに条件に当たった行と前後の行だけを行番号つきで返す指定。"""
 
     model_config = ConfigDict(extra="forbid")
 
-    context_lines: int = 1
-    max_per_doc: int = 3
+    context_lines: int = Field(
+        default=1, description="before・after を省いたときの前と後ろの行の数（0〜10）"
+    )
+    max_per_doc: int = Field(default=3, description="1 つの文書で返す箇所の数（1〜20）")
+    before: int | None = Field(
+        default=None, ge=0, description="当たった行の前に返す行の数。省けば context_lines"
+    )
+    after: int | None = Field(
+        default=None, ge=0, description="当たった行の後ろに返す行の数。省けば context_lines"
+    )
 
 
 class SearchRequest(BaseModel):
@@ -97,13 +116,32 @@ class SearchRequest(BaseModel):
 
 
 @dataclass(frozen=True)
+class SnippetLine:
+    """抜粋の 1 行。"""
+
+    # 本文の行番号（1 始まり）
+    line: int
+    # 行の文字列（改行を含まない）
+    text: str
+    # 当たった行なら True、前後の行なら False
+    hit: bool
+
+
+@dataclass(frozen=True)
+class Snippet:
+    """重なる範囲をまとめた 1 つの抜粋。"""
+
+    lines: list[SnippetLine]
+
+
+@dataclass(frozen=True)
 class SearchItem:
     """返す 1 件の文書の項目。"""
 
     id: str
     source: str | None
     values: dict[str, Any]
-    snippets: list[str] = field(default_factory=list)
+    snippets: list[Snippet] = field(default_factory=list)
     # 文書の場所と返した範囲。`ref` を渡した呼び出し・返し済み・本文を扱わない view では `None`
     path: str | None = None
     scope: Literal["full", "section", "summary"] | None = None

@@ -5,7 +5,8 @@ from __future__ import annotations
 from collections.abc import Sequence
 
 from dev_docs.features.documents.types import Document
-from dev_docs.features.search.filters import match_words, normalize, snippet_lines
+from dev_docs.features.search.filters import match_words, normalize
+from dev_docs.features.search.snippets import snippet_lines
 from dev_docs.features.view.paths import page_path
 from dev_docs.features.view.types import ScreenSearchItem, ScreenSearchResult
 

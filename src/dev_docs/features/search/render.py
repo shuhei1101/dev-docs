@@ -4,11 +4,14 @@ from __future__ import annotations
 
 from typing import Any
 
-from dev_docs.features.search.types import SearchItem, SearchResult
+from dev_docs.features.search.types import SearchItem, SearchResult, Snippet
 
 COLUMN_TITLES = {"@chars": "chars"}
 BODY_FIELD = "body"
 ARRAY_JOINER = ", "
+SNIPPET_SEPARATOR = "--"
+HIT_MARK = ":"
+CONTEXT_MARK = "-"
 
 
 def _title(name: str) -> str:
@@ -41,6 +44,19 @@ def _table(result: SearchResult) -> list[str]:
     return lines
 
 
+def _snippet_lines(snippets: list[Snippet]) -> list[str]:
+    """抜粋を grep の `-n` と同じ書式の行にする（当たった行は `:`、前後の行は `-`、抜粋の間は `--`）。"""
+    lines: list[str] = []
+    for index, snippet in enumerate(snippets):
+        if index > 0:
+            lines.append(SNIPPET_SEPARATOR)
+        lines.extend(
+            f"{line.line}{HIT_MARK if line.hit else CONTEXT_MARK}{line.text}"
+            for line in snippet.lines
+        )
+    return lines
+
+
 def _full(item: SearchItem) -> list[str]:
     """`view: full` の文書 1 件を、`<document>` で包んだ項目の箇条書きと本文にする。"""
     attributes = f' path="{item.path}" scope="{item.scope}"' if item.path else ""
@@ -55,7 +71,7 @@ def _full(item: SearchItem) -> list[str]:
     )
     if item.snippets:
         lines.append("")
-        lines.extend(snippet for snippet in item.snippets)
+        lines.extend(_snippet_lines(item.snippets))
     if isinstance(body, str):
         lines.append("")
         lines.append(body.rstrip("\n"))
