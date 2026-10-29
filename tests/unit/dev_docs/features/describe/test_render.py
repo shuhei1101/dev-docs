@@ -4,7 +4,7 @@ from pathlib import Path
 
 from dev_docs.features.access.types import SourceAccess, Workplace
 from dev_docs.features.describe.render import render_describe_markdown
-from dev_docs.features.describe.types import SourceListResult
+from dev_docs.features.describe.types import KindSchemaResult, SourceListResult
 
 
 def test_render_describe_markdown() -> None:
@@ -22,3 +22,20 @@ def test_render_describe_markdown() -> None:
     # 検証
     assert "| sample | write（作業中） | サンプル |" in markdown
     assert "| notes | read | メモ |" in markdown
+
+
+def test_render_describe_markdown_when_metadata() -> None:
+    """メタデータの対応の表（正常系）。"""
+    # 準備
+    result = KindSchemaResult(
+        source_id="sample",
+        kind="rules",
+        schema_text="type: object\n",
+        schema={"type": "object"},
+        metadata={"name": "title"},
+    )
+    # 実行
+    markdown = render_describe_markdown(result)
+    # 検証
+    assert "| name | title |" in markdown
+    assert markdown.index("| name | title |") < markdown.index("```yaml")

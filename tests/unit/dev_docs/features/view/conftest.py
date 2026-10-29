@@ -46,8 +46,8 @@ def make_view_env(
             write_files(root, files or default_files)
         row = DocumentTable(
             id="rules",
-            type="yaml",
             paths=["docs/*.yaml"],
+            schema_path="schemas/rule.schema.yaml",
             converter="c" if converters else None,
         )
         config = make_source_config(documents=tables or [row], converters=converters or [], nav=nav)

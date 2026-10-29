@@ -55,7 +55,9 @@ def make_env(
     def _make(files: dict[str, str], tables: list[DocumentTable] | None = None) -> RelatedEnv:
         root = tmp_path / "sample"
         write_files(root, files)
-        rows = tables or [DocumentTable(id="rules", type="yaml", paths=["docs/*.yaml"])]
+        rows = tables or [
+            DocumentTable(id="rules", paths=["docs/*.yaml"], schema_path="schemas/rule.schema.yaml")
+        ]
         source = make_served_source(
             id="sample", root=root, config=make_source_config(documents=rows)
         )
@@ -100,7 +102,11 @@ def test_trace_related_when_code_paths(make_env: Callable[..., RelatedEnv]) -> N
         "src/b.py": "b = 2\n",
     }
     table = DocumentTable(
-        id="src", type="yaml", paths=["src/files.yaml"], records="files", body_file="path"
+        id="src",
+        paths=["src/files.yaml"],
+        schema_path="schemas/rule.schema.yaml",
+        records="files",
+        body_file="path",
     )
     env = make_env(files, [table])
     # 実行

@@ -25,18 +25,27 @@ from dev_docs.shared.errors import (
     ValidationFailedError,
 )
 
-BROKEN_CONFIG = "name: {name}\ndocuments:\n  - id: rules\n    type: yaml\n"
+BROKEN_CONFIG = "name: {name}\ndocuments:\n  - id: rules\n    schema: schemas/rule.schema.yaml\n"
 NOTES_CONFIG = (
-    "name: notes\ndocuments:\n  - id: notes\n    type: markdown\n    paths: [docs/*.md]\n"
+    "name: notes\n"
+    "documents:\n"
+    "  - id: notes\n"
+    "    paths: [docs/files.yaml]\n"
+    "    schema: schemas/rule.schema.yaml\n"
+    "    records: files\n"
+    "    body_file: path\n"
 )
 EMPTY_NOTES_CONFIG = (
-    "name: empty\ndocuments:\n  - id: notes\n    type: markdown\n    paths: [notes/*.md]\n"
+    "name: empty\n"
+    "documents:\n"
+    "  - id: notes\n"
+    "    paths: [notes/*.yaml]\n"
+    "    schema: schemas/rule.schema.yaml\n"
 )
 CONVERT_CONFIG = (
     "name: conv\n"
     "documents:\n"
     "  - id: rules\n"
-    "    type: yaml\n"
     "    paths: [docs/rule/*.yaml]\n"
     "    schema: schemas/rule.schema.yaml\n"
     "    converter: conv\n"
@@ -48,7 +57,6 @@ SCRIPT_MISSING_CONFIG = (
     "name: sample\n"
     "documents:\n"
     "  - id: rules\n"
-    "    type: yaml\n"
     "    paths: [docs/rule/*.yaml]\n"
     "    schema: schemas/rule.schema.yaml\n"
     "converters:\n"
@@ -218,13 +226,16 @@ def test_check_project_when_missing_paths(
 ) -> None:
     """当たるファイルが無い範囲を返す（正常系）。"""
     # 準備
-    write_files(tmp_path, {"dev-docs.yaml": EMPTY_NOTES_CONFIG})
+    write_files(
+        tmp_path,
+        {"dev-docs.yaml": EMPTY_NOTES_CONFIG, "schemas/rule.schema.yaml": RULE_SCHEMA},
+    )
     (tmp_path / "notes").mkdir()
     handlers = _handlers(make_terminal_config)
     # 実行
     result = check_project(CheckProjectRequest(path=str(tmp_path)), handlers=handlers)
     # 検証
-    assert result.missing_paths == ["notes/*.md"]
+    assert result.missing_paths == ["notes/*.yaml"]
 
 
 def test_check_project_when_items_over_limit(
@@ -249,9 +260,17 @@ def test_try_convert(
 ) -> None:
     """組み込みの変換で Markdown にする（正常系）。"""
     # 準備
-    write_files(tmp_path, {"dev-docs.yaml": NOTES_CONFIG, "docs/a.md": "# A\n\n本文\n"})
+    write_files(
+        tmp_path,
+        {
+            "dev-docs.yaml": NOTES_CONFIG,
+            "schemas/rule.schema.yaml": RULE_SCHEMA,
+            "docs/files.yaml": "files:\n  - path: a.md\n",
+            "docs/a.md": "# A\n\n本文\n",
+        },
+    )
     handlers = _handlers(make_terminal_config)
-    request = TryConvertRequest(path=str(tmp_path), file="docs/a.md")
+    request = TryConvertRequest(path=str(tmp_path), file="docs/files.yaml")
     # 実行
     result = try_convert(request, handlers=handlers)
     # 検証
@@ -293,7 +312,10 @@ def test_try_convert_when_outside(
 ) -> None:
     """配信元の外を指す（異常系）。"""
     # 準備
-    write_files(tmp_path / "ws", {"dev-docs.yaml": NOTES_CONFIG})
+    write_files(
+        tmp_path / "ws",
+        {"dev-docs.yaml": NOTES_CONFIG, "schemas/rule.schema.yaml": RULE_SCHEMA},
+    )
     write_files(tmp_path, {"other.md": "# other\n"})
     handlers = _handlers(make_terminal_config)
     request = TryConvertRequest(path=str(tmp_path / "ws"), file="../other.md")
@@ -309,7 +331,14 @@ def test_try_convert_when_not_matched(
 ) -> None:
     """どの種類にも当たらない（異常系）。"""
     # 準備
-    write_files(tmp_path, {"dev-docs.yaml": NOTES_CONFIG, "README.txt": "text\n"})
+    write_files(
+        tmp_path,
+        {
+            "dev-docs.yaml": NOTES_CONFIG,
+            "schemas/rule.schema.yaml": RULE_SCHEMA,
+            "README.txt": "text\n",
+        },
+    )
     handlers = _handlers(make_terminal_config)
     request = TryConvertRequest(path=str(tmp_path), file="README.txt")
     # 実行・検証
@@ -349,7 +378,10 @@ def test_try_convert_when_invalid_config(
     request = TryConvertRequest(
         path=str(tmp_path),
         file="docs/a.md",
-        config="documents:\n  - id: notes\n    type: markdown\n    paths: [docs/*.md]\n",
+        config=(
+            "documents:\n  - id: notes\n    paths: [docs/*.md]\n"
+            "    schema: schemas/rule.schema.yaml\n"
+        ),
     )
     # 実行・検証
     with pytest.raises(ValidationFailedError):
@@ -382,7 +414,6 @@ def test_load_candidate_when_config_text(
         "name: draft\n"
         "documents:\n"
         "  - id: rules\n"
-        "    type: yaml\n"
         "    paths: [docs/rule/*.yaml]\n"
         "    schema: schemas/rule.schema.yaml\n"
     )

@@ -15,8 +15,10 @@ def test_served_source_table(
     """行を引く（正常系）。"""
     # 準備
     documents = [
-        DocumentTable(id="rules", type="yaml", paths=["docs/rule/*.yaml"]),
-        DocumentTable(id="notes", type="markdown", paths=["docs/note/*.md"]),
+        DocumentTable(
+            id="rules", paths=["docs/rule/*.yaml"], schema_path="schemas/rule.schema.yaml"
+        ),
+        DocumentTable(id="notes", paths=["docs/note/*.md"], schema_path="schemas/rule.schema.yaml"),
     ]
     source = make_served_source(config=make_source_config(documents=documents))
     # 実行
@@ -32,8 +34,15 @@ def test_served_source_table_when_unknown(
     """無い種類（異常系）。"""
     # 準備
     documents = [
-        DocumentTable(id="rules", type="yaml", paths=["docs/rule/*.yaml"]),
-        DocumentTable(id="notes", type="markdown", paths=["docs/note/*.md"], enabled=False),
+        DocumentTable(
+            id="rules", paths=["docs/rule/*.yaml"], schema_path="schemas/rule.schema.yaml"
+        ),
+        DocumentTable(
+            id="notes",
+            paths=["docs/note/*.md"],
+            schema_path="schemas/rule.schema.yaml",
+            enabled=False,
+        ),
     ]
     source = make_served_source(config=make_source_config(documents=documents))
     # 実行・検証
@@ -46,7 +55,10 @@ def test_document_table_excludes() -> None:
     """ファイル名で当てる（正常系）。"""
     # 準備
     table = DocumentTable(
-        id="rules", type="markdown", paths=["docs/**/*"], exclude=["README.md", "_*.yaml"]
+        id="rules",
+        paths=["docs/**/*"],
+        schema_path="schemas/rule.schema.yaml",
+        exclude=["README.md", "_*.yaml"],
     )
     # 実行
     by_name = table.excludes("docs/a/README.md")
@@ -61,7 +73,9 @@ def test_document_table_excludes() -> None:
 def test_document_table_matches() -> None:
     """paths に当たる（正常系）。"""
     # 準備
-    table = DocumentTable(id="notes", type="markdown", paths=["docs/**/*.md"], exclude=[])
+    table = DocumentTable(
+        id="notes", paths=["docs/**/*.md"], schema_path="schemas/rule.schema.yaml", exclude=[]
+    )
     # 実行
     result = table.matches("docs/a/b.md")
     # 検証
@@ -72,7 +86,10 @@ def test_document_table_matches_when_excluded() -> None:
     """除外の名前に当たる（正常系）。"""
     # 準備
     table = DocumentTable(
-        id="notes", type="markdown", paths=["docs/**/*.md"], exclude=["README.md"]
+        id="notes",
+        paths=["docs/**/*.md"],
+        schema_path="schemas/rule.schema.yaml",
+        exclude=["README.md"],
     )
     # 実行
     excluded = table.matches("docs/a/README.md")
@@ -85,7 +102,7 @@ def test_document_table_matches_when_excluded() -> None:
 def test_document_table_matches_when_outside_paths() -> None:
     """paths に当たらない（正常系）。"""
     # 準備
-    table = DocumentTable(id="notes", type="markdown", paths=["docs/*.md"])
+    table = DocumentTable(id="notes", paths=["docs/*.md"], schema_path="schemas/rule.schema.yaml")
     # 実行
     result = table.matches("src/a.md")
     # 検証

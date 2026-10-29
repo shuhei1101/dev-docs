@@ -35,7 +35,6 @@ SAMPLE_CONFIG = (
     "name: sample\n"
     "documents:\n"
     "  - id: rules\n"
-    "    type: yaml\n"
     "    paths: [docs/rule/*.yaml]\n"
     "    schema: schemas/rule.schema.yaml\n"
 )
@@ -95,7 +94,6 @@ def make_source_config() -> Callable[..., SourceConfig]:
             "documents": [
                 DocumentTable(
                     id="rules",
-                    type="yaml",
                     paths=["docs/rule/*.yaml"],
                     schema_path="schemas/rule.schema.yaml",
                 )
@@ -264,14 +262,12 @@ SOURCE_CONFIG_TEMPLATE = (
     "{version}"
     "documents:\n"
     "  - id: rules\n"
-    "    type: yaml\n"
     "    paths: [docs/rule/*.yaml]\n"
     "    schema: schemas/rule.schema.yaml\n"
 )
 
 FILES_ROW = (
     "  - id: src\n"
-    "    type: yaml\n"
     "    paths: [src/files.yaml]\n"
     "    schema: schemas/files.schema.yaml\n"
     "    records: files\n"

@@ -25,13 +25,12 @@ MISSING_FILES_CONFIG = (
     'version: "0"\n'
     "documents:\n"
     "  - id: src\n"
-    "    type: yaml\n"
     "    paths: [src/files.yaml]\n"
     "    schema: schemas/files.schema.yaml\n"
     "    records: files\n"
     "    body_file: path\n"
 )
-BROKEN_CONFIG = "name: b\ndocuments:\n  - id: rules\n    type: yaml\n"
+BROKEN_CONFIG = "name: b\ndocuments:\n  - id: rules\n    schema: schemas/rule.schema.yaml\n"
 
 
 def _access(source_id: str, access: str = "write", description: str = "") -> SourceAccess:

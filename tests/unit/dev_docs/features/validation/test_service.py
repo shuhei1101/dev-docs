@@ -48,7 +48,6 @@ def make_checked_target(
         root.mkdir(exist_ok=True)
         table = DocumentTable(
             id="rules",
-            type="yaml",
             paths=["rules/*.yaml"],
             schema_path="schemas/rule.schema.yaml",
             validators=row_validators,

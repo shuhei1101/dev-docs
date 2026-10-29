@@ -10,8 +10,15 @@ from dev_docs.shared.errors import InvalidArgumentError
 def test_new_document_path() -> None:
     """glob から決める（正常系）。"""
     # 準備
-    by_glob = DocumentTable(id="sample", type="yaml", paths=["docs/**/*.yaml"])
-    by_records = DocumentTable(id="items", type="yaml", paths=["data/list.yaml"], records="items")
+    by_glob = DocumentTable(
+        id="sample", paths=["docs/**/*.yaml"], schema_path="schemas/rule.schema.yaml"
+    )
+    by_records = DocumentTable(
+        id="items",
+        paths=["data/list.yaml"],
+        schema_path="schemas/rule.schema.yaml",
+        records="items",
+    )
     # 実行
     glob_result = new_document_path(by_glob, "sample-doc")
     records_result = new_document_path(by_records, "item-1")
@@ -24,7 +31,10 @@ def test_new_document_path_when_excluded() -> None:
     """置き場所が除外の名前に当たる（異常系）。"""
     # 準備
     table = DocumentTable(
-        id="sample", type="yaml", paths=["docs/rule/*.yaml"], exclude=["index.yaml"]
+        id="sample",
+        paths=["docs/rule/*.yaml"],
+        schema_path="schemas/rule.schema.yaml",
+        exclude=["index.yaml"],
     )
     # 実行・検証
     with pytest.raises(InvalidArgumentError, match=r"docs/rule/index\.yaml") as exc_info:
@@ -38,8 +48,8 @@ def test_new_document_path_when_records_excluded() -> None:
     # 準備
     table = DocumentTable(
         id="src",
-        type="yaml",
         paths=["src/files.yaml"],
+        schema_path="schemas/rule.schema.yaml",
         records="files",
         body_file="path",
         exclude=["files.yaml"],

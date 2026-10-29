@@ -114,7 +114,6 @@ def make_env(
         rows = tables or [
             DocumentTable(
                 id="rules",
-                type="yaml",
                 paths=["docs/rule/*.yaml"],
                 schema_path="schemas/rule.schema.yaml",
             )
@@ -198,7 +197,6 @@ def test_write_docs_when_create(make_env: Callable[..., WriteEnv]) -> None:
     generators = [ScriptEntry(id="index", run=[sys.executable, "-c", code])]
     table = DocumentTable(
         id="rules",
-        type="yaml",
         paths=["docs/rule/*.yaml"],
         schema_path="schemas/rule.schema.yaml",
         after_write=["index"],
@@ -260,7 +258,7 @@ def test_write_docs_when_not_git(
     # 準備
     root = tmp_path / "memo"
     write_files(root, {})
-    table = DocumentTable(id="rules", type="yaml", paths=["docs/*.yaml"])
+    table = DocumentTable(id="rules", paths=["docs/*.yaml"], schema_path="schemas/rule.schema.yaml")
     source = make_served_source(
         id="memo", root=root, config=make_source_config(documents=[table]), scope_write=[str(root)]
     )
@@ -343,6 +341,42 @@ def test_write_docs_when_too_many(make_env: Callable[..., WriteEnv]) -> None:
     assert exc_info.value.violations[0].path == "operations"
 
 
+def test_write_docs_when_metadata_mapped(make_env: Callable[..., WriteEnv]) -> None:
+    """共通のキー名で元の列に書く（正常系）。"""
+    # 準備
+    decision = "id: d1\ntitle: 決定 1\n"
+    files = {
+        "decisions/d1.yaml": decision,
+        "schemas/decision.schema.yaml": "title: decision\ntype: object\nrequired: [id, title]\n",
+    }
+    table = DocumentTable(
+        id="decisions",
+        paths=["decisions/*.yaml"],
+        schema_path="schemas/decision.schema.yaml",
+        metadata={"name": "title"},
+    )
+    env = make_env(files, tables=[table])
+    operations = [
+        Operation(
+            op="update",
+            id="d1",
+            expected_version=content_hash(decision),
+            set={"name": "新しい名前"},
+        ),
+        Operation(op="create", kind="decisions", id="d2", data={"name": "決定 2"}),
+    ]
+    # 実行
+    result = env.write(operations=operations)
+    # 検証
+    updated = (env.worktree / "decisions/d1.yaml").read_text(encoding="utf-8")
+    created = (env.worktree / "decisions/d2.yaml").read_text(encoding="utf-8")
+    assert [item.status for item in result.results] == ["updated", "created"]
+    assert "title: 新しい名前" in updated
+    assert "name:" not in updated
+    assert "title: 決定 2" in created
+    assert "name:" not in created
+
+
 def _with_related() -> dict[str, str]:
     """文書 1 の `related` が文書 2 を指す配信元のファイルを返す。"""
     return {
@@ -390,7 +424,11 @@ def test_delete_docs_when_records(
         "data/b.txt": "b\n",
     }
     table = DocumentTable(
-        id="items", type="yaml", paths=["data/list.yaml"], records="items", body_file="path"
+        id="items",
+        paths=["data/list.yaml"],
+        schema_path="schemas/rule.schema.yaml",
+        records="items",
+        body_file="path",
     )
     env = make_env(files, tables=[table])
     targets = [DeleteTarget(id="b", expected_version=value_hash({"id": "b", "path": "b.txt"}))]
@@ -430,7 +468,9 @@ def test_delete_docs_when_not_allowed(
     # 準備
     root = tmp_path / "memo"
     write_files(root, {"docs/doc-1.yaml": DOC_1})
-    table = DocumentTable(id="rules", type="yaml", paths=["docs/*.yaml"], writable=False)
+    table = DocumentTable(
+        id="rules", paths=["docs/*.yaml"], schema_path="schemas/rule.schema.yaml", writable=False
+    )
     source = make_served_source(
         id="memo", root=root, config=make_source_config(documents=[table]), scope_write=[str(root)]
     )

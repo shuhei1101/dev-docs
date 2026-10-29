@@ -92,6 +92,7 @@ def test_build_docs_mcp_when_descriptions(make_handlers: Callable[..., Any]) -> 
     for word in ("not", "glob", "@matches", "sections", "lines"):
         assert word in search_description
     assert "contains" in (by_name["list_changes"].description or "")
+    assert "describe(source, kind)" in (by_name["write_docs"].description or "")
     search_properties = by_name["search_docs"].input_schema["properties"]
     changes_properties = by_name["list_changes"].input_schema["properties"]
     assert "description" in search_properties["sections"]
