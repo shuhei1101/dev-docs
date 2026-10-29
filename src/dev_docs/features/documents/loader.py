@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import os
 import posixpath
-from collections.abc import Collection, Mapping
+from collections.abc import Callable, Collection, Mapping
 from datetime import date, datetime, time
 from pathlib import Path, PurePosixPath
 from typing import Any
@@ -94,13 +94,19 @@ def _timestamps(data: Mapping[str, Any], key: str, file_dates: FileDates | None)
     return _as_datetime(data.get(key))
 
 
-def _body_file(root: Path, path: str, value: Any) -> tuple[str, str] | None:
+def _body_file(
+    root: Path, path: str, value: Any, read_body: Callable[[str], str | None] | None = None
+) -> tuple[str, str] | None:
     """`body_file` が指すファイルの `root` からのパスと内容を返す（無い・外を指すなら `None`）。"""
     if not isinstance(value, str) or not value:
         return None
     relative = posixpath.normpath(posixpath.join(posixpath.dirname(path), value))
     if relative == ".." or relative.startswith(("../", "/")):
         return None
+    if read_body is not None:
+        # 内容は呼び出し元の読み方（commit のファイルなど）で読む
+        content = read_body(relative)
+        return None if content is None else (relative, content)
     target = root / relative
     try:
         if not target.resolve().is_relative_to(root.resolve()) or not target.is_file():
@@ -164,6 +170,7 @@ def documents_from_text(
     *,
     source_id: str,
     dates: Mapping[str, FileDates] | None = None,
+    read_body: Callable[[str], str | None] | None = None,
 ) -> tuple[list[Document], list[LoadProblem]]:
     """1 つのファイルの内容の文字列を、文書の行に従って 1 件以上の文書にする。"""
     dates = dates or {}
@@ -229,7 +236,7 @@ def documents_from_text(
         body_path: str | None = None
         if table.body_file is not None:
             value = get_field(record, table.body_file)
-            found = _body_file(root, path, value)
+            found = _body_file(root, path, value, read_body)
             if found is None:
                 problems.append(
                     LoadProblem(

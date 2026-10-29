@@ -223,6 +223,62 @@ scenarios:
       - '`view: full` の本文が `src/a.py` の内容で、`<document path="{sample のクローン本体}/src/a.py" scope="full">` で包まれる'
       - '`format: json` の項目の直下（`id`・`source` と同じ階層で `values` の外）が `path`（`src/a.py` の絶対パス）と `scope: full` を持ち、`values.path` は管理用の YAML の `path` 列の値 `a.py` のまま'
     test: test_normal_when_files_index
+  - name: 正常シナリオ（当たった数で並べて絞る）
+    setup:
+      - name: Mock
+        description: なし（実環境で実行。`cwd` はテストが引数に入れる）
+        notes: '-'
+      - name: Markdown の文書
+        description: sample の `notes/` に Markdown の文書を 3 件置く。`a.md` は本文に語 `検索` を含む行を 3 行、`b.md` は 1 行、`archive/c.md` は 2 行持つ
+        notes: 'sample の `dev-docs.yaml` に Markdown の文書の行（`paths: [notes/**/*.md]`）を持つ'
+      - name: dev-docs
+        description: sample を配信している dev-docs
+        notes: '`cwd` は sample のクローン本体'
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        actor A as エージェント
+        participant M as 文書の MCP（/mcp）
+
+        A->>M: search_docs(filter: and[body が 検索 を含む, not(@path が notes/archive/** に glob で当たる)], fields: [@matches], order_by: @matches の降順)
+        M->>M: 本文に 検索 を含み、notes/archive の下に無い文書に絞る
+        M->>M: 文書ごとに本文の条件に当たった行を数える
+        M-->>A: a（@matches 3）、b（@matches 1）の順
+      ```
+    expected:
+      - '`notes/a.md`・`notes/b.md` の 2 件だけを返し、`notes/archive/c.md` を返さない'
+      - 各行の `@matches` が a は 3、b は 1 で、その降順に並ぶ
+      - '`not` の条件を外した呼び出しは c も返し、a・c・b の順に並ぶ'
+    test: test_normal_when_ordered_by_matches
+  - name: 正常シナリオ（本文の一部を読む）
+    setup:
+      - name: Mock
+        description: なし（実環境で実行。`cwd`・`session_id` はテストが引数に入れる）
+        notes: '-'
+      - name: Markdown の文書
+        description: 正常シナリオ（当たった数で並べて絞る）と同じ `notes/a.md`。`## 決まったこと` と、その前後に別の `##` の見出しを持つ
+        notes: '-'
+      - name: dev-docs
+        description: sample を配信している dev-docs
+        notes: '`cwd` は sample のクローン本体。`session_id` は `s1`'
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        actor A as エージェント
+        participant M as 文書の MCP（/mcp）
+
+        A->>M: search_docs(filter: id が notes/a, view: full, sections: [決まったこと])
+        M-->>A: 決まったこと の節だけの本文（scope: section）
+        A->>M: search_docs(filter: id が notes/a, view: full, lines: offset 3, limit 2)
+        M-->>A: 3〜4 行目だけの本文（scope: section）
+        A->>M: search_docs(filter: id が notes/a, view: full)
+        M-->>A: 全文（scope: full）
+      ```
+    expected:
+      - 節の指定で、`## 決まったこと` の見出しから次の同じか上の階層の見出しの手前までを返し、`scope` が `section` になる
+      - 行の範囲の指定で 3〜4 行目だけを返し、`scope` が `section` になる
+      - '一部を返した後の全文の呼び出しは `（この会話で返し済み）` にならず、全文を `scope: full` で返す'
+    test: test_normal_when_part_of_body
   - name: 正常シナリオ（除外の名前に当たるファイルを外す）
     setup:
       - name: Mock

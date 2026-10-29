@@ -2,12 +2,20 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass
+from datetime import UTC, datetime
 
 import pytest
 from mcp.types import TextContent
 from pydantic import ValidationError
 
 from dev_docs.features.access.types import SourceAccess
+from dev_docs.features.changes.types import (
+    WORKTREE_LABEL,
+    ChangeItem,
+    ChangesResult,
+    ContainsChange,
+    RangePoint,
+)
 from dev_docs.features.search.types import (
     SearchItem,
     SearchRequest,
@@ -90,6 +98,70 @@ def test_to_tool_result_when_snippet_empty_line() -> None:
     assert result.structured_content is not None
     line = result.structured_content["items"][0]["snippets"][0]["lines"][0]
     assert line == {"line": 2, "text": "", "hit": False}
+
+
+def test_to_tool_result_when_empty_ranges() -> None:
+    """返す行の無い本文の範囲（正常系）。"""
+    # 準備
+    items = [
+        SearchItem(id="doc-1", source=None, values={"body": ""}, ranges=[], total_lines=10),
+        SearchItem(id="doc-2", source=None, values={"name": "文書 2"}),
+    ]
+    search = SearchResult(total_count=2, returned=2, view="full", items=items)
+    # 実行
+    result = to_tool_result(search, "json", None)
+    # 検証
+    assert result.structured_content is not None
+    first, second = result.structured_content["items"]
+    assert first["ranges"] == []
+    assert first["total_lines"] == 10
+    assert "ranges" not in second
+    assert "total_lines" not in second
+
+
+def test_to_tool_result_when_contains_changes() -> None:
+    """語の増減の区間（正常系）。"""
+    # 準備
+    date = datetime(2026, 10, 26, 10, 0, tzinfo=UTC)
+    added = ContainsChange(
+        kind="added",
+        from_=RangePoint(input="", commit="1111111", date=date),
+        to=RangePoint(input="", commit="3f2a9c1", date=date),
+        count_before=0,
+        count_after=1,
+    )
+    removed = ContainsChange(
+        kind="removed",
+        from_=RangePoint(input="", commit="3f2a9c1", date=date),
+        to=RangePoint(input=WORKTREE_LABEL, commit=None, date=None),
+        count_before=1,
+        count_after=0,
+    )
+    changes = ChangesResult(
+        range_from=RangePoint(input="1111111", commit="1111111", date=date),
+        range_to=RangePoint(input=WORKTREE_LABEL, commit=None, date=None),
+        total_count=1,
+        items=[
+            ChangeItem(
+                id="doc-1",
+                source=None,
+                change="unchanged",
+                keys=[],
+                values={},
+                contains_changes=[added, removed],
+            )
+        ],
+    )
+    # 実行
+    result = to_tool_result(changes, "json", None)
+    # 検証
+    assert result.structured_content is not None
+    first, second = result.structured_content["items"][0]["contains_changes"]
+    assert set(first) == {"kind", "from", "to", "count_before", "count_after"}
+    assert set(first["from"]) == {"commit", "date"}
+    assert set(first["to"]) == {"commit", "date"}
+    assert first["to"]["commit"] == "3f2a9c1"
+    assert second["to"] == {"input": WORKTREE_LABEL}
 
 
 def test_tool_error() -> None:

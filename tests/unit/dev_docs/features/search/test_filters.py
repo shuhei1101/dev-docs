@@ -7,14 +7,21 @@ import pytest
 
 from dev_docs.features.documents.types import Document
 from dev_docs.features.search.filters import (
+    check_filter,
     compile_regex,
     match_filter,
     parse_compare_value,
 )
-from dev_docs.features.search.types import Condition, Group
+from dev_docs.features.search.types import Condition, Group, LineRange, OrderKey, SearchRequest
 
 TODAY = date(2026, 10, 28)
-FIELDS = {"tags": "array", "name": "string", "updated": "date"}
+FIELDS = {
+    "tags": "array",
+    "name": "string",
+    "updated": "date",
+    "@path": "string",
+    "@matches": "number",
+}
 
 
 def test_parse_compare_value() -> None:
@@ -105,6 +112,112 @@ def test_match_filter_when_regex_lines(make_document: Callable[..., Document]) -
     # 検証
     assert line_head_result is True
     assert text_head_result is False
+
+
+def test_match_filter_when_not(make_document: Callable[..., Document]) -> None:
+    """束の否定と入れ子（正常系）。"""
+    # 準備
+    node = Group.model_validate(
+        {
+            "and": [
+                {"field": "tags", "op": "eq", "values": ["a"]},
+                {
+                    "not": {
+                        "or": [
+                            {"field": "name", "op": "eq", "values": ["x"]},
+                            {"field": "name", "op": "eq", "values": ["y"]},
+                        ]
+                    }
+                },
+            ]
+        }
+    )
+    kept = make_document(metadata={"tags": ["a"], "name": "z"})
+    excluded = make_document(metadata={"tags": ["a"], "name": "y"})
+    # 実行
+    kept_result = match_filter(node, kept, fields=FIELDS, today=TODAY)
+    excluded_result = match_filter(node, excluded, fields=FIELDS, today=TODAY)
+    # 検証
+    assert kept_result is True
+    assert excluded_result is False
+
+
+def test_match_filter_when_glob(make_document: Callable[..., Document]) -> None:
+    """パスの glob（正常系）。"""
+    # 準備
+    star = Condition(field="@path", op="glob", values=["notes/*.md"])
+    upper = Condition(field="@path", op="glob", values=["NOTES/**"])
+    direct = make_document(path="notes/a.md")
+    nested = make_document(path="notes/archive/c.md")
+    # 実行
+    star_direct = match_filter(star, direct, fields=FIELDS, today=TODAY)
+    star_nested = match_filter(star, nested, fields=FIELDS, today=TODAY)
+    upper_direct = match_filter(upper, direct, fields=FIELDS, today=TODAY)
+    upper_nested = match_filter(upper, nested, fields=FIELDS, today=TODAY)
+    # 検証
+    assert star_direct is True
+    assert star_nested is False
+    assert upper_direct is True
+    assert upper_nested is True
+
+
+def test_check_filter_when_group_keys() -> None:
+    """束のキーが 2 つ（異常系）。"""
+    # 準備
+    node = Group.model_validate(
+        {
+            "and": [{"field": "name", "op": "eq", "values": ["a"]}],
+            "not": {"field": "tags", "op": "eq", "values": ["x"]},
+        }
+    )
+    request = SearchRequest(filter=node)
+    # 実行
+    violations = check_filter(request, FIELDS)
+    # 検証
+    assert [(violation.path, violation.rule) for violation in violations] == [
+        ("filter", "and・or・not のどれか 1 つだけを持ってください")
+    ]
+
+
+def test_check_filter_when_not_child() -> None:
+    """`not` の下の知らない項目（異常系）。"""
+    # 準備
+    node = Group.model_validate({"not": {"field": "nmae", "op": "eq", "values": ["x"]}})
+    request = SearchRequest(filter=node)
+    # 実行
+    violations = check_filter(request, FIELDS)
+    # 検証
+    assert [violation.path for violation in violations] == ["filter.not.field"]
+
+
+def test_check_filter_when_matches() -> None:
+    """`@matches` を条件に使う（異常系）。"""
+    # 準備
+    in_filter = SearchRequest(filter=Condition(field="@matches", op="gt", values=["1"]))
+    in_order_by = SearchRequest(order_by=[OrderKey(field="@matches")])
+    # 実行
+    filter_violations = check_filter(in_filter, FIELDS)
+    order_by_violations = check_filter(in_order_by, FIELDS)
+    # 検証
+    assert [violation.path for violation in filter_violations] == ["filter.field"]
+    assert order_by_violations == []
+
+
+def test_check_filter_when_body_range() -> None:
+    """本文の範囲の引数の組み合わせ（異常系）。"""
+    # 準備
+    both = SearchRequest(view="full", sections=["a"], lines=LineRange(offset=1))
+    not_full = SearchRequest(view="summary", sections=["a"])
+    # 実行
+    both_violations = check_filter(both, FIELDS)
+    not_full_violations = check_filter(not_full, FIELDS)
+    # 検証
+    assert [(violation.path, violation.rule) for violation in both_violations] == [
+        ("sections", "sections と lines は同時に渡せません")
+    ]
+    assert [(violation.path, violation.rule) for violation in not_full_violations] == [
+        ("sections", "view: full のときだけ渡せます")
+    ]
 
 
 def test_compile_regex() -> None:

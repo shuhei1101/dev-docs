@@ -9,8 +9,8 @@ directory: |-
   │  └─ git.py               # run_git / repo_root / GitError
   └─ features/history/
      ├─ __init__.py          # 公開する型と関数の再エクスポート
-     ├─ types.py             # ResolvedRef / RefList / FileChange / FileDates
-     ├─ query.py             # resolve_ref / list_refs / changed_files / file_dates / co_changed_files / read_file_at
+     ├─ types.py             # ResolvedRef / RefList / FileChange / FileDates / CommitStep
+     ├─ query.py             # resolve_ref / list_refs / changed_files / list_commits / file_dates / co_changed_files / read_file_at
      └─ snapshot.py          # SnapshotStore（リビジョンの書き出し）
   ```
 diagrams:
@@ -21,12 +21,14 @@ diagrams:
         リビジョンの解決 ..> gitの実行
         リビジョンの一覧 ..> gitの実行
         変わったファイル ..> gitの実行
+        区間の commit ..> gitの実行
         ファイルの日時 ..> gitの実行
         一緒に変わったファイル ..> gitの実行
         リビジョンのファイル ..> gitの実行
         リポジトリの直下 ..> gitの実行
         リビジョンの書き出し ..> gitの実行 : git archive
         リビジョンの解決 ..> 解いたリビジョン : 返す
+        区間の commit ..> 区間の commit と親 : 返す
         gitの実行 ..> gitの失敗 : 送る
         class gitの実行 {
           <<function>>
@@ -41,6 +43,9 @@ diagrams:
           <<function>>
         }
         class 変わったファイル {
+          <<function>>
+        }
+        class 区間の commit {
           <<function>>
         }
         class ファイルの日時 {
@@ -59,6 +64,10 @@ diagrams:
           +渡した値: str
           +commit: str
           +日時: datetime
+        }
+        class 区間の commit と親 {
+          +commit: str
+          +親: str
         }
         class gitの失敗 {
           +終了コード: int
@@ -276,6 +285,35 @@ data_models:
         type: datetime
         access: 公開
         description: 最後の commit の日時
+  - name: CommitStep
+    title: 区間の commit と親
+    container: features/history/types.py
+    usecase: 変更を調べる
+    role: DTO
+    summary: 区間の中の commit 1 つと、最初の親
+    description: '`dataclass(frozen=True)`。`list_changes` の `contains` が commit ごとに親と比べる単位。'
+    properties:
+      - name: commit
+        title: commit
+        type: str
+        access: 公開
+        description: commit（全桁）
+      - name: date
+        title: 日時
+        type: datetime
+        access: 公開
+        description: commit の日時（`%cI`）
+      - name: parent
+        title: 親
+        type: str
+        access: 公開
+        description: 最初の親の commit（全桁）
+      - name: parent_date
+        title: 親の日時
+        type: datetime
+        access: 公開
+        description: 最初の親の commit の日時
+    status: planned
 constants:
   - name: SNAPSHOT_KEEP
     title: 残す書き出しの数
@@ -735,6 +773,59 @@ functions:
         condition: 後で追加したファイルを最初の commit で
         mock: なし
         expected: '`None`'
+  - name: list_commits
+    title: 区間の commit
+    kind: 関数
+    container: features/history/query.py
+    usecase: 変更を調べる
+    role: 読み取り
+    summary: 区間の中の commit（マージ commit を除く）を、最初の親と一緒に古い順に並べる
+    description: '`list_changes` の `contains` の語の当て方（`git log -S` と同じくマージ commit を見ない）に使う。'
+    scope: public
+    thread_safe: true
+    args:
+      - name: work_root
+        title: 作業ツリー
+        type: Path
+        required: true
+        passing: positional
+        description: git を実行する作業ツリー（クローンかワークツリーの直下）
+      - name: from_commit
+        title: 始点
+        type: str
+        required: true
+        passing: positional
+        description: 始点の commit（この commit とその祖先は含めない）
+      - name: to_ref
+        title: 終点
+        type: str
+        required: true
+        passing: positional
+        description: 終点の commit。`to` を省いた呼び出しは `HEAD`
+    returns:
+      type: list[CommitStep]
+      description: 古い順。区間に commit が無ければ空
+    process: |-
+      1. `log --no-merges --reverse --format=%H%x00%cI%x00%P {from}..{to}` を呼び、行ごとに commit・日時・親の並びの最初を取る（親が無い root の commit は `{from}..` の区間に入らない）
+      2. 親の日時を `show -s --format=%H%x00%cI {親 ...}` の 1 回で引き、`CommitStep` にして返す
+    exceptions:
+      - name: GitError
+        condition: git の実行が失敗した（`from`・`to` は解決済みのため通常は起きない）
+        message: git の実行の既定
+    unit_tests:
+      - name: test_list_commits
+        case: 正常
+        summary: 区間の commit と親
+        condition: commit 1・2・3 を積み、commit 1 の親から commit 3 まで
+        mock: なし（一時フォルダの git リポジトリ）
+        expected: commit 1・2・3 の順で、それぞれの `parent` が 1 つ前の commit、`parent_date` がその commit の日時
+      - name: test_list_commits_when_merge
+        case: 正常
+        summary: マージ commit を除く
+        condition: ブランチの commit を `--no-ff` でマージした区間
+        mock: なし（一時フォルダの git リポジトリ）
+        expected: ブランチの commit を含み、マージ commit を含まない
+    status: planned
 refs:
   - dev/設計書/インターフェース定義/開発ドキュメントサーバー/リビジョンの一覧#
   - dev/設計書/インターフェース定義/開発ドキュメントサーバー/変更の一覧#

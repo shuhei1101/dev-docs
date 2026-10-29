@@ -14,9 +14,9 @@ from mcp.types import CallToolResult, TextContent, ToolAnnotations
 from pydantic import ValidationError
 from ruamel.yaml import YAML
 
-from dev_docs.features.changes.types import ChangesResult
+from dev_docs.features.changes.types import ChangesResult, ContainsChange
 from dev_docs.features.related.types import RelatedItem
-from dev_docs.features.search.types import SnippetLine
+from dev_docs.features.search.types import SearchItem, SnippetLine
 from dev_docs.features.write.types import DeleteResult
 from dev_docs.shared.errors import DevDocsError
 
@@ -61,6 +61,16 @@ def _plain(value: Any) -> Any:
             {"id": doc_id, "version": version} for doc_id, version in value.unlinked
         ]
         return _plain(data)
+    if isinstance(value, ContainsChange):
+        data = _fields(value)
+        data["from"] = data.pop("from_")
+        return _plain(data)
+    if isinstance(value, SearchItem):
+        data = _plain(_fields(value))
+        if value.ranges is not None:
+            # 返す行が無くても、切り出したことが分かるよう `ranges: []` を出す
+            data["ranges"] = [_plain(item) for item in value.ranges]
+        return data
     if isinstance(value, SnippetLine):
         # 空の行も `line`・`text`・`hit` を全て出す
         return {"line": value.line, "text": value.text, "hit": value.hit}

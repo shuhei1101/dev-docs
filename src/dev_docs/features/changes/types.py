@@ -14,6 +14,18 @@ LAST_READ_LABEL = "前回読んだ時点"
 WORKTREE_LABEL = "作業ツリー"
 
 
+class ContainsQuery(BaseModel):
+    """`list_changes` の `contains`（変更の中身の語）。"""
+
+    model_config = ConfigDict(extra="forbid")
+
+    value: str = Field(min_length=1, description="探す語か正規表現")
+    regex: bool = Field(default=False, description="value を正規表現として当てるか")
+    case_sensitive: bool = Field(
+        default=False, description="大文字小文字と全角半角（NFKC）を区別するか"
+    )
+
+
 class ChangesRequest(BaseModel):
     """`list_changes` の引数。"""
 
@@ -32,6 +44,13 @@ class ChangesRequest(BaseModel):
     cwd: str | None = None
     session_id: str | None = None
     agent_id: str | None = None
+    contains: ContainsQuery | None = Field(
+        default=None,
+        description=(
+            "語の出現数が変わった文書だけを返し、語が入った・消えた区間を添える。"
+            "filter と同時に渡すと両方に当たる文書を返す"
+        ),
+    )
 
 
 @dataclass(frozen=True)
@@ -44,18 +63,35 @@ class RangePoint:
 
 
 @dataclass(frozen=True)
+class ContainsChange:
+    """語の出現数が変わった区間 1 つ。"""
+
+    # 出現数が増えた（added）か減った（removed）か
+    kind: Literal["added", "removed"]
+    # 区間の前の端（親の commit）
+    from_: RangePoint
+    # 区間の後の端（語が入った・消えた commit か作業ツリー）
+    to: RangePoint
+    # 前と後の端の文書の出現数（文書が無ければ 0）
+    count_before: int
+    count_after: int
+
+
+@dataclass(frozen=True)
 class ChangeItem:
     """変わった文書 1 件。"""
 
     id: str
     source: str | None
-    change: Literal["added", "modified", "deleted"]
+    change: Literal["added", "modified", "deleted", "unchanged"]
     keys: list[str]
     values: dict[str, tuple[Any, Any]] = field(default_factory=dict)
     diff: str | None = None
     # 変わった文書の今の場所と返した範囲。`to` を渡した呼び出しと `deleted` では `None`
     path: str | None = None
     scope: Literal["section", "summary"] | None = None
+    # 語の出現数が変わった区間の古い順。`contains` を渡したときだけ持つ
+    contains_changes: list[ContainsChange] | None = None
 
 
 @dataclass(frozen=True)

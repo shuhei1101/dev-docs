@@ -1,7 +1,13 @@
 from __future__ import annotations
 
 from dev_docs.features.search.render import render_search_markdown
-from dev_docs.features.search.types import SearchItem, SearchResult, Snippet, SnippetLine
+from dev_docs.features.search.types import (
+    BodyRange,
+    SearchItem,
+    SearchResult,
+    Snippet,
+    SnippetLine,
+)
 
 
 def test_render_search_markdown() -> None:
@@ -74,3 +80,33 @@ def test_render_search_markdown_when_snippets() -> None:
     assert lines[first : first + 4] == ["3:## a", "4-b", "--", "9:## c"]
     assert lines.index("<document>") < first
     assert first + 3 < lines.index("</document>")
+
+
+def test_render_search_markdown_when_ranges() -> None:
+    """切り出した範囲の行（正常系）。"""
+    # 準備
+    items = [
+        SearchItem(
+            id="notes/a",
+            source=None,
+            values={"body": "決まったこと"},
+            ranges=[BodyRange(6, 8)],
+            total_lines=10,
+        ),
+        SearchItem(
+            id="notes/b",
+            source=None,
+            values={"body": "経緯\n残り"},
+            ranges=[BodyRange(1, 2), BodyRange(5, 5)],
+            total_lines=5,
+        ),
+    ]
+    result = SearchResult(total_count=2, returned=2, view="full", items=items)
+    # 実行
+    markdown = render_search_markdown(result, source_label="sample")
+    # 検証
+    lines = markdown.splitlines()
+    first = lines.index("notes/a: 6-8 行目 / 全 10 行")
+    second = lines.index("notes/b: 1-2 行目・5-5 行目 / 全 5 行")
+    assert lines[first + 1].startswith("<document")
+    assert lines[second + 1].startswith("<document")

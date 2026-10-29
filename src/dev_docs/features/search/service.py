@@ -12,16 +12,18 @@ from dev_docs.features.access.service import resolve_read_targets
 from dev_docs.features.access.types import Target
 from dev_docs.features.documents.store import DocumentStore
 from dev_docs.features.documents.types import Document
+from dev_docs.features.search.body_parts import join_ranges, select_ranges
 from dev_docs.features.search.cursor import decode_cursor, encode_cursor
-from dev_docs.features.search.fields import field_values, known_fields
+from dev_docs.features.search.fields import field_values, is_yaml, known_fields
 from dev_docs.features.search.filters import check_filter, match_filter
-from dev_docs.features.search.snippets import find_snippets
+from dev_docs.features.search.snippets import count_matches, find_snippets, split_lines
 from dev_docs.features.search.types import (
     FIELD_CHARS_DEFAULT,
     FIELD_CHARS_FULL,
     LIMIT_MAX,
     MAX_CHARS_LIMIT,
     SUMMARY_FIELDS,
+    BodyRange,
     Condition,
     Group,
     GroupCount,
@@ -41,6 +43,7 @@ from dev_docs.shared.hashing import value_hash
 NONE_LABEL = "（なし）"
 MULTI_SOURCE_MIN = 2
 BODY = "body"
+MATCHES = "@matches"
 ARRAY_FIELDS = ("tags", "related", "aliases", "avoid", "@sections")
 FINGERPRINT_EXCLUDED = {"cursor", "limit", "max_chars"}
 
@@ -52,6 +55,8 @@ class _Hit:
     target: Target
     document: Document
     source_index: int
+    # `@matches`（本文の条件に当たった本文の全文の行の数）。使わない呼び出しでは 0
+    matches: int = 0
 
 
 def _invalid(violations: list[Violation]) -> InvalidArgumentError:
@@ -76,9 +81,11 @@ def _body_conditions(node: Condition | Group | None) -> list[Condition]:
     return [node] if node.field in (BODY, "*") else []
 
 
-def _sort_value(document: Document, field: str) -> Any:
+def _sort_value(hit: _Hit, field: str) -> Any:
     """並べ替えに使う値（比べられる型にそろえる。値が無ければ `None`）。"""
-    values = field_values(document, field)
+    if field == MATCHES:
+        return float(hit.matches)
+    values = field_values(hit.document, field)
     if not values:
         return None
     value = values[0]
@@ -95,12 +102,12 @@ def _order(hits: list[_Hit], request: SearchRequest) -> list[_Hit]:
     # 渡していないときは `id` の昇順
     keys = [OrderKey(field="id")] if request.order_by is None else request.order_by
     for key in reversed(keys):
-        present = [hit for hit in ordered if _sort_value(hit.document, key.field) is not None]
-        missing = [hit for hit in ordered if _sort_value(hit.document, key.field) is None]
+        present = [hit for hit in ordered if _sort_value(hit, key.field) is not None]
+        missing = [hit for hit in ordered if _sort_value(hit, key.field) is None]
         present.sort(
             key=lambda hit, field=key.field: (  # type: ignore[misc]
-                isinstance(_sort_value(hit.document, field), str),
-                _sort_value(hit.document, field),
+                isinstance(_sort_value(hit, field), str),
+                _sort_value(hit, field),
             ),
             reverse=key.direction == "desc",
         )
@@ -167,10 +174,15 @@ def _field_names(request: SearchRequest, document: Document) -> list[str]:
 
 
 def _scope(
-    document: Document, values: dict[str, Any], snippets: list[Snippet], field_chars: int
+    document: Document,
+    values: dict[str, Any],
+    snippets: list[Snippet],
+    field_chars: int,
+    *,
+    ranged: bool,
 ) -> Literal["full", "section", "summary"]:
     """返した範囲を決める（本文を切らずに返したら `full`）。"""
-    if snippets:
+    if snippets or ranged:
         return "section"
     if not isinstance(values.get(BODY), str):
         return "summary"
@@ -189,6 +201,31 @@ def _item_size(item: SearchItem) -> int:
             len(f"{line.line}:{line.text}") for snippet in item.snippets for line in snippet.lines
         )
     )
+
+
+def _cut_body(
+    document: Document, request: SearchRequest, notes: list[str]
+) -> tuple[str, list[BodyRange], int]:
+    """sections・lines で本文を切り出し、本文・範囲・本文の全体の行数を返す。"""
+    lines = split_lines(document.body)
+    # YAML の文書には sections を渡さず、空の範囲にする
+    yaml_document = is_yaml(document)
+    ranges = select_ranges(
+        lines,
+        sections=None if yaml_document else request.sections,
+        line_range=request.lines,
+    )
+    if request.sections is not None and not ranges:
+        if yaml_document:
+            notes.append(
+                f"{document.id}: YAML の文書は sections で切り出せません。lines を使ってください"
+            )
+        else:
+            notes.append(
+                f"{document.id}: sections に当たる見出しがありません"
+                f"（{', '.join(request.sections)}）"
+            )
+    return join_ranges(lines, ranges), ranges, len(lines)
 
 
 def search_docs(
@@ -238,8 +275,17 @@ def search_docs(
     if max_chars > MAX_CHARS_LIMIT:
         max_chars = MAX_CHARS_LIMIT
         notes.append(f"max_chars {request.max_chars} は上限 {MAX_CHARS_LIMIT} に丸めました")
+    body_conditions = _body_conditions(request.filter)
+    counts_matches = MATCHES in request.fields or any(
+        key.field == MATCHES for key in request.order_by or []
+    )
     hits = [
-        _Hit(target, document, index)
+        _Hit(
+            target,
+            document,
+            index,
+            count_matches(document.body, body_conditions) if counts_matches else 0,
+        )
         for index, target, documents in loaded
         for document in documents
         if match_filter(request.filter, document, fields=fields, today=today)
@@ -271,10 +317,10 @@ def search_docs(
     field_chars = request.max_chars_per_field or (
         FIELD_CHARS_FULL if request.view == "full" else FIELD_CHARS_DEFAULT
     )
-    body_conditions = _body_conditions(request.filter)
     returns_body = request.view == "full" or BODY in request.fields
+    cuts_body = request.sections is not None or request.lines is not None
     seen_ids: dict[str, set[str]] = {}
-    if returns_body and not request.repeat_seen and request.snippets is None:
+    if returns_body and not request.repeat_seen and request.snippets is None and not cuts_body:
         for target in targets:
             versions = {
                 hit.document.id: hit.document.version
@@ -291,8 +337,17 @@ def search_docs(
         document = hit.document
         values: dict[str, Any] = {}
         snippets: list[Snippet] = []
+        ranges: list[BodyRange] | None = None
+        total_lines: int | None = None
+        item_notes: list[str] = []
         for name in _field_names(request, document):
+            if name == MATCHES:
+                values[name] = hit.matches
+                continue
             if name == BODY:
+                body = document.body
+                if cuts_body:
+                    body, ranges, total_lines = _cut_body(document, request, item_notes)
                 if request.snippets is not None:
                     context = request.snippets.context_lines
                     before, after = request.snippets.before, request.snippets.after
@@ -303,12 +358,14 @@ def search_docs(
                         before=context if before is None else before,
                         after=context if after is None else after,
                         max_count=request.snippets.max_per_doc,
+                        ranges=ranges,
                     )
                     continue
                 if document.id in seen_ids.get(hit.target.source.id, set()):
                     values[name] = SEEN_MARK
                     continue
-                values[name] = _cut(document.body, field_chars)
+                # 切り出した本文は、切り出した後に文字数で切る
+                values[name] = _cut(body, field_chars)
                 continue
             values[name] = _cut(_field_value(document, name), field_chars)
         located = (
@@ -322,13 +379,20 @@ def search_docs(
             values=values,
             snippets=snippets,
             path=store.location(hit.target, document) if located else None,
-            scope=_scope(document, values, snippets, field_chars) if located else None,
+            scope=(
+                _scope(document, values, snippets, field_chars, ranged=ranges is not None)
+                if located
+                else None
+            ),
+            ranges=ranges,
+            total_lines=total_lines,
         )
         item_size = _item_size(item)
         if items and size + item_size > max_chars:
             truncated = True
             break
         items.append(item)
+        notes.extend(item_notes)
         used.append(hit)
         size += item_size
         if BODY in values and values[BODY] != SEEN_MARK:
@@ -347,11 +411,13 @@ def search_docs(
             f"max_chars {max_chars} で打ち切りました。cursor を渡して続きを取るか、"
             "fields を絞るか view: ids で取り直してください"
         )
-    for target in targets:
-        documents = [
-            hit.document for hit in returned_bodies if hit.target.source.id == target.source.id
-        ]
-        seen.mark_returned(key, target.source.id, "body", documents)
+    # sections・lines の呼び出しは返し済みに記録しない
+    if not cuts_body:
+        for target in targets:
+            documents = [
+                hit.document for hit in returned_bodies if hit.target.source.id == target.source.id
+            ]
+            seen.mark_returned(key, target.source.id, "body", documents)
     return SearchResult(
         total_count=len(hits),
         returned=len(items),

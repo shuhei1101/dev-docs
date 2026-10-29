@@ -30,6 +30,7 @@ class Condition(BaseModel):
         "contains",
         "not_contains",
         "regex",
+        "glob",
         "gt",
         "gte",
         "lt",
@@ -39,7 +40,8 @@ class Condition(BaseModel):
     ] = Field(
         description=(
             "比べ方。regex は値の各行に当たる"
-            "（^・$ は各行の先頭・末尾。値全体の先頭・末尾は \\A・\\Z）"
+            "（^・$ は各行の先頭・末尾。値全体の先頭・末尾は \\A・\\Z）。"
+            "glob は値全体に当て、** は / をまたぎ、*・? は / をまたがない"
         )
     )
     values: list[str] = Field(default_factory=list)
@@ -54,12 +56,17 @@ class Condition(BaseModel):
 
 
 class Group(BaseModel):
-    """条件を AND か OR で束ねる。"""
+    """条件を AND・OR で束ねるか、否定する。"""
 
     model_config = ConfigDict(extra="forbid", populate_by_name=True)
 
     all_of: list[Condition | Group] | None = Field(default=None, alias="and")
     any_of: list[Condition | Group] | None = Field(default=None, alias="or")
+    not_: Condition | Group | None = Field(
+        default=None,
+        alias="not",
+        description="中の条件か束に当たらない文書に当たる。and・or の中にも置ける",
+    )
 
 
 class OrderKey(BaseModel):
@@ -88,6 +95,15 @@ class Snippets(BaseModel):
     )
 
 
+class LineRange(BaseModel):
+    """本文から返す行の範囲。"""
+
+    model_config = ConfigDict(extra="forbid")
+
+    offset: int = Field(default=1, ge=1, description="返す最初の行の行番号（1 始まり）")
+    limit: int | None = Field(default=None, ge=1, description="返す行の数。省けば本文の末尾まで")
+
+
 class SearchRequest(BaseModel):
     """`search_docs` の引数。"""
 
@@ -113,6 +129,17 @@ class SearchRequest(BaseModel):
     cwd: str | None = None
     session_id: str | None = None
     agent_id: str | None = None
+    sections: list[str] | None = Field(
+        default=None,
+        description=(
+            "Markdown の本文から返すセクションの見出しの文字列"
+            "（# と前後の空白を除いた文字列と完全一致）。view: full のときだけ。lines と同時に渡せない"
+        ),
+    )
+    lines: LineRange | None = Field(
+        default=None,
+        description="本文から返す行の範囲。view: full のときだけ。sections と同時に渡せない",
+    )
 
 
 @dataclass(frozen=True)
@@ -135,6 +162,28 @@ class Snippet:
 
 
 @dataclass(frozen=True)
+class BodyRange:
+    """本文の行の範囲 1 つ。"""
+
+    # 本文の行番号（1 始まり）
+    start_line: int
+    # 本文の行番号（1 始まり、この行を含む）
+    end_line: int
+
+
+@dataclass(frozen=True)
+class Heading:
+    """Markdown の本文の見出し 1 つ。"""
+
+    # 本文の行番号（1 始まり）
+    line: int
+    # `#` の数（1〜6）
+    level: int
+    # `#` と前後の空白、末尾の閉じの `#` を除いた文字列
+    text: str
+
+
+@dataclass(frozen=True)
 class SearchItem:
     """返す 1 件の文書の項目。"""
 
@@ -145,6 +194,10 @@ class SearchItem:
     # 文書の場所と返した範囲。`ref` を渡した呼び出し・返し済み・本文を扱わない view では `None`
     path: str | None = None
     scope: Literal["full", "section", "summary"] | None = None
+    # `sections`・`lines` で切り出した本文の行の範囲（渡さない呼び出しでは `None`、範囲が無ければ空）
+    ranges: list[BodyRange] | None = None
+    # 本文の全体の行数（`ranges` と同じ条件で持つ）
+    total_lines: int | None = None
 
 
 @dataclass(frozen=True)

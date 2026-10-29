@@ -65,7 +65,7 @@ rule-inject は、この `path` と `scope` で文書を既読にします。
 | `scope` | 返したもの | 該当する呼び出し |
 | --- | --- | --- |
 | `full` | 本文を切らずに返した | `search_docs` の `view: full` で、`max_chars_per_field` に収まり、`snippets` を渡さなかったとき |
-| `section` | 本文の一部を返した | `max_chars_per_field` で切った本文、`snippets`、`body_file` の無い `records` の要素、`list_changes` の `view: full` の差分 |
+| `section` | 本文の一部を返した | `max_chars_per_field` で切った本文、`snippets`、`sections`・`lines` で切り出した本文、`body_file` の無い `records` の要素、`list_changes` の `view: full` の差分 |
 | `summary` | 本文を返さなかった | `view: summary`、`exclude_fields` で `body` を除いた `view: full`、`trace_related`、`list_changes` の `view: summary` |
 
 <!-- /table -->
@@ -84,6 +84,9 @@ rule-inject は、この `path` と `scope` で文書を既読にします。
 同じバージョンの本文と、`trace_related` の関連の相手の名前・概要文は、2 回目から `（この会話で返し済み）` だけを返します。
 `repeat_seen: true` で取り直せます。
 一覧の各行の概要文は、選ぶために使うので省きません。
+
+`search_docs` の `sections`・`lines` を渡した呼び出しは、返した文書を記録せず、返し済みの文書でも切り出した本文を返します。
+`list_changes` の前回読んだ時点も、この呼び出しでは進みません。
 
 ### 作成日時・更新日時
 
@@ -110,9 +113,9 @@ ID で絞れば取得、`view: summary` で一覧、`view: count` で件数、`g
 | --- | --- | --- | --- |
 | `filter` | Group か Condition | 全件 | 条件の木。下の「条件」 |
 | `view` | `ids` / `summary` / `full` / `count` | `summary` | `ids` は ID だけ、`summary` は共通のメタデータ、`full` は本文込み、`count` は件数だけ |
-| `fields` | list[str] | `view` に従う | 返す項目に加える項目（`body`・種類ごとの項目・計算項目も可） |
+| `fields` | list[str] | `view` に従う | 返す項目に加える項目（`body`・種類ごとの項目・計算項目も可。`@matches` は文書ごとに本文の条件に当たった行の数を返す） |
 | `exclude_fields` | list[str] | なし | 返す項目から除く項目 |
-| `order_by` | list[{`field`, `direction`}] | `id` の昇順 | 複数キーの並べ替え。先のキーが優先。`direction` は `asc` / `desc`。日時が空の文書は末尾 |
+| `order_by` | list[{`field`, `direction`}] | `id` の昇順 | 複数キーの並べ替え。先のキーが優先。`direction` は `asc` / `desc`。日時が空の文書は末尾。`@chars` で文字数順、`@matches` でよく当たる順 |
 | `group_by` | str | なし | 指定した項目の値ごとの件数を返す。配列の項目は要素ごとに数える |
 | `limit` | int | 20 | 返す件数。最大 100 で、超えたら 100 に丸めて `notes` で知らせる |
 | `cursor` | str | なし | 前回の `next_cursor`。ほかの引数は前回と同じにする |
@@ -120,6 +123,8 @@ ID で絞れば取得、`view: summary` で一覧、`view: count` で件数、`g
 | `max_chars` | int | 20,000 | 結果全体の文字数の上限。上限は 40,000 |
 | `max_chars_per_field` | int | 2,000（`view: full` は 10,000） | 長い値を末尾で切り、残りの文字数を添える |
 | `snippets` | {`context_lines`, `before`, `after`, `max_per_doc`} | なし | 本文の代わりに、条件に当たった行と前後の行だけを行番号つきで返す。下の「抜粋」 |
+| `sections` | list[str] | なし（本文の全文） | Markdown の本文から返すセクションの見出し。`view: full` のときだけで、`lines` と同時に渡せない。下の「本文の一部」 |
+| `lines` | {`offset`, `limit`} | なし（本文の全文） | 本文から返す行の範囲。`view: full` のときだけで、`sections` と同時に渡せない。文書の種類を問わない。下の「本文の一部」 |
 | `repeat_seen` | bool | `false` | この会話で返し済みの本文も返す |
 
 <!-- /table -->
@@ -127,7 +132,7 @@ ID で絞れば取得、`view: summary` で一覧、`view: count` で件数、`g
 ### 条件
 
 ```text
-Group     = {"and": [Group | Condition, ...]} | {"or": [Group | Condition, ...]}
+Group     = {"and": [Group | Condition, ...]} | {"or": [Group | Condition, ...]} | {"not": Group | Condition}
 Condition = {"field": str, "op": enum, "values": [str, ...], "match": "any" | "all", "case_sensitive": bool}
 ```
 
@@ -136,8 +141,9 @@ Condition = {"field": str, "op": enum, "values": [str, ...], "match": "any" | "a
 | 項目 | 説明 |
 | --- | --- |
 | 入れ子 | 深さの制限は無い |
-| `field` | メタデータのキー（`id`・`kind`・`name`・`tags`・`updated` など）、種類ごとの項目、`body`（本文）、`*`（全項目）、計算項目（`@chars` 文字数・`@path` ファイルのパス・`@sections` セクションの一覧） |
-| `op` | `eq`・`ne`・`prefix`・`suffix`・`contains`・`not_contains`・`regex`・`gt`・`gte`・`lt`・`lte`・`exists`・`not_exists`。`regex` は値の各行に当たる（`^`・`$` は各行の先頭・末尾。値全体の先頭・末尾は `\A`・`\Z`）。パターンには正規化をかけず、`case_sensitive: false` は `re.IGNORECASE` と NFKC にした値で比べる |
+| `not` | 中の条件か束に当たらない文書に当たる。`and`・`or` の中にも置ける。束は `and`・`or`・`not` のどれか 1 つのキーだけを持つ。`not` の中の `body`・`*` の条件は、`@matches` と抜粋の判定に使わない |
+| `field` | メタデータのキー（`id`・`kind`・`name`・`tags`・`updated` など）、種類ごとの項目、`body`（本文）、`*`（全項目）、計算項目（`@chars` 文字数・`@path` ファイルのパス・`@sections` セクションの一覧）。`@matches` は `fields`・`order_by` でだけ使え、条件には使えない |
+| `op` | `eq`・`ne`・`prefix`・`suffix`・`contains`・`not_contains`・`regex`・`glob`・`gt`・`gte`・`lt`・`lte`・`exists`・`not_exists`。`regex` は値の各行に当たる（`^`・`$` は各行の先頭・末尾。値全体の先頭・末尾は `\A`・`\Z`）。パターンには正規化をかけず、`case_sensitive: false` は `re.IGNORECASE` と NFKC にした値で比べる。`glob` は値全体に当て、`**` は `/` をまたぎ、`*`・`?` は `/` をまたがない。`@path` を含む文字列の項目で使える |
 | `values` | 文字列の配列。数値・日付は項目の型で解釈し、日付は `today`・`-7d` も受ける。`exists`・`not_exists` だけ省ける |
 | `match` | `values` の複数を OR（`any`、既定）か AND（`all`）で比べる |
 | `case_sensitive` | 既定 `false`。大文字小文字と全角半角（NFKC）を区別しない |
@@ -157,6 +163,9 @@ Condition = {"field": str, "op": enum, "values": [str, ...], "match": "any" | "a
 | `items[]` | 文書。ID で絞ったときは指定した順。各文書に `id`・`version`、`view: full` で `body`。複数の配信元を指したときは `source` が付く |
 | `items[].path`・`items[].scope` | 文書の場所と返した範囲。[文書の場所と範囲](#文書の場所と範囲)のとおり。`view: ids`・`count` では持たない |
 | `items[].snippets` | `snippets` を渡したときの抜粋。下の「抜粋」 |
+| `items[].values.@matches` | `fields` に `@matches` を渡したときの、本文の条件に当たった本文の行の数。下の「当たった数」 |
+| `items[].ranges` | `sections`・`lines` を渡したときの、切り出した本文の行の範囲（`start_line`・`end_line`。本文の行番号、1 始まり）の配列。切り出す範囲が無ければ空 |
+| `items[].total_lines` | `sections`・`lines` を渡したときの、本文の全体の行数 |
 
 YAML として読めないファイルがあっても、そのファイルを除いて返し、`notes` で知らせます。
 
@@ -174,6 +183,37 @@ YAML として読めないファイルがあっても、そのファイルを除
 
 `markdown` は grep の `-n` と同じく、当たった行を `{行番号}:{行}`、前後の行を `{行番号}-{行}` で出し、抜粋の間に `--` を置きます。
 `json` は `items[].snippets[].lines[]` の各行に `line`（1 始まりの行番号）・`text`・`hit`（当たった行か）を持ちます。
+
+### 当たった数
+
+`@matches` は、`filter` の `body`・`*` の条件（`not` の下を除く）のどれかに当たった本文の全文の行を数えます。
+行の判定は抜粋と同じで、本文の条件が無ければ 0 です。
+`fields` で返し、`order_by: [{"field": "@matches", "direction": "desc"}]` でよく当たる順に並べます。
+`sections`・`lines` を渡しても、数えるのは本文の全文の行です。
+
+### 本文の一部
+
+`sections`・`lines` は、`view: full` の本文の一部だけを返します。
+どちらも返した文書の `scope` は `section` で、返し済みの記録をしません。
+
+| 引数 | 説明 |
+| --- | --- |
+| `sections` | Markdown の本文から返すセクションの見出しの文字列。見出しの行から、次の同じか上の階層の見出しの前の行までを返す。見出しは `#` と前後の空白を除いた文字列と完全一致で当て、当たる見出しが複数あれば全て返す。YAML の文書と、当たる見出しの無い文書は本文を空で返し、`notes` で知らせる |
+| `lines.offset` | 返す最初の行の行番号（1 始まり）。既定 1。1 以上 |
+| `lines.limit` | 返す行の数。既定は本文の末尾まで。1 以上 |
+
+`view: full` 以外で渡す、`sections` と `lines` を同時に渡す、`lines` の `offset`・`limit` が 1 未満のときは、`InvalidArgumentError` です。
+
+切り出した範囲は `items[].ranges`、本文の全体の行数は `items[].total_lines` で返します。
+`markdown` は `<document>` の前の行に `{id}: {start_line}-{end_line} 行目 / 全 {total_lines} 行` を出します（範囲が複数なら `・` で並べます）。
+
+次の順に当てます。
+
+1. `sections`・`lines` で本文を切り出す
+2. 切り出した範囲の中で `snippets` の抜粋を探す
+3. `max_chars_per_field` で切る
+
+抜粋の行番号は本文の行番号のままで、そのまま `lines` に渡せます。
 
 ## write_docs
 
@@ -247,6 +287,7 @@ Git 管理外の配信元では、種類の `documents[].writable` が削除を�
 | `from` | str | この会話で前回読んだ時点 | 区間の始点（commit・日時・ブランチ・タグ）。日時はその時点の最後の commit に解決する。Git 管理外の配信元では渡せない |
 | `to` | str | 今の作業ツリー | 区間の終点。`from` を渡したときだけ |
 | `filter` | Group か Condition | 全件 | `search_docs` と同じ条件で、対象の文書を絞る |
+| `contains` | {`value`, `regex`, `case_sensitive`} | なし | 語の出現数が変わった文書だけを返し、語が入った・消えた区間を添える。`filter` と同時に渡すと両方に当たる文書を返す。下の「語の当て方」 |
 | `view` | `summary` / `full` | `summary` | `summary` は変わった文書と変わったキー、`full` は差分の行まで |
 | `limit` | int | 20 | 返す文書の数。最大 100 |
 | `cursor` | str | なし | 前回の `next_cursor` |
@@ -254,8 +295,29 @@ Git 管理外の配信元では、種類の `documents[].writable` が削除を�
 
 <!-- /table -->
 
-レスポンスは、解決した始点・終点（`range.from`・`range.to` の入力値・commit・日時）、`total_count`、`items[]`（`id`・`change` の `added` / `modified` / `deleted`・`keys`・`view: full` の `diff`・今の作業ツリーが終点のときの `path`・`scope`）、`truncated`、`notes` です。
+レスポンスは、解決した始点・終点（`range.from`・`range.to` の入力値・commit・日時）、`total_count`、`items[]`（`id`・`change` の `added` / `modified` / `deleted` / `unchanged`・`keys`・`view: full` の `diff`・今の作業ツリーが終点のときの `path`・`scope`・`contains` を渡したときの `contains_changes`）、`truncated`、`notes` です。
+`change: unchanged` は、`contains` を渡して、区間の中で語が入って消え、両端の内容が同じ文書だけが持ちます。
 前回読んだ時点は、`search_docs` が `state_dir` に記録した、文書ごとの最後に返した内容と比べます。
+
+### 語の当て方
+
+`contains` は `value`（探す語か正規表現。空文字は渡せない）、`regex`（`value` を正規表現として当てるか。既定 `false`）、`case_sensitive`（大文字小文字と全角半角を区別するか。既定 `false`。`search_docs` の条件と同じ）を持ちます。
+
+区間の中の commit（`git log {from}..{to}` が並べる commit のうち、親が 2 つ以上のマージ commit を除く）ごとに、その commit と親の文書の内容で語の出現数（正規表現なら当たった数）を比べ、数が変わった commit を返します。
+`git log -S`（正規表現は `--pickaxe-regex`）と同じ当て方です。
+語を含む行を書き換えただけで出現数が同じ commit と、マージの競合の解消で入った語は返しません。
+`to` を省いた呼び出しは、`{from}..HEAD` の commit に加えて、HEAD と今の作業ツリーを最後の区間として比べます。
+文書の内容は `search_docs` の `view: full` が返す本文で、`records` の文書も 1 件ずつ比べます。
+
+文書ごとの `items[].contains_changes` に、出現数が増えた（`added`）・減った（`removed`）区間を古い順に並べます。
+
+| キー | 説明 |
+| --- | --- |
+| `kind` | `added` / `removed` |
+| `from`・`to` | 区間の両端の `commit` と `date`。`to` を省いた呼び出しの HEAD と作業ツリーの区間は、`to` が `range.to` と同じ `作業ツリー`（commit を持たない） |
+| `count_before`・`count_after` | 区間の前後の語の出現数 |
+
+`from` を省いて前回読んだ時点と比べた呼び出しは、比べた区間全体の 1 要素を返し、`from`・`to` は `range` と同じ値です。
 
 ## trace_related
 
@@ -288,7 +350,7 @@ Git 管理外の配信元では、種類の `documents[].writable` が削除を�
 | SourceNotServedError | 起動時の検証で外したか `enabled: false` の配信元を指した | 違反したキーのパスと理由 |
 | WorktreeNotMatchedError | `worktree` が配信元の `worktrees` に当たらない | 渡したパスと `worktrees` の値 |
 | TargetIsCloneError | Git の配信元で、書く先がクローン本体になる | `worktree` でワークツリーを指すこと |
-| InvalidArgumentError | `filter`・`order_by`・`group_by`・Operation の中の知らない項目・型の合わない値、50 件を超える操作、必須のキーの欠け、`text_edits` の `old` が 1 か所に一致しない、`ref` を渡せない配信元に `ref`・`from`・`to` を渡した、`create` の置き場所のファイル名が `documents[].exclude[]` に当たる | 項目のパス・期待する型・実際の値と、`describe(source, kind)` でスキーマを見ること |
+| InvalidArgumentError | `filter`・`order_by`・`group_by`・Operation の中の知らない項目・型の合わない値、50 件を超える操作、必須のキーの欠け、`text_edits` の `old` が 1 か所に一致しない、`ref` を渡せない配信元に `ref`・`from`・`to` を渡した、`create` の置き場所のファイル名が `documents[].exclude[]` に当たる、束が `and`・`or`・`not` のキーを 2 つ以上持つ、`@matches` を条件に使った、`sections` と `lines` を同時に渡した、`view: full` 以外で `sections`・`lines` を渡した、`lines` の `offset`・`limit` が 1 未満、`contains.value` が空、`contains.regex: true` で `value` が正規表現として読めない | 項目のパス・期待する型・実際の値と、`describe(source, kind)` でスキーマを見ること |
 | RefNotFoundError | `ref`・`from`・`to` を commit に解決できない | 解決できなかった値 |
 | UnknownKindError | `kind` が配信元の種類に無い | その配信元の種類の一覧 |
 | DocumentNotFoundError | 指した ID の文書が無い | 見つからなかった ID と、近い ID の候補 |

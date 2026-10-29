@@ -53,9 +53,15 @@ def _signature(model: type[BaseModel]) -> inspect.Signature:
     parameters = []
     for name, info in model.model_fields.items():
         annotation: Any = info.annotation
+        extras: dict[str, Any] = {}
         if info.alias:
             # `from` は Python の予約語なので、属性は `from_`・入力のスキーマでは `from` にする
-            annotation = Annotated[annotation, Field(validation_alias=info.alias)]
+            extras["validation_alias"] = info.alias
+        if info.description:
+            # 要求のモデルのフィールドの説明を、入力のスキーマの項目の説明に出す
+            extras["description"] = info.description
+        if extras:
+            annotation = Annotated[annotation, Field(**extras)]
         default = (
             inspect.Parameter.empty
             if info.is_required()
@@ -110,7 +116,10 @@ def build_docs_mcp(handlers: Handlers) -> MCPServer:
         "view: count で件数、group_by で集計になる。"
         "op: regex は値の各行に当たる（値全体の先頭・末尾は \\A・\\Z）。"
         "snippets は本文の代わりに、当たった行と前後の行（before・after。省けば context_lines）"
-        "を行番号つきで返す。",
+        "を行番号つきで返す。"
+        "filter の not は中の条件か束に当たらない文書、op: glob は **・*・? のパターンに当たる。"
+        "fields・order_by の @matches は文書ごとの本文の条件に当たった行の数。"
+        "sections（Markdown の見出し）・lines（offset・limit）は view: full の本文の一部だけを返す。",
         SearchRequest,
         lambda request: search_docs(
             request,
@@ -133,7 +142,9 @@ def build_docs_mcp(handlers: Handlers) -> MCPServer:
     _register(
         mcp,
         "list_changes",
-        "2 つのリビジョンの間、またはこの会話で前回読んだ時点からの、文書の変更を返す。",
+        "2 つのリビジョンの間、またはこの会話で前回読んだ時点からの、文書の変更を返す。"
+        "contains は語（regex で正規表現）の出現数が変わった文書と、語が入った・消えた commit を返す"
+        "（git log -S と同じくマージ commit は見ない）。",
         ChangesRequest,
         lambda request: list_changes(
             request, registry=handlers.registry, store=handlers.store, seen=handlers.seen

@@ -9,6 +9,23 @@ FILES_SCHEMA = Path(__file__).parents[3] / "templates" / "files.schema.yaml"
 BROKEN_CONFIG = "name: broken\ndocuments:\n  - id: sample\n    type: yaml\n"
 DOC_1 = {"field": "id", "op": "eq", "values": ["doc-1"]}
 SEEN = "（この会話で返し済み）"
+NOTES_ROWS = "  - id: notes\n    type: markdown\n    paths: [notes/**/*.md]\n"
+SEARCH_WORD = {"field": "body", "op": "contains", "values": ["検索"]}
+IN_ARCHIVE = {"field": "@path", "op": "glob", "values": ["notes/archive/**"]}
+BY_MATCHES = {"fields": ["@matches"], "order_by": [{"field": "@matches", "direction": "desc"}]}
+NOTES_A = {"field": "id", "op": "eq", "values": ["notes/a"]}
+PART_LINES = [
+    "# a",
+    "2 行目 検索",
+    "## 経緯",
+    "経緯の本文",
+    "",
+    "## 決まったこと",
+    "7 行目 検索",
+    "詳細",
+    "## 残り",
+    "残りの本文",
+]
 
 
 def _related_files(
@@ -323,3 +340,72 @@ def test_normal_when_excluded_name(
     # 検証
     assert [item["id"] for item in rule.data["items"]] == ["docs/rule/a", "docs/rule/Rb"]
     assert [item["id"] for item in index.data["items"]] == ["docs/rule/README"]
+
+
+def test_normal_when_ordered_by_matches(
+    make_source: Callable[..., Any],
+    serve: Callable[..., Any],
+    sample_file_set: Callable[..., dict[str, str]],
+    sample_config_text: Callable[..., str],
+) -> None:
+    """当たった数で並べて絞る（正常系）。"""
+    # 準備
+    files = sample_file_set(
+        **{
+            "dev-docs.yaml": sample_config_text(NOTES_ROWS),
+            "notes/a.md": "検索 1\n検索 2\n検索 3\n他\n",
+            "notes/b.md": "検索 1\n他\n",
+            "notes/archive/c.md": "検索 1\n検索 2\n他\n",
+        }
+    )
+    sample = make_source("sample", files)
+    served = serve(sample)
+    cwd = str(sample.folder)
+    # 実行
+    narrowed = served.call(
+        "search_docs",
+        cwd=cwd,
+        filter={"and": [SEARCH_WORD, {"not": IN_ARCHIVE}]},
+        format="json",
+        **BY_MATCHES,
+    )
+    without_not = served.call(
+        "search_docs", cwd=cwd, filter=SEARCH_WORD, format="json", **BY_MATCHES
+    )
+    # 検証
+    assert [(item["id"], item["values"]["@matches"]) for item in narrowed.data["items"]] == [
+        ("notes/a", 3),
+        ("notes/b", 1),
+    ]
+    assert [(item["id"], item["values"]["@matches"]) for item in without_not.data["items"]] == [
+        ("notes/a", 3),
+        ("notes/archive/c", 2),
+        ("notes/b", 1),
+    ]
+
+
+def test_normal_when_part_of_body(
+    make_source: Callable[..., Any],
+    serve: Callable[..., Any],
+    sample_file_set: Callable[..., dict[str, str]],
+    sample_config_text: Callable[..., str],
+) -> None:
+    """見つけた文書の本文の一部を読む（正常系）。"""
+    # 準備
+    text = "\n".join(PART_LINES) + "\n"
+    files = sample_file_set(**{"dev-docs.yaml": sample_config_text(NOTES_ROWS), "notes/a.md": text})
+    sample = make_source("sample", files)
+    served = serve(sample)
+    request = {"cwd": str(sample.folder), "filter": NOTES_A, "view": "full", "session_id": "s1"}
+    # 実行
+    by_section = served.call("search_docs", format="json", sections=["決まったこと"], **request)
+    by_lines = served.call("search_docs", format="json", lines={"offset": 3, "limit": 2}, **request)
+    whole = served.call("search_docs", format="json", **request)
+    # 検証
+    section_item = by_section.data["items"][0]
+    assert section_item["values"]["body"] == "## 決まったこと\n7 行目 検索\n詳細"
+    assert section_item["scope"] == "section"
+    assert by_lines.data["items"][0]["values"]["body"] == "## 経緯\n経緯の本文"
+    assert by_lines.data["items"][0]["scope"] == "section"
+    assert whole.data["items"][0]["values"]["body"] == text
+    assert whole.data["items"][0]["scope"] == "full"
