@@ -348,11 +348,14 @@ scenarios:
         description: なし（実環境で実行。`cwd` はテストが引数に入れる）
         notes: '-'
       - name: 設計書
-        description: sample の YAML の文書 `design/repo`（タスクのリポジトリの設計書）
+        description: sample の YAML の文書 `design/repo.yaml`（id `design/repo`。タスクのリポジトリの設計書）
         notes: '-'
       - name: 管理用の YAML
         description: 'sample の `src/files.yaml`。`repo.py` の行が `related: [{to: design/repo, type: implements}]`、`test_repo.py` の行が `related: [{to: src/repo, type: tests}]` を持つ。`src/repo.py`・`src/test_repo.py` を置く'
-        notes: '`dev-docs.yaml` は `related.types[]` を書かず、既定の関連の種類で検査する'
+        notes: '-'
+      - name: 文書の行
+        description: 'sample の `dev-docs.yaml` の行 `design`（`paths: [design/*.yaml]`）と行 `src`（`paths: [src/files.yaml]`・`records: files`・`body_file: path`）'
+        notes: '`related.types[]` を書かず、既定の関連の種類で検査する'
       - name: dev-docs
         description: sample を配信している dev-docs
         notes: '`cwd` は sample のクローン本体'
@@ -368,11 +371,14 @@ scenarios:
         M-->>A: src/repo（via_type は implements）
         A->>M: trace_related(from_ids: src/repo, direction: in, depth: 1)
         M-->>A: src/test_repo（via_type は tests）
+        A->>M: search_docs(filter: id が src/repo か src/test_repo, view: full)
+        M->>M: 読み取りの検査（related の type が既定の種類にあるか）
+        M-->>A: 2 件の本文（違反なし）
       ```
     expected:
       - '`design/repo` を起点にした `direction: in` の `trace_related` が `src/repo` の 1 件を返し、`via_type` が `implements` になる'
       - '`src/repo` を起点にした `direction: in` の `trace_related` が `src/test_repo` の 1 件を返し、`via_type` が `tests` になる'
-      - '`related.types[]` を書いていない sample でも `implements`・`tests` の行が検査の違反にならない'
+      - '`search_docs` が `src/repo`・`src/test_repo` の 2 件を違反を付けずに返す'
     test: test_normal_when_implementing_code_traced
 lead: エージェントが文書の MCP の `describe`・`search_docs`・`trace_related` で、今の作業場所から読める配信元の文書を探して読む。
 issue: 3

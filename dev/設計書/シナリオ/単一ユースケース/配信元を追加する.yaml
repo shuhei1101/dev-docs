@@ -252,38 +252,43 @@ scenarios:
       - name: Mock
         description: なし（実環境で実行）
         notes: '-'
-      - name: dev-docs
-        description: 正常シナリオと同じ
-        notes: '-'
-      - name: コードと設計書を持つ配信元
-        description: '`src/` に `tasks/repo.py`・`tasks/test_repo.py`・空の `tasks/__init__.py`・`uv.lock`・`logo.png` を持ち、`dev-docs.yaml` も管理用の YAML も無い git リポジトリ。設計書 `design/repo`（YAML）の項目が実装の場所として `src/tasks/repo.py` を持つ'
-        notes: 範囲の質問に `src/**` を答える
+      - name: 設計書を配信している配信元
+        description: '`dev-docs.yaml` が設計書の行 `design`（YAML の文書。`design/repo.yaml` が id `design/repo` と `implementation: src/tasks/repo.py` を持つ）と、管理用の YAML を読む行 `src`（`paths: [src/files.yaml]`・`records: files`・`body_file: path`）を持ち、端末の設定に登録済みの git リポジトリ。`src/files.yaml` は `files: []`'
+        notes: '`dev-docs.yaml` は `related.types[]` を書かない'
+      - name: 範囲のファイル
+        description: '`src/` に `tasks/repo.py`・`tasks/test_repo.py`・空の `tasks/__init__.py`・`uv.lock`・`logo.png` を置き commit する。その commit でワークツリーを作る'
+        notes: 実装のパスを持つ設計書の質問に、種類 `design`・キー `implementation` を答える
     flow: |-
       ```mermaid
       sequenceDiagram
         actor U as 利用者
         participant SK as setup のスキル
-        participant FS as 配信元のフォルダ
+        participant DM as 文書の MCP
         participant AD as 管理の MCP
 
-        U->>SK: /dev-docs:setup {配信元のパス}
-        SK->>FS: 範囲のファイルを集める
+        U->>SK: 配信元のワークツリーで /dev-docs:setup
+        SK->>SK: 範囲のファイルと管理用の YAML の行を突き合わせる
         SK->>SK: 除外の条件（生成物・ロック・バイナリ・ベンダーのコード・再エクスポートや空の __init__）に当たるファイルを外す
-        SK->>FS: 設計書が実装の場所として持つパスを読む
-        SK->>SK: テストに tests、設計書が指すコードに implements の候補を付ける
+        SK->>U: 実装のパスを持つ設計書の種類とキーを聞く（既定は無し）
+        U-->>SK: 種類 design、キー implementation
+        SK->>DM: search_docs(filter: kind が design, format: json)
+        DM-->>SK: design/repo（implementation は src/tasks/repo.py）
+        SK->>SK: テストに tests、キーの値とパスが一致するコードに implements の候補を付ける
         SK-->>U: 追加する行・関連の候補・除外したファイルを表で示して確かめる
         U-->>SK: 了承
-        SK->>FS: dev-docs.yaml と管理用の YAML を書く
-        SK->>AD: check_project（配信元のパス）
+        SK->>DM: write_docs（管理用の YAML の行を追加する）
+        SK->>AD: check_project
         AD-->>SK: 違反 0 件・索引の同期の件数 0
+        SK->>AD: reload
         SK-->>U: 追加した行と結果を出す
       ```
     expected:
       - 管理用の YAML に `tasks/repo.py` と `tasks/test_repo.py` の 2 行だけが並び、`tasks/__init__.py`・`uv.lock`・`logo.png` の行は無い
       - '`tasks/repo.py` の行が `related: [{to: design/repo, type: implements}]` を持つ'
-      - '`tasks/test_repo.py` の行が `tests` で `tasks/repo.py` の文書を指す'
+      - '`tasks/test_repo.py` の行が `related: [{to: src/tasks/repo, type: tests}]` を持つ'
       - 確認の表に、除外した 3 件と `implements`・`tests` の候補が出る
       - '`check_project` が違反と索引の同期の件数を 0 で返す（除外した 3 件を索引に無いファイルとして数えない）'
+      - '`reload` の後、`design/repo` を起点にした `direction: in` の `trace_related` が `src/tasks/repo` を返す'
     test: test_normal_when_excluded_and_related_candidates
 lead: 利用者が `/dev-docs:setup [path]` で、フォルダを配信元として端末の設定に並べ、文書の MCP で読めるようにする。2 回目以降は範囲のファイルの増減・改名を管理用の YAML に合わせる。
 issue: 4
