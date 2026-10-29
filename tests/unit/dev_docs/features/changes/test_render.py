@@ -3,7 +3,12 @@ from __future__ import annotations
 from datetime import UTC, datetime
 
 from dev_docs.features.changes.render import render_changes_markdown
-from dev_docs.features.changes.types import ChangeItem, ChangesResult, RangePoint
+from dev_docs.features.changes.types import (
+    ChangeItem,
+    ChangesResult,
+    ContainsChange,
+    RangePoint,
+)
 
 
 def test_render_changes_markdown() -> None:
@@ -78,3 +83,44 @@ def test_render_changes_markdown_when_location() -> None:
     assert lines.count("</document>") == 1
     assert lines.index("## doc-1") < lines.index(opening)
     assert lines.index(opening) < lines.index("</document>") < lines.index("## doc-2")
+
+
+def test_render_changes_markdown_when_contains() -> None:
+    """語の増減の列（正常系）。"""
+    # 準備
+    date = datetime(2026, 10, 26, 10, 0, tzinfo=UTC)
+    result = ChangesResult(
+        range_from=RangePoint(input="3f2a9c1", commit="3f2a9c1", date=date),
+        range_to=RangePoint(input="8b1d4e0", commit="8b1d4e0", date=date),
+        total_count=1,
+        items=[
+            ChangeItem(
+                id="doc-1",
+                source=None,
+                change="unchanged",
+                keys=[],
+                values={},
+                contains_changes=[
+                    ContainsChange(
+                        kind="added",
+                        from_=RangePoint(input="", commit="1111111", date=date),
+                        to=RangePoint(input="", commit="3f2a9c1", date=date),
+                        count_before=0,
+                        count_after=1,
+                    ),
+                    ContainsChange(
+                        kind="removed",
+                        from_=RangePoint(input="", commit="3f2a9c1", date=date),
+                        to=RangePoint(input="", commit="8b1d4e0", date=date),
+                        count_before=1,
+                        count_after=0,
+                    ),
+                ],
+            )
+        ],
+    )
+    # 実行
+    markdown = render_changes_markdown(result, source_label="sample")
+    # 検証
+    assert "語の増減" in markdown
+    assert "| doc-1 | unchanged |  | added 3f2a9c1・removed 8b1d4e0 |" in markdown

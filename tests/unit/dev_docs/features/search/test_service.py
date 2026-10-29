@@ -14,8 +14,11 @@ from dev_docs.features.history.snapshot import SnapshotStore
 from dev_docs.features.search.service import search_docs
 from dev_docs.features.search.types import (
     SUMMARY_FIELDS,
+    BodyRange,
     Condition,
+    Group,
     GroupCount,
+    LineRange,
     OrderKey,
     SearchRequest,
     SearchResult,
@@ -75,6 +78,7 @@ def make_env(
         validators: list[ScriptEntry] | None = None,
         row_validators: list[str] | None = None,
         extra_sources: list[ServedSource] | None = None,
+        documents: list[DocumentTable] | None = None,
     ) -> SearchEnv:
         root = tmp_path / "sample"
         write_files(root, files)
@@ -84,7 +88,7 @@ def make_env(
             paths=["docs/*.yaml"],
             validators=row_validators or [],
         )
-        config = make_source_config(documents=[table], validators=validators or [])
+        config = make_source_config(documents=documents or [table], validators=validators or [])
         source = make_served_source(id="sample", root=root, config=config)
         store = DocumentStore(SnapshotStore(tmp_path / "snapshots"))
         checker = DocumentChecker(store, timeout_sec=10)
@@ -98,6 +102,34 @@ def make_env(
 TWO_DOCS = {
     "docs/doc-1.yaml": "id: doc-1\nname: 文書 1\ndescription: 1 件目\n",
     "docs/doc-2.yaml": "id: doc-2\nname: 文書 2\ndescription: 2 件目\n",
+}
+
+
+NOTES_TABLE = DocumentTable(id="notes", type="markdown", paths=["notes/**/*.md"])
+YAML_TABLE = DocumentTable(id="rules", type="yaml", paths=["docs/*.yaml"])
+
+NOTES = {
+    "notes/a.md": "---\ntags: [x]\n---\n検索 1\n検索 2\n検索 3\n他\n",
+    "notes/b.md": "検索 1\n他\n",
+    "notes/archive/c.md": "検索 1\n検索 2\n他\n",
+}
+
+PART_NOTES = {
+    "notes/a.md": "\n".join(
+        [
+            "# a",
+            "2 行目 検索",
+            "## 経緯",
+            "経緯の本文",
+            "",
+            "## 決まったこと",
+            "7 行目 検索",
+            "詳細",
+            "## 残り",
+            "残りの本文",
+        ]
+    )
+    + "\n",
 }
 
 
@@ -223,6 +255,118 @@ def test_search_docs_when_id_values_and_order_by(make_env: Callable[..., SearchE
     result = env.search(filter=condition, order_by=[OrderKey(field="id")])
     # 検証
     assert [item.id for item in result.items] == ["doc-1", "doc-2"]
+
+
+def test_search_docs_when_ordered_by_matches(make_env: Callable[..., SearchEnv]) -> None:
+    """当たった数で並べる（正常系）。"""
+    # 準備
+    env = make_env(NOTES, documents=[NOTES_TABLE])
+    body_condition = Condition(field="body", op="contains", values=["検索"])
+    archive = Group.model_validate(
+        {"not": {"field": "@path", "op": "glob", "values": ["notes/archive/**"]}}
+    )
+    node = Group.model_validate({"and": [body_condition, archive]})
+    # 実行
+    ordered = env.search(
+        filter=node,
+        fields=["@matches"],
+        order_by=[OrderKey(field="@matches", direction="desc")],
+    )
+    without_matches = env.search(filter=node)
+    # 検証
+    assert [(item.id, item.values["@matches"]) for item in ordered.items] == [
+        ("notes/a", 3),
+        ("notes/b", 1),
+    ]
+    assert all("@matches" not in item.values for item in without_matches.items)
+
+
+def test_search_docs_when_matches_under_not(make_env: Callable[..., SearchEnv]) -> None:
+    """`not` の下の本文の条件は数えない（正常系）。"""
+    # 準備
+    env = make_env(NOTES, documents=[NOTES_TABLE])
+    node = Group.model_validate(
+        {
+            "not": {
+                "and": [
+                    {"field": "body", "op": "contains", "values": ["検索"]},
+                    {"field": "tags", "op": "eq", "values": ["x"]},
+                ]
+            }
+        }
+    )
+    # 実行
+    result = env.search(filter=node, fields=["@matches"])
+    # 検証
+    assert [(item.id, item.values["@matches"]) for item in result.items] == [
+        ("notes/archive/c", 0),
+        ("notes/b", 0),
+    ]
+
+
+def test_search_docs_when_part_of_body(make_env: Callable[..., SearchEnv]) -> None:
+    """本文の一部と返し済み（正常系）。"""
+    # 準備
+    env = make_env(PART_NOTES, documents=[NOTES_TABLE])
+    condition = Condition(field="id", op="eq", values=["notes/a"])
+    request = {"filter": condition, "view": "full", "session_id": "s1"}
+    # 実行
+    by_section = env.search(**request, sections=["決まったこと"])
+    by_lines = env.search(**request, lines=LineRange(offset=3, limit=2))
+    whole = env.search(**request)
+    again = env.search(**request, sections=["決まったこと"])
+    # 検証
+    section_item = by_section.items[0]
+    assert section_item.values["body"] == "## 決まったこと\n7 行目 検索\n詳細"
+    assert section_item.scope == "section"
+    assert section_item.ranges == [BodyRange(6, 8)]
+    assert section_item.total_lines == 10
+    assert by_lines.items[0].values["body"] == "## 経緯\n経緯の本文"
+    assert by_lines.items[0].ranges == [BodyRange(3, 4)]
+    whole_item = whole.items[0]
+    assert whole_item.values["body"] == PART_NOTES["notes/a.md"]
+    assert whole_item.scope == "full"
+    assert whole_item.ranges is None
+    assert whole_item.total_lines is None
+    assert again.items[0].values["body"] == section_item.values["body"]
+
+
+def test_search_docs_when_part_of_body_with_snippets(make_env: Callable[..., SearchEnv]) -> None:
+    """切り出した範囲の抜粋と当たる見出しの無い文書（正常系）。"""
+    # 準備
+    files = {**PART_NOTES, "docs/doc-1.yaml": "id: doc-1\nname: 文書 1\n"}
+    env = make_env(files, documents=[NOTES_TABLE, YAML_TABLE])
+    snippet_condition = Condition(field="body", op="contains", values=["検索"])
+    # 実行
+    snippeted = env.search(
+        filter=snippet_condition,
+        view="full",
+        sections=["決まったこと"],
+        snippets=Snippets(context_lines=0),
+    )
+    missing = env.search(
+        filter=Group.model_validate(
+            {
+                "or": [
+                    {"field": "id", "op": "eq", "values": ["notes/a"]},
+                    {"field": "id", "op": "eq", "values": ["doc-1"]},
+                ]
+            }
+        ),
+        view="full",
+        sections=["無い見出し"],
+    )
+    # 検証
+    assert snippeted.items[0].snippets == [
+        Snippet(lines=[SnippetLine(line=7, text="7 行目 検索", hit=True)])
+    ]
+    assert [(item.id, item.values["body"], item.ranges) for item in missing.items] == [
+        ("doc-1", "", []),
+        ("notes/a", "", []),
+    ]
+    assert len(missing.notes) == 2
+    assert any("doc-1" in note and "YAML" in note for note in missing.notes)
+    assert any("notes/a" in note and "無い見出し" in note for note in missing.notes)
 
 
 def test_search_docs_when_unreadable_file(make_env: Callable[..., SearchEnv]) -> None:

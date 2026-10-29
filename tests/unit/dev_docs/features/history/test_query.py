@@ -10,17 +10,19 @@ from dev_docs.features.history.query import (
     changed_files,
     co_changed_files,
     file_dates,
+    list_commits,
     list_refs,
     read_file_at,
     resolve_ref,
 )
-from dev_docs.features.history.types import FileChange, FileDates
+from dev_docs.features.history.types import CommitStep, FileChange, FileDates
 from dev_docs.features.sources.types import ServedSource, SourceConfig
 from dev_docs.shared.errors import RefNotFoundError
 
 OCT_01 = "2026-10-01T12:00:00+09:00"
 OCT_03 = "2026-10-03T12:00:00+09:00"
 OCT_05 = "2026-10-05T12:00:00+09:00"
+OCT_07 = "2026-10-07T12:00:00+09:00"
 
 
 def test_resolve_ref(
@@ -233,3 +235,59 @@ def test_read_file_at_when_missing(
     result = read_file_at(root, first, "later.yaml")
     # 検証
     assert result is None
+
+
+def test_list_commits(
+    git_repo: Callable[..., Path],
+    commit_all: Callable[..., str],
+    run_git: Callable[..., str],
+) -> None:
+    """区間の commit と親（正常系）。"""
+    # 準備
+    root = git_repo({"a.yaml": "a: 0\n"}, date=OCT_01)
+    base = run_git(root, "rev-parse", "HEAD").strip()
+    first = commit_all(root, {"a.yaml": "a: 1\n"}, date=OCT_03)
+    second = commit_all(root, {"a.yaml": "a: 2\n"}, date=OCT_05)
+    third = commit_all(root, {"a.yaml": "a: 3\n"}, date=OCT_07)
+    # 実行
+    result = list_commits(root, base, "HEAD")
+    # 検証
+    assert result == [
+        CommitStep(
+            commit=first,
+            date=datetime.fromisoformat(OCT_03),
+            parent=base,
+            parent_date=datetime.fromisoformat(OCT_01),
+        ),
+        CommitStep(
+            commit=second,
+            date=datetime.fromisoformat(OCT_05),
+            parent=first,
+            parent_date=datetime.fromisoformat(OCT_03),
+        ),
+        CommitStep(
+            commit=third,
+            date=datetime.fromisoformat(OCT_07),
+            parent=second,
+            parent_date=datetime.fromisoformat(OCT_05),
+        ),
+    ]
+
+
+def test_list_commits_when_merge(
+    git_repo: Callable[..., Path],
+    commit_all: Callable[..., str],
+    run_git: Callable[..., str],
+) -> None:
+    """マージ commit を除く（正常系）。"""
+    # 準備
+    root = git_repo({"a.yaml": "a: 0\n"})
+    base = run_git(root, "rev-parse", "HEAD").strip()
+    run_git(root, "checkout", "-b", "feature")
+    branch_commit = commit_all(root, {"b.yaml": "b: 1\n"})
+    run_git(root, "checkout", "develop")
+    run_git(root, "merge", "--no-ff", "feature", "-m", "merge")
+    # 実行
+    result = list_commits(root, base, "HEAD")
+    # 検証
+    assert [step.commit for step in result] == [branch_commit]

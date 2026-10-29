@@ -78,3 +78,22 @@ def test_build_docs_mcp_when_error(
     assert result.is_error is True
     assert isinstance(result.content[0], TextContent)
     assert "UnknownKindError" in result.content[0].text
+
+
+def test_build_docs_mcp_when_descriptions(make_handlers: Callable[..., Any]) -> None:
+    """追加した引数の説明（正常系）。"""
+    # 準備
+    mcp = build_docs_mcp(make_handlers())
+    # 実行
+    tools = asyncio.run(mcp.list_tools())
+    # 検証
+    by_name = {tool.name: tool for tool in tools}
+    search_description = by_name["search_docs"].description or ""
+    for word in ("not", "glob", "@matches", "sections", "lines"):
+        assert word in search_description
+    assert "contains" in (by_name["list_changes"].description or "")
+    search_properties = by_name["search_docs"].input_schema["properties"]
+    changes_properties = by_name["list_changes"].input_schema["properties"]
+    assert "description" in search_properties["sections"]
+    assert "description" in search_properties["lines"]
+    assert "description" in changes_properties["contains"]
