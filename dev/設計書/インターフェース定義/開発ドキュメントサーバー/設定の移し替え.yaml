@@ -60,7 +60,7 @@ flows:
       - name: Mock
         description: 正常系と同じ差し替え
       - name: 配信元
-        description: '`version: "1"` の `dev-docs.yaml` を持つ sample と、配信元の設定の 1 → 2 の手順'
+        description: '`version: "1"` の `dev-docs.yaml` を持つ sample。`documents[0]` が `type: yaml`・`metadata: {name: {type: ref, field: title}, alias_type: {type: custom, value: rule}}` を持つ'
     flow: |-
       ```mermaid
       sequenceDiagram
@@ -74,6 +74,7 @@ flows:
       ```
     expected:
       - '`dev-docs.yaml` の `version` が `"2"`'
+      - '`documents[0]` が `type` を持たず、`metadata` が `{name: title}`、行の `alias_type` が `rule` になる'
       - 端末の設定が変わらない
     test: test_normal_when_source_config
   - name: 異常系（設定が読めない・ConfigInvalid）
@@ -161,6 +162,28 @@ flows:
       - 終了コード 6 で stderr に dev-docs の更新の案内を出す
       - 端末の設定が変わらない
     test: test_error_when_config_newer
+  - name: 異常系（配信元の設定に移せない設定がある・MigrationFailed）
+    summary: 機械的に移せない設定を持つ配信元の設定は書き換えず、違反と `/dev-docs:setup` の案内を出して終了コード 4 で止める
+    setup:
+      - name: Mock
+        description: 正常系と同じ差し替え
+      - name: 配信元
+        description: '`version: "1"` の `dev-docs.yaml` を持つ sample。`documents[0]` が `type: yaml`・`metadata: {name: {type: ref, field: title}}`、`documents[1]` が `type: markdown`・`defaults: [{paths: [docs/**], tags: [doc]}]`、`documents[2]` が `metadata: {tags: {type: custom, value: [x]}}` を持つ'
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        participant C as クライアント
+        participant M as dev-docs migrate
+        participant F as dev-docs.yaml
+
+        C->>M: --source
+        M->>M: 手順を当てた結果を新しいスキーマで検証し、違反が残る
+        M-->>C: 違反と /dev-docs:setup の案内（終了コード 4）
+      ```
+    expected:
+      - 終了コード 4 で stderr に `documents[1].type`・`documents[1].defaults`・`documents[2].metadata.tags` の違反と、`/dev-docs:setup` で管理用の YAML へ移す案内を出す
+      - '`dev-docs.yaml` の中身が適用前と同じ（`documents[0]` も書き換わらない）'
+    test: test_error_when_source_config_unmigratable
 lead: 端末の設定か配信元の `dev-docs.yaml` の `version` を dev-docs が読めるバージョンと比べ、移し替えの手順を古い順に当てる。
 identifier: migrate
 permissions: 対象の設定ファイルを書き換えられる利用者
@@ -168,6 +191,7 @@ idempotent: true
 side_effects: 適用では対象の設定ファイルを書き換え、同じフォルダに `{ファイル名}.bak-{時刻}` を残す。`--plan` は書き換えない
 callers:
   - dev/設計書/シナリオ/単一ユースケース/dev-docsを更新する#scenarios[正常シナリオ（端末の設定が古くなる）]
+  - dev/設計書/シナリオ/単一ユースケース/dev-docsを更新する#scenarios[正常シナリオ（配信元の設定が古くなる）]
 exclusivity: 端末の設定は動いているサーバーと同じファイルを書き換えるため、適用は書き換えの前後でファイルの中身を比べ、変わっていたら書かずに失敗とする
 request:
   - name: --plan
@@ -233,4 +257,6 @@ constraints:
     constraint: 動いているサーバーには反映しない。利用者が続けて `restart`（配信元の設定だけなら `reload`）を呼ぶ
   - item: タイムアウト
     constraint: 制限なし
+  - item: 配信元の設定の 1 → 2 の手順
+    constraint: '`type: yaml` を削除し、`metadata` の `{type: ref, field: X}` を列名の文字列 `X` に、`metadata.alias_type` の `{type: custom, value: X}` を行の `alias_type: X` にする。`type: markdown`・`defaults[]`・`alias_type` 以外の `custom` は書き換えず、新しいスキーマの違反として MigrationFailed にする。どの手順も破壊的ではない'
 test_file: tests/integration/server/test_migrate.py

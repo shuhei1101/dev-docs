@@ -123,9 +123,9 @@ scenarios:
         participant MG as dev-docs migrate
         participant SC as 配信元の dev-docs.yaml
 
-        U->>MG: dev-docs migrate --source {配信元のパス} --plan
+        U->>MG: dev-docs migrate --source {配信元の dev-docs.yaml} --plan
         MG-->>U: 当てる手順の一覧
-        U->>MG: dev-docs migrate --source {配信元のパス}
+        U->>MG: dev-docs migrate --source {配信元の dev-docs.yaml}
         MG->>SC: バックアップを取り、type を消し、ref の metadata を列名の文字列にし、version を書き換える
         MG-->>U: 当てた手順
       ```
@@ -151,12 +151,12 @@ scenarios:
         actor U as 利用者
         participant MG as dev-docs migrate
 
-        U->>MG: dev-docs migrate --source {配信元のパス}
+        U->>MG: dev-docs migrate --source {配信元の dev-docs.yaml}
         MG->>MG: 手順を当てた結果を新しいスキーマで検証し、違反が残る
         MG-->>U: 違反と、/dev-docs:setup で移す案内
       ```
     expected:
-      - '`dev-docs.yaml` が `migrate` の前と同じ中身で、バックアップは作られない'
+      - '`dev-docs.yaml` が `migrate` の前と同じ中身になる'
       - 0 以外の終了コードで終わる
       - 標準エラーに `documents[1].type`（Markdown の範囲）と `documents[1].defaults` の違反と、`/dev-docs:setup` で移す案内が出る
     test: test_error_when_source_config_unmigratable

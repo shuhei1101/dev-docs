@@ -356,7 +356,7 @@ flows:
       - name: Mock
         description: なし
       - name: 文書の行
-        description: 'sample の行 `rule`（`type: yaml`・`paths: [docs/rule/*.yaml]`・`exclude: [index.yaml]`）'
+        description: 'sample の行 `rule`（`paths: [docs/rule/*.yaml]`・`exclude: [index.yaml]`）'
       - name: 入力
         description: '`operations` は `create`・`kind: rule`・`id: index` の 1 件。`worktree` にワークツリー x'
         notes: 置き場所は `docs/rule/index.yaml` になる
@@ -376,6 +376,40 @@ flows:
     test: test_error_when_placement_excluded
     refs:
       - dev/設計書/シナリオ/単一ユースケース/エージェントが書き込む#scenarios[異常シナリオ（置き場所が除外の名前に当たる）]
+  - name: 正常系（共通のキー名で書く）
+    summary: 共通のキー名で渡した値を、行の `metadata` の対応で元の列に書く
+    setup:
+      - name: Mock
+        description: なし
+        notes: '-'
+      - name: 列名の違う種類
+        description: ワークツリー x の `decisions/d1.yaml` が `title` の列を持ち、`name` の列を持たない
+        notes: '行 `decisions` は `paths: [decisions/*.yaml]`・`metadata: {name: title}`'
+      - name: 入力
+        description: '1 回目は `update`（`id: d1`・`set: {name: 新しい名前}`）。2 回目は `create`（`kind: decisions`・`data` に `name: 決定 2`）。3 回目は `update`（`set: {title: 別の名前}`）。4 回目は `update`（`set: {name: a, title: b}`）'
+        notes: '-'
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        participant C as クライアント
+        participant T as write_docs
+        participant WT as ワークツリー x
+
+        C->>T: update d1・set {name: 新しい名前}
+        T->>T: metadata の対応で name を title へ読み替える
+        T->>T: スキーマと validators に通す
+        T->>WT: d1 の title を書き換える
+        T-->>C: status updated・diff
+        C->>T: create・kind decisions・data {name: 決定 2}
+        T->>WT: title 列に値を持つ YAML を書く
+        T-->>C: status created
+      ```
+    expected:
+      - 1 回目の `diff` が `title` の行だけを書き換え、d1 に `name` 列ができない
+      - '2 回目に作った YAML が `title: 決定 2` を持ち、`name` 列を持たない'
+      - 3 回目（列名をそのまま渡す）も d1 の `title` を書き換える
+      - 4 回目は `InvalidArgumentError` で、`name` と `title` が同じ列を指すことを返し、d1 を書き換えない
+    test: test_normal_when_metadata_mapped
 lead: 文書の作成・部分更新・置き換えを配列で受け、変更を当てた後の文書を配信元のスキーマと `validators[]` に通してから書き込む。dev-docs は commit しない。
 identifier: write_docs
 permissions: 対象の配信元の `scope.write` に `cwd` が当たること。Git の配信元はワークツリーにだけ書く
@@ -571,7 +605,7 @@ exceptions:
     condition: '`update`・`replace` の `id` の文書が無い'
     notes: 見つからなかった ID と近い ID の候補を添える
   - name: InvalidArgumentError
-    condition: 操作が 50 件を超える・`op` ごとの必須のキーが無い・`text_edits` の `old` が 1 か所に一致しない・`create` の置き場所のファイル名が行の `exclude[]` に当たる
+    condition: 操作が 50 件を超える・`op` ごとの必須のキーが無い・`text_edits` の `old` が 1 か所に一致しない・`create` の置き場所のファイル名が行の `exclude[]` に当たる・共通のキーとその列名を同じ操作に両方渡した
   - name: SourceNotServedError
     condition: '起動時の検証で外したか `enabled: false` の配信元を指した'
   - name: WorktreeNotMatchedError
@@ -592,6 +626,9 @@ constraints:
   - item: ツールの説明
     constraint: 「範囲のファイルを作った・消した・改名したら、管理用の YAML の行を修正する」を含める
     notes: D-163。索引へ反映するフックを置かないため
+  - item: 共通のキー名
+    constraint: '`data`・`set`・`add_to`・`remove_from` のキーと、`unset`・`text_edits[].field` の項目のパスの先頭のキーが、種類の行の `metadata` に書いた共通のキーなら、対応する列名（入れ子は `.` でつないだパス）へ読み替えてから当てる。列名をそのまま渡したキーと、`metadata` に書いていないキーは読み替えない'
+    notes: 共通のキーと列名を同じ操作に両方渡すと `InvalidArgumentError`
 refs:
   - dev/設計書/シナリオ/単一ユースケース/エージェントが書き込む#scenarios[正常シナリオ]
   - dev/設計書/シナリオ/単一ユースケース/YAMLを直接編集した#scenarios[異常シナリオ（読んだ後に変わった文書へ書き込む）]
