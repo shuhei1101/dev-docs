@@ -31,7 +31,7 @@ SCHEMA_LINE = (
     "https://raw.githubusercontent.com/shuhei1101/dev-docs/v{version}/schemas/dev-docs.schema.json\n"
 )
 NOTES_CONFIG = """\
-version: "2"
+version: "3"
 name: notes
 description: メモの配信元
 documents:
@@ -339,7 +339,7 @@ def test_normal_when_source_config_unmigratable(
     assert "defaults" not in config["documents"][0]
     assert config["documents"][0]["records"] == "files"
     assert config["documents"][0]["body_file"] == "path"
-    assert config["version"] == "2"
+    assert config["version"] == "3"
     assert config_text.startswith(SCHEMA_LINE.format(version=clone.version))
     for name, text in markdown.items():
         assert (notes.folder / name).read_text(encoding="utf-8") == text.split("---\n", 2)[2]

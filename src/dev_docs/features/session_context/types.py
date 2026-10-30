@@ -13,8 +13,9 @@ FORGET_REASONS = frozenset({"clear", "compact"})
 
 # 配信元の一覧の後に置く、場面ごとの短い使い方
 SESSION_USAGE = """使い方:
-- 始めに `describe(source)` で種類・タグ・書き方を確かめる
-- 探すときは `search_docs`。全体を見るときは `group_by="tags"`、配信元をまたぐときは `source="*"`、本文まで読むときは `view="full"`
+- 始めに `describe(source)` で種類と書き方を確かめる
+- タグを付ける前に `search_docs` の `group_by="tags"` で使われているタグを見て、同じ意味のタグを使い回す
+- 探すときは `search_docs`。配信元をまたぐときは `source="*"`、本文まで読むときは `view="full"`
 - 前に読んだ後の変更は `list_changes` で確かめる
 - 範囲のファイルを作った・消した・改名したら、管理用の YAML の行を修正する"""
 

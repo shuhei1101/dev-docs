@@ -121,7 +121,10 @@ def build_docs_mcp(handlers: Handlers) -> MCPServer:
         "fields・order_by の @matches は文書ごとの本文の条件に当たった行の数。"
         "sections（Markdown の見出し）・lines（offset・limit）は view: full の本文の一部だけを返す。"
         "fields・filter・order_by のキーには共通のキー（id・name・description・tags など）も使える。"
-        "種類の列名との対応は describe(source, kind) で見る。",
+        "種類の列名との対応は describe(source, kind) で見る。"
+        "group_by は値を NFKC と casefold でまとめて数える。"
+        'タグを付ける前に group_by: tags（配信元をまたぐときは source: "*"）で'
+        "使われているタグを見て、同じ意味のタグを使い回す。",
         SearchRequest,
         lambda request: search_docs(
             request,

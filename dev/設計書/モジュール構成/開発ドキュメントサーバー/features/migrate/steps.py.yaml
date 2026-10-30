@@ -5,7 +5,8 @@ directory: |-
   src/dev_docs/migrations/
   ├── settings/{バージョン}/steps.yaml   # 端末の設定をそのバージョンへ上げる手順
   └── dev-docs/{バージョン}/steps.yaml   # 配信元の設定をそのバージョンへ上げる手順
-      └── 2/steps.yaml                  # documents[].type: yaml の削除 → metadata.alias_type（type: custom）を行の alias_type へ引き上げ → metadata.*（type: ref）を列名へ取り出し
+      ├── 2/steps.yaml                  # documents[].type: yaml の削除 → metadata.alias_type（type: custom）を行の alias_type へ引き上げ → metadata.*（type: ref）を列名へ取り出し
+      └── 3/steps.yaml                  # tags（タグのマスター）の削除（value を持たない delete。破壊的）
   ```
 functions:
   - name: load_steps

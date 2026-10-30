@@ -202,6 +202,40 @@ def test_search_docs_when_count_grouped(make_env: Callable[..., SearchEnv]) -> N
     ]
 
 
+def test_search_docs_when_grouped_normalized(make_env: Callable[..., SearchEnv]) -> None:
+    """表記だけが違う値をまとめる（正常系）。"""
+    # 準備
+    env = make_env(
+        {
+            "docs/doc-1.yaml": "id: doc-1\nname: 1\ntags: [mcp]\n",
+            "docs/doc-2.yaml": "id: doc-2\nname: 2\ntags: [MCP, mcp, 設計]\n",
+            "docs/doc-3.yaml": "id: doc-3\nname: 3\ntags: [ｍｃｐ]\n",
+        }
+    )
+    # 実行
+    result = env.search(view="count", group_by="tags")
+    # 検証
+    assert result.groups == [
+        GroupCount(value="mcp", count=3),
+        GroupCount(value="設計", count=1),
+    ]
+
+
+def test_search_docs_when_grouped_tie(make_env: Callable[..., SearchEnv]) -> None:
+    """表記の文書の数が同じ（正常系）。"""
+    # 準備
+    env = make_env(
+        {
+            "docs/doc-1.yaml": "id: doc-1\nname: 1\nstatus: Draft\n",
+            "docs/doc-2.yaml": "id: doc-2\nname: 2\nstatus: draft\n",
+        }
+    )
+    # 実行
+    result = env.search(view="count", group_by="status")
+    # 検証
+    assert result.groups == [GroupCount(value="Draft", count=2)]
+
+
 def test_search_docs_when_limited(make_env: Callable[..., SearchEnv]) -> None:
     """上限と打ち切りと続き（正常系）。"""
     # 準備

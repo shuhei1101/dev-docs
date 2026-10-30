@@ -285,7 +285,7 @@ scenarios:
       ```
     expected:
       - セッションの文脈に、使える配信元 `sample`（読み書き）・`notes`（読み取りだけ）の名前・権限・`description` が 1 行ずつ入る
-      - 文脈に `describe(source)`・`search_docs` の `group_by="tags"`・`source="*"`・`view="full"`・`list_changes` の使い方と、範囲のファイルを作った・消した・改名したら管理用の YAML の行を直す 1 文が入る
+      - 文脈に `describe(source)` で種類と書き方を確かめること、タグは `search_docs` の `group_by="tags"` で使われているタグを見て同じ意味のタグを使い回すこと、`source="*"`・`view="full"`・`list_changes` の使い方と、範囲のファイルを作った・消した・改名したら管理用の YAML の行を直す 1 文が入る
       - 文脈に sample の索引の同期の件数 1 と、old の設定が古いことが入る
       - dev-docs のプロセスは増えず、つなぎ直しの案内は入らない
     test: test_normal_when_session_context_added
@@ -321,8 +321,8 @@ scenarios:
         description: 検証に通る配信元
         notes: id `sample`
       - name: 前の形式の配信元
-        description: '`version: "1"` の `dev-docs.yaml` を持ち、`documents[0]` が `paths`・`schema`・`type: markdown`、`documents[1]` が `paths`・`schema`・`type: yaml`・`metadata: {name: {type: ref, field: title}}`・`defaults: [{paths: [docs/**], tags: [doc]}]` を持つ配信元'
-        notes: id `legacy`。違反は `type`・`defaults`・オブジェクトの `metadata` だけになる
+        description: '`version: "1"` の `dev-docs.yaml` を持ち、最上位にタグのマスター `tags: tags.yaml` を持ち、`documents[0]` が `paths`・`schema`・`type: markdown`、`documents[1]` が `paths`・`schema`・`type: yaml`・`metadata: {name: {type: ref, field: title}}`・`defaults: [{paths: [docs/**], tags: [doc]}]` を持つ配信元'
+        notes: id `legacy`。`tags.yaml` は置く。違反は `tags`・`type`・`defaults`・オブジェクトの `metadata` だけになる
       - name: 端末の設定
         description: '`DEV_DOCS_CONFIG` が指す `settings.yaml`'
         notes: '`sources` に sample と legacy の 2 行'
@@ -334,13 +334,13 @@ scenarios:
 
         U->>DD: dev-docs serve
         DD->>DD: sample の設定を検証して配信元に加える
-        DD->>DD: legacy の設定が type・defaults・オブジェクトの metadata で検証に失敗する
+        DD->>DD: legacy の設定が tags・type・defaults・オブジェクトの metadata で検証に失敗する
         DD->>DD: legacy を配信せず、違反と設定のバージョンが古いことをエラーログに残す
         DD-->>U: sample だけを配信する
       ```
     expected:
       - '`/_api/sources/legacy/docs` が 404 を返し、`/_api/sources/sample/docs` は応答する'
-      - エラーログに legacy の id と、`documents[0].type`・`documents[1].type`・`documents[1].defaults`・`documents[1].metadata.name` のそれぞれの違反が残る
+      - エラーログに legacy の id と、`tags`・`documents[0].type`・`documents[1].type`・`documents[1].defaults`・`documents[1].metadata.name` のそれぞれの違反が残る
       - エラーログに、legacy の設定のバージョンが古く `dev-docs migrate --source` で移し替えられることが残る
     test: test_error_when_source_config_legacy
 lead: 利用者が `dev-docs serve` を実行し、端末の設定に並べた配信元を 1 プロセス・1 ポートで配信し始める。

@@ -55,12 +55,13 @@ flows:
       - '`version` が `"2"` で、改名前のキーがそのまま残る'
     test: test_normal_when_record_only
   - name: 正常系（配信元の設定）
-    summary: '`--source` で配信元の `dev-docs.yaml` に手順を当てる'
+    summary: '`--source` と `--allow-destructive` で配信元の `dev-docs.yaml` に手順を当てる'
     setup:
       - name: Mock
         description: 正常系と同じ差し替え
       - name: 配信元
-        description: '`version: "1"` の `dev-docs.yaml` を持つ sample。`documents[0]` が `type: yaml`・`metadata: {name: {type: ref, field: title}, alias_type: {type: custom, value: term}}` を持つ'
+        description: '`version: "1"` の `dev-docs.yaml` を持つ sample。最上位にタグのマスター `tags: tags.yaml` を持ち、`documents[0]` が `type: yaml`・`metadata: {name: {type: ref, field: title}, alias_type: {type: custom, value: term}}` を持つ'
+        notes: '`tags.yaml` を置く'
     flow: |-
       ```mermaid
       sequenceDiagram
@@ -68,13 +69,14 @@ flows:
         participant M as dev-docs migrate
         participant F as dev-docs.yaml
 
-        C->>M: --source
+        C->>M: --source --allow-destructive
         M->>F: バックアップを取り、手順を当てる
         M-->>C: 終了コード 0
       ```
     expected:
-      - '`dev-docs.yaml` の `version` が `"2"`'
+      - '`dev-docs.yaml` の `version` が `"3"`'
       - '`documents[0]` が `type` を持たず、`metadata` が `{name: title}`、行の `alias_type` が `term` になる'
+      - '`tags` が無くなり、`tags.yaml` は残る'
       - 端末の設定が変わらない
     test: test_normal_when_source_config
   - name: 異常系（設定が読めない・ConfigInvalid）
@@ -176,7 +178,7 @@ flows:
         participant M as dev-docs migrate
         participant F as dev-docs.yaml
 
-        C->>M: --source
+        C->>M: --source --allow-destructive
         M->>M: 手順を当てた結果を新しいスキーマで検証し、違反が残る
         M-->>C: 違反と /dev-docs:setup の案内（終了コード 4）
       ```
@@ -259,4 +261,7 @@ constraints:
     constraint: 制限なし
   - item: 配信元の設定の 1 → 2 の手順
     constraint: '`type: yaml` を削除し、`metadata` の `{type: ref, field: X}` を列名の文字列 `X` に、`metadata.alias_type` の `{type: custom, value: X}` を行の `alias_type: X` にする。`type: markdown`・`defaults[]`・`alias_type` 以外の `custom` は書き換えず、新しいスキーマの違反として MigrationFailed にする。どの手順も破壊的ではない'
+  - item: 配信元の設定の 2 → 3 の手順
+    constraint: 最上位の `tags`（タグのマスター）を、`value` を持たない `delete` で削除する。値を捨てる破壊的な手順で、`--allow-destructive` が要る。マスターのファイルは消さない
+    notes: '破壊的かは手順で決まるため、`tags` を持たない設定でも `version: "2"` 以前から移すには `--allow-destructive` が要る'
 test_file: tests/integration/server/test_migrate.py

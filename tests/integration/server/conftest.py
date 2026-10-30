@@ -209,7 +209,7 @@ FILES_ROW = (
 )
 
 
-def sample_sync_files(unindexed: int = 1, *, version: str = "2") -> dict[str, str]:
+def sample_sync_files(unindexed: int = 1, *, version: str = "3") -> dict[str, str]:
     """管理用の YAML に無いファイルを `unindexed` 件持つ、配信元のファイル一式を返す。"""
     files = sample_files(**{"dev-docs.yaml": sample_config(FILES_ROW, version=version)})
     files["src/files.yaml"] = "files:\n  - path: a.py\n"

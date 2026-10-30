@@ -172,6 +172,19 @@ def test_validate_source_config_when_legacy_keys(source_root: Path) -> None:
     assert "documents[0].metadata.name" in by_path
 
 
+def test_validate_source_config_when_tag_master(
+    source_root: Path, write_files: Callable[[Path, dict[str, str]], None]
+) -> None:
+    """タグのマスターを書いた（正常系）。"""
+    # 準備
+    write_files(source_root, {"tags.yaml": "python: Python の規約\n"})
+    value = _config_value(tags="tags.yaml")
+    # 実行
+    result = validate_source_config(value, root=source_root)
+    # 検証
+    assert [(v.path, v.rule) for v in result] == [("tags", "知らないキー")]
+
+
 def test_check_scripts(
     tmp_path: Path,
     write_files: Callable[[Path, dict[str, str]], None],
