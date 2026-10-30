@@ -14,5 +14,6 @@
 | [jsonschema](./jsonschema.yaml) | 文書と設定を検証する JSON Schema のライブラリ |
 | [uvicorn](./uvicorn.yaml) | アプリを待ち受ける ASGI サーバー |
 | [pydantic](./pydantic.yaml) | 要求のモデルを型ヒントで検証するデータ検証ライブラリ |
+| [storybook](./storybook.yaml) | UI の部品を状態ごとのストーリーとして描く開発ツール |
 
 <!-- /table -->
