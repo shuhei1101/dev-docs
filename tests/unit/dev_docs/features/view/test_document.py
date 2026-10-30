@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable
+from datetime import UTC, datetime
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -8,6 +9,7 @@ import pytest
 
 from dev_docs.features.sources.types import DocumentTable, ScriptEntry
 from dev_docs.features.view.document import get_document, not_found_fields
+from dev_docs.features.view.types import NavItem
 from dev_docs.shared.errors import DocumentNotFoundError, RefNotFoundError
 
 
@@ -55,18 +57,57 @@ def test_get_document_when_diff(
     run_git: Callable[..., str],
     make_view_env: Callable[..., SimpleNamespace],
 ) -> None:
-    """変わった項目（正常系）。"""
+    """差分の結果とサイドバーの変化（正常系）。"""
     # 準備
-    root = git_repo({"docs/a.yaml": "id: a\nname: A\n"})
+    root = git_repo(
+        {
+            "docs/a.yaml": "id: a\nname: A\n",
+            "docs/b.yaml": "id: b\nname: B\n",
+            "docs/c.yaml": "id: c\nname: C\n",
+        }
+    )
     previous = run_git(root, "rev-parse", "HEAD").strip()
-    current = commit_all(root, {"docs/a.yaml": "id: a\nname: A2\n"})
+    run_git(root, "rm", "-q", "docs/c.yaml")
+    current = commit_all(
+        root, {"docs/a.yaml": "id: a\nname: A2\n", "docs/d.yaml": "id: d\nname: D\n"}
+    )
     env = make_view_env(root=root, is_git=True, repo_root=root)
     # 実行
     response = get_document(
         "sample", "docs/a", handlers=env.handlers, ref=current, diff_ref=previous
     )
     # 検証
-    assert response.changed_items == ["name"]
+    assert response.diff is not None
+    assert response.diff.base == previous
+    assert response.diff.change == "modified"
+    assert response.diff.changed_items == ["name"]
+    changes = {item.path: item.change for tab in response.tabs for item in _pages(tab.items)}
+    assert changes["docs/a"] == "modified"
+    assert changes["docs/d"] == "added"
+    assert changes["docs/c"] == "deleted"
+
+
+def _pages(items: list[NavItem]) -> list[NavItem]:
+    """入れ子の項目から page だけを平らに集める。"""
+    pages: list[NavItem] = []
+    for item in items:
+        if item.kind == "page":
+            pages.append(item)
+        pages.extend(_pages(item.items))
+    return pages
+
+
+def test_get_document_when_not_git(make_view_env: Callable[..., SimpleNamespace]) -> None:
+    """Git 管理外の更新日時と差分（正常系）。"""
+    # 準備
+    env = make_view_env()
+    file = env.root / "docs" / "a.yaml"
+    # 実行
+    response = get_document("sample", "docs/a", handlers=env.handlers, ref=None, diff_ref="main")
+    # 検証
+    assert response.updated_at == datetime.fromtimestamp(file.stat().st_mtime, tz=UTC)
+    assert response.diff is None
+    assert response.ref is None
 
 
 def test_get_document_when_convert_failed(make_view_env: Callable[..., SimpleNamespace]) -> None:

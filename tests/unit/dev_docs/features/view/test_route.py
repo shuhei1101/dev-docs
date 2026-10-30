@@ -31,6 +31,9 @@ def test_build_view_router_when_document(make_view_env: Callable[..., SimpleName
     assert body["path"] == "docs/a"
     assert "# A" in body["markdown"]
     assert body["tabs"][0]["active"] is True
+    assert "updatedAt" in body
+    assert body["tableKeys"] == []
+    assert not any("_" in key for key in body)
 
 
 def test_build_view_router_when_document_missing(
@@ -59,7 +62,7 @@ def test_build_view_router_when_search(make_view_env: Callable[..., SimpleNamesp
     # 検証
     body = response.json()
     assert response.status_code == 200
-    assert body["total_count"] == 1
+    assert body["totalCount"] == 1
     assert body["items"][0]["path"] == "docs/a"
 
 
