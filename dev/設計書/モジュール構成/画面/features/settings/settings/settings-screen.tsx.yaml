@@ -19,7 +19,7 @@ components:
         initial: 'false'
         description: ショートカットの一覧
         notes: '`useState`'
-    description: 読み込み中の表示はルートの `pendingComponent`（`pendingMs` 1000）。1 文字のショートカットのスイッチは `usePreferencesStore` の `singleKey`。文書の画面に戻るは `usePreferencesStore` の直前の文書の URL（無ければ配信中の先頭の配信元のトップ）
+    description: 読み込み中の表示は、取得の待ちが 1 秒を超えたときだけ配信元の一覧の位置に `SourceSkeleton` を出す（`useDelayedFlag`）。1 文字のショートカットのスイッチは `usePreferencesStore` の `singleKey`。文書の画面に戻るは `useLastDocStore` の直前の文書の URL（無ければ配信中の先頭の配信元のトップ）
     unit_tests:
       - name: test_settings_screen
         case: 正常

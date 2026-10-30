@@ -1,0 +1,17 @@
+title: "画面 / アプリとルート / initial-loading.tsx"
+lead: 最初の画面の読み込みが長いときだけ出す読み込み中の表示。
+components:
+  - name: InitialLoading
+    title: 最初の読み込みの表示
+    container: app/initial-loading.tsx
+    usecase: 共通
+    role: 部品
+    summary: ルーターの `resolvedLocation` がまだ無い（最初の読み込みの）間が `INITIAL_LOADING_MS` 続いたときだけ `DocSkeleton` を出す（`useDelayedFlag`）。`main.tsx` が `RouterProvider` と並べて置く
+    kind: コンポーネント
+    props:
+      - name: router
+        type: AnyRouter
+        required: true
+        description: 読み込みの状態を読むルーター
+refs:
+  - dev/設計書/画面設計/文書の画面#elements[読み込み中の表示]

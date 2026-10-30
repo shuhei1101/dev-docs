@@ -5,5 +5,5 @@ constants:
     title: 配信元のトップのルート
     container: routes/$source/index.tsx
     usecase: 文書を読む
-    summary: '`createFileRoute("/$source/")({validateSearch: DocViewSearchSchema, loaderDeps: ({search}) => search, loader: loadDocument, component: DocViewScreen, notFoundComponent: NotFoundScreen, pendingComponent: DocSkeleton, pendingMs: 1000})`。`path` は空で `loadDocument` を呼ぶ'
+    summary: '`createFileRoute("/$source/")({validateSearch: DocViewSearchSchema, loaderDeps: ({search}) => search, loader: loadDocument, component: DocViewScreen, notFoundComponent: NotFoundScreen, pendingMs: KEEP_PREVIOUS_MS})`。`path` は空で `loadDocument` を呼ぶ'
     value: createFileRoute("/$source/")({...})

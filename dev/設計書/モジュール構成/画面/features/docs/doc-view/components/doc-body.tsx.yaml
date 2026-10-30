@@ -27,7 +27,7 @@ components:
         description: コメントを保存したとき（パネルを開く）
     description: |-
       - 列の初期の非表示は、`columns` のその表のキーの列を `+columns` の表の `hide=` に入れた Markdown を渡す（表のキーは `tableKeys` の同じ番号）
-      - 列の出し入れは `onColumnsChange`（mdmark#222）で受け、orval が生成した `view-put_columns` の mutation を呼ぶ。失敗は `handleAppError(error, {message: "列の表示を保存できませんでした。"})`
+      - 列の出し入れは `useColumnPersistence` で保存する
       - 本文のクリックを拾い、同じ配信元の文書への相対リンクは `navigate`（`rev` を保つ）、外の URL は `target="_blank" rel="noopener"` で開く
       - mdmark の `commentStore` はコメントのストアへつなぐ（`docId` は `{source}@{ref}:{path}`）
     unit_tests:
