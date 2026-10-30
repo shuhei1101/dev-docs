@@ -345,10 +345,10 @@ Git 管理外の配信元では、種類の `documents[].writable` が削除を�
 一度たどった文書はたどりません。
 `json` の各項目は、たどった文書の `path` と `scope: summary` を持ちます。
 候補は `related` に書き込まないので、採用するときは `write_docs` で `related` に追加します。
+たどった先が読めない配信元の文書は、ID だけを返します。
 
 設計書を起点に `direction: in` で呼ぶと、結果の `via.type` が `implements` の文書が、その設計書を実装するコードです。
 コードを起点に `direction: in` で呼ぶと、`via.type` が `tests` の文書が、そのコードのテストです。
-たどった先が読めない配信元の文書は、ID だけを返します。
 
 ## エラー
 
