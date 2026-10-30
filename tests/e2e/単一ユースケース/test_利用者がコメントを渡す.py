@@ -63,6 +63,10 @@ def test_normal(
     expect(page.get_by_role("button", name="コメント 2 件")).to_be_visible()
     expect(_panel(page).get_by_role("button", name="Issue を作成")).to_have_count(0)
     expect(page.get_by_text("選択 2 件をクリップボードにコピーしました。")).to_be_visible()
+    marks = page.locator("main .mdmark-comment-mark")
+    expect(marks).to_have_count(2)
+    expect(marks.nth(0)).to_have_text("a0")
+    expect(marks.nth(1)).to_have_text("s0")
     copied = _read_clipboard(page)
     assert copied.index(FIRST_COMMENT) < copied.index(SECOND_COMMENT)
     assert "### 文書 1 › 項目" in copied
@@ -130,7 +134,7 @@ def test_normal_when_issue_created(
         f"{url.scheme}://{url.netloc}{url.path}" == "https://github.com/example/sample/issues/new"
     )
     assert query["labels"] == ["review"]
-    assert query["title"] == ["docs/doc-1"]
+    assert "title" not in query
     assert FIRST_COMMENT in query["body"][0]
     assert "docs/doc-1" in query["body"][0]
     expect(page).to_have_url(re.compile("/sample/docs/doc-1"))

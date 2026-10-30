@@ -32,6 +32,21 @@ CONVERT_SCRIPT = (
     "print()\n"
     "print(f'## カスタムの見出し {name}')\n"
 )
+COLUMNS_EXTRA = (
+    "  - id: guide\n"
+    "    paths: [guide/files.yaml]\n"
+    "    schema: schemas/sample.schema.yaml\n"
+    "    records: files\n"
+    "    body_file: path\n"
+)
+COLUMNS_TABLE = (
+    "# 文書 5\n\n"
+    "<!-- table: data +columns -->\n"
+    "| キー | 名称 | 備考 |\n"
+    "| --- | --- | --- |\n"
+    "| k1 | 名称 1 | 備考 1 |\n"
+    "<!-- /table -->\n"
+)
 SLEEP_SCRIPT = "import time\ntime.sleep(60)\n"
 SMALL_ROWS = [{"key": "k1", "label": "名称 1", "notes": "備考 1"}]
 
@@ -263,10 +278,17 @@ def test_normal_when_column_hidden(
 ) -> None:
     """表の列の表示から 2 列目を外すと、開き直しても隠れたままになる（正常系）。"""
     # 準備
-    source = make_source("sample", screen_files())
+    source = make_source(
+        "sample",
+        screen_files(
+            nav=False,
+            config_extra=COLUMNS_EXTRA,
+            **{"guide/files.yaml": "files:\n  - path: table.md\n", "guide/table.md": COLUMNS_TABLE},
+        ),
+    )
     before = snapshot(source.folder)
     served = serve(source)
-    page.goto(served.url("/sample/docs/doc-1"))
+    page.goto(served.url("/sample/guide/files/guide/table"))
     columns = page.get_by_role("button", name=re.compile("^列の表示")).first
     # 実行
     columns.click()
