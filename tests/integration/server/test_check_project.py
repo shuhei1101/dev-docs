@@ -37,6 +37,37 @@ def test_normal(
     assert _listing(sample.folder) == before
 
 
+def test_normal_when_files_excluded(
+    make_source: Callable[..., Any],
+    make_server: Callable[..., Any],
+    sample_sync_file_set: Callable[..., dict[str, str]],
+) -> None:
+    """除外の条件に当たるファイルを索引に無いファイルとして数えない（正常系）。"""
+    # 準備
+    files = sample_sync_file_set(0)
+    files.update(
+        {
+            "src/files.yaml": "files: []\n",
+            "src/a.py": "a = 1\n",
+            "src/b.py": "b = 2\n",
+            "src/pkg/__init__.py": "",
+            "src/uv.lock": "version = 1\n",
+        }
+    )
+    sample = make_source("sample", files, git=False)
+    (sample.folder / "src" / "logo.png").write_bytes(b"\x00PNG\r\n")
+    env = make_server(sample)
+    # 実行
+    result = env.call_admin("check_project", path=str(sample.folder), format="json")
+    # 検証
+    assert not result.is_error
+    assert result.data["sync"]["unindexed_files"] == 2
+    assert [item["path"] for item in result.data["sync"]["items"]] == [
+        "src: src/a.py",
+        "src: src/b.py",
+    ]
+
+
 def test_normal_when_config_has_violations(tmp_path: Path, make_server: Callable[..., Any]) -> None:
     """スキーマに違反する設定と、書く前の `config` の違反を返す（正常系）。"""
     # 準備

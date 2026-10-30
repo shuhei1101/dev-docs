@@ -655,6 +655,49 @@ functions:
       - dev/設計書/モジュール構成/開発ドキュメントサーバー/features/migrate/service.py#functions[resolve_target]
       - dev/設計書/モジュール構成/開発ドキュメントサーバー/features/migrate/service.py#functions[plan_migration]
       - dev/設計書/モジュール構成/開発ドキュメントサーバー/features/migrate/service.py#functions[apply_migration]
+  - name: run_files
+    title: 載せるファイルの一覧の実行
+    container: main.py
+    usecase: 載せるファイルの一覧
+    role: 入口
+    summary: '`dev-docs files` の解析結果で範囲を集め、載せるファイルを 1 行ずつ出す'
+    kind: 関数
+    scope: public
+    side_effects: 標準出力・標準エラーに書く
+    args:
+      - name: args
+        title: 解析結果
+        type: argparse.Namespace
+        required: true
+        passing: positional
+        description: '`files` の解析結果（`root`・`paths`・`exclude`）'
+    returns:
+      type: int
+      description: 終了コード。出し終えたとき 0
+    process: |-
+      1. `root` を `Path` にし、フォルダでなければ「`{root}: フォルダがありません`」を標準エラーに出して 2 を返す
+      2. 載せるファイルの一覧（`indexable_files`。`paths`・`exclude` は解析結果）で集め、パスを 1 行ずつ標準出力に出して 0 を返す
+    exceptions:
+      - name: なし（終了コード 2）
+        condition: '`--root` が無いかフォルダでない（インターフェース定義の `RootNotFound`）'
+        message: '`{root}: フォルダがありません`'
+    unit_tests:
+      - name: test_run_files
+        case: 正常
+        summary: 載せるファイルを 1 行ずつ出す
+        condition: '`src/a.py`・`src/uv.lock` を置き、`paths=["src/**"]`・`exclude=[]`'
+        mock: なし（`tmp_path`・`capsys`）
+        expected: 0 を返し、標準出力が `src/a.py` の 1 行だけ
+        exception: '-'
+      - name: test_run_files_when_root_not_found
+        case: 異常
+        summary: フォルダが無い
+        condition: '`root` に無いパス'
+        mock: なし（`capsys`）
+        expected: 2 を返し、標準出力が空で、標準エラーに渡したパス
+        exception: なし（終了コード 2）
+    refs:
+      - dev/設計書/モジュール構成/開発ドキュメントサーバー/文書のストア.py#functions[indexable_files]
 refs:
   - dev/設計書/インターフェース定義/開発ドキュメントサーバー/起動#
 test_files:

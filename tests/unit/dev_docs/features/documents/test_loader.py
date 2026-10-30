@@ -74,6 +74,26 @@ def test_collect_files_when_excluded(
     assert result == ["a/x.md"]
 
 
+def test_collect_files_when_worktrees(
+    tmp_path: Path, write_files: Callable[[Path, dict[str, str]], None]
+) -> None:
+    """ワークツリーのフォルダをたどらない（正常系）。"""
+    # 準備
+    write_files(
+        tmp_path,
+        {
+            "a/x.md": "# x\n",
+            ".claude/worktrees/wt/a/x.md": "# x\n",
+            ".claude/a.md": "# a\n",
+        },
+    )
+    table = DocumentTable(id="notes", paths=["**/*.md"], schema_path="schemas/rule.schema.yaml")
+    # 実行
+    result = collect_files(tmp_path, table)
+    # 検証
+    assert result == [".claude/a.md", "a/x.md"]
+
+
 def test_load_file_when_yaml(
     tmp_path: Path, write_files: Callable[[Path, dict[str, str]], None]
 ) -> None:
@@ -325,6 +345,35 @@ def test_unindexed_files_when_excluded(
         records="files",
         body_file="path",
         exclude=["README.md"],
+    )
+    # 実行
+    result = loader_module.unindexed_files(tmp_path, "src/files.yaml", ["src/a.py"], table)
+    # 検証
+    assert result == ["src/d.py"]
+
+
+def test_unindexed_files_when_matching_exclusion(
+    tmp_path: Path, write_files: Callable[[Path, dict[str, str]], None]
+) -> None:
+    """除外の条件に当たるファイルは数えない（正常系）。"""
+    # 準備
+    write_files(
+        tmp_path,
+        {
+            "src/files.yaml": "files:\n  - path: a.py\n",
+            "src/a.py": "a = 1\n",
+            "src/d.py": "d = 4\n",
+            "src/pkg/__init__.py": "",
+            "src/uv.lock": "version = 1\n",
+            "src/vendor/v.py": "v = 1\n",
+        },
+    )
+    table = DocumentTable(
+        id="src",
+        paths=["src/files.yaml"],
+        schema_path="schemas/rule.schema.yaml",
+        records="files",
+        body_file="path",
     )
     # 実行
     result = loader_module.unindexed_files(tmp_path, "src/files.yaml", ["src/a.py"], table)

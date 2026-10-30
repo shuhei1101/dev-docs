@@ -1,0 +1,19 @@
+$ (rc=0; uv run ruff check . || rc=1; uv run ruff format --check . || rc=1; uv run mypy . || rc=1; claude plugin validate . || rc=1; exit $rc)
+All checks passed!
+239 files already formatted
+Success: no issues found in 235 source files
+Validating marketplace manifest: /mnt/c/Users/shuhe/repo/dev-docs/.claude/worktrees/chore-files-yaml-column-values-and-implements/.claude-plugin/marketplace.json
+
+⚠ Found 3 warnings:
+
+  ❯ description: No marketplace description provided. Adding a description helps users understand what this marketplace offers
+  ❯ plugins[0] plugin.json → version: No version specified. Consider adding a version following semver (e.g., "1.0.0")
+  ❯ plugins[0] plugin.json → author: No author information provided. Consider adding author details for plugin attribution
+
+ℹ Advice (does not change the verdict):
+
+  ❯ /mnt/c/Users/shuhe/repo/dev-docs/.claude/worktrees/chore-files-yaml-column-values-and-implements/README.md: This README has no line that installs "dev-docs" from a marketplace. Add the install line, which works in one step on Claude Code 2.1.275 or later. In it, replace <owner>/<repo> with the repository that holds the marketplace.
+      /plugin install dev-docs --marketplace <owner>/<repo>
+
+✔ Validation passed with warnings
+exit: 0

@@ -27,6 +27,7 @@ from dev_docs.features.sources.types import SourceStatus
 
 EXIT_CONFIG_INVALID = 2
 EXIT_PORT_IN_USE = 3
+EXIT_ROOT_NOT_FOUND = 2
 LOG_FILE = "dev-docs.log"
 LOG_MAX_BYTES = 5_000_000
 LOG_BACKUPS = 3
@@ -235,6 +236,19 @@ def reload_sources(
                     "%s: %s %d 件: %s", report.source_id, label, len(values), "、".join(values)
                 )
     return statuses
+
+
+def run_files(args: argparse.Namespace) -> int:
+    """`dev-docs files` の解析結果で範囲を集め、載せるファイルを 1 行ずつ出す。"""
+    from dev_docs.features.documents.indexable import indexable_files
+
+    root = Path(args.root)
+    if not root.is_dir():
+        print(f"{root}: フォルダがありません", file=sys.stderr)
+        return EXIT_ROOT_NOT_FOUND
+    for path in indexable_files(root, args.paths, exclude=args.exclude):
+        print(path)
+    return 0
 
 
 def run_migrate(args: argparse.Namespace) -> int:

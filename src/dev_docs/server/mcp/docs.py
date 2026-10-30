@@ -161,7 +161,9 @@ def build_docs_mcp(handlers: Handlers) -> MCPServer:
     _register(
         mcp,
         "trace_related",
-        "起点の文書やコードのパスから、related をたどって関連する文書を返す。",
+        "起点の文書やコードのパスから、related をたどって関連する文書を返す。"
+        "設計書を起点に direction: in で呼ぶと、via.type が implements の文書がその設計書を"
+        "実装するコード、コードを起点にすると tests の文書がそのテストになる。",
         RelatedRequest,
         lambda request: trace_related(
             request, registry=handlers.registry, store=handlers.store, seen=handlers.seen

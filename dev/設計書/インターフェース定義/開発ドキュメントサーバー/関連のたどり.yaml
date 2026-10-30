@@ -194,6 +194,7 @@ idempotent: true
 side_effects: 会話キーごとに、名前・概要文を返した関連の相手を `state_dir` に記録する
 callers:
   - dev/設計書/シナリオ/単一ユースケース/エージェントが調べる#scenarios[正常シナリオ]
+  - dev/設計書/シナリオ/単一ユースケース/エージェントが調べる#scenarios[正常シナリオ（設計書を実装するコードを引く）]
 exclusivity: '読み取りだけで排他しない（`readOnlyHint: true`）'
 request:
   - name: source
@@ -241,6 +242,7 @@ request:
     default: '`both`'
     location: argument
     description: '`out` は起点の `related` が指す先、`in` は起点を `related` で指す文書'
+    notes: 設計書を起点に `in` で呼ぶと、`via.type` が `implements` の文書がその設計書を実装するコードになる。コードを起点にすると `tests` の文書がそのテストになる
   - name: suggest
     type: bool
     required: false
