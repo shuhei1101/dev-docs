@@ -5,6 +5,7 @@ from pathlib import Path
 
 import pytest
 
+from dev_docs import main as main_module
 from dev_docs.__main__ import build_parser, main
 from dev_docs.main import run_migrate, run_serve
 
@@ -43,6 +44,22 @@ def test_build_parser_when_migrate() -> None:
     assert args.allow_destructive is False
     assert args.source == "/tmp/a/dev-docs.yaml"
     assert args.handler is run_migrate
+
+
+def test_build_parser_when_files() -> None:
+    """files の引数と処理を引く（正常系）。"""
+    # 準備
+    parser = build_parser()
+    # 実行
+    args = parser.parse_args(
+        ["files", "--root", "/tmp/a", "--paths", "src/**", "--paths", "docs/**"]
+    )
+    # 検証
+    assert args.cmd == "files"
+    assert args.root == "/tmp/a"
+    assert args.paths == ["src/**", "docs/**"]
+    assert args.exclude == []
+    assert args.handler is main_module.run_files
 
 
 def test_build_parser_when_plan_and_record() -> None:
