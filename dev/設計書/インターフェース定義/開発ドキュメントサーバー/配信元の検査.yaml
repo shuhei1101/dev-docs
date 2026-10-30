@@ -236,5 +236,5 @@ constraints:
     constraint: スクリプトの確かめは `script_timeout_sec` で打ち切り、`script_errors` に入れる
   - item: 除外の条件
     constraint: 生成物・ロック・バイナリ・ベンダーのコード・再エクスポートや空の `__init__` だけのファイルを `unindexed_files` に数えない。起動時の警告・状態の取得・`dev-docs files` も同じ判定を使う
-    notes: 見分け方はモジュール構成で決める。配信元固有の除外は `documents[].exclude[]`
+    notes: 見分け方はモジュール構成『文書のストア』の `is_excluded_file`。配信元固有の除外は `documents[].exclude[]`
 test_file: tests/integration/server/test_check_project.py
