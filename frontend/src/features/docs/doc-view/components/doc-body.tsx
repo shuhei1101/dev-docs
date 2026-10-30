@@ -89,22 +89,37 @@ export const DocBody = ({
   const { ready } = useMdmark(ref, {
     markdown,
     docId,
+    // コメントの機能は mdmark の既定でオフなので、オンにする
+    config: { features: { comments: true } },
     commentStore: {
-      load: (id) => commentsOf(useCommentStore.getState().comments, id),
-      save: (input) => {
+      load: ({ docId: id }) =>
+        Promise.resolve(commentsOf(useCommentStore.getState().comments, id)),
+      save: ({ comment }) => {
         const element = ref.current;
         const saved = useCommentStore.getState().add({
-          ...input,
+          ...comment,
+          docId,
           source: doc.source,
           ref: doc.ref ?? null,
           path: doc.path,
           docTitle: title,
           headings: element
-            ? headingsBefore(element, input.quote, input.prefix, input.suffix)
+            ? headingsBefore(
+                element,
+                comment.quote,
+                comment.prefix,
+                comment.suffix,
+              )
             : [],
         });
         onCommentSaved();
-        return saved;
+        return Promise.resolve({
+          id: saved.id,
+          quote: saved.quote,
+          prefix: saved.prefix,
+          suffix: saved.suffix,
+          body: saved.body,
+        });
       },
     },
   });

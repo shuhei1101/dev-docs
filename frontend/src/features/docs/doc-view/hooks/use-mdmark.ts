@@ -4,7 +4,11 @@ import { logger } from "@/shared/lib/logger";
 
 /** mdmark の読み込み先（採用バージョンのタグを固定した jsDelivr の GitHub の URL） */
 export const MDMARK_URL =
-  "https://cdn.jsdelivr.net/gh/shuhei1101/mdmark@v0.8.0/dist/mount.js";
+  "https://cdn.jsdelivr.net/gh/shuhei1101/mdmark@v0.8.0/dist/index.js";
+
+/** mdmark のスタイル */
+export const MDMARK_CSS_URL =
+  "https://cdn.jsdelivr.net/gh/shuhei1101/mdmark@v0.8.0/dist/index.css";
 
 export type MdmarkComment = {
   id: string;
@@ -14,25 +18,26 @@ export type MdmarkComment = {
   body: string;
 };
 
+export type MdmarkCommentDraft = Omit<MdmarkComment, "id">;
+
 export type MdmarkCommentStore = {
-  load: (docId: string) => MdmarkComment[];
-  save: (input: {
+  load: (target: { docId: string }) => Promise<MdmarkComment[]>;
+  save: (target: {
     docId: string;
-    quote: string;
-    prefix: string;
-    suffix: string;
-    body: string;
-  }) => MdmarkComment | Promise<MdmarkComment>;
+    comment: MdmarkCommentDraft;
+  }) => Promise<MdmarkComment>;
 };
 
 export type MdmarkOptions = {
   markdown: string;
   docId: string;
   commentStore: MdmarkCommentStore;
+  /** 機能のオン・オフ（`comments` は既定でオフ） */
+  config?: { features?: Record<string, boolean> };
 };
 
 export type MdmarkHandle = {
-  update: (next: Partial<MdmarkOptions>) => void;
+  update: (markdown: string) => void;
   destroy: () => void;
 };
 
@@ -42,8 +47,18 @@ type MdmarkModule = {
 
 let loading: Promise<MdmarkModule> | null = null;
 
+/** スタイルを `document.head` に 1 回だけ置く */
+const ensureStylesheet = (): void => {
+  if (document.head.querySelector(`link[href="${MDMARK_CSS_URL}"]`)) return;
+  const link = document.createElement("link");
+  link.rel = "stylesheet";
+  link.href = MDMARK_CSS_URL;
+  document.head.append(link);
+};
+
 /** mdmark をモジュールの中で 1 回だけ読む */
 const load = (): Promise<MdmarkModule> => {
+  ensureStylesheet();
   loading ??= import(/* @vite-ignore */ MDMARK_URL).catch((error: unknown) => {
     loading = null;
     throw error;
@@ -97,7 +112,7 @@ export const useMdmark = (
   useEffect(() => {
     if (handle === null || rendered.current === options.markdown) return;
     rendered.current = options.markdown;
-    handle.update({ markdown: options.markdown });
+    handle.update(options.markdown);
   }, [handle, options.markdown]);
 
   return state;

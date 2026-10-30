@@ -21,7 +21,7 @@ export default tseslint.config(
   js.configs.recommended,
   ...tseslint.configs.recommended,
   {
-    files: ["frontend/**/*.{ts,tsx}"],
+    files: ["frontend/**/*.{ts,tsx}", "tests/unit/frontend/**/*.{ts,tsx}"],
     languageOptions: {
       globals: { ...globals.browser },
       parserOptions: { projectService: false },
@@ -117,6 +117,11 @@ export default tseslint.config(
       "jsx-a11y/click-events-have-key-events": "off",
       "jsx-a11y/no-static-element-interactions": "off",
     },
+  },
+  {
+    // 単体テストは書き方を変えずに通す（func-style は frontend の実装コードにだけ当てる）
+    files: ["tests/unit/frontend/**/*.{ts,tsx}"],
+    rules: { "func-style": "off" },
   },
   {
     files: ["frontend/*.ts", "eslint.config.js"],

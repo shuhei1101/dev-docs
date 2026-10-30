@@ -31,7 +31,7 @@ const setup = (onSaved = vi.fn()) => {
 };
 
 test("test_use_source_form", async () => {
-  let body: { sources: { id: string }[] } | null = null;
+  let body = null as { sources: { id: string }[] } | null;
   server.use(
     http.put("/_api/settings/sources", async ({ request }) => {
       body = (await request.json()) as typeof body;

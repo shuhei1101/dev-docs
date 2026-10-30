@@ -14,6 +14,7 @@ import {
 
 import type { RefsResponse } from "@/shared/api/generated/model";
 import { Button } from "@/shared/components/ui/button";
+import { Kbd } from "@/shared/components/ui/kbd";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -60,7 +61,7 @@ const SourceMenu = ({
           variant="outline"
           size="sm"
           className="px-1.5 md:px-2.5"
-          aria-label="配信元を切り替える"
+          aria-label={`配信元を切り替える${currentSource ? `。今は ${currentSource}` : ""}`}
         />
       }
     >
@@ -75,6 +76,7 @@ const SourceMenu = ({
         {sources.map((source) => (
           <DropdownMenuItem
             key={source.id}
+            aria-current={source.id === currentSource ? "true" : undefined}
             onClick={() => onSourceSelect?.(source.id)}
           >
             <span className="font-mono text-xs">{source.id}</span>
@@ -102,6 +104,7 @@ const RefMenu = ({
     refs.defaultRef,
     ...(refs.branches ?? []).map((item) => item.name),
   ].filter((name, index, all) => all.indexOf(name) === index);
+  const current = currentRef ?? refs.defaultRef;
   const tags = refs.tags ?? [];
   const commits = refs.commits ?? [];
   return (
@@ -112,7 +115,7 @@ const RefMenu = ({
             variant="outline"
             size="sm"
             className="px-1.5 md:px-2.5"
-            aria-label="リビジョンを切り替える"
+            aria-label={`リビジョンを切り替える。今は ${current}`}
           />
         }
       >
@@ -128,6 +131,7 @@ const RefMenu = ({
           {branches.map((name) => (
             <DropdownMenuItem
               key={`b:${name}`}
+              aria-current={name === current ? "true" : undefined}
               onClick={() => onRefSelect?.(name)}
             >
               <span className="font-mono text-xs">{name}</span>
@@ -141,6 +145,7 @@ const RefMenu = ({
             {tags.map((tag) => (
               <DropdownMenuItem
                 key={`t:${tag.name}`}
+                aria-current={tag.name === current ? "true" : undefined}
                 onClick={() => onRefSelect?.(tag.name)}
               >
                 <span className="font-mono text-xs">{tag.name}</span>
@@ -155,6 +160,7 @@ const RefMenu = ({
             {commits.map((commit) => (
               <DropdownMenuItem
                 key={`c:${commit.commit}`}
+                aria-current={commit.commit === current ? "true" : undefined}
                 onClick={() => onRefSelect?.(commit.commit)}
               >
                 <span className="font-mono text-xs">{commit.commit}</span>
@@ -232,18 +238,20 @@ export const Topbar = (props: Props) => {
           <Button
             variant="outline"
             size="sm"
-            aria-label="検索"
+            aria-label="検索 Ctrl K"
+            aria-keyshortcuts="Control+K /"
             onClick={props.onSearchOpen}
           >
             <Search />
             <span className="hidden text-muted-foreground md:inline">検索</span>
+            <Kbd className="hidden text-foreground md:inline-flex">Ctrl K</Kbd>
           </Button>
         )}
         {screen === "doc-view" && (
           <Button
             variant="ghost"
             size="sm"
-            aria-label="コメント"
+            aria-label={`コメント ${commentCount} 件`}
             onClick={props.onCommentPanelToggle}
           >
             <MessageSquare />
@@ -266,7 +274,7 @@ export const Topbar = (props: Props) => {
         <Button
           variant="ghost"
           size="icon"
-          aria-label="明暗を切り替える"
+          aria-label="明暗を固定する"
           aria-pressed={colorScheme !== "system"}
           onClick={props.onColorSchemeToggle}
         >

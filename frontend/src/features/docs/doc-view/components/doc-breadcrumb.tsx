@@ -56,7 +56,12 @@ export const DocBreadcrumb = ({ source, active, search }: Props) => {
             <BreadcrumbSeparator />
             <BreadcrumbItem>
               {index === trail.length - 1 ? (
-                <span aria-current="page" className="font-normal text-foreground">{label}</span>
+                <span
+                  aria-current="page"
+                  className="font-normal text-foreground"
+                >
+                  {label}
+                </span>
               ) : (
                 <span>{label}</span>
               )}

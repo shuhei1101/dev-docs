@@ -42,6 +42,7 @@ used_in:
   - frontend/src/features/docs/doc-view/hooks/use-mdmark.ts
 upstream: shuhei1101/mdmark
 verification:
-  state: 未確認
-  detail: 画面の実装（`frontend/`）がまだ無い
+  state: 済
+  date: '2026-10-31'
+  detail: '`dev-docs serve` を起動し、Chromium で文書の画面を開いて、jsDelivr の `dist/index.js`（200）を読み込み、`dist/index.css` を置き、見出し・表・コードブロックが本文に描かれ、目次が出ることを確かめた。本文の文字列を選んでコメントを追加すると、`commentStore.save` が呼ばれ、コメントのパネルに見出しつきで並ぶ。`mount` は `commentStore.load({docId})`・`save({docId, comment})` を受け、`update` は Markdown の文字列を受ける。`comments` の機能は既定でオフのため、`config.features.comments` を `true` にして渡す。`v0.8.0` のタグに `dist/mount.js` は無い。'
 official_url: https://github.com/shuhei1101/mdmark

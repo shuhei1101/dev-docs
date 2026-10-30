@@ -9,7 +9,7 @@
     "api:export": "uv run python frontend/scripts/export_openapi.py",
     "api:generate": "npm run api:export && orval --config frontend/orval.config.ts",
     "typecheck": "node node_modules/typescript-native/bin/tsc --noEmit -p frontend/tsconfig.json",
-    "lint": "eslint frontend eslint.config.js",
+    "lint": "eslint frontend tests/unit/frontend eslint.config.js",
     "prepare": "lefthook install",
     "storybook": "storybook dev -c frontend/.storybook -p 6006",
     "build-storybook": "storybook build -c frontend/.storybook -o tmp/storybook-static"
