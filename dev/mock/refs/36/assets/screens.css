@@ -17,7 +17,7 @@
     --marker-w: 2.25rem;
     /* 薄い赤の地に置く赤の文字 */
     --destructive-text: light-dark(oklch(0.505 0.213 27.5), oklch(0.704 0.191 22));
-    /* 差分のマーカーのアイコン（地に対して 3:1 以上） */
+    /* 差分のマーカーの記号（本文の地と選択中の行の地に対して 3:1 以上） */
     --added-icon: light-dark(oklch(0.52 0.14 152), oklch(0.76 0.17 152));
     --changed-icon: light-dark(oklch(0.56 0.13 65), oklch(0.82 0.15 75));
   }
@@ -149,37 +149,27 @@
     overflow-wrap: anywhere;
   }
 
-  /* 差分のマーカーは形で見分ける（追加 = ＋、変更 = ●、削除 = −）。読み上げ名は視覚的に隠した文字で持つ */
+  /* 差分のマーカーは記号の形と色で見分ける（追加 = ＋、変更 = ●、削除 = −）。読み上げ名は視覚的に隠した文字で持つ */
   .diff-mark {
     display: inline-grid;
     flex: none;
     place-items: center;
-    width: 1.125rem;
-    height: 1.125rem;
-    border: 1px solid;
-    border-radius: var(--radius-badge);
   }
 
   .diff-mark svg {
-    width: 0.875rem;
-    height: 0.875rem;
+    width: 0.75rem;
+    height: 0.75rem;
   }
 
   .diff-mark--added {
-    border-color: var(--added-icon);
-    background: var(--diff-added);
     color: var(--added-icon);
   }
 
   .diff-mark--changed {
-    border-color: var(--changed-icon);
-    background: var(--diff-changed);
     color: var(--changed-icon);
   }
 
   .diff-mark--removed {
-    border-color: var(--destructive-text);
-    background: var(--diff-removed);
     color: var(--destructive-text);
   }
 
