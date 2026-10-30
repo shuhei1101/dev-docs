@@ -1,0 +1,127 @@
+$ uv run ruff check .
+All checks passed!
+$ uv run ruff format --check .
+248 files already formatted
+$ uv run mypy .
+Success: no issues found in 244 source files
+$ claude plugin validate .
+Validating marketplace manifest: /mnt/c/Users/shuhe/repo/dev-docs/.claude/worktrees/feat-frontend-react-spa/.claude-plugin/marketplace.json
+
+⚠ Found 3 warnings:
+
+  ❯ description: No marketplace description provided. Adding a description helps users understand what this marketplace offers
+  ❯ plugins[0] plugin.json → version: No version specified. Consider adding a version following semver (e.g., "1.0.0")
+  ❯ plugins[0] plugin.json → author: No author information provided. Consider adding author details for plugin attribution
+
+ℹ Advice (does not change the verdict):
+
+  ❯ /mnt/c/Users/shuhe/repo/dev-docs/.claude/worktrees/feat-frontend-react-spa/README.md: This README has no line that installs "dev-docs" from a marketplace. Add the install line, which works in one step on Claude Code 2.1.275 or later. In it, replace <owner>/<repo> with the repository that holds the marketplace.
+      /plugin install dev-docs --marketplace <owner>/<repo>
+
+✔ Validation passed with warnings
+$ npm run lint
+
+> lint
+> eslint frontend tests/unit/frontend tests/integration/frontend eslint.config.js
+
+$ npm run typecheck
+
+> typecheck
+> node node_modules/typescript-native/bin/tsc --noEmit -p frontend/tsconfig.json
+
+$ uv run pytest tests/e2e/ --collect-only --run-e2e -q
+tests/e2e/単一ユースケース/test_YAMLを直接編集した.py::test_normal
+tests/e2e/単一ユースケース/test_YAMLを直接編集した.py::test_error_when_version_mismatch
+tests/e2e/単一ユースケース/test_YAMLを直接編集した.py::test_error_when_yaml_broken
+tests/e2e/単一ユースケース/test_dev-docsを入れる.py::test_normal
+tests/e2e/単一ユースケース/test_dev-docsを入れる.py::test_normal_when_terminal_config_lacks_keys
+tests/e2e/単一ユースケース/test_dev-docsを入れる.py::test_normal_when_terminal_config_old
+tests/e2e/単一ユースケース/test_dev-docsを入れる.py::test_error_when_terminal_config_newer
+tests/e2e/単一ユースケース/test_dev-docsを更新する.py::test_normal
+tests/e2e/単一ユースケース/test_dev-docsを更新する.py::test_normal_when_terminal_config_old
+tests/e2e/単一ユースケース/test_dev-docsを更新する.py::test_error_when_migration_fails
+tests/e2e/単一ユースケース/test_dev-docsを更新する.py::test_error_when_pull_fails
+tests/e2e/単一ユースケース/test_dev-docsを更新する.py::test_normal_when_source_config_old
+tests/e2e/単一ユースケース/test_dev-docsを更新する.py::test_error_when_source_config_unmigratable
+tests/e2e/単一ユースケース/test_エージェントが書き込む.py::test_normal
+tests/e2e/単一ユースケース/test_エージェントが書き込む.py::test_normal_when_create
+tests/e2e/単一ユースケース/test_エージェントが書き込む.py::test_normal_when_dry_run
+tests/e2e/単一ユースケース/test_エージェントが書き込む.py::test_normal_when_non_git_source
+tests/e2e/単一ユースケース/test_エージェントが書き込む.py::test_normal_when_delete_unlink
+tests/e2e/単一ユースケース/test_エージェントが書き込む.py::test_error_when_validation_failed
+tests/e2e/単一ユースケース/test_エージェントが書き込む.py::test_error_when_source_not_writable
+tests/e2e/単一ユースケース/test_エージェントが書き込む.py::test_error_when_target_is_clone
+tests/e2e/単一ユースケース/test_エージェントが書き込む.py::test_error_when_delete_referenced
+tests/e2e/単一ユースケース/test_エージェントが書き込む.py::test_error_when_placement_excluded
+tests/e2e/単一ユースケース/test_エージェントが書き込む.py::test_normal_when_metadata_mapped
+tests/e2e/単一ユースケース/test_エージェントが調べる.py::test_normal
+tests/e2e/単一ユースケース/test_エージェントが調べる.py::test_normal_when_source_all
+tests/e2e/単一ユースケース/test_エージェントが調べる.py::test_normal_when_tags_grouped
+tests/e2e/単一ユースケース/test_エージェントが調べる.py::test_normal_when_worktree_given
+tests/e2e/単一ユースケース/test_エージェントが調べる.py::test_normal_when_same_doc_twice
+tests/e2e/単一ユースケース/test_エージェントが調べる.py::test_normal_when_files_index
+tests/e2e/単一ユースケース/test_エージェントが調べる.py::test_error_when_source_not_readable
+tests/e2e/単一ユースケース/test_エージェントが調べる.py::test_error_when_source_not_served
+tests/e2e/単一ユースケース/test_エージェントが調べる.py::test_error_when_worktree_not_matched
+tests/e2e/単一ユースケース/test_エージェントが調べる.py::test_normal_when_excluded_name
+tests/e2e/単一ユースケース/test_エージェントが調べる.py::test_normal_when_ordered_by_matches
+tests/e2e/単一ユースケース/test_エージェントが調べる.py::test_normal_when_part_of_body
+tests/e2e/単一ユースケース/test_エージェントが調べる.py::test_normal_when_metadata_mapped
+tests/e2e/単一ユースケース/test_エージェントが調べる.py::test_normal_when_implementing_code_traced
+tests/e2e/単一ユースケース/test_利用者がコメントを渡す.py::test_normal
+tests/e2e/単一ユースケース/test_利用者がコメントを渡す.py::test_normal_when_comment_edited
+tests/e2e/単一ユースケース/test_利用者がコメントを渡す.py::test_normal_when_issue_created
+tests/e2e/単一ユースケース/test_利用者がコメントを渡す.py::test_normal_when_issue_body_truncated
+tests/e2e/単一ユースケース/test_利用者が画面で読む.py::test_normal
+tests/e2e/単一ユースケース/test_利用者が画面で読む.py::test_normal_when_nav_missing
+tests/e2e/単一ユースケース/test_利用者が画面で読む.py::test_normal_when_ref_switched
+tests/e2e/単一ユースケース/test_利用者が画面で読む.py::test_normal_when_diff_shown
+tests/e2e/単一ユースケース/test_利用者が画面で読む.py::test_normal_when_searched
+tests/e2e/単一ユースケース/test_利用者が画面で読む.py::test_normal_when_column_hidden
+tests/e2e/単一ユースケース/test_利用者が画面で読む.py::test_normal_when_custom_converter
+tests/e2e/単一ユースケース/test_利用者が画面で読む.py::test_error_when_converter_timed_out
+tests/e2e/単一ユースケース/test_利用者が画面で読む.py::test_error_when_doc_not_found
+tests/e2e/単一ユースケース/test_利用者が画面で読む.py::test_error_when_ref_not_found
+tests/e2e/単一ユースケース/test_利用者が画面で読む.py::test_error_when_source_not_served
+tests/e2e/単一ユースケース/test_変更をレビューする.py::test_normal
+tests/e2e/単一ユースケース/test_変更をレビューする.py::test_normal_when_range_by_date_and_branch
+tests/e2e/単一ユースケース/test_変更をレビューする.py::test_normal_when_since_last_read
+tests/e2e/単一ユースケース/test_変更をレビューする.py::test_error_when_ref_not_found
+tests/e2e/単一ユースケース/test_変更をレビューする.py::test_normal_when_contains
+tests/e2e/単一ユースケース/test_設定・スクリプトを変える.py::test_normal
+tests/e2e/単一ユースケース/test_設定・スクリプトを変える.py::test_normal_when_config_version_old
+tests/e2e/単一ユースケース/test_設定・スクリプトを変える.py::test_error_when_config_invalid
+tests/e2e/単一ユースケース/test_設定・スクリプトを変える.py::test_error_when_converter_fails
+tests/e2e/単一ユースケース/test_起動する.py::test_normal
+tests/e2e/単一ユースケース/test_起動する.py::test_normal_when_configs_merged
+tests/e2e/単一ユースケース/test_起動する.py::test_normal_when_config_version_old
+tests/e2e/単一ユースケース/test_起動する.py::test_normal_when_metadata_out_of_sync
+tests/e2e/単一ユースケース/test_起動する.py::test_error_when_source_config_legacy
+tests/e2e/単一ユースケース/test_起動する.py::test_error_when_source_config_invalid
+tests/e2e/単一ユースケース/test_起動する.py::test_error_when_script_not_executable
+tests/e2e/単一ユースケース/test_起動する.py::test_error_when_terminal_config_invalid
+tests/e2e/単一ユースケース/test_起動する.py::test_error_when_port_in_use
+tests/e2e/単一ユースケース/test_起動する.py::test_normal_when_started_by_session_start
+tests/e2e/単一ユースケース/test_起動する.py::test_normal_when_session_context_added
+tests/e2e/単一ユースケース/test_起動する.py::test_error_when_session_start_cannot_start
+tests/e2e/単一ユースケース/test_配信元を外す.py::test_normal
+tests/e2e/単一ユースケース/test_配信元を外す.py::test_normal_when_source_disabled
+tests/e2e/単一ユースケース/test_配信元を追加する.py::test_normal
+tests/e2e/単一ユースケース/test_配信元を追加する.py::test_normal_when_non_yaml_range
+tests/e2e/単一ユースケース/test_配信元を追加する.py::test_normal_when_rerun
+tests/e2e/単一ユースケース/test_配信元を追加する.py::test_normal_when_rerun_outside_git
+tests/e2e/単一ユースケース/test_配信元を追加する.py::test_error_when_source_config_invalid
+tests/e2e/単一ユースケース/test_配信元を追加する.py::test_normal_when_schema_line_outdated
+tests/e2e/単一ユースケース/test_配信元を追加する.py::test_normal_when_schema_line_missing
+tests/e2e/単一ユースケース/test_配信元を追加する.py::test_normal_when_source_config_unmigratable
+tests/e2e/単一ユースケース/test_配信元を追加する.py::test_normal_when_excluded_and_related_candidates
+tests/e2e/単一ユースケース/test_配信元を追加する.py::test_normal_when_added_from_settings
+tests/e2e/単一ユースケース/test_配信元を追加する.py::test_normal_when_source_not_served
+tests/e2e/単一ユースケース/test_配信元を追加する.py::test_normal_when_added_source_invalid
+tests/e2e/単一ユースケース/test_配信元を追加する.py::test_error_when_schema_invalid
+tests/e2e/単一ユースケース/test_配信元を追加する.py::test_error_when_cross_origin
+tests/e2e/複合ユースケース/test_dev-docsで文書を配信して読み書きする.py::test_normal
+tests/e2e/複合ユースケース/test_dev-docsで文書を配信して読み書きする.py::test_error_when_source_config_invalid
+
+92 tests collected in 1.51s
+exit=0
