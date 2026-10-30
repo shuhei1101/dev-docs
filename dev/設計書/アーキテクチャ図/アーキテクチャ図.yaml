@@ -23,10 +23,20 @@ overview:
     - id: GIT
       label: git
       kind: external
+    - id: FE
+      label: 画面
+      kind: system
   edges:
     - from: U
+      to: FE
+      label: ブラウザで開く
+    - from: FE
       to: SRV
-      label: HTTP
+      label: 画面の API（HTTP）
+    - from: SRV
+      to: FE
+      label: ビルドを配る
+      line: dotted
     - from: CC
       to: SRV
       label: MCP
@@ -50,6 +60,7 @@ overview:
     - id: D
       label: dev-docs
       nodes:
+        - FE
         - SRV
         - PLG
 repository:
@@ -59,6 +70,7 @@ repository:
   layout: |-
     ```tree
     dev-docs/
+    ├── frontend/                # 画面（React の SPA）
     ├── src/dev_docs/            # 開発ドキュメントサーバー
     │   └── migrations/          # 設定の移し替えの手順（{settings|dev-docs}/{バージョン}/steps.yaml）
     ├── schemas/                 # dev-docs.yaml と端末の設定のスキーマ
@@ -84,6 +96,15 @@ subsystems:
     runs_on: 利用者の端末の Claude Code（ユーザースコープ）
     implementation: plugins/dev-docs/.claude-plugin/plugin.json
     status: planned
+  - name: 画面
+    scope: frontend
+    role: 文書の画面・設定画面・見つからない画面を 1 つの SPA で描き、画面の API を呼ぶ。ビルドは開発ドキュメントサーバーが配る
+    runtime: TypeScript・React 19（ブラウザ）
+    runs_on: 利用者のブラウザ
+    implementation: frontend/
+    status: planned
+    introduced:
+      pr: 36
 lead: dev-docs のサブシステムと、境界を越えて通信する外部システム。
 external_systems:
   - name: Claude Code
