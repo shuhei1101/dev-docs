@@ -35,7 +35,7 @@ setup が行を作ること自体と、漏れを `check_project` が知らせる
 - [x] ~~部品設計~~（画面の部品を持たない）
 - [x] ~~画面設計~~（変更が画面に及ばない）
 - [ ] モジュール構成設計
-- [ ] ドキュメント修正（templates/files.schema.yaml・docs/リファレンス/設定.md・docs/はじめに/コアコンセプト/文書のメタデータ.md・docs/使い方/配信元を配信する.md・docs/リファレンス/文書のMCP.md・docs/リファレンス/管理のMCP.md）
+- [ ] ドキュメント修正（templates/files.schema.yaml・docs/リファレンス/設定.md・docs/はじめに/コアコンセプト/文書のメタデータ.md・docs/使い方/配信元を配信する.md・docs/リファレンス/文書のMCP.md・docs/リファレンス/管理のMCP.md・docs/リファレンス/CLI.md）
 - [ ] 単体テスト作成
 - [ ] 実装
 - [ ] 結合テスト作成
