@@ -58,7 +58,11 @@ function applyState() {
       }
       if (!open && el.open) el.close();
     } else if (el.hasAttribute("popover")) {
-      if (open && !el.matches(":popover-open")) el.showPopover();
+      if (open && !el.matches(":popover-open")) {
+        // 開くボタンを起点にして、ボタンの近くに出す
+        const source = document.querySelector(`[commandfor="${el.id}"]`) ?? undefined;
+        el.showPopover({ source });
+      }
       if (!open && el.matches(":popover-open")) el.hidePopover();
     }
   }
