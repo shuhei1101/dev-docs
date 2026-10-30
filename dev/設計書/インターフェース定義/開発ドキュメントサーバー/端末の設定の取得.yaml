@@ -96,8 +96,9 @@ response:
     type: bool
     description: 配信するか
   - name: sources[].scope
-    type: '{read: list[str], write: list[str]}'
+    type: '{read: list[str], write: list[str] | None}'
     description: 読める・書ける作業場所の glob
+    notes: '`write` を省いた行は `null`（既定値の配信元のフォルダだけから書ける）'
   - name: sources[].status
     type: Literal['serving', 'not_served', 'disabled', 'pending_reload']
     description: '配信中・起動時か読み直しの検証で外した・`enabled: false`・ファイルにあるが読み直していない行。行は `config`（`id` を書いた行は `id` も）が同じ配信元の状態と突き合わせる'

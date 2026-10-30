@@ -22,7 +22,7 @@ elements:
       - name: screen
         value: '`doc-view`'
       - name: sources
-        value: 端末の設定の取得.sources[]（`status` が `serving` の行の `id` と、`scope.write` が 1 件以上かを `writable`）
+        value: 端末の設定の取得.sources[]（`status` が `serving` の行の `id` と、`scope.write` が `null`（省いた。配信元のフォルダから書ける）か 1 件以上かを `writable`）
       - name: currentSource
         value: 文書の取得.source
       - name: refs
@@ -104,7 +104,7 @@ elements:
   - name: 読み込み中の表示
     kind: skeleton
     position: 本文
-    description: 文書の取得の結果を待つ間に、文書のタイトル・情報・本文の形の枞を出す
+    description: 文書の取得の結果を待つ間に、文書のタイトル・情報・本文の形の枠を出す
     visible_when: 文書の取得を待っているとき（前の文書があれば前の文書を出したままにし、待ちが 1 秒を超えたときだけ出す）
     notes:
       読み上げ名: '`文書を読み込んでいます`。本文の領域に `aria-busy` を付ける'
@@ -198,7 +198,7 @@ elements:
     action: 列の出し入れのたびに、その表の隠した列を保存する。保存に失敗したら通知に `列の表示を保存できませんでした。` を出し、表は切り替えたままにする
     action_ref: dev/設計書/インターフェース定義/開発ドキュメントサーバー/表の列の設定の保存#
     notes:
-      mdmark とのつなぎ: 隠す列を渡す値と、列の出し入れを知らせる受け取りは mdmark の付け替え口を通す。mdmark 側の機能が入るまでは付け替え口のモックで作る
+      mdmark とのつなぎ: 初めに隠す列は、`mount` の前に `markdown` の `+columns` の表のマーカーへ `columns` の値を `hide=` で書いて渡す（mdmark の今の記法）。列の出し入れを知らせる受け取りは mdmark のアダプターを通し、mdmark 側の機能が入るまではアダプターのモックで作る
   - name: 目次
     kind: nav
     position: 本文の右
