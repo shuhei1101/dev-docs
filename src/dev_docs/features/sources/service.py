@@ -139,10 +139,6 @@ def validate_source_config(value: dict[str, Any], *, root: Path) -> list[Violati
             found = _check_schema_file(root, f"documents[{index}].schema", row["schema"])
         if found is not None:
             violations.append(found)
-    if "tags" in value:
-        found = _file_violation(root, "tags", value["tags"], "タグのマスター")
-        if found is not None:
-            violations.append(found)
     return violations
 
 
@@ -183,7 +179,7 @@ def build_source_config(value: dict[str, Any]) -> SourceConfig:
     diff = value.get("diff", {})
     github = value.get("github", {})
     options: dict[str, Any] = {}
-    for key in ("version", "enabled", "default_ref", "tags", "visibility", "worktrees", "nav"):
+    for key in ("version", "enabled", "default_ref", "visibility", "worktrees", "nav"):
         if key in value:
             options[key] = value[key]
     if "types" in related:
@@ -255,26 +251,6 @@ def _read_configs(files: list[Path]) -> tuple[list[dict[str, Any]], list[Violati
     return values, violations
 
 
-def _tag_master(root: Path, tags: str | None) -> dict[str, str]:
-    """タグのマスターのファイルを、タグ → 説明の辞書にする。"""
-    if tags is None:
-        return {}
-    value = load_yaml((root / tags).read_text(encoding="utf-8"))
-    if isinstance(value, dict) and isinstance(value.get("tags"), (dict, list)):
-        value = value["tags"]
-    if isinstance(value, dict):
-        return {str(key): str(item or "") for key, item in value.items()}
-    if isinstance(value, list):
-        result: dict[str, str] = {}
-        for item in value:
-            if isinstance(item, dict) and "name" in item:
-                result[str(item["name"])] = str(item.get("description", ""))
-            else:
-                result[str(item)] = ""
-        return result
-    return {}
-
-
 def _worktree_globs(patterns: list[str], base: Path) -> list[str]:
     """`worktrees` の glob を、リポジトリの直下からの絶対パスにする。"""
     result: list[str] = []
@@ -323,7 +299,6 @@ def assemble_source(
         scope_write=list(scope_write) if scope_write else [str(root)],
         worktree_globs=_worktree_globs(config.worktrees, base),
         schemas=schemas,
-        tag_master=_tag_master(root, config.tags),
     )
     return served, config, []
 

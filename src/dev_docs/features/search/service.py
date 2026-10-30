@@ -16,7 +16,7 @@ from dev_docs.features.documents.types import Document
 from dev_docs.features.search.body_parts import join_ranges, select_ranges
 from dev_docs.features.search.cursor import decode_cursor, encode_cursor
 from dev_docs.features.search.fields import field_values, known_fields
-from dev_docs.features.search.filters import check_filter, match_filter
+from dev_docs.features.search.filters import check_filter, match_filter, normalize
 from dev_docs.features.search.snippets import count_matches, find_snippets, split_lines
 from dev_docs.features.search.types import (
     FIELD_CHARS_DEFAULT,
@@ -131,16 +131,21 @@ def _id_ordered(ordered: list[_Hit], request: SearchRequest) -> list[_Hit]:
 
 
 def _groups(hits: Sequence[_Hit], field: str) -> list[GroupCount]:
-    """値ごとの件数を、件数の降順・値の昇順で返す。"""
-    counts: dict[str, int] = {}
-    for hit in hits:
+    """正規化した値ごとの件数を、件数の降順・値の昇順で返す。"""
+    # 正規化した値 → 元の表記 → その表記が付いた文書の番号
+    spellings: dict[str, dict[str, set[int]]] = {}
+    for number, hit in enumerate(hits):
         values = field_values(hit.document, field) or [NONE_LABEL]
         for value in dict.fromkeys(str(item) for item in values):
-            counts[value] = counts.get(value, 0) + 1
-    return [
-        GroupCount(value=value, count=count)
-        for value, count in sorted(counts.items(), key=lambda pair: (-pair[1], pair[0]))
-    ]
+            spellings.setdefault(normalize(value), {}).setdefault(value, set()).add(number)
+    groups: list[GroupCount] = []
+    for per_spelling in spellings.values():
+        # 付いた文書が最も多い表記で返す（同数なら値の昇順で先のもの）
+        shown = min(per_spelling, key=lambda value: (-len(per_spelling[value]), value))
+        # 1 つの文書に付いた表記違いの値は 1 件と数える
+        documents = set().union(*per_spelling.values())
+        groups.append(GroupCount(value=shown, count=len(documents)))
+    return sorted(groups, key=lambda group: (-group.count, group.value))
 
 
 def _cut(value: Any, limit: int) -> Any:

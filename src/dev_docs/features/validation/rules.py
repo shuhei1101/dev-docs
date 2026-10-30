@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import ast
-import difflib
 import re
 from collections.abc import Mapping, Sequence
 from typing import Any
@@ -20,7 +19,6 @@ SLUG_PATTERN = "[a-z0-9]+(?:-[a-z0-9]+)*"
 ROOT_PATH = "$"
 PLACEHOLDER = re.compile(r"(\{[^{}]*\})")
 REQUIRED_MESSAGE = re.compile(r"^(.*) is a required property$")
-TAG_CANDIDATES = 3
 
 
 def _schema_fix(error: ValidationError) -> str:
@@ -129,25 +127,3 @@ def check_related(metadata: Mapping[str, Any], types: Sequence[str]) -> list[Vio
             )
     return violations
 
-
-def check_tags(metadata: Mapping[str, Any], tag_master: Mapping[str, str]) -> list[Violation]:
-    """メタデータの `tags` がタグのマスターにあるかを確かめる。"""
-    if not tag_master or "tags" not in metadata:
-        return []
-    tags = metadata["tags"]
-    if not isinstance(tags, list) or not all(isinstance(tag, str) for tag in tags):
-        return [Violation(path="tags", rule="文字列の配列にしてください")]
-    violations: list[Violation] = []
-    for index, tag in enumerate(tags):
-        if tag in tag_master:
-            continue
-        close = difflib.get_close_matches(tag, list(tag_master), n=TAG_CANDIDATES)
-        fix = (
-            f"近いタグ: {', '.join(close)}"
-            if close
-            else "タグのマスターに追加するか、既にあるタグにしてください"
-        )
-        violations.append(
-            Violation(path=f"tags[{index}]", rule="タグのマスターに無いタグです", fix=fix)
-        )
-    return violations
