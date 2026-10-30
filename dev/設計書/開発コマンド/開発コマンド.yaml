@@ -43,14 +43,28 @@ categories:
       - 取り込み後の追従（pull 後）を流してある
       - 端末の設定（既定 `~/.config/dev-docs/settings.yaml`。別の場所は環境変数 `DEV_DOCS_CONFIG` で渡す）がある
     commands: |-
+      1. 開発ドキュメントサーバーを起動する
+
       ```bash
       uv run dev-docs serve
       ```
-    effects: 127.0.0.1 の `DEV_DOCS_PORT`（既定 8781）で待ち受け、止めるまで終わらない。実行している端末で Ctrl+C を押すと止まる。ポートが使用中のときは終了コード 3、端末の設定が無いか違反するときは終了コード 2 で終わる。
+
+      2. 画面を書き換えながら見るときは、Vite の開発サーバーを起動する（`/_api` を `http://127.0.0.1:8781` へ転送する。転送先は `DEV_DOCS_PORT` を見ずに 8781 で固定なので、先に 1 を既定のポートで起動しておく）
+
+      ```bash
+      npm run dev
+      ```
+
+      3. 部品のストーリーを見るときは、Storybook を起動する（`http://localhost:6006`。設定は `frontend/.storybook/`）
+
+      ```bash
+      npm run storybook
+      ```
+    effects: '`uv run dev-docs serve` は 127.0.0.1 の `DEV_DOCS_PORT`（既定 8781）で待ち受け、止めるまで終わらない。実行している端末で Ctrl+C を押すと止まる。ポートが使用中のときは終了コード 3、端末の設定が無いか違反するときは終了コード 2 で終わる。`npm run dev`（既定のポート 5173）と `npm run storybook` も、止めるまで終わらず Ctrl+C で止まる'
     verification:
       state: 済
-      date: '2026-10-28'
-      detail: '`DEV_DOCS_CONFIG` に配信元 1 つの端末の設定を入れて `uv run dev-docs serve` を走らせ、127.0.0.1 の `DEV_DOCS_PORT` で待ち受けて標準出力に URL と配信元の ID を出すことを確かめた。`/mcp` の `search_docs`・`describe`・`write_docs`・`trace_related` が応答し、SIGTERM で止まった。ポートの使用中（終了コード 3）と設定の違反（終了コード 2）は単体テストで確かめた'
+      date: '2026-10-31'
+      detail: '`DEV_DOCS_CONFIG` に配信元 1 つの端末の設定を入れて `uv run dev-docs serve` を走らせ、127.0.0.1 の `DEV_DOCS_PORT` で待ち受けて標準出力に URL と配信元の ID を出すことを確かめた（2026-10-28）。`/mcp` の `search_docs`・`describe`・`write_docs`・`trace_related` が応答し、SIGTERM で止まった。ポートの使用中（終了コード 3）と設定の違反（終了コード 2）は単体テストで確かめた。`npm run dev` を走らせ、`/` が 200 を返し、`/_api/settings/sources` が 8781 で動いているサーバーへ転送されて 200 を返すことを確かめた（2026-10-31）。`storybook dev -c frontend/.storybook`（`npm run storybook` と同じ設定）を走らせ、`index.json` にストーリー 19 件が載り、各ストーリーが描かれることを確かめた（2026-10-30）'
   - name: テスト
     refs:
       - dev/設計書/テスト/テスト実行方法#
