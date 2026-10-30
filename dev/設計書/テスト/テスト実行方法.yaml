@@ -62,6 +62,7 @@ layers:
       - '`127.0.0.1` の空きポートが使えること（テストごとに子プロセスが待ち受ける）'
       - 誤実行を防ぐため `--run-e2e` を必須にする（無いと全件 skip する）
       - Claude Code を動かすケースは、`claude` と `uv`（オフラインのキャッシュを使う）が使え、環境変数 `CLAUDE_CODE_OAUTH_TOKEN`（`claude setup-token`）か `ANTHROPIC_API_KEY` を渡すこと。端末の `~/.claude` の認証は使わない。モデルは `DEV_DOCS_E2E_CLAUDE_MODEL`（既定 `sonnet`）で変えられる
+      - 画面をブラウザで確かめるケースは、`uv sync` で入れた Playwright の Chromium（`uv run playwright install chromium`）とネットワークを使う（本文を描く mdmark を jsDelivr から読む）。Claude の利用量は使わない
     run_all: |-
       ```bash
       uv run pytest tests/e2e/ --run-e2e
