@@ -52,7 +52,7 @@ DEV_DOCS_CONFIG=/tmp/x/settings.yaml DEV_DOCS_PORT=8781 dev-docs serve
 
 ```bash
 dev-docs migrate --plan
-dev-docs migrate --source ~/repo/sample/dev-docs.yaml
+dev-docs migrate --source ~/repo/sample/dev-docs.yaml --allow-destructive
 ```
 
 `--plan` は当てる手順を `{バージョン}: {手順の説明}` の 1 行ずつで出し、破壊的な手順には `[destructive]` を付けます。
@@ -96,9 +96,15 @@ dev-docs migrate --source ~/repo/sample/dev-docs.yaml
 
 ### 配信元の設定の移し替え
 
-`--source` は、配信元の `dev-docs.yaml` を `version: "2"` の書き方へ移し替えます。
-前の書き方の `type: yaml` を削除し、`metadata` の列の指定を列名の文字列にし、`metadata` の `alias_type` を行の `alias_type` にします。
-どの手順も破壊的ではありません。
+`--source` は、配信元の `dev-docs.yaml` を `version: "3"` の書き方へ移し替えます。
+
+`version: "2"` の手順は、前の書き方の `type: yaml` を削除し、`metadata` の列の指定を列名の文字列にし、`metadata` の `alias_type` を行の `alias_type` にします。
+この手順は破壊的ではありません。
+
+`version: "3"` の手順は、最上位の `tags`（タグのマスター）を削除します。
+値を捨てる破壊的な手順なので、`--allow-destructive` が要ります。
+`tags` を持たない設定でも、`version: "2"` 以前から移すには `--allow-destructive` が要ります。
+タグのマスターのファイルは消しません。
 
 機械的に移せない設定（`type: markdown` の行・`defaults[]`・`alias_type` 以外の値を固定した `metadata`）が残るときは、`dev-docs.yaml` を書き換えず、終了コード 4 で止めます。
 違反したキーのパスと、`/dev-docs:setup` で管理用の YAML の行へ移す案内を標準エラーに出します。
