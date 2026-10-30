@@ -5,6 +5,6 @@
 
 | スタイル | 概要 |
 | --- | --- |
-| [developer-tool](./developer-tool/index.html) | 開発者ツール。無彩色の地に青 1 色、中くらいの密度で角丸は小さめ。見出しの前に `#` を置く |
+| [developer-tool](./developer-tool/index.html) `badge:採用` | 開発者ツール。無彩色の地に青 1 色、中くらいの密度で角丸は小さめ。見出しの前に `#` を置く |
 | [editorial](./editorial/index.html) | エディトリアル。生成りの地に朱 1 色、見出しを明朝で組み、行間を広く取る |
 | [modern](./modern/index.html) | モダン。shadcn/ui の既定に近い。スレートの地に藍 1 色、大きめの角丸と控えめな影 |
