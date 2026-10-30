@@ -1,9 +1,9 @@
 $ uv run ruff check .
 All checks passed!
 $ uv run ruff format --check .
-245 files already formatted
+248 files already formatted
 $ uv run mypy .
-Success: no issues found in 241 source files
+Success: no issues found in 244 source files
 $ claude plugin validate .
 Validating marketplace manifest: /mnt/c/Users/shuhe/repo/dev-docs/.claude/worktrees/feat-frontend-react-spa/.claude-plugin/marketplace.json
 
@@ -29,4 +29,8 @@ $ npm run typecheck
 > typecheck
 > node node_modules/typescript-native/bin/tsc --noEmit -p frontend/tsconfig.json
 
+$ uv run pytest tests/e2e/ --collect-only --run-e2e -q
+tests/e2e/複合ユースケース/test_dev-docsで文書を配信して読み書きする.py::test_error_when_source_config_invalid
+
+92 tests collected in 1.40s
 exit=0
