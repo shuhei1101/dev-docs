@@ -37,6 +37,6 @@ setup が行を作ること自体と、漏れを `check_project` が知らせる
 - [x] モジュール構成設計
 - [x] ドキュメント修正（templates/files.schema.yaml・docs/リファレンス/設定.md・docs/はじめに/コアコンセプト/文書のメタデータ.md・docs/使い方/配信元を配信する.md・docs/リファレンス/文書のMCP.md・docs/リファレンス/管理のMCP.md・docs/リファレンス/CLI.md）
 - [x] 単体テスト作成
-- [ ] 実装
+- [x] 実装
 - [ ] 結合テスト作成
 - [ ] E2E テスト作成
