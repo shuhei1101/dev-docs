@@ -31,7 +31,7 @@ components:
         summary: 文書が無いときの案内
         condition: '`{missing: "doc", value: "a.md"}` の `data`'
         mock: MSW のハンドラ（配信中の配信元 2 件）
-        expected: 見出し・詳細・配信元のトップへのリンク・配信中の配信元 2 件が出て、URL が変わらない
+        expected: 見出し・詳細・配信元のトップへのリンクが出て、配信中の配信元の一覧は出ず、URL が変わらない
       - name: test_not_found_screen_when_source_missing
         case: 正常
         summary: 配信元が無いときはリビジョンを読まない
