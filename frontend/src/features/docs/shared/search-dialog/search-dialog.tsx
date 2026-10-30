@@ -96,14 +96,14 @@ export const SearchDialog = ({
           onValueChange={setQuery}
           placeholder="文書を検索"
         />
+        <SearchStatus
+          sent={sent}
+          pending={search.isFetching}
+          error={search.error}
+          total={result?.totalCount}
+          revision={revision}
+        />
         <CommandList>
-          <SearchStatus
-            sent={sent}
-            pending={search.isFetching}
-            error={search.error}
-            total={result?.totalCount}
-            revision={revision}
-          />
           {result && result.items.length > 0 && (
             <CommandGroup>
               {result.items.map((item) => (

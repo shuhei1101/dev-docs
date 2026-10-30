@@ -1,5 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import {
+  BookOpen,
   ChevronDown,
   GitBranch,
   GitCompare,
@@ -55,11 +56,18 @@ const SourceMenu = ({
   <DropdownMenu>
     <DropdownMenuTrigger
       render={
-        <Button variant="outline" size="sm" aria-label="配信元を切り替える" />
+        <Button
+          variant="outline"
+          size="sm"
+          className="px-1.5 md:px-2.5"
+          aria-label="配信元を切り替える"
+        />
       }
     >
-      <span className="font-mono text-xs">{currentSource ?? "配信元"}</span>
-      <ChevronDown />
+      <span className="max-w-16 truncate md:max-w-24 font-mono text-xs">
+        {currentSource ?? "配信元"}
+      </span>
+      <ChevronDown className="hidden md:block" />
     </DropdownMenuTrigger>
     <DropdownMenuContent>
       <DropdownMenuGroup>
@@ -103,6 +111,7 @@ const RefMenu = ({
           <Button
             variant="outline"
             size="sm"
+            className="px-1.5 md:px-2.5"
             aria-label="リビジョンを切り替える"
           />
         }
@@ -111,7 +120,7 @@ const RefMenu = ({
         <span className="hidden font-mono text-xs md:inline">
           {currentRef ?? refs.defaultRef}
         </span>
-        <ChevronDown />
+        <ChevronDown className="hidden md:block" />
       </DropdownMenuTrigger>
       <DropdownMenuContent className="max-h-96 overflow-y-auto">
         <DropdownMenuGroup>
@@ -170,18 +179,28 @@ const RefMenu = ({
   );
 };
 
+const HOME_CLASS =
+  "flex shrink-0 items-center gap-1.5 font-semibold tracking-tight whitespace-nowrap";
+
+const HomeLabel = () => (
+  <>
+    <BookOpen className="size-4" aria-hidden="true" />
+    <span className="sr-only md:not-sr-only">dev-docs</span>
+  </>
+);
+
 const HomeLink = ({ currentSource }: { currentSource?: string }) =>
   currentSource !== undefined ? (
     <Link
       to="/$source"
       params={{ source: currentSource }}
-      className="font-semibold tracking-tight"
+      className={HOME_CLASS}
     >
-      dev-docs
+      <HomeLabel />
     </Link>
   ) : (
-    <Link to="/" className="font-semibold tracking-tight">
-      dev-docs
+    <Link to="/" className={HOME_CLASS}>
+      <HomeLabel />
     </Link>
   );
 
@@ -192,7 +211,7 @@ export const Topbar = (props: Props) => {
   const showRefs =
     !settings && currentSource !== undefined && refs?.git === true;
   return (
-    <header className="sticky top-0 z-30 flex h-12 items-center gap-2 border-b border-border bg-background px-3">
+    <header className="sticky top-0 z-30 flex h-12 items-center gap-1 border-b border-border bg-background px-2 md:gap-2 md:px-3">
       {screen === "doc-view" && (
         <Button
           variant="ghost"
