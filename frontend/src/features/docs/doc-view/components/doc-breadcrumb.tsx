@@ -7,7 +7,6 @@ import {
   Breadcrumb,
   BreadcrumbItem,
   BreadcrumbList,
-  BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/shared/components/ui/breadcrumb";
 
@@ -57,7 +56,7 @@ export const DocBreadcrumb = ({ source, active, search }: Props) => {
             <BreadcrumbSeparator />
             <BreadcrumbItem>
               {index === trail.length - 1 ? (
-                <BreadcrumbPage>{label}</BreadcrumbPage>
+                <span aria-current="page" className="font-normal text-foreground">{label}</span>
               ) : (
                 <span>{label}</span>
               )}

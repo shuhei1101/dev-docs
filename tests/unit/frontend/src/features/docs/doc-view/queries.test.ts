@@ -7,18 +7,11 @@ import {
   documentQueryOptions,
   loadDocument,
 } from "@/features/docs/doc-view/queries";
-import {
-  PROBLEM_HEADERS,
-  documentResponse,
-  problem,
-} from "@tests/helpers/fixtures";
+import { PROBLEM_HEADERS, documentResponse, problem } from "@tests/helpers/fixtures";
 import { server } from "@tests/helpers/msw-server";
 import { createTestQueryClient } from "@tests/helpers/render";
 
-const run = (
-  options: { queryFn?: unknown },
-  queryClient = createTestQueryClient(),
-) =>
+const run = (options: { queryFn?: unknown }, queryClient = createTestQueryClient()) =>
   (options.queryFn as (context: unknown) => Promise<unknown>)({
     queryKey: [],
     signal: new AbortController().signal,

@@ -6,7 +6,7 @@ import { ConfirmDialogProvider, useConfirmDialog } from "@/app/confirm-dialog";
 
 let result: boolean | null = null;
 
-const Opener = () => {
+function Opener() {
   const confirm = useConfirmDialog();
   return (
     <button
@@ -23,7 +23,7 @@ const Opener = () => {
       開く
     </button>
   );
-};
+}
 
 const open = async () => {
   result = null;

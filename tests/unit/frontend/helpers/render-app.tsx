@@ -6,7 +6,7 @@ import { createQueryClient } from "@/app/query-client";
 import { createAppRouter } from "@/app/router";
 
 /** 本物のルートの木で画面を開く（ブラウザの履歴に path を置いてからルーターを作る） */
-export const renderApp = (path: string) => {
+export function renderApp(path: string) {
   window.history.pushState({}, "", path);
   const queryClient = createQueryClient();
   const router = createAppRouter({ queryClient });
@@ -16,4 +16,4 @@ export const renderApp = (path: string) => {
     </AppProviders>,
   );
   return { router, queryClient, ...view };
-};
+}

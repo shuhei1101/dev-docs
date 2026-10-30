@@ -14,34 +14,25 @@ vi.mock("sonner", () => ({ toast: { error: vi.fn(), success: vi.fn() } }));
 
 test("test_use_save_sources", async () => {
   const queryClient = createTestQueryClient();
-  const get = vi.fn(() =>
-    HttpResponse.json(settingsView([settingsSource("a")])),
-  );
+  const get = vi.fn(() => HttpResponse.json(settingsView([settingsSource("a")])));
   server.use(
     http.get("/_api/settings/sources", get),
     http.put("/_api/settings/sources", () =>
-      HttpResponse.json({
-        sources: [{ id: "a", status: "serving", errors: [] }],
-      }),
+      HttpResponse.json({ sources: [{ id: "a", status: "serving", errors: [] }] }),
     ),
   );
   await queryClient.fetchQuery({
     queryKey: ["settings"],
-    queryFn: () =>
-      fetch("/_api/settings/sources").then((response) => response.json()),
+    queryFn: () => fetch("/_api/settings/sources").then((response) => response.json()),
   });
   const wrapper = ({ children }: { children: ReactNode }) => (
     <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
   );
   const { result } = renderHook(() => useSaveSources(), { wrapper });
 
-  await result.current.mutateAsync([
-    { id: "a", config: ["/a/dev-docs.yaml"], enabled: true },
-  ] as never);
+  await result.current.mutateAsync([{ id: "a", config: ["/a/dev-docs.yaml"], enabled: true }] as never);
 
   await waitFor(() => expect(get).toHaveBeenCalledTimes(2));
   expect(toast.success).toHaveBeenCalledTimes(1);
-  expect(toast.success).toHaveBeenCalledWith(
-    "端末の設定を保存し、配信元を読み直しました。",
-  );
+  expect(toast.success).toHaveBeenCalledWith("端末の設定を保存し、配信元を読み直しました。");
 });

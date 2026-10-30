@@ -38,9 +38,7 @@ test("test_handle_app_error", async () => {
 });
 
 test("test_handle_app_error_when_message", async () => {
-  handleAppError(await serverError(), {
-    message: "列の表示を保存できませんでした。",
-  });
+  handleAppError(await serverError(), { message: "列の表示を保存できませんでした。" });
 
   expect(toast.error).toHaveBeenCalledWith("列の表示を保存できませんでした。");
 });

@@ -5,10 +5,10 @@ import { beforeEach, expect, test, vi } from "vitest";
 import { useShortcut } from "@/shared/hooks/use-shortcut";
 import { usePreferencesStore } from "@/shared/stores/preferences";
 
-const Probe = ({ handler }: { handler: () => void }) => {
+function Probe({ handler }: { handler: () => void }) {
   useShortcut("search", handler);
   return <input aria-label="入力欄" />;
-};
+}
 
 beforeEach(() => {
   usePreferencesStore.setState({ singleKeyShortcuts: true });

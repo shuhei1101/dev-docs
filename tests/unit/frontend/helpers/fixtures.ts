@@ -1,8 +1,4 @@
-export const page = (
-  title: string,
-  path: string,
-  change: string | null = null,
-) => ({
+export const page = (title: string, path: string, change: string | null = null) => ({
   kind: "page" as const,
   title,
   path,
@@ -24,24 +20,13 @@ export const refsResponse = (overrides: Record<string, unknown> = {}) => ({
   branches: [{ name: "main", commit: "8b1d4e0" }],
   tags: [{ name: "v0.1.0", commit: "3f2a9c1" }],
   commits: [
-    {
-      commit: "8b1d4e0",
-      date: "2026-10-26T11:30:00+09:00",
-      subject: "docs: 変更",
-    },
-    {
-      commit: "7c0aa11",
-      date: "2026-10-25T11:30:00+09:00",
-      subject: "docs: 追加",
-    },
+    { commit: "8b1d4e0", date: "2026-10-26T11:30:00+09:00", subject: "docs: 変更" },
+    { commit: "7c0aa11", date: "2026-10-25T11:30:00+09:00", subject: "docs: 追加" },
   ],
   ...overrides,
 });
 
-export const settingsSource = (
-  id: string,
-  overrides: Record<string, unknown> = {},
-) => ({
+export const settingsSource = (id: string, overrides: Record<string, unknown> = {}) => ({
   id,
   config: [`/home/me/${id}/dev-docs.yaml`],
   enabled: true,
@@ -64,11 +49,7 @@ export const documentResponse = (overrides: Record<string, unknown> = {}) => ({
   markdown: "# A\n\n本文\n",
   conversionError: null,
   tabs: [
-    {
-      title: "設計書",
-      active: true,
-      items: [group("設計", [page("A", "a.md"), page("B", "b.md")])],
-    },
+    { title: "設計書", active: true, items: [group("設計", [page("A", "a.md"), page("B", "b.md")])] },
     { title: "規約", active: false, items: [] },
   ],
   github: null,
@@ -79,10 +60,7 @@ export const documentResponse = (overrides: Record<string, unknown> = {}) => ({
   ...overrides,
 });
 
-export const problem = (
-  status: number,
-  extra: Record<string, unknown> = {},
-) => ({
+export const problem = (status: number, extra: Record<string, unknown> = {}) => ({
   type: "urn:dev-docs:error:Error",
   title: "Error",
   status,

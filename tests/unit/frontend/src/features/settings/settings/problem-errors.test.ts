@@ -10,8 +10,6 @@ test("test_to_field_errors", () => {
 
   const result = toFieldErrors(errors, 1);
 
-  expect(result.fields).toEqual([
-    { name: "config", message: "ファイルがありません" },
-  ]);
+  expect(result.fields).toEqual([{ name: "config", message: "ファイルがありません" }]);
   expect(result.summary).toHaveLength(2);
 });

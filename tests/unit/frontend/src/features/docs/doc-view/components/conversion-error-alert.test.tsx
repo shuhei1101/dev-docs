@@ -7,12 +7,7 @@ test("test_conversion_error_alert", () => {
   render(
     <ConversionErrorAlert
       error={
-        {
-          reason: "timeout",
-          kind: "rules",
-          script: "scripts/convert.py",
-          detail: "10 秒を超えました",
-        } as never
+        { reason: "timeout", kind: "rules", script: "scripts/convert.py", detail: "10 秒を超えました" } as never
       }
       onRetry={vi.fn()}
     />,
@@ -34,14 +29,7 @@ test("test_conversion_error_alert_when_yaml", () => {
   render(
     <ConversionErrorAlert
       error={
-        {
-          reason: "invalid_yaml",
-          kind: "rules",
-          file: "docs/a.yaml",
-          line: 12,
-          column: 3,
-          detail: "x",
-        } as never
+        { reason: "invalid_yaml", kind: "rules", file: "docs/a.yaml", line: 12, column: 3, detail: "x" } as never
       }
       onRetry={vi.fn()}
     />,

@@ -8,10 +8,7 @@ import { renderInRouter } from "@tests/helpers/render";
 
 const mount = vi.hoisted(() => vi.fn());
 
-vi.mock(
-  "https://cdn.jsdelivr.net/gh/shuhei1101/mdmark@v0.8.0/dist/mount.js",
-  () => ({ mount }),
-);
+vi.mock("https://cdn.jsdelivr.net/gh/shuhei1101/mdmark@v0.8.0/dist/mount.js", () => ({ mount }));
 
 beforeEach(() => {
   mount.mockReset();
@@ -27,11 +24,7 @@ test("test_doc_body", async () => {
   });
 
   renderInRouter(
-    <DocBody
-      document={document as never}
-      onHeadings={vi.fn()}
-      onCommentSaved={vi.fn()}
-    />,
+    <DocBody document={document as never} onHeadings={vi.fn()} onCommentSaved={vi.fn()} />,
   );
 
   await waitFor(() => expect(mount).toHaveBeenCalled());
@@ -46,11 +39,7 @@ test("test_doc_body_when_internal_link", async () => {
     return { update: vi.fn(), destroy: vi.fn() };
   });
   const { router } = renderInRouter(
-    <DocBody
-      document={documentResponse() as never}
-      onHeadings={vi.fn()}
-      onCommentSaved={vi.fn()}
-    />,
+    <DocBody document={documentResponse() as never} onHeadings={vi.fn()} onCommentSaved={vi.fn()} />,
     "/s/a.md?rev=v1",
   );
 

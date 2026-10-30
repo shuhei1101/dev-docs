@@ -2,6 +2,6 @@ import { afterAll, afterEach, beforeAll } from "vitest";
 
 import { server } from "./helpers/msw-server";
 
-beforeAll(() => server.listen({ onUnhandledFrame: "error" }));
+beforeAll(() => server.listen({ onUnhandledRequest: "error" }));
 afterEach(() => server.resetHandlers());
 afterAll(() => server.close());

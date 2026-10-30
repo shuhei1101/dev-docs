@@ -1,10 +1,6 @@
 import { expect, test } from "vitest";
 
-import {
-  AppError,
-  ClientValueError,
-  NotFoundError,
-} from "@/shared/core/app-error";
+import { AppError, ClientValueError, NotFoundError } from "@/shared/core/app-error";
 
 const problemResponse = (status: number, body: Record<string, unknown>) =>
   new Response(JSON.stringify(body), {
@@ -34,7 +30,7 @@ test("test_from_response", async () => {
 });
 
 test("test_from_response_when_not_found", async () => {
-  const response = problemResponse(404, {
+    const response = problemResponse(404, {
     type: "urn:dev-docs:error:DocumentNotFoundError",
     title: "DocumentNotFoundError",
     status: 404,

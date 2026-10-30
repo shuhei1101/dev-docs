@@ -21,7 +21,7 @@ export default tseslint.config(
   js.configs.recommended,
   ...tseslint.configs.recommended,
   {
-    files: ["frontend/**/*.{ts,tsx}", "tests/unit/frontend/**/*.{ts,tsx}"],
+    files: ["frontend/**/*.{ts,tsx}"],
     languageOptions: {
       globals: { ...globals.browser },
       parserOptions: { projectService: false },

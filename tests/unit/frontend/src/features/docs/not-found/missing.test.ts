@@ -6,9 +6,7 @@ test("test_describe_missing", () => {
   const result = describeMissing({ missing: "doc", value: "a.md" });
 
   expect(result.kind).toBe("doc");
-  expect(result.details).toEqual([
-    { label: "開こうとしたパス", value: "a.md" },
-  ]);
+  expect(result.details).toEqual([{ label: "開こうとしたパス", value: "a.md" }]);
 });
 
 test("test_describe_missing_when_not_served", () => {
@@ -22,14 +20,8 @@ test("test_describe_missing_when_not_served", () => {
   );
 
   expect(result.kind).toBe("not_served");
-  expect(result.details).toContainEqual({
-    label: "外した理由",
-    value: "documents[0] 必須",
-  });
-  expect(result.details).toContainEqual({
-    label: "設定ファイル",
-    value: "/r/dev-docs.yaml",
-  });
+  expect(result.details).toContainEqual({ label: "外した理由", value: "documents[0] 必須" });
+  expect(result.details).toContainEqual({ label: "設定ファイル", value: "/r/dev-docs.yaml" });
 });
 
 test("test_describe_missing_when_route", () => {
@@ -37,18 +29,9 @@ test("test_describe_missing_when_route", () => {
 });
 
 test("test_describe_missing_when_ref", () => {
-  const result = describeMissing(
-    { missing: "ref", value: "nope" },
-    { defaultRef: "main" },
-  );
+  const result = describeMissing({ missing: "ref", value: "nope" }, { defaultRef: "main" });
 
   expect(result.kind).toBe("ref");
-  expect(result.details).toContainEqual({
-    label: "開こうとしたリビジョン",
-    value: "nope",
-  });
-  expect(result.details).toContainEqual({
-    label: "既定のリビジョン",
-    value: "main",
-  });
+  expect(result.details).toContainEqual({ label: "開こうとしたリビジョン", value: "nope" });
+  expect(result.details).toContainEqual({ label: "既定のリビジョン", value: "main" });
 });

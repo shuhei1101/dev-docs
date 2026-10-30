@@ -16,13 +16,7 @@ const items = [
 const renderDialog = (onResultSelect = vi.fn()) => {
   render(
     <QueryClientProvider client={createTestQueryClient()}>
-      <SearchDialog
-        open
-        onOpenChange={vi.fn()}
-        source="s"
-        ref="main"
-        onResultSelect={onResultSelect}
-      />
+      <SearchDialog open onOpenChange={vi.fn()} source="s" ref="main" onResultSelect={onResultSelect} />
     </QueryClientProvider>,
   );
   return onResultSelect;

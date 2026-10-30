@@ -14,34 +14,24 @@ const sources = [settingsSource("a")];
 const renderDialog = (index: number | null, onOpenChange = vi.fn()) => {
   render(
     <QueryClientProvider client={createTestQueryClient()}>
-      <SourceEditDialog
-        open
-        onOpenChange={onOpenChange}
-        sources={sources as never}
-        index={index}
-      />
+      <SourceEditDialog open onOpenChange={onOpenChange} sources={sources as never} index={index} />
     </QueryClientProvider>,
   );
   return onOpenChange;
 };
 
 test("test_source_edit_dialog", async () => {
-  let body = null as { sources: { id: string }[] } | null;
+  let body: { sources: { id: string }[] } | null = null;
   server.use(
     http.put("/_api/settings/sources", async ({ request }) => {
       body = (await request.json()) as typeof body;
-      return HttpResponse.json({
-        sources: [{ id: "extra", status: "serving", errors: [] }],
-      });
+      return HttpResponse.json({ sources: [{ id: "extra", status: "serving", errors: [] }] });
     }),
   );
   const onOpenChange = renderDialog(null);
 
   await userEvent.type(screen.getByLabelText(/配信元の ID/), "extra");
-  await userEvent.type(
-    screen.getByLabelText(/設定ファイル/),
-    "/x/dev-docs.yaml",
-  );
+  await userEvent.type(screen.getByLabelText(/設定ファイル/), "/x/dev-docs.yaml");
   await userEvent.type(screen.getByLabelText(/読み取りの範囲/), "/x/**");
   await userEvent.click(screen.getByRole("button", { name: "追加" }));
 
@@ -63,14 +53,8 @@ test("test_source_edit_dialog_when_invalid", async () => {
 
   await userEvent.click(screen.getByRole("button", { name: "追加" }));
 
-  expect(
-    await screen.findByText("配信元の ID を入力してください。"),
-  ).toBeInTheDocument();
-  expect(
-    screen.getByText("設定ファイルを 1 つ以上入力してください。"),
-  ).toBeInTheDocument();
-  expect(
-    screen.getByText("読み取りの範囲を 1 つ以上入力してください。"),
-  ).toBeInTheDocument();
+  expect(await screen.findByText("配信元の ID を入力してください。")).toBeInTheDocument();
+  expect(screen.getByText("設定ファイルを 1 つ以上入力してください。")).toBeInTheDocument();
+  expect(screen.getByText("読み取りの範囲を 1 つ以上入力してください。")).toBeInTheDocument();
   expect(save).not.toHaveBeenCalled();
 });

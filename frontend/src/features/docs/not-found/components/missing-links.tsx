@@ -38,7 +38,7 @@ export const MissingLinks = ({ missing, source, rev, serving }: Props) => {
           設定を開く
         </Link>
       </div>
-      {primary && serving.length > 0 && (
+      {serving.length > 0 && (
         <ul aria-label="配信中の配信元" className="flex flex-wrap gap-2">
           {serving.map((item) => (
             <li key={item.id}>

@@ -14,19 +14,13 @@ test("test_status_badge", () => {
 
   expect(screen.getByText("配信していない")).toBeInTheDocument();
   expect(screen.getByText(/起動時の検証で外しました。/)).toBeInTheDocument();
-  expect(
-    screen.getByText(/documents\[0\] paths が必要です/),
-  ).toBeInTheDocument();
+  expect(screen.getByText(/documents\[0\] paths が必要です/)).toBeInTheDocument();
 });
 
 test("test_status_badge_when_old_config_version", () => {
-  const source = settingsSource("a", {
-    configVersion: { config: "1", server: "2" },
-  });
+  const source = settingsSource("a", { configVersion: { config: "1", server: "2" } });
 
   render(<StatusBadge source={source as never} />);
 
-  expect(
-    screen.getByText("設定のバージョン 1（サーバーが読めるのは 2）"),
-  ).toBeInTheDocument();
+  expect(screen.getByText("設定のバージョン 1（サーバーが読めるのは 2）")).toBeInTheDocument();
 });

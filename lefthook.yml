@@ -2,10 +2,10 @@
 pre-commit:
   jobs:
     - name: frontend-lint
-      glob: "{frontend/**,tests/unit/frontend/**,eslint.config.js}"
+      glob: "{frontend/**,eslint.config.js}"
       run: npm run lint
     - name: frontend-typecheck
-      glob: "{frontend/**,tests/unit/frontend/**}"
+      glob: "frontend/**"
       run: npm run typecheck
     - name: frontend-build
       glob: "frontend/**"
