@@ -142,9 +142,9 @@ events:
     value: 次の `colorScheme`
     description: 明暗を切り替えて保つ
 accessibility:
-  - アイコンだけのボタンは `aria-label` を持つ（文書の一覧を開く・設定・明暗を固定する・コメント（{件数} 件））
-  - 配信元・リビジョンのボタンの読み上げ名に今の値を含める（配信元を切り替える（今は {ID}））。メニューの今の項目は `aria-current`
-  - 検索のボタンは `aria-keyshortcuts="Control+K /"` を持ち、キーを表示する
+  - アイコンだけのボタンは `aria-label` を持つ（文書の一覧を開く・設定・明暗を固定する・`コメント {件数} 件`）
+  - 配信元・リビジョンのボタンの読み上げ名に今の値を含める（`配信元を切り替える。今は {ID}`・`リビジョンを切り替える。今は {ref}`）。見える値に全角の括弧を隣接させると axe の `label-content-name-mismatch` に当たる。メニューの今の項目は `aria-current`
+  - 検索のボタンは `aria-keyshortcuts="Control+K /"` を持ち、キーを表示する（読み上げ名は `検索 Ctrl K`）
   - 明暗のボタンは `aria-pressed` で固定しているかを示す
   - メニューはキーボードだけで開閉・選択でき、Esc で閉じてボタンへフォーカスを戻す
 notes:
