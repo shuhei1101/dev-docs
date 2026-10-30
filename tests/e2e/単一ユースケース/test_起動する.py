@@ -43,6 +43,7 @@ SESSION_PROMPT = "このセッションでは何も実行せず、「了解」�
 LEGACY_CONFIG = (
     'version: "1"\n'
     "name: legacy\n"
+    "tags: tags.yaml\n"
     "documents:\n"
     "  - id: notes\n"
     "    paths: [docs/*.md]\n"
@@ -214,7 +215,9 @@ def test_error_when_source_config_legacy(
     """前の形式の配信元を外し、違反と移し替えの案内をエラーログに残す（異常系）。"""
     # 準備
     sample = make_source("sample")
-    legacy = make_source("legacy", {"dev-docs.yaml": LEGACY_CONFIG})
+    legacy = make_source(
+        "legacy", {"dev-docs.yaml": LEGACY_CONFIG, "tags.yaml": "python: Python の規約\n"}
+    )
     # 実行
     served = serve(sample, legacy)
     legacy_docs = served.get("/_api/sources/legacy/docs")
@@ -223,6 +226,7 @@ def test_error_when_source_config_legacy(
     errors = served.stderr()
     assert legacy_docs.status_code == 404
     assert sample_docs.status_code == 200
+    assert "legacy: tags" in errors
     assert "legacy: documents[0].type" in errors
     assert "legacy: documents[1].type" in errors
     assert "legacy: documents[1].defaults" in errors
@@ -401,6 +405,8 @@ def test_normal_when_session_context_added(
     assert "- notes（読み取りだけ）: メモの配信元" in context
     for usage in (
         "describe(source)",
+        "種類と書き方",
+        "同じ意味のタグを使い回す",
         "search_docs",
         'group_by="tags"',
         'source="*"',

@@ -34,6 +34,10 @@ LEGACY_ROWS = (
     "      name: {type: ref, field: title}\n"
 )
 LEGACY_CONFIG = 'version: "1"\nname: legacy\ndefault_ref: develop\ndocuments:\n' + LEGACY_ROWS
+TAGGED_CONFIG = (
+    'version: "1"\nname: legacy\ndefault_ref: develop\ntags: tags.yaml\ndocuments:\n' + LEGACY_ROWS
+)
+TAG_MASTER = "python: Python の規約\n"
 UNMIGRATABLE_CONFIG = (
     LEGACY_CONFIG
     + "  - id: notes\n"
@@ -193,24 +197,39 @@ def test_normal_when_source_config_old(
     """配信元の設定が古くなると、`dev-docs migrate --source` で書き方を移し替える（正常系）。"""
     # 準備
     clone = make_clone()
-    legacy = make_source("legacy", sample_file_set(**{"dev-docs.yaml": LEGACY_CONFIG}), git=False)
+    legacy = make_source(
+        "legacy",
+        sample_file_set(**{"dev-docs.yaml": TAGGED_CONFIG, "tags.yaml": TAG_MASTER}),
+        git=False,
+    )
     config = legacy.folder / "dev-docs.yaml"
     settings = write_settings()
     # 実行
     plan = clone.migrate(settings, "--source", str(config), "--plan")
     after_plan = config.read_text(encoding="utf-8")
-    migrated = clone.migrate(settings, "--source", str(config))
+    stopped = clone.migrate(settings, "--source", str(config))
+    after_stopped = config.read_text(encoding="utf-8")
+    migrated = clone.migrate(settings, "--source", str(config), "--allow-destructive")
     saved = load_yaml_file(config)
     # 検証
     backups = sorted(legacy.folder.glob("dev-docs.yaml.bak-*"))
+    destructive_lines = [
+        line for line in plan.stdout.splitlines() if line.endswith("[destructive]")
+    ]
     assert plan.returncode == 0
     assert "documents[].type の yaml を削除する" in plan.stdout
-    assert after_plan == LEGACY_CONFIG
+    assert len(destructive_lines) == 1
+    assert "tags（タグのマスター）を削除する" in destructive_lines[0]
+    assert after_plan == TAGGED_CONFIG
+    assert stopped.returncode == 5
+    assert after_stopped == TAGGED_CONFIG
     assert migrated.returncode == 0
+    assert "tags" not in saved
     assert "type" not in saved["documents"][0]
     assert saved["documents"][0]["metadata"] == {"name": "title"}
-    assert saved["version"] == "2"
-    assert [backup.read_text(encoding="utf-8") for backup in backups] == [LEGACY_CONFIG]
+    assert saved["version"] == "3"
+    assert (legacy.folder / "tags.yaml").read_text(encoding="utf-8") == TAG_MASTER
+    assert [backup.read_text(encoding="utf-8") for backup in backups] == [TAGGED_CONFIG]
 
 
 def test_error_when_source_config_unmigratable(
@@ -228,7 +247,7 @@ def test_error_when_source_config_unmigratable(
     config = legacy.folder / "dev-docs.yaml"
     settings = write_settings()
     # 実行
-    migrated = clone.migrate(settings, "--source", str(config))
+    migrated = clone.migrate(settings, "--source", str(config), "--allow-destructive")
     # 検証
     assert migrated.returncode == 4
     assert config.read_text(encoding="utf-8") == UNMIGRATABLE_CONFIG
