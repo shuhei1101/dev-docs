@@ -83,8 +83,44 @@ function resetStateOnClose(el) {
 
 for (const el of document.querySelectorAll("[data-open-when]")) resetStateOnClose(el);
 
-addEventListener("hashchange", applyState);
+// ===== 表の列の表示（外した列のセルを隠す） =====
+
+const columnToggles = [...document.querySelectorAll("[data-column-toggle]")];
+
+/** 列の表示の切り替えを表へ当てる */
+function applyColumns() {
+  const hiddenCount = new Map();
+  for (const toggle of columnToggles) {
+    const table = document.getElementById(toggle.dataset.columnToggle);
+    const cells = table.querySelectorAll(`tr > :nth-child(${toggle.dataset.column})`);
+    for (const cell of cells) cell.hidden = !toggle.checked;
+    if (!toggle.checked) {
+      hiddenCount.set(table.id, (hiddenCount.get(table.id) ?? 0) + 1);
+    }
+  }
+  for (const note of document.querySelectorAll("[data-column-note]")) {
+    const count = hiddenCount.get(note.dataset.columnNote) ?? 0;
+    note.hidden = count === 0;
+    note.textContent = `${count} 列を隠しています`;
+  }
+}
+
+/** 状態に合わせて、列の表示の初期値を決める */
+function resetColumns() {
+  for (const toggle of columnToggles) {
+    toggle.checked = toggle.dataset.uncheckedWhen !== currentState();
+  }
+  applyColumns();
+}
+
+for (const toggle of columnToggles) toggle.addEventListener("change", applyColumns);
+
+addEventListener("hashchange", () => {
+  applyState();
+  resetColumns();
+});
 applyState();
+resetColumns();
 
 // ===== 明暗の切り替え（押すたびにシステムの設定の反対へ固定し、もう一度押すと戻す） =====
 
