@@ -66,7 +66,7 @@ scenarios:
       - 'sample のワークツリーで `source` を省いて呼んだ `search_docs` がワークツリーの文書を返し、`source: *` が sample と notes の結果を各行の `source` つきで返す'
       - '`write_docs` の変更は sample のワークツリーの YAML だけに入り、sample のクローン本体は変わらない。dev-docs は commit しない（ワークツリーに増えた commit は、エージェントが commit した 1 件だけ）'
       - '`notes` を指した `write_docs` は断られ、notes のフォルダは変わらない'
-      - '`list_changes` がエージェントの commit の変更を返し、`/_api/sources/sample/docs/{パス}?ref={その commit}&diff={親の commit}` の `changed_items` が変わった項目を返す'
+      - '`list_changes` がエージェントの commit の変更を返し、`/_api/sources/sample/docs/{パス}?ref={その commit}&diff={親の commit}` の `diff.changedItems` が変わった項目を返す'
       - '`/_api/sources/sample/docs` が `tabs` と、YAML を変換した `markdown` を返す'
       - 直接編集した YAML の内容と新しいバージョンを、次の `search_docs` が返す
       - '`dev-docs.yaml` で変えた配信元の説明が、`reload` の後の `describe` に出る'
