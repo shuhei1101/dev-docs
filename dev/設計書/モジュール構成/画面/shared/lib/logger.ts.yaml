@@ -38,3 +38,5 @@ functions:
         condition: '`error("api_failed", {status: 500, error: new Error("x")})`'
         mock: 書き出し先（`vi.fn` を持つ偽物）
         expected: '`sink.error` に 1 回、`JSON.parse` でき `level` が `error`、`event` が `api_failed`、`error.message` が `x`'
+test_files:
+  - tests/unit/frontend/src/shared/lib/logger.test.ts
