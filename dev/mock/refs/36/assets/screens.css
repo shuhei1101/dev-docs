@@ -15,6 +15,8 @@
     --tabs-h: 2.875rem;
     --header-h: calc(var(--topbar-h) + var(--tabs-h));
     --marker-w: 2.25rem;
+    /* 薄い赤の地に置く赤の文字 */
+    --destructive-text: light-dark(oklch(0.505 0.213 27.5), oklch(0.704 0.191 22));
   }
 }
 
@@ -791,7 +793,7 @@
     align-items: center;
     gap: 0.5rem;
     margin: 0;
-    color: var(--destructive);
+    color: var(--destructive-text);
     font-size: var(--text-control);
     font-weight: 600;
   }
@@ -809,7 +811,7 @@
   }
 
   .error-summary a {
-    color: var(--destructive);
+    color: var(--destructive-text);
   }
 
   .error-summary code {
@@ -895,7 +897,7 @@
   .badge--error {
     border-color: color-mix(in oklab, var(--destructive) 50%, var(--border));
     background: color-mix(in oklab, var(--destructive) 8%, var(--background));
-    color: var(--destructive);
+    color: var(--destructive-text);
   }
 
   .badge--muted {
@@ -921,7 +923,7 @@
 
   .btn--danger-ghost:hover {
     background: color-mix(in oklab, var(--destructive) 10%, transparent);
-    color: var(--destructive);
+    color: var(--destructive-text);
   }
 
   .setting-row {
@@ -1101,9 +1103,13 @@
       padding: 0 0.5rem;
     }
 
+    .app-header .btn--icon {
+      width: 2rem;
+    }
+
     .app-header .search {
       min-width: 0;
-      width: var(--control-h);
+      width: 2rem;
       padding: 0;
       justify-content: center;
     }
@@ -1114,7 +1120,12 @@
     }
 
     .app-header .source-button span {
+      flex-shrink: 0;
       max-width: 5rem;
+    }
+
+    .app-header .source-button .btn__chevron {
+      display: none;
     }
 
     .app-header .brand {
