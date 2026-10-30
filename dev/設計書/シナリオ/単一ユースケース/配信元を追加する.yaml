@@ -321,7 +321,7 @@ scenarios:
         participant API as 画面の API
         participant CF as 端末の設定
 
-        U->>UI: 配信元を指さないトップの URL を開く
+        U->>UI: 設定画面の URL（`/_settings`）を開く
         UI-->>U: settings（配信元の一覧と状態）
         U->>UI: 配信元を追加し、extra の id・config・scope.read を入れて保存する
         UI->>API: 端末の設定の保存（sample と extra の sources）
@@ -331,7 +331,6 @@ scenarios:
         UI-->>U: settings（extra を加えた一覧）
       ```
     expected:
-      - 配信元を指さないトップの URL を開くと設定画面になる
       - 一覧に sample と extra が配信中で並ぶ
       - '`settings.yaml` の `sources` に extra の行が追加され、sample の行は変わらない'
       - dev-docs を再起動せずに、extra の文書の画面が開ける
@@ -416,31 +415,34 @@ scenarios:
         participant API as 画面の API
 
         U->>UI: 配信元を追加し、id を Sample Docs、scope.read に空の行を含めて保存する
-        UI->>API: 端末の設定の保存
-        API-->>UI: 422（違反したキーと理由）
+        UI->>UI: 入力チェック（保存の送信をしない）
         UI-->>U: 保存の失敗のまとめと、項目ごとのエラー
       ```
     expected:
-      - 保存できなかったことと、違反したキー `sources[1].id`・`sources[1].scope.read` とそれぞれの理由が出る
+      - 保存できなかったことと、画面設計『設定画面』の入力チェックの id と scope.read の文言が出る
       - 入れた値が入力欄に残る
       - '`settings.yaml` が変わらず、sample の文書の画面は開ける'
     test: test_error_when_schema_invalid
+    notes:
+      422 の受け方: 画面の入力チェックが先に止めるため、サーバーの 422 を画面に出す経路は結合テスト `settings-screen.spec.ts` が確かめる
   - name: 異常シナリオ（別のオリジンから書き込む）
     setup:
       - name: Mock
         description: なし（実環境で実行）
+        notes: '-'
       - name: 端末の設定
         description: '`DEV_DOCS_CONFIG` が指す一時フォルダの `settings.yaml`'
         notes: '`sources` に sample の 1 行'
-      - name: 別のオリジンのページ
-        description: dev-docs と別のポートで配信したページ。端末の設定の保存を dev-docs へ送信する
-        notes: 送信する内容はスキーマに通る端末の設定
+      - name: 別のオリジンの送信
+        description: '`Origin` を dev-docs と別のポートにした HTTP の端末の設定の保存'
+        notes: 送信する内容はスキーマに通る端末の設定。ブラウザは別のオリジンの 403 の応答を読めないため HTTP で送る
       - name: dev-docs
         description: 端末の設定で起動した dev-docs
+        notes: '-'
     flow: |-
       ```mermaid
       sequenceDiagram
-        participant OP as 別のオリジンのページ
+        participant OP as 別のオリジンの送信
         participant DD as dev-docs
 
         OP->>DD: 端末の設定の保存を送信する

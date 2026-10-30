@@ -106,7 +106,6 @@ scenarios:
         U->>UI: 文書 1 を開き、比較先に比較先の commit、比較元に比較元の commit を選ぶ
         UI->>API: 文書の取得（文書 1・比較先・比較元）
         API-->>UI: 比較先の文書 1 と変わった項目
-        UI->>UI: 差分を mdmark で強調して描く
         UI-->>U: doc-view（差分の案内・変更のマーカー）
         U->>UI: 差分の強調を解除する
         UI-->>U: doc-view（強調の無い本文）
@@ -115,10 +114,11 @@ scenarios:
       - 差分の案内に比較元と比較先の commit が出て、どちらもその場で選び直せる
       - サイドバーの文書 3 に追加、文書 1 に変更、文書 4 に削除のマーカーが出て、文書 2 にはマーカーが出ない
       - 目次の 2 つ目の見出しに変更のマーカーが出て、1 つ目の見出しには出ない
-      - 本文の変わった箇所が強調される
-      - 強調を解除すると、本文の強調・サイドバーと目次のマーカーが消え、比較先の文書 1 が出る
+      - 強調を解除すると、サイドバーと目次のマーカーが消え、比較先の文書 1 が出る
       - URL に比較元と比較先が入り、その URL を開き直しても同じ差分が出る
     test: test_normal_when_diff_shown
+    notes:
+      本文の強調: 本文の変わった箇所の強調は、mdmark#222 へのつなぎ込み（#44）で追加する
   - name: 正常シナリオ（検索する）
     setup:
       - name: Mock
@@ -150,18 +150,20 @@ scenarios:
     setup:
       - name: Mock
         description: なし（実環境で実行）
+        notes: '-'
       - name: 端末の設定
         description: '`state_dir` をテスト用の一時フォルダにした `settings.yaml`'
+        notes: '-'
       - name: dev-docs
         description: 正常シナリオと同じ sample を配信している dev-docs
-        notes: 文書 1 の本文に 3 列の表がある
+        notes: 'sample に、`<!-- table: data +columns -->` のマーカーを付けた 3 列の表を持つ Markdown の文書 5 がある（スキーマから作る表は `+columns` を持たない）'
     flow: |-
       ```mermaid
       sequenceDiagram
         actor U as 利用者
         participant UI as dev-docs の画面
 
-        U->>UI: 表の列の表示から 2 列目を外す
+        U->>UI: 文書 5 を開き、表の列の表示から 2 列目を外す
         UI-->>U: 2 列目を隠した表
         U->>UI: 同じ文書を開き直す
         UI-->>U: 2 列目を隠した表
