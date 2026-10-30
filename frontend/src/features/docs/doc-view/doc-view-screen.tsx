@@ -17,7 +17,10 @@ import {
 import type { DocViewSearch } from "@/features/docs/doc-view/search";
 import { type TocItem, changedSections } from "@/features/docs/doc-view/toc";
 import { CommentPanel } from "@/features/docs/shared/comments/comment-panel";
-import { useCommentStore } from "@/features/docs/shared/comments/comment-store";
+import {
+  type DocComment,
+  useCommentStore,
+} from "@/features/docs/shared/comments/comment-store";
 import { SearchDialog } from "@/features/docs/shared/search-dialog/search-dialog";
 import { servingSources } from "@/features/docs/shared/serving-sources";
 import type { NavTab } from "@/shared/api/generated/model";
@@ -60,6 +63,8 @@ export const DocViewScreen = () => {
     null,
   );
   const [headings, setHeadings] = useState<TocItem[]>([]);
+  // コメントのパネルで場所を選ばれたコメント（本文がその印まで移ったら戻す）
+  const [locating, setLocating] = useState<DocComment | null>(null);
 
   const { colorScheme, singleKeyShortcuts, setColorScheme } =
     usePreferencesStore();
@@ -139,6 +144,8 @@ export const DocViewScreen = () => {
           busy={query.isFetching}
           onHeadings={setHeadings}
           onCommentSaved={() => open("comments")}
+          locating={locating}
+          onLocated={() => setLocating(null)}
           onRetry={() => void query.refetch()}
           onCompare={nav.compare}
           onClearDiff={nav.clearDiff}
@@ -172,7 +179,10 @@ export const DocViewScreen = () => {
         open={panels.comments}
         onOpenChange={(value) => open("comments", value)}
         github={doc.github ?? null}
-        onLocate={nav.locate}
+        onLocate={(comment) => {
+          setLocating(comment);
+          nav.locate(comment);
+        }}
         onChanged={() => undefined}
       />
     </div>

@@ -6,6 +6,7 @@ import { useMdmark } from "@/features/docs/doc-view/hooks/use-mdmark";
 import { findActivePage } from "@/features/docs/doc-view/nav";
 import { type TocItem, readToc } from "@/features/docs/doc-view/toc";
 import {
+  type DocComment,
   commentsOf,
   useCommentStore,
 } from "@/features/docs/shared/comments/comment-store";
@@ -15,6 +16,9 @@ type Props = {
   document: DocumentResponse;
   onHeadings: (items: TocItem[]) => void;
   onCommentSaved: () => void;
+  /** コメントのパネルで場所を選ばれたコメント。印が見つかったら `onLocated` で戻す */
+  locating: DocComment | null;
+  onLocated: () => void;
 };
 
 const TABLE_MARKER = /<!--\s*table:[^>]*-->/g;
@@ -67,11 +71,19 @@ const headingsBefore = (
   return result.filter((item): item is string => item !== undefined);
 };
 
+/** 選んだ文字列が一致するコメントの印を探す */
+const findCommentMark = (root: HTMLElement, quote: string) =>
+  Array.from(root.querySelectorAll(".mdmark-comment-mark")).find(
+    (mark) => mark.textContent?.trim() === quote.trim(),
+  );
+
 /** mdmark で描く文書の本文。リンクとコメントを画面とつなぐ */
 export const DocBody = ({
   document: doc,
   onHeadings,
   onCommentSaved,
+  locating,
+  onLocated,
 }: Props) => {
   const ref = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
@@ -130,6 +142,26 @@ export const DocBody = ({
   useEffect(() => {
     if (ready && ref.current) onHeadings(readToc(ref.current));
   }, [ready, markdown, onHeadings]);
+
+  // 場所を選ばれたコメントの印へスクロールする（印は mdmark がコメントを読み込んだ後に描く）
+  useEffect(() => {
+    const root = ref.current;
+    if (!ready || !root || locating === null || locating.docId !== docId)
+      return;
+    const find = () => {
+      const mark = findCommentMark(root, locating.quote);
+      if (mark === undefined) return false;
+      mark.scrollIntoView({ block: "center" });
+      onLocated();
+      return true;
+    };
+    if (find()) return;
+    const observer = new MutationObserver(() => {
+      if (find()) observer.disconnect();
+    });
+    observer.observe(root, { childList: true, subtree: true });
+    return () => observer.disconnect();
+  }, [ready, locating, docId, onLocated]);
 
   const onClick = (event: MouseEvent<HTMLDivElement>) => {
     const anchor = (event.target as HTMLElement).closest("a[href]");
