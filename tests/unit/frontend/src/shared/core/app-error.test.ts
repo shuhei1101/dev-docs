@@ -30,20 +30,20 @@ test("test_from_response", async () => {
 });
 
 test("test_from_response_when_not_found", async () => {
-  const missing = { kind: "doc", source: "s", ref: "main", path: "a.md" };
-  const response = problemResponse(404, {
+    const response = problemResponse(404, {
     type: "urn:dev-docs:error:DocumentNotFoundError",
     title: "DocumentNotFoundError",
     status: 404,
     detail: "文書がありません",
     nextSteps: [],
-    missing,
+    missing: "doc",
+    value: "a.md",
   });
 
   const error = await AppError.fromResponse(response);
 
   expect(error).toBeInstanceOf(NotFoundError);
-  expect(error.problem).toMatchObject({ missing });
+  expect(error.problem).toMatchObject({ missing: "doc", value: "a.md" });
 });
 
 test("test_from_response_when_not_problem", async () => {

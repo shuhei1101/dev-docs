@@ -59,7 +59,7 @@ test("test_base_markdown_query_options", async () => {
 test("test_base_markdown_query_options_when_added", async () => {
   server.use(
     http.get("/_api/sources/s/docs/a.md", () =>
-      HttpResponse.json(problem(404, { missing: { kind: "doc", source: "s", ref: "v1", path: "a.md" } }), {
+      HttpResponse.json(problem(404, { missing: "doc", value: "a.md" }), {
         status: 404,
         headers: PROBLEM_HEADERS,
       }),
@@ -72,7 +72,7 @@ test("test_base_markdown_query_options_when_added", async () => {
 test("test_load_document_when_not_found", async () => {
   server.use(
     http.get("/_api/sources/s/docs/a.md", () =>
-      HttpResponse.json(problem(404, { missing: { kind: "doc", source: "s", ref: "main", path: "a.md" } }), {
+      HttpResponse.json(problem(404, { missing: "doc", value: "a.md" }), {
         status: 404,
         headers: PROBLEM_HEADERS,
       }),
@@ -86,5 +86,5 @@ test("test_load_document_when_not_found", async () => {
   } as never).catch((error: unknown) => error);
 
   expect(isNotFound(caught)).toBe(true);
-  expect((caught as { data: { missing: { kind: string } } }).data.missing.kind).toBe("doc");
+  expect((caught as { data: { missing: string } }).data.missing).toBe("doc");
 });

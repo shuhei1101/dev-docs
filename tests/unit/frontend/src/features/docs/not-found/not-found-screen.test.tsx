@@ -21,9 +21,7 @@ test("test_not_found_screen", async () => {
   useHandlers();
 
   const { router } = renderInRouter(
-    <NotFoundScreen
-      data={{ missing: { kind: "doc", source: "s", ref: "main", path: "a.md" } }}
-    />,
+    <NotFoundScreen data={{ missing: "doc", value: "a.md" }} />,
     "/s/a.md",
   );
 
@@ -39,11 +37,11 @@ test("test_not_found_screen_when_source_missing", async () => {
   const refs = useHandlers();
 
   renderInRouter(
-    <NotFoundScreen data={{ missing: { kind: "source", source: "zzz" } }} />,
-    "/zzz/a.md",
+    <NotFoundScreen data={{ missing: "source", value: "unknown" }} />,
+    "/unknown/a.md",
   );
 
-  expect(await screen.findByRole("heading", { name: "配信元 zzz はありません" })).toBeInTheDocument();
+  expect(await screen.findByRole("heading", { name: "配信元 unknown はありません" })).toBeInTheDocument();
   await waitFor(() => expect(screen.getByRole("list", { name: "配信中の配信元" })).toBeInTheDocument());
   expect(refs).not.toHaveBeenCalled();
 });
