@@ -12,9 +12,15 @@ export const redirectToFirstSource = async ({
   const view = await context.queryClient.ensureQueryData(
     getSettingsGetSettingsSourcesQueryOptions(),
   );
-  const serving = view.sources.find((source) => source.status === "serving" && source.id);
+  const serving = view.sources.find(
+    (source) => source.status === "serving" && source.id,
+  );
   if (serving?.id) {
-    throw redirect({ to: "/$source", params: { source: serving.id }, replace: true });
+    throw redirect({
+      to: "/$source",
+      params: { source: serving.id },
+      replace: true,
+    });
   }
   throw redirect({ to: "/_settings", replace: true });
 };

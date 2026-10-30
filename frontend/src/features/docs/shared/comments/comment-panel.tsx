@@ -2,12 +2,23 @@ import { Pencil, Trash2, X } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
-import { buildIssueUrl, formatComments } from "@/features/docs/shared/comments/comment-format";
-import { type DocComment, useCommentStore } from "@/features/docs/shared/comments/comment-store";
+import {
+  buildIssueUrl,
+  formatComments,
+} from "@/features/docs/shared/comments/comment-format";
+import {
+  type DocComment,
+  useCommentStore,
+} from "@/features/docs/shared/comments/comment-store";
 import type { GitHubTarget } from "@/shared/api/generated/model";
 import { Button } from "@/shared/components/ui/button";
 import { Checkbox } from "@/shared/components/ui/checkbox";
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/shared/components/ui/sheet";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from "@/shared/components/ui/sheet";
 import { Textarea } from "@/shared/components/ui/textarea";
 
 type Props = {
@@ -19,10 +30,19 @@ type Props = {
 };
 
 const placeOf = (comment: DocComment): string =>
-  [comment.docTitle, ...(comment.headings.length > 0 ? comment.headings : ["冒頭"])].join(" › ");
+  [
+    comment.docTitle,
+    ...(comment.headings.length > 0 ? comment.headings : ["冒頭"]),
+  ].join(" › ");
 
 /** 溜めたコメントの一覧と、コピー・起票 */
-export const CommentPanel = ({ open, onOpenChange, github, onLocate, onChanged }: Props) => {
+export const CommentPanel = ({
+  open,
+  onOpenChange,
+  github,
+  onLocate,
+  onChanged,
+}: Props) => {
   const { comments, setSelected, update, remove } = useCommentStore();
   const [editingId, setEditingId] = useState<string | null>(null);
   const [draft, setDraft] = useState("");
@@ -44,7 +64,9 @@ export const CommentPanel = ({ open, onOpenChange, github, onLocate, onChanged }
 
   const onCopy = async () => {
     if (await copy(formatComments(chosen))) {
-      toast.success(`選択 ${chosen.length} 件をクリップボードにコピーしました。`);
+      toast.success(
+        `選択 ${chosen.length} 件をクリップボードにコピーしました。`,
+      );
     }
   };
 
@@ -55,7 +77,10 @@ export const CommentPanel = ({ open, onOpenChange, github, onLocate, onChanged }
     const { url, truncated } = buildIssueUrl(github, body);
     window.open(url, "_blank", "noopener");
     toast.success("Issue の作成画面を別のタブで開きました。");
-    if (truncated) toast.success("本文が長いため末尾を切り詰め、全文をクリップボードにコピーしました。");
+    if (truncated)
+      toast.success(
+        "本文が長いため末尾を切り詰め、全文をクリップボードにコピーしました。",
+      );
   };
 
   const startEdit = (comment: DocComment) => {
@@ -76,12 +101,24 @@ export const CommentPanel = ({ open, onOpenChange, github, onLocate, onChanged }
 
   return (
     <Sheet modal={false} open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" showCloseButton={false} className="w-96 max-w-full">
+      <SheetContent
+        side="right"
+        showCloseButton={false}
+        className="w-96 max-w-full"
+      >
         <SheetHeader className="flex-row items-center justify-between">
           <SheetTitle>
-            コメント <span className="text-sm font-normal text-muted-foreground">{comments.length} 件</span>
+            コメント{" "}
+            <span className="text-sm font-normal text-muted-foreground">
+              {comments.length} 件
+            </span>
           </SheetTitle>
-          <Button variant="ghost" size="icon" aria-label="閉じる" onClick={() => onOpenChange(false)}>
+          <Button
+            variant="ghost"
+            size="icon"
+            aria-label="閉じる"
+            onClick={() => onOpenChange(false)}
+          >
             <X />
           </Button>
         </SheetHeader>
@@ -92,23 +129,29 @@ export const CommentPanel = ({ open, onOpenChange, github, onLocate, onChanged }
             </p>
           ) : (
             <>
-              <label className="flex items-center gap-2 text-sm">
+              <div className="flex items-center gap-2 text-sm">
                 <Checkbox
+                  id="select-all-comments"
                   aria-label="すべて選択"
                   checked={all}
                   indeterminate={mixed}
                   onCheckedChange={(checked) => setSelected(null, checked)}
                 />
-                すべて選択
-              </label>
+                <label htmlFor="select-all-comments">すべて選択</label>
+              </div>
               <ul className="space-y-3">
                 {comments.map((comment, index) => (
-                  <li key={comment.id} className="space-y-2 rounded-lg border border-border p-3">
+                  <li
+                    key={comment.id}
+                    className="space-y-2 rounded-lg border border-border p-3"
+                  >
                     <div className="flex items-start gap-2">
                       <Checkbox
                         aria-label={`${index + 1} 件目を選択`}
                         checked={comment.selected}
-                        onCheckedChange={(checked) => setSelected(comment.id, checked)}
+                        onCheckedChange={(checked) =>
+                          setSelected(comment.id, checked)
+                        }
                       />
                       <button
                         type="button"
@@ -148,14 +191,24 @@ export const CommentPanel = ({ open, onOpenChange, github, onLocate, onChanged }
                       <div className="space-y-2">
                         <Textarea
                           aria-label="コメント"
-                          autoFocus
+                          ref={(element) => element?.focus()}
                           value={draft}
                           onChange={(event) => setDraft(event.target.value)}
-                          onKeyDown={(event) => event.key === "Escape" && setEditingId(null)}
+                          onKeyDown={(event) =>
+                            event.key === "Escape" && setEditingId(null)
+                          }
                         />
-                        {invalid && <p className="text-xs text-destructive">コメントを入力してください。</p>}
+                        {invalid && (
+                          <p className="text-xs text-destructive">
+                            コメントを入力してください。
+                          </p>
+                        )}
                         <div className="flex justify-end gap-2">
-                          <Button variant="outline" size="sm" onClick={() => setEditingId(null)}>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setEditingId(null)}
+                          >
                             キャンセル
                           </Button>
                           <Button size="sm" onClick={save}>
@@ -164,7 +217,9 @@ export const CommentPanel = ({ open, onOpenChange, github, onLocate, onChanged }
                         </div>
                       </div>
                     ) : (
-                      <p className="text-sm whitespace-pre-wrap">{comment.body}</p>
+                      <p className="text-sm whitespace-pre-wrap">
+                        {comment.body}
+                      </p>
                     )}
                   </li>
                 ))}
@@ -178,7 +233,11 @@ export const CommentPanel = ({ open, onOpenChange, github, onLocate, onChanged }
               選択 {chosen.length} 件をコピー
             </Button>
             {github !== null && (
-              <Button variant="outline" disabled={chosen.length === 0} onClick={onIssue}>
+              <Button
+                variant="outline"
+                disabled={chosen.length === 0}
+                onClick={onIssue}
+              >
                 Issue を作成
               </Button>
             )}

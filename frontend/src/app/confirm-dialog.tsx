@@ -24,7 +24,11 @@ type Confirm = (request: ConfirmRequest) => Promise<boolean>;
 const ConfirmContext = createContext<Confirm | null>(null);
 
 /** `useConfirmDialog` から開く確認のダイアログを 1 つだけ持つ */
-export const ConfirmDialogProvider = ({ children }: { children: ReactNode }) => {
+export const ConfirmDialogProvider = ({
+  children,
+}: {
+  children: ReactNode;
+}) => {
   const [pending, setPending] = useState<Pending | null>(null);
 
   const confirm: Confirm = (request) =>
@@ -40,11 +44,16 @@ export const ConfirmDialogProvider = ({ children }: { children: ReactNode }) => 
   return (
     <ConfirmContext.Provider value={confirm}>
       {children}
-      <AlertDialog open={pending !== null} onOpenChange={(open) => !open && close(false)}>
+      <AlertDialog
+        open={pending !== null}
+        onOpenChange={(open) => !open && close(false)}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>{pending?.request.title}</AlertDialogTitle>
-            <AlertDialogDescription>{pending?.request.description}</AlertDialogDescription>
+            <AlertDialogDescription>
+              {pending?.request.description}
+            </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>キャンセル</AlertDialogCancel>
@@ -64,6 +73,7 @@ export const ConfirmDialogProvider = ({ children }: { children: ReactNode }) => 
 /** 確認のダイアログを開き、確定なら true を返す関数を返す */
 export const useConfirmDialog = (): Confirm => {
   const confirm = useContext(ConfirmContext);
-  if (confirm === null) throw new Error("ConfirmDialogProvider の中で使ってください");
+  if (confirm === null)
+    throw new Error("ConfirmDialogProvider の中で使ってください");
   return confirm;
 };

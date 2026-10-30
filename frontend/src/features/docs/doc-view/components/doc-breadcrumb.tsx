@@ -28,7 +28,12 @@ export const DocBreadcrumb = ({ source, active, search }: Props) => {
     <Breadcrumb aria-label="パンくず">
       <BreadcrumbList>
         <BreadcrumbItem>
-          <Link to="/$source" params={{ source }} search={query} className="hover:text-foreground">
+          <Link
+            to="/$source"
+            params={{ source }}
+            search={query}
+            className="hover:text-foreground"
+          >
             {source}
           </Link>
         </BreadcrumbItem>
@@ -51,7 +56,11 @@ export const DocBreadcrumb = ({ source, active, search }: Props) => {
           <Fragment key={`${index}:${label}`}>
             <BreadcrumbSeparator />
             <BreadcrumbItem>
-              {index === trail.length - 1 ? <BreadcrumbPage>{label}</BreadcrumbPage> : <span>{label}</span>}
+              {index === trail.length - 1 ? (
+                <BreadcrumbPage>{label}</BreadcrumbPage>
+              ) : (
+                <span>{label}</span>
+              )}
             </BreadcrumbItem>
           </Fragment>
         ))}

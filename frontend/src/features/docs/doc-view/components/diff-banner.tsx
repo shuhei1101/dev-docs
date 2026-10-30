@@ -36,7 +36,10 @@ type PickerProps = {
 };
 
 const Picker = ({ label, value, options, onValueChange }: PickerProps) => (
-  <Select value={value} onValueChange={(next) => next !== null && onValueChange(next)}>
+  <Select
+    value={value}
+    onValueChange={(next) => next !== null && onValueChange(next)}
+  >
     <SelectTrigger aria-label={label} className="w-44 font-mono text-xs">
       <SelectValue />
     </SelectTrigger>

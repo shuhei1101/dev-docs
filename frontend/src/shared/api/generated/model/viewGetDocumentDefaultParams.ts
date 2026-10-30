@@ -6,6 +6,6 @@
  */
 
 export type ViewGetDocumentDefaultParams = {
-ref?: string | null;
-diff?: string | null;
+  ref?: string | null;
+  diff?: string | null;
 };

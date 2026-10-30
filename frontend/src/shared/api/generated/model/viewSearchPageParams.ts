@@ -6,15 +6,15 @@
  */
 
 export type ViewSearchPageParams = {
-/**
- * @minLength 1
- * @maxLength 200
- */
-q: string;
-ref?: string | null;
-/**
- * @minimum 1
- * @maximum 100
- */
-limit?: number;
+  /**
+   * @minLength 1
+   * @maxLength 200
+   */
+  q: string;
+  ref?: string | null;
+  /**
+   * @minimum 1
+   * @maximum 100
+   */
+  limit?: number;
 };

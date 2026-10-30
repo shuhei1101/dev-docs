@@ -1,6 +1,9 @@
 import { z } from "zod";
 
-import type { SettingsSourceRow as SettingsSource, SourceEntry } from "@/shared/api/generated/model";
+import type {
+  SettingsSourceRow as SettingsSource,
+  SourceEntry,
+} from "@/shared/api/generated/model";
 
 export type SourceFormValues = {
   id: string;
@@ -11,29 +14,33 @@ export type SourceFormValues = {
 };
 
 const ID_PATTERN = /^[a-z0-9-]+$/;
-const lines = (text: string): string[] => text.split("\n").map((line) => line.trim());
-const filled = (text: string): string[] => lines(text).filter((line) => line !== "");
+const lines = (text: string): string[] =>
+  text.split("\n").map((line) => line.trim());
+const filled = (text: string): string[] =>
+  lines(text).filter((line) => line !== "");
 
 /** 画面設計の入力チェックの表どおりに検証する zod のスキーマを作る */
 export const sourceFormSchema = (otherIds: string[]) =>
   z.object({
-    id: z
-      .string()
-      .superRefine((value, context) => {
-        if (value.trim() === "") {
-          context.addIssue({ code: "custom", message: "配信元の ID を入力してください。" });
-        } else if (!ID_PATTERN.test(value)) {
-          context.addIssue({
-            code: "custom",
-            message: "配信元の ID に使えない文字があります。英小文字・数字・ハイフンで入力してください。",
-          });
-        } else if (otherIds.includes(value)) {
-          context.addIssue({
-            code: "custom",
-            message: `配信元の ID ${value} は既に使われています。別の ID を入力してください。`,
-          });
-        }
-      }),
+    id: z.string().superRefine((value, context) => {
+      if (value.trim() === "") {
+        context.addIssue({
+          code: "custom",
+          message: "配信元の ID を入力してください。",
+        });
+      } else if (!ID_PATTERN.test(value)) {
+        context.addIssue({
+          code: "custom",
+          message:
+            "配信元の ID に使えない文字があります。英小文字・数字・ハイフンで入力してください。",
+        });
+      } else if (otherIds.includes(value)) {
+        context.addIssue({
+          code: "custom",
+          message: `配信元の ID ${value} は既に使われています。別の ID を入力してください。`,
+        });
+      }
+    }),
     config: z.string().refine((value) => filled(value).length > 0, {
       message: "設定ファイルを 1 つ以上入力してください。",
     }),
@@ -58,14 +65,16 @@ const hasBlankLine = (text: string): boolean => {
 };
 
 /** 端末の設定の取得の行（追加のときは null）をダイアログの初期値にする */
-export const toFormValues = (source: SettingsSource | null): SourceFormValues =>
+export const toFormValues = (
+  source: SettingsSource | null,
+): SourceFormValues =>
   source === null
     ? { id: "", config: "", enabled: true, read: "", write: "" }
     : {
         id: source.id ?? "",
         config: source.config.join("\n"),
         enabled: source.enabled,
-        read: source.scope.read.join("\n"),
+        read: (source.scope.read ?? []).join("\n"),
         write: (source.scope.write ?? []).join("\n"),
       };
 
@@ -75,7 +84,7 @@ const toSourceInput = (source: SettingsSource): SourceEntry => ({
   config: source.config,
   enabled: source.enabled,
   scope: {
-    read: source.scope.read,
+    read: source.scope.read ?? [],
     ...(source.scope.write ? { write: source.scope.write } : {}),
   },
 });
@@ -86,7 +95,10 @@ const fromValues = (values: SourceFormValues): SourceEntry => {
     id: values.id,
     config: filled(values.config),
     enabled: values.enabled,
-    scope: { read: filled(values.read), ...(write.length > 0 ? { write } : {}) },
+    scope: {
+      read: filled(values.read),
+      ...(write.length > 0 ? { write } : {}),
+    },
   };
 };
 
@@ -103,5 +115,8 @@ export const applySource = (
 };
 
 /** `index` の行を除いた、端末の設定の保存へ送る `sources[]` を作る */
-export const removeSource = (sources: SettingsSource[], index: number): SourceEntry[] =>
+export const removeSource = (
+  sources: SettingsSource[],
+  index: number,
+): SourceEntry[] =>
   sources.filter((_, position) => position !== index).map(toSourceInput);

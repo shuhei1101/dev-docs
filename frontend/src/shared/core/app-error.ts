@@ -22,7 +22,9 @@ export class AppError extends Error {
   static async fromResponse(response: Response): Promise<AppError> {
     let problem: Problem | null = null;
     if (response.headers.get("Content-Type")?.includes(PROBLEM_JSON)) {
-      const parsed = ProblemSchema.safeParse(await response.json().catch(() => null));
+      const parsed = ProblemSchema.safeParse(
+        await response.json().catch(() => null),
+      );
       problem = parsed.success ? parsed.data : null;
     }
     const message = problem?.detail ?? `HTTP ${response.status}`;

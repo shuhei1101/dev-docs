@@ -33,7 +33,9 @@ export const useSourceForm = ({ sources, index, onSaved }: Options) => {
   });
   // 項目のエラーを描画で読んで購読する
   const { errors } = form.formState;
-  const [summary, setSummary] = useState<{ path: string; message: string }[]>([]);
+  const [summary, setSummary] = useState<{ path: string; message: string }[]>(
+    [],
+  );
   const save = useSaveSources();
 
   const submit = form.handleSubmit(async (values) => {
@@ -44,9 +46,15 @@ export const useSourceForm = ({ sources, index, onSaved }: Options) => {
     } catch (error) {
       if (error instanceof ClientValueError) {
         const position = index ?? sources.length;
-        const { fields, summary: all } = toFieldErrors(error.problem?.errors ?? [], position);
-        for (const field of fields) form.setError(field.name, { message: field.message });
-        setSummary(all.map((item) => ({ path: item.path, message: item.reason })));
+        const { fields, summary: all } = toFieldErrors(
+          error.problem?.errors ?? [],
+          position,
+        );
+        for (const field of fields)
+          form.setError(field.name, { message: field.message });
+        setSummary(
+          all.map((item) => ({ path: item.path, message: item.reason })),
+        );
         if (fields[0]) form.setFocus(fields[0].name);
         return;
       }

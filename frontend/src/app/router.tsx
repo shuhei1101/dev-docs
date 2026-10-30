@@ -19,6 +19,7 @@ export const createAppRouter = (context: RouterContext) =>
   });
 
 declare module "@tanstack/react-router" {
+  // eslint-disable-next-line @typescript-eslint/consistent-type-definitions -- declaration merging
   interface Register {
     router: ReturnType<typeof createAppRouter>;
   }

@@ -4,7 +4,7 @@
  * FastAPI
  * OpenAPI spec version: 0.1.0
  */
-import type { SettingsSourceRow } from './settingsSourceRow';
+import type { SettingsSourceRow } from "./settingsSourceRow";
 
 /**
  * GET `/_api/settings/sources` の応答。

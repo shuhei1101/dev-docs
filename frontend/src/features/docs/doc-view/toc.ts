@@ -19,7 +19,14 @@ const sections = (markdown: string): Map<string, string> => {
   let body: string[] = [];
   let fenced = false;
   const flush = () => {
-    if (current !== null) result.set(current, body.map((line) => line.trimEnd()).join("\n").trimEnd());
+    if (current !== null)
+      result.set(
+        current,
+        body
+          .map((line) => line.trimEnd())
+          .join("\n")
+          .trimEnd(),
+      );
   };
   for (const line of markdown.split("\n")) {
     if (FENCE.test(line)) fenced = !fenced;
@@ -40,12 +47,16 @@ const sections = (markdown: string): Map<string, string> => {
 };
 
 /** 2 つの Markdown を見出し 2・3 で区切り、中身が違う・比較元に無い見出しの文字列を返す */
-export const changedSections = (markdown: string, baseMarkdown: string | null): Set<string> => {
+export const changedSections = (
+  markdown: string,
+  baseMarkdown: string | null,
+): Set<string> => {
   const current = sections(markdown);
   const base = baseMarkdown === null ? null : sections(baseMarkdown);
   const changed = new Set<string>();
   for (const [heading, body] of current) {
-    if (base === null || base.get(heading) !== body) changed.add(heading.replace(/#\d+$/, ""));
+    if (base === null || base.get(heading) !== body)
+      changed.add(heading.replace(/#\d+$/, ""));
   }
   return changed;
 };

@@ -10,7 +10,10 @@ import "@/index.css";
 const queryClient = createQueryClient();
 const router = createAppRouter({ queryClient });
 
-createRoot(document.getElementById("root")!).render(
+const root = document.getElementById("root");
+if (root === null) throw new Error("#root がありません");
+
+createRoot(root).render(
   <StrictMode>
     <AppProviders queryClient={queryClient}>
       <RouterProvider router={router} />

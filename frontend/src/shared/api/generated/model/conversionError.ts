@@ -4,7 +4,7 @@
  * FastAPI
  * OpenAPI spec version: 0.1.0
  */
-import type { ConversionErrorReason } from './conversionErrorReason';
+import type { ConversionErrorReason } from "./conversionErrorReason";
 
 /**
  * 文書の取得の `conversion_error`（変換の失敗と同じフィールド）。

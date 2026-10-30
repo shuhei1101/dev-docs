@@ -34,7 +34,9 @@ test("test_diff_banner_when_clear", async () => {
     />,
   );
 
-  await userEvent.click(screen.getByRole("button", { name: "差分の強調を解除" }));
+  await userEvent.click(
+    screen.getByRole("button", { name: "差分の強調を解除" }),
+  );
 
   expect(onClear).toHaveBeenCalledTimes(1);
 });

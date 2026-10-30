@@ -25,7 +25,10 @@ const comment = (overrides: Record<string, unknown> = {}) => ({
 });
 
 test("test_format_comments", () => {
-  const text = formatComments([comment(), comment({ id: "2", headings: [], quote: "二行目\n三行目" })]);
+  const text = formatComments([
+    comment(),
+    comment({ id: "2", headings: [], quote: "二行目\n三行目" }),
+  ]);
 
   expect(text).toContain("A › 見出し1");
   expect(text).toContain("A › 冒頭");
@@ -34,11 +37,16 @@ test("test_format_comments", () => {
 });
 
 test("test_build_issue_url", () => {
-  const { url, truncated } = buildIssueUrl({ repository: "o/r", issueLabels: ["docs"] }, "短い本文");
+  const { url, truncated } = buildIssueUrl(
+    { repository: "o/r", issueLabels: ["docs"] },
+    "短い本文",
+  );
 
   expect(truncated).toBe(false);
   const parsed = new URL(url);
-  expect(parsed.origin + parsed.pathname).toBe("https://github.com/o/r/issues/new");
+  expect(parsed.origin + parsed.pathname).toBe(
+    "https://github.com/o/r/issues/new",
+  );
   expect(parsed.searchParams.get("labels")).toBe("docs");
   expect(parsed.searchParams.get("body")).toBe("短い本文");
 });
@@ -51,5 +59,7 @@ test("test_build_issue_url_when_too_long", () => {
 
   expect(truncated).toBe(true);
   expect(url.length).toBeLessThanOrEqual(ISSUE_URL_MAX);
-  expect(new URL(url).searchParams.get("body")?.endsWith(TRUNCATED_NOTE)).toBe(true);
+  expect(new URL(url).searchParams.get("body")?.endsWith(TRUNCATED_NOTE)).toBe(
+    true,
+  );
 });

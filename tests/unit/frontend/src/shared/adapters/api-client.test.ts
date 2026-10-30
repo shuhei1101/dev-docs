@@ -15,11 +15,16 @@ test("test_api_client", async () => {
 test("test_api_client_when_problem", async () => {
   server.use(
     http.get("/_api/x", () =>
-      HttpResponse.json(problem(409), { status: 409, headers: PROBLEM_HEADERS }),
+      HttpResponse.json(problem(409), {
+        status: 409,
+        headers: PROBLEM_HEADERS,
+      }),
     ),
   );
 
-  await expect(apiClient("/_api/x")).rejects.toBeInstanceOf(VersionConflictError);
+  await expect(apiClient("/_api/x")).rejects.toBeInstanceOf(
+    VersionConflictError,
+  );
 });
 
 test("test_api_client_when_network_error", async () => {

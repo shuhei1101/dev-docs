@@ -15,7 +15,10 @@ export default defineConfig({
       clean: true,
       override: {
         fetch: { includeHttpResponseReturnType: false },
-        mutator: { path: "./src/shared/adapters/api-client.ts", name: "apiClient" },
+        mutator: {
+          path: "./src/shared/adapters/api-client.ts",
+          name: "apiClient",
+        },
       },
     },
   },

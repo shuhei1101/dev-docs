@@ -1,3 +1,5 @@
+import { useRef } from "react";
+
 import { useSaveSources } from "@/features/settings/settings/queries";
 import { removeSource } from "@/features/settings/settings/form";
 import type { SettingsSourceRow } from "@/shared/api/generated/model";
@@ -24,8 +26,14 @@ const folderOf = (file: string | undefined): string =>
   file === undefined ? "" : file.slice(0, Math.max(file.lastIndexOf("/"), 0));
 
 /** 削除の確認のダイアログ。確定で、その行を除いた `sources[]` を保存する */
-export const SourceDeleteDialog = ({ open, onOpenChange, sources, index }: Props) => {
+export const SourceDeleteDialog = ({
+  open,
+  onOpenChange,
+  sources,
+  index,
+}: Props) => {
   const save = useSaveSources();
+  const cancelRef = useRef<HTMLButtonElement>(null);
   const source = sources[index];
   const name = source?.id ?? `${index + 1} 行目`;
 
@@ -40,7 +48,7 @@ export const SourceDeleteDialog = ({ open, onOpenChange, sources, index }: Props
 
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
-      <AlertDialogContent>
+      <AlertDialogContent initialFocus={cancelRef}>
         <AlertDialogHeader>
           <AlertDialogTitle>{name} を削除しますか?</AlertDialogTitle>
           <AlertDialogDescription>
@@ -49,7 +57,7 @@ export const SourceDeleteDialog = ({ open, onOpenChange, sources, index }: Props
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel autoFocus>キャンセル</AlertDialogCancel>
+          <AlertDialogCancel ref={cancelRef}>キャンセル</AlertDialogCancel>
           <AlertDialogAction
             variant="destructive"
             disabled={save.isPending}

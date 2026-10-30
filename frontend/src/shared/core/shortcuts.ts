@@ -36,6 +36,8 @@ export const shortcutsFor = (
     .filter((def) => def.screens.includes(screen))
     .map((def) => ({
       def,
-      hotkeys: singleKey ? def.hotkeys : def.hotkeys.filter((key) => !def.singleKey.includes(key)),
+      hotkeys: singleKey
+        ? def.hotkeys
+        : def.hotkeys.filter((key) => !def.singleKey.includes(key)),
     }))
     .filter(({ hotkeys }) => hotkeys.length > 0);

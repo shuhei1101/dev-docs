@@ -4,10 +4,10 @@
  * FastAPI
  * OpenAPI spec version: 0.1.0
  */
-import type { SettingsSourceRowStatus } from './settingsSourceRowStatus';
-import type { SourceConfigVersion } from './sourceConfigVersion';
-import type { SourceScope } from './sourceScope';
-import type { SourceViolation } from './sourceViolation';
+import type { SettingsSourceRowStatus } from "./settingsSourceRowStatus";
+import type { SourceConfigVersion } from "./sourceConfigVersion";
+import type { SourceScope } from "./sourceScope";
+import type { SourceViolation } from "./sourceViolation";
 
 /**
  * 端末の設定の取得の `sources[]` の 1 行（行の値に配信元の状態を重ねたもの）。

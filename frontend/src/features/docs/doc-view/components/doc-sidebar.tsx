@@ -38,12 +38,20 @@ const Marker = ({ change }: { change: NonNullable<NavItem["change"]> }) => {
 
 type ItemsProps = Omit<Props, "tab"> & { items: NavItem[] };
 
-const Items = ({ items, source, currentPath, search, onNavigate }: ItemsProps) => (
+const Items = ({
+  items,
+  source,
+  currentPath,
+  search,
+  onNavigate,
+}: ItemsProps) => (
   <ul className="space-y-0.5">
     {items.map((item) =>
       item.kind === "group" ? (
         <li key={`group:${item.title}`}>
-          <p className="mt-3 mb-1 px-2 text-xs font-semibold text-muted-foreground">{item.title}</p>
+          <p className="mt-3 mb-1 px-2 text-xs font-semibold text-muted-foreground">
+            {item.title}
+          </p>
           <Items
             items={item.items ?? []}
             source={source}
@@ -69,7 +77,9 @@ const Items = ({ items, source, currentPath, search, onNavigate }: ItemsProps) =
               item.path === currentPath && "bg-accent font-medium",
             )}
           >
-            <span className={cn(item.change === "deleted" && "line-through")}>{item.title}</span>
+            <span className={cn(item.change === "deleted" && "line-through")}>
+              {item.title}
+            </span>
             {item.change != null && <Marker change={item.change} />}
           </Link>
         </li>

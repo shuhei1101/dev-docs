@@ -4,7 +4,7 @@
  * FastAPI
  * OpenAPI spec version: 0.1.0
  */
-import type { SourceScope } from './sourceScope';
+import type { SourceScope } from "./sourceScope";
 
 /**
  * 端末の設定の `sources[]` の 1 行。

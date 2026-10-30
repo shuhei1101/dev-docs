@@ -8,7 +8,9 @@ export const ProblemSchema = z
     status: z.number(),
     detail: z.string(),
     nextSteps: z.array(z.string()).default([]),
-    errors: z.array(z.object({ path: z.string(), reason: z.string() })).optional(),
+    errors: z
+      .array(z.object({ path: z.string(), reason: z.string() }))
+      .optional(),
   })
   .passthrough();
 
@@ -16,5 +18,7 @@ export const ProblemSchema = z
 export const MissingSchema = z.object({
   missing: z.enum(["source", "not_served", "ref", "doc"]),
   value: z.string(),
-  errors: z.array(z.object({ path: z.string(), reason: z.string() })).optional(),
+  errors: z
+    .array(z.object({ path: z.string(), reason: z.string() }))
+    .optional(),
 });

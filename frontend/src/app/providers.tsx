@@ -16,7 +16,9 @@ const useColorScheme = (): void => {
   useEffect(() => {
     const media = window.matchMedia?.(DARK_QUERY);
     const apply = () => {
-      const dark = colorScheme === "dark" || (colorScheme === "system" && media?.matches === true);
+      const dark =
+        colorScheme === "dark" ||
+        (colorScheme === "system" && media?.matches === true);
       document.documentElement.classList.toggle("dark", dark);
     };
     apply();
@@ -31,7 +33,9 @@ type Props = { queryClient: QueryClient; children: ReactNode };
 export const AppProviders = ({ queryClient, children }: Props) => {
   useColorScheme();
   return (
-    <ErrorBoundary FallbackComponent={({ error }) => <ErrorFallback error={error} />}>
+    <ErrorBoundary
+      FallbackComponent={({ error }) => <ErrorFallback error={error} />}
+    >
       <QueryClientProvider client={queryClient}>
         <TooltipProvider>
           <ConfirmDialogProvider>

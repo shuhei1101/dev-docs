@@ -42,27 +42,155 @@ type Props = {
   onColorSchemeToggle: () => void;
 };
 
-/** 3 画面に共通のトップバー。配信元・リビジョンの切り替え、検索、コメント、設定、明暗の切り替え */
-export const Topbar = ({
-  screen,
+type SourceMenuProps = Pick<
+  Props,
+  "sources" | "currentSource" | "onSourceSelect"
+>;
+
+const SourceMenu = ({
   sources = [],
   currentSource,
-  refs,
-  currentRef,
-  commentCount = 0,
-  colorScheme,
   onSourceSelect,
+}: SourceMenuProps) => (
+  <DropdownMenu>
+    <DropdownMenuTrigger
+      render={
+        <Button variant="outline" size="sm" aria-label="配信元を切り替える" />
+      }
+    >
+      <span className="font-mono text-xs">{currentSource ?? "配信元"}</span>
+      <ChevronDown />
+    </DropdownMenuTrigger>
+    <DropdownMenuContent>
+      <DropdownMenuGroup>
+        <DropdownMenuLabel>配信元</DropdownMenuLabel>
+        {sources.map((source) => (
+          <DropdownMenuItem
+            key={source.id}
+            onClick={() => onSourceSelect?.(source.id)}
+          >
+            <span className="font-mono text-xs">{source.id}</span>
+            <span className="ml-auto text-xs text-muted-foreground">
+              {source.writable ? "読み書き" : "読み取りだけ"}
+            </span>
+          </DropdownMenuItem>
+        ))}
+      </DropdownMenuGroup>
+    </DropdownMenuContent>
+  </DropdownMenu>
+);
+
+type RefMenuProps = Required<Pick<Props, "refs" | "screen">> &
+  Pick<Props, "currentRef" | "onRefSelect" | "onCompareStart">;
+
+const RefMenu = ({
+  refs,
+  screen,
+  currentRef,
   onRefSelect,
   onCompareStart,
-  onSearchOpen,
-  onCommentPanelToggle,
-  onSidebarOpen,
-  onColorSchemeToggle,
-}: Props) => {
+}: RefMenuProps) => {
+  const branches = [
+    refs.defaultRef,
+    ...(refs.branches ?? []).map((item) => item.name),
+  ].filter((name, index, all) => all.indexOf(name) === index);
+  const tags = refs.tags ?? [];
+  const commits = refs.commits ?? [];
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger
+        render={
+          <Button
+            variant="outline"
+            size="sm"
+            aria-label="リビジョンを切り替える"
+          />
+        }
+      >
+        <GitBranch />
+        <span className="hidden font-mono text-xs md:inline">
+          {currentRef ?? refs.defaultRef}
+        </span>
+        <ChevronDown />
+      </DropdownMenuTrigger>
+      <DropdownMenuContent className="max-h-96 overflow-y-auto">
+        <DropdownMenuGroup>
+          <DropdownMenuLabel>ブランチ</DropdownMenuLabel>
+          {branches.map((name) => (
+            <DropdownMenuItem
+              key={`b:${name}`}
+              onClick={() => onRefSelect?.(name)}
+            >
+              <span className="font-mono text-xs">{name}</span>
+            </DropdownMenuItem>
+          ))}
+        </DropdownMenuGroup>
+        {tags.length > 0 && (
+          <DropdownMenuGroup>
+            <DropdownMenuSeparator />
+            <DropdownMenuLabel>タグ</DropdownMenuLabel>
+            {tags.map((tag) => (
+              <DropdownMenuItem
+                key={`t:${tag.name}`}
+                onClick={() => onRefSelect?.(tag.name)}
+              >
+                <span className="font-mono text-xs">{tag.name}</span>
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuGroup>
+        )}
+        {commits.length > 0 && (
+          <DropdownMenuGroup>
+            <DropdownMenuSeparator />
+            <DropdownMenuLabel>最近の commit</DropdownMenuLabel>
+            {commits.map((commit) => (
+              <DropdownMenuItem
+                key={`c:${commit.commit}`}
+                onClick={() => onRefSelect?.(commit.commit)}
+              >
+                <span className="font-mono text-xs">{commit.commit}</span>
+                <span className="ml-2 truncate text-xs text-muted-foreground">
+                  {commit.subject}
+                </span>
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuGroup>
+        )}
+        {screen === "doc-view" && (
+          <DropdownMenuGroup>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={onCompareStart}>
+              <GitCompare />
+              別のリビジョンと比較
+            </DropdownMenuItem>
+          </DropdownMenuGroup>
+        )}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+};
+
+const HomeLink = ({ currentSource }: { currentSource?: string }) =>
+  currentSource !== undefined ? (
+    <Link
+      to="/$source"
+      params={{ source: currentSource }}
+      className="font-semibold tracking-tight"
+    >
+      dev-docs
+    </Link>
+  ) : (
+    <Link to="/" className="font-semibold tracking-tight">
+      dev-docs
+    </Link>
+  );
+
+/** 3 画面に共通のトップバー。配信元・リビジョンの切り替え、検索、コメント、設定、明暗の切り替え */
+export const Topbar = (props: Props) => {
+  const { screen, currentSource, refs, commentCount = 0, colorScheme } = props;
   const settings = screen === "settings";
-  const showRefs = !settings && currentSource !== undefined && refs?.git === true;
-  const dark = colorScheme === "dark";
-  const shownRef = currentRef ?? refs?.defaultRef;
+  const showRefs =
+    !settings && currentSource !== undefined && refs?.git === true;
   return (
     <header className="sticky top-0 z-30 flex h-12 items-center gap-2 border-b border-border bg-background px-3">
       {screen === "doc-view" && (
@@ -71,122 +199,38 @@ export const Topbar = ({
           size="icon"
           aria-label="文書の一覧を開く"
           className="md:hidden"
-          onClick={onSidebarOpen}
+          onClick={props.onSidebarOpen}
         >
           <PanelLeft />
         </Button>
       )}
-      {currentSource !== undefined ? (
-        <Link
-          to="/$source"
-          params={{ source: currentSource }}
-          className="font-semibold tracking-tight"
-        >
-          dev-docs
-        </Link>
-      ) : (
-        <Link to="/" className="font-semibold tracking-tight">
-          dev-docs
-        </Link>
-      )}
+      <HomeLink currentSource={currentSource} />
       {settings && <span className="text-sm text-muted-foreground">設定</span>}
-
-      {!settings && (
-        <DropdownMenu>
-          <DropdownMenuTrigger
-            render={<Button variant="outline" size="sm" aria-label="配信元を切り替える" />}
-          >
-            <span className="font-mono text-xs">{currentSource ?? "配信元"}</span>
-            <ChevronDown />
-          </DropdownMenuTrigger>
-          <DropdownMenuContent>
-            <DropdownMenuGroup>
-              <DropdownMenuLabel>配信元</DropdownMenuLabel>
-              {sources.map((source) => (
-                <DropdownMenuItem key={source.id} onClick={() => onSourceSelect?.(source.id)}>
-                  <span className="font-mono text-xs">{source.id}</span>
-                  <span className="ml-auto text-xs text-muted-foreground">
-                    {source.writable ? "読み書き" : "読み取りだけ"}
-                  </span>
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuGroup>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      )}
-
-      {showRefs && refs && (
-        <DropdownMenu>
-          <DropdownMenuTrigger
-            render={<Button variant="outline" size="sm" aria-label="リビジョンを切り替える" />}
-          >
-            <GitBranch />
-            <span className="hidden font-mono text-xs md:inline">{shownRef}</span>
-            <ChevronDown />
-          </DropdownMenuTrigger>
-          <DropdownMenuContent className="max-h-96 overflow-y-auto">
-            <DropdownMenuGroup>
-              <DropdownMenuLabel>ブランチ</DropdownMenuLabel>
-              {[refs.defaultRef, ...(refs.branches ?? []).map((item) => item.name)]
-                .filter((name, index, all) => all.indexOf(name) === index)
-                .map((name) => (
-                  <DropdownMenuItem key={`b:${name}`} onClick={() => onRefSelect?.(name)}>
-                    <span className="font-mono text-xs">{name}</span>
-                  </DropdownMenuItem>
-                ))}
-            </DropdownMenuGroup>
-            {(refs.tags ?? []).length > 0 && (
-              <DropdownMenuGroup>
-                <DropdownMenuSeparator />
-                <DropdownMenuLabel>タグ</DropdownMenuLabel>
-                {(refs.tags ?? []).map((tag) => (
-                  <DropdownMenuItem key={`t:${tag.name}`} onClick={() => onRefSelect?.(tag.name)}>
-                    <span className="font-mono text-xs">{tag.name}</span>
-                  </DropdownMenuItem>
-                ))}
-              </DropdownMenuGroup>
-            )}
-            {(refs.commits ?? []).length > 0 && (
-              <DropdownMenuGroup>
-                <DropdownMenuSeparator />
-                <DropdownMenuLabel>最近の commit</DropdownMenuLabel>
-                {(refs.commits ?? []).map((commit) => (
-                  <DropdownMenuItem
-                    key={`c:${commit.commit}`}
-                    onClick={() => onRefSelect?.(commit.commit)}
-                  >
-                    <span className="font-mono text-xs">{commit.commit}</span>
-                    <span className="ml-2 truncate text-xs text-muted-foreground">
-                      {commit.subject}
-                    </span>
-                  </DropdownMenuItem>
-                ))}
-              </DropdownMenuGroup>
-            )}
-            {screen === "doc-view" && (
-              <DropdownMenuGroup>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={onCompareStart}>
-                  <GitCompare />
-                  別のリビジョンと比較
-                </DropdownMenuItem>
-              </DropdownMenuGroup>
-            )}
-          </DropdownMenuContent>
-        </DropdownMenu>
-      )}
-
+      {!settings && <SourceMenu {...props} />}
+      {showRefs && refs && <RefMenu {...props} refs={refs} />}
       <div className="ml-auto flex items-center gap-1">
         {!settings && (
-          <Button variant="outline" size="sm" aria-label="検索" onClick={onSearchOpen}>
+          <Button
+            variant="outline"
+            size="sm"
+            aria-label="検索"
+            onClick={props.onSearchOpen}
+          >
             <Search />
             <span className="hidden text-muted-foreground md:inline">検索</span>
           </Button>
         )}
         {screen === "doc-view" && (
-          <Button variant="ghost" size="sm" aria-label="コメント" onClick={onCommentPanelToggle}>
+          <Button
+            variant="ghost"
+            size="sm"
+            aria-label="コメント"
+            onClick={props.onCommentPanelToggle}
+          >
             <MessageSquare />
-            {commentCount > 0 && <span className="text-xs">{commentCount}</span>}
+            {commentCount > 0 && (
+              <span className="text-xs">{commentCount}</span>
+            )}
           </Button>
         )}
         {!settings && (
@@ -205,9 +249,9 @@ export const Topbar = ({
           size="icon"
           aria-label="明暗を切り替える"
           aria-pressed={colorScheme !== "system"}
-          onClick={onColorSchemeToggle}
+          onClick={props.onColorSchemeToggle}
         >
-          {dark ? <Sun /> : <Moon />}
+          {colorScheme === "dark" ? <Sun /> : <Moon />}
         </Button>
       </div>
     </header>

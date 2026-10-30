@@ -4,10 +4,7 @@
  * FastAPI
  * OpenAPI spec version: 0.1.0
  */
-import {
-  useMutation,
-  useQuery
-} from '@tanstack/react-query';
+import { useMutation, useQuery } from "@tanstack/react-query";
 import type {
   DataTag,
   DefinedInitialDataOptions,
@@ -20,8 +17,8 @@ import type {
   UseMutationOptions,
   UseMutationResult,
   UseQueryOptions,
-  UseQueryResult
-} from '@tanstack/react-query';
+  UseQueryResult,
+} from "@tanstack/react-query";
 
 import type {
   ColumnsRequest,
@@ -32,22 +29,22 @@ import type {
   ViewGetDocumentDefaultParams,
   ViewGetDocumentParams,
   ViewListRefsParams,
-  ViewSearchPageParams
-} from '../model';
+  ViewSearchPageParams,
+} from "../model";
 
-import { apiClient } from '../../../adapters/api-client';
-
+import { apiClient } from "../../../adapters/api-client";
 
 type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
 
-
-
-const withQueryKey = <T extends object, K>(query: T, queryKey: K): T & { queryKey: K } => {
+const withQueryKey = <T extends object, K>(
+  query: T,
+  queryKey: K,
+): T & { queryKey: K } => {
   const result = { queryKey } as T & { queryKey: K };
   for (const key of Object.keys(query)) {
     // The explicit queryKey always wins, matching the previous
     // `{ ...query, queryKey }` spread where it was set last.
-    if (key === 'queryKey') continue;
+    if (key === "queryKey") continue;
     Object.defineProperty(result, key, {
       enumerable: true,
       configurable: true,
@@ -57,559 +54,888 @@ const withQueryKey = <T extends object, K>(query: T, queryKey: K): T & { queryKe
   return result;
 };
 
-export const getViewGetDocumentDefaultUrl = (source: string,
-    params?: ViewGetDocumentDefaultParams,) => {
+export const getViewGetDocumentDefaultUrl = (
+  source: string,
+  params?: ViewGetDocumentDefaultParams,
+) => {
   const normalizedParams = new URLSearchParams();
 
   Object.entries(params || {}).forEach(([key, value]) => {
-
     if (value !== undefined) {
-      normalizedParams.append(key, value === null ? 'null' : String(value))
+      normalizedParams.append(key, value === null ? "null" : String(value));
     }
   });
 
   const stringifiedParams = normalizedParams.toString();
 
-  return stringifiedParams.length > 0 ? `/_api/sources/${source}/docs?${stringifiedParams}` : `/_api/sources/${source}/docs`
-}
+  return stringifiedParams.length > 0
+    ? `/_api/sources/${source}/docs?${stringifiedParams}`
+    : `/_api/sources/${source}/docs`;
+};
 
 /**
  * @summary Get Document Default
  */
-export const viewGetDocumentDefault = async (source: string,
-    params?: ViewGetDocumentDefaultParams, options?: Parameters<typeof apiClient>[1]): Promise<DocumentResponse> => {
+export const viewGetDocumentDefault = async (
+  source: string,
+  params?: ViewGetDocumentDefaultParams,
+  options?: Parameters<typeof apiClient>[1],
+): Promise<DocumentResponse> => {
+  return apiClient<DocumentResponse>(
+    getViewGetDocumentDefaultUrl(source, params),
+    {
+      ...options,
+      method: "GET",
+    },
+  );
+};
 
-  return apiClient<DocumentResponse>(getViewGetDocumentDefaultUrl(source,params),
-  {
-    ...options,
-    method: 'GET'
-
-
-  }
-);}
-
-
-
-
-
-export const getViewGetDocumentDefaultQueryKey = (source: string,
-    params?: ViewGetDocumentDefaultParams,) => {
-    return [
-    `/_api/sources/${source}/docs`, ...(params ? [params] : [])
-    ] as const;
-    }
-
-
-export const getViewGetDocumentDefaultQueryOptions = <TData = Awaited<ReturnType<typeof viewGetDocumentDefault>>, TError = HTTPValidationError>(source: string,
-    params?: ViewGetDocumentDefaultParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof viewGetDocumentDefault>>, TError, TData>>, request?: SecondParameter<typeof apiClient>}
+export const getViewGetDocumentDefaultQueryKey = (
+  source: string,
+  params?: ViewGetDocumentDefaultParams,
 ) => {
+  return [`/_api/sources/${source}/docs`, ...(params ? [params] : [])] as const;
+};
 
-const {query: queryOptions, request: requestOptions} = options ?? {};
+export const getViewGetDocumentDefaultQueryOptions = <
+  TData = Awaited<ReturnType<typeof viewGetDocumentDefault>>,
+  TError = HTTPValidationError,
+>(
+  source: string,
+  params?: ViewGetDocumentDefaultParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof viewGetDocumentDefault>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiClient>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
 
-  const queryKey =  queryOptions?.queryKey ?? getViewGetDocumentDefaultQueryKey(source,params);
+  const queryKey =
+    queryOptions?.queryKey ?? getViewGetDocumentDefaultQueryKey(source, params);
 
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof viewGetDocumentDefault>>
+  > = ({ signal }) =>
+    viewGetDocumentDefault(source, params, { signal, ...requestOptions });
 
+  return {
+    queryKey,
+    queryFn,
+    enabled: source !== null && source !== undefined,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof viewGetDocumentDefault>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof viewGetDocumentDefault>>> = ({ signal }) => viewGetDocumentDefault(source,params, { signal, ...requestOptions });
+export type ViewGetDocumentDefaultQueryResult = NonNullable<
+  Awaited<ReturnType<typeof viewGetDocumentDefault>>
+>;
+export type ViewGetDocumentDefaultQueryError = HTTPValidationError;
 
-
-
-
-
-   return  { queryKey, queryFn, enabled: source !== null && source !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof viewGetDocumentDefault>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
-}
-
-export type ViewGetDocumentDefaultQueryResult = NonNullable<Awaited<ReturnType<typeof viewGetDocumentDefault>>>
-export type ViewGetDocumentDefaultQueryError = HTTPValidationError
-
-
-export function useViewGetDocumentDefault<TData = Awaited<ReturnType<typeof viewGetDocumentDefault>>, TError = HTTPValidationError>(
- source: string,
-    params: undefined |  ViewGetDocumentDefaultParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof viewGetDocumentDefault>>, TError, TData>> & Pick<
+export function useViewGetDocumentDefault<
+  TData = Awaited<ReturnType<typeof viewGetDocumentDefault>>,
+  TError = HTTPValidationError,
+>(
+  source: string,
+  params: undefined | ViewGetDocumentDefaultParams,
+  options: {
+    query: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof viewGetDocumentDefault>>,
+        TError,
+        TData
+      >
+    > &
+      Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof viewGetDocumentDefault>>,
           TError,
           Awaited<ReturnType<typeof viewGetDocumentDefault>>
-        > , 'initialData'
-      >, request?: SecondParameter<typeof apiClient>}
- , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useViewGetDocumentDefault<TData = Awaited<ReturnType<typeof viewGetDocumentDefault>>, TError = HTTPValidationError>(
- source: string,
-    params?: ViewGetDocumentDefaultParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof viewGetDocumentDefault>>, TError, TData>> & Pick<
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof apiClient>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useViewGetDocumentDefault<
+  TData = Awaited<ReturnType<typeof viewGetDocumentDefault>>,
+  TError = HTTPValidationError,
+>(
+  source: string,
+  params?: ViewGetDocumentDefaultParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof viewGetDocumentDefault>>,
+        TError,
+        TData
+      >
+    > &
+      Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof viewGetDocumentDefault>>,
           TError,
           Awaited<ReturnType<typeof viewGetDocumentDefault>>
-        > , 'initialData'
-      >, request?: SecondParameter<typeof apiClient>}
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useViewGetDocumentDefault<TData = Awaited<ReturnType<typeof viewGetDocumentDefault>>, TError = HTTPValidationError>(
- source: string,
-    params?: ViewGetDocumentDefaultParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof viewGetDocumentDefault>>, TError, TData>>, request?: SecondParameter<typeof apiClient>}
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof apiClient>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useViewGetDocumentDefault<
+  TData = Awaited<ReturnType<typeof viewGetDocumentDefault>>,
+  TError = HTTPValidationError,
+>(
+  source: string,
+  params?: ViewGetDocumentDefaultParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof viewGetDocumentDefault>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiClient>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
 /**
  * @summary Get Document Default
  */
 
-export function useViewGetDocumentDefault<TData = Awaited<ReturnType<typeof viewGetDocumentDefault>>, TError = HTTPValidationError>(
- source: string,
-    params?: ViewGetDocumentDefaultParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof viewGetDocumentDefault>>, TError, TData>>, request?: SecondParameter<typeof apiClient>}
- , queryClient?: QueryClient
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+export function useViewGetDocumentDefault<
+  TData = Awaited<ReturnType<typeof viewGetDocumentDefault>>,
+  TError = HTTPValidationError,
+>(
+  source: string,
+  params?: ViewGetDocumentDefaultParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof viewGetDocumentDefault>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiClient>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+} {
+  const queryOptions = getViewGetDocumentDefaultQueryOptions(
+    source,
+    params,
+    options,
+  );
 
-  const queryOptions = getViewGetDocumentDefaultQueryOptions(source,params,options)
-
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<
+    TData,
+    TError
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
 
   return withQueryKey(query, queryOptions.queryKey);
 }
 
-
-
-
-
-
-export const getViewGetDocumentUrl = (source: string,
-    path: string,
-    params?: ViewGetDocumentParams,) => {
+export const getViewGetDocumentUrl = (
+  source: string,
+  path: string,
+  params?: ViewGetDocumentParams,
+) => {
   const normalizedParams = new URLSearchParams();
 
   Object.entries(params || {}).forEach(([key, value]) => {
-
     if (value !== undefined) {
-      normalizedParams.append(key, value === null ? 'null' : String(value))
+      normalizedParams.append(key, value === null ? "null" : String(value));
     }
   });
 
   const stringifiedParams = normalizedParams.toString();
 
-  return stringifiedParams.length > 0 ? `/_api/sources/${source}/docs/${path}?${stringifiedParams}` : `/_api/sources/${source}/docs/${path}`
-}
+  return stringifiedParams.length > 0
+    ? `/_api/sources/${source}/docs/${path}?${stringifiedParams}`
+    : `/_api/sources/${source}/docs/${path}`;
+};
 
 /**
  * @summary Get Document
  */
-export const viewGetDocument = async (source: string,
-    path: string,
-    params?: ViewGetDocumentParams, options?: Parameters<typeof apiClient>[1]): Promise<DocumentResponse> => {
+export const viewGetDocument = async (
+  source: string,
+  path: string,
+  params?: ViewGetDocumentParams,
+  options?: Parameters<typeof apiClient>[1],
+): Promise<DocumentResponse> => {
+  return apiClient<DocumentResponse>(
+    getViewGetDocumentUrl(source, path, params),
+    {
+      ...options,
+      method: "GET",
+    },
+  );
+};
 
-  return apiClient<DocumentResponse>(getViewGetDocumentUrl(source,path,params),
-  {
-    ...options,
-    method: 'GET'
-
-
-  }
-);}
-
-
-
-
-
-export const getViewGetDocumentQueryKey = (source: string,
-    path: string,
-    params?: ViewGetDocumentParams,) => {
-    return [
-    `/_api/sources/${source}/docs/${path}`, ...(params ? [params] : [])
-    ] as const;
-    }
-
-
-export const getViewGetDocumentQueryOptions = <TData = Awaited<ReturnType<typeof viewGetDocument>>, TError = HTTPValidationError>(source: string,
-    path: string,
-    params?: ViewGetDocumentParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof viewGetDocument>>, TError, TData>>, request?: SecondParameter<typeof apiClient>}
+export const getViewGetDocumentQueryKey = (
+  source: string,
+  path: string,
+  params?: ViewGetDocumentParams,
 ) => {
+  return [
+    `/_api/sources/${source}/docs/${path}`,
+    ...(params ? [params] : []),
+  ] as const;
+};
 
-const {query: queryOptions, request: requestOptions} = options ?? {};
+export const getViewGetDocumentQueryOptions = <
+  TData = Awaited<ReturnType<typeof viewGetDocument>>,
+  TError = HTTPValidationError,
+>(
+  source: string,
+  path: string,
+  params?: ViewGetDocumentParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof viewGetDocument>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiClient>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
 
-  const queryKey =  queryOptions?.queryKey ?? getViewGetDocumentQueryKey(source,path,params);
+  const queryKey =
+    queryOptions?.queryKey ?? getViewGetDocumentQueryKey(source, path, params);
 
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof viewGetDocument>>> = ({
+    signal,
+  }) => viewGetDocument(source, path, params, { signal, ...requestOptions });
 
+  return {
+    queryKey,
+    queryFn,
+    enabled:
+      source !== null &&
+      source !== undefined &&
+      path !== null &&
+      path !== undefined,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof viewGetDocument>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof viewGetDocument>>> = ({ signal }) => viewGetDocument(source,path,params, { signal, ...requestOptions });
+export type ViewGetDocumentQueryResult = NonNullable<
+  Awaited<ReturnType<typeof viewGetDocument>>
+>;
+export type ViewGetDocumentQueryError = HTTPValidationError;
 
-
-
-
-
-   return  { queryKey, queryFn, enabled: source !== null && source !== undefined && path !== null && path !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof viewGetDocument>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
-}
-
-export type ViewGetDocumentQueryResult = NonNullable<Awaited<ReturnType<typeof viewGetDocument>>>
-export type ViewGetDocumentQueryError = HTTPValidationError
-
-
-export function useViewGetDocument<TData = Awaited<ReturnType<typeof viewGetDocument>>, TError = HTTPValidationError>(
- source: string,
-    path: string,
-    params: undefined |  ViewGetDocumentParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof viewGetDocument>>, TError, TData>> & Pick<
+export function useViewGetDocument<
+  TData = Awaited<ReturnType<typeof viewGetDocument>>,
+  TError = HTTPValidationError,
+>(
+  source: string,
+  path: string,
+  params: undefined | ViewGetDocumentParams,
+  options: {
+    query: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof viewGetDocument>>,
+        TError,
+        TData
+      >
+    > &
+      Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof viewGetDocument>>,
           TError,
           Awaited<ReturnType<typeof viewGetDocument>>
-        > , 'initialData'
-      >, request?: SecondParameter<typeof apiClient>}
- , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useViewGetDocument<TData = Awaited<ReturnType<typeof viewGetDocument>>, TError = HTTPValidationError>(
- source: string,
-    path: string,
-    params?: ViewGetDocumentParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof viewGetDocument>>, TError, TData>> & Pick<
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof apiClient>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useViewGetDocument<
+  TData = Awaited<ReturnType<typeof viewGetDocument>>,
+  TError = HTTPValidationError,
+>(
+  source: string,
+  path: string,
+  params?: ViewGetDocumentParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof viewGetDocument>>,
+        TError,
+        TData
+      >
+    > &
+      Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof viewGetDocument>>,
           TError,
           Awaited<ReturnType<typeof viewGetDocument>>
-        > , 'initialData'
-      >, request?: SecondParameter<typeof apiClient>}
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useViewGetDocument<TData = Awaited<ReturnType<typeof viewGetDocument>>, TError = HTTPValidationError>(
- source: string,
-    path: string,
-    params?: ViewGetDocumentParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof viewGetDocument>>, TError, TData>>, request?: SecondParameter<typeof apiClient>}
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof apiClient>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useViewGetDocument<
+  TData = Awaited<ReturnType<typeof viewGetDocument>>,
+  TError = HTTPValidationError,
+>(
+  source: string,
+  path: string,
+  params?: ViewGetDocumentParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof viewGetDocument>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiClient>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
 /**
  * @summary Get Document
  */
 
-export function useViewGetDocument<TData = Awaited<ReturnType<typeof viewGetDocument>>, TError = HTTPValidationError>(
- source: string,
-    path: string,
-    params?: ViewGetDocumentParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof viewGetDocument>>, TError, TData>>, request?: SecondParameter<typeof apiClient>}
- , queryClient?: QueryClient
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+export function useViewGetDocument<
+  TData = Awaited<ReturnType<typeof viewGetDocument>>,
+  TError = HTTPValidationError,
+>(
+  source: string,
+  path: string,
+  params?: ViewGetDocumentParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof viewGetDocument>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof apiClient>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+} {
+  const queryOptions = getViewGetDocumentQueryOptions(
+    source,
+    path,
+    params,
+    options,
+  );
 
-  const queryOptions = getViewGetDocumentQueryOptions(source,path,params,options)
-
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<
+    TData,
+    TError
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
 
   return withQueryKey(query, queryOptions.queryKey);
 }
 
-
-
-
-
-
-export const getViewSearchPageUrl = (source: string,
-    params: ViewSearchPageParams,) => {
+export const getViewSearchPageUrl = (
+  source: string,
+  params: ViewSearchPageParams,
+) => {
   const normalizedParams = new URLSearchParams();
 
   Object.entries(params || {}).forEach(([key, value]) => {
-
     if (value !== undefined) {
-      normalizedParams.append(key, value === null ? 'null' : String(value))
+      normalizedParams.append(key, value === null ? "null" : String(value));
     }
   });
 
   const stringifiedParams = normalizedParams.toString();
 
-  return stringifiedParams.length > 0 ? `/_api/sources/${source}/search?${stringifiedParams}` : `/_api/sources/${source}/search`
-}
+  return stringifiedParams.length > 0
+    ? `/_api/sources/${source}/search?${stringifiedParams}`
+    : `/_api/sources/${source}/search`;
+};
 
 /**
  * @summary Search Page
  */
-export const viewSearchPage = async (source: string,
-    params: ViewSearchPageParams, options?: Parameters<typeof apiClient>[1]): Promise<ScreenSearchResult> => {
-
-  return apiClient<ScreenSearchResult>(getViewSearchPageUrl(source,params),
-  {
+export const viewSearchPage = async (
+  source: string,
+  params: ViewSearchPageParams,
+  options?: Parameters<typeof apiClient>[1],
+): Promise<ScreenSearchResult> => {
+  return apiClient<ScreenSearchResult>(getViewSearchPageUrl(source, params), {
     ...options,
-    method: 'GET'
+    method: "GET",
+  });
+};
 
-
-  }
-);}
-
-
-
-
-
-export const getViewSearchPageQueryKey = (source: string,
-    params?: ViewSearchPageParams,) => {
-    return [
-    `/_api/sources/${source}/search`, ...(params ? [params] : [])
-    ] as const;
-    }
-
-
-export const getViewSearchPageQueryOptions = <TData = Awaited<ReturnType<typeof viewSearchPage>>, TError = HTTPValidationError>(source: string,
-    params: ViewSearchPageParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof viewSearchPage>>, TError, TData>>, request?: SecondParameter<typeof apiClient>}
+export const getViewSearchPageQueryKey = (
+  source: string,
+  params?: ViewSearchPageParams,
 ) => {
+  return [
+    `/_api/sources/${source}/search`,
+    ...(params ? [params] : []),
+  ] as const;
+};
 
-const {query: queryOptions, request: requestOptions} = options ?? {};
+export const getViewSearchPageQueryOptions = <
+  TData = Awaited<ReturnType<typeof viewSearchPage>>,
+  TError = HTTPValidationError,
+>(
+  source: string,
+  params: ViewSearchPageParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof viewSearchPage>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof apiClient>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
 
-  const queryKey =  queryOptions?.queryKey ?? getViewSearchPageQueryKey(source,params);
+  const queryKey =
+    queryOptions?.queryKey ?? getViewSearchPageQueryKey(source, params);
 
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof viewSearchPage>>> = ({
+    signal,
+  }) => viewSearchPage(source, params, { signal, ...requestOptions });
 
+  return {
+    queryKey,
+    queryFn,
+    enabled: source !== null && source !== undefined,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof viewSearchPage>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof viewSearchPage>>> = ({ signal }) => viewSearchPage(source,params, { signal, ...requestOptions });
+export type ViewSearchPageQueryResult = NonNullable<
+  Awaited<ReturnType<typeof viewSearchPage>>
+>;
+export type ViewSearchPageQueryError = HTTPValidationError;
 
-
-
-
-
-   return  { queryKey, queryFn, enabled: source !== null && source !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof viewSearchPage>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
-}
-
-export type ViewSearchPageQueryResult = NonNullable<Awaited<ReturnType<typeof viewSearchPage>>>
-export type ViewSearchPageQueryError = HTTPValidationError
-
-
-export function useViewSearchPage<TData = Awaited<ReturnType<typeof viewSearchPage>>, TError = HTTPValidationError>(
- source: string,
-    params: ViewSearchPageParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof viewSearchPage>>, TError, TData>> & Pick<
+export function useViewSearchPage<
+  TData = Awaited<ReturnType<typeof viewSearchPage>>,
+  TError = HTTPValidationError,
+>(
+  source: string,
+  params: ViewSearchPageParams,
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof viewSearchPage>>, TError, TData>
+    > &
+      Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof viewSearchPage>>,
           TError,
           Awaited<ReturnType<typeof viewSearchPage>>
-        > , 'initialData'
-      >, request?: SecondParameter<typeof apiClient>}
- , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useViewSearchPage<TData = Awaited<ReturnType<typeof viewSearchPage>>, TError = HTTPValidationError>(
- source: string,
-    params: ViewSearchPageParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof viewSearchPage>>, TError, TData>> & Pick<
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof apiClient>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useViewSearchPage<
+  TData = Awaited<ReturnType<typeof viewSearchPage>>,
+  TError = HTTPValidationError,
+>(
+  source: string,
+  params: ViewSearchPageParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof viewSearchPage>>, TError, TData>
+    > &
+      Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof viewSearchPage>>,
           TError,
           Awaited<ReturnType<typeof viewSearchPage>>
-        > , 'initialData'
-      >, request?: SecondParameter<typeof apiClient>}
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useViewSearchPage<TData = Awaited<ReturnType<typeof viewSearchPage>>, TError = HTTPValidationError>(
- source: string,
-    params: ViewSearchPageParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof viewSearchPage>>, TError, TData>>, request?: SecondParameter<typeof apiClient>}
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof apiClient>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useViewSearchPage<
+  TData = Awaited<ReturnType<typeof viewSearchPage>>,
+  TError = HTTPValidationError,
+>(
+  source: string,
+  params: ViewSearchPageParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof viewSearchPage>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof apiClient>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
 /**
  * @summary Search Page
  */
 
-export function useViewSearchPage<TData = Awaited<ReturnType<typeof viewSearchPage>>, TError = HTTPValidationError>(
- source: string,
-    params: ViewSearchPageParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof viewSearchPage>>, TError, TData>>, request?: SecondParameter<typeof apiClient>}
- , queryClient?: QueryClient
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+export function useViewSearchPage<
+  TData = Awaited<ReturnType<typeof viewSearchPage>>,
+  TError = HTTPValidationError,
+>(
+  source: string,
+  params: ViewSearchPageParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof viewSearchPage>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof apiClient>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+} {
+  const queryOptions = getViewSearchPageQueryOptions(source, params, options);
 
-  const queryOptions = getViewSearchPageQueryOptions(source,params,options)
-
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<
+    TData,
+    TError
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
 
   return withQueryKey(query, queryOptions.queryKey);
 }
 
-
-
-
-
-
-export const getViewListRefsUrl = (source: string,
-    params?: ViewListRefsParams,) => {
+export const getViewListRefsUrl = (
+  source: string,
+  params?: ViewListRefsParams,
+) => {
   const normalizedParams = new URLSearchParams();
 
   Object.entries(params || {}).forEach(([key, value]) => {
-
     if (value !== undefined) {
-      normalizedParams.append(key, value === null ? 'null' : String(value))
+      normalizedParams.append(key, value === null ? "null" : String(value));
     }
   });
 
   const stringifiedParams = normalizedParams.toString();
 
-  return stringifiedParams.length > 0 ? `/_api/sources/${source}/refs?${stringifiedParams}` : `/_api/sources/${source}/refs`
-}
+  return stringifiedParams.length > 0
+    ? `/_api/sources/${source}/refs?${stringifiedParams}`
+    : `/_api/sources/${source}/refs`;
+};
 
 /**
  * @summary List Refs
  */
-export const viewListRefs = async (source: string,
-    params?: ViewListRefsParams, options?: Parameters<typeof apiClient>[1]): Promise<RefsResponse> => {
-
-  return apiClient<RefsResponse>(getViewListRefsUrl(source,params),
-  {
+export const viewListRefs = async (
+  source: string,
+  params?: ViewListRefsParams,
+  options?: Parameters<typeof apiClient>[1],
+): Promise<RefsResponse> => {
+  return apiClient<RefsResponse>(getViewListRefsUrl(source, params), {
     ...options,
-    method: 'GET'
+    method: "GET",
+  });
+};
 
-
-  }
-);}
-
-
-
-
-
-export const getViewListRefsQueryKey = (source: string,
-    params?: ViewListRefsParams,) => {
-    return [
-    `/_api/sources/${source}/refs`, ...(params ? [params] : [])
-    ] as const;
-    }
-
-
-export const getViewListRefsQueryOptions = <TData = Awaited<ReturnType<typeof viewListRefs>>, TError = HTTPValidationError>(source: string,
-    params?: ViewListRefsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof viewListRefs>>, TError, TData>>, request?: SecondParameter<typeof apiClient>}
+export const getViewListRefsQueryKey = (
+  source: string,
+  params?: ViewListRefsParams,
 ) => {
+  return [`/_api/sources/${source}/refs`, ...(params ? [params] : [])] as const;
+};
 
-const {query: queryOptions, request: requestOptions} = options ?? {};
+export const getViewListRefsQueryOptions = <
+  TData = Awaited<ReturnType<typeof viewListRefs>>,
+  TError = HTTPValidationError,
+>(
+  source: string,
+  params?: ViewListRefsParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof viewListRefs>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof apiClient>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
 
-  const queryKey =  queryOptions?.queryKey ?? getViewListRefsQueryKey(source,params);
+  const queryKey =
+    queryOptions?.queryKey ?? getViewListRefsQueryKey(source, params);
 
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof viewListRefs>>> = ({
+    signal,
+  }) => viewListRefs(source, params, { signal, ...requestOptions });
 
+  return {
+    queryKey,
+    queryFn,
+    enabled: source !== null && source !== undefined,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof viewListRefs>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof viewListRefs>>> = ({ signal }) => viewListRefs(source,params, { signal, ...requestOptions });
+export type ViewListRefsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof viewListRefs>>
+>;
+export type ViewListRefsQueryError = HTTPValidationError;
 
-
-
-
-
-   return  { queryKey, queryFn, enabled: source !== null && source !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof viewListRefs>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
-}
-
-export type ViewListRefsQueryResult = NonNullable<Awaited<ReturnType<typeof viewListRefs>>>
-export type ViewListRefsQueryError = HTTPValidationError
-
-
-export function useViewListRefs<TData = Awaited<ReturnType<typeof viewListRefs>>, TError = HTTPValidationError>(
- source: string,
-    params: undefined |  ViewListRefsParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof viewListRefs>>, TError, TData>> & Pick<
+export function useViewListRefs<
+  TData = Awaited<ReturnType<typeof viewListRefs>>,
+  TError = HTTPValidationError,
+>(
+  source: string,
+  params: undefined | ViewListRefsParams,
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof viewListRefs>>, TError, TData>
+    > &
+      Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof viewListRefs>>,
           TError,
           Awaited<ReturnType<typeof viewListRefs>>
-        > , 'initialData'
-      >, request?: SecondParameter<typeof apiClient>}
- , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useViewListRefs<TData = Awaited<ReturnType<typeof viewListRefs>>, TError = HTTPValidationError>(
- source: string,
-    params?: ViewListRefsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof viewListRefs>>, TError, TData>> & Pick<
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof apiClient>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useViewListRefs<
+  TData = Awaited<ReturnType<typeof viewListRefs>>,
+  TError = HTTPValidationError,
+>(
+  source: string,
+  params?: ViewListRefsParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof viewListRefs>>, TError, TData>
+    > &
+      Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof viewListRefs>>,
           TError,
           Awaited<ReturnType<typeof viewListRefs>>
-        > , 'initialData'
-      >, request?: SecondParameter<typeof apiClient>}
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useViewListRefs<TData = Awaited<ReturnType<typeof viewListRefs>>, TError = HTTPValidationError>(
- source: string,
-    params?: ViewListRefsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof viewListRefs>>, TError, TData>>, request?: SecondParameter<typeof apiClient>}
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof apiClient>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useViewListRefs<
+  TData = Awaited<ReturnType<typeof viewListRefs>>,
+  TError = HTTPValidationError,
+>(
+  source: string,
+  params?: ViewListRefsParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof viewListRefs>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof apiClient>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
 /**
  * @summary List Refs
  */
 
-export function useViewListRefs<TData = Awaited<ReturnType<typeof viewListRefs>>, TError = HTTPValidationError>(
- source: string,
-    params?: ViewListRefsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof viewListRefs>>, TError, TData>>, request?: SecondParameter<typeof apiClient>}
- , queryClient?: QueryClient
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+export function useViewListRefs<
+  TData = Awaited<ReturnType<typeof viewListRefs>>,
+  TError = HTTPValidationError,
+>(
+  source: string,
+  params?: ViewListRefsParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof viewListRefs>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof apiClient>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+} {
+  const queryOptions = getViewListRefsQueryOptions(source, params, options);
 
-  const queryOptions = getViewListRefsQueryOptions(source,params,options)
-
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<
+    TData,
+    TError
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
 
   return withQueryKey(query, queryOptions.queryKey);
 }
 
-
-
-
-
-
-export const getViewPutColumnsUrl = (source: string,) => {
-
-
-
-
-  return `/_api/sources/${source}/columns`
-}
+export const getViewPutColumnsUrl = (source: string) => {
+  return `/_api/sources/${source}/columns`;
+};
 
 /**
  * @summary Put Columns
  */
-export const viewPutColumns = async (source: string,
-    columnsRequest: ColumnsRequest, options?: Parameters<typeof apiClient>[1]): Promise<ColumnsRequest> => {
-
-    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+export const viewPutColumns = async (
+  source: string,
+  columnsRequest: ColumnsRequest,
+  options?: Parameters<typeof apiClient>[1],
+): Promise<ColumnsRequest> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
     if (!h) return {};
     if (h instanceof Headers) return Object.fromEntries(h.entries());
     if (Symbol.iterator in h) {
       return Object.fromEntries(
-        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
       );
     }
     const headers: Record<string, string | readonly string[]> = {};
-    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+    for (const [name, value] of Object.entries<
+      string | readonly string[] | undefined
+    >(h)) {
       if (value !== undefined) headers[name] = value;
     }
     return headers;
   };
-return apiClient<ColumnsRequest>(getViewPutColumnsUrl(source),
-  {
+  return apiClient<ColumnsRequest>(getViewPutColumnsUrl(source), {
     ...options,
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
-    body: JSON.stringify(columnsRequest)
-  }
-);}
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+      ...getHeaders(options?.headers),
+    },
+    body: JSON.stringify(columnsRequest),
+  });
+};
 
+export const getViewPutColumnsMutationKey = () => ["viewPutColumns"] as const;
 
+export const getViewPutColumnsMutationOptions = <
+  TError = HTTPValidationError,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof viewPutColumns>>,
+    TError,
+    ViewPutColumnsMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof apiClient>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof viewPutColumns>>,
+  TError,
+  ViewPutColumnsMutationVariables,
+  TContext
+> => {
+  const mutationKey = getViewPutColumnsMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
 
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof viewPutColumns>>,
+    ViewPutColumnsMutationVariables
+  > = (props) => {
+    const { source, data } = props ?? {};
 
+    return viewPutColumns(source, data, requestOptions);
+  };
 
-export const getViewPutColumnsMutationKey = () => ['viewPutColumns'] as const;
+  return { mutationFn, ...mutationOptions };
+};
 
-export const getViewPutColumnsMutationOptions = <TError = HTTPValidationError,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof viewPutColumns>>, TError,ViewPutColumnsMutationVariables, TContext>, request?: SecondParameter<typeof apiClient>}
-): UseMutationOptions<Awaited<ReturnType<typeof viewPutColumns>>, TError,ViewPutColumnsMutationVariables, TContext> => {
+export type ViewPutColumnsMutationResult = NonNullable<
+  Awaited<ReturnType<typeof viewPutColumns>>
+>;
+export type ViewPutColumnsMutationBody = ColumnsRequest;
+export type ViewPutColumnsMutationError = HTTPValidationError;
+export type ViewPutColumnsMutationVariables = {
+  source: string;
+  data: ColumnsRequest;
+};
 
-const mutationKey = getViewPutColumnsMutationKey();
-const {mutation: mutationOptions, request: requestOptions} = options ?
-      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
-      options
-      : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
-
-
-
-
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof viewPutColumns>>, ViewPutColumnsMutationVariables> = (props) => {
-          const {source,data} = props ?? {};
-
-          return  viewPutColumns(source,data,requestOptions)
-        }
-
-
-
-
-
-
-  return  { mutationFn, ...mutationOptions }}
-
-    export type ViewPutColumnsMutationResult = NonNullable<Awaited<ReturnType<typeof viewPutColumns>>>
-    export type ViewPutColumnsMutationBody = ColumnsRequest
-    export type ViewPutColumnsMutationError = HTTPValidationError
-    export type ViewPutColumnsMutationVariables = {source: string;data: ColumnsRequest}
-
-    /**
+/**
  * @summary Put Columns
  */
-export const useViewPutColumns = <TError = HTTPValidationError,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof viewPutColumns>>, TError,ViewPutColumnsMutationVariables, TContext>, request?: SecondParameter<typeof apiClient>}
- , queryClient?: QueryClient): UseMutationResult<
-        Awaited<ReturnType<typeof viewPutColumns>>,
-        TError,
-        ViewPutColumnsMutationVariables,
-        TContext
-      > => {
-      return useMutation(getViewPutColumnsMutationOptions(options), queryClient);
-    }
+export const useViewPutColumns = <
+  TError = HTTPValidationError,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof viewPutColumns>>,
+      TError,
+      ViewPutColumnsMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof apiClient>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof viewPutColumns>>,
+  TError,
+  ViewPutColumnsMutationVariables,
+  TContext
+> => {
+  return useMutation(getViewPutColumnsMutationOptions(options), queryClient);
+};

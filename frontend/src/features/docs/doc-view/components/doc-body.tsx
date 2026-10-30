@@ -4,7 +4,10 @@ import { type MouseEvent, useEffect, useRef } from "react";
 import { useMdmark } from "@/features/docs/doc-view/hooks/use-mdmark";
 import { findActivePage } from "@/features/docs/doc-view/nav";
 import { type TocItem, readToc } from "@/features/docs/doc-view/toc";
-import { commentsOf, useCommentStore } from "@/features/docs/shared/comments/comment-store";
+import {
+  commentsOf,
+  useCommentStore,
+} from "@/features/docs/shared/comments/comment-store";
 import type { DocumentResponse } from "@/shared/api/generated/model";
 
 type Props = {
@@ -16,7 +19,8 @@ type Props = {
 const TABLE_MARKER = /<!--\s*table:[^>]*-->/g;
 
 /** 最初の見出し 1 は文書のタイトルに出すため除く */
-const withoutFirstH1 = (markdown: string): string => markdown.replace(/^\s*# .*\n?/, "");
+const withoutFirstH1 = (markdown: string): string =>
+  markdown.replace(/^\s*# .*\n?/, "");
 
 /** 隠す列を、その表のマーカー（`+columns` の表）へ `hide=` で書き込む */
 export const applyHiddenColumns = (
@@ -34,7 +38,12 @@ export const applyHiddenColumns = (
 };
 
 /** 引用の前にある見出しを階層ごとに取る */
-const headingsBefore = (root: HTMLElement, quote: string, prefix: string, suffix: string): string[] => {
+const headingsBefore = (
+  root: HTMLElement,
+  quote: string,
+  prefix: string,
+  suffix: string,
+): string[] => {
   const text = root.textContent ?? "";
   const at = text.indexOf(`${prefix}${quote}${suffix}`);
   const position = at < 0 ? text.indexOf(quote) : at + prefix.length;
@@ -58,10 +67,17 @@ const headingsBefore = (root: HTMLElement, quote: string, prefix: string, suffix
 };
 
 /** mdmark で描く文書の本文。リンクとコメントを画面とつなぐ */
-export const DocBody = ({ document: doc, onHeadings, onCommentSaved }: Props) => {
+export const DocBody = ({
+  document: doc,
+  onHeadings,
+  onCommentSaved,
+}: Props) => {
   const ref = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
-  const search = useSearch({ strict: false }) as { rev?: string; base?: string };
+  const search = useSearch({ strict: false }) as {
+    rev?: string;
+    base?: string;
+  };
   const docId = `${doc.source}@${doc.ref ?? ""}:${doc.path}`;
   const markdown = applyHiddenColumns(
     withoutFirstH1(doc.markdown ?? ""),
@@ -83,7 +99,9 @@ export const DocBody = ({ document: doc, onHeadings, onCommentSaved }: Props) =>
           ref: doc.ref ?? null,
           path: doc.path,
           docTitle: title,
-          headings: element ? headingsBefore(element, input.quote, input.prefix, input.suffix) : [],
+          headings: element
+            ? headingsBefore(element, input.quote, input.prefix, input.suffix)
+            : [],
         });
         onCommentSaved();
         return saved;
@@ -106,12 +124,18 @@ export const DocBody = ({ document: doc, onHeadings, onCommentSaved }: Props) =>
     }
     if (href.startsWith("#")) return;
     event.preventDefault();
-    const url = new URL(href, `${window.location.origin}/${doc.source}/${doc.path}`);
+    const url = new URL(
+      href,
+      `${window.location.origin}/${doc.source}/${doc.path}`,
+    );
     const prefix = `/${doc.source}/`;
     if (!url.pathname.startsWith(prefix)) return;
     void navigate({
       to: "/$source/$",
-      params: { source: doc.source, _splat: decodeURIComponent(url.pathname.slice(prefix.length)) },
+      params: {
+        source: doc.source,
+        _splat: decodeURIComponent(url.pathname.slice(prefix.length)),
+      },
       search: { rev: search.rev, base: search.base },
     });
   };

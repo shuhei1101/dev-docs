@@ -19,6 +19,7 @@ export const useSaveSources = () => {
   });
   return {
     ...mutation,
-    mutateAsync: (sources: SourceEntry[]) => mutation.mutateAsync({ data: { sources } }),
+    mutateAsync: (sources: SourceEntry[]) =>
+      mutation.mutateAsync({ data: { sources } }),
   };
 };

@@ -30,13 +30,22 @@ const addThree = () => {
 
 const renderPanel = () =>
   render(
-    <CommentPanel open onOpenChange={vi.fn()} github={null} onLocate={vi.fn()} onChanged={vi.fn()} />,
+    <CommentPanel
+      open
+      onOpenChange={vi.fn()}
+      github={null}
+      onLocate={vi.fn()}
+      onChanged={vi.fn()}
+    />,
   );
 
 beforeEach(() => {
   vi.clearAllMocks();
   writeText.mockReset();
-  Object.defineProperty(navigator, "clipboard", { value: { writeText }, configurable: true });
+  Object.defineProperty(navigator, "clipboard", {
+    value: { writeText },
+    configurable: true,
+  });
   useCommentStore.setState({ comments: [] });
   addThree();
 });
@@ -46,7 +55,9 @@ test("test_comment_panel", async () => {
   renderPanel();
   await userEvent.click(screen.getByRole("checkbox", { name: "2 件目を選択" }));
 
-  await userEvent.click(screen.getByRole("button", { name: "選択 2 件をコピー" }));
+  await userEvent.click(
+    screen.getByRole("button", { name: "選択 2 件をコピー" }),
+  );
 
   await waitFor(() => expect(writeText).toHaveBeenCalledTimes(1));
   const text = writeText.mock.calls[0][0] as string;
@@ -54,7 +65,9 @@ test("test_comment_panel", async () => {
   expect(text).not.toContain("二つ目");
   expect(text).toContain("三つ目");
   await waitFor(() =>
-    expect(toast.success).toHaveBeenCalledWith("選択 2 件をクリップボードにコピーしました。"),
+    expect(toast.success).toHaveBeenCalledWith(
+      "選択 2 件をクリップボードにコピーしました。",
+    ),
   );
 });
 
@@ -63,16 +76,23 @@ test("test_comment_panel_when_indeterminate", async () => {
   await act(async () => useCommentStore.getState().setSelected(null, false));
   await userEvent.click(screen.getByRole("checkbox", { name: "1 件目を選択" }));
 
-  expect(screen.getByRole("checkbox", { name: "すべて選択" })).toHaveAttribute("aria-checked", "mixed");
+  expect(screen.getByRole("checkbox", { name: "すべて選択" })).toHaveAttribute(
+    "aria-checked",
+    "mixed",
+  );
 });
 
 test("test_comment_panel_when_clipboard_failed", async () => {
   writeText.mockRejectedValue(new Error("denied"));
   renderPanel();
 
-  await userEvent.click(screen.getByRole("button", { name: "選択 3 件をコピー" }));
+  await userEvent.click(
+    screen.getByRole("button", { name: "選択 3 件をコピー" }),
+  );
 
   await waitFor(() =>
-    expect(toast.error).toHaveBeenCalledWith("クリップボードにコピーできませんでした。"),
+    expect(toast.error).toHaveBeenCalledWith(
+      "クリップボードにコピーできませんでした。",
+    ),
   );
 });

@@ -1,6 +1,11 @@
 import type { ReactNode } from "react";
 
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/shared/components/ui/sheet";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from "@/shared/components/ui/sheet";
 
 type Props = {
   open: boolean;

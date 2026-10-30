@@ -4,7 +4,10 @@ import { AppError } from "@/shared/core/app-error";
 import { logger } from "@/shared/lib/logger";
 
 /** 例外の種類に合う通知を出し、ログを書く */
-export const handleAppError = (error: unknown, options: { message?: string } = {}): void => {
+export const handleAppError = (
+  error: unknown,
+  options: { message?: string } = {},
+): void => {
   const message =
     options.message ??
     (error instanceof AppError

@@ -5,10 +5,9 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export type NavItemKind = typeof NavItemKind[keyof typeof NavItemKind];
-
+export type NavItemKind = (typeof NavItemKind)[keyof typeof NavItemKind];
 
 export const NavItemKind = {
-  group: 'group',
-  page: 'page',
+  group: "group",
+  page: "page",
 } as const;

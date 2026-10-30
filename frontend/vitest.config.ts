@@ -10,18 +10,26 @@ export default defineConfig({
   plugins: [react()],
   resolve: {
     alias: {
-      "@tests": fileURLToPath(new URL("../tests/unit/frontend", import.meta.url)),
+      "@tests": fileURLToPath(
+        new URL("../tests/unit/frontend", import.meta.url),
+      ),
       "@": fileURLToPath(new URL("./src", import.meta.url)),
     },
   },
   test: {
     environment: "jsdom",
     globals: true,
-    setupFiles: ["./frontend/src/testing/setup-tests.ts", "./tests/unit/frontend/setup-msw.ts"],
+    setupFiles: [
+      "./frontend/src/testing/setup-tests.ts",
+      "./tests/unit/frontend/setup-msw.ts",
+    ],
     include: ["tests/unit/frontend/**/*.test.{ts,tsx}"],
     coverage: {
       include: ["frontend/src/**"],
-      exclude: ["frontend/src/routes/**", "frontend/src/shared/api/generated/**"],
+      exclude: [
+        "frontend/src/routes/**",
+        "frontend/src/shared/api/generated/**",
+      ],
     },
   },
 });

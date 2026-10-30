@@ -19,7 +19,8 @@ class FakeIntersectionObserver {
 beforeEach(() => {
   callbacks = [];
   vi.stubGlobal("IntersectionObserver", FakeIntersectionObserver);
-  document.body.innerHTML = '<h2 id="a">A</h2><h2 id="b">B</h2><h3 id="c">C</h3>';
+  document.body.innerHTML =
+    '<h2 id="a">A</h2><h2 id="b">B</h2><h3 id="c">C</h3>';
 });
 
 afterEach(() => {
@@ -42,7 +43,8 @@ test("test_use_active_heading", async () => {
 
   const { act } = await import("@testing-library/react");
   act(() => {
-    for (const callback of callbacks) callback([crossed("a"), crossed("b"), below("c")]);
+    for (const callback of callbacks)
+      callback([crossed("a"), crossed("b"), below("c")]);
   });
 
   expect(result.current).toBe("b");

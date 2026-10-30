@@ -33,7 +33,13 @@ type CommentState = {
 export const commentsOf = (comments: DocComment[], docId: string) =>
   comments
     .filter((comment) => comment.docId === docId)
-    .map(({ id, quote, prefix, suffix, body }) => ({ id, quote, prefix, suffix, body }));
+    .map(({ id, quote, prefix, suffix, body }) => ({
+      id,
+      quote,
+      prefix,
+      suffix,
+      body,
+    }));
 
 /** このブラウザのタブで溜めたコメントの置き場所（`sessionStorage`） */
 export const useCommentStore = create<CommentState>()(
@@ -52,9 +58,14 @@ export const useCommentStore = create<CommentState>()(
       },
       update: (id, body) =>
         set((state) => ({
-          comments: state.comments.map((item) => (item.id === id ? { ...item, body } : item)),
+          comments: state.comments.map((item) =>
+            item.id === id ? { ...item, body } : item,
+          ),
         })),
-      remove: (id) => set((state) => ({ comments: state.comments.filter((item) => item.id !== id) })),
+      remove: (id) =>
+        set((state) => ({
+          comments: state.comments.filter((item) => item.id !== id),
+        })),
       setSelected: (id, selected) =>
         set((state) => ({
           comments: state.comments.map((item) =>

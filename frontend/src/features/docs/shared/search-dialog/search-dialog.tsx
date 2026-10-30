@@ -24,7 +24,13 @@ type Props = {
 };
 
 /** 開いている配信元・リビジョンの文書を語で探すダイアログ */
-export const SearchDialog = ({ open, onOpenChange, source, ref, onResultSelect }: Props) => {
+export const SearchDialog = ({
+  open,
+  onOpenChange,
+  source,
+  ref: revision,
+  onResultSelect,
+}: Props) => {
   const [query, setQuery] = useState("");
   const [sent, setSent] = useState("");
 
@@ -35,15 +41,25 @@ export const SearchDialog = ({ open, onOpenChange, source, ref, onResultSelect }
   }, [query]);
 
   const search = useQuery({
-    ...getViewSearchPageQueryOptions(source, { q: sent, ref }),
+    // eslint-disable-next-line react-hooks/refs -- `ref` は React の ref でなくリビジョンを指す props
+    ...getViewSearchPageQueryOptions(source, { q: sent, ref: revision }),
     enabled: open && sent !== "",
   });
   const result = sent === "" ? undefined : search.data;
 
   return (
-    <CommandDialog open={open} onOpenChange={onOpenChange} title="文書を検索" description="語を入力して文書を探します">
+    <CommandDialog
+      open={open}
+      onOpenChange={onOpenChange}
+      title="文書を検索"
+      description="語を入力して文書を探します"
+    >
       <Command shouldFilter={false}>
-        <CommandInput value={query} onValueChange={setQuery} placeholder="文書を検索" />
+        <CommandInput
+          value={query}
+          onValueChange={setQuery}
+          placeholder="文書を検索"
+        />
         <CommandList>
           {sent !== "" && result && result.items.length === 0 && (
             <CommandEmpty>一致する文書がありません。</CommandEmpty>
@@ -62,10 +78,16 @@ export const SearchDialog = ({ open, onOpenChange, source, ref, onResultSelect }
                 >
                   <span className="font-medium">{item.name}</span>
                   {item.snippets.slice(0, 1).map((snippet) => (
-                    <span key={snippet} className="text-xs text-muted-foreground">
+                    <span
+                      key={snippet}
+                      className="text-xs text-muted-foreground"
+                    >
                       {splitHighlight(snippet, sent).map((part, index) =>
                         part.match ? (
-                          <mark key={index} className="bg-warning/30 text-foreground">
+                          <mark
+                            key={index}
+                            className="bg-warning/30 text-foreground"
+                          >
                             {part.text}
                           </mark>
                         ) : (

@@ -13,11 +13,21 @@ type Props = {
   onEmptyTab: (tab: NavTab) => void;
 };
 
-const TAB_CLASS = "whitespace-nowrap border-b-2 px-3 py-2 text-sm hover:text-foreground";
+const TAB_CLASS =
+  "whitespace-nowrap border-b-2 px-3 py-2 text-sm hover:text-foreground";
 
 /** 配信元の文書の種類のタブ。画面の移動なので `nav` のリンクにする */
-export const DocTabs = ({ tabs, currentIndex, source, search, onEmptyTab }: Props) => (
-  <nav aria-label="文書の種類" className="flex overflow-x-auto border-b border-border">
+export const DocTabs = ({
+  tabs,
+  currentIndex,
+  source,
+  search,
+  onEmptyTab,
+}: Props) => (
+  <nav
+    aria-label="文書の種類"
+    className="flex overflow-x-auto border-b border-border"
+  >
     {tabs.map((tab, index) => {
       const path = firstPagePath(tab);
       const current = index === currentIndex;

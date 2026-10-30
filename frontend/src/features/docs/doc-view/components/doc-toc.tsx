@@ -29,9 +29,14 @@ export const DocToc = ({ items, changed }: Props) => {
             >
               <span>{item.text}</span>
               {changed?.has(item.text) === true && (
-                <Circle aria-hidden="true" className="size-2.5 shrink-0 fill-current text-warning" />
+                <Circle
+                  aria-hidden="true"
+                  className="size-2.5 shrink-0 fill-current text-warning"
+                />
               )}
-              {changed?.has(item.text) === true && <span className="sr-only">変更</span>}
+              {changed?.has(item.text) === true && (
+                <span className="sr-only">変更</span>
+              )}
             </a>
           </li>
         ))}

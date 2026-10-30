@@ -12,7 +12,11 @@ const handles = (meta: HandleErrorMeta): boolean => meta?.handleError !== false;
 export const createQueryClient = (): QueryClient =>
   new QueryClient({
     defaultOptions: {
-      queries: { staleTime: SIXTY_SECONDS, refetchOnWindowFocus: false, retry: false },
+      queries: {
+        staleTime: SIXTY_SECONDS,
+        refetchOnWindowFocus: false,
+        retry: false,
+      },
     },
     queryCache: new QueryCache({
       onError: (error, query) => {

@@ -4,7 +4,7 @@
  * FastAPI
  * OpenAPI spec version: 0.1.0
  */
-import type { NavItem } from './navItem';
+import type { NavItem } from "./navItem";
 
 /**
  * 上のタブ 1 つとそのサイドバー。

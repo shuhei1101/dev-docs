@@ -5,7 +5,9 @@ import { getSettingsGetSettingsSourcesQueryOptions } from "@/shared/api/generate
 
 export const Route = createFileRoute("/_settings")({
   loader: ({ context }) =>
-    context.queryClient.ensureQueryData(getSettingsGetSettingsSourcesQueryOptions()),
+    context.queryClient.ensureQueryData(
+      getSettingsGetSettingsSourcesQueryOptions(),
+    ),
   component: SettingsScreen,
   pendingMs: 1000,
 });

@@ -4,11 +4,11 @@
  * FastAPI
  * OpenAPI spec version: 0.1.0
  */
-import type { ConversionError } from './conversionError';
-import type { DocumentDiff } from './documentDiff';
-import type { DocumentResponseColumns } from './documentResponseColumns';
-import type { GitHubTarget } from './gitHubTarget';
-import type { NavTab } from './navTab';
+import type { ConversionError } from "./conversionError";
+import type { DocumentDiff } from "./documentDiff";
+import type { DocumentResponseColumns } from "./documentResponseColumns";
+import type { GitHubTarget } from "./gitHubTarget";
+import type { NavTab } from "./navTab";
 
 /**
  * GET `/_api/sources/{source}/docs[/{path}]` の応答。

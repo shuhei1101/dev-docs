@@ -15,7 +15,9 @@ export const DocHeader = ({ title, kind, path, updatedAt }: Props) => (
     {kind !== undefined && (
       <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
         <Badge variant="secondary">{kind}</Badge>
-        {path !== undefined && <code className="font-mono text-xs">{path}</code>}
+        {path !== undefined && (
+          <code className="font-mono text-xs">{path}</code>
+        )}
         {updatedAt !== undefined && (
           <time dateTime={updatedAt}>更新 {formatJst(updatedAt)}</time>
         )}

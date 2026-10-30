@@ -52,7 +52,9 @@ export const describeMissing = (
         description: `配信元 ${source} に、リビジョン ${value} はありません。`,
         details: [
           { label: "開こうとしたリビジョン", value },
-          ...(context.defaultRef ? [{ label: "既定のリビジョン", value: context.defaultRef }] : []),
+          ...(context.defaultRef
+            ? [{ label: "既定のリビジョン", value: context.defaultRef }]
+            : []),
         ],
       };
     case "not_served":
@@ -65,7 +67,10 @@ export const describeMissing = (
             label: "外した理由",
             value: `${error.path} ${error.reason}`,
           })),
-          ...(context.configs ?? []).map((config) => ({ label: "設定ファイル", value: config })),
+          ...(context.configs ?? []).map((config) => ({
+            label: "設定ファイル",
+            value: config,
+          })),
         ],
       };
     case "source":

@@ -34,7 +34,11 @@ test("test_redirect_to_first_source", async () => {
 });
 
 test("test_redirect_to_first_source_when_none", async () => {
-  server.use(http.get("/_api/settings/sources", () => HttpResponse.json(settingsView([]))));
+  server.use(
+    http.get("/_api/settings/sources", () =>
+      HttpResponse.json(settingsView([])),
+    ),
+  );
 
   const redirect = await redirectOf();
 

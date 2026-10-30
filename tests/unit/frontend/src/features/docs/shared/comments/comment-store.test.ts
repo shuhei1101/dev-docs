@@ -1,6 +1,9 @@
 import { beforeEach, expect, test } from "vitest";
 
-import { commentsOf, useCommentStore } from "@/features/docs/shared/comments/comment-store";
+import {
+  commentsOf,
+  useCommentStore,
+} from "@/features/docs/shared/comments/comment-store";
 
 const input = (docId: string, body: string) => ({
   docId,
@@ -28,5 +31,9 @@ test("test_comments_of", () => {
   const result = commentsOf(useCommentStore.getState().comments, "s@main:a.md");
 
   expect(result.map((item) => item.body)).toEqual(["1", "3"]);
-  expect(result[0]).toMatchObject({ quote: "引用 1", prefix: "前", suffix: "後" });
+  expect(result[0]).toMatchObject({
+    quote: "引用 1",
+    prefix: "前",
+    suffix: "後",
+  });
 });

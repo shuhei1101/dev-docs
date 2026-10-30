@@ -2,7 +2,10 @@ import { expect, test } from "vitest";
 
 import { shortcutsFor } from "@/shared/core/shortcuts";
 
-const summarize = (screen: "doc-view" | "settings" | "not-found", singleKey: boolean) =>
+const summarize = (
+  screen: "doc-view" | "settings" | "not-found",
+  singleKey: boolean,
+) =>
   shortcutsFor(screen, singleKey).map(({ def, hotkeys }) => [def.id, hotkeys]);
 
 test("test_shortcuts_for", () => {

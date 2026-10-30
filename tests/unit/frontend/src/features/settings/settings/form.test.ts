@@ -36,18 +36,26 @@ test("test_source_form_schema_when_duplicate_id", () => {
 
   expect(result.success).toBe(false);
   const issue = result.error?.issues.find((item) => item.path[0] === "id");
-  expect(issue?.message).toBe("配信元の ID extra は既に使われています。別の ID を入力してください。");
+  expect(issue?.message).toBe(
+    "配信元の ID extra は既に使われています。別の ID を入力してください。",
+  );
 });
 
 test("test_source_form_schema_when_blank_line", () => {
-  const result = sourceFormSchema([]).safeParse(values({ read: "~/repo/**\n\n~/work/**" }));
+  const result = sourceFormSchema([]).safeParse(
+    values({ read: "~/repo/**\n\n~/work/**" }),
+  );
 
   const issue = result.error?.issues.find((item) => item.path[0] === "read");
-  expect(issue?.message).toBe("読み取りの範囲に空の行があります。空の行を削除してください。");
+  expect(issue?.message).toBe(
+    "読み取りの範囲に空の行があります。空の行を削除してください。",
+  );
 });
 
 test("test_to_form_values", () => {
-  const result = toFormValues(row("a", { config: ["/a.yaml", "/b.yaml"] }) as never);
+  const result = toFormValues(
+    row("a", { config: ["/a.yaml", "/b.yaml"] }) as never,
+  );
 
   expect(result.config).toBe("/a.yaml\n/b.yaml");
   expect(result.write).toBe("");
@@ -59,13 +67,21 @@ test("test_apply_source", () => {
   const result = applySource(sources, values(), null);
 
   expect(result).toHaveLength(2);
-  expect(result[1]).toMatchObject({ id: "extra", config: ["/a/dev-docs.yaml", "/a/local.yaml"] });
-  expect(result[0]).toMatchObject({ id: "a", config: ["/home/me/a/dev-docs.yaml"] });
+  expect(result[1]).toMatchObject({
+    id: "extra",
+    config: ["/a/dev-docs.yaml", "/a/local.yaml"],
+  });
+  expect(result[0]).toMatchObject({
+    id: "a",
+    config: ["/home/me/a/dev-docs.yaml"],
+  });
   expect(result[0]).not.toHaveProperty("status");
 });
 
 test("test_apply_source_when_edit", () => {
-  const sources = [row("a", { scope: { read: ["/x/**"], write: ["/x"] } })] as never;
+  const sources = [
+    row("a", { scope: { read: ["/x/**"], write: ["/x"] } }),
+  ] as never;
 
   const result = applySource(sources, values({ id: "a", write: "" }), 0);
 

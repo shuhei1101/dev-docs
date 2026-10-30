@@ -6,9 +6,9 @@
  */
 
 export type ViewListRefsParams = {
-/**
- * @minimum 0
- * @maximum 100
- */
-commits?: number;
+  /**
+   * @minimum 0
+   * @maximum 100
+   */
+  commits?: number;
 };

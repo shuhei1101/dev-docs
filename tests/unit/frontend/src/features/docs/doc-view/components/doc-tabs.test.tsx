@@ -13,7 +13,13 @@ test("test_doc_tabs", async () => {
   ];
 
   renderInRouter(
-    <DocTabs tabs={tabs as never} currentIndex={0} source="s" search={{}} onEmptyTab={vi.fn()} />,
+    <DocTabs
+      tabs={tabs as never}
+      currentIndex={0}
+      source="s"
+      search={{}}
+      onEmptyTab={vi.fn()}
+    />,
   );
 
   const link = await screen.findByRole("link", { name: "規約" });
@@ -23,10 +29,19 @@ test("test_doc_tabs", async () => {
 test("test_doc_tabs_when_empty", async () => {
   const onEmptyTab = vi.fn();
   const empty = { title: "空", active: false, items: [] };
-  const tabs = [{ title: "設計書", active: true, items: [page("A", "a.md")] }, empty];
+  const tabs = [
+    { title: "設計書", active: true, items: [page("A", "a.md")] },
+    empty,
+  ];
 
   renderInRouter(
-    <DocTabs tabs={tabs as never} currentIndex={0} source="s" search={{}} onEmptyTab={onEmptyTab} />,
+    <DocTabs
+      tabs={tabs as never}
+      currentIndex={0}
+      source="s"
+      search={{}}
+      onEmptyTab={onEmptyTab}
+    />,
   );
   await userEvent.click(await screen.findByText("空"));
 

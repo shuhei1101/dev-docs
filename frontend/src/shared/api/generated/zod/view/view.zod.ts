@@ -4,190 +4,290 @@
  * FastAPI
  * OpenAPI spec version: 0.1.0
  */
-import * as zod from 'zod';
-
+import * as zod from "zod";
 
 /**
  * @summary Get Document Default
  */
 export const ViewGetDocumentDefaultParams = zod.object({
-  "source": zod.string()
-})
+  source: zod.string(),
+});
 
 export const ViewGetDocumentDefaultQueryParams = zod.object({
-  "ref": zod.union([zod.string(),zod.null()]).optional(),
-  "diff": zod.union([zod.string(),zod.null()]).optional()
-})
+  ref: zod.union([zod.string(), zod.null()]).optional(),
+  diff: zod.union([zod.string(), zod.null()]).optional(),
+});
 
-export const ViewGetDocumentDefaultResponse = zod.object({
-  "source": zod.string(),
-  "ref": zod.union([zod.string(),zod.null()]),
-  "path": zod.string(),
-  "markdown": zod.union([zod.string(),zod.null()]),
-  "conversionError": zod.union([zod.object({
-  "reason": zod.enum(['timeout', 'exit', 'not_runnable', 'invalid_yaml']),
-  "kind": zod.string(),
-  "script": zod.union([zod.string(),zod.null()]).optional(),
-  "detail": zod.string(),
-  "file": zod.union([zod.string(),zod.null()]).optional(),
-  "line": zod.union([zod.int(),zod.null()]).optional(),
-  "column": zod.union([zod.int(),zod.null()]).optional()
-}).describe('文書の取得の `conversion_error`（変換の失敗と同じフィールド）。'),zod.null()]),
-  "tabs": zod.array(zod.object({
-  "title": zod.string(),
-  "active": zod.boolean(),
-  "items": zod.array(zod.object({
-  "kind": zod.enum(['group', 'page']),
-  "title": zod.string(),
-  "path": zod.union([zod.string(),zod.null()]).optional(),
-  "items": zod.array(zod.unknown()).optional(),
-  "change": zod.union([zod.enum(['added', 'modified', 'deleted']),zod.null()]).optional()
-}).describe('サイドバーの見出しか文書の 1 行。'))
-}).describe('上のタブ 1 つとそのサイドバー。')),
-  "github": zod.union([zod.object({
-  "repository": zod.string(),
-  "issueLabels": zod.array(zod.string())
-}).describe('文書の取得の `github`（起票先）。'),zod.null()]),
-  "columns": zod.record(zod.string(), zod.array(zod.string())),
-  "tableKeys": zod.array(zod.string()),
-  "diff": zod.union([zod.object({
-  "base": zod.string(),
-  "change": zod.union([zod.enum(['added', 'modified']),zod.null()]),
-  "changedItems": zod.array(zod.string()).optional()
-}).describe('文書の取得の `diff`（比べたリビジョンと、返した文書の変化・変わった項目）。'),zod.null()]),
-  "updatedAt": zod.iso.datetime({"offset":true})
-}).describe('GET `/_api/sources/{source}/docs[/{path}]` の応答。')
+export const ViewGetDocumentDefaultResponse = zod
+  .object({
+    source: zod.string(),
+    ref: zod.union([zod.string(), zod.null()]),
+    path: zod.string(),
+    markdown: zod.union([zod.string(), zod.null()]),
+    conversionError: zod.union([
+      zod
+        .object({
+          reason: zod.enum(["timeout", "exit", "not_runnable", "invalid_yaml"]),
+          kind: zod.string(),
+          script: zod.union([zod.string(), zod.null()]).optional(),
+          detail: zod.string(),
+          file: zod.union([zod.string(), zod.null()]).optional(),
+          line: zod.union([zod.int(), zod.null()]).optional(),
+          column: zod.union([zod.int(), zod.null()]).optional(),
+        })
+        .describe(
+          "文書の取得の `conversion_error`（変換の失敗と同じフィールド）。",
+        ),
+      zod.null(),
+    ]),
+    tabs: zod.array(
+      zod
+        .object({
+          title: zod.string(),
+          active: zod.boolean(),
+          items: zod.array(
+            zod
+              .object({
+                kind: zod.enum(["group", "page"]),
+                title: zod.string(),
+                path: zod.union([zod.string(), zod.null()]).optional(),
+                items: zod.array(zod.unknown()).optional(),
+                change: zod
+                  .union([
+                    zod.enum(["added", "modified", "deleted"]),
+                    zod.null(),
+                  ])
+                  .optional(),
+              })
+              .describe("サイドバーの見出しか文書の 1 行。"),
+          ),
+        })
+        .describe("上のタブ 1 つとそのサイドバー。"),
+    ),
+    github: zod.union([
+      zod
+        .object({
+          repository: zod.string(),
+          issueLabels: zod.array(zod.string()),
+        })
+        .describe("文書の取得の `github`（起票先）。"),
+      zod.null(),
+    ]),
+    columns: zod.record(zod.string(), zod.array(zod.string())),
+    tableKeys: zod.array(zod.string()),
+    diff: zod.union([
+      zod
+        .object({
+          base: zod.string(),
+          change: zod.union([zod.enum(["added", "modified"]), zod.null()]),
+          changedItems: zod.array(zod.string()).optional(),
+        })
+        .describe(
+          "文書の取得の `diff`（比べたリビジョンと、返した文書の変化・変わった項目）。",
+        ),
+      zod.null(),
+    ]),
+    updatedAt: zod.iso.datetime({ offset: true }),
+  })
+  .describe("GET `/_api/sources/{source}/docs[/{path}]` の応答。");
 
 /**
  * @summary Get Document
  */
 export const ViewGetDocumentParams = zod.object({
-  "source": zod.string(),
-  "path": zod.string()
-})
+  source: zod.string(),
+  path: zod.string(),
+});
 
 export const ViewGetDocumentQueryParams = zod.object({
-  "ref": zod.union([zod.string(),zod.null()]).optional(),
-  "diff": zod.union([zod.string(),zod.null()]).optional()
-})
+  ref: zod.union([zod.string(), zod.null()]).optional(),
+  diff: zod.union([zod.string(), zod.null()]).optional(),
+});
 
-export const ViewGetDocumentResponse = zod.object({
-  "source": zod.string(),
-  "ref": zod.union([zod.string(),zod.null()]),
-  "path": zod.string(),
-  "markdown": zod.union([zod.string(),zod.null()]),
-  "conversionError": zod.union([zod.object({
-  "reason": zod.enum(['timeout', 'exit', 'not_runnable', 'invalid_yaml']),
-  "kind": zod.string(),
-  "script": zod.union([zod.string(),zod.null()]).optional(),
-  "detail": zod.string(),
-  "file": zod.union([zod.string(),zod.null()]).optional(),
-  "line": zod.union([zod.int(),zod.null()]).optional(),
-  "column": zod.union([zod.int(),zod.null()]).optional()
-}).describe('文書の取得の `conversion_error`（変換の失敗と同じフィールド）。'),zod.null()]),
-  "tabs": zod.array(zod.object({
-  "title": zod.string(),
-  "active": zod.boolean(),
-  "items": zod.array(zod.object({
-  "kind": zod.enum(['group', 'page']),
-  "title": zod.string(),
-  "path": zod.union([zod.string(),zod.null()]).optional(),
-  "items": zod.array(zod.unknown()).optional(),
-  "change": zod.union([zod.enum(['added', 'modified', 'deleted']),zod.null()]).optional()
-}).describe('サイドバーの見出しか文書の 1 行。'))
-}).describe('上のタブ 1 つとそのサイドバー。')),
-  "github": zod.union([zod.object({
-  "repository": zod.string(),
-  "issueLabels": zod.array(zod.string())
-}).describe('文書の取得の `github`（起票先）。'),zod.null()]),
-  "columns": zod.record(zod.string(), zod.array(zod.string())),
-  "tableKeys": zod.array(zod.string()),
-  "diff": zod.union([zod.object({
-  "base": zod.string(),
-  "change": zod.union([zod.enum(['added', 'modified']),zod.null()]),
-  "changedItems": zod.array(zod.string()).optional()
-}).describe('文書の取得の `diff`（比べたリビジョンと、返した文書の変化・変わった項目）。'),zod.null()]),
-  "updatedAt": zod.iso.datetime({"offset":true})
-}).describe('GET `/_api/sources/{source}/docs[/{path}]` の応答。')
+export const ViewGetDocumentResponse = zod
+  .object({
+    source: zod.string(),
+    ref: zod.union([zod.string(), zod.null()]),
+    path: zod.string(),
+    markdown: zod.union([zod.string(), zod.null()]),
+    conversionError: zod.union([
+      zod
+        .object({
+          reason: zod.enum(["timeout", "exit", "not_runnable", "invalid_yaml"]),
+          kind: zod.string(),
+          script: zod.union([zod.string(), zod.null()]).optional(),
+          detail: zod.string(),
+          file: zod.union([zod.string(), zod.null()]).optional(),
+          line: zod.union([zod.int(), zod.null()]).optional(),
+          column: zod.union([zod.int(), zod.null()]).optional(),
+        })
+        .describe(
+          "文書の取得の `conversion_error`（変換の失敗と同じフィールド）。",
+        ),
+      zod.null(),
+    ]),
+    tabs: zod.array(
+      zod
+        .object({
+          title: zod.string(),
+          active: zod.boolean(),
+          items: zod.array(
+            zod
+              .object({
+                kind: zod.enum(["group", "page"]),
+                title: zod.string(),
+                path: zod.union([zod.string(), zod.null()]).optional(),
+                items: zod.array(zod.unknown()).optional(),
+                change: zod
+                  .union([
+                    zod.enum(["added", "modified", "deleted"]),
+                    zod.null(),
+                  ])
+                  .optional(),
+              })
+              .describe("サイドバーの見出しか文書の 1 行。"),
+          ),
+        })
+        .describe("上のタブ 1 つとそのサイドバー。"),
+    ),
+    github: zod.union([
+      zod
+        .object({
+          repository: zod.string(),
+          issueLabels: zod.array(zod.string()),
+        })
+        .describe("文書の取得の `github`（起票先）。"),
+      zod.null(),
+    ]),
+    columns: zod.record(zod.string(), zod.array(zod.string())),
+    tableKeys: zod.array(zod.string()),
+    diff: zod.union([
+      zod
+        .object({
+          base: zod.string(),
+          change: zod.union([zod.enum(["added", "modified"]), zod.null()]),
+          changedItems: zod.array(zod.string()).optional(),
+        })
+        .describe(
+          "文書の取得の `diff`（比べたリビジョンと、返した文書の変化・変わった項目）。",
+        ),
+      zod.null(),
+    ]),
+    updatedAt: zod.iso.datetime({ offset: true }),
+  })
+  .describe("GET `/_api/sources/{source}/docs[/{path}]` の応答。");
 
 /**
  * @summary Search Page
  */
 export const ViewSearchPageParams = zod.object({
-  "source": zod.string()
-})
+  source: zod.string(),
+});
 
 export const viewSearchPageQueryQMax = 200;
 
 export const viewSearchPageQueryLimitDefault = 20;
 export const viewSearchPageQueryLimitMax = 100;
 
-
-
 export const ViewSearchPageQueryParams = zod.object({
-  "q": zod.string().min(1).max(viewSearchPageQueryQMax),
-  "ref": zod.union([zod.string(),zod.null()]).optional(),
-  "limit": zod.int().min(1).max(viewSearchPageQueryLimitMax).default(viewSearchPageQueryLimitDefault)
-})
+  q: zod.string().min(1).max(viewSearchPageQueryQMax),
+  ref: zod.union([zod.string(), zod.null()]).optional(),
+  limit: zod
+    .int()
+    .min(1)
+    .max(viewSearchPageQueryLimitMax)
+    .default(viewSearchPageQueryLimitDefault),
+});
 
-export const ViewSearchPageResponse = zod.object({
-  "totalCount": zod.int(),
-  "items": zod.array(zod.object({
-  "path": zod.string(),
-  "name": zod.string(),
-  "snippets": zod.array(zod.string())
-}).describe('画面の検索の結果の文書。'))
-}).describe('GET `/_api/sources/{source}/search` の応答。')
+export const ViewSearchPageResponse = zod
+  .object({
+    totalCount: zod.int(),
+    items: zod.array(
+      zod
+        .object({
+          path: zod.string(),
+          name: zod.string(),
+          snippets: zod.array(zod.string()),
+        })
+        .describe("画面の検索の結果の文書。"),
+    ),
+  })
+  .describe("GET `/_api/sources/{source}/search` の応答。");
 
 /**
  * @summary List Refs
  */
 export const ViewListRefsParams = zod.object({
-  "source": zod.string()
-})
+  source: zod.string(),
+});
 
 export const viewListRefsQueryCommitsDefault = 20;
 export const viewListRefsQueryCommitsMin = 0;
 export const viewListRefsQueryCommitsMax = 100;
 
-
-
 export const ViewListRefsQueryParams = zod.object({
-  "commits": zod.int().min(viewListRefsQueryCommitsMin).max(viewListRefsQueryCommitsMax).default(viewListRefsQueryCommitsDefault)
-})
+  commits: zod
+    .int()
+    .min(viewListRefsQueryCommitsMin)
+    .max(viewListRefsQueryCommitsMax)
+    .default(viewListRefsQueryCommitsDefault),
+});
 
-export const ViewListRefsResponse = zod.object({
-  "git": zod.boolean(),
-  "defaultRef": zod.string(),
-  "branches": zod.array(zod.object({
-  "name": zod.string(),
-  "commit": zod.string()
-}).describe('ブランチかタグ 1 つ。')).optional(),
-  "tags": zod.array(zod.object({
-  "name": zod.string(),
-  "commit": zod.string()
-}).describe('ブランチかタグ 1 つ。')).optional(),
-  "commits": zod.array(zod.object({
-  "commit": zod.string(),
-  "date": zod.string(),
-  "subject": zod.string()
-}).describe('最近の commit 1 件。')).optional()
-}).describe('GET `/_api/sources/{source}/refs` の応答。')
+export const ViewListRefsResponse = zod
+  .object({
+    git: zod.boolean(),
+    defaultRef: zod.string(),
+    branches: zod
+      .array(
+        zod
+          .object({
+            name: zod.string(),
+            commit: zod.string(),
+          })
+          .describe("ブランチかタグ 1 つ。"),
+      )
+      .optional(),
+    tags: zod
+      .array(
+        zod
+          .object({
+            name: zod.string(),
+            commit: zod.string(),
+          })
+          .describe("ブランチかタグ 1 つ。"),
+      )
+      .optional(),
+    commits: zod
+      .array(
+        zod
+          .object({
+            commit: zod.string(),
+            date: zod.string(),
+            subject: zod.string(),
+          })
+          .describe("最近の commit 1 件。"),
+      )
+      .optional(),
+  })
+  .describe("GET `/_api/sources/{source}/refs` の応答。");
 
 /**
  * @summary Put Columns
  */
 export const ViewPutColumnsParams = zod.object({
-  "source": zod.string()
-})
+  source: zod.string(),
+});
 
-export const ViewPutColumnsBody = zod.object({
-  "table": zod.string(),
-  "hidden": zod.array(zod.string())
-}).describe('PUT `/_api/sources/{source}/columns` の本文と応答。')
+export const ViewPutColumnsBody = zod
+  .object({
+    table: zod.string(),
+    hidden: zod.array(zod.string()),
+  })
+  .describe("PUT `/_api/sources/{source}/columns` の本文と応答。");
 
-export const ViewPutColumnsResponse = zod.object({
-  "table": zod.string(),
-  "hidden": zod.array(zod.string())
-}).describe('PUT `/_api/sources/{source}/columns` の本文と応答。')
-
+export const ViewPutColumnsResponse = zod
+  .object({
+    table: zod.string(),
+    hidden: zod.array(zod.string()),
+  })
+  .describe("PUT `/_api/sources/{source}/columns` の本文と応答。");

@@ -3,9 +3,16 @@ import { type RefObject, useEffect, useRef, useState } from "react";
 import { logger } from "@/shared/lib/logger";
 
 /** mdmark の読み込み先（採用バージョンのタグを固定した jsDelivr の GitHub の URL） */
-export const MDMARK_URL = "https://cdn.jsdelivr.net/gh/shuhei1101/mdmark@v0.8.0/dist/mount.js";
+export const MDMARK_URL =
+  "https://cdn.jsdelivr.net/gh/shuhei1101/mdmark@v0.8.0/dist/mount.js";
 
-export type MdmarkComment = { id: string; quote: string; prefix: string; suffix: string; body: string };
+export type MdmarkComment = {
+  id: string;
+  quote: string;
+  prefix: string;
+  suffix: string;
+  body: string;
+};
 
 export type MdmarkCommentStore = {
   load: (docId: string) => MdmarkComment[];
@@ -29,7 +36,9 @@ export type MdmarkHandle = {
   destroy: () => void;
 };
 
-type MdmarkModule = { mount: (element: HTMLElement, options: MdmarkOptions) => MdmarkHandle };
+type MdmarkModule = {
+  mount: (element: HTMLElement, options: MdmarkOptions) => MdmarkHandle;
+};
 
 let loading: Promise<MdmarkModule> | null = null;
 
@@ -49,10 +58,16 @@ export const useMdmark = (
   ref: RefObject<HTMLElement | null>,
   options: MdmarkOptions,
 ): State => {
-  const [state, setState] = useState<State>({ handle: null, ready: false, error: null });
+  const [state, setState] = useState<State>({
+    handle: null,
+    ready: false,
+    error: null,
+  });
   const latest = useRef(options);
-  latest.current = options;
   const rendered = useRef(options.markdown);
+  useEffect(() => {
+    latest.current = options;
+  });
 
   // 文書が変わったら破棄して描き直す
   useEffect(() => {

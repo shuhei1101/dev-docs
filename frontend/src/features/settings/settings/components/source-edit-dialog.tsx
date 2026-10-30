@@ -1,8 +1,13 @@
+import { useRef } from "react";
 import { Controller } from "react-hook-form";
 
 import { useSourceForm } from "@/features/settings/settings/hooks/use-source-form";
 import type { SettingsSourceRow } from "@/shared/api/generated/model";
-import { Alert, AlertDescription, AlertTitle } from "@/shared/components/ui/alert";
+import {
+  Alert,
+  AlertDescription,
+  AlertTitle,
+} from "@/shared/components/ui/alert";
 import { Button } from "@/shared/components/ui/button";
 import {
   Dialog,
@@ -37,7 +42,9 @@ const Field = ({ id, label, required, hint, error, children }: FieldProps) => (
   <div className="space-y-1.5">
     <Label htmlFor={id}>
       {label}
-      <span className="text-xs font-normal text-muted-foreground">{required ? "必須" : "任意"}</span>
+      <span className="text-xs font-normal text-muted-foreground">
+        {required ? "必須" : "任意"}
+      </span>
     </Label>
     {children}
     {hint && <p className="text-xs text-muted-foreground">{hint}</p>}
@@ -49,43 +56,70 @@ const Field = ({ id, label, required, hint, error, children }: FieldProps) => (
   </div>
 );
 
+type FailureSummaryProps = {
+  summary: { path: string; message: string }[];
+  invalidCount: number;
+};
+
+/** 保存の失敗のまとめ（入力チェックに引っかかったときと、保存の 422 のとき） */
+const FailureSummary = ({ summary, invalidCount }: FailureSummaryProps) =>
+  summary.length === 0 && invalidCount === 0 ? null : (
+    <Alert variant="destructive" role="alert">
+      <AlertTitle>
+        保存できませんでした（{summary.length || invalidCount} 件）
+      </AlertTitle>
+      {summary.length > 0 && (
+        <AlertDescription>
+          <ul className="list-disc pl-4">
+            {summary.map((item) => (
+              <li key={`${item.path}:${item.message}`}>
+                {item.message}{" "}
+                <code className="font-mono text-xs">{item.path}</code>
+              </li>
+            ))}
+          </ul>
+        </AlertDescription>
+      )}
+    </Alert>
+  );
+
 /** 配信元の追加・編集のダイアログ */
-export const SourceEditDialog = ({ open, onOpenChange, sources, index }: Props) => {
+export const SourceEditDialog = ({
+  open,
+  onOpenChange,
+  sources,
+  index,
+}: Props) => {
   const { form, errors, submit, summary, saving } = useSourceForm({
     sources,
     index,
     onSaved: () => onOpenChange(false),
   });
   const editing = index !== null;
+  const idRef = useRef<HTMLInputElement | null>(null);
+  const configRef = useRef<HTMLTextAreaElement | null>(null);
+  const idField = form.register("id");
+  const configField = form.register("config");
   const invalidCount = Object.keys(errors).length;
-  const items = summary.length > 0 ? summary.map((item) => item.message) : [];
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
+      <DialogContent
+        initialFocus={editing ? configRef : idRef}
+        className="max-h-screen overflow-y-auto sm:max-w-lg"
+      >
         <form onSubmit={submit} noValidate className="space-y-4">
           <DialogHeader>
-            <DialogTitle>{editing ? "配信元を編集" : "配信元を追加"}</DialogTitle>
+            <DialogTitle>
+              {editing ? "配信元を編集" : "配信元を追加"}
+            </DialogTitle>
             <DialogDescription>
-              {editing ? `配信元 ${sources[index].id ?? ""}` : "端末の設定に配信元を追加します。"}
+              {editing
+                ? `配信元 ${sources[index].id ?? ""}`
+                : "端末の設定に配信元を追加します。"}
             </DialogDescription>
           </DialogHeader>
-          {(summary.length > 0 || invalidCount > 0) && (
-            <Alert variant="destructive" role="alert">
-              <AlertTitle>保存できませんでした（{summary.length || invalidCount} 件）</AlertTitle>
-              {items.length > 0 && (
-                <AlertDescription>
-                  <ul className="list-disc pl-4">
-                    {summary.map((item) => (
-                      <li key={`${item.path}:${item.message}`}>
-                        {item.message} <code className="font-mono text-xs">{item.path}</code>
-                      </li>
-                    ))}
-                  </ul>
-                </AlertDescription>
-              )}
-            </Alert>
-          )}
+          <FailureSummary summary={summary} invalidCount={invalidCount} />
           {!editing && (
             <Field
               id="source-id"
@@ -97,9 +131,12 @@ export const SourceEditDialog = ({ open, onOpenChange, sources, index }: Props) 
               <Input
                 id="source-id"
                 autoComplete="off"
-                autoFocus
                 aria-invalid={errors.id !== undefined}
-                {...form.register("id")}
+                {...idField}
+                ref={(element) => {
+                  idField.ref(element);
+                  idRef.current = element;
+                }}
               />
             </Field>
           )}
@@ -113,9 +150,12 @@ export const SourceEditDialog = ({ open, onOpenChange, sources, index }: Props) 
             <Textarea
               id="source-config"
               placeholder="~/repo/sample-docs/dev-docs.yaml"
-              autoFocus={editing}
               aria-invalid={errors.config !== undefined}
-              {...form.register("config")}
+              {...configField}
+              ref={(element) => {
+                configField.ref(element);
+                configRef.current = element;
+              }}
             />
           </Field>
           <div className="space-y-1.5">
@@ -133,7 +173,9 @@ export const SourceEditDialog = ({ open, onOpenChange, sources, index }: Props) 
                 )}
               />
             </div>
-            <p className="text-xs text-muted-foreground">外すと、設定を残したまま配信を止めます。</p>
+            <p className="text-xs text-muted-foreground">
+              外すと、設定を残したまま配信を止めます。
+            </p>
           </div>
           <Field
             id="source-read"
@@ -163,7 +205,11 @@ export const SourceEditDialog = ({ open, onOpenChange, sources, index }: Props) 
             />
           </Field>
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+            >
               キャンセル
             </Button>
             <Button type="submit" disabled={saving}>

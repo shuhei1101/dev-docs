@@ -1,2 +1,2 @@
-export * from './settings/settings.zod';
-export * from './view/view.zod';
+export * from "./settings/settings.zod";
+export * from "./view/view.zod";

@@ -25,13 +25,15 @@ export const formatComments = (comments: DocComment[]): string =>
 
 const urlOf = (github: GitHubTarget, body: string): string => {
   const params = new URLSearchParams();
-  if (github.issueLabels.length > 0) params.set("labels", github.issueLabels.join(","));
+  if (github.issueLabels.length > 0)
+    params.set("labels", github.issueLabels.join(","));
   params.set("body", body);
   return `https://github.com/${github.repository}/issues/new?${params.toString()}`;
 };
 
 /** サロゲートペアの途中で切らずに先頭の `length` 文字を取る */
-const head = (text: string, length: number): string => Array.from(text).slice(0, length).join("");
+const head = (text: string, length: number): string =>
+  Array.from(text).slice(0, length).join("");
 
 /** `github` のリポジトリの Issue の作成画面の URL を、上限に収めて作る */
 export const buildIssueUrl = (
@@ -46,7 +48,8 @@ export const buildIssueUrl = (
   let high = length;
   while (low < high) {
     const middle = Math.ceil((low + high) / 2);
-    if (urlOf(github, head(body, middle) + suffix).length <= ISSUE_URL_MAX) low = middle;
+    if (urlOf(github, head(body, middle) + suffix).length <= ISSUE_URL_MAX)
+      low = middle;
     else high = middle - 1;
   }
   return { url: urlOf(github, head(body, low) + suffix), truncated: true };

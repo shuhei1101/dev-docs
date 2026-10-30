@@ -10,7 +10,11 @@ export const Route = createFileRoute("/$source/$")({
   validateSearch: DocViewSearchSchema,
   loaderDeps: ({ search }) => search,
   loader: ({ context, params, deps }) =>
-    loadDocument({ context, params: { source: params.source, _splat: params._splat }, deps }),
+    loadDocument({
+      context,
+      params: { source: params.source, _splat: params._splat },
+      deps,
+    }),
   component: DocViewScreen,
   notFoundComponent: ({ data }) => <NotFoundScreen data={data} />,
   pendingComponent: DocSkeleton,

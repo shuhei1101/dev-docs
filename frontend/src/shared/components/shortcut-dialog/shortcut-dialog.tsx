@@ -15,16 +15,25 @@ type Props = {
   singleKey: boolean;
 };
 
-const IS_MAC = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.platform);
+const IS_MAC =
+  typeof navigator !== "undefined" &&
+  /Mac|iPhone|iPad/.test(navigator.platform);
 
 /** TanStack Hotkeys の書き方を画面に出すキーにする（`Shift+/` は `?`） */
 const display = (hotkey: string): string[] =>
   hotkey === "Shift+/"
     ? ["?"]
-    : hotkey.split("+").map((key) => (key === "Mod" ? (IS_MAC ? "⌘" : "Ctrl") : key));
+    : hotkey
+        .split("+")
+        .map((key) => (key === "Mod" ? (IS_MAC ? "⌘" : "Ctrl") : key));
 
 /** 画面で使えるキーを並べるダイアログ */
-export const ShortcutDialog = ({ open, onOpenChange, screen, singleKey }: Props) => (
+export const ShortcutDialog = ({
+  open,
+  onOpenChange,
+  screen,
+  singleKey,
+}: Props) => (
   <Dialog open={open} onOpenChange={onOpenChange}>
     <DialogContent>
       <DialogHeader>
@@ -33,7 +42,10 @@ export const ShortcutDialog = ({ open, onOpenChange, screen, singleKey }: Props)
       </DialogHeader>
       <ul className="space-y-2">
         {shortcutsFor(screen, singleKey).map(({ def, hotkeys }) => (
-          <li key={def.id} className="flex items-center justify-between gap-4 text-sm">
+          <li
+            key={def.id}
+            className="flex items-center justify-between gap-4 text-sm"
+          >
             <span>{def.label}</span>
             <span className="flex items-center gap-2">
               {hotkeys.map((hotkey) => (

@@ -1,6 +1,10 @@
 import { expect, test } from "vitest";
 
-import { findActivePage, firstPagePath, pageTitle } from "@/features/docs/doc-view/nav";
+import {
+  findActivePage,
+  firstPagePath,
+  pageTitle,
+} from "@/features/docs/doc-view/nav";
 
 const page = (title: string, path: string) => ({
   kind: "page" as const,
@@ -18,7 +22,13 @@ const group = (title: string, items: ReturnType<typeof page>[]) => ({
 });
 
 test("test_find_active_page", () => {
-  const tabs = [{ title: "設計書", active: true, items: [group("設計", [page("A", "a.md")])] }];
+  const tabs = [
+    {
+      title: "設計書",
+      active: true,
+      items: [group("設計", [page("A", "a.md")])],
+    },
+  ];
 
   const active = findActivePage(tabs, "a.md");
 
@@ -33,7 +43,11 @@ test("test_find_active_page_when_empty_tab", () => {
 });
 
 test("test_first_page_path", () => {
-  const tab = { title: "T", active: true, items: [group("G", [page("B", "b.md")]), page("C", "c.md")] };
+  const tab = {
+    title: "T",
+    active: true,
+    items: [group("G", [page("B", "b.md")]), page("C", "c.md")],
+  };
 
   expect(firstPagePath(tab)).toBe("b.md");
 });

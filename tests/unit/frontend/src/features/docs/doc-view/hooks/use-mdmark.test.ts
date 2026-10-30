@@ -1,7 +1,8 @@
 import { renderHook, waitFor } from "@testing-library/react";
 import { beforeEach, expect, test, vi } from "vitest";
 
-const MDMARK_URL = "https://cdn.jsdelivr.net/gh/shuhei1101/mdmark@v0.8.0/dist/mount.js";
+const MDMARK_URL =
+  "https://cdn.jsdelivr.net/gh/shuhei1101/mdmark@v0.8.0/dist/mount.js";
 
 const fake = () => {
   const handle = { update: vi.fn(), destroy: vi.fn() };
@@ -46,14 +47,19 @@ test("test_use_mdmark_when_doc_changes", async () => {
   const useMdmark = await loadHook();
   const ref = { current: document.createElement("div") };
 
-  const view = renderHook(({ docId }) => useMdmark(ref, options("# A", docId)), {
-    initialProps: { docId: "s@main:a.md" },
-  });
+  const view = renderHook(
+    ({ docId }) => useMdmark(ref, options("# A", docId)),
+    {
+      initialProps: { docId: "s@main:a.md" },
+    },
+  );
   await waitFor(() => expect(mount).toHaveBeenCalledTimes(1));
   view.rerender({ docId: "s@main:b.md" });
 
   await waitFor(() => expect(mount).toHaveBeenCalledTimes(2));
-  expect(handle.destroy.mock.invocationCallOrder[0]).toBeLessThan(mount.mock.invocationCallOrder[1]);
+  expect(handle.destroy.mock.invocationCallOrder[0]).toBeLessThan(
+    mount.mock.invocationCallOrder[1],
+  );
 });
 
 test("test_use_mdmark_when_load_failed", async () => {

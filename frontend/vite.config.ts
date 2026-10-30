@@ -6,7 +6,8 @@ import { tanstackRouter } from "@tanstack/router-plugin/vite";
 import react, { reactCompilerPreset } from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
 
-const here = (path: string): string => fileURLToPath(new URL(path, import.meta.url));
+const here = (path: string): string =>
+  fileURLToPath(new URL(path, import.meta.url));
 
 export default defineConfig({
   root: here("."),

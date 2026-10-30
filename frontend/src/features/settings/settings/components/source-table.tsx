@@ -1,5 +1,9 @@
 import { Link } from "@tanstack/react-router";
-import { createColumnHelper, tableFeatures, useTable } from "@tanstack/react-table";
+import {
+  createColumnHelper,
+  tableFeatures,
+  useTable,
+} from "@tanstack/react-table";
 import { Pencil, Trash2 } from "lucide-react";
 
 import { StatusBadge } from "@/features/settings/settings/components/status-badge";
@@ -98,7 +102,9 @@ export const SourceTable = ({ sources, onEdit, onRemove }: Props) => {
             <TableRow key={group.id}>
               {group.headers.map((header) => (
                 <TableHead key={header.id}>
-                  {header.isPlaceholder ? null : <table.FlexRender header={header} />}
+                  {header.isPlaceholder ? null : (
+                    <table.FlexRender header={header} />
+                  )}
                 </TableHead>
               ))}
             </TableRow>
