@@ -56,6 +56,23 @@ test("test_use_mdmark_when_doc_changes", async () => {
   expect(handle.destroy.mock.invocationCallOrder[0]).toBeLessThan(mount.mock.invocationCallOrder[1]);
 });
 
+test("test_use_mdmark_when_doc_changes_ready", async () => {
+  const { mount } = fake();
+  vi.doMock(MDMARK_URL, () => ({ mount }));
+  const useMdmark = await loadHook();
+  const ref = { current: document.createElement("div") };
+
+  const view = renderHook(({ docId }) => useMdmark(ref, options("# A", docId)), {
+    initialProps: { docId: "s@main:a.md" },
+  });
+  await waitFor(() => expect(view.result.current.ready).toBe(true));
+  view.rerender({ docId: "s@main:b.md" });
+
+  expect(view.result.current.ready).toBe(false);
+  await waitFor(() => expect(view.result.current.ready).toBe(true));
+  expect(mount).toHaveBeenCalledTimes(2);
+});
+
 test("test_use_mdmark_when_load_failed", async () => {
   vi.doMock(MDMARK_URL, () => {
     throw new Error("load failed");

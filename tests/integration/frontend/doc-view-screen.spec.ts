@@ -689,6 +689,32 @@ test.describe("目次", () => {
     await expect(toc.getByRole("link")).toHaveText(["概要", "項目", "項目の表", "関連"]);
   });
 
+  // 画面の中で別の文書へ移ると、移った先の文書の見出しで目次を描き直す（正常系）
+  test("toc_after_doc_changed", async ({ page }) => {
+    // 準備
+    await openRendered(page, "/sample/docs/doc-1", {
+      document: ({ path }) => ({
+        body: documentResponse({
+          path,
+          markdown:
+            path === "docs/doc-2"
+              ? "# 文書 2\n\n## 別の概要\n\n## 別の関連\n"
+              : "# 文書 1\n\n## 概要\n\n## 関連\n",
+        }),
+      }),
+    });
+    const toc = page.getByRole("navigation", { name: "目次" });
+    await expect(toc.getByRole("link")).toHaveText(["概要", "関連"]);
+    // 実行
+    await page
+      .getByRole("navigation", { name: "文書の一覧" })
+      .getByRole("link", { name: "文書 2" })
+      .click();
+    // 検証
+    await expect(page.getByRole("heading", { level: 2, name: "別の概要" })).toBeVisible();
+    await expect(toc.getByRole("link")).toHaveText(["別の概要", "別の関連"]);
+  });
+
   // 画面幅が 80rem 未満のときは出さない（正常系）
   test("toc_hidden_when_narrow", async ({ page }) => {
     await page.setViewportSize({ width: 1100, height: 800 });
