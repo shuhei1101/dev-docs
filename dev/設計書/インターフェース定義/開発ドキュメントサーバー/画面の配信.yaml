@@ -1,0 +1,119 @@
+title: "画面の配信"
+entry:
+  kind: endpoint
+  value: GET `/{path}`（`/_api/`・`/mcp`・`/_admin/` を除く）
+flows:
+  - name: 正常系
+    summary: 画面のパスに `index.html` を、`assets/` のパスに静的ファイルを返す
+    setup:
+      - name: Mock
+        description: なし（dev-docs のアプリを HTTP のテストのクライアントで呼ぶ）
+      - name: 画面のビルド
+        description: '`index.html` と `assets/` の JS 1 件を置いたビルドのフォルダ'
+        notes: 中身はテストで作る最小のファイルでよい
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        participant C as クライアント
+        participant E as GET /{path}
+
+        C->>E: GET /
+        E-->>C: 200 index.html
+        C->>E: GET /sample/docs/doc-1
+        E-->>C: 200 index.html
+        C->>E: GET /assets/{JS のファイル}
+        E-->>C: 200 JS のファイル
+      ```
+    expected:
+      - '`/` と `/sample/docs/doc-1` が 200 で、本文がビルドの `index.html`、`Content-Type` が `text/html`、`Cache-Control` が `no-cache`'
+      - '`/assets/{JS のファイル}` が 200 で、本文がそのファイル、`Content-Type` が JavaScript、`Cache-Control` が `immutable` を含む'
+      - '`/_api/sources/sample/docs` は画面ではなく文書の取得の JSON を返す'
+    test: test_normal
+  - name: 異常系（無い静的ファイル・無い API・404）
+    summary: '`assets/` の無いファイルと `/_api/` の無いパスは `index.html` を返さず 404 を返す'
+    setup:
+      - name: Mock
+        description: なし
+      - name: 画面のビルド
+        description: 正常系と同じビルドのフォルダ
+      - name: 入力
+        description: '`/assets/no-such.js`・`/_api/no-such`'
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        participant C as クライアント
+        participant E as GET /{path}
+
+        C->>E: GET /assets/no-such.js
+        E-->>C: 404
+        C->>E: GET /_api/no-such
+        E-->>C: 404 application/problem+json
+      ```
+    expected:
+      - '`/assets/no-such.js` が 404 で、本文が `index.html` でない'
+      - '`/_api/no-such` が 404 で、`Content-Type` が `application/problem+json`'
+    test: test_error_when_not_found
+  - name: 異常系（画面のビルドが無い・503）
+    summary: ビルドの `index.html` が無いとき、画面のパスは 503 でビルドを促し、画面の API は応え続ける
+    setup:
+      - name: Mock
+        description: なし
+      - name: 空のビルド
+        description: '`index.html` が無いビルドのフォルダ'
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        participant C as クライアント
+        participant E as GET /{path}
+
+        C->>E: GET /sample/docs/doc-1
+        E-->>C: 503 application/problem+json
+        C->>E: GET /_api/sources/sample/docs
+        E-->>C: 200
+      ```
+    expected:
+      - '`/sample/docs/doc-1` が 503 で、`nextSteps` に画面をビルドすることがある'
+      - '`/_api/sources/sample/docs` は 200 を返す'
+    test: test_error_when_build_missing
+lead: '#17 の画面を開くときにブラウザが読む。ビルドした画面の `index.html` と静的ファイルを返す。画面のパスは全て `index.html` を返し、どの画面を出すかは画面が決める。'
+identifier: serve_screen
+permissions: なし（`127.0.0.1` でだけ待ち受ける）
+idempotent: true
+side_effects: なし
+exclusivity: 排他しない
+request:
+  - name: path
+    type: str
+    required: false
+    default: なし（`/` は `index.html`）
+    location: path
+    description: 画面のパスか、静的ファイルのパス（`assets/` で始まる）
+request_example: |-
+  ```text
+  GET /sample/docs/doc-1
+  ```
+response:
+  - name: 本文
+    type: text/html | 静的ファイルの種類
+    description: 画面のパスは `index.html`、`assets/` のパスはそのファイル
+    notes: '`Content-Type` はファイルの拡張子から決める'
+status_codes:
+  - code: '200'
+    condition: '`index.html` か静的ファイルを返した（画面に無いパスも `index.html` を返し、見つからない画面は画面が出す）'
+  - code: '404'
+    condition: '`assets/` のパスのファイルが無い'
+    notes: '`index.html` を返さない'
+  - code: '503'
+    condition: 画面のビルド（`index.html`）が無い
+    notes: '`nextSteps` に画面をビルドすること'
+error_format: RFC 9457 の `application/problem+json`。拡張メンバーは camelCase（`nextSteps`）
+constraints:
+  - item: 除くパス
+    constraint: '`/_api/`・`/mcp`・`/_admin/` で始まるパスは画面を返さず、それぞれの入口が応える。無い `/_api/` のパスは `application/problem+json` の 404'
+  - item: キャッシュ
+    constraint: '`index.html` は `Cache-Control: no-cache`。`assets/` のファイルはファイル名に中身のハッシュを持ち、`Cache-Control: public, max-age=31536000, immutable`'
+  - item: 認可
+    constraint: 制限なし（`127.0.0.1` でだけ待ち受ける）
+    decided_by: dev/設計書/非機能要件/非機能要件#requirements[待ち受けのアドレス]
+  - item: OpenAPI
+    constraint: APIのスキーマに載せない

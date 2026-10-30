@@ -93,7 +93,7 @@ response:
     type: bool
     description: Git の配信元か
     notes: '`false` のときは他の配列が空'
-  - name: default_ref
+  - name: defaultRef
     type: str
     description: 配信元の `default_ref`
   - name: branches[].name
@@ -120,7 +120,7 @@ response:
     description: commit のメッセージの 1 行目
 response_example: |-
   ```json
-  {"git": true, "default_ref": "main",
+  {"git": true, "defaultRef": "main",
    "branches": [{"name": "main", "commit": "8b1d4e0"}],
    "tags": [{"name": "v0.1.0", "commit": "3f2a9c1"}],
    "commits": [{"commit": "8b1d4e0", "date": "2026-10-26T11:30:00+09:00", "subject": "docs: 文書 1 の名前を変える"}]}
@@ -130,7 +130,7 @@ status_codes:
     condition: '返した（Git 管理外の配信元は `git: false` で 200）'
   - code: '404'
     condition: 配信元が無い・配信していない
-error_format: RFC 9457 の `application/problem+json`
+error_format: RFC 9457 の `application/problem+json`。拡張メンバーは camelCase（`nextSteps`・`errors[]`）
 constraints:
   - item: 件数
     constraint: '`commits` は最大 100'
@@ -138,4 +138,8 @@ constraints:
     constraint: 制限なし（`127.0.0.1` でだけ待ち受ける）
   - item: タイムアウト
     constraint: 制限なし
+  - item: JSON のキー
+    constraint: レスポンスのキーは camelCase。パス・クエリのパラメータ名は変えない
+  - item: operationId
+    constraint: '`{tag}-{関数名}` の `view-list_refs`'
 test_file: tests/integration/server/test_list_refs.py

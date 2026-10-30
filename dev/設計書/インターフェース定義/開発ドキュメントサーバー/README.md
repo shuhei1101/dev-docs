@@ -30,5 +30,6 @@
 | 設定・起動 | [起動](./起動.yaml) | dev-docs serve |
 | 設定・起動 | [設定の移し替え](./設定の移し替え.yaml) | dev-docs migrate |
 | 設定・起動 | [セッションの文脈](./セッションの文脈.yaml) | POST /_admin/session-context |
+| 画面の API | [画面の配信](./画面の配信.yaml) | GET /{path} |
 
 <!-- /table -->

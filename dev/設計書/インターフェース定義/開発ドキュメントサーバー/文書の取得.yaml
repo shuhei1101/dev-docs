@@ -29,7 +29,7 @@ flows:
     expected:
       - '`/_api/sources/sample/docs` が 200 で、`path` が文書 1、`tabs` が `nav` の 2 つのタブで一番左だけが `active`'
       - '`markdown` に、スキーマの `x-heading` の項目が見出し、`x-key` の配列が表になった文書 1 がある'
-      - '`conversion_error` と `changed_items` が `null`'
+      - '`conversionError` と `diff` が `null`、`tabs[].items[].change` が全て `null`'
       - '`/_api/sources/sample/docs/{文書 2 のパス}` が 200 で文書 2 の `markdown` を返す'
     test: test_normal
   - name: 正常系（nav が無い）
@@ -79,12 +79,12 @@ flows:
       - '`ref` を省くと、`ref` に `default_ref` の名前を返す'
     test: test_normal_when_ref_given
   - name: 正常系（差分を求める）
-    summary: '`diff` のリビジョンから変わった項目を返す'
+    summary: '`diff` のリビジョンから変わった項目と、サイドバーの page ごとの変化を返す'
     setup:
       - name: Mock
         description: なし
       - name: 変更の commit
-        description: 文書 1 の `name` を変えた commit とその親の commit
+        description: 文書 1 の `name` を変え、文書 3 を削除し、文書 4 を追加した commit とその親の commit
     flow: |-
       ```mermaid
       sequenceDiagram
@@ -93,12 +93,14 @@ flows:
         participant G as sample の Git の履歴
 
         C->>E: GET /_api/sources/sample/docs/{文書 1 のパス}?ref={変更の commit}&diff={親の commit}
-        E-->>G: 両端の文書を読んで変わった項目を求める
-        E-->>C: 200（changed_items つき）
+        E-->>G: 両端の文書と nav を読んで変わった項目と page を求める
+        E-->>C: 200（diff と change つき）
       ```
     expected:
-      - '`changed_items` が `name` だけになる'
+      - '`diff.base` が親の commit、`diff.change` が `modified`、`diff.changedItems` が `name` だけになる'
       - '`markdown` は変更の commit の文書 1'
+      - '`tabs[].items[]` の文書 1 の `change` が `modified`、文書 4 が `added`、変わっていない文書 2 が `null`'
+      - '変更の commit に無い文書 3 が、親の commit の `nav` の位置に `change: deleted` で並ぶ'
     test: test_normal_when_diff_given
   - name: 正常系（配信元の変換を使う）
     summary: '`converters[]` のスクリプトの Markdown と、埋め込みのマーカーの表を返す'
@@ -132,7 +134,7 @@ flows:
       - 埋め込みのマーカーの場所に指した YAML の表があり、マーカーの文字列は無い
     test: test_normal_when_custom_converter
   - name: 正常系（変換に失敗する）
-    summary: 制限時間を超えたスクリプトを止め、`conversion_error` に失敗を入れる
+    summary: 制限時間を超えたスクリプトを止め、`conversionError` に失敗を入れる
     setup:
       - name: Mock
         description: なし
@@ -153,13 +155,13 @@ flows:
         C->>E: GET /_api/sources/custom/docs/{converters を指す種類の文書}
         E->>SC: 標準入力に YAML を渡す
         E->>SC: 制限時間を超えたので止める
-        E-->>C: 200（conversion_error つき）
+        E-->>C: 200（conversionError つき）
       ```
     expected:
-      - '`markdown` が `null` で、`conversion_error` に種類・スクリプトのパス・制限時間を超えたことがある'
+      - '`markdown` が `null` で、`conversionError` に種類・スクリプトのパス・制限時間を超えたことがある'
       - スクリプトのプロセスが残っていない
       - 同じ配信元のスキーマ駆動で変換する文書は 200 で `markdown` を返す
-      - 壊れた YAML の文書 1 は、`conversion_error` にファイルのパスと読めなかった行と列を入れて 200 を返す
+      - 壊れた YAML の文書 1 は、`conversionError` にファイルのパスと読めなかった行と列を入れて 200 を返す
     test: test_normal_when_conversion_failed
   - name: 異常系（無い配信元・リビジョン・文書・404）
     summary: 無いものを指すと 404 で何が無いかを返す
@@ -241,7 +243,7 @@ response:
     type: str | None
     description: 変換した Markdown（埋め込みのマーカーは表に置き換え済み）
     notes: 変換に失敗したときは `null`
-  - name: conversion_error
+  - name: conversionError
     type: ConversionError | None
     description: 変換に失敗したときの種類・スクリプトのパス・原因。YAML を読めないときはファイルのパスと行と列
     notes: 成功したときは `null`
@@ -254,10 +256,6 @@ response:
   - name: tabs[].items
     type: list[NavItem]
     description: サイドバーの項目（group と page の入れ子）。page は文書のパスを持つ
-  - name: changed_items
-    type: list[str] | None
-    description: '`diff` のリビジョンから変わった項目のパス'
-    notes: '`diff` を省いたときは `null`'
   - name: github
     type: GitHubTarget | None
     description: '`dev-docs.yaml` に書いた GitHub のリポジトリと起票のラベル'
@@ -265,14 +263,33 @@ response:
   - name: columns
     type: dict[str, list[str]]
     description: 表ごとの隠す列（表の列の設定の保存で書いたもの）
-  - name: table_keys
+  - name: tableKeys
     type: list[str]
     description: '`markdown` の表の出る順の表のキー。`columns` を表に当てるときと、表の列の設定の保存の `table` に使う'
     notes: 変換に失敗したときは空
-response_notes: '本文の描画（mdmark）・リンクの組み立て・コメントは #17 の画面が持つ。'
+  - name: tabs[].items[].change
+    type: Literal['added', 'modified', 'deleted'] | None
+    description: page の文書の `diff` のリビジョンからの変化。`deleted` の page は `diff` のリビジョンの `nav` の位置に並べる
+    notes: '`diff` を省いたとき・変わっていない page・group は `null`'
+  - name: diff
+    type: DocumentDiff | None
+    description: '`diff` のリビジョンと比べた結果'
+    notes: '`diff` を省いたとき・Git 管理外の配信元は `null`'
+  - name: diff.base
+    type: str
+    description: 比べたリビジョン（`diff` の値）
+  - name: diff.change
+    type: Literal['added', 'modified'] | None
+    description: 返した文書の `diff` のリビジョンからの変化
+    notes: 変わっていない文書は `null`
+  - name: diff.changedItems
+    type: list[str]
+    description: '`diff` のリビジョンから変わった項目のパス'
+    notes: 追加した文書・変わっていない文書は空
+response_notes: '本文の描画（mdmark）・リンクの組み立て・コメント・目次の変わった見出しのマーカーは #17 の画面が持つ。目次のマーカーは、`ref` を `diff.base` にして取った `markdown` と見出しごとに比べて付ける。'
 status_codes:
   - code: '200'
-    condition: 文書を返した（変換に失敗したとき・YAML を読めないときも `conversion_error` を入れて 200）
+    condition: 文書を返した（変換に失敗したとき・YAML を読めないときも `conversionError` を入れて 200）
   - code: '404'
     condition: 配信元が無い・配信していない、リビジョンを解決できない、文書が無い
     notes: '`missing`（`source`・`not_served`・`ref`・`doc`）と値、配信していない配信元は `errors[]` に外した理由'
@@ -286,7 +303,10 @@ constraints:
   - item: 読み直し
     constraint: ファイルの更新日時か大きさが変わった文書は、次の要求で読み直す
   - item: operationId
-    constraint: '`path` を含む入口は `get_document`、`path` を省く入口は `get_document_default`'
+    constraint: '`{tag}-{関数名}`。`path` を含む入口は `view-get_document`、`path` を省く入口は `view-get_document_default`'
+  - item: JSON のキー
+    constraint: レスポンスのキーは camelCase。パス・クエリのパラメータ名は変えない
 refs:
   - dev/設計書/シナリオ/単一ユースケース/YAMLを直接編集した#scenarios[異常シナリオ（YAML を壊した）]
 test_file: tests/integration/server/test_get_document.py
+error_format: RFC 9457 の `application/problem+json`（`type`・`title`・`status`・`detail`）。拡張メンバーは camelCase（`nextSteps`・`missing`・`errors[]` の `{path, reason}`）

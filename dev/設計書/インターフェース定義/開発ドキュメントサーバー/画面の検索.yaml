@@ -22,7 +22,7 @@ flows:
         E-->>C: 200 文書 2 と一致した箇所
       ```
     expected:
-      - '`total_count` が 1 で、`items` が文書 2 だけ'
+      - '`totalCount` が 1 で、`items` が文書 2 だけ'
       - '`snippets` に語を含む行がある'
       - '`items[0].path` を `path` に渡した文書の取得が文書 2 を返す'
     test: test_normal
@@ -102,7 +102,7 @@ request_example: |-
   GET /_api/sources/sample/search?q=%E3%83%9A%E3%83%BC%E3%82%B8%E3%83%B3%E3%82%B0
   ```
 response:
-  - name: total_count
+  - name: totalCount
     type: int
     description: 一致した文書の総件数
   - name: items[].path
@@ -117,7 +117,7 @@ response:
     constraints: 文書ごとに 3 件まで
 response_example: |-
   ```json
-  {"total_count": 1, "items": [
+  {"totalCount": 1, "items": [
     {"path": "docs/doc-2", "name": "文書 2", "snippets": ["…一覧のページングは…"]}
   ]}
   ```
@@ -128,7 +128,7 @@ status_codes:
     condition: '`q` が空か 200 文字を超える'
   - code: '404'
     condition: 配信元が無い・配信していない、または `ref` を解決できない
-error_format: RFC 9457 の `application/problem+json`（`type`・`title`・`status`・`detail`）。検証の違反は `errors[]` に `{path, reason}` で並べる
+error_format: RFC 9457 の `application/problem+json`（`type`・`title`・`status`・`detail`）。拡張メンバーは camelCase（`nextSteps`・`errors[]`）。検証の違反は `errors[]` に `{path, reason}` で並べる
 constraints:
   - item: 件数
     constraint: '`limit` は最大 100'
@@ -136,4 +136,8 @@ constraints:
     constraint: 制限なし（`127.0.0.1` でだけ待ち受ける）
   - item: タイムアウト
     constraint: 制限なし
+  - item: JSON のキー
+    constraint: レスポンスのキーは camelCase。パス・クエリのパラメータ名は変えない
+  - item: operationId
+    constraint: '`{tag}-{関数名}` の `view-search_page`'
 test_file: tests/integration/server/test_search_page.py
