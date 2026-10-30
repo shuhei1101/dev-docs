@@ -1,0 +1,154 @@
+title: "トップバー"
+implementation: "frontend/src/components/topbar/topbar.tsx#Topbar"
+story: "Layout/Topbar"
+states:
+  - name: DocView
+    description: 文書の画面。配信元 3 件・リビジョン・コメント 2 件
+    args:
+      - name: screen
+        value: doc-view
+      - name: currentSource
+        value: sample
+      - name: currentRef
+        value: develop
+      - name: commentCount
+        value: '2'
+  - name: DocViewNarrow
+    description: 文書の画面を置いた場所の幅が 48rem 未満。サイドバーを開くボタンを出し、リビジョンと画面名をアイコンだけにする
+    args:
+      - name: screen
+        value: doc-view
+      - name: currentSource
+        value: sample
+      - name: commentCount
+        value: '2'
+    notes:
+      幅: ストーリーのデコレーターで幅 390px の枠に置く
+  - name: DocViewNoComments
+    description: コメントが 0 件で、件数を出さない
+    args:
+      - name: screen
+        value: doc-view
+      - name: currentSource
+        value: sample
+      - name: commentCount
+        value: '0'
+  - name: NonGitSource
+    description: Git 管理外の配信元。リビジョンのボタンを出さない
+    args:
+      - name: screen
+        value: doc-view
+      - name: currentSource
+        value: notes
+      - name: refs
+        value: '{"git": false, "defaultRef": "", "branches": [], "tags": [], "commits": []}'
+  - name: Settings
+    description: 設定画面。画面名と明暗のボタンだけ
+    args:
+      - name: screen
+        value: settings
+  - name: NotFound
+    description: 見つからない画面。コメントを出さない
+    args:
+      - name: screen
+        value: not-found
+      - name: currentSource
+        value: sample
+  - name: NotFoundNarrow
+    description: 見つからない画面を幅 48rem 未満の場所に置く
+    args:
+      - name: screen
+        value: not-found
+      - name: currentSource
+        value: sample
+  - name: NotFoundWithoutSource
+    description: 無い配信元を開いた見つからない画面。配信元のボタンに今の配信元を出さず、リビジョンのボタンを出さない
+    args:
+      - name: screen
+        value: not-found
+  - name: DarkScheme
+    description: 明暗を暗に固定した状態。明暗のボタンが押した状態になる
+    args:
+      - name: screen
+        value: doc-view
+      - name: currentSource
+        value: sample
+      - name: colorScheme
+        value: dark
+lead: 文書の画面・設定画面・見つからない画面に共通の画面上部のバー。配信元・リビジョンの切り替え、検索、コメント、設定、明暗の切り替えを並べる。
+args:
+  - name: screen
+    type: 列挙
+    required: true
+    choices: '`doc-view` / `settings` / `not-found`'
+    description: 置く画面。`settings` は配信元・リビジョンの切り替え・検索・コメント・設定を出さない。`not-found` はコメントを出さない。`doc-view` だけが狭い幅でサイドバーを開くボタンを出す
+  - name: sources
+    type: オブジェクトの配列
+    required: false
+    default: '[]'
+    description: '配信元のメニューの項目。`{id: 文字列, writable: 真偽値}`。`writable` で「読み書き」「読み取りだけ」を添える'
+    enabled_when: '`screen` が `settings` 以外'
+  - name: currentSource
+    type: 文字列
+    required: false
+    default: なし（配信元が決まっていない。ボタンに今の配信元を出さず、リビジョンのボタンを出さない）
+    description: 今の配信元の ID。画面名のリンクはこの配信元のトップを開く
+  - name: refs
+    type: オブジェクト
+    required: false
+    default: なし（リビジョンのボタンを出さない）
+    description: リビジョンのメニューの項目。リビジョンの一覧のレスポンス（`git`・`defaultRef`・`branches`・`tags`・`commits`）
+    enabled_when: '`currentSource` があり、`refs.git` が `true`'
+  - name: currentRef
+    type: 文字列
+    required: false
+    default: '`refs.defaultRef`'
+    description: 開いているリビジョン
+  - name: commentCount
+    type: 整数
+    required: false
+    default: '0'
+    description: 溜めたコメントの件数。コメントのボタンに出す（0 のときは件数を出さない）
+    enabled_when: '`screen` が `doc-view`'
+  - name: colorScheme
+    type: 列挙
+    required: false
+    default: '`system`'
+    choices: '`system` / `light` / `dark`'
+    description: 今の明暗。`system` 以外のとき、明暗のボタンを押した状態（`aria-pressed`）にする
+events:
+  - name: sourceSelect
+    when: 配信元のメニューの項目を選んだ
+    value: 配信元の ID
+    description: その配信元のトップへ遷移する
+  - name: refSelect
+    when: リビジョンのメニューの項目を選んだ
+    value: ブランチ名・タグ名・commit
+    description: 同じ文書をそのリビジョンで開き直す
+  - name: compareStart
+    when: リビジョンのメニューの「別のリビジョンと比較」を選んだ
+    description: 文書の画面の差分の比較元・比較先の選択を出す
+  - name: searchOpen
+    when: 検索のボタンを押した
+    description: 検索のダイアログを開く（Ctrl+K・`/` のキー操作は画面が受ける）
+  - name: commentPanelToggle
+    when: コメントのボタンを押した
+    description: コメントのパネルを開閉する
+  - name: sidebarOpen
+    when: 狭い幅で文書の一覧を開くボタンを押した
+    description: サイドバーをドロワーで開く
+  - name: colorSchemeToggle
+    when: 明暗のボタンを押した
+    value: 次の `colorScheme`
+    description: 明暗を切り替えて保つ
+accessibility:
+  - アイコンだけのボタンは `aria-label` を持つ（文書の一覧を開く・設定・明暗を固定する・コメント（{件数} 件））
+  - 配信元・リビジョンのボタンの読み上げ名に今の値を含める（配信元を切り替える（今は {ID}））。メニューの今の項目は `aria-current`
+  - 検索のボタンは `aria-keyshortcuts="Control+K /"` を持ち、キーを表示する
+  - 明暗のボタンは `aria-pressed` で固定しているかを示す
+  - メニューはキーボードだけで開閉・選択でき、Esc で閉じてボタンへフォーカスを戻す
+notes:
+  モック: '[dev/mock/components/topbar/index.html](../../mock/components/topbar/index.html)'
+status: planned
+introduced:
+  pr: 36
