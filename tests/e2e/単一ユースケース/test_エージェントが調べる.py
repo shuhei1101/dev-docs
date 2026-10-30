@@ -147,6 +147,57 @@ def test_normal_when_source_all(make_source: Callable[..., Any], serve: Callable
     assert "notes" not in only_sample.text
 
 
+def test_normal_when_tags_grouped(
+    make_source: Callable[..., Any],
+    serve: Callable[..., Any],
+    sample_file_set: Callable[..., dict[str, str]],
+    sample_doc_text: Callable[..., str],
+) -> None:
+    """表記だけが違うタグを 1 つにまとめて数え、そのタグで文書を絞る（正常系）。"""
+    # 準備
+    sample_files = sample_file_set(
+        **{
+            "docs/doc-1.yaml": sample_doc_text(
+                "doc-1", "文書 1", description="1 件目", tags=["mcp"]
+            ),
+            "docs/doc-2.yaml": sample_doc_text(
+                "doc-2", "文書 2", description="2 件目", tags=["MCP", "mcp", "設計"]
+            ),
+        }
+    )
+    notes_files = sample_file_set(
+        **{
+            "docs/doc-1.yaml": sample_doc_text(
+                "doc-1", "メモ 1", description="1 件目", tags=["mcp"]
+            ),
+        }
+    )
+    del notes_files["docs/doc-2.yaml"]
+    sample = make_source("sample", sample_files)
+    notes = make_source("notes", notes_files, git=False, scope_read=[sample.folder])
+    served = serve(sample, notes)
+    arguments = {"cwd": str(sample.folder), "source": "*", "format": "json"}
+    # 実行
+    grouped = served.call("search_docs", view="count", group_by="tags", **arguments)
+    tagged = served.call(
+        "search_docs",
+        filter={"field": "tags", "op": "eq", "values": ["mcp"]},
+        view="summary",
+        **arguments,
+    )
+    # 検証
+    assert grouped.data["groups"] == [
+        {"value": "mcp", "count": 3},
+        {"value": "設計", "count": 1},
+    ]
+    assert tagged.data["total_count"] == 3
+    assert sorted((item["source"], item["id"]) for item in tagged.data["items"]) == [
+        ("notes", "doc-1"),
+        ("sample", "doc-1"),
+        ("sample", "doc-2"),
+    ]
+
+
 def test_normal_when_worktree_given(
     make_source: Callable[..., Any],
     serve: Callable[..., Any],
