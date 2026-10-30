@@ -47,7 +47,7 @@ def test_normal_when_source_not_served(
     assert response.status_code == 200
     assert rows["sample"]["status"] == "serving"
     assert rows["legacy"]["status"] == "serving"
-    assert rows["legacy"]["config_version"] == {"config": "0", "server": "2"}
+    assert rows["legacy"]["config_version"] == {"config": "0", "server": "3"}
     assert rows["broken"]["status"] == "not_served"
     assert any(
         error["path"] == "documents[0].paths" and "必須" in error["reason"]

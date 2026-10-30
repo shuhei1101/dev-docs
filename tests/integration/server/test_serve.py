@@ -184,7 +184,7 @@ def test_normal_when_config_version_old(
     # 検証
     warnings = [record.getMessage() for record in caplog.records if "old" in record.getMessage()]
     assert response.status_code == 200
-    assert any("0" in message and "2" in message for message in warnings)
+    assert any("0" in message and "3" in message for message in warnings)
 
 
 def test_normal_when_source_invalid(
@@ -278,6 +278,7 @@ def test_normal_when_source_config_legacy(
     legacy_config = (
         'version: "1"\n'
         "name: legacy\n"
+        "tags: tags.yaml\n"
         "documents:\n"
         "  - id: notes\n"
         "    paths: [docs/*.md]\n"
@@ -293,7 +294,9 @@ def test_normal_when_source_config_legacy(
         "      - paths: [docs/**]\n"
         "        tags: [doc]\n"
     )
-    legacy = make_source("legacy", {"dev-docs.yaml": legacy_config})
+    legacy = make_source(
+        "legacy", {"dev-docs.yaml": legacy_config, "tags.yaml": "python: Python の規約\n"}
+    )
     caplog.set_level(logging.ERROR)
     # 実行
     env = make_server(sample, legacy)
@@ -301,6 +304,7 @@ def test_normal_when_source_config_legacy(
     logs = caplog.text
     assert env.client.get("/_api/sources/legacy/docs").status_code == 404
     assert env.client.get("/_api/sources/sample/docs").status_code == 200
+    assert "legacy: tags" in logs
     assert "legacy: documents[0].type" in logs
     assert "legacy: documents[1].type" in logs
     assert "legacy: documents[1].defaults" in logs
