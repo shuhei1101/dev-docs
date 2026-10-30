@@ -8,6 +8,7 @@ import { DocTabs } from "@/features/docs/doc-view/components/doc-tabs";
 import { DocToc } from "@/features/docs/doc-view/components/doc-toc";
 import { SidebarDrawer } from "@/features/docs/doc-view/components/sidebar-drawer";
 import { useDocNavigation } from "@/features/docs/doc-view/hooks/use-doc-navigation";
+import { useLocating } from "@/features/docs/doc-view/hooks/use-locating";
 import { useDocScreenEffects } from "@/features/docs/doc-view/hooks/use-doc-screen-effects";
 import { findActivePage, pageTitle } from "@/features/docs/doc-view/nav";
 import {
@@ -18,7 +19,7 @@ import type { DocViewSearch } from "@/features/docs/doc-view/search";
 import { type TocItem, changedSections } from "@/features/docs/doc-view/toc";
 import { CommentPanel } from "@/features/docs/shared/comments/comment-panel";
 import {
-  type DocComment,
+  docIdOf,
   useCommentStore,
 } from "@/features/docs/shared/comments/comment-store";
 import { SearchDialog } from "@/features/docs/shared/search-dialog/search-dialog";
@@ -63,8 +64,6 @@ export const DocViewScreen = () => {
     null,
   );
   const [headings, setHeadings] = useState<TocItem[]>([]);
-  // コメントのパネルで場所を選ばれたコメント（本文がその印まで移ったら戻す）
-  const [locating, setLocating] = useState<DocComment | null>(null);
 
   const { colorScheme, singleKeyShortcuts, setColorScheme } =
     usePreferencesStore();
@@ -77,6 +76,7 @@ export const DocViewScreen = () => {
   const refs = useViewListRefs(source).data;
   const settings = useSettingsGetSettingsSources().data;
   const nav = useDocNavigation(source, doc.path, search, refs);
+  const place = useLocating(docIdOf(doc), nav.locate);
 
   const active = findActivePage(doc.tabs, doc.path);
   const emptyTab = empty?.path === doc.path ? empty.tab : null;
@@ -144,8 +144,8 @@ export const DocViewScreen = () => {
           busy={query.isFetching}
           onHeadings={setHeadings}
           onCommentSaved={() => open("comments")}
-          locating={locating}
-          onLocated={() => setLocating(null)}
+          locating={place.locating}
+          onLocated={place.onLocated}
           onRetry={() => void query.refetch()}
           onCompare={nav.compare}
           onClearDiff={nav.clearDiff}
@@ -179,15 +179,7 @@ export const DocViewScreen = () => {
         open={panels.comments}
         onOpenChange={(value) => open("comments", value)}
         github={doc.github ?? null}
-        onLocate={(comment) => {
-          setLocating(comment);
-          // 開いている文書のコメントは移動せず、本文の印までスクロールするだけにする
-          const here =
-            comment.source === source &&
-            comment.path === doc.path &&
-            (comment.ref ?? "") === (doc.ref ?? "");
-          if (!here) nav.locate(comment);
-        }}
+        onLocate={place.locate}
         onChanged={() => undefined}
       />
     </div>

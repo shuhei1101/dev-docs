@@ -8,6 +8,7 @@ import { type TocItem, readToc } from "@/features/docs/doc-view/toc";
 import {
   type DocComment,
   commentsOf,
+  docIdOf,
   useCommentStore,
 } from "@/features/docs/shared/comments/comment-store";
 import type { DocumentResponse } from "@/shared/api/generated/model";
@@ -91,7 +92,7 @@ export const DocBody = ({
     rev?: string;
     base?: string;
   };
-  const docId = `${doc.source}@${doc.ref ?? ""}:${doc.path}`;
+  const docId = docIdOf(doc);
   const markdown = applyHiddenColumns(
     withoutFirstH1(doc.markdown ?? ""),
     doc.tableKeys,

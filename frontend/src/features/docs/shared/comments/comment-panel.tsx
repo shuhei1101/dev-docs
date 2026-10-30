@@ -206,9 +206,12 @@ export const CommentPanel = ({
                           ref={(element) => element?.focus()}
                           value={draft}
                           onChange={(event) => setDraft(event.target.value)}
-                          onKeyDown={(event) =>
-                            event.key === "Escape" && setEditingId(null)
-                          }
+                          onKeyDown={(event) => {
+                            if (event.key !== "Escape") return;
+                            // パネルまで閉じないよう、Esc を修正欄で止める
+                            event.stopPropagation();
+                            setEditingId(null);
+                          }}
                         />
                         {invalid && (
                           <p className="text-xs text-destructive">

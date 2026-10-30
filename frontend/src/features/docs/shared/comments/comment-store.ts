@@ -29,6 +29,13 @@ type CommentState = {
   setSelected: (id: string | null, selected: boolean) => void;
 };
 
+/** 文書のコメントの `docId`（配信元・リビジョン・パス） */
+export const docIdOf = (doc: {
+  source: string;
+  ref?: string | null;
+  path: string;
+}) => `${doc.source}@${doc.ref ?? ""}:${doc.path}`;
+
 /** `docId` のコメントを、mdmark の `commentStore.load` が返す形で追加した順に返す */
 export const commentsOf = (comments: DocComment[], docId: string) =>
   comments
