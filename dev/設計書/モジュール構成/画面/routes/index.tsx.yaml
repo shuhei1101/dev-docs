@@ -1,0 +1,45 @@
+title: "画面 / アプリとルート / index.tsx"
+lead: '`/` を開いたときの振り分け。'
+constants:
+  - name: Route
+    title: 最初のルート
+    container: routes/index.tsx
+    usecase: 文書を読む
+    summary: '`createFileRoute("/")({loader: redirectToFirstSource})`'
+    value: createFileRoute("/")({...})
+functions:
+  - name: redirectToFirstSource
+    title: 最初の配信元への振り分け
+    kind: 関数
+    container: routes/index.tsx
+    usecase: 文書を読む
+    role: ルートの loader
+    summary: 端末の設定の配信元のうち最初の配信中のものへ、無ければ設定画面へ移す
+    scope: internal
+    is_async: true
+    args:
+      - name: ctx
+        type: '{context: RouterContext}'
+        required: true
+        passing: positional
+        description: loader の引数
+    returns:
+      type: Promise<never>
+      description: 必ず `redirect` を送る
+    process: |-
+      1. 端末の設定の取得の問い合わせ（orval が生成した `getSettingsGetSettingsSourcesQueryOptions()`）を `ensureQueryData` で読む
+      2. `status` が `serving` の最初の配信元があれば `redirect({to: "/$source", params: {source: id}, replace: true})` を送る
+      3. 無ければ `redirect({to: "/_settings", replace: true})` を送る
+    unit_tests:
+      - name: test_redirect_to_first_source
+        case: 正常
+        summary: 最初の配信中の配信元へ
+        condition: MSW が `a`（`error`）・`b`（`serving`）を返す
+        mock: MSW のハンドラ
+        expected: '`/b` への redirect'
+      - name: test_redirect_to_first_source_when_none
+        case: 正常
+        summary: 配信中が無い
+        condition: MSW が空の `sources` を返す
+        mock: MSW のハンドラ
+        expected: '`/_settings` への redirect'

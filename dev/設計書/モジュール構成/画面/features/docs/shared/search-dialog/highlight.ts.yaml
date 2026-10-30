@@ -1,0 +1,41 @@
+title: "画面 / 文書の画面 / highlight.ts"
+lead: 検索の結果の抜粋の一致した箇所を分ける。
+functions:
+  - name: splitHighlight
+    title: 一致した箇所の分割
+    kind: 関数
+    container: features/docs/shared/search-dialog/highlight.ts
+    usecase: 文書を探す
+    role: 変換
+    summary: 抜粋を、語に一致する箇所とそれ以外の並びに分ける（`mark` で描くため）
+    scope: public
+    args:
+      - name: text
+        type: string
+        required: true
+        passing: positional
+        description: 抜粋
+      - name: query
+        type: string
+        required: true
+        passing: positional
+        description: 入力した語（空白で区切る）
+    returns:
+      type: '{text: string; match: boolean}[]'
+      description: つなぐと `text` に戻る並び
+    process: |-
+      1. 語を空白で区切り、正規表現の記号をエスケープして大文字小文字を区別しない 1 つの正規表現にする
+      2. 一致した箇所を `match: true` にして分ける
+    unit_tests:
+      - name: test_split_highlight
+        case: 正常
+        summary: 複数の語
+        condition: '`text` が `Foo bar foo`、`query` が `foo bar`'
+        mock: なし
+        expected: '`Foo`（一致）・` `・`bar`（一致）・` `・`foo`（一致）'
+      - name: test_split_highlight_when_symbol
+        case: 正常
+        summary: 記号をそのまま探す
+        condition: '`query` が `a.b`、`text` が `axb a.b`'
+        mock: なし
+        expected: '`a.b` だけが一致'

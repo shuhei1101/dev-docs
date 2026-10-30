@@ -1,0 +1,58 @@
+title: "画面 / 文書の画面 / doc-view-screen.tsx"
+lead: 文書の画面の最上位。要素とその振る舞いは画面設計『文書の画面』が持つ。
+components:
+  - name: DocViewScreen
+    title: 文書の画面
+    kind: 画面
+    container: features/docs/doc-view/doc-view-screen.tsx
+    usecase: 文書を読む
+    role: 画面
+    summary: ルートの引数で文書を読み、トップバー・種類のタブ・サイドバー・本文・目次・コメントのパネルを並べる
+    description: 文書は `useSuspenseQuery(documentQueryOptions(...))`、配信元とリビジョンの一覧は orval が生成した問い合わせで読む。URL の変更は `useNavigate` で `search` を書き換える（`rev`・`base` を保つ）。`document.title` は `pageTitle` で書き換える。幅の切り替え（48rem・80rem）は Tailwind の `md:`・`xl:` で行い、JavaScript では幅を読まない
+    state:
+      - name: searchOpen
+        type: boolean
+        initial: 'false'
+        description: 検索のダイアログ
+        notes: '`useState`'
+      - name: helpOpen
+        type: boolean
+        initial: 'false'
+        description: ショートカットの一覧
+        notes: '`useState`'
+      - name: drawerOpen
+        type: boolean
+        initial: 'false'
+        description: 文書の一覧のドロワー
+        notes: '`useState`'
+      - name: commentPanelOpen
+        type: boolean
+        initial: 'false'
+        description: コメントのパネル
+        notes: '`useState`'
+      - name: emptyTab
+        type: NavTab | null
+        initial: 'null'
+        description: 文書の無いタブを選んだときのタブ（URL を変えない）
+        notes: '`useState`。文書が変わったら null'
+    unit_tests:
+      - name: test_doc_view_screen
+        case: 正常
+        summary: 文書を描く
+        condition: MSW が文書の取得・端末の設定の取得・リビジョンの一覧を返す。メモリの履歴のルーターで `/s/a.md` を開く
+        mock: MSW のハンドラ・mdmark（`vi.mock`、`mount` を記録する偽物）
+        expected: 文書のタイトル・パンくず・サイドバーの現在地が出て、`document.title` が `A | s | dev-docs`、mdmark の `mount` に最初の見出し 1 を除いた本文が渡る
+      - name: test_doc_view_screen_when_empty_tab
+        case: 正常
+        summary: 文書の無いタブ
+        condition: '`items` が空のタブを押す'
+        mock: MSW のハンドラ・mdmark（偽物）
+        expected: URL が変わらず、文書が無いことの表示が出る
+      - name: test_doc_view_screen_when_conversion_error
+        case: 正常
+        summary: 変換の失敗
+        condition: MSW が `conversionError` を持つ文書を返す
+        mock: MSW のハンドラ・mdmark（偽物）
+        expected: 変換の失敗が出て `mount` が呼ばれない
+refs:
+  - dev/設計書/画面設計/文書の画面#

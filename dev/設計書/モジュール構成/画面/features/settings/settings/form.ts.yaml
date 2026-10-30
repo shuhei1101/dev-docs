@@ -1,0 +1,157 @@
+title: "画面 / 設定画面 / form.ts"
+lead: 配信元のダイアログの入力のスキーマと、`sources[]` への反映。
+functions:
+  - name: sourceFormSchema
+    title: 配信元の入力のスキーマ
+    kind: 関数
+    container: features/settings/settings/form.ts
+    usecase: 配信元を設定する
+    role: 検証
+    summary: 画面設計の入力チェックの表どおりに検証する zod のスキーマを作る
+    scope: public
+    args:
+      - name: otherIds
+        type: string[]
+        required: true
+        passing: positional
+        description: 編集中の行を除いた行の ID（重なりの検査に使う）
+    returns:
+      type: z.ZodType<SourceFormValues>
+      description: '`{id: string; config: string; enabled: boolean; read: string; write: string}`（textarea の値は改行区切りの文字列のまま）'
+    process: |-
+      1. `id` は空・`^[a-z0-9-]+$`・`otherIds` との重なりを検査する
+      2. `config`・`read` は空の行を除いて 1 つ以上、`read`・`write` は空の行を含まないことを検査する
+      3. 文言は画面設計の入力チェックのエラー文言
+    unit_tests:
+      - name: test_source_form_schema
+        case: 正常
+        summary: 通る入力
+        condition: '`id` が `extra`、`config` が 2 行、`read` が 1 行、`write` が空'
+        mock: なし
+        expected: '`success` が true'
+      - name: test_source_form_schema_when_duplicate_id
+        case: 異常
+        summary: ID の重なり
+        condition: '`otherIds` が `["extra"]`、`id` が `extra`'
+        mock: なし
+        expected: '`id` のエラーが `配信元の ID extra は既に使われています。別の ID を入力してください。`'
+      - name: test_source_form_schema_when_blank_line
+        case: 異常
+        summary: 読み取りの範囲の空の行
+        condition: '`read` が `~/repo/**\n\n~/work/**`'
+        mock: なし
+        expected: '`read` のエラーが `読み取りの範囲に空の行があります。空の行を削除してください。`'
+  - name: toFormValues
+    title: 行からダイアログの初期値
+    kind: 関数
+    container: features/settings/settings/form.ts
+    usecase: 配信元を設定する
+    role: 変換
+    summary: 端末の設定の取得の行（追加のときは null）をダイアログの初期値にする
+    scope: public
+    args:
+      - name: source
+        type: SettingsSource | null
+        required: true
+        passing: positional
+        description: 端末の設定の取得の `sources[]` の行
+    returns:
+      type: SourceFormValues
+      description: '配列は改行でつなぐ。追加のときは空と `enabled: true`'
+    process: 1. `config`・`scope.read`・`scope.write`（null は空）を改行でつなぐ
+    unit_tests:
+      - name: test_to_form_values
+        case: 正常
+        summary: 編集の初期値
+        condition: '`config` が 2 件、`scope.write` が null の行'
+        mock: なし
+        expected: '`config` が改行でつないだ 2 行、`write` が空'
+  - name: applySource
+    title: 入力の反映
+    kind: 関数
+    container: features/settings/settings/form.ts
+    usecase: 配信元を設定する
+    role: 変換
+    summary: 入力を反映した、端末の設定の保存へ送る `sources[]` を作る
+    scope: public
+    args:
+      - name: sources
+        type: SettingsSource[]
+        required: true
+        passing: positional
+        description: 端末の設定の取得の `sources[]`
+      - name: values
+        type: SourceFormValues
+        required: true
+        passing: positional
+        description: 検証を通った入力
+      - name: index
+        type: number | null
+        required: true
+        passing: positional
+        description: 編集した行の位置（追加は null で末尾に加える）
+    returns:
+      type: SourceInput[]
+      description: 全行。改行で区切り、前後の空白と空の行を除く。`write` が空なら `scope.write` を省く
+    process: 1. 各行を `toSourceInput` で送る形にし、`index` の行を入力で置き換えるか末尾に加える
+    unit_tests:
+      - name: test_apply_source
+        case: 正常
+        summary: 追加
+        condition: 1 行の `sources` に追加の入力
+        mock: なし
+        expected: 2 行。2 行目が入力の値、1 行目は元のまま
+      - name: test_apply_source_when_edit
+        case: 正常
+        summary: 編集で書き込みの範囲を空にする
+        condition: '`write` が空の入力で 1 行目を編集'
+        mock: なし
+        expected: 1 行目の `scope` に `write` が無い
+  - name: removeSource
+    title: 行の削除
+    kind: 関数
+    container: features/settings/settings/form.ts
+    usecase: 配信元を設定する
+    role: 変換
+    summary: '`index` の行を除いた、端末の設定の保存へ送る `sources[]` を作る'
+    scope: public
+    args:
+      - name: sources
+        type: SettingsSource[]
+        required: true
+        passing: positional
+        description: 端末の設定の取得の `sources[]`
+      - name: index
+        type: number
+        required: true
+        passing: positional
+        description: 削除する行の位置
+    returns:
+      type: SourceInput[]
+      description: 残りの行
+    process: 1. `index` の行を除き、残りを `toSourceInput` で送る形にする
+    unit_tests:
+      - name: test_remove_source
+        case: 正常
+        summary: 削除
+        condition: 2 行の 1 行目を削除
+        mock: なし
+        expected: 2 行目だけ
+  - name: toSourceInput
+    title: 行を送る形にする
+    kind: 関数
+    container: features/settings/settings/form.ts
+    usecase: 配信元を設定する
+    role: 変換
+    summary: 取得の行から状態の項目を除き、保存の行にする
+    scope: internal
+    args:
+      - name: source
+        type: SettingsSource
+        required: true
+        passing: positional
+        description: 取得の行
+    returns:
+      type: SourceInput
+      description: '`id`（null は省く）・`config`・`enabled`・`scope`（`write` が null なら省く）'
+    process: 1. `status`・`errors`・`configVersion` を除く

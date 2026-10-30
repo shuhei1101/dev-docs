@@ -1,0 +1,40 @@
+title: "画面 / 共通 / logger.ts"
+lead: ブラウザのコンソールへ JSON Lines で書くロガー。
+constants:
+  - name: logger
+    title: ロガー
+    container: shared/lib/logger.ts
+    usecase: 共通
+    summary: '`debug`・`info`・`warn`・`error` を持ち、1 行の JSON（`{ts, level, event, ...fields}`）を `console` の同じレベルへ書く'
+    value: createLogger()
+functions:
+  - name: createLogger
+    title: ロガーの作成
+    kind: 関数
+    container: shared/lib/logger.ts
+    usecase: 共通
+    role: ログ
+    summary: レベルごとの書き出しを持つロガーを作る
+    scope: public
+    args:
+      - name: sink
+        title: 書き出し先
+        type: Pick<Console, "debug" | "info" | "warn" | "error">
+        required: false
+        default: console
+        passing: positional
+        description: テストで差し替える
+    returns:
+      type: Logger
+      description: '`(event: string, fields?: Record<string, unknown>) => void` をレベルごとに持つ'
+    process: |-
+      1. 各レベルの関数は `JSON.stringify({ts: new Date().toISOString(), level, event, ...fields})` を `sink[level]` へ渡す
+      2. `fields` の `Error` は `{name, message, stack}` にして渡す
+      3. `import.meta.env.PROD` のとき `debug` は書かない
+    unit_tests:
+      - name: test_create_logger
+        case: 正常
+        summary: 1 行の JSON を書く
+        condition: '`error("api_failed", {status: 500, error: new Error("x")})`'
+        mock: 書き出し先（`vi.fn` を持つ偽物）
+        expected: '`sink.error` に 1 回、`JSON.parse` でき `level` が `error`、`event` が `api_failed`、`error.message` が `x`'

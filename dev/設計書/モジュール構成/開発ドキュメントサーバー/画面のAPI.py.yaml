@@ -6,9 +6,9 @@ directory: |-
   ```text
   src/dev_docs/features/view/
   ├─ __init__.py   # 公開する型と関数の再エクスポート
-  ├─ types.py      # NavItem / NavTab / ConversionError / GitHubTarget / DocumentResponse / ScreenSearchItem / ScreenSearchResult / ColumnsRequest
+  ├─ types.py      # NavItem / NavTab / ConversionError / GitHubTarget / DocumentResponse / DocumentDiff / ScreenSearchItem / ScreenSearchResult / ColumnsRequest
   ├─ paths.py      # page_path / find_page / screen_target
-  ├─ nav.py        # build_nav / first_page
+  ├─ nav.py        # build_nav / first_page / mark_nav_changes
   ├─ columns.py    # ColumnSettings
   ├─ search.py     # screen_search
   ├─ document.py   # get_document / not_found_fields
@@ -32,6 +32,7 @@ diagrams:
         文書の取得 ..> 変換
         文書の取得 ..> 変わったキー
         文書の取得 ..> 表の列の設定
+        文書の取得 ..> サイドバーの変化
         画面の検索 ..> 語の照合
         画面の検索 ..> 一致した箇所の抜き出し
         class 画面の入口 {
@@ -59,6 +60,9 @@ diagrams:
           <<function>>
         }
         class タブの最初の文書 {
+          <<function>>
+        }
+        class サイドバーの変化 {
           <<function>>
         }
         class 文書のページの特定 {
@@ -131,7 +135,7 @@ data_models:
     usecase: 文書の取得
     role: DTO
     summary: 上のタブ 1 つとそのサイドバー
-    description: '`pydantic.BaseModel`。文書の取得の `tabs[]`。'
+    description: '共通の『画面の API のモデル』（`ApiModel`。JSON のキーは camelCase）を継承する。文書の取得の `tabs[]`。'
     properties:
       - name: title
         title: タブの名前
@@ -154,7 +158,7 @@ data_models:
     usecase: 画面の検索
     role: DTO
     summary: '`items[]` の 1 件'
-    description: '`pydantic.BaseModel`。'
+    description: '共通の『画面の API のモデル』（`ApiModel`。JSON のキーは camelCase）を継承する。'
     properties:
       - name: path
         title: 文書のページのパス
@@ -177,7 +181,7 @@ data_models:
     usecase: 画面の検索
     role: DTO
     summary: GET `/_api/sources/{source}/search` の応答
-    description: '`pydantic.BaseModel`。'
+    description: '共通の『画面の API のモデル』（`ApiModel`。JSON のキーは camelCase）を継承する。'
     properties:
       - name: total_count
         title: 総件数
@@ -195,7 +199,7 @@ data_models:
     usecase: 表の列の設定の保存
     role: DTO
     summary: PUT `/_api/sources/{source}/columns` の本文と応答
-    description: '`pydantic.BaseModel`（`extra="forbid"`）。応答も同じ形。'
+    description: '共通の『画面の API のモデル』（`ApiModel`。JSON のキーは camelCase）を継承し、`extra="forbid"` を足す。応答も同じ形。'
     properties:
       - name: table
         title: 表のキー
@@ -213,7 +217,7 @@ data_models:
     usecase: 文書の取得
     role: DTO
     summary: サイドバーの見出しか文書の 1 行
-    description: '`pydantic.BaseModel`。文書の取得の `tabs[].items`。'
+    description: '共通の『画面の API のモデル』（`ApiModel`。JSON のキーは camelCase）を継承する。文書の取得の `tabs[].items`。'
     properties:
       - name: kind
         title: 項目の種類
@@ -237,13 +241,19 @@ data_models:
         access: 公開
         default: '[]'
         description: '`group` の下の項目（`group` の入れ子と `auto` の `group_by`）。`page` は空'
+      - name: change
+        title: 比較元からの変化
+        type: Literal['added', 'modified', 'deleted'] | None
+        access: 公開
+        default: None
+        description: '`page` の文書の、文書の取得の `diff` のリビジョンからの変化（サイドバーの変化が入れる）。`diff` を省いたとき・変わっていない `page`・`group` は `None`'
   - name: ConversionError
     title: 変換の失敗の応答
     container: features/view/types.py
     usecase: 文書の取得
     role: DTO
     summary: 文書の取得の `conversion_error`
-    description: '`pydantic.BaseModel`。変換の『変換の失敗』と同じフィールドを持つ。'
+    description: '共通の『画面の API のモデル』（`ApiModel`。JSON のキーは camelCase）を継承する。変換の『変換の失敗』と同じフィールドを持つ。'
     properties:
       - name: reason
         title: 理由
@@ -290,7 +300,7 @@ data_models:
     usecase: 文書の取得
     role: DTO
     summary: 文書の取得の `github`
-    description: '`pydantic.BaseModel`。'
+    description: '共通の『画面の API のモデル』（`ApiModel`。JSON のキーは camelCase）を継承する。'
     properties:
       - name: repository
         title: GitHub のリポジトリ
@@ -308,7 +318,7 @@ data_models:
     usecase: 文書の取得
     role: DTO
     summary: GET `/_api/sources/{source}/docs[/{path}]` の応答
-    description: '`pydantic.BaseModel`。'
+    description: '共通の『画面の API のモデル』（`ApiModel`。JSON のキーは camelCase）を継承する。'
     properties:
       - name: source
         title: 配信元の ID
@@ -340,11 +350,6 @@ data_models:
         type: list[NavTab]
         access: 公開
         description: タブとサイドバーの組み立ての結果
-      - name: changed_items
-        title: 変わった項目
-        type: list[str] | None
-        access: 公開
-        description: '`diff` のリビジョンから変わったキーのパス。`diff` を省いたときは `None`'
       - name: github
         title: 起票先
         type: GitHubTarget | None
@@ -360,6 +365,40 @@ data_models:
         type: list[str]
         access: 公開
         description: 変換の結果の `table_keys`。失敗したときは空
+      - name: diff
+        title: 差分
+        type: DocumentDiff | None
+        access: 公開
+        description: '`diff` のリビジョンと比べた結果。`diff` を省いたとき・Git 管理外の配信元は `None`'
+      - name: updated_at
+        title: 更新日時
+        type: datetime
+        access: 公開
+        description: 返した文書の更新日時。文書の `updated`（Git の配信元は開いているリビジョンでファイルを最後に変えた commit の日時）、`None` ならファイルの更新日時
+  - name: DocumentDiff
+    title: 差分の結果
+    container: features/view/types.py
+    usecase: 文書の取得
+    role: DTO
+    summary: 文書の取得の `diff`。比べたリビジョンと、返した文書の変化・変わった項目
+    description: 共通の『画面の API のモデル』（`ApiModel`。JSON のキーは camelCase）を継承する。
+    properties:
+      - name: base
+        title: 比べたリビジョン
+        type: str
+        access: 公開
+        description: '`diff` の値'
+      - name: change
+        title: 文書の変化
+        type: Literal['added', 'modified'] | None
+        access: 公開
+        description: '`base` に同じ ID の文書が無ければ `added`、バージョンが違えば `modified`、同じなら `None`'
+      - name: changed_items
+        title: 変わった項目
+        type: list[str]
+        access: 公開
+        default: '[]'
+        description: '`base` の同じ ID の文書から変わったキーのパス。`change` が `added`・`None` のときは空'
 classes:
   - name: ColumnSettings
     title: 表の列の設定
@@ -679,7 +718,7 @@ functions:
       2. GET `/_api/sources/{source}/search` は、`q`（1〜`SEARCH_QUERY_MAX` 文字）・`ref`・`limit`（1〜`SEARCH_LIMIT_MAX`）を受け、画面の読む場所の文書で画面の検索を返す
       3. GET `/_api/sources/{source}/refs` は、`commits`（0〜`REFS_COMMITS_MAX`）を受け、リビジョンの一覧を返す（無い配信元は 404）
       4. PUT `/_api/sources/{source}/columns` は、同じオリジンの確認を依存に持ち、配信元を引いてから、本文を `ColumnsRequest` で受けて表の列の設定.列の設定を書く を呼び、同じ値を返す
-      5. 各ルートの `operation_id` は、`/docs` が `get_document_default`、`/docs/{path:path}` が `get_document`、search が `search_page`、refs が `list_refs`、columns が `put_columns`
+      5. ルーターは `APIRouter(tags=["view"])` にする。各ルートの `name`（`operation_id` は渡さず、アプリの組み立てが operationId を `view-{name}` にする）は、`/docs` が `get_document_default`、`/docs/{path:path}` が `get_document`、search が `search_page`、refs が `list_refs`、columns が `put_columns`
       6. サービスは `asyncio.to_thread` で呼ぶ
     unit_tests:
       - name: test_build_view_router_when_document
@@ -687,7 +726,7 @@ functions:
         summary: 文書の取得
         condition: GET `/_api/sources/sample/docs`
         mock: なし（一時フォルダの配信元）
-        expected: 200 で `path`・`markdown`・`tabs`
+        expected: 200 で `path`・`markdown`・`tabs`・`updatedAt`・`tableKeys`（キーが camelCase）
       - name: test_build_view_router_when_document_missing
         case: 異常
         summary: 無い文書
@@ -699,7 +738,7 @@ functions:
         summary: 画面の検索
         condition: GET `/_api/sources/sample/search?q=foo`
         mock: なし（一時フォルダの配信元）
-        expected: 200 で `total_count` と `items[].path`
+        expected: 200 で `totalCount` と `items[].path`
       - name: test_build_view_router_when_query_too_long
         case: 異常
         summary: 長すぎる語
@@ -773,9 +812,13 @@ functions:
          - `path` が無ければ、一番左のタブのタブの最初の文書。文書が 1 つも無ければ `DocumentNotFoundError`
          - `path` があれば文書のページの特定。無く、集めたときの `unreadable` の読めなかったファイルのうち拡張子を落としたパスが `path` と同じものがあれば、`markdown` を `None`、`conversion_error` を `reason` が `invalid_yaml`（`kind` は文書の行.行に当たるかが `True` になる最初の行、`file`・`line`・`column`・`detail` は読めなかったファイルの値）にして 6 へ進む。どちらにも無ければ `DocumentNotFoundError`（`missing` に `path`）
       4. 文書を変換する（変換.変換する）。`failure` があれば `markdown` を `None`、`conversion_error` を同じフィールドの `ConversionError` にする
-      5. `diff_ref` があり Git の配信元なら、`diff_ref` の画面の読む場所で同じ ID の文書を引き（無い文書は空の内容）、変わったキー（`ignore` は `diff_ignore_keys`）のパスを `changed_items` にする。Git 管理外は `None` にする
+      5. `diff_ref` があり Git の配信元なら、`diff_ref` の画面の読む場所で文書を集め、`diff` を `DocumentDiff(base=diff_ref, ...)` にする。Git 管理外は `diff` を `None` にする
+         - `change` は、`diff_ref` に同じ ID の文書が無ければ `added`、`version` が違えば `modified`、同じなら `None`
+         - `changed_items` は、`change` が `modified` のとき同じ ID の文書と比べた変わったキー（`ignore` は `diff_ignore_keys`）のパス。他は空
+         - `diff_ref` の文書でタブとサイドバーを組み立て、文書のページのパス → `version` を両方で作って、タブにサイドバーの変化を付ける
       6. 返した文書を含むタブの `active` を `True` にする
-      7. `ref` は `ref` の値、省いたときは `default_ref` の名前（Git 管理外は `None`）、`github` は `github_repository` があれば `github_repository`・`github_issue_labels`、`columns` は表の列の設定.列の設定を読む の結果、`table_keys` は変換の結果の値にして返す
+      7. `updated_at` は文書の `updated`、`None` なら文書のファイルの `st_mtime` をタイムゾーン付きにした日時にする
+      8. `ref` は `ref` の値、省いたときは `default_ref` の名前（Git 管理外は `None`）、`github` は `github_repository` があれば `github_repository`・`github_issue_labels`、`columns` は表の列の設定.列の設定を読む の結果、`table_keys` は変換の結果の値にして返す
     exceptions:
       - name: UnknownSourceError
         condition: 無い配信元
@@ -798,10 +841,10 @@ functions:
         expected: 一番左のタブの一番上の文書の `markdown` と `path`、一番左のタブだけが `active`
       - name: test_get_document_when_diff
         case: 正常
-        summary: 変わった項目
-        condition: '`name` を変えた commit を `ref`、親の commit を `diff_ref`'
+        summary: 差分の結果とサイドバーの変化
+        condition: '`docs/a` の `name` を変え、`docs/c` を削除し、`docs/d` を追加した commit を `ref`、親の commit を `diff_ref`、`path="docs/a"`'
         mock: なし（一時フォルダのリポジトリ）
-        expected: '`changed_items` が `["name"]`'
+        expected: '`diff` が `base` 親の commit・`change` `modified`・`changed_items` `["name"]`。サイドバーの `docs/a` が `modified`、`docs/d` が `added`、`docs/c` が `deleted`'
       - name: test_get_document_when_convert_failed
         case: 正常
         summary: 変換の失敗
@@ -821,6 +864,12 @@ functions:
         mock: なし
         expected: '`DocumentNotFoundError`'
         exception: 無い文書
+      - name: test_get_document_when_not_git
+        case: 正常
+        summary: Git 管理外の更新日時と差分
+        condition: Git 管理外の配信元の `docs/a`、`diff_ref="main"`
+        mock: なし（一時フォルダの配信元）
+        expected: '`updated_at` がファイルの `st_mtime` の日時、`diff` が `None`、`ref` が `None`'
   - name: not_found_fields
     title: 見つからなかったもの
     kind: 関数
@@ -863,6 +912,68 @@ functions:
         condition: '`RefNotFoundError(argument="ref", value="no-such-branch")` と、`DocumentNotFoundError` を `path="no-such-doc"` で'
         mock: なし
         expected: '`{missing: ref, value: no-such-branch}` と `{missing: doc, value: no-such-doc}`'
+  - name: mark_nav_changes
+    title: サイドバーの変化
+    kind: 関数
+    container: features/view/nav.py
+    usecase: 文書の取得
+    role: 変換
+    summary: タブの `page` の項目に比較元からの変化を付け、比較元にだけある文書を比較元の位置に差し込む
+    scope: public
+    thread_safe: true
+    args:
+      - name: tabs
+        title: タブ
+        type: list[NavTab]
+        required: true
+        passing: positional
+        description: 開いているリビジョンのタブとサイドバーの組み立ての結果
+      - name: base_tabs
+        title: 比較元のタブ
+        type: list[NavTab]
+        required: true
+        passing: positional
+        description: 比較元のリビジョンの文書で組み立てたタブ
+      - name: versions
+        title: バージョン
+        type: Mapping[str, str]
+        required: true
+        passing: keyword
+        description: 開いているリビジョンの文書のページのパス → 文書のバージョン
+      - name: base_versions
+        title: 比較元のバージョン
+        type: Mapping[str, str]
+        required: true
+        passing: keyword
+        description: 比較元の文書のページのパス → 文書のバージョン
+    returns:
+      type: list[NavTab]
+      description: 変化を付けたタブの並び。引数のタブは書き換えない
+    process: |-
+      1. `tabs` を複製し、`page` の項目の `change` を、`base_versions` に無ければ `added`、バージョンが違えば `modified`、同じなら `None` にする
+      2. `base_tabs` を同じ `title` のタブと突き合わせ、`base_versions` にあって `versions` に無い `page` を `change` が `deleted` の項目にして、比較元での直前の兄弟（`path` か `title` が同じ項目）の後ろへ差し込む
+         - 直前の兄弟が無い場合、同じ `title` の `group` の先頭に置く
+         - 同じ `title` の `group` もタブも無い場合、そのタブの末尾（タブが無ければ一番左のタブの末尾）に置く
+      3. 変化を付けたタブの並びを返す
+    unit_tests:
+      - name: test_mark_nav_changes
+        case: 正常
+        summary: 追加・変更・変わっていない文書
+        condition: '`docs/a` のバージョンが違い、`docs/b` が同じで、`docs/c` が比較元に無い'
+        mock: なし
+        expected: '`docs/a` が `modified`、`docs/b` が `None`、`docs/c` が `added`。引数の `tabs` の `change` は `None` のまま'
+      - name: test_mark_nav_changes_when_deleted
+        case: 正常
+        summary: 削除した文書を比較元の位置に差し込む
+        condition: 比較元の `group` 設計 の並びが `docs/a`・`docs/x`・`docs/b` で、`docs/x` が開いているリビジョンに無い
+        mock: なし
+        expected: '`group` 設計 の並びが `docs/a`・`docs/x`（`deleted`）・`docs/b`'
+      - name: test_mark_nav_changes_when_group_missing
+        case: 正常
+        summary: 比較元にだけある group の文書
+        condition: 比較元にだけある `group` 旧 の下の `docs/y` が開いているリビジョンに無い
+        mock: なし
+        expected: '`docs/y` が `deleted` で、同じ `title` のタブの末尾に並ぶ'
 refs:
   - dev/設計書/インターフェース定義/開発ドキュメントサーバー/文書の取得#
   - dev/設計書/インターフェース定義/開発ドキュメントサーバー/画面の検索#

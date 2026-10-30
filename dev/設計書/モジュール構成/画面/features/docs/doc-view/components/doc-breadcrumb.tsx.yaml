@@ -1,0 +1,23 @@
+title: "画面 / 文書の画面 / doc-breadcrumb.tsx"
+lead: 開いている文書の階層のパンくず。
+components:
+  - name: DocBreadcrumb
+    title: パンくず
+    kind: コンポーネント
+    container: features/docs/doc-view/components/doc-breadcrumb.tsx
+    usecase: 文書を読む
+    role: 部品
+    summary: '`{配信元の ID}` / `{タブ名}` / `{group}` / `{文書の名前}` を shadcn/ui の `Breadcrumb` で並べる。配信元とタブだけをリンクにする'
+    props:
+      - name: source
+        type: string
+        required: true
+        description: 配信元の ID
+      - name: active
+        type: ActivePage
+        required: true
+        description: 開いているページ
+      - name: search
+        type: DocViewSearch
+        required: true
+        description: 保つ `rev`・`base`

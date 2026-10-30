@@ -1,0 +1,24 @@
+title: "画面 / 設定画面 / queries.ts"
+lead: 端末の設定の保存の mutation。取得は orval が生成した問い合わせ（`getSettingsGetSettingsSourcesQueryOptions`）をそのまま使う。
+functions:
+  - name: useSaveSources
+    title: 端末の設定の保存
+    kind: フック
+    container: features/settings/settings/queries.ts
+    usecase: 配信元を設定する
+    role: アダプター
+    summary: orval が生成した `settings-put_settings_sources` の mutation に、成功後の読み直しと通知を加える
+    scope: public
+    returns:
+      type: UseMutationResult<SaveSourcesResponse, AppError, SourceInput[]>
+      description: '`mutateAsync(sources)` で保存する'
+    process: |-
+      1. 成功したら `queryClient.invalidateQueries()` で全ての問い合わせを読み直し（配信元の増減は文書の画面の問い合わせにも及ぶ）、sonner で `端末の設定を保存し、配信元を読み直しました。` を出す
+      2. 失敗は呼び出し元へ返す（422 はダイアログが項目に出し、他は `handleAppError`）
+    unit_tests:
+      - name: test_use_save_sources
+        case: 正常
+        summary: 保存後に読み直す
+        condition: '`mutateAsync` に 1 行'
+        mock: MSW の端末の設定の保存のハンドラ（200）・sonner の `toast`
+        expected: 端末の設定の取得がもう一度呼ばれ、通知が 1 回

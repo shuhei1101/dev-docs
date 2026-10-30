@@ -1,0 +1,30 @@
+title: "画面 / 文書の画面 / empty-tab.tsx"
+lead: 選んだタブに文書が無いことの表示。
+components:
+  - name: EmptyTab
+    title: 文書が無いことの表示
+    kind: コンポーネント
+    container: features/docs/doc-view/components/empty-tab.tsx
+    usecase: 文書を読む
+    role: 部品
+    summary: '`{タブ名}の文書はありません` と、`nav.tabs[{番号}].paths` に当たる文書が無い説明を出す（Git 管理外はリビジョンを省く）'
+    props:
+      - name: tab
+        type: NavTab
+        required: true
+        description: タブ
+      - name: index
+        type: number
+        required: true
+        description: タブの番号
+      - name: ref
+        type: string | null
+        required: true
+        description: リビジョン（Git 管理外は null）
+    unit_tests:
+      - name: test_empty_tab_when_not_git
+        case: 正常
+        summary: Git 管理外
+        condition: '`ref` が null'
+        mock: なし
+        expected: 説明に `、リビジョン` を含まない

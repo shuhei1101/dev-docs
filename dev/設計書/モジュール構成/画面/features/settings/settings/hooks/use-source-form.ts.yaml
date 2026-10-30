@@ -1,0 +1,47 @@
+title: "画面 / 設定画面 / use-source-form.ts"
+lead: 配信元のダイアログのフォームの状態と保存。
+functions:
+  - name: useSourceForm
+    title: 配信元のフォーム
+    kind: フック
+    container: features/settings/settings/hooks/use-source-form.ts
+    usecase: 配信元を設定する
+    role: フォーム
+    summary: 'react-hook-form（`zodResolver(sourceFormSchema(...))`・`mode: "onSubmit"`・`reValidateMode: "onChange"`）で入力を持ち、送信で保存する'
+    scope: public
+    args:
+      - name: sources
+        type: SettingsSource[]
+        required: true
+        passing: keyword
+        description: 端末の設定の取得の `sources[]`
+      - name: index
+        type: number | null
+        required: true
+        passing: keyword
+        description: 編集する行の位置（追加は null）
+      - name: onSaved
+        type: () => void
+        required: true
+        passing: keyword
+        description: 保存できたとき（ダイアログを閉じる）
+    returns:
+      type: '{form: UseFormReturn<SourceFormValues>; submit: () => Promise<void>; summary: {path: string; message: string}[]; saving: boolean}'
+      description: '`summary` は保存の失敗のまとめ'
+    process: |-
+      1. `submit` は検証を通した入力を `applySource` で `sources[]` にし、`useSaveSources` で保存する
+      2. `ClientValueError` なら `toFieldErrors` の `fields` を `setError`、`summary` を状態に入れ、最初の違反の項目へフォーカスする
+      3. それ以外の失敗は `handleAppError(error, {message: "端末の設定を保存できませんでした。"})`
+    unit_tests:
+      - name: test_use_source_form
+        case: 正常
+        summary: 保存して閉じる
+        condition: 通る入力で `submit`
+        mock: MSW の端末の設定の保存のハンドラ（200）
+        expected: 送った本文が `applySource` の結果、`onSaved` が 1 回
+      - name: test_use_source_form_when_422
+        case: 異常
+        summary: サーバーの検証で外れる
+        condition: 通る入力で `submit`
+        mock: MSW の端末の設定の保存のハンドラ（422、`sources[1].config[0]` の違反）
+        expected: '`config` にエラー、`summary` が 1 件、`onSaved` は呼ばれない'

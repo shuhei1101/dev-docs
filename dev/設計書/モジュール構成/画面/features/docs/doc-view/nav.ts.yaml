@@ -1,0 +1,119 @@
+title: "画面 / 文書の画面 / nav.ts"
+lead: 文書の取得の `tabs` から、開いているページ・パンくず・ページのタイトルを引く純粋な関数。
+data_models:
+  - name: ActivePage
+    title: 開いているページ
+    container: features/docs/doc-view/nav.ts
+    usecase: 文書を読む
+    role: DTO
+    summary: 開いているタブとページ
+    properties:
+      - name: tab
+        type: NavTab
+        description: '`active` のタブ'
+      - name: group
+        type: string | null
+        description: ページが入っている group の名前
+      - name: page
+        type: NavItem | null
+        description: 開いている page（文書の無いタブは null）
+functions:
+  - name: findActivePage
+    title: 開いているページの特定
+    kind: 関数
+    container: features/docs/doc-view/nav.ts
+    usecase: 文書を読む
+    role: 変換
+    summary: '`active` のタブから `path` の page とその group を探す'
+    scope: public
+    args:
+      - name: tabs
+        type: NavTab[]
+        required: true
+        passing: positional
+        description: 文書の取得の `tabs`
+      - name: path
+        type: string
+        required: true
+        passing: positional
+        description: 文書の取得の `path`
+    returns:
+      type: ActivePage
+      description: '`active` のタブが無いときは先頭のタブ'
+    process: |-
+      1. `active` のタブ（無ければ先頭）を取る
+      2. タブの `items` を深さ優先でたどり、`path` が一致する page と直前の group を返す
+    unit_tests:
+      - name: test_find_active_page
+        case: 正常
+        summary: group の中の page
+        condition: '`active` のタブの group `設計` の中に `a.md`'
+        mock: なし
+        expected: '`group` が `設計`、`page.path` が `a.md`'
+      - name: test_find_active_page_when_empty_tab
+        case: 正常
+        summary: 文書の無いタブ
+        condition: '`active` のタブの `items` が空'
+        mock: なし
+        expected: '`page` が null'
+  - name: firstPagePath
+    title: タブの最初の文書
+    kind: 関数
+    container: features/docs/doc-view/nav.ts
+    usecase: 文書を読む
+    role: 変換
+    summary: タブのサイドバーの一番上の page のパスを返す
+    scope: public
+    args:
+      - name: tab
+        type: NavTab
+        required: true
+        passing: positional
+        description: タブ
+    returns:
+      type: string | null
+      description: page が無ければ null
+    process: 1. `items` を深さ優先でたどり、最初の page の `path` を返す
+    unit_tests:
+      - name: test_first_page_path
+        case: 正常
+        summary: 入れ子の最初の page
+        condition: group の中に `b.md`、その後に `c.md`
+        mock: なし
+        expected: '`b.md`'
+      - name: test_first_page_path_when_empty
+        case: 正常
+        summary: page が無い
+        condition: '`items` が空'
+        mock: なし
+        expected: 'null'
+  - name: pageTitle
+    title: ページのタイトル
+    kind: 関数
+    container: features/docs/doc-view/nav.ts
+    usecase: 文書を読む
+    role: 変換
+    summary: ブラウザのタブに出すタイトルを作る
+    scope: public
+    args:
+      - name: active
+        type: ActivePage
+        required: true
+        passing: positional
+        description: 開いているページ
+      - name: source
+        type: string
+        required: true
+        passing: positional
+        description: 配信元の ID
+    returns:
+      type: string
+      description: '`{文書の名前} | {配信元の ID} | dev-docs`（文書の無いタブはタブ名）'
+    process: 1. page があればその `title`、無ければタブの `title` を頭に置く
+    unit_tests:
+      - name: test_page_title
+        case: 正常
+        summary: 文書の名前を頭に置く
+        condition: page の `title` が `A`、配信元 `s`
+        mock: なし
+        expected: '`A | s | dev-docs`'

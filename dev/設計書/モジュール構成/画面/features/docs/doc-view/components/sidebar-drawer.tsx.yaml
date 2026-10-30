@@ -1,0 +1,23 @@
+title: "画面 / 文書の画面 / sidebar-drawer.tsx"
+lead: 狭い幅で文書の一覧を重ねて出すドロワー。
+components:
+  - name: SidebarDrawer
+    title: 文書の一覧のドロワー
+    kind: コンポーネント
+    container: features/docs/doc-view/components/sidebar-drawer.tsx
+    usecase: 文書を読む
+    role: 部品
+    summary: shadcn/ui の `Sheet`（左）に文書の一覧を入れる。文書を開くか Esc・外のクリックで閉じ、開いたボタンへフォーカスを戻す
+    props:
+      - name: open
+        type: boolean
+        required: true
+        description: 開いているか
+      - name: onOpenChange
+        type: '(open: boolean) => void'
+        required: true
+        description: 開閉
+      - name: children
+        type: ReactNode
+        required: true
+        description: 文書の一覧

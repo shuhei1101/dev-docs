@@ -1,0 +1,29 @@
+title: "画面 / 設定画面 / status-badge.tsx"
+lead: 配信元の状態のバッジと補足。
+components:
+  - name: StatusBadge
+    title: 状態のバッジ
+    kind: コンポーネント
+    container: features/settings/settings/components/status-badge.tsx
+    usecase: 配信元を設定する
+    role: 部品
+    summary: '`status` をアイコンと文言のバッジにし、下に状態の補足を出す（色だけに頼らない）'
+    props:
+      - name: source
+        type: SettingsSource
+        required: true
+        description: 端末の設定の取得の行
+    description: 文言は画面設計の状態と状態の補足
+    unit_tests:
+      - name: test_status_badge
+        case: 正常
+        summary: 配信していない
+        condition: '`status` が `not_served`、`errors` が 1 件'
+        mock: なし
+        expected: '`配信していない`、`起動時の検証で外しました。` と `{path} {reason}`'
+      - name: test_status_badge_when_old_config_version
+        case: 正常
+        summary: 設定のバージョンが古い
+        condition: '`configVersion` が `{config: "1", server: "2"}`'
+        mock: なし
+        expected: '`設定のバージョン 1（サーバーが読めるのは 2）`'

@@ -1,0 +1,34 @@
+title: "画面 / アプリとルート / router.tsx"
+lead: TanStack Router のルーター。ルートの木は `route-tree.gen.ts`（`@tanstack/router-plugin` が生成）から取る。
+data_models:
+  - name: RouterContext
+    title: ルーターの文脈
+    container: app/router.tsx
+    usecase: 起動
+    role: 文脈
+    summary: ルートの `loader` が使う依存
+    properties:
+      - name: queryClient
+        type: QueryClient
+        description: '`ensureQueryData` に使う'
+functions:
+  - name: createAppRouter
+    title: ルーターの作成
+    kind: 関数
+    container: app/router.tsx
+    usecase: 起動
+    role: 合成の起点
+    summary: ルートの木と文脈でルーターを作る
+    scope: public
+    args:
+      - name: context
+        type: RouterContext
+        required: true
+        passing: positional
+        description: ルーターの文脈
+    returns:
+      type: Router
+      description: '`createRouter({routeTree, context, defaultPreload: "intent", defaultPreloadStaleTime: 0, scrollRestoration: true})`。`Register` の型も宣言する'
+    process: |-
+      1. 渡した文脈でルーターを作る（`defaultPreloadStaleTime` 0 で読み込みの鮮度は TanStack Query に任せる）
+      2. `defaultErrorComponent` に画面の例外の表示（`react-error-boundary` と同じ `ErrorFallback`）を渡す

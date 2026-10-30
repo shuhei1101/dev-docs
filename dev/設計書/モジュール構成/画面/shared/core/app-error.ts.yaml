@@ -1,0 +1,124 @@
+title: "画面 / 共通 / app-error.ts"
+lead: 画面の API の problem+json を受ける例外の階層。
+data_models:
+  - name: Problem
+    title: 問題の詳細
+    container: shared/core/app-error.ts
+    usecase: 共通
+    role: DTO
+    summary: RFC 9457 の problem+json の本文（`z.infer<typeof ProblemSchema>`）
+    properties:
+      - name: type
+        type: string
+        description: '`urn:dev-docs:error:{エラーの名前}`'
+      - name: title
+        type: string
+        description: エラーの名前
+      - name: status
+        type: number
+        description: HTTP のステータス
+      - name: detail
+        type: string
+        description: 説明
+      - name: nextSteps
+        type: string[]
+        description: 次にすること（無ければ空）
+      - name: errors
+        type: '{path: string; reason: string}[]'
+        description: 項目ごとの誤り（400・422 のとき）
+classes:
+  - name: AppError
+    title: 画面の例外
+    kind: クラス
+    container: shared/core/app-error.ts
+    usecase: 共通
+    role: 例外
+    summary: API の失敗を表す例外の根。`problem` と `status` を持つ
+    inherits: Error
+    properties:
+      - name: status
+        type: number
+        access: public
+        description: HTTP のステータス（通信の失敗は 0）
+      - name: problem
+        type: Problem | null
+        access: public
+        description: problem+json を読めたときの本文
+    methods:
+      - name: fromResponse
+        title: 応答からの作成
+        kind: メソッド
+        summary: 失敗した `Response` からステータスに合う例外を作る（static）
+        scope: public
+        is_async: true
+        args:
+          - name: response
+            type: Response
+            required: true
+            passing: positional
+            description: '`ok` が false の応答'
+        returns:
+          type: Promise<AppError>
+          description: 400・422 は ClientValueError、401 は ClientAuthError、404 は NotFoundError、409 は VersionConflictError、429 は RateLimitError、それ以外は AppError
+        process: |-
+          1. `Content-Type` が `application/problem+json` なら本文を `ProblemSchema.safeParse` で読む（読めなければ `problem` は null）
+          2. ステータスでクラスを選び、`message` を `problem.detail`（無ければ `HTTP {status}`）にする
+        unit_tests:
+          - name: test_from_response
+            case: 正常
+            summary: 422 を ClientValueError にする
+            condition: '`errors` を持つ problem+json の 422 の `Response`'
+            mock: なし
+            expected: ClientValueError、`problem.errors` が渡した並び
+          - name: test_from_response_when_not_found
+            case: 正常
+            summary: 404 を NotFoundError にする
+            condition: '`missing` を持つ problem+json の 404'
+            mock: なし
+            expected: NotFoundError、`problem.missing` が残る
+          - name: test_from_response_when_not_problem
+            case: 正常
+            summary: problem+json でない本文
+            condition: '`text/html` の 502'
+            mock: なし
+            expected: AppError、`problem` が null、`message` が `HTTP 502`
+  - name: ClientValueError
+    title: 値の誤り
+    kind: クラス
+    container: shared/core/app-error.ts
+    usecase: 共通
+    role: 例外
+    summary: 400・422。`problem.errors` を持つ
+    inherits: AppError
+  - name: ClientAuthError
+    title: 認証の誤り
+    kind: クラス
+    container: shared/core/app-error.ts
+    usecase: 共通
+    role: 例外
+    summary: '401'
+    inherits: AppError
+  - name: NotFoundError
+    title: 見つからない
+    kind: クラス
+    container: shared/core/app-error.ts
+    usecase: 共通
+    role: 例外
+    summary: 404。`problem.missing` で見つからなかったものを持つ
+    inherits: AppError
+  - name: VersionConflictError
+    title: 更新の衝突
+    kind: クラス
+    container: shared/core/app-error.ts
+    usecase: 共通
+    role: 例外
+    summary: '409'
+    inherits: AppError
+  - name: RateLimitError
+    title: 回数の上限
+    kind: クラス
+    container: shared/core/app-error.ts
+    usecase: 共通
+    role: 例外
+    summary: '429'
+    inherits: AppError

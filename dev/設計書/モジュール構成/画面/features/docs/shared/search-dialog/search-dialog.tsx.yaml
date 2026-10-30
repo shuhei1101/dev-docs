@@ -1,0 +1,52 @@
+title: "画面 / 文書の画面 / search-dialog.tsx"
+lead: 開いている配信元・リビジョンの文書を語で探すダイアログ。引数・イベント・状態は部品設計『検索のダイアログ』が持つ。
+components:
+  - name: SearchDialog
+    title: 検索のダイアログ
+    kind: コンポーネント
+    container: features/docs/shared/search-dialog/search-dialog.tsx
+    usecase: 文書を探す
+    role: 部品
+    summary: shadcn/ui の `CommandDialog` に入力欄と結果を出し、画面の検索（orval が生成した `view-search_page` の問い合わせ）を入力の 200 ミリ秒の待ちの後に呼ぶ
+    props:
+      - name: open
+        type: boolean
+        required: true
+        description: 開いているか
+      - name: onOpenChange
+        type: '(open: boolean) => void'
+        required: true
+        description: 開閉
+      - name: source
+        type: string
+        required: true
+        description: 配信元の ID
+      - name: ref
+        type: string
+        required: false
+        description: リビジョン
+      - name: onResultSelect
+        type: '(path: string) => void'
+        required: true
+        description: '`resultSelect`'
+    state:
+      - name: query
+        type: string
+        initial: '""'
+        description: 入力した語
+        notes: '`useState`。送信は `useDeferredValue` でなく 200 ミリ秒の待ち'
+    unit_tests:
+      - name: test_search_dialog
+        case: 正常
+        summary: 結果を選ぶ
+        condition: '`foo` を入力して 1 件目を Enter'
+        mock: MSW のハンドラ（画面の検索が 2 件を返す）
+        expected: '`onResultSelect` が 1 件目の `path` で 1 回'
+      - name: test_search_dialog_when_empty_query
+        case: 正常
+        summary: 空の語では呼ばない
+        condition: 開いただけ
+        mock: MSW のハンドラ
+        expected: 画面の検索が呼ばれない
+refs:
+  - dev/設計書/部品設計/検索のダイアログ#

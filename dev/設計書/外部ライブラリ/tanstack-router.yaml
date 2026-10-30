@@ -1,0 +1,48 @@
+title: "tanstack-router"
+kind: "ライブラリ"
+version:
+  current: 1.170.46
+  latest: 1.170.46
+  checked_on: '2026-10-30'
+  source: package.json
+catalogs:
+  - name: API
+    version: 1.170.46
+    entries:
+      - name: createRouter
+        kind: 関数
+        purpose: ルートの木と文脈（QueryClient）からルーターを作る
+      - name: createFileRoute
+        kind: 関数
+        purpose: ファイルのルートの `validateSearch`・`loader`・`component`
+      - name: createRootRouteWithContext
+        kind: 関数
+        purpose: '`notFoundComponent`・`errorComponent` を持つ親のルート'
+      - name: notFound
+        kind: 関数
+        purpose: loader から見つからない画面へ `data` を渡す
+      - name: redirect
+        kind: 関数
+        purpose: '`/` と配信元のトップの振り分け'
+      - name: Link / useNavigate
+        kind: コンポーネント / フック
+        purpose: 画面の中の移動と `search` の書き換え
+      - name: '@tanstack/router-plugin'
+        kind: ビルドのプラグイン
+        purpose: '`routes/` からルートの木（`route-tree.gen.ts`）を生成する'
+        notes:
+          版: 1.168.48（開発のみ）
+lead: 型の付いたルート・search の検証・loader を持つ React のルーター。
+purl: pkg:npm/%40tanstack/react-router
+dependency_scope: 必須
+adoption: 採用
+used_in:
+  - frontend/src/app/router.tsx
+  - frontend/src/routes/
+upstream: TanStack/router
+verification:
+  state: 未確認
+  detail: 画面の実装（`frontend/`）がまだ無い
+license: MIT（商用利用可）
+official_url: https://tanstack.com/router
+docs_url: https://tanstack.com/router/latest/docs/framework/react/overview

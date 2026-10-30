@@ -1,0 +1,40 @@
+title: "tanstack-query"
+kind: "ライブラリ"
+version:
+  current: 5.105.0
+  latest: 5.105.0
+  checked_on: '2026-10-30'
+  source: package.json
+catalogs:
+  - name: API
+    version: 5.105.0
+    entries:
+      - name: QueryClient
+        kind: クラス
+        purpose: 問い合わせの既定とキャッシュ
+      - name: queryOptions
+        kind: 関数
+        purpose: loader と画面で同じ問い合わせを共有する
+      - name: useSuspenseQuery
+        kind: フック
+        purpose: loader で読んだ問い合わせを画面で読む
+      - name: useMutation
+        kind: フック
+        purpose: 端末の設定の保存・表の列の設定の保存
+      - name: invalidateQueries
+        kind: メソッド
+        purpose: 保存の後の読み直し
+lead: サーバーの状態の取得・キャッシュ・再取得・更新を持つライブラリ。
+purl: pkg:npm/%40tanstack/react-query
+dependency_scope: 必須
+adoption: 採用
+used_in:
+  - frontend/src/app/query-client.ts
+  - frontend/src/features/
+upstream: TanStack/query
+verification:
+  state: 未確認
+  detail: 画面の実装（`frontend/`）がまだ無い
+license: MIT（商用利用可）
+official_url: https://tanstack.com/query
+docs_url: https://tanstack.com/query/latest/docs/framework/react/overview

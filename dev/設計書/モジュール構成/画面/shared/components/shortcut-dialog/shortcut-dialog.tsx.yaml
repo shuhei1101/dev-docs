@@ -1,0 +1,36 @@
+title: "画面 / 共通 / shortcut-dialog.tsx"
+lead: '`?` で開くショートカットの一覧。引数・状態は部品設計『ショートカットの一覧』が持つ。'
+components:
+  - name: ShortcutDialog
+    title: ショートカットの一覧
+    kind: コンポーネント
+    container: shared/components/shortcut-dialog/shortcut-dialog.tsx
+    usecase: 共通
+    role: 部品
+    summary: 画面で使えるキーを `shortcutsFor` から並べるダイアログ（shadcn/ui の `Dialog`、`Kbd`）
+    props:
+      - name: open
+        type: boolean
+        required: true
+        description: 開いているか
+      - name: onOpenChange
+        type: '(open: boolean) => void'
+        required: true
+        description: 開閉
+      - name: screen
+        type: ScreenId
+        required: true
+        description: 画面
+      - name: singleKey
+        type: boolean
+        required: true
+        description: 1 文字のショートカットを受けるか
+    unit_tests:
+      - name: test_shortcut_dialog
+        case: 正常
+        summary: 画面のキーを並べる
+        condition: '`screen` が `doc-view`、`singleKey` が `false`'
+        mock: なし
+        expected: 検索の行に Ctrl+K だけがあり `/` と `?` の行が無い
+refs:
+  - dev/設計書/部品設計/ショートカットの一覧#

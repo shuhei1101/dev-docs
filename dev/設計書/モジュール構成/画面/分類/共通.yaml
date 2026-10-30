@@ -1,0 +1,52 @@
+title: "画面 / 共通"
+lead: 画面の間で共通に使う型・エラー・API のクライアント・フック・ストア・部品と、テストの MSW のハンドラ。
+directory: |-
+  ```
+  frontend/src/
+  ├── shared/
+  │   ├── lib/
+  │   │   ├── format.ts         # 日時の表示（JST）
+  │   │   └── logger.ts         # コンソールのロガー
+  │   ├── core/
+  │   │   ├── schema.ts         # 生成しない zod のスキーマ（problem・missing）
+  │   │   ├── app-error.ts      # AppError とその派生
+  │   │   ├── handle-app-error.ts # 失敗の通知とログ
+  │   │   └── shortcuts.ts      # ショートカットの定義
+  │   ├── adapters/
+  │   │   └── api-client.ts     # orval の fetch の mutator
+  │   ├── hooks/
+  │   │   ├── use-shortcut.ts   # ショートカットの登録
+  │   │   └── use-active-heading.ts # 表示中の見出し
+  │   ├── stores/
+  │   │   └── preferences.ts    # ブラウザに保存する好み
+  │   └── components/
+  │       ├── topbar/topbar.tsx # トップバー
+  │       └── shortcut-dialog/shortcut-dialog.tsx # ショートカットの一覧
+  └── testing/
+      └── msw/handlers.ts       # テストの既定のハンドラ
+  ```
+diagrams:
+  - name: 全体
+    diagram: |-
+      ```mermaid
+      classDiagram
+        direction LR
+        class APIのクライアント
+        class AppError
+        class 失敗の通知
+        class 問題のスキーマ
+        class ショートカットの定義
+        class ショートカットの登録
+        class 好みのストア
+        class トップバー
+        class ショートカットの一覧
+        APIのクライアント --> AppError : fromResponse
+        AppError --> 問題のスキーマ
+        失敗の通知 --> AppError
+        ショートカットの登録 --> ショートカットの定義
+        ショートカットの登録 --> 好みのストア : singleKey
+        ショートカットの一覧 --> ショートカットの定義
+        トップバー --> 好みのストア : colorScheme
+      ```
+notes:
+  依存の向き: '`shared/` は `features/`・`app/`・`routes/` を import しない（eslint-plugin-boundaries で検査する）'

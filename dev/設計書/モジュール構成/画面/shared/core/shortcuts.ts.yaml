@@ -1,0 +1,83 @@
+title: "画面 / 共通 / shortcuts.ts"
+lead: キーボードのショートカットの定義。フックもショートカットの一覧もここから引く。
+data_models:
+  - name: ShortcutDef
+    title: ショートカットの定義
+    container: shared/core/shortcuts.ts
+    usecase: 共通
+    role: 定義
+    summary: 1 つの操作に当てたキー
+    properties:
+      - name: id
+        type: ShortcutId
+        description: '`search`・`help`'
+      - name: hotkeys
+        type: string[]
+        description: TanStack Hotkeys のキーの書き方（`Mod+K`・`/`・`Shift+/`）
+      - name: label
+        type: string
+        description: ショートカットの一覧に出す操作の名前
+      - name: singleKey
+        type: string[]
+        description: '`hotkeys` のうち 1 文字のキー（1 文字のショートカットを切ったときに受けない）'
+      - name: screens
+        type: ScreenId[]
+        description: 使える画面（`doc-view`・`settings`・`not-found`）
+constants:
+  - name: SHORTCUTS
+    title: ショートカットの一覧
+    container: shared/core/shortcuts.ts
+    usecase: 共通
+    summary: 画面で受けるショートカットの定義の並び（`satisfies readonly ShortcutDef[]`）
+    entries:
+      - key: '0'
+        value: search
+        description: 検索。`Mod+K`・`/`（`/` は 1 文字）。文書の画面・見つからない画面
+      - key: '1'
+        value: help
+        description: ショートカットの一覧。`Shift+/`（`?`、1 文字）。全ての画面
+functions:
+  - name: shortcutsFor
+    title: 画面のショートカット
+    kind: 関数
+    container: shared/core/shortcuts.ts
+    usecase: 共通
+    role: 定義
+    summary: 画面と 1 文字のショートカットの設定に合う定義とキーを返す（ショートカットの一覧が描く）
+    scope: public
+    args:
+      - name: screen
+        type: ScreenId
+        required: true
+        passing: positional
+        description: 画面
+      - name: singleKey
+        type: boolean
+        required: true
+        passing: positional
+        description: 1 文字のショートカットを受けるか
+    returns:
+      type: '{def: ShortcutDef; hotkeys: string[]}[]'
+      description: 使えるキーが 1 つも無い定義は除く
+    process: |-
+      1. `screens` に `screen` を含む定義だけを残す
+      2. `singleKey` が false のときは `hotkeys` から `singleKey` のキーを除き、空になった定義を除く
+    unit_tests:
+      - name: test_shortcuts_for
+        case: 正常
+        summary: 文書の画面のキー
+        condition: '`doc-view`・`true`'
+        mock: なし
+        expected: '`search`（`Mod+K`・`/`）と `help`（`Shift+/`）'
+      - name: test_shortcuts_for_when_single_key_off
+        case: 正常
+        summary: 1 文字を切る
+        condition: '`doc-view`・`false`'
+        mock: なし
+        expected: '`search`（`Mod+K` だけ）の 1 件'
+      - name: test_shortcuts_for_when_settings
+        case: 正常
+        summary: 設定画面に検索が無い
+        condition: '`settings`・`true`'
+        mock: なし
+        expected: '`help` の 1 件'

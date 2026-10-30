@@ -1,0 +1,163 @@
+title: "画面 / 文書の画面 / comment-store.ts"
+lead: このブラウザのタブで溜めたコメントの置き場所。
+data_models:
+  - name: DocComment
+    title: コメント
+    container: features/docs/shared/comments/comment-store.ts
+    usecase: コメントを溜める
+    role: DTO
+    summary: 本文の文字列に付けた 1 件のコメント
+    properties:
+      - name: id
+        type: string
+        description: '`crypto.randomUUID()`'
+      - name: docId
+        type: string
+        description: '`{source}@{ref}:{path}`'
+      - name: source
+        type: string
+        description: 配信元の ID
+      - name: ref
+        type: string | null
+        description: コメントしたリビジョン
+      - name: path
+        type: string
+        description: 文書のパス
+      - name: docTitle
+        type: string
+        description: 文書の名前
+      - name: headings
+        type: string[]
+        description: 直前の見出しの並び（無ければ空）
+      - name: quote
+        type: string
+        description: 選んだ文字列
+      - name: prefix
+        type: string
+        description: 引用の前の文字列（mdmark）
+      - name: suffix
+        type: string
+        description: 引用の後の文字列（mdmark）
+      - name: body
+        type: string
+        description: 書いたコメント
+      - name: selected
+        type: boolean
+        description: コピー・起票に含めるか（追加したときは true）
+      - name: createdAt
+        type: string
+        description: ISO 8601
+stores:
+  - name: useCommentStore
+    title: コメントのストア
+    container: features/docs/shared/comments/comment-store.ts
+    usecase: コメントを溜める
+    role: ストア
+    summary: Zustand の `persist`（`sessionStorage`、キー `dev-docs:comments`、`version` 1）で保存するコメントの一覧
+    state:
+      - name: comments
+        type: DocComment[]
+        initial: '[]'
+        description: 追加した順
+    actions:
+      - name: add
+        title: コメントの追加
+        kind: 関数
+        summary: コメントを末尾に加え、追加したコメントを返す（mdmark の `commentStore.save`）
+        scope: public
+        args:
+          - name: input
+            type: Omit<DocComment, "id" | "selected" | "createdAt">
+            required: true
+            passing: positional
+            description: 中身
+        returns:
+          type: DocComment
+          description: 追加したコメント
+        process: '1. `id`・`selected: true`・`createdAt` を付けて末尾に加える'
+      - name: update
+        title: コメントの修正
+        kind: 関数
+        summary: コメントの本文を書き換える
+        scope: public
+        args:
+          - name: id
+            type: string
+            required: true
+            passing: positional
+            description: コメント
+          - name: body
+            type: string
+            required: true
+            passing: positional
+            description: 新しい本文
+        returns:
+          type: void
+          description: 何も返さない
+        process: 1. `id` のコメントの `body` を書き換える
+      - name: remove
+        title: コメントの削除
+        kind: 関数
+        summary: コメントを削除する
+        scope: public
+        args:
+          - name: id
+            type: string
+            required: true
+            passing: positional
+            description: コメント
+        returns:
+          type: void
+          description: 何も返さない
+        process: 1. `id` のコメントを除く
+      - name: setSelected
+        title: 選択の切り替え
+        kind: 関数
+        summary: 1 件か全て（`id` が null）の選択を切り替える
+        scope: public
+        args:
+          - name: id
+            type: string | null
+            required: true
+            passing: positional
+            description: コメント（null は全て）
+          - name: selected
+            type: boolean
+            required: true
+            passing: positional
+            description: 選ぶか
+        returns:
+          type: void
+          description: 何も返さない
+        process: 1. 対象の `selected` を書き換える
+functions:
+  - name: commentsOf
+    title: 文書のコメント
+    kind: 関数
+    container: features/docs/shared/comments/comment-store.ts
+    usecase: コメントを溜める
+    role: 変換
+    summary: mdmark の `commentStore.load` が返す、`docId` のコメントの並び
+    scope: public
+    args:
+      - name: comments
+        type: DocComment[]
+        required: true
+        passing: positional
+        description: ストアの一覧
+      - name: docId
+        type: string
+        required: true
+        passing: positional
+        description: 文書
+    returns:
+      type: '{id: string; quote: string; prefix: string; suffix: string; body: string}[]'
+      description: 追加した順
+    process: 1. `docId` が一致するコメントを mdmark の形にして返す
+    unit_tests:
+      - name: test_comments_of
+        case: 正常
+        summary: 文書で絞る
+        condition: 2 つの文書のコメントが 3 件
+        mock: なし
+        expected: 渡した `docId` の分だけ、追加した順

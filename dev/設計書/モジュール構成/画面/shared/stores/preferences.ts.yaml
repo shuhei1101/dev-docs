@@ -1,0 +1,51 @@
+title: "画面 / 共通 / preferences.ts"
+lead: ブラウザに保存する画面の設定（明暗・1 文字のショートカット）。
+stores:
+  - name: usePreferencesStore
+    title: 設定のストア
+    container: shared/stores/preferences.ts
+    usecase: 共通
+    role: ストア
+    summary: Zustand の `persist`（`localStorage`、キー `dev-docs:preferences`、`version` 1）で保存する画面の設定
+    state:
+      - name: colorScheme
+        title: 明暗
+        type: '"light" | "dark" | "system"'
+        initial: '"system"'
+        description: トップバーの明暗の切り替え
+      - name: singleKeyShortcuts
+        title: 1 文字のショートカット
+        type: boolean
+        initial: 'true'
+        description: 設定画面のスイッチ
+    actions:
+      - name: setColorScheme
+        title: 明暗の設定
+        kind: 関数
+        summary: 明暗を書き換える
+        scope: public
+        args:
+          - name: value
+            type: '"light" | "dark" | "system"'
+            required: true
+            passing: positional
+            description: 新しい明暗
+        returns:
+          type: void
+          description: 何も返さない
+        process: 1. `colorScheme` を書き換える（`<html>` の `dark` クラスは提供元のテーマが合わせる）
+      - name: setSingleKeyShortcuts
+        title: 1 文字のショートカットの設定
+        kind: 関数
+        summary: 1 文字のショートカットの受け取りを切り替える
+        scope: public
+        args:
+          - name: value
+            type: boolean
+            required: true
+            passing: positional
+            description: 受けるか
+        returns:
+          type: void
+          description: 何も返さない
+        process: 1. `singleKeyShortcuts` を書き換える

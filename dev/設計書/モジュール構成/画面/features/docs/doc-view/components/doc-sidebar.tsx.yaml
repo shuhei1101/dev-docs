@@ -1,0 +1,45 @@
+title: "画面 / 文書の画面 / doc-sidebar.tsx"
+lead: 選んでいるタブの文書の一覧（サイドバーとドロワーの中身）。
+components:
+  - name: DocSidebar
+    title: 文書の一覧
+    kind: コンポーネント
+    container: features/docs/doc-view/components/doc-sidebar.tsx
+    usecase: 文書を読む
+    role: 部品
+    summary: group を見出し、page をリンクにして入れ子で並べ、比較元からの変化のマーカーを付ける
+    props:
+      - name: tab
+        type: NavTab
+        required: true
+        description: 選んでいるタブ
+      - name: source
+        type: string
+        required: true
+        description: 配信元の ID
+      - name: currentPath
+        type: string | null
+        required: true
+        description: 開いている文書（`aria-current="page"`）
+      - name: search
+        type: DocViewSearch
+        required: true
+        description: リンクに保つ `rev`・`base`
+      - name: onNavigate
+        type: () => void
+        required: false
+        description: リンクを押したとき（ドロワーを閉じる）
+    description: 'page のリンクは TanStack Router の `Link`（`to="/$source/$"`、`search` を保つ）。`change` が `deleted` の page は `search` を `{rev: base}` にし、文書の名前に取り消し線を引く。マーカーは lucide-react の `Plus`・`Circle`（塗り）・`Minus` に `aria-label`（`追加`・`変更`・`削除`）を付ける'
+    unit_tests:
+      - name: test_doc_sidebar
+        case: 正常
+        summary: 入れ子と現在地
+        condition: group の中に `a.md`（開いている）と `b.md`
+        mock: なし（メモリの履歴のルーター）
+        expected: group の見出しの下に 2 つのリンクがあり、`a.md` だけ `aria-current="page"`
+      - name: test_doc_sidebar_when_deleted
+        case: 正常
+        summary: 削除した page
+        condition: '`base` が `v1`、`change` が `deleted` の `c.md`'
+        mock: なし（メモリの履歴のルーター）
+        expected: リンク先が `/s/c.md?rev=v1` で `base` を持たず、`削除` のマーカーがある

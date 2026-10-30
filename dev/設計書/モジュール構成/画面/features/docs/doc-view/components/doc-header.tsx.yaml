@@ -1,0 +1,34 @@
+title: "画面 / 文書の画面 / doc-header.tsx"
+lead: 文書のタイトルと情報（種類・パス・更新日時）。
+components:
+  - name: DocHeader
+    title: 文書のヘッダー
+    kind: コンポーネント
+    container: features/docs/doc-view/components/doc-header.tsx
+    usecase: 文書を読む
+    role: 部品
+    summary: 見出し 1 に文書の名前、その下に種類のバッジ・等幅のパス・`更新 {formatJst(updatedAt)}`（`time` 要素）を出す
+    props:
+      - name: title
+        type: string
+        required: true
+        description: 文書の名前（文書の無いタブはタブ名）
+      - name: kind
+        type: string
+        required: false
+        description: 種類（タブ名）。無いときは情報を出さない
+      - name: path
+        type: string
+        required: false
+        description: 文書のパス
+      - name: updatedAt
+        type: string
+        required: false
+        description: ISO 8601 の更新日時
+    unit_tests:
+      - name: test_doc_header
+        case: 正常
+        summary: 情報を出す
+        condition: '`updatedAt` が `2026-10-26T14:40:00Z`'
+        mock: なし
+        expected: '`更新 10/26 23:40 JST` と `time` の `datetime` が渡した値'

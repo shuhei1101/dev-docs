@@ -92,4 +92,18 @@ requirements:
     unit: 件
     rationale: 1 回の書き込み・削除で配信元の排他を握る時間と、検査の実行の時間を抑えるため。`write_docs` の `operations`・`delete_docs` の `targets` の件数の上限
     overflow: 50 件を超える要求は `InvalidArgumentError` で断り、何も書かない
+  - name: Issue の作成画面の URL の長さ
+    english_name: issue_url_length
+    category: 動作環境
+    external_constraint: GitHub の Issue の作成画面は、長すぎる URL（実測でおよそ 8 KB を超えるもの）を 414 で断る。公式の上限の記載は無い
+    source_kind: 外部 API の制限
+    source: https://docs.github.com/en/issues/tracking-your-work-with-issues/using-issues/creating-an-issue#creating-an-issue-from-a-url-query
+    value: '8000'
+    unit: 文字（パーセントエンコード後の URL 全体）
+    rationale: 測れている断られる長さから余裕を取った。ブラウザの URL の上限はこれより大きい
+    overflow: '`body` の末尾を切り詰め、切り詰めたことを書き添える。全文は先にクリップボードへコピーする'
+    measurement: 単体テストで、作った URL の長さが決定値以下であることを確かめる
+    status: planned
+    refs:
+      - dev/設計書/画面設計/文書の画面#elements[Issue を作成]
 lead: 外部の制約から逆算した dev-docs の決定値。

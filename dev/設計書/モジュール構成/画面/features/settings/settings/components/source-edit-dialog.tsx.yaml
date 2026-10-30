@@ -1,0 +1,47 @@
+title: "画面 / 設定画面 / source-edit-dialog.tsx"
+lead: 配信元のダイアログ（追加・編集）。
+components:
+  - name: SourceEditDialog
+    title: 配信元のダイアログ
+    kind: コンポーネント
+    container: features/settings/settings/components/source-edit-dialog.tsx
+    usecase: 配信元を設定する
+    role: 部品
+    summary: shadcn/ui の `Dialog` と `Form` で、`useSourceForm` の入力欄・保存の失敗のまとめ・フッターを出す
+    props:
+      - name: open
+        type: boolean
+        required: true
+        description: 開いているか
+      - name: onOpenChange
+        type: '(open: boolean) => void'
+        required: true
+        description: 開閉（閉じたら開いたボタンへフォーカスを戻す）
+      - name: sources
+        type: SettingsSource[]
+        required: true
+        description: 端末の設定の取得の `sources[]`
+      - name: index
+        type: number | null
+        required: true
+        description: 編集する行の位置（追加は null）
+    description: 追加のときだけ配信元の ID の入力欄を出し、初期フォーカスを置く。保存の応答を待つ間は追加・保存ボタンを無効にする
+    unit_tests:
+      - name: test_source_edit_dialog
+        case: 正常
+        summary: 追加
+        condition: '`index` が null で入力して `追加`'
+        mock: MSW の端末の設定の保存のハンドラ（200）
+        expected: 送った本文の末尾に入力の行、ダイアログが閉じる
+      - name: test_source_edit_dialog_when_edit
+        case: 正常
+        summary: 編集では ID を入力できない
+        condition: '`index` が 0'
+        mock: なし
+        expected: ID の入力欄が無く、タイトルの下に `配信元 {id}`
+      - name: test_source_edit_dialog_when_invalid
+        case: 異常
+        summary: 入力チェック
+        condition: 空のまま `追加`
+        mock: MSW のハンドラ
+        expected: ID・設定ファイル・読み取りの範囲の下にエラー、保存は呼ばれない

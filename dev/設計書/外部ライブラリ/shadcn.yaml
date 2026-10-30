@@ -1,0 +1,44 @@
+title: "shadcn"
+kind: "ライブラリ"
+version:
+  current: 4.23.0
+  latest: 4.23.0
+  checked_on: '2026-10-30'
+  source: package.json
+catalogs:
+  - name: パッケージ
+    version: 4.23.0
+    entries:
+      - name: shadcn
+        kind: CLI
+        purpose: '`shadcn add` で部品のコードを `components/ui/` へ追加する（開発のみ）'
+      - name: '@base-ui/react'
+        kind: ライブラリ
+        purpose: 部品の振る舞いとアクセシビリティ
+        notes:
+          版: 1.9.0
+  - name: 部品
+    version: 4.23.0
+    entries:
+      - name: Button / Badge / Alert / Skeleton / Switch / Textarea / Input
+        kind: コンポーネント
+        purpose: 画面の基本の要素
+      - name: Dialog / AlertDialog / Sheet / CommandDialog
+        kind: コンポーネント
+        purpose: ダイアログ・確認・ドロワー・検索
+      - name: Tabs / Breadcrumb / Table / Form
+        kind: コンポーネント
+        purpose: タブ・パンくず・表・フォーム
+lead: Base UI の上に Tailwind CSS で組んだ部品のコードをリポジトリへ追加する CLI と、その部品。
+purl: pkg:npm/shadcn
+dependency_scope: 必須
+adoption: 採用
+used_in:
+  - frontend/src/components/ui/
+upstream: shadcn-ui/ui
+verification:
+  state: 未確認
+  detail: 画面の実装（`frontend/`）がまだ無い
+license: MIT（商用利用可）
+official_url: https://ui.shadcn.com/
+docs_url: https://ui.shadcn.com/docs

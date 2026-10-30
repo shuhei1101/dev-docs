@@ -1,0 +1,41 @@
+title: "画面 / 設定画面 / source-delete-dialog.tsx"
+lead: 削除の確認のダイアログ。
+components:
+  - name: SourceDeleteDialog
+    title: 削除の確認のダイアログ
+    kind: コンポーネント
+    container: features/settings/settings/components/source-delete-dialog.tsx
+    usecase: 配信元を設定する
+    role: 部品
+    summary: shadcn/ui の `AlertDialog` で削除の確認を出し、確定で `removeSource` の結果を保存する
+    props:
+      - name: open
+        type: boolean
+        required: true
+        description: 開いているか
+      - name: onOpenChange
+        type: '(open: boolean) => void'
+        required: true
+        description: 開閉（閉じたら削除ボタンへフォーカスを戻す）
+      - name: sources
+        type: SettingsSource[]
+        required: true
+        description: 端末の設定の取得の `sources[]`
+      - name: index
+        type: number
+        required: true
+        description: 削除する行の位置
+    description: '初期フォーカスはキャンセル。保存の失敗は `handleAppError(error, {message: "端末の設定を保存できませんでした。"})` で、ダイアログは開いたまま'
+    unit_tests:
+      - name: test_source_delete_dialog
+        case: 正常
+        summary: 削除
+        condition: 2 行の 1 行目で `削除`
+        mock: MSW の端末の設定の保存のハンドラ（200）
+        expected: 送った本文が 2 行目だけ、ダイアログが閉じる
+      - name: test_source_delete_dialog_when_failed
+        case: 異常
+        summary: 保存の失敗
+        condition: '`削除`'
+        mock: MSW のハンドラ（500）・sonner の `toast`
+        expected: 通知が `端末の設定を保存できませんでした。`、ダイアログは開いたまま

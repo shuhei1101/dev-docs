@@ -1,0 +1,19 @@
+title: "画面 / アプリとルート / main.tsx"
+lead: SPA の入口。ルーターと Provider を組んで `#root` に描く。
+functions:
+  - name: main
+    title: 画面の起動
+    kind: 関数
+    container: main.tsx
+    usecase: 起動
+    role: 合成の起点
+    summary: QueryClient とルーターを作り、`#root` に描く（モジュールの最上位で実行する）
+    scope: internal
+    side_effects: '`#root` に描く'
+    returns:
+      type: void
+      description: 何も返さない
+    process: |-
+      1. `createQueryClient()` で QueryClient を作る（QueryClient の作成）
+      2. `createAppRouter({queryClient})` でルーターを作る（ルーターの作成）
+      3. `createRoot(document.getElementById("root")!)` に `<StrictMode><AppProviders queryClient><RouterProvider router /></AppProviders></StrictMode>` を描く

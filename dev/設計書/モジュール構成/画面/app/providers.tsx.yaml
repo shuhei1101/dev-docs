@@ -1,0 +1,20 @@
+title: "画面 / アプリとルート / providers.tsx"
+lead: 画面全体の Provider。
+components:
+  - name: AppProviders
+    title: 画面の Provider
+    kind: コンポーネント
+    container: app/providers.tsx
+    usecase: 起動
+    role: Provider
+    summary: ErrorBoundary・QueryClientProvider・明暗の反映・TooltipProvider・ConfirmDialogProvider・Toaster（sonner）を外から順に重ねる
+    props:
+      - name: queryClient
+        type: QueryClient
+        required: true
+        description: 渡す QueryClient
+      - name: children
+        type: ReactNode
+        required: true
+        description: ルーター
+    description: 明暗は設定のストアの `colorScheme` を読み、`system` のときは `prefers-color-scheme` に合わせて `<html>` の `dark` クラスを付け外しする

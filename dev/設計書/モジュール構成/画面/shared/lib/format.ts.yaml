@@ -1,0 +1,35 @@
+title: "画面 / 共通 / format.ts"
+lead: 画面に出す日時の書式。
+functions:
+  - name: formatJst
+    title: 日本時間の表示
+    kind: 関数
+    container: shared/lib/format.ts
+    usecase: 共通
+    role: 書式
+    summary: ISO 8601 の日時を `MM/DD HH:mm JST` にする
+    scope: public
+    args:
+      - name: iso
+        title: 日時
+        type: string
+        required: true
+        passing: positional
+        description: ISO 8601 の日時（タイムゾーン付き）
+    returns:
+      type: string
+      description: '`MM/DD HH:mm JST`（例 `10/26 23:40 JST`）'
+    process: '1. `Intl.DateTimeFormat("ja-JP", {timeZone: "Asia/Tokyo", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hourCycle: "h23"})` の `formatToParts` で月・日・時・分を取り、`{月}/{日} {時}:{分} JST` に並べる'
+    unit_tests:
+      - name: test_format_jst
+        case: 正常
+        summary: UTC を日本時間で出す
+        condition: '`2026-10-26T14:40:00Z`'
+        mock: なし
+        expected: '`10/26 23:40 JST`'
+      - name: test_format_jst_when_date_changes
+        case: 正常
+        summary: 日をまたぐ
+        condition: '`2026-12-31T15:05:00Z`'
+        mock: なし
+        expected: '`01/01 00:05 JST`'

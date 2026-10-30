@@ -1,0 +1,57 @@
+title: "画面 / 文書の画面 / comment-panel.tsx"
+lead: 溜めたコメントの一覧と、コピー・起票。
+components:
+  - name: CommentPanel
+    title: コメントのパネル
+    kind: コンポーネント
+    container: features/docs/shared/comments/comment-panel.tsx
+    usecase: コメントを溜める
+    role: 部品
+    summary: コメントのストアの一覧を並べ、選択・修正・削除・コピー・起票をする（狭い幅では shadcn/ui の `Sheet` を下から出す）
+    props:
+      - name: open
+        type: boolean
+        required: true
+        description: 開いているか
+      - name: onOpenChange
+        type: '(open: boolean) => void'
+        required: true
+        description: 開閉（閉じたらトップバーのコメントのボタンへフォーカスを戻す）
+      - name: github
+        type: GitHubTarget | null
+        required: true
+        description: 起票先（null は「Issue を作成」を出さない）
+      - name: onLocate
+        type: '(comment: DocComment) => void'
+        required: true
+        description: コメントの場所を押したとき（他の文書は開いてから、mdmark#222 の `focusComment`）
+      - name: onChanged
+        type: () => void
+        required: true
+        description: 修正・削除の後（本文のマーカーを描き直す）
+    state:
+      - name: editingId
+        type: string | null
+        initial: 'null'
+        description: 修正中のコメント
+        notes: '`useState`'
+    description: コピーは `navigator.clipboard.writeText(formatComments(選んだコメント))`。起票は全文をコピーしてから `buildIssueUrl` の URL を `window.open(url, "_blank", "noopener")` で開く。結果は sonner の通知で出す（文言は画面設計の通知）
+    unit_tests:
+      - name: test_comment_panel
+        case: 正常
+        summary: 選んだコメントをコピーする
+        condition: 3 件のうち 1 件の選択を外して「選択 2 件をコピー」
+        mock: '`navigator.clipboard`（偽物）・sonner の `toast`（`vi.mock`）'
+        expected: '`writeText` に 2 件分の本文、通知が `選択 2 件をクリップボードにコピーしました。`'
+      - name: test_comment_panel_when_indeterminate
+        case: 正常
+        summary: 一部だけ選んだとき
+        condition: 3 件のうち 1 件だけ選ぶ
+        mock: なし
+        expected: 「すべて選択」が途中の状態（`aria-checked="mixed"`）
+      - name: test_comment_panel_when_clipboard_failed
+        case: 異常
+        summary: コピーの失敗
+        condition: '`writeText` が失敗する'
+        mock: '`navigator.clipboard`（例外を送る偽物）・sonner の `toast`'
+        expected: 通知が `クリップボードにコピーできませんでした。`

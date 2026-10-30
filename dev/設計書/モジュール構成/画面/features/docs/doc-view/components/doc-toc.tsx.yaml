@@ -1,0 +1,26 @@
+title: "画面 / 文書の画面 / doc-toc.tsx"
+lead: 本文の右の目次。
+components:
+  - name: DocToc
+    title: 目次
+    kind: コンポーネント
+    container: features/docs/doc-view/components/doc-toc.tsx
+    usecase: 文書を読む
+    role: 部品
+    summary: 見出し 2・3 を階層どおりにリンクで並べ、`useActiveHeading` の見出しに `aria-current="true"`、変わったセクションに変更のマーカーを付ける
+    props:
+      - name: items
+        type: TocItem[]
+        required: true
+        description: 描いた本文の見出し
+      - name: changed
+        type: Set<string>
+        required: false
+        description: '`changedSections` の結果（差分を出していないときは渡さない）'
+    unit_tests:
+      - name: test_doc_toc
+        case: 正常
+        summary: 変更のマーカー
+        condition: '`changed` に `A`'
+        mock: IntersectionObserver（偽物）
+        expected: '`A` の行だけに `変更` のマーカー'

@@ -1,0 +1,49 @@
+title: "画面 / 共通 / handle-app-error.ts"
+lead: 画面で拾った例外を通知とログに振り分ける。
+functions:
+  - name: handleAppError
+    title: 例外の扱い
+    kind: 関数
+    container: shared/core/handle-app-error.ts
+    usecase: 共通
+    role: 例外の扱い
+    summary: 例外の種類に合う通知を出し、ログを書く
+    scope: public
+    side_effects: 通知（sonner の `toast.error`）を出し、ロガーへ書く
+    args:
+      - name: error
+        type: unknown
+        required: true
+        passing: positional
+        description: 拾った例外
+      - name: options
+        type: '{message?: string}'
+        required: false
+        passing: positional
+        description: 通知の文言を画面側で決めるとき（列の表示の保存の失敗 等）
+    returns:
+      type: void
+      description: 何も返さない
+    process: |-
+      1. `options.message` があればその文言で通知する
+      2. 無ければ `AppError` は `problem.detail`（無ければ `通信に失敗しました。`）、それ以外は `予期しないエラーが起きました。` で通知する
+      3. `[error]` `app_error`（`status`・`type`・例外）をロガーへ書く
+    unit_tests:
+      - name: test_handle_app_error
+        case: 正常
+        summary: problem の説明で通知する
+        condition: '`detail` が `x` の 500 の AppError'
+        mock: sonner の `toast`・ロガー（`vi.mock`）
+        expected: '`toast.error("x")` が 1 回、ロガーの `error` が `app_error` で 1 回'
+      - name: test_handle_app_error_when_message
+        case: 正常
+        summary: 渡した文言を優先する
+        condition: '`message` に `列の表示を保存できませんでした。`'
+        mock: sonner の `toast`・ロガー（`vi.mock`）
+        expected: '`toast.error` が渡した文言で呼ばれる'
+      - name: test_handle_app_error_when_unknown
+        case: 正常
+        summary: AppError でない例外
+        condition: '`new TypeError("y")`'
+        mock: sonner の `toast`・ロガー（`vi.mock`）
+        expected: '`toast.error("予期しないエラーが起きました。")`'

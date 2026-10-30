@@ -1,0 +1,45 @@
+title: "画面 / 文書の画面 / doc-tabs.tsx"
+lead: 配信元の文書の種類のタブ。
+components:
+  - name: DocTabs
+    title: 種類のタブ
+    kind: コンポーネント
+    container: features/docs/doc-view/components/doc-tabs.tsx
+    usecase: 文書を読む
+    role: 部品
+    summary: '`tabs` をリンクの並びで出し、選んだタブの一番上の文書を開く（文書の無いタブは `onEmptyTab`）'
+    props:
+      - name: tabs
+        type: NavTab[]
+        required: true
+        description: 文書の取得の `tabs`
+      - name: currentIndex
+        type: number
+        required: true
+        description: 現在地のタブ
+      - name: source
+        type: string
+        required: true
+        description: 配信元の ID
+      - name: search
+        type: DocViewSearch
+        required: true
+        description: 保つ `rev`・`base`
+      - name: onEmptyTab
+        type: '(tab: NavTab) => void'
+        required: true
+        description: 文書の無いタブを押したとき
+    description: 画面の移動なので `role="tablist"` でなく `nav` のリンクにし、現在地に `aria-current="page"` を付ける。横に収まらないときは横にスクロールする
+    unit_tests:
+      - name: test_doc_tabs
+        case: 正常
+        summary: タブの最初の文書へ
+        condition: 2 つ目のタブの最初の page が `b.md`
+        mock: なし（メモリの履歴のルーター）
+        expected: 2 つ目のタブのリンク先が `/s/b.md`
+      - name: test_doc_tabs_when_empty
+        case: 正常
+        summary: 文書の無いタブ
+        condition: '`items` が空のタブを押す'
+        mock: なし
+        expected: '`onEmptyTab` がそのタブで 1 回'

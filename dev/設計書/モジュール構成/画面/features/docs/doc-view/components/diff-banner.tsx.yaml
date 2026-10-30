@@ -1,0 +1,44 @@
+title: "画面 / 文書の画面 / diff-banner.tsx"
+lead: 差分を強調していることと、比べている 2 つのリビジョンの案内。
+components:
+  - name: DiffBanner
+    title: 差分の案内
+    kind: コンポーネント
+    container: features/docs/doc-view/components/diff-banner.tsx
+    usecase: 文書を読む
+    role: 部品
+    summary: 比較元・比較先の選択（shadcn/ui の `Select`）と「差分の強調を解除」を並べる
+    props:
+      - name: base
+        type: string
+        required: true
+        description: 比較元（`diff.base`）
+      - name: head
+        type: string
+        required: true
+        description: 比較先（`ref`）
+      - name: refs
+        type: RefsResponse
+        required: true
+        description: 選択肢の元（`defaultRef`・ブランチ・タグ・最近の commit）
+      - name: onChange
+        type: '(next: {base: string; rev: string}) => void'
+        required: true
+        description: 選び直したとき
+      - name: onClear
+        type: () => void
+        required: true
+        description: 解除を押したとき
+    unit_tests:
+      - name: test_diff_banner
+        case: 正常
+        summary: 一覧に無い比較元を先頭に足す
+        condition: '`base` がリビジョンの一覧に無い commit'
+        mock: なし
+        expected: 比較元の選択肢の先頭がその commit
+      - name: test_diff_banner_when_clear
+        case: 正常
+        summary: 解除
+        condition: 「差分の強調を解除」を押す
+        mock: なし
+        expected: '`onClear` が 1 回'

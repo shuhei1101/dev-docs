@@ -1,0 +1,42 @@
+title: "画面 / 文書の画面 / missing.ts"
+lead: 文書の取得の 404 の `missing` を、見つからない画面の文言にする。
+functions:
+  - name: describeMissing
+    title: 見つからなかったものの説明
+    kind: 関数
+    container: features/docs/not-found/missing.ts
+    usecase: 文書を読む
+    role: 変換
+    summary: '`missing` を見出し・説明・詳細の行にする'
+    scope: public
+    args:
+      - name: data
+        type: unknown
+        required: true
+        passing: positional
+        description: '`notFound` の `data`（文書の取得の problem。ルートに当たらない URL は undefined）'
+    returns:
+      type: '{kind: "source" | "not_served" | "ref" | "doc" | "route"; heading: string; description: string; details: {label: string; value: string}[]}'
+      description: 文言は画面設計『見つからない画面』の見出し・説明・詳細
+    process: |-
+      1. `data.missing` を `MissingSchema.safeParse` で読む（読めなければ `route`）
+      2. `kind` ごとの文言に、配信元の ID・リビジョン・文書のパスを入れる
+    unit_tests:
+      - name: test_describe_missing
+        case: 正常
+        summary: 文書が無い
+        condition: '`missing` が `{kind: "doc", source: "s", ref: "main", path: "a.md"}`'
+        mock: なし
+        expected: '`kind` が `doc`、詳細に `a.md` と `main`'
+      - name: test_describe_missing_when_not_served
+        case: 正常
+        summary: 配信していない配信元
+        condition: '`missing.kind` が `not_served`'
+        mock: なし
+        expected: '`kind` が `not_served`'
+      - name: test_describe_missing_when_route
+        case: 正常
+        summary: ルートに当たらない URL
+        condition: '`data` が undefined'
+        mock: なし
+        expected: '`kind` が `route`'
