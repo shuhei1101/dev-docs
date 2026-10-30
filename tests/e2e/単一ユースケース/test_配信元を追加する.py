@@ -4,6 +4,9 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
+import httpx
+from playwright.sync_api import Locator, Page, expect
+
 TEMPLATES = Path(__file__).parents[3] / "templates"
 FILES_SCHEMA = TEMPLATES / "files.schema.yaml"
 BROKEN_CONFIG = "name: broken\ndocuments:\n  - id: sample\n    schema: schemas/sample.schema.yaml\n"
@@ -441,3 +444,156 @@ def test_normal_when_excluded_and_related_candidates(
     assert checked.data.get("violations", []) == []
     assert checked.data["sync"] == SYNC_ZERO
     assert [item["id"] for item in traced.data["items"]] == ["src/tasks/repo"]
+
+
+def _settings_rows(settings: Any) -> dict[str, Any]:
+    """端末の設定の `sources` を、配信元の ID から行を引く辞書にする。"""
+    return {row["id"]: row for row in settings["sources"]}
+
+
+def _source_row(page: Page, source_id: str) -> Locator:
+    """設定画面の配信元の一覧から、`source_id` の行のロケータを返す。"""
+    return page.get_by_role("row").filter(has=page.get_by_role("cell", name=source_id, exact=True))
+
+
+def _add_source(page: Page, source_id: str, config: Path, read: str) -> None:
+    """設定画面の追加のダイアログに入力して追加を押す。"""
+    dialog = page.get_by_role("dialog")
+    page.get_by_role("button", name="配信元を追加").click()
+    dialog.get_by_label("配信元の ID").fill(source_id)
+    dialog.get_by_label("設定ファイル").fill(str(config))
+    dialog.get_by_label("読み取りの範囲").fill(read)
+    dialog.get_by_role("button", name="追加", exact=True).click()
+
+
+def test_normal_when_added_from_settings(
+    make_source: Callable[..., Any],
+    serve: Callable[..., Any],
+    load_yaml_file: Callable[[Path], Any],
+    page: Page,
+) -> None:
+    """設定画面から配信元を追加し、再起動せずに配信する（正常系）。"""
+    # 準備
+    sample = make_source("sample")
+    extra = make_source("extra")
+    served = serve(sample)
+    sample_row = _settings_rows(load_yaml_file(served.settings))["sample"]
+    page.goto(served.url("/_settings"))
+    # 実行
+    _add_source(page, "extra", extra.folder / "dev-docs.yaml", f"{extra.folder}/**")
+    # 検証
+    expect(_source_row(page, "extra")).to_contain_text("配信中")
+    expect(_source_row(page, "sample")).to_contain_text("配信中")
+    rows = _settings_rows(load_yaml_file(served.settings))
+    assert list(rows) == ["sample", "extra"]
+    assert rows["sample"] == sample_row
+    page.goto(served.url("/extra"))
+    expect(page.get_by_role("main").get_by_role("heading", level=1)).to_have_text("文書 1")
+
+
+def test_normal_when_source_not_served(
+    make_source: Callable[..., Any],
+    serve: Callable[..., Any],
+    sample_file_set: Callable[..., dict[str, str]],
+    sample_config_text: Callable[..., str],
+    page: Page,
+) -> None:
+    """設定画面が、配信していない・設定が古い・無効の配信元を状態と理由つきで出す（正常系）。"""
+    # 準備
+    sample = make_source("sample")
+    legacy_config = sample_config_text(name="legacy", version="0")
+    legacy = make_source("legacy", sample_file_set(**{"dev-docs.yaml": legacy_config}))
+    broken = make_source("broken", {"dev-docs.yaml": BROKEN_CONFIG}, git=False)
+    archive = make_source("archive", enabled=False)
+    served = serve(sample, legacy, broken, archive)
+    # 実行
+    page.goto(served.url("/_settings"))
+    # 検証
+    expect(_source_row(page, "sample")).to_contain_text("配信中")
+    expect(_source_row(page, "legacy")).to_contain_text("配信中")
+    expect(_source_row(page, "legacy")).to_contain_text("設定のバージョン 0（サーバーが読めるのは")
+    expect(_source_row(page, "broken")).to_contain_text("配信していない")
+    expect(_source_row(page, "broken")).to_contain_text("documents[0].paths")
+    expect(_source_row(page, "archive")).to_contain_text("無効")
+    expect(_source_row(page, "archive")).to_contain_text("enabled が false です")
+
+
+def test_normal_when_added_source_invalid(
+    make_source: Callable[..., Any],
+    serve: Callable[..., Any],
+    load_yaml_file: Callable[[Path], Any],
+    page: Page,
+) -> None:
+    """設定画面で追加した配信元が検証に通らないと、端末の設定には残し、配信から外す（正常系）。"""
+    # 準備
+    broken = make_source("broken", {"dev-docs.yaml": BROKEN_CONFIG}, git=False)
+    served = serve(make_source("sample"))
+    page.goto(served.url("/_settings"))
+    # 実行
+    _add_source(page, "broken", broken.folder / "dev-docs.yaml", f"{broken.folder}/**")
+    # 検証
+    expect(_source_row(page, "broken")).to_contain_text("配信していない")
+    expect(_source_row(page, "broken")).to_contain_text("documents[0].paths")
+    assert list(_settings_rows(load_yaml_file(served.settings))) == ["sample", "broken"]
+    page.goto(served.url("/broken/docs/doc-1"))
+    expect(page.get_by_role("main").get_by_role("heading", level=1)).to_have_text(
+        "配信元 broken を配信していません"
+    )
+    page.goto(served.url("/sample"))
+    expect(page.get_by_role("main").get_by_role("heading", level=1)).to_have_text("文書 1")
+
+
+def test_error_when_schema_invalid(
+    make_source: Callable[..., Any],
+    serve: Callable[..., Any],
+    page: Page,
+) -> None:
+    """設定画面の保存が検証に通らないと、違反を項目ごとに出し、端末の設定を書き換えない（異常系）。"""
+    # 準備
+    sample = make_source("sample")
+    served = serve(sample)
+    before = served.settings.read_bytes()
+    page.goto(served.url("/_settings"))
+    dialog = page.get_by_role("dialog")
+    # 実行
+    _add_source(page, "Sample Docs", sample.folder / "dev-docs.yaml", "/a/**\n\n/b/**")
+    # 検証
+    expect(dialog.get_by_role("alert")).to_contain_text("保存できませんでした")
+    expect(dialog).to_contain_text("配信元の ID に使えない文字があります")
+    expect(dialog).to_contain_text("読み取りの範囲に空の行があります")
+    expect(dialog.get_by_label("配信元の ID")).to_have_value("Sample Docs")
+    assert served.settings.read_bytes() == before
+    page.goto(served.url("/sample"))
+    expect(page.get_by_role("main").get_by_role("heading", level=1)).to_have_text("文書 1")
+
+
+def test_error_when_cross_origin(
+    make_source: Callable[..., Any],
+    serve: Callable[..., Any],
+    free_port: Callable[[], int],
+) -> None:
+    """画面と別のオリジンからの端末の設定の保存は 403 で断る（異常系）。"""
+    # 準備
+    sample = make_source("sample")
+    served = serve(sample)
+    before = served.settings.read_bytes()
+    payload = {
+        "sources": [
+            {
+                "id": "sample",
+                "config": [str(sample.folder / "dev-docs.yaml")],
+                "scope": {"read": [str(sample.folder)]},
+            }
+        ]
+    }
+    # 実行
+    response = httpx.put(
+        served.url("/_api/settings/sources"),
+        json=payload,
+        headers={"Origin": f"http://127.0.0.1:{free_port()}"},
+        timeout=10,
+    )
+    # 検証
+    assert response.status_code == 403
+    assert served.settings.read_bytes() == before
+    assert served.get("/_api/sources/sample/docs").status_code == 200
