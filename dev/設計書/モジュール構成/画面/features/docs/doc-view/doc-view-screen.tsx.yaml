@@ -35,6 +35,11 @@ components:
         initial: 'null'
         description: 文書の無いタブを選んだときのタブ（URL を変えない）
         notes: '`useState`。文書が変わったら null'
+      - name: locating
+        type: DocComment | null
+        initial: 'null'
+        description: コメントのパネルで場所を選ばれたコメント。`DocBody` の `locating` へ渡す
+        notes: '`useState`。場所を選ばれたら入れ、開いている文書（配信元・`ref`・`path` が同じ）なら移動せず、他の文書なら `useDocNavigation` の `locate` で開く。`onLocated` か、開いている文書が `locating` と違う文書に変わったときに null'
     unit_tests:
       - name: test_doc_view_screen
         case: 正常

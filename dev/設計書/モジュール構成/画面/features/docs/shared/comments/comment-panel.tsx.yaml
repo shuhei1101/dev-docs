@@ -24,7 +24,7 @@ components:
       - name: onLocate
         type: '(comment: DocComment) => void'
         required: true
-        description: コメントの場所を押したとき（他の文書は開いてから、mdmark#222 の `focusComment`）
+        description: コメントの場所を押したとき（画面がその文書を開き、`DocBody` が本文のコメントのマーカーまでスクロールする）
       - name: onChanged
         type: () => void
         required: true
@@ -34,7 +34,7 @@ components:
         type: string | null
         initial: 'null'
         description: 修正中のコメント
-        notes: '`useState`'
+        notes: '`useState`。修正欄で Esc を押すと、イベントをパネルへ伝えず（`stopPropagation`）null に戻す'
     description: コピーは `navigator.clipboard.writeText(formatComments(選んだコメント))`。起票は全文をコピーしてから `buildIssueUrl` の URL を `window.open(url, "_blank", "noopener")` で開く。結果は sonner の通知で出す（文言は画面設計の通知）
     unit_tests:
       - name: test_comment_panel
