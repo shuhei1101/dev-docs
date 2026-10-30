@@ -87,7 +87,7 @@ categories:
     verification:
       state: 済
       date: '2026-10-30'
-      detail: worktree で 3 つのコマンドを実行し、終了コード 0 を確かめた。lefthook の設定は `npx lefthook validate` で確かめた。pre-commit のフックを commit で走らせることは確かめていない。
+      detail: worktree で 3 つのコマンドを実行し、終了コード 0 を確かめた。`frontend/` を含む commit で lefthook の pre-commit（lint・型検査・ビルド）が走り、ビルドし直した `src/dev_docs/screen/` がステージへ戻ることを確かめた。
   - name: 管理作業
     commands: 未確定
 lead: dev-docs の開発で使うコマンド。
