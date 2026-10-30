@@ -20,6 +20,8 @@
   <script type="module" src="../../../../refs/36/assets/app.js"></script>
 </head>
 <body>
+  <a class="skip-link" href="#main">本文へスキップ</a>
+
   <!-- モック専用の操作列（モックの階層と、無かったものの切り替え） -->
   <nav class="mockbar" aria-label="モックの操作">
     <span class="mockbar__path"><a href="../../../">pages</a> / <a href="../../">not-found</a> / <a href="../">36</a> / <span>default</span></span>
@@ -29,6 +31,8 @@
     <a class="mockbar__tab" href="#source">配信元</a>
     <span class="mockbar__sep"></span>
     <a class="mockbar__tab" href="#search">検索</a>
+    <span class="mockbar__sep"></span>
+    <a class="mockbar__tab" href="#shortcuts">ショートカットの一覧</a>
   </nav>
 
   <div class="app-header">
@@ -38,7 +42,7 @@
 
       <button class="btn btn--outline source-button" type="button" commandfor="source-menu" command="toggle-popover" aria-label="配信元を切り替える">
         <svg aria-hidden="true" viewBox="0 0 16 16" fill="currentColor"><path d="M2 2.5A1.5 1.5 0 0 1 3.5 1h9A1.5 1.5 0 0 1 14 2.5v11a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 2 13.5zm1.5 0v11h9v-11zM5 4h6v1.5H5zm0 3h6v1.5H5z"/></svg>
-        <span data-when="normal ref search">sample</span>
+        <span data-when="normal ref search shortcuts">sample</span>
         <span data-when="source">配信元を選ぶ</span>
         <svg class="btn__chevron" aria-hidden="true" viewBox="0 0 16 16" fill="currentColor"><path d="M3.2 5.7 8 10.5l4.8-4.8-1.06-1.06L8 8.38 4.26 4.64z"/></svg>
       </button>
@@ -50,9 +54,9 @@
       </div>
 
       <!-- 配信元が決まっているときだけ、リビジョンを切り替える -->
-      <button class="btn btn--outline revision-button" type="button" commandfor="revision-menu" command="toggle-popover" aria-label="リビジョンを切り替える" data-when="normal ref search">
+      <button class="btn btn--outline revision-button" type="button" commandfor="revision-menu" command="toggle-popover" aria-label="リビジョンを切り替える" data-when="normal ref search shortcuts">
         <svg aria-hidden="true" viewBox="0 0 16 16" fill="currentColor"><path d="M5 3.25a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0M3.5 5.37a2.25 2.25 0 1 1 1.5 0v.63c0 .55.45 1 1 1h4c.17 0 .34.03.5.08V5.37a2.25 2.25 0 1 1 1.5 0V8.5A2.5 2.5 0 0 1 10 11H6c-.17 0-.34-.03-.5-.08v.71a2.25 2.25 0 1 1-1.5 0zm8.5-1.37a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5M4.25 13.5a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5"/></svg>
-        <span class="mono only-wide" data-when="normal search">develop</span>
+        <span class="mono only-wide" data-when="normal search shortcuts">develop</span>
         <span class="mono only-wide" data-when="ref">no-such-branch</span>
         <svg class="btn__chevron only-wide" aria-hidden="true" viewBox="0 0 16 16" fill="currentColor"><path d="M3.2 5.7 8 10.5l4.8-4.8-1.06-1.06L8 8.38 4.26 4.64z"/></svg>
       </button>
@@ -80,14 +84,14 @@
     </header>
   </div>
 
-  <main class="page page--narrow">
+  <main id="main" class="page page--narrow" tabindex="-1">
     <div class="not-found">
       <div class="not-found__icon" aria-hidden="true">
         <svg viewBox="0 0 16 16" fill="currentColor"><path d="M2 1.75C2 .78 2.78 0 3.75 0h6.59c.46 0 .9.18 1.23.51l2.92 2.92c.33.33.51.77.51 1.23v9.59A1.75 1.75 0 0 1 13.25 16h-9.5A1.75 1.75 0 0 1 2 14.25zm1.75-.25a.25.25 0 0 0-.25.25v12.5c0 .14.11.25.25.25h9.5a.25.25 0 0 0 .25-.25V6h-2.75A1.75 1.75 0 0 1 9 4.25V1.5zm6.75.06V4.25c0 .14.11.25.25.25h2.69z"/></svg>
       </div>
 
       <!-- 無いのが文書 -->
-      <div data-when="normal search">
+      <div data-when="normal search shortcuts">
         <h1 tabindex="-1">文書が見つかりません</h1>
         <p>配信元 sample のリビジョン <code>develop</code> に、この文書はありません。</p>
         <dl class="facts">
@@ -145,15 +149,15 @@
       <div class="search-dialog__field">
         <svg aria-hidden="true" viewBox="0 0 16 16" fill="currentColor"><path d="M10.68 11.74a6 6 0 1 1 1.06-1.06l3.04 3.04-1.06 1.06zM11.5 7a4.5 4.5 0 1 0-9 0 4.5 4.5 0 0 0 9 0"/></svg>
         <label class="sr-only" for="search-input">検索する語</label>
-        <input id="search-input" class="input" type="search" value="no-such" autofocus>
+        <input id="search-input" class="input" type="text" value="no-such" role="combobox" aria-expanded="true" aria-autocomplete="list" aria-controls="search-results" aria-activedescendant="search-result-1" autofocus>
         <button class="btn btn--ghost btn--icon" type="button" commandfor="search-dialog" command="close" aria-label="閉じる">
           <svg aria-hidden="true" viewBox="0 0 16 16" fill="currentColor"><path d="M3.72 3.72a.75.75 0 0 1 1.06 0L8 6.94l3.22-3.22a.75.75 0 1 1 1.06 1.06L9.06 8l3.22 3.22a.75.75 0 1 1-1.06 1.06L8 9.06l-3.22 3.22a.75.75 0 0 1-1.06-1.06L6.94 8 3.72 4.78a.75.75 0 0 1 0-1.06"/></svg>
         </button>
       </div>
       <p class="search-dialog__count" aria-live="polite">sample の develop で 1 件</p>
-      <ul class="search-results">
-        <li>
-          <a href="../../../doc-view/36/default/index.html#not-found" aria-selected="true">
+      <ul id="search-results" class="search-results" role="listbox" aria-label="検索の結果">
+        <li role="none">
+          <a id="search-result-1" href="../../../doc-view/36/default/index.html#not-found" role="option" aria-selected="true" tabindex="-1">
             <span class="search-results__title">利用者が画面で読む › 異常シナリオ（無い文書を開く）</span>
             <span class="search-results__path">dev/設計書/シナリオ/単一ユースケース/利用者が画面で読む.yaml</span>
             <span class="search-results__snippet">文書のパス <mark>no-such</mark>-doc を開く</span>
@@ -166,6 +170,36 @@
         <span><kbd class="key">Esc</kbd> 閉じる</span>
       </div>
     </form>
+  </dialog>
+  <!-- ショートカットの一覧（? と、設定画面の「キーボード」のセクションから開く） -->
+  <dialog id="shortcut-dialog" class="dialog dialog--form" closedby="any" aria-labelledby="shortcut-title" data-open-when="shortcuts">
+    <div class="dialog__head">
+      <div>
+        <h2 class="dialog__title" id="shortcut-title">ショートカット</h2>
+        <p class="dialog__desc">この画面で使えるキー</p>
+      </div>
+      <button class="btn btn--ghost btn--icon" type="button" commandfor="shortcut-dialog" command="close" aria-label="閉じる" autofocus>
+        <svg aria-hidden="true" viewBox="0 0 16 16" fill="currentColor"><path d="M3.72 3.72a.75.75 0 0 1 1.06 0L8 6.94l3.22-3.22a.75.75 0 1 1 1.06 1.06L9.06 8l3.22 3.22a.75.75 0 1 1-1.06 1.06L8 9.06l-3.22 3.22a.75.75 0 0 1-1.06-1.06L6.94 8 3.72 4.78a.75.75 0 0 1 0-1.06"/></svg>
+      </button>
+    </div>
+    <div class="dialog__scroll">
+      <section class="shortcut-scope">
+        <h3 class="shortcut-scope__title">画面全体</h3>
+        <dl class="shortcut-list">
+          <div><dt>ショートカットの一覧を開く <span class="shortcut-list__note">1 文字</span></dt><dd><kbd class="key">?</kbd></dd></div>
+          <div><dt>検索を開く</dt><dd><kbd class="key">Ctrl K</kbd></dd></div>
+          <div><dt>検索を開く <span class="shortcut-list__note">1 文字</span></dt><dd><kbd class="key">/</kbd></dd></div>
+        </dl>
+      </section>
+      <section class="shortcut-scope">
+        <h3 class="shortcut-scope__title">検索のダイアログ</h3>
+        <dl class="shortcut-list">
+          <div><dt>結果を選ぶ</dt><dd><kbd class="key">↑</kbd> <kbd class="key">↓</kbd></dd></div>
+          <div><dt>選んだ文書を開く</dt><dd><kbd class="key">Enter</kbd></dd></div>
+          <div><dt>閉じる</dt><dd><kbd class="key">Esc</kbd></dd></div>
+        </dl>
+      </section>
+    </div>
   </dialog>
 </body>
 </html>

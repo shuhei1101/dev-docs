@@ -176,6 +176,20 @@ if (searchDialog) {
   });
 }
 
+// ===== ショートカットの一覧（?） =====
+
+const shortcutDialog = document.getElementById("shortcut-dialog");
+
+if (shortcutDialog) {
+  addEventListener("keydown", (event) => {
+    if (event.isComposing || event.keyCode === 229) return;
+    if (event.key === "?" && !event.ctrlKey && !event.metaKey && !isTyping(event.target)) {
+      event.preventDefault();
+      if (!shortcutDialog.open) shortcutDialog.showModal();
+    }
+  });
+}
+
 // ===== コメントのパネル（モーダルでないので Esc を自分で受ける） =====
 
 const commentPanel = document.getElementById("comment-panel");

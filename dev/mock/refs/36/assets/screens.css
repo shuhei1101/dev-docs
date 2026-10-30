@@ -199,7 +199,7 @@
   }
 
   .diff-bar__pick label {
-    color: var(--muted-foreground);
+    color: var(--foreground);
     font-size: var(--text-caption);
   }
 
@@ -371,9 +371,9 @@
     background: var(--muted);
   }
 
-  .skeleton .skeleton__title {
+  .skeleton .skeleton__meta {
     width: 50%;
-    height: 1.75rem;
+    margin-bottom: 0.75rem;
   }
 
   .skeleton span:nth-child(3n) {
@@ -672,7 +672,7 @@
   }
 
   .search-results a:hover,
-  .search-results a[aria-selected="true"] {
+  .search-results [aria-selected="true"] {
     background: var(--selected);
   }
 
@@ -693,9 +693,15 @@
     font-size: var(--text-caption);
   }
 
+  /* 選択中の背景の上でも 4.5:1 を保つ */
+  .search-results a:hover :is(.search-results__path, .search-results__snippet),
+  .search-results [aria-selected="true"] :is(.search-results__path, .search-results__snippet) {
+    color: light-dark(var(--zinc-700), var(--zinc-300));
+  }
+
   .search-results mark {
     background: var(--highlight);
-    color: inherit;
+    color: var(--foreground);
   }
 
   .search-dialog__empty {
@@ -712,6 +718,87 @@
     gap: 0.75rem;
     padding: 0.5rem 1rem;
     border-top: 1px solid var(--border);
+    color: var(--muted-foreground);
+    font-size: var(--text-caption);
+  }
+
+  /* ===== 本文へスキップ（Tab の 1 回目で現れる） ===== */
+
+  .skip-link {
+    position: fixed;
+    top: 0.5rem;
+    left: 0.5rem;
+    z-index: 100;
+    padding: 0.5rem 0.75rem;
+    border-radius: var(--radius-md);
+    background: var(--primary);
+    color: var(--primary-foreground);
+    font-size: var(--text-control);
+    font-weight: 500;
+    text-decoration: none;
+    translate: 0 calc(-100% - 1rem);
+  }
+
+  .skip-link:focus-visible {
+    translate: 0;
+  }
+
+  main:focus {
+    outline: none;
+  }
+
+  .link-button {
+    padding: 0;
+    border: 0;
+    background: none;
+    color: var(--link);
+    font: inherit;
+    font-size: var(--text-control);
+    text-decoration: underline;
+    text-underline-offset: 0.2em;
+    cursor: pointer;
+  }
+
+  /* ===== ショートカットの一覧 ===== */
+
+  .shortcut-scope + .shortcut-scope {
+    padding-top: 1rem;
+    border-top: 1px solid var(--border);
+  }
+
+  .shortcut-scope__title {
+    margin: 0 0 0.5rem;
+    color: var(--muted-foreground);
+    font-size: var(--text-caption);
+    font-weight: 600;
+  }
+
+  .shortcut-list {
+    display: grid;
+    gap: 0.5rem;
+    margin: 0;
+  }
+
+  .shortcut-list > div {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+  }
+
+  .shortcut-list dt {
+    font-size: var(--text-control);
+  }
+
+  .shortcut-list dd {
+    display: flex;
+    flex-shrink: 0;
+    gap: 0.25rem;
+    margin: 0;
+  }
+
+  .shortcut-list__note {
+    margin-left: 0.25rem;
     color: var(--muted-foreground);
     font-size: var(--text-caption);
   }

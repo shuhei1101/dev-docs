@@ -20,6 +20,8 @@
   <script type="module" src="../../../../refs/36/assets/app.js"></script>
 </head>
 <body>
+  <a class="skip-link" href="#main">本文へスキップ</a>
+
   <!-- モック専用の操作列（モックの階層と、画面の状態の切り替え） -->
   <nav class="mockbar" aria-label="モックの操作">
     <span class="mockbar__path"><a href="../../../">pages</a> / <a href="../../">settings</a> / <a href="../">36</a> / <span>default</span></span>
@@ -33,6 +35,8 @@
     <a class="mockbar__tab" href="#edit">編集</a>
     <a class="mockbar__tab" href="#delete">削除の確認</a>
     <a class="mockbar__tab" href="#saved">保存の通知</a>
+    <span class="mockbar__sep"></span>
+    <a class="mockbar__tab" href="#shortcuts">ショートカットの一覧</a>
   </nav>
 
   <div class="app-header">
@@ -46,7 +50,7 @@
     </header>
   </div>
 
-  <main class="page">
+  <main id="main" class="page" tabindex="-1">
     <a class="back-link" href="../../../doc-view/36/default/index.html">
       <svg aria-hidden="true" viewBox="0 0 16 16" fill="currentColor"><path d="M7.78 12.53a.75.75 0 0 1-1.06 0L2.47 8.28a.75.75 0 0 1 0-1.06l4.25-4.25a.75.75 0 1 1 1.06 1.06L4.81 7h7.44a.75.75 0 0 1 0 1.5H4.81l2.97 2.97a.75.75 0 0 1 0 1.06"/></svg>
       文書の画面に戻る
@@ -62,7 +66,7 @@
         </a>
       </div>
 
-      <div class="skeleton" data-when="loading" aria-busy="true" aria-label="配信元を読み込んでいます">
+      <div class="skeleton" data-when="loading" role="status" aria-busy="true" aria-label="配信元を読み込んでいます">
         <span class="skeleton__table"></span>
       </div>
 
@@ -70,7 +74,7 @@
         <p class="empty">配信元はありません。</p>
       </div>
 
-      <div class="table-wrap" tabindex="0" role="region" aria-label="配信元の表" data-when="normal add add-error edit delete saved">
+      <div class="table-wrap" tabindex="0" role="region" aria-label="配信元の表" data-when="normal add add-error edit delete saved shortcuts">
         <table class="sources">
           <thead><tr><th>配信元</th><th>設定ファイル</th><th>状態</th><th><span class="sr-only">操作</span></th></tr></thead>
           <tbody>
@@ -164,8 +168,11 @@
       <div class="setting-row">
         <div>
           <label class="switch"><input type="checkbox" role="switch" checked aria-describedby="single-key-hint"> 1 文字のショートカットを使う</label>
-          <p id="single-key-hint"><kbd class="key">/</kbd> で検索を開きます。この端末のブラウザに保存します。</p>
+          <p id="single-key-hint"><kbd class="key">/</kbd> で検索、<kbd class="key">?</kbd> でショートカットの一覧を開きます。この端末のブラウザに保存します。</p>
         </div>
+      </div>
+      <div class="setting-row">
+        <button class="link-button" type="button" commandfor="shortcut-dialog" command="show-modal" aria-keyshortcuts="Shift+?">ショートカットの一覧を開く</button>
       </div>
     </section>
   </main>
@@ -270,5 +277,31 @@
     <svg aria-hidden="true" viewBox="0 0 16 16" fill="currentColor"><path d="M13.78 4.22a.75.75 0 0 1 0 1.06l-7.25 7.25a.75.75 0 0 1-1.06 0L2.22 9.28a.75.75 0 0 1 1.06-1.06L6 10.94l6.72-6.72a.75.75 0 0 1 1.06 0"/></svg>
     <p>端末の設定を保存し、配信元を読み直しました。</p>
   </div>
+  <!-- ショートカットの一覧（? と、設定画面の「キーボード」のセクションから開く） -->
+  <dialog id="shortcut-dialog" class="dialog dialog--form" closedby="any" aria-labelledby="shortcut-title" data-open-when="shortcuts">
+    <div class="dialog__head">
+      <div>
+        <h2 class="dialog__title" id="shortcut-title">ショートカット</h2>
+        <p class="dialog__desc">この画面で使えるキー</p>
+      </div>
+      <button class="btn btn--ghost btn--icon" type="button" commandfor="shortcut-dialog" command="close" aria-label="閉じる" autofocus>
+        <svg aria-hidden="true" viewBox="0 0 16 16" fill="currentColor"><path d="M3.72 3.72a.75.75 0 0 1 1.06 0L8 6.94l3.22-3.22a.75.75 0 1 1 1.06 1.06L9.06 8l3.22 3.22a.75.75 0 1 1-1.06 1.06L8 9.06l-3.22 3.22a.75.75 0 0 1-1.06-1.06L6.94 8 3.72 4.78a.75.75 0 0 1 0-1.06"/></svg>
+      </button>
+    </div>
+    <div class="dialog__scroll">
+      <section class="shortcut-scope">
+        <h3 class="shortcut-scope__title">画面全体</h3>
+        <dl class="shortcut-list">
+          <div><dt>ショートカットの一覧を開く <span class="shortcut-list__note">1 文字</span></dt><dd><kbd class="key">?</kbd></dd></div>
+        </dl>
+      </section>
+      <section class="shortcut-scope">
+        <h3 class="shortcut-scope__title">配信元のダイアログ</h3>
+        <dl class="shortcut-list">
+          <div><dt>閉じる</dt><dd><kbd class="key">Esc</kbd></dd></div>
+        </dl>
+      </section>
+    </div>
+  </dialog>
 </body>
 </html>

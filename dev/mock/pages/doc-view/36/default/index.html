@@ -20,6 +20,8 @@
   <script type="module" src="../../../../refs/36/assets/app.js"></script>
 </head>
 <body>
+  <a class="skip-link" href="#main">本文へスキップ</a>
+
   <!-- モック専用の操作列（モックの階層と、画面の状態の切り替え） -->
   <nav class="mockbar" aria-label="モックの操作">
     <span class="mockbar__path"><a href="../../../">pages</a> / <a href="../../">doc-view</a> / <a href="../">36</a> / <span>default</span></span>
@@ -44,6 +46,8 @@
     <a class="mockbar__tab" href="#search-empty">0 件</a>
     <span class="mockbar__sep"></span>
     <a class="mockbar__tab" href="#drawer">狭い幅のドロワー</a>
+    <span class="mockbar__sep"></span>
+    <a class="mockbar__tab" href="#shortcuts">ショートカットの一覧</a>
   </nav>
 
   <div class="app-header">
@@ -111,7 +115,7 @@
 
     <!-- 種類のタブ（nav.tabs[] の並び） -->
     <nav class="tabs" aria-label="種類">
-      <a class="tabs__item" href="./index.html" data-current-when="normal diff failure loading select add-comment comments edit-comment copied issue-long search search-empty drawer">シナリオ</a>
+      <a class="tabs__item" href="./index.html" data-current-when="normal diff failure loading select add-comment comments edit-comment copied issue-long search search-empty drawer columns shortcuts">シナリオ</a>
       <a class="tabs__item" href="./index.html">インターフェース定義</a>
       <a class="tabs__item" href="./index.html">画面設計</a>
       <a class="tabs__item" href="./index.html">設定</a>
@@ -122,7 +126,7 @@
   <div class="layout">
     <!-- サイドバー（狭い幅ではドロワー） -->
     <nav id="sidebar" class="sidebar" popover aria-label="文書の一覧" data-open-when="drawer" data-open-media="(width < 48rem)">
-      <div data-when="normal diff failure loading select add-comment comments edit-comment copied issue-long search search-empty drawer columns">
+      <div data-when="normal diff failure loading select add-comment comments edit-comment copied issue-long search search-empty drawer columns shortcuts">
         <p class="sidebar__heading">単一ユースケース</p>
         <ul class="sidebar__list">
           <li><a class="sidebar__item" href="./index.html" aria-current="page"><span>利用者が画面で読む</span><span class="diff-mark diff-mark--changed" data-when="diff">変更</span></a></li>
@@ -141,18 +145,10 @@
     </nav>
 
     <!-- 本文 -->
-    <main class="content">
+    <main id="main" class="content" tabindex="-1">
       <nav class="breadcrumb" aria-label="パンくず">
         <a href="./index.html">sample</a><span aria-hidden="true">/</span><a href="./index.html">シナリオ</a><span aria-hidden="true">/</span><a href="./index.html">単一ユースケース</a><span aria-hidden="true">/</span><span aria-current="page">利用者が画面で読む</span>
       </nav>
-
-      <!-- 読み込み中 -->
-      <div class="skeleton" data-when="loading" aria-busy="true" aria-label="文書を読み込んでいます">
-        <span class="skeleton__title"></span>
-        <span></span><span></span><span></span>
-        <span class="skeleton__table"></span>
-        <span></span><span></span>
-      </div>
 
       <!-- 種類のタブに文書が無い -->
       <section class="state-panel" data-when="empty" aria-labelledby="empty-title">
@@ -163,9 +159,16 @@
         <p>このタブの <code>nav.tabs[4].paths</code> に当たる文書が、リビジョン <code>develop</code> にありません。</p>
       </section>
 
-      <div data-when="normal diff failure select add-comment comments edit-comment copied issue-long search search-empty drawer columns">
+      <div data-when="normal diff failure loading select add-comment comments edit-comment copied issue-long search search-empty drawer columns shortcuts">
         <h1 class="doc-title">利用者が画面で読む</h1>
-        <p class="doc-meta">
+        <!-- 読み込み中はメタ情報の行と本文だけをスケルトンにする -->
+        <div class="skeleton" data-when="loading" role="status" aria-busy="true" aria-label="文書を読み込んでいます">
+          <span class="skeleton__meta"></span>
+          <span></span><span></span><span></span>
+          <span class="skeleton__table"></span>
+          <span></span><span></span>
+        </div>
+        <p class="doc-meta" data-when="normal diff failure select add-comment comments edit-comment copied issue-long search search-empty drawer columns shortcuts">
           <span class="badge">シナリオ</span>
           <span class="doc-path">dev/設計書/シナリオ/単一ユースケース/利用者が画面で読む.yaml</span>
           <span>更新 <time datetime="2026-10-26T14:40:00Z">10/26 23:40 JST</time></span>
@@ -214,7 +217,7 @@
       </section>
 
       <!-- mdmark が描いた本文 -->
-      <div class="prose-wrap" data-when="normal diff select add-comment comments edit-comment copied issue-long search search-empty drawer columns">
+      <div class="prose-wrap" data-when="normal diff select add-comment comments edit-comment copied issue-long search search-empty drawer columns shortcuts">
         <article class="prose">
           <p>
             <button class="comment-marker" type="button" commandfor="comment-panel" command="show-popover" aria-label="コメント 1 件目を開く">1</button>
@@ -301,7 +304,7 @@
     </main>
 
     <!-- 目次 -->
-    <nav class="toc" aria-label="目次" data-when="normal diff select add-comment comments edit-comment copied issue-long search search-empty drawer columns">
+    <nav class="toc" aria-label="目次" data-when="normal diff select add-comment comments edit-comment copied issue-long search search-empty drawer columns shortcuts">
       <p class="toc__heading">目次</p>
       <ul>
         <li><a href="#overview"><span>概要</span></a></li>
@@ -355,7 +358,7 @@
             </button>
           </div>
         </li>
-        <li class="comment" data-when="normal add-comment comments copied issue-long">
+        <li class="comment" data-when="normal add-comment comments copied issue-long shortcuts">
           <input type="checkbox" checked aria-label="2 件目を選択">
           <button class="comment__jump" type="button" data-jump="c2-target">
             <span class="comment__path">利用者が画面で読む.yaml › 正常シナリオ › 期待値</span>
@@ -422,24 +425,24 @@
       <div class="search-dialog__field">
         <svg aria-hidden="true" viewBox="0 0 16 16" fill="currentColor"><path d="M10.68 11.74a6 6 0 1 1 1.06-1.06l3.04 3.04-1.06 1.06zM11.5 7a4.5 4.5 0 1 0-9 0 4.5 4.5 0 0 0 9 0"/></svg>
         <label class="sr-only" for="search-input">検索する語</label>
-        <input id="search-input" class="input" type="search" value="スクロール" data-when="normal search" autofocus>
-        <input class="input" type="search" value="ドロワーの幅" aria-label="検索する語" data-when="search-empty" autofocus>
+        <input id="search-input" class="input" type="text" value="スクロール" role="combobox" aria-expanded="true" aria-autocomplete="list" aria-controls="search-results" aria-activedescendant="search-result-1" data-when="normal search shortcuts" autofocus>
+        <input class="input" type="text" value="ドロワーの幅" role="combobox" aria-expanded="false" aria-autocomplete="list" aria-label="検索する語" data-when="search-empty" autofocus>
         <button class="btn btn--ghost btn--icon" type="button" commandfor="search-dialog" command="close" aria-label="閉じる">
           <svg aria-hidden="true" viewBox="0 0 16 16" fill="currentColor"><path d="M3.72 3.72a.75.75 0 0 1 1.06 0L8 6.94l3.22-3.22a.75.75 0 1 1 1.06 1.06L9.06 8l3.22 3.22a.75.75 0 1 1-1.06 1.06L8 9.06l-3.22 3.22a.75.75 0 0 1-1.06-1.06L6.94 8 3.72 4.78a.75.75 0 0 1 0-1.06"/></svg>
         </button>
       </div>
-      <div data-when="normal search">
+      <div data-when="normal search shortcuts">
         <p class="search-dialog__count" aria-live="polite">sample の develop で 2 件</p>
-        <ul class="search-results">
-          <li>
-            <a href="./index.html#normal-expected" aria-selected="true">
+        <ul id="search-results" class="search-results" role="listbox" aria-label="検索の結果">
+          <li role="none">
+            <a id="search-result-1" href="./index.html#normal-expected" role="option" aria-selected="true" tabindex="-1">
               <span class="search-results__title">利用者が画面で読む › 正常シナリオ › 期待値</span>
               <span class="search-results__path">dev/設計書/シナリオ/単一ユースケース/利用者が画面で読む.yaml</span>
               <span class="search-results__snippet">本文を下まで<mark>スクロール</mark>しても、種類のタブとサイドバーが画面に残る</span>
             </a>
           </li>
-          <li>
-            <a href="./index.html">
+          <li role="none">
+            <a id="search-result-2" href="./index.html" role="option" aria-selected="false" tabindex="-1">
               <span class="search-results__title">利用者がコメントを渡す › 正常シナリオ（コメントを修正・削除する）</span>
               <span class="search-results__path">dev/設計書/シナリオ/単一ユースケース/利用者がコメントを渡す.yaml</span>
               <span class="search-results__snippet">本文の 2 件目の箇所まで<mark>スクロール</mark>して示す</span>
@@ -454,6 +457,42 @@
         <span><kbd class="key">Esc</kbd> 閉じる</span>
       </div>
     </form>
+  </dialog>
+  <!-- ショートカットの一覧（? と、設定画面の「キーボード」のセクションから開く） -->
+  <dialog id="shortcut-dialog" class="dialog dialog--form" closedby="any" aria-labelledby="shortcut-title" data-open-when="shortcuts">
+    <div class="dialog__head">
+      <div>
+        <h2 class="dialog__title" id="shortcut-title">ショートカット</h2>
+        <p class="dialog__desc">この画面で使えるキー</p>
+      </div>
+      <button class="btn btn--ghost btn--icon" type="button" commandfor="shortcut-dialog" command="close" aria-label="閉じる" autofocus>
+        <svg aria-hidden="true" viewBox="0 0 16 16" fill="currentColor"><path d="M3.72 3.72a.75.75 0 0 1 1.06 0L8 6.94l3.22-3.22a.75.75 0 1 1 1.06 1.06L9.06 8l3.22 3.22a.75.75 0 1 1-1.06 1.06L8 9.06l-3.22 3.22a.75.75 0 0 1-1.06-1.06L6.94 8 3.72 4.78a.75.75 0 0 1 0-1.06"/></svg>
+      </button>
+    </div>
+    <div class="dialog__scroll">
+      <section class="shortcut-scope">
+        <h3 class="shortcut-scope__title">画面全体</h3>
+        <dl class="shortcut-list">
+          <div><dt>ショートカットの一覧を開く <span class="shortcut-list__note">1 文字</span></dt><dd><kbd class="key">?</kbd></dd></div>
+          <div><dt>検索を開く</dt><dd><kbd class="key">Ctrl K</kbd></dd></div>
+          <div><dt>検索を開く <span class="shortcut-list__note">1 文字</span></dt><dd><kbd class="key">/</kbd></dd></div>
+        </dl>
+      </section>
+      <section class="shortcut-scope">
+        <h3 class="shortcut-scope__title">検索のダイアログ</h3>
+        <dl class="shortcut-list">
+          <div><dt>結果を選ぶ</dt><dd><kbd class="key">↑</kbd> <kbd class="key">↓</kbd></dd></div>
+          <div><dt>選んだ文書を開く</dt><dd><kbd class="key">Enter</kbd></dd></div>
+          <div><dt>閉じる</dt><dd><kbd class="key">Esc</kbd></dd></div>
+        </dl>
+      </section>
+      <section class="shortcut-scope">
+        <h3 class="shortcut-scope__title">コメントのパネル</h3>
+        <dl class="shortcut-list">
+          <div><dt>閉じる</dt><dd><kbd class="key">Esc</kbd></dd></div>
+        </dl>
+      </section>
+    </div>
   </dialog>
 </body>
 </html>
