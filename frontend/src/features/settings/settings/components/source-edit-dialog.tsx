@@ -197,7 +197,14 @@ export const SourceEditDialog = ({
               }}
             />
           </Field>
-          <div className="space-y-1.5">
+          <div
+            role="group"
+            aria-labelledby="source-enabled-heading"
+            className="space-y-1.5"
+          >
+            <p id="source-enabled-heading" className="text-sm font-medium">
+              配信
+            </p>
             <div className="flex items-center justify-between">
               <Label htmlFor="source-enabled">配信する</Label>
               <Controller
