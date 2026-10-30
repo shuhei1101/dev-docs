@@ -1,0 +1,358 @@
+title: "設定画面"
+elements:
+  - name: ページのタイトル
+    kind: label
+    position: head > title
+    description: ブラウザのタブに出すタイトル
+    label: '`設定 | dev-docs`'
+    visible_when: 常時
+  - name: 本文へスキップ
+    kind: link
+    position: 画面の先頭
+    description: トップバーを飛ばして本文へフォーカスを移す
+    label: '`本文へスキップ`'
+    visible_when: キーボードでフォーカスしたとき
+    tab_order: 1
+    action: クリックで本文の領域へフォーカスを移す
+  - name: トップバー
+    kind: header
+    component: dev/設計書/部品設計/トップバー#
+    args:
+      - name: screen
+        value: '`settings`'
+      - name: colorScheme
+        value: ブラウザに保存した明暗（無ければ `system`）
+    position: 画面の上
+    description: 画面名と明暗の切り替えだけを出す
+    visible_when: 常時
+    action: 画面名のクリックで配信中の配信元の先頭のトップを開く。`colorSchemeToggle` で明暗を切り替え、ブラウザに保存する
+    action_ref: dev/設計書/画面設計/文書の画面#
+  - name: 文書の画面に戻る
+    kind: link
+    position: 本文の上
+    description: 直前に開いていた文書の画面へ戻る
+    label: 左向きの矢印のアイコンと `文書の画面に戻る`
+    visible_when: 直前に開いていた文書の画面か、配信中の配信元があるとき
+    action: クリックで直前に開いていた文書の画面（無ければ配信中の配信元の先頭のトップ）を開く
+    action_ref: dev/設計書/画面設計/文書の画面#
+  - name: 見出し
+    kind: label
+    position: 本文
+    description: 画面の見出し
+    label: '`設定`'
+    visible_when: 常時
+  - name: 配信元の見出し
+    kind: label
+    position: 本文 > 配信元のセクション
+    description: 配信元のセクションの見出し
+    label: '`配信元`'
+    visible_when: 常時
+  - name: 配信元を追加
+    kind: button
+    position: 本文 > 配信元のセクション > 見出しの右
+    description: 追加のダイアログを開く
+    label: プラスのアイコンと `配信元を追加`
+    visible_when: 常時
+    action: クリックで配信元のダイアログを追加で開く
+  - name: 配信元の読み込み中の表示
+    kind: skeleton
+    position: 本文 > 配信元のセクション
+    description: 端末の設定の取得を待つ間に表の行の形の枞を出す
+    visible_when: 端末の設定の取得を待っているとき（待ちが 1 秒を超えたときだけ出す）
+    notes:
+      読み上げ名: '`配信元を読み込んでいます`'
+  - name: 配信元が無いことの表示
+    kind: label
+    position: 本文 > 配信元のセクション
+    description: 端末の設定に配信元が無いこと
+    label: '`配信元はありません。`'
+    visible_when: '`sources` が空のとき'
+    source: 端末の設定の取得.sources
+  - name: 配信元の一覧
+    kind: table
+    position: 本文 > 配信元のセクション
+    description: 端末の設定の `sources[]` の行と状態
+    label: 列は `配信元`・`設定ファイル`・`状態`・`操作`
+    visible_when: '`sources` が 1 件以上のとき'
+    sorting: 並べ替え・絞り込みはしない。端末の設定の `sources[]` の並び順
+    source: 端末の設定の取得.sources
+    notes:
+      読み上げ名: '`配信元の表`'
+      狭い幅: 表を横にスクロールする領域に入れ、画面は横にスクロールさせない
+  - name: 配信元の ID
+    kind: link
+    position: 配信元の一覧 > 配信元
+    description: 配信元の ID。配信中ならトップへのリンクにする
+    label: '`{id}`（等幅）'
+    type: 文字列
+    visible_when: 常時
+    source: 端末の設定の取得.sources[].id
+    action: '`status` が `serving` の行だけ、クリックでその配信元のトップを開く（他の行はリンクにしない）'
+    action_ref: dev/設計書/画面設計/文書の画面#
+    notes:
+      読み上げ名: '`{id} のトップ`'
+  - name: 設定ファイル
+    kind: label
+    position: 配信元の一覧 > 設定ファイル
+    description: 配信元の設定の YAML のパス
+    label: '`config` のパスを 1 行に 1 つ（等幅。長いパスは折り返す）'
+    type: 文字列
+    visible_when: 常時
+    source: 端末の設定の取得.sources[].config
+  - name: 状態
+    kind: badge
+    position: 配信元の一覧 > 状態
+    description: 配信元の今の状態
+    label: アイコンと `配信中`（`serving`）/ `配信していない`（`not_served`）/ `無効`（`disabled`）/ `読み直していない`（`pending_reload`）
+    visible_when: 常時
+    source: 端末の設定の取得.sources[].status
+    notes:
+      色: 配信中は成功、配信していないは危険、無効・読み直していないは弱めの色。アイコンと文言でも区別する
+  - name: 状態の補足
+    kind: label
+    position: 配信元の一覧 > 状態 > バッジの下
+    description: 状態の理由と注意
+    label: 配信していないときは `起動時の検証で外しました。` と `errors[]` ごとの `{path} {reason}`。設定のバージョンが古いときは `設定のバージョン {config}（サーバーが読めるのは {server}）`。無効のときは `enabled が false です`。読み直していないときは `ファイルにありますが、まだ読み直していません。`
+    visible_when: 配信していない・設定のバージョンが古い・無効・読み直していないのいずれかのとき
+    source: 端末の設定の取得.sources[].errors・端末の設定の取得.sources[].configVersion
+  - name: 編集ボタン
+    kind: button
+    position: 配信元の一覧 > 操作
+    description: その行の配信元のダイアログを編集で開く
+    label: 鉛筆のアイコン
+    visible_when: 常時
+    action: クリックでその行の値を入れた配信元のダイアログを開く
+    notes:
+      読み上げ名: '`{id} を編集`'
+  - name: 削除ボタン
+    kind: button
+    position: 配信元の一覧 > 操作
+    description: その行の削除の確認を開く
+    label: ごみ箱のアイコン
+    visible_when: 常時
+    action: クリックで削除の確認のダイアログを開く
+    notes:
+      読み上げ名: '`{id} を削除`'
+  - name: キーボードの見出し
+    kind: label
+    position: 本文 > キーボードのセクション
+    description: キーボードのセクションの見出し
+    label: '`キーボード`'
+    visible_when: 常時
+  - name: 1 文字のショートカットのスイッチ
+    kind: switch
+    position: 本文 > キーボードのセクション
+    description: '`/`・`?` の 1 文字のショートカットを使うか'
+    label: '`1 文字のショートカットを使う`'
+    io: 入力
+    type: 真偽値
+    visible_when: 常時
+    hint: '`/ で検索、? でショートカットの一覧を開きます。この端末のブラウザに保存します。`'
+    initial_value: ブラウザに保存した値（無ければオン）
+    action: 切り替えでブラウザの `localStorage` に保存し、全ての画面ですぐに当てる
+  - name: ショートカットの一覧を開く
+    kind: button
+    position: 本文 > キーボードのセクション
+    description: ショートカットの一覧を開く
+    label: '`ショートカットの一覧を開く`'
+    visible_when: 常時
+    action: クリックでショートカットの一覧を開く
+  - name: 配信元のダイアログのタイトル
+    kind: label
+    position: 配信元のダイアログ
+    description: ダイアログの見出し
+    label: 追加は `配信元を追加`、編集は `配信元を編集` とその下に `配信元 {id}`
+    visible_when: 配信元のダイアログを開いたとき
+  - name: 保存の失敗のまとめ
+    kind: alert
+    position: 配信元のダイアログ > タイトルの下
+    description: 保存できなかったときの違反の一覧
+    label: 警告のアイコンと `保存できませんでした（{件数} 件）`。続けて違反ごとに項目のエラーの文言（末尾の句点と直し方を除く）と `{path}`（等幅）を並べる
+    visible_when: 入力チェックに引っかかったときか、端末の設定の保存が 422 を返したとき
+    source: 端末の設定の保存（422 の `errors[]` の `{path, reason}`）
+    action: 違反の行のクリックでその入力欄へフォーカスを移す。出たときはまとめへフォーカスを移す
+    notes:
+      読み上げ: '`role="alert"` で、出たときに読み上げる'
+      入力欄との対応: '`sources[{行}].id` は配信元の ID、`.config` は設定ファイル、`.enabled` は配信、`.scope.read` は読み取りの範囲、`.scope.write` は書き込みの範囲の入力欄。開いている行と違う行の違反は、まとめにだけ出す'
+  - name: 配信元の ID の入力欄
+    kind: input
+    position: 配信元のダイアログ
+    description: 配信元の ID。追加のときだけ入力できる
+    label: '`配信元の ID`'
+    io: 入力
+    type: 文字列
+    visible_when: 追加のとき（編集では入力欄を出さず、タイトルの下に ID を出す）
+    required: true
+    required_label: '`必須`'
+    pattern: ^[a-z0-9-]+$
+    charset: 英小文字・数字・ハイフン。変換はしない
+    hint: '`画面の URL と文書の MCP の source に使います。英小文字・数字・ハイフンで入力します。`'
+    initial_value: 空
+    autocomplete: off
+    autofocus: true
+    target: 端末の設定の保存.sources[].id
+  - name: 設定ファイルの入力欄
+    kind: textarea
+    position: 配信元のダイアログ
+    description: 配信元の設定の YAML のパス
+    label: '`設定ファイル`'
+    io: 入力
+    type: 文字列
+    visible_when: 配信元のダイアログを開いたとき
+    required: true
+    required_label: '`必須`'
+    hint: '`1 行に 1 つ。後のファイルが前のファイルの同じキーを上書きします。`'
+    placeholder: '`~/repo/sample-docs/dev-docs.yaml`'
+    initial_value: 追加は空、編集はその行の `config` を 1 行に 1 つ
+    target: 端末の設定の保存.sources[].config（1 行のときは文字列、2 行以上は配列）
+    notes:
+      初期フォーカス: 編集のときだけ初めにフォーカスする
+  - name: 配信のスイッチ
+    kind: switch
+    position: 配信元のダイアログ
+    description: 配信するか
+    label: '`配信` と `配信する`'
+    io: 入力
+    type: 真偽値
+    visible_when: 配信元のダイアログを開いたとき
+    hint: '`外すと、設定を残したまま配信を止めます。`'
+    initial_value: 追加はオン、編集はその行の `enabled`
+    target: 端末の設定の保存.sources[].enabled
+  - name: 読み取りの範囲の入力欄
+    kind: textarea
+    position: 配信元のダイアログ
+    description: この配信元を読める作業場所の glob
+    label: '`読み取りの範囲`'
+    io: 入力
+    type: 文字列
+    visible_when: 配信元のダイアログを開いたとき
+    required: true
+    required_label: '`必須`'
+    hint: '`glob を 1 行に 1 つ。当たる作業場所から、この配信元の文書を読めます。`'
+    placeholder: '`~/repo/**`'
+    initial_value: 追加は空、編集はその行の `scope.read` を 1 行に 1 つ
+    target: 端末の設定の保存.sources[].scope.read
+  - name: 書き込みの範囲の入力欄
+    kind: textarea
+    position: 配信元のダイアログ
+    description: この配信元を読み書きできる作業場所の glob
+    label: '`書き込みの範囲`'
+    io: 入力
+    type: 文字列
+    visible_when: 配信元のダイアログを開いたとき
+    required: false
+    required_label: '`任意`'
+    hint: '`glob を 1 行に 1 つ。当たる作業場所から、この配信元の文書へ書き込めます。`'
+    initial_value: 追加は空、編集はその行の `scope.write` を 1 行に 1 つ
+    target: 端末の設定の保存.sources[].scope.write（空なら送信しない）
+  - name: 配信元のダイアログのキャンセル
+    kind: button
+    position: 配信元のダイアログ > フッター
+    description: 保存せずに閉じる
+    label: '`キャンセル`'
+    visible_when: 配信元のダイアログを開いたとき
+    action: クリックか Esc で入力を捨てて閉じ、開いたボタンへフォーカスを戻す
+  - name: 追加・保存ボタン
+    kind: button
+    position: 配信元のダイアログ > フッター
+    description: 入力を反映した `sources[]` を保存する
+    label: 追加は `追加`、編集は `保存`（プライマリ）
+    visible_when: 配信元のダイアログを開いたとき
+    enabled_when: 保存の応答を待っていないとき
+    action: クリックで入力チェックを通し、通ったら今の一覧に入力を反映した `sources[]` を丸ごと送信する。200 ならダイアログを閉じて一覧を取り直し、通知を出す。422 ならダイアログを開いたまま保存の失敗のまとめと項目のエラーを出す
+    action_ref: dev/設計書/インターフェース定義/開発ドキュメントサーバー/端末の設定の保存#
+  - name: 削除の確認のタイトル
+    kind: label
+    position: 削除の確認のダイアログ
+    description: 削除の確認の見出し
+    label: '`{id} を削除しますか?`'
+    visible_when: 削除の確認のダイアログを開いたとき
+  - name: 削除の説明
+    kind: label
+    position: 削除の確認のダイアログ
+    description: 削除で起きることと起きないこと
+    label: '`端末の設定から {id} の行を削除し、配信から外します。フォルダ {設定ファイルのフォルダ} と文書は削除しません。`'
+    visible_when: 削除の確認のダイアログを開いたとき
+    source: 端末の設定の取得.sources[].config（先頭のファイルのフォルダ）
+  - name: 削除のキャンセル
+    kind: button
+    position: 削除の確認のダイアログ > フッター
+    description: 削除せずに閉じる
+    label: '`キャンセル`'
+    visible_when: 削除の確認のダイアログを開いたとき
+    autofocus: true
+    action: クリックか Esc で閉じ、削除ボタンへフォーカスを戻す
+  - name: 削除の確定ボタン
+    kind: button
+    position: 削除の確認のダイアログ > フッター
+    description: その行を除いた `sources[]` を保存する
+    label: '`削除`（危険の色）'
+    visible_when: 削除の確認のダイアログを開いたとき
+    enabled_when: 保存の応答を待っていないとき
+    action: クリックでその行を除いた `sources[]` を丸ごと送信し、200 ならダイアログを閉じて一覧を取り直し、通知を出す。失敗したらダイアログに Problem Details の `detail` を出す
+    action_ref: dev/設計書/インターフェース定義/開発ドキュメントサーバー/端末の設定の保存#
+  - name: 保存の通知
+    kind: toast
+    position: 画面の右下
+    description: 保存の結果
+    label: '`端末の設定を保存し、配信元を読み直しました。`'
+    visible_when: 追加・保存・削除が 200 を返したとき
+    notes:
+      読み上げ: '`role="status"` で読み上げる'
+  - name: ショートカットの一覧
+    kind: dialog
+    component: dev/設計書/部品設計/ショートカットの一覧#
+    args:
+      - name: open
+        value: '`?` か、ショートカットの一覧を開くのクリックで `true`'
+      - name: screen
+        value: '`settings`'
+      - name: singleKey
+        value: 1 文字のショートカットのスイッチの値
+    position: 画面の中央
+    description: この画面で使えるキー
+    visible_when: '`?` を押したときか、ショートカットの一覧を開くを押したとき'
+screen: frontend/src/features/settings/settings/settings-screen.tsx
+mock: dev/mock/pages/settings/36/default/
+lead: '`/_settings` で、端末の設定の `sources[]` を配信元ごとの状態とともに並べ、追加・編集・削除をダイアログで行う画面。保存は `sources[]` を丸ごと送信し、スキーマに通ったときだけ書き換わる。'
+input_checks:
+  - element: 配信元の ID の入力欄
+    violation: 空
+    trigger: 追加・保存ボタンのクリック（一度出た後は入力のたび）
+    message: '`配信元の ID を入力してください。`'
+    position: 入力欄の下
+  - element: 配信元の ID の入力欄
+    violation: 英小文字・数字・ハイフン以外の文字がある
+    trigger: 追加・保存ボタンのクリック（一度出た後は入力のたび）
+    message: '`配信元の ID に使えない文字があります。英小文字・数字・ハイフンで入力してください。`'
+    position: 入力欄の下
+  - element: 配信元の ID の入力欄
+    violation: 他の行の ID と重なる
+    trigger: 追加・保存ボタンのクリック（一度出た後は入力のたび）
+    message: '`配信元の ID {入力した値} は既に使われています。別の ID を入力してください。`'
+    position: 入力欄の下
+  - element: 設定ファイルの入力欄
+    violation: 空の行しか無い
+    trigger: 追加・保存ボタンのクリック（一度出た後は入力のたび）
+    message: '`設定ファイルを 1 つ以上入力してください。`'
+    position: 入力欄の下
+  - element: 読み取りの範囲の入力欄
+    violation: 空の行しか無い
+    trigger: 追加・保存ボタンのクリック（一度出た後は入力のたび）
+    message: '`読み取りの範囲を 1 つ以上入力してください。`'
+    position: 入力欄の下
+  - element: 読み取りの範囲の入力欄
+    violation: 空の行を含む
+    trigger: 追加・保存ボタンのクリック（一度出た後は入力のたび）
+    message: '`読み取りの範囲に空の行があります。空の行を削除してください。`'
+    position: 入力欄の下
+  - element: 書き込みの範囲の入力欄
+    violation: 空の行を含む
+    trigger: 追加・保存ボタンのクリック（一度出た後は入力のたび）
+    message: '`書き込みの範囲に空の行があります。空の行を削除してください。`'
+    position: 入力欄の下
+notes:
+  URL: '`/_settings`。配信元の ID は `^[a-z0-9-]+$` で `_` を含まないため、配信元のトップの URL と重ならない'
+  422 の受け方: 入力チェックを通した後も、サーバーの検証（ファイルが無い・設定のスキーマに合わない等）で 422 になる。`errors[]` の `reason` をそのまま項目のエラーの文言にする
+refs:
+  - dev/設計書/インターフェース定義/開発ドキュメントサーバー/端末の設定の取得#

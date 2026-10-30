@@ -30,6 +30,7 @@ flows:
       - '`/_api/sources/sample/docs` が 200 で、`path` が文書 1、`tabs` が `nav` の 2 つのタブで一番左だけが `active`'
       - '`markdown` に、スキーマの `x-heading` の項目が見出し、`x-key` の配列が表になった文書 1 がある'
       - '`conversionError` と `diff` が `null`、`tabs[].items[].change` が全て `null`'
+      - '`updatedAt` が文書 1 のファイルを最後に変えた commit の日時'
       - '`/_api/sources/sample/docs/{文書 2 のパス}` が 200 で文書 2 の `markdown` を返す'
     test: test_normal
   - name: 正常系（nav が無い）
@@ -286,6 +287,11 @@ response:
     type: list[str]
     description: '`diff` のリビジョンから変わった項目のパス'
     notes: 追加した文書・変わっていない文書は空
+  - name: updatedAt
+    type: str
+    format: date-time
+    description: 返した文書のファイルの更新日時。Git の配信元は開いているリビジョンでそのファイルを最後に変えた commit の日時、Git 管理外の配信元はファイルの更新日時
+    notes: 文書の画面の文書の情報に出す
 response_notes: '本文の描画（mdmark）・リンクの組み立て・コメント・目次の変わった見出しのマーカーは #17 の画面が持つ。目次のマーカーは、`ref` を `diff.base` にして取った `markdown` と見出しごとに比べて付ける。'
 status_codes:
   - code: '200'

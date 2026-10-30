@@ -1,0 +1,87 @@
+title: "検索のダイアログ"
+implementation: "frontend/src/features/docs/shared/search-dialog/search-dialog.tsx#SearchDialog"
+story: "Docs/SearchDialog"
+states:
+  - name: Empty
+    description: 開いた直後。語が無く、結果の場所に何も出さない
+    args:
+      - name: open
+        value: 'true'
+      - name: source
+        value: sample
+      - name: ref
+        value: develop
+  - name: Results
+    description: 2 件に一致し、1 件目を選んだ状態。一致した語を強調する
+    args:
+      - name: open
+        value: 'true'
+      - name: source
+        value: sample
+      - name: ref
+        value: develop
+  - name: NoResults
+    description: 一致が 0 件。`該当する文書はありません。別の語を試してください。` を出す
+    args:
+      - name: open
+        value: 'true'
+      - name: source
+        value: sample
+      - name: ref
+        value: develop
+  - name: Loading
+    description: 検索の結果を待っている
+    args:
+      - name: open
+        value: 'true'
+      - name: source
+        value: sample
+  - name: Failed
+    description: 画面の検索がエラーを返し、Problem Details の `detail` を結果の場所に出す
+    args:
+      - name: open
+        value: 'true'
+      - name: source
+        value: sample
+  - name: NonGitSource
+    description: Git 管理外の配信元。件数の文言にリビジョンを出さない
+    args:
+      - name: open
+        value: 'true'
+      - name: source
+        value: notes
+lead: 配信元の文書を語で探すモーダル。入力のたびに画面の検索を呼び、件数と、一致した文書のパンくず・パス・一致した箇所を並べる。
+status: planned
+introduced:
+  pr: 36
+args:
+  - name: open
+    type: 真偽値
+    required: true
+    description: 開いているか
+  - name: source
+    type: 文字列
+    required: true
+    description: 検索する配信元の ID。画面の検索の `source` に渡す
+  - name: ref
+    type: 文字列
+    default: なし（配信元の `defaultRef` を検索する。件数の文言にリビジョンを出さない）
+    description: 検索するリビジョン。画面の検索の `ref` に渡し、件数の文言にも出す
+events:
+  - name: openChange
+    when: Esc・ダイアログの外のクリック・結果の選択でダイアログが閉じる
+    value: '`false`'
+    description: 開閉の状態を戻す。閉じた後は開いたボタンへフォーカスを戻す
+  - name: resultSelect
+    when: 結果をクリックするか、結果を選んで Enter を押した
+    value: 画面の検索の `items[].path`
+    description: 同じリビジョンのその文書を文書の画面で開く
+accessibility:
+  - 検索欄は `role="combobox"` で、`aria-controls` に結果の一覧、`aria-activedescendant` に選んでいる結果を持つ
+  - ↑・↓ で結果を選び、Enter で開き、Esc 1 回で閉じる
+  - 件数の文言は `role="status"` で、変わるたびに読み上げる
+  - 一致した語の強調は色だけにせず `mark` 要素で表す
+refs:
+  - dev/設計書/インターフェース定義/開発ドキュメントサーバー/画面の検索#
+notes:
+  モック: '`dev/mock/pages/doc-view/36/default/index.html` の `検索`・`結果` の状態'

@@ -20,19 +20,19 @@ requirements:
   - name: 対応ブラウザ
     english_name: supported_browser
     category: 動作環境
-    external_constraint: 未確定
-    source_kind: 未確定
-    value: 未確定
-    rationale: '画面を作る #17 の設計で決める'
+    external_constraint: 制限なし
+    source_kind: 制限なし
+    value: PC は Chrome・Edge の最新安定版で全ての操作、スマホは Android の Chrome・iOS の Safari の最新安定版で文書を読む・検索する・コメントを溜めてコピーするまで
+    rationale: 'knowledge の規約『対応ブラウザ』の既定（PC は全ての操作、スマホは主な操作まで）に従う。スマホでは設定画面の編集を主な操作に含めない。対応ブラウザの指定は `package.json` の browserslist に置き、Safari 固有の代替の実装は入れない'
     measurement: 決めたブラウザで一覧・本文・差分の画面を開く
     status: planned
   - name: 対応する画面サイズ
     english_name: screen_size
     category: 動作環境
-    external_constraint: 未確定
-    source_kind: 未確定
-    value: 未確定
-    rationale: 画面の設計（#17）で、スマホ幅を扱うかを含めて決める
+    external_constraint: 制限なし
+    source_kind: 制限なし
+    value: 幅 360px 以上。幅 48rem（768px）未満はサイドバーをドロワー、コメントのパネルを画面の下から出す面にし、幅 80rem（1280px）未満は目次を出さない
+    rationale: 合意したモック（`dev/mock/pages/*/36/default/`）の切り替え幅に合わせる。360px は主なスマホの一番狭い幅
     measurement: 決めた幅で画面を開き、横スクロールが出ないことを確かめる
     status: planned
   - name: 待ち受けのアドレス

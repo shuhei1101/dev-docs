@@ -1,0 +1,62 @@
+title: "ショートカットの一覧"
+implementation: "frontend/src/shared/components/shortcut-dialog/shortcut-dialog.tsx#ShortcutDialog"
+story: "Layout/ShortcutDialog"
+states:
+  - name: DocView
+    description: 文書の画面のキー
+    args:
+      - name: open
+        value: 'true'
+      - name: screen
+        value: doc-view
+  - name: Settings
+    description: 設定画面のキー
+    args:
+      - name: open
+        value: 'true'
+      - name: screen
+        value: settings
+  - name: NotFound
+    description: 見つからない画面のキー
+    args:
+      - name: open
+        value: 'true'
+      - name: screen
+        value: not-found
+  - name: SingleKeyOff
+    description: 1 文字のショートカットを切った状態。`Ctrl K` だけを出す
+    args:
+      - name: open
+        value: 'true'
+      - name: screen
+        value: doc-view
+      - name: singleKey
+        value: 'false'
+lead: その画面で使えるキーボードのショートカットを、使う場所ごとに並べるモーダル。
+status: planned
+introduced:
+  pr: 36
+args:
+  - name: open
+    type: 真偽値
+    required: true
+    description: 開いているか
+  - name: screen
+    type: 列挙
+    required: true
+    choices: '`doc-view` / `settings` / `not-found`'
+    description: 置く画面。`doc-view` は画面全体・検索のダイアログ・コメントのパネル、`not-found` は画面全体・検索のダイアログ、`settings` は画面全体・配信元のダイアログのセクションを出す
+  - name: singleKey
+    type: 真偽値
+    default: 'true'
+    description: 1 文字のショートカット（`?`・`/`）を使うか。`false` のとき、`1 文字` の行を出さない
+events:
+  - name: openChange
+    when: Esc・閉じるボタン・ダイアログの外のクリックで閉じる
+    value: '`false`'
+    description: 開閉の状態を戻す。閉じた後は開いた要素へフォーカスを戻す
+accessibility:
+  - キーは `kbd` 要素で出し、読み上げ名を操作の名前にする
+  - 開いたとき閉じるボタンへフォーカスを移し、Esc 1 回で閉じる
+notes:
+  モック: 各画面のモックの `ショートカットの一覧` の状態
