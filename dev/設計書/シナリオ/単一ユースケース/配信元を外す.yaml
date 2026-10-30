@@ -1,0 +1,72 @@
+title: "配信元を外す"
+scenarios:
+  - name: 正常シナリオ
+    setup:
+      - name: Mock
+        description: なし（実環境で実行。ブラウザで画面を開く）
+      - name: 端末の設定
+        description: '`DEV_DOCS_CONFIG` が指す一時フォルダの `settings.yaml`'
+        notes: '`sources` に sample と extra の 2 行'
+      - name: dev-docs
+        description: 端末の設定で起動した dev-docs
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        actor U as 利用者
+        participant UI as dev-docs の画面
+        participant API as 画面の API
+        participant CF as 端末の設定
+
+        U->>UI: 設定画面で extra を削除する
+        UI-->>U: 削除の確認のダイアログ
+        U->>UI: 削除する
+        UI->>API: 端末の設定の保存（extra を除いた sources）
+        API->>CF: settings.yaml を書き換え、配信元を読み直す
+        UI-->>U: settings（extra の無い一覧）
+      ```
+    expected:
+      - 確認のダイアログに、extra のフォルダと文書は削除しないことが出る
+      - '`settings.yaml` の `sources` から extra の行が消え、sample の行は変わらない'
+      - extra のフォルダのファイルは変わらない
+      - extra の文書の画面を開くと見つからない画面になり、sample の文書の画面は開ける
+    test: test_normal
+  - name: 正常シナリオ（配信を止める）
+    setup:
+      - name: Mock
+        description: なし（実環境で実行）
+      - name: 端末の設定
+        description: '`DEV_DOCS_CONFIG` が指す一時フォルダの `settings.yaml`'
+        notes: '`sources` に sample と extra の 2 行'
+      - name: dev-docs
+        description: 端末の設定で起動した dev-docs
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        actor U as 利用者
+        participant UI as dev-docs の画面
+        participant API as 画面の API
+        participant CF as 端末の設定
+
+        U->>UI: 設定画面で extra を編集し、配信するを外して保存する
+        UI->>API: 端末の設定の保存（extra の enabled が false）
+        API->>CF: settings.yaml を書き換え、配信元を読み直す
+        UI-->>U: settings（extra が無効）
+      ```
+    expected:
+      - '`settings.yaml` の extra の行の `enabled` が `false` になる'
+      - 一覧の extra が無効になる
+      - extra の文書の画面を開くと見つからない画面になり、sample の文書の画面は開ける
+    test: test_normal_when_source_disabled
+lead: 利用者が設定画面で配信元の配信を止めるか、端末の設定から削除し、dev-docs を再起動せずに配信から外す。
+issue: 17
+primary_actor: 利用者
+stakeholders:
+  - name: 利用者
+    interest: '`settings.yaml` を手で開かずに配信元を止めたり削除したりでき、配信元のフォルダの文書は消えない'
+trigger: 利用者が設定画面で配信元を編集して配信するを外すか、配信元を削除する
+preconditions:
+  - dev-docs が起動し、端末の設定に配信元が並んでいる
+success_guarantee: 外した配信元だけが `settings.yaml` で無効になるか行ごと消え、読み直した後は配信されない。
+minimal_guarantee: 配信元のフォルダのファイルは変えない。他の配信元の配信は止まらない。
+frequency: 配信元を使わなくなったとき
+priority: 低

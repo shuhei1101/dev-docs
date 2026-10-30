@@ -317,63 +317,6 @@ scenarios:
       - legacy に、設定のバージョンとサーバーが読めるバージョンが出る
       - archive が無効で、`enabled` が `false` であることが出る
     test: test_normal_when_source_not_served
-  - name: 正常シナリオ（設定画面で配信を止める）
-    setup:
-      - name: Mock
-        description: なし（実環境で実行）
-      - name: 端末の設定
-        description: '`DEV_DOCS_CONFIG` が指す一時フォルダの `settings.yaml`'
-        notes: '`sources` に sample と extra の 2 行'
-      - name: dev-docs
-        description: 端末の設定で起動した dev-docs
-    flow: |-
-      ```mermaid
-      sequenceDiagram
-        actor U as 利用者
-        participant UI as dev-docs の画面
-        participant API as 画面の API
-        participant CF as 端末の設定
-
-        U->>UI: extra を編集し、配信するを外して保存する
-        UI->>API: 端末の設定の保存（extra の enabled が false）
-        API->>CF: settings.yaml を書き換え、配信元を読み直す
-        UI-->>U: settings（extra が無効）
-      ```
-    expected:
-      - '`settings.yaml` の extra の行の `enabled` が `false` になる'
-      - 一覧の extra が無効になる
-      - extra の文書の画面を開くと見つからない画面になり、sample の文書の画面は開ける
-    test: test_normal_when_source_disabled
-  - name: 正常シナリオ（設定画面で配信元を削除する）
-    setup:
-      - name: Mock
-        description: なし（実環境で実行）
-      - name: 端末の設定
-        description: '`DEV_DOCS_CONFIG` が指す一時フォルダの `settings.yaml`'
-        notes: '`sources` に sample と extra の 2 行'
-      - name: dev-docs
-        description: 端末の設定で起動した dev-docs
-    flow: |-
-      ```mermaid
-      sequenceDiagram
-        actor U as 利用者
-        participant UI as dev-docs の画面
-        participant API as 画面の API
-        participant CF as 端末の設定
-
-        U->>UI: extra を削除する
-        UI-->>U: 削除の確認のダイアログ
-        U->>UI: 削除する
-        UI->>API: 端末の設定の保存（extra を除いた sources）
-        API->>CF: settings.yaml を書き換え、配信元を読み直す
-        UI-->>U: settings（extra の無い一覧）
-      ```
-    expected:
-      - 確認のダイアログに、extra のフォルダと文書は削除しないことが出る
-      - '`settings.yaml` の `sources` から extra の行が消え、sample の行は変わらない'
-      - extra のフォルダのファイルは変わらない
-      - extra の文書の画面を開くと見つからない画面になる
-    test: test_normal_when_source_deleted
   - name: 正常シナリオ（設定画面で追加した配信元が検証に通らない）
     setup:
       - name: Mock
@@ -456,7 +399,7 @@ scenarios:
       - 応答が 403
       - '`settings.yaml` が変わらず、sample の文書の画面は開ける'
     test: test_error_when_cross_origin
-lead: 利用者が `/dev-docs:setup [path]` で、フォルダを配信元として端末の設定に並べ、文書の MCP で読めるようにする。2 回目以降は範囲のファイルの増減・改名を管理用の YAML に合わせる。設定画面からも配信元を追加・編集・削除できる。
+lead: 利用者が `/dev-docs:setup [path]` で、フォルダを配信元として端末の設定に並べ、文書の MCP で読めるようにする。2 回目以降は範囲のファイルの増減・改名を管理用の YAML に合わせる。
 issue: 4
 primary_actor: 利用者
 stakeholders:
@@ -464,7 +407,7 @@ stakeholders:
     interest: どの作業場所から読み書きできるかを質問に答えるだけで決められ、書き込む前に内容を表で確かめられる
   - name: エージェント（Claude Code）
     interest: 追加した配信元を、セッションを張り直さずに `describe` と `search_docs` で使える
-trigger: 利用者が `/dev-docs:setup [path]` を実行する（path を省くと今の作業場所）か、設定画面で配信元を追加・編集・削除する
+trigger: 利用者が `/dev-docs:setup [path]` を実行する（path を省くと今の作業場所）か、設定画面で配信元を追加する
 preconditions:
   - '`/dev-docs:global-setup` を済ませ、dev-docs が待ち受けている'
   - path のフォルダが YAML の文書とそのスキーマを持つ（git リポジトリか Git 管理外のフォルダ）
