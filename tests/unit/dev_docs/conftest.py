@@ -124,7 +124,6 @@ def make_served_source(
             "scope_write": [str(root)],
             "worktree_globs": [],
             "schemas": {},
-            "tag_master": {},
         }
         values.update(overrides)
         return ServedSource(**values)

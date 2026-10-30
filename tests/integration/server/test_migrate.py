@@ -75,14 +75,15 @@ def test_normal_when_record_only(settings_file: Path, write_steps: Callable[...,
 
 
 def test_normal_when_source_config(tmp_path: Path, settings_file: Path) -> None:
-    """`--source` で配信元の `dev-docs.yaml` に手順を当てる（正常系）。"""
+    """`--source --allow-destructive` で配信元の `dev-docs.yaml` に手順を当てる（正常系）。"""
     # 準備
     folder = tmp_path / "sample"
     (folder / "schemas").mkdir(parents=True)
     (folder / "schemas" / "rule.schema.yaml").write_text("type: object\n", encoding="utf-8")
     config = folder / "dev-docs.yaml"
+    (folder / "tags.yaml").write_text("python: Python の規約\n", encoding="utf-8")
     config.write_text(
-        'version: "1"\nname: sample\ndescription: 説明\n'
+        'version: "1"\nname: sample\ndescription: 説明\ntags: tags.yaml\n'
         "documents:\n"
         "  - id: rules\n"
         "    type: yaml\n"
@@ -94,12 +95,14 @@ def test_normal_when_source_config(tmp_path: Path, settings_file: Path) -> None:
         encoding="utf-8",
     )
     # 実行
-    code = main(["migrate", "--source", str(config)])
+    code = main(["migrate", "--source", str(config), "--allow-destructive"])
     # 検証
     value = load_yaml(config.read_text(encoding="utf-8"))
     row = value["documents"][0]
     assert code == 0
-    assert value["version"] == "2"
+    assert value["version"] == "3"
+    assert "tags" not in value
+    assert (folder / "tags.yaml").exists()
     assert "type" not in row
     assert row["metadata"] == {"name": "title"}
     assert row["alias_type"] == "term"
@@ -139,7 +142,7 @@ def test_error_when_source_config_unmigratable(
     )
     config.write_text(text, encoding="utf-8")
     # 実行
-    code = main(["migrate", "--source", str(config)])
+    code = main(["migrate", "--source", str(config), "--allow-destructive"])
     # 検証
     error = capsys.readouterr().err
     assert code == 4

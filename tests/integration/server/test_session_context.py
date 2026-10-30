@@ -6,6 +6,10 @@ from typing import Any
 from fastapi.testclient import TestClient
 
 USAGE_LINE = "範囲のファイルを作った・消した・改名したら、管理用の YAML の行を修正する"
+TAG_USAGE_LINE = (
+    'タグを付ける前に `search_docs` の `group_by="tags"` で使われているタグを見て、'
+    "同じ意味のタグを使い回す"
+)
 WORKPLACE = "/_admin/session-context"
 
 
@@ -39,6 +43,7 @@ def test_normal(
     assert "- sample（読み書き）" in body["context"]
     assert "- notes（読み取りだけ）" in body["context"]
     assert USAGE_LINE in body["context"]
+    assert TAG_USAGE_LINE in body["context"]
     assert len(body["warnings"]) == 1
     assert body["warnings"][0].startswith("sample: 管理用の YAML に無いファイル")
     assert body["forgotten"] is False

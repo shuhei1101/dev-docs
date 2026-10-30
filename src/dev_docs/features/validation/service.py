@@ -13,7 +13,6 @@ from dev_docs.features.validation.rules import (
     check_id_format,
     check_related,
     check_schema,
-    check_tags,
 )
 from dev_docs.features.validation.scripts import parse_validator_output
 from dev_docs.integrations.scripts import ScriptError, run_script
@@ -59,7 +58,7 @@ class DocumentChecker:
         on: Literal["read", "write"],
         new: bool = False,
     ) -> list[Violation]:
-        """スキーマ・ID の形・関連の種類・タグ・`validators[]` を順に通す。"""
+        """スキーマ・ID の形・関連の種類・`validators[]` を順に通す。"""
         source = target.source
         table = source.table(document.kind)
         violations: list[Violation] = []
@@ -69,7 +68,6 @@ class DocumentChecker:
                 check_id_format(document.id, source.config.ids_format, kind=document.kind)
             )
         violations.extend(check_related(document.metadata, source.config.related_types))
-        violations.extend(check_tags(document.metadata, source.tag_master))
         for validator_id in table.validators:
             entry = source.script("validators", validator_id)
             if on not in entry.on:

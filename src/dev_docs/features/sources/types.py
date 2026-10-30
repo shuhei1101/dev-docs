@@ -8,7 +8,7 @@ from typing import Any, Literal
 
 from dev_docs.shared.errors import UnknownKindError, Violation
 
-SOURCE_CONFIG_VERSION = "2"
+SOURCE_CONFIG_VERSION = "3"
 
 type SourceStatusKind = Literal["serving", "not_served", "disabled"]
 
@@ -67,7 +67,6 @@ class SourceConfig:
     version: str = SOURCE_CONFIG_VERSION
     enabled: bool = True
     default_ref: str = "develop"
-    tags: str | None = None
     visibility: dict[str, Any] | None = None
     worktrees: list[str] = field(default_factory=lambda: ["./.claude/worktrees/*"])
     documents: list[DocumentTable] = field(default_factory=list)
@@ -100,7 +99,6 @@ class ServedSource:
     scope_write: list[str]
     worktree_globs: list[str]
     schemas: dict[str, dict[str, Any]]
-    tag_master: dict[str, str]
 
     def table(self, kind: str) -> DocumentTable:
         """種類から有効な文書の行を引く。"""

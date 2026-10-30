@@ -291,12 +291,6 @@ data_models:
         access: 公開
         default: '"develop"'
         description: リビジョンを指さないときに読むリビジョン
-      - name: tags
-        title: タグのマスター
-        type: str | None
-        access: 公開
-        default: None
-        description: タグのマスターのファイル
       - name: visibility
         title: 公開範囲
         type: dict[str, Any] | None
@@ -438,11 +432,6 @@ data_models:
         type: dict[str, dict[str, Any]]
         access: 公開
         description: '`documents[].id` → 読んだスキーマ（配信元の直下のファイルを起動時に読む。作業中のワークツリーを読むときは文書のストアが読み直す）'
-      - name: tag_master
-        title: タグのマスター
-        type: dict[str, str]
-        access: 公開
-        description: タグ → 説明。`tags` が無ければ空
     methods:
       - name: table
         title: 文書の行を引く
@@ -572,7 +561,7 @@ constants:
     container: features/sources/types.py
     usecase: 共通
     summary: このサーバーが読める配信元の設定の `version`（整数の文字列。大きいほど新しい）
-    value: '"2"'
+    value: '"3"'
   - name: TABLE_KEYS
     title: テーブルのキー
     container: features/sources/merge.py
@@ -661,8 +650,8 @@ functions:
       2. テーブル（`TABLE_KEYS`）ごとに `id` の重なりを確かめ、後の行の `{テーブル}[{n}].id` に違反を加える
       3. 行の参照を確かめる。`documents[].validators[]`・`documents[].converter`・`documents[].after_write[]` が、それぞれ `validators[]`・`converters[]`・`generators[]` に無い ID を指す場合、その要素のパスに `存在しない ID` の違反を加える
       4. `body_file` を `records` なしで書いた行は `documents[{n}].body_file` に違反を加える
-      5. `documents[].schema` と `tags` のファイルが `root` の下に無いか YAML として読めない場合、そのキーに違反を加える（YAMLの読み込み）。スキーマは Draft 2020-12 の `check_schema` も通す
-      6. パス（`documents[].paths[]`・`schema`・`tags`）が `..` で `root` の外を指す場合、その要素に違反を加える
+      5. `documents[].schema` のファイルが `root` の下に無いか YAML として読めない場合、そのキーに違反を加える（YAMLの読み込み）。スキーマは Draft 2020-12 の `check_schema` も通す
+      6. パス（`documents[].paths[]`・`schema`）が `..` で `root` の外を指す場合、その要素に違反を加える
       7. 違反を返す
     unit_tests:
       - name: test_validate_source_config
@@ -719,6 +708,12 @@ functions:
         condition: '`documents[0]` に `type: yaml`・`defaults: [{paths: [a/**], tags: [x]}]`・`metadata: {name: {type: ref, field: title}}`'
         mock: なし
         expected: '`documents[0].type`・`documents[0].defaults` の `知らないキー` と、`documents[0].metadata.name` の違反'
+      - name: test_validate_source_config_when_tag_master
+        case: 正常
+        summary: タグのマスターを書いた
+        condition: '最上位に `tags: tags.yaml`（`tags.yaml` を置く）'
+        mock: なし
+        expected: '`tags` の `知らないキー` だけ'
   - name: check_scripts
     title: スクリプトの確かめ
     kind: 関数
@@ -827,7 +822,7 @@ functions:
          - `older` の場合、状態の `config_version` に `(設定, SOURCE_CONFIG_VERSION)` を入れる
          - `[warning]` 配信元の設定のバージョンが古い（ID・設定のバージョン・サーバーが読めるバージョン）
       8. `root` が Git の作業ツリーかとその直下を引く（履歴の『リポジトリの直下』）
-      9. 種類ごとのスキーマとタグのマスターを読み、`worktrees` を `repo_root`（Git でなければ `root`）からの絶対パスにして、`ServedSource` を作る。ID は `entry.id`、無ければ `config.name`
+      9. 種類ごとのスキーマを読み、`worktrees` を `repo_root`（Git でなければ `root`）からの絶対パスにして、`ServedSource` を作る。ID は `entry.id`、無ければ `config.name`
       10. `ServedSource` と `serving` を返す
 
       違反で返すときは `[error]` 配信元を配信しない（違反ごとに `{id}: {パス}: {理由}`）を書く。
@@ -990,7 +985,7 @@ functions:
       1. 設定のファイルを順に読む。無い・読めない・辞書でないファイルは違反にする
       2. マージして検証する（`merge_configs`・`validate_source_config`）
       3. 設定を作り、スクリプトを確かめる（`check_scripts`）
-      4. スキーマ・タグのマスター・ワークツリーの glob を解いて配信中の配信元を作る
+      4. スキーマ・ワークツリーの glob を解いて配信中の配信元を作る
     unit_tests:
       - name: test_assemble_source
         case: 正常

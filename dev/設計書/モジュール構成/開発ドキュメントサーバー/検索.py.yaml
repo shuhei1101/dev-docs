@@ -1118,6 +1118,8 @@ functions:
       6. 条件の木から、`field` が `body`・`*` の条件を `and`・`or` の下だけたどって集める（`not` の下はたどらない。以下、本文の条件）
       7. `fields` か `order_by` に `@matches` がある場合、当たった文書ごとに本文の全文と本文の条件で当たった行の数を数える（本文の条件が無ければ 0）
       8. `group_by` がある場合、当たった文書の値ごとの件数を `groups` にする（配列は要素ごとに数え、値が無い文書は `（なし）`）
+         - 値は条件の比較と同じ `normalize`（NFKC と `casefold`）をした値でまとめ、1 つの文書の同じ値は 1 件と数える
+         - `value` は、まとめた元の表記のうち付いている文書が最も多いもの（同数なら値の昇順で先のもの）にする
       9. `view` が `count` の場合、ここで返す
       10. `order_by` のキーの順に並べる（`order_by` が `None` なら `id` の昇順。`@matches` は 7 で数えた数。日時の項目の空と値が無い文書は向きによらず末尾。同じ順位は配信元の順・`id` の昇順）。`order_by` が `None` で、`filter` が `id` の `eq` の条件 1 つのときは、その `values` の順に並べる
       11. 始まりの位置を `skip` と、`cursor` があれば続きの位置を読む（指紋は要求のハッシュ）の和にし、`limit` 件を取り出す
@@ -1255,6 +1257,20 @@ functions:
         condition: '同じ文書（7 行目と 2 行目に `検索`）に `filter: {field: body, op: contains, values: [検索]}`・`sections: [決まったこと]`・`snippets: {context_lines: 0}` と、YAML の文書と、`body_file` が `.md` を指す文書に `sections: [無い見出し]`'
         mock: なし
         expected: 1 つ目は抜粋が行番号 7 の 1 行だけ。2 つ目はどちらも `body` が空で `ranges` が `[]`、`notes` に YAML の文書と当たる見出しが無いことの 2 行
+      - name: test_search_docs_when_grouped_normalized
+        case: 正常
+        summary: 表記だけが違う値をまとめる
+        condition: '`view: count`・`group_by: tags`（`[mcp]`・`[MCP, mcp, 設計]`・`[ｍｃｐ]`）'
+        mock: なし
+        expected: '`groups` が `mcp: 3`・`設計: 1` だけ'
+        exception: '-'
+      - name: test_search_docs_when_grouped_tie
+        case: 正常
+        summary: 表記の文書の数が同じ
+        condition: '`view: count`・`group_by: status`（`Draft`・`draft`）'
+        mock: なし
+        expected: '`groups` が `Draft: 2` だけ（値の昇順で先の表記）'
+        exception: '-'
   - name: render_search_markdown
     title: 検索の結果の Markdown
     kind: 関数

@@ -15,7 +15,7 @@ settings:
     default: サーバーが読めるバージョン
     description: 設定を記載したときのスキーマのバージョン。古い設定の配信元を検出する
     reload: reload
-    allowed: 整数の文字列。`SOURCE_CONFIG_VERSION`（`"2"`）以下
+    allowed: 整数の文字列。`SOURCE_CONFIG_VERSION`（`"3"`）以下
   - key: name
     title: 配信元の名前
     file: dev-docs.yaml
@@ -37,12 +37,6 @@ settings:
     type: str
     default: develop
     description: リビジョンを指さないときに読むリビジョン
-    reload: reload
-  - key: tags
-    title: タグのマスター
-    file: dev-docs.yaml
-    type: str
-    description: 'タグの検査と `group_by: tags` の語彙に使うファイル'
     reload: reload
   - key: visibility
     title: 公開の条件

@@ -180,11 +180,15 @@ def test_normal_when_snippets(
 
 
 def test_normal_when_count_grouped(
-    make_source: Callable[..., Any], make_server: Callable[..., Any]
+    make_source: Callable[..., Any],
+    make_server: Callable[..., Any],
+    sample_file_set: Callable[..., dict[str, str]],
+    sample_doc_text: Callable[..., str],
 ) -> None:
-    """view: count と group_by で件数と値ごとの件数だけを返す（正常系）。"""
+    """view: count と group_by で件数と正規化した値ごとの件数だけを返す（正常系）。"""
     # 準備
-    source = make_source("sample")
+    doc_2 = sample_doc_text("doc-2", "文書 2", description="2 件目", tags=["a", "Ａ", "b"])
+    source = make_source("sample", sample_file_set(**{"docs/doc-2.yaml": doc_2}))
     env = make_server(source)
     # 実行
     result = env.call(
