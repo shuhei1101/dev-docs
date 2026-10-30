@@ -368,16 +368,16 @@ scenarios:
 
         A->>M: trace_related(from_ids: design/repo, direction: in, depth: 1)
         M->>ST: related で design/repo を指す文書を引く
-        M-->>A: src/repo（via_type は implements）
+        M-->>A: src/repo（via.type は implements）
         A->>M: trace_related(from_ids: src/repo, direction: in, depth: 1)
-        M-->>A: src/test_repo（via_type は tests）
+        M-->>A: src/test_repo（via.type は tests）
         A->>M: search_docs(filter: id が src/repo か src/test_repo, view: full)
         M->>M: 読み取りの検査（related の type が既定の種類にあるか）
         M-->>A: 2 件の本文（違反なし）
       ```
     expected:
-      - '`design/repo` を起点にした `direction: in` の `trace_related` が `src/repo` の 1 件を返し、`via_type` が `implements` になる'
-      - '`src/repo` を起点にした `direction: in` の `trace_related` が `src/test_repo` の 1 件を返し、`via_type` が `tests` になる'
+      - '`design/repo` を起点にした `direction: in` の `trace_related` が `src/repo` の 1 件を返し、`via.type` が `implements` になる'
+      - '`src/repo` を起点にした `direction: in` の `trace_related` が `src/test_repo` の 1 件を返し、`via.type` が `tests` になる'
       - '`search_docs` が `src/repo`・`src/test_repo` の 2 件を違反を付けずに返す'
     test: test_normal_when_implementing_code_traced
 lead: エージェントが文書の MCP の `describe`・`search_docs`・`trace_related` で、今の作業場所から読める配信元の文書を探して読む。

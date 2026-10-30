@@ -267,8 +267,8 @@ scenarios:
         participant AD as 管理の MCP
 
         U->>SK: 配信元のワークツリーで /dev-docs:setup
-        SK->>SK: 範囲のファイルと管理用の YAML の行を突き合わせる
-        SK->>SK: 除外の条件（生成物・ロック・バイナリ・ベンダーのコード・再エクスポートや空の __init__）に当たるファイルを外す
+        SK->>AD: check_project(sync_limit: 0)
+        AD-->>SK: 管理用の YAML に無いファイルの全件（除外の条件に当たるファイルは含まない）
         SK->>U: 実装のパスを持つ設計書の種類とキーを聞く（既定は無し）
         U-->>SK: 種類 design、キー implementation
         SK->>DM: search_docs(filter: kind が design, format: json)

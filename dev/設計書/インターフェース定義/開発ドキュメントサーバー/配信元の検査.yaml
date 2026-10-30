@@ -106,6 +106,33 @@ flows:
       - '`violations` に `documents[0].type`・`documents[0].defaults`・`documents[1].metadata.name` がそれぞれ理由と一緒にある'
       - '`version_state` が `old` で、`config_version` が `1`'
     test: test_normal_when_config_legacy
+  - name: 正常系（除外の条件に当たるファイルを数えない）
+    summary: '除外の条件に当たるファイルを索引に無いファイルとして数えず、`sync_limit: 0` で内訳を全件返す'
+    setup:
+      - name: Mock
+        description: なし（一時フォルダに配信元を作り、dev-docs のアプリをテストのクライアントで呼ぶ）
+      - name: 配信元
+        description: '検証に通る sample。行 `src`（`paths: [src/files.yaml]`・`records: files`・`body_file: path`）の `src/files.yaml` が `files: []`'
+        notes: '-'
+      - name: 範囲のファイル
+        description: '`src/` に `a.py`・`b.py`・空の `pkg/__init__.py`・`uv.lock`・`logo.png`（先頭に NUL バイト）を置く'
+        notes: '`a.py`・`b.py` だけが除外の条件に当たらない'
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        participant C as クライアント
+        participant T as check_project
+        participant F as 配信元のフォルダ
+
+        C->>T: path, sync_limit: 0
+        T-->>F: 管理用の YAML とそのフォルダの配下のファイルを読む
+        T->>T: 除外の条件に当たるファイルを外す
+        T-->>C: 同期の件数と全件の内訳
+      ```
+    expected:
+      - '`sync.unindexed_files` が 2'
+      - '`sync.items` が `src/a.py`・`src/b.py` の 2 件だけで、`src/pkg/__init__.py`・`src/uv.lock`・`src/logo.png` を含まない'
+    test: test_normal_when_files_excluded
 lead: 配信元の `dev-docs.yaml` と管理用の YAML・スクリプトを検証し、違反・設定のバージョンの新旧・索引の同期の件数を返す。端末の設定に無い配信元も検査できる。
 identifier: check_project
 permissions: なし（`127.0.0.1` でだけ待ち受ける）
@@ -114,6 +141,7 @@ side_effects: なし（検査と確かめのスクリプトを実行するが、
 callers:
   - dev/設計書/シナリオ/単一ユースケース/配信元を追加する#scenarios[正常シナリオ]
   - dev/設計書/シナリオ/単一ユースケース/設定・スクリプトを変える#scenarios[正常シナリオ]
+  - dev/設計書/シナリオ/単一ユースケース/配信元を追加する#scenarios[正常シナリオ（除外の条件と関連の候補）]
 exclusivity: '読み取りだけで排他しない（`readOnlyHint: true`）'
 request:
   - name: path
@@ -134,6 +162,14 @@ request:
     default: '`markdown`'
     location: argument
     description: 返す形式
+  - name: sync_limit
+    type: int
+    required: false
+    default: '`50`'
+    location: argument
+    description: '`sync.items` に返す内訳の件数の上限。`0` で全件'
+    constraints: 0 以上
+    notes: setup が管理用の YAML に追加するファイルを全件引くため
 request_example: |-
   ```json
   {"path": "/home/u/repo/sample"}
@@ -171,14 +207,14 @@ response:
     description: '種類の行の `metadata` に書いた列が無い文書の件数'
   - name: sync.unindexed_files
     type: int
-    description: 管理用の YAML に無いファイルの件数
+    description: 管理用の YAML に無いファイルの件数。除外の条件（生成物・ロック・バイナリ・ベンダーのコード・再エクスポートや空の `__init__`）に当たるファイルは数えない
   - name: sync.missing_body_files
     type: int
     description: ファイルが無い行の件数
   - name: sync.items[]
     type: list[SyncItem]
     description: 件数の内訳（種類とパス）
-    notes: 先頭 50 件まで
+    notes: 先頭 `sync_limit` 件まで
 response_example: |-
   ```markdown
   /home/u/repo/sample（登録済み: sample）
@@ -203,7 +239,10 @@ constraints:
   - item: 検査の内容
     constraint: 起動・`reload` の配信元の検証と同じ関数を使う。結果は配信中の配信元の状態に反映しない
   - item: 件数の内訳
-    constraint: 先頭 50 件まで返し、件数は全件を数える
+    constraint: 先頭 `sync_limit` 件まで返し、件数は全件を数える
   - item: タイムアウト
     constraint: スクリプトの確かめは `script_timeout_sec` で打ち切り、`script_errors` に入れる
+  - item: 除外の条件
+    constraint: 生成物・ロック・バイナリ・ベンダーのコード・再エクスポートや空の `__init__` だけのファイルを `unindexed_files` に数えない。起動時の警告・状態の取得も同じ判定を使う
+    notes: 見分け方はモジュール構成で決める。配信元固有の除外は `documents[].exclude[]`
 test_file: tests/integration/server/test_check_project.py
