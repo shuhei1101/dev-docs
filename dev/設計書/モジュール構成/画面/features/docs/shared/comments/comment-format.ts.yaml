@@ -6,7 +6,7 @@ constants:
     container: features/docs/shared/comments/comment-format.ts
     usecase: コメントを溜める
     summary: 非機能要件の `Issue の作成画面の URL の長さ` の決定値
-    value: '8000'
+    value: '未確定（非機能要件の決定値が決まったら入れる）'
   - name: TRUNCATED_NOTE
     title: 切り詰めの書き添え
     container: features/docs/shared/comments/comment-format.ts
@@ -80,6 +80,6 @@ functions:
         summary: 末尾を切り詰める
         condition: 日本語 10000 文字の `body`
         mock: なし
-        expected: '`truncated` が true、URL の長さが 8000 以下、戻した `body` が `TRUNCATED_NOTE` で終わる'
+        expected: '`truncated` が true、URL の長さが `ISSUE_URL_MAX` 以下、戻した `body` が `TRUNCATED_NOTE` で終わる'
 refs:
   - dev/設計書/非機能要件/非機能要件#requirements[Issue の作成画面の URL の長さ]

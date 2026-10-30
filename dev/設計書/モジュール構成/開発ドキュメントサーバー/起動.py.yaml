@@ -526,9 +526,9 @@ functions:
       - name: test_build_app_when_openapi
         case: 正常
         summary: OpenAPI の画面を出さない
-        condition: GET `/docs` と `/_api/openapi.json`
+        condition: '`index.html` を置いた一時フォルダを `screen_dir` に渡し、GET `/docs` と `/_api/openapi.json`'
         mock: 配線済みの関数（偽物）
-        expected: '`/docs` は 404、`/_api/openapi.json` の `paths` が全て `/_api/` で始まり、各入口の `operationId` が `{タグ}-{name}`（`view-get_document_default`・`view-get_document`・`view-search_page`・`view-list_refs`・`view-put_columns`・`settings-get_settings_sources`・`settings-put_settings_sources`）で重複が無く、画面の配信のパスを含まない'
+        expected: '`/docs` は Swagger UI でなく画面の配信が応える（`screen_dir` に置いた `index.html` の中身）、`/_api/openapi.json` の `paths` が全て `/_api/` で始まり、各入口の `operationId` が `{タグ}-{name}`（`view-get_document_default`・`view-get_document`・`view-search_page`・`view-list_refs`・`view-put_columns`・`settings-get_settings_sources`・`settings-put_settings_sources`）で重複が無く、画面の配信のパスを含まない'
       - name: test_build_app_when_screen
         case: 正常
         summary: API と MCP を画面の配信より先に当てる
@@ -591,7 +591,7 @@ functions:
       type: None
       description: 何も返さない
     process: |-
-      1. `DevDocsError` は、`application/problem+json` で `{type: PROBLEM_TYPE_BASE + name, title: name, status, detail: message, nextSteps: next_steps, ...details()}` を返す。`details()` のキーは入れ子も含めて `pydantic.alias_generators.to_camel` で camelCase にする。`violations` を持つときは `errors[]`（`{path, reason}`、`reason` は `rule`）にも並べる
+      1. `DevDocsError` は、`application/problem+json` で `{type: PROBLEM_TYPE_BASE + name, title: name, status, detail: message, nextSteps: next_steps, ...details()}` を返す。`details()` の 1 段目のキーと入れ子のモデルのフィールド名を `pydantic.alias_generators.to_camel` で camelCase にする。`dict[str, ...]` の値のキー（`candidates` の文書の ID など）は変えない。`violations` を持つときは `errors[]`（`{path, reason}`、`reason` は `rule`）にも並べる
       2. `RequestValidationError` は、400 で `type` が `InvalidArgumentError` の problem+json を返す。`errors[]` は誤りごとに `loc` の `body` を除いたパス（`sources[1].id` の形）と `msg`
       3. `starlette.exceptions.HTTPException`（ルートの無いパス・画面の配信の 404 を含む）は、その `status_code` で `type` が `PROBLEM_TYPE_BASE + "HttpError"`、`detail` が例外の `detail` の problem+json を返す
       4. これら以外の例外は FastAPI の既定の 500 に任せ、`[error]` 要求の処理に失敗した（メソッド・パス・例外）を書く
@@ -617,9 +617,9 @@ functions:
       - name: test_register_error_handlers_when_details_snake
         case: 正常
         summary: 詳細のキーを camelCase にする
-        condition: '`details()` が `{"settings_path": "x", "missing": {"source_id": "a"}}` を返す `DevDocsError` を送るルートを GET'
+        condition: '`details()` が `{"settings_path": "x", "missing": {"source_id": "a"}, "candidates": {"tests/test_main": ["rule-auth"]}}` を返す `DevDocsError` を送るルートを GET'
         mock: なし（テスト用のルート）
-        expected: 本文に `settingsPath`・`missing.sourceId`・`nextSteps` があり、snake_case のキーが無い
+        expected: 本文に `settingsPath`・`missing.sourceId`・`nextSteps` があり、snake_case のフィールド名が無い。`candidates` のキーは `tests/test_main` のまま
   - name: run_migrate
     title: 設定の移し替えの実行
     container: main.py
@@ -810,6 +810,8 @@ functions:
     exceptions:
       - name: ScreenBuildMissingError
         condition: '`dist_dir` に `index.html` が無い'
+        message: '`画面のビルドがありません（{dist_dir}/index.html）`'
+        notes: '`next_steps` に `frontend/` で画面をビルドすること（`vite build`。出力先は `src/dev_docs/screen/`）'
     unit_tests:
       - name: test_build_screen_router
         case: 正常
@@ -842,7 +844,7 @@ functions:
         summary: ビルドが無いと 503
         condition: 空の一時フォルダで GET `/`
         mock: なし（一時フォルダ）
-        expected: '`ScreenBuildMissingError` が送られる'
+        expected: '`ScreenBuildMissingError` が送られ、`next_steps` に `vite build` がある'
         exception: ScreenBuildMissingError
 refs:
   - dev/設計書/インターフェース定義/開発ドキュメントサーバー/起動#

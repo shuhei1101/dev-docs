@@ -26,6 +26,9 @@ overview:
     - id: FE
       label: 画面
       kind: system
+    - id: CDN
+      label: jsDelivr
+      kind: external
   edges:
     - from: U
       to: FE
@@ -56,6 +59,9 @@ overview:
     - from: SRV
       to: GIT
       label: 子プロセス
+    - from: FE
+      to: CDN
+      label: mdmark の読み込み
   subgraphs:
     - id: D
       label: dev-docs
@@ -128,3 +134,11 @@ external_systems:
     status: planned
     notes:
       事前確認: '要否: 要。時点: 起動時・再読込時と管理の MCP の `check_project` で実行できるかを確かめ、失敗した配信元は配信しない'
+  - name: jsDelivr
+    purpose: 画面が mdmark（`dist/mount.js`）を実行時に読み込む
+    direction: 受信のみ
+    protocol: HTTPS（ES モジュールの `import`）
+    detail: dev/設計書/外部ライブラリ/mdmark#
+    status: planned
+    refs:
+      - dev/設計書/モジュール構成/画面/features/docs/doc-view/hooks/use-mdmark.ts#constants[MDMARK_URL]
