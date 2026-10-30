@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import os
 import posixpath
 from collections.abc import Callable, Collection, Mapping
 from datetime import date, datetime, time
@@ -10,31 +9,17 @@ from pathlib import Path
 from typing import Any
 
 from dev_docs.features.documents.fields import get_field, resolve_metadata
+from dev_docs.features.documents.indexable import is_excluded_file, walk_files
 from dev_docs.features.documents.types import Document, LoadProblem
 from dev_docs.features.history.types import FileDates
 from dev_docs.features.sources.types import DocumentTable
 from dev_docs.shared.hashing import content_hash, value_hash
 from dev_docs.shared.yaml_io import YamlLoadError, dump_roundtrip, load_yaml
 
-SKIP_DIRS = frozenset({".git", "node_modules", "__pycache__", ".venv"})
-
 
 def collect_files(root: Path, table: DocumentTable) -> list[str]:
     """文書の行に当たるファイルを配信元の直下から集める。"""
-    found: set[str] = set()
-    for folder, dirnames, filenames in os.walk(root):
-        # シンボルリンクのフォルダは中をたどらない
-        dirnames[:] = [
-            name
-            for name in dirnames
-            if name not in SKIP_DIRS and not os.path.islink(os.path.join(folder, name))
-        ]
-        relative_folder = Path(folder).relative_to(root).as_posix()
-        for name in filenames:
-            relative = name if relative_folder == "." else f"{relative_folder}/{name}"
-            if table.matches(relative):
-                found.add(relative)
-    return sorted(found)
+    return sorted({path for path in walk_files(root) if table.matches(path)})
 
 
 def _as_datetime(value: Any) -> datetime | None:
@@ -238,20 +223,12 @@ def unindexed_files(
 ) -> list[str]:
     """管理用の YAML のフォルダの配下で、どの行も指していないファイルを `root` からのパスで返す。
 
-    行の `exclude` に当たるファイルは数えない。
+    行の `exclude` に当たるファイルと、除外の条件に当たるファイルは数えない。
     """
-    start = root / posixpath.dirname(index_path)
+    start = posixpath.dirname(index_path) or "."
     excluded = {index_path, *body_paths}
-    found: list[str] = []
-    for folder, dirnames, filenames in os.walk(start):
-        dirnames[:] = [
-            name
-            for name in dirnames
-            if name not in SKIP_DIRS and not os.path.islink(os.path.join(folder, name))
-        ]
-        relative_folder = Path(folder).relative_to(root).as_posix()
-        for name in filenames:
-            relative = name if relative_folder == "." else f"{relative_folder}/{name}"
-            if relative not in excluded and not table.excludes(relative):
-                found.append(relative)
-    return sorted(found)
+    return sorted(
+        path
+        for path in walk_files(root, start=start)
+        if path not in excluded and not table.excludes(path) and not is_excluded_file(root, path)
+    )

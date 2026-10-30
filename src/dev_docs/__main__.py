@@ -8,7 +8,7 @@ from collections.abc import Callable
 from importlib.metadata import version
 
 from dev_docs import DIST_NAME
-from dev_docs.main import run_migrate, run_serve
+from dev_docs.main import run_files, run_migrate, run_serve
 
 PROG = "dev-docs"
 
@@ -34,6 +34,13 @@ def build_parser() -> argparse.ArgumentParser:
         "--allow-destructive", action="store_true", help="キーの削除など値を捨てる手順も当てる"
     )
     migrate.set_defaults(handler=run_migrate)
+    files = subparsers.add_parser("files", help="管理用の YAML に載せるファイルの一覧を出す")
+    files.add_argument("--root", required=True, help="配信元のフォルダ")
+    files.add_argument(
+        "--paths", required=True, action="append", help="範囲の glob（--root からの相対）"
+    )
+    files.add_argument("--exclude", action="append", default=[], help="外すファイル名の glob")
+    files.set_defaults(handler=run_files)
     return parser
 
 
