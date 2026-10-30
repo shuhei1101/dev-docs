@@ -16,10 +16,10 @@ functions:
         passing: positional
         description: '`notFound` の `data`（文書の取得の problem。ルートに当たらない URL は undefined）'
       - name: context
-        type: '{defaultRef?: string; configs?: string[]}'
+        type: '{defaultRef?: string; configs?: string[]; source?: string; ref?: string}'
         required: false
         passing: positional
-        description: 画面が別に読んだ値（リビジョンの一覧の `defaultRef`、端末の設定の取得のその配信元の `config`）
+        description: 画面が別に読んだ値（リビジョンの一覧の `defaultRef`、端末の設定の取得のその配信元の `config`、URL の配信元の ID `source` と開こうとしたリビジョン `ref`。`source`・`ref` は説明の文言に入れる）
     returns:
       type: '{kind: "source" | "not_served" | "ref" | "doc" | "route"; heading: string; description: string; details: {label: string; value: string}[]}'
       description: 文言は画面設計『見つからない画面』の見出し・説明・詳細
