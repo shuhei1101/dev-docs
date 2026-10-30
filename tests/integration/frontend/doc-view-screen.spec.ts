@@ -933,6 +933,42 @@ test.describe("コメントの場所への移動", () => {
     await expect(mark(page, "文書 1 の末尾の文")).toBeInViewport();
   });
 
+  // 印が見つからないまま別の文書へ移ったら、後で元の文書を開き直して同じ文字列の印が付いてもスクロールしない（正常系）
+  test("place_scroll_cleared_when_doc_left", async ({ page }) => {
+    // 準備（同じ文字列が 2 か所あり、前後の文字列が合わないため、場所を選んだ時点では印が付かない）
+    const twice = `# 文書 2\n\n## 概要\n\n${"本文です。\n\n".repeat(40)}中ほどの文\n\n${"本文です。\n\n".repeat(40)}中ほどの文\n\n${"本文です。\n\n".repeat(40)}`;
+    await seed(page, [
+      { id: "c2", path: "docs/doc-2", docTitle: "文書 2", headings: ["概要"], quote: "中ほどの文", prefix: "前の文字列", suffix: "後の文字列", body: "見つからない確認" },
+    ]);
+    await openRendered(page, "/sample/docs/doc-1", {
+      document: ({ path }) => ({
+        body: documentResponse({ path, markdown: path === "docs/doc-2" ? twice : LONG_DOC("文書 1", "文書 1 の末尾の文") }),
+      }),
+    });
+    const sidebar = page.getByRole("navigation", { name: "文書の一覧" });
+    const heading = page.getByRole("main").getByRole("heading", { level: 1 });
+    await page.getByRole("button", { name: /^コメント \d+ 件$/ }).click();
+    await panel(page).getByRole("button", { name: "文書 2 › 概要" }).click();
+    await expect(heading).toHaveText("文書 2");
+    await expect(page.locator(".mdmark-comment-mark")).toHaveCount(0);
+    // 実行（文書 1 へ移り、文書 2 を開き直して、1 つ目の「中ほどの文」を画面の上端に置いてコメントを付ける）
+    await sidebar.getByRole("link", { name: "文書 1" }).click();
+    await expect(heading).toHaveText("文書 1");
+    await sidebar.getByRole("link", { name: "文書 2" }).click();
+    await expect(heading).toHaveText("文書 2");
+    const target = page.getByText("中ほどの文").first();
+    await target.evaluate((element) => element.scrollIntoView({ block: "start" }));
+    const before = await page.evaluate(() => window.scrollY);
+    await target.selectText();
+    await page.getByRole("button", { name: "コメント", exact: true }).click();
+    await page.getByRole("dialog", { name: "コメントを書く" }).getByRole("textbox").fill("開き直した後の確認");
+    await page.getByRole("button", { name: "コメントを保存" }).click();
+    // 検証
+    await expect(mark(page, "中ほどの文")).toHaveCount(1);
+    await page.waitForTimeout(500);
+    expect(Math.abs((await page.evaluate(() => window.scrollY)) - before)).toBeLessThan(5);
+  });
+
   // 他の文書のコメントは、その文書を開いた後に本文の印が画面に入るまでスクロールする（正常系）
   test("place_scroll_other_doc", async ({ page }) => {
     // 準備

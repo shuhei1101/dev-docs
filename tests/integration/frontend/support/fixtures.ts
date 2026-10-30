@@ -154,6 +154,8 @@ export type SeedComment = {
   docTitle: string;
   headings: string[];
   quote: string;
+  prefix?: string;
+  suffix?: string;
   body: string;
   selected?: boolean;
 };
@@ -171,8 +173,8 @@ export const seededComments = (rows: SeedComment[]): string =>
         docTitle: row.docTitle,
         headings: row.headings,
         quote: row.quote,
-        prefix: "",
-        suffix: "",
+        prefix: row.prefix ?? "",
+        suffix: row.suffix ?? "",
         body: row.body,
         selected: row.selected ?? true,
         createdAt: "2026-10-26T05:40:00.000Z",
