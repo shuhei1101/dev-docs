@@ -49,7 +49,9 @@ function applyState() {
 
   // ダイアログとポップオーバーは、状態に当たるものだけを開く
   for (const el of document.querySelectorAll("[data-open-when]")) {
-    const open = el.dataset.openWhen.split(" ").includes(state);
+    // data-open-media の幅に当たらないときは開かない（広い幅で常に並べて出すサイドバー）
+    const media = el.dataset.openMedia;
+    const open = el.dataset.openWhen.split(" ").includes(state) && (!media || matchMedia(media).matches);
     if (el instanceof HTMLDialogElement) {
       if (open && !el.open) {
         el.showModal();
