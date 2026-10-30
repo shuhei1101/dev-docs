@@ -181,7 +181,12 @@ export const DocViewScreen = () => {
         github={doc.github ?? null}
         onLocate={(comment) => {
           setLocating(comment);
-          nav.locate(comment);
+          // 開いている文書のコメントは移動せず、本文の印までスクロールするだけにする
+          const here =
+            comment.source === source &&
+            comment.path === doc.path &&
+            (comment.ref ?? "") === (doc.ref ?? "");
+          if (!here) nav.locate(comment);
         }}
         onChanged={() => undefined}
       />
