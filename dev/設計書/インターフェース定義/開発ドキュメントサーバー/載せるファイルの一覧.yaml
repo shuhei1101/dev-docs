@@ -9,8 +9,8 @@ flows:
       - name: Mock
         description: なし（`main(["files", ...])` を同じプロセスで呼ぶ）
       - name: 配信元のフォルダ
-        description: '`dev-docs.yaml` も管理用の YAML も無い一時フォルダ。`src/` に `a.py`・`b.py`・空の `pkg/__init__.py`・`uv.lock`・`logo.png`（先頭に NUL バイト）を置く'
-        notes: '`a.py`・`b.py` だけが除外の条件に当たらない'
+        description: '`dev-docs.yaml` も管理用の YAML も無い一時フォルダ。`src/` に `a.py`・`b.py`・空の `pkg/__init__.py`・`uv.lock`・`logo.png`（先頭に NUL バイト）を置き、ワークツリーのファイル `.claude/worktrees/wt/src/c.py` を置く'
+        notes: '`a.py`・`b.py` だけが除外の条件・辿らないフォルダに当たらない。`--paths` は `**`'
     flow: |-
       ```mermaid
       sequenceDiagram
@@ -18,13 +18,13 @@ flows:
         participant M as dev-docs files
         participant F as 配信元のフォルダ
 
-        C->>M: --root {フォルダ} --paths src/**
+        C->>M: --root {フォルダ} --paths **
         M-->>F: glob に当たるファイルを集める
         M->>M: 除外の条件に当たるファイルを外す
         M-->>C: 載せるファイルのパス（終了コード 0）
       ```
     expected:
-      - 標準出力が `src/a.py`・`src/b.py` の 2 行だけ
+      - 標準出力が `src/a.py`・`src/b.py` の 2 行だけで、`.claude/worktrees/wt/src/c.py` を含まない
       - 終了コードが 0
       - フォルダのファイルが変わらない
     test: test_normal
@@ -121,5 +121,5 @@ constraints:
     constraint: 生成物・ロック・バイナリ・ベンダーのコード・再エクスポートや空の `__init__` だけのファイルを出さない。`check_project` の `unindexed_files` と同じ判定を使う
     notes: 見分け方はモジュール構成で決める
   - item: 辿らないフォルダ
-    constraint: 文書の収集と同じ（`.git`・`node_modules`・`__pycache__`・`.venv` とシンボリックリンク）
-    notes: '-'
+    constraint: '`.git`・`node_modules`・`__pycache__`・`.venv`・`.claude/worktrees` とシンボリックリンク。文書の収集・`unindexed_files` と同じ'
+    notes: '`.claude/worktrees` は配信元の設定の `worktrees` の既定と同じ場所で、setup の範囲の既定でも除く'

@@ -44,7 +44,7 @@ scenarios:
         description: 正常シナリオと同じ
         notes: '-'
       - name: Markdown を持つ配信元
-        description: '`docs/` に Markdown 2 件と、ベンダーのコードの Markdown `docs/vendor/lib.md` を持ち、`dev-docs.yaml` も管理用の YAML も無い git リポジトリ'
+        description: '`docs/` に Markdown 2 件と、ベンダーのコードの Markdown `docs/vendor/lib.md` を持ち、ワークツリーの Markdown `.claude/worktrees/wt/docs/a.md` を置き、`dev-docs.yaml` も管理用の YAML も無い git リポジトリ'
         notes: 範囲の質問に既定の `**/*.md` を答える
     flow: |-
       ```mermaid
@@ -61,7 +61,7 @@ scenarios:
         SK->>U: scope・範囲・仮のメタデータを聞く
         U-->>SK: 既定の値
         SK->>CL: dev-docs files --root {配信元のパス} --paths **/*.md
-        CL-->>SK: 載せるファイル（docs/vendor/ の下を含まない）
+        CL-->>SK: 載せるファイル（docs/vendor/ と .claude/worktrees/ の下を含まない）
         SK-->>U: dev-docs.yaml・管理用の YAML・sources の行を表で示して確かめる
         U-->>SK: 了承
         SK->>FS: 雛形から dev-docs.yaml を作る（1 行目にクローンのバージョンのタグのスキーマの行。管理用の YAML を読む documents の行。records: files）
