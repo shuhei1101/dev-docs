@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title>見つかりません | dev-docs</title>
+  <!-- 利用者が固定した明暗を、描画の前に当てる -->
+  <script>
+    {
+      const scheme = localStorage.getItem("dev-docs-color-scheme");
+      if (scheme) {
+        document.querySelector('meta[name="color-scheme"]').content = scheme;
+        document.documentElement.dataset.scheme = scheme;
+      }
+    }
+  </script>
+  <link rel="stylesheet" href="../../../../assets/style.css">
+  <link rel="stylesheet" href="../../../../refs/36/assets/screens.css">
+  <script type="module" src="../../../../refs/36/assets/app.js"></script>
+</head>
+<body>
+  <!-- モック専用の操作列（モックの階層と、無かったものの切り替え） -->
+  <nav class="mockbar" aria-label="モックの操作">
+    <span class="mockbar__path"><a href="../../../">pages</a> / <a href="../../">not-found</a> / <a href="../">36</a> / <span>default</span></span>
+    <span class="mockbar__label">無いもの</span>
+    <a class="mockbar__tab" href="#">文書</a>
+    <a class="mockbar__tab" href="#ref">リビジョン</a>
+    <a class="mockbar__tab" href="#source">配信元</a>
+    <span class="mockbar__sep"></span>
+    <a class="mockbar__tab" href="#search">検索</a>
+  </nav>
+
+  <div class="app-header">
+    <!-- 見つからない画面ではコメントを出さない -->
+    <header class="topbar">
+      <a class="brand" href="../../../doc-view/36/default/index.html" aria-label="sample のトップ"><span class="brand__mark">dd</span><span class="only-wide">dev-docs</span></a>
+
+      <button class="btn btn--outline source-button" type="button" commandfor="source-menu" command="toggle-popover" aria-label="配信元を切り替える">
+        <svg aria-hidden="true" viewBox="0 0 16 16" fill="currentColor"><path d="M2 2.5A1.5 1.5 0 0 1 3.5 1h9A1.5 1.5 0 0 1 14 2.5v11a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 2 13.5zm1.5 0v11h9v-11zM5 4h6v1.5H5zm0 3h6v1.5H5z"/></svg>
+        <span data-when="normal ref search">sample</span>
+        <span data-when="source">配信元を選ぶ</span>
+        <svg class="btn__chevron" aria-hidden="true" viewBox="0 0 16 16" fill="currentColor"><path d="M3.2 5.7 8 10.5l4.8-4.8-1.06-1.06L8 8.38 4.26 4.64z"/></svg>
+      </button>
+      <div id="source-menu" class="menu" popover>
+        <p class="menu__label">配信元</p>
+        <a class="menu__item" href="../../../doc-view/36/default/index.html">sample<span class="menu__note">読み書き</span></a>
+        <a class="menu__item" href="../../../doc-view/36/default/index.html">notes<span class="menu__note">読み取りだけ</span></a>
+        <a class="menu__item" href="../../../doc-view/36/default/index.html">extra<span class="menu__note">読み取りだけ</span></a>
+      </div>
+
+      <!-- 配信元が決まっているときだけ、リビジョンを切り替える -->
+      <button class="btn btn--outline revision-button" type="button" commandfor="revision-menu" command="toggle-popover" aria-label="リビジョンを切り替える" data-when="normal ref search">
+        <svg aria-hidden="true" viewBox="0 0 16 16" fill="currentColor"><path d="M5 3.25a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0M3.5 5.37a2.25 2.25 0 1 1 1.5 0v.63c0 .55.45 1 1 1h4c.17 0 .34.03.5.08V5.37a2.25 2.25 0 1 1 1.5 0V8.5A2.5 2.5 0 0 1 10 11H6c-.17 0-.34-.03-.5-.08v.71a2.25 2.25 0 1 1-1.5 0zm8.5-1.37a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5M4.25 13.5a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5"/></svg>
+        <span class="mono only-wide" data-when="normal search">develop</span>
+        <span class="mono only-wide" data-when="ref">no-such-branch</span>
+        <svg class="btn__chevron only-wide" aria-hidden="true" viewBox="0 0 16 16" fill="currentColor"><path d="M3.2 5.7 8 10.5l4.8-4.8-1.06-1.06L8 8.38 4.26 4.64z"/></svg>
+      </button>
+      <div id="revision-menu" class="menu" popover>
+        <p class="menu__label">リビジョン</p>
+        <a class="menu__item" href="../../../doc-view/36/default/index.html"><span class="mono">develop</span><span class="menu__note">既定</span></a>
+        <a class="menu__item" href="../../../doc-view/36/default/index.html"><span class="mono">feat/frontend</span><span class="menu__note">ブランチ</span></a>
+      </div>
+
+      <span class="spacer"></span>
+
+      <button class="btn btn--outline search" type="button" commandfor="search-dialog" command="show-modal" aria-label="文書を検索" aria-keyshortcuts="Control+K /">
+        <svg aria-hidden="true" viewBox="0 0 16 16" fill="currentColor"><path d="M10.68 11.74a6 6 0 1 1 1.06-1.06l3.04 3.04-1.06 1.06zM11.5 7a4.5 4.5 0 1 0-9 0 4.5 4.5 0 0 0 9 0"/></svg>
+        <span>文書を検索</span>
+        <kbd class="key">Ctrl K</kbd>
+      </button>
+
+      <a class="btn btn--ghost btn--icon" href="../../../settings/36/default/index.html" aria-label="設定" title="設定">
+        <svg aria-hidden="true" viewBox="0 0 16 16" fill="currentColor" fill-rule="evenodd"><path d="M8 0c.34 0 .64.23.73.57l.34 1.36c.47.12.91.31 1.32.55l1.2-.72a.75.75 0 0 1 .92.11l1.06 1.06c.24.24.29.62.11.92l-.72 1.2c.24.41.43.85.55 1.32l1.36.34c.34.09.57.39.57.73s-.23.64-.57.73l-1.36.34c-.12.47-.31.91-.55 1.32l.72 1.2a.75.75 0 0 1-.11.92l-1.06 1.06a.75.75 0 0 1-.92.11l-1.2-.72c-.41.24-.85.43-1.32.55l-.34 1.36A.75.75 0 0 1 8 16a.75.75 0 0 1-.73-.57l-.34-1.36a5 5 0 0 1-1.32-.55l-1.2.72a.75.75 0 0 1-.92-.11l-1.06-1.06a.75.75 0 0 1-.11-.92l.72-1.2a5 5 0 0 1-.55-1.32L.57 8.73A.75.75 0 0 1 0 8c0-.34.23-.64.57-.73l1.36-.34c.12-.47.31-.91.55-1.32l-.72-1.2a.75.75 0 0 1 .11-.92l1.06-1.06a.75.75 0 0 1 .92-.11l1.2.72c.41-.24.85-.43 1.32-.55L7.27.57A.75.75 0 0 1 8 0m0 5a3 3 0 1 0 0 6 3 3 0 0 0 0-6"/></svg>
+      </a>
+
+      <button class="btn btn--ghost btn--icon" type="button" data-scheme-toggle aria-label="明暗を固定する" aria-pressed="false">
+        <svg aria-hidden="true" viewBox="0 0 16 16" fill="currentColor"><path d="M8 1.5a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13M8 3a5 5 0 0 1 0 10z"/></svg>
+      </button>
+    </header>
+  </div>
+
+  <main class="page page--narrow">
+    <div class="not-found">
+      <div class="not-found__icon" aria-hidden="true">
+        <svg viewBox="0 0 16 16" fill="currentColor"><path d="M2 1.75C2 .78 2.78 0 3.75 0h6.59c.46 0 .9.18 1.23.51l2.92 2.92c.33.33.51.77.51 1.23v9.59A1.75 1.75 0 0 1 13.25 16h-9.5A1.75 1.75 0 0 1 2 14.25zm1.75-.25a.25.25 0 0 0-.25.25v12.5c0 .14.11.25.25.25h9.5a.25.25 0 0 0 .25-.25V6h-2.75A1.75 1.75 0 0 1 9 4.25V1.5zm6.75.06V4.25c0 .14.11.25.25.25h2.69z"/></svg>
+      </div>
+
+      <!-- 無いのが文書 -->
+      <div data-when="normal search">
+        <h1 tabindex="-1">文書が見つかりません</h1>
+        <p>配信元 sample のリビジョン <code>develop</code> に、この文書はありません。</p>
+        <dl class="facts">
+          <dt>開こうとしたパス</dt>
+          <dd><code>dev/設計書/シナリオ/単一ユースケース/no-such-doc.yaml</code></dd>
+        </dl>
+        <div class="actions">
+          <a class="btn btn--primary" href="../../../doc-view/36/default/index.html">sample のトップを開く</a>
+          <a class="btn btn--outline" href="../../../settings/36/default/index.html">設定を開く</a>
+        </div>
+      </div>
+
+      <!-- 無いのがリビジョン -->
+      <div data-when="ref">
+        <h1 tabindex="-1">リビジョンが見つかりません</h1>
+        <p>配信元 sample に、リビジョン <code>no-such-branch</code> はありません。</p>
+        <dl class="facts">
+          <dt>開こうとしたリビジョン</dt>
+          <dd><code>no-such-branch</code></dd>
+          <dt>既定のリビジョン</dt>
+          <dd><code>develop</code></dd>
+        </dl>
+        <div class="actions">
+          <a class="btn btn--primary" href="../../../doc-view/36/default/index.html">sample のトップを開く</a>
+          <a class="btn btn--outline" href="../../../settings/36/default/index.html">設定を開く</a>
+        </div>
+      </div>
+
+      <!-- 無いのが配信元（起動時の検証で外した） -->
+      <div data-when="source">
+        <h1 tabindex="-1">配信元 broken を配信していません</h1>
+        <p>起動時の検証で、配信から外しました。</p>
+        <dl class="facts">
+          <dt>外した理由</dt>
+          <dd><code>documents[0]</code> に必須のキー <code>paths</code> がありません</dd>
+          <dt>設定ファイル</dt>
+          <dd><code>~/repo/broken/dev-docs.yaml</code></dd>
+        </dl>
+        <div class="actions">
+          <a class="btn btn--primary" href="../../../settings/36/default/index.html">設定を開く</a>
+        </div>
+        <ul class="not-found__sources" aria-label="配信中の配信元">
+          <li><a class="mono" href="../../../doc-view/36/default/index.html">sample</a></li>
+          <li><a class="mono" href="../../../doc-view/36/default/index.html">notes</a></li>
+          <li><a class="mono" href="../../../doc-view/36/default/index.html">extra</a></li>
+        </ul>
+      </div>
+    </div>
+  </main>
+
+  <!-- 検索のダイアログ（文書の画面と同じ） -->
+  <dialog id="search-dialog" class="dialog dialog--search" closedby="closerequest" aria-labelledby="search-title" data-open-when="search">
+    <form role="search" method="dialog">
+      <h2 class="sr-only" id="search-title">文書を検索</h2>
+      <div class="search-dialog__field">
+        <svg aria-hidden="true" viewBox="0 0 16 16" fill="currentColor"><path d="M10.68 11.74a6 6 0 1 1 1.06-1.06l3.04 3.04-1.06 1.06zM11.5 7a4.5 4.5 0 1 0-9 0 4.5 4.5 0 0 0 9 0"/></svg>
+        <label class="sr-only" for="search-input">検索する語</label>
+        <input id="search-input" class="input" type="search" value="no-such" autofocus>
+        <button class="btn btn--ghost btn--icon" type="button" commandfor="search-dialog" command="close" aria-label="閉じる">
+          <svg aria-hidden="true" viewBox="0 0 16 16" fill="currentColor"><path d="M3.72 3.72a.75.75 0 0 1 1.06 0L8 6.94l3.22-3.22a.75.75 0 1 1 1.06 1.06L9.06 8l3.22 3.22a.75.75 0 1 1-1.06 1.06L8 9.06l-3.22 3.22a.75.75 0 0 1-1.06-1.06L6.94 8 3.72 4.78a.75.75 0 0 1 0-1.06"/></svg>
+        </button>
+      </div>
+      <p class="search-dialog__count" aria-live="polite">sample の develop で 1 件</p>
+      <ul class="search-results">
+        <li>
+          <a href="../../../doc-view/36/default/index.html#not-found" aria-selected="true">
+            <span class="search-results__title">利用者が画面で読む › 異常シナリオ（無い文書を開く）</span>
+            <span class="search-results__path">dev/設計書/シナリオ/単一ユースケース/利用者が画面で読む.yaml</span>
+            <span class="search-results__snippet">文書のパス <mark>no-such</mark>-doc を開く</span>
+          </a>
+        </li>
+      </ul>
+      <div class="search-dialog__foot">
+        <span><kbd class="key">↑</kbd> <kbd class="key">↓</kbd> 選ぶ</span>
+        <span><kbd class="key">Enter</kbd> 開く</span>
+        <span><kbd class="key">Esc</kbd> 閉じる</span>
+      </div>
+    </form>
+  </dialog>
+</body>
+</html>

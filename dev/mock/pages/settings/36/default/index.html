@@ -1,0 +1,274 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title>設定 | dev-docs</title>
+  <!-- 利用者が固定した明暗を、描画の前に当てる -->
+  <script>
+    {
+      const scheme = localStorage.getItem("dev-docs-color-scheme");
+      if (scheme) {
+        document.querySelector('meta[name="color-scheme"]').content = scheme;
+        document.documentElement.dataset.scheme = scheme;
+      }
+    }
+  </script>
+  <link rel="stylesheet" href="../../../../assets/style.css">
+  <link rel="stylesheet" href="../../../../refs/36/assets/screens.css">
+  <script type="module" src="../../../../refs/36/assets/app.js"></script>
+</head>
+<body>
+  <!-- モック専用の操作列（モックの階層と、画面の状態の切り替え） -->
+  <nav class="mockbar" aria-label="モックの操作">
+    <span class="mockbar__path"><a href="../../../">pages</a> / <a href="../../">settings</a> / <a href="../">36</a> / <span>default</span></span>
+    <a class="mockbar__tab" href="#">一覧</a>
+    <a class="mockbar__tab" href="#loading">読み込み中</a>
+    <a class="mockbar__tab" href="#empty">配信元が無い</a>
+    <span class="mockbar__sep"></span>
+    <span class="mockbar__label">ダイアログ</span>
+    <a class="mockbar__tab" href="#add">追加</a>
+    <a class="mockbar__tab" href="#add-error">保存の失敗</a>
+    <a class="mockbar__tab" href="#edit">編集</a>
+    <a class="mockbar__tab" href="#delete">削除の確認</a>
+    <a class="mockbar__tab" href="#saved">保存の通知</a>
+  </nav>
+
+  <div class="app-header">
+    <!-- 設定画面では配信元・リビジョン・検索・コメントを出さない -->
+    <header class="topbar">
+      <a class="brand" href="../../../doc-view/36/default/index.html" aria-label="sample のトップ"><span class="brand__mark">dd</span><span>dev-docs</span></a>
+      <span class="spacer"></span>
+      <button class="btn btn--ghost btn--icon" type="button" data-scheme-toggle aria-label="明暗を固定する" aria-pressed="false">
+        <svg aria-hidden="true" viewBox="0 0 16 16" fill="currentColor"><path d="M8 1.5a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13M8 3a5 5 0 0 1 0 10z"/></svg>
+      </button>
+    </header>
+  </div>
+
+  <main class="page">
+    <a class="back-link" href="../../../doc-view/36/default/index.html">
+      <svg aria-hidden="true" viewBox="0 0 16 16" fill="currentColor"><path d="M7.78 12.53a.75.75 0 0 1-1.06 0L2.47 8.28a.75.75 0 0 1 0-1.06l4.25-4.25a.75.75 0 1 1 1.06 1.06L4.81 7h7.44a.75.75 0 0 1 0 1.5H4.81l2.97 2.97a.75.75 0 0 1 0 1.06"/></svg>
+      文書の画面に戻る
+    </a>
+    <h1 class="page-title">設定</h1>
+
+    <section class="section" aria-labelledby="sources-title">
+      <div class="section__head">
+        <h2 class="section__title" id="sources-title">配信元</h2>
+        <a class="btn btn--primary" href="#add">
+          <svg aria-hidden="true" viewBox="0 0 16 16" fill="currentColor"><path d="M7.25 2.75a.75.75 0 0 1 1.5 0v4.5h4.5a.75.75 0 0 1 0 1.5h-4.5v4.5a.75.75 0 0 1-1.5 0v-4.5h-4.5a.75.75 0 0 1 0-1.5h4.5z"/></svg>
+          配信元を追加
+        </a>
+      </div>
+
+      <div class="skeleton" data-when="loading" aria-busy="true" aria-label="配信元を読み込んでいます">
+        <span class="skeleton__table"></span>
+      </div>
+
+      <div class="state-panel" data-when="empty">
+        <p class="empty">配信元はありません。</p>
+      </div>
+
+      <div class="table-wrap" tabindex="0" role="region" aria-label="配信元の表" data-when="normal add add-error edit delete saved">
+        <table class="sources">
+          <thead><tr><th>配信元</th><th>設定ファイル</th><th>状態</th><th><span class="sr-only">操作</span></th></tr></thead>
+          <tbody>
+            <tr>
+              <td><a class="mono" href="../../../doc-view/36/default/index.html">sample</a></td>
+              <td><span class="doc-path">~/repo/sample/dev-docs.yaml</span><span class="doc-path">~/repo/sample/dev-docs.local.yaml</span></td>
+              <td>
+                <div class="status">
+                  <span class="badge"><svg aria-hidden="true" viewBox="0 0 16 16" fill="currentColor"><path d="M13.78 4.22a.75.75 0 0 1 0 1.06l-7.25 7.25a.75.75 0 0 1-1.06 0L2.22 9.28a.75.75 0 0 1 1.06-1.06L6 10.94l6.72-6.72a.75.75 0 0 1 1.06 0"/></svg>配信中</span>
+                </div>
+              </td>
+              <td>
+                <div class="row-actions">
+                  <a class="btn btn--ghost btn--icon" href="#edit" aria-label="sample を編集" title="編集"><svg aria-hidden="true" viewBox="0 0 16 16" fill="currentColor"><path d="M11.01 1.47a1.75 1.75 0 0 1 2.48 0l1.04 1.04a1.75 1.75 0 0 1 0 2.48l-8.5 8.5a1.75 1.75 0 0 1-.8.46l-3.3.83a.75.75 0 0 1-.91-.91l.83-3.3c.08-.3.24-.58.46-.8zm1.42 1.06a.25.25 0 0 0-.36 0L10.8 3.8l1.4 1.4 1.27-1.27a.25.25 0 0 0 0-.36zm-1.29 3.73-1.4-1.4-6.17 6.17a.25.25 0 0 0-.07.12l-.5 1.85 1.85-.5a.25.25 0 0 0 .12-.07z"/></svg></a>
+                  <a class="btn btn--ghost btn--icon btn--danger-ghost" href="#delete" aria-label="sample を削除" title="削除"><svg aria-hidden="true" viewBox="0 0 16 16" fill="currentColor"><path d="M6.5 1.75a.25.25 0 0 1 .25-.25h2.5a.25.25 0 0 1 .25.25V3h-3zM11 3V1.75A1.75 1.75 0 0 0 9.25 0h-2.5A1.75 1.75 0 0 0 5 1.75V3H2.75a.75.75 0 0 0 0 1.5h.58l.83 9.06A1.75 1.75 0 0 0 5.9 15h4.2a1.75 1.75 0 0 0 1.74-1.44l.83-9.06h.58a.75.75 0 0 0 0-1.5zM4.84 4.5h6.32l-.82 8.93a.25.25 0 0 1-.24.07H5.9a.25.25 0 0 1-.25-.23z"/></svg></a>
+                </div>
+              </td>
+            </tr>
+            <tr>
+              <td><a class="mono" href="../../../doc-view/36/default/index.html">extra</a></td>
+              <td><span class="doc-path">~/repo/extra/dev-docs.yaml</span></td>
+              <td>
+                <div class="status">
+                  <span class="badge"><svg aria-hidden="true" viewBox="0 0 16 16" fill="currentColor"><path d="M13.78 4.22a.75.75 0 0 1 0 1.06l-7.25 7.25a.75.75 0 0 1-1.06 0L2.22 9.28a.75.75 0 0 1 1.06-1.06L6 10.94l6.72-6.72a.75.75 0 0 1 1.06 0"/></svg>配信中</span>
+                </div>
+              </td>
+              <td>
+                <div class="row-actions">
+                  <a class="btn btn--ghost btn--icon" href="#edit" aria-label="extra を編集" title="編集"><svg aria-hidden="true" viewBox="0 0 16 16" fill="currentColor"><path d="M11.01 1.47a1.75 1.75 0 0 1 2.48 0l1.04 1.04a1.75 1.75 0 0 1 0 2.48l-8.5 8.5a1.75 1.75 0 0 1-.8.46l-3.3.83a.75.75 0 0 1-.91-.91l.83-3.3c.08-.3.24-.58.46-.8zm1.42 1.06a.25.25 0 0 0-.36 0L10.8 3.8l1.4 1.4 1.27-1.27a.25.25 0 0 0 0-.36zm-1.29 3.73-1.4-1.4-6.17 6.17a.25.25 0 0 0-.07.12l-.5 1.85 1.85-.5a.25.25 0 0 0 .12-.07z"/></svg></a>
+                  <a class="btn btn--ghost btn--icon btn--danger-ghost" href="#delete" aria-label="extra を削除" title="削除"><svg aria-hidden="true" viewBox="0 0 16 16" fill="currentColor"><path d="M6.5 1.75a.25.25 0 0 1 .25-.25h2.5a.25.25 0 0 1 .25.25V3h-3zM11 3V1.75A1.75 1.75 0 0 0 9.25 0h-2.5A1.75 1.75 0 0 0 5 1.75V3H2.75a.75.75 0 0 0 0 1.5h.58l.83 9.06A1.75 1.75 0 0 0 5.9 15h4.2a1.75 1.75 0 0 0 1.74-1.44l.83-9.06h.58a.75.75 0 0 0 0-1.5zM4.84 4.5h6.32l-.82 8.93a.25.25 0 0 1-.24.07H5.9a.25.25 0 0 1-.25-.23z"/></svg></a>
+                </div>
+              </td>
+            </tr>
+            <tr>
+              <td><a class="mono" href="../../../doc-view/36/default/index.html">legacy</a></td>
+              <td><span class="doc-path">~/repo/legacy-docs-with-a-long-folder-name/dev-docs.yaml</span></td>
+              <td>
+                <div class="status">
+                  <span class="badge"><svg aria-hidden="true" viewBox="0 0 16 16" fill="currentColor"><path d="M13.78 4.22a.75.75 0 0 1 0 1.06l-7.25 7.25a.75.75 0 0 1-1.06 0L2.22 9.28a.75.75 0 0 1 1.06-1.06L6 10.94l6.72-6.72a.75.75 0 0 1 1.06 0"/></svg>配信中</span>
+                  <span class="status__note">設定のバージョン 1（サーバーが読めるのは 2）</span>
+                </div>
+              </td>
+              <td>
+                <div class="row-actions">
+                  <a class="btn btn--ghost btn--icon" href="#edit" aria-label="legacy を編集" title="編集"><svg aria-hidden="true" viewBox="0 0 16 16" fill="currentColor"><path d="M11.01 1.47a1.75 1.75 0 0 1 2.48 0l1.04 1.04a1.75 1.75 0 0 1 0 2.48l-8.5 8.5a1.75 1.75 0 0 1-.8.46l-3.3.83a.75.75 0 0 1-.91-.91l.83-3.3c.08-.3.24-.58.46-.8zm1.42 1.06a.25.25 0 0 0-.36 0L10.8 3.8l1.4 1.4 1.27-1.27a.25.25 0 0 0 0-.36zm-1.29 3.73-1.4-1.4-6.17 6.17a.25.25 0 0 0-.07.12l-.5 1.85 1.85-.5a.25.25 0 0 0 .12-.07z"/></svg></a>
+                  <a class="btn btn--ghost btn--icon btn--danger-ghost" href="#delete" aria-label="legacy を削除" title="削除"><svg aria-hidden="true" viewBox="0 0 16 16" fill="currentColor"><path d="M6.5 1.75a.25.25 0 0 1 .25-.25h2.5a.25.25 0 0 1 .25.25V3h-3zM11 3V1.75A1.75 1.75 0 0 0 9.25 0h-2.5A1.75 1.75 0 0 0 5 1.75V3H2.75a.75.75 0 0 0 0 1.5h.58l.83 9.06A1.75 1.75 0 0 0 5.9 15h4.2a1.75 1.75 0 0 0 1.74-1.44l.83-9.06h.58a.75.75 0 0 0 0-1.5zM4.84 4.5h6.32l-.82 8.93a.25.25 0 0 1-.24.07H5.9a.25.25 0 0 1-.25-.23z"/></svg></a>
+                </div>
+              </td>
+            </tr>
+            <tr>
+              <td><a class="mono" href="../../../not-found/36/default/index.html#source">broken</a></td>
+              <td><span class="doc-path">~/repo/broken/dev-docs.yaml</span></td>
+              <td>
+                <div class="status">
+                  <span class="badge badge--error"><svg aria-hidden="true" viewBox="0 0 16 16" fill="currentColor"><path d="M8 1.5a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8m7.25-3.25h1.5v4.5h-1.5zM8 12a1 1 0 1 0 0-2 1 1 0 0 0 0 2"/></svg>配信していない</span>
+                  <span class="status__note">起動時の検証で外しました。<code>documents[0]</code> に必須のキー <code>paths</code> がありません</span>
+                </div>
+              </td>
+              <td>
+                <div class="row-actions">
+                  <a class="btn btn--ghost btn--icon" href="#edit" aria-label="broken を編集" title="編集"><svg aria-hidden="true" viewBox="0 0 16 16" fill="currentColor"><path d="M11.01 1.47a1.75 1.75 0 0 1 2.48 0l1.04 1.04a1.75 1.75 0 0 1 0 2.48l-8.5 8.5a1.75 1.75 0 0 1-.8.46l-3.3.83a.75.75 0 0 1-.91-.91l.83-3.3c.08-.3.24-.58.46-.8zm1.42 1.06a.25.25 0 0 0-.36 0L10.8 3.8l1.4 1.4 1.27-1.27a.25.25 0 0 0 0-.36zm-1.29 3.73-1.4-1.4-6.17 6.17a.25.25 0 0 0-.07.12l-.5 1.85 1.85-.5a.25.25 0 0 0 .12-.07z"/></svg></a>
+                  <a class="btn btn--ghost btn--icon btn--danger-ghost" href="#delete" aria-label="broken を削除" title="削除"><svg aria-hidden="true" viewBox="0 0 16 16" fill="currentColor"><path d="M6.5 1.75a.25.25 0 0 1 .25-.25h2.5a.25.25 0 0 1 .25.25V3h-3zM11 3V1.75A1.75 1.75 0 0 0 9.25 0h-2.5A1.75 1.75 0 0 0 5 1.75V3H2.75a.75.75 0 0 0 0 1.5h.58l.83 9.06A1.75 1.75 0 0 0 5.9 15h4.2a1.75 1.75 0 0 0 1.74-1.44l.83-9.06h.58a.75.75 0 0 0 0-1.5zM4.84 4.5h6.32l-.82 8.93a.25.25 0 0 1-.24.07H5.9a.25.25 0 0 1-.25-.23z"/></svg></a>
+                </div>
+              </td>
+            </tr>
+            <tr>
+              <td><span class="mono">archive</span></td>
+              <td><span class="doc-path">~/repo/archive/dev-docs.yaml</span></td>
+              <td>
+                <div class="status">
+                  <span class="badge badge--muted"><svg aria-hidden="true" viewBox="0 0 16 16" fill="currentColor"><path d="M8 1.5a6.5 6.5 0 0 0-5.1 10.54l9.14-9.14A6.47 6.47 0 0 0 8 1.5m5.1 2.96-9.14 9.14A6.5 6.5 0 0 0 13.1 4.46M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8"/></svg>無効</span>
+                  <span class="status__note"><code>enabled</code> が <code>false</code> です</span>
+                </div>
+              </td>
+              <td>
+                <div class="row-actions">
+                  <a class="btn btn--ghost btn--icon" href="#edit" aria-label="archive を編集" title="編集"><svg aria-hidden="true" viewBox="0 0 16 16" fill="currentColor"><path d="M11.01 1.47a1.75 1.75 0 0 1 2.48 0l1.04 1.04a1.75 1.75 0 0 1 0 2.48l-8.5 8.5a1.75 1.75 0 0 1-.8.46l-3.3.83a.75.75 0 0 1-.91-.91l.83-3.3c.08-.3.24-.58.46-.8zm1.42 1.06a.25.25 0 0 0-.36 0L10.8 3.8l1.4 1.4 1.27-1.27a.25.25 0 0 0 0-.36zm-1.29 3.73-1.4-1.4-6.17 6.17a.25.25 0 0 0-.07.12l-.5 1.85 1.85-.5a.25.25 0 0 0 .12-.07z"/></svg></a>
+                  <a class="btn btn--ghost btn--icon btn--danger-ghost" href="#delete" aria-label="archive を削除" title="削除"><svg aria-hidden="true" viewBox="0 0 16 16" fill="currentColor"><path d="M6.5 1.75a.25.25 0 0 1 .25-.25h2.5a.25.25 0 0 1 .25.25V3h-3zM11 3V1.75A1.75 1.75 0 0 0 9.25 0h-2.5A1.75 1.75 0 0 0 5 1.75V3H2.75a.75.75 0 0 0 0 1.5h.58l.83 9.06A1.75 1.75 0 0 0 5.9 15h4.2a1.75 1.75 0 0 0 1.74-1.44l.83-9.06h.58a.75.75 0 0 0 0-1.5zM4.84 4.5h6.32l-.82 8.93a.25.25 0 0 1-.24.07H5.9a.25.25 0 0 1-.25-.23z"/></svg></a>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="section" aria-labelledby="keyboard-title">
+      <div class="section__head">
+        <h2 class="section__title" id="keyboard-title">キーボード</h2>
+      </div>
+      <div class="setting-row">
+        <div>
+          <label class="switch"><input type="checkbox" role="switch" checked aria-describedby="single-key-hint"> 1 文字のショートカットを使う</label>
+          <p id="single-key-hint"><kbd class="key">/</kbd> で検索を開きます。この端末のブラウザに保存します。</p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- 配信元の追加・編集（設定画面の上に開くダイアログ） -->
+  <dialog id="source-dialog" class="dialog dialog--form" closedby="closerequest" aria-labelledby="source-dialog-title" data-open-when="add add-error edit" data-confirm-close="入力した内容を破棄して閉じますか?">
+    <form class="dialog__form" method="dialog" novalidate>
+      <div class="dialog__head">
+        <div>
+          <h2 class="dialog__title" id="source-dialog-title"><span data-when="add add-error">配信元を追加</span><span data-when="edit">配信元を編集</span></h2>
+          <p class="dialog__desc" data-when="edit">配信元 <code>extra</code></p>
+        </div>
+        <button class="btn btn--ghost btn--icon" type="button" commandfor="source-dialog" command="request-close" aria-label="閉じる">
+          <svg aria-hidden="true" viewBox="0 0 16 16" fill="currentColor"><path d="M3.72 3.72a.75.75 0 0 1 1.06 0L8 6.94l3.22-3.22a.75.75 0 1 1 1.06 1.06L9.06 8l3.22 3.22a.75.75 0 1 1-1.06 1.06L8 9.06l-3.22 3.22a.75.75 0 0 1-1.06-1.06L6.94 8 3.72 4.78a.75.75 0 0 1 0-1.06"/></svg>
+        </button>
+      </div>
+
+      <div class="dialog__scroll">
+        <!-- 保存の失敗のまとめ（422 の違反したキーと理由） -->
+        <div class="error-summary" role="alert" tabindex="-1" aria-labelledby="error-summary-title" data-when="add-error">
+          <h3 id="error-summary-title">
+            <svg aria-hidden="true" viewBox="0 0 16 16" fill="currentColor"><path d="M8 1.5a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8m7.25-3.25h1.5v4.5h-1.5zM8 12a1 1 0 1 0 0-2 1 1 0 0 0 0 2"/></svg>
+            保存できませんでした（2 件）
+          </h3>
+          <ul>
+            <li><a href="#source-id-error">配信元の ID に使えない文字があります</a> <code>sources[5].id</code></li>
+            <li><a href="#source-read-error">読み取りの範囲に空の行があります</a> <code>sources[5].scope.read</code></li>
+          </ul>
+        </div>
+
+        <!-- 追加のときだけ ID を入れる -->
+        <div class="field" data-when="add">
+          <label class="field__label" for="source-id">配信元の ID <span class="req">必須</span></label>
+          <input id="source-id" class="input mono" autocomplete="off" spellcheck="false" placeholder="例: my-docs" aria-describedby="source-id-hint">
+          <span class="hint" id="source-id-hint">画面の URL と文書の MCP の <code>source</code> に使います。英小文字・数字・ハイフンで入力します。</span>
+        </div>
+        <div class="field" data-when="add-error">
+          <label class="field__label" for="source-id-error">配信元の ID <span class="req">必須</span></label>
+          <p class="field-error" id="source-id-error-msg"><svg aria-hidden="true" viewBox="0 0 16 16" fill="currentColor"><path d="M8 1.5a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8m7.25-3.25h1.5v4.5h-1.5zM8 12a1 1 0 1 0 0-2 1 1 0 0 0 0 2"/></svg>配信元の ID に使えない文字があります。英小文字・数字・ハイフンで入力してください。</p>
+          <input id="source-id-error" class="input mono" value="Sample Docs" autocomplete="off" spellcheck="false" aria-invalid="true" aria-describedby="source-id-error-msg">
+        </div>
+
+        <div class="field">
+          <label class="field__label" for="source-config">設定ファイル <span class="req">必須</span></label>
+          <textarea id="source-config" class="textarea mono" rows="2" spellcheck="false" aria-describedby="source-config-hint" data-when="add"></textarea>
+          <textarea class="textarea mono" rows="2" spellcheck="false" aria-label="設定ファイル" data-when="add-error">~/repo/sample-docs/dev-docs.yaml</textarea>
+          <textarea class="textarea mono" rows="2" spellcheck="false" aria-label="設定ファイル" data-when="edit">~/repo/extra/dev-docs.yaml</textarea>
+          <span class="hint" id="source-config-hint">1 行に 1 つ。後のファイルが前のファイルの同じキーを上書きします。</span>
+        </div>
+
+        <div class="field">
+          <span class="field__label">配信</span>
+          <label class="switch"><input type="checkbox" role="switch" checked> 配信する</label>
+          <span class="hint">外すと、設定を残したまま配信を止めます。</span>
+        </div>
+
+        <div class="field">
+          <label class="field__label" for="source-read" data-when="add edit">読み取りの範囲 <span class="req">必須</span></label>
+          <textarea id="source-read" class="textarea mono" rows="2" spellcheck="false" aria-describedby="source-read-hint" data-when="add"></textarea>
+          <textarea class="textarea mono" rows="2" spellcheck="false" aria-label="読み取りの範囲" aria-describedby="source-read-hint" data-when="edit">~/repo/**</textarea>
+          <label class="field__label" for="source-read-error" data-when="add-error">読み取りの範囲 <span class="req">必須</span></label>
+          <p class="field-error" id="source-read-error-msg" data-when="add-error"><svg aria-hidden="true" viewBox="0 0 16 16" fill="currentColor"><path d="M8 1.5a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8m7.25-3.25h1.5v4.5h-1.5zM8 12a1 1 0 1 0 0-2 1 1 0 0 0 0 2"/></svg>読み取りの範囲に空の行があります。空の行を削除してください。</p>
+          <textarea id="source-read-error" class="textarea mono" rows="3" spellcheck="false" aria-invalid="true" aria-describedby="source-read-error-msg source-read-hint" data-when="add-error">~/repo/**
+
+~/notes/**</textarea>
+          <span class="hint" id="source-read-hint">glob を 1 行に 1 つ。当たる作業場所から、この配信元の文書を読めます。</span>
+        </div>
+
+        <div class="field">
+          <label class="field__label" for="source-write">書き込みの範囲 <span class="req">任意</span></label>
+          <textarea id="source-write" class="textarea mono" rows="2" spellcheck="false" aria-describedby="source-write-hint" data-when="add add-error"></textarea>
+          <textarea class="textarea mono" rows="2" spellcheck="false" aria-label="書き込みの範囲" aria-describedby="source-write-hint" data-when="edit">~/repo/extra/**</textarea>
+          <span class="hint" id="source-write-hint">glob を 1 行に 1 つ。当たる作業場所から、この配信元の文書へ書き込めます。</span>
+        </div>
+      </div>
+
+      <div class="dialog__foot actions">
+        <button class="btn btn--outline" type="button" commandfor="source-dialog" command="request-close">キャンセル</button>
+        <a class="btn btn--primary" href="#saved" data-when="add add-error">追加</a>
+        <a class="btn btn--primary" href="#saved" data-when="edit">保存</a>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- 配信元の削除の確認 -->
+  <dialog id="delete-dialog" class="dialog dialog--confirm" closedby="closerequest" role="alertdialog" aria-labelledby="delete-title" aria-describedby="delete-desc" data-open-when="delete">
+    <div class="dialog__body">
+      <h2 class="dialog__title" id="delete-title">extra を削除しますか?</h2>
+      <div id="delete-desc">
+        <p>端末の設定から extra の行を削除し、配信から外します。</p>
+        <p>フォルダ <code>~/repo/extra</code> と文書は削除しません。</p>
+      </div>
+      <div class="actions">
+        <button class="btn btn--outline" type="button" commandfor="delete-dialog" command="close" autofocus>キャンセル</button>
+        <button class="btn btn--destructive" type="button" commandfor="delete-dialog" command="close">削除</button>
+      </div>
+    </div>
+  </dialog>
+
+  <!-- 保存の結果の通知 -->
+  <div class="toast" popover="manual" role="status" data-open-when="saved">
+    <svg aria-hidden="true" viewBox="0 0 16 16" fill="currentColor"><path d="M13.78 4.22a.75.75 0 0 1 0 1.06l-7.25 7.25a.75.75 0 0 1-1.06 0L2.22 9.28a.75.75 0 0 1 1.06-1.06L6 10.94l6.72-6.72a.75.75 0 0 1 1.06 0"/></svg>
+    <p>端末の設定を保存し、配信元を読み直しました。</p>
+  </div>
+</body>
+</html>

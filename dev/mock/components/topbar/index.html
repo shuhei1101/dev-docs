@@ -1,0 +1,302 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title>トップバー | 部品 | dev-docs</title>
+  <!-- 利用者が固定した明暗を、描画の前に当てる -->
+  <script>
+    {
+      const scheme = localStorage.getItem("dev-docs-color-scheme");
+      if (scheme) {
+        document.querySelector('meta[name="color-scheme"]').content = scheme;
+        document.documentElement.dataset.scheme = scheme;
+      }
+    }
+  </script>
+  <link rel="stylesheet" href="../../assets/style.css">
+  <link rel="stylesheet" href="../../refs/36/assets/screens.css">
+  <script type="module" src="../../refs/36/assets/app.js"></script>
+</head>
+<body>
+  <main class="catalog">
+    <h1 class="page-title">トップバー</h1>
+    <section class="catalog__item" aria-labelledby="t-doc">
+      <h2 id="t-doc">文書の画面</h2>
+      <p>配信元・リビジョンの切り替え、検索、コメント、設定、明暗の切り替えを並べる。</p>
+      <div class="catalog__frame">
+        <div class="app-header">
+        <header class="topbar">
+          <!-- 狭い幅でサイドバーを開く -->
+          <button class="btn btn--ghost btn--icon only-narrow" type="button" commandfor="sidebar" command="toggle-popover" aria-label="文書の一覧を開く">
+            <svg aria-hidden="true" viewBox="0 0 16 16" fill="currentColor"><path d="M1 3h14v1.5H1zm0 4.25h14v1.5H1zM1 11.5h14V13H1z"/></svg>
+          </button>
+          <a class="brand" href="../../pages/doc-view/36/default/index.html" aria-label="sample のトップ"><span class="brand__mark">dd</span><span class="only-wide">dev-docs</span></a>
+
+          <!-- 配信元の切り替え -->
+          <button class="btn btn--outline source-button" type="button" commandfor="source-menu-1" command="toggle-popover" aria-label="配信元を切り替える（今は sample）">
+            <svg aria-hidden="true" viewBox="0 0 16 16" fill="currentColor"><path d="M2 2.5A1.5 1.5 0 0 1 3.5 1h9A1.5 1.5 0 0 1 14 2.5v11a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 2 13.5zm1.5 0v11h9v-11zM5 4h6v1.5H5zm0 3h6v1.5H5z"/></svg>
+            <span>sample</span>
+            <svg class="btn__chevron" aria-hidden="true" viewBox="0 0 16 16" fill="currentColor"><path d="M3.2 5.7 8 10.5l4.8-4.8-1.06-1.06L8 8.38 4.26 4.64z"/></svg>
+          </button>
+          <div id="source-menu-1" class="menu" popover>
+            <p class="menu__label">配信元</p>
+            <a class="menu__item" href="../../pages/doc-view/36/default/index.html" aria-current="true">sample<span class="menu__note">読み書き</span></a>
+            <a class="menu__item" href="../../pages/doc-view/36/default/index.html">notes<span class="menu__note">読み取りだけ</span></a>
+            <a class="menu__item" href="../../pages/doc-view/36/default/index.html">extra<span class="menu__note">読み取りだけ</span></a>
+          </div>
+
+          <!-- リビジョンの切り替えと比較の開始 -->
+          <button class="btn btn--outline revision-button" type="button" commandfor="revision-menu-1" command="toggle-popover" aria-label="リビジョンを切り替える（今は develop）">
+            <svg aria-hidden="true" viewBox="0 0 16 16" fill="currentColor"><path d="M5 3.25a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0M3.5 5.37a2.25 2.25 0 1 1 1.5 0v.63c0 .55.45 1 1 1h4c.17 0 .34.03.5.08V5.37a2.25 2.25 0 1 1 1.5 0V8.5A2.5 2.5 0 0 1 10 11H6c-.17 0-.34-.03-.5-.08v.71a2.25 2.25 0 1 1-1.5 0zm8.5-1.37a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5M4.25 13.5a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5"/></svg>
+            <span class="mono only-wide">develop</span>
+            <svg class="btn__chevron only-wide" aria-hidden="true" viewBox="0 0 16 16" fill="currentColor"><path d="M3.2 5.7 8 10.5l4.8-4.8-1.06-1.06L8 8.38 4.26 4.64z"/></svg>
+          </button>
+          <div id="revision-menu-1" class="menu" popover>
+            <p class="menu__label">リビジョン</p>
+            <a class="menu__item" href="../../pages/doc-view/36/default/index.html" aria-current="true"><span class="mono">develop</span><span class="menu__note">既定</span></a>
+            <a class="menu__item" href="../../pages/doc-view/36/default/index.html"><span class="mono">feat/frontend</span><span class="menu__note">ブランチ</span></a>
+            <a class="menu__item" href="../../pages/doc-view/36/default/index.html"><span class="mono">3f9c2ab</span><span class="menu__note">10/26 23:40 JST</span></a>
+            <a class="menu__item" href="../../pages/doc-view/36/default/index.html"><span class="mono">8d41e07</span><span class="menu__note">10/26 21:12 JST</span></a>
+            <div class="menu__sep"></div>
+            <a class="menu__item menu__item--action" href="../../pages/doc-view/36/default/index.html#diff">別のリビジョンと比較</a>
+          </div>
+
+          <span class="spacer"></span>
+
+          <!-- 検索 -->
+          <button class="btn btn--outline search" type="button" commandfor="search-dialog" command="show-modal" aria-label="文書を検索" aria-keyshortcuts="Control+K /">
+            <svg aria-hidden="true" viewBox="0 0 16 16" fill="currentColor"><path d="M10.68 11.74a6 6 0 1 1 1.06-1.06l3.04 3.04-1.06 1.06zM11.5 7a4.5 4.5 0 1 0-9 0 4.5 4.5 0 0 0 9 0"/></svg>
+            <span>文書を検索</span>
+            <kbd class="key">Ctrl K</kbd>
+          </button>
+
+          <!-- 溜めたコメントのパネルを開閉する -->
+          <button class="btn btn--ghost" type="button" commandfor="comment-panel" command="toggle-popover" aria-label="コメント（2 件）">
+            <svg aria-hidden="true" viewBox="0 0 16 16" fill="currentColor"><path d="M1 2.75C1 1.78 1.78 1 2.75 1h10.5c.97 0 1.75.78 1.75 1.75v7.5c0 .97-.78 1.75-1.75 1.75H8.06l-3.53 2.82A.75.75 0 0 1 3.3 14.2V12h-.55C1.78 12 1 11.22 1 10.25zm1.75-.25a.25.25 0 0 0-.25.25v7.5c0 .14.11.25.25.25h1.3c.41 0 .75.34.75.75v1.4l2.53-2.02a.75.75 0 0 1 .47-.13h5.45a.25.25 0 0 0 .25-.25v-7.5a.25.25 0 0 0-.25-.25z"/></svg>
+            <span class="btn__count">2</span>
+          </button>
+
+          <!-- 設定画面を開く -->
+          <a class="btn btn--ghost btn--icon" href="../../pages/settings/36/default/index.html" aria-label="設定" title="設定">
+            <svg aria-hidden="true" viewBox="0 0 16 16" fill="currentColor" fill-rule="evenodd"><path d="M8 0c.34 0 .64.23.73.57l.34 1.36c.47.12.91.31 1.32.55l1.2-.72a.75.75 0 0 1 .92.11l1.06 1.06c.24.24.29.62.11.92l-.72 1.2c.24.41.43.85.55 1.32l1.36.34c.34.09.57.39.57.73s-.23.64-.57.73l-1.36.34c-.12.47-.31.91-.55 1.32l.72 1.2a.75.75 0 0 1-.11.92l-1.06 1.06a.75.75 0 0 1-.92.11l-1.2-.72c-.41.24-.85.43-1.32.55l-.34 1.36A.75.75 0 0 1 8 16a.75.75 0 0 1-.73-.57l-.34-1.36a5 5 0 0 1-1.32-.55l-1.2.72a.75.75 0 0 1-.92-.11l-1.06-1.06a.75.75 0 0 1-.11-.92l.72-1.2a5 5 0 0 1-.55-1.32L.57 8.73A.75.75 0 0 1 0 8c0-.34.23-.64.57-.73l1.36-.34c.12-.47.31-.91.55-1.32l-.72-1.2a.75.75 0 0 1 .11-.92l1.06-1.06a.75.75 0 0 1 .92-.11l1.2.72c.41-.24.85-.43 1.32-.55L7.27.57A.75.75 0 0 1 8 0m0 5a3 3 0 1 0 0 6 3 3 0 0 0 0-6"/></svg>
+          </a>
+
+          <!-- 明暗の切り替え -->
+          <button class="btn btn--ghost btn--icon" type="button" data-scheme-toggle aria-label="明暗を固定する" aria-pressed="false">
+            <svg aria-hidden="true" viewBox="0 0 16 16" fill="currentColor"><path d="M8 1.5a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13M8 3a5 5 0 0 1 0 10z"/></svg>
+          </button>
+        </header>
+        </div>
+      </div>
+    </section>
+    <section class="catalog__item" aria-labelledby="t-doc-narrow">
+      <h2 id="t-doc-narrow">文書の画面（390 幅）</h2>
+      <p>置いた場所の幅が 48rem 未満のとき。サイドバーを開くボタンを出し、リビジョンと検索をアイコンだけにする。</p>
+      <div class="catalog__frame catalog__frame--narrow">
+        <div class="app-header">
+        <header class="topbar">
+          <!-- 狭い幅でサイドバーを開く -->
+          <button class="btn btn--ghost btn--icon only-narrow" type="button" commandfor="sidebar" command="toggle-popover" aria-label="文書の一覧を開く">
+            <svg aria-hidden="true" viewBox="0 0 16 16" fill="currentColor"><path d="M1 3h14v1.5H1zm0 4.25h14v1.5H1zM1 11.5h14V13H1z"/></svg>
+          </button>
+          <a class="brand" href="../../pages/doc-view/36/default/index.html" aria-label="sample のトップ"><span class="brand__mark">dd</span><span class="only-wide">dev-docs</span></a>
+
+          <!-- 配信元の切り替え -->
+          <button class="btn btn--outline source-button" type="button" commandfor="source-menu-2" command="toggle-popover" aria-label="配信元を切り替える（今は sample）">
+            <svg aria-hidden="true" viewBox="0 0 16 16" fill="currentColor"><path d="M2 2.5A1.5 1.5 0 0 1 3.5 1h9A1.5 1.5 0 0 1 14 2.5v11a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 2 13.5zm1.5 0v11h9v-11zM5 4h6v1.5H5zm0 3h6v1.5H5z"/></svg>
+            <span>sample</span>
+            <svg class="btn__chevron" aria-hidden="true" viewBox="0 0 16 16" fill="currentColor"><path d="M3.2 5.7 8 10.5l4.8-4.8-1.06-1.06L8 8.38 4.26 4.64z"/></svg>
+          </button>
+          <div id="source-menu-2" class="menu" popover>
+            <p class="menu__label">配信元</p>
+            <a class="menu__item" href="../../pages/doc-view/36/default/index.html" aria-current="true">sample<span class="menu__note">読み書き</span></a>
+            <a class="menu__item" href="../../pages/doc-view/36/default/index.html">notes<span class="menu__note">読み取りだけ</span></a>
+            <a class="menu__item" href="../../pages/doc-view/36/default/index.html">extra<span class="menu__note">読み取りだけ</span></a>
+          </div>
+
+          <!-- リビジョンの切り替えと比較の開始 -->
+          <button class="btn btn--outline revision-button" type="button" commandfor="revision-menu-2" command="toggle-popover" aria-label="リビジョンを切り替える（今は develop）">
+            <svg aria-hidden="true" viewBox="0 0 16 16" fill="currentColor"><path d="M5 3.25a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0M3.5 5.37a2.25 2.25 0 1 1 1.5 0v.63c0 .55.45 1 1 1h4c.17 0 .34.03.5.08V5.37a2.25 2.25 0 1 1 1.5 0V8.5A2.5 2.5 0 0 1 10 11H6c-.17 0-.34-.03-.5-.08v.71a2.25 2.25 0 1 1-1.5 0zm8.5-1.37a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5M4.25 13.5a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5"/></svg>
+            <span class="mono only-wide">develop</span>
+            <svg class="btn__chevron only-wide" aria-hidden="true" viewBox="0 0 16 16" fill="currentColor"><path d="M3.2 5.7 8 10.5l4.8-4.8-1.06-1.06L8 8.38 4.26 4.64z"/></svg>
+          </button>
+          <div id="revision-menu-2" class="menu" popover>
+            <p class="menu__label">リビジョン</p>
+            <a class="menu__item" href="../../pages/doc-view/36/default/index.html" aria-current="true"><span class="mono">develop</span><span class="menu__note">既定</span></a>
+            <a class="menu__item" href="../../pages/doc-view/36/default/index.html"><span class="mono">feat/frontend</span><span class="menu__note">ブランチ</span></a>
+            <a class="menu__item" href="../../pages/doc-view/36/default/index.html"><span class="mono">3f9c2ab</span><span class="menu__note">10/26 23:40 JST</span></a>
+            <a class="menu__item" href="../../pages/doc-view/36/default/index.html"><span class="mono">8d41e07</span><span class="menu__note">10/26 21:12 JST</span></a>
+            <div class="menu__sep"></div>
+            <a class="menu__item menu__item--action" href="../../pages/doc-view/36/default/index.html#diff">別のリビジョンと比較</a>
+          </div>
+
+          <span class="spacer"></span>
+
+          <!-- 検索 -->
+          <button class="btn btn--outline search" type="button" commandfor="search-dialog" command="show-modal" aria-label="文書を検索" aria-keyshortcuts="Control+K /">
+            <svg aria-hidden="true" viewBox="0 0 16 16" fill="currentColor"><path d="M10.68 11.74a6 6 0 1 1 1.06-1.06l3.04 3.04-1.06 1.06zM11.5 7a4.5 4.5 0 1 0-9 0 4.5 4.5 0 0 0 9 0"/></svg>
+            <span>文書を検索</span>
+            <kbd class="key">Ctrl K</kbd>
+          </button>
+
+          <!-- 溜めたコメントのパネルを開閉する -->
+          <button class="btn btn--ghost" type="button" commandfor="comment-panel" command="toggle-popover" aria-label="コメント（2 件）">
+            <svg aria-hidden="true" viewBox="0 0 16 16" fill="currentColor"><path d="M1 2.75C1 1.78 1.78 1 2.75 1h10.5c.97 0 1.75.78 1.75 1.75v7.5c0 .97-.78 1.75-1.75 1.75H8.06l-3.53 2.82A.75.75 0 0 1 3.3 14.2V12h-.55C1.78 12 1 11.22 1 10.25zm1.75-.25a.25.25 0 0 0-.25.25v7.5c0 .14.11.25.25.25h1.3c.41 0 .75.34.75.75v1.4l2.53-2.02a.75.75 0 0 1 .47-.13h5.45a.25.25 0 0 0 .25-.25v-7.5a.25.25 0 0 0-.25-.25z"/></svg>
+            <span class="btn__count">2</span>
+          </button>
+
+          <!-- 設定画面を開く -->
+          <a class="btn btn--ghost btn--icon" href="../../pages/settings/36/default/index.html" aria-label="設定" title="設定">
+            <svg aria-hidden="true" viewBox="0 0 16 16" fill="currentColor" fill-rule="evenodd"><path d="M8 0c.34 0 .64.23.73.57l.34 1.36c.47.12.91.31 1.32.55l1.2-.72a.75.75 0 0 1 .92.11l1.06 1.06c.24.24.29.62.11.92l-.72 1.2c.24.41.43.85.55 1.32l1.36.34c.34.09.57.39.57.73s-.23.64-.57.73l-1.36.34c-.12.47-.31.91-.55 1.32l.72 1.2a.75.75 0 0 1-.11.92l-1.06 1.06a.75.75 0 0 1-.92.11l-1.2-.72c-.41.24-.85.43-1.32.55l-.34 1.36A.75.75 0 0 1 8 16a.75.75 0 0 1-.73-.57l-.34-1.36a5 5 0 0 1-1.32-.55l-1.2.72a.75.75 0 0 1-.92-.11l-1.06-1.06a.75.75 0 0 1-.11-.92l.72-1.2a5 5 0 0 1-.55-1.32L.57 8.73A.75.75 0 0 1 0 8c0-.34.23-.64.57-.73l1.36-.34c.12-.47.31-.91.55-1.32l-.72-1.2a.75.75 0 0 1 .11-.92l1.06-1.06a.75.75 0 0 1 .92-.11l1.2.72c.41-.24.85-.43 1.32-.55L7.27.57A.75.75 0 0 1 8 0m0 5a3 3 0 1 0 0 6 3 3 0 0 0 0-6"/></svg>
+          </a>
+
+          <!-- 明暗の切り替え -->
+          <button class="btn btn--ghost btn--icon" type="button" data-scheme-toggle aria-label="明暗を固定する" aria-pressed="false">
+            <svg aria-hidden="true" viewBox="0 0 16 16" fill="currentColor"><path d="M8 1.5a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13M8 3a5 5 0 0 1 0 10z"/></svg>
+          </button>
+        </header>
+        </div>
+      </div>
+    </section>
+    <section class="catalog__item" aria-labelledby="t-settings">
+      <h2 id="t-settings">設定画面</h2>
+      <p>配信元・リビジョンの切り替え・検索・コメントを出さない。</p>
+      <div class="catalog__frame">
+        <div class="app-header">
+        <header class="topbar">
+          <a class="brand" href="../../pages/doc-view/36/default/index.html" aria-label="sample のトップ"><span class="brand__mark">dd</span><span>dev-docs</span></a>
+          <span class="spacer"></span>
+          <button class="btn btn--ghost btn--icon" type="button" data-scheme-toggle aria-label="明暗を固定する" aria-pressed="false">
+            <svg aria-hidden="true" viewBox="0 0 16 16" fill="currentColor"><path d="M8 1.5a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13M8 3a5 5 0 0 1 0 10z"/></svg>
+          </button>
+        </header>
+        </div>
+      </div>
+    </section>
+    <section class="catalog__item" aria-labelledby="t-not-found">
+      <h2 id="t-not-found">見つからない画面</h2>
+      <p>コメントを出さない。</p>
+      <div class="catalog__frame">
+        <div class="app-header">
+        <header class="topbar">
+          <a class="brand" href="../../pages/doc-view/36/default/index.html" aria-label="sample のトップ"><span class="brand__mark">dd</span><span class="only-wide">dev-docs</span></a>
+
+          <button class="btn btn--outline source-button" type="button" commandfor="source-menu-4" command="toggle-popover" aria-label="配信元を切り替える">
+            <svg aria-hidden="true" viewBox="0 0 16 16" fill="currentColor"><path d="M2 2.5A1.5 1.5 0 0 1 3.5 1h9A1.5 1.5 0 0 1 14 2.5v11a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 2 13.5zm1.5 0v11h9v-11zM5 4h6v1.5H5zm0 3h6v1.5H5z"/></svg>
+            <span>sample</span>
+            <svg class="btn__chevron" aria-hidden="true" viewBox="0 0 16 16" fill="currentColor"><path d="M3.2 5.7 8 10.5l4.8-4.8-1.06-1.06L8 8.38 4.26 4.64z"/></svg>
+          </button>
+          <div id="source-menu-4" class="menu" popover>
+            <p class="menu__label">配信元</p>
+            <a class="menu__item" href="../../pages/doc-view/36/default/index.html">sample<span class="menu__note">読み書き</span></a>
+            <a class="menu__item" href="../../pages/doc-view/36/default/index.html">notes<span class="menu__note">読み取りだけ</span></a>
+            <a class="menu__item" href="../../pages/doc-view/36/default/index.html">extra<span class="menu__note">読み取りだけ</span></a>
+          </div>
+
+          <!-- 配信元が決まっているときだけ、リビジョンを切り替える -->
+          <button class="btn btn--outline revision-button" type="button" commandfor="revision-menu-4" command="toggle-popover" aria-label="リビジョンを切り替える">
+            <svg aria-hidden="true" viewBox="0 0 16 16" fill="currentColor"><path d="M5 3.25a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0M3.5 5.37a2.25 2.25 0 1 1 1.5 0v.63c0 .55.45 1 1 1h4c.17 0 .34.03.5.08V5.37a2.25 2.25 0 1 1 1.5 0V8.5A2.5 2.5 0 0 1 10 11H6c-.17 0-.34-.03-.5-.08v.71a2.25 2.25 0 1 1-1.5 0zm8.5-1.37a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5M4.25 13.5a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5"/></svg>
+            <span class="mono only-wide">develop</span>
+            <svg class="btn__chevron only-wide" aria-hidden="true" viewBox="0 0 16 16" fill="currentColor"><path d="M3.2 5.7 8 10.5l4.8-4.8-1.06-1.06L8 8.38 4.26 4.64z"/></svg>
+          </button>
+          <div id="revision-menu-4" class="menu" popover>
+            <p class="menu__label">リビジョン</p>
+            <a class="menu__item" href="../../pages/doc-view/36/default/index.html"><span class="mono">develop</span><span class="menu__note">既定</span></a>
+            <a class="menu__item" href="../../pages/doc-view/36/default/index.html"><span class="mono">feat/frontend</span><span class="menu__note">ブランチ</span></a>
+          </div>
+
+          <span class="spacer"></span>
+
+          <button class="btn btn--outline search" type="button" commandfor="search-dialog" command="show-modal" aria-label="文書を検索" aria-keyshortcuts="Control+K /">
+            <svg aria-hidden="true" viewBox="0 0 16 16" fill="currentColor"><path d="M10.68 11.74a6 6 0 1 1 1.06-1.06l3.04 3.04-1.06 1.06zM11.5 7a4.5 4.5 0 1 0-9 0 4.5 4.5 0 0 0 9 0"/></svg>
+            <span>文書を検索</span>
+            <kbd class="key">Ctrl K</kbd>
+          </button>
+
+          <a class="btn btn--ghost btn--icon" href="../../pages/settings/36/default/index.html" aria-label="設定" title="設定">
+            <svg aria-hidden="true" viewBox="0 0 16 16" fill="currentColor" fill-rule="evenodd"><path d="M8 0c.34 0 .64.23.73.57l.34 1.36c.47.12.91.31 1.32.55l1.2-.72a.75.75 0 0 1 .92.11l1.06 1.06c.24.24.29.62.11.92l-.72 1.2c.24.41.43.85.55 1.32l1.36.34c.34.09.57.39.57.73s-.23.64-.57.73l-1.36.34c-.12.47-.31.91-.55 1.32l.72 1.2a.75.75 0 0 1-.11.92l-1.06 1.06a.75.75 0 0 1-.92.11l-1.2-.72c-.41.24-.85.43-1.32.55l-.34 1.36A.75.75 0 0 1 8 16a.75.75 0 0 1-.73-.57l-.34-1.36a5 5 0 0 1-1.32-.55l-1.2.72a.75.75 0 0 1-.92-.11l-1.06-1.06a.75.75 0 0 1-.11-.92l.72-1.2a5 5 0 0 1-.55-1.32L.57 8.73A.75.75 0 0 1 0 8c0-.34.23-.64.57-.73l1.36-.34c.12-.47.31-.91.55-1.32l-.72-1.2a.75.75 0 0 1 .11-.92l1.06-1.06a.75.75 0 0 1 .92-.11l1.2.72c.41-.24.85-.43 1.32-.55L7.27.57A.75.75 0 0 1 8 0m0 5a3 3 0 1 0 0 6 3 3 0 0 0 0-6"/></svg>
+          </a>
+
+          <button class="btn btn--ghost btn--icon" type="button" data-scheme-toggle aria-label="明暗を固定する" aria-pressed="false">
+            <svg aria-hidden="true" viewBox="0 0 16 16" fill="currentColor"><path d="M8 1.5a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13M8 3a5 5 0 0 1 0 10z"/></svg>
+          </button>
+        </header>
+        </div>
+      </div>
+    </section>
+    <section class="catalog__item" aria-labelledby="t-not-found-narrow">
+      <h2 id="t-not-found-narrow">見つからない画面（390 幅）</h2>
+      <p>コメントを出さない。</p>
+      <div class="catalog__frame catalog__frame--narrow">
+        <div class="app-header">
+        <header class="topbar">
+          <a class="brand" href="../../pages/doc-view/36/default/index.html" aria-label="sample のトップ"><span class="brand__mark">dd</span><span class="only-wide">dev-docs</span></a>
+
+          <button class="btn btn--outline source-button" type="button" commandfor="source-menu-5" command="toggle-popover" aria-label="配信元を切り替える">
+            <svg aria-hidden="true" viewBox="0 0 16 16" fill="currentColor"><path d="M2 2.5A1.5 1.5 0 0 1 3.5 1h9A1.5 1.5 0 0 1 14 2.5v11a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 2 13.5zm1.5 0v11h9v-11zM5 4h6v1.5H5zm0 3h6v1.5H5z"/></svg>
+            <span>sample</span>
+            <svg class="btn__chevron" aria-hidden="true" viewBox="0 0 16 16" fill="currentColor"><path d="M3.2 5.7 8 10.5l4.8-4.8-1.06-1.06L8 8.38 4.26 4.64z"/></svg>
+          </button>
+          <div id="source-menu-5" class="menu" popover>
+            <p class="menu__label">配信元</p>
+            <a class="menu__item" href="../../pages/doc-view/36/default/index.html">sample<span class="menu__note">読み書き</span></a>
+            <a class="menu__item" href="../../pages/doc-view/36/default/index.html">notes<span class="menu__note">読み取りだけ</span></a>
+            <a class="menu__item" href="../../pages/doc-view/36/default/index.html">extra<span class="menu__note">読み取りだけ</span></a>
+          </div>
+
+          <!-- 配信元が決まっているときだけ、リビジョンを切り替える -->
+          <button class="btn btn--outline revision-button" type="button" commandfor="revision-menu-5" command="toggle-popover" aria-label="リビジョンを切り替える">
+            <svg aria-hidden="true" viewBox="0 0 16 16" fill="currentColor"><path d="M5 3.25a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0M3.5 5.37a2.25 2.25 0 1 1 1.5 0v.63c0 .55.45 1 1 1h4c.17 0 .34.03.5.08V5.37a2.25 2.25 0 1 1 1.5 0V8.5A2.5 2.5 0 0 1 10 11H6c-.17 0-.34-.03-.5-.08v.71a2.25 2.25 0 1 1-1.5 0zm8.5-1.37a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5M4.25 13.5a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5"/></svg>
+            <span class="mono only-wide">develop</span>
+            <svg class="btn__chevron only-wide" aria-hidden="true" viewBox="0 0 16 16" fill="currentColor"><path d="M3.2 5.7 8 10.5l4.8-4.8-1.06-1.06L8 8.38 4.26 4.64z"/></svg>
+          </button>
+          <div id="revision-menu-5" class="menu" popover>
+            <p class="menu__label">リビジョン</p>
+            <a class="menu__item" href="../../pages/doc-view/36/default/index.html"><span class="mono">develop</span><span class="menu__note">既定</span></a>
+            <a class="menu__item" href="../../pages/doc-view/36/default/index.html"><span class="mono">feat/frontend</span><span class="menu__note">ブランチ</span></a>
+          </div>
+
+          <span class="spacer"></span>
+
+          <button class="btn btn--outline search" type="button" commandfor="search-dialog" command="show-modal" aria-label="文書を検索" aria-keyshortcuts="Control+K /">
+            <svg aria-hidden="true" viewBox="0 0 16 16" fill="currentColor"><path d="M10.68 11.74a6 6 0 1 1 1.06-1.06l3.04 3.04-1.06 1.06zM11.5 7a4.5 4.5 0 1 0-9 0 4.5 4.5 0 0 0 9 0"/></svg>
+            <span>文書を検索</span>
+            <kbd class="key">Ctrl K</kbd>
+          </button>
+
+          <a class="btn btn--ghost btn--icon" href="../../pages/settings/36/default/index.html" aria-label="設定" title="設定">
+            <svg aria-hidden="true" viewBox="0 0 16 16" fill="currentColor" fill-rule="evenodd"><path d="M8 0c.34 0 .64.23.73.57l.34 1.36c.47.12.91.31 1.32.55l1.2-.72a.75.75 0 0 1 .92.11l1.06 1.06c.24.24.29.62.11.92l-.72 1.2c.24.41.43.85.55 1.32l1.36.34c.34.09.57.39.57.73s-.23.64-.57.73l-1.36.34c-.12.47-.31.91-.55 1.32l.72 1.2a.75.75 0 0 1-.11.92l-1.06 1.06a.75.75 0 0 1-.92.11l-1.2-.72c-.41.24-.85.43-1.32.55l-.34 1.36A.75.75 0 0 1 8 16a.75.75 0 0 1-.73-.57l-.34-1.36a5 5 0 0 1-1.32-.55l-1.2.72a.75.75 0 0 1-.92-.11l-1.06-1.06a.75.75 0 0 1-.11-.92l.72-1.2a5 5 0 0 1-.55-1.32L.57 8.73A.75.75 0 0 1 0 8c0-.34.23-.64.57-.73l1.36-.34c.12-.47.31-.91.55-1.32l-.72-1.2a.75.75 0 0 1 .11-.92l1.06-1.06a.75.75 0 0 1 .92-.11l1.2.72c.41-.24.85-.43 1.32-.55L7.27.57A.75.75 0 0 1 8 0m0 5a3 3 0 1 0 0 6 3 3 0 0 0 0-6"/></svg>
+          </a>
+
+          <button class="btn btn--ghost btn--icon" type="button" data-scheme-toggle aria-label="明暗を固定する" aria-pressed="false">
+            <svg aria-hidden="true" viewBox="0 0 16 16" fill="currentColor"><path d="M8 1.5a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13M8 3a5 5 0 0 1 0 10z"/></svg>
+          </button>
+        </header>
+        </div>
+      </div>
+    </section>
+    <section class="catalog__item" aria-labelledby="t-menus">
+      <h2 id="t-menus">メニューを開いたとき</h2>
+      <p>配信元とリビジョンのメニュー。リビジョンのメニューの末尾から比較を始める。</p>
+      <div class="catalog__frame">
+        <div class="menu catalog__menu">
+          <p class="menu__label">配信元</p>
+          <a class="menu__item" href="../../pages/doc-view/36/default/index.html" aria-current="true">sample<span class="menu__note">読み書き</span></a>
+          <a class="menu__item" href="../../pages/doc-view/36/default/index.html">notes<span class="menu__note">読み取りだけ</span></a>
+          <a class="menu__item" href="../../pages/doc-view/36/default/index.html">extra<span class="menu__note">読み取りだけ</span></a>
+        </div>
+        <div class="menu catalog__menu">
+          <p class="menu__label">リビジョン</p>
+          <a class="menu__item" href="../../pages/doc-view/36/default/index.html" aria-current="true"><span class="mono">develop</span><span class="menu__note">既定</span></a>
+          <a class="menu__item" href="../../pages/doc-view/36/default/index.html"><span class="mono">feat/frontend</span><span class="menu__note">ブランチ</span></a>
+          <a class="menu__item" href="../../pages/doc-view/36/default/index.html"><span class="mono">3f9c2ab</span><span class="menu__note">10/26 23:40 JST</span></a>
+          <div class="menu__sep"></div>
+          <a class="menu__item menu__item--action" href="../../pages/doc-view/36/default/index.html#diff">別のリビジョンと比較</a>
+        </div>
+      </div>
+    </section>
+  </main>
+</body>
+</html>
