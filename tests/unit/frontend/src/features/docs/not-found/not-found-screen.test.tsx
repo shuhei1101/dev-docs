@@ -28,8 +28,7 @@ test("test_not_found_screen", async () => {
   expect(await screen.findByRole("heading", { name: "文書が見つかりません" })).toBeInTheDocument();
   expect(screen.getByText("a.md")).toBeInTheDocument();
   expect(await screen.findByRole("link", { name: "s のトップを開く" })).toBeInTheDocument();
-  const list = await screen.findByRole("list", { name: "配信中の配信元" });
-  expect(list.querySelectorAll("a")).toHaveLength(2);
+  expect(screen.queryByRole("list", { name: "配信中の配信元" })).toBeNull();
   expect(router.state.location.pathname).toBe("/s/a.md");
 });
 

@@ -479,6 +479,15 @@ test.describe("設定ファイルの入力欄", () => {
 });
 
 test.describe("配信のスイッチ", () => {
+  // 項目の見出しに `配信` を出し、スイッチの横に `配信する` を出す（正常系）
+  test("enabled_switch_heading", async ({ page }) => {
+    await open(page);
+    await openAdd(page);
+    const group = dialog(page).getByRole("group", { name: "配信", exact: true });
+    await expect(group).toBeVisible();
+    await expect(group.getByRole("switch", { name: "配信する" })).toBeVisible();
+  });
+
   // 追加はオンで、補助文を出す（正常系）
   test("enabled_switch_when_add", async ({ page }) => {
     await open(page);

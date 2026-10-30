@@ -278,6 +278,12 @@ test.describe("配信中の配信元", () => {
     await expect(page).toHaveURL(/\/sample$/);
   });
 
+  // 無い文書のときは出さない（正常系）
+  test("serving_sources_when_doc_missing", async ({ page }) => {
+    await open(page, "/sample/docs/no-such", missingDoc);
+    await expect(page.getByRole("list", { name: "配信中の配信元" })).toHaveCount(0);
+  });
+
   // 配信中の配信元が無いときは出さない（正常系）
   test("serving_sources_when_none_serving", async ({ page }) => {
     await open(page, "/unknown/docs/a", missingSource, settingsView([]));
