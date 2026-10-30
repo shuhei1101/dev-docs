@@ -32,7 +32,24 @@ layers:
         uv run pytest {結合テストファイルパス}
         ```
   - name: 結合テスト（フロント）
-    run_all: 未確定
+    description: Playwright で実行する。画面は Vite の開発サーバー、部品は Storybook を立て、画面の API（`/_api/`）は `page.route` で差し替えて、画面と部品を Chromium で動かして見る。
+    prerequisites:
+      - Node 24 と npm
+      - '`npm ci` で直下の依存を入れてあり、`npx playwright install chromium` で Chromium を入れてあること'
+      - ネットワークが使えること（本文を描く mdmark を jsDelivr から読む）
+      - '`127.0.0.1` のポート 5199（画面）と 6199（Storybook）が空いていること'
+    run_all: |-
+      ```bash
+      npm run test:integration
+      ```
+    run_one:
+      label: ファイル
+      command: |-
+        ```bash
+        npx playwright test --config tests/integration/frontend/playwright.config.ts {結合テストファイルパス}
+        ```
+    parallel: true
+    external_cost: 本文を描く mdmark を jsDelivr から読む。料金は発生しない
   - name: 外部疎通テスト
     run_all: 未確定
   - name: 非機能要件テスト
