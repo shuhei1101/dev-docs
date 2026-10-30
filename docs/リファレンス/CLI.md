@@ -1,10 +1,10 @@
 # CLI
 
-dev-docs serve と dev-docs migrate のサブコマンド・引数・終了コード
+dev-docs serve・dev-docs migrate・dev-docs files のサブコマンド・引数・終了コード
 
 ## 共通
 
-`dev-docs` コマンドは `serve` と `migrate` の 2 つのサブコマンドを持ちます。
+`dev-docs` コマンドは `serve`・`migrate`・`files` のサブコマンドを持ちます。
 `dev-docs --version` で dev-docs のバージョンを表示します。
 
 ## dev-docs serve
@@ -102,3 +102,29 @@ dev-docs migrate --source ~/repo/sample/dev-docs.yaml
 
 機械的に移せない設定（`type: markdown` の行・`defaults[]`・`alias_type` 以外の値を固定した `metadata`）が残るときは、`dev-docs.yaml` を書き換えず、終了コード 4 で止めます。
 違反したキーのパスと、`/dev-docs:setup` で管理用の YAML の行へ移す案内を標準エラーに出します。
+
+## dev-docs files
+
+範囲の glob に当たるファイルのうち、除外の条件に当たらないもの（管理用の YAML に載せるファイル）を出します。
+`dev-docs.yaml` の有無に依らず呼べ、ファイルは書き換えません。
+`/dev-docs:setup` が、管理用の YAML に行を作るファイルを求めるのに使います。
+
+| オプション | 必須 | 既定 | 説明 |
+| --- | --- | --- | --- |
+| `--root` | ✅ | - | 配信元のフォルダのパス |
+| `--paths` | ✅ | - | 範囲の glob（`--root` からの相対）。繰り返して渡せる。`documents[].paths` に記載する値と同じ書き方 |
+| `--exclude` | - | なし（除外の条件だけで外す） | 外すファイル名の glob。繰り返して渡せる。`documents[].exclude[]` と同じ書き方 |
+
+```bash
+dev-docs files --root ~/repo/sample --paths 'src/**'
+```
+
+標準出力に、載せるファイルの `--root` からのパスを 1 行ずつ、パスの昇順で出します。
+載せるファイルが 0 件のときも、空の出力で終了コード 0 です。
+
+除外の条件は [文書のメタデータ](../はじめに/コアコンセプト/文書のメタデータ.md) の「載せるファイルの判定」にあります。
+`.git`・`node_modules`・`__pycache__`・`.venv`・`.claude/worktrees` のフォルダとシンボリックリンクは辿りません。
+
+| 終了コード | 意味 |
+| --- | --- |
+| 2 | `--root` が無いか、フォルダでない。標準エラーに渡したパスを出す。`dev-docs migrate` の設定の違反と同じ値 |
