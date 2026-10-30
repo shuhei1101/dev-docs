@@ -552,3 +552,38 @@ def test_run_migrate_when_config_invalid(
     # 検証
     assert code == 2
     assert str(missing) in capsys.readouterr().err
+
+
+def _files_args(**overrides: Any) -> argparse.Namespace:
+    """`files` の解析結果を作る。"""
+    values: dict[str, Any] = {"root": "", "paths": ["src/**"], "exclude": []}
+    values.update(overrides)
+    return argparse.Namespace(**values)
+
+
+def test_run_files(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+    write_files: Callable[[Path, dict[str, str]], None],
+) -> None:
+    """載せるファイルを 1 行ずつ出す（正常系）。"""
+    # 準備
+    write_files(tmp_path, {"src/a.py": "a = 1\n", "src/uv.lock": "version = 1\n"})
+    # 実行
+    code = main_module.run_files(_files_args(root=str(tmp_path), paths=["src/**"], exclude=[]))
+    # 検証
+    assert code == 0
+    assert capsys.readouterr().out == "src/a.py\n"
+
+
+def test_run_files_when_root_not_found(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    """フォルダが無い（異常系）。"""
+    # 準備
+    missing = tmp_path / "missing"
+    # 実行
+    code = main_module.run_files(_files_args(root=str(missing)))
+    # 検証
+    captured = capsys.readouterr()
+    assert code == 2
+    assert captured.out == ""
+    assert str(missing) in captured.err

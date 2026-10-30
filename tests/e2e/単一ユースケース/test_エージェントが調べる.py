@@ -32,6 +32,25 @@ DECISION_SCHEMA = (
     "    properties:\n"
     "      summary: {type: string}\n"
 )
+DESIGN_AND_SRC_ROWS = (
+    "  - id: design\n"
+    "    paths: [design/*.yaml]\n"
+    "    schema: schemas/sample.schema.yaml\n"
+    "  - id: src\n"
+    "    paths: [src/files.yaml]\n"
+    "    schema: schemas/files.schema.yaml\n"
+    "    records: files\n"
+    "    body_file: path\n"
+)
+SRC_FILES = (
+    "files:\n"
+    "  - path: repo.py\n"
+    "    related:\n"
+    "      - {to: design/repo, type: implements}\n"
+    "  - path: test_repo.py\n"
+    "    related:\n"
+    "      - {to: src/repo, type: tests}\n"
+)
 SEARCH_WORD = {"field": "body", "op": "contains", "values": ["検索"]}
 IN_ARCHIVE = {"field": "@path", "op": "glob", "values": ["notes/archive/**"]}
 BY_MATCHES = {"fields": ["@matches"], "order_by": [{"field": "@matches", "direction": "desc"}]}
@@ -538,3 +557,48 @@ def test_normal_when_metadata_mapped(
     assert [item["id"] for item in found.data["items"]] == ["d1"]
     assert found.data["items"][0]["values"]["name"] == "設定の置き場所"
     assert found.data["items"][0]["values"]["description"] == "設定を置く場所を決める"
+
+
+def test_normal_when_implementing_code_traced(
+    make_source: Callable[..., Any],
+    serve: Callable[..., Any],
+    sample_file_set: Callable[..., dict[str, str]],
+    sample_config_text: Callable[..., str],
+    sample_doc_text: Callable[..., str],
+) -> None:
+    """設計書を起点に `direction: in` で、設計書を実装するコードを引く（正常系）。"""
+    # 準備
+    files = sample_file_set(
+        **{
+            "dev-docs.yaml": sample_config_text(DESIGN_AND_SRC_ROWS),
+            "schemas/files.schema.yaml": FILES_SCHEMA.read_text(encoding="utf-8"),
+            "design/repo.yaml": sample_doc_text("design/repo", "タスクのリポジトリ"),
+            "src/files.yaml": SRC_FILES,
+            "src/repo.py": "repo = 1\n",
+            "src/test_repo.py": "test_repo = 1\n",
+        }
+    )
+    sample = make_source("sample", files)
+    served = serve(sample)
+    cwd = str(sample.folder)
+    # 実行
+    implementing = served.call(
+        "trace_related", cwd=cwd, from_ids=["design/repo"], direction="in", depth=1, format="json"
+    )
+    testing = served.call(
+        "trace_related", cwd=cwd, from_ids=["src/repo"], direction="in", depth=1, format="json"
+    )
+    bodies = served.call(
+        "search_docs",
+        cwd=cwd,
+        filter={"field": "id", "op": "eq", "values": ["src/repo", "src/test_repo"]},
+        view="full",
+        format="json",
+    )
+    # 検証
+    assert [item["id"] for item in implementing.data["items"]] == ["src/repo"]
+    assert implementing.data["items"][0]["via"]["type"] == "implements"
+    assert [item["id"] for item in testing.data["items"]] == ["src/test_repo"]
+    assert testing.data["items"][0]["via"]["type"] == "tests"
+    assert sorted(item["id"] for item in bodies.data["items"]) == ["src/repo", "src/test_repo"]
+    assert not any("related.types" in note for note in bodies.data.get("notes", []))

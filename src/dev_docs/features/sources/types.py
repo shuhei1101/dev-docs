@@ -76,7 +76,7 @@ class SourceConfig:
     nav: dict[str, Any] | None = None
     ids_format: str | None = None
     related_types: list[str] = field(
-        default_factory=lambda: ["references", "depends_on", "see_also"]
+        default_factory=lambda: ["references", "depends_on", "see_also", "implements", "tests"]
     )
     diff_ignore_keys: list[str] = field(default_factory=lambda: ["updated"])
     github_repository: str | None = None

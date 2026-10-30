@@ -28,14 +28,17 @@ argument-hint: "[path]"
    | 書き込める作業場所（`scope.write`）。パスか glob | `{path}` |
    | 読める作業場所（`scope.read`） | `{path}/**` |
    | 検索できるようにするファイル（`documents[].paths`）。`dev-docs.yaml` が無いときだけ聞く | `**/*.md`。`.git`・`node_modules`・`.claude/worktrees` の下は除く |
+   | 実装のパスを持つ設計書の種類とキー。`dev-docs.yaml` が無いときだけ聞く（ある配信元は手順 4 で聞く） | 無し |
 
 4. YAML でない範囲を管理用の YAML の行にする。
-   - 範囲のファイルを集め、管理用の YAML（`files.yaml`）の行と突き合わせる
+   - `{clone}/.venv/bin/python -m dev_docs files --root {path} --paths {範囲の glob}` で、範囲のうち管理用の YAML に載せるファイルを求める（`--paths` は繰り返せる。生成物・ロック・バイナリ・ベンダーのコード・再エクスポートや空の `__init__` と、`.git`・`node_modules`・`.claude/worktrees` の下は含まれない）。管理用の YAML（`files.yaml`）の行と突き合わせる
+     - 範囲の glob は、`dev-docs.yaml` が無いときは手順 3 で答えた範囲にする
+     - `dev-docs.yaml` があるときは、`records: files` の行が指す管理用の YAML ごとに `{管理用の YAML のフォルダ}/**` にする（行の `paths` の値は渡さない）
    - 結果は次の候補にする
 
      | 突き合わせの結果 | 候補 |
      | --- | --- |
-     | 管理用の YAML に無いファイル | 仮のメタデータを付けて行を追加 |
+     | 管理用の YAML に無いファイル | 仮のメタデータと関連の候補を付けて行を追加 |
      | ファイルが無い行 | 行を削除 |
      | 名前が変わったファイル | 行のパスを新しくし、メタデータは残す。Git の配信元は `git diff --name-status -M` のリネームの検出、Git 管理外は内容のハッシュの一致で見つける |
 
@@ -46,8 +49,19 @@ argument-hint: "[path]"
      | 1 行目が `# yaml-language-server: $schema=https://raw.githubusercontent.com/shuhei1101/dev-docs/{tag}/schemas/dev-docs.schema.json` でない（行が無い・タグが `{tag}` と違う） | 1 行目をその行にする（行が無ければ 1 行目に入れる） |
      | `type: markdown` の行・`defaults[]`・`alias_type` 以外の固定値の `metadata` | 範囲の Markdown のフロントマターと `defaults[]` の値を管理用の YAML の行へ移し、`documents` の行を管理用の YAML を読む行（`records: files`・`body_file: path`）にする。Markdown からフロントマターを削除し、`version` を新しくする |
 
-   - 仮のメタデータは、見出しと冒頭から `name` と `description` を付ける。`tags` は付けるタグがあるときだけ付ける。管理用の YAML の行が既にメタデータを持つファイルには付けない
-   - 追加・削除・改名と仮のメタデータを表で示し、書いてよいかを聞く。断られたら何も書き換えずに止まる
+   - 仮のメタデータは、見出しと冒頭から付ける。管理用の YAML の行が既にメタデータを持つファイルには付けない
+     - `name`: 何のファイルかを表す日本語の名詞句。クラス名・ファイル名の繰り返しにしない
+     - `description`: 「何を受け持つか」と「どんなときに読むか」の 1 文。関数の一覧・実装の手順は入れない
+     - `tags`: `topic`（扱う概念）と `tool`（使うライブラリ・外部サービス）で、付けるタグがあるときだけ付ける
+   - 追加する行があり、まだ聞いていないときは、実装のパスを持つ設計書の種類とキーを聞く（既定は無し）
+   - 追加する行に関連の候補を付ける
+
+     | 関連 | 付ける行 |
+     | --- | --- |
+     | `tests` | テストのファイル。ファイル名から `test_` の接頭辞（`_test`・`.test` の接尾辞）を除いた名前のコードを指す（`to` は文書の ID で、拡張子を除いたパス）。同じ名前のコードが範囲に無ければ付けない |
+     | `implements` | 答えた種類の文書を `search_docs`（`filter` は `kind`、`format: json`）で引き、そのキーの値とパスが一致するコード。その設計書を指す。種類とキーが無しなら付けない |
+
+   - 追加・削除・改名と、仮のメタデータ・関連の候補を表で示し、書いてよいかを聞く。断られたら何も書き換えずに止まる
 
 5. 確認が済んだものを書く。
    - `dev-docs.yaml` が無い場合、`{clone}/templates/dev-docs.yaml` から `dev-docs.yaml` を作り、1 行目のスキーマの行のタグを `{tag}` に、`name`・`description`・`documents[].paths` を決めた値にする。`{clone}/templates/files.schema.yaml` を `{path}/schemas/files.schema.yaml` にコピーする

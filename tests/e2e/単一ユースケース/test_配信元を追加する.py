@@ -26,6 +26,29 @@ documents:
       - paths: [docs/**]
         tags: [doc]
 """
+DESIGN_SCHEMA = """\
+type: object
+properties:
+  id: {type: string}
+  name: {type: string}
+  implementation: {type: string}
+required: [id, name]
+"""
+CANDIDATES_CONFIG = """\
+version: "3"
+name: sample
+documents:
+  - id: design
+    paths: [design/*.yaml]
+    schema: schemas/design.schema.yaml
+  - id: src
+    paths: [src/files.yaml]
+    schema: schemas/files.schema.yaml
+    records: files
+    body_file: path
+"""
+IMPLEMENTATION_QUESTION = r"実装のパス|設計書の種類"
+IMPLEMENTATION_ANSWER = "種類 design、キー implementation"
 SCHEMA_LINE = (
     "# yaml-language-server: $schema="
     "https://raw.githubusercontent.com/shuhei1101/dev-docs/v{version}/schemas/dev-docs.schema.json\n"
@@ -117,9 +140,14 @@ def test_normal_when_non_yaml_range(
     clone = make_clone()
     served = serve(clone=clone.clone, port=claude_home.port)
     claude_home.set_env(DEV_DOCS_CONFIG=str(served.settings))
-    notes = make_source("notes", dict(MARKDOWN_FILES))
+    # ベンダーのコードの Markdown は、除外の条件に当たるため行を作らない
+    notes = make_source("notes", {**MARKDOWN_FILES, "docs/vendor/lib.md": "# lib\n"})
     # `.git`・`node_modules`・`.claude/worktrees` の下のファイルは範囲に入れない
-    for ignored in ("node_modules/pkg/README.md", ".claude/worktrees/x/memo.md"):
+    for ignored in (
+        "node_modules/pkg/README.md",
+        ".claude/worktrees/x/memo.md",
+        ".claude/worktrees/wt/docs/a.md",
+    ):
         (notes.folder / ignored).parent.mkdir(parents=True, exist_ok=True)
         (notes.folder / ignored).write_text("# 除く\n", encoding="utf-8")
     # 実行
@@ -142,6 +170,7 @@ def test_normal_when_non_yaml_range(
     assert sorted(Path(path).name for path in paths) == ["a.md", "b.md"]
     assert all(row.get("name") for row in loaded["files"])
     assert not any("node_modules" in path or ".claude" in path for path in paths)
+    assert not any("vendor" in path for path in paths)
     assert schema_errors(FILES_SCHEMA, loaded) == []
     assert len(found.data["items"]) == len(MARKDOWN_FILES)
 
@@ -346,3 +375,69 @@ def test_normal_when_source_config_unmigratable(
     assert checked.data.get("violations", []) == []
     assert not reloaded.is_error
     assert sorted(item["values"]["name"] for item in found.data["items"]) == ["文書 A", "文書 B"]
+
+
+def test_normal_when_excluded_and_related_candidates(
+    claude_home: Any,
+    make_clone: Callable[..., Any],
+    make_source: Callable[..., Any],
+    add_worktree: Callable[..., Path],
+    serve: Callable[..., Any],
+    load_yaml_file: Callable[[Path], Any],
+) -> None:
+    """除外の条件に当たるファイルの行を作らず、`implements`・`tests` の候補を付ける（正常系）。"""
+    # 準備
+    clone = make_clone()
+    sample = make_source(
+        "sample",
+        {
+            "dev-docs.yaml": CANDIDATES_CONFIG,
+            "schemas/design.schema.yaml": DESIGN_SCHEMA,
+            "schemas/files.schema.yaml": FILES_SCHEMA.read_text(encoding="utf-8"),
+            "design/repo.yaml": (
+                "id: design/repo\nname: タスクのリポジトリ\nimplementation: src/tasks/repo.py\n"
+            ),
+            "src/files.yaml": "files: []\n",
+            "src/tasks/repo.py": "repo = 1\n",
+            "src/tasks/test_repo.py": "test_repo = 1\n",
+            "src/tasks/__init__.py": "",
+            "src/uv.lock": "version = 1\n",
+            "src/logo.png": "\x00PNG\n",
+        },
+    )
+    sample.scope_write = [sample.folder]
+    served = serve(sample, clone=clone.clone, port=claude_home.port)
+    claude_home.set_env(DEV_DOCS_CONFIG=str(served.settings))
+    # Git の配信元のクローン本体には書けないため、ワークツリーで path を省いて実行する
+    worktree = add_worktree(sample.folder, "x")
+    # 実行
+    run = claude_home.run(
+        "/dev-docs:setup",
+        cwd=worktree,
+        answers=[(IMPLEMENTATION_QUESTION, IMPLEMENTATION_ANSWER)],
+    )
+    # 検証
+    rows = _rows(load_yaml_file, worktree / "src")
+    related = {
+        path: [(item["to"], item["type"]) for item in row.get("related", [])]
+        for path, row in rows.items()
+    }
+    shown = "\n".join([*run.question_texts, run.text])
+    checked = served.call_admin("check_project", path=str(worktree), format="json")
+    traced = served.call(
+        "trace_related",
+        cwd=str(worktree),
+        from_ids=["design/repo"],
+        direction="in",
+        depth=1,
+        format="json",
+    )
+    assert not run.result["is_error"]
+    assert sorted(rows) == ["tasks/repo.py", "tasks/test_repo.py"]
+    assert related["tasks/repo.py"] == [("design/repo", "implements")]
+    assert related["tasks/test_repo.py"] == [("src/tasks/repo", "tests")]
+    assert "implements" in shown
+    assert "tests" in shown
+    assert checked.data.get("violations", []) == []
+    assert checked.data["sync"] == SYNC_ZERO
+    assert [item["id"] for item in traced.data["items"]] == ["src/tasks/repo"]
