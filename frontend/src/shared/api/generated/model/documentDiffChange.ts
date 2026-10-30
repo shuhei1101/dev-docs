@@ -5,10 +5,10 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export type DocumentDiffChange =
-  (typeof DocumentDiffChange)[keyof typeof DocumentDiffChange] | null;
+export type DocumentDiffChange = typeof DocumentDiffChange[keyof typeof DocumentDiffChange] | null;
+
 
 export const DocumentDiffChange = {
-  added: "added",
-  modified: "modified",
+  added: 'added',
+  modified: 'modified',
 } as const;

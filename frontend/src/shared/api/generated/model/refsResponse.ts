@@ -4,8 +4,8 @@
  * FastAPI
  * OpenAPI spec version: 0.1.0
  */
-import type { CommitItem } from "./commitItem";
-import type { RefItem } from "./refItem";
+import type { CommitItem } from './commitItem';
+import type { RefItem } from './refItem';
 
 /**
  * GET `/_api/sources/{source}/refs` の応答。

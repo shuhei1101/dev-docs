@@ -4,7 +4,7 @@
  * FastAPI
  * OpenAPI spec version: 0.1.0
  */
-import type { DocumentDiffChange } from "./documentDiffChange";
+import type { DocumentDiffChange } from './documentDiffChange';
 
 /**
  * 文書の取得の `diff`（比べたリビジョンと、返した文書の変化・変わった項目）。

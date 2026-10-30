@@ -4,126 +4,64 @@
  * FastAPI
  * OpenAPI spec version: 0.1.0
  */
-import * as zod from "zod";
+import * as zod from 'zod';
+
 
 /**
  * @summary Get Settings Sources
  */
-export const SettingsGetSettingsSourcesResponse = zod
-  .object({
-    settingsPath: zod.string(),
-    sources: zod.array(
-      zod
-        .object({
-          id: zod.union([zod.string(), zod.null()]),
-          config: zod.array(zod.string()),
-          enabled: zod.boolean(),
-          scope: zod
-            .object({
-              read: zod.array(zod.string()).optional(),
-              write: zod
-                .union([zod.array(zod.string()), zod.null()])
-                .optional(),
-            })
-            .describe("`sources[].scope` の `read`・`write`。"),
-          status: zod.enum([
-            "serving",
-            "not_served",
-            "disabled",
-            "pending_reload",
-          ]),
-          errors: zod
-            .array(
-              zod
-                .object({
-                  path: zod.string(),
-                  reason: zod.string(),
-                })
-                .describe("検証で外した理由 1 件。"),
-            )
-            .optional(),
-          configVersion: zod
-            .union([
-              zod
-                .object({
-                  config: zod.string(),
-                  server: zod.string(),
-                })
-                .describe("設定のバージョンとサーバーが読めるバージョン。"),
-              zod.null(),
-            ])
-            .optional(),
-        })
-        .describe(
-          "端末の設定の取得の `sources[]` の 1 行（行の値に配信元の状態を重ねたもの）。",
-        ),
-    ),
-  })
-  .describe("GET `/_api/settings/sources` の応答。");
+export const SettingsGetSettingsSourcesResponse = zod.object({
+  "settingsPath": zod.string(),
+  "sources": zod.array(zod.object({
+  "id": zod.union([zod.string(),zod.null()]),
+  "config": zod.array(zod.string()),
+  "enabled": zod.boolean(),
+  "scope": zod.object({
+  "read": zod.array(zod.string()).optional(),
+  "write": zod.union([zod.array(zod.string()),zod.null()]).optional()
+}).describe('`sources[].scope` の `read`・`write`。'),
+  "status": zod.enum(['serving', 'not_served', 'disabled', 'pending_reload']),
+  "errors": zod.array(zod.object({
+  "path": zod.string(),
+  "reason": zod.string()
+}).describe('検証で外した理由 1 件。')).optional(),
+  "configVersion": zod.union([zod.object({
+  "config": zod.string(),
+  "server": zod.string()
+}).describe('設定のバージョンとサーバーが読めるバージョン。'),zod.null()]).optional()
+}).describe('端末の設定の取得の `sources[]` の 1 行（行の値に配信元の状態を重ねたもの）。'))
+}).describe('GET `/_api/settings/sources` の応答。')
 
 /**
  * @summary Put Settings Sources
  */
 export const settingsPutSettingsSourcesBodySourcesItemEnabledDefault = true;
-export const settingsPutSettingsSourcesBodySourcesItemScopeDefault = {
-  read: [],
-};
+export const settingsPutSettingsSourcesBodySourcesItemScopeDefault = { "read": [] };
 
-export const SettingsPutSettingsSourcesBody = zod
-  .object({
-    sources: zod.array(
-      zod
-        .object({
-          config: zod.array(zod.string()),
-          id: zod.union([zod.string(), zod.null()]).optional(),
-          enabled: zod
-            .boolean()
-            .default(settingsPutSettingsSourcesBodySourcesItemEnabledDefault),
-          scope: zod
-            .object({
-              read: zod.array(zod.string()).optional(),
-              write: zod
-                .union([zod.array(zod.string()), zod.null()])
-                .optional(),
-            })
-            .default(settingsPutSettingsSourcesBodySourcesItemScopeDefault)
-            .describe("`sources[].scope` の `read`・`write`。"),
-        })
-        .describe("端末の設定の `sources[]` の 1 行。"),
-    ),
-  })
-  .describe("PUT `/_api/settings/sources` の本文。");
+export const SettingsPutSettingsSourcesBody = zod.object({
+  "sources": zod.array(zod.object({
+  "config": zod.array(zod.string()),
+  "id": zod.union([zod.string(),zod.null()]).optional(),
+  "enabled": zod.boolean().default(settingsPutSettingsSourcesBodySourcesItemEnabledDefault),
+  "scope": zod.object({
+  "read": zod.array(zod.string()).optional(),
+  "write": zod.union([zod.array(zod.string()),zod.null()]).optional()
+}).default(settingsPutSettingsSourcesBodySourcesItemScopeDefault).describe('`sources[].scope` の `read`・`write`。')
+}).describe('端末の設定の `sources[]` の 1 行。'))
+}).describe('PUT `/_api/settings/sources` の本文。')
 
-export const SettingsPutSettingsSourcesResponse = zod
-  .object({
-    sources: zod.array(
-      zod
-        .object({
-          id: zod.string(),
-          status: zod.enum(["serving", "not_served", "disabled"]),
-          errors: zod
-            .array(
-              zod
-                .object({
-                  path: zod.string(),
-                  reason: zod.string(),
-                })
-                .describe("検証で外した理由 1 件。"),
-            )
-            .optional(),
-          configVersion: zod
-            .union([
-              zod
-                .object({
-                  config: zod.string(),
-                  server: zod.string(),
-                })
-                .describe("設定のバージョンとサーバーが読めるバージョン。"),
-              zod.null(),
-            ])
-            .optional(),
-        })
-        .describe("読み直した後の配信元 1 つの状態。"),
-    ),
-  })
-  .describe("読み直した後の配信元ごとの状態。");
+export const SettingsPutSettingsSourcesResponse = zod.object({
+  "sources": zod.array(zod.object({
+  "id": zod.string(),
+  "status": zod.enum(['serving', 'not_served', 'disabled']),
+  "errors": zod.array(zod.object({
+  "path": zod.string(),
+  "reason": zod.string()
+}).describe('検証で外した理由 1 件。')).optional(),
+  "configVersion": zod.union([zod.object({
+  "config": zod.string(),
+  "server": zod.string()
+}).describe('設定のバージョンとサーバーが読めるバージョン。'),zod.null()]).optional()
+}).describe('読み直した後の配信元 1 つの状態。'))
+}).describe('読み直した後の配信元ごとの状態。')
+

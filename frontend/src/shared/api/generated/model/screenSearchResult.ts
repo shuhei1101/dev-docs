@@ -4,7 +4,7 @@
  * FastAPI
  * OpenAPI spec version: 0.1.0
  */
-import type { ScreenSearchItem } from "./screenSearchItem";
+import type { ScreenSearchItem } from './screenSearchItem';
 
 /**
  * GET `/_api/sources/{source}/search` の応答。

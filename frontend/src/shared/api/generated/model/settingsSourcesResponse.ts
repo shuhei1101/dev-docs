@@ -4,7 +4,7 @@
  * FastAPI
  * OpenAPI spec version: 0.1.0
  */
-import type { SettingsSourceStatus } from "./settingsSourceStatus";
+import type { SettingsSourceStatus } from './settingsSourceStatus';
 
 /**
  * 読み直した後の配信元ごとの状態。

@@ -1,2 +1,2 @@
-export * from "./settings/settings";
-export * from "./view/view";
+export * from './settings/settings';
+export * from './view/view';

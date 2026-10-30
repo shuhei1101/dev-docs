@@ -4,8 +4,8 @@
  * FastAPI
  * OpenAPI spec version: 0.1.0
  */
-import type { NavItemChange } from "./navItemChange";
-import type { NavItemKind } from "./navItemKind";
+import type { NavItemChange } from './navItemChange';
+import type { NavItemKind } from './navItemKind';
 
 /**
  * サイドバーの見出しか文書の 1 行。

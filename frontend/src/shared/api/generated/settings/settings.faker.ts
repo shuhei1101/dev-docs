@@ -4,100 +4,17 @@
  * FastAPI
  * OpenAPI spec version: 0.1.0
  */
-import { faker } from "@faker-js/faker";
+import {
+  faker
+} from '@faker-js/faker';
 
-import type { SettingsSourcesResponse, SettingsSourcesView } from "../model";
+import type {
+  SettingsSourcesResponse,
+  SettingsSourcesView
+} from '../model';
 
-export const getSettingsGetSettingsSourcesResponseMock = (
-  overrideResponse: Partial<Extract<SettingsSourcesView, object>> = {},
-): SettingsSourcesView => ({
-  settingsPath: faker.string.alpha({ length: { min: 10, max: 20 } }),
-  sources: Array.from(
-    { length: faker.number.int({ min: 1, max: 10 }) },
-    (_, i) => i + 1,
-  ).map(() => ({
-    id: faker.helpers.arrayElement([
-      faker.string.alpha({ length: { min: 10, max: 20 } }),
-      null,
-    ]),
-    config: Array.from(
-      { length: faker.number.int({ min: 1, max: 10 }) },
-      (_, i) => i + 1,
-    ).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
-    enabled: faker.datatype.boolean(),
-    scope: {
-      read: faker.helpers.arrayElement([
-        Array.from(
-          { length: faker.number.int({ min: 1, max: 10 }) },
-          (_, i) => i + 1,
-        ).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
-        undefined,
-      ]),
-      write: faker.helpers.arrayElement([
-        Array.from(
-          { length: faker.number.int({ min: 1, max: 10 }) },
-          (_, i) => i + 1,
-        ).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
-        null,
-      ]),
-    },
-    status: faker.helpers.arrayElement([
-      "serving",
-      "not_served",
-      "disabled",
-      "pending_reload",
-    ] as const),
-    errors: faker.helpers.arrayElement([
-      Array.from(
-        { length: faker.number.int({ min: 1, max: 10 }) },
-        (_, i) => i + 1,
-      ).map(() => ({
-        path: faker.string.alpha({ length: { min: 10, max: 20 } }),
-        reason: faker.string.alpha({ length: { min: 10, max: 20 } }),
-      })),
-      undefined,
-    ]),
-    configVersion: faker.helpers.arrayElement([
-      {
-        config: faker.string.alpha({ length: { min: 10, max: 20 } }),
-        server: faker.string.alpha({ length: { min: 10, max: 20 } }),
-      },
-      null,
-    ]),
-  })),
-  ...overrideResponse,
-});
 
-export const getSettingsPutSettingsSourcesResponseMock = (
-  overrideResponse: Partial<Extract<SettingsSourcesResponse, object>> = {},
-): SettingsSourcesResponse => ({
-  sources: Array.from(
-    { length: faker.number.int({ min: 1, max: 10 }) },
-    (_, i) => i + 1,
-  ).map(() => ({
-    id: faker.string.alpha({ length: { min: 10, max: 20 } }),
-    status: faker.helpers.arrayElement([
-      "serving",
-      "not_served",
-      "disabled",
-    ] as const),
-    errors: faker.helpers.arrayElement([
-      Array.from(
-        { length: faker.number.int({ min: 1, max: 10 }) },
-        (_, i) => i + 1,
-      ).map(() => ({
-        path: faker.string.alpha({ length: { min: 10, max: 20 } }),
-        reason: faker.string.alpha({ length: { min: 10, max: 20 } }),
-      })),
-      undefined,
-    ]),
-    configVersion: faker.helpers.arrayElement([
-      {
-        config: faker.string.alpha({ length: { min: 10, max: 20 } }),
-        server: faker.string.alpha({ length: { min: 10, max: 20 } }),
-      },
-      null,
-    ]),
-  })),
-  ...overrideResponse,
-});
+export const getSettingsGetSettingsSourcesResponseMock = (overrideResponse: Partial<Extract<SettingsSourcesView, object>> = {}): SettingsSourcesView => ({settingsPath: faker.string.alpha({length: {min: 10, max: 20}}), sources: Array.from({ length: faker.number.int({min: 1, max: 10}) }, (_, i) => i + 1).map(() => ({id: faker.helpers.arrayElement([faker.string.alpha({length: {min: 10, max: 20}}),null,]), config: Array.from({ length: faker.number.int({min: 1, max: 10}) }, (_, i) => i + 1).map(() => (faker.string.alpha({length: {min: 10, max: 20}}))), enabled: faker.datatype.boolean(), scope: {read: faker.helpers.arrayElement([Array.from({ length: faker.number.int({min: 1, max: 10}) }, (_, i) => i + 1).map(() => (faker.string.alpha({length: {min: 10, max: 20}}))), undefined]), write: faker.helpers.arrayElement([Array.from({ length: faker.number.int({min: 1, max: 10}) }, (_, i) => i + 1).map(() => (faker.string.alpha({length: {min: 10, max: 20}}))),null,])}, status: faker.helpers.arrayElement(['serving','not_served','disabled','pending_reload'] as const), errors: faker.helpers.arrayElement([Array.from({ length: faker.number.int({min: 1, max: 10}) }, (_, i) => i + 1).map(() => ({path: faker.string.alpha({length: {min: 10, max: 20}}), reason: faker.string.alpha({length: {min: 10, max: 20}})})), undefined]), configVersion: faker.helpers.arrayElement([{config: faker.string.alpha({length: {min: 10, max: 20}}), server: faker.string.alpha({length: {min: 10, max: 20}})},null,])})), ...overrideResponse})
+
+export const getSettingsPutSettingsSourcesResponseMock = (overrideResponse: Partial<Extract<SettingsSourcesResponse, object>> = {}): SettingsSourcesResponse => ({sources: Array.from({ length: faker.number.int({min: 1, max: 10}) }, (_, i) => i + 1).map(() => ({id: faker.string.alpha({length: {min: 10, max: 20}}), status: faker.helpers.arrayElement(['serving','not_served','disabled'] as const), errors: faker.helpers.arrayElement([Array.from({ length: faker.number.int({min: 1, max: 10}) }, (_, i) => i + 1).map(() => ({path: faker.string.alpha({length: {min: 10, max: 20}}), reason: faker.string.alpha({length: {min: 10, max: 20}})})), undefined]), configVersion: faker.helpers.arrayElement([{config: faker.string.alpha({length: {min: 10, max: 20}}), server: faker.string.alpha({length: {min: 10, max: 20}})},null,])})), ...overrideResponse})
+

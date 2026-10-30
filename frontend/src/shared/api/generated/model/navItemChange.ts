@@ -5,11 +5,11 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export type NavItemChange =
-  (typeof NavItemChange)[keyof typeof NavItemChange] | null;
+export type NavItemChange = typeof NavItemChange[keyof typeof NavItemChange] | null;
+
 
 export const NavItemChange = {
-  added: "added",
-  modified: "modified",
-  deleted: "deleted",
+  added: 'added',
+  modified: 'modified',
+  deleted: 'deleted',
 } as const;

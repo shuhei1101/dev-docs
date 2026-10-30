@@ -1,11 +1,20 @@
 title: "開発コマンド"
 categories:
   - name: 環境構築（クローン直後）
-    commands: 未確定
+    commands: |-
+      ```bash
+      uv sync --frozen
+      npm ci
+      ```
+    verification:
+      state: 済
+      date: '2026-10-30'
+      detail: worktree で `npm ci` を実行し、終了コード 0 で `package-lock.json` どおりに依存が入り、lefthook のフックが入ることを確かめた。`uv sync --frozen` は『取り込み後の追従（pull 後）』で確かめている。
   - name: 取り込み後の追従（pull 後）
     commands: |-
       ```bash
       uv sync --frozen
+      npm ci
       ```
     verification:
       state: 済
@@ -50,9 +59,35 @@ categories:
       - dev/設計書/テスト/テスト実行方法#layers[lint]
   - name: ビルド・生成
     commands: |-
-      未確定
+      1. 画面をビルドする（出力先は `src/dev_docs/screen/`。commit する成果物）
+         ```bash
+         npm run build
+         ```
+      2. 画面の API の OpenAPI を書き出し、orval で API クライアントを生成する（サーバーの画面の API を変えたとき）
+         ```bash
+         npm run api:generate
+         ```
+      3. Storybook をビルドする（`tmp/storybook-static/`。開発中は `npm run storybook`）
+         ```bash
+         npm run build-storybook
+         ```
+    verification:
+      state: 済
+      date: '2026-10-30'
+      detail: worktree で `npm run build`・`npm run api:generate`・`npm run build-storybook` を実行し、終了コード 0 で成果物ができることを確かめた。Storybook は、ビルドだけを確かめ、ブラウザで開いて描画することは確かめていない。
   - name: 取り込み前の検査
-    commands: 未確定
+    commands: |-
+      `frontend/` を変えた commit では、lefthook の pre-commit が検査を流し、画面をビルドし直して `src/dev_docs/screen/` をステージへ戻す。手で流すときは次のとおり。
+
+      ```bash
+      npm run lint
+      npm run typecheck
+      npm run build
+      ```
+    verification:
+      state: 済
+      date: '2026-10-30'
+      detail: worktree で 3 つのコマンドを実行し、終了コード 0 を確かめた。lefthook の設定は `npx lefthook validate` で確かめた。pre-commit のフックを commit で走らせることは確かめていない。
   - name: 管理作業
     commands: 未確定
 lead: dev-docs の開発で使うコマンド。

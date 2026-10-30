@@ -6,6 +6,6 @@
  */
 
 export type ViewGetDocumentParams = {
-  ref?: string | null;
-  diff?: string | null;
+ref?: string | null;
+diff?: string | null;
 };

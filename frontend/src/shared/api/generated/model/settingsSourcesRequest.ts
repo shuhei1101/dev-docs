@@ -4,7 +4,7 @@
  * FastAPI
  * OpenAPI spec version: 0.1.0
  */
-import type { SourceEntry } from "./sourceEntry";
+import type { SourceEntry } from './sourceEntry';
 
 /**
  * PUT `/_api/settings/sources` の本文。

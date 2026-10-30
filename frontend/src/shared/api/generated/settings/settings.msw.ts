@@ -4,83 +4,54 @@
  * FastAPI
  * OpenAPI spec version: 0.1.0
  */
-import { HttpResponse, http } from "msw";
+import {
+  HttpResponse,
+  http
+} from 'msw';
 import type {
   HttpResponseResolver,
   PathParams,
-  RequestHandlerOptions,
-} from "msw";
+  RequestHandlerOptions
+} from 'msw';
 
 import type {
   SettingsSourcesRequest,
   SettingsSourcesResponse,
-  SettingsSourcesView,
-} from "../model";
+  SettingsSourcesView
+} from '../model';
 
 import {
   getSettingsGetSettingsSourcesResponseMock,
-  getSettingsPutSettingsSourcesResponseMock,
-} from "./settings.faker";
+  getSettingsPutSettingsSourcesResponseMock
+} from './settings.faker';
 
-export {
-  getSettingsGetSettingsSourcesResponseMock,
-  getSettingsPutSettingsSourcesResponseMock,
-} from "./settings.faker";
+export { getSettingsGetSettingsSourcesResponseMock, getSettingsPutSettingsSourcesResponseMock } from './settings.faker';
 
-export const getSettingsGetSettingsSourcesMockHandler = (
-  overrideResponse?:
-    | SettingsSourcesView
-    | ((
-        info: Parameters<HttpResponseResolver>[0],
-      ) => Promise<SettingsSourcesView> | SettingsSourcesView),
-  options?: RequestHandlerOptions,
-) => {
-  return http.get(
-    "*/_api/settings/sources",
-    async (info: Parameters<HttpResponseResolver>[0]) => {
-      return HttpResponse.json(
-        overrideResponse !== undefined
-          ? typeof overrideResponse === "function"
-            ? await overrideResponse(info)
-            : overrideResponse
-          : getSettingsGetSettingsSourcesResponseMock(),
-        { status: 200 },
-      );
-    },
-    options,
-  );
-};
 
-export const getSettingsPutSettingsSourcesMockHandler = (
-  overrideResponse?:
-    | SettingsSourcesResponse
-    | ((
-        info: Parameters<
-          HttpResponseResolver<PathParams, SettingsSourcesRequest>
-        >[0],
-      ) => Promise<SettingsSourcesResponse> | SettingsSourcesResponse),
-  options?: RequestHandlerOptions,
-) => {
-  return http.put<PathParams, SettingsSourcesRequest>(
-    "*/_api/settings/sources",
-    async (
-      info: Parameters<
-        HttpResponseResolver<PathParams, SettingsSourcesRequest>
-      >[0],
-    ) => {
-      return HttpResponse.json(
-        overrideResponse !== undefined
-          ? typeof overrideResponse === "function"
-            ? await overrideResponse(info)
-            : overrideResponse
-          : getSettingsPutSettingsSourcesResponseMock(),
-        { status: 200 },
-      );
-    },
-    options,
-  );
-};
+export const getSettingsGetSettingsSourcesMockHandler = (overrideResponse?: SettingsSourcesView | ((info: Parameters<HttpResponseResolver>[0]) => Promise<SettingsSourcesView> | SettingsSourcesView), options?: RequestHandlerOptions) => {
+  return http.get('*/_api/settings/sources', async (info: Parameters<HttpResponseResolver>[0]) => {
+
+
+    return HttpResponse.json(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getSettingsGetSettingsSourcesResponseMock(),
+      { status: 200
+      })
+  }, options)
+}
+
+export const getSettingsPutSettingsSourcesMockHandler = (overrideResponse?: SettingsSourcesResponse | ((info: Parameters<HttpResponseResolver<PathParams, SettingsSourcesRequest>>[0]) => Promise<SettingsSourcesResponse> | SettingsSourcesResponse), options?: RequestHandlerOptions) => {
+  return http.put<PathParams, SettingsSourcesRequest>('*/_api/settings/sources', async (info: Parameters<HttpResponseResolver<PathParams, SettingsSourcesRequest>>[0]) => {
+
+
+    return HttpResponse.json(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getSettingsPutSettingsSourcesResponseMock(),
+      { status: 200
+      })
+  }, options)
+}
 export const getSettingsMock = () => [
   getSettingsGetSettingsSourcesMockHandler(),
-  getSettingsPutSettingsSourcesMockHandler(),
-];
+  getSettingsPutSettingsSourcesMockHandler()
+]

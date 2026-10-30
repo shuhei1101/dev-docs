@@ -5,12 +5,12 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export type SettingsSourceRowStatus =
-  (typeof SettingsSourceRowStatus)[keyof typeof SettingsSourceRowStatus];
+export type SettingsSourceRowStatus = typeof SettingsSourceRowStatus[keyof typeof SettingsSourceRowStatus];
+
 
 export const SettingsSourceRowStatus = {
-  serving: "serving",
-  not_served: "not_served",
-  disabled: "disabled",
-  pending_reload: "pending_reload",
+  serving: 'serving',
+  not_served: 'not_served',
+  disabled: 'disabled',
+  pending_reload: 'pending_reload',
 } as const;

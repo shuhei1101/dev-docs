@@ -4,9 +4,9 @@
  * FastAPI
  * OpenAPI spec version: 0.1.0
  */
-import type { SettingsSourceStatusStatus } from "./settingsSourceStatusStatus";
-import type { SourceConfigVersion } from "./sourceConfigVersion";
-import type { SourceViolation } from "./sourceViolation";
+import type { SettingsSourceStatusStatus } from './settingsSourceStatusStatus';
+import type { SourceConfigVersion } from './sourceConfigVersion';
+import type { SourceViolation } from './sourceViolation';
 
 /**
  * 読み直した後の配信元 1 つの状態。
