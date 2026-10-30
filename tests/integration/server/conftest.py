@@ -308,15 +308,22 @@ def make_server(tmp_path: Path) -> Iterator[Callable[..., ServerEnv]]:
     """端末の設定を書いてアプリを起動し、HTTP のテストのクライアントを持つ環境を作る関数を返す。"""
     stack = ExitStack()
 
-    def _make(*specs: SourceSpec, settings_extra: str = "") -> ServerEnv:
+    def _make(
+        *specs: SourceSpec, settings_extra: str = "", screen_dir: Path | None = None
+    ) -> ServerEnv:
         state_dir = tmp_path / "state"
         settings_path = tmp_path / "settings.yaml"
         settings_path.write_text(
             _settings_text(tmp_path, state_dir, list(specs), settings_extra), encoding="utf-8"
         )
         handlers = build_handlers(load_terminal_config(settings_path))
+        app = (
+            build_app(handlers)
+            if screen_dir is None
+            else build_app(handlers, screen_dir=screen_dir)
+        )
         client = stack.enter_context(
-            TestClient(build_app(handlers), base_url=LOCAL_BASE_URL, raise_server_exceptions=False)
+            TestClient(app, base_url=LOCAL_BASE_URL, raise_server_exceptions=False)
         )
         return ServerEnv(
             root=tmp_path,

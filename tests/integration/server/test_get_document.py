@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 from collections.abc import Callable
+from datetime import datetime
 from typing import Any
 
 import pytest
@@ -49,6 +50,16 @@ CUSTOM_EXTRA = (
 )
 
 
+def _page_changes(items: list[dict[str, Any]]) -> dict[str, str | None]:
+    """サイドバーの項目の入れ子をたどり、page の文書のパスと変化を対応させる。"""
+    changes: dict[str, str | None] = {}
+    for item in items:
+        if item["kind"] == "page":
+            changes[item["path"]] = item["change"]
+        changes.update(_page_changes(item["items"]))
+    return changes
+
+
 def _custom_files(
     sample_file_set: Callable[..., dict[str, str]],
     sample_config_text: Callable[..., str],
@@ -78,7 +89,7 @@ def test_normal(
     files = sample_file_set(
         **{"dev-docs.yaml": sample_config_text(NAV), "docs/doc-1.yaml": TABLE_DOC}
     )
-    env = make_server(make_source("sample", files))
+    env = make_server(make_source("sample", files, date="2026-10-26T14:40:00+09:00"))
     # 実行
     top = env.client.get("/_api/sources/sample/docs")
     second = env.client.get("/_api/sources/sample/docs/docs/doc-2")
@@ -91,8 +102,13 @@ def test_normal(
     assert "## 項目" in body["markdown"]
     assert "| キー | 名称 | 備考 |" in body["markdown"]
     assert "dev-docs-table" not in body["markdown"]
-    assert body["conversion_error"] is None
-    assert body["changed_items"] is None
+    assert len(body["tableKeys"]) == 1
+    assert body["conversionError"] is None
+    assert body["diff"] is None
+    assert set(_page_changes(body["tabs"][0]["items"]).values()) == {None}
+    assert datetime.fromisoformat(body["updatedAt"]) == datetime.fromisoformat(
+        "2026-10-26T14:40:00+09:00"
+    )
     assert second.status_code == 200
     assert "# 文書 2" in second.json()["markdown"]
 
@@ -154,13 +170,19 @@ def test_normal_when_diff_given(
     commit_all: Callable[..., str],
     run_git: Callable[..., str],
     sample_doc_text: Callable[..., str],
+    sample_file_set: Callable[..., dict[str, str]],
 ) -> None:
-    """diff のリビジョンから変わった項目を返す（正常系）。"""
+    """diff のリビジョンから変わった項目と、サイドバーの page ごとの変化を返す（正常系）。"""
     # 準備
-    source = make_source("sample")
+    files = sample_file_set(**{"docs/doc-3.yaml": sample_doc_text("doc-3", "文書 3")})
+    source = make_source("sample", files)
     parent = run_git(source.folder, "rev-parse", "HEAD").strip()
     renamed = sample_doc_text("doc-1", "新しい名前", description="1 件目", tags=["a"])
-    changed = commit_all(source.folder, {"docs/doc-1.yaml": renamed})
+    changed = commit_all(
+        source.folder,
+        {"docs/doc-1.yaml": renamed, "docs/doc-4.yaml": sample_doc_text("doc-4", "文書 4")},
+        delete=("docs/doc-3.yaml",),
+    )
     env = make_server(source)
     # 実行
     response = env.client.get(
@@ -169,8 +191,14 @@ def test_normal_when_diff_given(
     # 検証
     body = response.json()
     assert response.status_code == 200
-    assert body["changed_items"] == ["name"]
+    assert body["diff"] == {"base": parent, "change": "modified", "changedItems": ["name"]}
     assert "# 新しい名前" in body["markdown"]
+    assert _page_changes(body["tabs"][0]["items"]) == {
+        "docs/doc-1": "modified",
+        "docs/doc-2": None,
+        "docs/doc-3": "deleted",
+        "docs/doc-4": "added",
+    }
 
 
 def test_normal_when_custom_converter(
@@ -201,7 +229,7 @@ def test_normal_when_conversion_failed(
     sample_config_text: Callable[..., str],
     commit_all: Callable[..., str],
 ) -> None:
-    """制限時間を超えたスクリプトを止め、conversion_error に失敗を入れる（正常系）。"""
+    """制限時間を超えたスクリプトを止め、conversionError に失敗を入れる（正常系）。"""
     # 準備
     files = _custom_files(sample_file_set, sample_config_text, SLEEP_SCRIPT)
     source = make_source("custom", files)
@@ -212,7 +240,7 @@ def test_normal_when_conversion_failed(
     commit_all(source.folder, {"docs/doc-1.yaml": "a: [1\n"}, "docs: 壊す")
     unreadable = env.client.get("/_api/sources/custom/docs/docs/doc-1")
     # 検証
-    error = timed_out.json()["conversion_error"]
+    error = timed_out.json()["conversionError"]
     pid = int((source.folder / "pid.txt").read_text(encoding="utf-8"))
     assert timed_out.status_code == 200
     assert timed_out.json()["markdown"] is None
@@ -224,7 +252,7 @@ def test_normal_when_conversion_failed(
         os.kill(pid, 0)
     assert schema_driven.status_code == 200
     assert "# 文書 2" in schema_driven.json()["markdown"]
-    broken = unreadable.json()["conversion_error"]
+    broken = unreadable.json()["conversionError"]
     assert unreadable.status_code == 200
     assert unreadable.json()["markdown"] is None
     assert broken["reason"] == "invalid_yaml"

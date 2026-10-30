@@ -21,7 +21,11 @@ export default tseslint.config(
   js.configs.recommended,
   ...tseslint.configs.recommended,
   {
-    files: ["frontend/**/*.{ts,tsx}", "tests/unit/frontend/**/*.{ts,tsx}"],
+    files: [
+      "frontend/**/*.{ts,tsx}",
+      "tests/unit/frontend/**/*.{ts,tsx}",
+      "tests/integration/frontend/**/*.{ts,tsx}",
+    ],
     languageOptions: {
       globals: { ...globals.browser },
       parserOptions: { projectService: false },
@@ -124,7 +128,7 @@ export default tseslint.config(
     rules: { "func-style": "off" },
   },
   {
-    files: ["frontend/*.ts", "eslint.config.js"],
+    files: ["frontend/*.ts", "tests/integration/frontend/*.ts", "eslint.config.js"],
     languageOptions: { globals: globals.node },
   },
 );

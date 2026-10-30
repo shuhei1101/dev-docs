@@ -26,7 +26,7 @@ def test_normal(
     opened = env.client.get(f"/_api/sources/sample/docs/{body['items'][0]['path']}")
     # 検証
     assert found.status_code == 200
-    assert body["total_count"] == 1
+    assert body["totalCount"] == 1
     assert [item["path"] for item in body["items"]] == ["docs/doc-2"]
     assert any("ページング" in snippet for snippet in body["items"][0]["snippets"])
     assert opened.status_code == 200

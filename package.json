@@ -4,12 +4,13 @@
   "type": "module",
   "scripts": {
     "test:unit": "vitest run --config frontend/vitest.config.ts",
+    "test:integration": "playwright test --config tests/integration/frontend/playwright.config.ts",
     "dev": "vite --config frontend/vite.config.ts",
     "build": "vite build --config frontend/vite.config.ts",
     "api:export": "uv run python frontend/scripts/export_openapi.py",
     "api:generate": "npm run api:export && orval --config frontend/orval.config.ts",
     "typecheck": "node node_modules/typescript-native/bin/tsc --noEmit -p frontend/tsconfig.json",
-    "lint": "eslint frontend tests/unit/frontend eslint.config.js",
+    "lint": "eslint frontend tests/unit/frontend tests/integration/frontend eslint.config.js",
     "prepare": "lefthook install",
     "storybook": "storybook dev -c frontend/.storybook -p 6006",
     "build-storybook": "storybook build -c frontend/.storybook -o tmp/storybook-static"

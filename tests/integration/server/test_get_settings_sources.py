@@ -18,7 +18,7 @@ def test_normal(make_source: Callable[..., Any], make_server: Callable[..., Any]
     # 検証
     body = response.json()
     assert response.status_code == 200
-    assert body["settings_path"] == str(env.settings_path)
+    assert body["settingsPath"] == str(env.settings_path)
     assert [(row["id"], row["status"]) for row in body["sources"]] == [("sample", "serving")]
     assert body["sources"][0]["config"] == [str(source.config[0])]
     assert body["sources"][0]["scope"]["read"] == [str(source.folder)]
@@ -47,7 +47,7 @@ def test_normal_when_source_not_served(
     assert response.status_code == 200
     assert rows["sample"]["status"] == "serving"
     assert rows["legacy"]["status"] == "serving"
-    assert rows["legacy"]["config_version"] == {"config": "0", "server": "3"}
+    assert rows["legacy"]["configVersion"] == {"config": "0", "server": "3"}
     assert rows["broken"]["status"] == "not_served"
     assert any(
         error["path"] == "documents[0].paths" and "必須" in error["reason"]
