@@ -126,4 +126,3 @@ def check_related(metadata: Mapping[str, Any], types: Sequence[str]) -> list[Vio
                 )
             )
     return violations
-
