@@ -28,7 +28,68 @@ functions:
         description: ルーターの文脈
     returns:
       type: Router
-      description: '`createRouter({routeTree, context, defaultPreload: "intent", defaultPreloadStaleTime: 0, scrollRestoration: true})`。`Register` の型も宣言する'
+      description: '`createRouter({routeTree, context, defaultPreload: "intent", defaultPreloadStaleTime: 0, scrollRestoration: true, parseSearch, stringifySearch})`。`Register` の型も宣言する'
     process: |-
       1. 渡した文脈でルーターを作る（`defaultPreloadStaleTime` 0 で読み込みの鮮度は TanStack Query に任せる）
       2. `defaultErrorComponent` に画面の例外の表示（`react-error-boundary` と同じ `ErrorFallback`）を渡す
+    unit_tests:
+      - name: test_create_app_router
+        case: 正常
+        summary: ルーターの設定
+        condition: 文脈を渡して作る
+        mock: なし
+        expected: '`defaultPreload` が `intent`、`defaultPreloadStaleTime` が 0、`scrollRestoration` が `true`'
+  - name: parseSearch
+    title: クエリの読み取り
+    container: app/router.tsx
+    usecase: 起動
+    role: 変換
+    summary: URL のクエリを文字列のまま読む（数字だけのリビジョン＝commit の短縮 ID を数値にしない）
+    kind: 関数
+    scope: public
+    args:
+      - name: search
+        type: string
+        required: true
+        passing: positional
+        description: '`?` で始まるクエリの文字列'
+    returns:
+      type: Record<string, string>
+      description: キーと文字列の値。`createRouter` の `parseSearch` に渡す
+    process: 1. `URLSearchParams` で読み、値を文字列のまま返す（既定の読み取りは `8852552` を数値にする）
+    unit_tests:
+      - name: test_parse_search_when_numeric_rev
+        case: 正常
+        summary: 数字だけ・指数の形のリビジョンを文字列で読む
+        condition: '`?rev=8852552` と `?rev=1234e5&base=abc1234`'
+        mock: なし
+        expected: '`{rev: "8852552"}` と `{rev: "1234e5", base: "abc1234"}`'
+  - name: stringifySearch
+    title: クエリの書き出し
+    container: app/router.tsx
+    usecase: 起動
+    role: 変換
+    summary: クエリを引用符で囲まず文字列のまま書く
+    kind: 関数
+    scope: public
+    args:
+      - name: search
+        type: Record<string, unknown>
+        required: true
+        passing: positional
+        description: キーと値
+    returns:
+      type: string
+      description: '`?{key}={value}&...`（値があるキーが無いときは空文字列）。`createRouter` の `stringifySearch` に渡す'
+    process: |-
+      1. `undefined`・`null` のキーは書かない
+      2. 残りの値を `String` にして `URLSearchParams` で書く（既定の書き出しは数字だけの文字列を引用符で囲む）
+    unit_tests:
+      - name: test_stringify_search_when_numeric_rev
+        case: 正常
+        summary: 数字だけのリビジョンを引用符なしで書く
+        condition: '`{rev: "8852552", base: undefined}` と `{}`'
+        mock: なし
+        expected: '`?rev=8852552` と空文字列'
+test_files:
+  - tests/unit/frontend/src/app/router.test.tsx
