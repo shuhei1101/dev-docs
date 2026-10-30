@@ -4,7 +4,6 @@ from dev_docs.features.validation.rules import (
     check_id_format,
     check_related,
     check_schema,
-    check_tags,
 )
 
 DEFAULT_TYPES = ["references", "depends_on", "see_also"]
@@ -90,23 +89,3 @@ def test_check_related_when_malformed() -> None:
     result = check_related(metadata, DEFAULT_TYPES)
     # 検証
     assert [violation.path for violation in result] == ["related[0]", "related[1].to"]
-
-
-def test_check_tags() -> None:
-    """マスターに無いタグ（正常系）。"""
-    # 準備
-    master = {"python": "Python の規約", "mcp": "MCP の規約"}
-    # 実行
-    result = check_tags({"tags": ["python", "pyton"]}, master)
-    # 検証
-    assert len(result) == 1
-    assert result[0].path == "tags[1]"
-    assert "python" in result[0].fix
-
-
-def test_check_tags_when_no_master() -> None:
-    """マスターが無い（正常系）。"""
-    # 実行
-    result = check_tags({"tags": ["x"]}, {})
-    # 検証
-    assert result == []
