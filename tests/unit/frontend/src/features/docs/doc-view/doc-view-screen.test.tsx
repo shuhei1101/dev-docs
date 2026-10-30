@@ -1,4 +1,4 @@
-import { screen, waitFor } from "@testing-library/react";
+import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { HttpResponse, http } from "msw";
 import { beforeEach, expect, test, vi } from "vitest";
@@ -33,7 +33,8 @@ test("test_doc_view_screen", async () => {
 
   expect(await screen.findByRole("heading", { level: 1, name: "A" })).toBeInTheDocument();
   expect(screen.getByRole("navigation", { name: "パンくず" })).toBeInTheDocument();
-  expect(screen.getByRole("link", { name: "A" })).toHaveAttribute("aria-current", "page");
+  const sidebar = screen.getByRole("navigation", { name: "文書の一覧" });
+  expect(within(sidebar).getByRole("link", { name: "A" })).toHaveAttribute("aria-current", "page");
   await waitFor(() => expect(document.title).toBe("A | s | dev-docs"));
   await waitFor(() => expect(mount).toHaveBeenCalled());
   expect((mount.mock.calls[0][1] as { markdown: string }).markdown).not.toContain("# A");

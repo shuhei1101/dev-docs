@@ -1,4 +1,5 @@
 import { screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { HttpResponse, http } from "msw";
 import { expect, test, vi } from "vitest";
 
@@ -28,8 +29,8 @@ test("test_not_found_screen", async () => {
   expect(await screen.findByRole("heading", { name: "文書が見つかりません" })).toBeInTheDocument();
   expect(screen.getByText("a.md")).toBeInTheDocument();
   expect(await screen.findByRole("link", { name: "s のトップを開く" })).toBeInTheDocument();
-  const list = await screen.findByRole("list", { name: "配信中の配信元" });
-  expect(list.querySelectorAll("a")).toHaveLength(2);
+  await userEvent.click(await screen.findByRole("button", { name: "配信元を切り替える" }));
+  expect(await screen.findAllByRole("menuitem")).toHaveLength(2);
   expect(router.state.location.pathname).toBe("/s/a.md");
 });
 

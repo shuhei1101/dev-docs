@@ -1,0 +1,125 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+/* 標準の色のパレットを削除し、下の 3 ティアのトークンだけを使う */
+@theme {
+  --color-*: initial;
+}
+
+/* ティア 1: 素の値（用途を持たない） */
+:root {
+  --palette-white: oklch(1 0 0);
+  --palette-gray-50: oklch(0.985 0.002 250);
+  --palette-gray-100: oklch(0.968 0.003 250);
+  --palette-gray-200: oklch(0.928 0.005 250);
+  --palette-gray-300: oklch(0.87 0.007 250);
+  --palette-gray-500: oklch(0.556 0.015 255);
+  --palette-gray-700: oklch(0.372 0.02 258);
+  --palette-gray-800: oklch(0.27 0.02 260);
+  --palette-gray-900: oklch(0.205 0.02 262);
+  --palette-gray-950: oklch(0.15 0.02 262);
+  --palette-blue-500: oklch(0.6 0.2 259);
+  --palette-blue-600: oklch(0.54 0.22 262);
+  --palette-blue-300: oklch(0.75 0.14 255);
+  --palette-red-500: oklch(0.577 0.245 27);
+  --palette-red-400: oklch(0.7 0.19 22);
+  --palette-green-600: oklch(0.55 0.15 150);
+  --palette-green-400: oklch(0.75 0.17 150);
+  --palette-amber-600: oklch(0.65 0.16 70);
+  --palette-amber-400: oklch(0.8 0.15 80);
+  --radius: 0.5rem;
+}
+
+/* ティア 2: 意味を持つトークン（ライト） */
+:root {
+  --background: var(--palette-white);
+  --foreground: var(--palette-gray-900);
+  --card: var(--palette-white);
+  --card-foreground: var(--palette-gray-900);
+  --popover: var(--palette-white);
+  --popover-foreground: var(--palette-gray-900);
+  --primary: var(--palette-blue-600);
+  --primary-foreground: var(--palette-white);
+  --secondary: var(--palette-gray-100);
+  --secondary-foreground: var(--palette-gray-900);
+  --muted: var(--palette-gray-100);
+  --muted-foreground: var(--palette-gray-500);
+  --accent: var(--palette-gray-100);
+  --accent-foreground: var(--palette-gray-900);
+  --destructive: var(--palette-red-500);
+  --success: var(--palette-green-600);
+  --warning: var(--palette-amber-600);
+  --border: var(--palette-gray-200);
+  --input: var(--palette-gray-300);
+  --ring: var(--palette-blue-500);
+}
+
+.dark {
+  --background: var(--palette-gray-950);
+  --foreground: var(--palette-gray-50);
+  --card: var(--palette-gray-900);
+  --card-foreground: var(--palette-gray-50);
+  --popover: var(--palette-gray-900);
+  --popover-foreground: var(--palette-gray-50);
+  --primary: var(--palette-blue-300);
+  --primary-foreground: var(--palette-gray-950);
+  --secondary: var(--palette-gray-800);
+  --secondary-foreground: var(--palette-gray-50);
+  --muted: var(--palette-gray-800);
+  --muted-foreground: var(--palette-gray-300);
+  --accent: var(--palette-gray-800);
+  --accent-foreground: var(--palette-gray-50);
+  --destructive: var(--palette-red-400);
+  --success: var(--palette-green-400);
+  --warning: var(--palette-amber-400);
+  --border: var(--palette-gray-800);
+  --input: var(--palette-gray-700);
+  --ring: var(--palette-blue-300);
+}
+
+/* ティア 3: Tailwind への割り当て */
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-transparent: transparent;
+  --color-current: currentcolor;
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --font-sans: ui-sans-serif, system-ui, "Hiragino Sans", "Yu Gothic UI", "Noto Sans JP", sans-serif;
+  --font-mono: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background font-sans text-foreground;
+  }
+  html {
+    scroll-padding-top: 6rem;
+  }
+}
