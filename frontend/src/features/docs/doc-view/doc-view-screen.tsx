@@ -1,6 +1,6 @@
 import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
 import { useParams, useSearch } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 import { DocMain } from "@/features/docs/doc-view/components/doc-main";
 import { DocSidebar } from "@/features/docs/doc-view/components/doc-sidebar";
@@ -8,6 +8,7 @@ import { DocTabs } from "@/features/docs/doc-view/components/doc-tabs";
 import { DocToc } from "@/features/docs/doc-view/components/doc-toc";
 import { SidebarDrawer } from "@/features/docs/doc-view/components/sidebar-drawer";
 import { useDocNavigation } from "@/features/docs/doc-view/hooks/use-doc-navigation";
+import { useDocScreenEffects } from "@/features/docs/doc-view/hooks/use-doc-screen-effects";
 import { findActivePage, pageTitle } from "@/features/docs/doc-view/nav";
 import {
   baseMarkdownQueryOptions,
@@ -23,6 +24,7 @@ import type { NavTab } from "@/shared/api/generated/model";
 import { useSettingsGetSettingsSources } from "@/shared/api/generated/settings/settings";
 import { useViewListRefs } from "@/shared/api/generated/view/view";
 import { ShortcutDialog } from "@/shared/components/shortcut-dialog/shortcut-dialog";
+import { SkipLink } from "@/shared/components/skip-link";
 import { Topbar } from "@/shared/components/topbar/topbar";
 import { useShortcut } from "@/shared/hooks/use-shortcut";
 import { usePreferencesStore } from "@/shared/stores/preferences";
@@ -81,9 +83,7 @@ export const DocViewScreen = () => {
       ? changedSections(doc.markdown, baseMarkdown)
       : undefined;
 
-  useEffect(() => {
-    document.title = pageTitle(active, source);
-  }, [active, source]);
+  useDocScreenEffects(pageTitle(active, source, emptyTab), source);
   const idle = !panels.search && !panels.help;
   useShortcut("search", () => open("search"), { enabled: idle });
   useShortcut("help", () => open("help"), { enabled: idle });
@@ -100,12 +100,7 @@ export const DocViewScreen = () => {
 
   return (
     <div className="min-h-screen">
-      <a
-        href="#main"
-        className="sr-only focus:not-sr-only focus:absolute focus:z-50 focus:bg-background focus:p-2"
-      >
-        本文へスキップ
-      </a>
+      <SkipLink />
       <Topbar
         screen="doc-view"
         sources={servingSources(settings)}
@@ -132,9 +127,9 @@ export const DocViewScreen = () => {
         />
       </div>
       <div className="mx-auto flex max-w-screen-2xl gap-6 px-4">
-        <aside className="sticky top-24 hidden max-h-screen w-60 shrink-0 self-start overflow-y-auto py-4 md:block">
+        <div className="sticky top-24 hidden max-h-screen w-60 shrink-0 self-start overflow-y-auto py-4 md:block">
           {sidebar()}
-        </aside>
+        </div>
         <DocMain
           doc={doc}
           active={active}
@@ -148,11 +143,11 @@ export const DocViewScreen = () => {
           onCompare={nav.compare}
           onClearDiff={nav.clearDiff}
         />
-        <aside className="sticky top-24 hidden max-h-screen w-56 shrink-0 self-start overflow-y-auto py-6 xl:block">
+        <div className="sticky top-24 hidden max-h-screen w-56 shrink-0 self-start overflow-y-auto py-6 xl:block">
           {!emptyTab && !doc.conversionError && (
             <DocToc items={headings} changed={changed} />
           )}
-        </aside>
+        </div>
       </div>
       <SidebarDrawer
         open={panels.drawer}

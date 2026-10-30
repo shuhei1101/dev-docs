@@ -1,6 +1,7 @@
 import { useNavigate, useSearch } from "@tanstack/react-router";
 import { type MouseEvent, useEffect, useRef } from "react";
 
+import { useColumnPersistence } from "@/features/docs/doc-view/hooks/use-column-persistence";
 import { useMdmark } from "@/features/docs/doc-view/hooks/use-mdmark";
 import { findActivePage } from "@/features/docs/doc-view/nav";
 import { type TocItem, readToc } from "@/features/docs/doc-view/toc";
@@ -123,6 +124,8 @@ export const DocBody = ({
       },
     },
   });
+
+  useColumnPersistence(ref, doc.source, doc.tableKeys);
 
   useEffect(() => {
     if (ready && ref.current) onHeadings(readToc(ref.current));

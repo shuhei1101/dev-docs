@@ -12,17 +12,25 @@ const FIELDS: [RegExp, keyof SourceFormValues][] = [
   [/^scope\.write(\[\d+\])*$/, "write"],
 ];
 
+/** 違反の `path`（`sources[{index}].…`）が指す入力欄を返す。編集・追加した行のものでなければ undefined */
+export const fieldOf = (
+  path: string,
+  index: number,
+): keyof SourceFormValues | undefined => {
+  const prefix = `sources[${index}].`;
+  if (!path.startsWith(prefix)) return undefined;
+  const rest = path.slice(prefix.length);
+  return FIELDS.find(([pattern]) => pattern.test(rest))?.[1];
+};
+
 /** 保存の 422 の `errors[]` のうち、編集・追加した行のものを項目へ、全てをまとめへ振り分ける */
 export const toFieldErrors = (
   errors: Violation[],
   index: number,
 ): { fields: FieldError[]; summary: Violation[] } => {
-  const prefix = `sources[${index}].`;
   const fields: FieldError[] = [];
   for (const error of errors) {
-    if (!error.path.startsWith(prefix)) continue;
-    const rest = error.path.slice(prefix.length);
-    const name = FIELDS.find(([pattern]) => pattern.test(rest))?.[1];
+    const name = fieldOf(error.path, index);
     if (name) fields.push({ name, message: error.reason });
   }
   return { fields, summary: errors };

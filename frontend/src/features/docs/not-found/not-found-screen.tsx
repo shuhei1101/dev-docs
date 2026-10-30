@@ -1,10 +1,11 @@
 import { useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { MissingLinks } from "@/features/docs/not-found/components/missing-links";
 import { useMissingView } from "@/features/docs/not-found/hooks/use-missing-view";
 import { SearchDialog } from "@/features/docs/shared/search-dialog/search-dialog";
 import { ShortcutDialog } from "@/shared/components/shortcut-dialog/shortcut-dialog";
+import { SkipLink } from "@/shared/components/skip-link";
 import { Topbar } from "@/shared/components/topbar/topbar";
 import { useShortcut } from "@/shared/hooks/use-shortcut";
 import { usePreferencesStore } from "@/shared/stores/preferences";
@@ -25,6 +26,10 @@ export const NotFoundScreen = ({ data }: Props) => {
   const { source, urlSource, rev, refs, missing, serving } =
     useMissingView(data);
 
+  useEffect(() => {
+    document.title = "見つかりません | dev-docs";
+  }, []);
+
   const idle = dialog === null;
   useShortcut("search", () => setDialog("search"), {
     enabled: source !== undefined && idle,
@@ -33,12 +38,7 @@ export const NotFoundScreen = ({ data }: Props) => {
 
   return (
     <div className="min-h-screen">
-      <a
-        href="#main"
-        className="sr-only focus:not-sr-only focus:absolute focus:z-50 focus:bg-background focus:p-2"
-      >
-        本文へスキップ
-      </a>
+      <SkipLink />
       <Topbar
         screen="not-found"
         sources={serving}

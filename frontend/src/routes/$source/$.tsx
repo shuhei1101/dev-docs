@@ -1,9 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
 
-import { DocSkeleton } from "@/features/docs/doc-view/components/doc-skeleton";
 import { DocViewScreen } from "@/features/docs/doc-view/doc-view-screen";
 import { loadDocument } from "@/features/docs/doc-view/queries";
 import { DocViewSearchSchema } from "@/features/docs/doc-view/search";
+import { KEEP_PREVIOUS_MS } from "@/app/pending";
 import { NotFoundScreen } from "@/features/docs/not-found/not-found-screen";
 
 export const Route = createFileRoute("/$source/$")({
@@ -17,6 +17,5 @@ export const Route = createFileRoute("/$source/$")({
     }),
   component: DocViewScreen,
   notFoundComponent: ({ data }) => <NotFoundScreen data={data} />,
-  pendingComponent: DocSkeleton,
-  pendingMs: 1000,
+  pendingMs: KEEP_PREVIOUS_MS,
 });

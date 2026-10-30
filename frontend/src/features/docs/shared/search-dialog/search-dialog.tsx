@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { splitHighlight } from "@/features/docs/shared/search-dialog/highlight";
 import { AppError } from "@/shared/core/app-error";
@@ -14,6 +14,9 @@ import {
 } from "@/shared/components/ui/command";
 
 const DEBOUNCE_MS = 200;
+
+/** 結果の 1 件目が選ばれるのを待つ最大のフレーム数 */
+const SELECTION_WAIT_FRAMES = 30;
 
 type Props = {
   open: boolean;
@@ -83,6 +86,26 @@ export const SearchDialog = ({
   });
   const result = sent === "" ? undefined : search.data;
 
+  // cmdk は最初に選んだ結果を `aria-activedescendant` に反映しないため、結果が出たら選んでいる結果を指す
+  const inputRef = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    let frame = 0;
+    let attempts = 0;
+    const point = () => {
+      const selected = document.querySelector(
+        '[cmdk-item][aria-selected="true"]',
+      );
+      if (selected?.id) {
+        inputRef.current?.setAttribute("aria-activedescendant", selected.id);
+      } else if (attempts < SELECTION_WAIT_FRAMES) {
+        attempts += 1;
+        frame = requestAnimationFrame(point);
+      }
+    };
+    frame = requestAnimationFrame(point);
+    return () => cancelAnimationFrame(frame);
+  }, [result]);
+
   return (
     <CommandDialog
       open={open}
@@ -92,6 +115,7 @@ export const SearchDialog = ({
     >
       <Command shouldFilter={false}>
         <CommandInput
+          ref={inputRef}
           value={query}
           onValueChange={setQuery}
           placeholder="文書を検索"

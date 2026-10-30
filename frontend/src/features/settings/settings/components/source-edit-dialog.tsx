@@ -1,7 +1,9 @@
-import { useRef } from "react";
+import { useEffect, useRef } from "react";
 import { Controller } from "react-hook-form";
 
 import { useSourceForm } from "@/features/settings/settings/hooks/use-source-form";
+import { fieldOf } from "@/features/settings/settings/problem-errors";
+import type { SourceFormValues } from "@/features/settings/settings/form";
 import type { SettingsSourceRow } from "@/shared/api/generated/model";
 import {
   Alert,
@@ -59,29 +61,61 @@ const Field = ({ id, label, required, hint, error, children }: FieldProps) => (
 type FailureSummaryProps = {
   summary: { path: string; message: string }[];
   invalidCount: number;
+  /** 違反の行を押したときに、その入力欄へフォーカスを移す */
+  onFocusField: (name: keyof SourceFormValues) => void;
+  rowIndex: number;
 };
 
+/** 末尾の句点と直し方（最初の句点より後ろ）を除いた違反の文言 */
+const headline = (message: string): string => message.replace(/。.*$/s, "");
+
 /** 保存の失敗のまとめ（入力チェックに引っかかったときと、保存の 422 のとき） */
-const FailureSummary = ({ summary, invalidCount }: FailureSummaryProps) =>
-  summary.length === 0 && invalidCount === 0 ? null : (
-    <Alert variant="destructive" role="alert">
+const FailureSummary = ({
+  summary,
+  invalidCount,
+  onFocusField,
+  rowIndex,
+}: FailureSummaryProps) => {
+  const ref = useRef<HTMLDivElement>(null);
+  const visible = summary.length > 0 || invalidCount > 0;
+  // まとめが出たときにフォーカスを移す
+  useEffect(() => {
+    if (visible) ref.current?.focus();
+  }, [visible]);
+  if (!visible) return null;
+  return (
+    <Alert variant="destructive" role="alert" tabIndex={-1} ref={ref}>
       <AlertTitle>
         保存できませんでした（{summary.length || invalidCount} 件）
       </AlertTitle>
       {summary.length > 0 && (
         <AlertDescription>
           <ul className="list-disc pl-4">
-            {summary.map((item) => (
-              <li key={`${item.path}:${item.message}`}>
-                {item.message}{" "}
-                <code className="font-mono text-xs">{item.path}</code>
-              </li>
-            ))}
+            {summary.map((item) => {
+              const name = fieldOf(item.path, rowIndex);
+              return (
+                <li key={`${item.path}:${item.message}`}>
+                  {name ? (
+                    <button
+                      type="button"
+                      className="text-left underline underline-offset-2"
+                      onClick={() => onFocusField(name)}
+                    >
+                      {headline(item.message)}
+                    </button>
+                  ) : (
+                    headline(item.message)
+                  )}{" "}
+                  <code className="font-mono text-xs">{item.path}</code>
+                </li>
+              );
+            })}
           </ul>
         </AlertDescription>
       )}
     </Alert>
   );
+};
 
 /** 配信元の追加・編集のダイアログ */
 export const SourceEditDialog = ({
@@ -119,7 +153,12 @@ export const SourceEditDialog = ({
                 : "端末の設定に配信元を追加します。"}
             </DialogDescription>
           </DialogHeader>
-          <FailureSummary summary={summary} invalidCount={invalidCount} />
+          <FailureSummary
+            summary={summary}
+            invalidCount={invalidCount}
+            rowIndex={index ?? sources.length}
+            onFocusField={(name) => form.setFocus(name)}
+          />
           {!editing && (
             <Field
               id="source-id"

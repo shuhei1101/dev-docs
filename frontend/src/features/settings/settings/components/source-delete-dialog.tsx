@@ -1,4 +1,4 @@
-import { useRef } from "react";
+import { useRef, useState } from "react";
 
 import { useSaveSources } from "@/features/settings/settings/queries";
 import { removeSource } from "@/features/settings/settings/form";
@@ -13,6 +13,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/shared/components/ui/alert-dialog";
+import { Alert } from "@/shared/components/ui/alert";
+import { AppError } from "@/shared/core/app-error";
 import { handleAppError } from "@/shared/core/handle-app-error";
 
 type Props = {
@@ -33,15 +35,22 @@ export const SourceDeleteDialog = ({
   index,
 }: Props) => {
   const save = useSaveSources();
+  const [failure, setFailure] = useState<string | null>(null);
   const cancelRef = useRef<HTMLButtonElement>(null);
   const source = sources[index];
   const name = source?.id ?? `${index + 1} 行目`;
 
   const remove = async () => {
+    setFailure(null);
     try {
       await save.mutateAsync(removeSource(sources, index));
       onOpenChange(false);
     } catch (error) {
+      setFailure(
+        error instanceof AppError
+          ? (error.problem?.detail ?? error.message)
+          : "端末の設定を保存できませんでした。",
+      );
       handleAppError(error, { message: "端末の設定を保存できませんでした。" });
     }
   };
@@ -56,6 +65,7 @@ export const SourceDeleteDialog = ({
             {folderOf(source?.config[0])} と文書は削除しません。
           </AlertDialogDescription>
         </AlertDialogHeader>
+        {failure !== null && <Alert variant="destructive">{failure}</Alert>}
         <AlertDialogFooter>
           <AlertDialogCancel ref={cancelRef}>キャンセル</AlertDialogCancel>
           <AlertDialogAction

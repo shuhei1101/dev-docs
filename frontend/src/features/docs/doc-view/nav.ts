@@ -43,5 +43,9 @@ export const firstPagePath = (tab: NavTab): string | null => {
 };
 
 /** ブラウザのタブに出すタイトルを作る */
-export const pageTitle = (active: ActivePage, source: string): string =>
-  `${active.page?.title ?? active.tab.title} | ${source} | dev-docs`;
+export const pageTitle = (
+  active: ActivePage,
+  source: string,
+  emptyTab: NavTab | null = null,
+): string =>
+  `${emptyTab?.title ?? active.page?.title ?? active.tab.title} | ${source} | dev-docs`;

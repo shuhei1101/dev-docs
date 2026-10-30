@@ -55,7 +55,6 @@ export const useSourceForm = ({ sources, index, onSaved }: Options) => {
         setSummary(
           all.map((item) => ({ path: item.path, message: item.reason })),
         );
-        if (fields[0]) form.setFocus(fields[0].name);
         return;
       }
       handleAppError(error, { message: "端末の設定を保存できませんでした。" });

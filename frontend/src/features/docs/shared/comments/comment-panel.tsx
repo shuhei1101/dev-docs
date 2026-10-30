@@ -20,6 +20,7 @@ import {
   SheetTitle,
 } from "@/shared/components/ui/sheet";
 import { Textarea } from "@/shared/components/ui/textarea";
+import { useMediaQuery } from "@/shared/hooks/use-media-query";
 
 type Props = {
   open: boolean;
@@ -47,6 +48,7 @@ export const CommentPanel = ({
   const [editingId, setEditingId] = useState<string | null>(null);
   const [draft, setDraft] = useState("");
   const [invalid, setInvalid] = useState(false);
+  const narrow = useMediaQuery("(max-width: 47.99rem)");
 
   const chosen = comments.filter((comment) => comment.selected);
   const all = comments.length > 0 && chosen.length === comments.length;
@@ -100,11 +102,21 @@ export const CommentPanel = ({
   };
 
   return (
-    <Sheet modal={false} open={open} onOpenChange={onOpenChange}>
+    <Sheet
+      modal={false}
+      disablePointerDismissal
+      open={open}
+      onOpenChange={onOpenChange}
+    >
       <SheetContent
-        side="right"
+        side={narrow ? "bottom" : "right"}
         showCloseButton={false}
-        className="w-96 max-w-full"
+        overlay={false}
+        className={
+          narrow
+            ? "max-h-2/3 w-full"
+            : "top-12! bottom-0! h-auto! w-96 max-w-full"
+        }
       >
         <SheetHeader className="flex-row items-center justify-between">
           <SheetTitle>
