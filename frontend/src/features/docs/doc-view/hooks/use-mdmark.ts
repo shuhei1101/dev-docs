@@ -66,9 +66,15 @@ const load = (): Promise<MdmarkModule> => {
   return loading;
 };
 
-type State = { handle: MdmarkHandle | null; ready: boolean; error: unknown };
+type State = {
+  handle: MdmarkHandle | null;
+  ready: boolean;
+  error: unknown;
+  /** `handle` が描いている文書 */
+  docId: string | null;
+};
 
-/** 要素に mdmark で本文を描き、本文の変更で `update`、外れるときに `destroy` する */
+/** 要素に mdmark で本文を描き、本文の変更で `update`、外れるときに `destroy` する。`ready` は今の文書を描き終えたとき `true` */
 export const useMdmark = (
   ref: RefObject<HTMLElement | null>,
   options: MdmarkOptions,
@@ -77,6 +83,7 @@ export const useMdmark = (
     handle: null,
     ready: false,
     error: null,
+    docId: null,
   });
   const latest = useRef(options);
   const rendered = useRef(options.markdown);
@@ -94,12 +101,17 @@ export const useMdmark = (
         if (cancelled || element === null) return;
         rendered.current = latest.current.markdown;
         handle = module.mount(element, latest.current);
-        setState({ handle, ready: true, error: null });
+        setState({
+          handle,
+          ready: true,
+          error: null,
+          docId: latest.current.docId,
+        });
       })
       .catch((error: unknown) => {
         if (cancelled) return;
         logger.error("mdmark_load_failed", { error });
-        setState({ handle: null, ready: false, error });
+        setState({ handle: null, ready: false, error, docId: null });
       });
     return () => {
       cancelled = true;
@@ -109,11 +121,13 @@ export const useMdmark = (
 
   // 同じ文書で本文が変わったら更新する
   const { handle } = state;
+  const mounted = state.docId === options.docId;
   useEffect(() => {
-    if (handle === null || rendered.current === options.markdown) return;
+    if (!mounted || handle === null || rendered.current === options.markdown)
+      return;
     rendered.current = options.markdown;
     handle.update(options.markdown);
-  }, [handle, options.markdown]);
+  }, [handle, mounted, options.markdown]);
 
-  return state;
+  return { ...state, ready: state.ready && mounted };
 };
