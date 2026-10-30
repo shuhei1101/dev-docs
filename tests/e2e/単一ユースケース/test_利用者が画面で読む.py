@@ -234,6 +234,11 @@ def test_normal_when_diff_shown(
     # URL を開き直しても同じ差分が出る
     page.reload()
     expect(banner).to_be_visible()
+    expect(_side_link(page, "文書 3").get_by_role("img", name="追加")).to_be_visible()
+    expect(_side_link(page, "文書 1").get_by_role("img", name="変更")).to_be_visible()
+    expect(_side_link(page, "文書 4").get_by_role("img", name="削除")).to_be_visible()
+    expect(toc.get_by_role("link").filter(has_text="まとめ")).to_contain_text("変更")
+    expect(toc.get_by_role("link").filter(has_text="項目")).not_to_contain_text("変更")
     # 強調を解除する
     banner.get_by_role("button", name="差分の強調を解除").click()
     expect(page).not_to_have_url(re.compile("base="))

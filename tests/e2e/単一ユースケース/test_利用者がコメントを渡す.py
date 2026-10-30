@@ -29,6 +29,7 @@ def _first_cell(page: Page, table: int) -> Locator:
 
 def _add_comment(page: Page, target: Locator, body: str) -> None:
     """本文の文字列を選んでコメントを追加する。"""
+    target.scroll_into_view_if_needed()
     target.select_text()
     page.get_by_role("button", name="コメント", exact=True).click()
     page.get_by_role("dialog", name="コメントを書く").get_by_role("textbox").fill(body)

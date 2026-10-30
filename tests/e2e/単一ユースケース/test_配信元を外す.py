@@ -36,11 +36,13 @@ def test_normal(
     expect(dialog).to_contain_text(f"フォルダ {extra.folder} と文書は削除しません。")
     # 実行
     dialog.get_by_role("button", name="削除", exact=True).click()
-    # 検証
+    # 検証（保存が終わってダイアログが閉じてから読む）
+    expect(dialog).to_have_count(0)
     expect(page.get_by_role("button", name="extra を削除")).to_have_count(0)
     after = _rows(load_yaml_file(served.settings))
     assert list(after) == ["sample"]
-    assert after["sample"] == sample_row
+    # 設定ファイルが 1 つの行は、保存で文字列として書かれる
+    assert after["sample"] == {**sample_row, "config": str(sample.config[0])}
     assert snapshot(extra.folder) == extra_before
     page.goto(served.url("/extra"))
     expect(page).to_have_title(NOT_FOUND_TITLE)
