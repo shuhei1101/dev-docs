@@ -4,17 +4,19 @@ from __future__ import annotations
 
 import dataclasses
 from collections.abc import Sequence
+from datetime import UTC, datetime
 from pathlib import PurePosixPath
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Literal
 
 from dev_docs.features.access.types import Target
 from dev_docs.features.changes.compare import changed_keys
 from dev_docs.features.documents.types import Document, LoadProblem
 from dev_docs.features.sources.types import ServedSource
-from dev_docs.features.view.nav import build_nav, first_page
+from dev_docs.features.view.nav import build_nav, first_page, mark_nav_changes
 from dev_docs.features.view.paths import find_page, page_path, screen_target
 from dev_docs.features.view.types import (
     ConversionError,
+    DocumentDiff,
     DocumentResponse,
     GitHubTarget,
     NavItem,
@@ -63,19 +65,45 @@ def _kind_of(source: ServedSource, file: str) -> str:
     return ""
 
 
-def _changed_items(
-    handlers: Handlers, target: Target, document: Document, diff_ref: str
-) -> list[str]:
-    """`diff_ref` から変わったキーのパスを求める（`diff_ref` に無い文書は空の内容と比べる）。"""
+def _diff(
+    handlers: Handlers,
+    target: Target,
+    document: Document,
+    tabs: list[NavTab],
+    loaded_documents: Sequence[Document],
+    diff_ref: str,
+) -> tuple[DocumentDiff, list[NavTab]]:
+    """`diff_ref` と比べた差分の結果と、サイドバーの変化を付けたタブを作る。"""
     source = target.source
-    old_target, _ = screen_target(source.id, diff_ref, registry=handlers.registry)
-    before = {d.id: d for d in handlers.store.load(old_target).documents}.get(document.id)
-    found = changed_keys(
-        before.data if before is not None else {},
-        document.data,
-        ignore=source.config.diff_ignore_keys,
+    base_target, _ = screen_target(source.id, diff_ref, registry=handlers.registry)
+    base_documents = handlers.store.load(base_target).documents
+    before = next((d for d in base_documents if d.id == document.id), None)
+    change: Literal["added", "modified"] | None
+    if before is None:
+        change = "added"
+        changed: list[str] = []
+    elif before.version != document.version:
+        change = "modified"
+        changed = list(
+            changed_keys(before.data, document.data, ignore=source.config.diff_ignore_keys)
+        )
+    else:
+        change = None
+        changed = []
+    marked = mark_nav_changes(
+        tabs,
+        build_nav(source, base_documents),
+        versions={page_path(d): d.version for d in loaded_documents},
+        base_versions={page_path(d): d.version for d in base_documents},
     )
-    return list(found)
+    return DocumentDiff(base=diff_ref, change=change, changed_items=changed), marked
+
+
+def _updated_at(source: ServedSource, document: Document) -> datetime:
+    """文書の更新日時（無ければファイルの更新日時）を返す。"""
+    if document.updated is not None:
+        return document.updated
+    return datetime.fromtimestamp((source.root / document.path).stat().st_mtime, tz=UTC)
 
 
 def _activate(tabs: list[NavTab], path: str | None) -> list[NavTab]:
@@ -142,21 +170,20 @@ def get_document(
                 column=broken.column,
             ),
             tabs=_activate(tabs, None),
-            changed_items=None,
             github=github,
             columns=columns,
             table_keys=[],
+            diff=None,
+            updated_at=datetime.fromtimestamp((source.root / broken.path).stat().st_mtime, tz=UTC),
         )
 
     # 文書を変換する
     converted = handlers.converter.convert(target, document)
     failure = converted.failure
-    # diff が指定された Git の配信元は、変わったキーを求める
-    changed_items = (
-        _changed_items(handlers, target, document, diff_ref)
-        if diff_ref is not None and source.is_git and resolved is not None
-        else None
-    )
+    # diff が指定された Git の配信元は、差分の結果とサイドバーの変化を求める
+    diff: DocumentDiff | None = None
+    if diff_ref is not None and source.is_git and resolved is not None:
+        diff, tabs = _diff(handlers, target, document, tabs, loaded.documents, diff_ref)
     return DocumentResponse(
         source=source.id,
         ref=shown_ref,
@@ -168,10 +195,11 @@ def get_document(
             else None
         ),
         tabs=_activate(tabs, page_path(document)),
-        changed_items=changed_items,
         github=github,
         columns=columns,
         table_keys=[] if failure is not None else list(converted.table_keys),
+        diff=diff,
+        updated_at=_updated_at(source, document),
     )
 
 

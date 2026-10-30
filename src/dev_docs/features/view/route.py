@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import dataclasses
-from typing import TYPE_CHECKING, Annotated, Any
+from typing import TYPE_CHECKING, Annotated
 
 from fastapi import APIRouter, Depends, Query
 from fastapi.responses import Response
@@ -19,7 +19,12 @@ from dev_docs.features.view.search import (
     SEARCH_QUERY_MAX,
     screen_search,
 )
-from dev_docs.features.view.types import ColumnsRequest, DocumentResponse, ScreenSearchResult
+from dev_docs.features.view.types import (
+    ColumnsRequest,
+    DocumentResponse,
+    RefsResponse,
+    ScreenSearchResult,
+)
 from dev_docs.server.error_handlers import problem_of
 from dev_docs.server.origin import require_same_origin
 from dev_docs.shared.errors import DevDocsError
@@ -33,7 +38,7 @@ REFS_COMMITS_MAX = 100
 
 def build_view_router(handlers: Handlers) -> APIRouter:
     """画面の API のルートを持つルーターを作る。"""
-    router = APIRouter()
+    router = APIRouter(tags=["view"])
 
     async def document(
         source: str, path: str | None, ref: str | None, diff: str | None
@@ -51,7 +56,7 @@ def build_view_router(handlers: Handlers) -> APIRouter:
 
     @router.get(
         "/_api/sources/{source}/docs",
-        operation_id="get_document_default",
+        name="get_document_default",
         response_model=DocumentResponse,
     )
     async def get_document_default(
@@ -61,7 +66,7 @@ def build_view_router(handlers: Handlers) -> APIRouter:
 
     @router.get(
         "/_api/sources/{source}/docs/{path:path}",
-        operation_id="get_document",
+        name="get_document",
         response_model=DocumentResponse,
     )
     async def get_document_at(
@@ -69,7 +74,7 @@ def build_view_router(handlers: Handlers) -> APIRouter:
     ) -> Response | DocumentResponse:
         return await document(source, path, ref, diff)
 
-    @router.get("/_api/sources/{source}/search", operation_id="search_page")
+    @router.get("/_api/sources/{source}/search", name="search_page")
     async def search(
         source: str,
         q: Annotated[str, Query(min_length=1, max_length=SEARCH_QUERY_MAX)],
@@ -87,18 +92,18 @@ def build_view_router(handlers: Handlers) -> APIRouter:
 
         return await asyncio.to_thread(work)
 
-    @router.get("/_api/sources/{source}/refs", operation_id="list_refs")
+    @router.get("/_api/sources/{source}/refs", name="list_refs")
     async def refs(
         source: str,
         commits: Annotated[int, Query(ge=0, le=REFS_COMMITS_MAX)] = REFS_COMMITS_DEFAULT,
-    ) -> dict[str, Any]:
+    ) -> RefsResponse:
         served = handlers.registry.get(source)
         result = await asyncio.to_thread(list_refs, served, commits=commits)
-        return dataclasses.asdict(result)
+        return RefsResponse.model_validate(dataclasses.asdict(result))
 
     @router.put(
         "/_api/sources/{source}/columns",
-        operation_id="put_columns",
+        name="put_columns",
         dependencies=[Depends(require_same_origin)],
     )
     async def columns(source: str, body: ColumnsRequest) -> ColumnsRequest:

@@ -138,3 +138,111 @@ def first_page(tab: NavTab) -> str | None:
         return None
 
     return walk(tab.items)
+
+
+def _page_items(items: Sequence[NavItem]) -> list[NavItem]:
+    """入れ子の項目から page を並び順に平らに集める。"""
+    pages: list[NavItem] = []
+    for item in items:
+        if item.kind == "page":
+            pages.append(item)
+        pages.extend(_page_items(item.items))
+    return pages
+
+
+def _mark_items(
+    items: Sequence[NavItem], versions: Mapping[str, str], base_versions: Mapping[str, str]
+) -> list[NavItem]:
+    """項目を複製し、page に比較元からの変化を付ける。"""
+    result: list[NavItem] = []
+    for item in items:
+        if item.kind == "group":
+            children = _mark_items(item.items, versions, base_versions)
+            result.append(item.model_copy(update={"items": children}))
+            continue
+        path = item.path or ""
+        if path not in base_versions:
+            change = "added"
+        elif versions.get(path) != base_versions[path]:
+            change = "modified"
+        else:
+            change = None
+        result.append(item.model_copy(update={"change": change}))
+    return result
+
+
+def _same(a: NavItem, b: NavItem) -> bool:
+    """比較元と開いているリビジョンで同じ項目か（`path` か `title` が同じ）。"""
+    if a.kind != b.kind:
+        return False
+    return a.path == b.path if a.kind == "page" else a.title == b.title
+
+
+def _insert_deleted(
+    items: list[NavItem], base_items: Sequence[NavItem], deleted: Mapping[str, NavItem]
+) -> list[NavItem]:
+    """比較元の並びに合わせて、削除された page を差し込む（見つからない group は先頭の兄弟として扱う）。"""
+    result = list(items)
+    previous: NavItem | None = None
+    for base_item in base_items:
+        if base_item.kind == "group":
+            match = next((i for i in result if _same(i, base_item)), None)
+            if match is not None:
+                index = result.index(match)
+                result[index] = match.model_copy(
+                    update={"items": _insert_deleted(match.items, base_item.items, deleted)}
+                )
+        elif base_item.path in deleted:
+            marker = deleted[base_item.path or ""]
+            anchor = next((i for i in result if previous is not None and _same(i, previous)), None)
+            index = result.index(anchor) + 1 if anchor is not None else 0
+            result.insert(index, marker)
+        previous = base_item
+    return result
+
+
+def mark_nav_changes(
+    tabs: Sequence[NavTab],
+    base_tabs: Sequence[NavTab],
+    *,
+    versions: Mapping[str, str],
+    base_versions: Mapping[str, str],
+) -> list[NavTab]:
+    """タブの page に比較元からの変化を付け、比較元にだけある文書を比較元の位置に差し込む。"""
+    marked = [
+        tab.model_copy(update={"items": _mark_items(tab.items, versions, base_versions)})
+        for tab in tabs
+    ]
+    deleted = {
+        item.path: item.model_copy(update={"change": "deleted"})
+        for base_tab in base_tabs
+        for item in _page_items(base_tab.items)
+        if item.path is not None and item.path not in versions
+    }
+    if not deleted:
+        return marked
+    # 比較元のタブごとに、同じ title のタブへ差し込む。無ければ一番左のタブの末尾に置く
+    for base_tab in base_tabs:
+        target_index = next(
+            (i for i, tab in enumerate(marked) if tab.title == base_tab.title), None
+        )
+        base_deleted = {
+            path: item
+            for path, item in deleted.items()
+            if path in {p.path for p in _page_items(base_tab.items)}
+        }
+        if not base_deleted:
+            continue
+        if target_index is None:
+            if not marked:
+                continue
+            target_index = 0
+            tab = marked[0]
+            marked[0] = tab.model_copy(update={"items": [*tab.items, *base_deleted.values()]})
+        else:
+            tab = marked[target_index]
+            inserted = _insert_deleted(tab.items, base_tab.items, base_deleted)
+            present = {p.path for p in _page_items(inserted)}
+            missing = [item for path, item in base_deleted.items() if path not in present]
+            marked[target_index] = tab.model_copy(update={"items": [*inserted, *missing]})
+    return marked

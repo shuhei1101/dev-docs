@@ -230,3 +230,10 @@ class UpdateFailedError(DevDocsError):
     status: ClassVar[int] = 500
     command: list[str] = field(default_factory=list)
     stderr: str = ""
+
+
+@dataclass(kw_only=True)
+class ScreenBuildMissingError(DevDocsError):
+    """画面のビルドが無い。"""
+
+    status: ClassVar[int] = 503

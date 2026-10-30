@@ -2,21 +2,25 @@
 
 from __future__ import annotations
 
+from datetime import datetime
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import ConfigDict, Field
+
+from dev_docs.shared.api_model import ApiModel
 
 
-class NavItem(BaseModel):
+class NavItem(ApiModel):
     """サイドバーの見出しか文書の 1 行。"""
 
     kind: Literal["group", "page"]
     title: str
     path: str | None = None
-    items: list[NavItem] = []
+    items: list[NavItem] = Field(default_factory=list)
+    change: Literal["added", "modified", "deleted"] | None = None
 
 
-class NavTab(BaseModel):
+class NavTab(ApiModel):
     """上のタブ 1 つとそのサイドバー。"""
 
     title: str
@@ -24,7 +28,7 @@ class NavTab(BaseModel):
     items: list[NavItem]
 
 
-class ConversionError(BaseModel):
+class ConversionError(ApiModel):
     """文書の取得の `conversion_error`（変換の失敗と同じフィールド）。"""
 
     reason: Literal["timeout", "exit", "not_runnable", "invalid_yaml"]
@@ -36,14 +40,22 @@ class ConversionError(BaseModel):
     column: int | None = None
 
 
-class GitHubTarget(BaseModel):
+class GitHubTarget(ApiModel):
     """文書の取得の `github`（起票先）。"""
 
     repository: str
     issue_labels: list[str]
 
 
-class DocumentResponse(BaseModel):
+class DocumentDiff(ApiModel):
+    """文書の取得の `diff`（比べたリビジョンと、返した文書の変化・変わった項目）。"""
+
+    base: str
+    change: Literal["added", "modified"] | None
+    changed_items: list[str] = Field(default_factory=list)
+
+
+class DocumentResponse(ApiModel):
     """GET `/_api/sources/{source}/docs[/{path}]` の応答。"""
 
     source: str
@@ -52,13 +64,14 @@ class DocumentResponse(BaseModel):
     markdown: str | None
     conversion_error: ConversionError | None
     tabs: list[NavTab]
-    changed_items: list[str] | None
     github: GitHubTarget | None
     columns: dict[str, list[str]]
     table_keys: list[str]
+    diff: DocumentDiff | None
+    updated_at: datetime
 
 
-class ScreenSearchItem(BaseModel):
+class ScreenSearchItem(ApiModel):
     """画面の検索の結果の文書。"""
 
     path: str
@@ -66,17 +79,47 @@ class ScreenSearchItem(BaseModel):
     snippets: list[str]
 
 
-class ScreenSearchResult(BaseModel):
+class ScreenSearchResult(ApiModel):
     """GET `/_api/sources/{source}/search` の応答。"""
 
     total_count: int
     items: list[ScreenSearchItem]
 
 
-class ColumnsRequest(BaseModel):
+class ColumnsRequest(ApiModel):
     """PUT `/_api/sources/{source}/columns` の本文と応答。"""
 
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(
+        alias_generator=ApiModel.model_config["alias_generator"],
+        validate_by_name=True,
+        serialize_by_alias=True,
+        extra="forbid",
+    )
 
     table: str
     hidden: list[str]
+
+
+class RefItem(ApiModel):
+    """ブランチかタグ 1 つ。"""
+
+    name: str
+    commit: str
+
+
+class CommitItem(ApiModel):
+    """最近の commit 1 件。"""
+
+    commit: str
+    date: str
+    subject: str
+
+
+class RefsResponse(ApiModel):
+    """GET `/_api/sources/{source}/refs` の応答。"""
+
+    git: bool
+    default_ref: str
+    branches: list[RefItem] = Field(default_factory=list)
+    tags: list[RefItem] = Field(default_factory=list)
+    commits: list[CommitItem] = Field(default_factory=list)

@@ -6,8 +6,9 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, ClassVar, Literal
 
-from pydantic import BaseModel, ConfigDict, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
+from dev_docs.shared.api_model import ApiModel
 from dev_docs.shared.errors import DevDocsError, Violation
 
 if TYPE_CHECKING:
@@ -19,7 +20,7 @@ class SourceScope(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    read: list[str] = []
+    read: list[str] = Field(default_factory=list)
     write: list[str] | None = None
 
 
@@ -52,12 +53,12 @@ class TerminalConfig(BaseModel):
     log_dir: Path
     port: int = 8781
     bind: str = "127.0.0.1"
-    sources: list[SourceEntry] = []
+    sources: list[SourceEntry] = Field(default_factory=list)
     seen_retention_days: int = 7
     script_timeout_sec: int = 30
 
 
-class SettingsSourcesRequest(BaseModel):
+class SettingsSourcesRequest(ApiModel):
     """PUT `/_api/settings/sources` の本文。"""
 
     model_config = ConfigDict(extra="forbid")
@@ -65,27 +66,56 @@ class SettingsSourcesRequest(BaseModel):
     sources: list[SourceEntry]
 
 
-class SettingsSourcesResponse(BaseModel):
+class SourceViolation(ApiModel):
+    """検証で外した理由 1 件。"""
+
+    path: str
+    reason: str
+
+
+class SourceConfigVersion(ApiModel):
+    """設定のバージョンとサーバーが読めるバージョン。"""
+
+    config: str
+    server: str
+
+
+class SettingsSourceStatus(ApiModel):
+    """読み直した後の配信元 1 つの状態。"""
+
+    id: str
+    status: Literal["serving", "not_served", "disabled"]
+    errors: list[SourceViolation] = Field(default_factory=list)
+    config_version: SourceConfigVersion | None = None
+
+
+class SettingsSourcesResponse(ApiModel):
     """読み直した後の配信元ごとの状態。"""
 
-    sources: list[dict[str, Any]]
+    sources: list[SettingsSourceStatus]
 
     @classmethod
     def from_statuses(cls, statuses: list[SourceStatus]) -> SettingsSourcesResponse:
         """配信元の状態の並びから作る。"""
-        items: list[dict[str, Any]] = []
+        items: list[SettingsSourceStatus] = []
         for status in statuses:
-            item: dict[str, Any] = {"id": status.id, "status": status.status}
-            if status.status == "not_served":
-                item["errors"] = [{"path": v.path, "reason": v.rule} for v in status.errors]
+            item = SettingsSourceStatus(
+                id=status.id,
+                status=status.status,
+                errors=(
+                    [SourceViolation(path=v.path, reason=v.rule) for v in status.errors]
+                    if status.status == "not_served"
+                    else []
+                ),
+            )
             if status.config_version is not None:
                 config, server = status.config_version
-                item["config_version"] = {"config": config, "server": server}
+                item.config_version = SourceConfigVersion(config=config, server=server)
             items.append(item)
         return cls(sources=items)
 
 
-class SettingsSourceRow(BaseModel):
+class SettingsSourceRow(ApiModel):
     """端末の設定の取得の `sources[]` の 1 行（行の値に配信元の状態を重ねたもの）。"""
 
     id: str | None
@@ -93,11 +123,11 @@ class SettingsSourceRow(BaseModel):
     enabled: bool
     scope: SourceScope
     status: Literal["serving", "not_served", "disabled", "pending_reload"]
-    errors: list[dict[str, str]] = []
-    config_version: dict[str, str] | None = None
+    errors: list[SourceViolation] = Field(default_factory=list)
+    config_version: SourceConfigVersion | None = None
 
 
-class SettingsSourcesView(BaseModel):
+class SettingsSourcesView(ApiModel):
     """GET `/_api/settings/sources` の応答。"""
 
     settings_path: str
