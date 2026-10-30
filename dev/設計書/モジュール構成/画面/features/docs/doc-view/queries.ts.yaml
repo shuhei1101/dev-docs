@@ -110,7 +110,7 @@ functions:
       - name: test_load_document_when_not_found
         case: 異常
         summary: 404 を notFound にする
-        condition: MSW が `missing.kind` が `doc` の 404 を返す
+        condition: MSW が `missing` が `doc`、`value` が開こうとしたパス の 404 を返す
         mock: MSW のハンドラ
-        expected: '`isNotFound` が true の例外で、`data.missing.kind` が `doc`'
+        expected: '`isNotFound` が true の例外で、`data.missing` が `doc`'
         exception: 文書の取得が 404

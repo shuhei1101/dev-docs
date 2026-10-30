@@ -11,5 +11,5 @@ constants:
     title: 見つからなかったもののスキーマ
     container: shared/core/schema.ts
     usecase: 共通
-    summary: 文書の取得の 404 の `missing`（`kind` が `source`・`not_served`・`ref`・`doc` の判別共用体）
-    value: z.discriminatedUnion("kind", [...])
+    summary: 文書の取得の 404 の problem+json の最上位（`missing` が `source`・`not_served`・`ref`・`doc`、`value` が開こうとした値、`errors[]` が配信していない理由）
+    value: 'z.object({missing: z.enum(["source", "not_served", "ref", "doc"]), value: z.string(), errors: z.array(z.object({path: z.string(), reason: z.string()})).optional()})'

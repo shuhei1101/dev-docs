@@ -13,7 +13,7 @@ components:
         type: unknown
         required: false
         description: '`notFound` の `data`'
-    description: 配信中の配信元は端末の設定の取得、リビジョンの一覧は `missing` が `source`・`not_served` でないときだけ読む（orval が生成した問い合わせ）
+    description: 配信中の配信元は端末の設定の取得、リビジョンの一覧は `missing` が `source`・`not_served` でないときだけ読む（orval が生成した問い合わせ）。`describeMissing` の `context` へ、リビジョンの一覧の `defaultRef` と、端末の設定の取得のその配信元の `config` を渡す
     state:
       - name: searchOpen
         type: boolean
@@ -29,13 +29,13 @@ components:
       - name: test_not_found_screen
         case: 正常
         summary: 文書が無いときの案内
-        condition: '`missing.kind` が `doc` の `data`'
+        condition: '`{missing: "doc", value: "a.md"}` の `data`'
         mock: MSW のハンドラ（配信中の配信元 2 件）
         expected: 見出し・詳細・配信元のトップへのリンク・配信中の配信元 2 件が出て、URL が変わらない
       - name: test_not_found_screen_when_source_missing
         case: 正常
         summary: 配信元が無いときはリビジョンを読まない
-        condition: '`missing.kind` が `source`'
+        condition: '`{missing: "source", value: "unknown"}` の `data`'
         mock: MSW のハンドラ
         expected: リビジョンの一覧が呼ばれず、トップバーに配信元が渡らない
 refs:

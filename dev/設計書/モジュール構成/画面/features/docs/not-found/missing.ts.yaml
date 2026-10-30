@@ -15,28 +15,39 @@ functions:
         required: true
         passing: positional
         description: '`notFound` の `data`（文書の取得の problem。ルートに当たらない URL は undefined）'
+      - name: context
+        type: '{defaultRef?: string; configs?: string[]}'
+        required: false
+        passing: positional
+        description: 画面が別に読んだ値（リビジョンの一覧の `defaultRef`、端末の設定の取得のその配信元の `config`）
     returns:
       type: '{kind: "source" | "not_served" | "ref" | "doc" | "route"; heading: string; description: string; details: {label: string; value: string}[]}'
       description: 文言は画面設計『見つからない画面』の見出し・説明・詳細
     process: |-
-      1. `data.missing` を `MissingSchema.safeParse` で読む（読めなければ `route`）
-      2. `kind` ごとの文言に、配信元の ID・リビジョン・文書のパスを入れる
+      1. `data` を `MissingSchema.safeParse` で読む（読めなければ `route`）
+      2. `kind` を `missing` にし、`kind` ごとの文言に詳細の行を付ける。`doc` は `開こうとしたパス`（`value`）、`ref` は `開こうとしたリビジョン`（`value`）と `既定のリビジョン`（`context.defaultRef`。無ければ行を置かない）、`not_served` は `errors[]` ごとの `外した理由`（`{path} {reason}`）と `設定ファイル`（`context.configs`）、`source` は詳細を持たない
     unit_tests:
       - name: test_describe_missing
         case: 正常
         summary: 文書が無い
-        condition: '`missing` が `{kind: "doc", source: "s", ref: "main", path: "a.md"}`'
+        condition: '`data` が `{missing: "doc", value: "a.md"}`'
         mock: なし
-        expected: '`kind` が `doc`、詳細に `a.md` と `main`'
+        expected: '`kind` が `doc`、詳細が `開こうとしたパス` の `a.md` の 1 行'
       - name: test_describe_missing_when_not_served
         case: 正常
         summary: 配信していない配信元
-        condition: '`missing.kind` が `not_served`'
+        condition: '`data` が `{missing: "not_served", value: "broken", errors: [{path: "documents[0]", reason: "必須"}]}`、`context.configs` が `["/r/dev-docs.yaml"]`'
         mock: なし
-        expected: '`kind` が `not_served`'
+        expected: '`kind` が `not_served`、詳細に `外した理由` の `documents[0] 必須` と `設定ファイル` の `/r/dev-docs.yaml`'
       - name: test_describe_missing_when_route
         case: 正常
         summary: ルートに当たらない URL
         condition: '`data` が undefined'
         mock: なし
         expected: '`kind` が `route`'
+      - name: test_describe_missing_when_ref
+        case: 正常
+        summary: 無いリビジョン
+        condition: '`data` が `{missing: "ref", value: "nope"}`、`context.defaultRef` が `main`'
+        mock: なし
+        expected: '`kind` が `ref`、詳細が `開こうとしたリビジョン` の `nope` と `既定のリビジョン` の `main`'
