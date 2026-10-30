@@ -906,6 +906,49 @@ test.describe("コメントの場所", () => {
   });
 });
 
+test.describe("コメントの場所への移動", () => {
+  const LONG_DOC = (title: string, last: string) =>
+    `# ${title}\n\n## 概要\n\n${"本文です。\n\n".repeat(80)}## 関連\n\n${last}\n`;
+  const document: Handler = ({ path }) => ({
+    body: documentResponse({
+      path,
+      markdown: LONG_DOC(path === "docs/doc-2" ? "文書 2" : "文書 1", path === "docs/doc-2" ? "文書 2 の末尾の文" : "文書 1 の末尾の文"),
+    }),
+  });
+  const mark = (page: Page, text: string) =>
+    page.locator(".mdmark-comment-mark").filter({ hasText: text });
+
+  // 同じ文書のコメントは、本文のその印が画面に入るまでスクロールする（正常系）
+  test("place_scroll_same_doc", async ({ page }) => {
+    // 準備
+    await seed(page, [
+      { id: "c1", path: "docs/doc-1", docTitle: "文書 1", headings: ["関連"], quote: "文書 1 の末尾の文", body: "末尾の確認" },
+    ]);
+    await openRendered(page, "/sample/docs/doc-1", { document });
+    await expect(mark(page, "文書 1 の末尾の文")).not.toBeInViewport();
+    await page.getByRole("button", { name: /^コメント \d+ 件$/ }).click();
+    // 実行
+    await panel(page).getByRole("button", { name: "文書 1 › 関連" }).click();
+    // 検証
+    await expect(mark(page, "文書 1 の末尾の文")).toBeInViewport();
+  });
+
+  // 他の文書のコメントは、その文書を開いた後に本文の印が画面に入るまでスクロールする（正常系）
+  test("place_scroll_other_doc", async ({ page }) => {
+    // 準備
+    await seed(page, [
+      { id: "c2", path: "docs/doc-2", docTitle: "文書 2", headings: ["関連"], quote: "文書 2 の末尾の文", body: "別の文書の確認" },
+    ]);
+    await openRendered(page, "/sample/docs/doc-1", { document });
+    await page.getByRole("button", { name: /^コメント \d+ 件$/ }).click();
+    // 実行
+    await panel(page).getByRole("button", { name: "文書 2 › 関連" }).click();
+    // 検証
+    await expect(page.getByRole("main").getByRole("heading", { level: 1 })).toHaveText("文書 2");
+    await expect(mark(page, "文書 2 の末尾の文")).toBeInViewport();
+  });
+});
+
 test.describe("コメントの引用", () => {
   // 選んだ文字列を `「…」` で出し、長いときは 2 行で切る（正常系）
   test("quote_text", async ({ page }) => {

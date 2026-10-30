@@ -25,6 +25,14 @@ components:
         type: () => void
         required: true
         description: コメントを保存したとき（パネルを開く）
+      - name: locating
+        type: DocComment | null
+        required: true
+        description: コメントのパネルで場所を選ばれたコメント。`docId` が同じ文書の印（`.mdmark-comment-mark`）が描かれたら、その印が画面の中ほどに入るまでスクロールして `onLocated` を呼ぶ
+      - name: onLocated
+        type: () => void
+        required: true
+        description: '`locating` の印までスクロールしたとき'
     description: |-
       - 列の初期の非表示は、`columns` のその表のキーの列を `+columns` の表の `hide=` に入れた Markdown を渡す（表のキーは `tableKeys` の同じ番号）
       - 列の出し入れは `useColumnPersistence` で保存する

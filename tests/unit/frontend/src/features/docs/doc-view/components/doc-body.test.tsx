@@ -24,7 +24,7 @@ test("test_doc_body", async () => {
   });
 
   renderInRouter(
-    <DocBody document={document as never} onHeadings={vi.fn()} onCommentSaved={vi.fn()} />,
+    <DocBody document={document as never} onHeadings={vi.fn()} onCommentSaved={vi.fn()} locating={null} onLocated={vi.fn()} />,
   );
 
   await waitFor(() => expect(mount).toHaveBeenCalled());
@@ -39,7 +39,7 @@ test("test_doc_body_when_internal_link", async () => {
     return { update: vi.fn(), destroy: vi.fn() };
   });
   const { router } = renderInRouter(
-    <DocBody document={documentResponse() as never} onHeadings={vi.fn()} onCommentSaved={vi.fn()} />,
+    <DocBody document={documentResponse() as never} onHeadings={vi.fn()} onCommentSaved={vi.fn()} locating={null} onLocated={vi.fn()} />,
     "/s/a.md?rev=v1",
   );
 
