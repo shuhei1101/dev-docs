@@ -161,5 +161,23 @@ functions:
         condition: 2 つの文書のコメントが 3 件
         mock: なし
         expected: 渡した `docId` の分だけ、追加した順
+  - name: docIdOf
+    title: 文書の ID
+    container: features/docs/shared/comments/comment-store.ts
+    usecase: コメントを溜める
+    role: 変換
+    summary: コメントと mdmark の `docId` に使う、文書を指す文字列
+    kind: 関数
+    scope: public
+    args:
+      - name: doc
+        type: '{source: string; ref?: string | null; path: string}'
+        required: true
+        passing: positional
+        description: 配信元・リビジョン・文書のパス
+    returns:
+      type: string
+      description: '`{source}@{ref}:{path}`（`ref` が無ければ空）'
+    process: 1. `DocBody` と `useLocating` が同じ文字列で文書を比べるため、`{source}@{ref ?? ""}:{path}` を返す
 test_files:
   - tests/unit/frontend/src/features/docs/shared/comments/comment-store.test.ts
