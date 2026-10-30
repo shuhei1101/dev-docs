@@ -373,12 +373,12 @@ scenarios:
         M-->>A: src/test_repo（via.type は tests）
         A->>M: search_docs(filter: id が src/repo か src/test_repo, view: full)
         M->>M: 読み取りの検査（related の type が既定の種類にあるか）
-        M-->>A: 2 件の本文（違反なし）
+        M-->>A: 2 件の本文（related の種類の違反なし）
       ```
     expected:
       - '`design/repo` を起点にした `direction: in` の `trace_related` が `src/repo` の 1 件を返し、`via.type` が `implements` になる'
       - '`src/repo` を起点にした `direction: in` の `trace_related` が `src/test_repo` の 1 件を返し、`via.type` が `tests` になる'
-      - '`search_docs` が `src/repo`・`src/test_repo` の 2 件を違反を付けずに返す'
+      - '`search_docs` が `src/repo`・`src/test_repo` の 2 件を返し、`notes` に `related.types` の違反が付かない'
     test: test_normal_when_implementing_code_traced
   - name: 正常シナリオ（使われているタグを数える）
     setup:
