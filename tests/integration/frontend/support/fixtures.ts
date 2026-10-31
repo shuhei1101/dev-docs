@@ -82,6 +82,7 @@ export const documentResponse = (
   source: "sample",
   ref: "develop",
   path: "docs/doc-1",
+  bodyPath: null,
   markdown: DOC_MARKDOWN,
   conversionError: null,
   tabs: [
