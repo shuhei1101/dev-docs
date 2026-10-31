@@ -13,6 +13,7 @@ import {
   settingsView,
 } from "./support/fixtures";
 import type { SeedComment } from "./support/fixtures";
+import type { AliasItem } from "@/shared/api/generated/model";
 
 type Overrides = Partial<Record<Operation, Handler>>;
 
@@ -1307,5 +1308,68 @@ test.describe("ランドマーク", () => {
     await openRendered(page);
     const result = await new AxeBuilder({ page }).withRules(["landmark-unique"]).analyze();
     expect(result.violations.map((violation) => violation.id)).toEqual([]);
+  });
+});
+
+const TERM_MARKDOWN =
+  "# 文書 1\n\n## 概要\n\n作業範囲の中だけを書き換える。\n\n## 関連\n\n値は settings を見る。\n";
+const ALIASES: AliasItem[] = [
+  {
+    id: "scope",
+    name: "作業範囲",
+    aliases: ["scope", "担当範囲"],
+    description: "触ってよい範囲",
+    aliasType: "term",
+    avoid: ["担当領域"],
+  },
+  {
+    id: "settings",
+    name: "設定のリファレンス",
+    aliases: ["settings"],
+    description: "設定のキーの一覧",
+    aliasType: "doc",
+  },
+];
+
+const withAliases =
+  (aliases: AliasItem[]): Handler =>
+  ({ path }) => ({ body: documentResponse({ path, markdown: TERM_MARKDOWN, aliases }) });
+
+test.describe("本文の用語のツールチップ", () => {
+  // 本文の用語の語にポインターを載せると、用語の名前と意味のツールチップを出す（正常系）
+  test("term_tooltip", async ({ page }) => {
+    // 準備
+    await openRendered(page, "/sample/docs/doc-1", { document: withAliases(ALIASES) });
+    const term = page.getByRole("main").getByText("作業範囲", { exact: true });
+    // 実行
+    await term.hover();
+    // 検証
+    const tooltip = page.getByRole("tooltip");
+    await expect(tooltip).toBeVisible();
+    await expect(tooltip).toContainText("用語");
+    await expect(tooltip).toContainText("触ってよい範囲");
+  });
+
+  // 文書の別名の語にポインターを載せると、関連文書のツールチップを出す（正常系）
+  test("term_tooltip_when_doc_alias", async ({ page }) => {
+    // 準備
+    await openRendered(page, "/sample/docs/doc-1", { document: withAliases(ALIASES) });
+    const alias = page.getByRole("main").getByText("settings", { exact: true });
+    // 実行
+    await alias.hover();
+    // 検証
+    const tooltip = page.getByRole("group", { name: "「settings」の関連文書" });
+    await expect(tooltip).toBeVisible();
+    await expect(tooltip).toContainText("設定のリファレンス");
+  });
+
+  // aliases が空のときは本文の語にツールチップを付けない（正常系）
+  test("term_tooltip_when_no_aliases", async ({ page }) => {
+    // 準備
+    await openRendered(page, "/sample/docs/doc-1", { document: withAliases([]) });
+    // 実行
+    await page.getByRole("main").getByText("作業範囲の中だけを書き換える。").hover();
+    // 検証
+    await expect(page.getByRole("tooltip")).toHaveCount(0);
   });
 });
