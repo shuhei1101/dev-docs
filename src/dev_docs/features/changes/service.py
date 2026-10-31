@@ -319,7 +319,7 @@ def list_changes(
     key = SessionKey.of(request.session_id, request.agent_id)
     notes: list[str] = []
     fields = known_fields(
-        store.schema(target, table.id)
+        store.row_schema(target, table.id)
         for target in targets
         for table in target.source.config.documents
         if table.enabled

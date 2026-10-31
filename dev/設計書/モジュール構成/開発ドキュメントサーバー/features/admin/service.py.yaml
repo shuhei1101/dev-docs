@@ -137,6 +137,7 @@ functions:
       3. `config_version` があれば新旧を求める（バージョンの新旧）
       4. 取り得た値に応じて分ける
          - `violations` がある場合、`missing_paths`・`script_errors` を空、`sync` を `None` にして返す
+         - 配信元を組み立てられた場合、`records` を持つ有効な行ごとに、`$ref` を解いた行のスキーマ（`resolve_schema_refs`）から records の行の 1 行のスキーマ（`records_item_schema`）を引く。`None` なら `path` が `documents[{番号}].schema`、`rule` が `records: {records} の行のスキーマに properties.{records}.items がありません` の違反を `violations` に入れ、`missing_paths`・`script_errors` を空、`sync` を `None` にして返す
          - `script_violations` がある場合、`script_errors` に入れ、`sync` を `None` にする
       5. `documents[].paths[]` のうち、そのパターンだけに絞った行（`exclude` は元の行のまま）で当たるファイルが無いものを `missing_paths` にする（`collect_files`）
       6. `source` があれば、索引の同期を求めて件数と先頭 `SYNC_ITEMS_LIMIT` 件の内訳にする（`check_sync`）。`alias_violations` を `violations` に加え、nav の警告（画面の API）を `warnings` にする
@@ -179,6 +180,18 @@ functions:
         mock: なし（一時ディレクトリ）
         expected: '`violations` に `doc` がその文書のパスの違反が 1 件、`warnings` にタブ `none` の警告が 1 件、`alias_schema_version` が `v0.3.0`'
         exception: '-'
+      - name: test_check_project_when_records_schema_mismatch
+        case: 正常
+        summary: records の行のスキーマが 1 行のスキーマを持たなければ違反にする
+        condition: '`documents[0]` が `records: files` で、`schema` が `properties.files.items` を持たないスキーマ'
+        mock: なし
+        expected: '`violations` が 1 件で `path` が `documents[0].schema`、`sync` が `None`'
+      - name: test_check_project_when_records_schema
+        case: 正常
+        summary: setup が作る組み合わせは違反にしない
+        condition: '`documents[0]` が `records: files` で、`schema` が `templates/files.schema.yaml` のコピー'
+        mock: なし
+        expected: '`violations` が空'
     callers:
       - dev/設計書/モジュール構成/開発ドキュメントサーバー/文書のMCP.py#functions[build_admin_mcp]
     callees:

@@ -223,6 +223,7 @@ scenarios:
       - '`b` の `name` は `部品 B` のまま'
       - '`view: full` の本文が `src/a.py` の内容で、`<document path="{sample のクローン本体}/src/a.py" scope="full">` で包まれる'
       - '`format: json` の項目の直下（`id`・`source` と同じ階層で `values` の外）が `path`（`src/a.py` の絶対パス）と `scope: full` を持ち、`values.path` は管理用の YAML の `path` 列の値 `a.py` のまま'
+      - どの `search_docs` の応答の `notes` にも、スキーマの違反（`'files' is a required property` など）が付かない
     test: test_normal_when_files_index
   - name: 正常シナリオ（当たった数で並べて絞る）
     setup:

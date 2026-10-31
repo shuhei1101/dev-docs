@@ -178,6 +178,7 @@ def get_document(
             source=source.id,
             ref=shown_ref,
             path=path,
+            body_path=None,
             markdown=None,
             conversion_error=ConversionError(
                 reason="invalid_yaml",
@@ -206,6 +207,7 @@ def get_document(
         source=source.id,
         ref=shown_ref,
         path=page_path(document),
+        body_path=document.body_path,
         markdown=None if failure is not None else converted.markdown,
         conversion_error=(
             ConversionError.model_validate(dataclasses.asdict(failure))

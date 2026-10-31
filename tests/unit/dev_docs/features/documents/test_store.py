@@ -9,20 +9,40 @@ from typing import Any
 import pytest
 
 from dev_docs.features.access.types import Target
+from dev_docs.features.documents import indexable as indexable_module
+from dev_docs.features.documents import loader as loader_module
 from dev_docs.features.documents import store as store_module
 from dev_docs.features.documents.store import DocumentStore
 from dev_docs.features.documents.types import Document
 from dev_docs.features.history.snapshot import SnapshotStore
 from dev_docs.features.sources.types import DocumentTable, ServedSource, SourceConfig
 from dev_docs.shared.errors import DocumentNotFoundError, UnknownKindError
+from dev_docs.shared.yaml_io import load_yaml
 
 OCT_01 = "2026-10-01T12:00:00+09:00"
+
+FILES_SCHEMA_TEMPLATE = Path(__file__).parents[5] / "templates" / "files.schema.yaml"
 
 
 @pytest.fixture
 def document_store(tmp_path: Path) -> DocumentStore:
     """リビジョンの書き出しを `tmp_path` に置く文書のストアを返す。"""
     return DocumentStore(SnapshotStore(tmp_path / "snapshots"))
+
+
+@pytest.fixture
+def walk_calls(monkeypatch: pytest.MonkeyPatch) -> list[Path]:
+    """本物の `walk_files` を包んで呼ばれた `root` を記録し、その並びを返す。"""
+    calls: list[Path] = []
+    original = indexable_module.walk_files
+
+    def _walk(root: Path, **kwargs: Any) -> Any:
+        calls.append(root)
+        return original(root, **kwargs)
+
+    for module in (indexable_module, loader_module, store_module):
+        monkeypatch.setattr(module, "walk_files", _walk, raising=False)
+    return calls
 
 
 @pytest.fixture
@@ -168,6 +188,57 @@ def test_document_store_load_when_unknown_kind(
         document_store.load(workspace, kinds=["x"])
 
 
+def test_document_store_load_when_many_tables(
+    document_store: DocumentStore,
+    tmp_path: Path,
+    write_files: Callable[[Path, dict[str, str]], None],
+    make_source_config: Callable[..., SourceConfig],
+    make_served_source: Callable[..., ServedSource],
+    make_target: Callable[..., Target],
+    walk_calls: list[Path],
+) -> None:
+    """行がいくつあってもフォルダを 1 回だけたどる（正常系）。"""
+    # 準備
+    root = tmp_path / "ws"
+    write_files(
+        root,
+        {
+            "rules/a.yaml": "id: a\nname: A\n",
+            "notes/files.yaml": "files:\n  - path: x.md\n",
+            "notes/x.md": "# X\n",
+            "src/files.yaml": "files:\n  - path: a.py\n",
+            "src/a.py": "a = 1\n",
+        },
+    )
+    documents = [
+        DocumentTable(id="rules", paths=["rules/*.yaml"], schema_path="schemas/rule.schema.yaml"),
+        DocumentTable(
+            id="notes",
+            paths=["notes/files.yaml"],
+            schema_path="schemas/rule.schema.yaml",
+            records="files",
+            body_file="path",
+        ),
+        DocumentTable(
+            id="src",
+            paths=["src/files.yaml"],
+            schema_path="schemas/rule.schema.yaml",
+            records="files",
+            body_file="path",
+        ),
+    ]
+    source = make_served_source(root=root, config=make_source_config(documents=documents))
+    # 実行
+    result = document_store.load(make_target(source))
+    # 検証
+    assert len(walk_calls) == 1
+    assert [(doc.kind, doc.id) for doc in result.documents] == [
+        ("rules", "a"),
+        ("notes", "notes/x"),
+        ("src", "src/a"),
+    ]
+
+
 def test_document_store_get(document_store: DocumentStore, workspace: Target) -> None:
     """渡した順（正常系）。"""
     # 実行
@@ -271,6 +342,94 @@ def test_document_store_schema_when_ref(
     result = document_store.schema(make_target(source), "rules")
     # 検証
     assert result["properties"]["body"] == {"type": "string", "title": "Markdown"}
+
+
+def _row_schema_source(
+    root: Path,
+    notes_schema: dict[str, Any],
+    make_source_config: Callable[..., SourceConfig],
+    make_served_source: Callable[..., ServedSource],
+) -> ServedSource:
+    """ファイル 1 つが 1 文書の行 rules と、管理用の YAML の行 notes を持つ配信元を返す。"""
+    documents = [
+        DocumentTable(id="rules", paths=["rules/*.yaml"], schema_path="schemas/rule.schema.yaml"),
+        DocumentTable(
+            id="notes",
+            paths=["notes/files.yaml"],
+            schema_path="schemas/files.schema.yaml",
+            records="files",
+            body_file="path",
+        ),
+    ]
+    rule_schema = {"type": "object", "required": ["id"]}
+    return make_served_source(
+        root=root,
+        config=make_source_config(documents=documents),
+        schemas={"rules": rule_schema, "notes": notes_schema},
+    )
+
+
+def test_document_store_row_schema(
+    document_store: DocumentStore,
+    tmp_path: Path,
+    make_source_config: Callable[..., SourceConfig],
+    make_served_source: Callable[..., ServedSource],
+    make_target: Callable[..., Target],
+) -> None:
+    """ファイル 1 つが 1 文書の行はそのまま（正常系）。"""
+    # 準備
+    source = _row_schema_source(
+        tmp_path / "ws", {"type": "object"}, make_source_config, make_served_source
+    )
+    target = make_target(source)
+    # 実行
+    result = document_store.row_schema(target, "rules")
+    # 検証
+    assert result == document_store.schema(target, "rules")
+    assert result == {"type": "object", "required": ["id"]}
+
+
+def test_document_store_row_schema_when_records(
+    document_store: DocumentStore,
+    tmp_path: Path,
+    make_source_config: Callable[..., SourceConfig],
+    make_served_source: Callable[..., ServedSource],
+    make_target: Callable[..., Target],
+) -> None:
+    """records の行は 1 行のスキーマ（正常系）。"""
+    # 準備
+    files_schema = load_yaml(FILES_SCHEMA_TEMPLATE.read_text(encoding="utf-8"))
+    source = _row_schema_source(
+        tmp_path / "ws", files_schema, make_source_config, make_served_source
+    )
+    # 実行
+    result = document_store.row_schema(make_target(source), "notes")
+    # 検証
+    assert result == files_schema["properties"]["files"]["items"]
+    assert result["required"] == ["path"]
+
+
+def test_document_store_row_schema_when_items_missing(
+    document_store: DocumentStore,
+    tmp_path: Path,
+    make_source_config: Callable[..., SourceConfig],
+    make_served_source: Callable[..., ServedSource],
+    make_target: Callable[..., Target],
+) -> None:
+    """1 行のスキーマを取り出せない（正常系）。"""
+    # 準備
+    notes_schema = {
+        "type": "object",
+        "required": ["files"],
+        "properties": {"files": {"type": "array"}},
+    }
+    source = _row_schema_source(
+        tmp_path / "ws", notes_schema, make_source_config, make_served_source
+    )
+    # 実行
+    result = document_store.row_schema(make_target(source), "notes")
+    # 検証
+    assert result == {}
 
 
 def test_document_store_invalidate(document_store: DocumentStore, workspace: Target) -> None:
@@ -456,3 +615,36 @@ def test_check_sync_when_alias_violation(
     assert [(item.doc, item.path) for item in report.alias_violations] == [
         ("terms/broken.yaml", "aliases")
     ]
+
+
+def test_check_sync_when_walked_once(
+    document_store: DocumentStore,
+    tmp_path: Path,
+    write_files: Callable[[Path, dict[str, str]], None],
+    make_source_config: Callable[..., SourceConfig],
+    make_served_source: Callable[..., ServedSource],
+    walk_calls: list[Path],
+) -> None:
+    """配信元のフォルダを 1 回だけたどる（正常系）。"""
+    # 準備
+    root = tmp_path / "ws"
+    write_files(
+        root,
+        {
+            "rules/a.yaml": "id: a\ntitle: A\n",
+            "rules/b.yaml": "id: b\n",
+            "src/files.yaml": "files:\n  - path: a.py\n  - path: c.py\n",
+            "src/a.py": "a = 1\n",
+            "src/d.py": "d = 4\n",
+        },
+    )
+    source = _sync_source(root, make_source_config, make_served_source)
+    # 実行
+    report = store_module.check_sync(document_store, source)
+    # 検証
+    assert len(walk_calls) == 1
+    assert report.missing_refs == ["rules: b: name（title）"]
+    assert report.unindexed_files == ["src: src/d.py"]
+    assert len(report.missing_body_files) == 1
+    assert report.missing_body_files[0].startswith("src/files.yaml: ")
+    assert "c.py" in report.missing_body_files[0]

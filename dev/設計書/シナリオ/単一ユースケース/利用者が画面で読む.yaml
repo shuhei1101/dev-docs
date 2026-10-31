@@ -370,6 +370,44 @@ scenarios:
       - 本文の `担当範囲` の語にポインタを載せると、用語「作業範囲」のツールチップが出る
       - '`alias_type` を持つ行が無い配信元の文書は、ツールチップを出さずに今のまま描く'
     test: test_normal_when_term_tooltip_shown
+  - name: 正常シナリオ（管理用の YAML の行の文書の本文のリンクを開く）
+    setup:
+      - name: Mock
+        description: なし（実環境で実行。ブラウザで画面を開く）
+      - name: サンプルの配信元
+        description: 正常シナリオと同じ sample に、下の管理用の YAML・文書の行・`nav` のタブを加える
+        notes: 管理用の YAML と本文のファイルは、既存の行 `sample` の `paths`（`docs/*.yaml`）に当たらない `notes/` に置く
+      - name: 管理用の YAML
+        description: sample の `notes/files.yaml`。`files[]` に `a.md` と `b.md` の 2 行。`notes/a.md` の本文に相対リンク `[B](./b.md)` を置き、`notes/b.md` を置く
+        notes: スキーマは `templates/files.schema.yaml`
+      - name: 文書の行
+        description: 'sample の `dev-docs.yaml` の行 `notes`（`paths: [notes/files.yaml]`・`records: files`・`body_file: path`）'
+      - name: nav のタブ
+        description: 'sample の `nav.tabs[]` に、行 `notes` を並べるタブ（`items: [{auto: {document: notes}}]`）を加える'
+        notes: サイドバーに a と b が出る
+      - name: dev-docs
+        description: sample を配信している dev-docs
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        actor U as 利用者
+        participant UI as dev-docs の画面
+        participant API as 画面の API
+
+        U->>UI: 行 notes を並べるタブを選び、サイドバーで a を開く
+        UI->>API: 文書の取得（a）
+        API-->>UI: a の Markdown と本文のファイルのパス（notes/a.md）
+        UI-->>U: doc-view（a の本文）
+        U->>UI: 本文のリンク B を押す
+        UI->>UI: リンクを本文のファイルのパスを基準に解決する（notes/b.md）
+        UI->>API: 文書の取得（解決したパス）
+        API-->>UI: b の Markdown
+        UI-->>U: doc-view（b の本文）
+      ```
+    expected:
+      - リンク B を押すと b の本文が出て、「文書が見つかりません」にならない
+      - サイドバーで b が選ばれた状態になる
+    test: test_normal_when_files_index_relative_link
 lead: 利用者がブラウザで配信元の文書の画面を開き、タブ・サイドバー・検索・リビジョンの切り替え・差分で文書を読む。
 issue: 17
 primary_actor: 利用者

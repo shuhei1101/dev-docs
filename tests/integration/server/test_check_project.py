@@ -68,6 +68,44 @@ def test_normal_when_files_excluded(
     ]
 
 
+def test_normal_when_records_schema_mismatch(
+    tmp_path: Path,
+    make_source: Callable[..., Any],
+    make_server: Callable[..., Any],
+) -> None:
+    """records の行のスキーマが行に合わなければ、その行の schema を違反にする（正常系）。"""
+    # 準備
+    env = make_server(make_source("sample"))
+    before = env.handlers.registry.statuses()
+    folder = tmp_path / "mismatch"
+    folder.mkdir()
+    (folder / "dev-docs.yaml").write_text(
+        "name: mismatch\n"
+        "documents:\n"
+        "  - id: docs\n"
+        "    paths: [files.yaml]\n"
+        "    schema: schemas/files.schema.yaml\n"
+        "    records: files\n"
+        "    body_file: path\n",
+        encoding="utf-8",
+    )
+    (folder / "schemas").mkdir()
+    (folder / "schemas" / "files.schema.yaml").write_text(
+        "title: file\ntype: object\nrequired: [files]\nproperties:\n  files:\n    type: array\n",
+        encoding="utf-8",
+    )
+    (folder / "files.yaml").write_text("files:\n  - path: a.md\n", encoding="utf-8")
+    (folder / "a.md").write_text("# a\n", encoding="utf-8")
+    # 実行
+    result = env.call_admin("check_project", path=str(folder), format="json")
+    # 検証
+    violations = result.data["violations"]
+    assert [item["path"] for item in violations] == ["documents[0].schema"]
+    assert "properties.files.items" in violations[0]["rule"]
+    assert "sync" not in result.data
+    assert env.handlers.registry.statuses() == before
+
+
 def test_normal_when_config_has_violations(tmp_path: Path, make_server: Callable[..., Any]) -> None:
     """スキーマに違反する設定と、書く前の `config` の違反を返す（正常系）。"""
     # 準備

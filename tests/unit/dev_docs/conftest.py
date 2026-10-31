@@ -254,7 +254,15 @@ def make_document() -> Callable[..., Document]:
     return _make
 
 
-FILES_SCHEMA = "title: file\ntype: object\n"
+FILES_SCHEMA = (
+    "title: file\n"
+    "type: object\n"
+    "properties:\n"
+    "  files:\n"
+    "    type: array\n"
+    "    items:\n"
+    "      type: object\n"
+)
 
 SOURCE_CONFIG_TEMPLATE = (
     "name: {name}\n"

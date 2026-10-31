@@ -451,7 +451,7 @@ classes:
              - `converter` がある場合、`cache_dir` の控えがあればそれを使う。無ければスクリプトの実行（`cwd=target.base`・`stdin` に文書の YAML・制限時間 `timeout_sec`・`at`。`at` は `target.worktree` が `None` で `source.config_commit` がある場合に（`source.main_root`, `source.config_commit`））の標準出力を使い、一時ファイルから置き換えて控える。控えが `CONVERT_CACHE_KEEP` を超えたら古いものを消す
                - `ScriptTimeoutError`・`ScriptFailedError`・実行できない `ScriptError` の場合、`reason` が `timeout`・`exit`・`not_runnable` の `ConvertFailure` を返す
              - `converter` が無く Markdownの本文かが `True` の場合、`document.body` をそのまま使う
-             - それ以外は、スキーマ駆動の変換（スキーマは `store.schema(target, kind)`）
+             - それ以外は、スキーマ駆動の変換（スキーマは文書のストア.文書に当てるスキーマ `store.row_schema(target, kind)`）
           3. 埋め込みの展開（`target.base`）をする
           4. コードブロックの外の表を出る順にたどり、直前に `TABLE_KEY_PATTERN` の行があればそのキー、無ければ `{種類}:table[{n}]`（`n` は本文の中の 0 始まりの順）を表のキーにする。マーカーの行を取り除いた Markdown と表のキーを返す
         unit_tests:
@@ -488,6 +488,12 @@ classes:
             mock: なし
             expected: '`.md` の文書の `markdown` が本文と同じ。`.py` の文書はスキーマ駆動の変換（`# {name}` で始まる）'
             exception: '-'
+          - name: test_convert_service_convert_when_records
+            case: 正常
+            summary: records の行の要素を 1 行のスキーマで変換する
+            condition: '行 `notes`（`records: files`、`schema` が `templates/files.schema.yaml` のコピー）の要素 `{path: a.md, summary: 説明}` の文書'
+            mock: なし
+            expected: Markdown に `path`・`summary` の値が出る
       - name: clear
         title: 控えを捨てる
         summary: '`cache_dir` の控えを全て消す'

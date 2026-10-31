@@ -149,7 +149,7 @@ class ConvertService:
         elif is_markdown_body(document):
             markdown = document.body
         else:
-            markdown = schema_to_markdown(document, self.store.schema(target, document.kind))
+            markdown = schema_to_markdown(document, self.store.row_schema(target, document.kind))
         # ref を読むときだけ、埋め込みのマーカーがあればそのリビジョンを取り出した場所から読む
         base = target.base
         if target.ref is not None and re.search(EMBED_PATTERN, markdown):

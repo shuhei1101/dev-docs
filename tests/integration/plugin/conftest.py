@@ -35,12 +35,21 @@ class HookRun:
 
 @pytest.fixture
 def run_hook() -> Callable[..., HookRun]:
-    """プラグインのフックを、標準入力に JSON を渡して子プロセスで実行する関数を返す。"""
+    """プラグインのフックを、標準入力に JSON を渡して子プロセスで実行する関数を返す。
 
-    def _run(name: str, event: dict[str, Any] | str, env: dict[str, str]) -> HookRun:
+    `hooks_dir` は、定数を差し替えたフックのコピーを置いたフォルダを渡すときに使う。
+    """
+
+    def _run(
+        name: str,
+        event: dict[str, Any] | str,
+        env: dict[str, str],
+        *,
+        hooks_dir: Path = HOOKS_DIR,
+    ) -> HookRun:
         text = event if isinstance(event, str) else json.dumps(event)
         result = subprocess.run(
-            [sys.executable, str(HOOKS_DIR / f"{name}.py")],
+            [sys.executable, str(hooks_dir / f"{name}.py")],
             input=text,
             capture_output=True,
             text=True,

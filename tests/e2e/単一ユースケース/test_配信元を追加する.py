@@ -12,6 +12,7 @@ FILES_SCHEMA = TEMPLATES / "files.schema.yaml"
 BROKEN_CONFIG = "name: broken\ndocuments:\n  - id: sample\n    schema: schemas/sample.schema.yaml\n"
 SYNC_ZERO = {"missing_refs": 0, "unindexed_files": 0, "missing_body_files": 0}
 TOOL_COUNT = 6
+FILES_REQUIRED = "'files' is a required property"
 SETUP_PROMPT = "/dev-docs:setup {path}"
 MARKDOWN_FILES = {
     "docs/a.md": "# A\n\nA の説明。\n",
@@ -68,6 +69,17 @@ documents:
     records: files
     body_file: path
 """
+MISMATCH_CONFIG = """\
+version: "3"
+name: mismatch
+documents:
+  - id: docs
+    paths: [files.yaml]
+    schema: schemas/files.schema.yaml
+    records: files
+    body_file: path
+"""
+MISMATCH_SCHEMA = "type: object\nproperties:\n  files: {type: array}\nrequired: [files]\n"
 NOTES_FILES = """\
 files:
   - path: docs/a.md
@@ -176,6 +188,7 @@ def test_normal_when_non_yaml_range(
     assert not any("vendor" in path for path in paths)
     assert schema_errors(FILES_SCHEMA, loaded) == []
     assert len(found.data["items"]) == len(MARKDOWN_FILES)
+    assert not any(FILES_REQUIRED in note for note in found.data.get("notes", []))
 
 
 def test_normal_when_rerun(
@@ -261,6 +274,35 @@ def test_error_when_source_config_invalid(
     assert served.settings.read_bytes() == before
     assert served.get("/_api/sources/sample/docs").status_code == 200
     assert "documents[0].paths" in run.text
+
+
+def test_error_when_records_schema_mismatch(
+    claude_home: Any,
+    make_clone: Callable[..., Any],
+    make_source: Callable[..., Any],
+    serve: Callable[..., Any],
+) -> None:
+    """records の行のスキーマが行の項目を定めないと、違反を示して止まり、端末の設定を書き換えない（異常系）。"""
+    # 準備
+    clone = make_clone()
+    sample = make_source("sample")
+    mismatch_files = {
+        "dev-docs.yaml": MISMATCH_CONFIG,
+        "schemas/files.schema.yaml": MISMATCH_SCHEMA,
+        "files.yaml": "files:\n  - path: a.md\n",
+        "a.md": "# A\n",
+    }
+    mismatch = make_source("mismatch", mismatch_files, git=False)
+    served = serve(sample, clone=clone.clone, port=claude_home.port)
+    claude_home.set_env(DEV_DOCS_CONFIG=str(served.settings))
+    before = served.settings.read_bytes()
+    # 実行
+    run = claude_home.run(SETUP_PROMPT.format(path=mismatch.folder), cwd=mismatch.folder)
+    # 検証
+    assert served.settings.read_bytes() == before
+    assert served.get("/_api/sources/sample/docs").status_code == 200
+    assert "documents[0].schema" in run.text
+    assert "records" in run.text
 
 
 def _run_setup_for_registered(

@@ -2,12 +2,14 @@ from __future__ import annotations
 
 import contextlib
 import os
+import re
 import signal
 import time
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
+HOOKS_DIR = Path(__file__).parents[3] / "plugins" / "dev-docs" / "hooks"
 EVENT = {"session_id": "s1", "cwd": "/repo/sample", "source": "clear"}
 
 
@@ -24,6 +26,20 @@ def _clone_with_recorder(tmp_path: Path) -> tuple[Path, Path, Path]:
     )
     python.chmod(0o755)
     return clone, args_file, pid_file
+
+
+def _hooks_with_context_timeout(tmp_path: Path, seconds: int) -> Path:
+    """`CONTEXT_TIMEOUT_SEC` を `seconds` に差し替えたセッション開始のフックのコピーを置き、そのフォルダを返す。"""
+    source = HOOKS_DIR / "session_start.py"
+    text = source.read_text(encoding="utf-8")
+    replaced = re.sub(
+        r"^CONTEXT_TIMEOUT_SEC = \d+$", f"CONTEXT_TIMEOUT_SEC = {seconds}", text, flags=re.M
+    )
+    assert replaced != text
+    folder = tmp_path / "hooks"
+    folder.mkdir()
+    (folder / "session_start.py").write_text(replaced, encoding="utf-8")
+    return folder
 
 
 def _wait_for(path: Path, timeout_sec: float = 5) -> str:
@@ -108,11 +124,12 @@ def test_normal_when_terminal_config_missing(
 def test_normal_when_context_timeout(
     tmp_path: Path, run_hook: Callable[..., Any], context_server: Callable[..., Any]
 ) -> None:
-    """`POST /_admin/session-context` が 3 秒で返らなければ、理由を入れて戻る（正常系）。"""
+    """`POST /_admin/session-context` が `CONTEXT_TIMEOUT_SEC` 秒で返らなければ、打ち切った秒数を入れて戻る（正常系）。"""
     # 準備
+    hooks_dir = _hooks_with_context_timeout(tmp_path, 2)
     started = time.monotonic()
     # 実行
-    with context_server("ctx", hold_sec=5) as server:
+    with context_server("ctx", hold_sec=4) as server:
         result = run_hook(
             "session_start",
             EVENT,
@@ -120,11 +137,14 @@ def test_normal_when_context_timeout(
                 "DEV_DOCS_PORT": str(server.port),
                 "DEV_DOCS_CONFIG": str(tmp_path / "missing.yaml"),
             },
+            hooks_dir=hooks_dir,
         )
     elapsed = time.monotonic() - started
     # 検証
     context = result.output["hookSpecificOutput"]["additionalContext"]
     assert result.code == 0
-    assert elapsed < 4.5
+    assert elapsed < 3
     assert "取れませんでした" in context
+    assert "2 秒で打ち切りました" in context
     assert "status" in context
+    assert "起動しました" not in context

@@ -276,7 +276,7 @@ def search_docs(
             documents = [document for document in documents if document.id in ids]
         loaded.append((index, target, documents))
         schemas.extend(
-            store.schema(target, table.id)
+            store.row_schema(target, table.id)
             for table in target.source.config.documents
             if table.enabled
         )

@@ -176,9 +176,10 @@ export const DocBody = ({
     }
     if (href.startsWith("#")) return;
     event.preventDefault();
+    // 管理用の YAML の行の文書は、画面のパスではなく本文のファイルのパスを基準に解決する
     const url = new URL(
       href,
-      `${window.location.origin}/${doc.source}/${doc.path}`,
+      `${window.location.origin}/${doc.source}/${doc.bodyPath ?? doc.path}`,
     );
     const prefix = `/${doc.source}/`;
     if (!url.pathname.startsWith(prefix)) return;

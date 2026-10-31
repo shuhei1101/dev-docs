@@ -12,8 +12,9 @@ from typing import Any
 from dev_docs.features.access.types import Target
 from dev_docs.features.documents.aliases import collect_aliases
 from dev_docs.features.documents.fields import missing_ref_fields
+from dev_docs.features.documents.indexable import walk_files
 from dev_docs.features.documents.loader import collect_files, load_file, unindexed_files
-from dev_docs.features.documents.schema import resolve_schema_refs
+from dev_docs.features.documents.schema import records_item_schema, resolve_schema_refs
 from dev_docs.features.documents.types import Document, LoadProblem, LoadResult, SyncReport
 from dev_docs.features.history.query import file_dates, resolve_ref
 from dev_docs.features.history.snapshot import SnapshotStore
@@ -136,13 +137,18 @@ class DocumentStore:
         return [row for row in source.config.documents if row.enabled]
 
     def _load_table(
-        self, root: Path, table: DocumentTable, source_id: str, dates: dict[str, FileDates]
+        self,
+        root: Path,
+        table: DocumentTable,
+        source_id: str,
+        dates: dict[str, FileDates],
+        files: Sequence[str],
     ) -> tuple[list[Document], list[LoadProblem], set[tuple[Path, str]]]:
         """1 つの文書の行のファイルを集め、変わったファイルだけ読み直す。"""
         documents: list[Document] = []
         problems: list[LoadProblem] = []
         seen: set[tuple[Path, str]] = set()
-        for path in collect_files(root, table):
+        for path in collect_files(root, table, files=files):
             absolute = root / path
             key = (absolute, table.id)
             seen.add(key)
@@ -168,17 +174,28 @@ class DocumentStore:
             problems.extend(issues)
         return documents, problems, seen
 
-    def load(self, target: Target, *, kinds: Sequence[str] | None = None) -> LoadResult:
-        """読む場所の文書を、文書の行ごとに集めて返す。"""
+    def load(
+        self,
+        target: Target,
+        *,
+        kinds: Sequence[str] | None = None,
+        files: Sequence[str] | None = None,
+    ) -> LoadResult:
+        """読む場所の文書を、文書の行ごとに集めて返す。
+
+        `files` は呼び出し元が読むフォルダを `walk_files` でたどったパス。
+        無ければここで 1 回だけたどり、行ごとにたどり直さない。
+        """
         root = self.read_root(target)
         tables = self._tables(target, kinds)
         dates = self._file_dates(target)
+        walked = list(walk_files(root)) if files is None else files
         documents: list[Document] = []
         problems: list[LoadProblem] = []
         kind_ids = {table.id for table in tables}
         seen_keys: set[tuple[Path, str]] = set()
         for table in tables:
-            found, issues, seen = self._load_table(root, table, target.source.id, dates)
+            found, issues, seen = self._load_table(root, table, target.source.id, dates, walked)
             documents.extend(found)
             problems.extend(issues)
             seen_keys |= seen
@@ -248,6 +265,16 @@ class DocumentStore:
             self._schemas[path] = (stat.st_mtime_ns, stat.st_size, resolved)
         return resolved
 
+    def row_schema(self, target: Target, kind: str) -> dict[str, Any]:
+        """文書 1 件の内容に当てるスキーマを返す（`records` を持つ行は 1 行のスキーマ）。"""
+        schema = self.schema(target, kind)
+        records = target.source.table(kind).records
+        # ファイル 1 つが 1 文書の行: 種類のスキーマをそのまま当てる
+        if records is None:
+            return schema
+        # records の行: 要素 1 つのスキーマ。取り出せなければ何も当てない
+        return records_item_schema(schema, records) or {}
+
     def invalidate(self, paths: Iterable[Path]) -> None:
         """書き込んだファイルのキャッシュを捨てる。"""
         targets = set(paths)
@@ -267,7 +294,9 @@ class DocumentStore:
 
 def check_sync(store: DocumentStore, source: ServedSource) -> SyncReport:
     """配信元の文書を読み、`metadata` の列の欠け・管理用の YAML のずれ・エイリアスのキーの違反を求める。"""
-    result = store.load(Target(source, source.root, None, None, "read"))
+    # 配信元のフォルダは 1 回だけたどり、文書の収集と索引に無いファイルの検出で使い回す
+    files = list(walk_files(source.root))
+    result = store.load(Target(source, source.root, None, None, "read"), files=files)
     missing_refs = [
         f"{document.kind}: {document.id}: {key}（{field}）"
         for document in result.documents
@@ -277,7 +306,7 @@ def check_sync(store: DocumentStore, source: ServedSource) -> SyncReport:
     for table in source.config.documents:
         if not table.enabled or table.records is None or table.body_file is None:
             continue
-        for index_path in collect_files(source.root, table):
+        for index_path in collect_files(source.root, table, files=files):
             body_paths = {
                 document.body_path
                 for document in result.documents
@@ -285,7 +314,7 @@ def check_sync(store: DocumentStore, source: ServedSource) -> SyncReport:
             }
             unindexed.extend(
                 f"{table.id}: {path}"
-                for path in unindexed_files(source.root, index_path, body_paths, table)
+                for path in unindexed_files(source.root, index_path, body_paths, table, files=files)
             )
     missing_body_files = [
         f"{problem.path}: {problem.detail}"

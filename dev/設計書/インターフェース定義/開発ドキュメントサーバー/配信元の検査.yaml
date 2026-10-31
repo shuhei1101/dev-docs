@@ -10,6 +10,9 @@ flows:
         description: なし（一時フォルダに配信元を作り、dev-docs のアプリをテストのクライアントで呼ぶ）
       - name: 配信元
         description: 検証に通る sample。管理用の YAML に無いファイル 1 件を置く
+      - name: 管理用の YAML の行
+        description: 'sample の行 `src`（`records: files`・`body_file: path`）。`schema` は `templates/files.schema.yaml` のコピー'
+        notes: '`/dev-docs:setup` が作る組み合わせ'
     flow: |-
       ```mermaid
       sequenceDiagram
@@ -22,7 +25,7 @@ flows:
         T-->>C: 違反・設定のバージョン・同期の件数
       ```
     expected:
-      - '`violations` と `missing_paths` と `script_errors` が空'
+      - '`violations` と `missing_paths` と `script_errors` が空（行 `src` の `schema` も違反にしない）'
       - '`version_state` が `current`'
       - '`sync.unindexed_files` が 1 で、`sync.items` にそのパスがある'
       - 配信元のフォルダのファイルが変わらない
@@ -161,6 +164,30 @@ flows:
       - '`warnings` に、タブ `none` の条件が 0 件に当たる警告が 1 件ある'
       - '`alias_schema_version` が `v0.3.0`'
     test: test_normal_when_alias_and_nav_checked
+  - name: 正常系（records の行のスキーマが行に合わない）
+    summary: '`records` を持つ行の `schema` が `properties.{records}.items` を定めないとき、その行の `schema` を違反にする'
+    setup:
+      - name: Mock
+        description: なし
+      - name: 食い違う配信元
+        description: '`dev-docs.yaml` の `documents[0]`（`paths: [files.yaml]`・`records: files`・`body_file: path`）の `schema` が、最上位で `files` を必須にし `files` の `items` を定めないスキーマを指すフォルダ'
+        notes: 管理用の YAML は `files[]` に `a.md` の 1 行
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        participant C as クライアント
+        participant T as check_project
+        participant F as 配信元のフォルダ
+
+        C->>T: path
+        T-->>F: dev-docs.yaml と行の schema を読む
+        T->>T: records の行の schema から properties.files.items を取り出せない
+        T-->>C: violations（documents[0].schema）
+      ```
+    expected:
+      - '`violations` に `documents[0].schema` があり、`rule` にスキーマが `properties.files.items` を定めないことがある'
+      - 結果は配信中の配信元の状態に反映しない
+    test: test_normal_when_records_schema_mismatch
 lead: 配信元の `dev-docs.yaml` と管理用の YAML・スクリプトを検証し、違反・設定のバージョンの新旧・索引の同期の件数を返す。端末の設定に無い配信元も検査できる。
 identifier: check_project
 permissions: なし（`127.0.0.1` でだけ待ち受ける）
@@ -271,7 +298,7 @@ constraints:
   - item: 注釈
     constraint: '`readOnlyHint: true`'
   - item: 検査の内容
-    constraint: 起動・`reload` の配信元の検証と同じ関数を使う。結果は配信中の配信元の状態に反映しない
+    constraint: 起動・`reload` の配信元の検証と同じ関数を使う。結果は配信中の配信元の状態に反映しない。`records` を持つ行は、`schema` をファイル全体のスキーマとし、`properties.{records}.items` を取り出せない組み合わせを `documents[{番号}].schema` の違反にする
   - item: 件数の内訳
     constraint: 先頭 50 件まで返し、件数は全件を数える
   - item: タイムアウト

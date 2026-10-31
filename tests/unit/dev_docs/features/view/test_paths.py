@@ -7,7 +7,7 @@ from dev_docs.features.access.types import Target
 from dev_docs.features.documents.types import Document
 from dev_docs.features.sources.registry import SourceRegistry
 from dev_docs.features.sources.types import ServedSource, SourceConfig
-from dev_docs.features.view.paths import page_path, screen_target
+from dev_docs.features.view.paths import find_page, page_path, screen_target
 
 
 def test_page_path(make_document: Callable[..., Document]) -> None:
@@ -21,6 +21,43 @@ def test_page_path(make_document: Callable[..., Document]) -> None:
     # 検証
     assert plain_result == "docs/a"
     assert record_result == "docs/rules/r-1"
+
+
+def test_find_page(make_document: Callable[..., Document]) -> None:
+    """文書のページのパスで当たる（正常系）。"""
+    # 準備
+    document = make_document(id="a", path="rules/a.yaml")
+    other = make_document(id="b", path="rules/b.yaml")
+    # 実行
+    result = find_page([other, document], "rules/a")
+    # 検証
+    assert result is document
+
+
+def test_find_page_when_body_path(make_document: Callable[..., Document]) -> None:
+    """本文のファイルのパスで当たる（正常系）。"""
+    # 準備
+    plain = make_document(id="a", path="rules/a.yaml")
+    record = make_document(
+        id="notes/b", path="notes/files.yaml", record_index=0, body_path="notes/b.md"
+    )
+    # 実行
+    result = find_page([plain, record], "notes/b.md")
+    # 検証
+    assert result is record
+
+
+def test_find_page_when_missing(make_document: Callable[..., Document]) -> None:
+    """どれにも当たらない（正常系）。"""
+    # 準備
+    plain = make_document(id="a", path="rules/a.yaml")
+    record = make_document(
+        id="notes/b", path="notes/files.yaml", record_index=0, body_path="notes/b.md"
+    )
+    # 実行
+    result = find_page([plain, record], "no/such")
+    # 検証
+    assert result is None
 
 
 def test_screen_target(
