@@ -109,7 +109,7 @@ status_codes:
 error_format: RFC 9457 の `application/problem+json`。拡張メンバーは camelCase（`nextSteps`）
 constraints:
   - item: 除くパス
-    constraint: '`/_api/`・`/mcp`・`/_admin/` で始まるパスは画面を返さず、それぞれの入口が応える。無い `/_api/` のパスは `application/problem+json` の 404'
+    constraint: '`/_api/`・`/mcp`・`/_admin/` で始まるパスは画面を返さず、それぞれの入口が応える。スラッシュ無しの `/mcp`・`/_admin/mcp` も画面の配信に当たらず MCP が応える。無い `/_api/` のパスは `application/problem+json` の 404'
   - item: キャッシュ
     constraint: '`index.html` は `Cache-Control: no-cache`。`assets/` のファイルはファイル名に中身のハッシュを持ち、`Cache-Control: public, max-age=31536000, immutable`'
   - item: 認可

@@ -307,6 +307,84 @@ scenarios:
       - 見つからない画面に、`broken` を配信していないことと、起動時の検証で外した理由（`documents[0]` に必須のキー `paths` が無い）が出る
       - トップバーの配信元の切り替えに sample が出て、設定画面へのリンクがある
     test: test_error_when_source_not_served
+  - name: 正常シナリオ（プロンプトを読む）
+    setup:
+      - name: Mock
+        description: なし（実環境で実行）
+      - name: プロンプトを配信する配信元
+        description: '配信元を追加するの `正常シナリオ（content/prompts/ を見つける）` を終えた sample。例 2（`kind: llm`、`lang: en`、本文は `en`・`ja`、組 `no-logs`）と例 1（`kind: hook`）を持つ'
+        notes: id `sample`
+      - name: dev-docs
+        description: sample を配信している dev-docs
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        actor U as 利用者
+        participant UI as dev-docs の画面
+        participant API as 画面の API
+        participant CV as プロンプトの変換
+
+        U->>UI: プロンプトのタブを開く
+        UI-->>U: 種類（kind）ごとにまとめたサイドバー
+        U->>UI: 振り返りのノードを開く
+        UI->>API: 文書の取得
+        API->>CV: 標準入力にプロンプトの YAML を渡す
+        CV-->>API: 標準出力の Markdown
+        API-->>UI: 変換した Markdown
+        UI-->>U: 見出し・変数の表・テンプレート・例のセクション
+        U->>UI: テンプレートの本文の {{ character.display_name }} にフォーカスする
+        UI-->>U: 説明・型・例のツールチップ
+        U->>UI: テンプレートの部品の言語のタブで ja を選ぶ
+        UI-->>U: 全てのセクションの言語のタブが ja になる
+        U->>UI: 閉じた組 no-logs のセクションを開く
+        UI-->>U: ja で描画した no-logs の結果
+      ```
+    expected:
+      - サイドバーに、`llm`・`hook` の見出しの下にそれぞれのプロンプトが並ぶ
+      - 本文の頭に `name` の見出し、`kind`・`lang` のバッジ、`description` が出る
+      - 変数の表に `character.display_name`・`traits[].name` のようなパスの行が並び、型・必須・例・説明・出どころの列を持つ
+      - 「テンプレート」に部品ごとのセクション（`role`・`when` つき）があり、本文は Jinja2 のまま出て、`{{ character.display_name }}` にフォーカスすると「表示名」・`string`・「ひな」のツールチップが開く
+      - 「例」に「既定の例」と「ログが無い」のセクションがあり、「ログが無い」は閉じた状態で始まる。各組は `system`・`user` のメッセージに分かれ、使わなかった部品（既定の例は `no-logs`、ログが無いは `logs`）と字数が出る
+      - 言語のタブは `en`・`ja` の順で並び、`ja` を選ぶと全てのセクションが `ja` の本文になり、文書を開き直しても `ja` のまま残る
+      - 画面幅 1280 と 390 で、本文が横にはみ出さない
+    test: test_normal_when_prompt_document
+  - name: 正常シナリオ（プロンプトに注意の出る組がある）
+    setup:
+      - name: Mock
+        description: なし（実環境で実行）
+      - name: 型の合わない組
+        description: sample の例 2 に、`traits` に文字列を入れた組 `broken` を追加する
+        notes: '`values: {traits: oops}`'
+      - name: 字数を超える組
+        description: sample の例 1 に、描画した結果が 1,000 字を超える組 `many-sources` を追加する
+        notes: 配信元 20 件
+      - name: dev-docs
+        description: sample を配信している dev-docs
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        actor U as 利用者
+        participant UI as dev-docs の画面
+        participant API as 画面の API
+        participant CV as プロンプトの変換
+
+        U->>UI: 振り返りのノードを開く
+        UI->>API: 文書の取得
+        API->>CV: 標準入力にプロンプトの YAML を渡す
+        CV-->>API: broken の組だけ注意書きにした Markdown
+        API-->>UI: 変換した Markdown
+        U->>UI: broken のセクションを開く
+        UI-->>U: 変数と理由の注意書き
+        U->>UI: SessionStart の配信元の一覧を開き、many-sources のセクションを開く
+        UI-->>U: 字数の注意と描画した結果
+      ```
+    expected:
+      - '`broken` のセクションの各言語のタブに、描画できないことと `traits` の型が合わないことの注意書き（`[!CAUTION]`）が出る'
+      - 振り返りのノードの他の組（既定の例・ログが無い）と変数の表・テンプレートは描かれる
+      - '`many-sources` のセクションに、字数と 1,000 字を超えたことの注意（`[!WARNING]`）が出て、描画した結果も出る'
+      - '1,000 字以下の組と、`kind: llm` の組には字数の注意が出ない'
+      - 言語が `ja` だけの SessionStart の配信元の一覧には言語のタブが出ず、各セクションに本文だけが出る
+    test: test_normal_when_prompt_set_flagged
   - name: 正常シナリオ（タグの式で絞った一覧を開く）
     setup:
       - name: Mock

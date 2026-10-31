@@ -38,5 +38,6 @@
 | [lefthook](./lefthook.yaml) | Git のフックを流すツール |
 | [typescript](./typescript.yaml) | 画面の型の検査 |
 | [alias-inject](./alias-inject.yaml) | エイリアスの元の行のスキーマの正本を持つプラグイン |
+| [jinja2](./jinja2.yaml) | プロンプトの部品の本文を描くテンプレートエンジン |
 
 <!-- /table -->

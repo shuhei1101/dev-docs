@@ -7,6 +7,7 @@ import os
 import shutil
 import signal
 import subprocess
+import sys
 from collections.abc import Iterator, Sequence
 from contextlib import ExitStack, contextmanager
 from dataclasses import dataclass
@@ -61,7 +62,8 @@ def check_runnable(run: Sequence[str], *, cwd: Path) -> list[str]:
     # `/` を含む先頭は cwd からのパス、含まないときは PATH から引く
     resolved = str((cwd / head).resolve()) if "/" in head and (cwd / head).exists() else None
     if resolved is None and "/" not in head:
-        resolved = shutil.which(head)
+        # PATH に無ければ、サーバーを動かしている Python の環境の bin から引く（子プロセスの PATH は変えない）
+        resolved = shutil.which(head) or shutil.which(head, path=str(Path(sys.executable).parent))
     if resolved is None:
         raise ScriptNotFoundError(command, f"コマンド {head} が見つかりません")
     # cwd からの相対パスに見えるスクリプトの引数は、ファイルがあること

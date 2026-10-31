@@ -91,6 +91,11 @@ files:
     tags: [memo]
 """
 
+ROOT_PROMPTS = "content/prompts/**/*.yaml"
+PLUGIN_PROMPTS = "plugins/sample/content/prompts/**/*.yaml"
+PROMPT_METADATA = {"name": "name", "description": "description", "tags": "tags"}
+PROMPT_FILTER = {"field": "kind", "op": "prefix", "values": ["prompts"]}
+
 
 def _registered_files() -> dict[str, str]:
     """管理用の YAML の行を持つ、登録済みの配信元のファイル一式を返す。"""
@@ -105,6 +110,30 @@ def _registered_files() -> dict[str, str]:
 def _rows(load_yaml_file: Callable[[Path], Any], folder: Path) -> dict[str, dict[str, Any]]:
     """管理用の YAML の行を、パスをキーにして集める。"""
     return {row["path"]: row for row in load_yaml_file(folder / "files.yaml")["files"]}
+
+
+def _prompt_rows(config: dict[str, Any]) -> dict[str, dict[str, Any]]:
+    """`dev-docs.yaml` の documents のうち `content/prompts/` を指す行を、`paths` の先頭をキーにして集める。"""
+    return {
+        row["paths"][0]: row
+        for row in config["documents"]
+        if "content/prompts/" in row.get("paths", [""])[0]
+    }
+
+
+def _grouped_documents(config: dict[str, Any]) -> set[str]:
+    """`nav` のタブのうち、`auto` を `group_by: kind` で並べる項目の文書の行を集める。"""
+    return {
+        item["auto"]["document"]
+        for tab in config.get("nav", {}).get("tabs", [])
+        for item in tab.get("items", [])
+        if item.get("auto", {}).get("group_by") == "kind"
+    }
+
+
+def _names(found: Any) -> list[str]:
+    """`search_docs` の結果の文書の名前を昇順で返す。"""
+    return sorted(item["values"]["name"] for item in found.data["items"])
 
 
 def test_normal(
@@ -724,3 +753,66 @@ def test_normal_when_worktree_config_registered(
     assert str(worktree) in _worktree_paths(described)
     assert str(develop) in _worktree_paths(described)
     assert "name: ワークツリー x の文書 1" in found.text
+
+
+def test_normal_when_prompt_folder_found(
+    claude_home: Any,
+    make_clone: Callable[..., Any],
+    make_source: Callable[..., Any],
+    serve: Callable[..., Any],
+    prompt_files: Callable[..., dict[str, str]],
+    load_yaml_file: Callable[[Path], Any],
+) -> None:
+    """直下とプラグインのルートの content/prompts/ に、プロンプトの行・スキーマ・nav を書く（正常系）。"""
+    # 準備
+    clone = make_clone()
+    sample = make_source("sample", prompt_files(rows=False), git=False)
+    sample.scope_write = [sample.folder]
+    served = serve(sample, clone=clone.clone, port=claude_home.port)
+    claude_home.set_env(DEV_DOCS_CONFIG=str(served.settings))
+    # 実行
+    run = claude_home.run(SETUP_PROMPT.format(path=sample.folder), cwd=sample.folder)
+    # 検証
+    config = load_yaml_file(sample.folder / "dev-docs.yaml")
+    rows = _prompt_rows(config)
+    checked = served.call_admin("check_project", path=str(sample.folder), format="json")
+    found = served.call(
+        "search_docs", cwd=str(sample.folder), filter=PROMPT_FILTER, view="summary", format="json"
+    )
+    assert not run.result["is_error"]
+    assert sorted(rows) == [ROOT_PROMPTS, PLUGIN_PROMPTS]
+    assert rows[ROOT_PROMPTS]["schema"] == "schemas/prompt.schema.yaml"
+    assert rows[ROOT_PROMPTS]["converter"] == "prompt-doc"
+    assert rows[ROOT_PROMPTS]["metadata"] == PROMPT_METADATA
+    assert rows[PLUGIN_PROMPTS]["schema"] == "schemas/prompt.schema.yaml"
+    assert rows[PLUGIN_PROMPTS]["converter"] == "prompt-doc"
+    assert rows[PLUGIN_PROMPTS]["metadata"] == PROMPT_METADATA
+    assert (sample.folder / "schemas" / "prompt.schema.yaml").is_file()
+    assert _grouped_documents(config) == {rows[ROOT_PROMPTS]["id"], rows[PLUGIN_PROMPTS]["id"]}
+    assert checked.data.get("violations", []) == []
+    assert _names(found) == ["SessionStart の配信元の一覧", "振り返りのノード"]
+
+
+def test_normal_when_prompt_row_exists(
+    claude_home: Any,
+    make_clone: Callable[..., Any],
+    make_source: Callable[..., Any],
+    serve: Callable[..., Any],
+    prompt_files: Callable[..., dict[str, str]],
+) -> None:
+    """content/prompts/ の行が既にあれば、プロンプトの行の候補を出さず dev-docs.yaml を変えない（正常系）。"""
+    # 準備
+    clone = make_clone()
+    sample = make_source("sample", prompt_files(), git=False)
+    sample.scope_write = [sample.folder]
+    served = serve(sample, clone=clone.clone, port=claude_home.port)
+    claude_home.set_env(DEV_DOCS_CONFIG=str(served.settings))
+    before = (sample.folder / "dev-docs.yaml").read_text(encoding="utf-8")
+    # 実行
+    run = claude_home.run(SETUP_PROMPT.format(path=sample.folder), cwd=sample.folder)
+    # 検証
+    checked = served.call_admin("check_project", path=str(sample.folder), format="json")
+    assert not run.result["is_error"]
+    assert not any("content/prompts" in text for text in run.question_texts)
+    assert (sample.folder / "dev-docs.yaml").read_text(encoding="utf-8") == before
+    assert checked.data.get("violations", []) == []

@@ -453,6 +453,61 @@ scenarios:
       - 応答が 403
       - '`settings.yaml` が変わらず、sample の文書の画面は開ける'
     test: test_error_when_cross_origin
+  - name: 正常シナリオ（content/prompts/ を見つける）
+    setup:
+      - name: Mock
+        description: なし（実環境で実行。Claude Code は `claude -p` で動かし、AskUserQuestion には既定の選択肢で答える）
+      - name: プロンプトを持つ配信元
+        description: '登録済みの配信元。直下の `content/prompts/` に A-42 の例 2 のプロンプト（`kind: llm`）、`plugins/sample/`（`.claude-plugin/plugin.json` を持つ）の `content/prompts/` に例 1 のプロンプト（`kind: hook`）を置き、`dev-docs.yaml` にプロンプトの documents の行は無い'
+        notes: id `sample`
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        actor U as 利用者
+        participant SK as setup のスキル
+        participant FS as 配信元のフォルダ
+        participant AD as 管理の MCP
+
+        U->>SK: /dev-docs:setup {sample のパス}
+        SK->>FS: 直下とプラグインのルートの content/prompts/ を探す
+        FS-->>SK: content/prompts/ と plugins/sample/content/prompts/
+        SK-->>U: 見つけたフォルダごとの documents の行（paths・schema・converter・metadata）と、プロンプトのスキーマ・converters[]・nav の行を候補の表で示して確かめる
+        U-->>SK: 了承
+        SK->>FS: プロンプトのスキーマを置き、dev-docs.yaml に候補の行を書く
+        SK->>AD: check_project
+        SK->>AD: reload
+        SK-->>U: 書いた行と結果を出す
+      ```
+    expected:
+      - '`dev-docs.yaml` の documents に、`paths` が `content/prompts/**/*.yaml` の行と `plugins/sample/content/prompts/**/*.yaml` の行があり、どちらも `schema`・`converter`・`metadata`（`name`・`description`・`tags`）を持つ'
+      - '`nav` に、プロンプトの行を `auto` で並べ `group_by: kind` で種類ごとにまとめる項目がある'
+      - '`check_project` が違反を 0 件で返す'
+      - '`reload` の後の `search_docs` が 2 件のプロンプトを YAML の `name` で返す'
+    test: test_normal_when_prompt_folder_found
+  - name: 正常シナリオ（content/prompts/ の行が既にある）
+    setup:
+      - name: Mock
+        description: なし（実環境で実行）
+      - name: プロンプトの行を持つ配信元
+        description: '`正常シナリオ（content/prompts/ を見つける）` を終えた後の sample'
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        actor U as 利用者
+        participant SK as setup のスキル
+        participant FS as 配信元のフォルダ
+        participant AD as 管理の MCP
+
+        U->>SK: /dev-docs:setup {sample のパス}
+        SK->>FS: 直下とプラグインのルートの content/prompts/ を探す
+        SK->>FS: dev-docs.yaml の documents の paths と比べる
+        SK->>AD: check_project
+        SK-->>U: プロンプトの行の候補を出さずに結果を出す
+      ```
+    expected:
+      - プロンプトの documents の行の候補が出ない
+      - '`dev-docs.yaml` が変わらない'
+    test: test_normal_when_prompt_row_exists
   - name: 正常シナリオ（メインのリポジトリを指して追加する）
     setup:
       - name: Mock

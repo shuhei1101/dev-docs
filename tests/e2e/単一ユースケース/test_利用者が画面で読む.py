@@ -5,7 +5,7 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
-from playwright.sync_api import Locator, Page, expect
+from playwright.sync_api import Locator, Page, ViewportSize, expect
 
 FILES_SCHEMA = Path(__file__).parents[3] / "templates" / "files.schema.yaml"
 BROKEN_CONFIG = "name: broken\ndocuments:\n  - id: sample\n    schema: schemas/sample.schema.yaml\n"
@@ -88,6 +88,14 @@ SCOPE_TERM = "id: scope\nname: 作業範囲\ndescription: 触ってよい範囲\
 TERM_NOTE = "# A\n\n担当範囲の中だけを書き換える。\n"
 SLEEP_SCRIPT = "import time\ntime.sleep(60)\n"
 SMALL_ROWS = [{"key": "k1", "label": "名称 1", "notes": "備考 1"}]
+REFLECTION_PATH = "/sample/content/prompts/node/reflection"
+SESSION_CONTEXT_PATH = "/sample/plugins/sample/content/prompts/session-context"
+# 振り返りのノードの言語のタブ群の数（テンプレートの部品 5・例の組 2）
+REFLECTION_TAB_GROUPS = 7
+VIEWPORTS: tuple[ViewportSize, ...] = (
+    {"width": 1280, "height": 800},
+    {"width": 390, "height": 844},
+)
 
 
 def _custom_files(
@@ -118,6 +126,52 @@ def _side_link(page: Page, title: str) -> Locator:
     return (
         page.get_by_role("navigation", name="文書の一覧").get_by_role("link").filter(has_text=title)
     )
+
+
+def _section(page: Page, name: str) -> Locator:
+    """本文の、見出しの名前のセクションの中身のロケータを返す。"""
+    return page.locator(f'main [id="section-{name}"]')
+
+
+def _section_toggle(page: Page, name: str) -> Locator:
+    """本文の、見出しの名前のセクションを開閉するボタンのロケータを返す。"""
+    return page.get_by_role("main").get_by_role("button", name=name, exact=True)
+
+
+def _group_links(page: Page, group: str) -> Locator:
+    """サイドバーの、`group` の見出しの下の文書のリンクのロケータを返す。"""
+    sidebar = page.get_by_role("navigation", name="文書の一覧")
+    return (
+        sidebar.locator("li:has(> p)")
+        .filter(has=page.locator("p", has_text=re.compile(f"^{group}$")))
+        .get_by_role("link")
+    )
+
+
+def _selected_tabs(page: Page, name: str) -> Locator:
+    """本文の、選ばれている `name` の言語のタブのロケータを返す（閉じたセクションの中も含む）。"""
+    return page.locator('main [role="tab"][aria-selected="true"]').filter(
+        has_text=re.compile(f"^{name}$")
+    )
+
+
+def _fits_width(page: Page) -> bool:
+    """文書が画面の幅に収まり、横にはみ出していないかを返す。"""
+    return bool(
+        page.evaluate(
+            "document.documentElement.scrollWidth <= document.documentElement.clientWidth"
+        )
+    )
+
+
+def _fits_all_viewports(page: Page) -> list[bool]:
+    """`VIEWPORTS` の画面幅ごとに、文書が横にはみ出していないかを返す。"""
+    results = []
+    for size in VIEWPORTS:
+        page.set_viewport_size(size)
+        expect(_heading(page)).to_be_visible()
+        results.append(_fits_width(page))
+    return results
 
 
 def _diff_doc(sample_doc_text: Callable[..., str], notes: str) -> str:
@@ -554,3 +608,131 @@ def test_normal_when_term_tooltip_shown(
     expect(page.get_by_role("main")).to_contain_text("担当範囲の中だけを書き換える。")
     page.get_by_role("main").get_by_text("担当範囲の中だけを書き換える。").hover()
     expect(page.get_by_role("tooltip")).to_have_count(0)
+
+
+def test_normal_when_prompt_document(
+    make_source: Callable[..., Any],
+    serve: Callable[..., Any],
+    prompt_files: Callable[..., dict[str, str]],
+    page: Page,
+) -> None:
+    """プロンプトを、変数の表・テンプレート・例の組と言語のタブで出す（正常系）。"""
+    # 準備
+    served = serve(make_source("sample", prompt_files()))
+    tabs = page.get_by_role("navigation", name="文書の種類")
+    main = page.get_by_role("main")
+    # 実行
+    page.goto(served.url("/sample"))
+    tabs.get_by_role("link", name="プロンプト").click()
+    # 検証
+    expect(_group_links(page, "llm")).to_have_text(["振り返りのノード"])
+    expect(_group_links(page, "hook")).to_have_text(["SessionStart の配信元の一覧"])
+    _group_links(page, "llm").click()
+    expect(page).to_have_url(re.compile(f"{REFLECTION_PATH}$"))
+    # 見出し・バッジ・説明
+    expect(_heading(page)).to_have_text("振り返りのノード")
+    expect(main.locator(".mdmark > p").first.locator(".mdmark-badge")).to_have_text(
+        ["kind: llm", "lang: en"]
+    )
+    expect(main).to_contain_text(
+        "キャラクターが最近の出来事を振り返り、性格特性の基底値の変化を決める"
+    )
+    # 変数の表
+    variables = _section(page, "変数").locator("table")
+    expect(variables.locator("th")).to_have_text(["変数", "型", "必須", "例", "説明", "出どころ"])
+    expect(
+        variables.locator("td code").filter(has_text=re.compile(r"^character\.display_name$"))
+    ).to_be_visible()
+    expect(
+        variables.locator("td code").filter(has_text=re.compile(r"^traits\[\]\.name$"))
+    ).to_be_visible()
+    # テンプレートの部品（role・when）と、Jinja2 のままの本文
+    expect(_section(page, "role").locator(".mdmark-badge")).to_contain_text(["role: system"])
+    expect(_section(page, "logs").locator(".mdmark-badge")).to_contain_text(
+        ["when: {{ logs | length > 0 }}"]
+    )
+    expect(_section(page, "traits").locator("pre").first).to_contain_text("{% for t in traits -%}")
+    hint = (
+        _section(page, "role")
+        .locator("span[data-hint]")
+        .filter(has_text="{{ character.display_name }}")
+    )
+    hint.first.focus()
+    expect(page.get_by_role("tooltip")).to_have_text("表示名（型: string、例: ひな）")
+    page.keyboard.press("Escape")
+    # 例の組
+    expect(_section_toggle(page, "既定の例")).to_have_attribute("aria-expanded", "true")
+    expect(_section_toggle(page, "ログが無い")).to_have_attribute("aria-expanded", "false")
+    default_example = _section(page, "既定の例")
+    expect(default_example.locator("strong")).to_contain_text(["system", "user"])
+    expect(default_example).to_contain_text(re.compile(r"[\d,]+ 字 / 使わなかった部品: no-logs"))
+    # 言語のタブを ja にすると全てのセクションが揃って ja になる
+    expect(_section(page, "role").get_by_role("tab")).to_have_text(["en", "ja"])
+    _section(page, "role").get_by_role("tab", name="ja").click()
+    expect(_selected_tabs(page, "ja")).to_have_count(REFLECTION_TAB_GROUPS)
+    expect(_selected_tabs(page, "en")).to_have_count(0)
+    expect(_section(page, "role").locator("pre:visible")).to_contain_text("### 役割")
+    # 閉じた組を開くと、ja で描画した結果が出る
+    _section_toggle(page, "ログが無い").click()
+    no_logs = _section(page, "ログが無い")
+    expect(no_logs.locator("pre:visible").first).to_contain_text("### 役割")
+    expect(no_logs.locator("pre:visible").last).to_contain_text("- なし")
+    expect(no_logs).to_contain_text(re.compile(r"[\d,]+ 字 / 使わなかった部品: logs"))
+    # 開き直しても ja のまま
+    page.reload()
+    expect(_heading(page)).to_have_text("振り返りのノード")
+    expect(_selected_tabs(page, "ja")).to_have_count(REFLECTION_TAB_GROUPS)
+    # 画面幅 1280 と 390 で横にはみ出さない
+    assert _fits_all_viewports(page) == [True, True]
+
+
+def test_normal_when_prompt_set_flagged(
+    make_source: Callable[..., Any],
+    serve: Callable[..., Any],
+    prompt_files: Callable[..., dict[str, str]],
+    page: Page,
+) -> None:
+    """型の合わない組に注意書き、字数を超える hook の組に注意を出し、他は描く（正常系）。"""
+    # 準備
+    served = serve(make_source("sample", prompt_files(broken=True, many_sources=True)))
+    main = page.get_by_role("main")
+    # 実行
+    page.goto(served.url(REFLECTION_PATH))
+    _section_toggle(page, "broken").click()
+    # 検証
+    broken = _section(page, "broken")
+    cautions = broken.locator(".markdown-alert-caution")
+    expect(cautions).to_have_count(2)
+    expect(cautions.first).to_contain_text("この組は描画できません。")
+    expect(cautions.first).to_contain_text("traits は array ですが、oops が入っています")
+    expect(cautions.last).to_contain_text("traits は array ですが、oops が入っています")
+    broken.get_by_role("tab", name="ja").click()
+    expect(cautions.last).to_be_visible()
+    # 他の組・変数の表・テンプレートは描かれる
+    expect(_section(page, "既定の例")).to_contain_text(
+        re.compile(r"[\d,]+ 字 / 使わなかった部品: no-logs")
+    )
+    expect(_section(page, "ログが無い")).to_contain_text(
+        re.compile(r"[\d,]+ 字 / 使わなかった部品: logs")
+    )
+    expect(_section(page, "変数").locator("table")).to_be_visible()
+    expect(_section(page, "role").locator("pre:visible")).to_contain_text(
+        "{{ character.display_name }}"
+    )
+    # kind: llm の組には字数の注意が出ない
+    expect(main.locator(".markdown-alert-warning")).to_have_count(0)
+    # hook の字数を超える組に注意と描画した結果が出る
+    page.goto(served.url(SESSION_CONTEXT_PATH))
+    expect(_heading(page)).to_have_text("SessionStart の配信元の一覧")
+    _section_toggle(page, "many-sources").click()
+    many_sources = _section(page, "many-sources")
+    expect(many_sources.locator(".markdown-alert-warning")).to_contain_text(
+        re.compile(r"注入する本文が [\d,]+ 字で、上限の 1,000 字を超えています。")
+    )
+    expect(many_sources.locator("pre")).to_contain_text("source-20")
+    # 1,000 字以下の組には注意が出ず、言語が ja だけの文書には言語のタブが出ない
+    expect(main.locator(".markdown-alert-warning")).to_have_count(1)
+    expect(main.get_by_role("tablist")).to_have_count(0)
+    expect(_section(page, "既定の例").locator("pre")).to_contain_text(
+        "dev-docs で次の配信元を使えます。"
+    )

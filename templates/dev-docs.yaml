@@ -1,5 +1,6 @@
 # yaml-language-server: $schema=https://raw.githubusercontent.com/shuhei1101/dev-docs/v{バージョン}/schemas/dev-docs.schema.json
 # 配信元に置く dev-docs.yaml の雛形。/dev-docs:setup が 1 行目のタグと name・description・paths を書き換える
+# prompts の行と converters は content/prompts/ のプロンプトの雛形。/dev-docs:setup が content/prompts/ を見つけた配信元にだけ残す
 version: "3"
 name: sample
 description: 配信元の説明（1 文）
@@ -14,6 +15,18 @@ documents:
 #    metadata:
 #      tags: tags[].name
 #      main_tags: tags[main].name
+  - id: prompts
+    paths: [content/prompts/**/*.yaml]
+    title: プロンプト
+    schema: schemas/prompt.schema.yaml
+    converter: prompt-doc
+    metadata:
+      name: name
+      description: description
+      tags: tags
+converters:
+  - id: prompt-doc
+    run: [dev-docs, prompt-doc]
 # nav の auto は、search_docs の filter と同じ条件で並べる文書を絞れる
 # nav:
 #   tabs:

@@ -144,6 +144,35 @@ def test_normal(
     assert "notes" in output
 
 
+def test_normal_when_mcp_path_without_slash(
+    make_source: Callable[..., Any],
+    write_settings: Callable[..., Path],
+    free_port: Callable[[], int],
+    start_serve: Callable[..., Any],
+    wait_until_serving: Callable[..., None],
+) -> None:
+    """スラッシュ無しの /mcp・/_admin/mcp への POST に、リダイレクトを挟まずに MCP が応える（正常系）。"""
+    # 準備
+    settings = write_settings(make_source("sample"))
+    port = free_port()
+    process = start_serve(settings, port)
+    wait_until_serving(process, port)
+    # 実行
+    docs = _mcp(port, "/mcp", INITIALIZE)
+    admin = _mcp(port, "/_admin/mcp", INITIALIZE)
+    docs_slash = _mcp(port, "/mcp/", INITIALIZE)
+    admin_slash = _mcp(port, "/_admin/mcp/", INITIALIZE)
+    process.terminate()
+    process.wait(timeout=15)
+    # 検証
+    assert docs.status_code == 200
+    assert docs.json()["result"]["serverInfo"]
+    assert admin.status_code == 200
+    assert admin.json()["result"]["serverInfo"]
+    assert docs_slash.status_code == 200
+    assert admin_slash.status_code == 200
+
+
 def test_normal_when_configs_merged(
     make_source: Callable[..., Any],
     make_server: Callable[..., Any],

@@ -213,6 +213,38 @@ flows:
       - 'エラーログに `legacy: tags`・`legacy: documents[0].type`・`legacy: documents[1].type`・`legacy: documents[1].defaults`・`legacy: documents[1].metadata.name` の違反がある'
       - エラーログに、legacy の設定のバージョンが古く `dev-docs migrate --source` で移し替えられることがある
     test: test_normal_when_source_config_legacy
+  - name: 正常系（MCP の入口をスラッシュ無しで呼ぶ）
+    summary: プラグインの接続先と同じスラッシュ無しの `/mcp`・`/_admin/mcp` への POST に、リダイレクトを挟まずに MCP が応える
+    setup:
+      - name: Mock
+        description: なし（`dev-docs serve` を子プロセスで起動し、空きポートを `DEV_DOCS_PORT` に入れる）
+      - name: 配信元
+        description: git リポジトリの sample
+      - name: 端末の設定
+        description: '`DEV_DOCS_CONFIG` が指す一時フォルダの `settings.yaml`。`sources` に 1 行'
+      - name: 入力
+        description: '`/mcp` と `/_admin/mcp` へ MCP の initialize を POST する'
+        notes: HTTP のクライアントはリダイレクトを追従しない
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        participant U as クライアント
+        participant T as dev-docs serve
+        participant D as 文書の MCP
+        participant A as 管理の MCP
+
+        U->>T: POST /mcp（initialize）
+        T->>D: /mcp/ と同じ入口へ届ける
+        D-->>U: 200
+        U->>T: POST /_admin/mcp（initialize）
+        T->>A: /_admin/mcp/ と同じ入口へ届ける
+        A-->>U: 200
+      ```
+    expected:
+      - '`/mcp` への initialize が 307 を挟まずに 200 を返し、`serverInfo` を持つ'
+      - '`/_admin/mcp` への initialize が 307 を挟まずに 200 を返し、`serverInfo` を持つ'
+      - スラッシュ付きの `/mcp/`・`/_admin/mcp/` への initialize も 200 を返す
+    test: test_normal_when_mcp_path_without_slash
   - name: 正常系（設定とスキーマを default_ref から読む）
     summary: クローン本体が別のブランチを checkout していても、`default_ref` の設定とスキーマで配信元を組み立てる
     setup:
@@ -332,7 +364,8 @@ constraints:
     constraint: 既定 8781
     decided_by: dev/設計書/非機能要件/非機能要件#requirements[待ち受けのポート]
   - item: 配信する入口
-    constraint: '画面の API `/_api/`（そのスキーマ `/_api/openapi.json`）、文書の MCP `/mcp`（ツール 7 つ）、管理の MCP `/_admin/mcp`（ツール 7 つ）、SessionStart のフックが呼ぶ `POST /_admin/session-context`'
+    constraint: 画面の API `/_api/`（そのスキーマ `/_api/openapi.json`）、文書の MCP `/mcp`（ツール 7 つ）、管理の MCP `/_admin/mcp`（ツール 7 つ）、SessionStart のフックが呼ぶ `POST /_admin/session-context`。`/mcp`・`/_admin/mcp` はスラッシュの有無によらず同じ MCP が応え、リダイレクトを挟まない
+    notes: プラグインの `.mcp.json` の接続先はスラッシュ無し。画面の配信のルート（`GET /{path}`）より先に MCP へ届け、POST が 405 にならないようにする
   - item: 設定のマージ
     constraint: '`sources[].config` を上から順に読み、同じキーは後が優先、`documents[]` は `id` で行ごとに上書き・追加する'
   - item: タイムアウト

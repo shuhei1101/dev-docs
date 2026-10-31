@@ -22,6 +22,7 @@ from dev_docs.integrations.scripts import (
 )
 from dev_docs.shared.files import replace_file
 from dev_docs.shared.hashing import value_hash
+from dev_docs.shared.version import RUNNING_VERSION
 
 logger = logging.getLogger(__name__)
 
@@ -88,7 +89,15 @@ class ConvertService:
         self, target: Target, document: Document, converter: str, run: list[str]
     ) -> Path:
         """`converters[]` の結果の控えのファイルを返す。"""
-        parts = (target.source.id, document.kind, converter, document.version, value_hash(run))
+        # dev-docs が持つ変換（`dev-docs prompt-doc`）の出力は dev-docs の更新で変わるため、バージョンも含める
+        parts = (
+            target.source.id,
+            document.kind,
+            converter,
+            document.version,
+            value_hash(run),
+            RUNNING_VERSION,
+        )
         name = hashlib.sha256("\0".join(parts).encode("utf-8")).hexdigest()[:32]
         return self.cache_dir / f"{name}.md"
 

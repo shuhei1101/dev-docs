@@ -8,6 +8,7 @@ from collections.abc import Callable
 from importlib.metadata import version
 
 from dev_docs import DIST_NAME
+from dev_docs.features.prompt_doc.cli import run_prompt_doc
 from dev_docs.main import run_files, run_migrate, run_serve
 
 PROG = "dev-docs"
@@ -41,6 +42,10 @@ def build_parser() -> argparse.ArgumentParser:
     )
     files.add_argument("--exclude", action="append", default=[], help="外すファイル名の glob")
     files.set_defaults(handler=run_files)
+    prompt_doc = subparsers.add_parser(
+        "prompt-doc", help="標準入力のプロンプトの YAML を Markdown にして標準出力に出す"
+    )
+    prompt_doc.set_defaults(handler=run_prompt_doc)
     return parser
 
 

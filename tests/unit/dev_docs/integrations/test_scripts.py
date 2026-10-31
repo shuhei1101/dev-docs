@@ -80,6 +80,24 @@ def test_check_runnable(
     assert Path(result[0]).name == "python3"
 
 
+def test_check_runnable_when_server_env(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """PATH に無いコマンドをサーバーの Python の環境から引く（正常系）。"""
+    # 準備
+    empty_dir = tmp_path / "empty"
+    empty_dir.mkdir()
+    bin_dir = tmp_path / "env" / "bin"
+    bin_dir.mkdir(parents=True)
+    command = bin_dir / "dev-docs"
+    command.write_text("#!/bin/sh\n", encoding="utf-8")
+    command.chmod(0o755)
+    monkeypatch.setenv("PATH", str(empty_dir))
+    monkeypatch.setattr(sys, "executable", str(bin_dir / "python"))
+    # 実行
+    result = check_runnable(["dev-docs", "prompt-doc"], cwd=tmp_path)
+    # 検証
+    assert result == [str(command), "prompt-doc"]
+
+
 def test_check_runnable_when_empty(tmp_path: Path) -> None:
     """コマンドが空（異常系）。"""
     # 実行・検証
