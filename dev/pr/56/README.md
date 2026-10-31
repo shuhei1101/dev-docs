@@ -38,6 +38,6 @@ dev-docs 自身のプロンプトを `content/prompts/` へ移す作業は #48 �
 - [x] モジュール構成設計
 - [x] ドキュメント修正（templates/dev-docs.yaml・docs/リファレンス/設定.md・docs/使い方/配信元を配信する.md・docs/リファレンス/CLI.md・docs/リファレンス/用語集.md・plugins/dev-docs/skills/setup/SKILL.md）
 - [x] 単体テスト作成
-- [ ] 実装
+- [x] 実装
 - [ ] 結合テスト作成
 - [ ] E2E テスト作成
