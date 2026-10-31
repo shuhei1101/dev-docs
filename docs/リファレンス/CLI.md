@@ -16,6 +16,7 @@ dev-docs serve・dev-docs migrate・dev-docs files・dev-docs prompt-doc のサ�
 | --- | --- | --- |
 | `DEV_DOCS_CONFIG` | `~/.config/dev-docs/settings.yaml` | 端末の設定のパス |
 | `DEV_DOCS_PORT` | 端末の設定の `port`（既定 `8781`） | 待ち受けのポート。設定の `port` より優先する |
+| `DEV_DOCS_PROMPTS_DIR` | クローンの直下の `content/prompts/` | SessionStart の注入文・文書の MCP の instructions・2 つの MCP のツールの description のプロンプトの YAML を読むフォルダ |
 
 ```bash
 DEV_DOCS_CONFIG=/tmp/x/settings.yaml DEV_DOCS_PORT=8781 dev-docs serve
@@ -28,6 +29,7 @@ DEV_DOCS_CONFIG=/tmp/x/settings.yaml DEV_DOCS_PORT=8781 dev-docs serve
 | --- | --- |
 | 2 | 端末の設定が無い、またはスキーマに違反する。標準エラーに `{ファイル}: {キーのパス}: {理由}` を全て出す |
 | 3 | ポートが使用中。標準エラーにポートの番号と、`DEV_DOCS_PORT` で変えられることを出す |
+| 4 | プロンプトの YAML が無い・読めない・スキーマに違反する・描画できない。標準エラーに `{ファイル}: {キーのパス}: {理由}` を全て出す |
 
 待ち受けた後は、停止の合図まで終わりません。
 同じポートで待ち受けられるプロセスは 1 つだけで、後から起動したプロセスは終了コード 3 で終わります。
