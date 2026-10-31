@@ -441,7 +441,7 @@ data_models:
         title: ワークツリーの glob
         type: list[str]
         access: 公開
-        description: 設定の `worktrees` を `repo_root` からの絶対パスにしたもの
+        description: 設定の `worktrees` を `main_root`（Git でなければ `root`）からの絶対パスにしたもの
       - name: schemas
         title: 種類のスキーマ
         type: dict[str, dict[str, Any]]
@@ -1153,7 +1153,7 @@ classes:
       - name: _entries
         title: 行の控え
         type: dict[str, tuple[SourceEntry, int]]
-        access: 公開
+        access: 内部 (_)
         default: '{}'
         description: 配信中の ID → 読んだ端末の設定の行と位置。`default_ref` が進んだときの組み立て直しに使う
     methods:
