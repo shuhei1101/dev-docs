@@ -26,6 +26,8 @@ def _to_yaml_row(entry: SourceEntry) -> dict[str, Any]:
     row["config"] = entry.config[0] if len(entry.config) == 1 else list(entry.config)
     if not entry.enabled:
         row["enabled"] = False
+    if not entry.outside_read:
+        row["outside_read"] = False
     scope: dict[str, Any] = {}
     if entry.scope.read:
         scope["read"] = list(entry.scope.read)
