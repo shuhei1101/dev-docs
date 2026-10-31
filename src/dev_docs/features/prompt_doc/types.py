@@ -1,8 +1,12 @@
-"""`dev-docs prompt-doc` が読むプロンプトの YAML のモデルと、描画の結果・例外の型。"""
+"""`dev-docs prompt-doc` が読むプロンプトの YAML のモデルと、描画の結果・例外の型。
+
+サーバーが起動のときに読むプロンプトの違反の型も持つ。
+"""
 
 from __future__ import annotations
 
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -118,3 +122,26 @@ class PromptYamlError(PromptDocError):
 
 class InvalidPrompt(PromptDocError):
     """変換に使うキーが無いか型が違う。"""
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
+class PromptProblem:
+    """起動のときに読んだプロンプトの YAML の違反 1 件。"""
+
+    # 違反した YAML の絶対パス。無いファイルはあるはずのパス
+    file: Path
+    # 違反したキーのパス。ファイル全体の違反は `$`
+    path: str
+    reason: str
+
+    def line(self) -> str:
+        """`{ファイル}: {キーのパス}: {理由}` の 1 行にする。"""
+        return f"{self.file}: {self.path}: {self.reason}"
+
+
+class PromptInvalidError(Exception):
+    """起動のときに読むプロンプトの YAML が無い・読めない・スキーマに違反する・描画できない。"""
+
+    def __init__(self, problems: list[PromptProblem]) -> None:
+        super().__init__("\n".join(problem.line() for problem in problems))
+        self.problems = problems

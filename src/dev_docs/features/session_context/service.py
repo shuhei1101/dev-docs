@@ -1,4 +1,4 @@
-"""SessionStart のフックが文脈に入れる文の組み立てと、返し済みの記録の削除。"""
+"""SessionStart のフックが文脈に入れる文の描画と、返し済みの記録の削除。"""
 
 from __future__ import annotations
 
@@ -9,13 +9,12 @@ from dev_docs.features.access.service import available_sources
 from dev_docs.features.access.types import SourceAccess
 from dev_docs.features.admin.service import version_state
 from dev_docs.features.documents.store import check_sync
+from dev_docs.features.prompt_doc.runtime import PromptSet
 from dev_docs.features.seen.types import SessionKey
 from dev_docs.features.session_context.types import (
     CONTEXT_MAX_CHARS,
     FORGET_REASONS,
-    SESSION_USAGE,
-    SETUP_GUIDE,
-    TAG_GUIDE,
+    SESSION_CONTEXT_PROMPT_ID,
     ContextSource,
     SessionContextRequest,
     SessionContextResponse,
@@ -29,15 +28,13 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
-CONTEXT_HEADER = "dev-docs の文書の MCP（dev-docs）で、次の配信元を使えます。"
-ACCESS_LABELS = {"write": "読み書き", "read": "読み取りだけ"}
 TERMINAL_LABEL = "端末の設定"
 
 
 def build_session_context(
     request: SessionContextRequest, *, handlers: Handlers
 ) -> SessionContextResponse:
-    """作業場所から使える配信元と警告を集めて文脈の文を作る。"""
+    """作業場所から使える配信元と警告を集めて文脈の文を描画する。"""
     # `/clear`・圧縮の後は、その会話の返し済みの記録を削除する
     forgotten = False
     key = SessionKey.of(request.session_id, request.agent_id)
@@ -50,14 +47,9 @@ def build_session_context(
         ContextSource(id=item.source_id, access="read_write" if item.access == "write" else "read")
         for item in available
     ]
-    # 使える配信元が無いときは、登録の案内だけを返す
-    if not available:
-        return SessionContextResponse(
-            context=SETUP_GUIDE, sources=sources, warnings=[], forgotten=forgotten
-        )
-    warnings = _collect_warnings(available, handlers=handlers)
+    warnings = _collect_warnings(available, handlers=handlers) if available else []
     return SessionContextResponse(
-        context=_context_text(available, warnings),
+        context=_context_text(available, warnings, prompts=handlers.prompts),
         sources=sources,
         warnings=warnings,
         forgotten=forgotten,
@@ -119,33 +111,41 @@ def _old_version(label: str, mine: str, current: str) -> str:
     )
 
 
-def _source_line(item: SourceAccess, *, with_description: bool) -> str:
-    """配信元 1 つの行を作る。"""
-    line = f"- {item.source_id}（{ACCESS_LABELS[item.access]}）"
-    if with_description and item.description:
-        line += f": {item.description}"
-    return line
+def _render(
+    sources: list[dict[str, str | None]],
+    *,
+    omitted: int,
+    warnings: list[str],
+    prompts: PromptSet,
+) -> str:
+    """配信元・省いた件数・警告を渡して文脈の文のプロンプトを描画する。"""
+    return prompts.render(
+        SESSION_CONTEXT_PROMPT_ID,
+        {"sources": sources, "omitted": omitted, "warnings": warnings},
+    )
 
 
-def _compose(lines: list[str], warnings: list[str]) -> str:
-    """見出し・配信元の行・使い方・警告をつなぐ。"""
-    parts = [CONTEXT_HEADER, *lines, SESSION_USAGE, TAG_GUIDE]
-    if warnings:
-        parts.extend(["注意:", *(f"- {warning}" for warning in warnings)])
-    return "\n".join(parts)
-
-
-def _context_text(available: list[SourceAccess], warnings: list[str]) -> str:
-    """配信元の行・使い方・警告を `CONTEXT_MAX_CHARS` 字以内の文にする。"""
-    text = _compose([_source_line(item, with_description=True) for item in available], warnings)
+def _context_text(available: list[SourceAccess], warnings: list[str], *, prompts: PromptSet) -> str:
+    """配信元と警告をプロンプトの YAML で `CONTEXT_MAX_CHARS` 字以内の文に描画する。"""
+    sources: list[dict[str, str | None]] = [
+        {
+            "id": item.source_id,
+            "access": "read_write" if item.access == "write" else "read",
+            "description": item.description,
+        }
+        for item in available
+    ]
+    text = _render(sources, omitted=0, warnings=warnings, prompts=prompts)
     if len(text) <= CONTEXT_MAX_CHARS:
         return text
     # 超えるときは、配信元の説明を省く
-    lines = [_source_line(item, with_description=False) for item in available]
-    text = _compose(lines, warnings)
-    # それでも超えるときは、収まるまで配信元の行を末尾から減らして残りの件数を添える
-    kept = len(lines)
+    sources = [{**source, "description": None} for source in sources]
+    text = _render(sources, omitted=0, warnings=warnings, prompts=prompts)
+    # それでも超えるときは、収まるまで配信元を末尾から減らして残りの件数を添える
+    kept = len(sources)
     while len(text) > CONTEXT_MAX_CHARS and kept > 0:
         kept -= 1
-        text = _compose([*lines[:kept], f"- ほか {len(lines) - kept} 件"], warnings)
+        text = _render(
+            sources[:kept], omitted=len(sources) - kept, warnings=warnings, prompts=prompts
+        )
     return text

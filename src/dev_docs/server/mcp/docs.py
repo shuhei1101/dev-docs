@@ -25,10 +25,15 @@ from dev_docs.features.search.render import render_search_markdown
 from dev_docs.features.search.service import search_docs
 from dev_docs.features.search.terms import list_match_words, render_match_words_markdown
 from dev_docs.features.search.types import MatchWordsRequest, SearchRequest
-from dev_docs.features.session_context.types import TAG_GUIDE
 from dev_docs.features.write.service import delete_docs, write_docs
 from dev_docs.features.write.types import DeleteRequest, WriteRequest
-from dev_docs.server.mcp.result import TOOL_ANNOTATIONS, to_tool_result, tool_error
+from dev_docs.server.mcp.result import (
+    DOCS_INSTRUCTIONS_PROMPT_ID,
+    TOOL_ANNOTATIONS,
+    to_tool_result,
+    tool_error,
+    tool_prompt_id,
+)
 from dev_docs.shared.errors import DevDocsError
 
 if TYPE_CHECKING:
@@ -109,25 +114,15 @@ def _register(
 
 def build_docs_mcp(handlers: Handlers) -> MCPServer:
     """7 つのツールを持つ文書の MCP を作る。"""
-    mcp = MCPServer(DOCS_MCP_NAME, instructions=TAG_GUIDE)
+    mcp = MCPServer(
+        DOCS_MCP_NAME, instructions=handlers.prompts.render(DOCS_INSTRUCTIONS_PROMPT_ID)
+    )
     timeout = handlers.terminal.script_timeout_sec
 
     _register(
         mcp,
         "search_docs",
-        "条件に当たる文書を、指定した項目・量・順で返す。ID で絞れば取得、view: summary で一覧、"
-        "view: count で件数、group_by で集計になる。"
-        "op: regex は値の各行に当たる（値全体の先頭・末尾は \\A・\\Z）。"
-        "snippets は本文の代わりに、当たった行と前後の行（before・after。省けば context_lines）"
-        "を行番号つきで返す。"
-        "filter の not は中の条件か束に当たらない文書、op: glob は **・*・? のパターンに当たる。"
-        "fields・order_by の @matches は文書ごとの本文の条件に当たった行の数。"
-        "sections（Markdown の見出し）・lines（offset・limit）は view: full の本文の一部だけを返す。"
-        "fields・filter・order_by のキーには共通のキー（id・name・description・tags など）も使える。"
-        "種類の列名との対応は describe(source, kind) で見る。"
-        "group_by は値を NFKC と casefold でまとめて数える。"
-        'タグを付ける前に group_by: tags（配信元をまたぐときは source: "*"）で'
-        "使われているタグを見て、同じ意味のタグを使い回す。",
+        handlers.prompts.render(tool_prompt_id("docs", "search_docs")),
         SearchRequest,
         lambda request: search_docs(
             request,
@@ -141,8 +136,7 @@ def build_docs_mcp(handlers: Handlers) -> MCPServer:
     _register(
         mcp,
         "describe",
-        "今の作業場所から使える配信元の一覧（引数なし）、配信元の説明書と種類の一覧（source）、"
-        "種類のスキーマ（source と kind）を返す。",
+        handlers.prompts.render(tool_prompt_id("docs", "describe")),
         DescribeRequest,
         lambda request: describe(request, registry=handlers.registry, store=handlers.store),
         lambda result, request: render_describe_markdown(result),
@@ -150,9 +144,7 @@ def build_docs_mcp(handlers: Handlers) -> MCPServer:
     _register(
         mcp,
         "list_changes",
-        "2 つのリビジョンの間、またはこの会話で前回読んだ時点からの、文書の変更を返す。"
-        "contains は語（regex で正規表現）の出現数が変わった文書と、語が入った・消えた commit を返す"
-        "（git log -S と同じくマージ commit は見ない）。",
+        handlers.prompts.render(tool_prompt_id("docs", "list_changes")),
         ChangesRequest,
         lambda request: list_changes(
             request, registry=handlers.registry, store=handlers.store, seen=handlers.seen
@@ -164,9 +156,7 @@ def build_docs_mcp(handlers: Handlers) -> MCPServer:
     _register(
         mcp,
         "trace_related",
-        "起点の文書やコードのパスから、related をたどって関連する文書を返す。"
-        "設計書を起点に direction: in で呼ぶと、via.type が implements の文書がその設計書を"
-        "実装するコード、コードを起点にすると tests の文書がそのテストになる。",
+        handlers.prompts.render(tool_prompt_id("docs", "trace_related")),
         RelatedRequest,
         lambda request: trace_related(
             request, registry=handlers.registry, store=handlers.store, seen=handlers.seen
@@ -176,12 +166,7 @@ def build_docs_mcp(handlers: Handlers) -> MCPServer:
     _register(
         mcp,
         "write_docs",
-        "文書を作る・部分更新する・置き換える。操作を全て当てた後の文書を検査に通し、"
-        "通ったときだけ作業ツリーのファイルを書き換える（commit はしない）。"
-        "範囲のファイルを作った・消した・改名したら、管理用の YAML の行を修正する。"
-        "set・unset・add_to・remove_from・text_edits のキーには共通のキー"
-        "（id・name・description・tags・alias_type など）も使え、種類の列名へ読み替えて書く。"
-        "対応は describe(source, kind) で見る。",
+        handlers.prompts.render(tool_prompt_id("docs", "write_docs")),
         WriteRequest,
         lambda request: write_docs(
             request,
@@ -197,7 +182,7 @@ def build_docs_mcp(handlers: Handlers) -> MCPServer:
     _register(
         mcp,
         "delete_docs",
-        "文書を消す。参照されている文書は on_referenced に従って断るか、参照も外して消す。",
+        handlers.prompts.render(tool_prompt_id("docs", "delete_docs")),
         DeleteRequest,
         lambda request: delete_docs(
             request,
@@ -212,8 +197,7 @@ def build_docs_mcp(handlers: Handlers) -> MCPServer:
     _register(
         mcp,
         "list_match_words",
-        "配信元の alias_type を持つ行の文書から、照合する語（name と aliases）を、"
-        "指す文書の ID とともに返す。",
+        handlers.prompts.render(tool_prompt_id("docs", "list_match_words")),
         MatchWordsRequest,
         lambda request: list_match_words(request, registry=handlers.registry, store=handlers.store),
         lambda result, request: render_match_words_markdown(result),

@@ -231,7 +231,7 @@
       "$ref": "#/$defs/scripts"
     },
     "converters": {
-      "$ref": "#/$defs/scripts"
+      "$ref": "#/$defs/converters"
     },
     "generators": {
       "$ref": "#/$defs/scripts"
@@ -267,6 +267,44 @@
                 "write"
               ]
             }
+          }
+        }
+      }
+    },
+    "converters": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "run"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "run": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "string"
+            }
+          },
+          "on": {
+            "type": "array",
+            "items": {
+              "enum": [
+                "read",
+                "write"
+              ]
+            }
+          },
+          "cache": {
+            "description": "`false` の行の変換は、控えを読まず書かず、文書を開くたびにスクリプトを動かす",
+            "type": "boolean",
+            "default": true
           }
         }
       }

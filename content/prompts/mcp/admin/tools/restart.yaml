@@ -1,0 +1,12 @@
+# yaml-language-server: $schema=../../../../../templates/prompt.schema.yaml
+id: mcp/admin/tools/restart
+name: restart の description
+description: 管理の MCP の restart が何をするかを伝える
+kind: tool
+lang: ja
+parts:
+  - id: body
+    texts:
+      - lang: ja
+        text: |-
+          応答を返してからサーバーを止め、同じプロセス ID で dev-docs serve を起動し直す。再起動の後は /mcp でつなぎ直す。

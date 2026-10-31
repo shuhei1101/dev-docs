@@ -33,7 +33,12 @@ from dev_docs.features.admin.types import (
     WriteNavRequest,
 )
 from dev_docs.features.lifecycle.update import update_clone
-from dev_docs.server.mcp.result import TOOL_ANNOTATIONS, to_tool_result, tool_error
+from dev_docs.server.mcp.result import (
+    TOOL_ANNOTATIONS,
+    to_tool_result,
+    tool_error,
+    tool_prompt_id,
+)
 from dev_docs.shared.errors import DevDocsError
 
 if TYPE_CHECKING:
@@ -110,7 +115,7 @@ def build_admin_mcp(handlers: Handlers) -> MCPServer:
     _register(
         mcp,
         "status",
-        "待ち受けのアドレス・dev-docs のバージョン・端末の設定・配信元ごとの状態を返す。",
+        handlers.prompts.render(tool_prompt_id("admin", "status")),
         FormatRequest,
         lambda request: get_status(handlers, env=os.environ),
         render_status,
@@ -118,7 +123,7 @@ def build_admin_mcp(handlers: Handlers) -> MCPServer:
     _register(
         mcp,
         "reload",
-        "端末の設定と配信元の設定を読み直し、追加・削除・配信できなくなった配信元を返す。",
+        handlers.prompts.render(tool_prompt_id("admin", "reload")),
         FormatRequest,
         lambda request: reload_config(handlers),
         render_reload,
@@ -126,24 +131,21 @@ def build_admin_mcp(handlers: Handlers) -> MCPServer:
     _register(
         mcp,
         "restart",
-        "応答を返してからサーバーを止め、同じプロセス ID で dev-docs serve を起動し直す。"
-        "再起動の後は /mcp でつなぎ直す。",
+        handlers.prompts.render(tool_prompt_id("admin", "restart")),
         NoArguments,
         lambda request: handlers.restart.request(),
     )
     _register(
         mcp,
         "update",
-        "dev-docs のクローンで git pull --ff-only と uv sync を行い、"
-        "設定の移し替えが要らなければ再起動する。",
+        handlers.prompts.render(tool_prompt_id("admin", "update")),
         NoArguments,
         lambda request: update_clone(handlers.terminal.clone, control=handlers.restart),
     )
     _register(
         mcp,
         "check_project",
-        "配信元の dev-docs.yaml と管理用の YAML・スクリプトを検査し、"
-        "違反・設定のバージョンの新旧・索引の同期の件数を返す。端末の設定に無い配信元も検査できる。",
+        handlers.prompts.render(tool_prompt_id("admin", "check_project")),
         CheckProjectRequest,
         lambda request: check_project(request, handlers=handlers),
         render_check,
@@ -151,15 +153,14 @@ def build_admin_mcp(handlers: Handlers) -> MCPServer:
     _register(
         mcp,
         "try_convert",
-        "配信元の 1 つのファイルを、配信するときと同じ変換で Markdown にして返す。書き込まない。",
+        handlers.prompts.render(tool_prompt_id("admin", "try_convert")),
         TryConvertRequest,
         lambda request: try_convert(request, handlers=handlers),
     )
     _register(
         mcp,
         "write_nav",
-        "配信元の dev-docs.yaml の nav だけを、タブ・項目の追加・修正・削除で書き換える。"
-        "書いた後の nav をスキーマと check_filter で検証し、auto の条件に当たる文書の数を返す。",
+        handlers.prompts.render(tool_prompt_id("admin", "write_nav")),
         WriteNavRequest,
         lambda request: write_nav(request, handlers=handlers),
         render_write_nav,

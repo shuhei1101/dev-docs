@@ -7,6 +7,7 @@ from typing import Any
 
 from jsonschema import Draft202012Validator
 from jsonschema.exceptions import ValidationError
+from referencing import Registry
 
 from dev_docs.shared.errors import Violation
 
@@ -52,9 +53,15 @@ def _from_error(error: ValidationError) -> list[Violation]:
     return [Violation(path=path, rule=error.message)]
 
 
-def schema_violations(schema: Mapping[str, Any], value: Any) -> list[Violation]:
-    """スキーマの違反を全て集める。"""
-    validator = Draft202012Validator(dict(schema))
+def schema_violations(
+    schema: Mapping[str, Any], value: Any, *, registry: Registry[Any] | None = None
+) -> list[Violation]:
+    """スキーマの違反を全て集める（`registry` は別のファイルを `$ref` で指すスキーマの解決先）。"""
+    validator = (
+        Draft202012Validator(dict(schema))
+        if registry is None
+        else Draft202012Validator(dict(schema), registry=registry)
+    )
     errors = sorted(
         validator.iter_errors(value), key=lambda item: list(map(str, item.absolute_path))
     )

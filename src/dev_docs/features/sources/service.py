@@ -260,7 +260,12 @@ def build_source_config(value: dict[str, Any]) -> SourceConfig:
 
 def _build_script(row: dict[str, Any]) -> ScriptEntry:
     """スクリプトの行を作る。"""
-    return ScriptEntry(id=row["id"], run=list(row["run"]), on=list(row.get("on", ["write"])))
+    return ScriptEntry(
+        id=row["id"],
+        run=list(row["run"]),
+        on=list(row.get("on", ["write"])),
+        cache=bool(row.get("cache", True)),
+    )
 
 
 def _build_table(row: dict[str, Any]) -> DocumentTable:

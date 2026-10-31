@@ -1,0 +1,15 @@
+# yaml-language-server: $schema=../../../../../templates/prompt.schema.yaml
+id: mcp/docs/tools/list-changes
+name: list_changes の description
+description: 文書の MCP の list_changes が何をするか・いつ使うか・いつ使わないか・何を返さないかを伝える
+kind: tool
+lang: ja
+parts:
+  - id: body
+    texts:
+      - lang: ja
+        text: |-
+          2 つのリビジョンの間、またはこの会話で前回読んだ時点からの、文書の変更を返す。contains は語（regex で正規表現）の出現数が変わった文書と、語が入った・消えた commit を返す（git log -S と同じくマージ commit は見ない）。
+          前に読んだ後や 2 つのリビジョンの間に、どの文書が変わったかを確かめるときに使う。
+          今の文書の中身を読むときは search_docs、配信の範囲の外のファイルの変更は git log・git diff を使う。
+          配信の範囲の外のファイルの変更は返さない。

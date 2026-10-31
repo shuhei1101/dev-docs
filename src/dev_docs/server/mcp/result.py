@@ -37,6 +37,44 @@ TOOL_ANNOTATIONS = {
     "write_nav": ToolAnnotations(read_only_hint=False, destructive_hint=False),
 }
 
+# 文書の MCP が登録するツールの名前（登録の順）
+DOCS_TOOL_NAMES = (
+    "search_docs",
+    "describe",
+    "list_changes",
+    "trace_related",
+    "write_docs",
+    "delete_docs",
+    "list_match_words",
+)
+# 管理の MCP が登録するツールの名前（登録の順）
+ADMIN_TOOL_NAMES = (
+    "status",
+    "reload",
+    "restart",
+    "update",
+    "check_project",
+    "try_convert",
+    "write_nav",
+)
+# 文書の MCP の instructions を描画するプロンプトの ID
+DOCS_INSTRUCTIONS_PROMPT_ID = "mcp/docs/instructions"
+
+
+def tool_prompt_id(server: Literal["docs", "admin"], tool: str) -> str:
+    """ツールの description を描画するプロンプトの ID を作る（プロンプトの ID はハイフンだけを許す）。"""
+    return f"mcp/{server}/tools/{tool.replace('_', '-')}"
+
+
+def mcp_prompt_ids() -> list[str]:
+    """2 つの MCP が描画するプロンプトの ID を並べる。"""
+    return [
+        DOCS_INSTRUCTIONS_PROMPT_ID,
+        *(tool_prompt_id("docs", name) for name in DOCS_TOOL_NAMES),
+        *(tool_prompt_id("admin", name) for name in ADMIN_TOOL_NAMES),
+    ]
+
+
 DESCRIBE_HINT = "describe で使い方（使える配信元・種類・スキーマ）を見てください"
 
 
