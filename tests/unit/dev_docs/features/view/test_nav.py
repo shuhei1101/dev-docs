@@ -357,3 +357,50 @@ def test_nav_warnings_when_no_nav(
     result = nav_warnings(store, source, today=TODAY)
     # 検証
     assert result == []
+
+
+OWNER_FILTER = {"field": "owner", "op": "eq", "values": ["alice"]}
+
+
+def test_build_nav_when_records_filter(
+    make_records_nav_source_dir: Callable[..., Path],
+    make_entry: Callable[..., SourceEntry],
+    tmp_path: Path,
+) -> None:
+    """records の行の 1 行の項目で絞った auto（正常系）。"""
+    from dev_docs.features.access.types import Target
+
+    # 準備
+    config = make_records_nav_source_dir(
+        "priority",
+        "integer",
+        {"a": 10, "b": 9},
+        nav_filter={"field": "priority", "op": "gte", "values": ["10"]},
+    )
+    source, _ = load_source(make_entry(str(config), source_id="sample"), index=0)
+    assert source is not None
+    store = DocumentStore(SnapshotStore(tmp_path / "snapshots"))
+    documents = store.load(Target(source, source.root, None, None, "read")).documents
+    # 実行
+    tabs = build_nav(source, documents)
+    # 検証
+    assert [(item.kind, item.path) for item in tabs[0].items] == [("page", "notes/files/notes/a")]
+
+
+def test_nav_warnings_when_records_filter(
+    make_records_nav_source_dir: Callable[..., Path],
+    make_entry: Callable[..., SourceEntry],
+    tmp_path: Path,
+) -> None:
+    """records の行の 1 行の項目の条件を警告しない（正常系）。"""
+    from dev_docs.features.view.nav import nav_warnings
+
+    # 準備
+    config = make_records_nav_source_dir("owner", "string", {"a": "alice"}, nav_filter=OWNER_FILTER)
+    source, _ = load_source(make_entry(str(config), source_id="sample"), index=0)
+    assert source is not None
+    store = DocumentStore(SnapshotStore(tmp_path / "snapshots"))
+    # 実行
+    result = nav_warnings(store, source, today=TODAY)
+    # 検証
+    assert result == []

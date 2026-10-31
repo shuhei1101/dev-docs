@@ -681,6 +681,44 @@ def test_write_nav_when_zero_count(
     assert result.warnings[0].rule.startswith("none:")
 
 
+def test_write_nav_when_records_filter(
+    make_records_nav_source_dir: Callable[..., Path],
+    make_terminal_config: Callable[..., TerminalConfig],
+) -> None:
+    """records の行の 1 行の項目の条件を書ける（正常系）。"""
+    from dev_docs.features.admin.service import write_nav
+    from dev_docs.features.admin.types import NavOperation, WriteNavRequest
+
+    # 準備
+    config = make_records_nav_source_dir("owner", "string", {"a": "alice"})
+    handlers = _handlers(make_terminal_config)
+    request = WriteNavRequest(
+        path=str(config.parent),
+        operations=[
+            NavOperation(
+                op="add",
+                tab="files",
+                value={
+                    "title": "files",
+                    "items": [
+                        {
+                            "auto": {
+                                "document": "notes",
+                                "filter": {"field": "owner", "op": "eq", "values": ["alice"]},
+                            }
+                        }
+                    ],
+                },
+            )
+        ],
+    )
+    # 実行
+    result = write_nav(request, handlers=handlers)
+    # 検証
+    assert [(count.tab, count.count) for count in result.counts] == [("files", 1)]
+    assert result.warnings == []
+
+
 def test_write_nav_when_invalid_filter(
     nav_source: Path, make_terminal_config: Callable[..., TerminalConfig]
 ) -> None:
