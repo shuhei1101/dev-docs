@@ -43,6 +43,6 @@
 - [x] モジュール構成設計
 - [x] ドキュメント修正（docs/リファレンス/設定.md・docs/リファレンス/文書のMCP.md・docs/リファレンス/管理のMCP.md・docs/はじめに/コアコンセプト/文書のメタデータ.md・docs/はじめに/コアコンセプト/管理用プラグイン.md・docs/はじめに/コアコンセプト/配信元と権限.md・docs/使い方/配信元を配信する.md・docs/使い方/画面で読む.md・docs/リファレンス/用語集.md・templates/settings.yaml・templates/dev-docs.yaml）
 - [x] 単体テスト作成
-- [ ] 実装
+- [x] 実装
 - [ ] 結合テスト作成
 - [ ] E2E テスト作成
