@@ -1,11 +1,16 @@
 from __future__ import annotations
 
+import logging
 from collections.abc import Callable
 from typing import Any
+
+import pytest
 
 from dev_docs.shared.yaml_io import load_yaml
 
 SEEN_MARK = "（この会話で返し済み）"
+OUTSIDE_LINE = "作業範囲の外（参考）"
+OUTSIDE_LOG = "作業範囲の外を読んだ"
 CODE_ROW = (
     "  - id: code\n"
     "    paths: [src/files.yaml]\n"
@@ -266,3 +271,35 @@ def test_error_when_source_not_readable(
     assert "SourceNotReadableError" in result.text
     assert "other" in result.text
     assert "sample" in result.text
+
+
+def test_normal_when_outside_scope(
+    make_source: Callable[..., Any],
+    make_server: Callable[..., Any],
+    sample_file_set: Callable[..., dict[str, str]],
+    sample_doc_text: Callable[..., str],
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """outside_scope: true で、scope に当たらない配信元の関連を作業範囲の外としてたどる（正常系）。"""
+    # 準備
+    sample = make_source("sample")
+    other = make_source("other", _chain_files(sample_file_set, sample_doc_text))
+    closed = make_source(
+        "closed", _chain_files(sample_file_set, sample_doc_text), outside_read=False
+    )
+    env = make_server(sample, other, closed)
+    cwd = str(sample.folder)
+    arguments = {"cwd": cwd, "from_ids": ["doc-1"], "depth": 1, "outside_scope": True}
+    caplog.set_level(logging.INFO)
+    # 実行
+    result = env.call("trace_related", source="other", **arguments)
+    as_json = env.call("trace_related", source="other", format="json", **arguments)
+    refused = env.call("trace_related", source="closed", **arguments)
+    # 検証
+    logs = [record.getMessage() for record in caplog.records if OUTSIDE_LOG in record.getMessage()]
+    assert not result.is_error
+    assert result.text.splitlines()[0] == OUTSIDE_LINE
+    assert [item["id"] for item in as_json.data["items"]] == ["doc-2"]
+    assert any(cwd in message and "other" in message for message in logs)
+    assert refused.is_error
+    assert "SourceNotReadableError" in refused.text

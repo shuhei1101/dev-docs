@@ -1,9 +1,12 @@
 from __future__ import annotations
 
+import logging
 import re
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any
+
+import pytest
 
 FILES_SCHEMA = Path(__file__).parents[3] / "templates" / "files.schema.yaml"
 BROKEN_CONFIG = "name: broken\ndocuments:\n  - id: sample\n    schema: schemas/sample.schema.yaml\n"
@@ -18,6 +21,33 @@ NOTES_ROWS = (
 )
 SEARCH_WORD = {"field": "body", "op": "contains", "values": ["検索"]}
 IN_ARCHIVE = {"field": "@path", "op": "glob", "values": ["notes/archive/**"]}
+OUTSIDE_LINE = "作業範囲の外（参考）"
+OUTSIDE_LOG = "作業範囲の外を読んだ"
+OUTSIDE_HINT = "outside_scope: true"
+OBJECT_TAGS_CONFIG = (
+    "name: sample\n"
+    "default_ref: develop\n"
+    "documents:\n"
+    "  - id: rules\n"
+    "    paths: [rules/*.yaml]\n"
+    "    schema: schemas/rule.schema.yaml\n"
+    '    metadata: {tags: "tags[].name", main_tags: "tags[main].name"}\n'
+)
+OBJECT_TAGS_SCHEMA = (
+    "type: object\n"
+    "properties:\n"
+    "  id: {type: string}\n"
+    "  name: {type: string}\n"
+    "  tags:\n"
+    "    type: array\n"
+    "    items:\n"
+    "      type: object\n"
+    "      properties:\n"
+    "        name: {type: string}\n"
+    "        main: {type: boolean}\n"
+)
+TAG_MCP = {"field": "tags", "op": "eq", "values": ["mcp"]}
+MAIN_TAG_MCP = {"field": "main_tags", "op": "eq", "values": ["mcp"]}
 NOTES_A = {"field": "id", "op": "eq", "values": ["notes/a"]}
 
 
@@ -774,3 +804,151 @@ def test_normal_when_metadata_mapped(
     assert by_name.data["items"][0]["values"]["name"] == "決定 1"
     assert by_name.data["items"][0]["values"]["description"] == "要約 1"
     assert [item["id"] for item in by_column.data["items"]] == ["d1"]
+
+
+def _outside_logs(caplog: pytest.LogCaptureFixture) -> list[str]:
+    """要求のログのうち作業範囲の外を読んだ記録を返す。"""
+    return [record.getMessage() for record in caplog.records if OUTSIDE_LOG in record.getMessage()]
+
+
+def _other_files(
+    sample_file_set: Callable[..., dict[str, str]], sample_doc_text: Callable[..., str]
+) -> dict[str, str]:
+    """文書 o-1・o-2 を持つ配信元 other のファイル一式を返す。"""
+    return sample_file_set(
+        **{
+            "docs/doc-1.yaml": sample_doc_text("o-1", "other 1"),
+            "docs/doc-2.yaml": sample_doc_text("o-2", "other 2"),
+        }
+    )
+
+
+def test_normal_when_outside_scope(
+    make_source: Callable[..., Any],
+    make_server: Callable[..., Any],
+    sample_file_set: Callable[..., dict[str, str]],
+    sample_doc_text: Callable[..., str],
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """outside_scope: true で、scope に当たらない配信元の文書を作業範囲の外として返す（正常系）。"""
+    # 準備
+    sample = make_source("sample")
+    other = make_source("other", _other_files(sample_file_set, sample_doc_text))
+    env = make_server(sample, other)
+    cwd = str(sample.folder)
+    caplog.set_level(logging.INFO)
+    # 実行
+    full = env.call("search_docs", cwd=cwd, source="other", outside_scope=True, view="full")
+    as_json = env.call("search_docs", cwd=cwd, source="other", outside_scope=True, format="json")
+    everything = env.call(
+        "search_docs", cwd=cwd, source="*", outside_scope=True, view="ids", format="json"
+    )
+    # 検証
+    assert not full.is_error
+    assert full.text.splitlines()[0] == OUTSIDE_LINE
+    assert full.text.count('outside_scope="true"') == 2
+    assert as_json.data["outside_scope"] is True
+    assert {item["id"] for item in as_json.data["items"]} == {"o-1", "o-2"}
+    assert any(cwd in message and "other" in message for message in _outside_logs(caplog))
+    assert {item["id"] for item in everything.data["items"]} == {"doc-1", "doc-2"}
+
+
+def test_error_when_outside_read_disabled(
+    make_source: Callable[..., Any],
+    make_server: Callable[..., Any],
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """outside_read: false の配信元は outside_scope: true でも断る（異常系）。"""
+    # 準備
+    sample = make_source("sample")
+    closed = make_source("other", outside_read=False)
+    opened = make_source("open")
+    env = make_server(sample, closed, opened)
+    cwd = str(sample.folder)
+    caplog.set_level(logging.INFO)
+    # 実行
+    refused = env.call("search_docs", cwd=cwd, source="other", outside_scope=True)
+    guided = env.call("search_docs", cwd=cwd, source="open")
+    # 検証
+    assert refused.is_error
+    assert "SourceNotReadableError" in refused.text
+    assert "other" in refused.text
+    assert OUTSIDE_HINT not in refused.text
+    assert _outside_logs(caplog) == []
+    assert guided.is_error
+    assert OUTSIDE_HINT in guided.text
+
+
+def _term_ids(env: Any, cwd: str, term: str) -> list[str]:
+    """term で引いた文書の ID を並べる。"""
+    result = env.call("search_docs", cwd=cwd, term=term, view="ids", format="json")
+    return [item["id"] for item in result.data.get("items", [])]
+
+
+def test_normal_when_term(
+    make_source: Callable[..., Any],
+    make_server: Callable[..., Any],
+    alias_file_set: Callable[..., dict[str, str]],
+    sample_doc_text: Callable[..., str],
+) -> None:
+    """term で alias_type を持つ行の文書を name・aliases の語で引く（正常系）。"""
+    # 準備
+    doc_1 = sample_doc_text("doc-1", "担当範囲の文書", description="担当範囲の説明")
+    sample = make_source("sample", alias_file_set(**{"docs/doc-1.yaml": doc_1}))
+    plain = make_source("plain")
+    env = make_server(sample, plain)
+    cwd = str(sample.folder)
+    # 実行
+    by_alias = _term_ids(env, cwd, "担当範囲")
+    by_name = _term_ids(env, cwd, "作業範囲")
+    by_upper = _term_ids(env, cwd, "SCOPE")
+    by_part = _term_ids(env, cwd, "担当")
+    no_rows = env.call(
+        "search_docs", cwd=str(plain.folder), term="担当範囲", view="ids", format="json"
+    )
+    # 検証
+    assert by_alias == ["scope"]
+    assert by_name == ["scope"]
+    assert by_upper == ["scope"]
+    assert by_part == []
+    assert not no_rows.data.get("items")
+    assert any("alias_type" in note for note in no_rows.data["notes"])
+
+
+def test_normal_when_tags_are_objects(
+    make_source: Callable[..., Any], make_server: Callable[..., Any]
+) -> None:
+    """tags[].name で取り出したタグと main_tags で絞り、数える（正常系）。"""
+    # 準備
+    files = {
+        "dev-docs.yaml": OBJECT_TAGS_CONFIG,
+        "schemas/rule.schema.yaml": OBJECT_TAGS_SCHEMA,
+        "rules/r1.yaml": (
+            "id: r1\nname: 規約 1\ntags:\n  - {name: mcp, main: true}\n  - {name: 設計}\n"
+        ),
+        "rules/r2.yaml": (
+            "id: r2\nname: 規約 2\ntags:\n  - {name: MCP}\n  - {name: 設計, main: true}\n"
+        ),
+    }
+    source = make_source("sample", files)
+    env = make_server(source)
+    cwd = str(source.folder)
+    # 実行
+    by_tags = env.call("search_docs", cwd=cwd, filter=TAG_MCP, view="ids", format="json")
+    by_main = env.call("search_docs", cwd=cwd, filter=MAIN_TAG_MCP, view="ids", format="json")
+    counted = env.call("search_docs", cwd=cwd, view="count", group_by="tags", format="json")
+    picked = env.call(
+        "search_docs",
+        cwd=cwd,
+        filter={"field": "id", "op": "eq", "values": ["r1"]},
+        fields=["tags", "main_tags"],
+        format="json",
+    )
+    # 検証
+    assert [item["id"] for item in by_tags.data["items"]] == ["r1", "r2"]
+    assert [item["id"] for item in by_main.data["items"]] == ["r1"]
+    # 表記違いの mcp・MCP は 1 つにまとめる（表記は同数なら値の昇順で先のもの）
+    assert counted.data["groups"] == [{"value": "MCP", "count": 2}, {"value": "設計", "count": 2}]
+    values = picked.data["items"][0]["values"]
+    assert values["tags"] == ["mcp", "設計"]
+    assert values["main_tags"] == ["mcp"]

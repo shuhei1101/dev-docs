@@ -29,6 +29,29 @@ AFTER_WRITE_ROW = (
     "    after_write: [list]\n"
 )
 
+RULES_ROW = (
+    "  - id: rules\n"
+    "    paths: [rules/*.yaml]\n"
+    "    schema: schemas/rule.schema.yaml\n"
+    "    metadata:\n"
+    '      tags: "tags[].name"\n'
+    '      main_tags: "tags[main].name"\n'
+)
+RULE_SCHEMA = (
+    "type: object\n"
+    "properties:\n"
+    "  id: {type: string}\n"
+    "  name: {type: string}\n"
+    "  tags:\n"
+    "    type: array\n"
+    "    items:\n"
+    "      type: object\n"
+    "      properties:\n"
+    "        name: {type: string}\n"
+    "        main: {type: boolean}\n"
+)
+RULE_DOC = "id: r1\nname: 規約 1\ntags:\n  - {name: a, main: true}\n  - {name: b}\n"
+
 
 def _version(path: Path) -> str:
     """文書のファイルの今のバージョン（内容のハッシュ）を返す。"""
@@ -667,3 +690,62 @@ def test_normal_when_tool_description(
         "範囲のファイルを作った・消した・改名したら、管理用の YAML の行を修正する"
         in tools["write_docs"]["description"]
     )
+
+
+def _write_tags(env: Any, source: Any, worktree: Path, step: dict[str, Any]) -> tuple[Any, Any]:
+    """r1 に update を 1 回当て、結果と書いた後の tags を返す。"""
+    target = worktree / "rules" / "r1.yaml"
+    result = env.call(
+        "write_docs",
+        cwd=str(source.folder),
+        worktree=str(worktree),
+        operations=[_update("r1", _version(target), **step)],
+    )
+    return result, load_yaml(target.read_text(encoding="utf-8"))["tags"]
+
+
+def test_normal_when_tags_are_objects(
+    make_source: Callable[..., Any],
+    make_server: Callable[..., Any],
+    add_worktree: Callable[..., Path],
+    sample_file_set: Callable[..., dict[str, str]],
+    sample_config_text: Callable[..., str],
+) -> None:
+    """tags[].name の対応を持つ種類で、tags・main_tags への操作をオブジェクトの配列へ書き戻す（正常系）。"""
+    # 準備
+    files = sample_file_set(
+        **{
+            "dev-docs.yaml": sample_config_text(RULES_ROW),
+            "schemas/rule.schema.yaml": RULE_SCHEMA,
+            "rules/r1.yaml": RULE_DOC,
+        }
+    )
+    source, env, worktree = _setup(make_source, make_server, add_worktree, files)
+    # 実行
+    first, tags_1 = _write_tags(env, source, worktree, {"add_to": {"tags": ["c"]}})
+    second, tags_2 = _write_tags(env, source, worktree, {"remove_from": {"tags": ["b"]}})
+    third, tags_3 = _write_tags(env, source, worktree, {"set": {"tags": ["a", "c", "d"]}})
+    fourth, tags_4 = _write_tags(env, source, worktree, {"set": {"main_tags": ["c"]}})
+    fifth, tags_5 = _write_tags(env, source, worktree, {"set": {"main_tags": ["z"]}})
+    sixth, tags_6 = _write_tags(env, source, worktree, {"add_to": {"main_tags": ["d"]}})
+    seventh, tags_7 = _write_tags(env, source, worktree, {"remove_from": {"main_tags": ["c"]}})
+    eighth, tags_8 = _write_tags(env, source, worktree, {"unset": ["main_tags"]})
+    # 検証
+    assert not first.is_error
+    assert tags_1 == [{"name": "a", "main": True}, {"name": "b"}, {"name": "c"}]
+    assert not second.is_error
+    assert tags_2 == [{"name": "a", "main": True}, {"name": "c"}]
+    assert not third.is_error
+    assert tags_3 == [{"name": "a", "main": True}, {"name": "c"}, {"name": "d"}]
+    assert not fourth.is_error
+    assert tags_4 == [{"name": "a"}, {"name": "c", "main": True}, {"name": "d"}]
+    assert fifth.is_error
+    assert "InvalidArgumentError" in fifth.text
+    assert "z" in fifth.text
+    assert tags_5 == [{"name": "a"}, {"name": "c", "main": True}, {"name": "d"}]
+    assert not sixth.is_error
+    assert tags_6 == [{"name": "a"}, {"name": "c", "main": True}, {"name": "d", "main": True}]
+    assert not seventh.is_error
+    assert tags_7 == [{"name": "a"}, {"name": "c"}, {"name": "d", "main": True}]
+    assert not eighth.is_error
+    assert tags_8 == [{"name": "a"}, {"name": "c"}, {"name": "d"}]

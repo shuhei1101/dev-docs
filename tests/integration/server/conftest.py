@@ -103,6 +103,7 @@ class SourceSpec:
     scope_read: list[Path]
     scope_write: list[Path] | None = None
     enabled: bool = True
+    outside_read: bool | None = None
 
 
 @dataclass
@@ -222,6 +223,57 @@ def sample_sync_files(unindexed: int = 1, *, version: str = "3") -> dict[str, st
     return files
 
 
+ALIAS_ROWS = (
+    "  - id: terms\n"
+    "    paths: [terms/*.yaml]\n"
+    "    schema: schemas/term.schema.yaml\n"
+    "    alias_type: term\n"
+    "  - id: refs\n"
+    "    paths: [refs/*.yaml]\n"
+    "    schema: schemas/term.schema.yaml\n"
+    "    alias_type: doc\n"
+)
+TERM_SCHEMA = "title: 用語\ntype: object\n"
+# 数値の `aliases` を持ち、エイリアスのキーに違反する用語
+BROKEN_TERM = "id: broken\nname: 壊れた用語\ndescription: 型の違う別名\naliases: 3\n"
+
+
+def alias_files(extra: str = "", *, broken: bool = False, **overrides: str) -> dict[str, str]:
+    """用語「作業範囲」と文書の別名「設定のリファレンス」を持つ配信元のファイル一式を返す。
+
+    `extra` は設定の YAML の `documents` の後ろに続ける。`broken` は「壊れた用語」を置くか。
+    """
+    files = sample_files(
+        **{
+            "dev-docs.yaml": sample_config(ALIAS_ROWS + extra),
+            "schemas/term.schema.yaml": TERM_SCHEMA,
+            "terms/scope.yaml": (
+                "id: scope\n"
+                "name: 作業範囲\n"
+                "description: 触ってよい範囲\n"
+                "aliases: [scope, 担当範囲]\n"
+                "avoid: [担当領域]\n"
+            ),
+            "refs/settings.yaml": (
+                "id: settings\n"
+                "name: 設定のリファレンス\n"
+                "description: 設定のキーの一覧\n"
+                "aliases: [settings]\n"
+            ),
+        }
+    )
+    if broken:
+        files["terms/broken.yaml"] = BROKEN_TERM
+    files.update(overrides)
+    return files
+
+
+@pytest.fixture
+def alias_file_set() -> Callable[..., dict[str, str]]:
+    """エイリアスの行を持つ配信元のファイル一式を作る関数を返す。"""
+    return alias_files
+
+
 @pytest.fixture
 def sample_sync_file_set() -> Callable[..., dict[str, str]]:
     """管理用の YAML に無いファイルを持つ配信元のファイル一式を作る関数を返す。"""
@@ -264,6 +316,7 @@ def make_source(
         scope_write: list[Path] | None = None,
         enabled: bool = True,
         date: str | None = None,
+        outside_read: bool | None = None,
     ) -> SourceSpec:
         content = files if files is not None else sample_files()
         if git:
@@ -278,6 +331,7 @@ def make_source(
             scope_read=scope_read if scope_read is not None else [folder],
             scope_write=scope_write,
             enabled=enabled,
+            outside_read=outside_read,
         )
 
     return _make
@@ -298,6 +352,8 @@ def _settings_text(root: Path, state_dir: Path, specs: list[SourceSpec], extra: 
         lines.extend(f"      - {path}" for path in spec.config)
         if not spec.enabled:
             lines.append("    enabled: false")
+        if spec.outside_read is not None:
+            lines.append(f"    outside_read: {str(spec.outside_read).lower()}")
         lines.append("    scope:")
         lines.append("      read:")
         lines.extend(f"        - {path}" for path in spec.scope_read)

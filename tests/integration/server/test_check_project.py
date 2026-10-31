@@ -4,6 +4,16 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
+# どの文書にも当たらない `auto` の条件のタブ `none` を持つ nav
+NONE_NAV = (
+    "nav:\n"
+    "  tabs:\n"
+    "    - title: none\n"
+    "      items:\n"
+    "        - auto: {filter: {field: tags, op: eq, values: [none]}}\n"
+)
+ALIAS_SCHEMA_VERSION = "v0.3.0"
+
 
 def _listing(folder: Path) -> dict[str, str]:
     """フォルダの下のファイルのパスと中身を集める。"""
@@ -178,3 +188,25 @@ def test_error_when_config_unparsable(tmp_path: Path, make_server: Callable[...,
     # 検証
     assert result.is_error
     assert result.text.startswith("ConfigParseError")
+
+
+def test_normal_when_alias_and_nav_checked(
+    make_source: Callable[..., Any],
+    make_server: Callable[..., Any],
+    alias_file_set: Callable[..., dict[str, str]],
+) -> None:
+    """エイリアスのキーの違反と、どの文書にも当たらない nav の条件を返す（正常系）。"""
+    # 準備
+    sample = make_source("sample", alias_file_set(NONE_NAV, broken=True), git=False)
+    env = make_server(sample)
+    # 実行
+    result = env.call_admin("check_project", path=str(sample.folder), format="json")
+    # 検証
+    alias_violations = [item for item in result.data["violations"] if item["path"] == "aliases"]
+    assert not result.is_error
+    assert len(alias_violations) == 1
+    assert alias_violations[0]["doc"] == "terms/broken.yaml"
+    assert "文字列か文字列の並び" in alias_violations[0]["rule"]
+    assert len(result.data["warnings"]) == 1
+    assert "none" in result.data["warnings"][0]["rule"]
+    assert result.data["alias_schema_version"] == ALIAS_SCHEMA_VERSION

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import logging
 import socket
 from collections.abc import Callable
@@ -14,6 +15,7 @@ TOOL_NAMES = [
     "delete_docs",
     "describe",
     "list_changes",
+    "list_match_words",
     "search_docs",
     "trace_related",
     "write_docs",
@@ -25,6 +27,7 @@ ADMIN_TOOL_NAMES = [
     "status",
     "try_convert",
     "update",
+    "write_nav",
 ]
 MCP_HEADERS = {
     "Accept": "application/json, text/event-stream",
@@ -55,6 +58,24 @@ FILES_SCHEMA = Path(__file__).parents[3] / "templates" / "files.schema.yaml"
 LISTEN_STATE = "0A"
 TCP_TABLES = ("/proc/net/tcp", "/proc/net/tcp6")
 LOOPBACK_V4 = "0100007F"
+# どの文書にも当たらない `auto` の条件のタブ `none` を持つ nav
+NONE_NAV = (
+    "nav:\n"
+    "  tabs:\n"
+    "    - title: none\n"
+    "      items:\n"
+    "        - auto: {filter: {field: tags, op: eq, values: [none]}}\n"
+)
+
+
+def _kind_row(kind: str) -> str:
+    """`sample` のスキーマで `{kind}/*.yaml` を読む文書の種類の行を作る。"""
+    return f"  - id: {kind}\n    paths: [{kind}/*.yaml]\n    schema: schemas/sample.schema.yaml\n"
+
+
+def _tool_data(result: dict[str, Any]) -> Any:
+    """ツールの結果の本文を JSON として読む。"""
+    return json.loads("".join(part["text"] for part in result["content"]))
 
 
 def _listening_addresses(port: int) -> set[str]:
@@ -363,3 +384,95 @@ def test_error_when_port_in_use(
     assert code == 3
     assert str(port) in error
     assert "DEV_DOCS_PORT" in error
+
+
+def test_normal_when_config_read_from_default_ref(
+    make_source: Callable[..., Any],
+    write_settings: Callable[..., Path],
+    free_port: Callable[[], int],
+    start_serve: Callable[..., Any],
+    wait_until_serving: Callable[..., None],
+    call_tool: Callable[..., dict[str, Any]],
+    commit_all: Callable[..., str],
+    run_git: Callable[..., str],
+    sample_file_set: Callable[..., dict[str, str]],
+    sample_config_text: Callable[..., str],
+) -> None:
+    """クローン本体が別のブランチでも、default_ref の設定とスキーマで配信元を組み立てる（正常系）。"""
+    # 準備
+    sample = make_source("sample")
+    run_git(sample.folder, "branch", "master")
+    commit_all(sample.folder, {"dev-docs.yaml": sample_config_text(_kind_row("kind_a"))})
+    run_git(sample.folder, "checkout", "master")
+    worktree = sample.folder / ".claude" / "worktrees" / "develop"
+    run_git(sample.folder, "worktree", "add", str(worktree), "develop")
+    notes_files = sample_file_set(
+        **{"dev-docs.yaml": sample_config_text(_kind_row("kind_n"), name="notes")}
+    )
+    notes = make_source("notes", notes_files, git=False, scope_read=[sample.folder])
+    port = free_port()
+    process = start_serve(write_settings(sample, notes), port)
+    wait_until_serving(process, port)
+    cwd = str(sample.folder)
+    # 実行
+    with httpx.Client(timeout=15) as client:
+        first = _tool_data(
+            call_tool(client, port, "/mcp/", "describe", cwd=cwd, source="sample", format="json")
+        )
+        commit_all(
+            worktree,
+            {"dev-docs.yaml": sample_config_text(_kind_row("kind_a") + _kind_row("kind_b"))},
+        )
+        second = _tool_data(
+            call_tool(client, port, "/mcp/", "describe", cwd=cwd, source="sample", format="json")
+        )
+        disk = _tool_data(
+            call_tool(client, port, "/mcp/", "describe", cwd=cwd, source="notes", format="json")
+        )
+    # 検証
+    assert "kind_a" in {kind["id"] for kind in first["kinds"]}
+    assert {"kind_a", "kind_b"} <= {kind["id"] for kind in second["kinds"]}
+    assert str(worktree) in {item["path"] for item in first["worktrees"]}
+    assert "kind_n" in {kind["id"] for kind in disk["kinds"]}
+
+
+def test_normal_when_alias_and_nav_warned(
+    make_source: Callable[..., Any],
+    write_settings: Callable[..., Path],
+    free_port: Callable[[], int],
+    start_serve: Callable[..., Any],
+    wait_until_serving: Callable[..., None],
+    call_tool: Callable[..., dict[str, Any]],
+    alias_file_set: Callable[..., dict[str, str]],
+) -> None:
+    """エイリアスのキーの違反と 0 件に当たる nav の条件を警告のログに出し、配信を始める（正常系）。"""
+    # 準備
+    sample = make_source("sample", alias_file_set(NONE_NAV, broken=True))
+    port = free_port()
+    process = start_serve(write_settings(sample), port)
+    wait_until_serving(process, port)
+    cwd = str(sample.folder)
+    # 実行
+    with httpx.Client(timeout=15) as client:
+        status = call_tool(client, port, "/_admin/mcp/", "status", format="json")
+        found = _tool_data(
+            call_tool(
+                client, port, "/mcp/", "search_docs", cwd=cwd, term="壊れた用語", format="json"
+            )
+        )
+        words = _tool_data(
+            call_tool(
+                client, port, "/mcp/", "list_match_words", source="sample", cwd=cwd, format="json"
+            )
+        )
+    process.terminate()
+    process.wait(timeout=15)
+    logs = process.stderr.read() if process.stderr else ""
+    # 検証
+    assert "terms/broken.yaml" in logs
+    assert "文字列か文字列の並び" in logs
+    assert "none" in logs
+    sources = {item["id"]: item for item in status["structuredContent"]["sources"]}
+    assert sources["sample"]["status"] == "serving"
+    assert not found.get("items")
+    assert "壊れた用語" not in {item["word"] for item in words["words"]}

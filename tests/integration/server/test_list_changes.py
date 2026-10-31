@@ -1,14 +1,19 @@
 from __future__ import annotations
 
+import logging
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any
+
+import pytest
 
 from dev_docs.shared.hashing import content_hash
 
 DOC_1 = {"field": "id", "op": "eq", "values": ["doc-1"]}
 SHORT_SHA = 7
 WORD = "廃止予定"
+OUTSIDE_LINE = "作業範囲の外（参考）"
+OUTSIDE_LOG = "作業範囲の外を読んだ"
 
 
 def _changed_source(
@@ -349,3 +354,48 @@ def test_normal_when_contains(
     ]
     assert by_id["doc-1"][-1]["kind"] == "added"
     assert by_id["doc-1"][-1]["to"] == {"input": "作業ツリー"}
+
+
+def test_normal_when_outside_scope(
+    make_source: Callable[..., Any],
+    make_server: Callable[..., Any],
+    commit_all: Callable[..., str],
+    sample_doc_text: Callable[..., str],
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """outside_scope: true で、scope に当たらない配信元の変更を作業範囲の外として返す（正常系）。"""
+    # 準備
+    sample = make_source("sample")
+    other = make_source("other")
+    closed = make_source("closed", outside_read=False)
+    renamed = sample_doc_text("doc-1", "新しい名前", description="1 件目", tags=["a"])
+    commit_all(other.folder, {"docs/doc-1.yaml": renamed}, "docs: 改名")
+    commit_all(closed.folder, {"docs/doc-1.yaml": renamed}, "docs: 改名")
+    env = make_server(sample, other, closed)
+    cwd = str(sample.folder)
+    caplog.set_level(logging.INFO)
+    # 実行
+    result = env.call(
+        "list_changes", cwd=cwd, source="other", outside_scope=True, **{"from": "HEAD~1"}
+    )
+    as_json = env.call(
+        "list_changes",
+        cwd=cwd,
+        source="other",
+        outside_scope=True,
+        format="json",
+        **{"from": "HEAD~1"},
+    )
+    refused = env.call(
+        "list_changes", cwd=cwd, source="closed", outside_scope=True, **{"from": "HEAD~1"}
+    )
+    # 検証
+    logs = [record.getMessage() for record in caplog.records if OUTSIDE_LOG in record.getMessage()]
+    assert not result.is_error
+    assert result.text.splitlines()[0] == OUTSIDE_LINE
+    assert [(item["id"], item["change"]) for item in as_json.data["items"]] == [
+        ("doc-1", "modified")
+    ]
+    assert any(cwd in message and "other" in message for message in logs)
+    assert refused.is_error
+    assert "SourceNotReadableError" in refused.text
