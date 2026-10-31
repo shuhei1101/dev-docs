@@ -1,5 +1,5 @@
 title: "開発ドキュメントサーバー / プロンプトの文書の変換 / runtime.py"
-lead: サーバーが起動のときに `content/prompts/` のプロンプトの YAML を読んで検査し、SessionStart の注入文・MCP の instructions・ツールの description を描画する。画面用のマーカーは付けない。単体テストは `tests/unit/dev_docs/features/prompt_doc/test_runtime.py`。
+lead: サーバーが起動のときに `content/prompts/` のプロンプトの YAML を読んで検査し、SessionStart の注入文・MCP の instructions・ツールの description を描画する。画面用のマーカーは付けない。
 constants:
   - name: PROMPTS_DIR_ENV
     title: プロンプトの置き場所の環境変数
@@ -225,3 +225,5 @@ functions:
         condition: '`DEFAULT_PROMPTS_DIR`、`required` は `SESSION_CONTEXT_PROMPT_ID` と `mcp_prompt_ids()`'
         mock: なし
         expected: 送らず、どの部品の本文にも `MUST`・`必ず`・`禁止` が無く、`mcp/docs/instructions` を描画した文が 4,096 字以内
+test_files:
+  - tests/unit/dev_docs/features/prompt_doc/test_runtime.py
