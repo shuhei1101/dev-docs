@@ -528,7 +528,7 @@ def versions_2(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 REPO_ROOT = Path(__file__).parents[3]
-CLONE_FILES = ("src", "pyproject.toml", "uv.lock", ".python-version")
+CLONE_FILES = ("src", "content", "templates", "pyproject.toml", "uv.lock", ".python-version")
 
 
 @dataclass
