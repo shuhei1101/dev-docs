@@ -242,7 +242,7 @@ data_models:
       - name: violations
         title: 違反
         type: list[Violation]
-        description: 配信元の設定の検証の違反
+        description: 配信元の設定の検証の違反と、エイリアスのキーの違反（`doc` に文書のパス）
       - name: missing_paths
         title: 無いパス
         type: list[str]
@@ -255,6 +255,17 @@ data_models:
         title: 索引の同期
         type: CheckSync | None
         description: 違反もスクリプトの失敗も無く、文書を読めたとき
+      - name: warnings
+        title: 警告
+        type: list[Violation]
+        access: 公開
+        default: '[]'
+        description: nav の警告
+      - name: alias_schema_version
+        title: エイリアスのスキーマのバージョン
+        type: str
+        access: 公開
+        description: エイリアスのスキーマの取り込み元のタグ
   - name: TryConvertRequest
     title: 試しの変換の要求
     container: features/admin/types.py
@@ -350,3 +361,85 @@ data_models:
         type: Literal['markdown', 'json']
         default: "'markdown'"
         description: '`markdown` は `render_status`・`render_reload` の文、`json` は結果の辞書'
+  - name: NavOperation
+    title: 画面の構成の操作
+    container: features/admin/types.py
+    usecase: 画面の構成の書き込み
+    role: DTO
+    summary: '`write_nav` の `operations` の 1 件'
+    description: '`pydantic.BaseModel`（`extra="forbid"`）。'
+    properties:
+      - name: op
+        title: 操作
+        type: Literal['add', 'update', 'remove']
+        access: 公開
+        description: 追加・修正・削除
+      - name: tab
+        title: タブ
+        type: str
+        access: 公開
+        description: 対象のタブの名前（`nav.tabs[].title`）
+      - name: item
+        title: 項目
+        type: str | None
+        access: 公開
+        default: None
+        description: タブの中の `group` の名前。入れ子は ` > ` で区切る。`None` はタブそのもの
+      - name: value
+        title: 中身
+        type: dict[str, Any] | None
+        access: 公開
+        default: None
+        description: タブか項目の中身（`nav` と同じ書式）。`add`・`update` で必須
+  - name: WriteNavRequest
+    title: 画面の構成の書き込みの要求
+    container: features/admin/types.py
+    usecase: 画面の構成の書き込み
+    role: DTO
+    summary: '`write_nav` の引数'
+    description: '`pydantic.BaseModel`（`extra="forbid"`）。'
+    properties:
+      - name: path
+        title: 配信元の場所
+        type: str
+        access: 公開
+        description: 配信元のフォルダか `dev-docs.yaml` の絶対パス
+      - name: operations
+        title: 操作
+        type: list[NavOperation]
+        access: 公開
+        description: 並べた順に当てる操作（1 件以上）
+      - name: format
+        title: 返す形式
+        type: Literal['markdown', 'json']
+        access: 公開
+        default: "'markdown'"
+        description: '`markdown` は `render_write_nav` の文、`json` は結果の辞書'
+  - name: WriteNavResult
+    title: 画面の構成の書き込みの結果
+    container: features/admin/types.py
+    usecase: 画面の構成の書き込み
+    role: DTO
+    summary: 書いた `nav` と条件ごとの文書の数・警告
+    description: '`dataclass(frozen=True)`。'
+    properties:
+      - name: path
+        title: 書いたファイル
+        type: str
+        access: 公開
+        description: 書き換えた `dev-docs.yaml` のパス
+      - name: nav
+        title: 画面の構成
+        type: str
+        access: 公開
+        description: 書いた後の `nav`（YAML のまま）
+      - name: counts
+        title: 文書の数
+        type: list[NavAutoCount]
+        access: 公開
+        description: nav の条件の数えの結果
+      - name: warnings
+        title: 警告
+        type: list[Violation]
+        access: 公開
+        description: '`count` が 0 の `auto` の警告（nav の警告と同じ文）'

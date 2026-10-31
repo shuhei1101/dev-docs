@@ -80,6 +80,12 @@ data_models:
         access: 公開
         default: None
         description: フックが入れる
+      - name: outside_scope
+        title: 作業範囲の外も読むか
+        type: bool
+        access: 公開
+        default: 'False'
+        description: '`True` のとき、`scope` に当たらない配信元を `outside_read` が真なら作業範囲の外（参考）として読む（`source` が ID 1 つのときだけ効く）。引数なしの一覧には効かない'
   - name: KindSummary
     title: 種類の概要
     container: features/describe/types.py
@@ -139,6 +145,22 @@ data_models:
         type: list[KindSummary]
         access: 公開
         description: 有効な文書の行の順
+      - name: outside_scope
+        title: 作業範囲の外から読んだか
+        type: bool
+        access: 公開
+        default: 'False'
+        description: 読んだ場所の `outside_scope`
+      - name: refs
+        title: ブランチとタグ
+        type: dict[str, list[str]] | None
+        access: 公開
+        description: '`{branches, tags}`（リビジョンの一覧の名前だけ）。Git でない配信元は `None`'
+      - name: worktrees
+        title: ワークツリー
+        type: list[WorktreeInfo] | None
+        access: 公開
+        description: ワークツリーの一覧。Git でない配信元は `None`
   - name: KindSchemaResult
     title: 種類のスキーマ
     container: features/describe/types.py
@@ -172,6 +194,12 @@ data_models:
         type: dict[str, str]
         access: 公開
         description: 行の `metadata`（共通のキー → 列名）。持たない行は空
+      - name: outside_scope
+        title: 作業範囲の外から読んだか
+        type: bool
+        access: 公開
+        default: 'False'
+        description: 読んだ場所の `outside_scope`
 functions:
   - name: describe
     title: 配信元の説明
@@ -207,8 +235,8 @@ functions:
     process: |-
       1. `kind` があって `source` が無い場合、`InvalidArgumentError`（`kind` には `source` が要ります）を送る
       2. `source` が無い場合、作業場所の説明と使える配信元を返す（使える配信元が 0 件でも返す）
-      3. `source` がある場合、読む場所を解く（読む場所の解決。`source`・`worktree`・`cwd`）。作業中の配信元の作業ツリーかワークツリーを読むときは、その場所の設定を読み直した配信元を使う（作業場所の配信元の読み込み）
-      4. `kind` が無い場合、`instructions` と、有効な文書の行ごとの種類の概要（スキーマは文書のストア.種類のスキーマ）を返す
+      3. `source` がある場合、読む場所を解く（読む場所の解決。`source`・`worktree`・`cwd`・`outside_scope`。結果の `outside_scope` は場所の `outside_scope`）。作業中の配信元の作業ツリーかワークツリーを読むときは、その場所の設定を読み直した配信元を使う（作業場所の配信元の読み込み）
+      4. `kind` が無い場合、`instructions` と、有効な文書の行ごとの種類の概要（スキーマは文書のストア.種類のスキーマ）を返す。Git の配信元は、リビジョンの一覧（`commits=0`）のブランチとタグの名前を `refs`、ワークツリーの一覧を `worktrees` に入れる
       5. `kind` がある場合、文書の行を引き（無ければ `UnknownKindError`）、`target.base` の `schema` のファイルの内容と読んだスキーマ、行の `metadata` を返す
     exceptions:
       - name: InvalidArgumentError
@@ -265,6 +293,13 @@ functions:
         mock: なし
         expected: '`ValidationFailedError` で違反が `documents[0].paths`'
         exception: 作業場所の配信元の読み込みが送る
+      - name: test_describe_when_refs_and_worktrees
+        case: 正常
+        summary: ブランチとワークツリー
+        condition: Git の配信元 sample（ブランチ `develop`・`feat/x`、タグ `v0.1.0`、ワークツリー `.claude/worktrees/x`）の `source` だけ
+        mock: なし（一時フォルダで `git init`）
+        expected: '`refs.branches` に `develop`・`feat/x`、`refs.tags` に `v0.1.0`、`worktrees[0].branch` が `feat/x`'
+        exception: '-'
   - name: render_describe_markdown
     title: 説明の Markdown
     kind: 関数
@@ -285,9 +320,10 @@ functions:
       type: str
       description: Markdown
     process: |-
-      1. 使える配信元の一覧は、`作業場所: {cwd}（{配信元} のクローン本体 / ワークツリー）` の行と `| source | 権限 | description |` の表（作業中の配信元は権限に `（作業中）`）
-      2. 配信元の説明書は、`instructions` をそのまま置き、`| kind | description |` の表を続ける
-      3. 種類のスキーマは、`metadata` が空でなければ `| 共通のキー | 列名 |` の表を置き、```yaml でスキーマの YAML を囲む
+      1. 配信元の説明書と種類のスキーマは、`outside_scope` が `True` なら先頭に `作業範囲の外（参考）` の行を置く
+      2. 使える配信元の一覧は、`作業場所: {cwd}（{配信元} のクローン本体 / ワークツリー）` の行と `| source | 権限 | description |` の表（作業中の配信元は権限に `（作業中）`）
+      3. 配信元の説明書は、`instructions` をそのまま置き、`| kind | description |` の表を続ける。`refs` があれば `ブランチ: {,で繋いだ名前}`・`タグ: {同じ}` の行、`worktrees` があれば `| ワークツリー | ブランチ |` の表を続ける
+      4. 種類のスキーマは、`metadata` が空でなければ `| 共通のキー | 列名 |` の表を置き、```yaml でスキーマの YAML を囲む
     unit_tests:
       - name: test_render_describe_markdown
         case: 正常
@@ -301,6 +337,13 @@ functions:
         condition: '`metadata` が `{name: title}` の種類のスキーマ'
         mock: なし
         expected: '`| name | title |` の行が YAML のコードブロックの前にある'
+      - name: test_render_describe_markdown_when_outside_scope
+        case: 正常
+        summary: 作業範囲の外の表示
+        condition: '`outside_scope: true` の配信元の説明書'
+        mock: なし
+        expected: 先頭の行が `作業範囲の外（参考）`
+        exception: '-'
 refs:
   - dev/設計書/インターフェース定義/開発ドキュメントサーバー/配信元の説明#
 test_files:

@@ -448,7 +448,7 @@ classes:
         process: |-
           1. 文書の行を引く（`target.source.table(document.kind)`）
           2. Markdown を作る
-             - `converter` がある場合、`cache_dir` の控えがあればそれを使う。無ければスクリプトの実行（`cwd=target.base`・`stdin` に文書の YAML・制限時間 `timeout_sec`）の標準出力を使い、一時ファイルから置き換えて控える。控えが `CONVERT_CACHE_KEEP` を超えたら古いものを消す
+             - `converter` がある場合、`cache_dir` の控えがあればそれを使う。無ければスクリプトの実行（`cwd=target.base`・`stdin` に文書の YAML・制限時間 `timeout_sec`・`at`。`at` は `target.ref` と `target.worktree` がどちらも `None` で `source.config_commit` がある場合に（`source.main_root`, `source.config_commit`））の標準出力を使い、一時ファイルから置き換えて控える。控えが `CONVERT_CACHE_KEEP` を超えたら古いものを消す
                - `ScriptTimeoutError`・`ScriptFailedError`・実行できない `ScriptError` の場合、`reason` が `timeout`・`exit`・`not_runnable` の `ConvertFailure` を返す
              - `converter` が無く Markdownの本文かが `True` の場合、`document.body` をそのまま使う
              - それ以外は、スキーマ駆動の変換（スキーマは `store.schema(target, kind)`）

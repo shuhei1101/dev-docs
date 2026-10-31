@@ -101,6 +101,12 @@ data_models:
         access: 公開
         default: SourceScope()
         description: 読める・読み書きできる作業場所
+      - name: outside_read
+        title: 作業範囲の外から読めるか
+        type: bool
+        access: 公開
+        default: 'True'
+        description: '`False` で、`scope` に当たらない作業場所から `outside_scope: true` で読むのを断る'
   - name: TerminalConfig
     title: 端末の設定
     container: features/settings/types.py

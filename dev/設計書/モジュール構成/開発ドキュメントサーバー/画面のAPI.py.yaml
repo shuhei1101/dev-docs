@@ -6,9 +6,9 @@ directory: |-
   ```text
   src/dev_docs/features/view/
   ├─ __init__.py   # 公開する型と関数の再エクスポート
-  ├─ types.py      # NavItem / NavTab / ConversionError / GitHubTarget / DocumentResponse / DocumentDiff / ScreenSearchItem / ScreenSearchResult / ColumnsRequest
+  ├─ types.py      # NavItem / NavTab / ConversionError / GitHubTarget / AliasItem / NavAutoCount / DocumentResponse / DocumentDiff / ScreenSearchItem / ScreenSearchResult / ColumnsRequest
   ├─ paths.py      # page_path / find_page / screen_target
-  ├─ nav.py        # build_nav / first_page / mark_nav_changes
+  ├─ nav.py        # build_nav / first_page / mark_nav_changes / nav_auto_counts / check_nav_filters / nav_warnings
   ├─ columns.py    # ColumnSettings
   ├─ search.py     # screen_search
   ├─ document.py   # get_document / not_found_fields
@@ -365,6 +365,11 @@ data_models:
         type: list[str]
         access: 公開
         description: 変換の結果の `table_keys`。失敗したときは空
+      - name: aliases
+        title: エイリアス
+        type: list[AliasItem]
+        access: 公開
+        description: 配信元の `alias_type` を持つ行の文書のエイリアス（エイリアスの集めの `entries`）。`alias_type` を持つ行が無い配信元・変換に失敗したときは空
       - name: diff
         title: 差分
         type: DocumentDiff | None
@@ -399,6 +404,74 @@ data_models:
         access: 公開
         default: '[]'
         description: '`base` の同じ ID の文書から変わったキーのパス。`change` が `added`・`None` のときは空'
+  - name: AliasItem
+    title: エイリアスの応答
+    container: features/view/types.py
+    usecase: 文書の取得
+    role: DTO
+    summary: 文書の取得の `aliases` の 1 件
+    description: 共通の『画面の API のモデル』（`ApiModel`。JSON のキーは camelCase）を継承し、`extra="allow"` にする。`AliasEntry` の `extra` のキーは同じ階層に置き、値を持たないキーは載せない（`model_dump(exclude_none=True)`）。
+    properties:
+      - name: id
+        title: 文書の ID
+        type: str
+        access: 公開
+        description: 用語の文書の ID
+      - name: name
+        title: 名前
+        type: str
+        access: 公開
+        description: 共通のキー `name`
+      - name: aliases
+        title: 別名
+        type: list[str]
+        access: 公開
+        description: 本文で用語に当てる語
+      - name: description
+        title: 説明
+        type: str | None
+        access: 公開
+        default: None
+        description: ツールチップに出す説明
+      - name: alias_type
+        title: 引用の種類
+        type: Literal['term', 'doc', 'command', 'url', 'skill', 'tool', 'path', 'env', 'avoid']
+        access: 公開
+        description: 行の `alias_type`
+      - name: avoid
+        title: やめた言い方
+        type: list[str] | None
+        access: 公開
+        default: None
+        description: 用語のやめた言い方
+  - name: NavAutoCount
+    title: nav の条件の数
+    container: features/view/types.py
+    usecase: 画面の構成の書き込み
+    role: DTO
+    summary: '`nav` の `auto` 1 つと、その条件に当たる文書の数'
+    description: '`dataclass(frozen=True, slots=True, kw_only=True)`。'
+    properties:
+      - name: path
+        title: キーのパス
+        type: str
+        access: 公開
+        description: '`auto` のキーのパス（`nav.tabs[2].items[0].auto`）'
+      - name: tab
+        title: タブの名前
+        type: str
+        access: 公開
+        description: '`auto` を持つタブの `title`'
+      - name: filter
+        title: 条件
+        type: dict[str, Any] | None
+        access: 公開
+        description: '`auto.filter`。無ければ `None`'
+      - name: count
+        title: 文書の数
+        type: int
+        access: 公開
+        description: '`auto` の `document` と `filter` に当たる文書の数'
 classes:
   - name: ColumnSettings
     title: 表の列の設定
@@ -617,7 +690,7 @@ functions:
       2. `nav.tabs[]` ごとに `items[]` を上から次のように読む
          - `group` は `kind` が `group` の項目を作り、子の `items[]` を同じ読み方で入れ子にする
          - `page` は、文書の行が 1 ファイルだけならその文書、`{行の id}/{文書の ID}` ならその文書の `kind` が `page` の項目にする。無い文書は飛ばし、`[warning]` nav の文書が無い（配信元・値）を書く
-         - `auto` は `document` の行の文書を文書のページのパスの昇順で `page` の項目にする。`group_by` があれば、その項目のパスの値（配列は要素ごと、無ければ `その他`）ごとの `group` の項目にする
+         - `auto` は、`document` があればその行の文書、無ければ全ての文書のうち、`filter` があれば条件の照合（検索。`fields` は文書の種類のスキーマの使える項目、`today` は今日）で当たる文書を、文書のページのパスの昇順で `page` の項目にする。`group_by` があれば、その項目のパスの値（配列は要素ごと、無ければ `その他`）ごとの `group` の項目にする
          - `title` があれば行の名前を上書きする
       3. `active` を全て `False` にしたタブの並びを返す
     unit_tests:
@@ -633,6 +706,12 @@ functions:
         condition: 文書の行が 2 つで `nav` が無い
         mock: なし
         expected: 行ごとに 2 つのタブ
+      - name: test_build_nav_when_filter
+        case: 正常
+        summary: 条件で絞った auto
+        condition: '`auto: {filter: {field: tags, op: eq, values: [mcp]}}`（`document` なし）と、`auto: {document: rules, filter: {field: tags, op: eq, values: [mcp]}}`。`tags: [mcp]` の文書が rules に 1 件・notes に 1 件'
+        mock: なし
+        expected: 1 つ目のタブは 2 件の `page` の項目、2 つ目のタブは rules の 1 件だけ
   - name: first_page
     title: タブの最初の文書
     kind: 関数
@@ -818,7 +897,7 @@ functions:
          - `diff_ref` の文書でタブとサイドバーを組み立て、文書のページのパス → `version` を両方で作って、タブにサイドバーの変化を付ける
       6. 返した文書を含むタブの `active` を `True` にする
       7. `updated_at` は文書の `updated`、`None` なら文書のファイルの `st_mtime` をタイムゾーン付きにした日時にする
-      8. `ref` は `ref` の値、省いたときは `default_ref` の名前（Git 管理外は `None`）、`github` は `github_repository` があれば `github_repository`・`github_issue_labels`、`columns` は表の列の設定.列の設定を読む の結果、`table_keys` は変換の結果の値にして返す
+      8. `ref` は `ref` の値、省いたときは `default_ref` の名前（Git 管理外は `None`）、`github` は `github_repository` があれば `github_repository`・`github_issue_labels`、`columns` は表の列の設定.列の設定を読む の結果、`table_keys` は変換の結果の値、`aliases` は手順 1 の文書のエイリアスの集め（文書のストア）の `entries` を `AliasItem` にしたもの（手順 4 で変換に失敗したときは空）にして返す
     exceptions:
       - name: UnknownSourceError
         condition: 無い配信元
@@ -870,6 +949,13 @@ functions:
         condition: Git 管理外の配信元の `docs/a`、`diff_ref="main"`
         mock: なし（一時フォルダの配信元）
         expected: '`updated_at` がファイルの `st_mtime` の日時、`diff` が `None`、`ref` が `None`'
+      - name: test_get_document_when_aliases
+        case: 正常
+        summary: エイリアスを返す
+        condition: '`alias_type: term` の行の「作業範囲」（`aliases: [scope, 担当範囲]`・`avoid: [担当領域]`・`description` あり）と、`alias_type: doc` の行の「設定のリファレンス」（`aliases: [settings]`）を持つ配信元の文書を開く'
+        mock: なし（一時フォルダの配信元）
+        expected: '`aliases` が 2 件で、作業範囲の `avoid` が `[担当領域]`、設定のリファレンスは `avoid` を持たない（JSON にキーが無い）'
+        exception: '-'
   - name: not_found_fields
     title: 見つからなかったもの
     kind: 関数
@@ -974,6 +1060,151 @@ functions:
         condition: 比較元にだけある `group` 旧 の下の `docs/y` が開いているリビジョンに無い
         mock: なし
         expected: '`docs/y` が `deleted` で、同じ `title` のタブの末尾に並ぶ'
+  - name: nav_auto_counts
+    title: nav の条件の数え
+    kind: 関数
+    container: features/view/nav.py
+    usecase: 画面の構成の書き込み
+    role: 変換
+    summary: '`nav` の全ての `auto` について、条件に当たる文書を数える'
+    scope: public
+    thread_safe: true
+    args:
+      - name: nav
+        title: 画面の構成
+        type: Mapping[str, Any]
+        required: true
+        passing: positional
+        description: '`dev-docs.yaml` の `nav`'
+      - name: documents
+        title: 文書
+        type: Sequence[Document]
+        required: true
+        passing: positional
+        description: 数える文書
+      - name: fields
+        title: 使える項目
+        type: Mapping[str, str]
+        required: true
+        passing: keyword
+        description: 使える項目（検索）の結果
+      - name: today
+        title: 今日
+        type: date
+        required: true
+        passing: keyword
+        description: 日付の相対の値の基準
+    returns:
+      type: list[NavAutoCount]
+      description: '`nav` を上からたどった順の `auto` ごとの数'
+    process: |-
+      1. `nav.tabs[]` の `items[]` を、`group` の `items[]` の入れ子までたどって `auto` を集める（キーのパスは `nav.tabs[{i}].items[{j}]...auto`）
+      2. `auto` ごとに、タブとサイドバーの組み立てと同じ選び方（`document` と `filter`）で当たる文書を数える
+      3. `NavAutoCount` にして返す
+    unit_tests:
+      - name: test_nav_auto_counts
+        case: 正常
+        summary: 入れ子の auto を数える
+        condition: 'タブ `mcp` の `auto: {filter: tags が mcp}` と、タブ `設計` の group の下の `auto: {document: rules}`、タブ `none` の `auto: {filter: tags が none}`'
+        mock: なし
+        expected: 3 件で、`path` が `nav.tabs[0].items[0].auto`・`nav.tabs[1].items[0].items[0].auto`・`nav.tabs[2].items[0].auto`、`none` の `count` が 0
+  - name: check_nav_filters
+    title: nav の条件の確かめ
+    kind: 関数
+    container: features/view/nav.py
+    usecase: 画面の構成の書き込み
+    role: 検証
+    summary: '`nav` の `auto` の `document` と `filter` が使えるかを確かめる'
+    scope: public
+    thread_safe: true
+    args:
+      - name: nav
+        title: 画面の構成
+        type: Mapping[str, Any]
+        required: true
+        passing: positional
+        description: '`dev-docs.yaml` の `nav`'
+      - name: table_ids
+        title: 行の ID
+        type: Collection[str]
+        required: true
+        passing: keyword
+        description: 有効な documents の行の ID
+      - name: fields
+        title: 使える項目
+        type: Mapping[str, str]
+        required: true
+        passing: keyword
+        description: 使える項目（検索）の結果
+    returns:
+      type: list[Violation]
+      description: 違反。`path` は `nav.tabs[2].items[0].auto.filter.field` の形
+    process: |-
+      1. nav の条件の数えと同じ順で `auto` をたどる
+      2. `document` が `table_ids` に無ければ、`{auto のパス}.document` に `存在しない ID` の違反を加える
+      3. `filter` を `SearchRequest(filter=...)` にして条件の確かめ（検索）をし、違反の `path` の先頭の `filter` を `{auto のパス}.filter` に置き換えて加える
+      4. 違反を返す
+    unit_tests:
+      - name: test_check_nav_filters
+        case: 異常
+        summary: 知らない項目と無い行
+        condition: '`auto: {filter: {field: nmae, op: eq, values: [x]}}` と `auto: {document: none}`'
+        mock: なし
+        expected: 違反が 2 件で、`path` が `nav.tabs[0].items[0].auto.filter.field`（`fix` に `name`）と `nav.tabs[1].items[0].auto.document`
+  - name: nav_warnings
+    title: nav の警告
+    kind: 関数
+    container: features/view/nav.py
+    usecase: 配信元の検査
+    role: サービス
+    summary: 配信元のクローン本体の文書で、使えない条件とどの文書にも当たらない条件を警告にする
+    scope: public
+    thread_safe: true
+    description: 配信元の検査・起動時と読み直しの警告のログ・セッションの文脈の警告が呼ぶ。
+    args:
+      - name: store
+        title: 文書のストア
+        type: DocumentStore
+        required: true
+        passing: injected
+        description: 文書を読む
+      - name: source
+        title: 配信中の配信元
+        type: ServedSource
+        required: true
+        passing: positional
+        description: 確かめる配信元
+      - name: today
+        title: 今日
+        type: date | None
+        required: false
+        default: None
+        passing: keyword
+        description: テスト用。`None` は今日（ローカル）
+    returns:
+      type: list[Violation]
+      description: 警告。`nav` が無い配信元は空
+    process: |-
+      1. `source.config.nav` が無ければ空を返す
+      2. `Target(source, source.root, None, None, "read")` で文書を集め（文書のストア.文書を集める）、種類のスキーマから使える項目（検索）を作る
+      3. nav の条件の確かめの違反を加える
+      4. nav の条件の数えで `count` が 0 の `auto` ごとに、`path` を `{auto のパス}.filter`（`filter` が無ければ `auto` のパス）、`rule` を `{タブの名前}: 条件 {filter を JSON にした文字列} に当たる文書がありません` にした警告を加える
+      5. 警告を返す
+    unit_tests:
+      - name: test_nav_warnings
+        case: 正常
+        summary: 0 件の条件
+        condition: sample の `nav` に、`auto` の `filter` が `tags が none` のタブ `none` を置き、どの文書にもタグ `none` を付けない
+        mock: なし（一時フォルダの配信元）
+        expected: 警告が 1 件で、`path` が `nav.tabs[{none の位置}].items[0].auto.filter`、`rule` が `none:` で始まる
+        exception: '-'
+      - name: test_nav_warnings_when_no_nav
+        case: 正常
+        summary: nav が無い
+        condition: '`nav` の無い配信元'
+        mock: なし（一時フォルダの配信元）
+        expected: 空
+        exception: '-'
 refs:
   - dev/設計書/インターフェース定義/開発ドキュメントサーバー/文書の取得#
   - dev/設計書/インターフェース定義/開発ドキュメントサーバー/画面の検索#

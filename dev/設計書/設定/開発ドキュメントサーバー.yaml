@@ -36,7 +36,7 @@ settings:
     file: dev-docs.yaml
     type: str
     default: develop
-    description: リビジョンを指さないときに読むリビジョン
+    description: リビジョンを指さないときに読むリビジョン。Git の配信元は、この設定自身・種類のスキーマ・`validators`・`converters`・`generators` のスクリプトもこのリビジョンから読む（ディスクの先頭の設定の `default_ref` を使う）
     reload: reload
   - key: visibility
     title: 公開の条件
@@ -49,7 +49,7 @@ settings:
     file: dev-docs.yaml
     type: list[str]
     default: '[./.claude/worktrees/*]'
-    description: ワークツリーの場所の glob。配信元のフォルダからの相対パスか絶対パス
+    description: ワークツリーの場所の glob。メインのリポジトリの直下（Git でない配信元は配信元のフォルダ）からの相対パスか絶対パス。端末の設定がワークツリーの設定を指してもメインのリポジトリから数える
     reload: reload
   - key: description
     title: 配信元の説明
@@ -202,7 +202,7 @@ settings:
     file: dev-docs.yaml
     type: dict[str, str]
     default: '{}'
-    description: 共通のキー（`id`・`name`・`description`・`tags`・`related`・`status` と、エイリアスのキー `alias_type`・`aliases`・`command`・`cwd`・`url`・`avoid`・`skill`・`tool`・`path`・`port`・`replacement`）→ 列名。入れ子の列は `.` で結ぶ。書いていないキーは同じ名前の列から読む。`write_docs` は共通のキーをこの列へ読み替えて書き、`describe(source, kind)` が対応を表で出す
+    description: '共通のキー（`id`・`name`・`description`・`tags`・`related`・`status` と、エイリアスのキー `alias_type`・`aliases`・`command`・`cwd`・`url`・`avoid`・`skill`・`tool`・`path`・`port`・`replacement`）→ 列名。入れ子の列は `.` で結ぶ。オブジェクトの配列は `tags[].name` で要素ごとの値を、`main_tags: tags[main].name` で `main` が真の要素の値を取り出す。書いていないキーは同じ名前の列から読む。`write_docs` は共通のキーをこの列へ読み替えて書き、`describe(source, kind)` が対応を表で出す'
     reload: reload
     allowed: '値は文字列だけ。`{type: ref}`・`{type: custom}` の辞書は違反（`dev-docs migrate --source` が列名へ移す）'
     introduced:
@@ -264,6 +264,13 @@ settings:
     type: list[str]
     required: true
     description: 書き込んだ文書のパスを引数に受けるコマンド
+    reload: reload
+  - key: nav.tabs[].items[].auto.filter
+    title: nav の条件
+    file: dev-docs.yaml
+    type: Condition | Group
+    required: false
+    description: '`auto` で並べる文書を絞る条件。`search_docs` の `filter` と同じ書式（`and`・`or`・`not` の入れ子）。`document` を省くと全ての行の文書から絞る。どの文書にも当たらない条件は起動時・`check_project` で警告する'
     reload: reload
 refs:
   - dev/設計書/モジュール構成/開発ドキュメントサーバー/配信元.py#

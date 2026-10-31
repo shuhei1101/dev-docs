@@ -36,6 +36,11 @@ catalogs:
         purpose: コメントのマーカーの描き直しとスクロール
         status: planned
         description: '[mdmark#222](https://github.com/shuhei1101/mdmark/issues/222) で入る'
+      - name: opts.index
+        kind: 引数
+        purpose: 索引の `terms`（用語）と `docs`（文書の別名）で本文の語にツールチップを付ける
+        description: '`mount` の `opts.index`。形は mdmark の `docs/リファレンス/索引.md`（`terms[]` は `id`・`term`・`meaning` が必須で `aliases`・`avoid` を持てる。`docs[]` は `id`・`path`・`title` が必須で `description`・`aliases` を持てる）。Schema に合わない項目は mdmark が除いて使う。文書の取得の `aliases` を `toMdmarkIndex` で読み替えて渡す'
+        status: planned
 lead: Markdown を描き、本文の文字列へコメントを付けられるようにするブラウザの JS。
 dependency_scope: 必須
 adoption: 採用

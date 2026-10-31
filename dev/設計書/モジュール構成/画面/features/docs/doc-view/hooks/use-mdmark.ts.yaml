@@ -32,13 +32,13 @@ functions:
         type: MdmarkOptions
         required: true
         passing: positional
-        description: '`markdown`・`docId`・`commentStore`（`load({docId})`・`save({docId, comment})` を Promise で返す）・`config`（`features.comments` を `true`。mdmark の既定はオフ）・`baseMarkdown`・`onColumnsChange`（後の 2 つは mdmark#222 の後）'
+        description: '`markdown`・`docId`・`aliases`（文書の取得の `aliases`）・`commentStore`（`load({docId})`・`save({docId, comment})` を Promise で返す）・`config`（`features.comments` を `true`。mdmark の既定はオフ）・`baseMarkdown`・`onColumnsChange`（後の 2 つは mdmark#222 の後）'
     returns:
       type: '{handle: MdmarkHandle | null; ready: boolean; error: unknown; docId: string | null}'
       description: '`mount` の戻り値と読み込みの状態。`docId` は `handle` が描いている文書で、`ready` は今の `docId` を描き終えたときだけ `true`'
     process: |-
       1. 初回に `import(/* @vite-ignore */ MDMARK_URL)` で mdmark を読み、`document.head` に `MDMARK_CSS_URL` の `<link rel="stylesheet">` を置く（モジュールの中で 1 回だけ。失敗は `error` に入れ `[error]` `mdmark_load_failed` を書く）
-      2. `docId` が変わったら `destroy` して `mount(el, options)` し直す。描き直す間は `ready` を `false` にし、`mount` が終わると `true` にする
+      2. `docId` が変わったら `destroy` して `mount(el, options)` し直す。`opts.index` には `aliases` を mdmark の索引にしたもの（`toMdmarkIndex`）を渡す。描き直す間は `ready` を `false` にし、`mount` が終わると `true` にする
       3. 同じ `docId` で `markdown`（と `baseMarkdown`）が変わったら `update(markdown)` を呼ぶ
       4. 外れるときに `destroy` を呼ぶ
     unit_tests:
@@ -66,6 +66,41 @@ functions:
         condition: '`docId` を変えた直後と、`mount` が終わった後'
         mock: mdmark（偽物）
         expected: 変えた直後は `ready` が `false`、`mount` の後に `true`
+      - name: test_use_mdmark_when_aliases
+        case: 正常
+        summary: エイリアスを索引にして渡す
+        condition: '`aliases` に `term` の 1 件を渡して描く'
+        mock: mdmark（`vi.mock` で `mount` の引数を記録する偽物）
+        expected: '`mount` の `opts.index.terms` が 1 件'
+  - name: toMdmarkIndex
+    title: mdmark の索引への読み替え
+    kind: 関数
+    container: features/docs/doc-view/hooks/use-mdmark.ts
+    usecase: 文書を読む
+    role: 変換
+    summary: 文書の取得の `aliases` を mdmark の `opts.index`（`docs`・`terms`）にする
+    scope: public
+    args:
+      - name: aliases
+        title: エイリアス
+        type: AliasItem[]
+        required: true
+        passing: positional
+        description: 文書の取得の `aliases`
+    returns:
+      type: '{docs: MdmarkIndexDoc[]; terms: MdmarkIndexTerm[]}'
+      description: mdmark の索引（mdmark の `docs/リファレンス/索引.md` の形）
+    process: |-
+      1. `aliasType` が `term` のものを `terms` の `{id, term: name, aliases, meaning: description, avoid}` にする（`avoid` が無ければ省く。`description` が無いものは mdmark が除くので載せない）
+      2. `aliasType` が `doc` のものを `docs` の `{id, path: id, title: name, description, aliases}` にする
+      3. それ以外の引用の種類は載せない
+    unit_tests:
+      - name: test_to_mdmark_index
+        case: 正常
+        summary: 用語と文書の別名を分ける
+        condition: '`term` の「作業範囲」（`aliases: [scope, 担当範囲]`・`avoid: [担当領域]`）、`doc` の「設定のリファレンス」（`aliases: [settings]`）、`command` の 1 件'
+        mock: なし
+        expected: '`terms` が作業範囲の 1 件（`meaning` が `description`、`avoid` が `[担当領域]`）、`docs` が設定のリファレンスの 1 件、`command` はどちらにも無い'
 refs:
   - dev/設計書/外部ライブラリ/mdmark#
 test_files:

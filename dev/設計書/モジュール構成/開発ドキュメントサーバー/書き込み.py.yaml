@@ -7,7 +7,7 @@ directory: |-
   src/dev_docs/features/write/
   ├─ __init__.py    # 公開する型と関数の再エクスポート
   ├─ types.py       # Operation / TextEdit / WriteRequest / WriteResult / DeleteTarget / DeleteRequest / DeleteResult
-  ├─ apply.py       # apply_operation（項目の操作を当てる）/ to_columns（共通のキーを列名へ読み替える）
+  ├─ apply.py       # apply_operation（項目の操作を当てる）/ to_columns（共通のキーを列名へ読み替える）/ expand_array_keys（オブジェクトの配列の列へ書き戻す）
   ├─ ids.py         # generate_id（ids.format から ID を作る）
   ├─ placement.py   # new_document_path（新しい文書の置き場所）
   ├─ locks.py       # SourceLocks（配信元ごとの排他）
@@ -22,6 +22,7 @@ diagrams:
         文書の書き込み ..> 配信元ごとの排他
         文書の書き込み ..> 文書を集める
         文書の書き込み ..> バージョンの確かめ
+        文書の書き込み ..> オブジェクトの配列への書き戻し
         文書の書き込み ..> 列名への読み替え
         文書の書き込み ..> 操作を当てる
         文書の書き込み ..> IDを作る
@@ -52,6 +53,9 @@ diagrams:
           <<method>>
         }
         class バージョンの確かめ {
+          <<function>>
+        }
+        class オブジェクトの配列への書き戻し {
           <<function>>
         }
         class 列名への読み替え {
@@ -740,7 +744,7 @@ functions:
       5. 操作を順に当てる。失敗した操作は `failed` の行にして次へ進む
          - `create` の場合、種類の行を引き（無ければ `UnknownKindError`）、`writable` でなければ `documents[].writable` の違反にする。ID が無ければ IDを作る（`ids.format` も無ければ `id` が必須の違反）。ID が既にあれば違反。置き場所は新しい文書の置き場所。Git 管理外の配信元では `created`・`updated` に `now` を入れる
          - `update`・`replace` の場合、文書が無ければ近い ID を添えた `DocumentNotFoundError`。バージョンの確かめ（前回読んだ内容は会話の記録）。Git 管理外の配信元では `updated` に `now` を入れ、`replace` は `created` を引き継ぐ
-         - 操作を、`create` は `kind` の行、`update`・`replace` は文書の種類の行で列名への読み替えにかける。`create` の ID は行の `metadata.id` の列（無ければ `id`）に入れる
+         - 操作を、`create` は `kind` の行、`update`・`replace` は文書の種類の行で、オブジェクトの配列への書き戻し（`update` は今の内容を渡す）にかけてから列名への読み替えにかける。`create` の ID は行の `metadata.id` の列（無ければ `id`）に入れる
          - 操作を当てる。`records` の文書は配列の要素を、それ以外はファイルの内容を置き換える
          - 変更を当てた後のファイルの内容を往復編集の書き出しで文字列にし、文字列からの文書の組み立てで文書にして、文書の検査.検査する（`on="write"`、`create` は `new=True`）。違反は添字を付けて `failed` の行に入れる
          - 後の操作が同じファイルに当たるときは、当てた後の内容に重ねる
@@ -748,7 +752,7 @@ functions:
       7. 成功した行の `version` は組み立てた文書のバージョン、`diff` は今の本文との差分の行（変更.差分の行）にする
       8. `dry_run` なら `applied=False` で返す
       9. 変わったファイルをファイルの置き換えで書き、文書のストア.キャッシュを捨てる
-      10. 書いた種類の `after_write` の生成を、ID の重なりを除いて順にスクリプトの実行（`cwd=target.base`・引数に書いたファイルのパス・`timeout_sec`）で動かす。`ScriptError` は `[warning]` 書き込み後の生成に失敗した（配信元・生成の ID・理由）を書き、結果は変えない
+      10. 書いた種類の `after_write` の生成を、ID の重なりを除いて順にスクリプトの実行（`cwd=target.base`・引数に書いたファイルのパス・`timeout_sec`・`at`）で動かす。`at` は、`target.ref` と `target.worktree` がどちらも `None` で `source.config_commit` がある場合に（`source.main_root`, `source.config_commit`）。`ScriptError` は `[warning]` 書き込み後の生成に失敗した（配信元・生成の ID・理由）を書き、結果は変えない
       11. 会話の記録に書いた文書を `edited` で残す
       12. `applied=True` で返す
     exceptions:
@@ -831,6 +835,13 @@ functions:
         condition: '行 `decisions` が `metadata: {name: title}`。文書 `d1` に `set: {name: 新しい名前}`、続けて `create`（`data: {name: 決定 2}`）'
         mock: なし
         expected: '`d1` のファイルの `title` だけが変わり `name` の列が無い。作ったファイルが `title: 決定 2` を持ち `name` を持たない'
+        exception: '-'
+      - name: test_write_docs_when_tags_are_objects
+        case: 正常
+        summary: オブジェクトの配列のタグへ書き戻す
+        condition: '行 `rules` が `metadata: {tags: tags[].name, main_tags: tags[main].name}`。`tags: [{name: a, main: true}, {name: b}]` の文書 `r1` に `add_to: {tags: [c]}`、続けて `set: {main_tags: [c]}`'
+        mock: なし
+        expected: '`r1` のファイルの `tags` が 1 回目の後に `[{name: a, main: true}, {name: b}, {name: c}]`、2 回目の後に `[{name: a}, {name: b}, {name: c, main: true}]`'
         exception: '-'
   - name: delete_docs
     title: 文書の削除
@@ -1012,6 +1023,101 @@ functions:
         mock: なし
         expected: '`InvalidArgumentError` の違反の `path` が `operations[2].set.name`、`rule` に `title`'
         exception: 共通のキーとその列名を同じ操作に両方渡した
+  - name: expand_array_keys
+    title: オブジェクトの配列への書き戻し
+    kind: 関数
+    container: features/write/apply.py
+    usecase: 書き込み
+    role: 変換
+    summary: '`metadata` の列名が `[]`・`[{キー}]` を含む共通のキーへの操作を、オブジェクトの配列の列の置き換えにした操作を返す'
+    scope: public
+    thread_safe: true
+    args:
+      - name: operation
+        title: 操作
+        type: Operation
+        required: true
+        passing: positional
+        description: 書き戻す操作
+      - name: table
+        title: 文書の行
+        type: DocumentTable
+        required: true
+        passing: positional
+        description: '`create` は `kind` の行、`update`・`replace` は文書の種類の行'
+      - name: current
+        title: 今の内容
+        type: Mapping[str, Any] | None
+        required: true
+        passing: positional
+        description: '`update` は文書の今の内容。`create`・`replace` は `None`'
+      - name: index
+        title: 操作の添字
+        type: int
+        required: true
+        passing: keyword
+        description: 違反の `path` に付ける `operations` の位置
+    returns:
+      type: Operation
+      description: 書き戻した新しい操作（`operation` は書き換えない）
+    process: |-
+      1. `table.metadata` のうち、列名が `{配列}[].{項目}`（全ての要素のキー。例 `tags: tags[].name`）か `{配列}[{真偽値のキー}].{項目}`（選んだ要素のキー。例 `main_tags: tags[main].name`）の共通のキーを集める。無ければ `operation` をそのまま返す
+      2. `text_edits[].field` が集めたキーを指す場合、`path` が `operations[{index}].text_edits[{n}].field`、`rule` が `{共通のキー} は文字列の項目ではありません` の違反にする
+      3. 配列ごとに、元の配列を複製する。`update` は `current` の値、`create`・`replace` は `data` の列名の値（無ければ空の配列）
+      4. 全ての要素のキーへの操作を当てる
+         - `set` は渡した名前の並びで配列を作り直す。元からあった名前の要素は `main` を含む他のキーを保ち、無い名前は `{項目: 名前}` の要素にする
+         - `add_to` は配列に無い名前を `{項目: 名前}` の要素で末尾に追加する
+         - `remove_from` は項目が渡した名前の要素を削除する
+         - `unset` は配列の列を削除する
+         - `create`・`replace` の `data` の値は `set` と同じに当てる
+      5. 選んだ要素のキーへの操作を当てる
+         - `set` は渡した名前の要素の真偽値のキーを `true` にし、他の要素の真偽値のキーを削除する
+         - `add_to` は渡した名前の要素の真偽値のキーを `true` にする
+         - `remove_from` は渡した名前の要素の真偽値のキーを削除する（無い名前は飛ばす）
+         - `unset` は全ての要素の真偽値のキーを削除する
+         - `set`・`add_to`・`data` に配列に無い名前がある場合、`path` が `operations[{index}].{項目}.{共通のキー}`、`rule` が `{名前} は {全ての要素のキー} にありません` の違反にする
+      6. 違反があれば `InvalidArgumentError` で送る
+      7. 集めたキーを各項目から除き、配列の列名へ作り直した配列を書く操作（`update` は `set`、`create`・`replace` は `data`。`unset` で列を削除したときは `unset`）にして返す
+    exceptions:
+      - name: InvalidArgumentError
+        condition: 選んだ要素のキーに配列に無い名前を渡した、または `text_edits` で指した
+        message: '`引数が正しくありません: {違反の数} 件`'
+    unit_tests:
+      - name: test_expand_array_keys
+        case: 正常
+        summary: 全ての要素のキーの追加・削除・置き換え
+        condition: '`metadata` が `{tags: tags[].name, main_tags: tags[main].name}`、今の内容が `{tags: [{name: a, main: true}, {name: b}]}`。`add_to: {tags: [c]}`・`remove_from: {tags: [b]}`・`set: {tags: [a, c, d]}` を別々に当てる'
+        mock: なし
+        expected: '`set.tags` がそれぞれ `[{name: a, main: true}, {name: b}, {name: c}]`・`[{name: a, main: true}]`・`[{name: a, main: true}, {name: c}, {name: d}]`'
+        exception: '-'
+      - name: test_expand_array_keys_when_main
+        case: 正常
+        summary: 選んだ要素のキーの操作
+        condition: '同じ `metadata`、今の内容が `{tags: [{name: a, main: true}, {name: c}, {name: d}]}`。`set: {main_tags: [c]}`・`add_to: {main_tags: [d]}`・`remove_from: {main_tags: [a]}`・`unset: [main_tags]` を別々に当てる'
+        mock: なし
+        expected: '`set.tags` の `main` が、`c` だけ・`a` と `d`・無し・無しになる'
+        exception: '-'
+      - name: test_expand_array_keys_when_create
+        case: 正常
+        summary: create の data
+        condition: '同じ `metadata` で `create` の `data: {name: r2, tags: [a, b], main_tags: [b]}`'
+        mock: なし
+        expected: '`data` が `{name: r2, tags: [{name: a}, {name: b, main: true}]}` で `main_tags` を持たない'
+        exception: '-'
+      - name: test_expand_array_keys_when_unknown_name
+        case: 異常
+        summary: 配列に無い名前
+        condition: '同じ `metadata` と今の内容で `index=1`、`set: {main_tags: [z]}`'
+        mock: なし
+        expected: '`InvalidArgumentError` の違反の `path` が `operations[1].set.main_tags`、`rule` に `z`'
+        exception: 選んだ要素のキーに配列に無い名前を渡した、または `text_edits` で指した
+      - name: test_expand_array_keys_when_plain
+        case: 正常
+        summary: '[] を使わない行'
+        condition: '`metadata` が `{name: title}` で `set: {tags: [x]}`'
+        mock: なし
+        expected: 渡した操作のまま
+        exception: '-'
 refs:
   - dev/設計書/インターフェース定義/開発ドキュメントサーバー/文書の書き込み#
   - dev/設計書/インターフェース定義/開発ドキュメントサーバー/文書の削除#

@@ -139,7 +139,7 @@ flows:
       - name: Mock
         description: なし
       - name: エイリアスのキーの違反
-        description: sample の `alias_type` を持つ行の文書 1 件の `aliases` を文字列（配列でない）にする
+        description: sample の `alias_type` を持つ行の文書 1 件の `aliases` を数値（文字列でも文字列の並びでもない）にする
       - name: 0 件に当たる nav の条件
         description: sample の `nav` に、`auto` の `filter` が `tags が none` のタブ `none` を置く
         notes: どの文書にもタグ `none` を付けない
@@ -157,7 +157,7 @@ flows:
         T-->>C: 違反・警告・取り込んだスキーマのバージョン
       ```
     expected:
-      - '`violations` に、`doc` が違反した文書のパスで `aliases` が配列でないことの違反が 1 件ある'
+      - '`violations` に、`doc` が違反した文書のパスで `aliases` が文字列か文字列の並びでないことの違反が 1 件ある'
       - '`warnings` に、タブ `none` の条件が 0 件に当たる警告が 1 件ある'
       - '`alias_schema_version` が `v0.3.0`'
     test: test_normal_when_alias_and_nav_checked

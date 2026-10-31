@@ -116,6 +116,13 @@ functions:
         required: true
         passing: keyword
         description: 端末の設定の `script_timeout_sec`
+      - name: at
+        title: スクリプトのリビジョン
+        type: tuple[Path, str] | None
+        required: false
+        default: None
+        passing: keyword
+        description: （リポジトリの直下, commit）。渡すと、`run` のうちそのリビジョンにあるファイルを取り出したものに置き換えて動かす
     args_example: |-
       ```python
       run_script(["uv", "run", "python", "scripts/arch_to_md.py"], cwd=root, stdin=text, timeout_sec=30)
@@ -124,12 +131,13 @@ functions:
       type: ScriptResult
       description: 終了コード 0 で終えたときの出力
     process: |-
-      1. 『実行できるかの確かめ』でコマンドを解く（実行できるかの確かめ）
-      2. `subprocess.Popen` を `shell=False`・`cwd`・新しいプロセスグループで起動し、`stdin` を UTF-8 で渡して `timeout_sec` まで待つ
+      1. `at` がある場合、`run` の要素のうち `cwd` からの相対パスで commit にファイルがあるもののフォルダをリビジョンのフォルダの取り出しで取り出し、その要素を取り出したファイルの絶対パスに置き換える（抜けたら一時フォルダは削除される）。`cwd` は変えない
+      2. 『実行できるかの確かめ』でコマンドを解く（実行できるかの確かめ）
+      3. `subprocess.Popen` を `shell=False`・`cwd`・新しいプロセスグループで起動し、`stdin` を UTF-8 で渡して `timeout_sec` まで待つ
          - 制限時間を超えた場合、プロセスグループに SIGTERM を送り、`KILL_GRACE_SEC` 秒待って残っていれば SIGKILL を送ってから `ScriptTimeoutError` を送る
            - `[warning]` スクリプトを制限時間で止めた（コマンド・`cwd`・秒数）
-      3. 終了コードが 0 以外の場合、`ScriptFailedError` を送る
-      4. 標準出力と標準エラーを `ScriptResult` にして返す
+      4. 終了コードが 0 以外の場合、`ScriptFailedError` を送る
+      5. 標準出力と標準エラーを `ScriptResult` にして返す
     exceptions:
       - name: ScriptNotFoundError
         condition: コマンドが見つからない（『実行できるかの確かめ』から伝わる）
@@ -167,6 +175,13 @@ functions:
         mock: なし
         expected: '`ScriptFailedError` で、`exit_code` が 1、`reason` に標準エラーの末尾 5 行だけがある'
         exception: 終了コードが 0 以外
+      - name: test_run_script_when_at
+        case: 正常
+        summary: default_ref のスクリプトを動かす
+        condition: '`scripts/a.py` を `print("develop")` で commit した後、作業ツリーで `print("disk")` に書き換え、`at` に commit を渡す'
+        mock: なし（一時フォルダで `git init`）
+        expected: 標準出力が `develop`
+        exception: '-'
   - name: check_runnable
     title: 実行できるかの確かめ
     kind: 関数

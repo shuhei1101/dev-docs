@@ -254,7 +254,7 @@ flows:
       - name: Mock
         description: なし（`dev-docs serve` を子プロセスで起動する）
       - name: エイリアスのキーの違反
-        description: sample の `alias_type` を持つ行の文書 1 件の `aliases` を文字列（配列でない）にする
+        description: sample の `alias_type` を持つ行の文書 1 件の `aliases` を数値（文字列でも文字列の並びでもない）にする
       - name: 0 件に当たる nav の条件
         description: sample の `nav` に、`auto` の `filter` が `tags が none` のタブ `none` を置く
     flow: |-
@@ -269,7 +269,7 @@ flows:
         S-->>C: 警告のログと配信の開始
       ```
     expected:
-      - 警告のログに、違反した文書のパスと `aliases` が配列でないことが出る
+      - 警告のログに、違反した文書のパスと `aliases` が文字列か文字列の並びでないことが出る
       - 警告のログに、タブ `none` と条件が出る
       - sample を配信し始める
       - 違反した文書は `search_docs` の `term`・`list_match_words` に載らない

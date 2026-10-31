@@ -37,5 +37,6 @@
 | [eslint](./eslint.yaml) | 画面の静的検査とプラグイン |
 | [lefthook](./lefthook.yaml) | Git のフックを流すツール |
 | [typescript](./typescript.yaml) | 画面の型の検査 |
+| [alias-inject](./alias-inject.yaml) | エイリアスの元の行のスキーマの正本を持つプラグイン |
 
 <!-- /table -->

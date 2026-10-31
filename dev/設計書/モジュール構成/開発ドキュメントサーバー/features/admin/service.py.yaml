@@ -139,7 +139,8 @@ functions:
          - `violations` がある場合、`missing_paths`・`script_errors` を空、`sync` を `None` にして返す
          - `script_violations` がある場合、`script_errors` に入れ、`sync` を `None` にする
       5. `documents[].paths[]` のうち、そのパターンだけに絞った行（`exclude` は元の行のまま）で当たるファイルが無いものを `missing_paths` にする（`collect_files`）
-      6. `source` があれば、索引の同期を求めて件数と先頭 `SYNC_ITEMS_LIMIT` 件の内訳にする（`check_sync`）
+      6. `source` があれば、索引の同期を求めて件数と先頭 `SYNC_ITEMS_LIMIT` 件の内訳にする（`check_sync`）。`alias_violations` を `violations` に加え、nav の警告（画面の API）を `warnings` にする
+      7. `alias_schema_version` はエイリアスのスキーマの取り込み元のタグ（文書のストア）にする
     unit_tests:
       - name: test_check_project
         case: 正常
@@ -171,11 +172,104 @@ functions:
         condition: 管理用の YAML に無いファイル 51 件
         mock: なし
         expected: '`sync.unindexed_files` が 51、`sync.items` が 50 件'
+      - name: test_check_project_when_alias_and_nav
+        case: 正常
+        summary: エイリアスのキーの違反と nav の警告
+        condition: '`alias_type: term` の行の文書 1 件の `aliases` が `3`、`nav` に `auto` の `filter` が `tags が none` のタブ `none`'
+        mock: なし（一時ディレクトリ）
+        expected: '`violations` に `doc` がその文書のパスの違反が 1 件、`warnings` にタブ `none` の警告が 1 件、`alias_schema_version` が `v0.3.0`'
+        exception: '-'
     callers:
       - dev/設計書/モジュール構成/開発ドキュメントサーバー/文書のMCP.py#functions[build_admin_mcp]
     callees:
       - '#functions[_load_candidate]'
       - '#functions[version_state]'
+  - name: write_nav
+    title: 画面の構成の書き込み
+    kind: 関数
+    container: features/admin/service.py
+    usecase: 画面の構成の書き込み
+    role: サービス
+    summary: '`dev-docs.yaml` の `nav` のタブと group をタブ・group の名前で指して追加・修正・削除する'
+    scope: public
+    thread_safe: false
+    side_effects: '`dev-docs.yaml` の `nav` のキーを書き換える（ほかのキーとコメントは残す）'
+    args:
+      - name: request
+        title: 要求
+        type: WriteNavRequest
+        required: true
+        passing: positional
+        description: 書く配信元と操作
+      - name: handlers
+        title: 部品
+        type: Handlers
+        required: true
+        passing: keyword
+        description: 端末の設定と文書のストアを使う
+    returns:
+      type: WriteNavResult
+      description: 書いた `nav` と条件ごとの文書の数・警告
+    process: |-
+      1. `path` が `.yaml` で終わればそのフォルダ、そうでなければ `path` を `root` にし、`{root}/dev-docs.yaml` を往復編集で読む（`load_roundtrip`）。無ければ `ConfigNotFoundError`、YAML として読めなければ `ConfigParseError`
+      2. 端末の設定の `sources[]` のうち `config` の先頭のファイルが同じ `dev-docs.yaml` の行で、2 つ目以降のファイルが `nav` を持つ場合、`InvalidArgumentError` を送る（重ねた設定の `nav` が配信に出るため）
+      3. `nav`（無ければ `{tabs: []}`）の複製に操作を順に当てる。タブは `title`、項目は `item` を ` > ` で分けた `group` の名前でたどる
+         - `add` は、`item` が無ければタブの並びの末尾に `value` のタブ、あれば指した group の `items` の末尾に `value` の項目を加える。同じ名前のタブ・group があれば `InvalidArgumentError`
+         - `update` は指したタブか group に `value` のキーだけを重ね、`remove` は指したタブか group を除く
+         - 指したタブ・group が無い、`item` が `group` でない項目に当たる、`add`・`update` で `value` が無い場合、今のタブ・group の名前を添えた `InvalidArgumentError` を送る（`path` は `operations[{n}]`）
+      4. 書いた後の `nav` を検証する。`nav` を置き換えた設定で `SOURCE_SCHEMA` の `nav` の下の違反と、`root` の配信元を組み立てて（`assemble_source`）集めた文書での nav の条件の確かめの違反があれば、`NavInvalidError` を送り、ファイルを書き換えない
+      5. 往復編集の `nav` のキーだけを置き換えて書く（`dump_roundtrip`・`replace_file`）
+      6. nav の条件の数えを 4 の文書で求め、`count` が 0 の `auto` を nav の警告と同じ文の `warnings` にする
+      7. `WriteNavResult` を返す（`nav` は書いた `nav` を YAML にした文字列）
+    exceptions:
+      - name: ConfigNotFoundError
+        condition: '`path` に `dev-docs.yaml` が無い'
+        message: '`配信元の設定がありません: {path}`'
+      - name: ConfigParseError
+        condition: '`dev-docs.yaml` が YAML として読めない'
+        message: '`配信元の設定を読めません: {path}`'
+      - name: InvalidArgumentError
+        condition: 指したタブ・group が無い・group でない項目を指す・同じ名前がある・`value` が無い・重ねた設定が `nav` を持つ
+        message: '`引数が正しくありません: {違反の数} 件`'
+      - name: NavInvalidError
+        condition: 書いた後の `nav` がスキーマか nav の条件の確かめに通らない
+        message: '`画面の構成が正しくありません: {違反の数} 件`'
+    unit_tests:
+      - name: test_write_nav
+        case: 正常
+        summary: タブを足して group を直す
+        condition: '`nav` にタブ `設計`（group `MCP`）を持つ配信元に、`add`（タブ `mcp`、`value: {title: mcp, items: [{auto: {filter: tags が mcp}}]}`）と `update`（タブ `設計`・`item: MCP`・`value: {title: MCP のツール}`）'
+        mock: なし（一時ディレクトリ）
+        expected: '`dev-docs.yaml` の `nav` が 2 つのタブで group の名前が `MCP のツール`、ほかのキーとコメントが変わらない。`counts` が 1 件で `count` が `tags: [mcp]` の文書の数'
+        exception: '-'
+      - name: test_write_nav_when_zero_count
+        case: 正常
+        summary: 0 件の条件も書いて警告する
+        condition: '`add` で `auto: {filter: tags が none}` のタブ `none`'
+        mock: なし（一時ディレクトリ）
+        expected: 書いたうえで `warnings` にタブ `none` の警告が 1 件
+        exception: '-'
+      - name: test_write_nav_when_invalid_filter
+        case: 異常
+        summary: 使えない条件
+        condition: '`add` で `auto: {filter: {field: nmae, op: eq, values: [x]}}`'
+        mock: なし（一時ディレクトリ）
+        expected: '`NavInvalidError` の違反の `path` が `nav.tabs[{n}].items[0].auto.filter.field` で、ファイルが変わらない'
+        exception: 書いた後の `nav` が条件の確かめに通らない
+      - name: test_write_nav_when_missing_tab
+        case: 異常
+        summary: 無いタブ
+        condition: '`remove` でタブ `none`'
+        mock: なし（一時ディレクトリ）
+        expected: '`InvalidArgumentError` の違反の `path` が `operations[0]` で、`fix` に今のタブの名前'
+        exception: 指したタブ・group が無い
+      - name: test_write_nav_when_overlaid_nav
+        case: 異常
+        summary: 重ねた設定が nav を持つ
+        condition: 端末の設定の `sources[].config` が `[dev-docs.yaml, local.yaml]` で、`local.yaml` が `nav` を持つ
+        mock: なし（一時ディレクトリ）
+        expected: '`InvalidArgumentError`'
+        exception: 重ねた設定が `nav` を持つ
   - name: try_convert
     title: 試しの変換
     kind: 関数
