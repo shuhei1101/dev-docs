@@ -45,7 +45,7 @@ def test_alias_schema() -> None:
     # 検証
     keys = result["$defs"]["alias"]["properties"]["metadata"]["properties"]
     assert {"name", "aliases", "description", "avoid", "replacement"} <= set(keys)
-    assert len(keys["alias_type"]["enum"]) == 9
+    assert len(result["$defs"]["alias"]["properties"]["alias_type"]["enum"]) == 9
 
 
 def test_alias_schema_version() -> None:

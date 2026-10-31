@@ -15,7 +15,13 @@ def test_dev_docs_error_details() -> None:
     # 検証
     assert result == {
         "violations": [
-            {"path": "documents[0].paths", "rule": "必須のキーが無い", "fix": "", "index": None}
+            {
+                "path": "documents[0].paths",
+                "rule": "必須のキーが無い",
+                "fix": "",
+                "index": None,
+                "doc": None,
+            }
         ],
         "disabled": False,
     }
