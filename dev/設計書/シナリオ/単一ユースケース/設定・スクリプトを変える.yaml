@@ -91,6 +91,85 @@ scenarios:
       - '`try_convert` がエラーとしてスクリプトの終了コードと標準エラーを返す'
       - sample のフォルダと配信は変わらない
     test: test_error_when_converter_fails
+  - name: 正常シナリオ（管理の MCP で nav を書く）
+    setup:
+      - name: Mock
+        description: なし（実環境で実行。`cwd` はテストが引数に入れる）
+      - name: dev-docs
+        description: sample を配信している dev-docs
+        notes: '`cwd` は sample のワークツリー'
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        actor A as エージェント
+        participant AM as 管理の MCP（/admin/mcp）
+        participant F as ワークツリーの dev-docs.yaml
+
+        A->>AM: nav の項目を書くツール（タブを加え、auto の filter に tags が mcp）
+        AM->>AM: 書いた後の nav をスキーマと check_filter で検証する
+        AM->>F: nav を書く
+        AM-->>A: 書いた nav と、条件に当たる文書の数
+        A->>AM: nav の項目を書くツール（同じタブの filter を tags が 設計 に直す）
+        AM->>F: nav を書く
+        AM-->>A: 書いた nav
+      ```
+    expected:
+      - ワークツリーの `dev-docs.yaml` の `nav` にタブが加わり、`auto` の `filter` が `tags` が `mcp` になる
+      - 直した後、同じタブの `filter` が `tags` が `設計` になる
+      - '`nav` 以外のキーは書き換わらない'
+      - '検証に通らない `filter` は書かずに `isError: true` を返す'
+      - 0 件に当たる条件を書いたときは、書いたうえで警告を返す
+    test: test_normal_when_nav_written_by_admin_mcp
+  - name: 正常シナリオ（エイリアスのキーと nav の条件を点検する）
+    setup:
+      - name: Mock
+        description: なし（実環境で実行）
+      - name: エイリアスのキーの違反と 0 件の条件
+        description: 起動するの正常シナリオ（エイリアスのキーと nav の条件を検証する）と同じ違反と条件を、sample のワークツリーで書く
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        actor A as エージェント
+        participant AM as 管理の MCP（/admin/mcp）
+
+        A->>AM: check_project(ワークツリーのパス)
+        AM->>AM: エイリアスのキーを取り込んだスキーマで検証し、nav の条件に当たる文書を数える
+        AM-->>A: 違反と警告の一覧
+      ```
+    expected:
+      - '`check_project` が、エイリアスのキーの違反を文書のパスとともに返す'
+      - '`check_project` が、0 件に当たる `nav` の条件を警告として返す'
+      - 取り込んだスキーマの取り込み元のバージョンを返す
+    test: test_normal_when_check_project_reports_alias_and_nav
+  - name: 正常シナリオ（スクリプトを default_ref から動かす）
+    setup:
+      - name: Mock
+        description: なし（実環境で実行）
+      - name: default_ref のスクリプト
+        description: sample の `develop` ブランチの変換スクリプトが、本文の先頭に `develop` の文字を加える
+        notes: クローン本体は `master` を checkout し、`master` の変換スクリプトは何も加えない
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        actor U as 利用者
+        participant S as dev-docs のサーバー
+        participant G as sample のリポジトリ
+        participant T as 一時フォルダ
+
+        U->>S: 変換を使う文書を開く
+        S->>G: default_ref のスクリプトのフォルダを取り出す
+        G-->>T: develop のスクリプト
+        S->>T: スクリプトを動かす
+        T-->>S: 変換した本文
+        S->>T: 一時フォルダを消す
+        S-->>U: develop の文字が付いた本文
+      ```
+    expected:
+      - 変換した本文の先頭に `develop` の文字が付く
+      - 動かした後に一時フォルダが残らない
+      - '`validators`・`generators` も `develop` のスクリプトで動く'
+      - '`worktree` を渡して読むときは、そのワークツリーのスクリプトで動く'
+    test: test_normal_when_scripts_run_from_default_ref
 lead: 利用者かエージェントが配信元の設定・スキーマ・検査と変換のスクリプトを変え、管理の MCP の `check_project`・`try_convert` で確かめてから `reload` で配信に入れる。
 issue: 4
 primary_actor: 利用者・エージェント（Claude Code）

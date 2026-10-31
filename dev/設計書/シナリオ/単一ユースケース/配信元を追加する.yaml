@@ -452,6 +452,31 @@ scenarios:
       - 応答が 403
       - '`settings.yaml` が変わらず、sample の文書の画面は開ける'
     test: test_error_when_cross_origin
+  - name: 正常シナリオ（メインのリポジトリを指して追加する）
+    setup:
+      - name: Mock
+        description: なし（実環境で実行）
+      - name: 配信元にするリポジトリ
+        description: '`dev-docs.yaml` の `default_ref` が `develop` で、`.claude/worktrees/develop` に `develop` を checkout した Git のリポジトリ'
+        notes: '`worktrees` は `[./.claude/worktrees/*]`'
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        actor U as 利用者
+        participant S as dev-docs のサーバー
+        participant G as 配信元のリポジトリ
+
+        U->>S: 端末の設定の sources[].config にメインのリポジトリの dev-docs.yaml を書き、reload する
+        S->>G: default_ref の dev-docs.yaml で組み立てる
+        S->>G: git rev-parse --git-common-dir の親から worktrees[] を数える
+        S-->>U: 配信の開始（ワークツリーの一覧に .claude/worktrees/develop）
+      ```
+    expected:
+      - '`describe(source)` のワークツリーの一覧に `.claude/worktrees/develop` が載る'
+      - 端末の設定が `outside_read` を書かないとき、既定の `true` として扱う
+      - 端末の設定の `outside_read` が真偽値でないと、端末の設定のスキーマの違反として断る
+      - 端末の設定がワークツリーの `dev-docs.yaml` を指したときも、`worktrees[]` をメインのリポジトリの直下から数え、ほかのワークツリーに当たる
+    test: test_normal_when_main_repository_registered
 lead: 利用者が `/dev-docs:setup [path]` で、フォルダを配信元として端末の設定に並べ、文書の MCP で読めるようにする。2 回目以降は範囲のファイルの増減・改名を管理用の YAML に合わせる。
 issue: 4
 primary_actor: 利用者

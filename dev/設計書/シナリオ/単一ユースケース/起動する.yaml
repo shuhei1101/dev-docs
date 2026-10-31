@@ -343,6 +343,67 @@ scenarios:
       - エラーログに legacy の id と、`tags`・`documents[0].type`・`documents[1].type`・`documents[1].defaults`・`documents[1].metadata.name` のそれぞれの違反が残る
       - エラーログに、legacy の設定のバージョンが古く `dev-docs migrate --source` で移し替えられることが残る
     test: test_error_when_source_config_legacy
+  - name: 正常シナリオ（設定とスキーマを default_ref から読む）
+    setup:
+      - name: Mock
+        description: なし（実環境で実行）
+      - name: default_ref のブランチ
+        description: sample の `develop` ブランチに、文書の種類を 1 つ加えた `dev-docs.yaml` とそのスキーマを commit する
+        notes: '`dev-docs.yaml` の `default_ref` は `develop`。クローン本体は `master` を checkout したまま'
+      - name: 端末の設定
+        description: '`sources[].config` が sample のクローン本体の `dev-docs.yaml` を指す'
+      - name: ワークツリー
+        description: sample の `.claude/worktrees/develop`（`develop` を checkout）
+        notes: 配信元の設定の `worktrees` は既定（`[./.claude/worktrees/*]`）
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        actor U as 利用者
+        participant S as dev-docs のサーバー
+        participant G as sample のリポジトリ
+
+        U->>S: 起動する
+        S->>G: ディスクの dev-docs.yaml の default_ref を読む
+        S->>G: develop の dev-docs.yaml とスキーマを読む
+        S->>S: develop の設定で配信元を組み立てる
+        S-->>U: 配信を始める
+        U->>G: develop に文書の種類をもう 1 つ commit する
+        U->>S: describe(source: sample)
+        S->>G: default_ref の commit を確かめ、変わっていれば組み立て直す
+        S-->>U: 種類の一覧（develop の 2 つの種類）
+      ```
+    expected:
+      - クローン本体が `master` のままでも、`develop` の `dev-docs.yaml` に加えた種類を配信する
+      - '`documents[].schema` のスキーマを `develop` から読む'
+      - '`develop` に commit を積んだ後の要求で、`reload` をしなくても加えた種類が返る'
+      - '`worktrees[]` の相対パスをメインのリポジトリの直下から数え、ワークツリー `.claude/worktrees/develop` に当たる'
+      - Git でない配信元はディスクの設定を読む
+    test: test_normal_when_config_read_from_default_ref
+  - name: 正常シナリオ（エイリアスのキーと nav の条件を検証する）
+    setup:
+      - name: Mock
+        description: なし（実環境で実行）
+      - name: エイリアスのキーの違反
+        description: sample の `alias_type` を持つ行の文書 1 件の `aliases` を文字列（配列でない）にする
+      - name: 0 件に当たる nav の条件
+        description: sample の `nav` に、`auto` の `filter` が付いていないタグ `none` を指すタブを置く
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        actor U as 利用者
+        participant S as dev-docs のサーバー
+
+        U->>S: 起動する
+        S->>S: alias_type を持つ行の文書の metadata のエイリアスのキーを取り込んだスキーマで検証する
+        S->>S: nav の auto の条件に当たる文書を数える
+        S-->>U: 警告（エイリアスのキーの違反・0 件の条件）と配信の開始
+      ```
+    expected:
+      - 起動時の警告に、違反した文書のパスとエイリアスのキーの違反の内容が出る
+      - 起動時の警告に、0 件に当たる `nav` のタブと条件が出る
+      - 警告があっても配信を始める
+      - 違反した文書は用語の検索・`list_match_words` に載らない
+    test: test_normal_when_alias_and_nav_warned
 lead: 利用者が `dev-docs serve` を実行し、端末の設定に並べた配信元を 1 プロセス・1 ポートで配信し始める。
 issue: 3
 primary_actor: 利用者
