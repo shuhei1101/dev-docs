@@ -48,7 +48,7 @@ data_models:
       - name: when
         title: 使う条件
         type: jinja2.environment.TemplateExpression | None
-        description: '`env.compile_expression(part.when)`。`when` が無ければ `None`'
+        description: '`part.when`（`{{ }}` で囲んだ場合は外した式）を `env.compile_expression` したもの。`when` が無ければ `None`'
       - name: texts
         title: 本文
         type: dict[str, jinja2.Template]
@@ -192,7 +192,7 @@ functions:
       type: tuple[dict[str, CompiledPart], list[PartSyntaxError]]
       description: 部品の `id` ごとのテンプレートと、構文の誤り
     process: |-
-      1. 部品ごとに `when` を `env.compile_expression` で、各言語の本文を `env.from_string` でテンプレートにする
+      1. 部品ごとに `when` を `env.compile_expression` で（前後の空白を除いて `{{` で始まり `}}` で終わる場合は、それを外した式を）、各言語の本文を `env.from_string` でテンプレートにする
          - `jinja2.TemplateSyntaxError` の場合、その部品を結果から外し、`PartSyntaxError`（部品の `id`・場所・`lineno`・`message`）を加える
     unit_tests:
       - name: test_compile_parts
@@ -207,6 +207,12 @@ functions:
         condition: 部品 `logs` の `en` の本文が `{% if logs %}` で `{% endif %}` が無い
         mock: なし
         expected: 結果に `logs` が無く、誤りが `part_id=logs`・`field=texts[en]`・`line` ありの 1 件
+      - name: test_compile_parts_when_condition_braced
+        case: 正常
+        summary: '`{{ }}` で囲んだ when'
+        condition: 部品 `logs` の `when` が `"{{ logs | length > 0 }}"`
+        mock: なし
+        expected: '`logs` の `when` が `logs=["a"]` で真・`logs=[]` で偽を返し、誤りが空'
   - name: render_example
     title: 例の組の描画
     kind: 関数
