@@ -272,11 +272,68 @@ flows:
       - '`/_api/sources/sample/docs/notes/b.md` が 200 で、`path` が b の画面のパス、`markdown` が b の本文、`bodyPath` が `notes/b.md`'
       - ファイル 1 つが 1 文書の sample の文書 1 を開くと `bodyPath` が `null`
     test: test_normal_when_body_path_given
+  - name: 正常系（変換の結果をキャッシュしない）
+    summary: '`cache: false` の変換は要求のたびにスクリプトを動かし、控えを書かない'
+    setup:
+      - name: Mock
+        description: なし
+      - name: 変換を持つ配信元
+        description: '`converters[]` に `cache: false` の行を持ち、種類の 1 つがそれを指す配信元。スクリプトは本文の外の参照先の YAML の値を見出しに出す'
+        notes: id `custom`
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        participant C as クライアント
+        participant E as GET /_api/sources/{source}/docs/{path}
+        participant SC as 配信元のスクリプト
+
+        C->>E: GET /_api/sources/custom/docs/{cache: false の変換を指す種類の文書}
+        E->>SC: 標準入力に YAML を渡す
+        SC-->>E: 標準出力の Markdown
+        E-->>C: 200
+        C->>C: 参照先の YAML の値を書き換える
+        C->>E: 同じ GET
+        E->>SC: 標準入力に YAML を渡す
+        SC-->>E: 標準出力の Markdown
+        E-->>C: 200
+      ```
+    expected:
+      - 2 回目の `markdown` に、書き換えた後の参照先の値の見出しがある
+      - '`state_dir` の変換の結果の控えに、この文書の控えのファイルが無い'
+    test: test_normal_when_converter_cache_disabled
+  - name: 正常系（変換の結果をキャッシュする）
+    summary: '`cache` を書かない変換は控えを書き、本文が変わらなければ控えを返す'
+    setup:
+      - name: Mock
+        description: なし
+      - name: 変換を持つ配信元
+        description: '`converters[]` に `cache` を書かない行を持ち、種類の 1 つがそれを指す配信元。スクリプトは本文の外の参照先の YAML の値を見出しに出す'
+        notes: id `custom`
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        participant C as クライアント
+        participant E as GET /_api/sources/{source}/docs/{path}
+        participant SC as 配信元のスクリプト
+
+        C->>E: GET /_api/sources/custom/docs/{cache を書かない変換を指す種類の文書}
+        E->>SC: 標準入力に YAML を渡す
+        SC-->>E: 標準出力の Markdown
+        E->>E: 控えを書く
+        E-->>C: 200
+        C->>C: 参照先の YAML の値を書き換える
+        C->>E: 同じ GET
+        E-->>C: 200（控えの Markdown）
+      ```
+    expected:
+      - 2 回目の `markdown` が 1 回目と同じ
+      - '`state_dir` の変換の結果の控えに、この文書の控えのファイルが 1 つある'
+    test: test_normal_when_converter_cache_enabled
 lead: '#17 の画面が文書を開くときに呼ぶ。配信元の文書を変換した Markdown と、タブ・サイドバー・差分の項目・画面の状態を JSON で返す。`path` を省くと一番左のタブのサイドバーの一番上の文書を返す。'
 identifier: get_document
 permissions: なし（`127.0.0.1` でだけ待ち受ける）
 idempotent: true
-side_effects: なし。変換の結果は `state_dir` に保存し、文書が変わるまで使い回す
+side_effects: 'なし。変換の結果は `state_dir` に保存し、文書が変わるまで使い回す（`converters[]` の `cache: false` の行の変換は保存しない）'
 exclusivity: 読み取りだけで排他しない。同じ文書・同じバージョンの変換が同時に来たときは 1 回だけ変換する
 request:
   - name: source
@@ -426,7 +483,13 @@ constraints:
   - item: 文書の引き方
     constraint: '`path` を画面のパスで引き、当たらなければ文書のファイルか本文のファイルのパスが `path` と同じ最初の文書を返す'
     notes: 管理の MCP の `try_convert` と同じ引き方。同じ本文のファイルを複数の行が指すときは最初の文書に当たる
+  - item: 変換の結果の控え
+    constraint: '`converters[]` の行の `cache` が `true`（既定）なら、控えがあればスクリプトを動かさずに返し、無ければ動かして控えを書く。`false` なら控えを読まず書かず、要求のたびにスクリプトを動かす'
+    notes: '控えのキーは本文の外のファイルを含まない。本文の外のファイルを読む変換は `cache: false` にする'
 refs:
   - dev/設計書/シナリオ/単一ユースケース/YAMLを直接編集した#scenarios[異常シナリオ（YAML を壊した）]
 test_file: tests/integration/server/test_get_document.py
 error_format: RFC 9457 の `application/problem+json`（`type`・`title`・`status`・`detail`）。拡張メンバーは camelCase（`nextSteps`・`missing`・`errors[]` の `{path, reason}`）
+callers:
+  - dev/設計書/シナリオ/単一ユースケース/利用者が画面で読む#scenarios[正常シナリオ（変換の結果をキャッシュしない）]
+  - dev/設計書/シナリオ/単一ユースケース/利用者が画面で読む#scenarios[正常シナリオ（変換の結果をキャッシュする）]

@@ -104,7 +104,7 @@ flows:
       - '`additionalContext` に文脈を取れなかったこと、打ち切った秒数（`CONTEXT_TIMEOUT_SEC`）と `status` の案内がある'
       - プロセスを起動していない
     test: test_normal_when_context_timeout
-lead: ポートにつながらなければ `dev-docs serve` を切り離して起動し、つながれば `POST /_admin/session-context` で使える配信元と使い方を取って、セッションの文脈に入れる。入力は stdin の JSON と環境変数。
+lead: ポートにつながらなければ `dev-docs serve` を切り離して起動し、つながれば `POST /_admin/session-context` で使える配信元と警告を取って、セッションの文脈に入れる。入力は stdin の JSON と環境変数。
 identifier: hooks/session_start.py
 permissions: 利用者の権限で動く
 idempotent: true

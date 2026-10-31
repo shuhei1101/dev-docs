@@ -306,6 +306,59 @@ flows:
       - sample を配信し始める
       - 違反した文書は `search_docs` の `term`・`list_match_words` に載らない
     test: test_normal_when_alias_and_nav_warned
+  - name: 正常系（MCP の文をプロンプトの YAML から読む）
+    summary: 文書の MCP の instructions と 2 つの MCP のツールの description をプロンプトの YAML から描画して返す
+    setup:
+      - name: Mock
+        description: なし（`dev-docs serve` を子プロセスで起動し、空きポートを `DEV_DOCS_PORT` に入れる）
+      - name: 配信元
+        description: git リポジトリの sample
+      - name: プロンプトの YAML
+        description: リポジトリに同梱したままの YAML
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        participant U as クライアント
+        participant T as dev-docs serve
+        participant P as プロンプトの YAML
+
+        U->>T: dev-docs serve
+        T-->>P: YAML を読み、スキーマで検査する
+        T->>T: instructions と description を描画して MCP に登録する
+        U->>T: POST /mcp（initialize・tools/list）
+        T-->>U: instructions とツールの description
+        U->>T: POST /_admin/mcp（tools/list）
+        T-->>U: ツールの description
+      ```
+    expected:
+      - 文書の MCP の instructions が、使う場面・grep と Read が向く場面・ツールの順序・タグの付け方を持ち、4,096 字以内
+      - 文書の MCP の 7 つのツールの description が、それぞれの YAML を描画した文と同じ
+      - 管理の MCP の 7 つのツールの description が、それぞれの YAML を描画した文と同じ
+      - どの文にも `MUST`・`必ず`・`禁止` の語が無い
+      - ツールの名前と引数のスキーマは変わらない
+    test: test_normal_when_mcp_text_from_prompts
+  - name: 異常系（プロンプトの YAML が違反する・PromptInvalidError）
+    summary: プロンプトの YAML がスキーマに違反すると待ち受けずに終わる
+    setup:
+      - name: Mock
+        description: なし（`dev-docs serve` を子プロセスで起動する）
+      - name: 違反する YAML
+        description: プロンプトの YAML の置き場所をテストの一時フォルダへ向け、`search_docs` のツールの YAML から必須のキー `kind` を削除する
+        notes: 置き場所の向け方はモジュール構成設計で決める
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        participant U as クライアント
+        participant T as dev-docs serve
+
+        U->>T: dev-docs serve
+        T->>T: プロンプトの YAML の検査に失敗する
+        T-->>U: 違反を標準エラーに出して終わる
+      ```
+    expected:
+      - 終了コードが 4 で、ポートを待ち受けない
+      - 標準エラーに `search_docs` の YAML のパスと `kind` の違反がある
+    test: test_error_when_prompt_invalid
 lead: 端末の設定を読み、検証に通った配信元を 1 プロセス・1 ポートで画面の API・`/mcp`・`/_admin/mcp` に配信し始める。
 identifier: serve
 permissions: なし
@@ -315,6 +368,7 @@ callers:
   - dev/設計書/シナリオ/単一ユースケース/起動する#scenarios[正常シナリオ]
   - dev/設計書/シナリオ/単一ユースケース/起動する#scenarios[正常シナリオ（設定とスキーマを default_ref から読む）]
   - dev/設計書/シナリオ/単一ユースケース/起動する#scenarios[正常シナリオ（エイリアスのキーと nav の条件を検証する）]
+  - dev/設計書/シナリオ/単一ユースケース/エージェントが調べる#scenarios[正常シナリオ（MCP を使う場面の案内を受け取る）]
 exclusivity: 同じポートで待ち受けるプロセスは 1 つだけ（後からの起動はポート使用中で終わる）
 request:
   - name: DEV_DOCS_CONFIG
@@ -356,6 +410,9 @@ exceptions:
   - name: PortInUseError
     condition: ポートで待ち受けられない
     notes: 標準エラーにポートの番号と `DEV_DOCS_PORT` で変えられることを出し、終了コード 3 で終わる
+  - name: PromptInvalidError
+    condition: プロンプトの YAML（SessionStart の注入文・文書の MCP の instructions・文書の MCP と管理の MCP のツールの description）が無い・読めない・`templates/prompt.schema.yaml` に違反する・Jinja2 として解釈できない
+    notes: '標準エラーに `{ファイル}: {キーのパス}: {理由}` を全て出し、待ち受けずに終了コード 4 で終わる。代わりの文は持たない'
 constraints:
   - item: 待ち受けのアドレス
     constraint: '`127.0.0.1`'
@@ -364,7 +421,7 @@ constraints:
     constraint: 既定 8781
     decided_by: dev/設計書/非機能要件/非機能要件#requirements[待ち受けのポート]
   - item: 配信する入口
-    constraint: 画面の API `/_api/`（そのスキーマ `/_api/openapi.json`）、文書の MCP `/mcp`（ツール 7 つ）、管理の MCP `/_admin/mcp`（ツール 7 つ）、SessionStart のフックが呼ぶ `POST /_admin/session-context`。`/mcp`・`/_admin/mcp` はスラッシュの有無によらず同じ MCP が応え、リダイレクトを挟まない
+    constraint: 画面の API `/_api/`（そのスキーマ `/_api/openapi.json`）、文書の MCP `/mcp`（ツール 7 つ、instructions を持つ）、管理の MCP `/_admin/mcp`（ツール 7 つ、instructions を持たない）、SessionStart のフックが呼ぶ `POST /_admin/session-context`。`/mcp`・`/_admin/mcp` はスラッシュの有無によらず同じ MCP が応え、リダイレクトを挟まない
     notes: プラグインの `.mcp.json` の接続先はスラッシュ無し。画面の配信のルート（`GET /{path}`）より先に MCP へ届け、POST が 405 にならないようにする
   - item: 設定のマージ
     constraint: '`sources[].config` を上から順に読み、同じキーは後が優先、`documents[]` は `id` で行ごとに上書き・追加する'
@@ -378,6 +435,9 @@ constraints:
     notes: '`worktree` の引数で作業ツリー・ワークツリーを指して読むときは、そのフォルダの設定とスクリプトを使う'
   - item: ワークツリーの数え方
     constraint: '`worktrees[]` の相対パスは、`git rev-parse --git-common-dir` の親（メインのリポジトリの直下）から数える'
+  - item: MCP の文の出どころ
+    constraint: '文書の MCP の instructions（`kind: instructions`）と、文書の MCP・管理の MCP のツールごとの description（`kind: tool`）を、起動のときにプロンプトの YAML から読んで描画する。コードは文を持たない。instructions は 4,096 字以内'
+    notes: ツールの名前・引数・返り値は変えない。YAML を書き換えたときは再起動で効かせる
 refs:
   - dev/設計書/シナリオ/単一ユースケース/起動する#scenarios[正常シナリオ]
 test_file: tests/integration/server/test_serve.py
