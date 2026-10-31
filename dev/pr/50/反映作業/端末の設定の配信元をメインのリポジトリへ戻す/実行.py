@@ -8,14 +8,20 @@ import os
 import shutil
 import sys
 import tempfile
-from pathlib import Path
 
-from mcp_client import ADMIN_MCP_URL, BACKUP, REPLACEMENTS, SETTINGS, call_tool
+from mcp_client import (
+    ADMIN_MCP_URL,
+    BACKUP,
+    REPLACEMENTS,
+    SETTINGS,
+    call_tool,
+    config_at_default_ref,
+)
 
 
 def missing_targets() -> list[str]:
-    """書き換え先の dev-docs.yaml のうち、メインのリポジトリに無いものを返す。"""
-    return [new for _, new in REPLACEMENTS if not Path(new).is_file()]
+    """書き換え先の dev-docs.yaml のうち、`default_ref` の commit に無いものを返す。"""
+    return [new for _, new in REPLACEMENTS if not config_at_default_ref(new)]
 
 
 def plan(current: str) -> str:
@@ -55,7 +61,7 @@ def main() -> int:
     missing = missing_targets()
     if missing:
         # 書き換え先が無いまま書き換えると配信元が読めなくなるため、適用はしない。dry-run は差分まで出す
-        print(f"前提確認: failed (メインのリポジトリに無い: {', '.join(missing)})")
+        print(f"前提確認: failed (default_ref に無い: {', '.join(missing)})")
         if not dry_run:
             return 1
     else:

@@ -1,6 +1,8 @@
-"""反映作業のスクリプトが共有する、対象のパスと dev-docs の MCP の呼び出し。"""
+"""反映作業のスクリプトが共有する、対象のパス・default_ref の設定の確かめ・dev-docs の MCP の呼び出し。"""
 
 import json
+import re
+import subprocess
 import urllib.request
 from pathlib import Path
 
@@ -29,6 +31,25 @@ ADMIN_MCP_URL = "http://127.0.0.1:8781/_admin/mcp/"
 DOCS_MCP_URL = "http://127.0.0.1:8781/mcp/"
 TIMEOUT_SEC = 120
 PROTOCOL_VERSION = "2025-06-18"
+DEFAULT_REF = "develop"
+DEFAULT_REF_LINE = re.compile(r"^default_ref:\s*['\"]?([^'\"\s#]+)", re.MULTILINE)
+
+
+def config_at_default_ref(config: str) -> bool:
+    """サーバーと同じく、ディスクの設定の `default_ref`（無ければ develop）の commit に設定があるか。"""
+    path = Path(config)
+    default_ref = DEFAULT_REF
+    # ディスクに設定があれば、その default_ref を使う
+    if path.is_file():
+        match = DEFAULT_REF_LINE.search(path.read_text(encoding="utf-8"))
+        if match:
+            default_ref = match.group(1)
+    result = subprocess.run(
+        ["git", "-C", str(path.parent), "cat-file", "-e", f"{default_ref}:{path.name}"],
+        capture_output=True,
+        check=False,
+    )
+    return result.returncode == 0
 
 
 def _post(url: str, body: dict, session_id: str | None) -> tuple[dict | None, str | None]:
