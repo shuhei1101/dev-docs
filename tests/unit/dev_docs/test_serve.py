@@ -14,6 +14,7 @@ import pytest
 import uvicorn
 
 from dev_docs import main as main_module
+from dev_docs.features.access.types import Target
 from dev_docs.features.convert.service import ConvertService
 from dev_docs.features.documents.store import DocumentStore
 from dev_docs.features.history.snapshot import SnapshotStore
@@ -287,6 +288,42 @@ def test_build_handlers_when_out_of_sync(
     assert len(warnings) == 1
     assert "name（title）" in warnings[0]
     assert len(handlers.registry.served()) == 1
+
+
+def test_build_handlers_when_default_ref_moved(
+    git_repo: Callable[..., Path],
+    commit_all: Callable[..., str],
+    make_terminal_config: Callable[..., TerminalConfig],
+    make_entry: Callable[..., SourceEntry],
+) -> None:
+    """default_ref が進んだ後は新しい設定で文書を読む（正常系）。"""
+    # 準備
+    config = (
+        "name: a\n"
+        "documents:\n"
+        "  - id: rules\n"
+        "    paths: [docs/rule/*.yaml]\n"
+        "    schema: schemas/rule.schema.yaml\n"
+    )
+    root = git_repo(
+        {
+            "dev-docs.yaml": config,
+            "schemas/rule.schema.yaml": SYNC_SCHEMA,
+            "docs/rule/doc-1.yaml": "id: doc-1\nname: 文書 1\ntitle: タイトル\n",
+        }
+    )
+    terminal = make_terminal_config(
+        sources=[make_entry(str(root / "dev-docs.yaml"), source_id="a")]
+    )
+    handlers = build_handlers(terminal)
+    before = handlers.registry.get("a")
+    handlers.store.load(Target(before, before.root, None, None, "read"))
+    commit_all(root, {"dev-docs.yaml": config + "    metadata:\n      name: title\n"})
+    # 実行
+    source = handlers.registry.get("a")
+    documents = handlers.store.load(Target(source, source.root, None, None, "read")).documents
+    # 検証
+    assert [document.metadata["name"] for document in documents] == ["タイトル"]
 
 
 class _Recorder:
@@ -587,3 +624,39 @@ def test_run_files_when_root_not_found(tmp_path: Path, capsys: pytest.CaptureFix
     assert code == 2
     assert captured.out == ""
     assert str(missing) in captured.err
+
+
+def test_reload_sources_when_alias_and_nav(
+    tmp_path: Path,
+    make_alias_source_dir: Callable[..., Path],
+    make_terminal_config: Callable[..., TerminalConfig],
+    make_entry: Callable[..., SourceEntry],
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """エイリアスのキーと nav の条件の警告（正常系）。"""
+    # 準備
+    config = make_alias_source_dir(broken=True, none_nav=True)
+    terminal = make_terminal_config(sources=[make_entry(str(config))])
+    store = DocumentStore(SnapshotStore(tmp_path / "snapshots"))
+    # 実行
+    with caplog.at_level(logging.WARNING):
+        statuses = reload_sources(
+            terminal,
+            registry=SourceRegistry(),
+            store=store,
+            checker=DocumentChecker(store, timeout_sec=10),
+            converter=ConvertService(tmp_path / "converted", store, 10),
+        )
+    # 検証
+    warnings = [message for message in _warnings(caplog) if "sample" in message]
+    alias = [
+        message
+        for message in warnings
+        if "docs/term/broken.yaml" in message and "文字列か文字列の並びではありません" in message
+    ]
+    nav = [message for message in warnings if "nav.tabs[1].items[0].auto.filter" in message]
+    assert len(alias) == 1
+    assert "aliases" in alias[0]
+    assert len(nav) == 1
+    assert "none:" in nav[0]
+    assert [status.status for status in statuses] == ["serving"]

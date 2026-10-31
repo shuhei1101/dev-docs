@@ -110,3 +110,26 @@ def test_render_search_markdown_when_ranges() -> None:
     second = lines.index("notes/b: 1-2 行目・5-5 行目 / 全 5 行")
     assert lines[first + 1].startswith("<document")
     assert lines[second + 1].startswith("<document")
+
+
+def test_render_search_markdown_when_outside_scope() -> None:
+    """作業範囲の外の表示（正常系）。"""
+    # 準備
+    items = [
+        SearchItem(
+            id="doc-1",
+            source=None,
+            values={"body": "id: doc-1\n"},
+            path="/ws/docs/doc-1.yaml",
+            scope="full",
+        )
+    ]
+    result = SearchResult(total_count=1, returned=1, view="full", items=items, outside_scope=True)
+    # 実行
+    markdown = render_search_markdown(result, source_label="other")
+    # 検証
+    lines = markdown.splitlines()
+    opening = [line for line in lines if line.startswith("<document ")]
+    assert lines[0] == "作業範囲の外（参考）"
+    assert len(opening) == 1
+    assert 'outside_scope="true"' in opening[0]

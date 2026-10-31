@@ -6,13 +6,14 @@ directory: |-
   ```text
   src/dev_docs/features/search/
   ├─ __init__.py   # 公開する型と関数の再エクスポート
-  ├─ types.py      # Condition / Group / OrderKey / Snippets / LineRange / SearchRequest / Snippet / SnippetLine / BodyRange / Heading / SearchItem / GroupCount / SearchResult
+  ├─ types.py      # Condition / Group / OrderKey / Snippets / LineRange / SearchRequest / MatchWordsRequest / MatchWordsResult / Snippet / SnippetLine / BodyRange / Heading / SearchItem / GroupCount / SearchResult
   ├─ fields.py     # field_values / known_fields / heading_lines（項目の値・計算項目・使える項目・見出しの行）
   ├─ filters.py    # check_filter / match_filter / match_words / compile_regex / parse_compare_value
   ├─ snippets.py   # split_lines / find_snippets / count_matches / snippet_lines（行の分割・抜粋の検索・当たった行の数・一致した箇所の抜き出し）
   ├─ body_parts.py # select_ranges / join_ranges（本文の切り出し）
   ├─ cursor.py     # encode_cursor / decode_cursor
   ├─ render.py     # render_search_markdown
+  ├─ terms.py      # list_match_words / render_match_words_markdown（用語の一覧）
   └─ service.py    # search_docs
   ```
 diagrams:
@@ -315,6 +316,12 @@ data_models:
         access: 公開
         default: None
         description: 条件の木
+      - name: term
+        title: 用語
+        type: str | None
+        access: 公開
+        default: None
+        description: '`alias_type` を持つ行の文書のうち、`name` か `aliases` がこの語に一致する文書だけに絞る'
       - name: view
         title: 返す量
         type: Literal['ids', 'summary', 'full', 'count']
@@ -399,6 +406,12 @@ data_models:
         access: 公開
         default: None
         description: フックが入れる
+      - name: outside_scope
+        title: 作業範囲の外も読むか
+        type: bool
+        access: 公開
+        default: 'False'
+        description: '`True` のとき、`scope` に当たらない配信元を `outside_read` が真なら作業範囲の外（参考）として読む（`source` が ID 1 つのときだけ効く）'
       - name: session_id
         title: セッションの ID
         type: str | None
@@ -553,6 +566,12 @@ data_models:
         access: 公開
         default: '""'
         description: Markdown の先頭の行に出す、読んだ配信元の ID（複数なら `,` で繋ぐ）。JSON には出さない
+      - name: outside_scope
+        title: 作業範囲の外から読んだか
+        type: bool
+        access: 公開
+        default: 'False'
+        description: 読んだ場所のどれかの `outside_scope` が `True`
   - name: SnippetLine
     title: 抜粋の行
     container: features/search/types.py
@@ -653,6 +672,51 @@ data_models:
         access: 公開
         description: '`#` と前後の空白、末尾の閉じの `#` を除いた文字列'
     status: planned
+  - name: MatchWordsRequest
+    title: 用語の一覧の要求
+    container: features/search/types.py
+    usecase: 用語の一覧
+    role: DTO
+    summary: '`list_match_words` の引数'
+    description: '`pydantic.BaseModel`（`extra="forbid"`）。キーの意味と既定値はインターフェース定義『用語の一覧』の `request`。'
+    properties:
+      - name: source
+        title: 配信元
+        type: str
+        access: 公開
+        description: 配信元の ID
+      - name: worktree
+        title: ワークツリー
+        type: str | None
+        access: 公開
+        default: None
+        description: 読むワークツリー
+      - name: format
+        title: 形式
+        type: Literal['markdown', 'json']
+        access: 公開
+        default: '"markdown"'
+        description: 返す形式
+      - name: cwd
+        title: 作業場所
+        type: str | None
+        access: 公開
+        default: None
+        description: フックが入れる
+  - name: MatchWordsResult
+    title: 用語の一覧の結果
+    container: features/search/types.py
+    usecase: 用語の一覧
+    role: DTO
+    summary: 照合する語の並び
+    description: '`dataclass(frozen=True, slots=True, kw_only=True)`。'
+    properties:
+      - name: words
+        title: 語
+        type: list[MatchWord]
+        access: 公開
+        default: '[]'
+        description: 照合する語の一覧の結果
 functions:
   - name: field_values
     title: 項目の値
@@ -1109,12 +1173,12 @@ functions:
       type: SearchResult
       description: 検索の結果
     process: |-
-      1. 読む場所を解く（読む場所の解決。`source`・`ref`・`worktree`・`cwd`）
+      1. 読む場所を解く（読む場所の解決。`source`・`ref`・`worktree`・`cwd`・`outside_scope`）。結果の `outside_scope` は読んだ場所のどれかが作業範囲の外なら `True`
       2. 場所ごとに文書を集める（文書のストア.文書を集める）。`problems` は `notes` に `{path} を読めないので除きました（{detail}）` で足す
       3. 有効な文書の行ごとの文書に当てるスキーマ（文書のストア.文書に当てるスキーマ）で使える項目を作り、条件の確かめをする
          - 違反がある場合、違反と `describe(source, kind)` でスキーマを見ることを添えた `InvalidArgumentError` を送る
       4. `limit` が `LIMIT_MAX` を超えれば丸め、`max_chars` が `MAX_CHARS_LIMIT` を超えれば丸めて、それぞれ `notes` で知らせる。`limit` が 1 未満なら `InvalidArgumentError` を送る
-      5. 条件の照合で当たった文書を集め、`total_count` と（複数の配信元なら）`per_source` を数える。読んだ配信元の ID を `,` で繋いで `source_label` にする
+      5. 条件の照合で当たった文書を集め（`term` がある場合は、場所ごとにエイリアスの集め（文書のストア）をし、用語に当たる文書の ID（文書のストア）に入る文書だけを残す。`has_alias_rows` が `False` の場所は `{id}: alias_type を持つ documents の行が無いので term に当たる文書はありません` を `notes` に足す）、`total_count` と（複数の配信元なら）`per_source` を数える。読んだ配信元の ID を `,` で繋いで `source_label` にする
       6. 条件の木から、`field` が `body`・`*` の条件を `and`・`or` の下だけたどって集める（`not` の下はたどらない。以下、本文の条件）
       7. `fields` か `order_by` に `@matches` がある場合、当たった文書ごとに本文の全文と本文の条件で当たった行の数を数える（本文の条件が無ければ 0）
       8. `group_by` がある場合、当たった文書の値ごとの件数を `groups` にする（配列は要素ごとに数え、値が無い文書は `（なし）`）
@@ -1271,6 +1335,13 @@ functions:
         mock: なし
         expected: '`groups` が `Draft: 2` だけ（値の昇順で先の表記）'
         exception: '-'
+      - name: test_search_docs_when_term
+        case: 正常
+        summary: 用語で引く
+        condition: '`alias_type: term` の行の「作業範囲」（`aliases: [scope, 担当範囲]`）を持つ配信元に `term: 担当範囲`、`term: SCOPE`、`term: 担当` と、`alias_type` の行が無い配信元に `term: 担当範囲`'
+        mock: なし（一時フォルダの配信元）
+        expected: 1 つ目と 2 つ目は作業範囲だけ、3 つ目は 0 件、4 つ目は 0 件で `notes` に `alias_type を持つ documents の行が無い` ことがある
+        exception: '-'
       - name: test_search_when_records_fields
         case: 正常
         summary: records の行の要素の項目で絞り込む
@@ -1303,10 +1374,11 @@ functions:
       type: str
       description: Markdown
     process: |-
-      1. 先頭の行に `{配信元}: 該当 {total_count} 件・返した {returned} 件` を置く（複数の配信元は配信元ごとの件数も添える）
-      2. `groups` があれば `| 値 | 件数 |` の表を置く
-      3. `view` が `full` の場合、文書ごとに `<document path="{path}" scope="{scope}">`（`path` が `None` なら属性の無い `<document>`）と `</document>` で包み、中に項目の箇条書きと本文を置く。`total_lines` を持つ文書は、`<document>` の前の行に `{id}: {start_line}-{end_line} 行目 / 全 {total_lines} 行` を置く（範囲が複数なら `{start_line}-{end_line} 行目` を `・` で並べ、空なら `{id}: 返す行なし / 全 {total_lines} 行`）。抜粋は、当たった行を `{行番号}:{行}`、前後の行を `{行番号}-{行}` で出し、抜粋の間に `--` の行を置く。それ以外は項目を列にした表にする（列名は項目の名前。`@chars` は `chars`）
-      4. `notes` があれば末尾に `> ` の行で並べ、`next_cursor` があれば `続き: cursor={next_cursor}` を置く
+      1. `outside_scope` が `True` なら先頭に `作業範囲の外（参考）` の行を置く
+      2. 次の行に `{配信元}: 該当 {total_count} 件・返した {returned} 件` を置く（複数の配信元は配信元ごとの件数も添える）
+      3. `groups` があれば `| 値 | 件数 |` の表を置く
+      4. `view` が `full` の場合、文書ごとに `<document path="{path}" scope="{scope}">`（`path` が `None` なら属性の無い `<document>`。`outside_scope` が `True` なら `outside_scope="true"` の属性を加える）と `</document>` で包み、中に項目の箇条書きと本文を置く。`total_lines` を持つ文書は、`<document>` の前の行に `{id}: {start_line}-{end_line} 行目 / 全 {total_lines} 行` を置く（範囲が複数なら `{start_line}-{end_line} 行目` を `・` で並べ、空なら `{id}: 返す行なし / 全 {total_lines} 行`）。抜粋は、当たった行を `{行番号}:{行}`、前後の行を `{行番号}-{行}` で出し、抜粋の間に `--` の行を置く。それ以外は項目を列にした表にする（列名は項目の名前。`@chars` は `chars`）
+      5. `notes` があれば末尾に `> ` の行で並べ、`next_cursor` があれば `続き: cursor={next_cursor}` を置く
     unit_tests:
       - name: test_render_search_markdown
         case: 正常
@@ -1334,6 +1406,13 @@ functions:
         condition: '`view: full` で `ranges: [BodyRange(6, 8)]`・`total_lines: 10` の `notes/a` と、`ranges: [BodyRange(1, 2), BodyRange(5, 5)]`・`total_lines: 5` の `notes/b`'
         mock: なし
         expected: '`<document` の前の行が `notes/a: 6-8 行目 / 全 10 行` と `notes/b: 1-2 行目・5-5 行目 / 全 5 行`'
+      - name: test_render_search_markdown_when_outside_scope
+        case: 正常
+        summary: 作業範囲の外の表示
+        condition: '`outside_scope: true` の `view: full` の結果'
+        mock: なし
+        expected: 先頭の行が `作業範囲の外（参考）`、`<document>` に `outside_scope="true"`
+        exception: '-'
   - name: compile_regex
     title: 正規表現の組み立て
     kind: 関数
@@ -1645,6 +1724,92 @@ functions:
         mock: なし
         expected: '`"a\nc\nd"`'
     status: planned
+  - name: list_match_words
+    title: 用語の一覧
+    kind: 関数
+    container: features/search/terms.py
+    usecase: 用語の一覧
+    role: サービス
+    summary: '`alias_type` を持つ行の文書から、照合する語を指す文書の ID とともに返す'
+    scope: public
+    thread_safe: true
+    args:
+      - name: request
+        title: 用語の一覧の要求
+        type: MatchWordsRequest
+        required: true
+        passing: positional
+        description: ツールの引数
+      - name: registry
+        title: 配信元の一覧
+        type: SourceRegistry
+        required: true
+        passing: injected
+        description: 配信中の配信元
+      - name: store
+        title: 文書のストア
+        type: DocumentStore
+        required: true
+        passing: injected
+        description: 文書を読む
+    returns:
+      type: MatchWordsResult
+      description: 照合する語の並び
+    process: |-
+      1. 読む場所を解く（読む場所の解決。`source`・`worktree`・`cwd`）
+      2. 文書を集める（文書のストア.文書を集める）
+      3. エイリアスの集め（文書のストア）をし、`entries` で照合する語の一覧を作って返す（`alias_type` を持つ行が無い配信元は空）
+    exceptions:
+      - name: SourceNotReadableError
+        condition: 読む場所の解決が送る
+        message: '`{id} はこの作業場所（{cwd}）から読めません`'
+      - name: SourceNotServedError
+        condition: 読む場所の解決が送る
+        message: '`{id} は配信していません`'
+    unit_tests:
+      - name: test_list_match_words
+        case: 正常
+        summary: 用語の語と違反した文書の除外
+        condition: '「作業範囲」（`aliases: [scope, 担当範囲]`）と「壊れた用語」（`aliases: 3`）を持つ sample'
+        mock: なし（一時フォルダの配信元）
+        expected: '`words` が `作業範囲`・`scope`・`担当範囲` の 3 件で、壊れた用語の語が無い'
+        exception: '-'
+      - name: test_list_match_words_when_no_alias_rows
+        case: 正常
+        summary: 用語の種類が無い
+        condition: '`alias_type` を持つ行が無い配信元'
+        mock: なし（一時フォルダの配信元）
+        expected: '`words` が空'
+        exception: '-'
+  - name: render_match_words_markdown
+    title: 用語の一覧の文
+    kind: 関数
+    container: features/search/terms.py
+    usecase: 用語の一覧
+    role: 表示
+    summary: 用語の一覧の結果を `| 語 | 文書 | 種類 |` の表にする
+    scope: public
+    thread_safe: true
+    args:
+      - name: result
+        title: 用語の一覧の結果
+        type: MatchWordsResult
+        required: true
+        passing: positional
+        description: 用語の一覧の戻り値
+    returns:
+      type: str
+      description: Markdown。語が無ければ `用語はありません`
+    process: |-
+      1. 語が無ければ `用語はありません` を返す
+      2. `| 語 | 文書 | 種類 |` の表に語ごとの行を並べて返す
+    unit_tests:
+      - name: test_render_match_words_markdown
+        case: 正常
+        summary: 表と空
+        condition: 語 3 件と、空の結果
+        mock: なし
+        expected: インターフェース定義の返り値例と同じ表と、`用語はありません`
 refs:
   - dev/設計書/インターフェース定義/開発ドキュメントサーバー/文書の検索#
 test_files:
@@ -1655,3 +1820,4 @@ test_files:
   - tests/unit/dev_docs/features/search/test_render.py
   - tests/unit/dev_docs/features/search/test_service.py
   - tests/unit/dev_docs/features/search/test_body_parts.py
+  - tests/unit/dev_docs/features/search/test_terms.py

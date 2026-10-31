@@ -448,7 +448,7 @@ classes:
         process: |-
           1. 文書の行を引く（`target.source.table(document.kind)`）
           2. Markdown を作る
-             - `converter` がある場合、`cache_dir` の控えがあればそれを使う。無ければスクリプトの実行（`cwd=target.base`・`stdin` に文書の YAML・制限時間 `timeout_sec`）の標準出力を使い、一時ファイルから置き換えて控える。控えが `CONVERT_CACHE_KEEP` を超えたら古いものを消す
+             - `converter` がある場合、`cache_dir` の控えがあればそれを使う。無ければスクリプトの実行（`cwd=target.base`・`stdin` に文書の YAML・制限時間 `timeout_sec`・`at`。`at` は `target.worktree` が `None` で `source.config_commit` がある場合に（`source.main_root`, `source.config_commit`））の標準出力を使い、一時ファイルから置き換えて控える。控えが `CONVERT_CACHE_KEEP` を超えたら古いものを消す
                - `ScriptTimeoutError`・`ScriptFailedError`・実行できない `ScriptError` の場合、`reason` が `timeout`・`exit`・`not_runnable` の `ConvertFailure` を返す
              - `converter` が無く Markdownの本文かが `True` の場合、`document.body` をそのまま使う
              - それ以外は、スキーマ駆動の変換（スキーマは文書のストア.文書に当てるスキーマ `store.row_schema(target, kind)`）
@@ -473,6 +473,13 @@ classes:
             condition: '`converters[]` を指す行の同じ文書を、`RUNNING_VERSION` を `0.1.0` と `0.2.0` にして 1 回ずつ'
             mock: '`run_script`（呼ばれた数を数える）、`monkeypatch` で `RUNNING_VERSION`'
             expected: スクリプトが 2 回呼ばれる
+          - name: test_convert_service_convert_when_default_ref
+            case: 正常
+            summary: '`default_ref` のスクリプトで変換する'
+            condition: クローン本体が `master` を checkout し、`develop`（`default_ref`）の変換スクリプトだけが `# develop` を出す。`ref` に `default_ref` の commit を入れた場所で変換する
+            mock: なし（一時フォルダの Git の配信元）
+            expected: '`markdown` が `# develop` で、ディスクの `master` のスクリプトの出力でない'
+            exception: '-'
           - name: test_convert_service_convert_when_timeout
             case: 異常
             summary: 制限時間を超える

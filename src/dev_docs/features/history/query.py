@@ -2,9 +2,13 @@
 
 from __future__ import annotations
 
+import io
 import logging
 import re
-from collections.abc import Sequence
+import tarfile
+import tempfile
+from collections.abc import Iterator, Sequence
+from contextlib import contextmanager
 from datetime import datetime, time
 from pathlib import Path
 
@@ -16,10 +20,12 @@ from dev_docs.features.history.types import (
     NamedRef,
     RefList,
     ResolvedRef,
+    WorktreeInfo,
 )
 from dev_docs.features.sources.types import ServedSource
 from dev_docs.integrations.git import GitError, run_git
 from dev_docs.shared.errors import RefNotFoundError
+from dev_docs.shared.paths import match_glob
 
 logger = logging.getLogger(__name__)
 
@@ -234,3 +240,34 @@ def list_commits(work_root: Path, from_commit: str, to_ref: str) -> list[CommitS
         )
         for row in rows
     ]
+
+
+def list_worktrees(source: ServedSource) -> list[WorktreeInfo]:
+    """配信元の `worktrees` に当たるワークツリーのパスと checkout しているブランチを返す。"""
+    if not source.is_git or source.repo_root is None:
+        return []
+    output = _text(["worktree", "list", "--porcelain"], source.repo_root)
+    result: list[WorktreeInfo] = []
+    # 空行で区切ったかたまりが 1 つのワークツリー
+    for chunk in output.split("\n\n"):
+        path: str | None = None
+        branch: str | None = None
+        for line in chunk.splitlines():
+            if line.startswith("worktree "):
+                path = line.removeprefix("worktree ")
+            elif line.startswith("branch "):
+                branch = line.removeprefix("branch ").removeprefix("refs/heads/")
+        if path is not None and match_glob(Path(path), source.worktree_globs):
+            result.append(WorktreeInfo(path=path, branch=branch))
+    return result
+
+
+@contextmanager
+def export_paths_at(repo: Path, commit: str, paths: Sequence[str]) -> Iterator[Path]:
+    """commit のリビジョンのフォルダを一時フォルダへ取り出し、抜けるときに削除する。"""
+    with tempfile.TemporaryDirectory() as directory:
+        output = run_git(["archive", "--format=tar", commit, "--", *paths], cwd=repo, binary=True)
+        data = output if isinstance(output, bytes) else output.encode("utf-8")
+        with tarfile.open(fileobj=io.BytesIO(data)) as archive:
+            archive.extractall(directory, filter="data")
+        yield Path(directory)

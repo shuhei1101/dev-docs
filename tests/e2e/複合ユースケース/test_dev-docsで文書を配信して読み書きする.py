@@ -14,6 +14,7 @@ TOOL_NAMES = [
     "delete_docs",
     "describe",
     "list_changes",
+    "list_match_words",
     "search_docs",
     "trace_related",
     "write_docs",

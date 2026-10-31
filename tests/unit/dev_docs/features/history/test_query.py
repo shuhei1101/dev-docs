@@ -291,3 +291,48 @@ def test_list_commits_when_merge(
     result = list_commits(root, base, "HEAD")
     # 検証
     assert [step.commit for step in result] == [branch_commit]
+
+
+def test_list_worktrees(
+    tmp_path: Path,
+    git_repo: Callable[..., Path],
+    run_git: Callable[..., str],
+    make_served_source: Callable[..., ServedSource],
+) -> None:
+    """glob に当たるワークツリー（正常系）。"""
+    from dev_docs.features.history.query import list_worktrees
+
+    # 準備
+    root = git_repo({"a.yaml": "a: 1\n"})
+    run_git(root, "worktree", "add", "-b", "feat/x", str(root / ".claude/worktrees/x"))
+    run_git(root, "worktree", "add", "--detach", str(root / ".claude/worktrees/y"))
+    run_git(root, "worktree", "add", "-b", "feat/z", str(tmp_path / "z"))
+    source = make_served_source(
+        root=root,
+        is_git=True,
+        repo_root=root,
+        worktree_globs=[str(root / ".claude/worktrees/*")],
+    )
+    # 実行
+    result = list_worktrees(source)
+    # 検証
+    assert [(Path(item.path).resolve(), item.branch) for item in result] == [
+        ((root / ".claude/worktrees/x").resolve(), "feat/x"),
+        ((root / ".claude/worktrees/y").resolve(), None),
+    ]
+
+
+def test_export_paths_at(git_repo: Callable[..., Path], run_git: Callable[..., str]) -> None:
+    """commit のフォルダを取り出す（正常系）。"""
+    from dev_docs.features.history.query import export_paths_at
+
+    # 準備
+    root = git_repo({"scripts/a.py": 'print("develop")\n'})
+    commit = run_git(root, "rev-parse", "HEAD").strip()
+    (root / "scripts/a.py").write_text('print("disk")\n', encoding="utf-8")
+    # 実行
+    with export_paths_at(root, commit, ["scripts"]) as exported:
+        content = (exported / "scripts/a.py").read_text(encoding="utf-8")
+    # 検証
+    assert content == 'print("develop")\n'
+    assert not exported.exists()

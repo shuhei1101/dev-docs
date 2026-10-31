@@ -96,7 +96,8 @@ functions:
       1. 使える配信元ごとに索引の同期を求め、件数が 0 でない並びごとに `{id}: {並びの名前}が {件数} 件あります（check_project で確かめられます）` を加える（`check_sync`）
       2. 使える配信元の設定のバージョンが `old` なら `{id}: 設定のバージョンが古い（{設定}・読める {現在}）。dev-docs migrate で移し替えます` を加える（バージョンの新旧）
       3. 端末の設定のバージョンが `old` なら同じ形の文を加える
-      4. `not_served` の配信元ごとに `{id}: 配信していません（{先頭の理由}）。check_project で確かめられます` を加える
+      4. 使える配信元ごとに、`alias_violations` が 0 件でなければ `{id}: エイリアスのキーの違反が {件数} 件あります（check_project で確かめられます）` を加え、nav の警告（画面の API）ごとに `{id}: {path}: {rule}` を加える
+      5. `not_served` の配信元ごとに `{id}: 配信していません（{先頭の理由}）。check_project で確かめられます` を加える
     unit_tests:
       - name: test_collect_warnings
         case: 正常
@@ -110,6 +111,12 @@ functions:
         condition: 配信中だが `available` に無い配信元に同期のずれ 1 件
         mock: なし
         expected: 警告が空
+      - name: test_collect_warnings_when_alias_and_nav
+        case: 正常
+        summary: エイリアスのキーの違反と nav の警告
+        condition: 使える配信元 a に、`aliases` が `3` の用語の文書 1 件と、どの文書にも当たらない `auto` の条件 1 つ
+        mock: なし
+        expected: 警告が 2 件（a のエイリアスのキーの違反 1 件・a の nav の条件）
     callers:
       - '#functions[build_session_context]'
     callees:
@@ -142,7 +149,7 @@ functions:
       description: 文脈の文
     process: |-
       1. 先頭に `dev-docs の文書の MCP（dev-docs）で、次の配信元を使えます。` を置き、配信元ごとに `- {id}（読み書き|読み取りだけ）: {description}` を並べる
-      2. `SESSION_USAGE` を続け、警告があれば `注意:` の下に `- {警告}` を並べる
+      2. `SESSION_USAGE` と `TAG_GUIDE` を続け、警告があれば `注意:` の下に `- {警告}` を並べる
       3. `CONTEXT_MAX_CHARS` を超える場合、配信元の行の `description` を省く
       4. それでも超える場合、収まるまで配信元の行を末尾から削除し、`- ほか {件数} 件` を置く
     unit_tests:
@@ -158,6 +165,12 @@ functions:
         condition: '`description` が 500 字の配信元 100 件'
         mock: なし
         expected: 2,000 字以内で `description` を含まず、`- ほか {件数} 件` を含む
+      - name: test_context_text_when_tag_guide
+        case: 正常
+        summary: タグの付け方を含む
+        condition: 配信元 1 件・警告なし
+        mock: なし
+        expected: '`TAG_GUIDE` を含み、単語まで分けること・`action:`・`topic:`・`tool:`・`describe(source)` の行がある'
     callers:
       - '#functions[build_session_context]'
 test_files:

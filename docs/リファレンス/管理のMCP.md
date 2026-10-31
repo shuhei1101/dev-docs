@@ -1,6 +1,6 @@
 # 管理のMCP
 
-管理の MCP の 6 つのツールの引数・返す内容・エラーの一覧
+管理の MCP の 7 つのツールの引数・返す内容・エラーの一覧
 
 ## 共通
 
@@ -18,13 +18,14 @@
 | `update` | 書き込み | dev-docs のクローンの更新と、必要なら再起動 |
 | `check_project` | 読み取り | 配信元の設定・管理用の YAML・スクリプトの検査 |
 | `try_convert` | 読み取り | 1 つのファイルの試しの変換 |
+| `write_nav` | 書き込み | `dev-docs.yaml` の `nav` のタブ・項目の追加・修正・削除 |
 
 <!-- /table -->
 
 `status`・`check_project`・`try_convert` には `readOnlyHint: true` が付きます。
 タイムアウトは設けません。スクリプトを実行する確かめと変換は、配信元ごとに `script_timeout_sec` で打ち切ります。
 
-`status`・`reload`・`check_project` は引数 `format`（`markdown` か `json`、既定 `markdown`）を持ちます。
+`status`・`reload`・`check_project`・`write_nav` は引数 `format`（`markdown` か `json`、既定 `markdown`）を持ちます。
 `json` のときは、同じ中身を structuredContent と text に入れます。
 
 ### バージョンの比較
@@ -179,11 +180,15 @@ http://127.0.0.1:8781/ dev-docs 0.2.0（pid 4242）
 | `version_state` | `current` / `old` / `newer` / null | dev-docs が読めるバージョンとの比較 |
 | `violations[].path` | str | 違反したキーのパス（`documents[0].paths`） |
 | `violations[].rule` | str | 違反の理由 |
+| `violations[].doc` | str / null | 違反した文書のパス。`alias_type` を持つ行の文書のエイリアスのキーを、取り込んだエイリアスのスキーマで検証した違反に入る。`dev-docs.yaml` のキーの違反は `null` |
 | `missing_paths[]` | list[str] | `documents[].paths` などが指して無いフォルダ・ファイル |
 | `script_errors[].script` | str | 確かめに失敗したスクリプトのパス |
 | `script_errors[].reason` | str | 終了コードと標準エラーの要約 |
 | `sync` | obj | 索引の同期の件数。`metadata` の列の欠け・索引に無いファイル・ファイルが無い行 |
 | `sync.items[]` | list | 件数の内訳（種類とパス）。先頭 50 件まで。件数は全件を数える |
+| `warnings[].path` | str | 警告したキーのパス（`nav.tabs[2].items[0].auto.filter`） |
+| `warnings[].rule` | str | 警告の理由。`nav` の `auto` の条件がどの文書にも当たらないときは、タブの名前と条件 |
+| `alias_schema_version` | str | 取り込んだエイリアスのスキーマの取り込み元のタグ（`shuhei1101/alias-inject` のタグ） |
 
 <!-- /table -->
 
@@ -196,7 +201,7 @@ http://127.0.0.1:8781/ dev-docs 0.2.0（pid 4242）
 - unindexed_files: docs/memo.md
 ```
 
-違反があっても、違反を返して正常終了します。
+違反と警告があっても、それらを返して正常終了します。
 
 | エラー | 発生条件 |
 | --- | --- |
@@ -227,3 +232,43 @@ http://127.0.0.1:8781/ dev-docs 0.2.0（pid 4242）
 | `ValidationFailedError` | 配信元の設定に違反か動かないスクリプトがある。`check_project` で確かめる |
 | `ConfigNotFoundError` | `path` に `dev-docs.yaml` が無く、`config` も渡していない |
 | `ConfigParseError` | `dev-docs.yaml` か `config` が YAML として読めない。読めなかった行と理由を返す |
+
+## write_nav
+
+配信元の `dev-docs.yaml` の `nav` だけを、タブ・項目の追加・修正・削除で書き換えます。
+操作を全て当てた後の `nav` を 1 回だけ `dev-docs.yaml` のスキーマと条件の検証（`search_docs` の `filter` と同じ）に通し、通ったときだけ書き換えます。
+`nav` 以外のキーとコメントはそのまま残し、commit はしません。
+配信中の配信元には、`default_ref` へ commit された後の要求から入ります。
+
+<!-- table: data -->
+
+| 引数 | 型 | 必須 | 既定 | 説明 |
+| --- | --- | --- | --- | --- |
+| `path` | str | ✅ | - | 配信元のフォルダか、その `dev-docs.yaml` の絶対パス（作業中はワークツリー） |
+| `operations[]` | list | ✅ | - | 並べた順に当てる操作。1 件以上 |
+| `operations[].op` | `add` / `update` / `remove` | ✅ | - | 追加・修正・削除 |
+| `operations[].tab` | str | ✅ | - | 対象のタブの名前（`nav.tabs[].title`） |
+| `operations[].item` | str | - | なし（タブそのものが対象） | タブの中の `group` の名前。入れ子の group は `>` で区切る（`設計 > MCP`）。`add` では最後の名前が作る group、それより前が追加先の group。名前を持たない `auto`・`page` の項目は指せず、入っている group かタブの `items` を置き換えて書く |
+| `operations[].value` | obj | `add`・`update` で ✅ | - | タブか項目の中身（`dev-docs.yaml` の `nav` と同じ書式）。`update` は渡したキーだけを置き換える |
+| `format` | `markdown` / `json` | - | `markdown` | 返す形式 |
+
+<!-- /table -->
+
+項目はタブと group の名前でだけ指し、添字では指しません。
+同じ `operations` の前の操作で並びが変わっても、指す先はずれません。
+
+| 返すフィールド | 型 | 説明 |
+| --- | --- | --- |
+| `path` | str | 書き換えた `dev-docs.yaml` のパス |
+| `nav` | str | 書いた後の `nav`（YAML のまま） |
+| `counts[].path`・`counts[].count` | str・int | `auto` のキーのパスと、その条件に当たる文書の数。`path` のフォルダの文書で数える |
+| `warnings[]` | list | `check_project` の `warnings[]` と同じ。どの文書にも当たらない条件も書いたうえで警告する |
+
+| エラー | 発生条件 |
+| --- | --- |
+| `NavInvalidError` | 書いた後の `nav` が `dev-docs.yaml` のスキーマか条件の検証に通らない。違反したキーのパスと理由を返す |
+| `InvalidArgumentError` | `update`・`remove` で指したタブ・group が無い、`item` が `auto`・`page` に当たる、`add` で同じ名前のタブ・group がある、`add`・`update` で `value` が無い、端末の設定の `sources[].config` で `path` より後に重ねた設定の YAML が `nav` を持つ。今のタブ・group の名前の一覧（重ねた設定のときはそのファイルのパス）を返す |
+| `ConfigNotFoundError` | `path` に `dev-docs.yaml` が無い |
+| `ConfigParseError` | `dev-docs.yaml` が YAML として読めない。読めなかった行と理由を返す |
+
+どのエラーでもファイルは書き換えません。

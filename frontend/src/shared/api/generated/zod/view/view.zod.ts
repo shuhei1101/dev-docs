@@ -51,6 +51,14 @@ export const ViewGetDocumentDefaultResponse = zod.object({
 }).describe('文書の取得の `github`（起票先）。'),zod.null()]),
   "columns": zod.record(zod.string(), zod.array(zod.string())),
   "tableKeys": zod.array(zod.string()),
+  "aliases": zod.array(zod.looseObject({
+  "id": zod.string(),
+  "name": zod.string(),
+  "aliases": zod.array(zod.string()),
+  "description": zod.union([zod.string(),zod.null()]).optional(),
+  "aliasType": zod.enum(['term', 'doc', 'command', 'url', 'skill', 'tool', 'path', 'env', 'avoid']),
+  "avoid": zod.union([zod.array(zod.string()),zod.null()]).optional()
+}).describe('文書の取得の `aliases` の 1 件（`AliasEntry` の `extra` のキーは同じ階層に置く）。')).optional(),
   "diff": zod.union([zod.object({
   "base": zod.string(),
   "change": zod.union([zod.enum(['added', 'modified']),zod.null()]),
@@ -104,6 +112,14 @@ export const ViewGetDocumentResponse = zod.object({
 }).describe('文書の取得の `github`（起票先）。'),zod.null()]),
   "columns": zod.record(zod.string(), zod.array(zod.string())),
   "tableKeys": zod.array(zod.string()),
+  "aliases": zod.array(zod.looseObject({
+  "id": zod.string(),
+  "name": zod.string(),
+  "aliases": zod.array(zod.string()),
+  "description": zod.union([zod.string(),zod.null()]).optional(),
+  "aliasType": zod.enum(['term', 'doc', 'command', 'url', 'skill', 'tool', 'path', 'env', 'avoid']),
+  "avoid": zod.union([zod.array(zod.string()),zod.null()]).optional()
+}).describe('文書の取得の `aliases` の 1 件（`AliasEntry` の `extra` のキーは同じ階層に置く）。')).optional(),
   "diff": zod.union([zod.object({
   "base": zod.string(),
   "change": zod.union([zod.enum(['added', 'modified']),zod.null()]),

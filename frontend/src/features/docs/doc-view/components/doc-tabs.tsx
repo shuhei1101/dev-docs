@@ -52,7 +52,7 @@ export const DocTabs = ({
           key={tab.title}
           to="/$source/$"
           params={{ source, _splat: path }}
-          search={{ rev: search.rev, base: search.base }}
+          search={{ rev: search.rev, base: search.base, tab: index }}
           aria-current={current ? "page" : undefined}
           className={className}
         >

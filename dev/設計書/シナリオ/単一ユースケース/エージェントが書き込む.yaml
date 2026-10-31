@@ -291,6 +291,42 @@ scenarios:
       - create で作った YAML が `data` の `name` の値を `title` 列に持ち、`name` 列を持たない
       - 列名 `title` をそのまま渡した update も、同じ `title` 列を書き換える
     test: test_normal_when_metadata_mapped
+  - name: 正常シナリオ（オブジェクトの配列のタグを書く）
+    setup:
+      - name: Mock
+        description: なし（実環境で実行。`cwd` はテストが引数に入れる）
+      - name: オブジェクトの配列のタグ
+        description: 'sample の文書 1 が `tags` を `[{name: mcp, main: true}, {name: 設計}]` で持つ'
+        notes: '`metadata` に `tags: tags[].name` と、`main` が真の要素の `name` を `main_tags` へ取り出す指定'
+      - name: dev-docs
+        description: sample を配信している dev-docs
+        notes: '`cwd` は sample のワークツリー'
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        actor A as エージェント
+        participant M as 文書の MCP（/mcp）
+        participant F as 文書 1 の YAML
+
+        A->>M: write_docs(update 文書 1, add_to: tags に テスト, remove_from: tags から 設計)
+        M->>M: tags[].name の読み替えで、name が テスト の要素を加え、name が 設計 の要素を除く
+        M->>F: tags を [{name: mcp, main: true}, {name: テスト}] で書く
+        M-->>A: 書いた文書の version
+        A->>M: write_docs(update 文書 1, set: tags を [mcp, 運用])
+        M->>F: 残す mcp の要素はそのまま、運用 を {name: 運用} で加え、テスト を除く
+        M-->>A: 書いた文書の version
+        A->>M: write_docs(update 文書 1, set: main_tags を [運用])
+        M->>F: name が 運用 の要素に main: true を付け、mcp の main を外す
+        M-->>A: 書いた文書の version
+      ```
+    expected:
+      - '`add_to` の後、文書 1 の `tags` が `{name: テスト}` を `main` なしで持つ'
+      - '`remove_from` の後、`name` が `設計` の要素が無い'
+      - '`add_to`・`remove_from` の後も `{name: mcp, main: true}` の `main` が残る'
+      - '`set: tags` の後、`tags` が `[{name: mcp, main: true}, {name: 運用}]` になる'
+      - '`set: main_tags` の後、`tags` が `[{name: mcp}, {name: 運用, main: true}]` になる'
+      - '`tags` の各要素が `name` を持つオブジェクトのままで、文字列に置き換わらない'
+    test: test_normal_when_tags_are_objects
 lead: エージェントが文書の MCP の `write_docs`・`delete_docs` で、作業ツリーの YAML の文書を検査に通してから作る・直す・消す。
 issue: 3
 primary_actor: エージェント（Claude Code）

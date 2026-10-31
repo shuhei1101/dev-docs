@@ -11,13 +11,19 @@ CONTEXT_MAX_CHARS = 2000
 # 返し済みの記録を削除する `reason`
 FORGET_REASONS = frozenset({"clear", "compact"})
 
-# 配信元の一覧の後に置く、場面ごとの短い使い方
+# 配信元の一覧の後に置く、場面ごとの短い使い方（文脈の文ではこの後に `TAG_GUIDE` を続ける）
 SESSION_USAGE = """使い方:
 - 始めに `describe(source)` で種類と書き方を確かめる
-- タグを付ける前に `search_docs` の `group_by="tags"` で使われているタグを見て、同じ意味のタグを使い回す
 - 探すときは `search_docs`。配信元をまたぐときは `source="*"`、本文まで読むときは `view="full"`
 - 前に読んだ後の変更は `list_changes` で確かめる
 - 範囲のファイルを作った・消した・改名したら、管理用の YAML の行を修正する"""
+
+# 使い方の文と文書の MCP の instructions に同じ文で置くタグの行
+TAG_GUIDE = """タグ:
+- 付ける前に `search_docs` の `group_by="tags"` で使われているタグを見て、同じ意味のタグを使い回す
+- 複合語は単語まで分けてタグにする（`エラー処理` は `topic:エラー` と `action:処理`）
+- 動作は `action:`、題材は `topic:`、道具は `tool:` で始める
+- 配信元にタグの規約があれば、`describe(source)` の説明書に従う"""
 
 # 使える配信元が 0 件のときの文
 SETUP_GUIDE = (

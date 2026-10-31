@@ -78,3 +78,13 @@ def repo_root(path: Path) -> Path | None:
         return None
     text = output if isinstance(output, str) else output.decode("utf-8")
     return normalize_path(text.rstrip("\n"))
+
+
+def main_repo_root(path: Path) -> Path | None:
+    """ワークツリーの中からでも、メインのリポジトリ（クローン本体）の直下を返す。"""
+    try:
+        output = run_git(["rev-parse", "--path-format=absolute", "--git-common-dir"], cwd=path)
+    except GitError, FileNotFoundError, NotADirectoryError:
+        return None
+    text = output if isinstance(output, str) else output.decode("utf-8")
+    return normalize_path(str(Path(text.rstrip("\n")).parent))

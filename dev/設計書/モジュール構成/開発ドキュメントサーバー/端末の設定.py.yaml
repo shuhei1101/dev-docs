@@ -101,6 +101,12 @@ data_models:
         access: 公開
         default: SourceScope()
         description: 読める・読み書きできる作業場所
+      - name: outside_read
+        title: 作業範囲の外から読めるか
+        type: bool
+        access: 公開
+        default: 'True'
+        description: '`False` で、`scope` に当たらない作業場所から `outside_scope: true` で読むのを断る'
   - name: TerminalConfig
     title: 端末の設定
     container: features/settings/types.py
@@ -525,7 +531,7 @@ functions:
       description: 読み直した後の配信元ごとの状態（配信元の『配信元の状態』）
     process: |-
       1. `lock` を取る
-      2. 端末の設定を往復編集の形で読み（往復編集の読み込み）、`sources` だけを送られた行に置き換える。既定値と同じキー（`enabled: true`・空の `scope.read` など）は書かない
+      2. 端末の設定を往復編集の形で読み（往復編集の読み込み）、`sources` だけを送られた行に置き換える。既定値と同じキー（`enabled: true`・`outside_read: true`・空の `scope.read` など）は書かない
       3. 置き換えた値を検証する（端末の設定の検証）
          - 違反がある場合、ファイルを書かずに `TerminalConfigInvalidError` を送る
       4. 一時ファイルに書いてから置き換える（往復編集の書き出し・ファイルの置き換え）
@@ -549,6 +555,12 @@ functions:
         condition: '`enabled: true`・`scope.read: []` の行'
         mock: 配信元の読み直し（偽物）
         expected: ファイルの行に `enabled` と `scope` が無い
+      - name: test_save_sources_when_outside_read_false
+        case: 正常
+        summary: 既定値と違う outside_read を書く
+        condition: '`outside_read: false` の行'
+        mock: 配信元の読み直し（偽物）
+        expected: 'ファイルの行に `outside_read: false` がある'
       - name: test_save_sources_when_invalid
         case: 異常
         summary: 検証に通らない

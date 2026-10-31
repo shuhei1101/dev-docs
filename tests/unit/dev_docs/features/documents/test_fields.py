@@ -27,7 +27,7 @@ def test_parse_field_path() -> None:
 
 
 @pytest.mark.parametrize(
-    "path", [pytest.param("a..b", id="empty-key"), pytest.param("a[x]", id="bad-index")]
+    "path", [pytest.param("a..b", id="empty-key"), pytest.param("a[x-y]", id="bad-index")]
 )
 def test_parse_field_path_when_invalid(path: str) -> None:
     """空のキーと数字でない位置（異常系）。"""
@@ -35,6 +35,19 @@ def test_parse_field_path_when_invalid(path: str) -> None:
     with pytest.raises(InvalidArgumentError) as exc_info:
         parse_field_path(path)
     assert exc_info.value.violations[0].path == path
+
+
+def test_parse_field_path_when_selector() -> None:
+    """全ての要素と真偽値のキーで選ぶ要素（正常系）。"""
+    from dev_docs.features.documents.fields import ArraySelector
+
+    # 実行
+    results = [parse_field_path("tags[].name"), parse_field_path("tags[main].name")]
+    # 検証
+    assert results == [
+        ["tags", ArraySelector(key=None), "name"],
+        ["tags", ArraySelector(key="main"), "name"],
+    ]
 
 
 def test_get_field() -> None:
@@ -56,6 +69,20 @@ def test_get_field_when_missing(path: str) -> None:
     result = get_field(data, path)
     # 検証
     assert result is None
+
+
+def test_get_field_when_selector() -> None:
+    """要素を選んで取り出す（正常系）。"""
+    # 準備
+    data = {"tags": [{"name": "a", "main": True}, {"name": "b"}, "c"]}
+    # 実行
+    results = [
+        get_field(data, "tags[].name"),
+        get_field(data, "tags[main].name"),
+        get_field({"tags": "x"}, "tags[].name"),
+    ]
+    # 検証
+    assert results == [["a", "b"], ["a"], None]
 
 
 def test_set_field() -> None:
@@ -94,6 +121,15 @@ def test_set_field_when_out_of_range() -> None:
     # 実行・検証
     with pytest.raises(InvalidArgumentError):
         set_field(data, "a[3]", 2)
+
+
+def test_set_field_when_selector() -> None:
+    """要素の選び方を含むパス（異常系）。"""
+    # 準備
+    data: dict[str, Any] = {"tags": []}
+    # 実行・検証
+    with pytest.raises(InvalidArgumentError, match="を含む項目のパスには書き込めません"):
+        set_field(data, "tags[].name", "a")
 
 
 def test_delete_field() -> None:
@@ -151,6 +187,23 @@ def test_resolve_metadata_when_nested_field() -> None:
     result = resolve_metadata(data, table)
     # 検証
     assert result["description"] == "s"
+
+
+def test_resolve_metadata_when_object_array() -> None:
+    """オブジェクトの配列のタグ（正常系）。"""
+    # 準備
+    table = DocumentTable(
+        id="rules",
+        paths=["docs/*.yaml"],
+        schema_path="schemas/rule.schema.yaml",
+        metadata={"tags": "tags[].name", "main_tags": "tags[main].name"},
+    )
+    data = {"tags": [{"name": "mcp", "main": True}, {"name": "設計"}]}
+    # 実行
+    result = resolve_metadata(data, table)
+    # 検証
+    assert result["tags"] == ["mcp", "設計"]
+    assert result["main_tags"] == ["mcp"]
 
 
 def test_missing_ref_fields() -> None:

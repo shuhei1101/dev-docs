@@ -12,6 +12,7 @@ ARRAY_JOINER = ", "
 SNIPPET_SEPARATOR = "--"
 HIT_MARK = ":"
 CONTEXT_MARK = "-"
+OUTSIDE_SCOPE_LINE = "作業範囲の外（参考）"
 
 
 def _title(name: str) -> str:
@@ -65,9 +66,11 @@ def _range_line(item: SearchItem) -> str:
     return f"{item.id}: {spans} / 全 {item.total_lines} 行"
 
 
-def _full(item: SearchItem) -> list[str]:
+def _full(item: SearchItem, *, outside_scope: bool = False) -> list[str]:
     """`view: full` の文書 1 件を、`<document>` で包んだ項目の箇条書きと本文にする。"""
     attributes = f' path="{item.path}" scope="{item.scope}"' if item.path else ""
+    if outside_scope:
+        attributes += ' outside_scope="true"'
     lines = [f"<document{attributes}>", f"- id: {item.id}"]
     if item.total_lines is not None:
         lines.insert(0, _range_line(item))
@@ -95,7 +98,7 @@ def render_search_markdown(result: SearchResult, *, source_label: str) -> str:
     if result.per_source:
         counts = "・".join(f"{name} {count} 件" for name, count in result.per_source.items())
         head += f"（{counts}）"
-    lines = [head, ""]
+    lines = [*([OUTSIDE_SCOPE_LINE] if result.outside_scope else []), head, ""]
     if result.groups:
         lines.extend(["| 値 | 件数 |", "| --- | --- |"])
         lines.extend(f"| {_cell(group.value)} | {group.count} |" for group in result.groups)
@@ -103,7 +106,7 @@ def render_search_markdown(result: SearchResult, *, source_label: str) -> str:
     if result.items:
         if result.view == "full":
             for item in result.items:
-                lines.extend(_full(item))
+                lines.extend(_full(item, outside_scope=result.outside_scope))
                 lines.append("")
         else:
             lines.extend(_table(result))

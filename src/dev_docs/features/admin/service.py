@@ -1,14 +1,19 @@
-"""管理の MCP の `status`・`reload`・`check_project`・`try_convert` の中身。"""
+"""管理の MCP の `status`・`reload`・`check_project`・`try_convert`・`write_nav` の中身。"""
 
 from __future__ import annotations
 
+import copy
+import json
 import logging
 import os
 import tempfile
-from collections.abc import Mapping
+from collections.abc import Mapping, MutableMapping
 from dataclasses import replace
+from datetime import date
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
+
+from ruamel.yaml.comments import CommentedMap
 
 from dev_docs.features.access.types import Target
 from dev_docs.features.admin.types import (
@@ -17,6 +22,7 @@ from dev_docs.features.admin.types import (
     CheckProjectRequest,
     CheckProjectResult,
     CheckSync,
+    NavOperation,
     NotServedItem,
     ReloadResult,
     ScriptErrorItem,
@@ -28,11 +34,15 @@ from dev_docs.features.admin.types import (
     TryConvertRequest,
     TryConvertResult,
     VersionState,
+    WriteNavRequest,
+    WriteNavResult,
 )
 from dev_docs.features.convert.service import ConvertService
+from dev_docs.features.documents.aliases import alias_schema_version
 from dev_docs.features.documents.loader import collect_files
 from dev_docs.features.documents.schema import records_item_schema, resolve_schema_refs
 from dev_docs.features.documents.store import check_sync
+from dev_docs.features.search.fields import known_fields
 from dev_docs.features.settings.query import (
     SETTINGS_VERSION,
     listen_port,
@@ -40,17 +50,26 @@ from dev_docs.features.settings.query import (
 )
 from dev_docs.features.sources.service import assemble_source
 from dev_docs.features.sources.types import SOURCE_CONFIG_VERSION, ServedSource
+from dev_docs.features.view.nav import (
+    check_nav_filters,
+    nav_auto_counts,
+    nav_warnings,
+    zero_count_warnings,
+)
 from dev_docs.shared.errors import (
     ConfigNotFoundError,
     ConfigParseError,
     ConvertScriptError,
     DocumentNotFoundError,
+    InvalidArgumentError,
+    NavInvalidError,
     ValidationFailedError,
     Violation,
 )
+from dev_docs.shared.files import replace_file
 from dev_docs.shared.paths import normalize_path
 from dev_docs.shared.version import RUNNING_VERSION
-from dev_docs.shared.yaml_io import YamlLoadError, load_yaml
+from dev_docs.shared.yaml_io import YamlLoadError, dump_roundtrip, load_roundtrip, load_yaml
 
 if TYPE_CHECKING:
     from dev_docs.main import Handlers
@@ -246,6 +265,7 @@ def check_project(request: CheckProjectRequest, *, handlers: Handlers) -> CheckP
             for item in candidate.script_violations
         ],
         sync=None,
+        alias_schema_version=alias_schema_version(),
     )
     # 配信元を組み立てられなかった（違反かスクリプトの失敗）ときは、ここまで
     source = candidate.source
@@ -274,7 +294,7 @@ def check_project(request: CheckProjectRequest, *, handlers: Handlers) -> CheckP
         registered_id=registered_id,
         config_version=candidate.config_version,
         version_state=state,
-        violations=[],
+        violations=list(report.alias_violations),
         missing_paths=missing_paths,
         script_errors=[],
         sync=CheckSync(
@@ -283,6 +303,8 @@ def check_project(request: CheckProjectRequest, *, handlers: Handlers) -> CheckP
             missing_body_files=counts.missing_body_files,
             items=items[:SYNC_ITEMS_LIMIT],
         ),
+        warnings=nav_warnings(handlers.store, source),
+        alias_schema_version=alias_schema_version(),
     )
 
 
@@ -377,4 +399,181 @@ def try_convert(request: TryConvertRequest, *, handlers: Handlers) -> TryConvert
         kind=table.id,
         converter=used,
         markdown=DOCUMENT_SEPARATOR.join(item.markdown for item in converted),
+    )
+
+
+NAV_ITEM_SEPARATOR = " > "
+
+
+def _nav_invalid_argument(index: int, rule: str, fix: str = "") -> InvalidArgumentError:
+    """`operations[{index}]` の違反 1 件の `InvalidArgumentError` を作る。"""
+    return InvalidArgumentError(
+        message="引数が正しくありません: 1 件",
+        violations=[Violation(path=f"operations[{index}]", rule=rule, fix=fix)],
+    )
+
+
+def _find_tab(
+    tabs: list[MutableMapping[str, Any]], title: str, index: int
+) -> MutableMapping[str, Any]:
+    """名前でタブを引く（無ければ今のタブの名前を添えた `InvalidArgumentError`）。"""
+    found = next((tab for tab in tabs if tab.get("title") == title), None)
+    if found is None:
+        names = "、".join(str(tab.get("title")) for tab in tabs) or "なし"
+        raise _nav_invalid_argument(index, f"タブ {title} がありません", f"今のタブ: {names}")
+    return found
+
+
+def _find_group(
+    items: list[Any], name: str, index: int
+) -> tuple[list[Any], MutableMapping[str, Any]]:
+    """名前で `group` を引き、親の並びとその項目を返す。"""
+    found = next(
+        (item for item in items if item.get("group") == name or item.get("title") == name), None
+    )
+    if found is None:
+        names = "、".join(str(item["group"]) for item in items if "group" in item) or "なし"
+        raise _nav_invalid_argument(index, f"group {name} がありません", f"今の group: {names}")
+    if "group" not in found:
+        raise _nav_invalid_argument(index, f"{name} は group ではありません")
+    return items, found
+
+
+def _apply_nav_operation(nav: dict[str, Any], operation: NavOperation, index: int) -> None:
+    """`nav` の複製に操作 1 件を当てる。"""
+    if operation.op in ("add", "update") and operation.value is None:
+        raise _nav_invalid_argument(index, f"{operation.op} には value が要ります")
+    tabs: list[MutableMapping[str, Any]] = nav.setdefault("tabs", [])
+    value = copy.deepcopy(operation.value or {})
+    if operation.item is None:
+        if operation.op == "add":
+            if any(tab.get("title") == operation.tab for tab in tabs):
+                raise _nav_invalid_argument(index, f"タブ {operation.tab} は既にあります")
+            tabs.append(value)
+            return
+        tab = _find_tab(tabs, operation.tab, index)
+        if operation.op == "update":
+            tab.update(value)
+        else:
+            tabs.remove(tab)
+        return
+    parent: list[Any] = _find_tab(tabs, operation.tab, index).setdefault("items", [])
+    group: MutableMapping[str, Any] | None = None
+    for name in operation.item.split(NAV_ITEM_SEPARATOR):
+        if group is not None:
+            parent = group.setdefault("items", [])
+        parent, group = _find_group(parent, name, index)
+    assert group is not None  # noqa: S101
+    if operation.op == "add":
+        children: list[Any] = group.setdefault("items", [])
+        if "group" in value and any(item.get("group") == value["group"] for item in children):
+            raise _nav_invalid_argument(index, f"group {value['group']} は既にあります")
+        children.append(value)
+    elif operation.op == "update":
+        group.update(value)
+    else:
+        parent.remove(group)
+
+
+def _overlaid_nav(handlers: Handlers, config_file: Path) -> Path | None:
+    """`config` の先頭が同じ `dev-docs.yaml` の行で、`nav` を持つ 2 つ目以降のファイルを返す。"""
+    for entry in handlers.terminal.sources:
+        if normalize_path(entry.config[0]) != config_file:
+            continue
+        for extra in entry.config[1:]:
+            path = normalize_path(extra)
+            try:
+                value = load_yaml(path.read_text(encoding="utf-8"), file=str(path))
+            except OSError, UnicodeDecodeError, YamlLoadError:
+                continue
+            if isinstance(value, dict) and "nav" in value:
+                return path
+    return None
+
+
+def _nav_documents(handlers: Handlers, source: ServedSource) -> tuple[list[Any], dict[str, str]]:
+    """配信元の文書と、行ごとの文書に当てるスキーマから使える項目を返す。"""
+    target = Target(source, source.root, None, None, "read")
+    documents = handlers.store.load(target).documents
+    fields = known_fields(
+        handlers.store.row_schema(target, row.id) for row in source.config.documents if row.enabled
+    )
+    return documents, fields
+
+
+def write_nav(request: WriteNavRequest, *, handlers: Handlers) -> WriteNavResult:
+    """`dev-docs.yaml` の `nav` のタブと group を名前で指して追加・修正・削除する。"""
+    target = normalize_path(request.path)
+    root = target.parent if target.suffix == ".yaml" else target
+    config_file = root / CONFIG_FILE
+    if not config_file.is_file():
+        raise ConfigNotFoundError(
+            message=f"配信元の設定がありません: {config_file}",
+            path=str(config_file),
+            next_steps=["/dev-docs:setup で配信元を追加してください"],
+        )
+    try:
+        doc = load_roundtrip(config_file.read_text(encoding="utf-8"), file=str(config_file))
+    except YamlLoadError as error:
+        raise ConfigParseError(
+            message=f"配信元の設定を読めません: {config_file}（{error}）",
+            line=error.line,
+            column=error.column,
+        ) from error
+    overlaid = _overlaid_nav(handlers, config_file)
+    if overlaid is not None:
+        raise InvalidArgumentError(
+            message="引数が正しくありません: 1 件",
+            violations=[
+                Violation(
+                    path="path",
+                    rule=(
+                        f"重ねた設定のファイル {overlaid} が nav を持つため、"
+                        "配信に出るのはそちらの nav です"
+                    ),
+                    fix="重ねた設定のファイルの nav を外してください",
+                )
+            ],
+        )
+    current = doc.get("nav")
+    nav: dict[str, Any] = (
+        json.loads(json.dumps(current)) if isinstance(current, Mapping) else {"tabs": []}
+    )
+    for index, operation in enumerate(request.operations):
+        _apply_nav_operation(nav, operation, index)
+    doc["nav"] = nav
+    text = dump_roundtrip(doc)
+    # 書いた後の設定を使い捨てのフォルダに置き、配信元を組み立てて確かめる
+    with tempfile.TemporaryDirectory() as directory:
+        file = Path(directory) / CONFIG_FILE
+        file.write_text(text, encoding="utf-8")
+        source, _, violations = assemble_source(
+            [file], source_id=None, scope_read=[], scope_write=None, root_override=root
+        )
+    nav_violations = [
+        item for item in violations if item.path == "nav" or item.path.startswith("nav.")
+    ]
+    documents: list[Any] = []
+    fields: dict[str, str] = {}
+    if source is not None:
+        documents, fields = _nav_documents(handlers, source)
+        nav_violations.extend(
+            check_nav_filters(
+                nav,
+                table_ids=[row.id for row in source.config.documents if row.enabled],
+                fields=fields,
+            )
+        )
+    if nav_violations:
+        raise NavInvalidError(
+            message=f"画面の構成が正しくありません: {len(nav_violations)} 件",
+            violations=nav_violations,
+        )
+    replace_file(config_file, text)
+    counts = nav_auto_counts(nav, documents, fields=fields, today=date.today())  # noqa: DTZ011
+    return WriteNavResult(
+        path=str(config_file),
+        nav=dump_roundtrip(CommentedMap(nav)),
+        counts=counts,
+        warnings=zero_count_warnings(counts),
     )

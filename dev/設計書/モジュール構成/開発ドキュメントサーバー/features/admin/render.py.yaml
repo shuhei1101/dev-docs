@@ -131,7 +131,7 @@ functions:
     process: |-
       1. 1 行目に `{path}`。`registered_id` があれば `（登録済み: {id}）`、無ければ `（未登録）` を続ける
       2. `設定のバージョン: {config_version}（{version_state}）` を置く。読めなければ `-`
-      3. `違反` を置く。あれば件数を書き、`- {path}: {rule}` を並べる
+      3. `違反` を置く。あれば件数を書き、`- {path}: {rule}`（`doc` があれば `- {doc}: {path}: {rule}`）を並べる。続けて `警告` があれば件数と同じ書式の内訳を並べる。`alias_schema_version` が空でなければ `エイリアスのスキーマ: {alias_schema_version}` を置く
       4. `missing_paths`・`script_errors` があれば、`無いパス`・`スクリプトの失敗` の件数と内訳を並べる
       5. `sync` があれば `索引の同期` に 0 でない件数を並べ、`- {kind}: {path}` の内訳を続ける。全て 0 なら `索引の同期: ずれなし`。内訳が件数より少なければ `（先頭 {件数} 件）` を添える
     unit_tests:
@@ -195,5 +195,36 @@ functions:
     callers:
       - '#functions[render_status]'
       - '#functions[render_reload]'
+  - name: render_write_nav
+    title: 画面の構成の書き込みの文
+    kind: 関数
+    container: features/admin/render.py
+    usecase: 画面の構成の書き込み
+    role: 表示
+    summary: 画面の構成の書き込みの結果を Markdown にする
+    scope: public
+    thread_safe: true
+    args:
+      - name: result
+        title: 書き込みの結果
+        type: WriteNavResult
+        required: true
+        passing: positional
+        description: '`write_nav` の結果'
+    returns:
+      type: str
+      description: Markdown
+    process: |-
+      1. 1 行目に `{path} の nav を書きました` を置く
+      2. `| 条件 | タブ | 文書の数 |` の表に `counts` を並べる
+      3. `warnings` があれば `警告: {件数} 件` と `- {path}: {rule}` を並べる
+      4. `nav` を `yaml` のコードブロックで続ける
+    unit_tests:
+      - name: test_render_write_nav
+        case: 正常
+        summary: 数と警告
+        condition: '`counts` が 2 件（うち 1 件が 0）、`warnings` が 1 件'
+        mock: なし
+        expected: '表に 2 行、`警告: 1 件` の下に 1 行、末尾に `nav` のコードブロック'
 test_files:
   - tests/unit/dev_docs/features/admin/test_render.py

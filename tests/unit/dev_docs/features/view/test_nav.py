@@ -1,9 +1,15 @@
 from __future__ import annotations
 
 from collections.abc import Callable
+from datetime import date
+from pathlib import Path
 from typing import Any
 
+from dev_docs.features.documents.store import DocumentStore
 from dev_docs.features.documents.types import Document
+from dev_docs.features.history.snapshot import SnapshotStore
+from dev_docs.features.settings.types import SourceEntry
+from dev_docs.features.sources.service import load_source
 from dev_docs.features.sources.types import DocumentTable, ServedSource, SourceConfig
 from dev_docs.features.view.nav import build_nav, mark_nav_changes
 from dev_docs.features.view.types import NavItem, NavTab
@@ -206,3 +212,195 @@ def test_mark_nav_changes_when_group_missing() -> None:
     # 検証
     last = result[0].items[-1]
     assert (last.path, last.change) == ("docs/y", "deleted")
+
+
+MCP_FILTER = {"field": "tags", "op": "eq", "values": ["mcp"]}
+NONE_FILTER = {"field": "tags", "op": "eq", "values": ["none"]}
+TODAY = date(2026, 10, 31)
+
+
+def _tagged_documents(make_document: Callable[..., Document]) -> list[Document]:
+    """`tags: [mcp]` の文書を rules と notes に 1 件ずつ、タグの無い文書を rules に 1 件作る。"""
+    return [
+        make_document(
+            id="rule-mcp",
+            kind="rules",
+            path="docs/rule/mcp.yaml",
+            data={"tags": ["mcp"]},
+            metadata={"tags": ["mcp"]},
+        ),
+        make_document(id="rule-plain", kind="rules", path="docs/rule/plain.yaml"),
+        make_document(
+            id="notes/mcp",
+            kind="prompts",
+            path="prompts/mcp.md",
+            data={"tags": ["mcp"]},
+            metadata={"tags": ["mcp"]},
+        ),
+    ]
+
+
+def test_build_nav_when_filter(
+    make_served_source: Callable[..., ServedSource],
+    make_source_config: Callable[..., SourceConfig],
+    make_document: Callable[..., Document],
+) -> None:
+    """条件で絞った auto（正常系）。"""
+    # 準備
+    nav = {
+        "tabs": [
+            {"title": "mcp", "items": [{"auto": {"filter": MCP_FILTER}}]},
+            {
+                "title": "規約の mcp",
+                "items": [{"auto": {"document": "rules", "filter": MCP_FILTER}}],
+            },
+        ]
+    }
+    source = make_served_source(config=make_source_config(documents=_tables(), nav=nav))
+    # 実行
+    tabs = build_nav(source, _tagged_documents(make_document))
+    # 検証
+    assert [(item.kind, item.path) for item in tabs[0].items] == [
+        ("page", "docs/rule/mcp"),
+        ("page", "prompts/mcp"),
+    ]
+    assert [(item.kind, item.path) for item in tabs[1].items] == [("page", "docs/rule/mcp")]
+
+
+def test_nav_auto_counts(make_document: Callable[..., Document]) -> None:
+    """入れ子の auto を数える（正常系）。"""
+    from dev_docs.features.search.fields import known_fields
+    from dev_docs.features.view.nav import nav_auto_counts
+
+    # 準備
+    nav = {
+        "tabs": [
+            {"title": "mcp", "items": [{"auto": {"filter": MCP_FILTER}}]},
+            {
+                "title": "設計",
+                "items": [{"group": "規約", "items": [{"auto": {"document": "rules"}}]}],
+            },
+            {"title": "none", "items": [{"auto": {"filter": NONE_FILTER}}]},
+        ]
+    }
+    # 実行
+    result = nav_auto_counts(
+        nav, _tagged_documents(make_document), fields=known_fields([]), today=TODAY
+    )
+    # 検証
+    assert [(count.path, count.tab, count.count) for count in result] == [
+        ("nav.tabs[0].items[0].auto", "mcp", 2),
+        ("nav.tabs[1].items[0].items[0].auto", "設計", 2),
+        ("nav.tabs[2].items[0].auto", "none", 0),
+    ]
+
+
+def test_check_nav_filters() -> None:
+    """知らない項目と無い行（異常系）。"""
+    from dev_docs.features.search.fields import known_fields
+    from dev_docs.features.view.nav import check_nav_filters
+
+    # 準備
+    nav = {
+        "tabs": [
+            {
+                "title": "x",
+                "items": [{"auto": {"filter": {"field": "nmae", "op": "eq", "values": ["x"]}}}],
+            },
+            {"title": "y", "items": [{"auto": {"document": "none"}}]},
+        ]
+    }
+    # 実行
+    result = check_nav_filters(nav, table_ids=["rules"], fields=known_fields([]))
+    # 検証
+    assert [item.path for item in result] == [
+        "nav.tabs[0].items[0].auto.filter.field",
+        "nav.tabs[1].items[0].auto.document",
+    ]
+    assert "name" in result[0].fix
+
+
+def test_nav_warnings(
+    make_alias_source_dir: Callable[..., Path],
+    make_entry: Callable[..., SourceEntry],
+    tmp_path: Path,
+) -> None:
+    """0 件の条件（正常系）。"""
+    from dev_docs.features.view.nav import nav_warnings
+
+    # 準備
+    config = make_alias_source_dir(none_nav=True)
+    source, _ = load_source(make_entry(str(config), source_id="sample"), index=0)
+    assert source is not None
+    store = DocumentStore(SnapshotStore(tmp_path / "snapshots"))
+    # 実行
+    result = nav_warnings(store, source, today=TODAY)
+    # 検証
+    assert [item.path for item in result] == ["nav.tabs[1].items[0].auto.filter"]
+    assert result[0].rule.startswith("none:")
+
+
+def test_nav_warnings_when_no_nav(
+    make_alias_source_dir: Callable[..., Path],
+    make_entry: Callable[..., SourceEntry],
+    tmp_path: Path,
+) -> None:
+    """nav が無い（正常系）。"""
+    from dev_docs.features.view.nav import nav_warnings
+
+    # 準備
+    config = make_alias_source_dir()
+    source, _ = load_source(make_entry(str(config), source_id="sample"), index=0)
+    assert source is not None
+    store = DocumentStore(SnapshotStore(tmp_path / "snapshots"))
+    # 実行
+    result = nav_warnings(store, source, today=TODAY)
+    # 検証
+    assert result == []
+
+
+OWNER_FILTER = {"field": "owner", "op": "eq", "values": ["alice"]}
+
+
+def test_build_nav_when_records_filter(
+    make_records_nav_source_dir: Callable[..., Path],
+    make_entry: Callable[..., SourceEntry],
+    tmp_path: Path,
+) -> None:
+    """records の行の 1 行の項目で絞った auto（正常系）。"""
+    from dev_docs.features.access.types import Target
+
+    # 準備
+    config = make_records_nav_source_dir(
+        "priority",
+        "integer",
+        {"a": 10, "b": 9},
+        nav_filter={"field": "priority", "op": "gte", "values": ["10"]},
+    )
+    source, _ = load_source(make_entry(str(config), source_id="sample"), index=0)
+    assert source is not None
+    store = DocumentStore(SnapshotStore(tmp_path / "snapshots"))
+    documents = store.load(Target(source, source.root, None, None, "read")).documents
+    # 実行
+    tabs = build_nav(source, documents)
+    # 検証
+    assert [(item.kind, item.path) for item in tabs[0].items] == [("page", "notes/files/notes/a")]
+
+
+def test_nav_warnings_when_records_filter(
+    make_records_nav_source_dir: Callable[..., Path],
+    make_entry: Callable[..., SourceEntry],
+    tmp_path: Path,
+) -> None:
+    """records の行の 1 行の項目の条件を警告しない（正常系）。"""
+    from dev_docs.features.view.nav import nav_warnings
+
+    # 準備
+    config = make_records_nav_source_dir("owner", "string", {"a": "alice"}, nav_filter=OWNER_FILTER)
+    source, _ = load_source(make_entry(str(config), source_id="sample"), index=0)
+    assert source is not None
+    store = DocumentStore(SnapshotStore(tmp_path / "snapshots"))
+    # 実行
+    result = nav_warnings(store, source, today=TODAY)
+    # 検証
+    assert result == []

@@ -504,6 +504,115 @@ flows:
       - 1 回目が `d1` の 1 件を返し、`values.name` が `決定 1`、`values.description` が `要約 1` になる
       - 2 回目（列名 `title` で絞る）も `d1` を返す
     test: test_normal_when_metadata_mapped
+  - name: 正常系（作業範囲の外を参考に読む）
+    summary: '`outside_scope: true` で、`scope` に当たらない配信元の文書を作業範囲の外（参考）として返す'
+    setup:
+      - name: Mock
+        description: なし
+      - name: 配信元
+        description: sample（`scope.read`・`scope.write` は sample のフォルダ）と、文書 2 件を持つ other（`scope.read` は other のフォルダだけ）
+        notes: 端末の設定の other の行は `outside_read` を書かない（既定 `true`）
+      - name: 入力
+        description: '`source: other`, `outside_scope: true`, `view: full`。`cwd` は sample のクローン本体'
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        participant C as クライアント
+        participant T as search_docs
+        participant ST as other のファイル
+        participant L as 要求のログ
+
+        C->>T: source: other, outside_scope: true, view: full
+        T->>T: scope に cwd が当たらず、outside_read が真
+        T-->>ST: 文書を読む
+        T->>L: cwd と other を残す
+        T-->>C: 作業範囲の外（参考）、文書 2 件の本文
+      ```
+    expected:
+      - 先頭の行に「作業範囲の外（参考）」があり、other の文書 2 件を返す
+      - 各文書の `<document>` に `outside_scope="true"` が付く
+      - '`format: json` の `outside_scope` が `true`'
+      - 要求のログに sample のクローン本体のパスと `other` が残る
+      - '`source: *` に `outside_scope: true` を渡しても other の文書を返さない'
+    test: test_normal_when_outside_scope
+  - name: 異常系（作業範囲の外の参照を断る・SourceNotReadableError）
+    summary: '`outside_read: false` の配信元は `outside_scope: true` でも断る'
+    setup:
+      - name: Mock
+        description: なし
+      - name: 配信元
+        description: '正常系（作業範囲の外を参考に読む）と同じ sample・other。端末の設定の other の行に `outside_read: false`'
+      - name: 入力
+        description: '`source: other`, `outside_scope: true`。`cwd` は sample のクローン本体'
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        participant C as クライアント
+        participant T as search_docs
+
+        C->>T: source: other, outside_scope: true
+        T->>T: scope に cwd が当たらず、outside_read が偽
+        T-->>C: isError（読めない配信元）
+      ```
+    expected:
+      - '`isError: true` で、other を読めないことを返す'
+      - '`fix` が `outside_scope: true` を案内しない'
+      - 要求のログに作業範囲の外の記録を残さない
+      - '`outside_read` が真の other に `outside_scope` を渡さずに呼ぶと、`fix` が `outside_scope: true` を案内する'
+    test: test_error_when_outside_read_disabled
+  - name: 正常系（用語で引く）
+    summary: '`term` で、`alias_type` を持つ行の文書を `name`・`aliases` の語で引く'
+    setup:
+      - name: Mock
+        description: なし
+      - name: 用語の種類
+        description: 'sample に `alias_type` を持つ種類の行を加え、文書 `作業範囲`（`name: 作業範囲`、`aliases: [scope, 担当範囲]`）を置く'
+      - name: ほかの文書
+        description: sample の文書 1（`alias_type` を持たない行）の `name` と本文に `担当範囲` を含める
+      - name: 入力
+        description: '`term: 担当範囲`'
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        participant C as クライアント
+        participant T as search_docs
+
+        C->>T: term: 担当範囲
+        T->>T: alias_type を持つ行の文書の name・aliases を正規化して比べる
+        T-->>C: 文書「作業範囲」
+      ```
+    expected:
+      - 文書「作業範囲」だけを返し、文書 1 は返さない
+      - '`term: 作業範囲`・`term: SCOPE` も同じ文書を返す'
+      - '`term: 担当` は 0 件（部分一致しない）'
+      - '`alias_type` を持つ行が無い配信元では 0 件で、`notes` にその旨を返す'
+    test: test_normal_when_term
+  - name: 正常系（オブジェクトの配列のタグ）
+    summary: '`tags[].name` で取り出したタグと `main_tags` で絞り、数える'
+    setup:
+      - name: Mock
+        description: なし
+      - name: オブジェクトの配列のタグ
+        description: 'sample の種類の文書 1 が `tags: [{name: mcp, main: true}, {name: 設計}]`、文書 2 が `tags: [{name: MCP}, {name: 設計, main: true}]` を持つ'
+        notes: '種類の行の `metadata` は `{tags: tags[].name, main_tags: tags[main].name}`'
+      - name: 入力
+        description: '`filter` が `tags` の `eq` `mcp`'
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        participant C as クライアント
+        participant T as search_docs
+
+        C->>T: filter: tags eq mcp
+        T->>T: tags[].name で各要素の name を取り出し、正規化して比べる
+        T-->>C: 文書 1・文書 2
+      ```
+    expected:
+      - '`tags` が `mcp` の条件で文書 1・文書 2 を返す'
+      - '`main_tags` が `mcp` の条件で文書 1 だけを返す'
+      - '`view: count, group_by: tags` が `MCP` 2・`設計` 2 を返す（`mcp`・`MCP` は 1 つにまとめ、表記は同数なので値の昇順で先の `MCP`）'
+      - '`fields: [tags, main_tags]` が文書 1 で `tags: [mcp, 設計]`・`main_tags: [mcp]` を返す'
+    test: test_normal_when_tags_are_objects
 lead: '条件に当たる文書を、指定した項目・量・順で返す。ID で絞れば取得、`view: summary` で一覧、`view: count` で件数、`group_by` で集計になる。'
 identifier: search_docs
 permissions: 対象の配信元の `scope.read` か `scope.write` に `cwd` が当たること
@@ -745,6 +854,22 @@ request:
     description: 返す行の数
     constraints: 1 以上
     status: planned
+  - name: outside_scope
+    type: bool
+    required: false
+    default: '`false`'
+    location: argument
+    description: '`true` のとき、`cwd` が `scope` に当たらない配信元も、端末の設定の `sources[].outside_read` が真なら作業範囲の外（参考）として読む'
+    constraints: '`source` に ID を 1 つ渡したときだけ効く。配列・`*` は `scope` に当たる配信元だけを対象にする'
+    status: planned
+  - name: term
+    type: str
+    required: false
+    default: なし（用語で絞らない）
+    location: argument
+    description: 用語。`alias_type` を持つ documents の行の文書のうち、`name` か `aliases` の値がこの語に一致する文書に当たる
+    notes: 条件の比較と同じ正規化（NFKC と `casefold`）をして完全一致で比べる。`filter` と同時に渡すと両方に当たる文書を返す。`alias_type` を持つ行が無い配信元では 0 件で、`notes` で知らせる
+    status: planned
 request_example: |-
   ```json
   {
@@ -829,6 +954,10 @@ response:
     type: int
     description: 本文の全体の行数
     notes: '`items[].ranges` と同じ条件で持つ'
+  - name: outside_scope
+    type: bool
+    description: 作業範囲の外から読んだか
+    notes: '`format: markdown` は先頭の行に「作業範囲の外（参考）」を出し、`view: full` の `<document>` に `outside_scope="true"` を付ける'
 response_example: |-
   ```markdown
   sample: 該当 2 件・返した 2 件
@@ -849,8 +978,8 @@ exceptions:
   - name: なし（正常終了）
     condition: 検索できた（読めなかったファイルがあっても `notes` で知らせて正常終了）
   - name: SourceNotReadableError
-    condition: '`cwd` が配信元の `scope.read`・`scope.write` に当たらない、または `cwd` が無い'
-    notes: 今の作業場所から使える配信元の一覧を添える
+    condition: '`cwd` が配信元の `scope.read`・`scope.write` に当たらない（`outside_scope: true` のときは、加えて `outside_read` が偽）、または `cwd` が無い'
+    notes: '今の作業場所から使える配信元の一覧を添える。`outside_read` が真で `outside_scope` を渡していないときは、`fix` に `outside_scope: true` で作業範囲の外を参考に読めることを添える'
   - name: SourceNotServedError
     condition: '端末の設定にあるが、起動時の検証で外したか `enabled: false` の配信元を指した'
     notes: 違反したキーのパスと理由を添える
@@ -892,6 +1021,11 @@ constraints:
   - item: 返し済みの記録
     constraint: '`sections`・`lines` を渡した呼び出しは、返した文書を記録せず、返し済みでも切り出した本文を返す。ほかの呼び出しは `scope` によらず本文を返した文書を記録し、返し済みの本文を省く'
     notes: 既存の呼び出し（`max_chars_per_field` で切った本文・`body_file` の無い `records` の要素を含む）の記録は変えない
+  - item: 作業範囲の外の記録
+    constraint: '`outside_scope: true` で作業範囲の外の配信元を読んだ呼び出しは、作業場所（`cwd`）と配信元の ID を要求のログに残す'
+  - item: オブジェクトの配列のタグ
+    constraint: '種類の行の `metadata` に `tags: tags[].name` と書くと、各要素の `name` の文字列の配列を `tags` として扱う。共通のキー `main_tags` は、`main_tags: tags[main].name` のように `[{真偽値のキー}]` で絞った要素の `name` を取り出す。どちらも `filter`・`group_by`・`fields` で他の共通のキーと同じように使える'
+    notes: '`[]` と `[{キー}]` を使わない `metadata`（`a.b[0].c`）は今のまま読む'
   - item: records の行のスキーマ
     constraint: '`records` を持つ行の `schema` はファイル全体のスキーマとし、要素 1 つずつの検査と項目の一覧には `properties.{records}.items` を当てる'
     notes: 書き込み（`write_docs`）・`check_project` も同じ当て方

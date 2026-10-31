@@ -142,6 +142,7 @@ scenarios:
       ```
     expected:
       - '`isError: true` で、other を読めないことと、今の作業場所から使える配信元の一覧（`describe()` と同じ）を返す'
+      - 'エラーの直し方（`fix`）が、作業範囲の外を参考に読むときは `outside_scope: true` を渡すことを案内する'
       - other の文書を返さない
       - '`source: *` は other を対象に含めない'
       - '`cwd` を持たない呼び出しは、どの配信元も読めないとして同じエラーを返す'
@@ -409,6 +410,186 @@ scenarios:
       - '`設計` が件数 1 で返り、件数の降順・値の昇順に並ぶ'
       - '`tags` が `mcp` の `search_docs` が、文書 2 も含めて 3 件を返す'
     test: test_normal_when_tags_grouped
+  - name: 正常シナリオ（作業範囲の外を参考に読む）
+    setup:
+      - name: Mock
+        description: なし（実環境で実行。`cwd` はテストが引数に入れる）
+      - name: 別の配信元
+        description: 文書の種類を 1 つと文書 2 件（片方の `related` がもう片方を指す）を持つ Git の配信元
+        notes: id `other`。`scope.read` は other のフォルダだけ。端末の設定の `outside_read` は書かない（既定 `true`）
+      - name: dev-docs
+        description: sample と other を配信している dev-docs
+        notes: '`cwd` は sample のクローン本体'
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        actor A as エージェント
+        participant M as 文書の MCP（/mcp）
+        participant ST as other の文書
+        participant L as 要求のログ
+
+        A->>M: describe(source: other, outside_scope: true)
+        M->>M: other の scope.read に cwd が当たらず、outside_read が真
+        M-->>A: 説明書と種類の一覧（作業範囲の外（参考））
+        A->>M: search_docs(source: other, outside_scope: true, view: full)
+        M->>ST: 文書を読む
+        M->>L: 作業場所と配信元 other を残す
+        M-->>A: 文書の本文（作業範囲の外（参考））
+        A->>M: trace_related(source: other, from_ids: 文書 1, outside_scope: true)
+        M-->>A: 文書 2（作業範囲の外（参考））
+        A->>M: list_changes(source: other, from: 1 つ前の commit, outside_scope: true)
+        M-->>A: 変わった文書（作業範囲の外（参考））
+      ```
+    expected:
+      - '`outside_scope: true` の `describe`・`search_docs`・`trace_related`・`list_changes` が other の結果を返す'
+      - 返した文書・一覧の行に「作業範囲の外（参考）」の表示が付く
+      - 要求のログに、外から読んだ呼び出しの作業場所（`cwd`）と配信元 `other` が残る
+      - '`outside_scope` を省いた同じ呼び出しは、異常シナリオ（読めない配信元を指す）と同じエラーを返す'
+      - '`source: *` に `outside_scope: true` を渡しても、`scope.read` に当たらない other は対象に含めない'
+      - 引数なしの `describe()` は other を一覧に載せない
+    test: test_normal_when_outside_scope
+  - name: 異常シナリオ（作業範囲の外の参照を断る配信元を指す）
+    setup:
+      - name: Mock
+        description: なし（実環境で実行。`cwd` はテストが引数に入れる）
+      - name: 別の配信元
+        description: 正常シナリオ（作業範囲の外を参考に読む）と同じ other
+        notes: '端末の設定の other の行に `outside_read: false`'
+      - name: dev-docs
+        description: sample と other を配信している dev-docs
+        notes: '`cwd` は sample のクローン本体'
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        actor A as エージェント
+        participant M as 文書の MCP（/mcp）
+
+        A->>M: search_docs(source: other, outside_scope: true)
+        M->>M: other の scope.read に cwd が当たらず、outside_read が偽
+        M-->>A: エラー（読めない配信元）
+      ```
+    expected:
+      - '`isError: true` で、other を読めないことを返す'
+      - 'エラーの直し方（`fix`）が `outside_scope: true` を案内しない'
+      - other の文書を返さない
+      - 要求のログに外から読んだ記録を残さない
+    test: test_error_when_outside_read_disabled
+  - name: 正常シナリオ（ブランチとワークツリーを引く）
+    setup:
+      - name: Mock
+        description: なし（実環境で実行。`cwd` はテストが引数に入れる）
+      - name: ブランチとタグ
+        description: sample に `develop` ブランチと `v0.1.0` タグを作る
+        notes: '`dev-docs.yaml` の `default_ref` は `develop`'
+      - name: ワークツリー
+        description: sample の `.claude/worktrees/x`（ブランチ `feat/x` を checkout）
+        notes: 配信元の設定の `worktrees` は既定（`[./.claude/worktrees/*]`）
+      - name: dev-docs
+        description: sample を配信している dev-docs
+        notes: '`cwd` は sample のクローン本体'
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        actor A as エージェント
+        participant M as 文書の MCP（/mcp）
+        participant G as sample のリポジトリ
+
+        A->>M: describe(source: sample)
+        M->>G: ブランチ・タグと、worktrees に当たるワークツリーを引く
+        M-->>A: 説明書と種類の一覧、ブランチ・タグ、ワークツリーのパスと checkout しているブランチ
+        A->>M: search_docs(worktree: ワークツリー x のパス, filter: id が文書 1)
+        M-->>A: ワークツリーの文書 1
+      ```
+    expected:
+      - '`describe(source: sample)` がブランチ（`develop`・`feat/x` を含む）とタグ（`v0.1.0`）を返す'
+      - '`describe(source: sample)` がワークツリー x の絶対パスと、checkout しているブランチ `feat/x` を返す'
+      - 返したワークツリーのパスを `worktree` に渡した `search_docs` が、ワークツリーの文書 1 を返す
+      - 最近の commit は返さない
+    test: test_normal_when_describe_lists_refs_and_worktrees
+  - name: 正常シナリオ（オブジェクトの配列のタグで絞る）
+    setup:
+      - name: Mock
+        description: なし（実環境で実行。`cwd` はテストが引数に入れる）
+      - name: オブジェクトの配列のタグ
+        description: 'sample の種類の文書が `tags` を `{name, main}` のオブジェクトの配列で持つ。文書 1 は `[{name: mcp, main: true}, {name: 設計}]`、文書 2 は `[{name: MCP}, {name: 設計, main: true}]`'
+        notes: '`dev-docs.yaml` の documents の行の `metadata` に `tags: tags[].name` と、`main` が真の要素の `name` を共通のキー `main_tags` へ取り出す指定'
+      - name: dev-docs
+        description: sample を配信している dev-docs
+        notes: '`cwd` は sample のクローン本体'
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        actor A as エージェント
+        participant M as 文書の MCP（/mcp）
+
+        A->>M: search_docs(filter: tags が mcp, view: summary)
+        M->>M: metadata の tags[].name で各要素の name を取り出し、正規化して比べる
+        M-->>A: 文書 1・文書 2
+        A->>M: search_docs(filter: main_tags が mcp, view: summary)
+        M-->>A: 文書 1
+        A->>M: search_docs(view: count, group_by: tags)
+        M-->>A: タグごとの件数（MCP 2、設計 2）
+      ```
+    expected:
+      - '`tags` が `mcp` の `search_docs` が、`MCP` を付けた文書 2 も含めて 2 件を返す'
+      - '`main_tags` が `mcp` の `search_docs` が、`main: true` で `mcp` を持つ文書 1 だけを返す'
+      - '`group_by: tags` が、オブジェクトの `name` を数えて `MCP` 2・`設計` 2 を返す（`mcp`・`MCP` は 1 つにまとめ、表記は同数なので値の昇順で先の `MCP`）'
+      - '`fields: [tags]` の `search_docs` が、文字列の配列（`[mcp, 設計]`）を返す'
+      - '`[]` を使わない `metadata` の配信元は今のまま引ける'
+    test: test_normal_when_tags_are_objects
+  - name: 正常シナリオ（エイリアスの語で用語を引く）
+    setup:
+      - name: Mock
+        description: なし（実環境で実行。`cwd` はテストが引数に入れる）
+      - name: 用語の種類
+        description: sample に用語の種類を加え、文書 `作業範囲` を置く。`name` は `作業範囲`、`aliases` は `[scope, 担当範囲]`
+        notes: '`dev-docs.yaml` の documents の行に `alias_type` を持ち、`metadata` のエイリアスのキーが alias-inject のスキーマに通る'
+      - name: 用語を含むほかの文書
+        description: sample の文書 1（`alias_type` を持たない行）の本文と `name` に `担当範囲` を含める
+      - name: dev-docs
+        description: sample を配信している dev-docs
+        notes: '`cwd` は sample のクローン本体'
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        actor A as エージェント
+        participant M as 文書の MCP（/mcp）
+
+        A->>M: search_docs(term: 担当範囲)
+        M->>M: alias_type を持つ行の文書の name と aliases に照合する
+        M-->>A: 文書「作業範囲」
+        A->>M: list_match_words(source: sample)
+        M-->>A: 照合する語の一覧（作業範囲・scope・担当範囲 と文書の id）
+      ```
+    expected:
+      - '`search_docs(term: 担当範囲)` が、`aliases` に持つ文書「作業範囲」を返す'
+      - '`search_docs(term: 作業範囲)`（`name` の語）も同じ文書を返す'
+      - '`search_docs(term: 担当範囲)` は `alias_type` を持たない行の文書を返さない（本文に `担当範囲` を含む sample の文書 1 を返さない）'
+      - '`list_match_words` が `name` と `aliases` の語を、指す文書の id とともに返す'
+    test: test_normal_when_term_matched_by_alias
+  - name: 正常シナリオ（タグの付け方の案内を受け取る）
+    setup:
+      - name: Mock
+        description: なし（実環境で実行。SessionStart のフックの入力はテストが入れる）
+      - name: dev-docs
+        description: sample を配信している dev-docs
+        notes: '`cwd` は sample のクローン本体'
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        actor A as エージェント
+        participant H as SessionStart のフック
+        participant M as 文書の MCP（/mcp）
+
+        H-->>A: 注入文（使える配信元とタグの付け方）
+        A->>M: initialize
+        M-->>A: instructions（タグの付け方）
+      ```
+    expected:
+      - SessionStart の注入文のタグの行が、単語まで分けてタグにすること・`action:`・`topic:`・`tool:` の命名・配信元のタグの規約に従うことを案内する
+      - 文書の MCP の instructions のタグの行が、注入文と同じ内容を案内する
+      - 注入文が 2,000 字の上限に収まる
+    test: test_normal_when_tag_guide_injected
 lead: エージェントが文書の MCP の `describe`・`search_docs`・`trace_related` で、今の作業場所から読める配信元の文書を探して読む。
 issue: 3
 primary_actor: エージェント（Claude Code）

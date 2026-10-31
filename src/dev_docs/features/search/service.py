@@ -10,6 +10,7 @@ from typing import Any, Literal
 
 from dev_docs.features.access.service import resolve_read_targets
 from dev_docs.features.access.types import Target
+from dev_docs.features.documents.aliases import collect_aliases, term_ids
 from dev_docs.features.documents.fields import is_markdown_body
 from dev_docs.features.documents.store import DocumentStore
 from dev_docs.features.documents.types import Document
@@ -45,7 +46,7 @@ NONE_LABEL = "（なし）"
 MULTI_SOURCE_MIN = 2
 BODY = "body"
 MATCHES = "@matches"
-ARRAY_FIELDS = ("tags", "related", "aliases", "avoid", "@sections")
+ARRAY_FIELDS = ("tags", "main_tags", "related", "aliases", "avoid", "@sections")
 FINGERPRINT_EXCLUDED = {"cursor", "limit", "max_chars"}
 
 
@@ -252,7 +253,9 @@ def search_docs(
         ref=request.ref,
         worktree=request.worktree,
         cwd=request.cwd,
+        outside_scope=request.outside_scope,
     )
+    outside_scope = any(target.outside_scope for target in targets)
     loaded: list[tuple[int, Target, list[Document]]] = []
     schemas: list[dict[str, Any]] = []
     for index, target in enumerate(targets):
@@ -261,7 +264,17 @@ def search_docs(
             f"{problem.path} を読めないので除きました（{problem.detail}）"
             for problem in result.problems
         )
-        loaded.append((index, target, result.documents))
+        documents = result.documents
+        if request.term is not None:
+            collection = collect_aliases(target.source, documents)
+            if not collection.has_alias_rows:
+                notes.append(
+                    f"{target.source.id}: alias_type を持つ documents の行が無いので"
+                    " term に当たる文書はありません"
+                )
+            ids = term_ids(collection.entries, request.term)
+            documents = [document for document in documents if document.id in ids]
+        loaded.append((index, target, documents))
         schemas.extend(
             store.row_schema(target, table.id)
             for table in target.source.config.documents
@@ -314,6 +327,7 @@ def search_docs(
             notes=notes,
             groups=groups,
             source_label=source_label,
+            outside_scope=outside_scope,
         )
     ordered = _id_ordered(_order(hits, request), request)
     fingerprint = value_hash(request.model_dump(mode="json", exclude=FINGERPRINT_EXCLUDED))
@@ -435,4 +449,5 @@ def search_docs(
         groups=groups,
         items=items,
         source_label=source_label,
+        outside_scope=outside_scope,
     )

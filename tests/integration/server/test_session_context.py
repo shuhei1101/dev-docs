@@ -7,10 +7,33 @@ from fastapi.testclient import TestClient
 
 USAGE_LINE = "範囲のファイルを作った・消した・改名したら、管理用の YAML の行を修正する"
 TAG_USAGE_LINE = (
-    'タグを付ける前に `search_docs` の `group_by="tags"` で使われているタグを見て、'
+    '付ける前に `search_docs` の `group_by="tags"` で使われているタグを見て、'
     "同じ意味のタグを使い回す"
 )
 WORKPLACE = "/_admin/session-context"
+MCP_HEADERS = {
+    "Accept": "application/json, text/event-stream",
+    "Content-Type": "application/json",
+}
+INITIALIZE = {
+    "jsonrpc": "2.0",
+    "id": 1,
+    "method": "initialize",
+    "params": {
+        "protocolVersion": "2025-06-18",
+        "capabilities": {},
+        "clientInfo": {"name": "integration-test", "version": "0"},
+    },
+}
+CONTEXT_MAX_CHARS = 2000
+TAG_HEADER = "タグ:"
+TAG_RULES = (
+    "複合語は単語まで分けてタグにする",
+    "`action:`",
+    "`topic:`",
+    "`tool:`",
+    "配信元にタグの規約があれば",
+)
 
 
 def _post(env: Any, body: dict[str, Any]) -> Any:
@@ -102,3 +125,28 @@ def test_error_when_input_invalid(
     assert response.status_code == 422
     assert any("reason" in item["path"] for item in response.json()["errors"])
     assert "この会話で返し済み" in again.text
+
+
+def _tag_lines(text: str) -> str:
+    """`タグ:` の行から最後までを返す。"""
+    return text[text.index(TAG_HEADER) :]
+
+
+def test_normal_when_tag_guide_included(
+    make_source: Callable[..., Any], make_server: Callable[..., Any]
+) -> None:
+    """文脈のタグの行にタグの付け方を載せ、文書の MCP の instructions と同じにする（正常系）。"""
+    # 準備
+    sample = make_source("sample")
+    env = make_server(sample)
+    # 実行
+    response = _post(env, {"cwd": str(sample.folder), "reason": "startup"})
+    initialized = env.client.post("/mcp/", headers=MCP_HEADERS, json=INITIALIZE)
+    # 検証
+    context = response.json()["context"]
+    instructions = initialized.json()["result"]["instructions"]
+    tag_lines = _tag_lines(context)
+    assert response.status_code == 200
+    assert all(rule in tag_lines for rule in TAG_RULES)
+    assert _tag_lines(instructions) == tag_lines
+    assert len(context) <= CONTEXT_MAX_CHARS

@@ -33,6 +33,7 @@ class SourceEntry(BaseModel):
     id: str | None = None
     enabled: bool = True
     scope: SourceScope = SourceScope()
+    outside_read: bool = True
 
     @field_validator("config", mode="before")
     @classmethod

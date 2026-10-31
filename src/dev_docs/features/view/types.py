@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from datetime import datetime
-from typing import Literal
+from typing import Any, Literal
 
 from pydantic import ConfigDict, Field
 
+from dev_docs.features.documents.types import AliasType
 from dev_docs.shared.api_model import ApiModel
 
 
@@ -55,6 +57,30 @@ class DocumentDiff(ApiModel):
     changed_items: list[str] = Field(default_factory=list)
 
 
+def _is_none(value: object) -> bool:
+    """値を持たないか。"""
+    return value is None
+
+
+class AliasItem(ApiModel):
+    """文書の取得の `aliases` の 1 件（`AliasEntry` の `extra` のキーは同じ階層に置く）。"""
+
+    model_config = ConfigDict(
+        alias_generator=ApiModel.model_config["alias_generator"],
+        validate_by_name=True,
+        serialize_by_alias=True,
+        extra="allow",
+    )
+
+    id: str
+    name: str
+    aliases: list[str]
+    # 値を持たないキーは載せない
+    description: str | None = Field(default=None, exclude_if=_is_none)
+    alias_type: AliasType
+    avoid: list[str] | None = Field(default=None, exclude_if=_is_none)
+
+
 class DocumentResponse(ApiModel):
     """GET `/_api/sources/{source}/docs[/{path}]` の応答。"""
 
@@ -69,6 +95,7 @@ class DocumentResponse(ApiModel):
     github: GitHubTarget | None
     columns: dict[str, list[str]]
     table_keys: list[str]
+    aliases: list[AliasItem] = Field(default_factory=list)
     diff: DocumentDiff | None
     updated_at: datetime
 
@@ -125,3 +152,13 @@ class RefsResponse(ApiModel):
     branches: list[RefItem] = Field(default_factory=list)
     tags: list[RefItem] = Field(default_factory=list)
     commits: list[CommitItem] = Field(default_factory=list)
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
+class NavAutoCount:
+    """`nav` の `auto` 1 つと、その条件に当たる文書の数。"""
+
+    path: str
+    tab: str
+    filter: dict[str, Any] | None
+    count: int

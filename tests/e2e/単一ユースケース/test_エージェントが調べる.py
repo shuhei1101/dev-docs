@@ -5,6 +5,8 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
+import httpx
+
 FILES_SCHEMA = Path(__file__).parents[3] / "templates" / "files.schema.yaml"
 BROKEN_CONFIG = "name: broken\ndocuments:\n  - id: sample\n    schema: schemas/sample.schema.yaml\n"
 DOC_1 = {"field": "id", "op": "eq", "values": ["doc-1"]}
@@ -56,6 +58,60 @@ SEARCH_WORD = {"field": "body", "op": "contains", "values": ["検索"]}
 IN_ARCHIVE = {"field": "@path", "op": "glob", "values": ["notes/archive/**"]}
 BY_MATCHES = {"fields": ["@matches"], "order_by": [{"field": "@matches", "direction": "desc"}]}
 NOTES_A = {"field": "id", "op": "eq", "values": ["notes/a"]}
+OUTSIDE_LINE = "作業範囲の外（参考）"
+OUTSIDE_LOG = "作業範囲の外を読んだ"
+OUTSIDE_HINT = "outside_scope: true"
+OBJECT_TAGS_ROW = (
+    "  - id: rules\n"
+    "    paths: [rules/*.yaml]\n"
+    "    schema: schemas/rule.schema.yaml\n"
+    '    metadata: {tags: "tags[].name", main_tags: "tags[main].name"}\n'
+)
+OBJECT_TAGS_SCHEMA = (
+    "type: object\n"
+    "properties:\n"
+    "  id: {type: string}\n"
+    "  name: {type: string}\n"
+    "  tags:\n"
+    "    type: array\n"
+    "    items:\n"
+    "      type: object\n"
+    "      properties:\n"
+    "        name: {type: string}\n"
+    "        main: {type: boolean}\n"
+)
+TAG_MCP = {"field": "tags", "op": "eq", "values": ["mcp"]}
+MAIN_TAG_MCP = {"field": "main_tags", "op": "eq", "values": ["mcp"]}
+IN_RULES = {"field": "kind", "op": "eq", "values": ["rules"]}
+TERM_ROW = (
+    "  - id: terms\n"
+    "    paths: [terms/*.yaml]\n"
+    "    schema: schemas/term.schema.yaml\n"
+    "    alias_type: term\n"
+)
+TERM_SCHEMA = "title: 用語\ntype: object\n"
+SCOPE_TERM = "id: scope\nname: 作業範囲\ndescription: 触ってよい範囲\naliases: [scope, 担当範囲]\n"
+SESSION_CONTEXT = "/_admin/session-context"
+INITIALIZE = {
+    "jsonrpc": "2.0",
+    "id": 1,
+    "method": "initialize",
+    "params": {
+        "protocolVersion": "2025-06-18",
+        "capabilities": {},
+        "clientInfo": {"name": "e2e-test", "version": "0"},
+    },
+}
+MCP_HEADERS = {"Accept": "application/json, text/event-stream", "Content-Type": "application/json"}
+CONTEXT_MAX_CHARS = 2000
+TAG_HEADER = "タグ:"
+TAG_RULES = (
+    "複合語は単語まで分けてタグにする",
+    "`action:`",
+    "`topic:`",
+    "`tool:`",
+    "配信元にタグの規約があれば",
+)
 PART_LINES = [
     "# a",
     "2 行目 検索",
@@ -371,6 +427,7 @@ def test_error_when_source_not_readable(
         assert "other" in result.text
         assert "secret-1" not in result.text
     assert "sample" in with_cwd.text
+    assert OUTSIDE_HINT in with_cwd.text
     assert [item["id"] for item in everything.data["items"]] == ["doc-1", "doc-2"]
     assert "other" not in everything.text
     assert "secret-1" not in everything.text
@@ -607,3 +664,222 @@ def test_normal_when_implementing_code_traced(
     assert testing.data["items"][0]["via"]["type"] == "tests"
     assert sorted(item["id"] for item in bodies.data["items"]) == ["src/repo", "src/test_repo"]
     assert not any("related.types" in note for note in bodies.data.get("notes", []))
+
+
+def _outside_logs(served: Any) -> list[str]:
+    """要求のログ（標準エラー）のうち作業範囲の外を読んだ記録を返す。"""
+    return [line for line in served.stderr().splitlines() if OUTSIDE_LOG in line]
+
+
+def _ids(result: Any) -> list[str]:
+    """JSON の結果の items の ID を並べる。"""
+    return [item["id"] for item in result.data.get("items", [])]
+
+
+def _tag_lines(text: str) -> str:
+    """`タグ:` の行から最後までを返す。"""
+    return text[text.index(TAG_HEADER) :]
+
+
+def test_normal_when_outside_scope(
+    make_source: Callable[..., Any],
+    serve: Callable[..., Any],
+    commit_all: Callable[..., str],
+    sample_file_set: Callable[..., dict[str, str]],
+    sample_doc_text: Callable[..., str],
+) -> None:
+    """outside_scope: true で、scope.read に当たらない配信元を作業範囲の外として参考に読む（正常系）。"""
+    # 準備
+    sample = make_source("sample")
+    other = make_source("other", _related_files(sample_file_set, sample_doc_text))
+    renamed = sample_doc_text("doc-2", "新しい名前", description="2 件目")
+    commit_all(other.folder, {"docs/doc-2.yaml": renamed}, "docs: 改名")
+    served = serve(sample, other)
+    cwd = str(sample.folder)
+    outside = {"cwd": cwd, "source": "other", "outside_scope": True}
+    # 実行
+    described = served.call("describe", **outside)
+    full = served.call("search_docs", view="full", **outside)
+    searched = served.call("search_docs", format="json", **outside)
+    traced = served.call("trace_related", from_ids=["doc-1"], format="json", **outside)
+    changes = served.call("list_changes", format="json", **outside, **{"from": "HEAD~1"})
+    logs = _outside_logs(served)
+    without = served.call("search_docs", cwd=cwd, source="other")
+    everything = served.call(
+        "search_docs", cwd=cwd, source="*", outside_scope=True, view="ids", format="json"
+    )
+    listed = served.call("describe", cwd=cwd)
+    # 検証
+    assert not described.is_error
+    assert described.text.splitlines()[0] == OUTSIDE_LINE
+    assert full.text.splitlines()[0] == OUTSIDE_LINE
+    assert full.text.count('outside_scope="true"') == 2
+    assert searched.data["outside_scope"] is True
+    assert _ids(searched) == ["doc-1", "doc-2"]
+    assert traced.data["outside_scope"] is True
+    assert _ids(traced) == ["doc-2"]
+    assert changes.data["outside_scope"] is True
+    assert [(item["id"], item["change"]) for item in changes.data["items"]] == [
+        ("doc-2", "modified")
+    ]
+    assert any(cwd in line and "other" in line for line in logs)
+    assert without.is_error
+    assert "SourceNotReadableError" in without.text
+    assert _ids(everything) == ["doc-1", "doc-2"]
+    assert "other" not in everything.text
+    assert "| other |" not in listed.text
+
+
+def test_error_when_outside_read_disabled(
+    make_source: Callable[..., Any],
+    serve: Callable[..., Any],
+    sample_file_set: Callable[..., dict[str, str]],
+    sample_doc_text: Callable[..., str],
+) -> None:
+    """outside_read: false の配信元は outside_scope: true でも読めないとして断る（異常系）。"""
+    # 準備
+    sample = make_source("sample")
+    other_files = _related_files(sample_file_set, sample_doc_text)
+    other = make_source("other", other_files, outside_read=False)
+    served = serve(sample, other)
+    # 実行
+    result = served.call("search_docs", cwd=str(sample.folder), source="other", outside_scope=True)
+    # 検証
+    assert result.is_error
+    assert "SourceNotReadableError" in result.text
+    assert "other" in result.text
+    assert OUTSIDE_HINT not in result.text
+    assert "1 件目" not in result.text
+    assert _outside_logs(served) == []
+
+
+def test_normal_when_describe_lists_refs_and_worktrees(
+    make_source: Callable[..., Any],
+    serve: Callable[..., Any],
+    run_git: Callable[..., str],
+    add_worktree: Callable[..., Path],
+    sample_doc_text: Callable[..., str],
+) -> None:
+    """describe(source) がブランチ・タグとワークツリーを返し、そのパスで文書を引ける（正常系）。"""
+    # 準備
+    sample = make_source("sample")
+    run_git(sample.folder, "tag", "v0.1.0")
+    worktree = add_worktree(sample.folder, "x")
+    (worktree / "docs" / "doc-1.yaml").write_text(
+        sample_doc_text("doc-1", "ワークツリーの文書 1"), encoding="utf-8"
+    )
+    served = serve(sample)
+    cwd = str(sample.folder)
+    # 実行
+    described = served.call("describe", cwd=cwd, source="sample", format="json")
+    path = described.data["worktrees"][0]["path"]
+    found = served.call("search_docs", cwd=cwd, worktree=path, filter=DOC_1, view="full")
+    # 検証
+    assert {"develop", "feat/x"} <= set(described.data["refs"]["branches"])
+    assert "v0.1.0" in described.data["refs"]["tags"]
+    assert set(described.data["refs"]) == {"branches", "tags"}
+    worktrees = {item["path"]: item.get("branch") for item in described.data["worktrees"]}
+    assert worktrees == {str(worktree): "feat/x"}
+    assert "name: ワークツリーの文書 1" in found.text
+
+
+def test_normal_when_tags_are_objects(
+    make_source: Callable[..., Any],
+    serve: Callable[..., Any],
+    sample_file_set: Callable[..., dict[str, str]],
+    sample_config_text: Callable[..., str],
+) -> None:
+    """tags[].name で取り出したタグで絞り・数え、main_tags で主題のタグを引く（正常系）。"""
+    # 準備
+    files = sample_file_set(
+        **{
+            "dev-docs.yaml": sample_config_text(OBJECT_TAGS_ROW),
+            "schemas/rule.schema.yaml": OBJECT_TAGS_SCHEMA,
+            "rules/r1.yaml": (
+                "id: r1\nname: 文書 1\ntags:\n  - {name: mcp, main: true}\n  - {name: 設計}\n"
+            ),
+            "rules/r2.yaml": (
+                "id: r2\nname: 文書 2\ntags:\n  - {name: MCP}\n  - {name: 設計, main: true}\n"
+            ),
+        }
+    )
+    sample = make_source("sample", files)
+    served = serve(sample)
+    arguments = {"cwd": str(sample.folder), "format": "json"}
+    # 実行
+    by_tags = served.call("search_docs", filter=TAG_MCP, view="summary", **arguments)
+    by_main = served.call("search_docs", filter=MAIN_TAG_MCP, view="summary", **arguments)
+    counted = served.call(
+        "search_docs", filter=IN_RULES, view="count", group_by="tags", **arguments
+    )
+    picked = served.call(
+        "search_docs",
+        filter={"field": "id", "op": "eq", "values": ["r1"]},
+        fields=["tags"],
+        **arguments,
+    )
+    plain = served.call("search_docs", filter=DOC_1, fields=["tags"], **arguments)
+    # 検証
+    assert _ids(by_tags) == ["r1", "r2"]
+    assert _ids(by_main) == ["r1"]
+    # 表記違いの mcp・MCP は 1 つにまとめる（表記は同数なら値の昇順で先のもの）
+    assert counted.data["groups"] == [{"value": "MCP", "count": 2}, {"value": "設計", "count": 2}]
+    assert picked.data["items"][0]["values"]["tags"] == ["mcp", "設計"]
+    assert plain.data["items"][0]["values"]["tags"] == ["a"]
+
+
+def test_normal_when_term_matched_by_alias(
+    make_source: Callable[..., Any],
+    serve: Callable[..., Any],
+    sample_file_set: Callable[..., dict[str, str]],
+    sample_config_text: Callable[..., str],
+    sample_doc_text: Callable[..., str],
+) -> None:
+    """term で alias_type を持つ行の文書を name・aliases の語で引き、照合する語の一覧を返す（正常系）。"""
+    # 準備
+    files = sample_file_set(
+        **{
+            "dev-docs.yaml": sample_config_text(TERM_ROW),
+            "schemas/term.schema.yaml": TERM_SCHEMA,
+            "terms/scope.yaml": SCOPE_TERM,
+            "docs/doc-1.yaml": sample_doc_text(
+                "doc-1", "担当範囲の文書", description="担当範囲の説明"
+            ),
+        }
+    )
+    sample = make_source("sample", files)
+    served = serve(sample)
+    arguments = {"cwd": str(sample.folder), "view": "ids", "format": "json"}
+    # 実行
+    by_alias = served.call("search_docs", term="担当範囲", **arguments)
+    by_name = served.call("search_docs", term="作業範囲", **arguments)
+    words = served.call("list_match_words", cwd=str(sample.folder), source="sample", format="json")
+    # 検証
+    pairs = {(item["word"], item["id"]) for item in words.data["words"]}
+    assert _ids(by_alias) == ["scope"]
+    assert _ids(by_name) == ["scope"]
+    assert pairs == {("作業範囲", "scope"), ("scope", "scope"), ("担当範囲", "scope")}
+
+
+def test_normal_when_tag_guide_injected(
+    make_source: Callable[..., Any], serve: Callable[..., Any]
+) -> None:
+    """SessionStart の注入文と文書の MCP の instructions が、同じタグの付け方を案内する（正常系）。"""
+    # 準備
+    sample = make_source("sample")
+    served = serve(sample)
+    # 実行
+    response = httpx.post(
+        served.url(SESSION_CONTEXT),
+        json={"cwd": str(sample.folder), "reason": "startup"},
+        timeout=10,
+    )
+    initialized = httpx.post(served.url("/mcp/"), headers=MCP_HEADERS, json=INITIALIZE, timeout=10)
+    # 検証
+    context = response.json()["context"]
+    instructions = initialized.json()["result"]["instructions"]
+    tag_lines = _tag_lines(context)
+    assert response.status_code == 200
+    assert all(rule in tag_lines for rule in TAG_RULES)
+    assert _tag_lines(instructions) == tag_lines
+    assert len(context) <= CONTEXT_MAX_CHARS

@@ -508,6 +508,57 @@ scenarios:
       - プロンプトの documents の行の候補が出ない
       - '`dev-docs.yaml` が変わらない'
     test: test_normal_when_prompt_row_exists
+  - name: 正常シナリオ（メインのリポジトリを指して追加する）
+    setup:
+      - name: Mock
+        description: なし（実環境で実行）
+      - name: 配信元にするリポジトリ
+        description: '`dev-docs.yaml` の `default_ref` が `develop` で、`.claude/worktrees/develop` に `develop` を checkout した Git のリポジトリ'
+        notes: '`worktrees` は `[./.claude/worktrees/*]`'
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        actor U as 利用者
+        participant S as dev-docs のサーバー
+        participant G as 配信元のリポジトリ
+
+        U->>S: 端末の設定の sources[].config にメインのリポジトリの dev-docs.yaml を書き、reload する
+        S->>G: default_ref の dev-docs.yaml で組み立てる
+        S->>G: git rev-parse --git-common-dir の親から worktrees[] を数える
+        S-->>U: 配信の開始（ワークツリーの一覧に .claude/worktrees/develop）
+      ```
+    expected:
+      - '`describe(source)` のワークツリーの一覧に `.claude/worktrees/develop` が載る'
+      - 端末の設定が `outside_read` を書かないとき、既定の `true` として扱う
+      - 端末の設定の `outside_read` が真偽値でないと、端末の設定のスキーマの違反として断る
+    test: test_normal_when_main_repository_registered
+  - name: 正常シナリオ（ワークツリーを指して追加する）
+    setup:
+      - name: Mock
+        description: なし（実環境で実行）
+      - name: 配信元にするリポジトリ
+        description: '`.claude/worktrees/develop`（`develop` を checkout）と `.claude/worktrees/x`（`feat/x` を checkout）の 2 つのワークツリーを持つ Git のリポジトリ'
+        notes: '`worktrees` は `[./.claude/worktrees/*]`'
+      - name: 端末の設定
+        description: '`sources[].config` が `.claude/worktrees/develop/dev-docs.yaml` を指す'
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        actor U as 利用者
+        participant S as dev-docs のサーバー
+        participant G as 配信元のリポジトリ
+
+        U->>S: reload する
+        S->>G: git rev-parse --git-common-dir の親（メインのリポジトリの直下）から worktrees[] を数える
+        S-->>U: 配信の開始
+        U->>S: describe(source)
+        S-->>U: ワークツリーの一覧（.claude/worktrees/develop・.claude/worktrees/x）
+      ```
+    expected:
+      - '`describe(source)` のワークツリーの一覧に `.claude/worktrees/x` が載る'
+      - '`describe(source)` のワークツリーの一覧に `.claude/worktrees/develop` が載る'
+      - '`worktree` に `.claude/worktrees/x` のパスを渡した `search_docs` が、そのワークツリーの文書を返す'
+    test: test_normal_when_worktree_config_registered
   - name: 異常シナリオ（records の行のスキーマが行に合わない）
     setup:
       - name: Mock

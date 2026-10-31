@@ -6,6 +6,10 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any, Literal
 
+from dev_docs.shared.errors import Violation
+
+AliasType = Literal["term", "doc", "command", "url", "skill", "tool", "path", "env", "avoid"]
+
 
 @dataclass(frozen=True)
 class Document:
@@ -44,6 +48,7 @@ class SyncReport:
     missing_refs: list[str] = field(default_factory=list)
     unindexed_files: list[str] = field(default_factory=list)
     missing_body_files: list[str] = field(default_factory=list)
+    alias_violations: list[Violation] = field(default_factory=list)
 
 
 @dataclass(frozen=True)
@@ -52,3 +57,34 @@ class LoadResult:
 
     documents: list[Document] = field(default_factory=list)
     problems: list[LoadProblem] = field(default_factory=list)
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
+class AliasEntry:
+    """`alias_type` を持つ行の文書 1 件のエイリアスのキーの値。"""
+
+    id: str
+    name: str
+    aliases: list[str] = field(default_factory=list)
+    description: str | None = None
+    alias_type: AliasType
+    avoid: list[str] | None = None
+    extra: dict[str, Any] = field(default_factory=dict)
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
+class MatchWord:
+    """照合する語と、語が指す文書の ID。"""
+
+    word: str
+    id: str
+    kind: Literal["name", "alias"]
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
+class AliasCollection:
+    """検証に通ったエイリアスと違反。"""
+
+    entries: list[AliasEntry] = field(default_factory=list)
+    violations: list[Violation] = field(default_factory=list)
+    has_alias_rows: bool = False

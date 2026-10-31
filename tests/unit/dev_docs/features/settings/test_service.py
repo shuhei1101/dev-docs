@@ -81,6 +81,22 @@ def test_save_sources_when_defaults(
     assert "scope" not in text
 
 
+def test_save_sources_when_outside_read_false(
+    settings_path: Path,
+    fake_reload: tuple[Callable[[TerminalConfig], list[SourceStatus]], list[TerminalConfig]],
+    make_entry: Callable[..., SourceEntry],
+) -> None:
+    """既定値と違う outside_read を書く（正常系）。"""
+    # 準備
+    reload, _ = fake_reload
+    sources = [make_entry("/tmp/a/dev-docs.yaml", source_id="a", outside_read=False)]
+    # 実行
+    save_sources(sources, path=settings_path, reload=reload, lock=threading.Lock())
+    # 検証
+    text = settings_path.read_text(encoding="utf-8")
+    assert "outside_read: false" in text
+
+
 def test_save_sources_when_invalid(
     settings_path: Path,
     fake_reload: tuple[Callable[[TerminalConfig], list[SourceStatus]], list[TerminalConfig]],

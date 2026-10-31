@@ -124,3 +124,22 @@ def test_render_changes_markdown_when_contains() -> None:
     # 検証
     assert "語の増減" in markdown
     assert "| doc-1 | unchanged |  | added 3f2a9c1・removed 8b1d4e0 |" in markdown
+
+
+def test_render_changes_markdown_when_outside_scope() -> None:
+    """作業範囲の外の表示（正常系）。"""
+    # 準備
+    date = datetime(2026, 10, 26, 10, 0, tzinfo=UTC)
+    result = ChangesResult(
+        range_from=RangePoint(input="3f2a9c1", commit="3f2a9c1", date=date),
+        range_to=RangePoint(input="8b1d4e0", commit="8b1d4e0", date=date),
+        total_count=0,
+        items=[],
+        outside_scope=True,
+    )
+    # 実行
+    markdown = render_changes_markdown(result, source_label="other")
+    # 検証
+    lines = markdown.splitlines()
+    assert lines[0] == "作業範囲の外（参考）"
+    assert lines[1].startswith("other: 3f2a9c1（")

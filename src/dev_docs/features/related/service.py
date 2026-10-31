@@ -80,6 +80,7 @@ def trace_related(
         ref=request.ref,
         worktree=request.worktree,
         cwd=request.cwd,
+        outside_scope=request.outside_scope,
     )[0]
     documents = {document.id: document for document in store.load(target).documents}
     if request.from_ids is not None:
@@ -105,9 +106,12 @@ def trace_related(
         """別の配信元の文書を、同じ作業場所の権限で引く。"""
         if source_id not in other_cache:
             try:
-                other = resolve_read_targets(registry=registry, source=source_id, cwd=request.cwd)[
-                    0
-                ]
+                other = resolve_read_targets(
+                    registry=registry,
+                    source=source_id,
+                    cwd=request.cwd,
+                    outside_scope=request.outside_scope,
+                )[0]
                 other_cache[source_id] = {d.id: d for d in store.load(other).documents}
                 other_targets[source_id] = other
             except DevDocsError:
@@ -176,4 +180,10 @@ def trace_related(
         items=items,
         suggestions=suggestions,
         notes=notes,
+        outside_scope=target.outside_scope
+        or any(
+            other_targets[document.source_id].outside_scope
+            for document, *_ in found
+            if document.source_id in other_targets
+        ),
     )

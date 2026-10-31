@@ -68,3 +68,11 @@ class FileDates:
 
     created: datetime
     updated: datetime
+
+
+@dataclass(frozen=True)
+class WorktreeInfo:
+    """ワークツリーのパスと checkout しているブランチ。"""
+
+    path: str
+    branch: str | None

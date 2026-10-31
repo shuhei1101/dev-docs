@@ -6,11 +6,11 @@ directory: |-
   ```text
   src/dev_docs/
   ├─ integrations/
-  │  └─ git.py               # run_git / repo_root / GitError
+  │  └─ git.py               # run_git / repo_root / main_repo_root / GitError
   └─ features/history/
      ├─ __init__.py          # 公開する型と関数の再エクスポート
-     ├─ types.py             # ResolvedRef / RefList / FileChange / FileDates / CommitStep
-     ├─ query.py             # resolve_ref / list_refs / changed_files / list_commits / file_dates / co_changed_files / read_file_at
+     ├─ types.py             # ResolvedRef / RefList / FileChange / FileDates / CommitStep / WorktreeInfo
+     ├─ query.py             # resolve_ref / list_refs / changed_files / list_commits / file_dates / co_changed_files / read_file_at / export_paths_at / list_worktrees
      └─ snapshot.py          # SnapshotStore（リビジョンの書き出し）
   ```
 diagrams:
@@ -314,6 +314,23 @@ data_models:
         access: 公開
         description: 最初の親の commit の日時
     status: planned
+  - name: WorktreeInfo
+    title: ワークツリーの情報
+    container: features/history/types.py
+    usecase: 説明
+    role: DTO
+    summary: ワークツリーのパスと checkout しているブランチ
+    properties:
+      - name: path
+        title: パス
+        type: str
+        access: 公開
+        description: ワークツリーの絶対パス
+      - name: branch
+        title: ブランチ
+        type: str | None
+        access: 公開
+        description: checkout しているブランチ。detached HEAD は `None`
 constants:
   - name: SNAPSHOT_KEEP
     title: 残す書き出しの数
@@ -456,6 +473,44 @@ functions:
         condition: '`git init` していない一時フォルダ'
         mock: なし
         expected: '`None`'
+  - name: main_repo_root
+    title: メインのリポジトリの直下
+    kind: 関数
+    container: integrations/git.py
+    usecase: 共通
+    role: 読み取り
+    summary: ワークツリーの中からでも、メインのリポジトリ（クローン本体）の直下を返す
+    scope: public
+    thread_safe: true
+    args:
+      - name: path
+        title: フォルダ
+        type: Path
+        required: true
+        passing: positional
+        description: 確かめるフォルダ
+    returns:
+      type: Path | None
+      description: '`git rev-parse --git-common-dir` の親。Git の作業ツリーでなければ `None`'
+    process: |-
+      1. `rev-parse --path-format=absolute --git-common-dir` を呼ぶ（gitの実行）
+         - `GitError` の場合、`None` を返す
+      2. 出力の末尾の改行を除いたパスの親を正規化して返す
+    unit_tests:
+      - name: test_main_repo_root
+        case: 正常
+        summary: クローン本体とワークツリー
+        condition: 一時リポジトリの直下と、`git worktree add` したワークツリーの中のフォルダ
+        mock: なし（一時フォルダで `git init`）
+        expected: どちらもクローン本体の直下
+        exception: '-'
+      - name: test_main_repo_root_when_not_git
+        case: 正常
+        summary: Git の管理外
+        condition: '`git init` していない一時フォルダ'
+        mock: なし
+        expected: '`None`'
+        exception: '-'
   - name: resolve_ref
     title: リビジョンの解決
     kind: 関数
@@ -577,6 +632,37 @@ functions:
         condition: '`is_git` が `False` の配信元'
         mock: なし
         expected: '`git` が `False` で配列が空'
+  - name: list_worktrees
+    title: ワークツリーの一覧
+    kind: 関数
+    container: features/history/query.py
+    usecase: 説明
+    role: 読み取り
+    summary: 配信元の `worktrees` に当たるワークツリーのパスと checkout しているブランチを返す
+    scope: public
+    thread_safe: true
+    args:
+      - name: source
+        title: 配信元
+        type: ServedSource
+        required: true
+        passing: positional
+        description: 配信中の配信元
+    returns:
+      type: list[WorktreeInfo]
+      description: '`git worktree list` の順。Git でない配信元は空'
+    process: |-
+      1. Git の配信元でなければ空の配列を返す
+      2. `worktree list --porcelain` を呼び、`worktree` と `branch`（`refs/heads/` を除く。`detached` は `None`）の組にする
+      3. ワークツリーの解決で `worktree_globs` に当たるパスだけを残し、`WorktreeInfo` にして返す
+    unit_tests:
+      - name: test_list_worktrees
+        case: 正常
+        summary: glob に当たるワークツリー
+        condition: '`worktrees: [.claude/worktrees/*]` の配信元で、`.claude/worktrees/x`（`feat/x`）・`.claude/worktrees/y`（detached）・リポジトリの外の `/tmp/z`'
+        mock: なし（一時フォルダで `git init` と `git worktree add`）
+        expected: '`x` の `branch` が `feat/x`、`y` の `branch` が `None`、`/tmp/z` は含まない'
+        exception: '-'
   - name: changed_files
     title: 変わったファイル
     kind: 関数
@@ -773,6 +859,50 @@ functions:
         condition: 後で追加したファイルを最初の commit で
         mock: なし
         expected: '`None`'
+  - name: export_paths_at
+    title: リビジョンのフォルダの取り出し
+    kind: 関数
+    container: features/history/query.py
+    usecase: 共通
+    role: 読み取り
+    summary: commit のリビジョンのフォルダを一時フォルダへ取り出し、抜けるときに削除する
+    scope: public
+    thread_safe: true
+    side_effects: 一時フォルダを作り、抜けるときに削除する
+    args:
+      - name: repo
+        title: リポジトリの直下
+        type: Path
+        required: true
+        passing: positional
+        description: git を実行する作業ツリー
+      - name: commit
+        title: commit
+        type: str
+        required: true
+        passing: positional
+        description: 取り出す commit
+      - name: paths
+        title: フォルダ
+        type: Sequence[str]
+        required: true
+        passing: positional
+        description: リポジトリの直下からのフォルダのパス
+    returns:
+      type: ContextManager[Path]
+      description: 取り出した一時フォルダ（リポジトリの直下と同じ相対パスでファイルを置く）
+    process: |-
+      1. `tempfile.TemporaryDirectory` を作る
+      2. `archive --format=tar {commit} -- {paths}` を `binary=True` で呼び、`tarfile` の `filter="data"` で一時フォルダへ展開する
+      3. 一時フォルダを渡し、抜けるときに削除する
+    unit_tests:
+      - name: test_export_paths_at
+        case: 正常
+        summary: commit のフォルダを取り出す
+        condition: '`scripts/a.py` を commit した後に作業ツリーで書き換えた一時リポジトリ'
+        mock: なし（一時フォルダで `git init`）
+        expected: 取り出した `scripts/a.py` が commit の内容で、抜けた後に一時フォルダが無い
+        exception: '-'
   - name: list_commits
     title: 区間の commit
     kind: 関数

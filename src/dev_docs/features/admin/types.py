@@ -1,15 +1,16 @@
-"""管理の MCP の `status`・`reload`・`check_project`・`try_convert` の要求と結果の型。"""
+"""管理の MCP の `status`・`reload`・`check_project`・`try_convert`・`write_nav` の要求と結果の型。"""
 
 from __future__ import annotations
 
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING, Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
 from dev_docs.features.documents.types import SyncReport
 from dev_docs.features.sources.types import ServedSource, SourceStatusKind
+from dev_docs.features.view.types import NavAutoCount
 from dev_docs.shared.errors import Violation
 
 if TYPE_CHECKING:
@@ -137,6 +138,8 @@ class CheckProjectResult:
     missing_paths: list[str]
     script_errors: list[ScriptErrorItem]
     sync: CheckSync | None
+    warnings: list[Violation] = field(default_factory=list)
+    alias_schema_version: str = ""
 
 
 class TryConvertRequest(BaseModel):
@@ -178,3 +181,40 @@ class FormatRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     format: Literal["markdown", "json"] = Field(default="markdown", description="返す形式")
+
+
+class NavOperation(BaseModel):
+    """`write_nav` の `operations` の 1 件。"""
+
+    model_config = ConfigDict(extra="forbid")
+
+    op: Literal["add", "update", "remove"] = Field(description="追加・修正・削除")
+    tab: str = Field(description="対象のタブの名前（`nav.tabs[].title`）")
+    item: str | None = Field(
+        default=None,
+        description="タブの中の `group` の名前。入れ子は ` > ` で区切る。省くとタブそのもの",
+    )
+    value: dict[str, Any] | None = Field(
+        default=None,
+        description="タブか項目の中身（`nav` と同じ書式）。`add`・`update` で必須",
+    )
+
+
+class WriteNavRequest(BaseModel):
+    """`write_nav` の引数。"""
+
+    model_config = ConfigDict(extra="forbid")
+
+    path: str = Field(description="配信元のフォルダか `dev-docs.yaml` の絶対パス")
+    operations: list[NavOperation] = Field(description="並べた順に当てる操作（1 件以上）")
+    format: Literal["markdown", "json"] = Field(default="markdown", description="返す形式")
+
+
+@dataclass(frozen=True)
+class WriteNavResult:
+    """書いた `nav` と条件ごとの文書の数・警告。"""
+
+    path: str
+    nav: str
+    counts: list[NavAutoCount]
+    warnings: list[Violation]

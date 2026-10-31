@@ -22,8 +22,18 @@ const findPage = (
   return null;
 };
 
-/** `active` のタブから `path` の page とその group を探す */
-export const findActivePage = (tabs: NavTab[], path: string): ActivePage => {
+/** `tabIndex` のタブ（省いたか、`path` がそのタブに無いときは `active` のタブ）から `path` の page とその group を探す */
+export const findActivePage = (
+  tabs: NavTab[],
+  path: string,
+  tabIndex?: number,
+): ActivePage => {
+  const selected = tabIndex === undefined ? undefined : tabs[tabIndex];
+  const inSelected = selected && findPage(selected.items, path, null);
+  // 選んだタブに文書があればそのタブ、無ければ active のタブを現在地にする
+  if (selected && inSelected) {
+    return { tab: selected, group: inSelected.group, page: inSelected.page };
+  }
   const tab = tabs.find((item) => item.active) ?? tabs[0];
   const found = findPage(tab.items, path, null);
   return { tab, group: found?.group ?? null, page: found?.page ?? null };

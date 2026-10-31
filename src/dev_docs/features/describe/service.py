@@ -17,6 +17,7 @@ from dev_docs.features.describe.types import (
     SourceListResult,
 )
 from dev_docs.features.documents.store import DocumentStore
+from dev_docs.features.history.query import list_refs, list_worktrees
 from dev_docs.features.sources.registry import SourceRegistry
 from dev_docs.features.sources.service import load_source_at
 from dev_docs.shared.errors import InvalidArgumentError, Violation
@@ -43,7 +44,11 @@ def describe(
             sources=available_sources(request.cwd, registry=registry),
         )
     target = resolve_read_targets(
-        registry=registry, source=request.source, worktree=request.worktree, cwd=request.cwd
+        registry=registry,
+        source=request.source,
+        worktree=request.worktree,
+        cwd=request.cwd,
+        outside_scope=request.outside_scope,
     )[0]
     # 作業ツリーかワークツリーを読むときは、その場所の設定を読み直した配信元を使う
     if target.worktree is not None and target.ref is None:
@@ -60,8 +65,22 @@ def describe(
                     id=table.id, description=str(schema.get("description") or table.title or "")
                 )
             )
+        refs: dict[str, list[str]] | None = None
+        worktrees = None
+        if source.is_git:
+            listed = list_refs(source, commits=0)
+            refs = {
+                "branches": [item.name for item in listed.branches],
+                "tags": [item.name for item in listed.tags],
+            }
+            worktrees = list_worktrees(source)
         return SourceGuideResult(
-            source_id=source.id, instructions=source.config.instructions, kinds=kinds
+            source_id=source.id,
+            instructions=source.config.instructions,
+            kinds=kinds,
+            outside_scope=target.outside_scope,
+            refs=refs,
+            worktrees=worktrees,
         )
     table = source.table(request.kind)
     schema = store.schema(target, table.id)
@@ -75,4 +94,5 @@ def describe(
         schema_text=schema_text,
         schema=schema,
         metadata=dict(table.metadata),
+        outside_scope=target.outside_scope,
     )

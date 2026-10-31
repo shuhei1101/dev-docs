@@ -78,3 +78,27 @@ def test_repo_root_when_not_git(tmp_path: Path) -> None:
     result = repo_root(tmp_path)
     # 検証
     assert result is None
+
+
+def test_main_repo_root(git_repo: Callable[..., Path], run_git: Callable[..., str]) -> None:
+    """クローン本体とワークツリー（正常系）。"""
+    from dev_docs.integrations.git import main_repo_root
+
+    # 準備
+    root = git_repo({"docs/a.yaml": "a: 1\n"})
+    worktree = root / ".claude" / "worktrees" / "x"
+    run_git(root, "worktree", "add", "-b", "feat/x", str(worktree))
+    # 実行
+    results = [main_repo_root(root), main_repo_root(worktree / "docs")]
+    # 検証
+    assert results == [root.resolve(), root.resolve()]
+
+
+def test_main_repo_root_when_not_git(tmp_path: Path) -> None:
+    """Git の管理外（正常系）。"""
+    from dev_docs.integrations.git import main_repo_root
+
+    # 実行
+    result = main_repo_root(tmp_path)
+    # 検証
+    assert result is None

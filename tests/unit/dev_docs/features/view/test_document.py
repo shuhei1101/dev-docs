@@ -203,3 +203,47 @@ def test_not_found_fields() -> None:
     # 検証
     assert ref_fields == {"missing": "ref", "value": "no-such-branch"}
     assert doc_fields == {"missing": "doc", "value": "no-such-doc"}
+
+
+def test_get_document_when_aliases(make_view_env: Callable[..., SimpleNamespace]) -> None:
+    """エイリアスを返す（正常系）。"""
+    # 準備
+    tables = [
+        DocumentTable(
+            id="terms",
+            paths=["docs/term/*.yaml"],
+            schema_path="schemas/rule.schema.yaml",
+            alias_type="term",
+        ),
+        DocumentTable(
+            id="refs",
+            paths=["docs/ref/*.yaml"],
+            schema_path="schemas/rule.schema.yaml",
+            alias_type="doc",
+        ),
+    ]
+    env = make_view_env(
+        {
+            "docs/term/scope.yaml": (
+                "id: scope\n"
+                "name: 作業範囲\n"
+                "description: 触ってよい範囲\n"
+                "aliases: [scope, 担当範囲]\n"
+                "avoid: [担当領域]\n"
+            ),
+            "docs/ref/settings.yaml": (
+                "id: settings\nname: 設定のリファレンス\ndescription: 設定のキーの一覧\n"
+                "aliases: [settings]\n"
+            ),
+        },
+        tables=tables,
+    )
+    # 実行
+    response = get_document(
+        "sample", "docs/term/scope", handlers=env.handlers, ref=None, diff_ref=None
+    )
+    # 検証
+    aliases = response.model_dump(mode="json")["aliases"]
+    assert [item["id"] for item in aliases] == ["scope", "settings"]
+    assert aliases[0]["avoid"] == ["担当領域"]
+    assert "avoid" not in aliases[1]

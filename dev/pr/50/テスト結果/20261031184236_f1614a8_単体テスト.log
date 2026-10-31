@@ -1,0 +1,34 @@
+$ uv run pytest tests/unit/
+        # 実行
+        result = nav_warnings(store, source, today=TODAY)
+        # 検証
+>       assert result == []
+E       AssertionError: assert [Violation(pa...ne, doc=None)] == []
+E         
+E         Left contains one more item: Violation(path='nav.tabs[0].items[0].auto.filter.field', rule='知らない項目です（owner）', fix='近い項目: files.owner', index=None, doc=None)
+E         Use -v to get more diff
+
+tests/unit/dev_docs/features/view/test_nav.py:406: AssertionError
+=========================== short test summary info ============================
+FAILED tests/unit/dev_docs/features/admin/test_service.py::test_write_nav_when_records_filter
+FAILED tests/unit/dev_docs/features/view/test_nav.py::test_build_nav_when_records_filter
+FAILED tests/unit/dev_docs/features/view/test_nav.py::test_nav_warnings_when_records_filter
+=================== 3 failed, 640 passed in 88.31s (0:01:28) ===================
+$ npm run test:unit
+
+> test:unit
+> vitest run --config frontend/vitest.config.ts
+
+
+ RUN  v5.0.5 /mnt/c/Users/shuhe/repo/dev-docs/.claude/worktrees/feat-server-aliases-nav-outside-scope-default-ref-tags
+
+
+ Test Files  44 passed (44)
+      Tests  112 passed (112)
+   Start at  18:52:48
+   Duration  250.80s (environment 55%, import 22%, setup 21%, transform 1%, tests 1%, worker 1%)
+
+Environment  jsdom was created 44 times · 887.05s total, 55% of tracked time
+             create it once per worker with pool: 'vmThreads' (keeps per-file isolation) or isolate: false (shares it across files)
+             learn more: https://vitest.dev/guide/improving-performance#test-environments
+

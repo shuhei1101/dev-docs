@@ -28,6 +28,22 @@ NAV = (
     "      items:\n"
     "        - page: sample/doc-2\n"
 )
+TAG_NAV = (
+    "nav:\n"
+    "  tabs:\n"
+    "    - title: mcp\n"
+    "      items:\n"
+    "        - auto:\n"
+    "            document: sample\n"
+    "            filter:\n"
+    "              and:\n"
+    "                - {field: tags, op: eq, values: [mcp]}\n"
+    "                - not: {field: tags, op: eq, values: [設計]}\n"
+    "    - title: すべて\n"
+    "      items:\n"
+    "        - auto:\n"
+    "            document: sample\n"
+)
 TABLE_DOC = (
     "id: doc-1\n"
     "name: 文書 1\n"
@@ -327,3 +343,63 @@ def test_error_when_not_found(
     assert any(error["path"] == "documents[0].paths" for error in not_served.json()["errors"])
     assert unknown.status_code == 404
     assert (unknown.json()["missing"], unknown.json()["value"]) == ("source", "unknown")
+
+
+def test_normal_when_nav_filtered_by_tags(
+    make_source: Callable[..., Any],
+    make_server: Callable[..., Any],
+    sample_file_set: Callable[..., dict[str, str]],
+    sample_config_text: Callable[..., str],
+    sample_doc_text: Callable[..., str],
+) -> None:
+    """auto の filter に当たる文書だけをタブのサイドバーに並べる（正常系）。"""
+    # 準備
+    files = sample_file_set(
+        **{
+            "dev-docs.yaml": sample_config_text(TAG_NAV),
+            "docs/doc-1.yaml": sample_doc_text("doc-1", "文書 1", tags=["mcp"]),
+            "docs/doc-2.yaml": sample_doc_text("doc-2", "文書 2", tags=["mcp", "設計"]),
+            "docs/doc-3.yaml": sample_doc_text("doc-3", "文書 3", tags=["設計"]),
+        }
+    )
+    env = make_server(make_source("sample", files))
+    # 実行
+    response = env.client.get("/_api/sources/sample/docs")
+    # 検証
+    tabs = {tab["title"]: tab for tab in response.json()["tabs"]}
+    assert response.status_code == 200
+    assert list(_page_changes(tabs["mcp"]["items"])) == ["docs/doc-1"]
+    assert list(_page_changes(tabs["すべて"]["items"])) == [
+        "docs/doc-1",
+        "docs/doc-2",
+        "docs/doc-3",
+    ]
+
+
+def test_normal_when_aliases_returned(
+    make_source: Callable[..., Any],
+    make_server: Callable[..., Any],
+    alias_file_set: Callable[..., dict[str, str]],
+) -> None:
+    """alias_type を持つ行の文書のエイリアスを文書といっしょに返す（正常系）。"""
+    # 準備
+    sample = make_source("sample", alias_file_set())
+    plain = make_source("plain")
+    env = make_server(sample, plain)
+    # 実行
+    with_aliases = env.client.get("/_api/sources/sample/docs/docs/doc-1")
+    without = env.client.get("/_api/sources/plain/docs")
+    # 検証
+    aliases = {item["name"]: item for item in with_aliases.json()["aliases"]}
+    term = aliases["作業範囲"]
+    ref = aliases["設定のリファレンス"]
+    assert with_aliases.status_code == 200
+    assert term["aliasType"] == "term"
+    assert term["aliases"] == ["scope", "担当範囲"]
+    assert term["avoid"] == ["担当領域"]
+    assert term["description"] == "触ってよい範囲"
+    assert ref["aliasType"] == "doc"
+    assert ref["aliases"] == ["settings"]
+    assert ref.get("avoid") is None
+    assert without.status_code == 200
+    assert without.json()["aliases"] == []

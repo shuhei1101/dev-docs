@@ -23,7 +23,9 @@ from dev_docs.features.related.service import trace_related
 from dev_docs.features.related.types import RelatedRequest
 from dev_docs.features.search.render import render_search_markdown
 from dev_docs.features.search.service import search_docs
-from dev_docs.features.search.types import SearchRequest
+from dev_docs.features.search.terms import list_match_words, render_match_words_markdown
+from dev_docs.features.search.types import MatchWordsRequest, SearchRequest
+from dev_docs.features.session_context.types import TAG_GUIDE
 from dev_docs.features.write.service import delete_docs, write_docs
 from dev_docs.features.write.types import DeleteRequest, WriteRequest
 from dev_docs.server.mcp.result import TOOL_ANNOTATIONS, to_tool_result, tool_error
@@ -42,6 +44,7 @@ __all__ = [
     "delete_docs",
     "describe",
     "list_changes",
+    "list_match_words",
     "search_docs",
     "trace_related",
     "write_docs",
@@ -105,8 +108,8 @@ def _register(
 
 
 def build_docs_mcp(handlers: Handlers) -> MCPServer:
-    """6 つのツールを持つ文書の MCP を作る。"""
-    mcp = MCPServer(DOCS_MCP_NAME)
+    """7 つのツールを持つ文書の MCP を作る。"""
+    mcp = MCPServer(DOCS_MCP_NAME, instructions=TAG_GUIDE)
     timeout = handlers.terminal.script_timeout_sec
 
     _register(
@@ -205,5 +208,14 @@ def build_docs_mcp(handlers: Handlers) -> MCPServer:
             timeout_sec=timeout,
         ),
         None,
+    )
+    _register(
+        mcp,
+        "list_match_words",
+        "配信元の alias_type を持つ行の文書から、照合する語（name と aliases）を、"
+        "指す文書の ID とともに返す。",
+        MatchWordsRequest,
+        lambda request: list_match_words(request, registry=handlers.registry, store=handlers.store),
+        lambda result, request: render_match_words_markdown(result),
     )
     return mcp

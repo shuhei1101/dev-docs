@@ -42,7 +42,7 @@
 | 端末の設定 | 雛形から作る。`version` に dev-docs のバージョン、`clone` に引数のパス、`sources: []` を持つ |
 | Claude Code の env | 端末の設定が既定の場所と違うときだけ、`settings.json` の env に `DEV_DOCS_CONFIG` を記載する。env のほかのキーは変えない |
 | 起動 | `dev-docs serve` を切り離して起動する |
-| 接続の確認 | `/mcp` につながり、文書の MCP のツールが 6 つ返ることを確かめる |
+| 接続の確認 | `/mcp` につながり、文書の MCP のツールが 7 つ返ることを確かめる |
 
 ## つなぎ直す理由
 

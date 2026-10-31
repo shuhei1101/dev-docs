@@ -412,6 +412,75 @@
   },
   "components": {
     "schemas": {
+      "AliasItem": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "aliases": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Aliases"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "aliasType": {
+            "type": "string",
+            "enum": [
+              "term",
+              "doc",
+              "command",
+              "url",
+              "skill",
+              "tool",
+              "path",
+              "env",
+              "avoid"
+            ],
+            "title": "Aliastype"
+          },
+          "avoid": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avoid"
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "aliases",
+          "aliasType"
+        ],
+        "title": "AliasItem",
+        "description": "文書の取得の `aliases` の 1 件（`AliasEntry` の `extra` のキーは同じ階層に置く）。"
+      },
       "ColumnsRequest": {
         "properties": {
           "table": {
@@ -656,6 +725,13 @@
             },
             "type": "array",
             "title": "Tablekeys"
+          },
+          "aliases": {
+            "items": {
+              "$ref": "#/components/schemas/AliasItem"
+            },
+            "type": "array",
+            "title": "Aliases"
           },
           "diff": {
             "anyOf": [
@@ -1131,6 +1207,11 @@
             "default": {
               "read": []
             }
+          },
+          "outside_read": {
+            "type": "boolean",
+            "title": "Outside Read",
+            "default": true
           }
         },
         "additionalProperties": false,

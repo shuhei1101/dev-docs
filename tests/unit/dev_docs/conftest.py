@@ -21,6 +21,7 @@ from dev_docs.features.sources.types import (
 )
 from dev_docs.main import Handlers, build_handlers
 from dev_docs.shared.errors import UnknownSourceError
+from dev_docs.shared.yaml_io import dump_roundtrip, load_roundtrip
 
 SAMPLE_SCHEMA = (
     "title: rule\n"
@@ -376,3 +377,132 @@ def settings_version_2(monkeypatch: pytest.MonkeyPatch) -> None:
         "dev_docs.main.SETTINGS_VERSION",
     ):
         monkeypatch.setattr(target, "2", raising=False)
+
+
+ALIAS_CONFIG = (
+    "name: {name}\n"
+    "documents:\n"
+    "  - id: rules\n"
+    "    paths: [docs/rule/*.yaml]\n"
+    "    schema: schemas/rule.schema.yaml\n"
+    "  - id: terms\n"
+    "    paths: [docs/term/*.yaml]\n"
+    "    schema: schemas/term.schema.yaml\n"
+    "    alias_type: term\n"
+    "  - id: refs\n"
+    "    paths: [docs/ref/*.yaml]\n"
+    "    schema: schemas/term.schema.yaml\n"
+    "    alias_type: doc\n"
+)
+
+TERM_SCHEMA = "title: term\ntype: object\n"
+
+# どの文書にも当たらない `auto` の条件のタブ `none` を持つ nav
+NONE_NAV = (
+    "nav:\n"
+    "  tabs:\n"
+    "    - title: 規約\n"
+    "      items:\n"
+    "        - auto: {document: rules}\n"
+    "    - title: none\n"
+    "      items:\n"
+    "        - auto: {filter: {field: tags, op: eq, values: [none]}}\n"
+)
+
+
+@pytest.fixture
+def make_alias_source_dir(
+    tmp_path: Path, write_files: Callable[[Path, dict[str, str]], None]
+) -> Callable[..., Path]:
+    """`alias_type` の行を持つ配信元のフォルダを作り、`dev-docs.yaml` のパスを返す関数を返す。
+
+    用語「作業範囲」と文書の別名「設定のリファレンス」を置く。`broken` は `aliases` が `3` の用語「壊れた用語」を置くか、`none_nav` はどの文書にも当たらない条件のタブ `none` を持つ `nav` を置くか。
+    """
+
+    def _make(name: str = "sample", *, broken: bool = False, none_nav: bool = False) -> Path:
+        root = tmp_path / name
+        files = {
+            "dev-docs.yaml": ALIAS_CONFIG.format(name=name) + (NONE_NAV if none_nav else ""),
+            "schemas/rule.schema.yaml": SAMPLE_SCHEMA,
+            "schemas/term.schema.yaml": TERM_SCHEMA,
+            "docs/rule/doc-1.yaml": "id: doc-1\nname: 文書 1\n",
+            "docs/term/scope.yaml": (
+                "id: scope\n"
+                "name: 作業範囲\n"
+                "description: 触ってよい範囲\n"
+                "aliases: [scope, 担当範囲]\n"
+                "avoid: [担当領域]\n"
+            ),
+            "docs/ref/settings.yaml": (
+                "id: settings\n"
+                "name: 設定のリファレンス\n"
+                "description: 設定のキーの一覧\n"
+                "aliases: [settings]\n"
+            ),
+        }
+        if broken:
+            files["docs/term/broken.yaml"] = (
+                "id: broken\nname: 壊れた用語\ndescription: 型の違う別名\naliases: 3\n"
+            )
+        write_files(root, files)
+        return root / "dev-docs.yaml"
+
+    return _make
+
+
+REPO_ROOT = Path(__file__).parents[3]
+
+RECORDS_NAV_CONFIG = (
+    "name: sample\n"
+    "documents:\n"
+    "  - id: notes\n"
+    "    paths: [notes/files.yaml]\n"
+    "    schema: schemas/files.schema.yaml\n"
+    "    records: files\n"
+    "    body_file: path\n"
+)
+
+
+def records_files_schema(field: str, field_type: str) -> str:
+    """`templates/files.schema.yaml` の 1 行の項目に `field`（型 `field_type`）を追加したスキーマを返す。"""
+    schema = load_roundtrip(
+        (REPO_ROOT / "templates" / "files.schema.yaml").read_text(encoding="utf-8")
+    )
+    schema["properties"]["files"]["items"]["properties"][field] = {"type": field_type}
+    return dump_roundtrip(schema)
+
+
+@pytest.fixture
+def make_records_nav_source_dir(
+    tmp_path: Path, write_files: Callable[[Path, dict[str, str]], None]
+) -> Callable[..., Path]:
+    """1 行に項目を追加した `records: files` の行 `notes` の配信元のフォルダを作り、`dev-docs.yaml` のパスを返す関数を返す。
+
+    `values` はファイル名（拡張子 `.md`）→ 項目 `field` の値、`nav_filter` はあれば行 `notes` をその条件で絞るタブ `notes` を持つ `nav` を置く。
+    """
+
+    def _make(
+        field: str,
+        field_type: str,
+        values: dict[str, Any],
+        *,
+        nav_filter: dict[str, Any] | None = None,
+    ) -> Path:
+        root = tmp_path / "sample"
+        rows = "".join(
+            f"  - path: {stem}.md\n    {field}: {value}\n" for stem, value in values.items()
+        )
+        config = RECORDS_NAV_CONFIG
+        if nav_filter is not None:
+            auto = json.dumps({"document": "notes", "filter": nav_filter})
+            config += f"nav:\n  tabs:\n    - title: notes\n      items:\n        - auto: {auto}\n"
+        files = {
+            "dev-docs.yaml": config,
+            "schemas/files.schema.yaml": records_files_schema(field, field_type),
+            "notes/files.yaml": "files:\n" + rows,
+            **{f"notes/{stem}.md": f"# {stem}\n" for stem in values},
+        }
+        write_files(root, files)
+        return root / "dev-docs.yaml"
+
+    return _make

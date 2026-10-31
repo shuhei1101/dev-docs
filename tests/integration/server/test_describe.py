@@ -1,10 +1,16 @@
 from __future__ import annotations
 
+import logging
 from collections.abc import Callable
 from typing import Any
 
+import pytest
+
 BROKEN_CONFIG = "name: broken\ndocuments:\n  - id: sample\n    schema: schemas/sample.schema.yaml\n"
 INSTRUCTIONS = "この配信元の文書は、まず概要を読んでから個別の文書を開く。"
+OUTSIDE_LINE = "作業範囲の外（参考）"
+OUTSIDE_LOG = "作業範囲の外を読んだ"
+OUTSIDE_HINT = "outside_scope: true"
 
 
 def test_normal(make_source: Callable[..., Any], make_server: Callable[..., Any]) -> None:
@@ -147,3 +153,98 @@ def test_error_when_unknown_kind(
     assert "UnknownKindError" in result.text
     assert "no-such-kind" in result.text
     assert "sample" in result.text
+
+
+def _outside_logs(caplog: pytest.LogCaptureFixture) -> list[str]:
+    """要求のログのうち作業範囲の外を読んだ記録を返す。"""
+    return [record.getMessage() for record in caplog.records if OUTSIDE_LOG in record.getMessage()]
+
+
+def test_normal_when_outside_scope(
+    make_source: Callable[..., Any],
+    make_server: Callable[..., Any],
+    sample_file_set: Callable[..., dict[str, str]],
+    sample_config_text: Callable[..., str],
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """outside_scope: true で、scope に当たらない配信元の説明書を作業範囲の外として返す（正常系）。"""
+    # 準備
+    config = sample_config_text("instructions: |-\n  " + INSTRUCTIONS + "\n", name="other")
+    sample = make_source("sample")
+    other = make_source("other", sample_file_set(**{"dev-docs.yaml": config}))
+    env = make_server(sample, other)
+    cwd = str(sample.folder)
+    caplog.set_level(logging.INFO)
+    # 実行
+    result = env.call("describe", cwd=cwd, source="other", outside_scope=True)
+    as_json = env.call("describe", cwd=cwd, source="other", outside_scope=True, format="json")
+    logged = _outside_logs(caplog)
+    caplog.clear()
+    inside = env.call("describe", cwd=cwd, source="sample", outside_scope=True, format="json")
+    inside_logs = _outside_logs(caplog)
+    listed = env.call("describe", cwd=cwd)
+    # 検証
+    lines = result.text.splitlines()
+    assert not result.is_error
+    assert lines[0] == OUTSIDE_LINE
+    assert INSTRUCTIONS in result.text
+    assert "| sample |" in result.text
+    assert as_json.data["outside_scope"] is True
+    assert any(cwd in message and "other" in message for message in logged)
+    assert not inside.data.get("outside_scope")
+    assert inside_logs == []
+    assert "| other |" not in listed.text
+
+
+def test_error_when_outside_read_disabled(
+    make_source: Callable[..., Any],
+    make_server: Callable[..., Any],
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """outside_read: false の配信元は outside_scope: true でも断る（異常系）。"""
+    # 準備
+    sample = make_source("sample")
+    closed = make_source("other", outside_read=False)
+    opened = make_source("open")
+    env = make_server(sample, closed, opened)
+    cwd = str(sample.folder)
+    caplog.set_level(logging.INFO)
+    # 実行
+    refused = env.call("describe", cwd=cwd, source="other", outside_scope=True)
+    guided = env.call("describe", cwd=cwd, source="open")
+    # 検証
+    assert refused.is_error
+    assert "SourceNotReadableError" in refused.text
+    assert "other" in refused.text
+    assert OUTSIDE_HINT not in refused.text
+    assert _outside_logs(caplog) == []
+    assert guided.is_error
+    assert OUTSIDE_HINT in guided.text
+
+
+def test_normal_when_refs_and_worktrees(
+    make_source: Callable[..., Any],
+    make_server: Callable[..., Any],
+    run_git: Callable[..., str],
+    add_worktree: Callable[..., Any],
+) -> None:
+    """source で、ブランチ・タグとワークツリーの一覧を返す（正常系）。"""
+    # 準備
+    sample = make_source("sample")
+    run_git(sample.folder, "tag", "v0.1.0")
+    worktree = add_worktree(sample.folder, "x")
+    outside = sample.folder.parent / "outside"
+    run_git(sample.folder, "worktree", "add", "-b", "feat/y", str(outside))
+    notes = make_source("notes", git=False, scope_read=[sample.folder])
+    env = make_server(sample, notes)
+    cwd = str(sample.folder)
+    # 実行
+    result = env.call("describe", cwd=cwd, source="sample", format="json")
+    plain = env.call("describe", cwd=cwd, source="notes", format="json")
+    # 検証
+    worktrees = {item["path"]: item.get("branch") for item in result.data["worktrees"]}
+    assert {"develop", "feat/x"} <= set(result.data["refs"]["branches"])
+    assert "v0.1.0" in result.data["refs"]["tags"]
+    assert worktrees == {str(worktree): "feat/x"}
+    assert "refs" not in plain.data
+    assert "worktrees" not in plain.data

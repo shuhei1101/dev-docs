@@ -195,6 +195,32 @@ flows:
       - ブランチで文書 2 に `廃止予定` を追加し、`--no-ff` でマージした区間では、文書 2 の `contains_changes` がブランチの commit の `added` 1 要素だけ（マージ commit を含まない）
       - 'commit 3 の後に作業ツリーで文書 1 に `廃止予定` を戻し、`to` を省いて呼ぶと、文書 1 の `contains_changes` の最後に `{kind: added, to: 作業ツリー}` が加わる'
     test: test_normal_when_contains
+  - name: 正常系（作業範囲の外を参考に読む）
+    summary: '`outside_scope: true` で、`scope` に当たらない配信元の変更を作業範囲の外（参考）として返す'
+    setup:
+      - name: Mock
+        description: なし
+      - name: 配信元
+        description: sample と、最後の commit で文書 1 を変えた Git の配信元 other（`scope.read` は other のフォルダだけ。端末の設定の `outside_read` は書かない）
+      - name: 入力
+        description: '`source: other`, `from: HEAD~1`, `outside_scope: true`。`cwd` は sample のクローン本体'
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        participant C as クライアント
+        participant T as list_changes
+        participant L as 要求のログ
+
+        C->>T: source: other, from: HEAD~1, outside_scope: true
+        T->>T: scope に cwd が当たらず、outside_read が真
+        T->>L: cwd と other を残す
+        T-->>C: 作業範囲の外（参考）、文書 1 の変更
+      ```
+    expected:
+      - 先頭の行に「作業範囲の外（参考）」があり、文書 1 を `modified` で返す
+      - 要求のログに sample のクローン本体のパスと `other` が残る
+      - '`outside_read: false` の other では `SourceNotReadableError` を返す'
+    test: test_normal_when_outside_scope
 lead: 区間（commit・日時・ブランチ・タグ）か、この会話で前回読んだ時点から今までに変わった文書・変わったキー・差分の行を返す。
 identifier: list_changes
 permissions: 対象の配信元の `scope.read` か `scope.write` に `cwd` が当たること
@@ -322,6 +348,15 @@ request:
     description: 大文字小文字と全角半角（NFKC）を区別するか
     notes: '`search_docs` の条件の `case_sensitive` と同じ'
     status: planned
+  - name: outside_scope
+    type: bool
+    required: false
+    default: '`false`'
+    location: argument
+    description: '`true` のとき、`cwd` が `scope` に当たらない配信元も、端末の設定の `sources[].outside_read` が真なら作業範囲の外（参考）として読む'
+    constraints: '`source` に ID を 1 つ渡したときだけ効く'
+    notes: '`format: markdown` は先頭の行に「作業範囲の外（参考）」を出し、`format: json` は `outside_scope: true` を返す。外から読んだ呼び出しは作業場所と配信元の ID を要求のログに残す'
+    status: planned
 request_example: |-
   ```json
   {"source": "sample", "from": "3f2a9c1", "to": "feat/x", "view": "summary"}
@@ -393,7 +428,8 @@ exceptions:
   - name: InvalidArgumentError
     condition: 'Git 管理外の配信元に `from`・`to` を渡した、`from` 無しで `to` を渡した、`filter` に知らない項目を渡した、`contains.value` が空、`contains.regex: true` で `value` が正規表現として読めない'
   - name: SourceNotReadableError
-    condition: '`cwd` が配信元の `scope.read`・`scope.write` に当たらない'
+    condition: '`cwd` が配信元の `scope.read`・`scope.write` に当たらない（`outside_scope: true` のときは、加えて `outside_read` が偽）'
+    notes: '`outside_read` が真で `outside_scope` を渡していないときは、`fix` に `outside_scope: true` で作業範囲の外を参考に読めることを添える'
 constraints:
   - item: 件数
     constraint: '`limit` は最大 100'

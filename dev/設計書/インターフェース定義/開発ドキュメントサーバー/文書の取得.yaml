@@ -193,6 +193,58 @@ flows:
       - '`/_api/sources/broken/docs` が 404 で、`missing` が `not_served`、`errors[]` に `documents[0]` に必須のキー `paths` が無いことがある'
       - '`/_api/sources/unknown/docs` が 404 で、`missing` が `source`'
     test: test_error_when_not_found
+  - name: 正常系（nav をタグの式で絞る）
+    summary: '`auto` の `filter` に当たる文書だけをタブのサイドバーに並べる'
+    setup:
+      - name: Mock
+        description: なし
+      - name: nav の auto のタグの式
+        description: sample の `nav` に、`auto` の `filter` が `tags が mcp かつ tags が 設計 でない` のタブ `mcp` と、`filter` を書かないタブ `すべて` を置く
+        notes: 文書 1 の `tags` は `[mcp]`、文書 2 は `[mcp, 設計]`、文書 3 は `[設計]`
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        participant C as クライアント
+        participant E as GET /_api/sources/{source}/docs/{path}
+
+        C->>E: GET /_api/sources/sample/docs
+        E->>E: auto の filter を check_filter で検証し、match_filter で当たる文書を並べる
+        E-->>C: 200（tabs）
+      ```
+    expected:
+      - タブ `mcp` の `items` に文書 1 だけが並ぶ
+      - タブ `すべて` の `items` に文書 1〜3 が並ぶ
+    test: test_normal_when_nav_filtered_by_tags
+  - name: 正常系（エイリアスを返す）
+    summary: 配信元の `alias_type` を持つ行の文書のエイリアスを、取り込んだスキーマの形で文書といっしょに返す
+    setup:
+      - name: Mock
+        description: なし
+      - name: 用語の種類
+        description: 'sample の `alias_type: term` の行の文書「作業範囲」'
+        notes: '`aliases` は `[scope, 担当範囲]`、`avoid` は `[担当領域]`、`description` を持つ'
+      - name: 文書の別名の種類
+        description: 'sample の `alias_type: doc` の行の文書「設定のリファレンス」'
+        notes: '`aliases` は `[settings]`、`description` を持ち、`avoid` を持たない'
+      - name: エイリアスの無い配信元
+        description: '`alias_type` を持つ行が無い配信元 `plain`'
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        participant C as クライアント
+        participant E as GET /_api/sources/{source}/docs/{path}
+
+        C->>E: GET /_api/sources/sample/docs/{文書 1 のパス}
+        E->>E: alias_type を持つ行の文書のエイリアスを集める
+        E-->>C: 200（markdown と aliases）
+        C->>E: GET /_api/sources/plain/docs
+        E-->>C: 200（aliases は空）
+      ```
+    expected:
+      - sample の応答の `aliases` に、`alias_type` が `term`・`name` が `作業範囲`・`aliases` が `[scope, 担当範囲]`・`avoid` が `[担当領域]` で `description` を持つ要素がある
+      - sample の応答の `aliases` に、`alias_type` が `doc`・`name` が `設定のリファレンス`・`aliases` が `[settings]` で `avoid` が `null` の要素がある
+      - plain の応答の `aliases` が空
+    test: test_normal_when_aliases_returned
   - name: 正常系（本文のファイルのパスで引く）
     summary: 管理用の YAML の行の文書に `bodyPath` を返し、本文のファイルのパスで指した文書を返す
     setup:
@@ -319,6 +371,31 @@ response:
     format: date-time
     description: 返した文書のファイルの更新日時。Git の配信元は開いているリビジョンでそのファイルを最後に変えた commit の日時、Git 管理外の配信元はファイルの更新日時
     notes: 文書の画面の文書の情報に出す
+  - name: aliases
+    type: list[AliasItem]
+    description: 配信元の `alias_type` を持つ行の文書のエイリアス。要素は取り込んだエイリアスのスキーマ（alias-inject の「エイリアスの元の行」）の共通の形で、画面が mdmark の `mount`・`render` の引数へ読み替えて渡す
+    notes: '`alias_type` を持つ行が無い配信元・変換に失敗したときは空。エイリアスのキーに違反する文書は載せない'
+  - name: aliases[].id
+    type: str
+    description: 用語の文書の ID
+  - name: aliases[].name
+    type: str
+    description: 用語の名前（共通のキー `name`）
+  - name: aliases[].aliases
+    type: list[str]
+    description: 本文で用語に当てる語（取り込んだエイリアスの共通のスキーマの `aliases`）
+  - name: aliases[].description
+    type: str | None
+    description: ツールチップに出す説明（共通のキー `description`）
+    notes: 持たない文書は `null`
+  - name: aliases[].alias_type
+    type: Literal['term', 'doc', 'command', 'url', 'skill', 'tool', 'path', 'env', 'avoid']
+    description: 文書の行の引用の種類（取り込んだスキーマの `alias_type` の enum）
+    notes: 画面は `term` を用語、`doc` を文書の別名として mdmark へ分けて渡す
+  - name: aliases[].avoid
+    type: list[str] | None
+    description: 用語のやめた言い方（エイリアスのキー `avoid`）
+    notes: 持たない文書は `null`。`related`・`command`・`cwd`・`url`・`skill` など他のエイリアスのキーも、取り込んだスキーマの `metadata` のキー名で同じ階層に持ち、値を持たないキーは載せない
   - name: bodyPath
     type: str | None
     description: 本文のファイルのパス（配信元の直下から、拡張子つき）。管理用の YAML の行の文書は `body_file` が指すファイル
@@ -343,6 +420,9 @@ constraints:
     constraint: '`{tag}-{関数名}`。`path` を含む入口は `view-get_document`、`path` を省く入口は `view-get_document_default`'
   - item: JSON のキー
     constraint: レスポンスのキーは camelCase。パス・クエリのパラメータ名は変えない
+  - item: nav の auto の絞り込み
+    constraint: '`nav` の `auto` は `document`（種類）に加えて `filter` を持てる。`filter` は `search_docs` の `filter` と同じ書式で、`check_filter` で検証し `match_filter` で当たる文書だけをサイドバーに並べる。`filter` を書かない `auto` はその種類の文書を全て並べる。`document` を省いた `auto` は配信元の全ての行の文書を対象にする'
+    notes: '`check_filter` に通らない `filter` はそのタブを空にし、起動と配信元の検査が違反を返す'
   - item: 文書の引き方
     constraint: '`path` を画面のパスで引き、当たらなければ文書のファイルか本文のファイルのパスが `path` と同じ最初の文書を返す'
     notes: 管理の MCP の `try_convert` と同じ引き方。同じ本文のファイルを複数の行が指すときは最初の文書に当たる

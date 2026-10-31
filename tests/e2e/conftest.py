@@ -186,6 +186,7 @@ class SourceSpec:
     scope_read: list[Path]
     scope_write: list[Path] | None = None
     enabled: bool = True
+    outside_read: bool | None = None
 
 
 @dataclass
@@ -336,6 +337,7 @@ def make_source(
         scope_write: list[Path] | None = None,
         enabled: bool = True,
         date: str | None = None,
+        outside_read: bool | None = None,
     ) -> SourceSpec:
         content = files if files is not None else sample_files()
         if git:
@@ -350,6 +352,7 @@ def make_source(
             scope_read=scope_read if scope_read is not None else [folder],
             scope_write=scope_write,
             enabled=enabled,
+            outside_read=outside_read,
         )
 
     return _make
@@ -390,6 +393,8 @@ def _settings_text(
         lines.extend(f"      - {path}" for path in spec.config)
         if not spec.enabled:
             lines.append("    enabled: false")
+        if spec.outside_read is not None:
+            lines.append(f"    outside_read: {str(spec.outside_read).lower()}")
         lines.append("    scope:")
         lines.append("      read:")
         lines.extend(f"        - {path}" for path in spec.scope_read)

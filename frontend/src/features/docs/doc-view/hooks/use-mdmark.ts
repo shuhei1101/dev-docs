@@ -1,5 +1,6 @@
 import { type RefObject, useEffect, useRef, useState } from "react";
 
+import type { AliasItem } from "@/shared/api/generated/model";
 import { logger } from "@/shared/lib/logger";
 
 /** mdmark の読み込み先（jsDelivr の GitHub の master ブランチの URL。master に入った mdmark のリリースを読む） */
@@ -31,10 +32,32 @@ export type MdmarkCommentStore = {
 export type MdmarkOptions = {
   markdown: string;
   docId: string;
+  /** 文書の取得の `aliases`（mdmark の索引にして渡す） */
+  aliases?: AliasItem[];
   commentStore: MdmarkCommentStore;
   /** 機能のオン・オフ（`comments` は既定でオフ） */
   config?: { features?: Record<string, boolean> };
 };
+
+export type MdmarkIndexDoc = {
+  id: string;
+  path: string;
+  title: string;
+  description?: string;
+  aliases: string[];
+};
+
+export type MdmarkIndexTerm = {
+  id: string;
+  term: string;
+  aliases: string[];
+  meaning: string;
+  avoid?: string[];
+};
+
+export type MdmarkIndex = { docs: MdmarkIndexDoc[]; terms: MdmarkIndexTerm[] };
+
+type MdmarkMountOptions = Omit<MdmarkOptions, "aliases"> & { index: MdmarkIndex };
 
 export type MdmarkHandle = {
   update: (markdown: string) => void;
@@ -42,10 +65,38 @@ export type MdmarkHandle = {
 };
 
 type MdmarkModule = {
-  mount: (element: HTMLElement, options: MdmarkOptions) => MdmarkHandle;
+  mount: (element: HTMLElement, options: MdmarkMountOptions) => MdmarkHandle;
 };
 
 let loading: Promise<MdmarkModule> | null = null;
+
+/** 文書の取得の `aliases` を mdmark の `opts.index`（`docs`・`terms`）にする */
+export const toMdmarkIndex = (aliases: AliasItem[]): MdmarkIndex => {
+  const terms: MdmarkIndexTerm[] = [];
+  const docs: MdmarkIndexDoc[] = [];
+  for (const item of aliases) {
+    if (item.aliasType === "term") {
+      // 説明の無い用語は mdmark が除くので載せない
+      if (!item.description) continue;
+      terms.push({
+        id: item.id,
+        term: item.name,
+        aliases: item.aliases,
+        meaning: item.description,
+        ...(item.avoid ? { avoid: item.avoid } : {}),
+      });
+    } else if (item.aliasType === "doc") {
+      docs.push({
+        id: item.id,
+        path: item.id,
+        title: item.name,
+        ...(item.description ? { description: item.description } : {}),
+        aliases: item.aliases,
+      });
+    }
+  }
+  return { docs, terms };
+};
 
 /** スタイルを `document.head` に 1 回だけ置く */
 const ensureStylesheet = (): void => {
@@ -99,8 +150,9 @@ export const useMdmark = (
       .then((module) => {
         const element = ref.current;
         if (cancelled || element === null) return;
-        rendered.current = latest.current.markdown;
-        handle = module.mount(element, latest.current);
+        const { aliases = [], ...rest } = latest.current;
+        rendered.current = rest.markdown;
+        handle = module.mount(element, { ...rest, index: toMdmarkIndex(aliases) });
         setState({
           handle,
           ready: true,

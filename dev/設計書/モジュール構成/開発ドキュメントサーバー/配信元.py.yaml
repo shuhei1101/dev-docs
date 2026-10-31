@@ -412,6 +412,18 @@ data_models:
         type: Path | None
         access: 公開
         description: Git の配信元のとき、クローンの直下（`root` がリポジトリの中のフォルダのときに違う）
+      - name: main_root
+        title: メインのリポジトリの直下
+        type: Path | None
+        access: 公開
+        description: Git の配信元のとき、`git rev-parse --git-common-dir` の親。`worktrees` はここから数える
+        default: None
+      - name: config_commit
+        title: 設定の commit
+        type: str | None
+        access: 公開
+        description: '`default_ref` から設定を読んだときの commit。Git でない配信元は `None`'
+        default: None
       - name: scope_read
         title: 読める作業場所
         type: list[str]
@@ -422,11 +434,17 @@ data_models:
         type: list[str]
         access: 公開
         description: '`sources[].scope.write`。無ければ `[str(root)]`'
+      - name: outside_read
+        title: 作業範囲の外から読めるか
+        type: bool
+        access: 公開
+        description: '`sources[].outside_read`'
+        default: 'True'
       - name: worktree_globs
         title: ワークツリーの glob
         type: list[str]
         access: 公開
-        description: 設定の `worktrees` を `repo_root` からの絶対パスにしたもの
+        description: 設定の `worktrees` を `main_root`（Git でなければ `root`）からの絶対パスにしたもの
       - name: schemas
         title: 種類のスキーマ
         type: dict[str, dict[str, Any]]
@@ -714,6 +732,12 @@ functions:
         condition: '最上位に `tags: tags.yaml`（`tags.yaml` を置く）'
         mock: なし
         expected: '`tags` の `知らないキー` だけ'
+      - name: test_validate_source_config_when_nav_filter
+        case: 正常
+        summary: nav の auto の条件
+        condition: '`nav.tabs[0].items[0].auto` が `{filter: {field: tags, op: eq, values: [mcp]}}`（`document` なし）と、`{filter: {field: tags, op: like, values: [mcp]}}`'
+        mock: なし
+        expected: 1 つ目は違反が無く、2 つ目は `nav.tabs[0].items[0].auto.filter` の下のパスの違反
   - name: check_scripts
     title: スクリプトの確かめ
     kind: 関数
@@ -809,20 +833,20 @@ functions:
       description: 配信するときは配信中の配信元と `serving` の状態、配信しないときは `None` と `not_served` か `disabled` の状態
     process: |-
       1. `entry.enabled` が `False` の場合、`disabled` を返す（設定は読まない。ID は `entry.id`、無ければ `sources[{index}]`）
-      2. `entry.config` の各ファイルを順に読む（YAMLの読み込み）
+      2. `entry.config` の各ファイルを順に読む（YAMLの読み込み）。先頭のファイルは、Git の配信元なら『default_ref の設定の読み込み』の内容を読み、commit を設定の commit にする（`ValidationFailedError` は違反を持つ `not_served` を返す）。2 つ目以降のファイルはディスクから読む
          - 無い・読めない・辞書でない場合、`config[{n}]` のパスの違反を持つ `not_served` を返す
       3. 読んだ値をマージする（設定のマージ）。`root` は先頭のファイルのフォルダにする
       4. マージした値を検証する（配信元の設定の検証）
          - 違反がある場合、その違反を持つ `not_served` を返す。設定の `version` を設定のバージョンの比較にかけて `older` なら、エラーログに `dev-docs migrate --source {先頭の設定のファイル}` で移し替えられることを足す
       5. `SourceConfig` にする。設定の `enabled` が `False` の場合、`disabled` を返す
-      6. スクリプトを確かめる（スクリプトの確かめ）
+      6. スクリプトを確かめる（スクリプトの確かめ。設定の commit がある場合は、そのリビジョンにスクリプトのファイルがあるか）
          - 違反がある場合、その違反を持つ `not_served` を返す
       7. 設定のバージョンを比べる（設定のバージョンの比較）
          - `newer` の場合、`version` に「このサーバーより新しい設定」の違反を持つ `not_served` を返す
          - `older` の場合、状態の `config_version` に `(設定, SOURCE_CONFIG_VERSION)` を入れる
          - `[warning]` 配信元の設定のバージョンが古い（ID・設定のバージョン・サーバーが読めるバージョン）
       8. `root` が Git の作業ツリーかとその直下を引く（履歴の『リポジトリの直下』）
-      9. 種類ごとのスキーマを読み、`worktrees` を `repo_root`（Git でなければ `root`）からの絶対パスにして、`ServedSource` を作る。ID は `entry.id`、無ければ `config.name`
+      9. 種類ごとのスキーマを読み（設定の commit がある場合はそのリビジョンのファイル）、`worktrees` をメインのリポジトリの直下（Git でなければ `root`）からの絶対パスにして、`ServedSource` を作る。ID は `entry.id`、無ければ `config.name`。`outside_read` は `entry.outside_read`
       10. `ServedSource` と `serving` を返す
 
       違反で返すときは `[error]` 配信元を配信しない（違反ごとに `{id}: {パス}: {理由}`）を書く。
@@ -881,6 +905,69 @@ functions:
         condition: '`version: "1"` で `documents[0]` に `type: markdown` を持つ設定'
         mock: なし
         expected: '`None` と `not_served`、違反が `documents[0].type`。エラーログに `dev-docs migrate --source` と設定のファイルのパス'
+      - name: test_load_source_when_default_ref
+        case: 正常
+        summary: default_ref の設定とスキーマで組み立てる
+        condition: '`develop`（`default_ref`）に `kind_a` の行とスキーマを commit し、クローン本体は `master` を checkout'
+        mock: なし（一時フォルダで `git init`）
+        expected: '`config.documents` と `schemas` に `kind_a` があり、`config_commit` が `develop` の commit'
+      - name: test_load_source_when_worktree_config
+        case: 正常
+        summary: ワークツリーの設定でもメインから数える
+        condition: '`entry.config` が `.claude/worktrees/develop/dev-docs.yaml`、`worktrees: [.claude/worktrees/*]`'
+        mock: なし（一時フォルダで `git init` と `git worktree add`）
+        expected: '`worktree_globs` がクローン本体の直下の `.claude/worktrees/*`'
+  - name: read_default_ref_config
+    title: default_ref の設定の読み込み
+    kind: 関数
+    container: features/sources/service.py
+    usecase: 起動
+    role: 読み込み
+    summary: ディスクの先頭の設定から `default_ref` を読み、そのリビジョンの先頭の設定の内容と commit を返す
+    scope: public
+    thread_safe: true
+    args:
+      - name: first
+        title: 先頭の設定のファイル
+        type: Path
+        required: true
+        passing: positional
+        description: '`sources[].config` の先頭のファイル'
+    returns:
+      type: tuple[str, str] | None
+      description: （`default_ref` の commit, そのリビジョンの設定の内容）。Git の作業ツリーでなければ `None`
+    process: |-
+      1. `first` のフォルダのリポジトリの直下を引く（リポジトリの直下）。無ければ `None` を返す
+      2. ディスクの `first` を YAML として読み、`default_ref`（無ければスキーマの既定）を取る
+      3. `default_ref` を commit に解く（リビジョンの解決）。解けない場合、`default_ref` のパスの違反の `ValidationFailedError` を送る
+      4. その commit の `first` の相対パスのファイルを読む（リビジョンのファイル）。無い場合、`config[0]` のパスの違反の `ValidationFailedError` を送る
+      5. commit と内容を返す
+    exceptions:
+      - name: ValidationFailedError
+        condition: '`default_ref` が解けない、またはそのリビジョンに設定のファイルが無い'
+        message: '`{default_ref} を解けません` / `{default_ref} に {パス} がありません`'
+    unit_tests:
+      - name: test_read_default_ref_config
+        case: 正常
+        summary: 別のブランチを checkout していても default_ref を読む
+        condition: '`develop` に `kind_a` の行を足した設定を commit し、クローン本体は `master` を checkout'
+        mock: なし（一時フォルダで `git init`）
+        expected: '`develop` の commit と、`kind_a` を持つ設定の内容'
+        exception: '-'
+      - name: test_read_default_ref_config_when_not_git
+        case: 正常
+        summary: Git の管理外
+        condition: '`git init` していない一時フォルダの設定'
+        mock: なし
+        expected: '`None`'
+        exception: '-'
+      - name: test_read_default_ref_config_when_ref_missing
+        case: 異常
+        summary: default_ref が無い
+        condition: '`default_ref: none` の設定'
+        mock: なし
+        expected: '`ValidationFailedError` の違反のパスが `default_ref`'
+        exception: '`default_ref` が解けない'
   - name: load_source_at
     title: 作業場所の配信元の読み込み
     kind: 関数
@@ -905,10 +992,10 @@ functions:
         description: 作業ツリーかワークツリーの直下
     returns:
       type: ServedSource
-      description: '`root` の設定で作った配信元（ID・`scope_read`・`scope_write` は `source` のまま）'
+      description: '`root` の設定で作った配信元（ID・`scope_read`・`scope_write`・`outside_read` は `source` のまま）'
     process: |-
       1. `source.config_files` を `source.repo_root`（無ければ `source.root`）からの相対パスにし、`root` の下の同じパスにする
-      2. 配信元の読み込みの手順 2〜6・8〜9 を、配信元の読み込みと同じ内部の関数で行う（設定のバージョンは比べない）
+      2. 配信元の読み込みの手順 2〜6・8〜9 を、ディスクの設定・スキーマ・スクリプトで（`default_ref` を読まずに）、配信元の読み込みと同じ内部の関数で行う（設定のバージョンは比べない）
          - 違反がある場合、その違反を持つ `ValidationFailedError` を送る
       3. 作った配信元を返す
     exceptions:
@@ -972,6 +1059,13 @@ functions:
         required: true
         passing: keyword
         description: '`None` は配信元のフォルダだけ'
+      - name: outside_read
+        title: 作業範囲の外から読めるか
+        type: bool
+        required: false
+        default: 'True'
+        passing: keyword
+        description: 端末の設定の `outside_read`
       - name: root_override
         title: 配信元のフォルダ
         type: Path | None
@@ -1059,6 +1153,18 @@ classes:
         type: threading.Lock
         access: 内部 (_)
         description: 読み直しを 1 つずつにする
+      - name: _entries
+        title: 行の控え
+        type: dict[str, tuple[SourceEntry, int]]
+        access: 内部 (_)
+        default: '{}'
+        description: 配信中の ID → 読んだ端末の設定の行と位置。`default_ref` が進んだときの組み立て直しに使う
+      - name: _on_rebuilt
+        title: 組み立て直した後の処理
+        type: Callable[[ServedSource], None] | None
+        access: 内部 (_)
+        default: None
+        description: 初期化の引数 `on_rebuilt` で受け取り、`get` が配信元を組み立て直して差し替えた後に、新しい配信元を渡して呼ぶ。`None` なら呼ばない
     methods:
       - name: reload
         title: 読み直す
@@ -1120,7 +1226,7 @@ classes:
           type: ServedSource
           description: 配信中の配信元
         process: |-
-          1. `_snapshot` を 1 回だけ読み、配信中にあれば返す
+          1. `_snapshot` を 1 回だけ読み、配信中にあれば、設定の commit を持つ配信元は `default_ref` を commit に解いて比べる。違う場合、`_reload_lock` を取ってその行だけを配信元の読み込みで読み直し、`_snapshot` のその配信元と状態を差し替え、`_reload_lock` を持ったまま `_on_rebuilt` を新しい配信元で呼んでから返す（`[info]` default_ref が進んだので配信元を組み立て直した（ID・前と後の commit））。同じなら配信中の配信元を返す
           2. 状態の一覧にその ID が `not_served` か `disabled` である場合、`SourceNotServedError`（`violations` に状態の違反、`disabled` に無効か）を送る
           3. どちらにも無い場合、`UnknownSourceError` を送る
         exceptions:
@@ -1151,6 +1257,20 @@ classes:
             mock: なし
             expected: '`UnknownSourceError`'
             exception: 無い ID
+          - name: test_source_registry_get_when_default_ref_moved
+            case: 正常
+            summary: default_ref が進んだら組み立て直す
+            condition: '`a` を読んだ後に `default_ref` へ設定の行を足す commit を積む'
+            mock: なし（一時フォルダで `git init`）
+            expected: '`get("a")` が足した行を持つ配信元を返し、2 回目の `get` は読み直さない'
+            exception: '-'
+          - name: test_source_registry_get_when_default_ref_moved_with_on_rebuilt
+            case: 正常
+            summary: 組み立て直した後の処理を呼ぶ
+            condition: '`on_rebuilt` に呼ばれた配信元を記録する関数を渡し、`a` を読んだ後に `default_ref` へ設定の行を足す commit を積む'
+            mock: なし（一時フォルダで `git init`）
+            expected: '`get("a")` の後に `on_rebuilt` が新しい配信元で 1 回呼ばれ、2 回目の `get` では呼ばれない'
+            exception: '-'
       - name: served
         title: 配信中
         kind: メソッド

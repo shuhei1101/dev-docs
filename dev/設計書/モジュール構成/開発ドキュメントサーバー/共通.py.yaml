@@ -70,6 +70,12 @@ data_models:
         access: 公開
         default: None
         description: '`write_docs` の `operations` の添字。操作に結び付かない違反は `None`'
+      - name: doc
+        title: 文書のパス
+        type: str | None
+        access: 公開
+        default: None
+        description: 違反した文書のパス（配信元の直下から）。エイリアスのキーの違反だけが持ち、設定のキーの違反は `None`
   - name: ApiModel
     title: 画面の API のモデル
     container: shared/api_model.py
@@ -99,6 +105,7 @@ classes:
       | `WorktreeNotMatchedError` | ワークツリーに当たらない | `given: str`・`patterns: list[str]` | 400 |
       | `TargetIsCloneError` | 書く先がクローン本体 | `clone: str` | 409 |
       | `InvalidArgumentError` | 引数の誤り | `violations: list[Violation]` | 400 |
+      | `NavInvalidError` | 画面の構成の違反 | `violations: list[Violation]` | 400 |
       | `RefNotFoundError` | 無いリビジョン | `argument: str`・`value: str` | 404 |
       | `UnknownKindError` | 知らない種類 | `kinds: list[str]` | 400 |
       | `DocumentNotFoundError` | 無い文書 | `missing: list[str]`・`candidates: dict[str, list[str]]` | 404 |
@@ -156,7 +163,7 @@ classes:
             summary: 追加のプロパティを辞書にする
             condition: '`SourceNotServedError(violations=[Violation(path="documents[0].paths", rule="必須のキーが無い")], disabled=False)`'
             mock: なし
-            expected: '`{"violations": [{"path": "documents[0].paths", "rule": "必須のキーが無い", "fix": "", "index": None}], "disabled": False}`'
+            expected: '`{"violations": [{"path": "documents[0].paths", "rule": "必須のキーが無い", "fix": "", "index": None, "doc": None}], "disabled": False}`'
           - name: test_dev_docs_error_details_when_no_extra
             case: 正常
             summary: 追加のプロパティが無い

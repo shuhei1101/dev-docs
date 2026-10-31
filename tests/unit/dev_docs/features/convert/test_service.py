@@ -184,6 +184,45 @@ def test_convert_service_convert_when_markdown(
     assert code_result.markdown.startswith("# 部品")
 
 
+def test_convert_service_convert_when_default_ref(
+    tmp_path: Path,
+    git_repo: Callable[..., Path],
+    run_git: Callable[..., str],
+    commit_all: Callable[..., str],
+    make_source_config: Callable[..., SourceConfig],
+    make_served_source: Callable[..., ServedSource],
+    make_target: Callable[..., Target],
+    make_document: Callable[..., Document],
+) -> None:
+    """`default_ref` のスクリプトで変換する（正常系）。"""
+    # 準備
+    root = git_repo({"scripts/c.py": 'print("# develop")\n'})
+    develop = run_git(root, "rev-parse", "HEAD").strip()
+    run_git(root, "checkout", "-b", "master")
+    commit_all(root, {"scripts/c.py": 'print("# master")\n'})
+    table = DocumentTable(
+        id="rules", paths=["rules/*.yaml"], schema_path="schemas/rule.schema.yaml", converter="c"
+    )
+    config = make_source_config(
+        documents=[table],
+        converters=[ScriptEntry(id="c", run=[sys.executable, "scripts/c.py"])],
+    )
+    source = make_served_source(
+        root=root,
+        config=config,
+        is_git=True,
+        repo_root=root,
+        main_root=root,
+        config_commit=develop,
+    )
+    target = make_target(source, ref=develop, access="read")
+    # 実行
+    result = _service(tmp_path, {}).convert(target, make_document())
+    # 検証
+    assert result.failure is None
+    assert result.markdown.strip() == "# develop"
+
+
 def test_convert_service_convert_when_records(
     tmp_path: Path,
     make_source_config: Callable[..., SourceConfig],

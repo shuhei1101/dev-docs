@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any
@@ -353,3 +354,95 @@ def test_resolve_write_target_when_clone(
     with pytest.raises(TargetIsCloneError) as exc_info:
         resolve_write_target(registry=registry, cwd="/r")
     assert exc_info.value.clone == "/r"
+
+
+def test_resolve_read_targets_when_outside_scope(
+    sample: ServedSource,
+    make_served_source: Callable[..., ServedSource],
+    make_registry: Callable[..., Any],
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """作業範囲の外を参考に読む（正常系）。"""
+    # 準備
+    other = make_served_source(
+        id="other", root=Path("/o"), scope_read=["/zzz"], scope_write=[], outside_read=True
+    )
+    registry = make_registry(sample, other)
+    # 実行
+    with caplog.at_level(logging.INFO):
+        result = resolve_read_targets(
+            registry=registry, source="other", cwd="/r", outside_scope=True
+        )
+    # 検証
+    messages = [record.getMessage() for record in caplog.records if record.levelno == logging.INFO]
+    assert [(target.source.id, target.outside_scope, target.access) for target in result] == [
+        ("other", True, "read")
+    ]
+    assert len([message for message in messages if "/r" in message and "other" in message]) == 1
+
+
+def test_resolve_read_targets_when_outside_scope_in_scope(
+    sample: ServedSource, make_registry: Callable[..., Any], caplog: pytest.LogCaptureFixture
+) -> None:
+    """scope に当たる配信元には付けない（正常系）。"""
+    # 準備
+    registry = make_registry(sample)
+    # 実行
+    with caplog.at_level(logging.INFO):
+        result = resolve_read_targets(
+            registry=registry, source="sample", cwd="/r", outside_scope=True
+        )
+    # 検証
+    assert result[0].outside_scope is False
+    assert [record for record in caplog.records if record.levelno == logging.INFO] == []
+
+
+def test_resolve_read_targets_when_outside_scope_all(
+    sample: ServedSource,
+    make_served_source: Callable[..., ServedSource],
+    make_registry: Callable[..., Any],
+) -> None:
+    """`*` には効かない（正常系）。"""
+    # 準備
+    other = make_served_source(
+        id="other", root=Path("/o"), scope_read=["/zzz"], scope_write=[], outside_read=True
+    )
+    registry = make_registry(sample, other)
+    # 実行
+    result = resolve_read_targets(registry=registry, source="*", cwd="/r", outside_scope=True)
+    # 検証
+    assert [target.source.id for target in result] == ["sample"]
+
+
+def test_resolve_read_targets_when_outside_read_disabled(
+    sample: ServedSource,
+    make_served_source: Callable[..., ServedSource],
+    make_registry: Callable[..., Any],
+) -> None:
+    """外から読むのを断る配信元（異常系）。"""
+    # 準備
+    other = make_served_source(
+        id="other", root=Path("/o"), scope_read=["/zzz"], scope_write=[], outside_read=False
+    )
+    registry = make_registry(sample, other)
+    # 実行・検証
+    with pytest.raises(SourceNotReadableError, match="other はこの作業場所") as exc_info:
+        resolve_read_targets(registry=registry, source="other", cwd="/r", outside_scope=True)
+    assert [step for step in exc_info.value.next_steps if "outside_scope" in step] == []
+
+
+def test_resolve_read_targets_when_not_readable_guides_outside(
+    sample: ServedSource,
+    make_served_source: Callable[..., ServedSource],
+    make_registry: Callable[..., Any],
+) -> None:
+    """外から読めることを案内する（異常系）。"""
+    # 準備
+    other = make_served_source(
+        id="other", root=Path("/o"), scope_read=["/zzz"], scope_write=[], outside_read=True
+    )
+    registry = make_registry(sample, other)
+    # 実行・検証
+    with pytest.raises(SourceNotReadableError, match="other はこの作業場所") as exc_info:
+        resolve_read_targets(registry=registry, source="other", cwd="/r")
+    assert len([step for step in exc_info.value.next_steps if "outside_scope: true" in step]) == 1

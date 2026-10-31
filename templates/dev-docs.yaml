@@ -11,6 +11,10 @@ documents:
     schema: schemas/files.schema.yaml
     records: files
     body_file: path
+# タグを {name, main} のオブジェクトの配列で持つ行は、metadata で取り出す
+#    metadata:
+#      tags: tags[].name
+#      main_tags: tags[main].name
   - id: prompts
     paths: [content/prompts/**/*.yaml]
     title: プロンプト
@@ -23,3 +27,14 @@ documents:
 converters:
   - id: prompt-doc
     run: [dev-docs, prompt-doc]
+# nav の auto は、search_docs の filter と同じ条件で並べる文書を絞れる
+# nav:
+#   tabs:
+#     - title: MCP
+#       items:
+#         - auto:
+#             document: files
+#             filter:
+#               and:
+#                 - {field: tags, op: eq, values: [mcp]}
+#                 - not: {field: tags, op: eq, values: [設計]}

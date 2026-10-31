@@ -7,8 +7,8 @@ import logging
 import re
 from pathlib import Path
 
-from dev_docs.features.access.types import Target
-from dev_docs.features.convert.embed import expand_embeds
+from dev_docs.features.access.types import Target, script_at
+from dev_docs.features.convert.embed import EMBED_PATTERN, expand_embeds
 from dev_docs.features.convert.markdown import schema_to_markdown
 from dev_docs.features.convert.types import Converted, ConvertFailure
 from dev_docs.features.documents.fields import is_markdown_body
@@ -121,7 +121,11 @@ class ConvertService:
         script = " ".join(entry.run)
         try:
             result = run_script(
-                entry.run, cwd=target.base, stdin=document.body, timeout_sec=self.timeout_sec
+                entry.run,
+                cwd=target.base,
+                stdin=document.body,
+                timeout_sec=self.timeout_sec,
+                at=script_at(target),
             )
         except ScriptTimeoutError:
             return ConvertFailure(
@@ -155,7 +159,10 @@ class ConvertService:
             markdown = document.body
         else:
             markdown = schema_to_markdown(document, self.store.row_schema(target, document.kind))
-        base = target.base if target.ref is None else self.store.read_root(target)
+        # ref を読むときだけ、埋め込みのマーカーがあればそのリビジョンを取り出した場所から読む
+        base = target.base
+        if target.ref is not None and re.search(EMBED_PATTERN, markdown):
+            base = self.store.read_root(target)
         stripped, keys = _strip_table_keys(expand_embeds(markdown, base), document.kind)
         return Converted(markdown=stripped, table_keys=keys)
 

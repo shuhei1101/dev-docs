@@ -88,6 +88,31 @@ flows:
       - 422 で `reason` の違反を返す
       - 同じ `session_id` の返し済みの記録が残っている
     test: test_error_when_input_invalid
+  - name: 正常系（タグの付け方を案内する）
+    summary: 文脈のタグの行にタグの付け方を載せ、文書の MCP の instructions と同じ内容にする
+    setup:
+      - name: Mock
+        description: なし
+      - name: 配信元
+        description: sample を配信している dev-docs
+        notes: '`cwd` は sample のクローン本体'
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        participant C as クライアント
+        participant E as POST /_admin/session-context
+        participant M as 文書の MCP（/mcp）
+
+        C->>E: cwd
+        E-->>C: 200（context）
+        C->>M: initialize
+        M-->>C: instructions
+      ```
+    expected:
+      - '`context` のタグの行が、単語まで分けてタグにすること・`action:`・`topic:`・`tool:` の命名・配信元のタグの規約に従うことを含む'
+      - 文書の MCP の instructions のタグの行が `context` のタグの行と同じ
+      - '`context` が 2,000 字以内'
+    test: test_normal_when_tag_guide_included
 lead: SessionStart のフックが呼ぶ。cwd から使える配信元と使い方・索引の同期の件数・古い設定の警告を、セッションの文脈に入れる文として返す。`/clear`・圧縮の後は、そのセッションの返し済みの記録を捨てる。
 identifier: post_session_context
 permissions: なし（`127.0.0.1` でだけ待ち受ける）
@@ -95,6 +120,7 @@ idempotent: true
 side_effects: '`reason` が `clear`・`compact` のとき、`session_id`（と `agent_id`）の返し済みの記録を削除する'
 callers:
   - dev/設計書/シナリオ/単一ユースケース/起動する#scenarios[正常シナリオ（待ち受けているサーバーの文脈を追加する）]
+  - dev/設計書/シナリオ/単一ユースケース/エージェントが調べる#scenarios[正常シナリオ（タグの付け方の案内を受け取る）]
 exclusivity: 返し済みの記録の削除は記録の書き込みと同じロックで行う
 request:
   - name: cwd
@@ -128,7 +154,7 @@ response:
   - name: context
     type: str
     description: 文脈に入れる文。使える配信元ごとの 1 行（ID・読み書きか読み取りだけか・`description`）、場面ごとの短い使い方、警告
-    notes: 使い方には「範囲のファイルを作った・消した・改名したら、管理用の YAML の行を修正する」と「`describe(source)` で種類と書き方を確かめ、タグは `search_docs` の `group_by="tags"` で使われているタグを見て同じ意味のタグを使い回す」を含める
+    notes: 使い方には「範囲のファイルを作った・消した・改名したら、管理用の YAML の行を修正する」と「`describe(source)` で種類と書き方を確かめ、タグは `search_docs` の `group_by="tags"` で使われているタグを見て同じ意味のタグを使い回す」を含める。タグの行は、単語まで分けてタグにすること・`action:`・`topic:`・`tool:` の命名・配信元のタグの規約に従うことを案内し、文書の MCP の instructions のタグの行と同じ内容にする
   - name: sources[].id
     type: str
     description: 使える配信元の ID

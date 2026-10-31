@@ -13,6 +13,7 @@ import {
   settingsView,
 } from "./support/fixtures";
 import type { SeedComment } from "./support/fixtures";
+import type { AliasItem } from "@/shared/api/generated/model";
 
 type Overrides = Partial<Record<Operation, Handler>>;
 
@@ -39,6 +40,19 @@ const TABS_WITH_DOCS = [
     items: [{ kind: "page" as const, title: "補足 1", path: "notes/n-1", items: [], change: null }],
   },
   { title: "空", active: false, items: [] },
+];
+
+const DOC_1_PAGE = { kind: "page" as const, title: "文書 1", path: "docs/doc-1", items: [], change: null };
+const TABS_SHARING_DOC = [
+  { title: "mcp", active: true, items: [DOC_1_PAGE] },
+  {
+    title: "すべて",
+    active: false,
+    items: [
+      DOC_1_PAGE,
+      { kind: "page" as const, title: "文書 2", path: "docs/doc-2", items: [], change: null },
+    ],
+  },
 ];
 
 const openDoc = async (
@@ -252,6 +266,21 @@ test.describe("種類のタブ", () => {
     await openDoc(page, "/sample/docs/doc-1", withTabs);
     await page.getByRole("link", { name: "補足", exact: true }).click();
     await expect(page).toHaveURL(/\/sample\/notes\/n-1/);
+  });
+
+  // 1 つの文書が 2 つのタブに当たるとき、後のタブを押すとそのタブを現在地にしてサイドバーを替える（正常系）
+  test("tabs_click_when_doc_in_two_tabs", async ({ page }) => {
+    await openDoc(page, "/sample/docs/doc-1", {
+      document: ({ path }) => ({ body: documentResponse({ path, tabs: TABS_SHARING_DOC }) }),
+    });
+    const tabs = page.getByRole("navigation", { name: "文書の種類" });
+    await tabs.getByRole("link", { name: "すべて" }).click();
+    await expect(page).toHaveURL(/\/sample\/docs\/doc-1\?tab=1$/);
+    await expect(tabs.getByRole("link", { name: "すべて" })).toHaveAttribute("aria-current", "page");
+    await expect(page.getByRole("navigation", { name: "文書の一覧" }).getByRole("link")).toHaveText([
+      "文書 1",
+      "文書 2",
+    ]);
   });
 
   // 文書の無いタブは URL を変えず、文書が無いことの表示を出す（正常系）
@@ -1307,5 +1336,68 @@ test.describe("ランドマーク", () => {
     await openRendered(page);
     const result = await new AxeBuilder({ page }).withRules(["landmark-unique"]).analyze();
     expect(result.violations.map((violation) => violation.id)).toEqual([]);
+  });
+});
+
+const TERM_MARKDOWN =
+  "# 文書 1\n\n## 概要\n\n作業範囲の中だけを書き換える。\n\n## 関連\n\n値は settings を見る。\n";
+const ALIASES: AliasItem[] = [
+  {
+    id: "scope",
+    name: "作業範囲",
+    aliases: ["scope", "担当範囲"],
+    description: "触ってよい範囲",
+    aliasType: "term",
+    avoid: ["担当領域"],
+  },
+  {
+    id: "settings",
+    name: "設定のリファレンス",
+    aliases: ["settings"],
+    description: "設定のキーの一覧",
+    aliasType: "doc",
+  },
+];
+
+const withAliases =
+  (aliases: AliasItem[]): Handler =>
+  ({ path }) => ({ body: documentResponse({ path, markdown: TERM_MARKDOWN, aliases }) });
+
+test.describe("本文の用語のツールチップ", () => {
+  // 本文の用語の語にポインターを載せると、用語の名前と意味のツールチップを出す（正常系）
+  test("term_tooltip", async ({ page }) => {
+    // 準備
+    await openRendered(page, "/sample/docs/doc-1", { document: withAliases(ALIASES) });
+    const term = page.getByRole("main").getByText("作業範囲", { exact: true });
+    // 実行
+    await term.hover();
+    // 検証
+    const tooltip = page.getByRole("tooltip");
+    await expect(tooltip).toBeVisible();
+    await expect(tooltip).toContainText("用語");
+    await expect(tooltip).toContainText("触ってよい範囲");
+  });
+
+  // 文書の別名の語にポインターを載せると、関連文書のツールチップを出す（正常系）
+  test("term_tooltip_when_doc_alias", async ({ page }) => {
+    // 準備
+    await openRendered(page, "/sample/docs/doc-1", { document: withAliases(ALIASES) });
+    const alias = page.getByRole("main").getByText("settings", { exact: true });
+    // 実行
+    await alias.hover();
+    // 検証
+    const tooltip = page.getByRole("group", { name: "「settings」の関連文書" });
+    await expect(tooltip).toBeVisible();
+    await expect(tooltip).toContainText("設定のリファレンス");
+  });
+
+  // aliases が空のときは本文の語にツールチップを付けない（正常系）
+  test("term_tooltip_when_no_aliases", async ({ page }) => {
+    // 準備
+    await openRendered(page, "/sample/docs/doc-1", { document: withAliases([]) });
+    // 実行
+    await page.getByRole("main").getByText("作業範囲の中だけを書き換える。").hover();
+    // 検証
+    await expect(page.getByRole("tooltip")).toHaveCount(0);
   });
 });

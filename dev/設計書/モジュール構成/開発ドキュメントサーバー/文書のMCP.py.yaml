@@ -6,8 +6,8 @@ directory: |-
   ```text
   src/dev_docs/server/mcp/
   ├─ __init__.py   # build_docs_mcp / build_admin_mcp の再エクスポート
-  ├─ docs.py       # build_docs_mcp（6 つのツールの登録）
-  ├─ admin.py      # build_admin_mcp（6 つのツールの登録）
+  ├─ docs.py       # build_docs_mcp（7 つのツールの登録）
+  ├─ admin.py      # build_admin_mcp（7 つのツールの登録）
   └─ result.py     # to_tool_result / tool_error / TOOL_ANNOTATIONS
   ```
 diagrams:
@@ -161,6 +161,9 @@ constants:
       - key: delete_docs
         value: '`readOnlyHint=False`・`destructiveHint=True`'
         description: インターフェース定義『文書の削除』
+      - key: list_match_words
+        value: '`readOnlyHint=True`'
+        description: インターフェース定義『用語の一覧』
       - key: status
         value: '`readOnlyHint=True`'
         description: インターフェース定義『状態の取得』
@@ -179,6 +182,9 @@ constants:
       - key: try_convert
         value: '`readOnlyHint=True`'
         description: インターフェース定義『試しの変換』
+      - key: write_nav
+        value: '`readOnlyHint=False`・`destructiveHint=False`'
+        description: インターフェース定義『画面の構成の書き込み』
 functions:
   - name: to_tool_result
     title: ツールの結果
@@ -295,7 +301,7 @@ functions:
     container: server/mcp/docs.py
     usecase: 共通
     role: 入口
-    summary: 6 つのツールを持つ文書の MCP を作る
+    summary: 7 つのツールを持つ文書の MCP を作る
     scope: public
     args:
       - name: handlers
@@ -308,8 +314,8 @@ functions:
       type: mcp.server.mcpserver.MCPServer
       description: 文書の MCP（`stateless_http`・`json_response` はアプリの組み立てが `streamable_http_app()` の引数で渡す）
     process: |-
-      1. `MCPServer(DOCS_MCP_NAME)` を作る
-      2. `search_docs`・`describe`・`list_changes`・`trace_related`・`write_docs`・`delete_docs` を `TOOL_ANNOTATIONS` の注釈で登録する。引数はインターフェース定義の `request` をキーワード引数で受ける（`list_changes` の `from` は `from_: Annotated[str | None, Field(validation_alias="from")]` で受け、ツールの入力のスキーマでは `from` を出す。`alias` は関数の呼び出しで `TypeError` になるため使わない）
+      1. `MCPServer(DOCS_MCP_NAME, instructions=TAG_GUIDE)` を作る（`TAG_GUIDE` はセッションの文脈の定数。文脈の文のタグの行と同じ文にする）
+      2. `search_docs`・`describe`・`list_changes`・`trace_related`・`write_docs`・`delete_docs`・`list_match_words` を `TOOL_ANNOTATIONS` の注釈で登録する。引数はインターフェース定義の `request` をキーワード引数で受ける（`list_changes` の `from` は `from_: Annotated[str | None, Field(validation_alias="from")]` で受け、ツールの入力のスキーマでは `from` を出す。`alias` は関数の呼び出しで `TypeError` になるため使わない）
          - 要求のモデルのフィールドが `description` を持つ場合、その説明を入力のスキーマの項目の説明に出す（`Annotated[型, Field(description=...)]`）
          - `search_docs` の説明は、インターフェース定義の冒頭リードに続けて `op: regex は値の各行に当たる（値全体の先頭・末尾は \A・\Z）。snippets は本文の代わりに、当たった行と前後の行（before・after。省けば context_lines）を行番号つきで返す。` と `filter の not は中の条件か束に当たらない文書、op: glob は **・*・? のパターンに当たる。fields・order_by の @matches は文書ごとの本文の条件に当たった行の数。sections（Markdown の見出し）・lines（offset・limit）は view: full の本文の一部だけを返す。` と `fields・filter・order_by のキーには共通のキー（id・name・description・tags など）も使える。種類の列名との対応は describe(source, kind) で見る。` と `group_by は値を NFKC と casefold でまとめて数える。タグを付ける前に group_by: tags（配信元をまたぐときは source: "*"）で使われているタグを見て、同じ意味のタグを使い回す。` を置く
          - `write_docs` の説明は、今の説明に続けて `set・unset・add_to・remove_from・text_edits のキーには共通のキー（id・name・description・tags・alias_type など）も使え、種類の列名へ読み替えて書く。対応は describe(source, kind) で見る。` を置く
@@ -318,7 +324,7 @@ functions:
       3. 各ツールは次の順で処理する
          - 引数で要求のモデル（`SearchRequest` など）を作る
          - サービスを `asyncio.to_thread` で呼ぶ（引数は `handlers` の属性）
-         - 結果をツールの結果にする（`write_docs`・`delete_docs` の `render` は `None`。`search_docs` は `functools.partial(render_search_markdown, source_label=result.source_label)`、`list_changes` は `functools.partial(render_changes_markdown, source_label=request.source or "作業中の配信元")` を渡す）
+         - 結果をツールの結果にする（`write_docs`・`delete_docs` の `render` は `None`。`search_docs` は `functools.partial(render_search_markdown, source_label=result.source_label)`、`list_changes` は `functools.partial(render_changes_markdown, source_label=request.source or "作業中の配信元")`、`list_match_words` は用語の一覧の文を渡す）
          - `DevDocsError` と `pydantic.ValidationError` はツールのエラーの変換の `CallToolResult(is_error=True)` をそのまま返す。それ以外の例外は `[error]` ツールの処理に失敗した（ツール名・例外）を書いて MCP の既定に任せる
       4. 作った MCP を返す
     unit_tests:
@@ -327,7 +333,7 @@ functions:
         summary: ツールと注釈
         condition: '`list_tools` を呼ぶ'
         mock: 配線済みの関数（偽物）
-        expected: 6 つのツールが並び、`delete_docs` の `destructiveHint` が `True`、`search_docs` の `readOnlyHint` が `True`
+        expected: 7 つのツールが並び、`list_match_words` の `readOnlyHint` が `True`、`delete_docs` の `destructiveHint` が `True`、`search_docs` の `readOnlyHint` が `True`
       - name: test_build_docs_mcp_when_call
         case: 正常
         summary: サービスへの受け渡し
@@ -346,13 +352,19 @@ functions:
         condition: '`list_tools` を呼ぶ'
         mock: 配線済みの関数（偽物）
         expected: '`search_docs` の説明に `not`・`glob`・`@matches`・`sections`・`lines`・`describe(source, kind)`・`group_by: tags`、`list_changes` の説明に `contains`、`write_docs` の説明に `describe(source, kind)` があり、入力のスキーマの `sections`・`lines`・`contains` の項目が `description` を持つ'
+      - name: test_build_docs_mcp_when_instructions
+        case: 正常
+        summary: タグの付け方の instructions
+        condition: '`initialize` を呼ぶ'
+        mock: 配線済みの関数（偽物）
+        expected: '`instructions` が `TAG_GUIDE` と同じ'
   - name: build_admin_mcp
     title: 管理の MCP の組み立て
     kind: 関数
     container: server/mcp/admin.py
     usecase: 共通
     role: 入口
-    summary: '6 つのツールを持つ管理の MCP を作る'
+    summary: '7 つのツールを持つ管理の MCP を作る'
     scope: public
     args:
       - name: handlers
@@ -366,7 +378,7 @@ functions:
       description: 管理の MCP
     process: |-
       1. `MCPServer(ADMIN_MCP_NAME)` を作る
-      2. `status`・`reload`・`restart`・`update`・`check_project`・`try_convert` を `TOOL_ANNOTATIONS` の注釈で登録する。引数はインターフェース定義の `request` をキーワード引数で受ける
+      2. `status`・`reload`・`restart`・`update`・`check_project`・`try_convert`・`write_nav` を `TOOL_ANNOTATIONS` の注釈で登録する。引数はインターフェース定義の `request` をキーワード引数で受ける
       3. 各ツールは次のサービスを `asyncio.to_thread` で呼び、結果をツールの結果にする
          - `status`: 状態の取得（`env` は `os.environ`）。`render` は状態の文
          - `reload`: 設定の読み直し。`render` は読み直しの文
@@ -374,6 +386,7 @@ functions:
          - `update`: クローンの更新（クローンは端末の設定の `clone`、`control` は `handlers.restart`）。`render` は `None`
          - `check_project`: 配信元の検査。`render` は検査の文
          - `try_convert`: 試しの変換。`render` は `None`
+         - `write_nav`: 画面の構成の書き込み。`render` は画面の構成の書き込みの文
          - `DevDocsError` と `pydantic.ValidationError` はツールのエラーの変換の結果を返す。それ以外の例外は `[error]` ツールの処理に失敗した（ツール名・例外）を書いて MCP の既定に任せる
       4. 作った MCP を返す
     unit_tests:
@@ -382,7 +395,7 @@ functions:
         summary: ツールと注釈
         condition: '`list_tools` を呼ぶ'
         mock: 配線済みの関数（偽物）
-        expected: 6 つのツールが並び、`restart`・`update` の `destructiveHint` が `True`、`status`・`check_project`・`try_convert` の `readOnlyHint` が `True`
+        expected: 7 つのツールが並び、`write_nav` の `destructiveHint` が `False`、`restart`・`update` の `destructiveHint` が `True`、`status`・`check_project`・`try_convert` の `readOnlyHint` が `True`
       - name: test_build_admin_mcp_when_call
         case: 正常
         summary: サービスへの受け渡し

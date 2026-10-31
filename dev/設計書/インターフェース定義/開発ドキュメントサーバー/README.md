@@ -32,6 +32,8 @@
 | 設定・起動 | [セッションの文脈](./セッションの文脈.yaml) | POST /_admin/session-context |
 | 設定・起動 | [載せるファイルの一覧](./載せるファイルの一覧.yaml) | dev-docs files |
 | 画面の API | [画面の配信](./画面の配信.yaml) | GET /{path} |
+| MCP | [用語の一覧](./用語の一覧.yaml) | list_match_words |
+| 管理の MCP | [画面の構成の書き込み](./画面の構成の書き込み.yaml) | write_nav |
 | 設定・起動 | [プロンプトの文書の変換](./プロンプトの文書の変換.yaml) | dev-docs prompt-doc |
 
 <!-- /table -->

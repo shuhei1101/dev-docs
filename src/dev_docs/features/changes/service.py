@@ -302,6 +302,7 @@ def list_changes(
         source=request.source,
         worktree=request.worktree,
         cwd=request.cwd,
+        outside_scope=request.outside_scope,
     )
     if request.from_ is not None:
         for target in targets:
@@ -469,4 +470,5 @@ def list_changes(
         next_cursor=next_cursor,
         truncated=truncated,
         notes=notes,
+        outside_scope=any(target.outside_scope for target in targets),
     )

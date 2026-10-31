@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dev_docs.features.changes.types import ChangesResult, RangePoint
+from dev_docs.features.search.render import OUTSIDE_SCOPE_LINE
 
 
 def _point(point: RangePoint) -> str:
@@ -16,6 +17,7 @@ def _point(point: RangePoint) -> str:
 def render_changes_markdown(result: ChangesResult, *, source_label: str) -> str:
     """`format: markdown` の本文を作る。"""
     lines = [
+        *([OUTSIDE_SCOPE_LINE] if result.outside_scope else []),
         f"{source_label}: {_point(result.range_from)} → {_point(result.range_to)}"
         f"・変わった文書 {result.total_count} 件",
         "",

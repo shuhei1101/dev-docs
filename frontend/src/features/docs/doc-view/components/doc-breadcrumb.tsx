@@ -44,7 +44,7 @@ export const DocBreadcrumb = ({ source, active, search }: Props) => {
             <Link
               to="/$source/$"
               params={{ source, _splat: tabPath }}
-              search={query}
+              search={{ ...query, tab: search.tab }}
               className="hover:text-foreground"
             >
               {active.tab.title}

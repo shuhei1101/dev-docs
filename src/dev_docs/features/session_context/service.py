@@ -15,12 +15,14 @@ from dev_docs.features.session_context.types import (
     FORGET_REASONS,
     SESSION_USAGE,
     SETUP_GUIDE,
+    TAG_GUIDE,
     ContextSource,
     SessionContextRequest,
     SessionContextResponse,
 )
 from dev_docs.features.settings.query import SETTINGS_VERSION
 from dev_docs.features.sources.types import SOURCE_CONFIG_VERSION
+from dev_docs.features.view.nav import nav_warnings
 
 if TYPE_CHECKING:
     from dev_docs.main import Handlers
@@ -66,6 +68,7 @@ def _collect_warnings(available: list[SourceAccess], *, handlers: Handlers) -> l
     """使える配信元の同期のずれ・古い設定と、配信していない配信元を警告の文にする。"""
     warnings: list[str] = []
     old_sources: list[str] = []
+    config_warnings: list[str] = []
     for item in available:
         source = handlers.registry.get(item.source_id)
         report = check_sync(handlers.store, source)
@@ -83,10 +86,20 @@ def _collect_warnings(available: list[SourceAccess], *, handlers: Handlers) -> l
             old_sources.append(
                 _old_version(item.source_id, source.config.version, SOURCE_CONFIG_VERSION)
             )
+        if report.alias_violations:
+            config_warnings.append(
+                f"{item.source_id}: エイリアスのキーの違反が {len(report.alias_violations)} 件"
+                "あります（check_project で確かめられます）"
+            )
+        config_warnings.extend(
+            f"{item.source_id}: {warning.path}: {warning.rule}"
+            for warning in nav_warnings(handlers.store, source)
+        )
     warnings.extend(old_sources)
     # 端末の設定のバージョンが古い
     if version_state(handlers.terminal.version, SETTINGS_VERSION) == "old":
         warnings.append(_old_version(TERMINAL_LABEL, handlers.terminal.version, SETTINGS_VERSION))
+    warnings.extend(config_warnings)
     # 検証で外した配信元（使える配信元かによらない）
     for status in handlers.registry.statuses():
         if status.status == "not_served" and status.errors:
@@ -116,7 +129,7 @@ def _source_line(item: SourceAccess, *, with_description: bool) -> str:
 
 def _compose(lines: list[str], warnings: list[str]) -> str:
     """見出し・配信元の行・使い方・警告をつなぐ。"""
-    parts = [CONTEXT_HEADER, *lines, SESSION_USAGE]
+    parts = [CONTEXT_HEADER, *lines, SESSION_USAGE, TAG_GUIDE]
     if warnings:
         parts.extend(["注意:", *(f"- {warning}" for warning in warnings)])
     return "\n".join(parts)

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dev_docs.features.describe.types import KindSchemaResult, SourceGuideResult, SourceListResult
+from dev_docs.features.search.render import OUTSIDE_SCOPE_LINE
 
 
 def _cell(text: str) -> str:
@@ -29,11 +30,25 @@ def render_describe_markdown(
             access = f"{item.access}（作業中）" if item.current else item.access
             lines.append(f"| {_cell(item.source_id)} | {access} | {_cell(item.description)} |")
         return "\n".join(lines) + "\n"
+    head = [OUTSIDE_SCOPE_LINE] if result.outside_scope else []
     if isinstance(result, SourceGuideResult):
-        lines = [result.instructions, "", "| kind | description |", "| --- | --- |"]
+        lines = [*head, result.instructions, "", "| kind | description |", "| --- | --- |"]
         lines.extend(f"| {_cell(kind.id)} | {_cell(kind.description)} |" for kind in result.kinds)
+        if result.refs is not None:
+            lines.extend(
+                [
+                    "",
+                    f"ブランチ: {', '.join(result.refs.get('branches', []))}",
+                    f"タグ: {', '.join(result.refs.get('tags', []))}",
+                ]
+            )
+        if result.worktrees:
+            lines.extend(["", "| ワークツリー | ブランチ |", "| --- | --- |"])
+            lines.extend(
+                f"| {_cell(item.path)} | {_cell(item.branch or '')} |" for item in result.worktrees
+            )
         return "\n".join(lines) + "\n"
-    lines = []
+    lines = list(head)
     if result.metadata:
         lines = ["| 共通のキー | 列名 |", "| --- | --- |"]
         lines.extend(

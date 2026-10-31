@@ -159,3 +159,17 @@ def test_trace_related_when_missing(make_env: Callable[..., RelatedEnv]) -> None
     with pytest.raises(DocumentNotFoundError) as exc_info:
         env.trace(from_ids=["doc-9"])
     assert exc_info.value.candidates["doc-9"]
+
+
+def test_render_related_markdown_when_outside_scope() -> None:
+    """作業範囲の外の表示（正常系）。"""
+    from dev_docs.features.related.render import render_related_markdown
+
+    # 準備
+    result = RelatedResult(start=["doc-1"], outside_scope=True)
+    # 実行
+    markdown = render_related_markdown(result)
+    # 検証
+    lines = markdown.splitlines()
+    assert lines[0] == "作業範囲の外（参考）"
+    assert lines[1] == "doc-1 から 0 件"

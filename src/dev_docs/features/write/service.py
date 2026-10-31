@@ -23,7 +23,7 @@ from dev_docs.features.seen.types import LastRead, SessionKey
 from dev_docs.features.sources.registry import SourceRegistry
 from dev_docs.features.sources.types import DocumentTable
 from dev_docs.features.validation.service import DocumentChecker
-from dev_docs.features.write.apply import apply_operation, to_columns
+from dev_docs.features.write.apply import apply_operation, expand_array_keys, to_columns
 from dev_docs.features.write.ids import generate_id
 from dev_docs.features.write.locks import SourceLocks
 from dev_docs.features.write.placement import new_document_path
@@ -452,6 +452,7 @@ def _apply_one(
                     )
                 ]
             )
+        operation = expand_array_keys(operation, table, None, index=index)
         operation = to_columns(operation, table, index=index)
         data = operation.data or {}
         columns = resolve_metadata(data, table)
@@ -515,6 +516,8 @@ def _apply_one(
                 )
             ]
         )
+    current = existing.data if operation.op == "update" else None
+    operation = expand_array_keys(operation, table, current, index=index)
     operation = to_columns(operation, table, index=index)
     assert operation.expected_version is not None  # noqa: S101
     check_version(existing, operation.expected_version, last_read=last_reads.get(existing.id))

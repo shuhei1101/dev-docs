@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 from collections.abc import Sequence
 from pathlib import Path
 
@@ -18,8 +19,11 @@ from dev_docs.shared.errors import (
 )
 from dev_docs.shared.paths import match_glob, normalize_path
 
+logger = logging.getLogger(__name__)
+
 MULTI_SOURCE_MIN = 2
 DESCRIBE_HINT = "describe() で、今の作業場所から使える配信元を見てください"
+OUTSIDE_HINT = "outside_scope: true を渡すと、作業範囲の外（参考）として読めます"
 
 
 def _normalize(value: str | None) -> Path | None:
@@ -108,35 +112,45 @@ def describe_workplace(cwd: str | None, *, registry: SourceRegistry) -> Workplac
 
 
 def _not_readable(
-    source_id: str, cwd: str | None, registry: SourceRegistry
+    source_id: str, cwd: str | None, registry: SourceRegistry, *, guide_outside: bool = False
 ) -> SourceNotReadableError:
     """読めない配信元のエラーを、使える配信元を添えて作る。"""
     return SourceNotReadableError(
         message=f"{source_id} はこの作業場所（{cwd}）から読めません",
         available=available_sources(cwd, registry=registry),
-        next_steps=[DESCRIBE_HINT],
+        next_steps=[DESCRIBE_HINT, *([OUTSIDE_HINT] if guide_outside else [])],
     )
 
 
 def _readable_sources(
-    registry: SourceRegistry, source: str | list[str] | None, cwd: str | None
-) -> list[ServedSource]:
-    """読む配信元を決める（権限の無い配信元は断る。`*` は黙って外す）。"""
+    registry: SourceRegistry,
+    source: str | list[str] | None,
+    cwd: str | None,
+    *,
+    outside_scope: bool = False,
+) -> list[tuple[ServedSource, bool]]:
+    """読む配信元と作業範囲の外かを決める（権限の無い配信元は断る。`*` は黙って外す）。"""
     path = _normalize(cwd)
     if source is None:
         current = current_source(registry.served(), path)
         if current is None or access_of(current[0], path) is None:
             raise _not_readable("作業中の配信元", cwd, registry)
-        return [current[0]]
+        return [(current[0], False)]
     if source == "*":
-        return [item for item in registry.served() if access_of(item, path) is not None]
+        return [(item, False) for item in registry.served() if access_of(item, path) is not None]
     ids = [source] if isinstance(source, str) else source
-    result: list[ServedSource] = []
+    single = isinstance(source, str)
+    result: list[tuple[ServedSource, bool]] = []
     for source_id in ids:
         item = registry.get(source_id)
-        if access_of(item, path) is None:
-            raise _not_readable(source_id, cwd, registry)
-        result.append(item)
+        if access_of(item, path) is not None:
+            result.append((item, False))
+            continue
+        if single and item.outside_read and outside_scope:
+            logger.info("作業範囲の外を読んだ（cwd: %s・配信元: %s）", cwd, source_id)
+            result.append((item, True))
+            continue
+        raise _not_readable(source_id, cwd, registry, guide_outside=single and item.outside_read)
     return result
 
 
@@ -147,10 +161,11 @@ def resolve_read_targets(
     ref: str | None = None,
     worktree: str | None = None,
     cwd: str | None = None,
+    outside_scope: bool = False,
 ) -> list[Target]:
     """MCP の `source`・`ref`・`worktree`・`cwd` から、読む配信元ごとの場所を解く。"""
     path = _normalize(cwd)
-    sources = _readable_sources(registry, source, cwd)
+    sources = _readable_sources(registry, source, cwd, outside_scope=outside_scope)
     if len(sources) >= MULTI_SOURCE_MIN and (ref is not None or worktree is not None):
         argument = "ref" if ref is not None else "worktree"
         raise InvalidArgumentError(
@@ -164,40 +179,51 @@ def resolve_read_targets(
         )
     current = current_source(registry.served(), path)
     targets: list[Target] = []
-    for item in sources:
-        access = access_of(item, path)
+    for item, outside in sources:
+        access = "read" if outside else access_of(item, path)
         assert access is not None  # noqa: S101
-        if worktree is not None:
-            wt = find_worktree(item, normalize_path(worktree))
-            if wt is None:
-                raise WorktreeNotMatchedError(
-                    message=f"{worktree} は {item.id} のワークツリーに当たりません",
-                    given=worktree,
-                    patterns=item.worktree_globs,
-                )
-            targets.append(Target(item, _base_of(item, wt), None, wt, access))
-        elif ref is not None:
-            if not item.is_git:
-                raise InvalidArgumentError(
-                    message="引数が正しくありません: 1 件",
-                    violations=[
-                        Violation(
-                            path="ref",
-                            rule="ref は 1 つの Git の配信元を指すときだけ渡せます",
-                            fix=f"{item.id} は Git の管理外なので ref を省いてください",
-                        )
-                    ],
-                )
-            targets.append(Target(item, item.root, ref, None, access))
-        else:
-            wt = find_worktree(item, path) if path is not None else None
-            if wt is not None:
-                targets.append(Target(item, _base_of(item, wt), None, wt, access))
-            elif (current is not None and current[0].id == item.id) or not item.is_git:
-                targets.append(Target(item, item.root, None, None, access))
-            else:
-                targets.append(Target(item, item.root, item.config.default_ref, None, access))
+        targets.append(_target_of(item, access, outside, ref, worktree, path, current))
     return targets
+
+
+def _target_of(
+    item: ServedSource,
+    access: AccessLevel,
+    outside: bool,
+    ref: str | None,
+    worktree: str | None,
+    path: Path | None,
+    current: tuple[ServedSource, Path | None] | None,
+) -> Target:
+    """1 つの配信元の読む場所を決める。"""
+    if worktree is not None:
+        wt = find_worktree(item, normalize_path(worktree))
+        if wt is None:
+            raise WorktreeNotMatchedError(
+                message=f"{worktree} は {item.id} のワークツリーに当たりません",
+                given=worktree,
+                patterns=item.worktree_globs,
+            )
+        return Target(item, _base_of(item, wt), None, wt, access, outside_scope=outside)
+    if ref is not None:
+        if not item.is_git:
+            raise InvalidArgumentError(
+                message="引数が正しくありません: 1 件",
+                violations=[
+                    Violation(
+                        path="ref",
+                        rule="ref は 1 つの Git の配信元を指すときだけ渡せます",
+                        fix=f"{item.id} は Git の管理外なので ref を省いてください",
+                    )
+                ],
+            )
+        return Target(item, item.root, ref, None, access, outside_scope=outside)
+    wt = find_worktree(item, path) if path is not None else None
+    if wt is not None:
+        return Target(item, _base_of(item, wt), None, wt, access, outside_scope=outside)
+    if (current is not None and current[0].id == item.id) or not item.is_git:
+        return Target(item, item.root, None, None, access, outside_scope=outside)
+    return Target(item, item.root, item.config.default_ref, None, access, outside_scope=outside)
 
 
 def resolve_write_target(

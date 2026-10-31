@@ -11,6 +11,7 @@ TOOL_NAMES = [
     "delete_docs",
     "describe",
     "list_changes",
+    "list_match_words",
     "search_docs",
     "trace_related",
     "write_docs",
@@ -36,6 +37,22 @@ LOCAL_CONFIG_ROWS = (
 NO_SCRIPT_EXTRA = (
     "    converter: md\nconverters:\n  - id: md\n    run: [python3, scripts/missing.py]\n"
 )
+TERM_ROW = (
+    "  - id: terms\n"
+    "    paths: [terms/*.yaml]\n"
+    "    schema: schemas/term.schema.yaml\n"
+    "    alias_type: term\n"
+)
+TERM_SCHEMA = "title: 用語\ntype: object\n"
+BROKEN_TERM = "id: broken\nname: 壊れた用語\ndescription: 型の違う別名\naliases: 3\n"
+NONE_NAV = (
+    "nav:\n"
+    "  tabs:\n"
+    "    - title: none\n"
+    "      items:\n"
+    "        - auto: {filter: {field: tags, op: eq, values: [none]}}\n"
+)
+SAMPLE_KIND_SCHEMA = "type: object\nproperties:\n  id: {type: string}\n  name: {type: string}\n"
 LOOPBACK_V4 = "0100007F"
 EXIT_TIMEOUT_SEC = 30
 DOCS_TOOL_PREFIX = "mcp__plugin_dev-docs_dev-docs__"
@@ -441,3 +458,96 @@ def test_error_when_session_start_cannot_start(
     assert str(missing) in context
     assert "/dev-docs:global-setup" in context
     assert serve_pid_count(claude_home.port) == 0
+
+
+def _kind_row(kind: str) -> str:
+    """`schemas/{kind}.schema.yaml` で `{kind}/*.yaml` を読む文書の種類の行を作る。"""
+    return f"  - id: {kind}\n    paths: [{kind}/*.yaml]\n    schema: schemas/{kind}.schema.yaml\n"
+
+
+def _kinds(result: Any) -> set[str]:
+    """describe(source) の JSON の種類の ID を集める。"""
+    return {kind["id"] for kind in result.data["kinds"]}
+
+
+def test_normal_when_config_read_from_default_ref(
+    make_source: Callable[..., Any],
+    serve: Callable[..., Any],
+    run_git: Callable[..., str],
+    commit_all: Callable[..., str],
+    sample_file_set: Callable[..., dict[str, str]],
+    sample_config_text: Callable[..., str],
+) -> None:
+    """クローン本体が master のままでも、default_ref の develop の設定とスキーマで配信元を組み立てる（正常系）。"""
+    # 準備
+    sample = make_source("sample")
+    run_git(sample.folder, "branch", "master")
+    commit_all(
+        sample.folder,
+        {
+            "dev-docs.yaml": sample_config_text(_kind_row("kind_a")),
+            "schemas/kind_a.schema.yaml": SAMPLE_KIND_SCHEMA,
+        },
+        "docs: kind_a を加える",
+    )
+    run_git(sample.folder, "checkout", "master")
+    worktree = sample.folder / ".claude" / "worktrees" / "develop"
+    run_git(sample.folder, "worktree", "add", str(worktree), "develop")
+    notes_files = sample_file_set(
+        **{"dev-docs.yaml": sample_config_text(_kind_row("kind_n"), name="notes")}
+    )
+    notes_files["schemas/kind_n.schema.yaml"] = SAMPLE_KIND_SCHEMA
+    notes = make_source("notes", notes_files, git=False, scope_read=[sample.folder])
+    served = serve(sample, notes)
+    cwd = str(sample.folder)
+    # 実行
+    first = served.call("describe", cwd=cwd, source="sample", format="json")
+    commit_all(
+        worktree,
+        {
+            "dev-docs.yaml": sample_config_text(_kind_row("kind_a") + _kind_row("kind_b")),
+            "schemas/kind_b.schema.yaml": SAMPLE_KIND_SCHEMA,
+        },
+        "docs: kind_b を加える",
+    )
+    second = served.call("describe", cwd=cwd, source="sample", format="json")
+    disk = served.call("describe", cwd=cwd, source="notes", format="json")
+    # 検証
+    assert "kind_a" in _kinds(first)
+    assert not (sample.folder / "schemas" / "kind_a.schema.yaml").exists()
+    assert {"kind_a", "kind_b"} <= _kinds(second)
+    assert str(worktree) in {item["path"] for item in first.data["worktrees"]}
+    assert "kind_n" in _kinds(disk)
+
+
+def test_normal_when_alias_and_nav_warned(
+    make_source: Callable[..., Any],
+    serve: Callable[..., Any],
+    sample_file_set: Callable[..., dict[str, str]],
+    sample_config_text: Callable[..., str],
+) -> None:
+    """エイリアスのキーの違反と 0 件に当たる nav の条件を起動時に警告し、配信を始める（正常系）。"""
+    # 準備
+    files = sample_file_set(
+        **{
+            "dev-docs.yaml": sample_config_text(TERM_ROW + NONE_NAV),
+            "schemas/term.schema.yaml": TERM_SCHEMA,
+            "terms/broken.yaml": BROKEN_TERM,
+        }
+    )
+    sample = make_source("sample", files)
+    # 実行
+    served = serve(sample)
+    cwd = str(sample.folder)
+    status = served.call_admin("status", format="json")
+    found = served.call("search_docs", cwd=cwd, term="壊れた用語", format="json")
+    words = served.call("list_match_words", cwd=cwd, source="sample", format="json")
+    logs = served.stderr()
+    # 検証
+    sources = {item["id"]: item["status"] for item in status.data["sources"]}
+    assert "terms/broken.yaml" in logs
+    assert "文字列か文字列の並び" in logs
+    assert "none" in logs
+    assert sources["sample"] == "serving"
+    assert not found.data.get("items")
+    assert "壊れた用語" not in {item["word"] for item in words.data.get("words", [])}

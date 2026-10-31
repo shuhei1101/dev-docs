@@ -385,6 +385,69 @@ scenarios:
       - '1,000 字以下の組と、`kind: llm` の組には字数の注意が出ない'
       - 言語が `ja` だけの SessionStart の配信元の一覧には言語のタブが出ず、各セクションに本文だけが出る
     test: test_normal_when_prompt_set_flagged
+  - name: 正常シナリオ（タグの式で絞った一覧を開く）
+    setup:
+      - name: Mock
+        description: なし（実環境で実行。ブラウザは Playwright で操作する）
+      - name: nav の auto のタグの式
+        description: sample の `dev-docs.yaml` の `nav` に、`auto` の `filter` が `tags が mcp かつ tags が 設計 でない` のタブ `mcp` を置く
+        notes: 文書 1 の `tags` は `[mcp]`、文書 2 は `[mcp, 設計]`、文書 3 は `[設計]`
+      - name: filter を書かない auto
+        description: 同じ `nav` に、`auto` が `document` だけを書き `filter` を書かないタブ `すべて` を置く
+      - name: dev-docs
+        description: sample を配信している dev-docs
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        actor U as 利用者
+        participant B as ブラウザ（文書の画面）
+        participant S as dev-docs のサーバー
+
+        U->>B: 文書の画面を開く
+        B->>S: 配信元の nav を取得する
+        S->>S: auto の filter を check_filter で検証し、match_filter で当たる文書を並べる
+        S-->>B: タブとサイドバーの項目（文書 1）
+        U->>B: タブを押し、サイドバーの文書 1 を押す
+        B-->>U: 文書 1 の本文
+      ```
+    expected:
+      - タブ `mcp` のサイドバーに文書 1 だけが並ぶ
+      - タブ `mcp` のサイドバーに文書 2・文書 3 は並ばない
+      - サイドバーの文書 1 を押すと文書 1 の本文が開く
+      - タブ `すべて` のサイドバーに文書 1〜3 が並ぶ
+    test: test_normal_when_nav_filtered_by_tags
+  - name: 正常シナリオ（本文の用語のツールチップを見る）
+    setup:
+      - name: Mock
+        description: なし（実環境で実行。ブラウザは Playwright で操作する）
+      - name: 用語の種類
+        description: エージェントが調べるの正常シナリオ（エイリアスの語で用語を引く）と同じ、`alias_type` を持つ行の文書「作業範囲」
+        notes: '`aliases` は `[scope, 担当範囲]`'
+      - name: 本文に用語を含む文書
+        description: sample の文書 1 の本文に `担当範囲` の語を含める
+      - name: dev-docs
+        description: sample を配信している dev-docs
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        actor U as 利用者
+        participant B as ブラウザ（文書の画面）
+        participant S as dev-docs のサーバー
+        participant MD as mdmark
+
+        U->>B: 文書 1 を開く
+        B->>S: 文書 1 を取得する
+        S-->>B: 本文と配信元のエイリアス
+        B->>MD: mount（エイリアスを渡す）
+        MD-->>B: 用語にツールチップを付けた本文
+        U->>B: 担当範囲 の語にポインタを載せる
+        B-->>U: 用語「作業範囲」のツールチップ
+      ```
+    expected:
+      - 文書の取得の応答が、配信元のエイリアス（`name`・`aliases` と説明）を持つ
+      - 本文の `担当範囲` の語にポインタを載せると、用語「作業範囲」のツールチップが出る
+      - '`alias_type` を持つ行が無い配信元の文書は、ツールチップを出さずに今のまま描く'
+    test: test_normal_when_term_tooltip_shown
   - name: 正常シナリオ（管理用の YAML の行の文書の本文のリンクを開く）
     setup:
       - name: Mock

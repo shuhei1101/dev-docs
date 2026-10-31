@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Any
 
 from dev_docs.features.access.types import Target
+from dev_docs.features.documents.aliases import collect_aliases
 from dev_docs.features.documents.fields import missing_ref_fields
 from dev_docs.features.documents.indexable import walk_files
 from dev_docs.features.documents.loader import collect_files, load_file, unindexed_files
@@ -292,7 +293,7 @@ class DocumentStore:
 
 
 def check_sync(store: DocumentStore, source: ServedSource) -> SyncReport:
-    """配信元の文書を読み、`metadata` の列の欠けと管理用の YAML のずれを求める。"""
+    """配信元の文書を読み、`metadata` の列の欠け・管理用の YAML のずれ・エイリアスのキーの違反を求める。"""
     # 配信元のフォルダは 1 回だけたどり、文書の収集と索引に無いファイルの検出で使い回す
     files = list(walk_files(source.root))
     result = store.load(Target(source, source.root, None, None, "read"), files=files)
@@ -325,4 +326,5 @@ def check_sync(store: DocumentStore, source: ServedSource) -> SyncReport:
         missing_refs=missing_refs,
         unindexed_files=unindexed,
         missing_body_files=missing_body_files,
+        alias_violations=collect_aliases(source, result.documents).violations,
     )

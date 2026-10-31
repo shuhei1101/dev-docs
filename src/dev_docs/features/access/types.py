@@ -39,3 +39,12 @@ class Target:
     ref: str | None
     worktree: Path | None
     access: AccessLevel
+    outside_scope: bool = False
+
+
+def script_at(target: Target) -> tuple[Path, str] | None:
+    """クローン本体で動かすスクリプトを取り出す commit（クローン本体と `config_commit`）を返す。"""
+    source = target.source
+    if target.worktree is not None or source.main_root is None or source.config_commit is None:
+        return None
+    return source.main_root, source.config_commit

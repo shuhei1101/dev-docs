@@ -41,6 +41,7 @@ from dev_docs.shared.errors import (
     VersionMismatchError,
 )
 from dev_docs.shared.hashing import content_hash, value_hash
+from dev_docs.shared.yaml_io import load_yaml
 
 DOC_1 = "id: doc-1\nname: 文書 1\n"
 DOC_2 = "id: doc-2\nname: 文書 2\n"
@@ -489,3 +490,48 @@ def test_delete_docs_when_not_allowed(
             timeout_sec=10,
         )
     assert exc_info.value.kind == "rules"
+
+
+def test_write_docs_when_tags_are_objects(make_env: Callable[..., WriteEnv]) -> None:
+    """オブジェクトの配列のタグへ書き戻す（正常系）。"""
+    # 準備
+    rule = "id: r1\nname: 規約 1\ntags:\n  - name: a\n    main: true\n  - name: b\n"
+    files = {"docs/rule/r1.yaml": rule, "schemas/rule.schema.yaml": SCHEMA}
+    table = DocumentTable(
+        id="rules",
+        paths=["docs/rule/*.yaml"],
+        schema_path="schemas/rule.schema.yaml",
+        metadata={"tags": "tags[].name", "main_tags": "tags[main].name"},
+    )
+    env = make_env(files, tables=[table])
+    path = env.worktree / "docs/rule/r1.yaml"
+    # 実行
+    env.write(
+        operations=[
+            Operation(
+                op="update", id="r1", expected_version=content_hash(rule), add_to={"tags": ["c"]}
+            )
+        ]
+    )
+    added = path.read_text(encoding="utf-8")
+    env.write(
+        operations=[
+            Operation(
+                op="update",
+                id="r1",
+                expected_version=content_hash(added),
+                set={"main_tags": ["c"]},
+            )
+        ]
+    )
+    # 検証
+    assert load_yaml(added)["tags"] == [
+        {"name": "a", "main": True},
+        {"name": "b"},
+        {"name": "c"},
+    ]
+    assert load_yaml(path.read_text(encoding="utf-8"))["tags"] == [
+        {"name": "a"},
+        {"name": "b"},
+        {"name": "c", "main": True},
+    ]

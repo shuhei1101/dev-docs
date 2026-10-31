@@ -203,6 +203,14 @@ request:
     default: なし（`Sec-Fetch-Site` で判定する）
     location: header
     description: 要求元のオリジン
+  - name: sources[].outside_read
+    type: bool
+    required: false
+    default: '`true`'
+    location: body
+    description: '`scope` に当たらない作業場所からも `outside_scope: true` で作業範囲の外（参考）として読めるか'
+    notes: '`false` の配信元は `scope` の外から一切読めない'
+    status: planned
 request_example: |-
   ```json
   {"sources": [

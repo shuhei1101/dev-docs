@@ -584,6 +584,39 @@ def test_check_sync_when_clean(
     assert report.missing_body_files == []
 
 
+def test_check_sync_when_alias_violation(
+    document_store: DocumentStore,
+    tmp_path: Path,
+    write_files: Callable[[Path, dict[str, str]], None],
+    make_source_config: Callable[..., SourceConfig],
+    make_served_source: Callable[..., ServedSource],
+) -> None:
+    """エイリアスのキーの違反（正常系）。"""
+    # 準備
+    root = tmp_path / "ws"
+    write_files(
+        root,
+        {
+            "terms/broken.yaml": "id: broken\nname: 壊れた用語\ndescription: 型の違う別名\naliases: 3\n"
+        },
+    )
+    documents = [
+        DocumentTable(
+            id="terms",
+            paths=["terms/*.yaml"],
+            schema_path="schemas/term.schema.yaml",
+            alias_type="term",
+        )
+    ]
+    source = make_served_source(root=root, config=make_source_config(documents=documents))
+    # 実行
+    report = store_module.check_sync(document_store, source)
+    # 検証
+    assert [(item.doc, item.path) for item in report.alias_violations] == [
+        ("terms/broken.yaml", "aliases")
+    ]
+
+
 def test_check_sync_when_walked_once(
     document_store: DocumentStore,
     tmp_path: Path,
