@@ -60,7 +60,7 @@ RULE_SCHEMA = (
     "        main: {type: boolean}\n"
     "      required: [name]\n"
 )
-RULE_DOC = "id: doc-1\nname: 文書 1\ntags:\n  - {name: mcp, main: true}\n  - {name: 設計}\n"
+RULE_DOC = "id: rule-1\nname: 規約 1\ntags:\n  - {name: mcp, main: true}\n  - {name: 設計}\n"
 
 
 def _version(path: Path) -> str:
@@ -486,13 +486,13 @@ def test_normal_when_metadata_mapped(
 
 
 def _write_tags(served: Any, source: Any, worktree: Path, step: dict[str, Any]) -> tuple[Any, Any]:
-    """rules の文書 1 に update を 1 回当て、結果と書いた後の tags を返す。"""
-    target = worktree / "rules" / "doc-1.yaml"
+    """rules の規約 1 に update を 1 回当て、結果と書いた後の tags を返す。"""
+    target = worktree / "rules" / "rule-1.yaml"
     result = served.call(
         "write_docs",
         cwd=str(source.folder),
         worktree=str(worktree),
-        operations=[_update("doc-1", _version(target), **step)],
+        operations=[_update("rule-1", _version(target), **step)],
     )
     return result, load_yaml(target.read_text(encoding="utf-8"))["tags"]
 
@@ -510,7 +510,7 @@ def test_normal_when_tags_are_objects(
         **{
             "dev-docs.yaml": sample_config_text(RULES_ROW),
             "schemas/rule.schema.yaml": RULE_SCHEMA,
-            "rules/doc-1.yaml": RULE_DOC,
+            "rules/rule-1.yaml": RULE_DOC,
         }
     )
     source, served, worktree = _setup(make_source, serve, add_worktree, files)

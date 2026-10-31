@@ -714,7 +714,7 @@ def test_normal_when_worktree_config_registered(
     described = served.call("describe", cwd=str(repo.folder), source="repo", format="json")
     found = served.call(
         "search_docs",
-        cwd=str(repo.folder),
+        cwd=str(worktree),
         worktree=str(worktree),
         filter={"field": "id", "op": "eq", "values": ["doc-1"]},
         view="full",
