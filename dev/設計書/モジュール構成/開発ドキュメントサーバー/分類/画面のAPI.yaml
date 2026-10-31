@@ -1,0 +1,97 @@
+title: 開発ドキュメントサーバー / 画面のAPI
+lead: |-
+  #17 の画面が呼ぶ画面の API（文書の取得・画面の検索・リビジョンの一覧・表の列の設定の保存）。
+  端末の設定の取得・保存は端末の設定の入口が持つ。
+directory: |-
+  ```text
+  src/dev_docs/features/view/
+  ├─ __init__.py   # 公開する型と関数の再エクスポート
+  ├─ types.py      # NavItem / NavTab / ConversionError / GitHubTarget / AliasItem / NavAutoCount / DocumentResponse / DocumentDiff / ScreenSearchItem / ScreenSearchResult / ColumnsRequest
+  ├─ paths.py      # page_path / find_page / screen_target
+  ├─ nav.py        # build_nav / first_page / mark_nav_changes / nav_auto_counts / check_nav_filters / nav_warnings
+  ├─ columns.py    # ColumnSettings
+  ├─ search.py     # screen_search
+  ├─ document.py   # get_document / not_found_fields
+  └─ route.py      # build_view_router（/_api/sources/{source}/docs・search・refs・columns）
+  ```
+diagrams:
+  - name: 全体
+    diagram: |-
+      classDiagram
+        direction TD
+        画面の入口 ..> 文書の取得
+        画面の入口 ..> 見つからなかったもの
+        画面の入口 ..> 画面の読む場所
+        画面の入口 ..> 画面の検索
+        画面の入口 ..> 表の列の設定
+        画面の入口 ..> リビジョンの一覧
+        文書の取得 ..> 画面の読む場所
+        文書の取得 ..> タブとサイドバーの組み立て
+        文書の取得 ..> タブの最初の文書
+        文書の取得 ..> 文書のページの特定
+        文書の取得 ..> 変換
+        文書の取得 ..> 変わったキー
+        文書の取得 ..> 表の列の設定
+        文書の取得 ..> サイドバーの変化
+        画面の検索 ..> 語の照合
+        画面の検索 ..> 一致した箇所の抜き出し
+        class 画面の入口 {
+          <<function>>
+        }
+        class 文書の取得 {
+          <<function>>
+        }
+        class 見つからなかったもの {
+          <<function>>
+        }
+        class 画面の読む場所 {
+          <<function>>
+        }
+        class 画面の検索 {
+          <<function>>
+        }
+        class 表の列の設定 {
+          <<class>>
+        }
+        class リビジョンの一覧 {
+          <<function>>
+        }
+        class タブとサイドバーの組み立て {
+          <<function>>
+        }
+        class タブの最初の文書 {
+          <<function>>
+        }
+        class サイドバーの変化 {
+          <<function>>
+        }
+        class 文書のページの特定 {
+          <<function>>
+        }
+        class 変換 {
+          <<class>>
+        }
+        class 変わったキー {
+          <<function>>
+        }
+        class 語の照合 {
+          <<function>>
+        }
+        class 一致した箇所の抜き出し {
+          <<function>>
+        }
+        click 画面の入口 href "../features/view/route.py.yaml#画面の入口"
+        click 文書の取得 href "../features/view/document.py.yaml#文書の取得"
+        click 見つからなかったもの href "../features/view/document.py.yaml#見つからなかったもの"
+        click 画面の読む場所 href "../features/view/paths.py.yaml#画面の読む場所"
+        click 画面の検索 href "../features/view/search.py.yaml#画面の検索"
+        click 表の列の設定 href "../features/view/columns.py.yaml#表の列の設定"
+        click リビジョンの一覧 href "../features/history/query.py.yaml#リビジョンの一覧"
+        click タブとサイドバーの組み立て href "../features/view/nav.py.yaml#タブとサイドバーの組み立て"
+        click タブの最初の文書 href "../features/view/nav.py.yaml#タブの最初の文書"
+        click 文書のページの特定 href "../features/view/paths.py.yaml#文書のページの特定"
+        click 変換 href "../features/convert/service.py.yaml#変換"
+        click 変わったキー href "../features/changes/compare.py.yaml#変わったキー"
+        click サイドバーの変化 href "../features/view/nav.py.yaml#サイドバーの変化"
+        click 語の照合 href "../features/search/filters.py.yaml#語の照合"
+        click 一致した箇所の抜き出し href "../features/search/snippets.py.yaml#一致した箇所の抜き出し"

@@ -1,0 +1,141 @@
+title: 開発ドキュメントサーバー / 変換 / types.py
+lead: 変換の結果・失敗・表し方・図の種類の型。
+diagrams:
+  - name: 全体
+    diagram: |-
+      classDiagram
+        direction TD
+        変換 ..> 変換の結果 : 返す
+        変換の結果 o-- 変換の失敗
+        class 変換 {
+          +変換する(読み書きの場所, 文書) 変換の結果
+          +控えを捨てる() None
+        }
+        class 変換の結果 {
+          +Markdown: str
+        }
+        class 変換の失敗 {
+          +理由: str
+        }
+        click 変換 href "./service.py.yaml#変換"
+enums:
+  - name: Shape
+    title: 節の形
+    container: features/convert/types.py
+    usecase: 文書の取得
+    summary: スキーマの `x-shape` に書く、項目を Markdown にする形（ai-monitor の生成と同じ）
+    description: '`Literal` の型エイリアス。`x-shape` が無い文字列は `body`、オブジェクトは子を順に組み立てる。'
+    values:
+      - value: body
+        title: 本文
+        description: 文字列をそのまま段落にする
+      - value: table
+        title: 表
+        description: オブジェクトのリストを表にする。列は要素のスキーマの `properties` の順で、列名は `title`
+      - value: sections
+        title: 節
+        description: 要素・子を 1 つ深い見出しの節にする。要素の見出しは `x-key` の値
+      - value: list
+        title: 並び
+        description: 文字列のリストを箇条書きにする
+      - value: diagram
+        title: 図
+        description: 値から Mermaid の図を組み立て、続けて同じ値の表を置く
+      - value: attributes
+        title: 引用行
+        description: '子のスカラーを `> {title}: {値}` の行にする'
+  - name: DiagramKind
+    title: 図の種類
+    container: features/convert/types.py
+    usecase: 文書の取得
+    summary: スキーマの `x-diagram`
+    description: '`Literal` の型エイリアス。'
+    values:
+      - value: flowchart
+        title: フローチャート
+        description: '`nodes`・`edges`・`subgraphs`・`clicks` から `flowchart`'
+      - value: dataflow
+        title: データフロー
+        description: '`flowchart` と同じ値から、ノードの `kind` で形を変えた `flowchart LR`'
+      - value: architecture
+        title: アーキテクチャ
+        description: '`dataflow` と同じ'
+      - value: state
+        title: 状態遷移
+        description: '`states`・`transitions` から `stateDiagram-v2`'
+      - value: er
+        title: ER 図
+        description: '`entities`・`relations` から `erDiagram`'
+data_models:
+  - name: ConvertFailure
+    title: 変換の失敗
+    container: features/convert/types.py
+    usecase: 文書の取得
+    role: DTO
+    summary: 変換できなかった理由
+    description: '`dataclass(frozen=True)`。文書の取得は同じフィールドの `conversion_error` で返す。'
+    properties:
+      - name: reason
+        title: 理由
+        type: Literal['timeout', 'exit', 'not_runnable', 'invalid_yaml']
+        access: 公開
+        description: 制限時間を超えた・0 以外で終わった・実行できない・YAML を読めない
+      - name: kind
+        title: 種類
+        type: str
+        access: 公開
+        description: 文書の行の ID
+      - name: script
+        title: スクリプト
+        type: str | None
+        access: 公開
+        default: None
+        description: '`converters[].run` を空白で繋いだもの。YAML を読めないときは `None`'
+      - name: detail
+        title: 詳細
+        type: str
+        access: 公開
+        description: 制限時間の秒数・終了コードと標準エラーの末尾・読めなかった理由
+      - name: file
+        title: ファイル
+        type: str | None
+        access: 公開
+        default: None
+        description: YAML を読めないときのファイルのパス（配信元の直下から）
+      - name: line
+        title: 行
+        type: int | None
+        access: 公開
+        default: None
+        description: YAML を読めないときの行（1 始まり）
+      - name: column
+        title: 列
+        type: int | None
+        access: 公開
+        default: None
+        description: YAML を読めないときの列（1 始まり）
+  - name: Converted
+    title: 変換の結果
+    container: features/convert/types.py
+    usecase: 文書の取得
+    role: DTO
+    summary: 文書の取得で返す Markdown か、変換の失敗
+    description: '`dataclass(frozen=True)`。`failure` があるときの `markdown` は空。'
+    properties:
+      - name: markdown
+        title: Markdown
+        type: str
+        access: 公開
+        description: 返す Markdown（埋め込みを展開し、表のキーのマーカーを取り除いた後）
+      - name: table_keys
+        title: 表のキー
+        type: list[str]
+        access: 公開
+        default: '[]'
+        description: 本文の表の出る順の表のキー。画面の列の表示が、隠す列の設定を表に当てるときに使う
+      - name: failure
+        title: 変換の失敗
+        type: ConvertFailure | None
+        access: 公開
+        default: None
+        description: 失敗したときだけ

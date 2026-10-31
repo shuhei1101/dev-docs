@@ -1,0 +1,49 @@
+title: 開発ドキュメントサーバー / 説明 / render.py
+lead: '`describe` の結果の Markdown。'
+functions:
+  - name: render_describe_markdown
+    title: 説明の Markdown
+    kind: 関数
+    container: features/describe/render.py
+    usecase: 説明
+    role: 変換
+    summary: '`format: markdown` の本文を作る'
+    scope: public
+    thread_safe: true
+    args:
+      - name: result
+        title: 結果
+        type: SourceListResult | SourceGuideResult | KindSchemaResult
+        required: true
+        passing: positional
+        description: 描く結果
+    returns:
+      type: str
+      description: Markdown
+    process: |-
+      1. 配信元の説明書と種類のスキーマは、`outside_scope` が `True` なら先頭に `作業範囲の外（参考）` の行を置く
+      2. 使える配信元の一覧は、`作業場所: {cwd}（{配信元} のクローン本体 / ワークツリー）` の行と `| source | 権限 | description |` の表（作業中の配信元は権限に `（作業中）`）
+      3. 配信元の説明書は、`instructions` をそのまま置き、`| kind | description |` の表を続ける。`refs` があれば `ブランチ: {,で繋いだ名前}`・`タグ: {同じ}` の行、`worktrees` があれば `| ワークツリー | ブランチ |` の表を続ける
+      4. 種類のスキーマは、`metadata` が空でなければ `| 共通のキー | 列名 |` の表を置き、```yaml でスキーマの YAML を囲む
+    unit_tests:
+      - name: test_render_describe_markdown
+        case: 正常
+        summary: 一覧の表
+        condition: sample（write・作業中）と notes（read）
+        mock: なし
+        expected: '`| sample | write（作業中） | ... |` と `| notes | read | ... |` の行'
+      - name: test_render_describe_markdown_when_metadata
+        case: 正常
+        summary: メタデータの対応の表
+        condition: '`metadata` が `{name: title}` の種類のスキーマ'
+        mock: なし
+        expected: '`| name | title |` の行が YAML のコードブロックの前にある'
+      - name: test_render_describe_markdown_when_outside_scope
+        case: 正常
+        summary: 作業範囲の外の表示
+        condition: '`outside_scope: true` の配信元の説明書'
+        mock: なし
+        expected: 先頭の行が `作業範囲の外（参考）`
+        exception: '-'
+test_files:
+  - tests/unit/dev_docs/features/describe/test_render.py

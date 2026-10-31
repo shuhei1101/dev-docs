@@ -1,0 +1,148 @@
+title: 開発ドキュメントサーバー / 起動
+lead: |-
+  `dev-docs serve` と `dev-docs migrate` の処理。端末の設定と配信元を読み、部品を配線して、画面の API・文書の MCP・管理の MCP・セッションの文脈を 1 つのアプリとして待ち受ける。
+  再起動を要求されて止まったときは、同じプロセスを `serve` で置き換える。
+  例外から problem+json への変換もここで登録する。
+directory: |-
+  ```text
+  src/dev_docs/
+  ├─ main.py                    # Handlers / build_handlers / reload_sources / discard_source_caches / run_serve / run_migrate / PortInUseError
+  └─ server/
+     ├─ app.py                  # build_app / route_operation_id / SlashlessMcpPathMiddleware（ルートと MCP のマウント）
+     ├─ lifespan.py             # build_lifespan（MCP のセッションの管理と記録の削除）
+     ├─ error_handlers.py       # register_error_handlers（problem+json）
+     └─ screen.py               # build_screen_router / SCREEN_DIST_DIR（画面のビルドの配信）
+  ```
+diagrams:
+  - name: 全体
+    diagram: |-
+      classDiagram
+        direction TD
+        待ち受けの開始 ..> 端末の設定の読み込み
+        待ち受けの開始 ..> ポートの確かめ
+        待ち受けの開始 ..> 部品の配線
+        待ち受けの開始 ..> アプリの組み立て
+        待ち受けの開始 ..> 再起動の制御 : 取り付ける
+        部品の配線 ..> 配信元の一覧 : 読み直す
+        部品の配線 ..> 再起動の制御 : 作る
+        部品の配線 ..> 配線済みの関数 : 作る
+        部品の配線 ..> 配信元の読み直し : 束ねる
+        配信元の読み直し ..> 配信元の一覧 : 読み直す
+        配信元の読み直し ..> 配信元の控えの破棄
+        配信元の一覧 ..> 配信元の控えの破棄 : 組み立て直した後に呼ぶ
+        アプリの組み立て ..> 文書の MCP の組み立て
+        アプリの組み立て ..> 管理の MCP の組み立て
+        アプリの組み立て ..> 端末の設定の入口
+        アプリの組み立て ..> 画面の入口
+        アプリの組み立て ..> セッションの文脈のルーター
+        アプリの組み立て ..> 例外の変換の登録
+        アプリの組み立て ..> 画面の配信
+        アプリの組み立て ..> 操作の識別子
+        アプリの組み立て ..> アプリの寿命
+        アプリの組み立て ..> MCPのパスの補い : 取り付ける
+        class 待ち受けの開始 {
+          <<function>>
+        }
+        class 端末の設定の読み込み {
+          <<function>>
+        }
+        class ポートの確かめ {
+          <<function>>
+        }
+        class 部品の配線 {
+          <<function>>
+        }
+        class アプリの組み立て {
+          <<function>>
+        }
+        class MCPのパスの補い {
+          +__call__(scope, receive, send) None
+        }
+        class 配信元の読み直し {
+          <<function>>
+        }
+        class 配信元の控えの破棄 {
+          <<function>>
+        }
+        class 配信元の一覧 {
+          +読み直す(端末の設定) list
+        }
+        class 再起動の制御 {
+          +サーバーの取り付け(サーバー) None
+          +要求済み bool
+        }
+        class 配線済みの関数 {
+          +端末の設定: TerminalConfig
+          +配信元の一覧: SourceRegistry
+          +再起動の制御: RestartControl
+        }
+        class 文書の MCP の組み立て {
+          <<function>>
+        }
+        class 管理の MCP の組み立て {
+          <<function>>
+        }
+        class 端末の設定の入口 {
+          <<function>>
+        }
+        class 画面の入口 {
+          <<function>>
+        }
+        class セッションの文脈のルーター {
+          <<function>>
+        }
+        class 例外の変換の登録 {
+          <<function>>
+        }
+        class 画面の配信 {
+          <<function>>
+        }
+        class 操作の識別子 {
+          <<function>>
+        }
+        class アプリの寿命 {
+          <<function>>
+        }
+        click 待ち受けの開始 href "../main.py.yaml#待ち受けの開始"
+        click 端末の設定の読み込み href "../features/settings/query.py.yaml#端末の設定の読み込み"
+        click ポートの確かめ href "../main.py.yaml#ポートの確かめ"
+        click 部品の配線 href "../main.py.yaml#部品の配線"
+        click アプリの組み立て href "../server/app.py.yaml#アプリの組み立て"
+        click 再起動の制御 href "../features/lifecycle/control.py.yaml#再起動の制御"
+        click 配信元の一覧 href "../features/sources/registry.py.yaml#配信元の一覧"
+        click 配線済みの関数 href "../main.py.yaml#配線済みの関数"
+        click 配信元の読み直し href "../main.py.yaml#配信元の読み直し"
+        click 配信元の控えの破棄 href "../main.py.yaml#配信元の控えの破棄"
+        click 文書の MCP の組み立て href "../server/mcp/docs.py.yaml#文書の MCP の組み立て"
+        click 管理の MCP の組み立て href "../server/mcp/admin.py.yaml#管理の MCP の組み立て"
+        click 端末の設定の入口 href "../features/settings/route.py.yaml#端末の設定の入口"
+        click 画面の入口 href "../features/view/route.py.yaml#画面の入口"
+        click セッションの文脈のルーター href "../features/session_context/route.py.yaml#セッションの文脈のルーター"
+        click 例外の変換の登録 href "../server/error_handlers.py.yaml#例外の変換の登録"
+        click 画面の配信 href "../server/screen.py.yaml#画面の配信"
+        click 操作の識別子 href "../server/app.py.yaml#操作の識別子"
+        click アプリの寿命 href "../server/lifespan.py.yaml#アプリの寿命"
+        click MCPのパスの補い href "../server/app.py.yaml#MCPのパスの補い"
+  - name: 設定の移し替え
+    diagram: |-
+      classDiagram
+        direction TD
+        設定の移し替えの実行 ..> 対象の決定
+        設定の移し替えの実行 ..> 当てる手順の一覧
+        設定の移し替えの実行 ..> 移し替えの適用
+        class 設定の移し替えの実行 {
+          <<function>>
+        }
+        class 対象の決定 {
+          <<function>>
+        }
+        class 当てる手順の一覧 {
+          <<function>>
+        }
+        class 移し替えの適用 {
+          <<function>>
+        }
+        click 設定の移し替えの実行 href "../main.py.yaml#設定の移し替えの実行"
+        click 対象の決定 href "../features/migrate/service.py.yaml#対象の決定"
+        click 当てる手順の一覧 href "../features/migrate/service.py.yaml#当てる手順の一覧"
+        click 移し替えの適用 href "../features/migrate/service.py.yaml#移し替えの適用"

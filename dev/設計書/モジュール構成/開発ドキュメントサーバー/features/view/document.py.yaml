@@ -1,0 +1,224 @@
+title: 開発ドキュメントサーバー / 画面のAPI / document.py
+lead: 画面の文書の取得と、見つからない項目。
+diagrams:
+  - name: 全体
+    diagram: |-
+      classDiagram
+        direction TD
+        画面の入口 ..> 文書の取得
+        画面の入口 ..> 見つからなかったもの
+        文書の取得 ..> 画面の読む場所
+        文書の取得 ..> タブとサイドバーの組み立て
+        文書の取得 ..> タブの最初の文書
+        文書の取得 ..> 文書のページの特定
+        文書の取得 ..> 変換
+        文書の取得 ..> 変わったキー
+        文書の取得 ..> 表の列の設定
+        文書の取得 ..> サイドバーの変化
+        class 画面の入口 {
+          <<function>>
+        }
+        class 文書の取得 {
+          <<function>>
+        }
+        class 見つからなかったもの {
+          <<function>>
+        }
+        class 画面の読む場所 {
+          <<function>>
+        }
+        class 表の列の設定 {
+          <<class>>
+        }
+        class タブとサイドバーの組み立て {
+          <<function>>
+        }
+        class タブの最初の文書 {
+          <<function>>
+        }
+        class サイドバーの変化 {
+          <<function>>
+        }
+        class 文書のページの特定 {
+          <<function>>
+        }
+        class 変換 {
+          <<class>>
+        }
+        class 変わったキー {
+          <<function>>
+        }
+        click 画面の入口 href "./route.py.yaml#画面の入口"
+        click 画面の読む場所 href "./paths.py.yaml#画面の読む場所"
+        click 表の列の設定 href "./columns.py.yaml#表の列の設定"
+        click タブとサイドバーの組み立て href "./nav.py.yaml#タブとサイドバーの組み立て"
+        click タブの最初の文書 href "./nav.py.yaml#タブの最初の文書"
+        click サイドバーの変化 href "./nav.py.yaml#サイドバーの変化"
+        click 文書のページの特定 href "./paths.py.yaml#文書のページの特定"
+        click 変換 href "../convert/service.py.yaml#変換"
+        click 変わったキー href "../changes/compare.py.yaml#変わったキー"
+functions:
+  - name: get_document
+    title: 文書の取得
+    kind: 関数
+    container: features/view/document.py
+    usecase: 文書の取得
+    role: サービス
+    summary: 配信元の文書を変換した Markdown と、タブ・差分の項目・列の設定を返す
+    scope: public
+    args:
+      - name: handlers
+        title: 配線済みの関数
+        type: Handlers
+        required: true
+        passing: injected
+        description: 配信元の一覧・文書のストア・変換・表の列の設定
+      - name: source_id
+        title: 配信元の ID
+        type: str
+        required: true
+        passing: positional
+        description: 開く配信元
+      - name: path
+        title: 文書のページのパス
+        type: str | None
+        required: true
+        passing: positional
+        description: '`None` は一番左のタブの最初の文書'
+      - name: ref
+        title: リビジョン
+        type: str | None
+        required: true
+        passing: keyword
+        description: '`ref` の値'
+      - name: diff_ref
+        title: 比べるリビジョン
+        type: str | None
+        required: true
+        passing: keyword
+        description: '`diff` の値'
+    returns:
+      type: DocumentResponse
+      description: 文書の取得の応答
+    process: |-
+      1. 画面の読む場所で読む場所を作り、文書を集める（文書のストア.文書を集める）
+      2. タブとサイドバーを組み立てる
+      3. 返す文書を決める
+         - `path` が無ければ、一番左のタブのタブの最初の文書。文書が 1 つも無ければ `DocumentNotFoundError`
+         - `path` があれば文書のページの特定。無く、集めたときの `unreadable` の読めなかったファイルのうち拡張子を落としたパスが `path` と同じものがあれば、`markdown` を `None`、`conversion_error` を `reason` が `invalid_yaml`（`kind` は文書の行.行に当たるかが `True` になる最初の行、`file`・`line`・`column`・`detail` は読めなかったファイルの値）にして 6 へ進む。どちらにも無ければ `DocumentNotFoundError`（`missing` に `path`）
+      4. 文書を変換する（変換.変換する）。`failure` があれば `markdown` を `None`、`conversion_error` を同じフィールドの `ConversionError` にする
+      5. `diff_ref` があり Git の配信元なら、`diff_ref` の画面の読む場所で文書を集め、`diff` を `DocumentDiff(base=diff_ref, ...)` にする。Git 管理外は `diff` を `None` にする
+         - `change` は、`diff_ref` に同じ ID の文書が無ければ `added`、`version` が違えば `modified`、同じなら `None`
+         - `changed_items` は、`change` が `modified` のとき同じ ID の文書と比べた変わったキー（`ignore` は `diff_ignore_keys`）のパス。他は空
+         - `diff_ref` の文書でタブとサイドバーを組み立て、文書のページのパス → `version` を両方で作って、タブにサイドバーの変化を付ける
+      6. 返した文書を含むタブの `active` を `True` にする
+      7. `updated_at` は文書の `updated`、`None` なら文書のファイルの `st_mtime` をタイムゾーン付きにした日時にする
+      8. `body_path` は返した文書の `body_path`、`ref` は `ref` の値、省いたときは `default_ref` の名前（Git 管理外は `None`）、`github` は `github_repository` があれば `github_repository`・`github_issue_labels`、`columns` は表の列の設定.列の設定を読む の結果、`table_keys` は変換の結果の値、`aliases` は手順 1 の文書のエイリアスの集め（文書のストア）の `entries` を `AliasItem` にしたもの（手順 4 で変換に失敗したときは空）にして返す
+    exceptions:
+      - name: UnknownSourceError
+        condition: 無い配信元
+        message: '`配信元がありません: {id}`'
+      - name: SourceNotServedError
+        condition: 配信していない配信元
+        message: '`{id} は配信していません`'
+      - name: RefNotFoundError
+        condition: '`ref` か `diff` を解決できない'
+        message: '`ref を解決できません: {value}`'
+      - name: DocumentNotFoundError
+        condition: 無い文書
+        message: '`文書がありません: {path}`'
+    unit_tests:
+      - name: test_get_document
+        case: 正常
+        summary: 配信元のトップ
+        condition: '`path=None`、`nav` のタブが 2 つ'
+        mock: なし（一時フォルダの配信元）
+        expected: 一番左のタブの一番上の文書の `markdown` と `path`、一番左のタブだけが `active`
+      - name: test_get_document_when_diff
+        case: 正常
+        summary: 差分の結果とサイドバーの変化
+        condition: '`docs/a` の `name` を変え、`docs/c` を削除し、`docs/d` を追加した commit を `ref`、親の commit を `diff_ref`、`path="docs/a"`'
+        mock: なし（一時フォルダのリポジトリ）
+        expected: '`diff` が `base` 親の commit・`change` `modified`・`changed_items` `["name"]`。サイドバーの `docs/a` が `modified`、`docs/d` が `added`、`docs/c` が `deleted`'
+      - name: test_get_document_when_convert_failed
+        case: 正常
+        summary: 変換の失敗
+        condition: 制限時間を超えるスクリプトの行の文書
+        mock: なし
+        expected: '`markdown` が `None` で、`conversion_error.reason` が `timeout`'
+      - name: test_get_document_when_yaml_unreadable
+        case: 正常
+        summary: YAML を読めない
+        condition: YAML として読めない `docs/a.yaml` を `path="docs/a"`
+        mock: なし
+        expected: '`conversion_error` が `invalid_yaml` で、`file` が `docs/a.yaml`、`line`・`column` が読めなかった位置'
+      - name: test_get_document_when_missing
+        case: 異常
+        summary: 無い文書
+        condition: '`path="docs/none"`'
+        mock: なし
+        expected: '`DocumentNotFoundError`'
+        exception: 無い文書
+      - name: test_get_document_when_not_git
+        case: 正常
+        summary: Git 管理外の更新日時と差分
+        condition: Git 管理外の配信元の `docs/a`、`diff_ref="main"`
+        mock: なし（一時フォルダの配信元）
+        expected: '`updated_at` がファイルの `st_mtime` の日時、`diff` が `None`、`ref` が `None`'
+      - name: test_get_document_when_aliases
+        case: 正常
+        summary: エイリアスを返す
+        condition: '`alias_type: term` の行の「作業範囲」（`aliases: [scope, 担当範囲]`・`avoid: [担当領域]`・`description` あり）と、`alias_type: doc` の行の「設定のリファレンス」（`aliases: [settings]`）を持つ配信元の文書を開く'
+        mock: なし（一時フォルダの配信元）
+        expected: '`aliases` が 2 件で、作業範囲の `avoid` が `[担当領域]`、設定のリファレンスは `avoid` を持たない（JSON にキーが無い）'
+        exception: '-'
+      - name: test_get_document_when_body_path
+        case: 正常
+        summary: 管理用の YAML の行の文書の本文のファイルのパス
+        condition: '`records: files`・`body_file: path` の行の要素 `{path: notes/b.md}` の文書を、画面のパスと `notes/b.md` の 2 通りで開く。ファイル 1 つが 1 文書の文書も開く'
+        mock: なし
+        expected: どちらも `body_path` が `notes/b.md` で `path` が画面のパス。ファイル 1 つが 1 文書の文書は `body_path` が `None`
+  - name: not_found_fields
+    title: 見つからなかったもの
+    kind: 関数
+    container: features/view/document.py
+    usecase: 文書の取得
+    role: 変換
+    summary: 文書の取得の 404 の problem+json に加える `missing` と `value` を作る
+    scope: public
+    thread_safe: true
+    args:
+      - name: error
+        title: エラー
+        type: DevDocsError
+        required: true
+        passing: positional
+        description: 文書の取得が送った例外
+      - name: path
+        title: 文書のページのパス
+        type: str | None
+        required: true
+        passing: positional
+        description: 開こうとしたパス
+      - name: source_id
+        title: 配信元の ID
+        type: str
+        required: false
+        default: '""'
+        passing: keyword
+        description: 開こうとした配信元。`SourceNotServedError` の `value` に使う
+    returns:
+      type: dict[str, str] | None
+      description: '`{missing, value}`。404 にしない例外は `None`'
+    process: |-
+      1. `UnknownSourceError` は `source` と配信元の ID、`SourceNotServedError` は `not_served` と `source_id`、`RefNotFoundError` は `ref` と `value`、`DocumentNotFoundError` は `doc` と `path`（`None` なら空）を返す
+      2. それ以外は `None` を返す
+    unit_tests:
+      - name: test_not_found_fields
+        case: 正常
+        summary: 例外ごとの値
+        condition: '`RefNotFoundError(argument="ref", value="no-such-branch")` と、`DocumentNotFoundError` を `path="no-such-doc"` で'
+        mock: なし
+        expected: '`{missing: ref, value: no-such-branch}` と `{missing: doc, value: no-such-doc}`'
+test_files:
+  - tests/unit/dev_docs/features/view/test_document.py

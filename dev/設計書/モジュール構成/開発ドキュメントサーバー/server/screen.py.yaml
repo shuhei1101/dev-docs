@@ -1,0 +1,99 @@
+title: 開発ドキュメントサーバー / 起動 / screen.py
+lead: 画面のビルドの配信。
+diagrams:
+  - name: 全体
+    diagram: |-
+      classDiagram
+        direction TD
+        アプリの組み立て ..> 画面の配信
+        class アプリの組み立て {
+          <<function>>
+        }
+        class 画面の配信 {
+          <<function>>
+        }
+        click アプリの組み立て href "./app.py.yaml#アプリの組み立て"
+constants:
+  - name: SCREEN_DIST_DIR
+    title: 画面のビルドの置き場所
+    container: server/screen.py
+    usecase: 起動
+    summary: 画面のビルド（Vite の出力先）のフォルダ。パッケージの中の `screen/`
+    value: Path(__file__).parent.parent / "screen"
+  - name: EXCLUDED_PREFIXES
+    title: 画面を返さないパスの頭
+    container: server/screen.py
+    usecase: 起動
+    summary: 画面の配信が 404 にするパスの最初の区切り
+    value: ("_api", "mcp", "_admin")
+  - name: IMMUTABLE_CACHE
+    title: assets のキャッシュの指定
+    container: server/screen.py
+    usecase: 起動
+    summary: ファイル名にハッシュを持つ assets の `Cache-Control`
+    value: '"public, max-age=31536000, immutable"'
+functions:
+  - name: build_screen_router
+    title: 画面の配信
+    kind: 関数
+    container: server/screen.py
+    usecase: 起動
+    role: 入口
+    summary: 画面（React の SPA）のビルドを返すルーターを作る
+    scope: public
+    args:
+      - name: dist_dir
+        title: 画面のビルドの置き場所
+        type: Path
+        required: true
+        passing: positional
+        description: Vite の出力先（`index.html` と `assets/`）
+    returns:
+      type: fastapi.APIRouter
+      description: GET `/{path:path}` を持つルーター（`include_in_schema=False`）
+    process: |-
+      1. パスの最初の区切りが `EXCLUDED_PREFIXES` のどれかなら、`HTTPException(404)` を送る（API・MCP の誤ったパスに画面を返さない）
+      2. パスが `assets/` で始まるときは、`dist_dir` の下のファイルを `FileResponse` で返し、`Cache-Control` を `IMMUTABLE_CACHE` にする。ファイルが無い・解決したパスが `dist_dir` の外のときは `HTTPException(404)` を送る
+      3. それ以外のパスは、`dist_dir / "index.html"` を `Cache-Control: no-cache` で返す（どの URL も SPA が描く）
+      4. `index.html` が無いときは `ScreenBuildMissingError` を送る
+    exceptions:
+      - name: ScreenBuildMissingError
+        condition: '`dist_dir` に `index.html` が無い'
+        message: '`画面のビルドがありません（{dist_dir}/index.html）`'
+        notes: '`next_steps` に `frontend/` で画面をビルドすること（`vite build`。出力先は `src/dev_docs/screen/`）'
+    unit_tests:
+      - name: test_build_screen_router
+        case: 正常
+        summary: 文書の URL に index.html を返す
+        condition: '`index.html` を置いた一時フォルダで GET `/default/設計書/a.md`'
+        mock: なし（一時フォルダ）
+        expected: 200、本文が `index.html` の中身、`Cache-Control` が `no-cache`
+      - name: test_build_screen_router_when_asset
+        case: 正常
+        summary: assets のファイルを長く持たせて返す
+        condition: '`assets/index-abc.js` を置いて GET `/assets/index-abc.js`'
+        mock: なし（一時フォルダ）
+        expected: 200、`Cache-Control` が `IMMUTABLE_CACHE`
+      - name: test_build_screen_router_when_asset_missing
+        case: 異常
+        summary: 無い assets と外へ出るパスを 404 にする
+        condition: GET `/assets/none.js` と GET `/assets/..%2F..%2Fsecret`
+        mock: なし（一時フォルダ）
+        expected: どちらも 404
+        exception: HTTPException(404)
+      - name: test_build_screen_router_when_excluded
+        case: 異常
+        summary: API・MCP の頭のパスに画面を返さない
+        condition: GET `/_api/none`・`/mcp/none`・`/_admin/none`
+        mock: なし（一時フォルダ）
+        expected: 全て 404
+        exception: HTTPException(404)
+      - name: test_build_screen_router_when_build_missing
+        case: 異常
+        summary: ビルドが無いと 503
+        condition: 空の一時フォルダで GET `/`
+        mock: なし（一時フォルダ）
+        expected: '`ScreenBuildMissingError` が送られ、`next_steps` に `vite build` がある'
+        exception: ScreenBuildMissingError
+test_files:
+  - tests/unit/dev_docs/server/test_screen.py

@@ -45,7 +45,7 @@ functions:
         mock: なし
         expected: '`kind` が `dev-docs`、`file` が `~` を展開したパス'
     callers:
-      - dev/設計書/モジュール構成/開発ドキュメントサーバー/起動.py#functions[run_migrate]
+      - dev/設計書/モジュール構成/開発ドキュメントサーバー/main.py#functions[run_migrate]
   - name: plan_migration
     title: 当てる手順の一覧
     kind: 関数
@@ -108,7 +108,7 @@ functions:
         expected: '`MigrationConfigInvalidError`'
         exception: 対象の設定の違反
     callers:
-      - dev/設計書/モジュール構成/開発ドキュメントサーバー/起動.py#functions[run_migrate]
+      - dev/設計書/モジュール構成/開発ドキュメントサーバー/main.py#functions[run_migrate]
     callees:
       - dev/設計書/モジュール構成/開発ドキュメントサーバー/features/migrate/steps.py#functions[load_steps]
       - dev/設計書/モジュール構成/開発ドキュメントサーバー/features/admin/service.py#functions[version_state]
@@ -223,7 +223,7 @@ functions:
         expected: '`MigrationFailedError` のメッセージに `documents[0].type` の違反と `/dev-docs:setup`。対象は元の内容のまま'
         exception: 新しいスキーマの違反
     callers:
-      - dev/設計書/モジュール構成/開発ドキュメントサーバー/起動.py#functions[run_migrate]
+      - dev/設計書/モジュール構成/開発ドキュメントサーバー/main.py#functions[run_migrate]
     callees:
       - dev/設計書/モジュール構成/開発ドキュメントサーバー/features/migrate/steps.py#functions[apply_step]
 test_files:

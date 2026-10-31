@@ -8,25 +8,13 @@
 
 | ページ | 概要 |
 | --- | --- |
-| [入口.py](./入口.py.yaml) | `dev-docs` コマンドの引数の組み立てと main |
-| [起動.py](./起動.py.yaml) | `dev-docs serve`・`dev-docs migrate` の部品の配線と、画面の API・文書の MCP・管理の MCP・セッションの文脈を 1 つにまとめたアプリ |
-| [端末の設定.py](./端末の設定.py.yaml) | 端末の設定の検証と読み込み、`sources[]` の取得と保存 |
-| [配信元.py](./配信元.py.yaml) | 配信元の設定のマージと検証、配信する配信元の一覧 |
-| [権限と作業場所.py](./権限と作業場所.py.yaml) | 作業場所からの権限と、MCP の引数からの読み書きする場所の解決 |
-| [共通.py](./共通.py.yaml) | 例外の階層・YAML の読み書き・ハッシュ・パスの照合・オリジンの確認 |
-| [スクリプトの実行.py](./スクリプトの実行.py.yaml) | `validators[]`・`converters[]`・`generators[]` の制限時間つきの実行 |
-| [履歴.py](./履歴.py.yaml) | git によるリビジョンの解決・一覧・変わったファイル・ファイルの日時 |
-| [文書のストア.py](./文書のストア.py.yaml) | 文書のファイルの収集と、メタデータ・バージョン・日時を付けた文書 |
-| [検査.py](./検査.py.yaml) | スキーマ・ID の形・関連の種類・`validators[]` による文書の検査 |
-| [変換.py](./変換.py.yaml) | スキーマ駆動か `converters[]` による文書の Markdown への変換 |
-| [会話の記録.py](./会話の記録.py.yaml) | 会話キーごとの返し済み・前回読んだ内容・閲覧と編集の記録 |
-| [検索.py](./検索.py.yaml) | `search_docs` の条件の木・並べ替え・集計・量の上限 |
-| [書き込み.py](./書き込み.py.yaml) | `write_docs`・`delete_docs` の操作の適用・検査・書き換え |
-| [変更.py](./変更.py.yaml) | `list_changes` の区間か前回読んだ時点からの変わった文書と差分 |
-| [関連.py](./関連.py.yaml) | `trace_related` の関連のたどりと関連の候補 |
-| [説明.py](./説明.py.yaml) | `describe` の使える配信元・説明書と種類・種類のスキーマ |
-| [文書のMCP.py](./文書のMCP.py.yaml) | 文書の MCP と管理の MCP の組み立てと、ツールの結果・エラーの変換 |
-| [画面のAPI.py](./画面のAPI.py.yaml) | 文書の取得・画面の検索・リビジョンの一覧・表の列の設定の API |
-| [features](./features/) | 管理の MCP・セッションの文脈・再起動と更新・設定の移し替え |
+| [__init__.py](./__init__.py.yaml) | インストール済みのパッケージからバージョンを引くときの配布名 |
+| [__main__.py](./__main__.py.yaml) | `dev-docs` コマンドの引数の組み立てと main |
+| [main.py](./main.py.yaml) | `dev-docs serve`・`dev-docs migrate` の部品の配線と、配信元の読み直し |
+| [分類](./分類/) | 分類ごとのファイルのツリーと構成図 |
+| [features](./features/) | 文書の読み込み・検査・変換・検索・書き込み・履歴と、画面の API・管理の MCP・再起動と更新・設定の移し替え |
+| [server](./server/) | アプリの組み立て・例外の変換・MCP のセッションの管理・画面の配信と、文書の MCP・管理の MCP |
+| [shared](./shared/) | 例外の階層・YAML の読み書き・ファイルの置き換え・ハッシュ・パスの照合・API の DTO の基底 |
+| [integrations](./integrations/) | git の実行とスクリプトの実行 |
 
 <!-- /table -->

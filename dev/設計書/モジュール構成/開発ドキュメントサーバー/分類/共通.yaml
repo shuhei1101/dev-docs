@@ -1,0 +1,45 @@
+title: 開発ドキュメントサーバー / 共通
+lead: どの分類からも使う例外の階層・YAML の読み書き・内容のハッシュ・パスの照合と、画面の書き込みの要求のオリジンの確認。
+directory: |-
+  ```text
+  src/dev_docs/
+  ├─ shared/
+  │  ├─ errors.py    # DevDocsError と MCP・画面が返すエラーの階層
+  │  ├─ api_model.py # ApiModel（画面の API の DTO の基底。キーは camelCase）
+  │  ├─ yaml_io.py   # YAML の読み込み・往復編集の読み書き・YamlLoadError
+  │  ├─ hashing.py   # 内容のハッシュ（文書のバージョン）
+  │  ├─ paths.py     # 作業場所の glob の照合・パスの正規化
+  │  └─ files.py     # 一時ファイルからのファイルの置き換え
+  └─ server/
+     └─ origin.py    # 画面と同じオリジンからの要求かの確認
+  ```
+diagrams:
+  - name: 全体
+    diagram: |-
+      classDiagram
+        direction TD
+        開発ドキュメントサーバーのエラー <|-- 読めない配信元
+        開発ドキュメントサーバーのエラー <|-- 書き込めない配信元
+        開発ドキュメントサーバーのエラー <|-- 配信していない配信元
+        開発ドキュメントサーバーのエラー <|-- 引数の誤り
+        開発ドキュメントサーバーのエラー <|-- 検査の不合格
+        開発ドキュメントサーバーのエラー <|-- バージョンの不一致
+        YAMLの読み込み ..> YAMLを読めない : 送る
+        往復編集の読み込み ..> YAMLを読めない : 送る
+        class 開発ドキュメントサーバーのエラー {
+          +エラーの名前: str
+          +本文: str
+          +次の手: list
+        }
+        class YAMLの読み込み {
+          <<function>>
+        }
+        class 往復編集の読み込み {
+          <<function>>
+        }
+        click 開発ドキュメントサーバーのエラー href "../shared/errors.py.yaml#開発ドキュメントサーバーのエラー"
+        click YAMLの読み込み href "../shared/yaml_io.py.yaml#YAMLの読み込み"
+        click YAMLを読めない href "../shared/yaml_io.py.yaml#YAMLを読めない"
+        click 往復編集の読み込み href "../shared/yaml_io.py.yaml#往復編集の読み込み"
+notes:
+  例外の置き場所: どの分類の関数も、呼び出し側へ返す失敗は `shared/errors.py` の子クラスで送る。スクリプトの実行の失敗（スクリプトの実行の分類）と YAML を読めないことは、それぞれの分類の例外で送り、呼び出し側が `Violation` か本文の誤りに変える。

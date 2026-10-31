@@ -1,0 +1,60 @@
+title: 開発ドキュメントサーバー / 変換
+lead: |-
+  文書を文書の取得で返す Markdown にする。既定はスキーマ駆動（`x-heading`・`x-shape`・`x-key`・`x-diagram`・列の `title`）で、`converters[]` を指す種類だけ配信元のスクリプトに替える。
+  Markdown の中の埋め込みのマーカーは、返す前に YAML の表へ置き換える。
+directory: |-
+  ```text
+  src/dev_docs/features/convert/
+  ├─ __init__.py   # 公開する型と関数の再エクスポート
+  ├─ types.py      # Converted / ConvertFailure / Shape / DiagramKind
+  ├─ markdown.py   # schema_to_markdown / render_table（スキーマ駆動の変換）
+  ├─ diagrams.py   # render_diagram（x-diagram の Mermaid）
+  ├─ embed.py      # expand_embeds（埋め込みのマーカーを表へ）
+  └─ service.py    # ConvertService（変換の選択・converters[] の実行・結果の控え）
+  ```
+diagrams:
+  - name: 全体
+    diagram: |-
+      classDiagram
+        direction TD
+        変換 ..> スキーマ駆動の変換 : converter が無い
+        変換 ..> スクリプトの実行 : converters[]
+        変換 ..> 埋め込みの展開
+        スキーマ駆動の変換 ..> 表の組み立て
+        スキーマ駆動の変換 ..> 図の組み立て
+        埋め込みの展開 ..> 表の組み立て
+        変換 ..> 変換の結果 : 返す
+        変換の結果 o-- 変換の失敗
+        class 変換 {
+          +変換する(読み書きの場所, 文書) 変換の結果
+          +控えを捨てる() None
+        }
+        class スキーマ駆動の変換 {
+          <<function>>
+        }
+        class 表の組み立て {
+          <<function>>
+        }
+        class 図の組み立て {
+          <<function>>
+        }
+        class 埋め込みの展開 {
+          <<function>>
+        }
+        class スクリプトの実行 {
+          <<function>>
+        }
+        class 変換の結果 {
+          +Markdown: str
+        }
+        class 変換の失敗 {
+          +理由: str
+        }
+        click 変換 href "../features/convert/service.py.yaml#変換"
+        click スキーマ駆動の変換 href "../features/convert/markdown.py.yaml#スキーマ駆動の変換"
+        click スクリプトの実行 href "../integrations/scripts.py.yaml#スクリプトの実行"
+        click 埋め込みの展開 href "../features/convert/embed.py.yaml#埋め込みの展開"
+        click 表の組み立て href "../features/convert/markdown.py.yaml#表の組み立て"
+        click 図の組み立て href "../features/convert/diagrams.py.yaml#図の組み立て"
+        click 変換の結果 href "../features/convert/types.py.yaml#変換の結果"
+        click 変換の失敗 href "../features/convert/types.py.yaml#変換の失敗"

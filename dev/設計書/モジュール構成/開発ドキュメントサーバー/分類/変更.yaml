@@ -1,0 +1,88 @@
+title: 開発ドキュメントサーバー / 変更
+lead: |-
+  `list_changes` の処理。区間（commit・日時・ブランチ・タグ）か、この会話で前回読んだ時点から今までに変わった文書・変わったキー・差分の行を返す。
+  変わったキーと差分の行は、書き込みの差分と文書の取得の `diff` も使う。
+directory: |-
+  ```text
+  src/dev_docs/features/changes/
+  ├─ __init__.py   # 公開する型と関数の再エクスポート
+  ├─ types.py      # ChangesRequest / ContainsQuery / RangePoint / ContainsChange / ChangeItem / ChangesResult
+  ├─ compare.py    # changed_keys / diff_lines / count_occurrences
+  ├─ render.py     # render_changes_markdown
+  └─ service.py    # list_changes
+  ```
+diagrams:
+  - name: 全体
+    diagram: |-
+      classDiagram
+        direction TD
+        変更の一覧 ..> 読む場所の解決
+        変更の一覧 ..> リビジョンの解決 : from・to
+        変更の一覧 ..> 変わったファイル
+        変更の一覧 ..> 区間の commit : contains
+        変更の一覧 ..> リビジョンのファイル
+        変更の一覧 ..> 会話の記録 : 前回読んだ内容
+        変更の一覧 ..> 文字列からの文書の組み立て
+        変更の一覧 ..> 条件の照合
+        変更の一覧 ..> 変わったキー
+        変更の一覧 ..> 差分の行
+        変更の一覧 ..> 語の出現数 : contains
+        語の出現数 ..> 正規表現の組み立て
+        変更の一覧 ..> 変更の結果 : 返す
+        class 変更の一覧 {
+          <<function>>
+        }
+        class 読む場所の解決 {
+          <<function>>
+        }
+        class リビジョンの解決 {
+          <<function>>
+        }
+        class 変わったファイル {
+          <<function>>
+        }
+        class 区間の commit {
+          <<function>>
+        }
+        class リビジョンのファイル {
+          <<function>>
+        }
+        class 会話の記録 {
+          <<class>>
+        }
+        class 文字列からの文書の組み立て {
+          <<function>>
+        }
+        class 条件の照合 {
+          <<function>>
+        }
+        class 変わったキー {
+          <<function>>
+        }
+        class 差分の行 {
+          <<function>>
+        }
+        class 語の出現数 {
+          <<function>>
+        }
+        class 正規表現の組み立て {
+          <<function>>
+        }
+        class 変更の結果 {
+          +区間
+          +文書: list
+        }
+        click 変更の一覧 href "../features/changes/service.py.yaml#変更の一覧"
+        click 読む場所の解決 href "../features/access/service.py.yaml#読む場所の解決"
+        click リビジョンの解決 href "../features/history/query.py.yaml#リビジョンの解決"
+        click 変わったファイル href "../features/history/query.py.yaml#変わったファイル"
+        click 区間の commit href "../features/history/query.py.yaml#区間の commit"
+        click リビジョンのファイル href "../features/history/query.py.yaml#リビジョンのファイル"
+        click 会話の記録 href "../features/seen/store.py.yaml#会話の記録"
+        click 文字列からの文書の組み立て href "../features/documents/loader.py.yaml#文字列からの文書の組み立て"
+        click 条件の照合 href "../features/search/filters.py.yaml#条件の照合"
+        click 変わったキー href "../features/changes/compare.py.yaml#変わったキー"
+        click 差分の行 href "../features/changes/compare.py.yaml#差分の行"
+        click 語の出現数 href "../features/changes/compare.py.yaml#語の出現数"
+        click 正規表現の組み立て href "../features/search/filters.py.yaml#正規表現の組み立て"
+        click 変更の結果 href "../features/changes/types.py.yaml#変更の結果"
