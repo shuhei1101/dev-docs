@@ -294,7 +294,7 @@ functions:
       - name: test_search_when_records_fields
         case: 正常
         summary: records の行の要素の項目で絞り込む
-        condition: '行 `notes`（`records: files`、`schema` が `templates/files.schema.yaml` のコピー）に要素 `{path: a.md}`・`{path: b.md}`、`filter` が `path = a.md`'
+        condition: '行 `notes`（`records: files`、`schema` が `templates/files.schema.yaml` のコピーの `files.items.properties` に `owner: {type: string}` を追加したもの）に要素 `{path: a.md, owner: alice}`・`{path: b.md, owner: bob}`、`filter` が `owner = alice`'
         mock: なし
         expected: '`a.md` の要素 1 件で、`InvalidArgumentError` を送らない'
 refs:
