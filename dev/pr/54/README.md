@@ -39,6 +39,6 @@ SessionStart のフックは session-context の応答を待ちきり、配信�
 - [x] モジュール構成設計
 - [x] ドキュメント修正（templates/files.schema.yaml・docs/リファレンス/設定.md・docs/リファレンス/管理のMCP.md）
 - [x] 単体テスト作成
-- [ ] 実装
+- [x] 実装
 - [ ] 結合テスト作成
 - [ ] E2E テスト作成
