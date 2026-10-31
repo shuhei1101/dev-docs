@@ -10,7 +10,7 @@ flows:
         description: なし（`main(["prompt-doc"])` を同じプロセスで呼び、標準入力を差し替える）
       - name: LLM のプロンプト
         description: 'A-42 の例 2（`kind: llm`、`lang: en`、各部品の `texts[]` に `en`・`ja`、`examples[]` に組 `no-logs`、`output` あり）'
-        notes: 部品 `logs` は `when` でログがあるときだけ描く
+        notes: 部品 `logs` は `when` でログがあるときだけ描く。部品 `role` の `en` の本文に `<rules>` を含める
     flow: |-
       ```mermaid
       sequenceDiagram
@@ -33,6 +33,7 @@ flows:
       - 各セクションの言語のタブが `en`・`ja` の順で、`group=lang` を持ち、タブ名に「注入」「訳」が付かない
       - 描画結果の変数の値がマーカーと `data-hint` の要素で囲まれている
       - '`[!WARNING]` と `[!CAUTION]` が無い'
+      - 部品 `role` の本文と描画結果の `<rules>` が Markdown の中で `&lt;rules&gt;` になり、字数の行はエスケープ前の文字数
     test: test_normal
   - name: 正常系（言語が 1 つ）
     summary: 言語が `ja` だけのフックの注入文は、言語のタブを置かずに出す
@@ -143,6 +144,28 @@ flows:
       - 終了コードが 1
       - 標準出力が空で、標準エラーに `parts` と、それが無いことがある
     test: test_error_when_required_key_missing
+  - name: 正常系（構文の誤った部品がある）
+    summary: Jinja2 の構文が誤った部品だけを注意書きにし、変数の表と他の部品は出す
+    setup:
+      - name: Mock
+        description: 正常系と同じ
+      - name: LLM のプロンプト
+        description: 正常系のプロンプトの部品 `logs` の本文から `{% endif %}` を外す
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        participant C as クライアント
+        participant M as dev-docs prompt-doc
+
+        C->>M: 標準入力に logs の構文が誤ったプロンプト
+        M->>M: 部品ごとにテンプレートにする
+        M-->>C: logs を注意書きにした Markdown（終了コード 0）
+      ```
+    expected:
+      - 終了コードが 0
+      - 部品 `logs` のセクションと「既定の例」「ログが無い」のセクションに `[!CAUTION]` があり、`logs`・行・構文の誤りの理由が載る
+      - 変数の表と `logs` 以外の部品のセクションは正常系と同じに出ている
+    test: test_normal_when_part_syntax_invalid
 lead: 標準入力のプロンプトの YAML 1 件（キーは knowledge の `schemas/prompt.schema.yaml`）を、変数の表・テンプレート・例の組ごとの描画のセクションを持つ Markdown にして標準出力に出す。配信元の `converters[].run` から呼ぶ。
 identifier: prompt-doc
 permissions: 制限なし（標準入力だけを読む）
@@ -200,11 +223,12 @@ constraints:
   - item: 変数のツールチップ
     constraint: テンプレートの本文の `{{ 変数 }}` と、例の描画結果の変数の値を `data-hint`（変数のパス・説明・型・例）付きの要素にし、描画結果の値はマーカーで囲む
     notes: mdmark は埋め込みの HTML の `style`・`tabindex` を落とすため、見た目は文書の画面の CSS で当てる
-  - item: コマンドの解決
-    constraint: '`converters[].run` の先頭の `dev-docs` が PATH に無いときは、サーバーを動かしている Python の環境の `bin` から引く'
-    notes: global-setup は dev-docs を PATH に入れず、`{clone}/.venv/bin/python -m dev_docs serve` で起動する。PATH の後ろに足すだけで、配信元の他のスクリプトが引く `python` などは変えない
-  - item: 変換の控え
-    constraint: '`converters[]` の結果の控えのキーに dev-docs のバージョンを含め、dev-docs を更新したら変換し直す'
   - item: タイムアウト
     constraint: '`script_timeout_sec` の中で終わる'
     decided_by: dev/設計書/非機能要件/非機能要件#requirements[スクリプトの制限時間]
+  - item: HTML のエスケープ
+    constraint: 埋め込みの HTML に入れるテンプレートの本文・描画結果の文字列・`data-hint` の値は、HTML としてエスケープしてから要素を挟む。字数は、エスケープとマーカーを入れる前の描画結果で数える
+    notes: mdmark は埋め込みの HTML の未知のタグ（`<instructions>` など）を落とす。Jinja2 の描画は `autoescape` を使わず、注入文と同じ文字列を作ってからエスケープする
+  - item: 構文の誤った部品
+    constraint: 部品の本文か `when` の式が Jinja2 の構文として誤っているときは、その部品のセクションと全ての例の組のセクションに `[!CAUTION]` で部品の `id`・行・理由を出し、変数の表と他の部品のセクションは出して終了コード 0 で終える
+    notes: 例の組はその部品を含めた注入文を作れないため、描画結果を出さず注意書きだけにする

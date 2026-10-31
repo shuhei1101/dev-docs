@@ -37,7 +37,7 @@ used_in:
   - src/dev_docs/features/prompt_doc/
 verification:
   state: 未確認
-  detail: 実装の工程で確かめる
+  detail: 実装の工程で pyproject.toml・uv.lock に追加してから確かめる。それまではバージョンの出所の 2 つのファイルに jinja2 は無い
 selection:
   candidates: 比べていない。
   decision: プロンプトの部品の本文が Jinja2 の構文で書かれ（knowledge の `schemas/prompt.schema.yaml`）、プロンプトを実際に描画する側と同じエンジンで描かないと字数と描画結果がずれるため。
