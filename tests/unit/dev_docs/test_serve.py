@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 import argparse
+import json
 import logging
 import os
+import shutil
 import socket
 import sys
 from collections.abc import Callable, Iterator
@@ -133,6 +135,40 @@ def test_run_serve_when_port_in_use(
     assert "DEV_DOCS_PORT" in error
 
 
+def test_run_serve_when_prompt_invalid(
+    tmp_path: Path,
+    serve_settings: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """プロンプトの YAML が違反する（異常系）。"""
+    from dev_docs.features.prompt_doc.runtime import DEFAULT_PROMPTS_DIR
+
+    # 準備
+    prompts = tmp_path / "prompts"
+    shutil.copytree(DEFAULT_PROMPTS_DIR, prompts)
+    broken = prompts / "mcp/docs/tools/search-docs.yaml"
+    value = load_yaml(broken.read_text(encoding="utf-8"))
+    del value["kind"]
+    broken.write_text(json.dumps(value, ensure_ascii=False), encoding="utf-8")
+    monkeypatch.setenv("DEV_DOCS_PROMPTS_DIR", str(prompts))
+    monkeypatch.setenv("DEV_DOCS_PORT", str(_free_port()))
+    runs: list[uvicorn.Server] = []
+
+    def fake_run(self: uvicorn.Server, *args: Any, **kwargs: Any) -> None:
+        runs.append(self)
+
+    monkeypatch.setattr(uvicorn.Server, "run", fake_run)
+    # 実行
+    code = run_serve(argparse.Namespace())
+    # 検証
+    error = capsys.readouterr().err
+    assert code == 4
+    assert str(broken) in error
+    assert "kind" in error
+    assert runs == []
+
+
 def test_run_serve_when_restart(serve_settings: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """再起動の要求で同じプロセスを置き換える（正常系）。"""
     # 準備
@@ -235,6 +271,29 @@ def test_build_handlers(
     assert state_dir.is_dir()
     assert len(handlers.registry.served()) == 1
     assert len(handlers.registry.statuses()) == 2
+    assert "session-context" in handlers.prompts.prompts
+    assert "mcp/docs/instructions" in handlers.prompts.prompts
+
+
+def test_build_handlers_when_prompt_invalid(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    make_terminal_config: Callable[..., TerminalConfig],
+) -> None:
+    """プロンプトの YAML が違反すると部品を作らない（異常系）。"""
+    from dev_docs.features.prompt_doc.types import PromptInvalidError
+
+    # 準備
+    prompts = tmp_path / "prompts"
+    prompts.mkdir()
+    monkeypatch.setenv("DEV_DOCS_PROMPTS_DIR", str(prompts))
+    state_dir = tmp_path / "new-state"
+    terminal = make_terminal_config(state_dir=state_dir)
+    # 実行
+    with pytest.raises(PromptInvalidError):
+        build_handlers(terminal)
+    # 検証
+    assert not state_dir.exists()
 
 
 SYNC_SCHEMA = "title: rule\ntype: object\nproperties:\n  id: {type: string}\nrequired: [id]\n"

@@ -177,6 +177,30 @@ def make_handlers(make_terminal_config: Callable[..., TerminalConfig]) -> Callab
     return _make
 
 
+@pytest.fixture
+def bundled_prompts() -> Any:
+    """同梱したプロンプトの YAML を、サーバーが描画する全ての ID で読んだ一式を返す。"""
+    from dev_docs.features.prompt_doc.runtime import DEFAULT_PROMPTS_DIR, load_prompts
+    from dev_docs.features.session_context.types import SESSION_CONTEXT_PROMPT_ID
+    from dev_docs.server.mcp.result import mcp_prompt_ids
+
+    return load_prompts(
+        DEFAULT_PROMPTS_DIR, required=[SESSION_CONTEXT_PROMPT_ID, *mcp_prompt_ids()]
+    )
+
+
+@pytest.fixture
+def make_mcp_handlers(
+    make_handlers: Callable[..., Any], bundled_prompts: Any
+) -> Callable[..., Any]:
+    """同梱したプロンプトの一式を持たせ、指定した部品だけ偽物にした配線済みの関数を作る関数を返す。"""
+
+    def _make(**overrides: Any) -> Any:
+        return make_handlers(**{"prompts": bundled_prompts, **overrides})
+
+    return _make
+
+
 class FakeRegistry(SourceRegistry):
     """決めた配信元を返す配信元の一覧の偽物。"""
 

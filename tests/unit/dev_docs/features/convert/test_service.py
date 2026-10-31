@@ -116,6 +116,37 @@ def test_convert_service_convert_when_converter(
     assert len(calls) == 1
 
 
+def test_convert_service_convert_when_cache_disabled(
+    tmp_path: Path,
+    make_converted_target: Callable[..., Target],
+    make_document: Callable[..., Document],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """cache: false の変換は毎回スクリプトを動かし、控えを書かない（正常系）。"""
+    # 準備
+    calls: list[list[str]] = []
+
+    def fake_run_script(run: Any, **kwargs: Any) -> ScriptResult:
+        calls.append(list(run))
+        return ScriptResult(stdout="# 変換した\n", stderr="")
+
+    monkeypatch.setattr(service_module, "run_script", fake_run_script)
+    target = make_converted_target(
+        converter="c",
+        converters=[ScriptEntry(id="c", run=["python3", "scripts/c.py"], cache=False)],
+    )
+    service = _service(tmp_path, {})
+    document = make_document()
+    # 実行
+    first = service.convert(target, document)
+    second = service.convert(target, document)
+    # 検証
+    assert first.markdown.startswith("# 変換した")
+    assert second.markdown.startswith("# 変換した")
+    assert len(calls) == 2
+    assert list((tmp_path / "converted").glob("**/*.*")) == []
+
+
 def test_convert_service_convert_when_dev_docs_updated(
     tmp_path: Path,
     make_converted_target: Callable[..., Target],
