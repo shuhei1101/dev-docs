@@ -1,0 +1,649 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title>振り返りのノード | sample | dev-docs</title>
+  <link rel="stylesheet" href="../../../../assets/style.css">
+  <link rel="stylesheet" href="../../../../refs/36/assets/screens.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/shuhei1101/mdmark@580fae8/dist/index.css">
+  <link rel="stylesheet" href="../../../../refs/56/assets/prompt-doc.css">
+  <script type="module" src="../../../../refs/56/assets/prompt-doc.js"></script>
+</head>
+<body>
+  <a class="skip-link" href="#main">本文へスキップ</a>
+
+  <!-- モック専用の操作列（モックの階層・案・開く文書の切り替え） -->
+  <nav class="mockbar" aria-label="モックの操作">
+    <span class="mockbar__path"><a href="../../../">pages</a> / <a href="../../">doc-view</a> / <a href="../">56</a> / <span>b-examples-first</span></span>
+    <span class="mockbar__label">案</span>
+    <a class="mockbar__tab" href="../a-poc-order/index.html">PoC の並び</a>
+    <a class="mockbar__tab" href="../b-examples-first/index.html" aria-current="page">例を先に</a>
+    <a class="mockbar__tab" href="../c-a43/index.html">A-43 準拠</a>
+    <span class="mockbar__sep"></span>
+    <span class="mockbar__label">文書</span>
+    <a class="mockbar__tab" href="?doc=reflection" data-doc-link="reflection">振り返りのノード</a>
+    <a class="mockbar__tab" href="?doc=session-context" data-doc-link="session-context">SessionStart の配信元の一覧</a>
+  </nav>
+
+  <div class="app-header">
+    <header class="topbar">
+      <!-- 狭い幅でサイドバーを開く -->
+      <button class="btn btn--ghost btn--icon only-narrow" type="button" commandfor="sidebar" command="toggle-popover" aria-label="文書の一覧を開く">
+        <svg aria-hidden="true" viewBox="0 0 16 16" fill="currentColor"><path d="M1 3h14v1.5H1zm0 4.25h14v1.5H1zM1 11.5h14V13H1z"/></svg>
+      </button>
+      <a class="brand" href="./index.html" aria-label="sample のトップ"><span class="brand__mark">dd</span><span class="only-wide">dev-docs</span></a>
+
+      <!-- 配信元の切り替え -->
+      <button class="btn btn--outline source-button" type="button" commandfor="source-menu" command="toggle-popover" aria-label="配信元を切り替える（今は sample）">
+        <svg aria-hidden="true" viewBox="0 0 16 16" fill="currentColor"><path d="M2 2.5A1.5 1.5 0 0 1 3.5 1h9A1.5 1.5 0 0 1 14 2.5v11a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 2 13.5zm1.5 0v11h9v-11zM5 4h6v1.5H5zm0 3h6v1.5H5z"/></svg>
+        <span>sample</span>
+        <svg class="btn__chevron" aria-hidden="true" viewBox="0 0 16 16" fill="currentColor"><path d="M3.2 5.7 8 10.5l4.8-4.8-1.06-1.06L8 8.38 4.26 4.64z"/></svg>
+      </button>
+      <div id="source-menu" class="menu" popover>
+        <p class="menu__label">配信元</p>
+        <a class="menu__item" href="./index.html" aria-current="true">sample<span class="menu__note">読み書き</span></a>
+        <a class="menu__item" href="./index.html">notes<span class="menu__note">読み取りだけ</span></a>
+        <a class="menu__item" href="./index.html">extra<span class="menu__note">読み取りだけ</span></a>
+      </div>
+
+      <!-- リビジョンの切り替えと比較の開始 -->
+      <button class="btn btn--outline revision-button" type="button" commandfor="revision-menu" command="toggle-popover" aria-label="リビジョンを切り替える（今は develop）">
+        <svg aria-hidden="true" viewBox="0 0 16 16" fill="currentColor"><path d="M5 3.25a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0M3.5 5.37a2.25 2.25 0 1 1 1.5 0v.63c0 .55.45 1 1 1h4c.17 0 .34.03.5.08V5.37a2.25 2.25 0 1 1 1.5 0V8.5A2.5 2.5 0 0 1 10 11H6c-.17 0-.34-.03-.5-.08v.71a2.25 2.25 0 1 1-1.5 0zm8.5-1.37a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5M4.25 13.5a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5"/></svg>
+        <span class="mono only-wide">develop</span>
+        <svg class="btn__chevron only-wide" aria-hidden="true" viewBox="0 0 16 16" fill="currentColor"><path d="M3.2 5.7 8 10.5l4.8-4.8-1.06-1.06L8 8.38 4.26 4.64z"/></svg>
+      </button>
+      <div id="revision-menu" class="menu" popover>
+        <p class="menu__label">リビジョン</p>
+        <a class="menu__item" href="./index.html" aria-current="true"><span class="mono">develop</span><span class="menu__note">既定</span></a>
+        <a class="menu__item" href="./index.html"><span class="mono">feat/frontend</span><span class="menu__note">ブランチ</span></a>
+        <a class="menu__item" href="./index.html"><span class="mono">3f9c2ab</span><span class="menu__note">10/26 23:40 JST</span></a>
+        <a class="menu__item" href="./index.html"><span class="mono">8d41e07</span><span class="menu__note">10/26 21:12 JST</span></a>
+        <div class="menu__sep"></div>
+        <a class="menu__item menu__item--action" href="#diff">別のリビジョンと比較</a>
+      </div>
+
+
+      <span class="spacer"></span>
+
+      <!-- 検索 -->
+      <button class="btn btn--outline search" type="button" aria-label="文書を検索" aria-keyshortcuts="Control+K /">
+        <svg aria-hidden="true" viewBox="0 0 16 16" fill="currentColor"><path d="M10.68 11.74a6 6 0 1 1 1.06-1.06l3.04 3.04-1.06 1.06zM11.5 7a4.5 4.5 0 1 0-9 0 4.5 4.5 0 0 0 9 0"/></svg>
+        <span>文書を検索</span>
+        <kbd class="key">Ctrl K</kbd>
+      </button>
+    </header>
+
+    <!-- 種類のタブ（nav.tabs[] の並び） -->
+    <nav class="tabs" aria-label="種類">
+      <a class="tabs__item" href="./index.html">シナリオ</a>
+      <a class="tabs__item" href="./index.html" aria-current="page">プロンプト</a>
+      <a class="tabs__item" href="./index.html">設定</a>
+    </nav>
+  </div>
+
+  <div class="layout">
+    <!-- サイドバー（狭い幅ではドロワー） -->
+    <nav id="sidebar" class="sidebar" popover aria-label="文書の一覧">
+      <div>
+        <p class="sidebar__heading">llm</p>
+        <ul class="sidebar__list">
+          <li><a class="sidebar__item" href="?doc=reflection" data-doc-link="reflection"><span>振り返りのノード</span></a></li>
+        </ul>
+        <p class="sidebar__heading">hook</p>
+        <ul class="sidebar__list">
+          <li><a class="sidebar__item" href="?doc=session-context" data-doc-link="session-context"><span>SessionStart の配信元の一覧</span></a></li>
+        </ul>
+      </div>
+    </nav>
+
+    <!-- 本文 -->
+    <main id="main" class="content" tabindex="-1">
+      <nav class="breadcrumb" aria-label="パンくず">
+        <a href="./index.html">sample</a><span aria-hidden="true">/</span><a href="./index.html">プロンプト</a><span aria-hidden="true">/</span><a href="./index.html" data-doc-text="kind">llm</a><span aria-hidden="true">/</span><span aria-current="page" data-doc-text="title">振り返りのノード</span>
+      </nav>
+      <h1 class="doc-title" data-doc-text="title">振り返りのノード</h1>
+      <p class="doc-meta">
+        <span class="badge">プロンプト</span>
+        <span class="doc-path" data-doc-text="path">content/prompts/node/reflection.yaml</span>
+        <span>更新 <time datetime="2026-10-31T07:56:00Z">10/31 16:56 JST</time></span>
+      </p>
+
+      <!-- mdmark が描いた本文 -->
+      <div id="doc" class="doc-body"></div>
+    </main>
+
+    <!-- 目次（本文の ## と ### から作る） -->
+    <nav class="toc" aria-label="目次">
+      <p class="toc__heading">目次</p>
+      <ul id="toc-list"></ul>
+    </nav>
+  </div>
+
+  <!-- 変換が出した Markdown（文書ごと） -->
+  <script type="text/markdown" data-doc="reflection" data-title="振り返りのノード" data-kind="llm" data-path="content/prompts/node/reflection.yaml">
+# 振り返りのノード
+
+`badge:llm` `badge:注入する言語: en`
+
+キャラクターが最近の出来事を振り返り、性格特性の基底値の変化を決める
+
+## 例
+
+### 既定の例
+
+この組の値: 各変数の例
+
+<!-- tabs: group=lang -->
+
+#### en（注入）
+
+`badge:353 字` `badge:使わない部品: no-logs`
+
+<!-- code: title=system -->
+
+```text
+### Role
+You are in charge of reflecting on the recent events of the character "ひな" (character_id: hina) and thinking about changes to the base values of personality traits.
+```
+
+<!-- code: title=user -->
+
+```text
+### Now
+2026-10-31（金）21:00
+
+### Personality trait definitions and current base values
+- 好奇心: 新しいものへの興味 (base 0.7)
+
+### Logs to reflect on (oldest first)
+- 10/31 20:10 コンビニで新作のプリンを買った
+```
+
+
+#### ja
+
+`badge:191 字` `badge:使わない部品: no-logs`
+
+<!-- code: title=system -->
+
+```text
+### 役割
+あなたは、キャラクター「ひな」（character_id: hina）が最近の出来事を振り返って、性格特性の基底値の変化を考える担当です。
+```
+
+<!-- code: title=user -->
+
+```text
+### いま
+2026-10-31（金）21:00
+
+### 性格特性の定義と今の基底値
+- 好奇心: 新しいものへの興味（基底値 0.7）
+
+### 振り返るログ（古い順）
+- 10/31 20:10 コンビニで新作のプリンを買った
+```
+
+
+<!-- /tabs -->
+
+### ログが無い
+
+<!-- section: closed -->
+
+この組の値: `{logs: []}`（ほかの変数は例の値）
+
+<!-- tabs: group=lang -->
+
+#### en（注入）
+
+`badge:314 字` `badge:使わない部品: logs`
+
+<!-- code: title=system -->
+
+```text
+### Role
+You are in charge of reflecting on the recent events of the character "ひな" (character_id: hina) and thinking about changes to the base values of personality traits.
+```
+
+<!-- code: title=user -->
+
+```text
+### Now
+2026-10-31（金）21:00
+
+### Personality trait definitions and current base values
+- 好奇心: 新しいものへの興味 (base 0.7)
+
+### Logs to reflect on
+- none
+```
+
+
+#### ja
+
+`badge:160 字` `badge:使わない部品: logs`
+
+<!-- code: title=system -->
+
+```text
+### 役割
+あなたは、キャラクター「ひな」（character_id: hina）が最近の出来事を振り返って、性格特性の基底値の変化を考える担当です。
+```
+
+<!-- code: title=user -->
+
+```text
+### いま
+2026-10-31（金）21:00
+
+### 性格特性の定義と今の基底値
+- 好奇心: 新しいものへの興味（基底値 0.7）
+
+### 振り返るログ
+- なし
+```
+
+
+<!-- /tabs -->
+
+### 型の合わない値
+
+<!-- section: closed -->
+
+この組の値: `{traits: oops}`（ほかの変数は例の値）
+
+<!-- tabs: group=lang -->
+
+#### en（注入）
+
+> [!CAUTION]
+> この組は描画できませんでした。
+> 変数 `traits` の型は array ですが、組の値は `oops` です。`examples` の `broken` の `values.traits` を array にしてください。
+
+#### ja
+
+> [!CAUTION]
+> この組は描画できませんでした。
+> 変数 `traits` の型は array ですが、組の値は `oops` です。`examples` の `broken` の `values.traits` を array にしてください。
+
+<!-- /tabs -->
+
+## テンプレート
+
+### role
+
+`badge:system`
+
+<!-- tabs: group=lang -->
+
+#### en（注入）
+
+<!-- html -->
+
+```html
+<pre tabindex="0"><code>### Role
+You are in charge of reflecting on the recent events of the character &quot;<span data-hint="表示名（型: string、例: ひな）">{{ character.display_name }}</span>&quot; (character_id: <span data-hint="キャラクターの ID（型: string、例: hina）">{{ character.id }}</span>) and thinking about changes to the base values of personality traits.</code></pre>
+```
+
+<!-- /html -->
+
+#### ja
+
+<!-- html -->
+
+```html
+<pre tabindex="0"><code>### 役割
+あなたは、キャラクター「<span data-hint="表示名（型: string、例: ひな）">{{ character.display_name }}</span>」（character_id: <span data-hint="キャラクターの ID（型: string、例: hina）">{{ character.id }}</span>）が最近の出来事を振り返って、性格特性の基底値の変化を考える担当です。</code></pre>
+```
+
+<!-- /html -->
+
+<!-- /tabs -->
+
+### now
+
+`badge:user`
+
+<!-- tabs: group=lang -->
+
+#### en（注入）
+
+<!-- html -->
+
+```html
+<pre tabindex="0"><code>### Now
+<span data-hint="今の日時の文（型: string、例: 2026-10-31（金）21:00）">{{ now }}</span></code></pre>
+```
+
+<!-- /html -->
+
+#### ja
+
+<!-- html -->
+
+```html
+<pre tabindex="0"><code>### いま
+<span data-hint="今の日時の文（型: string、例: 2026-10-31（金）21:00）">{{ now }}</span></code></pre>
+```
+
+<!-- /html -->
+
+<!-- /tabs -->
+
+### traits
+
+`badge:user`
+
+<!-- tabs: group=lang -->
+
+#### en（注入）
+
+<!-- html -->
+
+```html
+<pre tabindex="0"><code>### Personality trait definitions and current base values
+{% for t in traits -%}
+- <span data-hint="特性の名前（型: string、例: 好奇心）">{{ t.name }}</span>: <span data-hint="特性の定義（型: string、例: 新しいものへの興味）">{{ t.definition }}</span> (base <span data-hint="今の基底値（0〜1）（型: number、例: 0.7）">{{ t.base }}</span>)
+{% endfor %}</code></pre>
+```
+
+<!-- /html -->
+
+#### ja
+
+<!-- html -->
+
+```html
+<pre tabindex="0"><code>### 性格特性の定義と今の基底値
+{% for t in traits -%}
+- <span data-hint="特性の名前（型: string、例: 好奇心）">{{ t.name }}</span>: <span data-hint="特性の定義（型: string、例: 新しいものへの興味）">{{ t.definition }}</span>（基底値 <span data-hint="今の基底値（0〜1）（型: number、例: 0.7）">{{ t.base }}</span>）
+{% endfor %}</code></pre>
+```
+
+<!-- /html -->
+
+<!-- /tabs -->
+
+### logs
+
+`badge:user` `badge:when: logs | length > 0`
+
+<!-- tabs: group=lang -->
+
+#### en（注入）
+
+<!-- html -->
+
+```html
+<pre tabindex="0"><code>### Logs to reflect on (oldest first)
+{% for line in logs -%}
+- <span data-hint="ログ 1 行（型: string、例: -）">{{ line }}</span>
+{% endfor %}</code></pre>
+```
+
+<!-- /html -->
+
+#### ja
+
+<!-- html -->
+
+```html
+<pre tabindex="0"><code>### 振り返るログ（古い順）
+{% for line in logs -%}
+- <span data-hint="ログ 1 行（型: string、例: -）">{{ line }}</span>
+{% endfor %}</code></pre>
+```
+
+<!-- /html -->
+
+<!-- /tabs -->
+
+### no-logs
+
+`badge:user` `badge:when: logs | length == 0`
+
+<!-- tabs: group=lang -->
+
+#### en（注入）
+
+<!-- html -->
+
+```html
+<pre tabindex="0"><code>### Logs to reflect on
+- none</code></pre>
+```
+
+<!-- /html -->
+
+#### ja
+
+<!-- html -->
+
+```html
+<pre tabindex="0"><code>### 振り返るログ
+- なし</code></pre>
+```
+
+<!-- /html -->
+
+<!-- /tabs -->
+
+## 変数
+
+| 変数 | 型 | 必須 | 例 | 説明 | 出どころ |
+| --- | --- | --- | --- | --- | --- |
+| `character` | object | ✅ | `{id: hina, display_name: ひな}` | 振り返るキャラクター | - |
+| `character.id` | string | ✅ | `hina` | キャラクターの ID | - |
+| `character.display_name` | string | ✅ | `ひな` | 表示名 | - |
+| `now` | string | ✅ | `2026-10-31（金）21:00` | 今の日時の文 | - |
+| `traits` | array | ✅ | `[{name: 好奇心, definition: 新しいものへの興味, base: 0.7}]` | 性格特性の定義と今の基底値 | DB のキャラクターの性格特性 |
+| `traits[].name` | string | ✅ | `好奇心` | 特性の名前 | - |
+| `traits[].definition` | string | ✅ | `新しいものへの興味` | 特性の定義 | - |
+| `traits[].base` | number | ✅ | `0.7` | 今の基底値（0〜1） | - |
+| `logs` | array | ✅ | `['10/31 20:10 コンビニで新作のプリンを買った']` | 振り返るログの行（古い順） | - |
+| `logs[]` | string | - | - | ログ 1 行 | - |
+
+  </script>
+  <script type="text/markdown" data-doc="session-context" data-title="SessionStart の配信元の一覧" data-kind="hook" data-path="plugins/dev-docs/content/prompts/session-context.yaml">
+# SessionStart の配信元の一覧
+
+`badge:hook` `badge:注入する言語: ja`
+
+作業場所から使える配信元と警告を、セッションの始めに伝える
+
+## 例
+
+### 既定の例
+
+この組の値: 各変数の例
+
+<!-- tabs: group=lang -->
+
+#### ja（注入）
+
+`badge:140 字` `badge:使わない部品: no-source`
+
+<!-- code: title=注入する本文 -->
+
+```text
+dev-docs で次の配信元を使えます。使い分けは dev-docs の instructions にあります。
+- claude-balancer（read_write）: 複数のアカウントを貸し出す基盤の設計書
+注意:
+- knowledge: 索引が 3 件ずれています
+```
+
+
+<!-- /tabs -->
+
+### 配信元が 2 件で警告あり
+
+<!-- section: closed -->
+
+この組の値: `{sources: [{id: knowledge, access: read, description: 共通の規約}, {id: claude-balancer, access: read_write, description: 設計書}]}`（ほかの変数は例の値）
+
+<!-- tabs: group=lang -->
+
+#### ja（注入）
+
+`badge:149 字` `badge:使わない部品: no-source`
+
+<!-- code: title=注入する本文 -->
+
+```text
+dev-docs で次の配信元を使えます。使い分けは dev-docs の instructions にあります。
+- knowledge（read）: 共通の規約
+- claude-balancer（read_write）: 設計書
+注意:
+- knowledge: 索引が 3 件ずれています
+```
+
+
+<!-- /tabs -->
+
+### 配信元が無い
+
+<!-- section: closed -->
+
+この組の値: `{sources: [], warnings: []}`（ほかの変数は例の値）
+
+<!-- tabs: group=lang -->
+
+#### ja（注入）
+
+`badge:33 字` `badge:使わない部品: sources` `badge:使わない部品: warnings`
+
+<!-- code: title=注入する本文 -->
+
+```text
+この作業場所から使える dev-docs の配信元はありません。
+```
+
+
+<!-- /tabs -->
+
+### 配信元が多い
+
+<!-- section: closed -->
+
+この組の値: `{sources: [{id: source-00, access: read, description: 字数の注意を出す長い説明の配信元 00 番。共通の規約・設計書・手順書をまとめて持つ}, {id: source-01, access: read, description: 字数の注意を出す長い説明の配信元 01 番。共通の規約・設計書・手順書をまとめて持つ}, {id: source-02, access: read, description: 字数の注意を出す長い説明の配信元 02 番。共通の規約・設計書・手順書をまとめて持つ}, {id: source-03, access: read, description: 字数の注意を出す長い説明の配信元 03 番。共通の規約・設計書・手順書をまとめて持つ}, {id: source-04, access: read, description: 字数の注意を出す長い説明の配信元 04 番。共通の規約・設計書・手順書をまとめて持つ}, {id: source-05, access: read, description: 字数の注意を出す長い説明の配信元 05 番。共通の規約・設計書・手順書をまとめて持つ}, {id: source-06, access: read, description: 字数の注意を出す長い説明の配信元 06 番。共通の規約・設計書・手順書をまとめて持つ}, {id: source-07, access: read, description: 字数の注意を出す長い説明の配信元 07 番。共通の規約・設計書・手順書をまとめて持つ}, {id: source-08, access: read, description: 字数の注意を出す長い説明の配信元 08 番。共通の規約・設計書・手順書をまとめて持つ}, {id: source-09, access: read, description: 字数の注意を出す長い説明の配信元 09 番。共通の規約・設計書・手順書をまとめて持つ}, {id: source-10, access: read, description: 字数の注意を出す長い説明の配信元 10 番。共通の規約・設計書・手順書をまとめて持つ}, {id: source-11, access: read, description: 字数の注意を出す長い説明の配信元 11 番。共通の規約・設計書・手順書をまとめて持つ}, {id: source-12, access: read, description: 字数の注意を出す長い説明の配信元 12 番。共通の規約・設計書・手順書をまとめて持つ}, {id: source-13, access: read, description: 字数の注意を出す長い説明の配信元 13 番。共通の規約・設計書・手順書をまとめて持つ}, {id: source-14, access: read, description: 字数の注意を出す長い説明の配信元 14 番。共通の規約・設計書・手順書をまとめて持つ}, {id: source-15, access: read, description: 字数の注意を出す長い説明の配信元 15 番。共通の規約・設計書・手順書をまとめて持つ}, {id: source-16, access: read, description: 字数の注意を出す長い説明の配信元 16 番。共通の規約・設計書・手順書をまとめて持つ}, {id: source-17, access: read, description: 字数の注意を出す長い説明の配信元 17 番。共通の規約・設計書・手順書をまとめて持つ}, {id: source-18, access: read, description: 字数の注意を出す長い説明の配信元 18 番。共通の規約・設計書・手順書をまとめて持つ}, {id: source-19, access: read, description: 字数の注意を出す長い説明の配信元 19 番。共通の規約・設計書・手順書をまとめて持つ}]}`（ほかの変数は例の値）
+
+<!-- tabs: group=lang -->
+
+#### ja（注入）
+
+> [!WARNING]
+> 描画した結果が 1,329 字で、目安の 1,000 字を超えています。
+
+`badge:1,329 字` `badge:使わない部品: no-source`
+
+<!-- code: title=注入する本文 -->
+
+```text
+dev-docs で次の配信元を使えます。使い分けは dev-docs の instructions にあります。
+- source-00（read）: 字数の注意を出す長い説明の配信元 00 番。共通の規約・設計書・手順書をまとめて持つ
+- source-01（read）: 字数の注意を出す長い説明の配信元 01 番。共通の規約・設計書・手順書をまとめて持つ
+- source-02（read）: 字数の注意を出す長い説明の配信元 02 番。共通の規約・設計書・手順書をまとめて持つ
+- source-03（read）: 字数の注意を出す長い説明の配信元 03 番。共通の規約・設計書・手順書をまとめて持つ
+- source-04（read）: 字数の注意を出す長い説明の配信元 04 番。共通の規約・設計書・手順書をまとめて持つ
+- source-05（read）: 字数の注意を出す長い説明の配信元 05 番。共通の規約・設計書・手順書をまとめて持つ
+- source-06（read）: 字数の注意を出す長い説明の配信元 06 番。共通の規約・設計書・手順書をまとめて持つ
+- source-07（read）: 字数の注意を出す長い説明の配信元 07 番。共通の規約・設計書・手順書をまとめて持つ
+- source-08（read）: 字数の注意を出す長い説明の配信元 08 番。共通の規約・設計書・手順書をまとめて持つ
+- source-09（read）: 字数の注意を出す長い説明の配信元 09 番。共通の規約・設計書・手順書をまとめて持つ
+- source-10（read）: 字数の注意を出す長い説明の配信元 10 番。共通の規約・設計書・手順書をまとめて持つ
+- source-11（read）: 字数の注意を出す長い説明の配信元 11 番。共通の規約・設計書・手順書をまとめて持つ
+- source-12（read）: 字数の注意を出す長い説明の配信元 12 番。共通の規約・設計書・手順書をまとめて持つ
+- source-13（read）: 字数の注意を出す長い説明の配信元 13 番。共通の規約・設計書・手順書をまとめて持つ
+- source-14（read）: 字数の注意を出す長い説明の配信元 14 番。共通の規約・設計書・手順書をまとめて持つ
+- source-15（read）: 字数の注意を出す長い説明の配信元 15 番。共通の規約・設計書・手順書をまとめて持つ
+- source-16（read）: 字数の注意を出す長い説明の配信元 16 番。共通の規約・設計書・手順書をまとめて持つ
+- source-17（read）: 字数の注意を出す長い説明の配信元 17 番。共通の規約・設計書・手順書をまとめて持つ
+- source-18（read）: 字数の注意を出す長い説明の配信元 18 番。共通の規約・設計書・手順書をまとめて持つ
+- source-19（read）: 字数の注意を出す長い説明の配信元 19 番。共通の規約・設計書・手順書をまとめて持つ
+注意:
+- knowledge: 索引が 3 件ずれています
+```
+
+
+<!-- /tabs -->
+
+## テンプレート
+
+### sources
+
+`badge:when: sources | length > 0`
+
+<!-- tabs: group=lang -->
+
+#### ja（注入）
+
+<!-- html -->
+
+```html
+<pre tabindex="0"><code>dev-docs で次の配信元を使えます。使い分けは dev-docs の instructions にあります。
+{% for s in sources %}- <span data-hint="配信元の ID（型: string、例: knowledge）">{{ s.id }}</span>（<span data-hint="権限（型: string、例: read）">{{ s.access }}</span>）: <span data-hint="配信元の説明（型: string、例: 共通の規約）">{{ s.description }}</span>
+{% endfor %}
+</code></pre>
+```
+
+<!-- /html -->
+
+<!-- /tabs -->
+
+### no-source
+
+`badge:when: sources | length == 0`
+
+<!-- tabs: group=lang -->
+
+#### ja（注入）
+
+<!-- html -->
+
+```html
+<pre tabindex="0"><code>この作業場所から使える dev-docs の配信元はありません。
+</code></pre>
+```
+
+<!-- /html -->
+
+<!-- /tabs -->
+
+### warnings
+
+`badge:when: warnings`
+
+<!-- tabs: group=lang -->
+
+#### ja（注入）
+
+<!-- html -->
+
+```html
+<pre tabindex="0"><code>注意:
+{% for w in warnings %}- <span data-hint="注意 1 件（型: string、例: -）">{{ w }}</span>
+{% endfor %}
+</code></pre>
+```
+
+<!-- /html -->
+
+<!-- /tabs -->
+
+## 変数
+
+| 変数 | 型 | 必須 | 例 | 説明 | 出どころ |
+| --- | --- | --- | --- | --- | --- |
+| `sources` | array | ✅ | `[{id: claude-balancer, access: read_write, description: 複数のアカウントを貸し出す基盤の設計書}]` | 作業場所から使える配信元 | 端末の設定の sources[] のうち scope.read に作業場所が入るもの |
+| `sources[].id` | string | ✅ | `knowledge` | 配信元の ID | - |
+| `sources[].access` | string | ✅ | `read` | 権限 | - |
+| `sources[].description` | string | - | `共通の規約` | 配信元の説明 | - |
+| `warnings` | array | - | `['knowledge: 索引が 3 件ずれています']` | 索引の同期のずれ・古い設定などの注意 | - |
+| `warnings[]` | string | - | - | 注意 1 件 | - |
+
+  </script>
+</body>
+</html>
