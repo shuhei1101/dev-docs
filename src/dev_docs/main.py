@@ -23,7 +23,7 @@ from dev_docs.features.lifecycle.types import SERVE_ARGV, SHUTDOWN_WAIT_FACTOR
 from dev_docs.features.settings.query import config_path, listen_port, load_terminal_config
 from dev_docs.features.settings.types import TerminalConfig, TerminalConfigInvalidError
 from dev_docs.features.sources.registry import SourceRegistry
-from dev_docs.features.sources.types import SourceStatus
+from dev_docs.features.sources.types import ServedSource, SourceStatus
 
 EXIT_CONFIG_INVALID = 2
 EXIT_PORT_IN_USE = 3
@@ -178,13 +178,17 @@ def build_handlers(terminal: TerminalConfig) -> Handlers:
 
     state_dir = terminal.state_dir
     state_dir.mkdir(parents=True, exist_ok=True)
-    registry = SourceRegistry()
     snapshots = SnapshotStore(state_dir / "snapshots")
     store = DocumentStore(snapshots)
     converter = ConvertService(state_dir / "converted", store, terminal.script_timeout_sec)
     seen = SeenStore(state_dir / "seen.sqlite3", terminal.seen_retention_days)
     checker = DocumentChecker(store, terminal.script_timeout_sec)
     columns = ColumnSettings(state_dir / COLUMNS_DIR)
+
+    def on_rebuilt(source: ServedSource) -> None:
+        discard_source_caches([source], store=store, checker=checker, converter=converter)
+
+    registry = SourceRegistry(on_rebuilt=on_rebuilt)
 
     def reload(new_terminal: TerminalConfig) -> list[SourceStatus]:
         statuses = reload_sources(
@@ -220,13 +224,25 @@ def reload_sources(
     converter: Any,
 ) -> list[SourceStatus]:
     """配信元の一覧を読み直し、配信元の内容を控えた部品の控えを捨てる。"""
+    statuses = registry.reload(terminal)
+    discard_source_caches(registry.served(), store=store, checker=checker, converter=converter)
+    return statuses
+
+
+def discard_source_caches(
+    sources: list[ServedSource],
+    *,
+    store: Any,
+    checker: Any,
+    converter: Any,
+) -> None:
+    """配信元の内容を控えた部品の控えを捨て、渡した配信元ごとのずれと警告をログに書く。"""
     from dev_docs.features.view.nav import nav_warnings
 
-    statuses = registry.reload(terminal)
     store.clear()
     checker.clear()
     converter.clear()
-    for source in registry.served():
+    for source in sources:
         report = check_sync(store, source)
         for label, values in (
             ("metadata の列の欠け", report.missing_refs),
@@ -247,7 +263,6 @@ def reload_sources(
             )
         for warning in nav_warnings(store, source):
             logger.warning("%s: nav: %s: %s", source.id, warning.path, warning.rule)
-    return statuses
 
 
 def run_files(args: argparse.Namespace) -> int:

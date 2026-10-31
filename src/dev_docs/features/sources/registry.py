@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 import threading
+from collections.abc import Callable
 
 from dev_docs.features.history.query import resolve_ref
 from dev_docs.features.settings.types import SourceEntry, TerminalConfig
@@ -24,10 +25,11 @@ __all__ = ["SourceRegistry", "load_source"]
 class SourceRegistry:
     """配信中の配信元と状態を持ち、読み直しで一覧ごと差し替える。"""
 
-    def __init__(self) -> None:
+    def __init__(self, on_rebuilt: Callable[[ServedSource], None] | None = None) -> None:
         self._snapshot: tuple[dict[str, ServedSource], list[SourceStatus]] = ({}, [])
         self._reload_lock = threading.Lock()
         self._entries: dict[str, tuple[SourceEntry, int]] = {}
+        self._on_rebuilt = on_rebuilt
 
     def reload(self, terminal: TerminalConfig) -> list[SourceStatus]:
         """端末の設定の全行を読み直し、一覧を差し替える。"""
@@ -123,6 +125,8 @@ class SourceRegistry:
                 source.config_commit,
                 current,
             )
+            if served is not None and self._on_rebuilt is not None:
+                self._on_rebuilt(served)
         if served is None:
             return self.get(source.id)
         return served
