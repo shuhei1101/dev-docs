@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -18,11 +19,31 @@ from dev_docs.server.mcp.docs import build_docs_mcp
 from dev_docs.server.screen import SCREEN_DIST_DIR, build_screen_router
 
 if TYPE_CHECKING:
+    from starlette.types import ASGIApp, Receive, Scope, Send
+
     from dev_docs.main import Handlers
 
 DOCS_MCP_PATH = "/mcp"
 ADMIN_MCP_PATH = "/_admin/mcp"
 OPENAPI_PATH = "/_api/openapi.json"
+
+
+class SlashlessMcpPathMiddleware:
+    """スラッシュ無しの MCP のパスへの要求を、ルーティングの前に末尾にスラッシュを付けたパスへ書き換える。"""
+
+    def __init__(self, app: ASGIApp, *, paths: Iterable[str]) -> None:
+        self._app = app
+        self._paths = frozenset(paths)
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        # マウントは `/mcp/...` にだけ当たり、`/mcp` は画面の配信のルートに当たって POST が 405 になる
+        if scope["type"] == "http" and scope["path"] in self._paths:
+            scope = {
+                **scope,
+                "path": scope["path"] + "/",
+                "raw_path": scope["raw_path"] + b"/",
+            }
+        await self._app(scope, receive, send)
 
 
 def route_operation_id(route: APIRoute) -> str:
@@ -50,6 +71,7 @@ def build_app(handlers: Handlers, *, screen_dir: Path = SCREEN_DIST_DIR) -> Fast
                 streamable_http_path="/", stateless_http=True, json_response=True
             ),
         )
+    app.add_middleware(SlashlessMcpPathMiddleware, paths=(DOCS_MCP_PATH, ADMIN_MCP_PATH))
     app.include_router(build_settings_router(handlers))
     app.include_router(build_session_context_router(handlers))
     app.include_router(build_view_router(handlers))

@@ -8,7 +8,7 @@ directory: |-
   src/dev_docs/
   ├─ main.py                    # Handlers / build_handlers / reload_sources / run_serve / run_migrate / PortInUseError
   └─ server/
-     ├─ app.py                  # build_app / route_operation_id（ルートと MCP のマウント）
+     ├─ app.py                  # build_app / route_operation_id / SlashlessMcpPathMiddleware（ルートと MCP のマウント）
      ├─ lifespan.py             # build_lifespan（MCP のセッションの管理と記録の削除）
      ├─ error_handlers.py       # register_error_handlers（problem+json）
      └─ screen.py               # build_screen_router / SCREEN_DIST_DIR（画面のビルドの配信）
@@ -37,6 +37,7 @@ diagrams:
         アプリの組み立て ..> 画面の配信
         アプリの組み立て ..> 操作の識別子
         アプリの組み立て ..> アプリの寿命
+        アプリの組み立て ..> MCPのパスの補い : 取り付ける
         class 待ち受けの開始 {
           <<function>>
         }
@@ -51,6 +52,9 @@ diagrams:
         }
         class アプリの組み立て {
           <<function>>
+        }
+        class MCPのパスの補い {
+          +__call__(scope, receive, send) None
         }
         class 配信元の読み直し {
           <<function>>
@@ -215,6 +219,67 @@ classes:
         type: int
         access: 公開
         description: 待ち受けようとしたポート
+  - name: SlashlessMcpPathMiddleware
+    title: MCP のパスの補い
+    container: server/app.py
+    usecase: 起動
+    role: ASGI のミドルウェア
+    summary: スラッシュ無しの MCP のパスへの要求を、ルーティングの前に末尾にスラッシュを付けたパスへ書き換え、マウントした MCP へ届ける
+    description: Starlette のマウントは `/mcp/...` にだけ当たり、`/mcp` は画面の配信のルート（GET だけ）に当たって POST が 405 になる。画面の配信が無くても末尾のスラッシュへの 307 になるため、ルーティングの前でパスを補う
+    kind: クラス
+    properties:
+      - name: app
+        title: 次の ASGI アプリ
+        type: ASGIApp
+        access: 内部 (_)
+        description: 書き換えた要求を渡す先
+      - name: paths
+        title: 補うパス
+        type: frozenset[str]
+        access: 内部 (_)
+        description: 末尾にスラッシュを付けるパス（`DOCS_MCP_PATH`・`ADMIN_MCP_PATH`）
+    methods:
+      - name: __call__
+        title: 要求の受け渡し
+        kind: メソッド
+        summary: パスが `paths` のどれかと一致する HTTP の要求だけ、末尾にスラッシュを付けて次のアプリへ渡す
+        scope: public
+        is_async: true
+        args:
+          - name: scope
+            type: Scope
+            required: true
+            passing: positional
+            description: ASGI の scope
+          - name: receive
+            type: Receive
+            required: true
+            passing: positional
+            description: ASGI の receive
+          - name: send
+            type: Send
+            required: true
+            passing: positional
+            description: ASGI の send
+        returns:
+          type: None
+          description: なし
+        process: |-
+          1. `scope["type"]` が `http` で、`scope["path"]` が `paths` のどれかと一致するとき、`path` の末尾に `/`、`raw_path` の末尾に `b"/"` を付けた scope のコピーを作る（受け取った scope は書き換えない）
+          2. scope（書き換えたときはそのコピー）と `receive`・`send` を次のアプリへ渡す
+        unit_tests:
+          - name: test_slashless_mcp_path_middleware
+            case: 正常
+            summary: スラッシュ無しの MCP のパスにスラッシュを補う
+            condition: '`paths=("/mcp", "/_admin/mcp")` で、`type: http` の `path` が `/mcp` と `/_admin/mcp` の scope を渡す'
+            mock: 次のアプリ（受け取った scope を控える偽物）
+            expected: '次のアプリが受け取った `path` が `/mcp/`・`/_admin/mcp/`、`raw_path` が `b"/mcp/"`・`b"/_admin/mcp/"`。渡した元の scope の `path` は変わらない'
+          - name: test_slashless_mcp_path_middleware_when_other_path
+            case: 正常
+            summary: 他のパスと HTTP でない要求はそのまま渡す
+            condition: '`path` が `/mcp/`・`/mcpx`・`/sample/mcp` の HTTP の scope と、`type: lifespan` の scope を渡す'
+            mock: 次のアプリ（受け取った scope を控える偽物）
+            expected: 次のアプリが受け取った scope が渡した scope そのもの
 constants:
   - name: EXIT_CONFIG_INVALID
     title: 設定の違反の終了コード
@@ -513,9 +578,10 @@ functions:
       2. 2 つの MCP と会話の記録を渡して寿命を作り（アプリの寿命）、`FastAPI(lifespan=..., docs_url=None, redoc_url=None, openapi_url="/_api/openapi.json", generate_unique_id_function=route_operation_id)` を作る（操作の識別子）
       3. 例外の変換を登録する（例外の変換の登録）
       4. `DOCS_MCP_PATH` に文書の MCP、`ADMIN_MCP_PATH` に管理の MCP の `streamable_http_app(streamable_http_path="/", stateless_http=True, json_response=True)` をマウントする
-      5. 端末の設定の入口・画面の入口・セッションの文脈（セッションの文脈のルーター）のルーターを登録する
-      6. 画面の配信のルーター（画面の配信、`screen_dir` を渡す）を最後に登録する（全てのパスに当たるため）
-      7. アプリを返す
+      5. `app.add_middleware(SlashlessMcpPathMiddleware, paths=(DOCS_MCP_PATH, ADMIN_MCP_PATH))` で、スラッシュ無しの MCP のパスをルーティングの前に補う（MCP のパスの補い）
+      6. 端末の設定の入口・画面の入口・セッションの文脈（セッションの文脈のルーター）のルーターを登録する
+      7. 画面の配信のルーター（画面の配信、`screen_dir` を渡す）を最後に登録する（全てのパスに当たるため）
+      8. アプリを返す
     unit_tests:
       - name: test_build_app
         case: 正常
@@ -535,6 +601,12 @@ functions:
         condition: '`index.html` を置いた一時フォルダを `screen_dir` に渡し、GET `/default/a.md` と GET `/_api/sources/none/docs`'
         mock: 配線済みの関数（配信元が空の偽物）
         expected: '`/default/a.md` は 200 で `index.html` の中身、`/_api/sources/none/docs` は 404 の problem+json'
+      - name: test_build_app_when_mcp_without_slash
+        case: 正常
+        summary: スラッシュ無しの MCP のパスへの POST を画面の配信でなく MCP が受ける
+        condition: '`index.html` を置いた一時フォルダを `screen_dir` に渡し、MCP が受け付けるホストを `base_url` にしてリダイレクトを追従しない `TestClient` で、`/mcp`・`/_admin/mcp` へ MCP の initialize を POST し、GET `/mcpx` を呼ぶ'
+        mock: 配線済みの関数（配信元が空の偽物）
+        expected: '`/mcp`・`/_admin/mcp` が 200 で本文の `result.serverInfo` を持ち、405・307 にならない。`/mcpx` は 200 で `index.html` の中身'
   - name: build_lifespan
     title: アプリの寿命
     kind: 関数
