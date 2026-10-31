@@ -42,6 +42,19 @@ const TABS_WITH_DOCS = [
   { title: "空", active: false, items: [] },
 ];
 
+const DOC_1_PAGE = { kind: "page" as const, title: "文書 1", path: "docs/doc-1", items: [], change: null };
+const TABS_SHARING_DOC = [
+  { title: "mcp", active: true, items: [DOC_1_PAGE] },
+  {
+    title: "すべて",
+    active: false,
+    items: [
+      DOC_1_PAGE,
+      { kind: "page" as const, title: "文書 2", path: "docs/doc-2", items: [], change: null },
+    ],
+  },
+];
+
 const openDoc = async (
   page: Page,
   url = "/sample/docs/doc-1",
@@ -253,6 +266,21 @@ test.describe("種類のタブ", () => {
     await openDoc(page, "/sample/docs/doc-1", withTabs);
     await page.getByRole("link", { name: "補足", exact: true }).click();
     await expect(page).toHaveURL(/\/sample\/notes\/n-1/);
+  });
+
+  // 1 つの文書が 2 つのタブに当たるとき、後のタブを押すとそのタブを現在地にしてサイドバーを替える（正常系）
+  test("tabs_click_when_doc_in_two_tabs", async ({ page }) => {
+    await openDoc(page, "/sample/docs/doc-1", {
+      document: ({ path }) => ({ body: documentResponse({ path, tabs: TABS_SHARING_DOC }) }),
+    });
+    const tabs = page.getByRole("navigation", { name: "文書の種類" });
+    await tabs.getByRole("link", { name: "すべて" }).click();
+    await expect(page).toHaveURL(/\/sample\/docs\/doc-1\?tab=1$/);
+    await expect(tabs.getByRole("link", { name: "すべて" })).toHaveAttribute("aria-current", "page");
+    await expect(page.getByRole("navigation", { name: "文書の一覧" }).getByRole("link")).toHaveText([
+      "文書 1",
+      "文書 2",
+    ]);
   });
 
   // 文書の無いタブは URL を変えず、文書が無いことの表示を出す（正常系）
