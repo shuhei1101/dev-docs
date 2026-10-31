@@ -19,6 +19,24 @@ constants:
     usecase: プロンプトの読み込み
     summary: プロンプトの YAML を検査するスキーマ（knowledge の `schemas/prompt.schema.yaml` のコピー）
     value: Path(__file__).resolve().parents[4] / "templates" / "prompt.schema.yaml"
+  - name: COMMON_SCHEMA_PATH
+    title: 共通の型のスキーマ
+    container: features/prompt_doc/runtime.py
+    usecase: プロンプトの読み込み
+    summary: プロンプトのスキーマが `$ref` で指す共通の型（knowledge の `schemas/common.schema.yaml` のコピー）
+    value: PROMPT_SCHEMA_PATH.with_name("common.schema.yaml")
+  - name: WHOLE_FILE_PATH
+    title: ファイル全体のキーのパス
+    container: features/prompt_doc/runtime.py
+    usecase: プロンプトの読み込み
+    summary: ファイルが無い・YAML として読めないときの違反のキーのパス
+    value: '"$"'
+  - name: KEY_RULES
+    title: キーの名前を添える違反
+    container: features/prompt_doc/runtime.py
+    usecase: プロンプトの読み込み
+    summary: 理由にキーの名前を添えるスキーマの違反（必須のキーが無い・知らないキー）
+    value: ("必須のキーが無い", "知らないキー")
 data_models:
   - name: LoadedPrompt
     title: 読んだプロンプト
