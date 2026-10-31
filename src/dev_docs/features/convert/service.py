@@ -145,7 +145,7 @@ class ConvertService:
         elif is_markdown_body(document):
             markdown = document.body
         else:
-            markdown = schema_to_markdown(document, self.store.schema(target, document.kind))
+            markdown = schema_to_markdown(document, self.store.row_schema(target, document.kind))
         base = target.base if target.ref is None else self.store.read_root(target)
         stripped, keys = _strip_table_keys(expand_embeds(markdown, base), document.kind)
         return Converted(markdown=stripped, table_keys=keys)

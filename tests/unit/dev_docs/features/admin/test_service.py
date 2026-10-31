@@ -64,6 +64,16 @@ SCRIPT_MISSING_CONFIG = (
     "    run: [python3, scripts/missing.py]\n"
 )
 RULE_SCHEMA = "title: rule\ntype: object\n"
+FILES_ROW_CONFIG = (
+    "name: files\n"
+    "documents:\n"
+    "  - id: docs\n"
+    "    paths: [files.yaml]\n"
+    "    schema: schemas/files.schema.yaml\n"
+    "    records: files\n"
+    "    body_file: path\n"
+)
+FILES_SCHEMA_TEMPLATE = Path(__file__).parents[5] / "templates" / "files.schema.yaml"
 
 
 def _handlers(
@@ -251,6 +261,61 @@ def test_check_project_when_items_over_limit(
     assert result.sync is not None
     assert result.sync.unindexed_files == 51
     assert len(result.sync.items) == 50
+
+
+def test_check_project_when_records_schema_mismatch(
+    tmp_path: Path,
+    write_files: Callable[[Path, dict[str, str]], None],
+    make_terminal_config: Callable[..., TerminalConfig],
+) -> None:
+    """records の行のスキーマが 1 行のスキーマを持たなければ違反にする（正常系）。"""
+    # 準備
+    write_files(
+        tmp_path,
+        {
+            "dev-docs.yaml": FILES_ROW_CONFIG,
+            "schemas/files.schema.yaml": (
+                "title: file\n"
+                "type: object\n"
+                "required: [files]\n"
+                "properties:\n"
+                "  files:\n"
+                "    type: array\n"
+            ),
+            "files.yaml": "files:\n  - path: a.md\n",
+            "a.md": "# a\n",
+        },
+    )
+    handlers = _handlers(make_terminal_config)
+    # 実行
+    result = check_project(CheckProjectRequest(path=str(tmp_path)), handlers=handlers)
+    # 検証
+    assert [violation.path for violation in result.violations] == ["documents[0].schema"]
+    assert "properties.files.items" in result.violations[0].rule
+    assert result.sync is None
+
+
+def test_check_project_when_records_schema(
+    tmp_path: Path,
+    write_files: Callable[[Path, dict[str, str]], None],
+    make_terminal_config: Callable[..., TerminalConfig],
+) -> None:
+    """setup が作る組み合わせは違反にしない（正常系）。"""
+    # 準備
+    write_files(
+        tmp_path,
+        {
+            "dev-docs.yaml": FILES_ROW_CONFIG,
+            "schemas/files.schema.yaml": FILES_SCHEMA_TEMPLATE.read_text(encoding="utf-8"),
+            "files.yaml": "files:\n  - path: a.md\n",
+            "a.md": "# a\n",
+        },
+    )
+    handlers = _handlers(make_terminal_config)
+    # 実行
+    result = check_project(CheckProjectRequest(path=str(tmp_path)), handlers=handlers)
+    # 検証
+    assert result.violations == []
 
 
 def test_try_convert(

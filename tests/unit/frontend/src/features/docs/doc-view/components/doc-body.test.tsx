@@ -50,3 +50,22 @@ test("test_doc_body_when_internal_link", async () => {
   await waitFor(() => expect(router.state.location.pathname).toBe("/s/b.md"));
   expect(router.state.location.search).toMatchObject({ rev: "v1" });
 });
+
+test("test_doc_body_when_body_path", async () => {
+  mount.mockImplementation((element: HTMLElement) => {
+    element.innerHTML = '<a href="./b.md">B</a>';
+    return { update: vi.fn(), destroy: vi.fn() };
+  });
+  const document = documentResponse({ path: "notes/files/a", bodyPath: "notes/a.md" });
+  const { router } = renderInRouter(
+    <DocBody document={document as never} onHeadings={vi.fn()} onCommentSaved={vi.fn()} locating={null} onLocated={vi.fn()} />,
+    "/s/notes/files/a?rev=v1",
+  );
+
+  await act(async () => {
+    await userEvent.click(await screen.findByRole("link", { name: "B" }));
+  });
+
+  await waitFor(() => expect(router.state.location.pathname).toBe("/s/notes/b.md"));
+  expect(router.state.location.search).toMatchObject({ rev: "v1" });
+});

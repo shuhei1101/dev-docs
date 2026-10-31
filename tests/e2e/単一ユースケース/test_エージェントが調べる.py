@@ -8,6 +8,7 @@ from typing import Any
 FILES_SCHEMA = Path(__file__).parents[3] / "templates" / "files.schema.yaml"
 BROKEN_CONFIG = "name: broken\ndocuments:\n  - id: sample\n    schema: schemas/sample.schema.yaml\n"
 DOC_1 = {"field": "id", "op": "eq", "values": ["doc-1"]}
+FILES_REQUIRED = "'files' is a required property"
 SEEN = "（この会話で返し済み）"
 NOTES_ROWS = (
     "  - id: notes\n"
@@ -342,6 +343,10 @@ def test_normal_when_files_index(
     assert located["path"] == f"{sample.folder}/src/a.py"
     assert located["scope"] == "full"
     assert located["values"]["path"] == "a.py"
+    assert not any(FILES_REQUIRED in note for note in tagged.data.get("notes", []))
+    assert not any(FILES_REQUIRED in note for note in other.data.get("notes", []))
+    assert not any(FILES_REQUIRED in note for note in as_json.data.get("notes", []))
+    assert FILES_REQUIRED not in markdown.text
 
 
 def test_error_when_source_not_readable(

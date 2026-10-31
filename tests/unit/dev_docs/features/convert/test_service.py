@@ -11,9 +11,14 @@ import pytest
 from dev_docs.features.access.types import Target
 from dev_docs.features.convert import service as service_module
 from dev_docs.features.convert.service import ConvertService
+from dev_docs.features.documents.store import DocumentStore
 from dev_docs.features.documents.types import Document
+from dev_docs.features.history.snapshot import SnapshotStore
 from dev_docs.features.sources.types import DocumentTable, ScriptEntry, ServedSource, SourceConfig
 from dev_docs.integrations.scripts import ScriptResult
+from dev_docs.shared.yaml_io import load_yaml
+
+FILES_SCHEMA_TEMPLATE = Path(__file__).parents[5] / "templates" / "files.schema.yaml"
 
 ITEMS_SCHEMA = {
     "properties": {
@@ -30,7 +35,9 @@ ITEMS_SCHEMA = {
 
 def _service(tmp_path: Path, schema: dict[str, Any], timeout_sec: float = 10) -> ConvertService:
     """決めたスキーマを返す文書のストアの偽物で、変換を作る。"""
-    store = SimpleNamespace(schema=lambda target, kind: schema)
+    store = SimpleNamespace(
+        schema=lambda target, kind: schema, row_schema=lambda target, kind: schema
+    )
     return ConvertService(tmp_path / "converted", store, timeout_sec)  # type: ignore[arg-type]
 
 
@@ -146,3 +153,46 @@ def test_convert_service_convert_when_markdown(
     # 検証
     assert markdown_result.markdown == "# 本文\n\n段落\n"
     assert code_result.markdown.startswith("# 部品")
+
+
+def test_convert_service_convert_when_records(
+    tmp_path: Path,
+    make_source_config: Callable[..., SourceConfig],
+    make_served_source: Callable[..., ServedSource],
+    make_target: Callable[..., Target],
+    make_document: Callable[..., Document],
+) -> None:
+    """records の行の要素を 1 行のスキーマで変換する（正常系）。"""
+    # 準備
+    root = tmp_path / "ws"
+    root.mkdir()
+    table = DocumentTable(
+        id="notes",
+        paths=["notes/files.yaml"],
+        schema_path="schemas/files.schema.yaml",
+        records="files",
+        body_file="path",
+    )
+    files_schema = load_yaml(FILES_SCHEMA_TEMPLATE.read_text(encoding="utf-8"))
+    source = make_served_source(
+        root=root,
+        config=make_source_config(documents=[table]),
+        schemas={"notes": files_schema},
+    )
+    document = make_document(
+        id="notes/a",
+        kind="notes",
+        path="notes/files.yaml",
+        record_index=0,
+        data={"path": "a.md", "summary": "説明"},
+        body="",
+        metadata={"id": "notes/a", "name": "a"},
+    )
+    store = DocumentStore(SnapshotStore(tmp_path / "snapshots"))
+    service = ConvertService(tmp_path / "converted", store, 10)
+    # 実行
+    result = service.convert(make_target(source), document)
+    # 検証
+    assert result.failure is None
+    assert "**ファイルのパス**: a.md" in result.markdown
+    assert "**summary**: 説明" in result.markdown

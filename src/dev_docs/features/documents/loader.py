@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import posixpath
-from collections.abc import Callable, Collection, Mapping
+from collections.abc import Callable, Collection, Iterable, Mapping, Sequence
 from datetime import date, datetime, time
 from pathlib import Path
 from typing import Any
@@ -17,9 +17,15 @@ from dev_docs.shared.hashing import content_hash, value_hash
 from dev_docs.shared.yaml_io import YamlLoadError, dump_roundtrip, load_yaml
 
 
-def collect_files(root: Path, table: DocumentTable) -> list[str]:
-    """文書の行に当たるファイルを配信元の直下から集める。"""
-    return sorted({path for path in walk_files(root) if table.matches(path)})
+def collect_files(
+    root: Path, table: DocumentTable, *, files: Sequence[str] | None = None
+) -> list[str]:
+    """文書の行に当たるファイルを配信元の直下から集める。
+
+    `files` は呼び出し元が `walk_files(root)` でたどったパスで、渡されたらフォルダをたどらない。
+    """
+    candidates = walk_files(root) if files is None else files
+    return sorted({path for path in candidates if table.matches(path)})
 
 
 def _as_datetime(value: Any) -> datetime | None:
@@ -219,16 +225,32 @@ def load_file(
 
 
 def unindexed_files(
-    root: Path, index_path: str, body_paths: Collection[str], table: DocumentTable
+    root: Path,
+    index_path: str,
+    body_paths: Collection[str],
+    table: DocumentTable,
+    *,
+    files: Sequence[str] | None = None,
 ) -> list[str]:
     """管理用の YAML のフォルダの配下で、どの行も指していないファイルを `root` からのパスで返す。
 
     行の `exclude` に当たるファイルと、除外の条件に当たるファイルは数えない。
+    `files` は呼び出し元が `walk_files(root)` でたどったパスで、渡されたらフォルダをたどらない。
     """
     start = posixpath.dirname(index_path) or "."
+    candidates: Iterable[str]
+    if files is None:
+        candidates = walk_files(root, start=start)
+    elif start == ".":
+        # 管理用の YAML が配信元の直下にある: たどった全てのパスが配下
+        candidates = files
+    else:
+        # たどったパスのうち、管理用の YAML のフォルダの配下だけを見る
+        prefix = f"{start}/"
+        candidates = [path for path in files if path.startswith(prefix)]
     excluded = {index_path, *body_paths}
     return sorted(
         path
-        for path in walk_files(root, start=start)
+        for path in candidates
         if path not in excluded and not table.excludes(path) and not is_excluded_file(root, path)
     )

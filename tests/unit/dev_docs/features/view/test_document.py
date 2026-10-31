@@ -142,6 +142,43 @@ def test_get_document_when_yaml_unreadable(make_view_env: Callable[..., SimpleNa
     assert error.column >= 1
 
 
+def test_get_document_when_body_path(make_view_env: Callable[..., SimpleNamespace]) -> None:
+    """管理用の YAML の行の文書の本文のファイルのパス（正常系）。"""
+    # 準備
+    tables = [
+        DocumentTable(id="rules", paths=["docs/*.yaml"], schema_path="schemas/rule.schema.yaml"),
+        DocumentTable(
+            id="notes",
+            paths=["notes/files.yaml"],
+            schema_path="schemas/rule.schema.yaml",
+            records="files",
+            body_file="path",
+        ),
+    ]
+    env = make_view_env(
+        {
+            "docs/a.yaml": "id: a\nname: A\n",
+            "notes/files.yaml": "files:\n  - path: b.md\n",
+            "notes/b.md": "# B\n",
+        },
+        tables=tables,
+    )
+    # 実行
+    by_page = get_document(
+        "sample", "notes/files/notes/b", handlers=env.handlers, ref=None, diff_ref=None
+    )
+    by_body_path = get_document(
+        "sample", "notes/b.md", handlers=env.handlers, ref=None, diff_ref=None
+    )
+    plain = get_document("sample", "docs/a", handlers=env.handlers, ref=None, diff_ref=None)
+    # 検証
+    assert by_page.body_path == "notes/b.md"
+    assert by_page.path == "notes/files/notes/b"
+    assert by_body_path.body_path == "notes/b.md"
+    assert by_body_path.path == "notes/files/notes/b"
+    assert plain.body_path is None
+
+
 def test_get_document_when_missing(make_view_env: Callable[..., SimpleNamespace]) -> None:
     """無い文書（異常系）。"""
     # 準備

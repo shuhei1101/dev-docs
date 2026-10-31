@@ -332,7 +332,7 @@ classes:
           type: list[Violation]
           description: 違反。検査の順に並ぶ
         process: |-
-          1. `store.schema(target, kind)` でスキーマを引いて『スキーマの検査』を通す（`records` の行は要素を、それ以外はファイルの内容を検査する）
+          1. 文書に当てるスキーマ（文書のストア.文書に当てるスキーマ）を `store.row_schema(target, kind)` で引いて『スキーマの検査』を通す（`records` の行は要素に 1 行のスキーマを、それ以外はファイルの内容に種類のスキーマを当てる）
           2. `new` なら『IDの形の検査』を通す
           3. 『関連の種類の検査』をメタデータに通す
           4. 行の `validators` の ID ごとに `source.script("validators", id)` を引き、`on` が行の `on` にあるものだけを通す
@@ -368,6 +368,13 @@ classes:
             condition: '`ids.format` が `{kind}-{slug}` で ID が `X`、`new=True` と `new=False`'
             mock: なし
             expected: '`new=True` だけ `id` の違反がある'
+            exception: '-'
+          - name: test_document_checker_check_when_records
+            case: 正常
+            summary: records の行の要素に 1 行のスキーマを当てる
+            condition: '行 `notes`（`records: files`、`schema` が `templates/files.schema.yaml` のコピー）の要素 `{path: a.md}` の文書を `on="read"`'
+            mock: なし
+            expected: 空の並び（`'files' is a required property` を返さない）
             exception: '-'
       - name: clear
         title: 控えを捨てる

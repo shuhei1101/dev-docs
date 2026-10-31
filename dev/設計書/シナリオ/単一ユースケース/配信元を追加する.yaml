@@ -77,6 +77,7 @@ scenarios:
       - '`dev-docs.yaml` の 1 行目が `# yaml-language-server: $schema=https://raw.githubusercontent.com/shuhei1101/dev-docs/v{クローンのバージョン}/schemas/dev-docs.schema.json` で、`documents[]` の行が `type` を持たない'
       - 管理用の YAML の行が `templates/files.schema.yaml` の検証に通る
       - '`reload` の後、`search_docs` が Markdown 2 件を返す'
+      - "`reload` の後の `search_docs` の `notes` に、スキーマの違反（`'files' is a required property` など）が付かない"
       - 範囲から `.git`・`node_modules`・`.claude/worktrees` の下のファイルは除かれる
       - 管理用の YAML に `docs/vendor/lib.md` の行は無い（初回の setup でも除外の条件が当たる）
     test: test_normal_when_non_yaml_range
@@ -460,6 +461,7 @@ scenarios:
         description: '登録済みの配信元。直下の `content/prompts/` に A-42 の例 2 のプロンプト（`kind: llm`）、`plugins/sample/`（`.claude-plugin/plugin.json` を持つ）の `content/prompts/` に例 1 のプロンプト（`kind: hook`）を置き、`dev-docs.yaml` にプロンプトの documents の行は無い'
         notes: id `sample`
     flow: |-
+      ```mermaid
       sequenceDiagram
         actor U as 利用者
         participant SK as setup のスキル
@@ -475,6 +477,7 @@ scenarios:
         SK->>AD: check_project
         SK->>AD: reload
         SK-->>U: 書いた行と結果を出す
+      ```
     expected:
       - '`dev-docs.yaml` の documents に、`paths` が `content/prompts/**/*.yaml` の行と `plugins/sample/content/prompts/**/*.yaml` の行があり、どちらも `schema`・`converter`・`metadata`（`name`・`description`・`tags`）を持つ'
       - '`nav` に、プロンプトの行を `auto` で並べ `group_by: kind` で種類ごとにまとめる項目がある'
@@ -488,6 +491,7 @@ scenarios:
       - name: プロンプトの行を持つ配信元
         description: '`正常シナリオ（content/prompts/ を見つける）` を終えた後の sample'
     flow: |-
+      ```mermaid
       sequenceDiagram
         actor U as 利用者
         participant SK as setup のスキル
@@ -499,10 +503,38 @@ scenarios:
         SK->>FS: dev-docs.yaml の documents の paths と比べる
         SK->>AD: check_project
         SK-->>U: プロンプトの行の候補を出さずに結果を出す
+      ```
     expected:
       - プロンプトの documents の行の候補が出ない
       - '`dev-docs.yaml` が変わらない'
     test: test_normal_when_prompt_row_exists
+  - name: 異常シナリオ（records の行のスキーマが行に合わない）
+    setup:
+      - name: Mock
+        description: なし（実環境で実行）
+      - name: 食い違う配信元
+        description: '`dev-docs.yaml` の行 `docs`（`paths: [files.yaml]`・`records: files`・`body_file: path`）の `schema` が、管理用の YAML の行の項目を定めないスキーマを指すフォルダ'
+        notes: スキーマは最上位で `files` を必須にし、`files` の要素（`items`）を定めない。管理用の YAML は `files[]` に `a.md` の 1 行
+      - name: 端末の設定
+        description: '`sources` に sample の 1 行'
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        actor U as 利用者
+        participant SK as setup のスキル
+        participant AD as 管理の MCP
+
+        U->>SK: /dev-docs:setup {食い違う配信元のパス}
+        SK->>U: scope・範囲を聞き、表で確かめる
+        U-->>SK: 了承
+        SK->>AD: check_project
+        AD-->>SK: 違反（documents[0].schema と、records と食い違う理由）
+        SK-->>U: 違反を示して止まる
+      ```
+    expected:
+      - 端末の設定は変わらず、sample の配信は続く
+      - スキルの応答に `documents[0].schema` と、スキーマが `records` の行に合わない理由が出る
+    test: test_error_when_records_schema_mismatch
 lead: 利用者が `/dev-docs:setup [path]` で、フォルダを配信元として端末の設定に並べ、文書の MCP で読めるようにする。2 回目以降は範囲のファイルの増減・改名を管理用の YAML に合わせる。
 issue: 4
 primary_actor: 利用者

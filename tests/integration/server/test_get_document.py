@@ -3,10 +3,19 @@ from __future__ import annotations
 import os
 from collections.abc import Callable
 from datetime import datetime
+from pathlib import Path
 from typing import Any
 
 import pytest
 
+FILES_SCHEMA_TEMPLATE = Path(__file__).parents[3] / "templates" / "files.schema.yaml"
+NOTES_ROW = (
+    "  - id: notes\n"
+    "    paths: [notes/files.yaml]\n"
+    "    schema: schemas/files.schema.yaml\n"
+    "    records: files\n"
+    "    body_file: path\n"
+)
 BROKEN_CONFIG = "name: broken\ndocuments:\n  - id: sample\n    schema: schemas/sample.schema.yaml\n"
 NAV = (
     "nav:\n"
@@ -139,6 +148,40 @@ def test_normal_when_nav_missing(
     assert [tab["title"] for tab in tabs] == ["sample", "メモ"]
     assert [item["path"] for item in tabs[0]["items"]] == ["docs/doc-1", "docs/doc-2"]
     assert [item["path"] for item in tabs[1]["items"]] == ["notes/n-1"]
+
+
+def test_normal_when_body_path_given(
+    make_source: Callable[..., Any],
+    make_server: Callable[..., Any],
+    sample_file_set: Callable[..., dict[str, str]],
+    sample_config_text: Callable[..., str],
+) -> None:
+    """管理用の YAML の行の文書に bodyPath を返し、本文のファイルのパスで指した文書を返す（正常系）。"""
+    # 準備
+    files = sample_file_set(
+        **{
+            "dev-docs.yaml": sample_config_text(NOTES_ROW),
+            "schemas/files.schema.yaml": FILES_SCHEMA_TEMPLATE.read_text(encoding="utf-8"),
+            "notes/files.yaml": "files:\n  - path: a.md\n  - path: b.md\n",
+            "notes/a.md": "# A の本文\n",
+            "notes/b.md": "# B の本文\n",
+        }
+    )
+    env = make_server(make_source("sample", files))
+    # 実行
+    by_page = env.client.get("/_api/sources/sample/docs/notes/files/notes/a")
+    by_body_path = env.client.get("/_api/sources/sample/docs/notes/b.md")
+    plain = env.client.get("/_api/sources/sample/docs/docs/doc-1")
+    # 検証
+    assert by_page.status_code == 200
+    assert by_page.json()["bodyPath"] == "notes/a.md"
+    assert by_page.json()["path"] == "notes/files/notes/a"
+    assert by_body_path.status_code == 200
+    assert by_body_path.json()["path"] == "notes/files/notes/b"
+    assert "# B の本文" in by_body_path.json()["markdown"]
+    assert by_body_path.json()["bodyPath"] == "notes/b.md"
+    assert plain.status_code == 200
+    assert plain.json()["bodyPath"] is None
 
 
 def test_normal_when_ref_given(

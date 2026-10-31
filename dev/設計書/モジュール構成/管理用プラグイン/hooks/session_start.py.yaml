@@ -6,7 +6,7 @@ directory: |-
   ```text
   plugins/dev-docs/
   ├─ hooks/
-  │  ├─ hooks.json          # SessionStart（timeout 6）・PreToolUse（timeout 5）の登録
+  │  ├─ hooks.json          # SessionStart（timeout 18）・PreToolUse（timeout 5）の登録
   │  └─ session_start.py    # main / is_listening / read_clone / start_server / fetch_context
   ```
 constants:
@@ -33,7 +33,7 @@ constants:
     container: hooks/session_start.py
     usecase: 起動
     summary: '`POST /_admin/session-context` を打ち切る秒数'
-    value: '3'
+    value: '11'
   - name: RECONNECT_GUIDE
     title: つなぎ直しの案内
     container: hooks/session_start.py
@@ -59,7 +59,8 @@ functions:
          - JSON として読めない場合、何も出さず 0 を返す
       2. ポートにつながるか確かめる（待ち受けの確かめ）
       3. つながる場合、文脈を取り（文脈の取得。`reason` に `source`）、その文を `additionalContext` にする
-         - `OSError`（`urllib.error.URLError`・`TimeoutError` を含む）・`ValueError` の場合、`dev-docs の文脈を取れませんでした（{理由}）。管理の MCP の status で状態を確かめてください。` を `additionalContext` にする
+         - `TimeoutError`、または `reason` が `TimeoutError` の `urllib.error.URLError` の場合、`dev-docs の文脈を取れませんでした（{CONTEXT_TIMEOUT_SEC} 秒で打ち切りました）。管理の MCP の status で状態を確かめてください。` を `additionalContext` にする
+         - そのほかの `OSError`・`ValueError` の場合、`dev-docs の文脈を取れませんでした（{理由}）。管理の MCP の status で状態を確かめてください。` を `additionalContext` にする
       4. つながらない場合、端末の設定（`DEV_DOCS_CONFIG`、無ければ `DEFAULT_CONFIG`）からクローンを読み（クローンの読み取り）、サーバーを起動し（サーバーの起動）、`RECONNECT_GUIDE` を `additionalContext` にする
          - 端末の設定・`clone`・`{clone}/.venv/bin/python` のどれかが無い場合、`dev-docs を起動できませんでした（{無いもののパス}）。/dev-docs:global-setup で端末の設定を作ってください。` を `additionalContext` にする
          - 起動が `OSError` の場合、理由を添えて同じ文を `additionalContext` にする
@@ -88,13 +89,19 @@ functions:
         summary: 文脈を取れなければ status を案内する
         condition: 'stdin に `source: startup` の JSON'
         mock: 待ち受けの確かめ（`True`）・文脈の取得（`TimeoutError` を送出する）
-        expected: 0 を返し、`additionalContext` に `status` の案内
+        expected: 0 を返し、`additionalContext` に `11 秒で打ち切りました` と `status` の案内
       - name: test_main_when_input_unparsable
         case: 異常
         summary: 読めない入力では何も出さない
         condition: stdin が `{`
         mock: なし
         expected: 0 を返し、標準出力が空
+      - name: test_main_when_context_refused
+        case: 異常
+        summary: 打ち切り以外の失敗は秒数を入れない
+        condition: 'stdin に `source: startup` の JSON'
+        mock: 待ち受けの確かめ（`True`）・文脈の取得（`reason` が `ConnectionRefusedError` の `urllib.error.URLError` を送出する）
+        expected: 0 を返し、`additionalContext` に理由と `status` の案内があり、`秒で打ち切りました` が無い
   - name: is_listening
     title: 待ち受けの確かめ
     container: hooks/session_start.py
@@ -259,10 +266,10 @@ functions:
         expected: '`ctx` を返し、サーバーが受けた本文が渡した `payload`'
       - name: test_fetch_context_when_timeout
         case: 異常
-        summary: 3 秒で打ち切る
-        condition: 5 秒応答しない HTTP サーバー
+        summary: '`CONTEXT_TIMEOUT_SEC` で打ち切る'
+        condition: '`CONTEXT_TIMEOUT_SEC` を 1 に差し替え、2 秒応答しない HTTP サーバー'
         mock: 応答しない HTTP サーバー
-        expected: 4 秒以内に `TimeoutError`
+        expected: 2 秒以内に `TimeoutError`
         exception: TimeoutError
 refs:
   - dev/設計書/インターフェース定義/管理用プラグイン/セッション開始のフック#
