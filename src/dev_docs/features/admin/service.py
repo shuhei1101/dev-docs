@@ -475,8 +475,8 @@ def _apply_nav_operation(nav: dict[str, Any], operation: NavOperation, index: in
         parent.remove(group)
 
 
-def _overlaid_nav(handlers: Handlers, config_file: Path) -> bool:
-    """`config` の先頭が同じ `dev-docs.yaml` の行で、2 つ目以降のファイルが `nav` を持つか。"""
+def _overlaid_nav(handlers: Handlers, config_file: Path) -> Path | None:
+    """`config` の先頭が同じ `dev-docs.yaml` の行で、`nav` を持つ 2 つ目以降のファイルを返す。"""
     for entry in handlers.terminal.sources:
         if normalize_path(entry.config[0]) != config_file:
             continue
@@ -487,8 +487,8 @@ def _overlaid_nav(handlers: Handlers, config_file: Path) -> bool:
             except OSError, UnicodeDecodeError, YamlLoadError:
                 continue
             if isinstance(value, dict) and "nav" in value:
-                return True
-    return False
+                return path
+    return None
 
 
 def _nav_documents(handlers: Handlers, source: ServedSource) -> tuple[list[Any], dict[str, str]]:
@@ -520,13 +520,17 @@ def write_nav(request: WriteNavRequest, *, handlers: Handlers) -> WriteNavResult
             line=error.line,
             column=error.column,
         ) from error
-    if _overlaid_nav(handlers, config_file):
+    overlaid = _overlaid_nav(handlers, config_file)
+    if overlaid is not None:
         raise InvalidArgumentError(
             message="引数が正しくありません: 1 件",
             violations=[
                 Violation(
                     path="path",
-                    rule="重ねた設定のファイルが nav を持つため、配信に出るのはそちらの nav です",
+                    rule=(
+                        f"重ねた設定のファイル {overlaid} が nav を持つため、"
+                        "配信に出るのはそちらの nav です"
+                    ),
                     fix="重ねた設定のファイルの nav を外してください",
                 )
             ],
