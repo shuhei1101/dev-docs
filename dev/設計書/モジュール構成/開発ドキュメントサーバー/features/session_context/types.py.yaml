@@ -1,5 +1,5 @@
 title: "開発ドキュメントサーバー / セッションの文脈 / types.py"
-lead: '`POST /_admin/session-context` の本文と応答の型と、文脈に入れる使い方の文。'
+lead: '`POST /_admin/session-context` の本文と応答の型と、文脈の文の字数の上限・プロンプトの ID。文はプロンプトの YAML が持ち、コードは持たない。'
 data_models:
   - name: SessionContextRequest
     title: セッションの文脈の要求
@@ -74,38 +74,16 @@ constants:
     container: features/session_context/types.py
     usecase: セッションの文脈
     summary: '`context` の字数の上限'
-    value: '2000'
+    value: '1000'
   - name: FORGET_REASONS
     title: 記録を削除する理由
     container: features/session_context/types.py
     usecase: セッションの文脈
     summary: 返し済みの記録を削除する `reason`
     value: frozenset({'clear', 'compact'})
-  - name: SESSION_USAGE
-    title: 使い方の文
+  - name: SESSION_CONTEXT_PROMPT_ID
+    title: 文脈の文のプロンプト
     container: features/session_context/types.py
     usecase: セッションの文脈
-    summary: 配信元の一覧の後に置く場面ごとの短い使い方（A-32 の「1. SessionStart で注入する文」）。文脈の文ではこの後に `TAG_GUIDE` を続ける
-    value: |-
-      使い方:
-      - 始めに `describe(source)` で種類と書き方を確かめる
-      - 探すときは `search_docs`。配信元をまたぐときは `source="*"`、本文まで読むときは `view="full"`
-      - 前に読んだ後の変更は `list_changes` で確かめる
-      - 範囲のファイルを作った・消した・改名したら、管理用の YAML の行を修正する
-  - name: TAG_GUIDE
-    title: タグの付け方
-    container: features/session_context/types.py
-    usecase: セッションの文脈
-    summary: 使い方の文と文書の MCP の instructions に同じ文で置くタグの行
-    value: |-
-      タグ:
-      - 付ける前に `search_docs` の `group_by="tags"` で使われているタグを見て、同じ意味のタグを使い回す
-      - 複合語は単語まで分けてタグにする（`エラー処理` は `topic:エラー` と `action:処理`）
-      - 動作は `action:`、題材は `topic:`、道具は `tool:` で始める
-      - 配信元にタグの規約があれば、`describe(source)` の説明書に従う
-  - name: SETUP_GUIDE
-    title: 登録の案内
-    container: features/session_context/types.py
-    usecase: セッションの文脈
-    summary: 使える配信元が 0 件のときの文
-    value: この作業場所から使える dev-docs の配信元はありません。配信元にするときは `/dev-docs:setup` を実行します。
+    summary: '文脈の文を描画するプロンプトの YAML（`content/prompts/session-context.yaml`、`kind: hook`）の ID'
+    value: '"session-context"'
