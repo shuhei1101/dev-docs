@@ -36,8 +36,9 @@ docs_url: https://jinja.palletsprojects.com/en/stable/api/
 used_in:
   - src/dev_docs/features/prompt_doc/
 verification:
-  state: 未確認
-  detail: 実装の工程で pyproject.toml・uv.lock に追加してから確かめる。それまではバージョンの出所の 2 つのファイルに jinja2 は無い
+  state: 済
+  date: '2026-10-31'
+  detail: pyproject.toml・uv.lock に 3.1.6 を追加し、`StrictUndefined`・`trim_blocks`・`lstrip_blocks`・`keep_trailing_newline`・`autoescape=False`・`finalize` の Environment で、`{% for %}` の描画が `- a\n` になること、未定義の変数が `UndefinedError` になること、`compile_expression` の式が真偽を返すこと、`meta.find_undeclared_variables` が最上位の変数名を返すことを確かめた
 selection:
   candidates: 比べていない。
   decision: プロンプトの部品の本文が Jinja2 の構文で書かれ（knowledge の `schemas/prompt.schema.yaml`）、プロンプトを実際に描画する側と同じエンジンで描かないと字数と描画結果がずれるため。
