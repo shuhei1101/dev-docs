@@ -9,12 +9,17 @@ from typing import Any
 import pytest
 
 from dev_docs.features.access.types import Target
+from dev_docs.features.documents.store import DocumentStore
 from dev_docs.features.documents.types import Document
+from dev_docs.features.history.snapshot import SnapshotStore
 from dev_docs.features.sources.types import DocumentTable, ScriptEntry, ServedSource, SourceConfig
 from dev_docs.features.validation import service as service_module
 from dev_docs.features.validation.service import DocumentChecker
+from dev_docs.shared.yaml_io import load_yaml
 
 SCHEMA = {"type": "object", "required": ["name"]}
+
+FILES_SCHEMA_TEMPLATE = Path(__file__).parents[5] / "templates" / "files.schema.yaml"
 
 
 def _script(violations: list[Any], exit_code: int = 0) -> list[str]:
@@ -25,7 +30,9 @@ def _script(violations: list[Any], exit_code: int = 0) -> list[str]:
 
 def _checker(schema: dict[str, Any]) -> DocumentChecker:
     """決めたスキーマを返す文書のストアの偽物で、文書の検査を作る。"""
-    store = SimpleNamespace(schema=lambda target, kind: schema)
+    store = SimpleNamespace(
+        schema=lambda target, kind: schema, row_schema=lambda target, kind: schema
+    )
     return DocumentChecker(store, timeout_sec=10)  # type: ignore[arg-type]
 
 
@@ -139,3 +146,44 @@ def test_document_checker_check_when_new(
     # 検証
     assert [violation.path for violation in for_new] == ["id"]
     assert for_existing == []
+
+
+def test_document_checker_check_when_records(
+    tmp_path: Path,
+    make_source_config: Callable[..., SourceConfig],
+    make_served_source: Callable[..., ServedSource],
+    make_target: Callable[..., Target],
+    make_document: Callable[..., Document],
+) -> None:
+    """records の行の要素に 1 行のスキーマを当てる（正常系）。"""
+    # 準備
+    root = tmp_path / "ws"
+    root.mkdir()
+    table = DocumentTable(
+        id="notes",
+        paths=["notes/files.yaml"],
+        schema_path="schemas/files.schema.yaml",
+        records="files",
+        body_file="path",
+    )
+    files_schema = load_yaml(FILES_SCHEMA_TEMPLATE.read_text(encoding="utf-8"))
+    source = make_served_source(
+        root=root,
+        config=make_source_config(documents=[table]),
+        schemas={"notes": files_schema},
+    )
+    document = make_document(
+        id="notes/a",
+        kind="notes",
+        path="notes/files.yaml",
+        record_index=0,
+        data={"path": "a.md"},
+        body="# A\n",
+        body_path="notes/a.md",
+        metadata={"id": "notes/a", "name": "a"},
+    )
+    checker = DocumentChecker(DocumentStore(SnapshotStore(tmp_path / "snapshots")), timeout_sec=10)
+    # 実行
+    result = checker.check(make_target(source), document, on="read")
+    # 検証
+    assert result == []

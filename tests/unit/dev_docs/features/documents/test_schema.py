@@ -6,7 +6,11 @@ from pathlib import Path
 
 import pytest
 
+from dev_docs.features.documents import schema as schema_module
 from dev_docs.features.documents.schema import resolve_schema_refs
+from dev_docs.shared.yaml_io import load_yaml
+
+FILES_SCHEMA_TEMPLATE = Path(__file__).parents[5] / "templates" / "files.schema.yaml"
 
 COMMON_SCHEMA = "$defs:\n  markdown:\n    type: string\n    title: Markdown\n"
 
@@ -62,3 +66,34 @@ def test_resolve_schema_refs_when_missing(tmp_path: Path, caplog: pytest.LogCapt
     # 検証
     assert result["properties"]["a"] == {"$ref": "無い.schema.yaml#/$defs/x"}
     assert len([r for r in caplog.records if r.levelno == logging.WARNING]) == 1
+
+
+def test_records_item_schema() -> None:
+    """要素のスキーマを取り出す（正常系）。"""
+    # 準備
+    schema = load_yaml(FILES_SCHEMA_TEMPLATE.read_text(encoding="utf-8"))
+    # 実行
+    result = schema_module.records_item_schema(schema, "files")
+    # 検証
+    assert result is not None
+    assert result["required"] == ["path"]
+
+
+@pytest.mark.parametrize(
+    ("schema", "records"),
+    [
+        pytest.param({"properties": {"files": {"type": "array"}}}, "files", id="no_items"),
+        pytest.param({"type": "object"}, "files", id="no_properties"),
+        pytest.param(
+            {"properties": {"files": {"type": "array", "items": {"type": "object"}}}},
+            "rows",
+            id="other_records",
+        ),
+    ],
+)
+def test_records_item_schema_when_missing(schema: dict[str, object], records: str) -> None:
+    """要素のスキーマが無い（正常系）。"""
+    # 実行
+    result = schema_module.records_item_schema(schema, records)
+    # 検証
+    assert result is None
