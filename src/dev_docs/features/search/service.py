@@ -46,7 +46,7 @@ NONE_LABEL = "（なし）"
 MULTI_SOURCE_MIN = 2
 BODY = "body"
 MATCHES = "@matches"
-ARRAY_FIELDS = ("tags", "related", "aliases", "avoid", "@sections")
+ARRAY_FIELDS = ("tags", "main_tags", "related", "aliases", "avoid", "@sections")
 FINGERPRINT_EXCLUDED = {"cursor", "limit", "max_chars"}
 
 
