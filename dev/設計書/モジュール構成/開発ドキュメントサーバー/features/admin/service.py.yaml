@@ -225,7 +225,7 @@ functions:
       description: 書いた `nav` と条件ごとの文書の数・警告
     process: |-
       1. `path` が `.yaml` で終わればそのフォルダ、そうでなければ `path` を `root` にし、`{root}/dev-docs.yaml` を往復編集で読む（`load_roundtrip`）。無ければ `ConfigNotFoundError`、YAML として読めなければ `ConfigParseError`
-      2. 端末の設定の `sources[]` のうち `config` の先頭のファイルが同じ `dev-docs.yaml` の行で、2 つ目以降のファイルが `nav` を持つ場合、`InvalidArgumentError` を送る（重ねた設定の `nav` が配信に出るため）
+      2. 端末の設定の `sources[]` のうち `config` の先頭のファイルが同じ `dev-docs.yaml` の行で、2 つ目以降のファイルが `nav` を持つ場合、`nav` を持つファイルのパスを `rule` に添えた `InvalidArgumentError` を送る（重ねた設定の `nav` が配信に出るため）
       3. `nav`（無ければ `{tabs: []}`）の複製に操作を順に当てる。タブは `title`、項目は `item` を ` > ` で分けた `group` の名前でたどる
          - `add` は、`item` が無ければタブの並びの末尾に `value` のタブ、あれば指した group の `items` の末尾に `value` の項目を加える。同じ名前のタブ・group があれば `InvalidArgumentError`
          - `update` は指したタブか group に `value` のキーだけを重ね、`remove` は指したタブか group を除く

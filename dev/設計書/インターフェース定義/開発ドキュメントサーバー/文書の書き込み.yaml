@@ -416,7 +416,7 @@ flows:
       - name: Mock
         description: なし
       - name: オブジェクトの配列のタグを持つ種類
-        description: 'ワークツリー x の `rules/r1.md` の front matter が `tags: [{name: a, main: true}, {name: b}]` を持つ'
+        description: 'ワークツリー x の `rules/r1.yaml` が `tags: [{name: a, main: true}, {name: b}]` を持つ'
         notes: '行 `rules` は `metadata: {tags: tags[].name, main_tags: tags[main].name}`'
       - name: 入力
         description: '1 回目は `update`（`id: r1`・`add_to: {tags: [c]}`）。2 回目は `update`（`remove_from: {tags: [b]}`）。3 回目は `update`（`set: {tags: [a, c, d]}`）。4 回目は `update`（`set: {main_tags: [c]}`）。5 回目は `update`（`set: {main_tags: [z]}`）。6 回目は `update`（`add_to: {main_tags: [d]}`）。7 回目は `update`（`remove_from: {main_tags: [c]}`）。8 回目は `update`（`unset: [main_tags]`）'
@@ -430,11 +430,11 @@ flows:
         C->>T: update r1・add_to {tags: [c]}
         T->>T: tags[].name の対応で {name: c} の要素にする
         T->>T: スキーマと validators に通す
-        T->>WT: r1 の front matter を書き換える
+        T->>WT: r1.yaml を書き換える
         T-->>C: status updated・diff
         C->>T: update r1・set {main_tags: [c]}
         T->>T: c の要素の main を true、他の要素の main を削除する
-        T->>WT: r1 の front matter を書き換える
+        T->>WT: r1.yaml を書き換える
         T-->>C: status updated・diff
       ```
     expected:
