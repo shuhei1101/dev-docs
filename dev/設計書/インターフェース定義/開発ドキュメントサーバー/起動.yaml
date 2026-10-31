@@ -323,7 +323,7 @@ flows:
         participant P as プロンプトの YAML
 
         U->>T: dev-docs serve
-        T-->>P: YAML を読み、スキーマで検査する
+        T->>P: YAML を読み、スキーマで検査する
         T->>T: instructions と description を描画して MCP に登録する
         U->>T: POST /mcp（initialize・tools/list）
         T-->>U: instructions とツールの description
