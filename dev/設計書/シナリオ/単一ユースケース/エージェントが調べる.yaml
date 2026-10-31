@@ -528,12 +528,12 @@ scenarios:
         A->>M: search_docs(filter: main_tags が mcp, view: summary)
         M-->>A: 文書 1
         A->>M: search_docs(view: count, group_by: tags)
-        M-->>A: タグごとの件数（mcp 2、設計 2）
+        M-->>A: タグごとの件数（MCP 2、設計 2）
       ```
     expected:
       - '`tags` が `mcp` の `search_docs` が、`MCP` を付けた文書 2 も含めて 2 件を返す'
       - '`main_tags` が `mcp` の `search_docs` が、`main: true` で `mcp` を持つ文書 1 だけを返す'
-      - '`group_by: tags` が、オブジェクトの `name` を数えて `mcp` 2・`設計` 2 を返す'
+      - '`group_by: tags` が、オブジェクトの `name` を数えて `MCP` 2・`設計` 2 を返す（`mcp`・`MCP` は 1 つにまとめ、表記は同数なので値の昇順で先の `MCP`）'
       - '`fields: [tags]` の `search_docs` が、文字列の配列（`[mcp, 設計]`）を返す'
       - '`[]` を使わない `metadata` の配信元は今のまま引ける'
     test: test_normal_when_tags_are_objects

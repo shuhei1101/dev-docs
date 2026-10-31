@@ -155,8 +155,8 @@ scenarios:
       - name: Mock
         description: なし（実環境で実行。`cwd` はテストが引数に入れる）
       - name: default_ref のスクリプト
-        description: 'sample の `develop` ブランチのスクリプトを次のようにする。変換スクリプトは本文の先頭に `develop` の文字を加える。`on: [read]` の validator は文書 1 に違反 `develop-rule` を出す。generator は生成した文書の本文を `develop` にする'
-        notes: クローン本体は `master` を checkout し、`master` の変換スクリプトは何も加えず、validator は違反を出さず、generator は本文を `master` にする
+        description: 'sample の `develop` ブランチのスクリプトを次のようにする。変換スクリプトは本文の先頭に `develop` の文字を加える。`on: [read]` の validator は文書 1 に違反 `develop-rule` を出す'
+        notes: クローン本体は `master` を checkout し、`master` の変換スクリプトは何も加えず、validator は違反を出さない
       - name: dev-docs
         description: sample を配信している dev-docs
         notes: '`cwd` は sample のクローン本体'
@@ -174,14 +174,10 @@ scenarios:
         U->>S: 変換を使う文書を開く
         S->>G: default_ref のスクリプトで変換する
         S-->>U: develop の文字が付いた本文
-        U->>S: generator が生成した文書を開く
-        S->>G: default_ref の generator を動かす
-        S-->>U: 本文 develop
       ```
     expected:
       - '`search_docs` の文書 1 の `notes` に違反 `develop-rule` が出る'
       - 変換した本文の先頭に `develop` の文字が付く
-      - generator が生成した文書の本文が `develop` になる
     test: test_normal_when_scripts_run_from_default_ref
   - name: 正常シナリオ（ワークツリーのスクリプトを動かす）
     setup:
@@ -195,17 +191,20 @@ scenarios:
     flow: |-
       ```mermaid
       sequenceDiagram
-        actor A as エージェント
+        actor U as 利用者
+        participant AM as 管理の MCP
         participant S as dev-docs のサーバー
         participant WT as ワークツリー x
 
-        A->>S: search_docs(worktree: ワークツリー x のパス, filter: id が変換を使う文書, view: full)
-        S->>WT: ワークツリーの変換スクリプトで変換する
-        S-->>A: worktree-x の文字が付いた本文
+        U->>AM: try_convert(path: ワークツリー x のパス, file: 変換を使う文書)
+        AM->>WT: ワークツリーの変換スクリプトで変換する
+        AM-->>U: worktree-x の文字が付いた本文
+        U->>S: 画面で変換を使う文書を開く
+        S-->>U: default_ref のスクリプトで変換した develop の文字が付いた本文
       ```
     expected:
-      - '`worktree` を渡した `search_docs` の本文の先頭に `worktree-x` の文字が付き、`develop` の文字は付かない'
-      - '`worktree` を渡さない同じ呼び出しは `develop` の文字が付いた本文を返す'
+      - ワークツリー x のパスを渡した `try_convert` の本文の先頭に `worktree-x` の文字が付き、`develop` の文字は付かない
+      - 画面の文書の取得（ワークツリーを指さない）は `develop` の文字が付いた本文を返す
     test: test_normal_when_scripts_run_from_worktree
 lead: 利用者かエージェントが配信元の設定・スキーマ・検査と変換のスクリプトを変え、管理の MCP の `check_project`・`try_convert` で確かめてから `reload` で配信に入れる。
 issue: 4
