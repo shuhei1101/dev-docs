@@ -492,11 +492,11 @@ def _overlaid_nav(handlers: Handlers, config_file: Path) -> bool:
 
 
 def _nav_documents(handlers: Handlers, source: ServedSource) -> tuple[list[Any], dict[str, str]]:
-    """配信元の文書と、種類のスキーマから使える項目を返す。"""
+    """配信元の文書と、行ごとの文書に当てるスキーマから使える項目を返す。"""
     target = Target(source, source.root, None, None, "read")
     documents = handlers.store.load(target).documents
     fields = known_fields(
-        handlers.store.schema(target, row.id) for row in source.config.documents if row.enabled
+        handlers.store.row_schema(target, row.id) for row in source.config.documents if row.enabled
     )
     return documents, fields
 

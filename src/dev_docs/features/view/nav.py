@@ -12,7 +12,7 @@ from pydantic import ValidationError
 
 from dev_docs.features.access.types import Target
 from dev_docs.features.documents.fields import get_field
-from dev_docs.features.documents.schema import resolve_schema_refs
+from dev_docs.features.documents.schema import records_item_schema, resolve_schema_refs
 from dev_docs.features.documents.store import DocumentStore
 from dev_docs.features.documents.types import Document
 from dev_docs.features.search.fields import known_fields
@@ -148,13 +148,17 @@ def _tab_title(row: DocumentTable) -> str:
     return row.title or row.id
 
 
+def _row_schema(source: ServedSource, row: DocumentTable) -> dict[str, Any]:
+    """行の文書 1 件に当てるスキーマ（`records` を持つ行は 1 行のスキーマ）を返す。"""
+    schema = resolve_schema_refs(source.schemas.get(row.id, {}), source.root / row.schema_path)
+    if row.records is None:
+        return schema
+    return records_item_schema(schema, row.records) or {}
+
+
 def _source_fields(source: ServedSource) -> dict[str, str]:
-    """配信元の有効な行の種類のスキーマから使える項目を作る。"""
-    return known_fields(
-        resolve_schema_refs(source.schemas.get(row.id, {}), source.root / row.schema_path)
-        for row in source.config.documents
-        if row.enabled
-    )
+    """配信元の有効な行の文書に当てるスキーマから使える項目を作る。"""
+    return known_fields(_row_schema(source, row) for row in source.config.documents if row.enabled)
 
 
 def build_nav(source: ServedSource, documents: Sequence[Document]) -> list[NavTab]:
@@ -261,7 +265,7 @@ def nav_warnings(
     target = Target(source, source.root, None, None, "read")
     documents = store.load(target).documents
     fields = known_fields(
-        store.schema(target, row.id) for row in source.config.documents if row.enabled
+        store.row_schema(target, row.id) for row in source.config.documents if row.enabled
     )
     table_ids = [row.id for row in source.config.documents if row.enabled]
     counts = nav_auto_counts(nav, documents, fields=fields, today=today)
