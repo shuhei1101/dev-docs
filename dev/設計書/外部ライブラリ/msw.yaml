@@ -1,0 +1,35 @@
+title: "msw"
+kind: "ライブラリ"
+version:
+  current: 3.0.3
+  latest: 3.0.3
+  checked_on: '2026-10-30'
+  source: package.json
+catalogs:
+  - name: API
+    version: 3.0.3
+    entries:
+      - name: setupServer
+        kind: 関数
+        purpose: Vitest の中で差し替える（`msw/node`）
+      - name: setupWorker
+        kind: 関数
+        purpose: 開発サーバーで差し替える（`msw/browser`）
+      - name: http / HttpResponse
+        kind: 関数 / クラス
+        purpose: テストごとの上書きのハンドラ
+lead: ネットワークの層で HTTP を差し替える API のモックのライブラリ。
+purl: pkg:npm/msw
+dependency_scope: 開発のみ
+adoption: 採用
+used_in:
+  - frontend/src/testing/msw/handlers.ts
+  - frontend/src/main.tsx
+upstream: mswjs/msw
+verification:
+  state: 済
+  date: '2026-10-30'
+  detail: 単体テストで API を差し替えて通ることを確かめた（msw 3 は `onUnhandledRequest` でなく `onUnhandledFrame`）。
+license: MIT（商用利用可）
+official_url: https://mswjs.io/
+docs_url: https://mswjs.io/docs/api

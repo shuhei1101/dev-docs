@@ -69,13 +69,13 @@ def _settings_view(handlers: Handlers) -> SettingsSourcesView:
         item = items[status.index]
         rows.append(
             SettingsSourceRow(
-                id=item["id"],
+                id=item.id,
                 config=list(entry.config),
                 enabled=entry.enabled,
                 scope=entry.scope,
-                status=item["status"],
-                errors=item.get("errors", []),
-                config_version=item.get("config_version"),
+                status=item.status,
+                errors=item.errors,
+                config_version=item.config_version,
             )
         )
     return SettingsSourcesView(settings_path=str(terminal.file), sources=rows)
@@ -83,15 +83,15 @@ def _settings_view(handlers: Handlers) -> SettingsSourcesView:
 
 def build_settings_router(handlers: Handlers) -> APIRouter:
     """端末の設定の取得・保存のルートを持つルーターを作る。"""
-    router = APIRouter()
+    router = APIRouter(tags=["settings"])
 
-    @router.get("/_api/settings/sources", operation_id="get_settings_sources")
+    @router.get("/_api/settings/sources", name="get_settings_sources")
     async def get_sources() -> SettingsSourcesView:
         return await asyncio.to_thread(_settings_view, handlers)
 
     @router.put(
         "/_api/settings/sources",
-        operation_id="put_settings_sources",
+        name="put_settings_sources",
         dependencies=[Depends(require_same_origin)],
     )
     async def put_sources(body: SettingsSourcesRequest) -> SettingsSourcesResponse:

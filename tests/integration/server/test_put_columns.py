@@ -31,7 +31,7 @@ def test_normal(
     # 準備
     env = _setup(make_source, make_server, sample_file_set)
     source_files = sorted(path.name for path in env.folders["sample"].rglob("*.yaml"))
-    table = env.client.get("/_api/sources/sample/docs/docs/doc-1").json()["table_keys"][0]
+    table = env.client.get("/_api/sources/sample/docs/docs/doc-1").json()["tableKeys"][0]
     # 実行
     saved = env.client.put(
         "/_api/sources/sample/columns",

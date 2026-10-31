@@ -130,7 +130,7 @@ def test_error_when_yaml_broken(
     document = served.get(DOC_URL)
     # 検証
     notes = " ".join(result.data["notes"])
-    broken = document.json()["conversion_error"]
+    broken = document.json()["conversionError"]
     assert [item["id"] for item in result.data["items"]] == ["doc-2"]
     assert "docs/doc-1.yaml" in notes
     assert re.search(r"1.*\d+", notes)

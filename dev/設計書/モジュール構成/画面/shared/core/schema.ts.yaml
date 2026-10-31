@@ -1,0 +1,15 @@
+title: "画面 / 共通 / schema.ts"
+lead: 画面の中で共通に使う zod のスキーマ。API の型は orval が生成し、ここには生成しないものだけを置く。
+constants:
+  - name: ProblemSchema
+    title: 問題の詳細のスキーマ
+    container: shared/core/schema.ts
+    usecase: 共通
+    summary: problem+json の本文（`type`・`title`・`status`・`detail`・`nextSteps`・`errors[]`、他のキーは `passthrough`）
+    value: z.object({...}).passthrough()
+  - name: MissingSchema
+    title: 見つからなかったもののスキーマ
+    container: shared/core/schema.ts
+    usecase: 共通
+    summary: 文書の取得の 404 の problem+json の最上位（`missing` が `source`・`not_served`・`ref`・`doc`、`value` が開こうとした値、`errors[]` が配信していない理由）
+    value: 'z.object({missing: z.enum(["source", "not_served", "ref", "doc"]), value: z.string(), errors: z.array(z.object({path: z.string(), reason: z.string()})).optional()})'

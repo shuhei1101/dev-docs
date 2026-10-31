@@ -22,8 +22,9 @@ flows:
       ```
     expected:
       - 200 で、`paths` に文書の取得・画面の検索・リビジョンの一覧・表の列の設定の保存・端末の設定の取得・端末の設定の保存の入口が全てある
-      - '`paths` に `/mcp`・`/_admin/mcp`・`/_api/openapi.json` が無い'
-      - 各入口の `operationId` がインターフェース定義の識別子と同じ（`path` を省く文書の取得は `get_document_default`）で、重複が無い
+      - '`paths` に `/mcp`・`/_admin/mcp`・`/_api/openapi.json`・画面の配信が無い'
+      - 各入口の `operationId` が `{tag}-{識別子}`（`view-get_document`、`path` を省く文書の取得は `view-get_document_default`、端末の設定は `settings-get_settings_sources` の形）で、重複が無い
+      - スキーマのプロパティ名が camelCase（文書の取得の `conversionError`・`tableKeys` 等）
     test: test_normal
 lead: '#17 が API クライアントを作るときに読む。画面の API（`/_api/` の入口）だけを載せた OpenAPI のスキーマを返す。'
 identifier: get_openapi
@@ -45,4 +46,6 @@ constraints:
     decided_by: dev/設計書/非機能要件/非機能要件#requirements[待ち受けのアドレス]
   - item: 載せる入口
     constraint: '`/_api/` で始まる入口だけ。`/mcp`・`/_admin/mcp`・この入口自身は載せない'
+  - item: operationId
+    constraint: '`{tag}-{関数名}`。tag は画面の API が `view`、端末の設定が `settings`。関数名はインターフェース定義の識別子'
 test_file: tests/integration/server/test_api_schema.py

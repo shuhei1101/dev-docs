@@ -1,0 +1,39 @@
+title: "画面 / 文書の画面 / use-column-persistence.ts"
+lead: mdmark の列の表示のメニューで出し入れした列を保存するフック。
+functions:
+  - name: useColumnPersistence
+    title: 列の表示の保存
+    container: features/docs/doc-view/hooks/use-column-persistence.ts
+    usecase: 文書を読む
+    role: アダプター
+    summary: 本文の要素の `change` を拾い、列の表示のメニューで外した列をその表の隠す列として表の列の設定の保存へ送信する
+    kind: フック
+    scope: public
+    args:
+      - name: ref
+        type: RefObject<HTMLElement | null>
+        required: true
+        passing: positional
+        description: mdmark が描いた本文の要素
+      - name: source
+        type: string
+        required: true
+        passing: positional
+        description: 配信元の ID
+      - name: tableKeys
+        type: string[]
+        required: true
+        passing: positional
+        description: 文書の取得の `tableKeys`（本文の表と同じ順）
+    returns:
+      type: void
+      description: 何も返さない
+    process: |-
+      1. 変更された要素が属する mdmark の列の表示のメニュー（`.mdmark-columns-menu`）を探し、本文の中の何番目のメニューかで `tableKeys` の表のキーを引く
+      2. メニューの外れたチェックボックスの `label` の文字列を隠す列にして `viewPutColumns(source, {table, hidden})` を呼ぶ
+      3. 成功したら文書の取得のクエリを無効にする。失敗は `列の表示を保存できませんでした。` を通知し、表は切り替えたままにする
+notes:
+  mdmark への依存: mdmark に列の出し入れの通知（mdmark#222）が無いため、mdmark の内部の DOM（`.mdmark-columns-menu` のクラス・チェックボックスの `label`）を読む。mdmark の採用バージョンを上げたときは、結合テスト `doc-view-screen.spec.ts` の列の表示のケースで確かめる
+refs:
+  - dev/設計書/外部ライブラリ/mdmark#
+  - dev/設計書/画面設計/文書の画面#elements[列の表示のメニュー]

@@ -161,7 +161,7 @@ def test_normal(
     assert [(item["id"], item["change"], item["keys"]) for item in changes.data["items"]] == [
         ("doc-1", "modified", ["name"])
     ]
-    assert any("name" in item for item in diff["changed_items"])
+    assert "name" in diff["diff"]["changedItems"]
     # S6: 利用者が画面で読む
     page = httpx.get(LIST_URL.format(port=port), timeout=10).json()
     assert page["tabs"]

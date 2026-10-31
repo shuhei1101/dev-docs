@@ -145,7 +145,7 @@ status_codes:
     condition: 画面と別のオリジンからの要求
   - code: '404'
     condition: 配信元が無い・配信していない
-error_format: RFC 9457 の `application/problem+json`。検証の違反は `errors[]` に `{path, reason}` で並べる
+error_format: RFC 9457 の `application/problem+json`。拡張メンバーは camelCase（`nextSteps`・`errors[]`）。検証の違反は `errors[]` に `{path, reason}` で並べる
 constraints:
   - item: オリジンの確認
     constraint: '`Origin` が画面のオリジンと同じか、`Origin` が無く `Sec-Fetch-Site` が `same-origin` のときだけ受ける'
@@ -153,4 +153,8 @@ constraints:
     constraint: 制限なし（`127.0.0.1` でだけ待ち受ける）
   - item: タイムアウト
     constraint: 制限なし
+  - item: JSON のキー
+    constraint: リクエストの本文とレスポンスのキーは camelCase。パスのパラメータ名は変えない
+  - item: operationId
+    constraint: '`{tag}-{関数名}` の `view-put_columns`'
 test_file: tests/integration/server/test_put_columns.py

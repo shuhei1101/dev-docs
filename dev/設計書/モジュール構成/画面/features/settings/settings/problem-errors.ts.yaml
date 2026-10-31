@@ -1,0 +1,37 @@
+title: "画面 / 設定画面 / problem-errors.ts"
+lead: 端末の設定の保存の 422 の `errors[]` を、ダイアログの項目のエラーに振り分ける。
+functions:
+  - name: toFieldErrors
+    title: 違反の振り分け
+    kind: 関数
+    container: features/settings/settings/problem-errors.ts
+    usecase: 配信元を設定する
+    role: 変換
+    summary: '`errors[]` のうち編集した行のものを項目へ、それ以外をまとめへ振り分ける'
+    scope: public
+    args:
+      - name: errors
+        type: '{path: string; reason: string}[]'
+        required: true
+        passing: positional
+        description: '`ClientValueError` の `errors`'
+      - name: index
+        type: number
+        required: true
+        passing: positional
+        description: 保存した `sources[]` の中の、編集・追加した行の位置
+    returns:
+      type: '{fields: {name: keyof SourceFormValues; message: string}[]; summary: {path: string; message: string}[]}'
+      description: '`summary` は全ての違反（保存の失敗のまとめに並べる）'
+    process: |-
+      1. `path` が `sources[{index}].{id,config,enabled,scope.read,scope.write}`（配列の添字を含む）なら対応する項目へ `reason` を入れる
+      2. 全ての違反を `summary` に並べる
+    unit_tests:
+      - name: test_to_field_errors
+        case: 正常
+        summary: 項目へ振り分ける
+        condition: '`sources[1].config[0]` と `sources[0].id` の違反、`index` が 1'
+        mock: なし
+        expected: '`fields` は `config` の 1 件、`summary` は 2 件'
+test_files:
+  - tests/unit/frontend/src/features/settings/settings/problem-errors.test.ts

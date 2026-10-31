@@ -1,0 +1,45 @@
+title: "画面 / 共通 / use-active-heading.ts"
+lead: 画面の一番上にある見出しを追うフック（目次の現在地）。
+functions:
+  - name: useActiveHeading
+    title: 現在の見出し
+    kind: フック
+    container: shared/hooks/use-active-heading.ts
+    usecase: 共通
+    role: フック
+    summary: 渡した見出しの ID のうち、画面の一番上を過ぎた最後の見出しを返す
+    scope: public
+    args:
+      - name: ids
+        type: string[]
+        required: true
+        passing: positional
+        description: 本文の見出し 2・3 の `id` の並び
+      - name: offset
+        type: number
+        required: false
+        default: トップバーと種類のタブの高さ
+        passing: positional
+        description: 画面に残る帯の高さ（px）
+    returns:
+      type: string | null
+      description: 現在の見出しの `id`（最初の見出しより上では最初の見出し、見出しが無ければ null）
+    process: |-
+      1. `IntersectionObserver`（`rootMargin` の上を `-offset`px）で各見出しが上の線を越えたかを受ける
+      2. 越えた見出しのうち並びで最後のものを状態に入れる
+      3. `ids` が変わったら監視し直し、外れるときに `disconnect` する
+    unit_tests:
+      - name: test_use_active_heading
+        case: 正常
+        summary: 過ぎた最後の見出し
+        condition: 3 つの見出しのうち 1・2 番目が上の線を越えた通知
+        mock: IntersectionObserver（通知を手で送る偽物）
+        expected: 2 番目の `id`
+      - name: test_use_active_heading_when_empty
+        case: 正常
+        summary: 見出しが無い
+        condition: '`ids` が空'
+        mock: IntersectionObserver（偽物）
+        expected: 'null'
+test_files:
+  - tests/unit/frontend/src/shared/hooks/use-active-heading.test.tsx

@@ -1,0 +1,33 @@
+title: "画面 / アプリとルート / query-client.ts"
+lead: TanStack Query の QueryClient の既定。
+functions:
+  - name: createQueryClient
+    title: QueryClient の作成
+    kind: 関数
+    container: app/query-client.ts
+    usecase: 起動
+    role: 合成の起点
+    summary: 画面の既定の QueryClient を作る
+    scope: public
+    returns:
+      type: QueryClient
+      description: '`defaultOptions.queries` が `staleTime` 60 秒・`refetchOnWindowFocus` false・`retry` false'
+    process: |-
+      1. 既定の問い合わせの設定で QueryClient を作る
+      2. `QueryCache` の `onError` は、問い合わせの `meta.handleError` が false でなければ `handleAppError` を呼ぶ（文書の取得の 404 は見つからない画面で扱うため false）
+      3. `MutationCache` の `onError` も同じにする（`meta.handleError` が false の変更は画面が扱う）
+    unit_tests:
+      - name: test_create_query_client
+        case: 正常
+        summary: 既定の設定
+        condition: 作った QueryClient の `getDefaultOptions()`
+        mock: なし
+        expected: '`staleTime` 60000・`refetchOnWindowFocus` false・`retry` false'
+      - name: test_create_query_client_when_meta_off
+        case: 正常
+        summary: 画面が扱う失敗を通知しない
+        condition: '`meta: {handleError: false}` の問い合わせが失敗する'
+        mock: '`handleAppError`（`vi.mock`）'
+        expected: '`handleAppError` が呼ばれない'
+test_files:
+  - tests/unit/frontend/src/app/query-client.test.ts

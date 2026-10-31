@@ -1,0 +1,134 @@
+title: "利用者がコメントを渡す"
+scenarios:
+  - name: 正常シナリオ
+    setup:
+      - name: Mock
+        description: なし（実環境で実行。クリップボードを読めるブラウザで画面を開く）
+      - name: 読み取りだけの配信元
+        description: 文書の種類を 1 つと、GitHub のリポジトリを書いていない `dev-docs.yaml` を持つ Git 管理外のフォルダ
+        notes: id `notes`。文書 1 に見出しが 2 つある
+      - name: dev-docs
+        description: notes を配信している dev-docs
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        actor U as 利用者
+        participant UI as dev-docs の画面
+
+        U->>UI: 文書 1 の 1 つ目の見出しの下の文字列を選ぶ
+        UI-->>U: 選んだ文字列のそばにコメントを追加するボタン
+        U->>UI: ボタンを押し、コメントを書いて追加する
+        U->>UI: 2 つ目の見出しの下の文字列を選び、同じようにコメントを追加する
+        U->>UI: トップバーのコメントを開き、2 件を選んでまとめてコピーする
+        UI-->>U: 2 件をまとめた文字列をクリップボードに書き、コピーしたことを通知する
+      ```
+    expected:
+      - 文字列を選ぶと、選んだ文字列のそばにコメントを追加するボタンが出る
+      - 本文の、コメントを付けた 2 か所に mdmark のコメントの印（`.mdmark-comment-mark`）が付き、それぞれの文字が選んだ文字列になる
+      - トップバーのコメントのボタンに件数 2 が出る
+      - クリップボードの文字列に 2 件が追加した順に並び、各件に文書のパスと直前の見出し・選んだ文字列の引用・コメントがある
+      - コメントのパネルに Issue を作成するボタンが無い
+    test: test_normal
+  - name: 正常シナリオ（コメントを修正・削除する）
+    setup:
+      - name: Mock
+        description: なし（実環境で実行）
+      - name: 読み取りだけの配信元
+        description: 正常シナリオと同じ notes
+      - name: 溜めたコメント
+        description: 文書 1 の 1 つ目と 2 つ目の見出しの下に 1 件ずつ追加したコメント
+        notes: 文書 1 は画面の高さを超える長さで、2 件目の箇所は最初の表示で画面の外にある
+      - name: dev-docs
+        description: notes を配信している dev-docs
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        actor U as 利用者
+        participant UI as dev-docs の画面
+
+        U->>UI: コメントのパネルで 2 件目を選ぶ
+        UI-->>U: 本文の 2 件目の箇所までスクロールして示す
+        U->>UI: 2 件目の修正のアイコンを押し、コメントを書き換えて保存する
+        U->>UI: 1 件目の削除のアイコンを押す
+        UI-->>U: コメントが 1 件のパネル
+      ```
+    expected:
+      - 2 件目を選ぶと、本文の 2 件目の箇所が画面に入り、その箇所が示される
+      - 修正と削除のボタンがアイコンで、読み上げ名に「修正」「削除」を持つ
+      - パネルに書き換えた 2 件目だけが残る
+      - トップバーのコメントのボタンの件数が 1 になる
+    test: test_normal_when_comment_edited
+    notes:
+      本文の印の描き直し: 修正・削除を本文のコメントの印へ反映するのは、mdmark#222 へのつなぎ込み（#44）で追加する
+  - name: 正常シナリオ（Issue を作成する）
+    setup:
+      - name: Mock
+        description: なし（実環境で実行。GitHub の画面は開いた URL だけを確かめる）
+      - name: GitHub のリポジトリを持つ配信元
+        description: 文書の種類を 1 つと、GitHub のリポジトリと起票のラベルを書いた `dev-docs.yaml` を持つ git リポジトリ
+        notes: id `sample`。リポジトリ `example/sample`、ラベル `review`
+      - name: dev-docs
+        description: sample を配信している dev-docs
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        actor U as 利用者
+        participant UI as dev-docs の画面
+        participant GH as GitHub の Issue の作成画面
+
+        U->>UI: 文書 1 の文字列を選び、コメントを書いて追加する
+        U->>UI: コメントのパネルで、そのコメントを選んで Issue を作成する
+        UI->>GH: 別のタブで作成画面を開く
+        GH-->>U: 本文・ラベルを入れた作成画面
+      ```
+    expected:
+      - 開いた URL が `https://github.com/example/sample/issues/new` で、`body` がまとめてコピーと同じ書式のコメント、`labels` が `review`（`title` は付けない。コメントは複数の文書にまたがるため）
+      - dev-docs の画面は元のタブに残る
+    test: test_normal_when_issue_created
+  - name: 正常シナリオ（Issue の本文が長い）
+    setup:
+      - name: Mock
+        description: なし（実環境で実行。クリップボードを読めるブラウザで開き、GitHub の画面は開いた URL だけを確かめる）
+      - name: GitHub のリポジトリを持つ配信元
+        description: 正常シナリオ（Issue を作成する）と同じ sample
+      - name: 長いコメント
+        description: まとめた本文を載せると、作成画面の URL が非機能要件の URL の長さの上限を超えるコメント
+        notes: 上限を 1 文字以上超える長さにする
+      - name: dev-docs
+        description: sample を配信している dev-docs
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        actor U as 利用者
+        participant UI as dev-docs の画面
+        participant GH as GitHub の Issue の作成画面
+
+        U->>UI: 長いコメントを選んで Issue を作成する
+        UI->>UI: まとめた全文をクリップボードに書く
+        UI->>UI: URL が上限に収まるまで本文の末尾を切り詰め、切り詰めたことを書き添える
+        UI->>GH: 別のタブで作成画面を開く
+      ```
+    expected:
+      - 開いた URL の長さが上限以下
+      - '`body` がまとめた全文の先頭から始まり、末尾に切り詰めたことと全文をクリップボードにコピーしたことがある'
+      - クリップボードの文字列が、切り詰めていない全文
+    test: test_normal_when_issue_body_truncated
+lead: 利用者が文書の画面で本文の文字列にコメントを溜め、まとめてコピーしてエージェントへ渡すか、GitHub の Issue として起票する。
+issue: 17
+primary_actor: 利用者
+stakeholders:
+  - name: 利用者
+    interest: 文書を読みながら気づいたことを、文書のパスと該当箇所つきでエージェントや Issue へ渡せる
+  - name: エージェント（Claude Code）
+    interest: 貼り付けられたコメントから、直す文書と箇所を特定できる
+trigger: 利用者が文書の画面で本文の文字列を選ぶ
+preconditions:
+  - dev-docs が起動し、画面のビルドと配信元を配信している
+  - 利用者が文書の画面で文書を開いている
+success_guarantee: 溜めたコメントが、文書のパス・直前の見出し・選んだ文字列の引用つきでクリップボードか Issue の作成画面に渡る。
+minimal_guarantee: Issue の作成画面の URL に収まらないときも、全文をクリップボードに残す。配信元のフォルダのファイルは変えない。
+frequency: 作業のたび
+priority: 中
+refs:
+  - dev/設計書/シナリオ/複合ユースケース/dev-docsで文書を配信して読み書きする#scenarios[正常シナリオ]
+test_file: tests/e2e/単一ユースケース/test_利用者がコメントを渡す.py

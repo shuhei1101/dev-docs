@@ -1,0 +1,41 @@
+title: "画面 / 設定画面"
+lead: 設定画面の構成。
+directory: |-
+  ```
+  frontend/src/features/settings/settings/
+  ├── form.ts                   # 入力のスキーマと sources[] への反映
+  ├── problem-errors.ts         # 422 の errors[] の振り分け
+  ├── queries.ts                # 端末の設定の保存の mutation
+  ├── hooks/use-source-form.ts  # 配信元のフォーム
+  ├── settings-screen.tsx       # 設定画面
+  └── components/
+      ├── source-table.tsx      # 配信元の一覧
+      ├── status-badge.tsx      # 状態のバッジ
+      ├── source-edit-dialog.tsx # 配信元のダイアログ
+      └── source-delete-dialog.tsx # 削除の確認のダイアログ
+  ```
+diagrams:
+  - name: 全体
+    diagram: |-
+      ```mermaid
+      classDiagram
+        direction LR
+        class 設定画面
+        class 配信元の一覧
+        class 状態のバッジ
+        class 配信元のダイアログ
+        class 削除の確認のダイアログ
+        class 配信元のフォーム
+        class 入力のスキーマ
+        class 違反の振り分け
+        class 端末の設定の保存
+        設定画面 --> 配信元の一覧
+        設定画面 --> 配信元のダイアログ
+        設定画面 --> 削除の確認のダイアログ
+        配信元の一覧 --> 状態のバッジ
+        配信元のダイアログ --> 配信元のフォーム
+        配信元のフォーム --> 入力のスキーマ
+        配信元のフォーム --> 違反の振り分け
+        配信元のフォーム --> 端末の設定の保存
+        削除の確認のダイアログ --> 端末の設定の保存
+      ```

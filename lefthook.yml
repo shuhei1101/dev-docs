@@ -1,0 +1,13 @@
+# frontend/ が変わった commit で、検査を流し、画面をビルドし直して成果物をステージへ戻す
+pre-commit:
+  jobs:
+    - name: frontend-lint
+      glob: "{frontend/**,tests/unit/frontend/**,tests/integration/frontend/**,eslint.config.js}"
+      run: npm run lint
+    - name: frontend-typecheck
+      glob: "{frontend/**,tests/unit/frontend/**,tests/integration/frontend/**}"
+      run: npm run typecheck
+    - name: frontend-build
+      glob: "frontend/**"
+      run: npm run build && git add --all src/dev_docs/screen
+      stage_fixed: true

@@ -1,0 +1,118 @@
+title: "画面 / 文書の画面 / queries.ts"
+lead: 文書の画面の問い合わせとルートの loader。API の関数と型は orval の生成物（`shared/api/generated/`）を使う。
+functions:
+  - name: documentQueryOptions
+    title: 文書の問い合わせ
+    kind: 関数
+    container: features/docs/doc-view/queries.ts
+    usecase: 文書を読む
+    role: 問い合わせ
+    summary: 文書の取得（パスが空なら `view-get_document_default`、あれば `view-get_document`）の `queryOptions` を作る
+    scope: public
+    args:
+      - name: source
+        type: string
+        required: true
+        passing: positional
+        description: 配信元の ID
+      - name: path
+        type: string
+        required: true
+        passing: positional
+        description: 文書のパス（空は配信元の最初の文書）
+      - name: search
+        type: DocViewSearch
+        required: true
+        passing: positional
+        description: '`rev`・`base`'
+    returns:
+      type: UseQueryOptions<DocumentResponse, AppError>
+      description: '`queryKey` は `["view", "document", source, path, rev, base]`、`meta.handleError` は false、`placeholderData` は `keepPreviousData`'
+    process: |-
+      1. パスに合う orval の関数を選び、`rev`・`base` をクエリに渡す
+      2. 失敗は画面が扱うため `meta.handleError` を false にする
+    unit_tests:
+      - name: test_document_query_options
+        case: 正常
+        summary: パスで呼ぶ API を分ける
+        condition: パスが空と `a.md` で `queryFn` を呼ぶ
+        mock: MSW のハンドラ
+        expected: 空は `GET /_api/sources/{source}/docs`、`a.md` は `GET /_api/sources/{source}/docs/a.md` に当たり、`rev`・`base` がクエリに乗る
+  - name: baseMarkdownQueryOptions
+    title: 比較元の本文の問い合わせ
+    kind: 関数
+    container: features/docs/doc-view/queries.ts
+    usecase: 文書を読む
+    role: 問い合わせ
+    summary: 目次の変更のマーカーに使う、比較元のリビジョンの同じ文書の `markdown` を取る
+    scope: public
+    args:
+      - name: source
+        type: string
+        required: true
+        passing: positional
+        description: 配信元の ID
+      - name: path
+        type: string
+        required: true
+        passing: positional
+        description: 文書のパス
+      - name: base
+        type: string | null
+        required: true
+        passing: positional
+        description: 文書の取得の `diff.base`
+    returns:
+      type: UseQueryOptions<string | null, AppError>
+      description: '`base` が null のときは `enabled: false`。比較元に文書が無い（404）ときは null を返す'
+    process: |-
+      1. `rev` を `base` にし、`base` を付けずに文書の取得を呼ぶ
+      2. 応答の `markdown` を返す。NotFoundError は null（比較元で追加された文書）
+    unit_tests:
+      - name: test_base_markdown_query_options
+        case: 正常
+        summary: 比較元の本文を取る
+        condition: '`base` が `v1`、MSW が `rev=v1` に `# A` を返す'
+        mock: MSW のハンドラ
+        expected: '`# A`'
+      - name: test_base_markdown_query_options_when_added
+        case: 正常
+        summary: 比較元に無い文書
+        condition: MSW が 404 を返す
+        mock: MSW のハンドラ
+        expected: 'null'
+  - name: loadDocument
+    title: 文書の読み込み
+    kind: 関数
+    container: features/docs/doc-view/queries.ts
+    usecase: 文書を読む
+    role: ルートの loader
+    summary: ルートの loader。文書を読み、404 は見つからない画面へ回す
+    scope: public
+    is_async: true
+    args:
+      - name: ctx
+        type: '{context: RouterContext; params: {source: string; _splat?: string}; deps: DocViewSearch}'
+        required: true
+        passing: positional
+        description: loader の引数
+    returns:
+      type: Promise<void>
+      description: 何も返さない（画面は `useSuspenseQuery` で同じ問い合わせを読む）
+    process: |-
+      1. `context.queryClient.ensureQueryData(documentQueryOptions(source, _splat ?? "", deps))` を待つ
+      2. NotFoundError は `throw notFound({data: error.problem})` でルートの `notFoundComponent` へ回す
+      3. それ以外の例外はそのまま送る（`errorComponent`）
+    exceptions:
+      - name: notFound
+        condition: 文書の取得が 404
+    unit_tests:
+      - name: test_load_document_when_not_found
+        case: 異常
+        summary: 404 を notFound にする
+        condition: MSW が `missing` が `doc`、`value` が開こうとしたパス の 404 を返す
+        mock: MSW のハンドラ
+        expected: '`isNotFound` が true の例外で、`data.missing` が `doc`'
+        exception: 文書の取得が 404
+test_files:
+  - tests/unit/frontend/src/features/docs/doc-view/queries.test.ts

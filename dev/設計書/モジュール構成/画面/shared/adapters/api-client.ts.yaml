@@ -1,0 +1,57 @@
+title: "画面 / 共通 / api-client.ts"
+lead: orval が生成した API の関数が通る fetch の mutator。失敗を AppError にするのはここだけ。
+functions:
+  - name: apiClient
+    title: API の呼び出し
+    kind: 関数
+    container: shared/adapters/api-client.ts
+    usecase: 共通
+    role: アダプター
+    summary: 同じオリジンの `/_api/` を fetch で呼び、JSON を返すか AppError を送る
+    scope: public
+    is_async: true
+    args:
+      - name: url
+        type: string
+        required: true
+        passing: positional
+        description: orval が組んだパスとクエリ
+      - name: init
+        type: RequestInit
+        required: false
+        passing: positional
+        description: メソッド・本文・`signal`
+    returns:
+      type: Promise<T>
+      description: 応答の JSON（204 は `undefined`）
+    process: |-
+      1. `Accept: application/json`（本文があれば `Content-Type: application/json`）を付けて `fetch` する
+      2. 通信に失敗したら（`AbortError` を除く）`status` 0 の AppError を送る
+      3. `ok` でなければ `AppError.fromResponse` の例外を送る
+      4. 204 は `undefined`、それ以外は `response.json()` を返す
+    exceptions:
+      - name: AppError
+        condition: 通信の失敗・`ok` でない応答
+    unit_tests:
+      - name: test_api_client
+        case: 正常
+        summary: JSON を返す
+        condition: 'MSW が `GET /_api/x` に `{a: 1}` を返す'
+        mock: MSW のハンドラ
+        expected: '`{a: 1}`'
+      - name: test_api_client_when_problem
+        case: 異常
+        summary: 失敗を AppError にする
+        condition: MSW が 409 の problem+json を返す
+        mock: MSW のハンドラ
+        expected: VersionConflictError が送られる
+        exception: AppError
+      - name: test_api_client_when_network_error
+        case: 異常
+        summary: 通信の失敗
+        condition: MSW が `HttpResponse.error()` を返す
+        mock: MSW のハンドラ
+        expected: '`status` 0 の AppError が送られる'
+        exception: AppError
+test_files:
+  - tests/unit/frontend/src/shared/adapters/api-client.test.ts

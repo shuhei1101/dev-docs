@@ -32,7 +32,24 @@ layers:
         uv run pytest {結合テストファイルパス}
         ```
   - name: 結合テスト（フロント）
-    run_all: 未確定
+    description: Playwright で実行する。画面は Vite の開発サーバー、部品は Storybook を立て、画面の API（`/_api/`）は `page.route` で差し替えて、画面と部品を Chromium で動かして見る。
+    prerequisites:
+      - Node 24 と npm
+      - '`npm ci` で直下の依存を入れてあり、`npx playwright install chromium` で Chromium を入れてあること'
+      - ネットワークが使えること（本文を描く mdmark を jsDelivr から読む）
+      - '`127.0.0.1` のポート 5199（画面）と 6199（Storybook）が空いていること'
+    run_all: |-
+      ```bash
+      npm run test:integration
+      ```
+    run_one:
+      label: ファイル
+      command: |-
+        ```bash
+        npx playwright test --config tests/integration/frontend/playwright.config.ts {結合テストファイルパス}
+        ```
+    parallel: true
+    external_cost: 本文を描く mdmark を jsDelivr から読む。料金は発生しない
   - name: 外部疎通テスト
     run_all: 未確定
   - name: 非機能要件テスト
@@ -45,6 +62,7 @@ layers:
       - '`127.0.0.1` の空きポートが使えること（テストごとに子プロセスが待ち受ける）'
       - 誤実行を防ぐため `--run-e2e` を必須にする（無いと全件 skip する）
       - Claude Code を動かすケースは、`claude` と `uv`（オフラインのキャッシュを使う）が使え、環境変数 `CLAUDE_CODE_OAUTH_TOKEN`（`claude setup-token`）か `ANTHROPIC_API_KEY` を渡すこと。端末の `~/.claude` の認証は使わない。モデルは `DEV_DOCS_E2E_CLAUDE_MODEL`（既定 `sonnet`）で変えられる
+      - 画面をブラウザで確かめるケースは、`uv sync` で入れた Playwright の Chromium（`uv run playwright install chromium`）とネットワークを使う（本文を描く mdmark を jsDelivr から読む）。Claude の利用量は使わない
     run_all: |-
       ```bash
       uv run pytest tests/e2e/ --run-e2e
@@ -107,14 +125,30 @@ layers:
     external_cost: Claude Code を動かすケースは Claude の利用量を使う（`ANTHROPIC_API_KEY` を渡したときは従量課金）。ほかのケースは外部サービスに依存せず、料金は発生しない
     results: 全件実行は標準出力。セッションを跨いで走らせる形は `$RUN_DIR/results.jsonl`
   - name: lint
-    description: ruff で linter と formatter の check を、mypy で型検査を、`claude plugin validate` でマーケットプレイスとプラグインの定義の構造を検査する。型検査はプロジェクト全体に回す。
+    description: ruff で linter と formatter の check を、mypy で型検査を、`claude plugin validate` でマーケットプレイスとプラグインの定義の構造を検査する。画面（`frontend/`）は ESLint（任意値の禁止・import の向き・react-hooks・jsx-a11y・複雑さ）と tsc の型検査を流す。型検査はプロジェクト全体に回す。
     prerequisites:
       - 検査の設定は `pyproject.toml` が持つ
       - '`claude` コマンドが使えること'
     run_all: |-
       ```bash
-      (rc=0; uv run ruff check . || rc=1; uv run ruff format --check . || rc=1; uv run mypy . || rc=1; claude plugin validate . || rc=1; exit $rc)
+      (rc=0; uv run ruff check . || rc=1; uv run ruff format --check . || rc=1; uv run mypy . || rc=1; claude plugin validate . || rc=1; npm run lint || rc=1; npm run typecheck || rc=1; exit $rc)
       ```
+  - name: 単体テスト（フロント）
+    description: vitest で実行する。jsdom で部品を描き、API は MSW で差し替える。外部サービスに依存しない。
+    prerequisites:
+      - Node 24 と npm
+      - '`npm ci` で直下の依存を入れてある'
+    run_all: |-
+      ```bash
+      npm run test:unit
+      ```
+    run_one:
+      label: ファイル
+      command: |-
+        ```bash
+        npx vitest run --config frontend/vitest.config.ts {単体テストファイルパス}
+        ```
+    parallel: true
 lead: dev-docs のテスト種別ごとの実行コマンド。
 prerequisites:
   - Python 3.14 と uv

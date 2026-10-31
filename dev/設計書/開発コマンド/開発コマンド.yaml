@@ -1,11 +1,20 @@
 title: "開発コマンド"
 categories:
   - name: 環境構築（クローン直後）
-    commands: 未確定
+    commands: |-
+      ```bash
+      uv sync --frozen
+      npm ci
+      ```
+    verification:
+      state: 済
+      date: '2026-10-30'
+      detail: worktree で `npm ci` を実行し、終了コード 0 で `package-lock.json` どおりに依存が入り、lefthook のフックが入ることを確かめた。`uv sync --frozen` は『取り込み後の追従（pull 後）』で確かめている。
   - name: 取り込み後の追従（pull 後）
     commands: |-
       ```bash
       uv sync --frozen
+      npm ci
       ```
     verification:
       state: 済
@@ -34,14 +43,28 @@ categories:
       - 取り込み後の追従（pull 後）を流してある
       - 端末の設定（既定 `~/.config/dev-docs/settings.yaml`。別の場所は環境変数 `DEV_DOCS_CONFIG` で渡す）がある
     commands: |-
+      1. 開発ドキュメントサーバーを起動する
+
       ```bash
       uv run dev-docs serve
       ```
-    effects: 127.0.0.1 の `DEV_DOCS_PORT`（既定 8781）で待ち受け、止めるまで終わらない。実行している端末で Ctrl+C を押すと止まる。ポートが使用中のときは終了コード 3、端末の設定が無いか違反するときは終了コード 2 で終わる。
+
+      2. 画面を書き換えながら見るときは、Vite の開発サーバーを起動する（`/_api` を `http://127.0.0.1:8781` へ転送する。転送先は `DEV_DOCS_PORT` を見ずに 8781 で固定なので、先に 1 を既定のポートで起動しておく）
+
+      ```bash
+      npm run dev
+      ```
+
+      3. 部品のストーリーを見るときは、Storybook を起動する（`http://localhost:6006`。設定は `frontend/.storybook/`）
+
+      ```bash
+      npm run storybook
+      ```
+    effects: '`uv run dev-docs serve` は 127.0.0.1 の `DEV_DOCS_PORT`（既定 8781）で待ち受け、止めるまで終わらない。実行している端末で Ctrl+C を押すと止まる。ポートが使用中のときは終了コード 3、端末の設定が無いか違反するときは終了コード 2 で終わる。`npm run dev`（既定のポート 5173）と `npm run storybook` も、止めるまで終わらず Ctrl+C で止まる'
     verification:
       state: 済
-      date: '2026-10-28'
-      detail: '`DEV_DOCS_CONFIG` に配信元 1 つの端末の設定を入れて `uv run dev-docs serve` を走らせ、127.0.0.1 の `DEV_DOCS_PORT` で待ち受けて標準出力に URL と配信元の ID を出すことを確かめた。`/mcp` の `search_docs`・`describe`・`write_docs`・`trace_related` が応答し、SIGTERM で止まった。ポートの使用中（終了コード 3）と設定の違反（終了コード 2）は単体テストで確かめた'
+      date: '2026-10-31'
+      detail: '`DEV_DOCS_CONFIG` に配信元 1 つの端末の設定を入れて `uv run dev-docs serve` を走らせ、127.0.0.1 の `DEV_DOCS_PORT` で待ち受けて標準出力に URL と配信元の ID を出すことを確かめた（2026-10-28）。`/mcp` の `search_docs`・`describe`・`write_docs`・`trace_related` が応答し、SIGTERM で止まった。ポートの使用中（終了コード 3）と設定の違反（終了コード 2）は単体テストで確かめた。`npm run dev` を走らせ、`/` が 200 を返し、`/_api/settings/sources` が 8781 で動いているサーバーへ転送されて 200 を返すことを確かめた（2026-10-31）。`storybook dev -c frontend/.storybook`（`npm run storybook` と同じ設定）を走らせ、`index.json` にストーリー 19 件が載り、各ストーリーが描かれることを確かめた（2026-10-30）'
   - name: テスト
     refs:
       - dev/設計書/テスト/テスト実行方法#
@@ -50,9 +73,35 @@ categories:
       - dev/設計書/テスト/テスト実行方法#layers[lint]
   - name: ビルド・生成
     commands: |-
-      未確定
+      1. 画面をビルドする（出力先は `src/dev_docs/screen/`。commit する成果物）
+         ```bash
+         npm run build
+         ```
+      2. 画面の API の OpenAPI を書き出し、orval で API クライアントを生成する（サーバーの画面の API を変えたとき）
+         ```bash
+         npm run api:generate
+         ```
+      3. Storybook をビルドする（`tmp/storybook-static/`。開発中は `npm run storybook`）
+         ```bash
+         npm run build-storybook
+         ```
+    verification:
+      state: 済
+      date: '2026-10-30'
+      detail: worktree で `npm run build`・`npm run api:generate`・`npm run build-storybook` を実行し、終了コード 0 で成果物ができることを確かめた。Storybook は、ビルドだけを確かめ、ブラウザで開いて描画することは確かめていない。
   - name: 取り込み前の検査
-    commands: 未確定
+    commands: |-
+      `frontend/` を変えた commit では、lefthook の pre-commit が検査を流し、画面をビルドし直して `src/dev_docs/screen/` をステージへ戻す。手で流すときは次のとおり。
+
+      ```bash
+      npm run lint
+      npm run typecheck
+      npm run build
+      ```
+    verification:
+      state: 済
+      date: '2026-10-30'
+      detail: worktree で 3 つのコマンドを実行し、終了コード 0 を確かめた。`frontend/` を含む commit で lefthook の pre-commit（lint・型検査・ビルド）が走り、ビルドし直した `src/dev_docs/screen/` がステージへ戻ることを確かめた。
   - name: 管理作業
     commands: 未確定
 lead: dev-docs の開発で使うコマンド。

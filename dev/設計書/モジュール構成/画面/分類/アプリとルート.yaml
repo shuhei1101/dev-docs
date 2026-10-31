@@ -1,0 +1,48 @@
+title: "画面 / アプリとルート"
+lead: 画面（`frontend/src`）の入口・プロバイダ・ルーター・ルートの構成。
+directory: |-
+  ```
+  frontend/src/
+  ├── main.tsx                  # MSW の起動（開発のみ）と描画の開始
+  ├── app/
+  │   ├── query-client.ts       # TanStack Query の QueryClient
+  │   ├── router.tsx            # ルーターの生成とルートの文脈
+  │   ├── providers.tsx         # QueryClient・テーマ・通知・確認ダイアログのプロバイダ
+  │   ├── confirm-dialog.tsx    # 確認ダイアログのプロバイダとフック
+  │   └── error-fallback.tsx    # ルートのエラーの表示
+  ├── routes/                   # TanStack Router のファイルベースのルート
+  │   ├── __root.tsx            # 全画面の枠・notFoundComponent・errorComponent
+  │   ├── index.tsx             # / を先頭の配信元へ転送
+  │   ├── [_]settings.tsx       # /_settings
+  │   └── $source/
+  │       ├── index.tsx         # /{source} の配信元のトップ
+  │       └── $.tsx             # /{source}/{path} の文書
+  ├── route-tree.gen.ts         # @tanstack/router-plugin の生成物（設計しない）
+  └── shared/api/generated/     # orval の生成物（API の関数・型・zod・MSW のハンドラ。設計しない）
+  ```
+diagrams:
+  - name: 全体
+    diagram: |-
+      ```mermaid
+      classDiagram
+        direction LR
+        class 入口
+        class プロバイダ
+        class ルーター
+        class 全画面の枠
+        class 文書のルート
+        class 設定のルート
+        class 文書の画面
+        class 設定画面
+        class 見つからない画面
+        入口 --> プロバイダ
+        入口 --> ルーター
+        ルーター --> 全画面の枠
+        全画面の枠 --> 文書のルート
+        全画面の枠 --> 設定のルート
+        全画面の枠 --> 見つからない画面 : notFoundComponent
+        文書のルート --> 文書の画面
+        設定のルート --> 設定画面
+      ```
+notes:
+  生成物: '`route-tree.gen.ts` と `shared/api/generated/` はビルドの前に生成し、commit しない。orval の入力はサーバーの `/_api/openapi.json`（operationId は `view-{name}`・`settings-{name}`）'

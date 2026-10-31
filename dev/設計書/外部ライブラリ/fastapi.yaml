@@ -19,9 +19,15 @@ catalogs:
       - name: FastAPI.middleware
         kind: 関数
         purpose: 画面と別のオリジンからの書き込みを断るミドルウェアを登録する
-      - name: HTMLResponse
+      - name: FastAPI(generate_unique_id_function=...)
+        kind: 引数
+        purpose: OpenAPI の operationId を `view-{name}`・`settings-{name}` にする（orval が生成する関数の名前になる）
+      - name: FileResponse
         kind: クラス
-        purpose: 画面と部品の描画の口の HTML を返す
+        purpose: 画面のビルドの `index.html` と `assets/` のファイルを `Cache-Control` つきで返す
+      - name: FastAPI.exception_handler / StarletteHTTPException
+        kind: 関数 / クラス
+        purpose: 当たらないパス・メソッドの 404・405 を含め、例外を problem+json にする
 lead: Starlette の上に作られた ASGI の Web フレームワーク。引数の型ヒントからリクエストを検証して受け取る。
 purl: pkg:pypi/fastapi
 dependency_scope: 必須

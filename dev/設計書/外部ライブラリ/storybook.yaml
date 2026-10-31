@@ -1,0 +1,44 @@
+title: "storybook"
+kind: "フレームワーク"
+version:
+  current: 10.6.5
+  latest: 10.6.5
+  checked_on: '2026-10-30'
+  source: package.json
+catalogs:
+  - name: パッケージ
+    version: 10.6.5
+    entries:
+      - name: '@storybook/react-vite'
+        kind: フレームワーク
+        purpose: 画面と同じ Vite の設定で React の部品を描く
+      - name: '@storybook/addon-vitest'
+        kind: アドオン
+        purpose: ストーリーを Vitest のテストとして流す
+      - name: '@storybook/addon-a11y'
+        kind: アドオン
+        purpose: ストーリーごとに axe の検査をかける
+      - name: '@storybook/addon-themes'
+        kind: アドオン
+        purpose: 全てのストーリーを明暗で切り替えて確かめる
+      - name: msw-storybook-addon
+        kind: アドオン
+        purpose: ストーリーの画面の API を MSW で差し替える
+        notes:
+          版: 3.0.3
+lead: UI の部品を状態ごとのストーリーとして描いて確かめる開発ツール。
+purl: pkg:npm/storybook
+dependency_scope: 開発のみ
+adoption: 採用
+upstream: storybookjs/storybook
+verification:
+  state: 済
+  date: '2026-10-30'
+  detail: '`npm run build-storybook` でビルドが通ることを確かめた。ブラウザで開いて描画することは確かめていない。'
+license: MIT（商用利用可）
+official_url: https://storybook.js.org/
+docs_url: https://storybook.js.org/docs
+selection:
+  candidates: 判定フローチャート『Storybookの描画の方式』で、React の部品で Next.js ではないため `@storybook/react-vite` になる。knowledge の規約 react-devtools-storybook が構成を決めており、比べる候補は無い。
+  decision: '`@storybook/react-vite` + `@storybook/addon-vitest` + `@storybook/addon-a11y` + `@storybook/addon-themes`。データは MSW（`msw-storybook-addon`）と props で差し込む。[案の合格](https://github.com/shuhei1101/dev-docs/pull/36#discussion_r4420987025)'
+  consequences: '`@chromatic-com/storybook` は入れない（ストーリーを外部サービスへアップロードするため）。ストーリーは shuhdev-gateway の公開 URL で見る。'

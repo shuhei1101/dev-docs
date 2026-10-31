@@ -1,0 +1,30 @@
+title: "画面 / 文書の画面 / use-doc-screen-effects.ts"
+lead: 文書の画面が開いている間の画面の外への副作用（タブのタイトル・直前の文書）。
+functions:
+  - name: useDocScreenEffects
+    title: 文書の画面の副作用
+    container: features/docs/doc-view/hooks/use-doc-screen-effects.ts
+    usecase: 文書を読む
+    role: フック
+    summary: ブラウザのタブのタイトルを合わせ、開いている文書の URL を `useLastDocStore` に覚える
+    kind: フック
+    scope: public
+    args:
+      - name: title
+        type: string
+        required: true
+        passing: positional
+        description: タブのタイトル（`pageTitle` の戻り値）
+      - name: source
+        type: string
+        required: true
+        passing: positional
+        description: 配信元の ID
+    returns:
+      type: void
+      description: 何も返さない
+    process: |-
+      1. `title` が変わったら `document.title` に入れる
+      2. ルーターの `location.href` が `/{source}` か `/{source}/` で始まるときだけ `setHref` で覚える（他の画面へ移る途中の URL は覚えない）
+refs:
+  - dev/設計書/画面設計/設定画面#elements[文書の画面に戻る]

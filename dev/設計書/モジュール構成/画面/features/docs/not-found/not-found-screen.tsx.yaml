@@ -1,0 +1,44 @@
+title: "画面 / 文書の画面 / not-found-screen.tsx"
+lead: 見つからない画面。要素とその振る舞いは画面設計『見つからない画面』が持つ。
+components:
+  - name: NotFoundScreen
+    title: 見つからない画面
+    kind: 画面
+    container: features/docs/not-found/not-found-screen.tsx
+    usecase: 文書を読む
+    role: 画面
+    summary: ルートの `notFoundComponent` として、URL を変えずに見つからなかったものと次のリンク・配信中の配信元を出す
+    props:
+      - name: data
+        type: unknown
+        required: false
+        description: '`notFound` の `data`'
+    description: 配信中の配信元は端末の設定の取得、リビジョンの一覧は `missing` が `source`・`not_served` でないときだけ読む（orval が生成した問い合わせ）。`describeMissing` の `context` へ、リビジョンの一覧の `defaultRef` と、端末の設定の取得のその配信元の `config` と、URL の配信元の ID・リビジョンを渡す
+    state:
+      - name: searchOpen
+        type: boolean
+        initial: 'false'
+        description: 検索のダイアログ
+        notes: '`useState`'
+      - name: helpOpen
+        type: boolean
+        initial: 'false'
+        description: ショートカットの一覧
+        notes: '`useState`'
+    unit_tests:
+      - name: test_not_found_screen
+        case: 正常
+        summary: 文書が無いときの案内
+        condition: '`{missing: "doc", value: "a.md"}` の `data`'
+        mock: MSW のハンドラ（配信中の配信元 2 件）
+        expected: 見出し・詳細・配信元のトップへのリンクが出て、配信中の配信元の一覧は出ず、URL が変わらない
+      - name: test_not_found_screen_when_source_missing
+        case: 正常
+        summary: 配信元が無いときはリビジョンを読まない
+        condition: '`{missing: "source", value: "unknown"}` の `data`'
+        mock: MSW のハンドラ
+        expected: リビジョンの一覧が呼ばれず、トップバーに配信元が渡らない
+refs:
+  - dev/設計書/画面設計/見つからない画面#
+test_files:
+  - tests/unit/frontend/src/features/docs/not-found/not-found-screen.test.tsx

@@ -1,0 +1,72 @@
+title: "画面 / 文書の画面 / use-mdmark.ts"
+lead: mdmark の `mount` を React の寿命に合わせて呼ぶフック。mdmark は jsDelivr の CDN から読む。
+constants:
+  - name: MDMARK_URL
+    title: mdmark の読み込み先
+    container: features/docs/doc-view/hooks/use-mdmark.ts
+    usecase: 文書を読む
+    summary: タグを固定した jsDelivr の GitHub の URL（`https://cdn.jsdelivr.net/gh/shuhei1101/mdmark@{タグ}/dist/index.js`。`mount` を公開する入口）。タグは外部ライブラリ『mdmark』の採用バージョン
+    value: '"https://cdn.jsdelivr.net/gh/shuhei1101/mdmark@v0.8.0/dist/index.js"'
+  - name: MDMARK_CSS_URL
+    title: mdmark の CSS の読み込み先
+    container: features/docs/doc-view/hooks/use-mdmark.ts
+    usecase: 文書を読む
+    summary: '`MDMARK_URL` と同じタグの `dist/index.css`'
+    value: '"https://cdn.jsdelivr.net/gh/shuhei1101/mdmark@v0.8.0/dist/index.css"'
+functions:
+  - name: useMdmark
+    title: mdmark の描画
+    kind: フック
+    container: features/docs/doc-view/hooks/use-mdmark.ts
+    usecase: 文書を読む
+    role: アダプター
+    summary: 要素に mdmark で本文を描き、本文の変更で `update`、外れるときに `destroy` する
+    scope: public
+    args:
+      - name: ref
+        type: RefObject<HTMLElement | null>
+        required: true
+        passing: positional
+        description: 描く要素
+      - name: options
+        type: MdmarkOptions
+        required: true
+        passing: positional
+        description: '`markdown`・`docId`・`commentStore`（`load({docId})`・`save({docId, comment})` を Promise で返す）・`config`（`features.comments` を `true`。mdmark の既定はオフ）・`baseMarkdown`・`onColumnsChange`（後の 2 つは mdmark#222 の後）'
+    returns:
+      type: '{handle: MdmarkHandle | null; ready: boolean; error: unknown; docId: string | null}'
+      description: '`mount` の戻り値と読み込みの状態。`docId` は `handle` が描いている文書で、`ready` は今の `docId` を描き終えたときだけ `true`'
+    process: |-
+      1. 初回に `import(/* @vite-ignore */ MDMARK_URL)` で mdmark を読み、`document.head` に `MDMARK_CSS_URL` の `<link rel="stylesheet">` を置く（モジュールの中で 1 回だけ。失敗は `error` に入れ `[error]` `mdmark_load_failed` を書く）
+      2. `docId` が変わったら `destroy` して `mount(el, options)` し直す。描き直す間は `ready` を `false` にし、`mount` が終わると `true` にする
+      3. 同じ `docId` で `markdown`（と `baseMarkdown`）が変わったら `update(markdown)` を呼ぶ
+      4. 外れるときに `destroy` を呼ぶ
+    unit_tests:
+      - name: test_use_mdmark
+        case: 正常
+        summary: 描いて更新して破棄する
+        condition: 同じ `docId` で `markdown` を変えてから外す
+        mock: mdmark（`vi.mock` で `mount`・`update`・`destroy` を記録する偽物）
+        expected: '`mount` 1 回・`update` 1 回・`destroy` 1 回'
+      - name: test_use_mdmark_when_doc_changes
+        case: 正常
+        summary: 文書が変わると描き直す
+        condition: '`docId` を変える'
+        mock: mdmark（偽物）
+        expected: '`destroy` の後に `mount` がもう 1 回'
+      - name: test_use_mdmark_when_load_failed
+        case: 異常
+        summary: 読み込みの失敗
+        condition: '`import` が失敗する'
+        mock: mdmark（読み込みで例外を送る偽物）
+        expected: '`error` が入り、ロガーの `error` が `mdmark_load_failed`'
+      - name: test_use_mdmark_when_doc_changes_ready
+        case: 正常
+        summary: 文書が変わると描き直すまで ready を false にする
+        condition: '`docId` を変えた直後と、`mount` が終わった後'
+        mock: mdmark（偽物）
+        expected: 変えた直後は `ready` が `false`、`mount` の後に `true`
+refs:
+  - dev/設計書/外部ライブラリ/mdmark#
+test_files:
+  - tests/unit/frontend/src/features/docs/doc-view/hooks/use-mdmark.test.ts

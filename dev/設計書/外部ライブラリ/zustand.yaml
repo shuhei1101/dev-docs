@@ -1,0 +1,32 @@
+title: "zustand"
+kind: "ライブラリ"
+version:
+  current: 5.0.16
+  latest: 5.0.16
+  checked_on: '2026-10-30'
+  source: package.json
+catalogs:
+  - name: API
+    version: 5.0.16
+    entries:
+      - name: create
+        kind: 関数
+        purpose: ストアのフックを作る
+      - name: persist / createJSONStorage
+        kind: ミドルウェア
+        purpose: localStorage・sessionStorage へ保存する
+lead: フックで読むクライアントの状態のストア。
+purl: pkg:npm/zustand
+dependency_scope: 必須
+adoption: 採用
+used_in:
+  - frontend/src/shared/stores/preferences.ts
+  - frontend/src/features/docs/shared/comments/comment-store.ts
+upstream: pmndrs/zustand
+verification:
+  state: 済
+  date: '2026-10-30'
+  detail: 設定とコメントのストアを単体テストで確かめた。
+license: MIT（商用利用可）
+official_url: https://zustand.docs.pmnd.rs/
+docs_url: https://zustand.docs.pmnd.rs/reference/apis/create

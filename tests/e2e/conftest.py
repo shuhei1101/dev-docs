@@ -20,6 +20,7 @@ from typing import Any
 import httpx
 import pytest
 from jsonschema import Draft202012Validator
+from playwright.sync_api import Page, expect, sync_playwright
 from ruamel.yaml import YAML
 
 RUN_DIR_ENV = "DEV_DOCS_RUN_DIR"
@@ -184,6 +185,7 @@ class SourceSpec:
     config: list[Path]
     scope_read: list[Path]
     scope_write: list[Path] | None = None
+    enabled: bool = True
 
 
 @dataclass
@@ -332,6 +334,7 @@ def make_source(
         config_names: tuple[str, ...] = ("dev-docs.yaml",),
         scope_read: list[Path] | None = None,
         scope_write: list[Path] | None = None,
+        enabled: bool = True,
         date: str | None = None,
     ) -> SourceSpec:
         content = files if files is not None else sample_files()
@@ -346,6 +349,7 @@ def make_source(
             config=[folder / name for name in config_names],
             scope_read=scope_read if scope_read is not None else [folder],
             scope_write=scope_write,
+            enabled=enabled,
         )
 
     return _make
@@ -384,6 +388,8 @@ def _settings_text(
         lines.append(f"  - id: {spec.id}")
         lines.append("    config:")
         lines.extend(f"      - {path}" for path in spec.config)
+        if not spec.enabled:
+            lines.append("    enabled: false")
         lines.append("    scope:")
         lines.append("      read:")
         lines.extend(f"        - {path}" for path in spec.scope_read)
@@ -1144,3 +1150,129 @@ def claude_home(tmp_path: Path, free_port: Callable[[], int]) -> Iterator[Claude
     claude.set_env(**{ENV_MARKER[0]: ENV_MARKER[1]})
     yield claude
     stop_servers(port)
+
+
+# === 画面をブラウザで確かめる道具 ===
+
+BROWSER_TIMEOUT_MS = 15_000
+SCREEN_SCHEMA = """\
+type: object
+title: 画面の確認
+properties:
+  id:
+    type: string
+    title: ID
+  name:
+    type: string
+    title: 名前
+  description:
+    type: string
+    title: 概要
+  items:
+    type: array
+    title: 項目
+    x-heading: 項目
+    items:
+      type: object
+      properties:
+        key:
+          type: string
+          title: キー
+        label:
+          type: string
+          title: 名称
+        notes:
+          type: string
+          title: 備考
+  summary:
+    type: array
+    title: まとめ
+    x-heading: まとめ
+    items:
+      type: object
+      properties:
+        key:
+          type: string
+          title: キー
+        label:
+          type: string
+          title: 名称
+        notes:
+          type: string
+          title: 備考
+required: [id, name]
+"""
+SCREEN_NAV = (
+    "nav:\n"
+    "  tabs:\n"
+    "    - title: 規約\n"
+    "      items:\n"
+    "        - auto:\n"
+    "            document: sample\n"
+    "    - title: 補足\n"
+    "      items:\n"
+    "        - page: sample/doc-2\n"
+)
+LONG_ROWS = 80
+
+
+def _rows(prefix: str, count: int, notes: str) -> list[dict[str, str]]:
+    """表の行を `count` 件作る。"""
+    return [
+        {"key": f"{prefix}{number}", "label": f"名称 {prefix}{number}", "notes": notes}
+        for number in range(count)
+    ]
+
+
+@pytest.fixture
+def page() -> Iterator[Page]:
+    """画面を開くブラウザ（Chromium）のページを返す。クリップボードを読み書きでき、日本語・JST で動く。"""
+    expect.set_options(timeout=BROWSER_TIMEOUT_MS)
+    with sync_playwright() as playwright:
+        browser = playwright.chromium.launch()
+        context = browser.new_context(
+            viewport={"width": 1280, "height": 800},
+            locale="ja-JP",
+            timezone_id="Asia/Tokyo",
+            permissions=["clipboard-read", "clipboard-write"],
+        )
+        context.set_default_timeout(BROWSER_TIMEOUT_MS)
+        yield context.new_page()
+        context.close()
+        browser.close()
+
+
+@pytest.fixture
+def screen_files() -> Callable[..., dict[str, str]]:
+    """画面で読む配信元のファイル一式（`nav` つき・文書 1 は画面の高さを超える長さ）を作る関数を返す。"""
+
+    def _files(
+        *,
+        summary_notes: str = "まとめの値",
+        nav: bool = True,
+        config_extra: str = "",
+        **overrides: str,
+    ) -> dict[str, str]:
+        files = sample_files(
+            **{
+                "dev-docs.yaml": sample_config((SCREEN_NAV if nav else "") + config_extra),
+                "schemas/sample.schema.yaml": SCREEN_SCHEMA,
+                "docs/doc-1.yaml": sample_doc(
+                    "doc-1",
+                    "文書 1",
+                    items=_rows("a", LONG_ROWS, "項目の備考"),
+                    summary=_rows("s", 3, summary_notes),
+                ),
+                "docs/doc-2.yaml": sample_doc(
+                    "doc-2",
+                    "文書 2",
+                    description="検索で当てるパンプキンの語",
+                    items=_rows("b", 3, "文書 2 の備考"),
+                    summary=_rows("t", 2, "文書 2 のまとめ"),
+                ),
+            }
+        )
+        files.update(overrides)
+        return files
+
+    return _files

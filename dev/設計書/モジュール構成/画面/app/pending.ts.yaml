@@ -1,0 +1,15 @@
+title: "画面 / アプリとルート / pending.ts"
+lead: 読み込み中の表示を出すまでの待ち時間。画面設計『文書の画面』の `読み込み中の表示` の条件を持つ。
+constants:
+  - name: KEEP_PREVIOUS_MS
+    title: 前の画面を出したままにする待ち時間
+    container: app/pending.ts
+    usecase: 共通
+    summary: ルートの `pendingMs` に渡し、画面の移動の間は読み込み中の画面（`pendingComponent`）に差し替えず前の画面を出したままにする
+    value: '2_000_000_000'
+  - name: INITIAL_LOADING_MS
+    title: 最初の読み込みの待ち時間
+    container: app/pending.ts
+    usecase: 共通
+    summary: 最初の画面の読み込みで、読み込み中の表示を出すまでの待ち時間（ms）
+    value: '1000'

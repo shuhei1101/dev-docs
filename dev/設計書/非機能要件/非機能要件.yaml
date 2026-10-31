@@ -20,19 +20,19 @@ requirements:
   - name: 対応ブラウザ
     english_name: supported_browser
     category: 動作環境
-    external_constraint: 未確定
-    source_kind: 未確定
-    value: 未確定
-    rationale: '画面を作る #17 の設計で決める'
+    external_constraint: 制限なし
+    source_kind: 制限なし
+    value: PC は Chrome・Edge の最新安定版で全ての操作、スマホは Android の Chrome・iOS の Safari の最新安定版で文書を読む・検索する・コメントを溜めてコピーするまで
+    rationale: 'knowledge の規約『対応ブラウザ』の既定（PC は全ての操作、スマホは主な操作まで）に従う。スマホでは設定画面の編集を主な操作に含めない。対応ブラウザの指定は `package.json` の browserslist に置き、Safari 固有の代替の実装は入れない'
     measurement: 決めたブラウザで一覧・本文・差分の画面を開く
     status: planned
   - name: 対応する画面サイズ
     english_name: screen_size
     category: 動作環境
-    external_constraint: 未確定
-    source_kind: 未確定
-    value: 未確定
-    rationale: 画面の設計（#17）で、スマホ幅を扱うかを含めて決める
+    external_constraint: 制限なし
+    source_kind: 制限なし
+    value: 幅 360px 以上。幅 48rem（768px）未満はサイドバーをドロワー、コメントのパネルを画面の下から出す面にし、幅 80rem（1280px）未満は目次を出さない
+    rationale: 合意したモック（`dev/mock/pages/*/36/default/`）の切り替え幅に合わせる。360px は主なスマホの一番狭い幅
     measurement: 決めた幅で画面を開き、横スクロールが出ないことを確かめる
     status: planned
   - name: 待ち受けのアドレス
@@ -92,4 +92,18 @@ requirements:
     unit: 件
     rationale: 1 回の書き込み・削除で配信元の排他を握る時間と、検査の実行の時間を抑えるため。`write_docs` の `operations`・`delete_docs` の `targets` の件数の上限
     overflow: 50 件を超える要求は `InvalidArgumentError` で断り、何も書かない
+  - name: Issue の作成画面の URL の長さ
+    english_name: issue_url_length
+    category: 動作環境
+    external_constraint: GitHub の Issue の作成画面は、長すぎる URL を断る。公式の上限の記載は無い。未ログインの curl（2026-10-30）では、URL 全体 8000 文字は応答、8067 文字・8117 文字は接続が切られ、8267 文字以上は 414
+    source_kind: 外部 API の制限
+    source: https://docs.github.com/en/issues/tracking-your-work-with-issues/using-issues/creating-an-issue#creating-an-issue-from-a-url-query
+    value: '7200'
+    unit: 文字（パーセントエンコード後の URL 全体）
+    rationale: 応答があった最長の 8000 文字から 1 割の余裕を取った（[確認ログ](https://github.com/shuhei1101/dev-docs/pull/36#discussion_r4422112042)）。断られるのはリクエストの 1 行目の長さで、クッキーは別のヘッダーの行のため、ログインした状態でも上限は下がらないとして扱う。ログインした状態では測っていない
+    overflow: '`body` の末尾を切り詰め、切り詰めたことを書き添える。全文は先にクリップボードへコピーする'
+    measurement: 単体テストで、作った URL の長さが決定値以下であることを確かめる。ログインした PC の Chrome で `https://github.com/shuhei1101/dev-docs/issues/new?labels=docs&body=` に続ける `body` の長さを変えて開き、作成画面が出る最長の長さを測れば、この扱いを確かめられる
+    status: planned
+    refs:
+      - dev/設計書/画面設計/文書の画面#elements[Issue を作成]
 lead: 外部の制約から逆算した dev-docs の決定値。

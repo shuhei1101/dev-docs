@@ -8,9 +8,10 @@ directory: |-
   src/dev_docs/
   ├─ main.py                    # Handlers / build_handlers / reload_sources / run_serve / run_migrate / PortInUseError
   └─ server/
-     ├─ app.py                  # build_app（ルートと MCP のマウント）
+     ├─ app.py                  # build_app / route_operation_id（ルートと MCP のマウント）
      ├─ lifespan.py             # build_lifespan（MCP のセッションの管理と記録の削除）
-     └─ error_handlers.py       # register_error_handlers（problem+json）
+     ├─ error_handlers.py       # register_error_handlers（problem+json）
+     └─ screen.py               # build_screen_router / SCREEN_DIST_DIR（画面のビルドの配信）
   ```
 diagrams:
   - name: 全体
@@ -33,6 +34,8 @@ diagrams:
         アプリの組み立て ..> 画面の入口
         アプリの組み立て ..> セッションの文脈のルーター
         アプリの組み立て ..> 例外の変換の登録
+        アプリの組み立て ..> 画面の配信
+        アプリの組み立て ..> 操作の識別子
         アプリの組み立て ..> アプリの寿命
         class 待ち受けの開始 {
           <<function>>
@@ -80,6 +83,12 @@ diagrams:
           <<function>>
         }
         class 例外の変換の登録 {
+          <<function>>
+        }
+        class 画面の配信 {
+          <<function>>
+        }
+        class 操作の識別子 {
           <<function>>
         }
         class アプリの寿命 {
@@ -237,6 +246,24 @@ constants:
     usecase: 共通
     summary: problem+json の `type` に置く URI の頭（末尾にエラーの名前を付ける）
     value: '"urn:dev-docs:error:"'
+  - name: SCREEN_DIST_DIR
+    title: 画面のビルドの置き場所
+    container: server/screen.py
+    usecase: 起動
+    summary: 画面のビルド（Vite の出力先）のフォルダ。パッケージの中の `screen/`
+    value: Path(__file__).parent.parent / "screen"
+  - name: EXCLUDED_PREFIXES
+    title: 画面を返さないパスの頭
+    container: server/screen.py
+    usecase: 起動
+    summary: 画面の配信が 404 にするパスの最初の区切り
+    value: ("_api", "mcp", "_admin")
+  - name: IMMUTABLE_CACHE
+    title: assets のキャッシュの指定
+    container: server/screen.py
+    usecase: 起動
+    summary: ファイル名にハッシュを持つ assets の `Cache-Control`
+    value: '"public, max-age=31536000, immutable"'
 functions:
   - name: run_serve
     title: 待ち受けの開始
@@ -471,16 +498,24 @@ functions:
         required: true
         passing: positional
         description: 部品の配線の結果
+      - name: screen_dir
+        title: 画面のビルドの置き場所
+        type: Path
+        required: false
+        default: SCREEN_DIST_DIR
+        passing: keyword
+        description: 画面の配信が返すビルドのフォルダ。テストで差し替える
     returns:
       type: fastapi.FastAPI
       description: 組み立てたアプリ
     process: |-
       1. 文書の MCP と管理の MCP を組み立てる（文書の MCP の組み立て・管理の MCP の組み立て）
-      2. 2 つの MCP と会話の記録を渡して寿命を作り（アプリの寿命）、`FastAPI(lifespan=..., docs_url=None, redoc_url=None, openapi_url="/_api/openapi.json")` を作る
+      2. 2 つの MCP と会話の記録を渡して寿命を作り（アプリの寿命）、`FastAPI(lifespan=..., docs_url=None, redoc_url=None, openapi_url="/_api/openapi.json", generate_unique_id_function=route_operation_id)` を作る（操作の識別子）
       3. 例外の変換を登録する（例外の変換の登録）
       4. `DOCS_MCP_PATH` に文書の MCP、`ADMIN_MCP_PATH` に管理の MCP の `streamable_http_app(streamable_http_path="/", stateless_http=True, json_response=True)` をマウントする
       5. 端末の設定の入口・画面の入口・セッションの文脈（セッションの文脈のルーター）のルーターを登録する
-      6. アプリを返す
+      6. 画面の配信のルーター（画面の配信、`screen_dir` を渡す）を最後に登録する（全てのパスに当たるため）
+      7. アプリを返す
     unit_tests:
       - name: test_build_app
         case: 正常
@@ -491,9 +526,15 @@ functions:
       - name: test_build_app_when_openapi
         case: 正常
         summary: OpenAPI の画面を出さない
-        condition: GET `/docs` と `/_api/openapi.json`
+        condition: '`index.html` を置いた一時フォルダを `screen_dir` に渡し、GET `/docs` と `/_api/openapi.json`'
         mock: 配線済みの関数（偽物）
-        expected: '`/docs` は 404、`/_api/openapi.json` の `paths` が全て `/_api/` で始まり、各入口の `operationId` が識別子（`get_document_default`・`get_document`・`search_page`・`list_refs`・`put_columns`・`get_settings_sources`・`put_settings_sources`）と同じで重複が無い'
+        expected: '`/docs` は Swagger UI でなく画面の配信が応える（`screen_dir` に置いた `index.html` の中身）、`/_api/openapi.json` の `paths` が全て `/_api/` で始まり、各入口の `operationId` が `{タグ}-{name}`（`view-get_document_default`・`view-get_document`・`view-search_page`・`view-list_refs`・`view-put_columns`・`settings-get_settings_sources`・`settings-put_settings_sources`）で重複が無く、画面の配信のパスを含まない'
+      - name: test_build_app_when_screen
+        case: 正常
+        summary: API と MCP を画面の配信より先に当てる
+        condition: '`index.html` を置いた一時フォルダを `screen_dir` に渡し、GET `/default/a.md` と GET `/_api/sources/none/docs`'
+        mock: 配線済みの関数（配信元が空の偽物）
+        expected: '`/default/a.md` は 200 で `index.html` の中身、`/_api/sources/none/docs` は 404 の problem+json'
   - name: build_lifespan
     title: アプリの寿命
     kind: 関数
@@ -536,7 +577,7 @@ functions:
     container: server/error_handlers.py
     usecase: 共通
     role: 入口
-    summary: 画面の API の例外を RFC 9457 の problem+json にするハンドラを登録する
+    summary: 画面の API・画面の配信の例外を RFC 9457 の problem+json にするハンドラを登録する
     scope: public
     side_effects: アプリに例外のハンドラを登録する
     args:
@@ -550,9 +591,10 @@ functions:
       type: None
       description: 何も返さない
     process: |-
-      1. `DevDocsError` は、`application/problem+json` で `{type: PROBLEM_TYPE_BASE + name, title: name, status, detail: message, next_steps, ...details()}` を返す。`violations` を持つときは `errors[]`（`{path, reason}`、`reason` は `rule`）にも並べる
+      1. `DevDocsError` は、`application/problem+json` で `{type: PROBLEM_TYPE_BASE + name, title: name, status, detail: message, nextSteps: next_steps, ...details()}` を返す。`details()` の 1 段目のキーと入れ子のモデルのフィールド名を `pydantic.alias_generators.to_camel` で camelCase にする。`dict[str, ...]` の値のキー（`candidates` の文書の ID など）は変えない。`violations` を持つときは `errors[]`（`{path, reason}`、`reason` は `rule`）にも並べる
       2. `RequestValidationError` は、400 で `type` が `InvalidArgumentError` の problem+json を返す。`errors[]` は誤りごとに `loc` の `body` を除いたパス（`sources[1].id` の形）と `msg`
-      3. これら以外の例外は FastAPI の既定の 500 に任せ、`[error]` 要求の処理に失敗した（メソッド・パス・例外）を書く
+      3. `starlette.exceptions.HTTPException`（ルートの無いパス・画面の配信の 404 を含む）は、その `status_code` で `type` が `PROBLEM_TYPE_BASE + "HttpError"`、`detail` が例外の `detail` の problem+json を返す
+      4. これら以外の例外は FastAPI の既定の 500 に任せ、`[error]` 要求の処理に失敗した（メソッド・パス・例外）を書く
     unit_tests:
       - name: test_register_error_handlers
         case: 正常
@@ -566,6 +608,18 @@ functions:
         condition: '`hidden: "x"`（配列でない）を PUT'
         mock: なし（テスト用のルート）
         expected: 400、`errors[0].path` が `hidden`
+      - name: test_register_error_handlers_when_http_error
+        case: 正常
+        summary: ルートの無いパスを problem+json の 404 にする
+        condition: どのルートにも当たらない GET `/_api/none`
+        mock: なし（テスト用のルート）
+        expected: 404、`Content-Type` が `application/problem+json`、`type` が `urn:dev-docs:error:HttpError`
+      - name: test_register_error_handlers_when_details_snake
+        case: 正常
+        summary: 詳細のキーを camelCase にする
+        condition: '`details()` が `{"settings_path": "x", "missing": {"source_id": "a"}, "candidates": {"tests/test_main": ["rule-auth"]}}` を返す `DevDocsError` を送るルートを GET'
+        mock: なし（テスト用のルート）
+        expected: 本文に `settingsPath`・`missing.sourceId`・`nextSteps` があり、snake_case のフィールド名が無い。`candidates` のキーは `tests/test_main` のまま
   - name: run_migrate
     title: 設定の移し替えの実行
     container: main.py
@@ -698,6 +752,100 @@ functions:
         exception: なし（終了コード 2）
     refs:
       - dev/設計書/モジュール構成/開発ドキュメントサーバー/文書のストア.py#functions[indexable_files]
+  - name: route_operation_id
+    title: 操作の識別子
+    kind: 関数
+    container: server/app.py
+    usecase: 起動
+    role: 入口
+    summary: OpenAPI の operationId をルートのタグと名前から作る
+    scope: public
+    args:
+      - name: route
+        title: ルート
+        type: fastapi.routing.APIRoute
+        required: true
+        passing: positional
+        description: 識別子を作るルート
+    returns:
+      type: str
+      description: '`{route.tags[0]}-{route.name}`（タグが無いときは `route.name`）'
+    process: 1. ルートの最初のタグと `name` を `-` で結んで返す。タグが無いときは `name` だけを返す
+    unit_tests:
+      - name: test_route_operation_id
+        case: 正常
+        summary: タグと名前を結ぶ
+        condition: '`tags=["view"]`・`name="get_document"` のルート'
+        mock: なし
+        expected: '`view-get_document`'
+      - name: test_route_operation_id_when_no_tag
+        case: 正常
+        summary: タグが無いと名前だけ
+        condition: '`tags=[]`・`name="x"` のルート'
+        mock: なし
+        expected: '`x`'
+  - name: build_screen_router
+    title: 画面の配信
+    kind: 関数
+    container: server/screen.py
+    usecase: 起動
+    role: 入口
+    summary: 画面（React の SPA）のビルドを返すルーターを作る
+    scope: public
+    args:
+      - name: dist_dir
+        title: 画面のビルドの置き場所
+        type: Path
+        required: true
+        passing: positional
+        description: Vite の出力先（`index.html` と `assets/`）
+    returns:
+      type: fastapi.APIRouter
+      description: GET `/{path:path}` を持つルーター（`include_in_schema=False`）
+    process: |-
+      1. パスの最初の区切りが `EXCLUDED_PREFIXES` のどれかなら、`HTTPException(404)` を送る（API・MCP の誤ったパスに画面を返さない）
+      2. パスが `assets/` で始まるときは、`dist_dir` の下のファイルを `FileResponse` で返し、`Cache-Control` を `IMMUTABLE_CACHE` にする。ファイルが無い・解決したパスが `dist_dir` の外のときは `HTTPException(404)` を送る
+      3. それ以外のパスは、`dist_dir / "index.html"` を `Cache-Control: no-cache` で返す（どの URL も SPA が描く）
+      4. `index.html` が無いときは `ScreenBuildMissingError` を送る
+    exceptions:
+      - name: ScreenBuildMissingError
+        condition: '`dist_dir` に `index.html` が無い'
+        message: '`画面のビルドがありません（{dist_dir}/index.html）`'
+        notes: '`next_steps` に `frontend/` で画面をビルドすること（`vite build`。出力先は `src/dev_docs/screen/`）'
+    unit_tests:
+      - name: test_build_screen_router
+        case: 正常
+        summary: 文書の URL に index.html を返す
+        condition: '`index.html` を置いた一時フォルダで GET `/default/設計書/a.md`'
+        mock: なし（一時フォルダ）
+        expected: 200、本文が `index.html` の中身、`Cache-Control` が `no-cache`
+      - name: test_build_screen_router_when_asset
+        case: 正常
+        summary: assets のファイルを長く持たせて返す
+        condition: '`assets/index-abc.js` を置いて GET `/assets/index-abc.js`'
+        mock: なし（一時フォルダ）
+        expected: 200、`Cache-Control` が `IMMUTABLE_CACHE`
+      - name: test_build_screen_router_when_asset_missing
+        case: 異常
+        summary: 無い assets と外へ出るパスを 404 にする
+        condition: GET `/assets/none.js` と GET `/assets/..%2F..%2Fsecret`
+        mock: なし（一時フォルダ）
+        expected: どちらも 404
+        exception: HTTPException(404)
+      - name: test_build_screen_router_when_excluded
+        case: 異常
+        summary: API・MCP の頭のパスに画面を返さない
+        condition: GET `/_api/none`・`/mcp/none`・`/_admin/none`
+        mock: なし（一時フォルダ）
+        expected: 全て 404
+        exception: HTTPException(404)
+      - name: test_build_screen_router_when_build_missing
+        case: 異常
+        summary: ビルドが無いと 503
+        condition: 空の一時フォルダで GET `/`
+        mock: なし（一時フォルダ）
+        expected: '`ScreenBuildMissingError` が送られ、`next_steps` に `vite build` がある'
+        exception: ScreenBuildMissingError
 refs:
   - dev/設計書/インターフェース定義/開発ドキュメントサーバー/起動#
 test_files:
@@ -705,3 +853,4 @@ test_files:
   - tests/unit/dev_docs/server/test_app.py
   - tests/unit/dev_docs/server/test_lifespan.py
   - tests/unit/dev_docs/server/test_error_handlers.py
+  - tests/unit/dev_docs/server/test_screen.py

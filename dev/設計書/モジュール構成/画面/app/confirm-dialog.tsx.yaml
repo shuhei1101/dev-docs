@@ -1,0 +1,71 @@
+title: "画面 / アプリとルート / confirm-dialog.tsx"
+lead: 画面共通の確認のダイアログと、それを開くフック。
+data_models:
+  - name: ConfirmRequest
+    title: 確認の依頼
+    container: app/confirm-dialog.tsx
+    usecase: 共通
+    role: DTO
+    summary: 開く確認の中身
+    properties:
+      - name: title
+        type: string
+        description: タイトル
+      - name: description
+        type: ReactNode
+        description: 説明
+      - name: confirmLabel
+        type: string
+        description: 確定のボタンの文言
+      - name: destructive
+        type: boolean
+        description: 確定のボタンを `destructive` にするか
+components:
+  - name: ConfirmDialogProvider
+    title: 確認のダイアログの Provider
+    kind: コンポーネント
+    container: app/confirm-dialog.tsx
+    usecase: 共通
+    role: Provider
+    summary: '`useConfirmDialog` から開く shadcn/ui の `AlertDialog` を 1 つだけ持つ'
+    props:
+      - name: children
+        type: ReactNode
+        required: true
+        description: 子
+    state:
+      - name: pending
+        type: '{request: ConfirmRequest; resolve: (ok: boolean) => void} | null'
+        initial: 'null'
+        description: 開いている確認
+        notes: '`useState`'
+functions:
+  - name: useConfirmDialog
+    title: 確認のダイアログ
+    kind: フック
+    container: app/confirm-dialog.tsx
+    usecase: 共通
+    role: フック
+    summary: 確認のダイアログを開き、確定なら true を返す関数を返す
+    scope: public
+    returns:
+      type: '(request: ConfirmRequest) => Promise<boolean>'
+      description: キャンセル・Esc は false
+    process: |-
+      1. ConfirmDialogProvider の文脈を読む（無ければ例外を送る）
+      2. 返す関数は `pending` を入れて Promise を返し、ダイアログを閉じたときに結果で解決する
+    unit_tests:
+      - name: test_use_confirm_dialog
+        case: 正常
+        summary: 確定で true
+        condition: 開いて確定のボタンを押す
+        mock: なし
+        expected: Promise が true で解決し、ダイアログが閉じる
+      - name: test_use_confirm_dialog_when_cancel
+        case: 正常
+        summary: Esc で false
+        condition: 開いて Esc
+        mock: なし
+        expected: Promise が false で解決する
+test_files:
+  - tests/unit/frontend/src/app/confirm-dialog.test.tsx

@@ -8,6 +8,8 @@ from typing import Any
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse, PlainTextResponse, Response
+from pydantic.alias_generators import to_camel
+from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from dev_docs.shared.errors import DevDocsError, InvalidArgumentError
 from dev_docs.shared.schema_check import format_path
@@ -18,6 +20,16 @@ PROBLEM_TYPE_BASE = "urn:dev-docs:error:"
 PROBLEM_JSON = "application/problem+json"
 BAD_REQUEST = 400
 NOT_PARSEABLE_PARTS = ("body", "query", "path")
+
+
+def _camelize(value: Any) -> Any:
+    """入れ子のキーを camelCase にする（値が全て配列の辞書は文書の ID などの索引なのでキーを保つ）。"""
+    if isinstance(value, dict):
+        keep = bool(value) and all(isinstance(item, list) for item in value.values())
+        return {(key if keep else to_camel(key)): _camelize(item) for key, item in value.items()}
+    if isinstance(value, list):
+        return [_camelize(item) for item in value]
+    return value
 
 
 def _problem(name: str, status: int, detail: str, extra: dict[str, Any]) -> JSONResponse:
@@ -34,7 +46,10 @@ def _problem(name: str, status: int, detail: str, extra: dict[str, Any]) -> JSON
 
 def problem_of(error: DevDocsError, fields: dict[str, Any] | None = None) -> JSONResponse:
     """`DevDocsError` を problem+json の応答にする（`fields` は本文に足す値）。"""
-    extra: dict[str, Any] = {"next_steps": error.next_steps, **error.details()}
+    extra: dict[str, Any] = {
+        "nextSteps": error.next_steps,
+        **{to_camel(key): _camelize(value) for key, value in error.details().items()},
+    }
     violations = getattr(error, "violations", None)
     if violations:
         extra["errors"] = [
@@ -45,7 +60,7 @@ def problem_of(error: DevDocsError, fields: dict[str, Any] | None = None) -> JSO
 
 
 def register_error_handlers(app: FastAPI) -> None:
-    """画面の API の例外を RFC 9457 の problem+json にするハンドラを登録する。"""
+    """画面の API・画面の配信の例外を RFC 9457 の problem+json にするハンドラを登録する。"""
 
     @app.exception_handler(DevDocsError)
     async def dev_docs_error(request: Request, error: Exception) -> Response:
@@ -70,8 +85,13 @@ def register_error_handlers(app: FastAPI) -> None:
             InvalidArgumentError.__name__,
             BAD_REQUEST,
             f"引数が正しくありません: {len(errors)} 件",
-            {"next_steps": [], "errors": errors},
+            {"nextSteps": [], "errors": errors},
         )
+
+    @app.exception_handler(StarletteHTTPException)
+    async def http_error(request: Request, error: Exception) -> Response:
+        assert isinstance(error, StarletteHTTPException)  # noqa: S101
+        return _problem("HttpError", error.status_code, str(error.detail), {"nextSteps": []})
 
     @app.exception_handler(Exception)
     async def unexpected(request: Request, error: Exception) -> Response:

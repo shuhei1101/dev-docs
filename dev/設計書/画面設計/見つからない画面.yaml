@@ -1,0 +1,120 @@
+title: "見つからない画面"
+elements:
+  - name: ページのタイトル
+    kind: label
+    position: head > title
+    description: ブラウザのタブに出すタイトル
+    label: '`見つかりません | dev-docs`'
+    visible_when: 常時
+  - name: 本文へスキップ
+    kind: link
+    position: 画面の先頭
+    description: トップバーを飛ばして本文へフォーカスを移す
+    label: '`本文へスキップ`'
+    visible_when: キーボードでフォーカスしたとき
+    tab_order: 1
+    action: クリックで本文の領域へフォーカスを移す
+  - name: トップバー
+    kind: header
+    component: dev/設計書/部品設計/トップバー#
+    args:
+      - name: screen
+        value: '`not-found`'
+      - name: sources
+        value: 端末の設定の取得.sources[]（`status` が `serving` の行の `id` と、`scope.write` が `null`（省いた。配信元のフォルダから書ける）か 1 件以上かを `writable`）
+      - name: currentSource
+        value: URL の配信元の ID（`missing` が `source`・`not_served` のときは渡さない）
+      - name: refs
+        value: リビジョンの一覧（`currentSource` を渡すとき）
+      - name: currentRef
+        value: URL の `rev`（無ければ `defaultRef`）
+      - name: colorScheme
+        value: ブラウザに保存した明暗（無ければ `system`）
+    position: 画面の上
+    description: 配信元・リビジョンの切り替え、検索、設定、明暗の切り替え
+    visible_when: 常時
+    action: '`sourceSelect` でその配信元のトップ、`refSelect` でそのリビジョンの配信元のトップを開く。`searchOpen` で検索のダイアログを開く。`colorSchemeToggle` で明暗を切り替え、ブラウザに保存する'
+    action_ref: dev/設計書/画面設計/文書の画面#
+  - name: 見出し
+    kind: label
+    position: 本文
+    description: 見つからなかったもの
+    label: 無い文書は `文書が見つかりません`、無いリビジョンは `リビジョンが見つかりません`、配信していない配信元は `配信元 {ID} を配信していません`、無い配信元は `配信元 {ID} はありません`
+    visible_when: 常時
+    source: 文書の取得（404 の `missing`）
+  - name: 説明
+    kind: label
+    position: 本文 > 見出しの下
+    description: 見つからなかった理由
+    label: 無い文書は `配信元 {ID} のリビジョン {ref} に、この文書はありません。`（Git 管理外の配信元は `配信元 {ID} に、この文書はありません。`）、無いリビジョンは `配信元 {ID} に、リビジョン {ref} はありません。`、配信していない配信元は `起動時の検証で、配信から外しました。`、無い配信元は `端末の設定に、この ID の配信元はありません。`
+    visible_when: 常時
+    source: 文書の取得（404 の `missing` と値）
+  - name: 見つからなかったものの詳細
+    kind: list
+    position: 本文 > 説明の下
+    description: 開こうとした値と、外した理由
+    label: 無い文書は `開こうとしたパス`。無いリビジョンは `開こうとしたリビジョン` と `既定のリビジョン`。配信していない配信元は `外した理由`（`errors[]` ごとの `{path} {reason}`）と `設定ファイル`。値は等幅で出す
+    visible_when: 無い配信元のときを除く
+    source: 文書の取得（404 の `missing` と値・`errors[]`）・リビジョンの一覧.defaultRef・端末の設定の取得.sources[].config
+  - name: 配信元のトップを開く
+    kind: link
+    position: 本文 > 次のリンク
+    description: 開こうとした配信元のトップへ戻る
+    label: '`{配信元の ID} のトップを開く`（プライマリ）'
+    visible_when: 無い文書・無いリビジョンのとき
+    action: 無い文書は `rev` を保った配信元のトップ、無いリビジョンは `rev` を外した配信元のトップを開く
+    action_ref: dev/設計書/画面設計/文書の画面#
+  - name: 設定を開く
+    kind: link
+    position: 本文 > 次のリンク
+    description: 設定画面を開く
+    label: '`設定を開く`（配信していない・無い配信元のときはプライマリ）'
+    visible_when: 常時
+    action: クリックで設定画面を開く
+    action_ref: dev/設計書/画面設計/設定画面#
+  - name: 配信中の配信元
+    kind: list
+    position: 本文 > 次のリンクの下
+    description: 代わりに開ける配信元のトップへのリンク
+    label: 配信中の配信元の ID（等幅）
+    visible_when: 配信していない・無い配信元のときで、配信中の配信元があるとき
+    source: 端末の設定の取得.sources[].id（`status` が `serving` の行）
+    action: クリックでその配信元のトップを開く
+    action_ref: dev/設計書/画面設計/文書の画面#
+    notes:
+      読み上げ名: '`配信中の配信元`'
+  - name: 検索のダイアログ
+    kind: dialog
+    component: dev/設計書/部品設計/検索のダイアログ#
+    args:
+      - name: open
+        value: トップバーの `searchOpen` か Ctrl+K・`/` で `true`
+      - name: source
+        value: URL の配信元の ID
+      - name: ref
+        value: URL の `rev`（無いリビジョンのときは渡さない）
+    position: 画面の中央の上
+    description: 開こうとした配信元の文書を語で探す
+    visible_when: 配信元が配信中で、検索を開いたとき
+    action: '`resultSelect` でその文書を開く'
+    action_ref: dev/設計書/インターフェース定義/開発ドキュメントサーバー/画面の検索#
+  - name: ショートカットの一覧
+    kind: dialog
+    component: dev/設計書/部品設計/ショートカットの一覧#
+    args:
+      - name: open
+        value: '`?` で `true`'
+      - name: screen
+        value: '`not-found`'
+      - name: singleKey
+        value: ブラウザに保存した 1 文字のショートカットの設定（無ければ `true`）
+    position: 画面の中央
+    description: この画面で使えるキー
+    visible_when: '`?` を押したとき'
+screen: frontend/src/features/docs/not-found/not-found-screen.tsx
+mock: dev/mock/pages/not-found/36/default/
+lead: 文書の取得が 404 を返した URL で、見つからなかったもの（文書・リビジョン・配信元）と理由を出し、配信元のトップと設定画面へ案内する画面。URL は開こうとした URL のままにする。
+refs:
+  - dev/設計書/インターフェース定義/開発ドキュメントサーバー/文書の取得#
+  - dev/設計書/シナリオ/単一ユースケース/利用者が画面で読む#
+test_file: tests/integration/frontend/not-found-screen.spec.ts

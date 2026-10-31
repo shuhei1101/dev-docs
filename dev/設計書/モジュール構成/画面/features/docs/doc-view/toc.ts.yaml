@@ -1,0 +1,97 @@
+title: "画面 / 文書の画面 / toc.ts"
+lead: 目次と、比較元から変わったセクションを引く純粋な関数。
+data_models:
+  - name: TocItem
+    title: 目次の行
+    container: features/docs/doc-view/toc.ts
+    usecase: 文書を読む
+    role: DTO
+    summary: 目次の 1 行
+    properties:
+      - name: id
+        type: string
+        description: 描いた本文の見出しの `id`
+      - name: text
+        type: string
+        description: 見出しの文字列
+      - name: level
+        type: 2 | 3
+        description: 見出しの深さ
+functions:
+  - name: readToc
+    title: 目次の読み取り
+    kind: 関数
+    container: features/docs/doc-view/toc.ts
+    usecase: 文書を読む
+    role: 変換
+    summary: mdmark が描いた本文の要素から見出し 2・3 を並べる
+    scope: public
+    args:
+      - name: root
+        type: HTMLElement
+        required: true
+        passing: positional
+        description: 本文の要素
+    returns:
+      type: TocItem[]
+      description: 本文の並びの順
+    process: 1. `root.querySelectorAll("h2[id], h3[id]")` を順に `TocItem` にする
+    unit_tests:
+      - name: test_read_toc
+        case: 正常
+        summary: 見出し 2・3 を並べる
+        condition: '`h2#a`・`h3#b`・`h4#c` を持つ要素'
+        mock: なし
+        expected: '`a`（2）・`b`（3）の 2 件'
+  - name: changedSections
+    title: 変わったセクション
+    kind: 関数
+    container: features/docs/doc-view/toc.ts
+    usecase: 文書を読む
+    role: 変換
+    summary: 2 つの Markdown を見出し 2・3 で区切り、中身が違う見出しの文字列を返す
+    scope: public
+    args:
+      - name: markdown
+        type: string
+        required: true
+        passing: positional
+        description: 比較先の本文
+      - name: baseMarkdown
+        type: string | null
+        required: true
+        passing: positional
+        description: 比較元の本文（文書が無いときは null）
+    returns:
+      type: Set<string>
+      description: 中身が変わった・比較元に無い見出しの文字列。`baseMarkdown` が null なら全ての見出し
+    process: |-
+      1. 各 Markdown をコードブロックの外の `## `・`### ` の行で区切り、見出しの文字列 → 次の見出しまでの中身（行末の空白を落とす）の対応にする（同じ文字列は出た順に `#2` を付けて分ける）
+      2. 比較先の見出しごとに、比較元に無いか中身が違えば結果に入れる
+    unit_tests:
+      - name: test_changed_sections
+        case: 正常
+        summary: 中身が変わった見出しだけ
+        condition: '`## A` の中身だけが違い、`## B` は同じ'
+        mock: なし
+        expected: '`{"A"}`'
+      - name: test_changed_sections_when_added_heading
+        case: 正常
+        summary: 追加した見出し
+        condition: 比較先にだけ `### C`
+        mock: なし
+        expected: '`C` を含む'
+      - name: test_changed_sections_when_code_block
+        case: 正常
+        summary: コードブロックの中の `##` で区切らない
+        condition: コードブロックの中に `## x`
+        mock: なし
+        expected: '`x` を含まない'
+      - name: test_changed_sections_when_base_missing
+        case: 正常
+        summary: 比較元に文書が無い
+        condition: '`baseMarkdown` が null'
+        mock: なし
+        expected: 全ての見出し
+test_files:
+  - tests/unit/frontend/src/features/docs/doc-view/toc.test.ts

@@ -1,0 +1,33 @@
+title: "vite"
+kind: "CLI"
+version:
+  current: 8.3.5
+  latest: 8.3.5
+  checked_on: '2026-10-30'
+  source: package.json
+catalogs:
+  - name: パッケージ
+    version: 8.3.5
+    entries:
+      - name: vite
+        kind: CLI
+        purpose: '`vite`（開発）・`vite build`（`src/dev_docs/screen/` へ出す）'
+      - name: '@vitejs/plugin-react'
+        kind: ビルドのプラグイン
+        purpose: JSX の変換と React Compiler の Babel
+        notes:
+          版: 6.1.2
+lead: 開発サーバーと本番のビルドを持つフロントエンドのビルドツール。
+purl: pkg:npm/vite
+dependency_scope: 開発のみ
+adoption: 採用
+used_in:
+  - frontend/vite.config.ts
+upstream: vitejs/vite
+verification:
+  state: 済
+  date: '2026-10-30'
+  detail: '`npm run build` で画面をビルドし、出力が `src/dev_docs/screen/` にできることを確かめた。'
+license: MIT（商用利用可）
+official_url: https://vite.dev/
+docs_url: https://vite.dev/config/

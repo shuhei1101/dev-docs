@@ -1,0 +1,39 @@
+title: "画面 / 設定画面 / source-table.tsx"
+lead: 配信元の一覧の表。
+components:
+  - name: SourceTable
+    title: 配信元の一覧
+    kind: コンポーネント
+    container: features/settings/settings/components/source-table.tsx
+    usecase: 配信元を設定する
+    role: 部品
+    summary: TanStack Table（並べ替え・絞り込みなし）で `sources[]` を `配信元`・`設定ファイル`・`状態`・`操作` の列に並べる
+    props:
+      - name: sources
+        type: SettingsSource[]
+        required: true
+        description: 端末の設定の取得の `sources[]`
+      - name: onEdit
+        type: '(index: number) => void'
+        required: true
+        description: 編集ボタン
+      - name: onRemove
+        type: '(index: number) => void'
+        required: true
+        description: 削除ボタン
+    description: '`status` が `serving` の行の ID だけを配信元のトップへの `Link` にする。編集・削除のボタンは `aria-label` に `{id} を編集`・`{id} を削除` を持つ'
+    unit_tests:
+      - name: test_source_table
+        case: 正常
+        summary: 配信中の行だけリンクにする
+        condition: '`serving` と `disabled` の 2 行'
+        mock: なし
+        expected: 1 行目の ID だけがリンク
+      - name: test_source_table_when_edit
+        case: 正常
+        summary: 編集ボタン
+        condition: 2 行目の編集ボタンを押す
+        mock: なし
+        expected: '`onEdit` が 1 で 1 回'
+test_files:
+  - tests/unit/frontend/src/features/settings/settings/components/source-table.test.tsx

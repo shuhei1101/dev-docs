@@ -1,0 +1,412 @@
+title: "文書の画面"
+elements:
+  - name: ページのタイトル
+    kind: label
+    position: head > title
+    description: ブラウザのタブに出すタイトル
+    label: '`{文書の名前} | {配信元の ID} | dev-docs`（文書の無いタブは `{タブ名} | {配信元の ID} | dev-docs`）'
+    visible_when: 常時
+    source: 文書の取得.tabs[].items
+  - name: 本文へスキップ
+    kind: link
+    position: 画面の先頭
+    description: トップバーとサイドバーを飛ばして本文へフォーカスを移す
+    label: '`本文へスキップ`'
+    visible_when: キーボードでフォーカスしたとき
+    tab_order: 1
+    action: クリックで本文の領域へフォーカスを移す
+  - name: トップバー
+    kind: header
+    component: dev/設計書/部品設計/トップバー#
+    args:
+      - name: screen
+        value: '`doc-view`'
+      - name: sources
+        value: 端末の設定の取得.sources[]（`status` が `serving` の行の `id` と、`scope.write` が `null`（省いた。配信元のフォルダから書ける）か 1 件以上かを `writable`）
+      - name: currentSource
+        value: 文書の取得.source
+      - name: refs
+        value: リビジョンの一覧（レスポンス全体）
+      - name: currentRef
+        value: 文書の取得.ref
+      - name: commentCount
+        value: 溜めたコメントの件数
+      - name: colorScheme
+        value: ブラウザに保存した明暗（無ければ `system`）
+    position: 画面の上
+    description: 配信元・リビジョンの切り替え、検索、コメント、設定、明暗の切り替え。スクロールしても画面に残す
+    visible_when: 常時
+    action: '`sourceSelect` でその配信元のトップ（`/{配信元の ID}`）を開く。`refSelect` で `rev` を書き換えて同じ文書を開き直す。`compareStart` で `base` に、開いているリビジョンが `defaultRef` 以外なら `defaultRef`、`defaultRef` なら最近の commit の 2 件目を入れて開き直す。`searchOpen` で検索のダイアログ、`commentPanelToggle` でコメントのパネル、`sidebarOpen` で文書の一覧のドロワーを開く。`colorSchemeToggle` で明暗を切り替え、ブラウザに保存する'
+    action_ref: dev/設計書/インターフェース定義/開発ドキュメントサーバー/リビジョンの一覧#
+  - name: 種類のタブ
+    kind: tab
+    position: トップバーの下
+    description: 配信元の文書の種類を選ぶ。スクロールしても画面に残す
+    label: タブの名前（`nav` の並び順）
+    visible_when: 常時
+    initial_value: '`active` のタブを現在地（`aria-current="page"`）にする'
+    source: 文書の取得.tabs[].title・文書の取得.tabs[].active
+    action: クリックでそのタブのサイドバーの一番上の文書を開く。文書の無いタブは URL を変えず、文書が無いことの表示を出す
+    action_ref: dev/設計書/インターフェース定義/開発ドキュメントサーバー/文書の取得#
+  - name: 文書の一覧
+    kind: nav
+    position: サイドバー
+    description: 選んでいるタブの group と page を入れ子で並べる。スクロールしても画面に残す
+    label: group は見出し、page は文書の名前のリンク
+    visible_when: 画面幅が 48rem 以上のとき（狭い幅では文書の一覧のドロワー）
+    initial_value: 開いている文書を現在地（`aria-current="page"`）にする
+    source: 文書の取得.tabs[].items
+    action: page のクリックで、`rev`・`base` を保ったその文書を開く。`change` が `deleted` の page は、`rev` を `base` にして `base` を外したその文書を開く
+    action_ref: dev/設計書/インターフェース定義/開発ドキュメントサーバー/文書の取得#
+    notes:
+      読み上げ名: '`文書の一覧`'
+  - name: 文書の変化のマーカー
+    kind: icon
+    position: サイドバー > 文書の一覧 > page の右
+    description: 比較元からの page の変化
+    label: 追加はプラス、変更は塗った円、削除はマイナスのアイコン。削除の page は文書の名前に取り消し線を引く
+    visible_when: '`base` があり、`change` が `null` でない page'
+    source: 文書の取得.tabs[].items[].change
+    notes:
+      読み上げ名: アイコンに文字を添えず、視覚に出さない `追加`・`変更`・`削除` を持つ
+  - name: 文書の一覧のドロワー
+    kind: drawer
+    position: 画面の左
+    description: 狭い幅で文書の一覧を重ねて出す
+    visible_when: 画面幅が 48rem 未満で、トップバーの `sidebarOpen` を受けたとき
+    action: 文書を開くか、Esc・ドロワーの外のクリックで閉じ、開いたボタンへフォーカスを戻す
+  - name: パンくず
+    kind: nav
+    position: 本文の上
+    description: 開いている文書の階層
+    label: '`{配信元の ID}` / `{タブ名}` / `{group の名前}` / `{文書の名前}`'
+    visible_when: 常時（文書の無いタブでは `{配信元の ID}` / `{タブ名}`）
+    source: 文書の取得.source・文書の取得.tabs[].items
+    action: 配信元の ID のクリックで配信元のトップ、タブ名のクリックでそのタブの一番上の文書を開く。group と末尾はリンクにしない
+    action_ref: dev/設計書/インターフェース定義/開発ドキュメントサーバー/文書の取得#
+    notes:
+      読み上げ名: '`パンくず`'
+  - name: 文書のタイトル
+    kind: label
+    position: 本文の上
+    description: 文書の名前（見出し 1）。文書の無いタブではタブ名
+    label: '`{文書の名前}`'
+    visible_when: 常時
+    source: 文書の取得.tabs[].items（開いている page の名前）
+  - name: 文書の情報
+    kind: label
+    position: 本文の上 > 文書のタイトルの下
+    description: 種類・文書のパス・更新日時
+    label: 種類のバッジ（タブ名）、文書のパス（等幅）、`更新 {日時}`
+    visible_when: 文書があるとき
+    display_format: 更新日時は `MM/DD HH:mm JST`（例 `10/26 23:40 JST`）。`time` 要素の `datetime` に ISO 8601 を持つ
+    source: 文書の取得.path・文書の取得.updatedAt
+  - name: 読み込み中の表示
+    kind: skeleton
+    position: 本文
+    description: 文書の取得の結果を待つ間に、文書のタイトル・情報・本文の形の枠を出す
+    visible_when: 文書の取得を待っているとき（前の文書があれば前の文書を出したままにし、待ちが 1 秒を超えたときだけ出す）
+    notes:
+      読み上げ名: '`文書を読み込んでいます`。本文の領域に `aria-busy` を付ける'
+  - name: 差分の案内
+    kind: section
+    position: 本文の上 > 文書の情報の下
+    description: 差分を強調していることと、比べている 2 つのリビジョン
+    label: '`比較元` の選択、`→`、`比較先` の選択、`差分の強調を解除`'
+    visible_when: '`base` があり、Git の配信元のとき'
+    source: 文書の取得.diff.base・文書の取得.ref
+    notes:
+      読み上げ名: '`差分`'
+  - name: 比較元の選択
+    kind: select
+    position: 差分の案内
+    description: 比べる元のリビジョン
+    label: '`比較元`'
+    type: 文字列
+    visible_when: 差分の案内を出しているとき
+    options: リビジョンの一覧の `defaultRef`・ブランチ・タグ・最近の commit（リビジョンのメニューと同じ並び）。一覧に無い `base` は先頭に足す
+    initial_value: '`base`'
+    source: リビジョンの一覧.defaultRef・リビジョンの一覧.branches[].name・リビジョンの一覧.tags[].name・リビジョンの一覧.commits[].commit
+    target: 文書の取得.diff（URL の `base`）
+    action: 選び直すと `base` を書き換えて開き直す
+    action_ref: dev/設計書/インターフェース定義/開発ドキュメントサーバー/文書の取得#
+  - name: 比較先の選択
+    kind: select
+    position: 差分の案内
+    description: 比べる先のリビジョン。開いているリビジョンと同じ
+    label: '`比較先`'
+    type: 文字列
+    visible_when: 差分の案内を出しているとき
+    options: 比較元の選択と同じ
+    initial_value: '`rev`（無ければ `defaultRef`）'
+    source: 文書の取得.ref
+    target: 文書の取得.ref（URL の `rev`）
+    action: 選び直すと `rev` を書き換えて開き直す
+    action_ref: dev/設計書/インターフェース定義/開発ドキュメントサーバー/文書の取得#
+  - name: 差分の強調を解除
+    kind: button
+    position: 差分の案内
+    description: 差分をやめて比較先の通常の本文を出す
+    label: '`差分の強調を解除`'
+    visible_when: 差分の案内を出しているとき
+    action: クリックで `base` を外した同じ文書を開く。本文の強調・文書の変化のマーカー・目次の変更のマーカーを消す
+    action_ref: dev/設計書/インターフェース定義/開発ドキュメントサーバー/文書の取得#
+  - name: 変換の失敗
+    kind: alert
+    position: 本文
+    description: 本文の代わりに、変換できなかった理由と次にすることを出す
+    label: 見出し `本文を変換できませんでした`。続けて原因ごとの説明（制限時間の超過は `配信元の変換のスクリプトが制限時間を超えたため、止めました。スクリプトを修正してから、再読み込みしてください。`）と、`種類`・`スクリプト`・`原因` の一覧（YAML を読めないときは `ファイル`・`場所`（`{行} 行 {列} 列`）・`原因`）
+    visible_when: '`conversionError` が `null` でないとき'
+    source: 文書の取得.conversionError
+    notes:
+      読み上げ: '`role="alert"` で、出たときに読み上げる'
+  - name: 再読み込み
+    kind: button
+    position: 変換の失敗
+    description: 同じ文書を取り直す
+    label: '`再読み込み`'
+    visible_when: 変換の失敗を出しているとき
+    action: クリックで同じ条件の文書の取得を呼び直す
+    action_ref: dev/設計書/インターフェース定義/開発ドキュメントサーバー/文書の取得#
+  - name: 文書が無いことの表示
+    kind: label
+    position: 本文
+    description: 選んだタブに文書が無いこと
+    label: 見出し `{タブ名}の文書はありません`と、`このタブの nav.tabs[{タブの番号}].paths に当たる文書が、リビジョン {ref} にありません。`（Git 管理外の配信元は `、リビジョン {ref}` を省く）
+    visible_when: 選んだタブの `items` に page が無いとき
+    source: 文書の取得.tabs[].items・文書の取得.ref
+  - name: 本文
+    kind: article
+    position: 本文
+    description: 変換した Markdown を mdmark の `mount` で描いた文書の中身。最初の見出し 1 は文書のタイトルに出すため除いて描く
+    visible_when: 文書があり、`conversionError` が `null` のとき
+    source: 文書の取得.markdown
+    action: 本文の中の同じ配信元の文書へのリンクは、画面を読み込み直さず `rev` を保って開く（無い文書は見つからない画面）。外の URL は別のタブで開く
+    action_ref: dev/設計書/インターフェース定義/開発ドキュメントサーバー/文書の取得#
+    notes:
+      mdmark に渡す値: '`docId` は `{配信元の ID}:{文書のパス}`、`commentStore` はコメントの置き場所の読み書き。`diffSource` は渡さず、mdmark の「変更を見る」を出さない'
+      差分: '`base` があるときは、`ref` を `diff.base` にして取った `markdown` と比べ、変わった行・表の行を強調して描く。描き方は mdmark の付け替え口を通し、mdmark 側の機能が入るまでは付け替え口のモックで作る'
+  - name: 列の表示のメニュー
+    kind: menu
+    position: 本文 > 表の上
+    description: mdmark が `+columns` の表に描く列の表示の切り替え。隠した列を文書ごとに記憶する
+    label: mdmark の `列の表示` のボタンと列のチェックボックス。隠した列があるときは表の上に `{件数} 列を隠しています`
+    visible_when: 本文に `+columns` の表があるとき（表ごと）
+    initial_value: '`columns` のその表のキーの列を隠した状態（表のキーは `tableKeys` の同じ順番）'
+    source: 文書の取得.columns・文書の取得.tableKeys
+    target: 表の列の設定の保存.hidden（`table` はその表のキー）
+    action: 列の出し入れのたびに、その表の隠した列を保存する。保存に失敗したら通知に `列の表示を保存できませんでした。` を出し、表は切り替えたままにする
+    action_ref: dev/設計書/インターフェース定義/開発ドキュメントサーバー/表の列の設定の保存#
+    notes:
+      mdmark とのつなぎ: 初めに隠す列は、`mount` の前に `markdown` の `+columns` の表のマーカーへ `columns` の値を `hide=` で書いて渡す（mdmark の今の記法）。列の出し入れを知らせる受け取りは mdmark のアダプターを通し、mdmark 側の機能が入るまではアダプターのモックで作る
+  - name: 目次
+    kind: nav
+    position: 本文の右
+    description: 本文の見出し 2・3 の一覧。スクロールしても画面に残す
+    label: 見出し `目次` と、本文の見出しを階層どおりに並べたリンク
+    visible_when: 本文があり、画面幅が 80rem 以上のとき
+    initial_value: 画面の一番上にある見出しを現在地（`aria-current="true"`）にし、スクロールに合わせて移す
+    source: 文書の取得.markdown（描いた本文の見出し）
+    action: クリックでその見出しへ移る
+    notes:
+      読み上げ名: '`目次`'
+  - name: 目次の変更のマーカー
+    kind: icon
+    position: 目次 > 見出しの右
+    description: 比較元から中身が変わったセクション
+    label: 塗った円のアイコン
+    visible_when: '`base` があり、`ref` を `diff.base` にして取った `markdown` とその見出しの下が違うとき'
+    source: 文書の取得.markdown（`ref` を `diff.base` にして取ったものと比べる）
+    notes:
+      読み上げ名: 視覚に出さない `変更`
+  - name: コメントの追加
+    kind: button
+    position: 本文 > 選んだ文字列の近く
+    description: mdmark が描くコメントのボタンと入力。保存すると `commentStore.save` でコメントの置き場所へ溜める
+    visible_when: 本文の文字列を選んだとき
+    action: 保存でコメントを溜め、コメントのパネルを開いて一覧とトップバーの件数を描き直す。mdmark は本文の中でコメントした文字列にマーカー（下線と地の色）を付ける
+  - name: コメントのパネル
+    kind: aside
+    position: 本文の右（画面幅が 48rem 未満では画面の下から出す面）
+    description: このブラウザのタブで溜めたコメントの一覧。他の文書のコメントも並べる
+    label: 見出し `コメント` と `{件数} 件`
+    visible_when: トップバーの `commentPanelToggle` か、コメントを保存したとき
+    notes:
+      読み上げ名: '`コメント`'
+  - name: コメントのパネルを閉じる
+    kind: button
+    position: コメントのパネル > 見出しの右
+    description: パネルを閉じる
+    label: バツのアイコン
+    visible_when: コメントのパネルを開いているとき
+    action: クリックか Esc でパネルを閉じ、トップバーのコメントのボタンへフォーカスを戻す
+    notes:
+      読み上げ名: '`閉じる`'
+  - name: すべて選択
+    kind: checkbox
+    position: コメントのパネル > 一覧の上
+    description: 溜めたコメントをまとめて選ぶ
+    label: '`すべて選択`'
+    type: 真偽値
+    visible_when: 溜めたコメントがあるとき
+    initial_value: 全て選んでいればオン、一部なら途中の状態（`indeterminate`）
+    action: 切り替えで全てのコメントの選択をそろえる
+  - name: コメントの選択
+    kind: checkbox
+    position: コメントのパネル > コメント
+    description: コピー・起票に含めるか
+    type: 真偽値
+    visible_when: 溜めたコメントごと
+    initial_value: 追加したときはオン
+    action: 切り替えでそのコメントの選択を変える
+    notes:
+      読み上げ名: '`{順番} 件目を選択`'
+  - name: コメントの場所
+    kind: link
+    position: コメントのパネル > コメント
+    description: コメントした文書と直前の見出しの並び
+    label: '`{文書の名前} › {見出し} › {見出し}`（見出しが無いときは `{文書の名前} › 冒頭`）'
+    visible_when: 溜めたコメントごと
+    action: クリックで本文のその箇所へ移る。他の文書のコメントは、コメントしたリビジョンのその文書を開いてから移る
+    action_ref: dev/設計書/インターフェース定義/開発ドキュメントサーバー/文書の取得#
+    notes:
+      見出しの求め方: 保存したときに、描いた本文の中で `prefix`・`quote`・`suffix` に当たる箇所の前にある見出しを階層ごとに取る
+  - name: コメントの引用
+    kind: label
+    position: コメントのパネル > コメント
+    description: 選んだ文字列
+    label: '`「{選んだ文字列}」`（長いときは 2 行で切って `…` を付ける）'
+    visible_when: 溜めたコメントごと
+  - name: コメントの本文
+    kind: label
+    position: コメントのパネル > コメント
+    description: 書いたコメント
+    visible_when: 溜めたコメントごと（修正中はコメントの修正欄）
+  - name: コメントの修正
+    kind: button
+    position: コメントのパネル > コメント > 右上
+    description: コメントの本文をその場で修正する
+    label: 鉛筆のアイコン
+    visible_when: 溜めたコメントごと（修正中を除く）
+    action: クリックで本文をコメントの修正欄に替える
+    notes:
+      読み上げ名: '`修正`'
+  - name: コメントの削除
+    kind: button
+    position: コメントのパネル > コメント > 右上
+    description: コメントを削除する
+    label: ごみ箱のアイコン
+    visible_when: 溜めたコメントごと（修正中を除く）
+    action: クリックでそのコメントを置き場所から削除し、一覧・件数・本文のマーカー（mdmark の `update`）を描き直す
+    notes:
+      読み上げ名: '`削除`'
+  - name: コメントの修正欄
+    kind: textarea
+    position: コメントのパネル > 修正中のコメント
+    description: コメントの本文
+    io: 入力
+    type: 文字列
+    visible_when: 修正中
+    required: true
+    autofocus: true
+    initial_value: そのコメントの本文
+    notes:
+      読み上げ名: '`コメント`'
+  - name: 修正のキャンセル
+    kind: button
+    position: コメントのパネル > 修正中のコメント
+    description: 修正を捨てる
+    label: '`キャンセル`'
+    visible_when: 修正中
+    action: クリックか Esc で元の本文に戻す
+  - name: 修正の保存
+    kind: button
+    position: コメントのパネル > 修正中のコメント
+    description: 修正した本文を置き場所へ書き戻す
+    label: '`保存`（プライマリ）'
+    visible_when: 修正中
+    action: クリックで本文を書き戻し、一覧と本文のマーカー（mdmark の `update`）を描き直す
+  - name: 選択をコピー
+    kind: button
+    position: コメントのパネル > フッター
+    description: 選んだコメントをまとめてクリップボードへコピーする
+    label: '`選択 {件数} 件をコピー`（プライマリ）'
+    visible_when: 溜めたコメントがあるとき
+    enabled_when: 選んだコメントが 1 件以上のとき
+    action: クリックで選んだコメントを一覧の順に、配信元の ID・リビジョン・文書のパス・見出し・引用・本文をまとめてコピーし、結果を通知で出す
+  - name: Issue を作成
+    kind: button
+    position: コメントのパネル > フッター
+    description: 選んだコメントを載せた GitHub の Issue の作成画面を開く
+    label: '`Issue を作成`'
+    visible_when: 溜めたコメントがあり、`github` が `null` でないとき
+    enabled_when: 選んだコメントが 1 件以上のとき
+    constraints: URL の長さは非機能要件の `Issue の作成画面の URL の長さ` の決定値以下
+    source: 文書の取得.github
+    action: クリックで選んだコメントの全文をクリップボードへコピーしてから、`github` のリポジトリの Issue の作成画面を、起票のラベルとコメントを載せた `body` で別のタブに開く。URL が上限を超えるときは、上限に収まるまで `body` の末尾を切り詰め、末尾に空行を挟んで `…（長さの上限を超えたため、本文の末尾を切り詰めました。全文はクリップボードにコピーしています）` を書き添える
+    refs:
+      - dev/設計書/非機能要件/非機能要件#requirements[Issue の作成画面の URL の長さ].value
+  - name: コメントが無いことの表示
+    kind: label
+    position: コメントのパネル
+    description: 溜めたコメントが無いことと、追加の仕方
+    label: '`コメントはありません。本文の文字列を選ぶと追加できます。`'
+    visible_when: 溜めたコメントが無いとき
+  - name: 通知
+    kind: toast
+    position: 画面の右下
+    description: コピー・起票・列の表示の保存の結果
+    label: '`選択 {件数} 件をクリップボードにコピーしました。` / `クリップボードにコピーできませんでした。` / `Issue の作成画面を別のタブで開きました。`（切り詰めたときは続けて `本文が長いため末尾を切り詰め、全文をクリップボードにコピーしました。`） / `列の表示を保存できませんでした。`'
+    visible_when: 選択をコピー・Issue を作成を押したとき、列の表示の保存に失敗したとき
+    notes:
+      読み上げ: '`role="status"` で読み上げる。失敗は `role="alert"`'
+  - name: 検索のダイアログ
+    kind: dialog
+    component: dev/設計書/部品設計/検索のダイアログ#
+    args:
+      - name: open
+        value: トップバーの `searchOpen` か Ctrl+K・`/` で `true`
+      - name: source
+        value: 文書の取得.source
+      - name: ref
+        value: 文書の取得.ref
+    position: 画面の中央の上
+    description: 開いている配信元・リビジョンの文書を語で探す
+    visible_when: 検索を開いたとき
+    action: '`resultSelect` で `rev` を保ったその文書を開く'
+    action_ref: dev/設計書/インターフェース定義/開発ドキュメントサーバー/画面の検索#
+  - name: ショートカットの一覧
+    kind: dialog
+    component: dev/設計書/部品設計/ショートカットの一覧#
+    args:
+      - name: open
+        value: '`?` で `true`'
+      - name: screen
+        value: '`doc-view`'
+      - name: singleKey
+        value: ブラウザに保存した 1 文字のショートカットの設定（無ければ `true`）
+    position: 画面の中央
+    description: この画面で使えるキー
+    visible_when: '`?` を押したとき'
+  - name: キーボードのショートカット
+    kind: keyboard
+    position: 画面全体
+    description: 画面全体で受けるキー
+    visible_when: 常時（入力欄にフォーカスがあるときと、ダイアログを開いているときは 1 文字のキーを受けない）
+    action: Ctrl+K（macOS は ⌘K）と `/` で検索のダイアログ、`?` でショートカットの一覧を開く。`/`・`?` は 1 文字のショートカットを切ったとき受けない
+screen: frontend/src/features/docs/doc-view/doc-view-screen.tsx
+mock: dev/mock/pages/doc-view/36/default/
+lead: '`/{配信元の ID}/{文書のパス}?rev={リビジョン}&base={比較元}` で、1 文書の本文を種類のタブ・サイドバー・パンくず・目次と一緒に読む画面。本文の文字列にコメントを溜め、まとめてコピー・起票できる。'
+input_checks:
+  - element: コメントの修正欄
+    violation: 空白だけか空
+    trigger: 修正の保存のクリック
+    message: '`コメントを入力してください。`'
+    position: 修正欄の下
+notes:
+  URL: '`/{配信元の ID}/{文書のパス}`。文書のパスを省いた `/{配信元の ID}` は配信元のトップ（一番左のタブの一番上の文書）。search パラメータは `rev`（開くリビジョン。省くと `defaultRef`）と `base`（比較元。省くと差分を出さない）で、TanStack Router の `validateSearch` と Zod で検査する。`/` は配信中の配信元の先頭のトップへ移り、配信中の配信元が無ければ設定画面へ移る'
+  コメントの置き場所: ブラウザのタブの `sessionStorage` に、配信元の ID・リビジョン・文書のパス・見出しの並び・`quote`・`prefix`・`suffix`・本文・選択を溜める。再読み込みしても残り、タブを閉じると消える。サーバーへは送信しない
+  404 のとき: 文書の取得が 404 を返したら、URL を変えずに見つからない画面を出す（`dev/設計書/画面設計/見つからない画面`）
+refs:
+  - dev/設計書/シナリオ/単一ユースケース/利用者が画面で読む#
+test_file: tests/integration/frontend/doc-view-screen.spec.ts

@@ -1,0 +1,65 @@
+title: "画面 / 文書の画面"
+lead: 文書の画面・見つからない画面と、両方が使う検索・コメントの構成。
+directory: |-
+  ```
+  frontend/src/features/docs/
+  ├── doc-view/
+  │   ├── search.ts             # URL の search の検証
+  │   ├── queries.ts            # 文書の問い合わせとルートの loader
+  │   ├── nav.ts                # ナビゲーションからの開いているページ・タイトル
+  │   ├── toc.ts                # 目次と変わった見出し
+  │   ├── doc-view-screen.tsx   # 文書の画面
+  │   ├── hooks/use-mdmark.ts   # mdmark の読み込み
+  │   └── components/           # サイドバー・タブ・パンくず・見出し・差分の帯・変換の失敗・空のタブ・本文・目次・読み込み中・ドロワー
+  ├── not-found/
+  │   ├── missing.ts            # 見つからなかったものの説明
+  │   └── not-found-screen.tsx  # 見つからない画面
+  └── shared/
+      ├── search-dialog/
+      │   ├── search-dialog.tsx # 検索のダイアログ
+      │   └── highlight.ts      # 一致した箇所の分割
+      └── comments/
+          ├── comment-store.ts  # コメントのストア（sessionStorage）
+          ├── comment-format.ts # コピーの本文と Issue の URL
+          └── comment-panel.tsx # コメントのパネル
+  ```
+diagrams:
+  - name: 文書の画面
+    diagram: |-
+      ```mermaid
+      classDiagram
+        direction LR
+        class 文書のルート
+        class 文書の問い合わせ
+        class 文書の画面
+        class 本文
+        class mdmarkの読み込み
+        class コメントのストア
+        class コメントのパネル
+        class 検索のダイアログ
+        class 目次
+        class サイドバー
+        文書のルート --> 文書の問い合わせ : loader
+        文書の画面 --> 文書の問い合わせ
+        文書の画面 --> サイドバー
+        文書の画面 --> 本文
+        文書の画面 --> 目次
+        文書の画面 --> 検索のダイアログ
+        文書の画面 --> コメントのパネル
+        本文 --> mdmarkの読み込み
+        本文 --> コメントのストア : commentStore
+        コメントのパネル --> コメントのストア
+      ```
+  - name: 見つからない画面
+    diagram: |-
+      ```mermaid
+      classDiagram
+        direction LR
+        class 見つからない画面
+        class 見つからなかったものの説明
+        class 検索のダイアログ
+        見つからない画面 --> 見つからなかったものの説明
+        見つからない画面 --> 検索のダイアログ
+      ```
+notes:
+  mdmark の未実装の機能: 差分の強調（`baseMarkdown`）・列の出し入れ（`onColumnsChange`）・コメントの修正と削除（`commentStore.update`・`remove`）・`reloadComments`・`focusComment` は mdmark#222 で入る。入るまでは呼ばずに済む範囲で実装する

@@ -237,7 +237,7 @@ status_codes:
   - code: '422'
     condition: 保存後の端末の設定がスキーマに通らない
     notes: '`errors[]` に違反したキーのパスと理由を全て並べる'
-error_format: RFC 9457 の `application/problem+json`。検証の違反は `errors[]` に `{path, reason}` で並べる（`path` は `sources[1].id` の形）
+error_format: RFC 9457 の `application/problem+json`。拡張メンバーは camelCase（`nextSteps`・`errors[]`）。検証の違反は `errors[]` に `{path, reason}` で並べる（`path` は `sources[1].id` の形）
 constraints:
   - item: オリジンの確認
     constraint: '`Origin` が画面のオリジンと同じか、`Origin` が無く `Sec-Fetch-Site` が `same-origin` のときだけ受ける'
@@ -249,4 +249,8 @@ constraints:
     constraint: 制限なし（`127.0.0.1` でだけ待ち受ける）
   - item: タイムアウト
     constraint: 制限なし
+  - item: JSON のキー
+    constraint: リクエストの本文とレスポンスのキーは camelCase
+  - item: operationId
+    constraint: '`{tag}-{関数名}` の `settings-put_settings_sources`'
 test_file: tests/integration/server/test_put_settings_sources.py

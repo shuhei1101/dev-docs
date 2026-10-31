@@ -1,0 +1,28 @@
+title: "画面 / アプリとルート / error-fallback.tsx"
+lead: 描画中の例外の表示。ErrorBoundary とルートの `errorComponent` が使う。
+components:
+  - name: ErrorFallback
+    title: 画面の例外の表示
+    kind: コンポーネント
+    container: app/error-fallback.tsx
+    usecase: 共通
+    role: 例外の表示
+    summary: '`画面を表示できませんでした。` と再読み込みのボタンを出し、`[error]` `render_failed` を書く'
+    props:
+      - name: error
+        type: unknown
+        required: true
+        description: 例外
+      - name: reset
+        type: () => void
+        required: false
+        description: やり直し（無いときは `location.reload()`）
+    unit_tests:
+      - name: test_error_fallback
+        case: 正常
+        summary: 例外を表示してログを書く
+        condition: '`new Error("x")` を渡す'
+        mock: ロガー（`vi.mock`）
+        expected: 文言と再読み込みのボタンがあり、ロガーの `error` が `render_failed` で 1 回
+test_files:
+  - tests/unit/frontend/src/app/error-fallback.test.tsx

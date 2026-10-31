@@ -1,0 +1,43 @@
+title: "vitest"
+kind: "CLI"
+version:
+  current: 5.0.5
+  latest: 5.0.5
+  checked_on: '2026-10-30'
+  source: package.json
+catalogs:
+  - name: パッケージ
+    version: 5.0.5
+    entries:
+      - name: vitest
+        kind: CLI
+        purpose: 単体テスト・結合テストを流す（`vi.mock`・`vi.fn`）
+      - name: '@testing-library/react'
+        kind: ライブラリ
+        purpose: 部品を描いて役割と名前で引く
+        notes:
+          版: 16.3.3
+      - name: '@testing-library/user-event'
+        kind: ライブラリ
+        purpose: キー・クリックの操作
+        notes:
+          版: 14.6.8
+      - name: jsdom
+        kind: ライブラリ
+        purpose: テストの DOM
+        notes:
+          版: 30.1.3
+lead: Vite の設定で流すテストランナーと、React の部品のテストのライブラリ。
+purl: pkg:npm/vitest
+dependency_scope: 開発のみ
+adoption: 採用
+used_in:
+  - frontend/vitest.config.ts
+upstream: vitest-dev/vitest
+verification:
+  state: 済
+  date: '2026-10-30'
+  detail: '`npm run test:unit` で 101 件が通ることを確かめた。'
+license: MIT（商用利用可）
+official_url: https://vitest.dev/
+docs_url: https://vitest.dev/api/

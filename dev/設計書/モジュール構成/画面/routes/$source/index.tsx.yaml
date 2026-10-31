@@ -1,0 +1,9 @@
+title: "画面 / アプリとルート / $source/index.tsx"
+lead: '`/{配信元の ID}` のルート。文書のパスを省いたときは配信元の最初の文書を開く。'
+constants:
+  - name: Route
+    title: 配信元のトップのルート
+    container: routes/$source/index.tsx
+    usecase: 文書を読む
+    summary: '`createFileRoute("/$source/")({validateSearch: DocViewSearchSchema, loaderDeps: ({search}) => search, loader: loadDocument, component: DocViewScreen, notFoundComponent: NotFoundScreen, pendingMs: KEEP_PREVIOUS_MS})`。`path` は空で `loadDocument` を呼ぶ'
+    value: createFileRoute("/$source/")({...})

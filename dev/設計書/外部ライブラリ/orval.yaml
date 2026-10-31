@@ -1,0 +1,40 @@
+title: "orval"
+kind: "CLI"
+version:
+  current: 8.45.0
+  latest: 8.45.0
+  checked_on: '2026-10-30'
+  source: package.json
+catalogs:
+  - name: 設定
+    version: 8.45.0
+    entries:
+      - name: input.target
+        kind: 設定
+        purpose: サーバーの `/_api/openapi.json`
+      - name: output.client
+        kind: 設定
+        purpose: '`react-query`（問い合わせの options と mutation のフック）と `zod`'
+      - name: output.mock
+        kind: 設定
+        purpose: MSW のハンドラ（`get{Tag}Mock()`）
+      - name: output.override.mutator
+        kind: 設定
+        purpose: fetch を `shared/adapters/api-client.ts` に通す
+      - name: output.target
+        kind: 設定
+        purpose: '`src/shared/api/generated/`'
+lead: OpenAPI から API の関数・型・zod のスキーマ・MSW のハンドラを生成する CLI。
+purl: pkg:npm/orval
+dependency_scope: 開発のみ
+adoption: 採用
+used_in:
+  - frontend/orval.config.ts
+upstream: orval-labs/orval
+verification:
+  state: 済
+  date: '2026-10-30'
+  detail: '`npm run api:generate` で API クライアント・zod・MSW のモックができることを確かめた。'
+license: MIT（商用利用可）
+official_url: https://orval.dev/
+docs_url: https://orval.dev/reference/configuration/overview

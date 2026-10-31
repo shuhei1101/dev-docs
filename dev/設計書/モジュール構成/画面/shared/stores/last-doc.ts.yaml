@@ -1,0 +1,32 @@
+title: "画面 / 共通 / last-doc.ts"
+lead: 設定画面から文書の画面へ戻る先（直前に開いていた文書）。
+stores:
+  - name: useLastDocStore
+    title: 直前の文書のストア
+    container: shared/stores/last-doc.ts
+    usecase: 共通
+    role: ストア
+    summary: Zustand でメモリにだけ持つ（再読み込みで消える）直前の文書の画面の URL
+    state:
+      - name: href
+        title: 直前の文書の URL
+        type: string | null
+        initial: 'null'
+        description: 文書の画面のパスと search。`null` のとき、設定画面は `/` へ戻る
+    actions:
+      - name: setHref
+        title: 直前の文書の記録
+        summary: '`href` を書き換える'
+        kind: 関数
+        scope: public
+        args:
+          - name: href
+            type: string
+            required: true
+            passing: positional
+            description: 文書の画面の URL
+        returns:
+          type: void
+          description: 何も返さない
+refs:
+  - dev/設計書/画面設計/設定画面#elements[文書の画面に戻る]

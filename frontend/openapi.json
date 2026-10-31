@@ -1,0 +1,1222 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "FastAPI",
+    "version": "0.1.0"
+  },
+  "paths": {
+    "/_api/settings/sources": {
+      "get": {
+        "tags": [
+          "settings"
+        ],
+        "summary": "Get Settings Sources",
+        "operationId": "settings-get_settings_sources",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SettingsSourcesView"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "settings"
+        ],
+        "summary": "Put Settings Sources",
+        "operationId": "settings-put_settings_sources",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SettingsSourcesRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SettingsSourcesResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/_api/sources/{source}/docs": {
+      "get": {
+        "tags": [
+          "view"
+        ],
+        "summary": "Get Document Default",
+        "operationId": "view-get_document_default",
+        "parameters": [
+          {
+            "name": "source",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Source"
+            }
+          },
+          {
+            "name": "ref",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Ref"
+            }
+          },
+          {
+            "name": "diff",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Diff"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DocumentResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/_api/sources/{source}/docs/{path}": {
+      "get": {
+        "tags": [
+          "view"
+        ],
+        "summary": "Get Document",
+        "operationId": "view-get_document",
+        "parameters": [
+          {
+            "name": "source",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Source"
+            }
+          },
+          {
+            "name": "path",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Path"
+            }
+          },
+          {
+            "name": "ref",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Ref"
+            }
+          },
+          {
+            "name": "diff",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Diff"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DocumentResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/_api/sources/{source}/search": {
+      "get": {
+        "tags": [
+          "view"
+        ],
+        "summary": "Search Page",
+        "operationId": "view-search_page",
+        "parameters": [
+          {
+            "name": "source",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Source"
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 200,
+              "title": "Q"
+            }
+          },
+          {
+            "name": "ref",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Ref"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 20,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScreenSearchResult"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/_api/sources/{source}/refs": {
+      "get": {
+        "tags": [
+          "view"
+        ],
+        "summary": "List Refs",
+        "operationId": "view-list_refs",
+        "parameters": [
+          {
+            "name": "source",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Source"
+            }
+          },
+          {
+            "name": "commits",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 0,
+              "default": 20,
+              "title": "Commits"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefsResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/_api/sources/{source}/columns": {
+      "put": {
+        "tags": [
+          "view"
+        ],
+        "summary": "Put Columns",
+        "operationId": "view-put_columns",
+        "parameters": [
+          {
+            "name": "source",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Source"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ColumnsRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ColumnsRequest"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "ColumnsRequest": {
+        "properties": {
+          "table": {
+            "type": "string",
+            "title": "Table"
+          },
+          "hidden": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Hidden"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "table",
+          "hidden"
+        ],
+        "title": "ColumnsRequest",
+        "description": "PUT `/_api/sources/{source}/columns` の本文と応答。"
+      },
+      "CommitItem": {
+        "properties": {
+          "commit": {
+            "type": "string",
+            "title": "Commit"
+          },
+          "date": {
+            "type": "string",
+            "title": "Date"
+          },
+          "subject": {
+            "type": "string",
+            "title": "Subject"
+          }
+        },
+        "type": "object",
+        "required": [
+          "commit",
+          "date",
+          "subject"
+        ],
+        "title": "CommitItem",
+        "description": "最近の commit 1 件。"
+      },
+      "ConversionError": {
+        "properties": {
+          "reason": {
+            "type": "string",
+            "enum": [
+              "timeout",
+              "exit",
+              "not_runnable",
+              "invalid_yaml"
+            ],
+            "title": "Reason"
+          },
+          "kind": {
+            "type": "string",
+            "title": "Kind"
+          },
+          "script": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Script"
+          },
+          "detail": {
+            "type": "string",
+            "title": "Detail"
+          },
+          "file": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "File"
+          },
+          "line": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Line"
+          },
+          "column": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Column"
+          }
+        },
+        "type": "object",
+        "required": [
+          "reason",
+          "kind",
+          "detail"
+        ],
+        "title": "ConversionError",
+        "description": "文書の取得の `conversion_error`（変換の失敗と同じフィールド）。"
+      },
+      "DocumentDiff": {
+        "properties": {
+          "base": {
+            "type": "string",
+            "title": "Base"
+          },
+          "change": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "added",
+                  "modified"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Change"
+          },
+          "changedItems": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Changeditems"
+          }
+        },
+        "type": "object",
+        "required": [
+          "base",
+          "change"
+        ],
+        "title": "DocumentDiff",
+        "description": "文書の取得の `diff`（比べたリビジョンと、返した文書の変化・変わった項目）。"
+      },
+      "DocumentResponse": {
+        "properties": {
+          "source": {
+            "type": "string",
+            "title": "Source"
+          },
+          "ref": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ref"
+          },
+          "path": {
+            "type": "string",
+            "title": "Path"
+          },
+          "markdown": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Markdown"
+          },
+          "conversionError": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ConversionError"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "tabs": {
+            "items": {
+              "$ref": "#/components/schemas/NavTab"
+            },
+            "type": "array",
+            "title": "Tabs"
+          },
+          "github": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/GitHubTarget"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "columns": {
+            "additionalProperties": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "type": "object",
+            "title": "Columns"
+          },
+          "tableKeys": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Tablekeys"
+          },
+          "diff": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DocumentDiff"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updatedat"
+          }
+        },
+        "type": "object",
+        "required": [
+          "source",
+          "ref",
+          "path",
+          "markdown",
+          "conversionError",
+          "tabs",
+          "github",
+          "columns",
+          "tableKeys",
+          "diff",
+          "updatedAt"
+        ],
+        "title": "DocumentResponse",
+        "description": "GET `/_api/sources/{source}/docs[/{path}]` の応答。"
+      },
+      "GitHubTarget": {
+        "properties": {
+          "repository": {
+            "type": "string",
+            "title": "Repository"
+          },
+          "issueLabels": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Issuelabels"
+          }
+        },
+        "type": "object",
+        "required": [
+          "repository",
+          "issueLabels"
+        ],
+        "title": "GitHubTarget",
+        "description": "文書の取得の `github`（起票先）。"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "NavItem": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "group",
+              "page"
+            ],
+            "title": "Kind"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "path": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Path"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/NavItem"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "change": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "added",
+                  "modified",
+                  "deleted"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Change"
+          }
+        },
+        "type": "object",
+        "required": [
+          "kind",
+          "title"
+        ],
+        "title": "NavItem",
+        "description": "サイドバーの見出しか文書の 1 行。"
+      },
+      "NavTab": {
+        "properties": {
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "active": {
+            "type": "boolean",
+            "title": "Active"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/NavItem"
+            },
+            "type": "array",
+            "title": "Items"
+          }
+        },
+        "type": "object",
+        "required": [
+          "title",
+          "active",
+          "items"
+        ],
+        "title": "NavTab",
+        "description": "上のタブ 1 つとそのサイドバー。"
+      },
+      "RefItem": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "commit": {
+            "type": "string",
+            "title": "Commit"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "commit"
+        ],
+        "title": "RefItem",
+        "description": "ブランチかタグ 1 つ。"
+      },
+      "RefsResponse": {
+        "properties": {
+          "git": {
+            "type": "boolean",
+            "title": "Git"
+          },
+          "defaultRef": {
+            "type": "string",
+            "title": "Defaultref"
+          },
+          "branches": {
+            "items": {
+              "$ref": "#/components/schemas/RefItem"
+            },
+            "type": "array",
+            "title": "Branches"
+          },
+          "tags": {
+            "items": {
+              "$ref": "#/components/schemas/RefItem"
+            },
+            "type": "array",
+            "title": "Tags"
+          },
+          "commits": {
+            "items": {
+              "$ref": "#/components/schemas/CommitItem"
+            },
+            "type": "array",
+            "title": "Commits"
+          }
+        },
+        "type": "object",
+        "required": [
+          "git",
+          "defaultRef"
+        ],
+        "title": "RefsResponse",
+        "description": "GET `/_api/sources/{source}/refs` の応答。"
+      },
+      "ScreenSearchItem": {
+        "properties": {
+          "path": {
+            "type": "string",
+            "title": "Path"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "snippets": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Snippets"
+          }
+        },
+        "type": "object",
+        "required": [
+          "path",
+          "name",
+          "snippets"
+        ],
+        "title": "ScreenSearchItem",
+        "description": "画面の検索の結果の文書。"
+      },
+      "ScreenSearchResult": {
+        "properties": {
+          "totalCount": {
+            "type": "integer",
+            "title": "Totalcount"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ScreenSearchItem"
+            },
+            "type": "array",
+            "title": "Items"
+          }
+        },
+        "type": "object",
+        "required": [
+          "totalCount",
+          "items"
+        ],
+        "title": "ScreenSearchResult",
+        "description": "GET `/_api/sources/{source}/search` の応答。"
+      },
+      "SettingsSourceRow": {
+        "properties": {
+          "id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Id"
+          },
+          "config": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Config"
+          },
+          "enabled": {
+            "type": "boolean",
+            "title": "Enabled"
+          },
+          "scope": {
+            "$ref": "#/components/schemas/SourceScope"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "serving",
+              "not_served",
+              "disabled",
+              "pending_reload"
+            ],
+            "title": "Status"
+          },
+          "errors": {
+            "items": {
+              "$ref": "#/components/schemas/SourceViolation"
+            },
+            "type": "array",
+            "title": "Errors"
+          },
+          "configVersion": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SourceConfigVersion"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "config",
+          "enabled",
+          "scope",
+          "status"
+        ],
+        "title": "SettingsSourceRow",
+        "description": "端末の設定の取得の `sources[]` の 1 行（行の値に配信元の状態を重ねたもの）。"
+      },
+      "SettingsSourceStatus": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "serving",
+              "not_served",
+              "disabled"
+            ],
+            "title": "Status"
+          },
+          "errors": {
+            "items": {
+              "$ref": "#/components/schemas/SourceViolation"
+            },
+            "type": "array",
+            "title": "Errors"
+          },
+          "configVersion": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SourceConfigVersion"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "status"
+        ],
+        "title": "SettingsSourceStatus",
+        "description": "読み直した後の配信元 1 つの状態。"
+      },
+      "SettingsSourcesRequest": {
+        "properties": {
+          "sources": {
+            "items": {
+              "$ref": "#/components/schemas/SourceEntry"
+            },
+            "type": "array",
+            "title": "Sources"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "sources"
+        ],
+        "title": "SettingsSourcesRequest",
+        "description": "PUT `/_api/settings/sources` の本文。"
+      },
+      "SettingsSourcesResponse": {
+        "properties": {
+          "sources": {
+            "items": {
+              "$ref": "#/components/schemas/SettingsSourceStatus"
+            },
+            "type": "array",
+            "title": "Sources"
+          }
+        },
+        "type": "object",
+        "required": [
+          "sources"
+        ],
+        "title": "SettingsSourcesResponse",
+        "description": "読み直した後の配信元ごとの状態。"
+      },
+      "SettingsSourcesView": {
+        "properties": {
+          "settingsPath": {
+            "type": "string",
+            "title": "Settingspath"
+          },
+          "sources": {
+            "items": {
+              "$ref": "#/components/schemas/SettingsSourceRow"
+            },
+            "type": "array",
+            "title": "Sources"
+          }
+        },
+        "type": "object",
+        "required": [
+          "settingsPath",
+          "sources"
+        ],
+        "title": "SettingsSourcesView",
+        "description": "GET `/_api/settings/sources` の応答。"
+      },
+      "SourceConfigVersion": {
+        "properties": {
+          "config": {
+            "type": "string",
+            "title": "Config"
+          },
+          "server": {
+            "type": "string",
+            "title": "Server"
+          }
+        },
+        "type": "object",
+        "required": [
+          "config",
+          "server"
+        ],
+        "title": "SourceConfigVersion",
+        "description": "設定のバージョンとサーバーが読めるバージョン。"
+      },
+      "SourceEntry": {
+        "properties": {
+          "config": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Config"
+          },
+          "id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Id"
+          },
+          "enabled": {
+            "type": "boolean",
+            "title": "Enabled",
+            "default": true
+          },
+          "scope": {
+            "$ref": "#/components/schemas/SourceScope",
+            "default": {
+              "read": []
+            }
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "config"
+        ],
+        "title": "SourceEntry",
+        "description": "端末の設定の `sources[]` の 1 行。"
+      },
+      "SourceScope": {
+        "properties": {
+          "read": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Read"
+          },
+          "write": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Write"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "SourceScope",
+        "description": "`sources[].scope` の `read`・`write`。"
+      },
+      "SourceViolation": {
+        "properties": {
+          "path": {
+            "type": "string",
+            "title": "Path"
+          },
+          "reason": {
+            "type": "string",
+            "title": "Reason"
+          }
+        },
+        "type": "object",
+        "required": [
+          "path",
+          "reason"
+        ],
+        "title": "SourceViolation",
+        "description": "検証で外した理由 1 件。"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      }
+    }
+  }
+}

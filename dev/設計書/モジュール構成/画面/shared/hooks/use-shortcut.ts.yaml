@@ -1,0 +1,55 @@
+title: "画面 / 共通 / use-shortcut.ts"
+lead: ショートカットの定義の ID でキーを受けるフック。
+functions:
+  - name: useShortcut
+    title: ショートカットの受け取り
+    kind: フック
+    container: shared/hooks/use-shortcut.ts
+    usecase: 共通
+    role: フック
+    summary: '`SHORTCUTS` の定義のキーを TanStack Hotkeys の `useHotkey` で受け、操作を呼ぶ'
+    scope: public
+    args:
+      - name: id
+        type: ShortcutId
+        required: true
+        passing: positional
+        description: 定義の ID
+      - name: handler
+        type: () => void
+        required: true
+        passing: positional
+        description: キーを押したときの操作
+      - name: options
+        type: '{enabled?: boolean}'
+        required: false
+        passing: positional
+        description: 'ダイアログを開いている間など受けないときは `enabled: false`'
+    returns:
+      type: void
+      description: 何も返さない
+    process: |-
+      1. 設定のストアから 1 文字のショートカットの設定を読む
+      2. 定義のキーごとに `useHotkey` を登録する。1 文字のキーは、設定がオフのときと入力欄（`input`・`textarea`・`contenteditable`）にフォーカスがあるときに受けない
+      3. 受けたら既定の動きを止めて `handler` を呼ぶ
+    unit_tests:
+      - name: test_use_shortcut
+        case: 正常
+        summary: キーで操作を呼ぶ
+        condition: '`search` を登録して `/` を押す'
+        mock: なし（`@testing-library/user-event`）
+        expected: '`handler` が 1 回'
+      - name: test_use_shortcut_when_input_focused
+        case: 正常
+        summary: 入力中は 1 文字を受けない
+        condition: 入力欄にフォーカスして `/` と Ctrl+K
+        mock: なし（`@testing-library/user-event`）
+        expected: '`/` では呼ばれず、Ctrl+K で 1 回'
+      - name: test_use_shortcut_when_single_key_off
+        case: 正常
+        summary: 1 文字を切ったとき
+        condition: 設定のストアの 1 文字をオフにして `?`
+        mock: なし
+        expected: '`handler` が呼ばれない'
+test_files:
+  - tests/unit/frontend/src/shared/hooks/use-shortcut.test.tsx

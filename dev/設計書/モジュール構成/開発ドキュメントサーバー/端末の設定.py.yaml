@@ -172,7 +172,7 @@ data_models:
     usecase: 端末の設定
     role: DTO
     summary: PUT `/_api/settings/sources` の本文
-    description: '`pydantic.BaseModel`。型の合わない本文は FastAPI が 422 にする前に、起動の『例外の変換の登録』で problem+json の `errors[]` に揃える。'
+    description: '共通の『画面の API のモデル』（`ApiModel`。JSON のキーは camelCase）を継承する。型の合わない本文は FastAPI が 422 にする前に、起動の『例外の変換の登録』で problem+json の `errors[]` に揃える。'
     properties:
       - name: sources
         title: 配信元
@@ -185,7 +185,7 @@ data_models:
     usecase: 端末の設定
     role: DTO
     summary: 読み直した後の配信元ごとの状態
-    description: '`pydantic.BaseModel`。`from_statuses(statuses)` で配信元の状態の並びから作る。'
+    description: '共通の『画面の API のモデル』（`ApiModel`。JSON のキーは camelCase）を継承する。`from_statuses(statuses)` で配信元の状態の並びから作る。'
     properties:
       - name: sources
         title: 配信元
@@ -198,7 +198,7 @@ data_models:
     usecase: 端末の設定の取得
     role: DTO
     summary: 端末の設定の取得の `sources[]` の 1 行
-    description: '`pydantic.BaseModel`。'
+    description: '共通の『画面の API のモデル』（`ApiModel`。JSON のキーは camelCase）を継承する。'
     properties:
       - name: id
         title: 配信元の ID
@@ -243,7 +243,7 @@ data_models:
     usecase: 端末の設定の取得
     role: DTO
     summary: GET `/_api/settings/sources` の応答
-    description: '`pydantic.BaseModel`。'
+    description: '共通の『画面の API のモデル』（`ApiModel`。JSON のキーは camelCase）を継承する。'
     properties:
       - name: settings_path
         title: 端末の設定のパス
@@ -578,14 +578,14 @@ functions:
       1. GET `/_api/settings/sources` は、`handlers.terminal.file` を `settings_path` にし、`sources[]` の各行に、`config`（行に `id` があれば `id` も）が同じ配信元の状態の `id`・`status`・`errors`・`config_version` を重ねた（1 つの状態は 1 行にだけ重ねる。当たる状態が無い行は `status` を `pending_reload`・`id` を行の `id` にする） `SettingsSourcesView` を返す（配信元の一覧.状態の一覧）。`sources[]` は `handlers.terminal.file` を端末の設定の読み込みで読み直した値（配信元の保存の後も新しい行を返す）
       2. PUT `/_api/settings/sources` は、同じオリジンの確認を依存に持ち（同じオリジンの確認）、本文を `SettingsSourcesRequest` で受けて『配信元の保存』を `reload=handlers.reload_sources`・`lock=handlers.settings_lock` で `asyncio.to_thread` で呼び、`SettingsSourcesResponse` を返す（配信元の保存）
          - `TerminalConfigInvalidError` は例外の変換で 422 の problem+json になる
-      3. 各ルートの `operation_id` は、GET が `get_settings_sources`、PUT が `put_settings_sources`
+      3. ルーターは `APIRouter(tags=["settings"])` にする。各ルートの `name`（`operation_id` は渡さず、アプリの組み立てが operationId を `settings-{name}` にする）は、GET が `get_settings_sources`、PUT が `put_settings_sources`
     unit_tests:
       - name: test_build_settings_router_when_get
         case: 正常
         summary: 行に状態を重ねる
         condition: GET `/_api/settings/sources`、状態は `serving` 1 つと `not_served` 1 つ
         mock: 配線済みの関数（偽物）
-        expected: 200 で `settings_path` と `sources` の 2 行、`not_served` の行に `errors`
+        expected: 200 で `settingsPath` と `sources` の 2 行、`not_served` の行に `errors`
       - name: test_build_settings_router_when_put
         case: 正常
         summary: 保存して状態を返す

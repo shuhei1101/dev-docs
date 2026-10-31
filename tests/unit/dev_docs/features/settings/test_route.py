@@ -68,7 +68,7 @@ def test_build_settings_router_when_get(
     # 検証
     body = response.json()
     assert response.status_code == 200
-    assert body["settings_path"] == str(terminal.file)
+    assert body["settingsPath"] == str(terminal.file)
     assert [row["id"] for row in body["sources"]] == ["a", "b"]
     assert body["sources"][0]["config"] == ["/tmp/a/dev-docs.yaml"]
     assert body["sources"][0]["status"] == "serving"

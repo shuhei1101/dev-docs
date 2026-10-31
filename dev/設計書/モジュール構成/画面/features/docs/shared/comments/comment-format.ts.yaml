@@ -1,0 +1,87 @@
+title: "画面 / 文書の画面 / comment-format.ts"
+lead: 選んだコメントのコピーの本文と、Issue の作成画面の URL。
+constants:
+  - name: ISSUE_URL_MAX
+    title: Issue の作成画面の URL の上限
+    container: features/docs/shared/comments/comment-format.ts
+    usecase: コメントを溜める
+    summary: 非機能要件の `Issue の作成画面の URL の長さ` の決定値
+    value: '7200'
+  - name: TRUNCATED_NOTE
+    title: 切り詰めの書き添え
+    container: features/docs/shared/comments/comment-format.ts
+    usecase: コメントを溜める
+    summary: 切り詰めた `body` の末尾に空行を挟んで付ける文
+    value: '"…（長さの上限を超えたため、本文の末尾を切り詰めました。全文はクリップボードにコピーしています）"'
+functions:
+  - name: formatComments
+    title: コメントの本文
+    kind: 関数
+    container: features/docs/shared/comments/comment-format.ts
+    usecase: コメントを溜める
+    role: 変換
+    summary: 選んだコメントを一覧の順に Markdown の本文にする
+    scope: public
+    args:
+      - name: comments
+        type: DocComment[]
+        required: true
+        passing: positional
+        description: 選んだコメント
+    returns:
+      type: string
+      description: 'コメントごとに `### {文書の名前} › {見出し} › …`、`{配信元の ID} @ {リビジョン} : {文書のパス}`、`> {引用}`、本文を空行で区切って並べたもの'
+    process: |-
+      1. コメントごとにブロックを作り、`
+
+      ` でつなぐ（見出しが無いときは `冒頭`、Git 管理外はリビジョンを省く）
+      2. 引用の各行の頭に `> ` を付ける
+    unit_tests:
+      - name: test_format_comments
+        case: 正常
+        summary: 2 件を並べる
+        condition: 見出しのあるコメントと無いコメント
+        mock: なし
+        expected: 2 つ目の見出しが `{文書の名前} › 冒頭`、引用が `> ` で始まる
+  - name: buildIssueUrl
+    title: Issue の作成画面の URL
+    kind: 関数
+    container: features/docs/shared/comments/comment-format.ts
+    usecase: コメントを溜める
+    role: 変換
+    summary: '`github` のリポジトリの Issue の作成画面の URL を、上限に収めて作る'
+    scope: public
+    args:
+      - name: github
+        type: GitHubTarget
+        required: true
+        passing: positional
+        description: 文書の取得の `github`（リポジトリと起票のラベル）
+      - name: body
+        type: string
+        required: true
+        passing: positional
+        description: '`formatComments` の結果'
+    returns:
+      type: '{url: string; truncated: boolean}'
+      description: '`https://github.com/{owner}/{repo}/issues/new?labels={ラベル}&body={body}`'
+    process: |-
+      1. `URLSearchParams` で URL を組み、長さが `ISSUE_URL_MAX` 以下ならそのまま返す
+      2. 超えるときは、`body` の末尾を削って `\n\n` + `TRUNCATED_NOTE` を付けた URL が上限に収まる最大の長さを二分探索で求め、`truncated: true` で返す（サロゲートペアの途中で切らない）
+    unit_tests:
+      - name: test_build_issue_url
+        case: 正常
+        summary: 上限に収まる
+        condition: 短い `body`、ラベル `docs`
+        mock: なし
+        expected: '`truncated` が false、`labels=docs` と `body` を持つ'
+      - name: test_build_issue_url_when_too_long
+        case: 正常
+        summary: 末尾を切り詰める
+        condition: 日本語 10000 文字の `body`
+        mock: なし
+        expected: '`truncated` が true、URL の長さが `ISSUE_URL_MAX` 以下、戻した `body` が `TRUNCATED_NOTE` で終わる'
+refs:
+  - dev/設計書/非機能要件/非機能要件#requirements[Issue の作成画面の URL の長さ]
+test_files:
+  - tests/unit/frontend/src/features/docs/shared/comments/comment-format.test.ts

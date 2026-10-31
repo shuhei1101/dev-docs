@@ -23,10 +23,23 @@ overview:
     - id: GIT
       label: git
       kind: external
+    - id: FE
+      label: 画面
+      kind: system
+    - id: CDN
+      label: jsDelivr
+      kind: external
   edges:
     - from: U
+      to: FE
+      label: 閲覧
+    - from: FE
       to: SRV
       label: HTTP
+    - from: SRV
+      to: FE
+      label: 配信
+      line: dotted
     - from: CC
       to: SRV
       label: MCP
@@ -46,10 +59,14 @@ overview:
     - from: SRV
       to: GIT
       label: 子プロセス
+    - from: FE
+      to: CDN
+      label: mdmark の読み込み
   subgraphs:
     - id: D
       label: dev-docs
       nodes:
+        - FE
         - SRV
         - PLG
 repository:
@@ -59,6 +76,7 @@ repository:
   layout: |-
     ```tree
     dev-docs/
+    ├── frontend/                # 画面（React の SPA）
     ├── src/dev_docs/            # 開発ドキュメントサーバー
     │   └── migrations/          # 設定の移し替えの手順（{settings|dev-docs}/{バージョン}/steps.yaml）
     ├── schemas/                 # dev-docs.yaml と端末の設定のスキーマ
@@ -72,7 +90,7 @@ repository:
 subsystems:
   - name: 開発ドキュメントサーバー
     scope: server
-    role: 端末の設定に並べた配信元を 1 プロセス・1 ポートで配り、YAML の文書を画面の API・文書の MCP・管理の MCP で出す
+    role: 端末の設定に並べた配信元を 1 プロセス・1 ポートで配り、画面のビルドを配って、YAML の文書を画面の API・文書の MCP・管理の MCP で出す
     runtime: Python 3.14
     runs_on: 利用者の端末（`127.0.0.1`）
     implementation: src/dev_docs/__main__.py
@@ -84,6 +102,15 @@ subsystems:
     runs_on: 利用者の端末の Claude Code（ユーザースコープ）
     implementation: plugins/dev-docs/.claude-plugin/plugin.json
     status: planned
+  - name: 画面
+    scope: frontend
+    role: 文書の画面・設定画面・見つからない画面を 1 つの SPA で描き、画面の API を呼ぶ。ビルドは開発ドキュメントサーバーが配る
+    runtime: TypeScript 7（ブラウザ）
+    runs_on: 利用者のブラウザ
+    implementation: frontend/
+    status: planned
+    introduced:
+      pr: 36
 lead: dev-docs のサブシステムと、境界を越えて通信する外部システム。
 external_systems:
   - name: Claude Code
@@ -107,3 +134,11 @@ external_systems:
     status: planned
     notes:
       事前確認: '要否: 要。時点: 起動時・再読込時と管理の MCP の `check_project` で実行できるかを確かめ、失敗した配信元は配信しない'
+  - name: jsDelivr
+    purpose: 画面が mdmark（`dist/index.js`・`dist/index.css`）を実行時に読み込む
+    direction: 受信のみ
+    protocol: HTTPS（ES モジュールの `import`）
+    detail: dev/設計書/外部ライブラリ/mdmark#
+    status: planned
+    refs:
+      - dev/設計書/モジュール構成/画面/features/docs/doc-view/hooks/use-mdmark.ts#constants[MDMARK_URL]

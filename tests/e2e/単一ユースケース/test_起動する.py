@@ -77,11 +77,15 @@ def test_normal(make_source: Callable[..., Any], serve: Callable[..., Any], tmp_
     served = serve(sample, notes)
     sample_docs = served.get("/_api/sources/sample/docs")
     notes_docs = served.get("/_api/sources/notes/docs")
+    screen = served.get("/sample/docs/doc-1")
     admin = served.post_admin(INITIALIZE)
     # 検証
     assert served.listening_addresses() == {LOOPBACK_V4}
     assert sample_docs.status_code == 200
     assert notes_docs.status_code == 200
+    assert screen.status_code == 200
+    assert screen.headers["content-type"].startswith("text/html")
+    assert '<div id="root">' in screen.text
     assert sorted(served.tool_names()) == TOOL_NAMES
     assert admin.status_code == 200
     assert admin.json()["result"]["serverInfo"]

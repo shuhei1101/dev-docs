@@ -1,0 +1,9 @@
+title: "画面 / 共通 / handlers.ts"
+lead: 単体テスト・結合テスト・Storybook が使う MSW のハンドラ。
+constants:
+  - name: handlers
+    title: 既定のハンドラ
+    container: testing/msw/handlers.ts
+    usecase: 共通
+    summary: orval が生成した MSW のハンドラ（`getViewMock()`・`getSettingsMock()`）を並べたもの。各テストは `server.use` で上書きする
+    value: '[...getViewMock(), ...getSettingsMock()]'

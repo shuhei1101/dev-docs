@@ -25,7 +25,7 @@ def test_normal(
     body = response.json()
     assert response.status_code == 200
     assert body["git"] is True
-    assert body["default_ref"] == "develop"
+    assert body["defaultRef"] == "develop"
     assert {branch["name"] for branch in body["branches"]} >= {"develop", "feat/x"}
     assert [tag["name"] for tag in body["tags"]] == ["v0.1.0"]
     assert [commit["subject"] for commit in body["commits"]] == ["docs: 改名", "init"]

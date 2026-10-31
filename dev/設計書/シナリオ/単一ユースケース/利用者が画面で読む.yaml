@@ -1,0 +1,327 @@
+title: "利用者が画面で読む"
+scenarios:
+  - name: 正常シナリオ
+    setup:
+      - name: Mock
+        description: なし（実環境で実行。ブラウザで画面を開く）
+      - name: サンプルの配信元
+        description: 文書の種類を 1 つ（スキーマと YAML 2 件）と、`nav` を持つ `dev-docs.yaml` を持つ git リポジトリ
+        notes: id `sample`。`nav.tabs[]` は 2 つ（最初のタブに YAML 2 件を並べる）。文書 1 は画面の高さを超える長さ
+      - name: dev-docs
+        description: sample を配信している dev-docs
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        actor U as 利用者
+        participant UI as dev-docs の画面
+        participant API as 画面の API
+
+        U->>UI: sample の文書の画面を開く
+        UI->>API: 文書の取得（文書のパスを省く）
+        API-->>UI: 文書 1 の Markdown・タブ・サイドバー
+        UI->>UI: 本文を mdmark で描き、見出しから目次を組み立てる
+        UI-->>U: doc-view（一番左のタブ・文書 1 の本文と目次）
+        U->>UI: 本文を下までスクロールする
+        U->>UI: サイドバーで文書 2 を選ぶ
+        UI->>API: 文書の取得（文書 2）
+        UI-->>U: doc-view（文書 2 の本文と目次）
+      ```
+    expected:
+      - '`nav` の 2 つのタブが出て、一番左のタブを選んだ状態になる'
+      - タブに文書の件数を出さない
+      - 本文に文書 1 が、スキーマの `x-heading` の項目が見出し、`x-key` の配列が表になった形で出て、目次にその見出しが並ぶ
+      - 本文の要素が mdmark の描画の要素でできている
+      - 本文を下までスクロールしても、種類のタブとサイドバーが画面に残る
+      - 文書 2 を選ぶと URL が文書 2 を指すものに変わり、文書 2 の本文と目次が出る
+      - 文書 2 の URL を直接開いても、文書 2 の本文と目次が出る
+    test: test_normal
+  - name: 正常シナリオ（nav が無い）
+    setup:
+      - name: Mock
+        description: なし（実環境で実行）
+      - name: nav の無い配信元
+        description: 文書の種類を 2 つ持ち、`dev-docs.yaml` に `nav` を持たない配信元
+        notes: id `plain`
+      - name: dev-docs
+        description: plain を配信している dev-docs
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        actor U as 利用者
+        participant UI as dev-docs の画面
+
+        U->>UI: plain の文書の画面を開く
+        UI-->>U: doc-view（1 つ目の種類のタブの一番上の文書）
+      ```
+    expected:
+      - タブが `documents[]` の 2 つの種類ごとに 1 つずつ並ぶ
+      - 各タブのサイドバーにその種類の文書だけが並ぶ
+    test: test_normal_when_nav_missing
+  - name: 正常シナリオ（リビジョンを切り替える）
+    setup:
+      - name: Mock
+        description: なし（実環境で実行）
+      - name: 古い commit
+        description: sample の文書 1 の `name` を変える前の commit
+        notes: 今の `default_ref` では `name` が変わっている
+      - name: dev-docs
+        description: sample を配信している dev-docs
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        actor U as 利用者
+        participant UI as dev-docs の画面
+        participant API as 画面の API
+
+        U->>UI: 文書 1 を開き、トップバーのリビジョンの切り替えで古い commit を選ぶ
+        UI->>API: 文書の取得（文書 1・古い commit）
+        API-->>UI: 古い commit の文書 1
+        UI-->>U: doc-view（古い commit の文書 1）
+      ```
+    expected:
+      - 本文の `name` が古い commit の値になる
+      - トップバーに今開いているリビジョンとして古い commit が出る
+      - URL に古い commit が入り、その URL を開き直しても古い commit の文書 1 が出る
+      - サイドバー・本文の中のリンクで開いた文書も古い commit で出る
+    test: test_normal_when_ref_switched
+  - name: 正常シナリオ（差分を見る）
+    setup:
+      - name: Mock
+        description: なし（実環境で実行）
+      - name: 比較元の commit
+        description: sample の文書 1・文書 2・文書 4 がある commit
+        notes: 文書 1 は見出し 2 つのうち 2 つ目の見出しの下の値が今と違う
+      - name: 比較先の commit
+        description: 比較元の commit から、文書 1 の 2 つ目の見出しの下を変え、文書 3 を追加し、文書 4 を削除した commit
+        notes: 文書 2 は変えない
+      - name: dev-docs
+        description: sample を配信している dev-docs
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        actor U as 利用者
+        participant UI as dev-docs の画面
+        participant API as 画面の API
+
+        U->>UI: 文書 1 を開き、比較先に比較先の commit、比較元に比較元の commit を選ぶ
+        UI->>API: 文書の取得（文書 1・比較先・比較元）
+        API-->>UI: 比較先の文書 1 と変わった項目
+        UI-->>U: doc-view（差分の案内・変更のマーカー）
+        U->>UI: 差分の強調を解除する
+        UI-->>U: doc-view（強調の無い本文）
+      ```
+    expected:
+      - 差分の案内に比較元と比較先の commit が出て、どちらもその場で選び直せる
+      - サイドバーの文書 3 に追加、文書 1 に変更、文書 4 に削除のマーカーが出て、文書 2 にはマーカーが出ない
+      - 目次の 2 つ目の見出しに変更のマーカーが出て、1 つ目の見出しには出ない
+      - 強調を解除すると、サイドバーと目次のマーカーが消え、比較先の文書 1 が出る
+      - URL に比較元と比較先が入り、その URL を開き直しても同じ差分が出る
+    test: test_normal_when_diff_shown
+    notes:
+      本文の強調: 本文の変わった箇所の強調は、mdmark#222 へのつなぎ込み（#44）で追加する
+  - name: 正常シナリオ（検索する）
+    setup:
+      - name: Mock
+        description: なし（実環境で実行）
+      - name: dev-docs
+        description: 正常シナリオと同じ sample を配信している dev-docs
+        notes: 文書 2 の本文だけが含む語を検索する
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        actor U as 利用者
+        participant UI as dev-docs の画面
+        participant API as 画面の API
+
+        U->>UI: 文書 1 を開いて Ctrl+K を押す
+        UI-->>U: 検索のダイアログ
+        U->>UI: 語を入れる
+        UI->>API: 画面の検索
+        UI-->>U: 一致した文書と一致した箇所の結果
+        U->>UI: 結果の文書 2 を選ぶ
+        UI-->>U: doc-view（文書 2）
+      ```
+    expected:
+      - Ctrl+K で検索のダイアログが開き、入力欄にフォーカスがある
+      - 結果に文書 2 だけが一致した箇所つきで並ぶ
+      - 結果を選ぶとダイアログが閉じ、文書 2 が出る
+    test: test_normal_when_searched
+  - name: 正常シナリオ（表の列を隠す）
+    setup:
+      - name: Mock
+        description: なし（実環境で実行）
+        notes: '-'
+      - name: 端末の設定
+        description: '`state_dir` をテスト用の一時フォルダにした `settings.yaml`'
+        notes: '-'
+      - name: dev-docs
+        description: 正常シナリオと同じ sample を配信している dev-docs
+        notes: 'sample に、`<!-- table: data +columns -->` のマーカーを付けた 3 列の表を持つ Markdown の文書 5 がある（スキーマから作る表は `+columns` を持たない）'
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        actor U as 利用者
+        participant UI as dev-docs の画面
+
+        U->>UI: 文書 5 を開き、表の列の表示から 2 列目を外す
+        UI-->>U: 2 列目を隠した表
+        U->>UI: 同じ文書を開き直す
+        UI-->>U: 2 列目を隠した表
+      ```
+    expected:
+      - 表の 2 列目が表示されない
+      - 開き直しても 2 列目が表示されない
+      - 配信元のフォルダのファイルは変わらない
+    test: test_normal_when_column_hidden
+    notes:
+      列の設定の保存先: 表と列の表示は mdmark が描く。隠した列を画面の API の表の列の設定の保存で送るかは画面設計で決める。
+  - name: 正常シナリオ（配信元の変換を使う）
+    setup:
+      - name: Mock
+        description: なし（実環境で実行）
+      - name: 変換を持つ配信元
+        description: '`converters[]` に、標準入力の YAML から決まった見出しの Markdown を出すスクリプトを持ち、文書の種類の 1 つがそれを指す配信元'
+        notes: id `custom`
+      - name: 埋め込みのマーカー
+        description: custom の Markdown の文書。本文に、別の YAML を表として入れる埋め込みのマーカーを置く
+      - name: dev-docs
+        description: custom を配信している dev-docs
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        actor U as 利用者
+        participant UI as dev-docs の画面
+        participant API as 画面の API
+        participant SC as 配信元のスクリプト
+
+        U->>UI: converters を指す種類の文書を開く
+        UI->>API: 文書の取得
+        API->>SC: 標準入力に YAML を渡す
+        SC-->>API: 標準出力の Markdown
+        API-->>UI: スクリプトの Markdown
+        UI-->>U: mdmark で描いた本文
+        U->>UI: 埋め込みのマーカーを持つ Markdown の文書を開く
+        UI-->>U: マーカーを YAML の表に置き換えた本文
+      ```
+    expected:
+      - converters を指す種類の文書の本文に、スクリプトが出した見出しが出る
+      - その他の種類の文書はスキーマ駆動の変換で描かれる
+      - 埋め込みのマーカーの場所に、指した YAML の内容の表が出て、マーカーの文字列は出ない
+    test: test_normal_when_custom_converter
+  - name: 異常シナリオ（変換のスクリプトが失敗する）
+    setup:
+      - name: Mock
+        description: なし（実環境で実行）
+      - name: 止まらないスクリプト
+        description: custom の `converters[]` のスクリプトを、制限時間より長く待つものに差し替える
+        notes: 制限時間は非機能要件の値
+      - name: dev-docs
+        description: custom を配信している dev-docs
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        actor U as 利用者
+        participant UI as dev-docs の画面
+        participant API as 画面の API
+        participant SC as 配信元のスクリプト
+
+        U->>UI: converters を指す種類の文書を開く
+        UI->>API: 文書の取得
+        API->>SC: 標準入力に YAML を渡す
+        API->>SC: 制限時間を超えたので止める
+        API-->>UI: 変換の失敗
+        UI-->>U: 本文の場所に変換の失敗を出す
+      ```
+    expected:
+      - 本文の場所に、変換に失敗したこと・種類・スクリプトのパス・制限時間を超えたことが出る
+      - タブ・サイドバー・トップバーは操作できる
+      - 同じ配信元の、スキーマ駆動で変換する文書は描ける
+    test: test_error_when_converter_timed_out
+  - name: 異常シナリオ（無い文書を開く）
+    setup:
+      - name: Mock
+        description: なし（実環境で実行）
+      - name: dev-docs
+        description: 正常シナリオと同じ sample を配信している dev-docs
+        notes: 文書のパス `no-such-doc` を開く
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        actor U as 利用者
+        participant UI as dev-docs の画面
+        participant API as 画面の API
+
+        U->>UI: sample の no-such-doc の URL を開く
+        UI->>API: 文書の取得
+        API-->>UI: 404（無いのは文書）
+        UI-->>U: not-found（無いのは文書）
+      ```
+    expected:
+      - 見つからない画面に、無いのが文書であることと、開こうとしたパスが出る
+      - 配信元 sample のトップへのリンクがある
+    test: test_error_when_doc_not_found
+  - name: 異常シナリオ（無いリビジョンを開く）
+    setup:
+      - name: Mock
+        description: なし（実環境で実行）
+      - name: dev-docs
+        description: 正常シナリオと同じ sample を配信している dev-docs
+        notes: リビジョン `no-such-branch` を指す URL を開く
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        actor U as 利用者
+        participant UI as dev-docs の画面
+        participant API as 画面の API
+
+        U->>UI: sample の no-such-branch の URL を開く
+        UI->>API: 文書の取得
+        API-->>UI: 404（無いのはリビジョン）
+        UI-->>U: not-found（無いのはリビジョン）
+      ```
+    expected:
+      - 見つからない画面に、無いのがリビジョン `no-such-branch` であることが出る
+    test: test_error_when_ref_not_found
+  - name: 異常シナリオ（配信していない配信元を開く）
+    setup:
+      - name: Mock
+        description: なし（実環境で実行）
+      - name: 検証に失敗する配信元
+        description: '`dev-docs.yaml` の `documents[0]` に必須のキー `paths` が無い配信元'
+        notes: id `broken`。起動時の検証で配信から外れる
+      - name: dev-docs
+        description: sample と broken を端末の設定に並べて起動した dev-docs
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        actor U as 利用者
+        participant UI as dev-docs の画面
+        participant API as 画面の API
+
+        U->>UI: broken の文書の画面を開く
+        UI->>API: 文書の取得
+        API-->>UI: 404（配信していない配信元と外した理由）
+        UI-->>U: not-found（無いのは配信元）
+      ```
+    expected:
+      - 見つからない画面に、`broken` を配信していないことと、起動時の検証で外した理由（`documents[0]` に必須のキー `paths` が無い）が出る
+      - トップバーの配信元の切り替えに sample が出て、設定画面へのリンクがある
+    test: test_error_when_source_not_served
+lead: 利用者がブラウザで配信元の文書の画面を開き、タブ・サイドバー・検索・リビジョンの切り替え・差分で文書を読む。
+issue: 17
+primary_actor: 利用者
+stakeholders:
+  - name: 利用者
+    interest: YAML の正本の文書が、表・見出し・図に描かれた本文で読める。過去のリビジョンや 2 つのリビジョンの差分も同じ画面で開ける
+  - name: 各配信元
+    interest: '`nav` と `converters[]` を書けば、画面の構成と本文の変換を配信元の設定だけで決められる'
+trigger: 利用者がブラウザで配信元の文書の画面の URL を開く
+preconditions:
+  - dev-docs が起動し、画面のビルドと配信元を配信している
+success_guarantee: 開いた配信元・リビジョンの文書が、変換した Markdown を mdmark で描いた本文で出る。
+minimal_guarantee: 無い配信元・文書・リビジョンは見つからない画面で、何が無いかを出す。変換に失敗した文書は、失敗したことと原因を出し、他の文書は読める。
+frequency: 作業のたび
+priority: 高
+refs:
+  - dev/設計書/シナリオ/複合ユースケース/dev-docsで文書を配信して読み書きする#scenarios[正常シナリオ]
+test_file: tests/e2e/単一ユースケース/test_利用者が画面で読む.py

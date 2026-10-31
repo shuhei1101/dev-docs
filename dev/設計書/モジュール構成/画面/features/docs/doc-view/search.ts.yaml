@@ -1,0 +1,23 @@
+title: "画面 / 文書の画面 / search.ts"
+lead: 文書の画面の URL のクエリ。
+constants:
+  - name: DocViewSearchSchema
+    title: 文書の画面のクエリのスキーマ
+    container: features/docs/doc-view/search.ts
+    usecase: 文書を読む
+    summary: '`z.object({rev: z.string().min(1).optional().catch(undefined), base: z.string().min(1).optional().catch(undefined)})`。読めない値は捨てる'
+    value: z.object({rev, base})
+data_models:
+  - name: DocViewSearch
+    title: 文書の画面のクエリ
+    container: features/docs/doc-view/search.ts
+    usecase: 文書を読む
+    role: DTO
+    summary: '`z.infer<typeof DocViewSearchSchema>`'
+    properties:
+      - name: rev
+        type: string | undefined
+        description: 開くリビジョン（無ければ `defaultRef`）
+      - name: base
+        type: string | undefined
+        description: 差分の比較元

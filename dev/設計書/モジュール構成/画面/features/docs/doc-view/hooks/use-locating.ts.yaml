@@ -1,0 +1,56 @@
+title: "画面 / 文書の画面 / use-locating.ts"
+lead: コメントのパネルで場所を選ばれたコメントを持ち、文書を開くか本文の印へスクロールするかを決めるフック。
+test_files:
+  - tests/unit/frontend/src/features/docs/doc-view/hooks/use-locating.test.ts
+functions:
+  - name: useLocating
+    title: 場所を選ばれたコメントの保持
+    container: features/docs/doc-view/hooks/use-locating.ts
+    usecase: 文書を読む
+    role: フック
+    summary: 場所を選ばれたコメントを持ち、開いている文書のコメントは移動せず、他の文書のコメントは開いてから本文の印へスクロールさせる
+    kind: フック
+    scope: public
+    args:
+      - name: docId
+        type: string
+        required: true
+        passing: positional
+        description: 今開いている文書の `docId`（`docIdOf`）
+      - name: openDoc
+        type: '(comment: DocComment) => void'
+        required: true
+        passing: positional
+        description: コメントの文書を開く関数（`useDocNavigation` の `locate`）
+    returns:
+      type: '{locating: DocComment | null; onLocated: () => void; locate: (comment: DocComment) => void}'
+      description: 場所を選ばれたコメントと、戻す関数、選ぶ関数
+    process: |-
+      1. `locate(comment)` は `locating` にコメントを入れ、コメントの `docId` が今開いている `docId` と違うときだけ `openDoc(comment)` を呼ぶ（開いている文書は移動しない）
+      2. `onLocated()` は `locating` を null に戻す（本文が印までスクロールしたとき）
+      3. 開いている `docId` が変わったとき、変わった先が `locating` の文書と違うなら `locating` を null に戻す（印が見つからないまま残った `locating` を、後で同じ文書を開き直したときに使わない）
+    unit_tests:
+      - name: test_use_locating
+        case: 正常
+        summary: 他の文書のコメントは文書を開く
+        condition: '`docId` が `a` のとき、`docId` が `b` のコメントで `locate` を呼ぶ'
+        mock: '`openDoc`（`vi.fn`）'
+        expected: '`openDoc` がコメントで 1 回呼ばれ、`locating` がそのコメントになる'
+      - name: test_use_locating_when_same_doc
+        case: 正常
+        summary: 開いている文書のコメントは移動しない
+        condition: '`docId` が `a` のとき、`docId` が `a` のコメントで `locate` を呼ぶ'
+        mock: '`openDoc`（`vi.fn`）'
+        expected: '`openDoc` は呼ばれず、`locating` がそのコメントになる'
+      - name: test_use_locating_when_doc_left
+        case: 正常
+        summary: 別の文書に変わると locating を戻す
+        condition: '`docId` が `b` のコメントで `locate` した後、開いている `docId` を `b` にし、続けて `c` にする'
+        mock: '`openDoc`（`vi.fn`）'
+        expected: '`b` に変わったときは `locating` が残り、`c` に変わったとき null になる'
+      - name: test_use_locating_when_located
+        case: 正常
+        summary: 印までスクロールしたら戻す
+        condition: '`locate` した後、`onLocated` を呼ぶ'
+        mock: '`openDoc`（`vi.fn`）'
+        expected: '`locating` が null になる'

@@ -1,0 +1,58 @@
+title: "画面 / 文書の画面 / doc-body.tsx"
+lead: mdmark で描く文書の本文。リンク・列の表示・コメントを画面とつなぐ。
+components:
+  - name: DocBody
+    title: 本文
+    kind: コンポーネント
+    container: features/docs/doc-view/components/doc-body.tsx
+    usecase: 文書を読む
+    role: 部品
+    summary: 最初の見出し 1 を除いた Markdown を `useMdmark` で描き、描いた後の見出しを `onHeadings` で返す
+    props:
+      - name: document
+        type: DocumentResponse
+        required: true
+        description: 文書の取得の応答
+      - name: baseMarkdown
+        type: string | null
+        required: false
+        description: 比較元の本文（差分の強調。mdmark#222 の後）
+      - name: onHeadings
+        type: '(items: TocItem[]) => void'
+        required: true
+        description: 描いた後の見出し（`readToc`）
+      - name: onCommentSaved
+        type: () => void
+        required: true
+        description: コメントを保存したとき（パネルを開く）
+      - name: locating
+        type: DocComment | null
+        required: true
+        description: コメントのパネルで場所を選ばれたコメント。`docId` が同じ文書の印（`.mdmark-comment-mark`）が描かれたら、その印が画面の中ほどに入るまでスクロールして `onLocated` を呼ぶ
+      - name: onLocated
+        type: () => void
+        required: true
+        description: '`locating` の印までスクロールしたとき'
+    description: |-
+      - 列の初期の非表示は、`columns` のその表のキーの列を `+columns` の表の `hide=` に入れた Markdown を渡す（表のキーは `tableKeys` の同じ番号）
+      - 列の出し入れは `useColumnPersistence` で保存する
+      - 本文のクリックを拾い、同じ配信元の文書への相対リンクは `navigate`（`rev` を保つ）、外の URL は `target="_blank" rel="noopener"` で開く
+      - mdmark の `commentStore` はコメントのストアへつなぐ（`docId` は `{source}@{ref}:{path}`）
+    unit_tests:
+      - name: test_doc_body
+        case: 正常
+        summary: 見出し 1 と列の初期の非表示
+        condition: '`# A` で始まり `+columns` の表を 1 つ持ち、`columns` にその表のキーで `["備考"]`'
+        mock: mdmark（`mount` を記録する偽物）
+        expected: '`mount` に渡る `markdown` が `# A` を含まず、表に `hide=備考`'
+      - name: test_doc_body_when_internal_link
+        case: 正常
+        summary: 同じ配信元のリンクを画面の中で開く
+        condition: 本文の `./b.md` を押す（`rev` が `v1`）
+        mock: mdmark（本文にリンクを描く偽物）
+        expected: ルーターの位置が `/s/b.md?rev=v1` になり、ページは読み込み直さない
+refs:
+  - dev/設計書/画面設計/文書の画面#elements[本文]
+  - dev/設計書/画面設計/文書の画面#elements[列の表示のメニュー]
+test_files:
+  - tests/unit/frontend/src/features/docs/doc-view/components/doc-body.test.tsx
