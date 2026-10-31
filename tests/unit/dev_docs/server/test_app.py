@@ -9,6 +9,7 @@ from typing import Any
 import pytest
 from fastapi.routing import APIRoute
 from fastapi.testclient import TestClient
+from starlette.types import Message, Receive, Scope, Send
 
 from dev_docs.server import app as app_module
 from dev_docs.server.app import build_app, route_operation_id
@@ -42,20 +43,20 @@ def _screen_dir(tmp_path: Path) -> Path:
     return screen_dir
 
 
-async def _noop_receive() -> dict[str, Any]:
+async def _noop_receive() -> Message:
     """何も届かない ASGI の receive。"""
     return {"type": "http.request"}
 
 
-async def _noop_send(message: dict[str, Any]) -> None:
+async def _noop_send(message: Message) -> None:
     """何も送らない ASGI の send。"""
 
 
-def _pass_through(scope: dict[str, Any]) -> list[dict[str, Any]]:
+def _pass_through(scope: Scope) -> list[Scope]:
     """スラッシュを補うミドルウェアに scope を渡し、次のアプリが受け取った scope を返す。"""
-    received: list[dict[str, Any]] = []
+    received: list[Scope] = []
 
-    async def next_app(scope: dict[str, Any], receive: Any, send: Any) -> None:
+    async def next_app(scope: Scope, receive: Receive, send: Send) -> None:
         received.append(scope)
 
     middleware = app_module.SlashlessMcpPathMiddleware(next_app, paths=("/mcp", "/_admin/mcp"))
