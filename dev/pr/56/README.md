@@ -2,7 +2,7 @@
 
 ## 概要
 
-利用者は、`content/prompts/` に置いたプロンプトの YAML を、dev-docs の画面で変数の表・テンプレート・例ごとに描画したタブ・言語の切り替えつきで読めるようになる。
+利用者は、`content/prompts/` に置いたプロンプトの YAML を、dev-docs の画面で変数の表・テンプレート・例ごとに描画した結果を、言語の切り替えつきで読めるようになる。
 `/dev-docs:setup` は `content/prompts/` を見つけたら、そのプロンプトを配信する documents の行を候補に出す。
 
 ## 背景
