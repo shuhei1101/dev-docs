@@ -324,16 +324,13 @@ flows:
     setup:
       - name: Mock
         description: なし
-        notes: '-'
       - name: 管理用の YAML
         description: 'sample の `src/files.yaml`。`files[]` に `a.py`（`tags: [auth, code]`、`name` なし）と `b.py`（`name: 部品 B`）の 2 行。`src/a.py`・`src/b.py` を置く'
-        notes: '行 `src` は `records: files`・`body_file: path`'
+        notes: '行 `src` は `records: files`・`body_file: path`、`schema` は `templates/files.schema.yaml` のコピー'
       - name: 名前の無い文書
         description: sample の文書 2 から `name` を除く
-        notes: '-'
       - name: 入力
         description: '`filter` は `id` が `src/a`、`view: full`、`format: json`。2 回目は `view: summary` で全件'
-        notes: '-'
     flow: |-
       ```mermaid
       sequenceDiagram
@@ -350,6 +347,7 @@ flows:
       - 項目の `values.name` が `a`、`values.tags` が `code` と `auth`、`values.path` が `a.py` になる
       - 項目の直下の `path` が `{sample のクローン本体}/src/a.py`、`scope` が `full` になる
       - 2 回目の `b` の `name` が `部品 B`、文書 2 の `name` が文書 2 のファイル名から拡張子を除いた名前になる
+      - どちらの呼び出しも、`src/a`・`src/b` の項目の `notes` にスキーマの違反（`'files' is a required property`）が付かない
     test: test_normal_when_files_index
   - name: 正常系（正規表現と抜粋）
     summary: '`regex` を行単位で当て、当たった行を行番号つきの抜粋で返す'
@@ -891,6 +889,9 @@ constraints:
   - item: 返し済みの記録
     constraint: '`sections`・`lines` を渡した呼び出しは、返した文書を記録せず、返し済みでも切り出した本文を返す。ほかの呼び出しは `scope` によらず本文を返した文書を記録し、返し済みの本文を省く'
     notes: 既存の呼び出し（`max_chars_per_field` で切った本文・`body_file` の無い `records` の要素を含む）の記録は変えない
+  - item: records の行のスキーマ
+    constraint: '`records` を持つ行の `schema` はファイル全体のスキーマとし、要素 1 つずつの検査と項目の一覧には `properties.{records}.items` を当てる'
+    notes: 書き込み（`write_docs`）・`describe`・`check_project` も同じ当て方
 refs:
   - dev/設計書/シナリオ/単一ユースケース/エージェントが調べる#scenarios[正常シナリオ]
   - dev/設計書/シナリオ/単一ユースケース/YAMLを直接編集した#scenarios[正常シナリオ]

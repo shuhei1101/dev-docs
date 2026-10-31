@@ -193,6 +193,31 @@ flows:
       - '`/_api/sources/broken/docs` が 404 で、`missing` が `not_served`、`errors[]` に `documents[0]` に必須のキー `paths` が無いことがある'
       - '`/_api/sources/unknown/docs` が 404 で、`missing` が `source`'
     test: test_error_when_not_found
+  - name: 正常系（本文のファイルのパスで引く）
+    summary: 管理用の YAML の行の文書に `bodyPath` を返し、本文のファイルのパスで指した文書を返す
+    setup:
+      - name: Mock
+        description: なし
+      - name: 管理用の YAML
+        description: sample の `notes/files.yaml`。`files[]` に `a.md` と `b.md` の 2 行。`notes/a.md`・`notes/b.md` を置く
+        notes: '行 `notes` は `paths: [notes/files.yaml]`・`records: files`・`body_file: path`。スキーマは `templates/files.schema.yaml`'
+    flow: |-
+      sequenceDiagram
+        participant C as クライアント
+        participant E as GET /_api/sources/{source}/docs/{path}
+        participant ST as 配信元のファイル
+
+        C->>E: GET /_api/sources/sample/docs/{a の画面のパス}
+        E-->>ST: notes/files.yaml と行の body_file を読む
+        E-->>C: 200（a・bodyPath: notes/a.md）
+        C->>E: GET /_api/sources/sample/docs/notes/b.md
+        E->>E: 画面のパスで当たらないので、本文のファイルのパスで引く
+        E-->>C: 200（b）
+    expected:
+      - a の `bodyPath` が `notes/a.md`、`path` が a の画面のパス
+      - '`/_api/sources/sample/docs/notes/b.md` が 200 で、`path` が b の画面のパス、`markdown` が b の本文、`bodyPath` が `notes/b.md`'
+      - ファイル 1 つが 1 文書の sample の文書 1 を開くと `bodyPath` が `null`
+    test: test_normal_when_body_path_given
 lead: '#17 の画面が文書を開くときに呼ぶ。配信元の文書を変換した Markdown と、タブ・サイドバー・差分の項目・画面の状態を JSON で返す。`path` を省くと一番左のタブのサイドバーの一番上の文書を返す。'
 identifier: get_document
 permissions: なし（`127.0.0.1` でだけ待ち受ける）
@@ -210,7 +235,7 @@ request:
     required: false
     default: なし（一番左のタブのサイドバーの一番上の文書）
     location: path
-    description: 文書のパス（配信元の直下から、拡張子を落とした形）
+    description: 文書のパス（配信元の直下から、拡張子を落とした形）。画面のパスで当たる文書が無いときは、文書のファイルか本文のファイルのパス（拡張子つき）として引く
   - name: ref
     type: str
     required: false
@@ -292,6 +317,10 @@ response:
     format: date-time
     description: 返した文書のファイルの更新日時。Git の配信元は開いているリビジョンでそのファイルを最後に変えた commit の日時、Git 管理外の配信元はファイルの更新日時
     notes: 文書の画面の文書の情報に出す
+  - name: bodyPath
+    type: str | None
+    description: 本文のファイルのパス（配信元の直下から、拡張子つき）。管理用の YAML の行の文書は `body_file` が指すファイル
+    notes: 本文のファイルを持たない文書（ファイル 1 つが 1 文書）は `null`。画面は本文の相対リンクを、これがあればこのパス、無ければ `path` を基準に解決する
 response_notes: '本文の描画（mdmark）・リンクの組み立て・コメント・目次の変わった見出しのマーカーは #17 の画面が持つ。目次のマーカーは、`ref` を `diff.base` にして取った `markdown` と見出しごとに比べて付ける。'
 status_codes:
   - code: '200'
@@ -312,6 +341,9 @@ constraints:
     constraint: '`{tag}-{関数名}`。`path` を含む入口は `view-get_document`、`path` を省く入口は `view-get_document_default`'
   - item: JSON のキー
     constraint: レスポンスのキーは camelCase。パス・クエリのパラメータ名は変えない
+  - item: 文書の引き方
+    constraint: '`path` を画面のパスで引き、当たらなければ文書のファイルか本文のファイルのパスが `path` と同じ最初の文書を返す'
+    notes: 管理の MCP の `try_convert` と同じ引き方。同じ本文のファイルを複数の行が指すときは最初の文書に当たる
 refs:
   - dev/設計書/シナリオ/単一ユースケース/YAMLを直接編集した#scenarios[異常シナリオ（YAML を壊した）]
 test_file: tests/integration/server/test_get_document.py

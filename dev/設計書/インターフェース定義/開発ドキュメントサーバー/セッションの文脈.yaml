@@ -157,7 +157,7 @@ constraints:
   - item: 記録の削除
     constraint: '`reason` が `clear`・`compact` で `session_id` があるときだけ削除する。`startup`・`resume`・`fork` では削除しない'
   - item: タイムアウト
-    constraint: 制限なし（呼ぶ側のフックが 3 秒で打ち切る）
+    constraint: 制限なし（呼ぶ側のフックが 11 秒で打ち切る）。配信元のファイルの一覧は配信元ごとに 1 回だけたどる
 status_codes:
   - code: '200'
     condition: 文脈を組み立てた（使える配信元が 0 件のときも `/dev-docs:setup` の案内を返す）

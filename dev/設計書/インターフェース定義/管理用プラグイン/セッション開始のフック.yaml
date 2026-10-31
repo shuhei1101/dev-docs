@@ -82,12 +82,12 @@ flows:
       - プロセスを起動していない
     test: test_normal_when_terminal_config_missing
   - name: 正常系（文脈を取れない）
-    summary: '`POST /_admin/session-context` が 3 秒で返らなければ、理由を文脈に入れて終了コード 0 で戻る'
+    summary: '`POST /_admin/session-context` が `CONTEXT_TIMEOUT_SEC` 秒で返らなければ、打ち切った秒数と理由を文脈に入れて終了コード 0 で戻る'
     setup:
       - name: Mock
-        description: 接続は受けるが `POST /_admin/session-context` に 5 秒応答しない HTTP サーバー
+        description: 接続は受けるが `POST /_admin/session-context` に `CONTEXT_TIMEOUT_SEC` より長く応答しない HTTP サーバー
+        notes: テストは `CONTEXT_TIMEOUT_SEC` を短くしてよい
     flow: |-
-      ```mermaid
       sequenceDiagram
         participant C as Claude Code
         participant H as セッション開始のフック
@@ -95,12 +95,11 @@ flows:
 
         C->>H: stdin
         H->>A: POST（cwd・session_id・reason）
-        H->>H: 3 秒で打ち切る
-        H-->>C: additionalContext（理由と status の案内）
-      ```
+        H->>H: CONTEXT_TIMEOUT_SEC 秒で打ち切る
+        H-->>C: additionalContext（打ち切った秒数・理由と status の案内）
     expected:
-      - 4 秒以内に終了コード 0 で戻る
-      - '`additionalContext` に文脈を取れなかったことと `status` の案内がある'
+      - '`CONTEXT_TIMEOUT_SEC` + 1 秒以内に終了コード 0 で戻る'
+      - '`additionalContext` に文脈を取れなかったこと、打ち切った秒数（`CONTEXT_TIMEOUT_SEC`）と `status` の案内がある'
       - プロセスを起動していない
     test: test_normal_when_context_timeout
 lead: ポートにつながらなければ `dev-docs serve` を切り離して起動し、つながれば `POST /_admin/session-context` で使える配信元と使い方を取って、セッションの文脈に入れる。入力は stdin の JSON と環境変数。
@@ -177,7 +176,7 @@ exceptions:
     notes: 終了コード 0 で、理由と `/dev-docs:global-setup` の案内を文脈に入れる
   - name: なし（文脈を取れない）
     condition: つながったが `POST /_admin/session-context` がタイムアウト・200 以外になった
-    notes: 終了コード 0 で、理由と `status` で確かめる案内を文脈に入れる
+    notes: 終了コード 0 で、理由と `status` で確かめる案内を文脈に入れる。打ち切ったときは打ち切った秒数も入れる
 constraints:
   - item: 言語
     constraint: Python 3.14 の標準ライブラリだけ。`uv` を前提にしない
@@ -190,10 +189,11 @@ constraints:
     constraint: '`{clone}/.venv/bin/python -m dev_docs serve` を `start_new_session=True`・入出力を `DEVNULL` で起動し、待たずに戻る'
     notes: 'PR #9 の PoC のとおり'
   - item: 文脈の取得
-    constraint: '`urllib.request` で `POST /_admin/session-context` に JSON（`cwd`・`session_id`・`agent_id`・`reason` に `source`）を 1 回送信し、3 秒で打ち切る'
+    constraint: '`urllib.request` で `POST /_admin/session-context` に JSON（`cwd`・`session_id`・`agent_id`・`reason` に `source`）を 1 回送信し、11 秒（`CONTEXT_TIMEOUT_SEC`）で打ち切る'
+    notes: 2026-10-31 に端末の配信元 5 件で 10 回ずつ測った応答の時間（遅い経路を修正した試作）の最大 7.3 秒を p99.9 とし、余裕 50% を乗せて切り上げた値（規約『資源の値の決め方』の下流を待つタイムアウト）。p50 は /mnt/c の配信元で 2.7〜5.0 秒、Linux のファイルシステムの配信元で 0.14 秒。実装の後に同じ測り方で測り直す
   - item: タイムアウト
-    constraint: '`hooks.json` の `timeout` は 6 秒'
-    notes: 内側の待ちの合計 3.5 秒に 50% を乗せた値。未実測で、結合テストで測って見直す
+    constraint: '`hooks.json` の `timeout` は 18 秒'
+    notes: 内側の待ちの合計 11.5 秒（接続 0.5 秒 + 文脈の取得 11 秒）に 50% を乗せて切り上げた値（規約『資源の値の決め方』の入れ子の待ち）
   - item: 失敗の扱い
     constraint: どの失敗でも終了コード 0 で戻り、セッションを止めない
 test_file: tests/integration/plugin/test_session_start.py
