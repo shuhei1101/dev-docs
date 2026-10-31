@@ -599,6 +599,7 @@ scenarios:
         description: '`src/README.md`・`src/new.py`・`tools/README.md` を追加して commit し、その commit でワークツリーを作る'
         notes: '`src/README.md` は行 `src` の `exclude` に当たり、`tools/README.md` はどの行の `exclude` にも当たらない'
     flow: |-
+      ```mermaid
       sequenceDiagram
         actor U as 利用者
         participant SK as setup のスキル
@@ -620,6 +621,7 @@ scenarios:
         AD-->>SK: 索引の同期の件数 0
         SK->>AD: reload
         SK-->>U: 追加した行と結果を出す
+      ```
     expected:
       - 確認の表の追加の行が `src/new.py` と `tools/README.md` の 2 つで、`src/README.md` は出ない
       - '`src/files.yaml` に `new.py` の行が追加され、`README.md` の行は無い'

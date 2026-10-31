@@ -44,8 +44,8 @@ scenarios:
         description: 文書の種類を 2 つ持ち、`dev-docs.yaml` に `nav` を持たない配信元
         notes: id `plain`
       - name: サブフォルダの文書
-        description: 1 つ目の種類の文書を、行の文書を置いたフォルダの直下に 1 件、サブフォルダ `lang/` に 2 件、その下の `lang/py/` に 1 件置く。`lang/` の 2 件のうち 1 件は `lang/index.yaml`
-        notes: 2 つ目の種類の文書はサブフォルダを持たない
+        description: 1 つ目の種類の行の `paths` を `docs/**/*.yaml` にし、`docs/` の直下に 1 件、`docs/lang/` に 2 件、`docs/lang/py/` に 1 件の文書を置く。`docs/lang/` の 2 件のうち 1 件は `docs/lang/index.yaml`
+        notes: 2 つ目の種類の行の `paths` はサブフォルダを含まない glob にする
       - name: dev-docs
         description: plain を配信している dev-docs
         notes: '-'
@@ -61,9 +61,9 @@ scenarios:
     expected:
       - タブが `documents[]` の 2 つの種類ごとに 1 つずつ並ぶ
       - 各タブのサイドバーにその種類の文書だけが並ぶ
-      - 1 つ目のタブのサイドバーで、直下の文書は group に入らずに並び、`lang/` の文書は group `lang` にまとまる
-      - group `lang` の先頭の page が `lang/index.yaml` の文書になる
-      - '`lang/py/` の文書は group `lang` の中の group `py` に入る'
+      - 1 つ目のタブのサイドバーで、`docs/` の直下の文書は group に入らずに並び、`docs/lang/` の文書は group `lang` にまとまる
+      - group `lang` の先頭の page が `docs/lang/index.yaml` の文書になる
+      - '`docs/lang/py/` の文書は group `lang` の中の group `py` に入る'
       - 2 つ目のタブのサイドバーは group を持たず、文書が平らに並ぶ
     test: test_normal_when_nav_missing
   - name: 正常シナリオ（リビジョンを切り替える）
@@ -565,15 +565,16 @@ scenarios:
         description: なし（実環境で実行。ブラウザは Playwright で操作する）
         notes: '-'
       - name: フォルダごとの文書
-        description: sample の行 `rules` の文書を、直下に `common.yaml`、`lang/` に `index.yaml`・`ts.yaml`、`lang/py/` に `style.yaml` で置く
+        description: 'sample の `dev-docs.yaml` に、`paths: [rules/**/*.yaml]`・`schema: schemas/sample.schema.yaml` の行 `rules` を追加し、`rules/` の直下に `common.yaml`、`rules/lang/` に `index.yaml`・`ts.yaml`、`rules/lang/py/` に `style.yaml` を置く'
         notes: '-'
       - name: nav のフォルダの束ね
-        description: 'sample の `dev-docs.yaml` の `nav` のタブ `ルール` に、手で書いた `page`（`common.yaml` の文書）と、`document: rules` の `auto` の `group_by` にフォルダの指定を書いた項目を、この順で置く'
+        description: 'sample の `dev-docs.yaml` の `nav` にタブ `ルール` を追加し、手で書いた `page`（`rules/common.yaml` の文書）と、`document: rules` の `auto` の `group_by` にフォルダの指定を書いた項目を、この順で置く'
         notes: フォルダの指定の書き方はインターフェース定義『文書の取得』が決める
       - name: dev-docs
         description: sample を配信している dev-docs
         notes: '-'
     flow: |-
+      ```mermaid
       sequenceDiagram
         actor U as 利用者
         participant B as ブラウザ（文書の画面）
@@ -583,13 +584,14 @@ scenarios:
         B->>S: 配信元の nav を取得する
         S->>S: 手で書いた page を並べ、auto の文書から手で書いた page の文書を除いてフォルダごとの group にする
         S-->>B: タブとサイドバーの項目
-        U->>B: group lang の lang/index.yaml の文書を押す
-        B-->>U: lang/index.yaml の文書の本文
+        U->>B: group lang の rules/lang/index.yaml の文書を押す
+        B-->>U: rules/lang/index.yaml の文書の本文
+      ```
     expected:
-      - サイドバーの一番上に手で書いた page（`common.yaml` の文書）が並び、`auto` の並びに `common.yaml` の文書は出ない
-      - '`auto` の並びに group `lang` があり、その先頭の page が `lang/index.yaml` の文書、次が `lang/ts.yaml` の文書になる'
-      - group `lang` の中に group `py` があり、`lang/py/style.yaml` の文書が入る
-      - group `lang` の `lang/index.yaml` の文書を押すと、その文書の本文が開く
+      - サイドバーの一番上に手で書いた page（`rules/common.yaml` の文書）が並び、`auto` の並びに `rules/common.yaml` の文書は出ない
+      - '`auto` の並びに group `lang` があり、その先頭の page が `rules/lang/index.yaml` の文書、次が `rules/lang/ts.yaml` の文書になる'
+      - group `lang` の中に group `py` があり、`rules/lang/py/style.yaml` の文書が入る
+      - group `lang` の `rules/lang/index.yaml` の文書を押すと、その文書の本文が開く
     test: test_normal_when_nav_grouped_by_folder
 lead: 利用者がブラウザで配信元の文書の画面を開き、タブ・サイドバー・検索・リビジョンの切り替え・差分で文書を読む。
 issue: 17
