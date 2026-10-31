@@ -399,6 +399,8 @@ def test_normal_when_files_index(
     assert f'<document path="{source.folder}/src/a.py" scope="full">' in markdown.text
     assert names["src/b"] == "部品 B"
     assert names["doc-2"] == "doc-2"
+    assert "'files' is a required property" not in one.text
+    assert "'files' is a required property" not in everything.text
 
 
 def test_normal_when_file_unreadable(
