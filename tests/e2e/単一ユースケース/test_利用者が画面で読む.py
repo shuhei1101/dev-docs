@@ -61,6 +61,31 @@ NOTES_EXTRA = (
     "        - auto:\n"
     "            document: notes\n"
 )
+TAG_NAV = (
+    "nav:\n"
+    "  tabs:\n"
+    "    - title: mcp\n"
+    "      items:\n"
+    "        - auto:\n"
+    "            document: sample\n"
+    "            filter:\n"
+    "              and:\n"
+    "                - {field: tags, op: eq, values: [mcp]}\n"
+    "                - not: {field: tags, op: eq, values: [設計]}\n"
+    "    - title: すべて\n"
+    "      items:\n"
+    "        - auto:\n"
+    "            document: sample\n"
+)
+TERM_ROW = (
+    "  - id: terms\n"
+    "    paths: [terms/*.yaml]\n"
+    "    schema: schemas/term.schema.yaml\n"
+    "    alias_type: term\n"
+)
+TERM_SCHEMA = "title: 用語\ntype: object\n"
+SCOPE_TERM = "id: scope\nname: 作業範囲\ndescription: 触ってよい範囲\naliases: [scope, 担当範囲]\n"
+TERM_NOTE = "# A\n\n担当範囲の中だけを書き換える。\n"
 SLEEP_SCRIPT = "import time\ntime.sleep(60)\n"
 SMALL_ROWS = [{"key": "k1", "label": "名称 1", "notes": "備考 1"}]
 
@@ -455,3 +480,77 @@ def test_error_when_source_not_served(
     expect(page.get_by_role("link", name="設定を開く")).to_be_visible()
     page.get_by_role("button", name=re.compile("^配信元を切り替える")).click()
     expect(page.get_by_role("menuitem", name=re.compile("sample"))).to_be_visible()
+
+
+def test_normal_when_nav_filtered_by_tags(
+    make_source: Callable[..., Any],
+    serve: Callable[..., Any],
+    sample_file_set: Callable[..., dict[str, str]],
+    sample_config_text: Callable[..., str],
+    sample_doc_text: Callable[..., str],
+    page: Page,
+) -> None:
+    """nav の auto のタグの式に当たる文書だけをサイドバーに並べ、式の無いタブは全てを並べる（正常系）。"""
+    # 準備
+    files = sample_file_set(
+        **{
+            "dev-docs.yaml": sample_config_text(TAG_NAV),
+            "docs/doc-1.yaml": sample_doc_text("doc-1", "文書 1", tags=["mcp"]),
+            "docs/doc-2.yaml": sample_doc_text("doc-2", "文書 2", tags=["mcp", "設計"]),
+            "docs/doc-3.yaml": sample_doc_text("doc-3", "文書 3", tags=["設計"]),
+        }
+    )
+    served = serve(make_source("sample", files))
+    tabs = page.get_by_role("navigation", name="文書の種類")
+    sidebar = page.get_by_role("navigation", name="文書の一覧")
+    # 実行
+    page.goto(served.url("/sample"))
+    expect(sidebar.get_by_role("link")).to_have_text(["文書 1"])
+    _side_link(page, "文書 1").click()
+    expect(_heading(page)).to_have_text("文書 1")
+    tabs.get_by_role("link", name="すべて").click()
+    # 検証
+    expect(sidebar.get_by_role("link")).to_have_text(["文書 1", "文書 2", "文書 3"])
+
+
+def test_normal_when_term_tooltip_shown(
+    make_source: Callable[..., Any],
+    serve: Callable[..., Any],
+    screen_files: Callable[..., dict[str, str]],
+    page: Page,
+) -> None:
+    """本文の用語の語にポインタを載せると、用語のツールチップを出す（正常系）。"""
+    # 準備
+    notes = {
+        "schemas/files.schema.yaml": FILES_SCHEMA.read_text(encoding="utf-8"),
+        "notes/files.yaml": "files:\n  - path: a.md\n",
+        "notes/a.md": TERM_NOTE,
+    }
+    sample = make_source(
+        "sample",
+        screen_files(
+            nav=False,
+            config_extra=TERM_ROW + NOTES_EXTRA,
+            **{"schemas/term.schema.yaml": TERM_SCHEMA, "terms/scope.yaml": SCOPE_TERM, **notes},
+        ),
+    )
+    plain = make_source("plain", screen_files(nav=False, config_extra=NOTES_EXTRA, **notes))
+    served = serve(sample, plain)
+    term = page.get_by_role("main").get_by_text("担当範囲", exact=True)
+    # 実行
+    document = served.get("/_api/sources/sample/docs/docs/doc-1")
+    page.goto(served.url("/sample/notes/files/notes/a"))
+    expect(_heading(page)).to_have_text("a")
+    term.hover()
+    tooltip = page.get_by_role("tooltip")
+    expect(tooltip).to_be_visible()
+    # 検証
+    aliases = {item["name"]: item for item in document.json()["aliases"]}
+    assert aliases["作業範囲"]["aliases"] == ["scope", "担当範囲"]
+    assert aliases["作業範囲"]["description"] == "触ってよい範囲"
+    expect(tooltip).to_contain_text("用語")
+    expect(tooltip).to_contain_text("触ってよい範囲")
+    page.goto(served.url("/plain/notes/files/notes/a"))
+    expect(page.get_by_role("main")).to_contain_text("担当範囲の中だけを書き換える。")
+    page.get_by_role("main").get_by_text("担当範囲の中だけを書き換える。").hover()
+    expect(page.get_by_role("tooltip")).to_have_count(0)

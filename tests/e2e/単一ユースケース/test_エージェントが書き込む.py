@@ -38,6 +38,31 @@ DECISIONS_ROW = (
 )
 
 
+RULES_ROW = (
+    "  - id: rules\n"
+    "    paths: [rules/*.yaml]\n"
+    "    schema: schemas/rule.schema.yaml\n"
+    "    metadata:\n"
+    '      tags: "tags[].name"\n'
+    '      main_tags: "tags[main].name"\n'
+)
+RULE_SCHEMA = (
+    "type: object\n"
+    "properties:\n"
+    "  id: {type: string}\n"
+    "  name: {type: string}\n"
+    "  tags:\n"
+    "    type: array\n"
+    "    items:\n"
+    "      type: object\n"
+    "      properties:\n"
+    "        name: {type: string}\n"
+    "        main: {type: boolean}\n"
+    "      required: [name]\n"
+)
+RULE_DOC = "id: doc-1\nname: 文書 1\ntags:\n  - {name: mcp, main: true}\n  - {name: 設計}\n"
+
+
 def _version(path: Path) -> str:
     """文書のファイルの今のバージョン（内容のハッシュ）を返す。"""
     return content_hash(path.read_text(encoding="utf-8"))
@@ -458,3 +483,50 @@ def test_normal_when_metadata_mapped(
     assert not by_column.is_error
     assert "title: 別の名前" in by_column_text
     assert "name:" not in by_column_text
+
+
+def _write_tags(served: Any, source: Any, worktree: Path, step: dict[str, Any]) -> tuple[Any, Any]:
+    """rules の文書 1 に update を 1 回当て、結果と書いた後の tags を返す。"""
+    target = worktree / "rules" / "doc-1.yaml"
+    result = served.call(
+        "write_docs",
+        cwd=str(source.folder),
+        worktree=str(worktree),
+        operations=[_update("doc-1", _version(target), **step)],
+    )
+    return result, load_yaml(target.read_text(encoding="utf-8"))["tags"]
+
+
+def test_normal_when_tags_are_objects(
+    make_source: Callable[..., Any],
+    serve: Callable[..., Any],
+    add_worktree: Callable[..., Path],
+    sample_file_set: Callable[..., dict[str, str]],
+    sample_config_text: Callable[..., str],
+) -> None:
+    """tags[].name の読み替えで、tags・main_tags への操作を name を持つオブジェクトの配列へ書き戻す（正常系）。"""
+    # 準備
+    files = sample_file_set(
+        **{
+            "dev-docs.yaml": sample_config_text(RULES_ROW),
+            "schemas/rule.schema.yaml": RULE_SCHEMA,
+            "rules/doc-1.yaml": RULE_DOC,
+        }
+    )
+    source, served, worktree = _setup(make_source, serve, add_worktree, files)
+    # 実行
+    first, tags_1 = _write_tags(
+        served,
+        source,
+        worktree,
+        {"add_to": {"tags": ["テスト"]}, "remove_from": {"tags": ["設計"]}},
+    )
+    second, tags_2 = _write_tags(served, source, worktree, {"set": {"tags": ["mcp", "運用"]}})
+    third, tags_3 = _write_tags(served, source, worktree, {"set": {"main_tags": ["運用"]}})
+    # 検証
+    assert not first.is_error
+    assert tags_1 == [{"name": "mcp", "main": True}, {"name": "テスト"}]
+    assert not second.is_error
+    assert tags_2 == [{"name": "mcp", "main": True}, {"name": "運用"}]
+    assert not third.is_error
+    assert tags_3 == [{"name": "mcp"}, {"name": "運用", "main": True}]

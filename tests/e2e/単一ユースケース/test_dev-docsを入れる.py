@@ -10,7 +10,7 @@ from dev_docs.features.settings.query import SETTINGS_VERSION
 SETTINGS_SCHEMA = (
     Path(__file__).parents[3] / "src" / "dev_docs" / "schemas" / "settings.schema.yaml"
 )
-TOOL_COUNT = 6
+TOOL_COUNT = 7
 RENAME_STEPS = (
     "steps:\n"
     "  - op: rename\n"

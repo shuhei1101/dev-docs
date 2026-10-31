@@ -11,7 +11,7 @@ TEMPLATES = Path(__file__).parents[3] / "templates"
 FILES_SCHEMA = TEMPLATES / "files.schema.yaml"
 BROKEN_CONFIG = "name: broken\ndocuments:\n  - id: sample\n    schema: schemas/sample.schema.yaml\n"
 SYNC_ZERO = {"missing_refs": 0, "unindexed_files": 0, "missing_body_files": 0}
-TOOL_COUNT = 6
+TOOL_COUNT = 7
 FILES_REQUIRED = "'files' is a required property"
 SETUP_PROMPT = "/dev-docs:setup {path}"
 MARKDOWN_FILES = {
@@ -639,3 +639,88 @@ def test_error_when_cross_origin(
     assert response.status_code == 403
     assert served.settings.read_bytes() == before
     assert served.get("/_api/sources/sample/docs").status_code == 200
+
+
+def _repository_with_develop(
+    make_source: Callable[..., Any], run_git: Callable[..., str]
+) -> tuple[Any, Path]:
+    """クローン本体が master で、`.claude/worktrees/develop` に develop を checkout した配信元を作る。"""
+    repo = make_source("repo")
+    run_git(repo.folder, "checkout", "-b", "master")
+    develop = repo.folder / ".claude" / "worktrees" / "develop"
+    run_git(repo.folder, "worktree", "add", str(develop), "develop")
+    return repo, develop
+
+
+def _worktree_paths(described: Any) -> set[str]:
+    """describe(source) の JSON のワークツリーのパスを集める。"""
+    return {item["path"] for item in described.data["worktrees"]}
+
+
+def test_normal_when_main_repository_registered(
+    make_source: Callable[..., Any],
+    serve: Callable[..., Any],
+    write_settings: Callable[..., Path],
+    run_git: Callable[..., str],
+) -> None:
+    """メインのリポジトリの dev-docs.yaml を指して追加すると、ワークツリーを数えて配信する（正常系）。"""
+    # 準備
+    sample = make_source("sample")
+    repo, develop = _repository_with_develop(make_source, run_git)
+    served = serve(sample)
+    settings = write_settings(sample, repo)
+    # 実行
+    reloaded = served.call_admin("reload")
+    described = served.call("describe", cwd=str(repo.folder), source="repo", format="json")
+    outside = served.call(
+        "search_docs", cwd=str(sample.folder), source="repo", outside_scope=True, view="ids"
+    )
+    settings.write_text(
+        settings.read_text(encoding="utf-8").replace(
+            "  - id: repo\n", '  - id: repo\n    outside_read: "yes"\n'
+        ),
+        encoding="utf-8",
+    )
+    invalid = served.call_admin("reload")
+    # 検証
+    assert not reloaded.is_error
+    assert str(develop) in _worktree_paths(described)
+    assert not outside.is_error
+    assert invalid.is_error
+    assert "outside_read" in invalid.text
+
+
+def test_normal_when_worktree_config_registered(
+    make_source: Callable[..., Any],
+    serve: Callable[..., Any],
+    write_settings: Callable[..., Path],
+    run_git: Callable[..., str],
+    add_worktree: Callable[..., Path],
+    sample_doc_text: Callable[..., str],
+) -> None:
+    """ワークツリーの dev-docs.yaml を指して追加しても、メインのリポジトリの直下からワークツリーを数える（正常系）。"""
+    # 準備
+    sample = make_source("sample")
+    repo, develop = _repository_with_develop(make_source, run_git)
+    worktree = add_worktree(repo.folder, "x")
+    (worktree / "docs" / "doc-1.yaml").write_text(
+        sample_doc_text("doc-1", "ワークツリー x の文書 1"), encoding="utf-8"
+    )
+    repo.config = [develop / "dev-docs.yaml"]
+    served = serve(sample)
+    write_settings(sample, repo)
+    # 実行
+    reloaded = served.call_admin("reload")
+    described = served.call("describe", cwd=str(repo.folder), source="repo", format="json")
+    found = served.call(
+        "search_docs",
+        cwd=str(repo.folder),
+        worktree=str(worktree),
+        filter={"field": "id", "op": "eq", "values": ["doc-1"]},
+        view="full",
+    )
+    # 検証
+    assert not reloaded.is_error
+    assert str(worktree) in _worktree_paths(described)
+    assert str(develop) in _worktree_paths(described)
+    assert "name: ワークツリー x の文書 1" in found.text
