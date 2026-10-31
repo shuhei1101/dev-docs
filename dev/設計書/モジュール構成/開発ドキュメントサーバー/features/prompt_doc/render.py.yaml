@@ -260,6 +260,7 @@ functions:
          - `lang` の本文が無い場合、`{id}（{lang} の本文なし）` を `unused` に加える
          - それ以外は本文を描画する
          - `jinja2.UndefinedError` の場合、「未定義の変数: {message}」を `problems` にして返す
+         - それ以外の例外（`jinja2.TemplateError`・`Exception`）の場合、「部品 `{id}` を描画できません: {例外の型}: {message}」を `problems` にして返す
       4. `kind` が `llm` の場合、描画した本文を `role` ごとに空行 1 つでつなぎ、`ROLES` の順に空でないものをメッセージにする。それ以外はつないで 1 件にする
       5. メッセージの `marked` は描画したまま、`text` は `VALUE_MARK_PATTERN` を値だけに戻したものにし、`char_count` を `text` の字数の合計にする
     unit_tests:
@@ -299,3 +300,9 @@ functions:
         condition: '`syntax_errors` に `logs` の 1 件'
         mock: なし
         expected: '`problems` に `logs` と行を含む 1 件で、`messages` が空'
+      - name: test_render_example_when_runtime_error
+        case: 異常
+        summary: 描画中の例外
+        condition: 本文が `{{ a + 1 }}` で、`a` が `type` なし・`example` が文字列
+        mock: なし
+        expected: '`problems` に `TypeError` を含む 1 件で、`messages` が空'
