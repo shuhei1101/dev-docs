@@ -344,7 +344,7 @@ flows:
         description: なし（`dev-docs serve` を子プロセスで起動する）
       - name: 違反する YAML
         description: プロンプトの YAML の置き場所をテストの一時フォルダへ向け、`search_docs` のツールの YAML から必須のキー `kind` を削除する
-        notes: 置き場所の向け方はモジュール構成設計で決める
+        notes: '`DEV_DOCS_PROMPTS_DIR` に一時フォルダを入れる'
     flow: |-
       ```mermaid
       sequenceDiagram
@@ -382,6 +382,12 @@ request:
     required: false
     default: 端末の設定の `port`（既定 8781）
     description: 待ち受けのポート。設定の `port` より優先
+    notes: 環境変数で渡す
+  - name: DEV_DOCS_PROMPTS_DIR
+    type: str
+    required: false
+    default: クローンの直下の `content/prompts/`
+    description: プロンプトの YAML を読むフォルダ
     notes: 環境変数で渡す
 request_example: |-
   ```bash
