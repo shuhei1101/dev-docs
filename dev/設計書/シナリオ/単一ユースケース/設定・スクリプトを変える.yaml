@@ -153,20 +153,24 @@ scenarios:
   - name: 正常シナリオ（スクリプトを default_ref から動かす）
     setup:
       - name: Mock
-        description: なし（実環境で実行）
+        description: なし（実環境で実行。`cwd` はテストが引数に入れる）
       - name: default_ref のスクリプト
-        description: sample の `develop` ブランチのスクリプトを次のようにする。変換スクリプトは本文の先頭に `develop` の文字を加える。validator は文書 1 に違反 `develop-rule` を出す。generator は生成した文書の本文を `develop` にする
+        description: 'sample の `develop` ブランチのスクリプトを次のようにする。変換スクリプトは本文の先頭に `develop` の文字を加える。`on: [read]` の validator は文書 1 に違反 `develop-rule` を出す。generator は生成した文書の本文を `develop` にする'
         notes: クローン本体は `master` を checkout し、`master` の変換スクリプトは何も加えず、validator は違反を出さず、generator は本文を `master` にする
+      - name: dev-docs
+        description: sample を配信している dev-docs
+        notes: '`cwd` は sample のクローン本体'
     flow: |-
       ```mermaid
       sequenceDiagram
+        actor A as エージェント
         actor U as 利用者
         participant S as dev-docs のサーバー
         participant G as sample のリポジトリ
 
-        U->>S: 起動する
-        S->>G: 起動時の検証で default_ref の validator を動かす
-        S-->>U: 起動時の警告（違反 develop-rule）と配信の開始
+        A->>S: search_docs(filter: id が文書 1)
+        S->>G: default_ref の validator を動かす
+        S-->>A: 文書 1 と notes の違反 develop-rule
         U->>S: 変換を使う文書を開く
         S->>G: default_ref のスクリプトで変換する
         S-->>U: develop の文字が付いた本文
@@ -175,7 +179,7 @@ scenarios:
         S-->>U: 本文 develop
       ```
     expected:
-      - 起動時の警告に、文書 1 の違反 `develop-rule` が出る
+      - '`search_docs` の文書 1 の `notes` に違反 `develop-rule` が出る'
       - 変換した本文の先頭に `develop` の文字が付く
       - generator が生成した文書の本文が `develop` になる
     test: test_normal_when_scripts_run_from_default_ref
