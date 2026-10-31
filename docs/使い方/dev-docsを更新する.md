@@ -72,6 +72,8 @@ update と dev-docs migrate で dev-docs を更新し、端末の設定を移し
 
 ## 失敗したとき
 
+<!-- table: data -->
+
 | 事象 | 動き |
 | --- | --- |
 | `git pull --ff-only` が失敗する（fast-forward できない・commit していない変更がある） | `update` が失敗したコマンドと標準エラーを返す。クローンに触らず、再起動もしない |
@@ -80,5 +82,7 @@ update と dev-docs migrate で dev-docs を更新し、端末の設定を移し
 | 当てる手順に破壊的なもの（キーの削除）がある | 触らずに止まる。内容を確かめ、了承できれば `--allow-destructive` を付けて実行する |
 | 端末の設定の `version` が dev-docs より新しい | 触らずに止まる。`update` で dev-docs を更新する |
 | `restart`・`update` の再起動が終わる前に呼んだ | `RestartInProgressError` で断る。起動し直した後に呼び直す |
+
+<!-- /table -->
 
 起動に失敗したときは、次のセッションの SessionStart のフックが起動し直します。

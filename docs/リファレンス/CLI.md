@@ -81,6 +81,8 @@ dev-docs migrate --source ~/repo/sample/dev-docs.yaml --allow-destructive
 `settings` は端末の設定、`dev-docs` は配信元の設定を、そのバージョンへ上げる手順です。
 `steps.yaml` は `steps:` の下に、次のキーを持つ行を並べます。
 
+<!-- table: data -->
+
 | キー | 説明 |
 | --- | --- |
 | `op` | `rename`（キーの改名）・`add`（無いキーだけを既定値つきで追加）・`delete`（キーの削除。`value` が無いときだけ破壊的な手順）・`lift`（値の引き上げ）・`unwrap`（値の取り出し） |
@@ -90,6 +92,8 @@ dev-docs migrate --source ~/repo/sample/dev-docs.yaml --allow-destructive
 | `match` | `lift`・`unwrap` で、値が辞書でこのキーと値を全て持つときだけ当てる。無ければ辞書の値に当てる |
 | `take` | `lift`・`unwrap` で、辞書の値から取り出すキー。`unwrap` で辞書がこのキーを持たないときは元のキー名を使う |
 | `description` | `--plan` に出す 1 行の説明 |
+
+<!-- /table -->
 
 `rename` は同じ位置で改名し、コメントを残します。
 改名先のキーが既にあるときは失敗とします。

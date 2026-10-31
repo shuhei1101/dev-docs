@@ -7,6 +7,8 @@
 接続先は `http://127.0.0.1:${DEV_DOCS_PORT:-8781}/mcp` の 1 つで、トランスポートは HTTP（Streamable HTTP）です。
 ツールは全配信元で共通で、配信元は引数 `source` で指します。
 
+<!-- table: data -->
+
 | ツール | 種類 | 役割 |
 | --- | --- | --- |
 | `search_docs` | 読み取り | 検索・取得・一覧・件数・集計 |
@@ -15,6 +17,8 @@
 | `describe` | 読み取り | 使える配信元の一覧・説明書・種類・スキーマ |
 | `list_changes` | 読み取り | 区間か前回読んだ時点からの変更 |
 | `trace_related` | 読み取り | 関連のたどりと関連の候補 |
+
+<!-- /table -->
 
 読み取りのツールには `readOnlyHint: true` が付き、並列に呼ばれます。
 引数の検証は strict tool use を使わず、サーバーが配信元のスキーマで検証し、直し方を添えてエラーを返します。
@@ -152,6 +156,8 @@ Condition = {"field": str, "op": enum, "values": [str, ...], "match": "any" | "a
 
 ### レスポンス
 
+<!-- table: data -->
+
 | フィールド | 説明 |
 | --- | --- |
 | `total_count` | 条件に当たった総件数。複数の配信元では配信元ごとにも返す |
@@ -166,6 +172,8 @@ Condition = {"field": str, "op": enum, "values": [str, ...], "match": "any" | "a
 | `items[].values.@matches` | `fields` に `@matches` を渡したときの、本文の条件に当たった本文の行の数。下の「当たった数」 |
 | `items[].ranges` | `sections`・`lines` を渡したときの、切り出した本文の行の範囲（`start_line`・`end_line`。本文の行番号、1 始まり）の配列。切り出す範囲が無ければ空 |
 | `items[].total_lines` | `sections`・`lines` を渡したときの、本文の全体の行数 |
+
+<!-- /table -->
 
 YAML として読めないファイルがあっても、そのファイルを除いて返し、`notes` で知らせます。
 
@@ -339,6 +347,8 @@ Git 管理外の配信元では、種類の `documents[].writable` が削除を�
 
 起点の文書かコードのパスから `related` をたどって、関連する文書を返します。
 
+<!-- table: data -->
+
 | 引数 | 型 | 既定 | 説明 |
 | --- | --- | --- | --- |
 | `from_ids` | list[str] | なし | 起点の文書の ID。`code_paths` とどちらか 1 つを渡す |
@@ -347,6 +357,8 @@ Git 管理外の配信元では、種類の `documents[].writable` が削除を�
 | `direction` | `out` / `in` / `both` | `both` | `out` は起点の `related` が指す先、`in` は起点を `related` で指す文書 |
 | `suggest` | bool | `false` | `true` で、関連の候補（同じ commit での変更・同じ会話での編集と閲覧）を上位 3 件返す |
 | `repeat_seen` | bool | `false` | この会話で返し済みの相手の名前・概要文も返す |
+
+<!-- /table -->
 
 一度たどった文書はたどりません。
 `json` の各項目は、たどった文書の `path` と `scope: summary` を持ちます。
