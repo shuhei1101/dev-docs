@@ -94,6 +94,8 @@ properties:
               minLength: 1
             items:
               type: array
+              items:
+                $ref: "#/$defs/nav_item"
   documents:
     type: array
     title: 配信する文書
@@ -183,3 +185,58 @@ $defs:
           type: array
           items:
             enum: [read, write]
+  nav_item:
+    type: object
+    properties:
+      items:
+        type: array
+        items:
+          $ref: "#/$defs/nav_item"
+      auto:
+        type: object
+        properties:
+          document:
+            type: string
+            minLength: 1
+          filter:
+            $ref: "#/$defs/filter"
+  filter:
+    title: 条件
+    oneOf:
+      - $ref: "#/$defs/condition"
+      - $ref: "#/$defs/group"
+  condition:
+    type: object
+    additionalProperties: false
+    required:
+      - field
+      - op
+    properties:
+      field:
+        type: string
+        minLength: 1
+      op:
+        enum: [eq, ne, prefix, suffix, contains, not_contains, regex, glob, gt, gte, lt, lte, exists, not_exists]
+      values:
+        type: array
+        items:
+          type: string
+      match:
+        enum: [any, all]
+      case_sensitive:
+        type: boolean
+  group:
+    type: object
+    additionalProperties: false
+    minProperties: 1
+    properties:
+      and:
+        type: array
+        items:
+          $ref: "#/$defs/filter"
+      or:
+        type: array
+        items:
+          $ref: "#/$defs/filter"
+      not:
+        $ref: "#/$defs/filter"

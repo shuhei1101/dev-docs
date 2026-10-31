@@ -103,6 +103,7 @@ export const DocBody = ({
   const { ready } = useMdmark(ref, {
     markdown,
     docId,
+    aliases: doc.aliases,
     // コメントの機能は mdmark の既定でオフなので、オンにする
     config: { features: { comments: true } },
     commentStore: {

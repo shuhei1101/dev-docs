@@ -128,7 +128,8 @@ def _check_overlap(
 
 def to_columns(operation: Operation, table: DocumentTable, *, index: int) -> Operation:
     """操作のキーのうち、種類の行の `metadata` に書いた共通のキーを列名へ読み替えた操作を返す。"""
-    metadata = table.metadata
+    # 配列の要素を指す列名は、オブジェクトの配列への書き戻しで読み替え済み
+    metadata = {key: column for key, column in table.metadata.items() if "[" not in column}
     if not metadata:
         return operation
     for item in ("set", "add_to", "remove_from"):
@@ -155,4 +156,186 @@ def to_columns(operation: Operation, table: DocumentTable, *, index: int) -> Ope
             else:
                 data[key] = copy.deepcopy(value)
         update["data"] = data
+    return operation.model_copy(update=update)
+
+
+ALL_KEY_PATTERN = re.compile(r"^(?P<array>[^\[\]]+)\[\]\.(?P<item>[^.\[\]]+)$")
+SELECTED_KEY_PATTERN = re.compile(
+    r"^(?P<array>[^\[\]]+)\[(?P<flag>[^.\[\]]+)\]\.(?P<item>[^.\[\]]+)$"
+)
+
+
+def _array_keys(
+    metadata: Mapping[str, str],
+) -> tuple[dict[str, tuple[str, str]], dict[str, tuple[str, str, str]]]:
+    """全ての要素のキー（キー → 配列・項目）と選んだ要素のキー（キー → 配列・真偽値のキー・項目）を集める。"""
+    all_keys: dict[str, tuple[str, str]] = {}
+    selected_keys: dict[str, tuple[str, str, str]] = {}
+    for key, column in metadata.items():
+        if matched := ALL_KEY_PATTERN.match(column):
+            all_keys[key] = (matched["array"], matched["item"])
+        elif matched := SELECTED_KEY_PATTERN.match(column):
+            selected_keys[key] = (matched["array"], matched["flag"], matched["item"])
+    return all_keys, selected_keys
+
+
+def _original(operation: Operation, current: Mapping[str, Any] | None, array: str) -> list[Any]:
+    """書き戻す前の配列の複製（`update` は今の内容、`create`・`replace` は `data` の列名の値）。"""
+    source = current if operation.op == "update" else operation.data
+    value = get_field(source, array) if source is not None else None
+    if not isinstance(value, list) or not all(isinstance(item, Mapping) for item in value):
+        return []
+    return copy.deepcopy(value)
+
+
+def _rebuild(elements: list[Any], item: str, names: Iterable[Any]) -> list[Any]:
+    """渡した名前の並びで配列を作り直す（元からあった名前の要素は他のキーを保つ）。"""
+    by_name = {element.get(item): element for element in elements}
+    return [by_name.get(name, {item: name}) for name in names]
+
+
+def _apply_all_key(
+    elements: list[Any], item: str, key: str, operation: Operation, data: Mapping[str, Any]
+) -> tuple[list[Any], bool]:
+    """全ての要素のキーへの操作を当て、配列と列を削除したかを返す。"""
+    if key in data:
+        elements = _rebuild(elements, item, data[key])
+    if key in operation.set:
+        elements = _rebuild(elements, item, operation.set[key])
+    if key in operation.add_to:
+        present = {element.get(item) for element in elements}
+        for name in operation.add_to[key]:
+            if name not in present:
+                elements.append({item: name})
+                present.add(name)
+    if key in operation.remove_from:
+        removed = operation.remove_from[key]
+        elements = [element for element in elements if element.get(item) not in removed]
+    return elements, key in operation.unset
+
+
+def _apply_selected_key(
+    elements: list[Any],
+    names_of: tuple[str, str],
+    key: str,
+    operation: Operation,
+    data: Mapping[str, Any],
+    *,
+    label: str,
+    index: int,
+) -> list[Violation]:
+    """選んだ要素のキーへの操作を配列へ当て、配列に無い名前の違反を返す。"""
+    flag, item = names_of
+    by_name = {element.get(item): element for element in elements}
+    violations: list[Violation] = []
+
+    def known(names: Iterable[Any], where: str) -> list[Any]:
+        found = []
+        for name in names:
+            if name in by_name:
+                found.append(name)
+            else:
+                violations.append(
+                    Violation(
+                        path=f"operations[{index}].{where}.{key}",
+                        rule=f"{name} は {label} にありません",
+                    )
+                )
+        return found
+
+    if key in data:
+        chosen = set(known(data[key], "data"))
+        for element in elements:
+            if element.get(item) in chosen:
+                element[flag] = True
+            else:
+                element.pop(flag, None)
+    if key in operation.set:
+        chosen = set(known(operation.set[key], "set"))
+        for element in elements:
+            if element.get(item) in chosen:
+                element[flag] = True
+            else:
+                element.pop(flag, None)
+    if key in operation.add_to:
+        for name in known(operation.add_to[key], "add_to"):
+            by_name[name][flag] = True
+    if key in operation.remove_from:
+        for name in operation.remove_from[key]:
+            if name in by_name:
+                by_name[name].pop(flag, None)
+    if key in operation.unset:
+        for element in elements:
+            element.pop(flag, None)
+    return violations
+
+
+def expand_array_keys(
+    operation: Operation, table: DocumentTable, current: Mapping[str, Any] | None, *, index: int
+) -> Operation:
+    """列名が `[]`・`[{キー}]` を含む共通のキーへの操作を、オブジェクトの配列の列の置き換えにした操作を返す。"""
+    all_keys, selected_keys = _array_keys(table.metadata)
+    collected = set(all_keys) | set(selected_keys)
+    if not collected:
+        return operation
+    data = operation.data or {}
+    used = (
+        set(operation.set)
+        | set(operation.add_to)
+        | set(operation.remove_from)
+        | set(operation.unset)
+        | set(data)
+    ) & collected
+    violations = [
+        Violation(
+            path=f"operations[{index}].text_edits[{number}].field",
+            rule=f"{edit.field} は文字列の項目ではありません",
+        )
+        for number, edit in enumerate(operation.text_edits)
+        if edit.field in collected
+    ]
+    arrays: dict[str, list[Any]] = {}
+    unset_arrays: set[str] = set()
+    for key in sorted(used & set(all_keys), key=list(all_keys).index):
+        array, item = all_keys[key]
+        elements = arrays.get(array, _original(operation, current, array))
+        arrays[array], removed = _apply_all_key(elements, item, key, operation, data)
+        if removed:
+            unset_arrays.add(array)
+    for key in sorted(used & set(selected_keys), key=list(selected_keys).index):
+        array, flag, item = selected_keys[key]
+        elements = arrays.setdefault(array, _original(operation, current, array))
+        label = next(
+            (name for name, (other, _) in all_keys.items() if other == array),
+            f"{array}[].{item}",
+        )
+        violations.extend(
+            _apply_selected_key(
+                elements, (flag, item), key, operation, data, label=label, index=index
+            )
+        )
+    if violations:
+        raise InvalidArgumentError(
+            message=f"引数が正しくありません: {len(violations)} 件", violations=violations
+        )
+    if not arrays:
+        return operation
+    update: dict[str, Any] = {
+        "set": {k: v for k, v in operation.set.items() if k not in collected},
+        "add_to": {k: v for k, v in operation.add_to.items() if k not in collected},
+        "remove_from": {k: v for k, v in operation.remove_from.items() if k not in collected},
+        "unset": [k for k in operation.unset if k not in collected],
+    }
+    if operation.op == "update":
+        for array, elements in arrays.items():
+            if array in unset_arrays:
+                update["unset"].append(array)
+            else:
+                update["set"][array] = elements
+    else:
+        rebuilt = {k: copy.deepcopy(v) for k, v in data.items() if k not in collected}
+        for array, elements in arrays.items():
+            if array not in unset_arrays:
+                set_field(rebuilt, array, elements)
+        update["data"] = rebuilt
     return operation.model_copy(update=update)

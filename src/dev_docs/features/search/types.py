@@ -7,6 +7,8 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from dev_docs.features.documents.types import MatchWord
+
 LIMIT_DEFAULT = 20
 LIMIT_MAX = 100
 MAX_CHARS_DEFAULT = 20000
@@ -113,6 +115,10 @@ class SearchRequest(BaseModel):
     ref: str | None = None
     worktree: str | None = None
     filter: Condition | Group | None = None
+    term: str | None = Field(
+        default=None,
+        description="alias_type を持つ行の文書のうち、name か aliases がこの語に一致する文書だけに絞る",
+    )
     view: Literal["ids", "summary", "full", "count"] = "summary"
     fields: list[str] = Field(default_factory=list)
     exclude_fields: list[str] = Field(default_factory=list)
@@ -127,6 +133,13 @@ class SearchRequest(BaseModel):
     repeat_seen: bool = False
     format: Literal["markdown", "json"] = "markdown"
     cwd: str | None = None
+    outside_scope: bool = Field(
+        default=False,
+        description=(
+            "true のとき、scope に当たらない配信元を outside_read が真なら"
+            "作業範囲の外（参考）として読む（source が ID 1 つのときだけ効く）"
+        ),
+    )
     session_id: str | None = None
     agent_id: str | None = None
     sections: list[str] | None = Field(
@@ -223,3 +236,22 @@ class SearchResult:
     items: list[SearchItem] = field(default_factory=list)
     # Markdown の先頭に出す配信元の ID。JSON には出さない
     source_label: str = field(default="", metadata={"internal": True})
+    outside_scope: bool = False
+
+
+class MatchWordsRequest(BaseModel):
+    """`list_match_words` の引数。"""
+
+    model_config = ConfigDict(extra="forbid")
+
+    source: str
+    worktree: str | None = None
+    format: Literal["markdown", "json"] = "markdown"
+    cwd: str | None = None
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
+class MatchWordsResult:
+    """照合する語の並び。"""
+
+    words: list[MatchWord] = field(default_factory=list)

@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 DEPTH_DEFAULT = 2
 DEPTH_MAX = 4
@@ -28,6 +28,13 @@ class RelatedRequest(BaseModel):
     repeat_seen: bool = False
     format: Literal["markdown", "json"] = "markdown"
     cwd: str | None = None
+    outside_scope: bool = Field(
+        default=False,
+        description=(
+            "true のとき、scope に当たらない配信元を outside_read が真なら"
+            "作業範囲の外（参考）として読む（source が ID 1 つのときだけ効く）"
+        ),
+    )
     session_id: str | None = None
     agent_id: str | None = None
 
@@ -75,3 +82,4 @@ class RelatedResult:
     items: list[RelatedItem] = field(default_factory=list)
     suggestions: list[Suggestion] = field(default_factory=list)
     notes: list[str] = field(default_factory=list)
+    outside_scope: bool = False

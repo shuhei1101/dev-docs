@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dev_docs.features.related.types import RelatedResult
+from dev_docs.features.search.render import OUTSIDE_SCOPE_LINE
 
 
 def _cell(text: str) -> str:
@@ -12,7 +13,11 @@ def _cell(text: str) -> str:
 
 def render_related_markdown(result: RelatedResult) -> str:
     """`format: markdown` の本文を作る。"""
-    lines = [f"{', '.join(result.start)} から {len(result.items)} 件", ""]
+    lines = [
+        *([OUTSIDE_SCOPE_LINE] if result.outside_scope else []),
+        f"{', '.join(result.start)} から {len(result.items)} 件",
+        "",
+    ]
     if result.items:
         lines.extend(
             ["| id | 深さ | たどった関連 | name | description |", "| --- | --- | --- | --- | --- |"]

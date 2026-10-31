@@ -5,13 +5,16 @@ from __future__ import annotations
 import json
 import logging
 import os
+import tempfile
+from collections.abc import Callable
 from importlib import resources
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import Any, Literal
 
 from jsonschema.exceptions import SchemaError
 from jsonschema.validators import Draft202012Validator
 
+from dev_docs.features.history.query import export_paths_at, read_file_at, resolve_ref
 from dev_docs.features.settings.types import SourceEntry
 from dev_docs.features.sources.merge import merge_configs
 from dev_docs.features.sources.types import (
@@ -22,9 +25,10 @@ from dev_docs.features.sources.types import (
     SourceConfig,
     SourceStatus,
 )
+from dev_docs.integrations.git import main_repo_root
 from dev_docs.integrations.git import repo_root as git_repo_root
 from dev_docs.integrations.scripts import ScriptNotFoundError, check_runnable
-from dev_docs.shared.errors import ValidationFailedError, Violation
+from dev_docs.shared.errors import DevDocsError, ValidationFailedError, Violation
 from dev_docs.shared.schema_check import schema_violations
 from dev_docs.shared.yaml_io import YamlLoadError, load_yaml
 
@@ -42,6 +46,7 @@ __all__ = [
     "compare_config_version",
     "load_source",
     "load_source_at",
+    "read_default_ref_config",
     "source_schema_json",
     "validate_source_config",
 ]
@@ -64,15 +69,40 @@ def _outside_root(pattern: str) -> bool:
     return ".." in Path(pattern).parts
 
 
-def _file_violation(root: Path, key_path: str, relative: str, what: str) -> Violation | None:
+ReadText = Callable[[str], str | None]
+
+
+def _disk_reader(root: Path) -> ReadText:
+    """配信元の直下からの相対パスのファイルをディスクから読む関数。"""
+
+    def _read(relative: str) -> str | None:
+        target = root / relative
+        return target.read_text(encoding="utf-8") if target.is_file() else None
+
+    return _read
+
+
+def _commit_reader(root: Path, repo: Path, commit: str) -> ReadText:
+    """配信元の直下からの相対パスのファイルを commit から読む関数。"""
+    prefix = root.relative_to(repo) if root.is_relative_to(repo) else Path()
+
+    def _read(relative: str) -> str | None:
+        return read_file_at(repo, commit, (PurePosixPath(prefix.as_posix()) / relative).as_posix())
+
+    return _read
+
+
+def _file_violation(
+    read_text: ReadText, key_path: str, relative: str, what: str
+) -> Violation | None:
     """設定が指すファイルが配信元の下にあり、YAML として読めるかを確かめる。"""
-    target = root / relative
     if _outside_root(relative):
         return Violation(path=key_path, rule=f"配信元の外を指しています: {relative}")
-    if not target.is_file():
+    text = read_text(relative)
+    if text is None:
         return Violation(path=key_path, rule=f"{what}のファイルが無い: {relative}")
     try:
-        load_yaml(target.read_text(encoding="utf-8"), file=relative)
+        load_yaml(text, file=relative)
     except YamlLoadError as error:
         return Violation(path=key_path, rule=f"{what}を YAML として読めない: {error}")
     return None
@@ -80,6 +110,11 @@ def _file_violation(root: Path, key_path: str, relative: str, what: str) -> Viol
 
 def validate_source_config(value: dict[str, Any], *, root: Path) -> list[Violation]:
     """マージした設定をスキーマ・行の参照・ファイルの有無で確かめ、違反を全て返す。"""
+    return _validate(value, _disk_reader(root))
+
+
+def _validate(value: dict[str, Any], read_text: ReadText) -> list[Violation]:
+    """配信元の設定の検証を、ファイルを `read_text` で読んで行う。"""
     violations = schema_violations(_source_schema(), value)
     # スキーマの違反があれば、ここで返す
     if violations:
@@ -134,17 +169,17 @@ def validate_source_config(value: dict[str, Any], *, root: Path) -> list[Violati
                         rule=f"配信元の外を指しています: {pattern}",
                     )
                 )
-        found = _file_violation(root, f"documents[{index}].schema", row["schema"], "スキーマ")
+        found = _file_violation(read_text, f"documents[{index}].schema", row["schema"], "スキーマ")
         if found is None:
-            found = _check_schema_file(root, f"documents[{index}].schema", row["schema"])
+            found = _check_schema_file(read_text, f"documents[{index}].schema", row["schema"])
         if found is not None:
             violations.append(found)
     return violations
 
 
-def _check_schema_file(root: Path, key_path: str, relative: str) -> Violation | None:
+def _check_schema_file(read_text: ReadText, key_path: str, relative: str) -> Violation | None:
     """スキーマのファイルが JSON Schema（Draft 2020-12）として正しいかを確かめる。"""
-    schema = load_yaml((root / relative).read_text(encoding="utf-8"))
+    schema = load_yaml(read_text(relative) or "")
     try:
         Draft202012Validator.check_schema(schema)
     except SchemaError as error:
@@ -162,6 +197,25 @@ def check_scripts(config: SourceConfig, *, root: Path) -> list[Violation]:
             except ScriptNotFoundError as error:
                 violations.append(Violation(path=f"{table}[{index}]", rule=error.reason))
     return violations
+
+
+def _check_scripts_at(config: SourceConfig, root: Path, repo: Path, commit: str) -> list[Violation]:
+    """スクリプトのファイルが commit にあるかを、そのリビジョンから取り出したフォルダで確かめる。"""
+    prefix = PurePosixPath(root.relative_to(repo).as_posix()) if root.is_relative_to(repo) else None
+    folders: set[str] = set()
+    for table in SCRIPT_TABLES:
+        for row in getattr(config, table):
+            for item in row.run:
+                if prefix is None or item.startswith(("-", "/")):
+                    continue
+                relative = (prefix / item).as_posix()
+                if read_file_at(repo, commit, relative) is not None:
+                    folders.add(PurePosixPath(relative).parent.as_posix())
+    if not folders:
+        with tempfile.TemporaryDirectory() as empty:
+            return check_scripts(config, root=Path(empty))
+    with export_paths_at(repo, commit, sorted(folders)) as exported:
+        return check_scripts(config, root=exported / (prefix or PurePosixPath()).as_posix())
 
 
 def compare_config_version(version: str) -> Literal["same", "older", "newer"]:
@@ -230,17 +284,23 @@ def _build_table(row: dict[str, Any]) -> DocumentTable:
     )
 
 
-def _read_configs(files: list[Path]) -> tuple[list[dict[str, Any]], list[Violation]]:
+def _read_configs(
+    files: list[Path], first_text: str | None = None
+) -> tuple[list[dict[str, Any]], list[Violation]]:
     """設定の YAML を順に読む。無い・読めない・辞書でないファイルは違反にする。"""
     values: list[dict[str, Any]] = []
     violations: list[Violation] = []
     for index, file in enumerate(files):
         path = f"config[{index}]"
-        if not file.is_file():
+        if index == 0 and first_text is not None:
+            text = first_text
+        elif file.is_file():
+            text = file.read_text(encoding="utf-8")
+        else:
             violations.append(Violation(path=path, rule=f"設定のファイルが無い: {file}"))
             continue
         try:
-            value = load_yaml(file.read_text(encoding="utf-8"), file=str(file))
+            value = load_yaml(text, file=str(file))
         except YamlLoadError as error:
             violations.append(Violation(path=path, rule=f"YAML として読めない: {error}"))
             continue
@@ -261,33 +321,87 @@ def _worktree_globs(patterns: list[str], base: Path) -> list[str]:
     return result
 
 
+def read_default_ref_config(first: Path) -> tuple[str, str] | None:
+    """ディスクの先頭の設定の `default_ref` を読み、そのリビジョンの先頭の設定の commit と内容を返す。"""
+    top = git_repo_root(first.parent)
+    if top is None:
+        return None
+    try:
+        value = load_yaml(first.read_text(encoding="utf-8"), file=str(first))
+    except OSError, YamlLoadError:
+        value = None
+    default_ref = SourceConfig.default_ref
+    if isinstance(value, dict) and isinstance(value.get("default_ref"), str):
+        default_ref = value["default_ref"]
+    try:
+        commit = resolve_ref(top, default_ref, date_base=default_ref, argument="default_ref").commit
+    except DevDocsError as error:
+        rule = f"{default_ref} を解けません"
+        raise ValidationFailedError(
+            message=rule, violations=[Violation(path="default_ref", rule=rule)]
+        ) from error
+    relative = Path(os.path.abspath(first)).relative_to(top).as_posix()
+    text = read_file_at(top, commit, relative)
+    if text is None:
+        rule = f"{default_ref} に {relative} がありません"
+        raise ValidationFailedError(
+            message=rule, violations=[Violation(path="config[0]", rule=rule)]
+        )
+    return commit, text
+
+
 def assemble_source(
     files: list[Path],
     *,
     source_id: str | None,
     scope_read: list[str],
     scope_write: list[str] | None,
+    outside_read: bool = True,
     root_override: Path | None = None,
 ) -> tuple[ServedSource | None, SourceConfig | None, list[Violation]]:
     """設定を読み、マージ・検証・スクリプトの確かめをして、配信中の配信元を作る。"""
-    values, violations = _read_configs(files)
+    return _assemble(
+        files,
+        source_id=source_id,
+        scope_read=scope_read,
+        scope_write=scope_write,
+        outside_read=outside_read,
+        root_override=root_override,
+    )
+
+
+def _assemble(
+    files: list[Path],
+    *,
+    source_id: str | None,
+    scope_read: list[str],
+    scope_write: list[str] | None,
+    outside_read: bool,
+    root_override: Path | None = None,
+    at: tuple[str, str] | None = None,
+) -> tuple[ServedSource | None, SourceConfig | None, list[Violation]]:
+    """配信元の組み立て。`at` は（`default_ref` の commit, そのリビジョンの先頭の設定の内容）。"""
+    values, violations = _read_configs(files, at[1] if at else None)
     if violations:
         return None, None, violations
     root = root_override or files[0].parent
+    top = git_repo_root(root)
+    commit = at[0] if at and top is not None else None
+    read_text = _commit_reader(root, top, commit) if top and commit else _disk_reader(root)
     merged = merge_configs(values)
-    violations = validate_source_config(merged, root=root)
+    violations = _validate(merged, read_text)
     if violations:
         return None, None, violations
     config = build_source_config(merged)
-    violations = check_scripts(config, root=root)
+    if top is not None and commit is not None:
+        violations = _check_scripts_at(config, root, top, commit)
+    else:
+        violations = check_scripts(config, root=root)
     if violations:
         return None, config, violations
-    top = git_repo_root(root)
-    base = top or root
-    schemas = {
-        row.id: load_yaml((root / row.schema_path).read_text(encoding="utf-8"))
-        for row in config.documents
-    }
+    main_root = main_repo_root(root) if top is not None else None
+    base = main_root or top or root
+    schemas = {row.id: load_yaml(read_text(row.schema_path) or "") for row in config.documents}
     served = ServedSource(
         id=source_id or config.name,
         root=root,
@@ -299,6 +413,9 @@ def assemble_source(
         scope_write=list(scope_write) if scope_write else [str(root)],
         worktree_globs=_worktree_globs(config.worktrees, base),
         schemas=schemas,
+        main_root=main_root,
+        config_commit=commit,
+        outside_read=outside_read,
     )
     return served, config, []
 
@@ -328,11 +445,24 @@ def load_source(entry: SourceEntry, *, index: int) -> tuple[ServedSource | None,
             id=fallback_id, index=index, status="disabled", config=config_files
         )
     files = [Path(item).expanduser() for item in entry.config]
-    served, config, violations = assemble_source(
+    try:
+        at = read_default_ref_config(files[0])
+    except ValidationFailedError as error:
+        _log_violations(fallback_id, error.violations)
+        return None, SourceStatus(
+            id=fallback_id,
+            index=index,
+            status="not_served",
+            errors=error.violations,
+            config=config_files,
+        )
+    served, config, violations = _assemble(
         files,
         source_id=entry.id,
         scope_read=entry.scope.read,
         scope_write=entry.scope.write,
+        outside_read=entry.outside_read,
+        at=at,
     )
     source_id = entry.id or (config.name if config else fallback_id)
     if violations:
@@ -393,6 +523,7 @@ def load_source_at(source: ServedSource, root: Path) -> ServedSource:
         source_id=source.id,
         scope_read=source.scope_read,
         scope_write=source.scope_write,
+        outside_read=source.outside_read,
         root_override=root / relative_root,
     )
     if violations or served is None:

@@ -16,6 +16,7 @@ class Violation:
     rule: str
     fix: str = ""
     index: int | None = None
+    doc: str | None = None
 
 
 @dataclass(kw_only=True)
@@ -111,6 +112,14 @@ class TargetIsCloneError(DevDocsError):
 @dataclass(kw_only=True)
 class InvalidArgumentError(DevDocsError):
     """引数の誤り。"""
+
+    status: ClassVar[int] = 400
+    violations: list[Violation] = field(default_factory=list)
+
+
+@dataclass(kw_only=True)
+class NavInvalidError(DevDocsError):
+    """画面の構成の違反。"""
 
     status: ClassVar[int] = 400
     violations: list[Violation] = field(default_factory=list)

@@ -13,14 +13,25 @@ from mcp.server.mcpserver import MCPServer
 from mcp.types import CallToolResult
 from pydantic import BaseModel, ConfigDict, ValidationError
 
-from dev_docs.features.admin.render import render_check, render_reload, render_status
+from dev_docs.features.admin.render import (
+    render_check,
+    render_reload,
+    render_status,
+    render_write_nav,
+)
 from dev_docs.features.admin.service import (
     check_project,
     get_status,
     reload_config,
     try_convert,
+    write_nav,
 )
-from dev_docs.features.admin.types import CheckProjectRequest, FormatRequest, TryConvertRequest
+from dev_docs.features.admin.types import (
+    CheckProjectRequest,
+    FormatRequest,
+    TryConvertRequest,
+    WriteNavRequest,
+)
 from dev_docs.features.lifecycle.update import update_clone
 from dev_docs.server.mcp.result import TOOL_ANNOTATIONS, to_tool_result, tool_error
 from dev_docs.shared.errors import DevDocsError
@@ -40,6 +51,7 @@ __all__ = [
     "reload_config",
     "try_convert",
     "update_clone",
+    "write_nav",
 ]
 
 
@@ -142,5 +154,14 @@ def build_admin_mcp(handlers: Handlers) -> MCPServer:
         "配信元の 1 つのファイルを、配信するときと同じ変換で Markdown にして返す。書き込まない。",
         TryConvertRequest,
         lambda request: try_convert(request, handlers=handlers),
+    )
+    _register(
+        mcp,
+        "write_nav",
+        "配信元の dev-docs.yaml の nav だけを、タブ・項目の追加・修正・削除で書き換える。"
+        "書いた後の nav をスキーマと check_filter で検証し、auto の条件に当たる文書の数を返す。",
+        WriteNavRequest,
+        lambda request: write_nav(request, handlers=handlers),
+        render_write_nav,
     )
     return mcp

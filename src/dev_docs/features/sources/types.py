@@ -99,6 +99,9 @@ class ServedSource:
     scope_write: list[str]
     worktree_globs: list[str]
     schemas: dict[str, dict[str, Any]]
+    main_root: Path | None = None
+    config_commit: str | None = None
+    outside_read: bool = True
 
     def table(self, kind: str) -> DocumentTable:
         """種類から有効な文書の行を引く。"""

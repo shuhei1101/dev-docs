@@ -2,12 +2,16 @@
 
 from __future__ import annotations
 
+import json
+
 from dev_docs.features.admin.types import (
     CheckProjectResult,
     ReloadResult,
     ServerStatus,
     SourceState,
+    WriteNavResult,
 )
+from dev_docs.shared.errors import Violation
 
 TABLE_HEADER = ("| source | 状態 | 設定のバージョン | 索引の同期 |", "| --- | --- | --- | --- |")
 SYNC_LABELS = {
@@ -59,6 +63,12 @@ def render_reload(result: ReloadResult) -> str:
     return "\n".join(lines)
 
 
+def _violation_line(item: Violation) -> str:
+    """違反 1 件を `- {doc}: {path}: {rule}`（`doc` が無ければ `- {path}: {rule}`）にする。"""
+    prefix = f"{item.doc}: " if item.doc else ""
+    return f"- {prefix}{item.path}: {item.rule}"
+
+
 def render_check(result: CheckProjectResult) -> str:
     """配信元の検査の結果を Markdown にする。"""
     registered = f"登録済み: {result.registered_id}" if result.registered_id else "未登録"
@@ -70,9 +80,14 @@ def render_check(result: CheckProjectResult) -> str:
     lines = [f"{result.path}（{registered}）", f"設定のバージョン: {version}"]
     if result.violations:
         lines.append(f"違反: {len(result.violations)} 件")
-        lines.extend(f"- {item.path}: {item.rule}" for item in result.violations)
+        lines.extend(_violation_line(item) for item in result.violations)
     else:
         lines.append("違反: なし")
+    if result.warnings:
+        lines.append(f"警告: {len(result.warnings)} 件")
+        lines.extend(_violation_line(item) for item in result.warnings)
+    if result.alias_schema_version:
+        lines.append(f"エイリアスのスキーマ: {result.alias_schema_version}")
     if result.missing_paths:
         lines.append(f"無いパス: {len(result.missing_paths)} 件")
         lines.extend(f"- {path}" for path in result.missing_paths)
@@ -90,4 +105,23 @@ def render_check(result: CheckProjectResult) -> str:
         lines.extend(f"- {item.kind}: {item.path}" for item in result.sync.items)
         if len(result.sync.items) < sum(counts.values()):
             lines.append(f"（先頭 {len(result.sync.items)} 件）")
+    return "\n".join(lines)
+
+
+def render_write_nav(result: WriteNavResult) -> str:
+    """画面の構成の書き込みの結果を Markdown にする。"""
+    lines = [
+        f"{result.path} の nav を書きました",
+        "| 条件 | タブ | 文書の数 |",
+        "| --- | --- | --- |",
+    ]
+    lines.extend(
+        f"| {json.dumps(count.filter, ensure_ascii=False) if count.filter is not None else '-'}"
+        f" | {count.tab} | {count.count} |"
+        for count in result.counts
+    )
+    if result.warnings:
+        lines.append(f"警告: {len(result.warnings)} 件")
+        lines.extend(f"- {item.path}: {item.rule}" for item in result.warnings)
+    lines.extend(["```yaml", result.nav.rstrip("\n"), "```"])
     return "\n".join(lines)

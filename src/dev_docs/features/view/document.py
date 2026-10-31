@@ -10,11 +10,13 @@ from typing import TYPE_CHECKING, Literal
 
 from dev_docs.features.access.types import Target
 from dev_docs.features.changes.compare import changed_keys
+from dev_docs.features.documents.aliases import collect_aliases
 from dev_docs.features.documents.types import Document, LoadProblem
 from dev_docs.features.sources.types import ServedSource
 from dev_docs.features.view.nav import build_nav, first_page, mark_nav_changes
 from dev_docs.features.view.paths import find_page, page_path, screen_target
 from dev_docs.features.view.types import (
+    AliasItem,
     ConversionError,
     DocumentDiff,
     DocumentResponse,
@@ -32,6 +34,22 @@ from dev_docs.shared.errors import (
 
 if TYPE_CHECKING:
     from dev_docs.main import Handlers
+
+
+def _aliases(source: ServedSource, documents: Sequence[Document]) -> list[AliasItem]:
+    """`alias_type` を持つ行の文書のエイリアスを応答の形にする。"""
+    return [
+        AliasItem(
+            id=entry.id,
+            name=entry.name,
+            aliases=list(entry.aliases),
+            description=entry.description,
+            alias_type=entry.alias_type,
+            avoid=None if entry.avoid is None else list(entry.avoid),
+            **entry.extra,
+        )
+        for entry in collect_aliases(source, documents).entries
+    ]
 
 
 def _pages(items: Sequence[NavItem]) -> list[str]:
@@ -198,6 +216,7 @@ def get_document(
         github=github,
         columns=columns,
         table_keys=[] if failure is not None else list(converted.table_keys),
+        aliases=[] if failure is not None else _aliases(source, loaded.documents),
         diff=diff,
         updated_at=_updated_at(source, document),
     )

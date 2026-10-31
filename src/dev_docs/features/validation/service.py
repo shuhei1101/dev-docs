@@ -6,7 +6,7 @@ import threading
 from collections import OrderedDict
 from typing import Literal
 
-from dev_docs.features.access.types import Target
+from dev_docs.features.access.types import Target, script_at
 from dev_docs.features.documents.store import DocumentStore
 from dev_docs.features.documents.types import Document
 from dev_docs.features.validation.rules import (
@@ -43,6 +43,7 @@ class DocumentChecker:
                 cwd=target.base,
                 stdin=document.body,
                 timeout_sec=self.timeout_sec,
+                at=script_at(target),
             )
         except ScriptError as error:
             message = " ".join(error.reason.split())

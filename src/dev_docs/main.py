@@ -220,6 +220,8 @@ def reload_sources(
     converter: Any,
 ) -> list[SourceStatus]:
     """配信元の一覧を読み直し、配信元の内容を控えた部品の控えを捨てる。"""
+    from dev_docs.features.view.nav import nav_warnings
+
     statuses = registry.reload(terminal)
     store.clear()
     checker.clear()
@@ -235,6 +237,16 @@ def reload_sources(
                 logger.warning(
                     "%s: %s %d 件: %s", report.source_id, label, len(values), "、".join(values)
                 )
+        for violation in report.alias_violations:
+            logger.warning(
+                "%s: エイリアスのキーの違反: %s: %s: %s",
+                report.source_id,
+                violation.doc,
+                violation.path,
+                violation.rule,
+            )
+        for warning in nav_warnings(store, source):
+            logger.warning("%s: nav: %s: %s", source.id, warning.path, warning.rule)
     return statuses
 
 

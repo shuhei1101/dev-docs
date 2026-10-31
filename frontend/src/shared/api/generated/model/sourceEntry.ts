@@ -14,4 +14,5 @@ export interface SourceEntry {
   id?: string | null;
   enabled?: boolean;
   scope?: SourceScope;
+  outside_read?: boolean;
 }

@@ -5,6 +5,8 @@
  * OpenAPI spec version: 0.1.0
  */
 
+export * from './aliasItem';
+export * from './aliasItemAliasType';
 export * from './columnsRequest';
 export * from './commitItem';
 export * from './conversionError';

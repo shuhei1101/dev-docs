@@ -4,6 +4,7 @@
  * FastAPI
  * OpenAPI spec version: 0.1.0
  */
+import type { AliasItem } from './aliasItem';
 import type { ConversionError } from './conversionError';
 import type { DocumentDiff } from './documentDiff';
 import type { DocumentResponseColumns } from './documentResponseColumns';
@@ -23,6 +24,7 @@ export interface DocumentResponse {
   github: GitHubTarget | null;
   columns: DocumentResponseColumns;
   tableKeys: string[];
+  aliases?: AliasItem[];
   diff: DocumentDiff | null;
   updatedAt: string;
 }

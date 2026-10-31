@@ -37,6 +37,7 @@ export const SettingsGetSettingsSourcesResponse = zod.object({
  */
 export const settingsPutSettingsSourcesBodySourcesItemEnabledDefault = true;
 export const settingsPutSettingsSourcesBodySourcesItemScopeDefault = { "read": [] };
+export const settingsPutSettingsSourcesBodySourcesItemOutsideReadDefault = true;
 
 export const SettingsPutSettingsSourcesBody = zod.object({
   "sources": zod.array(zod.object({
@@ -46,7 +47,8 @@ export const SettingsPutSettingsSourcesBody = zod.object({
   "scope": zod.object({
   "read": zod.array(zod.string()).optional(),
   "write": zod.union([zod.array(zod.string()),zod.null()]).optional()
-}).default(settingsPutSettingsSourcesBodySourcesItemScopeDefault).describe('`sources[].scope` の `read`・`write`。')
+}).default(settingsPutSettingsSourcesBodySourcesItemScopeDefault).describe('`sources[].scope` の `read`・`write`。'),
+  "outside_read": zod.boolean().default(settingsPutSettingsSourcesBodySourcesItemOutsideReadDefault)
 }).describe('端末の設定の `sources[]` の 1 行。'))
 }).describe('PUT `/_api/settings/sources` の本文。')
 

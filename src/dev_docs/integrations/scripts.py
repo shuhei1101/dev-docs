@@ -7,7 +7,8 @@ import os
 import shutil
 import signal
 import subprocess
-from collections.abc import Sequence
+from collections.abc import Iterator, Sequence
+from contextlib import ExitStack, contextmanager
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
 
@@ -90,6 +91,35 @@ def _stop(process: subprocess.Popen[bytes]) -> None:
         process.wait()
 
 
+@contextmanager
+def _run_at(run: Sequence[str], cwd: Path, at: tuple[Path, str] | None) -> Iterator[list[str]]:
+    """`run` のうち commit にあるファイルを、そのリビジョンから取り出したファイルに置き換える。"""
+    command = list(run)
+    if at is None:
+        yield command
+        return
+    from dev_docs.features.history.query import export_paths_at, read_file_at
+
+    repo, commit = at
+    prefix = (
+        cwd.resolve().relative_to(repo.resolve())
+        if cwd.resolve().is_relative_to(repo.resolve())
+        else None
+    )
+    with ExitStack() as stack:
+        for position, item in enumerate(command):
+            if prefix is None or item.startswith("-") or Path(item).is_absolute():
+                continue
+            relative = (prefix / item).as_posix()
+            if read_file_at(repo, commit, relative) is None:
+                continue
+            exported = stack.enter_context(
+                export_paths_at(repo, commit, [PurePosixPath(relative).parent.as_posix()])
+            )
+            command[position] = str(exported / relative)
+        yield command
+
+
 def run_script(
     run: Sequence[str],
     *,
@@ -97,9 +127,24 @@ def run_script(
     stdin: str = "",
     args: Sequence[str] = (),
     timeout_sec: float,
+    at: tuple[Path, str] | None = None,
 ) -> ScriptResult:
     """コマンドを配信元の直下で動かし、制限時間を超えたら止める。"""
-    command = check_runnable(run, cwd=cwd)
+    with _run_at(run, cwd, at) as resolved:
+        return _run(resolved, list(run), cwd=cwd, stdin=stdin, args=args, timeout_sec=timeout_sec)
+
+
+def _run(
+    resolved: list[str],
+    run: list[str],
+    *,
+    cwd: Path,
+    stdin: str,
+    args: Sequence[str],
+    timeout_sec: float,
+) -> ScriptResult:
+    """置き換えたコマンドを動かす。"""
+    command = check_runnable(resolved, cwd=cwd)
     full = [*command, *args]
     process = subprocess.Popen(
         full,
