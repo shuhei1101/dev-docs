@@ -137,6 +137,88 @@ flows:
     expected:
       - '`isError: true` で、`no-such-kind` と sample の種類の一覧を返す'
     test: test_error_when_unknown_kind
+  - name: 正常系（作業範囲の外を参考に読む）
+    summary: '`outside_scope: true` で、`scope` に当たらない配信元の説明書を作業範囲の外（参考）として返す'
+    setup:
+      - name: Mock
+        description: なし
+      - name: 配信元
+        description: 正常系と同じ sample・other。端末の設定の other の行は `outside_read` を書かない（既定 `true`）
+      - name: 入力
+        description: '`source: other`, `outside_scope: true`。`cwd` は sample のクローン本体'
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        participant C as クライアント
+        participant T as describe
+        participant L as 要求のログ
+
+        C->>T: source: other, outside_scope: true
+        T->>T: scope に cwd が当たらず、outside_read が真
+        T->>L: cwd と other を残す
+        T-->>C: 作業範囲の外（参考）、説明書と種類の表
+      ```
+    expected:
+      - 先頭の行に「作業範囲の外（参考）」があり、other の説明書と種類の表が続く
+      - '`format: json` の `outside_scope` が `true`'
+      - 要求のログに sample のクローン本体のパスと `other` が残る
+      - '`source: sample`（`scope` に当たる）に `outside_scope: true` を渡しても、`outside_scope` は `false` で要求のログに残さない'
+      - 引数なしの一覧に other を載せない
+    test: test_normal_when_outside_scope
+  - name: 異常系（作業範囲の外の参照を断る・SourceNotReadableError）
+    summary: '`outside_read: false` の配信元は `outside_scope: true` でも断る'
+    setup:
+      - name: Mock
+        description: なし
+      - name: 配信元
+        description: '正常系と同じ sample・other。端末の設定の other の行に `outside_read: false`'
+      - name: 入力
+        description: '`source: other`, `outside_scope: true`。`cwd` は sample のクローン本体'
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        participant C as クライアント
+        participant T as describe
+
+        C->>T: source: other, outside_scope: true
+        T->>T: scope に cwd が当たらず、outside_read が偽
+        T-->>C: isError（読めない配信元）
+      ```
+    expected:
+      - '`isError: true` で、other を読めないことを返す'
+      - '`fix` が `outside_scope: true` を案内しない'
+      - 要求のログに作業範囲の外の記録を残さない
+      - '`outside_read` が真の other に `outside_scope` を渡さずに呼ぶと、`fix` が `outside_scope: true` を案内する'
+    test: test_error_when_outside_read_disabled
+  - name: 正常系（ブランチとワークツリー）
+    summary: '`source` で、説明書と種類の一覧に加えてブランチ・タグとワークツリーの一覧を返す'
+    setup:
+      - name: Mock
+        description: なし
+      - name: ブランチとタグ
+        description: sample に `develop` ブランチと `v0.1.0` タグを作る
+      - name: ワークツリー
+        description: sample の `.claude/worktrees/x`（`feat/x` を checkout）と、`worktrees` に当たらない `../outside`（`feat/y` を checkout）
+        notes: 配信元の設定の `worktrees` は既定（`[./.claude/worktrees/*]`）
+      - name: 入力
+        description: '`source: sample`。`cwd` は sample のクローン本体'
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        participant C as クライアント
+        participant T as describe
+        participant G as sample のリポジトリ
+
+        C->>T: source: sample
+        T->>G: ブランチ・タグとワークツリーの一覧を引く
+        T-->>C: 説明書と種類の表、ブランチ・タグ、ワークツリーの表
+      ```
+    expected:
+      - '`refs.branches` に `develop`・`feat/x` がある'
+      - '`refs.tags` に `v0.1.0` がある'
+      - '`worktrees` に `.claude/worktrees/x` の絶対パスと `branch: feat/x` があり、`../outside` は無い'
+      - Git 管理外の配信元では `refs`・`worktrees` を返さない
+    test: test_normal_when_refs_and_worktrees
 lead: 引数の数で、使える配信元の一覧・配信元の説明書と種類の一覧・種類のスキーマを返す。
 identifier: describe
 permissions: 引数なしは不要。`source` を渡すときはその配信元の `scope.read` か `scope.write` に `cwd` が当たること
@@ -145,6 +227,7 @@ side_effects: なし
 callers:
   - dev/設計書/シナリオ/単一ユースケース/エージェントが調べる#scenarios[正常シナリオ]
   - dev/設計書/シナリオ/単一ユースケース/エージェントが書き込む#scenarios[正常シナリオ]
+  - dev/設計書/シナリオ/単一ユースケース/エージェントが調べる#scenarios[正常シナリオ（ブランチとワークツリーを引く）]
 exclusivity: '読み取りだけで排他しない（`readOnlyHint: true`）'
 request:
   - name: source
@@ -179,6 +262,15 @@ request:
     location: argument
     description: 作業場所
     notes: フック（#4）が入れる
+  - name: outside_scope
+    type: bool
+    required: false
+    default: '`false`'
+    location: argument
+    description: '`true` のとき、`cwd` が `scope` に当たらない配信元も、端末の設定の `sources[].outside_read` が真なら作業範囲の外（参考）として読む'
+    constraints: '`source` を渡したときだけ効く'
+    notes: 引数なしの一覧には作業範囲の外の配信元を載せない
+    status: planned
 request_example: |-
   ```json
   {"source": "sample", "kind": "sample"}
@@ -220,6 +312,26 @@ response:
     type: dict[str, str]
     description: 種類の共通のキーと列名の対応（種類の行の `metadata`）。書いていないキーは同じ名前の列を読む
     notes: '`source`・`kind` のとき。`format: markdown` ではスキーマの前に「共通のキー | 列名」の表で出し、対応が空なら表を出さない'
+  - name: outside_scope
+    type: bool
+    description: 作業範囲の外から読んだか
+    notes: '`format: markdown` は先頭の行に「作業範囲の外（参考）」を出す'
+  - name: refs.branches[]
+    type: str
+    description: 配信元のリポジトリのブランチ名
+    notes: '`source` だけのとき。Git の配信元だけ。画面の API のリビジョンの一覧と同じ関数で求める'
+  - name: refs.tags[]
+    type: str
+    description: 配信元のリポジトリのタグ名
+    notes: '`refs.branches[]` と同じ条件'
+  - name: worktrees[].path
+    type: str
+    description: 配信元の設定の `worktrees` に当たるワークツリーの絶対パス
+    notes: '`source` だけのとき。Git の配信元だけ。`worktrees` の相対パスはメインのリポジトリの直下（`git rev-parse --git-common-dir` の親）から数える'
+  - name: worktrees[].branch
+    type: str | None
+    description: ワークツリーが checkout しているブランチ
+    notes: detached HEAD のときは `null`
 response_example: |-
   ```markdown
   作業場所: /path/to/sample（sample のクローン本体）
@@ -234,8 +346,8 @@ exceptions:
   - name: なし（正常終了）
     condition: 返せた（引数なしで使える配信元が 0 件のときも、空の一覧を返して正常終了）
   - name: SourceNotReadableError
-    condition: '`cwd` が配信元の `scope.read`・`scope.write` に当たらない'
-    notes: 今の作業場所から使える配信元の一覧を添える
+    condition: '`cwd` が配信元の `scope.read`・`scope.write` に当たらない（`outside_scope: true` のときは、加えて `outside_read` が偽）'
+    notes: '今の作業場所から使える配信元の一覧を添える。`outside_read` が真で `outside_scope` を渡していないときは、`fix` に `outside_scope: true` で作業範囲の外を参考に読めることを添える'
   - name: SourceNotServedError
     condition: '起動時の検証で外したか `enabled: false` の配信元を指した'
   - name: UnknownKindError
@@ -248,6 +360,8 @@ constraints:
     constraint: 引数なしの結果は SessionStart で注入する配信元の一覧と同じ
   - item: タイムアウト
     constraint: 制限なし
+  - item: 作業範囲の外の記録
+    constraint: '`outside_scope: true` で作業範囲の外の配信元を読んだ呼び出しは、作業場所（`cwd`）と配信元の ID を要求のログに残す'
 refs:
   - dev/設計書/シナリオ/単一ユースケース/エージェントが調べる#scenarios[正常シナリオ]
 test_file: tests/integration/server/test_describe.py
