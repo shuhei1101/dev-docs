@@ -24,6 +24,7 @@ from dev_docs.shared.errors import (
     DocumentNotFoundError,
     ValidationFailedError,
 )
+from dev_docs.shared.yaml_io import load_yaml
 
 BROKEN_CONFIG = "name: {name}\ndocuments:\n  - id: rules\n    schema: schemas/rule.schema.yaml\n"
 NOTES_CONFIG = (
@@ -491,3 +492,201 @@ def test_version_state_when_not_integer() -> None:
     # 実行・検証
     with pytest.raises(ValueError, match="invalid literal"):
         version_state("a", "1")
+
+
+NAV_CONFIG = (
+    "name: navs\n"
+    "documents:\n"
+    "  - id: rules\n"
+    "    paths: [docs/rule/*.yaml]\n"
+    "    schema: schemas/rule.schema.yaml\n"
+    "# 画面の構成\n"
+    "nav:\n"
+    "  tabs:\n"
+    "    - title: 設計\n"
+    "      items:\n"
+    "        - group: MCP\n"
+    "          items:\n"
+    "            - page: rules/doc-1\n"
+)
+
+
+@pytest.fixture
+def nav_source(tmp_path: Path, write_files: Callable[[Path, dict[str, str]], None]) -> Path:
+    """`nav` にタブ `設計`（group `MCP`）を持つ配信元のフォルダを作り、そのフォルダを返す。"""
+    root = tmp_path / "navs"
+    write_files(
+        root,
+        {
+            "dev-docs.yaml": NAV_CONFIG,
+            "schemas/rule.schema.yaml": RULE_SCHEMA,
+            "docs/rule/doc-1.yaml": "id: doc-1\nname: 文書 1\ntags: [mcp]\n",
+            "docs/rule/doc-2.yaml": "id: doc-2\nname: 文書 2\ntags: [設計]\n",
+        },
+    )
+    return root
+
+
+def test_check_project_when_alias_and_nav(
+    make_alias_source_dir: Callable[..., Path],
+    make_terminal_config: Callable[..., TerminalConfig],
+) -> None:
+    """エイリアスのキーの違反と nav の警告（正常系）。"""
+    # 準備
+    config = make_alias_source_dir(broken=True, none_nav=True)
+    handlers = _handlers(make_terminal_config)
+    # 実行
+    result = check_project(CheckProjectRequest(path=str(config.parent)), handlers=handlers)
+    # 検証
+    assert [(item.doc, item.path) for item in result.violations] == [
+        ("docs/term/broken.yaml", "aliases")
+    ]
+    assert len(result.warnings) == 1
+    assert result.warnings[0].path.startswith("nav.tabs[1].")
+    assert result.warnings[0].rule.startswith("none:")
+    assert result.alias_schema_version == "v0.3.0"
+
+
+def test_write_nav(nav_source: Path, make_terminal_config: Callable[..., TerminalConfig]) -> None:
+    """タブを足して group を直す（正常系）。"""
+    from dev_docs.features.admin.service import write_nav
+    from dev_docs.features.admin.types import NavOperation, WriteNavRequest
+
+    # 準備
+    handlers = _handlers(make_terminal_config)
+    request = WriteNavRequest(
+        path=str(nav_source),
+        operations=[
+            NavOperation(
+                op="add",
+                tab="mcp",
+                value={
+                    "title": "mcp",
+                    "items": [
+                        {"auto": {"filter": {"field": "tags", "op": "eq", "values": ["mcp"]}}}
+                    ],
+                },
+            ),
+            NavOperation(op="update", tab="設計", item="MCP", value={"title": "MCP のツール"}),
+        ],
+    )
+    # 実行
+    result = write_nav(request, handlers=handlers)
+    # 検証
+    text = (nav_source / "dev-docs.yaml").read_text(encoding="utf-8")
+    written = load_yaml(text)
+    assert [tab["title"] for tab in written["nav"]["tabs"]] == ["設計", "mcp"]
+    assert written["nav"]["tabs"][0]["items"][0]["title"] == "MCP のツール"
+    assert text.startswith(NAV_CONFIG.split("nav:\n")[0])
+    assert [(count.tab, count.count) for count in result.counts] == [("mcp", 1)]
+    assert result.warnings == []
+
+
+def test_write_nav_when_zero_count(
+    nav_source: Path, make_terminal_config: Callable[..., TerminalConfig]
+) -> None:
+    """0 件の条件も書いて警告する（正常系）。"""
+    from dev_docs.features.admin.service import write_nav
+    from dev_docs.features.admin.types import NavOperation, WriteNavRequest
+
+    # 準備
+    handlers = _handlers(make_terminal_config)
+    request = WriteNavRequest(
+        path=str(nav_source),
+        operations=[
+            NavOperation(
+                op="add",
+                tab="none",
+                value={
+                    "title": "none",
+                    "items": [
+                        {"auto": {"filter": {"field": "tags", "op": "eq", "values": ["none"]}}}
+                    ],
+                },
+            )
+        ],
+    )
+    # 実行
+    result = write_nav(request, handlers=handlers)
+    # 検証
+    written = load_yaml((nav_source / "dev-docs.yaml").read_text(encoding="utf-8"))
+    assert [tab["title"] for tab in written["nav"]["tabs"]] == ["設計", "none"]
+    assert len(result.warnings) == 1
+    assert result.warnings[0].path == "nav.tabs[1].items[0].auto.filter"
+    assert result.warnings[0].rule.startswith("none:")
+
+
+def test_write_nav_when_invalid_filter(
+    nav_source: Path, make_terminal_config: Callable[..., TerminalConfig]
+) -> None:
+    """使えない条件（異常系）。"""
+    from dev_docs.features.admin.service import write_nav
+    from dev_docs.features.admin.types import NavOperation, WriteNavRequest
+    from dev_docs.shared.errors import NavInvalidError
+
+    # 準備
+    handlers = _handlers(make_terminal_config)
+    request = WriteNavRequest(
+        path=str(nav_source),
+        operations=[
+            NavOperation(
+                op="add",
+                tab="x",
+                value={
+                    "title": "x",
+                    "items": [{"auto": {"filter": {"field": "nmae", "op": "eq", "values": ["x"]}}}],
+                },
+            )
+        ],
+    )
+    # 実行・検証
+    with pytest.raises(NavInvalidError, match="画面の構成が正しくありません") as caught:
+        write_nav(request, handlers=handlers)
+    assert [item.path for item in caught.value.violations] == [
+        "nav.tabs[1].items[0].auto.filter.field"
+    ]
+    assert (nav_source / "dev-docs.yaml").read_text(encoding="utf-8") == NAV_CONFIG
+
+
+def test_write_nav_when_missing_tab(
+    nav_source: Path, make_terminal_config: Callable[..., TerminalConfig]
+) -> None:
+    """無いタブ（異常系）。"""
+    from dev_docs.features.admin.service import write_nav
+    from dev_docs.features.admin.types import NavOperation, WriteNavRequest
+    from dev_docs.shared.errors import InvalidArgumentError
+
+    # 準備
+    handlers = _handlers(make_terminal_config)
+    request = WriteNavRequest(
+        path=str(nav_source), operations=[NavOperation(op="remove", tab="none")]
+    )
+    # 実行・検証
+    with pytest.raises(InvalidArgumentError, match="引数が正しくありません") as caught:
+        write_nav(request, handlers=handlers)
+    assert caught.value.violations[0].path == "operations[0]"
+    assert "設計" in caught.value.violations[0].fix
+
+
+def test_write_nav_when_overlaid_nav(
+    nav_source: Path,
+    make_terminal_config: Callable[..., TerminalConfig],
+    make_entry: Callable[..., SourceEntry],
+) -> None:
+    """重ねた設定が nav を持つ（異常系）。"""
+    from dev_docs.features.admin.service import write_nav
+    from dev_docs.features.admin.types import NavOperation, WriteNavRequest
+    from dev_docs.shared.errors import InvalidArgumentError
+
+    # 準備
+    local = nav_source / "local.yaml"
+    local.write_text("nav:\n  tabs: []\n", encoding="utf-8")
+    entry = make_entry([str(nav_source / "dev-docs.yaml"), str(local)], source_id="navs")
+    handlers = _handlers(make_terminal_config, entry)
+    request = WriteNavRequest(
+        path=str(nav_source),
+        operations=[NavOperation(op="update", tab="設計", value={"title": "設計書"})],
+    )
+    # 実行・検証
+    with pytest.raises(InvalidArgumentError, match="引数が正しくありません"):
+        write_nav(request, handlers=handlers)

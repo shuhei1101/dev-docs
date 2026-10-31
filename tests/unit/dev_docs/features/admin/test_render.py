@@ -228,3 +228,47 @@ def test_source_row_when_not_served() -> None:
         "| broken | not_served（name: 必須のキーが無い、documents[0].paths: 必須のキーが無い）"
         " | - | - |"
     )
+
+
+def test_render_write_nav() -> None:
+    """数と警告を並べ、書いた nav を続ける（正常系）。"""
+    from dev_docs.features.admin.render import render_write_nav
+    from dev_docs.features.admin.types import WriteNavResult
+    from dev_docs.features.view.types import NavAutoCount
+
+    # 準備
+    none_filter = {"field": "tags", "op": "eq", "values": ["none"]}
+    nav = "tabs:\n  - title: mcp\n  - title: none\n"
+    write_result = WriteNavResult(
+        path="/home/u/repo/sample/dev-docs.yaml",
+        nav=nav,
+        counts=[
+            NavAutoCount(
+                path="nav.tabs[0].items[0].auto",
+                tab="mcp",
+                filter={"field": "tags", "op": "eq", "values": ["mcp"]},
+                count=2,
+            ),
+            NavAutoCount(path="nav.tabs[1].items[0].auto", tab="none", filter=none_filter, count=0),
+        ],
+        warnings=[
+            Violation(
+                path="nav.tabs[1].items[0].auto.filter",
+                rule="none: 条件 {} に当たる文書がありません",
+            )
+        ],
+    )
+    # 実行
+    result = render_write_nav(write_result)
+    # 検証
+    lines = result.splitlines()
+    assert lines[0] == "/home/u/repo/sample/dev-docs.yaml の nav を書きました"
+    header = lines.index("| 条件 | タブ | 文書の数 |")
+    assert len([line for line in lines[header + 2 :] if line.startswith("|")]) == 2
+    assert lines[header + 2].endswith("| mcp | 2 |")
+    assert lines[header + 3].endswith("| none | 0 |")
+    warning = lines.index("警告: 1 件")
+    assert lines[warning + 1] == (
+        "- nav.tabs[1].items[0].auto.filter: none: 条件 {} に当たる文書がありません"
+    )
+    assert result.rstrip().endswith(f"```yaml\n{nav}```")

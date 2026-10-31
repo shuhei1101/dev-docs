@@ -19,6 +19,7 @@ TOOL_NAMES = {
     "describe",
     "list_changes",
     "trace_related",
+    "list_match_words",
 }
 
 
@@ -35,6 +36,27 @@ def test_build_docs_mcp(make_handlers: Callable[..., Any]) -> None:
     assert by_name["delete_docs"].annotations.destructive_hint is True
     assert by_name["search_docs"].annotations is not None
     assert by_name["search_docs"].annotations.read_only_hint is True
+    assert by_name["list_match_words"].annotations is not None
+    assert by_name["list_match_words"].annotations.read_only_hint is True
+
+
+def test_build_docs_mcp_when_instructions(make_handlers: Callable[..., Any]) -> None:
+    """タグの付け方の instructions（正常系）。"""
+    from mcp import Client
+
+    from dev_docs.features.session_context.types import TAG_GUIDE
+
+    # 準備
+    mcp = build_docs_mcp(make_handlers())
+
+    async def _initialize() -> str | None:
+        async with Client(mcp) as client:
+            return client.instructions
+
+    # 実行
+    result = asyncio.run(_initialize())
+    # 検証
+    assert result == TAG_GUIDE
 
 
 def test_build_docs_mcp_when_call(

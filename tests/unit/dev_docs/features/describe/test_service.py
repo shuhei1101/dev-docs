@@ -188,3 +188,24 @@ def test_describe_when_worktree_config_invalid(
     with pytest.raises(ValidationFailedError) as exc_info:
         _describe(make_registry(source), store, worktree, source="sample")
     assert [v.path for v in exc_info.value.violations] == ["documents[0].paths"]
+
+
+def test_describe_when_refs_and_worktrees(
+    store: DocumentStore,
+    worktree_source: tuple[ServedSource, Path],
+    run_git: Callable[..., str],
+    make_registry: Callable[..., SourceRegistry],
+) -> None:
+    """ブランチとワークツリー（正常系）。"""
+    # 準備
+    source, _ = worktree_source
+    run_git(source.root, "tag", "-a", "v0.1.0", "-m", "release")
+    # 実行
+    result = _describe(make_registry(source), store, source.root, source="sample")
+    # 検証
+    assert isinstance(result, SourceGuideResult)
+    assert result.refs is not None
+    assert {"develop", "feat/x"} <= set(result.refs["branches"])
+    assert result.refs["tags"] == ["v0.1.0"]
+    assert result.worktrees is not None
+    assert result.worktrees[0].branch == "feat/x"

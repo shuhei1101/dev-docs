@@ -100,3 +100,17 @@ def test_check_runnable_when_script_missing(tmp_path: Path) -> None:
     with pytest.raises(ScriptNotFoundError) as exc_info:
         check_runnable(["python3", "scripts/none.py"], cwd=tmp_path)
     assert "scripts/none.py" in exc_info.value.reason
+
+
+def test_run_script_when_at(git_repo: Callable[..., Path], run_git: Callable[..., str]) -> None:
+    """default_ref のスクリプトを動かす（正常系）。"""
+    # 準備
+    repo = git_repo({"scripts/a.py": 'print("develop")\n'})
+    commit = run_git(repo, "rev-parse", "HEAD").strip()
+    (repo / "scripts/a.py").write_text('print("disk")\n', encoding="utf-8")
+    # 実行
+    result = run_script(
+        [sys.executable, "scripts/a.py"], cwd=repo, timeout_sec=10, at=(repo, commit)
+    )
+    # 検証
+    assert result.stdout == "develop\n"

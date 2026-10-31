@@ -89,3 +89,62 @@ test("test_use_mdmark_when_load_failed", async () => {
   await waitFor(() => expect(result.current.error).toBeTruthy());
   expect(errorLog.mock.calls[0][0]).toBe("mdmark_load_failed");
 });
+
+test("test_use_mdmark_when_aliases", async () => {
+  const { mount } = fake();
+  vi.doMock(MDMARK_URL, () => ({ mount }));
+  const useMdmark = await loadHook();
+  const ref = { current: document.createElement("div") };
+  const aliases = [
+    { id: "scope", name: "作業範囲", aliases: ["scope"], description: "触ってよい範囲", aliasType: "term" },
+  ];
+
+  renderHook(() => useMdmark(ref, { ...(options("# A") as object), aliases } as never));
+
+  await waitFor(() => expect(mount).toHaveBeenCalledTimes(1));
+  const opts = (mount.mock.calls[0] as unknown[])[1] as { index: { terms: unknown[] } };
+  expect(opts.index.terms).toHaveLength(1);
+});
+
+test("test_to_mdmark_index", async () => {
+  const { toMdmarkIndex } = await import("@/features/docs/doc-view/hooks/use-mdmark");
+  const aliases = [
+    {
+      id: "scope",
+      name: "作業範囲",
+      aliases: ["scope", "担当範囲"],
+      description: "触ってよい範囲",
+      aliasType: "term",
+      avoid: ["担当領域"],
+    },
+    {
+      id: "settings",
+      name: "設定のリファレンス",
+      aliases: ["settings"],
+      description: "設定のキーの一覧",
+      aliasType: "doc",
+    },
+    { id: "serve", name: "起動", aliases: ["serve"], aliasType: "command", command: "dev-docs serve" },
+  ];
+
+  const index = toMdmarkIndex(aliases as never);
+
+  expect(index.terms).toEqual([
+    {
+      id: "scope",
+      term: "作業範囲",
+      aliases: ["scope", "担当範囲"],
+      meaning: "触ってよい範囲",
+      avoid: ["担当領域"],
+    },
+  ]);
+  expect(index.docs).toEqual([
+    {
+      id: "settings",
+      path: "settings",
+      title: "設定のリファレンス",
+      description: "設定のキーの一覧",
+      aliases: ["settings"],
+    },
+  ]);
+});

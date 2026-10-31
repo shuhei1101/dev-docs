@@ -368,3 +368,74 @@ def settings_version_2(monkeypatch: pytest.MonkeyPatch) -> None:
         "dev_docs.main.SETTINGS_VERSION",
     ):
         monkeypatch.setattr(target, "2", raising=False)
+
+
+ALIAS_CONFIG = (
+    "name: {name}\n"
+    "documents:\n"
+    "  - id: rules\n"
+    "    paths: [docs/rule/*.yaml]\n"
+    "    schema: schemas/rule.schema.yaml\n"
+    "  - id: terms\n"
+    "    paths: [docs/term/*.yaml]\n"
+    "    schema: schemas/term.schema.yaml\n"
+    "    alias_type: term\n"
+    "  - id: refs\n"
+    "    paths: [docs/ref/*.yaml]\n"
+    "    schema: schemas/term.schema.yaml\n"
+    "    alias_type: doc\n"
+)
+
+TERM_SCHEMA = "title: term\ntype: object\n"
+
+# どの文書にも当たらない `auto` の条件のタブ `none` を持つ nav
+NONE_NAV = (
+    "nav:\n"
+    "  tabs:\n"
+    "    - title: 規約\n"
+    "      items:\n"
+    "        - auto: {document: rules}\n"
+    "    - title: none\n"
+    "      items:\n"
+    "        - auto: {filter: {field: tags, op: eq, values: [none]}}\n"
+)
+
+
+@pytest.fixture
+def make_alias_source_dir(
+    tmp_path: Path, write_files: Callable[[Path, dict[str, str]], None]
+) -> Callable[..., Path]:
+    """`alias_type` の行を持つ配信元のフォルダを作り、`dev-docs.yaml` のパスを返す関数を返す。
+
+    用語「作業範囲」と文書の別名「設定のリファレンス」を置く。`broken` は `aliases` が `3` の用語「壊れた用語」を置くか、`none_nav` はどの文書にも当たらない条件のタブ `none` を持つ `nav` を置くか。
+    """
+
+    def _make(name: str = "sample", *, broken: bool = False, none_nav: bool = False) -> Path:
+        root = tmp_path / name
+        files = {
+            "dev-docs.yaml": ALIAS_CONFIG.format(name=name) + (NONE_NAV if none_nav else ""),
+            "schemas/rule.schema.yaml": SAMPLE_SCHEMA,
+            "schemas/term.schema.yaml": TERM_SCHEMA,
+            "docs/rule/doc-1.yaml": "id: doc-1\nname: 文書 1\n",
+            "docs/term/scope.yaml": (
+                "id: scope\n"
+                "name: 作業範囲\n"
+                "description: 触ってよい範囲\n"
+                "aliases: [scope, 担当範囲]\n"
+                "avoid: [担当領域]\n"
+            ),
+            "docs/ref/settings.yaml": (
+                "id: settings\n"
+                "name: 設定のリファレンス\n"
+                "description: 設定のキーの一覧\n"
+                "aliases: [settings]\n"
+            ),
+        }
+        if broken:
+            files["docs/term/broken.yaml"] = (
+                "id: broken\nname: 壊れた用語\ndescription: 型の違う別名\naliases: 3\n"
+            )
+        write_files(root, files)
+        return root / "dev-docs.yaml"
+
+    return _make

@@ -151,3 +151,34 @@ def test_source_registry_get_when_unknown() -> None:
     # 実行・検証
     with pytest.raises(UnknownSourceError):
         registry.get("z")
+
+
+def test_source_registry_get_when_default_ref_moved(
+    git_repo: Callable[..., Path],
+    commit_all: Callable[..., str],
+    sample_files: dict[str, str],
+    make_terminal_config: Callable[..., TerminalConfig],
+    make_entry: Callable[..., SourceEntry],
+) -> None:
+    """default_ref が進んだら組み立て直す（正常系）。"""
+    # 準備
+    root = git_repo(sample_files)
+    terminal = make_terminal_config(
+        sources=[make_entry(str(root / "dev-docs.yaml"), source_id="a")]
+    )
+    registry = SourceRegistry()
+    registry.reload(terminal)
+    commit_all(
+        root,
+        {
+            "dev-docs.yaml": sample_files["dev-docs.yaml"]
+            + "  - id: kind_a\n    paths: [docs/a/*.yaml]\n    schema: schemas/a.schema.yaml\n",
+            "schemas/a.schema.yaml": "title: a\ntype: object\n",
+        },
+    )
+    # 実行
+    first = registry.get("a")
+    second = registry.get("a")
+    # 検証
+    assert [table.id for table in first.config.documents] == ["rules", "kind_a"]
+    assert second is first

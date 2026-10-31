@@ -227,3 +227,41 @@ def test_context_text_when_too_long() -> None:
     assert len(result) <= CONTEXT_MAX_CHARS
     assert "説明説明説明" not in result
     assert "- ほか " in result
+
+
+def test_collect_warnings_when_alias_and_nav(
+    make_alias_source_dir: Callable[..., Path],
+    make_terminal_config: Callable[..., TerminalConfig],
+    make_entry: Callable[..., SourceEntry],
+) -> None:
+    """エイリアスのキーの違反と nav の警告（正常系）。"""
+    # 準備
+    config = make_alias_source_dir("a", broken=True, none_nav=True)
+    handlers = build_handlers(
+        make_terminal_config(sources=[make_entry(str(config), source_id="a")])
+    )
+    # 実行
+    result = _collect_warnings([_access("a")], handlers=handlers)
+    # 検証
+    assert result[0] == "a: エイリアスのキーの違反が 1 件あります（check_project で確かめられます）"
+    assert result[1].startswith("a: nav.tabs[1].items[0].auto.filter: none:")
+    assert len(result) == 2
+
+
+def test_context_text_when_tag_guide() -> None:
+    """タグの付け方を含む（正常系）。"""
+    from dev_docs.features.session_context.types import TAG_GUIDE
+
+    # 準備
+    available = [_access("a", "write", "A の説明")]
+    # 実行
+    result = _context_text(available, [])
+    # 検証
+    assert TAG_GUIDE in result
+    assert result.index(SESSION_USAGE) < result.index(TAG_GUIDE)
+    assert (
+        "- 複合語は単語まで分けてタグにする（`エラー処理` は `topic:エラー` と `action:処理`）"
+        in result
+    )
+    assert "- 動作は `action:`、題材は `topic:`、道具は `tool:` で始める" in result
+    assert "- 配信元にタグの規約があれば、`describe(source)` の説明書に従う" in result

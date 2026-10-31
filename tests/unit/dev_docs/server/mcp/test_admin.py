@@ -13,7 +13,15 @@ from dev_docs.features.lifecycle.control import RestartControl
 from dev_docs.server.mcp import admin as admin_module
 from dev_docs.server.mcp.admin import build_admin_mcp
 
-TOOL_NAMES = {"status", "reload", "restart", "update", "check_project", "try_convert"}
+TOOL_NAMES = {
+    "status",
+    "reload",
+    "restart",
+    "update",
+    "check_project",
+    "try_convert",
+    "write_nav",
+}
 
 
 def test_build_admin_mcp(make_handlers: Callable[..., Any]) -> None:
@@ -33,6 +41,8 @@ def test_build_admin_mcp(make_handlers: Callable[..., Any]) -> None:
         name: by_name[name].annotations.read_only_hint  # type: ignore[union-attr]
         for name in ("status", "check_project", "try_convert")
     } == {"status": True, "check_project": True, "try_convert": True}
+    assert by_name["write_nav"].annotations is not None
+    assert by_name["write_nav"].annotations.destructive_hint is False
 
 
 def test_build_admin_mcp_when_call(

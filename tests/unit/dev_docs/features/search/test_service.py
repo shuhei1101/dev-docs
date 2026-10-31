@@ -552,3 +552,39 @@ def test_search_docs_when_location(
     ]
     assert [(item.path, item.scope) for item in ids.items] == [(None, None)]
     assert [(item.path, item.scope) for item in revision.items] == [(None, None)]
+
+
+TERM_DOCS = {
+    "terms/scope.yaml": (
+        "id: scope\nname: 作業範囲\ndescription: 触ってよい範囲\naliases: [scope, 担当範囲]\n"
+    ),
+    "terms/other.yaml": "id: other\nname: 別の用語\ndescription: 当たらない用語\n",
+}
+
+
+def _terms_table() -> DocumentTable:
+    """`alias_type: term` の文書の行を返す。"""
+    return DocumentTable(
+        id="terms",
+        paths=["terms/*.yaml"],
+        schema_path="schemas/rule.schema.yaml",
+        alias_type="term",
+    )
+
+
+def test_search_docs_when_term(make_env: Callable[..., SearchEnv]) -> None:
+    """用語で引く（正常系）。"""
+    # 準備
+    env = make_env(TERM_DOCS, documents=[_terms_table()])
+    # 実行
+    results = [
+        env.search(source="sample", term="担当範囲", view="ids"),
+        env.search(source="sample", term="SCOPE", view="ids"),
+        env.search(source="sample", term="担当", view="ids"),
+    ]
+    plain_env = make_env(TWO_DOCS, documents=[_yaml_table()])
+    plain = plain_env.search(source="sample", term="担当範囲", view="ids")
+    # 検証
+    assert [[item.id for item in result.items] for result in results] == [["scope"], ["scope"], []]
+    assert plain.items == []
+    assert any("alias_type を持つ documents の行が無い" in note for note in plain.notes)

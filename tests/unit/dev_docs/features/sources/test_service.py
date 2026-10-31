@@ -566,3 +566,150 @@ def test_source_schema_json_when_metadata() -> None:
         "avoid",
     ]
     assert row["required"] == ["id", "paths", "schema"]
+
+
+KIND_A_ROW = "  - id: kind_a\n    paths: [docs/a/*.yaml]\n    schema: schemas/a.schema.yaml\n"
+
+
+@pytest.fixture
+def develop_ahead(
+    git_repo: Callable[..., Path],
+    run_git: Callable[..., str],
+    commit_all: Callable[..., str],
+    sample_files: dict[str, str],
+) -> tuple[Path, str]:
+    """`develop` にだけ `kind_a` の行とスキーマを commit し、`master` を checkout したクローンと `develop` の commit を返す。"""
+    root = git_repo(sample_files)
+    run_git(root, "branch", "master")
+    develop = commit_all(
+        root,
+        {
+            "dev-docs.yaml": sample_files["dev-docs.yaml"] + KIND_A_ROW,
+            "schemas/a.schema.yaml": RULE_SCHEMA,
+        },
+    )
+    run_git(root, "checkout", "master")
+    return root, develop
+
+
+def test_validate_source_config_when_nav_filter(source_root: Path) -> None:
+    """nav の auto の条件（正常系）。"""
+    # 準備
+    valid = _config_value(
+        nav={
+            "tabs": [
+                {
+                    "title": "mcp",
+                    "items": [
+                        {"auto": {"filter": {"field": "tags", "op": "eq", "values": ["mcp"]}}}
+                    ],
+                }
+            ]
+        }
+    )
+    invalid = _config_value(
+        nav={
+            "tabs": [
+                {
+                    "title": "mcp",
+                    "items": [
+                        {"auto": {"filter": {"field": "tags", "op": "like", "values": ["mcp"]}}}
+                    ],
+                }
+            ]
+        }
+    )
+    # 実行
+    results = [
+        validate_source_config(valid, root=source_root),
+        validate_source_config(invalid, root=source_root),
+    ]
+    # 検証
+    assert results[0] == []
+    assert len(results[1]) >= 1
+    assert results[1][0].path.startswith("nav.tabs[0].items[0].auto.filter")
+
+
+def test_load_source_when_default_ref(
+    develop_ahead: tuple[Path, str], make_entry: Callable[..., SourceEntry]
+) -> None:
+    """default_ref の設定とスキーマで組み立てる（正常系）。"""
+    # 準備
+    root, develop = develop_ahead
+    entry = make_entry(str(root / "dev-docs.yaml"))
+    # 実行
+    served, status = load_source(entry, index=0)
+    # 検証
+    assert status.status == "serving"
+    assert served is not None
+    assert [table.id for table in served.config.documents] == ["rules", "kind_a"]
+    assert "kind_a" in served.schemas
+    assert served.config_commit == develop
+
+
+def test_load_source_when_worktree_config(
+    git_repo: Callable[..., Path],
+    run_git: Callable[..., str],
+    sample_files: dict[str, str],
+    make_entry: Callable[..., SourceEntry],
+) -> None:
+    """ワークツリーの設定でもメインから数える（正常系）。"""
+    # 準備
+    files = {
+        **sample_files,
+        "dev-docs.yaml": sample_files["dev-docs.yaml"] + "worktrees: [.claude/worktrees/*]\n",
+    }
+    root = git_repo(files, branch="main")
+    worktree = root / ".claude/worktrees/develop"
+    run_git(root, "worktree", "add", "-b", "develop", str(worktree))
+    entry = make_entry(str(worktree / "dev-docs.yaml"))
+    # 実行
+    served, _ = load_source(entry, index=0)
+    # 検証
+    assert served is not None
+    assert served.worktree_globs == [str(root.resolve() / ".claude/worktrees/*")]
+
+
+def test_read_default_ref_config(develop_ahead: tuple[Path, str]) -> None:
+    """別のブランチを checkout していても default_ref を読む（正常系）。"""
+    from dev_docs.features.sources.service import read_default_ref_config
+
+    # 準備
+    root, develop = develop_ahead
+    # 実行
+    result = read_default_ref_config(root / "dev-docs.yaml")
+    # 検証
+    assert result is not None
+    assert result[0] == develop
+    assert "id: kind_a" in result[1]
+
+
+def test_read_default_ref_config_when_not_git(
+    tmp_path: Path,
+    write_files: Callable[[Path, dict[str, str]], None],
+    sample_files: dict[str, str],
+) -> None:
+    """Git の管理外（正常系）。"""
+    from dev_docs.features.sources.service import read_default_ref_config
+
+    # 準備
+    write_files(tmp_path / "plain", sample_files)
+    # 実行
+    result = read_default_ref_config(tmp_path / "plain" / "dev-docs.yaml")
+    # 検証
+    assert result is None
+
+
+def test_read_default_ref_config_when_ref_missing(
+    git_repo: Callable[..., Path], sample_files: dict[str, str]
+) -> None:
+    """default_ref が無い（異常系）。"""
+    from dev_docs.features.sources.service import read_default_ref_config
+
+    # 準備
+    files = {**sample_files, "dev-docs.yaml": sample_files["dev-docs.yaml"] + "default_ref: none\n"}
+    root = git_repo(files)
+    # 実行・検証
+    with pytest.raises(ValidationFailedError, match="none を解けません") as exc_info:
+        read_default_ref_config(root / "dev-docs.yaml")
+    assert [item.path for item in exc_info.value.violations] == ["default_ref"]

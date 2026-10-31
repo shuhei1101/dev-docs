@@ -134,3 +134,126 @@ def test_to_columns_when_both() -> None:
         apply_module.to_columns(operation, _decisions_table(), index=2)
     assert exc_info.value.violations[0].path == "operations[2].set.name"
     assert "title" in exc_info.value.violations[0].rule
+
+
+def _tags_table(**overrides: Any) -> DocumentTable:
+    """`tags` を全ての要素のキー、`main_tags` を選んだ要素のキーにした文書の行を返す。"""
+    values: dict[str, Any] = {
+        "id": "rules",
+        "paths": ["docs/rule/*.yaml"],
+        "schema_path": "schemas/rule.schema.yaml",
+        "metadata": {"tags": "tags[].name", "main_tags": "tags[main].name"},
+    }
+    values.update(overrides)
+    return DocumentTable(**values)
+
+
+@pytest.mark.parametrize(
+    ("change", "expected"),
+    [
+        pytest.param(
+            {"add_to": {"tags": ["c"]}},
+            [{"name": "a", "main": True}, {"name": "b"}, {"name": "c"}],
+            id="add-to",
+        ),
+        pytest.param({"remove_from": {"tags": ["b"]}}, [{"name": "a", "main": True}], id="remove"),
+        pytest.param(
+            {"set": {"tags": ["a", "c", "d"]}},
+            [{"name": "a", "main": True}, {"name": "c"}, {"name": "d"}],
+            id="set",
+        ),
+    ],
+)
+def test_expand_array_keys(change: dict[str, Any], expected: list[dict[str, Any]]) -> None:
+    """全ての要素のキーの追加・削除・置き換え（正常系）。"""
+    from dev_docs.features.write.apply import expand_array_keys
+
+    # 準備
+    current = {"tags": [{"name": "a", "main": True}, {"name": "b"}]}
+    operation = Operation(op="update", id="r1", expected_version="v1", **change)
+    # 実行
+    result = expand_array_keys(operation, _tags_table(), current, index=0)
+    # 検証
+    assert result.set["tags"] == expected
+
+
+@pytest.mark.parametrize(
+    ("change", "expected"),
+    [
+        pytest.param(
+            {"set": {"main_tags": ["c"]}},
+            [{"name": "a"}, {"name": "c", "main": True}, {"name": "d"}],
+            id="set",
+        ),
+        pytest.param(
+            {"add_to": {"main_tags": ["d"]}},
+            [{"name": "a", "main": True}, {"name": "c"}, {"name": "d", "main": True}],
+            id="add-to",
+        ),
+        pytest.param(
+            {"remove_from": {"main_tags": ["a"]}},
+            [{"name": "a"}, {"name": "c"}, {"name": "d"}],
+            id="remove",
+        ),
+        pytest.param(
+            {"unset": ["main_tags"]}, [{"name": "a"}, {"name": "c"}, {"name": "d"}], id="unset"
+        ),
+    ],
+)
+def test_expand_array_keys_when_main(
+    change: dict[str, Any], expected: list[dict[str, Any]]
+) -> None:
+    """選んだ要素のキーの操作（正常系）。"""
+    from dev_docs.features.write.apply import expand_array_keys
+
+    # 準備
+    current = {"tags": [{"name": "a", "main": True}, {"name": "c"}, {"name": "d"}]}
+    operation = Operation(op="update", id="r1", expected_version="v1", **change)
+    # 実行
+    result = expand_array_keys(operation, _tags_table(), current, index=0)
+    # 検証
+    assert result.set["tags"] == expected
+
+
+def test_expand_array_keys_when_create() -> None:
+    """create の data（正常系）。"""
+    from dev_docs.features.write.apply import expand_array_keys
+
+    # 準備
+    operation = Operation(
+        op="create",
+        kind="rules",
+        data={"name": "r2", "tags": ["a", "b"], "main_tags": ["b"]},
+    )
+    # 実行
+    result = expand_array_keys(operation, _tags_table(), None, index=0)
+    # 検証
+    assert result.data == {"name": "r2", "tags": [{"name": "a"}, {"name": "b", "main": True}]}
+
+
+def test_expand_array_keys_when_unknown_name() -> None:
+    """配列に無い名前（異常系）。"""
+    from dev_docs.features.write.apply import expand_array_keys
+
+    # 準備
+    current = {"tags": [{"name": "a", "main": True}, {"name": "b"}]}
+    operation = Operation(op="update", id="r1", expected_version="v1", set={"main_tags": ["z"]})
+    # 実行・検証
+    with pytest.raises(InvalidArgumentError, match="引数が正しくありません") as exc_info:
+        expand_array_keys(operation, _tags_table(), current, index=1)
+    assert exc_info.value.violations[0].path == "operations[1].set.main_tags"
+    assert "z" in exc_info.value.violations[0].rule
+
+
+def test_expand_array_keys_when_plain() -> None:
+    """[] を使わない行（正常系）。"""
+    from dev_docs.features.write.apply import expand_array_keys
+
+    # 準備
+    operation = Operation(op="update", id="r1", expected_version="v1", set={"tags": ["x"]})
+    # 実行
+    result = expand_array_keys(
+        operation, _tags_table(metadata={"name": "title"}), {"tags": []}, index=0
+    )
+    # 検証
+    assert result == operation
