@@ -341,7 +341,7 @@ constraints:
     constraint: 管理用の YAML のフォルダの配下（下のフォルダを含む）のファイルから、管理用の YAML 自身と `SKIP_DIRS` を除いたもの
     notes: 件数は配信元を受け取って求める関数で求め、配信元の状態には持たない。読み直しのときも同じ関数で求め直す
   - item: 設定・スキーマ・スクリプトの読み元
-    constraint: Git の配信元は、ディスクの `dev-docs.yaml` から `default_ref` だけを読み（ディスクに無いか読めないときは既定の `develop`）、`dev-docs.yaml`・`documents[].schema` のスキーマ・`validators`・`converters`・`generators` のスクリプトを `default_ref` から読む。要求ごとに `default_ref` の commit を確かめ、変わっていれば配信元を組み立て直す。Git でない配信元はディスクの設定を読む
+    constraint: Git の配信元は、ディスクの `dev-docs.yaml` から `default_ref` だけを読み（ディスクに無いか読めないときは既定の `develop`）、`dev-docs.yaml`・`documents[].schema` のスキーマ・`validators`・`converters` のスクリプトを `default_ref` から読む（`generators` は書き込み先のワークツリーのスクリプトで動く）。要求ごとに `default_ref` の commit を確かめ、変わっていれば配信元を組み立て直す。Git でない配信元はディスクの設定を読む
     notes: '`worktree` の引数で作業ツリー・ワークツリーを指して読むときは、そのフォルダの設定とスクリプトを使う'
   - item: ワークツリーの数え方
     constraint: '`worktrees[]` の相対パスは、`git rev-parse --git-common-dir` の親（メインのリポジトリの直下）から数える'

@@ -155,8 +155,8 @@ scenarios:
       - name: Mock
         description: なし（実環境で実行。`cwd` はテストが引数に入れる）
       - name: default_ref のスクリプト
-        description: 'sample の `develop` ブランチのスクリプトを次のようにする。変換スクリプトは本文の先頭に `develop` の文字を加える。`on: [read]` の validator は文書 1 に違反 `develop-rule` を出す。`after_write` の generator は生成した文書の本文を `develop` にする'
-        notes: クローン本体は `master` を checkout し、`master` の変換スクリプトは何も加えず、validator は違反を出さず、generator は生成した文書の本文を `master` にする
+        description: 'sample の `develop` ブランチのスクリプトを次のようにする。変換スクリプトは本文の先頭に `develop` の文字を加える。`on: [read]` の validator は文書 1 に違反 `develop-rule` を出す'
+        notes: クローン本体は `master` を checkout し、`master` の変換スクリプトは何も加えず、validator は違反を出さない
       - name: dev-docs
         description: sample を配信している dev-docs
         notes: '`cwd` は sample のクローン本体'
@@ -174,14 +174,10 @@ scenarios:
         U->>S: 変換を使う文書を開く
         S->>G: default_ref のスクリプトで変換する
         S-->>U: develop の文字が付いた本文
-        A->>S: write_docs(cwd: クローン本体, worktree なし, after_write を持つ種類の文書を書く)
-        S->>G: クローン本体へ書き、default_ref の generator を動かす
-        S-->>A: 書いた結果
       ```
     expected:
       - '`search_docs` の文書 1 の `notes` に違反 `develop-rule` が出る'
       - 変換した本文の先頭に `develop` の文字が付く
-      - '`write_docs` の後に generator が生成した文書の本文が `develop` になる'
     test: test_normal_when_scripts_run_from_default_ref
   - name: 正常シナリオ（ワークツリーのスクリプトを動かす）
     setup:
