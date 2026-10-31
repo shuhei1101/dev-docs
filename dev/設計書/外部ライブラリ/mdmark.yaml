@@ -1,10 +1,11 @@
 title: "mdmark"
 kind: "CDN の JS"
 version:
-  current: v0.8.0
+  current: master
   latest: v0.8.0
-  checked_on: '2026-10-30'
-  source: https://cdn.jsdelivr.net/gh/shuhei1101/mdmark@v0.8.0/
+  checked_on: '2026-10-31'
+  source: https://cdn.jsdelivr.net/gh/shuhei1101/mdmark@master/
+  pinning: '固定しない。リリースのたびに `dist/` が入る master ブランチを読み、中身が変わるため integrity を付けない。jsDelivr は `@master` を CDN で 12 時間、ブラウザで 7 日キャッシュする（`cache-control: public, max-age=604800, s-maxage=43200`）。リリースをすぐ届けるときは purge.jsdelivr.net で CDN のキャッシュを削除する'
 catalogs:
   - name: API
     version: v0.8.0

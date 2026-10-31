@@ -1,7 +1,7 @@
 import { renderHook, waitFor } from "@testing-library/react";
 import { beforeEach, expect, test, vi } from "vitest";
 
-const MDMARK_URL = "https://cdn.jsdelivr.net/gh/shuhei1101/mdmark@v0.8.0/dist/index.js";
+const MDMARK_URL = "https://cdn.jsdelivr.net/gh/shuhei1101/mdmark@master/dist/index.js";
 
 const fake = () => {
   const handle = { update: vi.fn(), destroy: vi.fn() };
