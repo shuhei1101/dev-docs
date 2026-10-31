@@ -61,7 +61,7 @@ ADMIN_TOOL_NAMES = (
 DOCS_INSTRUCTIONS_PROMPT_ID = "mcp/docs/instructions"
 
 
-def tool_prompt_id(server: Literal["docs", "admin"], tool: str) -> str:
+def tool_prompt_id(server: str, tool: str) -> str:
     """ツールの description を描画するプロンプトの ID を作る（プロンプトの ID はハイフンだけを許す）。"""
     return f"mcp/{server}/tools/{tool.replace('_', '-')}"
 
