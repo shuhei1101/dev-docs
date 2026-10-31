@@ -178,7 +178,7 @@ functions:
       1. `PROMPT_SCHEMA_PATH` を読み、描画の環境（`build_environment`）を作る
       2. `directory` の下の `**/*.yaml` をパスの順に読む。違反はファイルごとに集め、違反のあるファイルはその先の検査を飛ばす
          - YAML として読めない場合、`$` と読めない理由
-         - スキーマに違反する場合、違反ごとにそのキーのパスと理由（`schema_violations`）
+         - スキーマに違反する場合、違反ごとにそのキーのパスと理由（スキーマの違反）
          - `id` が `directory` からのパス（`.yaml` を除く）と違う場合、`id` と `ファイルのパス {パス} と違います`
          - `PromptDoc` にして部品をテンプレートにし（`compile_parts`）、構文の誤りごとに `parts[{部品の id}].{場所}` と `{行} 行目: {理由}`
          - 変数の `example` で `lang` の本文を 1 回描画し（`render_example`）、描画できない理由ごとに `parts` とその理由

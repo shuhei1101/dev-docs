@@ -32,7 +32,7 @@ functions:
       1. `control.update_lock` を非ブロッキングで取る
          - 取れない場合、または `control.requested` が `True` の場合、`RestartInProgressError` を送出する
       2. 手順 3〜9 を `try` に入れ、`finally` で `update_lock` を放す（返す経路・`UpdateFailedError` の経路を含む）
-      3. `previous_version` を 起動時に読んだ値（`shared/version.py` の `RUNNING_VERSION`。更新で配布のメタデータが入れ替わっても変わらない） で得る
+      3. `previous_version` を 起動時に読んだ値（動いているバージョン。更新で配布のメタデータが入れ替わっても変わらない） で得る
       4. `git rev-parse HEAD` を実行して前の HEAD を控え、`git pull --ff-only` を実行する（コマンドの実行）
          - `[INFO]` クローンを更新する（clone）
       5. もう一度 `git rev-parse HEAD` を実行する

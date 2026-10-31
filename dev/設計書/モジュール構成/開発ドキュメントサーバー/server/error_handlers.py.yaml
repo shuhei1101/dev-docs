@@ -42,7 +42,7 @@ functions:
       description: 何も返さない
     process: |-
       1. `DevDocsError` は、`application/problem+json` で `{type: PROBLEM_TYPE_BASE + name, title: name, status, detail: message, nextSteps: next_steps, ...details()}` を返す。`details()` の 1 段目のキーと入れ子のモデルのフィールド名を `pydantic.alias_generators.to_camel` で camelCase にする。`dict[str, ...]` の値のキー（`candidates` の文書の ID など）は変えない。`violations` を持つときは `errors[]`（`{path, reason}`、`reason` は `rule`）にも並べる
-      2. `RequestValidationError` は、400 で `type` が `InvalidArgumentError` の problem+json を返す。`errors[]` は誤りごとに `loc` の `body` を除いたパス（`sources[1].id` の形）と `msg`
+      2. `RequestValidationError` は、400 で `type` が `InvalidArgumentError` の problem+json を返す。`errors[]` は誤りごとに `loc` の `body` を除いたパス（`sources[1].id` の形。項目のパスへの変換）と `msg`
       3. `starlette.exceptions.HTTPException`（ルートの無いパス・画面の配信の 404 を含む）は、その `status_code` で `type` が `PROBLEM_TYPE_BASE + "HttpError"`、`detail` が例外の `detail` の problem+json を返す
       4. これら以外の例外は FastAPI の既定の 500 に任せ、`[error]` 要求の処理に失敗した（メソッド・パス・例外）を書く
     unit_tests:
