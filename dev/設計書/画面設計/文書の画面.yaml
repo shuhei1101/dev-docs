@@ -44,9 +44,9 @@ elements:
     description: 配信元の文書の種類を選ぶ。スクロールしても画面に残す
     label: タブの名前（`nav` の並び順）
     visible_when: 常時
-    initial_value: '`active` のタブを現在地（`aria-current="page"`）にする'
+    initial_value: '`tab` のタブ（省いたか、開いている文書がそのタブに無いときは `active` のタブ）を現在地（`aria-current="page"`）にする'
     source: 文書の取得.tabs[].title・文書の取得.tabs[].active
-    action: クリックでそのタブのサイドバーの一番上の文書を開く。文書の無いタブは URL を変えず、文書が無いことの表示を出す
+    action: クリックで `tab` をそのタブの番号にして、そのタブのサイドバーの一番上の文書を開く。文書の無いタブは URL を変えず、文書が無いことの表示を出す
     action_ref: dev/設計書/インターフェース定義/開発ドキュメントサーバー/文書の取得#
   - name: 文書の一覧
     kind: nav
@@ -56,7 +56,7 @@ elements:
     visible_when: 画面幅が 48rem 以上のとき（狭い幅では文書の一覧のドロワー）
     initial_value: 開いている文書を現在地（`aria-current="page"`）にする
     source: 文書の取得.tabs[].items
-    action: page のクリックで、`rev`・`base` を保ったその文書を開く。`change` が `deleted` の page は、`rev` を `base` にして `base` を外したその文書を開く
+    action: page のクリックで、`rev`・`base`・`tab` を保ったその文書を開く。`change` が `deleted` の page は、`rev` を `base` にして `base` を外したその文書を開く
     action_ref: dev/設計書/インターフェース定義/開発ドキュメントサーバー/文書の取得#
     notes:
       読み上げ名: '`文書の一覧`'
@@ -82,7 +82,7 @@ elements:
     label: '`{配信元の ID}` / `{タブ名}` / `{group の名前}` / `{文書の名前}`'
     visible_when: 常時（文書の無いタブでは `{配信元の ID}` / `{タブ名}`）
     source: 文書の取得.source・文書の取得.tabs[].items
-    action: 配信元の ID のクリックで配信元のトップ、タブ名のクリックでそのタブの一番上の文書を開く。group と末尾はリンクにしない
+    action: 配信元の ID のクリックで配信元のトップ、タブ名のクリックで `tab` を保ってそのタブの一番上の文書を開く。group と末尾はリンクにしない
     action_ref: dev/設計書/インターフェース定義/開発ドキュメントサーバー/文書の取得#
     notes:
       読み上げ名: '`パンくず`'
@@ -412,7 +412,7 @@ input_checks:
     message: '`コメントを入力してください。`'
     position: 修正欄の下
 notes:
-  URL: '`/{配信元の ID}/{文書のパス}`。文書のパスを省いた `/{配信元の ID}` は配信元のトップ（一番左のタブの一番上の文書）。search パラメータは `rev`（開くリビジョン。省くと `defaultRef`）と `base`（比較元。省くと差分を出さない）で、TanStack Router の `validateSearch` と Zod で検査する。`/` は配信中の配信元の先頭のトップへ移り、配信中の配信元が無ければ設定画面へ移る'
+  URL: '`/{配信元の ID}/{文書のパス}`。文書のパスを省いた `/{配信元の ID}` は配信元のトップ（一番左のタブの一番上の文書）。search パラメータは `rev`（開くリビジョン。省くと `defaultRef`）・`base`（比較元。省くと差分を出さない）・`tab`（選んだタブの番号。省くか、開いている文書がそのタブに無いときは `active` のタブ）で、TanStack Router の `validateSearch` と Zod で検査する。`/` は配信中の配信元の先頭のトップへ移り、配信中の配信元が無ければ設定画面へ移る'
   コメントの置き場所: ブラウザのタブの `sessionStorage` に、配信元の ID・リビジョン・文書のパス・見出しの並び・`quote`・`prefix`・`suffix`・本文・選択を溜める。再読み込みしても残り、タブを閉じると消える。サーバーへは送信しない
   404 のとき: 文書の取得が 404 を返したら、URL を変えずに見つからない画面を出す（`dev/設計書/画面設計/見つからない画面`）
 refs:
