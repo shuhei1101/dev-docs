@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import logging
+import shutil
 import socket
 from collections.abc import Callable
 from pathlib import Path
@@ -9,6 +10,24 @@ from typing import Any
 
 import httpx
 import pytest
+from pydantic import BaseModel
+
+from dev_docs.features.admin.types import (
+    CheckProjectRequest,
+    FormatRequest,
+    TryConvertRequest,
+    WriteNavRequest,
+)
+from dev_docs.features.changes.types import ChangesRequest
+from dev_docs.features.describe.types import DescribeRequest
+from dev_docs.features.prompt_doc.runtime import DEFAULT_PROMPTS_DIR, PromptSet, load_prompts
+from dev_docs.features.related.types import RelatedRequest
+from dev_docs.features.search.types import MatchWordsRequest, SearchRequest
+from dev_docs.features.session_context.types import SESSION_CONTEXT_PROMPT_ID
+from dev_docs.features.write.types import DeleteRequest, WriteRequest
+from dev_docs.server.mcp.admin import NoArguments
+from dev_docs.server.mcp.result import DOCS_INSTRUCTIONS_PROMPT_ID, mcp_prompt_ids, tool_prompt_id
+from dev_docs.shared.yaml_io import load_yaml
 
 BROKEN_CONFIG = "name: broken\ndocuments:\n  - id: sample\n    schema: schemas/sample.schema.yaml\n"
 TOOL_NAMES = [
@@ -66,6 +85,31 @@ NONE_NAV = (
     "      items:\n"
     "        - auto: {filter: {field: tags, op: eq, values: [none]}}\n"
 )
+# 文書の MCP の instructions の字数の上限
+INSTRUCTIONS_MAX_CHARS = 4096
+# instructions が持つ見出し（使う場面・grep と Read が向く場面・ツールの順序・タグの付け方）
+INSTRUCTIONS_HEADERS = ("使う場面:", "grep・Read が向く場面:", "使い方:", "タグ:")
+# 文に置かない言い回し
+FORBIDDEN_WORDS = ("MUST", "必ず", "禁止")
+# ツールの名前 → 引数のスキーマの元の要求のモデル
+DOCS_TOOL_MODELS: dict[str, type[BaseModel]] = {
+    "search_docs": SearchRequest,
+    "describe": DescribeRequest,
+    "list_changes": ChangesRequest,
+    "trace_related": RelatedRequest,
+    "write_docs": WriteRequest,
+    "delete_docs": DeleteRequest,
+    "list_match_words": MatchWordsRequest,
+}
+ADMIN_TOOL_MODELS: dict[str, type[BaseModel]] = {
+    "status": FormatRequest,
+    "reload": FormatRequest,
+    "restart": NoArguments,
+    "update": NoArguments,
+    "check_project": CheckProjectRequest,
+    "try_convert": TryConvertRequest,
+    "write_nav": WriteNavRequest,
+}
 
 
 def _kind_row(kind: str) -> str:
@@ -88,6 +132,32 @@ def _listening_addresses(port: int) -> set[str]:
             if columns[3] == LISTEN_STATE and int(local_port, 16) == port:
                 found.add(address)
     return found
+
+
+def _descriptions(response: httpx.Response) -> dict[str, str]:
+    """`tools/list` の応答をツールの名前 → description にする。"""
+    return {tool["name"]: tool["description"] for tool in response.json()["result"]["tools"]}
+
+
+def _argument_keys(response: httpx.Response) -> dict[str, list[str]]:
+    """`tools/list` の応答をツールの名前 → 引数のスキーマのキーにする。"""
+    return {
+        tool["name"]: sorted(tool["inputSchema"].get("properties", {}))
+        for tool in response.json()["result"]["tools"]
+    }
+
+
+def _model_keys(models: dict[str, type[BaseModel]]) -> dict[str, list[str]]:
+    """ツールの名前 → 要求のモデルのフィールド（別名があれば別名）にする。"""
+    return {
+        name: sorted(info.alias or key for key, info in model.model_fields.items())
+        for name, model in models.items()
+    }
+
+
+def _rendered(prompts: PromptSet, server: str, names: dict[str, type[BaseModel]]) -> dict[str, str]:
+    """プロンプトの YAML を描画した、ツールの名前 → description を返す。"""
+    return {name: prompts.render(tool_prompt_id(server, name)) for name in names}
 
 
 def _mcp(port: int, path: str, payload: dict[str, Any]) -> httpx.Response:
@@ -505,3 +575,67 @@ def test_normal_when_alias_and_nav_warned(
     assert sources["sample"]["status"] == "serving"
     assert not found.get("items")
     assert "壊れた用語" not in {item["word"] for item in words["words"]}
+
+
+def test_normal_when_mcp_text_from_prompts(
+    make_source: Callable[..., Any],
+    write_settings: Callable[..., Path],
+    free_port: Callable[[], int],
+    start_serve: Callable[..., Any],
+    wait_until_serving: Callable[..., None],
+) -> None:
+    """文書の MCP の instructions と 2 つの MCP のツールの description をプロンプトの YAML から描画して返す（正常系）。"""
+    # 準備
+    port = free_port()
+    process = start_serve(write_settings(make_source("sample")), port)
+    wait_until_serving(process, port)
+    prompts = load_prompts(
+        DEFAULT_PROMPTS_DIR, required=[SESSION_CONTEXT_PROMPT_ID, *mcp_prompt_ids()]
+    )
+    # 実行
+    initialized = _mcp(port, "/mcp/", INITIALIZE)
+    tools = _mcp(port, "/mcp/", {"jsonrpc": "2.0", "id": 2, "method": "tools/list"})
+    admin_tools = _mcp(port, "/_admin/mcp/", {"jsonrpc": "2.0", "id": 3, "method": "tools/list"})
+    process.terminate()
+    process.wait(timeout=15)
+    # 検証
+    instructions = initialized.json()["result"]["instructions"]
+    texts = [instructions, *_descriptions(tools).values(), *_descriptions(admin_tools).values()]
+    assert instructions == prompts.render(DOCS_INSTRUCTIONS_PROMPT_ID)
+    assert [header for header in INSTRUCTIONS_HEADERS if header not in instructions] == []
+    assert len(instructions) <= INSTRUCTIONS_MAX_CHARS
+    assert _descriptions(tools) == _rendered(prompts, "docs", DOCS_TOOL_MODELS)
+    assert _descriptions(admin_tools) == _rendered(prompts, "admin", ADMIN_TOOL_MODELS)
+    assert [text for text in texts if any(word in text for word in FORBIDDEN_WORDS)] == []
+    assert _argument_keys(tools) == _model_keys(DOCS_TOOL_MODELS)
+    assert _argument_keys(admin_tools) == _model_keys(ADMIN_TOOL_MODELS)
+
+
+def test_error_when_prompt_invalid(
+    tmp_path: Path,
+    make_source: Callable[..., Any],
+    write_settings: Callable[..., Path],
+    free_port: Callable[[], int],
+    start_serve: Callable[..., Any],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """プロンプトの YAML がスキーマに違反すると待ち受けずに終わる（異常系）。"""
+    # 準備
+    prompts = tmp_path / "prompts"
+    shutil.copytree(DEFAULT_PROMPTS_DIR, prompts)
+    broken = prompts / "mcp" / "docs" / "tools" / "search-docs.yaml"
+    value = load_yaml(broken.read_text(encoding="utf-8"))
+    del value["kind"]
+    broken.write_text(json.dumps(value, ensure_ascii=False), encoding="utf-8")
+    monkeypatch.setenv("DEV_DOCS_PROMPTS_DIR", str(prompts))
+    settings = write_settings(make_source("sample"))
+    port = free_port()
+    # 実行
+    process = start_serve(settings, port)
+    code = process.wait(timeout=30)
+    error = process.stderr.read() if process.stderr else ""
+    # 検証
+    assert code == 4
+    assert _listening_addresses(port) == set()
+    assert str(broken) in error
+    assert "kind" in error

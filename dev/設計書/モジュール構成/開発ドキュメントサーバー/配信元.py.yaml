@@ -260,6 +260,12 @@ data_models:
         access: 公開
         default: '["write"]'
         description: '`validators[]` だけが使う'
+      - name: cache
+        title: 変換の結果の控え
+        type: bool
+        access: 公開
+        default: 'True'
+        description: '`converters[]` だけが使う。`False` の行の変換は控えを読まず書かない'
   - name: SourceConfig
     title: 配信元の設定
     container: features/sources/types.py
@@ -738,6 +744,12 @@ functions:
         condition: '`nav.tabs[0].items[0].auto` が `{filter: {field: tags, op: eq, values: [mcp]}}`（`document` なし）と、`{filter: {field: tags, op: like, values: [mcp]}}`'
         mock: なし
         expected: 1 つ目は違反が無く、2 つ目は `nav.tabs[0].items[0].auto.filter` の下のパスの違反
+      - name: test_validate_source_config_when_cache_outside_converters
+        case: 異常
+        summary: converters 以外の行の cache
+        condition: '`validators: [{id: v, run: [python3, scripts/v.py], cache: false}]`'
+        mock: なし
+        expected: '`validators[0].cache` の違反が 1 件'
   - name: check_scripts
     title: スクリプトの確かめ
     kind: 関数
@@ -917,6 +929,12 @@ functions:
         condition: '`entry.config` が `.claude/worktrees/develop/dev-docs.yaml`、`worktrees: [.claude/worktrees/*]`'
         mock: なし（一時フォルダで `git init` と `git worktree add`）
         expected: '`worktree_globs` がクローン本体の直下の `.claude/worktrees/*`'
+      - name: test_load_source_when_converter_cache
+        case: 正常
+        summary: converters の行の cache を読む
+        condition: '`converters` に `cache: false` の行 `c1` と `cache` を書かない行 `c2`'
+        mock: なし（一時フォルダ）
+        expected: '`serving` で、`script("converters", "c1").cache` が `False`、`c2` が `True`'
   - name: read_default_ref_config
     title: default_ref の設定の読み込み
     kind: 関数

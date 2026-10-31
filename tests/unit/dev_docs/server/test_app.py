@@ -64,15 +64,17 @@ def _pass_through(scope: Scope) -> list[Scope]:
     return received
 
 
-def _handlers(make_handlers: Callable[..., Any], make_registry: Callable[..., Any]) -> Any:
+def _handlers(make_mcp_handlers: Callable[..., Any], make_registry: Callable[..., Any]) -> Any:
     """配信元が空の配線済みの関数を作る。"""
-    return make_handlers(registry=make_registry())
+    return make_mcp_handlers(registry=make_registry())
 
 
-def test_build_app(make_handlers: Callable[..., Any], make_registry: Callable[..., Any]) -> None:
+def test_build_app(
+    make_mcp_handlers: Callable[..., Any], make_registry: Callable[..., Any]
+) -> None:
     """入口を全て持つ（正常系）。"""
     # 準備
-    app = build_app(_handlers(make_handlers, make_registry))
+    app = build_app(_handlers(make_mcp_handlers, make_registry))
     client = TestClient(app)
     # 実行
     response = client.get("/_api/openapi.json")
@@ -87,12 +89,14 @@ def test_build_app(make_handlers: Callable[..., Any], make_registry: Callable[..
 
 
 def test_build_app_when_openapi(
-    make_handlers: Callable[..., Any], make_registry: Callable[..., Any], tmp_path: Path
+    make_mcp_handlers: Callable[..., Any], make_registry: Callable[..., Any], tmp_path: Path
 ) -> None:
     """OpenAPI の画面を出さない（正常系）。"""
     # 準備
     screen_dir = _screen_dir(tmp_path)
-    client = TestClient(build_app(_handlers(make_handlers, make_registry), screen_dir=screen_dir))
+    client = TestClient(
+        build_app(_handlers(make_mcp_handlers, make_registry), screen_dir=screen_dir)
+    )
     # 実行
     docs = client.get("/docs")
     schema = client.get("/_api/openapi.json")
@@ -119,12 +123,12 @@ def test_build_app_when_openapi(
 
 
 def test_build_app_when_screen(
-    make_handlers: Callable[..., Any], make_registry: Callable[..., Any], tmp_path: Path
+    make_mcp_handlers: Callable[..., Any], make_registry: Callable[..., Any], tmp_path: Path
 ) -> None:
     """API と MCP を画面の配信より先に当てる（正常系）。"""
     # 準備
     client = TestClient(
-        build_app(_handlers(make_handlers, make_registry), screen_dir=_screen_dir(tmp_path))
+        build_app(_handlers(make_mcp_handlers, make_registry), screen_dir=_screen_dir(tmp_path))
     )
     # 実行
     screen = client.get("/default/a.md")
@@ -137,11 +141,11 @@ def test_build_app_when_screen(
 
 
 def test_build_app_when_mcp_without_slash(
-    make_handlers: Callable[..., Any], make_registry: Callable[..., Any], tmp_path: Path
+    make_mcp_handlers: Callable[..., Any], make_registry: Callable[..., Any], tmp_path: Path
 ) -> None:
     """スラッシュ無しの MCP のパスへの POST を画面の配信でなく MCP が受ける（正常系）。"""
     # 準備
-    handlers = make_handlers(
+    handlers = make_mcp_handlers(
         registry=make_registry(), seen=SimpleNamespace(purge_expired=lambda: 0)
     )
     app = build_app(handlers, screen_dir=_screen_dir(tmp_path))

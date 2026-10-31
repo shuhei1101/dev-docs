@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from pathlib import Path
+from typing import Any
 
 from dev_docs.features.access.types import SourceAccess
 from dev_docs.features.documents.types import Document
@@ -13,8 +14,6 @@ from dev_docs.features.session_context.service import (
 )
 from dev_docs.features.session_context.types import (
     CONTEXT_MAX_CHARS,
-    SESSION_USAGE,
-    SETUP_GUIDE,
     SessionContextRequest,
 )
 from dev_docs.features.settings.types import SourceEntry, SourceScope, TerminalConfig
@@ -69,7 +68,7 @@ def test_build_session_context(
     make_terminal_config: Callable[..., TerminalConfig],
     make_entry: Callable[..., SourceEntry],
 ) -> None:
-    """使える配信元・使い方・警告を返す（正常系）。"""
+    """使える配信元・警告と instructions を指す行を返す（正常系）。"""
     # 準備
     handlers, cwd = _two_sources(make_source_dir, make_terminal_config, make_entry)
     request = SessionContextRequest(cwd=str(cwd), reason="startup")
@@ -80,7 +79,11 @@ def test_build_session_context(
         "sample": "read_write",
         "notes": "read",
     }
-    assert SESSION_USAGE in result.context
+    assert "sample" in result.context
+    assert "notes" in result.context
+    assert result.warnings[0] in result.context
+    assert "instructions" in result.context
+    assert "describe(source)" not in result.context
     assert len(result.warnings) == 1
     assert result.forgotten is False
 
@@ -139,7 +142,8 @@ def test_build_session_context_when_no_source_available(
     result = build_session_context(request, handlers=handlers)
     # 検証
     assert result.sources == []
-    assert result.context == SETUP_GUIDE
+    assert "/dev-docs:setup" in result.context
+    assert "instructions" not in result.context
 
 
 def test_collect_warnings(
@@ -196,37 +200,49 @@ def test_collect_warnings_when_unavailable_source(
     assert result == []
 
 
-def test_context_text() -> None:
-    """配信元の行・使い方・警告をつなぐ（正常系）。"""
+def test_context_text(bundled_prompts: Any) -> None:
+    """配信元の行・警告・instructions を指す行を描画する（正常系）。"""
     # 準備
     available = [_access("a", "write", "A の説明"), _access("b", "read", "B の説明")]
     # 実行
-    result = _context_text(available, ["警告です"])
+    result = _context_text(available, ["警告です"], prompts=bundled_prompts)
     # 検証
-    positions = [
-        result.index("- a（読み書き）: A の説明"),
-        result.index("- b（読み取りだけ）: B の説明"),
-        result.index(SESSION_USAGE),
-        result.index("注意:"),
-        result.index("- 警告です"),
-    ]
-    assert result.startswith("dev-docs の文書の MCP（dev-docs）で、次の配信元を使えます。")
-    assert positions == sorted(positions)
+    assert "A の説明" in result
+    assert "B の説明" in result
+    assert "警告です" in result
+    assert "instructions" in result
+    assert "describe(source)" not in result
+    assert 'group_by="tags"' not in result
+    assert "action:" not in result
 
 
-def test_context_text_when_too_long() -> None:
-    """上限を超えるときは説明を省き、行を切る（正常系）。"""
+def test_context_text_when_too_long(bundled_prompts: Any) -> None:
+    """上限を超えるときは説明を省き、配信元を減らす（正常系）。"""
     # 準備
-    description = "説明" * 250
+    description = "説明" * 50
     available = [
-        _access("source-" + "x" * 30 + f"{index:03d}", "write", description) for index in range(100)
+        _access(f"source-{index:03d}-" + "x" * 13, "write", description) for index in range(40)
     ]
     # 実行
-    result = _context_text(available, [])
+    result = _context_text(available, [], prompts=bundled_prompts)
     # 検証
     assert len(result) <= CONTEXT_MAX_CHARS
     assert "説明説明説明" not in result
-    assert "- ほか " in result
+    assert "source-000-" in result
+    assert "source-039-" not in result
+    assert "件" in result
+    assert "instructions" in result
+
+
+def test_context_text_when_no_source(bundled_prompts: Any) -> None:
+    """使える配信元が無い（正常系）。"""
+    # 準備
+    available: list[SourceAccess] = []
+    # 実行
+    result = _context_text(available, [], prompts=bundled_prompts)
+    # 検証
+    assert "/dev-docs:setup" in result
+    assert "instructions" not in result
 
 
 def test_collect_warnings_when_alias_and_nav(
@@ -246,22 +262,3 @@ def test_collect_warnings_when_alias_and_nav(
     assert result[0] == "a: エイリアスのキーの違反が 1 件あります（check_project で確かめられます）"
     assert result[1].startswith("a: nav.tabs[1].items[0].auto.filter: none:")
     assert len(result) == 2
-
-
-def test_context_text_when_tag_guide() -> None:
-    """タグの付け方を含む（正常系）。"""
-    from dev_docs.features.session_context.types import TAG_GUIDE
-
-    # 準備
-    available = [_access("a", "write", "A の説明")]
-    # 実行
-    result = _context_text(available, [])
-    # 検証
-    assert TAG_GUIDE in result
-    assert result.index(SESSION_USAGE) < result.index(TAG_GUIDE)
-    assert (
-        "- 複合語は単語まで分けてタグにする（`エラー処理` は `topic:エラー` と `action:処理`）"
-        in result
-    )
-    assert "- 動作は `action:`、題材は `topic:`、道具は `tool:` で始める" in result
-    assert "- 配信元にタグの規約があれば、`describe(source)` の説明書に従う" in result

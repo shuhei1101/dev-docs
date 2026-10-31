@@ -1,0 +1,15 @@
+# yaml-language-server: $schema=../../../../../templates/prompt.schema.yaml
+id: mcp/docs/tools/describe
+name: describe の description
+description: 文書の MCP の describe が何をするか・いつ使うか・いつ使わないか・何を返さないかを伝える
+kind: tool
+lang: ja
+parts:
+  - id: body
+    texts:
+      - lang: ja
+        text: |-
+          今の作業場所から使える配信元の一覧（引数なし）、配信元の説明書と種類の一覧（source）、種類のスキーマ（source と kind）を返す。
+          配信元を初めて探す・書く前に、種類と書き方を確かめるときに使う。
+          文書そのものを探す・読むときは search_docs を使う。
+          文書の本文は返さない。

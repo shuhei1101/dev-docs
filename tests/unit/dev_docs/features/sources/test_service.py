@@ -630,6 +630,18 @@ def test_validate_source_config_when_nav_filter(source_root: Path) -> None:
     assert results[1][0].path.startswith("nav.tabs[0].items[0].auto.filter")
 
 
+def test_validate_source_config_when_cache_outside_converters(source_root: Path) -> None:
+    """converters 以外の行の cache（異常系）。"""
+    # 準備
+    value = _config_value(
+        validators=[{"id": "v", "run": ["python3", "scripts/v.py"], "cache": False}]
+    )
+    # 実行
+    result = validate_source_config(value, root=source_root)
+    # 検証
+    assert [violation.path for violation in result] == ["validators[0].cache"]
+
+
 def test_load_source_when_default_ref(
     develop_ahead: tuple[Path, str], make_entry: Callable[..., SourceEntry]
 ) -> None:
@@ -668,6 +680,33 @@ def test_load_source_when_worktree_config(
     # 検証
     assert served is not None
     assert served.worktree_globs == [str(root.resolve() / ".claude/worktrees/*")]
+
+
+def test_load_source_when_converter_cache(
+    tmp_path: Path,
+    write_files: Callable[[Path, dict[str, str]], None],
+    sample_files: dict[str, str],
+    make_entry: Callable[..., SourceEntry],
+) -> None:
+    """converters の行の cache を読む（正常系）。"""
+    # 準備
+    config = (
+        sample_files["dev-docs.yaml"]
+        + "converters:\n"
+        + "  - id: c1\n    run: [python3, scripts/c.py]\n    cache: false\n"
+        + "  - id: c2\n    run: [python3, scripts/c.py]\n"
+    )
+    write_files(
+        tmp_path, {**sample_files, "dev-docs.yaml": config, "scripts/c.py": "print('# c')\n"}
+    )
+    entry = make_entry(str(tmp_path / "dev-docs.yaml"), source_id="sample")
+    # 実行
+    served, status = load_source(entry, index=0)
+    # 検証
+    assert status.status == "serving"
+    assert served is not None
+    assert served.script("converters", "c1").cache is False
+    assert served.script("converters", "c2").cache is True
 
 
 def test_read_default_ref_config(develop_ahead: tuple[Path, str]) -> None:

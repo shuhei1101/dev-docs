@@ -1,0 +1,15 @@
+# yaml-language-server: $schema=../../../../../templates/prompt.schema.yaml
+id: mcp/docs/tools/write-docs
+name: write_docs の description
+description: 文書の MCP の write_docs が何をするか・いつ使うか・いつ使わないか・何を返さないかを伝える
+kind: tool
+lang: ja
+parts:
+  - id: body
+    texts:
+      - lang: ja
+        text: |-
+          文書を作る・部分更新する・置き換える。操作を全て当てた後の文書を検査に通し、通ったときだけ作業ツリーのファイルを書き換える（commit はしない）。範囲のファイルを作った・消した・改名したら、管理用の YAML の行を修正する。set・unset・add_to・remove_from・text_edits のキーには共通のキー（id・name・description・tags・alias_type など）も使え、種類の列名へ読み替えて書く。対応は describe(source, kind) で見る。
+          配信元の文書を作る・書き換えるときに使う。書く前に describe(source, kind) で種類のスキーマを確かめる。
+          文書を消すときは delete_docs を使う。配信の範囲の外のファイルは Edit・Write で書く。
+          書いた後の文書の本文は返さない。

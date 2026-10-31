@@ -113,10 +113,10 @@ class ConvertService:
     def _run_converter(
         self, target: Target, document: Document, converter: str
     ) -> str | ConvertFailure:
-        """`converters[]` のスクリプトで Markdown にする（控えがあればそれを使う）。"""
+        """`converters[]` のスクリプトで Markdown にする（`cache` の行は控えがあればそれを使う）。"""
         entry = target.source.script("converters", converter)
-        cache = self._cache_path(target, document, converter, entry.run)
-        if cache.is_file():
+        cache = self._cache_path(target, document, converter, entry.run) if entry.cache else None
+        if cache is not None and cache.is_file():
             return cache.read_text(encoding="utf-8")
         script = " ".join(entry.run)
         try:
@@ -142,9 +142,11 @@ class ConvertService:
             return ConvertFailure(
                 reason="not_runnable", kind=document.kind, script=script, detail=error.reason
             )
-        self.cache_dir.mkdir(parents=True, exist_ok=True)
-        replace_file(cache, result.stdout)
-        self._prune()
+        # `cache: false` の行の変換は控えを書かない
+        if cache is not None:
+            self.cache_dir.mkdir(parents=True, exist_ok=True)
+            replace_file(cache, result.stdout)
+            self._prune()
         return result.stdout
 
     def convert(self, target: Target, document: Document) -> Converted:

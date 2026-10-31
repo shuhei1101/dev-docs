@@ -57,6 +57,8 @@ class ScriptEntry:
     id: str
     run: list[str]
     on: list[Literal["read", "write"]] = field(default_factory=lambda: ["write"])
+    # `converters[]` だけが使う。False の行の変換は控えを読まず書かない
+    cache: bool = True
 
 
 @dataclass(frozen=True)

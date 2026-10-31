@@ -20,13 +20,18 @@ from typing import Any
 from dev_docs.features.documents.store import check_sync
 from dev_docs.features.lifecycle.control import RestartControl
 from dev_docs.features.lifecycle.types import SERVE_ARGV, SHUTDOWN_WAIT_FACTOR
+from dev_docs.features.prompt_doc.runtime import PromptSet, load_prompts, prompts_dir
+from dev_docs.features.prompt_doc.types import PromptInvalidError
+from dev_docs.features.session_context.types import SESSION_CONTEXT_PROMPT_ID
 from dev_docs.features.settings.query import config_path, listen_port, load_terminal_config
 from dev_docs.features.settings.types import TerminalConfig, TerminalConfigInvalidError
 from dev_docs.features.sources.registry import SourceRegistry
 from dev_docs.features.sources.types import ServedSource, SourceStatus
+from dev_docs.server.mcp.result import mcp_prompt_ids
 
 EXIT_CONFIG_INVALID = 2
 EXIT_PORT_IN_USE = 3
+EXIT_PROMPT_INVALID = 4
 EXIT_ROOT_NOT_FOUND = 2
 LOG_FILE = "dev-docs.log"
 LOG_MAX_BYTES = 5_000_000
@@ -62,6 +67,7 @@ class Handlers:
     columns: Any
     reload_sources: Callable[[TerminalConfig], list[SourceStatus]]
     restart: RestartControl
+    prompts: PromptSet
 
 
 def _setup_logging(log_dir: Path) -> list[logging.Handler]:
@@ -123,7 +129,12 @@ def run_serve(args: argparse.Namespace) -> int:
         except PortInUseError:
             _report_port(terminal.bind, port)
             return EXIT_PORT_IN_USE
-        handlers = build_handlers(terminal)
+        try:
+            handlers = build_handlers(terminal)
+        except PromptInvalidError as error:
+            for problem in error.problems:
+                print(problem.line(), file=sys.stderr, flush=True)
+            return EXIT_PROMPT_INVALID
         app = build_app(handlers)
         print(f"http://{terminal.bind}:{port}/", flush=True)
         for source in handlers.registry.served():
@@ -176,6 +187,10 @@ def build_handlers(terminal: TerminalConfig) -> Handlers:
     from dev_docs.features.view.columns import COLUMNS_DIR, ColumnSettings
     from dev_docs.features.write.locks import SourceLocks
 
+    # プロンプトの YAML が違反するときは、state_dir を作る前に止める
+    prompts = load_prompts(
+        prompts_dir(os.environ), required=[SESSION_CONTEXT_PROMPT_ID, *mcp_prompt_ids()]
+    )
     state_dir = terminal.state_dir
     state_dir.mkdir(parents=True, exist_ok=True)
     snapshots = SnapshotStore(state_dir / "snapshots")
@@ -212,6 +227,7 @@ def build_handlers(terminal: TerminalConfig) -> Handlers:
         columns=columns,
         reload_sources=reload,
         restart=RestartControl(),
+        prompts=prompts,
     )
 
 

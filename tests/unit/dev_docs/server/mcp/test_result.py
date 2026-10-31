@@ -194,3 +194,27 @@ def test_tool_error_when_validation() -> None:
     text = _text(result.content[0])
     assert "limit:" in text
     assert "describe" in text
+
+
+def test_tool_prompt_id() -> None:
+    """ツール名をハイフンにする（正常系）。"""
+    from dev_docs.server.mcp.result import tool_prompt_id
+
+    # 準備
+    server = "docs"
+    # 実行
+    result = tool_prompt_id(server, "search_docs")
+    # 検証
+    assert result == "mcp/docs/tools/search-docs"
+
+
+def test_mcp_prompt_ids() -> None:
+    """instructions と 14 のツール（正常系）。"""
+    from dev_docs.server.mcp.result import mcp_prompt_ids
+
+    # 準備・実行
+    result = mcp_prompt_ids()
+    # 検証
+    assert len(result) == 15
+    assert result[0] == "mcp/docs/instructions"
+    assert "mcp/admin/tools/check-project" in result

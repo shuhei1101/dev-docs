@@ -103,7 +103,7 @@ INITIALIZE = {
     },
 }
 MCP_HEADERS = {"Accept": "application/json, text/event-stream", "Content-Type": "application/json"}
-CONTEXT_MAX_CHARS = 2000
+CONTEXT_MAX_CHARS = 1000
 TAG_HEADER = "タグ:"
 TAG_RULES = (
     "複合語は単語まで分けてタグにする",
@@ -111,7 +111,29 @@ TAG_RULES = (
     "`topic:`",
     "`tool:`",
     "配信元にタグの規約があれば",
+    '`group_by="tags"` で使われているタグを見て',
 )
+# 使い分けは文書の MCP の instructions にある旨の行
+POINTER_LINE = (
+    "探す・読む・書くときの使い分けと書き方は、文書の MCP（dev-docs）の instructions にあります。"
+)
+INSTRUCTIONS_MAX_CHARS = 4096
+# instructions が案内する、使う場面・grep と Read が向く場面・ツールの順序の語
+INSTRUCTIONS_GUIDES = (
+    "使う場面:",
+    "`search_docs`",
+    "`trace_related`",
+    "`list_changes`",
+    "`write_docs`",
+    "grep・Read が向く場面:",
+    "コードの識別子・文字列の出現箇所",
+    "配信の範囲の外のファイル",
+    "始めに `describe(source)` で種類と書き方を確かめる",
+)
+# description が持つ、いつ使う・何を返さないの語
+DESCRIPTION_GUIDES = ("ときに使う", "返さない")
+FORBIDDEN_WORDS = ("MUST", "必ず", "禁止")
+TOOLS_LIST = {"jsonrpc": "2.0", "id": 2, "method": "tools/list"}
 PART_LINES = [
     "# a",
     "2 行目 検索",
@@ -864,7 +886,7 @@ def test_normal_when_term_matched_by_alias(
 def test_normal_when_tag_guide_injected(
     make_source: Callable[..., Any], serve: Callable[..., Any]
 ) -> None:
-    """SessionStart の注入文と文書の MCP の instructions が、同じタグの付け方を案内する（正常系）。"""
+    """文書の MCP の instructions がタグの付け方を案内し、注入文は instructions を指す 1 行だけを持つ（正常系）。"""
     # 準備
     sample = make_source("sample")
     served = serve(sample)
@@ -878,8 +900,35 @@ def test_normal_when_tag_guide_injected(
     # 検証
     context = response.json()["context"]
     instructions = initialized.json()["result"]["instructions"]
-    tag_lines = _tag_lines(context)
     assert response.status_code == 200
-    assert all(rule in tag_lines for rule in TAG_RULES)
-    assert _tag_lines(instructions) == tag_lines
+    assert [rule for rule in TAG_RULES if rule not in _tag_lines(instructions)] == []
+    assert TAG_HEADER not in context
+    assert context.splitlines().count(POINTER_LINE) == 1
     assert len(context) <= CONTEXT_MAX_CHARS
+
+
+def _descriptions(response: httpx.Response) -> list[str]:
+    """`tools/list` の応答のツールの description を並べる。"""
+    return [tool["description"] for tool in response.json()["result"]["tools"]]
+
+
+def test_normal_when_usage_guide_received(
+    make_source: Callable[..., Any], serve: Callable[..., Any]
+) -> None:
+    """文書の MCP の instructions と description が、使う場面・使わない場面・ツールの順序を案内する（正常系）。"""
+    # 準備
+    served = serve(make_source("sample"))
+    # 実行
+    initialized = httpx.post(served.url("/mcp/"), headers=MCP_HEADERS, json=INITIALIZE, timeout=10)
+    tools = httpx.post(served.url("/mcp/"), headers=MCP_HEADERS, json=TOOLS_LIST, timeout=10)
+    # 検証
+    instructions = initialized.json()["result"]["instructions"]
+    descriptions = _descriptions(tools)
+    texts = [instructions, *descriptions]
+    assert [guide for guide in INSTRUCTIONS_GUIDES if guide not in instructions] == []
+    assert len(instructions) <= INSTRUCTIONS_MAX_CHARS
+    assert len(descriptions) == 7
+    assert [
+        text for text in descriptions if not all(guide in text for guide in DESCRIPTION_GUIDES)
+    ] == []
+    assert [text for text in texts if any(word in text for word in FORBIDDEN_WORDS)] == []

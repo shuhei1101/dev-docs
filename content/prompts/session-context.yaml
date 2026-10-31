@@ -1,0 +1,100 @@
+# yaml-language-server: $schema=../../templates/prompt.schema.yaml
+id: session-context
+name: SessionStart の配信元の一覧
+description: 作業場所から使える配信元と警告を、セッションの始めに伝える
+kind: hook
+lang: ja
+vars:
+  sources:
+    type: array
+    required: true
+    description: 作業場所から使える配信元（字数の上限を超えたときは末尾から減らした残り）
+    source: 端末の設定の sources[] のうち、cwd が scope に当たるもの
+    example:
+      - id: knowledge
+        access: read
+        description: どのプロジェクトでも共通で使うコーディング規約・テンプレート
+    items:
+      type: object
+      description: 配信元 1 件
+      properties:
+        id:
+          type: string
+          required: true
+          description: 配信元の ID
+        access:
+          type: string
+          required: true
+          enum:
+            - read_write
+            - read
+          description: 権限
+        description:
+          type: string
+          description: 配信元の説明。字数の上限を超えたときは None
+  omitted:
+    type: integer
+    description: 字数の上限を超えて省いた配信元の件数
+    default: 0
+    example: 0
+  warnings:
+    type: array
+    description: 同期のずれ・古い設定・配信していない配信元の警告
+    default: []
+    example:
+      - 'knowledge: 管理用の YAML に無いファイルが 1 件あります（check_project で確かめられます）'
+    items:
+      type: string
+      description: 警告 1 件
+examples:
+  - id: no-source
+    name: 配信元が無い
+    values:
+      sources: []
+      warnings: []
+  - id: omitted
+    name: 字数の上限を超えた
+    values:
+      sources:
+        - id: knowledge
+          access: read_write
+          description: null
+      omitted: 3
+      warnings: []
+parts:
+  - id: sources
+    when: '{{ sources | length > 0 }}'
+    texts:
+      - lang: ja
+        text: |
+          dev-docs の文書の MCP（dev-docs）で、次の配信元を使えます。
+          {% for source in sources %}
+          - {{ source.id }}（{{ "読み書き" if source.access == "read_write" else "読み取りだけ" }}）{{ (": " ~ source.description) if source.description else "" }}
+          {% endfor %}
+  - id: omitted
+    when: '{{ omitted is not none and omitted > 0 }}'
+    texts:
+      - lang: ja
+        text: |
+          - ほか {{ omitted }} 件
+  - id: usage
+    when: '{{ sources | length > 0 }}'
+    texts:
+      - lang: ja
+        text: |
+          探す・読む・書くときの使い分けと書き方は、文書の MCP（dev-docs）の instructions にあります。
+  - id: no-source
+    when: '{{ sources | length == 0 }}'
+    texts:
+      - lang: ja
+        text: |
+          この作業場所から使える dev-docs の配信元はありません。配信元にするときは `/dev-docs:setup` を実行します。
+  - id: warnings
+    when: '{{ warnings }}'
+    texts:
+      - lang: ja
+        text: |
+          注意:
+          {% for warning in warnings %}
+          - {{ warning }}
+          {% endfor %}

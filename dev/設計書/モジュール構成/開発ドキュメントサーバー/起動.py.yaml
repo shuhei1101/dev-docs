@@ -204,6 +204,11 @@ data_models:
         type: RestartControl
         access: 公開
         description: 再起動と更新の要求を 1 つずつにし、`run_serve` が止まった後に同じプロセスを置き換えるかを持つ（再起動と更新）
+      - name: prompts
+        title: プロンプトの一式
+        type: PromptSet
+        access: 公開
+        description: 起動のときに読んだプロンプトの YAML（セッションの文脈・文書の MCP・管理の MCP が描画する。書き換えは再起動で効かせる）
 classes:
   - name: PortInUseError
     title: ポートが使用中
@@ -298,6 +303,12 @@ constants:
     usecase: 起動
     summary: ポートで待ち受けられないときの終了コード
     value: '3'
+  - name: EXIT_PROMPT_INVALID
+    title: プロンプトの違反の終了コード
+    container: main.py
+    usecase: 起動
+    summary: プロンプトの YAML が無い・違反するときの終了コード
+    value: '4'
   - name: DOCS_MCP_PATH
     title: 文書の MCP のパス
     container: server/app.py
@@ -361,6 +372,7 @@ functions:
       3. ポートで待ち受けられるか確かめる（ポートの確かめ）
          - `PortInUseError` の場合、`{bind}:{port} は使用中です。DEV_DOCS_PORT で別のポートを指定できます` を標準エラーに出し、`EXIT_PORT_IN_USE` を返す
       4. 部品を配線し（部品の配線）、アプリを組み立てる（アプリの組み立て）
+         - `PromptInvalidError` の場合、違反ごとに `{file}: {path}: {reason}` を標準エラーに出し、`EXIT_PROMPT_INVALID` を返す
       5. 標準出力に `http://{bind}:{port}/` と配信中の配信元の ID を 1 行ずつ出す
       6. `uvicorn.Server(uvicorn.Config(app, host=bind, port=port, log_config=None, timeout_graceful_shutdown=script_timeout_sec * SHUTDOWN_WAIT_FACTOR))` を作り、再起動の制御に取り付けて（サーバーの取り付け）`run()` する
          - 確かめた後に他のプロセスがポートを取り、uvicorn が待ち受けに失敗して止まった場合（`server.started` が `False`）、手順 3 と同じ本文を出して `EXIT_PORT_IN_USE` を返す
@@ -374,6 +386,9 @@ functions:
       - name: なし（終了コード 3）
         condition: ポートで待ち受けられない
         message: '`{bind}:{port} は使用中です。DEV_DOCS_PORT で別のポートを指定できます`'
+      - name: なし（終了コード 4）
+        condition: プロンプトの YAML が無い・読めない・スキーマに違反する・描画できない
+        message: '標準エラーに `{ファイル}: {キーのパス}: {理由}` を全て'
     unit_tests:
       - name: test_run_serve
         case: 正常
@@ -395,6 +410,13 @@ functions:
         mock: なし
         expected: 3 を返し、標準エラーにポートの番号と `DEV_DOCS_PORT`
         exception: ポートで待ち受けられない
+      - name: test_run_serve_when_prompt_invalid
+        case: 異常
+        summary: プロンプトの YAML が違反する
+        condition: 配信できる配信元 1 つの端末の設定。同梱した YAML を一時フォルダへ複製して `mcp/docs/tools/search-docs.yaml` から `kind` を削除し、そのフォルダを `DEV_DOCS_PROMPTS_DIR` に入れる
+        mock: '`uvicorn.Server.run`（呼ばれた数を数える）'
+        expected: 4 を返し、標準エラーに `search-docs.yaml` のパスと `kind` があり、`uvicorn.Server.run` が呼ばれない
+        exception: プロンプトの YAML が違反する
       - name: test_run_serve_when_restart
         case: 正常
         summary: 再起動の要求で同じプロセスを置き換える
@@ -472,17 +494,22 @@ functions:
       type: Handlers
       description: 配線済みの関数
     process: |-
-      1. `state_dir` を作る
-      2. 配信元の一覧・リビジョンの書き出し（`{state_dir}/snapshots`）・文書のストア・変換（`{state_dir}/converted`、制限時間は `script_timeout_sec`）・会話の記録（`{state_dir}/seen.sqlite3`、保持日数は `seen_retention_days`）・文書の検査（制限時間は `script_timeout_sec`）・配信元ごとの排他・表の列の設定（`{state_dir}/columns`）・再起動の制御を作る。配信元の一覧には、組み立て直した配信元を 1 つ受け取って『配信元の控えの破棄』をこれらの部品で呼ぶ関数を `on_rebuilt` に渡す
-      3. 『配信元の読み直し』をこれらの部品で束ねた関数を作り、端末の設定で 1 回呼ぶ（配信元を読み、メタデータのずれを警告のログに書く）。検証で外した配信元があっても続ける
-      4. これらと手順 3 の関数を持つ `Handlers` を返す
+      1. プロンプトの一式を読む（`load_prompts(prompts_dir(os.environ), required=[SESSION_CONTEXT_PROMPT_ID, *mcp_prompt_ids()])`）。`PromptInvalidError` はそのまま送る
+      2. `state_dir` を作る
+      3. 配信元の一覧・リビジョンの書き出し（`{state_dir}/snapshots`）・文書のストア・変換（`{state_dir}/converted`、制限時間は `script_timeout_sec`）・会話の記録（`{state_dir}/seen.sqlite3`、保持日数は `seen_retention_days`）・文書の検査（制限時間は `script_timeout_sec`）・配信元ごとの排他・表の列の設定（`{state_dir}/columns`）・再起動の制御を作る。配信元の一覧には、組み立て直した配信元を 1 つ受け取って『配信元の控えの破棄』をこれらの部品で呼ぶ関数を `on_rebuilt` に渡す
+      4. 『配信元の読み直し』をこれらの部品で束ねた関数を作り、端末の設定で 1 回呼ぶ（配信元を読み、メタデータのずれを警告のログに書く）。検証で外した配信元があっても続ける
+      5. プロンプトの一式・これらの部品・手順 4 の関数を持つ `Handlers` を返す
+    exceptions:
+      - name: PromptInvalidError
+        condition: プロンプトの YAML が無い・読めない・スキーマに違反する・描画できない
+        message: 違反を全て `problems` に持つ
     unit_tests:
       - name: test_build_handlers
         case: 正常
         summary: 部品を作り配信元を読む
         condition: '`state_dir` が無い一時フォルダの下、配信できる配信元 1 つと検証に失敗する配信元 1 つ'
         mock: なし
-        expected: '`state_dir` ができ、`registry.served()` が 1 つ、`registry.statuses()` が 2 つ'
+        expected: '`state_dir` ができ、`registry.served()` が 1 つ、`registry.statuses()` が 2 つ、`prompts` が `session-context` と `mcp/docs/instructions` を持つ'
       - name: test_build_handlers_when_out_of_sync
         case: 正常
         summary: 初回の読み込みでもずれを警告のログに書く
@@ -497,6 +524,13 @@ functions:
         mock: なし（一時フォルダで `git init`）
         expected: '`registry.get("a")` の後に `store` で読んだ文書の `metadata.name` が `タイトル`'
         exception: '-'
+      - name: test_build_handlers_when_prompt_invalid
+        case: 異常
+        summary: プロンプトの YAML が違反すると部品を作らない
+        condition: '`state_dir` が無い一時フォルダの下、`DEV_DOCS_PROMPTS_DIR` が空の一時フォルダ'
+        mock: なし
+        expected: '`PromptInvalidError` を送り、`state_dir` ができない'
+        exception: プロンプトの YAML が違反する
   - name: reload_sources
     title: 配信元の読み直し
     kind: 関数

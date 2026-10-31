@@ -23,7 +23,9 @@
 
 読み取りのツールには `readOnlyHint: true` が付き、並列に呼ばれます。
 引数の検証は strict tool use を使わず、サーバーが配信元のスキーマで検証し、直し方を添えてエラーを返します。
-`initialize` の `instructions` は、SessionStart で注入する文のタグの行と同じ文です（[使われているタグを引く](#使われているタグを引く)）。
+`initialize` の `instructions` は、`search_docs`・`trace_related`・`list_changes`・`write_docs` を使う場面と、grep・Read が向く場面（コードの識別子・文字列の出現箇所、配信の範囲の外のファイル）、`describe(source)` で種類と書き方を確かめてから探す・書く順序、タグの付け方（[使われているタグを引く](#使われているタグを引く)）を持ち、4,096 字以内です。
+`instructions` とツールごとの description は、起動のときに `content/prompts/mcp/` のプロンプトの YAML から読みます（置き場所は環境変数 `DEV_DOCS_PROMPTS_DIR` で変えられます）。
+YAML を書き換えたときは、再起動で反映します。
 
 ### 共通の引数
 
@@ -196,7 +198,7 @@ YAML として読めないファイルがあっても、そのファイルを除
 使われているタグは `group_by: tags` で件数つきで引けます。
 配信元をまたいで引くときは `source: "*"` を渡します。
 
-タグの付け方は次のとおりで、SessionStart で注入する文と `instructions` のタグの行と同じです。
+タグの付け方は次のとおりで、`instructions` のタグの行と同じです。
 
 ```text
 タグ:
