@@ -106,4 +106,18 @@ requirements:
     status: planned
     refs:
       - dev/設計書/画面設計/文書の画面#elements[Issue を作成]
+  - name: mdmark の読み込み元
+    english_name: mdmark_source
+    category: 保守性
+    external_constraint: 'jsDelivr は `@master` を CDN で 12 時間、ブラウザで 7 日キャッシュする（`cache-control: public, max-age=604800, s-maxage=43200`）'
+    source_kind: ユーザー要望
+    source: https://github.com/shuhei1101/dev-docs/issues/15
+    value: jsDelivr の mdmark の master ブランチ（`@master` の `dist/index.js`・`dist/index.css`）を読み、タグを固定せず integrity を付けない
+    rationale: mdmark のリリースのたびに読み込み先を書き換えずに追従するため。develop はそのたびに `dist/` をビルドする手間がかかるので、リリースのたびに `dist/` が入る master を読む。中身が変わるため integrity は付けられない
+    measurement: 文書の画面を開き、`@master` の `dist/index.js`・`dist/index.css` が 200 で読まれることを確かめる
+    overflow: リリースはキャッシュが切れるまで届かない。すぐ届けるときは purge.jsdelivr.net で CDN のキャッシュを削除する
+    refs:
+      - dev/設計書/外部ライブラリ/mdmark#
+      - dev/設計書/モジュール構成/画面/features/docs/doc-view/hooks/use-mdmark.ts#constants[MDMARK_URL]
+    status: planned
 lead: 外部の制約から逆算した dev-docs の決定値。
