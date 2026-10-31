@@ -230,7 +230,7 @@ functions:
          - `add` は、`item` が無ければタブの並びの末尾に `value` のタブ、あれば指した group の `items` の末尾に `value` の項目を加える。同じ名前のタブ・group があれば `InvalidArgumentError`
          - `update` は指したタブか group に `value` のキーだけを重ね、`remove` は指したタブか group を除く
          - 指したタブ・group が無い、`item` が `group` でない項目に当たる、`add`・`update` で `value` が無い場合、今のタブ・group の名前を添えた `InvalidArgumentError` を送る（`path` は `operations[{n}]`）
-      4. 書いた後の `nav` を検証する。`nav` を置き換えた設定で `SOURCE_SCHEMA` の `nav` の下の違反と、`root` の配信元を組み立てて（`assemble_source`）集めた文書での nav の条件の確かめの違反があれば、`NavInvalidError` を送り、ファイルを書き換えない
+      4. 書いた後の `nav` を検証する。`nav` を置き換えた設定で `SOURCE_SCHEMA` の `nav` の下の違反と、`root` の配信元を組み立てて（`assemble_source`）集めた文書と、有効な文書の行ごとの文書に当てるスキーマ（文書のストア.文書に当てるスキーマ）から作った使える項目での nav の条件の確かめの違反があれば、`NavInvalidError` を送り、ファイルを書き換えない
       5. 往復編集の `nav` のキーだけを置き換えて書く（`dump_roundtrip`・`replace_file`）
       6. nav の条件の数えを 4 の文書で求め、`count` が 0 の `auto` を nav の警告と同じ文の `warnings` にする
       7. `WriteNavResult` を返す（`nav` は書いた `nav` を YAML にした文字列）
@@ -269,6 +269,13 @@ functions:
         mock: なし（一時ディレクトリ）
         expected: '`NavInvalidError` の違反の `path` が `nav.tabs[{n}].items[0].auto.filter.field` で、ファイルが変わらない'
         exception: 書いた後の `nav` が条件の確かめに通らない
+      - name: test_write_nav_when_records_filter
+        case: 正常
+        summary: records の行の 1 行の項目の条件を書ける
+        condition: '行 `notes`（`records: files`、`schema` が `templates/files.schema.yaml` のコピー）に要素 `{path: a.md}` を持つ配信元に、`add` で `auto: {document: notes, filter: {field: path, op: eq, values: [a.md]}}` のタブ `files`'
+        mock: なし（一時ディレクトリ）
+        expected: '`NavInvalidError` を送らずに書き、`counts` の `count` が 1、`warnings` が空'
+        exception: '-'
       - name: test_write_nav_when_missing_tab
         case: 異常
         summary: 無いタブ

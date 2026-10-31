@@ -717,7 +717,7 @@ functions:
       2. `nav.tabs[]` ごとに `items[]` を上から次のように読む
          - `group` は `kind` が `group` の項目を作り、子の `items[]` を同じ読み方で入れ子にする
          - `page` は、文書の行が 1 ファイルだけならその文書、`{行の id}/{文書の ID}` ならその文書の `kind` が `page` の項目にする。無い文書は飛ばし、`[warning]` nav の文書が無い（配信元・値）を書く
-         - `auto` は、`document` があればその行の文書、無ければ全ての文書のうち、`filter` があれば条件の照合（検索。`fields` は文書の種類のスキーマの使える項目、`today` は今日）で当たる文書を、文書のページのパスの昇順で `page` の項目にする。`group_by` があれば、その項目のパスの値（配列は要素ごと、無ければ `その他`）ごとの `group` の項目にする
+         - `auto` は、`document` があればその行の文書、無ければ全ての文書のうち、`filter` があれば条件の照合（検索。`fields` は有効な文書の行ごとに、`$ref` を解いた種類のスキーマ（`records` を持つ行は `records_item_schema` で引いた 1 行のスキーマ）の使える項目、`today` は今日）で当たる文書を、文書のページのパスの昇順で `page` の項目にする。`group_by` があれば、その項目のパスの値（配列は要素ごと、無ければ `その他`）ごとの `group` の項目にする
          - `title` があれば行の名前を上書きする
       3. `active` を全て `False` にしたタブの並びを返す
     unit_tests:
@@ -739,6 +739,12 @@ functions:
         condition: '`auto: {filter: {field: tags, op: eq, values: [mcp]}}`（`document` なし）と、`auto: {document: rules, filter: {field: tags, op: eq, values: [mcp]}}`。`tags: [mcp]` の文書が rules に 1 件・notes に 1 件'
         mock: なし
         expected: 1 つ目のタブは 2 件の `page` の項目、2 つ目のタブは rules の 1 件だけ
+      - name: test_build_nav_when_records_filter
+        case: 正常
+        summary: records の行の 1 行の項目で絞った auto
+        condition: '行 `notes`（`records: files`、`schema` が `templates/files.schema.yaml` のコピー）に要素 `{path: a.md}`・`{path: b.md}`、`auto: {document: notes, filter: {field: path, op: eq, values: [a.md]}}`'
+        mock: なし
+        expected: タブの `page` の項目が `a.md` の要素 1 件
   - name: first_page
     title: タブの最初の文書
     kind: 関数
@@ -1219,7 +1225,7 @@ functions:
       description: 警告。`nav` が無い配信元は空
     process: |-
       1. `source.config.nav` が無ければ空を返す
-      2. `Target(source, source.root, None, None, "read")` で文書を集め（文書のストア.文書を集める）、種類のスキーマから使える項目（検索）を作る
+      2. `Target(source, source.root, None, None, "read")` で文書を集め（文書のストア.文書を集める）、有効な文書の行ごとの文書に当てるスキーマ（文書のストア.文書に当てるスキーマ）から使える項目（検索）を作る
       3. nav の条件の確かめの違反を加える
       4. nav の条件の数えで `count` が 0 の `auto` ごとに、`path` を `{auto のパス}.filter`（`filter` が無ければ `auto` のパス）、`rule` を `{タブの名前}: 条件 {filter を JSON にした文字列} に当たる文書がありません` にした警告を加える
       5. 警告を返す
@@ -1230,6 +1236,13 @@ functions:
         condition: sample の `nav` に、`auto` の `filter` が `tags が none` のタブ `none` を置き、どの文書にもタグ `none` を付けない
         mock: なし（一時フォルダの配信元）
         expected: 警告が 1 件で、`path` が `nav.tabs[{none の位置}].items[0].auto.filter`、`rule` が `none:` で始まる
+        exception: '-'
+      - name: test_nav_warnings_when_records_filter
+        case: 正常
+        summary: records の行の 1 行の項目の条件を警告しない
+        condition: '行 `notes`（`records: files`、`schema` が `templates/files.schema.yaml` のコピー）に要素 `{path: a.md}`、`nav` に `auto: {document: notes, filter: {field: path, op: eq, values: [a.md]}}` のタブ'
+        mock: なし（一時フォルダの配信元）
+        expected: 空
         exception: '-'
       - name: test_nav_warnings_when_no_nav
         case: 正常
