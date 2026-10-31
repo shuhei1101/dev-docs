@@ -67,8 +67,8 @@ const Items = ({
             params={{ source, _splat: item.path ?? "" }}
             search={
               item.change === "deleted"
-                ? { rev: search.base }
-                : { rev: search.rev, base: search.base }
+                ? { rev: search.base, tab: search.tab }
+                : { rev: search.rev, base: search.base, tab: search.tab }
             }
             aria-current={item.path === currentPath ? "page" : undefined}
             onClick={onNavigate}

@@ -4,6 +4,7 @@ import { z } from "zod";
 export const DocViewSearchSchema = z.object({
   rev: z.string().min(1).optional().catch(undefined),
   base: z.string().min(1).optional().catch(undefined),
+  tab: z.coerce.number().int().min(0).optional().catch(undefined),
 });
 
 export type DocViewSearch = z.infer<typeof DocViewSearchSchema>;

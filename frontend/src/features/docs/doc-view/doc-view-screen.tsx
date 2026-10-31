@@ -78,7 +78,7 @@ export const DocViewScreen = () => {
   const nav = useDocNavigation(source, doc.path, search, refs);
   const place = useLocating(docIdOf(doc), nav.locate);
 
-  const active = findActivePage(doc.tabs, doc.path);
+  const active = findActivePage(doc.tabs, doc.path, search.tab);
   const emptyTab = empty?.path === doc.path ? empty.tab : null;
   const baseMarkdown = useQuery(
     baseMarkdownQueryOptions(source, doc.path, doc.diff?.base ?? null),
