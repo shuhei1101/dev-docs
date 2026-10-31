@@ -31,7 +31,7 @@
 - [x] ~~インターフェース定義設計~~（影響なし: 検索の振る舞いを変えない）
 - [x] ~~部品設計~~（画面の部品を変えない）
 - [x] ~~画面設計~~（画面を変えない）
-- [ ] モジュール構成設計（`features/search/service.py` の単体テストの行 `test_search_when_records_fields` の条件）
+- [x] モジュール構成設計（`features/search/service.py` の単体テストの行 `test_search_when_records_fields` の条件）
 - [x] ~~ドキュメント修正~~（更新ドキュメントなし）
 - [ ] 単体テスト作成
 - [x] ~~実装~~（コードを変えない）
