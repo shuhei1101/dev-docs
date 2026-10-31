@@ -9,7 +9,7 @@ import { renderApp } from "@tests/helpers/render-app";
 
 const mount = vi.hoisted(() => vi.fn());
 
-vi.mock("https://cdn.jsdelivr.net/gh/shuhei1101/mdmark@v0.8.0/dist/index.js", () => ({ mount }));
+vi.mock("https://cdn.jsdelivr.net/gh/shuhei1101/mdmark@master/dist/index.js", () => ({ mount }));
 
 const useHandlers = (document: Record<string, unknown>) =>
   server.use(
