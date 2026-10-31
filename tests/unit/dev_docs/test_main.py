@@ -62,6 +62,19 @@ def test_build_parser_when_files() -> None:
     assert args.handler is main_module.run_files
 
 
+def test_build_parser_when_prompt_doc() -> None:
+    """prompt-doc の処理を引く（正常系）。"""
+    # 準備
+    from dev_docs.features.prompt_doc.cli import run_prompt_doc
+
+    parser = build_parser()
+    # 実行
+    args = parser.parse_args(["prompt-doc"])
+    # 検証
+    assert args.cmd == "prompt-doc"
+    assert args.handler is run_prompt_doc
+
+
 def test_build_parser_when_plan_and_record() -> None:
     """--plan と --record は同時に渡せない（異常系）。"""
     # 準備
