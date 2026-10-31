@@ -1,0 +1,318 @@
+title: 開発ドキュメントサーバー / 画面のAPI / nav.py
+lead: 画面のナビゲーションの組み立てと、変わったページ・自動の件数・絞り込みの確かめ・警告。
+diagrams:
+  - name: 全体
+    diagram: |-
+      classDiagram
+        direction TD
+        文書の取得 ..> タブとサイドバーの組み立て
+        文書の取得 ..> タブの最初の文書
+        文書の取得 ..> サイドバーの変化
+        class 文書の取得 {
+          <<function>>
+        }
+        class タブとサイドバーの組み立て {
+          <<function>>
+        }
+        class タブの最初の文書 {
+          <<function>>
+        }
+        class サイドバーの変化 {
+          <<function>>
+        }
+        click 文書の取得 href "./document.py.yaml#文書の取得"
+functions:
+  - name: build_nav
+    title: タブとサイドバーの組み立て
+    kind: 関数
+    container: features/view/nav.py
+    usecase: 文書の取得
+    role: 変換
+    summary: 配信元の `nav` と文書から、上のタブとサイドバーを作る
+    scope: public
+    thread_safe: true
+    args:
+      - name: source
+        title: 配信中の配信元
+        type: ServedSource
+        required: true
+        passing: positional
+        description: '`config.nav` と文書の行を読む'
+      - name: documents
+        title: 文書
+        type: Sequence[Document]
+        required: true
+        passing: positional
+        description: 読む場所の文書
+    returns:
+      type: list[NavTab]
+      description: タブの並び
+    process: |-
+      1. `nav` が無い場合、有効な文書の行ごとに 1 つのタブを作り、`auto: {document: 行の id}` と同じ並びにする
+      2. `nav.tabs[]` ごとに `items[]` を上から次のように読む
+         - `group` は `kind` が `group` の項目を作り、子の `items[]` を同じ読み方で入れ子にする
+         - `page` は、文書の行が 1 ファイルだけならその文書、`{行の id}/{文書の ID}` ならその文書の `kind` が `page` の項目にする。無い文書は飛ばし、`[warning]` nav の文書が無い（配信元・値）を書く
+         - `auto` は、`document` があればその行の文書、無ければ全ての文書のうち、`filter` があれば条件の照合（検索。`fields` は有効な文書の行ごとに、`$ref` を解いた種類のスキーマ（`records` を持つ行は `records_item_schema` で引いた 1 行のスキーマ）の使える項目、`today` は今日）で当たる文書を、文書のページのパスの昇順で `page` の項目にする。`group_by` があれば、その項目のパスの値（配列は要素ごと、無ければ `その他`）ごとの `group` の項目にする
+         - `title` があれば行の名前を上書きする
+      3. `active` を全て `False` にしたタブの並びを返す
+    unit_tests:
+      - name: test_build_nav
+        case: 正常
+        summary: group・page・auto
+        condition: 'A-25 の例の `nav`（`auto: {document: rules, group_by: tags.lang}`・`group: アーキテクチャ`・`page: architecture`）'
+        mock: なし
+        expected: 3 つのタブ。規約のタブは `tags.lang` の値ごとの `group` の項目、設計書のタブは `group` の項目 `アーキテクチャ` の下に architecture の `page` の項目
+      - name: test_build_nav_when_no_nav
+        case: 正常
+        summary: nav が無い
+        condition: 文書の行が 2 つで `nav` が無い
+        mock: なし
+        expected: 行ごとに 2 つのタブ
+      - name: test_build_nav_when_filter
+        case: 正常
+        summary: 条件で絞った auto
+        condition: '`auto: {filter: {field: tags, op: eq, values: [mcp]}}`（`document` なし）と、`auto: {document: rules, filter: {field: tags, op: eq, values: [mcp]}}`。`tags: [mcp]` の文書が rules に 1 件・notes に 1 件'
+        mock: なし
+        expected: 1 つ目のタブは 2 件の `page` の項目、2 つ目のタブは rules の 1 件だけ
+      - name: test_build_nav_when_records_filter
+        case: 正常
+        summary: records の行の 1 行の項目の型で比べる auto
+        condition: '行 `notes`（`records: files`、`schema` が `templates/files.schema.yaml` のコピーの `files.items.properties` に `priority: {type: integer}` を追加したもの）に要素 `{path: a.md, priority: 10}`・`{path: b.md, priority: 9}`、`auto: {document: notes, filter: {field: priority, op: gte, values: [10]}}`'
+        mock: なし
+        expected: タブの `page` の項目が `a.md` の要素 1 件
+  - name: first_page
+    title: タブの最初の文書
+    kind: 関数
+    container: features/view/nav.py
+    usecase: 文書の取得
+    role: 判定
+    summary: タブのサイドバーの一番上の文書のページのパスを返す
+    scope: public
+    thread_safe: true
+    args:
+      - name: tab
+        title: タブ
+        type: NavTab
+        required: true
+        passing: positional
+        description: 調べるタブ
+    returns:
+      type: str | None
+      description: 文書が無いタブは `None`
+    process: 1. `items` を上から深さ優先でたどり、最初の `page` の項目の `path` を返す
+  - name: mark_nav_changes
+    title: サイドバーの変化
+    kind: 関数
+    container: features/view/nav.py
+    usecase: 文書の取得
+    role: 変換
+    summary: タブの `page` の項目に比較元からの変化を付け、比較元にだけある文書を比較元の位置に差し込む
+    scope: public
+    thread_safe: true
+    args:
+      - name: tabs
+        title: タブ
+        type: list[NavTab]
+        required: true
+        passing: positional
+        description: 開いているリビジョンのタブとサイドバーの組み立ての結果
+      - name: base_tabs
+        title: 比較元のタブ
+        type: list[NavTab]
+        required: true
+        passing: positional
+        description: 比較元のリビジョンの文書で組み立てたタブ
+      - name: versions
+        title: バージョン
+        type: Mapping[str, str]
+        required: true
+        passing: keyword
+        description: 開いているリビジョンの文書のページのパス → 文書のバージョン
+      - name: base_versions
+        title: 比較元のバージョン
+        type: Mapping[str, str]
+        required: true
+        passing: keyword
+        description: 比較元の文書のページのパス → 文書のバージョン
+    returns:
+      type: list[NavTab]
+      description: 変化を付けたタブの並び。引数のタブは書き換えない
+    process: |-
+      1. `tabs` を複製し、`page` の項目の `change` を、`base_versions` に無ければ `added`、バージョンが違えば `modified`、同じなら `None` にする
+      2. `base_tabs` を同じ `title` のタブと突き合わせ、`base_versions` にあって `versions` に無い `page` を `change` が `deleted` の項目にして、比較元での直前の兄弟（`path` か `title` が同じ項目）の後ろへ差し込む
+         - 直前の兄弟が無い場合、同じ `title` の `group` の先頭に置く
+         - 同じ `title` の `group` もタブも無い場合、そのタブの末尾（タブが無ければ一番左のタブの末尾）に置く
+      3. 変化を付けたタブの並びを返す
+    unit_tests:
+      - name: test_mark_nav_changes
+        case: 正常
+        summary: 追加・変更・変わっていない文書
+        condition: '`docs/a` のバージョンが違い、`docs/b` が同じで、`docs/c` が比較元に無い'
+        mock: なし
+        expected: '`docs/a` が `modified`、`docs/b` が `None`、`docs/c` が `added`。引数の `tabs` の `change` は `None` のまま'
+      - name: test_mark_nav_changes_when_deleted
+        case: 正常
+        summary: 削除した文書を比較元の位置に差し込む
+        condition: 比較元の `group` 設計 の並びが `docs/a`・`docs/x`・`docs/b` で、`docs/x` が開いているリビジョンに無い
+        mock: なし
+        expected: '`group` 設計 の並びが `docs/a`・`docs/x`（`deleted`）・`docs/b`'
+      - name: test_mark_nav_changes_when_group_missing
+        case: 正常
+        summary: 比較元にだけある group の文書
+        condition: 比較元にだけある `group` 旧 の下の `docs/y` が開いているリビジョンに無い
+        mock: なし
+        expected: '`docs/y` が `deleted` で、同じ `title` のタブの末尾に並ぶ'
+  - name: nav_auto_counts
+    title: nav の条件の数え
+    kind: 関数
+    container: features/view/nav.py
+    usecase: 画面の構成の書き込み
+    role: 変換
+    summary: '`nav` の全ての `auto` について、条件に当たる文書を数える'
+    scope: public
+    thread_safe: true
+    args:
+      - name: nav
+        title: 画面の構成
+        type: Mapping[str, Any]
+        required: true
+        passing: positional
+        description: '`dev-docs.yaml` の `nav`'
+      - name: documents
+        title: 文書
+        type: Sequence[Document]
+        required: true
+        passing: positional
+        description: 数える文書
+      - name: fields
+        title: 使える項目
+        type: Mapping[str, str]
+        required: true
+        passing: keyword
+        description: 使える項目（検索）の結果
+      - name: today
+        title: 今日
+        type: date
+        required: true
+        passing: keyword
+        description: 日付の相対の値の基準
+    returns:
+      type: list[NavAutoCount]
+      description: '`nav` を上からたどった順の `auto` ごとの数'
+    process: |-
+      1. `nav.tabs[]` の `items[]` を、`group` の `items[]` の入れ子までたどって `auto` を集める（キーのパスは `nav.tabs[{i}].items[{j}]...auto`）
+      2. `auto` ごとに、タブとサイドバーの組み立てと同じ選び方（`document` と `filter`）で当たる文書を数える
+      3. `NavAutoCount` にして返す
+    unit_tests:
+      - name: test_nav_auto_counts
+        case: 正常
+        summary: 入れ子の auto を数える
+        condition: 'タブ `mcp` の `auto: {filter: tags が mcp}` と、タブ `設計` の group の下の `auto: {document: rules}`、タブ `none` の `auto: {filter: tags が none}`'
+        mock: なし
+        expected: 3 件で、`path` が `nav.tabs[0].items[0].auto`・`nav.tabs[1].items[0].items[0].auto`・`nav.tabs[2].items[0].auto`、`none` の `count` が 0
+  - name: check_nav_filters
+    title: nav の条件の確かめ
+    kind: 関数
+    container: features/view/nav.py
+    usecase: 画面の構成の書き込み
+    role: 検証
+    summary: '`nav` の `auto` の `document` と `filter` が使えるかを確かめる'
+    scope: public
+    thread_safe: true
+    args:
+      - name: nav
+        title: 画面の構成
+        type: Mapping[str, Any]
+        required: true
+        passing: positional
+        description: '`dev-docs.yaml` の `nav`'
+      - name: table_ids
+        title: 行の ID
+        type: Collection[str]
+        required: true
+        passing: keyword
+        description: 有効な documents の行の ID
+      - name: fields
+        title: 使える項目
+        type: Mapping[str, str]
+        required: true
+        passing: keyword
+        description: 使える項目（検索）の結果
+    returns:
+      type: list[Violation]
+      description: 違反。`path` は `nav.tabs[2].items[0].auto.filter.field` の形
+    process: |-
+      1. nav の条件の数えと同じ順で `auto` をたどる
+      2. `document` が `table_ids` に無ければ、`{auto のパス}.document` に `存在しない ID` の違反を加える
+      3. `filter` を `SearchRequest(filter=...)` にして条件の確かめ（検索）をし、違反の `path` の先頭の `filter` を `{auto のパス}.filter` に置き換えて加える
+      4. 違反を返す
+    unit_tests:
+      - name: test_check_nav_filters
+        case: 異常
+        summary: 知らない項目と無い行
+        condition: '`auto: {filter: {field: nmae, op: eq, values: [x]}}` と `auto: {document: none}`'
+        mock: なし
+        expected: 違反が 2 件で、`path` が `nav.tabs[0].items[0].auto.filter.field`（`fix` に `name`）と `nav.tabs[1].items[0].auto.document`
+  - name: nav_warnings
+    title: nav の警告
+    kind: 関数
+    container: features/view/nav.py
+    usecase: 配信元の検査
+    role: サービス
+    summary: 配信元のクローン本体の文書で、使えない条件とどの文書にも当たらない条件を警告にする
+    scope: public
+    thread_safe: true
+    description: 配信元の検査・起動時と読み直しの警告のログ・セッションの文脈の警告が呼ぶ。
+    args:
+      - name: store
+        title: 文書のストア
+        type: DocumentStore
+        required: true
+        passing: injected
+        description: 文書を読む
+      - name: source
+        title: 配信中の配信元
+        type: ServedSource
+        required: true
+        passing: positional
+        description: 確かめる配信元
+      - name: today
+        title: 今日
+        type: date | None
+        required: false
+        default: None
+        passing: keyword
+        description: テスト用。`None` は今日（ローカル）
+    returns:
+      type: list[Violation]
+      description: 警告。`nav` が無い配信元は空
+    process: |-
+      1. `source.config.nav` が無ければ空を返す
+      2. `Target(source, source.root, None, None, "read")` で文書を集め（文書のストア.文書を集める）、有効な文書の行ごとの文書に当てるスキーマ（文書のストア.文書に当てるスキーマ）から使える項目（検索）を作る
+      3. nav の条件の確かめの違反を加える
+      4. nav の条件の数えで `count` が 0 の `auto` ごとに、`path` を `{auto のパス}.filter`（`filter` が無ければ `auto` のパス）、`rule` を `{タブの名前}: 条件 {filter を JSON にした文字列} に当たる文書がありません` にした警告を加える
+      5. 警告を返す
+    unit_tests:
+      - name: test_nav_warnings
+        case: 正常
+        summary: 0 件の条件
+        condition: sample の `nav` に、`auto` の `filter` が `tags が none` のタブ `none` を置き、どの文書にもタグ `none` を付けない
+        mock: なし（一時フォルダの配信元）
+        expected: 警告が 1 件で、`path` が `nav.tabs[{none の位置}].items[0].auto.filter`、`rule` が `none:` で始まる
+        exception: '-'
+      - name: test_nav_warnings_when_records_filter
+        case: 正常
+        summary: records の行の 1 行の項目の条件を警告しない
+        condition: '行 `notes`（`records: files`、`schema` が `templates/files.schema.yaml` のコピーの `files.items.properties` に `owner: {type: string}` を追加したもの）に要素 `{path: a.md, owner: alice}`、`nav` に `auto: {document: notes, filter: {field: owner, op: eq, values: [alice]}}` のタブ'
+        mock: なし（一時フォルダの配信元）
+        expected: 空
+        exception: '-'
+      - name: test_nav_warnings_when_no_nav
+        case: 正常
+        summary: nav が無い
+        condition: '`nav` の無い配信元'
+        mock: なし（一時フォルダの配信元）
+        expected: 空
+        exception: '-'
+test_files:
+  - tests/unit/dev_docs/features/view/test_nav.py

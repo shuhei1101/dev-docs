@@ -1,0 +1,105 @@
+title: 開発ドキュメントサーバー / 画面のAPI / columns.py
+lead: 表の列の設定の読み書き。
+diagrams:
+  - name: 全体
+    diagram: |-
+      classDiagram
+        direction TD
+        画面の入口 ..> 表の列の設定
+        文書の取得 ..> 表の列の設定
+        class 画面の入口 {
+          <<function>>
+        }
+        class 文書の取得 {
+          <<function>>
+        }
+        class 表の列の設定 {
+          <<class>>
+        }
+        click 画面の入口 href "./route.py.yaml#画面の入口"
+        click 文書の取得 href "./document.py.yaml#文書の取得"
+constants:
+  - name: COLUMNS_DIR
+    title: 表の列の設定のフォルダ
+    container: features/view/columns.py
+    usecase: 表の列の設定の保存
+    summary: '`state_dir` の下の、配信元ごとの列の設定（`{source}.json`）を置くフォルダ'
+    value: '"columns"'
+classes:
+  - name: ColumnSettings
+    title: 表の列の設定
+    container: features/view/columns.py
+    usecase: 表の列の設定の保存
+    role: リポジトリ
+    summary: 配信元・表ごとの隠す列を `state_dir` の JSON に読み書きする
+    properties:
+      - name: dir
+        title: フォルダ
+        type: Path
+        access: 公開
+        description: '`{state_dir}/{COLUMNS_DIR}`'
+      - name: _lock
+        title: 書き込みの排他
+        type: threading.Lock
+        access: 内部 (_)
+        description: 読んで書き戻す間を 1 つずつにする
+    methods:
+      - name: get
+        title: 列の設定を読む
+        kind: メソッド
+        summary: 配信元の表のキー → 隠す列を返す
+        scope: public
+        thread_safe: true
+        args:
+          - name: source_id
+            title: 配信元の ID
+            type: str
+            required: true
+            passing: positional
+            description: 配信元
+        returns:
+          type: dict[str, list[str]]
+          description: ファイルが無い・読めないときは空（読めないときは `[warning]` 列の設定を読めない（パス・理由）を書く）
+        process: 1. `{dir}/{source_id}.json` を読んで返す
+      - name: save
+        title: 列の設定を書く
+        kind: メソッド
+        summary: 1 つの表の隠す列を書き、他の表の設定は残す
+        scope: public
+        thread_safe: true
+        side_effects: '`{dir}/{source_id}.json` を書き換える'
+        args:
+          - name: source_id
+            title: 配信元の ID
+            type: str
+            required: true
+            passing: positional
+            description: 配信元
+          - name: table
+            title: 表のキー
+            type: str
+            required: true
+            passing: positional
+            description: 書く表
+          - name: hidden
+            title: 隠す列
+            type: list[str]
+            required: true
+            passing: positional
+            description: 空なら表のキーを消す
+        returns:
+          type: None
+          description: '-'
+        process: |-
+          1. ロックを握り、今の設定を読む
+          2. `hidden` が空なら表のキーを消し、そうでなければ重複を除いて置く
+          3. フォルダを作り、ファイルの置き換え（共通）で書く
+        unit_tests:
+          - name: test_save
+            case: 正常
+            summary: 他の表を残す
+            condition: '`a:x` を書いた後に `a:y` を書き、`a:x` を空で書く'
+            mock: なし（一時フォルダ）
+            expected: '`get` が `{"a:y": [...]}`'
+test_files:
+  - tests/unit/dev_docs/features/view/test_columns.py

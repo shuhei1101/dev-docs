@@ -1,0 +1,129 @@
+title: 開発ドキュメントサーバー / 画面のAPI / route.py
+lead: 画面の API のルーター（`/_api/sources/{source}/docs`・`search`・`refs`・`columns`）。
+diagrams:
+  - name: 全体
+    diagram: |-
+      classDiagram
+        direction TD
+        画面の入口 ..> 文書の取得
+        画面の入口 ..> 見つからなかったもの
+        画面の入口 ..> 画面の読む場所
+        画面の入口 ..> 画面の検索
+        画面の入口 ..> 表の列の設定
+        画面の入口 ..> リビジョンの一覧
+        class 画面の入口 {
+          <<function>>
+        }
+        class 文書の取得 {
+          <<function>>
+        }
+        class 見つからなかったもの {
+          <<function>>
+        }
+        class 画面の読む場所 {
+          <<function>>
+        }
+        class 画面の検索 {
+          <<function>>
+        }
+        class 表の列の設定 {
+          <<class>>
+        }
+        class リビジョンの一覧 {
+          <<function>>
+        }
+        click 文書の取得 href "./document.py.yaml#文書の取得"
+        click 見つからなかったもの href "./document.py.yaml#見つからなかったもの"
+        click 画面の読む場所 href "./paths.py.yaml#画面の読む場所"
+        click 画面の検索 href "./search.py.yaml#画面の検索"
+        click 表の列の設定 href "./columns.py.yaml#表の列の設定"
+        click リビジョンの一覧 href "../history/query.py.yaml#リビジョンの一覧"
+constants:
+  - name: REFS_COMMITS_DEFAULT
+    title: 最近の commit の数の既定
+    container: features/view/route.py
+    usecase: リビジョンの一覧
+    summary: '`commits` を省いたときの数'
+    value: '20'
+  - name: REFS_COMMITS_MAX
+    title: 最近の commit の数の上限
+    container: features/view/route.py
+    usecase: リビジョンの一覧
+    summary: '`commits` の上限'
+    value: '100'
+functions:
+  - name: build_view_router
+    title: 画面の入口
+    kind: 関数
+    container: features/view/route.py
+    usecase: 共通
+    role: 入口
+    summary: 画面の API のルートを持つ `APIRouter` を作る
+    scope: public
+    args:
+      - name: handlers
+        title: 配線済みの関数
+        type: Handlers
+        required: true
+        passing: positional
+        description: 起動の『配線済みの関数』
+    returns:
+      type: fastapi.APIRouter
+      description: 5 つのルートを持つルーター
+    process: |-
+      1. GET `/_api/sources/{source}/docs` と `/_api/sources/{source}/docs/{path:path}` は、`ref`・`diff` を受け、文書の取得を `DocumentResponse` で返す。文書の取得の例外は、例外の変換の登録と同じ problem+json に見つからなかったものを加えて 404 で返す（`SourceNotServedError` の `errors[]` もそのまま）
+      2. GET `/_api/sources/{source}/search` は、`q`（1〜`SEARCH_QUERY_MAX` 文字）・`ref`・`limit`（1〜`SEARCH_LIMIT_MAX`）を受け、画面の読む場所の文書で画面の検索を返す
+      3. GET `/_api/sources/{source}/refs` は、`commits`（0〜`REFS_COMMITS_MAX`）を受け、リビジョンの一覧を返す（無い配信元は 404）
+      4. PUT `/_api/sources/{source}/columns` は、同じオリジンの確認を依存に持ち、配信元を引いてから、本文を `ColumnsRequest` で受けて表の列の設定.列の設定を書く を呼び、同じ値を返す
+      5. ルーターは `APIRouter(tags=["view"])` にする。各ルートの `name`（`operation_id` は渡さず、アプリの組み立てが operationId を `view-{name}` にする）は、`/docs` が `get_document_default`、`/docs/{path:path}` が `get_document`、search が `search_page`、refs が `list_refs`、columns が `put_columns`
+      6. サービスは `asyncio.to_thread` で呼ぶ
+    unit_tests:
+      - name: test_build_view_router_when_document
+        case: 正常
+        summary: 文書の取得
+        condition: GET `/_api/sources/sample/docs`
+        mock: なし（一時フォルダの配信元）
+        expected: 200 で `path`・`markdown`・`tabs`・`updatedAt`・`tableKeys`（キーが camelCase）
+      - name: test_build_view_router_when_document_missing
+        case: 異常
+        summary: 無い文書
+        condition: GET `/_api/sources/sample/docs/no-such-doc`
+        mock: なし
+        expected: 404 の problem+json で、`missing` が `doc`、`value` が `no-such-doc`
+      - name: test_build_view_router_when_search
+        case: 正常
+        summary: 画面の検索
+        condition: GET `/_api/sources/sample/search?q=foo`
+        mock: なし（一時フォルダの配信元）
+        expected: 200 で `totalCount` と `items[].path`
+      - name: test_build_view_router_when_query_too_long
+        case: 異常
+        summary: 長すぎる語
+        condition: '`q` が 201 文字'
+        mock: なし
+        expected: 400 の problem+json
+      - name: test_build_view_router_when_refs
+        case: 正常
+        summary: Git 管理外のリビジョンの一覧
+        condition: Git 管理外の配信元で GET `/_api/sources/notes/refs`
+        mock: なし
+        expected: 200 で `git` が `false`
+      - name: test_build_view_router_when_columns
+        case: 正常
+        summary: 列の設定の保存
+        condition: 'PUT `/_api/sources/sample/columns` を `Sec-Fetch-Site: same-origin` で'
+        mock: なし
+        expected: 200 で、次の文書の取得の `columns` に入る
+      - name: test_build_view_router_when_cross_origin
+        case: 異常
+        summary: 別のオリジン
+        condition: '`Origin: http://evil.example`'
+        mock: なし
+        expected: 403 で、ファイルを書かない
+refs:
+  - dev/設計書/インターフェース定義/開発ドキュメントサーバー/文書の取得#
+  - dev/設計書/インターフェース定義/開発ドキュメントサーバー/画面の検索#
+  - dev/設計書/インターフェース定義/開発ドキュメントサーバー/リビジョンの一覧#
+  - dev/設計書/インターフェース定義/開発ドキュメントサーバー/表の列の設定の保存#
+test_files:
+  - tests/unit/dev_docs/features/view/test_route.py

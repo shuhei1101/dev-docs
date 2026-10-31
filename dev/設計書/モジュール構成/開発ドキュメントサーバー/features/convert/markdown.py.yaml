@@ -1,0 +1,134 @@
+title: 開発ドキュメントサーバー / 変換 / markdown.py
+lead: スキーマ駆動の文書の Markdown への変換と表の描画。
+diagrams:
+  - name: 全体
+    diagram: |-
+      classDiagram
+        direction TD
+        変換 ..> スキーマ駆動の変換 : converter が無い
+        スキーマ駆動の変換 ..> 表の組み立て
+        スキーマ駆動の変換 ..> 図の組み立て
+        埋め込みの展開 ..> 表の組み立て
+        class 変換 {
+          +変換する(読み書きの場所, 文書) 変換の結果
+          +控えを捨てる() None
+        }
+        class スキーマ駆動の変換 {
+          <<function>>
+        }
+        class 表の組み立て {
+          <<function>>
+        }
+        class 図の組み立て {
+          <<function>>
+        }
+        class 埋め込みの展開 {
+          <<function>>
+        }
+        click 変換 href "./service.py.yaml#変換"
+        click 図の組み立て href "./diagrams.py.yaml#図の組み立て"
+        click 埋め込みの展開 href "./embed.py.yaml#埋め込みの展開"
+constants:
+  - name: MAX_HEADING_LEVEL
+    title: 見出しの深さの上限
+    container: features/convert/markdown.py
+    usecase: 文書の取得
+    summary: これより深い見出しは `######` で止める
+    value: '6'
+functions:
+  - name: schema_to_markdown
+    title: スキーマ駆動の変換
+    kind: 関数
+    container: features/convert/markdown.py
+    usecase: 文書の取得
+    role: 変換
+    summary: YAML の文書をスキーマの `x-heading`・`x-shape`・`x-key`・`x-diagram`・`title` に沿って Markdown にする
+    description: 表示の順はスキーマの `properties` の順、見出しと表の列名はスキーマの `title`。スキーマに無いキーは末尾に `title` 無しのキーの名前で出す。
+    scope: public
+    thread_safe: true
+    args:
+      - name: document
+        title: 文書
+        type: Document
+        required: true
+        passing: positional
+        description: YAML の文書（`records` の行は要素）
+      - name: schema
+        title: スキーマ
+        type: Mapping[str, Any]
+        required: true
+        passing: positional
+        description: 種類のスキーマ（`$ref` は文書のストアが解いた後のもの）。空なら全ての値を `x-shape` 無しとして組み立てる
+    returns:
+      type: str
+      description: Markdown
+    process: |-
+      1. 先頭に `# {name}`（内容に `name` が無ければ文書のメタデータの `name`。名前の既定で空にはならない）の見出しを置き、`description` があれば段落にする
+      2. スキーマの `properties` の順に値を組み立てる（`name`・`description` と、値が空のキーは飛ばす）
+         - `x-heading` を持つ値は、深さ 2 から始まる見出し（`x-heading` の文字列、要素なら `x-key` の値）を置く。深さは `MAX_HEADING_LEVEL` で止める
+         - `x-shape` で本文を組み立てる（`Shape`）。`table` は表の組み立て、`diagram` は図の組み立ての ```mermaid と同じ値の表、`sections` は子を 1 つ深い見出しで再帰、`attributes` は `> {title}: {値}<br>` の行
+         - `x-shape` が無いスカラーは `**{title}**: {値}` の段落、文字列のリストは箇条書き、オブジェクトは子を順に組み立てる
+      3. 行を空行で繋いで返す
+    unit_tests:
+      - name: test_schema_to_markdown
+        case: 正常
+        summary: 見出しと表
+        condition: '`x-heading: 一覧`・`x-shape: table` の `items`（要素の `properties` が `id`・`name`、`title` が `ID`・`名前`）を持つ文書'
+        mock: なし
+        expected: '`# {name}`、`## 一覧`、列名が `ID`・`名前` の表がこの順にある'
+      - name: test_schema_to_markdown_when_sections
+        case: 正常
+        summary: 節の見出しの深さ
+        condition: '`x-shape: sections`・`x-key: name` のリストの中に、さらに `x-heading` を持つ項目'
+        mock: なし
+        expected: 要素の見出しが `###`、その中の見出しが `####`
+      - name: test_schema_to_markdown_when_no_schema
+        case: 正常
+        summary: スキーマが無い
+        condition: スキーマが空で、文字列・リスト・オブジェクトを持つ文書
+        mock: なし
+        expected: キーの名前の段落と箇条書きで全ての値が出る
+  - name: render_table
+    title: 表の組み立て
+    kind: 関数
+    container: features/convert/markdown.py
+    usecase: 文書の取得
+    role: 変換
+    summary: オブジェクトのリストを、mdmark の表のマーカーつきの Markdown の表にする
+    scope: public
+    thread_safe: true
+    args:
+      - name: rows
+        title: 行
+        type: Sequence[Mapping[str, Any]]
+        required: true
+        passing: positional
+        description: 表にする要素
+      - name: item_schema
+        title: 要素のスキーマ
+        type: Mapping[str, Any]
+        required: true
+        passing: positional
+        description: 列の順と列名を決める。空なら要素のキーの出た順で、列名はキーの名前
+      - name: table_key
+        title: 表のキー
+        type: str
+        required: true
+        passing: keyword
+        description: '`{種類}:{項目のパス}`。表の列の設定の保存の `table`'
+    returns:
+      type: str
+      description: '表のキーのマーカーと、`<!-- table: data -->` で囲んだ表'
+    process: |-
+      1. 列をスキーマの `properties` の順に決める（要素のどれも値を持たない列は除く）
+      2. セルは、スカラーはそのまま（`|` はエスケープ、改行は `<br>`）、文字列のリストは `・` で繋ぎ、オブジェクトと入れ子のリストは `{n} 件` にする
+      3. `<!-- dev-docs-table: {table_key} -->`・`<!-- table: data -->`・見出しの行・区切りの行・データの行・`<!-- /table -->` の順に置いて返す
+    unit_tests:
+      - name: test_render_table
+        case: 正常
+        summary: セルの書き方
+        condition: '`|` と改行を含む文字列・文字列のリスト・入れ子のリストを持つ 2 行'
+        mock: なし
+        expected: '`\|`・`<br>`・`a・b`・`2 件` のセルと、表の前の `<!-- dev-docs-table: {表のキー} -->`'
+test_files:
+  - tests/unit/dev_docs/features/convert/test_markdown.py

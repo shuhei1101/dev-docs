@@ -1,0 +1,81 @@
+title: 開発ドキュメントサーバー / 変換 / embed.py
+lead: 埋め込みのマーカーの表への展開。
+diagrams:
+  - name: 全体
+    diagram: |-
+      classDiagram
+        direction TD
+        変換 ..> 埋め込みの展開
+        埋め込みの展開 ..> 表の組み立て
+        class 変換 {
+          +変換する(読み書きの場所, 文書) 変換の結果
+          +控えを捨てる() None
+        }
+        class 表の組み立て {
+          <<function>>
+        }
+        class 埋め込みの展開 {
+          <<function>>
+        }
+        click 変換 href "./service.py.yaml#変換"
+        click 表の組み立て href "./markdown.py.yaml#表の組み立て"
+constants:
+  - name: EMBED_PATTERN
+    title: 埋め込みのマーカー
+    container: features/convert/embed.py
+    usecase: 文書の取得
+    summary: '埋め込みのマーカーに当てる正規表現（mdmark の `<!-- 名前: 引数 -->` の書式で、名前は mdmark の予約名と重ならない `embed`）'
+    value: '`r"<!--\s*embed:\s*(?P<path>[^#\s]+)(?:#(?P<item>\S+))?\s*-->"`'
+functions:
+  - name: expand_embeds
+    title: 埋め込みの展開
+    kind: 関数
+    container: features/convert/embed.py
+    usecase: 文書の取得
+    role: 変換
+    summary: Markdown の中の埋め込みのマーカーを、指した YAML の値の表に置き換える
+    scope: public
+    thread_safe: true
+    args:
+      - name: markdown
+        title: Markdown
+        type: str
+        required: true
+        passing: positional
+        description: 変換した Markdown
+      - name: base
+        title: 読む場所
+        type: Path
+        required: true
+        passing: positional
+        description: '`Target.base`（リビジョンを開いているときは書き出したフォルダ）。マーカーのパスはここからの相対'
+    returns:
+      type: str
+      description: マーカーを置き換えた Markdown
+    process: |-
+      1. コードブロックの外の `EMBED_PATTERN` に当たる行ごとに置き換える
+      2. `path` を `base` と結合し、`base` の外を指す・ファイルが無い・YAML を読めない場合は `> [!WARNING]` の囲みに `埋め込めません: {path}（{理由}）` を置く
+      3. `item` があれば項目の取得で値を取り出す（無ければ同じ囲みで `{path}#{item} がありません`）
+      4. 値がオブジェクトのリストなら表の組み立て（表のキーは `embed:{path}#{item}`）、オブジェクトならキーと値の 2 列の表、スカラーならその値を置く
+      5. 埋め込んだ値の中のマーカーは展開しない
+    unit_tests:
+      - name: test_expand_embeds
+        case: 正常
+        summary: 表に置き換える
+        condition: '`<!-- embed: data/list.yaml#items -->` と、`items` が 2 行の YAML'
+        mock: なし（一時フォルダ）
+        expected: 2 行の表があり、マーカーの文字列が無い
+      - name: test_expand_embeds_when_in_code_block
+        case: 正常
+        summary: コードブロックの中は置き換えない
+        condition: '```text の中のマーカー'
+        mock: なし
+        expected: そのまま残る
+      - name: test_expand_embeds_when_missing
+        case: 正常
+        summary: 無いファイルと配信元の外
+        condition: '`<!-- embed: none.yaml -->` と `<!-- embed: ../x.yaml -->`'
+        mock: なし
+        expected: どちらも `埋め込めません` の囲み
+test_files:
+  - tests/unit/dev_docs/features/convert/test_embed.py

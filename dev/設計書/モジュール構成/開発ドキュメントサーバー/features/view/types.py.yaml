@@ -1,0 +1,351 @@
+title: 開発ドキュメントサーバー / 画面のAPI / types.py
+lead: 画面の API の要求と結果の型。
+data_models:
+  - name: NavTab
+    title: 種類のタブ
+    container: features/view/types.py
+    usecase: 文書の取得
+    role: DTO
+    summary: 上のタブ 1 つとそのサイドバー
+    description: '共通の『画面の API のモデル』（`ApiModel`。JSON のキーは camelCase）を継承する。文書の取得の `tabs[]`。'
+    properties:
+      - name: title
+        title: タブの名前
+        type: str
+        access: 公開
+        description: '`nav.tabs[].title`。nav が無ければ文書の行の `title`（無ければ `id`）'
+      - name: active
+        title: 選んだタブ
+        type: bool
+        access: 公開
+        description: 返した文書を含むタブか
+      - name: items
+        title: サイドバーの項目
+        type: list[NavItem]
+        access: 公開
+        description: 見出しと文書の入れ子
+  - name: ScreenSearchItem
+    title: 画面の検索の結果の文書
+    container: features/view/types.py
+    usecase: 画面の検索
+    role: DTO
+    summary: '`items[]` の 1 件'
+    description: '共通の『画面の API のモデル』（`ApiModel`。JSON のキーは camelCase）を継承する。'
+    properties:
+      - name: path
+        title: 文書のページのパス
+        type: str
+        access: 公開
+        description: '文書の取得の `path` に渡す形'
+      - name: name
+        title: 名前
+        type: str
+        access: 公開
+        description: メタデータの `name`（空なら文書のストアがファイル名か ID を入れたもの）
+      - name: snippets
+        title: 一致した箇所
+        type: list[str]
+        access: 公開
+        description: '`SNIPPETS_PER_DOC` 件まで'
+  - name: ScreenSearchResult
+    title: 画面の検索の結果
+    container: features/view/types.py
+    usecase: 画面の検索
+    role: DTO
+    summary: GET `/_api/sources/{source}/search` の応答
+    description: '共通の『画面の API のモデル』（`ApiModel`。JSON のキーは camelCase）を継承する。'
+    properties:
+      - name: total_count
+        title: 総件数
+        type: int
+        access: 公開
+        description: 一致した文書の数
+      - name: items
+        title: 文書
+        type: list[ScreenSearchItem]
+        access: 公開
+        description: '`limit` 件まで'
+  - name: ColumnsRequest
+    title: 表の列の設定の保存の要求
+    container: features/view/types.py
+    usecase: 表の列の設定の保存
+    role: DTO
+    summary: PUT `/_api/sources/{source}/columns` の本文と応答
+    description: '共通の『画面の API のモデル』（`ApiModel`。JSON のキーは camelCase）を継承し、`extra="forbid"` を足す。応答も同じ形。'
+    properties:
+      - name: table
+        title: 表のキー
+        type: str
+        access: 公開
+        description: '`{種類}:{項目のパス}` か `{種類}:table[{n}]`（変換の『表の組み立て』）。1 文字以上'
+      - name: hidden
+        title: 隠す列
+        type: list[str]
+        access: 公開
+        description: 空なら全ての列を出す
+  - name: NavItem
+    title: サイドバーの項目
+    container: features/view/types.py
+    usecase: 文書の取得
+    role: DTO
+    summary: サイドバーの見出しか文書の 1 行
+    description: '共通の『画面の API のモデル』（`ApiModel`。JSON のキーは camelCase）を継承する。文書の取得の `tabs[].items`。'
+    properties:
+      - name: kind
+        title: 項目の種類
+        type: Literal['group', 'page']
+        access: 公開
+        description: '`group` は見出し、`page` は文書'
+      - name: title
+        title: 名前
+        type: str
+        access: 公開
+        description: '`title` の上書きか、見出しの名前・文書のメタデータの `name`（空なら文書のストアがファイル名か ID を入れたもの）'
+      - name: path
+        title: 文書のページのパス
+        type: str | None
+        access: 公開
+        default: None
+        description: '`page` の文書のページのパス。`group` は `None`'
+      - name: items
+        title: 入れ子の項目
+        type: list[NavItem]
+        access: 公開
+        default: '[]'
+        description: '`group` の下の項目（`group` の入れ子と `auto` の `group_by`）。`page` は空'
+      - name: change
+        title: 比較元からの変化
+        type: Literal['added', 'modified', 'deleted'] | None
+        access: 公開
+        default: None
+        description: '`page` の文書の、文書の取得の `diff` のリビジョンからの変化（サイドバーの変化が入れる）。`diff` を省いたとき・変わっていない `page`・`group` は `None`'
+  - name: ConversionError
+    title: 変換の失敗の応答
+    container: features/view/types.py
+    usecase: 文書の取得
+    role: DTO
+    summary: 文書の取得の `conversion_error`
+    description: '共通の『画面の API のモデル』（`ApiModel`。JSON のキーは camelCase）を継承する。変換の『変換の失敗』と同じフィールドを持つ。'
+    properties:
+      - name: reason
+        title: 理由
+        type: Literal['timeout', 'exit', 'not_runnable', 'invalid_yaml']
+        access: 公開
+        description: 制限時間を超えた・0 以外で終わった・実行できない・YAML を読めない
+      - name: kind
+        title: 種類
+        type: str
+        access: 公開
+        description: 文書の行の ID
+      - name: script
+        title: スクリプト
+        type: str | None
+        access: 公開
+        default: None
+        description: '`converters[].run` を空白で繋いだもの。YAML を読めないときは `None`'
+      - name: detail
+        title: 詳細
+        type: str
+        access: 公開
+        description: 制限時間の秒数・終了コードと標準エラーの末尾・読めなかった理由
+      - name: file
+        title: ファイル
+        type: str | None
+        access: 公開
+        default: None
+        description: YAML を読めないときのファイルのパス（配信元の直下から）
+      - name: line
+        title: 行
+        type: int | None
+        access: 公開
+        default: None
+        description: YAML を読めないときの行（1 始まり）
+      - name: column
+        title: 列
+        type: int | None
+        access: 公開
+        default: None
+        description: YAML を読めないときの列（1 始まり）
+  - name: GitHubTarget
+    title: 起票先
+    container: features/view/types.py
+    usecase: 文書の取得
+    role: DTO
+    summary: 文書の取得の `github`
+    description: '共通の『画面の API のモデル』（`ApiModel`。JSON のキーは camelCase）を継承する。'
+    properties:
+      - name: repository
+        title: GitHub のリポジトリ
+        type: str
+        access: 公開
+        description: 配信元の `github_repository`（`owner/name`）
+      - name: issue_labels
+        title: 起票のラベル
+        type: list[str]
+        access: 公開
+        description: 配信元の `github_issue_labels`
+  - name: DocumentResponse
+    title: 文書の取得の応答
+    container: features/view/types.py
+    usecase: 文書の取得
+    role: DTO
+    summary: GET `/_api/sources/{source}/docs[/{path}]` の応答
+    description: '共通の『画面の API のモデル』（`ApiModel`。JSON のキーは camelCase）を継承する。'
+    properties:
+      - name: source
+        title: 配信元の ID
+        type: str
+        access: 公開
+        description: 配信元の ID
+      - name: ref
+        title: リビジョン
+        type: str | None
+        access: 公開
+        description: '`ref` の値。省いたときは `default_ref` の名前。Git 管理外は `None`'
+      - name: path
+        title: 文書のページのパス
+        type: str
+        access: 公開
+        description: 返した文書のページのパス
+      - name: body_path
+        title: 本文のファイルのパス
+        type: str | None
+        access: 公開
+        description: 管理用の YAML の行の文書の本文のファイルのパス（`document.body_path`。拡張子つき）。ファイル 1 つが 1 文書の文書は `None`
+      - name: markdown
+        title: Markdown
+        type: str | None
+        access: 公開
+        description: 変換の結果の `markdown`。失敗したときは `None`
+      - name: conversion_error
+        title: 変換の失敗
+        type: ConversionError | None
+        access: 公開
+        description: 失敗したときだけ
+      - name: tabs
+        title: タブ
+        type: list[NavTab]
+        access: 公開
+        description: タブとサイドバーの組み立ての結果
+      - name: github
+        title: 起票先
+        type: GitHubTarget | None
+        access: 公開
+        description: '`github_repository` が無い配信元は `None`'
+      - name: columns
+        title: 隠す列
+        type: dict[str, list[str]]
+        access: 公開
+        description: 表のキー → 隠す列（表の列の設定.列の設定を読む）
+      - name: table_keys
+        title: 表のキー
+        type: list[str]
+        access: 公開
+        description: 変換の結果の `table_keys`。失敗したときは空
+      - name: aliases
+        title: エイリアス
+        type: list[AliasItem]
+        access: 公開
+        description: 配信元の `alias_type` を持つ行の文書のエイリアス（エイリアスの集めの `entries`）。`alias_type` を持つ行が無い配信元・変換に失敗したときは空
+      - name: diff
+        title: 差分
+        type: DocumentDiff | None
+        access: 公開
+        description: '`diff` のリビジョンと比べた結果。`diff` を省いたとき・Git 管理外の配信元は `None`'
+      - name: updated_at
+        title: 更新日時
+        type: datetime
+        access: 公開
+        description: 返した文書の更新日時。文書の `updated`（Git の配信元は開いているリビジョンでファイルを最後に変えた commit の日時）、`None` ならファイルの更新日時
+  - name: DocumentDiff
+    title: 差分の結果
+    container: features/view/types.py
+    usecase: 文書の取得
+    role: DTO
+    summary: 文書の取得の `diff`。比べたリビジョンと、返した文書の変化・変わった項目
+    description: 共通の『画面の API のモデル』（`ApiModel`。JSON のキーは camelCase）を継承する。
+    properties:
+      - name: base
+        title: 比べたリビジョン
+        type: str
+        access: 公開
+        description: '`diff` の値'
+      - name: change
+        title: 文書の変化
+        type: Literal['added', 'modified'] | None
+        access: 公開
+        description: '`base` に同じ ID の文書が無ければ `added`、バージョンが違えば `modified`、同じなら `None`'
+      - name: changed_items
+        title: 変わった項目
+        type: list[str]
+        access: 公開
+        default: '[]'
+        description: '`base` の同じ ID の文書から変わったキーのパス。`change` が `added`・`None` のときは空'
+  - name: AliasItem
+    title: エイリアスの応答
+    container: features/view/types.py
+    usecase: 文書の取得
+    role: DTO
+    summary: 文書の取得の `aliases` の 1 件
+    description: 共通の『画面の API のモデル』（`ApiModel`。JSON のキーは camelCase）を継承し、`extra="allow"` にする。`AliasEntry` の `extra` のキーは同じ階層に置き、値を持たないキーは載せない（`model_dump(exclude_none=True)`）。
+    properties:
+      - name: id
+        title: 文書の ID
+        type: str
+        access: 公開
+        description: 用語の文書の ID
+      - name: name
+        title: 名前
+        type: str
+        access: 公開
+        description: 共通のキー `name`
+      - name: aliases
+        title: 別名
+        type: list[str]
+        access: 公開
+        description: 本文で用語に当てる語
+      - name: description
+        title: 説明
+        type: str | None
+        access: 公開
+        default: None
+        description: ツールチップに出す説明
+      - name: alias_type
+        title: 引用の種類
+        type: Literal['term', 'doc', 'command', 'url', 'skill', 'tool', 'path', 'env', 'avoid']
+        access: 公開
+        description: 行の `alias_type`
+      - name: avoid
+        title: やめた言い方
+        type: list[str] | None
+        access: 公開
+        default: None
+        description: 用語のやめた言い方
+  - name: NavAutoCount
+    title: nav の条件の数
+    container: features/view/types.py
+    usecase: 画面の構成の書き込み
+    role: DTO
+    summary: '`nav` の `auto` 1 つと、その条件に当たる文書の数'
+    description: '`dataclass(frozen=True, slots=True, kw_only=True)`。'
+    properties:
+      - name: path
+        title: キーのパス
+        type: str
+        access: 公開
+        description: '`auto` のキーのパス（`nav.tabs[2].items[0].auto`）'
+      - name: tab
+        title: タブの名前
+        type: str
+        access: 公開
+        description: '`auto` を持つタブの `title`'
+      - name: filter
+        title: 条件
+        type: dict[str, Any] | None
+        access: 公開
+        description: '`auto.filter`。無ければ `None`'
+      - name: count
+        title: 文書の数
+        type: int
+        access: 公開
+        description: '`auto` の `document` と `filter` に当たる文書の数'

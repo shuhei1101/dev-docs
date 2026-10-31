@@ -1,0 +1,72 @@
+title: 開発ドキュメントサーバー / 変換 / diagrams.py
+lead: '`x-diagram` の Mermaid の描画。'
+diagrams:
+  - name: 全体
+    diagram: |-
+      classDiagram
+        direction TD
+        スキーマ駆動の変換 ..> 図の組み立て
+        class スキーマ駆動の変換 {
+          <<function>>
+        }
+        class 図の組み立て {
+          <<function>>
+        }
+        click スキーマ駆動の変換 href "./markdown.py.yaml#スキーマ駆動の変換"
+functions:
+  - name: render_diagram
+    title: 図の組み立て
+    kind: 関数
+    container: features/convert/diagrams.py
+    usecase: 文書の取得
+    role: 変換
+    summary: '`x-diagram` の種類で、値から Mermaid の図を組み立てる'
+    scope: public
+    thread_safe: true
+    args:
+      - name: value
+        title: 値
+        type: Mapping[str, Any]
+        required: true
+        passing: positional
+        description: 図の値
+      - name: kind
+        title: 図の種類
+        type: DiagramKind
+        required: true
+        passing: positional
+        description: スキーマの `x-diagram`
+    returns:
+      type: str
+      description: Mermaid のコード（```mermaid の中身）
+    process: |-
+      1. `flowchart`・`dataflow`・`architecture` は、`flowchart {direction}`（既定は `flowchart` が `TD`、他は `LR`）、ノードを `id[label]`（`shape` と `kind` で括弧を替える）、辺を `from -->|label| to`（`line` で `-.->`・`==>`・`---`）、`subgraph`、`click id href "..."` の順に並べる
+      2. `state` は `stateDiagram-v2` に、`[*] --> {initial}`、遷移を `from --> to : きっかけ [条件]`、終了状態から `[*]` を並べる
+      3. `er` は `erDiagram` に、実体と列、関連を `from {多重度} to : label` で並べる
+      4. ラベルの `"` は `#quot;` に替える
+    exceptions:
+      - name: ValueError
+        condition: 知らない図の種類
+        message: '`x-diagram {kind} は描けません`'
+    unit_tests:
+      - name: test_render_diagram
+        case: 正常
+        summary: フローチャート
+        condition: '`nodes` 2 つ・ラベルつきの `edges` 1 つ・`direction` 無し'
+        mock: なし
+        expected: '`flowchart TD`、`a[A]`、`a -->|x| b` の行'
+      - name: test_render_diagram_when_state
+        case: 正常
+        summary: 状態遷移
+        condition: '`initial` と `transitions` 2 つ'
+        mock: なし
+        expected: '`stateDiagram-v2`、`[*] --> 下書き` と遷移の行'
+      - name: test_render_diagram_when_unknown
+        case: 異常
+        summary: 知らない種類
+        condition: '`kind="gantt"`'
+        mock: なし
+        expected: '`ValueError`'
+        exception: 知らない図の種類
+test_files:
+  - tests/unit/dev_docs/features/convert/test_diagrams.py
