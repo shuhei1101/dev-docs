@@ -272,7 +272,7 @@ functions:
       - name: test_write_nav_when_records_filter
         case: 正常
         summary: records の行の 1 行の項目の条件を書ける
-        condition: '行 `notes`（`records: files`、`schema` が `templates/files.schema.yaml` のコピー）に要素 `{path: a.md}` を持つ配信元に、`add` で `auto: {document: notes, filter: {field: path, op: eq, values: [a.md]}}` のタブ `files`'
+        condition: '行 `notes`（`records: files`、`schema` が `templates/files.schema.yaml` のコピーの `files.items.properties` に `owner: {type: string}` を追加したもの）に要素 `{path: a.md, owner: alice}` を持つ配信元に、`add` で `auto: {document: notes, filter: {field: owner, op: eq, values: [alice]}}` のタブ `files`'
         mock: なし（一時ディレクトリ）
         expected: '`NavInvalidError` を送らずに書き、`counts` の `count` が 1、`warnings` が空'
         exception: '-'

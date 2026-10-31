@@ -742,7 +742,7 @@ functions:
       - name: test_build_nav_when_records_filter
         case: 正常
         summary: records の行の 1 行の項目で絞った auto
-        condition: '行 `notes`（`records: files`、`schema` が `templates/files.schema.yaml` のコピー）に要素 `{path: a.md}`・`{path: b.md}`、`auto: {document: notes, filter: {field: path, op: eq, values: [a.md]}}`'
+        condition: '行 `notes`（`records: files`、`schema` が `templates/files.schema.yaml` のコピーの `files.items.properties` に `owner: {type: string}` を追加したもの）に要素 `{path: a.md, owner: alice}`・`{path: b.md, owner: bob}`、`auto: {document: notes, filter: {field: owner, op: eq, values: [alice]}}`'
         mock: なし
         expected: タブの `page` の項目が `a.md` の要素 1 件
   - name: first_page
@@ -1240,7 +1240,7 @@ functions:
       - name: test_nav_warnings_when_records_filter
         case: 正常
         summary: records の行の 1 行の項目の条件を警告しない
-        condition: '行 `notes`（`records: files`、`schema` が `templates/files.schema.yaml` のコピー）に要素 `{path: a.md}`、`nav` に `auto: {document: notes, filter: {field: path, op: eq, values: [a.md]}}` のタブ'
+        condition: '行 `notes`（`records: files`、`schema` が `templates/files.schema.yaml` のコピーの `files.items.properties` に `owner: {type: string}` を追加したもの）に要素 `{path: a.md, owner: alice}`、`nav` に `auto: {document: notes, filter: {field: owner, op: eq, values: [alice]}}` のタブ'
         mock: なし（一時フォルダの配信元）
         expected: 空
         exception: '-'
