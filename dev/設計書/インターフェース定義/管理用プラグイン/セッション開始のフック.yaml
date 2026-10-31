@@ -88,6 +88,7 @@ flows:
         description: 接続は受けるが `POST /_admin/session-context` に `CONTEXT_TIMEOUT_SEC` より長く応答しない HTTP サーバー
         notes: テストは `CONTEXT_TIMEOUT_SEC` を短くしてよい
     flow: |-
+      ```mermaid
       sequenceDiagram
         participant C as Claude Code
         participant H as セッション開始のフック
@@ -97,6 +98,7 @@ flows:
         H->>A: POST（cwd・session_id・reason）
         H->>H: CONTEXT_TIMEOUT_SEC 秒で打ち切る
         H-->>C: additionalContext（打ち切った秒数・理由と status の案内）
+      ```
     expected:
       - '`CONTEXT_TIMEOUT_SEC` + 1 秒以内に終了コード 0 で戻る'
       - '`additionalContext` に文脈を取れなかったこと、打ち切った秒数（`CONTEXT_TIMEOUT_SEC`）と `status` の案内がある'

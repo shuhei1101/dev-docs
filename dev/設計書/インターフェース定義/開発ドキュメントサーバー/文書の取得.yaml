@@ -202,6 +202,7 @@ flows:
         description: sample の `notes/files.yaml`。`files[]` に `a.md` と `b.md` の 2 行。`notes/a.md`・`notes/b.md` を置く
         notes: '行 `notes` は `paths: [notes/files.yaml]`・`records: files`・`body_file: path`。スキーマは `templates/files.schema.yaml`'
     flow: |-
+      ```mermaid
       sequenceDiagram
         participant C as クライアント
         participant E as GET /_api/sources/{source}/docs/{path}
@@ -213,6 +214,7 @@ flows:
         C->>E: GET /_api/sources/sample/docs/notes/b.md
         E->>E: 画面のパスで当たらないので、本文のファイルのパスで引く
         E-->>C: 200（b）
+      ```
     expected:
       - a の `bodyPath` が `notes/a.md`、`path` が a の画面のパス
       - '`/_api/sources/sample/docs/notes/b.md` が 200 で、`path` が b の画面のパス、`markdown` が b の本文、`bodyPath` が `notes/b.md`'

@@ -145,6 +145,7 @@ flows:
         description: '`dev-docs.yaml` の `documents[0]`（`paths: [files.yaml]`・`records: files`・`body_file: path`）の `schema` が、最上位で `files` を必須にし `files` の `items` を定めないスキーマを指すフォルダ'
         notes: 管理用の YAML は `files[]` に `a.md` の 1 行
     flow: |-
+      ```mermaid
       sequenceDiagram
         participant C as クライアント
         participant T as check_project
@@ -154,6 +155,7 @@ flows:
         T-->>F: dev-docs.yaml と行の schema を読む
         T->>T: records の行の schema から properties.files.items を取り出せない
         T-->>C: violations（documents[0].schema）
+      ```
     expected:
       - '`violations` に `documents[0].schema` があり、`rule` にスキーマが `properties.files.items` を定めないことがある'
       - 結果は配信中の配信元の状態に反映しない

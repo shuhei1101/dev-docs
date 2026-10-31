@@ -324,13 +324,16 @@ flows:
     setup:
       - name: Mock
         description: なし
+        notes: '-'
       - name: 管理用の YAML
         description: 'sample の `src/files.yaml`。`files[]` に `a.py`（`tags: [auth, code]`、`name` なし）と `b.py`（`name: 部品 B`）の 2 行。`src/a.py`・`src/b.py` を置く'
         notes: '行 `src` は `records: files`・`body_file: path`、`schema` は `templates/files.schema.yaml` のコピー'
       - name: 名前の無い文書
         description: sample の文書 2 から `name` を除く
+        notes: '-'
       - name: 入力
         description: '`filter` は `id` が `src/a`、`view: full`、`format: json`。2 回目は `view: summary` で全件'
+        notes: '-'
     flow: |-
       ```mermaid
       sequenceDiagram
