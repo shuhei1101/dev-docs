@@ -543,6 +543,8 @@ scenarios:
       - name: 用語の種類
         description: sample に用語の種類を加え、文書 `作業範囲` を置く。`name` は `作業範囲`、`aliases` は `[scope, 担当範囲]`
         notes: '`dev-docs.yaml` の documents の行に `alias_type` を持ち、`metadata` のエイリアスのキーが alias-inject のスキーマに通る'
+      - name: 用語を含むほかの文書
+        description: sample の文書 1（`alias_type` を持たない行）の本文と `name` に `担当範囲` を含める
       - name: dev-docs
         description: sample を配信している dev-docs
         notes: '`cwd` は sample のクローン本体'
@@ -552,16 +554,16 @@ scenarios:
         actor A as エージェント
         participant M as 文書の MCP（/mcp）
 
-        A->>M: search_docs(用語の検索: 担当範囲)
+        A->>M: search_docs(term: 担当範囲)
         M->>M: alias_type を持つ行の文書の name と aliases に照合する
         M-->>A: 文書「作業範囲」
         A->>M: list_match_words(source: sample)
         M-->>A: 照合する語の一覧（作業範囲・scope・担当範囲 と文書の id）
       ```
     expected:
-      - 用語の検索で `担当範囲` を渡すと、`aliases` に持つ文書「作業範囲」を返す
-      - 用語の検索で `name` の `作業範囲` を渡しても同じ文書を返す
-      - '`alias_type` を持たない行の文書は用語の検索に当たらない'
+      - '`search_docs(term: 担当範囲)` が、`aliases` に持つ文書「作業範囲」を返す'
+      - '`search_docs(term: 作業範囲)`（`name` の語）も同じ文書を返す'
+      - '`search_docs(term: 担当範囲)` は `alias_type` を持たない行の文書を返さない（本文に `担当範囲` を含む sample の文書 1 を返さない）'
       - '`list_match_words` が `name` と `aliases` の語を、指す文書の id とともに返す'
     test: test_normal_when_term_matched_by_alias
   - name: 正常シナリオ（タグの付け方の案内を受け取る）

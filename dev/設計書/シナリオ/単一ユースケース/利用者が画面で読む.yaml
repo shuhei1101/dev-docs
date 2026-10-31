@@ -312,8 +312,10 @@ scenarios:
       - name: Mock
         description: なし（実環境で実行。ブラウザは Playwright で操作する）
       - name: nav の auto のタグの式
-        description: sample の `dev-docs.yaml` の `nav` に、`auto` の `filter` が `tags が mcp かつ tags が 設計 でない` のタブを置く
+        description: sample の `dev-docs.yaml` の `nav` に、`auto` の `filter` が `tags が mcp かつ tags が 設計 でない` のタブ `mcp` を置く
         notes: 文書 1 の `tags` は `[mcp]`、文書 2 は `[mcp, 設計]`、文書 3 は `[設計]`
+      - name: filter を書かない auto
+        description: 同じ `nav` に、`auto` が `document` だけを書き `filter` を書かないタブ `すべて` を置く
       - name: dev-docs
         description: sample を配信している dev-docs
     flow: |-
@@ -331,10 +333,10 @@ scenarios:
         B-->>U: 文書 1 の本文
       ```
     expected:
-      - タブのサイドバーに文書 1 だけが並ぶ
-      - 文書 2・文書 3 はサイドバーに並ばない
+      - タブ `mcp` のサイドバーに文書 1 だけが並ぶ
+      - タブ `mcp` のサイドバーに文書 2・文書 3 は並ばない
       - サイドバーの文書 1 を押すと文書 1 の本文が開く
-      - '`filter` を書かない `auto` のタブは今のまま並ぶ'
+      - タブ `すべて` のサイドバーに文書 1〜3 が並ぶ
     test: test_normal_when_nav_filtered_by_tags
   - name: 正常シナリオ（本文の用語のツールチップを見る）
     setup:

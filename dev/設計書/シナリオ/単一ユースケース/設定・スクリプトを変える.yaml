@@ -95,6 +95,8 @@ scenarios:
     setup:
       - name: Mock
         description: なし（実環境で実行。`cwd` はテストが引数に入れる）
+      - name: 文書のタグ
+        description: sample の文書 1 の `tags` を `[mcp]`、文書 2 を `[設計]`、文書 3 を `[mcp, 設計]` にする
       - name: dev-docs
         description: sample を配信している dev-docs
         notes: '`cwd` は sample のワークツリー'
@@ -105,20 +107,27 @@ scenarios:
         participant AM as 管理の MCP（/admin/mcp）
         participant F as ワークツリーの dev-docs.yaml
 
-        A->>AM: nav の項目を書くツール（タブを加え、auto の filter に tags が mcp）
+        A->>AM: nav の項目を書くツール（タブ mcp を加え、auto の filter に tags が mcp）
         AM->>AM: 書いた後の nav をスキーマと check_filter で検証する
         AM->>F: nav を書く
-        AM-->>A: 書いた nav と、条件に当たる文書の数
-        A->>AM: nav の項目を書くツール（同じタブの filter を tags が 設計 に直す）
+        AM-->>A: 書いた nav と、条件に当たる文書の数（2）
+        A->>AM: nav の項目を書くツール（タブ mcp の filter を tags が 設計 に直す）
         AM->>F: nav を書く
-        AM-->>A: 書いた nav
+        AM-->>A: 書いた nav と、条件に当たる文書の数（2）
+        A->>AM: nav の項目を書くツール（タブ bad を加え、filter の op に無い値 like）
+        AM->>AM: check_filter に通らない
+        AM-->>A: エラー（書かない）
+        A->>AM: nav の項目を書くツール（タブ none を加え、filter に tags が none）
+        AM->>F: nav を書く
+        AM-->>A: 書いた nav と、0 件に当たる警告
       ```
     expected:
-      - ワークツリーの `dev-docs.yaml` の `nav` にタブが加わり、`auto` の `filter` が `tags` が `mcp` になる
-      - 直した後、同じタブの `filter` が `tags` が `設計` になる
+      - ワークツリーの `dev-docs.yaml` の `nav` にタブ `mcp` が加わり、`auto` の `filter` が `tags` が `mcp` になる
+      - 1 回目の応答の条件に当たる文書の数が 2（文書 1・文書 3）
+      - 直した後、タブ `mcp` の `filter` が `tags` が `設計` になり、条件に当たる文書の数が 2（文書 2・文書 3）
+      - '`op` が `like` の `filter` は `isError: true` を返し、タブ `bad` を書かない'
+      - '`tags` が `none` の `filter` はタブ `none` を書いたうえで、0 件に当たる警告を返す'
       - '`nav` 以外のキーは書き換わらない'
-      - '検証に通らない `filter` は書かずに `isError: true` を返す'
-      - 0 件に当たる条件を書いたときは、書いたうえで警告を返す
     test: test_normal_when_nav_written_by_admin_mcp
   - name: 正常シナリオ（エイリアスのキーと nav の条件を点検する）
     setup:
@@ -146,30 +155,54 @@ scenarios:
       - name: Mock
         description: なし（実環境で実行）
       - name: default_ref のスクリプト
-        description: sample の `develop` ブランチの変換スクリプトが、本文の先頭に `develop` の文字を加える
-        notes: クローン本体は `master` を checkout し、`master` の変換スクリプトは何も加えない
+        description: sample の `develop` ブランチのスクリプトを次のようにする。変換スクリプトは本文の先頭に `develop` の文字を加える。validator は文書 1 に違反 `develop-rule` を出す。generator は生成した文書の本文を `develop` にする
+        notes: クローン本体は `master` を checkout し、`master` の変換スクリプトは何も加えず、validator は違反を出さず、generator は本文を `master` にする
     flow: |-
       ```mermaid
       sequenceDiagram
         actor U as 利用者
         participant S as dev-docs のサーバー
         participant G as sample のリポジトリ
-        participant T as 一時フォルダ
 
         U->>S: 変換を使う文書を開く
-        S->>G: default_ref のスクリプトのフォルダを取り出す
-        G-->>T: develop のスクリプト
-        S->>T: スクリプトを動かす
-        T-->>S: 変換した本文
-        S->>T: 一時フォルダを消す
+        S->>G: default_ref のスクリプトで変換する
         S-->>U: develop の文字が付いた本文
+        U->>S: check_project(sample)
+        S->>G: default_ref の validator を動かす
+        S-->>U: 違反 develop-rule
+        U->>S: generator が生成した文書を開く
+        S->>G: default_ref の generator を動かす
+        S-->>U: 本文 develop
       ```
     expected:
       - 変換した本文の先頭に `develop` の文字が付く
-      - 動かした後に一時フォルダが残らない
-      - '`validators`・`generators` も `develop` のスクリプトで動く'
-      - '`worktree` を渡して読むときは、そのワークツリーのスクリプトで動く'
+      - '`check_project` が文書 1 の違反 `develop-rule` を返す'
+      - generator が生成した文書の本文が `develop` になる
     test: test_normal_when_scripts_run_from_default_ref
+  - name: 正常シナリオ（ワークツリーのスクリプトを動かす）
+    setup:
+      - name: Mock
+        description: なし（実環境で実行）
+      - name: default_ref のスクリプト
+        description: 正常シナリオ（スクリプトを default_ref から動かす）と同じ `develop` の変換スクリプト
+      - name: ワークツリー
+        description: sample の `.claude/worktrees/x`。変換スクリプトを、本文の先頭に `worktree-x` の文字を加えるように書き換えて commit していない
+        notes: 配信元の設定の `worktrees` は既定（`[./.claude/worktrees/*]`）
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        actor A as エージェント
+        participant S as dev-docs のサーバー
+        participant WT as ワークツリー x
+
+        A->>S: search_docs(worktree: ワークツリー x のパス, filter: id が変換を使う文書, view: full)
+        S->>WT: ワークツリーの変換スクリプトで変換する
+        S-->>A: worktree-x の文字が付いた本文
+      ```
+    expected:
+      - '`worktree` を渡した `search_docs` の本文の先頭に `worktree-x` の文字が付き、`develop` の文字は付かない'
+      - '`worktree` を渡さない同じ呼び出しは `develop` の文字が付いた本文を返す'
+    test: test_normal_when_scripts_run_from_worktree
 lead: 利用者かエージェントが配信元の設定・スキーマ・検査と変換のスクリプトを変え、管理の MCP の `check_project`・`try_convert` で確かめてから `reload` で配信に入れる。
 issue: 4
 primary_actor: 利用者・エージェント（Claude Code）

@@ -348,8 +348,8 @@ scenarios:
       - name: Mock
         description: なし（実環境で実行）
       - name: default_ref のブランチ
-        description: sample の `develop` ブランチに、文書の種類を 1 つ加えた `dev-docs.yaml` とそのスキーマを commit する
-        notes: '`dev-docs.yaml` の `default_ref` は `develop`。クローン本体は `master` を checkout したまま'
+        description: sample の `develop` ブランチに、文書の種類 `kind_a` を加えた `dev-docs.yaml` とそのスキーマを commit する
+        notes: '`dev-docs.yaml` の `default_ref` は `develop`。クローン本体は `master` を checkout したままで、`master` の `dev-docs.yaml` は `kind_a` を持たない'
       - name: 端末の設定
         description: '`sources[].config` が sample のクローン本体の `dev-docs.yaml` を指す'
       - name: ワークツリー
@@ -367,15 +367,15 @@ scenarios:
         S->>G: develop の dev-docs.yaml とスキーマを読む
         S->>S: develop の設定で配信元を組み立てる
         S-->>U: 配信を始める
-        U->>G: develop に文書の種類をもう 1 つ commit する
+        U->>G: develop に文書の種類 kind_b を commit する
         U->>S: describe(source: sample)
         S->>G: default_ref の commit を確かめ、変わっていれば組み立て直す
-        S-->>U: 種類の一覧（develop の 2 つの種類）
+        S-->>U: 種類の一覧（kind_a・kind_b を含む）
       ```
     expected:
-      - クローン本体が `master` のままでも、`develop` の `dev-docs.yaml` に加えた種類を配信する
+      - 'クローン本体が `master` のままでも、起動直後の `describe(source: sample)` の種類の一覧に `kind_a` が載る'
       - '`documents[].schema` のスキーマを `develop` から読む'
-      - '`develop` に commit を積んだ後の要求で、`reload` をしなくても加えた種類が返る'
+      - '`develop` に `kind_b` を commit した後の `describe(source: sample)` で、`reload` をしなくても種類の一覧に `kind_a`・`kind_b` が載る'
       - '`worktrees[]` の相対パスをメインのリポジトリの直下から数え、ワークツリー `.claude/worktrees/develop` に当たる'
       - Git でない配信元はディスクの設定を読む
     test: test_normal_when_config_read_from_default_ref
@@ -386,7 +386,7 @@ scenarios:
       - name: エイリアスのキーの違反
         description: sample の `alias_type` を持つ行の文書 1 件の `aliases` を文字列（配列でない）にする
       - name: 0 件に当たる nav の条件
-        description: sample の `nav` に、`auto` の `filter` が付いていないタグ `none` を指すタブを置く
+        description: sample の `nav` に、どの文書にも付いていないタグ `none` を `auto` の `filter`（`tags` が `none`）に記載したタブを置く
     flow: |-
       ```mermaid
       sequenceDiagram
@@ -402,7 +402,7 @@ scenarios:
       - 起動時の警告に、違反した文書のパスとエイリアスのキーの違反の内容が出る
       - 起動時の警告に、0 件に当たる `nav` のタブと条件が出る
       - 警告があっても配信を始める
-      - 違反した文書は用語の検索・`list_match_words` に載らない
+      - 違反した文書は `search_docs` の `term`・`list_match_words` に載らない
     test: test_normal_when_alias_and_nav_warned
 lead: 利用者が `dev-docs serve` を実行し、端末の設定に並べた配信元を 1 プロセス・1 ポートで配信し始める。
 issue: 3

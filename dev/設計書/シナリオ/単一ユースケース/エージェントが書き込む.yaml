@@ -312,16 +312,19 @@ scenarios:
         M->>M: tags[].name の読み替えで、name が テスト の要素を加え、name が 設計 の要素を除く
         M->>F: tags を [{name: mcp, main: true}, {name: テスト}] で書く
         M-->>A: 書いた文書の version
-        A->>M: write_docs(update 文書 1, set: main_tags を [テスト])
-        M->>F: name が テスト の要素に main: true を付け、mcp の main を外す
+        A->>M: write_docs(update 文書 1, set: tags を [mcp, 運用])
+        M->>F: 残す mcp の要素はそのまま、運用 を {name: 運用} で加え、テスト を除く
+        M-->>A: 書いた文書の version
+        A->>M: write_docs(update 文書 1, set: main_tags を [運用])
+        M->>F: name が 運用 の要素に main: true を付け、mcp の main を外す
         M-->>A: 書いた文書の version
       ```
     expected:
       - '`add_to` の後、文書 1 の `tags` が `{name: テスト}` を `main` なしで持つ'
       - '`remove_from` の後、`name` が `設計` の要素が無い'
       - '`add_to`・`remove_from` の後も `{name: mcp, main: true}` の `main` が残る'
-      - '`set: tags` で残した要素は元の `main` を保つ'
-      - '`set: main_tags` の後、`main: true` を持つ要素が `テスト` だけになる'
+      - '`set: tags` の後、`tags` が `[{name: mcp, main: true}, {name: 運用}]` になる'
+      - '`set: main_tags` の後、`tags` が `[{name: mcp}, {name: 運用, main: true}]` になる'
       - '`tags` の各要素が `name` を持つオブジェクトのままで、文字列に置き換わらない'
     test: test_normal_when_tags_are_objects
 lead: エージェントが文書の MCP の `write_docs`・`delete_docs` で、作業ツリーの YAML の文書を検査に通してから作る・直す・消す。

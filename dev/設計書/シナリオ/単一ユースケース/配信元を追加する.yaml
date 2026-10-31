@@ -475,8 +475,34 @@ scenarios:
       - '`describe(source)` のワークツリーの一覧に `.claude/worktrees/develop` が載る'
       - 端末の設定が `outside_read` を書かないとき、既定の `true` として扱う
       - 端末の設定の `outside_read` が真偽値でないと、端末の設定のスキーマの違反として断る
-      - 端末の設定がワークツリーの `dev-docs.yaml` を指したときも、`worktrees[]` をメインのリポジトリの直下から数え、ほかのワークツリーに当たる
     test: test_normal_when_main_repository_registered
+  - name: 正常シナリオ（ワークツリーを指して追加する）
+    setup:
+      - name: Mock
+        description: なし（実環境で実行）
+      - name: 配信元にするリポジトリ
+        description: '`.claude/worktrees/develop`（`develop` を checkout）と `.claude/worktrees/x`（`feat/x` を checkout）の 2 つのワークツリーを持つ Git のリポジトリ'
+        notes: '`worktrees` は `[./.claude/worktrees/*]`'
+      - name: 端末の設定
+        description: '`sources[].config` が `.claude/worktrees/develop/dev-docs.yaml` を指す'
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        actor U as 利用者
+        participant S as dev-docs のサーバー
+        participant G as 配信元のリポジトリ
+
+        U->>S: reload する
+        S->>G: git rev-parse --git-common-dir の親（メインのリポジトリの直下）から worktrees[] を数える
+        S-->>U: 配信の開始
+        U->>S: describe(source)
+        S-->>U: ワークツリーの一覧（.claude/worktrees/develop・.claude/worktrees/x）
+      ```
+    expected:
+      - '`describe(source)` のワークツリーの一覧に `.claude/worktrees/x` が載る'
+      - '`describe(source)` のワークツリーの一覧に `.claude/worktrees/develop` が載る'
+      - '`worktree` に `.claude/worktrees/x` のパスを渡した `search_docs` が、そのワークツリーの文書を返す'
+    test: test_normal_when_worktree_config_registered
 lead: 利用者が `/dev-docs:setup [path]` で、フォルダを配信元として端末の設定に並べ、文書の MCP で読めるようにする。2 回目以降は範囲のファイルの増減・改名を管理用の YAML に合わせる。
 issue: 4
 primary_actor: 利用者
