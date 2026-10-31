@@ -36,7 +36,7 @@ components:
     description: |-
       - 列の初期の非表示は、`columns` のその表のキーの列を `+columns` の表の `hide=` に入れた Markdown を渡す（表のキーは `tableKeys` の同じ番号）
       - 列の出し入れは `useColumnPersistence` で保存する
-      - 本文のクリックを拾い、同じ配信元の文書への相対リンクは `navigate`（`rev` を保つ）、外の URL は `target="_blank" rel="noopener"` で開く
+      - 本文のクリックを拾い、同じ配信元の文書への相対リンクは、`document.bodyPath` があればそれを、無ければ `document.path` を基準に解決して `navigate`（`rev` を保つ）、外の URL は `target="_blank" rel="noopener"` で開く
       - mdmark の `commentStore` はコメントのストアへつなぐ（`docId` は `{source}@{ref}:{path}`）
     unit_tests:
       - name: test_doc_body
@@ -51,6 +51,12 @@ components:
         condition: 本文の `./b.md` を押す（`rev` が `v1`）
         mock: mdmark（本文にリンクを描く偽物）
         expected: ルーターの位置が `/s/b.md?rev=v1` になり、ページは読み込み直さない
+      - name: test_doc_body_when_body_path
+        case: 正常
+        summary: 管理用の YAML の行の文書の相対リンクを本文のファイルのパスで解決する
+        condition: '`path` が `notes/files/a`・`bodyPath` が `notes/a.md` の文書で、本文の `./b.md` を押す（`rev` が `v1`）'
+        mock: mdmark（本文にリンクを描く偽物）
+        expected: ルーターの位置が `/s/notes/b.md?rev=v1` になり、ページは読み込み直さない
 refs:
   - dev/設計書/画面設計/文書の画面#elements[本文]
   - dev/設計書/画面設計/文書の画面#elements[列の表示のメニュー]

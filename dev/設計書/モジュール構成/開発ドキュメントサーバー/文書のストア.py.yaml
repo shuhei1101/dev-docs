@@ -10,7 +10,7 @@ directory: |
   ├─ fields.py     # get_field / set_field / delete_field / resolve_metadata / missing_ref_fields / is_markdown_body
   ├─ loader.py     # collect_files / load_file / unindexed_files（ファイルから文書を作る）
   ├─ indexable.py  # walk_files / is_excluded_file / indexable_files（たどるフォルダと載せるファイルの判定）
-  ├─ schema.py     # resolve_schema_refs（種類のスキーマの $ref を解く）
+  ├─ schema.py     # resolve_schema_refs（種類のスキーマの $ref を解く）/ records_item_schema（records の行の 1 行のスキーマ）
   └─ store.py      # DocumentStore（キャッシュ・ID の引き当て・種類のスキーマ・文書の場所）/ check_sync（メタデータのずれ）
   ```
 diagrams:
@@ -565,11 +565,18 @@ functions:
         required: true
         passing: positional
         description: 集める行（`paths`・`exclude`）
+      - name: files
+        title: たどったファイル
+        type: Sequence[str] | None
+        required: false
+        default: None
+        passing: keyword
+        description: '`walk_files(root)` で得たパス。渡されたらフォルダをたどらずにこれを使う。`None` はその場でたどる'
     returns:
       type: list[str]
       description: '`root` からのパス（`/` 区切り）の昇順。重複は含まない'
     process: |-
-      1. 中をたどるファイルの列挙（`walk_files`）で `root` の配下のファイルを `root` からのパスで得る
+      1. `files` があればそのパス、無ければ中をたどるファイルの列挙（`walk_files`）で `root` の配下のファイルを `root` からのパスで得る
       2. 文書の行.行に当たるかが `True` のパスを加える
       3. 昇順に並べて返す
     unit_tests:
@@ -601,6 +608,12 @@ functions:
         mock: なし（`tmp_path`）
         expected: '`[".claude/a.md", "a/x.md"]`'
         exception: '-'
+      - name: test_collect_files_when_files_given
+        case: 正常
+        summary: たどったファイルを使う
+        condition: '`a/x.yaml` を置き、`files=["a/x.yaml", "a/y.yaml"]`、`paths: ["a/*.yaml"]` の行'
+        mock: '`walk_files`（呼ばれないことを確かめる）'
+        expected: '`["a/x.yaml", "a/y.yaml"]` で、`walk_files` を呼ばない'
   - name: load_file
     title: ファイルの読み込み
     kind: 関数
@@ -822,6 +835,47 @@ functions:
         condition: '`無い.schema.yaml#/$defs/x`'
         mock: なし
         expected: '`$ref` のまま残り、`[warning]` が 1 件'
+  - name: records_item_schema
+    title: records の行の 1 行のスキーマ
+    container: features/documents/schema.py
+    usecase: 共通
+    role: 変換
+    summary: ファイル全体のスキーマから `records` の要素 1 つのスキーマを取り出す
+    description: 文書に当てるスキーマ（`row_schema`）と `check_project` の食い違いの検出が使う。
+    kind: 関数
+    scope: public
+    args:
+      - name: schema
+        title: スキーマ
+        type: Mapping[str, Any]
+        required: true
+        passing: positional
+        description: '`$ref` を解いた行のスキーマ'
+      - name: records
+        title: 要素のキー
+        type: str
+        required: true
+        passing: positional
+        description: 行の `records`
+    returns:
+      type: dict[str, Any] | None
+      description: '`properties.{records}.items`。辞書でない・無いときは `None`'
+    process: |-
+      1. `schema` の `properties` が辞書で、その `records` の値が辞書で、その `items` が辞書なら `items` を返す
+      2. それ以外は `None` を返す
+    unit_tests:
+      - name: test_records_item_schema
+        case: 正常
+        summary: 要素のスキーマを取り出す
+        condition: '`templates/files.schema.yaml` を読んだスキーマと `files`'
+        mock: なし
+        expected: '`required` が `[path]` の `items`'
+      - name: test_records_item_schema_when_missing
+        case: 正常
+        summary: 要素のスキーマが無い
+        condition: '`properties.files` が `{type: array}` だけのスキーマ、`properties` が無いスキーマ、`files` 以外の `records`'
+        mock: なし
+        expected: どれも `None`
   - name: missing_ref_fields
     title: 'metadataの列の欠け'
     container: features/documents/fields.py
@@ -893,11 +947,18 @@ functions:
         required: true
         passing: positional
         description: 管理用の YAML を持つ行（`exclude`）
+      - name: files
+        title: たどったファイル
+        type: Sequence[str] | None
+        required: false
+        default: None
+        passing: keyword
+        description: '`walk_files(root)` で得たパス。渡されたら、そのうち `index_path` のフォルダの配下のパスを使う。`None` はその場でたどる'
     returns:
       type: list[str]
       description: '`root` からのパスの昇順'
     process: |-
-      1. 中をたどるファイルの列挙（`walk_files`）で `index_path` のフォルダの配下のファイルを `root` からのパスで得る
+      1. `files` があればそのうち `index_path` のフォルダの配下のパス（フォルダが `root` なら全て）、無ければ中をたどるファイルの列挙（`walk_files`）で `index_path` のフォルダの配下のファイルを `root` からのパスで得る
       2. `index_path` 自身と `body_paths` にあるパスと、文書の行.除外の名前に当たるかが `True` のパスと、除外の条件に当たるか（`is_excluded_file`）が `True` のパスを除き、昇順で返す
     unit_tests:
       - name: test_unindexed_files
@@ -921,6 +982,12 @@ functions:
         mock: なし（`tmp_path`）
         expected: '`["src/d.py"]`'
         exception: '-'
+      - name: test_unindexed_files_when_files_given
+        case: 正常
+        summary: たどったファイルのうちフォルダの配下だけを見る
+        condition: '`src/files.yaml`・`src/a.py`・`src/d.py`・`docs/x.md` を置き、`files` にその 4 件、`body_paths` が `[src/a.py]`'
+        mock: '`walk_files`（呼ばれないことを確かめる）'
+        expected: '`["src/d.py"]` で、`walk_files` を呼ばない'
   - name: check_sync
     title: メタデータのずれの確かめ
     container: features/documents/store.py
@@ -948,9 +1015,9 @@ functions:
       type: SyncReport
       description: ずれの並び（ずれが無ければ空）
     process: |-
-      1. `Target(source, source.root, None, None, "read")` で文書を集める（文書のストア.文書を集める）
+      1. `source.root` を `walk_files` で 1 回だけたどり、そのパスを `files` に渡して `Target(source, source.root, None, None, "read")` で文書を集める（文書のストア.文書を集める）
       2. 文書ごとに、その行で metadataの列の欠けを求め、`{行の id}: {文書の id}: {キー}（{列名}）` で `missing_refs` に加える
-      3. `records` と `body_file` を持つ行ごとに、行に当たる管理用の YAML（ファイルの収集）ごとに、その YAML から作った文書の `body_path` と行を渡して索引に無いファイルを求め、`{行の id}: {パス}` で `unindexed_files` に加える
+      3. `records` と `body_file` を持つ行ごとに、行に当たる管理用の YAML（手順 1 のパスを渡したファイルの収集）ごとに、その YAML から作った文書の `body_path` と行と手順 1 のパスを渡して索引に無いファイルを求め、`{行の id}: {パス}` で `unindexed_files` に加える
       4. 手順 1 の `problems` のうち `reason` が `missing_body_file` のものを `{path}: {detail}` で `missing_body_files` に加える
       5. `SyncReport` を返す
     unit_tests:
@@ -968,6 +1035,12 @@ functions:
         mock: なし
         expected: 3 つの並びが空
         exception: '-'
+      - name: test_check_sync_when_walked_once
+        case: 正常
+        summary: 配信元のフォルダを 1 回だけたどる
+        condition: test_check_sync と同じ配信元（行 `rules`・`src`）
+        mock: '`walk_files`（本物を包んで呼ばれた回数を記録する）'
+        expected: '`walk_files` が 1 回だけ呼ばれ、結果が test_check_sync と同じ'
   - name: is_markdown_body
     title: Markdownの本文か
     kind: 関数
@@ -1024,8 +1097,8 @@ functions:
       type: Iterator[str]
       description: '`root` からのパス（`/` 区切り）。順は `os.walk` のまま'
     process: |-
-      1. `root / start` を `os.walk` でたどる
-      2. 各フォルダで、`SKIP_DIRS` の名前のフォルダ・`root` からのパスが `SKIP_PATHS` にあるフォルダ・シンボリックリンクのフォルダをたどる先から外す
+      1. `root / start` を `os.walk`（`followlinks=False`）でたどる。シンボリックリンクのフォルダには `os.walk` が入らないので、フォルダごとに `os.path.islink` を呼ばない
+      2. 各フォルダで、`SKIP_DIRS` の名前のフォルダ・`root` からのパスが `SKIP_PATHS` にあるフォルダをたどる先から外す
       3. ファイルごとに `root` からのパスを作って返す
     unit_tests:
       - name: test_walk_files
@@ -1244,6 +1317,13 @@ classes:
             default: None
             passing: keyword
             description: 絞る文書の行の ID。`None` は有効な全ての行
+          - name: files
+            title: たどったファイル
+            type: Sequence[str] | None
+            required: false
+            default: None
+            passing: keyword
+            description: 読むフォルダを `walk_files` でたどったパス。呼び出し元が既にたどったときに渡す。`None` は `load` が 1 回だけたどる
         returns:
           type: LoadResult
           description: 集めた文書と読めなかったファイル
@@ -1253,7 +1333,7 @@ classes:
              - `target.ref` がある場合、履歴の『リビジョンの解決』（`date_base` は配信元の `default_ref`）で解いた commit を `snapshots.checkout` で書き出し、その下に `source.root` の `repo_root` からの相対パスをつなぐ
           2. 文書の行を決める。`kinds` があれば `source.table` で引き（無い種類は `UnknownKindError`）、無ければ `enabled` の全ての行
           3. Git の配信元の場合、履歴の『ファイルの日時』を `_dates` から引く。無ければ、作業ツリー（ワークツリーか `repo_root`）と commit（`ref` の commit、無ければ作業ツリーの `HEAD` を解いた SHA）で呼び、配信元の直下からのパスに直して控える
-          4. 行ごとに『ファイルの収集』でファイルを集め、ファイルごとに `stat` を取る
+          4. 読むフォルダのファイルを、`files` が無ければ `walk_files` で 1 回だけたどって得る。行ごとにそのパスを渡して『ファイルの収集』でファイルを集め、ファイルごとに `stat` を取る
              - `_files` の更新日時と大きさが同じで、理由に `missing_body_file` が無く、本文のファイルの (パス, 更新日時, 大きさ) も同じなら控えた結果を使う
              - それ以外は『ファイルの読み込み』で読み、`_files` を置き換える
           5. 収集で当たらなかった `_files` のキーのうち、読むフォルダの下にあるものを削除する（削除されたファイル）
@@ -1309,6 +1389,12 @@ classes:
             mock: なし
             expected: '`UnknownKindError`'
             exception: '`kinds` に有効な文書の行に無い種類がある'
+          - name: test_document_store_load_when_many_tables
+            case: 正常
+            summary: 行がいくつあってもフォルダを 1 回だけたどる
+            condition: 行 `rules`・`notes`・`src` の 3 つを持つ配信元
+            mock: '`walk_files`（本物を包んで呼ばれた回数を記録する）'
+            expected: '`walk_files` が 1 回だけ呼ばれ、3 行の文書を返す'
       - name: get
         title: ID で引く
         summary: ID の並びの順に文書を返す
@@ -1412,6 +1498,56 @@ classes:
             mock: なし（`tmp_path`）
             expected: '`properties.body` が `$ref` を持たず `markdown` の中身'
             exception: '-'
+      - name: row_schema
+        title: 文書に当てるスキーマ
+        summary: 文書 1 件の内容に当てるスキーマを返す。`records` を持つ行は 1 行のスキーマ
+        description: 検査・変換・検索と変更の項目の一覧・説明の種類のスキーマが、`schema` の代わりに呼ぶ。
+        kind: メソッド
+        scope: public
+        thread_safe: true
+        args:
+          - name: target
+            title: 読む場所
+            type: Target
+            required: true
+            passing: positional
+            description: 読む場所
+          - name: kind
+            title: 種類
+            type: str
+            required: true
+            passing: positional
+            description: 文書の行の ID
+        returns:
+          type: dict[str, Any]
+          description: JSON Schema。`records` の行で 1 行のスキーマを取り出せないときは空の辞書
+        process: |-
+          1. `schema(target, kind)` で種類のスキーマを得る
+          2. 行の `records` が `None` の場合、そのまま返す
+          3. `records` がある場合、records の行の 1 行のスキーマ（`records_item_schema`）を返す。`None` なら空の辞書を返す
+        exceptions:
+          - name: UnknownKindError
+            condition: '`kind` が有効な文書の行に無い'
+            message: '`schema` のまま'
+        unit_tests:
+          - name: test_document_store_row_schema
+            case: 正常
+            summary: ファイル 1 つが 1 文書の行はそのまま
+            condition: 行 `rules`（`records` なし）
+            mock: なし（`tmp_path`）
+            expected: '`schema` と同じスキーマ'
+          - name: test_document_store_row_schema_when_records
+            case: 正常
+            summary: records の行は 1 行のスキーマ
+            condition: '行 `notes`（`records: files`）の `schema` が `templates/files.schema.yaml` のコピー'
+            mock: なし（`tmp_path`）
+            expected: '`required` が `[path]` の `files` の `items`'
+          - name: test_document_store_row_schema_when_items_missing
+            case: 正常
+            summary: 1 行のスキーマを取り出せない
+            condition: 行 `notes` の `schema` が `properties.files.items` を持たない
+            mock: なし（`tmp_path`）
+            expected: 空の辞書
       - name: invalidate
         title: キャッシュを捨てる
         summary: 書き込んだファイルのキャッシュを捨てる
