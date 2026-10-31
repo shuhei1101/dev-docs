@@ -1,0 +1,239 @@
+title: "画面の構成の書き込み"
+entry:
+  kind: mcp_tool
+  value: write_nav
+flows:
+  - name: 正常系
+    summary: タブを追加し、書いた後の `nav` と条件に当たる文書の数を返す
+    setup:
+      - name: Mock
+        description: なし（一時フォルダに配信元を作り、dev-docs のアプリをテストのクライアントで呼ぶ）
+      - name: 文書のタグ
+        description: sample のワークツリー x の文書 1 の `tags` を `[mcp]`、文書 2 を `[設計]`、文書 3 を `[mcp, 設計]` にする
+        notes: '`dev-docs.yaml` は `nav` のほかに `description` とコメントを持つ'
+      - name: 入力
+        description: 1 回目は `add`（タブ `mcp`、`auto` の `filter` が `tags が mcp`）。2 回目は `update`（タブ `mcp` の `filter` を `tags が 設計` にする）
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        participant C as クライアント
+        participant T as write_nav
+        participant F as ワークツリーの dev-docs.yaml
+
+        C->>T: add タブ mcp
+        T->>T: 書いた後の nav をスキーマと check_filter で検証する
+        T->>F: nav を書く
+        T-->>C: nav・counts
+        C->>T: update タブ mcp
+        T->>F: nav を書く
+        T-->>C: nav・counts
+      ```
+    expected:
+      - 1 回目の後、`dev-docs.yaml` の `nav` にタブ `mcp` が加わり、`counts` のその `auto` が 2（文書 1・文書 3）
+      - 2 回目の後、タブ `mcp` の `filter` が `tags が 設計` になり、`counts` が 2（文書 2・文書 3）
+      - '`description` とコメントは書き換わらない'
+      - '`warnings` が空'
+    test: test_normal
+  - name: 正常系（0 件の条件を書く）
+    summary: どの文書にも当たらない条件も書いたうえで警告を返す
+    setup:
+      - name: Mock
+        description: なし
+      - name: 入力
+        description: '`add`（タブ `none`、`auto` の `filter` が `tags が none`）'
+        notes: どの文書にもタグ `none` を付けない
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        participant C as クライアント
+        participant T as write_nav
+        participant F as ワークツリーの dev-docs.yaml
+
+        C->>T: add タブ none
+        T->>F: nav を書く
+        T-->>C: nav・counts・warnings
+      ```
+    expected:
+      - '`dev-docs.yaml` の `nav` にタブ `none` が加わる'
+      - '`counts` のその `auto` が 0'
+      - '`warnings` にタブ `none` の条件が 0 件に当たる警告が 1 件ある'
+    test: test_normal_when_filter_matches_nothing
+  - name: 異常系（検証に通らない・NavInvalidError）
+    summary: '`check_filter` に通らない条件を書かない'
+    setup:
+      - name: Mock
+        description: なし
+      - name: 入力
+        description: '`add`（タブ `bad`、`filter` の `op` が無い値 `like`）'
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        participant C as クライアント
+        participant T as write_nav
+
+        C->>T: add タブ bad
+        T->>T: check_filter に通らない
+        T-->>C: NavInvalidError
+      ```
+    expected:
+      - '`isError: true` で、`op` のキーのパスと `like` が使えないことを返す'
+      - '`dev-docs.yaml` は書き換わらない'
+    test: test_error_when_nav_invalid
+  - name: 異常系（無いタブ・InvalidArgumentError）
+    summary: 無いタブの修正を断る
+    setup:
+      - name: Mock
+        description: なし
+      - name: 入力
+        description: '`update`（タブ `missing`）'
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        participant C as クライアント
+        participant T as write_nav
+
+        C->>T: update タブ missing
+        T-->>C: InvalidArgumentError
+      ```
+    expected:
+      - '`isError: true` で、今のタブの名前の一覧を返す'
+      - '`dev-docs.yaml` は書き換わらない'
+    test: test_error_when_tab_missing
+  - name: 異常系（設定が無い・ConfigNotFoundError）
+    summary: '`dev-docs.yaml` が無いフォルダを断る'
+    setup:
+      - name: Mock
+        description: なし
+      - name: 入力
+        description: '`path` に `dev-docs.yaml` の無い一時フォルダ'
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        participant C as クライアント
+        participant T as write_nav
+
+        C->>T: path
+        T-->>C: ConfigNotFoundError
+      ```
+    expected:
+      - '`isError: true` で `dev-docs.yaml` が無いことを返す'
+    test: test_error_when_config_missing
+  - name: 異常系（YAML として読めない・ConfigParseError）
+    summary: 読めない `dev-docs.yaml` を断る
+    setup:
+      - name: Mock
+        description: なし
+      - name: 入力
+        description: '`path` の `dev-docs.yaml` の途中の行を壊す'
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        participant C as クライアント
+        participant T as write_nav
+
+        C->>T: path
+        T-->>C: ConfigParseError
+      ```
+    expected:
+      - '`isError: true` で壊した行と理由を返す'
+    test: test_error_when_config_unparsable
+lead: 配信元の `dev-docs.yaml` の `nav` だけを、タブ・項目の追加・修正・削除で書き換える。書いた後の `nav` をスキーマと `check_filter` で検証し、`auto` の条件に当たる文書の数を返す。
+identifier: write_nav
+permissions: なし（`127.0.0.1` でだけ待ち受ける）
+idempotent: false
+side_effects: '`path` の `dev-docs.yaml` の `nav` を書き換える（commit はしない）'
+callers:
+  - dev/設計書/シナリオ/単一ユースケース/設定・スクリプトを変える#scenarios[正常シナリオ（管理の MCP で nav を書く）]
+exclusivity: 同じ `dev-docs.yaml` への書き込みは 1 つずつ行う
+request:
+  - name: path
+    type: str
+    required: true
+    location: argument
+    description: 配信元のフォルダか、その `dev-docs.yaml` の絶対パス（作業中はワークツリー）
+  - name: operations
+    type: list[NavOperation]
+    required: true
+    location: argument
+    description: 並べた順に当てる操作
+    constraints: 1 件以上
+  - name: operations[].op
+    type: Literal['add', 'update', 'remove']
+    required: true
+    location: argument
+    description: 追加・修正・削除
+  - name: operations[].tab
+    type: str
+    required: true
+    location: argument
+    description: 対象のタブの名前（`nav.tabs[].title`）
+  - name: operations[].item
+    type: str
+    required: false
+    default: なし（タブそのものが対象）
+    location: argument
+    description: タブの中の項目の名前。入れ子の項目は `>` で区切る（`設計 > MCP`）
+    notes: '`add` のときは、最後の名前を作る項目、それより前を追加先の group にする'
+  - name: operations[].value
+    type: dict
+    required: false
+    default: なし（`remove` では持たない）
+    location: argument
+    description: タブか項目の中身（`dev-docs.yaml` の `nav` と同じ書式）。`update` は渡したキーだけを置き換える
+    constraints: '`add`・`update` で必須'
+  - name: format
+    type: Literal['markdown', 'json']
+    required: false
+    default: '`markdown`'
+    location: argument
+    description: 返す形式
+request_example: |-
+  ```json
+  {"path": "/home/u/repo/sample/.claude/worktrees/x", "operations": [{"op": "add", "tab": "mcp", "value": {"title": "mcp", "items": [{"auto": {"document": "docs", "filter": {"field": "tags", "op": "eq", "values": ["mcp"]}}}]}}]}
+  ```
+response:
+  - name: path
+    type: str
+    description: 書き換えた `dev-docs.yaml` のパス
+  - name: nav
+    type: str
+    description: 書いた後の `nav`（YAML のまま）
+  - name: counts[].path
+    type: str
+    description: '`auto` のキーのパス（`nav.tabs[2].items[0].auto`）'
+  - name: counts[].count
+    type: int
+    description: その `auto` の条件に当たる文書の数
+  - name: warnings[].path
+    type: str
+    description: 警告したキーのパス
+  - name: warnings[].rule
+    type: str
+    description: 警告の理由。条件がどの文書にも当たらないときは、タブの名前と条件
+    notes: '`check_project` の `warnings[]` と同じ関数で求める'
+exceptions:
+  - name: なし（正常終了）
+    condition: 書けた（0 件に当たる条件も書いたうえで `warnings` に入れる）
+  - name: NavInvalidError
+    condition: 書いた後の `nav` が `dev-docs.yaml` のスキーマか `check_filter` に通らない
+    notes: '`isError: true` で違反したキーのパスと理由を返し、ファイルを書き換えない'
+  - name: InvalidArgumentError
+    condition: '`update`・`remove` で指したタブ・項目が無い、`add` で同じ名前のタブ・項目がある、`add`・`update` で `value` が無い'
+    notes: '`isError: true` で今のタブの名前の一覧を添え、ファイルを書き換えない'
+  - name: ConfigNotFoundError
+    condition: '`path` に `dev-docs.yaml` が無い'
+    notes: '`isError: true`'
+  - name: ConfigParseError
+    condition: '`dev-docs.yaml` が YAML として読めない'
+    notes: '`isError: true` で行と理由を返す'
+constraints:
+  - item: 書き換える範囲
+    constraint: '`nav` のキーだけを書き換え、ほかのキーとコメントはそのまま残す'
+  - item: 書き込みの方式
+    constraint: 操作を全て当てた後の `nav` を 1 回だけ検証し、通ったときだけファイルを書き換える
+  - item: 文書の数
+    constraint: '`counts` は書いた後の `nav` の全ての `auto` を、`path` のフォルダの文書で数える。`文書の取得` と同じ `match_filter` を使う'
+  - item: 反映
+    constraint: 配信中の配信元には、`default_ref` へ commit された後の要求から入る
+  - item: タイムアウト
+    constraint: 制限なし

@@ -133,6 +133,34 @@ flows:
       - '`sync.unindexed_files` が 2'
       - '`sync.items` が `src/a.py`・`src/b.py` の 2 件だけで、`src/pkg/__init__.py`・`src/uv.lock`・`src/logo.png` を含まない'
     test: test_normal_when_files_excluded
+  - name: 正常系（エイリアスのキーと nav の条件を点検する）
+    summary: エイリアスのキーの違反を文書のパスとともに、どの文書にも当たらない `nav` の条件を警告として返す
+    setup:
+      - name: Mock
+        description: なし
+      - name: エイリアスのキーの違反
+        description: sample の `alias_type` を持つ行の文書 1 件の `aliases` を文字列（配列でない）にする
+      - name: 0 件に当たる nav の条件
+        description: sample の `nav` に、`auto` の `filter` が `tags が none` のタブ `none` を置く
+        notes: どの文書にもタグ `none` を付けない
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        participant C as クライアント
+        participant T as check_project
+        participant F as 配信元のフォルダ
+
+        C->>T: path
+        T-->>F: dev-docs.yaml と文書を読む
+        T->>T: エイリアスのキーを取り込んだスキーマで検証する
+        T->>T: nav の auto の条件に当たる文書を数える
+        T-->>C: 違反・警告・取り込んだスキーマのバージョン
+      ```
+    expected:
+      - '`violations` に、`doc` が違反した文書のパスで `aliases` が配列でないことの違反が 1 件ある'
+      - '`warnings` に、タブ `none` の条件が 0 件に当たる警告が 1 件ある'
+      - '`alias_schema_version` が `v0.3.0`'
+    test: test_normal_when_alias_and_nav_checked
 lead: 配信元の `dev-docs.yaml` と管理用の YAML・スクリプトを検証し、違反・設定のバージョンの新旧・索引の同期の件数を返す。端末の設定に無い配信元も検査できる。
 identifier: check_project
 permissions: なし（`127.0.0.1` でだけ待ち受ける）
@@ -142,6 +170,7 @@ callers:
   - dev/設計書/シナリオ/単一ユースケース/配信元を追加する#scenarios[正常シナリオ]
   - dev/設計書/シナリオ/単一ユースケース/設定・スクリプトを変える#scenarios[正常シナリオ]
   - dev/設計書/シナリオ/単一ユースケース/配信元を追加する#scenarios[正常シナリオ（除外の条件と関連の候補）]
+  - dev/設計書/シナリオ/単一ユースケース/設定・スクリプトを変える#scenarios[正常シナリオ（エイリアスのキーと nav の条件を点検する）]
 exclusivity: '読み取りだけで排他しない（`readOnlyHint: true`）'
 request:
   - name: path
@@ -207,6 +236,19 @@ response:
     type: list[SyncItem]
     description: 件数の内訳（種類とパス）
     notes: 先頭 50 件まで
+  - name: violations[].doc
+    type: str | None
+    description: 違反した文書のパス。`alias_type` を持つ行の文書のエイリアスのキーを、取り込んだエイリアスのスキーマで検証した違反に入れる
+    notes: '`dev-docs.yaml` のキーの違反は `null`'
+  - name: warnings[].path
+    type: str
+    description: 警告したキーのパス（`nav.tabs[2].items[0].auto.filter`）
+  - name: warnings[].rule
+    type: str
+    description: 警告の理由。`nav` の `auto` の条件がどの文書にも当たらないときは、タブの名前と条件
+  - name: alias_schema_version
+    type: str
+    description: 取り込んだエイリアスのスキーマの取り込み元のタグ（`shuhei1101/alias-inject` の `v0.3.0`）
 response_example: |-
   ```markdown
   /home/u/repo/sample（登録済み: sample）

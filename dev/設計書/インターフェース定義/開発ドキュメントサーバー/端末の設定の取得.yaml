@@ -110,6 +110,10 @@ response:
     type: '{config: str, server: str} | None'
     description: 設定のバージョンとサーバーが読めるバージョン
     notes: 設定のバージョンが古いときだけ
+  - name: sources[].outsideRead
+    type: bool
+    description: '`scope` に当たらない作業場所からも `outside_scope: true` で作業範囲の外（参考）として読めるか（端末の設定の `outside_read`）'
+    notes: 書いていない行は `true`
 status_codes:
   - code: '200'
     condition: 返した（配信元が 0 件でも 200）
