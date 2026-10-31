@@ -56,6 +56,20 @@ SAMPLE_KIND_SCHEMA = "type: object\nproperties:\n  id: {type: string}\n  name: {
 LOOPBACK_V4 = "0100007F"
 EXIT_TIMEOUT_SEC = 30
 DOCS_TOOL_PREFIX = "mcp__plugin_dev-docs_dev-docs__"
+# 使い分けは文書の MCP の instructions にある旨の行
+POINTER_LINE = (
+    "探す・読む・書くときの使い分けと書き方は、文書の MCP（dev-docs）の instructions にあります。"
+)
+# 文脈に置かない使い方・タグの行の語
+USAGE_WORDS = (
+    "describe(source)",
+    'group_by="tags"',
+    'source="*"',
+    'view="full"',
+    "管理用の YAML の行",
+    "タグ:",
+)
+CONTEXT_MAX_CHARS = 1000
 SESSION_PROMPT = "このセッションでは何も実行せず、「了解」とだけ答えてください。"
 LEGACY_CONFIG = (
     'version: "1"\n'
@@ -393,7 +407,7 @@ def test_normal_when_session_context_added(
     sample_file_set: Callable[..., dict[str, str]],
     sample_config_text: Callable[..., str],
 ) -> None:
-    """待ち受けているサーバーから、使える配信元・使い方・警告を取ってセッションの文脈に入れる（正常系）。"""
+    """待ち受けているサーバーから、使える配信元・警告と instructions を指す 1 行を取ってセッションの文脈に入れる（正常系）。"""
     # 準備
     clone = make_clone()
     sample_files = sample_file_set(
@@ -424,18 +438,9 @@ def test_normal_when_session_context_added(
     assert exit_code == 0
     assert "- sample（読み書き）: サンプルの配信元" in context
     assert "- notes（読み取りだけ）: メモの配信元" in context
-    for usage in (
-        "describe(source)",
-        "種類と書き方",
-        "同じ意味のタグを使い回す",
-        "search_docs",
-        'group_by="tags"',
-        'source="*"',
-        'view="full"',
-        "list_changes",
-        "管理用の YAML の行",
-    ):
-        assert usage in context
+    assert POINTER_LINE in context
+    assert [word for word in USAGE_WORDS if word in context] == []
+    assert len(context) <= CONTEXT_MAX_CHARS
     assert "sample: 管理用の YAML に無いファイルが 1 件あります" in context
     assert "old: 設定のバージョンが古い" in context
     assert "つなぎ直" not in context

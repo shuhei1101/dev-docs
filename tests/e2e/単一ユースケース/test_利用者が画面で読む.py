@@ -96,6 +96,38 @@ VIEWPORTS: tuple[ViewportSize, ...] = (
     {"width": 1280, "height": 800},
     {"width": 390, "height": 844},
 )
+# 本文の外の参照先の YAML の値を見出しに出す変換のスクリプト
+REF_SCRIPT = (
+    "import pathlib, sys\n"
+    "sys.stdin.read()\n"
+    "value = pathlib.Path('data/ref.yaml').read_text(encoding='utf-8').split(':', 1)[1].strip()\n"
+    "print(f'## 参照先 {value}')\n"
+)
+CACHE_EXTRA = (
+    "  - id: custom\n"
+    "    paths: [custom/*.yaml]\n"
+    "    schema: schemas/sample.schema.yaml\n"
+    "    converter: ref\n"
+    "converters:\n"
+    "  - id: ref\n"
+    "    run: [python3, scripts/ref.py]\n"
+)
+
+
+def _ref_files(
+    sample_file_set: Callable[..., dict[str, str]],
+    sample_config_text: Callable[..., str],
+    cache_line: str,
+) -> dict[str, str]:
+    """本文の外の参照先の YAML を読む変換を持つ配信元のファイル一式を返す。"""
+    return sample_file_set(
+        **{
+            "dev-docs.yaml": sample_config_text(CACHE_EXTRA + cache_line, name="custom"),
+            "scripts/ref.py": REF_SCRIPT,
+            "custom/c-1.yaml": "id: c-1\nname: カスタム 1\n",
+            "data/ref.yaml": "value: 前の値\n",
+        }
+    )
 
 
 def _custom_files(
@@ -454,6 +486,52 @@ def test_normal_when_custom_converter(
     expect(page.locator("main table").first.locator("th")).to_have_text(["colA", "colB"])
     expect(page.locator("main td")).to_have_text(["値A", "値B"])
     expect(page.get_by_role("main")).not_to_contain_text("embed:")
+
+
+def test_normal_when_converter_cache_disabled(
+    tmp_path: Path,
+    make_source: Callable[..., Any],
+    serve: Callable[..., Any],
+    sample_file_set: Callable[..., dict[str, str]],
+    sample_config_text: Callable[..., str],
+    page: Page,
+) -> None:
+    """cache: false の変換は、開き直すたびにスクリプトを動かして参照先の今の内容を出す（正常系）。"""
+    # 準備
+    files = _ref_files(sample_file_set, sample_config_text, "    cache: false\n")
+    source = make_source("custom", files, git=False)
+    served = serve(source)
+    page.goto(served.url("/custom/custom/c-1"))
+    expect(_heading(page, 2)).to_have_text("参照先 前の値")
+    (source.folder / "data" / "ref.yaml").write_text("value: 後の値\n", encoding="utf-8")
+    # 実行
+    page.goto(served.url("/custom/custom/c-1"))
+    # 検証
+    expect(_heading(page, 2)).to_have_text("参照先 後の値")
+    assert list((tmp_path / "state" / "converted").glob("*.md")) == []
+
+
+def test_normal_when_converter_cache_enabled(
+    tmp_path: Path,
+    make_source: Callable[..., Any],
+    serve: Callable[..., Any],
+    sample_file_set: Callable[..., dict[str, str]],
+    sample_config_text: Callable[..., str],
+    page: Page,
+) -> None:
+    """cache を書かない変換は控えを書き、開き直しても 1 回目と同じ本文を出す（正常系）。"""
+    # 準備
+    files = _ref_files(sample_file_set, sample_config_text, "")
+    source = make_source("custom", files, git=False)
+    served = serve(source)
+    page.goto(served.url("/custom/custom/c-1"))
+    expect(_heading(page, 2)).to_have_text("参照先 前の値")
+    (source.folder / "data" / "ref.yaml").write_text("value: 後の値\n", encoding="utf-8")
+    # 実行
+    page.goto(served.url("/custom/custom/c-1"))
+    # 検証
+    expect(_heading(page, 2)).to_have_text("参照先 前の値")
+    assert len(list((tmp_path / "state" / "converted").glob("*.md"))) == 1
 
 
 def test_error_when_converter_timed_out(

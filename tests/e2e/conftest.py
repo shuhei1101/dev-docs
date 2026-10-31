@@ -655,6 +655,7 @@ def schema_errors() -> Callable[[Path, Any], list[str]]:
 REPO_ROOT = Path(__file__).parents[2]
 CLONE_FILES = (
     "src",
+    "content",
     "templates",
     "plugins",
     ".claude-plugin",
