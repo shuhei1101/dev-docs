@@ -1,0 +1,120 @@
+"""`dev-docs prompt-doc` が読むプロンプトの YAML のモデルと、描画の結果・例外の型。"""
+
+from __future__ import annotations
+
+from dataclasses import dataclass
+from typing import Any, Literal
+
+from pydantic import BaseModel, ConfigDict, Field
+
+VarType = Literal["string", "integer", "number", "boolean", "array", "object"]
+Role = Literal["system", "user", "assistant"]
+
+
+class PromptVar(BaseModel):
+    """`vars` の 1 件（入れ子の `items`・`properties` を含む）。"""
+
+    model_config = ConfigDict(extra="ignore")
+
+    # 無ければ型を確かめない
+    type: VarType | None = None
+    required: bool = False
+    description: str = ""
+    # 無いことと `example: null` は `model_fields_set` で分ける
+    example: Any = None
+    source: str | None = None
+    items: PromptVar | None = None
+    properties: dict[str, PromptVar] = Field(default_factory=dict)
+
+
+class PromptText(BaseModel):
+    """部品の 1 言語の本文。"""
+
+    model_config = ConfigDict(extra="ignore")
+
+    lang: str
+    text: str
+
+
+class PromptPart(BaseModel):
+    """`parts` の 1 件。"""
+
+    model_config = ConfigDict(extra="ignore")
+
+    id: str
+    role: Role | None = None
+    tags: list[str] = Field(default_factory=list)
+    # Jinja2 の式。偽なら部品を使わない
+    when: str | None = None
+    texts: list[PromptText] = Field(min_length=1)
+
+
+class PromptExample(BaseModel):
+    """`examples` の 1 件。"""
+
+    model_config = ConfigDict(extra="ignore")
+
+    name: str
+    values: dict[str, Any] = Field(default_factory=dict)
+
+
+class PromptDoc(BaseModel):
+    """プロンプトの YAML 1 件のうち変換に使うキー。"""
+
+    model_config = ConfigDict(extra="ignore")
+
+    name: str
+    description: str = ""
+    # `llm` はメッセージに分け、`hook` は字数の注意を出す
+    kind: Literal["llm", "hook", "instructions", "tool"]
+    # 注入する言語
+    lang: str
+    tags: list[str] = Field(default_factory=list)
+    output: Any = None
+    vars: dict[str, PromptVar] = Field(default_factory=dict)
+    parts: list[PromptPart]
+    examples: list[PromptExample] = Field(default_factory=list)
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
+class RenderedMessage:
+    """例の組を 1 言語で描画した本文 1 件。"""
+
+    role: Role | None
+    # 注入する文字列と同じ本文（字数を数える）
+    text: str
+    # 変数の値を `VALUE_MARK_PATTERN` の区切りで囲んだ本文（エスケープ前）
+    marked: str
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
+class RenderedExample:
+    """例の組を 1 言語で描画した結果（`problems` があるときは `messages` が空）。"""
+
+    messages: list[RenderedMessage]
+    unused: list[str]
+    char_count: int
+    problems: list[str]
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
+class PartSyntaxError:
+    """テンプレートにできなかった部品の本文か `when` 1 件。"""
+
+    part_id: str
+    # `when` か `texts[{lang}]`
+    field: str
+    line: int | None
+    message: str
+
+
+class PromptDocError(Exception):
+    """`dev-docs prompt-doc` が終了コード 1 で終える例外の基底。"""
+
+
+class PromptYamlError(PromptDocError):
+    """標準入力が YAML として読めない。"""
+
+
+class InvalidPrompt(PromptDocError):
+    """変換に使うキーが無いか型が違う。"""
