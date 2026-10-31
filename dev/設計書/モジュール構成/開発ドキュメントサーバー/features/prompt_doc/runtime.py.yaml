@@ -97,7 +97,7 @@ data_models:
           description: 描画した文
         process: |-
           1. `prompts` から `prompt_id` を引く（起動のときに `required` で確かめてあるので、無い ID は `KeyError` のままにする）
-          2. 部品を並び順に辿り、`when` が偽の部品と `doc.lang` の本文が無い部品を飛ばして、残りを `values` で描画する（描画の例外はそのまま送る）
+          2. 部品を並び順に辿り、`when` が偽の部品と `doc.lang` の本文が無い部品を飛ばして、残りを `values` で描画する。`values` に無い `vars` の変数は `None` で埋める（描画の例外はそのまま送る）
           3. 描画した本文をそのままつなぎ、末尾の改行を除いて返す
         unit_tests:
           - name: test_prompt_set_render
