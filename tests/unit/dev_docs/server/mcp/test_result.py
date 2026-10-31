@@ -3,7 +3,6 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass
 from datetime import UTC, datetime
-from typing import Literal
 
 import pytest
 from mcp.types import TextContent
@@ -202,7 +201,7 @@ def test_tool_prompt_id() -> None:
     from dev_docs.server.mcp.result import tool_prompt_id
 
     # 準備
-    server: Literal["docs", "admin"] = "docs"
+    server = "docs"
     # 実行
     result = tool_prompt_id(server, "search_docs")
     # 検証
