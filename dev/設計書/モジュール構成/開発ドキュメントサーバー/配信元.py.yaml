@@ -1159,6 +1159,12 @@ classes:
         access: 内部 (_)
         default: '{}'
         description: 配信中の ID → 読んだ端末の設定の行と位置。`default_ref` が進んだときの組み立て直しに使う
+      - name: _on_rebuilt
+        title: 組み立て直した後の処理
+        type: Callable[[ServedSource], None] | None
+        access: 内部 (_)
+        default: None
+        description: 初期化の引数 `on_rebuilt` で受け取り、`get` が配信元を組み立て直して差し替えた後に、新しい配信元を渡して呼ぶ。`None` なら呼ばない
     methods:
       - name: reload
         title: 読み直す
@@ -1220,7 +1226,7 @@ classes:
           type: ServedSource
           description: 配信中の配信元
         process: |-
-          1. `_snapshot` を 1 回だけ読み、配信中にあれば、設定の commit を持つ配信元は `default_ref` を commit に解いて比べる。違う場合、`_reload_lock` を取ってその行だけを配信元の読み込みで読み直し、`_snapshot` のその配信元と状態を差し替えて返す（`[info]` default_ref が進んだので配信元を組み立て直した（ID・前と後の commit））。同じなら配信中の配信元を返す
+          1. `_snapshot` を 1 回だけ読み、配信中にあれば、設定の commit を持つ配信元は `default_ref` を commit に解いて比べる。違う場合、`_reload_lock` を取ってその行だけを配信元の読み込みで読み直し、`_snapshot` のその配信元と状態を差し替え、`_reload_lock` を持ったまま `_on_rebuilt` を新しい配信元で呼んでから返す（`[info]` default_ref が進んだので配信元を組み立て直した（ID・前と後の commit））。同じなら配信中の配信元を返す
           2. 状態の一覧にその ID が `not_served` か `disabled` である場合、`SourceNotServedError`（`violations` に状態の違反、`disabled` に無効か）を送る
           3. どちらにも無い場合、`UnknownSourceError` を送る
         exceptions:
@@ -1257,6 +1263,13 @@ classes:
             condition: '`a` を読んだ後に `default_ref` へ設定の行を足す commit を積む'
             mock: なし（一時フォルダで `git init`）
             expected: '`get("a")` が足した行を持つ配信元を返し、2 回目の `get` は読み直さない'
+            exception: '-'
+          - name: test_source_registry_get_when_default_ref_moved_with_on_rebuilt
+            case: 正常
+            summary: 組み立て直した後の処理を呼ぶ
+            condition: '`on_rebuilt` に呼ばれた配信元を記録する関数を渡し、`a` を読んだ後に `default_ref` へ設定の行を足す commit を積む'
+            mock: なし（一時フォルダで `git init`）
+            expected: '`get("a")` の後に `on_rebuilt` が新しい配信元で 1 回呼ばれ、2 回目の `get` では呼ばれない'
             exception: '-'
       - name: served
         title: 配信中

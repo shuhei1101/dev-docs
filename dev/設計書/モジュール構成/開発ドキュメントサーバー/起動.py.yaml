@@ -6,7 +6,7 @@ lead: |-
 directory: |-
   ```text
   src/dev_docs/
-  ├─ main.py                    # Handlers / build_handlers / reload_sources / run_serve / run_migrate / PortInUseError
+  ├─ main.py                    # Handlers / build_handlers / reload_sources / discard_source_caches / run_serve / run_migrate / PortInUseError
   └─ server/
      ├─ app.py                  # build_app / route_operation_id（ルートと MCP のマウント）
      ├─ lifespan.py             # build_lifespan（MCP のセッションの管理と記録の削除）
@@ -28,6 +28,8 @@ diagrams:
         部品の配線 ..> 配線済みの関数 : 作る
         部品の配線 ..> 配信元の読み直し : 束ねる
         配信元の読み直し ..> 配信元の一覧 : 読み直す
+        配信元の読み直し ..> 配信元の控えの破棄
+        配信元の一覧 ..> 配信元の控えの破棄 : 組み立て直した後に呼ぶ
         アプリの組み立て ..> 文書の MCP の組み立て
         アプリの組み立て ..> 管理の MCP の組み立て
         アプリの組み立て ..> 端末の設定の入口
@@ -53,6 +55,9 @@ diagrams:
           <<function>>
         }
         class 配信元の読み直し {
+          <<function>>
+        }
+        class 配信元の控えの破棄 {
           <<function>>
         }
         class 配信元の一覧 {
@@ -403,7 +408,7 @@ functions:
       description: 配線済みの関数
     process: |-
       1. `state_dir` を作る
-      2. 配信元の一覧・リビジョンの書き出し（`{state_dir}/snapshots`）・文書のストア・変換（`{state_dir}/converted`、制限時間は `script_timeout_sec`）・会話の記録（`{state_dir}/seen.sqlite3`、保持日数は `seen_retention_days`）・文書の検査（制限時間は `script_timeout_sec`）・配信元ごとの排他・表の列の設定（`{state_dir}/columns`）・再起動の制御を作る
+      2. 配信元の一覧・リビジョンの書き出し（`{state_dir}/snapshots`）・文書のストア・変換（`{state_dir}/converted`、制限時間は `script_timeout_sec`）・会話の記録（`{state_dir}/seen.sqlite3`、保持日数は `seen_retention_days`）・文書の検査（制限時間は `script_timeout_sec`）・配信元ごとの排他・表の列の設定（`{state_dir}/columns`）・再起動の制御を作る。配信元の一覧には、組み立て直した配信元を 1 つ受け取って『配信元の控えの破棄』をこれらの部品で呼ぶ関数を `on_rebuilt` に渡す
       3. 『配信元の読み直し』をこれらの部品で束ねた関数を作り、端末の設定で 1 回呼ぶ（配信元を読み、メタデータのずれを警告のログに書く）。検証で外した配信元があっても続ける
       4. これらと手順 3 の関数を持つ `Handlers` を返す
     unit_tests:
@@ -419,6 +424,13 @@ functions:
         condition: 行 `rules` に `title` の無い文書が 1 件ある配信元 `sample` 1 つ
         mock: なし（一時フォルダの配信元と `caplog`）
         expected: '`sample` の `metadata` の列の欠けの警告が 1 件あり、`registry.served()` が 1 つ'
+        exception: '-'
+      - name: test_build_handlers_when_default_ref_moved
+        case: 正常
+        summary: default_ref が進んだ後は新しい設定で文書を読む
+        condition: '`default_ref` の `rules` の行に `metadata` が無い Git の配信元 `a` と、`name: 文書 1`・`title: タイトル` の文書 1 件。1 回読んだ後に、`rules` の行へ `metadata: {name: title}` を足す commit を積む'
+        mock: なし（一時フォルダで `git init`）
+        expected: '`registry.get("a")` の後に `store` で読んだ文書の `metadata.name` が `タイトル`'
         exception: '-'
   - name: reload_sources
     title: 配信元の読み直し
@@ -466,9 +478,8 @@ functions:
       description: 読み直した後の配信元ごとの状態
     process: |-
       1. 配信元の一覧を読み直す（配信元の一覧.読み直す）
-      2. 文書のストア・文書の検査・変換の控えを捨てる（文書のストア.全て捨てる・文書の検査.控えを捨てる・変換.控えを捨てる）
-      3. 配信中の配信元ごとにメタデータのずれを確かめ（文書のストア.メタデータのずれの確かめ）、3 つの並びのうち 0 件でないものを、配信元の ID・ずれの種類・件数・並びの値で警告のログに書く。`alias_violations` は文書のパス・キー・理由で、nav の警告（画面の API）はキーのパスと理由で警告のログに書く。結果は状態に持たない
-      4. 手順 1 の状態を返す
+      2. 配信中の配信元で『配信元の控えの破棄』を呼ぶ
+      3. 手順 1 の状態を返す
     unit_tests:
       - name: test_reload_sources
         case: 正常
@@ -490,6 +501,47 @@ functions:
         mock: なし（一時フォルダの配信元）
         expected: 警告のログに違反した文書のパスと `aliases` が文字列か文字列の並びでないことと、タブ `none` の条件が出て、`sample` が `serving`
         exception: '-'
+  - name: discard_source_caches
+    title: 配信元の控えの破棄
+    kind: 関数
+    container: main.py
+    usecase: 共通
+    role: 合成の起点
+    summary: 配信元の内容を控えた部品の控えを捨て、渡した配信元ごとにメタデータのずれ・エイリアス・nav の警告をログに書く
+    scope: public
+    thread_safe: true
+    side_effects: 文書のストア・文書の検査・変換の控えを捨てる。メタデータのずれを警告のログに書く
+    args:
+      - name: sources
+        title: 配信元
+        type: list[ServedSource]
+        required: true
+        passing: positional
+        description: 警告を確かめる配信元
+      - name: store
+        title: 文書のストア
+        type: DocumentStore
+        required: true
+        passing: injected
+        description: 控えを捨てる
+      - name: checker
+        title: 文書の検査
+        type: DocumentChecker
+        required: true
+        passing: injected
+        description: 控えを捨てる
+      - name: converter
+        title: 変換
+        type: ConvertService
+        required: true
+        passing: injected
+        description: 控えを捨てる
+    returns:
+      type: None
+      description: なし
+    process: |-
+      1. 文書のストア・文書の検査・変換の控えを捨てる（文書のストア.全て捨てる・文書の検査.控えを捨てる・変換.控えを捨てる）
+      2. 渡した配信元ごとにメタデータのずれを確かめ（文書のストア.メタデータのずれの確かめ）、3 つの並びのうち 0 件でないものを、配信元の ID・ずれの種類・件数・並びの値で警告のログに書く。`alias_violations` は文書のパス・キー・理由で、nav の警告（画面の API）はキーのパスと理由で警告のログに書く。結果は状態に持たない
   - name: build_app
     title: アプリの組み立て
     kind: 関数
