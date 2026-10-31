@@ -184,7 +184,7 @@ functions:
     process: |-
       1. `FOR_PATTERN` でループの変数 → 配列の名前を集める
       2. `EXPR_PATTERN` の式ごとに、式の前の文字列を `html.escape` し、式の先頭の変数のパスを解く（ループの変数は `{配列}[]` に読み替える）
-         - パスが定義にある場合、エスケープした式を `<span data-hint="{ヒント}">` で囲む。ヒントは `{説明}（型: {type}、例: {example のフロー形式}）` をエスケープしたもの
+         - パスが定義にある場合（`logs[]` のように `[]` で終わり定義に無いパスは、配列の `items` の定義を使う）、エスケープした式を `<span data-hint="{ヒント}">` で囲む。ヒントは `{説明}（型: {type}、例: {example のフロー形式}）` をエスケープしたもの
          - 無い場合、エスケープした式だけを置く
       3. 残りをエスケープしてつなぎ、`<pre><code>` で囲む
     unit_tests:
@@ -247,7 +247,7 @@ functions:
     process: |-
       1. `problems` がある場合、`[!CAUTION]` に「この組は描画できません。」と理由の箇条書きを置いて返す
       2. `kind` が `hook` で `char_count` が `HOOK_TEXT_WARN_CHARS` を超える場合、`[!WARNING]` に字数と上限を置く
-      3. メッセージごとに、`role` があれば `**{role}**` の行を置き、`marked` を `html.escape` してから `VALUE_MARK_PATTERN` を `<mark data-hint="{ヒント}">{値}</mark>`（ヒントは `{パス}: {説明}` をエスケープしたもの）に置き換えた `<pre><code>` を `<!-- html -->` で囲んで置く
+      3. メッセージごとに、`role` があれば `**{role}**` の行を置き、`marked` を `html.escape` してから `VALUE_MARK_PATTERN` を `<mark data-hint="{ヒント}">{値}</mark>`（ヒントは `{パス}: {説明}` をエスケープしたもの。説明は `template_html` と同じく、定義に無い `[]` で終わるパスは配列の `items` から引く）に置き換えた `<pre><code>` を `<!-- html -->` で囲んで置く
       4. `{字数の見出し}: {char_count:,} 字 / 使わなかった部品: {unused か なし}` の行を置く。字数の見出しは、`lang` が注入する言語なら `注入する本文（{lang}）`、それ以外は `{lang} の本文`
     unit_tests:
       - name: test_example_body

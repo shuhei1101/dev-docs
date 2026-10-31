@@ -19,6 +19,18 @@ constants:
     usecase: プロンプトの文書の変換
     summary: 描画結果の変数の値を囲む区切り（私用領域の文字 `` パス `` 値 ``）に当てる正規表現
     value: re.compile("(?P<path>[^]*)(?P<value>[^]*)")
+  - name: LLM_PART_SEPARATOR
+    title: 役割の本文の区切り
+    container: features/prompt_doc/render.py
+    usecase: プロンプトの文書の変換
+    summary: '`kind: llm` で同じ役割の部品の本文をつなぐ区切り'
+    value: '"\n\n"'
+  - name: FLOW_QUOTE_PATTERN
+    title: フロー形式で引用符が要る文字
+    container: features/prompt_doc/render.py
+    usecase: プロンプトの文書の変換
+    summary: フローの区切り・コメント・キーの区切り・前後の空白・改行に当てる正規表現
+    value: 're.compile(r"[,\[\]{}#\n]|: |:$|^\s|\s$")'
 data_models:
   - name: TracedStr
     title: パス付きの文字列
@@ -267,7 +279,7 @@ functions:
          - それ以外は本文を描画する
          - `jinja2.UndefinedError` の場合、「未定義の変数: {message}」を `problems` にして返す
          - それ以外の例外（`jinja2.TemplateError`・`Exception`）の場合、「部品 `{id}` を描画できません: {例外の型}: {message}」を `problems` にして返す
-      4. `kind` が `llm` の場合、描画した本文を `role` ごとに空行 1 つでつなぎ、`ROLES` の順に空でないものをメッセージにする。それ以外はつないで 1 件にする
+      4. `kind` が `llm` の場合、描画した本文を `role` ごとに `LLM_PART_SEPARATOR` でつなぎ、`ROLES` の順に空でないものをメッセージにする（`role` の無い部品は `ROLES` の後に役割なしのメッセージとして置く）。それ以外はつないで 1 件にする
       5. メッセージの `marked` は描画したまま、`text` は `VALUE_MARK_PATTERN` を値だけに戻したものにし、`char_count` を `text` の字数の合計にする
     unit_tests:
       - name: test_render_example
@@ -312,5 +324,32 @@ functions:
         condition: 本文が `{{ a + 1 }}` で、`a` が `type` なし・`example` が文字列
         mock: なし
         expected: '`problems` に `TypeError` を含む 1 件で、`messages` が空'
+  - name: flow_yaml
+    title: YAML のフロー形式
+    kind: 関数
+    container: features/prompt_doc/render.py
+    usecase: プロンプトの文書の変換
+    role: 変換
+    summary: 値を YAML のフロー形式の 1 行にする
+    description: 'ruamel.yaml のフロー形式は配列の中のキーが 1 つの辞書を `[name: 好奇心]` と書くため、自前で組み立てる。'
+    scope: public
+    is_async: false
+    thread_safe: true
+    args:
+      - name: value
+        title: 値
+        type: Any
+        required: true
+        passing: positional
+        description: 変数の例・出力・型の合わない値
+    returns:
+      type: str
+      description: フロー形式の 1 行
+    process: |-
+      1. 辞書は `{キー: 値, ...}`、配列は `[値, ...]` にして中を再帰で組み立てる
+      2. スカラーは、`null`・真偽値・数は JSON の表記にする
+         - 文字列は、`FLOW_QUOTE_PATTERN` に当たらず YAML として読み戻して同じ文字列になる場合はそのまま、それ以外は JSON の文字列（`ensure_ascii=False`）にする
+    notes:
+      単体テスト: '`test_var_table`（配列の中の辞書）と `test_build_values_when_type_mismatch` で確かめる'
 test_files:
   - tests/unit/dev_docs/features/prompt_doc/test_render.py
