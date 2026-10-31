@@ -79,7 +79,7 @@ def test_normal(
 ) -> None:
     """設定を変えて `check_project`・`try_convert` で確かめ、`reload` で配信に入れる（正常系）。"""
     # 準備
-    sample = make_source("sample")
+    sample = make_source("sample", git=False)
     served = serve(sample)
     pid = served.call_admin("status", format="json").data["pid"]
     (sample.folder / "dev-docs.yaml").write_text(
