@@ -313,9 +313,7 @@ def check_sync(store: DocumentStore, source: ServedSource) -> SyncReport:
             }
             unindexed.extend(
                 f"{table.id}: {path}"
-                for path in unindexed_files(
-                    source.root, index_path, body_paths, table, files=files
-                )
+                for path in unindexed_files(source.root, index_path, body_paths, table, files=files)
             )
     missing_body_files = [
         f"{problem.path}: {problem.detail}"
