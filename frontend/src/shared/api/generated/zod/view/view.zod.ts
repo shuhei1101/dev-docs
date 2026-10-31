@@ -23,6 +23,7 @@ export const ViewGetDocumentDefaultResponse = zod.object({
   "source": zod.string(),
   "ref": zod.union([zod.string(),zod.null()]),
   "path": zod.string(),
+  "bodyPath": zod.union([zod.string(),zod.null()]),
   "markdown": zod.union([zod.string(),zod.null()]),
   "conversionError": zod.union([zod.object({
   "reason": zod.enum(['timeout', 'exit', 'not_runnable', 'invalid_yaml']),
@@ -75,6 +76,7 @@ export const ViewGetDocumentResponse = zod.object({
   "source": zod.string(),
   "ref": zod.union([zod.string(),zod.null()]),
   "path": zod.string(),
+  "bodyPath": zod.union([zod.string(),zod.null()]),
   "markdown": zod.union([zod.string(),zod.null()]),
   "conversionError": zod.union([zod.object({
   "reason": zod.enum(['timeout', 'exit', 'not_runnable', 'invalid_yaml']),

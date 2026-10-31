@@ -37,6 +37,9 @@ from dev_docs.features.sources.types import (
 )
 from dev_docs.features.validation.service import DocumentChecker
 from dev_docs.shared.errors import InvalidArgumentError
+from dev_docs.shared.yaml_io import load_yaml
+
+FILES_SCHEMA_TEMPLATE = Path(__file__).parents[5] / "templates" / "files.schema.yaml"
 
 TODAY = date(2026, 10, 28)
 
@@ -79,6 +82,7 @@ def make_env(
         row_validators: list[str] | None = None,
         extra_sources: list[ServedSource] | None = None,
         documents: list[DocumentTable] | None = None,
+        schemas: dict[str, dict[str, Any]] | None = None,
     ) -> SearchEnv:
         root = tmp_path / "sample"
         write_files(root, files)
@@ -89,7 +93,7 @@ def make_env(
             validators=row_validators or [],
         )
         config = make_source_config(documents=documents or [table], validators=validators or [])
-        source = make_served_source(id="sample", root=root, config=config)
+        source = make_served_source(id="sample", root=root, config=config, schemas=schemas or {})
         store = DocumentStore(SnapshotStore(tmp_path / "snapshots"))
         checker = DocumentChecker(store, timeout_sec=10)
         seen = SeenStore(tmp_path / "seen.sqlite3", retention_days=7)
@@ -453,6 +457,35 @@ def test_search_docs_when_unknown_field(make_env: Callable[..., SearchEnv]) -> N
         env.search(filter=condition)
     assert exc_info.value.violations[0].path == "filter.field"
     assert "name" in exc_info.value.violations[0].fix
+
+
+def test_search_when_records_fields(make_env: Callable[..., SearchEnv]) -> None:
+    """records の行の要素の項目で絞り込む（正常系）。"""
+    # 準備
+    table = DocumentTable(
+        id="notes",
+        paths=["notes/files.yaml"],
+        schema_path="schemas/files.schema.yaml",
+        records="files",
+        body_file="path",
+    )
+    files_schema = load_yaml(FILES_SCHEMA_TEMPLATE.read_text(encoding="utf-8"))
+    env = make_env(
+        {
+            "notes/files.yaml": "files:\n  - path: a.md\n  - path: b.md\n",
+            "notes/a.md": "# a\n",
+            "notes/b.md": "# b\n",
+        },
+        documents=[table],
+        schemas={"notes": files_schema},
+    )
+    condition = Condition(field="path", op="eq", values=["a.md"])
+    # 実行
+    result = env.search(filter=condition)
+    # 検証
+    assert result.total_count == 1
+    assert [item.id for item in result.items] == ["notes/a"]
+    assert result.notes == []
 
 
 def test_search_docs_when_sources_all(

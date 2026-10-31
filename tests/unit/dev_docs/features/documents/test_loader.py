@@ -3,6 +3,9 @@ from __future__ import annotations
 from collections.abc import Callable
 from datetime import datetime
 from pathlib import Path
+from typing import Any
+
+import pytest
 
 from dev_docs.features.documents import loader as loader_module
 from dev_docs.features.documents.loader import (
@@ -92,6 +95,29 @@ def test_collect_files_when_worktrees(
     result = collect_files(tmp_path, table)
     # 検証
     assert result == [".claude/a.md", "a/x.md"]
+
+
+def test_collect_files_when_files_given(
+    tmp_path: Path,
+    write_files: Callable[[Path, dict[str, str]], None],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """たどったファイルを使う（正常系）。"""
+    # 準備
+    write_files(tmp_path, {"a/x.yaml": "x: 1\n"})
+    walked: list[Path] = []
+
+    def fake_walk_files(root: Path, **kwargs: Any) -> list[str]:
+        walked.append(root)
+        return []
+
+    monkeypatch.setattr(loader_module, "walk_files", fake_walk_files)
+    table = DocumentTable(id="rules", paths=["a/*.yaml"], schema_path="schemas/rule.schema.yaml")
+    # 実行
+    result = collect_files(tmp_path, table, files=["a/x.yaml", "a/y.yaml"])
+    # 検証
+    assert result == ["a/x.yaml", "a/y.yaml"]
+    assert walked == []
 
 
 def test_load_file_when_yaml(
@@ -379,3 +405,46 @@ def test_unindexed_files_when_matching_exclusion(
     result = loader_module.unindexed_files(tmp_path, "src/files.yaml", ["src/a.py"], table)
     # 検証
     assert result == ["src/d.py"]
+
+
+def test_unindexed_files_when_files_given(
+    tmp_path: Path,
+    write_files: Callable[[Path, dict[str, str]], None],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """たどったファイルのうちフォルダの配下だけを見る（正常系）。"""
+    # 準備
+    write_files(
+        tmp_path,
+        {
+            "src/files.yaml": "files:\n  - path: a.py\n",
+            "src/a.py": "a = 1\n",
+            "src/d.py": "d = 4\n",
+            "docs/x.md": "# x\n",
+        },
+    )
+    walked: list[Path] = []
+
+    def fake_walk_files(root: Path, **kwargs: Any) -> list[str]:
+        walked.append(root)
+        return []
+
+    monkeypatch.setattr(loader_module, "walk_files", fake_walk_files)
+    table = DocumentTable(
+        id="src",
+        paths=["src/files.yaml"],
+        schema_path="schemas/rule.schema.yaml",
+        records="files",
+        body_file="path",
+    )
+    # 実行
+    result = loader_module.unindexed_files(
+        tmp_path,
+        "src/files.yaml",
+        ["src/a.py"],
+        table,
+        files=["src/files.yaml", "src/a.py", "src/d.py", "docs/x.md"],
+    )
+    # 検証
+    assert result == ["src/d.py"]
+    assert walked == []

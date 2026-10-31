@@ -200,10 +200,13 @@ def sample_files(**overrides: str) -> dict[str, str]:
     return files
 
 
+# `/dev-docs:setup` が配信元にコピーする管理用の YAML のスキーマ
+FILES_SCHEMA_TEMPLATE = Path(__file__).parents[3] / "templates" / "files.schema.yaml"
+
 FILES_ROW = (
     "  - id: src\n"
     "    paths: [src/files.yaml]\n"
-    "    schema: schemas/sample.schema.yaml\n"
+    "    schema: schemas/files.schema.yaml\n"
     "    records: files\n"
     "    body_file: path\n"
 )
@@ -212,6 +215,7 @@ FILES_ROW = (
 def sample_sync_files(unindexed: int = 1, *, version: str = "3") -> dict[str, str]:
     """管理用の YAML に無いファイルを `unindexed` 件持つ、配信元のファイル一式を返す。"""
     files = sample_files(**{"dev-docs.yaml": sample_config(FILES_ROW, version=version)})
+    files["schemas/files.schema.yaml"] = FILES_SCHEMA_TEMPLATE.read_text(encoding="utf-8")
     files["src/files.yaml"] = "files:\n  - path: a.py\n"
     files["src/a.py"] = "a = 1\n"
     files.update({f"src/extra{index}.py": "x = 1\n" for index in range(unindexed)})

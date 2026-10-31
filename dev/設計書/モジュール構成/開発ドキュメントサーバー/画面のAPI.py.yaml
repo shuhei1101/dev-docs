@@ -335,6 +335,11 @@ data_models:
         type: str
         access: 公開
         description: 返した文書のページのパス
+      - name: body_path
+        title: 本文のファイルのパス
+        type: str | None
+        access: 公開
+        description: 管理用の YAML の行の文書の本文のファイルのパス（`document.body_path`。拡張子つき）。ファイル 1 つが 1 文書の文書は `None`
       - name: markdown
         title: Markdown
         type: str | None
@@ -528,7 +533,29 @@ functions:
     returns:
       type: Document | None
       description: 無ければ `None`
-    process: 1. 文書のページのパスが `page` と同じ文書を返す
+    process: |-
+      1. 文書のページのパスが `page` と同じ文書を返す
+      2. 無ければ、`path` か `body_path` が `page` と同じ最初の文書を返す（`try_convert` と同じ引き方）
+      3. どちらにも無ければ `None` を返す
+    unit_tests:
+      - name: test_find_page
+        case: 正常
+        summary: 文書のページのパスで当たる
+        condition: 文書のページのパスが `rules/a` の文書と `page` が `rules/a`
+        mock: なし
+        expected: その文書
+      - name: test_find_page_when_body_path
+        case: 正常
+        summary: 本文のファイルのパスで当たる
+        condition: '`path` が `notes/files.yaml`・`body_path` が `notes/b.md` の管理用の YAML の行の文書と `page` が `notes/b.md`'
+        mock: なし
+        expected: その文書
+      - name: test_find_page_when_missing
+        case: 正常
+        summary: どれにも当たらない
+        condition: '`page` が `no/such`'
+        mock: なし
+        expected: '`None`'
   - name: screen_target
     title: 画面の読む場所
     kind: 関数
@@ -818,7 +845,7 @@ functions:
          - `diff_ref` の文書でタブとサイドバーを組み立て、文書のページのパス → `version` を両方で作って、タブにサイドバーの変化を付ける
       6. 返した文書を含むタブの `active` を `True` にする
       7. `updated_at` は文書の `updated`、`None` なら文書のファイルの `st_mtime` をタイムゾーン付きにした日時にする
-      8. `ref` は `ref` の値、省いたときは `default_ref` の名前（Git 管理外は `None`）、`github` は `github_repository` があれば `github_repository`・`github_issue_labels`、`columns` は表の列の設定.列の設定を読む の結果、`table_keys` は変換の結果の値にして返す
+      8. `body_path` は返した文書の `body_path`、`ref` は `ref` の値、省いたときは `default_ref` の名前（Git 管理外は `None`）、`github` は `github_repository` があれば `github_repository`・`github_issue_labels`、`columns` は表の列の設定.列の設定を読む の結果、`table_keys` は変換の結果の値にして返す
     exceptions:
       - name: UnknownSourceError
         condition: 無い配信元
@@ -870,6 +897,12 @@ functions:
         condition: Git 管理外の配信元の `docs/a`、`diff_ref="main"`
         mock: なし（一時フォルダの配信元）
         expected: '`updated_at` がファイルの `st_mtime` の日時、`diff` が `None`、`ref` が `None`'
+      - name: test_get_document_when_body_path
+        case: 正常
+        summary: 管理用の YAML の行の文書の本文のファイルのパス
+        condition: '`records: files`・`body_file: path` の行の要素 `{path: notes/b.md}` の文書を、画面のパスと `notes/b.md` の 2 通りで開く。ファイル 1 つが 1 文書の文書も開く'
+        mock: なし
+        expected: どちらも `body_path` が `notes/b.md` で `path` が画面のパス。ファイル 1 つが 1 文書の文書は `body_path` が `None`
   - name: not_found_fields
     title: 見つからなかったもの
     kind: 関数

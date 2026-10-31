@@ -12,6 +12,7 @@ import os
 import socket
 import subprocess
 import sys
+import urllib.error
 import urllib.request
 from pathlib import Path
 from typing import Any
@@ -21,7 +22,7 @@ DEFAULT_CONFIG = "~/.config/dev-docs/settings.yaml"
 # ポートへの TCP 接続を打ち切る秒数
 CONNECT_TIMEOUT_SEC = 0.5
 # `POST /_admin/session-context` を打ち切る秒数
-CONTEXT_TIMEOUT_SEC = 3
+CONTEXT_TIMEOUT_SEC = 11
 # 起動したときに文脈に入れる文
 RECONNECT_GUIDE = (
     "dev-docs を起動しました。"
@@ -121,8 +122,13 @@ def _context(event: dict[str, Any]) -> str:
         try:
             return fetch_context(port, payload)
         except (OSError, ValueError) as error:
+            # 打ち切ったとき: 理由の代わりに打ち切った秒数を入れる
+            timed_out = isinstance(error, TimeoutError) or (
+                isinstance(error, urllib.error.URLError) and isinstance(error.reason, TimeoutError)
+            )
+            reason = f"{CONTEXT_TIMEOUT_SEC} 秒で打ち切りました" if timed_out else str(error)
             return (
-                f"dev-docs の文脈を取れませんでした（{error}）。"
+                f"dev-docs の文脈を取れませんでした（{reason}）。"
                 "管理の MCP の status で状態を確かめてください。"
             )
     # 落ちているサーバーは、端末の設定のクローンで起動する
