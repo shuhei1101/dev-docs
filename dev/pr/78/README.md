@@ -1,0 +1,1 @@
+# shared/version.py・shared/schema_check.py のモジュール構成の設計書を作る
