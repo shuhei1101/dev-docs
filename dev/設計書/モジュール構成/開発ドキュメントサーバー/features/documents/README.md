@@ -4,6 +4,8 @@
 
 ## 目次
 
+<!-- table: data -->
+
 | ページ | 概要 |
 | --- | --- |
 | [types.py](./types.py.yaml) | 文書・読み込みの誤りと結果・同期のずれ・エイリアスの型 |
@@ -13,3 +15,5 @@
 | [loader.py](./loader.py.yaml) | ファイルの収集と、ファイルからの文書の作成 |
 | [schema.py](./schema.py.yaml) | 種類のスキーマの `$ref` の解決と、`records` の行のスキーマ |
 | [store.py](./store.py.yaml) | 文書のキャッシュ・ID の引き当て・種類のスキーマ・文書の場所と、メタデータのずれの確かめ |
+
+<!-- /table -->

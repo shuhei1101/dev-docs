@@ -142,7 +142,5 @@ classes:
             condition: '`LastReadNotFoundError(message="…")`'
             mock: なし
             expected: '`{}`'
-notes:
-  例外の置き場所: どの分類の関数も、呼び出し側へ返す失敗は `shared/errors.py` の子クラスで送る。スクリプトの実行の失敗（スクリプトの実行の分類）と YAML を読めないことは、それぞれの分類の例外で送り、呼び出し側が `Violation` か本文の誤りに変える。
 test_files:
   - tests/unit/dev_docs/shared/test_errors.py

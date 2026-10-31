@@ -1,0 +1,55 @@
+title: 開発ドキュメントサーバー / 端末の設定
+lead: |-
+  端末の設定 `settings.yaml` をスキーマで検証して読み、設定画面から送られた `sources[]` を、他のキーとコメントを保って書き換える。
+  端末の設定の取得・保存の入口も持つ。
+directory: |-
+  ```text
+  src/dev_docs/features/settings/
+  ├─ __init__.py   # 公開する型と関数の再エクスポート
+  ├─ types.py      # TerminalConfig / SourceEntry / SourceScope / SettingsSourceRow / SettingsSourcesView / SettingsSourcesRequest / SettingsSourcesResponse
+  ├─ query.py      # config_path / load_terminal_config / listen_port
+  ├─ service.py    # save_sources
+  └─ route.py      # build_settings_router（GET・PUT /_api/settings/sources）
+  schemas/
+  └─ settings.schema.yaml   # 端末の設定のスキーマ（JSON Schema 2020-12）
+  ```
+diagrams:
+  - name: 全体
+    diagram: |-
+      classDiagram
+        direction TD
+        端末の設定の入口 ..> 配信元の保存 : PUT
+        端末の設定の入口 ..> 同じオリジンの確認 : PUT の前
+        配信元の保存 ..> 端末の設定の検証 : 書く前
+        端末の設定の読み込み ..> 端末の設定の検証 : 読んだ後
+        配信元の保存 ..> 配信元の読み直し : 書いた後
+        端末の設定の読み込み ..> 端末の設定 : 返す
+        class 端末の設定の入口 {
+          <<function>>
+        }
+        class 配信元の保存 {
+          <<function>>
+        }
+        class 端末の設定の読み込み {
+          <<function>>
+        }
+        class 端末の設定の検証 {
+          <<function>>
+        }
+        class 同じオリジンの確認 {
+          <<function>>
+        }
+        class 配信元の読み直し {
+          <<function>>
+        }
+        class 端末の設定 {
+          +配信元: list
+          +状態の置き場所: Path
+        }
+        click 端末の設定の入口 href "../features/settings/route.py.yaml#端末の設定の入口"
+        click 配信元の保存 href "../features/settings/service.py.yaml#配信元の保存"
+        click 同じオリジンの確認 href "../server/origin.py.yaml#同じオリジンの確認"
+        click 端末の設定の検証 href "../features/settings/query.py.yaml#端末の設定の検証"
+        click 端末の設定の読み込み href "../features/settings/query.py.yaml#端末の設定の読み込み"
+        click 配信元の読み直し href "../main.py.yaml#配信元の読み直し"
+        click 端末の設定 href "../features/settings/types.py.yaml#端末の設定"

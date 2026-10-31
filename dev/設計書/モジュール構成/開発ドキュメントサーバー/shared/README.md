@@ -4,6 +4,8 @@
 
 ## 目次
 
+<!-- table: data -->
+
 | ページ | 概要 |
 | --- | --- |
 | [api_model.py](./api_model.py.yaml) | 画面の API の DTO の基底（キーは camelCase） |
@@ -12,3 +14,5 @@
 | [hashing.py](./hashing.py.yaml) | 内容のハッシュ（文書のバージョン） |
 | [paths.py](./paths.py.yaml) | 作業場所の glob の照合とパスの正規化 |
 | [yaml_io.py](./yaml_io.py.yaml) | YAML の読み込みと、往復編集の読み書き |
+
+<!-- /table -->

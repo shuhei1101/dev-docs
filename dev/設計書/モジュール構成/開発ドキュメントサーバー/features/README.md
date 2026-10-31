@@ -4,6 +4,8 @@
 
 ## 目次
 
+<!-- table: data -->
+
 | ページ | 概要 |
 | --- | --- |
 | [documents](./documents/) | 文書のファイルの収集と、メタデータ・バージョン・日時を付けた文書 |
@@ -25,3 +27,5 @@
 | [lifecycle](./lifecycle/) | 再起動の制御とクローンの更新 |
 | [migrate](./migrate/) | `dev-docs migrate` の設定の移し替え |
 | [prompt_doc](./prompt_doc/) | `dev-docs prompt-doc` のプロンプトの YAML の Markdown への変換 |
+
+<!-- /table -->

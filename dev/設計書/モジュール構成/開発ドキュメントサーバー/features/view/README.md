@@ -4,6 +4,8 @@
 
 ## 目次
 
+<!-- table: data -->
+
 | ページ | 概要 |
 | --- | --- |
 | [types.py](./types.py.yaml) | 画面の API の要求と結果の型 |
@@ -13,3 +15,5 @@
 | [paths.py](./paths.py.yaml) | 画面のページのパスと、文書の場所の解決 |
 | [route.py](./route.py.yaml) | 画面の API のルーター（`/_api/sources/{source}/docs`・`search`・`refs`・`columns`） |
 | [search.py](./search.py.yaml) | 画面の検索 |
+
+<!-- /table -->

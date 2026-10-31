@@ -4,6 +4,8 @@
 
 ## 目次
 
+<!-- table: data -->
+
 | ページ | 概要 |
 | --- | --- |
 | [app.py](./app.py.yaml) | ルートと MCP のマウントをまとめたアプリの組み立て |
@@ -12,3 +14,5 @@
 | [origin.py](./origin.py.yaml) | 画面と同じオリジンからの要求かの確認 |
 | [screen.py](./screen.py.yaml) | 画面のビルドの配信 |
 | [mcp](./mcp/) | 文書の MCP と管理の MCP の組み立てと、ツールの結果・エラーの変換 |
+
+<!-- /table -->

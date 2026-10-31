@@ -4,6 +4,8 @@
 
 ## 目次
 
+<!-- table: data -->
+
 | ページ | 概要 |
 | --- | --- |
 | [types.py](./types.py.yaml) | `search_docs`・用語の一覧の要求と結果の型 |
@@ -15,3 +17,5 @@
 | [render.py](./render.py.yaml) | `search_docs` の結果の Markdown |
 | [snippets.py](./snippets.py.yaml) | 行の分割・抜粋の検索・当たった行の数・一致した箇所の抜き出し |
 | [terms.py](./terms.py.yaml) | 用語の一覧と、その Markdown |
+
+<!-- /table -->
