@@ -7,6 +7,7 @@ from typing import Any
 
 from playwright.sync_api import Locator, Page, expect
 
+FILES_SCHEMA = Path(__file__).parents[3] / "templates" / "files.schema.yaml"
 BROKEN_CONFIG = "name: broken\ndocuments:\n  - id: sample\n    schema: schemas/sample.schema.yaml\n"
 MEMO_ROW = "  - id: memo\n    title: メモ\n    paths: [notes/*.yaml]\n    schema: schemas/sample.schema.yaml\n"
 CUSTOM_EXTRA = (
@@ -46,6 +47,19 @@ COLUMNS_TABLE = (
     "| --- | --- | --- |\n"
     "| k1 | 名称 1 | 備考 1 |\n"
     "<!-- /table -->\n"
+)
+NOTES_EXTRA = (
+    "  - id: notes\n"
+    "    paths: [notes/files.yaml]\n"
+    "    schema: schemas/files.schema.yaml\n"
+    "    records: files\n"
+    "    body_file: path\n"
+    "nav:\n"
+    "  tabs:\n"
+    "    - title: メモ\n"
+    "      items:\n"
+    "        - auto:\n"
+    "            document: notes\n"
 )
 SLEEP_SCRIPT = "import time\ntime.sleep(60)\n"
 SMALL_ROWS = [{"key": "k1", "label": "名称 1", "notes": "備考 1"}]
@@ -303,6 +317,41 @@ def test_normal_when_column_hidden(
     page.reload()
     expect(page.locator("main table").first.locator("th:visible")).to_have_text(["キー", "備考"])
     assert snapshot(source.folder) == before
+
+
+def test_normal_when_files_index_relative_link(
+    make_source: Callable[..., Any],
+    serve: Callable[..., Any],
+    screen_files: Callable[..., dict[str, str]],
+    page: Page,
+) -> None:
+    """管理用の YAML の行の文書の本文の相対リンクを押すと、リンク先の文書を開く（正常系）。"""
+    # 準備
+    source = make_source(
+        "sample",
+        screen_files(
+            nav=False,
+            config_extra=NOTES_EXTRA,
+            **{
+                "schemas/files.schema.yaml": FILES_SCHEMA.read_text(encoding="utf-8"),
+                "notes/files.yaml": "files:\n  - path: a.md\n  - path: b.md\n",
+                "notes/a.md": "# A\n\n[B](./b.md)\n",
+                "notes/b.md": "# B\n\nB の本文。\n",
+            },
+        ),
+    )
+    served = serve(source)
+    page.goto(served.url("/sample/notes/files/notes/a"))
+    expect(_heading(page)).to_have_text("A")
+    # 実行
+    page.get_by_role("main").get_by_role("link", name="B").click()
+    # 検証
+    expect(page).to_have_url(re.compile(r"/sample/notes/files/notes/b$"))
+    expect(_heading(page)).to_have_text("B")
+    expect(page.get_by_role("main")).to_contain_text("B の本文。")
+    expect(page.get_by_role("main")).not_to_contain_text("文書が見つかりません")
+    current = page.get_by_role("navigation", name="文書の一覧").locator('[aria-current="page"]')
+    expect(current).to_have_attribute("href", re.compile(r"/notes/files/notes/b$"))
 
 
 def test_normal_when_custom_converter(
