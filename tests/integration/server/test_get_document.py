@@ -73,6 +73,40 @@ CUSTOM_EXTRA = (
     "  - id: md\n"
     "    run: [python3, scripts/convert.py]\n"
 )
+# 本文の外の参照先の YAML の値を見出しに出す変換のスクリプト
+REF_SCRIPT = (
+    "import pathlib, sys\n"
+    "sys.stdin.read()\n"
+    "value = pathlib.Path('data/ref.yaml').read_text(encoding='utf-8').split(':', 1)[1].strip()\n"
+    "print(f'# 参照先: {value}')\n"
+)
+CACHE_EXTRA = (
+    "  - id: custom\n"
+    "    paths: [custom/*.yaml]\n"
+    "    schema: schemas/sample.schema.yaml\n"
+    "    converter: ref\n"
+    "converters:\n"
+    "  - id: ref\n"
+    "    run: [python3, scripts/ref.py]\n"
+)
+
+
+def _ref_source(
+    make_source: Callable[..., Any],
+    sample_file_set: Callable[..., dict[str, str]],
+    sample_config_text: Callable[..., str],
+    cache_line: str,
+) -> Any:
+    """本文の外の参照先の YAML を読む変換を持つ配信元（Git 管理外）を作る。"""
+    files = sample_file_set(
+        **{
+            "dev-docs.yaml": sample_config_text(CACHE_EXTRA + cache_line, name="custom"),
+            "scripts/ref.py": REF_SCRIPT,
+            "custom/c-1.yaml": "id: c-1\nname: カスタム 1\n",
+            "data/ref.yaml": "value: 前の値\n",
+        }
+    )
+    return make_source("custom", files, git=False)
 
 
 def _page_changes(items: list[dict[str, Any]]) -> dict[str, str | None]:
@@ -279,6 +313,48 @@ def test_normal_when_custom_converter(
     assert embedded.status_code == 200
     assert "| colA | colB |" in embedded.json()["markdown"]
     assert "embed:" not in embedded.json()["markdown"]
+
+
+def test_normal_when_converter_cache_disabled(
+    make_source: Callable[..., Any],
+    make_server: Callable[..., Any],
+    sample_file_set: Callable[..., dict[str, str]],
+    sample_config_text: Callable[..., str],
+) -> None:
+    """cache: false の変換は要求のたびにスクリプトを動かし、控えを書かない（正常系）。"""
+    # 準備
+    source = _ref_source(make_source, sample_file_set, sample_config_text, "    cache: false\n")
+    env = make_server(source)
+    first = env.client.get("/_api/sources/custom/docs/custom/c-1")
+    (source.folder / "data" / "ref.yaml").write_text("value: 後の値\n", encoding="utf-8")
+    # 実行
+    second = env.client.get("/_api/sources/custom/docs/custom/c-1")
+    # 検証
+    assert "# 参照先: 前の値" in first.json()["markdown"]
+    assert second.status_code == 200
+    assert "# 参照先: 後の値" in second.json()["markdown"]
+    assert list((env.state_dir / "converted").glob("*.md")) == []
+
+
+def test_normal_when_converter_cache_enabled(
+    make_source: Callable[..., Any],
+    make_server: Callable[..., Any],
+    sample_file_set: Callable[..., dict[str, str]],
+    sample_config_text: Callable[..., str],
+) -> None:
+    """cache を書かない変換は控えを書き、本文が変わらなければ控えを返す（正常系）。"""
+    # 準備
+    source = _ref_source(make_source, sample_file_set, sample_config_text, "")
+    env = make_server(source)
+    first = env.client.get("/_api/sources/custom/docs/custom/c-1")
+    (source.folder / "data" / "ref.yaml").write_text("value: 後の値\n", encoding="utf-8")
+    # 実行
+    second = env.client.get("/_api/sources/custom/docs/custom/c-1")
+    # 検証
+    assert "# 参照先: 前の値" in first.json()["markdown"]
+    assert second.status_code == 200
+    assert second.json()["markdown"] == first.json()["markdown"]
+    assert len(list((env.state_dir / "converted").glob("*.md"))) == 1
 
 
 def test_normal_when_conversion_failed(
