@@ -1,0 +1,14 @@
+version: "3"
+name: poc-prompt-doc
+description: PR #60 の PoC。プロンプトの YAML を変換した Markdown を文書の画面で確かめる
+default_ref: poc/server/prompt-doc-tabs
+documents:
+  - id: prompts
+    paths: [content/prompts/**/*.yaml]
+    title: プロンプト
+    schema: schemas/prompt.schema.yaml
+    converter: prompt-md
+    writable: false
+converters:
+  - id: prompt-md
+    run: [uv, run, --no-project, --with, jinja2, --with, pyyaml, python, convert.py]

@@ -1,0 +1,121 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/shuhei1101/knowledge/v0.2.0/schemas/prompt.schema.yaml
+# content/prompts/node/reflection.yaml
+id: node/reflection
+name: 振り返りのノード
+kind: llm
+lang: en
+description: キャラクターが最近の出来事を振り返り、性格特性の基底値の変化を決める
+tags: [reflection]
+vars:
+  character:
+    type: object
+    required: true
+    description: 振り返るキャラクター
+    example: {id: hina, display_name: ひな}
+    properties:
+      id: {type: string, required: true, description: キャラクターの ID, example: hina}
+      display_name: {type: string, required: true, description: 表示名, example: ひな}
+  now:
+    type: string
+    required: true
+    description: 今の日時の文
+    example: 2026-10-31（金）21:00
+  traits:
+    type: array
+    required: true
+    description: 性格特性の定義と今の基底値
+    source: DB のキャラクターの性格特性
+    example:
+      - {name: 好奇心, definition: 新しいものへの興味, base: 0.7}
+    items:
+      type: object
+      description: 性格特性 1 件
+      properties:
+        name: {type: string, required: true, description: 特性の名前, example: 好奇心}
+        definition: {type: string, required: true, description: 特性の定義, example: 新しいものへの興味}
+        base: {type: number, required: true, description: 今の基底値（0〜1）, example: 0.7}
+  logs:
+    type: array
+    required: true
+    description: 振り返るログの行（古い順）
+    example: ["10/31 20:10 コンビニで新作のプリンを買った"]
+    items: {type: string, description: ログ 1 行}
+examples:
+  - id: no-logs
+    name: ログが無い
+    values: {logs: []}
+  - id: broken
+    name: 型の合わない値（PoC で注意書きを出す）
+    values: {traits: oops}
+output: write_trait_changes を 1 回呼んで終える
+parts:
+  - id: role
+    role: system
+    tags: [role]
+    texts:
+      - lang: en
+        text: |-
+          ### Role
+          You are in charge of reflecting on the recent events of the character "{{ character.display_name }}" (character_id: {{ character.id }}) and thinking about changes to the base values of personality traits.
+      - lang: ja
+        text: |-
+          ### 役割
+          あなたは、キャラクター「{{ character.display_name }}」（character_id: {{ character.id }}）が最近の出来事を振り返って、性格特性の基底値の変化を考える担当です。
+  - id: now
+    role: user
+    tags: [context]
+    texts:
+      - lang: en
+        text: |-
+          ### Now
+          {{ now }}
+      - lang: ja
+        text: |-
+          ### いま
+          {{ now }}
+  - id: traits
+    role: user
+    tags: [context]
+    texts:
+      - lang: en
+        text: |-
+          ### Personality trait definitions and current base values
+          {% for t in traits -%}
+          - {{ t.name }}: {{ t.definition }} (base {{ t.base }})
+          {% endfor %}
+      - lang: ja
+        text: |-
+          ### 性格特性の定義と今の基底値
+          {% for t in traits -%}
+          - {{ t.name }}: {{ t.definition }}（基底値 {{ t.base }}）
+          {% endfor %}
+  - id: logs
+    role: user
+    tags: [context]
+    when: "{{ logs | length > 0 }}"
+    texts:
+      - lang: en
+        text: |-
+          ### Logs to reflect on (oldest first)
+          {% for line in logs -%}
+          - {{ line }}
+          {% endfor %}
+      - lang: ja
+        text: |-
+          ### 振り返るログ（古い順）
+          {% for line in logs -%}
+          - {{ line }}
+          {% endfor %}
+  - id: no-logs
+    role: user
+    tags: [context]
+    when: "{{ logs | length == 0 }}"
+    texts:
+      - lang: en
+        text: |-
+          ### Logs to reflect on
+          - none
+      - lang: ja
+        text: |-
+          ### 振り返るログ
+          - なし

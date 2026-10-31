@@ -1,0 +1,87 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/shuhei1101/knowledge/v0.2.0/schemas/prompt.schema.yaml
+# plugins/dev-docs/content/prompts/session-context.yaml
+id: session-context
+name: SessionStart の配信元の一覧
+kind: hook
+lang: ja
+description: 作業場所から使える配信元と警告を、セッションの始めに伝える
+tags: [sessionstart, 配信元]
+vars:
+  sources:
+    type: array
+    required: true
+    description: 作業場所から使える配信元
+    source: 端末の設定の sources[] のうち scope.read に作業場所が入るもの
+    example:
+      - {id: claude-balancer, access: read_write, description: 複数のアカウントを貸し出す基盤の設計書}
+    items:
+      type: object
+      description: 配信元 1 件
+      properties:
+        id: {type: string, required: true, description: 配信元の ID, example: knowledge}
+        access: {type: string, required: true, enum: [read, read_write], description: 権限, example: read}
+        description: {type: string, required: false, description: 配信元の説明, example: 共通の規約}
+  warnings:
+    type: array
+    required: false
+    default: []
+    description: 索引の同期のずれ・古い設定などの注意
+    example: ["knowledge: 索引が 3 件ずれています"]
+    items: {type: string, description: 注意 1 件}
+examples:
+  - id: two-sources
+    name: 配信元が 2 件で警告あり
+    values:
+      sources:
+        - {id: knowledge, access: read, description: 共通の規約}
+        - {id: claude-balancer, access: read_write, description: 設計書}
+  - id: no-source
+    name: 配信元が無い
+    values: {sources: [], warnings: []}
+  - id: many-sources
+    name: 配信元が多い（PoC で字数の注意を出す）
+    values:
+      sources:
+        - {id: source-00, access: read, description: PoC で字数の注意を出すための長い説明の配信元 00 番。共通の規約・設計書・手順書をまとめて持つ}
+        - {id: source-01, access: read, description: PoC で字数の注意を出すための長い説明の配信元 01 番。共通の規約・設計書・手順書をまとめて持つ}
+        - {id: source-02, access: read, description: PoC で字数の注意を出すための長い説明の配信元 02 番。共通の規約・設計書・手順書をまとめて持つ}
+        - {id: source-03, access: read, description: PoC で字数の注意を出すための長い説明の配信元 03 番。共通の規約・設計書・手順書をまとめて持つ}
+        - {id: source-04, access: read, description: PoC で字数の注意を出すための長い説明の配信元 04 番。共通の規約・設計書・手順書をまとめて持つ}
+        - {id: source-05, access: read, description: PoC で字数の注意を出すための長い説明の配信元 05 番。共通の規約・設計書・手順書をまとめて持つ}
+        - {id: source-06, access: read, description: PoC で字数の注意を出すための長い説明の配信元 06 番。共通の規約・設計書・手順書をまとめて持つ}
+        - {id: source-07, access: read, description: PoC で字数の注意を出すための長い説明の配信元 07 番。共通の規約・設計書・手順書をまとめて持つ}
+        - {id: source-08, access: read, description: PoC で字数の注意を出すための長い説明の配信元 08 番。共通の規約・設計書・手順書をまとめて持つ}
+        - {id: source-09, access: read, description: PoC で字数の注意を出すための長い説明の配信元 09 番。共通の規約・設計書・手順書をまとめて持つ}
+        - {id: source-10, access: read, description: PoC で字数の注意を出すための長い説明の配信元 10 番。共通の規約・設計書・手順書をまとめて持つ}
+        - {id: source-11, access: read, description: PoC で字数の注意を出すための長い説明の配信元 11 番。共通の規約・設計書・手順書をまとめて持つ}
+        - {id: source-12, access: read, description: PoC で字数の注意を出すための長い説明の配信元 12 番。共通の規約・設計書・手順書をまとめて持つ}
+        - {id: source-13, access: read, description: PoC で字数の注意を出すための長い説明の配信元 13 番。共通の規約・設計書・手順書をまとめて持つ}
+        - {id: source-14, access: read, description: PoC で字数の注意を出すための長い説明の配信元 14 番。共通の規約・設計書・手順書をまとめて持つ}
+        - {id: source-15, access: read, description: PoC で字数の注意を出すための長い説明の配信元 15 番。共通の規約・設計書・手順書をまとめて持つ}
+        - {id: source-16, access: read, description: PoC で字数の注意を出すための長い説明の配信元 16 番。共通の規約・設計書・手順書をまとめて持つ}
+        - {id: source-17, access: read, description: PoC で字数の注意を出すための長い説明の配信元 17 番。共通の規約・設計書・手順書をまとめて持つ}
+        - {id: source-18, access: read, description: PoC で字数の注意を出すための長い説明の配信元 18 番。共通の規約・設計書・手順書をまとめて持つ}
+        - {id: source-19, access: read, description: PoC で字数の注意を出すための長い説明の配信元 19 番。共通の規約・設計書・手順書をまとめて持つ}
+parts:
+  - id: sources
+    when: "{{ sources | length > 0 }}"
+    texts:
+      - lang: ja
+        text: |
+          dev-docs で次の配信元を使えます。使い分けは dev-docs の instructions にあります。
+          {% for s in sources %}- {{ s.id }}（{{ s.access }}）: {{ s.description }}
+          {% endfor %}
+  - id: no-source
+    when: "{{ sources | length == 0 }}"
+    texts:
+      - lang: ja
+        text: |
+          この作業場所から使える dev-docs の配信元はありません。
+  - id: warnings
+    when: "{{ warnings }}"
+    texts:
+      - lang: ja
+        text: |
+          注意:
+          {% for w in warnings %}- {{ w }}
+          {% endfor %}
