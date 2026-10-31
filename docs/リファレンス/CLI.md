@@ -1,10 +1,10 @@
 # CLI
 
-dev-docs serve・dev-docs migrate・dev-docs files のサブコマンド・引数・終了コード
+dev-docs serve・dev-docs migrate・dev-docs files・dev-docs prompt-doc のサブコマンド・引数・終了コード
 
 ## 共通
 
-`dev-docs` コマンドは `serve`・`migrate`・`files` のサブコマンドを持ちます。
+`dev-docs` コマンドは `serve`・`migrate`・`files`・`prompt-doc` のサブコマンドを持ちます。
 `dev-docs --version` で dev-docs のバージョンを表示します。
 
 ## dev-docs serve
@@ -138,3 +138,36 @@ dev-docs files --root ~/repo/sample --paths 'src/**'
 | 終了コード | 意味 |
 | --- | --- |
 | 2 | `--root` が無いか、フォルダでない。標準エラーに渡したパスを出す。`dev-docs migrate` の設定の違反と同じ値 |
+
+## dev-docs prompt-doc
+
+標準入力のプロンプトの YAML 1 件（キーは `templates/prompt.schema.yaml`）を Markdown にして標準出力に出します。
+配信元の `converters[].run` から呼ぶ変換で、引数は持たず、ファイルは書き換えません。
+行の書き方は [設定](./設定.md) の「雛形」にあります。
+
+```bash
+dev-docs prompt-doc < content/prompts/node/reflection.yaml
+```
+
+Markdown は、`name` の見出し・`kind` と `lang` のバッジ・`description`・タグと出力の行のあとに、次のセクションを並べます。
+
+| セクション | 内容 |
+| --- | --- |
+| 変数 | `vars` を `character.display_name`・`traits[].name` のようなパスで 1 行ずつ展開した表。列は変数・型・必須・例・説明・出どころ |
+| テンプレート | 部品ごとのセクションに、`role`・`tags`・`when` のバッジと Jinja2 の本文。本文の `{{ 変数 }}` に説明・型・例のツールチップが付く |
+| 例 | 「既定の例」（各変数の `example`）と `examples[]` の組ごとのセクションに、`when` が真の部品だけを描画した結果。`kind: llm` は `role` ごとのメッセージに分け、使わなかった部品と字数を出す。2 つ目以降の組は閉じた状態 |
+
+部品と例の組のセクションには、`parts[].texts[]` の言語のタブを置きます。
+タブは注入する言語（`lang`）を先頭に並べ、全ての部品の言語が 1 つだけの文書にはタブを置きません。
+
+| 注意書き | 出る場所 |
+| --- | --- |
+| `[!CAUTION]` | 未定義の変数・型の合わない値・描画中の例外の組のセクション。他の組は描画する |
+| `[!CAUTION]` | Jinja2 の構文が誤った部品のセクションと、全ての例の組のセクション |
+| `[!WARNING]` | `kind: hook` で、描画した結果が 1,000 字を超えた組のセクション |
+
+| 終了コード | 意味 |
+| --- | --- |
+| 0 | 正常。描画できない組・字数を超えた組・構文の誤った部品があっても 0 |
+| 1 | YAML として読めない、または変換に使うキーが無い・型が違う。標準出力には何も出さず、標準エラーに理由とキーのパスを出す |
+| 2 | 引数を渡した |

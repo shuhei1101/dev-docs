@@ -194,7 +194,7 @@ functions:
       description: 解いたコマンド（先頭を絶対パスにしたもの）
     process: |-
       1. `run` が空の場合、`ScriptNotFoundError` を送る
-      2. 先頭が `/` を含む場合は `cwd` からのパスとして、含まない場合は `shutil.which` で解き、見つからなければ `ScriptNotFoundError` を送る
+      2. 先頭が `/` を含む場合は `cwd` からのパスとして、含まない場合は `shutil.which` で解き、見つからなければサーバーを動かしている Python の環境の `bin`（`Path(sys.executable).parent`）で解き直す。それでも見つからなければ `ScriptNotFoundError` を送る（子プロセスの PATH は変えない）
       3. 2 つ目以降の引数のうち、拡張子（`.py`・`.sh`・`.js`・`.ts`）を持ち `cwd` からの相対パスに見えるものが無い場合、`ScriptNotFoundError` を送る
       4. 先頭を解いた絶対パスにしたコマンドを返す
     exceptions:
@@ -235,5 +235,12 @@ functions:
         mock: なし
         expected: '`ScriptNotFoundError` で、`scripts/none.py` が載る'
         exception: 引数のスクリプトのファイルが無い
+      - name: test_check_runnable_when_server_env
+        case: 正常
+        summary: PATH に無いコマンドをサーバーの Python の環境から引く
+        condition: '`["dev-docs", "prompt-doc"]`、PATH に `dev-docs` が無く、`sys.executable` と同じフォルダに実行できる `dev-docs` がある'
+        mock: '`monkeypatch` で `PATH` を空のフォルダだけにし、`sys.executable` を一時フォルダの `bin/python` にする'
+        expected: 先頭が一時フォルダの `bin/dev-docs`、後ろが `prompt-doc`
+        exception: '-'
 test_files:
   - tests/unit/dev_docs/integrations/test_scripts.py

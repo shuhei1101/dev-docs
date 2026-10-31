@@ -403,7 +403,7 @@ classes:
     usecase: 文書の取得
     role: サービス
     summary: 文書の行の設定で変換を選び、埋め込みを展開した Markdown を返す
-    description: '`converters[]` の結果は (配信元, 種類, 変換の ID, 文書のバージョン, `run` の値のハッシュ) を名前にしたファイルで `{state_dir}/converted` に控え、同じ文書・バージョンは 1 回だけ変換する。'
+    description: '`converters[]` の結果は (配信元, 種類, 変換の ID, 文書のバージョン, `run` の値のハッシュ, dev-docs のバージョン `RUNNING_VERSION`) を名前にしたファイルで `{state_dir}/converted` に控え、同じ文書・バージョンは 1 回だけ変換する。'
     kind: クラス
     properties:
       - name: cache_dir
@@ -467,6 +467,12 @@ classes:
             condition: '`converters[]` を指す行の同じ文書を 2 回'
             mock: '`run_script`（`# 変換した` を返し、呼ばれた数を数える）'
             expected: 2 回とも `# 変換した` で、スクリプトは 1 回だけ呼ばれる
+          - name: test_convert_service_convert_when_dev_docs_updated
+            case: 正常
+            summary: dev-docs のバージョンが変わったら変換し直す
+            condition: '`converters[]` を指す行の同じ文書を、`RUNNING_VERSION` を `0.1.0` と `0.2.0` にして 1 回ずつ'
+            mock: '`run_script`（呼ばれた数を数える）、`monkeypatch` で `RUNNING_VERSION`'
+            expected: スクリプトが 2 回呼ばれる
           - name: test_convert_service_convert_when_timeout
             case: 異常
             summary: 制限時間を超える
