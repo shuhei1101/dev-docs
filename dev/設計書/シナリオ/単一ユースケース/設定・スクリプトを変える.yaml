@@ -164,19 +164,19 @@ scenarios:
         participant S as dev-docs のサーバー
         participant G as sample のリポジトリ
 
+        U->>S: 起動する
+        S->>G: 起動時の検証で default_ref の validator を動かす
+        S-->>U: 起動時の警告（違反 develop-rule）と配信の開始
         U->>S: 変換を使う文書を開く
         S->>G: default_ref のスクリプトで変換する
         S-->>U: develop の文字が付いた本文
-        U->>S: check_project(sample)
-        S->>G: default_ref の validator を動かす
-        S-->>U: 違反 develop-rule
         U->>S: generator が生成した文書を開く
         S->>G: default_ref の generator を動かす
         S-->>U: 本文 develop
       ```
     expected:
+      - 起動時の警告に、文書 1 の違反 `develop-rule` が出る
       - 変換した本文の先頭に `develop` の文字が付く
-      - '`check_project` が文書 1 の違反 `develop-rule` を返す'
       - generator が生成した文書の本文が `develop` になる
     test: test_normal_when_scripts_run_from_default_ref
   - name: 正常シナリオ（ワークツリーのスクリプトを動かす）
