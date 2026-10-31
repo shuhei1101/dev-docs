@@ -1,6 +1,16 @@
+$ uv run ruff check .
 All checks passed!
+exit=0
+
+$ uv run ruff format --check .
 257 files already formatted
+exit=0
+
+$ uv run mypy .
 Success: no issues found in 253 source files
+exit=0
+
+$ claude plugin validate .
 Validating marketplace manifest: /mnt/c/Users/shuhe/repo/dev-docs/.claude/worktrees/chore-templates-prompt-yaml-converter/.claude-plugin/marketplace.json
 
 ⚠ Found 3 warnings:
@@ -15,11 +25,20 @@ Validating marketplace manifest: /mnt/c/Users/shuhe/repo/dev-docs/.claude/worktr
       /plugin install dev-docs --marketplace <owner>/<repo>
 
 ✔ Validation passed with warnings
+exit=0
+
+$ npm run lint
 
 > lint
 > eslint frontend tests/unit/frontend tests/integration/frontend eslint.config.js
 
+exit=0
+
+$ npm run typecheck
 
 > typecheck
 > node node_modules/typescript-native/bin/tsc --noEmit -p frontend/tsconfig.json
 
+exit=0
+
+total exit=0
