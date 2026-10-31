@@ -419,7 +419,7 @@ flows:
         description: 'ワークツリー x の `rules/r1.md` の front matter が `tags: [{name: a, main: true}, {name: b}]` を持つ'
         notes: '行 `rules` は `metadata: {tags: tags[].name, main_tags: tags[main].name}`'
       - name: 入力
-        description: '1 回目は `update`（`id: r1`・`add_to: {tags: [c]}`）。2 回目は `update`（`remove_from: {tags: [b]}`）。3 回目は `update`（`set: {tags: [a, c, d]}`）。4 回目は `update`（`set: {main_tags: [c]}`）。5 回目は `update`（`set: {main_tags: [z]}`）'
+        description: '1 回目は `update`（`id: r1`・`add_to: {tags: [c]}`）。2 回目は `update`（`remove_from: {tags: [b]}`）。3 回目は `update`（`set: {tags: [a, c, d]}`）。4 回目は `update`（`set: {main_tags: [c]}`）。5 回目は `update`（`set: {main_tags: [z]}`）。6 回目は `update`（`add_to: {main_tags: [d]}`）。7 回目は `update`（`remove_from: {main_tags: [c]}`）。8 回目は `update`（`unset: [main_tags]`）'
     flow: |-
       ```mermaid
       sequenceDiagram
@@ -443,6 +443,9 @@ flows:
       - '3 回目の後の r1 の `tags` が `[{name: a, main: true}, {name: c}, {name: d}]`'
       - '4 回目の後の r1 の `tags` が `[{name: a}, {name: c, main: true}, {name: d}]`'
       - 5 回目は `InvalidArgumentError` で、`z` が `tags` に無いことを返し、r1 を書き換えない
+      - '6 回目の後の r1 の `tags` が `[{name: a}, {name: c, main: true}, {name: d, main: true}]`'
+      - '7 回目の後の r1 の `tags` が `[{name: a}, {name: c}, {name: d, main: true}]`'
+      - '8 回目の後の r1 の `tags` が `[{name: a}, {name: c}, {name: d}]`'
     test: test_normal_when_tags_are_objects
 lead: 文書の作成・部分更新・置き換えを配列で受け、変更を当てた後の文書を配信元のスキーマと `validators[]` に通してから書き込む。dev-docs は commit しない。
 identifier: write_docs
@@ -664,8 +667,8 @@ constraints:
     constraint: '`data`・`set`・`add_to`・`remove_from` のキーと、`unset`・`text_edits[].field` の項目のパスの先頭のキーが、種類の行の `metadata` に書いた共通のキーなら、対応する列名（入れ子は `.` でつないだパス）へ読み替えてから当てる。列名をそのまま渡したキーと、`metadata` に書いていないキーは読み替えない'
     notes: 共通のキーと列名を同じ操作に両方渡すと `InvalidArgumentError`
   - item: オブジェクトの配列のタグの書き戻し
-    constraint: '行の `metadata` が `tags: tags[].name` のとき、`add_to: {tags: [x]}` は `{name: x}` の要素を末尾に追加し、`remove_from: {tags: [x]}` は `name` が `x` の要素を削除する。`set: {tags: [...]}` は渡した名前の並びで配列を置き換え、元からあった名前の要素は `main` を含む他のキーを保つ。`set: {main_tags: [...]}` は渡した名前の要素の `main` を `true`、それ以外の要素の `main` を削除する'
-    notes: '`main_tags` に `tags` に無い名前を渡したときは `InvalidArgumentError` を返す'
+    constraint: '行の `metadata` が `tags: tags[].name` のとき、`add_to: {tags: [x]}` は `{name: x}` の要素を末尾に追加し、`remove_from: {tags: [x]}` は `name` が `x` の要素を削除する。`set: {tags: [...]}` は渡した名前の並びで配列を置き換え、元からあった名前の要素は `main` を含む他のキーを保つ。`main_tags`（`tags[main].name`）は要素の `main` を書き換える。`set: {main_tags: [...]}` は渡した名前の要素の `main` を `true`、それ以外の要素の `main` を削除する。`add_to: {main_tags: [...]}` は渡した名前の要素に `main: true` を付け、`remove_from: {main_tags: [...]}` は渡した名前の要素の `main` を削除する。`unset: [main_tags]` は全ての要素の `main` を削除する'
+    notes: '`main_tags` の `set`・`add_to` に `tags` に無い名前を渡したときは `InvalidArgumentError` を返す。`remove_from` に無い名前を渡したときは何もしない'
 refs:
   - dev/設計書/シナリオ/単一ユースケース/エージェントが書き込む#scenarios[正常シナリオ]
   - dev/設計書/シナリオ/単一ユースケース/YAMLを直接編集した#scenarios[異常シナリオ（読んだ後に変わった文書へ書き込む）]

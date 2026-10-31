@@ -12,7 +12,7 @@ flows:
         description: sample のワークツリー x の文書 1 の `tags` を `[mcp]`、文書 2 を `[設計]`、文書 3 を `[mcp, 設計]` にする
         notes: '`dev-docs.yaml` は `nav` のほかに `description` とコメントを持つ'
       - name: 入力
-        description: 1 回目は `add`（タブ `mcp`、`auto` の `filter` が `tags が mcp`）。2 回目は `update`（タブ `mcp` の `filter` を `tags が 設計` にする）
+        description: 1 回目は `add`（タブ `mcp`、`auto` の `filter` が `tags が mcp`）。2 回目は `update`（タブ `mcp` の `value.items` を、`filter` が `tags が 設計` の `auto` 1 つに置き換える）
     flow: |-
       ```mermaid
       sequenceDiagram
@@ -137,6 +137,34 @@ flows:
     expected:
       - '`isError: true` で壊した行と理由を返す'
     test: test_error_when_config_unparsable
+  - name: 異常系（group でない項目を指す・InvalidArgumentError）
+    summary: 名前を持たない項目を `item` で指す操作と、後に重ねた設定が `nav` を持つ配信元への書き込みを断る
+    setup:
+      - name: Mock
+        description: なし
+      - name: auto を持つタブ
+        description: sample の `nav` のタブ `mcp` が `auto` の項目 1 つだけを持つ
+      - name: 重ねた設定
+        description: 端末の設定の配信元 layered の `config` が `[base/dev-docs.yaml, local/dev-docs.yaml]` で、`local/dev-docs.yaml` が `nav` を持つ
+      - name: 入力
+        description: '1 回目は sample へ `update`（タブ `mcp`、`item: auto`）。2 回目は `path` が `base` で `add`（タブ `x`）'
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        participant C as クライアント
+        participant T as write_nav
+
+        C->>T: update タブ mcp・item auto
+        T-->>C: InvalidArgumentError
+        C->>T: path base・add タブ x
+        T->>T: 後に重ねた local が nav を持つ
+        T-->>C: InvalidArgumentError
+      ```
+    expected:
+      - '1 回目は `isError: true` で、タブ `mcp` の group の名前の一覧（空）を返す'
+      - '2 回目は `isError: true` で、`local/dev-docs.yaml` のパスを返す'
+      - どちらの `dev-docs.yaml` も書き換わらない
+    test: test_error_when_item_not_group
 lead: 配信元の `dev-docs.yaml` の `nav` だけを、タブ・項目の追加・修正・削除で書き換える。書いた後の `nav` をスキーマと `check_filter` で検証し、`auto` の条件に当たる文書の数を返す。
 identifier: write_nav
 permissions: なし（`127.0.0.1` でだけ待ち受ける）
@@ -172,8 +200,9 @@ request:
     required: false
     default: なし（タブそのものが対象）
     location: argument
-    description: タブの中の項目の名前。入れ子の項目は `>` で区切る（`設計 > MCP`）
-    notes: '`add` のときは、最後の名前を作る項目、それより前を追加先の group にする'
+    description: タブの中の `group` の項目の名前（`group` の値）。入れ子の group は `>` で区切る（`設計 > MCP`）
+    constraints: 名前を持たない `auto`・`page` の項目は指せない。それらは、入っている group かタブの `value.items` を置き換えて追加・修正・削除する
+    notes: '`add` のときは、最後の名前を作る group、それより前を追加先の group にする'
   - name: operations[].value
     type: dict
     required: false
@@ -218,8 +247,8 @@ exceptions:
     condition: 書いた後の `nav` が `dev-docs.yaml` のスキーマか `check_filter` に通らない
     notes: '`isError: true` で違反したキーのパスと理由を返し、ファイルを書き換えない'
   - name: InvalidArgumentError
-    condition: '`update`・`remove` で指したタブ・項目が無い、`add` で同じ名前のタブ・項目がある、`add`・`update` で `value` が無い'
-    notes: '`isError: true` で今のタブの名前の一覧を添え、ファイルを書き換えない'
+    condition: '`update`・`remove` で指したタブ・group が無い、`item` が group でない項目（`auto`・`page`）に当たる、`add` で同じ名前のタブ・group がある、`add`・`update` で `value` が無い、端末の設定の `sources[].config` で `path` より後に重ねた設定の YAML が `nav` を持つ'
+    notes: '`isError: true` で今のタブ・group の名前の一覧を添え、ファイルを書き換えない。重ねた設定の YAML が `nav` を持つときはそのファイルのパスを添える'
   - name: ConfigNotFoundError
     condition: '`path` に `dev-docs.yaml` が無い'
     notes: '`isError: true`'
@@ -237,3 +266,7 @@ constraints:
     constraint: 配信中の配信元には、`default_ref` へ commit された後の要求から入る
   - item: タイムアウト
     constraint: 制限なし
+  - item: 項目の指し方
+    constraint: 項目はタブの名前と group の名前でだけ指し、添字では指さない。同じ `operations` の前の `add`・`remove` で並びが変わっても指す先はずれない
+  - item: 重ねた設定
+    constraint: 端末の設定の `sources[].config` で `path` の `dev-docs.yaml` より後に重ねた設定の YAML が `nav` を持つ配信元は、書いても配信に出ないため `InvalidArgumentError` で断る

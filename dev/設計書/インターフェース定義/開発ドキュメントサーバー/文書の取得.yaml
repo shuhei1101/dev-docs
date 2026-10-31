@@ -216,13 +216,16 @@ flows:
       - タブ `すべて` の `items` に文書 1〜3 が並ぶ
     test: test_normal_when_nav_filtered_by_tags
   - name: 正常系（エイリアスを返す）
-    summary: 配信元の `alias_type` を持つ行の文書のエイリアスを文書といっしょに返す
+    summary: 配信元の `alias_type` を持つ行の文書のエイリアスを、取り込んだスキーマの形で文書といっしょに返す
     setup:
       - name: Mock
         description: なし
       - name: 用語の種類
-        description: sample の `alias_type` を持つ行の文書「作業範囲」
-        notes: '`aliases` は `[scope, 担当範囲]`、`description` を持つ'
+        description: 'sample の `alias_type: term` の行の文書「作業範囲」'
+        notes: '`aliases` は `[scope, 担当範囲]`、`avoid` は `[担当領域]`、`description` を持つ'
+      - name: 文書の別名の種類
+        description: 'sample の `alias_type: doc` の行の文書「設定のリファレンス」'
+        notes: '`aliases` は `[settings]`、`description` を持ち、`avoid` を持たない'
       - name: エイリアスの無い配信元
         description: '`alias_type` を持つ行が無い配信元 `plain`'
     flow: |-
@@ -238,7 +241,8 @@ flows:
         E-->>C: 200（aliases は空）
       ```
     expected:
-      - sample の応答の `aliases` に、`name` が `作業範囲`・`aliases` が `[scope, 担当範囲]`・`description` を持つ要素がある
+      - sample の応答の `aliases` に、`alias_type` が `term`・`name` が `作業範囲`・`aliases` が `[scope, 担当範囲]`・`avoid` が `[担当領域]` で `description` を持つ要素がある
+      - sample の応答の `aliases` に、`alias_type` が `doc`・`name` が `設定のリファレンス`・`aliases` が `[settings]` で `avoid` が `null` の要素がある
       - plain の応答の `aliases` が空
     test: test_normal_when_aliases_returned
 lead: '#17 の画面が文書を開くときに呼ぶ。配信元の文書を変換した Markdown と、タブ・サイドバー・差分の項目・画面の状態を JSON で返す。`path` を省くと一番左のタブのサイドバーの一番上の文書を返す。'
@@ -342,8 +346,8 @@ response:
     notes: 文書の画面の文書の情報に出す
   - name: aliases
     type: list[AliasEntry]
-    description: 配信元の `alias_type` を持つ行の文書のエイリアス。画面が mdmark の `mount`・`render` に渡し、本文の用語にツールチップを出す
-    notes: '`alias_type` を持つ行が無い配信元・変換に失敗したときは空'
+    description: 配信元の `alias_type` を持つ行の文書のエイリアス。要素は取り込んだエイリアスのスキーマ（alias-inject の「エイリアスの元の行」）の共通の形で、画面が mdmark の `mount`・`render` の引数へ読み替えて渡す
+    notes: '`alias_type` を持つ行が無い配信元・変換に失敗したときは空。エイリアスのキーに違反する文書は載せない'
   - name: aliases[].id
     type: str
     description: 用語の文書の ID
@@ -357,6 +361,14 @@ response:
     type: str | None
     description: ツールチップに出す説明（共通のキー `description`）
     notes: 持たない文書は `null`
+  - name: aliases[].alias_type
+    type: Literal['term', 'doc', 'command', 'url', 'skill', 'tool', 'path', 'env', 'avoid']
+    description: 文書の行の引用の種類（取り込んだスキーマの `alias_type` の enum）
+    notes: 画面は `term` を用語、`doc` を文書の別名として mdmark へ分けて渡す
+  - name: aliases[].avoid
+    type: list[str] | None
+    description: 用語のやめた言い方（エイリアスのキー `avoid`）
+    notes: 持たない文書は `null`。`related`・`command`・`cwd`・`url`・`skill` など他のエイリアスのキーも、取り込んだスキーマの `metadata` のキー名で同じ階層に持ち、値を持たないキーは載せない
 response_notes: '本文の描画（mdmark）・リンクの組み立て・コメント・目次の変わった見出しのマーカーは #17 の画面が持つ。目次のマーカーは、`ref` を `diff.base` にして取った `markdown` と見出しごとに比べて付ける。'
 status_codes:
   - code: '200'
