@@ -119,7 +119,7 @@ exceptions:
 constraints:
   - item: 除外の条件
     constraint: 生成物・ロック・バイナリ・ベンダーのコード・再エクスポートや空の `__init__` だけのファイルを出さない。`check_project` の `unindexed_files` と同じ判定を使う
-    notes: 見分け方はモジュール構成『文書のストア』の `is_excluded_file`
+    notes: 見分け方はモジュール構成『文書のストア / indexable.py』の `is_excluded_file`
   - item: 辿らないフォルダ
     constraint: '`.git`・`node_modules`・`__pycache__`・`.venv`・`.claude/worktrees` とシンボリックリンク。文書の収集・`unindexed_files` と同じ'
     notes: '`.claude/worktrees` は配信元の設定の `worktrees` の既定と同じ場所で、setup の範囲の既定でも除く'
