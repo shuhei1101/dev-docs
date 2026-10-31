@@ -1,0 +1,14 @@
+端末の設定の配信元をメインのリポジトリへ戻す:
+  説明: 端末の設定（~/.config/dev-docs/settings.yaml）の sources[].config のうち、develop のワークツリーを指す shuhdev-gateway・claude-balancer・alias-inject・rule-inject の 4 行を、各リポジトリのメインのリポジトリの dev-docs.yaml を指す行に書き換え、管理の MCP の reload で読み直す
+  タグ: [端末の設定, 読み直し]
+  実行者: tester
+  時期: master へ入った後
+  回数: 1 回限り
+  可逆: true
+  疎通確認: null
+  実行: null
+  確認: null
+  切り戻し: null
+  失敗時: 書き換える前の端末の設定に戻して 1 回やり直し、2 回続けて失敗したら依頼元へ返す
+  確認方法: 管理の MCP の status で 4 つの配信元の config がメインのリポジトリの dev-docs.yaml を指し、describe(source) の結果のワークツリーの一覧に .claude/worktrees/develop が載っている
+  状態: "-"
