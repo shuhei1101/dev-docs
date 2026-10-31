@@ -38,8 +38,7 @@ from dev_docs.features.sources.types import (
 from dev_docs.features.validation.service import DocumentChecker
 from dev_docs.shared.errors import InvalidArgumentError
 from dev_docs.shared.yaml_io import load_yaml
-
-FILES_SCHEMA_TEMPLATE = Path(__file__).parents[5] / "templates" / "files.schema.yaml"
+from tests.unit.dev_docs.conftest import records_files_schema
 
 TODAY = date(2026, 10, 28)
 
@@ -469,17 +468,19 @@ def test_search_when_records_fields(make_env: Callable[..., SearchEnv]) -> None:
         records="files",
         body_file="path",
     )
-    files_schema = load_yaml(FILES_SCHEMA_TEMPLATE.read_text(encoding="utf-8"))
+    files_schema = load_yaml(records_files_schema("owner", "string"))
     env = make_env(
         {
-            "notes/files.yaml": "files:\n  - path: a.md\n  - path: b.md\n",
+            "notes/files.yaml": (
+                "files:\n  - path: a.md\n    owner: alice\n  - path: b.md\n    owner: bob\n"
+            ),
             "notes/a.md": "# a\n",
             "notes/b.md": "# b\n",
         },
         documents=[table],
         schemas={"notes": files_schema},
     )
-    condition = Condition(field="path", op="eq", values=["a.md"])
+    condition = Condition(field="owner", op="eq", values=["alice"])
     # 実行
     result = env.search(filter=condition)
     # 検証
