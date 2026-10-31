@@ -280,13 +280,14 @@ scenarios:
         CC->>HK: SessionStart
         HK->>DD: ポートにつながる
         HK->>DD: cwd で使える配信元・索引の同期の件数・設定のバージョンの新旧を取る
-        HK-->>CC: 配信元の一覧と短い使い方を文脈に追加する
+        HK-->>CC: 配信元の一覧と警告を文脈に追加する
         CC->>DD: /mcp につながる
       ```
     expected:
       - セッションの文脈に、使える配信元 `sample`（読み書き）・`notes`（読み取りだけ）の名前・権限・`description` が 1 行ずつ入る
-      - 文脈に `describe(source)` で種類と書き方を確かめること、タグは `search_docs` の `group_by="tags"` で使われているタグを見て同じ意味のタグを使い回すこと、`source="*"`・`view="full"`・`list_changes` の使い方と、範囲のファイルを作った・消した・改名したら管理用の YAML の行を直す 1 文が入る
+      - 文脈に、使い分けは文書の MCP の instructions にあることを示す 1 行が入り、`describe(source)`・`search_docs`・`list_changes` の使い方の行とタグの付け方の行は入らない
       - 文脈に sample の索引の同期の件数 1 と、old の設定が古いことが入る
+      - 文脈が 1,000 字以内に収まる
       - dev-docs のプロセスは増えず、つなぎ直しの案内は入らない
     test: test_normal_when_session_context_added
   - name: 異常シナリオ（SessionStart で起動できない）
