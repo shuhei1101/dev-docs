@@ -1,6 +1,6 @@
 $schema: https://json-schema.org/draft/2020-12/schema
 title: 管理用の YAML
-description: 'ソースコードなど YAML でない文書のメタデータを持つ YAML。文書の行の `records: files`・`body_file: path` で指す。'
+description: 'ソースコードなど YAML でない文書のメタデータを持つ YAML。文書の行の `records: files`・`body_file: path` で指す。行の `schema` にはこのファイル全体のスキーマを指し、1 行ずつの検査には `files.items` を当てる。'
 type: object
 required:
   - files

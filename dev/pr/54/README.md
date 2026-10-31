@@ -37,7 +37,7 @@ SessionStart のフックは session-context の応答を待ちきり、配信�
 - [x] ~~部品設計~~（部品の引数・状態が変わらない）
 - [x] ~~画面設計~~（UI 項目と操作が変わらない。変わるのは本文のリンクの行き先の解決だけ）
 - [x] モジュール構成設計
-- [ ] ドキュメント修正（templates/files.schema.yaml・docs/リファレンス/設定.md・docs/リファレンス/管理のMCP.md）
+- [x] ドキュメント修正（templates/files.schema.yaml・docs/リファレンス/設定.md・docs/リファレンス/管理のMCP.md）
 - [ ] 単体テスト作成
 - [ ] 実装
 - [ ] 結合テスト作成
