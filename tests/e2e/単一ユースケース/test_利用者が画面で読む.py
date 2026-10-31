@@ -342,12 +342,12 @@ def test_normal_when_files_index_relative_link(
     )
     served = serve(source)
     page.goto(served.url("/sample/notes/files/notes/a"))
-    expect(_heading(page)).to_have_text("A")
+    expect(_heading(page)).to_have_text("a")
     # 実行
     page.get_by_role("main").get_by_role("link", name="B").click()
     # 検証
-    expect(page).to_have_url(re.compile(r"/sample/notes/files/notes/b$"))
-    expect(_heading(page)).to_have_text("B")
+    expect(page).to_have_url(re.compile(r"/sample/notes/b\.md$"))
+    expect(_heading(page)).to_have_text("b")
     expect(page.get_by_role("main")).to_contain_text("B の本文。")
     expect(page.get_by_role("main")).not_to_contain_text("文書が見つかりません")
     current = page.get_by_role("navigation", name="文書の一覧").locator('[aria-current="page"]')
