@@ -741,8 +741,8 @@ functions:
         expected: 1 つ目のタブは 2 件の `page` の項目、2 つ目のタブは rules の 1 件だけ
       - name: test_build_nav_when_records_filter
         case: 正常
-        summary: records の行の 1 行の項目で絞った auto
-        condition: '行 `notes`（`records: files`、`schema` が `templates/files.schema.yaml` のコピーの `files.items.properties` に `owner: {type: string}` を追加したもの）に要素 `{path: a.md, owner: alice}`・`{path: b.md, owner: bob}`、`auto: {document: notes, filter: {field: owner, op: eq, values: [alice]}}`'
+        summary: records の行の 1 行の項目の型で比べる auto
+        condition: '行 `notes`（`records: files`、`schema` が `templates/files.schema.yaml` のコピーの `files.items.properties` に `priority: {type: integer}` を追加したもの）に要素 `{path: a.md, priority: 10}`・`{path: b.md, priority: 9}`、`auto: {document: notes, filter: {field: priority, op: gte, values: [10]}}`'
         mock: なし
         expected: タブの `page` の項目が `a.md` の要素 1 件
   - name: first_page
