@@ -5,6 +5,7 @@ import re
 import subprocess
 import urllib.request
 from pathlib import Path
+from typing import Any
 
 SETTINGS = Path.home() / ".config/dev-docs/settings.yaml"
 BACKUP = Path.home() / ".config/dev-docs/settings.yaml.pr50.bak"
@@ -52,7 +53,9 @@ def config_at_default_ref(config: str) -> bool:
     return result.returncode == 0
 
 
-def _post(url: str, body: dict, session_id: str | None) -> tuple[dict | None, str | None]:
+def _post(
+    url: str, body: dict[str, Any], session_id: str | None
+) -> tuple[dict[str, Any] | None, str | None]:
     """JSON-RPC を 1 回送り、応答の JSON とセッション ID を返す。"""
     headers = {"Content-Type": "application/json", "Accept": "application/json, text/event-stream"}
     if session_id:
@@ -88,7 +91,7 @@ def initialize(url: str) -> str | None:
     return session_id
 
 
-def call_tool(url: str, name: str, arguments: dict) -> str:
+def call_tool(url: str, name: str, arguments: dict[str, Any]) -> str:
     """MCP のツールを呼び、結果の text を連結して返す。エラーの結果は RuntimeError にする。"""
     session_id = initialize(url)
     body = {
