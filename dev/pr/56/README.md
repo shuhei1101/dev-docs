@@ -36,7 +36,7 @@ dev-docs 自身のプロンプトを `content/prompts/` へ移す作業は #48 �
 - [x] ~~部品設計~~（画面の部品を追加しない。本文は変換の Markdown を既存の文書の画面が描く）
 - [x] ~~画面設計~~（UI 項目と操作が変わらない。変わるのは Markdown の本文）
 - [x] モジュール構成設計
-- [ ] ドキュメント修正（templates/dev-docs.yaml・docs/リファレンス/設定.md・docs/使い方/配信元を配信する.md・docs/リファレンス/CLI.md・docs/リファレンス/用語集.md・plugins/dev-docs/skills/setup/SKILL.md）
+- [x] ドキュメント修正（templates/dev-docs.yaml・docs/リファレンス/設定.md・docs/使い方/配信元を配信する.md・docs/リファレンス/CLI.md・docs/リファレンス/用語集.md・plugins/dev-docs/skills/setup/SKILL.md）
 - [ ] 単体テスト作成
 - [ ] 実装
 - [ ] 結合テスト作成
