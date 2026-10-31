@@ -61,10 +61,15 @@ argument-hint: "[path]"
      | `tests` | テストのファイル。ファイル名から `test_` の接頭辞（`_test`・`.test` の接尾辞）を除いた名前のコードを指す（`to` は文書の ID で、拡張子を除いたパス）。同じ名前のコードが範囲に無ければ付けない |
      | `implements` | 答えた種類の文書を `search_docs`（`filter` は `kind`、`format: json`）で引き、そのキーの値とパスが一致するコード。その設計書を指す。種類とキーが無しなら付けない |
 
-   - 追加・削除・改名と、仮のメタデータ・関連の候補を表で示し、書いてよいかを聞く。断られたら何も書き換えずに止まる
+   - 配信元の直下と、配信元の中のプラグインのルート（`.claude-plugin/plugin.json` を持つフォルダ）で `content/prompts/` を探す。見つけたフォルダのうち、`content/prompts/**/*.yaml`（プラグインのルートは `{ルート}/content/prompts/**/*.yaml`）を `paths` に持つ行が `dev-docs.yaml` に無いものごとに、次の候補を加える
+     - `{clone}/templates/dev-docs.yaml` の `prompts` の行の `paths` をそのフォルダにした `documents` の行。プラグインのルートの行は `id` を `prompts-{ルートのフォルダ名}` にする
+     - `converters[]` に `prompt-doc` の行が無ければ、雛形の `prompt-doc` の行
+     - `nav` の、プロンプトの行を `auto` で並べ `group_by: kind` でまとめる `プロンプト` のタブ。`nav` が無ければ、今の `documents` の行ごとの `auto` のタブ（`title` は行の `title`）を先に並べる
+   - 追加・削除・改名と、仮のメタデータ・関連・プロンプトの行の候補を表で示し、書いてよいかを聞く。断られたら何も書き換えずに止まる
 
 5. 確認が済んだものを書く。
-   - `dev-docs.yaml` が無い場合、`{clone}/templates/dev-docs.yaml` から `dev-docs.yaml` を作り、1 行目のスキーマの行のタグを `{tag}` に、`name`・`description`・`documents[].paths` を決めた値にする。`{clone}/templates/files.schema.yaml` を `{path}/schemas/files.schema.yaml` にコピーする
+   - `dev-docs.yaml` が無い場合、`{clone}/templates/dev-docs.yaml` から `dev-docs.yaml` を作り、1 行目のスキーマの行のタグを `{tag}` に、`name`・`description`・`files` の行の `paths` を決めた値にする。雛形の `prompts` の行と `converters[]` は削除する。`{clone}/templates/files.schema.yaml` を `{path}/schemas/files.schema.yaml` にコピーする
+   - プロンプトの行の候補が了承された場合、`dev-docs.yaml` に `documents`・`converters[]`・`nav` の行を書き、`{clone}/templates/prompt.schema.yaml` を `{path}/schemas/prompt.schema.yaml` にコピーする
    - 管理用の YAML の行は、`write_docs` で書く（配信元が登録済みのとき）。登録前の配信元は、`templates/files.schema.yaml` に沿って `files.yaml` を直接書く
    - `check_project`（`path` は配信元のフォルダ）を呼び、違反が無いことを確かめる。違反があれば示して止まり、端末の設定は書き換えない
 
