@@ -1,0 +1,14 @@
+dev-docs のサーバーの再起動:
+  説明: develop の worktree から起動して稼働中の dev-docs のサーバー（127.0.0.1:8781）を、マージした develop のコードで起動し直し、スラッシュ無しの /mcp・/_admin/mcp への POST を MCP に届ける
+  タグ: [再起動]
+  実行者: planner
+  時期: マージの後
+  回数: 1 回限り
+  可逆: true
+  疎通確認: null
+  実行: null
+  確認: null
+  切り戻し: null
+  失敗時: 既定の対処を 1 回、2 回連続で失敗したら依頼元へ返す
+  確認方法: http://127.0.0.1:8781/mcp と http://127.0.0.1:8781/_admin/mcp へ MCP の initialize を POST すると、リダイレクトを挟まずに 200 が返る
+  状態: "-"
