@@ -209,7 +209,7 @@ functions:
       2. `source` が無い場合、作業場所の説明と使える配信元を返す（使える配信元が 0 件でも返す）
       3. `source` がある場合、読む場所を解く（読む場所の解決。`source`・`worktree`・`cwd`）。作業中の配信元の作業ツリーかワークツリーを読むときは、その場所の設定を読み直した配信元を使う（作業場所の配信元の読み込み）
       4. `kind` が無い場合、`instructions` と、有効な文書の行ごとの種類の概要（スキーマは文書のストア.種類のスキーマ）を返す
-      5. `kind` がある場合、文書の行を引き（無ければ `UnknownKindError`）、`target.base` の `schema` のファイルの内容と文書に当てるスキーマ（文書のストア.文書に当てるスキーマ）、行の `metadata` を返す
+      5. `kind` がある場合、文書の行を引き（無ければ `UnknownKindError`）、`target.base` の `schema` のファイルの内容と読んだスキーマ、行の `metadata` を返す
     exceptions:
       - name: InvalidArgumentError
         condition: '`source` の無い `kind`'
@@ -265,12 +265,6 @@ functions:
         mock: なし
         expected: '`ValidationFailedError` で違反が `documents[0].paths`'
         exception: 作業場所の配信元の読み込みが送る
-      - name: test_describe_when_records_kind
-        case: 正常
-        summary: records の行の種類のスキーマ
-        condition: '`source: sample`・`kind: notes`（`records: files`、`schema` が `templates/files.schema.yaml` のコピー）'
-        mock: なし
-        expected: '`schema` が `files` の `items`、`schema_text` がスキーマのファイルと同じ文字列'
   - name: render_describe_markdown
     title: 説明の Markdown
     kind: 関数
