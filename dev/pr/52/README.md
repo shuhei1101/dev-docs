@@ -33,7 +33,7 @@ develop の `ai-monitor-version.ini` は `v0.2.0` のまま、`docs/_theme/` は
 - [x] ~~部品設計~~（影響なし）
 - [x] ~~画面設計~~（dev-docs の画面を変えない）
 - [x] ~~モジュール構成設計~~（影響なし）
-- [ ] ドキュメント修正（docs/_theme/・ai-monitor-theme.yaml・ai-monitor-version.ini・dev/設計書/デザイン方針.md・docs/リファレンス/CLI.md・docs/リファレンス/文書のMCP.md・docs/リファレンス/管理のMCP.md・docs/リファレンス/設定.md・docs/使い方/dev-docsを更新する.md・docs/使い方/配信元を配信する.md）
+- [x] ドキュメント修正（docs/_theme/・ai-monitor-theme.yaml・ai-monitor-version.ini・dev/設計書/デザイン方針.md・docs/リファレンス/CLI.md・docs/リファレンス/文書のMCP.md・docs/リファレンス/管理のMCP.md・docs/リファレンス/設定.md・docs/使い方/dev-docsを更新する.md・docs/使い方/配信元を配信する.md）
 - [x] ~~単体テスト作成~~（コードを変えない）
 - [x] ~~実装~~（コードを変えない）
 - [x] ~~結合テスト作成~~（コードを変えない）
