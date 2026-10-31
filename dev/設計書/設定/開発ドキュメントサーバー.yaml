@@ -251,6 +251,16 @@ settings:
     required: true
     description: 標準入力に文書の内容、標準出力に Markdown を返すコマンド
     reload: reload
+  - key: converters[].cache
+    title: 変換の結果の控え
+    file: dev-docs.yaml
+    type: bool
+    required: false
+    default: 'true'
+    description: '`false` の行の変換は、控えを読まず書かず、文書を開くたびにスクリプトを動かす。本文の外のファイルを読む変換で使う'
+    reload: reload
+    notes:
+      持たない表: '`validators[]`・`generators[]` の行は持たない'
   - key: generators[].id
     title: 生成の ID
     file: dev-docs.yaml

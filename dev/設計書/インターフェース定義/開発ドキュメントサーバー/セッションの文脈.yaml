@@ -4,7 +4,7 @@ entry:
   value: POST /_admin/session-context
 flows:
   - name: 正常系
-    summary: ワークツリーから使える配信元と使い方・警告を返す
+    summary: ワークツリーから使える配信元と警告を返す
     setup:
       - name: Mock
         description: なし（dev-docs のアプリをテストのクライアントで呼ぶ）
@@ -22,8 +22,8 @@ flows:
       ```
     expected:
       - '`sources` が sample（`read_write`）と notes（`read`）'
-      - '`context` に両方の配信元の行と、管理用の YAML の行を修正する使い方と、タグを `group_by="tags"` で使い回す使い方がある'
-      - '`warnings` に sample の管理用の YAML に無いファイル 1 件がある'
+      - '`context` に両方の配信元の行がある'
+      - '`warnings` に sample の管理用の YAML に無いファイル 1 件があり、`context` にも同じ警告がある'
       - '`forgotten` が `false`'
     test: test_normal
   - name: 正常系（/clear の後）
@@ -66,7 +66,7 @@ flows:
       ```
     expected:
       - '`sources` が空'
-      - '`context` が `/dev-docs:setup` の案内を含み、使い方を含まない'
+      - '`context` が `/dev-docs:setup` の案内を含み、instructions を指す行を含まない'
     test: test_normal_when_no_source_available
   - name: 異常系（入力が不正・422）
     summary: '`reason` が選択肢の外だと 422 を返し、記録を削除しない'
@@ -88,8 +88,8 @@ flows:
       - 422 で `reason` の違反を返す
       - 同じ `session_id` の返し済みの記録が残っている
     test: test_error_when_input_invalid
-  - name: 正常系（タグの付け方を案内する）
-    summary: 文脈のタグの行にタグの付け方を載せ、文書の MCP の instructions と同じ内容にする
+  - name: 正常系（使い分けの案内先を示す）
+    summary: '`context` はタグの行を持たず、使い分けは文書の MCP の instructions にある旨を 1 行で示す'
     setup:
       - name: Mock
         description: なし
@@ -109,11 +109,38 @@ flows:
         M-->>C: instructions
       ```
     expected:
-      - '`context` のタグの行が、単語まで分けてタグにすること・`action:`・`topic:`・`tool:` の命名・配信元のタグの規約に従うことを含む'
-      - 文書の MCP の instructions のタグの行が `context` のタグの行と同じ
-      - '`context` が 2,000 字以内'
-    test: test_normal_when_tag_guide_included
-lead: SessionStart のフックが呼ぶ。cwd から使える配信元と使い方・索引の同期の件数・古い設定の警告を、セッションの文脈に入れる文として返す。`/clear`・圧縮の後は、そのセッションの返し済みの記録を捨てる。
+      - '`context` に、使い分けは文書の MCP の instructions にある旨の行が 1 つある'
+      - '`context` に `describe(source)`・`group_by="tags"`・`action:` の語が無い'
+      - 文書の MCP の instructions にタグの行（単語まで分けてタグにすること・`action:`・`topic:`・`tool:` の命名）がある
+      - '`context` が 1,000 字以内'
+    test: test_normal_when_usage_pointer_included
+  - name: 正常系（字数の上限を超える）
+    summary: 配信元が多く 1,000 字を超えるとき、説明を省き、それでも超えれば配信元の行を減らして残りの件数を添える
+    setup:
+      - name: Mock
+        description: なし
+      - name: 端末の設定
+        description: sample のワークツリーが当たる `scope.write` を持つ配信元を 40 件並べ、それぞれ 24 字の ID と 100 字の `description` を持たせる
+        notes: 説明を省いた行は `- {ID}（読み書き）` で 1 行 32 字、40 件で 1,280 字になり、1,000 字を超える
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        participant C as クライアント
+        participant T as POST /_admin/session-context
+
+        C->>T: cwd
+        T->>T: 配信元と警告を渡して描画する
+        T->>T: 1,000 字を超えたので説明を省いて描画し直す
+        T->>T: まだ超えるので配信元を末尾から減らし、残りの件数を渡して描画し直す
+        T-->>C: context
+      ```
+    expected:
+      - '`context` が 1,000 字以内'
+      - '`context` に配信元の `description` が無く、省いた配信元の件数がある'
+      - '`context` に instructions を指す行が残っている'
+      - '`sources` は 40 件全てを持つ'
+    test: test_normal_when_context_over_limit
+lead: SessionStart のフックが呼ぶ。cwd から使える配信元・索引の同期の件数・古い設定の警告を、プロンプトの YAML で描画したセッションの文脈の文として返す。`/clear`・圧縮の後は、そのセッションの返し済みの記録を捨てる。
 identifier: post_session_context
 permissions: なし（`127.0.0.1` でだけ待ち受ける）
 idempotent: true
@@ -153,8 +180,8 @@ request_example: |-
 response:
   - name: context
     type: str
-    description: 文脈に入れる文。使える配信元ごとの 1 行（ID・読み書きか読み取りだけか・`description`）、場面ごとの短い使い方、警告
-    notes: 使い方には「範囲のファイルを作った・消した・改名したら、管理用の YAML の行を修正する」と「`describe(source)` で種類と書き方を確かめ、タグは `search_docs` の `group_by="tags"` で使われているタグを見て同じ意味のタグを使い回す」を含める。タグの行は、単語まで分けてタグにすること・`action:`・`topic:`・`tool:` の命名・配信元のタグの規約に従うことを案内し、文書の MCP の instructions のタグの行と同じ内容にする
+    description: '文脈に入れる文。プロンプトの YAML（`kind: hook`）を描画したもので、使える配信元ごとの 1 行（ID・読み書きか読み取りだけか・`description`）、使い分けは文書の MCP の instructions にある旨の 1 行、警告を持つ'
+    notes: ツールの使い方の行とタグの付け方の行は持たない（文書の MCP の instructions が持つ）
   - name: sources[].id
     type: str
     description: 使える配信元の ID
@@ -176,7 +203,7 @@ constraints:
     constraint: 管理の MCP のツールにしない。`/_api/openapi.json` にも載せない
     notes: フックだけが呼ぶ操作で、エージェントのツール一覧に出さないため
   - item: 文の長さ
-    constraint: '`context` は 2,000 字以内。超えるときは配信元の `description` を省き、それでも超えるときは配信元の行を切って残りの件数を添える'
+    constraint: '`context` は 1,000 字以内。超えるときは配信元の `description` を省いて描画し直し、それでも超えるときは配信元の行を末尾から減らして残りの件数を添える'
     notes: 毎セッションの文脈に入るため短く保つ
   - item: 同期の件数
     constraint: '`status` と同じ関数で求め、使える配信元だけを警告に載せる'
@@ -184,6 +211,9 @@ constraints:
     constraint: '`reason` が `clear`・`compact` で `session_id` があるときだけ削除する。`startup`・`resume`・`fork` では削除しない'
   - item: タイムアウト
     constraint: 制限なし（呼ぶ側のフックが 11 秒で打ち切る）。配信元のファイルの一覧は配信元ごとに 1 回だけたどる
+  - item: 文の出どころ
+    constraint: '文はプロンプトの YAML（`kind: hook`）だけが持ち、サーバーは配信元・警告・省いた配信元の件数を変数で渡して描画する。使える配信元が無いときの `/dev-docs:setup` の案内も YAML が持つ'
+    notes: YAML は起動のときに読んで検査する（dev/設計書/インターフェース定義/開発ドキュメントサーバー/起動）
 status_codes:
   - code: '200'
     condition: 文脈を組み立てた（使える配信元が 0 件のときも `/dev-docs:setup` の案内を返す）

@@ -486,6 +486,70 @@ scenarios:
       - リンク B を押すと b の本文が出て、「文書が見つかりません」にならない
       - サイドバーで b が選ばれた状態になる
     test: test_normal_when_files_index_relative_link
+  - name: 正常シナリオ（変換の結果をキャッシュしない）
+    setup:
+      - name: Mock
+        description: なし（実環境で実行）
+      - name: 変換を持つ配信元
+        description: '`converters[]` に `cache: false` の行を持ち、文書の種類の 1 つがそれを指す配信元。スクリプトは本文の外の参照先の YAML を読んで Markdown を出す'
+        notes: id `custom`
+      - name: dev-docs
+        description: custom を配信している dev-docs
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        actor U as 利用者
+        participant UI as dev-docs の画面
+        participant API as 画面の API
+        participant SC as 配信元のスクリプト
+
+        U->>UI: cache: false の変換を指す種類の文書を開く
+        UI->>API: 文書の取得
+        API->>SC: 標準入力に YAML を渡す
+        SC-->>API: 参照先の内容を入れた Markdown
+        API-->>UI: スクリプトの Markdown
+        U->>U: 本文の外の参照先の YAML を書き換える
+        U->>UI: 同じ文書を開き直す
+        UI->>API: 文書の取得
+        API->>SC: 標準入力に YAML を渡す
+        SC-->>API: 書き換えた後の参照先の内容を入れた Markdown
+        API-->>UI: スクリプトの Markdown
+      ```
+    expected:
+      - 開き直した本文に、書き換えた後の参照先の内容が出る
+      - 変換の結果の控えのフォルダに、その変換の控えのファイルができない
+    test: test_normal_when_converter_cache_disabled
+  - name: 正常シナリオ（変換の結果をキャッシュする）
+    setup:
+      - name: Mock
+        description: なし（実環境で実行）
+      - name: 変換を持つ配信元
+        description: '`converters[]` に `cache` を書かない行を持ち、文書の種類の 1 つがそれを指す配信元。スクリプトは本文の外の参照先の YAML を読んで Markdown を出す'
+        notes: id `custom`
+      - name: dev-docs
+        description: custom を配信している dev-docs
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        actor U as 利用者
+        participant UI as dev-docs の画面
+        participant API as 画面の API
+        participant SC as 配信元のスクリプト
+
+        U->>UI: cache を書かない変換を指す種類の文書を開く
+        UI->>API: 文書の取得
+        API->>SC: 標準入力に YAML を渡す
+        SC-->>API: 参照先の内容を入れた Markdown
+        API-->>UI: スクリプトの Markdown
+        U->>U: 本文の外の参照先の YAML を書き換える
+        U->>UI: 同じ文書を開き直す
+        UI->>API: 文書の取得
+        API-->>UI: 控えの Markdown
+      ```
+    expected:
+      - 開き直した本文が 1 回目と同じで、書き換えた後の参照先の内容は出ない
+      - 変換の結果の控えのフォルダに、その変換の控えのファイルができる
+    test: test_normal_when_converter_cache_enabled
 lead: 利用者がブラウザで配信元の文書の画面を開き、タブ・サイドバー・検索・リビジョンの切り替え・差分で文書を読む。
 issue: 17
 primary_actor: 利用者

@@ -581,15 +581,39 @@ scenarios:
         participant H as SessionStart のフック
         participant M as 文書の MCP（/mcp）
 
-        H-->>A: 注入文（使える配信元とタグの付け方）
+        H-->>A: 注入文（使える配信元と、使い分けは instructions にある旨）
         A->>M: initialize
         M-->>A: instructions（タグの付け方）
       ```
     expected:
-      - SessionStart の注入文のタグの行が、単語まで分けてタグにすること・`action:`・`topic:`・`tool:` の命名・配信元のタグの規約に従うことを案内する
-      - 文書の MCP の instructions のタグの行が、注入文と同じ内容を案内する
-      - 注入文が 2,000 字の上限に収まる
+      - 文書の MCP の instructions のタグの行が、単語まで分けてタグにすること・`action:`・`topic:`・`tool:` の命名・配信元のタグの規約に従うこと・付ける前に `group_by="tags"` で使われているタグを見ることを案内する
+      - SessionStart の注入文はタグの行を持たず、使い分けは文書の MCP の instructions にあることを 1 行で示す
+      - 注入文が 1,000 字の上限に収まる
     test: test_normal_when_tag_guide_injected
+  - name: 正常シナリオ（MCP を使う場面の案内を受け取る）
+    setup:
+      - name: Mock
+        description: なし（実環境で実行）
+      - name: dev-docs
+        description: sample を配信している dev-docs
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        actor A as エージェント
+        participant M as 文書の MCP（/mcp）
+
+        A->>M: initialize
+        M-->>A: instructions（使う場面・grep と Read が向く場面・ツールの順序）
+        A->>M: tools/list
+        M-->>A: ツールごとの description
+      ```
+    expected:
+      - instructions が、`search_docs`・`trace_related`・`list_changes`・`write_docs` を使う場面と、grep・Read が向く場面（コードの識別子・文字列の出現箇所、配信の範囲の外のファイル）を案内する
+      - instructions が、`describe(source)` で種類と書き方を確かめてから探す・書く順序を案内する
+      - instructions が 4,096 字以内に収まる
+      - 文書の MCP の各ツールの description が、何をする・いつ使う・いつ使わない・何を返さないを持つ
+      - instructions・description に `MUST`・`必ず`・`禁止` の語が無い
+    test: test_normal_when_usage_guide_received
 lead: エージェントが文書の MCP の `describe`・`search_docs`・`trace_related` で、今の作業場所から読める配信元の文書を探して読む。
 issue: 3
 primary_actor: エージェント（Claude Code）

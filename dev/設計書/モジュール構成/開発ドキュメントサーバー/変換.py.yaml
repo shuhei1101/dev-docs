@@ -403,7 +403,7 @@ classes:
     usecase: 文書の取得
     role: サービス
     summary: 文書の行の設定で変換を選び、埋め込みを展開した Markdown を返す
-    description: '`converters[]` の結果は (配信元, 種類, 変換の ID, 文書のバージョン, `run` の値のハッシュ, dev-docs のバージョン `RUNNING_VERSION`) を名前にしたファイルで `{state_dir}/converted` に控え、同じ文書・バージョンは 1 回だけ変換する。'
+    description: '`converters[]` の結果は (配信元, 種類, 変換の ID, 文書のバージョン, `run` の値のハッシュ, dev-docs のバージョン `RUNNING_VERSION`) を名前にしたファイルで `{state_dir}/converted` に控え、同じ文書・バージョンは 1 回だけ変換する。`converters[]` の行の `cache` が `False` の変換は控えを読まず書かず、要求のたびにスクリプトを動かす。'
     kind: クラス
     properties:
       - name: cache_dir
@@ -448,7 +448,7 @@ classes:
         process: |-
           1. 文書の行を引く（`target.source.table(document.kind)`）
           2. Markdown を作る
-             - `converter` がある場合、`cache_dir` の控えがあればそれを使う。無ければスクリプトの実行（`cwd=target.base`・`stdin` に文書の YAML・制限時間 `timeout_sec`・`at`。`at` は `target.worktree` が `None` で `source.config_commit` がある場合に（`source.main_root`, `source.config_commit`））の標準出力を使い、一時ファイルから置き換えて控える。控えが `CONVERT_CACHE_KEEP` を超えたら古いものを消す
+             - `converter` がある場合、行（`target.source.script("converters", converter)`）の `cache` が `True` で `cache_dir` の控えがあればそれを使う。無ければスクリプトの実行（`cwd=target.base`・`stdin` に文書の YAML・制限時間 `timeout_sec`・`at`。`at` は `target.worktree` が `None` で `source.config_commit` がある場合に（`source.main_root`, `source.config_commit`））の標準出力を使い、`cache` が `True` なら一時ファイルから置き換えて控える。控えが `CONVERT_CACHE_KEEP` を超えたら古いものを消す。`cache` が `False` なら控えを書かない
                - `ScriptTimeoutError`・`ScriptFailedError`・実行できない `ScriptError` の場合、`reason` が `timeout`・`exit`・`not_runnable` の `ConvertFailure` を返す
              - `converter` が無く Markdownの本文かが `True` の場合、`document.body` をそのまま使う
              - それ以外は、スキーマ駆動の変換（スキーマは文書のストア.文書に当てるスキーマ `store.row_schema(target, kind)`）
@@ -467,6 +467,12 @@ classes:
             condition: '`converters[]` を指す行の同じ文書を 2 回'
             mock: '`run_script`（`# 変換した` を返し、呼ばれた数を数える）'
             expected: 2 回とも `# 変換した` で、スクリプトは 1 回だけ呼ばれる
+          - name: test_convert_service_convert_when_cache_disabled
+            case: 正常
+            summary: 'cache: false の変換は毎回スクリプトを動かし、控えを書かない'
+            condition: '`cache: false` の `converters[]` を指す行の同じ文書を 2 回'
+            mock: '`run_script`（`# 変換した` を返し、呼ばれた数を数える）'
+            expected: 2 回とも `# 変換した` で、スクリプトは 2 回呼ばれ、`cache_dir` にファイルが無い
           - name: test_convert_service_convert_when_dev_docs_updated
             case: 正常
             summary: dev-docs のバージョンが変わったら変換し直す

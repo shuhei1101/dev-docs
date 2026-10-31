@@ -1,5 +1,5 @@
 title: "開発ドキュメントサーバー / セッションの文脈 / service.py"
-lead: SessionStart のフックが文脈に入れる文（使える配信元・使い方・警告）を組み立て、`/clear`・圧縮の後は返し済みの記録を削除する。
+lead: SessionStart のフックが文脈に入れる文（使える配信元・警告）をプロンプトの YAML で描画し、`/clear`・圧縮の後は返し済みの記録を削除する。
 functions:
   - name: build_session_context
     title: セッションの文脈の組み立て
@@ -24,7 +24,7 @@ functions:
         type: Handlers
         required: true
         passing: keyword
-        description: 登録簿・文書のストア・会話の記録を使う
+        description: 登録簿・文書のストア・会話の記録・プロンプトの一式を使う
     returns:
       type: SessionContextResponse
       description: 文脈の文と内訳
@@ -33,16 +33,14 @@ functions:
          - `[INFO]` 返し済みの記録を削除した（セッション ID・件数）
       2. 作業場所から使える配信元と権限を引く（`available_sources`）
       3. 警告を集める（警告の収集）
-      4. 使える配信元に応じて文を作る
-         - 0 件の場合、`SETUP_GUIDE` だけにする
-         - それ以外の場合、配信元の行・`SESSION_USAGE`・警告をつなぐ（文脈の文）
+      4. 使える配信元と警告で文を描画する（文脈の文、プロンプトは `handlers.prompts`）
     unit_tests:
       - name: test_build_session_context
         case: 正常
         summary: 使える配信元・使い方・警告を返す
         condition: 書ける sample（管理用の YAML に無いファイル 1 件）と読める notes、`reason` は `startup`
         mock: なし（一時ディレクトリ）
-        expected: '`sources` が sample（`read_write`）と notes（`read`）、`context` に `SESSION_USAGE` を含む、`warnings` が 1 件、`forgotten` が `False`'
+        expected: '`sources` が sample（`read_write`）と notes（`read`）、`context` に両方の ID と警告と `instructions` の語を含み `describe(source)` を含まない、`warnings` が 1 件、`forgotten` が `False`'
       - name: test_build_session_context_when_cleared
         case: 正常
         summary: '`/clear` の後は返し済みの記録を削除する'
@@ -60,7 +58,7 @@ functions:
         summary: 使える配信元が無い
         condition: '`cwd` がどの配信元の範囲にも当たらない'
         mock: なし
-        expected: '`sources` が空、`context` が `SETUP_GUIDE`'
+        expected: '`sources` が空、`context` が `/dev-docs:setup` を含み `instructions` の語を含まない'
     callers:
       - dev/設計書/モジュール構成/開発ドキュメントサーバー/features/session_context/route.py#functions[build_session_context_router]
     callees:
@@ -127,7 +125,7 @@ functions:
     container: features/session_context/service.py
     usecase: セッションの文脈
     role: 表示
-    summary: 配信元の行・使い方・警告を `CONTEXT_MAX_CHARS` 字以内の文にする
+    summary: 配信元と警告をプロンプトの YAML で `CONTEXT_MAX_CHARS` 字以内の文に描画する
     scope: internal
     is_async: false
     thread_safe: true
@@ -137,40 +135,45 @@ functions:
         type: list[SourceAccess]
         required: true
         passing: positional
-        description: 1 件以上
+        description: '`available_sources` の結果（0 件もある）'
       - name: warnings
         title: 警告
         type: list[str]
         required: true
         passing: positional
         description: 警告の収集の結果
+      - name: prompts
+        title: プロンプトの一式
+        type: PromptSet
+        required: true
+        passing: keyword
+        description: '`handlers.prompts`'
     returns:
       type: str
       description: 文脈の文
     process: |-
-      1. 先頭に `dev-docs の文書の MCP（dev-docs）で、次の配信元を使えます。` を置き、配信元ごとに `- {id}（読み書き|読み取りだけ）: {description}` を並べる
-      2. `SESSION_USAGE` と `TAG_GUIDE` を続け、警告があれば `注意:` の下に `- {警告}` を並べる
-      3. `CONTEXT_MAX_CHARS` を超える場合、配信元の行の `description` を省く
-      4. それでも超える場合、収まるまで配信元の行を末尾から削除し、`- ほか {件数} 件` を置く
+      1. 配信元ごとに `{id, access, description}`（`access` は `read_write` か `read`）を作り、`sources`・`omitted`（0）・`warnings` を渡して `SESSION_CONTEXT_PROMPT_ID` を描画する。見出し・配信元の行・権限の表示・instructions を指す行・配信元が無いときの `/dev-docs:setup` の案内・警告の見出しは YAML が持つ
+      2. `CONTEXT_MAX_CHARS` を超える場合、`description` を `None` にして描画し直す
+      3. それでも超える場合、収まるまで配信元を末尾から 1 件ずつ減らし、減らした件数を `omitted` に入れて描画し直す
     unit_tests:
       - name: test_context_text
         case: 正常
-        summary: 配信元の行・使い方・警告をつなぐ
-        condition: 配信元 2 件・警告 1 件
+        summary: 配信元の行・警告・instructions を指す行を描画する
+        condition: 配信元 2 件（書ける 1 件・読める 1 件）・警告 1 件、プロンプトは同梱した YAML（`load_prompts(DEFAULT_PROMPTS_DIR, required=[SESSION_CONTEXT_PROMPT_ID])`）
         mock: なし
-        expected: 配信元の行 2 つ・`SESSION_USAGE`・`注意:` の下の警告をこの順で含む
+        expected: 配信元の ID・`description`・警告・`instructions` の語を含み、`describe(source)`・`group_by="tags"`・`action:` を含まない
       - name: test_context_text_when_too_long
         case: 正常
-        summary: 上限を超えるときは説明を省き、行を切る
-        condition: '`description` が 500 字の配信元 100 件'
+        summary: 上限を超えるときは説明を省き、配信元を減らす
+        condition: 24 字の ID と 100 字の `description` を持つ書ける配信元 40 件、同梱した YAML
         mock: なし
-        expected: 2,000 字以内で `description` を含まず、`- ほか {件数} 件` を含む
-      - name: test_context_text_when_tag_guide
+        expected: 1,000 字以内で、`description` を含まず、減らした件数と `instructions` の語を含む
+      - name: test_context_text_when_no_source
         case: 正常
-        summary: タグの付け方を含む
-        condition: 配信元 1 件・警告なし
+        summary: 使える配信元が無い
+        condition: 配信元 0 件・警告なし、同梱した YAML
         mock: なし
-        expected: '`TAG_GUIDE` を含み、単語まで分けること・`action:`・`topic:`・`tool:`・`describe(source)` の行がある'
+        expected: '`/dev-docs:setup` を含み、`instructions` の語を含まない'
     callers:
       - '#functions[build_session_context]'
 test_files:

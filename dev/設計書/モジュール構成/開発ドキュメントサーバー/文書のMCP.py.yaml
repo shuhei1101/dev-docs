@@ -8,7 +8,14 @@ directory: |-
   ├─ __init__.py   # build_docs_mcp / build_admin_mcp の再エクスポート
   ├─ docs.py       # build_docs_mcp（7 つのツールの登録）
   ├─ admin.py      # build_admin_mcp（7 つのツールの登録）
-  └─ result.py     # to_tool_result / tool_error / TOOL_ANNOTATIONS
+  └─ result.py     # to_tool_result / tool_error / TOOL_ANNOTATIONS / 2 つの MCP のツール名とプロンプトの ID
+
+  content/prompts/mcp/
+  ├─ docs/
+  │  ├─ instructions.yaml   # 文書の MCP の instructions（kind: instructions）
+  │  └─ tools/{ツール名}.yaml # 文書の MCP のツールの description（kind: tool。ツール名の _ を - にした名前）
+  └─ admin/
+     └─ tools/{ツール名}.yaml # 管理の MCP のツールの description（kind: tool）
   ```
 diagrams:
   - name: 全体
@@ -24,6 +31,11 @@ diagrams:
         文書の MCP の組み立て ..> 関連のたどり
         文書の MCP の組み立て ..> 配信元の説明
         ツールのエラーの変換 ..> 開発ドキュメントサーバーのエラー
+        文書の MCP の組み立て ..> ツールのプロンプトの ID
+        管理の MCP の組み立て ..> ツールのプロンプトの ID
+        class ツールのプロンプトの ID {
+          <<function>>
+        }
         class 文書の MCP の組み立て {
           <<function>>
         }
@@ -185,6 +197,24 @@ constants:
       - key: write_nav
         value: '`readOnlyHint=False`・`destructiveHint=False`'
         description: インターフェース定義『画面の構成の書き込み』
+  - name: DOCS_TOOL_NAMES
+    title: 文書の MCP のツール名
+    container: server/mcp/result.py
+    usecase: 共通
+    summary: 文書の MCP が登録するツールの名前（登録の順）
+    value: ("search_docs", "describe", "list_changes", "trace_related", "write_docs", "delete_docs", "list_match_words")
+  - name: ADMIN_TOOL_NAMES
+    title: 管理の MCP のツール名
+    container: server/mcp/result.py
+    usecase: 共通
+    summary: 管理の MCP が登録するツールの名前（登録の順）
+    value: ("status", "reload", "restart", "update", "check_project", "try_convert", "write_nav")
+  - name: DOCS_INSTRUCTIONS_PROMPT_ID
+    title: 文書の MCP の instructions のプロンプト
+    container: server/mcp/result.py
+    usecase: 共通
+    summary: 文書の MCP の instructions を描画するプロンプトの ID
+    value: '"mcp/docs/instructions"'
 functions:
   - name: to_tool_result
     title: ツールの結果
@@ -295,6 +325,61 @@ functions:
         condition: '`SearchRequest(limit="x")` の検証の誤り'
         mock: なし
         expected: text に `limit:` の行と `describe` の案内
+  - name: tool_prompt_id
+    title: ツールのプロンプトの ID
+    kind: 関数
+    container: server/mcp/result.py
+    usecase: 共通
+    role: 変換
+    summary: ツールの description を描画するプロンプトの ID を作る
+    scope: public
+    is_async: false
+    thread_safe: true
+    args:
+      - name: server
+        title: MCP
+        type: Literal['docs', 'admin']
+        required: true
+        passing: positional
+        description: 文書の MCP か管理の MCP か
+      - name: tool
+        title: ツール名
+        type: str
+        required: true
+        passing: positional
+        description: '`DOCS_TOOL_NAMES`・`ADMIN_TOOL_NAMES` の名前'
+    returns:
+      type: str
+      description: '`mcp/{server}/tools/{ツール名の _ を - にした名前}`'
+    process: 1. ツール名の `_` を `-` にして `mcp/{server}/tools/` に続ける（プロンプトの `id` は小文字とハイフンだけを許す）
+    unit_tests:
+      - name: test_tool_prompt_id
+        case: 正常
+        summary: ツール名をハイフンにする
+        condition: '`tool_prompt_id("docs", "search_docs")`'
+        mock: なし
+        expected: '`mcp/docs/tools/search-docs`'
+  - name: mcp_prompt_ids
+    title: MCP のプロンプトの ID
+    kind: 関数
+    container: server/mcp/result.py
+    usecase: 共通
+    role: 変換
+    summary: 2 つの MCP が描画するプロンプトの ID を並べる（起動の `required` に渡す）
+    scope: public
+    is_async: false
+    thread_safe: true
+    returns:
+      type: list[str]
+      description: '`DOCS_INSTRUCTIONS_PROMPT_ID` と、両方の MCP のツールごとの `tool_prompt_id`'
+    process: 1. `DOCS_INSTRUCTIONS_PROMPT_ID`、`DOCS_TOOL_NAMES` の `tool_prompt_id("docs", …)`、`ADMIN_TOOL_NAMES` の `tool_prompt_id("admin", …)` をこの順に並べる
+    unit_tests:
+      - name: test_mcp_prompt_ids
+        case: 正常
+        summary: instructions と 14 のツール
+        condition: 引数なし
+        mock: なし
+        expected: 15 件で、先頭が `mcp/docs/instructions`、`mcp/admin/tools/check-project` を含む
   - name: build_docs_mcp
     title: 文書の MCP の組み立て
     kind: 関数
@@ -314,12 +399,10 @@ functions:
       type: mcp.server.mcpserver.MCPServer
       description: 文書の MCP（`stateless_http`・`json_response` はアプリの組み立てが `streamable_http_app()` の引数で渡す）
     process: |-
-      1. `MCPServer(DOCS_MCP_NAME, instructions=TAG_GUIDE)` を作る（`TAG_GUIDE` はセッションの文脈の定数。文脈の文のタグの行と同じ文にする）
-      2. `search_docs`・`describe`・`list_changes`・`trace_related`・`write_docs`・`delete_docs`・`list_match_words` を `TOOL_ANNOTATIONS` の注釈で登録する。引数はインターフェース定義の `request` をキーワード引数で受ける（`list_changes` の `from` は `from_: Annotated[str | None, Field(validation_alias="from")]` で受け、ツールの入力のスキーマでは `from` を出す。`alias` は関数の呼び出しで `TypeError` になるため使わない）
+      1. `MCPServer(DOCS_MCP_NAME, instructions=handlers.prompts.render(DOCS_INSTRUCTIONS_PROMPT_ID))` を作る
+      2. `DOCS_TOOL_NAMES` のツールを、`description` を `handlers.prompts.render(tool_prompt_id("docs", 名前))` にして `TOOL_ANNOTATIONS` の注釈で登録する。引数はインターフェース定義の `request` をキーワード引数で受ける（`list_changes` の `from` は `from_: Annotated[str | None, Field(validation_alias="from")]` で受け、ツールの入力のスキーマでは `from` を出す。`alias` は関数の呼び出しで `TypeError` になるため使わない）
          - 要求のモデルのフィールドが `description` を持つ場合、その説明を入力のスキーマの項目の説明に出す（`Annotated[型, Field(description=...)]`）
-         - `search_docs` の説明は、インターフェース定義の冒頭リードに続けて `op: regex は値の各行に当たる（値全体の先頭・末尾は \A・\Z）。snippets は本文の代わりに、当たった行と前後の行（before・after。省けば context_lines）を行番号つきで返す。` と `filter の not は中の条件か束に当たらない文書、op: glob は **・*・? のパターンに当たる。fields・order_by の @matches は文書ごとの本文の条件に当たった行の数。sections（Markdown の見出し）・lines（offset・limit）は view: full の本文の一部だけを返す。` と `fields・filter・order_by のキーには共通のキー（id・name・description・tags など）も使える。種類の列名との対応は describe(source, kind) で見る。` と `group_by は値を NFKC と casefold でまとめて数える。タグを付ける前に group_by: tags（配信元をまたぐときは source: "*"）で使われているタグを見て、同じ意味のタグを使い回す。` を置く
-         - `write_docs` の説明は、今の説明に続けて `set・unset・add_to・remove_from・text_edits のキーには共通のキー（id・name・description・tags・alias_type など）も使え、種類の列名へ読み替えて書く。対応は describe(source, kind) で見る。` を置く
-         - `list_changes` の説明は、今の説明に続けて `contains は語（regex で正規表現）の出現数が変わった文書と、語が入った・消えた commit を返す（git log -S と同じくマージ commit は見ない）。` を置く
+         - 今のツールの説明（`search_docs`・`write_docs`・`list_changes` の引数の説明の文と `trace_related` の説明を含む）は、削らずに各ツールの YAML へ移す
          - 引数の型の誤り・`Literal` に無い値は、SDK が関数を呼ぶ前に `isError` の結果にする。入力のスキーマに無いキーは SDK が捨てる
       3. 各ツールは次の順で処理する
          - 引数で要求のモデル（`SearchRequest` など）を作る
@@ -348,16 +431,16 @@ functions:
         expected: '`isError` が `True`'
       - name: test_build_docs_mcp_when_descriptions
         case: 正常
-        summary: 追加した引数の説明
+        summary: ツールの説明をプロンプトの YAML から描画する
         condition: '`list_tools` を呼ぶ'
-        mock: 配線済みの関数（偽物）
-        expected: '`search_docs` の説明に `not`・`glob`・`@matches`・`sections`・`lines`・`describe(source, kind)`・`group_by: tags`、`list_changes` の説明に `contains`、`write_docs` の説明に `describe(source, kind)` があり、入力のスキーマの `sections`・`lines`・`contains` の項目が `description` を持つ'
+        mock: 配線済みの関数（偽物。`prompts` は同梱した YAML を読んだ一式）
+        expected: '7 つのツールの説明がそれぞれ `prompts.render(tool_prompt_id("docs", 名前))` と同じ。`search_docs` の説明に `not`・`glob`・`@matches`・`sections`・`lines`・`describe(source, kind)`・`group_by: tags`、`list_changes` の説明に `contains`、`write_docs` の説明に `describe(source, kind)`、`trace_related` の説明に `implements` があり、入力のスキーマの `sections`・`lines`・`contains` の項目が `description` を持つ'
       - name: test_build_docs_mcp_when_instructions
         case: 正常
-        summary: タグの付け方の instructions
+        summary: instructions をプロンプトの YAML から描画する
         condition: '`initialize` を呼ぶ'
-        mock: 配線済みの関数（偽物）
-        expected: '`instructions` が `TAG_GUIDE` と同じ'
+        mock: 配線済みの関数（偽物。`prompts` は同梱した YAML を読んだ一式）
+        expected: '`instructions` が `prompts.render(DOCS_INSTRUCTIONS_PROMPT_ID)` と同じで、`grep`・`action:`・`topic:`・`tool:` を含む'
   - name: build_admin_mcp
     title: 管理の MCP の組み立て
     kind: 関数
@@ -378,7 +461,7 @@ functions:
       description: 管理の MCP
     process: |-
       1. `MCPServer(ADMIN_MCP_NAME)` を作る
-      2. `status`・`reload`・`restart`・`update`・`check_project`・`try_convert`・`write_nav` を `TOOL_ANNOTATIONS` の注釈で登録する。引数はインターフェース定義の `request` をキーワード引数で受ける
+      2. `ADMIN_TOOL_NAMES` のツールを、`description` を `handlers.prompts.render(tool_prompt_id("admin", 名前))` にして `TOOL_ANNOTATIONS` の注釈で登録する（今の説明の文は各ツールの YAML へ移す）。引数はインターフェース定義の `request` をキーワード引数で受ける
       3. 各ツールは次のサービスを `asyncio.to_thread` で呼び、結果をツールの結果にする
          - `status`: 状態の取得（`env` は `os.environ`）。`render` は状態の文
          - `reload`: 設定の読み直し。`render` は読み直しの文
@@ -408,6 +491,12 @@ functions:
         condition: '`restart` を 2 回呼ぶ'
         mock: 再起動の制御（uvicorn のサーバーはスタブ）
         expected: 1 回目の `restarting` が `True`、2 回目の `isError` が `True` で text が `RestartInProgressError` で始まる
+      - name: test_build_admin_mcp_when_descriptions
+        case: 正常
+        summary: ツールの説明をプロンプトの YAML から描画する
+        condition: '`list_tools` と `initialize` を呼ぶ'
+        mock: 配線済みの関数（偽物。`prompts` は同梱した YAML を読んだ一式）
+        expected: 7 つのツールの説明がそれぞれ `prompts.render(tool_prompt_id("admin", 名前))` と同じで、`instructions` が無い
 refs:
   - dev/設計書/インターフェース定義/開発ドキュメントサーバー/文書の検索#
   - dev/設計書/インターフェース定義/開発ドキュメントサーバー/文書の書き込み#
@@ -420,4 +509,4 @@ test_files:
   - tests/unit/dev_docs/server/mcp/test_docs.py
   - tests/unit/dev_docs/server/mcp/test_admin.py
 notes:
-  trace_related のツールの説明: '`trace_related` を登録する説明は「起点の文書やコードのパスから、related をたどって関連する文書を返す。設計書を起点に direction: in で呼ぶと、via.type が implements の文書がその設計書を実装するコード、コードを起点にすると tests の文書がそのテストになる。」にする（インターフェース定義『関連のたどり』の `direction` の補足）'
+  trace_related のツールの説明: '`content/prompts/mcp/docs/tools/trace-related.yaml` は「起点の文書やコードのパスから、related をたどって関連する文書を返す。設計書を起点に direction: in で呼ぶと、via.type が implements の文書がその設計書を実装するコード、コードを起点にすると tests の文書がそのテストになる。」を持つ（インターフェース定義『関連のたどり』の `direction` の補足）'
