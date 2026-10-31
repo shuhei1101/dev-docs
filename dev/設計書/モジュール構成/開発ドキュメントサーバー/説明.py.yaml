@@ -156,11 +156,13 @@ data_models:
         type: dict[str, list[str]] | None
         access: 公開
         description: '`{branches, tags}`（リビジョンの一覧の名前だけ）。Git でない配信元は `None`'
+        default: None
       - name: worktrees
         title: ワークツリー
         type: list[WorktreeInfo] | None
         access: 公開
         description: ワークツリーの一覧。Git でない配信元は `None`
+        default: None
   - name: KindSchemaResult
     title: 種類のスキーマ
     container: features/describe/types.py

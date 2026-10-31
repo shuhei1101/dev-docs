@@ -417,11 +417,13 @@ data_models:
         type: Path | None
         access: 公開
         description: Git の配信元のとき、`git rev-parse --git-common-dir` の親。`worktrees` はここから数える
+        default: None
       - name: config_commit
         title: 設定の commit
         type: str | None
         access: 公開
         description: '`default_ref` から設定を読んだときの commit。Git でない配信元は `None`'
+        default: None
       - name: scope_read
         title: 読める作業場所
         type: list[str]
@@ -437,6 +439,7 @@ data_models:
         type: bool
         access: 公開
         description: '`sources[].outside_read`'
+        default: 'True'
       - name: worktree_globs
         title: ワークツリーの glob
         type: list[str]
