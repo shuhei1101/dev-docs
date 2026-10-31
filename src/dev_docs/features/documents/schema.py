@@ -86,3 +86,17 @@ def resolve_schema_refs(schema: Mapping[str, Any], base: Path) -> dict[str, Any]
 
     result = resolve(schema, base, schema, ())
     return result  # type: ignore[no-any-return]
+
+
+def records_item_schema(schema: Mapping[str, Any], records: str) -> dict[str, Any] | None:
+    """ファイル全体のスキーマから `records` の要素 1 つのスキーマ（`properties.{records}.items`）を取り出す。"""
+    properties = schema.get("properties")
+    if not isinstance(properties, Mapping):
+        return None
+    array = properties.get(records)
+    if not isinstance(array, Mapping):
+        return None
+    items = array.get("items")
+    if not isinstance(items, Mapping):
+        return None
+    return dict(items)

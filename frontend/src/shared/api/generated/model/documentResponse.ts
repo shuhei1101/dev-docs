@@ -17,6 +17,7 @@ export interface DocumentResponse {
   source: string;
   ref: string | null;
   path: string;
+  bodyPath: string | null;
   markdown: string | null;
   conversionError: ConversionError | null;
   tabs: NavTab[];

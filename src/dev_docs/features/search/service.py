@@ -263,7 +263,7 @@ def search_docs(
         )
         loaded.append((index, target, result.documents))
         schemas.extend(
-            store.schema(target, table.id)
+            store.row_schema(target, table.id)
             for table in target.source.config.documents
             if table.enabled
         )

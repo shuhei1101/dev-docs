@@ -61,6 +61,8 @@ class DocumentResponse(ApiModel):
     source: str
     ref: str | None
     path: str
+    # 管理用の YAML の行の文書の本文のファイルのパス（拡張子つき）。画面が本文の相対リンクの基準にする
+    body_path: str | None
     markdown: str | None
     conversion_error: ConversionError | None
     tabs: list[NavTab]

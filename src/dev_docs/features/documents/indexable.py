@@ -27,15 +27,15 @@ BINARY_SNIFF_BYTES = 8192
 
 def walk_files(root: Path, *, start: str = ".") -> Iterator[str]:
     """フォルダの配下のファイルを、たどらないフォルダを飛ばして `root` からのパスで返す。"""
-    for folder, dirnames, filenames in os.walk(root / start):
+    # シンボリックリンクのフォルダには os.walk（followlinks=False）が入らないので、
+    # フォルダごとに os.path.islink（lstat）を呼ばない
+    for folder, dirnames, filenames in os.walk(root / start, followlinks=False):
         relative_folder = Path(folder).relative_to(root).as_posix()
-        # たどらない名前・パスのフォルダと、シンボリックリンクのフォルダは中に入らない
+        # たどらない名前・パスのフォルダは中に入らない
         dirnames[:] = [
             name
             for name in dirnames
-            if name not in SKIP_DIRS
-            and _join(relative_folder, name) not in SKIP_PATHS
-            and not os.path.islink(os.path.join(folder, name))
+            if name not in SKIP_DIRS and _join(relative_folder, name) not in SKIP_PATHS
         ]
         for name in filenames:
             yield _join(relative_folder, name)

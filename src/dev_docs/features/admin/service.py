@@ -31,6 +31,7 @@ from dev_docs.features.admin.types import (
 )
 from dev_docs.features.convert.service import ConvertService
 from dev_docs.features.documents.loader import collect_files
+from dev_docs.features.documents.schema import records_item_schema, resolve_schema_refs
 from dev_docs.features.documents.store import check_sync
 from dev_docs.features.settings.query import (
     SETTINGS_VERSION,
@@ -38,7 +39,7 @@ from dev_docs.features.settings.query import (
     load_terminal_config,
 )
 from dev_docs.features.sources.service import assemble_source
-from dev_docs.features.sources.types import SOURCE_CONFIG_VERSION
+from dev_docs.features.sources.types import SOURCE_CONFIG_VERSION, ServedSource
 from dev_docs.shared.errors import (
     ConfigNotFoundError,
     ConfigParseError,
@@ -250,6 +251,10 @@ def check_project(request: CheckProjectRequest, *, handlers: Handlers) -> CheckP
     source = candidate.source
     if source is None:
         return result
+    # records の行のスキーマから 1 行のスキーマを取り出せない組み合わせは違反にする
+    records_violations = _records_schema_violations(source)
+    if records_violations:
+        return replace(result, violations=records_violations)
     missing_paths = [
         pattern
         for table in source.config.documents
@@ -279,6 +284,28 @@ def check_project(request: CheckProjectRequest, *, handlers: Handlers) -> CheckP
             items=items[:SYNC_ITEMS_LIMIT],
         ),
     )
+
+
+def _records_schema_violations(source: ServedSource) -> list[Violation]:
+    """`records` を持つ有効な行のうち、スキーマに `properties.{records}.items` が無い行の違反を返す。"""
+    violations: list[Violation] = []
+    for index, table in enumerate(source.config.documents):
+        if not table.enabled or table.records is None:
+            continue
+        schema = resolve_schema_refs(
+            source.schemas.get(table.id, {}), source.root / table.schema_path
+        )
+        if records_item_schema(schema, table.records) is None:
+            violations.append(
+                Violation(
+                    path=f"documents[{index}].schema",
+                    rule=(
+                        f"records: {table.records} の行のスキーマに "
+                        f"properties.{table.records}.items がありません"
+                    ),
+                )
+            )
+    return violations
 
 
 def try_convert(request: TryConvertRequest, *, handlers: Handlers) -> TryConvertResult:

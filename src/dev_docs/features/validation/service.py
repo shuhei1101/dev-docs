@@ -62,7 +62,7 @@ class DocumentChecker:
         source = target.source
         table = source.table(document.kind)
         violations: list[Violation] = []
-        violations.extend(check_schema(document.data, self.store.schema(target, document.kind)))
+        violations.extend(check_schema(document.data, self.store.row_schema(target, document.kind)))
         if new:
             violations.extend(
                 check_id_format(document.id, source.config.ids_format, kind=document.kind)
