@@ -345,7 +345,7 @@ response:
     description: 返した文書のファイルの更新日時。Git の配信元は開いているリビジョンでそのファイルを最後に変えた commit の日時、Git 管理外の配信元はファイルの更新日時
     notes: 文書の画面の文書の情報に出す
   - name: aliases
-    type: list[AliasEntry]
+    type: list[AliasItem]
     description: 配信元の `alias_type` を持つ行の文書のエイリアス。要素は取り込んだエイリアスのスキーマ（alias-inject の「エイリアスの元の行」）の共通の形で、画面が mdmark の `mount`・`render` の引数へ読み替えて渡す
     notes: '`alias_type` を持つ行が無い配信元・変換に失敗したときは空。エイリアスのキーに違反する文書は載せない'
   - name: aliases[].id
