@@ -1,0 +1,12 @@
+title: "画面 / index.css"
+lead: 画面全体の CSS。Tailwind の読み込みと色のトークンに加え、mdmark が描く本文への上書きを持つ。
+styles:
+  - name: mdmark-html
+    title: HTML ブロックの上書き
+    container: index.css
+    summary: 本文の `<!-- html -->` ブロックの `<pre>` を画面幅で折り返す
+    description: プロンプトの文書のテンプレートと描画の結果は `<mark>`・`<span data-hint>` を含むため HTML の `<pre>` で出す。長い行で横スクロールさせない。
+    values:
+      - class_name: .mdmark-html pre
+        target: HTML ブロックの整形済みテキスト
+        value: '`white-space: pre-wrap; overflow-wrap: anywhere`'
