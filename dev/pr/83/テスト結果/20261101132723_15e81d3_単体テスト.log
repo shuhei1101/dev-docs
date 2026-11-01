@@ -1,0 +1,1032 @@
+$ uv run pytest tests/unit/ -rf
+（commit 15e81d3。FAILED の 22 件は、この作業 PR で追加・期待値を修正したテストで、実装が無いことによる Red。それ以外の変えていない単体テストは全 pass）
+============================= test session starts ==============================
+platform linux -- Python 3.14.3, pytest-9.1.1, pluggy-1.7.0
+rootdir: /mnt/c/Users/shuhe/repo/dev-docs/.claude/worktrees/fix-server-document-id-with-extension
+configfile: pyproject.toml
+plugins: anyio-4.15.1
+collected 724 items
+
+tests/unit/dev_docs/features/access/test_service.py .................... [  2%]
+.........                                                                [  4%]
+tests/unit/dev_docs/features/admin/test_render.py ..........             [  5%]
+tests/unit/dev_docs/features/admin/test_service.py ..................... [  8%]
+............                                                             [  9%]
+tests/unit/dev_docs/features/changes/test_compare.py .....               [ 10%]
+tests/unit/dev_docs/features/changes/test_render.py ....                 [ 11%]
+tests/unit/dev_docs/features/changes/test_service.py .....F......FF      [ 13%]
+tests/unit/dev_docs/features/convert/test_diagrams.py ...                [ 13%]
+tests/unit/dev_docs/features/convert/test_embed.py ...                   [ 13%]
+tests/unit/dev_docs/features/convert/test_markdown.py ....               [ 14%]
+tests/unit/dev_docs/features/convert/test_service.py ........            [ 15%]
+tests/unit/dev_docs/features/describe/test_render.py ...                 [ 16%]
+tests/unit/dev_docs/features/describe/test_service.py .......            [ 16%]
+tests/unit/dev_docs/features/documents/test_aliases.py ..........        [ 18%]
+tests/unit/dev_docs/features/documents/test_fields.py .................. [ 20%]
+......FF                                                                 [ 21%]
+tests/unit/dev_docs/features/documents/test_indexable.py ............    [ 23%]
+tests/unit/dev_docs/features/documents/test_loader.py ......F....FF....  [ 25%]
+tests/unit/dev_docs/features/documents/test_schema.py .......            [ 26%]
+tests/unit/dev_docs/features/documents/test_store.py F.....F............ [ 29%]
+FF..                                                                     [ 30%]
+tests/unit/dev_docs/features/history/test_query.py .................     [ 32%]
+tests/unit/dev_docs/features/history/test_snapshot.py ....               [ 33%]
+tests/unit/dev_docs/features/lifecycle/test_control.py ...               [ 33%]
+tests/unit/dev_docs/features/lifecycle/test_update.py ..........         [ 34%]
+tests/unit/dev_docs/features/migrate/test_service.py ............        [ 36%]
+tests/unit/dev_docs/features/migrate/test_steps.py ...........           [ 37%]
+tests/unit/dev_docs/features/prompt_doc/test_cli.py ..                   [ 38%]
+tests/unit/dev_docs/features/prompt_doc/test_markdown.py ............... [ 40%]
+..                                                                       [ 40%]
+tests/unit/dev_docs/features/prompt_doc/test_render.py ...............   [ 42%]
+tests/unit/dev_docs/features/prompt_doc/test_runtime.py ............     [ 44%]
+tests/unit/dev_docs/features/related/test_graph.py ...                   [ 44%]
+tests/unit/dev_docs/features/related/test_service.py .F.....             [ 45%]
+tests/unit/dev_docs/features/related/test_suggest.py .                   [ 45%]
+tests/unit/dev_docs/features/search/test_body_parts.py ....              [ 46%]
+tests/unit/dev_docs/features/search/test_cursor.py ..                    [ 46%]
+tests/unit/dev_docs/features/search/test_fields.py ..                    [ 46%]
+tests/unit/dev_docs/features/search/test_filters.py .............        [ 48%]
+tests/unit/dev_docs/features/search/test_render.py .....                 [ 49%]
+tests/unit/dev_docs/features/search/test_service.py ..........FFFF...F.. [ 52%]
+.                                                                        [ 52%]
+tests/unit/dev_docs/features/search/test_snippets.py ........            [ 53%]
+tests/unit/dev_docs/features/search/test_terms.py ...                    [ 53%]
+tests/unit/dev_docs/features/seen/test_store.py ......                   [ 54%]
+tests/unit/dev_docs/features/seen/test_types.py .                        [ 54%]
+tests/unit/dev_docs/features/session_context/test_route.py ...           [ 55%]
+tests/unit/dev_docs/features/session_context/test_service.py ....F.....  [ 56%]
+tests/unit/dev_docs/features/settings/test_query.py .............        [ 58%]
+tests/unit/dev_docs/features/settings/test_route.py ...                  [ 58%]
+tests/unit/dev_docs/features/settings/test_service.py ....               [ 59%]
+tests/unit/dev_docs/features/sources/test_merge.py ....                  [ 59%]
+tests/unit/dev_docs/features/sources/test_registry.py ........           [ 61%]
+tests/unit/dev_docs/features/sources/test_service.py ................... [ 63%]
+..................                                                       [ 66%]
+tests/unit/dev_docs/features/sources/test_types.py ......                [ 66%]
+tests/unit/dev_docs/features/validation/test_rules.py ........           [ 68%]
+tests/unit/dev_docs/features/validation/test_scripts.py ....             [ 68%]
+tests/unit/dev_docs/features/validation/test_service.py .....            [ 69%]
+tests/unit/dev_docs/features/view/test_columns.py .                      [ 69%]
+tests/unit/dev_docs/features/view/test_document.py .....F...             [ 70%]
+tests/unit/dev_docs/features/view/test_nav.py ..........F.               [ 72%]
+tests/unit/dev_docs/features/view/test_paths.py ......                   [ 73%]
+tests/unit/dev_docs/features/view/test_route.py .......                  [ 74%]
+tests/unit/dev_docs/features/view/test_search.py .                       [ 74%]
+tests/unit/dev_docs/features/write/test_apply.py ..................      [ 76%]
+tests/unit/dev_docs/features/write/test_ids.py ..                        [ 77%]
+tests/unit/dev_docs/features/write/test_locks.py .                       [ 77%]
+tests/unit/dev_docs/features/write/test_placement.py ...                 [ 77%]
+tests/unit/dev_docs/features/write/test_service.py .................     [ 79%]
+tests/unit/dev_docs/integrations/test_git.py .......                     [ 80%]
+tests/unit/dev_docs/integrations/test_scripts.py ..........              [ 82%]
+tests/unit/dev_docs/server/mcp/test_admin.py ....                        [ 82%]
+tests/unit/dev_docs/server/mcp/test_docs.py .....                        [ 83%]
+tests/unit/dev_docs/server/mcp/test_result.py ..........                 [ 84%]
+tests/unit/dev_docs/server/test_app.py ...........                       [ 86%]
+tests/unit/dev_docs/server/test_error_handlers.py ....                   [ 87%]
+tests/unit/dev_docs/server/test_lifespan.py .                            [ 87%]
+tests/unit/dev_docs/server/test_origin.py ....                           [ 87%]
+tests/unit/dev_docs/server/test_screen.py .......                        [ 88%]
+tests/unit/dev_docs/shared/test_errors.py ..                             [ 88%]
+tests/unit/dev_docs/shared/test_files.py ...                             [ 89%]
+tests/unit/dev_docs/shared/test_hashing.py ..                            [ 89%]
+tests/unit/dev_docs/shared/test_paths.py .....                           [ 90%]
+tests/unit/dev_docs/shared/test_schema_check.py .............            [ 92%]
+tests/unit/dev_docs/shared/test_yaml_io.py ......                        [ 92%]
+tests/unit/dev_docs/test_main.py .........                               [ 94%]
+tests/unit/dev_docs/test_serve.py .............F..........               [ 97%]
+tests/unit/plugins/dev_docs/hooks/test_pre_tool_use.py ....              [ 98%]
+tests/unit/plugins/dev_docs/hooks/test_session_start.py ..............   [100%]
+
+=================================== FAILURES ===================================
+_______________________ test_list_changes_when_excluded ________________________
+
+excluded_env = ChangesEnv(registry=<tests.unit.dev_docs.conftest.FakeRegistry object at 0x75b70a323ee0>, store=<dev_docs.features.doc...one, outside_read=True), clone=PosixPath('/tmp/pytest-of-shuhei2441/pytest-5518/test_list_changes_when_exclude0/repo'))
+commit_all = <function commit_all.<locals>._commit at 0x75b70a392090>
+run_git = <function run_git.<locals>._run at 0x75b70a393b60>
+
+    def test_list_changes_when_excluded(
+        excluded_env: ChangesEnv, commit_all: Callable[..., str], run_git: Callable[..., str]
+    ) -> None:
+        """除外の名前に当たるファイルは次の行へ進む（正常系）。"""
+        # 準備
+        first = run_git(excluded_env.clone, "rev-parse", "HEAD").strip()
+        commit_all(excluded_env.clone, {"docs/rule/README.md": "title: 目次\n"})
+        # 実行
+        result = excluded_env.list(
+            **{"from": first, "filter": Condition(field="kind", op="eq", values=["index"])}
+        )
+        # 検証
+>       assert [(item.id, item.change) for item in result.items] == [("docs/rule/README.md", "added")]
+E       AssertionError: assert [('docs/rule/...ME', 'added')] == [('docs/rule/...md', 'added')]
+E         
+E         At index 0 diff: ('docs/rule/README', 'added') != ('docs/rule/README.md', 'added')
+E         Use -v to get more diff
+
+tests/unit/dev_docs/features/changes/test_service.py:268: AssertionError
+__________________ test_list_changes_when_contains_body_file ___________________
+
+body_file_env = ChangesEnv(registry=<tests.unit.dev_docs.conftest.FakeRegistry object at 0x75b70a3f1630>, store=<dev_docs.features.doc...one, outside_read=True), clone=PosixPath('/tmp/pytest-of-shuhei2441/pytest-5518/test_list_changes_when_contain5/repo'))
+commit_all = <function commit_all.<locals>._commit at 0x75b70a1bda60>
+run_git = <function run_git.<locals>._run at 0x75b70a1bd2d0>
+
+    def test_list_changes_when_contains_body_file(
+        body_file_env: ChangesEnv, commit_all: Callable[..., str], run_git: Callable[..., str]
+    ) -> None:
+        """`body_file` の文書の語（正常系）。"""
+        # 準備
+        base = run_git(body_file_env.clone, "rev-parse", "HEAD").strip()
+        first = commit_all(body_file_env.clone, {"a.md": "a の本文\n廃止予定\n"})
+        commit_all(
+            body_file_env.clone,
+            {
+                "index.yaml": "items:\n  - path: a.md\n  - path: b.md\n",
+                "b.md": "b の本文\n",
+            },
+        )
+        third = commit_all(body_file_env.clone, {"b.md": "b の本文\n廃止予定\n"})
+        # 実行
+        result = body_file_env.list(**{"from": base, "to": third, "contains": {"value": "廃止予定"}})
+        # 検証
+>       assert [item.id for item in result.items] == ["a.md", "b.md"]
+E       AssertionError: assert ['a', 'b'] == ['a.md', 'b.md']
+E         
+E         At index 0 diff: 'a' != 'a.md'
+E         Use -v to get more diff
+
+tests/unit/dev_docs/features/changes/test_service.py:394: AssertionError
+__________________ test_list_changes_when_last_read_body_file __________________
+
+tmp_path = PosixPath('/tmp/pytest-of-shuhei2441/pytest-5518/test_list_changes_when_last_re1')
+write_files = <function write_files.<locals>._write at 0x75b70a1bfb60>
+make_source_config = <function make_source_config.<locals>._make at 0x75b70a009d20>
+make_served_source = <function make_served_source.<locals>._make at 0x75b70a0087d0>
+make_registry = <function make_registry.<locals>._make at 0x75b70a0083b0>
+make_target = <function make_target.<locals>._make at 0x75b70a009590>
+
+    def test_list_changes_when_last_read_body_file(
+        tmp_path: Path,
+        write_files: Callable[[Path, dict[str, str]], None],
+        make_source_config: Callable[..., SourceConfig],
+        make_served_source: Callable[..., ServedSource],
+        make_registry: Callable[..., SourceRegistry],
+        make_target: Callable[..., Target],
+    ) -> None:
+        """前回読んだ Markdown の本文の変化（正常系）。"""
+        # 準備
+        root = tmp_path / "ws"
+        write_files(
+            root,
+            {
+                "notes/files.yaml": "files:\n  - path: a.md\n  - path: b.md\n",
+                "notes/a.md": "a の本文\n",
+                "notes/b.md": "b の本文\n",
+            },
+        )
+        table = DocumentTable(
+            id="notes",
+            paths=["notes/files.yaml"],
+            schema_path="schemas/rule.schema.yaml",
+            records="files",
+            body_file="path",
+        )
+        source = make_served_source(
+            id="sample", root=root, config=make_source_config(documents=[table])
+        )
+        env = ChangesEnv(
+            registry=make_registry(source),
+            store=DocumentStore(SnapshotStore(tmp_path / "snapshots")),
+            seen=SeenStore(tmp_path / "seen.sqlite3", retention_days=7),
+            source=source,
+            clone=root,
+        )
+>       documents = env.store.get(make_target(source), ["notes/a.md", "notes/b.md"])
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/unit/dev_docs/features/changes/test_service.py:439: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <dev_docs.features.documents.store.DocumentStore object at 0x75b70a3f3310>
+target = Target(source=ServedSource(id='sample', root=PosixPath('/tmp/pytest-of-shuhei2441/pytest-5518/test_list_changes_when_l...hei2441/pytest-5518/test_list_changes_when_last_re1/ws'), ref=None, worktree=None, access='write', outside_scope=False)
+ids = ['notes/a.md', 'notes/b.md'], kinds = None
+
+    def get(
+        self, target: Target, ids: Sequence[str], *, kinds: Sequence[str] | None = None
+    ) -> list[Document]:
+        """ID の並びの順に文書を返す。"""
+        by_id = {document.id: document for document in self.load(target, kinds=kinds).documents}
+        missing = [document_id for document_id in ids if document_id not in by_id]
+        if missing:
+>           raise not_found_error(target.source.id, missing, list(by_id))
+E           dev_docs.shared.errors.DocumentNotFoundError: sample: 文書 notes/a.md, notes/b.md はありません
+
+src/dev_docs/features/documents/store.py:237: DocumentNotFoundError
+___________________________ test_unresolved_related ____________________________
+
+    def test_unresolved_related() -> None:
+        """source を持たない関連だけを照合する（正常系）。"""
+        # 準備
+        metadata = {
+            "related": [
+                {"to": "src/b.py"},
+                {"to": "src/z.py"},
+                {"to": "other-doc", "source": "other"},
+                {"to": "src/y.py", "source": None},
+                {"type": "tests"},
+            ]
+        }
+        ids = {"src/a.py", "src/b.py"}
+        # 実行
+>       result = fields_module.unresolved_related(metadata, ids)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       AttributeError: module 'dev_docs.features.documents.fields' has no attribute 'unresolved_related'
+
+tests/unit/dev_docs/features/documents/test_fields.py:262: AttributeError
+____________________ test_unresolved_related_when_not_list _____________________
+
+    def test_unresolved_related_when_not_list() -> None:
+        """related が配列でない（正常系）。"""
+        # 準備
+        ids = {"src/a.py"}
+        # 実行
+>       missing = fields_module.unresolved_related({"name": "a"}, ids)
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       AttributeError: module 'dev_docs.features.documents.fields' has no attribute 'unresolved_related'
+
+tests/unit/dev_docs/features/documents/test_fields.py:272: AttributeError
+_________________________ test_load_file_when_records __________________________
+
+tmp_path = PosixPath('/tmp/pytest-of-shuhei2441/pytest-5518/test_load_file_when_records0')
+write_files = <function write_files.<locals>._write at 0x75b70a4df3d0>
+
+    def test_load_file_when_records(
+        tmp_path: Path, write_files: Callable[[Path, dict[str, str]], None]
+    ) -> None:
+        """records と body_file（正常系）。"""
+        # 準備
+        write_files(
+            tmp_path,
+            {
+                "src/files.yaml": "files:\n  - path: a.py\n    tags: [x]\n  - path: b.py\n",
+                "src/a.py": "a = 1\n",
+                "src/b.py": "b = 2\n",
+            },
+        )
+        table = DocumentTable(
+            id="src",
+            paths=["src/files.yaml"],
+            schema_path="schemas/rule.schema.yaml",
+            records="files",
+            body_file="path",
+        )
+        # 実行
+        documents, problems = load_file(tmp_path, "src/files.yaml", table, source_id="sample")
+        # 検証
+        assert problems == []
+>       assert [doc.id for doc in documents] == ["src/a.py", "src/b.py"]
+E       AssertionError: assert ['src/a', 'src/b'] == ['src/a.py', 'src/b.py']
+E         
+E         At index 0 diff: 'src/a' != 'src/a.py'
+E         Use -v to get more diff
+
+tests/unit/dev_docs/features/documents/test_loader.py:171: AssertionError
+_______________________ test_load_file_when_default_name _______________________
+
+tmp_path = PosixPath('/tmp/pytest-of-shuhei2441/pytest-5518/test_load_file_when_default_na0')
+write_files = <function write_files.<locals>._write at 0x75b70a4f2cf0>
+
+    def test_load_file_when_default_name(
+        tmp_path: Path, write_files: Callable[[Path, dict[str, str]], None]
+    ) -> None:
+        """名前の既定（正常系）。"""
+        # 準備
+        write_files(
+            tmp_path,
+            {
+                "rules/a.yaml": "id: rule-a\n",
+                "src/files.yaml": "files:\n  - path: a.py\n  - path: b.py\n    name: 部品 B\n",
+                "src/a.py": "a = 1\n",
+                "src/b.py": "b = 2\n",
+                "list.yaml": "items:\n  - x: 1\n",
+            },
+        )
+        rules = DocumentTable(
+            id="rules", paths=["rules/*.yaml"], schema_path="schemas/rule.schema.yaml"
+        )
+        src = DocumentTable(
+            id="src",
+            paths=["src/files.yaml"],
+            schema_path="schemas/rule.schema.yaml",
+            records="files",
+            body_file="path",
+        )
+        items = DocumentTable(
+            id="items", paths=["list.yaml"], schema_path="schemas/rule.schema.yaml", records="items"
+        )
+        # 実行
+        rule_docs = load_file(tmp_path, "rules/a.yaml", rules, source_id="sample")[0]
+        src_docs = load_file(tmp_path, "src/files.yaml", src, source_id="sample")[0]
+        item_docs = load_file(tmp_path, "list.yaml", items, source_id="sample")[0]
+        # 検証
+        assert [doc.metadata["name"] for doc in rule_docs] == ["a"]
+        assert [doc.metadata["name"] for doc in src_docs] == ["a", "部品 B"]
+>       assert [doc.metadata["name"] for doc in item_docs] == ["list.yaml#0"]
+E       AssertionError: assert ['list#0'] == ['list.yaml#0']
+E         
+E         At index 0 diff: 'list#0' != 'list.yaml#0'
+E         Use -v to get more diff
+
+tests/unit/dev_docs/features/documents/test_loader.py:322: AssertionError
+________________________ test_load_file_when_same_stem _________________________
+
+tmp_path = PosixPath('/tmp/pytest-of-shuhei2441/pytest-5518/test_load_file_when_same_stem0')
+write_files = <function write_files.<locals>._write at 0x75b70a4f2350>
+
+    def test_load_file_when_same_stem(
+        tmp_path: Path, write_files: Callable[[Path, dict[str, str]], None]
+    ) -> None:
+        """同じ名前で拡張子の違うファイルが別の ID の文書になる（正常系）。"""
+        # 準備
+        write_files(
+            tmp_path,
+            {
+                "src/files.yaml": "files:\n  - path: plan.ts\n  - path: plan.css\n",
+                "src/plan.ts": "export const plan = 1;\n",
+                "src/plan.css": ".plan {}\n",
+                "docs/files.yaml": "files:\n  - path: index.md\n",
+                "docs/index.md": "# 目次\n",
+                "docs/index.yaml": "title: 目次\n",
+            },
+        )
+        src = DocumentTable(
+            id="src",
+            paths=["src/files.yaml"],
+            schema_path="schemas/rule.schema.yaml",
+            records="files",
+            body_file="path",
+        )
+        docs = DocumentTable(
+            id="docs",
+            paths=["docs/files.yaml"],
+            schema_path="schemas/rule.schema.yaml",
+            records="files",
+            body_file="path",
+        )
+        index = DocumentTable(
+            id="index", paths=["docs/index.yaml"], schema_path="schemas/rule.schema.yaml"
+        )
+        # 実行
+        documents = [
+            *load_file(tmp_path, "src/files.yaml", src, source_id="sample")[0],
+            *load_file(tmp_path, "docs/files.yaml", docs, source_id="sample")[0],
+            *load_file(tmp_path, "docs/index.yaml", index, source_id="sample")[0],
+        ]
+        # 検証
+>       assert [doc.id for doc in documents] == [
+            "src/plan.ts",
+            "src/plan.css",
+            "docs/index.md",
+            "docs/index.yaml",
+        ]
+E       AssertionError: assert ['src/plan', ... 'docs/index'] == ['src/plan.ts...s/index.yaml']
+E         
+E         At index 0 diff: 'src/plan' != 'src/plan.ts'
+E         Use -v to get more diff
+
+tests/unit/dev_docs/features/documents/test_loader.py:365: AssertionError
+___________________________ test_document_store_load ___________________________
+
+document_store = <dev_docs.features.documents.store.DocumentStore object at 0x75b70a4041a0>
+workspace = Target(source=ServedSource(id='sample', root=PosixPath('/tmp/pytest-of-shuhei2441/pytest-5518/test_document_store_load...of-shuhei2441/pytest-5518/test_document_store_load0/ws'), ref=None, worktree=None, access='write', outside_scope=False)
+
+    def test_document_store_load(document_store: DocumentStore, workspace: Target) -> None:
+        """行ごとに集める（正常系）。"""
+        # 実行
+        result = document_store.load(workspace)
+        # 検証
+>       assert [(doc.kind, doc.id) for doc in result.documents] == [
+            ("rules", "a"),
+            ("rules", "b"),
+            ("notes", "notes/x.md"),
+            ("notes", "notes/y.md"),
+        ]
+E       AssertionError: assert [('rules', 'a...', 'notes/y')] == [('rules', 'a...'notes/y.md')]
+E         
+E         At index 2 diff: ('notes', 'notes/x') != ('notes', 'notes/x.md')
+E         Use -v to get more diff
+
+tests/unit/dev_docs/features/documents/test_store.py:87: AssertionError
+__________________ test_document_store_load_when_many_tables ___________________
+
+document_store = <dev_docs.features.documents.store.DocumentStore object at 0x75b70a404fa0>
+tmp_path = PosixPath('/tmp/pytest-of-shuhei2441/pytest-5518/test_document_store_load_when_5')
+write_files = <function write_files.<locals>._write at 0x75b70a5264b0>
+make_source_config = <function make_source_config.<locals>._make at 0x75b70a527a00>
+make_served_source = <function make_served_source.<locals>._make at 0x75b70a49d640>
+make_target = <function make_target.<locals>._make at 0x75b70a49d430>
+walk_calls = [PosixPath('/tmp/pytest-of-shuhei2441/pytest-5518/test_document_store_load_when_5/ws')]
+
+    def test_document_store_load_when_many_tables(
+        document_store: DocumentStore,
+        tmp_path: Path,
+        write_files: Callable[[Path, dict[str, str]], None],
+        make_source_config: Callable[..., SourceConfig],
+        make_served_source: Callable[..., ServedSource],
+        make_target: Callable[..., Target],
+        walk_calls: list[Path],
+    ) -> None:
+        """行がいくつあってもフォルダを 1 回だけたどる（正常系）。"""
+        # 準備
+        root = tmp_path / "ws"
+        write_files(
+            root,
+            {
+                "rules/a.yaml": "id: a\nname: A\n",
+                "notes/files.yaml": "files:\n  - path: x.md\n",
+                "notes/x.md": "# X\n",
+                "src/files.yaml": "files:\n  - path: a.py\n",
+                "src/a.py": "a = 1\n",
+            },
+        )
+        documents = [
+            DocumentTable(id="rules", paths=["rules/*.yaml"], schema_path="schemas/rule.schema.yaml"),
+            DocumentTable(
+                id="notes",
+                paths=["notes/files.yaml"],
+                schema_path="schemas/rule.schema.yaml",
+                records="files",
+                body_file="path",
+            ),
+            DocumentTable(
+                id="src",
+                paths=["src/files.yaml"],
+                schema_path="schemas/rule.schema.yaml",
+                records="files",
+                body_file="path",
+            ),
+        ]
+        source = make_served_source(root=root, config=make_source_config(documents=documents))
+        # 実行
+        result = document_store.load(make_target(source))
+        # 検証
+        assert len(walk_calls) == 1
+>       assert [(doc.kind, doc.id) for doc in result.documents] == [
+            ("rules", "a"),
+            ("notes", "notes/x.md"),
+            ("src", "src/a.py"),
+        ]
+E       AssertionError: assert [('rules', 'a...rc', 'src/a')] == [('rules', 'a..., 'src/a.py')]
+E         
+E         At index 1 diff: ('notes', 'notes/x') != ('notes', 'notes/x.md')
+E         Use -v to get more diff
+
+tests/unit/dev_docs/features/documents/test_store.py:235: AssertionError
+__________________________ test_check_sync_when_clean __________________________
+
+document_store = <dev_docs.features.documents.store.DocumentStore object at 0x75b70a6c3380>
+tmp_path = PosixPath('/tmp/pytest-of-shuhei2441/pytest-5518/test_check_sync_when_clean0')
+write_files = <function write_files.<locals>._write at 0x75b70a4807d0>
+make_source_config = <function make_source_config.<locals>._make at 0x75b70a481c70>
+make_served_source = <function make_served_source.<locals>._make at 0x75b70a47be20>
+
+    def test_check_sync_when_clean(
+        document_store: DocumentStore,
+        tmp_path: Path,
+        write_files: Callable[[Path, dict[str, str]], None],
+        make_source_config: Callable[..., SourceConfig],
+        make_served_source: Callable[..., ServedSource],
+    ) -> None:
+        """ずれが無い（正常系）。"""
+        # 準備
+        root = tmp_path / "ws"
+        write_files(
+            root,
+            {
+                "rules/a.yaml": "id: a\ntitle: A\n",
+                "rules/b.yaml": "id: b\ntitle: B\n",
+                "src/files.yaml": "files:\n  - path: a.py\n  - path: d.py\n",
+                "src/a.py": "a = 1\n",
+                "src/d.py": "d = 4\n",
+            },
+        )
+        source = _sync_source(root, make_source_config, make_served_source)
+        # 実行
+        report = store_module.check_sync(document_store, source)
+        # 検証
+        assert report.missing_refs == []
+        assert report.unindexed_files == []
+        assert report.missing_body_files == []
+>       assert report.unresolved_related == []
+               ^^^^^^^^^^^^^^^^^^^^^^^^^
+E       AttributeError: 'SyncReport' object has no attribute 'unresolved_related'
+
+tests/unit/dev_docs/features/documents/test_store.py:585: AttributeError
+___________________ test_check_sync_when_related_unresolved ____________________
+
+document_store = <dev_docs.features.documents.store.DocumentStore object at 0x75b70a3f2e40>
+tmp_path = PosixPath('/tmp/pytest-of-shuhei2441/pytest-5518/test_check_sync_when_related_u0')
+write_files = <function write_files.<locals>._write at 0x75b70a47b320>
+make_source_config = <function make_source_config.<locals>._make at 0x75b70a47b3d0>
+make_served_source = <function make_served_source.<locals>._make at 0x75b70a47b1c0>
+
+    def test_check_sync_when_related_unresolved(
+        document_store: DocumentStore,
+        tmp_path: Path,
+        write_files: Callable[[Path, dict[str, str]], None],
+        make_source_config: Callable[..., SourceConfig],
+        make_served_source: Callable[..., ServedSource],
+    ) -> None:
+        """どの文書にも当たらない関連（正常系）。"""
+        # 準備
+        root = tmp_path / "ws"
+        write_files(
+            root,
+            {
+                "src/files.yaml": (
+                    "files:\n"
+                    "  - path: a.py\n"
+                    "    related:\n"
+                    "      - to: src/b.py\n"
+                    "      - to: src/z.py\n"
+                    "      - to: other-doc\n"
+                    "        source: other\n"
+                    "  - path: b.py\n"
+                ),
+                "src/a.py": "a = 1\n",
+                "src/b.py": "b = 2\n",
+            },
+        )
+        source = _sync_source(root, make_source_config, make_served_source)
+        # 実行
+        report = store_module.check_sync(document_store, source)
+        # 検証
+>       assert report.unresolved_related == ["src: src/a.py: src/z.py"]
+               ^^^^^^^^^^^^^^^^^^^^^^^^^
+E       AttributeError: 'SyncReport' object has no attribute 'unresolved_related'
+
+tests/unit/dev_docs/features/documents/test_store.py:619: AttributeError
+______________________ test_trace_related_when_code_paths ______________________
+
+make_env = <function make_env.<locals>._make at 0x75b70a21e4b0>
+
+    def test_trace_related_when_code_paths(make_env: Callable[..., RelatedEnv]) -> None:
+        """コードのパスから（正常系）。"""
+        # 準備
+        files = {
+            "src/files.yaml": (
+                "files:\n"
+                "  - path: a.py\n"
+                "    related:\n"
+                "      - to: src/b.py\n"
+                "        type: references\n"
+                "  - path: b.py\n"
+            ),
+            "src/a.py": "a = 1\n",
+            "src/b.py": "b = 2\n",
+        }
+        table = DocumentTable(
+            id="src",
+            paths=["src/files.yaml"],
+            schema_path="schemas/rule.schema.yaml",
+            records="files",
+            body_file="path",
+        )
+        env = make_env(files, [table])
+        # 実行
+        result = env.trace(code_paths=["src/a.py"])
+        # 検証
+>       assert [item.id for item in result.items] == ["src/b.py"]
+E       AssertionError: assert [] == ['src/b.py']
+E         
+E         Right contains one more item: 'src/b.py'
+E         Use -v to get more diff
+
+tests/unit/dev_docs/features/related/test_service.py:115: AssertionError
+___________________ test_search_docs_when_ordered_by_matches ___________________
+
+make_env = <function make_env.<locals>._make at 0x75b709ddc510>
+
+    def test_search_docs_when_ordered_by_matches(make_env: Callable[..., SearchEnv]) -> None:
+        """当たった数で並べる（正常系）。"""
+        # 準備
+        env = make_env(NOTES, documents=[_notes_table()])
+        body_condition = Condition(field="body", op="contains", values=["検索"])
+        archive = Group.model_validate(
+            {"not": {"field": "@path", "op": "glob", "values": ["notes/archive/**"]}}
+        )
+        node = Group.model_validate({"and": [body_condition, archive]})
+        # 実行
+        ordered = env.search(
+            filter=node,
+            fields=["@matches"],
+            order_by=[OrderKey(field="@matches", direction="desc")],
+        )
+        without_matches = env.search(filter=node)
+        # 検証
+>       assert [(item.id, item.values["@matches"]) for item in ordered.items] == [
+            ("notes/a.md", 3),
+            ("notes/b.md", 1),
+        ]
+E       AssertionError: assert [('notes/a', ...'notes/b', 1)] == [('notes/a.md...tes/b.md', 1)]
+E         
+E         At index 0 diff: ('notes/a', 3) != ('notes/a.md', 3)
+E         Use -v to get more diff
+
+tests/unit/dev_docs/features/search/test_service.py:330: AssertionError
+___________________ test_search_docs_when_matches_under_not ____________________
+
+make_env = <function make_env.<locals>._make at 0x75b709dde2a0>
+
+    def test_search_docs_when_matches_under_not(make_env: Callable[..., SearchEnv]) -> None:
+        """`not` の下の本文の条件は数えない（正常系）。"""
+        # 準備
+        env = make_env(NOTES, documents=[_notes_table()])
+        node = Group.model_validate(
+            {
+                "not": {
+                    "and": [
+                        {"field": "body", "op": "contains", "values": ["検索"]},
+                        {"field": "tags", "op": "eq", "values": ["x"]},
+                    ]
+                }
+            }
+        )
+        # 実行
+        result = env.search(filter=node, fields=["@matches"])
+        # 検証
+>       assert [(item.id, item.values["@matches"]) for item in result.items] == [
+            ("notes/archive/c.md", 0),
+            ("notes/b.md", 0),
+        ]
+E       AssertionError: assert [('notes/arch...'notes/b', 0)] == [('notes/arch...tes/b.md', 0)]
+E         
+E         At index 0 diff: ('notes/archive/c', 0) != ('notes/archive/c.md', 0)
+E         Use -v to get more diff
+
+tests/unit/dev_docs/features/search/test_service.py:354: AssertionError
+______________________ test_search_docs_when_part_of_body ______________________
+
+make_env = <function make_env.<locals>._make at 0x75b709ddf740>
+
+    def test_search_docs_when_part_of_body(make_env: Callable[..., SearchEnv]) -> None:
+        """本文の一部と返し済み（正常系）。"""
+        # 準備
+        env = make_env(PART_NOTES, documents=[_notes_table()])
+        condition = Condition(field="id", op="eq", values=["notes/a.md"])
+        request = {"filter": condition, "view": "full", "session_id": "s1"}
+        # 実行
+        by_section = env.search(**request, sections=["決まったこと"])
+        by_lines = env.search(**request, lines=LineRange(offset=3, limit=2))
+        whole = env.search(**request)
+        again = env.search(**request, sections=["決まったこと"])
+        # 検証
+>       section_item = by_section.items[0]
+                       ^^^^^^^^^^^^^^^^^^^
+E       IndexError: list index out of range
+
+tests/unit/dev_docs/features/search/test_service.py:372: IndexError
+_______________ test_search_docs_when_part_of_body_with_snippets _______________
+
+make_env = <function make_env.<locals>._make at 0x75b709e1d010>
+
+    def test_search_docs_when_part_of_body_with_snippets(make_env: Callable[..., SearchEnv]) -> None:
+        """切り出した範囲の抜粋と当たる見出しの無い文書（正常系）。"""
+        # 準備
+        files = {**PART_NOTES, "docs/doc-1.yaml": "id: doc-1\nname: 文書 1\n"}
+        env = make_env(files, documents=[_notes_table(), _yaml_table()])
+        snippet_condition = Condition(field="body", op="contains", values=["検索"])
+        # 実行
+        snippeted = env.search(
+            filter=snippet_condition,
+            view="full",
+            sections=["決まったこと"],
+            snippets=Snippets(context_lines=0),
+        )
+        missing = env.search(
+            filter=Group.model_validate(
+                {
+                    "or": [
+                        {"field": "id", "op": "eq", "values": ["notes/a.md"]},
+                        {"field": "id", "op": "eq", "values": ["doc-1"]},
+                    ]
+                }
+            ),
+            view="full",
+            sections=["無い見出し"],
+        )
+        # 検証
+        assert snippeted.items[0].snippets == [
+            Snippet(lines=[SnippetLine(line=7, text="7 行目 検索", hit=True)])
+        ]
+>       assert [(item.id, item.values["body"], item.ranges) for item in missing.items] == [
+            ("doc-1", "", []),
+            ("notes/a.md", "", []),
+        ]
+E       AssertionError: assert [('doc-1', '', [])] == [('doc-1', ''....md', '', [])]
+E         
+E         Right contains one more item: ('notes/a.md', '', [])
+E         Use -v to get more diff
+
+tests/unit/dev_docs/features/search/test_service.py:416: AssertionError
+_______________________ test_search_when_records_fields ________________________
+
+make_env = <function make_env.<locals>._make at 0x75b709dec670>
+
+    def test_search_when_records_fields(make_env: Callable[..., SearchEnv]) -> None:
+        """records の行の要素の項目で絞り込む（正常系）。"""
+        # 準備
+        table = DocumentTable(
+            id="notes",
+            paths=["notes/files.yaml"],
+            schema_path="schemas/files.schema.yaml",
+            records="files",
+            body_file="path",
+        )
+        files_schema = load_yaml(records_files_schema("owner", "string"))
+        env = make_env(
+            {
+                "notes/files.yaml": (
+                    "files:\n  - path: a.md\n    owner: alice\n  - path: b.md\n    owner: bob\n"
+                ),
+                "notes/a.md": "# a\n",
+                "notes/b.md": "# b\n",
+            },
+            documents=[table],
+            schemas={"notes": files_schema},
+        )
+        condition = Condition(field="owner", op="eq", values=["alice"])
+        # 実行
+        result = env.search(filter=condition)
+        # 検証
+        assert result.total_count == 1
+>       assert [item.id for item in result.items] == ["notes/a.md"]
+E       AssertionError: assert ['notes/a'] == ['notes/a.md']
+E         
+E         At index 0 diff: 'notes/a' != 'notes/a.md'
+E         Use -v to get more diff
+
+tests/unit/dev_docs/features/search/test_service.py:488: AssertionError
+____________________________ test_collect_warnings _____________________________
+
+tmp_path = PosixPath('/tmp/pytest-of-shuhei2441/pytest-5518/test_collect_warnings0')
+write_files = <function write_files.<locals>._write at 0x75b7083feae0>
+make_terminal_config = <function make_terminal_config.<locals>._make at 0x75b7083fe980>
+make_entry = <function make_entry.<locals>._make at 0x75b7083fefb0>
+
+    def test_collect_warnings(
+        tmp_path: Path,
+        write_files: Callable[[Path, dict[str, str]], None],
+        make_terminal_config: Callable[..., TerminalConfig],
+        make_entry: Callable[..., SourceEntry],
+    ) -> None:
+        """同期のずれ・古い設定・配信していない配信元を並べる（正常系）。"""
+        # 準備
+        write_files(
+            tmp_path / "a",
+            {
+                "dev-docs.yaml": MISSING_FILES_CONFIG,
+                "schemas/files.schema.yaml": "title: file\ntype: object\n",
+                "src/files.yaml": (
+                    "files:\n"
+                    "  - path: x.py\n"
+                    "  - path: y.py\n"
+                    "  - path: z.py\n"
+                    "    related:\n"
+                    "      - to: src/none.py\n"
+                ),
+                "src/z.py": "z = 1\n",
+            },
+        )
+        write_files(tmp_path / "b", {"dev-docs.yaml": BROKEN_CONFIG})
+        handlers = build_handlers(
+            make_terminal_config(
+                sources=[
+                    make_entry(str(tmp_path / "a" / "dev-docs.yaml"), source_id="a"),
+                    make_entry(str(tmp_path / "b" / "dev-docs.yaml"), source_id="b"),
+                ]
+            )
+        )
+        # 実行
+        result = _collect_warnings([_access("a")], handlers=handlers)
+        # 検証
+>       assert len(result) == 4
+E       AssertionError: assert 3 == 4
+E        +  where 3 = len(['a: ファイルが無い行が 2 件あります（check_project で確かめられます）', 'a: 設定のバージョンが古い（0・読める 3）。dev-docs migrate で移し替えます', 'b: 配信していません（documents[0].paths: 必須のキーが無い）。check_project で確かめられます'])
+
+tests/unit/dev_docs/features/session_context/test_service.py:185: AssertionError
+------------------------------ Captured log call -------------------------------
+WARNING  dev_docs.features.sources.service:service.py:500 配信元の設定のバージョンが古い（a・設定 0・サーバーが読める 3）
+ERROR    dev_docs.features.sources.service:service.py:431 b: documents[0].paths: 必須のキーが無い
+WARNING  dev_docs.main:main.py:269 a: ファイルが無い行 2 件: src/files.yaml: files[0] の path（x.py）が指すファイルがありません、src/files.yaml: files[1] の path（y.py）が指すファイルがありません
+_______________________ test_get_document_when_body_path _______________________
+
+make_view_env = <function make_view_env.<locals>._make at 0x75b708517060>
+
+    def test_get_document_when_body_path(make_view_env: Callable[..., SimpleNamespace]) -> None:
+        """管理用の YAML の行の文書の本文のファイルのパス（正常系）。"""
+        # 準備
+        tables = [
+            DocumentTable(id="rules", paths=["docs/*.yaml"], schema_path="schemas/rule.schema.yaml"),
+            DocumentTable(
+                id="notes",
+                paths=["notes/files.yaml"],
+                schema_path="schemas/rule.schema.yaml",
+                records="files",
+                body_file="path",
+            ),
+        ]
+        env = make_view_env(
+            {
+                "docs/a.yaml": "id: a\nname: A\n",
+                "notes/files.yaml": "files:\n  - path: b.md\n",
+                "notes/b.md": "# B\n",
+            },
+            tables=tables,
+        )
+        # 実行
+>       by_page = get_document(
+            "sample", "notes/files/notes/b.md", handlers=env.handlers, ref=None, diff_ref=None
+        )
+
+tests/unit/dev_docs/features/view/test_document.py:167: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+source_id = 'sample', path = 'notes/files/notes/b.md'
+handlers = Handlers(terminal=TerminalConfig(file=PosixPath('/tmp/pytest-of-shuhei2441/pytest-5518/test_get_document_when_body_pa0...reload_sources=<function make_handlers.<locals>._make.<locals>.<lambda> at 0x75b708515b10>, restart=None, prompts=None)
+ref = None, diff_ref = None
+
+    def get_document(
+        source_id: str,
+        path: str | None,
+        *,
+        handlers: Handlers,
+        ref: str | None,
+        diff_ref: str | None,
+    ) -> DocumentResponse:
+        """配信元の文書を変換した Markdown と、タブ・差分の項目・列の設定を返す。"""
+        # 読む場所を作り、文書を集める
+        target, resolved = screen_target(source_id, ref, registry=handlers.registry)
+        source = target.source
+        loaded = handlers.store.load(target)
+        tabs = build_nav(source, loaded.documents)
+        # Git の配信元は ref の値（省いたときは default_ref の名前）、Git 管理外は None
+        shown_ref = (ref or source.config.default_ref) if source.is_git else None
+        columns = handlers.columns.get(source.id)
+        github = (
+            GitHubTarget(
+                repository=source.config.github_repository,
+                issue_labels=list(source.config.github_issue_labels),
+            )
+            if source.config.github_repository
+            else None
+        )
+    
+        # 返す文書を決める
+        document: Document | None
+        if path is None:
+            # path が無い: 一番左のタブの最初の文書
+            first = next((page for tab in tabs if (page := first_page(tab)) is not None), None)
+            if first is None:
+                raise DocumentNotFoundError(message="文書がありません", missing=[])
+            path = first
+            document = find_page(loaded.documents, first)
+        else:
+            document = find_page(loaded.documents, path)
+        if document is None:
+            broken = _unreadable(loaded.problems, path)
+            if broken is None:
+>               raise DocumentNotFoundError(message=f"文書がありません: {path}", missing=[path])
+E               dev_docs.shared.errors.DocumentNotFoundError: 文書がありません: notes/files/notes/b.md
+
+src/dev_docs/features/view/document.py:175: DocumentNotFoundError
+______________________ test_build_nav_when_records_filter ______________________
+
+make_records_nav_source_dir = <function make_records_nav_source_dir.<locals>._make at 0x75b7082a5c70>
+make_entry = <function make_entry.<locals>._make at 0x75b70a47b740>
+tmp_path = PosixPath('/tmp/pytest-of-shuhei2441/pytest-5518/test_build_nav_when_records_fi0')
+
+    def test_build_nav_when_records_filter(
+        make_records_nav_source_dir: Callable[..., Path],
+        make_entry: Callable[..., SourceEntry],
+        tmp_path: Path,
+    ) -> None:
+        """records の行の 1 行の項目で絞った auto（正常系）。"""
+        from dev_docs.features.access.types import Target
+    
+        # 準備
+        config = make_records_nav_source_dir(
+            "priority",
+            "integer",
+            {"a": 10, "b": 9},
+            nav_filter={"field": "priority", "op": "gte", "values": ["10"]},
+        )
+        source, _ = load_source(make_entry(str(config), source_id="sample"), index=0)
+        assert source is not None
+        store = DocumentStore(SnapshotStore(tmp_path / "snapshots"))
+        documents = store.load(Target(source, source.root, None, None, "read")).documents
+        # 実行
+        tabs = build_nav(source, documents)
+        # 検証
+>       assert [(item.kind, item.path) for item in tabs[0].items] == [
+            ("page", "notes/files/notes/a.md")
+        ]
+E       AssertionError: assert [('page', 'no...les/notes/a')] == [('page', 'no.../notes/a.md')]
+E         
+E         At index 0 diff: ('page', 'notes/files/notes/a') != ('page', 'notes/files/notes/a.md')
+E         Use -v to get more diff
+
+tests/unit/dev_docs/features/view/test_nav.py:387: AssertionError
+_____________________ test_reload_sources_when_out_of_sync _____________________
+
+tmp_path = PosixPath('/tmp/pytest-of-shuhei2441/pytest-5518/test_reload_sources_when_out_o0')
+write_files = <function write_files.<locals>._write at 0x75b6fb305900>
+make_terminal_config = <function make_terminal_config.<locals>._make at 0x75b6fb3062a0>
+make_entry = <function make_entry.<locals>._make at 0x75b6fb307690>
+caplog = <_pytest.logging.LogCaptureFixture object at 0x75b709d81650>
+
+    def test_reload_sources_when_out_of_sync(
+        tmp_path: Path,
+        write_files: Callable[[Path, dict[str, str]], None],
+        make_terminal_config: Callable[..., TerminalConfig],
+        make_entry: Callable[..., SourceEntry],
+        caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        """メタデータのずれを警告のログに書く（正常系）。"""
+        # 準備
+        write_files(
+            tmp_path / "sample",
+            {
+                "dev-docs.yaml": SYNC_RULES_CONFIG.format(name="sample") + SYNC_SRC_CONFIG,
+                "schemas/rule.schema.yaml": SYNC_SCHEMA,
+                "docs/rule/doc-1.yaml": "id: doc-1\ntitle: 文書 1\n",
+                "docs/rule/doc-2.yaml": "id: doc-2\n",
+                "src/files.yaml": (
+                    "files:\n  - path: a.py\n    related:\n      - to: src/none.py\n  - path: c.py\n"
+                ),
+                "src/a.py": "a = 1\n",
+                "src/d.py": "d = 4\n",
+                "src/sub/e.py": "e = 5\n",
+            },
+        )
+        write_files(
+            tmp_path / "clean",
+            {
+                "dev-docs.yaml": SYNC_RULES_CONFIG.format(name="clean"),
+                "schemas/rule.schema.yaml": SYNC_SCHEMA,
+                "docs/rule/doc-1.yaml": "id: doc-1\ntitle: 文書 1\n",
+            },
+        )
+        terminal = make_terminal_config(
+            sources=[
+                make_entry(str(tmp_path / "sample" / "dev-docs.yaml")),
+                make_entry(str(tmp_path / "clean" / "dev-docs.yaml")),
+            ]
+        )
+        snapshots = SnapshotStore(tmp_path / "snapshots")
+        store = DocumentStore(snapshots)
+        # 実行
+        with caplog.at_level(logging.WARNING):
+            statuses = reload_sources(
+                terminal,
+                registry=SourceRegistry(),
+                store=store,
+                checker=DocumentChecker(store, timeout_sec=10),
+                converter=ConvertService(tmp_path / "converted", store, 10),
+            )
+        # 検証
+        warnings = _warnings(caplog)
+        sample = [message for message in warnings if "sample" in message]
+>       assert len(sample) == 4
+E       AssertionError: assert 3 == 4
+E        +  where 3 = len(['sample: metadata の列の欠け 1 件: rules: doc-2: name（title）', 'sample: 管理用の YAML に無いファイル 2 件: src: src/d.py、src: src/sub/e.py', 'sample: ファイルが無い行 1 件: src/files.yaml: files[1] の path（c.py）が指すファイルがありません'])
+
+tests/unit/dev_docs/test_serve.py:484: AssertionError
+------------------------------ Captured log call -------------------------------
+WARNING  dev_docs.main:main.py:269 sample: metadata の列の欠け 1 件: rules: doc-2: name（title）
+WARNING  dev_docs.main:main.py:269 sample: 管理用の YAML に無いファイル 2 件: src: src/d.py、src: src/sub/e.py
+WARNING  dev_docs.main:main.py:269 sample: ファイルが無い行 1 件: src/files.yaml: files[1] の path（c.py）が指すファイルがありません
+=========================== short test summary info ============================
+FAILED tests/unit/dev_docs/features/changes/test_service.py::test_list_changes_when_excluded
+FAILED tests/unit/dev_docs/features/changes/test_service.py::test_list_changes_when_contains_body_file
+FAILED tests/unit/dev_docs/features/changes/test_service.py::test_list_changes_when_last_read_body_file
+FAILED tests/unit/dev_docs/features/documents/test_fields.py::test_unresolved_related
+FAILED tests/unit/dev_docs/features/documents/test_fields.py::test_unresolved_related_when_not_list
+FAILED tests/unit/dev_docs/features/documents/test_loader.py::test_load_file_when_records
+FAILED tests/unit/dev_docs/features/documents/test_loader.py::test_load_file_when_default_name
+FAILED tests/unit/dev_docs/features/documents/test_loader.py::test_load_file_when_same_stem
+FAILED tests/unit/dev_docs/features/documents/test_store.py::test_document_store_load
+FAILED tests/unit/dev_docs/features/documents/test_store.py::test_document_store_load_when_many_tables
+FAILED tests/unit/dev_docs/features/documents/test_store.py::test_check_sync_when_clean
+FAILED tests/unit/dev_docs/features/documents/test_store.py::test_check_sync_when_related_unresolved
+FAILED tests/unit/dev_docs/features/related/test_service.py::test_trace_related_when_code_paths
+FAILED tests/unit/dev_docs/features/search/test_service.py::test_search_docs_when_ordered_by_matches
+FAILED tests/unit/dev_docs/features/search/test_service.py::test_search_docs_when_matches_under_not
+FAILED tests/unit/dev_docs/features/search/test_service.py::test_search_docs_when_part_of_body
+FAILED tests/unit/dev_docs/features/search/test_service.py::test_search_docs_when_part_of_body_with_snippets
+FAILED tests/unit/dev_docs/features/search/test_service.py::test_search_when_records_fields
+FAILED tests/unit/dev_docs/features/session_context/test_service.py::test_collect_warnings
+FAILED tests/unit/dev_docs/features/view/test_document.py::test_get_document_when_body_path
+FAILED tests/unit/dev_docs/features/view/test_nav.py::test_build_nav_when_records_filter
+FAILED tests/unit/dev_docs/test_serve.py::test_reload_sources_when_out_of_sync
+================== 22 failed, 702 passed in 74.10s (0:01:14) ===================
