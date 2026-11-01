@@ -49,7 +49,7 @@ classes:
     usecase: 文書の取得
     role: サービス
     summary: 文書の行の設定で変換を選び、埋め込みを展開した Markdown を返す
-    description: '`converters[]` の結果は (配信元, 種類, 変換の ID, 文書のバージョン, `run` の値のハッシュ, dev-docs のバージョン `RUNNING_VERSION`) を名前にしたファイルで `{state_dir}/converted` に控え、同じ文書・バージョンは 1 回だけ変換する。`converters[]` の行の `cache` が `False` の変換は控えを読まず書かず、要求のたびにスクリプトを動かす。'
+    description: '`converters[]` の結果は (配信元, 種類, 変換の ID, 文書のバージョン, `run` の値のハッシュ, dev-docs のバージョン（動いているバージョン）) を名前にしたファイルで `{state_dir}/converted` に控え、同じ文書・バージョンは 1 回だけ変換する。`converters[]` の行の `cache` が `False` の変換は控えを読まず書かず、要求のたびにスクリプトを動かす。'
     kind: クラス
     properties:
       - name: cache_dir

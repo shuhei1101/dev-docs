@@ -172,7 +172,7 @@ functions:
       type: list[Violation]
       description: 違反の並び。無ければ空
     process: |-
-      1. `SETTINGS_SCHEMA` を読み、Draft 2020-12 で `iter_errors` を全て集め、誤りの場所を `sources[0].config` の形のパスにした `Violation` にする（必須のキーが無い誤りは、無いキーまでをパスにする）
+      1. `SETTINGS_SCHEMA` を読み、スキーマの違反を全て集める（スキーマの違反）
       2. `sources[].id` が行の間で重なる場合、後の行の `sources[{n}].id` に重複の違反を加える（`id` を省いた行はここでは比べず、配信元の読み込みで比べる）
       3. `scope.read`・`scope.write` に空の文字列がある場合、その要素のパスに違反を加える
       4. `version` が `SETTINGS_VERSION` より新しい場合、`version` に「このサーバーより新しい設定」の違反を加える

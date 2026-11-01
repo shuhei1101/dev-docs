@@ -57,7 +57,7 @@ functions:
     process: |-
       1. `schema` が空なら空の並びを返す
       2. `jsonschema.validators.validator_for` でスキーマの `$schema` に合う検査器を選び（無ければ Draft 2020-12）、`format_checker` を付けて `iter_errors` で全ての誤りを取る
-      3. 誤りごとに、`absolute_path` を `a.b[0]` の形の項目のパス（最上位は `$`）に、`message` を決まりにした `Violation` を作る。`fix` には `validator` が `required`・`enum`・`type` のとき、足りないキー・許す値・期待する型を書く
+      3. 誤りごとに、`absolute_path` を `a.b[0]` の形の項目のパス（項目のパスへの変換。最上位は `$`）に、`message` を決まりにした `Violation` を作る。`fix` には `validator` が `required`・`enum`・`type` のとき、足りないキー・許す値・期待する型を書く
       4. 項目のパスの昇順に並べて返す
     unit_tests:
       - name: test_check_schema
