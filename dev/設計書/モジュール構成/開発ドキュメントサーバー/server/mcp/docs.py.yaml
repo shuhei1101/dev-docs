@@ -87,6 +87,7 @@ functions:
          - 引数の型の誤り・`Literal` に無い値は、SDK が関数を呼ぶ前に `isError` の結果にする。入力のスキーマに無いキーは SDK が捨てる
       3. 各ツールは次の順で処理する
          - 引数で要求のモデル（`SearchRequest` など）を作る
+         - `await handlers.registry.wait_loaded()` で配信元の読み込みを待つ（初期化とツールの一覧は待たない）
          - サービスを `asyncio.to_thread` で呼ぶ（引数は `handlers` の属性）
          - 結果をツールの結果にする（`write_docs`・`delete_docs` の `render` は `None`。`search_docs` は `functools.partial(render_search_markdown, source_label=result.source_label)`、`list_changes` は `functools.partial(render_changes_markdown, source_label=request.source or "作業中の配信元")`、`list_match_words` は用語の一覧の文を渡す）
          - `DevDocsError` と `pydantic.ValidationError` はツールのエラーの変換の `CallToolResult(is_error=True)` をそのまま返す。それ以外の例外は `[error]` ツールの処理に失敗した（ツール名・例外）を書いて MCP の既定に任せる
@@ -122,6 +123,12 @@ functions:
         condition: '`initialize` を呼ぶ'
         mock: 配線済みの関数（偽物。`prompts` は同梱した YAML を読んだ一式）
         expected: '`instructions` が `prompts.render(DOCS_INSTRUCTIONS_PROMPT_ID)` と同じで、`grep`・`action:`・`topic:`・`tool:` を含む'
+      - name: test_build_docs_mcp_when_loading
+        case: 正常
+        summary: ツールの呼び出しは読み込みを待ち、スレッドを持たない
+        condition: '`SourceRegistry(loading=True)` のまま `search_docs` を 13 本並べて呼び、`tools/list` を呼ぶ。その後 `reload` する'
+        mock: なし（一時フォルダの配信元）
+        expected: '`reload` の前に `tools/list` が答え、`search_docs` はまだ答えない（既定の executor のスレッドを使っていない）。`reload` の後に 13 本とも結果を返す'
 refs:
   - dev/設計書/インターフェース定義/開発ドキュメントサーバー/文書の検索#
   - dev/設計書/インターフェース定義/開発ドキュメントサーバー/文書の書き込み#
