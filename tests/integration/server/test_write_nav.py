@@ -47,6 +47,10 @@ NONE_TAB = {
     "title": "none",
     "items": [{"auto": {"filter": {"field": "tags", "op": "eq", "values": ["none"]}}}],
 }
+FOLDERS_TAB = {
+    "title": "folders",
+    "items": [{"auto": {"document": "sample", "group_by": "@folder"}}],
+}
 BAD_TAB = {
     "title": "bad",
     "items": [{"auto": {"filter": {"field": "tags", "op": "like", "values": ["mcp"]}}}],
@@ -293,3 +297,30 @@ def test_error_when_item_not_group(
     assert "InvalidArgumentError" in overridden.text
     assert str(local) in overridden.text
     assert (config.read_text(encoding="utf-8"), base.read_text(encoding="utf-8")) == before
+
+
+def test_normal_when_group_by_folder(
+    make_source: Callable[..., Any],
+    make_server: Callable[..., Any],
+    add_worktree: Callable[..., Path],
+    sample_file_set: Callable[..., dict[str, str]],
+    sample_doc_text: Callable[..., str],
+) -> None:
+    """group_by: '@folder' の auto を検証に通して書き、文書の数を返す（正常系）。"""
+    # 準備
+    files = _tagged_files(sample_file_set, sample_doc_text)
+    env, config = _setup(make_source, make_server, add_worktree, files)
+    # 実行
+    result = env.call_admin(
+        "write_nav",
+        path=str(config.parent),
+        operations=[{"op": "add", "tab": "folders", "value": FOLDERS_TAB}],
+        format="json",
+    )
+    written = load_yaml(config.read_text(encoding="utf-8"))
+    # 検証
+    assert not result.is_error
+    assert [tab["title"] for tab in written["nav"]["tabs"]] == ["すべて", "folders"]
+    assert written["nav"]["tabs"][1]["items"][0]["auto"]["group_by"] == "@folder"
+    assert _counts(result)[NEW_TAB_PATH] == 3
+    assert not result.data.get("warnings")

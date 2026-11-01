@@ -28,6 +28,17 @@ NAV = (
     "      items:\n"
     "        - page: sample/doc-2\n"
 )
+RULES_ROW = "  - id: rules\n    paths: [rules/**/*.yaml]\n    schema: schemas/sample.schema.yaml\n"
+FOLDER_NAV = (
+    "nav:\n"
+    "  tabs:\n"
+    "    - title: ルール\n"
+    "      items:\n"
+    "        - page: rules/common\n"
+    "        - auto:\n"
+    "            document: rules\n"
+    "            group_by: '@folder'\n"
+)
 TAG_NAV = (
     "nav:\n"
     "  tabs:\n"
@@ -119,6 +130,14 @@ def _page_changes(items: list[dict[str, Any]]) -> dict[str, str | None]:
     return changes
 
 
+def _outline(items: list[dict[str, Any]]) -> list[Any]:
+    """サイドバーの項目を、page は文書のパス、group は（名前, 中の並び）にした入れ子にする。"""
+    return [
+        item["path"] if item["kind"] == "page" else (item["title"], _outline(item["items"]))
+        for item in items
+    ]
+
+
 def _custom_files(
     sample_file_set: Callable[..., dict[str, str]],
     sample_config_text: Callable[..., str],
@@ -177,8 +196,9 @@ def test_normal_when_nav_missing(
     make_server: Callable[..., Any],
     sample_file_set: Callable[..., dict[str, str]],
     sample_config_text: Callable[..., str],
+    sample_doc_text: Callable[..., str],
 ) -> None:
-    """nav が無い配信元は種類ごとにタブを作る（正常系）。"""
+    """nav が無い配信元は種類ごとにタブを作り、文書をフォルダで束ねる（正常系）。"""
     # 準備
     memo = (
         "  - id: memo\n"
@@ -186,9 +206,17 @@ def test_normal_when_nav_missing(
         "    paths: [notes/*.yaml]\n"
         "    schema: schemas/sample.schema.yaml\n"
     )
+    config = sample_config_text(memo).replace("paths: [docs/*.yaml]", "paths: [docs/**/*.yaml]")
     files = sample_file_set(
-        **{"dev-docs.yaml": sample_config_text(memo), "notes/n-1.yaml": "id: n-1\nname: メモ 1\n"}
+        **{
+            "dev-docs.yaml": config,
+            "docs/lang/index.yaml": sample_doc_text("lang-index", "言語"),
+            "docs/lang/ts.yaml": sample_doc_text("ts", "TypeScript"),
+            "docs/lang/py/style.yaml": sample_doc_text("py-style", "Python のスタイル"),
+            "notes/n-1.yaml": "id: n-1\nname: メモ 1\n",
+        }
     )
+    files.pop("docs/doc-2.yaml")
     env = make_server(make_source("plain", files))
     # 実行
     response = env.client.get("/_api/sources/plain/docs")
@@ -196,8 +224,11 @@ def test_normal_when_nav_missing(
     tabs = response.json()["tabs"]
     assert response.status_code == 200
     assert [tab["title"] for tab in tabs] == ["sample", "メモ"]
-    assert [item["path"] for item in tabs[0]["items"]] == ["docs/doc-1", "docs/doc-2"]
-    assert [item["path"] for item in tabs[1]["items"]] == ["notes/n-1"]
+    assert _outline(tabs[0]["items"]) == [
+        "docs/doc-1",
+        ("lang", ["docs/lang/index", "docs/lang/ts", ("py", ["docs/lang/py/style"])]),
+    ]
+    assert _outline(tabs[1]["items"]) == ["notes/n-1"]
 
 
 def test_normal_when_body_path_given(
@@ -479,3 +510,33 @@ def test_normal_when_aliases_returned(
     assert ref.get("avoid") is None
     assert without.status_code == 200
     assert without.json()["aliases"] == []
+
+
+def test_normal_when_nav_grouped_by_folder(
+    make_source: Callable[..., Any],
+    make_server: Callable[..., Any],
+    sample_file_set: Callable[..., dict[str, str]],
+    sample_config_text: Callable[..., str],
+    sample_doc_text: Callable[..., str],
+) -> None:
+    """group_by: '@folder' の auto が、手で書いた page の文書を除いてフォルダごとの group を作る（正常系）。"""
+    # 準備
+    files = sample_file_set(
+        **{
+            "dev-docs.yaml": sample_config_text(RULES_ROW + FOLDER_NAV),
+            "rules/common.yaml": sample_doc_text("common", "共通"),
+            "rules/lang/index.yaml": sample_doc_text("lang-index", "言語"),
+            "rules/lang/ts.yaml": sample_doc_text("ts", "TypeScript"),
+            "rules/lang/py/style.yaml": sample_doc_text("py-style", "Python のスタイル"),
+        }
+    )
+    env = make_server(make_source("sample", files))
+    # 実行
+    response = env.client.get("/_api/sources/sample/docs")
+    # 検証
+    tabs = {tab["title"]: tab for tab in response.json()["tabs"]}
+    assert response.status_code == 200
+    assert _outline(tabs["ルール"]["items"]) == [
+        "rules/common",
+        ("lang", ["rules/lang/index", "rules/lang/ts", ("py", ["rules/lang/py/style"])]),
+    ]

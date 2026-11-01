@@ -5,6 +5,7 @@ from collections.abc import Callable
 from importlib.metadata import version
 from typing import Any
 
+LOADING_LINE = "配信元: 読み込み中（終わるまで文書の MCP の呼び出しは待たされます）"
 BROKEN_CONFIG = "name: broken\ndocuments:\n  - id: sample\n    schema: schemas/sample.schema.yaml\n"
 
 
@@ -32,3 +33,26 @@ def test_normal(
     assert any("documents[0].paths" in error for error in sources["broken"]["errors"])
     assert result.structured == json.loads(result.text)
     assert "| sample | serving |" in markdown.text
+
+
+def test_normal_when_loading(
+    make_source: Callable[..., Any], make_loading_server: Callable[..., Any]
+) -> None:
+    """配信元の読み込みを待たずに、読み込み中であることを返す（正常系）。"""
+    # 準備
+    loading = make_loading_server(make_source("sample"))
+    env = loading.env
+    # 実行
+    before = env.call_admin("status", format="json")
+    markdown = env.call_admin("status")
+    loading.finish()
+    after = env.call_admin("status", format="json")
+    # 検証
+    assert before.data["loading"] is True
+    # 空の値は MCP の結果から落ちる
+    assert "sources" not in before.data
+    assert LOADING_LINE in markdown.text
+    assert after.data["loading"] is False
+    assert [(item["id"], item["status"]) for item in after.data["sources"]] == [
+        ("sample", "serving")
+    ]
