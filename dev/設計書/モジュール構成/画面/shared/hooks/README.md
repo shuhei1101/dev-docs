@@ -8,3 +8,5 @@
 | --- | --- |
 | [use-shortcut.ts](./use-shortcut.ts.yaml) | ショートカットの定義の ID でキーを受けるフック |
 | [use-active-heading.ts](./use-active-heading.ts.yaml) | 画面の一番上にある見出しを追うフック |
+| [use-delayed-flag.ts](./use-delayed-flag.ts.yaml) | 待ちが続いたときだけ true にするフック |
+| [use-media-query.ts](./use-media-query.ts.yaml) | メディアクエリに今当たっているかを返すフック |
