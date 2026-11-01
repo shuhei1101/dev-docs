@@ -730,6 +730,20 @@ def test_normal_when_tags_are_objects(
     sixth, tags_6 = _write_tags(env, source, worktree, {"add_to": {"main_tags": ["d"]}})
     seventh, tags_7 = _write_tags(env, source, worktree, {"remove_from": {"main_tags": ["c"]}})
     eighth, tags_8 = _write_tags(env, source, worktree, {"unset": ["main_tags"]})
+    ninth = env.call(
+        "write_docs",
+        cwd=str(source.folder),
+        worktree=str(worktree),
+        operations=[
+            {
+                "op": "create",
+                "kind": "rules",
+                "data": {"id": "r2", "tags": [{"name": "a", "main": True}]},
+            }
+        ],
+    )
+    tenth, tags_10 = _write_tags(env, source, worktree, {"set": {"tags": "a"}})
+    eleventh, tags_11 = _write_tags(env, source, worktree, {"add_to": {"tags": [{"name": "c"}]}})
     # 検証
     assert not first.is_error
     assert tags_1 == [{"name": "a", "main": True}, {"name": "b"}, {"name": "c"}]
@@ -749,3 +763,16 @@ def test_normal_when_tags_are_objects(
     assert tags_7 == [{"name": "a"}, {"name": "c"}, {"name": "d", "main": True}]
     assert not eighth.is_error
     assert tags_8 == [{"name": "a"}, {"name": "c"}, {"name": "d"}]
+    assert ninth.is_error
+    assert "InvalidArgumentError" in ninth.text
+    assert "operations[0].data.tags" in ninth.text
+    assert "名前（文字列）の配列" in ninth.text
+    assert not (worktree / "rules" / "r2.yaml").exists()
+    assert tenth.is_error
+    assert "InvalidArgumentError" in tenth.text
+    assert "operations[0].set.tags" in tenth.text
+    assert tags_10 == tags_8
+    assert eleventh.is_error
+    assert "InvalidArgumentError" in eleventh.text
+    assert "operations[0].add_to.tags" in eleventh.text
+    assert tags_11 == tags_8
