@@ -446,11 +446,7 @@ def test_reload_sources_when_out_of_sync(
             "docs/rule/doc-1.yaml": "id: doc-1\ntitle: 文書 1\n",
             "docs/rule/doc-2.yaml": "id: doc-2\n",
             "src/files.yaml": (
-                "files:\n"
-                "  - path: a.py\n"
-                "    related:\n"
-                "      - to: src/none.py\n"
-                "  - path: c.py\n"
+                "files:\n  - path: a.py\n    related:\n      - to: src/none.py\n  - path: c.py\n"
             ),
             "src/a.py": "a = 1\n",
             "src/d.py": "d = 4\n",
