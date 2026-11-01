@@ -42,6 +42,9 @@ flows:
       - name: nav の無い配信元
         description: 文書の種類を 2 つ持ち、`nav` を持たない配信元
         notes: id `plain`
+      - name: サブフォルダの文書
+        description: 1 つ目の種類の行の `paths` を `docs/**/*.yaml` にし、`docs/` の直下に 1 件、`docs/lang/` に `index.yaml` を含む 2 件、`docs/lang/py/` に 1 件の文書を置く
+        notes: 2 つ目の種類の行の `paths` はサブフォルダを含まない glob
     flow: |-
       ```mermaid
       sequenceDiagram
@@ -49,12 +52,15 @@ flows:
         participant E as GET /_api/sources/{source}/docs/{path}
 
         C->>E: GET /_api/sources/plain/docs
-        E->>E: 種類ごとにタブを作る
+        E->>E: 種類ごとにタブを作り、文書をフォルダで束ねる
         E-->>C: 200（1 つ目の種類のタブの一番上の文書）
       ```
     expected:
       - '`tabs` が `documents[]` の 2 つの種類ごとに 1 つずつ並ぶ'
       - 各タブの `items` にその種類の文書だけが並ぶ
+      - 1 つ目のタブの `items` の先頭が `docs/` の直下の文書の page、次が group `lang`
+      - group `lang` の先頭が `docs/lang/index.yaml` の文書の page で、中に group `py` がある
+      - 2 つ目のタブの `items` は group を持たない
     test: test_normal_when_nav_missing
   - name: 正常系（リビジョンを指す）
     summary: '`ref` のリビジョンの文書を返す'
@@ -329,6 +335,34 @@ flows:
       - 2 回目の `markdown` が 1 回目と同じ
       - '`state_dir` の変換の結果の控えに、この文書の控えのファイルが 1 つある'
     test: test_normal_when_converter_cache_enabled
+  - name: 正常系（nav をフォルダで束ねる）
+    summary: "`group_by: '@folder'` の `auto` が、手で書いた page の文書を除いてフォルダごとの group を作る"
+    setup:
+      - name: Mock
+        description: なし
+        notes: '-'
+      - name: フォルダごとの文書
+        description: 'sample に `paths: [rules/**/*.yaml]` の行 `rules` を追加し、`rules/common.yaml`・`rules/lang/index.yaml`・`rules/lang/ts.yaml`・`rules/lang/py/style.yaml` を置く'
+        notes: '-'
+      - name: nav のフォルダの束ね
+        description: "sample の `nav` にタブ `ルール` を追加し、`rules/common.yaml` の文書を指す `page` と `{auto: {document: rules, group_by: '@folder'}}` をこの順で置く"
+        notes: '-'
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        participant C as クライアント
+        participant E as GET /_api/sources/{source}/docs/{path}
+
+        C->>E: GET /_api/sources/sample/docs
+        E->>E: 手で書いた page を並べる
+        E->>E: auto の文書から手で書いた page の文書を除き、行の paths の起点からのフォルダごとの group にする
+        E-->>C: 200（tabs）
+      ```
+    expected:
+      - タブ `ルール` の `items` の先頭が `rules/common.yaml` の文書の page で、`auto` の並びに同じ文書は出ない
+      - 次の項目が group `lang` で、中の並びは `rules/lang/index.yaml` の文書・`rules/lang/ts.yaml` の文書・group `py` の順
+      - group `py` に `rules/lang/py/style.yaml` の文書が入る
+    test: test_normal_when_nav_grouped_by_folder
 lead: '#17 の画面が文書を開くときに呼ぶ。配信元の文書を変換した Markdown と、タブ・サイドバー・差分の項目・画面の状態を JSON で返す。`path` を省くと一番左のタブのサイドバーの一番上の文書を返す。'
 identifier: get_document
 permissions: なし（`127.0.0.1` でだけ待ち受ける）
@@ -486,6 +520,12 @@ constraints:
   - item: 変換の結果の控え
     constraint: '`converters[]` の行の `cache` が `true`（既定）なら、控えがあればスクリプトを動かさずに返し、無ければ動かして控えを書く。`false` なら控えを読まず書かず、要求のたびにスクリプトを動かす'
     notes: '控えのキーは本文の外のファイルを含まない。本文の外のファイルを読む変換は `cache: false` にする'
+  - item: nav の auto のフォルダの束ね
+    constraint: "`auto` の `group_by` が `'@folder'` のとき、文書が当たった行の `paths` の glob（複数当たるときは `paths` で先に並ぶ glob）のうちワイルドカードより前のフォルダを起点に、起点からのフォルダごとにフォルダ名の group を作り、入れ子のフォルダは入れ子の group にする。起点の直下の文書は group に入れず、group より前に並べる。フォルダの `index.yaml` の文書をその group の先頭の page にする。管理用の YAML の行（`records`）の文書は束ねず、そのまま並べる。`'@folder'` 以外の `group_by` は今と同じく項目のパスとして読む"
+    notes: "`nav` が無い配信元は、種類ごとのタブを `group_by: '@folder'` の `auto` として組み立てる"
+  - item: 手で書いた page と auto の重なり
+    constraint: 同じタブの中で、手で書いた `page`（`group` の中を含む）が指す文書を `auto` の結果から除く。手で書いた `group`・`page` の並びは変えない
+    notes: '-'
 refs:
   - dev/設計書/シナリオ/単一ユースケース/YAMLを直接編集した#scenarios[異常シナリオ（YAML を壊した）]
 test_file: tests/integration/server/test_get_document.py

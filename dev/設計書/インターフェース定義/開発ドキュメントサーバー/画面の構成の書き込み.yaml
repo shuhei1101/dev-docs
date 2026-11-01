@@ -165,6 +165,32 @@ flows:
       - '2 回目は `isError: true` で、`local/dev-docs.yaml` のパスを返す'
       - どちらの `dev-docs.yaml` も書き換わらない
     test: test_error_when_item_not_group
+  - name: 正常系（フォルダで束ねる auto を書く）
+    summary: "`group_by: '@folder'` の `auto` を検証に通して書き、文書の数を返す"
+    setup:
+      - name: Mock
+        description: なし（一時フォルダに配信元を作り、dev-docs のアプリをテストのクライアントで呼ぶ）
+        notes: '-'
+      - name: 入力
+        description: "`add`（タブ `folders`、`auto` が `{document: sample, group_by: '@folder'}`）"
+        notes: sample の文書は 3 件
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        participant C as クライアント
+        participant T as write_nav
+        participant F as ワークツリーの dev-docs.yaml
+
+        C->>T: add タブ folders
+        T->>T: 書いた後の nav をスキーマと check_filter で検証する
+        T->>F: nav を書く
+        T-->>C: nav・counts
+      ```
+    expected:
+      - "`dev-docs.yaml` の `nav` にタブ `folders` が加わり、その `auto` の `group_by` が `'@folder'`"
+      - '`counts` のその `auto` が 3'
+      - '`warnings` が空'
+    test: test_normal_when_group_by_folder
 lead: 配信元の `dev-docs.yaml` の `nav` だけを、タブ・項目の追加・修正・削除で書き換える。書いた後の `nav` をスキーマと `check_filter` で検証し、`auto` の条件に当たる文書の数を返す。
 identifier: write_nav
 permissions: なし（`127.0.0.1` でだけ待ち受ける）
@@ -270,4 +296,6 @@ constraints:
     constraint: 項目はタブの名前と group の名前でだけ指し、添字では指さない。同じ `operations` の前の `add`・`remove` で並びが変わっても指す先はずれない
   - item: 重ねた設定
     constraint: 端末の設定の `sources[].config` で `path` の `dev-docs.yaml` より後に重ねた設定の YAML が `nav` を持つ配信元は、書いても配信に出ないため `InvalidArgumentError` で断る
+  - item: auto の group_by
+    constraint: "`auto` の `group_by` は、項目のパスかフォルダで束ねる指定 `'@folder'` を受ける。`'@folder'` は項目のパスとして検査しない。`counts` は `group_by` によらず条件に当たる文書の数"
 test_file: tests/integration/server/test_write_nav.py

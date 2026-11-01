@@ -306,4 +306,6 @@ constraints:
   - item: 除外の条件
     constraint: 生成物・ロック・バイナリ・ベンダーのコード・再エクスポートや空の `__init__` だけのファイルを `unindexed_files` に数えない。起動時の警告・状態の取得・`dev-docs files` も同じ判定を使う
     notes: 見分け方はモジュール構成『文書のストア / indexable.py』の `is_excluded_file`。配信元固有の除外は `documents[].exclude[]`
+  - item: nav の auto の group_by
+    constraint: "`group_by` の `'@folder'` は項目のパスとして検査せず、違反・警告にしない"
 test_file: tests/integration/server/test_check_project.py
