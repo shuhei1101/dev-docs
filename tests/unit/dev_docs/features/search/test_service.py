@@ -328,8 +328,8 @@ def test_search_docs_when_ordered_by_matches(make_env: Callable[..., SearchEnv])
     without_matches = env.search(filter=node)
     # 検証
     assert [(item.id, item.values["@matches"]) for item in ordered.items] == [
-        ("notes/a", 3),
-        ("notes/b", 1),
+        ("notes/a.md", 3),
+        ("notes/b.md", 1),
     ]
     assert all("@matches" not in item.values for item in without_matches.items)
 
