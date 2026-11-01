@@ -1,0 +1,49 @@
+title: "画面 / 文書の画面 / missing-links.tsx"
+lead: 見つからない画面の次のリンク（配信元のトップ・設定画面）と、代わりに開ける配信中の配信元。
+components:
+  - name: MissingLinks
+    title: 次のリンク
+    kind: コンポーネント
+    container: features/docs/not-found/components/missing-links.tsx
+    usecase: 文書を読む
+    role: 部品
+    summary: 見つからなかったものに応じて、配信元のトップ・設定画面へのリンクと配信中の配信元の一覧を出す
+    props:
+      - name: missing
+        type: MissingDescription
+        required: true
+        description: 見つからなかったものの説明
+      - name: source
+        type: string
+        required: false
+        description: リビジョンを読んだ配信元の ID
+      - name: rev
+        type: string
+        required: false
+        description: URL のリビジョン
+      - name: serving
+        type: ServingSource[]
+        required: true
+        description: 配信中の配信元
+    description: '`missing.kind` が `doc`・`ref` で `source` があるときだけ `{source} のトップを開く` を出す（`doc` は `rev` を保つ）。`設定を開く` は常に出し、`missing.kind` が `source`・`not_served` のときは主のボタン、それ以外は枠線のボタンにする。`source`・`not_served` で配信中の配信元があるときだけ、配信中の配信元のトップへのリンクの一覧（`aria-label="配信中の配信元"`）を出す。リンクは TanStack Router の `Link`'
+    unit_tests:
+      - name: test_missing_links
+        case: 正常
+        summary: 文書が無い
+        condition: '`missing.kind` が `doc`、`source` が `s`、`rev` が `v1`、配信中の配信元 2 件'
+        mock: なし（メモリの履歴のルーター）
+        expected: '`s のトップを開く` のリンク先が `/s?rev=v1`、`設定を開く` があり、配信中の配信元の一覧は出ない'
+      - name: test_missing_links_when_source_missing
+        case: 正常
+        summary: 配信元が無い
+        condition: '`missing.kind` が `source`、配信中の配信元 2 件'
+        mock: なし（メモリの履歴のルーター）
+        expected: 配信元のトップのリンクは出ず、`設定を開く` と配信中の配信元 2 件のリンクが出る
+      - name: test_missing_links_when_no_serving
+        case: 正常
+        summary: 配信中の配信元が無い
+        condition: '`missing.kind` が `not_served`、`serving` が空'
+        mock: なし（メモリの履歴のルーター）
+        expected: 配信中の配信元の一覧が出ない
+test_files:
+  - tests/unit/frontend/src/features/docs/not-found/components/missing-links.test.tsx

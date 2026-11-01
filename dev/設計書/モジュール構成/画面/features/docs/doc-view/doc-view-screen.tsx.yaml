@@ -8,7 +8,7 @@ components:
     usecase: 文書を読む
     role: 画面
     summary: ルートの引数で文書を読み、トップバー・種類のタブ・サイドバー・本文・目次・コメントのパネルを並べる
-    description: 文書は `useSuspenseQuery(documentQueryOptions(...))`、配信元とリビジョンの一覧は orval が生成した問い合わせで読む。URL の変更は `useNavigate` で `search` を書き換える（`rev`・`base` を保つ）。`document.title` は `pageTitle` で書き換える。幅の切り替え（48rem・80rem）は Tailwind の `md:`・`xl:` で行い、JavaScript では幅を読まない
+    description: 文書は `useSuspenseQuery(documentQueryOptions(...))`、配信元とリビジョンの一覧は orval が生成した問い合わせで読む。URL の変更は `search` を書き換える（`rev`・`base` を保つ。文書の画面の移動）。トップバーへは配信中の配信元を渡す（配信中の配信元の取り出し）。文書は本文の領域に出し、画面の先頭に本文へのスキップを置く。`document.title` は `pageTitle` で書き換える。幅の切り替え（48rem・80rem）は Tailwind の `md:`・`xl:` で行い、JavaScript では幅を読まない
     state:
       - name: searchOpen
         type: boolean
@@ -39,7 +39,7 @@ components:
         type: DocComment | null
         initial: 'null'
         description: コメントのパネルで場所を選ばれたコメント。`DocBody` の `locating` へ渡す
-        notes: '`useLocating`。場所を選ばれたら入れ、開いている文書（`docId` が同じ）なら移動せず、他の文書なら `useDocNavigation` の `locate` で開く。`onLocated` か、開いている文書が `locating` と違う文書に変わったときに null'
+        notes: '`useLocating`。場所を選ばれたら入れ、開いている文書（`docId` が同じ）なら移動せず、他の文書なら文書の画面の移動の `locate` で開く。`onLocated` か、開いている文書が `locating` と違う文書に変わったときに null'
     unit_tests:
       - name: test_doc_view_screen
         case: 正常

@@ -1,0 +1,20 @@
+title: "画面 / 共通 / skip-link.tsx"
+lead: キーボードでフォーカスしたときだけ見える、本文の領域へフォーカスを移すリンク。
+components:
+  - name: SkipLink
+    title: 本文へのスキップ
+    kind: コンポーネント
+    container: shared/components/skip-link.tsx
+    usecase: 共通
+    role: 部品
+    summary: '`本文へスキップ` のリンクを画面の先頭に置き、押したら `id="main"` の要素へフォーカスを移す'
+    description: ふだんは `sr-only` で隠し、フォーカスを受けたときだけ左上に出す。押したときは既定の移動を止め、`main` の要素の `focus()` を呼ぶ（`main` は `tabIndex={-1}` を持つ）
+    unit_tests:
+      - name: test_skip_link
+        case: 正常
+        summary: 本文へフォーカスを移す
+        condition: '`id="main"`（`tabIndex={-1}`）の要素と並べてリンクを押す'
+        mock: なし（`@testing-library/user-event`）
+        expected: '`main` の要素にフォーカスがある'
+test_files:
+  - tests/unit/frontend/src/shared/components/skip-link.test.tsx

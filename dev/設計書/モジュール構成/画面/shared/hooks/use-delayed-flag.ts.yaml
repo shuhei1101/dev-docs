@@ -1,0 +1,44 @@
+title: "画面 / 共通 / use-delayed-flag.ts"
+lead: 待ちが続いたときだけ true にするフック（短い待ちで読み込み中の表示を出さないため）。
+functions:
+  - name: useDelayedFlag
+    title: 遅らせた読み込み中の判定
+    kind: フック
+    container: shared/hooks/use-delayed-flag.ts
+    usecase: 共通
+    role: フック
+    summary: '`active` が `delayMs` 続いたときだけ true を返す'
+    scope: public
+    args:
+      - name: active
+        type: boolean
+        required: true
+        passing: positional
+        description: 待っているか
+      - name: delayMs
+        type: number
+        required: true
+        passing: positional
+        description: true にするまでの待ち時間（ms）
+    returns:
+      type: boolean
+      description: '`active` で、かつ `delayMs` が過ぎたか'
+    process: |-
+      1. `active` の間だけ `delayMs` のタイマーを置き、過ぎたら経過の状態を true にする
+      2. `active`・`delayMs` が変わるか外れるときに、タイマーを止めて経過の状態を false に戻す
+      3. `active` と経過の状態の両方が true のときだけ true を返す
+    unit_tests:
+      - name: test_use_delayed_flag
+        case: 正常
+        summary: 待ちが続いた
+        condition: '`active` が true のまま `delayMs` を進める'
+        mock: 偽のタイマー（`vi.useFakeTimers`）
+        expected: '`delayMs` の前は false、過ぎた後は true'
+      - name: test_use_delayed_flag_when_finished
+        case: 正常
+        summary: 待ちが終わった
+        condition: '`delayMs` の前に `active` を false にしてから時間を進める'
+        mock: 偽のタイマー
+        expected: false のまま
+test_files:
+  - tests/unit/frontend/src/shared/hooks/use-delayed-flag.test.tsx

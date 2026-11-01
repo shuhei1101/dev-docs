@@ -24,7 +24,7 @@ components:
       - name: search
         type: DocViewSearch
         required: true
-        description: 保つ `rev`・`base`
+        description: 保つ `rev`・`base`（`tab` はリンク先のタブの番号にする）
       - name: onEmptyTab
         type: '(tab: NavTab) => void'
         required: true
@@ -36,7 +36,7 @@ components:
         summary: タブの最初の文書へ
         condition: 2 つ目のタブの最初の page が `b.md`
         mock: なし（メモリの履歴のルーター）
-        expected: 2 つ目のタブのリンク先が `/s/b.md`
+        expected: 2 つ目のタブのリンク先が `/s/b.md?tab=1`
       - name: test_doc_tabs_when_empty
         case: 正常
         summary: 文書の無いタブ

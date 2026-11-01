@@ -1,0 +1,58 @@
+title: "画面 / 文書の画面 / serving-sources.ts"
+lead: 端末の設定の取得から、配信中の配信元を取り出す。
+data_models:
+  - name: ServingSource
+    title: 配信中の配信元
+    container: features/docs/shared/serving-sources.ts
+    usecase: 共通
+    role: DTO
+    summary: トップバーの配信元のメニューと見つからない画面のリンクに出す配信元
+    properties:
+      - name: id
+        type: string
+        description: 配信元の ID
+      - name: writable
+        type: boolean
+        description: コメントを書ける範囲を持つか（`scope.write` が null か 1 件以上）
+functions:
+  - name: servingSources
+    title: 配信中の配信元の取り出し
+    kind: 関数
+    container: features/docs/shared/serving-sources.ts
+    usecase: 共通
+    role: 変換
+    summary: 端末の設定の取得の `sources[]` のうち、状態が `serving` で `id` を持つものを配信中の配信元にする
+    scope: public
+    args:
+      - name: view
+        type: SettingsSourcesView | undefined
+        required: true
+        passing: positional
+        description: 端末の設定の取得の応答（読み込み中は undefined）
+    returns:
+      type: ServingSource[]
+      description: 配信中の配信元の並び（`sources[]` の順）。`view` が undefined なら空
+    process: |-
+      1. `view.sources` を順に見て、`status` が `serving` で `id` を持つ行だけを残す
+      2. 残した行を `{id, writable}` にする。`writable` は `scope.write` が null（範囲を限らない）か、1 件以上のときに true
+    unit_tests:
+      - name: test_serving_sources
+        case: 正常
+        summary: 配信中の行だけ
+        condition: '`serving`・`error` の 2 行'
+        mock: なし
+        expected: '`serving` の行の 1 件'
+      - name: test_serving_sources_when_write_scope
+        case: 正常
+        summary: 書ける範囲
+        condition: '`scope.write` が null・`[]`・`["docs/"]` の 3 行（全て `serving`）'
+        mock: なし
+        expected: '`writable` が順に true・false・true'
+      - name: test_serving_sources_when_undefined
+        case: 正常
+        summary: 読み込み中
+        condition: '`view` が undefined'
+        mock: なし
+        expected: 空の配列
+test_files:
+  - tests/unit/frontend/src/features/docs/shared/serving-sources.test.ts

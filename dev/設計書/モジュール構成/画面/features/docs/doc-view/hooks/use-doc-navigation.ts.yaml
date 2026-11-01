@@ -1,0 +1,120 @@
+title: "画面 / 文書の画面 / use-doc-navigation.ts"
+lead: 文書の画面から別の文書・リビジョン・配信元へ移る操作。
+functions:
+  - name: compareBase
+    title: 比較を始めるときの比較元
+    kind: 関数
+    container: features/docs/doc-view/hooks/use-doc-navigation.ts
+    usecase: 文書を読む
+    role: 変換
+    summary: 開いているのが既定のリビジョン以外なら既定のリビジョン、既定なら最近の commit の 2 件目を比較元にする
+    scope: public
+    args:
+      - name: refs
+        type: RefsResponse | undefined
+        required: true
+        passing: positional
+        description: リビジョンの一覧（読み込み中は undefined）
+      - name: rev
+        type: string | undefined
+        required: true
+        passing: positional
+        description: 開いているリビジョン（URL の `rev`。無ければ既定）
+    returns:
+      type: string | undefined
+      description: 比較元のリビジョン。`refs` が undefined か、既定を開いていて commit が 2 件に満たないときは undefined
+    process: |-
+      1. `refs` が undefined なら undefined を返す
+      2. `rev`（無ければ `refs.defaultRef`）が `refs.defaultRef` と違うなら `refs.defaultRef` を返す
+      3. 同じなら `refs.commits` の 2 件目の `commit` を返す
+    unit_tests:
+      - name: test_compare_base
+        case: 正常
+        summary: 既定を開いている
+        condition: '`rev` が undefined、`commits` が 2 件'
+        mock: なし
+        expected: 2 件目の `commit`
+      - name: test_compare_base_when_other_rev
+        case: 正常
+        summary: 既定以外を開いている
+        condition: '`rev` が `v1`、`defaultRef` が `main`'
+        mock: なし
+        expected: '`main`'
+      - name: test_compare_base_when_no_commits
+        case: 正常
+        summary: 比較元が無い
+        condition: '`rev` が undefined、`commits` が 1 件。または `refs` が undefined'
+        mock: なし
+        expected: undefined
+  - name: useDocNavigation
+    title: 文書の画面の移動
+    kind: フック
+    container: features/docs/doc-view/hooks/use-doc-navigation.ts
+    usecase: 文書を読む
+    role: フック
+    summary: TanStack Router の `useNavigate` で、文書・リビジョン・比較・配信元・コメントの文書へ移る操作をまとめて返す
+    scope: public
+    args:
+      - name: source
+        type: string
+        required: true
+        passing: positional
+        description: 開いている配信元の ID
+      - name: path
+        type: string
+        required: true
+        passing: positional
+        description: 開いている文書のパス
+      - name: search
+        type: DocViewSearch
+        required: true
+        passing: positional
+        description: URL の `rev`・`base`
+      - name: refs
+        type: RefsResponse | undefined
+        required: true
+        passing: positional
+        description: リビジョンの一覧（比較を始めるときの比較元に使う）
+    returns:
+      type: '{openDoc: (splat: string) => void; selectRef: (rev: string) => void; compare: (rev: string | undefined, base: string) => void; clearDiff: () => void; startCompare: () => void; selectSource: (id: string) => void; locate: (comment: DocComment) => void}'
+      description: 移る操作
+    process: |-
+      1. `openDoc` は同じ配信元の `splat` の文書へ、`rev` を保って移る（`base` は外す）
+      2. `selectRef` は同じ文書のまま `rev` を替え、`base` を保つ
+      3. `compare` は同じ文書の `rev`・`base` を渡した値にする。`clearDiff` は `base` を外す
+      4. `startCompare` は比較を始めるときの比較元を `base` にして移る。比較元が無ければ移らない
+      5. `selectSource` はその配信元のトップ（`/$source`）へ移る
+      6. `locate` はコメントの配信元・パスの文書へ、コメントの `ref` を `rev` にして移る
+    unit_tests:
+      - name: test_use_doc_navigation
+        case: 正常
+        summary: 文書を開くとき `rev` を保つ
+        condition: '`/s/a.md?rev=v1&base=v0` で `openDoc("b.md")`'
+        mock: なし（メモリの履歴のルーター）
+        expected: URL が `/s/b.md?rev=v1`
+      - name: test_use_doc_navigation_when_select_ref
+        case: 正常
+        summary: リビジョンを替えるとき `base` を保つ
+        condition: '`/s/a.md?base=v0` で `selectRef("v2")`'
+        mock: なし（メモリの履歴のルーター）
+        expected: URL が `/s/a.md?rev=v2&base=v0`
+      - name: test_use_doc_navigation_when_start_compare
+        case: 正常
+        summary: 比較を始める
+        condition: '`/s/a.md`、リビジョンの一覧の `commits` が 2 件で `startCompare()`'
+        mock: なし（メモリの履歴のルーター）
+        expected: URL の `base` が 2 件目の `commit`
+      - name: test_use_doc_navigation_when_clear_diff
+        case: 正常
+        summary: 比較をやめる
+        condition: '`/s/a.md?rev=v1&base=v0` で `clearDiff()`'
+        mock: なし（メモリの履歴のルーター）
+        expected: URL が `/s/a.md?rev=v1`
+      - name: test_use_doc_navigation_when_locate
+        case: 正常
+        summary: コメントの文書を開く
+        condition: 配信元 `t`・パス `c.md`・`ref` が `v3` のコメントで `locate`
+        mock: なし（メモリの履歴のルーター）
+        expected: URL が `/t/c.md?rev=v3`
+test_files:
+  - tests/unit/frontend/src/features/docs/doc-view/hooks/use-doc-navigation.test.tsx
