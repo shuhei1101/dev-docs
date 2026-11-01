@@ -137,7 +137,7 @@ def test_build_settings_router_when_put(
         return [make_status("a", 0)]
 
     monkeypatch.setattr(route_module, "save_sources", fake_save_sources)
-    handlers = make_handlers(settings_lock=threading.Lock())
+    handlers = make_handlers(settings_lock=threading.Lock(), registry=SourceRegistry())
     app = FastAPI()
     app.include_router(build_settings_router(handlers))
     client = TestClient(app)
