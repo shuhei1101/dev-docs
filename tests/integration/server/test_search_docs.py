@@ -48,7 +48,7 @@ OBJECT_TAGS_SCHEMA = (
 )
 TAG_MCP = {"field": "tags", "op": "eq", "values": ["mcp"]}
 MAIN_TAG_MCP = {"field": "main_tags", "op": "eq", "values": ["mcp"]}
-NOTES_A = {"field": "id", "op": "eq", "values": ["notes/a"]}
+NOTES_A = {"field": "id", "op": "eq", "values": ["notes/a.md"]}
 
 
 def _notes_files(
@@ -405,21 +405,21 @@ def test_normal_when_files_index(
     one = env.call(
         "search_docs",
         cwd=str(source.folder),
-        filter={"field": "id", "op": "eq", "values": ["src/a"]},
+        filter={"field": "id", "op": "eq", "values": ["src/a.py"]},
         view="full",
         format="json",
     )
     markdown = env.call(
         "search_docs",
         cwd=str(source.folder),
-        filter={"field": "id", "op": "eq", "values": ["src/a"]},
+        filter={"field": "id", "op": "eq", "values": ["src/a.py"]},
         view="full",
     )
     everything = env.call("search_docs", cwd=str(source.folder), view="summary", format="json")
     # 検証
     item = one.data["items"][0]
     names = {row["id"]: row["values"]["name"] for row in everything.data["items"]}
-    assert item["id"] == "src/a"
+    assert item["id"] == "src/a.py"
     assert item["values"]["name"] == "a"
     assert item["values"]["tags"] == ["auth", "code"]
     assert item["values"]["path"] == "a.py"
@@ -427,7 +427,7 @@ def test_normal_when_files_index(
     assert item["scope"] == "full"
     assert item["values"]["body"] == "a = 1\n"
     assert f'<document path="{source.folder}/src/a.py" scope="full">' in markdown.text
-    assert names["src/b"] == "部品 B"
+    assert names["src/b.py"] == "部品 B"
     assert names["doc-2"] == "doc-2"
     assert "'files' is a required property" not in one.text
     assert "'files' is a required property" not in everything.text
@@ -670,18 +670,18 @@ def test_normal_when_ordered_by_matches(
     without_fields = env.call("search_docs", cwd=cwd, filter=exclude_archive, format="json")
     # 検証
     assert [(item["id"], item["values"]["@matches"]) for item in ordered.data["items"]] == [
-        ("notes/a", 3),
-        ("notes/b", 1),
+        ("notes/a.md", 3),
+        ("notes/b.md", 1),
     ]
     assert [(item["id"], item["values"]["@matches"]) for item in without_not.data["items"]] == [
-        ("notes/a", 3),
-        ("notes/archive/c", 2),
-        ("notes/b", 1),
+        ("notes/a.md", 3),
+        ("notes/archive/c.md", 2),
+        ("notes/b.md", 1),
     ]
-    assert [item["id"] for item in direct_only.data["items"]] == ["notes/a", "notes/b"]
+    assert [item["id"] for item in direct_only.data["items"]] == ["notes/a.md", "notes/b.md"]
     assert [(item["id"], item["values"]["@matches"]) for item in under_not.data["items"]] == [
-        ("notes/archive/c", 0),
-        ("notes/b", 0),
+        ("notes/archive/c.md", 0),
+        ("notes/b.md", 0),
     ]
     assert all("@matches" not in item["values"] for item in without_fields.data["items"])
 
@@ -747,7 +747,7 @@ def test_normal_when_part_of_body(
     assert missing.data["items"][0]["values"].get("body", "") == ""
     assert missing.data["items"][0]["ranges"] == []
     assert any("無い見出し" in note for note in missing.data["notes"])
-    assert "notes/a: 6-8 行目 / 全 10 行" in markdown.text
+    assert "notes/a.md: 6-8 行目 / 全 10 行" in markdown.text
 
 
 def test_normal_when_metadata_mapped(

@@ -27,6 +27,7 @@ def test_normal(
     assert result.data["version"] == version("dev-docs")
     assert sources["sample"]["status"] == "serving"
     assert sources["sample"]["sync"]["unindexed_files"] == 1
+    assert sources["sample"]["sync"]["unresolved_related"] == 0
     assert sources["broken"]["status"] == "not_served"
     assert any("documents[0].paths" in error for error in sources["broken"]["errors"])
     assert result.structured == json.loads(result.text)

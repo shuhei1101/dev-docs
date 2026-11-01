@@ -359,7 +359,13 @@ def test_normal_when_metadata_out_of_sync(
             "schemas/files.schema.yaml": FILES_SCHEMA.read_text(encoding="utf-8"),
             "docs/doc-1.yaml": "id: doc-1\nname: 文書 1\ntitle: 文書 1\n",
             "docs/doc-2.yaml": "id: doc-2\nname: 文書 2\n",
-            "src/files.yaml": "files:\n  - path: a.py\n  - path: c.py\n",
+            "src/files.yaml": (
+                "files:\n"
+                "  - path: a.py\n"
+                "    related:\n"
+                "      - {to: src/z.py, type: tests}\n"
+                "  - path: c.py\n"
+            ),
             "src/a.py": "a = 1\n",
             "src/d.py": "d = 4\n",
             "src/sub/e.py": "e = 5\n",
@@ -376,13 +382,17 @@ def test_normal_when_metadata_out_of_sync(
     warnings = [record.getMessage() for record in caplog.records]
     sample_warnings = [message for message in warnings if message.startswith("sample:")]
     assert env.client.get("/_api/sources/sample/docs").status_code == 200
-    assert len(sample_warnings) == 3
+    assert len(sample_warnings) == 4
     assert any("metadata の列の欠け 1 件" in m and "name（title）" in m for m in sample_warnings)
     assert any(
         "管理用の YAML に無いファイル 2 件" in m and "src/d.py" in m and "src/sub/e.py" in m
         for m in sample_warnings
     )
     assert any("ファイルが無い行 1 件" in m and "c.py" in m for m in sample_warnings)
+    assert any(
+        "どの文書にも当たらない関連 1 件" in m and "src: src/a.py: src/z.py" in m
+        for m in sample_warnings
+    )
     assert not any("src: src/files.yaml" in m for m in sample_warnings)
     assert [message for message in warnings if message.startswith("clean:")] == []
 
