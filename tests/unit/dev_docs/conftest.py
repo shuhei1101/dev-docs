@@ -196,7 +196,9 @@ def make_mcp_handlers(
     """同梱したプロンプトの一式を持たせ、指定した部品だけ偽物にした配線済みの関数を作る関数を返す。"""
 
     def _make(**overrides: Any) -> Any:
-        return make_handlers(**{"prompts": bundled_prompts, **overrides})
+        return make_handlers(
+            **{"prompts": bundled_prompts, "registry": SourceRegistry(), **overrides}
+        )
 
     return _make
 

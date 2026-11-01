@@ -165,7 +165,10 @@ def test_build_docs_mcp_when_loading(
     async def scenario() -> list[Any]:
         calls = [
             asyncio.ensure_future(
-                mcp.call_tool("search_docs", {"source": "sample", "format": "json"})
+                mcp.call_tool(
+                    "search_docs",
+                    {"source": "sample", "format": "json", "cwd": str(config.parent)},
+                )
             )
             for _ in range(13)
         ]

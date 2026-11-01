@@ -376,7 +376,9 @@ def make_server(tmp_path: Path) -> Iterator[Callable[..., ServerEnv]]:
         settings_path.write_text(
             _settings_text(tmp_path, state_dir, list(specs), settings_extra), encoding="utf-8"
         )
-        handlers = build_handlers(load_terminal_config(settings_path))
+        terminal = load_terminal_config(settings_path)
+        handlers = build_handlers(terminal)
+        handlers.reload_sources(terminal)
         app = (
             build_app(handlers)
             if screen_dir is None
