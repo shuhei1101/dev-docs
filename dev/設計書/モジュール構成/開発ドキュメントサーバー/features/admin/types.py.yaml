@@ -137,6 +137,10 @@ data_models:
         title: 配信元
         type: list[SourceState]
         description: '`sources[]` の順'
+      - name: loading
+        title: 読み込み中
+        type: bool
+        description: 配信元の初回の読み込みが終わっていないとき `True`（その間は `sources` が空）
   - name: NotServedItem
     title: 配信していない配信元
     container: features/admin/types.py

@@ -48,11 +48,11 @@ functions:
       type: list[NavTab]
       description: タブの並び
     process: |-
-      1. `nav` が無い場合、有効な文書の行ごとに 1 つのタブを作り、`auto: {document: 行の id}` と同じ並びにする
-      2. `nav.tabs[]` ごとに `items[]` を上から次のように読む
+      1. `nav` が無い場合、有効な文書の行ごとに 1 つのタブを作り、`auto: {document: 行の id, group_by: '@folder'}` と同じ並びにする
+      2. `nav.tabs[]` ごとに、先にタブの `items[]` を `group` の入れ子までたどって `page` が指す文書を集め、そのタブの `auto` の結果から除く。その上で `items[]` を上から次のように読む
          - `group` は `kind` が `group` の項目を作り、子の `items[]` を同じ読み方で入れ子にする
          - `page` は、文書の行が 1 ファイルだけならその文書、`{行の id}/{文書の ID}` ならその文書の `kind` が `page` の項目にする。無い文書は飛ばし、`[warning]` nav の文書が無い（配信元・値）を書く
-         - `auto` は、`document` があればその行の文書、無ければ全ての文書のうち、`filter` があれば条件の照合（検索。`fields` は有効な文書の行ごとに、`$ref` を解いた種類のスキーマ（`records` を持つ行は `records_item_schema` で引いた 1 行のスキーマ）の使える項目、`today` は今日）で当たる文書を、文書のページのパスの昇順で `page` の項目にする。`group_by` があれば、その項目のパスの値（配列は要素ごと、無ければ `その他`）ごとの `group` の項目にする
+         - `auto` は、`document` があればその行の文書、無ければ全ての文書のうち、`filter` があれば条件の照合（検索。`fields` は有効な文書の行ごとに、`$ref` を解いた種類のスキーマ（`records` を持つ行は `records_item_schema` で引いた 1 行のスキーマ）の使える項目、`today` は今日）で当たる文書を、文書のページのパスの昇順で `page` の項目にする。`group_by` が `'@folder'` ならフォルダで束ねる（フォルダの束ね）。それ以外の `group_by` があれば、その項目のパスの値（配列は要素ごと、無ければ `その他`）ごとの `group` の項目にする
          - `title` があれば行の名前を上書きする
       3. `active` を全て `False` にしたタブの並びを返す
     unit_tests:
@@ -64,10 +64,10 @@ functions:
         expected: 3 つのタブ。規約のタブは `tags.lang` の値ごとの `group` の項目、設計書のタブは `group` の項目 `アーキテクチャ` の下に architecture の `page` の項目
       - name: test_build_nav_when_no_nav
         case: 正常
-        summary: nav が無い
-        condition: 文書の行が 2 つで `nav` が無い
+        summary: nav が無いときは行ごとのタブをフォルダで束ねる
+        condition: '`nav` が無く、文書の行が 2 つ（`docs`: `paths: [docs/**/*.yaml]` で `docs/a.yaml`・`docs/sub/b.yaml`、`notes`: `paths: [notes/*.md]` で `notes/c.md`）'
         mock: なし
-        expected: 行ごとに 2 つのタブ
+        expected: 行ごとに 2 つのタブ。`docs` のタブは `docs/a` の `page` と group `sub`（中に `docs/sub/b`）の順、`notes` のタブは `notes/c` の `page` だけ
       - name: test_build_nav_when_filter
         case: 正常
         summary: 条件で絞った auto
@@ -80,6 +80,12 @@ functions:
         condition: '行 `notes`（`records: files`、`schema` が `templates/files.schema.yaml` のコピーの `files.items.properties` に `priority: {type: integer}` を追加したもの）に要素 `{path: a.md, priority: 10}`・`{path: b.md, priority: 9}`、`auto: {document: notes, filter: {field: priority, op: gte, values: [10]}}`'
         mock: なし
         expected: タブの `page` の項目が `a.md` の要素 1 件
+      - name: test_build_nav_when_group_by_folder
+        case: 正常
+        summary: フォルダで束ねる auto と手で書いた page の重なり
+        condition: "行 `rules`（`paths: [rules/**/*.yaml]`）に `rules/common.yaml`・`rules/lang/index.yaml`・`rules/lang/ts.yaml`・`rules/lang/py/style.yaml`。タブの `items` に `group: 共通`（中に `page: rules/{rules/common.yaml の文書の ID}`）と `auto: {document: rules, group_by: '@folder'}` をこの順で置く"
+        mock: なし
+        expected: タブの並びが group `共通`（`rules/common` の page）・group `lang` の順。`rules/common` は `auto` に出ない。group `lang` の中が `rules/lang/index`・`rules/lang/ts`・group `py`（中に `rules/lang/py/style`）の順
   - name: first_page
     title: タブの最初の文書
     kind: 関数
@@ -314,5 +320,57 @@ functions:
         mock: なし（一時フォルダの配信元）
         expected: 空
         exception: '-'
+  - name: _folder_items
+    title: フォルダの束ね
+    container: features/view/nav.py
+    usecase: 文書の取得
+    role: 変換
+    summary: '`auto` が選んだ文書を、行の `paths` の起点からのフォルダごとの入れ子の `group` にする'
+    kind: 関数
+    scope: internal
+    thread_safe: true
+    args:
+      - name: documents
+        title: 文書
+        type: Sequence[Document]
+        required: true
+        passing: positional
+        description: '`auto` が選んだ文書（手で書いた `page` を除いた後）'
+      - name: rows
+        title: 文書の行
+        type: Mapping[str, DocumentTable]
+        required: true
+        passing: keyword
+        description: 行の ID → `documents[]` の行
+    returns:
+      type: list[NavItem]
+      description: 起点の直下の `page` の項目と、フォルダごとの `group` の項目
+    process: |-
+      1. 文書ごとに、属するフォルダの並びを決める
+         - `record_index` を持つ文書（管理用の YAML の行）は空の並び（起点の直下）にする
+         - それ以外は、文書の行（`rows[document.kind]`）の `paths` のうち文書の `path` に `full_match` で当たる最初の glob を取り、`*`・`?`・`[` を含む最初の要素より前の要素を起点にする。`path` の起点より後ろで、ファイル名を除いた要素がフォルダの並びになる。当たる glob が無ければ空の並びにする
+      2. フォルダの並びをたどって木に入れ、各階層を次の順で項目にする
+         - `page`: ファイル名が `index.yaml` の文書を先頭にし、残りを文書のページのパスの昇順に並べる
+         - `group`: 入れ子のフォルダをフォルダ名の昇順に、フォルダ名を `title` にした `group` の項目にして並べる
+      3. 起点の階層の項目を返す
+    unit_tests:
+      - name: test_folder_items
+        case: 正常
+        summary: 入れ子のフォルダと並び
+        condition: '行 `rules`（`paths: [rules/**/*.yaml]`）の `rules/z.yaml`・`rules/a.yaml`・`rules/lang/ts.yaml`・`rules/lang/index.yaml`・`rules/lang/py/style.yaml`・`rules/b/x.yaml`'
+        mock: なし
+        expected: 並びが `rules/a`・`rules/z`・group `b`（`rules/b/x`）・group `lang`（`rules/lang/index`・`rules/lang/ts`・group `py`（`rules/lang/py/style`））
+      - name: test_folder_items_when_multiple_globs
+        case: 正常
+        summary: 先に並ぶ glob の起点を使う
+        condition: 行の `paths` が `[docs/guide/**/*.md, docs/**/*.md]` で、文書 `docs/guide/start/a.md`
+        mock: なし
+        expected: group `start` の下に `docs/guide/start/a` が入り、group `guide` は作らない
+      - name: test_folder_items_when_records
+        case: 正常
+        summary: 管理用の YAML の行の文書は束ねない
+        condition: '行 `notes`（`records: files`、`paths: [notes/index/files.yaml]`）の要素 2 件'
+        mock: なし
+        expected: '`group` の項目が無く、要素 2 件の `page` の項目が文書のページのパスの順に並ぶ'
 test_files:
   - tests/unit/dev_docs/features/view/test_nav.py

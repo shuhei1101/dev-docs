@@ -33,6 +33,7 @@ functions:
     process: |-
       1. 1 行目に `{address} dev-docs {version}（pid {pid}）`、2 行目に `端末の設定: {file}（{version_state}）` を置く
       2. 配信元ごとに表の行を作る（配信元の行）
+         - `loading` が `True` の場合、表の代わりに `配信元: 読み込み中（終わるまで文書の MCP の呼び出しは待たされます）` を置く
          - 配信元が 0 件の場合、表の代わりに `配信元: なし` を置く
     unit_tests:
       - name: test_render_status
@@ -47,6 +48,12 @@ functions:
         condition: '`sources` が空'
         mock: なし
         expected: '3 行目が `配信元: なし`'
+      - name: test_render_status_when_loading
+        case: 正常
+        summary: 読み込み中
+        condition: '`loading` が `True`、`sources` が空'
+        mock: なし
+        expected: '3 行目が `配信元: 読み込み中（終わるまで文書の MCP の呼び出しは待たされます）`'
     callers:
       - dev/設計書/モジュール構成/開発ドキュメントサーバー/server/mcp/admin.py#functions[build_admin_mcp]
     callees:

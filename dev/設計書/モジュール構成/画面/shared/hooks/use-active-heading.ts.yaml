@@ -25,9 +25,10 @@ functions:
       type: string | null
       description: 現在の見出しの `id`（最初の見出しより上では最初の見出し、見出しが無ければ null）
     process: |-
-      1. `IntersectionObserver`（`rootMargin` の上を `-offset`px）で各見出しが上の線を越えたかを受ける
+      1. `IntersectionObserver`（`rootMargin` の上を `-(offset + SETTLE_MARGIN)`px）で各見出しが上の線を越えたかを受ける
       2. 越えた見出しのうち並びで最後のものを状態に入れる
-      3. `ids` が変わったら監視し直し、外れるときに `disconnect` する
+      3. スクロールのたびに、見出しごとの上端を `offset + SETTLE_MARGIN + その見出しの scroll-margin-top`（`getComputedStyle` で読む。mdmark が見出しに当てる移る先の余白）と比べて、上端がそれより上の最後の見出しを状態に入れる。一度スクロールで求めた後は交差の通知を使わない
+      4. `ids` が変わったら監視し直し、外れるときに `disconnect` とスクロールの受け取りを外す
     unit_tests:
       - name: test_use_active_heading
         case: 正常
@@ -41,5 +42,11 @@ functions:
         condition: '`ids` が空'
         mock: IntersectionObserver（偽物）
         expected: 'null'
+      - name: test_use_active_heading_when_scroll_margin
+        case: 正常
+        summary: 見出しの scroll-margin-top の分だけ線を下げる
+        condition: '見出し 2 つ。2 番目は `scroll-margin-top: 56px` で上端が `offset + SETTLE_MARGIN + 8`px、`scroll` を発火する'
+        mock: IntersectionObserver（偽物）
+        expected: 2 番目の `id`
 test_files:
   - tests/unit/frontend/src/shared/hooks/use-active-heading.test.tsx

@@ -51,6 +51,11 @@ classes:
         access: 内部 (_)
         default: None
         description: 初期化の引数 `on_rebuilt` で受け取り、`get` が配信元を組み立て直して差し替えた後に、新しい配信元を渡して呼ぶ。`None` なら呼ばない
+      - name: _ready
+        title: 読み込みの済み
+        type: threading.Event
+        access: 内部 (_)
+        description: 初回の読み直しが終わったか。初期化の引数 `loading` が `True` なら立てずに作り、`False`（既定）なら立てて作る。`reload` が終わるとき（例外で止まったときも）に立てる
     methods:
       - name: reload
         title: 読み直す
@@ -75,7 +80,8 @@ classes:
           3. 配信する配信元の ID が先の行と重なる場合（`id` を省いて設定の `name` が同じなど）、後の行を `sources[{n}].id` の重複の違反を持つ `not_served` にする
           4. 新しい組を作り、`_snapshot` を入れ替える
              - `[info]` 配信元を読み直した（配信中の ID の並び・外した数）
-          5. 状態を返す
+          5. `_ready` を立て、状態を返す
+             - 手順 2〜4 で例外が起きた場合も `_ready` を立ててから送り直す（`_snapshot` は入れ替えない）
         unit_tests:
           - name: test_source_registry_reload
             case: 正常
@@ -95,6 +101,18 @@ classes:
             condition: 読み込みの偽物が `threading.Event` で止まっている間に別のスレッドから `get("a")`
             mock: 配信元の読み込み（止められる偽物）
             expected: '`get` が待たずに古い配信元を返し、読み直しの後は新しい配信元を返す'
+          - name: test_source_registry_reload_when_loading
+            case: 正常
+            summary: 初回の読み込みまで get と served を待たせる
+            condition: '`SourceRegistry(loading=True)`。読み込みの偽物が `threading.Event` で止まっている間に、別のスレッドから `get("a")` と `served()` を呼ぶ'
+            mock: 配信元の読み込み（止められる偽物）
+            expected: 合図の前は `loading` が `True` で `get`・`served` が戻らず、`statuses()` は待たずに空を返す。合図の後は `get` が配信元を、`served` が 1 つを返し、`loading` が `False`
+          - name: test_source_registry_reload_when_failed
+            case: 異常
+            summary: 読み込みが例外で止まっても待ちを解く
+            condition: '`SourceRegistry(loading=True)`。読み込みの偽物が `RuntimeError` を送る'
+            mock: 配信元の読み込み（例外を送る偽物）
+            expected: '`reload` が `RuntimeError` を送り、その後 `loading` が `False` で `served()` が待たずに空を返す'
       - name: get
         title: 引く
         kind: メソッド
@@ -112,7 +130,7 @@ classes:
           type: ServedSource
           description: 配信中の配信元
         process: |-
-          1. `_snapshot` を 1 回だけ読み、配信中にあれば、設定の commit を持つ配信元は `default_ref` を commit に解いて比べる。違う場合、`_reload_lock` を取ってその行だけを配信元の読み込みで読み直し、`_snapshot` のその配信元と状態を差し替え、`_reload_lock` を持ったまま `_on_rebuilt` を新しい配信元で呼んでから返す（`[info]` default_ref が進んだので配信元を組み立て直した（ID・前と後の commit））。同じなら配信中の配信元を返す
+          1. `_ready` が立つまで待ち、`_snapshot` を 1 回だけ読み、配信中にあれば、設定の commit を持つ配信元は `default_ref` を commit に解いて比べる。違う場合、`_reload_lock` を取ってその行だけを配信元の読み込みで読み直し、`_snapshot` のその配信元と状態を差し替え、`_reload_lock` を持ったまま `_on_rebuilt` を新しい配信元で呼んでから返す（`[info]` default_ref が進んだので配信元を組み立て直した（ID・前と後の commit））。同じなら配信中の配信元を返す
           2. 状態の一覧にその ID が `not_served` か `disabled` である場合、`SourceNotServedError`（`violations` に状態の違反、`disabled` に無効か）を送る
           3. どちらにも無い場合、`UnknownSourceError` を送る
         exceptions:
@@ -166,7 +184,7 @@ classes:
         returns:
           type: list[ServedSource]
           description: 配信中の配信元
-        process: 1. `_snapshot` を 1 回だけ読み、状態の順に `serving` の配信元を返す
+        process: 1. `_ready` が立つまで待ち、`_snapshot` を 1 回だけ読み、状態の順に `serving` の配信元を返す
       - name: statuses
         title: 状態の一覧
         kind: メソッド
@@ -176,6 +194,17 @@ classes:
         returns:
           type: list[SourceStatus]
           description: 状態の並び
-        process: 1. `_snapshot` の状態を返す
+        process: 1. 待たずに `_snapshot` の状態を返す（初回の読み込みの間は空）
+      - name: loading
+        title: 読み込み中
+        summary: 初回の読み込みが終わっていないかを待たずに返す
+        description: '`@property`。'
+        kind: メソッド
+        scope: public
+        thread_safe: true
+        returns:
+          type: bool
+          description: '`_ready` が立っていないとき `True`'
+        process: 1. `_ready` が立っていなければ `True` を返す
 test_files:
   - tests/unit/dev_docs/features/sources/test_registry.py
