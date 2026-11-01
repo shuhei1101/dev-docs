@@ -195,9 +195,9 @@ functions:
       - name: test_load_file_when_same_stem
         case: 正常
         summary: 同じ名前で拡張子の違うファイル
-        condition: '`src/files.yaml` が `files: [{path: plan.ts}, {path: plan.css}]`、`src/plan.ts`・`src/plan.css` を置き、行は `records: files`・`body_file: path`。`rules/a.md` と `rules/a.yaml` をそれぞれ読む'
+        condition: '行 `src`（`records: files`・`body_file: path`）の `src/files.yaml` が `files: [{path: plan.ts}, {path: plan.css}]` で、`src/plan.ts`・`src/plan.css` を置く。行 `docs`（`records: files`・`body_file: path`）の `docs/files.yaml` が `files: [{path: index.md}]` で、`docs/index.md` が `# 目次`。行 `index`（`records` を持たない）が読む `docs/index.yaml` が `title: 目次`。それぞれの行で 3 つのファイルを読む'
         mock: なし（`tmp_path`）
-        expected: '`id` が `src/plan.ts`・`src/plan.css`・`rules/a.md`・`rules/a.yaml` の 4 件で重ならず、`metadata.name` はどれも拡張子を除いた名前（`plan`・`a`）'
+        expected: '`id` が `src/plan.ts`・`src/plan.css`・`docs/index.md`・`docs/index.yaml` の 4 件で重ならず、`metadata.name` が `plan`・`plan`・`index`・`index`'
         exception: '-'
   - name: documents_from_text
     title: 文字列からの文書の組み立て

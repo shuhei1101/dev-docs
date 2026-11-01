@@ -439,15 +439,15 @@ functions:
       description: 当たらない `to` の並び（`related` の順）
     process: |-
       1. `metadata` の `related` が配列でなければ空の並びを返す
-      2. 要素ごとに、文字列の `to` を持ち `source` を持たない要素だけを見て、`to` が `ids` に無ければ加える
+      2. 要素ごとに、文字列の `to` を持ち、文字列の `source` を持たない要素だけを見て（`source` が無い・`null` の要素を同じ配信元への関連として扱う。`related_links` と同じ読み方）、`to` が `ids` に無ければ加える
       3. 並びを返す
     unit_tests:
       - name: test_unresolved_related
         case: 正常
         summary: source を持たない関連だけを照合する
-        condition: '`related` が `[{to: src/b.py}, {to: src/z.py}, {to: other-doc, source: other}, {type: tests}]`、`ids` が `{src/a.py, src/b.py}`'
+        condition: '`related` が `[{to: src/b.py}, {to: src/z.py}, {to: other-doc, source: other}, {to: src/y.py, source: null}, {type: tests}]`、`ids` が `{src/a.py, src/b.py}`'
         mock: なし
-        expected: '`["src/z.py"]`'
+        expected: '`["src/z.py", "src/y.py"]`'
         exception: '-'
       - name: test_unresolved_related_when_not_list
         case: 正常
