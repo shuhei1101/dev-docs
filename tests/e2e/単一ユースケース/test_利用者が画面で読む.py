@@ -77,6 +77,17 @@ TAG_NAV = (
     "        - auto:\n"
     "            document: sample\n"
 )
+RULES_ROW = "  - id: rules\n    paths: [rules/**/*.yaml]\n    schema: schemas/sample.schema.yaml\n"
+FOLDER_NAV = (
+    "nav:\n"
+    "  tabs:\n"
+    "    - title: ルール\n"
+    "      items:\n"
+    "        - page: rules/common\n"
+    "        - auto:\n"
+    "            document: rules\n"
+    "            group_by: '@folder'\n"
+)
 TERM_ROW = (
     "  - id: terms\n"
     "    paths: [terms/*.yaml]\n"
@@ -180,6 +191,18 @@ def _group_links(page: Page, group: str) -> Locator:
     )
 
 
+def _group(page: Page, group: str) -> Locator:
+    """サイドバーの、`group` の見出しを持つ項目のロケータを返す。"""
+    return _group_item(page.get_by_role("navigation", name="文書の一覧"), group)
+
+
+def _group_item(scope: Locator, group: str) -> Locator:
+    """`scope` の中の、`group` の見出しを直下に持つ項目のロケータを返す。"""
+    return scope.locator("li:has(> p)").filter(
+        has=scope.page.locator(":scope > p", has_text=re.compile(f"^{group}$"))
+    )
+
+
 def _selected_tabs(page: Page, name: str) -> Locator:
     """本文の、選ばれている `name` の言語のタブのロケータを返す（閉じたセクションの中も含む）。"""
     return page.locator('main [role="tab"][aria-selected="true"]').filter(
@@ -258,14 +281,19 @@ def test_normal_when_nav_missing(
     sample_doc_text: Callable[..., str],
     page: Page,
 ) -> None:
-    """nav が無い配信元は種類ごとにタブを作る（正常系）。"""
+    """nav が無い配信元は種類ごとにタブを作り、文書をフォルダで束ねる（正常系）。"""
     # 準備
+    config = sample_config_text(MEMO_ROW).replace("paths: [docs/*.yaml]", "paths: [docs/**/*.yaml]")
     files = sample_file_set(
         **{
-            "dev-docs.yaml": sample_config_text(MEMO_ROW),
+            "dev-docs.yaml": config,
+            "docs/lang/index.yaml": sample_doc_text("lang-index", "言語"),
+            "docs/lang/ts.yaml": sample_doc_text("ts", "TypeScript"),
+            "docs/lang/py/style.yaml": sample_doc_text("py-style", "Python のスタイル"),
             "notes/n-1.yaml": sample_doc_text("n-1", "メモ 1"),
         }
     )
+    files.pop("docs/doc-2.yaml")
     served = serve(make_source("plain", files))
     tabs = page.get_by_role("navigation", name="文書の種類")
     sidebar = page.get_by_role("navigation", name="文書の一覧")
@@ -273,9 +301,19 @@ def test_normal_when_nav_missing(
     page.goto(served.url("/plain"))
     # 検証
     expect(tabs.locator("a, button")).to_have_text(["sample", "メモ"])
-    expect(sidebar.get_by_role("link")).to_have_text(["文書 1", "文書 2"])
+    expect(sidebar.get_by_role("link")).to_have_text(
+        ["文書 1", "言語", "TypeScript", "Python のスタイル"]
+    )
+    expect(_group(page, "lang")).to_have_count(1)
+    expect(_group(page, "lang").get_by_role("link")).to_have_text(
+        ["言語", "TypeScript", "Python のスタイル"]
+    )
+    expect(_group_item(_group(page, "lang"), "py").get_by_role("link")).to_have_text(
+        ["Python のスタイル"]
+    )
     tabs.get_by_role("link", name="メモ").click()
     expect(sidebar.get_by_role("link")).to_have_text(["メモ 1"])
+    expect(sidebar.locator("li:has(> p)")).to_have_count(0)
 
 
 def test_normal_when_ref_switched(
@@ -814,3 +852,42 @@ def test_normal_when_prompt_set_flagged(
     expect(_section(page, "既定の例").locator("pre")).to_contain_text(
         "dev-docs で次の配信元を使えます。"
     )
+
+
+def test_normal_when_nav_grouped_by_folder(
+    make_source: Callable[..., Any],
+    serve: Callable[..., Any],
+    sample_file_set: Callable[..., dict[str, str]],
+    sample_config_text: Callable[..., str],
+    sample_doc_text: Callable[..., str],
+    page: Page,
+) -> None:
+    """group_by にフォルダの指定を書いた auto が、手で書いた page を除いてフォルダごとに束ねる（正常系）。"""
+    # 準備
+    files = sample_file_set(
+        **{
+            "dev-docs.yaml": sample_config_text(RULES_ROW + FOLDER_NAV),
+            "rules/common.yaml": sample_doc_text("common", "共通"),
+            "rules/lang/index.yaml": sample_doc_text("lang-index", "言語"),
+            "rules/lang/ts.yaml": sample_doc_text("ts", "TypeScript"),
+            "rules/lang/py/style.yaml": sample_doc_text("py-style", "Python のスタイル"),
+        }
+    )
+    served = serve(make_source("sample", files))
+    tabs = page.get_by_role("navigation", name="文書の種類")
+    sidebar = page.get_by_role("navigation", name="文書の一覧")
+    # 実行
+    page.goto(served.url("/sample"))
+    tabs.locator("a, button").filter(has_text="ルール").click()
+    # 検証
+    expect(sidebar.get_by_role("link")).to_have_text(
+        ["共通", "言語", "TypeScript", "Python のスタイル"]
+    )
+    expect(_group(page, "lang").get_by_role("link")).to_have_text(
+        ["言語", "TypeScript", "Python のスタイル"]
+    )
+    expect(_group_item(_group(page, "lang"), "py").get_by_role("link")).to_have_text(
+        ["Python のスタイル"]
+    )
+    _group(page, "lang").get_by_role("link", name="言語", exact=True).click()
+    expect(_heading(page)).to_have_text("言語")

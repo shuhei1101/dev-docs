@@ -990,6 +990,7 @@ test.describe("コメントの場所への移動", () => {
     const target = page.getByText("中ほどの文").first();
     await target.evaluate((element) => element.scrollIntoView({ block: "start" }));
     const before = await page.evaluate(() => window.scrollY);
+    await expect(page.locator("#mdmark-comment-hint")).toBeAttached();
     await target.selectText();
     await page.getByRole("button", { name: "コメント", exact: true }).click();
     await page.getByRole("dialog", { name: "コメントを書く" }).getByRole("textbox").fill("開き直した後の確認");

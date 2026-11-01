@@ -27,8 +27,14 @@ def _first_cell(page: Page, table: int) -> Locator:
     return page.locator("main table").nth(table).locator("td").first
 
 
+def _wait_comments_attached(page: Page) -> None:
+    """mdmark がコメントの部品を付け、選択の変化を受け始めるまで待つ。"""
+    expect(page.locator("#mdmark-comment-hint")).to_be_attached()
+
+
 def _add_comment(page: Page, target: Locator, body: str) -> None:
     """本文の文字列を選んでコメントを追加する。"""
+    _wait_comments_attached(page)
     target.scroll_into_view_if_needed()
     target.select_text()
     page.get_by_role("button", name="コメント", exact=True).click()
@@ -53,6 +59,7 @@ def test_normal(
     page.goto(served.url("/notes/docs/doc-1"))
     expect(_first_cell(page, 0)).to_be_visible()
     # 実行
+    _wait_comments_attached(page)
     _first_cell(page, 0).select_text()
     # 検証（文字列を選ぶと、コメントを追加するボタンが出る）
     expect(page.get_by_role("button", name="コメント", exact=True)).to_be_visible()
