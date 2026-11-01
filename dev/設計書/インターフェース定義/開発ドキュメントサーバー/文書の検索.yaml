@@ -406,7 +406,7 @@ flows:
         T-->>C: a（@matches 3）・b（@matches 1）
       ```
     expected:
-      - 結果が `notes/a`（`values.@matches` 3）・`notes/b`（同 1）の順で、`notes/archive/c` が無い
+      - 結果が `notes/a.md`（`values.@matches` 3）・`notes/b.md`（同 1）の順で、`notes/archive/c.md` が無い
       - '`not` を外すと a（3）・c（2）・b（1）の順になる'
       - '`@path` の `glob` `notes/files.yaml#*` は a・b に当たり、c（`notes/archive/files.yaml#0`）には当たらない'
       - 本文の条件が `not(and[body の contains 検索, tags の eq x])` の下にしか無い `filter` では、当たった b・c の `@matches` が 0
@@ -417,11 +417,13 @@ flows:
     setup:
       - name: Mock
         description: なし（`state_dir` は一時フォルダ）
+        notes: '-'
       - name: Markdown の文書
         description: sample の `notes/a.md` を 10 行にする。1 行目 `# a`、3 行目 `## 経緯`、6 行目 `## 決まったこと`、7 行目に語 `検索`、9 行目 `## 残り`
         notes: 「決まったこと」の節は 6〜8 行目
       - name: 入力
-        description: '`session_id: s1`、`filter` は `id` が `notes/a`、`view: full`、`format: json`。1 回目 `sections: [決まったこと]`、2 回目 `lines: {offset: 3, limit: 2}`、3 回目はどちらも省く'
+        description: '`session_id: s1`、`filter` は `id` が `notes/a.md`、`view: full`、`format: json`。1 回目 `sections: [決まったこと]`、2 回目 `lines: {offset: 3, limit: 2}`、3 回目はどちらも省く'
+        notes: '-'
     flow: |-
       ```mermaid
       sequenceDiagram
@@ -429,7 +431,7 @@ flows:
         participant T as search_docs
         participant SD as state_dir
 
-        C->>T: filter（id が notes/a）, view: full, sections: [決まったこと], session_id: s1
+        C->>T: filter（id が notes/a.md）, view: full, sections: [決まったこと], session_id: s1
         T-->>C: 6〜8 行目の本文（scope: section）
         C->>T: 同じ filter, lines: {offset: 3, limit: 2}
         T-->>C: 3〜4 行目の本文（scope: section）
@@ -444,7 +446,7 @@ flows:
       - 3 回目の後に 1 回目と同じ引数で呼ぶと、返し済みでも 6〜8 行目を返す
       - '`sections: [決まったこと]` と `snippets: {context_lines: 0}`、`filter` に `body` の `contains` `検索` を渡すと、抜粋が `7:` の行（本文の行番号）になる'
       - '`sections: [無い見出し]` は本文を空で返し、`ranges` が空で、`notes` に当たる見出しが無いことがある'
-      - '`format: markdown` では `<document>` の前の行に `notes/a: 6-8 行目 / 全 10 行` がある'
+      - '`format: markdown` では `<document>` の前の行に `notes/a.md: 6-8 行目 / 全 10 行` がある'
     test: test_normal_when_part_of_body
   - name: 正常系（除外の名前に当たるファイル）
     summary: 行の `exclude[]` に当たるファイルをその行の文書にせず、他の行に当たればその行の文書として返す
