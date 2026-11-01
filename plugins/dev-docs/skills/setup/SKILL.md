@@ -33,7 +33,7 @@ argument-hint: "[path]"
 4. YAML でない範囲を管理用の YAML の行にする。
    - `{clone}/.venv/bin/python -m dev_docs files --root {path} --paths {範囲の glob}` で、範囲のうち管理用の YAML に載せるファイルを求める（`--paths` は繰り返せる。生成物・ロック・バイナリ・ベンダーのコード・再エクスポートや空の `__init__` と、`.git`・`node_modules`・`.claude/worktrees` の下は含まれない）。管理用の YAML（`files.yaml`）の行と突き合わせる
      - 範囲の glob は、`dev-docs.yaml` が無いときは手順 3 で答えた範囲にする
-     - `dev-docs.yaml` があるときは、`records: files` の行が指す管理用の YAML ごとに `{管理用の YAML のフォルダ}/**` にする（行の `paths` の値は渡さない）
+     - `dev-docs.yaml` があるときは、`records: files` の行ごとに 1 回ずつ呼び、範囲の glob を `{管理用の YAML のフォルダ}/**` にする（行の `paths` の値は渡さない）。その行の `exclude` を 1 つずつ `--exclude` で渡す。行をまとめて 1 回で呼ばない
    - 結果は次の候補にする
 
      | 突き合わせの結果 | 候補 |
