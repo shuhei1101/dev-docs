@@ -332,7 +332,7 @@ flows:
         description: sample の文書 2 から `name` を除く
         notes: '-'
       - name: 入力
-        description: '`filter` は `id` が `src/a`、`view: full`、`format: json`。2 回目は `view: summary` で全件'
+        description: '`filter` は `id` が `src/a.py`、`view: full`、`format: json`。2 回目は `view: summary` で全件'
         notes: '-'
     flow: |-
       ```mermaid
@@ -341,16 +341,16 @@ flows:
         participant T as search_docs
         participant ST as 配信元のファイル
 
-        C->>T: filter（id が src/a）, view: full, format: json
+        C->>T: filter（id が src/a.py）, view: full, format: json
         T-->>ST: src/files.yaml を読み、files の各行の body_file を読む
         T->>T: 行の列から共通のメタデータを取り、name が空なら body_file のファイル名にする
         T-->>C: src/a.py の本文と、path・scope を持つ項目
       ```
     expected:
-      - 項目の `values.name` が `a`、`values.tags` が `code` と `auth`、`values.path` が `a.py` になる
+      - 項目の `id` が `src/a.py`、`values.name` が `a`、`values.tags` が `code` と `auth`、`values.path` が `a.py` になる
       - 項目の直下の `path` が `{sample のクローン本体}/src/a.py`、`scope` が `full` になる
-      - 2 回目の `b` の `name` が `部品 B`、文書 2 の `name` が文書 2 のファイル名から拡張子を除いた名前になる
-      - どちらの呼び出しも、`src/a`・`src/b` の項目の `notes` にスキーマの違反（`'files' is a required property`）が付かない
+      - 2 回目の `src/b.py` の `name` が `部品 B`、文書 2 の `name` が文書 2 のファイル名から拡張子を除いた名前になる
+      - どちらの呼び出しも、`src/a.py`・`src/b.py` の項目の `notes` にスキーマの違反（`'files' is a required property`）が付かない
     test: test_normal_when_files_index
   - name: 正常系（正規表現と抜粋）
     summary: '`regex` を行単位で当て、当たった行を行番号つきの抜粋で返す'
@@ -1029,6 +1029,9 @@ constraints:
   - item: records の行のスキーマ
     constraint: '`records` を持つ行の `schema` はファイル全体のスキーマとし、要素 1 つずつの検査と項目の一覧には `properties.{records}.items` を当てる'
     notes: 書き込み（`write_docs`）・`check_project` も同じ当て方
+  - item: ID の既定
+    constraint: メタデータの `id` が空なら、配信元の直下からのファイルのパス（拡張子付き）にする。`records` の要素は `body_file` が指すファイルのパス、`body_file` が無ければ `{管理用の YAML のパス}#{位置}`
+    notes: 同じ名前で拡張子の違うファイルも別の文書になる
 refs:
   - dev/設計書/シナリオ/単一ユースケース/エージェントが調べる#scenarios[正常シナリオ]
   - dev/設計書/シナリオ/単一ユースケース/YAMLを直接編集した#scenarios[正常シナリオ]
