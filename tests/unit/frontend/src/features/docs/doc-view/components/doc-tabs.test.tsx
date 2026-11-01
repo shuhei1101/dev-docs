@@ -17,7 +17,7 @@ test("test_doc_tabs", async () => {
   );
 
   const link = await screen.findByRole("link", { name: "規約" });
-  expect(link.getAttribute("href")).toBe("/s/b.md");
+  expect(link.getAttribute("href")).toBe("/s/b.md?tab=1");
 });
 
 test("test_doc_tabs_when_empty", async () => {
