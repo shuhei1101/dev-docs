@@ -87,6 +87,9 @@ response:
   - name: sources[].sync.missing_body_files
     type: int
     description: ファイルが無い行の件数
+  - name: sources[].sync.unresolved_related
+    type: int
+    description: '`related[].to` が配信元のどの文書の ID にも当たらない関連の件数（`check_project` と同じ）'
 response_example: |-
   ```markdown
   http://127.0.0.1:8781/ dev-docs 0.2.0（pid 4242）

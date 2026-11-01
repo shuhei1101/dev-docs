@@ -251,7 +251,7 @@ functions:
         summary: 当たった数で並べる
         condition: '`notes/a.md`（`検索` を含む行が 3 行）・`notes/b.md`（同 1 行）・`notes/archive/c.md`（同 2 行）に、`filter: {and: [{field: body, op: contains, values: [検索]}, {not: {field: "@path", op: glob, values: ["notes/archive/**"]}}]}`・`fields: ["@matches"]`・`order_by: [{field: "@matches", direction: desc}]`'
         mock: なし
-        expected: '`items` が `notes/a`（`values["@matches"]` が 3）・`notes/b`（同 1）の順。`fields` に `@matches` を渡さない呼び出しの `values` は `@matches` を持たない'
+        expected: '`items` が `notes/a.md`（`values["@matches"]` が 3）・`notes/b.md`（同 1）の順。`fields` に `@matches` を渡さない呼び出しの `values` は `@matches` を持たない'
       - name: test_search_docs_when_matches_under_not
         case: 正常
         summary: '`not` の下の本文の条件は数えない'

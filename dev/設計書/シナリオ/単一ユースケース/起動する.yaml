@@ -205,8 +205,8 @@ scenarios:
         description: '配信元 sample の文書の行 `rules` が `metadata: {name: title}` を持ち、2 件のうち 1 件に `title` が無い'
         notes: '`metadata` に書いていないキー（同じ名前の列）の欠けは数えない'
       - name: ずれた管理用の YAML
-        description: 'sample の `src/files.yaml` が `a.py` と `c.py` の 2 行を持ち、`src/` には `a.py` と `d.py` を置く。行 `src` は `records: files`・`body_file: path`'
-        notes: '`c.py` はファイルが無い行、`d.py` は索引に無いファイル'
+        description: 'sample の `src/files.yaml` が `a.py` と `c.py` の 2 行を持ち、`src/` には `a.py` と `d.py` を置く。行 `src` は `records: files`・`body_file: path`。`a.py` の行は `related: [{to: src/z.py, type: tests}]` を持つ'
+        notes: '`c.py` はファイルが無い行、`d.py` は索引に無いファイル、`src/z.py` はどの文書の ID にも当たらない関連先'
       - name: 端末の設定
         description: '`DEV_DOCS_CONFIG` が指す `settings.yaml`'
         notes: '`sources` に sample の 1 行'
@@ -222,6 +222,7 @@ scenarios:
         DD->>ST: 文書を読む
         DD->>DD: metadata に書いた列が無い文書を数える
         DD->>DD: 管理用の YAML のフォルダの配下で files に無いファイルを数え、読み込みの missing_body_file を数える
+        DD->>DD: 全ての文書の ID の集合を 1 回作り、related の to が集合に無い行を数える
         DD->>DD: 件数を警告のログに残す（配信元の状態には持たない）
         DD-->>U: sample を配信する
       ```
@@ -229,6 +230,7 @@ scenarios:
       - '`/_api/sources/sample/docs` が 200 を返す'
       - 警告のログに sample の id と、行 `rules` の `metadata` の列の欠け 1 件（`name` の `title`）が残る
       - 警告のログに行 `src` の索引に無いファイル 1 件（`src/d.py`）とファイルが無い行 1 件（`c.py`）が残る
+      - '警告のログにどの文書にも当たらない関連 1 件（`src: src/a.py: src/z.py`）が残る'
       - '`search_docs` が `title` の無い文書も返し、その `name` はファイル名から拡張子を除いた名前になる'
     test: test_normal_when_metadata_out_of_sync
   - name: 正常シナリオ（SessionStart で起動する）

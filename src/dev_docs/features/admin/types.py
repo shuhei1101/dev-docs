@@ -25,11 +25,12 @@ type VersionState = Literal["current", "old", "newer"]
 
 @dataclass(frozen=True)
 class SyncCounts:
-    """文書のストアの『メタデータのずれ』の 3 つの並びの件数。"""
+    """文書のストアの『メタデータのずれ』の 4 つの並びの件数。"""
 
     missing_refs: int
     unindexed_files: int
     missing_body_files: int
+    unresolved_related: int
 
     @classmethod
     def of(cls, report: SyncReport) -> Self:
@@ -38,6 +39,7 @@ class SyncCounts:
             missing_refs=len(report.missing_refs),
             unindexed_files=len(report.unindexed_files),
             missing_body_files=len(report.missing_body_files),
+            unresolved_related=len(report.unresolved_related),
         )
 
 
@@ -45,7 +47,7 @@ class SyncCounts:
 class SyncItem:
     """同期のずれ 1 件の種類と値。"""
 
-    kind: Literal["missing_refs", "unindexed_files", "missing_body_files"]
+    kind: Literal["missing_refs", "unindexed_files", "missing_body_files", "unresolved_related"]
     path: str
 
 

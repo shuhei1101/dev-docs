@@ -243,3 +243,34 @@ def test_is_markdown_body(
     result = is_markdown_body(document)
     # 検証
     assert result is expected
+
+
+def test_unresolved_related() -> None:
+    """source を持たない関連だけを照合する（正常系）。"""
+    # 準備
+    metadata = {
+        "related": [
+            {"to": "src/b.py"},
+            {"to": "src/z.py"},
+            {"to": "other-doc", "source": "other"},
+            {"to": "src/y.py", "source": None},
+            {"type": "tests"},
+        ]
+    }
+    ids = {"src/a.py", "src/b.py"}
+    # 実行
+    result = fields_module.unresolved_related(metadata, ids)
+    # 検証
+    assert result == ["src/z.py", "src/y.py"]
+
+
+def test_unresolved_related_when_not_list() -> None:
+    """related が配列でない（正常系）。"""
+    # 準備
+    ids = {"src/a.py"}
+    # 実行
+    missing = fields_module.unresolved_related({"name": "a"}, ids)
+    text = fields_module.unresolved_related({"related": "src/z.py"}, ids)
+    # 検証
+    assert missing == []
+    assert text == []

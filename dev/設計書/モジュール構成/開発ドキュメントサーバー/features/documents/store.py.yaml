@@ -71,7 +71,7 @@ functions:
     container: features/documents/store.py
     usecase: 起動
     role: サービス
-    summary: 配信元のクローン本体の文書を読み、`metadata` の列の欠け・管理用の YAML のずれ・エイリアスのキーの違反を求める
+    summary: 配信元のクローン本体の文書を読み、`metadata` の列の欠け・管理用の YAML のずれ・当たらない関連・エイリアスのキーの違反を求める
     description: 起動時と読み直しのときに呼ぶ。#4 の `check_project` も呼ばれるたびにこの関数で求め直す。
     kind: 関数
     scope: public
@@ -97,8 +97,9 @@ functions:
       2. 文書ごとに、その行で metadataの列の欠けを求め、`{行の id}: {文書の id}: {キー}（{列名}）` で `missing_refs` に加える
       3. `records` と `body_file` を持つ行ごとに、行に当たる管理用の YAML（手順 1 のパスを渡したファイルの収集）ごとに、その YAML から作った文書の `body_path` と行と手順 1 のパスを渡して索引に無いファイルを求め、`{行の id}: {パス}` で `unindexed_files` に加える
       4. 手順 1 の `problems` のうち `reason` が `missing_body_file` のものを `{path}: {detail}` で `missing_body_files` に加える
-      5. 手順 1 の文書でエイリアスの集めをし、`violations` を `alias_violations` にする
-      6. `SyncReport` を返す
+      5. 手順 1 の文書の ID の集合を 1 回だけ作り、文書ごとに当たらない関連を求めて `{行の id}: {文書の id}: {to}` で `unresolved_related` に加える
+      6. 手順 1 の文書でエイリアスの集めをし、`violations` を `alias_violations` にする
+      7. `SyncReport` を返す
     unit_tests:
       - name: test_check_sync
         case: 正常
@@ -112,7 +113,7 @@ functions:
         summary: ずれが無い
         condition: 全ての文書に `title` があり、管理用の YAML とファイルがそろう
         mock: なし
-        expected: 3 つの並びが空
+        expected: 4 つの並びが空
         exception: '-'
       - name: test_check_sync_when_alias_violation
         case: 正常
@@ -127,6 +128,13 @@ functions:
         condition: test_check_sync と同じ配信元（行 `rules`・`src`）
         mock: '`walk_files`（本物を包んで呼ばれた回数を記録する）'
         expected: '`walk_files` が 1 回だけ呼ばれ、結果が test_check_sync と同じ'
+      - name: test_check_sync_when_related_unresolved
+        case: 正常
+        summary: どの文書にも当たらない関連
+        condition: '行 `src` の `src/files.yaml` が `a.py`（`related: [{to: src/b.py}, {to: src/z.py}, {to: other-doc, source: other}]`）・`b.py` を持ち、`src/a.py`・`src/b.py` を置く'
+        mock: なし（一時フォルダの配信元）
+        expected: '`unresolved_related` が `["src: src/a.py: src/z.py"]`'
+        exception: '-'
 classes:
   - name: DocumentStore
     title: 文書のストア

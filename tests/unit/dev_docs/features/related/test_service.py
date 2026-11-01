@@ -94,7 +94,7 @@ def test_trace_related_when_code_paths(make_env: Callable[..., RelatedEnv]) -> N
             "files:\n"
             "  - path: a.py\n"
             "    related:\n"
-            "      - to: src/b\n"
+            "      - to: src/b.py\n"
             "        type: references\n"
             "  - path: b.py\n"
         ),
@@ -112,7 +112,7 @@ def test_trace_related_when_code_paths(make_env: Callable[..., RelatedEnv]) -> N
     # 実行
     result = env.trace(code_paths=["src/a.py"])
     # 検証
-    assert [item.id for item in result.items] == ["src/b"]
+    assert [item.id for item in result.items] == ["src/b.py"]
 
 
 def test_trace_related_when_seen(make_env: Callable[..., RelatedEnv]) -> None:

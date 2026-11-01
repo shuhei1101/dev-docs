@@ -72,11 +72,6 @@ def _body_file(
         return None
 
 
-def _stem(path: str) -> str:
-    """パスから拡張子を除く。"""
-    return posixpath.splitext(path)[0]
-
-
 def _build(
     *,
     data: dict[str, Any],
@@ -155,7 +150,7 @@ def documents_from_text(
                 body_path=None,
                 index=None,
                 version=content_hash(text),
-                fallback_id=_stem(path),
+                fallback_id=path,
                 **common,
             )
         ], []
@@ -190,10 +185,10 @@ def documents_from_text(
                 )
                 continue
             body_path, body = found
-            fallback_id = _stem(body_path)
+            fallback_id = body_path
         else:
             body = dump_roundtrip(record)  # type: ignore[arg-type]
-            fallback_id = f"{_stem(path)}#{index}"
+            fallback_id = f"{path}#{index}"
         documents.append(
             _build(
                 data=record,

@@ -165,7 +165,7 @@ def test_get_document_when_body_path(make_view_env: Callable[..., SimpleNamespac
     )
     # 実行
     by_page = get_document(
-        "sample", "notes/files/notes/b", handlers=env.handlers, ref=None, diff_ref=None
+        "sample", "notes/files/notes/b.md", handlers=env.handlers, ref=None, diff_ref=None
     )
     by_body_path = get_document(
         "sample", "notes/b.md", handlers=env.handlers, ref=None, diff_ref=None
@@ -173,9 +173,9 @@ def test_get_document_when_body_path(make_view_env: Callable[..., SimpleNamespac
     plain = get_document("sample", "docs/a", handlers=env.handlers, ref=None, diff_ref=None)
     # 検証
     assert by_page.body_path == "notes/b.md"
-    assert by_page.path == "notes/files/notes/b"
+    assert by_page.path == "notes/files/notes/b.md"
     assert by_body_path.body_path == "notes/b.md"
-    assert by_body_path.path == "notes/files/notes/b"
+    assert by_body_path.path == "notes/files/notes/b.md"
     assert plain.body_path is None
 
 

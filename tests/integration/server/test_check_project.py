@@ -78,6 +78,41 @@ def test_normal_when_files_excluded(
     ]
 
 
+def test_normal_when_related_unresolved(
+    make_source: Callable[..., Any],
+    make_server: Callable[..., Any],
+    sample_sync_file_set: Callable[..., dict[str, str]],
+) -> None:
+    """どの文書にも当たらない関連を、同期の件数と内訳で返す（正常系）。"""
+    # 準備
+    files = sample_sync_file_set(0)
+    files.update(
+        {
+            "src/files.yaml": (
+                "files:\n"
+                "  - path: a.py\n"
+                "    related:\n"
+                "      - {to: src/b.py, type: tests}\n"
+                "      - {to: src/z.py, type: tests}\n"
+                "      - {to: other-doc, type: tests, source: other}\n"
+                "  - path: b.py\n"
+            ),
+            "src/a.py": "a = 1\n",
+            "src/b.py": "b = 2\n",
+        }
+    )
+    sample = make_source("sample", files, git=False)
+    env = make_server(sample)
+    # 実行
+    result = env.call_admin("check_project", path=str(sample.folder), format="json")
+    # 検証
+    assert not result.is_error
+    assert result.data["sync"]["unresolved_related"] == 1
+    paths = [item["path"] for item in result.data["sync"]["items"]]
+    assert paths == ["src: src/a.py: src/z.py"]
+    assert not any("src/b.py" in path or "other-doc" in path for path in paths)
+
+
 def test_normal_when_records_schema_mismatch(
     tmp_path: Path,
     make_source: Callable[..., Any],

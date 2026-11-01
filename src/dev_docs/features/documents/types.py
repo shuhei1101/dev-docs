@@ -48,6 +48,8 @@ class SyncReport:
     missing_refs: list[str] = field(default_factory=list)
     unindexed_files: list[str] = field(default_factory=list)
     missing_body_files: list[str] = field(default_factory=list)
+    # source を持たない related[].to が配信元のどの文書の ID にも当たらないもの（`{行の id}: {文書の id}: {to}`）
+    unresolved_related: list[str] = field(default_factory=list)
     alias_violations: list[Violation] = field(default_factory=list)
 
 

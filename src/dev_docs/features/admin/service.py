@@ -286,6 +286,7 @@ def check_project(request: CheckProjectRequest, *, handlers: Handlers) -> CheckP
         ("missing_refs", report.missing_refs),
         ("unindexed_files", report.unindexed_files),
         ("missing_body_files", report.missing_body_files),
+        ("unresolved_related", report.unresolved_related),
     )
     items = [SyncItem(kind=kind, path=path) for kind, paths in entries for path in paths]  # type: ignore[arg-type]
     counts = SyncCounts.of(report)
@@ -301,6 +302,7 @@ def check_project(request: CheckProjectRequest, *, handlers: Handlers) -> CheckP
             missing_refs=counts.missing_refs,
             unindexed_files=counts.unindexed_files,
             missing_body_files=counts.missing_body_files,
+            unresolved_related=counts.unresolved_related,
             items=items[:SYNC_ITEMS_LIMIT],
         ),
         warnings=nav_warnings(handlers.store, source),

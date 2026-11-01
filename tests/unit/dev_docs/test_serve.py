@@ -445,7 +445,9 @@ def test_reload_sources_when_out_of_sync(
             "schemas/rule.schema.yaml": SYNC_SCHEMA,
             "docs/rule/doc-1.yaml": "id: doc-1\ntitle: 文書 1\n",
             "docs/rule/doc-2.yaml": "id: doc-2\n",
-            "src/files.yaml": "files:\n  - path: a.py\n  - path: c.py\n",
+            "src/files.yaml": (
+                "files:\n  - path: a.py\n    related:\n      - to: src/none.py\n  - path: c.py\n"
+            ),
             "src/a.py": "a = 1\n",
             "src/d.py": "d = 4\n",
             "src/sub/e.py": "e = 5\n",
@@ -479,13 +481,14 @@ def test_reload_sources_when_out_of_sync(
     # 検証
     warnings = _warnings(caplog)
     sample = [message for message in warnings if "sample" in message]
-    assert len(sample) == 3
+    assert len(sample) == 4
     assert any("name（title）" in message and "1" in message for message in sample)
     assert any(
         "src: src/d.py" in message and "src: src/sub/e.py" in message and "2" in message
         for message in sample
     )
     assert any("c.py" in message and "1" in message for message in sample)
+    assert any("src: src/a.py: src/none.py" in message and "1" in message for message in sample)
     assert [message for message in warnings if "clean" in message] == []
     assert [status.status for status in statuses] == ["serving", "serving"]
 

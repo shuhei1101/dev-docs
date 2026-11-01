@@ -194,8 +194,8 @@ scenarios:
         description: なし（実環境で実行。`cwd` はテストが引数に入れる）
         notes: '-'
       - name: 管理用の YAML
-        description: 'sample の `src/files.yaml`。`files[]` に `a.py`（`tags: [auth, code]`、`name` なし）と `b.py`（`name: 部品 B`）の 2 行。`src/a.py`・`src/b.py` を置く'
-        notes: スキーマは `templates/files.schema.yaml`
+        description: 'sample の `src/files.yaml`。`files[]` に `a.py`（`tags: [auth, code]`、`name` なし）・`b.py`（`name: 部品 B`）・`a.md`（`name` なし）の 3 行。`src/a.py`・`src/b.py`・`src/a.md` を置く'
+        notes: スキーマは `templates/files.schema.yaml`。`a.py` と `a.md` は同じフォルダの同じ名前で拡張子だけが違う
       - name: 文書の行
         description: 'sample の `dev-docs.yaml` の行 `src`（`paths: [src/files.yaml]`・`records: files`・`body_file: path`）'
         notes: '-'
@@ -211,18 +211,21 @@ scenarios:
 
         A->>M: search_docs(filter: tags が auth, view: summary)
         M->>ST: src/files.yaml を読み、files の各行を 1 件の文書にする
-        M->>M: 行の列から共通のメタデータを取る。name が空なら body_file のファイル名
+        M->>M: 行の列から共通のメタデータを取る。id が空なら body_file のパス、name が空なら body_file のファイル名
         M-->>A: a の行（name は a、tags は code と auth）
-        A->>M: search_docs(filter: id が src/a, view: full)
+        A->>M: search_docs(filter: id が src/a.py, view: full)
         M-->>A: src/a.py の内容を path と scope つきの document で包んだ本文
-        A->>M: search_docs(filter: id が src/a, view: full, format: json)
+        A->>M: search_docs(filter: id が src/a.py, view: full, format: json)
         M-->>A: 項目の直下に path と scope を持つ JSON
+        A->>M: search_docs(filter: id が src/a.md, view: full)
+        M-->>A: src/a.md の内容の本文
       ```
     expected:
-      - '`tags` が `auth` の `search_docs` が id `src/a`（`body_file` が指すファイルの拡張子を除いたパス）の 1 件を返し、`name` が `a`、`tags` が `auth` と `code` になる'
+      - '`tags` が `auth` の `search_docs` が id `src/a.py`（`body_file` が指すファイルの配信元の直下からのパス。拡張子を含む）の 1 件を返し、`name` が `a`、`tags` が `auth` と `code` になる'
       - '`b` の `name` は `部品 B` のまま'
       - '`view: full` の本文が `src/a.py` の内容で、`<document path="{sample のクローン本体}/src/a.py" scope="full">` で包まれる'
       - '`format: json` の項目の直下（`id`・`source` と同じ階層で `values` の外）が `path`（`src/a.py` の絶対パス）と `scope: full` を持ち、`values.path` は管理用の YAML の `path` 列の値 `a.py` のまま'
+      - '同じフォルダの同じ名前の `a.md` の行は id `src/a.md` の別の文書になり、`view: full` の本文が `src/a.md` の内容になる。`name` は `a`'
       - どの `search_docs` の応答の `notes` にも、スキーマの違反（`'files' is a required property` など）が付かない
     test: test_normal_when_files_index
   - name: 正常シナリオ（当たった数で並べて絞る）
@@ -269,11 +272,11 @@ scenarios:
         actor A as エージェント
         participant M as 文書の MCP（/mcp）
 
-        A->>M: search_docs(filter: id が notes/a, view: full, sections: [決まったこと])
+        A->>M: search_docs(filter: id が notes/a.md, view: full, sections: [決まったこと])
         M-->>A: 決まったこと の節だけの本文（scope: section）
-        A->>M: search_docs(filter: id が notes/a, view: full, lines: offset 3, limit 2)
+        A->>M: search_docs(filter: id が notes/a.md, view: full, lines: offset 3, limit 2)
         M-->>A: 3〜4 行目だけの本文（scope: section）
-        A->>M: search_docs(filter: id が notes/a, view: full)
+        A->>M: search_docs(filter: id が notes/a.md, view: full)
         M-->>A: 全文（scope: full）
       ```
     expected:
@@ -350,10 +353,10 @@ scenarios:
         description: なし（実環境で実行。`cwd` はテストが引数に入れる）
         notes: '-'
       - name: 設計書
-        description: sample の YAML の文書 `design/repo.yaml`（id `design/repo`。タスクのリポジトリの設計書）
+        description: sample の YAML の文書 `design/repo.yaml`（メタデータの `id` に `design/repo` を持つ。タスクのリポジトリの設計書）
         notes: '-'
       - name: 管理用の YAML
-        description: 'sample の `src/files.yaml`。`repo.py` の行が `related: [{to: design/repo, type: implements}]`、`test_repo.py` の行が `related: [{to: src/repo, type: tests}]` を持つ。`src/repo.py`・`src/test_repo.py` を置く'
+        description: 'sample の `src/files.yaml`。`repo.py` の行が `related: [{to: design/repo, type: implements}]`、`test_repo.py` の行が `related: [{to: src/repo.py, type: tests}]` を持つ。`src/repo.py`・`src/test_repo.py` を置く'
         notes: '-'
       - name: 文書の行
         description: 'sample の `dev-docs.yaml` の行 `design`（`paths: [design/*.yaml]`）と行 `src`（`paths: [src/files.yaml]`・`records: files`・`body_file: path`）'
@@ -370,17 +373,17 @@ scenarios:
 
         A->>M: trace_related(from_ids: design/repo, direction: in, depth: 1)
         M->>ST: related で design/repo を指す文書を引く
-        M-->>A: src/repo（via.type は implements）
-        A->>M: trace_related(from_ids: src/repo, direction: in, depth: 1)
-        M-->>A: src/test_repo（via.type は tests）
-        A->>M: search_docs(filter: id が src/repo か src/test_repo, view: full)
+        M-->>A: src/repo.py（via.type は implements）
+        A->>M: trace_related(from_ids: src/repo.py, direction: in, depth: 1)
+        M-->>A: src/test_repo.py（via.type は tests）
+        A->>M: search_docs(filter: id が src/repo.py か src/test_repo.py, view: full)
         M->>M: 読み取りの検査（related の type が既定の種類にあるか）
         M-->>A: 2 件の本文（related の種類の違反なし）
       ```
     expected:
-      - '`design/repo` を起点にした `direction: in` の `trace_related` が `src/repo` の 1 件を返し、`via.type` が `implements` になる'
-      - '`src/repo` を起点にした `direction: in` の `trace_related` が `src/test_repo` の 1 件を返し、`via.type` が `tests` になる'
-      - '`search_docs` が `src/repo`・`src/test_repo` の 2 件を返し、`notes` に `related.types` の違反が付かない'
+      - '`design/repo` を起点にした `direction: in` の `trace_related` が `src/repo.py` の 1 件を返し、`via.type` が `implements` になる'
+      - '`src/repo.py` を起点にした `direction: in` の `trace_related` が `src/test_repo.py` の 1 件を返し、`via.type` が `tests` になる'
+      - '`search_docs` が `src/repo.py`・`src/test_repo.py` の 2 件を返し、`notes` に `related.types` の違反が付かない'
     test: test_normal_when_implementing_code_traced
   - name: 正常シナリオ（使われているタグを数える）
     setup:

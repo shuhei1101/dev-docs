@@ -435,9 +435,9 @@ functions:
       - name: test_reload_sources_when_out_of_sync
         case: 正常
         summary: メタデータのずれを警告のログに書く
-        condition: 配信元 `sample` の行 `rules` に `title` の無い文書が 1 件、行 `src` の管理用の YAML に無いファイルが 2 件、ファイルが無い行が 1 件。配信元 `clean` はずれが無い
+        condition: 配信元 `sample` の行 `rules` に `title` の無い文書が 1 件、行 `src` の管理用の YAML に無いファイルが 2 件、ファイルが無い行が 1 件、どの文書にも当たらない `related[].to` が 1 件。配信元 `clean` はずれが無い
         mock: なし（一時フォルダの配信元と `caplog`）
-        expected: '`sample` の警告が 3 件（件数と並びの値を含む）、`clean` の警告は無い。両方の配信元が `serving`'
+        expected: '`sample` の警告が 4 件（件数と並びの値を含む）、`clean` の警告は無い。両方の配信元が `serving`'
         exception: '-'
       - name: test_reload_sources_when_alias_and_nav
         case: 正常
