@@ -30,8 +30,7 @@ class SyncCounts:
     missing_refs: int
     unindexed_files: int
     missing_body_files: int
-    # 後から加えた並び。件数を渡さない呼び出し元は 0 件として扱う
-    unresolved_related: int = 0
+    unresolved_related: int
 
     @classmethod
     def of(cls, report: SyncReport) -> Self:
