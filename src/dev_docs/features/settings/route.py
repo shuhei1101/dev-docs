@@ -87,6 +87,7 @@ def build_settings_router(handlers: Handlers) -> APIRouter:
 
     @router.get("/_api/settings/sources", name="get_settings_sources")
     async def get_sources() -> SettingsSourcesView:
+        await handlers.registry.wait_loaded()
         return await asyncio.to_thread(_settings_view, handlers)
 
     @router.put(
@@ -95,6 +96,7 @@ def build_settings_router(handlers: Handlers) -> APIRouter:
         dependencies=[Depends(require_same_origin)],
     )
     async def put_sources(body: SettingsSourcesRequest) -> SettingsSourcesResponse:
+        await handlers.registry.wait_loaded()
         statuses = await asyncio.to_thread(
             save_sources,
             body.sources,
