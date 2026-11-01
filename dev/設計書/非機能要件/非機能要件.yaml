@@ -120,4 +120,30 @@ requirements:
       - dev/設計書/外部ライブラリ/mdmark#
       - dev/設計書/モジュール構成/画面/features/docs/doc-view/hooks/use-mdmark.ts#constants[MDMARK_URL]
     status: planned
+  - name: 起動から接続を受け付けるまでの時間
+    english_name: listen_start_time
+    category: 可用性
+    external_constraint: 再起動のスクリプト（#62）が待ち受けを待つ上限 60 秒
+    source_kind: ユーザー要望
+    source: https://github.com/shuhei1101/dev-docs/issues/65
+    value: '20'
+    unit: 秒
+    rationale: 待ち受けの前に残るのは import と端末の設定・プロンプトの YAML の読み込みだけで、負荷のある端末の計測で約 8 秒。配信元の読み込み（計測で約 95 秒）と検査（約 125 秒）は待ち受けの後に回すため含めない。60 秒に対して計測値の 2 倍強を決定値にする
+    measurement: '`dev-docs serve` を子プロセスで起動してから、待ち受けのポートへの TCP の接続が通るまでの時間'
+    test_file: tests/nfr/test_listen_start_time.py
+    overflow: 超えても起動は止めない。再起動のスクリプトが 60 秒で打ち切る
+    breakdown:
+      - part: import とプロンプトの YAML の読み込み
+        value: 約 8 秒
+        notes: 他のプロセスが動いている端末での計測
+      - part: 配信元の読み込みと検査
+        value: 0 秒
+        notes: 待ち受けの後に回す
+    tests:
+      - name: test_listen_start_time
+        summary: 配信元の読み込みが終わらなくても、決定値以内に接続を受け付ける
+        condition: 配信元 1 つ。配信元の読み込み（`load_source`）を 60 秒止めるものに差し替えて、`dev-docs serve` を子プロセスで起動する
+        measurement: 起動から TCP の接続が通るまでの時間を測る
+        expected: 20 秒以内で、配信元の読み込みが終わる前に接続が通る
+    status: planned
 lead: 外部の制約から逆算した dev-docs の決定値。

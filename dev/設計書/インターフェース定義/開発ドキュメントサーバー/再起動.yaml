@@ -27,7 +27,7 @@ flows:
     expected:
       - 応答の `pid` が子プロセスの PID と同じ
       - '`/mcp` の接続を張ったまま `restart` を呼んでも、起動し直した子プロセスがポートの確かめで止まらず待ち受ける'
-      - 起動し直した後の `status` の `pid` が同じで、sample が `serving`
+      - 起動し直した後の `status` の `pid` が同じで、`loading` が `false` になった後に sample が `serving`
       - 起動し直した後に `/mcp` を張り直すと呼べる
     test: test_normal
   - name: 異常系（再起動の途中で呼ばれる・RestartInProgressError）
@@ -90,9 +90,13 @@ constraints:
     notes: スクリプトの実行が一番長い要求になるため
   - item: 起動し直す方法
     constraint: uvicorn の停止の後、`os.execv(sys.executable, [sys.executable, "-m", "dev_docs", "serve"])` で同じプロセスを置き換える
-    notes: SessionStart のフックで切り離して起動したプロセスのまま続くため、親を持たないまま残らない
+    notes: SessionStart のフックで切り離して起動したプロセスのまま続くため、親を持たないまま残らない。起動し直した後は『起動』の待ち受けまでの順番に従い、配信元を読む前に待ち受ける
   - item: 起動に失敗したとき
     constraint: '`dev-docs serve` の終了コードで止まり、次のセッションの SessionStart のフックが起動し直す'
   - item: タイムアウト
     constraint: 制限なし
+  - item: 接続できない時間
+    constraint: 応答を返してから接続を受け付け直すまでを、非機能要件の決定値以内にする
+    decided_by: dev/設計書/非機能要件/非機能要件#requirements[起動から接続を受け付けるまでの時間]
+    notes: 停止の待ち（処理中の要求）は含めない
 test_file: tests/integration/server/test_restart.py

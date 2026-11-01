@@ -140,6 +140,29 @@ flows:
       - '`context` に instructions を指す行が残っている'
       - '`sources` は 40 件全てを持つ'
     test: test_normal_when_context_over_limit
+  - name: 正常系（配信元を読み込んでいる）
+    summary: 配信元の読み込みを待たずに、読み込み中の案内を返す
+    setup:
+      - name: Mock
+        description: 配信元の読み込み（`load_source`）を、テストが合図を出すまで止めるものに差し替える
+        notes: 合図は `threading.Event`
+      - name: cwd
+        description: sample の `scope.write` に当たるワークツリー
+        notes: '-'
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        participant C as クライアント
+        participant T as POST /_admin/session-context
+
+        C->>T: cwd
+        T-->>C: context（読み込み中の案内）・loading: true・sources: []
+      ```
+    expected:
+      - 合図を出す前に 200 を返す
+      - '`loading` が `true`、`sources` が空'
+      - '`context` が、読み込み中であることと、終わるまで文書の MCP の呼び出しが待たされることを含み、`/dev-docs:setup` の案内を含まない'
+    test: test_normal_when_loading
 lead: SessionStart のフックが呼ぶ。cwd から使える配信元・索引の同期の件数・古い設定の警告を、プロンプトの YAML で描画したセッションの文脈の文として返す。`/clear`・圧縮の後は、そのセッションの返し済みの記録を捨てる。
 identifier: post_session_context
 permissions: なし（`127.0.0.1` でだけ待ち受ける）
@@ -194,6 +217,10 @@ response:
   - name: forgotten
     type: bool
     description: 返し済みの記録を削除したか
+  - name: loading
+    type: bool
+    description: 配信元を読み込んでいる間は `true`。その間は `sources` が空で、`context` は読み込み中であることと、終わるまで文書の MCP の呼び出しが待たされることを伝える
+    notes: '文はプロンプトの YAML（`kind: hook`）が `loading` の変数で出し分ける'
 response_example: |-
   ```json
   {"context": "dev-docs の文書の MCP（dev-docs）で、次の配信元を使えます。\n- sample（読み書き）: サンプルの配信元\n...", "sources": [{"id": "sample", "access": "read_write"}], "warnings": ["sample: 管理用の YAML に無いファイルが 1 件あります（check_project で確かめられます）"], "forgotten": false}
@@ -214,6 +241,9 @@ constraints:
   - item: 文の出どころ
     constraint: '文はプロンプトの YAML（`kind: hook`）だけが持ち、サーバーは配信元・警告・省いた配信元の件数を変数で渡して描画する。使える配信元が無いときの `/dev-docs:setup` の案内も YAML が持つ'
     notes: YAML は起動のときに読んで検査する（dev/設計書/インターフェース定義/開発ドキュメントサーバー/起動）
+  - item: 配信元の読み込みの間
+    constraint: 配信元の読み込みを待たずに答える（起動の待ち受けまでの順番）
+    notes: フックの打ち切り（11 秒）に収めるため
 status_codes:
   - code: '200'
     condition: 文脈を組み立てた（使える配信元が 0 件のときも `/dev-docs:setup` の案内を返す）

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -16,6 +17,7 @@ from dev_docs.features.admin.service import (
 )
 from dev_docs.features.admin.types import CheckProjectRequest, TryConvertRequest
 from dev_docs.features.settings.types import SourceEntry, TerminalConfig, TerminalConfigInvalidError
+from dev_docs.features.sources.registry import SourceRegistry
 from dev_docs.main import Handlers, build_handlers
 from dev_docs.shared.errors import (
     ConfigNotFoundError,
@@ -80,8 +82,11 @@ FILES_SCHEMA_TEMPLATE = Path(__file__).parents[5] / "templates" / "files.schema.
 def _handlers(
     make_terminal_config: Callable[..., TerminalConfig], *entries: SourceEntry, **overrides: object
 ) -> Handlers:
-    """端末の設定の行から、部品を本物で配線した配線済みの関数を作る。"""
-    return build_handlers(make_terminal_config(sources=list(entries), **overrides))
+    """端末の設定の行から、部品を本物で配線して配信元を読んだ配線済みの関数を作る。"""
+    terminal = make_terminal_config(sources=list(entries), **overrides)
+    handlers = build_handlers(terminal)
+    handlers.reload_sources(terminal)
+    return handlers
 
 
 def test_get_status(
@@ -116,6 +121,25 @@ def test_get_status(
     assert status.sources[0].sync.unindexed_files == 1
     assert status.sources[1].sync is None
     assert status.sources[2].sync is None
+
+
+def test_get_status_when_loading(
+    make_source_dir: Callable[..., Path],
+    make_terminal_config: Callable[..., TerminalConfig],
+    make_entry: Callable[..., SourceEntry],
+    make_handlers: Callable[..., Any],
+) -> None:
+    """読み込み中は配信元を待たずに返す（正常系）。"""
+    # 準備
+    terminal = make_terminal_config(
+        sources=[make_entry(str(make_source_dir("alpha")), source_id="alpha")]
+    )
+    handlers = make_handlers(terminal=terminal, registry=SourceRegistry(loading=True))
+    # 実行
+    status = get_status(handlers, env={})
+    # 検証
+    assert status.loading is True
+    assert status.sources == []
 
 
 def test_get_status_when_port_env(

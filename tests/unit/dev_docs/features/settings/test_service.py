@@ -9,6 +9,7 @@ import pytest
 from dev_docs.features.settings.service import save_sources
 from dev_docs.features.settings.types import SourceEntry, TerminalConfig, TerminalConfigInvalidError
 from dev_docs.features.sources.types import SourceStatus
+from dev_docs.shared.yaml_io import load_yaml
 
 SETTINGS_TEXT = (
     'version: "1"\n'
@@ -77,8 +78,10 @@ def test_save_sources_when_defaults(
     save_sources(sources, path=settings_path, reload=reload, lock=threading.Lock())
     # 検証
     text = settings_path.read_text(encoding="utf-8")
+    row = load_yaml(text)["sources"][0]
     assert "enabled" not in text
     assert "scope" not in text
+    assert row["config"] == ["/tmp/a/dev-docs.yaml"]
 
 
 def test_save_sources_when_outside_read_false(

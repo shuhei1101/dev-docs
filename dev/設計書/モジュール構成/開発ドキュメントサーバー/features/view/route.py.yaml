@@ -76,7 +76,7 @@ functions:
       3. GET `/_api/sources/{source}/refs` は、`commits`（0〜`REFS_COMMITS_MAX`）を受け、リビジョンの一覧を返す（無い配信元は 404）
       4. PUT `/_api/sources/{source}/columns` は、同じオリジンの確認を依存に持ち、配信元を引いてから、本文を `ColumnsRequest` で受けて表の列の設定.列の設定を書く を呼び、同じ値を返す
       5. ルーターは `APIRouter(tags=["view"])` にする。各ルートの `name`（`operation_id` は渡さず、アプリの組み立てが operationId を `view-{name}` にする）は、`/docs` が `get_document_default`、`/docs/{path:path}` が `get_document`、search が `search_page`、refs が `list_refs`、columns が `put_columns`
-      6. サービスは `asyncio.to_thread` で呼ぶ
+      6. 各ルートは、初めに `await handlers.registry.wait_loaded()` で配信元の読み込みを待ち、配信元を引く処理（refs・columns の `registry.get` を含む）とサービスは `asyncio.to_thread` の内側で呼ぶ
     unit_tests:
       - name: test_build_view_router_when_document
         case: 正常
@@ -120,6 +120,12 @@ functions:
         condition: '`Origin: http://evil.example`'
         mock: なし
         expected: 403 で、ファイルを書かない
+      - name: test_build_view_router_when_loading
+        case: 正常
+        summary: 読み込みの間は待たせ、イベントループを止めない
+        condition: '`SourceRegistry(loading=True)` のまま、GET `/_api/sources/sample/refs` と GET `/_api/sources/sample/docs` を同じイベントループで送り、その間に別のコルーチンが `asyncio.sleep(0)` で進むかを確かめる。その後、別のスレッドで `reload` する'
+        mock: なし（一時フォルダの配信元と httpx の非同期のクライアント）
+        expected: '`reload` の前は refs・docs が答えず、別のコルーチンは進む。`reload` の後に refs・docs が 200'
 refs:
   - dev/設計書/インターフェース定義/開発ドキュメントサーバー/文書の取得#
   - dev/設計書/インターフェース定義/開発ドキュメントサーバー/画面の検索#

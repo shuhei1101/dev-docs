@@ -10,7 +10,9 @@ diagrams:
         待ち受けの開始 ..> 部品の配線
         待ち受けの開始 ..> アプリの組み立て
         待ち受けの開始 ..> 再起動の制御 : 取り付ける
-        部品の配線 ..> 配信元の一覧 : 読み直す
+        待ち受けの開始 ..> 配信元の読み込みの開始
+        配信元の読み込みの開始 ..> 配信元の読み直し : 裏のスレッドで
+        部品の配線 ..> 配信元の一覧 : 読み込み中で作る
         部品の配線 ..> 再起動の制御 : 作る
         部品の配線 ..> 配線済みの関数 : 作る
         部品の配線 ..> 配信元の読み直し : 束ねる
@@ -30,6 +32,9 @@ diagrams:
           <<function>>
         }
         class アプリの組み立て {
+          <<function>>
+        }
+        class 配信元の読み込みの開始 {
           <<function>>
         }
         class 配信元の読み直し {
@@ -219,7 +224,7 @@ functions:
          - `PortInUseError` の場合、`{bind}:{port} は使用中です。DEV_DOCS_PORT で別のポートを指定できます` を標準エラーに出し、`EXIT_PORT_IN_USE` を返す
       4. 部品を配線し（部品の配線）、アプリを組み立てる（アプリの組み立て）
          - `PromptInvalidError` の場合、違反ごとに `{file}: {path}: {reason}` を標準エラーに出し、`EXIT_PROMPT_INVALID` を返す
-      5. 標準出力に `http://{bind}:{port}/` と配信中の配信元の ID を 1 行ずつ出す
+      5. 標準出力に `http://{bind}:{port}/` を出し、配信元の読み込みを裏で始める（配信元の読み込みの開始）
       6. `uvicorn.Server(uvicorn.Config(app, host=bind, port=port, log_config=None, timeout_graceful_shutdown=script_timeout_sec * SHUTDOWN_WAIT_FACTOR))` を作り、再起動の制御に取り付けて（サーバーの取り付け）`run()` する
          - 確かめた後に他のプロセスがポートを取り、uvicorn が待ち受けに失敗して止まった場合（`server.started` が `False`）、手順 3 と同じ本文を出して `EXIT_PORT_IN_USE` を返す
       7. 止まった後、再起動を要求済み（`handlers.restart.requested`）かで分ける
@@ -241,7 +246,7 @@ functions:
         summary: 待ち受けて配信元を出す
         condition: 配信できる配信元 1 つの端末の設定を `DEV_DOCS_CONFIG` に入れる
         mock: '`uvicorn.Server.run`（何もせず戻る。`started` を `True` にする）'
-        expected: 0 を返し、標準出力に `http://127.0.0.1:{port}/` と配信元の ID、`uvicorn.Config` の `host` が `127.0.0.1`
+        expected: 0 を返し、標準出力に `http://127.0.0.1:{port}/` が配信元の ID より前に出る（`run` の後に読み込みのスレッドを join して確かめる）、`uvicorn.Config` の `host` が `127.0.0.1`
       - name: test_run_serve_when_config_invalid
         case: 異常
         summary: 端末の設定が違反する
@@ -326,9 +331,9 @@ functions:
     container: main.py
     usecase: 起動
     role: 合成の起点
-    summary: 端末の設定から部品を 1 回だけ作り、配信元を読んで配線済みの関数にする
+    summary: 端末の設定から部品を 1 回だけ作り、配線済みの関数にする（配信元は読まない）
     scope: public
-    side_effects: '`state_dir` の下にフォルダを作る。配信元を読む'
+    side_effects: '`state_dir` の下にフォルダを作る'
     args:
       - name: terminal
         title: 端末の設定
@@ -342,8 +347,8 @@ functions:
     process: |-
       1. プロンプトの一式を読む（`load_prompts(prompts_dir(os.environ), required=[SESSION_CONTEXT_PROMPT_ID, *mcp_prompt_ids()])`）。`PromptInvalidError` はそのまま送る
       2. `state_dir` を作る
-      3. 配信元の一覧・リビジョンの書き出し（`{state_dir}/snapshots`）・文書のストア・変換（`{state_dir}/converted`、制限時間は `script_timeout_sec`）・会話の記録（`{state_dir}/seen.sqlite3`、保持日数は `seen_retention_days`）・文書の検査（制限時間は `script_timeout_sec`）・配信元ごとの排他・表の列の設定（`{state_dir}/columns`）・再起動の制御を作る。配信元の一覧には、組み立て直した配信元を 1 つ受け取って『配信元の控えの破棄』をこれらの部品で呼ぶ関数を `on_rebuilt` に渡す
-      4. 『配信元の読み直し』をこれらの部品で束ねた関数を作り、端末の設定で 1 回呼ぶ（配信元を読み、メタデータのずれを警告のログに書く）。検証で外した配信元があっても続ける
+      3. 配信元の一覧・リビジョンの書き出し（`{state_dir}/snapshots`）・文書のストア・変換（`{state_dir}/converted`、制限時間は `script_timeout_sec`）・会話の記録（`{state_dir}/seen.sqlite3`、保持日数は `seen_retention_days`）・文書の検査（制限時間は `script_timeout_sec`）・配信元ごとの排他・表の列の設定（`{state_dir}/columns`）・再起動の制御を作る。配信元の一覧は `loading=True` で作り、組み立て直した配信元を 1 つ受け取って『配信元の控えの破棄』をこれらの部品で呼ぶ関数を `on_rebuilt` に渡す
+      4. 『配信元の読み直し』をこれらの部品で束ねた関数を作る（呼ぶのは配信元の読み込みの開始と配信元の保存）
       5. プロンプトの一式・これらの部品・手順 4 の関数を持つ `Handlers` を返す
     exceptions:
       - name: PromptInvalidError
@@ -352,17 +357,16 @@ functions:
     unit_tests:
       - name: test_build_handlers
         case: 正常
-        summary: 部品を作り配信元を読む
+        summary: 部品を作り配信元は読まない
         condition: '`state_dir` が無い一時フォルダの下、配信できる配信元 1 つと検証に失敗する配信元 1 つ'
         mock: なし
-        expected: '`state_dir` ができ、`registry.served()` が 1 つ、`registry.statuses()` が 2 つ、`prompts` が `session-context` と `mcp/docs/instructions` を持つ'
+        expected: '`state_dir` ができ、`registry.loading` が `True` で `registry.statuses()` が空。`handlers.reload_sources(terminal)` の後は `registry.served()` が 1 つ、`registry.statuses()` が 2 つ。`prompts` が `session-context` と `mcp/docs/instructions` を持つ'
       - name: test_build_handlers_when_out_of_sync
         case: 正常
         summary: 初回の読み込みでもずれを警告のログに書く
-        condition: 行 `rules` に `title` の無い文書が 1 件ある配信元 `sample` 1 つ
+        condition: 行 `rules` に `title` の無い文書が 1 件ある配信元 `sample` 1 つ。`build_handlers` の後に `handlers.reload_sources(terminal)` を呼ぶ
         mock: なし（一時フォルダの配信元と `caplog`）
         expected: '`sample` の `metadata` の列の欠けの警告が 1 件あり、`registry.served()` が 1 つ'
-        exception: '-'
       - name: test_build_handlers_when_default_ref_moved
         case: 正常
         summary: default_ref が進んだ後は新しい設定で文書を読む
@@ -619,6 +623,43 @@ functions:
         exception: なし（終了コード 2）
     refs:
       - dev/設計書/モジュール構成/開発ドキュメントサーバー/features/documents/indexable.py#functions[indexable_files]
+  - name: start_loading
+    title: 配信元の読み込みの開始
+    container: main.py
+    usecase: 起動
+    role: 合成の起点
+    summary: 配信元の読み直しとその後の検査を裏のスレッドで始める
+    kind: 関数
+    scope: public
+    side_effects: デーモンのスレッドを 1 つ起こす。標準出力に書く
+    args:
+      - name: handlers
+        title: 配線済みの関数
+        type: Handlers
+        required: true
+        passing: positional
+        description: '`reload_sources` と `terminal` を使う'
+    returns:
+      type: threading.Thread
+      description: 起こしたスレッド（テストが join する）
+    process: |-
+      1. 次を実行するデーモンのスレッドを起こして返す
+         - `handlers.reload_sources(handlers.terminal)` を呼ぶ（配信元の一覧が読み終えた時点で待ちを解き、その後に検査の警告をログに書く）
+         - 配信中の配信元の ID を標準出力に 1 行ずつ出す
+         - 例外の場合、`[error]` 配信元の読み込みに失敗した（例外のスタックトレース）を書いてスレッドを終える（配信元の一覧は待ちを解いている）
+    unit_tests:
+      - name: test_start_loading
+        case: 正常
+        summary: 裏で配信元を読み ID を出す
+        condition: 配信できる配信元 1 つの端末の設定で `build_handlers` した `Handlers`
+        mock: なし（`capsys`）
+        expected: 返ったスレッドを join した後、`registry.loading` が `False`、`registry.served()` が 1 つで、標準出力に配信元の ID
+      - name: test_start_loading_when_failed
+        case: 異常
+        summary: 読み込みの例外をログに書いて待ちを解く
+        condition: '`build_handlers` した `Handlers` の `reload_sources` を、`registry.reload` を呼んだ後に `RuntimeError` を送るものに差し替える'
+        mock: '`reload_sources`（例外を送る偽物）'
+        expected: スレッドを join した後、`caplog` に `error` の行が 1 件あり、`registry.loading` が `False`
 refs:
   - dev/設計書/インターフェース定義/開発ドキュメントサーバー/起動#
 test_files:

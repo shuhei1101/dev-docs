@@ -137,8 +137,7 @@ def run_serve(args: argparse.Namespace) -> int:
             return EXIT_PROMPT_INVALID
         app = build_app(handlers)
         print(f"http://{terminal.bind}:{port}/", flush=True)
-        for source in handlers.registry.served():
-            print(source.id, flush=True)
+        start_loading(handlers)
         server = uvicorn.Server(
             uvicorn.Config(
                 app,
@@ -164,6 +163,22 @@ def run_serve(args: argparse.Namespace) -> int:
         _close_logging(log_handlers)
 
 
+def start_loading(handlers: Handlers) -> threading.Thread:
+    """配信元の読み直しとその後の検査を裏のスレッドで始める。"""
+
+    def work() -> None:
+        try:
+            handlers.reload_sources(handlers.terminal)
+            for source in handlers.registry.served():
+                print(source.id, flush=True)
+        except Exception:
+            logger.exception("配信元の読み込みに失敗した")
+
+    thread = threading.Thread(target=work, name="dev-docs-loading", daemon=True)
+    thread.start()
+    return thread
+
+
 def check_port(bind: str, port: int) -> None:
     """待ち受けのアドレスとポートで待ち受けられるかを、一度 bind して確かめる。"""
     with closing(socket.socket(socket.AF_INET, socket.SOCK_STREAM)) as sock:
@@ -178,7 +193,7 @@ def check_port(bind: str, port: int) -> None:
 
 
 def build_handlers(terminal: TerminalConfig) -> Handlers:
-    """端末の設定から部品を 1 回だけ作り、配信元を読んで配線済みの関数にする。"""
+    """端末の設定から部品を 1 回だけ作り、配線済みの関数にする（配信元は読まない）。"""
     from dev_docs.features.convert.service import ConvertService
     from dev_docs.features.documents.store import DocumentStore
     from dev_docs.features.history.snapshot import SnapshotStore
@@ -203,7 +218,7 @@ def build_handlers(terminal: TerminalConfig) -> Handlers:
     def on_rebuilt(source: ServedSource) -> None:
         discard_source_caches([source], store=store, checker=checker, converter=converter)
 
-    registry = SourceRegistry(on_rebuilt=on_rebuilt)
+    registry = SourceRegistry(on_rebuilt=on_rebuilt, loading=True)
 
     def reload(new_terminal: TerminalConfig) -> list[SourceStatus]:
         statuses = reload_sources(
@@ -213,7 +228,6 @@ def build_handlers(terminal: TerminalConfig) -> Handlers:
         terminal.sources[:] = new_terminal.sources
         return statuses
 
-    reload(terminal)
     return Handlers(
         terminal=terminal,
         registry=registry,

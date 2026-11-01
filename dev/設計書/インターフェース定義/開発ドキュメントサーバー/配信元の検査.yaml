@@ -335,6 +335,8 @@ constraints:
   - item: 除外の条件
     constraint: 生成物・ロック・バイナリ・ベンダーのコード・再エクスポートや空の `__init__` だけのファイルを `unindexed_files` に数えない。起動時の警告・状態の取得・`dev-docs files` も同じ判定を使う
     notes: 見分け方はモジュール構成『文書のストア / indexable.py』の `is_excluded_file`。配信元固有の除外は `documents[].exclude[]`
+  - item: nav の auto の group_by
+    constraint: "`group_by` の `'@folder'` は項目のパスとして検査せず、違反・警告にしない"
   - item: 当たらない関連の照合
     constraint: 配信元の全ての文書の ID の集合を 1 回だけ作り、`source` を持たない `related[].to` をその集合と照合する。起動時の警告・状態の取得も同じ判定を使う
     notes: '`source` を持つ関連は、別の配信元が同じ端末で配信されているとは限らないため照合しない'

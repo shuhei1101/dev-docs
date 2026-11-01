@@ -4,6 +4,7 @@ from collections.abc import Callable
 from typing import Any
 
 from dev_docs.features.settings.query import load_terminal_config
+from dev_docs.shared.yaml_io import load_yaml
 
 ORIGIN = {"Origin": "http://127.0.0.1:8781"}
 SETTINGS_EXTRA = "# 取り込みの保持日数（コメントは保つ）\nseen_retention_days: 5\n"
@@ -31,7 +32,7 @@ def test_normal(make_source: Callable[..., Any], make_server: Callable[..., Any]
     # 実行
     response = env.client.put(
         "/_api/settings/sources",
-        json={"sources": [_row(sample), _row(extra)]},
+        json={"sources": [_row(sample), _row(extra, config=str(extra.config[0]))]},
         headers=ORIGIN,
     )
     # 検証
@@ -47,6 +48,7 @@ def test_normal(make_source: Callable[..., Any], make_server: Callable[..., Any]
     assert [entry.id for entry in saved.sources] == ["sample", "extra"]
     assert saved.sources[0] == sample_before
     assert SETTINGS_EXTRA in text
+    assert load_yaml(text)["sources"][1]["config"] == [str(extra.config[0])]
     assert docs.status_code == 200
     assert "extra" in described.text
 

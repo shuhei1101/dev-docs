@@ -56,6 +56,22 @@ documents:
     records: files
     body_file: path
 """
+EXCLUDE_CONFIG = """\
+version: "3"
+name: sample
+documents:
+  - id: src
+    paths: [src/files.yaml]
+    schema: schemas/files.schema.yaml
+    records: files
+    body_file: path
+    exclude: [README.md]
+  - id: tools
+    paths: [tools/files.yaml]
+    schema: schemas/files.schema.yaml
+    records: files
+    body_file: path
+"""
 IMPLEMENTATION_QUESTION = r"実装のパス|設計書の種類"
 IMPLEMENTATION_ANSWER = "種類 design、キー implementation"
 SCHEMA_LINE = (
@@ -522,6 +538,54 @@ def test_normal_when_excluded_and_related_candidates(
     assert [item["id"] for item in traced.data["items"]] == ["src/tasks/repo.py"]
 
 
+def test_normal_when_rerun_with_row_exclude(
+    claude_home: Any,
+    make_clone: Callable[..., Any],
+    make_source: Callable[..., Any],
+    add_worktree: Callable[..., Path],
+    serve: Callable[..., Any],
+    run_git: Callable[..., str],
+    load_yaml_file: Callable[[Path], Any],
+) -> None:
+    """2 回目以降の突き合わせで、行の exclude に当たるファイルの行を作らない（正常系）。"""
+    # 準備
+    clone = make_clone()
+    sample = make_source(
+        "sample",
+        {
+            "dev-docs.yaml": EXCLUDE_CONFIG,
+            "schemas/files.schema.yaml": FILES_SCHEMA.read_text(encoding="utf-8"),
+            "src/files.yaml": "files:\n  - path: a.py\n",
+            "src/a.py": "a = 1\n",
+            "tools/files.yaml": "files:\n  - path: run.sh\n",
+            "tools/run.sh": "echo run\n",
+        },
+    )
+    sample.scope_write = [sample.folder]
+    served = serve(sample, clone=clone.clone, port=claude_home.port)
+    claude_home.set_env(DEV_DOCS_CONFIG=str(served.settings))
+    (sample.folder / "src" / "README.md").write_text("# src\n", encoding="utf-8")
+    (sample.folder / "src" / "new.py").write_text("new = 1\n", encoding="utf-8")
+    (sample.folder / "tools" / "README.md").write_text("# tools\n", encoding="utf-8")
+    run_git(sample.folder, "add", "-A")
+    run_git(sample.folder, "commit", "-m", "ファイルを追加")
+    # Git の配信元のクローン本体には書けないため、ワークツリーで path を省いて実行する
+    worktree = add_worktree(sample.folder, "x")
+    # 実行
+    run = claude_home.run("/dev-docs:setup", cwd=worktree)
+    # 検証
+    src_rows = _rows(load_yaml_file, worktree / "src")
+    tools_rows = _rows(load_yaml_file, worktree / "tools")
+    shown = "\n".join([*run.question_texts, run.text])
+    checked = served.call_admin("check_project", path=str(worktree), format="json")
+    assert not run.result["is_error"]
+    assert "new.py" in shown
+    assert "src/README.md" not in shown
+    assert sorted(src_rows) == ["a.py", "new.py"]
+    assert sorted(tools_rows) == ["README.md", "run.sh"]
+    assert checked.data["sync"] == SYNC_ZERO
+
+
 def _settings_rows(settings: Any) -> dict[str, Any]:
     """端末の設定の `sources` を、配信元の ID から行を引く辞書にする。"""
     return {row["id"]: row for row in settings["sources"]}
@@ -563,6 +627,7 @@ def test_normal_when_added_from_settings(
     rows = _settings_rows(load_yaml_file(served.settings))
     assert list(rows) == ["sample", "extra"]
     assert rows["sample"] == sample_row
+    assert rows["extra"]["config"] == [str(extra.folder / "dev-docs.yaml")]
     page.goto(served.url("/extra"))
     expect(page.get_by_role("main").get_by_role("heading", level=1)).to_have_text("文書 1")
 

@@ -334,6 +334,7 @@ scenarios:
     expected:
       - 一覧に sample と extra が配信中で並ぶ
       - '`settings.yaml` の `sources` に extra の行が追加され、sample の行は変わらない'
+      - '`settings.yaml` の extra の行の `config` が、要素 1 つの配列で書かれる'
       - dev-docs を再起動せずに、extra の文書の画面が開ける
     test: test_normal_when_added_from_settings
   - name: 正常シナリオ（設定画面に配信していない配信元がある）
@@ -586,6 +587,47 @@ scenarios:
       - 端末の設定は変わらず、sample の配信は続く
       - スキルの応答に `documents[0].schema` と、スキーマが `records` の行に合わない理由が出る
     test: test_error_when_records_schema_mismatch
+  - name: 正常シナリオ（2 回目以降で行の exclude に当たるファイルがある）
+    setup:
+      - name: Mock
+        description: なし（実環境で実行）
+        notes: '-'
+      - name: 管理用の YAML を 2 行持つ配信元
+        description: '`dev-docs.yaml` が、管理用の YAML を読む行 `src`（`paths: [src/files.yaml]`・`records: files`・`body_file: path`・`exclude: [README.md]`）と行 `tools`（`paths: [tools/files.yaml]`・`records: files`・`body_file: path`。`exclude` なし）を持ち、端末の設定に登録済みの git リポジトリ'
+        notes: 2 つの管理用の YAML は、どちらも今あるファイルを全て行に持つ
+      - name: 追加したファイル
+        description: '`src/README.md`・`src/new.py`・`tools/README.md` を追加して commit し、その commit でワークツリーを作る'
+        notes: '`src/README.md` は行 `src` の `exclude` に当たり、`tools/README.md` はどの行の `exclude` にも当たらない'
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        actor U as 利用者
+        participant SK as setup のスキル
+        participant CL as dev-docs の CLI
+        participant DM as 文書の MCP
+        participant AD as 管理の MCP
+
+        U->>SK: 配信元のワークツリーで /dev-docs:setup
+        SK->>SK: 既にある sources の行と管理用の YAML を読む
+        SK->>CL: dev-docs files --root {配信元のパス} --paths src/** --exclude README.md
+        CL-->>SK: 行 src の載せるファイル
+        SK->>CL: dev-docs files --root {配信元のパス} --paths tools/**
+        CL-->>SK: 行 tools の載せるファイル
+        SK->>SK: 行ごとに、載せるファイルと管理用の YAML の行を突き合わせる
+        SK-->>U: 追加の行を表で示して確かめる
+        U-->>SK: 了承
+        SK->>DM: write_docs（管理用の YAML の行を追加する）
+        SK->>AD: check_project
+        AD-->>SK: 索引の同期の件数 0
+        SK->>AD: reload
+        SK-->>U: 追加した行と結果を出す
+      ```
+    expected:
+      - 確認の表の追加の行が `src/new.py` と `tools/README.md` の 2 つで、`src/README.md` は出ない
+      - '`src/files.yaml` に `new.py` の行が追加され、`README.md` の行は無い'
+      - '`tools/files.yaml` に `README.md` の行が追加される'
+      - '`check_project` が索引の同期の件数を 0 で返す'
+    test: test_normal_when_rerun_with_row_exclude
 lead: 利用者が `/dev-docs:setup [path]` で、フォルダを配信元として端末の設定に並べ、文書の MCP で読めるようにする。2 回目以降は範囲のファイルの増減・改名を管理用の YAML に合わせる。
 issue: 4
 primary_actor: 利用者

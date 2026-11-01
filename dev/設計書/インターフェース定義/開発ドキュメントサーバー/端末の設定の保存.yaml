@@ -31,6 +31,7 @@ flows:
     expected:
       - 200 で、sample と extra が `serving`
       - '`settings.yaml` の `sources` に extra の行があり、sample の行・他のキー・コメントは変わらない'
+      - 文字列で送った extra の `config` が、`settings.yaml` では要素 1 つの配列で書かれる
       - 再起動せずに `/_api/sources/extra/docs` が 200 を返し、`describe()` に extra が出る
     test: test_normal
   - name: 正常系（配信を止める）
@@ -177,7 +178,7 @@ request:
     type: str | list[str]
     required: true
     location: body
-    description: 配信元の設定の YAML の絶対パス
+    description: 配信元の設定の YAML の絶対パス。文字列でも、`settings.yaml` には要素の数によらず配列で書く
   - name: sources[].enabled
     type: bool
     required: false

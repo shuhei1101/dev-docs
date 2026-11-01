@@ -83,6 +83,8 @@ const seed = async (page: Page, rows: SeedComment[]) => {
 };
 
 const addComment = async (page: Page, text: string, body: string) => {
+  // mdmark がコメントの部品を付け、選択の変化を受け始めるまで待つ
+  await expect(page.locator("#mdmark-comment-hint")).toBeAttached();
   await page.getByText(text).selectText();
   await page.getByRole("button", { name: "コメント", exact: true }).click();
   await page.getByRole("dialog", { name: "コメントを書く" }).getByRole("textbox").fill(body);
@@ -988,6 +990,7 @@ test.describe("コメントの場所への移動", () => {
     const target = page.getByText("中ほどの文").first();
     await target.evaluate((element) => element.scrollIntoView({ block: "start" }));
     const before = await page.evaluate(() => window.scrollY);
+    await expect(page.locator("#mdmark-comment-hint")).toBeAttached();
     await target.selectText();
     await page.getByRole("button", { name: "コメント", exact: true }).click();
     await page.getByRole("dialog", { name: "コメントを書く" }).getByRole("textbox").fill("開き直した後の確認");

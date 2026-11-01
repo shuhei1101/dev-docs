@@ -31,9 +31,10 @@ functions:
     process: |-
       1. `reason` が `FORGET_REASONS` で `SessionKey.of(session_id, agent_id)` が `None` でなければ、記録を削除し `forgotten` を `True` にする（`SeenStore.forget`）
          - `[INFO]` 返し済みの記録を削除した（セッション ID・件数）
-      2. 作業場所から使える配信元と権限を引く（`available_sources`）
-      3. 警告を集める（警告の収集）
-      4. 使える配信元と警告で文を描画する（文脈の文、プロンプトは `handlers.prompts`）
+      2. 配信元の一覧が読み込み中（`handlers.registry.loading`）の場合、配信元を引かずに、`loading` を `True` にして描画した文（文脈の文）と空の `sources`・`warnings` を返す（以降の手順は実行しない）
+      3. 作業場所から使える配信元と権限を引く（`available_sources`）
+      4. 警告を集める（警告の収集）
+      5. 使える配信元と警告で文を描画する（文脈の文、プロンプトは `handlers.prompts`）
     unit_tests:
       - name: test_build_session_context
         case: 正常
@@ -59,6 +60,12 @@ functions:
         condition: '`cwd` がどの配信元の範囲にも当たらない'
         mock: なし
         expected: '`sources` が空、`context` が `/dev-docs:setup` を含み `instructions` の語を含まない'
+      - name: test_build_session_context_when_loading
+        case: 正常
+        summary: 読み込み中は配信元を待たずに案内を返す
+        condition: '`SourceRegistry(loading=True)` でまだ読み直していない配信元の一覧を持つ `Handlers`、`cwd` は sample の範囲'
+        mock: なし
+        expected: 待たずに戻り、`loading` が `True`、`sources`・`warnings` が空、`context` が読み込み中の案内を含み `/dev-docs:setup` を含まない
     callers:
       - dev/設計書/モジュール構成/開発ドキュメントサーバー/features/session_context/route.py#functions[build_session_context_router]
     callees:
@@ -148,11 +155,18 @@ functions:
         required: true
         passing: keyword
         description: '`handlers.prompts`'
+      - name: loading
+        title: 読み込み中
+        type: bool
+        required: false
+        default: 'False'
+        passing: keyword
+        description: 配信元の一覧が読み込み中か
     returns:
       type: str
       description: 文脈の文
     process: |-
-      1. 配信元ごとに `{id, access, description}`（`access` は `read_write` か `read`）を作り、`sources`・`omitted`（0）・`warnings` を渡して `SESSION_CONTEXT_PROMPT_ID` を描画する。見出し・配信元の行・権限の表示・instructions を指す行・配信元が無いときの `/dev-docs:setup` の案内・警告の見出しは YAML が持つ
+      1. 配信元ごとに `{id, access, description}`（`access` は `read_write` か `read`）を作り、`sources`・`omitted`（0）・`warnings`・`loading` を渡して `SESSION_CONTEXT_PROMPT_ID` を描画する。見出し・配信元の行・権限の表示・instructions を指す行・配信元が無いときの `/dev-docs:setup` の案内・読み込み中の案内・警告の見出しは YAML（`content/prompts/session-context.yaml`）が持つ。YAML は変数 `loading`（真偽値、既定 `false`）を受け、`loading` のときだけ「配信元を読み込んでいることと、終わるまで文書の MCP の呼び出しが待たされること」を出し、`/dev-docs:setup` の案内は `loading` でないときだけ出す
       2. `CONTEXT_MAX_CHARS` を超える場合、`description` を `None` にして描画し直す
       3. それでも超える場合、収まるまで配信元を末尾から 1 件ずつ減らし、減らした件数を `omitted` に入れて描画し直す
     unit_tests:
@@ -174,6 +188,12 @@ functions:
         condition: 配信元 0 件・警告なし、同梱した YAML
         mock: なし
         expected: '`/dev-docs:setup` を含み、`instructions` の語を含まない'
+      - name: test_context_text_when_loading
+        case: 正常
+        summary: 読み込み中の案内
+        condition: 配信元 0 件・警告なし・`loading=True`、同梱した YAML
+        mock: なし
+        expected: 読み込み中であることと文書の MCP の呼び出しが待たされることを含み、`/dev-docs:setup` を含まない
     callers:
       - '#functions[build_session_context]'
 test_files:

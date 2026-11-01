@@ -5,7 +5,9 @@ from __future__ import annotations
 import json
 import logging
 from collections.abc import Collection, Iterator, Mapping, Sequence
+from dataclasses import dataclass, field
 from datetime import date
+from pathlib import PurePosixPath
 from typing import Any
 
 from pydantic import ValidationError
@@ -26,6 +28,9 @@ from dev_docs.shared.errors import Violation
 logger = logging.getLogger(__name__)
 
 OTHER_GROUP = "その他"
+FOLDER_GROUP_BY = "@folder"
+INDEX_FILE = "index.yaml"
+GLOB_CHARS = ("*", "?", "[")
 
 
 def _link(document: Document, title: str | None = None) -> NavItem:
@@ -73,12 +78,23 @@ def _auto(
     *,
     fields: Mapping[str, str],
     today: date,
+    rows: Mapping[str, DocumentTable],
+    excluded: Collection[str] = (),
 ) -> list[NavItem]:
-    """`auto` の文書を並べる（`group_by` があれば値ごとの `group` の項目にする）。"""
-    found = _select(documents, spec, fields=fields, today=today)
+    """`auto` の文書を並べる（`group_by` があれば値ごと・フォルダごとの `group` の項目にする）。
+
+    `excluded` は同じタブで手で書いた `page` が指す文書のページのパスで、結果から除く。
+    """
+    found = [
+        document
+        for document in _select(documents, spec, fields=fields, today=today)
+        if page_path(document) not in excluded
+    ]
     group_by = spec.get("group_by")
     if not group_by:
         return [_link(document) for document in found]
+    if group_by == FOLDER_GROUP_BY:
+        return _folder_items(found, rows=rows)
     buckets: dict[str, list[NavItem]] = {}
     for document in found:
         value = get_field(document.data, str(group_by))
@@ -106,6 +122,73 @@ def _page(source: ServedSource, documents: Sequence[Document], value: str) -> Do
     return next((d for d in found if d.id == doc_id), None)
 
 
+@dataclass
+class _Folder:
+    """フォルダの束ねの木の 1 階層。"""
+
+    pages: list[Document] = field(default_factory=list)
+    children: dict[str, _Folder] = field(default_factory=dict)
+
+
+def _folder_parts(document: Document, rows: Mapping[str, DocumentTable]) -> tuple[str, ...]:
+    """文書が属する、行の `paths` の起点からのフォルダの並びを返す。"""
+    row = rows.get(document.kind)
+    if document.record_index is not None or row is None:
+        return ()
+    path = PurePosixPath(document.path)
+    for pattern in row.paths:
+        if not path.full_match(pattern):
+            continue
+        parts = PurePosixPath(pattern).parts
+        base = next(
+            (index for index, part in enumerate(parts) if any(c in part for c in GLOB_CHARS)),
+            len(parts),
+        )
+        return path.parts[base:-1]
+    return ()
+
+
+def _folder_nav(folder: _Folder) -> list[NavItem]:
+    """1 階層を、page（`index.yaml` が先頭）・入れ子の group（フォルダ名の順）の順の項目にする。"""
+    pages = sorted(
+        folder.pages,
+        key=lambda d: (PurePosixPath(d.path).name != INDEX_FILE, page_path(d)),
+    )
+    groups = [
+        NavItem(kind="group", title=name, items=_folder_nav(folder.children[name]))
+        for name in sorted(folder.children)
+    ]
+    return [*(_link(document) for document in pages), *groups]
+
+
+def _folder_items(
+    documents: Sequence[Document], *, rows: Mapping[str, DocumentTable]
+) -> list[NavItem]:
+    """`auto` が選んだ文書を、行の `paths` の起点からのフォルダごとの入れ子の `group` にする。"""
+    root = _Folder()
+    for document in documents:
+        node = root
+        for part in _folder_parts(document, rows):
+            node = node.children.setdefault(part, _Folder())
+        node.pages.append(document)
+    return _folder_nav(root)
+
+
+def _manual_pages(
+    source: ServedSource, documents: Sequence[Document], items: Sequence[Mapping[str, Any]]
+) -> set[str]:
+    """`items[]` を `group` の入れ子までたどり、手で書いた `page` が指す文書のページのパスを集める。"""
+    found: set[str] = set()
+    for item in items:
+        if "group" in item:
+            found |= _manual_pages(source, documents, item.get("items") or [])
+        elif "page" in item:
+            document = _page(source, documents, str(item["page"]))
+            if document is not None:
+                found.add(page_path(document))
+    return found
+
+
 def _items(
     source: ServedSource,
     documents: Sequence[Document],
@@ -113,13 +196,19 @@ def _items(
     *,
     fields: Mapping[str, str],
     today: date,
+    excluded: Collection[str] = (),
 ) -> list[NavItem]:
     """`items[]` を上から読み、サイドバーの項目の並びを作る。"""
     result: list[NavItem] = []
     for item in items:
         if "group" in item:
             children = _items(
-                source, documents, item.get("items") or [], fields=fields, today=today
+                source,
+                documents,
+                item.get("items") or [],
+                fields=fields,
+                today=today,
+                excluded=excluded,
             )
             result.append(NavItem(kind="group", title=str(item["group"]), items=children))
         elif "page" in item:
@@ -129,7 +218,14 @@ def _items(
                 continue
             result.append(_link(document, item.get("title")))
         elif "auto" in item:
-            auto = _auto(documents, item["auto"], fields=fields, today=today)
+            auto = _auto(
+                documents,
+                item["auto"],
+                fields=fields,
+                today=today,
+                rows={row.id: row for row in source.config.documents},
+                excluded=excluded,
+            )
             title = item.get("title")
             # 見出しを持たない並びは、title があれば各行の名前を上書きする
             if title and all(entry.kind == "page" for entry in auto):
@@ -172,7 +268,13 @@ def build_nav(source: ServedSource, documents: Sequence[Document]) -> list[NavTa
             NavTab(
                 title=_tab_title(row),
                 active=False,
-                items=_auto(documents, {"document": row.id}, fields=fields, today=today),
+                items=_auto(
+                    documents,
+                    {"document": row.id, "group_by": FOLDER_GROUP_BY},
+                    fields=fields,
+                    today=today,
+                    rows={row.id: row},
+                ),
             )
             for row in source.config.documents
             if row.enabled
@@ -181,7 +283,14 @@ def build_nav(source: ServedSource, documents: Sequence[Document]) -> list[NavTa
         NavTab(
             title=str(tab["title"]),
             active=False,
-            items=_items(source, documents, tab.get("items") or [], fields=fields, today=today),
+            items=_items(
+                source,
+                documents,
+                tab.get("items") or [],
+                fields=fields,
+                today=today,
+                excluded=_manual_pages(source, documents, tab.get("items") or []),
+            ),
         )
         for tab in nav.get("tabs", [])
     ]

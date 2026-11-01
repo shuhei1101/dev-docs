@@ -4,6 +4,7 @@ import json
 import logging
 import shutil
 import socket
+import threading
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any
@@ -25,6 +26,7 @@ from dev_docs.features.related.types import RelatedRequest
 from dev_docs.features.search.types import MatchWordsRequest, SearchRequest
 from dev_docs.features.session_context.types import SESSION_CONTEXT_PROMPT_ID
 from dev_docs.features.write.types import DeleteRequest, WriteRequest
+from dev_docs.server.app import build_app
 from dev_docs.server.mcp.admin import NoArguments
 from dev_docs.server.mcp.result import DOCS_INSTRUCTIONS_PROMPT_ID, mcp_prompt_ids, tool_prompt_id
 from dev_docs.shared.yaml_io import load_yaml
@@ -91,6 +93,10 @@ INSTRUCTIONS_MAX_CHARS = 4096
 INSTRUCTIONS_HEADERS = ("使う場面:", "grep・Read が向く場面:", "使い方:", "タグ:")
 # 文に置かない言い回し
 FORBIDDEN_WORDS = ("MUST", "必ず", "禁止")
+SCREEN_INDEX = "<!doctype html><title>dev-docs</title>"
+# 読み込み中の要求が答えないことを確かめる間と、読み終えた後に答えを待つ上限
+LOADING_HOLD_SEC = 1
+LOADING_REQUEST_SEC = 30
 # ツールの名前 → 引数のスキーマの元の要求のモデル
 DOCS_TOOL_MODELS: dict[str, type[BaseModel]] = {
     "search_docs": SearchRequest,
@@ -649,3 +655,43 @@ def test_error_when_prompt_invalid(
     assert _listening_addresses(port) == set()
     assert str(broken) in error
     assert "kind" in error
+
+
+def test_normal_when_requested_while_loading(
+    make_source: Callable[..., Any],
+    make_loading_server: Callable[..., Any],
+    serve_in_thread: Callable[[Any, int], None],
+    free_port: Callable[[], int],
+    tmp_path: Path,
+) -> None:
+    """配信元を読む前に待ち受け、読む間に届いた要求は読み終えてから答える（正常系）。"""
+    # 準備
+    screen = tmp_path / "screen-build"
+    screen.mkdir()
+    (screen / "index.html").write_text(SCREEN_INDEX, encoding="utf-8")
+    loading = make_loading_server(make_source("sample"))
+    port = free_port()
+    serve_in_thread(build_app(loading.env.handlers, screen_dir=screen), port)
+    responses: dict[str, httpx.Response] = {}
+
+    def request_docs() -> None:
+        responses["docs"] = httpx.get(
+            f"http://127.0.0.1:{port}/_api/sources/sample/docs", timeout=LOADING_REQUEST_SEC
+        )
+
+    # 実行
+    with socket.create_connection(("127.0.0.1", port), timeout=5):
+        connected = True
+    docs_thread = threading.Thread(target=request_docs)
+    docs_thread.start()
+    top = httpx.get(f"http://127.0.0.1:{port}/", timeout=10)
+    docs_thread.join(timeout=LOADING_HOLD_SEC)
+    answered_before = "docs" in responses
+    loading.finish()
+    docs_thread.join(timeout=LOADING_REQUEST_SEC)
+    # 検証
+    assert connected
+    assert top.status_code == 200
+    assert answered_before is False
+    assert responses["docs"].status_code == 200
+    assert responses["docs"].json()["path"] == "docs/doc-1"

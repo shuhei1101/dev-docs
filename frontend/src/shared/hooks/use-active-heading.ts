@@ -44,10 +44,13 @@ export const useActiveHeading = (
     // 目次のリンクなどで見出しを飛び越えたときは交差の変化が起きないため、スクロールのたびに位置から求め直す
     const onScroll = () => {
       measured = true;
-      const line = offset + SETTLE_MARGIN;
-      const last = list.filter(
-        (id) => (document.getElementById(id)?.getBoundingClientRect().top ?? line) < line,
-      );
+      const last = list.filter((id) => {
+        const element = document.getElementById(id);
+        if (!element) return false;
+        // mdmark が見出しに当てる移る先の余白（scroll-margin-top）の分だけ線を下げる
+        const margin = Number.parseFloat(getComputedStyle(element).scrollMarginTop) || 0;
+        return element.getBoundingClientRect().top < offset + SETTLE_MARGIN + margin;
+      });
       setActive(last.at(-1) ?? null);
     };
     window.addEventListener("scroll", onScroll, { passive: true });

@@ -28,6 +28,8 @@ INITIALIZE = {
     },
 }
 CONTEXT_MAX_CHARS = 1000
+LOADING_TEXT = "dev-docs は配信元を読み込み中です。読み込みが終わるまで、文書の MCP（dev-docs）の呼び出しは待たされます。"
+SETUP_COMMAND = "/dev-docs:setup"
 TAG_HEADER = "タグ:"
 # 字数の上限を超える配信元の数・ID の長さを揃える埋め草・説明
 MANY_SOURCES = 40
@@ -206,3 +208,24 @@ def test_normal_when_context_over_limit(
     assert "- ほか " in context
     assert POINTER_LINE in context
     assert len(body["sources"]) == MANY_SOURCES
+
+
+def test_normal_when_loading(
+    make_source: Callable[..., Any],
+    make_loading_server: Callable[..., Any],
+    add_worktree: Callable[..., Any],
+) -> None:
+    """配信元の読み込みを待たずに、読み込み中の案内を返す（正常系）。"""
+    # 準備
+    sample = make_source("sample")
+    worktree = add_worktree(sample.folder)
+    loading = make_loading_server(sample)
+    # 実行
+    response = _post(loading.env, {"cwd": str(worktree), "reason": "startup"})
+    # 検証
+    body = response.json()
+    assert response.status_code == 200
+    assert body["loading"] is True
+    assert body["sources"] == []
+    assert LOADING_TEXT in body["context"]
+    assert SETUP_COMMAND not in body["context"]

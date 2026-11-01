@@ -3,9 +3,10 @@
 from __future__ import annotations
 
 import asyncio
+import functools
 import inspect
 import logging
-from collections.abc import Callable
+from collections.abc import Awaitable, Callable
 from typing import TYPE_CHECKING, Annotated, Any, Literal
 
 from mcp.server.mcpserver import MCPServer
@@ -90,12 +91,15 @@ def _register(
     model: type[BaseModel],
     call: Callable[[Any], Any],
     render: Callable[[Any, Any], str] | None,
+    *,
+    wait_loaded: Callable[[], Awaitable[None]],
 ) -> None:
-    """要求のモデルを引数に持つツールを 1 つ登録する。"""
+    """要求のモデルを引数に持つツールを 1 つ登録する（呼ぶ前に配信元の読み込みを待つ）。"""
 
     async def tool(**arguments: Any) -> CallToolResult:
         try:
             request = model(**arguments)
+            await wait_loaded()
             result = await asyncio.to_thread(call, request)
             fmt: Literal["markdown", "json"] = getattr(request, "format", "json")
             return to_tool_result(
@@ -118,8 +122,9 @@ def build_docs_mcp(handlers: Handlers) -> MCPServer:
         DOCS_MCP_NAME, instructions=handlers.prompts.render(DOCS_INSTRUCTIONS_PROMPT_ID)
     )
     timeout = handlers.terminal.script_timeout_sec
+    register = functools.partial(_register, wait_loaded=lambda: handlers.registry.wait_loaded())
 
-    _register(
+    register(
         mcp,
         "search_docs",
         handlers.prompts.render(tool_prompt_id("docs", "search_docs")),
@@ -133,7 +138,7 @@ def build_docs_mcp(handlers: Handlers) -> MCPServer:
         ),
         lambda result, request: render_search_markdown(result, source_label=result.source_label),
     )
-    _register(
+    register(
         mcp,
         "describe",
         handlers.prompts.render(tool_prompt_id("docs", "describe")),
@@ -141,7 +146,7 @@ def build_docs_mcp(handlers: Handlers) -> MCPServer:
         lambda request: describe(request, registry=handlers.registry, store=handlers.store),
         lambda result, request: render_describe_markdown(result),
     )
-    _register(
+    register(
         mcp,
         "list_changes",
         handlers.prompts.render(tool_prompt_id("docs", "list_changes")),
@@ -153,7 +158,7 @@ def build_docs_mcp(handlers: Handlers) -> MCPServer:
             result, source_label=str(request.source or "作業中の配信元")
         ),
     )
-    _register(
+    register(
         mcp,
         "trace_related",
         handlers.prompts.render(tool_prompt_id("docs", "trace_related")),
@@ -163,7 +168,7 @@ def build_docs_mcp(handlers: Handlers) -> MCPServer:
         ),
         lambda result, request: render_related_markdown(result),
     )
-    _register(
+    register(
         mcp,
         "write_docs",
         handlers.prompts.render(tool_prompt_id("docs", "write_docs")),
@@ -179,7 +184,7 @@ def build_docs_mcp(handlers: Handlers) -> MCPServer:
         ),
         None,
     )
-    _register(
+    register(
         mcp,
         "delete_docs",
         handlers.prompts.render(tool_prompt_id("docs", "delete_docs")),
@@ -194,7 +199,7 @@ def build_docs_mcp(handlers: Handlers) -> MCPServer:
         ),
         None,
     )
-    _register(
+    register(
         mcp,
         "list_match_words",
         handlers.prompts.render(tool_prompt_id("docs", "list_match_words")),

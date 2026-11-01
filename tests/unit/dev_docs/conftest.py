@@ -196,7 +196,9 @@ def make_mcp_handlers(
     """同梱したプロンプトの一式を持たせ、指定した部品だけ偽物にした配線済みの関数を作る関数を返す。"""
 
     def _make(**overrides: Any) -> Any:
-        return make_handlers(**{"prompts": bundled_prompts, **overrides})
+        return make_handlers(
+            **{"prompts": bundled_prompts, "registry": SourceRegistry(), **overrides}
+        )
 
     return _make
 
@@ -361,7 +363,10 @@ def make_real_handlers() -> Callable[[Path], Handlers]:
     """端末の設定のファイルを読み、部品を本物で配線した配線済みの関数を作る関数を返す。"""
 
     def _make(settings: Path) -> Handlers:
-        return build_handlers(load_terminal_config(settings))
+        terminal = load_terminal_config(settings)
+        handlers = build_handlers(terminal)
+        handlers.reload_sources(terminal)
+        return handlers
 
     return _make
 

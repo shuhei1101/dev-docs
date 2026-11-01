@@ -6,6 +6,7 @@ import shutil
 import socket
 import subprocess
 import sys
+import threading
 import time
 from collections.abc import Callable, Iterator
 from contextlib import ExitStack
@@ -17,10 +18,13 @@ import pytest
 from fastapi.testclient import TestClient
 
 from dev_docs.features.settings.query import load_terminal_config
-from dev_docs.main import Handlers, build_handlers
+from dev_docs.features.sources import registry as registry_module
+from dev_docs.main import Handlers, build_handlers, start_loading
 from dev_docs.server.app import build_app
 
 LOCAL_BASE_URL = "http://127.0.0.1:8781"
+# 読み込みを止めた配信元の合図を待つ上限と、読み込みのスレッドの終わりを待つ上限
+LOADING_WAIT_SEC = 60
 MCP_HEADERS = {
     "Accept": "application/json, text/event-stream",
     "Content-Type": "application/json",
@@ -376,7 +380,9 @@ def make_server(tmp_path: Path) -> Iterator[Callable[..., ServerEnv]]:
         settings_path.write_text(
             _settings_text(tmp_path, state_dir, list(specs), settings_extra), encoding="utf-8"
         )
-        handlers = build_handlers(load_terminal_config(settings_path))
+        terminal = load_terminal_config(settings_path)
+        handlers = build_handlers(terminal)
+        handlers.reload_sources(terminal)
         app = (
             build_app(handlers)
             if screen_dir is None
@@ -397,6 +403,89 @@ def make_server(tmp_path: Path) -> Iterator[Callable[..., ServerEnv]]:
 
     with stack:
         yield _make
+
+
+@dataclass
+class LoadingServerEnv:
+    """配信元の読み込みを合図まで止めたまま起動したアプリ。"""
+
+    env: ServerEnv
+    release: threading.Event
+    thread: threading.Thread
+
+    def finish(self) -> None:
+        """読み込みの合図を出し、読み込みが終わるまで待つ。"""
+        self.release.set()
+        self.thread.join(timeout=LOADING_WAIT_SEC)
+
+
+@pytest.fixture
+def make_loading_server(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> Iterator[Callable[..., LoadingServerEnv]]:
+    """配信元の読み込み（`load_source`）を合図まで止めて、裏で読み込みを始めたアプリを作る関数を返す。"""
+    stack = ExitStack()
+    started: list[LoadingServerEnv] = []
+    original = registry_module.load_source
+
+    def _make(*specs: SourceSpec) -> LoadingServerEnv:
+        release = threading.Event()
+
+        def blocked(entry: Any, *, index: int) -> Any:
+            release.wait(timeout=LOADING_WAIT_SEC)
+            return original(entry, index=index)
+
+        monkeypatch.setattr(registry_module, "load_source", blocked)
+        state_dir = tmp_path / "state"
+        settings_path = tmp_path / "settings.yaml"
+        settings_path.write_text(
+            _settings_text(tmp_path, state_dir, list(specs), ""), encoding="utf-8"
+        )
+        handlers = build_handlers(load_terminal_config(settings_path))
+        thread = start_loading(handlers)
+        client = stack.enter_context(
+            TestClient(build_app(handlers), base_url=LOCAL_BASE_URL, raise_server_exceptions=False)
+        )
+        env = ServerEnv(
+            root=tmp_path,
+            settings_path=settings_path,
+            state_dir=state_dir,
+            handlers=handlers,
+            client=client,
+            folders={spec.id: spec.folder for spec in specs},
+        )
+        loading = LoadingServerEnv(env=env, release=release, thread=thread)
+        started.append(loading)
+        return loading
+
+    with stack:
+        yield _make
+        for loading in started:
+            loading.finish()
+
+
+@pytest.fixture
+def serve_in_thread() -> Iterator[Callable[[Any, int], None]]:
+    """アプリを uvicorn で 127.0.0.1 のポートに待ち受けさせる関数を返す（終了時に止める）。"""
+    import uvicorn
+
+    servers: list[tuple[uvicorn.Server, threading.Thread]] = []
+
+    def _serve(app: Any, port: int) -> None:
+        server = uvicorn.Server(uvicorn.Config(app, host="127.0.0.1", port=port, log_config=None))
+        thread = threading.Thread(target=server.run, daemon=True)
+        thread.start()
+        servers.append((server, thread))
+        deadline = time.monotonic() + LOADING_WAIT_SEC
+        while not server.started:
+            assert thread.is_alive(), "uvicorn が待ち受けの前に終わった"
+            assert time.monotonic() < deadline, "uvicorn が待ち受けを始めなかった"
+            time.sleep(0.05)
+
+    yield _serve
+    for server, thread in servers:
+        server.should_exit = True
+        thread.join(timeout=LOADING_WAIT_SEC)
 
 
 @pytest.fixture

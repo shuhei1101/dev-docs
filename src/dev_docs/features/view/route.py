@@ -44,6 +44,7 @@ def build_view_router(handlers: Handlers) -> APIRouter:
         source: str, path: str | None, ref: str | None, diff: str | None
     ) -> Response | DocumentResponse:
         """文書を取得し、見つからなかったときは何が無いかを足した 404 にする。"""
+        await handlers.registry.wait_loaded()
         try:
             return await asyncio.to_thread(
                 get_document, source, path, handlers=handlers, ref=ref, diff_ref=diff
@@ -90,6 +91,7 @@ def build_view_router(handlers: Handlers) -> APIRouter:
             ]
             return screen_search(documents, q, limit)
 
+        await handlers.registry.wait_loaded()
         return await asyncio.to_thread(work)
 
     @router.get("/_api/sources/{source}/refs", name="list_refs")
@@ -97,8 +99,10 @@ def build_view_router(handlers: Handlers) -> APIRouter:
         source: str,
         commits: Annotated[int, Query(ge=0, le=REFS_COMMITS_MAX)] = REFS_COMMITS_DEFAULT,
     ) -> RefsResponse:
-        served = handlers.registry.get(source)
-        result = await asyncio.to_thread(list_refs, served, commits=commits)
+        await handlers.registry.wait_loaded()
+        result = await asyncio.to_thread(
+            lambda: list_refs(handlers.registry.get(source), commits=commits)
+        )
         return RefsResponse.model_validate(dataclasses.asdict(result))
 
     @router.put(
@@ -107,9 +111,14 @@ def build_view_router(handlers: Handlers) -> APIRouter:
         dependencies=[Depends(require_same_origin)],
     )
     async def columns(source: str, body: ColumnsRequest) -> ColumnsRequest:
-        handlers.registry.get(source)
         settings: ColumnSettings = handlers.columns
-        await asyncio.to_thread(settings.save, source, body.table, body.hidden)
+
+        def work() -> None:
+            handlers.registry.get(source)
+            settings.save(source, body.table, body.hidden)
+
+        await handlers.registry.wait_loaded()
+        await asyncio.to_thread(work)
         return body
 
     return router
