@@ -84,7 +84,7 @@ functions:
       type: list[Violation]
       description: 違反の並び。無ければ空
     process: |-
-      1. `SOURCE_SCHEMA` で `iter_errors` を全て集め、`documents[0].paths` の形のパスの `Violation` にする（必須のキーが無い誤りは `必須のキーが無い`、表に無いキーは `知らないキー`）。スキーマの違反があれば、ここで返す
+      1. `SOURCE_SCHEMA` でスキーマの違反を全て集める（スキーマの違反）。スキーマの違反があれば、ここで返す
       2. テーブル（`TABLE_KEYS`）ごとに `id` の重なりを確かめ、後の行の `{テーブル}[{n}].id` に違反を加える
       3. 行の参照を確かめる。`documents[].validators[]`・`documents[].converter`・`documents[].after_write[]` が、それぞれ `validators[]`・`converters[]`・`generators[]` に無い ID を指す場合、その要素のパスに `存在しない ID` の違反を加える
       4. `body_file` を `records` なしで書いた行は `documents[{n}].body_file` に違反を加える

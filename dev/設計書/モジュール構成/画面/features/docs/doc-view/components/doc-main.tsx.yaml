@@ -1,0 +1,91 @@
+title: "画面 / 文書の画面 / doc-main.tsx"
+lead: 文書の画面の本文の領域（パンくず・文書のヘッダー・差分の帯・本文か変換の失敗か文書の無いタブ）。
+components:
+  - name: DocMain
+    title: 本文の領域
+    kind: コンポーネント
+    container: features/docs/doc-view/components/doc-main.tsx
+    usecase: 文書を読む
+    role: 部品
+    summary: '`main`（`id="main"`・`tabIndex={-1}`・`aria-busy`）にパンくずを置き、文書の無いタブを選んでいればそのタブの見出しと空のタブを、そうでなければ文書の中身を出す'
+    props:
+      - name: doc
+        type: DocumentResponse
+        required: true
+        description: 開いている文書
+      - name: active
+        type: ActivePage
+        required: true
+        description: ナビゲーションの開いているページとタブ
+      - name: search
+        type: DocViewSearch
+        required: true
+        description: パンくずのリンクに保つ `rev`・`base`・`tab`
+      - name: refs
+        type: RefsResponse | undefined
+        required: true
+        description: リビジョンの一覧（差分の帯に使う）
+      - name: emptyTab
+        type: NavTab | null
+        required: true
+        description: 文書の無いタブを選んだときのタブ
+      - name: busy
+        type: boolean
+        required: true
+        description: 次の文書を読み込んでいるか（`aria-busy`）
+      - name: onHeadings
+        type: '(items: TocItem[]) => void'
+        required: true
+        description: 本文の見出しが揃ったとき（目次へ渡す）
+      - name: onCommentSaved
+        type: () => void
+        required: true
+        description: 本文でコメントを保存したとき
+      - name: locating
+        type: DocComment | null
+        required: true
+        description: 場所を選ばれたコメント
+      - name: onLocated
+        type: () => void
+        required: true
+        description: 本文がコメントのマーカーまでスクロールしたとき
+      - name: onRetry
+        type: () => void
+        required: true
+        description: 変換の失敗の再試行
+      - name: onCompare
+        type: '(rev: string | undefined, base: string) => void'
+        required: true
+        description: 差分の帯で比較を変えたとき
+      - name: onClearDiff
+        type: () => void
+        required: true
+        description: 差分の帯で比較をやめたとき
+    description: 文書の中身は、文書のヘッダー（ページのタイトル。無ければパス）、`doc.diff` とリビジョンの一覧があるときの差分の帯、`doc.conversionError` があれば変換の失敗、無ければ本文の順に出す
+    unit_tests:
+      - name: test_doc_main
+        case: 正常
+        summary: 文書を出す
+        condition: '`emptyTab` が null、`conversionError` の無い文書'
+        mock: 本文（`DocBody` を `vi.mock` で置き換える）
+        expected: パンくず・文書のタイトル・本文が出て、`main` が `id="main"`
+      - name: test_doc_main_when_empty_tab
+        case: 正常
+        summary: 文書の無いタブ
+        condition: '`emptyTab` に `items` が空のタブ'
+        mock: 本文（偽物）
+        expected: タブのタイトルと文書が無いことの表示が出て、本文は出ない
+      - name: test_doc_main_when_conversion_error
+        case: 正常
+        summary: 変換の失敗
+        condition: '`conversionError` を持つ文書'
+        mock: 本文（偽物）
+        expected: 変換の失敗が出て、本文は出ない
+      - name: test_doc_main_when_diff
+        case: 正常
+        summary: 差分の帯
+        condition: '`diff` を持つ文書とリビジョンの一覧'
+        mock: 本文（偽物）
+        expected: 差分の帯が出る
+test_files:
+  - tests/unit/frontend/src/features/docs/doc-view/components/doc-main.test.tsx
