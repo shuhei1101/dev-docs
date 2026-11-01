@@ -24,12 +24,12 @@ components:
       - name: search
         type: DocViewSearch
         required: true
-        description: リンクに保つ `rev`・`base`
+        description: リンクに保つ `rev`・`base`・`tab`
       - name: onNavigate
         type: () => void
         required: false
         description: リンクを押したとき（ドロワーを閉じる）
-    description: 'page のリンクは TanStack Router の `Link`（`to="/$source/$"`、`search` を保つ）。`change` が `deleted` の page は `search` を `{rev: base}` にし、文書の名前に取り消し線を引く。マーカーは lucide-react の `Plus`・`Circle`（塗り）・`Minus` に `aria-label`（`追加`・`変更`・`削除`）を付ける'
+    description: 'page のリンクは TanStack Router の `Link`（`to="/$source/$"`、`search` を保つ）。`change` が `deleted` の page は `search` を `{rev: base, tab}` にし、文書の名前に取り消し線を引く。マーカーは lucide-react の `Plus`・`Circle`（塗り）・`Minus` に `aria-label`（`追加`・`変更`・`削除`）を付ける'
     unit_tests:
       - name: test_doc_sidebar
         case: 正常
