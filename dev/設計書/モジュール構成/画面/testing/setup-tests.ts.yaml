@@ -1,0 +1,8 @@
+title: "画面 / 共通 / setup-tests.ts"
+lead: 単体テストの共通の準備。`frontend/vitest.config.ts` の `setupFiles` が読む。
+notes:
+  準備すること: |-
+    - `@testing-library/jest-dom` の照合を Vitest に加える
+    - `fetch` の相対 URL（`/` で始まる文字列）を画面のオリジンの URL に直して呼ぶ（jsdom は相対 URL の `fetch` を解けない）
+    - jsdom に無い `matchMedia`（常に当たらない）・`ResizeObserver`・`IntersectionObserver`・`Element.scrollIntoView` を、無いときだけ何もしない実装で補う
+    - 各テストの後に描画を片付け、`localStorage`・`sessionStorage` を空にする

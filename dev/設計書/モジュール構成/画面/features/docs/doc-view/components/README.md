@@ -19,5 +19,6 @@
 | [doc-body.tsx](./doc-body.tsx.yaml) | mdmark で描く文書の本文 |
 | [doc-toc.tsx](./doc-toc.tsx.yaml) | 本文の右の目次 |
 | [doc-skeleton.tsx](./doc-skeleton.tsx.yaml) | 文書の取得を待つ間の読み込み中の表示 |
+| [doc-main.tsx](./doc-main.tsx.yaml) | 文書の画面の本文の領域 |
 
 <!-- /table -->

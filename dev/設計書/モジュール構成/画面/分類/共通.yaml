@@ -6,7 +6,8 @@ directory: |-
   ├── shared/
   │   ├── lib/
   │   │   ├── format.ts         # 日時の表示（JST）
-  │   │   └── logger.ts         # コンソールのロガー
+  │   │   ├── logger.ts         # コンソールのロガー
+  │   │   └── utils.ts          # shadcn/ui が置く cn（設計しない）
   │   ├── core/
   │   │   ├── schema.ts         # 生成しない zod のスキーマ（problem・missing）
   │   │   ├── app-error.ts      # AppError とその派生
@@ -16,14 +17,20 @@ directory: |-
   │   │   └── api-client.ts     # orval の fetch の mutator
   │   ├── hooks/
   │   │   ├── use-shortcut.ts   # ショートカットの登録
-  │   │   └── use-active-heading.ts # 表示中の見出し
+  │   │   ├── use-active-heading.ts # 表示中の見出し
+  │   │   ├── use-delayed-flag.ts # 遅らせた読み込み中の判定
+  │   │   └── use-media-query.ts # メディアクエリの判定
   │   ├── stores/
   │   │   └── preferences.ts    # ブラウザに保存する好み
   │   └── components/
   │       ├── topbar/topbar.tsx # トップバー
-  │       └── shortcut-dialog/shortcut-dialog.tsx # ショートカットの一覧
+  │       ├── shortcut-dialog/shortcut-dialog.tsx # ショートカットの一覧
+  │       ├── skip-link.tsx     # 本文へのスキップ
+  │       ├── ui/               # shadcn/ui が置く部品（設計しない）
+  │       └── **/*.stories.tsx  # Storybook のストーリー（部品設計の story が持つ。設計しない）
   └── testing/
-      └── msw/handlers.ts       # テストの既定のハンドラ
+      ├── msw/handlers.ts       # テストの既定のハンドラ
+      └── setup-tests.ts        # 単体テストの共通の準備
   ```
 diagrams:
   - name: 全体

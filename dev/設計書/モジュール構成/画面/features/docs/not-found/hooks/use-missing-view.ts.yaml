@@ -1,0 +1,39 @@
+title: "画面 / 文書の画面 / use-missing-view.ts"
+lead: 見つからない画面に出す内容と、読んだ配信元・リビジョンの一覧。
+functions:
+  - name: useMissingView
+    title: 見つからない画面の内容
+    kind: フック
+    container: features/docs/not-found/hooks/use-missing-view.ts
+    usecase: 文書を読む
+    role: フック
+    summary: URL の配信元・リビジョンと、端末の設定の取得・リビジョンの一覧を読んで、見つからなかったものの説明と配信中の配信元を返す
+    scope: public
+    args:
+      - name: data
+        type: unknown
+        required: true
+        passing: positional
+        description: '`notFound` の `data`'
+    returns:
+      type: '{source: string | undefined; urlSource: string | undefined; rev: string | undefined; refs: RefsResponse | undefined; missing: MissingDescription; serving: ServingSource[]}'
+      description: リビジョンを読んだ配信元（`source`）・URL の配信元（`urlSource`）・URL のリビジョン・リビジョンの一覧・見つからなかったものの説明・配信中の配信元
+    process: |-
+      1. URL の配信元・リビジョンを読み、`data` の `missing` を `MissingSchema` で読む
+      2. `missing` が `source`・`not_served` のときは配信元を undefined にし、リビジョンの一覧を読まない。それ以外で `missing` を読めたときだけ、URL の配信元のリビジョンの一覧を読む（orval が生成した問い合わせ）
+      3. 端末の設定の取得を読む（orval が生成した問い合わせ）
+      4. 見つからなかったものの説明の `context` へ、リビジョンの一覧の `defaultRef`、端末の設定の取得の URL の配信元の `config`、URL の配信元の ID、リビジョン（git でない配信元は渡さない。URL に無ければ `defaultRef`）を渡す（見つからなかったものの説明）
+      5. 端末の設定の取得から配信中の配信元を取り出す（配信中の配信元の取り出し）
+    unit_tests:
+      - name: test_use_missing_view
+        case: 正常
+        summary: 文書が無い
+        condition: '`/s/a.md` で `{missing: "doc", value: "a.md"}`'
+        mock: MSW のハンドラ（配信中の配信元 2 件・リビジョンの一覧）
+        expected: '`source` が `s`、`missing.kind` が `doc`、リビジョンの一覧が読まれ、`serving` が 2 件'
+      - name: test_use_missing_view_when_source_missing
+        case: 正常
+        summary: 配信元が無い
+        condition: '`/unknown` で `{missing: "source", value: "unknown"}`'
+        mock: MSW のハンドラ
+        expected: '`source` が undefined、`urlSource` が `unknown`、リビジョンの一覧が呼ばれない'
