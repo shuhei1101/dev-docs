@@ -33,7 +33,7 @@
 - [x] ~~画面設計~~（画面設計は既に `tab` を付けるタブのクリックを決めている）
 - [x] モジュール構成設計（`doc-tabs.tsx` の引数 `search` の説明と単体テストの行 `test_doc_tabs` の期待値、`doc-sidebar.tsx`・`doc-breadcrumb.tsx`・`doc-main.tsx` の引数 `search` の説明、`doc-sidebar.tsx` の `description`、`search.ts` の `DocViewSearch`・`DocViewSearchSchema`）
 - [x] ~~ドキュメント修正~~（更新ドキュメントなし）
-- [ ] 単体テスト作成
+- [x] 単体テスト作成
 - [x] ~~実装~~（コードを変えない）
 - [x] ~~結合テスト作成~~（結合テストを変えない）
 - [x] ~~E2E テスト作成~~（シナリオを変えない）
