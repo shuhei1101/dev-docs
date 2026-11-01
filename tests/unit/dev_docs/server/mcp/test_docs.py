@@ -1,13 +1,19 @@
 from __future__ import annotations
 
 import asyncio
+import dataclasses
+import threading
 from collections.abc import Callable
+from pathlib import Path
 from typing import Any
 
 import pytest
 from mcp.types import CallToolResult, TextContent
 
 from dev_docs.features.search.types import SearchRequest, SearchResult
+from dev_docs.features.settings.types import SourceEntry, TerminalConfig
+from dev_docs.features.sources.registry import SourceRegistry
+from dev_docs.main import build_handlers
 from dev_docs.server.mcp import docs as docs_module
 from dev_docs.server.mcp.docs import build_docs_mcp
 from dev_docs.server.mcp.result import DOCS_INSTRUCTIONS_PROMPT_ID, tool_prompt_id
@@ -140,3 +146,43 @@ def test_build_docs_mcp_when_descriptions(
     assert "description" in search_properties["sections"]
     assert "description" in search_properties["lines"]
     assert "description" in changes_properties["contains"]
+
+
+def test_build_docs_mcp_when_loading(
+    make_source_dir: Callable[..., Path],
+    make_terminal_config: Callable[..., TerminalConfig],
+    make_entry: Callable[..., SourceEntry],
+) -> None:
+    """ツールの呼び出しは読み込みを待ち、スレッドを持たない（正常系）。"""
+    # 準備
+    config = make_source_dir("sample")
+    terminal = make_terminal_config(sources=[make_entry(str(config), source_id="sample")])
+    registry = SourceRegistry(loading=True)
+    handlers = dataclasses.replace(build_handlers(terminal), registry=registry)
+    mcp = build_docs_mcp(handlers)
+    observed: dict[str, Any] = {}
+
+    async def scenario() -> list[Any]:
+        calls = [
+            asyncio.ensure_future(
+                mcp.call_tool("search_docs", {"source": "sample", "format": "json"})
+            )
+            for _ in range(13)
+        ]
+        observed["tools"] = await asyncio.wait_for(mcp.list_tools(), timeout=5)
+        await asyncio.sleep(0.1)
+        observed["done_before"] = [call.done() for call in calls]
+        observed["executor_threads"] = [
+            thread.name for thread in threading.enumerate() if thread.name.startswith("asyncio_")
+        ]
+        await asyncio.to_thread(registry.reload, terminal)
+        return await asyncio.wait_for(asyncio.gather(*calls), timeout=30)
+
+    # 実行
+    results = asyncio.run(scenario())
+    # 検証
+    assert {tool.name for tool in observed["tools"]} == TOOL_NAMES
+    assert observed["done_before"] == [False] * 13
+    assert observed["executor_threads"] == []
+    assert len(results) == 13
+    assert all(isinstance(result, CallToolResult) and not result.is_error for result in results)

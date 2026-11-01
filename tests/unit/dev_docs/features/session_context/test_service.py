@@ -17,6 +17,7 @@ from dev_docs.features.session_context.types import (
     SessionContextRequest,
 )
 from dev_docs.features.settings.types import SourceEntry, SourceScope, TerminalConfig
+from dev_docs.features.sources.registry import SourceRegistry
 from dev_docs.main import Handlers, build_handlers
 
 MISSING_FILES_CONFIG = (
@@ -30,6 +31,13 @@ MISSING_FILES_CONFIG = (
     "    body_file: path\n"
 )
 BROKEN_CONFIG = "name: b\ndocuments:\n  - id: rules\n    schema: schemas/rule.schema.yaml\n"
+
+
+def _loaded_handlers(terminal: TerminalConfig) -> Handlers:
+    """部品を本物で配線し、配信元を読んだ配線済みの関数を作る。"""
+    handlers = build_handlers(terminal)
+    handlers.reload_sources(terminal)
+    return handlers
 
 
 def _access(source_id: str, access: str = "write", description: str = "") -> SourceAccess:
@@ -50,7 +58,7 @@ def _two_sources(
     """書ける sample（管理用の YAML に無いファイル 1 件）と、読める notes の配線済みの関数を作る。"""
     sample = make_source_dir("sample", unindexed=1)
     notes = make_source_dir("notes")
-    handlers = build_handlers(
+    handlers = _loaded_handlers(
         make_terminal_config(
             sources=[
                 make_entry(str(sample), source_id="sample"),
@@ -86,6 +94,32 @@ def test_build_session_context(
     assert "describe(source)" not in result.context
     assert len(result.warnings) == 1
     assert result.forgotten is False
+
+
+def test_build_session_context_when_loading(
+    make_source_dir: Callable[..., Path],
+    make_terminal_config: Callable[..., TerminalConfig],
+    make_entry: Callable[..., SourceEntry],
+    make_handlers: Callable[..., Any],
+    bundled_prompts: Any,
+) -> None:
+    """読み込み中は配信元を待たずに案内を返す（正常系）。"""
+    # 準備
+    config = make_source_dir("sample")
+    terminal = make_terminal_config(sources=[make_entry(str(config), source_id="sample")])
+    handlers = make_handlers(
+        terminal=terminal, registry=SourceRegistry(loading=True), prompts=bundled_prompts
+    )
+    request = SessionContextRequest(cwd=str(config.parent), reason="startup")
+    # 実行
+    result = build_session_context(request, handlers=handlers)
+    # 検証
+    assert result.loading is True
+    assert result.sources == []
+    assert result.warnings == []
+    assert "読み込み中" in result.context
+    assert "待たされ" in result.context
+    assert "/dev-docs:setup" not in result.context
 
 
 def test_build_session_context_when_cleared(
@@ -163,7 +197,7 @@ def test_collect_warnings(
         },
     )
     write_files(tmp_path / "b", {"dev-docs.yaml": BROKEN_CONFIG})
-    handlers = build_handlers(
+    handlers = _loaded_handlers(
         make_terminal_config(
             sources=[
                 make_entry(str(tmp_path / "a" / "dev-docs.yaml"), source_id="a"),
@@ -189,7 +223,7 @@ def test_collect_warnings_when_unavailable_source(
 ) -> None:
     """使えない配信元の同期のずれは載せない（正常系）。"""
     # 準備
-    handlers = build_handlers(
+    handlers = _loaded_handlers(
         make_terminal_config(
             sources=[make_entry(str(make_source_dir("a", unindexed=1)), source_id="a")]
         )
@@ -245,6 +279,18 @@ def test_context_text_when_no_source(bundled_prompts: Any) -> None:
     assert "instructions" not in result
 
 
+def test_context_text_when_loading(bundled_prompts: Any) -> None:
+    """読み込み中の案内（正常系）。"""
+    # 準備
+    available: list[SourceAccess] = []
+    # 実行
+    result = _context_text(available, [], prompts=bundled_prompts, loading=True)
+    # 検証
+    assert "読み込み中" in result
+    assert "待たされ" in result
+    assert "/dev-docs:setup" not in result
+
+
 def test_collect_warnings_when_alias_and_nav(
     make_alias_source_dir: Callable[..., Path],
     make_terminal_config: Callable[..., TerminalConfig],
@@ -253,7 +299,7 @@ def test_collect_warnings_when_alias_and_nav(
     """エイリアスのキーの違反と nav の警告（正常系）。"""
     # 準備
     config = make_alias_source_dir("a", broken=True, none_nav=True)
-    handlers = build_handlers(
+    handlers = _loaded_handlers(
         make_terminal_config(sources=[make_entry(str(config), source_id="a")])
     )
     # 実行

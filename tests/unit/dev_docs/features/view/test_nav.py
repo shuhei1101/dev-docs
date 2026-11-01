@@ -11,6 +11,7 @@ from dev_docs.features.history.snapshot import SnapshotStore
 from dev_docs.features.settings.types import SourceEntry
 from dev_docs.features.sources.service import load_source
 from dev_docs.features.sources.types import DocumentTable, ServedSource, SourceConfig
+from dev_docs.features.view import nav as nav_module
 from dev_docs.features.view.nav import build_nav, mark_nav_changes
 from dev_docs.features.view.types import NavItem, NavTab
 
@@ -98,17 +99,152 @@ def test_build_nav_when_no_nav(
     make_source_config: Callable[..., SourceConfig],
     make_document: Callable[..., Document],
 ) -> None:
-    """nav が無い（正常系）。"""
+    """nav が無いときは行ごとのタブをフォルダで束ねる（正常系）。"""
     # 準備
-    source = make_served_source(config=make_source_config(documents=_tables()[:2]))
+    tables = [
+        DocumentTable(id="docs", paths=["docs/**/*.yaml"], schema_path="schemas/rule.schema.yaml"),
+        DocumentTable(id="notes", paths=["notes/*.md"], schema_path="schemas/rule.schema.yaml"),
+    ]
+    source = make_served_source(config=make_source_config(documents=tables))
     documents = [
-        make_document(id="rule-py", kind="rules", path="docs/rule/py.yaml"),
-        make_document(id="architecture", kind="architecture", path="docs/design/architecture.yaml"),
+        make_document(id="a", kind="docs", path="docs/a.yaml"),
+        make_document(id="b", kind="docs", path="docs/sub/b.yaml"),
+        make_document(id="c", kind="notes", path="notes/c.md"),
     ]
     # 実行
     tabs = build_nav(source, documents)
     # 検証
-    assert [tab.title for tab in tabs] == ["規約", "architecture"]
+    assert [tab.title for tab in tabs] == ["docs", "notes"]
+    assert [_shape(item) for item in tabs[0].items] == ["docs/a", ("sub", ["docs/sub/b"])]
+    assert [_shape(item) for item in tabs[1].items] == ["notes/c"]
+
+
+def test_build_nav_when_group_by_folder(
+    make_served_source: Callable[..., ServedSource],
+    make_source_config: Callable[..., SourceConfig],
+    make_document: Callable[..., Document],
+) -> None:
+    """フォルダで束ねる auto と手で書いた page の重なり（正常系）。"""
+    # 準備
+    nav = {
+        "tabs": [
+            {
+                "title": "ルール",
+                "items": [
+                    {"group": "共通", "items": [{"page": "rules/common"}]},
+                    {"auto": {"document": "rules", "group_by": "@folder"}},
+                ],
+            }
+        ]
+    }
+    source = make_served_source(config=make_source_config(documents=_folder_tables(), nav=nav))
+    documents = _rule_documents(
+        make_document,
+        [
+            "rules/common.yaml",
+            "rules/lang/index.yaml",
+            "rules/lang/ts.yaml",
+            "rules/lang/py/style.yaml",
+        ],
+    )
+    # 実行
+    tabs = build_nav(source, documents)
+    # 検証
+    assert [_shape(item) for item in tabs[0].items] == [
+        ("共通", ["rules/common"]),
+        ("lang", ["rules/lang/index", "rules/lang/ts", ("py", ["rules/lang/py/style"])]),
+    ]
+
+
+def _shape(item: NavItem) -> Any:
+    """項目を、page はパス、group は（名前・子の並び）にして返す。"""
+    if item.kind == "page":
+        return item.path
+    return (item.title, [_shape(child) for child in item.items])
+
+
+def _folder_tables() -> list[DocumentTable]:
+    """`paths: [rules/**/*.yaml]` の行 `rules` を返す。"""
+    return [
+        DocumentTable(id="rules", paths=["rules/**/*.yaml"], schema_path="schemas/rule.schema.yaml")
+    ]
+
+
+def _rule_documents(make_document: Callable[..., Document], paths: list[str]) -> list[Document]:
+    """行 `rules` の文書を、ファイル名を ID にして作る。"""
+    return [
+        make_document(
+            id=Path(path).stem if Path(path).stem != "index" else "lang-index",
+            kind="rules",
+            path=path,
+        )
+        for path in paths
+    ]
+
+
+def test_folder_items(make_document: Callable[..., Document]) -> None:
+    """入れ子のフォルダと並び（正常系）。"""
+    # 準備
+    rows = {row.id: row for row in _folder_tables()}
+    documents = _rule_documents(
+        make_document,
+        [
+            "rules/z.yaml",
+            "rules/a.yaml",
+            "rules/lang/ts.yaml",
+            "rules/lang/index.yaml",
+            "rules/lang/py/style.yaml",
+            "rules/b/x.yaml",
+        ],
+    )
+    # 実行
+    items = nav_module._folder_items(documents, rows=rows)
+    # 検証
+    assert [_shape(item) for item in items] == [
+        "rules/a",
+        "rules/z",
+        ("b", ["rules/b/x"]),
+        ("lang", ["rules/lang/index", "rules/lang/ts", ("py", ["rules/lang/py/style"])]),
+    ]
+
+
+def test_folder_items_when_multiple_globs(make_document: Callable[..., Document]) -> None:
+    """先に並ぶ glob の起点を使う（正常系）。"""
+    # 準備
+    row = DocumentTable(
+        id="docs",
+        paths=["docs/guide/**/*.md", "docs/**/*.md"],
+        schema_path="schemas/rule.schema.yaml",
+    )
+    documents = [make_document(id="a", kind="docs", path="docs/guide/start/a.md")]
+    # 実行
+    items = nav_module._folder_items(documents, rows={"docs": row})
+    # 検証
+    assert [_shape(item) for item in items] == [("start", ["docs/guide/start/a"])]
+
+
+def test_folder_items_when_records(make_document: Callable[..., Document]) -> None:
+    """管理用の YAML の行の文書は束ねない（正常系）。"""
+    # 準備
+    row = DocumentTable(
+        id="notes",
+        paths=["notes/index/files.yaml"],
+        schema_path="schemas/files.schema.yaml",
+        records="files",
+        body_file="path",
+    )
+    documents = [
+        make_document(id="b.md", kind="notes", path="notes/index/files.yaml", record_index=1),
+        make_document(id="a.md", kind="notes", path="notes/index/files.yaml", record_index=0),
+    ]
+    # 実行
+    items = nav_module._folder_items(documents, rows={"notes": row})
+    # 検証
+    assert all(item.kind == "page" for item in items)
+    assert [item.path for item in items] == [
+        "notes/index/files/a.md",
+        "notes/index/files/b.md",
+    ]
 
 
 def _page_item(title: str, path: str, **overrides: Any) -> NavItem:

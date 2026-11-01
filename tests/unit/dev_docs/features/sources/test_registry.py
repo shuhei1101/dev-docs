@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import threading
 from collections.abc import Callable
 from pathlib import Path
@@ -213,3 +214,88 @@ def test_source_registry_get_when_default_ref_moved_with_on_rebuilt(
     registry.get("a")
     # 検証
     assert rebuilt == [first]
+
+
+def test_source_registry_reload_when_loading(
+    monkeypatch: pytest.MonkeyPatch,
+    make_terminal_config: Callable[..., TerminalConfig],
+    make_entry: Callable[..., SourceEntry],
+    make_served_source: Callable[..., ServedSource],
+    make_status: Callable[..., SourceStatus],
+) -> None:
+    """初回の読み込みまで wait_loaded を待たせ、スレッドは持たない（正常系）。"""
+    # 準備
+    entered = threading.Event()
+    release = threading.Event()
+
+    def blocking_load(entry: SourceEntry, *, index: int) -> LoadResult:
+        entered.set()
+        release.wait(timeout=5)
+        return make_served_source(id="a"), make_status("a", index)
+
+    monkeypatch.setattr(registry_module, "load_source", blocking_load)
+    terminal = make_terminal_config(sources=[make_entry("/tmp/a/dev-docs.yaml", source_id="a")])
+    registry = SourceRegistry(loading=True)
+    observed: dict[str, object] = {}
+
+    async def scenario() -> None:
+        waiters = [asyncio.ensure_future(registry.wait_loaded()) for _ in range(2)]
+        await asyncio.sleep(0)
+        worker = threading.Thread(target=registry.reload, args=(terminal,))
+        worker.start()
+        await asyncio.to_thread(entered.wait, 5)
+        await asyncio.sleep(0.05)
+        observed["loading_before"] = registry.loading
+        observed["done_before"] = [waiter.done() for waiter in waiters]
+        observed["statuses_before"] = registry.statuses()
+        observed["served_before"] = registry.served()
+        release.set()
+        await asyncio.wait_for(asyncio.gather(*waiters), timeout=5)
+        await asyncio.to_thread(worker.join, 5)
+
+    # 実行
+    asyncio.run(scenario())
+    # 検証
+    assert observed["loading_before"] is True
+    assert observed["done_before"] == [False, False]
+    assert observed["statuses_before"] == []
+    assert observed["served_before"] == []
+    assert registry.get("a").id == "a"
+    assert len(registry.served()) == 1
+    assert registry.loading is False
+
+
+def test_source_registry_reload_when_failed(
+    monkeypatch: pytest.MonkeyPatch,
+    make_terminal_config: Callable[..., TerminalConfig],
+    make_entry: Callable[..., SourceEntry],
+) -> None:
+    """読み込みが例外で止まっても待ちを解く（異常系）。"""
+
+    # 準備
+    def failing_load(entry: SourceEntry, *, index: int) -> LoadResult:
+        raise RuntimeError("読めない")
+
+    monkeypatch.setattr(registry_module, "load_source", failing_load)
+    terminal = make_terminal_config(sources=[make_entry("/tmp/a/dev-docs.yaml", source_id="a")])
+    registry = SourceRegistry(loading=True)
+    errors: list[BaseException] = []
+
+    def reload_in_thread() -> None:
+        try:
+            registry.reload(terminal)
+        except RuntimeError as error:
+            errors.append(error)
+
+    async def scenario() -> None:
+        waiter = asyncio.ensure_future(registry.wait_loaded())
+        await asyncio.sleep(0)
+        await asyncio.to_thread(reload_in_thread)
+        await asyncio.wait_for(waiter, timeout=5)
+
+    # 実行
+    asyncio.run(scenario())
+    # 検証
+    assert [str(error) for error in errors] == ["読めない"]
+    assert registry.loading is False
+    assert registry.served() == []

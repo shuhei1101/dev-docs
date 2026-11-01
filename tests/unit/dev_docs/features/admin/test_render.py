@@ -90,6 +90,28 @@ def test_render_status_when_no_sources() -> None:
     assert result.splitlines()[2] == "配信元: なし"
 
 
+def test_render_status_when_loading() -> None:
+    """読み込み中（正常系）。"""
+    # 準備
+    status = ServerStatus(
+        address="http://127.0.0.1:8781/",
+        version="0.2.0",
+        pid=4242,
+        terminal=TerminalState(
+            file="/home/u/.config/dev-docs/settings.yaml", version_state="current"
+        ),
+        sources=[],
+        loading=True,
+    )
+    # 実行
+    result = render_status(status)
+    # 検証
+    assert (
+        result.splitlines()[2]
+        == "配信元: 読み込み中（終わるまで文書の MCP の呼び出しは待たされます）"
+    )
+
+
 def test_render_reload() -> None:
     """差と配信元の表を組み立てる（正常系）。"""
     # 準備

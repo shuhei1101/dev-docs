@@ -8,8 +8,15 @@ from fastapi.testclient import TestClient
 
 from dev_docs.features.session_context.route import build_session_context_router
 from dev_docs.features.settings.types import SourceEntry, TerminalConfig
-from dev_docs.main import build_handlers
+from dev_docs.main import Handlers, build_handlers
 from dev_docs.server.error_handlers import register_error_handlers
+
+
+def _loaded_handlers(terminal: TerminalConfig) -> Handlers:
+    """部品を本物で配線し、配信元を読んだ配線済みの関数を作る。"""
+    handlers = build_handlers(terminal)
+    handlers.reload_sources(terminal)
+    return handlers
 
 
 def _client(
@@ -19,7 +26,7 @@ def _client(
 ) -> tuple[TestClient, Path]:
     """配信元 1 つの配線済みの関数でルーターを載せたクライアントと、配信元のフォルダを返す。"""
     config = make_source_dir("sample")
-    handlers = build_handlers(
+    handlers = _loaded_handlers(
         make_terminal_config(sources=[make_entry(str(config), source_id="sample")])
     )
     app = FastAPI(docs_url=None, redoc_url=None, openapi_url="/_api/openapi.json")

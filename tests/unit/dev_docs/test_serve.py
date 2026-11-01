@@ -1,12 +1,14 @@
 from __future__ import annotations
 
 import argparse
+import dataclasses
 import json
 import logging
 import os
 import shutil
 import socket
 import sys
+import threading
 from collections.abc import Callable, Iterator
 from contextlib import closing, contextmanager
 from pathlib import Path
@@ -89,15 +91,24 @@ def test_run_serve(
     def fake_run(self: uvicorn.Server, *args: Any, **kwargs: Any) -> None:
         self.started = True
 
+    threads: list[threading.Thread] = []
+    real_start_loading = main_module.start_loading
+
+    def recording_start_loading(handlers: Any) -> threading.Thread:
+        thread = real_start_loading(handlers)
+        threads.append(thread)
+        return thread
+
     monkeypatch.setattr(uvicorn, "Config", recording_config)
     monkeypatch.setattr(uvicorn.Server, "run", fake_run)
+    monkeypatch.setattr(main_module, "start_loading", recording_start_loading)
     # 実行
     code = run_serve(argparse.Namespace())
+    threads[0].join(timeout=30)
     # 検証
-    output = capsys.readouterr().out
+    lines = capsys.readouterr().out.splitlines()
     assert code == 0
-    assert f"http://127.0.0.1:{port}/" in output
-    assert "sample" in output
+    assert lines.index(f"http://127.0.0.1:{port}/") < lines.index("sample")
     assert configs[0]["host"] == "127.0.0.1"
 
 
@@ -246,7 +257,7 @@ def test_build_handlers(
     make_terminal_config: Callable[..., TerminalConfig],
     make_entry: Callable[..., SourceEntry],
 ) -> None:
-    """部品を作り配信元を読む（正常系）。"""
+    """部品を作り配信元は読まない（正常系）。"""
     # 準備
     write_files(tmp_path / "ok", sample_files)
     write_files(
@@ -267,8 +278,13 @@ def test_build_handlers(
     )
     # 実行
     handlers = build_handlers(terminal)
+    loading = handlers.registry.loading
+    statuses_before = handlers.registry.statuses()
+    handlers.reload_sources(terminal)
     # 検証
     assert state_dir.is_dir()
+    assert loading is True
+    assert statuses_before == []
     assert len(handlers.registry.served()) == 1
     assert len(handlers.registry.statuses()) == 2
     assert "session-context" in handlers.prompts.prompts
@@ -340,8 +356,9 @@ def test_build_handlers_when_out_of_sync(
     )
     terminal = make_terminal_config(sources=[make_entry(str(tmp_path / "ws" / "dev-docs.yaml"))])
     # 実行
+    handlers = build_handlers(terminal)
     with caplog.at_level(logging.WARNING):
-        handlers = build_handlers(terminal)
+        handlers.reload_sources(terminal)
     # 検証
     warnings = [message for message in _warnings(caplog) if "sample" in message]
     assert len(warnings) == 1
@@ -375,6 +392,7 @@ def test_build_handlers_when_default_ref_moved(
         sources=[make_entry(str(root / "dev-docs.yaml"), source_id="a")]
     )
     handlers = build_handlers(terminal)
+    handlers.reload_sources(terminal)
     before = handlers.registry.get("a")
     handlers.store.load(Target(before, before.root, None, None, "read"))
     commit_all(root, {"dev-docs.yaml": config + "    metadata:\n      name: title\n"})
@@ -719,3 +737,53 @@ def test_reload_sources_when_alias_and_nav(
     assert len(nav) == 1
     assert "none:" in nav[0]
     assert [status.status for status in statuses] == ["serving"]
+
+
+def test_start_loading(
+    tmp_path: Path,
+    write_files: Callable[[Path, dict[str, str]], None],
+    sample_files: dict[str, str],
+    make_terminal_config: Callable[..., TerminalConfig],
+    make_entry: Callable[..., SourceEntry],
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """裏で配信元を読み ID を出す（正常系）。"""
+    # 準備
+    write_files(tmp_path / "ws", sample_files)
+    terminal = make_terminal_config(sources=[make_entry(str(tmp_path / "ws" / "dev-docs.yaml"))])
+    handlers = build_handlers(terminal)
+    # 実行
+    thread = main_module.start_loading(handlers)
+    thread.join(timeout=30)
+    # 検証
+    assert handlers.registry.loading is False
+    assert len(handlers.registry.served()) == 1
+    assert "sample" in capsys.readouterr().out.splitlines()
+
+
+def test_start_loading_when_failed(
+    tmp_path: Path,
+    write_files: Callable[[Path, dict[str, str]], None],
+    sample_files: dict[str, str],
+    make_terminal_config: Callable[..., TerminalConfig],
+    make_entry: Callable[..., SourceEntry],
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """読み込みの例外をログに書いて待ちを解く（異常系）。"""
+    # 準備
+    write_files(tmp_path / "ws", sample_files)
+    terminal = make_terminal_config(sources=[make_entry(str(tmp_path / "ws" / "dev-docs.yaml"))])
+    handlers = build_handlers(terminal)
+
+    def failing_reload(terminal: TerminalConfig) -> list[SourceStatus]:
+        handlers.registry.reload(terminal)
+        raise RuntimeError("検査に失敗した")
+
+    failing = dataclasses.replace(handlers, reload_sources=failing_reload)
+    # 実行
+    with caplog.at_level(logging.ERROR):
+        thread = main_module.start_loading(failing)
+        thread.join(timeout=30)
+    # 検証
+    assert len([record for record in caplog.records if record.levelno == logging.ERROR]) == 1
+    assert handlers.registry.loading is False
