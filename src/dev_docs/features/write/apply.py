@@ -294,6 +294,26 @@ def expand_array_keys(
         for number, edit in enumerate(operation.text_edits)
         if edit.field in collected
     ]
+    # 集めたキーの値が名前（文字列）の配列でなければ、操作を当てる前に違反にする
+    for field, values in (
+        ("data", data),
+        ("set", operation.set),
+        ("add_to", operation.add_to),
+        ("remove_from", operation.remove_from),
+    ):
+        violations.extend(
+            Violation(
+                path=f"operations[{index}].{field}.{key}",
+                rule=f"{key} は名前（文字列）の配列で渡します",
+            )
+            for key, value in values.items()
+            if key in collected
+            and not (isinstance(value, list) and all(isinstance(name, str) for name in value))
+        )
+    if violations:
+        raise InvalidArgumentError(
+            message=f"引数が正しくありません: {len(violations)} 件", violations=violations
+        )
     arrays: dict[str, list[Any]] = {}
     unset_arrays: set[str] = set()
     for key in sorted(used & set(all_keys), key=list(all_keys).index):
