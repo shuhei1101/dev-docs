@@ -193,7 +193,15 @@ def test_collect_warnings(
         {
             "dev-docs.yaml": MISSING_FILES_CONFIG,
             "schemas/files.schema.yaml": "title: file\ntype: object\n",
-            "src/files.yaml": "files:\n  - path: x.py\n  - path: y.py\n",
+            "src/files.yaml": (
+                "files:\n"
+                "  - path: x.py\n"
+                "  - path: y.py\n"
+                "  - path: z.py\n"
+                "    related:\n"
+                "      - to: src/none.py\n"
+            ),
+            "src/z.py": "z = 1\n",
         },
     )
     write_files(tmp_path / "b", {"dev-docs.yaml": BROKEN_CONFIG})
@@ -208,12 +216,15 @@ def test_collect_warnings(
     # 実行
     result = _collect_warnings([_access("a")], handlers=handlers)
     # 検証
-    assert len(result) == 3
+    assert len(result) == 4
     assert result[0].startswith("a: ")
     assert "2 件" in result[0]
     assert "check_project" in result[0]
-    assert result[1].startswith("a: 設定のバージョンが古い")
-    assert result[2].startswith("b: 配信していません")
+    assert result[1].startswith("a: ")
+    assert "1 件" in result[1]
+    assert "check_project" in result[1]
+    assert result[2].startswith("a: 設定のバージョンが古い")
+    assert result[3].startswith("b: 配信していません")
 
 
 def test_collect_warnings_when_unavailable_source(

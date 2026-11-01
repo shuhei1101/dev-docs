@@ -107,9 +107,9 @@ functions:
       - name: test_collect_warnings
         case: 正常
         summary: 同期のずれ・古い設定・配信していない配信元を並べる
-        condition: 使える配信元 a（ファイルが無い行 2 件・古い設定）、`not_served` の b
+        condition: 使える配信元 a（ファイルが無い行 2 件・当たらない関連 1 件・古い設定）、`not_served` の b
         mock: なし
-        expected: 警告が 3 件（a の同期・a の古い設定・b の配信していない）
+        expected: 警告が 4 件（a のファイルが無い行・a の当たらない関連・a の古い設定・b の配信していない）
       - name: test_collect_warnings_when_unavailable_source
         case: 正常
         summary: 使えない配信元の同期のずれは載せない

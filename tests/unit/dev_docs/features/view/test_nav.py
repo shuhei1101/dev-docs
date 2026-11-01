@@ -520,7 +520,9 @@ def test_build_nav_when_records_filter(
     # 実行
     tabs = build_nav(source, documents)
     # 検証
-    assert [(item.kind, item.path) for item in tabs[0].items] == [("page", "notes/files/notes/a")]
+    assert [(item.kind, item.path) for item in tabs[0].items] == [
+        ("page", "notes/files/notes/a.md")
+    ]
 
 
 def test_nav_warnings_when_records_filter(

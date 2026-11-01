@@ -412,5 +412,49 @@ functions:
         mock: なし
         expected: '`True`・`True`・`False`・`False`'
         exception: '-'
+  - name: unresolved_related
+    title: 当たらない関連
+    container: features/documents/fields.py
+    usecase: 起動
+    role: 判定
+    summary: 文書の `related` のうち、`to` が配信元の文書の ID の集合に無い関連の `to` を返す
+    kind: 関数
+    scope: public
+    thread_safe: true
+    args:
+      - name: metadata
+        title: メタデータ
+        type: Mapping[str, Any]
+        required: true
+        passing: positional
+        description: 文書の解決済みのメタデータ（`Document.metadata`）
+      - name: ids
+        title: 文書の ID の集合
+        type: AbstractSet[str]
+        required: true
+        passing: positional
+        description: 配信元の全ての文書の ID
+    returns:
+      type: list[str]
+      description: 当たらない `to` の並び（`related` の順）
+    process: |-
+      1. `metadata` の `related` が配列でなければ空の並びを返す
+      2. 要素ごとに、文字列の `to` を持ち、文字列の `source` を持たない要素だけを見て（`source` が無い・`null` の要素を同じ配信元への関連として扱う。`related_links` と同じ読み方）、`to` が `ids` に無ければ加える
+      3. 並びを返す
+    unit_tests:
+      - name: test_unresolved_related
+        case: 正常
+        summary: source を持たない関連だけを照合する
+        condition: '`related` が `[{to: src/b.py}, {to: src/z.py}, {to: other-doc, source: other}, {to: src/y.py, source: null}, {type: tests}]`、`ids` が `{src/a.py, src/b.py}`'
+        mock: なし
+        expected: '`["src/z.py", "src/y.py"]`'
+        exception: '-'
+      - name: test_unresolved_related_when_not_list
+        case: 正常
+        summary: related が配列でない
+        condition: '`related` が無いメタデータと、`related` が文字列のメタデータ'
+        mock: なし
+        expected: どちらも `[]`
+        exception: '-'
 test_files:
   - tests/unit/dev_docs/features/documents/test_fields.py

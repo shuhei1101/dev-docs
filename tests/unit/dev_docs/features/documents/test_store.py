@@ -87,8 +87,8 @@ def test_document_store_load(document_store: DocumentStore, workspace: Target) -
     assert [(doc.kind, doc.id) for doc in result.documents] == [
         ("rules", "a"),
         ("rules", "b"),
-        ("notes", "notes/x"),
-        ("notes", "notes/y"),
+        ("notes", "notes/x.md"),
+        ("notes", "notes/y.md"),
     ]
     assert result.problems == []
 
@@ -234,8 +234,8 @@ def test_document_store_load_when_many_tables(
     assert len(walk_calls) == 1
     assert [(doc.kind, doc.id) for doc in result.documents] == [
         ("rules", "a"),
-        ("notes", "notes/x"),
-        ("src", "src/a"),
+        ("notes", "notes/x.md"),
+        ("src", "src/a.py"),
     ]
 
 
@@ -582,6 +582,41 @@ def test_check_sync_when_clean(
     assert report.missing_refs == []
     assert report.unindexed_files == []
     assert report.missing_body_files == []
+    assert report.unresolved_related == []
+
+
+def test_check_sync_when_related_unresolved(
+    document_store: DocumentStore,
+    tmp_path: Path,
+    write_files: Callable[[Path, dict[str, str]], None],
+    make_source_config: Callable[..., SourceConfig],
+    make_served_source: Callable[..., ServedSource],
+) -> None:
+    """どの文書にも当たらない関連（正常系）。"""
+    # 準備
+    root = tmp_path / "ws"
+    write_files(
+        root,
+        {
+            "src/files.yaml": (
+                "files:\n"
+                "  - path: a.py\n"
+                "    related:\n"
+                "      - to: src/b.py\n"
+                "      - to: src/z.py\n"
+                "      - to: other-doc\n"
+                "        source: other\n"
+                "  - path: b.py\n"
+            ),
+            "src/a.py": "a = 1\n",
+            "src/b.py": "b = 2\n",
+        },
+    )
+    source = _sync_source(root, make_source_config, make_served_source)
+    # 実行
+    report = store_module.check_sync(document_store, source)
+    # 検証
+    assert report.unresolved_related == ["src: src/a.py: src/z.py"]
 
 
 def test_check_sync_when_alias_violation(

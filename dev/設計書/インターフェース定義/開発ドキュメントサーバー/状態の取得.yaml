@@ -113,6 +113,9 @@ response:
   - name: sources[].sync.missing_body_files
     type: int
     description: ファイルが無い行の件数
+  - name: sources[].sync.unresolved_related
+    type: int
+    description: '`related[].to` が配信元のどの文書の ID にも当たらない関連の件数（`check_project` と同じ）'
   - name: loading
     type: bool
     description: 配信元を読み込んでいる間は `true`。その間は `sources` が空で、markdown に読み込み中であることと、終わるまで文書の MCP の呼び出しが待たされることを出す

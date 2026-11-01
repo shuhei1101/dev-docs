@@ -28,7 +28,12 @@ def _serving(source_id: str, sync: tuple[int, int, int] = (0, 0, 0)) -> SourceSt
         errors=[],
         config_version="1",
         version_state="current",
-        sync=SyncCounts(missing_refs=sync[0], unindexed_files=sync[1], missing_body_files=sync[2]),
+        sync=SyncCounts(
+            missing_refs=sync[0],
+            unindexed_files=sync[1],
+            missing_body_files=sync[2],
+            unresolved_related=0,
+        ),
     )
 
 
@@ -159,6 +164,7 @@ def test_render_check() -> None:
             missing_refs=0,
             unindexed_files=1,
             missing_body_files=0,
+            unresolved_related=0,
             items=[SyncItem(kind="unindexed_files", path="docs/memo.md")],
         ),
     )
@@ -218,6 +224,7 @@ def test_render_check_when_items_truncated() -> None:
             missing_refs=0,
             unindexed_files=51,
             missing_body_files=0,
+            unresolved_related=0,
             items=[SyncItem(kind="unindexed_files", path=f"src/u{n}.py") for n in range(50)],
         ),
     )

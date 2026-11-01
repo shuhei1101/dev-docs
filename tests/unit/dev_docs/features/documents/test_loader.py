@@ -168,7 +168,7 @@ def test_load_file_when_records(
     documents, problems = load_file(tmp_path, "src/files.yaml", table, source_id="sample")
     # 検証
     assert problems == []
-    assert [doc.id for doc in documents] == ["src/a", "src/b"]
+    assert [doc.id for doc in documents] == ["src/a.py", "src/b.py"]
     assert [doc.body for doc in documents] == ["a = 1\n", "b = 2\n"]
     assert [doc.body_path for doc in documents] == ["src/a.py", "src/b.py"]
     assert [doc.record_index for doc in documents] == [0, 1]
@@ -319,7 +319,56 @@ def test_load_file_when_default_name(
     # 検証
     assert [doc.metadata["name"] for doc in rule_docs] == ["a"]
     assert [doc.metadata["name"] for doc in src_docs] == ["a", "部品 B"]
-    assert [doc.metadata["name"] for doc in item_docs] == ["list#0"]
+    assert [doc.metadata["name"] for doc in item_docs] == ["list.yaml#0"]
+
+
+def test_load_file_when_same_stem(
+    tmp_path: Path, write_files: Callable[[Path, dict[str, str]], None]
+) -> None:
+    """同じ名前で拡張子の違うファイルが別の ID の文書になる（正常系）。"""
+    # 準備
+    write_files(
+        tmp_path,
+        {
+            "src/files.yaml": "files:\n  - path: plan.ts\n  - path: plan.css\n",
+            "src/plan.ts": "export const plan = 1;\n",
+            "src/plan.css": ".plan {}\n",
+            "docs/files.yaml": "files:\n  - path: index.md\n",
+            "docs/index.md": "# 目次\n",
+            "docs/index.yaml": "title: 目次\n",
+        },
+    )
+    src = DocumentTable(
+        id="src",
+        paths=["src/files.yaml"],
+        schema_path="schemas/rule.schema.yaml",
+        records="files",
+        body_file="path",
+    )
+    docs = DocumentTable(
+        id="docs",
+        paths=["docs/files.yaml"],
+        schema_path="schemas/rule.schema.yaml",
+        records="files",
+        body_file="path",
+    )
+    index = DocumentTable(
+        id="index", paths=["docs/index.yaml"], schema_path="schemas/rule.schema.yaml"
+    )
+    # 実行
+    documents = [
+        *load_file(tmp_path, "src/files.yaml", src, source_id="sample")[0],
+        *load_file(tmp_path, "docs/files.yaml", docs, source_id="sample")[0],
+        *load_file(tmp_path, "docs/index.yaml", index, source_id="sample")[0],
+    ]
+    # 検証
+    assert [doc.id for doc in documents] == [
+        "src/plan.ts",
+        "src/plan.css",
+        "docs/index.md",
+        "docs/index.yaml",
+    ]
+    assert [doc.metadata["name"] for doc in documents] == ["plan", "plan", "index", "index"]
 
 
 def test_unindexed_files(

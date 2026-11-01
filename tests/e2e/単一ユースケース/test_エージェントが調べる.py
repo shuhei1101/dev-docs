@@ -52,12 +52,12 @@ SRC_FILES = (
     "      - {to: design/repo, type: implements}\n"
     "  - path: test_repo.py\n"
     "    related:\n"
-    "      - {to: src/repo, type: tests}\n"
+    "      - {to: src/repo.py, type: tests}\n"
 )
 SEARCH_WORD = {"field": "body", "op": "contains", "values": ["検索"]}
 IN_ARCHIVE = {"field": "@path", "op": "glob", "values": ["notes/archive/**"]}
 BY_MATCHES = {"fields": ["@matches"], "order_by": [{"field": "@matches", "direction": "desc"}]}
-NOTES_A = {"field": "id", "op": "eq", "values": ["notes/a"]}
+NOTES_A = {"field": "id", "op": "eq", "values": ["notes/a.md"]}
 OUTSIDE_LINE = "作業範囲の外（参考）"
 OUTSIDE_LOG = "作業範囲の外を読んだ"
 OUTSIDE_HINT = "outside_scope: true"
@@ -382,15 +382,24 @@ def test_normal_when_files_index(
             "dev-docs.yaml": sample_config_text(src_row),
             "schemas/files.schema.yaml": FILES_SCHEMA.read_text(encoding="utf-8"),
             "src/files.yaml": (
-                "files:\n  - path: a.py\n    tags: [auth, code]\n  - path: b.py\n    name: 部品 B\n"
+                "files:\n"
+                "  - path: a.py\n"
+                "    tags: [auth, code]\n"
+                "  - path: b.py\n"
+                "    name: 部品 B\n"
+                "  - path: a.md\n"
             ),
             "src/a.py": "a = 1\n",
             "src/b.py": "b = 2\n",
+            "src/a.md": "# A の説明\n",
         }
     )
     sample = make_source("sample", files)
     served = serve(sample)
-    by_id = {"cwd": str(sample.folder), "filter": {"field": "id", "op": "eq", "values": ["src/a"]}}
+    by_id = {
+        "cwd": str(sample.folder),
+        "filter": {"field": "id", "op": "eq", "values": ["src/a.py"]},
+    }
     # 実行
     tagged = served.call(
         "search_docs",
@@ -403,16 +412,23 @@ def test_normal_when_files_index(
     other = served.call(
         "search_docs",
         cwd=str(sample.folder),
-        filter={"field": "id", "op": "eq", "values": ["src/b"]},
+        filter={"field": "id", "op": "eq", "values": ["src/b.py"]},
         view="summary",
         format="json",
     )
     markdown = served.call("search_docs", view="full", **by_id)
     as_json = served.call("search_docs", view="full", format="json", **by_id)
+    same_stem = served.call(
+        "search_docs",
+        cwd=str(sample.folder),
+        filter={"field": "id", "op": "eq", "values": ["src/a.md"]},
+        view="full",
+        format="json",
+    )
     # 検証
     item = tagged.data["items"][0]
     located = as_json.data["items"][0]
-    assert [row["id"] for row in tagged.data["items"]] == ["src/a"]
+    assert [row["id"] for row in tagged.data["items"]] == ["src/a.py"]
     assert item["values"]["name"] == "a"
     assert item["values"]["tags"] == ["auth", "code"]
     assert other.data["items"][0]["values"]["name"] == "部品 B"
@@ -421,6 +437,9 @@ def test_normal_when_files_index(
     assert located["path"] == f"{sample.folder}/src/a.py"
     assert located["scope"] == "full"
     assert located["values"]["path"] == "a.py"
+    assert [row["id"] for row in same_stem.data["items"]] == ["src/a.md"]
+    assert same_stem.data["items"][0]["values"]["body"] == "# A の説明\n"
+    assert same_stem.data["items"][0]["values"]["name"] == "a"
     assert not any(FILES_REQUIRED in note for note in tagged.data.get("notes", []))
     assert not any(FILES_REQUIRED in note for note in other.data.get("notes", []))
     assert not any(FILES_REQUIRED in note for note in as_json.data.get("notes", []))
@@ -570,13 +589,13 @@ def test_normal_when_ordered_by_matches(
     )
     # 検証
     assert [(item["id"], item["values"]["@matches"]) for item in narrowed.data["items"]] == [
-        ("notes/a", 3),
-        ("notes/b", 1),
+        ("notes/a.md", 3),
+        ("notes/b.md", 1),
     ]
     assert [(item["id"], item["values"]["@matches"]) for item in without_not.data["items"]] == [
-        ("notes/a", 3),
-        ("notes/archive/c", 2),
-        ("notes/b", 1),
+        ("notes/a.md", 3),
+        ("notes/archive/c.md", 2),
+        ("notes/b.md", 1),
     ]
 
 
@@ -670,21 +689,24 @@ def test_normal_when_implementing_code_traced(
         "trace_related", cwd=cwd, from_ids=["design/repo"], direction="in", depth=1, format="json"
     )
     testing = served.call(
-        "trace_related", cwd=cwd, from_ids=["src/repo"], direction="in", depth=1, format="json"
+        "trace_related", cwd=cwd, from_ids=["src/repo.py"], direction="in", depth=1, format="json"
     )
     bodies = served.call(
         "search_docs",
         cwd=cwd,
-        filter={"field": "id", "op": "eq", "values": ["src/repo", "src/test_repo"]},
+        filter={"field": "id", "op": "eq", "values": ["src/repo.py", "src/test_repo.py"]},
         view="full",
         format="json",
     )
     # 検証
-    assert [item["id"] for item in implementing.data["items"]] == ["src/repo"]
+    assert [item["id"] for item in implementing.data["items"]] == ["src/repo.py"]
     assert implementing.data["items"][0]["via"]["type"] == "implements"
-    assert [item["id"] for item in testing.data["items"]] == ["src/test_repo"]
+    assert [item["id"] for item in testing.data["items"]] == ["src/test_repo.py"]
     assert testing.data["items"][0]["via"]["type"] == "tests"
-    assert sorted(item["id"] for item in bodies.data["items"]) == ["src/repo", "src/test_repo"]
+    assert sorted(item["id"] for item in bodies.data["items"]) == [
+        "src/repo.py",
+        "src/test_repo.py",
+    ]
     assert not any("related.types" in note for note in bodies.data.get("notes", []))
 
 

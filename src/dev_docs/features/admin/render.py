@@ -19,6 +19,7 @@ SYNC_LABELS = {
     "missing_refs": "metadata の列の欠け",
     "unindexed_files": "管理用の YAML に無いファイル",
     "missing_body_files": "ファイルが無い行",
+    "unresolved_related": "どの文書にも当たらない関連",
 }
 
 
@@ -33,7 +34,10 @@ def _source_row(state: SourceState) -> str:
     sync = "-"
     if state.sync is not None:
         sync = str(
-            state.sync.missing_refs + state.sync.unindexed_files + state.sync.missing_body_files
+            state.sync.missing_refs
+            + state.sync.unindexed_files
+            + state.sync.missing_body_files
+            + state.sync.unresolved_related
         )
     return f"| {state.id} | {status} | {version} | {sync} |"
 
@@ -102,6 +106,7 @@ def render_check(result: CheckProjectResult) -> str:
             "missing_refs": result.sync.missing_refs,
             "unindexed_files": result.sync.unindexed_files,
             "missing_body_files": result.sync.missing_body_files,
+            "unresolved_related": result.sync.unresolved_related,
         }
         gaps = [f"{SYNC_LABELS[kind]} {count} 件" for kind, count in counts.items() if count]
         lines.append(f"索引の同期: {'、'.join(gaps) if gaps else 'ずれなし'}")

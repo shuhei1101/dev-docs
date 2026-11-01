@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import re
-from collections.abc import Mapping, MutableMapping, Sequence
+from collections.abc import Mapping, MutableMapping, Sequence, Set
 from dataclasses import dataclass
 from pathlib import PurePosixPath
 from typing import Any
@@ -211,6 +211,25 @@ def missing_ref_fields(data: Mapping[str, Any], table: DocumentTable) -> list[tu
     return [
         (key, column) for key, column in table.metadata.items() if get_field(data, column) is None
     ]
+
+
+def unresolved_related(metadata: Mapping[str, Any], ids: Set[str]) -> list[str]:
+    """`related` のうち、`to` が配信元の文書の ID の集合に無い関連の `to` を返す。"""
+    rows = metadata.get("related")
+    # related が配列でない: 照合する関連が無い
+    if not isinstance(rows, list):
+        return []
+    unresolved: list[str] = []
+    for row in rows:
+        # 文字列の to を持たない要素は関連の行ではない（related_links と同じ読み方）
+        if not isinstance(row, dict) or not isinstance(row.get("to"), str):
+            continue
+        # 文字列の source を持つ関連は別の配信元を指すので照合しない
+        if isinstance(row.get("source"), str):
+            continue
+        if row["to"] not in ids:
+            unresolved.append(row["to"])
+    return unresolved
 
 
 def is_markdown_body(document: Document) -> bool:

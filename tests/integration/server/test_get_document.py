@@ -219,15 +219,15 @@ def test_normal_when_body_path_given(
     )
     env = make_server(make_source("sample", files))
     # 実行
-    by_page = env.client.get("/_api/sources/sample/docs/notes/files/notes/a")
+    by_page = env.client.get("/_api/sources/sample/docs/notes/files/notes/a.md")
     by_body_path = env.client.get("/_api/sources/sample/docs/notes/b.md")
     plain = env.client.get("/_api/sources/sample/docs/docs/doc-1")
     # 検証
     assert by_page.status_code == 200
     assert by_page.json()["bodyPath"] == "notes/a.md"
-    assert by_page.json()["path"] == "notes/files/notes/a"
+    assert by_page.json()["path"] == "notes/files/notes/a.md"
     assert by_body_path.status_code == 200
-    assert by_body_path.json()["path"] == "notes/files/notes/b"
+    assert by_body_path.json()["path"] == "notes/files/notes/b.md"
     assert "# B の本文" in by_body_path.json()["markdown"]
     assert by_body_path.json()["bodyPath"] == "notes/b.md"
     assert plain.status_code == 200
@@ -306,7 +306,7 @@ def test_normal_when_custom_converter(
     env = make_server(make_source("custom", files))
     # 実行
     converted = env.client.get("/_api/sources/custom/docs/custom/c-1")
-    embedded = env.client.get("/_api/sources/custom/docs/guide/files/guide/intro")
+    embedded = env.client.get("/_api/sources/custom/docs/guide/files/guide/intro.md")
     # 検証
     assert converted.status_code == 200
     assert "# カスタム変換: カスタム 1" in converted.json()["markdown"]

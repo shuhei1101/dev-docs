@@ -162,7 +162,7 @@ functions:
         summary: records と body_file
         condition: '`src/files.yaml` が `files: [{path: a.py, tags: [x]}, {path: b.py}]`、`src/a.py`・`src/b.py` を置き、行は `records: files`・`body_file: path`'
         mock: なし（`tmp_path`）
-        expected: 2 件で、`id` が `src/a`・`src/b`、`body` が各ファイルの内容、`body_path` が `src/a.py`・`src/b.py`、`record_index` が 0・1、`version` が要素の『値のハッシュ』
+        expected: 2 件で、`id` が `src/a.py`・`src/b.py`、`body` が各ファイルの内容、`body_path` が `src/a.py`・`src/b.py`、`record_index` が 0・1、`version` が要素の『値のハッシュ』
         exception: '-'
       - name: test_load_file_when_dates
         case: 正常
@@ -190,7 +190,14 @@ functions:
         summary: 名前の既定
         condition: '`rules/a.yaml` が `id: rule-a` だけ。`src/files.yaml` が `files: [{path: a.py}, {path: b.py, name: 部品 B}]`（行は `records: files`・`body_file: path`）。`list.yaml` が `items: [{x: 1}]`（行は `records: items`）'
         mock: なし（`tmp_path`）
-        expected: '`metadata.name` が `a`（`rules/a.yaml`）、`a`・`部品 B`（`src`）、`list#0`（`list.yaml`）'
+        expected: '`metadata.name` が `a`（`rules/a.yaml`）、`a`・`部品 B`（`src`）、`list.yaml#0`（`list.yaml`）'
+        exception: '-'
+      - name: test_load_file_when_same_stem
+        case: 正常
+        summary: 同じ名前で拡張子の違うファイル
+        condition: '行 `src`（`records: files`・`body_file: path`）の `src/files.yaml` が `files: [{path: plan.ts}, {path: plan.css}]` で、`src/plan.ts`・`src/plan.css` を置く。行 `docs`（`records: files`・`body_file: path`）の `docs/files.yaml` が `files: [{path: index.md}]` で、`docs/index.md` が `# 目次`。行 `index`（`records` を持たない）が読む `docs/index.yaml` が `title: 目次`。それぞれの行で 3 つのファイルを読む'
+        mock: なし（`tmp_path`）
+        expected: '`id` が `src/plan.ts`・`src/plan.css`・`docs/index.md`・`docs/index.yaml` の 4 件で重ならず、`metadata.name` が `plan`・`plan`・`index`・`index`'
         exception: '-'
   - name: documents_from_text
     title: 文字列からの文書の組み立て
@@ -262,7 +269,7 @@ functions:
          - `body_file` が無ければ、要素を YAML に書き出した文字列を本文にする
          - バージョンは要素の『値のハッシュ』
       4. 文書ごとに『メタデータの解決』を当てる
-      5. ID はメタデータの `id`。無ければ、`body_path` か `path` から拡張子を除いた値（`records` で `body_file` が無ければ末尾に `#{位置}`）にする
+      5. ID はメタデータの `id`。無ければ、`body_path` か `path` を拡張子付きのまま（`records` で `body_file` が無ければ末尾に `#{位置}`）にする
          - メタデータの `name` が空なら、`body_path`（無ければ `path`）のファイル名から拡張子を除いた名前を入れる。`records` で `body_file` が無ければ ID を入れる
       6. `created` / `updated` は、`dates` の `body_path`（無ければ `path`）の値、内容の同じ名前の項目（ISO 8601 の文字列か日時）の順に最初にある値を使う。どちらも無ければ `None`
       7. 文書と理由を返す

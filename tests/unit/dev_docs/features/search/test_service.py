@@ -328,8 +328,8 @@ def test_search_docs_when_ordered_by_matches(make_env: Callable[..., SearchEnv])
     without_matches = env.search(filter=node)
     # 検証
     assert [(item.id, item.values["@matches"]) for item in ordered.items] == [
-        ("notes/a", 3),
-        ("notes/b", 1),
+        ("notes/a.md", 3),
+        ("notes/b.md", 1),
     ]
     assert all("@matches" not in item.values for item in without_matches.items)
 
@@ -352,8 +352,8 @@ def test_search_docs_when_matches_under_not(make_env: Callable[..., SearchEnv]) 
     result = env.search(filter=node, fields=["@matches"])
     # 検証
     assert [(item.id, item.values["@matches"]) for item in result.items] == [
-        ("notes/archive/c", 0),
-        ("notes/b", 0),
+        ("notes/archive/c.md", 0),
+        ("notes/b.md", 0),
     ]
 
 
@@ -361,7 +361,7 @@ def test_search_docs_when_part_of_body(make_env: Callable[..., SearchEnv]) -> No
     """本文の一部と返し済み（正常系）。"""
     # 準備
     env = make_env(PART_NOTES, documents=[_notes_table()])
-    condition = Condition(field="id", op="eq", values=["notes/a"])
+    condition = Condition(field="id", op="eq", values=["notes/a.md"])
     request = {"filter": condition, "view": "full", "session_id": "s1"}
     # 実行
     by_section = env.search(**request, sections=["決まったこと"])
@@ -401,7 +401,7 @@ def test_search_docs_when_part_of_body_with_snippets(make_env: Callable[..., Sea
         filter=Group.model_validate(
             {
                 "or": [
-                    {"field": "id", "op": "eq", "values": ["notes/a"]},
+                    {"field": "id", "op": "eq", "values": ["notes/a.md"]},
                     {"field": "id", "op": "eq", "values": ["doc-1"]},
                 ]
             }
@@ -415,11 +415,11 @@ def test_search_docs_when_part_of_body_with_snippets(make_env: Callable[..., Sea
     ]
     assert [(item.id, item.values["body"], item.ranges) for item in missing.items] == [
         ("doc-1", "", []),
-        ("notes/a", "", []),
+        ("notes/a.md", "", []),
     ]
     assert len(missing.notes) == 2
     assert any("doc-1" in note and "YAML" in note for note in missing.notes)
-    assert any("notes/a" in note and "無い見出し" in note for note in missing.notes)
+    assert any("notes/a.md" in note and "無い見出し" in note for note in missing.notes)
 
 
 def test_search_docs_when_unreadable_file(make_env: Callable[..., SearchEnv]) -> None:
@@ -485,7 +485,7 @@ def test_search_when_records_fields(make_env: Callable[..., SearchEnv]) -> None:
     result = env.search(filter=condition)
     # 検証
     assert result.total_count == 1
-    assert [item.id for item in result.items] == ["notes/a"]
+    assert [item.id for item in result.items] == ["notes/a.md"]
     assert result.notes == []
 
 

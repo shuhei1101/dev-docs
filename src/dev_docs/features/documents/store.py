@@ -11,7 +11,7 @@ from typing import Any
 
 from dev_docs.features.access.types import Target
 from dev_docs.features.documents.aliases import collect_aliases
-from dev_docs.features.documents.fields import missing_ref_fields
+from dev_docs.features.documents.fields import missing_ref_fields, unresolved_related
 from dev_docs.features.documents.indexable import walk_files
 from dev_docs.features.documents.loader import collect_files, load_file, unindexed_files
 from dev_docs.features.documents.schema import records_item_schema, resolve_schema_refs
@@ -293,7 +293,7 @@ class DocumentStore:
 
 
 def check_sync(store: DocumentStore, source: ServedSource) -> SyncReport:
-    """配信元の文書を読み、`metadata` の列の欠け・管理用の YAML のずれ・エイリアスのキーの違反を求める。"""
+    """配信元の文書を読み、`metadata` の列の欠け・管理用の YAML のずれ・当たらない関連・エイリアスのキーの違反を求める。"""
     # 配信元のフォルダは 1 回だけたどり、文書の収集と索引に無いファイルの検出で使い回す
     files = list(walk_files(source.root))
     result = store.load(Target(source, source.root, None, None, "read"), files=files)
@@ -321,10 +321,18 @@ def check_sync(store: DocumentStore, source: ServedSource) -> SyncReport:
         for problem in result.problems
         if problem.reason == "missing_body_file"
     ]
+    # 文書の ID の集合は 1 回だけ作り、全ての文書の関連の照合で使い回す
+    ids = {document.id for document in result.documents}
+    unresolved = [
+        f"{document.kind}: {document.id}: {to}"
+        for document in result.documents
+        for to in unresolved_related(document.metadata, ids)
+    ]
     return SyncReport(
         source_id=source.id,
         missing_refs=missing_refs,
         unindexed_files=unindexed,
         missing_body_files=missing_body_files,
+        unresolved_related=unresolved,
         alias_violations=collect_aliases(source, result.documents).violations,
     )
