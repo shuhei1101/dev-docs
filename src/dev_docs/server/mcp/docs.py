@@ -122,7 +122,7 @@ def build_docs_mcp(handlers: Handlers) -> MCPServer:
         DOCS_MCP_NAME, instructions=handlers.prompts.render(DOCS_INSTRUCTIONS_PROMPT_ID)
     )
     timeout = handlers.terminal.script_timeout_sec
-    register = functools.partial(_register, wait_loaded=handlers.registry.wait_loaded)
+    register = functools.partial(_register, wait_loaded=lambda: handlers.registry.wait_loaded())
 
     register(
         mcp,
