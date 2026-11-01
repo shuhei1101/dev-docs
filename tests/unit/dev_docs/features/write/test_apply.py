@@ -257,3 +257,69 @@ def test_expand_array_keys_when_plain() -> None:
     )
     # 検証
     assert result == operation
+
+
+@pytest.mark.parametrize(
+    ("operation", "expected_path"),
+    [
+        pytest.param(
+            Operation(
+                op="create",
+                kind="rules",
+                data={"name": "r2", "tags": [{"name": "a", "main": True}]},
+            ),
+            "operations[2].data.tags",
+            id="create-data",
+        ),
+        pytest.param(
+            Operation(
+                op="update", id="r1", expected_version="v1", add_to={"tags": [{"name": "c"}]}
+            ),
+            "operations[2].add_to.tags",
+            id="add-to",
+        ),
+        pytest.param(
+            Operation(
+                op="update",
+                id="r1",
+                expected_version="v1",
+                remove_from={"main_tags": [{"name": "a"}]},
+            ),
+            "operations[2].remove_from.main_tags",
+            id="remove-from-main",
+        ),
+    ],
+)
+def test_expand_array_keys_when_objects(operation: Operation, expected_path: str) -> None:
+    """要素が文字列でない配列（異常系）。"""
+    from dev_docs.features.write.apply import expand_array_keys
+
+    # 準備
+    current = (
+        None if operation.op == "create" else {"tags": [{"name": "a", "main": True}, {"name": "b"}]}
+    )
+    # 実行・検証
+    with pytest.raises(InvalidArgumentError, match="引数が正しくありません") as exc_info:
+        expand_array_keys(operation, _tags_table(), current, index=2)
+    assert exc_info.value.violations[0].path == expected_path
+    assert "名前（文字列）の配列" in exc_info.value.violations[0].rule
+
+
+@pytest.mark.parametrize(
+    ("change", "expected_path"),
+    [
+        pytest.param({"set": {"tags": "a"}}, "operations[0].set.tags", id="tags"),
+        pytest.param({"set": {"main_tags": "a"}}, "operations[0].set.main_tags", id="main-tags"),
+    ],
+)
+def test_expand_array_keys_when_string(change: dict[str, Any], expected_path: str) -> None:
+    """配列でなく文字列 1 つ（異常系）。"""
+    from dev_docs.features.write.apply import expand_array_keys
+
+    # 準備
+    current = {"tags": [{"name": "a", "main": True}, {"name": "b"}]}
+    operation = Operation(op="update", id="r1", expected_version="v1", **change)
+    # 実行・検証
+    with pytest.raises(InvalidArgumentError, match="引数が正しくありません") as exc_info:
+        expand_array_keys(operation, _tags_table(), current, index=0)
+    assert exc_info.value.violations[0].path == expected_path
