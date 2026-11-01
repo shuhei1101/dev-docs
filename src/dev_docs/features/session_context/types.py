@@ -43,3 +43,6 @@ class SessionContextResponse(BaseModel):
     sources: list[ContextSource] = Field(description="作業場所から使える配信元")
     warnings: list[str] = Field(description="同期のずれ・古い設定・配信していない配信元")
     forgotten: bool = Field(description="返し済みの記録を削除したか")
+    loading: bool = Field(
+        default=False, description="配信元の初回の読み込みが終わっていないとき `true`"
+    )

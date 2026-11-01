@@ -23,7 +23,7 @@ def _to_yaml_row(entry: SourceEntry) -> dict[str, Any]:
     row: dict[str, Any] = {}
     if entry.id is not None:
         row["id"] = entry.id
-    row["config"] = entry.config[0] if len(entry.config) == 1 else list(entry.config)
+    row["config"] = list(entry.config)
     if not entry.enabled:
         row["enabled"] = False
     if not entry.outside_read:

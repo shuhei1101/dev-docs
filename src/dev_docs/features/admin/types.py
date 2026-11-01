@@ -78,6 +78,8 @@ class ServerStatus:
     pid: int
     terminal: TerminalState
     sources: list[SourceState]
+    # 配信元の初回の読み込みが終わっていないとき True（その間は sources が空）
+    loading: bool = False
 
 
 @dataclass(frozen=True)

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import asyncio
+import contextlib
 import logging
 import threading
 from collections.abc import Callable
@@ -25,14 +27,64 @@ __all__ = ["SourceRegistry", "load_source"]
 class SourceRegistry:
     """配信中の配信元と状態を持ち、読み直しで一覧ごと差し替える。"""
 
-    def __init__(self, on_rebuilt: Callable[[ServedSource], None] | None = None) -> None:
+    def __init__(
+        self,
+        on_rebuilt: Callable[[ServedSource], None] | None = None,
+        *,
+        loading: bool = False,
+    ) -> None:
         self._snapshot: tuple[dict[str, ServedSource], list[SourceStatus]] = ({}, [])
         self._reload_lock = threading.Lock()
         self._entries: dict[str, tuple[SourceEntry, int]] = {}
         self._on_rebuilt = on_rebuilt
+        self._ready = threading.Event()
+        if not loading:
+            self._ready.set()
+        self._waiters: list[tuple[asyncio.AbstractEventLoop, asyncio.Future[None]]] = []
+        self._waiters_lock = threading.Lock()
+
+    @property
+    def loading(self) -> bool:
+        """初回の読み込みが終わっていなければ `True`。"""
+        return not self._ready.is_set()
+
+    async def wait_loaded(self) -> None:
+        """初回の読み込みが終わるまで、スレッドを持たずに待つ。"""
+        if self._ready.is_set():
+            return
+        loop = asyncio.get_running_loop()
+        future: asyncio.Future[None] = loop.create_future()
+        with self._waiters_lock:
+            if self._ready.is_set():
+                return
+            self._waiters.append((loop, future))
+        try:
+            await future
+        except asyncio.CancelledError:
+            with self._waiters_lock, contextlib.suppress(ValueError):
+                self._waiters.remove((loop, future))
+            raise
+
+    def _release_waiters(self) -> None:
+        """読み込みの済みを立て、待っている `wait_loaded` を全て済ませる。"""
+        self._ready.set()
+        with self._waiters_lock:
+            waiters, self._waiters = self._waiters, []
+        for loop, future in waiters:
+            if loop.is_closed():
+                continue
+            with contextlib.suppress(RuntimeError):
+                loop.call_soon_threadsafe(_finish, future)
 
     def reload(self, terminal: TerminalConfig) -> list[SourceStatus]:
         """端末の設定の全行を読み直し、一覧を差し替える。"""
+        try:
+            return self._reload(terminal)
+        finally:
+            self._release_waiters()
+
+    def _reload(self, terminal: TerminalConfig) -> list[SourceStatus]:
+        """全行を読み、一覧を差し替える（例外のときは差し替えない）。"""
         with self._reload_lock:
             sources: dict[str, ServedSource] = {}
             statuses: list[SourceStatus] = []
@@ -143,3 +195,9 @@ class SourceRegistry:
     def statuses(self) -> list[SourceStatus]:
         """`sources[]` の順の状態を返す。"""
         return self._snapshot[1]
+
+
+def _finish(future: asyncio.Future[None]) -> None:
+    """済んでいない Future を済ませる。"""
+    if not future.done():
+        future.set_result(None)

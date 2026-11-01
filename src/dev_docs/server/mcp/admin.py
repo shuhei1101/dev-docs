@@ -6,7 +6,7 @@ import asyncio
 import inspect
 import logging
 import os
-from collections.abc import Callable
+from collections.abc import Awaitable, Callable
 from typing import TYPE_CHECKING, Any, Literal
 
 from mcp.server.mcpserver import MCPServer
@@ -89,12 +89,16 @@ def _register(
     model: type[BaseModel],
     call: Callable[[Any], Any],
     render: Callable[[Any], str] | None = None,
+    *,
+    wait_loaded: Callable[[], Awaitable[None]] | None = None,
 ) -> None:
-    """要求のモデルを引数に持つツールを 1 つ登録する。"""
+    """要求のモデルを引数に持つツールを 1 つ登録する（`wait_loaded` があれば呼ぶ前に待つ）。"""
 
     async def tool(**arguments: Any) -> CallToolResult:
         try:
             request = model(**arguments)
+            if wait_loaded is not None:
+                await wait_loaded()
             result = await asyncio.to_thread(call, request)
             fmt: Literal["markdown", "json"] = getattr(request, "format", "json")
             return to_tool_result(result, fmt, render)
@@ -127,6 +131,7 @@ def build_admin_mcp(handlers: Handlers) -> MCPServer:
         FormatRequest,
         lambda request: reload_config(handlers),
         render_reload,
+        wait_loaded=handlers.registry.wait_loaded,
     )
     _register(
         mcp,
@@ -141,6 +146,7 @@ def build_admin_mcp(handlers: Handlers) -> MCPServer:
         handlers.prompts.render(tool_prompt_id("admin", "update")),
         NoArguments,
         lambda request: update_clone(handlers.terminal.clone, control=handlers.restart),
+        wait_loaded=handlers.registry.wait_loaded,
     )
     _register(
         mcp,
@@ -149,6 +155,7 @@ def build_admin_mcp(handlers: Handlers) -> MCPServer:
         CheckProjectRequest,
         lambda request: check_project(request, handlers=handlers),
         render_check,
+        wait_loaded=handlers.registry.wait_loaded,
     )
     _register(
         mcp,
@@ -156,6 +163,7 @@ def build_admin_mcp(handlers: Handlers) -> MCPServer:
         handlers.prompts.render(tool_prompt_id("admin", "try_convert")),
         TryConvertRequest,
         lambda request: try_convert(request, handlers=handlers),
+        wait_loaded=handlers.registry.wait_loaded,
     )
     _register(
         mcp,
@@ -164,5 +172,6 @@ def build_admin_mcp(handlers: Handlers) -> MCPServer:
         WriteNavRequest,
         lambda request: write_nav(request, handlers=handlers),
         render_write_nav,
+        wait_loaded=handlers.registry.wait_loaded,
     )
     return mcp

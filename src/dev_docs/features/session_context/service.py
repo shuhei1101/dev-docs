@@ -42,6 +42,15 @@ def build_session_context(
         removed = handlers.seen.forget(key)
         forgotten = True
         logger.info("返し済みの記録を削除した（%s・%s 件）", request.session_id, removed)
+    # 配信元を読み込んでいる間は、読み込みを待たずに読み込み中の案内を返す
+    if handlers.registry.loading:
+        return SessionContextResponse(
+            context=_context_text([], [], prompts=handlers.prompts, loading=True),
+            sources=[],
+            warnings=[],
+            forgotten=forgotten,
+            loading=True,
+        )
     available = available_sources(request.cwd, registry=handlers.registry)
     sources = [
         ContextSource(id=item.source_id, access="read_write" if item.access == "write" else "read")
@@ -117,15 +126,22 @@ def _render(
     omitted: int,
     warnings: list[str],
     prompts: PromptSet,
+    loading: bool,
 ) -> str:
-    """配信元・省いた件数・警告を渡して文脈の文のプロンプトを描画する。"""
+    """配信元・省いた件数・警告・読み込み中かを渡して文脈の文のプロンプトを描画する。"""
     return prompts.render(
         SESSION_CONTEXT_PROMPT_ID,
-        {"sources": sources, "omitted": omitted, "warnings": warnings},
+        {"sources": sources, "omitted": omitted, "warnings": warnings, "loading": loading},
     )
 
 
-def _context_text(available: list[SourceAccess], warnings: list[str], *, prompts: PromptSet) -> str:
+def _context_text(
+    available: list[SourceAccess],
+    warnings: list[str],
+    *,
+    prompts: PromptSet,
+    loading: bool = False,
+) -> str:
     """配信元と警告をプロンプトの YAML で `CONTEXT_MAX_CHARS` 字以内の文に描画する。"""
     sources: list[dict[str, str | None]] = [
         {
@@ -135,17 +151,21 @@ def _context_text(available: list[SourceAccess], warnings: list[str], *, prompts
         }
         for item in available
     ]
-    text = _render(sources, omitted=0, warnings=warnings, prompts=prompts)
+    text = _render(sources, omitted=0, warnings=warnings, prompts=prompts, loading=loading)
     if len(text) <= CONTEXT_MAX_CHARS:
         return text
     # 超えるときは、配信元の説明を省く
     sources = [{**source, "description": None} for source in sources]
-    text = _render(sources, omitted=0, warnings=warnings, prompts=prompts)
+    text = _render(sources, omitted=0, warnings=warnings, prompts=prompts, loading=loading)
     # それでも超えるときは、収まるまで配信元を末尾から減らして残りの件数を添える
     kept = len(sources)
     while len(text) > CONTEXT_MAX_CHARS and kept > 0:
         kept -= 1
         text = _render(
-            sources[:kept], omitted=len(sources) - kept, warnings=warnings, prompts=prompts
+            sources[:kept],
+            omitted=len(sources) - kept,
+            warnings=warnings,
+            prompts=prompts,
+            loading=loading,
         )
     return text

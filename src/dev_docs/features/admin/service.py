@@ -125,6 +125,7 @@ def _source_states(handlers: Handlers) -> list[SourceState]:
 def get_status(handlers: Handlers, *, env: Mapping[str, str]) -> ServerStatus:
     """待ち受けのアドレス・バージョン・配信元ごとの状態を返す。"""
     port = listen_port(handlers.terminal, env)
+    loading = handlers.registry.loading
     return ServerStatus(
         address=f"http://{handlers.terminal.bind}:{port}/",
         version=RUNNING_VERSION,
@@ -133,7 +134,8 @@ def get_status(handlers: Handlers, *, env: Mapping[str, str]) -> ServerStatus:
             file=str(handlers.terminal.file),
             version_state=version_state(handlers.terminal.version, SETTINGS_VERSION),
         ),
-        sources=_source_states(handlers),
+        sources=[] if loading else _source_states(handlers),
+        loading=loading,
     )
 
 

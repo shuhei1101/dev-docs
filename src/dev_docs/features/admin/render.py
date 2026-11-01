@@ -14,6 +14,7 @@ from dev_docs.features.admin.types import (
 from dev_docs.shared.errors import Violation
 
 TABLE_HEADER = ("| source | 状態 | 設定のバージョン | 索引の同期 |", "| --- | --- | --- | --- |")
+LOADING_LINE = "配信元: 読み込み中（終わるまで文書の MCP の呼び出しは待たされます）"
 SYNC_LABELS = {
     "missing_refs": "metadata の列の欠け",
     "unindexed_files": "管理用の YAML に無いファイル",
@@ -43,7 +44,9 @@ def render_status(status: ServerStatus) -> str:
         f"{status.address} dev-docs {status.version}（pid {status.pid}）",
         f"端末の設定: {status.terminal.file}（{status.terminal.version_state}）",
     ]
-    if status.sources:
+    if status.loading:
+        lines.append(LOADING_LINE)
+    elif status.sources:
         lines.extend([*TABLE_HEADER, *(_source_row(state) for state in status.sources)])
     else:
         lines.append("配信元: なし")
