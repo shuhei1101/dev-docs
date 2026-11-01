@@ -68,7 +68,12 @@ WORKTREE_CONVERT = (
 DEVELOP_CHECK = "import json\nprint(json.dumps([{'path': 'name', 'rule': 'develop-rule'}]))\n"
 MASTER_CHECK = "import json\nprint(json.dumps([]))\n"
 C_1 = {"field": "id", "op": "eq", "values": ["c-1"]}
-SYNC_ZERO = {"missing_refs": 0, "unindexed_files": 0, "missing_body_files": 0}
+SYNC_ZERO = {
+    "missing_refs": 0,
+    "unindexed_files": 0,
+    "missing_body_files": 0,
+    "unresolved_related": 0,
+}
 
 
 def test_normal(

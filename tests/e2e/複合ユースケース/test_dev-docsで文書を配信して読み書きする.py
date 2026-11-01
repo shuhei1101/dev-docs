@@ -19,7 +19,12 @@ TOOL_NAMES = [
     "trace_related",
     "write_docs",
 ]
-SYNC_ZERO = {"missing_refs": 0, "unindexed_files": 0, "missing_body_files": 0}
+SYNC_ZERO = {
+    "missing_refs": 0,
+    "unindexed_files": 0,
+    "missing_body_files": 0,
+    "unresolved_related": 0,
+}
 # 使い分けは文書の MCP の instructions にある旨の行
 POINTER_LINE = (
     "探す・読む・書くときの使い分けと書き方は、文書の MCP（dev-docs）の instructions にあります。"

@@ -10,7 +10,12 @@ from playwright.sync_api import Locator, Page, expect
 TEMPLATES = Path(__file__).parents[3] / "templates"
 FILES_SCHEMA = TEMPLATES / "files.schema.yaml"
 BROKEN_CONFIG = "name: broken\ndocuments:\n  - id: sample\n    schema: schemas/sample.schema.yaml\n"
-SYNC_ZERO = {"missing_refs": 0, "unindexed_files": 0, "missing_body_files": 0}
+SYNC_ZERO = {
+    "missing_refs": 0,
+    "unindexed_files": 0,
+    "missing_body_files": 0,
+    "unresolved_related": 0,
+}
 TOOL_COUNT = 7
 FILES_REQUIRED = "'files' is a required property"
 SETUP_PROMPT = "/dev-docs:setup {path}"
@@ -509,12 +514,12 @@ def test_normal_when_excluded_and_related_candidates(
     assert not run.result["is_error"]
     assert sorted(rows) == ["tasks/repo.py", "tasks/test_repo.py"]
     assert related["tasks/repo.py"] == [("design/repo", "implements")]
-    assert related["tasks/test_repo.py"] == [("src/tasks/repo", "tests")]
+    assert related["tasks/test_repo.py"] == [("src/tasks/repo.py", "tests")]
     assert "implements" in shown
     assert "tests" in shown
     assert checked.data.get("violations", []) == []
     assert checked.data["sync"] == SYNC_ZERO
-    assert [item["id"] for item in traced.data["items"]] == ["src/tasks/repo"]
+    assert [item["id"] for item in traced.data["items"]] == ["src/tasks/repo.py"]
 
 
 def _settings_rows(settings: Any) -> dict[str, Any]:

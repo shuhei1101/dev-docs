@@ -212,7 +212,13 @@ def test_normal_when_metadata_out_of_sync(
             "schemas/files.schema.yaml": FILES_SCHEMA.read_text(encoding="utf-8"),
             "docs/doc-1.yaml": "id: doc-1\nname: 文書 1\ntitle: 文書 1\n",
             "docs/doc-2.yaml": "id: doc-2\n",
-            "src/files.yaml": "files:\n  - path: a.py\n  - path: c.py\n",
+            "src/files.yaml": (
+                "files:\n"
+                "  - path: a.py\n"
+                "    related:\n"
+                "      - {to: src/z.py, type: tests}\n"
+                "  - path: c.py\n"
+            ),
             "src/a.py": "a = 1\n",
             "src/d.py": "d = 4\n",
         }
@@ -235,12 +241,16 @@ def test_normal_when_metadata_out_of_sync(
         if "WARNING" in line and "dev_docs.main: sample:" in line
     ]
     assert docs.status_code == 200
-    assert len(warnings) == 3
+    assert len(warnings) == 4
     assert any("metadata の列の欠け 1 件" in line and "name（title）" in line for line in warnings)
     assert any(
         "管理用の YAML に無いファイル 1 件" in line and "src/d.py" in line for line in warnings
     )
     assert any("ファイルが無い行 1 件" in line and "c.py" in line for line in warnings)
+    assert any(
+        "どの文書にも当たらない関連 1 件" in line and "src: src/a.py: src/z.py" in line
+        for line in warnings
+    )
     assert found.data["items"][0]["values"]["name"] == "doc-2"
 
 

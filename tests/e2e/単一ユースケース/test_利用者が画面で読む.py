@@ -418,7 +418,7 @@ def test_normal_when_column_hidden(
     )
     before = snapshot(source.folder)
     served = serve(source)
-    page.goto(served.url("/sample/guide/files/guide/table"))
+    page.goto(served.url("/sample/guide/files/guide/table.md"))
     columns = page.get_by_role("button", name=re.compile("^列の表示")).first
     # 実行
     columns.click()
@@ -452,7 +452,7 @@ def test_normal_when_files_index_relative_link(
         ),
     )
     served = serve(source)
-    page.goto(served.url("/sample/notes/files/notes/a"))
+    page.goto(served.url("/sample/notes/files/notes/a.md"))
     expect(_heading(page)).to_have_text("a")
     # 実行
     page.get_by_role("main").get_by_role("link", name="B").click()
@@ -462,7 +462,7 @@ def test_normal_when_files_index_relative_link(
     expect(page.get_by_role("main")).to_contain_text("B の本文。")
     expect(page.get_by_role("main")).not_to_contain_text("文書が見つかりません")
     current = page.get_by_role("navigation", name="文書の一覧").locator('[aria-current="page"]')
-    expect(current).to_have_attribute("href", re.compile(r"/notes/files/notes/b$"))
+    expect(current).to_have_attribute("href", re.compile(r"/notes/files/notes/b\.md$"))
 
 
 def test_normal_when_custom_converter(
@@ -482,7 +482,7 @@ def test_normal_when_custom_converter(
     expect(_heading(page, 2)).to_have_text("カスタムの見出し カスタム 1")
     page.goto(served.url("/custom/docs/doc-2"))
     expect(_heading(page)).to_have_text("文書 2")
-    page.goto(served.url("/custom/guide/files/guide/intro"))
+    page.goto(served.url("/custom/guide/files/guide/intro.md"))
     expect(page.locator("main table").first.locator("th")).to_have_text(["colA", "colB"])
     expect(page.locator("main td")).to_have_text(["値A", "値B"])
     expect(page.get_by_role("main")).not_to_contain_text("embed:")
@@ -671,7 +671,7 @@ def test_normal_when_term_tooltip_shown(
     term = page.get_by_role("main").get_by_text("担当範囲", exact=True)
     # 実行
     document = served.get("/_api/sources/sample/docs/docs/doc-1")
-    page.goto(served.url("/sample/notes/files/notes/a"))
+    page.goto(served.url("/sample/notes/files/notes/a.md"))
     expect(_heading(page)).to_have_text("a")
     term.hover()
     tooltip = page.get_by_role("tooltip")
@@ -682,7 +682,7 @@ def test_normal_when_term_tooltip_shown(
     assert aliases["作業範囲"]["description"] == "触ってよい範囲"
     expect(tooltip).to_contain_text("用語")
     expect(tooltip).to_contain_text("触ってよい範囲")
-    page.goto(served.url("/plain/notes/files/notes/a"))
+    page.goto(served.url("/plain/notes/files/notes/a.md"))
     expect(page.get_by_role("main")).to_contain_text("担当範囲の中だけを書き換える。")
     page.get_by_role("main").get_by_text("担当範囲の中だけを書き換える。").hover()
     expect(page.get_by_role("tooltip")).to_have_count(0)
