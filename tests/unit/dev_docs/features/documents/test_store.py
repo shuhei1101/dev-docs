@@ -87,8 +87,8 @@ def test_document_store_load(document_store: DocumentStore, workspace: Target) -
     assert [(doc.kind, doc.id) for doc in result.documents] == [
         ("rules", "a"),
         ("rules", "b"),
-        ("notes", "notes/x"),
-        ("notes", "notes/y"),
+        ("notes", "notes/x.md"),
+        ("notes", "notes/y.md"),
     ]
     assert result.problems == []
 
@@ -234,8 +234,8 @@ def test_document_store_load_when_many_tables(
     assert len(walk_calls) == 1
     assert [(doc.kind, doc.id) for doc in result.documents] == [
         ("rules", "a"),
-        ("notes", "notes/x"),
-        ("src", "src/a"),
+        ("notes", "notes/x.md"),
+        ("src", "src/a.py"),
     ]
 
 

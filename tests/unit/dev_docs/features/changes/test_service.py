@@ -265,7 +265,7 @@ def test_list_changes_when_excluded(
         **{"from": first, "filter": Condition(field="kind", op="eq", values=["index"])}
     )
     # 検証
-    assert [(item.id, item.change) for item in result.items] == [("docs/rule/README", "added")]
+    assert [(item.id, item.change) for item in result.items] == [("docs/rule/README.md", "added")]
 
 
 def test_list_changes_when_contains(env: ChangesEnv, word_history: WordHistory) -> None:
@@ -391,7 +391,7 @@ def test_list_changes_when_contains_body_file(
     # 実行
     result = body_file_env.list(**{"from": base, "to": third, "contains": {"value": "廃止予定"}})
     # 検証
-    assert [item.id for item in result.items] == ["a", "b"]
+    assert [item.id for item in result.items] == ["a.md", "b.md"]
     first_changes = result.items[0].contains_changes
     second_changes = result.items[1].contains_changes
     assert first_changes is not None
@@ -436,12 +436,12 @@ def test_list_changes_when_last_read_body_file(
         source=source,
         clone=root,
     )
-    documents = env.store.get(make_target(source), ["notes/a", "notes/b"])
+    documents = env.store.get(make_target(source), ["notes/a.md", "notes/b.md"])
     env.seen.mark_returned(SessionKey("s1"), "sample", "body", documents)
     (root / "notes/a.md").write_text("a の本文を書き換えた\n", encoding="utf-8")
     # 実行
     result = env.list(session_id="s1")
     # 検証
     assert [(item.id, item.change, item.keys) for item in result.items] == [
-        ("notes/a", "modified", ["body"])
+        ("notes/a.md", "modified", ["body"])
     ]
