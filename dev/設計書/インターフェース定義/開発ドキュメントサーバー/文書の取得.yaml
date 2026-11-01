@@ -521,7 +521,7 @@ constraints:
     constraint: '`converters[]` の行の `cache` が `true`（既定）なら、控えがあればスクリプトを動かさずに返し、無ければ動かして控えを書く。`false` なら控えを読まず書かず、要求のたびにスクリプトを動かす'
     notes: '控えのキーは本文の外のファイルを含まない。本文の外のファイルを読む変換は `cache: false` にする'
   - item: nav の auto のフォルダの束ね
-    constraint: "`auto` の `group_by` が `'@folder'` のとき、文書が当たった行の `paths` の glob（複数当たるときは `paths` で先に並ぶ glob）のうちワイルドカードより前のフォルダを起点に、起点からのフォルダごとにフォルダ名の group を作り、入れ子のフォルダは入れ子の group にする。起点の直下の文書は group に入れず、group より前に並べる。フォルダの `index.yaml` の文書をその group の先頭の page にする。管理用の YAML の行（`records`）の文書は束ねず、そのまま並べる。`'@folder'` 以外の `group_by` は今と同じく項目のパスとして読む"
+    constraint: "`auto` の `group_by` が `'@folder'` のとき、文書が当たった行の `paths` の glob（複数当たるときは `paths` で先に並ぶ glob）のうちワイルドカードより前のフォルダを起点に、起点からのフォルダごとにフォルダ名の group を作り、入れ子のフォルダは入れ子の group にする。起点の直下の文書は group に入れない。各階層で page（フォルダの `index.yaml` の文書が先頭、残りはページのパスの順）を先に、入れ子の group をフォルダ名の順に後に並べる。管理用の YAML の行（`records`）の文書は束ねず、そのまま並べる。`'@folder'` 以外の `group_by` は今と同じく項目のパスとして読む"
     notes: "`nav` が無い配信元は、種類ごとのタブを `group_by: '@folder'` の `auto` として組み立てる"
   - item: 手で書いた page と auto の重なり
     constraint: 同じタブの中で、手で書いた `page`（`group` の中を含む）が指す文書を `auto` の結果から除く。手で書いた `group`・`page` の並びは変えない
