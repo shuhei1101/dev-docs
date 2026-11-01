@@ -30,7 +30,7 @@ data_models:
     container: features/admin/types.py
     usecase: 共通
     role: DTO
-    summary: 文書のストアの『メタデータのずれ』の 3 つの並びの件数
+    summary: 文書のストアの『メタデータのずれ』の 4 つの並びの件数
     description: '`dataclass(frozen=True)`。`of(report)` で `SyncReport` から作る。'
     properties:
       - name: missing_refs
@@ -45,6 +45,10 @@ data_models:
         title: ファイルが無い行
         type: int
         description: '`SyncReport.missing_body_files` の件数'
+      - name: unresolved_related
+        title: 当たらない関連
+        type: int
+        description: '`SyncReport.unresolved_related` の件数'
   - name: SyncItem
     title: 同期のずれの内訳
     container: features/admin/types.py
@@ -55,7 +59,7 @@ data_models:
     properties:
       - name: kind
         title: 種類
-        type: Literal['missing_refs', 'unindexed_files', 'missing_body_files']
+        type: Literal['missing_refs', 'unindexed_files', 'missing_body_files', 'unresolved_related']
         description: どの並びのずれか
       - name: path
         title: パス
@@ -348,7 +352,7 @@ data_models:
       - name: items
         title: 内訳
         type: list[SyncItem]
-        description: '`missing_refs`・`unindexed_files`・`missing_body_files` の順に並べ、先頭 `SYNC_ITEMS_LIMIT` 件まで'
+        description: '`missing_refs`・`unindexed_files`・`missing_body_files`・`unresolved_related` の順に並べ、先頭 `SYNC_ITEMS_LIMIT` 件まで'
   - name: FormatRequest
     title: 返す形式の指定
     container: features/admin/types.py

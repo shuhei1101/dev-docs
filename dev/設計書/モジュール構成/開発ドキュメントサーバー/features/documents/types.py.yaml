@@ -189,6 +189,12 @@ data_models:
         access: 公開
         default: '[]'
         description: エイリアスの集めの違反（`doc` に文書のパス）
+      - name: unresolved_related
+        title: 当たらない関連
+        type: list[str]
+        access: 公開
+        default: '[]'
+        description: '`{行の id}: {文書の id}: {to}` の並び。`source` を持たない `related[].to` が配信元のどの文書の ID にも当たらないもの'
   - name: AliasEntry
     title: エイリアス
     container: features/documents/types.py
