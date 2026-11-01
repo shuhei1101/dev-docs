@@ -195,23 +195,23 @@ functions:
     process: |-
       1. `table.metadata` のうち、列名が `{配列}[].{項目}`（全ての要素のキー。例 `tags: tags[].name`）か `{配列}[{真偽値のキー}].{項目}`（選んだ要素のキー。例 `main_tags: tags[main].name`）の共通のキーを集める。無ければ `operation` をそのまま返す
       2. `text_edits[].field` が集めたキーを指す場合、`path` が `operations[{index}].text_edits[{n}].field`、`rule` が `{共通のキー} は文字列の項目ではありません` の違反にする
-         - `data`・`set`・`add_to`・`remove_from` の集めたキーの値が、要素が全て文字列のリストでない場合（オブジェクトの配列・文字列 1 つなど）、`path` が `operations[{index}].{項目}.{共通のキー}`、`rule` が `{共通のキー} は名前（文字列）の配列で渡します` の違反にする
-         - ここまでに違反があれば、操作を当てずに `InvalidArgumentError` で送る
-      3. 配列ごとに、元の配列を複製する。`update` は `current` の値、`create`・`replace` は `data` の列名の値（無ければ空の配列）
-      4. 全ての要素のキーへの操作を当てる
+      3. `data`・`set`・`add_to`・`remove_from` の集めたキーの値が、要素が全て文字列のリストでない場合（オブジェクトの配列・文字列 1 つなど）、`path` が `operations[{index}].{項目}.{共通のキー}`、`rule` が `{共通のキー} は名前（文字列）の配列で渡します` の違反にする
+      4. 2・3 の違反があれば、操作を当てずに `InvalidArgumentError` で送る
+      5. 配列ごとに、元の配列を複製する。`update` は `current` の値、`create`・`replace` は `data` の列名の値（無ければ空の配列）
+      6. 全ての要素のキーへの操作を当てる
          - `set` は渡した名前の並びで配列を作り直す。元からあった名前の要素は `main` を含む他のキーを保ち、無い名前は `{項目: 名前}` の要素にする
          - `add_to` は配列に無い名前を `{項目: 名前}` の要素で末尾に追加する
          - `remove_from` は項目が渡した名前の要素を削除する
          - `unset` は配列の列を削除する
          - `create`・`replace` の `data` の値は `set` と同じに当てる
-      5. 選んだ要素のキーへの操作を当てる
+      7. 選んだ要素のキーへの操作を当てる
          - `set` は渡した名前の要素の真偽値のキーを `true` にし、他の要素の真偽値のキーを削除する
          - `add_to` は渡した名前の要素の真偽値のキーを `true` にする
          - `remove_from` は渡した名前の要素の真偽値のキーを削除する（無い名前は飛ばす）
          - `unset` は全ての要素の真偽値のキーを削除する
          - `set`・`add_to`・`data` に配列に無い名前がある場合、`path` が `operations[{index}].{項目}.{共通のキー}`、`rule` が `{名前} は {全ての要素のキー} にありません` の違反にする
-      6. 違反があれば `InvalidArgumentError` で送る
-      7. 集めたキーを各項目から除き、配列の列名へ作り直した配列を書く操作（`update` は `set`、`create`・`replace` は `data`。`unset` で列を削除したときは `unset`）にして返す
+      8. 7 の違反があれば `InvalidArgumentError` で送る
+      9. 集めたキーを各項目から除き、配列の列名へ作り直した配列を書く操作（`update` は `set`、`create`・`replace` は `data`。`unset` で列を削除したときは `unset`）にして返す
     exceptions:
       - name: InvalidArgumentError
         condition: 集めたキーに名前（文字列）の配列でない値を渡した、選んだ要素のキーに配列に無い名前を渡した、または `text_edits` で指した
