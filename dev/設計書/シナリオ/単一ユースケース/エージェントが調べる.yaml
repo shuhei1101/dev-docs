@@ -582,8 +582,11 @@ scenarios:
       - name: Mock
         description: なし（実環境で実行。SessionStart のフックの入力はテストが入れる）
       - name: dev-docs
-        description: sample を配信している dev-docs
+        description: sample と other を配信している dev-docs
         notes: '`cwd` は sample のクローン本体'
+      - name: 別の配信元
+        description: 作業範囲の外の配信元
+        notes: id `other`。`scope.read` は other のフォルダだけ
     flow: |-
       ```mermaid
       sequenceDiagram
