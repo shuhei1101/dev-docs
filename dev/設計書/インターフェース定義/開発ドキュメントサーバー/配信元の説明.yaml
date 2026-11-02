@@ -326,7 +326,7 @@ response:
   - name: outside_sources[].id
     type: str
     description: '`scope` に `cwd` が当たらず、端末の設定の `sources[].outside_read` が真の配信元の ID'
-    notes: '`source` を省いて `outside_scope: true` のとき。`format: markdown` は「作業範囲の外（参考）」の見出しの下の表で出す'
+    notes: '`source` を省いて `outside_scope: true` のとき。`format: markdown` は「作業範囲の外（参考）」の見出しの下の表で出し、0 件は表の代わりに `なし` と出す。`format: json` は 0 件のときキーを持たない'
   - name: outside_sources[].description
     type: str
     description: 配信元の設定の `description`

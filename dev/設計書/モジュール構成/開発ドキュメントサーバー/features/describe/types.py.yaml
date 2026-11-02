@@ -44,7 +44,7 @@ data_models:
         type: bool
         access: 公開
         default: 'False'
-        description: '`True` のとき、`scope` に当たらない配信元を `outside_read` が真なら作業範囲の外（参考）として読む（`source` が ID 1 つのときだけ効く）。引数なしの一覧には効かない'
+        description: '`True` のとき、`scope` に当たらない配信元を `outside_read` が真なら作業範囲の外（参考）として読む（`source` が ID 1 つのとき）。`source` を省いたときは、使える配信元の一覧に作業範囲の外で読める配信元の一覧を加える'
   - name: KindSummary
     title: 種類の概要
     container: features/describe/types.py
@@ -81,6 +81,30 @@ data_models:
         type: list[SourceAccess]
         access: 公開
         description: 使える配信元の結果
+      - name: outside_sources
+        title: 作業範囲の外で読める配信元
+        type: list[OutsideSource] | None
+        access: 公開
+        default: None
+        description: '`outside_scope` が `True` のときだけリスト（0 件は空）。`format: json` は空のリストと `None` を落とすので、どちらも `outside_sources` のキーを持たない'
+  - name: OutsideSource
+    title: 作業範囲の外で読める配信元
+    container: features/describe/types.py
+    usecase: 説明
+    role: DTO
+    summary: 作業範囲の外で読める配信元の一覧の 1 行
+    description: '`dataclass(frozen=True)`。'
+    properties:
+      - name: id
+        title: 配信元の ID
+        type: str
+        access: 公開
+        description: 配信元の ID
+      - name: description
+        title: 説明
+        type: str
+        access: 公開
+        description: 配信元の設定の `description`
   - name: SourceGuideResult
     title: 配信元の説明書
     container: features/describe/types.py

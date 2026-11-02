@@ -39,7 +39,7 @@ YAML を書き換えたときは、再起動で反映します。
 | `format` | `markdown` / `json` | 返す形式 | 既定 `markdown` |
 | `cwd` | str | 作業場所 | 管理用プラグインのフックが入れる。エージェントは指定しない |
 | `session_id`・`agent_id` | str | 会話キー | 同じ。メインの会話は `agent_id` が空 |
-| `outside_scope` | bool | `true` のとき、`cwd` が `scope` に当たらない配信元も、端末の設定の `sources[].outside_read` が真なら作業範囲の外（参考）として読む | 既定 `false`。`describe`・`search_docs`・`trace_related`・`list_changes` だけが持ち、`source` に ID を 1 つ渡したときだけ効く（配列・`*` は `scope` に当たる配信元だけを対象にする）。`describe` は `source` を省くと、作業範囲の外で読める配信元の一覧を加える。下の「作業範囲の外」 |
+| `outside_scope` | bool | `true` のとき、`cwd` が `scope` に当たらない配信元も、端末の設定の `sources[].outside_read` が真なら作業範囲の外（参考）として読む | 既定 `false`。`describe`・`search_docs`・`trace_related`・`list_changes` だけが持ち、作業範囲の外を読むのは `source` に ID を 1 つ渡したときだけ（配列・`*` は `scope` に当たる配信元だけを対象にする）。`describe` は `source` を省くと、作業範囲の外で読める配信元の一覧を加える。下の「作業範囲の外」 |
 
 <!-- /table -->
 

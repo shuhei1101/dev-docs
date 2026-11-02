@@ -22,7 +22,7 @@ functions:
       description: Markdown
     process: |-
       1. 配信元の説明書と種類のスキーマは、`outside_scope` が `True` なら先頭に `作業範囲の外（参考）` の行を置く
-      2. 使える配信元の一覧は、`作業場所: {cwd}（{配信元} のクローン本体 / ワークツリー）` の行と `| source | 権限 | description |` の表（作業中の配信元は権限に `（作業中）`）
+      2. 使える配信元の一覧は、`作業場所: {cwd}（{配信元} のクローン本体 / ワークツリー）` の行と `| source | 権限 | description |` の表（作業中の配信元は権限に `（作業中）`）。`outside_sources` が `None` でなければ、空行・`作業範囲の外（参考）` の行・`| source | description |` の表を続ける（0 件は表の代わりに `なし` の行）
       3. 配信元の説明書は、`instructions` をそのまま置き、`| kind | description |` の表を続ける。`refs` があれば `ブランチ: {,で繋いだ名前}`・`タグ: {同じ}` の行、`worktrees` があれば `| ワークツリー | ブランチ |` の表を続ける
       4. 種類のスキーマは、`metadata` が空でなければ `| 共通のキー | 列名 |` の表を置き、```yaml でスキーマの YAML を囲む
     unit_tests:
@@ -32,6 +32,18 @@ functions:
         condition: sample（write・作業中）と notes（read）
         mock: なし
         expected: '`| sample | write（作業中） | ... |` と `| notes | read | ... |` の行'
+      - name: test_render_describe_markdown_when_outside_sources
+        case: 正常
+        summary: 作業範囲の外で読める配信元の表
+        condition: sample（write・作業中）と、`outside_sources` に other
+        mock: なし
+        expected: 使える配信元の表の後ろに `作業範囲の外（参考）` の行と `| other | ... |` の行があり、`outside_sources` が `None` の一覧には `作業範囲の外（参考）` の行が無い
+      - name: test_render_describe_markdown_when_outside_sources_empty
+        case: 正常
+        summary: 作業範囲の外で読める配信元が 0 件
+        condition: '`outside_sources` が空のリスト'
+        mock: なし
+        expected: '`作業範囲の外（参考）` の行の次が `なし` の行で、`| source | description |` の表が無い'
       - name: test_render_describe_markdown_when_metadata
         case: 正常
         summary: メタデータの対応の表
