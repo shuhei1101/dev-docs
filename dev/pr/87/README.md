@@ -36,5 +36,5 @@ SessionStart の文（`content/prompts/session-context.yaml`）は使える配�
 - [x] ドキュメント修正（docs/はじめに/コアコンセプト/管理用プラグイン.md・docs/リファレンス/文書のMCP.md・docs/はじめに/コアコンセプト/配信元と権限.md）
 - [x] 単体テスト作成
 - [x] 実装
-- [ ] 結合テスト作成
+- [x] 結合テスト作成
 - [ ] E2E テスト作成
