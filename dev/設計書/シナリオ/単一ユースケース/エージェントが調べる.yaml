@@ -431,6 +431,8 @@ scenarios:
         participant ST as other の文書
         participant L as 要求のログ
 
+        A->>M: describe(outside_scope: true)
+        M-->>A: 作業範囲の外で読める配信元の一覧（other。作業範囲の外（参考））
         A->>M: describe(source: other, outside_scope: true)
         M->>M: other の scope.read に cwd が当たらず、outside_read が真
         M-->>A: 説明書と種類の一覧（作業範囲の外（参考））
@@ -444,6 +446,7 @@ scenarios:
         M-->>A: 変わった文書（作業範囲の外（参考））
       ```
     expected:
+      - '`source` を省いた `describe(outside_scope: true)` が、作業範囲の外で読める配信元として other を「作業範囲の外（参考）」の表示付きで返し、`scope` に当たる sample を外の一覧に含めない'
       - '`outside_scope: true` の `describe`・`search_docs`・`trace_related`・`list_changes` が other の結果を返す'
       - 返した文書・一覧の行に「作業範囲の外（参考）」の表示が付く
       - 要求のログに、外から読んだ呼び出しの作業場所（`cwd`）と配信元 `other` が残る
@@ -470,11 +473,15 @@ scenarios:
         A->>M: search_docs(source: other, outside_scope: true)
         M->>M: other の scope.read に cwd が当たらず、outside_read が偽
         M-->>A: エラー（読めない配信元）
+        A->>M: describe(outside_scope: true)
+        M->>M: outside_read が偽の other をエラーにせず、作業範囲の外の一覧から除外する
+        M-->>A: 作業範囲の外で読める配信元の一覧（other を含まない）
       ```
     expected:
       - '`isError: true` で、other を読めないことを返す'
       - 'エラーの直し方（`fix`）が `outside_scope: true` を案内しない'
       - other の文書を返さない
+      - '`source` を省いた `describe(outside_scope: true)` の作業範囲の外の一覧に other を載せない'
       - 要求のログに外から読んだ記録を残さない
     test: test_error_when_outside_read_disabled
   - name: 正常シナリオ（ブランチとワークツリーを引く）
@@ -570,13 +577,16 @@ scenarios:
       - '`search_docs(term: 担当範囲)` は `alias_type` を持たない行の文書を返さない（本文に `担当範囲` を含む sample の文書 1 を返さない）'
       - '`list_match_words` が `name` と `aliases` の語を、指す文書の id とともに返す'
     test: test_normal_when_term_matched_by_alias
-  - name: 正常シナリオ（タグの付け方の案内を受け取る）
+  - name: 正常シナリオ（SessionStart と instructions の案内を受け取る）
     setup:
       - name: Mock
         description: なし（実環境で実行。SessionStart のフックの入力はテストが入れる）
       - name: dev-docs
-        description: sample を配信している dev-docs
+        description: sample と other を配信している dev-docs
         notes: '`cwd` は sample のクローン本体'
+      - name: 別の配信元
+        description: 作業範囲の外の配信元
+        notes: id `other`。`scope.read` は other のフォルダだけ
     flow: |-
       ```mermaid
       sequenceDiagram
@@ -584,15 +594,17 @@ scenarios:
         participant H as SessionStart のフック
         participant M as 文書の MCP（/mcp）
 
-        H-->>A: 注入文（使える配信元と、使い分けは instructions にある旨）
+        H-->>A: 注入文（使える配信元・設計書から調べる案内・作業場所の外を参照する案内と、使い分けは instructions にある旨）
         A->>M: initialize
         M-->>A: instructions（タグの付け方）
       ```
     expected:
       - 文書の MCP の instructions のタグの行が、単語まで分けてタグにすること・`action:`・`topic:`・`tool:` の命名・配信元のタグの規約に従うこと・付ける前に `group_by="tags"` で使われているタグを見ることを案内する
       - SessionStart の注入文はタグの行を持たず、使い分けは文書の MCP の instructions にあることを 1 行で示す
+      - SessionStart の注入文が、コードや不具合の調査も設計書から参照し、設計書が指すコードを参照することを案内する
+      - 'SessionStart の注入文が、作業場所の外のリポジトリも `source` と `outside_scope: true` で参照でき、外で読める配信元の ID は `describe(outside_scope: true)` で引けることを案内し、配信元の ID を固有の値で持たない（配信元の一覧の sample の行を除く）'
       - 注入文が 1,000 字の上限に収まる
-    test: test_normal_when_tag_guide_injected
+    test: test_normal_when_session_guide_injected
   - name: 正常シナリオ（MCP を使う場面の案内を受け取る）
     setup:
       - name: Mock

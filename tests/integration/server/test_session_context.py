@@ -10,6 +10,13 @@ from fastapi.testclient import TestClient
 POINTER_LINE = (
     "探す・読む・書くときの使い分けと書き方は、文書の MCP（dev-docs）の instructions にあります。"
 )
+# 設計書から調査する案内と、作業場所の外を参照する案内の語
+DESIGN_FIRST_WORDS = ("コードや不具合の調査", "設計書から参照し、設計書が指すコードを参照")
+OUTSIDE_WORDS = (
+    "作業場所の外のリポジトリ",
+    "`outside_scope: true`",
+    "`describe(outside_scope: true)`",
+)
 # 文脈に置かない使い方・タグの行の語
 USAGE_WORDS = ("describe(source)", 'group_by="tags"', "action:")
 WORKPLACE = "/_admin/session-context"
@@ -162,13 +169,14 @@ def _many_sources(
     return specs
 
 
-def test_normal_when_usage_pointer_included(
+def test_normal_when_usage_and_research_guides_included(
     make_source: Callable[..., Any], make_server: Callable[..., Any]
 ) -> None:
-    """文脈はタグの行を持たず、使い分けは文書の MCP の instructions にある旨を 1 行で示す（正常系）。"""
+    """文脈はタグの行を持たず、使い分けの案内先と、設計書から調査する案内・作業場所の外を参照する案内を示す（正常系）。"""
     # 準備
     sample = make_source("sample")
-    env = make_server(sample)
+    other = make_source("other")
+    env = make_server(sample, other)
     # 実行
     response = _post(env, {"cwd": str(sample.folder), "reason": "startup"})
     initialized = env.client.post("/mcp/", headers=MCP_HEADERS, json=INITIALIZE)
@@ -177,6 +185,9 @@ def test_normal_when_usage_pointer_included(
     instructions = initialized.json()["result"]["instructions"]
     assert response.status_code == 200
     assert context.splitlines().count(POINTER_LINE) == 1
+    assert all(word in context for word in DESIGN_FIRST_WORDS)
+    assert all(word in context for word in OUTSIDE_WORDS)
+    assert "other" not in context
     assert [word for word in USAGE_WORDS if word in context] == []
     assert all(rule in _tag_lines(instructions) for rule in TAG_RULES)
     assert len(context) <= CONTEXT_MAX_CHARS
@@ -207,6 +218,8 @@ def test_normal_when_context_over_limit(
     assert "source-039-xxxxxxxxxxxxx" not in context
     assert "- ほか " in context
     assert POINTER_LINE in context
+    assert all(word in context for word in DESIGN_FIRST_WORDS)
+    assert all(word in context for word in OUTSIDE_WORDS)
     assert len(body["sources"]) == MANY_SOURCES
 
 

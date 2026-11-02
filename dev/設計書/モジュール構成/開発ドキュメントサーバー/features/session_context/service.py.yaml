@@ -166,7 +166,7 @@ functions:
       type: str
       description: 文脈の文
     process: |-
-      1. 配信元ごとに `{id, access, description}`（`access` は `read_write` か `read`）を作り、`sources`・`omitted`（0）・`warnings`・`loading` を渡して `SESSION_CONTEXT_PROMPT_ID` を描画する。見出し・配信元の行・権限の表示・instructions を指す行・配信元が無いときの `/dev-docs:setup` の案内・読み込み中の案内・警告の見出しは YAML（`content/prompts/session-context.yaml`）が持つ。YAML は変数 `loading`（真偽値、既定 `false`）を受け、`loading` のときだけ「配信元を読み込んでいることと、終わるまで文書の MCP の呼び出しが待たされること」を出し、`/dev-docs:setup` の案内は `loading` でないときだけ出す
+      1. 配信元ごとに `{id, access, description}`（`access` は `read_write` か `read`）を作り、`sources`・`omitted`（0）・`warnings`・`loading` を渡して `SESSION_CONTEXT_PROMPT_ID` を描画する。見出し・配信元の行・権限の表示・設計書から調査する案内の行・作業場所の外の配信元を `source` と `outside_scope: true` で参照し、読める配信元の ID は `describe(outside_scope: true)` で引く案内の行（配信元の ID を固有の値で持たない。配信元が 1 件以上のときだけ）・instructions を指す行・配信元が無いときの `/dev-docs:setup` の案内・読み込み中の案内・警告の見出しは YAML（`content/prompts/session-context.yaml`）が持つ。YAML は変数 `loading`（真偽値、既定 `false`）を受け、`loading` のときだけ「配信元を読み込んでいることと、終わるまで文書の MCP の呼び出しが待たされること」を出し、`/dev-docs:setup` の案内は `loading` でないときだけ出す
       2. `CONTEXT_MAX_CHARS` を超える場合、`description` を `None` にして描画し直す
       3. それでも超える場合、収まるまで配信元を末尾から 1 件ずつ減らし、減らした件数を `omitted` に入れて描画し直す
     unit_tests:
@@ -175,19 +175,19 @@ functions:
         summary: 配信元の行・警告・instructions を指す行を描画する
         condition: 配信元 2 件（書ける 1 件・読める 1 件）・警告 1 件、プロンプトは同梱した YAML（`load_prompts(DEFAULT_PROMPTS_DIR, required=[SESSION_CONTEXT_PROMPT_ID])`）
         mock: なし
-        expected: 配信元の ID・`description`・警告・`instructions` の語を含み、`describe(source)`・`group_by="tags"`・`action:` を含まない
+        expected: '配信元の ID・`description`・警告・`instructions` の語と、`設計書`・`outside_scope: true`・`describe(outside_scope: true)` を含み、`describe(source)`・`group_by="tags"`・`action:` を含まない'
       - name: test_context_text_when_too_long
         case: 正常
         summary: 上限を超えるときは説明を省き、配信元を減らす
         condition: 24 字の ID と 100 字の `description` を持つ書ける配信元 40 件、同梱した YAML
         mock: なし
-        expected: 1,000 字以内で、`description` を含まず、減らした件数と `instructions` の語を含む
+        expected: '1,000 字以内で、`description` を含まず、減らした件数と `instructions` の語と `describe(outside_scope: true)` を含む'
       - name: test_context_text_when_no_source
         case: 正常
         summary: 使える配信元が無い
         condition: 配信元 0 件・警告なし、同梱した YAML
         mock: なし
-        expected: '`/dev-docs:setup` を含み、`instructions` の語を含まない'
+        expected: '`/dev-docs:setup` を含み、`instructions` の語と `outside_scope` を含まない'
       - name: test_context_text_when_loading
         case: 正常
         summary: 読み込み中の案内

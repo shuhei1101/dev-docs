@@ -10,6 +10,7 @@ from dev_docs.features.describe.service import describe
 from dev_docs.features.describe.types import (
     DescribeRequest,
     KindSchemaResult,
+    OutsideSource,
     SourceGuideResult,
     SourceListResult,
 )
@@ -84,6 +85,58 @@ def test_describe(
         ("sample", "write", True),
         ("notes", "read", False),
     ]
+    assert result.outside_sources is None
+
+
+def test_describe_when_outside_list(
+    store: DocumentStore,
+    folder_source: ServedSource,
+    make_served_source: Callable[..., ServedSource],
+    make_source_config: Callable[..., SourceConfig],
+    make_registry: Callable[..., SourceRegistry],
+) -> None:
+    """作業範囲の外で読める配信元の一覧（正常系）。"""
+    # 準備
+    notes = make_served_source(
+        id="notes", root=Path("/w/notes"), scope_read=[str(folder_source.root)], scope_write=[]
+    )
+    other = make_served_source(
+        id="other",
+        root=Path("/w/other"),
+        scope_read=["/zzz"],
+        scope_write=[],
+        outside_read=True,
+        config=make_source_config(description="別の配信元"),
+    )
+    closed = make_served_source(
+        id="closed", root=Path("/w/closed"), scope_read=["/yyy"], scope_write=[], outside_read=False
+    )
+    registry = make_registry(folder_source, notes, other, closed)
+    # 実行
+    result = _describe(registry, store, folder_source.root, outside_scope=True)
+    # 検証
+    assert isinstance(result, SourceListResult)
+    assert [item.source_id for item in result.sources] == ["sample", "notes"]
+    assert result.outside_sources == [OutsideSource(id="other", description="別の配信元")]
+
+
+def test_describe_when_outside_list_empty(
+    store: DocumentStore,
+    folder_source: ServedSource,
+    make_served_source: Callable[..., ServedSource],
+    make_registry: Callable[..., SourceRegistry],
+) -> None:
+    """作業範囲の外で読める配信元が無い（正常系）。"""
+    # 準備
+    notes = make_served_source(
+        id="notes", root=Path("/w/notes"), scope_read=[str(folder_source.root)], scope_write=[]
+    )
+    registry = make_registry(folder_source, notes)
+    # 実行
+    result = _describe(registry, store, folder_source.root, outside_scope=True)
+    # 検証
+    assert isinstance(result, SourceListResult)
+    assert result.outside_sources == []
 
 
 def test_describe_when_source(

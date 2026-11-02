@@ -94,6 +94,18 @@ parts:
       - lang: ja
         text: |
           - ほか {{ omitted }} 件
+  - id: design-first
+    when: '{{ sources | length > 0 }}'
+    texts:
+      - lang: ja
+        text: |
+          コードや不具合の調査も、設計書から参照し、設計書が指すコードを参照します。
+  - id: outside
+    when: '{{ sources | length > 0 }}'
+    texts:
+      - lang: ja
+        text: |
+          作業場所の外のリポジトリも、`source` に配信元の ID と `outside_scope: true` を指定すると、設計書から参照できます。読める配信元の ID は `describe(outside_scope: true)` で確認できます。
   - id: usage
     when: '{{ sources | length > 0 }}'
     texts:

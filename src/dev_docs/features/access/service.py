@@ -102,6 +102,16 @@ def available_sources(cwd: str | None, *, registry: SourceRegistry) -> list[Sour
     return result
 
 
+def outside_readable_sources(cwd: str | None, *, registry: SourceRegistry) -> list[ServedSource]:
+    """作業場所の `scope` に当たらず、`outside_read` が真の配信元を並べる。"""
+    path = _normalize(cwd)
+    return [
+        source
+        for source in registry.served()
+        if access_of(source, path) is None and source.outside_read
+    ]
+
+
 def describe_workplace(cwd: str | None, *, registry: SourceRegistry) -> Workplace:
     """作業場所がどの配信元のクローン本体かワークツリーかを返す。"""
     path = _normalize(cwd)

@@ -61,6 +61,13 @@ NOTES_A = {"field": "id", "op": "eq", "values": ["notes/a.md"]}
 OUTSIDE_LINE = "作業範囲の外（参考）"
 OUTSIDE_LOG = "作業範囲の外を読んだ"
 OUTSIDE_HINT = "outside_scope: true"
+# 設計書から調査する案内と、作業場所の外を参照する案内の語
+DESIGN_FIRST_WORDS = ("コードや不具合の調査", "設計書から参照し、設計書が指すコードを参照")
+OUTSIDE_WORDS = (
+    "作業場所の外のリポジトリ",
+    "`outside_scope: true`",
+    "`describe(outside_scope: true)`",
+)
 OBJECT_TAGS_ROW = (
     "  - id: rules\n"
     "    paths: [rules/*.yaml]\n"
@@ -742,6 +749,7 @@ def test_normal_when_outside_scope(
     cwd = str(sample.folder)
     outside = {"cwd": cwd, "source": "other", "outside_scope": True}
     # 実行
+    outside_list = served.call("describe", cwd=cwd, outside_scope=True)
     described = served.call("describe", **outside)
     full = served.call("search_docs", view="full", **outside)
     searched = served.call("search_docs", format="json", **outside)
@@ -754,6 +762,10 @@ def test_normal_when_outside_scope(
     )
     listed = served.call("describe", cwd=cwd)
     # 検証
+    listed_head, listed_outside = outside_list.text.split(OUTSIDE_LINE)
+    assert "| sample |" in listed_head
+    assert "| other |" in listed_outside
+    assert "| sample |" not in listed_outside
     assert not described.is_error
     assert described.text.splitlines()[0] == OUTSIDE_LINE
     assert full.text.splitlines()[0] == OUTSIDE_LINE
@@ -788,12 +800,15 @@ def test_error_when_outside_read_disabled(
     served = serve(sample, other)
     # 実行
     result = served.call("search_docs", cwd=str(sample.folder), source="other", outside_scope=True)
+    listed = served.call("describe", cwd=str(sample.folder), outside_scope=True)
     # 検証
     assert result.is_error
     assert "SourceNotReadableError" in result.text
     assert "other" in result.text
     assert OUTSIDE_HINT not in result.text
     assert "1 件目" not in result.text
+    assert not listed.is_error
+    assert "| other |" not in listed.text.split(OUTSIDE_LINE)[1]
     assert _outside_logs(served) == []
 
 
@@ -905,13 +920,14 @@ def test_normal_when_term_matched_by_alias(
     assert pairs == {("作業範囲", "scope"), ("scope", "scope"), ("担当範囲", "scope")}
 
 
-def test_normal_when_tag_guide_injected(
+def test_normal_when_session_guide_injected(
     make_source: Callable[..., Any], serve: Callable[..., Any]
 ) -> None:
-    """文書の MCP の instructions がタグの付け方を案内し、注入文は instructions を指す 1 行だけを持つ（正常系）。"""
+    """instructions がタグの付け方を、注入文が instructions を指す行と設計書から調査する案内・作業場所の外を参照する案内を示す（正常系）。"""
     # 準備
     sample = make_source("sample")
-    served = serve(sample)
+    other = make_source("other")
+    served = serve(sample, other)
     # 実行
     response = httpx.post(
         served.url(SESSION_CONTEXT),
@@ -926,6 +942,9 @@ def test_normal_when_tag_guide_injected(
     assert [rule for rule in TAG_RULES if rule not in _tag_lines(instructions)] == []
     assert TAG_HEADER not in context
     assert context.splitlines().count(POINTER_LINE) == 1
+    assert all(word in context for word in DESIGN_FIRST_WORDS)
+    assert all(word in context for word in OUTSIDE_WORDS)
+    assert "other" not in context
     assert len(context) <= CONTEXT_MAX_CHARS
 
 

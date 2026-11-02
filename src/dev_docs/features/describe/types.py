@@ -25,7 +25,8 @@ class DescribeRequest(BaseModel):
         default=False,
         description=(
             "true のとき、scope に当たらない配信元を outside_read が真なら"
-            "作業範囲の外（参考）として読む（source が ID 1 つのときだけ効く）。引数なしの一覧には効かない"
+            "作業範囲の外（参考）として読む（source が ID 1 つのとき）。"
+            "source を省くと、使える配信元の一覧に作業範囲の外で読める配信元の一覧を加える"
         ),
     )
 
@@ -39,11 +40,21 @@ class KindSummary:
 
 
 @dataclass(frozen=True)
+class OutsideSource:
+    """作業範囲の外で読める配信元の一覧の 1 行。"""
+
+    id: str
+    description: str
+
+
+@dataclass(frozen=True)
 class SourceListResult:
     """引数なしの結果。"""
 
     workplace: Workplace
     sources: list[SourceAccess]
+    # `outside_scope` を渡したときだけ持つ（0 件は空のリスト）
+    outside_sources: list[OutsideSource] | None = None
 
 
 @dataclass(frozen=True)

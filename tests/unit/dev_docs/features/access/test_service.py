@@ -13,6 +13,7 @@ from dev_docs.features.access.service import (
     current_source,
     describe_workplace,
     find_worktree,
+    outside_readable_sources,
     resolve_read_targets,
     resolve_write_target,
 )
@@ -177,6 +178,44 @@ def test_available_sources_when_no_cwd(
     result = available_sources(None, registry=registry)
     # 検証
     assert result == []
+
+
+def test_outside_readable_sources(
+    make_served_source: Callable[..., ServedSource],
+    make_registry: Callable[..., Any],
+) -> None:
+    """scope に当たらず outside_read が真の配信元だけを並べる（正常系）。"""
+    # 準備
+    sample = make_served_source(id="sample", root=Path("/w/sample"), scope_write=["/w/sample"])
+    notes = make_served_source(
+        id="notes", root=Path("/w/notes"), scope_read=["/w/sample"], scope_write=[]
+    )
+    other = make_served_source(
+        id="other", root=Path("/w/other"), scope_read=["/zzz"], scope_write=[], outside_read=True
+    )
+    closed = make_served_source(
+        id="closed", root=Path("/w/closed"), scope_read=["/yyy"], scope_write=[], outside_read=False
+    )
+    registry = make_registry(sample, notes, other, closed)
+    # 実行
+    result = outside_readable_sources("/w/sample", registry=registry)
+    # 検証
+    assert [item.id for item in result] == ["other"]
+
+
+def test_outside_readable_sources_when_no_cwd(
+    make_served_source: Callable[..., ServedSource],
+    make_registry: Callable[..., Any],
+) -> None:
+    """作業場所が無い（正常系）。"""
+    # 準備
+    other = make_served_source(
+        id="other", root=Path("/w/other"), scope_read=["/zzz"], scope_write=[], outside_read=True
+    )
+    # 実行
+    result = outside_readable_sources(None, registry=make_registry(other))
+    # 検証
+    assert [item.id for item in result] == ["other"]
 
 
 def test_describe_workplace(sample: ServedSource, make_registry: Callable[..., Any]) -> None:

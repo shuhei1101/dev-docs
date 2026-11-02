@@ -12,6 +12,7 @@ diagrams:
         書く場所の解決 ..> 権限の判定
         書く場所の解決 ..> ワークツリーの解決
         使える配信元 ..> 権限の判定
+        作業範囲の外で読める配信元 ..> 権限の判定
         作業場所の説明 ..> 作業中の配信元
         権限の判定 ..> ワークツリーの解決
         権限の判定 ..> globの照合
@@ -24,6 +25,9 @@ diagrams:
           <<function>>
         }
         class 使える配信元 {
+          <<function>>
+        }
+        class 作業範囲の外で読める配信元 {
           <<function>>
         }
         class 作業場所の説明 {
@@ -239,6 +243,47 @@ functions:
         condition: '`cwd` が `None`'
         mock: 配信元の一覧（偽物）
         expected: 空
+  - name: outside_readable_sources
+    title: 作業範囲の外で読める配信元
+    kind: 関数
+    container: features/access/service.py
+    usecase: 配信元を調べる
+    role: 読み取り
+    summary: 作業場所の `scope` に当たらず、`outside_read` が真の配信元を並べる
+    scope: public
+    thread_safe: true
+    args:
+      - name: registry
+        title: 配信元の一覧
+        type: SourceRegistry
+        required: true
+        passing: injected
+        description: 配信中の配信元
+      - name: cwd
+        title: 作業場所
+        type: str | None
+        required: true
+        passing: positional
+        description: MCP の引数 `cwd`
+    returns:
+      type: list[ServedSource]
+      description: '`sources[]` の順。当たる配信元が無ければ空'
+    process: |-
+      1. `cwd` を正規化する（パスの正規化）
+      2. 配信中の配信元のうち、権限が `None`（権限の判定）で `outside_read` が真のものを並べる
+    unit_tests:
+      - name: test_outside_readable_sources
+        case: 正常
+        summary: scope に当たらず outside_read が真の配信元だけを並べる
+        condition: 'sample（`cwd` を `scope.write` に含む）・notes（`scope.read` だけ）・other（当たらない・`outside_read: true`）・closed（当たらない・`outside_read: false`）'
+        mock: 配信元の一覧（4 つを返す偽物）
+        expected: '`[other]`'
+      - name: test_outside_readable_sources_when_no_cwd
+        case: 正常
+        summary: 作業場所が無い
+        condition: '`cwd` が `None`、other（`outside_read: true`）'
+        mock: 配信元の一覧（偽物）
+        expected: '`[other]`（どの `scope` にも当たらない）'
   - name: describe_workplace
     title: 作業場所の説明
     kind: 関数
