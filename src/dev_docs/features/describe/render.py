@@ -5,6 +5,8 @@ from __future__ import annotations
 from dev_docs.features.describe.types import KindSchemaResult, SourceGuideResult, SourceListResult
 from dev_docs.features.search.render import OUTSIDE_SCOPE_LINE
 
+OUTSIDE_NONE_LINE = "なし"
+
 
 def _cell(text: str) -> str:
     """表のセルの文字列にする。"""
@@ -29,6 +31,17 @@ def render_describe_markdown(
         for item in result.sources:
             access = f"{item.access}（作業中）" if item.current else item.access
             lines.append(f"| {_cell(item.source_id)} | {access} | {_cell(item.description)} |")
+        # 作業範囲の外の一覧を求められたときだけ、表か「なし」を続ける
+        if result.outside_sources is not None:
+            lines.extend(["", OUTSIDE_SCOPE_LINE])
+            if result.outside_sources:
+                lines.extend(["| source | description |", "| --- | --- |"])
+                lines.extend(
+                    f"| {_cell(item.id)} | {_cell(item.description)} |"
+                    for item in result.outside_sources
+                )
+            else:
+                lines.append(OUTSIDE_NONE_LINE)
         return "\n".join(lines) + "\n"
     head = [OUTSIDE_SCOPE_LINE] if result.outside_scope else []
     if isinstance(result, SourceGuideResult):

@@ -7,12 +7,14 @@ import dataclasses
 from dev_docs.features.access.service import (
     available_sources,
     describe_workplace,
+    outside_readable_sources,
     resolve_read_targets,
 )
 from dev_docs.features.describe.types import (
     DescribeRequest,
     KindSchemaResult,
     KindSummary,
+    OutsideSource,
     SourceGuideResult,
     SourceListResult,
 )
@@ -39,9 +41,19 @@ def describe(
                     )
                 ],
             )
+        # outside_scope を渡したときだけ、作業範囲の外で読める配信元を添える
+        outside_sources = (
+            [
+                OutsideSource(id=source.id, description=source.config.description)
+                for source in outside_readable_sources(request.cwd, registry=registry)
+            ]
+            if request.outside_scope
+            else None
+        )
         return SourceListResult(
             workplace=describe_workplace(request.cwd, registry=registry),
             sources=available_sources(request.cwd, registry=registry),
+            outside_sources=outside_sources,
         )
     target = resolve_read_targets(
         registry=registry,
