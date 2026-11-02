@@ -473,6 +473,9 @@ scenarios:
         A->>M: search_docs(source: other, outside_scope: true)
         M->>M: other の scope.read に cwd が当たらず、outside_read が偽
         M-->>A: エラー（読めない配信元）
+        A->>M: describe(outside_scope: true)
+        M->>M: outside_read が偽の other をエラーにせず、作業範囲の外の一覧から除外する
+        M-->>A: 作業範囲の外で読める配信元の一覧（other を含まない）
       ```
     expected:
       - '`isError: true` で、other を読めないことを返す'
@@ -574,7 +577,7 @@ scenarios:
       - '`search_docs(term: 担当範囲)` は `alias_type` を持たない行の文書を返さない（本文に `担当範囲` を含む sample の文書 1 を返さない）'
       - '`list_match_words` が `name` と `aliases` の語を、指す文書の id とともに返す'
     test: test_normal_when_term_matched_by_alias
-  - name: 正常シナリオ（タグの付け方の案内を受け取る）
+  - name: 正常シナリオ（SessionStart と instructions の案内を受け取る）
     setup:
       - name: Mock
         description: なし（実環境で実行。SessionStart のフックの入力はテストが入れる）
@@ -596,9 +599,9 @@ scenarios:
       - 文書の MCP の instructions のタグの行が、単語まで分けてタグにすること・`action:`・`topic:`・`tool:` の命名・配信元のタグの規約に従うこと・付ける前に `group_by="tags"` で使われているタグを見ることを案内する
       - SessionStart の注入文はタグの行を持たず、使い分けは文書の MCP の instructions にあることを 1 行で示す
       - SessionStart の注入文が、コードや不具合の調査も設計書から参照し、設計書が指すコードを参照することを案内する
-      - 'SessionStart の注入文が、作業場所の外のリポジトリも `source` と `outside_scope: true` で参照でき、外で読める配信元の ID は `describe(outside_scope: true)` で引けることを案内し、配信元の ID を固有の値で持たない（sample・notes の行を除く）'
+      - 'SessionStart の注入文が、作業場所の外のリポジトリも `source` と `outside_scope: true` で参照でき、外で読める配信元の ID は `describe(outside_scope: true)` で引けることを案内し、配信元の ID を固有の値で持たない（配信元の一覧の sample の行を除く）'
       - 注入文が 1,000 字の上限に収まる
-    test: test_normal_when_tag_guide_injected
+    test: test_normal_when_session_guide_injected
   - name: 正常シナリオ（MCP を使う場面の案内を受け取る）
     setup:
       - name: Mock
