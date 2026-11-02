@@ -256,6 +256,9 @@ def test_context_text(bundled_prompts: Any) -> None:
     assert "B の説明" in result
     assert "警告です" in result
     assert "instructions" in result
+    assert "設計書" in result
+    assert "outside_scope: true" in result
+    assert "describe(outside_scope: true)" in result
     assert "describe(source)" not in result
     assert 'group_by="tags"' not in result
     assert "action:" not in result
@@ -277,6 +280,7 @@ def test_context_text_when_too_long(bundled_prompts: Any) -> None:
     assert "source-039-" not in result
     assert "件" in result
     assert "instructions" in result
+    assert "describe(outside_scope: true)" in result
 
 
 def test_context_text_when_no_source(bundled_prompts: Any) -> None:
@@ -288,6 +292,7 @@ def test_context_text_when_no_source(bundled_prompts: Any) -> None:
     # 検証
     assert "/dev-docs:setup" in result
     assert "instructions" not in result
+    assert "outside_scope" not in result
 
 
 def test_context_text_when_loading(bundled_prompts: Any) -> None:
