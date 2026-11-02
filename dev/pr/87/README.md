@@ -37,4 +37,4 @@ SessionStart の文（`content/prompts/session-context.yaml`）は使える配�
 - [x] 単体テスト作成
 - [x] 実装
 - [x] 結合テスト作成
-- [ ] E2E テスト作成
+- [x] E2E テスト作成
