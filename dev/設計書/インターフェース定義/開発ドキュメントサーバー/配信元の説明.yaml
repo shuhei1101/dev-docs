@@ -190,6 +190,34 @@ flows:
       - 要求のログに作業範囲の外の記録を残さない
       - '`outside_read` が真の other に `outside_scope` を渡さずに呼ぶと、`fix` が `outside_scope: true` を案内する'
     test: test_error_when_outside_read_disabled
+  - name: 正常系（作業範囲の外で読める配信元の一覧）
+    summary: '`source` を省いた `outside_scope: true` で、使える配信元の一覧に加えて、作業範囲の外で読める配信元の一覧を返す'
+    setup:
+      - name: Mock
+        description: なし
+      - name: 配信元
+        description: '正常系と同じ sample・notes・other（`outside_read` を書かない）に、`scope.read` が closed のフォルダだけで端末の設定の行に `outside_read: false` を持つ closed を加える'
+      - name: 入力
+        description: '`outside_scope: true`（`source` なし）。`cwd` は sample のクローン本体'
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        participant C as クライアント
+        participant T as describe
+
+        C->>T: outside_scope: true
+        T->>T: 各配信元の scope に cwd を照らす
+        T->>T: scope に当たらず outside_read が真の配信元を集める
+        T-->>C: 作業場所と使える配信元の表、作業範囲の外（参考）で読める配信元の表
+      ```
+    expected:
+      - 作業場所と使える配信元の表は、引数なしの正常系と同じ（sample・notes）
+      - 続けて「作業範囲の外（参考）」の見出しと、other の ID と `description` の行を持つ表がある
+      - 作業範囲の外の表に、`scope` に当たる sample・notes と、`outside_read` が偽の closed が無い
+      - '`format: json` の `outside_sources` が other の 1 件だけで、`sources` は引数なしと同じ'
+      - 要求のログに作業範囲の外の記録を残さない（文書を読まない）
+      - '`outside_scope` を省いた引数なしの一覧には、作業範囲の外の表が無い'
+    test: test_normal_when_outside_list
   - name: 正常系（ブランチとワークツリー）
     summary: '`source` で、説明書と種類の一覧に加えてブランチ・タグとワークツリーの一覧を返す'
     setup:
@@ -219,7 +247,7 @@ flows:
       - '`worktrees` に `.claude/worktrees/x` の絶対パスと `branch: feat/x` があり、`../outside` は無い'
       - Git 管理外の配信元では `refs`・`worktrees` を返さない
     test: test_normal_when_refs_and_worktrees
-lead: 引数の数で、使える配信元の一覧・配信元の説明書と種類の一覧・種類のスキーマを返す。
+lead: '引数の数で、使える配信元の一覧・配信元の説明書と種類の一覧・種類のスキーマを返す。`source` を省いた `outside_scope: true` では、作業範囲の外で読める配信元の一覧も返す。'
 identifier: describe
 permissions: 引数なしは不要。`source` を渡すときはその配信元の `scope.read` か `scope.write` に `cwd` が当たること
 idempotent: true
@@ -228,6 +256,8 @@ callers:
   - dev/設計書/シナリオ/単一ユースケース/エージェントが調べる#scenarios[正常シナリオ]
   - dev/設計書/シナリオ/単一ユースケース/エージェントが書き込む#scenarios[正常シナリオ]
   - dev/設計書/シナリオ/単一ユースケース/エージェントが調べる#scenarios[正常シナリオ（ブランチとワークツリーを引く）]
+  - dev/設計書/シナリオ/単一ユースケース/エージェントが調べる#scenarios[正常シナリオ（作業範囲の外を参考に読む）]
+  - dev/設計書/シナリオ/単一ユースケース/エージェントが調べる#scenarios[異常シナリオ（作業範囲の外の参照を断る配信元を指す）]
 exclusivity: '読み取りだけで排他しない（`readOnlyHint: true`）'
 request:
   - name: source
@@ -268,8 +298,8 @@ request:
     default: '`false`'
     location: argument
     description: '`true` のとき、`cwd` が `scope` に当たらない配信元も、端末の設定の `sources[].outside_read` が真なら作業範囲の外（参考）として読む'
-    constraints: '`source` を渡したときだけ効く'
-    notes: 引数なしの一覧には作業範囲の外の配信元を載せない
+    constraints: '`source` を渡したときはその配信元を作業範囲の外として読む。`source` を省いたときは、使える配信元の一覧に作業範囲の外で読める配信元の一覧を加える'
+    notes: '`outside_scope` を省いた引数なしの一覧には作業範囲の外の配信元を載せない'
     status: planned
 request_example: |-
   ```json
@@ -291,6 +321,13 @@ response:
     type: bool
     description: 作業中の配信元か
   - name: sources[].description
+    type: str
+    description: 配信元の設定の `description`
+  - name: outside_sources[].id
+    type: str
+    description: '`scope` に `cwd` が当たらず、端末の設定の `sources[].outside_read` が真の配信元の ID'
+    notes: '`source` を省いて `outside_scope: true` のとき。`format: markdown` は「作業範囲の外（参考）」の見出しの下の表で出す'
+  - name: outside_sources[].description
     type: str
     description: 配信元の設定の `description`
   - name: instructions
@@ -357,7 +394,7 @@ constraints:
   - item: 注釈
     constraint: '`readOnlyHint: true`'
   - item: 一覧の中身
-    constraint: 引数なしの結果は SessionStart で注入する配信元の一覧と同じ
+    constraint: 引数なし（`outside_scope` を省く）の結果は SessionStart で注入する配信元の一覧と同じ
   - item: タイムアウト
     constraint: 制限なし
   - item: 作業範囲の外の記録
