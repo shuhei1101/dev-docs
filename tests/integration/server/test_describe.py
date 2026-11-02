@@ -11,6 +11,7 @@ INSTRUCTIONS = "この配信元の文書は、まず概要を読んでから個�
 OUTSIDE_LINE = "作業範囲の外（参考）"
 OUTSIDE_LOG = "作業範囲の外を読んだ"
 OUTSIDE_HINT = "outside_scope: true"
+OTHER_DESCRIPTION = "別のリポジトリの設計書"
 
 
 def test_normal(make_source: Callable[..., Any], make_server: Callable[..., Any]) -> None:
@@ -220,6 +221,44 @@ def test_error_when_outside_read_disabled(
     assert _outside_logs(caplog) == []
     assert guided.is_error
     assert OUTSIDE_HINT in guided.text
+
+
+def test_normal_when_outside_list(
+    make_source: Callable[..., Any],
+    make_server: Callable[..., Any],
+    sample_file_set: Callable[..., dict[str, str]],
+    sample_config_text: Callable[..., str],
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """source を省いた outside_scope: true で、作業範囲の外で読める配信元の一覧を添える（正常系）。"""
+    # 準備
+    config = sample_config_text(name="other", description=OTHER_DESCRIPTION)
+    sample = make_source("sample")
+    notes = make_source("notes", git=False, scope_read=[sample.folder])
+    other = make_source("other", sample_file_set(**{"dev-docs.yaml": config}))
+    closed = make_source("closed", outside_read=False)
+    env = make_server(sample, notes, other, closed)
+    cwd = str(sample.folder)
+    caplog.set_level(logging.INFO)
+    # 実行
+    result = env.call("describe", cwd=cwd, outside_scope=True)
+    as_json = env.call("describe", cwd=cwd, outside_scope=True, format="json")
+    plain_json = env.call("describe", cwd=cwd, format="json")
+    logged = _outside_logs(caplog)
+    listed = env.call("describe", cwd=cwd)
+    # 検証
+    assert not result.is_error
+    head, outside = result.text.split(OUTSIDE_LINE)
+    assert "| sample | write（作業中） |" in head
+    assert "| notes | read |" in head
+    assert f"| other | {OTHER_DESCRIPTION} |" in outside
+    assert "| sample |" not in outside
+    assert "| notes |" not in outside
+    assert "| closed |" not in outside
+    assert as_json.data["outside_sources"] == [{"id": "other", "description": OTHER_DESCRIPTION}]
+    assert as_json.data["sources"] == plain_json.data["sources"]
+    assert logged == []
+    assert OUTSIDE_LINE not in listed.text
 
 
 def test_normal_when_refs_and_worktrees(
