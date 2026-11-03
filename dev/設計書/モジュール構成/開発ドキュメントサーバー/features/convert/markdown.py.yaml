@@ -143,7 +143,7 @@ functions:
       type: str
       description: Markdown
     process: |-
-      1. 先頭に `# {見出し}`（`HEADING_KEYS` のうち最初に値を持つキー。無ければ文書のメタデータの `name`）を置き、`LEAD_KEYS` のうち最初に値を持つキーの値を本文の書き換えにかけて段落にする。使った 2 つのキーは本文の組み立てから除く
+      1. 先頭に `# {見出し}`（`HEADING_KEYS` のうち最初に値を持つキー。無ければ文書のメタデータの `name`）を置き、`LEAD_KEYS` のうち最初に値を持つキーの値を本文の書き換えにかけて段落にする。使った 2 つのキーは本文の組み立てから除く。`x-key` を持つ `sections` の要素の `title` と見出しの組を文脈の `anchors` に集める
       2. スキーマの `properties` の順に値を組み立てる（値が空のキーと、スキーマに `x-hidden: true` を持つキーは飛ばす）
          - `x-heading` を持つ値は、深さ 2 から始まる見出し（`x-heading` の文字列、要素なら `x-key` の値）を置く。深さは `MAX_HEADING_LEVEL` で止める
          - 見出しも `x-shape` も持たないスカラーが `ATTRIBUTE_MIN` 以上続く間は、まとめて属性の表の組み立てにかける
@@ -276,10 +276,16 @@ functions:
       description: '表のキーのマーカーと、`<!-- table: data … -->` で囲んだ表'
     process: |-
       1. 列をスキーマの `properties` の順に決める（要素のどれも値を持たない列と、スキーマに `x-hidden: true` を持つ列は除く）。`first` が列にあれば先頭へ移す
-      2. セルは、真偽の値は `CHECK_MARK` か空、参照のリンクに当たる文字列はリンク、それ以外のスカラーはそのまま（`|` はエスケープ、改行は `<br>`）、文字列のリストは `・` で繋ぐ。`table`・`column` を持つオブジェクトは `[{table}.{column}](#{table の見出しのアンカー})`、それ以外のオブジェクトは `{キー}: {値}` を `、` で繋ぎ、オブジェクトのリストは要素ごとのセルを `<br>` で繋ぐ
+      2. セルは、真偽の値は `CHECK_MARK` か空、参照のリンクに当たる文字列はリンク、それ以外のスカラーはそのまま（`|` はエスケープ、改行は `<br>`）、文字列のリストは `・` で繋ぐ。`table` を持つオブジェクト（外部キー）は、`table` の値を最後の `.` でテーブルとカラムに分け、テーブルが `{分類}/{テーブル}` なら同じフォルダの `{分類}.yaml` の文書へのリンク、そうでなければ `anchors` でテーブルの `title` から引いた見出しのアンカーへのリンク（どちらも引けなければ値の文字のまま）、それ以外のオブジェクトは `{キー}: {値}` を `、` で繋ぎ、オブジェクトのリストは要素ごとのセルを `<br>` で繋ぐ
       3. 表のマーカーの引数は、`data` に、`closed` なら `closed`、隠す列があれば `+columns hide={列名,…}`、`WIDE_KEYS` の列があれば `wide={列名,…}` を続ける（空白を含む列名は記載しない）
       4. `<!-- dev-docs-table: {table_key} -->`・表のマーカー・見出しの行・区切りの行・データの行・`<!-- /table -->` の順に置いて返す
     unit_tests:
+      - name: test_schema_to_markdown_when_foreign_key
+        case: 正常
+        summary: 同じ文書のテーブルへの外部キー
+        condition: '`x-shape: sections`・`x-key: name` の `tables` に、`name: tasks`・`title: タスク` のテーブルと、`foreign_key: {table: タスク.ID}` のカラムを持つテーブルがある文書'
+        mock: なし
+        expected: カラムの表に `[タスク.ID](#tasks)` のセルがある
       - name: test_render_table
         case: 正常
         summary: セルの書き方
@@ -289,9 +295,9 @@ functions:
       - name: test_render_table_when_objects
         case: 正常
         summary: オブジェクトのリストのセル
-        condition: '`references` が `[{table: users, column: id}]` の行と、`{a: 1, b: 2}` のオブジェクトの行'
+        condition: '`anchors` が `{タスク: tasks}`、`links` に `dev/er/ユーザー.yaml` を持つ文脈で、`foreign_key` が `{table: タスク.ID}`・`{table: ユーザー/ユーザー.ID, on_delete: CASCADE}`・`{table: 不明.ID}` の行と、`{a: 1, b: 2}` のオブジェクトの行'
         mock: なし
-        expected: '`[users.id](#users)` と `a: 1、b: 2` のセルで、`件` のセルが無い'
+        expected: '`[タスク.ID](#tasks)`・`[ユーザー/ユーザー.ID](ユーザー.yaml)`・`不明.ID` と `a: 1、b: 2` のセルで、`件` のセルが無い'
       - name: test_render_table_when_closed_and_hidden
         case: 正常
         summary: 閉じた表と隠す列

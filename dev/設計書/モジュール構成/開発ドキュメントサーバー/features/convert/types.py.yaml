@@ -348,3 +348,8 @@ data_models:
         type: str
         access: 公開
         description: 変換する文書のパス。リンクの相対パスの起点
+      - name: anchors
+        title: 同じ文書のテーブルの見出し
+        type: Mapping[str, str]
+        access: 公開
+        description: '`x-key` を持つ `sections` の要素の `title` から、その要素の見出し（`x-key` の値）。外部キーのリンクのアンカーに使う。既定は空'

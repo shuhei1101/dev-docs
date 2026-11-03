@@ -87,7 +87,7 @@ functions:
       2. 進む線だけで、元の無い箱を段 0 とし、各箱の段を元の箱からの最長の段数にする
       3. 段ごとに箱を出た順に並べ、`TD` は段を縦（`y = MARGIN + 段 × (NODE_HEIGHT + RANK_GAP)`）・段の中を横（`x = MARGIN + 順 × (NODE_WIDTH + ROW_GAP)`）に、`LR` は縦と横を入れ替えて置く
       4. 進む線は、元の箱の進む向きの縁の中央から、先の箱の手前の縁の中央へ、先の段の手前 `RANK_GAP / 2` の位置で折れる縦と横の折れ線にする（`line` は `flow`）
-      5. 戻る線は、元の箱と先の箱の帯の側の縁の中央から、戻りの帯の中央を通る折れ線にする（`line` は `loop`）
+      5. 戻る線は、元の箱と先の箱の帯の側の縁の中央から、戻りの帯の中央を通る折れ線にする（`line` は `loop`）。元と先が同じ線は、出る点を縁の中央から `-NODE_HEIGHT / 4`（`LR` は `-NODE_WIDTH / 4`）、入る点を `+` 側にずらす
       6. ラベルは、線の最も長い区間の中央を `labelAt` にする
       7. 線の `id` は、中間データの線の出た順の `e{n}`（`n` は 1 始まり）にする
       8. `width`・`height` は、箱の右端・下端の最大に `MARGIN` を足し、戻る線があれば帯の側に `LOOP_BAND` を足す
@@ -122,5 +122,11 @@ functions:
         condition: 同じ中間データで 2 回呼ぶ
         mock: なし
         expected: 2 回の戻り値が等しい
+      - name: test_layout_flow_when_self_loop
+        case: 正常
+        summary: 元と先が同じ線
+        condition: '`TD` で線 `a → b`・`b → b`'
+        mock: なし
+        expected: '`b → b` の `line` が `loop` で、`points` の最初と最後の点の `y` が `b` の縁の中央から上下に `14` ずれ、帯を通る'
 test_files:
   - tests/unit/dev_docs/features/convert/test_flow_layout.py

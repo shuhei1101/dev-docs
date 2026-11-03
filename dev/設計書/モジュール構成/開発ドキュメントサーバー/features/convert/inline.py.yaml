@@ -33,8 +33,8 @@ constants:
     title: Issue 番号
     container: features/convert/inline.py
     usecase: 文書の取得
-    summary: リンクにする Issue 番号。前が英数字・`/`・`&`・`[` の `#` と、行内のコード・リンクの中は当てない
-    value: '(?<![\w/&\[])#(\d+)\b'
+    summary: リンクにする Issue 番号。前が英数字・`/`・`&`・`[`・`(` の `#` と、行内のコード・リンクの中は当てない
+    value: '(?<![\w/&\[(])#(\d+)\b'
   - name: CHOICE
     title: 値の選択肢の 1 つ
     container: features/convert/inline.py
