@@ -112,3 +112,5 @@ class RenderContext:
     links: Mapping[str, DocumentLink]
     issue_url: str | None
     path: str
+    # 同じ文書のテーブルの `title` から見出し（`x-key` の値）。外部キーのリンクのアンカーに使う
+    anchors: Mapping[str, str] = field(default_factory=dict)

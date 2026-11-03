@@ -11,7 +11,7 @@ from dev_docs.features.convert.types import DiagramHead, RenderContext
 
 TREE_LINE = re.compile(r"^(\S.*|(│   |\|   |    )*(├── |└── |\|-- |`-- ).+)$")
 TREE_BRANCH = re.compile(r"(├── |└── |\|-- |`-- )")
-ISSUE_NUMBER = re.compile(r"(?<![\w/&\[])#(\d+)\b")
+ISSUE_NUMBER = re.compile(r"(?<![\w/&\[(])#(\d+)\b")
 CHOICE = re.compile(r"^'([^']+)'（(.+)）$")
 CHOICE_SEPARATOR = " / "
 TREE_MIN_LINES = 2

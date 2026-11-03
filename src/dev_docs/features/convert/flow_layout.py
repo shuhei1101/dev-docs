@@ -105,14 +105,18 @@ def _forward_points(top_down: bool, source: Point, target: Point) -> list[Point]
 
 def _loop_points(top_down: bool, source: Point, target: Point, band: int) -> list[Point]:
     """戻る線の、戻りの帯の中央を通る折れ線の点を返す。"""
+    # 元と先が同じ線: 出る点と入る点を縁の中央から前後にずらし、幅のある輪にする
+    shift = 0
+    if source == target:
+        shift = NODE_HEIGHT // 4 if top_down else NODE_WIDTH // 4
     if top_down:
         # 上から下: 箱の右の縁から右の帯を通る
-        start = (source[0] + NODE_WIDTH, source[1] + NODE_HEIGHT // 2)
-        end = (target[0] + NODE_WIDTH, target[1] + NODE_HEIGHT // 2)
+        start = (source[0] + NODE_WIDTH, source[1] + NODE_HEIGHT // 2 - shift)
+        end = (target[0] + NODE_WIDTH, target[1] + NODE_HEIGHT // 2 + shift)
         return [start, (band, start[1]), (band, end[1]), end]
     # 左から右: 箱の下の縁から下の帯を通る
-    start = (source[0] + NODE_WIDTH // 2, source[1] + NODE_HEIGHT)
-    end = (target[0] + NODE_WIDTH // 2, target[1] + NODE_HEIGHT)
+    start = (source[0] + NODE_WIDTH // 2 - shift, source[1] + NODE_HEIGHT)
+    end = (target[0] + NODE_WIDTH // 2 + shift, target[1] + NODE_HEIGHT)
     return [start, (start[0], band), (end[0], band), end]
 
 

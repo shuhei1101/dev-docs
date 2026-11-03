@@ -2,10 +2,13 @@
 
 from __future__ import annotations
 
+import posixpath
 import re
 from collections.abc import Mapping, Sequence
+from dataclasses import replace
 from datetime import date, datetime
 from typing import Any
+from urllib.parse import quote
 
 from dev_docs.features.convert.diagrams import render_diagram
 from dev_docs.features.convert.inline import link_reference, rewrite_text
@@ -69,11 +72,34 @@ def _escape_cell(text: str) -> str:
     return text.replace("\r\n", "\n").replace("|", "\\|").replace("\n", "<br>")
 
 
-def _object_cell(value: Mapping[str, Any]) -> str:
-    """オブジェクトのセル（外部キーは列へのリンク、それ以外は `キー: 値` の並び）にする。"""
-    if "table" in value and "column" in value:
-        return f"[{value['table']}.{value['column']}](#{_anchor(str(value['table']))})"
-    return OBJECT_JOINER.join(f"{key}: {_scalar(item)}" for key, item in value.items())
+def _foreign_key(reference: str, context: RenderContext | None) -> str:
+    """外部キーの `{分類}/{テーブル}.{カラム}` を、参照先のテーブルへのリンクにする（引けなければ文字のまま）。"""
+    if context is None:
+        return _escape_cell(reference)
+    table = reference.rpartition(".")[0]
+    classification, _, name = table.rpartition("/")
+    # 他の分類のテーブル: 同じフォルダの分類の文書へのリンク
+    if classification:
+        folder = posixpath.dirname(context.path)
+        link = context.links.get(posixpath.join(folder, f"{classification}.yaml"))
+        if link is None:
+            return _escape_cell(reference)
+        relative = quote(posixpath.relpath(link.path, folder or "."), safe="/")
+        return f"[{reference}]({relative})"
+    # 同じ文書のテーブル: 論理名から見出しのアンカーへのリンク
+    heading = context.anchors.get(name)
+    if heading is None:
+        return _escape_cell(reference)
+    return f"[{reference}](#{_anchor(heading)})"
+
+
+def _object_cell(value: Mapping[str, Any], context: RenderContext | None) -> str:
+    """オブジェクトのセル（外部キーは参照先のテーブルへのリンク、それ以外は `キー: 値` の並び）にする。"""
+    if isinstance(value.get("table"), str):
+        return _foreign_key(value["table"], context)
+    return _escape_cell(
+        OBJECT_JOINER.join(f"{key}: {_scalar(item)}" for key, item in value.items())
+    )
 
 
 def _cell(value: Any, context: RenderContext | None) -> str:
@@ -81,7 +107,7 @@ def _cell(value: Any, context: RenderContext | None) -> str:
     if value is None:
         return ""
     if isinstance(value, Mapping):
-        return _escape_cell(_object_cell(value))
+        return _object_cell(value, context)
     if isinstance(value, list):
         # 文字列のリスト: `・` で繋ぐ。オブジェクトを含む: 要素ごとに改行で繋ぐ
         if all(_is_scalar(item) for item in value):
@@ -440,6 +466,28 @@ class _Builder:
             self.bullets(value, title)
 
 
+def _anchors(data: Any, schema: Any, found: dict[str, str]) -> dict[str, str]:
+    """`x-key` を持つ `sections` の要素の `title` と見出しの組を集める。"""
+    if not isinstance(schema, Mapping):
+        return found
+    if isinstance(data, Mapping):
+        properties: Mapping[str, Any] = schema.get("properties") or {}
+        for key, child in data.items():
+            _anchors(child, properties.get(key), found)
+    elif isinstance(data, list):
+        x_key = schema.get("x-key") if schema.get("x-shape") == "sections" else None
+        for element in data:
+            if (
+                x_key
+                and isinstance(element, Mapping)
+                and element.get("title")
+                and element.get(x_key)
+            ):
+                found.setdefault(str(element["title"]), str(element[x_key]))
+            _anchors(element, schema.get("items"), found)
+    return found
+
+
 def _first(data: Mapping[str, Any], keys: Sequence[str]) -> str | None:
     """`keys` のうち最初に値を持つキーを返す。"""
     return next((key for key in keys if not _is_empty(data.get(key))), None)
@@ -450,6 +498,7 @@ def schema_to_markdown(
 ) -> str:
     """YAML の文書をスキーマの `x-heading`・`x-shape`・`x-key`・`x-diagram`・`x-hidden`・`title` に沿って Markdown にする。"""
     data = document.data
+    context = replace(context, anchors=_anchors(data, schema, {}))
     heading_key = _first(data, HEADING_KEYS)
     lead_key = _first(data, LEAD_KEYS)
     name = str(data[heading_key]) if heading_key else str(document.metadata["name"])
