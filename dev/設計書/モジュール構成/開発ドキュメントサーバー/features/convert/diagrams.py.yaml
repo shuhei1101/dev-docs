@@ -1,18 +1,50 @@
 title: 開発ドキュメントサーバー / 変換 / diagrams.py
-lead: '`x-diagram` の Mermaid の描画。'
+lead: '`x-diagram` の値と手で書く Mermaid の、mdmark の図の部品か Mermaid のコードブロックへの描画。'
 diagrams:
   - name: 全体
     diagram: |-
       classDiagram
         direction TD
         スキーマ駆動の変換 ..> 図の組み立て
+        本文の書き換え ..> 手で書く図の組み立て
+        図の組み立て ..> フロー図の配置
+        手で書く図の組み立て ..> Mermaidの読み取り
+        手で書く図の組み立て ..> フロー図の配置
         class スキーマ駆動の変換 {
+          <<function>>
+        }
+        class 本文の書き換え {
           <<function>>
         }
         class 図の組み立て {
           <<function>>
         }
+        class 手で書く図の組み立て {
+          <<function>>
+        }
+        class フロー図の配置 {
+          <<function>>
+        }
+        class Mermaidの読み取り {
+          <<function>>
+        }
         click スキーマ駆動の変換 href "./markdown.py.yaml#スキーマ駆動の変換"
+        click 本文の書き換え href "./inline.py.yaml#本文の書き換え"
+        click フロー図の配置 href "./flow_layout.py.yaml#フロー図の配置"
+        click Mermaidの読み取り href "./mermaid.py.yaml#Mermaid の読み取り"
+constants:
+  - name: FLOW_KINDS
+    title: フロー図にする種類
+    container: features/convert/diagrams.py
+    usecase: 文書の取得
+    summary: mdmark のフロー図にする `x-diagram`
+    value: '`flowchart`・`dataflow`・`architecture`・`state`'
+  - name: NODE_KINDS
+    title: 箱の種類の対応
+    container: features/convert/diagrams.py
+    usecase: 文書の取得
+    summary: '`x-diagram` のノードの `kind`・`shape` から mdmark の箱の種類を決める。どれにも当たらなければ `script`'
+    value: '`kind` の `actor`・`external` と `shape` の `stadium`・`circle` は `external`、`kind` の `store` と `shape` の `cylinder` は `data`、`shape` の `diamond` は `dm`'
 functions:
   - name: render_diagram
     title: 図の組み立て
@@ -20,7 +52,7 @@ functions:
     container: features/convert/diagrams.py
     usecase: 文書の取得
     role: 変換
-    summary: '`x-diagram` の種類で、値から Mermaid の図を組み立てる'
+    summary: '`x-diagram` の種類で、値から本文に置く図のブロックを組み立てる'
     scope: public
     thread_safe: true
     args:
@@ -36,14 +68,20 @@ functions:
         required: true
         passing: positional
         description: スキーマの `x-diagram`
+      - name: head
+        title: 図の見出し
+        type: DiagramHead
+        required: true
+        passing: positional
+        description: mdmark の図の部品の定義の `title`・`scope`・`updated`
     returns:
       type: str
-      description: Mermaid のコード（```mermaid の中身）
+      description: '`<!-- flow -->` で囲んだ定義の JSON のコードブロックか、`er` の ```mermaid のコードブロック'
     process: |-
-      1. `flowchart`・`dataflow`・`architecture` は、`flowchart {direction}`（既定は `flowchart` が `TD`、他は `LR`）、ノードを `id[label]`（`shape` と `kind` で括弧を替える）、辺を `from -->|label| to`（`line` で `-.->`・`==>`・`---`）、`subgraph`、`click id href "..."` の順に並べる
-      2. `state` は `stateDiagram-v2` に、`[*] --> {initial}`、遷移を `from --> to : きっかけ [条件]`、終了状態から `[*]` を並べる
-      3. `er` は `erDiagram` に、実体と列、関連を `from {多重度} to : label` で並べる
-      4. ラベルの `"` は `#quot;` に替える
+      1. `flowchart`・`dataflow`・`architecture` は、`nodes` を箱（名前は `label`、無ければ `id`。種類は `NODE_KINDS`）、`edges` を線（`from`・`to`・`label`）にしたフロー図の中間データにする。向きは `direction` が `LR` か、`direction` が無く種類が `dataflow`・`architecture` なら `LR`、それ以外は `TD`。`subgraphs`・`clicks` は mdmark のフロー図に置き場が無いため描かず、図の元データの表に残す
+      2. `state` は、`states` と遷移の端に出た状態を出た順に箱（種類は `script`）にし、`initial` の箱の補足を `初期状態`、`final` の箱の補足を `終了状態` にする。遷移は線で、ラベルは `{trigger} [{condition}]`（どちらも無ければ無し）。向きは `TD`
+      3. 中間データをフロー図の配置にかけ、定義を JSON（`ensure_ascii=False`・字下げ 2）にして `<!-- flow -->`・```json・定義・```・`<!-- /flow -->` の順に置く
+      4. `er` は、今と同じ `erDiagram` の Mermaid を ```mermaid のコードブロックにする
     exceptions:
       - name: ValueError
         condition: 知らない図の種類
@@ -52,15 +90,27 @@ functions:
       - name: test_render_diagram
         case: 正常
         summary: フローチャート
-        condition: '`nodes` 2 つ・ラベルつきの `edges` 1 つ・`direction` 無し'
+        condition: '`nodes` 2 つ（`label` が `A`・`B`）・ラベル `x` の `edges` 1 つ・`direction` 無し'
         mock: なし
-        expected: '`flowchart TD`、`a[A]`、`a -->|x| b` の行'
+        expected: '`<!-- flow -->` で囲んだ JSON で、`title`・`scope`・`updated` が見出しの値、`nodes` の `name` が `A`・`B`、`wires` 1 本の `label` が `x`。```mermaid が無い'
+      - name: test_render_diagram_when_node_kinds
+        case: 正常
+        summary: 箱の種類
+        condition: '`kind` が `actor`・`store`・`process` のノード'
+        mock: なし
+        expected: '箱の `kind` が `external`・`data`・`script`'
       - name: test_render_diagram_when_state
         case: 正常
         summary: 状態遷移
-        condition: '`initial` と `transitions` 2 つ'
+        condition: '`initial: 下書き`・`final: [公開]`・`transitions` 2 つ（1 つは `trigger` と `condition` を持つ）'
         mock: なし
-        expected: '`stateDiagram-v2`、`[*] --> 下書き` と遷移の行'
+        expected: '箱 `下書き` の `sub` が `初期状態`、箱 `公開` の `sub` が `終了状態`、線のラベルが `{trigger} [{condition}]`'
+      - name: test_render_diagram_when_er
+        case: 正常
+        summary: ER 図は Mermaid のまま
+        condition: '`kind="er"`'
+        mock: なし
+        expected: '```mermaid のコードブロックの `erDiagram`'
       - name: test_render_diagram_when_unknown
         case: 異常
         summary: 知らない種類
@@ -68,5 +118,54 @@ functions:
         mock: なし
         expected: '`ValueError`'
         exception: 知らない図の種類
+  - name: render_mermaid
+    title: 手で書く図の組み立て
+    kind: 関数
+    container: features/convert/diagrams.py
+    usecase: 文書の取得
+    role: 変換
+    summary: 手で書く Mermaid のコードを、読み取れれば mdmark の図の部品に、読み取れなければ Mermaid のコードブロックのまま組み立てる
+    scope: public
+    thread_safe: true
+    args:
+      - name: code
+        title: コード
+        type: str
+        required: true
+        passing: positional
+        description: '```mermaid のコードブロックの中身'
+      - name: head
+        title: 図の見出し
+        type: DiagramHead
+        required: true
+        passing: positional
+        description: mdmark の図の部品の定義の `title`・`scope`・`updated`
+    returns:
+      type: str
+      description: '`<!-- flow -->`・`<!-- sequence -->` で囲んだ定義の JSON のコードブロックか、元の ```mermaid のコードブロック'
+    process: |-
+      1. Mermaid の読み取りにかける
+      2. フロー図の中間データは、フロー図の配置にかけて `<!-- flow -->` で囲む
+      3. シーケンス図の中間データは、`participants`（`id`・`kind`・`name`）と `steps`（`from`・`to`・`label`、返す線は `reply: true`）の定義にして `<!-- sequence -->` で囲む
+      4. `None` なら、`code` を ```mermaid のコードブロックにして返す
+    unit_tests:
+      - name: test_render_mermaid
+        case: 正常
+        summary: シーケンス図
+        condition: '`participant A as 画面` と `A->>B: 読む` のコード'
+        mock: なし
+        expected: '`<!-- sequence -->` で囲んだ JSON で、`participants` の `name` が `画面`・`B`、`steps` 1 つの `label` が `読む`'
+      - name: test_render_mermaid_when_flowchart
+        case: 正常
+        summary: フローチャート
+        condition: '`flowchart TD` と `a --> b` のコード'
+        mock: なし
+        expected: '`<!-- flow -->` で囲んだ JSON'
+      - name: test_render_mermaid_when_unreadable
+        case: 正常
+        summary: 読み取れないコード
+        condition: '`Note over A: 補足` の行を含む `sequenceDiagram`'
+        mock: なし
+        expected: '元のコードの全ての行を持つ ```mermaid のコードブロック'
 test_files:
   - tests/unit/dev_docs/features/convert/test_diagrams.py

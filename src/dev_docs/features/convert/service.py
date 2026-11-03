@@ -10,7 +10,12 @@ from pathlib import Path
 from dev_docs.features.access.types import Target, script_at
 from dev_docs.features.convert.embed import EMBED_PATTERN, expand_embeds
 from dev_docs.features.convert.markdown import schema_to_markdown
-from dev_docs.features.convert.types import Converted, ConvertFailure
+from dev_docs.features.convert.types import (
+    Converted,
+    ConvertFailure,
+    DocumentLink,
+    RenderContext,
+)
 from dev_docs.features.documents.fields import is_markdown_body
 from dev_docs.features.documents.store import DocumentStore
 from dev_docs.features.documents.types import Document
@@ -149,6 +154,21 @@ class ConvertService:
             self._prune()
         return result.stdout
 
+    def _context(self, target: Target, document: Document) -> RenderContext:
+        """同じ配信元の文書を ID・パスで引くリンクの引き先と、Issue の URL を集める。"""
+        links: dict[str, DocumentLink] = {}
+        for found in self.store.load(target).documents:
+            link = DocumentLink(title=str(found.metadata["name"]), path=found.path)
+            for key in (found.id, found.path, found.body_path):
+                if key is not None:
+                    links.setdefault(key, link)
+        repository = target.source.config.github_repository
+        return RenderContext(
+            links=links,
+            issue_url=f"https://github.com/{repository}/issues/" if repository else None,
+            path=document.path,
+        )
+
     def convert(self, target: Target, document: Document) -> Converted:
         """1 件の文書を Markdown にする。"""
         table = target.source.table(document.kind)
@@ -160,7 +180,11 @@ class ConvertService:
         elif is_markdown_body(document):
             markdown = document.body
         else:
-            markdown = schema_to_markdown(document, self.store.row_schema(target, document.kind))
+            markdown = schema_to_markdown(
+                document,
+                self.store.row_schema(target, document.kind),
+                self._context(target, document),
+            )
         # ref を読むときだけ、埋め込みのマーカーがあればそのリビジョンを取り出した場所から読む
         base = target.base
         if target.ref is not None and re.search(EMBED_PATTERN, markdown):

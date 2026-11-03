@@ -1,34 +1,36 @@
-"""`x-diagram` の Mermaid の組み立て。"""
+"""`x-diagram` の値と手で書く Mermaid の、mdmark の図の部品か Mermaid のコードブロックへの描画。"""
 
 from __future__ import annotations
 
+import json
 import re
 from collections.abc import Mapping, Sequence
 from typing import Any
 
-from dev_docs.features.convert.types import DiagramKind
+from dev_docs.features.convert.flow_layout import layout_flow
+from dev_docs.features.convert.mermaid import parse_mermaid
+from dev_docs.features.convert.types import (
+    DiagramHead,
+    DiagramKind,
+    FlowEdge,
+    FlowGraph,
+    FlowNode,
+    NodeKind,
+)
 
 INDENT = "  "
-FLOW_KINDS = ("flowchart", "dataflow", "architecture")
-SHAPE_BRACKETS = {
-    "rect": ("[", "]"),
-    "round": ("(", ")"),
-    "stadium": ("([", "])"),
-    "diamond": ("{", "}"),
-    "circle": ("((", "))"),
-    "cylinder": ("[(", ")]"),
-    "hexagon": ("{{", "}}"),
-    "subroutine": ("[[", "]]"),
+FLOW_KINDS = ("flowchart", "dataflow", "architecture", "state")
+LEFT_TO_RIGHT_KINDS = ("dataflow", "architecture")
+# `x-diagram` のノードの `kind`・`shape` から mdmark の箱の種類（どれにも当たらなければ `script`）
+NODE_KINDS: dict[str, NodeKind] = {
+    "actor": "external",
+    "external": "external",
+    "stadium": "external",
+    "circle": "external",
+    "store": "data",
+    "cylinder": "data",
+    "diamond": "dm",
 }
-KIND_SHAPES = {
-    "actor": "stadium",
-    "process": "round",
-    "store": "cylinder",
-    "system": "rect",
-    "external": "subroutine",
-}
-EDGE_ARROWS = {"solid": "-->", "dotted": "-.->", "thick": "==>", "open": "---"}
-NEEDS_QUOTE = re.compile(r"[()\[\]{}|\"<>;#&]")
 PLAIN_NAME = re.compile(r"^[\w\-]+$")
 
 
@@ -37,78 +39,88 @@ def _text(value: Any) -> str:
     return str(value).replace("\n", " ").replace('"', "#quot;")
 
 
-def _label(value: Any) -> str:
-    """ラベルに記号があるときだけ `"` で囲む。"""
-    text = _text(value)
-    return f'"{text}"' if NEEDS_QUOTE.search(text) or "#quot;" in text else text
-
-
 def _items(value: Mapping[str, Any], key: str) -> list[Mapping[str, Any]]:
     """値の配列のうち、辞書の要素だけを取り出す。"""
     items = value.get(key)
     return [item for item in items if isinstance(item, Mapping)] if isinstance(items, list) else []
 
 
-def _flowchart(value: Mapping[str, Any], kind: str) -> str:
-    """`flowchart` の Mermaid を組み立てる。"""
-    direction = value.get("direction") or ("TD" if kind == "flowchart" else "LR")
-    lines = [f"flowchart {direction}"]
-    for node in _items(value, "nodes"):
-        shape = node.get("shape") or KIND_SHAPES.get(str(node.get("kind")), "rect")
-        opening, closing = SHAPE_BRACKETS.get(str(shape), SHAPE_BRACKETS["rect"])
-        lines.append(
-            f"{INDENT}{node['id']}{opening}{_label(node.get('label', node['id']))}{closing}"
-        )
+def _block(marker: str, definition: Mapping[str, Any]) -> str:
+    """mdmark の図の部品の範囲に、定義の JSON のコードブロックを置く。"""
+    code = json.dumps(definition, ensure_ascii=False, indent=2)
+    return f"<!-- {marker} -->\n\n```json\n{code}\n```\n\n<!-- /{marker} -->"
+
+
+def _node_kind(node: Mapping[str, Any]) -> NodeKind:
+    """ノードの `kind` と `shape` から箱の種類を決める。"""
+    for key in ("kind", "shape"):
+        kind = NODE_KINDS.get(str(node.get(key)))
+        if kind is not None:
+            return kind
+    return "script"
+
+
+def _flow_graph(value: Mapping[str, Any], kind: DiagramKind) -> FlowGraph:
+    """flow 系の値を中間データにする（`subgraphs`・`clicks` は描かない）。"""
+    direction = value.get("direction")
+    left_to_right = direction == "LR" or (direction is None and kind in LEFT_TO_RIGHT_KINDS)
+    nodes = [
+        FlowNode(id=str(node["id"]), name=str(node.get("label", node["id"])), kind=_node_kind(node))
+        for node in _items(value, "nodes")
+    ]
+    known = {node.id for node in nodes}
+    edges: list[FlowEdge] = []
     for edge in _items(value, "edges"):
-        arrow = EDGE_ARROWS.get(str(edge.get("line") or "solid"), "-->")
-        label = f"|{_text(edge['label'])}|" if edge.get("label") else ""
-        lines.append(f"{INDENT}{edge['from']} {arrow}{label} {edge['to']}")
-    for group in _items(value, "subgraphs"):
-        title = _label(group.get("label", group["id"]))
-        lines.append(f"{INDENT}subgraph {group['id']}[{title}]")
-        lines.extend(f"{INDENT * 2}{node_id}" for node_id in group.get("nodes", []))
-        lines.append(f"{INDENT}end")
-    for click in _items(value, "clicks"):
-        lines.append(f'{INDENT}click {click["id"]} href "{click["href"]}"')
-    return "\n".join(lines)
+        source, target = str(edge["from"]), str(edge["to"])
+        # 宣言の無い端の箱: 名前を ID にして足す
+        for end in (source, target):
+            if end not in known:
+                nodes.append(FlowNode(id=end, name=end, kind="script"))
+                known.add(end)
+        label = edge.get("label")
+        edges.append(FlowEdge(source=source, target=target, label=str(label) if label else None))
+    return FlowGraph(direction="LR" if left_to_right else "TD", nodes=nodes, edges=edges)
 
 
-def _state(value: Mapping[str, Any]) -> str:
-    """`stateDiagram-v2` の Mermaid を組み立てる。"""
-    names: list[str] = []
-    for item in _items(value, "states"):
-        names.append(str(item["name"]))
+def _state_graph(value: Mapping[str, Any]) -> FlowGraph:
+    """状態遷移の値を、状態を箱・遷移を線にした中間データにする。"""
+    names: list[str] = [str(item["name"]) for item in _items(value, "states")]
     for transition in _items(value, "transitions"):
         for end in (transition.get("from"), transition.get("to")):
             if end is not None and str(end) not in names:
                 names.append(str(end))
-    ids: dict[str, str] = {}
-    lines = ["stateDiagram-v2"]
-    for index, name in enumerate(names):
-        if PLAIN_NAME.match(name):
-            ids[name] = name
-        else:
-            ids[name] = f"s{index}"
-            lines.append(f'{INDENT}state "{_text(name)}" as s{index}')
     initial = value.get("initial")
-    if initial is not None:
-        lines.append(f"{INDENT}[*] --> {ids.get(str(initial), initial)}")
-    for transition in _items(value, "transitions"):
-        label = " ".join(
-            part
-            for part in (
-                _text(transition["trigger"]) if transition.get("trigger") else "",
-                f"[{_text(transition['condition'])}]" if transition.get("condition") else "",
-            )
-            if part
-        )
-        suffix = f" : {label}" if label else ""
-        source, target = str(transition["from"]), str(transition["to"])
-        lines.append(f"{INDENT}{ids[source]} --> {ids[target]}{suffix}")
     final = value.get("final")
-    for name in final if isinstance(final, list) else []:
-        lines.append(f"{INDENT}{ids.get(str(name), name)} --> [*]")
-    return "\n".join(lines)
+    finals = {str(name) for name in final} if isinstance(final, list) else set()
+    ids = {name: f"s{index + 1}" for index, name in enumerate(names)}
+    nodes = [
+        FlowNode(
+            id=ids[name],
+            name=name,
+            kind="script",
+            sub="初期状態"
+            if initial is not None and name == str(initial)
+            else "終了状態"
+            if name in finals
+            else None,
+        )
+        for name in names
+    ]
+    edges: list[FlowEdge] = []
+    for transition in _items(value, "transitions"):
+        parts = [
+            str(transition["trigger"]) if transition.get("trigger") else "",
+            f"[{transition['condition']}]" if transition.get("condition") else "",
+        ]
+        label = " ".join(part for part in parts if part)
+        edges.append(
+            FlowEdge(
+                source=ids[str(transition["from"])],
+                target=ids[str(transition["to"])],
+                label=label or None,
+            )
+        )
+    return FlowGraph(direction="TD", nodes=nodes, edges=edges)
 
 
 def _entity_name(name: Any) -> str:
@@ -142,12 +154,45 @@ def _er(value: Mapping[str, Any]) -> str:
     return "\n".join(lines)
 
 
-def render_diagram(value: Mapping[str, Any], kind: DiagramKind) -> str:
-    """`x-diagram` の種類で、値から Mermaid の図を組み立てる。"""
-    if kind in FLOW_KINDS:
-        return _flowchart(value, kind)
+def render_diagram(value: Mapping[str, Any], kind: DiagramKind, head: DiagramHead) -> str:
+    """`x-diagram` の種類で、値から本文に置く図のブロックを組み立てる。"""
     if kind == "state":
-        return _state(value)
+        return _block("flow", layout_flow(_state_graph(value), head))
+    if kind in FLOW_KINDS:
+        return _block("flow", layout_flow(_flow_graph(value, kind), head))
     if kind == "er":
-        return _er(value)
+        return f"```mermaid\n{_er(value)}\n```"
     raise ValueError(f"x-diagram {kind} は描けません")
+
+
+def render_mermaid(code: str, head: DiagramHead) -> str:
+    """手で書く Mermaid のコードを、読み取れれば mdmark の図の部品に、読み取れなければ Mermaid のまま組み立てる。"""
+    graph = parse_mermaid(code)
+    # 読み取れない: 元のコードのまま
+    if graph is None:
+        return f"```mermaid\n{code}\n```"
+    # フローチャート: 配置してフロー図にする
+    if isinstance(graph, FlowGraph):
+        return _block("flow", layout_flow(graph, head))
+    # シーケンス図: 相手とメッセージの定義にする
+    steps: list[dict[str, Any]] = []
+    for message in graph.messages:
+        step: dict[str, Any] = {
+            "from": message.source,
+            "to": message.target,
+            "label": message.label,
+        }
+        if message.reply:
+            step["reply"] = True
+        steps.append(step)
+    definition = {
+        "title": head.title,
+        "scope": head.scope,
+        "updated": head.updated,
+        "participants": [
+            {"id": participant.id, "kind": participant.kind, "name": participant.name}
+            for participant in graph.participants
+        ],
+        "steps": steps,
+    }
+    return _block("sequence", definition)

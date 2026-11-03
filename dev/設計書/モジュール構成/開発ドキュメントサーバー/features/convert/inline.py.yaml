@@ -1,0 +1,161 @@
+title: 開発ドキュメントサーバー / 変換 / inline.py
+lead: 文字列の値の中の、図・ファイルツリー・手順・参照・Issue 番号・値の選択肢の書き換え。
+diagrams:
+  - name: 全体
+    diagram: |-
+      classDiagram
+        direction TD
+        スキーマ駆動の変換 ..> 本文の書き換え
+        スキーマ駆動の変換 ..> 参照のリンク
+        本文の書き換え ..> 手で書く図の組み立て
+        class スキーマ駆動の変換 {
+          <<function>>
+        }
+        class 本文の書き換え {
+          <<function>>
+        }
+        class 参照のリンク {
+          <<function>>
+        }
+        class 手で書く図の組み立て {
+          <<function>>
+        }
+        click スキーマ駆動の変換 href "./markdown.py.yaml#スキーマ駆動の変換"
+        click 手で書く図の組み立て href "./diagrams.py.yaml#手で書く図の組み立て"
+constants:
+  - name: TREE_LINE
+    title: ファイルツリーの罫線
+    container: features/convert/inline.py
+    usecase: 文書の取得
+    summary: 言語の無いコードブロックの全ての行がこの書き方なら、ファイルツリーにする
+    value: '^(\S.*|(│   |\|   |    )*(├── |└── |\|-- |`-- ).+)$'
+  - name: ISSUE_NUMBER
+    title: Issue 番号
+    container: features/convert/inline.py
+    usecase: 文書の取得
+    summary: リンクにする Issue 番号。前が英数字・`/`・`&`・`[`・`(` の `#` と、行内のコード・リンクの中は当てない
+    value: '(?<![\w/&\[(])#(\d+)\b'
+  - name: CHOICE
+    title: 値の選択肢の 1 つ
+    container: features/convert/inline.py
+    usecase: 文書の取得
+    summary: 値の選択肢の 1 つ。` / ` で区切った全ての部分がこの書き方なら、値の選択肢にする
+    value: '^''([^'']+)''（(.+)）$'
+functions:
+  - name: rewrite_text
+    title: 本文の書き換え
+    kind: 関数
+    container: features/convert/inline.py
+    usecase: 文書の取得
+    role: 変換
+    summary: 文字列の値を、mdmark の記法を使った Markdown に書き換える
+    scope: public
+    thread_safe: true
+    args:
+      - name: text
+        title: 文字列
+        type: str
+        required: true
+        passing: positional
+        description: 文書の文字列の値
+      - name: context
+        title: 描画の文脈
+        type: RenderContext
+        required: true
+        passing: positional
+        description: Issue の URL
+      - name: head
+        title: 図の見出し
+        type: DiagramHead
+        required: true
+        passing: positional
+        description: 中の ```mermaid を部品にするときの見出し
+    returns:
+      type: str
+      description: 書き換えた Markdown
+    process: |-
+      1. 値の全体が値の選択肢（` / ` で区切った全ての部分が `CHOICE`）なら、部分ごとに `` - `badge:{値}` {説明} `` の行にして返す
+      2. ```mermaid のコードブロックを、1 つずつ手で書く図の組み立てで置き換える
+      3. 言語の無いコードブロックのうち、2 行以上で全ての行が `TREE_LINE` に当たり、罫線を持つ行が 1 つ以上あるものの言語を `tree` にする
+      4. 値の全体が番号付きの箇条書き（全ての行が `{数}. ` で始まるか、その字下げの続き）なら、`<!-- steps -->`・箇条書き・`<!-- /steps -->` にする
+      5. コードブロックの外で、`ISSUE_NUMBER` を `[#{番号}]({issue_url}{番号})` にする（`issue_url` が `None` なら書き換えない）
+    unit_tests:
+      - name: test_rewrite_text_when_mermaid
+        case: 正常
+        summary: 中の図を部品にする
+        condition: '前後に段落を持つ、```mermaid の `sequenceDiagram` のコードブロック'
+        mock: なし
+        expected: 前後の段落が残り、コードブロックが `<!-- sequence -->` の範囲に替わる
+      - name: test_rewrite_text_when_tree
+        case: 正常
+        summary: ファイルツリー
+        condition: '`src/`・`├── a.py`・`└── b.py` の言語の無いコードブロック'
+        mock: なし
+        expected: コードブロックの言語が `tree`
+      - name: test_rewrite_text_when_steps
+        case: 正常
+        summary: 手順
+        condition: '`1. 開く`・`2. 読む` の 2 行'
+        mock: なし
+        expected: '`<!-- steps -->` と `<!-- /steps -->` で囲んだ箇条書き'
+      - name: test_rewrite_text_when_issue
+        case: 正常
+        summary: Issue 番号
+        condition: '`#26 で直す` と、行内のコード `` `#27` ``、`issue_url` が `https://github.com/o/r/issues/`'
+        mock: なし
+        expected: '`[#26](https://github.com/o/r/issues/26) で直す` で、`` `#27` `` は書き換えない'
+      - name: test_rewrite_text_when_no_issue_url
+        case: 正常
+        summary: Issue の URL が無い
+        condition: '`#26`、`issue_url` が `None`'
+        mock: なし
+        expected: '`#26` のまま'
+      - name: test_rewrite_text_when_choices
+        case: 正常
+        summary: 値の選択肢
+        condition: '`''planned''（予定） / ''allowed''（許可）`'
+        mock: なし
+        expected: '`` - `badge:planned` 予定 `` と `` - `badge:allowed` 許可 `` の 2 行'
+  - name: link_reference
+    title: 参照のリンク
+    kind: 関数
+    container: features/convert/inline.py
+    usecase: 文書の取得
+    role: 変換
+    summary: 文書の ID・パスを指す参照の値を、文書のタイトル付きのリンクにする
+    scope: public
+    thread_safe: true
+    args:
+      - name: value
+        title: 値
+        type: str
+        required: true
+        passing: positional
+        description: '`{文書の ID}#{項目のパス}` か文書のパス'
+      - name: context
+        title: 描画の文脈
+        type: RenderContext
+        required: true
+        passing: positional
+        description: リンクの引き先と、相対パスの起点
+    returns:
+      type: str | None
+      description: '`[{タイトル}]({相対パス})` か、`[{タイトル} / {項目のパス}]({相対パス})`。引き先に無ければ `None`'
+    process: |-
+      1. 値を最初の `#` で文書の ID と項目のパスに分け、`links` を ID で引く
+      2. 相対パスは、文書のパスのフォルダからリンクの先の `path` への相対パス（`/` 区切り・URL エンコード）にする
+    unit_tests:
+      - name: test_link_reference
+        case: 正常
+        summary: 項目を指す参照
+        condition: '`dev/a#flows[正常系]`、`links` に `dev/a`（タイトル `A`・パス `dev/a.yaml`）、文書のパスが `dev/b.yaml`'
+        mock: なし
+        expected: '`[A / flows\[正常系\]](a.yaml)`（リンクの文字の `[`・`]` はエスケープする）'
+      - name: test_link_reference_when_unknown
+        case: 正常
+        summary: 引き先に無い
+        condition: '`links` に無い ID'
+        mock: なし
+        expected: '`None`'
+test_files:
+  - tests/unit/dev_docs/features/convert/test_inline.py

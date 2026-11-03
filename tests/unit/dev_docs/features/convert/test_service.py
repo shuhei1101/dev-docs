@@ -12,7 +12,7 @@ from dev_docs.features.access.types import Target
 from dev_docs.features.convert import service as service_module
 from dev_docs.features.convert.service import ConvertService
 from dev_docs.features.documents.store import DocumentStore
-from dev_docs.features.documents.types import Document
+from dev_docs.features.documents.types import Document, LoadResult
 from dev_docs.features.history.snapshot import SnapshotStore
 from dev_docs.features.sources.types import DocumentTable, ScriptEntry, ServedSource, SourceConfig
 from dev_docs.integrations.scripts import ScriptResult
@@ -36,7 +36,9 @@ ITEMS_SCHEMA = {
 def _service(tmp_path: Path, schema: dict[str, Any], timeout_sec: float = 10) -> ConvertService:
     """決めたスキーマを返す文書のストアの偽物で、変換を作る。"""
     store = SimpleNamespace(
-        schema=lambda target, kind: schema, row_schema=lambda target, kind: schema
+        schema=lambda target, kind: schema,
+        row_schema=lambda target, kind: schema,
+        load=lambda target: LoadResult(),
     )
     return ConvertService(tmp_path / "converted", store, timeout_sec)  # type: ignore[arg-type]
 

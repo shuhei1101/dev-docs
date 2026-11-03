@@ -891,3 +891,111 @@ def test_normal_when_nav_grouped_by_folder(
     )
     _group(page, "lang").get_by_role("link", name="言語", exact=True).click()
     expect(_heading(page)).to_have_text("言語")
+
+
+DRAWN_ROW = "  - id: drawn\n    paths: [drawn/*.yaml]\n    schema: schemas/drawn.schema.yaml\n"
+# 図・属性・複数行の値・内部向けの項目を持つ種類のスキーマ
+DRAWN_SCHEMA = """\
+type: object
+title: 図の文書
+properties:
+  id: {type: string, title: ID}
+  title: {type: string, title: タイトル}
+  lead: {type: string, title: リード}
+  internal_note: {type: string, title: 内部メモ, x-hidden: true}
+  flow:
+    title: 処理の流れ
+    x-heading: 処理の流れ
+    x-shape: diagram
+    x-diagram: flowchart
+    properties:
+      nodes:
+        type: array
+        items:
+          properties: {id: {title: ID}, label: {title: 表示}, shape: {title: 形}}
+      edges:
+        type: array
+        items:
+          properties: {from: {title: 元}, to: {title: 先}}
+  states:
+    title: 状態
+    x-heading: 状態
+    x-shape: diagram
+    x-diagram: state
+  sequence: {type: string, title: やり取り, x-heading: やり取り}
+  spec:
+    type: object
+    title: 仕様
+    x-heading: 仕様
+    properties: {kind: {title: 種類}, limit: {title: 上限}, owner: {title: 担当}}
+  command: {type: string, title: 全件実行}
+"""
+DRAWN_DOC = """\
+id: doc-6
+title: 図の文書 6
+lead: 図と表で読む文書
+internal_note: 内部メモの値
+flow:
+  nodes:
+    - {id: a, label: 受付, shape: rect}
+    - {id: b, label: 保存, shape: cylinder}
+  edges:
+    - {from: a, to: b}
+states:
+  initial: 下書き
+  states: [{name: 下書き}, {name: 公開}]
+  transitions:
+    - {from: 下書き, to: 公開, trigger: 公開する}
+sequence: |-
+  ```mermaid
+  sequenceDiagram
+    participant U as 利用者
+    U->>S: 開く
+    S-->>U: 本文
+  ```
+spec: {kind: 定期, limit: 3, owner: 運用}
+command: |-
+  ```bash
+  uv run pytest
+  ```
+"""
+
+
+def test_normal_when_schema_document_drawn(
+    make_source: Callable[..., Any],
+    serve: Callable[..., Any],
+    sample_file_set: Callable[..., dict[str, str]],
+    sample_config_text: Callable[..., str],
+    page: Page,
+) -> None:
+    """スキーマ駆動の文書の図を mdmark の部品で、スカラーの並びを「項目 / 値」の表で読む（正常系）。"""
+    # 準備
+    files = sample_file_set(
+        **{
+            "dev-docs.yaml": sample_config_text(DRAWN_ROW),
+            "schemas/drawn.schema.yaml": DRAWN_SCHEMA,
+            "drawn/doc-6.yaml": DRAWN_DOC,
+        }
+    )
+    served = serve(make_source("sample", files))
+    main = page.get_by_role("main")
+    source_tables = main.locator("details.mdmark-table-details")
+    # 実行
+    page.goto(served.url("/sample/drawn/doc-6"))
+    expect(_heading(page)).to_have_text("図の文書 6")
+    source_tables.first.locator("summary").click()
+    # 検証
+    expect(main.locator('figure.mdmark-diagram[data-diagram="flow"]')).to_have_count(2)
+    expect(main.locator('figure.mdmark-diagram[data-diagram="sequence"]')).to_have_count(1)
+    expect(main.get_by_text("sequenceDiagram")).to_have_count(0)
+    expect(source_tables.first.locator("th:visible")).to_have_text(["表示"])
+    expect(source_tables.nth(1)).not_to_have_attribute("open", "")
+    expect(main.locator(".mdmark-syntax-warning")).to_have_count(0)
+    attributes = main.locator("table").filter(has=page.locator("th", has_text="項目"))
+    expect(attributes.locator("th")).to_have_text(["項目", "値"])
+    expect(attributes.locator("tbody tr").first.locator("td")).to_have_text(["種類", "定期"])
+    expect(main.locator("p", has_text=re.compile("^全件実行$"))).to_have_count(1)
+    expect(main.locator("pre", has_text="uv run pytest")).to_have_count(1)
+    expect(main.get_by_text("図と表で読む文書")).to_have_count(1)
+    expect(main.get_by_text("タイトル")).to_have_count(0)
+    expect(main.get_by_text("内部メモの値")).to_have_count(0)
