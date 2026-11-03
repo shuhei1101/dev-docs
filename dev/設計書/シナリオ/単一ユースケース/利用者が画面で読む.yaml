@@ -599,7 +599,7 @@ scenarios:
         description: なし（実環境で実行。ブラウザは Playwright で操作する）
         notes: '-'
       - name: 図と属性を持つ文書
-        description: 'sample に、`x-shape: diagram`・`x-diagram: flowchart` の項目（ノード 2 つ・辺 1 つ）、`x-shape: diagram`・`x-diagram: state` の項目、スカラーが 3 つ以上並ぶオブジェクト、改行を含む値、`x-hidden: true` の項目を持つスキーマと、その文書 6 を置く'
+        description: 'sample に、`x-shape: diagram`・`x-diagram: flowchart` の項目（ノード 2 つ・辺 1 つ）、`x-shape: diagram`・`x-diagram: state` の項目、`sequenceDiagram` を書いた Mermaid の文字列の項目、スカラーが 3 つ以上並ぶオブジェクト、改行を含む値、`x-hidden: true` の項目を持つスキーマと、その文書 6 を置く'
         notes: 文書 6 の `title`・`lead` は見出しとリードに使う
       - name: dev-docs
         description: sample を配信している dev-docs
@@ -620,7 +620,7 @@ scenarios:
         UI-->>U: 元データの表
       ```
     expected:
-      - flowchart と state の項目が mdmark のフロー図で描かれ、Mermaid のコードブロックが本文に出ない
+      - flowchart と state の項目が mdmark のフロー図で、`sequenceDiagram` の項目が mdmark のシーケンス図で描かれ、Mermaid のコードブロックが本文に出ない
       - 図の下の元データの表は閉じた状態で出て、開くとノードの表の先頭の列が `表示` で、ID と形の列が隠れている
       - 元データの表に、列名が表に無い・先頭の列を隠せないという mdmark の警告が出ない
       - スカラーが並ぶオブジェクトが「項目 / 値」の 2 列の表で出る
