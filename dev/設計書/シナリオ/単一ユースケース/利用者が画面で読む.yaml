@@ -593,6 +593,39 @@ scenarios:
       - group `lang` の中に group `py` があり、`rules/lang/py/style.yaml` の文書が入る
       - group `lang` の `rules/lang/index.yaml` の文書を押すと、その文書の本文が開く
     test: test_normal_when_nav_grouped_by_folder
+  - name: 正常シナリオ（スキーマ駆動の文書を図と表で読む）
+    setup:
+      - name: Mock
+        description: なし（実環境で実行。ブラウザは Playwright で操作する）
+        notes: '-'
+      - name: 図と属性を持つ文書
+        description: 'sample に、`x-shape: diagram`・`x-diagram: flowchart` の項目（ノード 2 つ・辺 1 つ）、`x-shape: diagram`・`x-diagram: state` の項目、スカラーが 3 つ以上並ぶオブジェクト、改行を含む値、`x-hidden: true` の項目を持つスキーマと、その文書 6 を置く'
+        notes: 文書 6 の `title`・`lead` は見出しとリードに使う
+      - name: dev-docs
+        description: sample を配信している dev-docs
+        notes: '-'
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        actor U as 利用者
+        participant B as ブラウザ（文書の画面）
+        participant S as dev-docs のサーバー
+
+        U->>B: 文書 6 を開く
+        B->>S: 文書の取得（文書 6）
+        S->>S: スキーマ駆動で Markdown にする
+        S-->>B: 文書 6 の Markdown
+        B-->>U: 図と表で描いた文書 6 の本文
+        U->>B: 図の下の元データの表を開く
+        B-->>U: 元データの表
+      ```
+    expected:
+      - flowchart と state の項目が mdmark のフロー図で描かれ、Mermaid のコードブロックが本文に出ない
+      - 図の下の元データの表は閉じた状態で出て、開くと ID と形の列が隠れている
+      - スカラーが並ぶオブジェクトが「項目 / 値」の 2 列の表で出る
+      - 改行を含む値は、ラベルの次の行からブロックで出る
+      - '`title`・`lead` の値が見出しとリードの後に重ねて出ず、`x-hidden: true` の項目が本文に出ない'
+    test: test_normal_when_schema_document_drawn
 lead: 利用者がブラウザで配信元の文書の画面を開き、タブ・サイドバー・検索・リビジョンの切り替え・差分で文書を読む。
 issue: 17
 primary_actor: 利用者
