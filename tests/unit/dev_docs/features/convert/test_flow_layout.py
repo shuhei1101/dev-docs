@@ -92,3 +92,18 @@ def test_layout_flow_when_same_input() -> None:
     second = layout_flow(graph, HEAD)
     # 検証
     assert first == second
+
+
+def test_layout_flow_when_self_loop() -> None:
+    """元と先が同じ線（正常系）。"""
+    # 準備
+    graph = _graph("TD", [("a", "b", None), ("b", "b", None)])
+    # 実行
+    result = layout_flow(graph, HEAD)
+    # 検証
+    wire = result["wires"][1]
+    b = _node(result, "b")
+    center = b["y"] + b["h"] // 2
+    assert wire["line"] == "loop"
+    assert (wire["points"][0][1], wire["points"][-1][1]) == (center - 14, center + 14)
+    assert wire["points"][1][0] > b["x"] + b["w"]

@@ -3,6 +3,7 @@ from __future__ import annotations
 from collections.abc import Callable
 from datetime import UTC, datetime
 from typing import Any
+from urllib.parse import quote
 
 from dev_docs.features.convert.markdown import (
     render_attributes,
@@ -241,6 +242,41 @@ def test_schema_to_markdown_when_examples(make_document: Callable[..., Document]
     assert result.count("## レスポンス例", start, end) == 1
 
 
+def test_schema_to_markdown_when_foreign_key(make_document: Callable[..., Document]) -> None:
+    """同じ文書のテーブルへの外部キー（正常系）。"""
+    # 準備
+    schema = {
+        "properties": {
+            "tables": {
+                "x-shape": "sections",
+                "x-key": "name",
+                "items": {
+                    "properties": {
+                        "columns": {"x-heading": "カラム", "x-shape": "table", "items": {}},
+                    }
+                },
+            }
+        }
+    }
+    document = make_document(
+        data={
+            "name": "N",
+            "tables": [
+                {"name": "tasks", "title": "タスク", "columns": [{"name": "id"}]},
+                {
+                    "name": "comments",
+                    "title": "コメント",
+                    "columns": [{"name": "task_id", "foreign_key": {"table": "タスク.ID"}}],
+                },
+            ],
+        }
+    )
+    # 実行
+    result = schema_to_markdown(document, schema, CONTEXT)
+    # 検証
+    assert "[タスク.ID](#tasks)" in result
+
+
 def test_render_table() -> None:
     """セルの書き方（正常系）。"""
     # 準備
@@ -261,14 +297,31 @@ def test_render_table() -> None:
 def test_render_table_when_objects() -> None:
     """オブジェクトのリストのセル（正常系）。"""
     # 準備
+    context = RenderContext(
+        links={
+            "dev/er/ユーザー.yaml": DocumentLink(
+                title="ER 図: ユーザー", path="dev/er/ユーザー.yaml"
+            )
+        },
+        issue_url=None,
+        path="dev/er/タスク.yaml",
+        anchors={"タスク": "tasks"},
+    )
     rows: list[dict[str, Any]] = [
-        {"name": "user_id", "references": [{"table": "users", "column": "id"}]},
-        {"name": "meta", "references": {"a": 1, "b": 2}},
+        {"name": "task_id", "foreign_key": {"table": "タスク.ID"}},
+        {
+            "name": "user_id",
+            "foreign_key": {"table": "ユーザー/ユーザー.ID", "on_delete": "CASCADE"},
+        },
+        {"name": "other_id", "foreign_key": {"table": "不明.ID"}},
+        {"name": "meta", "foreign_key": {"a": 1, "b": 2}},
     ]
     # 実行
-    result = render_table(rows, {}, table_key="er:columns", context=CONTEXT)
+    result = render_table(rows, {}, table_key="er:columns", context=context)
     # 検証
-    assert "[users.id](#users)" in result
+    assert "[タスク.ID](#tasks)" in result
+    assert f"[ユーザー/ユーザー.ID]({quote('ユーザー.yaml')})" in result
+    assert "| other_id | 不明.ID |" in result
     assert "a: 1、b: 2" in result
     assert "件" not in result
 

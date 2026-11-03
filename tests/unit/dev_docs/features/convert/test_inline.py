@@ -51,6 +51,14 @@ def test_rewrite_text_when_issue() -> None:
     assert result == "[#26](https://github.com/o/r/issues/26) で直す。`#27` は残す"
 
 
+def test_rewrite_text_when_heading_link() -> None:
+    """見出しへのリンク先の `#`（正常系）。"""
+    # 実行
+    result = rewrite_text("[手順](#1-手順) と #26", CONTEXT, HEAD)
+    # 検証
+    assert result == "[手順](#1-手順) と [#26](https://github.com/o/r/issues/26)"
+
+
 def test_rewrite_text_when_no_issue_url() -> None:
     """Issue の URL が無い（正常系）。"""
     # 実行
