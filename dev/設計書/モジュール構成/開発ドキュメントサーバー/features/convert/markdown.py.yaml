@@ -245,10 +245,11 @@ functions:
         description: '`{種類}:{項目のパス}`。表の列の設定の保存の `table`'
       - name: context
         title: 描画の文脈
-        type: RenderContext
-        required: true
+        type: RenderContext | None
+        required: false
+        default: None
         passing: keyword
-        description: 参照のリンクの引き先
+        description: 参照のリンクの引き先。`None`（埋め込みの展開）なら参照のリンクを張らない
       - name: closed
         title: 閉じる
         type: bool
