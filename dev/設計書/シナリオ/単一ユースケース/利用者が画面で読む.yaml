@@ -165,7 +165,7 @@ scenarios:
         notes: '-'
       - name: dev-docs
         description: 正常シナリオと同じ sample を配信している dev-docs
-        notes: 'sample に、`<!-- table: data +columns -->` のマーカーを付けた 3 列の表を持つ Markdown の文書 5 がある（スキーマから作る表は `+columns` を持たない）'
+        notes: 'sample に、`<!-- table: data +columns -->` のマーカーを付けた 3 列の表を持つ Markdown の文書 5 がある（スキーマから作る表のうち `+columns` を持つのは図の元データの表だけ）'
     flow: |-
       ```mermaid
       sequenceDiagram
@@ -608,20 +608,21 @@ scenarios:
       ```mermaid
       sequenceDiagram
         actor U as 利用者
-        participant B as ブラウザ（文書の画面）
-        participant S as dev-docs のサーバー
+        participant UI as dev-docs の画面
+        participant API as 画面の API
 
-        U->>B: 文書 6 を開く
-        B->>S: 文書の取得（文書 6）
-        S->>S: スキーマ駆動で Markdown にする
-        S-->>B: 文書 6 の Markdown
-        B-->>U: 図と表で描いた文書 6 の本文
-        U->>B: 図の下の元データの表を開く
-        B-->>U: 元データの表
+        U->>UI: 文書 6 を開く
+        UI->>API: 文書の取得（文書 6）
+        API->>API: スキーマ駆動で Markdown にする
+        API-->>UI: 文書 6 の Markdown
+        UI-->>U: 図と表で描いた文書 6 の本文
+        U->>UI: 図の下の元データの表を開く
+        UI-->>U: 元データの表
       ```
     expected:
       - flowchart と state の項目が mdmark のフロー図で描かれ、Mermaid のコードブロックが本文に出ない
-      - 図の下の元データの表は閉じた状態で出て、開くと ID と形の列が隠れている
+      - 図の下の元データの表は閉じた状態で出て、開くとノードの表の先頭の列が `表示` で、ID と形の列が隠れている
+      - 元データの表に、列名が表に無い・先頭の列を隠せないという mdmark の警告が出ない
       - スカラーが並ぶオブジェクトが「項目 / 値」の 2 列の表で出る
       - 改行を含む値は、ラベルの次の行からブロックで出る
       - '`title`・`lead` の値が見出しとリードの後に重ねて出ず、`x-hidden: true` の項目が本文に出ない'
