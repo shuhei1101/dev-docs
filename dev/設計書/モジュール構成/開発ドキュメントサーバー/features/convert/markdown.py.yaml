@@ -90,7 +90,7 @@ constants:
     container: features/convert/markdown.py
     usecase: 文書の取得
     summary: 図の元データの表の `+columns hide=` に記載する列のキー（先頭の列にしたものは除く）
-    value: '`id`・`shape`・`kind`'
+    value: '`id`・`shape`'
   - name: TEST_FILE_KEYS
     title: 対応テストファイルのキー
     container: features/convert/markdown.py
@@ -294,9 +294,9 @@ functions:
       - name: test_render_table_when_closed_and_hidden
         case: 正常
         summary: 閉じた表と隠す列
-        condition: '`closed=True`・`first="label"`・`hidden=["id", "kind", "shape"]` で、`id`・`label`・`shape` の列の行'
+        condition: '`closed=True`・`first="label"`・`hidden=["id", "shape"]` で、`id`・`label`・`shape`・`kind` の列の行'
         mock: なし
-        expected: '先頭の列が `label` の列で、マーカーが `<!-- table: data closed +columns hide={id の列名},{shape の列名} -->`'
+        expected: '先頭の列が `label` の列で、マーカーが `<!-- table: data closed +columns hide={id の列名},{shape の列名} -->`（`kind` の列は隠さない）'
       - name: test_render_table_when_wide
         case: 正常
         summary: 説明の列

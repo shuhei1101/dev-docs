@@ -89,14 +89,15 @@ functions:
       4. 進む線は、元の箱の進む向きの縁の中央から、先の箱の手前の縁の中央へ、先の段の手前 `RANK_GAP / 2` の位置で折れる縦と横の折れ線にする（`line` は `flow`）
       5. 戻る線は、元の箱と先の箱の帯の側の縁の中央から、戻りの帯の中央を通る折れ線にする（`line` は `loop`）
       6. ラベルは、線の最も長い区間の中央を `labelAt` にする
-      7. `width`・`height` は、箱の右端・下端の最大に `MARGIN` を足し、戻る線があれば帯の側に `LOOP_BAND` を足す
+      7. 線の `id` は、中間データの線の出た順の `e{n}`（`n` は 1 始まり）にする
+      8. `width`・`height` は、箱の右端・下端の最大に `MARGIN` を足し、戻る線があれば帯の側に `LOOP_BAND` を足す
     unit_tests:
       - name: test_layout_flow
         case: 正常
         summary: 上から下の 2 段
         condition: '`TD` で箱 `a`・`b`、ラベル `x` の線 `a → b`'
         mock: なし
-        expected: '`a` が `(20, 20)`、`b` が `(20, 140)`、線の `points` が `[[100, 76], [100, 140]]`、`line` が `flow`、`label` が `x`'
+        expected: '`a` が `(20, 20)`、`b` が `(20, 140)`、線の `id` が `e1`、`points` が `[[100, 76], [100, 140]]`、`line` が `flow`、`label` が `x`'
       - name: test_layout_flow_when_left_to_right
         case: 正常
         summary: 左から右

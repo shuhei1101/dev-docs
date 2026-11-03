@@ -71,12 +71,12 @@ functions:
         description: '```mermaid のコードブロックの中身'
     returns:
       type: FlowGraph | SequenceGraph | None
-      description: 中間データ。読み取れない行を含むか、`flowchart`・`graph`・`sequenceDiagram` 以外の図なら `None`
+      description: 中間データ。読み取れない行を含むか、箱・メッセージが無いか、`flowchart`・`graph`・`sequenceDiagram` 以外の図なら `None`
     process: |-
       1. 空行と `%%` で始まる行を除き、最初の行で図の種類を決める（`FLOW_HEADER` に当たればフローチャート、`sequenceDiagram` ならシーケンス図、それ以外は `None`）
       2. フローチャートは、残りの行を、箱の宣言（`id` と `NODE_SHAPES` の括弧のラベル）か、箱をつなぐ線（`FLOW_ARROWS`。`a --> b --> c` の連なりと、線の端での箱の宣言を含む）として読む。初めて出た `id` を出た順に箱にし、ラベルの無い箱は `id` を名前にする
       3. シーケンス図は、残りの行を、`participant`・`actor` の宣言（`as` の名前を含む）、`autonumber`、メッセージ（`{元}{SEQUENCE_ARROWS}{先}: {ラベル}`。先の頭の `+`・`-` は除く）として読む。宣言の無い相手は初めて出た順に足す
-      4. どの書き方にも当たらない行（`subgraph`・`classDef`・`style`・`click`・`Note`・`alt`・`loop`・`activate` など）が 1 つでもあれば `None` を返す
+      4. どの書き方にも当たらない行（`subgraph`・`classDef`・`style`・`click`・`Note`・`alt`・`loop`・`activate` など）が 1 つでもあるか、フローチャートの箱・シーケンス図のメッセージが 1 つも無ければ `None` を返す
       5. ラベルの `"` の囲みは外し、`<br>` は空白にする
     unit_tests:
       - name: test_parse_mermaid
@@ -103,6 +103,12 @@ functions:
         condition: '`sequenceDiagram` の中に `alt 成功` と `end` の行'
         mock: なし
         expected: '`None`'
+      - name: test_parse_mermaid_when_empty
+        case: 正常
+        summary: 箱・メッセージが無い
+        condition: '`participant A` だけの `sequenceDiagram` と、`flowchart TD` だけのコード'
+        mock: なし
+        expected: どちらも `None`
       - name: test_parse_mermaid_when_other_diagram
         case: 正常
         summary: 部品の無い図
