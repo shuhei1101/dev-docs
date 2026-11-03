@@ -1,0 +1,125 @@
+title: 開発ドキュメントサーバー / 変換 / flow_layout.py
+lead: フロー図の中間データの、mdmark のフロー図の部品の定義への配置。
+diagrams:
+  - name: 全体
+    diagram: |-
+      classDiagram
+        direction TD
+        図の組み立て ..> フロー図の配置
+        手で書く図の組み立て ..> フロー図の配置
+        class 図の組み立て {
+          <<function>>
+        }
+        class 手で書く図の組み立て {
+          <<function>>
+        }
+        class フロー図の配置 {
+          <<function>>
+        }
+        click 図の組み立て href "./diagrams.py.yaml#図の組み立て"
+        click 手で書く図の組み立て href "./diagrams.py.yaml#手で書く図の組み立て"
+constants:
+  - name: NODE_WIDTH
+    title: 箱の幅
+    container: features/convert/flow_layout.py
+    usecase: 文書の取得
+    summary: 全ての箱の幅（px）
+    value: '160'
+  - name: NODE_HEIGHT
+    title: 箱の高さ
+    container: features/convert/flow_layout.py
+    usecase: 文書の取得
+    summary: 全ての箱の高さ（px）
+    value: '56'
+  - name: RANK_GAP
+    title: 段の間隔
+    container: features/convert/flow_layout.py
+    usecase: 文書の取得
+    summary: 並べる向きに隣り合う段の箱の間隔（px）。線のラベルを置く
+    value: '64'
+  - name: ROW_GAP
+    title: 段の中の間隔
+    container: features/convert/flow_layout.py
+    usecase: 文書の取得
+    summary: 同じ段に並ぶ箱の間隔（px）
+    value: '40'
+  - name: MARGIN
+    title: 余白
+    container: features/convert/flow_layout.py
+    usecase: 文書の取得
+    summary: 図の縁と箱の間の余白（px）
+    value: '20'
+  - name: LOOP_BAND
+    title: 戻りの帯の幅
+    container: features/convert/flow_layout.py
+    usecase: 文書の取得
+    summary: 戻る線を通す帯の幅（px）。`TD` は右、`LR` は下に取る
+    value: '40'
+functions:
+  - name: layout_flow
+    title: フロー図の配置
+    kind: 関数
+    container: features/convert/flow_layout.py
+    usecase: 文書の取得
+    role: 変換
+    summary: フロー図の中間データの箱と線に座標を付け、mdmark のフロー図の部品の定義にする
+    description: mdmark は自動配置しないため、段に分けて格子に並べる。同じ中間データからは同じ定義を返す。
+    scope: public
+    thread_safe: true
+    args:
+      - name: graph
+        title: フロー図の中間データ
+        type: FlowGraph
+        required: true
+        passing: positional
+        description: 配置する箱と線
+      - name: head
+        title: 図の見出し
+        type: DiagramHead
+        required: true
+        passing: positional
+        description: 定義の `title`・`scope`・`updated`
+    returns:
+      type: dict[str, Any]
+      description: '`MdmarkFlowDefinition` の JSON にする値（`title`・`scope`・`updated`・`width`・`height`・`nodes`・`wires`）'
+    process: |-
+      1. 線を、箱の出た順の深さ優先でたどり、たどっている途中の箱へ戻る線と、元と先が同じ線を戻る線にする。残りの線を進む線にする
+      2. 進む線だけで、元の無い箱を段 0 とし、各箱の段を元の箱からの最長の段数にする
+      3. 段ごとに箱を出た順に並べ、`TD` は段を縦（`y = MARGIN + 段 × (NODE_HEIGHT + RANK_GAP)`）・段の中を横（`x = MARGIN + 順 × (NODE_WIDTH + ROW_GAP)`）に、`LR` は縦と横を入れ替えて置く
+      4. 進む線は、元の箱の進む向きの縁の中央から、先の箱の手前の縁の中央へ、先の段の手前 `RANK_GAP / 2` の位置で折れる縦と横の折れ線にする（`line` は `flow`）
+      5. 戻る線は、元の箱と先の箱の帯の側の縁の中央から、戻りの帯の中央を通る折れ線にする（`line` は `loop`）
+      6. ラベルは、線の最も長い区間の中央を `labelAt` にする
+      7. `width`・`height` は、箱の右端・下端の最大に `MARGIN` を足し、戻る線があれば帯の側に `LOOP_BAND` を足す
+    unit_tests:
+      - name: test_layout_flow
+        case: 正常
+        summary: 上から下の 2 段
+        condition: '`TD` で箱 `a`・`b`、ラベル `x` の線 `a → b`'
+        mock: なし
+        expected: '`a` が `(20, 20)`、`b` が `(20, 140)`、線の `points` が `[[100, 76], [100, 140]]`、`line` が `flow`、`label` が `x`'
+      - name: test_layout_flow_when_left_to_right
+        case: 正常
+        summary: 左から右
+        condition: '`LR` で箱 `a`・`b`、線 `a → b`'
+        mock: なし
+        expected: '`b` が `(244, 20)`、線の `points` が `[[180, 48], [244, 48]]`'
+      - name: test_layout_flow_when_branch
+        case: 正常
+        summary: 分岐した先を同じ段に並べる
+        condition: '`TD` で線 `a → b`・`a → c`'
+        mock: なし
+        expected: '`b`・`c` が同じ `y` で、`c` の `x` が `b` の `x + 200`。`a → c` の `points` が 4 点の折れ線'
+      - name: test_layout_flow_when_loop
+        case: 正常
+        summary: 戻る線
+        condition: '`TD` で線 `a → b`・`b → a`'
+        mock: なし
+        expected: '`b → a` の `line` が `loop` で、`points` が帯（`x` が箱の右端より右）を通り、`width` が帯の分だけ広い'
+      - name: test_layout_flow_when_same_input
+        case: 正常
+        summary: 同じ入力に同じ定義
+        condition: 同じ中間データで 2 回呼ぶ
+        mock: なし
+        expected: 2 回の戻り値が等しい
+test_files:
+  - tests/unit/dev_docs/features/convert/test_flow_layout.py

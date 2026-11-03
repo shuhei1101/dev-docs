@@ -1,0 +1,113 @@
+title: 開発ドキュメントサーバー / 変換 / mermaid.py
+lead: 手で書く Mermaid の `flowchart`・`sequenceDiagram` の読み取り。
+diagrams:
+  - name: 全体
+    diagram: |-
+      classDiagram
+        direction TD
+        手で書く図の組み立て ..> Mermaidの読み取り
+        Mermaidの読み取り ..> フロー図の中間データ : 返す
+        Mermaidの読み取り ..> シーケンス図の中間データ : 返す
+        class 手で書く図の組み立て {
+          <<function>>
+        }
+        class Mermaidの読み取り {
+          <<function>>
+        }
+        class フロー図の中間データ {
+          +向き
+          +箱
+          +線
+        }
+        class シーケンス図の中間データ {
+          +相手
+          +メッセージ
+        }
+        click 手で書く図の組み立て href "./diagrams.py.yaml#手で書く図の組み立て"
+        click フロー図の中間データ href "./types.py.yaml#フロー図の中間データ"
+        click シーケンス図の中間データ href "./types.py.yaml#シーケンス図の中間データ"
+constants:
+  - name: FLOW_HEADER
+    title: フローチャートの先頭行
+    container: features/convert/mermaid.py
+    usecase: 文書の取得
+    summary: '`flowchart` か `graph` と、向き（`TD`・`TB`・`LR`。省くと `TD`）。`TB` は `TD`、`BT`・`RL` は読み取れない行にする'
+    value: '^(flowchart|graph)(\s+(TD|TB|LR))?$'
+  - name: NODE_SHAPES
+    title: 箱の括弧と種類
+    container: features/convert/mermaid.py
+    usecase: 文書の取得
+    summary: '`id` の後ろの括弧から mdmark の箱の種類を決める'
+    value: '`[(…)]` は `data`、`{…}` は `dm`、`([…])`・`((…))` は `external`、`[…]`・`(…)`・`[[…]]`・`{{…}}` は `script`'
+  - name: FLOW_ARROWS
+    title: フローチャートの線
+    container: features/convert/mermaid.py
+    usecase: 文書の取得
+    summary: 読み取る線の書き方。ラベルは `-->|ラベル|` と `-- ラベル -->` の 2 つ
+    value: '`-->`・`---`・`-.->`・`==>`'
+  - name: SEQUENCE_ARROWS
+    title: シーケンス図の矢印
+    container: features/convert/mermaid.py
+    usecase: 文書の取得
+    summary: 読み取る矢印。破線（`--` で始まる）は返す線にする
+    value: '`->>`・`-->>`・`->`・`-->`・`-x`・`--x`・`-)`・`--)`'
+functions:
+  - name: parse_mermaid
+    title: Mermaid の読み取り
+    kind: 関数
+    container: features/convert/mermaid.py
+    usecase: 文書の取得
+    role: 変換
+    summary: Mermaid のコードを、フロー図かシーケンス図の中間データにする
+    description: 読み取れない行を 1 つでも含むコードは `None` を返し、呼び出し元が図ごと Mermaid のまま出す。
+    scope: public
+    thread_safe: true
+    args:
+      - name: code
+        title: コード
+        type: str
+        required: true
+        passing: positional
+        description: '```mermaid のコードブロックの中身'
+    returns:
+      type: FlowGraph | SequenceGraph | None
+      description: 中間データ。読み取れない行を含むか、`flowchart`・`graph`・`sequenceDiagram` 以外の図なら `None`
+    process: |-
+      1. 空行と `%%` で始まる行を除き、最初の行で図の種類を決める（`FLOW_HEADER` に当たればフローチャート、`sequenceDiagram` ならシーケンス図、それ以外は `None`）
+      2. フローチャートは、残りの行を、箱の宣言（`id` と `NODE_SHAPES` の括弧のラベル）か、箱をつなぐ線（`FLOW_ARROWS`。`a --> b --> c` の連なりと、線の端での箱の宣言を含む）として読む。初めて出た `id` を出た順に箱にし、ラベルの無い箱は `id` を名前にする
+      3. シーケンス図は、残りの行を、`participant`・`actor` の宣言（`as` の名前を含む）、`autonumber`、メッセージ（`{元}{SEQUENCE_ARROWS}{先}: {ラベル}`。先の頭の `+`・`-` は除く）として読む。宣言の無い相手は初めて出た順に足す
+      4. どの書き方にも当たらない行（`subgraph`・`classDef`・`style`・`click`・`Note`・`alt`・`loop`・`activate` など）が 1 つでもあれば `None` を返す
+      5. ラベルの `"` の囲みは外し、`<br>` は空白にする
+    unit_tests:
+      - name: test_parse_mermaid
+        case: 正常
+        summary: フローチャート
+        condition: '`flowchart LR`、`a[受け取り] -->|本文| b{分類}`、`b --> c[(控え)]`'
+        mock: なし
+        expected: '向きが `LR`、箱が `a`（`script`・`受け取り`）・`b`（`dm`）・`c`（`data`）、線が `a → b`（`本文`）・`b → c`'
+      - name: test_parse_mermaid_when_chain
+        case: 正常
+        summary: 線の連なりとラベルの書き方
+        condition: '`graph TD` と `a -- はい --> b --> c`'
+        mock: なし
+        expected: '線が `a → b`（`はい`）・`b → c`、ラベルの無い箱の名前が `id`'
+      - name: test_parse_mermaid_when_sequence
+        case: 正常
+        summary: シーケンス図
+        condition: '`sequenceDiagram`、`actor U as 利用者`、`participant S as 画面`、`U->>+S: 開く`、`S-->>-U: 本文`、`S->>DB: 読む`'
+        mock: なし
+        expected: '相手が `U`（`external`・`利用者`）・`S`（`script`・`画面`）・`DB`（`script`・`DB`）、メッセージ 3 つで 2 つ目だけ `reply` が `True`'
+      - name: test_parse_mermaid_when_unreadable_line
+        case: 正常
+        summary: 読み取れない行
+        condition: '`sequenceDiagram` の中に `alt 成功` と `end` の行'
+        mock: なし
+        expected: '`None`'
+      - name: test_parse_mermaid_when_other_diagram
+        case: 正常
+        summary: 部品の無い図
+        condition: '`classDiagram` で始まるコード'
+        mock: なし
+        expected: '`None`'
+test_files:
+  - tests/unit/dev_docs/features/convert/test_mermaid.py

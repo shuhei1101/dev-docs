@@ -1,5 +1,5 @@
 title: 開発ドキュメントサーバー / 変換 / types.py
-lead: 変換の結果・失敗・表し方・図の種類の型。
+lead: 変換の結果・失敗・表し方・図の種類・図の中間データ・描画の文脈の型。
 diagrams:
   - name: 全体
     diagram: |-
@@ -40,10 +40,10 @@ enums:
         description: 文字列のリストを箇条書きにする
       - value: diagram
         title: 図
-        description: 値から Mermaid の図を組み立て、続けて同じ値の表を置く
+        description: 値から図を組み立て、続けて同じ値の閉じた表を置く。`er` 以外は mdmark の部品
       - value: attributes
-        title: 引用行
-        description: '子のスカラーを `> {title}: {値}` の行にする'
+        title: 属性
+        description: 子のスカラーを「項目 / 値」の表にする
   - name: DiagramKind
     title: 図の種類
     container: features/convert/types.py
@@ -53,19 +53,19 @@ enums:
     values:
       - value: flowchart
         title: フローチャート
-        description: '`nodes`・`edges`・`subgraphs`・`clicks` から `flowchart`'
+        description: '`nodes`・`edges` から mdmark のフロー図（上から下）'
       - value: dataflow
         title: データフロー
-        description: '`flowchart` と同じ値から、ノードの `kind` で形を変えた `flowchart LR`'
+        description: '`flowchart` と同じ値から、mdmark のフロー図（左から右）'
       - value: architecture
         title: アーキテクチャ
         description: '`dataflow` と同じ'
       - value: state
         title: 状態遷移
-        description: '`states`・`transitions` から `stateDiagram-v2`'
+        description: '`states`・`transitions` から mdmark のフロー図（状態を箱、遷移を線にする）'
       - value: er
         title: ER 図
-        description: '`entities`・`relations` から `erDiagram`'
+        description: '`entities`・`relations` から Mermaid の `erDiagram`'
 data_models:
   - name: ConvertFailure
     title: 変換の失敗
@@ -139,3 +139,212 @@ data_models:
         access: 公開
         default: None
         description: 失敗したときだけ
+  - name: DiagramHead
+    title: 図の見出し
+    container: features/convert/types.py
+    usecase: 文書の取得
+    role: DTO
+    summary: mdmark の図の部品の定義に入れる題名・範囲・更新日
+    description: '`dataclass(frozen=True)`。'
+    properties:
+      - name: title
+        title: 題名
+        type: str
+        access: 公開
+        description: 図の項目の `title`（無ければキーの名前）
+      - name: scope
+        title: 範囲
+        type: str
+        access: 公開
+        description: 文書の名前
+      - name: updated
+        title: 更新日
+        type: str
+        access: 公開
+        description: '文書の `updated`（無ければ `created`）の `YYYY-MM-DD`。どちらも無ければ `-`'
+  - name: FlowNode
+    title: フロー図の箱
+    container: features/convert/types.py
+    usecase: 文書の取得
+    role: DTO
+    summary: 配置の前のフロー図の箱
+    description: '`dataclass(frozen=True)`。'
+    properties:
+      - name: id
+        title: ID
+        type: str
+        access: 公開
+        description: 線の端に指す ID
+      - name: name
+        title: 名前
+        type: str
+        access: 公開
+        description: 箱に出す名前
+      - name: kind
+        title: 種類
+        type: Literal['llm', 'dm', 'script', 'mcp', 'data', 'external']
+        access: 公開
+        description: mdmark の箱の種類
+      - name: sub
+        title: 補足
+        type: str | None
+        access: 公開
+        default: None
+        description: 名前の下の補足（状態遷移の `初期状態`・`終了状態`）
+  - name: FlowEdge
+    title: フロー図の線
+    container: features/convert/types.py
+    usecase: 文書の取得
+    role: DTO
+    summary: 配置の前のフロー図の線
+    description: '`dataclass(frozen=True)`。'
+    properties:
+      - name: source
+        title: 元
+        type: str
+        access: 公開
+        description: 元の箱の ID
+      - name: target
+        title: 先
+        type: str
+        access: 公開
+        description: 先の箱の ID
+      - name: label
+        title: ラベル
+        type: str | None
+        access: 公開
+        default: None
+        description: 線のラベル
+  - name: FlowGraph
+    title: フロー図の中間データ
+    container: features/convert/types.py
+    usecase: 文書の取得
+    role: DTO
+    summary: '`x-diagram` の値か手で書く Mermaid の `flowchart` から作る、配置の前のフロー図'
+    description: '`dataclass(frozen=True)`。'
+    properties:
+      - name: direction
+        title: 向き
+        type: Literal['TD', 'LR']
+        access: 公開
+        description: 箱を並べる向き（`TD` は上から下、`LR` は左から右）
+      - name: nodes
+        title: 箱
+        type: list[FlowNode]
+        access: 公開
+        description: 出た順の箱
+      - name: edges
+        title: 線
+        type: list[FlowEdge]
+        access: 公開
+        description: 出た順の線
+  - name: SequenceParticipant
+    title: シーケンス図の相手
+    container: features/convert/types.py
+    usecase: 文書の取得
+    role: DTO
+    summary: シーケンス図の相手 1 つ
+    description: '`dataclass(frozen=True)`。'
+    properties:
+      - name: id
+        title: ID
+        type: str
+        access: 公開
+        description: Mermaid の相手の ID
+      - name: name
+        title: 名前
+        type: str
+        access: 公開
+        description: '`as` の後ろの名前（無ければ ID）'
+      - name: kind
+        title: 種類
+        type: Literal['script', 'external']
+        access: 公開
+        description: '`actor` は `external`、`participant` と宣言の無い相手は `script`'
+  - name: SequenceMessage
+    title: シーケンス図のメッセージ
+    container: features/convert/types.py
+    usecase: 文書の取得
+    role: DTO
+    summary: シーケンス図のメッセージ 1 つ
+    description: '`dataclass(frozen=True)`。'
+    properties:
+      - name: source
+        title: 元
+        type: str
+        access: 公開
+        description: 元の相手の ID
+      - name: target
+        title: 先
+        type: str
+        access: 公開
+        description: 先の相手の ID
+      - name: label
+        title: ラベル
+        type: str
+        access: 公開
+        description: '`:` の後ろの文（無ければ空）'
+      - name: reply
+        title: 返す線
+        type: bool
+        access: 公開
+        description: 破線の矢印（`-->>`・`-->`・`--x`・`--)`）なら `True`
+  - name: SequenceGraph
+    title: シーケンス図の中間データ
+    container: features/convert/types.py
+    usecase: 文書の取得
+    role: DTO
+    summary: 手で書く Mermaid の `sequenceDiagram` から作るシーケンス図
+    description: '`dataclass(frozen=True)`。'
+    properties:
+      - name: participants
+        title: 相手
+        type: list[SequenceParticipant]
+        access: 公開
+        description: 宣言か初めて出た順の相手
+      - name: messages
+        title: メッセージ
+        type: list[SequenceMessage]
+        access: 公開
+        description: 時刻の順のメッセージ
+  - name: DocumentLink
+    title: 文書へのリンク
+    container: features/convert/types.py
+    usecase: 文書の取得
+    role: DTO
+    summary: 本文の参照から張る、同じ配信元の文書へのリンク
+    description: '`dataclass(frozen=True)`。'
+    properties:
+      - name: title
+        title: タイトル
+        type: str
+        access: 公開
+        description: リンクの文字にする文書の名前
+      - name: path
+        title: パス
+        type: str
+        access: 公開
+        description: 文書のパス（配信元の直下から）
+  - name: RenderContext
+    title: 描画の文脈
+    container: features/convert/types.py
+    usecase: 文書の取得
+    role: DTO
+    summary: スキーマ駆動の変換が、文書の外から受け取るリンクの引き先と更新日
+    description: '`dataclass(frozen=True)`。'
+    properties:
+      - name: links
+        title: リンクの引き先
+        type: Mapping[str, DocumentLink]
+        access: 公開
+        description: 文書の ID と、文書のファイル・本文のファイルのパス（配信元の直下から）から、その文書へのリンク
+      - name: issue_url
+        title: Issue の URL
+        type: str | None
+        access: 公開
+        description: '`https://github.com/{github.repository}/issues/`。配信元に `github.repository` が無ければ `None`'
+      - name: path
+        title: 文書のパス
+        type: str
+        access: 公開
+        description: 変換する文書のパス。リンクの相対パスの起点
