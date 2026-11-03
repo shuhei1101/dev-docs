@@ -18,7 +18,8 @@ def _definition(block: str, marker: str) -> dict[str, Any]:
         rf"<!-- {marker} -->\n\n```json\n(.*?)\n```\n\n<!-- /{marker} -->", block, re.S
     )
     assert match is not None, block
-    return json.loads(match.group(1))
+    definition: dict[str, Any] = json.loads(match.group(1))
+    return definition
 
 
 def test_render_diagram() -> None:

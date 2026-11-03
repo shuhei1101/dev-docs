@@ -1,12 +1,14 @@
-"""変換の結果の型。"""
+"""変換の結果・図の中間データ・描画の文脈の型。"""
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass, field
 from typing import Literal
 
 type Shape = Literal["body", "table", "sections", "list", "diagram", "attributes"]
 type DiagramKind = Literal["flowchart", "dataflow", "architecture", "state", "er"]
+type NodeKind = Literal["llm", "dm", "script", "mcp", "data", "external"]
 
 
 @dataclass(frozen=True)
@@ -29,3 +31,84 @@ class Converted:
     markdown: str
     table_keys: list[str] = field(default_factory=list)
     failure: ConvertFailure | None = None
+
+
+@dataclass(frozen=True)
+class DiagramHead:
+    """mdmark の図の部品の定義に入れる題名・範囲・更新日。"""
+
+    title: str
+    scope: str
+    updated: str
+
+
+@dataclass(frozen=True)
+class FlowNode:
+    """配置の前のフロー図の箱。"""
+
+    id: str
+    name: str
+    kind: NodeKind
+    sub: str | None = None
+
+
+@dataclass(frozen=True)
+class FlowEdge:
+    """配置の前のフロー図の線。"""
+
+    source: str
+    target: str
+    label: str | None = None
+
+
+@dataclass(frozen=True)
+class FlowGraph:
+    """`x-diagram` の値か手で書く Mermaid の `flowchart` から作る、配置の前のフロー図。"""
+
+    direction: Literal["TD", "LR"]
+    nodes: list[FlowNode]
+    edges: list[FlowEdge]
+
+
+@dataclass(frozen=True)
+class SequenceParticipant:
+    """シーケンス図の相手 1 つ。"""
+
+    id: str
+    name: str
+    kind: Literal["script", "external"]
+
+
+@dataclass(frozen=True)
+class SequenceMessage:
+    """シーケンス図のメッセージ 1 つ。"""
+
+    source: str
+    target: str
+    label: str
+    reply: bool
+
+
+@dataclass(frozen=True)
+class SequenceGraph:
+    """手で書く Mermaid の `sequenceDiagram` から作るシーケンス図。"""
+
+    participants: list[SequenceParticipant]
+    messages: list[SequenceMessage]
+
+
+@dataclass(frozen=True)
+class DocumentLink:
+    """本文の参照から張る、同じ配信元の文書へのリンク。"""
+
+    title: str
+    path: str
+
+
+@dataclass(frozen=True)
+class RenderContext:
+    """スキーマ駆動の変換が、文書の外から受け取るリンクの引き先と Issue の URL。"""
+
+    links: Mapping[str, DocumentLink]
+    issue_url: str | None
+    path: str

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 
 from dev_docs.features.convert.markdown import (
@@ -192,7 +192,7 @@ def test_schema_to_markdown_when_diagram(make_document: Callable[..., Document])
                 "edges": [{"from": "a", "to": "b"}],
             },
         },
-        updated=datetime(2026, 11, 3, 9, 0, 0),
+        updated=datetime(2026, 11, 3, 9, 0, 0, tzinfo=UTC),
     )
     # 実行
     result = schema_to_markdown(document, schema, CONTEXT)
@@ -261,7 +261,7 @@ def test_render_table() -> None:
 def test_render_table_when_objects() -> None:
     """オブジェクトのリストのセル（正常系）。"""
     # 準備
-    rows = [
+    rows: list[dict[str, Any]] = [
         {"name": "user_id", "references": [{"table": "users", "column": "id"}]},
         {"name": "meta", "references": {"a": 1, "b": 2}},
     ]

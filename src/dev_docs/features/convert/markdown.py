@@ -2,18 +2,32 @@
 
 from __future__ import annotations
 
+import re
 from collections.abc import Mapping, Sequence
 from datetime import date, datetime
 from typing import Any
 
 from dev_docs.features.convert.diagrams import render_diagram
-from dev_docs.features.convert.types import DiagramKind
+from dev_docs.features.convert.inline import link_reference, rewrite_text
+from dev_docs.features.convert.types import DiagramHead, DiagramKind, RenderContext
 from dev_docs.features.documents.types import Document
 
 MAX_HEADING_LEVEL = 6
 FIRST_HEADING_LEVEL = 2
-SKIPPED_KEYS = ("name", "description")
+HEADING_KEYS = ("title", "name")
+LEAD_KEYS = ("lead", "description")
+ATTRIBUTE_MIN = 3
+LONG_VALUE_CHARS = 100
+WIDE_KEYS = ("description", "summary", "notes")
+LABEL_KEYS = ("label", "name")
+DIAGRAM_HIDDEN_KEYS = ("id", "shape")
+TEST_FILE_KEYS = ("test_file", "test_files")
+EXAMPLE_SUFFIX = "_example"
+CHECK_MARK = "✓"
 CELL_JOINER = "・"
+OBJECT_JOINER = "、"
+NO_DATE = "-"
+ANCHOR_DROP = re.compile(r"[^\w\- ]")
 
 
 def _is_empty(value: Any) -> bool:
@@ -22,11 +36,11 @@ def _is_empty(value: Any) -> bool:
 
 
 def _scalar(value: Any) -> str:
-    """スカラーを文字列にする。"""
+    """スカラーを文字列にする（真偽の値は `CHECK_MARK` か空）。"""
     if isinstance(value, datetime | date):
         return value.isoformat()
     if isinstance(value, bool):
-        return "true" if value else "false"
+        return CHECK_MARK if value else ""
     return str(value)
 
 
@@ -40,72 +54,239 @@ def _is_rows(value: Any) -> bool:
     return isinstance(value, list) and bool(value) and all(isinstance(v, Mapping) for v in value)
 
 
-def _cell(value: Any) -> str:
+def _is_hidden(sub: Any) -> bool:
+    """スキーマが `x-hidden: true` を持つかを返す。"""
+    return isinstance(sub, Mapping) and sub.get("x-hidden") is True
+
+
+def _anchor(text: str) -> str:
+    """見出しのアンカーにする。"""
+    return ANCHOR_DROP.sub("", text.strip().lower()).replace(" ", "-")
+
+
+def _escape_cell(text: str) -> str:
+    """セルの `|` をエスケープし、改行を `<br>` にする。"""
+    return text.replace("\r\n", "\n").replace("|", "\\|").replace("\n", "<br>")
+
+
+def _object_cell(value: Mapping[str, Any]) -> str:
+    """オブジェクトのセル（外部キーは列へのリンク、それ以外は `キー: 値` の並び）にする。"""
+    if "table" in value and "column" in value:
+        return f"[{value['table']}.{value['column']}](#{_anchor(str(value['table']))})"
+    return OBJECT_JOINER.join(f"{key}: {_scalar(item)}" for key, item in value.items())
+
+
+def _cell(value: Any, context: RenderContext | None) -> str:
     """表のセルの文字列にする。"""
     if value is None:
         return ""
-    if isinstance(value, list):
-        if all(_is_scalar(item) for item in value):
-            return CELL_JOINER.join(_cell(item) for item in value)
-        return f"{len(value)} 件"
     if isinstance(value, Mapping):
-        return f"{len(value)} 件"
-    return _scalar(value).replace("\r\n", "\n").replace("|", "\\|").replace("\n", "<br>")
+        return _escape_cell(_object_cell(value))
+    if isinstance(value, list):
+        # 文字列のリスト: `・` で繋ぐ。オブジェクトを含む: 要素ごとに改行で繋ぐ
+        if all(_is_scalar(item) for item in value):
+            return CELL_JOINER.join(_cell(item, context) for item in value)
+        return "<br>".join(_cell(item, context) for item in value)
+    if isinstance(value, str) and context is not None:
+        link = link_reference(value, context)
+        if link is not None:
+            return link
+    return _escape_cell(_scalar(value))
 
 
 def render_table(
-    rows: Sequence[Mapping[str, Any]], item_schema: Mapping[str, Any], *, table_key: str
+    rows: Sequence[Mapping[str, Any]],
+    item_schema: Mapping[str, Any],
+    *,
+    table_key: str,
+    context: RenderContext | None = None,
+    closed: bool = False,
+    first: str | None = None,
+    hidden: Sequence[str] = (),
 ) -> str:
     """オブジェクトのリストを、mdmark の表のマーカーつきの Markdown の表にする。"""
     properties: Mapping[str, Any] = item_schema.get("properties") or {}
     keys = list(properties)
     keys.extend(key for row in rows for key in row if key not in keys)
     keys = list(dict.fromkeys(keys))
-    columns = [key for key in keys if any(not _is_empty(row.get(key)) for row in rows)]
+    columns = [
+        key
+        for key in keys
+        if not _is_hidden(properties.get(key)) and any(not _is_empty(row.get(key)) for row in rows)
+    ]
     if not columns:
         return ""
-    titles = [str(properties.get(key, {}).get("title") or key) for key in columns]
+    if first in columns:
+        columns.remove(first)
+        columns.insert(0, first)
+
+    def title(key: str) -> str:
+        sub = properties.get(key)
+        return str(sub.get("title") or key) if isinstance(sub, Mapping) else key
+
+    # 表のマーカーの引数（mdmark は先頭の列を隠せないため、先頭の列は隠す列に入れない）
+    marker = ["data"]
+    if closed:
+        marker.append("closed")
+    hide = [title(key) for key in columns[1:] if key in hidden and " " not in title(key)]
+    if hide:
+        marker.append(f"+columns hide={','.join(hide)}")
+    wide = [title(key) for key in columns if key in WIDE_KEYS and " " not in title(key)]
+    if wide:
+        marker.append(f"wide={','.join(wide)}")
     lines = [
         f"<!-- dev-docs-table: {table_key} -->",
-        "<!-- table: data -->",
-        f"| {' | '.join(titles)} |",
+        f"<!-- table: {' '.join(marker)} -->",
+        f"| {' | '.join(title(key) for key in columns)} |",
         f"| {' | '.join('---' for _ in columns)} |",
     ]
-    lines.extend(f"| {' | '.join(_cell(row.get(key)) for key in columns)} |" for row in rows)
+    lines.extend(
+        f"| {' | '.join(_cell(row.get(key), context) for key in columns)} |" for row in rows
+    )
     lines.append("<!-- /table -->")
     return "\n".join(lines)
+
+
+def render_attributes(
+    pairs: Sequence[tuple[str, Any]], context: RenderContext, head: DiagramHead
+) -> str:
+    """名前と値の組を「項目 / 値」の 2 列の表にし、長い値は行の詳細に入れる。"""
+    rows: list[str] = []
+    details: list[str] = []
+    for position, (name, value) in enumerate(pairs, start=1):
+        text = _scalar(value)
+        link = link_reference(text, context) if isinstance(value, str) else None
+        # 長い値・複数行の値: セルは最初の行の先頭だけにし、全文は行の詳細に置く
+        if link is None and (len(text) > LONG_VALUE_CHARS or "\n" in text):
+            cell = f"{_escape_cell(text.splitlines()[0][:LONG_VALUE_CHARS])}…"
+            details.append(
+                f"<!-- row-detail: {position} -->\n\n"
+                f"{rewrite_text(text, context, head)}\n\n<!-- /row-detail -->"
+            )
+        else:
+            cell = link if link is not None else _escape_cell(text)
+        rows.append(f"| {_escape_cell(name)} | {cell} |")
+    table = "\n".join(
+        ["<!-- table: plain -->", "| 項目 | 値 |", "| --- | --- |", *rows, "<!-- /table -->"]
+    )
+    return "\n\n".join([table, *details])
+
+
+def _date(value: Any) -> str | None:
+    """文書の日時を `YYYY-MM-DD` にする。"""
+    if isinstance(value, datetime):
+        return value.date().isoformat()
+    if isinstance(value, date):
+        return value.isoformat()
+    if isinstance(value, str) and value:
+        return value[:10]
+    return None
 
 
 class _Builder:
     """文書の値をスキーマに沿って Markdown の塊の並びにする。"""
 
-    def __init__(self, kind: str) -> None:
-        self.kind = kind
+    def __init__(self, document: Document, context: RenderContext, scope: str) -> None:
+        self.kind = document.kind
+        self.context = context
+        self.scope = scope
+        self.updated = _date(document.updated) or _date(document.created) or NO_DATE
         self.blocks: list[str] = []
+
+    def head(self, title: str) -> DiagramHead:
+        """図の部品の定義に入れる題名・範囲・更新日を作る。"""
+        return DiagramHead(title=title, scope=self.scope, updated=self.updated)
 
     def heading(self, text: str, level: int) -> None:
         """見出しを置く（深さは `MAX_HEADING_LEVEL` で止める）。"""
         self.blocks.append(f"{'#' * min(level, MAX_HEADING_LEVEL)} {text}")
 
+    def text(self, value: Any, title: str) -> str:
+        """スカラーを、参照のリンクか本文の書き換えにかけた文字列にする。"""
+        text = _scalar(value)
+        if isinstance(value, str):
+            link = link_reference(value, self.context)
+            if link is not None:
+                return link
+            return rewrite_text(text, self.context, self.head(title))
+        return text
+
     def object(
-        self, data: Mapping[str, Any], schema: Mapping[str, Any], path: str, level: int
+        self,
+        data: Mapping[str, Any],
+        schema: Mapping[str, Any],
+        path: str,
+        level: int,
+        skip: Sequence[str] = (),
     ) -> None:
         """オブジェクトの子を、スキーマの `properties` の順に組み立てる。"""
         properties: Mapping[str, Any] = schema.get("properties") or {}
-        keys = [*properties, *(key for key in data if key not in properties)]
-        for key in keys:
-            if key not in data or _is_empty(data[key]):
-                continue
-            if not path and key in SKIPPED_KEYS:
-                continue
+        keys = [
+            key
+            for key in [*properties, *(key for key in data if key not in properties)]
+            if key in data
+            and key not in skip
+            and not _is_empty(data[key])
+            and not _is_hidden(properties.get(key))
+        ]
+
+        def sub_of(key: str) -> Mapping[str, Any]:
             sub = properties.get(key)
-            self.value(
-                key,
-                data[key],
-                sub if isinstance(sub, Mapping) else {},
-                f"{path}.{key}" if path else key,
-                level,
+            return sub if isinstance(sub, Mapping) else {}
+
+        def is_plain_scalar(key: str) -> bool:
+            sub = sub_of(key)
+            return (
+                _is_scalar(data[key])
+                and not sub.get("x-heading")
+                and not sub.get("x-shape")
+                and key not in TEST_FILE_KEYS
+                and not key.endswith(EXAMPLE_SUFFIX)
             )
+
+        index = 0
+        while index < len(keys):
+            key = keys[index]
+            # 見出しも表し方も持たないスカラーの並び: `ATTRIBUTE_MIN` 以上なら属性の表にまとめる
+            run = 0
+            while index + run < len(keys) and is_plain_scalar(keys[index + run]):
+                run += 1
+            if run >= ATTRIBUTE_MIN:
+                pairs = [
+                    (str(sub_of(name).get("title") or name), data[name])
+                    for name in keys[index : index + run]
+                ]
+                self.blocks.append(render_attributes(pairs, self.context, self.head(self.scope)))
+                index += run
+                continue
+            # リクエスト例・レスポンス例の並び: タブで切り替える
+            if key.endswith(EXAMPLE_SUFFIX):
+                end = index
+                while end < len(keys) and keys[end].endswith(EXAMPLE_SUFFIX):
+                    end += 1
+                self.examples(data, keys[index:end], sub_of, level)
+                index = end
+                continue
+            self.value(key, data[key], sub_of(key), f"{path}.{key}" if path else key, level)
+            index += 1
+
+    def examples(
+        self,
+        data: Mapping[str, Any],
+        keys: Sequence[str],
+        sub_of: Any,
+        level: int,
+    ) -> None:
+        """例の値ごとに見出しと本文を置き、`<!-- tabs -->` の範囲で囲む。"""
+        self.blocks.append("<!-- tabs -->")
+        for key in keys:
+            title = str(sub_of(key).get("title") or key)
+            self.heading(title, level)
+            value = data[key]
+            self.blocks.append(
+                self.text(value, title) if _is_scalar(value) else _cell(value, self.context)
+            )
+        self.blocks.append("<!-- /tabs -->")
 
     def value(self, key: str, value: Any, sub: Mapping[str, Any], path: str, level: int) -> None:
         """値 1 つを `x-heading`・`x-shape` に沿って組み立てる。"""
@@ -116,59 +297,86 @@ class _Builder:
         if heading:
             self.heading(str(heading), level)
             content_level = level + 1
-        if shape == "diagram" and isinstance(value, Mapping):
-            self.diagram(value, sub, path)
+        if key in TEST_FILE_KEYS:
+            self.test_files(title, value)
+        elif shape == "diagram" and isinstance(value, Mapping):
+            self.diagram(title, value, sub, path)
         elif shape == "sections" and isinstance(value, list | Mapping):
             self.sections(value, sub, path, content_level)
         elif shape == "attributes" and isinstance(value, Mapping):
             self.attributes(value, sub)
         elif shape == "list" and isinstance(value, list):
-            self.bullets(value)
+            self.bullets(value, title)
         elif shape == "table" and _is_rows(value):
             self.table(value, sub, path)
         else:
             self.plain(title, value, sub, path, content_level, labeled=not heading)
 
+    def test_files(self, title: str, value: Any) -> None:
+        """対応テストファイルを、引き先があればリンク、無ければ行内のコードの 1 列の閉じた表にする。"""
+        paths = [str(item) for item in value] if isinstance(value, list) else [str(value)]
+        cells = [link_reference(path, self.context) or f"`{path}`" for path in paths]
+        lines = ["<!-- table: plain closed -->", f"| {title} |", "| --- |"]
+        lines.extend(f"| {cell} |" for cell in cells)
+        lines.append("<!-- /table -->")
+        self.blocks.append("\n".join(lines))
+
     def table(self, rows: Sequence[Mapping[str, Any]], sub: Mapping[str, Any], path: str) -> None:
         """オブジェクトのリストを表にする。"""
         items = sub.get("items")
         table = render_table(
-            rows, items if isinstance(items, Mapping) else {}, table_key=f"{self.kind}:{path}"
+            rows,
+            items if isinstance(items, Mapping) else {},
+            table_key=f"{self.kind}:{path}",
+            context=self.context,
         )
         if table:
             self.blocks.append(table)
 
-    def bullets(self, values: Sequence[Any]) -> None:
-        """リストを箇条書きにする。"""
-        self.blocks.append("\n".join(f"- {_cell(item)}" for item in values if not _is_empty(item)))
+    def bullets(self, values: Sequence[Any], title: str) -> None:
+        """リストを箇条書きにする（文字列は参照のリンクか本文の書き換えにかける）。"""
+        items = [
+            self.text(item, title) if _is_scalar(item) else _cell(item, self.context)
+            for item in values
+            if not _is_empty(item)
+        ]
+        self.blocks.append("\n".join(f"- {item}" for item in items))
 
-    def diagram(self, value: Mapping[str, Any], sub: Mapping[str, Any], path: str) -> None:
-        """Mermaid の図と、続けて同じ値の表を置く。"""
+    def diagram(
+        self, title: str, value: Mapping[str, Any], sub: Mapping[str, Any], path: str
+    ) -> None:
+        """図と、続けて同じ値の閉じた元データの表を置く。"""
         kind: DiagramKind = sub.get("x-diagram", "flowchart")
-        self.blocks.append(f"```mermaid\n{render_diagram(value, kind)}\n```")
+        self.blocks.append(render_diagram(value, kind, self.head(title)))
         properties: Mapping[str, Any] = sub.get("properties") or {}
         for key, rows in value.items():
-            if _is_rows(rows):
-                item_sub = properties.get(key, {})
-                items = item_sub.get("items") if isinstance(item_sub, Mapping) else None
-                self.blocks.append(
-                    render_table(
-                        rows,
-                        items if isinstance(items, Mapping) else {},
-                        table_key=f"{self.kind}:{path}.{key}",
-                    )
+            if not _is_rows(rows):
+                continue
+            item_sub = properties.get(key, {})
+            items = item_sub.get("items") if isinstance(item_sub, Mapping) else None
+            present = {name for row in rows for name in row}
+            self.blocks.append(
+                render_table(
+                    rows,
+                    items if isinstance(items, Mapping) else {},
+                    table_key=f"{self.kind}:{path}.{key}",
+                    context=self.context,
+                    closed=True,
+                    first=next((name for name in LABEL_KEYS if name in present), None),
+                    hidden=[name for name in DIAGRAM_HIDDEN_KEYS if name in present],
                 )
+            )
 
     def attributes(self, value: Mapping[str, Any], sub: Mapping[str, Any]) -> None:
-        """子のスカラーを `> {title}: {値}` の行にする。"""
+        """子のスカラーを「項目 / 値」の表にする。"""
         properties: Mapping[str, Any] = sub.get("properties") or {}
-        lines = [
-            f"> {properties.get(key, {}).get('title') or key}: {_cell(item)}"
+        pairs = [
+            (str((properties.get(key) or {}).get("title") or key), item)
             for key, item in value.items()
-            if _is_scalar(item) and not _is_empty(item)
+            if _is_scalar(item) and not _is_empty(item) and not _is_hidden(properties.get(key))
         ]
-        if lines:
-            self.blocks.append("<br>\n".join(lines))
+        if pairs:
+            self.blocks.append(render_attributes(pairs, self.context, self.head(self.scope)))
 
     def sections(self, value: Any, sub: Mapping[str, Any], path: str, level: int) -> None:
         """要素・子を 1 つ深い見出しの節にする。"""
@@ -180,19 +388,19 @@ class _Builder:
                 self.heading(str(label if label is not None else index + 1), level)
                 child_path = f"{path}[{index}]"
                 if isinstance(element, Mapping):
-                    skip = {x_key} if x_key else set()
                     self.object(
-                        {k: v for k, v in element.items() if k not in skip},
+                        element,
                         items,  # type: ignore[arg-type]
                         child_path,
                         level + 1,
+                        skip=[x_key] if x_key else [],
                     )
                 elif not _is_empty(element):
-                    self.blocks.append(_cell(element))
+                    self.blocks.append(self.text(element, str(index + 1)))
             return
         properties: Mapping[str, Any] = sub.get("properties") or {}
         for key, child in value.items():
-            if _is_empty(child):
+            if _is_empty(child) or _is_hidden(properties.get(key)):
                 continue
             child_sub = properties.get(key, {})
             child_sub = child_sub if isinstance(child_sub, Mapping) else {}
@@ -209,32 +417,46 @@ class _Builder:
         *,
         labeled: bool,
     ) -> None:
-        """`x-shape` が無い値を、種類ごとの既定の形で組み立てる。"""
+        """`x-shape` が無い値を、種類ごとの既定の表し方で組み立てる。"""
         if _is_scalar(value):
-            text = _scalar(value)
-            self.blocks.append(f"**{title}**: {text}" if labeled else text)
-        elif isinstance(value, Mapping):
-            if labeled:
-                self.blocks.append(f"**{title}**:")
+            text = self.text(value, title)
+            # 見出しの下の値: そのまま置く
+            if not labeled:
+                self.blocks.append(text)
+            # 複数行・ブロックで始まる値: ラベルを独立した行にし、値を次のブロックに置く
+            elif "\n" in text or text.startswith(("```", "<!--")):
+                self.blocks.append(f"**{title}**")
+                self.blocks.append(text)
+            else:
+                self.blocks.append(f"**{title}**: {text}")
+            return
+        if labeled:
+            self.blocks.append(f"**{title}**")
+        if isinstance(value, Mapping):
             self.object(value, sub, path, level)
         elif _is_rows(value):
-            if labeled:
-                self.blocks.append(f"**{title}**:")
             self.table(value, sub, path)
         else:
-            if labeled:
-                self.blocks.append(f"**{title}**:")
-            self.bullets(value)
+            self.bullets(value, title)
 
 
-def schema_to_markdown(document: Document, schema: Mapping[str, Any]) -> str:
-    """YAML の文書をスキーマの `x-heading`・`x-shape`・`x-key`・`x-diagram`・`title` に沿って Markdown にする。"""
+def _first(data: Mapping[str, Any], keys: Sequence[str]) -> str | None:
+    """`keys` のうち最初に値を持つキーを返す。"""
+    return next((key for key in keys if not _is_empty(data.get(key))), None)
+
+
+def schema_to_markdown(
+    document: Document, schema: Mapping[str, Any], context: RenderContext
+) -> str:
+    """YAML の文書をスキーマの `x-heading`・`x-shape`・`x-key`・`x-diagram`・`x-hidden`・`title` に沿って Markdown にする。"""
     data = document.data
-    name = data.get("name") or document.metadata["name"]
-    builder = _Builder(document.kind)
+    heading_key = _first(data, HEADING_KEYS)
+    lead_key = _first(data, LEAD_KEYS)
+    name = str(data[heading_key]) if heading_key else str(document.metadata["name"])
+    builder = _Builder(document, context, name)
     builder.blocks.append(f"# {name}")
-    description = data.get("description") or document.metadata.get("description")
-    if description:
-        builder.blocks.append(_scalar(description))
-    builder.object(data, schema, "", FIRST_HEADING_LEVEL)
+    if lead_key:
+        builder.blocks.append(builder.text(data[lead_key], name))
+    used = [key for key in (heading_key, lead_key) if key]
+    builder.object(data, schema, "", FIRST_HEADING_LEVEL, skip=used)
     return "\n\n".join(block for block in builder.blocks if block) + "\n"
