@@ -540,3 +540,156 @@ def test_normal_when_nav_grouped_by_folder(
         "rules/common",
         ("lang", ["rules/lang/index", "rules/lang/ts", ("py", ["rules/lang/py/style"])]),
     ]
+
+
+DRAWN_ROW = "  - id: drawn\n    paths: [drawn/*.yaml]\n    schema: schemas/drawn.schema.yaml\n"
+# 図・属性・複数行の値・内部向けの項目・説明の列を持つ種類のスキーマ
+DRAWN_SCHEMA = """\
+type: object
+title: 図の文書
+properties:
+  id: {type: string, title: ID}
+  title: {type: string, title: タイトル}
+  lead: {type: string, title: リード}
+  internal_note: {type: string, title: 内部メモ, x-hidden: true}
+  flow:
+    title: 処理の流れ
+    x-heading: 処理の流れ
+    x-shape: diagram
+    x-diagram: flowchart
+    properties:
+      nodes:
+        type: array
+        items:
+          properties: {id: {title: ID}, label: {title: 表示}, shape: {title: 形}}
+      edges:
+        type: array
+        items:
+          properties: {from: {title: 元}, to: {title: 先}}
+  states:
+    title: 状態
+    x-heading: 状態
+    x-shape: diagram
+    x-diagram: state
+  sequence: {type: string, title: やり取り, x-heading: やり取り}
+  chart: {type: string, title: 手順の図, x-heading: 手順の図}
+  spec:
+    type: object
+    title: 仕様
+    x-heading: 仕様
+    properties: {kind: {title: 種類}, limit: {title: 上限}, owner: {title: 担当}}
+  command: {type: string, title: 全件実行}
+  items:
+    title: 一覧
+    x-heading: 一覧
+    x-shape: table
+    items:
+      properties: {name: {title: 名前}, description: {title: 説明}}
+"""
+DRAWN_DOC = """\
+id: doc-6
+title: 図の文書 6
+lead: 図と表で読む文書
+internal_note: 内部メモの値
+flow:
+  nodes:
+    - {id: a, label: 受付, shape: rect}
+    - {id: b, label: 保存, shape: cylinder}
+  edges:
+    - {from: a, to: b}
+states:
+  initial: 下書き
+  states: [{name: 下書き}, {name: 公開}]
+  transitions:
+    - {from: 下書き, to: 公開, trigger: 公開する}
+sequence: |-
+  ```mermaid
+  sequenceDiagram
+    participant U as 利用者
+    U->>S: 開く
+    S-->>U: 本文
+  ```
+chart: |-
+  ```mermaid
+  flowchart LR
+    a[受付] --> b[(保存)]
+  ```
+spec: {kind: 定期, limit: 3, owner: 運用}
+command: |-
+  ```bash
+  uv run pytest
+  ```
+items:
+  - {name: 項目 1, description: 説明 1}
+"""
+UNREADABLE_SEQUENCE = "sequenceDiagram\n  A->>B: 読む\n  これは Mermaid の構文でない行"
+UNREADABLE_DOC = (
+    "id: doc-7\ntitle: 図の文書 7\nsequence: |-\n  ```mermaid\n"
+    + "".join(f"  {line}\n" for line in UNREADABLE_SEQUENCE.splitlines())
+    + "  ```\n"
+)
+
+
+def _drawn_files(
+    sample_file_set: Callable[..., dict[str, str]],
+    sample_config_text: Callable[..., str],
+) -> dict[str, str]:
+    """図の文書の種類と文書 6・7 を持つ配信元のファイル一式を返す。"""
+    return sample_file_set(
+        **{
+            "dev-docs.yaml": sample_config_text(DRAWN_ROW),
+            "schemas/drawn.schema.yaml": DRAWN_SCHEMA,
+            "drawn/doc-6.yaml": DRAWN_DOC,
+            "drawn/doc-7.yaml": UNREADABLE_DOC,
+        }
+    )
+
+
+def test_normal_when_schema_document_drawn(
+    make_source: Callable[..., Any],
+    make_server: Callable[..., Any],
+    sample_file_set: Callable[..., dict[str, str]],
+    sample_config_text: Callable[..., str],
+) -> None:
+    """図を mdmark の部品に、スカラーの並びを「項目 / 値」の表にした Markdown を返す（正常系）。"""
+    # 準備
+    files = _drawn_files(sample_file_set, sample_config_text)
+    env = make_server(make_source("sample", files))
+    # 実行
+    response = env.client.get("/_api/sources/sample/docs/drawn/doc-6")
+    # 検証
+    markdown = response.json()["markdown"]
+    assert response.status_code == 200
+    assert markdown.count("<!-- flow -->") == 3
+    assert markdown.count("<!-- sequence -->") == 1
+    assert "```mermaid" not in markdown
+    assert "<!-- table: data closed +columns hide=ID,形 -->\n| 表示 | ID | 形 |" in markdown
+    assert "<!-- table: data closed -->\n| 元 | 先 |" in markdown
+    assert "| 項目 | 値 |" in markdown
+    assert "| 種類 | 定期 |" in markdown
+    assert "**全件実行**\n\n```bash\nuv run pytest\n```" in markdown
+    assert markdown.startswith("# 図の文書 6\n\n図と表で読む文書\n")
+    assert "**タイトル**" not in markdown
+    assert "**リード**" not in markdown
+    assert "内部メモの値" not in markdown
+    assert "<!-- table: data wide=説明 -->" in markdown
+
+
+def test_normal_when_mermaid_unreadable(
+    make_source: Callable[..., Any],
+    make_server: Callable[..., Any],
+    sample_file_set: Callable[..., dict[str, str]],
+    sample_config_text: Callable[..., str],
+) -> None:
+    """読み取れない行を含む Mermaid を、図ごと Mermaid のコードブロックのまま返す（正常系）。"""
+    # 準備
+    files = _drawn_files(sample_file_set, sample_config_text)
+    env = make_server(make_source("sample", files))
+    # 実行
+    response = env.client.get("/_api/sources/sample/docs/drawn/doc-7")
+    # 検証
+    body = response.json()
+    assert response.status_code == 200
+    assert "<!-- sequence -->" not in body["markdown"]
+    assert f"```mermaid\n{UNREADABLE_SEQUENCE}\n```" in body["markdown"]
+    assert body["conversionError"] is None
