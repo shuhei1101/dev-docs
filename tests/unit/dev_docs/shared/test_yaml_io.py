@@ -52,6 +52,17 @@ def test_load_roundtrip() -> None:
     assert result == "# c\na: 1  # x\n"
 
 
+def test_load_roundtrip_when_quotes() -> None:
+    """引用符の種類を保つ（正常系）。"""
+    # 準備
+    doc = load_roundtrip("version: '2020-12'\ntitle: \"A: b\"\nname: x\n")
+    doc["name"] = "y"
+    # 実行
+    result = dump_roundtrip(doc)
+    # 検証
+    assert result == "version: '2020-12'\ntitle: \"A: b\"\nname: y\n"
+
+
 def test_load_roundtrip_when_not_mapping() -> None:
     """最上位が配列（異常系）。"""
     # 準備
