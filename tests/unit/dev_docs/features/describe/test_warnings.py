@@ -4,6 +4,7 @@ from collections.abc import Callable
 from pathlib import Path
 
 from dev_docs.features.access.types import SourceAccess
+from dev_docs.features.describe.source_checks import SourceChecks
 from dev_docs.features.describe.warnings import collect_warnings
 from dev_docs.features.settings.types import SourceEntry, TerminalConfig
 from dev_docs.main import Handlers, build_handlers
@@ -75,7 +76,7 @@ def test_collect_warnings(
     result = collect_warnings(
         [_access("a")],
         registry=handlers.registry,
-        store=handlers.store,
+        checks=handlers.checks,
         terminal=handlers.terminal,
     )
     # 検証
@@ -104,7 +105,7 @@ def test_collect_warnings_when_unavailable_source(
     )
     # 実行
     result = collect_warnings(
-        [], registry=handlers.registry, store=handlers.store, terminal=handlers.terminal
+        [], registry=handlers.registry, checks=handlers.checks, terminal=handlers.terminal
     )
     # 検証
     assert result == []
@@ -125,13 +126,36 @@ def test_collect_warnings_when_alias_and_nav(
     result = collect_warnings(
         [_access("a")],
         registry=handlers.registry,
-        store=handlers.store,
+        checks=handlers.checks,
         terminal=handlers.terminal,
     )
     # 検証
     assert result[0] == "a: エイリアスのキーの違反が 1 件あります（check_project で確かめられます）"
     assert result[1].startswith("a: nav.tabs[1].items[0].auto.filter: none:")
     assert len(result) == 2
+
+
+def test_collect_warnings_when_unchecked(
+    make_source_dir: Callable[..., Path],
+    make_terminal_config: Callable[..., TerminalConfig],
+    make_entry: Callable[..., SourceEntry],
+) -> None:
+    """まだ検査していない配信元は、同期のずれを載せない（正常系）。"""
+    # 準備
+    handlers = _loaded_handlers(
+        make_terminal_config(
+            sources=[make_entry(str(make_source_dir("a", unindexed=1)), source_id="a")]
+        )
+    )
+    # 実行
+    result = collect_warnings(
+        [_access("a")],
+        registry=handlers.registry,
+        checks=SourceChecks(),
+        terminal=handlers.terminal,
+    )
+    # 検証
+    assert result == []
 
 
 def test_collect_warnings_when_no_source_available(
@@ -151,7 +175,7 @@ def test_collect_warnings_when_no_source_available(
     )
     # 実行
     result = collect_warnings(
-        [], registry=handlers.registry, store=handlers.store, terminal=handlers.terminal
+        [], registry=handlers.registry, checks=handlers.checks, terminal=handlers.terminal
     )
     # 検証
     assert len(result) == 2

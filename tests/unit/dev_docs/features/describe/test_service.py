@@ -7,6 +7,7 @@ from typing import Any
 import pytest
 
 from dev_docs.features.describe.service import describe
+from dev_docs.features.describe.source_checks import SourceChecks
 from dev_docs.features.describe.types import (
     DescribeRequest,
     KindSchemaResult,
@@ -82,6 +83,7 @@ def _describe(
         registry=source_registry,
         store=store,
         terminal=TERMINAL,
+        checks=SourceChecks(),
     )
 
 
@@ -130,6 +132,7 @@ def test_describe_when_warned(
         registry=handlers.registry,
         store=handlers.store,
         terminal=handlers.terminal,
+        checks=handlers.checks,
     )
     # 検証
     assert isinstance(result, SourceListResult)
