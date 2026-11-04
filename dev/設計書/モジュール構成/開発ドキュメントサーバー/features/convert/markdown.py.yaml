@@ -151,7 +151,7 @@ functions:
       2. スキーマの `properties` の順に値を組み立てる（値が空のキーと、スキーマに `x-hidden: true` を持つキーは飛ばす）
          - `x-heading` を持つ値は、深さ 2 から始まる見出し（`x-heading` の文字列、要素なら `x-key` の値）を置く。深さは `MAX_HEADING_LEVEL` で止める
          - 見出しも `x-shape` も持たないスカラーが `ATTRIBUTE_MIN` 以上続く間は、まとめて属性の表の組み立てにかける
-         - `x-shape` で本文を組み立てる（`Shape`）。`table` は表の組み立て、`diagram` は図の組み立て（見出しの `title` は項目の `title`、`scope` は文書の見出し、`updated` は文書の `updated` か `created` の日付。`x-diagram: er` は文書の `tables` の値を `tables` に渡す）と、値の中のオブジェクトのリストごとの図の元データの表、`sections` は子を 1 つ深い見出しで再帰、`attributes` は属性の表の組み立て
+         - `x-shape` で本文を組み立てる（`Shape`）。`table` は表の組み立て、`diagram` は図の組み立て（見出しの `title` は項目の `title`、`scope` は文書の見出し、`updated` は文書の `updated` か `created` の日付。`x-diagram: er` は文書の `tables` の値を `tables` に、文脈の `path` のファイル名の拡張子を除いた名前を `classification` に渡す）と、値の中のオブジェクトのリストごとの図の元データの表、`sections` は子を 1 つ深い見出しで再帰、`attributes` は属性の表の組み立て
          - `TEST_FILE_KEYS` の値は、項目の `title` を列名にした 1 列の閉じた表（`<!-- table: plain closed -->`）にし、セルは引き先にあればリンク、無ければ行内のコードにする
          - キーが `EXAMPLE_SUFFIX` で終わる値が続く間は、`<!-- tabs -->` の範囲に、値ごとに今の深さの見出し（項目の `title`）と本文の書き換えにかけた値を置く
          - `x-shape` が無いスカラーは、参照のリンクに当たればそのリンクを、当たらなければ本文の書き換えにかけた値を使う。改行を含むか ``` で始まる値は `**{title}**` の行の次のブロックに、それ以外は `**{title}**: {値}` の段落にする
