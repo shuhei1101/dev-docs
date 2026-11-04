@@ -15,9 +15,8 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-from dev_docs.features.documents.store import check_sync
 from dev_docs.features.lifecycle.control import RestartControl
 from dev_docs.features.lifecycle.types import SERVE_ARGV, SHUTDOWN_WAIT_FACTOR
 from dev_docs.features.prompt_doc.runtime import PromptSet, load_prompts, prompts_dir
@@ -27,6 +26,9 @@ from dev_docs.features.settings.types import TerminalConfig, TerminalConfigInval
 from dev_docs.features.sources.registry import SourceRegistry
 from dev_docs.features.sources.types import ServedSource, SourceStatus
 from dev_docs.server.mcp.result import mcp_prompt_ids
+
+if TYPE_CHECKING:
+    from dev_docs.features.describe.source_checks import SourceChecks
 
 EXIT_CONFIG_INVALID = 2
 EXIT_PORT_IN_USE = 3
@@ -67,7 +69,7 @@ class Handlers:
     reload_sources: Callable[[TerminalConfig], list[SourceStatus]]
     restart: RestartControl
     prompts: PromptSet
-    checks: Any = None
+    checks: SourceChecks
 
 
 def _setup_logging(log_dir: Path) -> list[logging.Handler]:
@@ -260,7 +262,7 @@ def reload_sources(
     store: Any,
     checker: Any,
     converter: Any,
-    checks: Any = None,
+    checks: SourceChecks,
 ) -> list[SourceStatus]:
     """配信元の一覧を読み直し、配信元の内容を控えた部品の控えを捨てる。"""
     statuses = registry.reload(terminal)
@@ -276,21 +278,16 @@ def discard_source_caches(
     store: Any,
     checker: Any,
     converter: Any,
-    checks: Any = None,
+    checks: SourceChecks,
 ) -> None:
     """配信元の内容を控えた部品の控えを捨て、渡した配信元ごとのずれと警告をログに書く。"""
-    from dev_docs.features.view.nav import nav_warnings
-
     store.clear()
     checker.clear()
     converter.clear()
     for source in sources:
-        # 控えがあれば検査の結果を持たせ、`describe` の警告が読めるようにする
-        if checks is not None:
-            check = checks.refresh(store, source)
-            report, navs = check.report, check.nav
-        else:
-            report, navs = check_sync(store, source), nav_warnings(store, source)
+        # 検査の結果を控えに持たせ、`describe` の警告が読めるようにする
+        check = checks.refresh(store, source)
+        report = check.report
         for label, values in (
             ("metadata の列の欠け", report.missing_refs),
             ("管理用の YAML に無いファイル", report.unindexed_files),
@@ -309,7 +306,7 @@ def discard_source_caches(
                 violation.path,
                 violation.rule,
             )
-        for warning in navs:
+        for warning in check.nav:
             logger.warning("%s: nav: %s: %s", source.id, warning.path, warning.rule)
 
 
