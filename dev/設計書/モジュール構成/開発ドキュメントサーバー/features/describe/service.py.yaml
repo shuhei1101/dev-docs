@@ -71,13 +71,19 @@ functions:
         type: DocumentStore
         required: true
         passing: injected
-        description: 種類のスキーマを読み、引数なしのときは索引の同期を求める
+        description: 種類のスキーマを読む
       - name: terminal
         title: 端末の設定
         type: TerminalConfig
         required: true
         passing: injected
         description: 引数なしのときに設定のバージョンを比べる
+      - name: checks
+        title: 配信元の検査の控え
+        type: SourceChecks
+        required: true
+        passing: injected
+        description: 引数なしのときに警告の元にする
     returns:
       type: SourceListResult | SourceGuideResult | KindSchemaResult
       description: 引数の数で決まる結果

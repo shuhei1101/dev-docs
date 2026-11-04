@@ -24,12 +24,12 @@ functions:
         required: true
         passing: keyword
         description: 配信中の配信元と配信の状態
-      - name: store
-        title: 文書のストア
-        type: DocumentStore
+      - name: checks
+        title: 配信元の検査の控え
+        type: SourceChecks
         required: true
         passing: keyword
-        description: 索引の同期と nav の警告を求める
+        description: 配信元ごとの最後の検査の結果を読む（配信元のファイルはたどらない）
       - name: terminal
         title: 端末の設定
         type: TerminalConfig
@@ -40,7 +40,7 @@ functions:
       type: list[str]
       description: 警告の文
     process: |-
-      1. 使える配信元ごとに索引の同期を求め、件数が 0 でない並びごとに `{id}: {並びの名前}が {件数} 件あります（check_project で確かめられます）` を加える（`check_sync`）
+      1. 使える配信元ごとに最後の検査の結果を読み（配信元の検査の控え.結果の取得。`None` の配信元は同期のずれ・エイリアス・nav を飛ばす）、件数が 0 でない並びごとに `{id}: {並びの名前}が {件数} 件あります（check_project で確かめられます）` を加える
       2. 使える配信元の設定のバージョンが `old` なら `{id}: 設定のバージョンが古い（{設定}・読める {現在}）。dev-docs migrate で移し替えます` を加える（バージョンの新旧）
       3. 端末の設定のバージョンが `old` なら同じ形の文を加える（使える配信元が 0 件でも加える）
       4. 使える配信元ごとに、`alias_violations` が 0 件でなければ `{id}: エイリアスのキーの違反が {件数} 件あります（check_project で確かめられます）` を加え、nav の警告（画面の API）ごとに `{id}: {path}: {rule}` を加える
@@ -50,7 +50,7 @@ functions:
         case: 正常
         summary: 同期のずれ・古い設定・配信していない配信元を並べる
         condition: 使える配信元 a（ファイルが無い行 2 件・当たらない関連 1 件・古い設定）、`not_served` の b
-        mock: なし
+        mock: なし（検査の結果は配信元の検査の控えに流してから渡す）
         expected: 警告が 4 件（a のファイルが無い行・a の当たらない関連・a の古い設定・b の配信していない）
       - name: test_collect_warnings_when_unavailable_source
         case: 正常
@@ -64,6 +64,12 @@ functions:
         condition: 使える配信元 a に、`aliases` が `3` の用語の文書 1 件と、どの文書にも当たらない `auto` の条件 1 つ
         mock: なし
         expected: 警告が 2 件（a のエイリアスのキーの違反 1 件・a の nav の条件）
+      - name: test_collect_warnings_when_unchecked
+        case: 正常
+        summary: まだ検査していない配信元は、同期のずれを載せない
+        condition: 使える配信元 a（管理用の YAML に無いファイル 1 件）を、配信元の検査の控えに流さずに渡す
+        mock: なし
+        expected: 警告が空
       - name: test_collect_warnings_when_no_source_available
         case: 正常
         summary: 使える配信元が無くても、端末の設定の古さと配信していない配信元を載せる
