@@ -67,6 +67,7 @@ class Handlers:
     reload_sources: Callable[[TerminalConfig], list[SourceStatus]]
     restart: RestartControl
     prompts: PromptSet
+    checks: Any = None
 
 
 def _setup_logging(log_dir: Path) -> list[logging.Handler]:
@@ -194,6 +195,7 @@ def check_port(bind: str, port: int) -> None:
 def build_handlers(terminal: TerminalConfig) -> Handlers:
     """端末の設定から部品を 1 回だけ作り、配線済みの関数にする（配信元は読まない）。"""
     from dev_docs.features.convert.service import ConvertService
+    from dev_docs.features.describe.source_checks import SourceChecks
     from dev_docs.features.documents.store import DocumentStore
     from dev_docs.features.history.snapshot import SnapshotStore
     from dev_docs.features.seen.store import SeenStore
@@ -211,15 +213,23 @@ def build_handlers(terminal: TerminalConfig) -> Handlers:
     seen = SeenStore(state_dir / "seen.sqlite3", terminal.seen_retention_days)
     checker = DocumentChecker(store, terminal.script_timeout_sec)
     columns = ColumnSettings(state_dir / COLUMNS_DIR)
+    checks = SourceChecks()
 
     def on_rebuilt(source: ServedSource) -> None:
-        discard_source_caches([source], store=store, checker=checker, converter=converter)
+        discard_source_caches(
+            [source], store=store, checker=checker, converter=converter, checks=checks
+        )
 
     registry = SourceRegistry(on_rebuilt=on_rebuilt, loading=True)
 
     def reload(new_terminal: TerminalConfig) -> list[SourceStatus]:
         statuses = reload_sources(
-            new_terminal, registry=registry, store=store, checker=checker, converter=converter
+            new_terminal,
+            registry=registry,
+            store=store,
+            checker=checker,
+            converter=converter,
+            checks=checks,
         )
         # 設定画面が起動時の一覧ではなく保存した一覧を見せるよう、起動時の端末の設定の一覧を差し替える
         terminal.sources[:] = new_terminal.sources
@@ -239,6 +249,7 @@ def build_handlers(terminal: TerminalConfig) -> Handlers:
         reload_sources=reload,
         restart=RestartControl(),
         prompts=prompts,
+        checks=checks,
     )
 
 
@@ -249,10 +260,13 @@ def reload_sources(
     store: Any,
     checker: Any,
     converter: Any,
+    checks: Any = None,
 ) -> list[SourceStatus]:
     """配信元の一覧を読み直し、配信元の内容を控えた部品の控えを捨てる。"""
     statuses = registry.reload(terminal)
-    discard_source_caches(registry.served(), store=store, checker=checker, converter=converter)
+    discard_source_caches(
+        registry.served(), store=store, checker=checker, converter=converter, checks=checks
+    )
     return statuses
 
 
@@ -262,6 +276,7 @@ def discard_source_caches(
     store: Any,
     checker: Any,
     converter: Any,
+    checks: Any = None,
 ) -> None:
     """配信元の内容を控えた部品の控えを捨て、渡した配信元ごとのずれと警告をログに書く。"""
     from dev_docs.features.view.nav import nav_warnings
@@ -270,7 +285,12 @@ def discard_source_caches(
     checker.clear()
     converter.clear()
     for source in sources:
-        report = check_sync(store, source)
+        # 控えがあれば検査の結果を持たせ、`describe` の警告が読めるようにする
+        if checks is not None:
+            check = checks.refresh(store, source)
+            report, navs = check.report, check.nav
+        else:
+            report, navs = check_sync(store, source), nav_warnings(store, source)
         for label, values in (
             ("metadata の列の欠け", report.missing_refs),
             ("管理用の YAML に無いファイル", report.unindexed_files),
@@ -289,7 +309,7 @@ def discard_source_caches(
                 violation.path,
                 violation.rule,
             )
-        for warning in nav_warnings(store, source):
+        for warning in navs:
             logger.warning("%s: nav: %s: %s", source.id, warning.path, warning.rule)
 
 

@@ -4,12 +4,11 @@ from __future__ import annotations
 
 from dev_docs.features.access.types import SourceAccess
 from dev_docs.features.admin.service import version_state
-from dev_docs.features.documents.store import DocumentStore, check_sync
+from dev_docs.features.describe.source_checks import SourceChecks
 from dev_docs.features.settings.query import SETTINGS_VERSION
 from dev_docs.features.settings.types import TerminalConfig
 from dev_docs.features.sources.registry import SourceRegistry
 from dev_docs.features.sources.types import SOURCE_CONFIG_VERSION
-from dev_docs.features.view.nav import nav_warnings
 
 TERMINAL_LABEL = "端末の設定"
 
@@ -18,7 +17,7 @@ def collect_warnings(
     available: list[SourceAccess],
     *,
     registry: SourceRegistry,
-    store: DocumentStore,
+    checks: SourceChecks,
     terminal: TerminalConfig,
 ) -> list[str]:
     """使える配信元の同期のずれ・古い設定と、端末の設定の古さ・配信していない配信元を警告の文にする。"""
@@ -27,7 +26,15 @@ def collect_warnings(
     config_warnings: list[str] = []
     for item in available:
         source = registry.get(item.source_id)
-        report = check_sync(store, source)
+        if version_state(source.config.version, SOURCE_CONFIG_VERSION) == "old":
+            old_sources.append(
+                _old_version(item.source_id, source.config.version, SOURCE_CONFIG_VERSION)
+            )
+        # 配信元のファイルはたどらず、最後の検査の結果を読む
+        check = checks.get(item.source_id)
+        if check is None:
+            continue
+        report = check.report
         for label, values in (
             ("metadata の列の欠け", report.missing_refs),
             ("管理用の YAML に無いファイル", report.unindexed_files),
@@ -39,18 +46,13 @@ def collect_warnings(
                     f"{item.source_id}: {label}が {len(values)} 件あります"
                     "（check_project で確かめられます）"
                 )
-        if version_state(source.config.version, SOURCE_CONFIG_VERSION) == "old":
-            old_sources.append(
-                _old_version(item.source_id, source.config.version, SOURCE_CONFIG_VERSION)
-            )
         if report.alias_violations:
             config_warnings.append(
                 f"{item.source_id}: エイリアスのキーの違反が {len(report.alias_violations)} 件"
                 "あります（check_project で確かめられます）"
             )
         config_warnings.extend(
-            f"{item.source_id}: {warning.path}: {warning.rule}"
-            for warning in nav_warnings(store, source)
+            f"{item.source_id}: {warning.path}: {warning.rule}" for warning in check.nav
         )
     warnings.extend(old_sources)
     # 端末の設定のバージョンが古い（使える配信元が無くても載せる）
