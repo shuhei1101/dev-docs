@@ -209,7 +209,7 @@ flows:
       - name: Mock
         description: なし
       - name: 引用符を持つ参照元
-        description: 'ワークツリー x の文書 1 が、単一引用符の値（`version: ''2020-12''`）と、`: ` を含む二重引用符の値（`title: "A: b"`）を持ち、`related` が文書 2 を指す'
+        description: 'ワークツリー x の文書 1 が、単一引用符の値（`description: ''2020-12''`）と、`: ` を含む二重引用符の値（`name: "A: b"`）を持ち、`related` が文書 2 を指す'
       - name: 入力
         description: '`targets` に文書 2、`on_referenced: unlink`'
     flow: |-
@@ -225,7 +225,7 @@ flows:
         T-->>C: deleted と参照を外した文書
       ```
     expected:
-      - '文書 1 の YAML の、`related` の文書 2 の行以外の行が書き込み前の文字列と一致し、`version: ''2020-12''` と `title: "A: b"` が残る'
+      - '文書 1 の YAML の、`related` の文書 2 の行以外の行が書き込み前の文字列と一致し、`description: ''2020-12''` と `name: "A: b"` が残る'
     test: test_normal_when_unlink_quotes_preserved
 lead: 文書を配列で受けて物理削除する。他の文書の `related` から参照されているときは断るか、参照も外して消す。
 identifier: delete_docs

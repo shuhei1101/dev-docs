@@ -333,7 +333,7 @@ scenarios:
         description: なし（実環境で実行）
         notes: '-'
       - name: 引用符を持つ文書
-        description: 'ワークツリー x の文書 1 と文書 2 が、単一引用符の値（`version: ''2020-12''`）、`: ` を含む二重引用符の値（`title: "A: b"`）、引用符なしの値を持つ'
+        description: 'ワークツリー x の文書 1 と文書 2 が、単一引用符の値（`description: ''2020-12''`）、`: ` を含む二重引用符の値（`name: "A: b"`）、引用符なしの値（`weight: 1`）を持つ'
         notes: '-'
       - name: 参照されている文書
         description: ワークツリー x の文書 3。文書 2 の `related` が文書 3 を指す
@@ -348,7 +348,7 @@ scenarios:
         participant M as 文書の MCP（/mcp）
         participant WT as ワークツリー x
 
-        A->>M: write_docs(operations: update 文書 1・set 引用符なしの項目)
+        A->>M: write_docs(operations: update 文書 1・set weight)
         M->>WT: 文書 1 を書き換える
         M-->>A: 新しい version と差分
         A->>M: delete_docs(targets: 文書 3, on_referenced: unlink)
@@ -356,7 +356,7 @@ scenarios:
         M-->>A: 消した文書と参照を外した文書
       ```
     expected:
-      - '文書 1 の YAML の、`set` で変えた行以外の行が書き込み前の文字列と一致し、`version: ''2020-12''` と `title: "A: b"` の引用符が残る'
+      - '文書 1 の YAML の、`set` で変えた行以外の行が書き込み前の文字列と一致し、`description: ''2020-12''` と `name: "A: b"` の引用符が残る'
       - 文書 2 の YAML の、`related` の文書 3 の行以外の行が書き込み前の文字列と一致する
       - '`write_docs` の結果の差分に、`set` で変えた項目の行だけが出る'
     test: test_normal_when_quotes_preserved

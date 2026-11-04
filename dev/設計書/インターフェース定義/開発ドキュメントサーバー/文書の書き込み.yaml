@@ -463,9 +463,9 @@ flows:
       - name: Mock
         description: なし
       - name: 引用符を持つ文書
-        description: 'ワークツリー x の文書 1 が、単一引用符の値（`version: ''2020-12''`）、`: ` を含む二重引用符の値（`title: "A: b"`）、引用符なしの値（`name: 文書 1`）を持つ'
+        description: 'ワークツリー x の文書 1 が、単一引用符の値（`description: ''2020-12''`）、`: ` を含む二重引用符の値（`name: "A: b"`）、引用符なしの値（`weight: 1`）を持つ'
       - name: 入力
-        description: '`update`（`id`: 文書 1・`set: {name: 新しい名前}`）'
+        description: '`update`（`id`: 文書 1・`set: {weight: 2}`）'
     flow: |-
       ```mermaid
       sequenceDiagram
@@ -473,14 +473,14 @@ flows:
         participant T as write_docs
         participant WT as ワークツリー x
 
-        C->>T: update 文書 1・set {name: 新しい名前}
+        C->>T: update 文書 1・set {weight: 2}
         T->>T: 引用符の種類を保って読み、変更を当てて検査に通す
         T->>WT: 文書 1 を書き換える
         T-->>C: status updated・diff
       ```
     expected:
-      - '書き換えた文書 1 の YAML の、`name` の行以外の行が書き込み前の文字列と一致し、`version: ''2020-12''` と `title: "A: b"` が残る'
-      - '`results[0].diff` が `name` の行の `-`・`+` だけを持つ'
+      - '書き換えた文書 1 の YAML の、`weight` の行以外の行が書き込み前の文字列と一致し、`description: ''2020-12''` と `name: "A: b"` が残る'
+      - '`results[0].diff` が `weight` の行の `-`・`+` だけを持つ'
     test: test_normal_when_quotes_preserved
 lead: 文書の作成・部分更新・置き換えを配列で受け、変更を当てた後の文書を配信元のスキーマと `validators[]` に通してから書き込む。dev-docs は commit しない。
 identifier: write_docs
