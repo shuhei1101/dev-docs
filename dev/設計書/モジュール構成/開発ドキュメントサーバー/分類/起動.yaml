@@ -1,6 +1,6 @@
 title: 開発ドキュメントサーバー / 起動
 lead: |-
-  `dev-docs serve` と `dev-docs migrate` の処理。端末の設定と配信元を読み、部品を配線して、画面の API・文書の MCP・管理の MCP・セッションの文脈を 1 つのアプリとして待ち受ける。
+  `dev-docs serve` と `dev-docs migrate` の処理。端末の設定と配信元を読み、部品を配線して、画面の API・文書の MCP・管理の MCP・セッションの開始を 1 つのアプリとして待ち受ける。
   再起動を要求されて止まったときは、同じプロセスを `serve` で置き換える。
   例外から problem+json への変換もここで登録する。
 directory: |-
@@ -34,7 +34,7 @@ diagrams:
         アプリの組み立て ..> 管理の MCP の組み立て
         アプリの組み立て ..> 端末の設定の入口
         アプリの組み立て ..> 画面の入口
-        アプリの組み立て ..> セッションの文脈のルーター
+        アプリの組み立て ..> セッションの開始のルーター
         アプリの組み立て ..> 例外の変換の登録
         アプリの組み立て ..> 画面の配信
         アプリの組み立て ..> 操作の識別子
@@ -88,7 +88,7 @@ diagrams:
         class 画面の入口 {
           <<function>>
         }
-        class セッションの文脈のルーター {
+        class セッションの開始のルーター {
           <<function>>
         }
         class 例外の変換の登録 {
@@ -117,7 +117,7 @@ diagrams:
         click 管理の MCP の組み立て href "../server/mcp/admin.py.yaml#管理の MCP の組み立て"
         click 端末の設定の入口 href "../features/settings/route.py.yaml#端末の設定の入口"
         click 画面の入口 href "../features/view/route.py.yaml#画面の入口"
-        click セッションの文脈のルーター href "../features/session_context/route.py.yaml#セッションの文脈のルーター"
+        click セッションの開始のルーター href "../features/session_start/route.py.yaml#セッションの開始のルーター"
         click 例外の変換の登録 href "../server/error_handlers.py.yaml#例外の変換の登録"
         click 画面の配信 href "../server/screen.py.yaml#画面の配信"
         click 操作の識別子 href "../server/app.py.yaml#操作の識別子"

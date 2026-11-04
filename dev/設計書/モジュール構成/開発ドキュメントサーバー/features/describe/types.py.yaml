@@ -69,7 +69,7 @@ data_models:
     usecase: 説明
     role: DTO
     summary: 引数なしの結果
-    description: '`dataclass(frozen=True)`。SessionStart で注入する一覧（#4）と同じ中身。'
+    description: '`dataclass(frozen=True)`。'
     properties:
       - name: workplace
         title: 作業場所
@@ -87,6 +87,12 @@ data_models:
         access: 公開
         default: None
         description: '`outside_scope` が `True` のときだけリスト（0 件は空）。`format: json` は空のリストと `None` を落とすので、どちらも `outside_sources` のキーを持たない'
+      - name: warnings
+        title: 警告
+        type: list[str]
+        access: 公開
+        default: '[]'
+        description: '警告の収集の結果。`format: json` は 0 件のときも空のリストで持つ'
   - name: OutsideSource
     title: 作業範囲の外で読める配信元
     container: features/describe/types.py

@@ -23,7 +23,7 @@
 | [describe](./describe/) | `describe` の使える配信元・説明書と種類・種類のスキーマ |
 | [view](./view/) | 文書の取得・画面の検索・リビジョンの一覧・表の列の設定の API |
 | [admin](./admin/) | 管理の MCP の状態・読み直し・検査・試しの変換 |
-| [session_context](./session_context/) | `POST /_admin/session-context` のセッションの文脈 |
+| [session_start](./session_start/) | `POST /_admin/session-start` のセッションの開始 |
 | [lifecycle](./lifecycle/) | 再起動の制御とクローンの更新 |
 | [migrate](./migrate/) | `dev-docs migrate` の設定の移し替え |
 | [prompt_doc](./prompt_doc/) | `dev-docs prompt-doc` のプロンプトの YAML の Markdown への変換 |
