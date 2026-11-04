@@ -203,6 +203,30 @@ flows:
     expected:
       - '`isError: true` で、`doc-9` と近い ID の候補を返す'
     test: test_error_when_document_not_found
+  - name: 正常系（参照を外した文書の引用符を保つ）
+    summary: '`on_referenced: unlink` で書き換えた参照元の文書の、変更していない項目の引用符の種類を元のまま書き出す'
+    setup:
+      - name: Mock
+        description: なし
+      - name: 引用符を持つ参照元
+        description: 'ワークツリー x の文書 1 が、単一引用符の値（`version: ''2020-12''`）と、`: ` を含む二重引用符の値（`title: "A: b"`）を持ち、`related` が文書 2 を指す'
+      - name: 入力
+        description: '`targets` に文書 2、`on_referenced: unlink`'
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        participant C as クライアント
+        participant T as delete_docs
+        participant WT as ワークツリー x
+
+        C->>T: targets: 文書 2, on_referenced: unlink
+        T->>T: 引用符の種類を保って文書 1 を読み、related から文書 2 を外す
+        T->>WT: 文書 1 を書き換え、文書 2 のファイルを削除する
+        T-->>C: deleted と参照を外した文書
+      ```
+    expected:
+      - '文書 1 の YAML の、`related` の文書 2 の行以外の行が書き込み前の文字列と一致し、`version: ''2020-12''` と `title: "A: b"` が残る'
+    test: test_normal_when_unlink_quotes_preserved
 lead: 文書を配列で受けて物理削除する。他の文書の `related` から参照されているときは断るか、参照も外して消す。
 identifier: delete_docs
 permissions: 対象の配信元の `scope.write` に `cwd` が当たること。Git の配信元はワークツリーだけ。Git 管理外の配信元は種類の `documents[].writable` が削除を許すこと
@@ -210,6 +234,7 @@ idempotent: false
 side_effects: '作業ツリー（Git 管理外の配信元はそのフォルダ）の文書のファイルを削除する。`on_referenced: unlink` のときは参照元の文書の `related` も書き換える。`generators[]` を流す。'
 callers:
   - dev/設計書/シナリオ/単一ユースケース/エージェントが書き込む#scenarios[正常シナリオ（参照も外して消す）]
+  - dev/設計書/シナリオ/単一ユースケース/エージェントが書き込む#scenarios[正常シナリオ（変更していない項目の引用符を保つ）]
 exclusivity: '`write_docs` と同じ配信元ごとの排他ロックの中で行う'
 request:
   - name: source
@@ -317,7 +342,7 @@ constraints:
   - item: 件数
     constraint: 1 回の `targets` は最大 50 件
   - item: 削除の方式
-    constraint: 物理削除。参照を外した文書は `write_docs` と同じ検査に通してから書く
+    constraint: 物理削除。参照を外した文書は `write_docs` と同じ検査に通してから、`write_docs` と同じく変更していない項目の引用符の種類を保って書く
   - item: 注釈
     constraint: '`destructiveHint: true`'
   - item: 配信元・ワークツリーの解決
