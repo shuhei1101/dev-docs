@@ -1,42 +1,31 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { type RefObject, useEffect } from "react";
 import { toast } from "sonner";
 
+import type { MdmarkColumnsChangeHandler } from "@/features/docs/doc-view/hooks/use-mdmark";
 import { viewPutColumns } from "@/shared/api/generated/view/view";
 
-const MENU = ".mdmark-columns-menu";
+type Params = {
+  /** 配信元の ID */
+  source: string;
+  /** `+columns` の表のキーを出る順に並べたもの */
+  columnKeys: string[];
+};
 
-/** 列の表示のメニューで出し入れした列を、その表の隠す列として保存する。失敗しても表は切り替えたままにする */
-export const useColumnPersistence = (
-  ref: RefObject<HTMLElement | null>,
-  source: string,
-  tableKeys: string[],
-): void => {
+/** mdmark の `onColumnsChange` に渡す関数を返し、受けた表の隠す列を保存する。失敗しても表は切り替えたままにする */
+export const useColumnPersistence = ({
+  source,
+  columnKeys,
+}: Params): MdmarkColumnsChangeHandler => {
   const queryClient = useQueryClient();
-  useEffect(() => {
-    const element = ref.current;
-    if (element === null) return;
-    const onChange = (event: Event) => {
-      const target = event.target as HTMLElement;
-      const menu = target.closest(MENU);
-      if (menu === null) return;
-      const table =
-        tableKeys[Array.from(element.querySelectorAll(MENU)).indexOf(menu)];
-      if (table === undefined) return;
-      const hidden = Array.from(
-        menu.querySelectorAll<HTMLInputElement>('input[type="checkbox"]'),
+  return ({ tableIndex, hidden }) => {
+    const table = columnKeys[tableIndex];
+    if (table === undefined) return;
+    viewPutColumns(source, { table, hidden })
+      .then(() =>
+        queryClient.invalidateQueries({
+          queryKey: ["view", "document", source],
+        }),
       )
-        .filter((input) => !input.checked)
-        .map((input) => input.closest("label")?.textContent?.trim() ?? "");
-      viewPutColumns(source, { table, hidden })
-        .then(() =>
-          queryClient.invalidateQueries({
-            queryKey: ["view", "document", source],
-          }),
-        )
-        .catch(() => toast.error("列の表示を保存できませんでした。"));
-    };
-    element.addEventListener("change", onChange);
-    return () => element.removeEventListener("change", onChange);
-  }, [ref, source, tableKeys, queryClient]);
+      .catch(() => toast.error("列の表示を保存できませんでした。"));
+  };
 };

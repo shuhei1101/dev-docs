@@ -31,7 +31,7 @@ export const documentQueryOptions = (
     placeholderData: keepPreviousData,
   });
 
-/** 目次の変更のマーカーに使う、比較元のリビジョンの同じ文書の `markdown`。比較元に無ければ null */
+/** 目次の変更のマーカーと本文の強調に使う、比較元のリビジョンの同じ文書の `markdown` と `tableKeys`。比較元に無いか本文が無ければ null */
 export const baseMarkdownQueryOptions = (
   source: string,
   path: string,
@@ -41,7 +41,9 @@ export const baseMarkdownQueryOptions = (
     queryKey: ["view", "base-markdown", source, path, base],
     enabled: base !== null,
     meta: { handleError: false },
-    queryFn: async ({ signal }): Promise<string | null> => {
+    queryFn: async ({
+      signal,
+    }): Promise<{ markdown: string; tableKeys: string[] } | null> => {
       try {
         const response = await viewGetDocument(
           source,
@@ -49,7 +51,8 @@ export const baseMarkdownQueryOptions = (
           { ref: base ?? undefined },
           { signal },
         );
-        return response.markdown ?? null;
+        if (response.markdown == null) return null;
+        return { markdown: response.markdown, tableKeys: response.tableKeys };
       } catch (error) {
         if (error instanceof NotFoundError) return null;
         throw error;
