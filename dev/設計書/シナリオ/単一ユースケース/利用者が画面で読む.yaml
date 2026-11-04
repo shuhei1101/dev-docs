@@ -166,7 +166,7 @@ scenarios:
         notes: '-'
       - name: dev-docs
         description: 正常シナリオと同じ sample を配信している dev-docs
-        notes: 'sample に、`<!-- table: data +columns -->` のマーカーを付けた 3 列の表を持つ Markdown の文書 5 がある（スキーマから作る表のうち `+columns` を持つのは図の元データの表だけ）'
+        notes: 'sample に、`+columns` を持たない表の後に `<!-- table: data +columns -->` のマーカーを付けた 3 列の表を持つ Markdown の文書 5 がある（スキーマから作る表のうち `+columns` を持つのは図の元データの表だけ）'
     flow: |-
       ```mermaid
       sequenceDiagram
@@ -183,6 +183,7 @@ scenarios:
     expected:
       - 表の 2 列目が表示されない
       - 開き直しても 2 列目が表示されない
+      - '`+columns` を持たない先頭の表は、開き直しても全ての列が表示される'
       - 配信元のフォルダのファイルは変わらない
     test: test_normal_when_column_hidden
   - name: 正常シナリオ（配信元の変換を使う）
