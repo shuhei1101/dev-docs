@@ -327,6 +327,39 @@ scenarios:
       - '`set: main_tags` の後、`tags` が `[{name: mcp}, {name: 運用, main: true}]` になる'
       - '`tags` の各要素が `name` を持つオブジェクトのままで、文字列に置き換わらない'
     test: test_normal_when_tags_are_objects
+  - name: 正常シナリオ（変更していない項目の引用符を保つ）
+    setup:
+      - name: Mock
+        description: なし（実環境で実行）
+        notes: '-'
+      - name: 引用符を持つ文書
+        description: 'ワークツリー x の文書 1 と文書 2 が、単一引用符の値（`version: ''2020-12''`）、`: ` を含む二重引用符の値（`title: "A: b"`）、引用符なしの値を持つ'
+        notes: '-'
+      - name: 参照されている文書
+        description: ワークツリー x の文書 3。文書 2 の `related` が文書 3 を指す
+        notes: '-'
+      - name: dev-docs
+        description: sample を配信している dev-docs
+        notes: '`worktree` にワークツリー x のパスを渡す'
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        actor A as エージェント
+        participant M as 文書の MCP（/mcp）
+        participant WT as ワークツリー x
+
+        A->>M: write_docs(operations: update 文書 1・set 引用符なしの項目)
+        M->>WT: 文書 1 を書き換える
+        M-->>A: 新しい version と差分
+        A->>M: delete_docs(targets: 文書 3, on_referenced: unlink)
+        M->>WT: 文書 2 の related から文書 3 を外して書き換え、文書 3 のファイルを消す
+        M-->>A: 消した文書と参照を外した文書
+      ```
+    expected:
+      - '文書 1 の YAML の、`set` で変えた行以外の行が書き込み前の文字列と一致し、`version: ''2020-12''` と `title: "A: b"` の引用符が残る'
+      - 文書 2 の YAML の、`related` の文書 3 の行以外の行が書き込み前の文字列と一致する
+      - '`write_docs` の結果の差分に、`set` で変えた項目の行だけが出る'
+    test: test_normal_when_quotes_preserved
 lead: エージェントが文書の MCP の `write_docs`・`delete_docs` で、作業ツリーの YAML の文書を検査に通してから作る・直す・消す。
 issue: 3
 primary_actor: エージェント（Claude Code）
