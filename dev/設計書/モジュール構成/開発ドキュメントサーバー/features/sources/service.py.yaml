@@ -264,10 +264,11 @@ functions:
         description: '`sources[]` の中の位置'
       - name: lookup
         title: 参照先の配信元の引き当て
-        type: SchemaRefLookup
-        required: true
+        type: SchemaRefLookup | None
+        required: false
+        default: None
         passing: keyword
-        description: 読み直す端末の設定から作った引き当て（配信元の設定の検証へ渡す）
+        description: 読み直す端末の設定から作った引き当て（配信元の設定の検証へ渡す。`None` は端末の設定のファイルから作る）
     returns:
       type: tuple[ServedSource | None, SourceStatus]
       description: 配信するときは配信中の配信元と `serving` の状態、配信しないときは `None` と `not_served` か `disabled` の状態
