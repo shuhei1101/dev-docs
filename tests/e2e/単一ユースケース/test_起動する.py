@@ -56,20 +56,6 @@ SAMPLE_KIND_SCHEMA = "type: object\nproperties:\n  id: {type: string}\n  name: {
 LOOPBACK_V4 = "0100007F"
 EXIT_TIMEOUT_SEC = 30
 DOCS_TOOL_PREFIX = "mcp__plugin_dev-docs_dev-docs__"
-# 使い分けは文書の MCP の instructions にある旨の行
-POINTER_LINE = (
-    "探す・読む・書くときの使い分けと書き方は、文書の MCP（dev-docs）の instructions にあります。"
-)
-# 文脈に置かない使い方・タグの行の語
-USAGE_WORDS = (
-    "describe(source)",
-    'group_by="tags"',
-    'source="*"',
-    'view="full"',
-    "管理用の YAML の行",
-    "タグ:",
-)
-CONTEXT_MAX_CHARS = 1000
 SESSION_PROMPT = "このセッションでは何も実行せず、「了解」とだけ答えてください。"
 LEGACY_CONFIG = (
     'version: "1"\n'
@@ -89,13 +75,6 @@ LEGACY_CONFIG = (
     "    defaults:\n"
     "      - paths: [docs/**]\n"
     "        tags: [doc]\n"
-)
-FILES_ROW = (
-    "  - id: src\n"
-    "    paths: [src/files.yaml]\n"
-    "    schema: schemas/files.schema.yaml\n"
-    "    records: files\n"
-    "    body_file: path\n"
 )
 
 
@@ -407,7 +386,7 @@ def test_normal_when_started_by_session_start(
     assert reconnected == [DOCS_TOOL_PREFIX + name for name in TOOL_NAMES]
 
 
-def test_normal_when_session_context_added(
+def test_normal_when_listening_server_not_injected(
     claude_home: Any,
     make_clone: Callable[..., Any],
     make_source: Callable[..., Any],
@@ -417,43 +396,23 @@ def test_normal_when_session_context_added(
     sample_file_set: Callable[..., dict[str, str]],
     sample_config_text: Callable[..., str],
 ) -> None:
-    """待ち受けているサーバーから、使える配信元・警告と instructions を指す 1 行を取ってセッションの文脈に入れる（正常系）。"""
+    """待ち受けているサーバーがあるときは、セッションの文脈に何も入れずに戻る（正常系）。"""
     # 準備
     clone = make_clone()
-    sample_files = sample_file_set(
-        **{
-            "dev-docs.yaml": sample_config_text(FILES_ROW, description="サンプルの配信元"),
-            "schemas/files.schema.yaml": FILES_SCHEMA.read_text(encoding="utf-8"),
-            "src/files.yaml": "files:\n  - path: a.py\n",
-            "src/a.py": "a = 1\n",
-            "src/extra.py": "x = 1\n",
-        }
-    )
-    sample = make_source("sample", sample_files)
+    sample = make_source("sample")
     sample.scope_write = [sample.folder]
     readable = [sample.folder, sample.folder / "**"]
-    notes_files = sample_file_set(
-        **{"dev-docs.yaml": sample_config_text(name="notes", description="メモの配信元")}
-    )
+    notes_files = sample_file_set(**{"dev-docs.yaml": sample_config_text(name="notes")})
     notes = make_source("notes", notes_files, git=False, scope_read=readable)
-    old_files = sample_file_set(**{"dev-docs.yaml": sample_config_text(name="old", version="0")})
-    old = make_source("old", old_files, git=False, scope_read=readable)
     worktree = add_worktree(sample.folder, "x")
-    served = serve(sample, notes, old, clone=clone.clone, port=claude_home.port)
+    served = serve(sample, notes, clone=clone.clone, port=claude_home.port)
     claude_home.set_env(DEV_DOCS_CONFIG=str(served.settings))
     # 実行
     run = claude_home.run(SESSION_PROMPT, cwd=worktree)
     # 検証
     exit_code, context = run.session_start_context()
     assert exit_code == 0
-    assert "- sample（読み書き）: サンプルの配信元" in context
-    assert "- notes（読み取りだけ）: メモの配信元" in context
-    assert POINTER_LINE in context
-    assert [word for word in USAGE_WORDS if word in context] == []
-    assert len(context) <= CONTEXT_MAX_CHARS
-    assert "sample: 管理用の YAML に無いファイルが 1 件あります" in context
-    assert "old: 設定のバージョンが古い" in context
-    assert "つなぎ直" not in context
+    assert context == ""
     assert serve_pid_count(claude_home.port) == 1
 
 
