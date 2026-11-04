@@ -633,10 +633,10 @@ scenarios:
       - name: Mock
         description: なし（実環境で実行。Claude Code は `claude -p` で動かし、AskUserQuestion には既定の選択肢で答える）
       - name: スキーマの配信元
-        description: 種類のスキーマ `schemas/note.schema.yaml` と、そこから `$ref` で指す `schemas/common.schema.yaml` を持つ git リポジトリ
-        notes: id `schemas`。タグ `v1` の後の commit で `note.schema.yaml` に必須のキー `owner` を追加し、作業ツリーはその commit
+        description: 種類のスキーマ `schemas/note.schema.yaml` と、そこから `$ref` で指す `schemas/common.schema.yaml` と、`dev-docs.yaml` を持つ git リポジトリ。`dev-docs.yaml` は検証に通り、配信中
+        notes: id `schemas`。タグ `v1` の後の commit で `note.schema.yaml` に必須のキー `owner` を、`common.schema.yaml` の定義に項目 `extra` を追加し、作業ツリーはその commit
       - name: サンプルの配信元
-        description: '`documents[0].schema` で、スキーマの配信元の `schemas/note.schema.yaml` をリビジョン `v1` で指す配信元'
+        description: '`documents[0].schema` で、スキーマの配信元の `schemas/note.schema.yaml` をリビジョン `v1` で指す Git 管理外のフォルダ'
         notes: id `sample`。文書は `owner` を持たない
       - name: dev-docs
         description: 端末の設定の `sources` に schemas の 1 行を持つ dev-docs
@@ -647,6 +647,7 @@ scenarios:
         actor A as エージェント
         participant SK as setup のスキル
         participant AD as 管理の MCP
+        participant CF as 端末の設定
         participant DM as 文書の MCP
         participant SG as schemas のリポジトリ
 
@@ -654,6 +655,11 @@ scenarios:
         SK->>AD: check_project（sample のパス）
         AD->>SG: v1 の note.schema.yaml と common.schema.yaml を読む
         AD-->>SK: 違反 0 件
+        SK->>U: scope.write・scope.read を既定の値つきで聞く
+        U-->>SK: 既定の値
+        SK-->>U: 書き込む行を表で示して確かめる
+        U-->>SK: 了承
+        SK->>CF: sources に sample の行を書く
         SK->>AD: reload
         SK-->>U: 追加した配信元と check_project の結果を出す
         A->>DM: describe(source: sample, kind: note)
@@ -663,7 +669,8 @@ scenarios:
       ```
     expected:
       - '`check_project` が違反を 0 件で返す'
-      - '`describe(source: sample, kind: note)` が返すスキーマに、`common.schema.yaml` の `$ref` が v1 の内容で解かれて入り、`owner` が無い'
+      - 端末の設定の `sources` に sample の行がある
+      - '`describe(source: sample, kind: note)` が返すスキーマに、`common.schema.yaml` の `$ref` が v1 の内容で解かれて入り、`owner` と `extra` が無い'
       - '`owner` を持たない文書の `write_docs` が通り、sample の作業ツリーに文書ができる'
       - スキーマの配信元の作業ツリーのファイルは変わらない
     test: test_normal_when_schema_from_other_source
@@ -674,7 +681,7 @@ scenarios:
       - name: スキーマの配信元
         description: 正常シナリオ（ほかの配信元のスキーマを参照する）と同じ schemas
       - name: サンプルの配信元
-        description: '`documents[0].schema` で、スキーマの配信元の `schemas/note.schema.yaml` を、無いリビジョン `v9` で指す配信元'
+        description: '`documents[0].schema` で、スキーマの配信元の `schemas/note.schema.yaml` を、無いリビジョン `v9` で指す Git 管理外のフォルダ'
       - name: 端末の設定
         description: '`sources` に schemas の 1 行'
     flow: |-
