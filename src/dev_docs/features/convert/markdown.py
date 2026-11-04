@@ -11,7 +11,7 @@ from typing import Any
 from urllib.parse import quote
 
 from dev_docs.features.convert.diagrams import render_diagram
-from dev_docs.features.convert.inline import link_reference, rewrite_text
+from dev_docs.features.convert.inline import heading_anchor, link_reference, rewrite_text
 from dev_docs.features.convert.types import DiagramHead, DiagramKind, RenderContext
 from dev_docs.features.documents.types import Document
 
@@ -30,7 +30,10 @@ CHECK_MARK = "✓"
 CELL_JOINER = "・"
 OBJECT_JOINER = "、"
 NO_DATE = "-"
-ANCHOR_DROP = re.compile(r"[^\w\- ]")
+# ER 図の実体の列を補うテーブルを持つ、文書のキー
+ER_TABLES_KEY = "tables"
+# 項目のパスの 1 段（`{キー}` か `{キー}[{x-key の値}]`）
+ITEM_STEP = re.compile(r"(?P<key>[^.\[\]]+)(?:\[(?P<label>[^\]]*)\])?")
 
 
 def _is_empty(value: Any) -> bool:
@@ -62,9 +65,9 @@ def _is_hidden(sub: Any) -> bool:
     return isinstance(sub, Mapping) and sub.get("x-hidden") is True
 
 
-def _anchor(text: str) -> str:
-    """見出しのアンカーにする。"""
-    return ANCHOR_DROP.sub("", text.strip().lower()).replace(" ", "-")
+def _items(value: Any) -> list[Mapping[str, Any]]:
+    """配列の値のうち、辞書の要素だけを取り出す（配列でなければ空）。"""
+    return [item for item in value if isinstance(item, Mapping)] if isinstance(value, list) else []
 
 
 def _escape_cell(text: str) -> str:
@@ -90,7 +93,7 @@ def _foreign_key(reference: str, context: RenderContext | None) -> str:
     heading = context.anchors.get(name)
     if heading is None:
         return _escape_cell(reference)
-    return f"[{reference}](#{_anchor(heading)})"
+    return f"[{reference}](#{heading_anchor(heading)})"
 
 
 def _object_cell(value: Mapping[str, Any], context: RenderContext | None) -> str:
@@ -214,6 +217,7 @@ class _Builder:
 
     def __init__(self, document: Document, context: RenderContext, scope: str) -> None:
         self.kind = document.kind
+        self.data = document.data
         self.context = context
         self.scope = scope
         self.updated = _date(document.updated) or _date(document.created) or NO_DATE
@@ -373,7 +377,17 @@ class _Builder:
     ) -> None:
         """図と、続けて同じ値の閉じた元データの表を置く。"""
         kind: DiagramKind = sub.get("x-diagram", "flowchart")
-        self.blocks.append(render_diagram(value, kind, self.head(title)))
+        # ER 図の列を補う同じ文書のテーブルと、外部キーの分類を判定する文書の分類（ER 図以外は使わない）
+        tables = self.data.get(ER_TABLES_KEY) if isinstance(self.data, Mapping) else None
+        self.blocks.append(
+            render_diagram(
+                value,
+                kind,
+                self.head(title),
+                tables=_items(tables),
+                classification=posixpath.splitext(posixpath.basename(self.context.path))[0],
+            )
+        )
         properties: Mapping[str, Any] = sub.get("properties") or {}
         for key, rows in value.items():
             if not _is_rows(rows):
@@ -486,6 +500,38 @@ def _anchors(data: Any, schema: Any, found: dict[str, str]) -> dict[str, str]:
                 found.setdefault(str(element["title"]), str(element[x_key]))
             _anchors(element, schema.get("items"), found)
     return found
+
+
+def item_heading(data: Mapping[str, Any], schema: Mapping[str, Any], item: str) -> str | None:
+    """文書の項目のパスが、スキーマ駆動の変換で見出しになる項目を指すとき、その見出しを返す。"""
+    value: Any = data
+    sub: Any = schema
+    heading: Any = None
+    for step in ITEM_STEP.finditer(item):
+        if not isinstance(sub, Mapping) or not isinstance(value, Mapping):
+            return None
+        properties: Mapping[str, Any] = sub.get("properties") or {}
+        sub = properties.get(step["key"])
+        value = value.get(step["key"])
+        if not isinstance(sub, Mapping):
+            return None
+        label = step["label"]
+        # `{キー}`: キーの `x-heading` がこの段の見出し
+        if label is None:
+            heading = sub.get("x-heading")
+            continue
+        # `{キー}[{値}]`: `sections` の要素のうち `x-key` が値に当たる要素へ進み、その値が見出し
+        x_key = sub.get("x-key")
+        if sub.get("x-shape") != "sections" or not x_key or not isinstance(value, list):
+            return None
+        value = next(
+            (e for e in value if isinstance(e, Mapping) and str(e.get(x_key)) == label), None
+        )
+        if value is None:
+            return None
+        sub = sub.get("items")
+        heading = label
+    return str(heading) if heading else None
 
 
 def _first(data: Mapping[str, Any], keys: Sequence[str]) -> str | None:
