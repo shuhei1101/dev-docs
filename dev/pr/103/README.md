@@ -37,6 +37,6 @@ SessionStart の注入はサブエージェントに届かず、compact のた�
 - [x] モジュール構成設計
 - [x] ドキュメント修正（docs/はじめに/コアコンセプト/管理用プラグイン.md・docs/リファレンス/文書のMCP.md・docs/リファレンス/CLI.md・templates/prompt.schema.yaml）
 - [x] 単体テスト作成
-- [ ] 実装
+- [x] 実装
 - [ ] 結合テスト作成
 - [ ] E2E テスト作成
