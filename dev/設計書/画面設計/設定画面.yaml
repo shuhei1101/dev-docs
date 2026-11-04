@@ -103,17 +103,17 @@ elements:
     kind: badge
     position: 配信元の一覧 > 状態
     description: 配信元の今の状態
-    label: アイコンと `配信中`（`serving`）/ `配信していない`（`not_served`）/ `無効`（`disabled`）/ `再読み込み待ち`（`pending_reload`）
+    label: アイコンと `配信中`（`serving`）/ `配信停止`（`not_served`）/ `無効`（`disabled`）/ `再読み込み待ち`（`pending_reload`）
     visible_when: 常時
     source: 端末の設定の取得.sources[].status
     notes:
-      色: 配信中は成功、配信していないは危険、無効・再読み込み待ちは弱めの色。アイコンと文言でも区別する
+      色: 配信中は成功、配信停止は危険、無効・再読み込み待ちは弱めの色。アイコンと文言でも区別する
   - name: 状態の補足
     kind: label
     position: 配信元の一覧 > 状態 > バッジの下
     description: 状態の理由と注意
-    label: 配信していないときは `起動時の検証で除外しました。` と `errors[]` ごとの `{path} {reason}`。設定のバージョンが古いときは `設定のバージョン {config}（サーバーが読み込めるのは {server}）`。無効のときは `enabled が false です`。再読み込み待ちのときは `ファイルにありますが、まだ再読み込みしていません。`
-    visible_when: 配信していない・設定のバージョンが古い・無効・再読み込み待ちのいずれかのとき
+    label: 配信停止のときは `起動時の検証で除外しました。` と `errors[]` ごとの `{path} {reason}`。設定のバージョンが古いときは `設定のバージョン {config}（サーバーが読み込めるのは {server}）`。無効のときは `enabled が false です`。再読み込み待ちのときは `ファイルにありますが、まだ再読み込みしていません。`
+    visible_when: 配信停止・設定のバージョンが古い・無効・再読み込み待ちのいずれかのとき
     source: 端末の設定の取得.sources[].errors・端末の設定の取得.sources[].configVersion
   - name: 編集ボタン
     kind: button
