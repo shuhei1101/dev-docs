@@ -3,12 +3,18 @@
 from __future__ import annotations
 
 import logging
-from collections.abc import Mapping
-from pathlib import Path
-from typing import Any
+import posixpath
+from collections.abc import Callable, Mapping
+from pathlib import Path, PurePath, PurePosixPath
+from typing import TYPE_CHECKING, Any
 from urllib.parse import unquote, urldefrag
 
 from dev_docs.shared.yaml_io import YamlLoadError, load_yaml
+
+if TYPE_CHECKING:
+    from dev_docs.features.sources.types import DocumentTable, ServedSource
+
+type ReadText = Callable[[str], str | None]
 
 logger = logging.getLogger(__name__)
 
@@ -17,14 +23,32 @@ class _Unresolved(Exception):
     """`$ref` の参照先が無い・読めないことを表す。"""
 
 
-def _file_schema(path: Path, cache: dict[Path, Any]) -> Any:
-    """参照先のスキーマのファイルを読む（同じファイルは 1 回だけ読む）。"""
-    if path not in cache:
+def _disk_schema(path: PurePath, cache: dict[str, Any]) -> Any:
+    """参照先のスキーマのファイルをディスクから読む（同じファイルは 1 回だけ読む）。"""
+    key = str(path)
+    if key not in cache:
         try:
-            cache[path] = load_yaml(path.read_text(encoding="utf-8"), file=str(path))
+            cache[key] = load_yaml(Path(path).read_text(encoding="utf-8"), file=key)
         except (OSError, UnicodeDecodeError, YamlLoadError) as error:
             raise _Unresolved(str(error)) from error
-    return cache[path]
+    return cache[key]
+
+
+def _read_schema(path: PurePath, read: ReadText, cache: dict[str, Any]) -> Any:
+    """参照先のスキーマのファイルを `read` で読む（同じファイルは 1 回だけ読む）。"""
+    key = path.as_posix()
+    # リポジトリの直下より上を指す参照先は無いものとして扱う
+    if key == ".." or key.startswith(("../", "/")):
+        raise _Unresolved(f"{key} はリポジトリの外です")
+    if key not in cache:
+        text = read(key)
+        if text is None:
+            raise _Unresolved(f"{key} がありません")
+        try:
+            cache[key] = load_yaml(text, file=key)
+        except YamlLoadError as error:
+            raise _Unresolved(str(error)) from error
+    return cache[key]
 
 
 def _pointer(document: Any, fragment: str) -> Any:
@@ -44,11 +68,27 @@ def _pointer(document: Any, fragment: str) -> Any:
     return current
 
 
-def resolve_schema_refs(schema: Mapping[str, Any], base: Path) -> dict[str, Any]:
-    """種類のスキーマの `$ref` を参照先の中身で置き換えたスキーマを返す。"""
-    files: dict[Path, Any] = {}
+def _target(current: PurePath, location: str, *, posix: bool) -> PurePath:
+    """`$ref` の参照先のファイルのパスを、今のファイルのフォルダから組み立てる。"""
+    if not location:
+        return current
+    joined = current.parent / unquote(location)
+    # 読み取りの関数で読むときは、`..` を畳んだリポジトリの直下からのパスにする
+    return PurePosixPath(posixpath.normpath(joined.as_posix())) if posix else joined
 
-    def resolve(value: Any, current: Path, document: Any, stack: tuple[str, ...]) -> Any:
+
+def resolve_schema_refs(
+    schema: Mapping[str, Any], base: Path | PurePosixPath, *, read: ReadText | None = None
+) -> dict[str, Any]:
+    """種類のスキーマの `$ref` を参照先の中身で置き換えたスキーマを返す。"""
+    files: dict[str, Any] = {}
+
+    def load(path: PurePath) -> Any:
+        if read is None:
+            return _disk_schema(Path(path).resolve(), files)
+        return _read_schema(path, read, files)
+
+    def resolve(value: Any, current: PurePath, document: Any, stack: tuple[str, ...]) -> Any:
         if isinstance(value, list):
             return [resolve(item, current, document, stack) for item in value]
         if not isinstance(value, Mapping):
@@ -63,13 +103,13 @@ def resolve_schema_refs(schema: Mapping[str, Any], base: Path) -> dict[str, Any]
                 for key, item in value.items()
             }
         location, fragment = urldefrag(ref)
-        target_path = current if not location else (current.parent / unquote(location))
+        target_path = _target(current, location, posix=read is not None)
         identity = f"{target_path}#{fragment}"
         if identity in stack:
             logger.warning("スキーマの循環する参照を解かずに残した（%s・%s）", current, ref)
             return dict(value)
         try:
-            target_doc = document if not location else _file_schema(target_path.resolve(), files)
+            target_doc = document if not location else load(target_path)
             target = _pointer(target_doc, fragment)
         except _Unresolved as error:
             logger.warning("スキーマの参照を解けなかった（%s・%s・%s）", current, ref, error)
@@ -86,6 +126,15 @@ def resolve_schema_refs(schema: Mapping[str, Any], base: Path) -> dict[str, Any]
 
     result = resolve(schema, base, schema, ())
     return result  # type: ignore[no-any-return]
+
+
+def startup_schema(source: ServedSource, table: DocumentTable) -> dict[str, Any]:
+    """配信元が起動時に読んだ行のスキーマを、`$ref` を解いて返す。"""
+    startup = source.schemas.get(table.id, {})
+    # ほかの配信元の参照は、起動時に参照先のリビジョンで `$ref` まで解いてある
+    if not isinstance(table.schema_path, str):
+        return dict(startup)
+    return resolve_schema_refs(startup, source.root / table.schema_path)
 
 
 def records_item_schema(schema: Mapping[str, Any], records: str) -> dict[str, Any] | None:

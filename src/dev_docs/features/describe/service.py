@@ -3,6 +3,10 @@
 from __future__ import annotations
 
 import dataclasses
+from io import StringIO
+from typing import Any
+
+from ruamel.yaml import YAML
 
 from dev_docs.features.access.service import (
     available_sources,
@@ -23,6 +27,16 @@ from dev_docs.features.history.query import list_refs, list_worktrees
 from dev_docs.features.sources.registry import SourceRegistry
 from dev_docs.features.sources.service import load_source_at
 from dev_docs.shared.errors import InvalidArgumentError, Violation
+
+
+def _dump_yaml(value: dict[str, Any]) -> str:
+    """スキーマを YAML の文字列にする。"""
+    yaml = YAML(typ="safe", pure=True)
+    yaml.default_flow_style = False
+    yaml.allow_unicode = True
+    stream = StringIO()
+    yaml.dump(value, stream)
+    return stream.getvalue()
 
 
 def describe(
@@ -97,9 +111,13 @@ def describe(
     table = source.table(request.kind)
     schema = store.schema(target, table.id)
     schema_text = ""
-    schema_file = store.read_root(target) / table.schema_path
-    if schema_file.is_file():
-        schema_text = schema_file.read_text(encoding="utf-8")
+    # ほかの配信元のリビジョンを指す行は、`$ref` まで解いたスキーマを YAML にして返す
+    if not isinstance(table.schema_path, str):
+        schema_text = _dump_yaml(schema)
+    else:
+        schema_file = store.read_root(target) / table.schema_path
+        if schema_file.is_file():
+            schema_text = schema_file.read_text(encoding="utf-8")
     return KindSchemaResult(
         source_id=source.id,
         kind=table.id,

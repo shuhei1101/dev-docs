@@ -40,7 +40,7 @@ from dev_docs.features.admin.types import (
 from dev_docs.features.convert.service import ConvertService
 from dev_docs.features.documents.aliases import alias_schema_version
 from dev_docs.features.documents.loader import collect_files
-from dev_docs.features.documents.schema import records_item_schema, resolve_schema_refs
+from dev_docs.features.documents.schema import records_item_schema, startup_schema
 from dev_docs.features.documents.store import check_sync
 from dev_docs.features.search.fields import known_fields
 from dev_docs.features.settings.query import (
@@ -318,9 +318,7 @@ def _records_schema_violations(source: ServedSource) -> list[Violation]:
     for index, table in enumerate(source.config.documents):
         if not table.enabled or table.records is None:
             continue
-        schema = resolve_schema_refs(
-            source.schemas.get(table.id, {}), source.root / table.schema_path
-        )
+        schema = startup_schema(source, table)
         if records_item_schema(schema, table.records) is None:
             violations.append(
                 Violation(

@@ -127,8 +127,34 @@ properties:
         enabled:
           type: boolean
         schema:
-          type: string
-          minLength: 1
+          description: この行の文書を検査する JSON Schema。文字列は配信元の直下からの相対パス、オブジェクトはほかの配信元のリビジョンのスキーマ
+          oneOf:
+            - type: string
+              minLength: 1
+            - type: object
+              additionalProperties: false
+              required:
+                - source
+                - path
+                - ref
+              properties:
+                source:
+                  description: 端末の設定の `sources[]` の行の ID
+                  type: string
+                  minLength: 1
+                path:
+                  description: 参照先のリポジトリの直下からのスキーマのパス
+                  type: string
+                  minLength: 1
+                ref:
+                  description: タグか commit
+                  type: string
+                  minLength: 1
+          examples:
+            - schemas/rule.schema.yaml
+            - source: knowledge
+              path: schemas/design/interface.schema.yaml
+              ref: v1.4.0
         validators:
           type: array
           items:

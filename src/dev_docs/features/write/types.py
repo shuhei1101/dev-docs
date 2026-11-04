@@ -12,6 +12,14 @@ from dev_docs.shared.errors import Violation
 OPERATIONS_MAX = 50
 
 
+@dataclass(frozen=True, slots=True, kw_only=True)
+class WriteViolation(Violation):
+    """スキーマの説明を持てる書き込みの違反。"""
+
+    # 違反した項目のスキーマの定義から取り出した説明（`title`・`description` など）
+    schema: dict[str, Any] | None = None
+
+
 class TextEdit(BaseModel):
     """文字列の項目の一部を置き換える操作。"""
 

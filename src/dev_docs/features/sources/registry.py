@@ -10,6 +10,7 @@ from collections.abc import Callable
 
 from dev_docs.features.history.query import resolve_ref
 from dev_docs.features.settings.types import SourceEntry, TerminalConfig
+from dev_docs.features.sources.schema_ref import SchemaRefLookup, terminal_lookup
 from dev_docs.features.sources.service import load_source
 from dev_docs.features.sources.types import ServedSource, SourceStatus
 from dev_docs.shared.errors import (
@@ -36,6 +37,8 @@ class SourceRegistry:
         self._snapshot: tuple[dict[str, ServedSource], list[SourceStatus]] = ({}, [])
         self._reload_lock = threading.Lock()
         self._entries: dict[str, tuple[SourceEntry, int]] = {}
+        # 最後に読み直した端末の設定から作った、参照先の配信元の引き当て
+        self._lookup: SchemaRefLookup | None = None
         self._on_rebuilt = on_rebuilt
         self._ready = threading.Event()
         if not loading:
@@ -89,8 +92,10 @@ class SourceRegistry:
             sources: dict[str, ServedSource] = {}
             statuses: list[SourceStatus] = []
             entries: dict[str, tuple[SourceEntry, int]] = {}
+            # ほかの配信元のスキーマの参照先は、読み直す端末の設定から引く
+            lookup = terminal_lookup(terminal)
             for index, entry in enumerate(terminal.sources):
-                served, status = load_source(entry, index=index)
+                served, status = load_source(entry, index=index, lookup=lookup)
                 # 配信する配信元の ID が先の行と重なるときは、後の行を外す
                 if served is not None and served.id in sources:
                     status = SourceStatus(
@@ -112,6 +117,7 @@ class SourceRegistry:
                     entries[served.id] = (entry, index)
                 statuses.append(status)
             self._entries = entries
+            self._lookup = lookup
             self._snapshot = (sources, statuses)
             logger.info(
                 "配信元を読み直した（配信中: %s・外した数: %s）",
@@ -163,7 +169,7 @@ class SourceRegistry:
             if latest.config_commit == current or source.id not in self._entries:
                 return latest
             entry, index = self._entries[source.id]
-            served, status = load_source(entry, index=index)
+            served, status = load_source(entry, index=index, lookup=self._lookup)
             next_sources = dict(sources)
             if served is None:
                 next_sources.pop(source.id, None)
