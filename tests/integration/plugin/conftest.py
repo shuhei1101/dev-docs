@@ -76,10 +76,11 @@ def free_port() -> Callable[[], int]:
 
 @dataclass
 class ContextServer:
-    """`POST /_admin/session-context` を真似る HTTP サーバーのポートと、受けた本文。"""
+    """`POST /_admin/session-start` を真似る HTTP サーバーのポートと、受けた本文・パス。"""
 
     port: int
     bodies: list[dict[str, Any]] = field(default_factory=list)
+    paths: list[str] = field(default_factory=list)
 
 
 @pytest.fixture
@@ -87,7 +88,7 @@ def context_server() -> Callable[..., AbstractContextManager[ContextServer]]:
     """決めた応答を返す HTTP サーバーを一時のポートで立てる関数を返す。"""
 
     @contextmanager
-    def _serve(context: str = "", *, hold_sec: float = 0.0) -> Iterator[ContextServer]:
+    def _serve(*, hold_sec: float = 0.0) -> Iterator[ContextServer]:
         released = threading.Event()
         holder: list[ContextServer] = []
 
@@ -95,10 +96,11 @@ def context_server() -> Callable[..., AbstractContextManager[ContextServer]]:
             def do_POST(self) -> None:
                 length = int(self.headers.get("Content-Length", "0"))
                 holder[0].bodies.append(json.loads(self.rfile.read(length)))
+                holder[0].paths.append(self.path)
                 # 応答しない設定のときは、テストが終わるまで待つ
                 if hold_sec:
                     released.wait(hold_sec)
-                payload = json.dumps({"context": context}).encode("utf-8")
+                payload = json.dumps({"forgotten": True}).encode("utf-8")
                 try:
                     self.send_response(200)
                     self.send_header("Content-Type", "application/json")

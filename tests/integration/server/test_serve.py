@@ -24,7 +24,6 @@ from dev_docs.features.describe.types import DescribeRequest
 from dev_docs.features.prompt_doc.runtime import DEFAULT_PROMPTS_DIR, PromptSet, load_prompts
 from dev_docs.features.related.types import RelatedRequest
 from dev_docs.features.search.types import MatchWordsRequest, SearchRequest
-from dev_docs.features.session_context.types import SESSION_CONTEXT_PROMPT_ID
 from dev_docs.features.write.types import DeleteRequest, WriteRequest
 from dev_docs.server.app import build_app
 from dev_docs.server.mcp.admin import NoArguments
@@ -194,9 +193,9 @@ def test_normal(
     tools = _mcp(port, "/mcp/", {"jsonrpc": "2.0", "id": 2, "method": "tools/list"})
     admin = _mcp(port, "/_admin/mcp/", INITIALIZE)
     admin_tools = _mcp(port, "/_admin/mcp/", {"jsonrpc": "2.0", "id": 3, "method": "tools/list"})
-    context = httpx.post(
-        f"http://127.0.0.1:{port}/_admin/session-context",
-        json={"cwd": str(sample.folder)},
+    session_start = httpx.post(
+        f"http://127.0.0.1:{port}/_admin/session-start",
+        json={"session_id": "s1", "reason": "startup"},
         timeout=10,
     )
     addresses = _listening_addresses(port)
@@ -213,8 +212,8 @@ def test_normal(
     assert (
         sorted(tool["name"] for tool in admin_tools.json()["result"]["tools"]) == ADMIN_TOOL_NAMES
     )
-    assert context.status_code == 200
-    assert [item["id"] for item in context.json()["sources"]] == ["sample"]
+    assert session_start.status_code == 200
+    assert session_start.json() == {"forgotten": False}
     assert f"http://127.0.0.1:{port}/" in output
     assert "sample" in output
     assert "notes" in output
@@ -605,9 +604,7 @@ def test_normal_when_mcp_text_from_prompts(
     port = free_port()
     process = start_serve(write_settings(make_source("sample")), port)
     wait_until_serving(process, port)
-    prompts = load_prompts(
-        DEFAULT_PROMPTS_DIR, required=[SESSION_CONTEXT_PROMPT_ID, *mcp_prompt_ids()]
-    )
+    prompts = load_prompts(DEFAULT_PROMPTS_DIR, required=mcp_prompt_ids())
     # 実行
     initialized = _mcp(port, "/mcp/", INITIALIZE)
     tools = _mcp(port, "/mcp/", {"jsonrpc": "2.0", "id": 2, "method": "tools/list"})

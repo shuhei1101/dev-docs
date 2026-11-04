@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING
 from fastapi import FastAPI
 from fastapi.routing import APIRoute
 
-from dev_docs.features.session_context.route import build_session_context_router
+from dev_docs.features.session_start.route import build_session_start_router
 from dev_docs.features.settings.route import build_settings_router
 from dev_docs.features.view.route import build_view_router
 from dev_docs.server.error_handlers import register_error_handlers
@@ -73,7 +73,7 @@ def build_app(handlers: Handlers, *, screen_dir: Path = SCREEN_DIST_DIR) -> Fast
         )
     app.add_middleware(SlashlessMcpPathMiddleware, paths=(DOCS_MCP_PATH, ADMIN_MCP_PATH))
     app.include_router(build_settings_router(handlers))
-    app.include_router(build_session_context_router(handlers))
+    app.include_router(build_session_start_router(handlers))
     app.include_router(build_view_router(handlers))
     # 全てのパスに当たるため、最後に登録する
     app.include_router(build_screen_router(screen_dir))

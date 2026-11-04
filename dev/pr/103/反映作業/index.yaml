@@ -1,0 +1,28 @@
+dev-docs のサーバーの再起動:
+  説明: develop の worktree から起動して稼働中の dev-docs のサーバー（127.0.0.1:8781）を、マージした develop のコードで起動し直し、記録の削除のエンドポイントと describe の警告を効かせる
+  タグ: [再起動]
+  実行者: planner
+  時期: マージの後
+  回数: 1 回限り
+  可逆: true
+  疎通確認: dev-docs のサーバーの再起動/疎通確認.sh
+  実行: dev-docs のサーバーの再起動/実行.sh
+  確認: dev-docs のサーバーの再起動/確認.sh
+  切り戻し: null
+  失敗時: 既定の対処を 1 回、2 回連続で失敗したら依頼元へ返す
+  確認方法: http://127.0.0.1:8781/_admin/session-start へ session_id と reason の JSON を POST すると 200 と forgotten が返り、http://127.0.0.1:8781/_admin/session-context への POST が 404 を返す
+  状態: "-"
+プラグイン dev-docs の更新:
+  説明: 端末の Claude Code の設定の場所ごとに、マーケットプレイス dev-docs を取り直してプラグイン dev-docs を更新し、プラグインのキャッシュの SessionStart のフックを、/_admin/session-context を呼ばない今のバージョンにする。更新の後に開いたセッションから効く
+  タグ: [プラグイン, 更新]
+  実行者: planner
+  時期: マージの後
+  回数: 1 回限り
+  可逆: true
+  疎通確認: プラグイン dev-docs の更新/疎通確認.sh
+  実行: プラグイン dev-docs の更新/実行.sh
+  確認: プラグイン dev-docs の更新/確認.sh
+  切り戻し: null
+  失敗時: 既定の対処を 1 回、2 回連続で失敗したら依頼元へ返す
+  確認方法: 各設定の場所の plugins/cache/dev-docs の hooks/session_start.py が /_admin/session-start を含み、/_admin/session-context と fetch_context を含まない
+  状態: "-"

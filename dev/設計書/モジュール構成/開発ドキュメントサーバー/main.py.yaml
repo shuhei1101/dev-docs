@@ -152,11 +152,16 @@ data_models:
         type: RestartControl
         access: 公開
         description: 再起動と更新の要求を 1 つずつにし、`run_serve` が止まった後に同じプロセスを置き換えるかを持つ（再起動と更新）
+      - name: checks
+        title: 配信元の検査の控え
+        type: SourceChecks
+        access: 公開
+        description: 配信元ごとの最後の検査の結果（`describe` の警告が読む）
       - name: prompts
         title: プロンプトの一式
         type: PromptSet
         access: 公開
-        description: 起動のときに読んだプロンプトの YAML（セッションの文脈・文書の MCP・管理の MCP が描画する。書き換えは再起動で効かせる）
+        description: 起動のときに読んだプロンプトの YAML（文書の MCP・管理の MCP が描画する。書き換えは再起動で効かせる）
 classes:
   - name: PortInUseError
     title: ポートが使用中
@@ -345,7 +350,7 @@ functions:
       type: Handlers
       description: 配線済みの関数
     process: |-
-      1. プロンプトの一式を読む（`load_prompts(prompts_dir(os.environ), required=[SESSION_CONTEXT_PROMPT_ID, *mcp_prompt_ids()])`）。`PromptInvalidError` はそのまま送る
+      1. プロンプトの一式を読む（`load_prompts(prompts_dir(os.environ), required=mcp_prompt_ids())`）。`PromptInvalidError` はそのまま送る
       2. `state_dir` を作る
       3. 配信元の一覧・リビジョンの書き出し（`{state_dir}/snapshots`）・文書のストア・変換（`{state_dir}/converted`、制限時間は `script_timeout_sec`）・会話の記録（`{state_dir}/seen.sqlite3`、保持日数は `seen_retention_days`）・文書の検査（制限時間は `script_timeout_sec`）・配信元ごとの排他・表の列の設定（`{state_dir}/columns`）・再起動の制御を作る。配信元の一覧は `loading=True` で作り、組み立て直した配信元を 1 つ受け取って『配信元の控えの破棄』をこれらの部品で呼ぶ関数を `on_rebuilt` に渡す
       4. 『配信元の読み直し』をこれらの部品で束ねた関数を作る（呼ぶのは配信元の読み込みの開始と配信元の保存）
@@ -360,7 +365,7 @@ functions:
         summary: 部品を作り配信元は読まない
         condition: '`state_dir` が無い一時フォルダの下、配信できる配信元 1 つと検証に失敗する配信元 1 つ'
         mock: なし
-        expected: '`state_dir` ができ、`registry.loading` が `True` で `registry.statuses()` が空。`handlers.reload_sources(terminal)` の後は `registry.served()` が 1 つ、`registry.statuses()` が 2 つ。`prompts` が `session-context` と `mcp/docs/instructions` を持つ'
+        expected: '`state_dir` ができ、`registry.loading` が `True` で `registry.statuses()` が空。`handlers.reload_sources(terminal)` の後は `registry.served()` が 1 つ、`registry.statuses()` が 2 つ。`prompts` が `mcp/docs/instructions` を持ち、`session-context` を持たない'
       - name: test_build_handlers_when_out_of_sync
         case: 正常
         summary: 初回の読み込みでもずれを警告のログに書く
@@ -422,6 +427,12 @@ functions:
         required: true
         passing: injected
         description: 控えを捨てる
+      - name: checks
+        title: 配信元の検査の控え
+        type: SourceChecks
+        required: true
+        passing: injected
+        description: 配信元の控えの破棄へ渡す
     returns:
       type: list[SourceStatus]
       description: 読み直した後の配信元ごとの状態
@@ -485,12 +496,18 @@ functions:
         required: true
         passing: injected
         description: 控えを捨てる
+      - name: checks
+        title: 配信元の検査の控え
+        type: SourceChecks
+        required: true
+        passing: injected
+        description: 検査の結果を持たせる
     returns:
       type: None
       description: なし
     process: |-
       1. 文書のストア・文書の検査・変換の控えを捨てる（文書のストア.全て捨てる・文書の検査.控えを捨てる・変換.控えを捨てる）
-      2. 渡した配信元ごとにメタデータのずれを確かめ（文書のストア.メタデータのずれの確かめ）、3 つの並びのうち 0 件でないものを、配信元の ID・ずれの種類・件数・並びの値で警告のログに書く。`alias_violations` は文書のパス・キー・理由で、nav の警告（画面の API）はキーのパスと理由で警告のログに書く。結果は状態に持たない
+      2. 渡した配信元ごとに検査し（配信元の検査の控え.検査の流し直し）、3 つの並びのうち 0 件でないものを、配信元の ID・ずれの種類・件数・並びの値で警告のログに書く。`alias_violations` は文書のパス・キー・理由で、nav の警告（画面の API）はキーのパスと理由で警告のログに書く
   - name: run_migrate
     title: 設定の移し替えの実行
     container: main.py

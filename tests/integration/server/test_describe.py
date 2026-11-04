@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import time
 from collections.abc import Callable
 from typing import Any
 
@@ -12,6 +13,10 @@ OUTSIDE_LINE = "作業範囲の外（参考）"
 OUTSIDE_LOG = "作業範囲の外を読んだ"
 OUTSIDE_HINT = "outside_scope: true"
 OTHER_DESCRIPTION = "別のリポジトリの設計書"
+WARNINGS_LINE = "注意:"
+MEMO_WARNING = "memo: 管理用の YAML に無いファイルが 1 件"
+# 書き込みの後の裏の検査を待つ上限の秒数
+RECHECK_WAIT_SEC = 10
 
 
 def test_normal(make_source: Callable[..., Any], make_server: Callable[..., Any]) -> None:
@@ -30,6 +35,119 @@ def test_normal(make_source: Callable[..., Any], make_server: Callable[..., Any]
     assert "| sample | write（作業中） |" in result.text
     assert "| notes | read |" in result.text
     assert "| other |" not in result.text
+
+
+def test_normal_when_warned(
+    make_source: Callable[..., Any],
+    make_server: Callable[..., Any],
+    sample_sync_file_set: Callable[..., dict[str, str]],
+    sample_file_set: Callable[..., dict[str, str]],
+    sample_config_text: Callable[..., str],
+) -> None:
+    """引数なしで、使える配信元の一覧に続けて、同期のずれ・古い設定・配信していない配信元の警告を返す（正常系）。"""
+    # 準備
+    sample = make_source("sample", sample_sync_file_set(1))
+    notes = make_source("notes", git=False, scope_read=[sample.folder])
+    other = make_source("other")
+    old = make_source(
+        "old",
+        sample_file_set(**{"dev-docs.yaml": sample_config_text(name="old", version="0")}),
+        scope_read=[sample.folder],
+    )
+    broken = make_source("broken", {"dev-docs.yaml": BROKEN_CONFIG}, scope_read=[sample.folder])
+    env = make_server(sample, notes, other, old, broken)
+    # 実行
+    result = env.call("describe", cwd=str(sample.folder))
+    as_json = env.call("describe", cwd=str(sample.folder), format="json")
+    # 検証
+    lines = result.text.splitlines()
+    notes_at = lines.index(WARNINGS_LINE)
+    warnings = [line for line in lines[notes_at + 1 :] if line.startswith("- ")]
+    assert not result.is_error
+    assert notes_at > lines.index(next(line for line in lines if line.startswith("| sample |")))
+    assert any(
+        line.startswith("- sample: 管理用の YAML に無いファイルが 1 件") for line in warnings
+    )
+    assert any(
+        line.startswith("- old: 設定のバージョンが古い") and "dev-docs migrate" in line
+        for line in warnings
+    )
+    assert any(
+        line.startswith("- broken: 配信していません") and "documents[0].paths" in line
+        for line in warnings
+    )
+    assert all("check_project" in line or "dev-docs migrate" in line for line in warnings)
+    assert len(as_json.data["warnings"]) == 3
+
+
+def test_normal_when_no_source_available(
+    tmp_path: Any,
+    make_source: Callable[..., Any],
+    make_server: Callable[..., Any],
+) -> None:
+    """どの scope にも当たらない作業場所では、setup の案内と、使える配信元によらない警告を返す（正常系）。"""
+    # 準備
+    elsewhere = tmp_path / "elsewhere"
+    elsewhere.mkdir()
+    sample = make_source("sample")
+    notes = make_source("notes", git=False, scope_read=[sample.folder])
+    other = make_source("other")
+    broken = make_source("broken", {"dev-docs.yaml": BROKEN_CONFIG}, scope_read=[elsewhere])
+    env = make_server(sample, notes, other, broken)
+    # 実行
+    result = env.call("describe", cwd=str(elsewhere))
+    as_json = env.call("describe", cwd=str(elsewhere), format="json")
+    # 検証
+    body = as_json.data
+    assert not result.is_error
+    assert "| source | 権限 | description |" not in result.text
+    assert "/dev-docs:setup" in result.text
+    assert WARNINGS_LINE in result.text.splitlines()
+    assert any(
+        line.startswith("- broken: 配信していません") and "documents[0].paths" in line
+        for line in result.text.splitlines()
+    )
+    assert "sources" not in body
+    assert len(body["warnings"]) == 1
+
+
+def test_normal_when_rechecked_after_write(
+    make_source: Callable[..., Any],
+    make_server: Callable[..., Any],
+    sample_sync_file_set: Callable[..., dict[str, str]],
+) -> None:
+    """`write_docs` を当てた後に裏で流し直した検査の結果で、引数なしの警告が変わる（正常系）。"""
+    # 準備
+    sample = make_source("sample")
+    memo = make_source(
+        "memo",
+        sample_sync_file_set(1),
+        git=False,
+        scope_read=[sample.folder],
+        scope_write=[sample.folder],
+    )
+    env = make_server(sample, memo)
+    cwd = str(sample.folder)
+    before = env.call("describe", cwd=cwd)
+    # 実行
+    written = env.call(
+        "write_docs",
+        cwd=cwd,
+        source="memo",
+        operations=[
+            {"op": "create", "kind": "src", "id": "src/extra0.py", "data": {"path": "extra0.py"}}
+        ],
+    )
+    # 裏の検査が終わるまで、警告が消えるのを待つ
+    deadline = time.monotonic() + RECHECK_WAIT_SEC
+    after = env.call("describe", cwd=cwd)
+    while MEMO_WARNING in after.text and time.monotonic() < deadline:
+        time.sleep(0.1)
+        after = env.call("describe", cwd=cwd)
+    # 検証
+    assert written.data["applied"] is True
+    assert MEMO_WARNING in before.text
+    assert MEMO_WARNING not in after.text
 
 
 def test_normal_when_source(

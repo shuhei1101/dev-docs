@@ -27,6 +27,84 @@ flows:
       - sample を `write（作業中）`、notes を `read` として返す
       - other を返さない
     test: test_normal
+  - name: 正常系（使える配信元の警告）
+    summary: 引数なしで、使える配信元の一覧に続けて、使える配信元の同期のずれ・古い設定と、配信していない配信元の警告を返す
+    setup:
+      - name: Mock
+        description: なし
+      - name: 配信元
+        description: 正常系と同じ sample・notes・other に、`dev-docs.yaml` の `version` が古い old（`scope.read` は sample のフォルダ）と、検証で外れる broken を加える。sample は管理用の YAML に無いファイルを 1 件持つ
+      - name: 入力
+        description: 引数なし。`cwd` は sample のクローン本体
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        participant C as クライアント
+        participant T as describe
+
+        C->>T: 引数なし, cwd
+        T->>T: 使える配信元の同期のずれ・設定のバージョン・nav の警告を求める
+        T->>T: 検証で外した配信元を集める
+        T-->>C: 作業場所と使える配信元の表、注意の一覧
+      ```
+    expected:
+      - 使える配信元の表の後に「注意」の見出しと、sample の管理用の YAML に無いファイル 1 件・old の設定が古いこと（`dev-docs migrate` の案内）・broken を配信していないこと（理由のキーのパス）の行がある
+      - '`format: json` の `warnings` が同じ 3 件の文を持つ'
+      - 警告の行は `check_project` で確かめられることを示す
+    test: test_normal_when_warned
+  - name: 正常系（使える配信元が無い）
+    summary: どの配信元の `scope` にも当たらない作業場所では、空の一覧に `/dev-docs:setup` の案内と、使える配信元によらない警告を添える
+    setup:
+      - name: Mock
+        description: なし
+      - name: 配信元
+        description: 正常系と同じ sample・notes・other に、検証で外れる broken（`scope.read` は一時フォルダ）を加える
+      - name: 入力
+        description: 引数なし。`cwd` はどの配信元の `scope` にも当たらない一時フォルダ
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        participant C as クライアント
+        participant T as describe
+
+        C->>T: 引数なし, cwd
+        T->>T: 各配信元の scope に cwd を照らす（当たらない）
+        T->>T: 検証で外した配信元を集める
+        T-->>C: 作業場所、setup の案内、注意の一覧
+      ```
+    expected:
+      - 配信元の表の代わりに、使える配信元が無いことと `/dev-docs:setup` で配信元にできることの行がある
+      - 「注意」の見出しの下に、broken を配信していないこと（理由のキーのパス）の行がある
+      - '`format: json` が `sources` のキーを持たず、`warnings` が broken の 1 件'
+    test: test_normal_when_no_source_available
+  - name: 正常系（書き込みの後の警告）
+    summary: '`write_docs` を当てた後に裏で流し直した検査の結果で、引数なしの警告が変わる'
+    setup:
+      - name: Mock
+        description: なし
+      - name: 配信元
+        description: sample と、Git 管理外で管理用の YAML に無いファイル `src/extra0.py` を 1 件持つ memo（`scope.read`・`scope.write` は sample のフォルダ）
+      - name: 入力
+        description: '`write_docs` で memo の `src` の行に `extra0.py` を作り、引数なしの `describe` を呼ぶ。`cwd` は sample のクローン本体'
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        participant C as クライアント
+        participant W as write_docs
+        participant T as describe
+
+        C->>T: 引数なし
+        T-->>C: memo の管理用の YAML に無いファイル 1 件の警告
+        C->>W: create（src・extra0.py）
+        W-->>C: applied: true
+        W->>W: 書ける配信元を裏で検査し直す
+        C->>T: 引数なし（検査を終えた後）
+        T-->>C: memo の警告が無い
+      ```
+    expected:
+      - 書き込みの前の引数なしの一覧に、memo の管理用の YAML に無いファイル 1 件の警告がある
+      - 裏の検査を終えた後の引数なしの一覧に、memo の警告が無い
+    test: test_normal_when_rechecked_after_write
   - name: 正常系（配信元の説明書）
     summary: '`source` で配信元の説明書と種類の一覧を返す'
     setup:
@@ -258,6 +336,7 @@ callers:
   - dev/設計書/シナリオ/単一ユースケース/エージェントが調べる#scenarios[正常シナリオ（ブランチとワークツリーを引く）]
   - dev/設計書/シナリオ/単一ユースケース/エージェントが調べる#scenarios[正常シナリオ（作業範囲の外を参考に読む）]
   - dev/設計書/シナリオ/単一ユースケース/エージェントが調べる#scenarios[異常シナリオ（作業範囲の外の参照を断る配信元を指す）]
+  - dev/設計書/シナリオ/単一ユースケース/エージェントが調べる#scenarios[正常シナリオ（instructions の調査の案内を受け取る）]
 exclusivity: '読み取りだけで排他しない（`readOnlyHint: true`）'
 request:
   - name: source
@@ -330,6 +409,10 @@ response:
   - name: outside_sources[].description
     type: str
     description: 配信元の設定の `description`
+  - name: warnings[]
+    type: str
+    description: 使える配信元の同期のずれ（metadata の列の欠け・管理用の YAML に無いファイル・ファイルが無い行・どの文書にも当たらない関連）とエイリアスのキーの違反、配信元・端末の設定のバージョンが古いこと、どの文書にも当たらない `nav` の条件、検証で外した配信元
+    notes: '引数なしのとき。同期のずれ・エイリアス・`nav`・配信元の設定のバージョンは使える配信元だけを対象にし、端末の設定のバージョンと検証で外した配信元は使える配信元が 0 件のときも載せる。`format: markdown` は使える配信元の表の後の「注意」の見出しの下に 1 行ずつ出し、0 件は見出しごと出さない。`format: json` は 0 件のときキーを持たない'
   - name: instructions
     type: str
     description: 配信元の設定の `instructions` をそのまま
@@ -381,7 +464,7 @@ response_example: |-
 response_notes: '説明書には配信元に固有のことだけが書かれている。タグの一覧・文書の件数は `search_docs` の `group_by`・`view: count` で取る。'
 exceptions:
   - name: なし（正常終了）
-    condition: 返せた（引数なしで使える配信元が 0 件のときも、空の一覧を返して正常終了）
+    condition: 返せた（引数なしで使える配信元が 0 件のときも、空の一覧と `/dev-docs:setup` の案内を返して正常終了）
   - name: SourceNotReadableError
     condition: '`cwd` が配信元の `scope.read`・`scope.write` に当たらない（`outside_scope: true` のときは、加えて `outside_read` が偽）'
     notes: '今の作業場所から使える配信元の一覧を添える。`outside_read` が真で `outside_scope` を渡していないときは、`fix` に `outside_scope: true` で作業範囲の外を参考に読めることを添える'
@@ -394,9 +477,12 @@ constraints:
   - item: 注釈
     constraint: '`readOnlyHint: true`'
   - item: 一覧の中身
-    constraint: 引数なし（`outside_scope` を省く）の結果は SessionStart で注入する配信元の一覧と同じ
+    constraint: 引数なし（`outside_scope` を省く）の結果は、作業場所から使える配信元と、その警告だけを持つ
   - item: タイムアウト
     constraint: 制限なし
+  - item: 警告の求め方
+    constraint: 同期のずれ・エイリアスのキーの違反・`nav` の警告は、配信元の読み込み・読み直し・`default_ref` の組み立て直しの後と、`write_docs`・`delete_docs` の後に裏で流す検査の結果を読み、`describe` は配信元のファイルをたどらない。配信元の読み込みが終わってから答えるため、読み込み中の案内は持たない
+    notes: 配信元のフォルダをたどる検査は /mnt/c の配信元で 1 件 3〜12 秒かかる（2026-11-04 の実測）。直接編集したファイルのずれは、次の検査まで警告に出ない
   - item: 作業範囲の外の記録
     constraint: '`outside_scope: true` で作業範囲の外の配信元を読んだ呼び出しは、作業場所（`cwd`）と配信元の ID を要求のログに残す'
 refs:
