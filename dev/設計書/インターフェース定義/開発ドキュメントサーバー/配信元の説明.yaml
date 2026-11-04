@@ -77,6 +77,34 @@ flows:
       - 「注意」の見出しの下に、broken を配信していないこと（理由のキーのパス）の行がある
       - '`format: json` が `sources` のキーを持たず、`warnings` が broken の 1 件'
     test: test_normal_when_no_source_available
+  - name: 正常系（書き込みの後の警告）
+    summary: '`write_docs` を当てた後に裏で流し直した検査の結果で、引数なしの警告が変わる'
+    setup:
+      - name: Mock
+        description: なし
+      - name: 配信元
+        description: sample と、Git 管理外で管理用の YAML に無いファイル `src/extra0.py` を 1 件持つ memo（`scope.read`・`scope.write` は sample のフォルダ）
+      - name: 入力
+        description: '`write_docs` で memo の `src` の行に `extra0.py` を作り、引数なしの `describe` を呼ぶ。`cwd` は sample のクローン本体'
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        participant C as クライアント
+        participant W as write_docs
+        participant T as describe
+
+        C->>T: 引数なし
+        T-->>C: memo の管理用の YAML に無いファイル 1 件の警告
+        C->>W: create（src・extra0.py）
+        W-->>C: applied: true
+        W->>W: 書ける配信元を裏で検査し直す
+        C->>T: 引数なし（検査を終えた後）
+        T-->>C: memo の警告が無い
+      ```
+    expected:
+      - 書き込みの前の引数なしの一覧に、memo の管理用の YAML に無いファイル 1 件の警告がある
+      - 裏の検査を終えた後の引数なしの一覧に、memo の警告が無い
+    test: test_normal_when_rechecked_after_write
   - name: 正常系（配信元の説明書）
     summary: '`source` で配信元の説明書と種類の一覧を返す'
     setup:
