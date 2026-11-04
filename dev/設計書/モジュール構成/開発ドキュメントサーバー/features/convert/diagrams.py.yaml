@@ -149,7 +149,7 @@ functions:
          - 実体（`entities[]`）を出た順にテーブルにする。`id`・`label` は実体の `name`。`tables` のうち `title` が実体の `name` に当たるテーブルがあれば、`name` をそのテーブルの `name`（物理名）、`desc` をその `summary` にする（無ければ `name` は実体の `name`）
          - 列は、実体が `columns` を持てばその要素（`name`・`type`、`key` の `PK` は `pk: true`、`FK` は `fk: true`）、持たなければ当たったテーブルの `columns` の要素（`name`・`type`・`desc` は `title`、`primary_key` は `pk`、`foreign_key` は `fk`、`not_null` は `nn` を `true`）にする。どちらも無ければ空
          - 関連（`relations[]`）ごとに、`cardinality` を `--`（か `..`）の前後に分け、`ER_CARDINALITIES` で `fromCard`・`toCard` にする。両端の列は、先（`to`）の実体の列のうち外部キーが元（`from`）の実体の列を指す列を `toColumn`、指された列を `fromColumn` にし、無ければ元の実体の列のうち外部キーが先の実体の列を指す列を `fromColumn`、指された列を `toColumn` にする。`label` はそのまま
-           - 外部キーが指す実体と列は、テーブルの列は `foreign_key.table` を最後の `.` でテーブルと列に分け（テーブルが `{分類}/{テーブル名}` のとき、`{分類}` が `classification` と同じなら `{テーブル名}` を同じ文書のテーブルとして当て、違えば他の分類のテーブルなので当てない）、`tables` で `name` がそのテーブルの `title` の実体にする。実体の列は `key` が `FK` で `comment` が `ER_FOREIGN_KEY_COMMENT` に当たるとき、その `entity`・`column`
+           - 外部キーが指す実体と列は、テーブルの列は `foreign_key.table` を最後の `.` でテーブルと列に分け（テーブルが `{分類}/{テーブル名}` のとき、`{分類}` が `classification` と同じなら `{テーブル名}` を同じ文書のテーブルとして当て、違えば他の分類のテーブルなので当てない）、`tables` で `name`（物理名）か `title`（論理名）がそのテーブル名に当たるテーブルの `title` の実体にする。実体の列は `key` が `FK` で `comment` が `ER_FOREIGN_KEY_COMMENT` に当たるとき、その `entity`・`column`
            - 多重度を読み替えられない関連と、両端の列が決まらない関連は `relations` に入れない
          - テーブルの位置は `ER_LAYOUT` で格子に置く。`per_row` 個ずつ段にし、`x` は `margin + 列の番号 * (width + gap_x)`、`y` は前の段の `y` に前の段で一番高いテーブルの高さ（`head + 列の数 * row + frame`）と `gap_y` を足した値（最初の段は `margin`）。`w` は `width`。図の `width` は `margin * 2 + 段のテーブルの数の最大 * width + (その数 - 1) * gap_x`
     exceptions:
@@ -186,7 +186,7 @@ functions:
         summary: テーブルの列の外部キー
         condition: '`kind="er"`、実体 `顧客`・`支払い`（どちらも `columns` 無し）と関連 `顧客` → `支払い`（`||--o{`）、`tables` に `customers`（`顧客`。列 `id`）と `payments`（`支払い`。列 `customer_id` の `foreign_key.table` が `customers.id`）'
         mock: なし
-        expected: '`relations` 1 件が `fromColumn: id`・`toColumn: customer_id`'
+        expected: '`relations` 1 件が `fromColumn: id`・`toColumn: customer_id`。`foreign_key.table` を論理名の `顧客.id` にしても同じ'
       - name: test_render_diagram_when_er_own_classification
         case: 正常
         summary: 自分の分類を付けたテーブルの列の外部キー
