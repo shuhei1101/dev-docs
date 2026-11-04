@@ -12,6 +12,7 @@ OUTSIDE_LINE = "作業範囲の外（参考）"
 OUTSIDE_LOG = "作業範囲の外を読んだ"
 OUTSIDE_HINT = "outside_scope: true"
 OTHER_DESCRIPTION = "別のリポジトリの設計書"
+WARNINGS_LINE = "注意:"
 
 
 def test_normal(make_source: Callable[..., Any], make_server: Callable[..., Any]) -> None:
@@ -30,6 +31,80 @@ def test_normal(make_source: Callable[..., Any], make_server: Callable[..., Any]
     assert "| sample | write（作業中） |" in result.text
     assert "| notes | read |" in result.text
     assert "| other |" not in result.text
+
+
+def test_normal_when_warned(
+    make_source: Callable[..., Any],
+    make_server: Callable[..., Any],
+    sample_sync_file_set: Callable[..., dict[str, str]],
+    sample_file_set: Callable[..., dict[str, str]],
+    sample_config_text: Callable[..., str],
+) -> None:
+    """引数なしで、使える配信元の一覧に続けて、同期のずれ・古い設定・配信していない配信元の警告を返す（正常系）。"""
+    # 準備
+    sample = make_source("sample", sample_sync_file_set(1))
+    notes = make_source("notes", git=False, scope_read=[sample.folder])
+    other = make_source("other")
+    old = make_source(
+        "old",
+        sample_file_set(**{"dev-docs.yaml": sample_config_text(name="old", version="0")}),
+        scope_read=[sample.folder],
+    )
+    broken = make_source("broken", {"dev-docs.yaml": BROKEN_CONFIG}, scope_read=[sample.folder])
+    env = make_server(sample, notes, other, old, broken)
+    # 実行
+    result = env.call("describe", cwd=str(sample.folder))
+    as_json = env.call("describe", cwd=str(sample.folder), format="json")
+    # 検証
+    lines = result.text.splitlines()
+    notes_at = lines.index(WARNINGS_LINE)
+    warnings = [line for line in lines[notes_at + 1 :] if line.startswith("- ")]
+    assert not result.is_error
+    assert notes_at > lines.index(next(line for line in lines if line.startswith("| sample |")))
+    assert any(
+        line.startswith("- sample: 管理用の YAML に無いファイルが 1 件") for line in warnings
+    )
+    assert any(
+        line.startswith("- old: 設定のバージョンが古い") and "dev-docs migrate" in line
+        for line in warnings
+    )
+    assert any(
+        line.startswith("- broken: 配信していません") and "documents[0].paths" in line
+        for line in warnings
+    )
+    assert all("check_project" in line or "dev-docs migrate" in line for line in warnings)
+    assert len(as_json.data["warnings"]) == 3
+
+
+def test_normal_when_no_source_available(
+    tmp_path: Any,
+    make_source: Callable[..., Any],
+    make_server: Callable[..., Any],
+) -> None:
+    """どの scope にも当たらない作業場所では、setup の案内と、使える配信元によらない警告を返す（正常系）。"""
+    # 準備
+    elsewhere = tmp_path / "elsewhere"
+    elsewhere.mkdir()
+    sample = make_source("sample")
+    notes = make_source("notes", git=False, scope_read=[sample.folder])
+    other = make_source("other")
+    broken = make_source("broken", {"dev-docs.yaml": BROKEN_CONFIG}, scope_read=[elsewhere])
+    env = make_server(sample, notes, other, broken)
+    # 実行
+    result = env.call("describe", cwd=str(elsewhere))
+    as_json = env.call("describe", cwd=str(elsewhere), format="json")
+    # 検証
+    body = as_json.data
+    assert not result.is_error
+    assert "| source | 権限 | description |" not in result.text
+    assert "/dev-docs:setup" in result.text
+    assert WARNINGS_LINE in result.text.splitlines()
+    assert any(
+        line.startswith("- broken: 配信していません") and "documents[0].paths" in line
+        for line in result.text.splitlines()
+    )
+    assert "sources" not in body
+    assert len(body["warnings"]) == 1
 
 
 def test_normal_when_source(
