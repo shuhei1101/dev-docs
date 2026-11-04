@@ -460,6 +460,31 @@ flows:
       - 10 回目は `InvalidArgumentError` で、違反の `path` が `operations[0].set.tags` で、r1 を書き換えない
       - 11 回目は `InvalidArgumentError` で、違反の `path` が `operations[0].add_to.tags` で、r1 を書き換えない
     test: test_normal_when_tags_are_objects
+  - name: 正常系（変更していない項目の引用符を保つ）
+    summary: 書き換えた文書の、変更していない項目の引用符の種類を元のまま書き出す
+    setup:
+      - name: Mock
+        description: なし
+      - name: 引用符を持つ文書
+        description: 'ワークツリー x の文書 1 が、単一引用符の値（`description: ''2020-12''`）、`: ` を含む二重引用符の値（`name: "A: b"`）、引用符なしの値（`weight: 1`）を持つ'
+      - name: 入力
+        description: '`update`（`id`: 文書 1・`set: {weight: 2}`）'
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        participant C as クライアント
+        participant T as write_docs
+        participant WT as ワークツリー x
+
+        C->>T: update 文書 1・set {weight: 2}
+        T->>T: 引用符の種類を保って読み、変更を当てて検査に通す
+        T->>WT: 文書 1 を書き換える
+        T-->>C: status updated・diff
+      ```
+    expected:
+      - '書き換えた文書 1 の YAML の、`weight` の行以外の行が書き込み前の文字列と一致し、`description: ''2020-12''` と `name: "A: b"` が残る'
+      - '`results[0].diff` が `weight` の行の `-`・`+` だけを持つ'
+    test: test_normal_when_quotes_preserved
 lead: 文書の作成・部分更新・置き換えを配列で受け、変更を当てた後の文書を配信元のスキーマと `validators[]` に通してから書き込む。dev-docs は commit しない。
 identifier: write_docs
 permissions: 対象の配信元の `scope.write` に `cwd` が当たること。Git の配信元はワークツリーにだけ書く
@@ -467,6 +492,7 @@ idempotent: false
 side_effects: 作業ツリー（Git 管理外の配信元はそのフォルダ）の文書の YAML を作る・書き換える。`generators[]` のスクリプトを流して生成物を書き出す。Git 管理外の配信元ではメタデータの `created`・`updated` を付ける。
 callers:
   - dev/設計書/シナリオ/単一ユースケース/エージェントが書き込む#scenarios[正常シナリオ]
+  - dev/設計書/シナリオ/単一ユースケース/エージェントが書き込む#scenarios[正常シナリオ（変更していない項目の引用符を保つ）]
 exclusivity: 配信元ごとの排他ロックの中で、読み込み・バージョンの確認・検査・書き込みを行う。後から来た呼び出しはロックを待つ
 request:
   - name: source
@@ -665,6 +691,9 @@ constraints:
     constraint: 1 回の `operations` は最大 50 件
   - item: 書き込みの方式
     constraint: 一時ファイルに書いてから置き換える
+  - item: 変更していない項目の書き出し
+    constraint: 変更していない項目は、コメント・順序・字下げ・引用符の種類（単一引用符・二重引用符・引用符なし）を元のまま書き出す
+    notes: 改行を含む引用符なしの文字列だけをブロックのリテラル（`|-`）で書く
   - item: 検査
     constraint: 全ての操作を当ててから 1 回だけスキーマと `validators[]` に通す
   - item: commit

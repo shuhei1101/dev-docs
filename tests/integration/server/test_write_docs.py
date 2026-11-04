@@ -776,3 +776,33 @@ def test_normal_when_tags_are_objects(
     assert "InvalidArgumentError" in eleventh.text
     assert "operations[0].add_to.tags" in eleventh.text
     assert tags_11 == tags_8
+
+
+# 単一引用符・`: ` を含む二重引用符・引用符なしの値を持つ文書 1
+QUOTED_DOC = "id: doc-1\nname: \"A: b\"\ndescription: '2020-12'\nweight: 1\n"
+
+
+def test_normal_when_quotes_preserved(
+    make_source: Callable[..., Any],
+    make_server: Callable[..., Any],
+    add_worktree: Callable[..., Path],
+    sample_file_set: Callable[..., dict[str, str]],
+) -> None:
+    """書き換えた文書の、変更していない項目の引用符の種類を元のまま書き出す（正常系）。"""
+    # 準備
+    files = sample_file_set(**{"docs/doc-1.yaml": QUOTED_DOC})
+    source, env, worktree = _setup(make_source, make_server, add_worktree, files)
+    target = worktree / "docs" / "doc-1.yaml"
+    # 実行
+    result = env.call(
+        "write_docs",
+        cwd=str(source.folder),
+        worktree=str(worktree),
+        operations=[_update("doc-1", _version(target), set={"weight": 2})],
+    )
+    # 検証
+    assert not result.is_error
+    assert target.read_text(encoding="utf-8") == (
+        "id: doc-1\nname: \"A: b\"\ndescription: '2020-12'\nweight: 2\n"
+    )
+    assert result.data["results"][0]["diff"] == "- weight: 1\n+ weight: 2"

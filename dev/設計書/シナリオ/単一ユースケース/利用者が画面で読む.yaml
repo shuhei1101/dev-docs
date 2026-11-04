@@ -629,6 +629,80 @@ scenarios:
       - 改行を含む値は、ラベルの次の行からブロックで出る
       - '`title`・`lead` の値が見出しとリードの後に重ねて出ず、`x-hidden: true` の項目が本文に出ない'
     test: test_normal_when_schema_document_drawn
+  - name: 正常シナリオ（ER 図を読む）
+    setup:
+      - name: Mock
+        description: なし（実環境で実行。ブラウザは Playwright で操作する）
+        notes: '-'
+      - name: ER 図を持つ文書
+        description: 'sample に、`x-shape: diagram`・`x-diagram: er` の項目 `er`（実体 3 つと関連 2 つ）と、`tables[]` を持つスキーマと、その文書 7 を置く'
+        notes: '`er` と `tables` の構造は ER 図のテンプレート（`dev/テンプレート/ER図.schema.yaml`）と同じ'
+      - name: 実体とテーブル
+        description: '実体 `顧客` は `columns` を持たず、`tables[]` に `name` が `customers`・`title` が `顧客` のテーブル（列 `id`（`primary_key: true`）と `email`）がある。実体 `注文` は `columns` に列 `id` と、`key: FK`・`comment: 参照: 顧客.id` の列 `customer_id` を持つ。実体 `商品` は他の分類のテーブルとして名前だけを持つ'
+        notes: '-'
+      - name: 関連
+        description: '`顧客` から `注文` へ多重度 `||--o{` の関連と、`注文` から `商品` へ多重度 `}o--||` の関連'
+        notes: '`注文` から `商品` への関連は、端の列が決まらない関連'
+      - name: dev-docs
+        description: sample を配信している dev-docs
+        notes: '-'
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        actor U as 利用者
+        participant UI as dev-docs の画面
+        participant API as 画面の API
+
+        U->>UI: 文書 7 を開く
+        UI->>API: 文書の取得（文書 7）
+        API->>API: er の項目を、tables の列で補った ER 図の部品にする
+        API-->>UI: 文書 7 の Markdown
+        UI-->>U: ER 図で描いた文書 7 の本文
+      ```
+    expected:
+      - '`er` の項目が mdmark の ER 図で描かれ、Mermaid のコードブロック（`erDiagram`）が本文に出ない'
+      - 実体 `顧客` のテーブルに、`tables[]` のテーブルの列の名前と型が出て、主キーの列に `PK` のマーカーが出る
+      - 実体 `注文` のテーブルに、`columns` の列の名前と型が出る
+      - '`顧客` から `注文` への関連の線が、`顧客` の列 `id` の行と `注文` の列 `customer_id` の行を結び、`顧客` の端に多重度 `1`、`注文` の端に多重度 `0..n` の記号が出る'
+      - '`注文` から `商品` への関連の線は図に出ず、図の元データの表にその関連の行が出る'
+      - ER 図に書き方の警告が出ない
+      - 図の下の元データの表は閉じた状態で出る
+    test: test_normal_when_er_diagram_drawn
+    notes:
+      mdmark のバージョン: ER 図の部品は mdmark#298 で入り、画面が読み込む mdmark の master（v0.9.0）には無い。このシナリオの E2E は、mdmark#298 を含む mdmark のリリースから pass する。
+  - name: 正常シナリオ（本文の id のリンクを開く）
+    setup:
+      - name: Mock
+        description: なし（実環境で実行。ブラウザは Playwright で操作する）
+        notes: '-'
+      - name: id のリンクを持つ文書
+        description: 'sample の文書 1 の Markdown の文字列の値に、`[文書 2](id:{文書 2 の ID})`・`[項目](id:{文書 6 の ID}#flow)`・`[無い文書](id:no-such-doc)` のリンクと、行内のコード `` `[コード](id:{文書 2 の ID})` `` を置く'
+        notes: '文書 6 は正常シナリオ（スキーマ駆動の文書を図と表で読む）の文書。`flow` は文書 6 の `x-diagram: flowchart` の項目のパスで、スキーマでその項目に `x-heading: 処理の流れ` を持たせる'
+      - name: dev-docs
+        description: sample を配信している dev-docs
+        notes: '-'
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        actor U as 利用者
+        participant UI as dev-docs の画面
+        participant API as 画面の API
+
+        U->>UI: 文書 1 を開く
+        UI->>API: 文書の取得（文書 1）
+        API->>API: 本文の id のリンクを、同じ配信元の文書へのリンクに書き換える
+        API-->>UI: 文書 1 の Markdown
+        U->>UI: リンク 文書 2 を押す
+        UI-->>U: doc-view（文書 2）
+        U->>UI: 文書 1 に戻り、リンク 項目 を押す
+        UI-->>U: doc-view（文書 6 の項目の見出し）
+      ```
+    expected:
+      - リンク `文書 2` を押すと、URL が文書 2 を指すものに変わり、文書 2 の本文が出る
+      - リンク `項目` を押すと、文書 6 が開き、URL のアンカーが見出し `処理の流れ` を指し、その見出しが画面に出る
+      - '`無い文書` の文字は出て、文書へのリンクにならず、文書 1 の他のリンクと本文は描かれる'
+      - 行内のコードの中の `id:` のリンクは書き換わらず、コードのまま出る
+    test: test_normal_when_id_link_opened
 lead: 利用者がブラウザで配信元の文書の画面を開き、タブ・サイドバー・検索・リビジョンの切り替え・差分で文書を読む。
 issue: 17
 primary_actor: 利用者
