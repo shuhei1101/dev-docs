@@ -429,9 +429,8 @@ functions:
         description: 控えを捨てる
       - name: checks
         title: 配信元の検査の控え
-        type: SourceChecks | None
-        required: false
-        default: None
+        type: SourceChecks
+        required: true
         passing: injected
         description: 配信元の控えの破棄へ渡す
     returns:
@@ -499,17 +498,16 @@ functions:
         description: 控えを捨てる
       - name: checks
         title: 配信元の検査の控え
-        type: SourceChecks | None
-        required: false
-        default: None
+        type: SourceChecks
+        required: true
         passing: injected
-        description: 検査の結果を持たせる（`None` なら持たせない）
+        description: 検査の結果を持たせる
     returns:
       type: None
       description: なし
     process: |-
       1. 文書のストア・文書の検査・変換の控えを捨てる（文書のストア.全て捨てる・文書の検査.控えを捨てる・変換.控えを捨てる）
-      2. 渡した配信元ごとに検査し（`checks` があれば配信元の検査の控え.検査の流し直し、無ければ `check_sync` と `nav_warnings`）、3 つの並びのうち 0 件でないものを、配信元の ID・ずれの種類・件数・並びの値で警告のログに書く。`alias_violations` は文書のパス・キー・理由で、nav の警告（画面の API）はキーのパスと理由で警告のログに書く
+      2. 渡した配信元ごとに検査し（配信元の検査の控え.検査の流し直し）、3 つの並びのうち 0 件でないものを、配信元の ID・ずれの種類・件数・並びの値で警告のログに書く。`alias_violations` は文書のパス・キー・理由で、nav の警告（画面の API）はキーのパスと理由で警告のログに書く
   - name: run_migrate
     title: 設定の移し替えの実行
     container: main.py
