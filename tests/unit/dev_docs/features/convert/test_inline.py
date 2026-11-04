@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dev_docs.features.convert.inline import link_reference, rewrite_text
+from dev_docs.features.convert.inline import heading_anchor, link_reference, rewrite_text
 from dev_docs.features.convert.types import DiagramHead, DocumentLink, RenderContext
 
 HEAD = DiagramHead(title="図", scope="文書", updated="2026-11-03")
@@ -10,6 +10,25 @@ CONTEXT = RenderContext(
     path="dev/b.yaml",
 )
 NO_ISSUE = RenderContext(links={}, issue_url=None, path="dev/b.yaml")
+ID_LINKS = {
+    "a": DocumentLink(title="A", path="dev/a.yaml"),
+    "b": DocumentLink(title="B", path="dev/b.yaml"),
+}
+
+
+def _flow_heading(document_id: str, item: str) -> str | None:
+    """文書 `b` の項目 `flow` だけが見出し `処理の流れ` を持つ、項目の見出しの引き方。"""
+    return "処理の流れ" if (document_id, item) == ("b", "flow") else None
+
+
+def _section_heading(document_id: str, item: str) -> str | None:
+    """文書 `dev/a` の項目 `flows[正常系]` だけが見出し `正常系` を持つ、項目の見出しの引き方。"""
+    return "正常系" if (document_id, item) == ("dev/a", "flows[正常系]") else None
+
+
+ID_CONTEXT = RenderContext(
+    links=ID_LINKS, issue_url=None, path="dev/c.yaml", item_heading=_flow_heading
+)
 
 
 def test_rewrite_text_when_mermaid() -> None:
@@ -75,6 +94,24 @@ def test_rewrite_text_when_choices() -> None:
     assert result == "- `badge:planned` 予定\n- `badge:allowed` 許可"
 
 
+def test_rewrite_text_when_id_link() -> None:
+    """id のリンク（正常系）。"""
+    # 準備
+    text = "[A](id:a) と [B](id:b#flow) と [C](id:zzz) と `[D](id:a)`"
+    # 実行
+    result = rewrite_text(text, ID_CONTEXT, HEAD)
+    # 検証
+    assert result == "[A](a.yaml) と [B](b.yaml#処理の流れ) と [C](id:zzz) と `[D](id:a)`"
+
+
+def test_rewrite_text_when_id_link_no_heading() -> None:
+    """見出しにならない項目（正常系）。"""
+    # 実行
+    result = rewrite_text("[B](id:b#no-such)", ID_CONTEXT, HEAD)
+    # 検証
+    assert result == "[B](b.yaml)"
+
+
 def test_link_reference() -> None:
     """項目を指す参照（正常系）。"""
     # 実行
@@ -83,9 +120,29 @@ def test_link_reference() -> None:
     assert result == "[A / flows\\[正常系\\]](a.yaml)"
 
 
+def test_link_reference_when_heading() -> None:
+    """見出しになる項目（正常系）。"""
+    # 準備
+    context = RenderContext(
+        links=CONTEXT.links, issue_url=None, path="dev/b.yaml", item_heading=_section_heading
+    )
+    # 実行
+    result = link_reference("dev/a#flows[正常系]", context)
+    # 検証
+    assert result == "[A / flows\\[正常系\\]](a.yaml#正常系)"
+
+
 def test_link_reference_when_unknown() -> None:
     """引き先に無い（正常系）。"""
     # 実行
     result = link_reference("dev/z#x", CONTEXT)
     # 検証
     assert result is None
+
+
+def test_heading_anchor() -> None:
+    """記号と空白（正常系）。"""
+    # 実行
+    result = heading_anchor("正常シナリオ（ER 図を読む）")
+    # 検証
+    assert result == "正常シナリオer-図を読む"

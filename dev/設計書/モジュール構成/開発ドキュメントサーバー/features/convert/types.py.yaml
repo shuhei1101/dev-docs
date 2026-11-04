@@ -353,3 +353,9 @@ data_models:
         type: Mapping[str, str]
         access: 公開
         description: '`x-key` を持つ `sections` の要素の `title` から、その要素の見出し（`x-key` の値）。外部キーのリンクのアンカーに使う。既定は空'
+      - name: item_heading
+        title: 項目の見出しの引き方
+        type: Callable[[str, str], str | None]
+        access: 公開
+        default: 常に `None` を返す関数
+        description: 文書の ID と項目のパスから、リンク先の文書でその項目が出す見出し（無ければ `None`）を引く。参照のリンクと本文の id のリンクのアンカーに使う

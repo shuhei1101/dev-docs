@@ -999,3 +999,152 @@ def test_normal_when_schema_document_drawn(
     expect(main.get_by_text("図と表で読む文書")).to_have_count(1)
     expect(main.get_by_text("タイトル")).to_have_count(0)
     expect(main.get_by_text("内部メモの値")).to_have_count(0)
+
+
+ER_ROW = "  - id: er\n    paths: [er/*.yaml]\n    schema: schemas/er.schema.yaml\n"
+# ER 図のテンプレートと同じ `er`・`tables` の構造を持つ種類のスキーマ
+ER_SCHEMA = """\
+type: object
+title: ER 図
+properties:
+  id: {type: string, title: ID}
+  title: {type: string, title: タイトル}
+  er:
+    title: ER 図
+    x-heading: ER 図
+    x-shape: diagram
+    x-diagram: er
+    properties:
+      entities:
+        type: array
+        items:
+          properties: {name: {title: 名前}}
+      relations:
+        type: array
+        items:
+          properties: {from: {title: 元}, to: {title: 先}, cardinality: {title: 多重度}}
+  tables:
+    type: array
+    title: テーブル
+    x-heading: テーブル
+    x-shape: sections
+    x-key: name
+"""
+ER_DOC = """\
+id: doc-7
+title: 'ER 図: 販売'
+er:
+  entities:
+    - name: 顧客
+    - name: 注文
+      columns:
+        - {type: bigint, name: id, key: PK}
+        - {type: bigint, name: customer_id, key: FK, comment: '参照: 顧客.id'}
+    - name: 商品
+  relations:
+    - {from: 顧客, to: 注文, cardinality: '||--o{'}
+    - {from: 注文, to: 商品, cardinality: '}o--||'}
+tables:
+  - name: customers
+    title: 顧客
+    columns:
+      - {name: id, title: 顧客 ID, type: bigint, primary_key: true}
+      - {name: email, title: メール, type: text}
+"""
+
+
+def test_normal_when_er_diagram_drawn(
+    make_source: Callable[..., Any],
+    serve: Callable[..., Any],
+    sample_file_set: Callable[..., dict[str, str]],
+    sample_config_text: Callable[..., str],
+    page: Page,
+) -> None:
+    """ER 図を、テーブルの列で補った mdmark の ER 図で読む（正常系）。"""
+    # 準備
+    files = sample_file_set(
+        **{
+            "dev-docs.yaml": sample_config_text(ER_ROW),
+            "schemas/er.schema.yaml": ER_SCHEMA,
+            "er/販売.yaml": ER_DOC,
+        }
+    )
+    served = serve(make_source("sample", files))
+    main = page.get_by_role("main")
+    figure = main.locator('figure.mdmark-diagram[data-diagram="er"]')
+    customers = figure.locator('[data-node="顧客"] .mdmark-diagram-er-column')
+    orders = figure.locator('[data-node="注文"] .mdmark-diagram-er-column')
+    relations = figure.locator("g[data-er-relation]")
+    source_tables = main.locator("details.mdmark-table-details")
+    # 実行
+    page.goto(served.url("/sample/er/販売"))
+    expect(_heading(page)).to_have_text("ER 図: 販売")
+    # 検証
+    expect(figure).to_have_count(1)
+    expect(main.get_by_text("erDiagram")).to_have_count(0)
+    expect(customers.locator(".mdmark-diagram-er-name")).to_have_text(["id", "email"])
+    expect(customers.locator(".mdmark-diagram-er-type")).to_have_text(["bigint", "text"])
+    expect(customers.first.locator('abbr[data-key="pk"]')).to_have_text("PK")
+    expect(orders.locator(".mdmark-diagram-er-name")).to_have_text(["id", "customer_id"])
+    expect(relations).to_have_count(1)
+    expect(relations.first).to_have_attribute("data-er-from-column", "id")
+    expect(relations.first).to_have_attribute("data-er-to-column", "customer_id")
+    expect(relations.first).to_have_attribute("data-er-from-card", "1")
+    expect(relations.first).to_have_attribute("data-er-to-card", "0..n")
+    expect(main.locator(".mdmark-syntax-warning")).to_have_count(0)
+    expect(source_tables.first).not_to_have_attribute("open", "")
+    source_tables.nth(1).locator("summary").click()
+    expect(source_tables.nth(1).locator("tbody tr").nth(1).locator("td")).to_contain_text(
+        ["注文", "商品"]
+    )
+
+
+# 本文（`description`）に id のリンクと、行内のコードの id のリンクを持つ文書 1
+LINKED_DOC = (
+    "id: doc-1\n"
+    "name: 文書 1\n"
+    "description: >-\n"
+    "  [文書 2](id:doc-2) と [項目](id:doc-6#flow) と [無い文書](id:no-such-doc)\n"
+    "  と `[コード](id:doc-2)`\n"
+)
+
+
+def test_normal_when_id_link_opened(
+    make_source: Callable[..., Any],
+    serve: Callable[..., Any],
+    sample_file_set: Callable[..., dict[str, str]],
+    sample_config_text: Callable[..., str],
+    page: Page,
+) -> None:
+    """本文の id のリンクを開く（正常系）。"""
+    # 準備
+    files = sample_file_set(
+        **{
+            "dev-docs.yaml": sample_config_text(DRAWN_ROW),
+            "schemas/drawn.schema.yaml": DRAWN_SCHEMA,
+            "drawn/doc-6.yaml": DRAWN_DOC,
+            "docs/doc-1.yaml": LINKED_DOC,
+        }
+    )
+    served = serve(make_source("sample", files))
+    main = page.get_by_role("main")
+    # 実行
+    page.goto(served.url("/sample/docs/doc-1"))
+    expect(_heading(page)).to_have_text("文書 1")
+    main.get_by_role("link", name="文書 2", exact=True).click()
+    expect(_heading(page)).to_have_text("文書 2")
+    to_second = page.url
+    page.go_back()
+    expect(_heading(page)).to_have_text("文書 1")
+    missing_links = main.get_by_role("link", name="無い文書").count()
+    missing_texts = main.get_by_text("無い文書").count()
+    codes = main.locator("code").all_text_contents()
+    main.get_by_role("link", name="項目", exact=True).click()
+    # 検証
+    assert to_second.endswith("/sample/docs/doc-2")
+    expect(_heading(page)).to_have_text("図の文書 6")
+    assert page.evaluate("decodeURIComponent(location.hash)") == "#処理の流れ"
+    expect(main.get_by_role("heading", name="処理の流れ")).to_be_in_viewport()
+    assert missing_links == 0
+    assert missing_texts == 1
+    assert "[コード](id:doc-2)" in codes

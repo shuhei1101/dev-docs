@@ -530,3 +530,55 @@ def test_normal_when_tags_are_objects(
     assert tags_2 == [{"name": "mcp", "main": True}, {"name": "運用"}]
     assert not third.is_error
     assert tags_3 == [{"name": "mcp"}, {"name": "運用", "main": True}]
+
+
+def _quoted_doc(doc_id: str, *, weight: int, related: str = "") -> str:
+    """単一引用符・`: ` を含む二重引用符・引用符なしの値を持つ文書の YAML を作る。"""
+    return f"id: {doc_id}\nname: \"A: b\"\ndescription: '2020-12'\nweight: {weight}\n{related}"
+
+
+def test_normal_when_quotes_preserved(
+    make_source: Callable[..., Any],
+    serve: Callable[..., Any],
+    add_worktree: Callable[..., Path],
+    sample_file_set: Callable[..., dict[str, str]],
+    sample_doc_text: Callable[..., str],
+) -> None:
+    """変更していない項目の引用符を保つ（正常系）。"""
+    # 準備
+    files = sample_file_set(
+        **{
+            "docs/doc-1.yaml": _quoted_doc("doc-1", weight=1),
+            "docs/doc-2.yaml": _quoted_doc(
+                "doc-2", weight=1, related="related:\n  - to: doc-3\n    type: references\n"
+            ),
+            "docs/doc-3.yaml": sample_doc_text("doc-3", "文書 3"),
+        }
+    )
+    source, served, worktree = _setup(make_source, serve, add_worktree, files)
+    first = worktree / "docs" / "doc-1.yaml"
+    third = worktree / "docs" / "doc-3.yaml"
+    # 実行
+    written = served.call(
+        "write_docs",
+        cwd=str(source.folder),
+        worktree=str(worktree),
+        operations=[_update("doc-1", _version(first), set={"weight": 2})],
+    )
+    deleted = served.call(
+        "delete_docs",
+        cwd=str(source.folder),
+        worktree=str(worktree),
+        targets=[{"id": "doc-3", "expected_version": _version(third)}],
+        on_referenced="unlink",
+    )
+    # 検証
+    assert not written.is_error
+    assert not deleted.is_error
+    assert first.read_text(encoding="utf-8") == _quoted_doc("doc-1", weight=2)
+    assert (
+        (worktree / "docs" / "doc-2.yaml")
+        .read_text(encoding="utf-8")
+        .startswith(_quoted_doc("doc-2", weight=1))
+    )
+    assert written.data["results"][0]["diff"] == "- weight: 1\n+ weight: 2"

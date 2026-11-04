@@ -18,7 +18,6 @@ from dev_docs.features.convert.types import (
     NodeKind,
 )
 
-INDENT = "  "
 FLOW_KINDS = ("flowchart", "dataflow", "architecture", "state")
 LEFT_TO_RIGHT_KINDS = ("dataflow", "architecture")
 # `x-diagram` のノードの `kind`・`shape` から mdmark の箱の種類（どれにも当たらなければ `script`）
@@ -31,12 +30,33 @@ NODE_KINDS: dict[str, NodeKind] = {
     "cylinder": "data",
     "diamond": "dm",
 }
-PLAIN_NAME = re.compile(r"^[\w\-]+$")
-
-
-def _text(value: Any) -> str:
-    """ラベルの文字列にする（`"` は `#quot;` に替える）。"""
-    return str(value).replace("\n", " ").replace('"', "#quot;")
+# Mermaid の多重度の片端の記号から、mdmark の ER 図の部品の多重度
+ER_CARDINALITIES = {
+    "||": "1",
+    "|o": "0..1",
+    "o|": "0..1",
+    "|{": "1..n",
+    "}|": "1..n",
+    "o{": "0..n",
+    "}o": "0..n",
+}
+# Mermaid の多重度（`{左}--{右}` か `{左}..{右}`）
+ER_CARDINALITY = re.compile(r"^(?P<left>\S{2})(?:--|\.\.)(?P<right>\S{2})$")
+# 実体の列の `key` から、mdmark の ER 図の部品の列のマーカー
+ER_COLUMN_KEYS = {"PK": "pk", "FK": "fk"}
+# `key: FK` の実体の列の `comment` から、指す実体と列
+ER_FOREIGN_KEY_COMMENT = re.compile(r"^参照: (?P<entity>.+)\.(?P<column>[^.\s]+)$")
+# ER 図のテーブルを格子に置く寸法（px）。`head`・`row`・`frame` は mdmark の ER 図の寸法と同じ値
+ER_LAYOUT = {
+    "per_row": 3,
+    "width": 240,
+    "gap_x": 96,
+    "gap_y": 48,
+    "margin": 24,
+    "head": 44,
+    "row": 26,
+    "frame": 4,
+}
 
 
 def _items(value: Mapping[str, Any], key: str) -> list[Mapping[str, Any]]:
@@ -123,45 +143,202 @@ def _state_graph(value: Mapping[str, Any]) -> FlowGraph:
     return FlowGraph(direction="TD", nodes=nodes, edges=edges)
 
 
-def _entity_name(name: Any) -> str:
-    """ER 図の実体の名前（空白などを含むときは `"` で囲む）。"""
-    text = str(name)
-    return text if PLAIN_NAME.match(text) else f'"{_text(text)}"'
+def _er_table_columns(table: Mapping[str, Any]) -> list[dict[str, Any]]:
+    """ER 図のテンプレートのテーブルの列を、ER 図の部品の列にする。"""
+    columns: list[dict[str, Any]] = []
+    for column in _items(table, "columns"):
+        item: dict[str, Any] = {"name": str(column["name"]), "type": str(column.get("type", ""))}
+        if column.get("title"):
+            item["desc"] = str(column["title"])
+        for key, flag in (("primary_key", "pk"), ("foreign_key", "fk"), ("not_null", "nn")):
+            if column.get(key):
+                item[flag] = True
+        columns.append(item)
+    return columns
 
 
-def _er(value: Mapping[str, Any]) -> str:
-    """`erDiagram` の Mermaid を組み立てる。"""
-    lines = ["erDiagram"]
-    for entity in _items(value, "entities"):
-        lines.append(f"{INDENT}{_entity_name(entity['name'])} {{")
-        columns: Sequence[Any] = entity.get("columns") or []
-        for column in columns:
-            if not isinstance(column, Mapping):
+def _er_entity_columns(entity: Mapping[str, Any]) -> list[dict[str, Any]]:
+    """実体の `columns` を、ER 図の部品の列にする。"""
+    columns: list[dict[str, Any]] = []
+    for column in _items(entity, "columns"):
+        item: dict[str, Any] = {"name": str(column["name"]), "type": str(column.get("type", ""))}
+        flag = ER_COLUMN_KEYS.get(str(column.get("key")))
+        if flag is not None:
+            item[flag] = True
+        columns.append(item)
+    return columns
+
+
+class _ErModel:
+    """ER 図の実体ごとのテーブルと、外部キーが指す実体と列の引き方。"""
+
+    def __init__(
+        self,
+        value: Mapping[str, Any],
+        tables: Sequence[Mapping[str, Any]],
+        classification: str | None,
+    ) -> None:
+        self.classification = classification
+        self.by_title = {str(table.get("title")): table for table in tables}
+        # 外部キーのテーブル名は物理名・論理名のどちらでも引く
+        self.entity_of: dict[str, str] = {}
+        for table in tables:
+            for key in ("name", "title"):
+                if table.get(key) is not None:
+                    self.entity_of.setdefault(str(table[key]), str(table.get("title")))
+        self.entities = _items(value, "entities")
+
+    def table(self, entity: Mapping[str, Any]) -> Mapping[str, Any] | None:
+        """実体の `name` が `title` に当たるテーブルを返す。"""
+        return self.by_title.get(str(entity.get("name")))
+
+    def columns(self, entity: Mapping[str, Any]) -> list[dict[str, Any]]:
+        """実体の列（`columns` を持たなければ当たるテーブルの列）を返す。"""
+        if _items(entity, "columns"):
+            return _er_entity_columns(entity)
+        table = self.table(entity)
+        return _er_table_columns(table) if table is not None else []
+
+    def references(self, entity: Mapping[str, Any]) -> list[tuple[str, str, str]]:
+        """実体の列のうち外部キーの列ごとに（列, 指す実体, 指す列）を返す。"""
+        found: list[tuple[str, str, str]] = []
+        for column in _items(entity, "columns"):
+            matched = ER_FOREIGN_KEY_COMMENT.match(str(column.get("comment", "")))
+            if column.get("key") == "FK" and matched:
+                found.append((str(column["name"]), matched["entity"], matched["column"]))
+        table = self.table(entity)
+        if _items(entity, "columns") or table is None:
+            return found
+        for column in _items(table, "columns"):
+            foreign_key = column.get("foreign_key")
+            if not isinstance(foreign_key, Mapping) or not foreign_key.get("table"):
                 continue
-            parts = [str(column.get("type", "string")).replace(" ", "_"), str(column["name"])]
-            if column.get("key"):
-                parts.append(str(column["key"]))
-            if column.get("comment"):
-                parts.append(f'"{_text(column["comment"])}"')
-            lines.append(f"{INDENT * 2}{' '.join(parts)}")
-        lines.append(f"{INDENT}}}")
-    for relation in _items(value, "relations"):
-        label = f'"{_text(relation["label"])}"' if relation.get("label") else '""'
-        lines.append(
-            f"{INDENT}{_entity_name(relation['from'])} {relation['cardinality']} "
-            f"{_entity_name(relation['to'])} : {label}"
+            target = self._foreign_key_target(str(foreign_key["table"]))
+            if target is not None:
+                found.append((str(column["name"]), *target))
+        return found
+
+    def _foreign_key_target(self, reference: str) -> tuple[str, str] | None:
+        """`{分類}/{テーブル名}.{列}` から、同じ文書の（指す実体, 指す列）を返す。"""
+        table_name, _, column = reference.rpartition(".")
+        classification, _, name = table_name.rpartition("/")
+        # 他の分類のテーブル: 同じ文書に無いので当てない
+        if classification and classification != self.classification:
+            return None
+        entity = self.entity_of.get(name)
+        return (entity, column) if entity is not None else None
+
+    def ends(self, source: str, target: str) -> tuple[str, str] | None:
+        """関連の元と先の実体から、（元の列, 先の列）を外部キーで決める（決まらなければ `None`）。"""
+        by_name = {str(entity["name"]): entity for entity in self.entities}
+        # 先の実体の外部キーが元の実体を指す
+        for column, entity, referenced in self.references(by_name.get(target, {})):
+            if entity == source:
+                return referenced, column
+        # 元の実体の外部キーが先の実体を指す
+        for column, entity, referenced in self.references(by_name.get(source, {})):
+            if entity == target:
+                return column, referenced
+        return None
+
+
+def _er_cards(cardinality: str) -> tuple[str, str] | None:
+    """Mermaid の多重度を、両端の多重度にする（読み替えられなければ `None`）。"""
+    matched = ER_CARDINALITY.match(cardinality)
+    if matched is None:
+        return None
+    left = ER_CARDINALITIES.get(matched["left"])
+    right = ER_CARDINALITIES.get(matched["right"])
+    return (left, right) if left is not None and right is not None else None
+
+
+def _er_layout(tables: list[dict[str, Any]]) -> int:
+    """テーブルを格子に置き、図の幅を返す。"""
+    y = ER_LAYOUT["margin"]
+    for start in range(0, len(tables), ER_LAYOUT["per_row"]):
+        row = tables[start : start + ER_LAYOUT["per_row"]]
+        for index, table in enumerate(row):
+            table["x"] = ER_LAYOUT["margin"] + index * (ER_LAYOUT["width"] + ER_LAYOUT["gap_x"])
+            table["y"] = y
+            table["w"] = ER_LAYOUT["width"]
+        tallest = max(
+            ER_LAYOUT["head"] + len(table["columns"]) * ER_LAYOUT["row"] + ER_LAYOUT["frame"]
+            for table in row
         )
-    return "\n".join(lines)
+        y += tallest + ER_LAYOUT["gap_y"]
+    per_row = min(len(tables), ER_LAYOUT["per_row"])
+    return (
+        ER_LAYOUT["margin"] * 2
+        + per_row * ER_LAYOUT["width"]
+        + max(per_row - 1, 0) * ER_LAYOUT["gap_x"]
+    )
 
 
-def render_diagram(value: Mapping[str, Any], kind: DiagramKind, head: DiagramHead) -> str:
+def _er(
+    value: Mapping[str, Any],
+    head: DiagramHead,
+    tables: Sequence[Mapping[str, Any]],
+    classification: str | None,
+) -> dict[str, Any]:
+    """mdmark の ER 図の部品の定義を組み立てる。"""
+    model = _ErModel(value, tables, classification)
+    nodes: list[dict[str, Any]] = []
+    for entity in model.entities:
+        name = str(entity["name"])
+        node: dict[str, Any] = {"id": name, "name": name, "label": name}
+        table = model.table(entity)
+        # テンプレートのテーブルに当たる: 物理名と概要を使う
+        if table is not None:
+            node["name"] = str(table.get("name", name))
+            if table.get("summary"):
+                node["desc"] = str(table["summary"])
+        node["columns"] = model.columns(entity)
+        nodes.append(node)
+    relations: list[dict[str, Any]] = []
+    for relation in _items(value, "relations"):
+        source, target = str(relation["from"]), str(relation["to"])
+        cards = _er_cards(str(relation.get("cardinality", "")))
+        ends = model.ends(source, target)
+        # 多重度を読み替えられない・端の列が決まらない関連は図に出さない（元データの表に残る）
+        if cards is None or ends is None:
+            continue
+        item: dict[str, Any] = {
+            "from": source,
+            "fromColumn": ends[0],
+            "fromCard": cards[0],
+            "to": target,
+            "toColumn": ends[1],
+            "toCard": cards[1],
+        }
+        if relation.get("label"):
+            item["label"] = str(relation["label"])
+        relations.append(item)
+    width = _er_layout(nodes)
+    return {
+        "title": head.title,
+        "scope": head.scope,
+        "updated": head.updated,
+        "width": width,
+        "tables": nodes,
+        "relations": relations,
+    }
+
+
+def render_diagram(
+    value: Mapping[str, Any],
+    kind: DiagramKind,
+    head: DiagramHead,
+    *,
+    tables: Sequence[Mapping[str, Any]] = (),
+    classification: str | None = None,
+) -> str:
     """`x-diagram` の種類で、値から本文に置く図のブロックを組み立てる。"""
     if kind == "state":
         return _block("flow", layout_flow(_state_graph(value), head))
     if kind in FLOW_KINDS:
         return _block("flow", layout_flow(_flow_graph(value, kind), head))
     if kind == "er":
-        return f"```mermaid\n{_er(value)}\n```"
+        return _block("er", _er(value, head, tables, classification))
     raise ValueError(f"x-diagram {kind} は描けません")
 
 

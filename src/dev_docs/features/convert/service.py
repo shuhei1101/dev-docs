@@ -5,11 +5,13 @@ from __future__ import annotations
 import hashlib
 import logging
 import re
+from collections.abc import Mapping
 from pathlib import Path
+from typing import Any
 
 from dev_docs.features.access.types import Target, script_at
 from dev_docs.features.convert.embed import EMBED_PATTERN, expand_embeds
-from dev_docs.features.convert.markdown import schema_to_markdown
+from dev_docs.features.convert.markdown import item_heading, schema_to_markdown
 from dev_docs.features.convert.types import (
     Converted,
     ConvertFailure,
@@ -157,16 +159,30 @@ class ConvertService:
     def _context(self, target: Target, document: Document) -> RenderContext:
         """同じ配信元の文書を ID・パスで引くリンクの引き先と、Issue の URL を集める。"""
         links: dict[str, DocumentLink] = {}
+        documents: dict[str, Document] = {}
         for found in self.store.load(target).documents:
             link = DocumentLink(title=str(found.metadata["name"]), path=found.path)
+            documents.setdefault(found.id, found)
             for key in (found.id, found.path, found.body_path):
                 if key is not None:
                     links.setdefault(key, link)
+        schemas: dict[str, Mapping[str, Any]] = {}
+
+        def heading(document_id: str, item: str) -> str | None:
+            """ID の文書の値とスキーマで、項目の見出しを引く（同じ種類のスキーマは 1 回だけ引く）。"""
+            found = documents.get(document_id)
+            if found is None:
+                return None
+            if found.kind not in schemas:
+                schemas[found.kind] = self.store.row_schema(target, found.kind)
+            return item_heading(found.data, schemas[found.kind], item)
+
         repository = target.source.config.github_repository
         return RenderContext(
             links=links,
             issue_url=f"https://github.com/{repository}/issues/" if repository else None,
             path=document.path,
+            item_heading=heading,
         )
 
     def convert(self, target: Target, document: Document) -> Converted:

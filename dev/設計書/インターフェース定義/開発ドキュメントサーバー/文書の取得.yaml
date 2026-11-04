@@ -413,6 +413,64 @@ flows:
       - '`markdown` に `<!-- sequence -->` の範囲が無く、文書 7 の Mermaid の文字列の全ての行が `` ```mermaid `` のコードブロックにある'
       - '`conversionError` が `null`'
     test: test_normal_when_mermaid_unreadable
+  - name: 正常系（ER 図を部品にする）
+    summary: '`x-diagram: er` の項目を、テーブルの列で補った mdmark の ER 図の部品にする'
+    setup:
+      - name: Mock
+        description: なし
+        notes: '-'
+      - name: ER 図を持つ文書
+        description: 'sample に、`x-shape: diagram`・`x-diagram: er` の項目 `er` と `tables[]` を持つスキーマと、その文書 8 を置く'
+        notes: '`er` と `tables` の構造は ER 図のテンプレートと同じ'
+      - name: 実体とテーブル
+        description: '実体 `顧客` は `columns` を持たず、`tables[]` に `name` が `customers`・`title` が `顧客` のテーブル（列 `id`（`primary_key: true`・`not_null: true`）と `email`）がある。実体 `注文` は `columns` に列 `id`（`key: PK`）と、`key: FK`・`comment: 参照: 顧客.id` の列 `customer_id` を持つ。実体 `商品` は名前だけを持つ。実体 `支払い` は `columns` を持たず、`tables[]` に `name` が `payments`・`title` が `支払い` のテーブル（列 `id`（`primary_key: true`）と、`foreign_key.table` が `customers.id` の列 `customer_id`）がある'
+        notes: '-'
+      - name: 関連
+        description: '`顧客` から `注文` へ `||--o{`・ラベル `注文する` の関連と、`顧客` から `支払い` へ `||--o{` の関連と、`注文` から `商品` へ `}o--||` の関連'
+        notes: '`顧客` から `注文` への関連は実体の列の `comment`、`顧客` から `支払い` への関連はテーブルの列の `foreign_key.table` で端の列が決まる。`注文` から `商品` への関連は端の列が決まらない'
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        participant C as クライアント
+        participant E as GET /_api/sources/{source}/docs/{path}
+
+        C->>E: GET /_api/sources/sample/docs/{文書 8 のパス}
+        E->>E: er の実体の列を tables で補い、関連の端の列を外部キーから決めて ER 図の部品にする
+        E-->>C: 200（文書 8）
+      ```
+    expected:
+      - '`markdown` に `<!-- er -->` の範囲が 1 つあり、`erDiagram` の `` ```mermaid `` のコードブロックが無い'
+      - '範囲の JSON の `tables` に `顧客`・`注文`・`商品`・`支払い` の 4 つがあり、`顧客` の `columns` が `id`（`pk: true`・`nn: true`）と `email`、`注文` の `columns` が `id`（`pk: true`）と `customer_id`（`fk: true`）、`商品` の `columns` が空、`支払い` の `columns` が `id`（`pk: true`）と `customer_id`（`fk: true`）'
+      - '範囲の JSON の `relations` が 2 件で、1 件目は `from` が `顧客`・`fromColumn` が `id`・`fromCard` が `1`・`to` が `注文`・`toColumn` が `customer_id`・`toCard` が `0..n`・`label` が `注文する`、2 件目は `from` が `顧客`・`fromColumn` が `id`・`to` が `支払い`・`toColumn` が `customer_id`'
+      - '`注文` から `商品` への関連は `relations` に無く、図の元データの表の関連の行にある'
+      - 図の元データの表が `closed` の表のマーカーで囲まれている
+    test: test_normal_when_er_diagram_drawn
+  - name: 正常系（本文の id のリンクを解決する）
+    summary: 本文の `id:` のリンクを、同じ配信元の文書と、その項目の見出しのアンカーへのリンクにする
+    setup:
+      - name: Mock
+        description: なし
+        notes: '-'
+      - name: id のリンクを持つ文書
+        description: 'sample の文書 1 の Markdown の文字列の値に、`[文書 2](id:{文書 2 の ID})`・`[項目](id:{文書 6 の ID}#flow)`・`[無い項目](id:{文書 6 の ID}#no-such-item)`・`[無い文書](id:no-such-doc)` のリンクと、行内のコード `` `[コード](id:{文書 2 の ID})` `` を置く'
+        notes: '文書 6 のスキーマの `flow` の項目は `x-heading: 処理の流れ` を持つ'
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        participant C as クライアント
+        participant E as GET /_api/sources/{source}/docs/{path}
+
+        C->>E: GET /_api/sources/sample/docs/{文書 1 のパス}
+        E->>E: 本文の id のリンクを、文書の相対パスと項目の見出しのアンカーに書き換える
+        E-->>C: 200（文書 1）
+      ```
+    expected:
+      - '`markdown` に、文書 2 の相対パスを指す `[文書 2](…)` がある'
+      - '`markdown` に、文書 6 の相対パスに見出し `処理の流れ` のアンカーを付けた `[項目](…#処理の流れ)` がある'
+      - '`[無い項目](…)` は文書 6 の相対パスをアンカーなしで指す'
+      - '`[無い文書](id:no-such-doc)` と、行内のコードの `` `[コード](id:{文書 2 の ID})` `` は書き換わらない'
+      - '`conversionError` が `null`'
+    test: test_normal_when_id_link_resolved
 lead: '#17 の画面が文書を開くときに呼ぶ。配信元の文書を変換した Markdown と、タブ・サイドバー・差分の項目・画面の状態を JSON で返す。`path` を省くと一番左のタブのサイドバーの一番上の文書を返す。'
 identifier: get_document
 permissions: なし（`127.0.0.1` でだけ待ち受ける）
@@ -574,8 +632,14 @@ constraints:
     constraint: "`auto` の `group_by` が `'@folder'` のとき、文書が当たった行の `paths` の glob（複数当たるときは `paths` で先に並ぶ glob）のうちワイルドカードより前のフォルダを起点に、起点からのフォルダごとにフォルダ名の group を作り、入れ子のフォルダは入れ子の group にする。起点の直下の文書は group に入れない。各階層で page（フォルダの `index.yaml` の文書が先頭、残りはページのパスの順）を先に、入れ子の group をフォルダ名の順に後に並べる。管理用の YAML の行（`records`）の文書は束ねず、そのまま並べる。`'@folder'` 以外の `group_by` は今と同じく項目のパスとして読む"
     notes: "`nav` が無い配信元は、種類ごとのタブを `group_by: '@folder'` の `auto` として組み立てる"
   - item: スキーマ駆動の Markdown の表し方
-    constraint: '`converters[]` を持たない種類の文書は、図を mdmark の部品（`x-diagram` の flow 系と `state`、Mermaid の文字列の `flowchart` はフロー図、Mermaid の文字列の `sequenceDiagram` はシーケンス図）で、スカラーが並ぶオブジェクトを「項目 / 値」の表で返す。`x-diagram: er` と、mdmark に部品の無い Mermaid の文字列と、変換が読み取れない行を 1 つでも含む Mermaid の文字列は、図ごと `` ```mermaid `` のまま返す。図の元データの表は閉じた表にする。スキーマに `x-hidden: true` を持つ項目と、見出し・リードに使った項目は本文に出さない'
+    constraint: '`converters[]` を持たない種類の文書は、図を mdmark の部品（`x-diagram` の flow 系と `state`、Mermaid の文字列の `flowchart` はフロー図、Mermaid の文字列の `sequenceDiagram` はシーケンス図）で、スカラーが並ぶオブジェクトを「項目 / 値」の表で返す。`x-diagram: er` は ER 図の部品にする。mdmark に部品の無い Mermaid の文字列と、変換が読み取れない行を 1 つでも含む Mermaid の文字列は、図ごと `` ```mermaid `` のまま返す。図の元データの表は閉じた表にする。スキーマに `x-hidden: true` を持つ項目と、見出し・リードに使った項目は本文に出さない'
     notes: 表し方は knowledge の規約『表し方の優先順位』に沿う
+  - item: ER 図の部品
+    constraint: '`x-diagram: er` の実体のうち `columns` を持たない実体は、同じ文書の `tables[]` のうち `title` が実体の `name` に当たるテーブルの `columns` から列（`name`・`type`・主キー・外部キー・NOT NULL）を作る。当たるテーブルが無い実体は列なしにする。関連の多重度は Mermaid の書き方から両端の `1`・`0..1`・`1..n`・`0..n` に読み替え、両端の列は、片方の実体の外部キー（テーブルの列の `foreign_key.table`、実体の列の `key: FK` と `comment` の `参照: {実体}.{列}`）がもう片方の実体の列を指す列と、指される列にする'
+    notes: 端の列が決まらない関連と、多重度を読み替えられない関連は図から除外し、図の元データの表にだけ残す。ER 図の部品は mdmark#298 から
+  - item: 本文の id のリンク
+    constraint: 'スキーマ駆動の変換で、Markdown の文字列の値のうちコードブロック・行内のコードの外の `[名前](id:{文書の ID})` を、同じ配信元のその文書への相対パスのリンクにする。`[名前](id:{文書の ID}#{項目のパス})` は、項目のパスがリンク先の文書で見出しになる項目（`x-heading` を持つ項目、`x-shape: sections` の要素）を指すとき、その見出しのアンカーを付ける。型 `ref` の値のリンクも同じアンカーを付ける'
+    notes: どの文書の ID にも当たらないリンクは書き換えず、警告も出さない。見出しにならない項目を指すリンクはアンカーを付けずに文書を指す。`converters[]` の出力と Markdown の本文の文書は書き換えない
   - item: 手で書いた page と auto の重なり
     constraint: 同じタブの中で、手で書いた `page`（`group` の中を含む）が指す文書を `auto` の結果から除く。手で書いた `group`・`page` の並びは変えない
     notes: '-'
@@ -587,3 +651,5 @@ callers:
   - dev/設計書/シナリオ/単一ユースケース/利用者が画面で読む#scenarios[正常シナリオ（スキーマ駆動の文書を図と表で読む）]
   - dev/設計書/シナリオ/単一ユースケース/利用者が画面で読む#scenarios[正常シナリオ（変換の結果をキャッシュしない）]
   - dev/設計書/シナリオ/単一ユースケース/利用者が画面で読む#scenarios[正常シナリオ（変換の結果をキャッシュする）]
+  - dev/設計書/シナリオ/単一ユースケース/利用者が画面で読む#scenarios[正常シナリオ（ER 図を読む）]
+  - dev/設計書/シナリオ/単一ユースケース/利用者が画面で読む#scenarios[正常シナリオ（本文の id のリンクを開く）]

@@ -1,0 +1,108 @@
+$ uv run pytest tests/unit/
+============================= test session starts ==============================
+platform linux -- Python 3.14.3, pytest-9.1.1, pluggy-1.7.0
+rootdir: /mnt/c/Users/shuhe/repo/dev-docs/.claude/worktrees/fix-convert-er-diagram-quotes-id-links
+configfile: pyproject.toml
+plugins: anyio-4.15.1
+collected 772 items / 2 errors
+
+==================================== ERRORS ====================================
+_____ ERROR collecting tests/unit/dev_docs/features/convert/test_inline.py _____
+ImportError while importing test module '/mnt/c/Users/shuhe/repo/dev-docs/.claude/worktrees/fix-convert-er-diagram-quotes-id-links/tests/unit/dev_docs/features/convert/test_inline.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+tests/unit/dev_docs/features/convert/test_inline.py:3: in <module>
+    from dev_docs.features.convert.inline import heading_anchor, link_reference, rewrite_text
+E   ImportError: cannot import name 'heading_anchor' from 'dev_docs.features.convert.inline' (/mnt/c/Users/shuhe/repo/dev-docs/.claude/worktrees/fix-convert-er-diagram-quotes-id-links/src/dev_docs/features/convert/inline.py)
+____ ERROR collecting tests/unit/dev_docs/features/convert/test_markdown.py ____
+ImportError while importing test module '/mnt/c/Users/shuhe/repo/dev-docs/.claude/worktrees/fix-convert-er-diagram-quotes-id-links/tests/unit/dev_docs/features/convert/test_markdown.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+tests/unit/dev_docs/features/convert/test_markdown.py:10: in <module>
+    from dev_docs.features.convert.markdown import (
+E   ImportError: cannot import name 'item_heading' from 'dev_docs.features.convert.markdown' (/mnt/c/Users/shuhe/repo/dev-docs/.claude/worktrees/fix-convert-er-diagram-quotes-id-links/src/dev_docs/features/convert/markdown.py)
+=========================== short test summary info ============================
+ERROR tests/unit/dev_docs/features/convert/test_inline.py
+ERROR tests/unit/dev_docs/features/convert/test_markdown.py
+!!!!!!!!!!!!!!!!!!! Interrupted: 2 errors during collection !!!!!!!!!!!!!!!!!!!!
+============================== 2 errors in 24.01s ==============================
+
+$ uv run pytest tests/unit/ --continue-on-collection-errors
+E   ImportError: cannot import name 'heading_anchor' from 'dev_docs.features.convert.inline' (/mnt/c/Users/shuhe/repo/dev-docs/.claude/worktrees/fix-convert-er-diagram-quotes-id-links/src/dev_docs/features/convert/inline.py)
+E   ImportError: cannot import name 'item_heading' from 'dev_docs.features.convert.markdown' (/mnt/c/Users/shuhe/repo/dev-docs/.claude/worktrees/fix-convert-er-diagram-quotes-id-links/src/dev_docs/features/convert/markdown.py)
+E       TypeError: render_diagram() got an unexpected keyword argument 'tables'
+E       TypeError: render_diagram() got an unexpected keyword argument 'tables'
+E       TypeError: render_diagram() got an unexpected keyword argument 'tables'
+E       TypeError: render_diagram() got an unexpected keyword argument 'tables'
+E       TypeError: render_diagram() got an unexpected keyword argument 'tables'
+E       AssertionError: ```mermaid
+E         erDiagram
+E           注文 {
+E             bigint customer_id FK "参照: 顧客.id"
+E           }
+E           顧客 {
+E             bigint id PK
+E           }
+E           注文 }o--|| 顧客 : ""
+E         ```
+E       assert None is not None
+E       AssertionError: ```mermaid
+E         erDiagram
+E           注文 {
+E             bigint id PK
+E             bigint customer_id FK "参照: 顧客.id"
+E           }
+E           顧客 {
+E             bigint id PK
+E           }
+E           商品 {
+E           }
+E           注文 }o--|| 商品 : ""
+E           顧客 ||..xx 注文 : ""
+E         ```
+E       assert None is not None
+E       AssertionError: ```mermaid
+E         erDiagram
+E           t0 {
+E             int a
+E             int b
+E           }
+E           t1 {
+E             int a
+E             int b
+E           }
+E           t2 {
+E             int a
+E             int b
+E           }
+E           t3 {
+E             int a
+E             int b
+E           }
+E         ```
+E       assert None is not None
+E       AssertionError: assert '[B](b.yaml#処理の流れ) を読む' in '# A\n\n**本文**: [B](id:b#flow) を読む\n'
+E        +  where '# A\n\n**本文**: [B](id:b#flow) を読む\n' = Converted(markdown='# A\n\n**本文**: [B](id:b#flow) を読む\n', table_keys=[], failure=None).markdown
+E       assert "version: 202...b'\nname: y\n" == 'version: \'2...b"\nname: y\n'
+E         
+E         - version: '2020-12'
+E         ?          -       -
+E         + version: 2020-12
+E         - title: "A: b"
+E         ?        ^    ^
+E         + title: 'A: b'
+E         ?        ^    ^
+E           name: y
+ERROR tests/unit/dev_docs/features/convert/test_inline.py
+ERROR tests/unit/dev_docs/features/convert/test_markdown.py
+FAILED tests/unit/dev_docs/features/convert/test_diagrams.py::test_render_diagram_when_er
+FAILED tests/unit/dev_docs/features/convert/test_diagrams.py::test_render_diagram_when_er_table_foreign_key[physical]
+FAILED tests/unit/dev_docs/features/convert/test_diagrams.py::test_render_diagram_when_er_table_foreign_key[logical]
+FAILED tests/unit/dev_docs/features/convert/test_diagrams.py::test_render_diagram_when_er_own_classification[own]
+FAILED tests/unit/dev_docs/features/convert/test_diagrams.py::test_render_diagram_when_er_own_classification[other]
+FAILED tests/unit/dev_docs/features/convert/test_diagrams.py::test_render_diagram_when_er_reverse_foreign_key
+FAILED tests/unit/dev_docs/features/convert/test_diagrams.py::test_render_diagram_when_er_unresolved
+FAILED tests/unit/dev_docs/features/convert/test_diagrams.py::test_render_diagram_when_er_layout
+FAILED tests/unit/dev_docs/features/convert/test_service.py::test_convert_service_convert_when_id_link
+FAILED tests/unit/dev_docs/shared/test_yaml_io.py::test_load_roundtrip_when_quotes
+============= 10 failed, 762 passed, 2 errors in 85.46s (0:01:25) ==============

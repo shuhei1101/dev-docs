@@ -291,3 +291,41 @@ def test_error_when_document_not_found(
     assert "DocumentNotFoundError" in result.text
     assert "doc-9" in result.text
     assert "doc-1" in result.text
+
+
+# 単一引用符・`: ` を含む二重引用符の値を持ち、`related` が文書 2 を指す文書 1
+QUOTED_REFERRER = (
+    "id: doc-1\n"
+    'name: "A: b"\n'
+    "description: '2020-12'\n"
+    "related:\n"
+    "  - to: doc-2\n"
+    "    type: references\n"
+)
+
+
+def test_normal_when_unlink_quotes_preserved(
+    make_source: Callable[..., Any],
+    make_server: Callable[..., Any],
+    add_worktree: Callable[..., Path],
+    sample_file_set: Callable[..., dict[str, str]],
+) -> None:
+    """参照を外した参照元の文書の、変更していない項目の引用符の種類を元のまま書き出す（正常系）。"""
+    # 準備
+    files = sample_file_set(**{"docs/doc-1.yaml": QUOTED_REFERRER})
+    source, env, worktree = _setup(make_source, make_server, add_worktree, files)
+    target = worktree / "docs" / "doc-2.yaml"
+    referrer = worktree / "docs" / "doc-1.yaml"
+    # 実行
+    result = env.call(
+        "delete_docs",
+        cwd=str(source.folder),
+        worktree=str(worktree),
+        targets=[{"id": "doc-2", "expected_version": _version(target)}],
+        on_referenced="unlink",
+    )
+    # 検証
+    assert not result.is_error
+    assert referrer.read_text(encoding="utf-8").startswith(
+        "id: doc-1\nname: \"A: b\"\ndescription: '2020-12'\n"
+    )
