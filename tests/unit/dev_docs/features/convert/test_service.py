@@ -297,3 +297,45 @@ def test_convert_service_convert_when_records(
     assert result.failure is None
     assert "**ファイルのパス**: a.md" in result.markdown
     assert "**summary**: 説明" in result.markdown
+
+
+# 本文の `body` と、`x-heading: 処理の流れ` の `flow` を持つスキーマ
+LINK_SCHEMA = {
+    "properties": {
+        "name": {"type": "string"},
+        "body": {"type": "string", "title": "本文"},
+        "flow": {"type": "string", "x-heading": "処理の流れ"},
+    }
+}
+
+
+def test_convert_service_convert_when_id_link(
+    tmp_path: Path,
+    make_converted_target: Callable[..., Target],
+    make_document: Callable[..., Document],
+) -> None:
+    """本文の id のリンクを他の文書の見出しへ解決する（正常系）。"""
+    # 準備
+    document_a = make_document(
+        id="a",
+        path="rules/a.yaml",
+        data={"name": "A", "body": "[B](id:b#flow) を読む"},
+        metadata={"id": "a", "name": "A"},
+    )
+    document_b = make_document(
+        id="b",
+        path="rules/b.yaml",
+        data={"name": "B", "flow": "流れ"},
+        metadata={"id": "b", "name": "B"},
+    )
+    store = SimpleNamespace(
+        schema=lambda target, kind: LINK_SCHEMA,
+        row_schema=lambda target, kind: LINK_SCHEMA,
+        load=lambda target: LoadResult(documents=[document_a, document_b]),
+    )
+    service = ConvertService(tmp_path / "converted", store, 10)  # type: ignore[arg-type]
+    # 実行
+    result = service.convert(make_converted_target(converters=[]), document_a)
+    # 検証
+    assert result.failure is None
+    assert "[B](b.yaml#処理の流れ) を読む" in result.markdown

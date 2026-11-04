@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import posixpath
 import re
+from collections.abc import Callable
 from urllib.parse import quote
 
 from dev_docs.features.convert.diagrams import render_mermaid
@@ -18,8 +19,12 @@ TREE_MIN_LINES = 2
 MERMAID_BLOCK = re.compile(r"```mermaid\n(.*?)\n```", re.S)
 PLAIN_BLOCK = re.compile(r"^```\n(.*?)\n```$", re.S | re.M)
 STEP_LINE = re.compile(r"^\d+\. ")
-# Issue 番号を書き換えない、コードブロックと行内のコード
+# Issue 番号・id のリンクを書き換えない、コードブロックと行内のコード
 CODE_SPAN = re.compile(r"```.*?```|`[^`\n]*`", re.S)
+# 本文の `[名前](id:{文書の ID})`・`[名前](id:{文書の ID}#{項目のパス})`
+ID_LINK = re.compile(r"\[(?P<name>[^\]]*)\]\(id:(?P<id>[^)#\s]+)(?:#(?P<item>[^)]+))?\)")
+# 見出しのアンカーで落とす記号（mdmark の見出しの `id` と同じ）
+ANCHOR_DROP = re.compile(r"[^\w\- ]")
 
 
 def _choices(text: str) -> str | None:
@@ -50,20 +55,47 @@ def _is_steps(text: str) -> bool:
     return all(STEP_LINE.match(line) or line.startswith((" ", "\t")) for line in lines)
 
 
-def _link_issues(text: str, issue_url: str) -> str:
-    """コードの外の Issue 番号を、Issue へのリンクにする。"""
+def _outside_code(text: str, rewrite: Callable[[str], str]) -> str:
+    """コードブロック・行内のコードの外の部分だけを `rewrite` で書き換える。"""
     parts: list[str] = []
     position = 0
     for code in CODE_SPAN.finditer(text):
-        parts.append(ISSUE_NUMBER.sub(rf"[#\1]({issue_url}\1)", text[position : code.start()]))
+        parts.append(rewrite(text[position : code.start()]))
         parts.append(code.group(0))
         position = code.end()
-    parts.append(ISSUE_NUMBER.sub(rf"[#\1]({issue_url}\1)", text[position:]))
+    parts.append(rewrite(text[position:]))
     return "".join(parts)
 
 
+def heading_anchor(text: str) -> str:
+    """見出しの文字列を、その見出しへ飛ぶアンカー（`#` を除く）にする。"""
+    return ANCHOR_DROP.sub("", text.strip().lower()).replace(" ", "-")
+
+
+def _target(document_id: str, item: str, context: RenderContext) -> str | None:
+    """文書の ID と項目のパスから、リンク先の相対パスとアンカー（引き先に無ければ `None`）を返す。"""
+    link = context.links.get(document_id)
+    if link is None:
+        return None
+    folder = posixpath.dirname(context.path) or "."
+    relative = quote(posixpath.relpath(link.path, folder), safe="/")
+    heading = context.item_heading(document_id, item) if item else None
+    # 項目が見出しになる: その見出しのアンカーを付ける
+    return f"{relative}#{heading_anchor(heading)}" if heading else relative
+
+
+def _link_ids(text: str, context: RenderContext) -> str:
+    """`id:` のリンクを、同じ配信元の文書への相対パスのリンクにする（引き先に無ければそのまま）。"""
+
+    def replace(match: re.Match[str]) -> str:
+        target = _target(match.group("id"), match.group("item") or "", context)
+        return match.group(0) if target is None else f"[{match.group('name')}]({target})"
+
+    return ID_LINK.sub(replace, text)
+
+
 def rewrite_text(text: str, context: RenderContext, head: DiagramHead) -> str:
-    """文字列の値の中の図・ファイルツリー・手順・Issue 番号・値の選択肢を mdmark の記法に書き換える。"""
+    """文字列の値の中の図・ファイルツリー・手順・Issue 番号・値の選択肢・id のリンクを mdmark の記法に書き換える。"""
     choices = _choices(text)
     if choices is not None:
         return choices
@@ -71,9 +103,10 @@ def rewrite_text(text: str, context: RenderContext, head: DiagramHead) -> str:
     text = PLAIN_BLOCK.sub(_tree, text)
     if _is_steps(text):
         text = f"<!-- steps -->\n\n{text}\n\n<!-- /steps -->"
-    if context.issue_url is not None:
-        text = _link_issues(text, context.issue_url)
-    return text
+    issue_url = context.issue_url
+    if issue_url is not None:
+        text = _outside_code(text, lambda part: ISSUE_NUMBER.sub(rf"[#\1]({issue_url}\1)", part))
+    return _outside_code(text, lambda part: _link_ids(part, context))
 
 
 def _escape(text: str) -> str:
@@ -84,10 +117,9 @@ def _escape(text: str) -> str:
 def link_reference(value: str, context: RenderContext) -> str | None:
     """`{ID}#{項目のパス}` の参照の値を、引き先の文書のタイトル付きのリンクにする（引き先に無ければ `None`）。"""
     document_id, _, item = value.partition("#")
-    link = context.links.get(document_id)
-    if link is None:
+    target = _target(document_id, item, context)
+    if target is None:
         return None
-    folder = posixpath.dirname(context.path) or "."
-    relative = quote(posixpath.relpath(link.path, folder), safe="/")
-    title = f"{link.title} / {item}" if item else link.title
-    return f"[{_escape(title)}]({relative})"
+    name = context.links[document_id].title
+    title = f"{name} / {item}" if item else name
+    return f"[{_escape(title)}]({target})"

@@ -41,6 +41,11 @@ catalogs:
         purpose: 索引の `terms`（用語）と `docs`（文書の別名）で本文の語にツールチップを付ける
         description: '`mount` の `opts.index`。形は mdmark の `docs/リファレンス/索引.md`（`terms[]` は `id`・`term`・`meaning` が必須で `aliases`・`avoid` を持てる。`docs[]` は `id`・`path`・`title` が必須で `description`・`aliases` を持てる）。Schema に合わない項目は mdmark が除いて使う。文書の取得の `aliases` を `toMdmarkIndex` で読み替えて渡す'
         status: planned
+      - name: '<!-- er -->'
+        kind: 記法
+        purpose: 'スキーマ駆動の変換の `x-diagram: er` を ER 図の部品で描く'
+        status: planned
+        description: '[mdmark#298](https://github.com/shuhei1101/mdmark/pull/298) で develop に入り、v0.9.0 の master には無い。定義は `title`・`scope`・`updated`・`width`・`tables[]`（`id`・`name`・`label`・`x`・`y`・`w`・`columns[]` の `name`・`type`・`pk`・`fk`・`nn`・`desc`）・`relations[]`（`from`・`fromColumn`・`fromCard`・`to`・`toColumn`・`toCard`・`label`）。関係の端の列は省けず、無い列を指すと図全体が書き方の警告になる'
 lead: Markdown を描き、本文の文字列へコメントを付けられるようにするブラウザの JS。
 dependency_scope: 必須
 adoption: 採用

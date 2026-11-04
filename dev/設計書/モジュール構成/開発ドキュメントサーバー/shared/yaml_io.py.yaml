@@ -147,7 +147,7 @@ functions:
       type: CommentedMap
       description: コメントと順序を持つ辞書。空の文字列は空の `CommentedMap`
     process: |-
-      1. 往復編集の YAML（`typ="rt"`、Python 実装。`ruamel.yaml.clib` ではコメントが残らない）で読む
+      1. 往復編集の YAML（`typ="rt"`、Python 実装。`ruamel.yaml.clib` ではコメントが残らない）に `preserve_quotes = True` を設定して読む。引用符つきの文字列は引用符の種類を持つ文字列（`str` のサブクラス）になる
       2. 読めない場合、『YAMLの読み込み』と同じ形の `YamlLoadError` を送る
       3. 最上位が辞書でない場合、`YamlLoadError` を送る
     exceptions:
@@ -164,6 +164,12 @@ functions:
         condition: '`# c\na: 1  # x` を読んで『往復編集の書き出し』で書く'
         mock: なし
         expected: 元の文字列と同じ
+      - name: test_load_roundtrip_when_quotes
+        case: 正常
+        summary: 引用符の種類を保つ
+        condition: '`version: ''2020-12''`・`title: "A: b"`・`name: x` の 3 行を読み、`name` だけを `y` に変えて『往復編集の書き出し』で書く'
+        mock: なし
+        expected: '`version: ''2020-12''`・`title: "A: b"`・`name: y` の 3 行'
       - name: test_load_roundtrip_when_not_mapping
         case: 異常
         summary: 最上位が配列
@@ -192,7 +198,7 @@ functions:
       description: YAML の文字列（末尾は改行 1 つ）
     process: |-
       1. 幅を `YAML_WIDTH`、字下げを `YAML_INDENT` にした往復編集の YAML で書き出す
-      2. 改行を含む文字列の値は、ブロックのリテラル（`|-`）にして書く
+      2. 引用符の種類を持つ文字列（往復編集の読み込みで引用符つきで読んだ値）は元の引用符で書く。改行を含む引用符なしの文字列の値は、ブロックのリテラル（`|-`）にして書く
     unit_tests:
       - name: test_dump_roundtrip
         case: 正常

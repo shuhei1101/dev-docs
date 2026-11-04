@@ -45,6 +45,56 @@ constants:
     usecase: 文書の取得
     summary: '`x-diagram` のノードの `kind`・`shape` から mdmark の箱の種類を決める。どれにも当たらなければ `script`'
     value: '`kind` の `actor`・`external` と `shape` の `stadium`・`circle` は `external`、`kind` の `store` と `shape` の `cylinder` は `data`、`shape` の `diamond` は `dm`'
+  - name: ER_CARDINALITIES
+    title: ER 図の多重度の対応
+    container: features/convert/diagrams.py
+    usecase: 文書の取得
+    summary: Mermaid の多重度の片端の記号から、mdmark の ER 図の部品の多重度
+    entries:
+      - key: '`||`'
+        value: '`1`'
+      - key: '`|o`・`o|`'
+        value: '`0..1`'
+      - key: '`|{`・`}|`'
+        value: '`1..n`'
+      - key: '`o{`・`}o`'
+        value: '`0..n`'
+  - name: ER_FOREIGN_KEY_COMMENT
+    title: 実体の列の外部キーの注記
+    container: features/convert/diagrams.py
+    usecase: 文書の取得
+    summary: '`key: FK` の実体の列の `comment` から、指す実体と列を取り出す正規表現'
+    value: '`^参照: (?P<entity>.+)\.(?P<column>[^.\s]+)$`'
+  - name: ER_LAYOUT
+    title: ER 図の配置の寸法
+    container: features/convert/diagrams.py
+    usecase: 文書の取得
+    summary: ER 図のテーブルを格子に置く寸法（px）。`head`・`row`・`frame` は mdmark の ER 図の寸法（`ER_METRICS`）と同じ値
+    entries:
+      - key: per_row
+        value: '3'
+        description: 1 段に並べるテーブルの数
+      - key: width
+        value: '240'
+        description: テーブルの幅
+      - key: gap_x
+        value: '96'
+        description: テーブルの横の間隔（関連の線の縦の部分を通す）
+      - key: gap_y
+        value: '48'
+        description: 段の縦の間隔
+      - key: margin
+        value: '24'
+        description: 図の端の余白
+      - key: head
+        value: '44'
+        description: テーブルの見出しの高さ
+      - key: row
+        value: '26'
+        description: 列の行の高さ
+      - key: frame
+        value: '4'
+        description: テーブルの枠と余白
 functions:
   - name: render_diagram
     title: 図の組み立て
@@ -74,14 +124,34 @@ functions:
         required: true
         passing: positional
         description: mdmark の図の部品の定義の `title`・`scope`・`updated`
+      - name: tables
+        title: テーブル
+        type: Sequence[Mapping[str, Any]]
+        required: false
+        default: ()
+        passing: keyword
+        description: '`er` のとき、同じ文書の `tables[]`。`columns` を持たない実体の列を補う'
+      - name: classification
+        title: 分類
+        type: str | None
+        required: false
+        default: None
+        passing: keyword
+        description: '`er` のとき、描画中の文書の分類（文書のファイル名の拡張子を除いた名前）。`foreign_key.table` の `{分類}/` が同じ分類かを判定する'
     returns:
       type: str
-      description: '`<!-- flow -->` で囲んだ定義の JSON のコードブロックか、`er` の ```mermaid のコードブロック'
+      description: '`<!-- flow -->`・`<!-- er -->` で囲んだ定義の JSON のコードブロック'
     process: |-
       1. `flowchart`・`dataflow`・`architecture` は、`nodes` を箱（名前は `label`、無ければ `id`。種類は `NODE_KINDS`）、`edges` を線（`from`・`to`・`label`）にしたフロー図の中間データにする。向きは `direction` が `LR` か、`direction` が無く種類が `dataflow`・`architecture` なら `LR`、それ以外は `TD`。`subgraphs`・`clicks` は mdmark のフロー図に置き場が無いため描かず、図の元データの表に残す
       2. `state` は、`states` と遷移の端に出た状態を出た順に箱（種類は `script`）にし、`initial` の箱の補足を `初期状態`、`final` の箱の補足を `終了状態` にする。遷移は線で、ラベルは `{trigger} [{condition}]`（どちらも無ければ無し）。向きは `TD`
       3. 中間データをフロー図の配置にかけ、定義を JSON（`ensure_ascii=False`・字下げ 2）にして `<!-- flow -->`・```json・定義・```・`<!-- /flow -->` の順に置く
-      4. `er` は、今と同じ `erDiagram` の Mermaid を ```mermaid のコードブロックにする
+      4. `er` は、mdmark の ER 図の部品の定義（`title`・`scope`・`updated`・`width`・`tables`・`relations`）を組み立て、JSON にして `<!-- er -->` で囲む
+         - 実体（`entities[]`）を出た順にテーブルにする。`id`・`label` は実体の `name`。`tables` のうち `title` が実体の `name` に当たるテーブルがあれば、`name` をそのテーブルの `name`（物理名）、`desc` をその `summary` にする（無ければ `name` は実体の `name`）
+         - 列は、実体が `columns` を持てばその要素（`name`・`type`、`key` の `PK` は `pk: true`、`FK` は `fk: true`）、持たなければ当たったテーブルの `columns` の要素（`name`・`type`・`desc` は `title`、`primary_key` は `pk`、`foreign_key` は `fk`、`not_null` は `nn` を `true`）にする。どちらも無ければ空
+         - 関連（`relations[]`）ごとに、`cardinality` を `--`（か `..`）の前後に分け、`ER_CARDINALITIES` で `fromCard`・`toCard` にする。両端の列は、先（`to`）の実体の列のうち外部キーが元（`from`）の実体の列を指す列を `toColumn`、指された列を `fromColumn` にし、無ければ元の実体の列のうち外部キーが先の実体の列を指す列を `fromColumn`、指された列を `toColumn` にする。`label` はそのまま
+           - 外部キーが指す実体と列は、テーブルの列は `foreign_key.table` を最後の `.` でテーブルと列に分け（テーブルが `{分類}/{テーブル名}` のとき、`{分類}` が `classification` と同じなら `{テーブル名}` を同じ文書のテーブルとして当て、違えば他の分類のテーブルなので当てない）、`tables` で `name`（物理名）か `title`（論理名）がそのテーブル名に当たるテーブルの `title` の実体にする。実体の列は `key` が `FK` で `comment` が `ER_FOREIGN_KEY_COMMENT` に当たるとき、その `entity`・`column`
+           - 多重度を読み替えられない関連と、両端の列が決まらない関連は `relations` に入れない
+         - テーブルの位置は `ER_LAYOUT` で格子に置く。`per_row` 個ずつ段にし、`x` は `margin + 列の番号 * (width + gap_x)`、`y` は前の段の `y` に前の段で一番高いテーブルの高さ（`head + 列の数 * row + frame`）と `gap_y` を足した値（最初の段は `margin`）。`w` は `width`。図の `width` は `margin * 2 + 段のテーブルの数の最大 * width + (その数 - 1) * gap_x`
     exceptions:
       - name: ValueError
         condition: 知らない図の種類
@@ -107,10 +177,40 @@ functions:
         expected: '箱 `下書き` の `sub` が `初期状態`、箱 `公開` の `sub` が `終了状態`、線のラベルが `{trigger} [{condition}]`'
       - name: test_render_diagram_when_er
         case: 正常
-        summary: ER 図は Mermaid のまま
-        condition: '`kind="er"`'
+        summary: ER 図
+        condition: '`kind="er"`、実体 `顧客`（`columns` 無し）・`注文`（`columns` に `id`（`key: PK`）と `customer_id`（`key: FK`・`comment: 参照: 顧客.id`））、関連 `顧客` → `注文`（`||--o{`・`label: 注文する`）、`tables` に `name: customers`・`title: 顧客` のテーブル（`id`（`primary_key: true`・`not_null: true`）と `email`）'
         mock: なし
-        expected: '```mermaid のコードブロックの `erDiagram`'
+        expected: '`<!-- er -->` で囲んだ JSON で、`tables` の `顧客` の `name` が `customers`・`columns` が `id`（`pk`・`nn`）と `email`、`注文` の `columns` が `id`（`pk`）と `customer_id`（`fk`）。`relations` 1 件が `fromColumn: id`・`toColumn: customer_id`・`fromCard: 1`・`toCard: 0..n`・`label: 注文する`。```mermaid が無い'
+      - name: test_render_diagram_when_er_table_foreign_key
+        case: 正常
+        summary: テーブルの列の外部キー
+        condition: '`kind="er"`、実体 `顧客`・`支払い`（どちらも `columns` 無し）と関連 `顧客` → `支払い`（`||--o{`）、`tables` に `customers`（`顧客`。列 `id`）と `payments`（`支払い`。列 `customer_id` の `foreign_key.table` が `customers.id`）'
+        mock: なし
+        expected: '`relations` 1 件が `fromColumn: id`・`toColumn: customer_id`。`foreign_key.table` を論理名の `顧客.id` にしても同じ'
+      - name: test_render_diagram_when_er_own_classification
+        case: 正常
+        summary: 自分の分類を付けたテーブルの列の外部キー
+        condition: '`test_render_diagram_when_er_table_foreign_key` と同じ値で、`customer_id` の `foreign_key.table` が `注文/customers.id`。`classification` が `注文` の場合と `請求` の場合'
+        mock: なし
+        expected: '`注文` では `relations` 1 件が `fromColumn: id`・`toColumn: customer_id`。`請求` では `relations` が空'
+      - name: test_render_diagram_when_er_reverse_foreign_key
+        case: 正常
+        summary: 元の実体が外部キーを持つ
+        condition: '`kind="er"`、関連 `注文` → `顧客`（`}o--||`）で、`注文` の列 `customer_id` が `参照: 顧客.id`'
+        mock: なし
+        expected: '`relations` 1 件が `fromColumn: customer_id`・`toColumn: id`・`fromCard: 0..n`・`toCard: 1`'
+      - name: test_render_diagram_when_er_unresolved
+        case: 正常
+        summary: 端の列が決まらない関連と読み替えられない多重度
+        condition: '`kind="er"`、名前だけの実体 `商品` への関連（`}o--||`）と、多重度が `||..xx` の関連'
+        mock: なし
+        expected: '`relations` が空で、`tables` に `商品` が `columns` 空で入る'
+      - name: test_render_diagram_when_er_layout
+        case: 正常
+        summary: 格子の配置
+        condition: '`kind="er"`、列 2 つの実体 4 つ'
+        mock: なし
+        expected: '1 段目の 3 つの `y` が 24、`x` が 24・360・696。4 つ目の `x` が 24、`y` が `24 + 44 + 2 * 26 + 4 + 48`。図の `width` が `24 * 2 + 3 * 240 + 2 * 96`'
       - name: test_render_diagram_when_unknown
         case: 異常
         summary: 知らない種類

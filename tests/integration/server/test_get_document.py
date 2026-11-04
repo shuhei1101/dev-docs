@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import json
 import os
+import re
 from collections.abc import Callable
 from datetime import datetime
 from pathlib import Path
@@ -692,4 +694,170 @@ def test_normal_when_mermaid_unreadable(
     assert response.status_code == 200
     assert "<!-- sequence -->" not in body["markdown"]
     assert f"```mermaid\n{UNREADABLE_SEQUENCE}\n```" in body["markdown"]
+    assert body["conversionError"] is None
+
+
+ER_ROW = "  - id: er\n    paths: [er/*.yaml]\n    schema: schemas/er.schema.yaml\n"
+# ER 図のテンプレートと同じ `er`・`tables` の構造を持つ種類のスキーマ
+ER_SCHEMA = """\
+type: object
+title: ER 図
+properties:
+  id: {type: string, title: ID}
+  title: {type: string, title: タイトル}
+  er:
+    title: ER 図
+    x-heading: ER 図
+    x-shape: diagram
+    x-diagram: er
+    properties:
+      entities:
+        type: array
+        items:
+          properties: {name: {title: 名前}}
+      relations:
+        type: array
+        items:
+          properties: {from: {title: 元}, to: {title: 先}, cardinality: {title: 多重度}}
+  tables:
+    type: array
+    title: テーブル
+    x-heading: テーブル
+    x-shape: sections
+    x-key: name
+"""
+ER_DOC = """\
+id: doc-8
+title: 'ER 図: 販売'
+er:
+  entities:
+    - name: 顧客
+    - name: 注文
+      columns:
+        - {type: bigint, name: id, key: PK}
+        - {type: bigint, name: customer_id, key: FK, comment: '参照: 顧客.id'}
+    - name: 商品
+    - name: 支払い
+  relations:
+    - {from: 顧客, to: 注文, cardinality: '||--o{', label: 注文する}
+    - {from: 顧客, to: 支払い, cardinality: '||--o{'}
+    - {from: 注文, to: 商品, cardinality: '}o--||'}
+tables:
+  - name: customers
+    title: 顧客
+    columns:
+      - {name: id, title: 顧客 ID, type: bigint, primary_key: true, not_null: true}
+      - {name: email, title: メール, type: text}
+  - name: payments
+    title: 支払い
+    columns:
+      - {name: id, title: 支払い ID, type: bigint, primary_key: true}
+      - {name: customer_id, title: 顧客 ID, type: bigint, foreign_key: {table: customers.id}}
+"""
+ER_BLOCK = re.compile(r"<!-- er -->\n\n```json\n(.*?)\n```\n\n<!-- /er -->", re.S)
+
+
+def _er_columns(definition: dict[str, Any], table_id: str) -> list[tuple[str, bool, bool, bool]]:
+    """ER 図の定義の `table_id` のテーブルの列の名前と `pk`・`fk`・`nn` の組。"""
+    table = next(t for t in definition["tables"] if t["id"] == table_id)
+    return [
+        (c["name"], bool(c.get("pk")), bool(c.get("fk")), bool(c.get("nn")))
+        for c in table["columns"]
+    ]
+
+
+def test_normal_when_er_diagram_drawn(
+    make_source: Callable[..., Any],
+    make_server: Callable[..., Any],
+    sample_file_set: Callable[..., dict[str, str]],
+    sample_config_text: Callable[..., str],
+) -> None:
+    """`x-diagram: er` の項目を、テーブルの列で補った mdmark の ER 図の部品にする（正常系）。"""
+    # 準備
+    files = sample_file_set(
+        **{
+            "dev-docs.yaml": sample_config_text(ER_ROW),
+            "schemas/er.schema.yaml": ER_SCHEMA,
+            "er/販売.yaml": ER_DOC,
+        }
+    )
+    env = make_server(make_source("sample", files))
+    # 実行
+    response = env.client.get("/_api/sources/sample/docs/er/販売")
+    # 検証
+    markdown = response.json()["markdown"]
+    match = ER_BLOCK.search(markdown)
+    assert response.status_code == 200
+    assert match is not None
+    assert markdown.count("<!-- er -->") == 1
+    assert "erDiagram" not in markdown
+    definition = json.loads(match.group(1))
+    assert [t["id"] for t in definition["tables"]] == ["顧客", "注文", "商品", "支払い"]
+    assert _er_columns(definition, "顧客") == [
+        ("id", True, False, True),
+        ("email", False, False, False),
+    ]
+    assert _er_columns(definition, "注文") == [
+        ("id", True, False, False),
+        ("customer_id", False, True, False),
+    ]
+    assert _er_columns(definition, "商品") == []
+    assert _er_columns(definition, "支払い") == [
+        ("id", True, False, False),
+        ("customer_id", False, True, False),
+    ]
+    assert definition["relations"] == [
+        {
+            "from": "顧客",
+            "fromColumn": "id",
+            "fromCard": "1",
+            "to": "注文",
+            "toColumn": "customer_id",
+            "toCard": "0..n",
+            "label": "注文する",
+        },
+        {
+            "from": "顧客",
+            "fromColumn": "id",
+            "fromCard": "1",
+            "to": "支払い",
+            "toColumn": "customer_id",
+            "toCard": "0..n",
+        },
+    ]
+    assert "<!-- table: data closed -->\n| label | 元 | 先 | 多重度 |" in markdown
+    assert "|  | 注文 | 商品 | }o--\\|\\| |" in markdown
+
+
+# 本文（`description`）に id のリンクを持つ文書 1
+LINKED_DOC = (
+    "id: doc-1\n"
+    "name: 文書 1\n"
+    "description: >-\n"
+    "  [文書 2](id:doc-2) と [項目](id:doc-6#flow) と [無い項目](id:doc-6#no-such-item)\n"
+    "  と [無い文書](id:no-such-doc) と `[コード](id:doc-2)`\n"
+)
+
+
+def test_normal_when_id_link_resolved(
+    make_source: Callable[..., Any],
+    make_server: Callable[..., Any],
+    sample_file_set: Callable[..., dict[str, str]],
+    sample_config_text: Callable[..., str],
+) -> None:
+    """本文の `id:` のリンクを、同じ配信元の文書と、その項目の見出しのアンカーへのリンクにする（正常系）。"""
+    # 準備
+    files = _drawn_files(sample_file_set, sample_config_text)
+    files["docs/doc-1.yaml"] = LINKED_DOC
+    env = make_server(make_source("sample", files))
+    # 実行
+    response = env.client.get("/_api/sources/sample/docs/docs/doc-1")
+    # 検証
+    body = response.json()
+    assert response.status_code == 200
+    assert "[文書 2](doc-2.yaml)" in body["markdown"]
+    assert "[項目](../drawn/doc-6.yaml#処理の流れ)" in body["markdown"]
+    assert "[無い項目](../drawn/doc-6.yaml)" in body["markdown"]
+    assert "[無い文書](id:no-such-doc)" in body["markdown"]
+    assert "`[コード](id:doc-2)`" in body["markdown"]
     assert body["conversionError"] is None

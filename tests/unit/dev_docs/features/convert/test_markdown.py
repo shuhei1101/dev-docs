@@ -1,11 +1,14 @@
 from __future__ import annotations
 
+import json
+import re
 from collections.abc import Callable
 from datetime import UTC, datetime
 from typing import Any
 from urllib.parse import quote
 
 from dev_docs.features.convert.markdown import (
+    item_heading,
     render_attributes,
     render_table,
     schema_to_markdown,
@@ -202,6 +205,78 @@ def test_schema_to_markdown_when_diagram(make_document: Callable[..., Document])
     assert '"updated": "2026-11-03"' in result
     assert "<!-- table: data closed +columns hide=ID,形 -->\n| 表示 | ID | 形 |" in result
     assert "<!-- table: data closed -->\n| 元 | 先 |" in result
+
+
+def test_schema_to_markdown_when_er(make_document: Callable[..., Document]) -> None:
+    """ER 図にテーブルの列を渡す（正常系）。"""
+    # 準備
+    schema = {
+        "properties": {
+            "er": {"title": "ER 図", "x-shape": "diagram", "x-diagram": "er"},
+            "tables": {"x-shape": "sections", "x-key": "name"},
+        }
+    }
+    document = make_document(
+        data={
+            "name": "N",
+            "er": {"entities": [{"name": "顧客"}]},
+            "tables": [
+                {
+                    "name": "customers",
+                    "title": "顧客",
+                    "columns": [{"name": "id", "title": "顧客 ID", "type": "bigint"}],
+                }
+            ],
+        }
+    )
+    # 実行
+    result = schema_to_markdown(document, schema, CONTEXT)
+    # 検証
+    match = re.search(r"<!-- er -->\n\n```json\n(.*?)\n```\n\n<!-- /er -->", result, re.S)
+    assert match is not None
+    definition = json.loads(match.group(1))
+    assert definition["tables"][0]["columns"][0]["name"] == "id"
+    assert definition["tables"][0]["columns"][0]["type"] == "bigint"
+
+
+SCENARIO_SCHEMA: dict[str, Any] = {
+    "properties": {
+        "name": {"type": "string"},
+        "flow": {"x-heading": "処理の流れ"},
+        "scenarios": {"x-shape": "sections", "x-key": "name"},
+    }
+}
+SCENARIO_DATA: dict[str, Any] = {
+    "name": "N",
+    "flow": "a",
+    "scenarios": [{"name": "正常シナリオ"}],
+}
+
+
+def test_item_heading() -> None:
+    """x-heading を持つ項目（正常系）。"""
+    # 実行
+    result = item_heading(SCENARIO_DATA, SCENARIO_SCHEMA, "flow")
+    # 検証
+    assert result == "処理の流れ"
+
+
+def test_item_heading_when_section() -> None:
+    """sections の要素（正常系）。"""
+    # 実行
+    result = item_heading(SCENARIO_DATA, SCENARIO_SCHEMA, "scenarios[正常シナリオ]")
+    # 検証
+    assert result == "正常シナリオ"
+
+
+def test_item_heading_when_not_heading() -> None:
+    """見出しにならない項目と無い項目（正常系）。"""
+    # 実行
+    plain = item_heading(SCENARIO_DATA, SCENARIO_SCHEMA, "name")
+    missing = item_heading(SCENARIO_DATA, SCENARIO_SCHEMA, "scenarios[無い]")
+    # 検証
+    assert plain is None
+    assert missing is None
 
 
 def test_schema_to_markdown_when_test_files(make_document: Callable[..., Document]) -> None:
