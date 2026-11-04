@@ -92,7 +92,7 @@ scenarios:
       - 警告のログに old の id・設定のバージョン・サーバーが読めるバージョンが残る
     test: test_normal_when_config_version_old
     notes:
-      知らせる経路: '古い設定の配信元は、管理の MCP の `check_project` と、正常シナリオ（待ち受けているサーバーがあるときは文脈を注入しない）の引数なしの `describe()` の警告でも知らせる。'
+      知らせる経路: '古い設定の配信元は、管理の MCP の `check_project` と、『エージェントが調べる』の正常シナリオ（instructions の調査の案内を受け取る）の引数なしの `describe()` の警告でも知らせる。'
   - name: 異常シナリオ（設定の検証に失敗する）
     setup:
       - name: Mock
@@ -269,7 +269,6 @@ scenarios:
         description: なし（実環境で実行。Claude Code は `claude -p` で動かす）
       - name: dev-docs
         description: SessionStart で起動する正常シナリオと同じ端末の設定で待ち受けている dev-docs
-        notes: sample のワークツリーで、管理用の YAML の `files` に無いファイルを 1 件置き、配信元 old（設定が古い）も `sources` に並べる
     flow: |-
       ```mermaid
       sequenceDiagram
@@ -283,12 +282,9 @@ scenarios:
         HK->>DD: ポートにつながる
         HK-->>CC: 文脈を追加せずに戻る
         CC->>DD: /mcp につながる
-        CC->>DD: describe()
-        DD-->>CC: 使える配信元と警告
       ```
     expected:
       - フックが 0 の終了コードで戻り、セッションの文脈に dev-docs の配信元の一覧・使い方・警告・つなぎ直しの案内が入らない
-      - 引数なしの `describe()` が、使える配信元 `sample`（読み書き）・`notes`（読み取りだけ）と、sample の索引の同期の件数 1・old の設定が古いことの警告を返す
       - dev-docs のプロセスは増えない
     test: test_normal_when_listening_server_not_injected
   - name: 異常シナリオ（SessionStart で起動できない）

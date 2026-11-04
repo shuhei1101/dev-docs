@@ -583,10 +583,13 @@ scenarios:
         description: なし（実環境で実行）
       - name: dev-docs
         description: sample と other を配信している dev-docs
-        notes: '`cwd` は sample のクローン本体'
+        notes: '`cwd` は sample のクローン本体。sample のワークツリーに、管理用の YAML の `files` に無いファイルを 1 件置く'
       - name: 別の配信元
         description: 作業範囲の外の配信元
         notes: id `other`。`scope.read` は other のフォルダだけ
+      - name: 設定が古い配信元
+        description: '`dev-docs.yaml` の `version` がサーバーの読めるバージョンより古い配信元'
+        notes: id `old`。`scope.read` は sample のクローン本体を含む
     flow: |-
       ```mermaid
       sequenceDiagram
@@ -603,7 +606,7 @@ scenarios:
       - instructions が、使える配信元は引数なしの `describe()` で引けることを示し、SessionStart を参照しない
       - instructions が、コードや不具合の調査も設計書から参照し、設計書が指すコードを参照することを案内する
       - 'instructions が、作業場所の外のリポジトリも `source` と `outside_scope: true` で参照でき、外で読める配信元の ID は `describe(outside_scope: true)` で引けることを案内し、配信元の ID を固有の値で持たない'
-      - 引数なしの `describe()` が、使える配信元 `sample` を返し、other を返さない
+      - 引数なしの `describe()` が、sample の索引の同期の件数 1 と、old の設定が古いことの警告を返す
     test: test_normal_when_research_guide_received
   - name: 正常シナリオ（MCP を使う場面の案内を受け取る）
     setup:
