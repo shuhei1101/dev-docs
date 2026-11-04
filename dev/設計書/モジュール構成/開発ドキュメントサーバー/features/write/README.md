@@ -14,5 +14,6 @@
 | [ids.py](./ids.py.yaml) | `ids.format` からの ID の生成 |
 | [locks.py](./locks.py.yaml) | 配信元ごとの書き込みの排他 |
 | [placement.py](./placement.py.yaml) | 新しい文書の置き場所 |
+| [hints.py](./hints.py.yaml) | 違反へのスキーマの説明の添付 |
 
 <!-- /table -->
