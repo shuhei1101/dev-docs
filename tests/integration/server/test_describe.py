@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import time
 from collections.abc import Callable
 from typing import Any
 
@@ -13,6 +14,9 @@ OUTSIDE_LOG = "作業範囲の外を読んだ"
 OUTSIDE_HINT = "outside_scope: true"
 OTHER_DESCRIPTION = "別のリポジトリの設計書"
 WARNINGS_LINE = "注意:"
+MEMO_WARNING = "memo: 管理用の YAML に無いファイルが 1 件"
+# 書き込みの後の裏の検査を待つ上限の秒数
+RECHECK_WAIT_SEC = 10
 
 
 def test_normal(make_source: Callable[..., Any], make_server: Callable[..., Any]) -> None:
@@ -105,6 +109,45 @@ def test_normal_when_no_source_available(
     )
     assert "sources" not in body
     assert len(body["warnings"]) == 1
+
+
+def test_normal_when_rechecked_after_write(
+    make_source: Callable[..., Any],
+    make_server: Callable[..., Any],
+    sample_sync_file_set: Callable[..., dict[str, str]],
+) -> None:
+    """`write_docs` を当てた後に裏で流し直した検査の結果で、引数なしの警告が変わる（正常系）。"""
+    # 準備
+    sample = make_source("sample")
+    memo = make_source(
+        "memo",
+        sample_sync_file_set(1),
+        git=False,
+        scope_read=[sample.folder],
+        scope_write=[sample.folder],
+    )
+    env = make_server(sample, memo)
+    cwd = str(sample.folder)
+    before = env.call("describe", cwd=cwd)
+    # 実行
+    written = env.call(
+        "write_docs",
+        cwd=cwd,
+        source="memo",
+        operations=[
+            {"op": "create", "kind": "src", "id": "src/extra0.py", "data": {"path": "extra0.py"}}
+        ],
+    )
+    # 裏の検査が終わるまで、警告が消えるのを待つ
+    deadline = time.monotonic() + RECHECK_WAIT_SEC
+    after = env.call("describe", cwd=cwd)
+    while MEMO_WARNING in after.text and time.monotonic() < deadline:
+        time.sleep(0.1)
+        after = env.call("describe", cwd=cwd)
+    # 検証
+    assert written.data["applied"] is True
+    assert MEMO_WARNING in before.text
+    assert MEMO_WARNING not in after.text
 
 
 def test_normal_when_source(
