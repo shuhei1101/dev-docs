@@ -1136,14 +1136,15 @@ def test_normal_when_id_link_opened(
     to_second = page.url
     page.go_back()
     expect(_heading(page)).to_have_text("文書 1")
-    missing = main.get_by_role("link", name="無い文書")
+    missing_links = main.get_by_role("link", name="無い文書").count()
+    missing_texts = main.get_by_text("無い文書").count()
     codes = main.locator("code").all_text_contents()
-    missing_href = missing.get_attribute("href")
     main.get_by_role("link", name="項目", exact=True).click()
     # 検証
     assert to_second.endswith("/sample/docs/doc-2")
     expect(_heading(page)).to_have_text("図の文書 6")
     assert page.evaluate("decodeURIComponent(location.hash)") == "#処理の流れ"
     expect(main.get_by_role("heading", name="処理の流れ")).to_be_in_viewport()
-    assert missing_href == "id:no-such-doc"
+    assert missing_links == 0
+    assert missing_texts == 1
     assert "[コード](id:doc-2)" in codes
