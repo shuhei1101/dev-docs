@@ -16,7 +16,7 @@ properties:
     type: string
     pattern: ^[a-z0-9]+(-[a-z0-9]+)*(/[a-z0-9]+(-[a-z0-9]+)*)*$
     examples:
-      - session-context
+      - mcp/docs/instructions
       - node/reflection
   name:
     title: 名前
@@ -24,14 +24,14 @@ properties:
     type: string
     minLength: 1
     examples:
-      - SessionStart の配信元の一覧
+      - 文書の MCP の instructions
   description:
     title: 説明
     description: 何のための文かを 1 文で。
     type: string
     minLength: 1
     examples:
-      - 作業場所から使える配信元と警告を伝える
+      - 文書の MCP を使う場面と grep・Read が向く場面を伝える
   kind:
     title: 種類
     description: 文の種類。`llm` は LLM の呼び出し、`hook` はフックの注入文、`instructions` は MCP のサーバーの instructions、`tool` はツールの description。
@@ -55,8 +55,8 @@ properties:
       type: string
       minLength: 1
     examples:
-      - - sessionstart
-        - 配信元
+      - - mcp
+        - instructions
   vars:
     title: 変数
     description: 本文で使う変数。変数名 → 変数の定義。本文で使う変数は全てここに置く。

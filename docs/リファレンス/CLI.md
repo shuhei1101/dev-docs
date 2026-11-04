@@ -16,7 +16,7 @@ dev-docs serve・dev-docs migrate・dev-docs files・dev-docs prompt-doc のサ�
 | --- | --- | --- |
 | `DEV_DOCS_CONFIG` | `~/.config/dev-docs/settings.yaml` | 端末の設定のパス |
 | `DEV_DOCS_PORT` | 端末の設定の `port`（既定 `8781`） | 待ち受けのポート。設定の `port` より優先する |
-| `DEV_DOCS_PROMPTS_DIR` | クローンの直下の `content/prompts/` | SessionStart の注入文・文書の MCP の instructions・2 つの MCP のツールの description のプロンプトの YAML を読むフォルダ |
+| `DEV_DOCS_PROMPTS_DIR` | クローンの直下の `content/prompts/` | 文書の MCP の instructions・2 つの MCP のツールの description のプロンプトの YAML を読むフォルダ |
 
 ```bash
 DEV_DOCS_CONFIG=/tmp/x/settings.yaml DEV_DOCS_PORT=8781 dev-docs serve
