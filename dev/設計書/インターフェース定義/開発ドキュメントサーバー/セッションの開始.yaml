@@ -127,8 +127,6 @@ constraints:
     notes: フックだけが呼ぶ操作で、エージェントのツール一覧に出さないため
   - item: 記録の削除
     constraint: '`reason` が `clear`・`compact` のときだけ削除する。`startup`・`resume`・`fork` では削除しない'
-  - item: 知らないキー
-    constraint: 本文の知らないキー（前のバージョンのフックが送る `cwd` など）は捨てる
   - item: タイムアウト
     constraint: 制限なし（呼ぶ側のフックが `FORGET_TIMEOUT_SEC` 秒で打ち切る）
   - item: 配信元の読み込みの間

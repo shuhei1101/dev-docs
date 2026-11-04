@@ -10,5 +10,19 @@ dev-docs のサーバーの再起動:
   確認: null
   切り戻し: null
   失敗時: 既定の対処を 1 回、2 回連続で失敗したら依頼元へ返す
-  確認方法: 引数なしの describe() の応答に警告の欄があり、http://127.0.0.1:8781/_admin/session-context への POST が 404 を返す
+  確認方法: http://127.0.0.1:8781/_admin/session-start へ session_id と reason の JSON を POST すると 200 と forgotten が返り、http://127.0.0.1:8781/_admin/session-context への POST が 404 を返す
+  状態: "-"
+プラグイン dev-docs の更新:
+  説明: 端末の Claude Code の設定の場所ごとに、マーケットプレイス dev-docs を取り直してプラグイン dev-docs を更新し、プラグインのキャッシュの SessionStart のフックを、/_admin/session-context を呼ばない今のバージョンにする。更新の後に開いたセッションから効く
+  タグ: [プラグイン, 更新]
+  実行者: planner
+  時期: マージの後
+  回数: 1 回限り
+  可逆: true
+  疎通確認: null
+  実行: null
+  確認: null
+  切り戻し: null
+  失敗時: 既定の対処を 1 回、2 回連続で失敗したら依頼元へ返す
+  確認方法: 各設定の場所の plugins/cache/dev-docs の hooks/session_start.py が /_admin/session-start を含み、/_admin/session-context と fetch_context を含まない
   状態: "-"
