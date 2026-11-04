@@ -92,7 +92,7 @@ data_models:
         type: list[str]
         access: 公開
         default: '[]'
-        description: '警告の収集の結果。`format: json` は 0 件のときも空のリストで持つ'
+        description: '警告の収集の結果。`format: json` は空のリストを落とすので、0 件のときは `warnings` のキーを持たない'
   - name: OutsideSource
     title: 作業範囲の外で読める配信元
     container: features/describe/types.py
