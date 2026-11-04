@@ -159,6 +159,20 @@ data_models:
         access: 公開
         default: None
         description: フックが入れる
+  - name: WriteViolation
+    title: 書き込みの違反
+    container: features/write/types.py
+    usecase: 書き込み
+    role: DTO
+    summary: スキーマの説明を持てる書き込みの違反
+    description: '`Violation` の派生の `dataclass`（`kw_only=True`）。`ValidationFailedError` と `WriteResultItem.errors` にそのまま入れ、JSON にするときは `None` の項目を落とす。'
+    properties:
+      - name: schema
+        title: スキーマの説明
+        type: dict[str, Any] | None
+        access: 公開
+        default: None
+        description: 違反した項目のスキーマの定義から取り出した `title`・`description`・`x-rules`・`examples`・`x-bad-examples` のうち持つもの
   - name: WriteResultItem
     title: 書き込みの結果の行
     container: features/write/types.py

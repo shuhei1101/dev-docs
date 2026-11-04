@@ -353,7 +353,7 @@ classes:
           description: JSON Schema
         process: |-
           1. `source.table(kind)` で行を引く
-          2. `target.ref` と `target.worktree` がどちらも `None` の場合、起動時に読んだ `source.schemas[kind]` を使う
+          2. `target.ref` と `target.worktree` がどちらも `None` の場合と、行の `schema_path` が `SchemaRef` の場合、起動時のスキーマを返す（読む場所によらず参照したリビジョンのスキーマ）
           3. それ以外は、`load` と同じ読むフォルダの `schema_path` を `_schemas` から引き、更新日時か大きさが違えば『YAMLの読み込み』で読み直す
              - ファイルが無い・読めない場合、手順 2 のスキーマを使う
           4. `$ref` を解いたスキーマを返す（スキーマの参照の解決。基準は手順 2・3 で使った `schema_path`）。解いた結果も `_schemas` に控える

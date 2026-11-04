@@ -4,6 +4,7 @@ import { type MouseEvent, useEffect, useRef } from "react";
 import { useColumnPersistence } from "@/features/docs/doc-view/hooks/use-column-persistence";
 import { useMdmark } from "@/features/docs/doc-view/hooks/use-mdmark";
 import { findActivePage } from "@/features/docs/doc-view/nav";
+import { applyHiddenColumns, columnTableKeys } from "@/features/docs/doc-view/tables";
 import { type TocItem, readToc } from "@/features/docs/doc-view/toc";
 import {
   type DocComment,
@@ -15,33 +16,18 @@ import type { DocumentResponse } from "@/shared/api/generated/model";
 
 type Props = {
   document: DocumentResponse;
+  /** 比較元の文書の本文と表のキー（差分の強調）。null・省略は強調しない */
+  baseMarkdown?: { markdown: string; tableKeys: string[] } | null;
   onHeadings: (items: TocItem[]) => void;
   onCommentSaved: () => void;
-  /** コメントのパネルで場所を選ばれたコメント。印が見つかったら `onLocated` で戻す */
+  /** コメントのパネルで場所を選ばれたコメント。その箇所へ移ったら `onLocated` で戻す */
   locating: DocComment | null;
   onLocated: () => void;
 };
 
-const TABLE_MARKER = /<!--\s*table:[^>]*-->/g;
-
 /** 最初の見出し 1 は文書のタイトルに出すため除く */
 const withoutFirstH1 = (markdown: string): string =>
   markdown.replace(/^\s*# .*\n?/, "");
-
-/** 隠す列を、その表のマーカー（`+columns` の表）へ `hide=` で書き込む */
-export const applyHiddenColumns = (
-  markdown: string,
-  tableKeys: string[],
-  columns: Record<string, string[]>,
-): string => {
-  let index = 0;
-  return markdown.replace(TABLE_MARKER, (marker) => {
-    const key = tableKeys[index++];
-    const hidden = key === undefined ? undefined : columns[key];
-    if (!marker.includes("+columns") || !hidden?.length) return marker;
-    return marker.replace(/\s*-->$/, ` hide=${hidden.join(",")} -->`);
-  });
-};
 
 /** 引用の前にある見出しを階層ごとに取る */
 const headingsBefore = (
@@ -72,15 +58,10 @@ const headingsBefore = (
   return result.filter((item): item is string => item !== undefined);
 };
 
-/** 選んだ文字列が一致するコメントの印を探す */
-const findCommentMark = (root: HTMLElement, quote: string) =>
-  Array.from(root.querySelectorAll(".mdmark-comment-mark")).find(
-    (mark) => mark.textContent?.trim() === quote.trim(),
-  );
-
 /** mdmark で描く文書の本文。リンクとコメントを画面とつなぐ */
 export const DocBody = ({
   document: doc,
+  baseMarkdown,
   onHeadings,
   onCommentSaved,
   locating,
@@ -93,15 +74,35 @@ export const DocBody = ({
     base?: string;
   };
   const docId = docIdOf(doc);
-  const markdown = applyHiddenColumns(
-    withoutFirstH1(doc.markdown ?? ""),
-    doc.tableKeys,
-    doc.columns,
+  const markdown = applyHiddenColumns({
+    markdown: withoutFirstH1(doc.markdown ?? ""),
+    tableKeys: doc.tableKeys,
+    columns: doc.columns,
+  });
+  // 比較元にも、本文と同じ見出し 1 の除去と隠す列の書き込みを当てて比べる
+  const base = baseMarkdown
+    ? applyHiddenColumns({
+        markdown: withoutFirstH1(baseMarkdown.markdown),
+        tableKeys: baseMarkdown.tableKeys,
+        columns: doc.columns,
+      })
+    : null;
+  const onColumnsChange = useColumnPersistence({
+    source: doc.source,
+    columnKeys: columnTableKeys({ markdown, tableKeys: doc.tableKeys }),
+  });
+  // この文書のコメントの並び（変わったら本文のマーカーを描き直す）
+  const commentSignature = useCommentStore((state) =>
+    commentsOf(state.comments, docId)
+      .map((item) => `${item.id}:${item.body}`)
+      .join("\n"),
   );
   const title = findActivePage(doc.tabs, doc.path).page?.title ?? doc.path;
 
-  const { ready } = useMdmark(ref, {
+  const { ready, handle } = useMdmark(ref, {
     markdown,
+    baseMarkdown: base,
+    onColumnsChange,
     docId,
     aliases: doc.aliases,
     // コメントの機能は mdmark の既定でオフなので、オンにする
@@ -136,34 +137,48 @@ export const DocBody = ({
           body: saved.body,
         });
       },
+      update: ({ id, body }) => {
+        useCommentStore.getState().update(id, body);
+        return Promise.resolve();
+      },
+      remove: ({ id }) => {
+        useCommentStore.getState().remove(id);
+        return Promise.resolve();
+      },
     },
   });
 
-  useColumnPersistence(ref, doc.source, doc.tableKeys);
+  // コメントの置き場所のこの文書のコメントが変わったら、本文のマーカーを描き直す（描いた直後の並びは描き直さない）
+  const shown = useRef<{ docId: string; signature: string } | null>(null);
+  useEffect(() => {
+    if (!ready || handle === null) return;
+    if (shown.current?.docId !== docId) {
+      shown.current = { docId, signature: commentSignature };
+      return;
+    }
+    if (shown.current.signature === commentSignature) return;
+    shown.current = { docId, signature: commentSignature };
+    void handle.reloadComments();
+  }, [ready, handle, docId, commentSignature]);
 
   useEffect(() => {
     if (ready && ref.current) onHeadings(readToc(ref.current));
   }, [ready, markdown, onHeadings]);
 
-  // 場所を選ばれたコメントの印へスクロールする（印は mdmark がコメントを読み込んだ後に描く）
+  // 場所を選ばれたコメントへ移る（コメントを読み直してから、その箇所を画面に入れて強調する）
   useEffect(() => {
-    const root = ref.current;
-    if (!ready || !root || locating === null || locating.docId !== docId)
+    if (!ready || handle === null || locating === null || locating.docId !== docId)
       return;
-    const find = () => {
-      const mark = findCommentMark(root, locating.quote);
-      if (mark === undefined) return false;
-      mark.scrollIntoView({ block: "center" });
+    let cancelled = false;
+    void handle.reloadComments().then(() => {
+      if (cancelled) return;
+      handle.focusComment(locating.id);
       onLocated();
-      return true;
-    };
-    if (find()) return;
-    const observer = new MutationObserver(() => {
-      if (find()) observer.disconnect();
     });
-    observer.observe(root, { childList: true, subtree: true });
-    return () => observer.disconnect();
-  }, [ready, locating, docId, onLocated]);
+    return () => {
+      cancelled = true;
+    };
+  }, [ready, handle, locating, docId, onLocated]);
 
   const onClick = (event: MouseEvent<HTMLDivElement>) => {
     const anchor = (event.target as HTMLElement).closest("a[href]");

@@ -15,8 +15,17 @@ from jsonschema.exceptions import SchemaError
 from jsonschema.validators import Draft202012Validator
 
 from dev_docs.features.history.query import export_paths_at, read_file_at, resolve_ref
-from dev_docs.features.settings.types import SourceEntry
+from dev_docs.features.settings.query import config_path, load_terminal_config
+from dev_docs.features.settings.types import SourceEntry, TerminalConfigInvalidError
 from dev_docs.features.sources.merge import merge_configs
+from dev_docs.features.sources.schema_ref import (
+    RefSchema,
+    SchemaRef,
+    SchemaRefError,
+    SchemaRefLookup,
+    read_schema_ref,
+    terminal_lookup,
+)
 from dev_docs.features.sources.types import (
     SOURCE_CONFIG_VERSION,
     DocumentTable,
@@ -108,12 +117,59 @@ def _file_violation(
     return None
 
 
-def validate_source_config(value: dict[str, Any], *, root: Path) -> list[Violation]:
+type ReadRef = Callable[[SchemaRef], RefSchema]
+
+
+def _settings_lookup() -> SchemaRefLookup:
+    """端末の設定のファイルから参照先の配信元の引き当てを作る（読めなければ何も引けない）。"""
+    try:
+        terminal = load_terminal_config(config_path(os.environ))
+    except TerminalConfigInvalidError:
+        return lambda _source_id: None
+    return terminal_lookup(terminal)
+
+
+def _ref_reader(lookup: SchemaRefLookup | None) -> ReadRef:
+    """参照先のスキーマを 1 回の組み立ての中で 1 回だけ読む関数を返す。"""
+    resolved: list[SchemaRefLookup] = [lookup] if lookup is not None else []
+    cache: dict[SchemaRef, RefSchema] = {}
+
+    def _read(ref: SchemaRef) -> RefSchema:
+        # 端末の設定は、参照の行を初めて読むときだけ読む
+        if not resolved:
+            resolved.append(_settings_lookup())
+        if ref not in cache:
+            cache[ref] = read_schema_ref(ref, lookup=resolved[0])
+        return cache[ref]
+
+    return _read
+
+
+def validate_source_config(
+    value: dict[str, Any], *, root: Path, lookup: SchemaRefLookup | None = None
+) -> list[Violation]:
     """マージした設定をスキーマ・行の参照・ファイルの有無で確かめ、違反を全て返す。"""
-    return _validate(value, _disk_reader(root))
+    return _validate(value, _disk_reader(root), _ref_reader(lookup))
 
 
-def _validate(value: dict[str, Any], read_text: ReadText) -> list[Violation]:
+def _schema_violation(
+    read_text: ReadText, read_ref: ReadRef, index: int, value: Any
+) -> Violation | None:
+    """行の `schema` が読めて JSON Schema として正しいかを確かめる。"""
+    key_path = f"documents[{index}].schema"
+    # 相対パスは配信元の下のファイルを読む
+    if isinstance(value, str):
+        found = _file_violation(read_text, key_path, value, "スキーマ")
+        return found if found is not None else _check_schema_file(read_text, key_path, value)
+    # オブジェクトはほかの配信元のリビジョンのスキーマを読む
+    try:
+        schema = read_ref(SchemaRef(**value)).schema
+    except SchemaRefError as error:
+        return Violation(path=key_path, rule=error.rule)
+    return _check_schema(key_path, schema)
+
+
+def _validate(value: dict[str, Any], read_text: ReadText, read_ref: ReadRef) -> list[Violation]:
     """配信元の設定の検証を、ファイルを `read_text` で読んで行う。"""
     violations = schema_violations(_source_schema(), value)
     # スキーマの違反があれば、ここで返す
@@ -169,9 +225,7 @@ def _validate(value: dict[str, Any], read_text: ReadText) -> list[Violation]:
                         rule=f"配信元の外を指しています: {pattern}",
                     )
                 )
-        found = _file_violation(read_text, f"documents[{index}].schema", row["schema"], "スキーマ")
-        if found is None:
-            found = _check_schema_file(read_text, f"documents[{index}].schema", row["schema"])
+        found = _schema_violation(read_text, read_ref, index, row["schema"])
         if found is not None:
             violations.append(found)
     return violations
@@ -179,7 +233,11 @@ def _validate(value: dict[str, Any], read_text: ReadText) -> list[Violation]:
 
 def _check_schema_file(read_text: ReadText, key_path: str, relative: str) -> Violation | None:
     """スキーマのファイルが JSON Schema（Draft 2020-12）として正しいかを確かめる。"""
-    schema = load_yaml(read_text(relative) or "")
+    return _check_schema(key_path, load_yaml(read_text(relative) or ""))
+
+
+def _check_schema(key_path: str, schema: Any) -> Violation | None:
+    """スキーマが JSON Schema（Draft 2020-12）として正しいかを確かめる。"""
     try:
         Draft202012Validator.check_schema(schema)
     except SchemaError as error:
@@ -273,7 +331,7 @@ def _build_table(row: dict[str, Any]) -> DocumentTable:
     return DocumentTable(
         id=row["id"],
         paths=list(row["paths"]),
-        schema_path=row["schema"],
+        schema_path=row["schema"] if isinstance(row["schema"], str) else SchemaRef(**row["schema"]),
         title=row.get("title"),
         enabled=row.get("enabled", True),
         validators=list(row.get("validators", [])),
@@ -363,6 +421,7 @@ def assemble_source(
     scope_write: list[str] | None,
     outside_read: bool = True,
     root_override: Path | None = None,
+    lookup: SchemaRefLookup | None = None,
 ) -> tuple[ServedSource | None, SourceConfig | None, list[Violation]]:
     """設定を読み、マージ・検証・スクリプトの確かめをして、配信中の配信元を作る。"""
     return _assemble(
@@ -372,6 +431,7 @@ def assemble_source(
         scope_write=scope_write,
         outside_read=outside_read,
         root_override=root_override,
+        lookup=lookup,
     )
 
 
@@ -384,6 +444,7 @@ def _assemble(
     outside_read: bool,
     root_override: Path | None = None,
     at: tuple[str, str] | None = None,
+    lookup: SchemaRefLookup | None = None,
 ) -> tuple[ServedSource | None, SourceConfig | None, list[Violation]]:
     """配信元の組み立て。`at` は（`default_ref` の commit, そのリビジョンの先頭の設定の内容）。"""
     values, violations = _read_configs(files, at[1] if at else None)
@@ -394,7 +455,8 @@ def _assemble(
     commit = at[0] if at and top is not None else None
     read_text = _commit_reader(root, top, commit) if top and commit else _disk_reader(root)
     merged = merge_configs(values)
-    violations = _validate(merged, read_text)
+    read_ref = _ref_reader(lookup)
+    violations = _validate(merged, read_text, read_ref)
     if violations:
         return None, None, violations
     config = build_source_config(merged)
@@ -406,7 +468,13 @@ def _assemble(
         return None, config, violations
     main_root = main_repo_root(root) if top is not None else None
     base = main_root or top or root
-    schemas = {row.id: load_yaml(read_text(row.schema_path) or "") for row in config.documents}
+    schemas = {
+        row.id: load_yaml(read_text(row.schema_path) or "")
+        if isinstance(row.schema_path, str)
+        # ほかの配信元の参照は、検証で読んだ（`$ref` まで解いた）スキーマを使う
+        else read_ref(row.schema_path).schema
+        for row in config.documents
+    }
     served = ServedSource(
         id=source_id or config.name,
         root=root,
@@ -440,7 +508,9 @@ def _declared_version(files: list[Path]) -> str | None:
     return version if isinstance(version, str) and version.isdecimal() else None
 
 
-def load_source(entry: SourceEntry, *, index: int) -> tuple[ServedSource | None, SourceStatus]:
+def load_source(
+    entry: SourceEntry, *, index: int, lookup: SchemaRefLookup | None = None
+) -> tuple[ServedSource | None, SourceStatus]:
     """端末の設定の 1 行から配信元の設定を読んで検証し、配信中の配信元と状態を作る。"""
     fallback_id = entry.id or f"sources[{index}]"
     config_files = tuple(entry.config)
@@ -468,6 +538,7 @@ def load_source(entry: SourceEntry, *, index: int) -> tuple[ServedSource | None,
         scope_write=entry.scope.write,
         outside_read=entry.outside_read,
         at=at,
+        lookup=lookup,
     )
     source_id = entry.id or (config.name if config else fallback_id)
     if violations:

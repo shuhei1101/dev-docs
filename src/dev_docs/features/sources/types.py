@@ -4,9 +4,12 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from pathlib import Path, PurePosixPath
-from typing import Any, Literal
+from typing import TYPE_CHECKING, Any, Literal
 
 from dev_docs.shared.errors import UnknownKindError, Violation
+
+if TYPE_CHECKING:
+    from dev_docs.features.sources.schema_ref import SchemaRef
 
 SOURCE_CONFIG_VERSION = "3"
 
@@ -19,7 +22,8 @@ class DocumentTable:
 
     id: str
     paths: list[str]
-    schema_path: str
+    # 文字列は配信元の直下からの相対パス、`SchemaRef` はほかの配信元のリビジョンのスキーマ
+    schema_path: str | SchemaRef
     title: str | None = None
     enabled: bool = True
     validators: list[str] = field(default_factory=list)

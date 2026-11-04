@@ -307,7 +307,7 @@ YAML として読めないファイルがあっても、そのファイルを除
 読み込み・検査・書き込みは配信元ごとの排他ロックの中で行い、書いた後に `generators[]` を流します。
 
 レスポンスは `applied`（1 件以上を書いたか。`dry_run` は常に `false`）と `results[]` です。
-`results[]` は `index`・`id`・`status`（`created`・`updated`・`replaced`・`failed`）・`version`・`diff`（`updated`・`replaced` と `dry_run`）・`errors`（`failed` のとき、項目のパス・決まり・直し方）を持ちます。
+`results[]` は `index`・`id`・`status`（`created`・`updated`・`replaced`・`failed`）・`version`・`diff`（`updated`・`replaced` と `dry_run`）・`errors`（`failed` のとき、項目のパス・決まり・直し方と、スキーマの違反では違反した項目のスキーマの `title`・`description`・`x-rules`・`examples`・`x-bad-examples` のうちスキーマが持つものを入れた `schema`）を持ちます。
 
 ## delete_docs
 
@@ -450,7 +450,7 @@ Git 管理外の配信元では、種類の `documents[].writable` が削除を�
 | UnknownKindError | `kind` が配信元の種類に無い | その配信元の種類の一覧 |
 | DocumentNotFoundError | 指した ID の文書が無い | 見つからなかった ID と、近い ID の候補 |
 | VersionMismatchError | `expected_version` が今のバージョンと違う | 今のバージョンと差分、読み直して呼び直すこと |
-| ValidationFailedError | 変更を当てた後の文書がスキーマか `validators[]` に通らない（`atomic: true`） | 違反ごとの添字・パス・決まり・直し方 |
+| ValidationFailedError | 変更を当てた後の文書がスキーマか `validators[]` に通らない（`atomic: true`） | 違反ごとの添字・パス・決まり・直し方。スキーマの違反には、違反した項目のスキーマの `title`・`description`・`x-rules`・`examples`・`x-bad-examples` のうちスキーマが持つもの |
 | DocumentReferencedError | `on_referenced: fail` で、消す文書が他の文書の `related` から参照されている | 参照元の ID と `on_referenced: unlink` |
 | DeleteNotAllowedError | Git 管理外の配信元で、種類の `documents[].writable` が削除を許していない | 種類の ID と `documents[].writable` のパス |
 | LastReadNotFoundError | `list_changes` の `from` を省いたが、この会話で本文を読んだ記録が無い | `from` を渡すこと |

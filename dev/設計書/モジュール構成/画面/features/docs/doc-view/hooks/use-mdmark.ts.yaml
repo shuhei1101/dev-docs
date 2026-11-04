@@ -20,7 +20,7 @@ functions:
     container: features/docs/doc-view/hooks/use-mdmark.ts
     usecase: 文書を読む
     role: アダプター
-    summary: 要素に mdmark で本文を描き、本文の変更で `update`、外れるときに `destroy` する
+    summary: 要素に mdmark で本文を描き、本文か比較元の変更で `update`、外れるときに `destroy` する
     scope: public
     args:
       - name: ref
@@ -32,14 +32,14 @@ functions:
         type: MdmarkOptions
         required: true
         passing: positional
-        description: '`markdown`・`docId`・`aliases`（文書の取得の `aliases`）・`commentStore`（`load({docId})`・`save({docId, comment})` を Promise で返す）・`config`（`features.comments` を `true`。mdmark の既定はオフ）・`baseMarkdown`・`onColumnsChange`（後の 2 つは mdmark#222 の後）'
+        description: '`markdown`・`docId`・`aliases`（文書の取得の `aliases`）・`commentStore`（`load({docId})`・`save({docId, comment})`・`update({docId, id, body})`・`remove({docId, id})` を Promise で返す）・`config`（`features.comments` を `true`。mdmark の既定はオフ）・`baseMarkdown`（比較元の本文。`null` は強調なし）・`onColumnsChange`（`{tableIndex, hidden}` を受ける）'
     returns:
       type: '{handle: MdmarkHandle | null; ready: boolean; error: unknown; docId: string | null}'
-      description: '`mount` の戻り値と読み込みの状態。`docId` は `handle` が描いている文書で、`ready` は今の `docId` を描き終えたときだけ `true`'
+      description: '`mount` の戻り値（`update(markdown, {baseMarkdown})`・`destroy()`・`reloadComments()`・`focusComment(id)`）と読み込みの状態。`docId` は `handle` が描いている文書で、`ready` は今の `docId` を描き終えたときだけ `true`'
     process: |-
       1. 初回に `import(/* @vite-ignore */ MDMARK_URL)` で mdmark を読み、`document.head` に `MDMARK_CSS_URL` の `<link rel="stylesheet">` を置く（モジュールの中で 1 回だけ。失敗は `error` に入れ `[error]` `mdmark_load_failed` を書く）
-      2. `docId` が変わったら `destroy` して `mount(el, options)` し直す。`opts.index` には `aliases` を mdmark の索引にしたもの（`toMdmarkIndex`）を渡す。描き直す間は `ready` を `false` にし、`mount` が終わると `true` にする
-      3. 同じ `docId` で `markdown`（と `baseMarkdown`）が変わったら `update(markdown)` を呼ぶ
+      2. `docId` が変わったら `destroy` して `mount(el, options)` し直す。`opts.index` には `aliases` を mdmark の索引にしたもの（`toMdmarkIndex`）を渡す。`commentStore` と `onColumnsChange` には、呼ばれたときに最新の `options` の関数を呼ぶ関数を渡す（`mount` は文書ごとに 1 回のため）。描き直す間は `ready` を `false` にし、`mount` が終わると `true` にする
+      3. 同じ `docId` で `markdown` か `baseMarkdown` が変わったら `update(markdown, {baseMarkdown})` を呼ぶ（`baseMarkdown` が無いときは `null`）
       4. 外れるときに `destroy` を呼ぶ
     unit_tests:
       - name: test_use_mdmark
@@ -72,6 +72,18 @@ functions:
         condition: '`aliases` に `term` の 1 件を渡して描く'
         mock: mdmark（`vi.mock` で `mount` の引数を記録する偽物）
         expected: '`mount` の `opts.index.terms` が 1 件'
+      - name: test_use_mdmark_when_base_changes
+        case: 正常
+        summary: 比較元が変わると update に渡す
+        condition: 同じ `docId` で `baseMarkdown` を `null` から文字列にし、続けて `null` に戻す
+        mock: mdmark（偽物）
+        expected: '`update` が `(markdown, {baseMarkdown: 文字列})`、`(markdown, {baseMarkdown: null})` の順に 2 回'
+      - name: test_use_mdmark_when_callbacks_change
+        case: 正常
+        summary: 描いた後に変わった関数を呼ぶ
+        condition: '`mount` の後に `onColumnsChange` と `commentStore.update` を別の関数に替え、mdmark から呼ぶ'
+        mock: mdmark（`mount` の引数を記録する偽物）
+        expected: 替えた後の関数が呼ばれ、`mount` は 1 回のまま
   - name: toMdmarkIndex
     title: mdmark の索引への読み替え
     kind: 関数

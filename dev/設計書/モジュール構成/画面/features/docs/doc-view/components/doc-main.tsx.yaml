@@ -48,7 +48,11 @@ components:
       - name: onLocated
         type: () => void
         required: true
-        description: 本文がコメントのマーカーまでスクロールしたとき
+        description: 本文がコメントの箇所へ移ったとき
+      - name: baseMarkdown
+        type: '{markdown: string; tableKeys: string[]} | null'
+        required: false
+        description: 比較元の本文と表のキー（`DocBody` へそのまま渡す）
       - name: onRetry
         type: () => void
         required: true

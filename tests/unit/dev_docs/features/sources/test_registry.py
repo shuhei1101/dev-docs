@@ -38,7 +38,9 @@ def test_source_registry_reload(
         ),
         (None, make_status("c", 2, "disabled")),
     ]
-    monkeypatch.setattr(registry_module, "load_source", lambda entry, *, index: results[index])
+    monkeypatch.setattr(
+        registry_module, "load_source", lambda entry, *, index, lookup=None: results[index]
+    )
     terminal = make_terminal_config(
         sources=[make_entry(f"/tmp/{name}/dev-docs.yaml", source_id=name) for name in "abc"]
     )
@@ -62,7 +64,7 @@ def test_source_registry_reload_when_duplicate_name(
     monkeypatch.setattr(
         registry_module,
         "load_source",
-        lambda entry, *, index: (make_served_source(id="a"), make_status("a", index)),
+        lambda entry, *, index, lookup=None: (make_served_source(id="a"), make_status("a", index)),
     )
     terminal = make_terminal_config(
         sources=[make_entry("/tmp/x/dev-docs.yaml"), make_entry("/tmp/y/dev-docs.yaml")]
@@ -91,7 +93,7 @@ def test_source_registry_reload_when_reading(
     release = threading.Event()
     served: list[ServedSource] = [old, new]
 
-    def blocking_load(entry: SourceEntry, *, index: int) -> LoadResult:
+    def blocking_load(entry: SourceEntry, *, index: int, lookup: object = None) -> LoadResult:
         source = served.pop(0)
         if source is new:
             entered.set()
@@ -228,7 +230,7 @@ def test_source_registry_reload_when_loading(
     entered = threading.Event()
     release = threading.Event()
 
-    def blocking_load(entry: SourceEntry, *, index: int) -> LoadResult:
+    def blocking_load(entry: SourceEntry, *, index: int, lookup: object = None) -> LoadResult:
         entered.set()
         release.wait(timeout=5)
         return make_served_source(id="a"), make_status("a", index)
@@ -273,7 +275,7 @@ def test_source_registry_reload_when_failed(
     """読み込みが例外で止まっても待ちを解く（異常系）。"""
 
     # 準備
-    def failing_load(entry: SourceEntry, *, index: int) -> LoadResult:
+    def failing_load(entry: SourceEntry, *, index: int, lookup: object = None) -> LoadResult:
         raise RuntimeError("読めない")
 
     monkeypatch.setattr(registry_module, "load_source", failing_load)
