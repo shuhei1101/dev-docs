@@ -423,11 +423,11 @@ flows:
         description: 'sample に、`x-shape: diagram`・`x-diagram: er` の項目 `er` と `tables[]` を持つスキーマと、その文書 8 を置く'
         notes: '`er` と `tables` の構造は ER 図のテンプレートと同じ'
       - name: 実体とテーブル
-        description: '実体 `顧客` は `columns` を持たず、`tables[]` に `name` が `customers`・`title` が `顧客` のテーブル（列 `id`（`primary_key: true`・`not_null: true`）と `email`）がある。実体 `注文` は `columns` に列 `id`（`key: PK`）と、`key: FK`・`comment: 参照: 顧客.id` の列 `customer_id` を持つ。実体 `商品` は名前だけを持つ'
+        description: '実体 `顧客` は `columns` を持たず、`tables[]` に `name` が `customers`・`title` が `顧客` のテーブル（列 `id`（`primary_key: true`・`not_null: true`）と `email`）がある。実体 `注文` は `columns` に列 `id`（`key: PK`）と、`key: FK`・`comment: 参照: 顧客.id` の列 `customer_id` を持つ。実体 `商品` は名前だけを持つ。実体 `支払い` は `columns` を持たず、`tables[]` に `name` が `payments`・`title` が `支払い` のテーブル（列 `id`（`primary_key: true`）と、`foreign_key.table` が `customers.id` の列 `customer_id`）がある'
         notes: '-'
       - name: 関連
-        description: '`顧客` から `注文` へ `||--o{`・ラベル `注文する` の関連と、`注文` から `商品` へ `}o--||` の関連'
-        notes: '`注文` から `商品` への関連は端の列が決まらない'
+        description: '`顧客` から `注文` へ `||--o{`・ラベル `注文する` の関連と、`顧客` から `支払い` へ `||--o{` の関連と、`注文` から `商品` へ `}o--||` の関連'
+        notes: '`顧客` から `注文` への関連は実体の列の `comment`、`顧客` から `支払い` への関連はテーブルの列の `foreign_key.table` で端の列が決まる。`注文` から `商品` への関連は端の列が決まらない'
     flow: |-
       ```mermaid
       sequenceDiagram
@@ -440,8 +440,8 @@ flows:
       ```
     expected:
       - '`markdown` に `<!-- er -->` の範囲が 1 つあり、`erDiagram` の `` ```mermaid `` のコードブロックが無い'
-      - '範囲の JSON の `tables` に `顧客`・`注文`・`商品` の 3 つがあり、`顧客` の `columns` が `id`（`pk: true`・`nn: true`）と `email`、`注文` の `columns` が `id`（`pk: true`）と `customer_id`（`fk: true`）、`商品` の `columns` が空'
-      - '範囲の JSON の `relations` が 1 件で、`from` が `顧客`・`fromColumn` が `id`・`fromCard` が `1`・`to` が `注文`・`toColumn` が `customer_id`・`toCard` が `0..n`・`label` が `注文する`'
+      - '範囲の JSON の `tables` に `顧客`・`注文`・`商品`・`支払い` の 4 つがあり、`顧客` の `columns` が `id`（`pk: true`・`nn: true`）と `email`、`注文` の `columns` が `id`（`pk: true`）と `customer_id`（`fk: true`）、`商品` の `columns` が空、`支払い` の `columns` が `id`（`pk: true`）と `customer_id`（`fk: true`）'
+      - '範囲の JSON の `relations` が 2 件で、1 件目は `from` が `顧客`・`fromColumn` が `id`・`fromCard` が `1`・`to` が `注文`・`toColumn` が `customer_id`・`toCard` が `0..n`・`label` が `注文する`、2 件目は `from` が `顧客`・`fromColumn` が `id`・`to` が `支払い`・`toColumn` が `customer_id`'
       - '`注文` から `商品` への関連は `relations` に無く、図の元データの表の関連の行にある'
       - 図の元データの表が `closed` の表のマーカーで囲まれている
     test: test_normal_when_er_diagram_drawn

@@ -6,6 +6,7 @@ diagrams:
       classDiagram
         direction TD
         変換 ..> スキーマ駆動の変換 : converter が無い
+        変換 ..> 項目の見出し : 描画の文脈の見出しの引き方
         スキーマ駆動の変換 ..> 表の組み立て
         スキーマ駆動の変換 ..> 属性の表の組み立て
         スキーマ駆動の変換 ..> 図の組み立て
@@ -35,6 +36,9 @@ diagrams:
           <<function>>
         }
         class 埋め込みの展開 {
+          <<function>>
+        }
+        class 項目の見出し {
           <<function>>
         }
         click 変換 href "./service.py.yaml#変換"
@@ -147,7 +151,7 @@ functions:
       2. スキーマの `properties` の順に値を組み立てる（値が空のキーと、スキーマに `x-hidden: true` を持つキーは飛ばす）
          - `x-heading` を持つ値は、深さ 2 から始まる見出し（`x-heading` の文字列、要素なら `x-key` の値）を置く。深さは `MAX_HEADING_LEVEL` で止める
          - 見出しも `x-shape` も持たないスカラーが `ATTRIBUTE_MIN` 以上続く間は、まとめて属性の表の組み立てにかける
-         - `x-shape` で本文を組み立てる（`Shape`）。`table` は表の組み立て、`diagram` は図の組み立て（見出しの `title` は項目の `title`、`scope` は文書の見出し、`updated` は文書の `updated` か `created` の日付）と、値の中のオブジェクトのリストごとの図の元データの表、`sections` は子を 1 つ深い見出しで再帰、`attributes` は属性の表の組み立て
+         - `x-shape` で本文を組み立てる（`Shape`）。`table` は表の組み立て、`diagram` は図の組み立て（見出しの `title` は項目の `title`、`scope` は文書の見出し、`updated` は文書の `updated` か `created` の日付。`x-diagram: er` は文書の `tables` の値を `tables` に渡す）と、値の中のオブジェクトのリストごとの図の元データの表、`sections` は子を 1 つ深い見出しで再帰、`attributes` は属性の表の組み立て
          - `TEST_FILE_KEYS` の値は、項目の `title` を列名にした 1 列の閉じた表（`<!-- table: plain closed -->`）にし、セルは引き先にあればリンク、無ければ行内のコードにする
          - キーが `EXAMPLE_SUFFIX` で終わる値が続く間は、`<!-- tabs -->` の範囲に、値ごとに今の深さの見出し（項目の `title`）と本文の書き換えにかけた値を置く
          - `x-shape` が無いスカラーは、参照のリンクに当たればそのリンクを、当たらなければ本文の書き換えにかけた値を使う。改行を含むか ``` で始まる値は `**{title}**` の行の次のブロックに、それ以外は `**{title}**: {値}` の段落にする
@@ -215,6 +219,66 @@ functions:
         condition: '`request_example`・`response_example` を持つ文書'
         mock: なし
         expected: '`<!-- tabs -->` の範囲に `リクエスト例`・`レスポンス例` の見出しが 1 つずつある'
+      - name: test_schema_to_markdown_when_er
+        case: 正常
+        summary: ER 図にテーブルの列を渡す
+        condition: '`x-shape: diagram`・`x-diagram: er` の `er`（`columns` を持たない実体 `顧客`）と、`title: 顧客` のテーブルを持つ `tables`'
+        mock: なし
+        expected: '`<!-- er -->` の範囲の JSON の `顧客` の `columns` が `tables` のテーブルの列'
+  - name: item_heading
+    title: 項目の見出し
+    kind: 関数
+    container: features/convert/markdown.py
+    usecase: 文書の取得
+    role: 変換
+    summary: 文書の項目のパスが、スキーマ駆動の変換で見出しになる項目を指すとき、その見出しの文字列を返す
+    scope: public
+    thread_safe: true
+    args:
+      - name: data
+        title: 文書の値
+        type: Mapping[str, Any]
+        required: true
+        passing: positional
+        description: リンク先の文書の値
+      - name: schema
+        title: スキーマ
+        type: Mapping[str, Any]
+        required: true
+        passing: positional
+        description: リンク先の文書の種類のスキーマ
+      - name: item
+        title: 項目のパス
+        type: str
+        required: true
+        passing: positional
+        description: '`{キー}`・`{キー}[{x-key の値}]` を `.` で繋いだ項目のパス（型 `ref` の `#` 以降と同じ書き方）'
+    returns:
+      type: str | None
+      description: 見出しの文字列。見出しにならない項目・無い項目は `None`
+    process: |-
+      1. 項目のパスを `.` で区切り（`[` と `]` の中の `.` では区切らない）、最上位からスキーマの `properties` と値を 1 段ずつたどる
+         - `{キー}[{値}]` は、キーのスキーマが `x-shape: sections`・`x-key` を持つ配列のとき、`x-key` が値に当たる要素へ進む（当たらなければ `None`）
+      2. 最後の段が `{キー}[{値}]` なら、その要素の見出し（`x-key` の値）を返す。`{キー}` なら、キーのスキーマの `x-heading` を返す（無ければ `None`）
+    unit_tests:
+      - name: test_item_heading
+        case: 正常
+        summary: x-heading を持つ項目
+        condition: '`flow` のスキーマが `x-heading: 処理の流れ`、項目のパス `flow`'
+        mock: なし
+        expected: '`処理の流れ`'
+      - name: test_item_heading_when_section
+        case: 正常
+        summary: sections の要素
+        condition: '`scenarios` が `x-shape: sections`・`x-key: name` で、`name: 正常シナリオ` の要素を持つ。項目のパス `scenarios[正常シナリオ]`'
+        mock: なし
+        expected: '`正常シナリオ`'
+      - name: test_item_heading_when_not_heading
+        case: 正常
+        summary: 見出しにならない項目と無い項目
+        condition: '`x-heading` を持たない `name` と、`scenarios[無い]`'
+        mock: なし
+        expected: どちらも `None`
   - name: render_table
     title: 表の組み立て
     kind: 関数
@@ -276,7 +340,7 @@ functions:
       description: '表のキーのマーカーと、`<!-- table: data … -->` で囲んだ表'
     process: |-
       1. 列をスキーマの `properties` の順に決める（要素のどれも値を持たない列と、スキーマに `x-hidden: true` を持つ列は除く）。`first` が列にあれば先頭へ移す
-      2. セルは、真偽の値は `CHECK_MARK` か空、参照のリンクに当たる文字列はリンク、それ以外のスカラーはそのまま（`|` はエスケープ、改行は `<br>`）、文字列のリストは `・` で繋ぐ。`table` を持つオブジェクト（外部キー）は、`table` の値を最後の `.` でテーブルとカラムに分け、テーブルが `{分類}/{テーブル}` なら同じフォルダの `{分類}.yaml` の文書へのリンク、そうでなければ `anchors` でテーブルの `title` から引いた見出しのアンカーへのリンク（どちらも引けなければ値の文字のまま）、それ以外のオブジェクトは `{キー}: {値}` を `、` で繋ぎ、オブジェクトのリストは要素ごとのセルを `<br>` で繋ぐ
+      2. セルは、真偽の値は `CHECK_MARK` か空、参照のリンクに当たる文字列はリンク、それ以外のスカラーはそのまま（`|` はエスケープ、改行は `<br>`）、文字列のリストは `・` で繋ぐ。`table` を持つオブジェクト（外部キー）は、`table` の値を最後の `.` でテーブルとカラムに分け、テーブルが `{分類}/{テーブル}` なら同じフォルダの `{分類}.yaml` の文書へのリンク、そうでなければ `anchors` でテーブルの `title` から引いた見出しのアンカー（見出しのアンカー）へのリンク（どちらも引けなければ値の文字のまま）、それ以外のオブジェクトは `{キー}: {値}` を `、` で繋ぎ、オブジェクトのリストは要素ごとのセルを `<br>` で繋ぐ
       3. 表のマーカーの引数は、`data` に、`closed` なら `closed`、隠す列があれば `+columns hide={列名,…}`、`WIDE_KEYS` の列があれば `wide={列名,…}` を続ける（空白を含む列名は記載しない）
       4. `<!-- dev-docs-table: {table_key} -->`・表のマーカー・見出しの行・区切りの行・データの行・`<!-- /table -->` の順に置いて返す
     unit_tests:

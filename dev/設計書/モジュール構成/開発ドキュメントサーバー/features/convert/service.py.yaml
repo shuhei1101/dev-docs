@@ -97,7 +97,7 @@ classes:
              - `converter` がある場合、行（`target.source.script("converters", converter)`）の `cache` が `True` で `cache_dir` の控えがあればそれを使う。無ければスクリプトの実行（`cwd=target.base`・`stdin` に文書の YAML・制限時間 `timeout_sec`・`at`。`at` は `target.worktree` が `None` で `source.config_commit` がある場合に（`source.main_root`, `source.config_commit`））の標準出力を使い、`cache` が `True` なら一時ファイルから置き換えて控える。控えが `CONVERT_CACHE_KEEP` を超えたら古いものを消す。`cache` が `False` なら控えを書かない
                - `ScriptTimeoutError`・`ScriptFailedError`・実行できない `ScriptError` の場合、`reason` が `timeout`・`exit`・`not_runnable` の `ConvertFailure` を返す
              - `converter` が無く Markdownの本文かが `True` の場合、`document.body` をそのまま使う
-             - それ以外は、スキーマ駆動の変換（スキーマは文書のストア.文書に当てるスキーマ `store.row_schema(target, kind)`）。描画の文脈は、`links` を `store.load(target)` の文書ごとに ID・`path`・`body_path` から `DocumentLink`（タイトルはメタデータの `name`、パスは `path`）を引く辞書、`issue_url` を `source.github_repository` から作った URL（無ければ `None`）、`path` を文書の `path` にする
+             - それ以外は、スキーマ駆動の変換（スキーマは文書のストア.文書に当てるスキーマ `store.row_schema(target, kind)`）。描画の文脈は、`links` を `store.load(target)` の文書ごとに ID・`path`・`body_path` から `DocumentLink`（タイトルはメタデータの `name`、パスは `path`）を引く辞書、`issue_url` を `source.github_repository` から作った URL（無ければ `None`）、`path` を文書の `path`、`item_heading` を「ID の文書を `store.load(target)` から引き、その値とスキーマ（`store.row_schema(target, 文書の kind)`）で項目の見出しを返す関数（ID の文書が無ければ `None`。同じ ID の文書とスキーマは 1 回の変換の中で 1 回だけ引く）」にする
           3. 埋め込みの展開（`target.base`）をする
           4. コードブロックの外の表を出る順にたどり、直前に `TABLE_KEY_PATTERN` の行があればそのキー、無ければ `{種類}:table[{n}]`（`n` は本文の中の 0 始まりの順）を表のキーにする。マーカーの行を取り除いた Markdown と表のキーを返す
         unit_tests:
@@ -152,6 +152,12 @@ classes:
             condition: '行 `notes`（`records: files`、`schema` が `templates/files.schema.yaml` のコピー）の要素 `{path: a.md, summary: 説明}` の文書'
             mock: なし
             expected: Markdown に `path`・`summary` の値が出る
+          - name: test_convert_service_convert_when_id_link
+            case: 正常
+            summary: 本文の id のリンクを他の文書の見出しへ解決する
+            condition: '本文に `[B](id:b#flow)` を持つ文書 a と、スキーマで `flow` が `x-heading: 処理の流れ` の文書 b の配信元'
+            mock: なし（一時フォルダの配信元）
+            expected: 文書 a の `markdown` に、文書 b の相対パスに `#処理の流れ` を付けたリンクがある
       - name: clear
         title: 控えを捨てる
         summary: '`cache_dir` の控えを全て消す'
