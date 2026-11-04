@@ -31,7 +31,7 @@ def load_hook() -> Callable[[str], ModuleType]:
 
 
 class ReceivedBodies:
-    """`POST /_admin/session-context` を真似る HTTP サーバーのポートと、受けた本文。"""
+    """`POST /_admin/session-start` を真似る HTTP サーバーのポートと、受けた本文。"""
 
     def __init__(self, port: int) -> None:
         self.port = port

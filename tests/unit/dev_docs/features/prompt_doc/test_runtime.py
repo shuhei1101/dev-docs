@@ -12,7 +12,6 @@ from dev_docs.features.prompt_doc.runtime import (
     prompts_dir,
 )
 from dev_docs.features.prompt_doc.types import PromptInvalidError
-from dev_docs.features.session_context.types import SESSION_CONTEXT_PROMPT_ID
 from dev_docs.server.mcp.result import DOCS_INSTRUCTIONS_PROMPT_ID, mcp_prompt_ids
 
 # 本文に置かない言い回し
@@ -223,7 +222,7 @@ def test_load_prompts_when_required_missing(tmp_path: Path) -> None:
 def test_load_prompts_when_bundled() -> None:
     """同梱した YAML が読め、言い回しと字数を守る（正常系）。"""
     # 準備
-    required = [SESSION_CONTEXT_PROMPT_ID, *mcp_prompt_ids()]
+    required = mcp_prompt_ids()
     # 実行
     result = load_prompts(DEFAULT_PROMPTS_DIR, required=required)
     # 検証

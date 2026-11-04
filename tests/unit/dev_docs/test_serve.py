@@ -287,7 +287,7 @@ def test_build_handlers(
     assert statuses_before == []
     assert len(handlers.registry.served()) == 1
     assert len(handlers.registry.statuses()) == 2
-    assert "session-context" in handlers.prompts.prompts
+    assert "session-context" not in handlers.prompts.prompts
     assert "mcp/docs/instructions" in handlers.prompts.prompts
 
 
