@@ -1,4 +1,4 @@
-"""SessionStart のフック。落ちている dev-docs を起動し、使える配信元と使い方を文脈に入れる。
+"""SessionStart のフック。落ちている dev-docs を起動し、`/clear`・圧縮のときは返し済みの記録の削除を依頼する。
 
 Usage:
 # Claude Code が stdin に SessionStart の入力の JSON を渡して実行する
@@ -21,8 +21,10 @@ DEFAULT_PORT = 8781
 DEFAULT_CONFIG = "~/.config/dev-docs/settings.yaml"
 # ポートへの TCP 接続を打ち切る秒数
 CONNECT_TIMEOUT_SEC = 0.5
-# `POST /_admin/session-context` を打ち切る秒数
-CONTEXT_TIMEOUT_SEC = 11
+# `POST /_admin/session-start` を打ち切る秒数（実装の後に応答の時間を測って決め直す）
+FORGET_TIMEOUT_SEC = 3
+# 返し済みの記録の削除を依頼する `source`
+FORGET_REASONS = frozenset({"clear", "compact"})
 # 起動したときに文脈に入れる文
 RECONNECT_GUIDE = (
     "dev-docs を起動しました。"
@@ -69,20 +71,18 @@ def start_server(clone: Path) -> None:
     )
 
 
-def fetch_context(port: int, payload: dict[str, str]) -> str:
-    """`POST /_admin/session-context` を 1 回呼び、応答の `context` を返す。"""
+def request_forget(port: int, payload: dict[str, str]) -> None:
+    """`POST /_admin/session-start` を 1 回呼ぶ。"""
     request = urllib.request.Request(
-        f"http://127.0.0.1:{port}/_admin/session-context",
+        f"http://127.0.0.1:{port}/_admin/session-start",
         data=json.dumps(payload).encode("utf-8"),
         headers={"Content-Type": "application/json"},
         method="POST",
     )
-    with urllib.request.urlopen(request, timeout=CONTEXT_TIMEOUT_SEC) as response:
+    with urllib.request.urlopen(request, timeout=FORGET_TIMEOUT_SEC) as response:
         body = json.load(response)
-    context = body.get("context") if isinstance(body, dict) else None
-    if not isinstance(context, str):
-        raise ValueError("context がありません")
-    return context
+    if not isinstance(body, dict):
+        raise ValueError("応答が読めません")
 
 
 def _unavailable(reason: str) -> str:
@@ -109,35 +109,43 @@ def _start_context(clone: Path | None, config: Path) -> str:
     return RECONNECT_GUIDE
 
 
-def _context(event: dict[str, Any]) -> str:
-    """フックの入力から、セッションの文脈に入れる文を決める。"""
+def _forget_context(port: int, event: dict[str, Any]) -> str | None:
+    """`/clear`・圧縮のときだけ記録の削除を依頼し、失敗したときだけ理由の文を返す。"""
+    reason = str(event.get("source", "startup"))
+    session_id = event.get("session_id")
+    if reason not in FORGET_REASONS or not session_id:
+        return None
+    payload = {"session_id": str(session_id), "reason": reason}
+    if event.get("agent_id"):
+        payload["agent_id"] = str(event["agent_id"])
+    try:
+        request_forget(port, payload)
+    except (OSError, ValueError) as error:
+        # 打ち切ったとき: 理由の代わりに打ち切った秒数を入れる
+        timed_out = isinstance(error, TimeoutError) or (
+            isinstance(error, urllib.error.URLError) and isinstance(error.reason, TimeoutError)
+        )
+        detail = f"{FORGET_TIMEOUT_SEC} 秒で打ち切りました" if timed_out else str(error)
+        return (
+            f"dev-docs の返し済みの記録を削除できませんでした（{detail}）。"
+            "前に返した文書は repeat_seen: true で取り直せます。"
+        )
+    return None
+
+
+def _context(event: dict[str, Any]) -> str | None:
+    """フックの入力から、セッションの文脈に入れる文を決める（入れないときは `None`）。"""
     port = int(os.environ.get("DEV_DOCS_PORT") or DEFAULT_PORT)
-    payload = {"cwd": str(event.get("cwd", "")), "reason": str(event.get("source", "startup"))}
-    # 会話キーは、あるものだけを送る
-    for key in ("session_id", "agent_id"):
-        if event.get(key):
-            payload[key] = str(event[key])
-    # 待ち受けているサーバーから文脈を取る
+    # 待ち受けているサーバーには、記録の削除だけを依頼する
     if is_listening(port):
-        try:
-            return fetch_context(port, payload)
-        except (OSError, ValueError) as error:
-            # 打ち切ったとき: 理由の代わりに打ち切った秒数を入れる
-            timed_out = isinstance(error, TimeoutError) or (
-                isinstance(error, urllib.error.URLError) and isinstance(error.reason, TimeoutError)
-            )
-            reason = f"{CONTEXT_TIMEOUT_SEC} 秒で打ち切りました" if timed_out else str(error)
-            return (
-                f"dev-docs の文脈を取れませんでした（{reason}）。"
-                "管理の MCP の status で状態を確かめてください。"
-            )
+        return _forget_context(port, event)
     # 落ちているサーバーは、端末の設定のクローンで起動する
     config = Path(os.environ.get("DEV_DOCS_CONFIG") or DEFAULT_CONFIG).expanduser()
     return _start_context(read_clone(config), config)
 
 
 def main() -> int:
-    """stdin の JSON を読み、文脈を取るかサーバーを起動して、`additionalContext` を出す。"""
+    """stdin の JSON を読み、サーバーを起動するか記録の削除を依頼して、入れる文だけを出す。"""
     try:
         event = json.load(sys.stdin)
     except ValueError:
@@ -149,6 +157,8 @@ def main() -> int:
     except Exception as error:  # noqa: BLE001
         # どの失敗でもセッションを止めない
         context = f"dev-docs のフックが失敗しました（{error}）。"
+    if context is None:
+        return 0
     output = {"hookSpecificOutput": {"hookEventName": "SessionStart", "additionalContext": context}}
     print(json.dumps(output, ensure_ascii=False))
     return 0

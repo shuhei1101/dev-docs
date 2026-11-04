@@ -143,7 +143,9 @@ def build_docs_mcp(handlers: Handlers) -> MCPServer:
         "describe",
         handlers.prompts.render(tool_prompt_id("docs", "describe")),
         DescribeRequest,
-        lambda request: describe(request, registry=handlers.registry, store=handlers.store),
+        lambda request: describe(
+            request, registry=handlers.registry, store=handlers.store, terminal=handlers.terminal
+        ),
         lambda result, request: render_describe_markdown(result),
     )
     register(

@@ -22,7 +22,6 @@ from dev_docs.features.lifecycle.control import RestartControl
 from dev_docs.features.lifecycle.types import SERVE_ARGV, SHUTDOWN_WAIT_FACTOR
 from dev_docs.features.prompt_doc.runtime import PromptSet, load_prompts, prompts_dir
 from dev_docs.features.prompt_doc.types import PromptInvalidError
-from dev_docs.features.session_context.types import SESSION_CONTEXT_PROMPT_ID
 from dev_docs.features.settings.query import config_path, listen_port, load_terminal_config
 from dev_docs.features.settings.types import TerminalConfig, TerminalConfigInvalidError
 from dev_docs.features.sources.registry import SourceRegistry
@@ -203,9 +202,7 @@ def build_handlers(terminal: TerminalConfig) -> Handlers:
     from dev_docs.features.write.locks import SourceLocks
 
     # プロンプトの YAML が違反するときは、state_dir を作る前に止める
-    prompts = load_prompts(
-        prompts_dir(os.environ), required=[SESSION_CONTEXT_PROMPT_ID, *mcp_prompt_ids()]
-    )
+    prompts = load_prompts(prompts_dir(os.environ), required=mcp_prompt_ids())
     state_dir = terminal.state_dir
     state_dir.mkdir(parents=True, exist_ok=True)
     snapshots = SnapshotStore(state_dir / "snapshots")

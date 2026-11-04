@@ -6,6 +6,8 @@ from dev_docs.features.describe.types import KindSchemaResult, SourceGuideResult
 from dev_docs.features.search.render import OUTSIDE_SCOPE_LINE
 
 OUTSIDE_NONE_LINE = "なし"
+NO_SOURCE_LINE = "使える配信元はありません。配信元にするときは /dev-docs:setup を実行します。"
+WARNINGS_LINE = "注意:"
 
 
 def _cell(text: str) -> str:
@@ -27,10 +29,16 @@ def render_describe_markdown(
 ) -> str:
     """`format: markdown` の本文を作る。"""
     if isinstance(result, SourceListResult):
-        lines = [_place(result), "", "| source | 権限 | description |", "| --- | --- | --- |"]
-        for item in result.sources:
-            access = f"{item.access}（作業中）" if item.current else item.access
-            lines.append(f"| {_cell(item.source_id)} | {access} | {_cell(item.description)} |")
+        lines = [_place(result), ""]
+        if result.sources:
+            lines.extend(["| source | 権限 | description |", "| --- | --- | --- |"])
+            for item in result.sources:
+                access = f"{item.access}（作業中）" if item.current else item.access
+                lines.append(
+                    f"| {_cell(item.source_id)} | {access} | {_cell(item.description)} |"
+                )
+        else:
+            lines.append(NO_SOURCE_LINE)
         # 作業範囲の外の一覧を求められたときだけ、表か「なし」を続ける
         if result.outside_sources is not None:
             lines.extend(["", OUTSIDE_SCOPE_LINE])
@@ -42,6 +50,9 @@ def render_describe_markdown(
                 )
             else:
                 lines.append(OUTSIDE_NONE_LINE)
+        if result.warnings:
+            lines.extend(["", WARNINGS_LINE])
+            lines.extend(f"- {warning}" for warning in result.warnings)
         return "\n".join(lines) + "\n"
     head = [OUTSIDE_SCOPE_LINE] if result.outside_scope else []
     if isinstance(result, SourceGuideResult):
