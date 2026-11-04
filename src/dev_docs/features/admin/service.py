@@ -174,7 +174,9 @@ def _serving_ids(handlers: Handlers) -> list[str]:
     return [status.id for status in handlers.registry.statuses() if status.status == "serving"]
 
 
-def _load_candidate(path: str, *, config: str | None, lookup: SchemaRefLookup) -> CandidateSource:
+def _load_candidate(
+    path: str, *, config: str | None, lookup: SchemaRefLookup | None = None
+) -> CandidateSource:
     """パスか書く前の設定の文字列から、端末の設定によらず配信元を組み立てる。"""
     target = normalize_path(path)
     # `.yaml` で終わるパスは設定のファイル、それ以外は配信元のフォルダ
