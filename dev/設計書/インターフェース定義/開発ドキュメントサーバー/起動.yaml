@@ -391,6 +391,35 @@ flows:
       - 合図を出す前に `GET /` が 200 を返す
       - '`GET /_api/sources/sample/docs` は合図を出すまで答えず、出した後に 200 を返す'
     test: test_normal_when_requested_while_loading
+  - name: 正常系（ほかの配信元のスキーマを参照する）
+    summary: 参照先の配信元が検証で外れていても、ほかの配信元のリビジョンのスキーマで参照する側の配信元を組み立てる
+    setup:
+      - name: Mock
+        description: なし（`dev-docs serve` を子プロセスで起動する）
+      - name: スキーマの配信元
+        description: '`schemas/note.schema.yaml` を持つ Git のリポジトリ。`dev-docs.yaml` は必須のキー `paths` が無く検証に通らない'
+        notes: id `schemas`。タグ `v1` がある
+      - name: 参照する配信元
+        description: '`documents[0].schema: {source: schemas, path: schemas/note.schema.yaml, ref: v1}` を持つ Git 管理外のフォルダ'
+        notes: id `sample`
+      - name: 端末の設定
+        description: '`sources` に sample・schemas の 2 行（参照する側が先）'
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        participant C as クライアント
+        participant T as dev-docs serve
+        participant G as schemas のリポジトリ
+
+        C->>T: dev-docs serve
+        T->>T: schemas の検証に失敗し、配信から外す
+        T->>G: v1 の note.schema.yaml を読む
+        T-->>C: sample を配信する
+      ```
+    expected:
+      - '`/_api/sources/sample/docs` が応答し、`/_api/sources/schemas/docs` が 404'
+      - '`describe(source: sample, kind: note)` が v1 のスキーマを返す'
+    test: test_normal_when_schema_from_other_source
 lead: 端末の設定を読み、検証に通った配信元を 1 プロセス・1 ポートで画面の API・`/mcp`・`/_admin/mcp` に配信し始める。
 identifier: serve
 permissions: なし
@@ -480,6 +509,11 @@ constraints:
     constraint: 端末の設定・ポート・プロンプトの YAML を確かめたら待ち受けを始め、配信元の読み込み（`registry.reload`）とその後の検査（管理用の YAML の同期・エイリアスのキー・`nav` の警告）を待ち受けの裏で流す。配信元を使う要求は、読み込みが終わるまで待ってから答える。検査は待たない
     decided_by: dev/設計書/非機能要件/非機能要件#requirements[起動から接続を受け付けるまでの時間]
     notes: 画面の静的なファイル、MCP の初期化・ツールの一覧、管理の MCP の `status`、`POST /_admin/session-context` は読み込みを待たずに答える（`status` と `session-context` は読み込み中であることを返す）。読み込みが例外で止まったときはエラーログに残し、配信元が 0 件のまま待ちを解く
+  - item: ほかの配信元のスキーマの参照
+    constraint: '`documents[].schema` がオブジェクト（`source`・`path`・`ref`）の行は、端末の設定の `sources` の `source` の行が指す配信元のリポジトリから、`ref` を commit に解いたリビジョンの `path` のファイルを Git のオブジェクトとして読む。スキーマの中の相対の `$ref` も同じリポジトリの同じ commit のファイルで解く。参照先が `not_served`（検証で外した・`enabled: false`）でも、端末の設定に行があり Git のリポジトリなら読む'
+    notes: 参照先の作業ツリー・`default_ref` の今の内容は読まない。`ref` は配信元を組み立てるとき（起動・`reload`・`default_ref` の commit が変わったとき）に commit へ解き直す
+  - item: 参照先が見つからない配信元
+    constraint: 参照先のスキーマを読めない行を持つ配信元は、`documents[{番号}].schema` の違反として配信から外し、エラーログに残す（違反の条件は配信元の検査と同じ）
 refs:
   - dev/設計書/シナリオ/単一ユースケース/起動する#scenarios[正常シナリオ]
 test_file: tests/integration/server/test_serve.py

@@ -213,6 +213,54 @@ flows:
       - '`sync.unresolved_related` が 1'
       - '`sync.items` に `src: src/a.py: src/z.py` があり、`src/b.py`・`other-doc` の関連を含まない'
     test: test_normal_when_related_unresolved
+  - name: 正常系（ほかの配信元のスキーマを参照する）
+    summary: '`documents[].schema` で指したほかの配信元のリビジョンのスキーマを読み、違反 0 件を返す'
+    setup:
+      - name: Mock
+        description: なし（一時フォルダに配信元を作り、dev-docs のアプリをテストのクライアントで呼ぶ）
+      - name: スキーマの配信元
+        description: '`schemas/note.schema.yaml` と、そこから `$ref` で指す `schemas/common.schema.yaml` を持つ Git のリポジトリ。端末の設定の `sources` に行がある'
+        notes: id `schemas`。タグ `v1` の後の commit で `note.schema.yaml` を YAML として読めない内容に書き換え、作業ツリーはその commit
+      - name: 配信元
+        description: '`documents[0].schema: {source: schemas, path: schemas/note.schema.yaml, ref: v1}` を持つ Git 管理外のフォルダ'
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        participant C as クライアント
+        participant T as check_project
+        participant G as schemas のリポジトリ
+
+        C->>T: path
+        T->>G: v1 を commit に解き、note.schema.yaml と common.schema.yaml を読む
+        T-->>C: 違反・設定のバージョン・同期の件数
+      ```
+    expected:
+      - '`violations` が空（作業ツリーの壊れた `note.schema.yaml` を読まない）'
+    test: test_normal_when_schema_from_other_source
+  - name: 正常系（参照先のスキーマが見つからない）
+    summary: '`documents[].schema` の参照先の配信元・リビジョン・パスが見つからないとき、`documents[{番号}].schema` の違反にする'
+    setup:
+      - name: Mock
+        description: なし（一時フォルダに配信元を作り、dev-docs のアプリをテストのクライアントで呼ぶ）
+      - name: スキーマの配信元
+        description: 正常系（ほかの配信元のスキーマを参照する）と同じ schemas
+      - name: 配信元
+        description: '`documents[0]` は `source: nothing`（端末の設定に無い）、`documents[1]` は `ref: v9`（無いタグ）、`documents[2]` は `path: schemas/none.schema.yaml`（v1 に無いファイル）で schemas を指す Git 管理外のフォルダ'
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        participant C as クライアント
+        participant T as check_project
+        participant G as schemas のリポジトリ
+
+        C->>T: path
+        T->>G: 行ごとに参照先を解く
+        T-->>C: violations（documents[0].schema・documents[1].schema・documents[2].schema）
+      ```
+    expected:
+      - '`violations` に `documents[0].schema`（配信元 `nothing` が端末の設定に無い）・`documents[1].schema`（schemas に `v9` が無い）・`documents[2].schema`（`v1` に `schemas/none.schema.yaml` が無い）が理由と一緒にある'
+      - 結果は配信中の配信元の状態に反映しない
+    test: test_normal_when_schema_ref_not_found
 lead: 配信元の `dev-docs.yaml` と管理用の YAML・スクリプトを検証し、違反・設定のバージョンの新旧・索引の同期の件数を返す。端末の設定に無い配信元も検査できる。
 identifier: check_project
 permissions: なし（`127.0.0.1` でだけ待ち受ける）
@@ -340,4 +388,9 @@ constraints:
   - item: 当たらない関連の照合
     constraint: 配信元の全ての文書の ID の集合を 1 回だけ作り、`source` を持たない `related[].to` をその集合と照合する。起動時の警告・状態の取得も同じ判定を使う
     notes: '`source` を持つ関連は、別の配信元が同じ端末で配信されているとは限らないため照合しない'
+  - item: ほかの配信元のスキーマの参照
+    constraint: '`documents[].schema` がオブジェクト（`source`・`path`・`ref`）の行は、端末の設定の `sources` の `source` の行が指す配信元のリポジトリから、`ref` を commit に解いたリビジョンの `path` のファイルを Git のオブジェクトとして読む。スキーマの中の相対の `$ref` も同じリポジトリの同じ commit のファイルで解く。参照先が `not_served`（検証で外した・`enabled: false`）でも、端末の設定に行があり Git のリポジトリなら読む'
+    notes: 参照先の作業ツリー・`default_ref` の今の内容は読まない。`ref` は配信元を組み立てるとき（起動・`reload`・`default_ref` の commit が変わったとき）に commit へ解き直す
+  - item: 参照先のスキーマの違反
+    constraint: 参照先の配信元が端末の設定に無い・Git のリポジトリでない、`ref` を commit に解けない、そのリビジョンに `path` のファイルが無い・YAML として読めない・オブジェクトでない、`$ref` の参照先がそのリビジョンに無いときは、`documents[{番号}].schema` の違反にする
 test_file: tests/integration/server/test_check_project.py
