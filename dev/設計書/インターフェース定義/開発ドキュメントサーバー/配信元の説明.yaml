@@ -425,8 +425,7 @@ constraints:
   - item: 作業範囲の外の記録
     constraint: '`outside_scope: true` で作業範囲の外の配信元を読んだ呼び出しは、作業場所（`cwd`）と配信元の ID を要求のログに残す'
   - item: ほかの配信元のスキーマの参照
-    constraint: '`documents[].schema` がオブジェクト（`source`・`path`・`ref`）の行は、端末の設定の `sources` の `source` の行が指す配信元のリポジトリから、`ref` を commit に解いたリビジョンの `path` のファイルを Git のオブジェクトとして読む。スキーマの中の相対の `$ref` も同じリポジトリの同じ commit のファイルで解く。参照先が `not_served`（検証で外した・`enabled: false`）でも、端末の設定に行があり Git のリポジトリなら読む'
-    notes: 参照先の作業ツリー・`default_ref` の今の内容は読まない。`ref` は配信元を組み立てるとき（起動・`reload`・`default_ref` の commit が変わったとき）に commit へ解き直す
+    constraint: '`documents[].schema` でほかの配信元を指す行は、配信元の検査の制約「ほかの配信元のスキーマの参照」のとおりに読む'
 refs:
   - dev/設計書/シナリオ/単一ユースケース/エージェントが調べる#scenarios[正常シナリオ]
 test_file: tests/integration/server/test_describe.py

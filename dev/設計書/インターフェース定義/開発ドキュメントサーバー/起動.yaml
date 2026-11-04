@@ -510,8 +510,7 @@ constraints:
     decided_by: dev/設計書/非機能要件/非機能要件#requirements[起動から接続を受け付けるまでの時間]
     notes: 画面の静的なファイル、MCP の初期化・ツールの一覧、管理の MCP の `status`、`POST /_admin/session-context` は読み込みを待たずに答える（`status` と `session-context` は読み込み中であることを返す）。読み込みが例外で止まったときはエラーログに残し、配信元が 0 件のまま待ちを解く
   - item: ほかの配信元のスキーマの参照
-    constraint: '`documents[].schema` がオブジェクト（`source`・`path`・`ref`）の行は、端末の設定の `sources` の `source` の行が指す配信元のリポジトリから、`ref` を commit に解いたリビジョンの `path` のファイルを Git のオブジェクトとして読む。スキーマの中の相対の `$ref` も同じリポジトリの同じ commit のファイルで解く。参照先が `not_served`（検証で外した・`enabled: false`）でも、端末の設定に行があり Git のリポジトリなら読む'
-    notes: 参照先の作業ツリー・`default_ref` の今の内容は読まない。`ref` は配信元を組み立てるとき（起動・`reload`・`default_ref` の commit が変わったとき）に commit へ解き直す
+    constraint: '`documents[].schema` でほかの配信元を指す行は、配信元の検査の制約「ほかの配信元のスキーマの参照」のとおりに読む'
   - item: 参照先が見つからない配信元
     constraint: 参照先のスキーマを読めない行を持つ配信元は、`documents[{番号}].schema` の違反として配信から外し、エラーログに残す（違反の条件は配信元の検査と同じ）
 refs:

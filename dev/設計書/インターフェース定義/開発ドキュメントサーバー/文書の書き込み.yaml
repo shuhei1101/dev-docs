@@ -161,7 +161,8 @@ flows:
       - name: Mock
         description: なし
       - name: 入力
-        description: 正常系（一部だけ書く）と同じ 2 件で、`atomic` は既定（`true`）
+        description: 正常系（一部だけ書く）と同じ 2 件で、`atomic` は既定（`true`）。1 番目の操作は、加えて項目 `count` に文字列を `set` する
+        notes: '`unset` する項目のスキーマは `title`・`description`・`examples` を持ち、`x-rules` を持たない。`count` のスキーマは `type: integer` だけを持つ'
     flow: |-
       ```mermaid
       sequenceDiagram
@@ -173,8 +174,9 @@ flows:
         T-->>C: isError（添字 1・違反したパス・決まり・直し方・違反した項目のスキーマの説明）
       ```
     expected:
-      - '`isError: true` で、添字 1 の違反のパス・決まり・直し方を返す'
-      - '違反の `schema` に、`unset` した項目のスキーマの `title`・`description`・`examples` だけが入る'
+      - '`isError: true` で、添字 1 の 2 件の違反のパス・決まり・直し方を返す'
+      - '`unset` した項目の違反の `schema` に `title`・`description`・`examples` が入り、`x-rules` とスキーマのほかの項目は入らない'
+      - '`count` の違反は `schema` のキーを持たない'
       - 0 番目の文書も書き換わらない
     test: test_error_when_validation_failed
   - name: 異常系（書き込めない配信元・SourceNotWritableError）
@@ -620,7 +622,7 @@ response:
     description: git と同じ `+`・`-` の差分の行
     notes: '`updated`・`replaced` と `dry_run` のとき'
   - name: results[].errors
-    type: 'list[{path: str, rule: str, fix: str, schema: SchemaHint | None}]'
+    type: 'list[{path: str, rule: str, fix: str, schema?: {title?: str, description?: str, x-rules?: list, examples?: list, x-bad-examples?: list}}]'
     description: 違反ごとの項目のパス・決まり・直し方と、違反した項目のスキーマの説明
     notes: '`failed` のときだけ。`schema` の中身は制約の「違反へ添えるスキーマの説明」'
 response_example: |-
@@ -681,7 +683,7 @@ constraints:
     constraint: '行の `metadata` が `tags: tags[].name` のとき、`add_to: {tags: [x]}` は `{name: x}` の要素を末尾に追加し、`remove_from: {tags: [x]}` は `name` が `x` の要素を削除する。`set: {tags: [...]}` は渡した名前の並びで配列を置き換え、元からあった名前の要素は `main` を含む他のキーを保つ。`main_tags`（`tags[main].name`）は要素の `main` を書き換える。`set: {main_tags: [...]}` は渡した名前の要素の `main` を `true`、それ以外の要素の `main` を削除する。`add_to: {main_tags: [...]}` は渡した名前の要素に `main: true` を付け、`remove_from: {main_tags: [...]}` は渡した名前の要素の `main` を削除する。`unset: [main_tags]` は全ての要素の `main` を削除する'
     notes: '`main_tags` の `set`・`add_to` に `tags` に無い名前を渡したときは `InvalidArgumentError` を返す。`remove_from` に無い名前を渡したときは何もしない。`tags`・`main_tags` の `data`・`set`・`add_to`・`remove_from` に名前（文字列）の配列でない値（オブジェクトの配列。`data`・`set` は文字列 1 つも）を渡したときは、配列へ書き戻さず `InvalidArgumentError` を返す'
   - item: 違反へ添えるスキーマの説明
-    constraint: 'スキーマの違反（`validators[]` の違反・引数の誤りは除く）ごとに、違反した項目に当たるスキーマの定義から `title`・`description`・`x-rules`・`examples`・`x-bad-examples` のうちスキーマが持つキーだけを `schema` に入れる。`required` の違反は無かったキーの `properties` の定義、それ以外は違反した値に当てた定義（`$ref` を解いた後）から取る。どのキーも持たない項目は `schema` を付けない'
+    constraint: 'スキーマの違反（`validators[]` の違反・引数の誤りは除く）ごとに、違反した項目に当たるスキーマの定義から `title`・`description`・`x-rules`・`examples`・`x-bad-examples` のうちスキーマが持つキーだけを `schema` に入れる。`required` の違反は無かったキーの `properties` の定義、それ以外は違反した値に当てた定義（`$ref` を解いた後）から取る。どのキーも持たない項目は `schema` のキーを出さない'
     notes: 'スキーマの全文は返さない。同じ応答で同じ定義を指す違反が続くときも、違反ごとに添える'
   - item: 当てるスキーマ
     constraint: '`documents[].schema` でほかの配信元を指す種類は、参照したリビジョンのスキーマで検査する（読み方は配信元の検査の制約「ほかの配信元のスキーマの参照」）'
