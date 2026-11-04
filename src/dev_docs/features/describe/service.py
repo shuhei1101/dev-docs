@@ -10,7 +10,6 @@ from dev_docs.features.access.service import (
     outside_readable_sources,
     resolve_read_targets,
 )
-from dev_docs.features.describe.warnings import collect_warnings
 from dev_docs.features.describe.types import (
     DescribeRequest,
     KindSchemaResult,
@@ -19,6 +18,7 @@ from dev_docs.features.describe.types import (
     SourceGuideResult,
     SourceListResult,
 )
+from dev_docs.features.describe.warnings import collect_warnings
 from dev_docs.features.documents.store import DocumentStore
 from dev_docs.features.history.query import list_refs, list_worktrees
 from dev_docs.features.settings.types import TerminalConfig
@@ -61,9 +61,7 @@ def describe(
             workplace=describe_workplace(request.cwd, registry=registry),
             sources=available,
             outside_sources=outside_sources,
-            warnings=collect_warnings(
-                available, registry=registry, store=store, terminal=terminal
-            ),
+            warnings=collect_warnings(available, registry=registry, store=store, terminal=terminal),
         )
     target = resolve_read_targets(
         registry=registry,

@@ -34,9 +34,7 @@ def render_describe_markdown(
             lines.extend(["| source | 権限 | description |", "| --- | --- | --- |"])
             for item in result.sources:
                 access = f"{item.access}（作業中）" if item.current else item.access
-                lines.append(
-                    f"| {_cell(item.source_id)} | {access} | {_cell(item.description)} |"
-                )
+                lines.append(f"| {_cell(item.source_id)} | {access} | {_cell(item.description)} |")
         else:
             lines.append(NO_SOURCE_LINE)
         # 作業範囲の外の一覧を求められたときだけ、表か「なし」を続ける
