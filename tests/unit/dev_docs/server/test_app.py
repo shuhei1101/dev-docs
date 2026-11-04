@@ -85,7 +85,11 @@ def test_build_app(
     assert "/_api/settings/sources" in response.json()["paths"]
     assert "/mcp" in mounted
     assert "/_admin/mcp" in mounted
-    assert client.post("/_admin/session-context", json={"cwd": "/"}).status_code == 200
+    session_start = client.post(
+        "/_admin/session-start", json={"session_id": "s1", "reason": "startup"}
+    )
+    assert session_start.status_code == 200
+    assert "/_admin/session-context" not in mounted
 
 
 def test_build_app_when_openapi(

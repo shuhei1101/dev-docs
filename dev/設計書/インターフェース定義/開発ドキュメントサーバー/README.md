@@ -29,7 +29,7 @@
 | 設定・起動 | [端末の設定の保存](./端末の設定の保存.yaml) | PUT /_api/settings/sources |
 | 設定・起動 | [起動](./起動.yaml) | dev-docs serve |
 | 設定・起動 | [設定の移し替え](./設定の移し替え.yaml) | dev-docs migrate |
-| 設定・起動 | [セッションの文脈](./セッションの文脈.yaml) | POST /_admin/session-context |
+| 設定・起動 | [セッションの開始](./セッションの開始.yaml) | POST /_admin/session-start |
 | 設定・起動 | [載せるファイルの一覧](./載せるファイルの一覧.yaml) | dev-docs files |
 | 画面の API | [画面の配信](./画面の配信.yaml) | GET /{path} |
 | MCP | [用語の一覧](./用語の一覧.yaml) | list_match_words |

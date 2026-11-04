@@ -10,7 +10,7 @@ diagrams:
         アプリの組み立て ..> 管理の MCP の組み立て
         アプリの組み立て ..> 端末の設定の入口
         アプリの組み立て ..> 画面の入口
-        アプリの組み立て ..> セッションの文脈のルーター
+        アプリの組み立て ..> セッションの開始のルーター
         アプリの組み立て ..> 例外の変換の登録
         アプリの組み立て ..> 画面の配信
         アプリの組み立て ..> 操作の識別子
@@ -37,7 +37,7 @@ diagrams:
         class 画面の入口 {
           <<function>>
         }
-        class セッションの文脈のルーター {
+        class セッションの開始のルーター {
           <<function>>
         }
         class 例外の変換の登録 {
@@ -57,7 +57,7 @@ diagrams:
         click 管理の MCP の組み立て href "./mcp/admin.py.yaml#管理の MCP の組み立て"
         click 端末の設定の入口 href "../features/settings/route.py.yaml#端末の設定の入口"
         click 画面の入口 href "../features/view/route.py.yaml#画面の入口"
-        click セッションの文脈のルーター href "../features/session_context/route.py.yaml#セッションの文脈のルーター"
+        click セッションの開始のルーター href "../features/session_start/route.py.yaml#セッションの開始のルーター"
         click 例外の変換の登録 href "./error_handlers.py.yaml#例外の変換の登録"
         click 画面の配信 href "./screen.py.yaml#画面の配信"
         click アプリの寿命 href "./lifespan.py.yaml#アプリの寿命"
@@ -143,7 +143,7 @@ functions:
     container: server/app.py
     usecase: 起動
     role: 合成の起点
-    summary: 画面の API・文書の MCP・管理の MCP・セッションの文脈を 1 つの FastAPI のアプリにまとめる
+    summary: 画面の API・文書の MCP・管理の MCP・セッションの開始を 1 つの FastAPI のアプリにまとめる
     scope: public
     args:
       - name: handlers
@@ -168,7 +168,7 @@ functions:
       3. 例外の変換を登録する（例外の変換の登録）
       4. `DOCS_MCP_PATH` に文書の MCP、`ADMIN_MCP_PATH` に管理の MCP の `streamable_http_app(streamable_http_path="/", stateless_http=True, json_response=True)` をマウントする
       5. `app.add_middleware(SlashlessMcpPathMiddleware, paths=(DOCS_MCP_PATH, ADMIN_MCP_PATH))` で、スラッシュ無しの MCP のパスをルーティングの前に補う（MCP のパスの補い）
-      6. 端末の設定の入口・画面の入口・セッションの文脈（セッションの文脈のルーター）のルーターを登録する
+      6. 端末の設定の入口・画面の入口・セッションの開始（セッションの開始のルーター）のルーターを登録する
       7. 画面の配信のルーター（画面の配信、`screen_dir` を渡す）を最後に登録する（全てのパスに当たるため）
       8. アプリを返す
     unit_tests:
@@ -177,7 +177,7 @@ functions:
         summary: 入口を全て持つ
         condition: 配線済みの関数を渡して `TestClient` で GET `/_api/openapi.json`
         mock: 配線済みの関数（配信元が空の偽物）
-        expected: 200 で `paths` に `/_api/sources/{source}/docs`・`/_api/settings/sources` があり、アプリのルートに `/mcp`・`/_admin/mcp` のマウントと `POST /_admin/session-context` がある
+        expected: 200 で `paths` に `/_api/sources/{source}/docs`・`/_api/settings/sources` があり、アプリのルートに `/mcp`・`/_admin/mcp` のマウントと `POST /_admin/session-start` があり、`POST /_admin/session-context` が無い
       - name: test_build_app_when_openapi
         case: 正常
         summary: OpenAPI の画面を出さない

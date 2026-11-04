@@ -25,10 +25,6 @@ SYNC_ZERO = {
     "missing_body_files": 0,
     "unresolved_related": 0,
 }
-# 使い分けは文書の MCP の instructions にある旨の行
-POINTER_LINE = (
-    "探す・読む・書くときの使い分けと書き方は、文書の MCP（dev-docs）の instructions にあります。"
-)
 SESSION_PROMPT = "このセッションでは何も実行せず、「了解」とだけ答えてください。"
 LOCATION_PATTERN = r"場所|パス|settings\.yaml"
 WRITE_PATTERN = r"scope\.write|書き込める"
@@ -106,17 +102,13 @@ def test_normal(
         cwd=notes.folder,
         answers=[(WRITE_PATTERN, NOT_ANSWERED), (READ_PATTERN, f"{sample.folder}/**")],
     )
-    # S2: 新しいセッションの文脈に、使える配信元と、使い分けは instructions にある旨の 1 行が入る
+    # S2: 新しいセッションの文脈に、dev-docs の配信元の一覧・使い方・警告が入らない
     session = claude_home.run(SESSION_PROMPT, cwd=worktree)
     exit_code, context = session.session_start_context()
     assert not added_sample.result["is_error"]
     assert not added_notes.result["is_error"]
     assert exit_code == 0
-    assert "- sample（読み書き）" in context
-    assert "- notes（読み取りだけ）" in context
-    assert POINTER_LINE in context
-    assert "describe(source)" not in context
-    assert "つなぎ直" not in context
+    assert context == ""
     # 端末の設定に並べた配信元は、管理の MCP の状態・検査・変換で確かめられる
     status = admin("status", format="json").data
     checked = admin("check_project", path=str(sample.folder), format="json")

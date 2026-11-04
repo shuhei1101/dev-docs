@@ -89,6 +89,7 @@ functions:
          - 引数で要求のモデル（`SearchRequest` など）を作る
          - `await handlers.registry.wait_loaded()` で配信元の読み込みを待つ（初期化とツールの一覧は待たない）
          - サービスを `asyncio.to_thread` で呼ぶ（引数は `handlers` の属性）
+         - `write_docs`・`delete_docs` の結果の `applied` が `True` の場合、`cwd` から書ける配信元を裏で検査し直す（配信元の検査の控え.裏での検査の流し直し）
          - 結果をツールの結果にする（`write_docs`・`delete_docs` の `render` は `None`。`search_docs` は `functools.partial(render_search_markdown, source_label=result.source_label)`、`list_changes` は `functools.partial(render_changes_markdown, source_label=request.source or "作業中の配信元")`、`list_match_words` は用語の一覧の文を渡す）
          - `DevDocsError` と `pydantic.ValidationError` はツールのエラーの変換の `CallToolResult(is_error=True)` をそのまま返す。それ以外の例外は `[error]` ツールの処理に失敗した（ツール名・例外）を書いて MCP の既定に任せる
       4. 作った MCP を返す
