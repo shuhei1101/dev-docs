@@ -59,9 +59,7 @@ def test_build_session_start_router_when_invalid(
     # 準備
     client, _ = _client(make_source_dir, make_terminal_config, make_entry)
     # 実行
-    response = client.post(
-        "/_admin/session-start", json={"session_id": "s1", "reason": "unknown"}
-    )
+    response = client.post("/_admin/session-start", json={"session_id": "s1", "reason": "unknown"})
     # 検証
     body = response.json()
     assert response.status_code == 422

@@ -15,9 +15,7 @@ def _seen(tmp_path: Path) -> SeenStore:
     return SeenStore(tmp_path / "seen.sqlite3", retention_days=7)
 
 
-def test_start_session_when_cleared(
-    tmp_path: Path, make_document: Callable[..., Document]
-) -> None:
+def test_start_session_when_cleared(tmp_path: Path, make_document: Callable[..., Document]) -> None:
     """/clear の後は返し済みの記録を削除する（正常系）。"""
     # 準備
     seen = _seen(tmp_path)
@@ -50,9 +48,7 @@ def test_start_session_when_compacted(
     assert list(seen.last_read(main_key, "sample")) == ["doc-1"]
 
 
-def test_start_session_when_resumed(
-    tmp_path: Path, make_document: Callable[..., Document]
-) -> None:
+def test_start_session_when_resumed(tmp_path: Path, make_document: Callable[..., Document]) -> None:
     """再開では記録を削除しない（正常系）。"""
     # 準備
     seen = _seen(tmp_path)

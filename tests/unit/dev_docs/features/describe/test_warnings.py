@@ -90,7 +90,6 @@ def test_collect_warnings(
     assert result[3].startswith("b: 配信していません")
 
 
-
 def test_collect_warnings_when_unavailable_source(
     make_source_dir: Callable[..., Path],
     make_terminal_config: Callable[..., TerminalConfig],
@@ -109,7 +108,6 @@ def test_collect_warnings_when_unavailable_source(
     )
     # 検証
     assert result == []
-
 
 
 def test_collect_warnings_when_alias_and_nav(
