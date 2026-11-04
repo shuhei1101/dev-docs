@@ -1,0 +1,39 @@
+# SessionStart のフックをサーバーの起動だけにし、配信元の一覧と警告を describe() で返す
+
+## 概要
+
+SessionStart のフックをサーバーの起動と起動できなかったときの通知だけにし、エージェントが使い方を MCP の instructions、使える配信元と警告を引数なしの `describe()` で取得するようにする。
+
+## 背景
+
+[#92](https://github.com/shuhei1101/dev-docs/issues/92) の要望。
+SessionStart のフック（`plugins/dev-docs/hooks/session_start.py`）は、待ち受けているサーバーの `POST /_admin/session-context` から使える配信元の一覧と使い方の文を取得して `additionalContext` に注入しており、使い方が MCP の instructions と二重に入る。
+SessionStart の注入はサブエージェントに届かず、compact のたびに再実行される。
+関連: shuhei1101/knowledge#154（SessionStart と instructions の使い分けの規約の改定）・shuhei1101/mdmark#293。
+
+## 計画書
+
+| ファイル | 中身 |
+| --- | --- |
+| [要件](./要件.md) | 要望の整理と影響範囲 |
+
+## タスク一覧
+
+- [x] ~~初期構築~~（既存リポジトリのため対象外）
+- [x] ~~リバースエンジニアリング~~（現状設計書が揃っている）
+- [x] ~~方針決め~~（方針決めを依頼する Issue ではない）
+- [x] ~~PoC 検証~~（未検証の技術機構に依存しない）
+- [ ] 複合ユースケース設計
+- [x] ~~デザインスタイル選定~~（画面を変えない）
+- [x] ~~画面一覧・画面遷移~~（画面を変えない）
+- [ ] 単一ユースケース設計
+- [x] ~~モック作成~~（画面を変えない）
+- [ ] インターフェース定義設計
+- [x] ~~部品設計~~（画面の部品を変えない）
+- [x] ~~画面設計~~（画面を変えない）
+- [ ] モジュール構成設計
+- [ ] ドキュメント修正（docs/はじめに/コアコンセプト/管理用プラグイン.md・docs/リファレンス/文書のMCP.md・docs/リファレンス/CLI.md・templates/prompt.schema.yaml）
+- [ ] 単体テスト作成
+- [ ] 実装
+- [ ] 結合テスト作成
+- [ ] E2E テスト作成
