@@ -15,11 +15,7 @@ from dev_docs.features.sources.schema_ref import (
 )
 
 NOTE_SCHEMA_V1 = (
-    "title: note\n"
-    "type: object\n"
-    "properties:\n"
-    "  body:\n"
-    "    $ref: common.schema.yaml#/$defs/text\n"
+    "title: note\ntype: object\nproperties:\n  body:\n    $ref: common.schema.yaml#/$defs/text\n"
 )
 NOTE_SCHEMA_V2 = (
     "title: note\n"
@@ -76,7 +72,10 @@ def test_terminal_lookup(
     # 準備
     write_files(
         tmp_path,
-        {"a/dev-docs.yaml": "name: a\ndocuments: []\n", "b/dev-docs.yaml": "name: b\ndocuments: []\n"},
+        {
+            "a/dev-docs.yaml": "name: a\ndocuments: []\n",
+            "b/dev-docs.yaml": "name: b\ndocuments: []\n",
+        },
     )
     terminal = make_terminal_config(
         sources=[

@@ -431,9 +431,9 @@ def make_loading_server(
     def _make(*specs: SourceSpec) -> LoadingServerEnv:
         release = threading.Event()
 
-        def blocked(entry: Any, *, index: int) -> Any:
+        def blocked(entry: Any, *, index: int, lookup: Any = None) -> Any:
             release.wait(timeout=LOADING_WAIT_SEC)
-            return original(entry, index=index)
+            return original(entry, index=index, lookup=lookup)
 
         monkeypatch.setattr(registry_module, "load_source", blocked)
         state_dir = tmp_path / "state"
