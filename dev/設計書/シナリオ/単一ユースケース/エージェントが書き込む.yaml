@@ -153,10 +153,11 @@ scenarios:
 
         A->>M: write_docs(operations: 2 件)
         M->>M: 全ての操作を当ててから検査し、1 番目が通らない
-        M-->>A: エラー（添字 1・違反したパス・決まり・直し方）
+        M-->>A: エラー（添字 1・違反したパス・決まり・直し方・違反した項目のスキーマの説明）
       ```
     expected:
       - '`isError: true` で、添字 1 の違反のパス・決まり・直し方を返す'
+      - 違反に、`unset` した項目のスキーマの `title`・`description`・`examples` が添えられ、スキーマのほかの項目は返さない
       - 0 番目の文書も書き換わらない
       - '`atomic: false` では 0 番目だけを書き、1 番目を添字つきの失敗として返す'
     test: test_error_when_validation_failed

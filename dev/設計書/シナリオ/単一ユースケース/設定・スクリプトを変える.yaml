@@ -206,6 +206,38 @@ scenarios:
       - ワークツリー x のパスを渡した `try_convert` の本文の先頭に `worktree-x` の文字が付き、`develop` の文字は付かない
       - 画面の文書の取得（ワークツリーを指さない）は `develop` の文字が付いた本文を返す
     test: test_normal_when_scripts_run_from_worktree
+  - name: 正常シナリオ（参照するスキーマのリビジョンを上げる）
+    setup:
+      - name: Mock
+        description: なし（実環境で実行）
+      - name: スキーマの配信元
+        description: 配信元を追加する『正常シナリオ（ほかの配信元のスキーマを参照する）』と同じ schemas
+        notes: タグ `v2` で `note.schema.yaml` に必須のキー `owner` を追加している
+      - name: サンプルの配信元
+        description: '`documents[0].schema` で schemas の `schemas/note.schema.yaml` をリビジョン `v1` で指して配信中の sample'
+        notes: '`dev-docs.yaml` の `documents[0].schema` のリビジョンを `v2` に書き換えておく'
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        actor A as 利用者・エージェント
+        participant AD as 管理の MCP
+        participant DM as 文書の MCP
+
+        A->>DM: describe(source: sample, kind: note)
+        DM-->>A: v1 のスキーマ
+        A->>AD: check_project（sample のパス）
+        AD-->>A: 違反 0 件
+        A->>AD: reload
+        A->>DM: describe(source: sample, kind: note)
+        DM-->>A: v2 のスキーマ
+        A->>DM: write_docs（owner を持たない文書を作る）
+        DM-->>A: エラー（owner が無い違反）
+      ```
+    expected:
+      - '`reload` の前の `describe` は `owner` の無い v1 のスキーマを返す'
+      - '`reload` の後の `describe` は `owner` を必須にした v2 のスキーマを返す'
+      - '`reload` の後、`owner` を持たない文書の `write_docs` が `owner` の違反で書かれない'
+    test: test_normal_when_schema_ref_raised
 lead: 利用者かエージェントが配信元の設定・スキーマ・検査と変換のスクリプトを変え、管理の MCP の `check_project`・`try_convert` で確かめてから `reload` で配信に入れる。
 issue: 4
 primary_actor: 利用者・エージェント（Claude Code）
