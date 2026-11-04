@@ -131,12 +131,15 @@ def _settings_lookup() -> SchemaRefLookup:
 
 def _ref_reader(lookup: SchemaRefLookup | None) -> ReadRef:
     """参照先のスキーマを 1 回の組み立ての中で 1 回だけ読む関数を返す。"""
-    resolved_lookup = lookup or _settings_lookup()
+    resolved: list[SchemaRefLookup] = [lookup] if lookup is not None else []
     cache: dict[SchemaRef, RefSchema] = {}
 
     def _read(ref: SchemaRef) -> RefSchema:
+        # 端末の設定は、参照の行を初めて読むときだけ読む
+        if not resolved:
+            resolved.append(_settings_lookup())
         if ref not in cache:
-            cache[ref] = read_schema_ref(ref, lookup=resolved_lookup)
+            cache[ref] = read_schema_ref(ref, lookup=resolved[0])
         return cache[ref]
 
     return _read
