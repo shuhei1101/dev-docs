@@ -1,0 +1,738 @@
+$ uv run pytest tests/unit/ --continue-on-collection-errors
+........................................................................ [  9%]
+........................................................................ [ 18%]
+.............FF....EFEEEEEEEE........................................... [ 27%]
+........................................................................ [ 37%]
+........................................................................ [ 46%]
+........................................................................ [ 55%]
+........................................................................ [ 64%]
+........................................................................ [ 74%]
+........................................................................ [ 83%]
+..................F..................................................... [ 92%]
+.....................F.....................FF..F.F......FF               [100%]
+==================================== ERRORS ====================================
+___ ERROR collecting tests/unit/dev_docs/features/describe/test_warnings.py ____
+ImportError while importing test module '/mnt/c/Users/shuhe/repo/dev-docs/.claude/worktrees/chore-session-start-stop-context-injection/tests/unit/dev_docs/features/describe/test_warnings.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+tests/unit/dev_docs/features/describe/test_warnings.py:7: in <module>
+    from dev_docs.features.describe.warnings import collect_warnings
+E   ModuleNotFoundError: No module named 'dev_docs.features.describe.warnings'
+__ ERROR collecting tests/unit/dev_docs/features/session_start/test_route.py ___
+ImportError while importing test module '/mnt/c/Users/shuhe/repo/dev-docs/.claude/worktrees/chore-session-start-stop-context-injection/tests/unit/dev_docs/features/session_start/test_route.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+tests/unit/dev_docs/features/session_start/test_route.py:9: in <module>
+    from dev_docs.features.session_start.route import build_session_start_router
+E   ModuleNotFoundError: No module named 'dev_docs.features.session_start'
+_ ERROR collecting tests/unit/dev_docs/features/session_start/test_service.py __
+ImportError while importing test module '/mnt/c/Users/shuhe/repo/dev-docs/.claude/worktrees/chore-session-start-stop-context-injection/tests/unit/dev_docs/features/session_start/test_service.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+tests/unit/dev_docs/features/session_start/test_service.py:9: in <module>
+    from dev_docs.features.session_start.service import start_session
+E   ModuleNotFoundError: No module named 'dev_docs.features.session_start'
+_______________________ ERROR at setup of test_describe ________________________
+
+obj = <module 'dev_docs.features.describe.service' from '/mnt/c/Users/shuhe/repo/dev-docs/.claude/worktrees/chore-session-start-stop-context-injection/src/dev_docs/features/describe/service.py'>
+name = 'collect_warnings', ann = 'dev_docs.features.describe.service'
+
+    def annotated_getattr(obj: object, name: str, ann: str) -> object:
+        try:
+>           obj = getattr(obj, name)
+                  ^^^^^^^^^^^^^^^^^^
+E           AttributeError: module 'dev_docs.features.describe.service' has no attribute 'collect_warnings'
+
+.venv/lib/python3.14/site-packages/_pytest/monkeypatch.py:95: AttributeError
+
+The above exception was the direct cause of the following exception:
+
+request = <SubRequest 'no_warnings' for <Function test_describe>>
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x77d18a1d2e00>
+
+    @pytest.fixture(autouse=True)
+    def no_warnings(request: pytest.FixtureRequest, monkeypatch: pytest.MonkeyPatch) -> None:
+        """偽の配信元で警告を求めないよう、本物の配信元を使うテスト以外では警告の収集を空にする。"""
+        if request.node.name != "test_describe_when_warned":
+>           monkeypatch.setattr(
+                "dev_docs.features.describe.service.collect_warnings", lambda *args, **kwargs: []
+            )
+
+tests/unit/dev_docs/features/describe/test_service.py:40: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+.venv/lib/python3.14/site-packages/_pytest/monkeypatch.py:109: in derive_importpath
+    annotated_getattr(target, attr, ann=module)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+obj = <module 'dev_docs.features.describe.service' from '/mnt/c/Users/shuhe/repo/dev-docs/.claude/worktrees/chore-session-start-stop-context-injection/src/dev_docs/features/describe/service.py'>
+name = 'collect_warnings', ann = 'dev_docs.features.describe.service'
+
+    def annotated_getattr(obj: object, name: str, ann: str) -> object:
+        try:
+            obj = getattr(obj, name)
+        except AttributeError as e:
+>           raise AttributeError(
+                f"{type(obj).__name__!r} object at {ann} has no attribute {name!r}"
+            ) from e
+E           AttributeError: 'module' object at dev_docs.features.describe.service has no attribute 'collect_warnings'
+
+.venv/lib/python3.14/site-packages/_pytest/monkeypatch.py:97: AttributeError
+______________ ERROR at setup of test_describe_when_outside_list _______________
+
+obj = <module 'dev_docs.features.describe.service' from '/mnt/c/Users/shuhe/repo/dev-docs/.claude/worktrees/chore-session-start-stop-context-injection/src/dev_docs/features/describe/service.py'>
+name = 'collect_warnings', ann = 'dev_docs.features.describe.service'
+
+    def annotated_getattr(obj: object, name: str, ann: str) -> object:
+        try:
+>           obj = getattr(obj, name)
+                  ^^^^^^^^^^^^^^^^^^
+E           AttributeError: module 'dev_docs.features.describe.service' has no attribute 'collect_warnings'
+
+.venv/lib/python3.14/site-packages/_pytest/monkeypatch.py:95: AttributeError
+
+The above exception was the direct cause of the following exception:
+
+request = <SubRequest 'no_warnings' for <Function test_describe_when_outside_list>>
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x77d18a1fae50>
+
+    @pytest.fixture(autouse=True)
+    def no_warnings(request: pytest.FixtureRequest, monkeypatch: pytest.MonkeyPatch) -> None:
+        """偽の配信元で警告を求めないよう、本物の配信元を使うテスト以外では警告の収集を空にする。"""
+        if request.node.name != "test_describe_when_warned":
+>           monkeypatch.setattr(
+                "dev_docs.features.describe.service.collect_warnings", lambda *args, **kwargs: []
+            )
+
+tests/unit/dev_docs/features/describe/test_service.py:40: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+.venv/lib/python3.14/site-packages/_pytest/monkeypatch.py:109: in derive_importpath
+    annotated_getattr(target, attr, ann=module)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+obj = <module 'dev_docs.features.describe.service' from '/mnt/c/Users/shuhe/repo/dev-docs/.claude/worktrees/chore-session-start-stop-context-injection/src/dev_docs/features/describe/service.py'>
+name = 'collect_warnings', ann = 'dev_docs.features.describe.service'
+
+    def annotated_getattr(obj: object, name: str, ann: str) -> object:
+        try:
+            obj = getattr(obj, name)
+        except AttributeError as e:
+>           raise AttributeError(
+                f"{type(obj).__name__!r} object at {ann} has no attribute {name!r}"
+            ) from e
+E           AttributeError: 'module' object at dev_docs.features.describe.service has no attribute 'collect_warnings'
+
+.venv/lib/python3.14/site-packages/_pytest/monkeypatch.py:97: AttributeError
+___________ ERROR at setup of test_describe_when_outside_list_empty ____________
+
+obj = <module 'dev_docs.features.describe.service' from '/mnt/c/Users/shuhe/repo/dev-docs/.claude/worktrees/chore-session-start-stop-context-injection/src/dev_docs/features/describe/service.py'>
+name = 'collect_warnings', ann = 'dev_docs.features.describe.service'
+
+    def annotated_getattr(obj: object, name: str, ann: str) -> object:
+        try:
+>           obj = getattr(obj, name)
+                  ^^^^^^^^^^^^^^^^^^
+E           AttributeError: module 'dev_docs.features.describe.service' has no attribute 'collect_warnings'
+
+.venv/lib/python3.14/site-packages/_pytest/monkeypatch.py:95: AttributeError
+
+The above exception was the direct cause of the following exception:
+
+request = <SubRequest 'no_warnings' for <Function test_describe_when_outside_list_empty>>
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x77d18a1aa650>
+
+    @pytest.fixture(autouse=True)
+    def no_warnings(request: pytest.FixtureRequest, monkeypatch: pytest.MonkeyPatch) -> None:
+        """偽の配信元で警告を求めないよう、本物の配信元を使うテスト以外では警告の収集を空にする。"""
+        if request.node.name != "test_describe_when_warned":
+>           monkeypatch.setattr(
+                "dev_docs.features.describe.service.collect_warnings", lambda *args, **kwargs: []
+            )
+
+tests/unit/dev_docs/features/describe/test_service.py:40: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+.venv/lib/python3.14/site-packages/_pytest/monkeypatch.py:109: in derive_importpath
+    annotated_getattr(target, attr, ann=module)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+obj = <module 'dev_docs.features.describe.service' from '/mnt/c/Users/shuhe/repo/dev-docs/.claude/worktrees/chore-session-start-stop-context-injection/src/dev_docs/features/describe/service.py'>
+name = 'collect_warnings', ann = 'dev_docs.features.describe.service'
+
+    def annotated_getattr(obj: object, name: str, ann: str) -> object:
+        try:
+            obj = getattr(obj, name)
+        except AttributeError as e:
+>           raise AttributeError(
+                f"{type(obj).__name__!r} object at {ann} has no attribute {name!r}"
+            ) from e
+E           AttributeError: 'module' object at dev_docs.features.describe.service has no attribute 'collect_warnings'
+
+.venv/lib/python3.14/site-packages/_pytest/monkeypatch.py:97: AttributeError
+_________________ ERROR at setup of test_describe_when_source __________________
+
+obj = <module 'dev_docs.features.describe.service' from '/mnt/c/Users/shuhe/repo/dev-docs/.claude/worktrees/chore-session-start-stop-context-injection/src/dev_docs/features/describe/service.py'>
+name = 'collect_warnings', ann = 'dev_docs.features.describe.service'
+
+    def annotated_getattr(obj: object, name: str, ann: str) -> object:
+        try:
+>           obj = getattr(obj, name)
+                  ^^^^^^^^^^^^^^^^^^
+E           AttributeError: module 'dev_docs.features.describe.service' has no attribute 'collect_warnings'
+
+.venv/lib/python3.14/site-packages/_pytest/monkeypatch.py:95: AttributeError
+
+The above exception was the direct cause of the following exception:
+
+request = <SubRequest 'no_warnings' for <Function test_describe_when_source>>
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x77d18a0068a0>
+
+    @pytest.fixture(autouse=True)
+    def no_warnings(request: pytest.FixtureRequest, monkeypatch: pytest.MonkeyPatch) -> None:
+        """偽の配信元で警告を求めないよう、本物の配信元を使うテスト以外では警告の収集を空にする。"""
+        if request.node.name != "test_describe_when_warned":
+>           monkeypatch.setattr(
+                "dev_docs.features.describe.service.collect_warnings", lambda *args, **kwargs: []
+            )
+
+tests/unit/dev_docs/features/describe/test_service.py:40: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+.venv/lib/python3.14/site-packages/_pytest/monkeypatch.py:109: in derive_importpath
+    annotated_getattr(target, attr, ann=module)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+obj = <module 'dev_docs.features.describe.service' from '/mnt/c/Users/shuhe/repo/dev-docs/.claude/worktrees/chore-session-start-stop-context-injection/src/dev_docs/features/describe/service.py'>
+name = 'collect_warnings', ann = 'dev_docs.features.describe.service'
+
+    def annotated_getattr(obj: object, name: str, ann: str) -> object:
+        try:
+            obj = getattr(obj, name)
+        except AttributeError as e:
+>           raise AttributeError(
+                f"{type(obj).__name__!r} object at {ann} has no attribute {name!r}"
+            ) from e
+E           AttributeError: 'module' object at dev_docs.features.describe.service has no attribute 'collect_warnings'
+
+.venv/lib/python3.14/site-packages/_pytest/monkeypatch.py:97: AttributeError
+__________________ ERROR at setup of test_describe_when_kind ___________________
+
+obj = <module 'dev_docs.features.describe.service' from '/mnt/c/Users/shuhe/repo/dev-docs/.claude/worktrees/chore-session-start-stop-context-injection/src/dev_docs/features/describe/service.py'>
+name = 'collect_warnings', ann = 'dev_docs.features.describe.service'
+
+    def annotated_getattr(obj: object, name: str, ann: str) -> object:
+        try:
+>           obj = getattr(obj, name)
+                  ^^^^^^^^^^^^^^^^^^
+E           AttributeError: module 'dev_docs.features.describe.service' has no attribute 'collect_warnings'
+
+.venv/lib/python3.14/site-packages/_pytest/monkeypatch.py:95: AttributeError
+
+The above exception was the direct cause of the following exception:
+
+request = <SubRequest 'no_warnings' for <Function test_describe_when_kind>>
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x77d18a9627b0>
+
+    @pytest.fixture(autouse=True)
+    def no_warnings(request: pytest.FixtureRequest, monkeypatch: pytest.MonkeyPatch) -> None:
+        """偽の配信元で警告を求めないよう、本物の配信元を使うテスト以外では警告の収集を空にする。"""
+        if request.node.name != "test_describe_when_warned":
+>           monkeypatch.setattr(
+                "dev_docs.features.describe.service.collect_warnings", lambda *args, **kwargs: []
+            )
+
+tests/unit/dev_docs/features/describe/test_service.py:40: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+.venv/lib/python3.14/site-packages/_pytest/monkeypatch.py:109: in derive_importpath
+    annotated_getattr(target, attr, ann=module)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+obj = <module 'dev_docs.features.describe.service' from '/mnt/c/Users/shuhe/repo/dev-docs/.claude/worktrees/chore-session-start-stop-context-injection/src/dev_docs/features/describe/service.py'>
+name = 'collect_warnings', ann = 'dev_docs.features.describe.service'
+
+    def annotated_getattr(obj: object, name: str, ann: str) -> object:
+        try:
+            obj = getattr(obj, name)
+        except AttributeError as e:
+>           raise AttributeError(
+                f"{type(obj).__name__!r} object at {ann} has no attribute {name!r}"
+            ) from e
+E           AttributeError: 'module' object at dev_docs.features.describe.service has no attribute 'collect_warnings'
+
+.venv/lib/python3.14/site-packages/_pytest/monkeypatch.py:97: AttributeError
+______________ ERROR at setup of test_describe_when_unknown_kind _______________
+
+obj = <module 'dev_docs.features.describe.service' from '/mnt/c/Users/shuhe/repo/dev-docs/.claude/worktrees/chore-session-start-stop-context-injection/src/dev_docs/features/describe/service.py'>
+name = 'collect_warnings', ann = 'dev_docs.features.describe.service'
+
+    def annotated_getattr(obj: object, name: str, ann: str) -> object:
+        try:
+>           obj = getattr(obj, name)
+                  ^^^^^^^^^^^^^^^^^^
+E           AttributeError: module 'dev_docs.features.describe.service' has no attribute 'collect_warnings'
+
+.venv/lib/python3.14/site-packages/_pytest/monkeypatch.py:95: AttributeError
+
+The above exception was the direct cause of the following exception:
+
+request = <SubRequest 'no_warnings' for <Function test_describe_when_unknown_kind>>
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x77d18a1ec3d0>
+
+    @pytest.fixture(autouse=True)
+    def no_warnings(request: pytest.FixtureRequest, monkeypatch: pytest.MonkeyPatch) -> None:
+        """偽の配信元で警告を求めないよう、本物の配信元を使うテスト以外では警告の収集を空にする。"""
+        if request.node.name != "test_describe_when_warned":
+>           monkeypatch.setattr(
+                "dev_docs.features.describe.service.collect_warnings", lambda *args, **kwargs: []
+            )
+
+tests/unit/dev_docs/features/describe/test_service.py:40: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+.venv/lib/python3.14/site-packages/_pytest/monkeypatch.py:109: in derive_importpath
+    annotated_getattr(target, attr, ann=module)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+obj = <module 'dev_docs.features.describe.service' from '/mnt/c/Users/shuhe/repo/dev-docs/.claude/worktrees/chore-session-start-stop-context-injection/src/dev_docs/features/describe/service.py'>
+name = 'collect_warnings', ann = 'dev_docs.features.describe.service'
+
+    def annotated_getattr(obj: object, name: str, ann: str) -> object:
+        try:
+            obj = getattr(obj, name)
+        except AttributeError as e:
+>           raise AttributeError(
+                f"{type(obj).__name__!r} object at {ann} has no attribute {name!r}"
+            ) from e
+E           AttributeError: 'module' object at dev_docs.features.describe.service has no attribute 'collect_warnings'
+
+.venv/lib/python3.14/site-packages/_pytest/monkeypatch.py:97: AttributeError
+________________ ERROR at setup of test_describe_when_worktree _________________
+
+obj = <module 'dev_docs.features.describe.service' from '/mnt/c/Users/shuhe/repo/dev-docs/.claude/worktrees/chore-session-start-stop-context-injection/src/dev_docs/features/describe/service.py'>
+name = 'collect_warnings', ann = 'dev_docs.features.describe.service'
+
+    def annotated_getattr(obj: object, name: str, ann: str) -> object:
+        try:
+>           obj = getattr(obj, name)
+                  ^^^^^^^^^^^^^^^^^^
+E           AttributeError: module 'dev_docs.features.describe.service' has no attribute 'collect_warnings'
+
+.venv/lib/python3.14/site-packages/_pytest/monkeypatch.py:95: AttributeError
+
+The above exception was the direct cause of the following exception:
+
+request = <SubRequest 'no_warnings' for <Function test_describe_when_worktree>>
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x77d18a1ed0f0>
+
+    @pytest.fixture(autouse=True)
+    def no_warnings(request: pytest.FixtureRequest, monkeypatch: pytest.MonkeyPatch) -> None:
+        """偽の配信元で警告を求めないよう、本物の配信元を使うテスト以外では警告の収集を空にする。"""
+        if request.node.name != "test_describe_when_warned":
+>           monkeypatch.setattr(
+                "dev_docs.features.describe.service.collect_warnings", lambda *args, **kwargs: []
+            )
+
+tests/unit/dev_docs/features/describe/test_service.py:40: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+.venv/lib/python3.14/site-packages/_pytest/monkeypatch.py:109: in derive_importpath
+    annotated_getattr(target, attr, ann=module)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+obj = <module 'dev_docs.features.describe.service' from '/mnt/c/Users/shuhe/repo/dev-docs/.claude/worktrees/chore-session-start-stop-context-injection/src/dev_docs/features/describe/service.py'>
+name = 'collect_warnings', ann = 'dev_docs.features.describe.service'
+
+    def annotated_getattr(obj: object, name: str, ann: str) -> object:
+        try:
+            obj = getattr(obj, name)
+        except AttributeError as e:
+>           raise AttributeError(
+                f"{type(obj).__name__!r} object at {ann} has no attribute {name!r}"
+            ) from e
+E           AttributeError: 'module' object at dev_docs.features.describe.service has no attribute 'collect_warnings'
+
+.venv/lib/python3.14/site-packages/_pytest/monkeypatch.py:97: AttributeError
+_________ ERROR at setup of test_describe_when_worktree_config_invalid _________
+
+obj = <module 'dev_docs.features.describe.service' from '/mnt/c/Users/shuhe/repo/dev-docs/.claude/worktrees/chore-session-start-stop-context-injection/src/dev_docs/features/describe/service.py'>
+name = 'collect_warnings', ann = 'dev_docs.features.describe.service'
+
+    def annotated_getattr(obj: object, name: str, ann: str) -> object:
+        try:
+>           obj = getattr(obj, name)
+                  ^^^^^^^^^^^^^^^^^^
+E           AttributeError: module 'dev_docs.features.describe.service' has no attribute 'collect_warnings'
+
+.venv/lib/python3.14/site-packages/_pytest/monkeypatch.py:95: AttributeError
+
+The above exception was the direct cause of the following exception:
+
+request = <SubRequest 'no_warnings' for <Function test_describe_when_worktree_config_invalid>>
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x77d18a463c70>
+
+    @pytest.fixture(autouse=True)
+    def no_warnings(request: pytest.FixtureRequest, monkeypatch: pytest.MonkeyPatch) -> None:
+        """偽の配信元で警告を求めないよう、本物の配信元を使うテスト以外では警告の収集を空にする。"""
+        if request.node.name != "test_describe_when_warned":
+>           monkeypatch.setattr(
+                "dev_docs.features.describe.service.collect_warnings", lambda *args, **kwargs: []
+            )
+
+tests/unit/dev_docs/features/describe/test_service.py:40: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+.venv/lib/python3.14/site-packages/_pytest/monkeypatch.py:109: in derive_importpath
+    annotated_getattr(target, attr, ann=module)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+obj = <module 'dev_docs.features.describe.service' from '/mnt/c/Users/shuhe/repo/dev-docs/.claude/worktrees/chore-session-start-stop-context-injection/src/dev_docs/features/describe/service.py'>
+name = 'collect_warnings', ann = 'dev_docs.features.describe.service'
+
+    def annotated_getattr(obj: object, name: str, ann: str) -> object:
+        try:
+            obj = getattr(obj, name)
+        except AttributeError as e:
+>           raise AttributeError(
+                f"{type(obj).__name__!r} object at {ann} has no attribute {name!r}"
+            ) from e
+E           AttributeError: 'module' object at dev_docs.features.describe.service has no attribute 'collect_warnings'
+
+.venv/lib/python3.14/site-packages/_pytest/monkeypatch.py:97: AttributeError
+___________ ERROR at setup of test_describe_when_refs_and_worktrees ____________
+
+obj = <module 'dev_docs.features.describe.service' from '/mnt/c/Users/shuhe/repo/dev-docs/.claude/worktrees/chore-session-start-stop-context-injection/src/dev_docs/features/describe/service.py'>
+name = 'collect_warnings', ann = 'dev_docs.features.describe.service'
+
+    def annotated_getattr(obj: object, name: str, ann: str) -> object:
+        try:
+>           obj = getattr(obj, name)
+                  ^^^^^^^^^^^^^^^^^^
+E           AttributeError: module 'dev_docs.features.describe.service' has no attribute 'collect_warnings'
+
+.venv/lib/python3.14/site-packages/_pytest/monkeypatch.py:95: AttributeError
+
+The above exception was the direct cause of the following exception:
+
+request = <SubRequest 'no_warnings' for <Function test_describe_when_refs_and_worktrees>>
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x77d189dbdb50>
+
+    @pytest.fixture(autouse=True)
+    def no_warnings(request: pytest.FixtureRequest, monkeypatch: pytest.MonkeyPatch) -> None:
+        """偽の配信元で警告を求めないよう、本物の配信元を使うテスト以外では警告の収集を空にする。"""
+        if request.node.name != "test_describe_when_warned":
+>           monkeypatch.setattr(
+                "dev_docs.features.describe.service.collect_warnings", lambda *args, **kwargs: []
+            )
+
+tests/unit/dev_docs/features/describe/test_service.py:40: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+.venv/lib/python3.14/site-packages/_pytest/monkeypatch.py:109: in derive_importpath
+    annotated_getattr(target, attr, ann=module)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+obj = <module 'dev_docs.features.describe.service' from '/mnt/c/Users/shuhe/repo/dev-docs/.claude/worktrees/chore-session-start-stop-context-injection/src/dev_docs/features/describe/service.py'>
+name = 'collect_warnings', ann = 'dev_docs.features.describe.service'
+
+    def annotated_getattr(obj: object, name: str, ann: str) -> object:
+        try:
+            obj = getattr(obj, name)
+        except AttributeError as e:
+>           raise AttributeError(
+                f"{type(obj).__name__!r} object at {ann} has no attribute {name!r}"
+            ) from e
+E           AttributeError: 'module' object at dev_docs.features.describe.service has no attribute 'collect_warnings'
+
+.venv/lib/python3.14/site-packages/_pytest/monkeypatch.py:97: AttributeError
+=================================== FAILURES ===================================
+_________________ test_render_describe_markdown_when_warnings __________________
+
+    def test_render_describe_markdown_when_warnings() -> None:
+        """注意の一覧（正常系）。"""
+        # 準備
+        workplace = Workplace(cwd=Path("/w/sample"), source_id="sample", worktree=None)
+        sources = [
+            SourceAccess(source_id="sample", access="write", current=True, description="サンプル")
+        ]
+>       warned = SourceListResult(workplace=workplace, sources=sources, warnings=["警告です"])
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       TypeError: SourceListResult.__init__() got an unexpected keyword argument 'warnings'
+
+tests/unit/dev_docs/features/describe/test_render.py:34: TypeError
+_________________ test_render_describe_markdown_when_no_source _________________
+
+    def test_render_describe_markdown_when_no_source() -> None:
+        """使える配信元が無い（正常系）。"""
+        # 準備
+>       result = SourceListResult(
+            workplace=Workplace(cwd=Path("/w/elsewhere"), source_id=None, worktree=None),
+            sources=[],
+            warnings=["b: 配信していません"],
+        )
+E       TypeError: SourceListResult.__init__() got an unexpected keyword argument 'warnings'
+
+tests/unit/dev_docs/features/describe/test_render.py:49: TypeError
+__________________________ test_describe_when_warned ___________________________
+
+make_source_dir = <function make_source_dir.<locals>._make at 0x77d189f0cf60>
+make_terminal_config = <function make_terminal_config.<locals>._make at 0x77d189fcc460>
+make_entry = <function make_entry.<locals>._make at 0x77d189fcc7d0>
+
+    def test_describe_when_warned(
+        make_source_dir: Callable[..., Path],
+        make_terminal_config: Callable[..., TerminalConfig],
+        make_entry: Callable[..., SourceEntry],
+    ) -> None:
+        """使える配信元の警告を添える（正常系）。"""
+        # 準備
+        config = make_source_dir("sample", unindexed=1)
+        terminal = make_terminal_config(sources=[make_entry(str(config), source_id="sample")])
+        handlers = build_handlers(terminal)
+        handlers.reload_sources(terminal)
+        # 実行
+>       result = describe(
+            DescribeRequest(cwd=str(config.parent)),
+            registry=handlers.registry,
+            store=handlers.store,
+            terminal=handlers.terminal,
+        )
+E       TypeError: describe() got an unexpected keyword argument 'terminal'
+
+tests/unit/dev_docs/features/describe/test_service.py:128: TypeError
+------------------------------ Captured log call -------------------------------
+WARNING  dev_docs.main:main.py:284 sample: 管理用の YAML に無いファイル 1 件: src: src/u0.py
+________________________________ test_build_app ________________________________
+
+make_mcp_handlers = <function make_mcp_handlers.<locals>._make at 0x77d17b46a400>
+make_registry = <function make_registry.<locals>._make at 0x77d17b468a90>
+
+    def test_build_app(
+        make_mcp_handlers: Callable[..., Any], make_registry: Callable[..., Any]
+    ) -> None:
+        """入口を全て持つ（正常系）。"""
+        # 準備
+        app = build_app(_handlers(make_mcp_handlers, make_registry))
+        client = TestClient(app)
+        # 実行
+        response = client.get("/_api/openapi.json")
+        # 検証
+        mounted = [getattr(route, "path", "") for route in app.routes]
+        assert response.status_code == 200
+        assert "/_api/sources/{source}/docs" in response.json()["paths"]
+        assert "/_api/settings/sources" in response.json()["paths"]
+        assert "/mcp" in mounted
+        assert "/_admin/mcp" in mounted
+        session_start = client.post(
+            "/_admin/session-start", json={"session_id": "s1", "reason": "startup"}
+        )
+>       assert session_start.status_code == 200
+E       assert 405 == 200
+E        +  where 405 = <Response [405 Method Not Allowed]>.status_code
+
+tests/unit/dev_docs/server/test_app.py:91: AssertionError
+_____________________________ test_build_handlers ______________________________
+
+tmp_path = PosixPath('/tmp/pytest-of-shuhei2441/pytest-6094/test_build_handlers0')
+write_files = <function write_files.<locals>._write at 0x77d189285bc0>
+sample_files = {'dev-docs.yaml': 'name: sample\ndocuments:\n  - id: rules\n    paths: [docs/rule/*.yaml]\n    schema: schemas/rule.sc...d: [id, name]\n', 'docs/rule/doc-1.yaml': 'id: doc-1\nname: 文書 1\n', 'docs/rule/doc-2.yaml': 'id: doc-2\nname: 文書 2\n'}
+make_terminal_config = <function make_terminal_config.<locals>._make at 0x77d189285e80>
+make_entry = <function make_entry.<locals>._make at 0x77d189286090>
+
+    def test_build_handlers(
+        tmp_path: Path,
+        write_files: Callable[[Path, dict[str, str]], None],
+        sample_files: dict[str, str],
+        make_terminal_config: Callable[..., TerminalConfig],
+        make_entry: Callable[..., SourceEntry],
+    ) -> None:
+        """部品を作り配信元は読まない（正常系）。"""
+        # 準備
+        write_files(tmp_path / "ok", sample_files)
+        write_files(
+            tmp_path / "broken",
+            {
+                "dev-docs.yaml": (
+                    "name: broken\ndocuments:\n  - id: rules\n    schema: schemas/rule.schema.yaml\n"
+                )
+            },
+        )
+        state_dir = tmp_path / "new-state"
+        terminal = make_terminal_config(
+            state_dir=state_dir,
+            sources=[
+                make_entry(str(tmp_path / "ok" / "dev-docs.yaml")),
+                make_entry(str(tmp_path / "broken" / "dev-docs.yaml")),
+            ],
+        )
+        # 実行
+        handlers = build_handlers(terminal)
+        loading = handlers.registry.loading
+        statuses_before = handlers.registry.statuses()
+        handlers.reload_sources(terminal)
+        # 検証
+        assert state_dir.is_dir()
+        assert loading is True
+        assert statuses_before == []
+        assert len(handlers.registry.served()) == 1
+        assert len(handlers.registry.statuses()) == 2
+>       assert "session-context" not in handlers.prompts.prompts
+E       AssertionError: assert 'session-context' not in {'mcp/admin/tools/check-project': LoadedPrompt(doc=PromptDoc(name='check_project の description', description='管理の MCP ...ext='待ち受けのアドレス・dev-docs のバージョン・端末の設定・配信元ごとの状態を返す。')]), when=None, texts={'ja': <Template memory:77d1892ba0d0>})}), ...}
+E        +  where {'mcp/admin/tools/check-project': LoadedPrompt(doc=PromptDoc(name='check_project の description', description='管理の MCP ...ext='待ち受けのアドレス・dev-docs のバージョン・端末の設定・配信元ごとの状態を返す。')]), when=None, texts={'ja': <Template memory:77d1892ba0d0>})}), ...} = PromptSet(prompts={'mcp/admin/tools/check-project': LoadedPrompt(doc=PromptDoc(name='check_project の description', des...fad0>, texts={'ja': <Template memory:77d189138690>})})}, env=<jinja2.environment.Environment object at 0x77d1895dd480>).prompts
+E        +    where PromptSet(prompts={'mcp/admin/tools/check-project': LoadedPrompt(doc=PromptDoc(name='check_project の description', des...fad0>, texts={'ja': <Template memory:77d189138690>})})}, env=<jinja2.environment.Environment object at 0x77d1895dd480>) = Handlers(terminal=TerminalConfig(file=PosixPath('/tmp/pytest-of-shuhei2441/pytest-6094/test_build_handlers0/settings.y...ad0>, texts={'ja': <Template memory:77d189138690>})})}, env=<jinja2.environment.Environment object at 0x77d1895dd480>)).prompts
+
+tests/unit/dev_docs/test_serve.py:290: AssertionError
+----------------------------- Captured stdout call -----------------------------
+sample
+------------------------------ Captured log call -------------------------------
+ERROR    dev_docs.features.sources.service:service.py:431 sources[1]: documents[0].paths: 必須のキーが無い
+INFO     dev_docs.features.sources.registry:registry.py:116 配信元を読み直した（配信中: ['sample']・外した数: 1）
+___________________________ test_main_when_listening ___________________________
+
+load_hook = <function load_hook.<locals>._load at 0x77d1895c64b0>
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x77d189838c90>
+capsys = <_pytest.capture.CaptureFixture object at 0x77d189834af0>
+
+    def test_main_when_listening(
+        load_hook: Callable[[str], ModuleType],
+        monkeypatch: pytest.MonkeyPatch,
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        """つながれば何も出さない（正常系）。"""
+        # 準備
+        hook = load_hook("session_start")
+        requested: list[tuple[int, dict[str, str]]] = []
+    
+        def fake_forget(port: int, payload: dict[str, str]) -> None:
+            requested.append((port, payload))
+    
+        monkeypatch.setattr(hook, "is_listening", lambda port: True)
+>       monkeypatch.setattr(hook, "request_forget", fake_forget)
+E       AttributeError: <module 'hook_session_start' from '/mnt/c/Users/shuhe/repo/dev-docs/.claude/worktrees/chore-session-start-stop-context-injection/plugins/dev-docs/hooks/session_start.py'> has no attribute 'request_forget'
+
+tests/unit/plugins/dev_docs/hooks/test_session_start.py:52: AttributeError
+____________________________ test_main_when_cleared ____________________________
+
+load_hook = <function load_hook.<locals>._load at 0x77d1895c4eb0>
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x77d189420980>
+capsys = <_pytest.capture.CaptureFixture object at 0x77d1896dc4d0>
+
+    def test_main_when_cleared(
+        load_hook: Callable[[str], ModuleType],
+        monkeypatch: pytest.MonkeyPatch,
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        """/clear の後は記録の削除を依頼し、何も出さない（正常系）。"""
+        # 準備
+        hook = load_hook("session_start")
+        requested: list[tuple[int, dict[str, str]]] = []
+    
+        def fake_forget(port: int, payload: dict[str, str]) -> None:
+            requested.append((port, payload))
+    
+        monkeypatch.setattr(hook, "is_listening", lambda port: True)
+>       monkeypatch.setattr(hook, "request_forget", fake_forget)
+E       AttributeError: <module 'hook_session_start' from '/mnt/c/Users/shuhe/repo/dev-docs/.claude/worktrees/chore-session-start-stop-context-injection/plugins/dev-docs/hooks/session_start.py'> has no attribute 'request_forget'
+
+tests/unit/plugins/dev_docs/hooks/test_session_start.py:79: AttributeError
+_________________________ test_main_when_forget_failed _________________________
+
+load_hook = <function load_hook.<locals>._load at 0x77d1895ba1f0>
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x77d189421550>
+capsys = <_pytest.capture.CaptureFixture object at 0x77d1892907d0>
+
+    def test_main_when_forget_failed(
+        load_hook: Callable[[str], ModuleType],
+        monkeypatch: pytest.MonkeyPatch,
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        """記録の削除を依頼できなければ repeat_seen を案内する（異常系）。"""
+        # 準備
+        hook = load_hook("session_start")
+    
+        def failing_forget(port: int, payload: dict[str, str]) -> None:
+            raise TimeoutError("timed out")
+    
+        monkeypatch.setattr(hook, "is_listening", lambda port: True)
+>       monkeypatch.setattr(hook, "request_forget", failing_forget)
+E       AttributeError: <module 'hook_session_start' from '/mnt/c/Users/shuhe/repo/dev-docs/.claude/worktrees/chore-session-start-stop-context-injection/plugins/dev-docs/hooks/session_start.py'> has no attribute 'request_forget'
+
+tests/unit/plugins/dev_docs/hooks/test_session_start.py:165: AttributeError
+________________________ test_main_when_forget_refused _________________________
+
+load_hook = <function load_hook.<locals>._load at 0x77d189574250>
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x77d189422e40>
+capsys = <_pytest.capture.CaptureFixture object at 0x77d189291350>
+
+    def test_main_when_forget_refused(
+        load_hook: Callable[[str], ModuleType],
+        monkeypatch: pytest.MonkeyPatch,
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        """打ち切り以外の失敗は秒数を入れない（異常系）。"""
+        # 準備
+        hook = load_hook("session_start")
+    
+        def refused_forget(port: int, payload: dict[str, str]) -> None:
+            raise urllib.error.URLError(ConnectionRefusedError(111, "Connection refused"))
+    
+        monkeypatch.setattr(hook, "is_listening", lambda port: True)
+>       monkeypatch.setattr(hook, "request_forget", refused_forget)
+E       AttributeError: <module 'hook_session_start' from '/mnt/c/Users/shuhe/repo/dev-docs/.claude/worktrees/chore-session-start-stop-context-injection/plugins/dev-docs/hooks/session_start.py'> has no attribute 'request_forget'
+
+tests/unit/plugins/dev_docs/hooks/test_session_start.py:208: AttributeError
+_____________________________ test_request_forget ______________________________
+
+load_hook = <function load_hook.<locals>._load at 0x77d18950d850>
+context_server = <function context_server.<locals>._serve at 0x77d18950cf60>
+
+    def test_request_forget(
+        load_hook: Callable[[str], ModuleType],
+        context_server: Callable[..., Any],
+    ) -> None:
+        """本文を POST する（正常系）。"""
+        # 準備
+        hook = load_hook("session_start")
+        payload = {"session_id": "s1", "reason": "clear"}
+        # 実行
+        with context_server({"forgotten": True}) as server:
+>           result = hook.request_forget(server.port, payload)
+                     ^^^^^^^^^^^^^^^^^^^
+E           AttributeError: module 'hook_session_start' has no attribute 'request_forget'
+
+tests/unit/plugins/dev_docs/hooks/test_session_start.py:311: AttributeError
+_______________________ test_request_forget_when_timeout _______________________
+
+load_hook = <function load_hook.<locals>._load at 0x77d18950c510>
+context_server = <function context_server.<locals>._serve at 0x77d18950d010>
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x77d189d35cc0>
+
+    def test_request_forget_when_timeout(
+        load_hook: Callable[[str], ModuleType],
+        context_server: Callable[..., Any],
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """`FORGET_TIMEOUT_SEC` で打ち切る（異常系）。"""
+        # 準備
+        hook = load_hook("session_start")
+>       monkeypatch.setattr(hook, "FORGET_TIMEOUT_SEC", 1)
+E       AttributeError: <module 'hook_session_start' from '/mnt/c/Users/shuhe/repo/dev-docs/.claude/worktrees/chore-session-start-stop-context-injection/plugins/dev-docs/hooks/session_start.py'> has no attribute 'FORGET_TIMEOUT_SEC'
+
+tests/unit/plugins/dev_docs/hooks/test_session_start.py:325: AttributeError
+=========================== short test summary info ============================
+ERROR tests/unit/dev_docs/features/describe/test_warnings.py
+ERROR tests/unit/dev_docs/features/session_start/test_route.py
+ERROR tests/unit/dev_docs/features/session_start/test_service.py
+ERROR tests/unit/dev_docs/features/describe/test_service.py::test_describe - ...
+ERROR tests/unit/dev_docs/features/describe/test_service.py::test_describe_when_outside_list
+ERROR tests/unit/dev_docs/features/describe/test_service.py::test_describe_when_outside_list_empty
+ERROR tests/unit/dev_docs/features/describe/test_service.py::test_describe_when_source
+ERROR tests/unit/dev_docs/features/describe/test_service.py::test_describe_when_kind
+ERROR tests/unit/dev_docs/features/describe/test_service.py::test_describe_when_unknown_kind
+ERROR tests/unit/dev_docs/features/describe/test_service.py::test_describe_when_worktree
+ERROR tests/unit/dev_docs/features/describe/test_service.py::test_describe_when_worktree_config_invalid
+ERROR tests/unit/dev_docs/features/describe/test_service.py::test_describe_when_refs_and_worktrees
+FAILED tests/unit/dev_docs/features/describe/test_render.py::test_render_describe_markdown_when_warnings
+FAILED tests/unit/dev_docs/features/describe/test_render.py::test_render_describe_markdown_when_no_source
+FAILED tests/unit/dev_docs/features/describe/test_service.py::test_describe_when_warned
+FAILED tests/unit/dev_docs/server/test_app.py::test_build_app - assert 405 ==...
+FAILED tests/unit/dev_docs/test_serve.py::test_build_handlers - AssertionErro...
+FAILED tests/unit/plugins/dev_docs/hooks/test_session_start.py::test_main_when_listening
+FAILED tests/unit/plugins/dev_docs/hooks/test_session_start.py::test_main_when_cleared
+FAILED tests/unit/plugins/dev_docs/hooks/test_session_start.py::test_main_when_forget_failed
+FAILED tests/unit/plugins/dev_docs/hooks/test_session_start.py::test_main_when_forget_refused
+FAILED tests/unit/plugins/dev_docs/hooks/test_session_start.py::test_request_forget
+FAILED tests/unit/plugins/dev_docs/hooks/test_session_start.py::test_request_forget_when_timeout
+11 failed, 758 passed, 12 errors in 77.23s (0:01:17)
