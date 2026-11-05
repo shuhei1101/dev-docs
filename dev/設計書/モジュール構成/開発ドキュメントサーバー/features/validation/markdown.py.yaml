@@ -90,6 +90,12 @@ constants:
     usecase: 書き込み
     summary: 違反にする mdmark の種類（描画時の書き方の警告）
     value: 'frozenset({"diagram_invalid", "syntax_warning"})'
+  - name: MEDIA_TYPE_KEYWORD
+    title: メディアタイプのキーワード
+    container: features/validation/markdown.py
+    usecase: 書き込み
+    summary: 処理を差し替える JSON Schema のキーワードと、目印の誤りの `validator` の値
+    value: '"contentMediaType"'
 functions:
   - name: markdown_values
     title: Markdownの値
