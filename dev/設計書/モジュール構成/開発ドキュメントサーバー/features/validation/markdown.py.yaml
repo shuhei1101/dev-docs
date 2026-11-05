@@ -119,8 +119,8 @@ functions:
     process: |-
       1. `schema` が空なら空の辞書を返す
       2. 『スキーマの検査』と同じ検査器のクラス（`validator_for`、既定は Draft 2020-12）を、`contentMediaType` の処理を「値が `MARKDOWN_MEDIA_TYPE` で、当たった値が `str` なら目印の `ValidationError` を 1 つ出す」に差し替えて作る（`jsonschema.validators.extend`）
-         - `$ref`・`properties`・`items`・`allOf` などをたどるのは jsonschema に任せる
-      3. 検査器の `iter_errors(data)` を最後まで回し、`validator` が `contentMediaType` の誤りの `absolute_path` を項目のパスへの変換で項目のパスにし、`instance` を値にして返す（ほかの誤りは捨てる）
+         - `$ref`・`properties`・`items`・`allOf` をたどるのは jsonschema に任せる
+      3. 検査器の `iter_errors(data)` を最後まで回し、`validator` が `contentMediaType` の誤りの `absolute_path` を項目のパスへの変換で項目のパスにし、`instance` を値にして返す。`anyOf`・`oneOf` などにまとめられた誤りは `context` の中を再帰してたどる（ほかの誤りは捨てる）
     unit_tests:
       - name: test_markdown_values
         case: 正常
@@ -128,6 +128,12 @@ functions:
         condition: '`properties.body` が `{"$ref": "#/$defs/md"}`（`$defs.md` が `{type: string, contentMediaType: text/markdown}`）、`properties.items.items.properties.note` が同じ参照、`properties.name` が `contentMediaType` を持たない文字列。値 `{body: a, items: [{note: b}], name: c}`'
         mock: なし
         expected: '`{"body": "a", "items[0].note": "b"}`'
+      - name: test_markdown_values_when_any_of
+        case: 正常
+        summary: anyOf の中のキー
+        condition: '`properties.body` が `{anyOf: [{type: string, contentMediaType: text/markdown}, {type: "null"}]}`、値 `{body: a}`'
+        mock: なし
+        expected: '`{"body": "a"}`'
       - name: test_markdown_values_when_not_string
         case: 正常
         summary: 文字列でない値と無い値
@@ -225,7 +231,7 @@ functions:
       1. `values` を順に回す
          - `stopped` がある場合、mdmark を呼ばずに（パス, `stopped`）を点検できなかったキーにする
          - Markdownの点検（`cwd`・`timeout_sec`）を呼び、種類が `BLOCKING_KINDS` のずれを、`path` がそのパス、`rule` が `mdmark の {種類}（{行} 行目）`、`fix` が内容の違反にする。ほかの種類のずれは捨てる
-         - `MdmarkUnavailableError` の場合、（パス, `reason`）を点検できなかったキーにする。`retryable` が `False` なら `stopped` を `reason` にする
+         - `MdmarkUnavailableError` の場合、（パス, `reason`）を点検できなかったキーにする。`continuable` が `False` なら `stopped` を `reason` にする
            - `[info]` mdmark で点検できなかった（パス・理由）
       2. 違反・点検できなかったキー・`stopped` を返す
     unit_tests:
@@ -238,13 +244,13 @@ functions:
       - name: test_check_markdown_values_when_missing
         case: 正常
         summary: CLI が無いと残りを呼ばない
-        condition: '`{a: x, b: y}`。1 回目の Markdownの点検が `MdmarkUnavailableError`（`retryable=False`・理由 R）'
+        condition: '`{a: x, b: y}`。1 回目の Markdownの点検が `MdmarkUnavailableError`（`continuable=False`・理由 R）'
         mock: '`check_markdown`（呼ばれた数を数える）'
         expected: '`unchecked` が `a`・`b`（理由 R）、`stopped` が R、`check_markdown` は 1 回だけ'
-      - name: test_check_markdown_values_when_retryable
+      - name: test_check_markdown_values_when_continuable
         case: 正常
         summary: 1 つの値だけ結果を出さない
-        condition: '`{a: x, b: y}`。`a` の点検だけが `MdmarkUnavailableError`（`retryable=True`）'
+        condition: '`{a: x, b: y}`。`a` の点検だけが `MdmarkUnavailableError`（`continuable=True`）'
         mock: '`check_markdown`'
         expected: '`unchecked` が `a` だけ、`stopped` が `None`、`check_markdown` は 2 回'
       - name: test_check_markdown_values_when_stopped

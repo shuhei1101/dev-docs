@@ -65,8 +65,8 @@ classes:
         type: str
         access: 公開
         description: '`results[].unchecked` に入れる理由の文'
-      - name: retryable
-        title: 続けて呼べるか
+      - name: continuable
+        title: 残りを続けるか
         type: bool
         access: 公開
         description: '`False` は CLI が見つからない・制限時間を超えたときで、同じ書き込みの残りの値も呼ばない。`True` は 1 つの値の点検が結果を出さずに終わったとき'
@@ -128,10 +128,9 @@ functions:
       description: ずれ。0 件なら空の並び（種類で絞らない）
     process: |-
       1. `MDMARK_CHECK_RUN` をスクリプトの実行（`cwd`・`stdin=text`・`timeout_sec`）で動かす（スクリプトの実行）
-         - `ScriptNotFoundError` の場合、`MdmarkUnavailableError`（`retryable=False`）を送る
-         - `ScriptTimeoutError` の場合、`MdmarkUnavailableError`（`retryable=False`）を送る
-           - `[warning]` mdmark の点検が制限時間を超えた（`cwd`・秒数）
-         - `ScriptFailedError` の場合、標準出力を点検の出力の解釈にかける。`None` なら `MdmarkUnavailableError`（`retryable=True`）を送る
+         - `ScriptNotFoundError` の場合、`MdmarkUnavailableError`（`continuable=False`）を送る
+         - `ScriptTimeoutError` の場合、`MdmarkUnavailableError`（`continuable=False`）を送る
+         - `ScriptFailedError` の場合、標準出力を点検の出力の解釈にかける。`None` なら `MdmarkUnavailableError`（`continuable=True`）を送る
       2. 終了コード 0 なら空の並びを返す
       3. 解釈したずれを返す
     exceptions:
@@ -162,21 +161,21 @@ functions:
         summary: CLI が無い
         condition: '`PATH` に `mdmark` が無い'
         mock: '`monkeypatch` で `PATH` を空のフォルダにする'
-        expected: '`MdmarkUnavailableError` で、`retryable` が `False`'
+        expected: '`MdmarkUnavailableError` で、`continuable` が `False`'
         exception: mdmark の CLI が `PATH` に無い
       - name: test_check_markdown_when_timeout
         case: 異常
         summary: 制限時間を超える
         condition: '`sleep 5` するスクリプトを `timeout_sec=0.2` で'
         mock: '`monkeypatch` で `PATH` を一時フォルダにする'
-        expected: '`MdmarkUnavailableError` で、`retryable` が `False`'
+        expected: '`MdmarkUnavailableError` で、`continuable` が `False`'
         exception: 制限時間を超えた
       - name: test_check_markdown_when_no_summary
         case: 異常
         summary: 結果を出さずに終わる
         condition: 標準エラーに `unknown option --text` を出し、標準出力を出さずに終了コード 1 で終わるスクリプト
         mock: '`monkeypatch` で `PATH` を一時フォルダにする'
-        expected: '`MdmarkUnavailableError` で、`retryable` が `True`、`reason` に `unknown option --text` がある'
+        expected: '`MdmarkUnavailableError` で、`continuable` が `True`、`reason` に `unknown option --text` がある'
         exception: 終了コード 1 で、最後の行が `ずれ {件数} 件` でない
   - name: parse_check_output
     title: 点検の出力の解釈
