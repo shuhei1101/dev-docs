@@ -1,0 +1,688 @@
+$ npm run test:unit
+
+> test:unit
+> vitest run --config frontend/vitest.config.ts
+
+
+ RUN  v5.0.5 /mnt/c/Users/shuhe/repo/dev-docs/.claude/worktrees/chore-wording-ai-slop-word-list
+
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+ ❯ tests/unit/frontend/src/features/settings/settings/form.test.ts (7 tests | 1 failed) 18ms
+   × test_source_form_schema_when_duplicate_id 5ms
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+ ❯ tests/unit/frontend/src/features/settings/settings/queries.test.tsx (1 test | 1 failed) 92ms
+   × test_use_save_sources 85ms
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+ ❯ tests/unit/frontend/src/features/settings/settings/settings-screen.test.tsx (3 tests | 1 failed) 415ms
+   × test_settings_screen_when_single_key_off 109ms
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+ ❯ tests/unit/frontend/src/features/docs/not-found/missing.test.ts (4 tests | 1 failed) 16ms
+   × test_describe_missing_when_not_served 6ms
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+ ❯ tests/unit/frontend/src/features/settings/settings/components/status-badge.test.tsx (2 tests | 2 failed) 58ms
+   × test_status_badge 45ms
+   × test_status_badge_when_old_config_version 7ms
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 6 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/unit/frontend/src/features/settings/settings/form.test.ts > test_source_form_schema_when_duplicate_id
+AssertionError: expected '配信元の ID extra は既に使われています。別の ID を入力してく…' to be '配信元の ID extra は既に使用されています。別の ID を入力して…' // Object.is equality
+
+Expected: "配信元の ID extra は既に使用されています。別の ID を入力してください。"
+Received: "配信元の ID extra は既に使われています。別の ID を入力してください。"
+
+ ❯ tests/unit/frontend/src/features/settings/settings/form.test.ts:39:26
+     37|   expect(result.success).toBe(false);
+     38|   const issue = result.error?.issues.find((item) => item.path[0] === "…
+     39|   expect(issue?.message).toBe("配信元の ID extra は既に使用されています。別の ID を入力してくだ…
+       |                          ^
+     40| });
+     41|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/6]⎯
+
+ FAIL  tests/unit/frontend/src/features/settings/settings/queries.test.tsx > test_use_save_sources
+AssertionError: expected "vi.fn()" to be called with arguments: [ '端末の設定を保存し、配信元を再読み込みしました。' ]
+
+Received:
+
+  1st vi.fn() call:
+
+  [
+-   "端末の設定を保存し、配信元を再読み込みしました。",
++   "端末の設定を保存し、配信元を読み直しました。",
+  ]
+
+
+Number of calls: 1
+
+ ❯ tests/unit/frontend/src/features/settings/settings/queries.test.tsx:37:25
+     35|   await waitFor(() => expect(get).toHaveBeenCalledTimes(2));
+     36|   expect(toast.success).toHaveBeenCalledTimes(1);
+     37|   expect(toast.success).toHaveBeenCalledWith("端末の設定を保存し、配信元を再読み込みしました。…
+       |                         ^
+     38| });
+     39|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/6]⎯
+
+ FAIL  tests/unit/frontend/src/features/settings/settings/settings-screen.test.tsx > test_settings_screen_when_single_key_off
+TestingLibraryElementError: Unable to find an accessible element with the role "switch" and name "1 文字のショートカットを使用する"
+
+Here are the accessible roles:
+
+  link:
+
+  Name "本文へスキップ":
+  <a
+    class="sr-only focus:not-sr-only focus:absolute focus:z-50 focus:bg-background focus:p-2"
+    href="#main"
+  />
+
+  Name "dev-docs":
+  <a
+    class="flex shrink-0 items-center gap-1.5 font-semibold tracking-tight whitespace-nowrap"
+    href="/"
+  />
+
+  Name "文書の画面に戻る":
+  <a
+    class="group/button inline-flex shrink-0 items-center justify-center border border-transparent bg-clip-padding font-medium whitespace-nowrap transition-all outline-none select-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 active:not-aria-[haspopup]:translate-y-px disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:hover:bg-muted/50 h-7 gap-1 rounded-[min(var(--radius-md),12px)] px-2.5 text-[0.8rem] in-data-[slot=button-group]:rounded-lg has-data-[icon=inline-end]:pr-1.5 has-data-[icon=inline-start]:pl-1.5 [&_svg:not([class*='size-'])]:size-3.5"
+    href="/"
+  />
+
+  Name "a":
+  <a
+    class="font-mono text-primary hover:underline"
+    href="/a"
+  />
+
+  --------------------------------------------------
+  banner:
+
+  Name "":
+  <header
+    class="sticky top-0 z-30 flex h-12 items-center gap-1 border-b border-border bg-background px-2 md:gap-2 md:px-3"
+  />
+
+  --------------------------------------------------
+  button:
+
+  Name "明暗を固定する":
+  <button
+    aria-label="明暗を固定する"
+    aria-pressed="false"
+    class="group/button inline-flex shrink-0 items-center justify-center rounded-lg border border-transparent bg-clip-padding text-sm font-medium whitespace-nowrap transition-all outline-none select-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 active:not-aria-[haspopup]:translate-y-px disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:hover:bg-muted/50 size-8"
+    data-slot="button"
+    tabindex="0"
+    type="button"
+  />
+
+  Name "配信元を追加":
+  <button
+    class="group/button inline-flex shrink-0 items-center justify-center border border-transparent bg-clip-padding font-medium whitespace-nowrap transition-all outline-none select-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 active:not-aria-[haspopup]:translate-y-px disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 bg-primary text-primary-foreground hover:bg-primary/80 h-7 gap-1 rounded-[min(var(--radius-md),12px)] px-2.5 text-[0.8rem] in-data-[slot=button-group]:rounded-lg has-data-[icon=inline-end]:pr-1.5 has-data-[icon=inline-start]:pl-1.5 [&_svg:not([class*='size-'])]:size-3.5"
+    data-slot="button"
+    tabindex="0"
+    type="button"
+  />
+
+  Name "a を編集":
+  <button
+    aria-label="a を編集"
+    class="group/button inline-flex shrink-0 items-center justify-center border border-transparent bg-clip-padding text-sm font-medium whitespace-nowrap transition-all outline-none select-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 active:not-aria-[haspopup]:translate-y-px disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:hover:bg-muted/50 size-7 rounded-[min(var(--radius-md),12px)] in-data-[slot=button-group]:rounded-lg"
+    data-slot="button"
+    tabindex="0"
+    type="button"
+  />
+
+  Name "a を削除":
+  <button
+    aria-label="a を削除"
+    class="group/button inline-flex shrink-0 items-center justify-center border border-transparent bg-clip-padding text-sm font-medium whitespace-nowrap transition-all outline-none select-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 active:not-aria-[haspopup]:translate-y-px disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:hover:bg-muted/50 size-7 rounded-[min(var(--radius-md),12px)] in-data-[slot=button-group]:rounded-lg"
+    data-slot="button"
+    tabindex="0"
+    type="button"
+  />
+
+  Name "ショートカットの一覧を開く":
+  <button
+    class="group/button inline-flex shrink-0 items-center justify-center border bg-clip-padding font-medium whitespace-nowrap transition-all outline-none select-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 active:not-aria-[haspopup]:translate-y-px disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 border-border bg-background hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:border-input dark:bg-input/30 dark:hover:bg-input/50 h-7 gap-1 rounded-[min(var(--radius-md),12px)] px-2.5 text-[0.8rem] in-data-[slot=button-group]:rounded-lg has-data-[icon=inline-end]:pr-1.5 has-data-[icon=inline-start]:pl-1.5 [&_svg:not([class*='size-'])]:size-3.5"
+    data-slot="button"
+    tabindex="0"
+    type="button"
+  />
+
+  --------------------------------------------------
+  main:
+
+  Name "":
+  <main
+    class="mx-auto max-w-4xl space-y-8 p-6"
+    id="main"
+    tabindex="-1"
+  />
+
+  --------------------------------------------------
+  heading:
+
+  Name "設定":
+  <h1
+    class="text-2xl font-semibold"
+  />
+
+  Name "配信元":
+  <h2
+    class="text-lg font-semibold"
+    id="sources-heading"
+  />
+
+  Name "キーボード":
+  <h2
+    class="text-lg font-semibold"
+    id="keyboard-heading"
+  />
+
+  --------------------------------------------------
+  region:
+
+  Name "配信元":
+  <section
+    aria-labelledby="sources-heading"
+    class="space-y-3"
+  />
+
+  Name "キーボード":
+  <section
+    aria-labelledby="keyboard-heading"
+    class="space-y-3"
+  />
+
+  Name "Notifications alt+T":
+  <section
+    aria-atomic="false"
+    aria-label="Notifications alt+T"
+    aria-live="polite"
+    aria-relevant="additions text"
+    data-react-aria-top-layer="true"
+    tabindex="-1"
+  />
+
+  --------------------------------------------------
+  table:
+
+  Name "配信元の表":
+  <table
+    aria-label="配信元の表"
+    class="w-full caption-bottom text-sm"
+    data-slot="table"
+  />
+
+  --------------------------------------------------
+  rowgroup:
+
+  Name "":
+  <thead
+    class="[&_tr]:border-b"
+    data-slot="table-header"
+  />
+
+  Name "":
+  <tbody
+    class="[&_tr:last-child]:border-0"
+    data-slot="table-body"
+  />
+
+  --------------------------------------------------
+  row:
+
+  Name "配信元 設定ファイル 状態 操作":
+  <tr
+    class="border-b transition-colors hover:bg-muted/50 has-aria-expanded:bg-muted/50 data-[state=selected]:bg-muted"
+    data-slot="table-row"
+  />
+
+  Name "a /home/me/a/dev-docs.yaml 配信中":
+  <tr
+    class="border-b transition-colors hover:bg-muted/50 has-aria-expanded:bg-muted/50 data-[state=selected]:bg-muted"
+    data-slot="table-row"
+  />
+
+  --------------------------------------------------
+  columnheader:
+
+  Name "配信元":
+  <th
+    class="h-10 px-2 text-left align-middle font-medium whitespace-nowrap text-foreground [&:has([role=checkbox])]:pr-0"
+    data-slot="table-head"
+  />
+
+  Name "設定ファイル":
+  <th
+    class="h-10 px-2 text-left align-middle font-medium whitespace-nowrap text-foreground [&:has([role=checkbox])]:pr-0"
+    data-slot="table-head"
+  />
+
+  Name "状態":
+  <th
+    class="h-10 px-2 text-left align-middle font-medium whitespace-nowrap text-foreground [&:has([role=checkbox])]:pr-0"
+    data-slot="table-head"
+  />
+
+  Name "操作":
+  <th
+    class="h-10 px-2 text-left align-middle font-medium whitespace-nowrap text-foreground [&:has([role=checkbox])]:pr-0"
+    data-slot="table-head"
+  />
+
+  --------------------------------------------------
+  cell:
+
+  Name "a":
+  <td
+    class="p-2 whitespace-nowrap [&:has([role=checkbox])]:pr-0 align-top"
+    data-slot="table-cell"
+  />
+
+  Name "/home/me/a/dev-docs.yaml":
+  <td
+    class="p-2 whitespace-nowrap [&:has([role=checkbox])]:pr-0 align-top"
+    data-slot="table-cell"
+  />
+
+  Name "配信中":
+  <td
+    class="p-2 whitespace-nowrap [&:has([role=checkbox])]:pr-0 align-top"
+    data-slot="table-cell"
+  />
+
+  Name "":
+  <td
+    class="p-2 whitespace-nowrap [&:has([role=checkbox])]:pr-0 align-top"
+    data-slot="table-cell"
+  />
+
+  --------------------------------------------------
+  paragraph:
+
+  Name "":
+  <p
+    class="font-mono text-xs break-all"
+  />
+
+  Name "":
+  <p
+    class="text-xs text-muted-foreground"
+  />
+
+  --------------------------------------------------
+  switch:
+
+  Name "1 文字のショートカットを使う":
+  <span
+    aria-checked="true"
+    aria-labelledby="single-key-label"
+    class="peer group/switch relative inline-flex shrink-0 items-center rounded-full border border-transparent transition-all outline-none group-has-[:focus-visible]/field-label:border-transparent group-has-[:focus-visible]/field-label:ring-0 after:absolute after:-inset-x-3 after:-inset-y-2 focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 data-[size=default]:h-[18.4px] data-[size=default]:w-[32px] data-[size=sm]:h-[14px] data-[size=sm]:w-[24px] dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 data-checked:bg-primary data-unchecked:bg-input dark:data-unchecked:bg-input/80 data-disabled:cursor-not-allowed data-disabled:opacity-50"
+    data-checked=""
+    data-size="default"
+    data-slot="switch"
+    id="base-ui-_r_b_"
+    role="switch"
+    tabindex="0"
+  />
+
+  --------------------------------------------------
+
+Ignored nodes: comments, script, style
+<body>
+  <div>
+    <div
+      class="min-h-screen"
+    >
+      <a
+        class="sr-only focus:not-sr-only focus:absolute focus:z-50 focus:bg-background focus:p-2"
+        href="#main"
+      >
+        本文へスキップ
+      </a>
+      <header
+        class="sticky top-0 z-30 flex h-12 items-center gap-1 border-b border-border bg-background px-2 md:gap-2 md:px-3"
+      >
+        <a
+          class="flex shrink-0 items-center gap-1.5 font-semibold tracking-tight whitespace-nowrap"
+          href="/"
+        >
+          <svg
+            aria-hidden="true"
+            class="lucide lucide-book-open size-4"
+            fill="none"
+            height="24"
+            stroke="currentColor"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            viewBox="0 0 24 24"
+            width="24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="M12 5v16"
+            />
+            <path
+              d="M20.001 19A2 2 0 0022 17V5a2 2 0 00-1.999-2L16 3.002A5 5 0 0012 5a5 5 0 00-4-2H4a2 2 0 00-2 2v12a2 2 0 001.999 2H8a5 5 0 014 2 5 5 0 014-2z"
+            />
+          </svg>
+          <span
+            class="sr-only md:not-sr-only"
+          >
+            dev-docs
+          </span>
+        </a>
+        <span
+          class="text-sm text-muted-foreground"
+        >
+          設定
+        </span>
+        <div
+          class="ml-auto flex items-center gap-1"
+        >
+          <button
+            aria-label="明暗を固定する"
+            aria-pressed="false"
+            class="group/button inline-flex shrink-0 items-center justify-center rounded-lg border border-transparent bg-clip-padding text-sm font-medium whitespace-nowrap transition-all outline-none select-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 active:not-aria-[haspopup]:translate-y-px disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:hover:bg-muted/50 size-8"
+            data-slot="button"
+            tabindex="0"
+            type="button"
+          >
+            <svg
+              aria-hidden="true"
+              class="lucide lucide-moon"
+              fill="none"
+              height="24"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+              width="24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M20.985 12.486a9 9 0 1 1-9.473-9.472c.405-.022.617.46.402.803a6 6 0 0 0 8.268 8.268c.344-.215.825-.004.803.401"
+              />
+            </svg>
+          </button>
+        </div>
+      </header>
+      <main
+        class="mx-auto max-w-4xl space-y-8 p-6"
+        id="main"
+        tabindex="-1"
+      >
+        <a
+          class="group/button inline-flex shrink-0 items-center justify-center border border-transparent bg-clip-padding font-medium whitespace-nowrap transition-all outline-none select-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 active:not-aria-[haspopup]:translate-y-px disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:hover:bg-muted/50 h-7 gap-1 rounded-[min(var(--radius-md),12px)] px-2.5 text-[0.8rem] in-data-[slot=button-group]:rounded-lg has-data-[icon=inline-end]:pr-1.5 has-data-[icon=inline-start]:pl-1.5 [&_svg:not([class*='size-'])]:size-3.5"
+          href="/"
+        >
+          <svg
+            aria-hidden="true"
+            class="lucide lucide-arrow-left"
+            fill="none"
+            height="24"
+            stroke="currentColor"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            viewBox="0 0 24 24"
+            width="24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="m12 19-7-7 7-7"
+            />
+            <path
+              d="M19 12H5"
+            />
+          </svg>
+          文書の画面に戻る
+        </a>
+        <h1
+          class="text-2xl font-semibold"
+        >
+          設定
+        </h1>
+        <section
+          aria-labelledby="sources-heading"
+          class="space-y-3"
+        >
+          <div
+            class="flex items-center justify-between"
+          >
+            <h2
+              class="text-lg font-semibold"
+              id="sources-heading"
+            >
+              配信元
+            </h2>
+            <button
+     ...
+ ❯ Object.getElementError node_modules/@testing-library/dom/dist/config.js:37:19
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:76:38
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:52:17
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:95:19
+ ❯ tests/unit/frontend/src/features/settings/settings/settings-screen.test.tsx:42:32
+     40|   await screen.findByRole("table", { name: "配信元の表" });
+     41|
+     42|   await userEvent.click(screen.getByRole("switch", { name: "1 文字のショートカ…
+       |                                ^
+     43|   await userEvent.keyboard("?");
+     44|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/6]⎯
+
+ FAIL  tests/unit/frontend/src/features/docs/not-found/missing.test.ts > test_describe_missing_when_not_served
+AssertionError: expected [ { label: '外した理由', …(1) }, …(1) ] to deep equally contain { label: '除外した理由', …(1) }
+
+- Expected:
+{
+  "label": "除外した理由",
+  "value": "documents[0] 必須",
+}
+
++ Received:
+[
+  {
+    "label": "外した理由",
+    "value": "documents[0] 必須",
+  },
+  {
+    "label": "設定ファイル",
+    "value": "/r/dev-docs.yaml",
+  },
+]
+
+ ❯ tests/unit/frontend/src/features/docs/not-found/missing.test.ts:23:26
+     21|
+     22|   expect(result.kind).toBe("not_served");
+     23|   expect(result.details).toContainEqual({ label: "除外した理由", value: "doc…
+       |                          ^
+     24|   expect(result.details).toContainEqual({ label: "設定ファイル", value: "/r/…
+     25| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/6]⎯
+
+ FAIL  tests/unit/frontend/src/features/settings/settings/components/status-badge.test.tsx > test_status_badge
+TestingLibraryElementError: Unable to find an element with the text: 配信停止. This could be because the text is broken up by multiple elements. In this case, you can provide a function for your text matcher to make your matcher more flexible.
+
+Ignored nodes: comments, script, style
+<body>
+  <div>
+    <div
+      class="space-y-1"
+    >
+      <span
+        class="group/badge inline-flex h-5 w-fit shrink-0 items-center justify-center gap-1 overflow-hidden rounded-4xl border border-transparent px-2 py-0.5 text-xs font-medium whitespace-nowrap transition-all focus-visible:border-ring focus-visible:ring-[3px] has-data-[icon=inline-end]:pr-1.5 has-data-[icon=inline-start]:pl-1.5 aria-invalid:border-destructive aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 [&>svg]:pointer-events-none [&>svg]:size-3! bg-destructive/10 text-destructive focus-visible:ring-destructive/20 dark:bg-destructive/20 dark:focus-visible:ring-destructive/40 [a]:hover:bg-destructive/20"
+        data-slot="badge"
+        data-variant="destructive"
+      >
+        <svg
+          aria-hidden="true"
+          class="lucide lucide-circle-alert lucide-alert-circle"
+          fill="none"
+          height="24"
+          stroke="currentColor"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          viewBox="0 0 24 24"
+          width="24"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <circle
+            cx="12"
+            cy="12"
+            r="10"
+          />
+          <line
+            x1="12"
+            x2="12"
+            y1="8"
+            y2="12"
+          />
+          <line
+            x1="12"
+            x2="12.01"
+            y1="16"
+            y2="16"
+          />
+        </svg>
+        配信していない
+      </span>
+      <p
+        class="text-xs text-muted-foreground"
+      >
+        起動時の検証で外しました。
+      </p>
+      <p
+        class="text-xs text-muted-foreground"
+      >
+        documents[0] paths が必要です
+      </p>
+    </div>
+  </div>
+</body>
+ ❯ Object.getElementError node_modules/@testing-library/dom/dist/config.js:37:19
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:76:38
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:52:17
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:95:19
+ ❯ tests/unit/frontend/src/features/settings/settings/components/status-badge.test.tsx:15:17
+     13|   render(<StatusBadge source={source as never} />);
+     14|
+     15|   expect(screen.getByText("配信停止")).toBeInTheDocument();
+       |                 ^
+     16|   expect(screen.getByText(/起動時の検証で除外しました。/)).toBeInTheDocument();
+     17|   expect(screen.getByText(/documents\[0\] paths が必要です/)).toBeInTheDocu…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/6]⎯
+
+ FAIL  tests/unit/frontend/src/features/settings/settings/components/status-badge.test.tsx > test_status_badge_when_old_config_version
+TestingLibraryElementError: Unable to find an element with the text: 設定のバージョン 1（サーバーが読み込めるのは 2）. This could be because the text is broken up by multiple elements. In this case, you can provide a function for your text matcher to make your matcher more flexible.
+
+Ignored nodes: comments, script, style
+<body>
+  <div>
+    <div
+      class="space-y-1"
+    >
+      <span
+        class="group/badge inline-flex h-5 w-fit shrink-0 items-center justify-center gap-1 overflow-hidden rounded-4xl border border-transparent px-2 py-0.5 text-xs font-medium whitespace-nowrap transition-all focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 has-data-[icon=inline-end]:pr-1.5 has-data-[icon=inline-start]:pl-1.5 aria-invalid:border-destructive aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 [&>svg]:pointer-events-none [&>svg]:size-3! bg-secondary text-secondary-foreground [a]:hover:bg-secondary/80"
+        data-slot="badge"
+        data-variant="secondary"
+      >
+        <svg
+          aria-hidden="true"
+          class="lucide lucide-circle-check lucide-check-circle-2"
+          fill="none"
+          height="24"
+          stroke="currentColor"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          viewBox="0 0 24 24"
+          width="24"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <circle
+            cx="12"
+            cy="12"
+            r="10"
+          />
+          <path
+            d="m16 9-5.5 5.5L8 12"
+          />
+        </svg>
+        配信中
+      </span>
+      <p
+        class="text-xs text-muted-foreground"
+      >
+        設定のバージョン 1（サーバーが読めるのは 2）
+      </p>
+    </div>
+  </div>
+</body>
+ ❯ Object.getElementError node_modules/@testing-library/dom/dist/config.js:37:19
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:76:38
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:52:17
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:95:19
+ ❯ tests/unit/frontend/src/features/settings/settings/components/status-badge.test.tsx:25:17
+     23|   render(<StatusBadge source={source as never} />);
+     24|
+     25|   expect(screen.getByText("設定のバージョン 1（サーバーが読み込めるのは 2）")).toBeInTheDocu…
+       |                 ^
+     26| });
+     27|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/6]⎯
+
+
+ Test Files  5 failed | 47 passed (52)
+      Tests  6 failed | 132 passed (138)
+   Start at  09:32:59
+   Duration  415.10s (environment 55%, import 21%, setup 21%, transform 2%, worker 1%)
+
+Environment  jsdom was created 52 times · 1446.29s total, 55% of tracked time
+             create it once per worker with pool: 'vmThreads' (keeps per-file isolation) or isolate: false (shares it across files)
+             learn more: https://vitest.dev/guide/improving-performance#test-environments
+
