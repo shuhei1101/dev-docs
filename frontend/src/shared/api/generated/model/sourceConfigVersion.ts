@@ -6,7 +6,7 @@
  */
 
 /**
- * 設定のバージョンとサーバーが読めるバージョン。
+ * 設定のバージョンとサーバーが読み込めるバージョン。
  */
 export interface SourceConfigVersion {
   config: string;

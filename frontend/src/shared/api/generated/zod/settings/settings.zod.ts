@@ -24,11 +24,11 @@ export const SettingsGetSettingsSourcesResponse = zod.object({
   "errors": zod.array(zod.object({
   "path": zod.string(),
   "reason": zod.string()
-}).describe('検証で外した理由 1 件。')).optional(),
+}).describe('検証で除外した理由 1 件。')).optional(),
   "configVersion": zod.union([zod.object({
   "config": zod.string(),
   "server": zod.string()
-}).describe('設定のバージョンとサーバーが読めるバージョン。'),zod.null()]).optional()
+}).describe('設定のバージョンとサーバーが読み込めるバージョン。'),zod.null()]).optional()
 }).describe('端末の設定の取得の `sources[]` の 1 行（行の値に配信元の状態を重ねたもの）。'))
 }).describe('GET `/_api/settings/sources` の応答。')
 
@@ -59,11 +59,11 @@ export const SettingsPutSettingsSourcesResponse = zod.object({
   "errors": zod.array(zod.object({
   "path": zod.string(),
   "reason": zod.string()
-}).describe('検証で外した理由 1 件。')).optional(),
+}).describe('検証で除外した理由 1 件。')).optional(),
   "configVersion": zod.union([zod.object({
   "config": zod.string(),
   "server": zod.string()
-}).describe('設定のバージョンとサーバーが読めるバージョン。'),zod.null()]).optional()
-}).describe('読み直した後の配信元 1 つの状態。'))
-}).describe('読み直した後の配信元ごとの状態。')
+}).describe('設定のバージョンとサーバーが読み込めるバージョン。'),zod.null()]).optional()
+}).describe('再読み込みした後の配信元 1 つの状態。'))
+}).describe('再読み込みした後の配信元ごとの状態。')
 

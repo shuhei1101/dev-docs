@@ -6,7 +6,7 @@
  */
 
 /**
- * 検証で外した理由 1 件。
+ * 検証で除外した理由 1 件。
  */
 export interface SourceViolation {
   path: string;
