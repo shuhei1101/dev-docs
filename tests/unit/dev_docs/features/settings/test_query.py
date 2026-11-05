@@ -115,6 +115,7 @@ def test_validate_terminal_config_when_duplicate_id() -> None:
     result = validate_terminal_config(value)
     # 検証
     assert [v.path for v in result] == ["sources[1].id"]
+    assert [v.rule for v in result] == ["a は既に使用されています"]
 
 
 def test_validate_terminal_config_when_empty_glob() -> None:
@@ -126,6 +127,7 @@ def test_validate_terminal_config_when_empty_glob() -> None:
     result = validate_terminal_config(value)
     # 検証
     assert [v.path for v in result] == ["sources[0].scope.read[0]"]
+    assert [v.rule for v in result] == ["空の文字列は記載できません"]
 
 
 def test_validate_terminal_config_when_newer_version() -> None:

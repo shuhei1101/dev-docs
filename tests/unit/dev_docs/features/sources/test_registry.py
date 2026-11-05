@@ -73,6 +73,7 @@ def test_source_registry_reload_when_duplicate_name(
     # 検証
     assert statuses[1].status == "not_served"
     assert [error.path for error in statuses[1].errors] == ["sources[1].id"]
+    assert [error.rule for error in statuses[1].errors] == ["a は既に使用されています"]
 
 
 def test_source_registry_reload_when_reading(
