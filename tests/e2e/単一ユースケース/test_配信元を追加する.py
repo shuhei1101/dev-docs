@@ -652,7 +652,9 @@ def test_normal_when_source_not_served(
     # 検証
     expect(_source_row(page, "sample")).to_contain_text("配信中")
     expect(_source_row(page, "legacy")).to_contain_text("配信中")
-    expect(_source_row(page, "legacy")).to_contain_text("設定のバージョン 0（サーバーが読み込めるのは")
+    expect(_source_row(page, "legacy")).to_contain_text(
+        "設定のバージョン 0（サーバーが読み込めるのは"
+    )
     expect(_source_row(page, "broken")).to_contain_text("配信停止")
     expect(_source_row(page, "broken")).to_contain_text("documents[0].paths")
     expect(_source_row(page, "archive")).to_contain_text("無効")
