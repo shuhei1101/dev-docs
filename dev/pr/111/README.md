@@ -1,0 +1,1 @@
+# write_docs の検査で、Markdown のキーの値を mdmark の点検に通し、警告があれば書き込まない
