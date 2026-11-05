@@ -80,6 +80,62 @@ def test_build_screen_router_when_excluded(dist_dir: Path, path: str) -> None:
     assert response.text != INDEX
 
 
+def _client_with_api(dist_dir: Path) -> TestClient:
+    """画面の配信より先に GET `/_api/x` のルートを持つアプリのクライアントを返す。"""
+    app = FastAPI()
+    register_error_handlers(app)
+
+    @app.get("/_api/x")
+    def api_x() -> dict[str, str]:
+        return {"ok": "x"}
+
+    app.include_router(build_screen_router(dist_dir))
+    return TestClient(app)
+
+
+@pytest.mark.parametrize(
+    ("method", "path"),
+    [
+        pytest.param("POST", "/_admin/none", id="post-admin"),
+        pytest.param("PUT", "/_api/none", id="put-api"),
+        pytest.param("DELETE", "/_admin/none", id="delete-admin"),
+    ],
+)
+def test_build_screen_router_when_excluded_not_get(
+    dist_dir: Path, method: str, path: str
+) -> None:
+    """API・管理の頭の無いパスへの GET 以外の要求を 404 にする（異常系）。"""
+    # 準備
+    client = _client_with_api(dist_dir)
+    # 実行
+    response = client.request(method, path)
+    # 検証
+    assert response.status_code == 404
+    assert response.headers["content-type"].startswith("application/problem+json")
+
+
+def test_build_screen_router_when_excluded_wrong_method(dist_dir: Path) -> None:
+    """API の頭の有るパスへの合わないメソッドを 405 にする（異常系）。"""
+    # 準備
+    client = _client_with_api(dist_dir)
+    # 実行
+    response = client.post("/_api/x")
+    # 検証
+    assert response.status_code == 405
+    assert "GET" in response.headers["allow"]
+
+
+def test_build_screen_router_when_not_get(dist_dir: Path) -> None:
+    """画面のパスへの GET 以外の要求を 405 にする（異常系）。"""
+    # 準備
+    client = _client(dist_dir)
+    # 実行
+    response = client.post("/default/設計書/a.md")
+    # 検証
+    assert response.status_code == 405
+    assert response.headers["allow"] == "GET"
+
+
 def test_build_screen_router_when_build_missing(tmp_path: Path) -> None:
     """ビルドが無いと 503（異常系）。"""
     # 準備

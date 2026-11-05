@@ -6,7 +6,7 @@ from typing import Any
 
 import pytest
 
-from dev_docs.features.convert.diagrams import render_diagram, render_mermaid
+from dev_docs.features.convert.diagrams import er_table_titles, render_diagram, render_mermaid
 from dev_docs.features.convert.types import DiagramHead
 
 HEAD = DiagramHead(title="図", scope="文書", updated="2026-11-03")
@@ -316,6 +316,30 @@ def test_render_diagram_when_unknown() -> None:
     # 実行・検証
     with pytest.raises(ValueError, match="gantt"):
         render_diagram({}, "gantt", HEAD)  # type: ignore[arg-type]
+
+
+def test_er_table_titles() -> None:
+    """物理名と論理名（正常系）。"""
+    # 準備
+    tables = [
+        {"name": "customers", "title": "顧客"},
+        {"name": "payments", "title": "支払い"},
+    ]
+    # 実行
+    result = er_table_titles(tables)
+    # 検証
+    assert result == {"customers": "顧客", "顧客": "顧客", "payments": "支払い", "支払い": "支払い"}
+
+
+def test_er_table_titles_when_duplicated_or_untitled() -> None:
+    """重なるキーと論理名の無いテーブル（正常系）。"""
+    # 準備
+    tables = [{"name": "a", "title": "A"}, {"name": "A", "title": "B"}, {"name": "c"}]
+    # 実行
+    result = er_table_titles(tables)
+    # 検証
+    assert result["A"] == "A"
+    assert "c" not in result
 
 
 def test_render_mermaid() -> None:

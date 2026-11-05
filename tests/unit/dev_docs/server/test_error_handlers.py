@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import ClassVar
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.testclient import TestClient
 from pydantic import BaseModel
 
@@ -82,6 +82,25 @@ def test_register_error_handlers_when_http_error() -> None:
     assert response.status_code == 404
     assert response.headers["content-type"].startswith("application/problem+json")
     assert response.json()["type"] == "urn:dev-docs:error:HttpError"
+
+
+def test_register_error_handlers_when_http_error_headers() -> None:
+    """HTTPException のヘッダーを応答に載せる（正常系）。"""
+    # 準備
+    app = FastAPI()
+    register_error_handlers(app)
+
+    @app.post("/boom")
+    def boom() -> None:
+        raise HTTPException(status_code=405, headers={"Allow": "GET"})
+
+    client = TestClient(app)
+    # 実行
+    response = client.post("/boom")
+    # 検証
+    assert response.status_code == 405
+    assert response.headers["content-type"].startswith("application/problem+json")
+    assert response.headers["allow"] == "GET"
 
 
 def test_register_error_handlers_when_details_snake() -> None:
