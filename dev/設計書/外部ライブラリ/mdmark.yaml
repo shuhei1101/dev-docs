@@ -46,6 +46,33 @@ catalogs:
         purpose: 'スキーマ駆動の変換の `x-diagram: er` を ER 図の部品で描く'
         status: planned
         description: '[mdmark#298](https://github.com/shuhei1101/mdmark/pull/298) で develop に入り、v0.9.0 の master には無い。定義は `title`・`scope`・`updated`・`width`・`tables[]`（`id`・`name`・`label`・`x`・`y`・`w`・`columns[]` の `name`・`type`・`pk`・`fk`・`nn`・`desc`）・`relations[]`（`from`・`fromColumn`・`fromCard`・`to`・`toColumn`・`toCard`・`label`）。関係の端の列は省けず、無い列を指すと図全体が書き方の警告になる'
+  - name: コマンド
+    version: develop（mdmark#328 のマージ後）
+    entries:
+      - name: mdmark check --text
+        kind: コマンド
+        purpose: Markdown の文字列を、描画時の書き方の警告・知らない印・図の配置のずれで点検する
+        status: planned
+        description: '[mdmark#328](https://github.com/shuhei1101/mdmark/pull/328) で develop に入り、v0.9.0 の master には無い。npm のレジストリに公開されず、Node 24 以降で動く。設定ファイルを渡さないときは、起動したフォルダから上へ `mdmark.config.yaml` を探し、無ければ既定の設定で点検する'
+        params:
+          - name: --text
+            type: str
+            required: true
+            description: 点検する Markdown。`-` を渡すと標準入力から読む
+          - name: --config
+            type: str
+            required: false
+            default: なし（起動したフォルダから上へ `mdmark.config.yaml` を探す）
+            description: 使う設定ファイルのパス
+        returns:
+          - name: 標準出力
+            type: str
+            description: 'ずれ 1 つを `-:{行}: {種類}: {内容}` の 1 行で並べ、最後に `ずれ {件数} 件` の行を出す'
+            notes: 内容は、何が合わないかと直し方の日本語の 1 文。`diagram_invalid`・`syntax_warning` は描画時の書き方の警告と同じ文
+          - name: 終了コード
+            type: int
+            description: '`0` はずれが 0 件。`1` はずれが 1 件以上'
+            notes: 引数の誤りなどで点検しなかったときも `1` で、標準エラーに原因を出し、`ずれ {件数} 件` の行を出さない
 lead: Markdown を描き、本文の文字列へコメントを付けられるようにするブラウザの JS。
 dependency_scope: 必須
 adoption: 採用

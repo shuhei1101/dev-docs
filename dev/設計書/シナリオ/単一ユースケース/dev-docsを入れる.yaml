@@ -4,6 +4,7 @@ scenarios:
     setup:
       - name: Mock
         description: なし（実環境で実行。Claude Code は `claude -p` で動かし、AskUserQuestion には既定の選択肢で答える）
+        notes: '`claude -p` を動かす環境の `PATH` に mdmark の CLI を置かない'
       - name: Claude Code の設定の場所
         description: '`CLAUDE_CONFIG_DIR` が指すテスト用の一時フォルダ。プラグイン `dev-docs` をこの場所のユーザースコープに入れておく'
         notes: '`settings.json` の env に `DEV_DOCS_CONFIG` が無い'
@@ -28,15 +29,17 @@ scenarios:
         SK->>DD: クローンで依存を入れる（uv sync）
         SK->>CF: 雛形から端末の設定を作る（version・clone・sources は空）
         SK->>CF: 既定と違う場所なので settings.json の env に DEV_DOCS_CONFIG を書く
+        SK->>SK: PATH に mdmark の CLI が無いことを確かめる
         SK->>DD: dev-docs serve を切り離して起動する
         SK->>DD: /mcp につながり、ツールの一覧を取る
-        SK-->>U: 作ったもの・つながった結果と、次に /dev-docs:setup を実行する案内を出す
+        SK-->>U: 作ったもの・つながった結果・mdmark の CLI の入れ方と、次に /dev-docs:setup を実行する案内を出す
       ```
     expected:
       - '端末の設定の `settings.yaml` が、`version` に dev-docs のバージョン、`clone` に引数のパス、`sources: []` を持ち、端末の設定のスキーマの検証に通る'
       - Claude Code の設定の場所の `settings.json` の env の `DEV_DOCS_CONFIG` が、その `settings.yaml` の絶対パスを指す。env のほかのキーは変わらない
       - '`127.0.0.1:8781` を待ち受ける dev-docs のプロセスが 1 つだけあり、`/mcp` のツールが 6 つ返る'
       - スキルの最後の応答に、作った端末の設定のパスと `/dev-docs:setup` の案内がある
+      - スキルの最後の応答に、mdmark の CLI の入れ方（`npm install -g github:shuhei1101/mdmark`）の案内がある
       - テストを流した端末の `~/.claude` と `~/.config/dev-docs` は変わらない
     test: test_normal
   - name: 正常シナリオ（端末の設定に足りないキーがある）
