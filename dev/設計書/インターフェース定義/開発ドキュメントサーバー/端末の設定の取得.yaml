@@ -104,11 +104,11 @@ response:
     description: '配信中・起動時か読み直しの検証で外した・`enabled: false`・ファイルにあるが読み直していない行。行は `config`（`id` を書いた行は `id` も）が同じ配信元の状態と突き合わせる'
   - name: sources[].errors
     type: 'list[{path: str, reason: str}]'
-    description: 検証で外した理由
+    description: 検証で除外した理由
     notes: '`not_served` のときだけ'
   - name: sources[].configVersion
     type: '{config: str, server: str} | None'
-    description: 設定のバージョンとサーバーが読めるバージョン
+    description: 設定のバージョンとサーバーが読み込めるバージョン
     notes: 設定のバージョンが古いときだけ
   - name: sources[].outsideRead
     type: bool
