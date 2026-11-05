@@ -37,5 +37,5 @@
 - [x] ドキュメント修正（content/prompts/mcp/docs/tools/write-docs.yaml・dev/設計書/外部ライブラリ/mdmark.yaml・plugins/dev-docs/skills/global-setup/SKILL.md・docs/使い方/dev-docsを入れる.md・docs/リファレンス/文書のMCP.md）
 - [x] 単体テスト作成
 - [x] 実装
-- [ ] 結合テスト作成
+- [x] 結合テスト作成
 - [ ] E2E テスト作成
