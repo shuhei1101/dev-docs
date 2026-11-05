@@ -189,6 +189,34 @@ scenarios:
       - '`dry_run: true` でも同じ違反を返す'
       - '`atomic: false` では 0 番目だけを書き、1 番目を添字つきの失敗として返す'
     test: test_error_when_mdmark_warning
+  - name: 正常シナリオ（mdmark の CLI が無い）
+    setup:
+      - name: Mock
+        description: なし（実環境で実行。dev-docs を起動する環境の `PATH` に mdmark の CLI を置かない）
+      - name: Markdown のキーを持つ種類
+        description: 異常シナリオ（Markdown の値に mdmark の警告がある）と同じ sample の種類
+        notes: 文書 1 の `body` を Markdown のキーとして持つ
+      - name: dev-docs
+        description: sample を配信している dev-docs
+        notes: '文書 1 の `body` に定義の誤った図の部品（`<!-- flow -->` の中の壊れた JSON）を `set` する update 1 件'
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        actor A as エージェント
+        participant M as 文書の MCP（/mcp）
+        participant WT as ワークツリー x
+
+        A->>M: write_docs(operations: update 文書 1・set body)
+        M->>M: スキーマと validators に通す
+        M->>M: mdmark の CLI が見つからず、点検を飛ばす
+        M->>WT: 一時ファイルに書いてから置き換える
+        M-->>A: 新しい version と差分、点検できなかった理由
+      ```
+    expected:
+      - '結果が `applied: true` で、文書 1 の `status` が `updated`'
+      - ワークツリー x の文書 1 の `body` が `set` の値になる
+      - 結果に、mdmark の CLI が見つからず点検できなかったことが入る
+    test: test_normal_when_mdmark_unavailable
   - name: 異常シナリオ（書き込めない配信元を指す）
     setup:
       - name: Mock
@@ -402,7 +430,7 @@ preconditions:
   - dev-docs が起動し、配信元を配信している
   - 呼び出しの引数に、フック（#4）が作業場所 `cwd` と会話キーを入れている
   - エージェントが直す文書を `search_docs` で読み、`version` を持っている
-success_guarantee: 変更を当てた後の文書が配信元のスキーマと `validators[]` に通り、変えた Markdown の値が mdmark の点検に通り、作業ツリー（Git 管理外の配信元はそのフォルダ）のファイルだけが書き換わる。新しいバージョンが返る。
+success_guarantee: 変更を当てた後の文書が配信元のスキーマと `validators[]` に通り、作業ツリー（Git 管理外の配信元はそのフォルダ）のファイルだけが書き換わる。新しいバージョンが返る。変えた Markdown の値は、mdmark の CLI を使えるときは点検に通っており、使えないとき（CLI が無い・制限時間を超えた）は点検できなかった理由が返る。
 minimal_guarantee: '検査に通らない書き込み、mdmark の警告がある Markdown の値の書き込み、`scope.write` に当たらない作業場所からの書き込み、クローン本体への書き込みは、ファイルを 1 つも書き換えない（`atomic: true` のときは他の操作も書かない）。'
 frequency: 作業のたび
 priority: 高
