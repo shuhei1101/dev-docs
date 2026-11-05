@@ -853,6 +853,13 @@ def _put_mdmark(folder: Path, code: str, monkeypatch: pytest.MonkeyPatch) -> Pat
     return folder
 
 
+def _hide_mdmark(monkeypatch: pytest.MonkeyPatch) -> None:
+    """今の PATH から mdmark を持つフォルダを除く（git などのほかのコマンドは引ける状態を保つ）。"""
+    folders = os.environ["PATH"].split(os.pathsep)
+    kept = [folder for folder in folders if not (Path(folder) / "mdmark").exists()]
+    monkeypatch.setenv("PATH", os.pathsep.join(kept))
+
+
 def _markdown_setup(
     make_source: Callable[..., Any],
     make_server: Callable[..., Any],
@@ -876,6 +883,9 @@ def test_normal_when_mdmark_unavailable(
     # 準備
     source, env, worktree = _markdown_setup(make_source, make_server, add_worktree, sample_file_set)
     target = worktree / "docs" / "doc-1.yaml"
+    _hide_mdmark(monkeypatch)
+    # PATH に無いときに探すサーバーの Python の環境の bin にも mdmark が無いこと
+    assert not (Path(sys.executable).parent / "mdmark").exists()
     # 実行（1 回目: PATH に mdmark が無い）
     first = env.call(
         "write_docs",
