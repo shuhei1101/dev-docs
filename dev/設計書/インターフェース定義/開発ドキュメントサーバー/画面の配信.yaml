@@ -1,7 +1,7 @@
 title: "画面の配信"
 entry:
   kind: endpoint
-  value: GET `/{path}`（`/_api/`・`/mcp`・`/_admin/` を除く）
+  value: GET `/{path}`（`/_api/`・`/mcp`・`/_admin/` を除く。`/_api/`・`/_admin/` の下で、どの入口にも当たらないパス（`/_admin/mcp/` の下を除く）は、全てのメソッドで 404 を返す）
 flows:
   - name: 正常系
     summary: 画面のパスに `index.html` を、`assets/` のパスに静的ファイルを返す
@@ -54,7 +54,7 @@ flows:
       - '`/_api/no-such` が 404 で、`Content-Type` が `application/problem+json`'
     test: test_error_when_not_found
   - name: 異常系（除くパスへの GET 以外の要求・404）
-    summary: '`/_api/`・`/mcp/`・`/_admin/` の下の、どの入口にも当たらないパスへの要求は、GET 以外のメソッドでも 405 にせず 404 を返す'
+    summary: '`/_api/`・`/_admin/` の下（`/_admin/mcp/` の下を除く）の、どの入口にも当たらないパスへの要求は、GET 以外のメソッドでも 405 にせず 404 を返す'
     setup:
       - name: Mock
         description: なし
@@ -126,7 +126,7 @@ status_codes:
   - code: '200'
     condition: '`index.html` か静的ファイルを返した（画面に無いパスも `index.html` を返し、見つからない画面は画面が出す）'
   - code: '404'
-    condition: '`assets/` のパスのファイルが無い。`/_api/`・`/mcp/`・`/_admin/` の下の、どの入口にも当たらないパスへの要求（メソッドによらない）'
+    condition: '`assets/` のパスのファイルが無い。`/_api/`・`/_admin/` の下（`/_admin/mcp/` の下を除く）の、どの入口にも当たらないパスへの要求（メソッドによらない）'
     notes: '`index.html` を返さない'
   - code: '503'
     condition: 画面のビルド（`index.html`）が無い
@@ -134,7 +134,7 @@ status_codes:
 error_format: RFC 9457 の `application/problem+json`。拡張メンバーは camelCase（`nextSteps`）
 constraints:
   - item: 除くパス
-    constraint: '`/_api/`・`/mcp`・`/_admin/` で始まるパスは画面を返さず、それぞれの入口が応える。スラッシュ無しの `/mcp`・`/_admin/mcp` も画面の配信に当たらず MCP が応える。無い `/_api/` のパスは `application/problem+json` の 404。除くパスの下の、どの入口にも当たらないパスへの要求は、GET 以外のメソッドでも `application/problem+json` の 404 を返す（除くパスの外への GET 以外の要求は 405）'
+    constraint: '`/_api/`・`/mcp`・`/_admin/` で始まるパスは画面を返さず、それぞれの入口が応える。スラッシュ無しの `/mcp`・`/_admin/mcp` も画面の配信に当たらず MCP が応える。無い `/_api/` のパスは `application/problem+json` の 404。`/_api/`・`/_admin/` の下（`/_admin/mcp/` の下を除く）の、どの入口にも当たらないパスへの要求は、GET 以外のメソッドでも `application/problem+json` の 404 を返す（除くパスの外への GET 以外の要求は 405）。`/mcp/`・`/_admin/mcp/` の下の無いパスは、マウントした MCP のアプリが応え、メソッドによらず `text/plain` の 404 を返す'
   - item: キャッシュ
     constraint: '`index.html` は `Cache-Control: no-cache`。`assets/` のファイルはファイル名に中身のハッシュを持ち、`Cache-Control: public, max-age=31536000, immutable`'
   - item: 認可
