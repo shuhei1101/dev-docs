@@ -22,6 +22,7 @@ from dev_docs.features.seen.store import SeenStore
 from dev_docs.features.seen.types import LastRead, SessionKey
 from dev_docs.features.sources.registry import SourceRegistry
 from dev_docs.features.sources.types import DocumentTable
+from dev_docs.features.validation.markdown import UncheckedKey
 from dev_docs.features.validation.service import DocumentChecker
 from dev_docs.features.write.apply import apply_operation, expand_array_keys, to_columns
 from dev_docs.features.write.ids import generate_id
@@ -124,6 +125,8 @@ class _Session:
     docs: dict[str, Document] = field(default_factory=dict)
     pending: dict[str, str | None] = field(default_factory=dict)
     tables: dict[str, DocumentTable] = field(default_factory=dict)
+    # mdmark の CLI が無い・制限時間を超えたときの理由。後の操作の点検を飛ばす
+    markdown_stopped: str | None = None
 
     def __post_init__(self) -> None:
         self.docs = {document.id: document for document in self.store.load(self.target).documents}
@@ -303,8 +306,9 @@ def _check_and_commit(
     index: int | None,
     doc_id: str | None,
     new: bool,
-) -> Document:
-    """新しい内容を文書にして検査し、通れば控える。"""
+    previous: Mapping[str, Any] | None,
+) -> tuple[Document, list[UncheckedKey]]:
+    """新しい内容を文書にして検査し、通れば控える（点検できなかった Markdown のキーも返す）。"""
     documents = session.build(path, text, table)
     if not documents:
         raise ValidationFailedError(
@@ -313,12 +317,21 @@ def _check_and_commit(
         )
     document = _new_document(documents, index, doc_id)
     violations = checker.check(session.target, document, on="write", new=new)
+    unchecked: list[UncheckedKey] = []
+    # 検査に通った文書だけ、変えた Markdown の値を mdmark の点検に通す
+    if not violations:
+        markdown = checker.check_markdown(
+            session.target, document, previous=previous, stopped=session.markdown_stopped
+        )
+        session.markdown_stopped = markdown.stopped
+        violations = markdown.violations
+        unchecked = markdown.unchecked
     if violations:
         raise ValidationFailedError(
             message=f"検査に通らない操作があります: {len(violations)} 件", violations=violations
         )
     session.commit(path, text, table)
-    return document
+    return document, unchecked
 
 
 def _unique(tables: list[DocumentTable]) -> list[DocumentTable]:
@@ -487,8 +500,16 @@ def _apply_one(
         index_in_file = (
             len(get_field(load_roundtrip(text), table.records or "")) - 1 if appended else None
         )
-        document = _check_and_commit(
-            session, checker, table, path, text, index=index_in_file, doc_id=doc_id, new=True
+        document, unchecked = _check_and_commit(
+            session,
+            checker,
+            table,
+            path,
+            text,
+            index=index_in_file,
+            doc_id=doc_id,
+            new=True,
+            previous=None,
         )
         created_ids.add(document.id)
         return (
@@ -498,6 +519,7 @@ def _apply_one(
                 status="created",
                 version=document.version,
                 diff=diff_lines("", document.body),
+                unchecked=unchecked,
             ),
             table,
         )
@@ -522,7 +544,7 @@ def _apply_one(
     assert operation.expected_version is not None  # noqa: S101
     check_version(existing, operation.expected_version, last_read=last_reads.get(existing.id))
     path, text = _apply_existing(session, operation, existing, table, now)
-    new_document = _check_and_commit(
+    new_document, unchecked = _check_and_commit(
         session,
         checker,
         table,
@@ -531,6 +553,7 @@ def _apply_one(
         index=existing.record_index,
         doc_id=None,
         new=False,
+        previous=existing.data,
     )
     return (
         WriteResultItem(
@@ -539,6 +562,7 @@ def _apply_one(
             status="updated" if operation.op == "update" else "replaced",
             version=new_document.version,
             diff=diff_lines(existing.body, new_document.body),
+            unchecked=unchecked,
         ),
         table,
     )
