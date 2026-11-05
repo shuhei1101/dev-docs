@@ -5,10 +5,10 @@ dev-docs のサーバーの再起動:
   時期: マージの後
   回数: 1 回限り
   可逆: true
-  疎通確認: null
-  実行: null
-  確認: null
+  疎通確認: dev-docs のサーバーの再起動/疎通確認.sh
+  実行: dev-docs のサーバーの再起動/実行.sh
+  確認: dev-docs のサーバーの再起動/確認.sh
   切り戻し: null
   失敗時: 既定の対処を 1 回、2 回連続で失敗したら依頼元へ返す
-  確認方法: http://127.0.0.1:8781/_admin/session-start へ session_id と reason の JSON を POST すると 200 が返り、ER 図を持つ文書の Markdown で、物理名で書いた同じ文書のテーブルへの外部キーのセルが見出しへのリンクになっている。案 C を採った場合は、http://127.0.0.1:8781/_admin/no-such への POST が 404 を返す
+  確認方法: http://127.0.0.1:8781/_admin/session-start へ session_id と reason の JSON を POST すると 200 と forgotten が返り、http://127.0.0.1:8781/_admin/no-such と http://127.0.0.1:8781/_admin/session-context への POST が 404 を返し、aituber の ER 図『キャラクター』（dev/設計書/ER図/キャラクター.yaml）の Markdown で、物理名の外部キー characters.character_id のセルが見出しへのリンクになっている
   状態: "-"
