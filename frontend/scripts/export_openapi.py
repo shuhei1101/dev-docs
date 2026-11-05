@@ -13,7 +13,10 @@ OUTPUT = Path(__file__).parent.parent / "openapi.json"
 
 def main() -> None:
     """ルートの定義だけを使うので、配線済みの関数は偽物でよい。"""
-    app = build_app(MagicMock())
+    handlers = MagicMock()
+    # MCP のツールの description は文字列でないと登録できない
+    handlers.prompts.render.return_value = ""
+    app = build_app(handlers)
     schema = app.openapi()
     OUTPUT.write_text(json.dumps(schema, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
