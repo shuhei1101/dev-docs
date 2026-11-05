@@ -39,7 +39,7 @@ test("test_settings_screen_when_single_key_off", async () => {
   renderApp("/_settings");
   await screen.findByRole("table", { name: "配信元の表" });
 
-  await userEvent.click(screen.getByRole("switch", { name: "1 文字のショートカットを使う" }));
+  await userEvent.click(screen.getByRole("switch", { name: "1 文字のショートカットを使用する" }));
   await userEvent.keyboard("?");
 
   expect(screen.queryByRole("dialog")).toBeNull();

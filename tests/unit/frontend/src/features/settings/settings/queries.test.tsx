@@ -34,5 +34,5 @@ test("test_use_save_sources", async () => {
 
   await waitFor(() => expect(get).toHaveBeenCalledTimes(2));
   expect(toast.success).toHaveBeenCalledTimes(1);
-  expect(toast.success).toHaveBeenCalledWith("端末の設定を保存し、配信元を読み直しました。");
+  expect(toast.success).toHaveBeenCalledWith("端末の設定を保存し、配信元を再読み込みしました。");
 });
