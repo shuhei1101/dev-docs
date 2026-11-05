@@ -164,7 +164,7 @@ export const SourceEditDialog = ({
               id="source-id"
               label="配信元の ID"
               required
-              hint="画面の URL と文書の MCP の source に使います。英小文字・数字・ハイフンで入力します。"
+              hint="画面の URL と文書の MCP の source に使用します。英小文字・数字・ハイフンで入力します。"
               error={errors.id?.message}
             >
               <Input
@@ -220,14 +220,14 @@ export const SourceEditDialog = ({
               />
             </div>
             <p className="text-xs text-muted-foreground">
-              外すと、設定を残したまま配信を止めます。
+              オフにすると、設定を残したまま配信を止めます。
             </p>
           </div>
           <Field
             id="source-read"
             label="読み取りの範囲"
             required
-            hint="glob を 1 行に 1 つ。当たる作業場所から、この配信元の文書を読めます。"
+            hint="glob を 1 行に 1 つ。当たる作業場所から、この配信元の文書を参照できます。"
             error={errors.read?.message}
           >
             <Textarea

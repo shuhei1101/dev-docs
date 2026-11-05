@@ -18,7 +18,7 @@ const EXPLANATIONS: Record<ConversionError["reason"], string> = {
   not_runnable:
     "配信元の変換のスクリプトを実行できませんでした。スクリプトを修正してから、再読み込みしてください。",
   invalid_yaml:
-    "文書の YAML を読めませんでした。ファイルを修正してから、再読み込みしてください。",
+    "文書の YAML を読み込めませんでした。ファイルを修正してから、再読み込みしてください。",
 };
 
 /** 本文の代わりに出す変換の失敗 */
