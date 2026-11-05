@@ -17,15 +17,15 @@ components:
     unit_tests:
       - name: test_status_badge
         case: 正常
-        summary: 配信していない
+        summary: 配信停止
         condition: '`status` が `not_served`、`errors` が 1 件'
         mock: なし
-        expected: '`配信していない`、`起動時の検証で外しました。` と `{path} {reason}`'
+        expected: '`配信停止`、`起動時の検証で除外しました。` と `{path} {reason}`'
       - name: test_status_badge_when_old_config_version
         case: 正常
         summary: 設定のバージョンが古い
         condition: '`configVersion` が `{config: "1", server: "2"}`'
         mock: なし
-        expected: '`設定のバージョン 1（サーバーが読めるのは 2）`'
+        expected: '`設定のバージョン 1（サーバーが読み込めるのは 2）`'
 test_files:
   - tests/unit/frontend/src/features/settings/settings/components/status-badge.test.tsx

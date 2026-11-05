@@ -13,13 +13,13 @@ type Props = { source: SettingsSourceRow };
 const LABELS = {
   serving: { text: "配信中", Icon: CircleCheck, variant: "secondary" },
   not_served: {
-    text: "配信していない",
+    text: "配信停止",
     Icon: CircleAlert,
     variant: "destructive",
   },
   disabled: { text: "無効", Icon: CircleMinus, variant: "outline" },
   pending_reload: {
-    text: "読み直していない",
+    text: "再読み込み待ち",
     Icon: CircleDashed,
     variant: "outline",
   },
@@ -30,17 +30,17 @@ export const StatusBadge = ({ source }: Props) => {
   const { text, Icon, variant } = LABELS[source.status];
   const notes: string[] = [];
   if (source.status === "not_served") {
-    notes.push("起動時の検証で外しました。");
+    notes.push("起動時の検証で除外しました。");
     for (const error of source.errors ?? [])
       notes.push(`${error.path} ${error.reason}`);
   }
   if (source.status === "disabled") notes.push("enabled が false です");
   if (source.status === "pending_reload") {
-    notes.push("ファイルにありますが、まだ読み直していません。");
+    notes.push("ファイルにありますが、まだ再読み込みしていません。");
   }
   if (source.configVersion) {
     notes.push(
-      `設定のバージョン ${source.configVersion.config}（サーバーが読めるのは ${source.configVersion.server}）`,
+      `設定のバージョン ${source.configVersion.config}（サーバーが読み込めるのは ${source.configVersion.server}）`,
     );
   }
   return (

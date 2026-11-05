@@ -652,8 +652,10 @@ def test_normal_when_source_not_served(
     # 検証
     expect(_source_row(page, "sample")).to_contain_text("配信中")
     expect(_source_row(page, "legacy")).to_contain_text("配信中")
-    expect(_source_row(page, "legacy")).to_contain_text("設定のバージョン 0（サーバーが読めるのは")
-    expect(_source_row(page, "broken")).to_contain_text("配信していない")
+    expect(_source_row(page, "legacy")).to_contain_text(
+        "設定のバージョン 0（サーバーが読み込めるのは"
+    )
+    expect(_source_row(page, "broken")).to_contain_text("配信停止")
     expect(_source_row(page, "broken")).to_contain_text("documents[0].paths")
     expect(_source_row(page, "archive")).to_contain_text("無効")
     expect(_source_row(page, "archive")).to_contain_text("enabled が false です")
@@ -673,7 +675,7 @@ def test_normal_when_added_source_invalid(
     # 実行
     _add_source(page, "broken", broken.folder / "dev-docs.yaml", f"{broken.folder}/**")
     # 検証
-    expect(_source_row(page, "broken")).to_contain_text("配信していない")
+    expect(_source_row(page, "broken")).to_contain_text("配信停止")
     expect(_source_row(page, "broken")).to_contain_text("documents[0].paths")
     assert list(_settings_rows(load_yaml_file(served.settings))) == ["sample", "broken"]
     page.goto(served.url("/broken/docs/doc-1"))
@@ -700,7 +702,7 @@ def test_error_when_schema_invalid(
     _add_source(page, "Sample Docs", sample.folder / "dev-docs.yaml", "/a/**\n\n/b/**")
     # 検証
     expect(dialog.get_by_role("alert")).to_contain_text("保存できませんでした")
-    expect(dialog).to_contain_text("配信元の ID に使えない文字があります")
+    expect(dialog).to_contain_text("配信元の ID に使用できない文字があります")
     expect(dialog).to_contain_text("読み取りの範囲に空の行があります")
     expect(dialog.get_by_label("配信元の ID")).to_have_value("Sample Docs")
     assert served.settings.read_bytes() == before

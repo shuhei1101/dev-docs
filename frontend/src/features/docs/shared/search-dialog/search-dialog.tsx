@@ -48,7 +48,7 @@ const SearchStatus = ({
       text = error.problem?.detail ?? error.message;
     else if (pending && total === undefined) text = "検索しています";
     else if (total === 0)
-      text = "該当する文書はありません。別の語を試してください。";
+      text = "該当する文書はありません。別の条件を試してください。";
     else if (total !== undefined)
       text = `${total} 件${revision ? `（リビジョン ${revision}）` : ""}`;
   }
@@ -111,7 +111,7 @@ export const SearchDialog = ({
       open={open}
       onOpenChange={onOpenChange}
       title="文書を検索"
-      description="語を入力して文書を探します"
+      description="単語を入力して文書を探します"
     >
       <Command shouldFilter={false}>
         <CommandInput

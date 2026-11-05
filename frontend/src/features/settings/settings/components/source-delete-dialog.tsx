@@ -61,7 +61,7 @@ export const SourceDeleteDialog = ({
         <AlertDialogHeader>
           <AlertDialogTitle>{name} を削除しますか?</AlertDialogTitle>
           <AlertDialogDescription>
-            端末の設定から {name} の行を削除し、配信から外します。フォルダ{" "}
+            端末の設定から {name} の行を削除し、配信から除外します。フォルダ{" "}
             {folderOf(source?.config[0])} と文書は削除しません。
           </AlertDialogDescription>
         </AlertDialogHeader>

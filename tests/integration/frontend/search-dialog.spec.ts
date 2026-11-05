@@ -46,11 +46,11 @@ test.describe("Results", () => {
 });
 
 test.describe("NoResults", () => {
-  // 一致が 0 件。`該当する文書はありません。別の語を試してください。` を出す（正常系）
+  // 一致が 0 件。`該当する文書はありません。別の条件を試してください。` を出す（正常系）
   test("no_results", async ({ page }) => {
     await openStory(page, "docs-searchdialog--no-results");
     await expect(dialog(page).getByRole("status")).toHaveText(
-      "該当する文書はありません。別の語を試してください。",
+      "該当する文書はありません。別の条件を試してください。",
     );
     expect(await axeViolations(page)).toEqual([]);
   });
@@ -70,7 +70,7 @@ test.describe("Failed", () => {
   // 画面の検索がエラーを返し、Problem Details の detail を結果の場所に出す（異常系）
   test("failed", async ({ page }) => {
     await openStory(page, "docs-searchdialog--failed");
-    await expect(dialog(page).getByRole("status")).toHaveText("検索する語が正しくありません");
+    await expect(dialog(page).getByRole("status")).toHaveText("検索する単語が正しくありません");
     expect(await axeViolations(page)).toEqual([]);
   });
 });

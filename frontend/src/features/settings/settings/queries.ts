@@ -13,7 +13,7 @@ export const useSaveSources = () => {
       meta: { handleError: false },
       onSuccess: async () => {
         await queryClient.invalidateQueries({ refetchType: "all" });
-        toast.success("端末の設定を保存し、配信元を読み直しました。");
+        toast.success("端末の設定を保存し、配信元を再読み込みしました。");
       },
     },
   });

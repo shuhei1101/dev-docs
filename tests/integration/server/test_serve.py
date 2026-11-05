@@ -88,8 +88,8 @@ NONE_NAV = (
 )
 # 文書の MCP の instructions の字数の上限
 INSTRUCTIONS_MAX_CHARS = 4096
-# instructions が持つ見出し（使う場面・grep と Read が向く場面・ツールの順序・タグの付け方）
-INSTRUCTIONS_HEADERS = ("使う場面:", "grep・Read が向く場面:", "使い方:", "タグ:")
+# instructions が持つ見出し（使用する場面・grep と Read が向く場面・ツールの順序・タグの付け方）
+INSTRUCTIONS_HEADERS = ("使用する場面:", "grep・Read が向く場面:", "使用方法:", "タグ:")
 # 文に置かない言い回し
 FORBIDDEN_WORDS = ("MUST", "必ず", "禁止")
 SCREEN_INDEX = "<!doctype html><title>dev-docs</title>"

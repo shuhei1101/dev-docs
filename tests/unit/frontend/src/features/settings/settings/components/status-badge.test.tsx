@@ -12,8 +12,8 @@ test("test_status_badge", () => {
 
   render(<StatusBadge source={source as never} />);
 
-  expect(screen.getByText("配信していない")).toBeInTheDocument();
-  expect(screen.getByText(/起動時の検証で外しました。/)).toBeInTheDocument();
+  expect(screen.getByText("配信停止")).toBeInTheDocument();
+  expect(screen.getByText(/起動時の検証で除外しました。/)).toBeInTheDocument();
   expect(screen.getByText(/documents\[0\] paths が必要です/)).toBeInTheDocument();
 });
 
@@ -22,5 +22,5 @@ test("test_status_badge_when_old_config_version", () => {
 
   render(<StatusBadge source={source as never} />);
 
-  expect(screen.getByText("設定のバージョン 1（サーバーが読めるのは 2）")).toBeInTheDocument();
+  expect(screen.getByText("設定のバージョン 1（サーバーが読み込めるのは 2）")).toBeInTheDocument();
 });

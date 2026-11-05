@@ -36,7 +36,7 @@ test("test_source_form_schema_when_duplicate_id", () => {
 
   expect(result.success).toBe(false);
   const issue = result.error?.issues.find((item) => item.path[0] === "id");
-  expect(issue?.message).toBe("配信元の ID extra は既に使われています。別の ID を入力してください。");
+  expect(issue?.message).toBe("配信元の ID extra は既に使用されています。別の ID を入力してください。");
 });
 
 test("test_source_form_schema_when_blank_line", () => {
