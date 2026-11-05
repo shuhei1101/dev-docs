@@ -104,7 +104,7 @@ def _file_violation(
     try:
         load_yaml(text, file=relative)
     except YamlLoadError as error:
-        return Violation(path=key_path, rule=f"{what}を YAML として読めない: {error}")
+        return Violation(path=key_path, rule=f"{what}を YAML として読み込めない: {error}")
     return None
 
 
@@ -157,7 +157,7 @@ def _validate(value: dict[str, Any], read_text: ReadText) -> list[Violation]:
         if "body_file" in row and "records" not in row:
             violations.append(
                 Violation(
-                    path=f"documents[{index}].body_file", rule="records と一緒に書いてください"
+                    path=f"documents[{index}].body_file", rule="records と一緒に記載してください"
                 )
             )
         # ファイルの有無と配信元の外を指すパス
@@ -307,7 +307,7 @@ def _read_configs(
         try:
             value = load_yaml(text, file=str(file))
         except YamlLoadError as error:
-            violations.append(Violation(path=path, rule=f"YAML として読めない: {error}"))
+            violations.append(Violation(path=path, rule=f"YAML として読み込めない: {error}"))
             continue
         if not isinstance(value, dict):
             violations.append(Violation(path=path, rule=f"最上位が辞書ではない: {file}"))

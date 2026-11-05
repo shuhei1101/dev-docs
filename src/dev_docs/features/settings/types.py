@@ -68,21 +68,21 @@ class SettingsSourcesRequest(ApiModel):
 
 
 class SourceViolation(ApiModel):
-    """検証で外した理由 1 件。"""
+    """検証で除外した理由 1 件。"""
 
     path: str
     reason: str
 
 
 class SourceConfigVersion(ApiModel):
-    """設定のバージョンとサーバーが読めるバージョン。"""
+    """設定のバージョンとサーバーが読み込めるバージョン。"""
 
     config: str
     server: str
 
 
 class SettingsSourceStatus(ApiModel):
-    """読み直した後の配信元 1 つの状態。"""
+    """再読み込みした後の配信元 1 つの状態。"""
 
     id: str
     status: Literal["serving", "not_served", "disabled"]
@@ -91,7 +91,7 @@ class SettingsSourceStatus(ApiModel):
 
 
 class SettingsSourcesResponse(ApiModel):
-    """読み直した後の配信元ごとの状態。"""
+    """再読み込みした後の配信元ごとの状態。"""
 
     sources: list[SettingsSourceStatus]
 
