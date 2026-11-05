@@ -6,6 +6,8 @@ diagrams:
       classDiagram
         direction TD
         スキーマ駆動の変換 ..> 図の組み立て
+        スキーマ駆動の変換 ..> テーブルの論理名の引き方
+        図の組み立て ..> テーブルの論理名の引き方
         本文の書き換え ..> 手で書く図の組み立て
         図の組み立て ..> フロー図の配置
         手で書く図の組み立て ..> Mermaidの読み取り
@@ -17,6 +19,9 @@ diagrams:
           <<function>>
         }
         class 図の組み立て {
+          <<function>>
+        }
+        class テーブルの論理名の引き方 {
           <<function>>
         }
         class 手で書く図の組み立て {
@@ -149,7 +154,7 @@ functions:
          - 実体（`entities[]`）を出た順にテーブルにする。`id`・`label` は実体の `name`。`tables` のうち `title` が実体の `name` に当たるテーブルがあれば、`name` をそのテーブルの `name`（物理名）、`desc` をその `summary` にする（無ければ `name` は実体の `name`）
          - 列は、実体が `columns` を持てばその要素（`name`・`type`、`key` の `PK` は `pk: true`、`FK` は `fk: true`）、持たなければ当たったテーブルの `columns` の要素（`name`・`type`・`desc` は `title`、`primary_key` は `pk`、`foreign_key` は `fk`、`not_null` は `nn` を `true`）にする。どちらも無ければ空
          - 関連（`relations[]`）ごとに、`cardinality` を `--`（か `..`）の前後に分け、`ER_CARDINALITIES` で `fromCard`・`toCard` にする。両端の列は、先（`to`）の実体の列のうち外部キーが元（`from`）の実体の列を指す列を `toColumn`、指された列を `fromColumn` にし、無ければ元の実体の列のうち外部キーが先の実体の列を指す列を `fromColumn`、指された列を `toColumn` にする。`label` はそのまま
-           - 外部キーが指す実体と列は、テーブルの列は `foreign_key.table` を最後の `.` でテーブルと列に分け（テーブルが `{分類}/{テーブル名}` のとき、`{分類}` が `classification` と同じなら `{テーブル名}` を同じ文書のテーブルとして当て、違えば他の分類のテーブルなので当てない）、`tables` で `name`（物理名）か `title`（論理名）がそのテーブル名に当たるテーブルの `title` の実体にする。実体の列は `key` が `FK` で `comment` が `ER_FOREIGN_KEY_COMMENT` に当たるとき、その `entity`・`column`
+           - 外部キーが指す実体と列は、テーブルの列は `foreign_key.table` を最後の `.` でテーブルと列に分け（テーブルが `{分類}/{テーブル名}` のとき、`{分類}` が `classification` と同じなら `{テーブル名}` を同じ文書のテーブルとして当て、違えば他の分類のテーブルなので当てない）、そのテーブル名から引いた論理名（`tables` のテーブルの論理名の引き方）の実体にする。実体の列は `key` が `FK` で `comment` が `ER_FOREIGN_KEY_COMMENT` に当たるとき、その `entity`・`column`
            - 多重度を読み替えられない関連と、両端の列が決まらない関連は `relations` に入れない
          - テーブルの位置は `ER_LAYOUT` で格子に置く。`per_row` 個ずつ段にし、`x` は `margin + 列の番号 * (width + gap_x)`、`y` は前の段の `y` に前の段で一番高いテーブルの高さ（`head + 列の数 * row + frame`）と `gap_y` を足した値（最初の段は `margin`）。`w` は `width`。図の `width` は `margin * 2 + 段のテーブルの数の最大 * width + (その数 - 1) * gap_x`
     exceptions:
@@ -218,6 +223,42 @@ functions:
         mock: なし
         expected: '`ValueError`'
         exception: 知らない図の種類
+  - name: er_table_titles
+    title: テーブルの論理名の引き方
+    kind: 関数
+    container: features/convert/diagrams.py
+    usecase: 文書の取得
+    role: 変換
+    summary: 同じ文書の `tables[]` から、テーブルの物理名（`name`）と論理名（`title`）のどちらからも論理名を引く表を作る
+    description: ER 図の部品の外部キーの端と、表の外部キーのセルのリンクが、同じ引き方でテーブル名を当てる。
+    scope: public
+    thread_safe: true
+    args:
+      - name: tables
+        title: テーブル
+        type: Sequence[Mapping[str, Any]]
+        required: true
+        passing: positional
+        description: 同じ文書の `tables[]`
+    returns:
+      type: dict[str, str]
+      description: 物理名か論理名から、そのテーブルの論理名
+    process: |-
+      1. `title` を持つテーブルを出た順に見て、`name` と `title` の値（文字列にする）をそれぞれキーに、`title` を値にして入れる。同じキーが既にあるときは先に入れた値を残す
+      2. `title` を持たないテーブルは入れない
+    unit_tests:
+      - name: test_er_table_titles
+        case: 正常
+        summary: 物理名と論理名
+        condition: '`name: customers`・`title: 顧客` と `name: payments`・`title: 支払い` のテーブル'
+        mock: なし
+        expected: '`{customers: 顧客, 顧客: 顧客, payments: 支払い, 支払い: 支払い}`'
+      - name: test_er_table_titles_when_duplicated_or_untitled
+        case: 正常
+        summary: 重なるキーと論理名の無いテーブル
+        condition: '`name: a`・`title: A` のテーブル、`name: A`・`title: B` のテーブル、`name: c` だけのテーブル'
+        mock: なし
+        expected: '`A` の値が `A`（先に入れた値）で、`c` のキーが無い'
   - name: render_mermaid
     title: 手で書く図の組み立て
     kind: 関数
