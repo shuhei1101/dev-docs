@@ -33,8 +33,8 @@
 - [x] インターフェース定義設計
 - [x] ~~部品設計~~（画面の部品を変えない）
 - [x] ~~画面設計~~（画面を変えない）
-- [ ] モジュール構成設計
-- [ ] ドキュメント修正（content/prompts/mcp/docs/tools/write-docs.yaml・dev/設計書/外部ライブラリ/mdmark.yaml・plugins/dev-docs/skills/global-setup/SKILL.md・docs/使い方/dev-docsを入れる.md・docs/リファレンス/文書のMCP.md）
+- [x] モジュール構成設計
+- [x] ドキュメント修正（content/prompts/mcp/docs/tools/write-docs.yaml・dev/設計書/外部ライブラリ/mdmark.yaml・plugins/dev-docs/skills/global-setup/SKILL.md・docs/使い方/dev-docsを入れる.md・docs/リファレンス/文書のMCP.md）
 - [ ] 単体テスト作成
 - [ ] 実装
 - [ ] 結合テスト作成
