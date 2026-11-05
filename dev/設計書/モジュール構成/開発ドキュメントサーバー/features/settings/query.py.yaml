@@ -188,13 +188,13 @@ functions:
         summary: 行の ID が重なる
         condition: '`sources` の 2 行がどちらも `id: a`'
         mock: なし
-        expected: '`sources[1].id` の違反 1 つ'
+        expected: '`sources[1].id` の違反 1 つで、`rule` が `a は既に使用されています`'
       - name: test_validate_terminal_config_when_empty_glob
         case: 正常
         summary: 空の glob
         condition: '`scope.read: [""]`'
         mock: なし
-        expected: '`sources[0].scope.read[0]` の違反'
+        expected: '`sources[0].scope.read[0]` の違反で、`rule` が `空の文字列は記載できません`'
       - name: test_validate_terminal_config_when_newer_version
         case: 正常
         summary: 新しいバージョンの設定
