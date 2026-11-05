@@ -204,10 +204,10 @@ flows:
       - 0 番目の文書も書き換わらない
     test: test_error_when_validation_failed
   - name: 異常系（Markdown の値に mdmark の警告がある・ValidationFailedError）
-    summary: 変えた Markdown のキーの値に mdmark の点検のずれがあれば何も書かない
+    summary: 変えた Markdown のキーの値に mdmark の描画時の書き方の警告があれば何も書かない
     setup:
       - name: Mock
-        description: 'mdmark の CLI を、`check --text -` の標準入力に `<!-- flow -->` を含む値を受けると `-:3: diagram_invalid: {内容}` と `ずれ 1 件` を出して終了コード 1 で終わる、`PATH` の先頭に置いたスクリプトに差し替える'
+        description: 'mdmark の CLI を、`check --text -` の標準入力に `<!-- flow -->` を含む値を受けると `-:3: diagram_invalid: {内容}` と `ずれ 1 件` を、`<!-- embed: x -->` だけを含む値を受けると `-:1: unknown_mark: {内容}` と `ずれ 1 件` を出して終了コード 1 で終わる、`PATH` の先頭に置いたスクリプトに差し替える'
       - name: Markdown のキーを持つ種類
         description: 'sample の種類のスキーマが、`contentMediaType: text/markdown` を持つキー `body` を持つ'
         notes: 文書 1 の `body` は `<!-- flow -->` を含まない
@@ -230,6 +230,7 @@ flows:
       - '`isError: true` で、添字 1 の違反として、パス `body`、決まり `mdmark の diagram_invalid（3 行目）`、直し方に mdmark の内容を返す'
       - 0 番目の文書も文書 1 も書き換わらない
       - mdmark の CLI は 1 回だけ呼ばれる（0 番目の操作は Markdown のキーを変えない）
+      - '続けて文書 1 の `body` に `<!-- embed: x -->` だけを含む値を `set` する update は、mdmark が `unknown_mark` を返しても書き込まれ、`results[0].status` が `updated` になる'
     test: test_error_when_mdmark_warning
   - name: 異常系（書き込めない配信元・SourceNotWritableError）
     summary: '`scope.write` に当たらない作業場所からの書き込みを断る'
@@ -721,7 +722,7 @@ exceptions:
   - name: なし（正常終了）
     condition: '全ての操作を書いた（`atomic: false` で一部が失敗したときも、失敗分を `failed` として返して正常終了）'
   - name: ValidationFailedError
-    condition: '変更を当てた後の文書がスキーマか `validators[]` に通らないか、変えた Markdown のキーの値に mdmark の点検のずれがある（`atomic: true`）'
+    condition: '変更を当てた後の文書がスキーマか `validators[]` に通らないか、変えた Markdown のキーの値に mdmark の描画時の書き方の警告がある（`atomic: true`）'
     notes: 違反ごとの添字・パス・決まり・直し方を添える
   - name: SourceNotWritableError
     condition: '`cwd` が配信元の `scope.write` に当たらない'
@@ -764,7 +765,7 @@ constraints:
     constraint: '`PATH` の `mdmark` を、点検する値ごとに `check --text -` で起動し、値を標準入力に渡す。制限時間は端末の設定の `script_timeout_sec`'
     notes: 起動するフォルダは書き込む配信元の作業ツリーの直下（`mdmark.config.yaml` があればその設定で点検する）
   - item: mdmark の点検の結果
-    constraint: '終了コード 0 はずれ無し。終了コード 1 で最後の行が `ずれ {件数} 件` のときは、`-:{行}: {種類}: {内容}` の行ごとに、パスをキーのパス、決まりを `mdmark の {種類}（{行} 行目）`、直し方を内容にした違反にする。それ以外（CLI が見つからない・制限時間を超えた・最後の行が `ずれ {件数} 件` でない）は点検できなかったとして `results[].unchecked` に理由を入れ、書き込みは止めない'
+    constraint: '終了コード 0 はずれ無し。終了コード 1 で最後の行が `ずれ {件数} 件` のときは、`-:{行}: {種類}: {内容}` の行のうち種類が `diagram_invalid`・`syntax_warning`（描画時の書き方の警告）の行ごとに、パスをキーのパス、決まりを `mdmark の {種類}（{行} 行目）`、直し方を内容にした違反にする。ほかの種類の行（`unknown_mark`・`diagram_` で始まる配置のずれ・`missing_file`）では書き込みを止めない。それ以外（CLI が見つからない・制限時間を超えた・最後の行が `ずれ {件数} 件` でない）は点検できなかったとして `results[].unchecked` に理由を入れ、書き込みは止めない'
     notes: 1 回の呼び出しの中で CLI が見つからなかった・制限時間を超えた後は、残りの値の点検も同じ理由で飛ばす
   - item: commit
     constraint: dev-docs は commit しない

@@ -307,7 +307,8 @@ YAML として読めないファイルがあっても、そのファイルを除
 読み込み・検査・書き込みは配信元ごとの排他ロックの中で行い、書いた後に `generators[]` を流します。
 
 種類のスキーマで `contentMediaType: text/markdown` を持つキーは Markdown のキーで、操作で値を変えたキー（`create` は値を持つ全てのキー）を mdmark の点検（`mdmark check --text -`）に通します。
-点検のずれは、項目のパス・`mdmark の {種類}（{行} 行目）`・mdmark の内容の違反になり、スキーマの違反と同じく書き込みを止めます。
+点検のずれのうち描画時の書き方の警告（`diagram_invalid`・`syntax_warning`）は、項目のパス・`mdmark の {種類}（{行} 行目）`・mdmark の内容の違反になり、スキーマの違反と同じく書き込みを止めます。
+ほかの種類（知らない印の `unknown_mark`・図の配置のずれ・見つからないファイル）では書き込みを止めません。
 mdmark の CLI が `PATH` に無いか、点検が端末の設定の `script_timeout_sec` を超えた・結果を出さずに終わったときは、点検せずに書き込み、そのキーと理由を `results[].unchecked` に返します。
 
 レスポンスは `applied`（1 件以上を書いたか。`dry_run` は常に `false`）と `results[]` です。
