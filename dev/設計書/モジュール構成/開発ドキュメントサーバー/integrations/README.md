@@ -8,3 +8,4 @@ git の実行とスクリプトの実行
 | --- | --- |
 | [git.py](./git.py.yaml) | git の実行と、リポジトリの直下の解決 |
 | [scripts.py](./scripts.py.yaml) | `validators[]`・`converters[]`・`generators[]` のスクリプトの制限時間つきの実行と、実行できるかの確かめ |
+| [mdmark.py](./mdmark.py.yaml) | mdmark の CLI の `check --text -` による Markdown の点検と、出力の解釈 |

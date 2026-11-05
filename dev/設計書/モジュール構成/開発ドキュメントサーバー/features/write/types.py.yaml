@@ -200,6 +200,12 @@ data_models:
         access: 公開
         default: '[]'
         description: '`failed` のときだけ'
+      - name: unchecked
+        title: 点検できなかったキー
+        type: list[UncheckedKey]
+        access: 公開
+        default: '[]'
+        description: mdmark で点検できなかった Markdown のキーと理由（検査.点検できなかったキー）。`failed` では空。空の並びは JSON に出さない
   - name: WriteResult
     title: 書き込みの結果
     container: features/write/types.py
