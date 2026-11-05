@@ -68,7 +68,7 @@ functions:
       `NON_GET_METHODS` の要求:
 
       1. パスの最初の区切りが `EXCLUDED_PREFIXES` のどれかのとき
-         - アプリの他のルートのうち、パスに当たりメソッドが合わないルート（Starlette の `Match.PARTIAL`）があれば、`HTTPException(405)` を送る。`Allow` はそのルートのメソッド
+         - アプリのルート（`request.app.router.routes`）から画面の配信のルーター（このルーター自身と、その GET・`NON_GET_METHODS` のルート）を除いたうち、パスに当たりメソッドが合わないルート（Starlette の `Match.PARTIAL`）があれば、`HTTPException(405)` を送る。`Allow` はそのルートのメソッド
          - 無ければ `HTTPException(404)` を送る（エンドポイントが無いことを、メソッドによらず 404 で表す）
       2. それ以外のパスは `HTTPException(405)` を送る。`Allow` は `GET`
     exceptions:
@@ -110,21 +110,21 @@ functions:
       - name: test_build_screen_router_when_excluded_not_get
         case: 異常
         summary: API・管理の頭の無いパスへの GET 以外の要求を 404 にする
-        condition: POST `/_admin/none`・PUT `/_api/none`・DELETE `/_admin/none`
+        condition: 画面の配信より先に GET `/_api/x` のルートを登録し、エラーハンドラ（例外の変換の登録）を登録したアプリで、POST `/_admin/none`・PUT `/_api/none`・DELETE `/_admin/none`
         mock: なし（一時フォルダ）
         expected: 全て 404
         exception: HTTPException(404)
       - name: test_build_screen_router_when_excluded_wrong_method
         case: 異常
         summary: API の頭の有るパスへの合わないメソッドを 405 にする
-        condition: 画面の配信より先に GET `/_api/x` のルートを登録したアプリで POST `/_api/x`
+        condition: 画面の配信より先に GET `/_api/x` のルートを登録し、エラーハンドラ（例外の変換の登録）を登録したアプリで POST `/_api/x`
         mock: なし（一時フォルダ）
         expected: 405、`Allow` に `GET` がある
         exception: HTTPException(405)
       - name: test_build_screen_router_when_not_get
         case: 異常
         summary: 画面のパスへの GET 以外の要求を 405 にする
-        condition: POST `/default/設計書/a.md`
+        condition: エラーハンドラ（例外の変換の登録）を登録したアプリで POST `/default/設計書/a.md`
         mock: なし（一時フォルダ）
         expected: 405、`Allow` が `GET`
         exception: HTTPException(405)
