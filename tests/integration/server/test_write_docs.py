@@ -1,8 +1,12 @@
 from __future__ import annotations
 
+import os
+import sys
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any
+
+import pytest
 
 from dev_docs.shared.hashing import content_hash
 from dev_docs.shared.yaml_io import load_yaml
@@ -806,3 +810,147 @@ def test_normal_when_quotes_preserved(
         "id: doc-1\nname: \"A: b\"\ndescription: '2020-12'\nweight: 2\n"
     )
     assert result.data["results"][0]["diff"] == "- weight: 1\n+ weight: 2"
+
+
+MARKDOWN_SCHEMA = (
+    "type: object\n"
+    "properties:\n"
+    "  id: {type: string}\n"
+    "  name: {type: string}\n"
+    "  description: {type: string}\n"
+    "  tags: {type: array, items: {type: string}}\n"
+    "  body: {type: string, contentMediaType: text/markdown}\n"
+)
+# 図の部品を含む値には書き方の警告、embed のマーカーだけの値には知らない印を返す偽の mdmark
+FAKE_MDMARK = (
+    "import pathlib, sys\n"
+    "text = sys.stdin.read()\n"
+    "with pathlib.Path(sys.argv[0]).with_name('calls.txt').open('a', encoding='utf-8') as f:\n"
+    "    f.write('call\\n')\n"
+    "if '<!-- flow -->' in text:\n"
+    "    print('-:3: diagram_invalid: 図の定義を読めません')\n"
+    "    print('ずれ 1 件')\n"
+    "    sys.exit(1)\n"
+    "if '<!-- embed: x -->' in text:\n"
+    "    print('-:1: unknown_mark: 知らない印 embed です')\n"
+    "    print('ずれ 1 件')\n"
+    "    sys.exit(1)\n"
+    "print('ずれ 0 件')\n"
+)
+NO_SUMMARY_MDMARK = (
+    "import sys\nsys.stdin.read()\nprint('unknown option --text', file=sys.stderr)\nsys.exit(1)\n"
+)
+FLOW_BODY = '<!-- flow -->\n\n```json\n{"nodes": [\n```\n\n<!-- /flow -->\n'
+
+
+def _put_mdmark(folder: Path, code: str, monkeypatch: pytest.MonkeyPatch) -> Path:
+    """`code` を本体にした `mdmark` をフォルダに置き、PATH の先頭にそのフォルダを入れる。"""
+    folder.mkdir(parents=True, exist_ok=True)
+    script = folder / "mdmark"
+    script.write_text(f"#!{sys.executable}\n{code}", encoding="utf-8")
+    script.chmod(0o755)
+    monkeypatch.setenv("PATH", f"{folder}{os.pathsep}{os.environ['PATH']}")
+    return folder
+
+
+def _markdown_setup(
+    make_source: Callable[..., Any],
+    make_server: Callable[..., Any],
+    add_worktree: Callable[..., Path],
+    sample_file_set: Callable[..., dict[str, str]],
+) -> tuple[Any, Any, Path]:
+    """`body` を Markdown のキーに持つ sample を起動する。"""
+    files = sample_file_set(**{"schemas/sample.schema.yaml": MARKDOWN_SCHEMA})
+    return _setup(make_source, make_server, add_worktree, files)
+
+
+def test_normal_when_mdmark_unavailable(
+    make_source: Callable[..., Any],
+    make_server: Callable[..., Any],
+    add_worktree: Callable[..., Path],
+    sample_file_set: Callable[..., dict[str, str]],
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """mdmark の CLI が無いか点検を終えられないときは、点検せずに書き込み、理由を返す（正常系）。"""
+    # 準備
+    source, env, worktree = _markdown_setup(make_source, make_server, add_worktree, sample_file_set)
+    target = worktree / "docs" / "doc-1.yaml"
+    # 実行（1 回目: PATH に mdmark が無い）
+    first = env.call(
+        "write_docs",
+        cwd=str(source.folder),
+        worktree=str(worktree),
+        operations=[_update("doc-1", _version(target), set={"body": FLOW_BODY})],
+    )
+    # 実行（2 回目: 結果を出さずに終わる mdmark）
+    _put_mdmark(tmp_path / "bin-no-summary", NO_SUMMARY_MDMARK, monkeypatch)
+    second = env.call(
+        "write_docs",
+        cwd=str(source.folder),
+        worktree=str(worktree),
+        operations=[_update("doc-1", _version(target), set={"body": FLOW_BODY + "\n2\n"})],
+    )
+    # 検証
+    first_item = first.data["results"][0]
+    second_item = second.data["results"][0]
+    assert not first.is_error
+    assert first.data["applied"] is True
+    assert first_item["status"] == "updated"
+    assert first_item["unchecked"][0]["path"] == "body"
+    assert "mdmark の CLI が PATH に見つかりません" in first_item["unchecked"][0]["reason"]
+    assert not second.is_error
+    assert second.data["applied"] is True
+    assert second_item["status"] == "updated"
+    assert "結果を出さずに終了コード 1" in second_item["unchecked"][0]["reason"]
+    assert "unknown option --text" in second_item["unchecked"][0]["reason"]
+    assert load_yaml(target.read_text(encoding="utf-8"))["body"] == FLOW_BODY + "\n2\n"
+
+
+def test_error_when_mdmark_warning(
+    make_source: Callable[..., Any],
+    make_server: Callable[..., Any],
+    add_worktree: Callable[..., Path],
+    sample_file_set: Callable[..., dict[str, str]],
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """変えた Markdown のキーの値に mdmark の描画時の書き方の警告があれば何も書かない（異常系）。"""
+    # 準備
+    bin_dir = _put_mdmark(tmp_path / "bin", FAKE_MDMARK, monkeypatch)
+    source, env, worktree = _markdown_setup(make_source, make_server, add_worktree, sample_file_set)
+    first = worktree / "docs" / "doc-1.yaml"
+    second = worktree / "docs" / "doc-2.yaml"
+    first_before = first.read_text(encoding="utf-8")
+    second_before = second.read_text(encoding="utf-8")
+    # 実行
+    result = env.call(
+        "write_docs",
+        cwd=str(source.folder),
+        worktree=str(worktree),
+        operations=[
+            _update("doc-2", _version(second), set={"name": "通る"}),
+            _update("doc-1", _version(first), set={"body": FLOW_BODY}),
+        ],
+    )
+    calls_after_error = (bin_dir / "calls.txt").read_text(encoding="utf-8")
+    first_after_error = first.read_text(encoding="utf-8")
+    second_after_error = second.read_text(encoding="utf-8")
+    embed = env.call(
+        "write_docs",
+        cwd=str(source.folder),
+        worktree=str(worktree),
+        operations=[_update("doc-1", _version(first), set={"body": "<!-- embed: x -->\n"})],
+    )
+    # 検証
+    assert result.is_error
+    assert "ValidationFailedError" in result.text
+    assert "operations[1].body" in result.text
+    assert "mdmark の diagram_invalid（3 行目）" in result.text
+    assert "図の定義を読めません" in result.text
+    assert first_after_error == first_before
+    assert second_after_error == second_before
+    assert calls_after_error == "call\n"
+    assert not embed.is_error
+    assert embed.data["results"][0]["status"] == "updated"
+    assert load_yaml(first.read_text(encoding="utf-8"))["body"] == "<!-- embed: x -->\n"
