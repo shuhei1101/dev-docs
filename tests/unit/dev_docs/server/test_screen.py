@@ -101,9 +101,7 @@ def _client_with_api(dist_dir: Path) -> TestClient:
         pytest.param("DELETE", "/_admin/none", id="delete-admin"),
     ],
 )
-def test_build_screen_router_when_excluded_not_get(
-    dist_dir: Path, method: str, path: str
-) -> None:
+def test_build_screen_router_when_excluded_not_get(dist_dir: Path, method: str, path: str) -> None:
     """API・管理の頭の無いパスへの GET 以外の要求を 404 にする（異常系）。"""
     # 準備
     client = _client_with_api(dist_dir)
