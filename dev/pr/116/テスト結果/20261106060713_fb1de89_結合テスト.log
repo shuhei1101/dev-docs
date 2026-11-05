@@ -1,0 +1,178 @@
+$ uv run pytest tests/integration/server/
+============================= test session starts ==============================
+platform linux -- Python 3.14.3, pytest-9.1.1, pluggy-1.7.0
+rootdir: /mnt/c/Users/shuhe/repo/dev-docs/.claude/worktrees/chore-wording-server-error-ai-slop
+configfile: pyproject.toml
+plugins: anyio-4.15.1
+collected 202 items
+
+tests/integration/server/test_api_schema.py .                            [  0%]
+tests/integration/server/test_check_project.py .........                 [  4%]
+tests/integration/server/test_delete_docs.py ..........                  [  9%]
+tests/integration/server/test_describe.py .............                  [ 16%]
+tests/integration/server/test_files.py ...                               [ 17%]
+tests/integration/server/test_get_document.py .................          [ 26%]
+tests/integration/server/test_get_settings_sources.py ...                [ 27%]
+tests/integration/server/test_get_status.py ..                           [ 28%]
+tests/integration/server/test_list_changes.py .........                  [ 33%]
+tests/integration/server/test_list_match_words.py ....                   [ 35%]
+tests/integration/server/test_list_refs.py ...                           [ 36%]
+tests/integration/server/test_migrate.py ........                        [ 40%]
+tests/integration/server/test_prompt_doc.py .......                      [ 44%]
+tests/integration/server/test_put_columns.py ....                        [ 46%]
+tests/integration/server/test_put_settings_sources.py ......             [ 49%]
+tests/integration/server/test_reload.py ...                              [ 50%]
+tests/integration/server/test_restart.py ..                              [ 51%]
+tests/integration/server/test_search_docs.py .......................     [ 62%]
+tests/integration/server/test_search_page.py ...                         [ 64%]
+tests/integration/server/test_serve.py ..............                    [ 71%]
+tests/integration/server/test_serve_screen.py ....                       [ 73%]
+tests/integration/server/test_session_start.py ....                      [ 75%]
+tests/integration/server/test_trace_related.py .........                 [ 79%]
+tests/integration/server/test_try_convert.py ......                      [ 82%]
+tests/integration/server/test_update.py .....                            [ 85%]
+tests/integration/server/test_write_docs.py .................F....       [ 96%]
+tests/integration/server/test_write_nav.py ........                      [100%]
+
+=================================== FAILURES ===================================
+______________________ test_normal_when_tool_description _______________________
+
+make_source = <function make_source.<locals>._make at 0x74dcef0ca400>
+make_server = <function make_server.<locals>._make at 0x74dcef0cb270>
+
+    def test_normal_when_tool_description(
+        make_source: Callable[..., Any], make_server: Callable[..., Any]
+    ) -> None:
+        """ツールの説明に、範囲のファイルの増減・改名で管理用の YAML の行を修正することを含める（正常系）。"""
+        # 準備
+        env = make_server(make_source("sample"))
+        # 実行
+        response = env.client.post(
+            "/mcp/",
+            headers={
+                "Accept": "application/json, text/event-stream",
+                "Content-Type": "application/json",
+            },
+            json={"jsonrpc": "2.0", "id": 1, "method": "tools/list"},
+        )
+        # 検証
+        tools = {tool["name"]: tool for tool in response.json()["result"]["tools"]}
+>       assert (
+            "範囲のファイルを作った・消した・改名したら、管理用の YAML の行を修正する"
+            in tools["write_docs"]["description"]
+        )
+E       AssertionError: assert '範囲のファイルを作った・消した・改名したら、管理用の YAML の行を修正する' in '文書を作成・部分更新・置換する。操作を全て適用した後の文書を検査し、合格したときだけ作業ツリーのファイルを書き換える（commit はしない）。変更した Markdown のキーの値は mdmark の点検に通し、描画時の書き方の警告...scribe(source, kind) で種類のスキーマを確認する。\n文書を削除するときは delete_docs を使用する。配信の範囲の外のファイルは Edit・Write で編集する。\n書き込んだ後の文書の本文は返却しない。'
+
+tests/integration/server/test_write_docs.py:693: AssertionError
+=========================== short test summary info ============================
+FAILED tests/integration/server/test_write_docs.py::test_normal_when_tool_description
+================== 1 failed, 201 passed in 496.11s (0:08:16) ===================
+
+$ npx playwright test --config tests/integration/frontend/playwright.config.ts tests/integration/frontend/settings-screen.spec.ts tests/integration/frontend/not-found-screen.spec.ts
+
+Running 101 tests using 4 workers
+
+  ✓    3 [chromium] › tests/integration/frontend/not-found-screen.spec.ts:43:3 › ページのタイトル › page_title (3.5s)
+  ✓    1 [chromium] › tests/integration/frontend/not-found-screen.spec.ts:53:3 › 本文へスキップ › skip_link (4.1s)
+  ✓    2 [chromium] › tests/integration/frontend/not-found-screen.spec.ts:80:3 › トップバー › topbar_ref_select (4.4s)
+  ✓    4 [chromium] › tests/integration/frontend/not-found-screen.spec.ts:69:3 › トップバー › topbar_source_select (4.2s)
+  ✓    5 [chromium] › tests/integration/frontend/not-found-screen.spec.ts:101:3 › トップバー › topbar_color_scheme_toggle (2.5s)
+  ✓    6 [chromium] › tests/integration/frontend/not-found-screen.spec.ts:91:3 › トップバー › topbar_search_open (2.7s)
+  ✓    7 [chromium] › tests/integration/frontend/not-found-screen.spec.ts:116:3 › トップバー › topbar_without_comment (2.4s)
+  ✓    8 [chromium] › tests/integration/frontend/not-found-screen.spec.ts:126:3 › 見出し › heading_when_doc_missing (2.0s)
+  ✓   11 [chromium] › tests/integration/frontend/not-found-screen.spec.ts:144:3 › 見出し › heading_when_source_unknown (2.1s)
+  ✓    9 [chromium] › tests/integration/frontend/not-found-screen.spec.ts:132:3 › 見出し › heading_when_ref_missing (2.4s)
+  ✓   10 [chromium] › tests/integration/frontend/not-found-screen.spec.ts:138:3 › 見出し › heading_when_source_not_served (2.3s)
+  ✓   12 [chromium] › tests/integration/frontend/not-found-screen.spec.ts:152:3 › 説明 › description_when_doc_missing (1.9s)
+  ✓   13 [chromium] › tests/integration/frontend/not-found-screen.spec.ts:158:3 › 説明 › description_when_doc_missing_in_non_git_source (1.7s)
+  ✓   15 [chromium] › tests/integration/frontend/not-found-screen.spec.ts:177:3 › 説明 › description_when_source_not_served (1.8s)
+  ✓   14 [chromium] › tests/integration/frontend/not-found-screen.spec.ts:171:3 › 説明 › description_when_ref_missing (2.0s)
+  ✓   16 [chromium] › tests/integration/frontend/not-found-screen.spec.ts:183:3 › 説明 › description_when_source_unknown (1.8s)
+  ✓   17 [chromium] › tests/integration/frontend/not-found-screen.spec.ts:191:3 › 見つからなかったものの詳細 › details_when_doc_missing (1.9s)
+  ✓   18 [chromium] › tests/integration/frontend/not-found-screen.spec.ts:198:3 › 見つからなかったものの詳細 › details_when_ref_missing (1.8s)
+  ✓   19 [chromium] › tests/integration/frontend/not-found-screen.spec.ts:207:3 › 見つからなかったものの詳細 › details_when_source_not_served (1.9s)
+  ✓   20 [chromium] › tests/integration/frontend/not-found-screen.spec.ts:216:3 › 見つからなかったものの詳細 › details_when_source_unknown (1.9s)
+  ✓   22 [chromium] › tests/integration/frontend/not-found-screen.spec.ts:236:3 › 配信元のトップを開く › top_link_when_ref_missing (1.7s)
+  ✓   21 [chromium] › tests/integration/frontend/not-found-screen.spec.ts:224:3 › 配信元のトップを開く › top_link_when_doc_missing (2.0s)
+  ✓   23 [chromium] › tests/integration/frontend/not-found-screen.spec.ts:242:3 › 配信元のトップを開く › top_link_when_source_unavailable (1.8s)
+  ✓   26 [chromium] › tests/integration/frontend/not-found-screen.spec.ts:271:3 › 配信中の配信元 › serving_sources_when_unavailable (2.1s)
+  ✓   24 [chromium] › tests/integration/frontend/not-found-screen.spec.ts:250:3 › 設定を開く › settings_link_variant (3.5s)
+  ✓   25 [chromium] › tests/integration/frontend/not-found-screen.spec.ts:262:3 › 設定を開く › settings_link_click (2.4s)
+  ✓   27 [chromium] › tests/integration/frontend/not-found-screen.spec.ts:282:3 › 配信中の配信元 › serving_sources_when_doc_missing (2.2s)
+  ✓   30 [chromium] › tests/integration/frontend/not-found-screen.spec.ts:317:3 › 検索のダイアログ › search_dialog_when_source_not_served (1.8s)
+  ✓   28 [chromium] › tests/integration/frontend/not-found-screen.spec.ts:288:3 › 配信中の配信元 › serving_sources_when_none_serving (2.0s)
+  ✓   31 [chromium] › tests/integration/frontend/not-found-screen.spec.ts:326:3 › ショートカットの一覧 › shortcut_dialog (1.9s)
+  ✓   29 [chromium] › tests/integration/frontend/not-found-screen.spec.ts:296:3 › 検索のダイアログ › search_dialog_result_select (2.6s)
+  ✓   32 [chromium] › tests/integration/frontend/settings-screen.spec.ts:50:3 › ページのタイトル › page_title (1.9s)
+  ✓   33 [chromium] › tests/integration/frontend/settings-screen.spec.ts:58:3 › 本文へスキップ › skip_link (2.1s)
+  ✓   34 [chromium] › tests/integration/frontend/settings-screen.spec.ts:74:3 › トップバー › topbar_home_link (2.0s)
+  ✓   35 [chromium] › tests/integration/frontend/settings-screen.spec.ts:81:3 › トップバー › topbar_color_scheme_toggle (2.1s)
+  ✓   36 [chromium] › tests/integration/frontend/settings-screen.spec.ts:96:3 › トップバー › topbar_only_title_and_color_scheme (1.9s)
+  ✓   38 [chromium] › tests/integration/frontend/settings-screen.spec.ts:121:3 › 文書の画面に戻る › back_link_without_previous_doc (1.9s)
+  ✓   37 [chromium] › tests/integration/frontend/settings-screen.spec.ts:106:3 › 文書の画面に戻る › back_link_to_previous_doc (2.2s)
+  ✓   39 [chromium] › tests/integration/frontend/settings-screen.spec.ts:128:3 › 文書の画面に戻る › back_link_when_none_serving (1.7s)
+  ✓   40 [chromium] › tests/integration/frontend/settings-screen.spec.ts:136:3 › 見出し › heading (1.6s)
+  ✓   41 [chromium] › tests/integration/frontend/settings-screen.spec.ts:142:3 › 見出し › sources_heading (1.7s)
+  ✓   42 [chromium] › tests/integration/frontend/settings-screen.spec.ts:148:3 › 見出し › keyboard_heading (1.8s)
+  ✓   44 [chromium] › tests/integration/frontend/settings-screen.spec.ts:175:3 › 配信元が無いことの表示 › empty_message (1.5s)
+  ✓   45 [chromium] › tests/integration/frontend/settings-screen.spec.ts:184:3 › 配信元の一覧 › table_columns_and_order (1.3s)
+  ✓   46 [chromium] › tests/integration/frontend/settings-screen.spec.ts:200:3 › 配信元の ID › id_link_when_serving (1.6s)
+  ✓   47 [chromium] › tests/integration/frontend/settings-screen.spec.ts:210:3 › 配信元の ID › id_not_link_when_not_serving (1.3s)
+  ✓   48 [chromium] › tests/integration/frontend/settings-screen.spec.ts:221:3 › 設定ファイル › config_paths (1.4s)
+  ✓   49 [chromium] › tests/integration/frontend/settings-screen.spec.ts:238:3 › 状態 › status_serving (1.6s)
+  ✓   43 [chromium] › tests/integration/frontend/settings-screen.spec.ts:156:3 › 配信元の読み込み中の表示 › loading_skeleton (4.6s)
+  ✓   50 [chromium] › tests/integration/frontend/settings-screen.spec.ts:244:3 › 状態 › status_not_served (1.5s)
+  ✓   51 [chromium] › tests/integration/frontend/settings-screen.spec.ts:252:3 › 状態 › status_disabled (1.6s)
+  ✓   52 [chromium] › tests/integration/frontend/settings-screen.spec.ts:260:3 › 状態 › status_pending_reload (1.9s)
+  ✓   54 [chromium] › tests/integration/frontend/settings-screen.spec.ts:284:3 › 状態の補足 › status_note_when_config_version_old (1.7s)
+  ✓   53 [chromium] › tests/integration/frontend/settings-screen.spec.ts:270:3 › 状態の補足 › status_note_when_not_served (2.2s)
+  ✓   55 [chromium] › tests/integration/frontend/settings-screen.spec.ts:294:3 › 状態の補足 › status_note_when_disabled (1.9s)
+  ✓   57 [chromium] › tests/integration/frontend/settings-screen.spec.ts:310:3 › 状態の補足 › status_note_when_serving (1.8s)
+  ✓   56 [chromium] › tests/integration/frontend/settings-screen.spec.ts:302:3 › 状態の補足 › status_note_when_pending_reload (2.0s)
+  ✓   58 [chromium] › tests/integration/frontend/settings-screen.spec.ts:319:3 › 配信元を追加 › add_button (1.9s)
+  ✓   59 [chromium] › tests/integration/frontend/settings-screen.spec.ts:328:3 › 編集ボタン › edit_button (1.7s)
+  ✓   60 [chromium] › tests/integration/frontend/settings-screen.spec.ts:349:3 › 削除ボタン › delete_button (1.6s)
+  ✓   61 [chromium] › tests/integration/frontend/settings-screen.spec.ts:358:3 › 1 文字のショートカットのスイッチ › single_key_switch_initial (1.7s)
+  ✓   62 [chromium] › tests/integration/frontend/settings-screen.spec.ts:367:3 › 1 文字のショートカットのスイッチ › single_key_switch_toggle (1.8s)
+  ✓   63 [chromium] › tests/integration/frontend/settings-screen.spec.ts:387:3 › ショートカットの一覧 › shortcut_open_button (1.5s)
+  ✓   64 [chromium] › tests/integration/frontend/settings-screen.spec.ts:394:3 › ショートカットの一覧 › shortcut_key (1.6s)
+  ✓   65 [chromium] › tests/integration/frontend/settings-screen.spec.ts:403:3 › 配信元のダイアログのタイトル › dialog_title_when_add (1.9s)
+  ✓   66 [chromium] › tests/integration/frontend/settings-screen.spec.ts:410:3 › 配信元のダイアログのタイトル › dialog_title_when_edit (2.0s)
+  ✓   67 [chromium] › tests/integration/frontend/settings-screen.spec.ts:420:3 › 配信元の ID の入力欄 › id_input_when_add (1.9s)
+  ✓   68 [chromium] › tests/integration/frontend/settings-screen.spec.ts:436:3 › 配信元の ID の入力欄 › id_input_when_edit (1.8s)
+  ✓   69 [chromium] › tests/integration/frontend/settings-screen.spec.ts:443:3 › 配信元の ID の入力欄 › id_input_keeps_value (1.7s)
+  ✓   70 [chromium] › tests/integration/frontend/settings-screen.spec.ts:453:3 › 設定ファイルの入力欄 › config_input_when_add (1.8s)
+  ✓   71 [chromium] › tests/integration/frontend/settings-screen.spec.ts:465:3 › 設定ファイルの入力欄 › config_input_when_edit (1.7s)
+  ✓   72 [chromium] › tests/integration/frontend/settings-screen.spec.ts:483:3 › 配信のスイッチ › enabled_switch_heading (1.8s)
+  ✓   73 [chromium] › tests/integration/frontend/settings-screen.spec.ts:492:3 › 配信のスイッチ › enabled_switch_when_add (1.7s)
+  ✓   74 [chromium] › tests/integration/frontend/settings-screen.spec.ts:502:3 › 配信のスイッチ › enabled_switch_when_edit (1.6s)
+  ✓   75 [chromium] › tests/integration/frontend/settings-screen.spec.ts:513:3 › 読み取りの範囲の入力欄 › read_input_when_add (1.7s)
+  ✓   76 [chromium] › tests/integration/frontend/settings-screen.spec.ts:525:3 › 読み取りの範囲の入力欄 › read_input_when_edit (1.6s)
+  ✓   77 [chromium] › tests/integration/frontend/settings-screen.spec.ts:538:3 › 書き込みの範囲の入力欄 › write_input_when_add (1.5s)
+  ✓   78 [chromium] › tests/integration/frontend/settings-screen.spec.ts:549:3 › 書き込みの範囲の入力欄 › write_input_when_edit (1.7s)
+  ✓   79 [chromium] › tests/integration/frontend/settings-screen.spec.ts:572:3 › 配信元のダイアログのキャンセル › cancel_button (1.9s)
+  ✓   80 [chromium] › tests/integration/frontend/settings-screen.spec.ts:587:3 › 配信元のダイアログのキャンセル › cancel_by_escape (1.3s)
+  ✓   81 [chromium] › tests/integration/frontend/settings-screen.spec.ts:598:3 › 追加・保存ボタン › submit_label (1.8s)
+  ✓   82 [chromium] › tests/integration/frontend/settings-screen.spec.ts:608:3 › 追加・保存ボタン › submit_add_success (2.1s)
+  ✓   84 [chromium] › tests/integration/frontend/settings-screen.spec.ts:655:3 › 追加・保存ボタン › submit_failure_422 (1.9s)
+  ✓   85 [chromium] › tests/integration/frontend/settings-screen.spec.ts:676:3 › 保存の失敗のまとめ › failure_summary_when_invalid (1.6s)
+  ✓   86 [chromium] › tests/integration/frontend/settings-screen.spec.ts:687:3 › 保存の失敗のまとめ › failure_summary_when_422 (1.6s)
+  ✓   83 [chromium] › tests/integration/frontend/settings-screen.spec.ts:639:3 › 追加・保存ボタン › submit_disabled_while_saving (3.8s)
+  ✓   87 [chromium] › tests/integration/frontend/settings-screen.spec.ts:711:3 › 保存の失敗のまとめ › failure_summary_row_click (1.7s)
+  ✓   88 [chromium] › tests/integration/frontend/settings-screen.spec.ts:731:3 › 削除の確認 › delete_title (1.2s)
+  ✓   89 [chromium] › tests/integration/frontend/settings-screen.spec.ts:738:3 › 削除の確認 › delete_description (1.5s)
+  ✓   90 [chromium] › tests/integration/frontend/settings-screen.spec.ts:749:3 › 削除の確認 › delete_cancel (1.7s)
+[WebServer] 6:00:34 AM [vite] (client) [console.error] {"ts":"2026-11-05T21:00:34.069Z","level":"error","event":"app_error","status":500,"type":"urn:dev-docs:error:Error","error":{"name":"AppError","message":"端末の設定を書き込めませんでした","stack":"AppError: 端末の設定を書き込めませんでした\n    at AppError.fromResponse (http://127.0.0.1:5199/src/shared/core/app-error.ts:28:20)\n    at async apiClient (http://127.0.0.1:5199/src/shared/adapters/api-client.ts:19:26)"}}
+  ✓   92 [chromium] › tests/integration/frontend/settings-screen.spec.ts:792:3 › 削除の確認 › delete_confirm_failure (2.0s)
+  ✓   91 [chromium] › tests/integration/frontend/settings-screen.spec.ts:764:3 › 削除の確認 › delete_confirm_success (2.1s)
+  ✓   93 [chromium] › tests/integration/frontend/settings-screen.spec.ts:805:3 › 削除の確認 › delete_confirm_disabled_while_saving (1.4s)
+  ✓   94 [chromium] › tests/integration/frontend/settings-screen.spec.ts:825:3 › 入力チェック › id_input_check_when_empty (1.9s)
+  ✓   95 [chromium] › tests/integration/frontend/settings-screen.spec.ts:832:3 › 入力チェック › id_input_check_when_invalid_char (2.0s)
+  ✓   96 [chromium] › tests/integration/frontend/settings-screen.spec.ts:842:3 › 入力チェック › id_input_check_when_duplicated (2.0s)
+  ✓   97 [chromium] › tests/integration/frontend/settings-screen.spec.ts:852:3 › 入力チェック › id_input_check_revalidates_on_input (2.0s)
+  ✓   98 [chromium] › tests/integration/frontend/settings-screen.spec.ts:862:3 › 入力チェック › config_input_check_when_blank (1.9s)
+  ✓  100 [chromium] › tests/integration/frontend/settings-screen.spec.ts:870:3 › 入力チェック › read_input_check_when_blank (2.0s)
+  ✓   99 [chromium] › tests/integration/frontend/settings-screen.spec.ts:877:3 › 入力チェック › read_input_check_when_contains_blank (2.0s)
+  ✓  101 [chromium] › tests/integration/frontend/settings-screen.spec.ts:887:3 › 入力チェック › write_input_check_when_contains_blank (1.8s)
+
+  101 passed (2.4m)

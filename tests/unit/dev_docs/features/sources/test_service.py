@@ -120,6 +120,39 @@ def test_validate_source_config_when_schema_missing(source_root: Path) -> None:
     assert [v.path for v in result] == ["documents[0].schema"]
 
 
+def test_validate_source_config_when_schema_broken(
+    tmp_path: Path, write_files: Callable[[Path, dict[str, str]], None]
+) -> None:
+    """スキーマのファイルを YAML として読み込めない（正常系）。"""
+    # 準備
+    root = tmp_path / "root"
+    write_files(root, {"schemas/rule.schema.yaml": "a: [\n"})
+    value = _config_value()
+    # 実行
+    result = validate_source_config(value, root=root)
+    # 検証
+    assert [v.path for v in result] == ["documents[0].schema"]
+    assert result[0].rule.startswith("スキーマを YAML として読み込めない:")
+
+
+def test_validate_source_config_when_body_file_without_records(source_root: Path) -> None:
+    """`records` の無い行が `body_file` を持つ（正常系）。"""
+    # 準備
+    row = {
+        "id": "rules",
+        "paths": ["docs/rule/*.yaml"],
+        "schema": "schemas/rule.schema.yaml",
+        "body_file": "body",
+    }
+    value = _config_value(documents=[row])
+    # 実行
+    result = validate_source_config(value, root=source_root)
+    # 検証
+    assert [(v.path, v.rule) for v in result] == [
+        ("documents[0].body_file", "records と一緒に記載してください")
+    ]
+
+
 def test_validate_source_config_when_outside_root(source_root: Path) -> None:
     """配信元の外を指す（正常系）。"""
     # 準備
@@ -287,6 +320,24 @@ def test_load_source_when_config_missing(make_entry: Callable[..., SourceEntry])
     assert served is None
     assert status.status == "not_served"
     assert [error.path for error in status.errors] == ["config[0]"]
+
+
+def test_load_source_when_config_broken(
+    tmp_path: Path,
+    write_files: Callable[[Path, dict[str, str]], None],
+    make_entry: Callable[..., SourceEntry],
+) -> None:
+    """設定のファイルを YAML として読み込めない（正常系）。"""
+    # 準備
+    write_files(tmp_path, {"dev-docs.yaml": "name: [\n"})
+    entry = make_entry(str(tmp_path / "dev-docs.yaml"), source_id="sample")
+    # 実行
+    served, status = load_source(entry, index=0)
+    # 検証
+    assert served is None
+    assert status.status == "not_served"
+    assert [error.path for error in status.errors] == ["config[0]"]
+    assert status.errors[0].rule.startswith("YAML として読み込めない:")
 
 
 def test_load_source_when_invalid(

@@ -55,4 +55,4 @@ def test_require_same_origin_when_unknown() -> None:
     # 実行・検証
     with pytest.raises(CrossOriginError) as exc_info:
         require_same_origin(request)
-    assert "確かめられません" in exc_info.value.message
+    assert "確認できません" in exc_info.value.message

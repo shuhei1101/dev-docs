@@ -225,10 +225,10 @@ response:
     description: 配信元の ID
   - name: sources[].status
     type: Literal['serving', 'not_served', 'disabled']
-    description: 読み直した後の状態
+    description: 再読み込みした後の状態
   - name: sources[].errors
     type: 'list[{path: str, reason: str}]'
-    description: 検証で外した理由
+    description: 検証で除外した理由
     notes: '`not_served` のときだけ'
 response_example: |-
   ```json

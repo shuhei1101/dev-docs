@@ -128,6 +128,18 @@ functions:
         condition: '`documents[0].schema: schemas/none.yaml`'
         mock: なし
         expected: '`documents[0].schema` の違反'
+      - name: test_validate_source_config_when_schema_broken
+        case: 正常
+        summary: スキーマのファイルを YAML として読み込めない
+        condition: '`schemas/rule.schema.yaml` が `a: [`'
+        mock: なし
+        expected: '`documents[0].schema` の違反で、`rule` が `スキーマを YAML として読み込めない:` で始まる'
+      - name: test_validate_source_config_when_body_file_without_records
+        case: 正常
+        summary: '`records` の無い行が `body_file` を持つ'
+        condition: '`documents[0]` に `body_file: body` があり `records` が無い'
+        mock: なし
+        expected: '`documents[0].body_file` の違反で、`rule` が `records と一緒に記載してください`'
       - name: test_validate_source_config_when_outside_root
         case: 正常
         summary: 配信元の外を指す
@@ -301,6 +313,12 @@ functions:
         condition: '`config: [/tmp/none.yaml]`'
         mock: なし
         expected: '`None` と `not_served`、違反のパスが `config[0]`'
+      - name: test_load_source_when_config_broken
+        case: 正常
+        summary: 設定のファイルを YAML として読み込めない
+        condition: '`dev-docs.yaml` が `name: [`'
+        mock: なし
+        expected: '`None` と `not_served`、違反のパスが `config[0]` で、`rule` が `YAML として読み込めない:` で始まる'
       - name: test_load_source_when_invalid
         case: 正常
         summary: 検証に失敗する

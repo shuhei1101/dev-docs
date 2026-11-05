@@ -58,12 +58,12 @@ export const ViewGetDocumentDefaultResponse = zod.object({
   "description": zod.union([zod.string(),zod.null()]).optional(),
   "aliasType": zod.enum(['term', 'doc', 'command', 'url', 'skill', 'tool', 'path', 'env', 'avoid']),
   "avoid": zod.union([zod.array(zod.string()),zod.null()]).optional()
-}).describe('文書の取得の `aliases` の 1 件（`AliasEntry` の `extra` のキーは同じ階層に置く）。')).optional(),
+}).describe('文書の取得の `aliases` の 1 件（`AliasEntry` の `extra` のキーは同じ階層に配置する）。')).optional(),
   "diff": zod.union([zod.object({
   "base": zod.string(),
   "change": zod.union([zod.enum(['added', 'modified']),zod.null()]),
   "changedItems": zod.array(zod.string()).optional()
-}).describe('文書の取得の `diff`（比べたリビジョンと、返した文書の変化・変わった項目）。'),zod.null()]),
+}).describe('文書の取得の `diff`（比べたリビジョンと、返却した文書の変化・変わった項目）。'),zod.null()]),
   "updatedAt": zod.iso.datetime({"offset":true})
 }).describe('GET `/_api/sources/{source}/docs[/{path}]` の応答。')
 
@@ -119,12 +119,12 @@ export const ViewGetDocumentResponse = zod.object({
   "description": zod.union([zod.string(),zod.null()]).optional(),
   "aliasType": zod.enum(['term', 'doc', 'command', 'url', 'skill', 'tool', 'path', 'env', 'avoid']),
   "avoid": zod.union([zod.array(zod.string()),zod.null()]).optional()
-}).describe('文書の取得の `aliases` の 1 件（`AliasEntry` の `extra` のキーは同じ階層に置く）。')).optional(),
+}).describe('文書の取得の `aliases` の 1 件（`AliasEntry` の `extra` のキーは同じ階層に配置する）。')).optional(),
   "diff": zod.union([zod.object({
   "base": zod.string(),
   "change": zod.union([zod.enum(['added', 'modified']),zod.null()]),
   "changedItems": zod.array(zod.string()).optional()
-}).describe('文書の取得の `diff`（比べたリビジョンと、返した文書の変化・変わった項目）。'),zod.null()]),
+}).describe('文書の取得の `diff`（比べたリビジョンと、返却した文書の変化・変わった項目）。'),zod.null()]),
   "updatedAt": zod.iso.datetime({"offset":true})
 }).describe('GET `/_api/sources/{source}/docs[/{path}]` の応答。')
 

@@ -50,7 +50,7 @@ class GitHubTarget(ApiModel):
 
 
 class DocumentDiff(ApiModel):
-    """文書の取得の `diff`（比べたリビジョンと、返した文書の変化・変わった項目）。"""
+    """文書の取得の `diff`（比べたリビジョンと、返却した文書の変化・変わった項目）。"""
 
     base: str
     change: Literal["added", "modified"] | None
@@ -63,7 +63,7 @@ def _is_none(value: object) -> bool:
 
 
 class AliasItem(ApiModel):
-    """文書の取得の `aliases` の 1 件（`AliasEntry` の `extra` のキーは同じ階層に置く）。"""
+    """文書の取得の `aliases` の 1 件（`AliasEntry` の `extra` のキーは同じ階層に配置する）。"""
 
     model_config = ConfigDict(
         alias_generator=ApiModel.model_config["alias_generator"],

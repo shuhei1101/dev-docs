@@ -36,7 +36,7 @@ functions:
         notes: '`DevDocsError` の子で HTTP 403'
       - name: CrossOriginError
         condition: '`Origin` が無く、`Sec-Fetch-Site` が `same-origin` でない'
-        message: '`画面と同じオリジンからの要求か確かめられません`'
+        message: '`画面と同じオリジンからの要求か確認できません`'
     unit_tests:
       - name: test_require_same_origin
         case: 正常
@@ -62,7 +62,7 @@ functions:
         summary: どちらのヘッダーも無い
         condition: ヘッダーなし
         mock: なし
-        expected: '`CrossOriginError`'
+        expected: '`CrossOriginError` で、`message` に `確認できません` を含む'
         exception: '`Sec-Fetch-Site` が same-origin でない'
 test_files:
   - tests/unit/dev_docs/server/test_origin.py

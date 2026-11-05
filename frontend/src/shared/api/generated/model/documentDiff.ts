@@ -7,7 +7,7 @@
 import type { DocumentDiffChange } from './documentDiffChange';
 
 /**
- * 文書の取得の `diff`（比べたリビジョンと、返した文書の変化・変わった項目）。
+ * 文書の取得の `diff`（比べたリビジョンと、返却した文書の変化・変わった項目）。
  */
 export interface DocumentDiff {
   base: string;
