@@ -13,7 +13,7 @@ functions:
       type: UseMutationResult<SaveSourcesResponse, AppError, SourceInput[]>
       description: '`mutateAsync(sources)` で保存する'
     process: |-
-      1. 成功したら `queryClient.invalidateQueries()` で全ての問い合わせを読み直し（配信元の増減は文書の画面の問い合わせにも及ぶ）、sonner で `端末の設定を保存し、配信元を読み直しました。` を出す
+      1. 成功したら `queryClient.invalidateQueries()` で全ての問い合わせを読み直し（配信元の増減は文書の画面の問い合わせにも及ぶ）、sonner で `端末の設定を保存し、配信元を再読み込みしました。` を出す
       2. 失敗は呼び出し元へ返す（422 はダイアログが項目に出し、他は `handleAppError`）
     unit_tests:
       - name: test_use_save_sources
