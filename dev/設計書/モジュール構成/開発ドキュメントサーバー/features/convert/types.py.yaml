@@ -353,6 +353,11 @@ data_models:
         type: Mapping[str, str]
         access: 公開
         description: '`x-key` を持つ `sections` の要素の `title` から、その要素の見出し（`x-key` の値）。外部キーのリンクのアンカーに使う。既定は空'
+      - name: table_titles
+        title: 同じ文書のテーブルの論理名
+        type: Mapping[str, str]
+        access: 公開
+        description: 同じ文書の `tables[]` のテーブルの物理名か論理名から、そのテーブルの論理名（テーブルの論理名の引き方の結果）。外部キーのリンクで `anchors` を引く前にテーブル名を論理名にする。既定は空
       - name: item_heading
         title: 項目の見出しの引き方
         type: Callable[[str, str], str | None]

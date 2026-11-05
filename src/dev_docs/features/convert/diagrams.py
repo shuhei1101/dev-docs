@@ -169,6 +169,20 @@ def _er_entity_columns(entity: Mapping[str, Any]) -> list[dict[str, Any]]:
     return columns
 
 
+def er_table_titles(tables: Sequence[Mapping[str, Any]]) -> dict[str, str]:
+    """同じ文書の `tables[]` から、テーブルの物理名と論理名のどちらからも論理名を引く表を作る。"""
+    titles: dict[str, str] = {}
+    for table in tables:
+        # 論理名を持たないテーブルは、当てる見出し・実体が無いため入れない
+        if table.get("title") is None:
+            continue
+        for key in ("name", "title"):
+            if table.get(key) is not None:
+                # 重なるキーは先に出たテーブルを残す
+                titles.setdefault(str(table[key]), str(table["title"]))
+    return titles
+
+
 class _ErModel:
     """ER 図の実体ごとのテーブルと、外部キーが指す実体と列の引き方。"""
 
@@ -181,11 +195,7 @@ class _ErModel:
         self.classification = classification
         self.by_title = {str(table.get("title")): table for table in tables}
         # 外部キーのテーブル名は物理名・論理名のどちらでも引く
-        self.entity_of: dict[str, str] = {}
-        for table in tables:
-            for key in ("name", "title"):
-                if table.get(key) is not None:
-                    self.entity_of.setdefault(str(table[key]), str(table.get("title")))
+        self.entity_of = er_table_titles(tables)
         self.entities = _items(value, "entities")
 
     def table(self, entity: Mapping[str, Any]) -> Mapping[str, Any] | None:

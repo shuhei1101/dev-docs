@@ -10,6 +10,7 @@ diagrams:
         スキーマ駆動の変換 ..> 表の組み立て
         スキーマ駆動の変換 ..> 属性の表の組み立て
         スキーマ駆動の変換 ..> 図の組み立て
+        スキーマ駆動の変換 ..> テーブルの論理名の引き方
         スキーマ駆動の変換 ..> 本文の書き換え
         表の組み立て ..> 参照のリンク
         埋め込みの展開 ..> 表の組み立て
@@ -41,8 +42,12 @@ diagrams:
         class 項目の見出し {
           <<function>>
         }
+        class テーブルの論理名の引き方 {
+          <<function>>
+        }
         click 変換 href "./service.py.yaml#変換"
         click 図の組み立て href "./diagrams.py.yaml#図の組み立て"
+        click テーブルの論理名の引き方 href "./diagrams.py.yaml#テーブルの論理名の引き方"
         click 本文の書き換え href "./inline.py.yaml#本文の書き換え"
         click 参照のリンク href "./inline.py.yaml#参照のリンク"
         click 埋め込みの展開 href "./embed.py.yaml#埋め込みの展開"
@@ -147,7 +152,7 @@ functions:
       type: str
       description: Markdown
     process: |-
-      1. 先頭に `# {見出し}`（`HEADING_KEYS` のうち最初に値を持つキー。無ければ文書のメタデータの `name`）を置き、`LEAD_KEYS` のうち最初に値を持つキーの値を本文の書き換えにかけて段落にする。使った 2 つのキーは本文の組み立てから除く。`x-key` を持つ `sections` の要素の `title` と見出しの組を文脈の `anchors` に集める
+      1. 先頭に `# {見出し}`（`HEADING_KEYS` のうち最初に値を持つキー。無ければ文書のメタデータの `name`）を置き、`LEAD_KEYS` のうち最初に値を持つキーの値を本文の書き換えにかけて段落にする。使った 2 つのキーは本文の組み立てから除く。`x-key` を持つ `sections` の要素の `title` と見出しの組を文脈の `anchors` に集める。文書の `tables` の値をテーブルの論理名の引き方にかけ、文脈の `table_titles` にする
       2. スキーマの `properties` の順に値を組み立てる（値が空のキーと、スキーマに `x-hidden: true` を持つキーは飛ばす）
          - `x-heading` を持つ値は、深さ 2 から始まる見出し（`x-heading` の文字列、要素なら `x-key` の値）を置く。深さは `MAX_HEADING_LEVEL` で止める
          - 見出しも `x-shape` も持たないスカラーが `ATTRIBUTE_MIN` 以上続く間は、まとめて属性の表の組み立てにかける
@@ -340,7 +345,7 @@ functions:
       description: '表のキーのマーカーと、`<!-- table: data … -->` で囲んだ表'
     process: |-
       1. 列をスキーマの `properties` の順に決める（要素のどれも値を持たない列と、スキーマに `x-hidden: true` を持つ列は除く）。`first` が列にあれば先頭へ移す
-      2. セルは、真偽の値は `CHECK_MARK` か空、参照のリンクに当たる文字列はリンク、それ以外のスカラーはそのまま（`|` はエスケープ、改行は `<br>`）、文字列のリストは `・` で繋ぐ。`table` を持つオブジェクト（外部キー）は、`table` の値を最後の `.` でテーブルとカラムに分け、テーブルが `{分類}/{テーブル}` なら同じフォルダの `{分類}.yaml` の文書へのリンク、そうでなければ `anchors` でテーブルの `title` から引いた見出しのアンカー（見出しのアンカー）へのリンク（どちらも引けなければ値の文字のまま）、それ以外のオブジェクトは `{キー}: {値}` を `、` で繋ぎ、オブジェクトのリストは要素ごとのセルを `<br>` で繋ぐ
+      2. セルは、真偽の値は `CHECK_MARK` か空、参照のリンクに当たる文字列はリンク、それ以外のスカラーはそのまま（`|` はエスケープ、改行は `<br>`）、文字列のリストは `・` で繋ぐ。`table` を持つオブジェクト（外部キー）は、`table` の値を最後の `.` でテーブルとカラムに分け、テーブルが `{分類}/{テーブル}` なら同じフォルダの `{分類}.yaml` の文書へのリンク、そうでなければ、テーブル名を `table_titles` で論理名にし（当たらなければテーブル名のまま）、`anchors` でその論理名から引いた見出しのアンカー（見出しのアンカー）へのリンク（どちらも引けなければ値の文字のまま）、それ以外のオブジェクトは `{キー}: {値}` を `、` で繋ぎ、オブジェクトのリストは要素ごとのセルを `<br>` で繋ぐ
       3. 表のマーカーの引数は、`data` に、`closed` なら `closed`、隠す列があれば `+columns hide={列名,…}`、`WIDE_KEYS` の列があれば `wide={列名,…}` を続ける（空白を含む列名は記載しない）
       4. `<!-- dev-docs-table: {table_key} -->`・表のマーカー・見出しの行・区切りの行・データの行・`<!-- /table -->` の順に置いて返す
     unit_tests:
@@ -350,6 +355,12 @@ functions:
         condition: '`x-shape: sections`・`x-key: name` の `tables` に、`name: tasks`・`title: タスク` のテーブルと、`foreign_key: {table: タスク.ID}` のカラムを持つテーブルがある文書'
         mock: なし
         expected: カラムの表に `[タスク.ID](#tasks)` のセルがある
+      - name: test_schema_to_markdown_when_foreign_key_physical_name
+        case: 正常
+        summary: 物理名で書いた同じ文書のテーブルへの外部キー
+        condition: '`test_schema_to_markdown_when_foreign_key` と同じ文書で、`foreign_key` が `{table: tasks.id}`'
+        mock: なし
+        expected: カラムの表に `[tasks.id](#tasks)` のセルがある
       - name: test_render_table
         case: 正常
         summary: セルの書き方
@@ -362,6 +373,12 @@ functions:
         condition: '`anchors` が `{タスク: tasks}`、`links` に `dev/er/ユーザー.yaml` を持つ文脈で、`foreign_key` が `{table: タスク.ID}`・`{table: ユーザー/ユーザー.ID, on_delete: CASCADE}`・`{table: 不明.ID}` の行と、`{a: 1, b: 2}` のオブジェクトの行'
         mock: なし
         expected: '`[タスク.ID](#tasks)`・`[ユーザー/ユーザー.ID](ユーザー.yaml)`・`不明.ID` と `a: 1、b: 2` のセルで、`件` のセルが無い'
+      - name: test_render_table_when_physical_name
+        case: 正常
+        summary: 物理名で書いた同じ文書のテーブルへの外部キー
+        condition: '`anchors` が `{タスク: tasks}`、`table_titles` が `{tasks: タスク, タスク: タスク}` の文脈で、`foreign_key` が `{table: tasks.id}` の行'
+        mock: なし
+        expected: '`[tasks.id](#tasks)` のセル'
       - name: test_render_table_when_closed_and_hidden
         case: 正常
         summary: 閉じた表と隠す列
