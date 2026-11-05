@@ -415,9 +415,11 @@ def test_write_docs_when_mdmark_unavailable(
     # 準備
     env = make_env()
     received: list[str | None] = []
+    previous: list[Any] = []
 
     def _fake(target: Target, document: Document, **kwargs: Any) -> MarkdownCheck:
         received.append(kwargs.get("stopped"))
+        previous.append(kwargs.get("previous"))
         return MarkdownCheck(
             violations=[], unchecked=[UncheckedKey(path="body", reason="R")], stopped="R"
         )
@@ -436,6 +438,7 @@ def test_write_docs_when_mdmark_unavailable(
         [UncheckedKey(path="body", reason="R")],
     ]
     assert received == [None, "R"]
+    assert previous == [{"id": "doc-1", "name": "文書 1"}, {"id": "doc-2", "name": "文書 2"}]
 
 
 def _with_related() -> dict[str, str]:
