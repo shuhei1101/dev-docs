@@ -123,12 +123,12 @@ TAG_RULES = (
     "`topic:`",
     "`tool:`",
     "配信元にタグの規約があれば",
-    '`group_by="tags"` で使われているタグを見て',
+    '`group_by="tags"` で使用されているタグを確認し',
 )
 INSTRUCTIONS_MAX_CHARS = 4096
-# instructions が案内する、使う場面・grep と Read が向く場面・ツールの順序の語
+# instructions が案内する、使用する場面・grep と Read が向く場面・ツールの順序の語
 INSTRUCTIONS_GUIDES = (
-    "使う場面:",
+    "使用する場面:",
     "`search_docs`",
     "`trace_related`",
     "`list_changes`",
@@ -136,10 +136,10 @@ INSTRUCTIONS_GUIDES = (
     "grep・Read が向く場面:",
     "コードの識別子・文字列の出現箇所",
     "配信の範囲の外のファイル",
-    "始めに `describe(source)` で種類と書き方を確かめる",
+    "始めに `describe(source)` で種類と記載方法を確認する",
 )
-# description が持つ、いつ使う・何を返さないの語
-DESCRIPTION_GUIDES = ("ときに使う", "返さない")
+# description が持つ、いつ使用する・何を返却しないの語
+DESCRIPTION_GUIDES = ("ときに使用する", "返却しない")
 FORBIDDEN_WORDS = ("MUST", "必ず", "禁止")
 TOOLS_LIST = {"jsonrpc": "2.0", "id": 2, "method": "tools/list"}
 PART_LINES = [
