@@ -4,11 +4,17 @@ from __future__ import annotations
 
 import threading
 from collections import OrderedDict
-from typing import Literal
+from collections.abc import Mapping
+from typing import Any, Literal
 
 from dev_docs.features.access.types import Target, script_at
 from dev_docs.features.documents.store import DocumentStore
 from dev_docs.features.documents.types import Document
+from dev_docs.features.validation.markdown import (
+    MarkdownCheck,
+    changed_markdown,
+    check_markdown_values,
+)
 from dev_docs.features.validation.rules import (
     check_id_format,
     check_related,
@@ -91,6 +97,24 @@ class DocumentChecker:
                     while len(self._read_cache) > VALIDATOR_ON_READ_CACHE:
                         self._read_cache.popitem(last=False)
         return violations
+
+    def check_markdown(
+        self,
+        target: Target,
+        document: Document,
+        *,
+        previous: Mapping[str, Any] | None,
+        stopped: str | None = None,
+    ) -> MarkdownCheck:
+        """書き込む文書の変えた Markdown の値を mdmark の点検に通す。"""
+        schema = self.store.row_schema(target, document.kind)
+        values = changed_markdown(document.data, previous, schema)
+        # Markdown の値を変えていなければ mdmark を呼ばない
+        if not values:
+            return MarkdownCheck(violations=[], unchecked=[], stopped=stopped)
+        return check_markdown_values(
+            values, cwd=target.base, timeout_sec=self.timeout_sec, stopped=stopped
+        )
 
     def clear(self) -> None:
         """読み取りの結果の控えを捨てる。"""

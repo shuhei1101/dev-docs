@@ -1,0 +1,14 @@
+dev-docs のサーバーの再起動:
+  説明: develop の worktree から起動して稼働中の dev-docs のサーバー（127.0.0.1:8781）を、マージした develop のコードで起動し直し、write_docs の mdmark の点検を効かせる
+  タグ: [再起動]
+  実行者: planner
+  時期: マージの後
+  回数: 1 回限り
+  可逆: true
+  疎通確認: dev-docs のサーバーの再起動/疎通確認.sh
+  実行: dev-docs のサーバーの再起動/実行.sh
+  確認: dev-docs のサーバーの再起動/確認.sh
+  切り戻し: null
+  失敗時: 既定の対処を 1 回、2 回連続で失敗したら依頼元へ返す
+  確認方法: 稼働中の dev-docs のサーバーの write_docs の description（tools/list）に unchecked の説明が入っている
+  状態: "-"

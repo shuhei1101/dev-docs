@@ -1,8 +1,12 @@
 from __future__ import annotations
 
+import os
+import shutil
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any
+
+import pytest
 
 from dev_docs.shared.hashing import content_hash
 from dev_docs.shared.yaml_io import load_yaml
@@ -582,3 +586,105 @@ def test_normal_when_quotes_preserved(
         .startswith(_quoted_doc("doc-2", weight=1))
     )
     assert written.data["results"][0]["diff"] == "- weight: 1\n+ weight: 2"
+
+
+MARKDOWN_SCHEMA = (
+    "type: object\n"
+    "properties:\n"
+    "  id: {type: string}\n"
+    "  name: {type: string}\n"
+    "  description: {type: string}\n"
+    "  tags: {type: array, items: {type: string}}\n"
+    "  body: {type: string, contentMediaType: text/markdown}\n"
+)
+# 図の部品の中の JSON が壊れている Markdown（mdmark が diagram_invalid の書き方の警告を返す）
+BROKEN_FLOW = '<!-- flow -->\n\n```json\n{"nodes": [\n```\n\n<!-- /flow -->\n'
+
+
+def _markdown_files(sample_file_set: Callable[..., dict[str, str]]) -> dict[str, str]:
+    """`body` を Markdown のキーに持ち、文書 1 の `body` が警告の出ない Markdown の配信元のファイル。"""
+    return sample_file_set(
+        **{
+            "schemas/sample.schema.yaml": MARKDOWN_SCHEMA,
+            "docs/doc-1.yaml": "id: doc-1\nname: 文書 1\nbody: |-\n  # 見出し\n\n  本文\n",
+        }
+    )
+
+
+def test_error_when_mdmark_warning(
+    make_source: Callable[..., Any],
+    serve: Callable[..., Any],
+    add_worktree: Callable[..., Path],
+    sample_file_set: Callable[..., dict[str, str]],
+) -> None:
+    """Markdown の値に mdmark の書き方の警告があれば何も書かず、dry_run と atomic: false も同じ違反を返す（異常系）。"""
+    # 準備
+    assert shutil.which("mdmark") is not None, (
+        "端末に mdmark の CLI（check --text を持つもの）が要る"
+    )
+    source, served, worktree = _setup(
+        make_source, serve, add_worktree, _markdown_files(sample_file_set)
+    )
+    first = worktree / "docs" / "doc-1.yaml"
+    second = worktree / "docs" / "doc-2.yaml"
+    first_before = first.read_text(encoding="utf-8")
+    second_before = second.read_text(encoding="utf-8")
+    arguments = {
+        "cwd": str(source.folder),
+        "worktree": str(worktree),
+        "operations": [
+            _update("doc-2", _version(second), set={"name": "通る"}),
+            _update("doc-1", _version(first), set={"body": BROKEN_FLOW}),
+        ],
+    }
+    # 実行
+    atomic = served.call("write_docs", **arguments)
+    atomic_text = (first.read_text(encoding="utf-8"), second.read_text(encoding="utf-8"))
+    dry_run = served.call("write_docs", dry_run=True, **arguments)
+    partial = served.call("write_docs", atomic=False, **arguments)
+    # 検証
+    results = partial.data["results"]
+    assert atomic.is_error
+    assert "ValidationFailedError" in atomic.text
+    assert "operations[1].body" in atomic.text
+    assert "mdmark の diagram_invalid" in atomic.text
+    assert atomic_text == (first_before, second_before)
+    assert dry_run.is_error
+    assert "operations[1].body" in dry_run.text
+    assert [item["status"] for item in results] == ["updated", "failed"]
+    assert results[1]["errors"][0]["path"] == "operations[1].body"
+    assert load_yaml(second.read_text(encoding="utf-8"))["name"] == "通る"
+    assert first.read_text(encoding="utf-8") == first_before
+
+
+def test_normal_when_mdmark_unavailable(
+    make_source: Callable[..., Any],
+    serve: Callable[..., Any],
+    add_worktree: Callable[..., Path],
+    sample_file_set: Callable[..., dict[str, str]],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """mdmark の CLI が無い端末では、点検せずに書き込み、点検できなかったことを返す（正常系）。"""
+    # 準備（dev-docs を起動する環境の PATH から mdmark を持つフォルダを除く）
+    folders = os.environ["PATH"].split(os.pathsep)
+    kept = [folder for folder in folders if not (Path(folder) / "mdmark").exists()]
+    monkeypatch.setenv("PATH", os.pathsep.join(kept))
+    source, served, worktree = _setup(
+        make_source, serve, add_worktree, _markdown_files(sample_file_set)
+    )
+    target = worktree / "docs" / "doc-1.yaml"
+    # 実行
+    result = served.call(
+        "write_docs",
+        cwd=str(source.folder),
+        worktree=str(worktree),
+        operations=[_update("doc-1", _version(target), set={"body": BROKEN_FLOW})],
+    )
+    # 検証
+    item = result.data["results"][0]
+    assert not result.is_error
+    assert result.data["applied"] is True
+    assert item["status"] == "updated"
+    assert load_yaml(target.read_text(encoding="utf-8"))["body"] == BROKEN_FLOW
+    assert item["unchecked"][0]["path"] == "body"
+    assert "mdmark の CLI が PATH に見つかりません" in item["unchecked"][0]["reason"]

@@ -22,6 +22,7 @@ from dev_docs.features.sources.types import (
     ServedSource,
     SourceConfig,
 )
+from dev_docs.features.validation.markdown import MarkdownCheck, UncheckedKey
 from dev_docs.features.validation.service import DocumentChecker
 from dev_docs.features.write.locks import SourceLocks
 from dev_docs.features.write.service import check_version, delete_docs, write_docs
@@ -39,6 +40,7 @@ from dev_docs.shared.errors import (
     InvalidArgumentError,
     ValidationFailedError,
     VersionMismatchError,
+    Violation,
 )
 from dev_docs.shared.hashing import content_hash, value_hash
 from dev_docs.shared.yaml_io import load_yaml
@@ -376,6 +378,67 @@ def test_write_docs_when_metadata_mapped(make_env: Callable[..., WriteEnv]) -> N
     assert "name:" not in updated
     assert "title: 決定 2" in created
     assert "name:" not in created
+
+
+def test_write_docs_when_mdmark_warning(
+    make_env: Callable[..., WriteEnv], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Markdown の値に書き方の警告がある（異常系）。"""
+    # 準備
+    env = make_env()
+
+    def _fake(target: Target, document: Document, **kwargs: Any) -> MarkdownCheck:
+        if document.id == "doc-2":
+            violation = Violation(path="body", rule="mdmark の diagram_invalid（3 行目）", fix="A")
+            return MarkdownCheck(violations=[violation], unchecked=[])
+        return MarkdownCheck(violations=[], unchecked=[])
+
+    monkeypatch.setattr(env.checker, "check_markdown", _fake)
+    operations = [
+        Operation(
+            op="update", id="doc-1", expected_version=content_hash(DOC_1), set={"name": "通る"}
+        ),
+        Operation(op="update", id="doc-2", expected_version=content_hash(DOC_2), set={"body": "x"}),
+    ]
+    # 実行・検証
+    with pytest.raises(ValidationFailedError) as exc_info:
+        env.write(operations=operations)
+    assert [violation.path for violation in exc_info.value.violations] == ["operations[1].body"]
+    assert (env.worktree / "docs/rule/doc-1.yaml").read_text(encoding="utf-8") == DOC_1
+    assert (env.worktree / "docs/rule/doc-2.yaml").read_text(encoding="utf-8") == DOC_2
+
+
+def test_write_docs_when_mdmark_unavailable(
+    make_env: Callable[..., WriteEnv], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """mdmark を使えない（正常系）。"""
+    # 準備
+    env = make_env()
+    received: list[str | None] = []
+    previous: list[Any] = []
+
+    def _fake(target: Target, document: Document, **kwargs: Any) -> MarkdownCheck:
+        received.append(kwargs.get("stopped"))
+        previous.append(kwargs.get("previous"))
+        return MarkdownCheck(
+            violations=[], unchecked=[UncheckedKey(path="body", reason="R")], stopped="R"
+        )
+
+    monkeypatch.setattr(env.checker, "check_markdown", _fake)
+    operations = [
+        Operation(op="update", id="doc-1", expected_version=content_hash(DOC_1), set={"body": "x"}),
+        Operation(op="update", id="doc-2", expected_version=content_hash(DOC_2), set={"body": "y"}),
+    ]
+    # 実行
+    result = env.write(operations=operations)
+    # 検証
+    assert result.applied is True
+    assert [item.unchecked for item in result.results] == [
+        [UncheckedKey(path="body", reason="R")],
+        [UncheckedKey(path="body", reason="R")],
+    ]
+    assert received == [None, "R"]
+    assert previous == [{"id": "doc-1", "name": "文書 1"}, {"id": "doc-2", "name": "文書 2"}]
 
 
 def _with_related() -> dict[str, str]:
