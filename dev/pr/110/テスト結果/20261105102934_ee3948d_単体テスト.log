@@ -1,0 +1,306 @@
+$ uv run pytest tests/unit/ -q -p no:cacheprovider --continue-on-collection-errors
+........................................................................ [  8%]
+................................................................F..F.... [ 17%]
+........................................................................ [ 26%]
+........................................................................ [ 35%]
+........................................................................ [ 44%]
+........................................................................ [ 53%]
+........................................................................ [ 62%]
+........................................................................ [ 71%]
+........................................................................ [ 80%]
+...................................................F............FFFFF... [ 89%]
+........................................................................ [ 98%]
+............                                                             [100%]
+==================================== ERRORS ====================================
+____ ERROR collecting tests/unit/dev_docs/features/convert/test_diagrams.py ____
+ImportError while importing test module '/mnt/c/Users/shuhe/repo/dev-docs/.claude/worktrees/fix-dev-docs-endpoint-absence-check-and-fk-physical-name/tests/unit/dev_docs/features/convert/test_diagrams.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+tests/unit/dev_docs/features/convert/test_diagrams.py:9: in <module>
+    from dev_docs.features.convert.diagrams import er_table_titles, render_diagram, render_mermaid
+E   ImportError: cannot import name 'er_table_titles' from 'dev_docs.features.convert.diagrams' (/mnt/c/Users/shuhe/repo/dev-docs/.claude/worktrees/fix-dev-docs-endpoint-absence-check-and-fk-physical-name/src/dev_docs/features/convert/diagrams.py)
+=================================== FAILURES ===================================
+____________ test_schema_to_markdown_when_foreign_key_physical_name ____________
+
+make_document = <function make_document.<locals>._make at 0x7ce4aef47950>
+
+    def test_schema_to_markdown_when_foreign_key_physical_name(
+        make_document: Callable[..., Document],
+    ) -> None:
+        """物理名で書いた同じ文書のテーブルへの外部キー（正常系）。"""
+        # 準備
+        schema = {
+            "properties": {
+                "tables": {
+                    "x-shape": "sections",
+                    "x-key": "name",
+                    "items": {
+                        "properties": {
+                            "columns": {"x-heading": "カラム", "x-shape": "table", "items": {}},
+                        }
+                    },
+                }
+            }
+        }
+        document = make_document(
+            data={
+                "name": "N",
+                "tables": [
+                    {"name": "tasks", "title": "タスク", "columns": [{"name": "id"}]},
+                    {
+                        "name": "comments",
+                        "title": "コメント",
+                        "columns": [{"name": "task_id", "foreign_key": {"table": "tasks.id"}}],
+                    },
+                ],
+            }
+        )
+        # 実行
+        result = schema_to_markdown(document, schema, CONTEXT)
+        # 検証
+>       assert "[tasks.id](#tasks)" in result
+E       AssertionError: assert '[tasks.id](#tasks)' in '# N\n\n## tasks\n\n### カラム\n\n<!-- dev-docs-table: rules:tables[0].columns -->\n<!-- table: data -->\n| name |\n| ---...- table: data -->\n| name | foreign_key |\n| --- | --- |\n| task_id | tasks.id |\n<!-- /table -->\n\n**title**: コメント\n'
+
+tests/unit/dev_docs/features/convert/test_markdown.py:389: AssertionError
+_____________________ test_render_table_when_physical_name _____________________
+
+    def test_render_table_when_physical_name() -> None:
+        """物理名で書いた同じ文書のテーブルへの外部キー（正常系）。"""
+        # 準備
+>       context = RenderContext(
+            links={},
+            issue_url=None,
+            path="dev/er/タスク.yaml",
+            anchors={"タスク": "tasks"},
+            table_titles={"tasks": "タスク", "タスク": "タスク"},
+        )
+E       TypeError: RenderContext.__init__() got an unexpected keyword argument 'table_titles'
+
+tests/unit/dev_docs/features/convert/test_markdown.py:444: TypeError
+_____________ test_register_error_handlers_when_http_error_headers _____________
+
+    def test_register_error_handlers_when_http_error_headers() -> None:
+        """HTTPException のヘッダーを応答に載せる（正常系）。"""
+        # 準備
+        app = FastAPI()
+        register_error_handlers(app)
+    
+        @app.post("/boom")
+        def boom() -> None:
+            raise HTTPException(status_code=405, headers={"Allow": "GET"})
+    
+        client = TestClient(app)
+        # 実行
+        response = client.post("/boom")
+        # 検証
+        assert response.status_code == 405
+        assert response.headers["content-type"].startswith("application/problem+json")
+>       assert response.headers["allow"] == "GET"
+               ^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/unit/dev_docs/server/test_error_handlers.py:103: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = Headers({'content-length': '117', 'content-type': 'application/problem+json'})
+key = 'allow'
+
+    def __getitem__(self, key: str) -> str:
+        """
+        Return a single header value.
+    
+        If there are multiple headers with the same key, then we concatenate
+        them with commas. See: https://tools.ietf.org/html/rfc7230#section-3.2.2
+        """
+        normalized_key = key.lower().encode(self.encoding)
+    
+        items = [
+            header_value.decode(self.encoding)
+            for _, header_key, header_value in self._list
+            if header_key == normalized_key
+        ]
+    
+        if items:
+            return ", ".join(items)
+    
+>       raise KeyError(key)
+E       KeyError: 'allow'
+
+.venv/lib/python3.14/site-packages/httpx2/_models.py:326: KeyError
+__________ test_build_screen_router_when_excluded_not_get[post-admin] __________
+
+dist_dir = PosixPath('/tmp/pytest-of-shuhei2441/pytest-6217/test_build_screen_router_when_5')
+method = 'POST', path = '/_admin/none'
+
+    @pytest.mark.parametrize(
+        ("method", "path"),
+        [
+            pytest.param("POST", "/_admin/none", id="post-admin"),
+            pytest.param("PUT", "/_api/none", id="put-api"),
+            pytest.param("DELETE", "/_admin/none", id="delete-admin"),
+        ],
+    )
+    def test_build_screen_router_when_excluded_not_get(
+        dist_dir: Path, method: str, path: str
+    ) -> None:
+        """API・管理の頭の無いパスへの GET 以外の要求を 404 にする（異常系）。"""
+        # 準備
+        client = _client_with_api(dist_dir)
+        # 実行
+        response = client.request(method, path)
+        # 検証
+>       assert response.status_code == 404
+E       assert 405 == 404
+E        +  where 405 = <Response [405 Method Not Allowed]>.status_code
+
+tests/unit/dev_docs/server/test_screen.py:113: AssertionError
+___________ test_build_screen_router_when_excluded_not_get[put-api] ____________
+
+dist_dir = PosixPath('/tmp/pytest-of-shuhei2441/pytest-6217/test_build_screen_router_when_6')
+method = 'PUT', path = '/_api/none'
+
+    @pytest.mark.parametrize(
+        ("method", "path"),
+        [
+            pytest.param("POST", "/_admin/none", id="post-admin"),
+            pytest.param("PUT", "/_api/none", id="put-api"),
+            pytest.param("DELETE", "/_admin/none", id="delete-admin"),
+        ],
+    )
+    def test_build_screen_router_when_excluded_not_get(
+        dist_dir: Path, method: str, path: str
+    ) -> None:
+        """API・管理の頭の無いパスへの GET 以外の要求を 404 にする（異常系）。"""
+        # 準備
+        client = _client_with_api(dist_dir)
+        # 実行
+        response = client.request(method, path)
+        # 検証
+>       assert response.status_code == 404
+E       assert 405 == 404
+E        +  where 405 = <Response [405 Method Not Allowed]>.status_code
+
+tests/unit/dev_docs/server/test_screen.py:113: AssertionError
+_________ test_build_screen_router_when_excluded_not_get[delete-admin] _________
+
+dist_dir = PosixPath('/tmp/pytest-of-shuhei2441/pytest-6217/test_build_screen_router_when_7')
+method = 'DELETE', path = '/_admin/none'
+
+    @pytest.mark.parametrize(
+        ("method", "path"),
+        [
+            pytest.param("POST", "/_admin/none", id="post-admin"),
+            pytest.param("PUT", "/_api/none", id="put-api"),
+            pytest.param("DELETE", "/_admin/none", id="delete-admin"),
+        ],
+    )
+    def test_build_screen_router_when_excluded_not_get(
+        dist_dir: Path, method: str, path: str
+    ) -> None:
+        """API・管理の頭の無いパスへの GET 以外の要求を 404 にする（異常系）。"""
+        # 準備
+        client = _client_with_api(dist_dir)
+        # 実行
+        response = client.request(method, path)
+        # 検証
+>       assert response.status_code == 404
+E       assert 405 == 404
+E        +  where 405 = <Response [405 Method Not Allowed]>.status_code
+
+tests/unit/dev_docs/server/test_screen.py:113: AssertionError
+_____________ test_build_screen_router_when_excluded_wrong_method ______________
+
+dist_dir = PosixPath('/tmp/pytest-of-shuhei2441/pytest-6217/test_build_screen_router_when_8')
+
+    def test_build_screen_router_when_excluded_wrong_method(dist_dir: Path) -> None:
+        """API の頭の有るパスへの合わないメソッドを 405 にする（異常系）。"""
+        # 準備
+        client = _client_with_api(dist_dir)
+        # 実行
+        response = client.post("/_api/x")
+        # 検証
+        assert response.status_code == 405
+>       assert "GET" in response.headers["allow"]
+                        ^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/unit/dev_docs/server/test_screen.py:125: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = Headers({'content-length': '117', 'content-type': 'application/problem+json'})
+key = 'allow'
+
+    def __getitem__(self, key: str) -> str:
+        """
+        Return a single header value.
+    
+        If there are multiple headers with the same key, then we concatenate
+        them with commas. See: https://tools.ietf.org/html/rfc7230#section-3.2.2
+        """
+        normalized_key = key.lower().encode(self.encoding)
+    
+        items = [
+            header_value.decode(self.encoding)
+            for _, header_key, header_value in self._list
+            if header_key == normalized_key
+        ]
+    
+        if items:
+            return ", ".join(items)
+    
+>       raise KeyError(key)
+E       KeyError: 'allow'
+
+.venv/lib/python3.14/site-packages/httpx2/_models.py:326: KeyError
+____________________ test_build_screen_router_when_not_get _____________________
+
+dist_dir = PosixPath('/tmp/pytest-of-shuhei2441/pytest-6217/test_build_screen_router_when_9')
+
+    def test_build_screen_router_when_not_get(dist_dir: Path) -> None:
+        """画面のパスへの GET 以外の要求を 405 にする（異常系）。"""
+        # 準備
+        client = _client(dist_dir)
+        # 実行
+        response = client.post("/default/設計書/a.md")
+        # 検証
+        assert response.status_code == 405
+>       assert response.headers["allow"] == "GET"
+               ^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/unit/dev_docs/server/test_screen.py:136: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = Headers({'content-length': '117', 'content-type': 'application/problem+json'})
+key = 'allow'
+
+    def __getitem__(self, key: str) -> str:
+        """
+        Return a single header value.
+    
+        If there are multiple headers with the same key, then we concatenate
+        them with commas. See: https://tools.ietf.org/html/rfc7230#section-3.2.2
+        """
+        normalized_key = key.lower().encode(self.encoding)
+    
+        items = [
+            header_value.decode(self.encoding)
+            for _, header_key, header_value in self._list
+            if header_key == normalized_key
+        ]
+    
+        if items:
+            return ", ".join(items)
+    
+>       raise KeyError(key)
+E       KeyError: 'allow'
+
+.venv/lib/python3.14/site-packages/httpx2/_models.py:326: KeyError
+=========================== short test summary info ============================
+ERROR tests/unit/dev_docs/features/convert/test_diagrams.py
+FAILED tests/unit/dev_docs/features/convert/test_markdown.py::test_schema_to_markdown_when_foreign_key_physical_name
+FAILED tests/unit/dev_docs/features/convert/test_markdown.py::test_render_table_when_physical_name
+FAILED tests/unit/dev_docs/server/test_error_handlers.py::test_register_error_handlers_when_http_error_headers
+FAILED tests/unit/dev_docs/server/test_screen.py::test_build_screen_router_when_excluded_not_get[post-admin]
+FAILED tests/unit/dev_docs/server/test_screen.py::test_build_screen_router_when_excluded_not_get[put-api]
+FAILED tests/unit/dev_docs/server/test_screen.py::test_build_screen_router_when_excluded_not_get[delete-admin]
+FAILED tests/unit/dev_docs/server/test_screen.py::test_build_screen_router_when_excluded_wrong_method
+FAILED tests/unit/dev_docs/server/test_screen.py::test_build_screen_router_when_not_get
+8 failed, 796 passed, 1 error in 154.67s (0:02:34)
