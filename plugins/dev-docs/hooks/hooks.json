@@ -4,13 +4,13 @@
       {
         "hooks": [
           {
-            "_description": "dev-docs が落ちていれば起動し、使える配信元と使い方をセッションの文脈に入れる",
+            "_description": "dev-docs が落ちていれば起動し、/clear・圧縮のときは返し済みの記録の削除を依頼する",
             "type": "command",
             "command": "python3",
             "args": [
               "${CLAUDE_PLUGIN_ROOT}/hooks/session_start.py"
             ],
-            "timeout": 18
+            "timeout": 6
           }
         ]
       }

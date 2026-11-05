@@ -10,6 +10,7 @@ from dev_docs.features.access.service import (
     outside_readable_sources,
     resolve_read_targets,
 )
+from dev_docs.features.describe.source_checks import SourceChecks
 from dev_docs.features.describe.types import (
     DescribeRequest,
     KindSchemaResult,
@@ -18,15 +19,22 @@ from dev_docs.features.describe.types import (
     SourceGuideResult,
     SourceListResult,
 )
+from dev_docs.features.describe.warnings import collect_warnings
 from dev_docs.features.documents.store import DocumentStore
 from dev_docs.features.history.query import list_refs, list_worktrees
+from dev_docs.features.settings.types import TerminalConfig
 from dev_docs.features.sources.registry import SourceRegistry
 from dev_docs.features.sources.service import load_source_at
 from dev_docs.shared.errors import InvalidArgumentError, Violation
 
 
 def describe(
-    request: DescribeRequest, *, registry: SourceRegistry, store: DocumentStore
+    request: DescribeRequest,
+    *,
+    registry: SourceRegistry,
+    store: DocumentStore,
+    terminal: TerminalConfig,
+    checks: SourceChecks,
 ) -> SourceListResult | SourceGuideResult | KindSchemaResult:
     """`describe` の要求を処理して結果を返す。"""
     if request.source is None:
@@ -50,10 +58,14 @@ def describe(
             if request.outside_scope
             else None
         )
+        available = available_sources(request.cwd, registry=registry)
         return SourceListResult(
             workplace=describe_workplace(request.cwd, registry=registry),
-            sources=available_sources(request.cwd, registry=registry),
+            sources=available,
             outside_sources=outside_sources,
+            warnings=collect_warnings(
+                available, registry=registry, checks=checks, terminal=terminal
+            ),
         )
     target = resolve_read_targets(
         registry=registry,

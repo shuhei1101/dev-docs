@@ -20,6 +20,7 @@ import uvicorn
 from dev_docs import main as main_module
 from dev_docs.features.access.types import Target
 from dev_docs.features.convert.service import ConvertService
+from dev_docs.features.describe.source_checks import SourceChecks
 from dev_docs.features.documents.store import DocumentStore
 from dev_docs.features.history.snapshot import SnapshotStore
 from dev_docs.features.settings.types import SourceEntry, TerminalConfig
@@ -287,7 +288,7 @@ def test_build_handlers(
     assert statuses_before == []
     assert len(handlers.registry.served()) == 1
     assert len(handlers.registry.statuses()) == 2
-    assert "session-context" in handlers.prompts.prompts
+    assert "session-context" not in handlers.prompts.prompts
     assert "mcp/docs/instructions" in handlers.prompts.prompts
 
 
@@ -440,6 +441,7 @@ def test_reload_sources(
         store=_Recorder("store", calls),
         checker=_Recorder("checker", calls),
         converter=_Recorder("converter", calls),
+        checks=SourceChecks(),
     )
     # 検証
     assert calls[0] == "registry.reload"
@@ -495,6 +497,7 @@ def test_reload_sources_when_out_of_sync(
             store=store,
             checker=DocumentChecker(store, timeout_sec=10),
             converter=ConvertService(tmp_path / "converted", store, 10),
+            checks=SourceChecks(),
         )
     # 検証
     warnings = _warnings(caplog)
@@ -726,6 +729,7 @@ def test_reload_sources_when_alias_and_nav(
             store=store,
             checker=DocumentChecker(store, timeout_sec=10),
             converter=ConvertService(tmp_path / "converted", store, 10),
+            checks=SourceChecks(),
         )
     # 検証
     warnings = [message for message in _warnings(caplog) if "sample" in message]

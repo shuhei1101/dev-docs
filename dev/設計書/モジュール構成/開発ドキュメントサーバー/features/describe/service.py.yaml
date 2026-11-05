@@ -8,6 +8,7 @@ diagrams:
         配信元の説明 ..> 作業場所の説明 : 引数なし
         配信元の説明 ..> 使える配信元 : 引数なし
         配信元の説明 ..> 作業範囲の外で読める配信元 : 引数なしの outside_scope
+        配信元の説明 ..> 警告の収集 : 引数なし
         配信元の説明 ..> 読む場所の解決 : source
         配信元の説明 ..> 作業場所の配信元の読み込み : 作業ツリー・ワークツリー
         配信元の説明 ..> 文書の行を引く : kind
@@ -23,6 +24,9 @@ diagrams:
         class 作業範囲の外で読める配信元 {
           <<function>>
         }
+        class 警告の収集 {
+          <<function>>
+        }
         class 読む場所の解決 {
           <<function>>
         }
@@ -35,6 +39,7 @@ diagrams:
         click 作業場所の説明 href "../access/service.py.yaml#作業場所の説明"
         click 使える配信元 href "../access/service.py.yaml#使える配信元"
         click 作業範囲の外で読める配信元 href "../access/service.py.yaml#作業範囲の外で読める配信元"
+        click 警告の収集 href "./warnings.py.yaml#警告の収集"
         click 読む場所の解決 href "../access/service.py.yaml#読む場所の解決"
         click 作業場所の配信元の読み込み href "../sources/service.py.yaml#作業場所の配信元の読み込み"
         click 文書の行を引く href "../sources/types.py.yaml#配信中の配信元"
@@ -67,12 +72,24 @@ functions:
         required: true
         passing: injected
         description: 種類のスキーマを読む
+      - name: terminal
+        title: 端末の設定
+        type: TerminalConfig
+        required: true
+        passing: injected
+        description: 引数なしのときに設定のバージョンを比べる
+      - name: checks
+        title: 配信元の検査の控え
+        type: SourceChecks
+        required: true
+        passing: injected
+        description: 引数なしのときに警告の元にする
     returns:
       type: SourceListResult | SourceGuideResult | KindSchemaResult
       description: 引数の数で決まる結果
     process: |-
       1. `kind` があって `source` が無い場合、`InvalidArgumentError`（`kind` には `source` が要ります）を送る
-      2. `source` が無い場合、作業場所の説明と使える配信元を返す（使える配信元が 0 件でも返す）。`outside_scope` が `True` なら、作業範囲の外で読める配信元（作業範囲の外で読める配信元）を `OutsideSource` にして `outside_sources` に入れる（0 件は空のリスト）。`False` なら `outside_sources` は `None`。文書を読まないので要求のログには残さない
+      2. `source` が無い場合、作業場所の説明と使える配信元を返す（使える配信元が 0 件でも返す）。`outside_scope` が `True` なら、作業範囲の外で読める配信元（作業範囲の外で読める配信元）を `OutsideSource` にして `outside_sources` に入れる（0 件は空のリスト）。`False` なら `outside_sources` は `None`。警告（警告の収集）を `warnings` に入れる。文書を読まないので要求のログには残さない
       3. `source` がある場合、読む場所を解く（読む場所の解決。`source`・`worktree`・`cwd`・`outside_scope`。結果の `outside_scope` は場所の `outside_scope`）。作業中の配信元の作業ツリーかワークツリーを読むときは、その場所の設定を読み直した配信元を使う（作業場所の配信元の読み込み）
       4. `kind` が無い場合、`instructions` と、有効な文書の行ごとの種類の概要（スキーマは文書のストア.種類のスキーマ）を返す。Git の配信元は、リビジョンの一覧（`commits=0`）のブランチとタグの名前を `refs`、ワークツリーの一覧を `worktrees` に入れる
       5. `kind` がある場合、文書の行を引き（無ければ `UnknownKindError`）、`target.base` の `schema` のファイルの内容と読んだスキーマ、行の `metadata` を返す
@@ -98,7 +115,13 @@ functions:
         summary: 使える配信元の一覧
         condition: '`cwd` が sample のクローン本体で、notes は `scope.read` に当たり、other は当たらない'
         mock: なし（一時フォルダの配信元）
-        expected: '`workplace` が sample のクローン本体、`sources` が sample（write・作業中）と notes（read）で、other が無い。`outside_sources` が `None`'
+        expected: '`workplace` が sample のクローン本体、`sources` が sample（write・作業中）と notes（read）で、other が無い。`outside_sources` が `None`、`warnings` が空'
+      - name: test_describe_when_warned
+        case: 正常
+        summary: 使える配信元の警告を添える
+        condition: '`cwd` が sample のクローン本体で、sample の管理用の YAML に無いファイルが 1 件ある'
+        mock: なし（一時フォルダの配信元）
+        expected: '`warnings` が sample の管理用の YAML に無いファイル 1 件の文'
       - name: test_describe_when_outside_list
         case: 正常
         summary: 作業範囲の外で読める配信元の一覧

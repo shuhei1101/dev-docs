@@ -15,19 +15,20 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-from dev_docs.features.documents.store import check_sync
 from dev_docs.features.lifecycle.control import RestartControl
 from dev_docs.features.lifecycle.types import SERVE_ARGV, SHUTDOWN_WAIT_FACTOR
 from dev_docs.features.prompt_doc.runtime import PromptSet, load_prompts, prompts_dir
 from dev_docs.features.prompt_doc.types import PromptInvalidError
-from dev_docs.features.session_context.types import SESSION_CONTEXT_PROMPT_ID
 from dev_docs.features.settings.query import config_path, listen_port, load_terminal_config
 from dev_docs.features.settings.types import TerminalConfig, TerminalConfigInvalidError
 from dev_docs.features.sources.registry import SourceRegistry
 from dev_docs.features.sources.types import ServedSource, SourceStatus
 from dev_docs.server.mcp.result import mcp_prompt_ids
+
+if TYPE_CHECKING:
+    from dev_docs.features.describe.source_checks import SourceChecks
 
 EXIT_CONFIG_INVALID = 2
 EXIT_PORT_IN_USE = 3
@@ -68,6 +69,7 @@ class Handlers:
     reload_sources: Callable[[TerminalConfig], list[SourceStatus]]
     restart: RestartControl
     prompts: PromptSet
+    checks: SourceChecks
 
 
 def _setup_logging(log_dir: Path) -> list[logging.Handler]:
@@ -195,6 +197,7 @@ def check_port(bind: str, port: int) -> None:
 def build_handlers(terminal: TerminalConfig) -> Handlers:
     """端末の設定から部品を 1 回だけ作り、配線済みの関数にする（配信元は読まない）。"""
     from dev_docs.features.convert.service import ConvertService
+    from dev_docs.features.describe.source_checks import SourceChecks
     from dev_docs.features.documents.store import DocumentStore
     from dev_docs.features.history.snapshot import SnapshotStore
     from dev_docs.features.seen.store import SeenStore
@@ -203,9 +206,7 @@ def build_handlers(terminal: TerminalConfig) -> Handlers:
     from dev_docs.features.write.locks import SourceLocks
 
     # プロンプトの YAML が違反するときは、state_dir を作る前に止める
-    prompts = load_prompts(
-        prompts_dir(os.environ), required=[SESSION_CONTEXT_PROMPT_ID, *mcp_prompt_ids()]
-    )
+    prompts = load_prompts(prompts_dir(os.environ), required=mcp_prompt_ids())
     state_dir = terminal.state_dir
     state_dir.mkdir(parents=True, exist_ok=True)
     snapshots = SnapshotStore(state_dir / "snapshots")
@@ -214,15 +215,23 @@ def build_handlers(terminal: TerminalConfig) -> Handlers:
     seen = SeenStore(state_dir / "seen.sqlite3", terminal.seen_retention_days)
     checker = DocumentChecker(store, terminal.script_timeout_sec)
     columns = ColumnSettings(state_dir / COLUMNS_DIR)
+    checks = SourceChecks()
 
     def on_rebuilt(source: ServedSource) -> None:
-        discard_source_caches([source], store=store, checker=checker, converter=converter)
+        discard_source_caches(
+            [source], store=store, checker=checker, converter=converter, checks=checks
+        )
 
     registry = SourceRegistry(on_rebuilt=on_rebuilt, loading=True)
 
     def reload(new_terminal: TerminalConfig) -> list[SourceStatus]:
         statuses = reload_sources(
-            new_terminal, registry=registry, store=store, checker=checker, converter=converter
+            new_terminal,
+            registry=registry,
+            store=store,
+            checker=checker,
+            converter=converter,
+            checks=checks,
         )
         # 設定画面が起動時の一覧ではなく保存した一覧を見せるよう、起動時の端末の設定の一覧を差し替える
         terminal.sources[:] = new_terminal.sources
@@ -242,6 +251,7 @@ def build_handlers(terminal: TerminalConfig) -> Handlers:
         reload_sources=reload,
         restart=RestartControl(),
         prompts=prompts,
+        checks=checks,
     )
 
 
@@ -252,10 +262,13 @@ def reload_sources(
     store: Any,
     checker: Any,
     converter: Any,
+    checks: SourceChecks,
 ) -> list[SourceStatus]:
     """配信元の一覧を読み直し、配信元の内容を控えた部品の控えを捨てる。"""
     statuses = registry.reload(terminal)
-    discard_source_caches(registry.served(), store=store, checker=checker, converter=converter)
+    discard_source_caches(
+        registry.served(), store=store, checker=checker, converter=converter, checks=checks
+    )
     return statuses
 
 
@@ -265,15 +278,16 @@ def discard_source_caches(
     store: Any,
     checker: Any,
     converter: Any,
+    checks: SourceChecks,
 ) -> None:
     """配信元の内容を控えた部品の控えを捨て、渡した配信元ごとのずれと警告をログに書く。"""
-    from dev_docs.features.view.nav import nav_warnings
-
     store.clear()
     checker.clear()
     converter.clear()
     for source in sources:
-        report = check_sync(store, source)
+        # 検査の結果を控えに持たせ、`describe` の警告が読めるようにする
+        check = checks.refresh(store, source)
+        report = check.report
         for label, values in (
             ("metadata の列の欠け", report.missing_refs),
             ("管理用の YAML に無いファイル", report.unindexed_files),
@@ -292,7 +306,7 @@ def discard_source_caches(
                 violation.path,
                 violation.rule,
             )
-        for warning in nav_warnings(store, source):
+        for warning in check.nav:
             logger.warning("%s: nav: %s: %s", source.id, warning.path, warning.rule)
 
 

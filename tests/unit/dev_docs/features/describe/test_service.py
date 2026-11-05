@@ -7,6 +7,7 @@ from typing import Any
 import pytest
 
 from dev_docs.features.describe.service import describe
+from dev_docs.features.describe.source_checks import SourceChecks
 from dev_docs.features.describe.types import (
     DescribeRequest,
     KindSchemaResult,
@@ -16,11 +17,30 @@ from dev_docs.features.describe.types import (
 )
 from dev_docs.features.documents.store import DocumentStore
 from dev_docs.features.history.snapshot import SnapshotStore
+from dev_docs.features.settings.types import SourceEntry, TerminalConfig
 from dev_docs.features.sources.registry import SourceRegistry
 from dev_docs.features.sources.types import DocumentTable, ServedSource, SourceConfig
+from dev_docs.main import build_handlers
 from dev_docs.shared.errors import UnknownKindError, ValidationFailedError
 
 SCHEMA_TEXT = "description: 規約の文書\ntype: object\n"
+# 偽の配信元では警告を求めないので、端末の設定はどの値でもよい
+TERMINAL = TerminalConfig(
+    file=Path("/w/settings.yaml"),
+    version="1",
+    clone=Path("/w/clone"),
+    state_dir=Path("/w/state"),
+    log_dir=Path("/w/state/logs"),
+)
+
+
+@pytest.fixture(autouse=True)
+def no_warnings(request: pytest.FixtureRequest, monkeypatch: pytest.MonkeyPatch) -> None:
+    """偽の配信元で警告を求めないよう、本物の配信元を使うテスト以外では警告の収集を空にする。"""
+    if request.node.name != "test_describe_when_warned":
+        monkeypatch.setattr(
+            "dev_docs.features.describe.service.collect_warnings", lambda *args, **kwargs: []
+        )
 
 
 @pytest.fixture
@@ -58,7 +78,13 @@ def _describe(
     source_registry: SourceRegistry, store: DocumentStore, cwd: Path, **request: Any
 ) -> SourceListResult | SourceGuideResult | KindSchemaResult:
     """作業場所 `cwd` から `describe` を呼ぶ。"""
-    return describe(DescribeRequest(cwd=str(cwd), **request), registry=source_registry, store=store)
+    return describe(
+        DescribeRequest(cwd=str(cwd), **request),
+        registry=source_registry,
+        store=store,
+        terminal=TERMINAL,
+        checks=SourceChecks(),
+    )
 
 
 def test_describe(
@@ -86,6 +112,32 @@ def test_describe(
         ("notes", "read", False),
     ]
     assert result.outside_sources is None
+    assert result.warnings == []
+
+
+def test_describe_when_warned(
+    make_source_dir: Callable[..., Path],
+    make_terminal_config: Callable[..., TerminalConfig],
+    make_entry: Callable[..., SourceEntry],
+) -> None:
+    """使える配信元の警告を添える（正常系）。"""
+    # 準備
+    config = make_source_dir("sample", unindexed=1)
+    terminal = make_terminal_config(sources=[make_entry(str(config), source_id="sample")])
+    handlers = build_handlers(terminal)
+    handlers.reload_sources(terminal)
+    # 実行
+    result = describe(
+        DescribeRequest(cwd=str(config.parent)),
+        registry=handlers.registry,
+        store=handlers.store,
+        terminal=handlers.terminal,
+        checks=handlers.checks,
+    )
+    # 検証
+    assert isinstance(result, SourceListResult)
+    assert len(result.warnings) == 1
+    assert result.warnings[0].startswith("sample: 管理用の YAML に無いファイルが 1 件あります")
 
 
 def test_describe_when_outside_list(

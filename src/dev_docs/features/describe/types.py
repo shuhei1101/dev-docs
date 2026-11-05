@@ -55,6 +55,7 @@ class SourceListResult:
     sources: list[SourceAccess]
     # `outside_scope` を渡したときだけ持つ（0 件は空のリスト）
     outside_sources: list[OutsideSource] | None = None
+    warnings: list[str] = field(default_factory=list)
 
 
 @dataclass(frozen=True)

@@ -10,7 +10,9 @@ from pathlib import Path
 from typing import Any
 
 HOOKS_DIR = Path(__file__).parents[3] / "plugins" / "dev-docs" / "hooks"
-EVENT = {"session_id": "s1", "cwd": "/repo/sample", "source": "clear"}
+EVENT = {"session_id": "s1", "cwd": "/repo/sample", "source": "startup"}
+CLEARED = {"session_id": "s1", "cwd": "/repo/sample", "source": "clear"}
+COMPACTED = {"session_id": "s1", "cwd": "/repo/sample", "source": "compact"}
 
 
 def _clone_with_recorder(tmp_path: Path) -> tuple[Path, Path, Path]:
@@ -28,12 +30,12 @@ def _clone_with_recorder(tmp_path: Path) -> tuple[Path, Path, Path]:
     return clone, args_file, pid_file
 
 
-def _hooks_with_context_timeout(tmp_path: Path, seconds: int) -> Path:
-    """`CONTEXT_TIMEOUT_SEC` を `seconds` に差し替えたセッション開始のフックのコピーを置き、そのフォルダを返す。"""
+def _hooks_with_forget_timeout(tmp_path: Path, seconds: int) -> Path:
+    """`FORGET_TIMEOUT_SEC` を `seconds` に差し替えたセッション開始のフックのコピーを置き、そのフォルダを返す。"""
     source = HOOKS_DIR / "session_start.py"
     text = source.read_text(encoding="utf-8")
     replaced = re.sub(
-        r"^CONTEXT_TIMEOUT_SEC = \d+$", f"CONTEXT_TIMEOUT_SEC = {seconds}", text, flags=re.M
+        r"^FORGET_TIMEOUT_SEC = \d+$", f"FORGET_TIMEOUT_SEC = {seconds}", text, flags=re.M
     )
     assert replaced != text
     folder = tmp_path / "hooks"
@@ -53,9 +55,9 @@ def _wait_for(path: Path, timeout_sec: float = 5) -> str:
 def test_normal_when_server_listening(
     tmp_path: Path, run_hook: Callable[..., Any], context_server: Callable[..., Any]
 ) -> None:
-    """つながったサーバーの `POST /_admin/session-context` の文を文脈に入れる（正常系）。"""
+    """つながったサーバーには何も依頼せず、文脈を入れずに戻る（正常系）。"""
     # 準備・実行
-    with context_server("ctx 文") as server:
+    with context_server() as server:
         result = run_hook(
             "session_start",
             EVENT,
@@ -65,10 +67,30 @@ def test_normal_when_server_listening(
             },
         )
     # 検証
-    context = result.output["hookSpecificOutput"]["additionalContext"]
     assert result.code == 0
-    assert context == "ctx 文"
-    assert server.bodies == [{"cwd": "/repo/sample", "session_id": "s1", "reason": "clear"}]
+    assert result.stdout == ""
+    assert server.bodies == []
+
+
+def test_normal_when_cleared(
+    tmp_path: Path, run_hook: Callable[..., Any], context_server: Callable[..., Any]
+) -> None:
+    """`/clear` の後は `POST /_admin/session-start` で記録の削除を依頼し、文脈を入れずに戻る（正常系）。"""
+    # 準備・実行
+    with context_server() as server:
+        result = run_hook(
+            "session_start",
+            CLEARED,
+            {
+                "DEV_DOCS_PORT": str(server.port),
+                "DEV_DOCS_CONFIG": str(tmp_path / "missing.yaml"),
+            },
+        )
+    # 検証
+    assert result.code == 0
+    assert result.stdout == ""
+    assert server.bodies == [{"session_id": "s1", "reason": "clear"}]
+    assert server.paths == ["/_admin/session-start"]
 
 
 def test_normal_when_server_down(
@@ -121,18 +143,18 @@ def test_normal_when_terminal_config_missing(
     assert "/dev-docs:global-setup" in context
 
 
-def test_normal_when_context_timeout(
+def test_normal_when_forget_failed(
     tmp_path: Path, run_hook: Callable[..., Any], context_server: Callable[..., Any]
 ) -> None:
-    """`POST /_admin/session-context` が `CONTEXT_TIMEOUT_SEC` 秒で返らなければ、打ち切った秒数を入れて戻る（正常系）。"""
+    """`POST /_admin/session-start` が `FORGET_TIMEOUT_SEC` 秒で返らなければ、削除できなかったことと打ち切った秒数・repeat_seen の案内を入れて戻る（正常系）。"""
     # 準備
-    hooks_dir = _hooks_with_context_timeout(tmp_path, 2)
+    hooks_dir = _hooks_with_forget_timeout(tmp_path, 1)
     started = time.monotonic()
     # 実行
-    with context_server("ctx", hold_sec=4) as server:
+    with context_server(hold_sec=3) as server:
         result = run_hook(
             "session_start",
-            EVENT,
+            COMPACTED,
             {
                 "DEV_DOCS_PORT": str(server.port),
                 "DEV_DOCS_CONFIG": str(tmp_path / "missing.yaml"),
@@ -143,8 +165,8 @@ def test_normal_when_context_timeout(
     # 検証
     context = result.output["hookSpecificOutput"]["additionalContext"]
     assert result.code == 0
-    assert elapsed < 3
-    assert "取れませんでした" in context
-    assert "2 秒で打ち切りました" in context
-    assert "status" in context
+    assert elapsed < 2
+    assert "削除できませんでした" in context
+    assert "1 秒で打ち切りました" in context
+    assert "repeat_seen: true" in context
     assert "起動しました" not in context

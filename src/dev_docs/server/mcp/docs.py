@@ -13,6 +13,7 @@ from mcp.server.mcpserver import MCPServer
 from mcp.types import CallToolResult
 from pydantic import BaseModel, Field, ValidationError
 
+from dev_docs.features.access.service import available_sources
 from dev_docs.features.changes.render import render_changes_markdown
 from dev_docs.features.changes.service import list_changes
 from dev_docs.features.changes.types import ChangesRequest
@@ -27,7 +28,7 @@ from dev_docs.features.search.service import search_docs
 from dev_docs.features.search.terms import list_match_words, render_match_words_markdown
 from dev_docs.features.search.types import MatchWordsRequest, SearchRequest
 from dev_docs.features.write.service import delete_docs, write_docs
-from dev_docs.features.write.types import DeleteRequest, WriteRequest
+from dev_docs.features.write.types import DeleteRequest, DeleteResult, WriteRequest, WriteResult
 from dev_docs.server.mcp.result import (
     DOCS_INSTRUCTIONS_PROMPT_ID,
     TOOL_ANNOTATIONS,
@@ -116,6 +117,20 @@ def _register(
     mcp.tool(name=name, description=description, annotations=TOOL_ANNOTATIONS[name])(tool)
 
 
+def _recheck_after[R: (WriteResult, DeleteResult)](
+    result: R, cwd: str | None, handlers: Handlers
+) -> R:
+    """書き込み・削除を当てたとき、作業場所から書ける配信元を裏で検査し直して結果を返す。"""
+    if result.applied:
+        sources = [
+            handlers.registry.get(item.source_id)
+            for item in available_sources(cwd, registry=handlers.registry)
+            if item.access == "write"
+        ]
+        handlers.checks.refresh_later(handlers.store, sources)
+    return result
+
+
 def build_docs_mcp(handlers: Handlers) -> MCPServer:
     """7 つのツールを持つ文書の MCP を作る。"""
     mcp = MCPServer(
@@ -143,7 +158,13 @@ def build_docs_mcp(handlers: Handlers) -> MCPServer:
         "describe",
         handlers.prompts.render(tool_prompt_id("docs", "describe")),
         DescribeRequest,
-        lambda request: describe(request, registry=handlers.registry, store=handlers.store),
+        lambda request: describe(
+            request,
+            registry=handlers.registry,
+            store=handlers.store,
+            terminal=handlers.terminal,
+            checks=handlers.checks,
+        ),
         lambda result, request: render_describe_markdown(result),
     )
     register(
@@ -173,14 +194,18 @@ def build_docs_mcp(handlers: Handlers) -> MCPServer:
         "write_docs",
         handlers.prompts.render(tool_prompt_id("docs", "write_docs")),
         WriteRequest,
-        lambda request: write_docs(
-            request,
-            registry=handlers.registry,
-            store=handlers.store,
-            checker=handlers.checker,
-            seen=handlers.seen,
-            locks=handlers.locks,
-            timeout_sec=timeout,
+        lambda request: _recheck_after(
+            write_docs(
+                request,
+                registry=handlers.registry,
+                store=handlers.store,
+                checker=handlers.checker,
+                seen=handlers.seen,
+                locks=handlers.locks,
+                timeout_sec=timeout,
+            ),
+            request.cwd,
+            handlers,
         ),
         None,
     )
@@ -189,13 +214,17 @@ def build_docs_mcp(handlers: Handlers) -> MCPServer:
         "delete_docs",
         handlers.prompts.render(tool_prompt_id("docs", "delete_docs")),
         DeleteRequest,
-        lambda request: delete_docs(
-            request,
-            registry=handlers.registry,
-            store=handlers.store,
-            checker=handlers.checker,
-            locks=handlers.locks,
-            timeout_sec=timeout,
+        lambda request: _recheck_after(
+            delete_docs(
+                request,
+                registry=handlers.registry,
+                store=handlers.store,
+                checker=handlers.checker,
+                locks=handlers.locks,
+                timeout_sec=timeout,
+            ),
+            request.cwd,
+            handlers,
         ),
         None,
     )

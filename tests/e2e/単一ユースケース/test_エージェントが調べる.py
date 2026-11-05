@@ -12,6 +12,13 @@ BROKEN_CONFIG = "name: broken\ndocuments:\n  - id: sample\n    schema: schemas/s
 DOC_1 = {"field": "id", "op": "eq", "values": ["doc-1"]}
 FILES_REQUIRED = "'files' is a required property"
 SEEN = "（この会話で返し済み）"
+FILES_ROW = (
+    "  - id: src\n"
+    "    paths: [src/files.yaml]\n"
+    "    schema: schemas/files.schema.yaml\n"
+    "    records: files\n"
+    "    body_file: path\n"
+)
 NOTES_ROWS = (
     "  - id: notes\n"
     "    paths: [notes/**/files.yaml]\n"
@@ -98,7 +105,6 @@ TERM_ROW = (
 )
 TERM_SCHEMA = "title: 用語\ntype: object\n"
 SCOPE_TERM = "id: scope\nname: 作業範囲\ndescription: 触ってよい範囲\naliases: [scope, 担当範囲]\n"
-SESSION_CONTEXT = "/_admin/session-context"
 INITIALIZE = {
     "jsonrpc": "2.0",
     "id": 1,
@@ -110,7 +116,6 @@ INITIALIZE = {
     },
 }
 MCP_HEADERS = {"Accept": "application/json, text/event-stream", "Content-Type": "application/json"}
-CONTEXT_MAX_CHARS = 1000
 TAG_HEADER = "タグ:"
 TAG_RULES = (
     "複合語は単語まで分けてタグにする",
@@ -119,10 +124,6 @@ TAG_RULES = (
     "`tool:`",
     "配信元にタグの規約があれば",
     '`group_by="tags"` で使われているタグを見て',
-)
-# 使い分けは文書の MCP の instructions にある旨の行
-POINTER_LINE = (
-    "探す・読む・書くときの使い分けと書き方は、文書の MCP（dev-docs）の instructions にあります。"
 )
 INSTRUCTIONS_MAX_CHARS = 4096
 # instructions が案内する、使う場面・grep と Read が向く場面・ツールの順序の語
@@ -920,32 +921,41 @@ def test_normal_when_term_matched_by_alias(
     assert pairs == {("作業範囲", "scope"), ("scope", "scope"), ("担当範囲", "scope")}
 
 
-def test_normal_when_session_guide_injected(
-    make_source: Callable[..., Any], serve: Callable[..., Any]
+def test_normal_when_research_guide_received(
+    make_source: Callable[..., Any],
+    serve: Callable[..., Any],
+    sample_file_set: Callable[..., dict[str, str]],
+    sample_config_text: Callable[..., str],
 ) -> None:
-    """instructions がタグの付け方を、注入文が instructions を指す行と設計書から調査する案内・作業場所の外を参照する案内を示す（正常系）。"""
+    """instructions が配信元の引き方・調べ方・タグの付け方を、引数なしの describe が警告を示す（正常系）。"""
     # 準備
-    sample = make_source("sample")
-    other = make_source("other")
-    served = serve(sample, other)
-    # 実行
-    response = httpx.post(
-        served.url(SESSION_CONTEXT),
-        json={"cwd": str(sample.folder), "reason": "startup"},
-        timeout=10,
+    files = sample_file_set(
+        **{
+            "dev-docs.yaml": sample_config_text(FILES_ROW),
+            "schemas/files.schema.yaml": FILES_SCHEMA.read_text(encoding="utf-8"),
+            "src/files.yaml": "files:\n  - path: a.py\n",
+            "src/a.py": "a = 1\n",
+            "src/extra.py": "x = 1\n",
+        }
     )
+    sample = make_source("sample", files)
+    other = make_source("other")
+    old_files = sample_file_set(**{"dev-docs.yaml": sample_config_text(name="old", version="0")})
+    old = make_source("old", old_files, git=False, scope_read=[sample.folder])
+    served = serve(sample, other, old)
+    # 実行
     initialized = httpx.post(served.url("/mcp/"), headers=MCP_HEADERS, json=INITIALIZE, timeout=10)
+    listed = served.call("describe", cwd=str(sample.folder))
     # 検証
-    context = response.json()["context"]
     instructions = initialized.json()["result"]["instructions"]
-    assert response.status_code == 200
     assert [rule for rule in TAG_RULES if rule not in _tag_lines(instructions)] == []
-    assert TAG_HEADER not in context
-    assert context.splitlines().count(POINTER_LINE) == 1
-    assert all(word in context for word in DESIGN_FIRST_WORDS)
-    assert all(word in context for word in OUTSIDE_WORDS)
-    assert "other" not in context
-    assert len(context) <= CONTEXT_MAX_CHARS
+    assert "`describe()`" in instructions
+    assert "SessionStart" not in instructions
+    assert all(word in instructions for word in DESIGN_FIRST_WORDS)
+    assert all(word in instructions for word in OUTSIDE_WORDS)
+    assert "other" not in instructions
+    assert "sample: 管理用の YAML に無いファイルが 1 件あります" in listed.text
+    assert "old: 設定のバージョンが古い" in listed.text
 
 
 def _descriptions(response: httpx.Response) -> list[str]:

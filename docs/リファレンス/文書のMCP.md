@@ -329,10 +329,15 @@ Git 管理外の配信元では、種類の `documents[].writable` が削除を�
 
 | 引数 | 返すもの |
 | --- | --- |
-| なし | 今の作業場所から使える配信元の一覧（`id`・権限 `read` / `write`・作業中か・`description`）と、作業場所 |
+| なし | 今の作業場所から使える配信元の一覧（`id`・権限 `read` / `write`・作業中か・`description`）と、作業場所、使える配信元の警告（`warnings[]`） |
 | `outside_scope: true`（`source` なし） | 引数なしと同じ一覧に加えて、作業範囲の外（参考）で読める配信元（`scope` に当たらず `sources[].outside_read` が真）の一覧（`outside_sources[]` の `id`・`description`） |
 | `source` | その配信元の説明書（`instructions`）と種類（`kinds[]`）の一覧。Git の配信元は、ブランチ・タグ（`refs.branches[]`・`refs.tags[]`）と、`worktrees` に当たるワークツリー（`worktrees[]` の `path`・`branch`）の一覧も返す |
 | `source`・`kind` | その種類の共通のキーと列名の対応（`metadata`）と、スキーマ（YAML のまま） |
+
+`warnings[]` は、使える配信元の同期のずれ（metadata の列の欠け・管理用の YAML に無いファイル・ファイルが無い行・どの文書にも当たらない関連）・エイリアスのキーの違反・どの文書にも当たらない `nav` の条件、配信元と端末の設定のバージョンが古いこと、検証で外した配信元です。
+`markdown` では配信元の表の後に「注意」の見出しの下に 1 行ずつ出し、0 件のときは見出しごと出しません。
+使える配信元が無い作業場所では、表の代わりに `/dev-docs:setup` で配信元にできることを返し、端末の設定のバージョンと検証で外した配信元の警告は載せます。
+詳しい内容は管理の MCP の `check_project` で確認します。
 
 `metadata` は、種類の行の `metadata` をそのまま返します。
 `markdown` ではスキーマの前に「共通のキー | 列名」の表で出し、`json` では `metadata` に `{name: title}` の形で入れます。

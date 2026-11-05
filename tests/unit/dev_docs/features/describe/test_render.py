@@ -24,6 +24,42 @@ def test_render_describe_markdown() -> None:
     assert "| notes | read | メモ |" in markdown
 
 
+def test_render_describe_markdown_when_warnings() -> None:
+    """注意の一覧（正常系）。"""
+    # 準備
+    workplace = Workplace(cwd=Path("/w/sample"), source_id="sample", worktree=None)
+    sources = [
+        SourceAccess(source_id="sample", access="write", current=True, description="サンプル")
+    ]
+    warned = SourceListResult(workplace=workplace, sources=sources, warnings=["警告です"])
+    quiet = SourceListResult(workplace=workplace, sources=sources)
+    # 実行
+    markdown = render_describe_markdown(warned)
+    quiet_markdown = render_describe_markdown(quiet)
+    # 検証
+    lines = markdown.splitlines()
+    assert lines.index("注意:") > lines.index("| sample | write（作業中） | サンプル |")
+    assert "- 警告です" in lines
+    assert "注意:" not in quiet_markdown
+
+
+def test_render_describe_markdown_when_no_source() -> None:
+    """使える配信元が無い（正常系）。"""
+    # 準備
+    result = SourceListResult(
+        workplace=Workplace(cwd=Path("/w/elsewhere"), source_id=None, worktree=None),
+        sources=[],
+        warnings=["b: 配信していません"],
+    )
+    # 実行
+    markdown = render_describe_markdown(result)
+    # 検証
+    assert "| source | 権限 | description |" not in markdown
+    assert "/dev-docs:setup" in markdown
+    assert "注意:" in markdown
+    assert "- b: 配信していません" in markdown
+
+
 def test_render_describe_markdown_when_outside_sources() -> None:
     """作業範囲の外で読める配信元の表（正常系）。"""
     # 準備
