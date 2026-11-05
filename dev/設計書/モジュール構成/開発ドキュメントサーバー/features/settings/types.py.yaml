@@ -156,7 +156,7 @@ data_models:
     container: features/settings/types.py
     usecase: 端末の設定
     role: DTO
-    summary: 読み直した後の配信元ごとの状態
+    summary: 再読み込みした後の配信元ごとの状態
     description: '共通の『画面の API のモデル』（`ApiModel`。JSON のキーは camelCase）を継承する。`from_statuses(statuses)` で配信元の状態の並びから作る。'
     properties:
       - name: sources
@@ -198,7 +198,7 @@ data_models:
         access: 公開
         description: 配信元の状態の `status`。当たる配信元の状態が無い行（読み直していない行）は `pending_reload`
       - name: errors
-        title: 外した理由
+        title: 除外した理由
         type: list[dict[str, str]]
         access: 公開
         default: '[]'
