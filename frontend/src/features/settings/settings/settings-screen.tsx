@@ -123,7 +123,7 @@ export const SettingsScreen = () => {
           </h2>
           <div className="flex items-center justify-between gap-4">
             <div>
-              <Label htmlFor="single-key">1 文字のショートカットを使う</Label>
+              <Label htmlFor="single-key">1 文字のショートカットを使用する</Label>
               <p className="text-xs text-muted-foreground">
                 / で検索、?
                 でショートカットの一覧を開きます。この端末のブラウザに保存します。

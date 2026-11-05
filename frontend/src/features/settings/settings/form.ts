@@ -32,12 +32,12 @@ export const sourceFormSchema = (otherIds: string[]) =>
         context.addIssue({
           code: "custom",
           message:
-            "配信元の ID に使えない文字があります。英小文字・数字・ハイフンで入力してください。",
+            "配信元の ID に使用できない文字があります。英小文字・数字・ハイフンで入力してください。",
         });
       } else if (otherIds.includes(value)) {
         context.addIssue({
           code: "custom",
-          message: `配信元の ID ${value} は既に使われています。別の ID を入力してください。`,
+          message: `配信元の ID ${value} は既に使用されています。別の ID を入力してください。`,
         });
       }
     }),

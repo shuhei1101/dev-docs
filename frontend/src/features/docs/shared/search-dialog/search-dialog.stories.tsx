@@ -87,7 +87,7 @@ export const Failed: Story = {
             type: "urn:dev-docs:error:InvalidArgumentError",
             title: "InvalidArgumentError",
             status: 400,
-            detail: "検索する語が正しくありません",
+            detail: "検索する単語が正しくありません",
             nextSteps: [],
           },
           {
