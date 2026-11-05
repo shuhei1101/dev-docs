@@ -10,7 +10,7 @@ from datetime import date, datetime
 from typing import Any
 from urllib.parse import quote
 
-from dev_docs.features.convert.diagrams import render_diagram
+from dev_docs.features.convert.diagrams import er_table_titles, render_diagram
 from dev_docs.features.convert.inline import heading_anchor, link_reference, rewrite_text
 from dev_docs.features.convert.types import DiagramHead, DiagramKind, RenderContext
 from dev_docs.features.documents.types import Document
@@ -89,8 +89,8 @@ def _foreign_key(reference: str, context: RenderContext | None) -> str:
             return _escape_cell(reference)
         relative = quote(posixpath.relpath(link.path, folder or "."), safe="/")
         return f"[{reference}]({relative})"
-    # 同じ文書のテーブル: 論理名から見出しのアンカーへのリンク
-    heading = context.anchors.get(name)
+    # 同じ文書のテーブル: 物理名でも論理名にしてから、論理名で見出しのアンカーへのリンク
+    heading = context.anchors.get(context.table_titles.get(name, name))
     if heading is None:
         return _escape_cell(reference)
     return f"[{reference}](#{heading_anchor(heading)})"
@@ -544,7 +544,12 @@ def schema_to_markdown(
 ) -> str:
     """YAML の文書をスキーマの `x-heading`・`x-shape`・`x-key`・`x-diagram`・`x-hidden`・`title` に沿って Markdown にする。"""
     data = document.data
-    context = replace(context, anchors=_anchors(data, schema, {}))
+    tables = data.get(ER_TABLES_KEY) if isinstance(data, Mapping) else None
+    context = replace(
+        context,
+        anchors=_anchors(data, schema, {}),
+        table_titles=er_table_titles(_items(tables)),
+    )
     heading_key = _first(data, HEADING_KEYS)
     lead_key = _first(data, LEAD_KEYS)
     name = str(data[heading_key]) if heading_key else str(document.metadata["name"])
