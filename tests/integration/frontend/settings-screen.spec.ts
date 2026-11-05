@@ -8,7 +8,7 @@ import {
   settingsView,
 } from "./support/fixtures";
 
-const TOAST = "端末の設定を保存し、配信元を読み直しました。";
+const TOAST = "端末の設定を保存し、配信元を再読み込みしました。";
 
 const open = async (
   page: Page,
@@ -240,12 +240,12 @@ test.describe("状態", () => {
     await expect(page.getByText("配信中", { exact: true })).toBeVisible();
   });
 
-  // 配信していない行を `配信していない` で出す（正常系）
+  // 配信していない行を `配信停止` で出す（正常系）
   test("status_not_served", async ({ page }) => {
     await open(page, {
       settings: withSources(settingsSource("a", { status: "not_served" })),
     });
-    await expect(page.getByText("配信していない", { exact: true })).toBeVisible();
+    await expect(page.getByText("配信停止", { exact: true })).toBeVisible();
   });
 
   // 無効の行を `無効` で出す（正常系）
@@ -256,12 +256,12 @@ test.describe("状態", () => {
     await expect(page.getByText("無効", { exact: true })).toBeVisible();
   });
 
-  // 読み直していない行を `読み直していない` で出す（正常系）
+  // 読み直していない行を `再読み込み待ち` で出す（正常系）
   test("status_pending_reload", async ({ page }) => {
     await open(page, {
       settings: withSources(settingsSource("fresh", { id: null, status: "pending_reload" })),
     });
-    await expect(page.getByText("読み直していない", { exact: true })).toBeVisible();
+    await expect(page.getByText("再読み込み待ち", { exact: true })).toBeVisible();
   });
 });
 
@@ -276,7 +276,7 @@ test.describe("状態の補足", () => {
         }),
       ),
     });
-    await expect(page.getByText("起動時の検証で外しました。")).toBeVisible();
+    await expect(page.getByText("起動時の検証で除外しました。")).toBeVisible();
     await expect(page.getByText("documents[0].paths 必須のキーがありません")).toBeVisible();
   });
 
@@ -287,7 +287,7 @@ test.describe("状態の補足", () => {
         settingsSource("a", { configVersion: { config: "0", server: "3" } }),
       ),
     });
-    await expect(page.getByText("設定のバージョン 0（サーバーが読めるのは 3）")).toBeVisible();
+    await expect(page.getByText("設定のバージョン 0（サーバーが読み込めるのは 3）")).toBeVisible();
   });
 
   // 無効のとき `enabled が false です` を出す（正常系）
@@ -303,13 +303,13 @@ test.describe("状態の補足", () => {
     await open(page, {
       settings: withSources(settingsSource("a", { status: "pending_reload" })),
     });
-    await expect(page.getByText("ファイルにありますが、まだ読み直していません。")).toBeVisible();
+    await expect(page.getByText("ファイルにありますが、まだ再読み込みしていません。")).toBeVisible();
   });
 
   // 配信中で設定のバージョンも古くないとき補足を出さない（正常系）
   test("status_note_when_serving", async ({ page }) => {
     await open(page, { settings: withSources(settingsSource("a")) });
-    await expect(page.getByText("起動時の検証で外しました。")).toHaveCount(0);
+    await expect(page.getByText("起動時の検証で除外しました。")).toHaveCount(0);
     await expect(page.getByText("enabled が false です")).toHaveCount(0);
   });
 });
@@ -357,7 +357,7 @@ test.describe("1 文字のショートカットのスイッチ", () => {
   // 初期値をオンにし、補助文を出す（正常系）
   test("single_key_switch_initial", async ({ page }) => {
     await open(page);
-    await expect(page.getByRole("switch", { name: "1 文字のショートカットを使う" })).toBeChecked();
+    await expect(page.getByRole("switch", { name: "1 文字のショートカットを使用する" })).toBeChecked();
     await expect(
       page.getByText("この端末のブラウザに保存します。"),
     ).toBeVisible();
@@ -367,7 +367,7 @@ test.describe("1 文字のショートカットのスイッチ", () => {
   test("single_key_switch_toggle", async ({ page }) => {
     // 準備
     await open(page);
-    const toggle = page.getByRole("switch", { name: "1 文字のショートカットを使う" });
+    const toggle = page.getByRole("switch", { name: "1 文字のショートカットを使用する" });
     // 実行
     await toggle.click();
     await page.getByRole("heading", { level: 1 }).click();
@@ -428,7 +428,7 @@ test.describe("配信元の ID の入力欄", () => {
     await expect(input).toHaveAttribute("autocomplete", "off");
     await expect(dialog(page).getByText("必須").first()).toBeVisible();
     await expect(
-      dialog(page).getByText("画面の URL と文書の MCP の source に使います。英小文字・数字・ハイフンで入力します。"),
+      dialog(page).getByText("画面の URL と文書の MCP の source に使用します。英小文字・数字・ハイフンで入力します。"),
     ).toBeVisible();
   });
 
@@ -494,7 +494,7 @@ test.describe("配信のスイッチ", () => {
     await openAdd(page);
     await expect(dialog(page).getByRole("switch", { name: "配信する" })).toBeChecked();
     await expect(
-      dialog(page).getByText("外すと、設定を残したまま配信を止めます。"),
+      dialog(page).getByText("オフにすると、設定を残したまま配信を止めます。"),
     ).toBeVisible();
   });
 
@@ -517,7 +517,7 @@ test.describe("読み取りの範囲の入力欄", () => {
     await expect(input).toHaveValue("");
     await expect(input).toHaveAttribute("placeholder", "~/repo/**");
     await expect(
-      dialog(page).getByText("glob を 1 行に 1 つ。当たる作業場所から、この配信元の文書を読めます。"),
+      dialog(page).getByText("glob を 1 行に 1 つ。当たる作業場所から、この配信元の文書を参照できます。"),
     ).toBeVisible();
   });
 
@@ -740,7 +740,7 @@ test.describe("削除の確認", () => {
     await page.getByRole("button", { name: "sample を削除" }).click();
     await expect(
       page.getByRole("alertdialog").getByText(
-        "端末の設定から sample の行を削除し、配信から外します。フォルダ /home/me/sample と文書は削除しません。",
+        "端末の設定から sample の行を削除し、配信から除外します。フォルダ /home/me/sample と文書は削除しません。",
       ),
     ).toBeVisible();
   });
@@ -834,7 +834,7 @@ test.describe("入力チェック", () => {
     await page.getByLabel("配信元の ID").fill("Sample_1");
     await submit(page);
     await expect(
-      dialog(page).getByText("配信元の ID に使えない文字があります。英小文字・数字・ハイフンで入力してください。"),
+      dialog(page).getByText("配信元の ID に使用できない文字があります。英小文字・数字・ハイフンで入力してください。"),
     ).toBeVisible();
   });
 
@@ -844,7 +844,7 @@ test.describe("入力チェック", () => {
     await page.getByLabel("配信元の ID").fill("sample");
     await submit(page);
     await expect(
-      dialog(page).getByText("配信元の ID sample は既に使われています。別の ID を入力してください。"),
+      dialog(page).getByText("配信元の ID sample は既に使用されています。別の ID を入力してください。"),
     ).toBeVisible();
   });
 
