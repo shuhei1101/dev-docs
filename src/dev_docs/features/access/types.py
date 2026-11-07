@@ -40,6 +40,7 @@ class Target:
     worktree: Path | None
     access: AccessLevel
     outside_scope: bool = False
+    commit: str | None = None
 
 
 def script_at(target: Target) -> tuple[Path, str] | None:

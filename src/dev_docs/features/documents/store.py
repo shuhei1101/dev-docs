@@ -77,17 +77,30 @@ class DocumentStore:
         self.snapshots = snapshots
         self._files: dict[tuple[Path, str], _CachedFile] = {}
         self._schemas: dict[Path, tuple[int, int, dict[str, Any]]] = {}
-        self._dates: dict[tuple[Path, str], dict[str, FileDates]] = {}
+        self._revision_schemas: dict[tuple[Path, str, str], dict[str, Any]] = {}
+        self._dates: dict[tuple[Path, str, str], dict[str, FileDates]] = {}
         self._lock = threading.Lock()
 
     def read_root(self, target: Target) -> Path:
         """読むフォルダを決める（`ref` があればリビジョンを書き出す）。"""
         if target.ref is None:
             return target.base
+        return self._revision_root(target, self._commit_of(target))
+
+    def _commit_of(self, target: Target) -> str:
+        """`ref` を持つ読む場所の commit を返す（`commit` が無いときだけ解く）。"""
+        if target.commit is not None:
+            return target.commit
+        assert target.ref is not None  # noqa: S101
         source = target.source
         repo_root = source.repo_root or source.root
-        resolved = resolve_ref(repo_root, target.ref, date_base=source.config.default_ref)
-        checkout = self.snapshots.checkout(repo_root, resolved.commit)
+        return resolve_ref(repo_root, target.ref, date_base=source.config.default_ref).commit
+
+    def _revision_root(self, target: Target, commit: str) -> Path:
+        """commit を書き出したフォルダの下の、配信元の直下を返す。"""
+        source = target.source
+        repo_root = source.repo_root or source.root
+        checkout = self.snapshots.checkout(repo_root, commit)
         return checkout / source.root.relative_to(repo_root)
 
     def location(self, target: Target, document: Document) -> str | None:
@@ -96,29 +109,27 @@ class DocumentStore:
             return None
         return str(self.read_root(target) / (document.body_path or document.path))
 
-    def _file_dates(self, target: Target) -> dict[str, FileDates]:
+    def _file_dates(self, target: Target, revision: str | None) -> dict[str, FileDates]:
         """Git の配信元のファイルの日時を、配信元の直下からのパスで返す。"""
         source = target.source
         if not source.is_git:
             return {}
         repo_root = source.repo_root or source.root
         work_root = target.worktree or repo_root
-        try:
-            if target.ref is not None:
-                commit = resolve_ref(
-                    repo_root, target.ref, date_base=source.config.default_ref
-                ).commit
-            else:
+        if revision is not None:
+            commit = revision
+        else:
+            try:
                 output = run_git(["rev-parse", "HEAD"], cwd=work_root)
-                commit = (output if isinstance(output, str) else output.decode("utf-8")).strip()
-        except GitError:
-            # commit がまだ 1 つも無いリポジトリ
-            return {}
-        key = (work_root, commit)
+            except GitError:
+                # commit がまだ 1 つも無いリポジトリ
+                return {}
+            commit = (output if isinstance(output, str) else output.decode("utf-8")).strip()
+        prefix = source.root.relative_to(repo_root).as_posix()
+        key = (work_root, commit, prefix)
         with self._lock:
             cached = self._dates.get(key)
         if cached is None:
-            prefix = source.root.relative_to(repo_root).as_posix()
             raw = file_dates(work_root, commit=commit)
             cached = {
                 path if prefix == "." else path.removeprefix(f"{prefix}/"): dates
@@ -186,9 +197,10 @@ class DocumentStore:
         `files` は呼び出し元が読むフォルダを `walk_files` でたどったパス。
         無ければここで 1 回だけたどり、行ごとにたどり直さない。
         """
-        root = self.read_root(target)
+        revision = None if target.ref is None else self._commit_of(target)
+        root = target.base if revision is None else self._revision_root(target, revision)
         tables = self._tables(target, kinds)
-        dates = self._file_dates(target)
+        dates = self._file_dates(target, revision)
         walked = list(walk_files(root)) if files is None else files
         documents: list[Document] = []
         problems: list[LoadProblem] = []
@@ -245,6 +257,8 @@ class DocumentStore:
         base = source.root / table.schema_path
         if target.ref is None and target.worktree is None:
             return resolve_schema_refs(startup, base)
+        if target.ref is not None:
+            return self._revision_schema(target, table, startup, base)
         path = self.read_root(target) / table.schema_path
         try:
             stat = path.stat()
@@ -263,6 +277,31 @@ class DocumentStore:
         resolved = resolve_schema_refs(raw, path)
         with self._lock:
             self._schemas[path] = (stat.st_mtime_ns, stat.st_size, resolved)
+        return resolved
+
+    def _revision_schema(
+        self, target: Target, table: DocumentTable, startup: dict[str, Any], base: Path
+    ) -> dict[str, Any]:
+        """リビジョンの種類のスキーマを、commit とスキーマのファイルの相対パスで控えて返す。"""
+        source = target.source
+        repo_root = source.repo_root or source.root
+        commit = self._commit_of(target)
+        relative = (source.root.relative_to(repo_root) / table.schema_path).as_posix()
+        key = (repo_root, commit, relative)
+        with self._lock:
+            cached = self._revision_schemas.get(key)
+        if cached is not None:
+            return cached
+        path = self._revision_root(target, commit) / table.schema_path
+        try:
+            raw = load_yaml(path.read_text(encoding="utf-8"), file=str(path))
+        except OSError, UnicodeDecodeError, YamlLoadError:
+            return resolve_schema_refs(startup, base)
+        if not isinstance(raw, dict):
+            return resolve_schema_refs(startup, base)
+        resolved = resolve_schema_refs(raw, path)
+        with self._lock:
+            self._revision_schemas[key] = resolved
         return resolved
 
     def row_schema(self, target: Target, kind: str) -> dict[str, Any]:
@@ -289,6 +328,7 @@ class DocumentStore:
         with self._lock:
             self._files.clear()
             self._schemas.clear()
+            self._revision_schemas.clear()
             self._dates.clear()
 
 
