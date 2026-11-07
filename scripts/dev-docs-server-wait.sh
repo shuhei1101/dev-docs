@@ -1,9 +1,9 @@
 #!/bin/sh
 # dev-docs のサーバーの再起動の反映作業が、再起動の後の新しいサーバーを待つ共通のスクリプト。
 #
-#   scripts/dev-docs-server-wait.sh listening {UNIX 時刻}
+#   sh scripts/dev-docs-server-wait.sh listening {UNIX 時刻}
 #     127.0.0.1:8781 で、{UNIX 時刻} 以後に起動したプロセスが待ち受けるまで待つ
-#   scripts/dev-docs-server-wait.sh loaded
+#   sh scripts/dev-docs-server-wait.sh loaded
 #     配信元の読み込みが終わり、文書の MCP の describe が応答するまで待つ
 #
 # 上限は規約『資源の値の決め方』の下流を待つタイムアウト（実測 + 50%）で導いた。

@@ -1,7 +1,7 @@
 #!/bin/sh
 set -u
 
-if ! scripts/dev-docs-server-wait.sh loaded; then
+if ! sh scripts/dev-docs-server-wait.sh loaded; then
   exit 1
 fi
 

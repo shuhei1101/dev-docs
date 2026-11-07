@@ -58,7 +58,7 @@ if [ "$code" != "200" ]; then
   echo "サーバーの再起動: failed（restart が $code）"
   exit 1
 fi
-if ! scripts/dev-docs-server-wait.sh listening "$requested"; then
+if ! sh scripts/dev-docs-server-wait.sh listening "$requested"; then
   echo "サーバーの再起動: failed（修正の後に起動したサーバーが待ち受けない）"
   exit 1
 fi

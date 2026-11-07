@@ -111,13 +111,13 @@ categories:
       1. 実行スクリプトで、`restart` を要求する前に取った UNIX 時刻を渡し、その時刻以後に起動したサーバーが待ち受けるまで待つ
 
       ```bash
-      scripts/dev-docs-server-wait.sh listening "$requested"
+      sh scripts/dev-docs-server-wait.sh listening "$requested"
       ```
 
       2. 確認スクリプトの最初に、配信元の読み込みが終わり文書の MCP の `describe` が応答するまで待つ
 
       ```bash
-      scripts/dev-docs-server-wait.sh loaded
+      sh scripts/dev-docs-server-wait.sh loaded
       ```
     effects: '`listening` は最長 120 秒、`loaded` は最長 540 秒待つ（上限の導き方はスクリプトの冒頭のコメント）。待ちきれなければ `failed` の行を出して終了コード 1 で終わる。サーバーの状態は変えない'
     verification:
