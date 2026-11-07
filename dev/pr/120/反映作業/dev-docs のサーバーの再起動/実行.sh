@@ -14,7 +14,7 @@ server_started() {
   date -d "$(ps -o lstart= -p "$pid")" +%s
 }
 
-# 新しいコードのサーバーは、修正を入れた commit より後に起動している
+# 新しいコードのサーバーは、develop の worktree の修正したファイルが更新された後に起動している
 running_new() {
   started=$(server_started)
   [ -n "$started" ] && [ "$started" -gt "$FIXED_AT" ]
@@ -31,11 +31,7 @@ else
   echo "develop の worktree の修正: failed（$FIXED に _revision_target が無い）"
   exit 1
 fi
-FIXED_AT=$(git -C "$DEVELOP" log -1 --format=%ct -S _revision_target -- "$FIXED")
-if [ -z "$FIXED_AT" ]; then
-  echo "修正の commit: failed（develop に _revision_target を入れた commit が無い）"
-  exit 1
-fi
+FIXED_AT=$(stat -c %Y "$DEVELOP/$FIXED")
 if [ -n "$(server_started)" ]; then
   echo "稼働中のサーバー: ok"
 else
@@ -45,7 +41,7 @@ fi
 
 # 計画
 if running_new; then
-  echo "サーバーの再起動: skipped（修正を入れた commit より後に起動している）"
+  echo "サーバーの再起動: skipped（develop の worktree の $FIXED の更新より後に起動している）"
   exit 0
 fi
 echo "再起動するサーバー: 127.0.0.1:8781（$DEVELOP の dev-docs serve）"
