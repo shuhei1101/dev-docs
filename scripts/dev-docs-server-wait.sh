@@ -14,7 +14,10 @@ set -u
 PORT=8781
 LISTENING_LIMIT=120
 LOADED_LIMIT=540
-# 読み込み中の describe は読み込みの終わりまで応答しないため、1 回の要求を短く切って問い直す
+# 読み込み中の describe は読み込みの終わりまで応答しないため、1 回の要求を LOADED_TRY 秒で切って送り直す。
+# 読み込みの後の describe の実測 1.1 秒 + 50% = 1.7 秒を下限とし、送り直す回数を抑えるため 30 秒にした
+# （実測は 2026-11-08 の 2 回だけの仮の値で、p99.9 を測る作業が残る）。
+# 1 回の要求は LOADED_LIMIT の残りを超えない
 LOADED_TRY=30
 DESCRIBE='{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"describe","arguments":{}}}'
 
@@ -45,16 +48,19 @@ wait_listening() {
 wait_loaded() {
   start=$(date +%s)
   while :; do
-    body=$(curl -s --max-time "$LOADED_TRY" -X POST "http://127.0.0.1:$PORT/mcp" \
+    left=$((LOADED_LIMIT - ($(date +%s) - start)))
+    if [ "$left" -le 0 ]; then
+      echo "配信元の読み込み: failed（$LOADED_LIMIT 秒待っても describe が応答しない）"
+      return 1
+    fi
+    try=$LOADED_TRY
+    [ "$left" -lt "$try" ] && try=$left
+    body=$(curl -s --max-time "$try" -X POST "http://127.0.0.1:$PORT/mcp" \
       -H 'Accept: application/json, text/event-stream' -H 'Content-Type: application/json' \
       -d "$DESCRIBE")
     if printf '%s' "$body" | grep -q '"isError":false'; then
       echo "配信元の読み込み: ok（$(($(date +%s) - start)) 秒）"
       return 0
-    fi
-    if [ $(($(date +%s) - start)) -ge "$LOADED_LIMIT" ]; then
-      echo "配信元の読み込み: failed（$LOADED_LIMIT 秒待っても describe が応答しない）"
-      return 1
     fi
     sleep 1
   done
