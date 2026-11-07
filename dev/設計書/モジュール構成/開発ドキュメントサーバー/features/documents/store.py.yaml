@@ -271,7 +271,7 @@ classes:
           - name: test_document_store_load_when_commit
             case: 正常
             summary: 解いた commit を持つ読む場所は解き直さない
-            condition: test_document_store_load_when_ref と同じ配信元で、`ref` に `main`、`commit` に最初の commit を持つ読む場所
+            condition: test_document_store_load_when_ref と同じ配信元で、書き換えた `rules/a.yaml` を `develop` へ 2 つ目の commit として積み、`ref` に `develop`、`commit` に最初の commit を持つ読む場所
             mock: 履歴の『リビジョンの解決』（本物を包んで呼ばれた回数を記録する）
             expected: 最初の commit の内容を返し、リビジョンの解決が呼ばれない
           - name: test_document_store_load_when_dates_shared_repo
@@ -464,7 +464,7 @@ classes:
           - name: test_document_store_row_schema_when_many_documents
             case: 正常
             summary: 文書の数だけ呼んでも git を文書の数だけ起動しない
-            condition: Git の配信元で行 `rules` の文書 50 件を commit し、`ref` に `main`、`commit` に解いた commit を持つ読む場所で `load` した後、文書ごとに `row_schema` を呼ぶ
+            condition: Git の配信元で行 `rules` の文書 50 件を commit し、`ref` に `develop`、`commit` に解いた commit を持つ読む場所で `load` した後、文書ごとに `row_schema` を呼ぶ
             mock: '`run_git`（本物を包んで呼ばれた回数を記録する）'
             expected: '`row_schema` の 50 回の呼び出しで `run_git` が呼ばれない'
       - name: invalidate
