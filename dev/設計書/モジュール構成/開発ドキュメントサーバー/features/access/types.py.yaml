@@ -17,6 +17,7 @@ diagrams:
           +配信元: ServedSource
           +直下: Path
           +リビジョン: str
+          +解いた commit: str
         }
         click 読む場所の解決 href "./service.py.yaml#読む場所の解決"
         click 書く場所の解決 href "./service.py.yaml#書く場所の解決"
@@ -92,7 +93,9 @@ data_models:
     usecase: 共通
     role: DTO
     summary: 1 つの配信元をどこから読み書きするか
-    description: '`dataclass(frozen=True)`。`ref` が `None` のときは `base` のファイルをそのまま読み、`ref` があるときは履歴の『リビジョンの書き出し』が作ったフォルダを読む。'
+    description: |-
+      `dataclass(frozen=True)`。`ref` が `None` のときは `base` のファイルをそのまま読み、`ref` があるときは履歴の『リビジョンの書き出し』が作ったフォルダを読む。
+      `ref` を持つ場所は、作るときに `ref` を commit へ解いて `commit` に持たせ、1 回の要求の中で解き直さない。
     properties:
       - name: source
         title: 配信元
@@ -125,3 +128,9 @@ data_models:
         access: 公開
         default: 'False'
         description: '`cwd` が `scope` に当たらない配信元を `outside_scope` で読む場所。`access` は `read`'
+      - name: commit
+        title: 解いた commit
+        type: str | None
+        access: 公開
+        default: None
+        description: '`ref` を履歴の『リビジョンの解決』で解いた commit の SHA。`ref` が `None` の場所は `None`。`ref` を持ち `commit` が `None` の場所は、文書のストアが読むときに 1 回解く'

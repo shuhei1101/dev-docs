@@ -132,7 +132,7 @@ functions:
     process: |-
       1. 配信元を引く（配信元の一覧.引く。`UnknownSourceError`・`SourceNotServedError` はそのまま伝える）
       2. Git 管理外の配信元は `ref` を無視し、`root` を `ref` なしで読む場所にする（`access` は `read`。画面は `127.0.0.1` だけで待ち受けるので作業場所の権限を見ない）
-      3. Git の配信元は、`ref`（無ければ `default_ref`）をリビジョンの解決で解き、`root` をその commit で読む場所にする
+      3. Git の配信元は、`ref`（無ければ `default_ref`）をリビジョンの解決で解き、`root` をその commit で読む場所にする（`Target.ref` と `Target.commit` に解いた commit を持たせる）
     exceptions:
       - name: UnknownSourceError
         condition: 無い配信元
@@ -149,7 +149,7 @@ functions:
         summary: 既定のリビジョン
         condition: Git の配信元で `ref=None`
         mock: なし（一時フォルダのリポジトリ）
-        expected: '`Target.ref` が `default_ref` の commit'
+        expected: '`Target.ref` と `Target.commit` が `default_ref` の commit'
       - name: test_screen_target_when_not_git
         case: 正常
         summary: Git 管理外

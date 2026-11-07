@@ -162,7 +162,12 @@ classes:
         title: スキーマのキャッシュ
         type: dict[Path, tuple[int, int, dict[str, Any]]]
         access: 内部 (_)
-        description: スキーマの絶対パス → (更新日時, 大きさ, 読んだスキーマ)
+        description: スキーマの絶対パス → (更新日時, 大きさ, 読んだスキーマ)。ワークツリーの読む場所が使う
+      - name: _revision_schemas
+        title: リビジョンのスキーマのキャッシュ
+        type: dict[tuple[Path, str, str], dict[str, Any]]
+        access: 内部 (_)
+        description: (`repo_root`, 解いた commit, 文書の行の ID) → `$ref` を解いたスキーマ。commit のファイルは書き換わらないので、ファイルの `stat` を取らずに引く
       - name: _dates
         title: 日時のキャッシュ
         type: dict[tuple[Path, str], dict[str, FileDates]]
@@ -208,21 +213,24 @@ classes:
         process: |-
           1. 読むフォルダを決める
              - `target.ref` が `None` の場合、`target.base`
-             - `target.ref` がある場合、履歴の『リビジョンの解決』（`date_base` は配信元の `default_ref`）で解いた commit を `snapshots.checkout` で書き出し、その下に `source.root` の `repo_root` からの相対パスをつなぐ
+             - `target.ref` がある場合、読む場所の commit（下の「読む場所の commit」）を `snapshots.checkout` で書き出し、その下に `source.root` の `repo_root` からの相対パスをつなぐ
           2. 文書の行を決める。`kinds` があれば `source.table` で引き（無い種類は `UnknownKindError`）、無ければ `enabled` の全ての行
-          3. Git の配信元の場合、履歴の『ファイルの日時』を `_dates` から引く。無ければ、作業ツリー（ワークツリーか `repo_root`）と commit（`ref` の commit、無ければ作業ツリーの `HEAD` を解いた SHA）で呼び、配信元の直下からのパスに直して控える
+          3. Git の配信元の場合、履歴の『ファイルの日時』を `_dates` から引く。無ければ、作業ツリー（ワークツリーか `repo_root`）と commit（`ref` があれば読む場所の commit、無ければ作業ツリーの `HEAD` を解いた SHA）で呼び、配信元の直下からのパスに直して控える
           4. 読むフォルダのファイルを、`files` が無ければ `walk_files` で 1 回だけたどって得る。行ごとにそのパスを渡して『ファイルの収集』でファイルを集め、ファイルごとに `stat` を取る
              - `_files` の更新日時と大きさが同じで、理由に `missing_body_file` が無く、本文のファイルの (パス, 更新日時, 大きさ) も同じなら控えた結果を使う
              - それ以外は『ファイルの読み込み』で読み、`_files` を置き換える
           5. 収集で当たらなかった `_files` のキーのうち、読むフォルダの下にあるものを削除する（削除されたファイル）
           6. 行の順に文書を並べ、先に現れた ID を残して、後に現れた同じ ID の文書を `duplicate_id` にする（`detail` に ID と先の文書のファイル）
           7. `LoadResult` を返す
+
+          読む場所の commit は、`target.commit` があればそのまま使い、無ければ `target.ref` を履歴の『リビジョンの解決』（`date_base` は配信元の `default_ref`）で解く。
+          1 回の `load` の中では、手順 1 と手順 3 で同じ commit を使い、解き直さない。
         exceptions:
           - name: UnknownKindError
             condition: '`kinds` に有効な文書の行に無い種類がある'
             message: 配信元の『文書の行を引く』のまま
           - name: RefNotFoundError
-            condition: '`target.ref` を commit に解けない'
+            condition: '`target.commit` が無く、`target.ref` を commit に解けない'
             message: 履歴の『リビジョンの解決』のまま
         unit_tests:
           - name: test_document_store_load
@@ -260,6 +268,12 @@ classes:
             mock: なし（`tmp_path` に `git init`）
             expected: commit した内容を返し、`updated` が commit の日時
             exception: '-'
+          - name: test_document_store_load_when_commit
+            case: 正常
+            summary: 解いた commit を持つ読む場所は解き直さない
+            condition: test_document_store_load_when_ref と同じ配信元で、`ref` に `main`、`commit` に最初の commit を持つ読む場所
+            mock: 履歴の『リビジョンの解決』（本物を包んで呼ばれた回数を記録する）
+            expected: 最初の commit の内容を返し、リビジョンの解決が呼ばれない
           - name: test_document_store_load_when_unknown_kind
             case: 異常
             summary: 無い種類
@@ -354,9 +368,12 @@ classes:
         process: |-
           1. `source.table(kind)` で行を引く
           2. `target.ref` と `target.worktree` がどちらも `None` の場合、起動時に読んだ `source.schemas[kind]` を使う
-          3. それ以外は、`load` と同じ読むフォルダの `schema_path` を `_schemas` から引き、更新日時か大きさが違えば『YAMLの読み込み』で読み直す
+          3. `target.ref` がある場合、読む場所の commit（`load` と同じ）と `repo_root`・`kind` で `_revision_schemas` を引き、当たればそのまま返す（リビジョンの書き出しとファイルの `stat` をしない）。
+             当たらなければ、`load` と同じ読むフォルダの `schema_path` を『YAMLの読み込み』で読み、`$ref` を解いた結果を `_revision_schemas` に控える
+             - ファイルが無い・読めない場合、手順 2 のスキーマを使い、控えない
+          4. ワークツリーの場合、読むフォルダの `schema_path` を `_schemas` から引き、更新日時か大きさが違えば『YAMLの読み込み』で読み直す
              - ファイルが無い・読めない場合、手順 2 のスキーマを使う
-          4. `$ref` を解いたスキーマを返す（スキーマの参照の解決。基準は手順 2・3 で使った `schema_path`）。解いた結果も `_schemas` に控える
+          5. `$ref` を解いたスキーマを返す（スキーマの参照の解決。基準は手順 2〜4 で使った `schema_path`）。ワークツリーで解いた結果は `_schemas` に控える
         exceptions:
           - name: UnknownKindError
             condition: '`kind` が有効な文書の行に無い'
@@ -376,6 +393,12 @@ classes:
             mock: なし（`tmp_path`）
             expected: '`properties.body` が `$ref` を持たず `markdown` の中身'
             exception: '-'
+          - name: test_document_store_schema_when_revision
+            case: 正常
+            summary: リビジョンのスキーマは commit で控える
+            condition: Git の配信元で `schemas/rule.schema.yaml` を commit した後、作業ツリーで `required` を書き換え、`commit` に最初の commit を持つ読む場所で 2 回呼ぶ
+            mock: '`snapshots.checkout`（本物を包んで呼ばれた回数を記録する）'
+            expected: 2 回とも commit した `required` のスキーマを返し、`snapshots.checkout` が 1 回だけ呼ばれる
       - name: row_schema
         title: 文書に当てるスキーマ
         summary: 文書 1 件の内容に当てるスキーマを返す。`records` を持つ行は 1 行のスキーマ
@@ -426,6 +449,12 @@ classes:
             condition: 行 `notes` の `schema` が `properties.files.items` を持たない
             mock: なし（`tmp_path`）
             expected: 空の辞書
+          - name: test_document_store_row_schema_when_many_documents
+            case: 正常
+            summary: 文書の数だけ呼んでも git を文書の数だけ起動しない
+            condition: Git の配信元で行 `rules` の文書 50 件を commit し、`ref` に `main`、`commit` に解いた commit を持つ読む場所で `load` した後、文書ごとに `row_schema` を呼ぶ
+            mock: '`run_git`（本物を包んで呼ばれた回数を記録する）'
+            expected: '`row_schema` の 50 回の呼び出しで `run_git` が呼ばれない'
       - name: invalidate
         title: キャッシュを捨てる
         summary: 書き込んだファイルのキャッシュを捨てる
@@ -459,11 +488,11 @@ classes:
         kind: メソッド
         scope: public
         thread_safe: true
-        side_effects: '`_files`・`_schemas`・`_dates` を空にする'
+        side_effects: '`_files`・`_schemas`・`_revision_schemas`・`_dates` を空にする'
         returns:
           type: None
           description: '-'
-        process: 1. 3 つのキャッシュを空にする（起動の『配信元の読み直し』が呼ぶ）
+        process: 1. 4 つのキャッシュを空にする（起動の『配信元の読み直し』が呼ぶ）
       - name: location
         title: 文書の場所
         summary: 文書のファイルの絶対パスを返す。リビジョンを読んだ文書は返さない
