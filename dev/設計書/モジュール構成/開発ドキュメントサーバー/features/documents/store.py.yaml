@@ -181,16 +181,18 @@ classes:
         description: (作業ツリー, 解いた commit, 配信元の `root` の `repo_root` からの相対パス) → 配信元の直下からのパスに直した履歴の『ファイルの日時』の結果。commit が変わればキーが変わり、同じリポジトリの `root` の違う配信元を分ける
       - name: _revision_files
         title: リビジョンのファイルのキャッシュ
-        type: dict[tuple[Path, str, str], tuple[str, tuple[tuple[str, str], ...], tuple[tuple[str, FileDates | None], ...], list[Document], list[LoadProblem]]]
+        type: dict[tuple[Path, str, str, str, str], tuple[str, tuple[tuple[str, str], ...], tuple[tuple[str, FileDates | None], ...], list[Document], list[LoadProblem]]]
         access: 内部 (_)
         description: |-
-          (`repo_root`, ファイルの `repo_root` からの相対パス, 文書の行の ID) → (ファイルの blob の SHA, 文書が指す本文のファイルの (パス, blob の SHA) のパスの順の並び, ファイルと本文のファイルの (パス, 日時) の並び, 文書, 理由)。
-          `ref` を持つ読む場所が使い、commit をまたいで、blob と日時の変わらないファイルの読み込みを使い回す
+          (`repo_root`, 配信元の ID, ファイルの `repo_root` からの相対パス, 文書の行の ID, 文書の行の定義のハッシュ) → (ファイルの blob の SHA, 文書が指す本文のファイルの (パス, blob の SHA) のパスの順の並び, ファイルと本文のファイルの (パス, 日時) の並び, 文書, 理由)。
+          `ref` を持つ読む場所が使い、commit をまたいで、blob と日時の変わらないファイルの読み込みを使い回す。
+          中身は commit の blob と文書の行の定義で決まり古くならないので、`clear` では空にしない。
+          文書の行の定義のハッシュは `DocumentTable` の全ての項目の `repr` の SHA-256 で、`paths`・`metadata` などが変われば別のキーになる
       - name: _trees
         title: commit のファイルの blob のキャッシュ
         type: dict[tuple[Path, str], dict[str, str]]
         access: 内部 (_)
-        description: (`repo_root`, 解いた commit) → `repo_root` からの相対パス → blob の SHA。`TREE_KEEP` 件を超えたら古く入れたものから捨てる
+        description: (`repo_root`, 解いた commit) → `repo_root` からの相対パス → blob の SHA。`TREE_KEEP` 件を超えたら古く入れたものから捨てる。commit の中身は変わらないので、`clear` では空にしない
       - name: _lock
         title: 排他
         type: threading.Lock
@@ -237,7 +239,8 @@ classes:
           4. 読むフォルダのファイルを、`files` が無ければ `walk_files` で 1 回だけたどって得る。行ごとにそのパスを渡して『ファイルの収集』でファイルを集める
              - `target.ref` が `None` の場合、ファイルごとに `stat` を取る。`_files` の更新日時と大きさが同じで、理由に `missing_body_file` が無く、本文のファイルの (パス, 更新日時, 大きさ) も同じなら控えた結果を使い、それ以外は『ファイルの読み込み』で読んで `_files` を置き換える
              - `target.ref` がある場合、読む場所の commit のファイルの blob の SHA を `_trees` から引く（無ければ `git ls-tree -r --full-tree {commit}` を 1 回だけ起動して控える）。`_revision_files` の blob の SHA が同じで、理由に `missing_body_file` が無く、本文のファイルの (パス, blob の SHA) と、ファイルと本文のファイルの日時（手順 3）も同じなら控えた結果を使い、それ以外は『ファイルの読み込み』で読んで `_revision_files` を置き換える。blob の SHA が無いファイルは読まない
-          5. 収集で当たらなかった `_files` のキーのうち、読むフォルダの下にあるものを削除する（削除されたファイル。`_revision_files` は commit をまたいで使うので削除しない）
+          5. 収集で当たらなかった `_files` のキーのうち、読むフォルダの下にあるものを削除する（削除されたファイル）。
+             `target.ref` がある場合は、読んだ行ごとに、`_revision_files` のキーのうち `repo_root`・配信元の ID・行の ID が同じで、今回の commit のファイルに当たらないもの、または行の定義のハッシュが違うものを削除する（`_revision_files` を今の commit と行の定義のファイルの数に抑える）
           6. 行の順に文書を並べ、先に現れた ID を残して、後に現れた同じ ID の文書を `duplicate_id` にする（`detail` に ID と先の文書のファイル）
           7. `LoadResult` を返す
 
@@ -298,6 +301,18 @@ classes:
             condition: Git の配信元で `rules/a.yaml`・`rules/b.yaml` を commit し、最初の commit を持つ読む場所で `load` した後、`rules/a.yaml` だけを書き換えた 2 つ目の commit を持つ読む場所で `load` する
             mock: '`load_file`（本物を包んで呼ばれたパスを記録する）'
             expected: 2 回目に `load_file` が呼ばれたのは `rules/a.yaml` だけで、`rules/a.yaml` の文書が書き換えた内容と 2 つ目の commit の日時、`rules/b.yaml` の文書が最初の内容を返す
+          - name: test_document_store_load_when_revision_reused_after_clear
+            case: 正常
+            summary: 配信元の組み立て直しの後も変わったファイルだけ読み直す
+            condition: test_document_store_load_when_revision_reused と同じ配信元で、最初の commit を持つ読む場所で `load` し、`clear` を呼んだ後、`rules/a.yaml` だけを書き換えた 2 つ目の commit を持つ読む場所で `load` する
+            mock: '`load_file`（本物を包んで呼ばれたパスを記録する）'
+            expected: 2 回目に `load_file` が呼ばれたのは `rules/a.yaml` だけ
+          - name: test_document_store_load_when_revision_table_changed
+            case: 正常
+            summary: 文書の行の定義が変われば読み直す
+            condition: 'Git の配信元で `rules/a.yaml`（`title` を持つ）を commit し、同じ commit を持つ読む場所で、行 `rules` の `metadata` を `{}` にした配信元と `{name: title}` にした配信元で順に `load` する'
+            mock: '`load_file`（本物を包んで呼ばれたパスを記録する）'
+            expected: 2 回とも `load_file` が `rules/a.yaml` で呼ばれ、2 回目の文書の `name` が `title` の値
           - name: test_document_store_load_when_dates_shared_repo
             case: 正常
             summary: 同じリポジトリで root の違う配信元の日時を取り違えない
@@ -524,11 +539,13 @@ classes:
         kind: メソッド
         scope: public
         thread_safe: true
-        side_effects: '`_files`・`_revision_files`・`_trees`・`_schemas`・`_revision_schemas`・`_dates` を空にする'
+        side_effects: '`_files`・`_schemas`・`_revision_schemas`・`_dates` を空にする（`_revision_files`・`_trees` は残す）'
         returns:
           type: None
           description: '-'
-        process: 1. 6 つのキャッシュを空にする（起動の『配信元の読み直し』が呼ぶ）
+        process: |-
+          1. `_files`・`_schemas`・`_revision_schemas`・`_dates` を空にする（起動の『配信元の読み直し』と『配信元の控えの破棄』が呼ぶ）
+          2. `_revision_files`・`_trees` は、commit の blob と文書の行の定義で中身が決まり古くならないので残す
       - name: location
         title: 文書の場所
         summary: 文書のファイルの絶対パスを返す。リビジョンを読んだ文書は返さない
