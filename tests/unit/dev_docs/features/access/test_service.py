@@ -2,11 +2,13 @@ from __future__ import annotations
 
 import logging
 from collections.abc import Callable
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
 import pytest
 
+from dev_docs.features.access import service as service_module
 from dev_docs.features.access.service import (
     access_of,
     available_sources,
@@ -18,9 +20,11 @@ from dev_docs.features.access.service import (
     resolve_write_target,
 )
 from dev_docs.features.access.types import SourceAccess
+from dev_docs.features.history.types import ResolvedRef
 from dev_docs.features.sources.types import ServedSource, SourceConfig
 from dev_docs.shared.errors import (
     InvalidArgumentError,
+    RefNotFoundError,
     SourceNotReadableError,
     SourceNotWritableError,
     TargetIsCloneError,
@@ -242,10 +246,14 @@ def test_resolve_read_targets(sample: ServedSource, make_registry: Callable[...,
     assert result[0].base == Path("/r")
 
 
+RESOLVED_COMMIT = "0123456789abcdef0123456789abcdef01234567"
+
+
 def test_resolve_read_targets_when_other_source(
     sample: ServedSource,
     make_served_source: Callable[..., ServedSource],
     make_registry: Callable[..., Any],
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """作業中でない Git の配信元は既定のリビジョン（正常系）。"""
     # 準備
@@ -258,10 +266,52 @@ def test_resolve_read_targets_when_other_source(
         scope_write=[],
     )
     registry = make_registry(sample, notes)
+    calls: list[tuple[Path, str, str]] = []
+
+    def fake_resolve_ref(repo_root: Path, ref: str, *, date_base: str, **_: Any) -> ResolvedRef:
+        calls.append((repo_root, ref, date_base))
+        return ResolvedRef(
+            input=ref,
+            commit=RESOLVED_COMMIT,
+            date=datetime.fromisoformat("2026-10-01T12:00:00+09:00"),
+        )
+
+    monkeypatch.setattr(service_module, "resolve_ref", fake_resolve_ref, raising=False)
     # 実行
     result = resolve_read_targets(registry=registry, source="notes", cwd="/r")
     # 検証
     assert result[0].ref == "develop"
+    assert result[0].commit == RESOLVED_COMMIT
+    assert calls == [(Path("/n"), "develop", "develop")]
+
+
+def test_resolve_read_targets_when_ref_not_found(
+    sample: ServedSource,
+    make_served_source: Callable[..., ServedSource],
+    make_registry: Callable[..., Any],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """解けない ref（異常系）。"""
+    # 準備
+    notes = make_served_source(
+        id="notes",
+        root=Path("/n"),
+        is_git=True,
+        repo_root=Path("/n"),
+        scope_read=["/r"],
+        scope_write=[],
+    )
+    registry = make_registry(sample, notes)
+
+    def fake_resolve_ref(repo_root: Path, ref: str, *, date_base: str, **_: Any) -> ResolvedRef:
+        raise RefNotFoundError(
+            message=f"ref={ref} を commit に解決できません", argument="ref", value=ref
+        )
+
+    monkeypatch.setattr(service_module, "resolve_ref", fake_resolve_ref, raising=False)
+    # 実行・検証
+    with pytest.raises(RefNotFoundError):
+        resolve_read_targets(registry=registry, source="notes", ref="nope", cwd="/r")
 
 
 def test_resolve_read_targets_when_worktree_cwd(
