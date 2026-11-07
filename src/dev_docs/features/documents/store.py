@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import difflib
+import hashlib
 import logging
 import threading
 from collections.abc import Iterable, Sequence
@@ -28,10 +29,12 @@ logger = logging.getLogger(__name__)
 
 CANDIDATE_COUNT = 5
 CANDIDATE_CUTOFF = 0.6
+TREE_KEEP = 20
 
 __all__ = [
     "CANDIDATE_COUNT",
     "CANDIDATE_CUTOFF",
+    "TREE_KEEP",
     "DocumentStore",
     "check_sync",
     "collect_files",
@@ -56,6 +59,23 @@ def not_found_error(source_id: str, missing: list[str], known: list[str]) -> Doc
 
 type _BodyStamps = tuple[tuple[str, int, int], ...]
 type _CachedFile = tuple[int, int, list[Document], list[LoadProblem], _BodyStamps]
+type _BodyBlobs = tuple[tuple[str, str], ...]
+type _DateStamps = tuple[tuple[str, FileDates | None], ...]
+type _RevisionKey = tuple[Path, str, str, str, str]
+type _CachedRevisionFile = tuple[str, _BodyBlobs, _DateStamps, list[Document], list[LoadProblem]]
+
+
+def _table_hash(table: DocumentTable) -> str:
+    """文書の行の定義の全ての項目から作るハッシュを返す。"""
+    return hashlib.sha256(repr(table).encode("utf-8")).hexdigest()
+
+
+def _date_stamps(
+    path: str, documents: Sequence[Document], dates: dict[str, FileDates]
+) -> _DateStamps:
+    """ファイルと、文書が指す本文のファイルの (パス, 日時) を、パスの順に返す。"""
+    paths = {path} | {d.body_path for d in documents if d.body_path is not None}
+    return tuple((item, dates.get(item)) for item in sorted(paths))
 
 
 def _body_stamps(root: Path, documents: Sequence[Document]) -> _BodyStamps:
@@ -77,17 +97,32 @@ class DocumentStore:
         self.snapshots = snapshots
         self._files: dict[tuple[Path, str], _CachedFile] = {}
         self._schemas: dict[Path, tuple[int, int, dict[str, Any]]] = {}
-        self._dates: dict[tuple[Path, str], dict[str, FileDates]] = {}
+        self._revision_schemas: dict[tuple[Path, str, str], dict[str, Any]] = {}
+        self._revision_files: dict[_RevisionKey, _CachedRevisionFile] = {}
+        self._trees: dict[tuple[Path, str], dict[str, str]] = {}
+        self._dates: dict[tuple[Path, str, str], dict[str, FileDates]] = {}
         self._lock = threading.Lock()
 
     def read_root(self, target: Target) -> Path:
         """読むフォルダを決める（`ref` があればリビジョンを書き出す）。"""
         if target.ref is None:
             return target.base
+        return self._revision_root(target, self._commit_of(target))
+
+    def _commit_of(self, target: Target) -> str:
+        """`ref` を持つ読む場所の commit を返す（`commit` が無いときだけ解く）。"""
+        if target.commit is not None:
+            return target.commit
+        assert target.ref is not None  # noqa: S101
         source = target.source
         repo_root = source.repo_root or source.root
-        resolved = resolve_ref(repo_root, target.ref, date_base=source.config.default_ref)
-        checkout = self.snapshots.checkout(repo_root, resolved.commit)
+        return resolve_ref(repo_root, target.ref, date_base=source.config.default_ref).commit
+
+    def _revision_root(self, target: Target, commit: str) -> Path:
+        """commit を書き出したフォルダの下の、配信元の直下を返す。"""
+        source = target.source
+        repo_root = source.repo_root or source.root
+        checkout = self.snapshots.checkout(repo_root, commit)
         return checkout / source.root.relative_to(repo_root)
 
     def location(self, target: Target, document: Document) -> str | None:
@@ -96,29 +131,27 @@ class DocumentStore:
             return None
         return str(self.read_root(target) / (document.body_path or document.path))
 
-    def _file_dates(self, target: Target) -> dict[str, FileDates]:
+    def _file_dates(self, target: Target, revision: str | None) -> dict[str, FileDates]:
         """Git の配信元のファイルの日時を、配信元の直下からのパスで返す。"""
         source = target.source
         if not source.is_git:
             return {}
         repo_root = source.repo_root or source.root
         work_root = target.worktree or repo_root
-        try:
-            if target.ref is not None:
-                commit = resolve_ref(
-                    repo_root, target.ref, date_base=source.config.default_ref
-                ).commit
-            else:
+        if revision is not None:
+            commit = revision
+        else:
+            try:
                 output = run_git(["rev-parse", "HEAD"], cwd=work_root)
-                commit = (output if isinstance(output, str) else output.decode("utf-8")).strip()
-        except GitError:
-            # commit がまだ 1 つも無いリポジトリ
-            return {}
-        key = (work_root, commit)
+            except GitError:
+                # commit がまだ 1 つも無いリポジトリ
+                return {}
+            commit = (output if isinstance(output, str) else output.decode("utf-8")).strip()
+        prefix = source.root.relative_to(repo_root).as_posix()
+        key = (work_root, commit, prefix)
         with self._lock:
             cached = self._dates.get(key)
         if cached is None:
-            prefix = source.root.relative_to(repo_root).as_posix()
             raw = file_dates(work_root, commit=commit)
             cached = {
                 path if prefix == "." else path.removeprefix(f"{prefix}/"): dates
@@ -174,6 +207,97 @@ class DocumentStore:
             problems.extend(issues)
         return documents, problems, seen
 
+    def _blobs(self, repo_root: Path, commit: str) -> dict[str, str]:
+        """commit のファイルの blob の SHA を、`repo_root` からの相対パスで返す。"""
+        key = (repo_root, commit)
+        with self._lock:
+            cached = self._trees.get(key)
+        if cached is not None:
+            return cached
+        output = run_git(
+            ["-c", "core.quotepath=off", "ls-tree", "-r", "-z", "--full-tree", commit],
+            cwd=repo_root,
+        )
+        text = output if isinstance(output, str) else output.decode("utf-8")
+        blobs: dict[str, str] = {}
+        for entry in text.split("\0"):
+            if not entry:
+                continue
+            meta, path = entry.split("\t", 1)
+            blobs[path] = meta.split(" ")[2]
+        with self._lock:
+            self._trees[key] = blobs
+            while len(self._trees) > TREE_KEEP:
+                del self._trees[next(iter(self._trees))]
+        return blobs
+
+    def _load_revision_table(
+        self,
+        target: Target,
+        root: Path,
+        table: DocumentTable,
+        dates: dict[str, FileDates],
+        files: Sequence[str],
+        commit: str,
+    ) -> tuple[list[Document], list[LoadProblem]]:
+        """リビジョンの 1 つの文書の行のファイルを集め、blob・日時・行の定義が変わったファイルだけ読む。"""
+        source = target.source
+        repo_root = source.repo_root or source.root
+        prefix = source.root.relative_to(repo_root).as_posix()
+        blobs = self._blobs(repo_root, commit)
+        table_hash = _table_hash(table)
+
+        def from_repo(path: str) -> str:
+            return path if prefix == "." else f"{prefix}/{path}"
+
+        def body_blobs(found: Sequence[Document]) -> _BodyBlobs:
+            paths = sorted({d.body_path for d in found if d.body_path is not None})
+            return tuple((path, blobs.get(from_repo(path), "")) for path in paths)
+
+        documents: list[Document] = []
+        problems: list[LoadProblem] = []
+        seen: set[str] = set()
+        for path in collect_files(root, table, files=files):
+            relative = from_repo(path)
+            blob = blobs.get(relative)
+            if blob is None:
+                continue
+            seen.add(relative)
+            key = (repo_root, source.id, relative, table.id, table_hash)
+            with self._lock:
+                cached = self._revision_files.get(key)
+            if (
+                cached is not None
+                and cached[0] == blob
+                and not any(issue.reason == "missing_body_file" for issue in cached[4])
+                and cached[1] == body_blobs(cached[3])
+                and cached[2] == _date_stamps(path, cached[3], dates)
+            ):
+                found, issues = cached[3], cached[4]
+            else:
+                found, issues = load_file(root, path, table, source_id=source.id, dates=dates)
+                with self._lock:
+                    self._revision_files[key] = (
+                        blob,
+                        body_blobs(found),
+                        _date_stamps(path, found, dates),
+                        found,
+                        issues,
+                    )
+            documents.extend(found)
+            problems.extend(issues)
+        # 今の commit に無いファイルと、行の定義が変わった結果を捨てる
+        with self._lock:
+            for key in [
+                key
+                for key in self._revision_files
+                if key[:2] == (repo_root, source.id)
+                and key[3] == table.id
+                and (key[2] not in seen or key[4] != table_hash)
+            ]:
+                del self._revision_files[key]
+        return documents, problems
+
     def load(
         self,
         target: Target,
@@ -186,19 +310,25 @@ class DocumentStore:
         `files` は呼び出し元が読むフォルダを `walk_files` でたどったパス。
         無ければここで 1 回だけたどり、行ごとにたどり直さない。
         """
-        root = self.read_root(target)
+        revision = None if target.ref is None else self._commit_of(target)
+        root = target.base if revision is None else self._revision_root(target, revision)
         tables = self._tables(target, kinds)
-        dates = self._file_dates(target)
+        dates = self._file_dates(target, revision)
         walked = list(walk_files(root)) if files is None else files
         documents: list[Document] = []
         problems: list[LoadProblem] = []
         kind_ids = {table.id for table in tables}
         seen_keys: set[tuple[Path, str]] = set()
         for table in tables:
-            found, issues, seen = self._load_table(root, table, target.source.id, dates, walked)
+            if revision is None:
+                found, issues, seen = self._load_table(root, table, target.source.id, dates, walked)
+                seen_keys |= seen
+            else:
+                found, issues = self._load_revision_table(
+                    target, root, table, dates, walked, revision
+                )
             documents.extend(found)
             problems.extend(issues)
-            seen_keys |= seen
         # 削除されたファイルのキャッシュを捨てる
         with self._lock:
             for key in [
@@ -245,6 +375,8 @@ class DocumentStore:
         base = source.root / table.schema_path
         if target.ref is None and target.worktree is None:
             return resolve_schema_refs(startup, base)
+        if target.ref is not None:
+            return self._revision_schema(target, table, startup, base)
         path = self.read_root(target) / table.schema_path
         try:
             stat = path.stat()
@@ -263,6 +395,31 @@ class DocumentStore:
         resolved = resolve_schema_refs(raw, path)
         with self._lock:
             self._schemas[path] = (stat.st_mtime_ns, stat.st_size, resolved)
+        return resolved
+
+    def _revision_schema(
+        self, target: Target, table: DocumentTable, startup: dict[str, Any], base: Path
+    ) -> dict[str, Any]:
+        """リビジョンの種類のスキーマを、commit とスキーマのファイルの相対パスで控えて返す。"""
+        source = target.source
+        repo_root = source.repo_root or source.root
+        commit = self._commit_of(target)
+        relative = (source.root.relative_to(repo_root) / table.schema_path).as_posix()
+        key = (repo_root, commit, relative)
+        with self._lock:
+            cached = self._revision_schemas.get(key)
+        if cached is not None:
+            return cached
+        path = self._revision_root(target, commit) / table.schema_path
+        try:
+            raw = load_yaml(path.read_text(encoding="utf-8"), file=str(path))
+        except OSError, UnicodeDecodeError, YamlLoadError:
+            return resolve_schema_refs(startup, base)
+        if not isinstance(raw, dict):
+            return resolve_schema_refs(startup, base)
+        resolved = resolve_schema_refs(raw, path)
+        with self._lock:
+            self._revision_schemas[key] = resolved
         return resolved
 
     def row_schema(self, target: Target, kind: str) -> dict[str, Any]:
@@ -289,6 +446,7 @@ class DocumentStore:
         with self._lock:
             self._files.clear()
             self._schemas.clear()
+            self._revision_schemas.clear()
             self._dates.clear()
 
 

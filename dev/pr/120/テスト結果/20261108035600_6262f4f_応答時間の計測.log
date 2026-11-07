@@ -1,0 +1,93 @@
+# 新しい commit の後の最初の要求（6262f4f。ai-monitor の 1 つ前の commit を読んだ後、配信元の組み立て直しと同じ clear を経て最新の commit を読む）
+$ uv run python newcommit.py
+前の commit: 885b213・最新: 258bf16・変わったファイル: 1 件
+前の commit の load（起動直後と同じ 1 回目）: 42.37 秒
+  読む場所の解決（ref の解決）: 2.42 秒
+  書き出し: 6.49 秒
+  load（書き出しの後）: 4.21 秒（1467 文書）
+最新の commit の解決・書き出し・load（新しい commit の後の最初の要求の、検索の前まで）: 13.12 秒
+参考: 全 1,467 文書の点検（検索は返した文書だけを点検する）: 2.06 秒
+
+# サーバー（6262f4f を worktree から DEV_DOCS_PORT=8791 で起動。端末の設定は稼働中のサーバーと同じ）
+$ sh measure120.sh 8791（同じ 3 つの要求を 2 回）
+name に planner・limit 3: 300.340382292 秒: 
+view count: 103.207854352 秒: {"jsonrpc":"2.0","id":1,"result":{"content":[{"text":"作業範囲の外（参考）\nai-monitor: 該当 1467 件・返した 0 件\n","type":"text"}],"isError"
+body の正規表現 (?i)changelog・limit 5: 5.380492224 秒: {"jsonrpc":"2.0","id":1,"result":{"content":[{"text":"作業範囲の外（参考）\nai-monitor: 該当 5 件・返した 5 件\n\n| id | kind | name | descrip
+name に planner・limit 3: 4.976877507 秒: {"jsonrpc":"2.0","id":1,"result":{"content":[{"text":"作業範囲の外（参考）\nai-monitor: 該当 2 件・返した 2 件\n\n| id | kind | name | descrip
+view count: 8.435348695 秒: {"jsonrpc":"2.0","id":1,"result":{"content":[{"text":"作業範囲の外（参考）\nai-monitor: 該当 1467 件・返した 0 件\n","type":"text"}],"isError"
+body の正規表現 (?i)changelog・limit 5: 4.957808401 秒: {"jsonrpc":"2.0","id":1,"result":{"content":[{"text":"作業範囲の外（参考）\nai-monitor: 該当 5 件・返した 5 件\n\n| id | kind | name | descrip
+
+# サーバーのログ（起動・配信元の読み込みの終わり・要求）
+2026-11-08 03:48:31,319 INFO uvicorn.error: Uvicorn running on http://127.0.0.1:8791 (Press CTRL+C to quit)
+2026-11-08 03:48:32,741 INFO uvicorn.access: 127.0.0.1:60349 - "POST /mcp HTTP/1.1" 200
+2026-11-08 03:54:28,495 INFO dev_docs.features.sources.registry: 配信元を読み直した（配信中: ['shuhdev-gate
+2026-11-08 03:54:29,536 INFO dev_docs.features.access.service: 作業範囲の外を読んだ（cwd: /mnt/c/Users/shuhe/
+2026-11-08 03:54:29,573 INFO dev_docs.features.access.service: 作業範囲の外を読んだ（cwd: /mnt/c/Users/shuhe/
+2026-11-08 03:55:16,302 INFO uvicorn.access: 127.0.0.1:57041 - "POST /mcp HTTP/1.1" 200
+2026-11-08 03:55:18,100 INFO dev_docs.features.access.service: 作業範囲の外を読んだ（cwd: /mnt/c/Users/shuhe/
+2026-11-08 03:55:21,695 INFO uvicorn.access: 127.0.0.1:60169 - "POST /mcp HTTP/1.1" 200
+2026-11-08 03:55:21,741 INFO uvicorn.access: 127.0.0.1:57037 - "POST /mcp HTTP/1.1" 200
+2026-11-08 03:55:23,459 INFO dev_docs.features.access.service: 作業範囲の外を読んだ（cwd: /mnt/c/Users/shuhe/
+2026-11-08 03:55:26,704 INFO uvicorn.access: 127.0.0.1:57039 - "POST /mcp HTTP/1.1" 200
+2026-11-08 03:55:30,870 INFO dev_docs.features.access.service: 作業範囲の外を読んだ（cwd: /mnt/c/Users/shuhe/
+2026-11-08 03:55:35,205 INFO uvicorn.access: 127.0.0.1:58683 - "POST /mcp HTTP/1.1" 200
+2026-11-08 03:55:36,884 INFO dev_docs.features.access.service: 作業範囲の外を読んだ（cwd: /mnt/c/Users/shuhe/
+2026-11-08 03:55:40,171 INFO uvicorn.access: 127.0.0.1:58689 - "POST /mcp HTTP/1.1" 200
+
+# newcommit.py
+"""ai-monitor の default_ref の 1 つ前の commit を読んだ後、配信元の組み立て直し（clear）を経て最新の commit を読む時間を測る。"""
+import os, time, tempfile
+from pathlib import Path
+from dev_docs.features.settings.query import config_path, load_terminal_config
+from dev_docs.main import build_handlers
+from dev_docs.features.access.types import Target
+from dev_docs.features.access.service import resolve_read_targets
+from dev_docs.features.history.query import resolve_ref
+from dev_docs.integrations.git import run_git
+
+terminal = load_terminal_config(config_path(os.environ))
+terminal.sources[:] = [s for s in terminal.sources if getattr(s, "id", None) == "ai-monitor"]
+terminal = terminal.model_copy(update={"state_dir": Path(tempfile.mkdtemp(dir="/tmp/prof120"))})
+h = build_handlers(terminal)
+h.reload_sources(terminal)
+source = h.registry.get("ai-monitor")
+repo_root = source.repo_root or source.root
+ref = source.config.default_ref
+head = resolve_ref(repo_root, ref, date_base=ref).commit
+log = run_git(["log", "--format=%H", "-n", "8", head], cwd=repo_root)
+commits = (log if isinstance(log, str) else log.decode()).split()
+# 1 つ前の commit で、変わったファイルの数が 1 以上の親を探す
+previous = commits[1]
+changed = run_git(["diff", "--name-only", previous, head], cwd=repo_root)
+changed = (changed if isinstance(changed, str) else changed.decode()).split()
+print(f"前の commit: {previous[:7]}・最新: {head[:7]}・変わったファイル: {len(changed)} 件")
+old = Target(source, source.root, previous, None, "read", outside_scope=True, commit=previous)
+t = time.perf_counter(); h.store.load(old); print(f"前の commit の load（起動直後と同じ 1 回目）: {time.perf_counter()-t:.2f} 秒")
+# default_ref が進んだときの組み立て直しの破棄と同じく clear を呼ぶ
+h.store.clear()
+t = time.perf_counter()
+target = resolve_read_targets(registry=h.registry, source="ai-monitor", cwd="/mnt/c/Users/shuhe/repo/dev-docs", outside_scope=True)[0]
+print(f"  読む場所の解決（ref の解決）: {time.perf_counter()-t:.2f} 秒")
+t1 = time.perf_counter(); h.store._revision_root(target, target.commit); print(f"  書き出し: {time.perf_counter()-t1:.2f} 秒")
+t1 = time.perf_counter(); result = h.store.load(target); print(f"  load（書き出しの後）: {time.perf_counter()-t1:.2f} 秒（{len(result.documents)} 文書）")
+print(f"最新の commit の解決・書き出し・load（新しい commit の後の最初の要求の、検索の前まで）: {time.perf_counter()-t:.2f} 秒")
+t1 = time.perf_counter()
+for document in result.documents:
+    h.checker.check(target, document, on="read")
+print(f"参考: 全 1,467 文書の点検（検索は返した文書だけを点検する）: {time.perf_counter()-t1:.2f} 秒")
+
+# measure120.sh
+#!/bin/sh
+PORT=$1
+until curl -s -o /dev/null -X POST "http://127.0.0.1:$PORT/mcp" -H 'Accept: application/json, text/event-stream' -H 'Content-Type: application/json' -d '{"jsonrpc":"2.0","id":1,"method":"tools/list"}'; do sleep 5; done
+call() {
+  label=$1; args=$2
+  start=$(date +%s.%N)
+  body=$(curl -s --max-time 300 -X POST "http://127.0.0.1:$PORT/mcp" -H 'Accept: application/json, text/event-stream' -H 'Content-Type: application/json' -d "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/call\",\"params\":{\"name\":\"search_docs\",\"arguments\":$args}}")
+  end=$(date +%s.%N)
+  printf '%s: %s 秒: %s\n' "$label" "$(echo "$end - $start" | bc)" "$(printf '%s' "$body" | head -c 160)"
+}
+BASE='"source":"ai-monitor","outside_scope":true,"cwd":"/mnt/c/Users/shuhe/repo/dev-docs"'
+call "name に planner・limit 3" "{$BASE,\"filter\":{\"field\":\"name\",\"op\":\"contains\",\"values\":[\"planner\"]},\"limit\":3}"
+call "view count" "{$BASE,\"view\":\"count\"}"
+call "body の正規表現 (?i)changelog・limit 5" "{$BASE,\"filter\":{\"field\":\"body\",\"op\":\"regex\",\"values\":[\"(?i)changelog\"]},\"limit\":5}"

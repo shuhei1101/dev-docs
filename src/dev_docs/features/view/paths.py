@@ -45,4 +45,5 @@ def screen_target(
         return Target(source, source.root, None, None, "read"), None
     default_ref = source.config.default_ref
     resolved = resolve_ref(source.repo_root, ref or default_ref, date_base=default_ref)
-    return Target(source, source.root, resolved.commit, None, "read"), resolved
+    target = Target(source, source.root, resolved.commit, None, "read", commit=resolved.commit)
+    return target, resolved

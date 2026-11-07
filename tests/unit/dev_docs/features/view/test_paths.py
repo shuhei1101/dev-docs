@@ -83,6 +83,7 @@ def test_screen_target(
     # 検証
     assert isinstance(target, Target)
     assert target.ref == commit
+    assert target.commit == commit
     assert resolved is not None
     assert resolved.commit == commit
 

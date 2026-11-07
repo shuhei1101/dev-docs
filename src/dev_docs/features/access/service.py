@@ -7,6 +7,7 @@ from collections.abc import Sequence
 from pathlib import Path
 
 from dev_docs.features.access.types import AccessLevel, SourceAccess, Target, Workplace
+from dev_docs.features.history.query import resolve_ref
 from dev_docs.features.sources.registry import SourceRegistry
 from dev_docs.features.sources.types import ServedSource
 from dev_docs.shared.errors import (
@@ -227,13 +228,20 @@ def _target_of(
                     )
                 ],
             )
-        return Target(item, item.root, ref, None, access, outside_scope=outside)
+        return _revision_target(item, ref, access, outside)
     wt = find_worktree(item, path) if path is not None else None
     if wt is not None:
         return Target(item, _base_of(item, wt), None, wt, access, outside_scope=outside)
     if (current is not None and current[0].id == item.id) or not item.is_git:
         return Target(item, item.root, None, None, access, outside_scope=outside)
-    return Target(item, item.root, item.config.default_ref, None, access, outside_scope=outside)
+    return _revision_target(item, item.config.default_ref, access, outside)
+
+
+def _revision_target(item: ServedSource, ref: str, access: AccessLevel, outside: bool) -> Target:
+    """`ref` を commit へ 1 回だけ解き、その commit を持たせた読む場所を作る。"""
+    repo_root = item.repo_root or item.root
+    commit = resolve_ref(repo_root, ref, date_base=item.config.default_ref).commit
+    return Target(item, item.root, ref, None, access, outside_scope=outside, commit=commit)
 
 
 def resolve_write_target(

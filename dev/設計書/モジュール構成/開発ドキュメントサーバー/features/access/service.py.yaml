@@ -8,6 +8,7 @@ diagrams:
         読む場所の解決 ..> 作業中の配信元
         読む場所の解決 ..> 権限の判定
         読む場所の解決 ..> ワークツリーの解決
+        読む場所の解決 ..> リビジョンの解決
         書く場所の解決 ..> 作業中の配信元
         書く場所の解決 ..> 権限の判定
         書く場所の解決 ..> ワークツリーの解決
@@ -45,12 +46,17 @@ diagrams:
         class globの照合 {
           <<function>>
         }
+        class リビジョンの解決 {
+          <<function>>
+        }
         class 読み書きの場所 {
           +配信元: ServedSource
           +直下: Path
           +リビジョン: str
+          +解いた commit: str
         }
         click globの照合 href "../../shared/paths.py.yaml#globの照合"
+        click リビジョンの解決 href "../history/query.py.yaml#リビジョンの解決"
         click 読み書きの場所 href "./types.py.yaml#読み書きの場所"
 functions:
   - name: find_worktree
@@ -382,11 +388,12 @@ functions:
       3. 配信元が 2 つ以上で `ref` か `worktree` を渡された場合、`InvalidArgumentError` を送る
       4. 配信元ごとに場所を決める
          - `worktree` を渡された場合、そのパスがワークツリーに当たらなければ `WorktreeNotMatchedError` を送る。当たればそのワークツリーを `ref` なしで読む
-         - `ref` を渡された場合、Git の管理外の配信元なら `InvalidArgumentError` を送る。そうでなければ `root` をその `ref` で読む（解決できない ref は履歴が `RefNotFoundError` にする）
+         - `ref` を渡された場合、Git の管理外の配信元なら `InvalidArgumentError` を送る。そうでなければ `root` をその `ref` で読む
          - どちらも無く、`cwd` が配信元のワークツリーの中の場合、そのワークツリーを `ref` なしで読む
          - どちらも無く、作業中の配信元か Git の管理外の配信元の場合、`root` を `ref` なしで読む
          - それ以外は `root` を `default_ref` で読む
-      5. `Target` の並びを返す
+      5. `ref` で読む場所は、`ref` を履歴の『リビジョンの解決』（`date_base` は配信元の `default_ref`）で 1 回だけ解き、解いた commit を `Target.commit` に持たせる。ブランチ名の `ref` も要求ごとに解き直し、要求をまたいで commit を控えない
+      6. `Target` の並びを返す
     exceptions:
       - name: SourceNotReadableError
         condition: '`cwd` が配信元の `scope` に当たらない（`outside_scope` が `True` のときは、加えて `outside_read` が偽か `source` が ID 1 つでない）、または `source` を省いて作業中の配信元が無い'
@@ -398,6 +405,9 @@ functions:
       - name: InvalidArgumentError
         condition: 複数の配信元に `ref`・`worktree` を渡した、または Git の管理外の配信元に `ref` を渡した
         message: '`ref は 1 つの Git の配信元を指すときだけ渡せます`'
+      - name: RefNotFoundError
+        condition: '`ref`（渡されなければ `default_ref`）を commit に解けない'
+        message: 履歴の『リビジョンの解決』のまま
     unit_tests:
       - name: test_resolve_read_targets
         case: 正常
@@ -409,8 +419,8 @@ functions:
         case: 正常
         summary: 作業中でない Git の配信元は既定のリビジョン
         condition: '`source: notes`（Git、`default_ref: develop`、`cwd` は `scope.read` に当たる）'
-        mock: 配信元の一覧（偽物）
-        expected: '`ref` が `develop`'
+        mock: 配信元の一覧（偽物）、履歴の『リビジョンの解決』（`develop` を固定の commit に解く偽物）
+        expected: '`ref` が `develop`、`commit` が偽物の解いた commit で、リビジョンの解決が 1 回だけ呼ばれる'
       - name: test_resolve_read_targets_when_worktree_cwd
         case: 正常
         summary: ワークツリーの中から読む
@@ -465,6 +475,13 @@ functions:
         mock: 配信元の一覧（偽物）
         expected: other の `Target` を含まない
         exception: '-'
+      - name: test_resolve_read_targets_when_ref_not_found
+        case: 異常
+        summary: 解けない ref
+        condition: '`source: notes`（Git）、`ref: nope`'
+        mock: 配信元の一覧（偽物）、履歴の『リビジョンの解決』（`RefNotFoundError` を送る偽物）
+        expected: '`RefNotFoundError` をそのまま伝える'
+        exception: '`ref` を commit に解けない'
       - name: test_resolve_read_targets_when_outside_read_disabled
         case: 異常
         summary: 外から読むのを断る配信元

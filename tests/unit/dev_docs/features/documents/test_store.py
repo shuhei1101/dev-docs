@@ -14,14 +14,57 @@ from dev_docs.features.documents import loader as loader_module
 from dev_docs.features.documents import store as store_module
 from dev_docs.features.documents.store import DocumentStore
 from dev_docs.features.documents.types import Document
+from dev_docs.features.history import query as query_module
+from dev_docs.features.history import snapshot as snapshot_module
 from dev_docs.features.history.snapshot import SnapshotStore
 from dev_docs.features.sources.types import DocumentTable, ServedSource, SourceConfig
+from dev_docs.integrations import git as git_module
 from dev_docs.shared.errors import DocumentNotFoundError, UnknownKindError
 from dev_docs.shared.yaml_io import load_yaml
 
 OCT_01 = "2026-10-01T12:00:00+09:00"
 
 FILES_SCHEMA_TEMPLATE = Path(__file__).parents[5] / "templates" / "files.schema.yaml"
+
+
+OCT_02 = "2026-10-02T12:00:00+09:00"
+
+RULES_TABLE = DocumentTable(
+    id="rules", paths=["rules/*.yaml"], schema_path="schemas/rule.schema.yaml"
+)
+
+
+@pytest.fixture
+def git_calls(monkeypatch: pytest.MonkeyPatch) -> list[list[str]]:
+    """文書のストア・リビジョンの解決・書き出しが起動する git の引数を記録し、その並びを返す。"""
+    calls: list[list[str]] = []
+    original = git_module.run_git
+
+    def _run(args: list[str], *rest: Any, **kwargs: Any) -> Any:
+        calls.append(list(args))
+        return original(args, *rest, **kwargs)
+
+    for module in (store_module, query_module, snapshot_module):
+        monkeypatch.setattr(module, "run_git", _run)
+    return calls
+
+
+def _git_source(
+    root: Path,
+    repo_root: Path,
+    make_source_config: Callable[..., SourceConfig],
+    make_served_source: Callable[..., ServedSource],
+    *,
+    source_id: str = "sample",
+) -> ServedSource:
+    """行 `rules` を持ち、`default_ref` が `develop` の Git の配信元を返す。"""
+    return make_served_source(
+        id=source_id,
+        root=root,
+        is_git=True,
+        repo_root=repo_root,
+        config=make_source_config(documents=[RULES_TABLE], default_ref="develop"),
+    )
 
 
 @pytest.fixture
@@ -177,6 +220,195 @@ def test_document_store_load_when_ref(
     # 検証
     assert result.documents[0].data["name"] == "old"
     assert result.documents[0].updated == datetime.fromisoformat(OCT_01)
+
+
+def test_document_store_load_when_commit(
+    git_repo: Callable[..., Path],
+    write_files: Callable[[Path, dict[str, str]], None],
+    run_git: Callable[..., str],
+    make_source_config: Callable[..., SourceConfig],
+    make_served_source: Callable[..., ServedSource],
+    make_target: Callable[..., Target],
+    document_store: DocumentStore,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """解いた commit を持つ読む場所は解き直さない（正常系）。"""
+    # 準備
+    root = git_repo({"rules/a.yaml": "id: a\nname: old\n"}, date=OCT_01)
+    first = run_git(root, "rev-parse", "HEAD").strip()
+    write_files(root, {"rules/a.yaml": "id: a\nname: new\n"})
+    run_git(root, "commit", "-am", "new")
+    source = _git_source(root, root, make_source_config, make_served_source)
+    target = make_target(source, ref="develop", commit=first)
+    calls: list[str] = []
+    original = query_module.resolve_ref
+
+    def recording(repo_root: Path, ref: str, **kwargs: Any) -> Any:
+        calls.append(ref)
+        return original(repo_root, ref, **kwargs)
+
+    monkeypatch.setattr(store_module, "resolve_ref", recording)
+    # 実行
+    result = document_store.load(target)
+    # 検証
+    assert result.documents[0].data["name"] == "old"
+    assert calls == []
+
+
+def _recording_load_file(monkeypatch: pytest.MonkeyPatch) -> list[str]:
+    """本物の `load_file` を包んで呼ばれたパスを記録し、その並びを返す。"""
+    calls: list[str] = []
+    real = loader_module.load_file
+
+    def recording(root: Path, path: str, *args: Any, **kwargs: Any) -> Any:
+        calls.append(path)
+        return real(root, path, *args, **kwargs)
+
+    monkeypatch.setattr(store_module, "load_file", recording)
+    return calls
+
+
+def _two_commits(
+    git_repo: Callable[..., Path],
+    write_files: Callable[[Path, dict[str, str]], None],
+    run_git: Callable[..., str],
+) -> tuple[Path, str, str]:
+    """`rules/a.yaml`・`rules/b.yaml` の commit と、`rules/a.yaml` だけを書き換えた commit を作る。"""
+    root = git_repo({"rules/a.yaml": "id: a\nname: A\n", "rules/b.yaml": "id: b\nname: B\n"})
+    first = run_git(root, "rev-parse", "HEAD").strip()
+    write_files(root, {"rules/a.yaml": "id: a\nname: A2\n"})
+    run_git(
+        root, "commit", "-am", "a2", env={"GIT_AUTHOR_DATE": OCT_02, "GIT_COMMITTER_DATE": OCT_02}
+    )
+    second = run_git(root, "rev-parse", "HEAD").strip()
+    return root, first, second
+
+
+def test_document_store_load_when_revision_reused(
+    git_repo: Callable[..., Path],
+    write_files: Callable[[Path, dict[str, str]], None],
+    run_git: Callable[..., str],
+    make_source_config: Callable[..., SourceConfig],
+    make_served_source: Callable[..., ServedSource],
+    make_target: Callable[..., Target],
+    document_store: DocumentStore,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """新しい commit でも変わったファイルだけ読み直す（正常系）。"""
+    # 準備
+    root, first, second = _two_commits(git_repo, write_files, run_git)
+    source = _git_source(root, root, make_source_config, make_served_source)
+    calls = _recording_load_file(monkeypatch)
+    document_store.load(make_target(source, ref="develop", commit=first))
+    calls.clear()
+    # 実行
+    result = document_store.load(make_target(source, ref="develop", commit=second))
+    # 検証
+    assert calls == ["rules/a.yaml"]
+    by_id = {document.id: document for document in result.documents}
+    assert by_id["a"].data["name"] == "A2"
+    assert by_id["a"].updated == datetime.fromisoformat(OCT_02)
+    assert by_id["b"].data["name"] == "B"
+
+
+def test_document_store_load_when_revision_reused_after_clear(
+    git_repo: Callable[..., Path],
+    write_files: Callable[[Path, dict[str, str]], None],
+    run_git: Callable[..., str],
+    make_source_config: Callable[..., SourceConfig],
+    make_served_source: Callable[..., ServedSource],
+    make_target: Callable[..., Target],
+    document_store: DocumentStore,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """配信元の組み立て直しの後も変わったファイルだけ読み直す（正常系）。"""
+    # 準備
+    root, first, second = _two_commits(git_repo, write_files, run_git)
+    source = _git_source(root, root, make_source_config, make_served_source)
+    calls = _recording_load_file(monkeypatch)
+    document_store.load(make_target(source, ref="develop", commit=first))
+    document_store.clear()
+    calls.clear()
+    # 実行
+    document_store.load(make_target(source, ref="develop", commit=second))
+    # 検証
+    assert calls == ["rules/a.yaml"]
+
+
+def test_document_store_load_when_revision_table_changed(
+    git_repo: Callable[..., Path],
+    run_git: Callable[..., str],
+    make_source_config: Callable[..., SourceConfig],
+    make_served_source: Callable[..., ServedSource],
+    make_target: Callable[..., Target],
+    document_store: DocumentStore,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """文書の行の定義が変われば読み直す（正常系）。"""
+    # 準備
+    root = git_repo({"rules/a.yaml": "id: a\ntitle: T\n"})
+    head = run_git(root, "rev-parse", "HEAD").strip()
+
+    def source_with(metadata: dict[str, str]) -> ServedSource:
+        table = DocumentTable(
+            id="rules",
+            paths=["rules/*.yaml"],
+            schema_path="schemas/rule.schema.yaml",
+            metadata=metadata,
+        )
+        return make_served_source(
+            root=root,
+            is_git=True,
+            repo_root=root,
+            config=make_source_config(documents=[table], default_ref="develop"),
+        )
+
+    calls = _recording_load_file(monkeypatch)
+    document_store.load(make_target(source_with({}), ref="develop", commit=head))
+    # 実行
+    result = document_store.load(
+        make_target(source_with({"name": "title"}), ref="develop", commit=head)
+    )
+    # 検証
+    assert calls == ["rules/a.yaml", "rules/a.yaml"]
+    assert result.documents[0].metadata["name"] == "T"
+
+
+def test_document_store_load_when_dates_shared_repo(
+    tmp_path: Path,
+    write_files: Callable[[Path, dict[str, str]], None],
+    run_git: Callable[..., str],
+    make_source_config: Callable[..., SourceConfig],
+    make_served_source: Callable[..., ServedSource],
+    make_target: Callable[..., Target],
+    document_store: DocumentStore,
+) -> None:
+    """同じリポジトリで root の違う配信元の日時を取り違えない（正常系）。"""
+    # 準備
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    run_git(repo, "init", "-b", "develop")
+    write_files(repo, {"docs/rules/a.yaml": "id: a\n"})
+    run_git(repo, "add", "-A")
+    run_git(
+        repo, "commit", "-m", "docs", env={"GIT_AUTHOR_DATE": OCT_01, "GIT_COMMITTER_DATE": OCT_01}
+    )
+    write_files(repo, {"dev/rules/a.yaml": "id: a\n"})
+    run_git(repo, "add", "-A")
+    run_git(
+        repo, "commit", "-m", "dev", env={"GIT_AUTHOR_DATE": OCT_02, "GIT_COMMITTER_DATE": OCT_02}
+    )
+    head = run_git(repo, "rev-parse", "HEAD").strip()
+    docs = _git_source(
+        repo / "docs", repo, make_source_config, make_served_source, source_id="docs"
+    )
+    dev = _git_source(repo / "dev", repo, make_source_config, make_served_source, source_id="dev")
+    # 実行
+    from_docs = document_store.load(make_target(docs, ref="develop", commit=head))
+    from_dev = document_store.load(make_target(dev, ref="develop", commit=head))
+    # 検証
+    assert from_docs.documents[0].updated == datetime.fromisoformat(OCT_01)
+    assert from_dev.documents[0].updated == datetime.fromisoformat(OCT_02)
 
 
 def test_document_store_load_when_unknown_kind(
@@ -344,6 +576,69 @@ def test_document_store_schema_when_ref(
     assert result["properties"]["body"] == {"type": "string", "title": "Markdown"}
 
 
+def test_document_store_schema_when_revision(
+    git_repo: Callable[..., Path],
+    write_files: Callable[[Path, dict[str, str]], None],
+    run_git: Callable[..., str],
+    make_source_config: Callable[..., SourceConfig],
+    make_served_source: Callable[..., ServedSource],
+    make_target: Callable[..., Target],
+    document_store: DocumentStore,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """リビジョンのスキーマは commit で控える（正常系）。"""
+    # 準備
+    root = git_repo(
+        {"rules/a.yaml": "id: a\n", "schemas/rule.schema.yaml": "type: object\nrequired: [id]\n"}
+    )
+    first = run_git(root, "rev-parse", "HEAD").strip()
+    write_files(root, {"schemas/rule.schema.yaml": "type: object\nrequired: [id, name]\n"})
+    source = _git_source(root, root, make_source_config, make_served_source)
+    target = make_target(source, ref="develop", commit=first)
+    calls: list[str] = []
+    original = document_store.snapshots.checkout
+
+    def recording(repo_root: Path, commit: str) -> Path:
+        calls.append(commit)
+        return original(repo_root, commit)
+
+    monkeypatch.setattr(document_store.snapshots, "checkout", recording)
+    # 実行
+    results = [document_store.schema(target, "rules"), document_store.schema(target, "rules")]
+    # 検証
+    assert [result["required"] for result in results] == [["id"], ["id"]]
+    assert calls == [first]
+
+
+def test_document_store_schema_when_revision_shared_repo(
+    git_repo: Callable[..., Path],
+    run_git: Callable[..., str],
+    make_source_config: Callable[..., SourceConfig],
+    make_served_source: Callable[..., ServedSource],
+    make_target: Callable[..., Target],
+    document_store: DocumentStore,
+) -> None:
+    """同じリポジトリで root の違う配信元のスキーマを取り違えない（正常系）。"""
+    # 準備
+    repo = git_repo(
+        {
+            "docs/schemas/rule.schema.yaml": "type: object\nrequired: [docs]\n",
+            "dev/schemas/rule.schema.yaml": "type: object\nrequired: [dev]\n",
+        }
+    )
+    head = run_git(repo, "rev-parse", "HEAD").strip()
+    docs = _git_source(
+        repo / "docs", repo, make_source_config, make_served_source, source_id="docs"
+    )
+    dev = _git_source(repo / "dev", repo, make_source_config, make_served_source, source_id="dev")
+    # 実行
+    from_docs = document_store.schema(make_target(docs, ref="develop", commit=head), "rules")
+    from_dev = document_store.schema(make_target(dev, ref="develop", commit=head), "rules")
+    # 検証
+    assert from_docs["required"] == ["docs"]
+    assert from_dev["required"] == ["dev"]
+
+
 def _row_schema_source(
     root: Path,
     notes_schema: dict[str, Any],
@@ -430,6 +725,33 @@ def test_document_store_row_schema_when_items_missing(
     result = document_store.row_schema(make_target(source), "notes")
     # 検証
     assert result == {}
+
+
+def test_document_store_row_schema_when_many_documents(
+    git_repo: Callable[..., Path],
+    run_git: Callable[..., str],
+    make_source_config: Callable[..., SourceConfig],
+    make_served_source: Callable[..., ServedSource],
+    make_target: Callable[..., Target],
+    document_store: DocumentStore,
+    git_calls: list[list[str]],
+) -> None:
+    """文書の数だけ呼んでも git を文書の数だけ起動しない（正常系）。"""
+    # 準備
+    files = {f"rules/r{i:02}.yaml": f"id: r{i:02}\n" for i in range(50)}
+    files["schemas/rule.schema.yaml"] = "type: object\nrequired: [id]\n"
+    root = git_repo(files)
+    head = run_git(root, "rev-parse", "HEAD").strip()
+    source = _git_source(root, root, make_source_config, make_served_source)
+    target = make_target(source, ref="develop", commit=head)
+    documents = document_store.load(target).documents
+    git_calls.clear()
+    # 実行
+    results = [document_store.row_schema(target, document.kind) for document in documents]
+    # 検証
+    assert len(results) == 50
+    assert all(result["required"] == ["id"] for result in results)
+    assert git_calls == []
 
 
 def test_document_store_invalidate(document_store: DocumentStore, workspace: Target) -> None:
