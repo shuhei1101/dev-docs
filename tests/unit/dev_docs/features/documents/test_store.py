@@ -18,6 +18,7 @@ from dev_docs.features.history import query as query_module
 from dev_docs.features.history import snapshot as snapshot_module
 from dev_docs.features.history.snapshot import SnapshotStore
 from dev_docs.features.sources.types import DocumentTable, ServedSource, SourceConfig
+from dev_docs.integrations import git as git_module
 from dev_docs.shared.errors import DocumentNotFoundError, UnknownKindError
 from dev_docs.shared.yaml_io import load_yaml
 
@@ -37,7 +38,7 @@ RULES_TABLE = DocumentTable(
 def git_calls(monkeypatch: pytest.MonkeyPatch) -> list[list[str]]:
     """文書のストア・リビジョンの解決・書き出しが起動する git の引数を記録し、その並びを返す。"""
     calls: list[list[str]] = []
-    original = store_module.run_git
+    original = git_module.run_git
 
     def _run(args: list[str], *rest: Any, **kwargs: Any) -> Any:
         calls.append(list(args))
@@ -240,7 +241,7 @@ def test_document_store_load_when_commit(
     source = _git_source(root, root, make_source_config, make_served_source)
     target = make_target(source, ref="develop", commit=first)
     calls: list[str] = []
-    original = store_module.resolve_ref
+    original = query_module.resolve_ref
 
     def recording(repo_root: Path, ref: str, **kwargs: Any) -> Any:
         calls.append(ref)
