@@ -51,19 +51,15 @@ if [ "${1:-}" = "--dry-run" ]; then
 fi
 
 # 適用
+requested=$(date +%s)
 code=$(curl -s -o /dev/null -w '%{http_code}' -X POST http://127.0.0.1:8781/_admin/mcp \
   -H "$HEADERS_ACCEPT" -H "$HEADERS_TYPE" -d "$RESTART")
 if [ "$code" != "200" ]; then
   echo "サーバーの再起動: failed（restart が $code）"
   exit 1
 fi
-tries=0
-until running_new; do
-  tries=$((tries + 1))
-  if [ "$tries" -ge 60 ]; then
-    echo "サーバーの再起動: failed（60 秒待っても修正の後に起動したサーバーが待ち受けない）"
-    exit 1
-  fi
-  sleep 1
-done
+if ! sh scripts/dev-docs-server-wait.sh listening "$requested"; then
+  echo "サーバーの再起動: failed（修正の後に起動したサーバーが待ち受けない）"
+  exit 1
+fi
 echo "サーバーの再起動: changed"

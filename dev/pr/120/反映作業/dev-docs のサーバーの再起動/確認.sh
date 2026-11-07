@@ -1,6 +1,10 @@
 #!/bin/sh
 set -u
 
+if ! sh scripts/dev-docs-server-wait.sh loaded; then
+  exit 1
+fi
+
 # 作業範囲の外の配信元 ai-monitor の件数の検索が、修正の前の 85.3 秒より短い時間で応答するか
 REQUEST='{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"search_docs","arguments":{"source":"ai-monitor","outside_scope":true,"view":"count","cwd":"/mnt/c/Users/shuhe/repo/dev-docs"}}}'
 start=$(date +%s.%N)
