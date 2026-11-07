@@ -91,17 +91,11 @@ categories:
       detail: worktree で `npm run build`・`npm run api:generate`・`npm run build-storybook` を実行し、終了コード 0 で成果物ができることを確かめた。Storybook は、ビルドだけを確かめ、ブラウザで開いて描画することは確かめていない。
   - name: 取り込み前の検査
     commands: |-
-      `frontend/` を変えた commit では、lefthook の pre-commit が検査を流し、画面をビルドし直して `src/dev_docs/screen/` をステージへ戻す。手で流すときは次のとおり。
-
-      ```bash
-      npm run lint
-      npm run typecheck
-      npm run build
-      ```
+      `frontend/` を変えた commit では、lefthook の pre-commit が画面をビルドし直して `src/dev_docs/screen/` をステージへ戻す。
     verification:
       state: 済
-      date: '2026-10-30'
-      detail: worktree で 3 つのコマンドを実行し、終了コード 0 を確かめた。`frontend/` を含む commit で lefthook の pre-commit（lint・型検査・ビルド）が走り、ビルドし直した `src/dev_docs/screen/` がステージへ戻ることを確かめた。
+      date: '2026-11-08'
+      detail: worktree で `frontend/` の変更をステージして `npx lefthook run pre-commit` を実行し、`frontend-build` だけが実行されて終了コード 0 になり、lint・型検査が実行されないことを確認した。
   - name: 管理作業
     prerequisites:
       - 127.0.0.1:8781 で dev-docs のサーバーが待ち受けている

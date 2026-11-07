@@ -11,7 +11,7 @@ catalogs:
     entries:
       - name: pre-commit.jobs
         kind: 設定
-        purpose: '`frontend/**` の変更で検査とビルドを流す'
+        purpose: '`frontend/**` の変更でビルドを流す'
       - name: glob / stage_fixed
         kind: 設定
         purpose: 当たるファイルの絞り込みと、作り直したファイルをステージへ戻す
@@ -24,8 +24,8 @@ used_in:
 upstream: evilmartians/lefthook
 verification:
   state: 済
-  date: '2026-10-30'
-  detail: '`npx lefthook validate` と、`frontend/` を含む commit での pre-commit の実行を確かめた。'
+  date: '2026-11-08'
+  detail: '`npx lefthook validate` と、`frontend/` の変更をステージした pre-commit の実行（`frontend-build` だけが実行される）を確認した。'
 license: MIT（商用利用可）
 official_url: https://lefthook.dev/
 docs_url: https://lefthook.dev/configuration/
