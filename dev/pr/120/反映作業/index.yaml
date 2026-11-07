@@ -11,5 +11,5 @@ dev-docs のサーバーの再起動:
   確認: dev-docs のサーバーの再起動/確認.sh
   切り戻し: null
   失敗時: 既定の対処を 1 回、2 回連続で失敗したら依頼元へ返す
-  確認方法: 稼働中の dev-docs のサーバーへ配信元 ai-monitor の search_docs（outside_scope true・view count）を直接 HTTP で要求し、修正の前の 85.3 秒より短い時間で応答する
+  確認方法: 配信元の読み込みが終わった（文書の MCP の describe が応答する）後に、稼働中の dev-docs のサーバーへ配信元 ai-monitor の search_docs（outside_scope true・view count）を直接 HTTP で要求し、修正の前の 85.3 秒より短い時間で応答する
   状態: "-"
