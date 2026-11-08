@@ -8,7 +8,10 @@ from typing import Literal
 
 type Shape = Literal["body", "table", "sections", "list", "diagram", "attributes"]
 type DiagramKind = Literal["flowchart", "dataflow", "architecture", "state", "er"]
-type NodeKind = Literal["llm", "dm", "script", "mcp", "data", "external"]
+type NodeKind = Literal[
+    "llm", "dm", "script", "mcp", "data", "external", "start", "question", "action", "result"
+]
+type LineKind = Literal["flow", "read", "write", "reply", "loop"]
 
 
 @dataclass(frozen=True)
@@ -49,7 +52,8 @@ class FlowNode:
     id: str
     name: str
     kind: NodeKind
-    sub: str | None = None
+    # 箱のツールチップに出す説明
+    hint: str | None = None
 
 
 @dataclass(frozen=True)
@@ -59,6 +63,18 @@ class FlowEdge:
     source: str
     target: str
     label: str | None = None
+    # 配置で戻る線になった線は `loop` で描く
+    line: LineKind = "flow"
+    # 線のラベルのツールチップに出す詳細
+    tip: str | None = None
+
+
+@dataclass(frozen=True)
+class FlowFrame:
+    """配置の前のフロー図の、中の箱を囲む枠。"""
+
+    label: str
+    nodes: frozenset[str]
 
 
 @dataclass(frozen=True)
@@ -68,6 +84,7 @@ class FlowGraph:
     direction: Literal["TD", "LR"]
     nodes: list[FlowNode]
     edges: list[FlowEdge]
+    frame: FlowFrame | None = None
 
 
 @dataclass(frozen=True)

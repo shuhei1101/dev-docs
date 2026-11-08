@@ -3,9 +3,8 @@
 from __future__ import annotations
 
 import json
-import re
 from collections.abc import Mapping, Sequence
-from typing import Any
+from typing import Any, cast
 
 from dev_docs.features.convert.flow_layout import layout_flow
 from dev_docs.features.convert.mermaid import parse_mermaid
@@ -13,39 +12,44 @@ from dev_docs.features.convert.types import (
     DiagramHead,
     DiagramKind,
     FlowEdge,
+    FlowFrame,
     FlowGraph,
     FlowNode,
+    LineKind,
     NodeKind,
 )
 
 FLOW_KINDS = ("flowchart", "dataflow", "architecture", "state")
 LEFT_TO_RIGHT_KINDS = ("dataflow", "architecture")
-# `x-diagram` のノードの `kind`・`shape` から mdmark の箱の種類（どれにも当たらなければ `script`）
+# `x-diagram` のノードの `kind` から mdmark のノードの種類
 NODE_KINDS: dict[str, NodeKind] = {
     "actor": "external",
     "external": "external",
-    "stadium": "external",
-    "circle": "external",
+    "process": "script",
+    "system": "script",
     "store": "data",
-    "cylinder": "data",
-    "diamond": "dm",
+    "start": "start",
+    "question": "question",
+    "action": "action",
+    "result": "result",
 }
-# Mermaid の多重度の片端の記号から、mdmark の ER 図の部品の多重度
-ER_CARDINALITIES = {
-    "||": "1",
-    "|o": "0..1",
-    "o|": "0..1",
-    "|{": "1..n",
-    "}|": "1..n",
-    "o{": "0..n",
-    "}o": "0..n",
-}
-# Mermaid の多重度（`{左}--{右}` か `{左}..{右}`）
-ER_CARDINALITY = re.compile(r"^(?P<left>\S{2})(?:--|\.\.)(?P<right>\S{2})$")
+# `kind` が無いノードと、`NODE_KINDS` に無い `kind` のノードの種類（スキーマの既定）
+DEFAULT_NODE_KIND = "process"
+# 辺の `line` に書ける線の種類
+LINE_KINDS: tuple[LineKind, ...] = ("flow", "read", "write", "reply", "loop")
+# `line` が無い辺と、`LINE_KINDS` に無い `line` の辺の種類
+DEFAULT_LINE: LineKind = "flow"
+# 状態遷移の図の始点・終点のノードの ID と名前
+STATE_START = ("start", "開始")
+STATE_END = ("end", "終了")
+# 遷移の `from` のこの値は、`representative` の状態から引く
+ALL_STATES = "全状態"
+# 遷移の `to` のこの値は、`representative` の状態へ引く
+PREVIOUS_STATE = "元の状態"
+# 関連の両端に書ける多重度（mdmark の ER 図の部品の多重度と同じ値）
+ER_CARDINALITIES = ("1", "0..1", "1..n", "0..n")
 # 実体の列の `key` から、mdmark の ER 図の部品の列のマーカー
 ER_COLUMN_KEYS = {"PK": "pk", "FK": "fk"}
-# `key: FK` の実体の列の `comment` から、指す実体と列
-ER_FOREIGN_KEY_COMMENT = re.compile(r"^参照: (?P<entity>.+)\.(?P<column>[^.\s]+)$")
 # ER 図のテーブルを格子に置く寸法（px）。`head`・`row`・`frame` は mdmark の ER 図の寸法と同じ値
 ER_LAYOUT = {
     "per_row": 3,
@@ -72,20 +76,34 @@ def _block(marker: str, definition: Mapping[str, Any]) -> str:
 
 
 def _node_kind(node: Mapping[str, Any]) -> NodeKind:
-    """ノードの `kind` と `shape` から箱の種類を決める。"""
-    for key in ("kind", "shape"):
-        kind = NODE_KINDS.get(str(node.get(key)))
-        if kind is not None:
-            return kind
-    return "script"
+    """ノードの `kind` から mdmark のノードの種類を決める。"""
+    return NODE_KINDS.get(str(node.get("kind", DEFAULT_NODE_KIND)), NODE_KINDS[DEFAULT_NODE_KIND])
+
+
+def _line(edge: Mapping[str, Any]) -> LineKind:
+    """辺の `line` から線の種類を決める。"""
+    line = edge.get("line")
+    return cast("LineKind", line) if line in LINE_KINDS else DEFAULT_LINE
+
+
+def _text(value: Any) -> str | None:
+    """値があれば文字列にする。"""
+    return str(value) if value else None
 
 
 def _flow_graph(value: Mapping[str, Any], kind: DiagramKind) -> FlowGraph:
-    """flow 系の値を中間データにする（`subgraphs`・`clicks` は描かない）。"""
+    """flow 系の値を中間データにする（`clicks` は描かない）。"""
     direction = value.get("direction")
-    left_to_right = direction == "LR" or (direction is None and kind in LEFT_TO_RIGHT_KINDS)
+    # 向き: 指定があればその値、無ければ図の種類の既定
+    if direction not in ("TD", "LR"):
+        direction = "LR" if kind in LEFT_TO_RIGHT_KINDS else "TD"
     nodes = [
-        FlowNode(id=str(node["id"]), name=str(node.get("label", node["id"])), kind=_node_kind(node))
+        FlowNode(
+            id=str(node["id"]),
+            name=str(node.get("label", node["id"])),
+            kind=_node_kind(node),
+            hint=_text(node.get("hint")),
+        )
         for node in _items(value, "nodes")
     ]
     known = {node.id for node in nodes}
@@ -95,51 +113,83 @@ def _flow_graph(value: Mapping[str, Any], kind: DiagramKind) -> FlowGraph:
         # 宣言の無い端の箱: 名前を ID にして足す
         for end in (source, target):
             if end not in known:
-                nodes.append(FlowNode(id=end, name=end, kind="script"))
+                nodes.append(FlowNode(id=end, name=end, kind=NODE_KINDS[DEFAULT_NODE_KIND]))
                 known.add(end)
-        label = edge.get("label")
-        edges.append(FlowEdge(source=source, target=target, label=str(label) if label else None))
-    return FlowGraph(direction="LR" if left_to_right else "TD", nodes=nodes, edges=edges)
+        edges.append(
+            FlowEdge(
+                source=source,
+                target=target,
+                label=_text(edge.get("label")),
+                line=_line(edge),
+                tip=_text(edge.get("tip")),
+            )
+        )
+    frame_value = value.get("frame")
+    frame = (
+        FlowFrame(
+            label=str(frame_value.get("label", "")),
+            nodes=frozenset(str(node_id) for node_id in frame_value.get("nodes") or []),
+        )
+        if isinstance(frame_value, Mapping)
+        else None
+    )
+    return FlowGraph(direction=direction, nodes=nodes, edges=edges, frame=frame)
+
+
+def _state_ends(transition: Mapping[str, Any]) -> tuple[str, str]:
+    """遷移の元と先（`全状態`・`元の状態` は `representative` へ置き換える）。"""
+    source = str(transition.get("from", ""))
+    target = str(transition.get("to", ""))
+    if source == ALL_STATES:
+        source = str(transition.get("representative", ""))
+    if target == PREVIOUS_STATE:
+        target = str(transition.get("representative", ""))
+    return source, target
+
+
+def _state_label(transition: Mapping[str, Any]) -> str | None:
+    """遷移のラベル（`{trigger} [{condition}]`。どちらも無ければ `None`）。"""
+    parts = [
+        str(transition["trigger"]) if transition.get("trigger") else "",
+        f"[{transition['condition']}]" if transition.get("condition") else "",
+    ]
+    return " ".join(part for part in parts if part) or None
 
 
 def _state_graph(value: Mapping[str, Any]) -> FlowGraph:
-    """状態遷移の値を、状態を箱・遷移を線にした中間データにする。"""
+    """状態遷移の値を、始点・終点と状態のノード、遷移の線にした中間データにする。"""
+    transitions = _items(value, "transitions")
     names: list[str] = [str(item["name"]) for item in _items(value, "states")]
-    for transition in _items(value, "transitions"):
-        for end in (transition.get("from"), transition.get("to")):
-            if end is not None and str(end) not in names:
-                names.append(str(end))
-    initial = value.get("initial")
-    final = value.get("final")
-    finals = {str(name) for name in final} if isinstance(final, list) else set()
+    # 遷移の端に出た `states` に無い状態も足す
+    for transition in transitions:
+        for end in _state_ends(transition):
+            if end and end not in names:
+                names.append(end)
     ids = {name: f"s{index + 1}" for index, name in enumerate(names)}
-    nodes = [
-        FlowNode(
-            id=ids[name],
-            name=name,
-            kind="script",
-            sub="初期状態"
-            if initial is not None and name == str(initial)
-            else "終了状態"
-            if name in finals
-            else None,
-        )
-        for name in names
-    ]
+    nodes = [FlowNode(id=STATE_START[0], name=STATE_START[1], kind="start")]
+    nodes += [FlowNode(id=ids[name], name=name, kind="action") for name in names]
     edges: list[FlowEdge] = []
-    for transition in _items(value, "transitions"):
-        parts = [
-            str(transition["trigger"]) if transition.get("trigger") else "",
-            f"[{transition['condition']}]" if transition.get("condition") else "",
-        ]
-        label = " ".join(part for part in parts if part)
+    # 始点から初期状態へ
+    initial = value.get("initial")
+    if initial is not None and str(initial) in ids:
+        edges.append(FlowEdge(source=STATE_START[0], target=ids[str(initial)]))
+    for transition in transitions:
+        source, target = _state_ends(transition)
         edges.append(
             FlowEdge(
-                source=ids[str(transition["from"])],
-                target=ids[str(transition["to"])],
-                label=label or None,
+                source=ids[source],
+                target=ids[target],
+                label=_state_label(transition),
+                # 元と先が同じ遷移は戻る線
+                line="loop" if source == target else DEFAULT_LINE,
             )
         )
+    final = value.get("final")
+    finals = [str(name) for name in final if str(name) in ids] if isinstance(final, list) else []
+    # 終了状態があれば、終点を置いて各終了状態から引く
+    if finals:
+        nodes.append(FlowNode(id=STATE_END[0], name=STATE_END[1], kind="result"))
+        edges += [FlowEdge(source=ids[name], target=STATE_END[0]) for name in finals]
     return FlowGraph(direction="TD", nodes=nodes, edges=edges)
 
 
@@ -184,18 +234,10 @@ def er_table_titles(tables: Sequence[Mapping[str, Any]]) -> dict[str, str]:
 
 
 class _ErModel:
-    """ER 図の実体ごとのテーブルと、外部キーが指す実体と列の引き方。"""
+    """ER 図の実体ごとのテーブルと列の引き方。"""
 
-    def __init__(
-        self,
-        value: Mapping[str, Any],
-        tables: Sequence[Mapping[str, Any]],
-        classification: str | None,
-    ) -> None:
-        self.classification = classification
+    def __init__(self, value: Mapping[str, Any], tables: Sequence[Mapping[str, Any]]) -> None:
         self.by_title = {str(table.get("title")): table for table in tables}
-        # 外部キーのテーブル名は物理名・論理名のどちらでも引く
-        self.entity_of = er_table_titles(tables)
         self.entities = _items(value, "entities")
 
     def table(self, entity: Mapping[str, Any]) -> Mapping[str, Any] | None:
@@ -208,58 +250,6 @@ class _ErModel:
             return _er_entity_columns(entity)
         table = self.table(entity)
         return _er_table_columns(table) if table is not None else []
-
-    def references(self, entity: Mapping[str, Any]) -> list[tuple[str, str, str]]:
-        """実体の列のうち外部キーの列ごとに（列, 指す実体, 指す列）を返す。"""
-        found: list[tuple[str, str, str]] = []
-        for column in _items(entity, "columns"):
-            matched = ER_FOREIGN_KEY_COMMENT.match(str(column.get("comment", "")))
-            if column.get("key") == "FK" and matched:
-                found.append((str(column["name"]), matched["entity"], matched["column"]))
-        table = self.table(entity)
-        if _items(entity, "columns") or table is None:
-            return found
-        for column in _items(table, "columns"):
-            foreign_key = column.get("foreign_key")
-            if not isinstance(foreign_key, Mapping) or not foreign_key.get("table"):
-                continue
-            target = self._foreign_key_target(str(foreign_key["table"]))
-            if target is not None:
-                found.append((str(column["name"]), *target))
-        return found
-
-    def _foreign_key_target(self, reference: str) -> tuple[str, str] | None:
-        """`{分類}/{テーブル名}.{列}` から、同じ文書の（指す実体, 指す列）を返す。"""
-        table_name, _, column = reference.rpartition(".")
-        classification, _, name = table_name.rpartition("/")
-        # 他の分類のテーブル: 同じ文書に無いので当てない
-        if classification and classification != self.classification:
-            return None
-        entity = self.entity_of.get(name)
-        return (entity, column) if entity is not None else None
-
-    def ends(self, source: str, target: str) -> tuple[str, str] | None:
-        """関連の元と先の実体から、（元の列, 先の列）を外部キーで決める（決まらなければ `None`）。"""
-        by_name = {str(entity["name"]): entity for entity in self.entities}
-        # 先の実体の外部キーが元の実体を指す
-        for column, entity, referenced in self.references(by_name.get(target, {})):
-            if entity == source:
-                return referenced, column
-        # 元の実体の外部キーが先の実体を指す
-        for column, entity, referenced in self.references(by_name.get(source, {})):
-            if entity == target:
-                return column, referenced
-        return None
-
-
-def _er_cards(cardinality: str) -> tuple[str, str] | None:
-    """Mermaid の多重度を、両端の多重度にする（読み替えられなければ `None`）。"""
-    matched = ER_CARDINALITY.match(cardinality)
-    if matched is None:
-        return None
-    left = ER_CARDINALITIES.get(matched["left"])
-    right = ER_CARDINALITIES.get(matched["right"])
-    return (left, right) if left is not None and right is not None else None
 
 
 def _er_layout(tables: list[dict[str, Any]]) -> int:
@@ -284,14 +274,39 @@ def _er_layout(tables: list[dict[str, Any]]) -> int:
     )
 
 
+def _er_relation(
+    relation: Mapping[str, Any], columns: Mapping[str, set[str]]
+) -> dict[str, Any] | None:
+    """関連を ER 図の部品の関係にする（両端の列か多重度が図に出せなければ `None`）。"""
+    source, target = str(relation["from"]), str(relation["to"])
+    from_column, to_column = relation.get("from_column"), relation.get("to_column")
+    from_card, to_card = relation.get("from_cardinality"), relation.get("to_cardinality")
+    # 無い列・知らない多重度を指す関係は mdmark の図全体を警告にするため出さない
+    if (
+        from_column not in columns.get(source, set())
+        or to_column not in columns.get(target, set())
+        or from_card not in ER_CARDINALITIES
+        or to_card not in ER_CARDINALITIES
+    ):
+        return None
+    item: dict[str, Any] = {
+        "from": source,
+        "fromColumn": str(from_column),
+        "fromCard": str(from_card),
+        "to": target,
+        "toColumn": str(to_column),
+        "toCard": str(to_card),
+    }
+    if relation.get("label"):
+        item["label"] = str(relation["label"])
+    return item
+
+
 def _er(
-    value: Mapping[str, Any],
-    head: DiagramHead,
-    tables: Sequence[Mapping[str, Any]],
-    classification: str | None,
+    value: Mapping[str, Any], head: DiagramHead, tables: Sequence[Mapping[str, Any]]
 ) -> dict[str, Any]:
     """mdmark の ER 図の部品の定義を組み立てる。"""
-    model = _ErModel(value, tables, classification)
+    model = _ErModel(value, tables)
     nodes: list[dict[str, Any]] = []
     for entity in model.entities:
         name = str(entity["name"])
@@ -304,25 +319,13 @@ def _er(
                 node["desc"] = str(table["summary"])
         node["columns"] = model.columns(entity)
         nodes.append(node)
-    relations: list[dict[str, Any]] = []
-    for relation in _items(value, "relations"):
-        source, target = str(relation["from"]), str(relation["to"])
-        cards = _er_cards(str(relation.get("cardinality", "")))
-        ends = model.ends(source, target)
-        # 多重度を読み替えられない・端の列が決まらない関連は図に出さない（元データの表に残る）
-        if cards is None or ends is None:
-            continue
-        item: dict[str, Any] = {
-            "from": source,
-            "fromColumn": ends[0],
-            "fromCard": cards[0],
-            "to": target,
-            "toColumn": ends[1],
-            "toCard": cards[1],
-        }
-        if relation.get("label"):
-            item["label"] = str(relation["label"])
-        relations.append(item)
+    # 実体ごとの列の名前（関係の両端の列が実体にあるかを見る）
+    columns = {node["id"]: {str(column["name"]) for column in node["columns"]} for node in nodes}
+    relations = [
+        item
+        for item in (_er_relation(relation, columns) for relation in _items(value, "relations"))
+        if item is not None
+    ]
     width = _er_layout(nodes)
     return {
         "title": head.title,
@@ -340,7 +343,6 @@ def render_diagram(
     head: DiagramHead,
     *,
     tables: Sequence[Mapping[str, Any]] = (),
-    classification: str | None = None,
 ) -> str:
     """`x-diagram` の種類で、値から本文に置く図のブロックを組み立てる。"""
     if kind == "state":
@@ -348,7 +350,7 @@ def render_diagram(
     if kind in FLOW_KINDS:
         return _block("flow", layout_flow(_flow_graph(value, kind), head))
     if kind == "er":
-        return _block("er", _er(value, head, tables, classification))
+        return _block("er", _er(value, head, tables))
     raise ValueError(f"x-diagram {kind} は描けません")
 
 
