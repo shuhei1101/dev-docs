@@ -2,8 +2,8 @@ title: "mdmark"
 kind: "CDN の JS"
 version:
   current: master
-  latest: v0.9.0
-  checked_on: '2026-11-01'
+  latest: v0.10.0
+  checked_on: '2026-11-09'
   source: https://cdn.jsdelivr.net/gh/shuhei1101/mdmark@master/
   pinning: '固定しない。リリースのたびに `dist/` が入る master ブランチを読み、中身が変わるため integrity を付けない。jsDelivr は `@master` を CDN で 12 時間、ブラウザで 7 日キャッシュする（`cache-control: public, max-age=604800, s-maxage=43200`）。リリースをすぐ届けるときは purge.jsdelivr.net で CDN のキャッシュを削除する'
 catalogs:
@@ -44,8 +44,11 @@ catalogs:
       - name: '<!-- er -->'
         kind: 記法
         purpose: 'スキーマ駆動の変換の `x-diagram: er` を ER 図の部品で描く'
-        status: planned
-        description: '[mdmark#298](https://github.com/shuhei1101/mdmark/pull/298) で develop に入り、v0.9.0 の master には無い。定義は `title`・`scope`・`updated`・`width`・`tables[]`（`id`・`name`・`label`・`x`・`y`・`w`・`columns[]` の `name`・`type`・`pk`・`fk`・`nn`・`desc`）・`relations[]`（`from`・`fromColumn`・`fromCard`・`to`・`toColumn`・`toCard`・`label`）。関係の端の列は省けず、無い列を指すと図全体が書き方の警告になる'
+        description: '[mdmark#298](https://github.com/shuhei1101/mdmark/pull/298) で入り、v0.10.0 の master にある。定義は `title`・`scope`・`updated`・`width`・`tables[]`（`id`・`name`・`label`・`x`・`y`・`w`・`columns[]` の `name`・`type`・`pk`・`fk`・`nn`・`desc`）・`relations[]`（`from`・`fromColumn`・`fromCard`・`to`・`toColumn`・`toCard`・`label`）。関係の端の列は省けず、無い列を指すと図全体が書き方の警告になる。多重度は `1`・`0..1`・`1..n`・`0..n`'
+      - name: '<!-- flow -->'
+        kind: 記法
+        purpose: 'スキーマ駆動の変換の `x-diagram` の flow 系・`state` と、手で書く Mermaid の `flowchart` をフロー図の部品で描く'
+        description: 'ノードの `kind` は `llm`・`dm`・`script`・`mcp`・`data`・`external` と、判定の `start`・`question`・`action`・`result`（[mdmark#268](https://github.com/shuhei1101/mdmark/pull/268) で入り、v0.10.0 の master にある）。ノードは `hint`（ツールチップの説明）、線は `line`（`flow`・`read`・`write`・`reply`・`loop`）・`label`・`labelAt`・`tip`（ラベルのツールチップ。ラベルの無い線には出ない）、定義は中の箱を囲む `frame`（`title`・`x`・`y`・`w`・`h`）を持てる'
   - name: コマンド
     version: develop（mdmark#328 のマージ後）
     entries:

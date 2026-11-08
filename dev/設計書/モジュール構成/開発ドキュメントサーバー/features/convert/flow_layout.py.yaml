@@ -55,6 +55,12 @@ constants:
     usecase: 文書の取得
     summary: 戻る線を通す帯の幅（px）。`TD` は右、`LR` は下に取る
     value: '40'
+  - name: FRAME_PADDING
+    title: 枠の余白
+    container: features/convert/flow_layout.py
+    usecase: 文書の取得
+    summary: 枠と中の箱の間の余白（px）。AI Monitor の設計書の生成と同じ値
+    value: '20'
 functions:
   - name: layout_flow
     title: フロー図の配置
@@ -81,16 +87,17 @@ functions:
         description: 定義の `title`・`scope`・`updated`
     returns:
       type: dict[str, Any]
-      description: '`MdmarkFlowDefinition` の JSON にする値（`title`・`scope`・`updated`・`width`・`height`・`nodes`・`wires`）'
+      description: '`MdmarkFlowDefinition` の JSON にする値（`title`・`scope`・`updated`・`width`・`height`・枠があれば `frame`・`nodes`・`wires`）'
     process: |-
       1. 線を、箱の出た順の深さ優先でたどり、たどっている途中の箱へ戻る線と、元と先が同じ線を戻る線にする。残りの線を進む線にする
       2. 進む線だけで、元の無い箱を段 0 とし、各箱の段を元の箱からの最長の段数にする
       3. 段ごとに箱を出た順に並べ、`TD` は段を縦（`y = MARGIN + 段 × (NODE_HEIGHT + RANK_GAP)`）・段の中を横（`x = MARGIN + 順 × (NODE_WIDTH + ROW_GAP)`）に、`LR` は縦と横を入れ替えて置く
-      4. 進む線は、元の箱の進む向きの縁の中央から、先の箱の手前の縁の中央へ、先の段の手前 `RANK_GAP / 2` の位置で折れる縦と横の折れ線にする（`line` は `flow`）
-      5. 戻る線は、元の箱と先の箱の帯の側の縁の中央から、戻りの帯の中央を通る折れ線にする（`line` は `loop`）。元と先が同じ線は、出る点を縁の中央から `-NODE_HEIGHT / 4`（`LR` は `-NODE_WIDTH / 4`）、入る点を `+` 側にずらす
-      6. ラベルは、線の最も長い区間の中央を `labelAt` にする
-      7. 線の `id` は、中間データの線の出た順の `e{n}`（`n` は 1 始まり）にする
-      8. `width`・`height` は、箱の右端・下端の最大に `MARGIN` を足し、戻る線があれば帯の側に `LOOP_BAND` を足す
+      4. 枠があり、中の箱が 1 つ以上置かれていれば、中の箱の左上の最小から右下の最大までを `FRAME_PADDING` だけ広げた矩形を枠（`title`・`x`・`y`・`w`・`h`）にする。戻りの帯と図の右端・下端は、箱と枠の右端・下端の最大から取る
+      5. 進む線は、元の箱の進む向きの縁の中央から、先の箱の手前の縁の中央へ、先の段の手前 `RANK_GAP / 2` の位置で折れる縦と横の折れ線にする（`line` は中間データの線の種類）
+      6. 戻る線は、元の箱と先の箱の帯の側の縁の中央から、戻りの帯の中央を通る折れ線にする（`line` は `loop`）。元と先が同じ線は、出る点を縁の中央から `-NODE_HEIGHT / 4`（`LR` は `-NODE_WIDTH / 4`）、入る点を `+` 側にずらす
+      7. ラベルは、線の最も長い区間の中央を `labelAt` にし、詳細があれば `tip` に入れる。箱の説明があれば `hint` に入れる
+      8. 線の `id` は、中間データの線の出た順の `e{n}`（`n` は 1 始まり）にする
+      9. `width`・`height` は、箱と枠の右端・下端の最大に `MARGIN` を足し、戻る線があれば帯の側に `LOOP_BAND` を足す
     unit_tests:
       - name: test_layout_flow
         case: 正常
@@ -128,5 +135,23 @@ functions:
         condition: '`TD` で線 `a → b`・`b → b`'
         mock: なし
         expected: '`b → b` の `line` が `loop` で、`points` の最初と最後の点の `y` が `b` の縁の中央から上下に `14` ずれ、帯を通る'
+      - name: test_layout_flow_when_line_and_tips
+        case: 正常
+        summary: 線の種類・詳細と箱の説明
+        condition: '`TD` で説明を持つ箱 `a`・箱 `b`、種類 `read`・ラベル `x`・詳細 `y` の線 `a → b`'
+        mock: なし
+        expected: '線の `line` が `read`・`tip` が `y`、`a` の `hint` が箱の説明で、`b` は `hint` を持たない'
+      - name: test_layout_flow_when_frame
+        case: 正常
+        summary: 枠
+        condition: '`TD` で箱 `a`・`b`・`c`、線 `a → b`・`b → c`、`a`・`b` を中の箱にした表示 `判定` の枠'
+        mock: なし
+        expected: '`frame` が `{title: 判定, x: 0, y: 0, w: 200, h: 216}` で、`width` が枠の右端に `MARGIN` を足した `220`、`height` が箱 `c` の下端に `MARGIN` を足した `336`'
+      - name: test_layout_flow_when_frame_without_nodes
+        case: 正常
+        summary: 中の箱が置かれていない枠
+        condition: '`TD` で箱 `a`、中の箱が `z`（無い箱）だけの枠'
+        mock: なし
+        expected: 定義に `frame` が無い
 test_files:
   - tests/unit/dev_docs/features/convert/test_flow_layout.py
