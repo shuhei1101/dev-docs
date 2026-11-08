@@ -176,7 +176,7 @@ test.describe("説明", () => {
   // 配信していない配信元は起動時の検証で外した理由を出す（正常系）
   test("description_when_source_not_served", async ({ page }) => {
     await open(page, "/broken/docs/a", notServed, BROKEN_VIEW);
-    await expect(page.getByText("起動時の検証で、配信から外しました。")).toBeVisible();
+    await expect(page.getByText("起動時の検証で、配信から除外しました。")).toBeVisible();
   });
 
   // 無い配信元は端末の設定に無いことを出す（正常系）
@@ -206,7 +206,7 @@ test.describe("見つからなかったものの詳細", () => {
   // 配信していない配信元は外した理由と設定ファイルを出す（正常系）
   test("details_when_source_not_served", async ({ page }) => {
     await open(page, "/broken/docs/a", notServed, BROKEN_VIEW);
-    await expect(page.locator("dt", { hasText: "外した理由" })).toBeVisible();
+    await expect(page.locator("dt", { hasText: "除外した理由" })).toBeVisible();
     await expect(page.locator("dd", { hasText: "documents[0].paths 必須のキーがありません" })).toBeVisible();
     await expect(page.locator("dt", { hasText: "設定ファイル" })).toBeVisible();
     await expect(page.locator("dd", { hasText: "/home/me/broken/dev-docs.yaml" })).toBeVisible();

@@ -25,7 +25,7 @@ functions:
       description: 文言は画面設計『見つからない画面』の見出し・説明・詳細
     process: |-
       1. `data` を `MissingSchema.safeParse` で読む（読めなければ `route`）
-      2. `kind` を `missing` にし、`kind` ごとの文言に詳細の行を付ける。`doc` は `開こうとしたパス`（`value`）、`ref` は `開こうとしたリビジョン`（`value`）と `既定のリビジョン`（`context.defaultRef`。無ければ行を置かない）、`not_served` は `errors[]` ごとの `外した理由`（`{path} {reason}`）と `設定ファイル`（`context.configs`）、`source` は詳細を持たない
+      2. `kind` を `missing` にし、`kind` ごとの文言に詳細の行を付ける。`doc` は `開こうとしたパス`（`value`）、`ref` は `開こうとしたリビジョン`（`value`）と `既定のリビジョン`（`context.defaultRef`。無ければ行を置かない）、`not_served` は `errors[]` ごとの `除外した理由`（`{path} {reason}`）と `設定ファイル`（`context.configs`）、`source` は詳細を持たない
     unit_tests:
       - name: test_describe_missing
         case: 正常
@@ -38,7 +38,7 @@ functions:
         summary: 配信していない配信元
         condition: '`data` が `{missing: "not_served", value: "broken", errors: [{path: "documents[0]", reason: "必須"}]}`、`context.configs` が `["/r/dev-docs.yaml"]`'
         mock: なし
-        expected: '`kind` が `not_served`、詳細に `外した理由` の `documents[0] 必須` と `設定ファイル` の `/r/dev-docs.yaml`'
+        expected: '`kind` が `not_served`、詳細に `除外した理由` の `documents[0] 必須` と `設定ファイル` の `/r/dev-docs.yaml`'
       - name: test_describe_missing_when_route
         case: 正常
         summary: ルートに当たらない URL

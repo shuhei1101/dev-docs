@@ -9,7 +9,7 @@ import type { SourceConfigVersion } from './sourceConfigVersion';
 import type { SourceViolation } from './sourceViolation';
 
 /**
- * 読み直した後の配信元 1 つの状態。
+ * 再読み込みした後の配信元 1 つの状態。
  */
 export interface SettingsSourceStatus {
   id: string;

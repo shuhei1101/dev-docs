@@ -563,11 +563,12 @@ properties:
       nodes:
         type: array
         items:
-          properties: {id: {title: ID}, label: {title: 表示}, shape: {title: 形}}
+          properties: {id: {title: ID}, label: {title: 表示}, kind: {title: 種類}, hint: {title: 補足}}
       edges:
         type: array
         items:
-          properties: {from: {title: 元}, to: {title: 先}}
+          properties:
+            {from: {title: 元}, to: {title: 先}, label: {title: ラベル}, line: {title: 線}, tip: {title: 詳細}}
   states:
     title: 状態
     x-heading: 状態
@@ -595,12 +596,14 @@ lead: 図と表で読む文書
 internal_note: 内部メモの値
 flow:
   nodes:
-    - {id: a, label: 受付, shape: rect}
-    - {id: b, label: 保存, shape: cylinder}
+    - {id: q, label: 保存するか, kind: question, hint: 保存の判定}
+    - {id: r, label: 保存する, kind: result}
   edges:
-    - {from: a, to: b}
+    - {from: q, to: r, label: YES, line: read, tip: 保存の判定の詳細}
+  frame: {label: 判定, nodes: [q, r]}
 states:
   initial: 下書き
+  final: [公開]
   states: [{name: 下書き}, {name: 公開}]
   transitions:
     - {from: 下書き, to: 公開, trigger: 公開する}
@@ -624,6 +627,7 @@ command: |-
 items:
   - {name: 項目 1, description: 説明 1}
 """
+FLOW_BLOCK = re.compile(r"<!-- flow -->\n\n```json\n(.*?)\n```\n\n<!-- /flow -->", re.S)
 UNREADABLE_SEQUENCE = "sequenceDiagram\n  A->>B: 読む\n  これは Mermaid の構文でない行"
 UNREADABLE_DOC = (
     "id: doc-7\ntitle: 図の文書 7\nsequence: |-\n  ```mermaid\n"
@@ -665,8 +669,40 @@ def test_normal_when_schema_document_drawn(
     assert markdown.count("<!-- flow -->") == 3
     assert markdown.count("<!-- sequence -->") == 1
     assert "```mermaid" not in markdown
-    assert "<!-- table: data closed +columns hide=ID,形 -->\n| 表示 | ID | 形 |" in markdown
-    assert "<!-- table: data closed -->\n| 元 | 先 |" in markdown
+    assert "<!-- table: data closed +columns hide=ID -->\n| 表示 | ID | 種類 | 補足 |" in markdown
+    assert "<!-- table: data closed -->\n| ラベル | 元 | 先 | 線 | 詳細 |" in markdown
+    flows = [json.loads(block) for block in FLOW_BLOCK.findall(markdown)]
+    flowchart, states = flows[0], flows[1]
+    nodes = {node["id"]: node for node in flowchart["nodes"]}
+    assert (nodes["q"]["kind"], nodes["q"]["hint"], nodes["r"]["kind"]) == (
+        "question",
+        "保存の判定",
+        "result",
+    )
+    wire = flowchart["wires"][0]
+    assert (wire["label"], wire["line"], wire["tip"]) == ("YES", "read", "保存の判定の詳細")
+    frame = flowchart["frame"]
+    assert frame["title"] == "判定"
+    assert all(
+        frame["x"] <= node["x"]
+        and frame["y"] <= node["y"]
+        and node["x"] + node["w"] <= frame["x"] + frame["w"]
+        and node["y"] + node["h"] <= frame["y"] + frame["h"]
+        for node in flowchart["nodes"]
+    )
+    kinds = {node["name"]: node["kind"] for node in states["nodes"]}
+    assert (kinds["開始"], kinds["下書き"], kinds["公開"], kinds["終了"]) == (
+        "start",
+        "action",
+        "action",
+        "result",
+    )
+    names = {node["id"]: node["name"] for node in states["nodes"]}
+    assert [(names[w["from"]], names[w["to"]]) for w in states["wires"]] == [
+        ("開始", "下書き"),
+        ("下書き", "公開"),
+        ("公開", "終了"),
+    ]
     assert "| 項目 | 値 |" in markdown
     assert "| 種類 | 定期 |" in markdown
     assert "**全件実行**\n\n```bash\nuv run pytest\n```" in markdown
@@ -718,7 +754,13 @@ properties:
       relations:
         type: array
         items:
-          properties: {from: {title: 元}, to: {title: 先}, cardinality: {title: 多重度}}
+          properties:
+            from: {title: 元}
+            from_column: {title: 元の列}
+            from_cardinality: {title: 元の多重度}
+            to: {title: 先}
+            to_column: {title: 先の列}
+            to_cardinality: {title: 先の多重度}
   tables:
     type: array
     title: テーブル
@@ -739,9 +781,25 @@ er:
     - name: 商品
     - name: 支払い
   relations:
-    - {from: 顧客, to: 注文, cardinality: '||--o{', label: 注文する}
-    - {from: 顧客, to: 支払い, cardinality: '||--o{'}
-    - {from: 注文, to: 商品, cardinality: '}o--||'}
+    - from: 顧客
+      from_column: id
+      from_cardinality: '1'
+      to: 注文
+      to_column: customer_id
+      to_cardinality: 0..n
+      label: 注文する
+    - from: 顧客
+      from_column: id
+      from_cardinality: '1'
+      to: 支払い
+      to_column: customer_id
+      to_cardinality: 0..n
+    - from: 注文
+      from_column: product_id
+      from_cardinality: 0..n
+      to: 商品
+      to_column: id
+      to_cardinality: '1'
 tables:
   - name: customers
     title: 顧客
@@ -825,8 +883,7 @@ def test_normal_when_er_diagram_drawn(
             "toCard": "0..n",
         },
     ]
-    assert "<!-- table: data closed -->\n| label | 元 | 先 | 多重度 |" in markdown
-    assert "|  | 注文 | 商品 | }o--\\|\\| |" in markdown
+    assert "| 注文 | product_id | 0..n | 商品 | id | 1 |" in markdown
 
 
 # 本文（`description`）に id のリンクを持つ文書 1

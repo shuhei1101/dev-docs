@@ -262,7 +262,7 @@ data_models:
     container: features/view/types.py
     usecase: 文書の取得
     role: DTO
-    summary: 文書の取得の `diff`。比べたリビジョンと、返した文書の変化・変わった項目
+    summary: 文書の取得の `diff`。比べたリビジョンと、返却した文書の変化・変わった項目
     description: 共通の『画面の API のモデル』（`ApiModel`。JSON のキーは camelCase）を継承する。
     properties:
       - name: base
@@ -287,7 +287,7 @@ data_models:
     usecase: 文書の取得
     role: DTO
     summary: 文書の取得の `aliases` の 1 件
-    description: 共通の『画面の API のモデル』（`ApiModel`。JSON のキーは camelCase）を継承し、`extra="allow"` にする。`AliasEntry` の `extra` のキーは同じ階層に置き、値を持たないキーは載せない（`model_dump(exclude_none=True)`）。
+    description: 共通の『画面の API のモデル』（`ApiModel`。JSON のキーは camelCase）を継承し、`extra="allow"` にする。`AliasEntry` の `extra` のキーは同じ階層に配置し、値を持たないキーは載せない（`model_dump(exclude_none=True)`）。
     properties:
       - name: id
         title: 文書の ID

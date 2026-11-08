@@ -7,6 +7,7 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from dev_docs.features.validation.markdown import UncheckedKey
 from dev_docs.shared.errors import Violation
 
 OPERATIONS_MAX = 50
@@ -73,6 +74,7 @@ class WriteResultItem:
     version: str | None = None
     diff: str | None = None
     errors: list[Violation] = field(default_factory=list)
+    unchecked: list[UncheckedKey] = field(default_factory=list)
 
 
 @dataclass(frozen=True)

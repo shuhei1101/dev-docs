@@ -7,7 +7,7 @@
 import type { AliasItemAliasType } from './aliasItemAliasType';
 
 /**
- * 文書の取得の `aliases` の 1 件（`AliasEntry` の `extra` のキーは同じ階層に置く）。
+ * 文書の取得の `aliases` の 1 件（`AliasEntry` の `extra` のキーは同じ階層に配置する）。
  */
 export interface AliasItem {
   id: string;

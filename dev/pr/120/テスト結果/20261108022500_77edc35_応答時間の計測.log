@@ -1,0 +1,35 @@
+# 修正後（77edc35 を worktree から DEV_DOCS_PORT=8791 で起動。端末の設定は稼働中のサーバーと同じ）
+$ sh measure120.sh 8791（同じ 3 つの要求を 2 回）
+name に planner・limit 3: 55.221781585 秒: {"jsonrpc":"2.0","id":1,"result":{"content":[{"text":"作業範囲の外（参考）\nai-monitor: 該当 2 件・返した 2 件\n\n| id | kind | name | descrip
+view count: 4.929477443 秒: {"jsonrpc":"2.0","id":1,"result":{"content":[{"text":"作業範囲の外（参考）\nai-monitor: 該当 1467 件・返した 0 件\n","type":"text"}],"isError"
+body の正規表現 (?i)changelog・limit 5: 5.078501085 秒: {"jsonrpc":"2.0","id":1,"result":{"content":[{"text":"作業範囲の外（参考）\nai-monitor: 該当 5 件・返した 5 件\n\n| id | kind | name | descrip
+---
+name に planner・limit 3: 3.783896010 秒: {"jsonrpc":"2.0","id":1,"result":{"content":[{"text":"作業範囲の外（参考）\nai-monitor: 該当 2 件・返した 2 件\n\n| id | kind | name | descrip
+view count: 5.666953190 秒: {"jsonrpc":"2.0","id":1,"result":{"content":[{"text":"作業範囲の外（参考）\nai-monitor: 該当 1467 件・返した 0 件\n","type":"text"}],"isError"
+body の正規表現 (?i)changelog・limit 5: 5.264490688 秒: {"jsonrpc":"2.0","id":1,"result":{"content":[{"text":"作業範囲の外（参考）\nai-monitor: 該当 5 件・返した 5 件\n\n| id | kind | name | descrip
+
+[exited with code 0]
+
+# 修正前（稼働中のサーバー 127.0.0.1:8781。develop の worktree の 9b9fc91 のコード）
+$ sh measure120.sh 8781
+name に planner・limit 3: 73.905506236 秒: {"jsonrpc":"2.0","id":1,"result":{"content":[{"text":"作業範囲の外（参考）\nai-monitor: 該当 2 件・返した 2 件\n\n| id | kind | name | descrip
+view count: 27.415918762 秒: {"jsonrpc":"2.0","id":1,"result":{"content":[{"text":"作業範囲の外（参考）\nai-monitor: 該当 1467 件・返した 0 件\n","type":"text"}],"isError"
+body の正規表現 (?i)changelog・limit 5: 27.585601135 秒: {"jsonrpc":"2.0","id":1,"result":{"content":[{"text":"作業範囲の外（参考）\nai-monitor: 該当 5 件・返した 5 件\n\n| id | kind | name | descrip
+
+[exited with code 0]
+
+# measure120.sh
+#!/bin/sh
+PORT=$1
+until curl -s -o /dev/null -X POST "http://127.0.0.1:$PORT/mcp" -H 'Accept: application/json, text/event-stream' -H 'Content-Type: application/json' -d '{"jsonrpc":"2.0","id":1,"method":"tools/list"}'; do sleep 5; done
+call() {
+  label=$1; args=$2
+  start=$(date +%s.%N)
+  body=$(curl -s --max-time 300 -X POST "http://127.0.0.1:$PORT/mcp" -H 'Accept: application/json, text/event-stream' -H 'Content-Type: application/json' -d "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/call\",\"params\":{\"name\":\"search_docs\",\"arguments\":$args}}")
+  end=$(date +%s.%N)
+  printf '%s: %s 秒: %s\n' "$label" "$(echo "$end - $start" | bc)" "$(printf '%s' "$body" | head -c 160)"
+}
+BASE='"source":"ai-monitor","outside_scope":true,"cwd":"/mnt/c/Users/shuhe/repo/dev-docs"'
+call "name に planner・limit 3" "{$BASE,\"filter\":{\"field\":\"name\",\"op\":\"contains\",\"values\":[\"planner\"]},\"limit\":3}"
+call "view count" "{$BASE,\"view\":\"count\"}"
+call "body の正規表現 (?i)changelog・limit 5" "{$BASE,\"filter\":{\"field\":\"body\",\"op\":\"regex\",\"values\":[\"(?i)changelog\"]},\"limit\":5}"

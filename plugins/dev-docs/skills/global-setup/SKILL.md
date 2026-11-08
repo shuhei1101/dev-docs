@@ -34,11 +34,15 @@ argument-hint: "[クローンのパス]"
    - 書き先は `${CLAUDE_CONFIG_DIR:-~/.claude}/settings.json` の `env`
    - `env` のほかのキーと、ファイルのほかの内容は変えない
 
-5. dev-docs を起動して、つながることを確かめる。
+5. `write_docs` が Markdown の値の点検に使う mdmark の CLI が `PATH` にあるかを、`command -v mdmark` で確かめる。
+   - 無くても続ける（`write_docs` は点検せずに書き込む）
+
+6. dev-docs を起動して、つながることを確かめる。
    - 待ち受けていなければ、`{clone}/.venv/bin/python -m dev_docs serve` を切り離して起動する。環境変数 `DEV_DOCS_CONFIG` に端末の設定のパスを渡す
    - `http://127.0.0.1:${DEV_DOCS_PORT:-8781}/mcp` にツールの一覧（`tools/list`）を要求し、文書の MCP のツールが 6 つ返ることを確かめる
 
-6. 結果を示す。
+7. 結果を示す。
    - 作ったもの（端末の設定のパス・env に書いたキー）と、つながった結果を出す
+   - mdmark の CLI が無かったときは、`npm install -g github:shuhei1101/mdmark`（Node 24 以降）で入れると `write_docs` が Markdown の値を点検することを案内する
    - このセッションで文書の MCP を使うには `/mcp` でつなぎ直すことを案内する
    - 配信元を登録する `/dev-docs:setup` を案内する

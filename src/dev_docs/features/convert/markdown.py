@@ -10,7 +10,7 @@ from datetime import date, datetime
 from typing import Any
 from urllib.parse import quote
 
-from dev_docs.features.convert.diagrams import render_diagram
+from dev_docs.features.convert.diagrams import er_table_titles, render_diagram
 from dev_docs.features.convert.inline import heading_anchor, link_reference, rewrite_text
 from dev_docs.features.convert.types import DiagramHead, DiagramKind, RenderContext
 from dev_docs.features.documents.types import Document
@@ -23,7 +23,7 @@ ATTRIBUTE_MIN = 3
 LONG_VALUE_CHARS = 100
 WIDE_KEYS = ("description", "summary", "notes")
 LABEL_KEYS = ("label", "name")
-DIAGRAM_HIDDEN_KEYS = ("id", "shape")
+DIAGRAM_HIDDEN_KEYS = ("id",)
 TEST_FILE_KEYS = ("test_file", "test_files")
 EXAMPLE_SUFFIX = "_example"
 CHECK_MARK = "✓"
@@ -89,8 +89,8 @@ def _foreign_key(reference: str, context: RenderContext | None) -> str:
             return _escape_cell(reference)
         relative = quote(posixpath.relpath(link.path, folder or "."), safe="/")
         return f"[{reference}]({relative})"
-    # 同じ文書のテーブル: 論理名から見出しのアンカーへのリンク
-    heading = context.anchors.get(name)
+    # 同じ文書のテーブル: 物理名でも論理名にしてから、論理名で見出しのアンカーへのリンク
+    heading = context.anchors.get(context.table_titles.get(name, name))
     if heading is None:
         return _escape_cell(reference)
     return f"[{reference}](#{heading_anchor(heading)})"
@@ -377,17 +377,9 @@ class _Builder:
     ) -> None:
         """図と、続けて同じ値の閉じた元データの表を置く。"""
         kind: DiagramKind = sub.get("x-diagram", "flowchart")
-        # ER 図の列を補う同じ文書のテーブルと、外部キーの分類を判定する文書の分類（ER 図以外は使わない）
+        # ER 図の列を補う同じ文書のテーブル（ER 図以外は使わない）
         tables = self.data.get(ER_TABLES_KEY) if isinstance(self.data, Mapping) else None
-        self.blocks.append(
-            render_diagram(
-                value,
-                kind,
-                self.head(title),
-                tables=_items(tables),
-                classification=posixpath.splitext(posixpath.basename(self.context.path))[0],
-            )
-        )
+        self.blocks.append(render_diagram(value, kind, self.head(title), tables=_items(tables)))
         properties: Mapping[str, Any] = sub.get("properties") or {}
         for key, rows in value.items():
             if not _is_rows(rows):
@@ -544,7 +536,12 @@ def schema_to_markdown(
 ) -> str:
     """YAML の文書をスキーマの `x-heading`・`x-shape`・`x-key`・`x-diagram`・`x-hidden`・`title` に沿って Markdown にする。"""
     data = document.data
-    context = replace(context, anchors=_anchors(data, schema, {}))
+    tables = data.get(ER_TABLES_KEY) if isinstance(data, Mapping) else None
+    context = replace(
+        context,
+        anchors=_anchors(data, schema, {}),
+        table_titles=er_table_titles(_items(tables)),
+    )
     heading_key = _first(data, HEADING_KEYS)
     lead_key = _first(data, LEAD_KEYS)
     name = str(data[heading_key]) if heading_key else str(document.metadata["name"])

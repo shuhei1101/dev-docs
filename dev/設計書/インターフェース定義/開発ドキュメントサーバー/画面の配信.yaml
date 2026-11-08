@@ -1,7 +1,7 @@
 title: "画面の配信"
 entry:
   kind: endpoint
-  value: GET `/{path}`（`/_api/`・`/mcp`・`/_admin/` を除く）
+  value: GET `/{path}`（`/_api/`・`/mcp`・`/_admin/` を除く。`/_api/`・`/_admin/` の下で、どの入口にも当たらないパス（`/_admin/mcp/` の下を除く）は、GET・POST・PUT・PATCH・DELETE で 404 を返す）
 flows:
   - name: 正常系
     summary: 画面のパスに `index.html` を、`assets/` のパスに静的ファイルを返す
@@ -53,6 +53,31 @@ flows:
       - '`/assets/no-such.js` が 404 で、本文が `index.html` でない'
       - '`/_api/no-such` が 404 で、`Content-Type` が `application/problem+json`'
     test: test_error_when_not_found
+  - name: 異常系（除くパスへの GET 以外の要求・404）
+    summary: '`/_api/`・`/_admin/` の下（`/_admin/mcp/` の下を除く）の、どの入口にも当たらないパスへの要求は、POST・PUT・PATCH・DELETE でも 405 にせず 404 を返す'
+    setup:
+      - name: Mock
+        description: なし
+      - name: 画面のビルド
+        description: 正常系と同じビルドのフォルダ
+      - name: 入力
+        description: '`/_admin/session-context` と `/_admin/no-such` への POST、`/_api/no-such` への PUT'
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        participant C as クライアント
+        participant E as /{path}
+
+        C->>E: POST /_admin/session-context
+        E-->>C: 404 application/problem+json
+        C->>E: POST /_admin/no-such
+        E-->>C: 404 application/problem+json
+        C->>E: PUT /_api/no-such
+        E-->>C: 404 application/problem+json
+      ```
+    expected:
+      - '`/_admin/session-context` と `/_admin/no-such` への POST、`/_api/no-such` への PUT が 404 で、`Content-Type` が `application/problem+json`'
+    test: test_error_when_excluded_not_get
   - name: 異常系（画面のビルドが無い・503）
     summary: ビルドの `index.html` が無いとき、画面のパスは 503 でビルドを促し、画面の API は応え続ける
     setup:
@@ -101,7 +126,7 @@ status_codes:
   - code: '200'
     condition: '`index.html` か静的ファイルを返した（画面に無いパスも `index.html` を返し、見つからない画面は画面が出す）'
   - code: '404'
-    condition: '`assets/` のパスのファイルが無い'
+    condition: '`assets/` のパスのファイルが無い。`/_api/`・`/_admin/` の下（`/_admin/mcp/` の下を除く）の、どの入口にも当たらないパスへの要求（GET・POST・PUT・PATCH・DELETE）'
     notes: '`index.html` を返さない'
   - code: '503'
     condition: 画面のビルド（`index.html`）が無い
@@ -109,7 +134,7 @@ status_codes:
 error_format: RFC 9457 の `application/problem+json`。拡張メンバーは camelCase（`nextSteps`）
 constraints:
   - item: 除くパス
-    constraint: '`/_api/`・`/mcp`・`/_admin/` で始まるパスは画面を返さず、それぞれの入口が応える。スラッシュ無しの `/mcp`・`/_admin/mcp` も画面の配信に当たらず MCP が応える。無い `/_api/` のパスは `application/problem+json` の 404'
+    constraint: '`/_api/`・`/mcp`・`/_admin/` で始まるパスは画面を返さず、それぞれの入口が応える。スラッシュ無しの `/mcp`・`/_admin/mcp` も画面の配信に当たらず MCP が応える。無い `/_api/` のパスは `application/problem+json` の 404。`/_api/`・`/_admin/` の下（`/_admin/mcp/` の下を除く）の、どの入口にも当たらないパスへの要求は、POST・PUT・PATCH・DELETE でも `application/problem+json` の 404 を返す（除くパスの外への GET 以外の要求は 405）。`/mcp/`・`/_admin/mcp/` の下の無いパスは、マウントした MCP のアプリが応え、メソッドによらず `text/plain` の 404 を返す'
   - item: キャッシュ
     constraint: '`index.html` は `Cache-Control: no-cache`。`assets/` のファイルはファイル名に中身のハッシュを持ち、`Cache-Control: public, max-age=31536000, immutable`'
   - item: 認可

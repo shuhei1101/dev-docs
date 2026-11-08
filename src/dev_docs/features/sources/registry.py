@@ -106,7 +106,7 @@ class SourceRegistry:
                         errors=[
                             Violation(
                                 path=f"sources[{index}].id",
-                                rule=f"{served.id} は既に使われています",
+                                rule=f"{served.id} は既に使用されています",
                                 fix="sources[].id を別の値にしてください",
                             )
                         ],

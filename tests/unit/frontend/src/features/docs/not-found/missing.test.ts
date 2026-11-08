@@ -20,7 +20,7 @@ test("test_describe_missing_when_not_served", () => {
   );
 
   expect(result.kind).toBe("not_served");
-  expect(result.details).toContainEqual({ label: "外した理由", value: "documents[0] 必須" });
+  expect(result.details).toContainEqual({ label: "除外した理由", value: "documents[0] 必須" });
   expect(result.details).toContainEqual({ label: "設定ファイル", value: "/r/dev-docs.yaml" });
 });
 

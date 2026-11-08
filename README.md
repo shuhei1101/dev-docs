@@ -17,6 +17,6 @@ Claude Code にプラグイン `dev-docs` をユーザースコープで入れ�
 画面は `frontend/` の React（Vite）の SPA です。
 ビルドの成果物は `src/dev_docs/screen/` に置いて commit します。
 開発のコマンドは、直下の `package.json` の npm scripts にあります（[開発コマンド](dev/設計書/開発コマンド/)）。
-lefthook の pre-commit が、`frontend/**` の変更で検査を流し、画面をビルドし直して `src/dev_docs/screen/` をステージへ戻します。
+lefthook の pre-commit が、`frontend/**` の変更で画面をビルドし直して `src/dev_docs/screen/` をステージへ戻します。
 
 ドキュメント: https://shuhei1101.github.io/dev-docs/

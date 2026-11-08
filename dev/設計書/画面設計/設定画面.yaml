@@ -103,17 +103,17 @@ elements:
     kind: badge
     position: 配信元の一覧 > 状態
     description: 配信元の今の状態
-    label: アイコンと `配信中`（`serving`）/ `配信していない`（`not_served`）/ `無効`（`disabled`）/ `読み直していない`（`pending_reload`）
+    label: アイコンと `配信中`（`serving`）/ `配信停止`（`not_served`）/ `無効`（`disabled`）/ `再読み込み待ち`（`pending_reload`）
     visible_when: 常時
     source: 端末の設定の取得.sources[].status
     notes:
-      色: 配信中は成功、配信していないは危険、無効・読み直していないは弱めの色。アイコンと文言でも区別する
+      色: 配信中は成功、配信停止は危険、無効・再読み込み待ちは弱めの色。アイコンと文言でも区別する
   - name: 状態の補足
     kind: label
     position: 配信元の一覧 > 状態 > バッジの下
     description: 状態の理由と注意
-    label: 配信していないときは `起動時の検証で外しました。` と `errors[]` ごとの `{path} {reason}`。設定のバージョンが古いときは `設定のバージョン {config}（サーバーが読めるのは {server}）`。無効のときは `enabled が false です`。読み直していないときは `ファイルにありますが、まだ読み直していません。`
-    visible_when: 配信していない・設定のバージョンが古い・無効・読み直していないのいずれかのとき
+    label: 配信停止のときは `起動時の検証で除外しました。` と `errors[]` ごとの `{path} {reason}`。設定のバージョンが古いときは `設定のバージョン {config}（サーバーが読み込めるのは {server}）`。無効のときは `enabled が false です`。再読み込み待ちのときは `ファイルにありますが、まだ再読み込みしていません。`
+    visible_when: 配信停止・設定のバージョンが古い・無効・再読み込み待ちのいずれかのとき
     source: 端末の設定の取得.sources[].errors・端末の設定の取得.sources[].configVersion
   - name: 編集ボタン
     kind: button
@@ -143,7 +143,7 @@ elements:
     kind: switch
     position: 本文 > キーボードのセクション
     description: '`/`・`?` の 1 文字のショートカットを使うか'
-    label: '`1 文字のショートカットを使う`'
+    label: '`1 文字のショートカットを使用する`'
     io: 入力
     type: 真偽値
     visible_when: 常時
@@ -186,7 +186,7 @@ elements:
     required_label: '`必須`'
     pattern: ^[a-z0-9-]+$
     charset: 英小文字・数字・ハイフン。変換はしない
-    hint: '`画面の URL と文書の MCP の source に使います。英小文字・数字・ハイフンで入力します。`'
+    hint: '`画面の URL と文書の MCP の source に使用します。英小文字・数字・ハイフンで入力します。`'
     initial_value: 空
     autocomplete: off
     autofocus: true
@@ -215,7 +215,7 @@ elements:
     io: 入力
     type: 真偽値
     visible_when: 配信元のダイアログを開いたとき
-    hint: '`外すと、設定を残したまま配信を止めます。`'
+    hint: '`オフにすると、設定を残したまま配信を止めます。`'
     initial_value: 追加はオン、編集はその行の `enabled`
     target: 端末の設定の保存.sources[].enabled
   - name: 読み取りの範囲の入力欄
@@ -228,7 +228,7 @@ elements:
     visible_when: 配信元のダイアログを開いたとき
     required: true
     required_label: '`必須`'
-    hint: '`glob を 1 行に 1 つ。当たる作業場所から、この配信元の文書を読めます。`'
+    hint: '`glob を 1 行に 1 つ。当たる作業場所から、この配信元の文書を参照できます。`'
     placeholder: '`~/repo/**`'
     initial_value: 追加は空、編集はその行の `scope.read` を 1 行に 1 つ
     target: 端末の設定の保存.sources[].scope.read
@@ -271,7 +271,7 @@ elements:
     kind: label
     position: 削除の確認のダイアログ
     description: 削除で起きることと起きないこと
-    label: '`端末の設定から {id} の行を削除し、配信から外します。フォルダ {設定ファイルのフォルダ} と文書は削除しません。`'
+    label: '`端末の設定から {id} の行を削除し、配信から除外します。フォルダ {設定ファイルのフォルダ} と文書は削除しません。`'
     visible_when: 削除の確認のダイアログを開いたとき
     source: 端末の設定の取得.sources[].config（先頭のファイルのフォルダ）
   - name: 削除のキャンセル
@@ -295,7 +295,7 @@ elements:
     kind: toast
     position: 画面の右下
     description: 保存の結果
-    label: '`端末の設定を保存し、配信元を読み直しました。`'
+    label: '`端末の設定を保存し、配信元を再読み込みしました。`'
     visible_when: 追加・保存・削除が 200 を返したとき
     notes:
       読み上げ: '`role="status"` で読み上げる'
@@ -324,12 +324,12 @@ input_checks:
   - element: 配信元の ID の入力欄
     violation: 英小文字・数字・ハイフン以外の文字がある
     trigger: 追加・保存ボタンのクリック（一度出た後は入力のたび）
-    message: '`配信元の ID に使えない文字があります。英小文字・数字・ハイフンで入力してください。`'
+    message: '`配信元の ID に使用できない文字があります。英小文字・数字・ハイフンで入力してください。`'
     position: 入力欄の下
   - element: 配信元の ID の入力欄
     violation: 他の行の ID と重なる
     trigger: 追加・保存ボタンのクリック（一度出た後は入力のたび）
-    message: '`配信元の ID {入力した値} は既に使われています。別の ID を入力してください。`'
+    message: '`配信元の ID {入力した値} は既に使用されています。別の ID を入力してください。`'
     position: 入力欄の下
   - element: 設定ファイルの入力欄
     violation: 空の行しか無い

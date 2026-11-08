@@ -7,7 +7,7 @@
 import type { SettingsSourceStatus } from './settingsSourceStatus';
 
 /**
- * 読み直した後の配信元ごとの状態。
+ * 再読み込みした後の配信元ごとの状態。
  */
 export interface SettingsSourcesResponse {
   sources: SettingsSourceStatus[];

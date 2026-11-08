@@ -5,7 +5,7 @@ import { toFieldErrors } from "@/features/settings/settings/problem-errors";
 test("test_to_field_errors", () => {
   const errors = [
     { path: "sources[1].config[0]", reason: "ファイルがありません" },
-    { path: "sources[0].id", reason: "使えない文字があります" },
+    { path: "sources[0].id", reason: "使用できない文字があります" },
   ];
 
   const result = toFieldErrors(errors, 1);

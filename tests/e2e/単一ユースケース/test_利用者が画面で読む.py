@@ -912,11 +912,12 @@ properties:
       nodes:
         type: array
         items:
-          properties: {id: {title: ID}, label: {title: 表示}, shape: {title: 形}}
+          properties: {id: {title: ID}, label: {title: 表示}, kind: {title: 種類}, hint: {title: 補足}}
       edges:
         type: array
         items:
-          properties: {from: {title: 元}, to: {title: 先}}
+          properties:
+            {from: {title: 元}, to: {title: 先}, label: {title: ラベル}, line: {title: 線}, tip: {title: 詳細}}
   states:
     title: 状態
     x-heading: 状態
@@ -937,12 +938,14 @@ lead: 図と表で読む文書
 internal_note: 内部メモの値
 flow:
   nodes:
-    - {id: a, label: 受付, shape: rect}
-    - {id: b, label: 保存, shape: cylinder}
+    - {id: q, label: 保存するか, kind: question, hint: 保存の判定}
+    - {id: r, label: 保存する, kind: result}
   edges:
-    - {from: a, to: b}
+    - {from: q, to: r, label: YES, line: read, tip: 保存の判定の詳細}
+  frame: {label: 判定, nodes: [q, r]}
 states:
   initial: 下書き
+  final: [公開]
   states: [{name: 下書き}, {name: 公開}]
   transitions:
     - {from: 下書き, to: 公開, trigger: 公開する}
@@ -985,10 +988,26 @@ def test_normal_when_schema_document_drawn(
     expect(_heading(page)).to_have_text("図の文書 6")
     source_tables.first.locator("summary").click()
     # 検証
-    expect(main.locator('figure.mdmark-diagram[data-diagram="flow"]')).to_have_count(2)
+    flows = main.locator('figure.mdmark-diagram[data-diagram="flow"]')
+    expect(flows).to_have_count(2)
+    flowchart, states = flows.first, flows.nth(1)
+    expect(flowchart.locator('[data-node="q"]')).to_have_attribute("data-kind", "question")
+    expect(flowchart.locator('[data-node="r"]')).to_have_attribute("data-kind", "result")
+    expect(flowchart.locator(".mdmark-diagram-frame-title")).to_have_text("判定")
+    hint_id = flowchart.locator('[data-node="q"] .mdmark-diagram-info').get_attribute(
+        "aria-describedby"
+    )
+    expect(flowchart.locator(f'[id="{hint_id}"]')).to_contain_text("保存の判定")
+    label = flowchart.locator(".mdmark-diagram-label", has_text="YES")
+    expect(label).to_have_attribute("data-line", "read")
+    tip_id = label.get_attribute("aria-describedby")
+    expect(flowchart.locator(f'[id="{tip_id}"]')).to_contain_text("保存の判定の詳細")
+    expect(states.locator('.mdmark-diagram-node[data-kind="start"]')).to_have_count(1)
+    expect(states.locator('.mdmark-diagram-node[data-kind="result"]')).to_have_count(1)
+    expect(states.locator('.mdmark-diagram-node[data-kind="action"]')).to_have_count(2)
     expect(main.locator('figure.mdmark-diagram[data-diagram="sequence"]')).to_have_count(1)
     expect(main.get_by_text("sequenceDiagram")).to_have_count(0)
-    expect(source_tables.first.locator("th:visible")).to_have_text(["表示"])
+    expect(source_tables.first.locator("th:visible")).to_have_text(["表示", "種類", "補足"])
     expect(source_tables.nth(1)).not_to_have_attribute("open", "")
     expect(main.locator(".mdmark-syntax-warning")).to_have_count(0)
     attributes = main.locator("table").filter(has=page.locator("th", has_text="項目"))
@@ -1022,7 +1041,13 @@ properties:
       relations:
         type: array
         items:
-          properties: {from: {title: 元}, to: {title: 先}, cardinality: {title: 多重度}}
+          properties:
+            from: {title: 元}
+            from_column: {title: 元の列}
+            from_cardinality: {title: 元の多重度}
+            to: {title: 先}
+            to_column: {title: 先の列}
+            to_cardinality: {title: 先の多重度}
   tables:
     type: array
     title: テーブル
@@ -1042,8 +1067,18 @@ er:
         - {type: bigint, name: customer_id, key: FK, comment: '参照: 顧客.id'}
     - name: 商品
   relations:
-    - {from: 顧客, to: 注文, cardinality: '||--o{'}
-    - {from: 注文, to: 商品, cardinality: '}o--||'}
+    - from: 顧客
+      from_column: id
+      from_cardinality: '1'
+      to: 注文
+      to_column: customer_id
+      to_cardinality: 0..n
+    - from: 注文
+      from_column: product_id
+      from_cardinality: 0..n
+      to: 商品
+      to_column: id
+      to_cardinality: '1'
 tables:
   - name: customers
     title: 顧客

@@ -59,6 +59,25 @@ def test_error_when_not_found(
     assert api.headers["content-type"].startswith("application/problem+json")
 
 
+def test_error_when_excluded_not_get(
+    make_source: Callable[..., Any], make_server: Callable[..., Any], tmp_path: Path
+) -> None:
+    """/_api/・/_admin/ の下の、どの入口にも当たらないパスへの GET 以外の要求は 404 を返す（異常系）。"""
+    # 準備
+    env = make_server(make_source("sample"), screen_dir=_build_dir(tmp_path, with_index=True))
+    # 実行
+    session_context = env.client.post("/_admin/session-context", json={"cwd": "/"})
+    admin = env.client.post("/_admin/no-such", json={})
+    api = env.client.put("/_api/no-such", json={})
+    # 検証
+    assert session_context.status_code == 404
+    assert session_context.headers["content-type"].startswith("application/problem+json")
+    assert admin.status_code == 404
+    assert admin.headers["content-type"].startswith("application/problem+json")
+    assert api.status_code == 404
+    assert api.headers["content-type"].startswith("application/problem+json")
+
+
 def test_error_when_build_missing(
     make_source: Callable[..., Any], make_server: Callable[..., Any], tmp_path: Path
 ) -> None:

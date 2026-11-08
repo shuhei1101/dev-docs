@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+from collections.abc import Mapping
 from typing import Any
 
 from fastapi import FastAPI, Request
@@ -32,7 +33,13 @@ def _camelize(value: Any) -> Any:
     return value
 
 
-def _problem(name: str, status: int, detail: str, extra: dict[str, Any]) -> JSONResponse:
+def _problem(
+    name: str,
+    status: int,
+    detail: str,
+    extra: dict[str, Any],
+    headers: Mapping[str, str] | None = None,
+) -> JSONResponse:
     """problem+json の応答を作る。"""
     body = {
         "type": f"{PROBLEM_TYPE_BASE}{name}",
@@ -41,7 +48,7 @@ def _problem(name: str, status: int, detail: str, extra: dict[str, Any]) -> JSON
         "detail": detail,
         **extra,
     }
-    return JSONResponse(body, status_code=status, media_type=PROBLEM_JSON)
+    return JSONResponse(body, status_code=status, media_type=PROBLEM_JSON, headers=headers)
 
 
 def problem_of(error: DevDocsError, fields: dict[str, Any] | None = None) -> JSONResponse:
@@ -91,7 +98,14 @@ def register_error_handlers(app: FastAPI) -> None:
     @app.exception_handler(StarletteHTTPException)
     async def http_error(request: Request, error: Exception) -> Response:
         assert isinstance(error, StarletteHTTPException)  # noqa: S101
-        return _problem("HttpError", error.status_code, str(error.detail), {"nextSteps": []})
+        # 例外のヘッダー（405 の `Allow` など）は応答に載せる
+        return _problem(
+            "HttpError",
+            error.status_code,
+            str(error.detail),
+            {"nextSteps": []},
+            headers=error.headers,
+        )
 
     @app.exception_handler(Exception)
     async def unexpected(request: Request, error: Exception) -> Response:

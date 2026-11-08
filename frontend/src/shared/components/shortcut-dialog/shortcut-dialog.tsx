@@ -38,7 +38,7 @@ export const ShortcutDialog = ({
     <DialogContent>
       <DialogHeader>
         <DialogTitle>キーボードのショートカット</DialogTitle>
-        <DialogDescription>この画面で使えるキーです。</DialogDescription>
+        <DialogDescription>この画面で使用できるキーです。</DialogDescription>
       </DialogHeader>
       <ul className="space-y-2">
         {shortcutsFor(screen, singleKey).map(({ def, hotkeys }) => (

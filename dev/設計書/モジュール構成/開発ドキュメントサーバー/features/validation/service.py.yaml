@@ -11,6 +11,8 @@ diagrams:
         文書の検査 ..> スクリプトの実行 : validators[]
         文書の検査 ..> 検査の出力の解釈
         文書の検査 ..> 違反 : 返す
+        文書の検査 ..> 変えたMarkdownの値
+        文書の検査 ..> Markdownの値の点検
         class 文書の検査 {
           <<class>>
         }
@@ -32,12 +34,20 @@ diagrams:
         class 違反 {
           <<dataclass>>
         }
+        class 変えたMarkdownの値 {
+          <<function>>
+        }
+        class Markdownの値の点検 {
+          <<function>>
+        }
         click スキーマの検査 href "./rules.py.yaml#スキーマの検査"
         click IDの形の検査 href "./rules.py.yaml#IDの形の検査"
         click 関連の種類の検査 href "./rules.py.yaml#関連の種類の検査"
         click 検査の出力の解釈 href "./scripts.py.yaml#検査の出力の解釈"
         click スクリプトの実行 href "../../integrations/scripts.py.yaml#スクリプトの実行"
         click 違反 href "../../shared/errors.py.yaml#違反"
+        click 変えたMarkdownの値 href "./markdown.py.yaml#変えたMarkdownの値"
+        click Markdownの値の点検 href "./markdown.py.yaml#Markdownの値の点検"
 constants:
   - name: VALIDATOR_ON_READ_CACHE
     title: 読み取りの検査の結果の数
@@ -159,6 +169,59 @@ classes:
             mock: なし
             expected: 空の並び（`'files' is a required property` を返さない）
             exception: '-'
+      - name: check_markdown
+        title: Markdownの値を点検する
+        summary: 書き込む文書の変えた Markdown の値を mdmark の点検に通す
+        kind: メソッド
+        scope: public
+        thread_safe: true
+        side_effects: mdmark の CLI を値ごとに起動する
+        args:
+          - name: target
+            title: 読み書きの場所
+            type: Target
+            required: true
+            passing: positional
+            description: mdmark を動かす場所（`target.base`）とスキーマを読む場所
+          - name: document
+            title: 文書
+            type: Document
+            required: true
+            passing: positional
+            description: 書こうとしている内容で作った文書（検査するで違反の無かったもの）
+          - name: previous
+            title: 操作の前の内容
+            type: Mapping[str, Any] | None
+            required: true
+            passing: keyword
+            description: 操作を当てる前の文書の `data`。`create` は `None`
+          - name: stopped
+            title: 止めた理由
+            type: str | None
+            required: false
+            default: None
+            passing: keyword
+            description: 同じ書き込みの前の文書の点検で止めた理由
+        returns:
+          type: MarkdownCheck
+          description: 違反・点検できなかったキー・止めた理由
+        process: |-
+          1. 文書に当てるスキーマを `store.row_schema(target, kind)` で引く
+          2. 変えたMarkdownの値（`document.data`・`previous`・スキーマ）を引く。空なら空の `MarkdownCheck`（`stopped` は引数のまま）を返す
+          3. Markdownの値の点検（`cwd=target.base`・`timeout_sec`・`stopped`）を返す
+        unit_tests:
+          - name: test_document_checker_check_markdown
+            case: 正常
+            summary: 変えた値だけを点検に渡す
+            condition: '`body` が `contentMediaType: text/markdown` の種類で、前 `{body: a}`、後 `{body: b}` の文書'
+            mock: '`check_markdown_values`（受けた値を控える）'
+            expected: '`{"body": "b"}` と `cwd=target.base` で呼ばれる'
+          - name: test_document_checker_check_markdown_when_unchanged
+            case: 正常
+            summary: Markdown の値を変えない
+            condition: '前も後も `{body: a}`'
+            mock: '`check_markdown_values`'
+            expected: 空の `MarkdownCheck` で、`check_markdown_values` は呼ばれない
       - name: clear
         title: 控えを捨てる
         summary: 読み取りの結果の控えを捨てる

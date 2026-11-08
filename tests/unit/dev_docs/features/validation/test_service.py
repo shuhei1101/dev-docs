@@ -14,6 +14,7 @@ from dev_docs.features.documents.types import Document
 from dev_docs.features.history.snapshot import SnapshotStore
 from dev_docs.features.sources.types import DocumentTable, ScriptEntry, ServedSource, SourceConfig
 from dev_docs.features.validation import service as service_module
+from dev_docs.features.validation.markdown import MarkdownCheck
 from dev_docs.features.validation.service import DocumentChecker
 from dev_docs.shared.yaml_io import load_yaml
 
@@ -187,3 +188,51 @@ def test_document_checker_check_when_records(
     result = checker.check(make_target(source), document, on="read")
     # 検証
     assert result == []
+
+
+MARKDOWN_SCHEMA = {
+    "type": "object",
+    "properties": {"body": {"type": "string", "contentMediaType": "text/markdown"}},
+}
+
+
+def test_document_checker_check_markdown(
+    make_checked_target: Callable[..., Target],
+    make_document: Callable[..., Document],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """変えた値だけを点検に渡す（正常系）。"""
+    # 準備
+    target = make_checked_target([], row_validators=[])
+    calls: list[tuple[dict[str, str], Path]] = []
+
+    def _fake(values: dict[str, str], **kwargs: Any) -> MarkdownCheck:
+        calls.append((dict(values), kwargs["cwd"]))
+        return MarkdownCheck(violations=[], unchecked=[])
+
+    monkeypatch.setattr(service_module, "check_markdown_values", _fake)
+    document = make_document(data={"body": "b"})
+    # 実行
+    _checker(MARKDOWN_SCHEMA).check_markdown(target, document, previous={"body": "a"})
+    # 検証
+    assert calls == [({"body": "b"}, target.base)]
+
+
+def test_document_checker_check_markdown_when_unchanged(
+    make_checked_target: Callable[..., Target],
+    make_document: Callable[..., Document],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Markdown の値を変えない（正常系）。"""
+    # 準備
+    target = make_checked_target([], row_validators=[])
+    calls: list[Any] = []
+    monkeypatch.setattr(
+        service_module, "check_markdown_values", lambda *args, **kwargs: calls.append(args)
+    )
+    document = make_document(data={"body": "a"})
+    # 実行
+    result = _checker(MARKDOWN_SCHEMA).check_markdown(target, document, previous={"body": "a"})
+    # 検証
+    assert result == MarkdownCheck(violations=[], unchecked=[])
+    assert calls == []

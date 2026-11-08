@@ -174,7 +174,7 @@ def test_schema_to_markdown_when_diagram(make_document: Callable[..., Document])
                             "properties": {
                                 "id": {"title": "ID"},
                                 "label": {"title": "表示"},
-                                "shape": {"title": "形"},
+                                "kind": {"title": "種類"},
                             }
                         }
                     },
@@ -190,8 +190,8 @@ def test_schema_to_markdown_when_diagram(make_document: Callable[..., Document])
             "name": "N",
             "flow": {
                 "nodes": [
-                    {"id": "a", "label": "A", "shape": "rect"},
-                    {"id": "b", "label": "B", "shape": "round"},
+                    {"id": "a", "label": "A", "kind": "process"},
+                    {"id": "b", "label": "B", "kind": "store"},
                 ],
                 "edges": [{"from": "a", "to": "b"}],
             },
@@ -203,7 +203,7 @@ def test_schema_to_markdown_when_diagram(make_document: Callable[..., Document])
     # 検証
     assert "<!-- flow -->" in result
     assert '"updated": "2026-11-03"' in result
-    assert "<!-- table: data closed +columns hide=ID,形 -->\n| 表示 | ID | 形 |" in result
+    assert "<!-- table: data closed +columns hide=ID -->\n| 表示 | ID | 種類 |" in result
     assert "<!-- table: data closed -->\n| 元 | 先 |" in result
 
 
@@ -352,6 +352,43 @@ def test_schema_to_markdown_when_foreign_key(make_document: Callable[..., Docume
     assert "[タスク.ID](#tasks)" in result
 
 
+def test_schema_to_markdown_when_foreign_key_physical_name(
+    make_document: Callable[..., Document],
+) -> None:
+    """物理名で書いた同じ文書のテーブルへの外部キー（正常系）。"""
+    # 準備
+    schema = {
+        "properties": {
+            "tables": {
+                "x-shape": "sections",
+                "x-key": "name",
+                "items": {
+                    "properties": {
+                        "columns": {"x-heading": "カラム", "x-shape": "table", "items": {}},
+                    }
+                },
+            }
+        }
+    }
+    document = make_document(
+        data={
+            "name": "N",
+            "tables": [
+                {"name": "tasks", "title": "タスク", "columns": [{"name": "id"}]},
+                {
+                    "name": "comments",
+                    "title": "コメント",
+                    "columns": [{"name": "task_id", "foreign_key": {"table": "tasks.id"}}],
+                },
+            ],
+        }
+    )
+    # 実行
+    result = schema_to_markdown(document, schema, CONTEXT)
+    # 検証
+    assert "[tasks.id](#tasks)" in result
+
+
 def test_render_table() -> None:
     """セルの書き方（正常系）。"""
     # 準備
@@ -399,6 +436,23 @@ def test_render_table_when_objects() -> None:
     assert "| other_id | 不明.ID |" in result
     assert "a: 1、b: 2" in result
     assert "件" not in result
+
+
+def test_render_table_when_physical_name() -> None:
+    """物理名で書いた同じ文書のテーブルへの外部キー（正常系）。"""
+    # 準備
+    context = RenderContext(
+        links={},
+        issue_url=None,
+        path="dev/er/タスク.yaml",
+        anchors={"タスク": "tasks"},
+        table_titles={"tasks": "タスク", "タスク": "タスク"},
+    )
+    rows: list[dict[str, Any]] = [{"name": "task_id", "foreign_key": {"table": "tasks.id"}}]
+    # 実行
+    result = render_table(rows, {}, table_key="er:columns", context=context)
+    # 検証
+    assert "[tasks.id](#tasks)" in result
 
 
 def test_render_table_when_closed_and_hidden() -> None:

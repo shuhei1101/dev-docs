@@ -1,0 +1,14 @@
+dev-docs のサーバーの再起動:
+  説明: develop の worktree から起動して稼働中の dev-docs のサーバー（127.0.0.1:8781）を、マージした develop のコードで起動し直し、表の外部キーのセルの変換と、エンドポイントの不在の判定に関わる応答を効かせる
+  タグ: [再起動]
+  実行者: planner
+  時期: マージの後
+  回数: 1 回限り
+  可逆: true
+  疎通確認: dev-docs のサーバーの再起動/疎通確認.sh
+  実行: dev-docs のサーバーの再起動/実行.sh
+  確認: dev-docs のサーバーの再起動/確認.sh
+  切り戻し: null
+  失敗時: 既定の対処を 1 回、2 回連続で失敗したら依頼元へ返す
+  確認方法: http://127.0.0.1:8781/_admin/session-start へ session_id と reason の JSON を POST すると 200 と forgotten が返り、http://127.0.0.1:8781/_admin/no-such と http://127.0.0.1:8781/_admin/session-context への POST が 404 を返し、aituber の ER 図『キャラクター』（dev/設計書/ER図/キャラクター.yaml）の Markdown で、物理名の外部キー characters.character_id のセルが見出しへのリンクになっている
+  状態: "-"

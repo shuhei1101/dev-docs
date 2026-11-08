@@ -11,7 +11,7 @@ const problemResponse = (status: number, body: Record<string, unknown>) =>
 test("test_from_response", async () => {
   const errors = [
     { path: "sources[1].config[0]", reason: "ファイルがありません" },
-    { path: "sources[0].id", reason: "使えない文字があります" },
+    { path: "sources[0].id", reason: "使用できない文字があります" },
   ];
   const response = problemResponse(422, {
     type: "urn:dev-docs:error:ValidationFailedError",

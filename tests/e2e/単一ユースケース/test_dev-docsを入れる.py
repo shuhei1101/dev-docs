@@ -1,9 +1,12 @@
 from __future__ import annotations
 
 import json
+import os
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any
+
+import pytest
 
 from dev_docs.features.settings.query import SETTINGS_VERSION
 
@@ -44,10 +47,15 @@ def test_normal(
     schema_errors: Callable[[Path, Any], list[str]],
     list_mcp_tools: Callable[[int], list[str]],
     serve_pid_count: Callable[[int], int],
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """端末の設定・Claude Code の env・起動を用意し、`/mcp` につながることを確かめる（正常系）。"""
     # 準備
     clone = make_clone(sync=False)
+    # claude -p を動かす環境の PATH から mdmark を持つフォルダを除く
+    folders = os.environ["PATH"].split(os.pathsep)
+    kept = [folder for folder in folders if not (Path(folder) / "mdmark").exists()]
+    monkeypatch.setenv("PATH", os.pathsep.join(kept))
     settings = tmp_path / "terminal" / "settings.yaml"
     settings.parent.mkdir()
     work = tmp_path / "work"
@@ -72,6 +80,7 @@ def test_normal(
     assert len(list_mcp_tools(claude_home.port)) == TOOL_COUNT
     assert str(settings) in run.text
     assert "/dev-docs:setup" in run.text
+    assert "npm install -g github:shuhei1101/mdmark" in run.text
     assert claude_home.real_changes() == []
 
 

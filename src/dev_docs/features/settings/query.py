@@ -53,7 +53,7 @@ def validate_terminal_config(value: Any) -> list[Violation]:
                     violations.append(
                         Violation(
                             path=f"sources[{index}].id",
-                            rule=f"{row_id} は既に使われています",
+                            rule=f"{row_id} は既に使用されています",
                             fix="別の ID にしてください",
                         )
                     )
@@ -70,7 +70,7 @@ def validate_terminal_config(value: Any) -> list[Violation]:
                             violations.append(
                                 Violation(
                                     path=f"sources[{index}].scope.{key}[{position}]",
-                                    rule="空の文字列は書けません",
+                                    rule="空の文字列は記載できません",
                                 )
                             )
     # 読めるバージョンより新しい設定

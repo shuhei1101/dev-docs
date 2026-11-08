@@ -100,7 +100,7 @@ classes:
             summary: 既定の ID が重なる
             condition: '`id` を省いた 2 行の設定の `name` がどちらも `a`'
             mock: 配信元の読み込み（偽物）
-            expected: 後の行が `not_served` で違反が `sources[1].id`
+            expected: 後の行が `not_served` で違反が `sources[1].id`、`rule` が `a は既に使用されています`
           - name: test_source_registry_reload_when_reading
             case: 正常
             summary: 読み直しの間は古い一覧で応える
