@@ -1,0 +1,69 @@
+use_cases:
+  - kind: single
+    scenario: dev/設計書/シナリオ/単一ユースケース/起動する.yaml
+    impact: changed
+    detail: 端末の設定を XDG_CONFIG_HOME の下から、状態を XDG_STATE_HOME の下か DEV_DOCS_STATE_DIR から決める。先頭の配信元の設定が Git 管理外でも配信できる
+    depends_on: []
+  - kind: single
+    scenario: dev/設計書/シナリオ/単一ユースケース/配信元を追加する.yaml
+    impact: changed
+    detail: Git 管理外のフォルダの dev-docs.yaml と、.gitignore した dev-docs.local.yaml を先頭に置いた配信元を追加できる
+    depends_on: []
+  - kind: single
+    scenario: dev/設計書/シナリオ/単一ユースケース/dev-docsを入れる.yaml
+    impact: changed
+    detail: 端末の設定の既定の場所を XDG_CONFIG_HOME の下にする
+    depends_on: []
+  - kind: single
+    scenario: dev/設計書/シナリオ/単一ユースケース/設定・スクリプトを変える.yaml
+    impact: run_only
+    detail: 先頭の設定を default_ref から読む今の動きが変わらないことを確かめる
+    depends_on: []
+docs:
+  - page: dev/設計書/設定/開発ドキュメントサーバー.yaml
+    new: false
+    change: default_ref の説明に、先頭の設定が Git 管理外のときの読み方を追加。端末の設定の既定のパス・state_dir の既定と XDG_CONFIG_HOME・XDG_STATE_HOME・DEV_DOCS_STATE_DIR を追加
+    status: todo
+  - page: docs/リファレンス/設定.md
+    new: false
+    change: 端末の設定の既定のパス・state_dir の既定・環境変数 DEV_DOCS_STATE_DIR・default_ref の先頭の設定が Git 管理外のときの読み方
+    status: todo
+  - page: docs/リファレンス/CLI.md
+    new: false
+    change: 端末の設定の既定のパスと環境変数（XDG_CONFIG_HOME・XDG_STATE_HOME・DEV_DOCS_STATE_DIR）
+    status: todo
+  - page: docs/リファレンス/用語集.md
+    new: false
+    change: 端末の設定・状態の置き場の既定のパス
+    status: todo
+  - page: docs/使い方/dev-docsを入れる.md
+    new: false
+    change: 端末の設定の既定の場所
+    status: todo
+  - page: docs/使い方/配信元を配信する.md
+    new: false
+    change: Git 管理外のフォルダの dev-docs.yaml と、.gitignore した dev-docs.local.yaml を先頭に置く書き方
+    status: todo
+  - page: docs/はじめに/コアコンセプト/配信元と権限.md
+    new: false
+    change: 設定のマージと配信元のフォルダの説明に、先頭の設定が Git 管理外のときにディスクから読むことを追加
+    status: todo
+  - page: plugins/dev-docs/skills/global-setup/SKILL.md
+    new: false
+    change: 端末の設定の既定を ${XDG_CONFIG_HOME:-~/.config}/dev-docs/settings.yaml にする
+    status: todo
+  - page: templates/settings.yaml
+    new: false
+    change: 先頭のコメントの端末の設定の場所を XDG_CONFIG_HOME に合わせる
+    status: todo
+  - page: dev/設計書/開発コマンド/開発コマンド.yaml
+    new: false
+    change: 端末の設定・状態の置き場のパスの記述を合わせる
+    status: todo
+scope_out:
+  - item: rule-inject・alias-inject・mdmark・knowledge の端末の設定・環境変数の揃え方（D-145〜D-147）
+    reason: 各リポジトリへ別に起票済みで、このリポジトリの変更ではない
+    plan: none
+  - item: 既定と違う場所にある既存の端末の設定・状態のフォルダの移し替え
+    reason: XDG_CONFIG_HOME・XDG_STATE_HOME を設定していない端末は今と同じパスで、移し替える物が無い
+    plan: none
