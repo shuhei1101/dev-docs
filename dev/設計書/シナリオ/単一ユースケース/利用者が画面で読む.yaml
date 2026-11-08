@@ -602,7 +602,7 @@ scenarios:
         description: 'sample に、`x-shape: diagram`・`x-diagram: flowchart` の項目（ノード 2 つ・辺 1 つ）、`x-shape: diagram`・`x-diagram: state` の項目、`sequenceDiagram` を書いた Mermaid の文字列の項目、スカラーが 3 つ以上並ぶオブジェクト、改行を含む値、`x-hidden: true` の項目を持つスキーマと、その文書 6 を置く'
         notes: 文書 6 の `title`・`lead` は見出しとリードに使う
       - name: フローチャートと状態遷移
-        description: 'flowchart の項目は、`kind: question`・`hint` を持つノードと `kind: result` のノード、`line: read`・`tip` を持つ辺、2 つのノードを囲む `frame` を持つ。state の項目は `initial` と `final` を持つ'
+        description: 'flowchart の項目は、`kind: question`・`hint` を持つノードと `kind: result` のノード、`label`・`line: read`・`tip` を持つ辺、2 つのノードを囲む `frame` を持つ。state の項目は `initial` と `final` を持つ'
         notes: 構造は AI Monitor の設計書のスキーマ（`共通.schema.yaml` の `flowchart`・`state_transitions`）と同じ
       - name: dev-docs
         description: sample を配信している dev-docs
@@ -624,7 +624,7 @@ scenarios:
       ```
     expected:
       - flowchart と state の項目が mdmark のフロー図で、`sequenceDiagram` の項目が mdmark のシーケンス図で描かれ、Mermaid のコードブロックが本文に出ない
-      - 'flowchart のフロー図で、`kind: question` のノードが質問の形状、`kind: result` のノードが結果の形状で出て、`frame` の 2 つのノードが `label` の枠に囲まれ、`hint` がノードの、`tip` が線のツールチップに出る'
+      - 'flowchart のフロー図で、`kind: question` のノードが質問の形状、`kind: result` のノードが結果の形状で出て、`frame` の 2 つのノードが `label` の枠に囲まれ、`hint` がノードの、`tip` が線のラベルのツールチップに出る'
       - state のフロー図に、開始のノードから初期状態への線と、終了状態から終了のノードへの線が出る
       - 図の下の元データの表は閉じた状態で出て、開くとノードの表の先頭の列が `表示` で、ID の列が隠れている
       - 元データの表に、列名が表に無い・先頭の列を隠せないという mdmark の警告が出ない

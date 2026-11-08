@@ -373,7 +373,7 @@ flows:
         description: 'sample に、`x-shape: diagram`・`x-diagram: flowchart` の項目（ノード 2 つ・辺 1 つ）、`x-shape: diagram`・`x-diagram: state` の項目、`sequenceDiagram` を書いた Mermaid の文字列の項目、`flowchart` を書いた Mermaid の文字列の項目、スカラーが 3 つ以上並ぶオブジェクト、改行を含む値、`x-hidden: true` の項目、説明の列を持つ表の項目を持つスキーマと、その文書 6 を置く'
         notes: 文書 6 の `title`・`lead` は見出しとリードに使う
       - name: フローチャートと状態遷移
-        description: '`x-diagram: flowchart` の項目は、`kind: question`・`hint` を持つノード `q` と `kind: result` のノード `r`、`line: read`・`tip` を持つ `q` から `r` への辺、`q`・`r` を囲む `frame`（`label: 判定`）を持つ。`x-diagram: state` の項目は、状態 `下書き`・`公開` と `下書き` から `公開` への遷移、`initial: 下書き`・`final: [公開]` を持つ'
+        description: '`x-diagram: flowchart` の項目は、`kind: question`・`hint` を持つノード `q` と `kind: result` のノード `r`、`label`・`line: read`・`tip` を持つ `q` から `r` への辺、`q`・`r` を囲む `frame`（`label: 判定`）を持つ。`x-diagram: state` の項目は、状態 `下書き`・`公開` と `下書き` から `公開` への遷移、`initial: 下書き`・`final: [公開]` を持つ'
         notes: '-'
     flow: |-
       ```mermaid
@@ -387,7 +387,7 @@ flows:
       ```
     expected:
       - '`markdown` に `<!-- flow -->` の範囲が 3 つと `<!-- sequence -->` の範囲が 1 つあり、`` ```mermaid `` のコードブロックが無い'
-      - 'flowchart の `<!-- flow -->` の JSON で、`q` の `kind` が `question`・`hint` が文書の `hint`、`r` の `kind` が `result`、`q` から `r` への線の `line` が `read`・`tip` が文書の `tip` で、`frame` の `title` が `判定` で `q`・`r` の位置を囲む'
+      - 'flowchart の `<!-- flow -->` の JSON で、`q` の `kind` が `question`・`hint` が文書の `hint`、`r` の `kind` が `result`、`q` から `r` への線の `label` が文書の `label`・`line` が `read`・`tip` が文書の `tip` で、`frame` の `title` が `判定` で `q`・`r` の位置を囲む'
       - 'state の `<!-- flow -->` の JSON に、`kind` が `start` のノードから `下書き` への線と、`公開` から `kind` が `result` のノードへの線があり、`下書き`・`公開` のノードの `kind` が `action`'
       - 図の元データの表が `closed` の表のマーカーで囲まれ、ノードの表の先頭の列が `表示` で、`+columns hide=` に ID の列名がある。辺の表のマーカーは `hide=` を持たない
       - スカラーが並ぶオブジェクトが、列名が `項目`・`値` の表になっている
