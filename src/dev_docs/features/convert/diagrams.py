@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 from collections.abc import Mapping, Sequence
-from typing import Any, cast
+from typing import Any, Literal, cast
 
 from dev_docs.features.convert.flow_layout import layout_flow
 from dev_docs.features.convert.mermaid import parse_mermaid
@@ -93,10 +93,14 @@ def _text(value: Any) -> str | None:
 
 def _flow_graph(value: Mapping[str, Any], kind: DiagramKind) -> FlowGraph:
     """flow 系の値を中間データにする（`clicks` は描かない）。"""
-    direction = value.get("direction")
     # 向き: 指定があればその値、無ければ図の種類の既定
-    if direction not in ("TD", "LR"):
-        direction = "LR" if kind in LEFT_TO_RIGHT_KINDS else "TD"
+    direction: Literal["TD", "LR"] = (
+        cast("Literal['TD', 'LR']", value["direction"])
+        if value.get("direction") in ("TD", "LR")
+        else "LR"
+        if kind in LEFT_TO_RIGHT_KINDS
+        else "TD"
+    )
     nodes = [
         FlowNode(
             id=str(node["id"]),
