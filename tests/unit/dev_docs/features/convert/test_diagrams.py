@@ -227,6 +227,21 @@ def test_render_diagram_when_state_representative() -> None:
     assert [(w["from"], w["to"]) for w in definition["wires"]] == [("s2", "s1"), ("s1", "s2")]
 
 
+def test_render_diagram_when_state_without_representative() -> None:
+    """`representative` の無い `全状態`・`元の状態` の遷移（正常系）。"""
+    # 準備
+    value = {
+        "states": [{"name": "下書き"}],
+        "transitions": [{"from": "全状態", "to": "下書き"}],
+    }
+    # 実行
+    result = render_diagram(value, "state", HEAD)
+    # 検証
+    definition = _definition(result, "flow")
+    assert [n["id"] for n in definition["nodes"]] == ["start", "s1"]
+    assert definition["wires"] == []
+
+
 CUSTOMERS = {
     "name": "customers",
     "title": "顧客",
