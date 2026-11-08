@@ -179,6 +179,9 @@ def _state_graph(value: Mapping[str, Any]) -> FlowGraph:
         edges.append(FlowEdge(source=STATE_START[0], target=ids[str(initial)]))
     for transition in transitions:
         source, target = _state_ends(transition)
+        # `representative` が無く端が決まらない遷移: 線を引かない（図の元データの表に残る）
+        if source not in ids or target not in ids:
+            continue
         edges.append(
             FlowEdge(
                 source=ids[source],
