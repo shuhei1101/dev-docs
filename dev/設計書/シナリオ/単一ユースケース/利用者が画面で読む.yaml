@@ -706,6 +706,44 @@ scenarios:
       - '`無い文書` の文字は出て、文書へのリンクにならず、文書 1 の他のリンクと本文は描かれる'
       - 行内のコードの中の `id:` のリンクは書き換わらず、コードのまま出る
     test: test_normal_when_id_link_opened
+  - name: 正常シナリオ（設計書の検討事項のリンクを開く）
+    setup:
+      - name: Mock
+        description: 話し合いの記録の検討事項の文書を返却する HTTP サーバー（127.0.0.1 の空きポートで `docs/D-1.md` を返却する）
+        notes: ブラウザは Playwright で操作する
+      - name: 検討事項のリンク先
+        description: sample の `dev-docs.yaml` に、検討事項のリンク先の型（`{id}` を検討事項の ID に置き換える、Mock の `docs/{id}.md` の URL）を記載する
+        notes: plain の `dev-docs.yaml` には記載しない
+      - name: decisions を持つ文書
+        description: 'sample の文書 6 の表の行・「項目 / 値」の表の項目・見出しのセクションに、`decisions: [D-1, D-2]` を持たせる。plain の文書にも `decisions: [D-1]` を持たせる'
+        notes: 文書 6 は正常シナリオ（スキーマ駆動の文書を図と表で読む）の文書
+      - name: dev-docs
+        description: sample と plain を配信している dev-docs
+        notes: '-'
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        actor U as 利用者
+        participant UI as dev-docs の画面
+        participant API as 画面の API
+        participant M as 話し合いの記録（Mock）
+
+        U->>UI: 文書 6 を開く
+        UI->>API: 文書の取得（文書 6）
+        API->>API: decisions の ID を、配信元の設定のリンク先の型でリンクにする
+        API-->>UI: 文書 6 の Markdown
+        U->>UI: リンク D-1 を押す
+        UI->>M: docs/D-1.md
+        M-->>U: 検討事項 D-1 の文書
+        U->>UI: plain の文書を開く
+        UI-->>U: decisions を ID の文字で出した本文
+      ```
+    expected:
+      - 文書 6 の表のセル・「項目 / 値」の表・見出しのセクションのどこでも、`D-1`・`D-2` が検討事項へのリンクで出る
+      - リンク `D-1` を押すと、Mock の `docs/D-1.md` が開く
+      - plain の文書の `D-1` は、リンクにならず ID の文字で出て、他の本文は描かれる
+      - '`decisions` 以外の文字列の並びの出し方は変わらない'
+    test: test_normal_when_decision_link_opened
 lead: 利用者がブラウザで配信元の文書の画面を開き、タブ・サイドバー・検索・リビジョンの切り替え・差分で文書を読む。
 issue: 17
 primary_actor: 利用者
