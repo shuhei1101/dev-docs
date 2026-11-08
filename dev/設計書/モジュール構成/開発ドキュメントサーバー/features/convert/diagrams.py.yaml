@@ -181,7 +181,7 @@ functions:
          - 向きは `direction` が `TD`・`LR` ならその値、それ以外は種類が `dataflow`・`architecture` なら `LR`、`flowchart` なら `TD`
          - `frame` がオブジェクトなら、`label` と `nodes` の ID の集合を枠にする。`clicks` は描かず、図の元データの表に残す
       2. `state` は、フロー図の中間データ（向きは `TD`）にする
-         - 先頭に `STATE_START` の `start` のノードを置き、`states` の状態を出た順に `action` のノード（ID は `s{n}`、`n` は 1 始まり）にする。遷移の端に出た `states` に無い状態も、出た順に `action` のノードにする
+         - 先頭に `STATE_START` の `start` のノードを置き、`states` の状態を出た順に `action` のノード（ID は `s{n}`、`n` は 1 始まり）にする。遷移の端（`from` の `ALL_STATES`・`to` の `PREVIOUS_STATE` は `representative` へ置き換えた後）に出た `states` に無い状態も、出た順に `action` のノードにする
          - `initial` があれば、始点から初期状態のノードへ線を引く
          - 遷移ごとに線を引く。`from` が `ALL_STATES` なら元を、`to` が `PREVIOUS_STATE` なら先を `representative` の状態にする。元と先が同じ遷移は `loop`、それ以外は `DEFAULT_LINE`。ラベルは `{trigger} [{condition}]`（どちらも無ければ無し）
          - `final` があれば、末尾に `STATE_END` の `result` のノードを置き、各終了状態のノードから線を引く
