@@ -182,15 +182,15 @@ data_models:
         description: 箱に出す名前
       - name: kind
         title: 種類
-        type: Literal['llm', 'dm', 'script', 'mcp', 'data', 'external']
+        type: Literal['llm', 'dm', 'script', 'mcp', 'data', 'external', 'start', 'question', 'action', 'result']
         access: 公開
         description: mdmark の箱の種類
-      - name: sub
-        title: 補足
+      - name: hint
+        title: 説明
         type: str | None
         access: 公開
         default: None
-        description: 名前の下の補足（状態遷移の `初期状態`・`終了状態`）
+        description: 箱のツールチップに出す説明（`x-diagram` のノードの `hint`）
   - name: FlowEdge
     title: フロー図の線
     container: features/convert/types.py
@@ -215,6 +215,18 @@ data_models:
         access: 公開
         default: None
         description: 線のラベル
+      - name: line
+        title: 線の種類
+        type: Literal['flow', 'read', 'write', 'reply', 'loop']
+        access: 公開
+        default: '''flow'''
+        description: mdmark の線の種類。配置で戻る線になった線は `loop` で描く
+      - name: tip
+        title: 詳細
+        type: str | None
+        access: 公開
+        default: None
+        description: 線のラベルのツールチップに出す詳細（`x-diagram` の辺の `tip`）
   - name: FlowGraph
     title: フロー図の中間データ
     container: features/convert/types.py
@@ -238,6 +250,30 @@ data_models:
         type: list[FlowEdge]
         access: 公開
         description: 出た順の線
+      - name: frame
+        title: 枠
+        type: FlowFrame | None
+        access: 公開
+        default: None
+        description: 中の箱を囲む枠（`x-diagram` の `frame`）
+  - name: FlowFrame
+    title: フロー図の枠
+    container: features/convert/types.py
+    usecase: 文書の取得
+    role: DTO
+    summary: 配置の前のフロー図の、中の箱を囲む枠
+    description: '`dataclass(frozen=True)`。'
+    properties:
+      - name: label
+        title: 表示
+        type: str
+        access: 公開
+        description: 枠に出す名前
+      - name: nodes
+        title: 中の箱
+        type: frozenset[str]
+        access: 公開
+        description: 枠で囲む箱の ID
   - name: SequenceParticipant
     title: シーケンス図の相手
     container: features/convert/types.py

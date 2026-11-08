@@ -5,7 +5,7 @@ from __future__ import annotations
 from itertools import pairwise
 from typing import Any
 
-from dev_docs.features.convert.types import DiagramHead, FlowEdge, FlowGraph
+from dev_docs.features.convert.types import DiagramHead, FlowEdge, FlowFrame, FlowGraph
 
 NODE_WIDTH = 160
 NODE_HEIGHT = 56
@@ -13,6 +13,7 @@ RANK_GAP = 64
 ROW_GAP = 40
 MARGIN = 20
 LOOP_BAND = 40
+FRAME_PADDING = 20
 
 type Point = tuple[int, int]
 
@@ -142,7 +143,21 @@ def _wire(index: int, edge: FlowEdge, points: list[Point], line: str) -> dict[st
     if edge.label:
         wire["label"] = edge.label
         wire["labelAt"] = _label_at(points)
+    if edge.tip:
+        wire["tip"] = edge.tip
     return wire
+
+
+def _frame(frame: FlowFrame, positions: dict[str, Point]) -> dict[str, Any] | None:
+    """中の箱を余白つきで囲む枠の定義を作る（中の箱が 1 つも置かれていなければ `None`）。"""
+    inside = [positions[node_id] for node_id in frame.nodes if node_id in positions]
+    if not inside:
+        return None
+    left = min(x for x, _ in inside) - FRAME_PADDING
+    top = min(y for _, y in inside) - FRAME_PADDING
+    right = max(x for x, _ in inside) + NODE_WIDTH + FRAME_PADDING
+    bottom = max(y for _, y in inside) + NODE_HEIGHT + FRAME_PADDING
+    return {"title": frame.label, "x": left, "y": top, "w": right - left, "h": bottom - top}
 
 
 def layout_flow(graph: FlowGraph, head: DiagramHead) -> dict[str, Any]:
@@ -152,6 +167,11 @@ def layout_flow(graph: FlowGraph, head: DiagramHead) -> dict[str, Any]:
     positions = _positions(graph, _ranks(graph, back))
     right = max((x + NODE_WIDTH for x, _ in positions.values()), default=MARGIN)
     bottom = max((y + NODE_HEIGHT for _, y in positions.values()), default=MARGIN)
+    frame = _frame(graph.frame, positions) if graph.frame is not None else None
+    # 枠があれば、戻りの帯と図の端を枠の外に取る
+    if frame is not None:
+        right = max(right, frame["x"] + frame["w"])
+        bottom = max(bottom, frame["y"] + frame["h"])
     band = (right if top_down else bottom) + LOOP_BAND // 2
     # 線: 戻る線は帯を通し、それ以外は先の段の手前で折る
     wires = [
@@ -161,7 +181,7 @@ def layout_flow(graph: FlowGraph, head: DiagramHead) -> dict[str, Any]:
             _loop_points(top_down, positions[edge.source], positions[edge.target], band)
             if index in back
             else _forward_points(top_down, positions[edge.source], positions[edge.target]),
-            "loop" if index in back else "flow",
+            "loop" if index in back else edge.line,
         )
         for index, edge in enumerate(graph.edges)
     ]
@@ -180,15 +200,18 @@ def layout_flow(graph: FlowGraph, head: DiagramHead) -> dict[str, Any]:
             "h": NODE_HEIGHT,
             "name": node.name,
         }
-        if node.sub:
-            item["sub"] = node.sub
+        if node.hint:
+            item["hint"] = node.hint
         nodes.append(item)
-    return {
+    definition: dict[str, Any] = {
         "title": head.title,
         "scope": head.scope,
         "updated": head.updated,
         "width": width,
         "height": height,
-        "nodes": nodes,
-        "wires": wires,
     }
+    if frame is not None:
+        definition["frame"] = frame
+    definition["nodes"] = nodes
+    definition["wires"] = wires
+    return definition

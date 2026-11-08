@@ -23,7 +23,7 @@ ATTRIBUTE_MIN = 3
 LONG_VALUE_CHARS = 100
 WIDE_KEYS = ("description", "summary", "notes")
 LABEL_KEYS = ("label", "name")
-DIAGRAM_HIDDEN_KEYS = ("id", "shape")
+DIAGRAM_HIDDEN_KEYS = ("id",)
 TEST_FILE_KEYS = ("test_file", "test_files")
 EXAMPLE_SUFFIX = "_example"
 CHECK_MARK = "✓"
@@ -377,17 +377,9 @@ class _Builder:
     ) -> None:
         """図と、続けて同じ値の閉じた元データの表を置く。"""
         kind: DiagramKind = sub.get("x-diagram", "flowchart")
-        # ER 図の列を補う同じ文書のテーブルと、外部キーの分類を判定する文書の分類（ER 図以外は使わない）
+        # ER 図の列を補う同じ文書のテーブル（ER 図以外は使わない）
         tables = self.data.get(ER_TABLES_KEY) if isinstance(self.data, Mapping) else None
-        self.blocks.append(
-            render_diagram(
-                value,
-                kind,
-                self.head(title),
-                tables=_items(tables),
-                classification=posixpath.splitext(posixpath.basename(self.context.path))[0],
-            )
-        )
+        self.blocks.append(render_diagram(value, kind, self.head(title), tables=_items(tables)))
         properties: Mapping[str, Any] = sub.get("properties") or {}
         for key, rows in value.items():
             if not _is_rows(rows):

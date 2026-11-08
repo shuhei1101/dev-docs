@@ -174,7 +174,7 @@ def test_schema_to_markdown_when_diagram(make_document: Callable[..., Document])
                             "properties": {
                                 "id": {"title": "ID"},
                                 "label": {"title": "表示"},
-                                "shape": {"title": "形"},
+                                "kind": {"title": "種類"},
                             }
                         }
                     },
@@ -190,8 +190,8 @@ def test_schema_to_markdown_when_diagram(make_document: Callable[..., Document])
             "name": "N",
             "flow": {
                 "nodes": [
-                    {"id": "a", "label": "A", "shape": "rect"},
-                    {"id": "b", "label": "B", "shape": "round"},
+                    {"id": "a", "label": "A", "kind": "process"},
+                    {"id": "b", "label": "B", "kind": "store"},
                 ],
                 "edges": [{"from": "a", "to": "b"}],
             },
@@ -203,7 +203,7 @@ def test_schema_to_markdown_when_diagram(make_document: Callable[..., Document])
     # 検証
     assert "<!-- flow -->" in result
     assert '"updated": "2026-11-03"' in result
-    assert "<!-- table: data closed +columns hide=ID,形 -->\n| 表示 | ID | 形 |" in result
+    assert "<!-- table: data closed +columns hide=ID -->\n| 表示 | ID | 種類 |" in result
     assert "<!-- table: data closed -->\n| 元 | 先 |" in result
 
 
