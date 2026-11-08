@@ -531,7 +531,7 @@ flows:
     expected:
       - '`_decisions/D-1` が 200 で、`path` が `_decisions/D-1`、`markdown` が `tmp/a/.mindstella/docs/D-1.md` の本文のまま'
       - '`tabs` は sample の `nav` のタブで、どのサイドバーの項目も選ばれていない'
-      - '`updatedAt`・`bodyPath`・`diff` が `null`'
+      - '`updatedAt` が `D-1.md` のファイルの更新日時で、`bodyPath`・`diff` が `null`'
       - '2 つのフォルダにある `_decisions/D-2` と、どこにも無い `_decisions/D-3` は 404 で、`missing` が `doc`'
     test: test_normal_when_decision_document_returned
 lead: '#17 の画面が文書を開くときに呼ぶ。配信元の文書を変換した Markdown と、タブ・サイドバー・差分の項目・画面の状態を JSON で返す。`path` を省くと一番左のタブのサイドバーの一番上の文書を返す。'
