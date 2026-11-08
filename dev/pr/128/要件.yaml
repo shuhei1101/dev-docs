@@ -1,0 +1,29 @@
+use_cases:
+  - kind: single
+    scenario: dev/設計書/シナリオ/単一ユースケース/利用者が画面で読む.yaml
+    impact: changed
+    detail: 文書の図（判定・データフロー・アーキテクチャ・状態遷移・ER 図）が新しいスキーマの書き方で描かれる。ER 図の文書のサンプルを両端の列と多重度の書き方へ、mdmark のバージョンの注記を今の master（v0.10.0）へ修正する
+    depends_on: []
+  - kind: single
+    scenario: dev/設計書/シナリオ/単一ユースケース/エージェントが調べる.yaml
+    impact: run_only
+    detail: 文書の検索・取得で返る本文の図も同じ変換を通る
+    depends_on: []
+scope_out:
+  - item: 画面の `use-mdmark.ts` が読む mdmark を `mdmark@master` からタグへ切り替える
+    reason: '#127 の受付判断が、読む mdmark の切り替えを #118 から #127 へ移す。mdmark の master は v0.10.0 と同じ commit で、今の読み込み先のまま新しい箱の種類・ER 図の部品で描ける'
+    plan: '#127'
+  - item: '`clicks` のリンクを mdmark のフロー図のノードのリンクへ変換する'
+    reason: 同じ内容の open の Issue がある
+    plan: '#98'
+  - item: 'dev-docs 自身の文書（`dev/設計書/アーキテクチャ図/アーキテクチャ図.yaml` の `subgraphs`・`line: dotted` など）と `dev/テンプレート/*.schema.yaml` を新しいスキーマへ移す'
+    reason: AI Monitor の新しいスキーマの配布物への追従の作業で、変換 `v0.4.0.py` が移す。追従の Issue は配布元が v0.4.0 のタグを打つときに起票する
+    plan: none
+  - item: '`decisions`（検討事項の ID）を話し合いの記録へのリンクにする'
+    reason: Issue の要望は図の描画で、`decisions` は既存の汎用の変換で値の並びとして出る。リンク先の決め方は図と別の論点のため、スコープに含めないと判断した（レビューで確定する）
+    plan: to_file
+docs:
+  - page: dev/設計書/外部ライブラリ/mdmark.yaml
+    new: false
+    change: 最新の版を v0.10.0 にし、ER 図の部品・判定の箱の種類・枠・箱の説明・線の詳細を、画面が読む master（v0.10.0 と同じ commit）にあるものとして書き直す
+    status: todo
