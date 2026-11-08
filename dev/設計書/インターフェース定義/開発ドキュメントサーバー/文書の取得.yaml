@@ -476,6 +476,64 @@ flows:
       - '`[無い文書](id:no-such-doc)` と、行内のコードの `` `[コード](id:{文書 2 の ID})` `` は書き換わらない'
       - '`conversionError` が `null`'
     test: test_normal_when_id_link_resolved
+  - name: 正常系（decisions を検討事項のリンクにする）
+    summary: '`decisions` の ID のうち、話し合いの記録のフォルダで 1 つに決まる ID を、検討事項の文書の画面のパスへのリンクにする'
+    setup:
+      - name: Mock
+        description: なし
+        notes: '-'
+      - name: 話し合いの記録のフォルダ
+        description: 'sample のメインのリポジトリの `tmp/a/.mindstella/docs/` に `D-1.md`・`D-2.md`、`tmp/b/.mindstella/docs/` に `D-2.md` を配置し、`dev-docs.yaml` の `decisions.folders` を `[tmp/a, tmp/b]` にする'
+        notes: '`D-2` は 2 つのフォルダにある ID、`D-3` はどちらにも無い ID'
+      - name: decisions を持つ文書
+        description: 'sample の文書 6 の表の行・「項目 / 値」の表の項目・見出しの要素に `decisions: [D-1, D-2, D-3]` を持たせる'
+        notes: '-'
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        participant C as クライアント
+        participant E as GET /_api/sources/{source}/docs/{path}
+        participant WS as 話し合いの記録のフォルダ
+
+        C->>E: GET /_api/sources/sample/docs/{文書 6 のパス}
+        E-->>WS: decisions.folders の .mindstella/docs/{ID}.md を探す
+        E->>E: 1 つのフォルダにだけある ID を、検討事項の文書のパスへのリンクにする
+        E-->>C: 200（文書 6）
+      ```
+    expected:
+      - '`markdown` の表のセル・「項目 / 値」の表・箇条書きのどこでも、`D-1` が文書 6 のフォルダから `_decisions/D-1` への相対パスを指す `[D-1](…)` になる'
+      - '`D-2`・`D-3` はリンクにならず、ID の文字のまま出る'
+      - '`decisions` 以外の文字列の並びの出し方は変わらない'
+      - '`conversionError` が `null`'
+    test: test_normal_when_decision_linked
+  - name: 正常系（検討事項の文書を返す）
+    summary: '`path` が `_decisions/{ID}` のとき、話し合いの記録のフォルダの検討事項の文書を Markdown で返す'
+    setup:
+      - name: Mock
+        description: なし
+        notes: '-'
+      - name: 話し合いの記録のフォルダ
+        description: 正常系（decisions を検討事項のリンクにする）と同じフォルダと `decisions.folders`
+        notes: '-'
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        participant C as クライアント
+        participant E as GET /_api/sources/{source}/docs/{path}
+        participant WS as 話し合いの記録のフォルダ
+
+        C->>E: GET /_api/sources/sample/docs/_decisions/D-1
+        E-->>WS: tmp/a/.mindstella/docs/D-1.md を読む
+        E-->>C: 200（検討事項 D-1）
+        C->>E: GET /_api/sources/sample/docs/_decisions/D-2
+        E-->>C: 404
+      ```
+    expected:
+      - '`_decisions/D-1` が 200 で、`path` が `_decisions/D-1`、`markdown` が `tmp/a/.mindstella/docs/D-1.md` の本文のまま'
+      - '`tabs` は sample の `nav` のタブで、どのサイドバーの項目も選ばれていない'
+      - '`updatedAt`・`bodyPath`・`diff` が `null`'
+      - '2 つのフォルダにある `_decisions/D-2` と、どこにも無い `_decisions/D-3` は 404 で、`missing` が `doc`'
+    test: test_normal_when_decision_document_returned
 lead: '#17 の画面が文書を開くときに呼ぶ。配信元の文書を変換した Markdown と、タブ・サイドバー・差分の項目・画面の状態を JSON で返す。`path` を省くと一番左のタブのサイドバーの一番上の文書を返す。'
 identifier: get_document
 permissions: なし（`127.0.0.1` でだけ待ち受ける）
@@ -651,6 +709,12 @@ constraints:
   - item: 手で書いた page と auto の重なり
     constraint: 同じタブの中で、手で書いた `page`（`group` の中を含む）が指す文書を `auto` の結果から除く。手で書いた `group`・`page` の並びは変えない
     notes: '-'
+  - item: 検討事項のリンク
+    constraint: 'スキーマ駆動の変換で、項目 `decisions` の要素（検討事項の ID）を、配信元の `decisions.folders` のうちちょうど 1 つのフォルダに `.mindstella/docs/{ID}.md` がある ID だけ、文書のフォルダから `_decisions/{ID}` への相対パスのリンクにする。0 個か 2 個以上のフォルダにある ID は ID の文字のまま出す。表のセルは `・` でつなぎ、それ以外は箇条書きにする今の並べ方は変えない'
+    notes: '`decisions.folders` を持たない配信元は全ての ID を文字のまま出す。リンクの相対パスは本文の id のリンクと同じく画面が `/{source}@{ref}/_decisions/{ID}` に解決する'
+  - item: 検討事項の文書
+    constraint: '`path` が `_decisions/{ID}`（`{ID}` は `^[A-Z]+-[0-9]+$`）のとき、`decisions.folders` のうちちょうど 1 つのフォルダにある `.mindstella/docs/{ID}.md` の本文を、変換せずに `markdown` で返す。`ref` は解決するが、検討事項の文書は Git の管理外のためリビジョンによらず今のファイルを読む'
+    notes: '当たるフォルダが 0 個か 2 個以上なら 404（`missing`: `doc`）。`diff` は求めず `null` を返す。フォルダの外を指す `{ID}` は形式で弾く'
 refs:
   - dev/設計書/シナリオ/単一ユースケース/YAMLを直接編集した#scenarios[異常シナリオ（YAML を壊した）]
 test_file: tests/integration/server/test_get_document.py
@@ -661,3 +725,4 @@ callers:
   - dev/設計書/シナリオ/単一ユースケース/利用者が画面で読む#scenarios[正常シナリオ（変換の結果をキャッシュする）]
   - dev/設計書/シナリオ/単一ユースケース/利用者が画面で読む#scenarios[正常シナリオ（ER 図を読む）]
   - dev/設計書/シナリオ/単一ユースケース/利用者が画面で読む#scenarios[正常シナリオ（本文の id のリンクを開く）]
+  - dev/設計書/シナリオ/単一ユースケース/利用者が画面で読む#scenarios[正常シナリオ（設計書の検討事項のリンクを開く）]
