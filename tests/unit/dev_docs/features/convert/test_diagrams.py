@@ -159,7 +159,7 @@ def test_render_diagram_when_frame() -> None:
     assert frame["title"] == "判定"
 
     def inside(node: dict[str, Any]) -> bool:
-        return (
+        return bool(
             frame["x"] <= node["x"]
             and frame["y"] <= node["y"]
             and node["x"] + node["w"] <= frame["x"] + frame["w"]
