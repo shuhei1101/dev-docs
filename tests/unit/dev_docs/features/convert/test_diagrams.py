@@ -22,6 +22,12 @@ def _definition(block: str, marker: str) -> dict[str, Any]:
     return definition
 
 
+def _node(definition: dict[str, Any], node_id: str) -> dict[str, Any]:
+    """フロー図の定義から `id` のノードを取り出す。"""
+    node: dict[str, Any] = next(n for n in definition["nodes"] if n["id"] == node_id)
+    return node
+
+
 def test_render_diagram() -> None:
     """フローチャート（正常系）。"""
     # 準備
@@ -39,29 +45,135 @@ def test_render_diagram() -> None:
         "2026-11-03",
     )
     assert [node["name"] for node in definition["nodes"]] == ["A", "B"]
-    assert [wire["label"] for wire in definition["wires"]] == ["x"]
+    assert [(wire["label"], wire["line"]) for wire in definition["wires"]] == [("x", "flow")]
     assert "```mermaid" not in result
 
 
-def test_render_diagram_when_node_kinds() -> None:
-    """箱の種類（正常系）。"""
+@pytest.mark.parametrize(
+    ("kind", "expected"),
+    [
+        pytest.param("actor", "external", id="actor"),
+        pytest.param("external", "external", id="external"),
+        pytest.param("process", "script", id="process"),
+        pytest.param("system", "script", id="system"),
+        pytest.param("store", "data", id="store"),
+        pytest.param("start", "start", id="start"),
+        pytest.param("question", "question", id="question"),
+        pytest.param("action", "action", id="action"),
+        pytest.param("result", "result", id="result"),
+        pytest.param(None, "script", id="none"),
+    ],
+)
+def test_render_diagram_when_node_kinds(kind: str | None, expected: str) -> None:
+    """ノードの種類（正常系）。"""
+    # 準備
+    node: dict[str, Any] = {"id": "a"}
+    if kind is not None:
+        node["kind"] = kind
+    # 実行
+    result = render_diagram({"nodes": [node], "edges": []}, "flowchart", HEAD)
+    # 検証
+    assert _node(_definition(result, "flow"), "a")["kind"] == expected
+
+
+def test_render_diagram_when_shape_only() -> None:
+    """古いキーの `shape` だけを持つノード（正常系）。"""
+    # 準備
+    value = {"nodes": [{"id": "a", "shape": "diamond"}], "edges": []}
+    # 実行
+    result = render_diagram(value, "flowchart", HEAD)
+    # 検証
+    assert _node(_definition(result, "flow"), "a")["kind"] == "script"
+
+
+def test_render_diagram_when_hint_and_tip() -> None:
+    """ノードの説明と線の種類・詳細（正常系）。"""
     # 準備
     value = {
-        "nodes": [
-            {"id": "a", "kind": "actor"},
-            {"id": "b", "kind": "store"},
-            {"id": "c", "kind": "process"},
-        ],
-        "edges": [],
+        "nodes": [{"id": "a", "label": "A", "hint": "説明"}, {"id": "b", "label": "B"}],
+        "edges": [{"from": "a", "to": "b", "label": "読む", "line": "read", "tip": "詳細"}],
     }
     # 実行
-    result = render_diagram(value, "dataflow", HEAD)
+    result = render_diagram(value, "flowchart", HEAD)
     # 検証
-    assert [node["kind"] for node in _definition(result, "flow")["nodes"]] == [
-        "external",
-        "data",
-        "script",
-    ]
+    definition = _definition(result, "flow")
+    assert _node(definition, "a")["hint"] == "説明"
+    wire = definition["wires"][0]
+    assert (wire["line"], wire["label"], wire["tip"]) == ("read", "読む", "詳細")
+
+
+def test_render_diagram_when_unknown_line() -> None:
+    """`LINE_KINDS` に無い線の種類（正常系）。"""
+    # 準備
+    value = {
+        "nodes": [{"id": "a"}, {"id": "b"}],
+        "edges": [{"from": "a", "to": "b", "line": "dotted"}],
+    }
+    # 実行
+    result = render_diagram(value, "flowchart", HEAD)
+    # 検証
+    assert _definition(result, "flow")["wires"][0]["line"] == "flow"
+
+
+@pytest.mark.parametrize(
+    ("kind", "direction", "expected"),
+    [
+        pytest.param("flowchart", None, "TD", id="flowchart"),
+        pytest.param("dataflow", None, "LR", id="dataflow"),
+        pytest.param("architecture", None, "LR", id="architecture"),
+        pytest.param("dataflow", "TD", "TD", id="dataflow-td"),
+    ],
+)
+def test_render_diagram_when_direction(kind: str, direction: str | None, expected: str) -> None:
+    """向きの既定と指定（正常系）。"""
+    # 準備
+    value: dict[str, Any] = {
+        "nodes": [{"id": "a"}, {"id": "b"}],
+        "edges": [{"from": "a", "to": "b"}],
+    }
+    if direction is not None:
+        value["direction"] = direction
+    # 実行
+    result = render_diagram(value, kind, HEAD)  # type: ignore[arg-type]
+    # 検証
+    definition = _definition(result, "flow")
+    a, b = _node(definition, "a"), _node(definition, "b")
+    # 先のノードが下にあれば上から下、右にあれば左から右
+    actual = "TD" if b["y"] > a["y"] else "LR"
+    assert actual == expected
+
+
+def test_render_diagram_when_frame() -> None:
+    """枠（正常系）。"""
+    # 準備
+    value = {
+        "nodes": [{"id": "a"}, {"id": "b"}, {"id": "c"}],
+        "edges": [],
+        "frame": {"label": "判定", "nodes": ["a", "b"]},
+    }
+    # 実行
+    result = render_diagram(value, "flowchart", HEAD)
+    # 検証
+    definition = _definition(result, "flow")
+    frame = definition["frame"]
+    assert frame["title"] == "判定"
+
+    def inside(node: dict[str, Any]) -> bool:
+        return (
+            frame["x"] <= node["x"]
+            and frame["y"] <= node["y"]
+            and node["x"] + node["w"] <= frame["x"] + frame["w"]
+            and node["y"] + node["h"] <= frame["y"] + frame["h"]
+        )
+
+    assert inside(_node(definition, "a"))
+    assert inside(_node(definition, "b"))
+    assert not inside(_node(definition, "c"))
+
+
+def _wires(definition: dict[str, Any]) -> list[tuple[str, str, str]]:
+    """フロー図の定義の線の元・先・種類の組。"""
+    return [(w["from"], w["to"], w["line"]) for w in definition["wires"]]
 
 
 def test_render_diagram_when_state() -> None:
@@ -73,16 +185,46 @@ def test_render_diagram_when_state() -> None:
         "states": [{"name": "下書き"}, {"name": "公開"}],
         "transitions": [
             {"from": "下書き", "to": "公開", "trigger": "公開する", "condition": "承認済み"},
-            {"from": "公開", "to": "下書き", "trigger": "取り下げる"},
+            {"from": "公開", "to": "公開", "trigger": "更新する"},
         ],
     }
     # 実行
     result = render_diagram(value, "state", HEAD)
     # 検証
     definition = _definition(result, "flow")
-    subs = {node["name"]: node.get("sub") for node in definition["nodes"]}
-    assert subs == {"下書き": "初期状態", "公開": "終了状態"}
-    assert definition["wires"][0]["label"] == "公開する [承認済み]"
+    assert [(n["id"], n["kind"], n["name"]) for n in definition["nodes"]] == [
+        ("start", "start", "開始"),
+        ("s1", "action", "下書き"),
+        ("s2", "action", "公開"),
+        ("end", "result", "終了"),
+    ]
+    assert _wires(definition) == [
+        ("start", "s1", "flow"),
+        ("s1", "s2", "flow"),
+        ("s2", "s2", "loop"),
+        ("s2", "end", "flow"),
+    ]
+    assert definition["wires"][1]["label"] == "公開する [承認済み]"
+
+
+def test_render_diagram_when_state_representative() -> None:
+    """どの状態からも入る遷移と元の状態へ戻る遷移（正常系）。"""
+    # 準備
+    value = {
+        "states": [{"name": "下書き"}, {"name": "公開"}],
+        "transitions": [
+            {"from": "全状態", "to": "下書き", "representative": "公開"},
+            {"from": "下書き", "to": "元の状態", "representative": "公開"},
+        ],
+    }
+    # 実行
+    result = render_diagram(value, "state", HEAD)
+    # 検証
+    definition = _definition(result, "flow")
+    names = [n["name"] for n in definition["nodes"]]
+    assert "全状態" not in names
+    assert "元の状態" not in names
+    assert [(w["from"], w["to"]) for w in definition["wires"]] == [("s2", "s1"), ("s1", "s2")]
 
 
 CUSTOMERS = {
@@ -94,28 +236,6 @@ CUSTOMERS = {
         {"name": "email", "title": "メール", "type": "text"},
     ],
 }
-# 支払いと顧客の関連（`||--o{`）
-PAYMENT_RELATION = {
-    "entities": [{"name": "顧客"}, {"name": "支払い"}],
-    "relations": [{"from": "顧客", "to": "支払い", "cardinality": "||--o{"}],
-}
-
-
-def _payments(reference: str) -> dict[str, Any]:
-    """`customer_id` の外部キーが `reference` を指す支払いのテーブル。"""
-    return {
-        "name": "payments",
-        "title": "支払い",
-        "columns": [
-            {"name": "id", "title": "支払い ID", "type": "bigint", "primary_key": True},
-            {
-                "name": "customer_id",
-                "title": "顧客 ID",
-                "type": "bigint",
-                "foreign_key": {"table": reference},
-            },
-        ],
-    }
 
 
 def _table(definition: dict[str, Any], table_id: str) -> dict[str, Any]:
@@ -132,11 +252,6 @@ def _columns(table: dict[str, Any]) -> list[tuple[str, bool, bool, bool]]:
     ]
 
 
-def _ends(definition: dict[str, Any]) -> list[tuple[str, str]]:
-    """ER 図の定義の関連の `fromColumn`・`toColumn` の組。"""
-    return [(r["fromColumn"], r["toColumn"]) for r in definition["relations"]]
-
-
 def test_render_diagram_when_er() -> None:
     """ER 図（正常系）。"""
     # 準備
@@ -147,16 +262,21 @@ def test_render_diagram_when_er() -> None:
                 "name": "注文",
                 "columns": [
                     {"type": "bigint", "name": "id", "key": "PK"},
-                    {
-                        "type": "bigint",
-                        "name": "customer_id",
-                        "key": "FK",
-                        "comment": "参照: 顧客.id",
-                    },
+                    {"type": "bigint", "name": "customer_id", "key": "FK"},
                 ],
             },
         ],
-        "relations": [{"from": "顧客", "to": "注文", "cardinality": "||--o{", "label": "注文する"}],
+        "relations": [
+            {
+                "from": "顧客",
+                "from_column": "id",
+                "from_cardinality": "1",
+                "to": "注文",
+                "to_column": "customer_id",
+                "to_cardinality": "0..n",
+                "label": "注文する",
+            }
+        ],
     }
     # 実行
     result = render_diagram(value, "er", HEAD, tables=[CUSTOMERS])
@@ -185,105 +305,47 @@ def test_render_diagram_when_er() -> None:
     assert "```mermaid" not in result
 
 
-@pytest.mark.parametrize(
-    "reference",
-    [
-        pytest.param("customers.id", id="physical"),
-        pytest.param("顧客.id", id="logical"),
-    ],
-)
-def test_render_diagram_when_er_table_foreign_key(reference: str) -> None:
-    """テーブルの列の外部キー（正常系）。"""
-    # 準備
-    tables = [CUSTOMERS, _payments(reference)]
-    # 実行
-    result = render_diagram(PAYMENT_RELATION, "er", HEAD, tables=tables)
-    # 検証
-    assert _ends(_definition(result, "er")) == [("id", "customer_id")]
+# 顧客の id から商品への関連の両端（パラメータごとに一部を差し替える）
+RELATION = {
+    "from": "顧客",
+    "from_column": "id",
+    "from_cardinality": "1",
+    "to": "商品",
+    "to_column": "product_id",
+    "to_cardinality": "0..n",
+}
 
 
 @pytest.mark.parametrize(
-    ("classification", "expected"),
+    ("relation", "entities"),
     [
-        pytest.param("注文", [("id", "customer_id")], id="own"),
-        pytest.param("請求", [], id="other"),
+        pytest.param(RELATION, [{"name": "商品"}], id="missing-column"),
+        pytest.param(
+            {**RELATION, "to_column": "id", "to_cardinality": "many"},
+            [{"name": "商品", "columns": [{"type": "int", "name": "id"}]}],
+            id="unknown-cardinality",
+        ),
+        pytest.param(
+            {"from": "顧客", "to": "商品", "cardinality": "||--o{"},
+            [{"name": "商品", "columns": [{"type": "int", "name": "id"}]}],
+            id="old-cardinality",
+        ),
+        pytest.param({**RELATION, "to": "無い実体", "to_column": "id"}, [], id="missing-entity"),
     ],
 )
-def test_render_diagram_when_er_own_classification(
-    classification: str, expected: list[tuple[str, str]]
+def test_render_diagram_when_er_excluded(
+    relation: dict[str, Any], entities: list[dict[str, Any]]
 ) -> None:
-    """自分の分類を付けたテーブルの列の外部キー（正常系）。"""
-    # 準備
-    tables = [CUSTOMERS, _payments("注文/customers.id")]
-    # 実行
-    result = render_diagram(
-        PAYMENT_RELATION, "er", HEAD, tables=tables, classification=classification
-    )
-    # 検証
-    assert _ends(_definition(result, "er")) == expected
-
-
-def test_render_diagram_when_er_reverse_foreign_key() -> None:
-    """元の実体が外部キーを持つ（正常系）。"""
+    """図に出さない関連（正常系）。"""
     # 準備
     value = {
-        "entities": [
-            {
-                "name": "注文",
-                "columns": [
-                    {
-                        "type": "bigint",
-                        "name": "customer_id",
-                        "key": "FK",
-                        "comment": "参照: 顧客.id",
-                    }
-                ],
-            },
-            {"name": "顧客", "columns": [{"type": "bigint", "name": "id", "key": "PK"}]},
-        ],
-        "relations": [{"from": "注文", "to": "顧客", "cardinality": "}o--||"}],
+        "entities": [{"name": "顧客", "columns": [{"type": "int", "name": "id"}]}, *entities],
+        "relations": [relation],
     }
     # 実行
     result = render_diagram(value, "er", HEAD)
     # 検証
-    relation = _definition(result, "er")["relations"][0]
-    assert relation["fromColumn"] == "customer_id"
-    assert relation["toColumn"] == "id"
-    assert relation["fromCard"] == "0..n"
-    assert relation["toCard"] == "1"
-
-
-def test_render_diagram_when_er_unresolved() -> None:
-    """端の列が決まらない関連と読み替えられない多重度（正常系）。"""
-    # 準備
-    value = {
-        "entities": [
-            {
-                "name": "注文",
-                "columns": [
-                    {"type": "bigint", "name": "id", "key": "PK"},
-                    {
-                        "type": "bigint",
-                        "name": "customer_id",
-                        "key": "FK",
-                        "comment": "参照: 顧客.id",
-                    },
-                ],
-            },
-            {"name": "顧客", "columns": [{"type": "bigint", "name": "id", "key": "PK"}]},
-            {"name": "商品"},
-        ],
-        "relations": [
-            {"from": "注文", "to": "商品", "cardinality": "}o--||"},
-            {"from": "顧客", "to": "注文", "cardinality": "||..xx"},
-        ],
-    }
-    # 実行
-    result = render_diagram(value, "er", HEAD)
-    # 検証
-    definition = _definition(result, "er")
-    assert definition["relations"] == []
-    assert _table(definition, "商品")["columns"] == []
+    assert _definition(result, "er")["relations"] == []
 
 
 def test_render_diagram_when_er_layout() -> None:

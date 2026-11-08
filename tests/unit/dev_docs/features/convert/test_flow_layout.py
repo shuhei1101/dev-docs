@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Any
 
 from dev_docs.features.convert.flow_layout import layout_flow
-from dev_docs.features.convert.types import DiagramHead, FlowEdge, FlowGraph, FlowNode
+from dev_docs.features.convert.types import DiagramHead, FlowEdge, FlowFrame, FlowGraph, FlowNode
 
 HEAD = DiagramHead(title="図", scope="文書", updated="2026-11-03")
 
@@ -107,3 +107,55 @@ def test_layout_flow_when_self_loop() -> None:
     assert wire["line"] == "loop"
     assert (wire["points"][0][1], wire["points"][-1][1]) == (center - 14, center + 14)
     assert wire["points"][1][0] > b["x"] + b["w"]
+
+
+def test_layout_flow_when_line_and_tips() -> None:
+    """線の種類・詳細と箱の説明（正常系）。"""
+    # 準備
+    graph = FlowGraph(
+        direction="TD",
+        nodes=[
+            FlowNode(id="a", name="A", kind="script", hint="説明"),
+            FlowNode(id="b", name="B", kind="script"),
+        ],
+        edges=[FlowEdge(source="a", target="b", label="x", line="read", tip="y")],
+    )
+    # 実行
+    result = layout_flow(graph, HEAD)
+    # 検証
+    wire = result["wires"][0]
+    assert (wire["line"], wire["tip"]) == ("read", "y")
+    assert _node(result, "a")["hint"] == "説明"
+    assert "hint" not in _node(result, "b")
+
+
+def test_layout_flow_when_frame() -> None:
+    """枠（正常系）。"""
+    # 準備
+    base = _graph("TD", [("a", "b", None), ("b", "c", None)])
+    graph = FlowGraph(
+        direction=base.direction,
+        nodes=base.nodes,
+        edges=base.edges,
+        frame=FlowFrame(label="判定", nodes=frozenset({"a", "b"})),
+    )
+    # 実行
+    result = layout_flow(graph, HEAD)
+    # 検証
+    assert result["frame"] == {"title": "判定", "x": 0, "y": 0, "w": 200, "h": 216}
+    assert (result["width"], result["height"]) == (220, 336)
+
+
+def test_layout_flow_when_frame_without_nodes() -> None:
+    """中の箱が置かれていない枠（正常系）。"""
+    # 準備
+    graph = FlowGraph(
+        direction="TD",
+        nodes=[FlowNode(id="a", name="A", kind="script")],
+        edges=[],
+        frame=FlowFrame(label="枠", nodes=frozenset({"z"})),
+    )
+    # 実行
+    result = layout_flow(graph, HEAD)
+    # 検証
+    assert "frame" not in result
