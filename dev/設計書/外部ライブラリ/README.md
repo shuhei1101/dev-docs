@@ -33,7 +33,7 @@
 | [react-error-boundary](./react-error-boundary.yaml) | 描画中の例外の代わりの表示 |
 | [sonner](./sonner.yaml) | 画面の隅に積む通知 |
 | [vitest](./vitest.yaml) | 画面の単体テスト・結合テストのランナーと Testing Library |
-| [playwright](./playwright.yaml) | 実際のブラウザで流す E2E テストのランナー |
+| [playwright](./playwright.yaml) | 実際のブラウザで画面を操作する結合テスト（フロント）のランナー |
 | [eslint](./eslint.yaml) | 画面の静的検査とプラグイン |
 | [lefthook](./lefthook.yaml) | Git のフックを流すツール |
 | [typescript](./typescript.yaml) | 画面の型の検査 |
