@@ -816,7 +816,9 @@ def test_check_sources(
             "src/d.py": "d = 4\n",
         },
     )
-    terminal = make_terminal_config(sources=[make_entry(str(tmp_path / "sample" / "dev-docs.yaml"))])
+    terminal = make_terminal_config(
+        sources=[make_entry(str(tmp_path / "sample" / "dev-docs.yaml"))]
+    )
     registry = SourceRegistry()
     registry.reload(terminal)
     store = DocumentStore(SnapshotStore(tmp_path / "snapshots"))

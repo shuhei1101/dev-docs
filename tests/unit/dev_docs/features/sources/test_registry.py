@@ -476,9 +476,7 @@ def test_source_registry_load_when_duplicate_loaded_later(
 ) -> None:
     """後の行が先に読み込まれて ID が重なる（正常系）。"""
     # 準備
-    loader = _Loader(
-        make_served_source, make_status, blocked=("x",), names={"x": "a", "y": "a"}
-    )
+    loader = _Loader(make_served_source, make_status, blocked=("x",), names={"x": "a", "y": "a"})
     monkeypatch.setattr(registry_module, "load_source", loader)
     terminal = make_terminal_config(sources=_entries(make_entry, "x", "y", with_id=False))
     waiting = threading.Event()
