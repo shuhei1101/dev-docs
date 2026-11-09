@@ -486,7 +486,7 @@ flows:
         description: 'sample のメインのリポジトリの `tmp/a/.mindstella/docs/` に `D-1.md`・`D-2.md`、`tmp/b/.mindstella/docs/` に `D-2.md` を配置し、`dev-docs.yaml` の `decisions.folders` を `[tmp/a, tmp/b]` にする'
         notes: '`D-2` は 2 つのフォルダにある ID、`D-3` はどちらにも無い ID'
       - name: decisions を持つ文書
-        description: 'sample の文書 6 の表の行・「項目 / 値」の表の項目・見出しの要素に `decisions: [D-1, D-2, D-3]` を持たせる'
+        description: 'sample の文書 6 の表の行と、「項目 / 値」の表を持つ見出しの要素に `decisions: [D-1, D-2, D-3]` を持たせる'
         notes: '-'
     flow: |-
       ```mermaid
@@ -501,7 +501,7 @@ flows:
         E-->>C: 200（文書 6）
       ```
     expected:
-      - '`markdown` の表のセル・「項目 / 値」の表・箇条書きのどこでも、`D-1` が文書 6 のフォルダから `_decisions/D-1` への相対パスを指す `[D-1](…)` になる'
+      - '`markdown` の表のセルと箇条書き（「項目 / 値」の表を持つ要素の `decisions` を含む）のどちらでも、`D-1` が文書 6 のフォルダから `_decisions/D-1` への相対パスを指す `[D-1](…)` になる'
       - '`D-2`・`D-3` はリンクにならず、ID の文字のまま出る'
       - '`decisions` 以外の文字列の並びの出し方は変わらない'
       - '`conversionError` が `null`'

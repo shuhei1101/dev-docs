@@ -718,7 +718,7 @@ scenarios:
         description: sample の `dev-docs.yaml` の `decisions.folders` に、話し合い a・b のフォルダを記載する
         notes: plain の `dev-docs.yaml` には記載しない
       - name: decisions を持つ文書
-        description: 'sample の文書 6 の表の行・「項目 / 値」の表の項目・見出しのセクションに、`decisions: [D-1, D-2, D-3]` を持たせる。plain の文書にも `decisions: [D-1]` を持たせる'
+        description: 'sample の文書 6 の表の行と、「項目 / 値」の表を持つ見出しのセクションに、`decisions: [D-1, D-2, D-3]` を持たせる。plain の文書にも `decisions: [D-1]` を持たせる'
         notes: 文書 6 は正常シナリオ（スキーマ駆動の文書を図と表で読む）の文書
       - name: dev-docs
         description: sample と plain を配信している dev-docs
@@ -741,7 +741,7 @@ scenarios:
         UI-->>U: decisions を ID の文字で出した本文
       ```
     expected:
-      - 文書 6 の表のセル・「項目 / 値」の表・見出しのセクションのどこでも、`D-1` が検討事項へのリンクで出る
+      - 文書 6 の表のセルと箇条書き（「項目 / 値」の表を持つセクションの `decisions` を含む）のどちらでも、`D-1` が検討事項へのリンクで出る
       - リンク `D-1` を押すと、URL が dev-docs の画面のまま、話し合い a の `D-1.md` の本文が mdmark で描かれる
       - 2 つの話し合いにある `D-2` と、どちらにも無い `D-3` は、リンクにならず ID の文字で出る
       - plain の文書の `D-1` は、リンクにならず ID の文字で出て、他の本文は描かれる
