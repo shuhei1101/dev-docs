@@ -47,11 +47,11 @@ constants:
     summary: '`POST /_admin/session-start` を呼ぶ `source`'
     value: frozenset({'clear', 'compact'})
   - name: RECONNECT_GUIDE
-    title: つなぎ直しの案内
+    title: 再接続の案内
     container: hooks/session_start.py
     usecase: 起動
     summary: 起動したときに文脈に入れる文
-    value: '"dev-docs を起動しました。このセッションで文書の MCP を使うには /mcp で dev-docs につなぎ直してください。"'
+    value: '"dev-docs を起動しました。このセッションで文書の MCP を使用するには /mcp で dev-docs に再接続してください。"'
 functions:
   - name: main
     title: フックの入口
@@ -71,8 +71,8 @@ functions:
          - JSON として読めない場合、何も出さず 0 を返す
       2. ポートにつながるか確かめる（待ち受けの確かめ）
       3. つながる場合、`source` が `FORGET_REASONS` で `session_id` があるときだけ記録の削除を依頼する（記録の削除の依頼。`reason` に `source`）。依頼しないときと依頼が成功したときは文を作らない
-         - `TimeoutError`、または `reason` が `TimeoutError` の `urllib.error.URLError` の場合、`dev-docs の返し済みの記録を削除できませんでした（{FORGET_TIMEOUT_SEC} 秒で打ち切りました）。前に返した文書は repeat_seen: true で取り直せます。` を `additionalContext` にする
-         - そのほかの `OSError`・`ValueError` の場合、`dev-docs の返し済みの記録を削除できませんでした（{理由}）。前に返した文書は repeat_seen: true で取り直せます。` を `additionalContext` にする
+         - `TimeoutError`、または `reason` が `TimeoutError` の `urllib.error.URLError` の場合、`dev-docs の返却済みの記録を削除できませんでした（{FORGET_TIMEOUT_SEC} 秒で打ち切りました）。前に返却した文書は repeat_seen: true で再取得できます。` を `additionalContext` にする
+         - そのほかの `OSError`・`ValueError` の場合、`dev-docs の返却済みの記録を削除できませんでした（{理由}）。前に返却した文書は repeat_seen: true で再取得できます。` を `additionalContext` にする
       4. つながらない場合、端末の設定（端末の設定のパス）からクローンを読み（クローンの読み取り）、サーバーを起動し（サーバーの起動）、`RECONNECT_GUIDE` を `additionalContext` にする
          - 端末の設定・`clone`・`{clone}/.venv/bin/python` のどれかが無い場合、`dev-docs を起動できませんでした（{無いもののパス}）。/dev-docs:global-setup で端末の設定を作ってください。` を `additionalContext` にする
          - 起動が `OSError` の場合、理由を添えて同じ文を `additionalContext` にする
@@ -315,7 +315,7 @@ functions:
         message: urllib の理由
       - name: ValueError
         condition: 応答が JSON の辞書でない
-        message: '`応答が読めません`'
+        message: '`応答を読み込めません`'
     unit_tests:
       - name: test_request_forget
         case: 正常
