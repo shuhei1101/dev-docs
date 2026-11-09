@@ -24,6 +24,6 @@ class SessionStartRequest(BaseModel):
 
 
 class SessionStartResponse(BaseModel):
-    """返し済みの記録を削除したか。"""
+    """返却済みの記録を削除したか。"""
 
     forgotten: bool = Field(description="返却済みの記録を削除したか")

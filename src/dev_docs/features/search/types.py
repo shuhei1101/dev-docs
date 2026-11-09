@@ -58,7 +58,7 @@ class Condition(BaseModel):
 
 
 class Group(BaseModel):
-    """条件を AND・OR で束ねるか、否定する。"""
+    """条件を AND・OR でまとめるか、否定する。"""
 
     model_config = ConfigDict(extra="forbid", populate_by_name=True)
 
@@ -81,7 +81,7 @@ class OrderKey(BaseModel):
 
 
 class Snippets(BaseModel):
-    """本文の代わりに条件に当たった行と前後の行だけを行番号つきで返す指定。"""
+    """本文の代わりに条件に該当した行と前後の行だけを行番号つきで返却する指定。"""
 
     model_config = ConfigDict(extra="forbid")
 
@@ -98,7 +98,7 @@ class Snippets(BaseModel):
 
 
 class LineRange(BaseModel):
-    """本文から返す行の範囲。"""
+    """本文から返却する行の範囲。"""
 
     model_config = ConfigDict(extra="forbid")
 

@@ -15,7 +15,7 @@ WORKTREE_LABEL = "作業ツリー"
 
 
 class ContainsQuery(BaseModel):
-    """`list_changes` の `contains`（変更の中身の語）。"""
+    """`list_changes` の `contains`（変更の中身の単語）。"""
 
     model_config = ConfigDict(extra="forbid")
 
