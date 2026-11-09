@@ -177,7 +177,8 @@ class SourceRegistry:
     def _next_row(self) -> int | None:
         """次に読み込む行。待っている要求が指す行を先にし、無ければ位置の順。"""
         with self._waiters_lock:
-            for index in [*self._requested, *range(len(self._rows))]:
+            candidates: list[int] = [*self._requested, *range(len(self._rows))]
+            for index in candidates:
                 if not self._rows_done[index].is_set():
                     return index
         return None
