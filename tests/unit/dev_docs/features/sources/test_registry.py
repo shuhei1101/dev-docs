@@ -476,28 +476,38 @@ def test_source_registry_load_when_duplicate_loaded_later(
 ) -> None:
     """後の行が先に読み込まれて ID が重なる（正常系）。"""
     # 準備
-    loader = _Loader(make_served_source, make_status, blocked=("x",), names={"x": "a", "y": "a"})
+    from dev_docs.features.settings.types import SourceScope
+
+    loader = _Loader(make_served_source, make_status, blocked=("z",), names={"x": "a", "y": "a"})
     monkeypatch.setattr(registry_module, "load_source", loader)
-    terminal = make_terminal_config(sources=_entries(make_entry, "x", "y", with_id=False))
+    terminal = make_terminal_config(
+        sources=[
+            make_entry("/tmp/z/dev-docs.yaml", source_id="z"),
+            make_entry("/tmp/x/dev-docs.yaml", scope=SourceScope(read=["/w/x/**"])),
+            make_entry("/tmp/y/dev-docs.yaml", scope=SourceScope(read=["/w/y/**"])),
+        ]
+    )
     waiting = threading.Event()
     registry = SourceRegistry(loading=True, on_waiting=waiting.set)
 
     async def scenario() -> None:
         worker = threading.Thread(target=registry.load, args=(terminal,))
         worker.start()
-        await asyncio.to_thread(loader.entered["x"].wait, 5)
-        waiter = asyncio.ensure_future(registry.wait_for(ids=["a"]))
+        await asyncio.to_thread(loader.entered["z"].wait, 5)
+        waiter = asyncio.ensure_future(registry.wait_for(cwd="/w/y/q"))
         await asyncio.to_thread(waiting.wait, 5)
-        loader.release["x"].set()
+        loader.release["z"].set()
         await asyncio.wait_for(waiter, timeout=5)
         await asyncio.to_thread(worker.join, 5)
 
     # 実行
     asyncio.run(scenario())
     # 検証
+    assert loader.order == ["z", "y", "x"]
     statuses = registry.statuses()
-    assert [status.status for status in statuses] == ["serving", "not_served"]
-    assert [error.path for error in statuses[1].errors] == ["sources[1].id"]
+    assert [status.status for status in statuses] == ["serving", "serving", "not_served"]
+    assert [error.path for error in statuses[2].errors] == ["sources[2].id"]
+    assert registry.get("a").root == Path("/tmp/x")
 
 
 def test_source_registry_wait_for(
