@@ -26,21 +26,21 @@ def build_parser() -> argparse.ArgumentParser:
     migrate = subparsers.add_parser("migrate", help="設定のバージョンを今のバージョンに移し替える")
     # --plan は書き換えず手順だけを出し、--record は手順を当てずにバージョンだけを書き換える
     mode = migrate.add_mutually_exclusive_group()
-    mode.add_argument("--plan", action="store_true", help="当てる手順を出して終わる")
+    mode.add_argument("--plan", action="store_true", help="適用する手順を出して終わる")
     mode.add_argument("--record", action="store_true", help="version だけを今のバージョンにする")
     migrate.add_argument(
         "--source", default=None, help="移し替える配信元の dev-docs.yaml（省くと端末の設定）"
     )
     migrate.add_argument(
-        "--allow-destructive", action="store_true", help="キーの削除など値を捨てる手順も当てる"
+        "--allow-destructive", action="store_true", help="キーの削除など値を捨てる手順も適用する"
     )
     migrate.set_defaults(handler=run_migrate)
-    files = subparsers.add_parser("files", help="管理用の YAML に載せるファイルの一覧を出す")
+    files = subparsers.add_parser("files", help="管理用の YAML に記載するファイルの一覧を出す")
     files.add_argument("--root", required=True, help="配信元のフォルダ")
     files.add_argument(
         "--paths", required=True, action="append", help="範囲の glob（--root からの相対）"
     )
-    files.add_argument("--exclude", action="append", default=[], help="外すファイル名の glob")
+    files.add_argument("--exclude", action="append", default=[], help="除外するファイル名の glob")
     files.set_defaults(handler=run_files)
     prompt_doc = subparsers.add_parser(
         "prompt-doc", help="標準入力のプロンプトの YAML を Markdown にして標準出力に出す"

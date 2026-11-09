@@ -31,8 +31,8 @@ class RelatedRequest(BaseModel):
     outside_scope: bool = Field(
         default=False,
         description=(
-            "true のとき、scope に当たらない配信元を outside_read が真なら"
-            "作業範囲の外（参考）として読む（source が ID 1 つのときだけ効く）"
+            "true のとき、scope に該当しない配信元を outside_read が真なら"
+            "作業範囲の外（参考）として参照する（source が ID 1 つのときだけ有効）"
         ),
     )
     session_id: str | None = None
