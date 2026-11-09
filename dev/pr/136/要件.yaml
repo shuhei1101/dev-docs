@@ -29,7 +29,9 @@ docs:
   - page: scripts/dev-docs-server-wait.sh
     new: false
     change: '`loaded` の待つ条件を、引数なしの `describe` の応答から、管理の MCP の `status` が `loading: false` を返すことに替え、1 回の要求を `LOADED_TRY` 秒で区切って送り直す処理を除く'
-    status: todo
+    status: done
+    updated_by: planner
+    updated_at: '2026-11-09T01:47:45.512670+00:00'
 scope_out:
   - item: 画面の設定の API・管理の MCP の `status` 以外のツール・`describe` の作業範囲の外の一覧が、起動直後に全ての配信元の読み込みの終わりまで待つこと
     reason: 要望に含まれない。どれも全ての配信元の一覧を返すか差し替える操作で、全ての行の読み込みを待つ必要がある。画面の文書の API は配信元を指すため、文書の MCP と同じく指す配信元の読み込みだけを待つようにしてスコープに含めた
