@@ -249,5 +249,49 @@ functions:
         mock: なし
         expected: '`None`'
         exception: '-'
+  - name: is_ignored
+    title: 無視されているファイル
+    kind: 関数
+    container: integrations/git.py
+    usecase: 共通
+    role: 読み取り
+    summary: ファイルが `.gitignore` などで無視されているかを返す
+    scope: public
+    thread_safe: true
+    args:
+      - name: path
+        title: ファイル
+        type: Path
+        required: true
+        passing: positional
+        description: 確かめるファイルの絶対パス
+      - name: top
+        title: リポジトリの直下
+        type: Path
+        required: true
+        passing: positional
+        description: '`repo_root` が返した直下'
+    returns:
+      type: bool
+      description: 無視されていれば `True`
+    process: |-
+      1. `top` で `check-ignore -q -- {path の top からの相対パス}` を呼ぶ（gitの実行）
+      2. 終了コード 0 なら `True` を返す
+         - `GitError` の場合（無視されていない終了コード 1 と、失敗の 128）、`False` を返す
+    unit_tests:
+      - name: test_is_ignored
+        case: 正常
+        summary: 無視されている
+        condition: '`.gitignore` に `dev-docs.local.yaml` を書いた一時リポジトリの `dev-docs.local.yaml`'
+        mock: なし（一時フォルダで `git init`）
+        expected: '`True`'
+        exception: '-'
+      - name: test_is_ignored_when_not_ignored
+        case: 正常
+        summary: 無視されていない
+        condition: '`.gitignore` に書いていない、commit していない `dev-docs.yaml`'
+        mock: なし（一時フォルダで `git init`）
+        expected: '`False`'
+        exception: '-'
 test_files:
   - tests/unit/dev_docs/integrations/test_git.py

@@ -385,12 +385,14 @@ functions:
         description: '`sources[].config` の先頭のファイル'
     returns:
       type: tuple[str, str] | None
-      description: （`default_ref` の commit, そのリビジョンの設定の内容）。Git の作業ツリーでなければ `None`
+      description: （`default_ref` の commit, そのリビジョンの設定の内容）。先頭の設定を無視していれば内容はディスクの設定。Git の作業ツリーでなければ `None`
     process: |-
       1. `first` のフォルダのリポジトリの直下を引く（リポジトリの直下）。無ければ `None` を返す
       2. ディスクの `first` を YAML として読み、`default_ref`（無ければスキーマの既定）を取る
       3. `default_ref` を commit に解く（リビジョンの解決）。解けない場合、`default_ref` のパスの違反の `ValidationFailedError` を送る
-      4. その commit の `first` の相対パスのファイルを読む（リビジョンのファイル）。無い場合、`config[0]` のパスの違反の `ValidationFailedError` を送る
+      4. その commit の `first` の相対パスのファイルを読む（リビジョンのファイル）
+         - 無く、`first` が無視されている場合（無視されているファイル）、ディスクの `first` の内容を使う
+         - 無く、無視されていない場合、`config[0]` のパスの違反の `ValidationFailedError` を送る
       5. commit と内容を返す
     exceptions:
       - name: ValidationFailedError
@@ -418,6 +420,20 @@ functions:
         mock: なし
         expected: '`ValidationFailedError` の違反のパスが `default_ref`'
         exception: '`default_ref` が解けない'
+      - name: test_read_default_ref_config_when_ignored
+        case: 正常
+        summary: 無視されている先頭の設定はディスクから読む
+        condition: '`develop` に無く `.gitignore` した `dev-docs.local.yaml`（`default_ref: develop`）'
+        mock: なし（一時フォルダで `git init`）
+        expected: '`develop` の commit と、ディスクの `dev-docs.local.yaml` の内容'
+        exception: '-'
+      - name: test_read_default_ref_config_when_not_committed
+        case: 異常
+        summary: 無視していない先頭の設定が default_ref に無い
+        condition: '`develop` に無く `.gitignore` もしていない `dev-docs.yaml`'
+        mock: なし（一時フォルダで `git init`）
+        expected: '`ValidationFailedError` の違反のパスが `config[0]` で、`develop に dev-docs.yaml がありません`'
+        exception: そのリビジョンに設定のファイルが無い
   - name: load_source_at
     title: 作業場所の配信元の読み込み
     kind: 関数
@@ -445,6 +461,7 @@ functions:
       description: '`root` の設定で作った配信元（ID・`scope_read`・`scope_write`・`outside_read` は `source` のまま）'
     process: |-
       1. `source.config_files` を `source.repo_root`（無ければ `source.root`）からの相対パスにし、`root` の下の同じパスにする
+         - `root` の下の同じパスにファイルが無く、元のファイルが無視されている場合（無視されているファイル）、元のファイル（クローン本体のディスク）を使う
       2. 配信元の読み込みの手順 2〜6・8〜9 を、ディスクの設定・スキーマ・スクリプトで（`default_ref` を読まずに）、配信元の読み込みと同じ内部の関数で行う（設定のバージョンは比べない）
          - 違反がある場合、その違反を持つ `ValidationFailedError` を送る
       3. 作った配信元を返す
@@ -466,6 +483,13 @@ functions:
         mock: なし
         expected: '`ValidationFailedError` で違反のパスが `config[0]`'
         exception: 設定が無い
+      - name: test_load_source_at_when_ignored_config
+        case: 正常
+        summary: 無視した先頭の設定はクローン本体のものを使う
+        condition: クローン本体の直下に `.gitignore` した `dev-docs.local.yaml` を先頭に持つ配信元を、`git worktree add` したワークツリーで読み直す
+        mock: なし（一時フォルダで `git init` と `git worktree add`）
+        expected: '`config_files` の先頭がクローン本体の `dev-docs.local.yaml` で、`root` がワークツリーの直下'
+        exception: '-'
       - name: test_load_source_at_when_invalid
         case: 異常
         summary: 検証に通らない

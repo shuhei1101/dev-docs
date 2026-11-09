@@ -81,6 +81,34 @@ flows:
       - '`additionalContext` が `/mcp` のつなぎ直しの案内'
       - フックが起動したプロセスの終了を待たずに終了コード 0 で戻る
     test: test_normal_when_server_down
+  - name: 正常系（XDG_CONFIG_HOME の下の端末の設定）
+    summary: '`DEV_DOCS_CONFIG` が無ければ `XDG_CONFIG_HOME` の下の端末の設定の `clone` で起動する'
+    setup:
+      - name: Mock
+        description: '`{clone}/.venv/bin/python` を、受けた引数をファイルに書いて終わるスクリプトに差し替える'
+      - name: 端末の設定
+        description: '`clone:` にその一時フォルダを持つ `settings.yaml` を `$XDG_CONFIG_HOME/dev-docs/` に置き、`DEV_DOCS_CONFIG` を外す'
+        notes: 2 回目は `XDG_CONFIG_HOME` に相対パスを入れ、`HOME` の下の `.config/dev-docs/settings.yaml` に別の `clone:` を置く
+      - name: ポート
+        description: 空いているポートを `DEV_DOCS_PORT` に渡す
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        participant C as Claude Code
+        participant H as セッション開始のフック
+        participant S as dev-docs serve
+
+        C->>H: stdin
+        H->>H: ポートにつながらない
+        H-->>H: $XDG_CONFIG_HOME/dev-docs/settings.yaml の clone を読む
+        H->>S: 切り離して起動する
+        H-->>C: additionalContext（つなぎ直しの案内）
+      ```
+    expected:
+      - '`$XDG_CONFIG_HOME/dev-docs/settings.yaml` の `clone` の Mock が `-m dev_docs serve` を受けている'
+      - '`XDG_CONFIG_HOME` が相対パスの 2 回目は、`HOME` の下の `.config/dev-docs/settings.yaml` の `clone` の Mock が受けている'
+      - フックが終了コード 0 で戻る
+    test: test_normal_when_xdg_config_home_set
   - name: 正常系（端末の設定が無い）
     summary: 起動できない理由と `/dev-docs:global-setup` の案内を文脈に入れ、終了コード 0 で戻る
     setup:
@@ -139,6 +167,7 @@ callers:
   - dev/設計書/シナリオ/単一ユースケース/起動する#scenarios[正常シナリオ（SessionStart で起動する）]
   - dev/設計書/シナリオ/単一ユースケース/起動する#scenarios[正常シナリオ（待ち受けているサーバーがあるときは文脈を注入しない）]
   - dev/設計書/シナリオ/単一ユースケース/起動する#scenarios[異常シナリオ（SessionStart で起動できない）]
+  - dev/設計書/シナリオ/単一ユースケース/起動する#scenarios[正常シナリオ（SessionStart で XDG_CONFIG_HOME の下の端末の設定から起動する）]
 exclusivity: 同時に開いた複数のセッションがどれも起動してもよい。後から起動した `dev-docs serve` はポートが使用中（終了コード 3）で止まり、待ち受けるのは 1 つだけ
 request:
   - name: session_id
@@ -175,9 +204,15 @@ request:
   - name: DEV_DOCS_CONFIG
     type: str
     required: false
-    default: '`~/.config/dev-docs/settings.yaml`'
+    default: '`${XDG_CONFIG_HOME:-~/.config}/dev-docs/settings.yaml`'
     description: 端末の設定のパス
     notes: 環境変数
+  - name: XDG_CONFIG_HOME
+    type: str
+    required: false
+    default: '`~/.config`'
+    description: '`DEV_DOCS_CONFIG` が無いときに端末の設定を探すフォルダの親'
+    notes: 環境変数。空の文字列か相対パスは未設定として扱う
 request_example: |-
   ```json
   {"session_id": "8f1c...", "cwd": "/home/u/repo/sample/.claude/worktrees/x", "source": "startup", "hook_event_name": "SessionStart"}
@@ -210,6 +245,9 @@ constraints:
     constraint: Python 3.14 の標準ライブラリだけ。`uv` を前提にしない
   - item: 接続の確かめ
     constraint: '`127.0.0.1:${DEV_DOCS_PORT}` への TCP 接続を 0.5 秒で打ち切る'
+  - item: 端末の設定のパス
+    constraint: '`DEV_DOCS_CONFIG`、無ければ `${XDG_CONFIG_HOME:-~/.config}/dev-docs/settings.yaml`。`XDG_CONFIG_HOME` が空の文字列か相対パスなら未設定として扱う'
+    notes: dev/設計書/インターフェース定義/開発ドキュメントサーバー/起動 の `端末の設定と状態の置き場` と同じ規則。フックはサーバーのパッケージを import しないため、同じ規則を持つ
   - item: 端末の設定の読み方
     constraint: トップレベルの `clone:` の行だけを読む（`~` を展開し、引用符を外す）
     notes: 標準ライブラリに YAML のパーサーが無いため

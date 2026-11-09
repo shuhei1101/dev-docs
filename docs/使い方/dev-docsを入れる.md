@@ -26,7 +26,7 @@
    /dev-docs:global-setup /home/me/repo/dev-docs
    ```
 4. 聞かれた端末の設定の場所に答える。
-   既定は `~/.config/dev-docs/settings.yaml`。
+   既定は `${XDG_CONFIG_HOME:-~/.config}/dev-docs/settings.yaml`。
 5. スキルの最後の応答にある、作った端末の設定のパスと接続の結果を確かめる。
 6. Claude Code で `/mcp` を開き、`dev-docs` につなぎ直す。
 7. 配信元を登録する。

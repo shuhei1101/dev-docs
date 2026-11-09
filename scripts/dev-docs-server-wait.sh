@@ -14,8 +14,10 @@
 set -u
 
 PORT=8781
-# 端末の設定の log_dir の既定
-LOG_DIR="$HOME/.local/state/dev-docs/logs"
+# 端末の設定の log_dir の既定（XDG_STATE_HOME は絶対パスでなければ未設定として扱う）
+XDG_STATE_HOME=${XDG_STATE_HOME:-}
+case "$XDG_STATE_HOME" in /*) ;; *) XDG_STATE_HOME= ;; esac
+LOG_DIR="${DEV_DOCS_STATE_DIR:-${XDG_STATE_HOME:-$HOME/.local/state}/dev-docs}/logs"
 LISTENING_LIMIT=120
 LOADED_LIMIT=540
 # 読み込み中の describe は読み込みの終わりまで応答しないため、1 回の要求を LOADED_TRY 秒で切って送り直す。

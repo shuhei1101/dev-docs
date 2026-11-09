@@ -124,6 +124,39 @@ def test_normal_when_server_down(
             os.kill(int(_wait_for(pid_file, 1)), signal.SIGTERM)
 
 
+def test_normal_when_xdg_config_home_set(
+    tmp_path: Path, run_hook: Callable[..., Any], free_port: Callable[[], int]
+) -> None:
+    """DEV_DOCS_CONFIG が無ければ XDG_CONFIG_HOME の下の端末の設定の clone で起動する（正常系）。"""
+    # 準備
+    xdg = tmp_path / "xdg"
+    xdg_clone, xdg_args, xdg_pid = _clone_with_recorder(xdg)
+    (xdg / "dev-docs").mkdir()
+    (xdg / "dev-docs" / "settings.yaml").write_text(
+        f'version: "1"\nclone: {xdg_clone}\n', encoding="utf-8"
+    )
+    home = tmp_path / "home"
+    home_clone, home_args, home_pid = _clone_with_recorder(home)
+    (home / ".config" / "dev-docs").mkdir(parents=True)
+    (home / ".config" / "dev-docs" / "settings.yaml").write_text(
+        f'version: "1"\nclone: {home_clone}\n', encoding="utf-8"
+    )
+    base = {"DEV_DOCS_PORT": str(free_port()), "DEV_DOCS_CONFIG": "", "HOME": str(home)}
+    # 実行
+    first = run_hook("session_start", EVENT, {**base, "XDG_CONFIG_HOME": str(xdg)})
+    second = run_hook("session_start", EVENT, {**base, "XDG_CONFIG_HOME": "rel"})
+    # 検証
+    try:
+        assert first.code == 0
+        assert _wait_for(xdg_args) == "-m dev_docs serve"
+        assert second.code == 0
+        assert _wait_for(home_args) == "-m dev_docs serve"
+    finally:
+        for pid_file in (xdg_pid, home_pid):
+            with contextlib.suppress(OSError, ValueError):
+                os.kill(int(_wait_for(pid_file, 1)), signal.SIGTERM)
+
+
 def test_normal_when_terminal_config_missing(
     tmp_path: Path, run_hook: Callable[..., Any], free_port: Callable[[], int]
 ) -> None:

@@ -8,7 +8,7 @@ from typing import Any
 import pytest
 
 from dev_docs.integrations import git as git_module
-from dev_docs.integrations.git import GitError, repo_root, run_git
+from dev_docs.integrations.git import GitError, is_ignored, repo_root, run_git
 
 
 def test_run_git(git_repo: Callable[..., Path]) -> None:
@@ -102,3 +102,25 @@ def test_main_repo_root_when_not_git(tmp_path: Path) -> None:
     result = main_repo_root(tmp_path)
     # 検証
     assert result is None
+
+
+def test_is_ignored(git_repo: Callable[..., Path]) -> None:
+    """無視されている（正常系）。"""
+    # 準備
+    root = git_repo({".gitignore": "dev-docs.local.yaml\n"})
+    (root / "dev-docs.local.yaml").write_text("name: x\n", encoding="utf-8")
+    # 実行
+    result = is_ignored(root / "dev-docs.local.yaml", root)
+    # 検証
+    assert result is True
+
+
+def test_is_ignored_when_not_ignored(git_repo: Callable[..., Path]) -> None:
+    """無視されていない（正常系）。"""
+    # 準備
+    root = git_repo({"a.yaml": "a: 1\n"})
+    (root / "dev-docs.yaml").write_text("name: x\n", encoding="utf-8")
+    # 実行
+    result = is_ignored(root / "dev-docs.yaml", root)
+    # 検証
+    assert result is False

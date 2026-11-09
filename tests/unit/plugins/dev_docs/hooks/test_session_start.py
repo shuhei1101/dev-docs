@@ -240,6 +240,44 @@ def test_is_listening_when_closed(load_hook: Callable[[str], ModuleType]) -> Non
     assert result is False
 
 
+def test_config_path(load_hook: Callable[[str], ModuleType]) -> None:
+    """DEV_DOCS_CONFIG が優先（正常系）。"""
+    # 準備
+    hook = load_hook("session_start")
+    env = {"DEV_DOCS_CONFIG": "/tmp/x/settings.yaml", "XDG_CONFIG_HOME": "/tmp/c"}
+    # 実行
+    result = hook.config_path(env)
+    # 検証
+    assert result == Path("/tmp/x/settings.yaml")
+
+
+def test_config_path_when_xdg_config_home_set(load_hook: Callable[[str], ModuleType]) -> None:
+    """XDG_CONFIG_HOME の下（正常系）。"""
+    # 準備
+    hook = load_hook("session_start")
+    env = {"XDG_CONFIG_HOME": "/tmp/c"}
+    # 実行
+    result = hook.config_path(env)
+    # 検証
+    assert result == Path("/tmp/c/dev-docs/settings.yaml")
+
+
+@pytest.mark.parametrize("env", [{}, {"XDG_CONFIG_HOME": ""}, {"XDG_CONFIG_HOME": "rel"}])
+def test_config_path_when_unset_or_relative(
+    load_hook: Callable[[str], ModuleType],
+    monkeypatch: pytest.MonkeyPatch,
+    env: dict[str, str],
+) -> None:
+    """未設定・空の文字列・相対パスは既定（正常系）。"""
+    # 準備
+    hook = load_hook("session_start")
+    monkeypatch.setenv("HOME", "/home/u")
+    # 実行
+    result = hook.config_path(env)
+    # 検証
+    assert result == Path("/home/u/.config/dev-docs/settings.yaml")
+
+
 def test_read_clone(load_hook: Callable[[str], ModuleType], tmp_path: Path) -> None:
     """引用符と ~ を扱う（正常系）。"""
     # 準備
