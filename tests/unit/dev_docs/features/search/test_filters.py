@@ -213,10 +213,10 @@ def test_check_filter_when_body_range() -> None:
     not_full_violations = check_filter(not_full, FIELDS)
     # 検証
     assert [(violation.path, violation.rule) for violation in both_violations] == [
-        ("sections", "sections と lines は同時に渡せません")
+        ("sections", "sections と lines は同時に指定できません")
     ]
     assert [(violation.path, violation.rule) for violation in not_full_violations] == [
-        ("sections", "view: full のときだけ渡せます")
+        ("sections", "view: full のときだけ指定できます")
     ]
 
 

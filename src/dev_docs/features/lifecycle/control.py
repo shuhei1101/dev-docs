@@ -37,7 +37,7 @@ class RestartControl:
             if self._requested:
                 raise RestartInProgressError(
                     message="再起動の途中です",
-                    next_steps=["/mcp でつなぎ直して status を呼んでください"],
+                    next_steps=["/mcp で再接続して status を呼んでください"],
                 )
             self._requested = True
             # 待ち受けを閉じて処理中の要求を待たせる（応答は返ってから止まる）

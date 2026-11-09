@@ -11,7 +11,7 @@ FILES_SCHEMA = Path(__file__).parents[3] / "templates" / "files.schema.yaml"
 BROKEN_CONFIG = "name: broken\ndocuments:\n  - id: sample\n    schema: schemas/sample.schema.yaml\n"
 DOC_1 = {"field": "id", "op": "eq", "values": ["doc-1"]}
 FILES_REQUIRED = "'files' is a required property"
-SEEN = "（この会話で返し済み）"
+SEEN = "（この会話で返却済み）"
 FILES_ROW = (
     "  - id: src\n"
     "    paths: [src/files.yaml]\n"
@@ -226,7 +226,7 @@ def test_normal(
     assert "| sample | write（作業中） |" in sources.text
     assert "| notes | read |" in sources.text
     assert "| sample |" in detail.text
-    assert summary.text.startswith("sample: 該当 2 件・返した 2 件")
+    assert summary.text.startswith("sample: 該当 2 件・返却した 2 件")
     assert [row.split("|")[1].strip() for row in rows] == ["doc-1", "doc-2"]
     assert all(re.search(r"\| [0-9a-f]{6} \|$", row) for row in rows)
     assert "id: doc-1" in full.text

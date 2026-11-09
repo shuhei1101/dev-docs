@@ -42,9 +42,9 @@ functions:
       description: Markdown
     process: |-
       1. `outside_scope` が `True` なら先頭に `作業範囲の外（参考）` の行を置く
-      2. 次の行に `{配信元}: 該当 {total_count} 件・返した {returned} 件` を置く（複数の配信元は配信元ごとの件数も添える）
+      2. 次の行に `{配信元}: 該当 {total_count} 件・返却した {returned} 件` を置く（複数の配信元は配信元ごとの件数も添える）
       3. `groups` があれば `| 値 | 件数 |` の表を置く
-      4. `view` が `full` の場合、文書ごとに `<document path="{path}" scope="{scope}">`（`path` が `None` なら属性の無い `<document>`。`outside_scope` が `True` なら `outside_scope="true"` の属性を加える）と `</document>` で包み、中に項目の箇条書きと本文を置く。`total_lines` を持つ文書は、`<document>` の前の行に `{id}: {start_line}-{end_line} 行目 / 全 {total_lines} 行` を置く（範囲が複数なら `{start_line}-{end_line} 行目` を `・` で並べ、空なら `{id}: 返す行なし / 全 {total_lines} 行`）。抜粋は、当たった行を `{行番号}:{行}`、前後の行を `{行番号}-{行}` で出し、抜粋の間に `--` の行を置く。それ以外は項目を列にした表にする（列名は項目の名前。`@chars` は `chars`）
+      4. `view` が `full` の場合、文書ごとに `<document path="{path}" scope="{scope}">`（`path` が `None` なら属性の無い `<document>`。`outside_scope` が `True` なら `outside_scope="true"` の属性を加える）と `</document>` で包み、中に項目の箇条書きと本文を置く。`total_lines` を持つ文書は、`<document>` の前の行に `{id}: {start_line}-{end_line} 行目 / 全 {total_lines} 行` を置く（範囲が複数なら `{start_line}-{end_line} 行目` を `・` で並べ、空なら `{id}: 返却する行なし / 全 {total_lines} 行`）。抜粋は、当たった行を `{行番号}:{行}`、前後の行を `{行番号}-{行}` で出し、抜粋の間に `--` の行を置く。それ以外は項目を列にした表にする（列名は項目の名前。`@chars` は `chars`）
       5. `notes` があれば末尾に `> ` の行で並べ、`next_cursor` があれば `続き: cursor={next_cursor}` を置く
     unit_tests:
       - name: test_render_search_markdown
@@ -52,7 +52,7 @@ functions:
         summary: 一覧の表
         condition: '`view: summary` の 2 件'
         mock: なし
-        expected: '`sample: 該当 2 件・返した 2 件` の行と、`| id | kind | name | description | chars | version |` の表'
+        expected: '`sample: 該当 2 件・返却した 2 件` の行と、`| id | kind | name | description | chars | version |` の表'
       - name: test_render_search_markdown_when_full
         case: 正常
         summary: 場所と範囲を属性にする

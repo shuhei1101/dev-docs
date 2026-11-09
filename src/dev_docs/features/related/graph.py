@@ -56,7 +56,7 @@ def walk_related(
                         key = f"{link.source}:{link.to}"
                         target = resolve_other(link.source, link.to)
                         if target is None:
-                            note = f"{key} は読めないので除きました"
+                            note = f"{key} は参照できないので除きました"
                             if note not in notes:
                                 notes.append(note)
                             continue

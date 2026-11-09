@@ -64,7 +64,7 @@ functions:
     exceptions:
       - name: InvalidArgumentError
         condition: 配列でない項目への追加・削除、文字列でない項目への置き換え、`old` の一致が 1 か所でない
-        message: '`操作を当てられません`'
+        message: '`操作を適用できません`'
     unit_tests:
       - name: test_apply_operation
         case: 正常
@@ -195,7 +195,7 @@ functions:
     process: |-
       1. `table.metadata` のうち、列名が `{配列}[].{項目}`（全ての要素のキー。例 `tags: tags[].name`）か `{配列}[{真偽値のキー}].{項目}`（選んだ要素のキー。例 `main_tags: tags[main].name`）の共通のキーを集める。無ければ `operation` をそのまま返す
       2. `text_edits[].field` が集めたキーを指す場合、`path` が `operations[{index}].text_edits[{n}].field`、`rule` が `{共通のキー} は文字列の項目ではありません` の違反にする
-      3. `data`・`set`・`add_to`・`remove_from` の集めたキーの値が、要素が全て文字列のリストでない場合（オブジェクトの配列・文字列 1 つなど）、`path` が `operations[{index}].{項目}.{共通のキー}`、`rule` が `{共通のキー} は名前（文字列）の配列で渡します` の違反にする
+      3. `data`・`set`・`add_to`・`remove_from` の集めたキーの値が、要素が全て文字列のリストでない場合（オブジェクトの配列・文字列 1 つなど）、`path` が `operations[{index}].{項目}.{共通のキー}`、`rule` が `{共通のキー} は名前（文字列）の配列で指定します` の違反にする
       4. 2・3 の違反があれば、操作を当てずに `InvalidArgumentError` で送る
       5. 配列ごとに、元の配列を複製する。`update` は `current` の値、`create`・`replace` は `data` の列名の値（無ければ空の配列）
       6. 全ての要素のキーへの操作を当てる

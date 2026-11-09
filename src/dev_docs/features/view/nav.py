@@ -349,7 +349,7 @@ def check_nav_filters(
             request = SearchRequest(filter=spec["filter"])
         except ValidationError as error:
             violations.append(
-                Violation(path=f"{path}.filter", rule=f"条件として読めません（{error}）")
+                Violation(path=f"{path}.filter", rule=f"条件として読み込めません（{error}）")
             )
             continue
         violations.extend(
@@ -391,7 +391,7 @@ def zero_count_warnings(counts: Sequence[NavAutoCount]) -> list[Violation]:
             path=f"{count.path}.filter" if count.filter is not None else count.path,
             rule=(
                 f"{count.tab}: 条件 {json.dumps(count.filter, ensure_ascii=False)}"
-                " に当たる文書がありません"
+                " に該当する文書がありません"
             ),
         )
         for count in counts

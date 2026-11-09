@@ -39,7 +39,7 @@ functions:
     exceptions:
       - name: SourceNotReadableError
         condition: 読む場所の解決が送る
-        message: '`{id} はこの作業場所（{cwd}）から読めません`'
+        message: '`{id} はこの作業場所（{cwd}）から参照できません`'
       - name: SourceNotServedError
         condition: 読む場所の解決が送る
         message: '`{id} は配信していません`'
@@ -64,7 +64,7 @@ functions:
     container: features/search/terms.py
     usecase: 用語の一覧
     role: 表示
-    summary: 用語の一覧の結果を `| 語 | 文書 | 種類 |` の表にする
+    summary: 用語の一覧の結果を `| 単語 | 文書 | 種類 |` の表にする
     scope: public
     thread_safe: true
     args:
@@ -79,7 +79,7 @@ functions:
       description: Markdown。語が無ければ `用語はありません`
     process: |-
       1. 語が無ければ `用語はありません` を返す
-      2. `| 語 | 文書 | 種類 |` の表に語ごとの行を並べて返す
+      2. `| 単語 | 文書 | 種類 |` の表に語ごとの行を並べて返す
     unit_tests:
       - name: test_render_match_words_markdown
         case: 正常

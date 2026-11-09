@@ -8,7 +8,7 @@ import pytest
 
 from dev_docs.shared.yaml_io import load_yaml
 
-SEEN_MARK = "（この会話で返し済み）"
+SEEN_MARK = "（この会話で返却済み）"
 OUTSIDE_LINE = "作業範囲の外（参考）"
 OUTSIDE_LOG = "作業範囲の外を読んだ"
 CODE_ROW = (

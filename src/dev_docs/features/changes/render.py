@@ -30,7 +30,7 @@ def render_changes_markdown(result: ChangesResult, *, source_label: str) -> str:
             *(["source"] if has_source else []),
             "変更",
             "変わったキー",
-            *(["語の増減"] if has_words else []),
+            *(["単語の増減"] if has_words else []),
         ]
         lines.extend([f"| {' | '.join(head)} |", f"| {' | '.join('---' for _ in head)} |"])
         for item in result.items:

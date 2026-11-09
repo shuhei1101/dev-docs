@@ -26,7 +26,7 @@ flows:
         T-->>C: 総件数と id・name・description・chars・version の表
       ```
     expected:
-      - '先頭に `sample: 該当 2 件・返した 2 件` がある'
+      - '先頭に `sample: 該当 2 件・返却した 2 件` がある'
       - 表に 2 件が `id` 昇順で並び、各行に `version` がある
       - structuredContent を返さない
     test: test_normal
@@ -180,12 +180,12 @@ flows:
         T-->>C: 文書 1 の本文
         C->>T: 同じ引数
         T-->>SD: 記録を読む
-        T-->>C: 文書 1 は（この会話で返し済み）
+        T-->>C: 文書 1 は（この会話で返却済み）
         C->>T: 同じ引数と repeat_seen: true
         T-->>C: 文書 1 の本文
       ```
     expected:
-      - 2 回目の本文が `（この会話で返し済み）` だけになり、`<document>` に属性が無く、json の項目に `path`・`scope` が無い
+      - 2 回目の本文が `（この会話で返却済み）` だけになり、`<document>` に属性が無く、json の項目に `path`・`scope` が無い
       - 3 回目は本文を返す
       - '`session_id: s2` の呼び出しは本文を返す'
       - 文書 1 のファイルが変わった後の呼び出しは、`s1` でも本文を返す
@@ -442,7 +442,7 @@ flows:
     expected:
       - '1 回目の `values.body` が 6〜8 行目だけで、`scope` が `section`、`ranges` が `[{start_line: 6, end_line: 8}]`、`total_lines` が 10'
       - '2 回目の `values.body` が 3〜4 行目だけで、`ranges` が `[{start_line: 3, end_line: 4}]`'
-      - '3 回目は全文を `scope: full` で返し、`（この会話で返し済み）` にならない'
+      - '3 回目は全文を `scope: full` で返し、`（この会話で返却済み）` にならない'
       - 3 回目の後に 1 回目と同じ引数で呼ぶと、返し済みでも 6〜8 行目を返す
       - '`sections: [決まったこと]` と `snippets: {context_lines: 0}`、`filter` に `body` の `contains` `検索` を渡すと、抜粋が `7:` の行（本文の行番号）になる'
       - '`sections: [無い見出し]` は本文を空で返し、`ranges` が空で、`notes` に当たる見出しが無いことがある'
@@ -922,7 +922,7 @@ response:
   - name: items[].values.body
     type: str
     description: 本文。YAML の文書は YAML、Markdown の文書は Markdown
-    notes: 返し済みなら `（この会話で返し済み）`
+    notes: 返し済みなら `（この会話で返却済み）`
   - name: items[].path
     type: str
     description: 文書の場所。配信元（ワークツリーを指したときはワークツリー）の直下と文書のパスを結んだ絶対パス。`body_file` のある `records` の要素は指したファイル
@@ -962,7 +962,7 @@ response:
     notes: '`format: markdown` は先頭の行に「作業範囲の外（参考）」を出し、`view: full` の `<document>` に `outside_scope="true"` を付ける'
 response_example: |-
   ```markdown
-  sample: 該当 2 件・返した 2 件
+  sample: 該当 2 件・返却した 2 件
 
   | id | kind | name | description | chars | version |
   | --- | --- | --- | --- | --- | --- |

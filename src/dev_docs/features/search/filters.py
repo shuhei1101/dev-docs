@@ -57,7 +57,7 @@ def parse_compare_value(value: str, field_type: str, *, today: date) -> Any:
         if field_type == "number":
             return float(value)
     except ValueError as error:
-        raise ValueError(f"{value} を {field_type} として読めません") from error
+        raise ValueError(f"{value} を {field_type} として読み込めません") from error
     return value
 
 
@@ -76,7 +76,9 @@ def _walk(node: Condition | Group, path: str) -> list[tuple[str, Condition | Gro
 def _unknown_field(path: str, field: str, fields: Mapping[str, str]) -> Violation:
     """知らない項目の違反を、近い項目を添えて作る。"""
     close = difflib.get_close_matches(field, list(fields), n=CLOSE_FIELDS)
-    fix = f"近い項目: {', '.join(close)}" if close else "describe で使える項目を見てください"
+    fix = (
+        f"近い項目: {', '.join(close)}" if close else "describe で使用できる項目を確認してください"
+    )
     return Violation(path=path, rule=f"知らない項目です（{field}）", fix=fix)
 
 
@@ -88,8 +90,8 @@ def _check_condition(condition: Condition, path: str, fields: Mapping[str, str])
         return [
             Violation(
                 path=f"{path}.field",
-                rule="@matches は条件に使えません",
-                fix="fields か order_by に渡してください",
+                rule="@matches は条件に使用できません",
+                fix="fields か order_by に指定してください",
             )
         ]
     if condition.field not in fields:
@@ -101,7 +103,7 @@ def _check_condition(condition: Condition, path: str, fields: Mapping[str, str])
             Violation(
                 path=f"{path}.values",
                 rule="値が 1 つ以上要ります",
-                fix="values に値を渡してください",
+                fix="values に値を指定してください",
             )
         )
     for index, value in enumerate(condition.values):
@@ -111,7 +113,8 @@ def _check_condition(condition: Condition, path: str, fields: Mapping[str, str])
             except re.error as error:
                 violations.append(
                     Violation(
-                        path=f"{path}.values[{index}]", rule=f"正規表現として読めません（{error}）"
+                        path=f"{path}.values[{index}]",
+                        rule=f"正規表現として読み込めません（{error}）",
                     )
                 )
         elif condition.op in COMPARE_OPS and condition.field in fields:
@@ -150,8 +153,8 @@ def check_filter(request: SearchRequest, fields: Mapping[str, str]) -> list[Viol
         violations.append(
             Violation(
                 path="group_by",
-                rule="@matches は集計に使えません",
-                fix="fields か order_by に渡してください",
+                rule="@matches は集計に使用できません",
+                fix="fields か order_by に指定してください",
             )
         )
     elif request.group_by is not None and request.group_by not in fields:
@@ -167,7 +170,7 @@ def _check_body_range(request: SearchRequest) -> list[Violation]:
         violations.append(
             Violation(
                 path="sections",
-                rule="sections と lines は同時に渡せません",
+                rule="sections と lines は同時に指定できません",
                 fix="どちらか一方にしてください",
             )
         )
@@ -175,8 +178,8 @@ def _check_body_range(request: SearchRequest) -> list[Violation]:
         violations.append(
             Violation(
                 path="sections" if request.sections is not None else "lines",
-                rule="view: full のときだけ渡せます",
-                fix="view に full を渡してください",
+                rule="view: full のときだけ指定できます",
+                fix="view に full を指定してください",
             )
         )
     return violations
