@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import shutil
 import socket
 from collections.abc import Callable
 from pathlib import Path
@@ -607,7 +608,12 @@ def test_normal_when_xdg_dirs_set(
         f"    scope: {{read: [{sample.folder}]}}\n",
         encoding="utf-8",
     )
-    env = {"XDG_CONFIG_HOME": str(config_home), "XDG_STATE_HOME": str(state_home)}
+    home = tmp_path / "home"
+    env = {
+        "XDG_CONFIG_HOME": str(config_home),
+        "XDG_STATE_HOME": str(state_home),
+        "HOME": str(home),
+    }
 
     def serve_once(extra: dict[str, str]) -> int:
         port = free_port()
@@ -621,10 +627,14 @@ def test_normal_when_xdg_dirs_set(
     # 実行
     first = serve_once({})
     first_log = (state_home / "dev-docs" / "logs" / "dev-docs.log").is_file()
+    first_default = (home / ".local" / "state" / "dev-docs").exists()
+    shutil.rmtree(state_home)
     second = serve_once({"DEV_DOCS_STATE_DIR": str(override)})
     # 検証
     assert first == 200
     assert first_log
+    assert not first_default
+    assert not state_home.exists()
     assert second == 200
     assert (override / "logs" / "dev-docs.log").is_file()
 
