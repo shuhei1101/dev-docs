@@ -383,7 +383,7 @@ class DocumentStore:
         startup = source.schemas.get(kind, {})
         base = source.root / table.schema_path
         if target.ref is not None:
-            return self._revision_schema(target, table, startup, base)
+            return self._revision_schema(target, table.schema_path, startup, base)
         path = self.read_root(target) / table.schema_path
         try:
             stat = path.stat()
@@ -405,19 +405,19 @@ class DocumentStore:
         return resolved
 
     def _revision_schema(
-        self, target: Target, table: DocumentTable, startup: dict[str, Any], base: Path
+        self, target: Target, schema_path: str, startup: dict[str, Any], base: Path
     ) -> dict[str, Any]:
         """リビジョンの種類のスキーマを、commit とスキーマのファイルの相対パスで控えて返す。"""
         source = target.source
         repo_root = source.repo_root or source.root
         commit = self._commit_of(target)
-        relative = (source.root.relative_to(repo_root) / table.schema_path).as_posix()
+        relative = (source.root.relative_to(repo_root) / schema_path).as_posix()
         key = (repo_root, commit, relative)
         with self._lock:
             cached = self._revision_schemas.get(key)
         if cached is not None:
             return cached
-        path = self._revision_root(target, commit) / table.schema_path
+        path = self._revision_root(target, commit) / schema_path
         try:
             raw = load_yaml(path.read_text(encoding="utf-8"), file=str(path))
         except OSError, UnicodeDecodeError, YamlLoadError:
