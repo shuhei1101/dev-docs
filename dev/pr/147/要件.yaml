@@ -1,0 +1,25 @@
+use_cases:
+  - kind: composite
+    scenario: dev/設計書/シナリオ/複合ユースケース/dev-docsで文書を配信して読み書きする.yaml
+    impact: none
+    detail: 流れは変わらない
+    depends_on: []
+  - kind: single
+    scenario: dev/設計書/シナリオ/単一ユースケース/起動する.yaml
+    impact: changed
+    detail: フックがサーバーを起動したときに文脈へ入る /mcp の案内の文言が、つなぎ直しから再接続に変わる
+    depends_on: []
+scope_out:
+  - item: '`plugins/dev-docs/hooks/session_start.py` の docstring・コメント（`返し済みの記録`・`読む`・`見る` など）'
+    reason: '文脈へ返却されず、Claude Code にも画面にも出ない（PR #133・PR #116 と同じ扱い）'
+    plan: none
+  - item: 設計書の地の文で、フックの案内の中身を指さない `返し済みの記録`（サーバーの記録の名前。インターフェース定義『セッションの開始』『文書の検索』など）と、シナリオ『起動する』の利用者の操作の `/mcp でつなぎ直す`
+    reason: '`docs/`・`dev/` の文書の修正は #95 の範囲。本 PR は修正する文言を引用する、または文言の中身を指す項目だけを修正する'
+    plan: '#95'
+  - item: '`docs/リファレンス/文書のMCP.md` の `repeat_seen: true で取り直せます。`'
+    reason: 'フックではなく MCP の取得済みの文書の説明で、`docs/` の地の文の修正は #95 の範囲'
+    plan: '#95'
+  - item: モジュール構成『features/lifecycle/control.py』の `next_steps` の説明の `/mcp でつなぎ直して`
+    reason: 'フックではなく MCP の応答を言い換えて説明する設計書の地の文で、`dev/` の地の文の修正は #95 の範囲'
+    plan: '#95'
+docs: []
