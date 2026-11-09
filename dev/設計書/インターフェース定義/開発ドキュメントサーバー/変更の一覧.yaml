@@ -295,7 +295,7 @@ request:
     required: false
     default: '`markdown`'
     location: argument
-    description: 返す形式
+    description: 返却する形式
   - name: cwd
     type: str
     required: false
@@ -322,14 +322,14 @@ request:
     required: false
     default: なし（語で絞らない）
     location: argument
-    description: 語の出現数が変わった文書だけを返し、語が入った・消えた区間を添える
+    description: 単語の出現数が変わった文書だけを返却し、単語が入った・消えた区間を添える
     notes: 当て方は制約の「語の当て方」。`filter` と同時に渡すと両方に当たる文書を返す
     status: planned
   - name: contains.value
     type: str
     required: true
     location: argument
-    description: 探す語か正規表現
+    description: 探す単語か正規表現
     constraints: 空文字は渡せない
     status: planned
   - name: contains.regex
@@ -337,7 +337,7 @@ request:
     required: false
     default: '`false`'
     location: argument
-    description: '`value` を正規表現として当てるか'
+    description: '`value` を正規表現として適用するか'
     notes: '`git log -S --pickaxe-regex` と同じく、当たった数を比べる'
     status: planned
   - name: contains.case_sensitive
@@ -353,7 +353,7 @@ request:
     required: false
     default: '`false`'
     location: argument
-    description: '`true` のとき、`cwd` が `scope` に当たらない配信元も、端末の設定の `sources[].outside_read` が真なら作業範囲の外（参考）として読む'
+    description: '`true` のとき、`cwd` が `scope` に該当しない配信元も、端末の設定の `sources[].outside_read` が真なら作業範囲の外（参考）として参照する'
     constraints: '`source` に ID を 1 つ渡したときだけ効く'
     notes: '`format: markdown` は先頭の行に「作業範囲の外（参考）」を出し、`format: json` は `outside_scope: true` を返す。外から読んだ呼び出しは作業場所と配信元の ID を要求のログに残す'
     status: planned
