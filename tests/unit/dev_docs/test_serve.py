@@ -30,7 +30,6 @@ from dev_docs.main import (
     PortInUseError,
     build_handlers,
     check_port,
-    check_sources,
     reload_sources,
     run_migrate,
     run_serve,
@@ -804,6 +803,8 @@ def test_check_sources(
 ) -> None:
     """控えを捨てずに検査の結果を持たせる（正常系）。"""
     # 準備
+    from dev_docs.main import check_sources
+
     write_files(
         tmp_path / "sample",
         {
