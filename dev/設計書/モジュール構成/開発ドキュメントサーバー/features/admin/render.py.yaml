@@ -33,7 +33,7 @@ functions:
     process: |-
       1. 1 行目に `{address} dev-docs {version}（pid {pid}）`、2 行目に `端末の設定: {file}（{version_state}）` を置く
       2. 配信元ごとに表の行を作る（配信元の行）
-         - `loading` が `True` の場合、表の代わりに `配信元: 読み込み中（終わるまで文書の MCP の呼び出しは待たされます）` を置く
+         - `loading` が `True` の場合、表の代わりに `配信元: 読み込み中（読み込みが終わっていない配信元を指す文書の MCP の呼び出しは待たされます）` を置く
          - 配信元が 0 件の場合、表の代わりに `配信元: なし` を置く
     unit_tests:
       - name: test_render_status
@@ -53,7 +53,7 @@ functions:
         summary: 読み込み中
         condition: '`loading` が `True`、`sources` が空'
         mock: なし
-        expected: '3 行目が `配信元: 読み込み中（終わるまで文書の MCP の呼び出しは待たされます）`'
+        expected: '3 行目が `配信元: 読み込み中（読み込みが終わっていない配信元を指す文書の MCP の呼び出しは待たされます）`'
     callers:
       - dev/設計書/モジュール構成/開発ドキュメントサーバー/server/mcp/admin.py#functions[build_admin_mcp]
     callees:
@@ -185,7 +185,7 @@ functions:
     process: |-
       1. 状態を書く。`not_served` は `errors` を `、` でつないで括弧で添える
       2. 設定のバージョンは `{config_version}（{version_state}）`、無ければ `-`
-      3. 索引の同期は 3 つの件数の合計、`sync` が無ければ `-`
+      3. 索引の同期は 3 つの件数の合計。`serving` で `sync` が無ければ `検査中`、それ以外で `sync` が無ければ `-`
     unit_tests:
       - name: test_source_row
         case: 正常
@@ -199,6 +199,12 @@ functions:
         condition: '`not_served`、`errors` 2 件'
         mock: なし
         expected: 状態の列が `not_served（{1 件目}、{2 件目}）`、残りの列が `-`
+      - name: test_source_row_when_checking
+        case: 正常
+        summary: 検査が済んでいない配信中の行
+        condition: '`serving`、`sync` が `None`'
+        mock: なし
+        expected: '`| sample | serving | 1（current） | 検査中 |`'
     callers:
       - '#functions[render_status]'
       - '#functions[render_reload]'

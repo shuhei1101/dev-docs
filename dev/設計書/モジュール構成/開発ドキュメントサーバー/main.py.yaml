@@ -11,13 +11,15 @@ diagrams:
         待ち受けの開始 ..> アプリの組み立て
         待ち受けの開始 ..> 再起動の制御 : 取り付ける
         待ち受けの開始 ..> 配信元の読み込みの開始
-        配信元の読み込みの開始 ..> 配信元の読み直し : 裏のスレッドで
+        配信元の読み込みの開始 ..> 配信元の一覧 : 裏のスレッドで行ごとに読み込む
+        配信元の読み込みの開始 ..> 配信元の検査 : 全ての行の後に
         部品の配線 ..> 配信元の一覧 : 読み込み中で作る
         部品の配線 ..> 再起動の制御 : 作る
         部品の配線 ..> 配線済みの関数 : 作る
         部品の配線 ..> 配信元の読み直し : 束ねる
         配信元の読み直し ..> 配信元の一覧 : 読み直す
         配信元の読み直し ..> 配信元の控えの破棄
+        配信元の控えの破棄 ..> 配信元の検査
         配信元の一覧 ..> 配信元の控えの破棄 : 組み立て直した後に呼ぶ
         class 待ち受けの開始 {
           <<function>>
@@ -43,8 +45,12 @@ diagrams:
         class 配信元の控えの破棄 {
           <<function>>
         }
+        class 配信元の検査 {
+          <<function>>
+        }
         class 配信元の一覧 {
           +読み直す(端末の設定) list
+          +行ごとに読み込む(端末の設定) None
         }
         class 再起動の制御 {
           +サーバーの取り付け(サーバー) None
@@ -507,7 +513,48 @@ functions:
       description: なし
     process: |-
       1. 文書のストア・文書の検査・変換の控えを捨てる（文書のストア.全て捨てる・文書の検査.控えを捨てる・変換.控えを捨てる）
-      2. 渡した配信元ごとに検査し（配信元の検査の控え.検査の流し直し）、3 つの並びのうち 0 件でないものを、配信元の ID・ずれの種類・件数・並びの値で警告のログに書く。`alias_violations` は文書のパス・キー・理由で、nav の警告（画面の API）はキーのパスと理由で警告のログに書く
+      2. 渡した配信元で『配信元の検査』を呼ぶ
+  - name: check_sources
+    title: 配信元の検査
+    kind: 関数
+    container: main.py
+    usecase: 共通
+    role: 合成の起点
+    summary: 渡した配信元ごとに検査して結果を持たせ、メタデータのずれ・エイリアス・nav の警告をログに書く
+    scope: public
+    thread_safe: true
+    side_effects: 配信元の検査の控えを書き換える。メタデータのずれを警告のログに書く
+    args:
+      - name: sources
+        title: 配信元
+        type: list[ServedSource]
+        required: true
+        passing: positional
+        description: 検査する配信元
+      - name: store
+        title: 文書のストア
+        type: DocumentStore
+        required: true
+        passing: injected
+        description: 検査が文書を読む
+      - name: checks
+        title: 配信元の検査の控え
+        type: SourceChecks
+        required: true
+        passing: injected
+        description: 検査の結果を持たせる
+    returns:
+      type: None
+      description: なし
+    process: |-
+      1. 渡した配信元ごとに検査し（配信元の検査の控え.検査の流し直し）、3 つの並びのうち 0 件でないものを、配信元の ID・ずれの種類・件数・並びの値で警告のログに書く。`alias_violations` は文書のパス・キー・理由で、nav の警告（画面の API）はキーのパスと理由で警告のログに書く
+    unit_tests:
+      - name: test_check_sources
+        case: 正常
+        summary: 控えを捨てずに検査の結果を持たせる
+        condition: 配信元 `sample`（管理用の YAML に無いファイル 1 件）を読み込んだ文書のストア
+        mock: 文書のストア（`clear` の呼び出しを記録する偽物で包む）
+        expected: '`checks.get("sample")` の `report.unindexed_files` が 1 件で、`store.clear` が呼ばれない'
   - name: run_migrate
     title: 設定の移し替えの実行
     container: main.py
@@ -645,7 +692,7 @@ functions:
     container: main.py
     usecase: 起動
     role: 合成の起点
-    summary: 配信元の読み直しとその後の検査を裏のスレッドで始める
+    summary: 配信元の行ごとの読み込みと、全ての行の後の検査を裏のスレッドで始める
     kind: 関数
     scope: public
     side_effects: デーモンのスレッドを 1 つ起こす。標準出力に書く
@@ -655,13 +702,14 @@ functions:
         type: Handlers
         required: true
         passing: positional
-        description: '`reload_sources` と `terminal` を使う'
+        description: '`registry`・`store`・`checks`・`terminal` を使う'
     returns:
       type: threading.Thread
       description: 起こしたスレッド（テストが join する）
     process: |-
       1. 次を実行するデーモンのスレッドを起こして返す
-         - `handlers.reload_sources(handlers.terminal)` を呼ぶ（配信元の一覧が読み終えた時点で待ちを解き、その後に検査の警告をログに書く）
+         - `handlers.registry.load(handlers.terminal)` を呼ぶ（行ごとに読み込み、読み込み終えた行から待ちを解く）
+         - 配信中の配信元で『配信元の検査』を呼ぶ（全ての行を読み込んだ後に行ごとに検査し、警告をログに書く。控えは捨てない）
          - 配信中の配信元の ID を標準出力に 1 行ずつ出す
          - 例外の場合、`[error]` 配信元の読み込みに失敗した（例外のスタックトレース）を書いてスレッドを終える（配信元の一覧は待ちを解いている）
     unit_tests:
@@ -670,12 +718,12 @@ functions:
         summary: 裏で配信元を読み ID を出す
         condition: 配信できる配信元 1 つの端末の設定で `build_handlers` した `Handlers`
         mock: なし（`capsys`）
-        expected: 返ったスレッドを join した後、`registry.loading` が `False`、`registry.served()` が 1 つで、標準出力に配信元の ID
+        expected: 返ったスレッドを join した後、`registry.loading` が `False`、`registry.served()` が 1 つ、`checks.get` がその配信元の検査の結果を返し、標準出力に配信元の ID
       - name: test_start_loading_when_failed
         case: 異常
         summary: 読み込みの例外をログに書いて待ちを解く
-        condition: '`build_handlers` した `Handlers` の `reload_sources` を、`registry.reload` を呼んだ後に `RuntimeError` を送るものに差し替える'
-        mock: '`reload_sources`（例外を送る偽物）'
+        condition: '`build_handlers` した `Handlers` の `checks.refresh` を、`RuntimeError` を送るものに差し替える'
+        mock: '`checks.refresh`（例外を送る偽物）'
         expected: スレッドを join した後、`caplog` に `error` の行が 1 件あり、`registry.loading` が `False`
 refs:
   - dev/設計書/インターフェース定義/開発ドキュメントサーバー/起動#
