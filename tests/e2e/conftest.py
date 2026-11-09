@@ -442,18 +442,28 @@ def launch(tmp_path: Path) -> Iterator[Callable[..., Served]]:
     counter = iter(range(1000))
 
     def _launch(
-        settings: Path, port: int, *, python: Path | None = None, cwd: Path | None = None
+        settings: Path | None,
+        port: int,
+        *,
+        python: Path | None = None,
+        cwd: Path | None = None,
+        extra_env: dict[str, str] | None = None,
     ) -> Served:
         number = next(counter)
         stdout_path = tmp_path / f"serve-{number}.stdout"
         stderr_path = tmp_path / f"serve-{number}.stderr"
-        env = {**os.environ, "DEV_DOCS_CONFIG": str(settings), "DEV_DOCS_PORT": str(port)}
+        # settings が None のときは DEV_DOCS_CONFIG を渡さず、既定のパスを読ませる
+        env = {key: value for key, value in os.environ.items() if key != "DEV_DOCS_CONFIG"}
+        env["DEV_DOCS_PORT"] = str(port)
+        if settings is not None:
+            env["DEV_DOCS_CONFIG"] = str(settings)
+        env.update(extra_env or {})
         interpreter = str(python) if python is not None else sys.executable
         with stdout_path.open("wb") as out, stderr_path.open("wb") as err:
             process = subprocess.Popen(
                 [interpreter, "-m", "dev_docs", "serve"], env=env, cwd=cwd, stdout=out, stderr=err
             )
-        served = Served(process, port, settings, stdout_path, stderr_path)
+        served = Served(process, port, settings or Path(), stdout_path, stderr_path)
         started.append(served)
         return served
 

@@ -888,3 +888,31 @@ def test_normal_when_prompt_row_exists(
     assert not any("content/prompts" in text for text in run.question_texts)
     assert (sample.folder / "dev-docs.yaml").read_text(encoding="utf-8") == before
     assert checked.data.get("violations", []) == []
+
+
+def test_normal_when_ignored_config_registered(
+    make_source: Callable[..., Any],
+    serve: Callable[..., Any],
+    write_settings: Callable[..., Path],
+    sample_file_set: Callable[..., dict[str, str]],
+    sample_config_text: Callable[..., str],
+) -> None:
+    """.gitignore した dev-docs.local.yaml を端末の設定に追加して reload すると配信する（正常系）。"""
+    # 準備
+    sample = make_source("sample")
+    files = {k: v for k, v in sample_file_set().items() if k != "dev-docs.yaml"}
+    files[".gitignore"] = "dev-docs.local.yaml\n"
+    local = make_source("local", files, config_names=("dev-docs.local.yaml",))
+    (local.folder / "dev-docs.local.yaml").write_text(
+        sample_config_text(name="local"), encoding="utf-8"
+    )
+    served = serve(sample)
+    write_settings(sample, local)
+    # 実行
+    reloaded = served.call_admin("reload")
+    described = served.call("describe", cwd=str(local.folder), source="local", format="json")
+    found = served.call("search_docs", cwd=str(local.folder), source="local", view="ids")
+    # 検証
+    assert not reloaded.is_error
+    assert not described.is_error
+    assert "docs/doc-1" in found.text

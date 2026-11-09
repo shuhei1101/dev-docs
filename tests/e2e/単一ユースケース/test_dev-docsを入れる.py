@@ -84,6 +84,40 @@ def test_normal(
     assert claude_home.real_changes() == []
 
 
+def test_normal_when_xdg_config_home_set(
+    tmp_path: Path,
+    claude_home: Any,
+    make_clone: Callable[..., Any],
+    load_yaml_file: Callable[[Path], Any],
+    list_mcp_tools: Callable[[int], list[str]],
+    serve_pid_count: Callable[[int], int],
+) -> None:
+    """XDG_CONFIG_HOME があれば、その下の既定の場所に端末の設定を作り、env に DEV_DOCS_CONFIG を書かない（正常系）。"""
+    # 準備
+    clone = make_clone(sync=False)
+    config_home = tmp_path / "xdg-config"
+    config_home.mkdir()
+    claude_home.env["XDG_CONFIG_HOME"] = str(config_home)
+    settings = config_home / "dev-docs" / "settings.yaml"
+    work = tmp_path / "work"
+    work.mkdir()
+    # 実行
+    run = claude_home.run(
+        SETUP_PROMPT.format(clone=clone.clone),
+        cwd=work,
+        answers=[(LOCATION_PATTERN, str(settings))],
+    )
+    # 検証
+    saved = load_yaml_file(settings)
+    env = claude_home.settings_json()["env"]
+    assert not run.result["is_error"]
+    assert saved["clone"] == str(clone.clone)
+    assert "DEV_DOCS_CONFIG" not in env
+    assert not (claude_home.home / ".config" / "dev-docs").exists()
+    assert serve_pid_count(claude_home.port) == 1
+    assert len(list_mcp_tools(claude_home.port)) == TOOL_COUNT
+
+
 def test_normal_when_terminal_config_lacks_keys(
     tmp_path: Path,
     claude_home: Any,

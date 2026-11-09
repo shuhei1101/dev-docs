@@ -525,3 +525,147 @@ def test_normal_when_alias_and_nav_warned(
     assert sources["sample"] == "serving"
     assert not found.data.get("items")
     assert "壊れた用語" not in {item["word"] for item in words.data.get("words", [])}
+
+
+def test_normal_when_ignored_config_first(
+    make_source: Callable[..., Any],
+    serve: Callable[..., Any],
+    run_git: Callable[..., str],
+    commit_all: Callable[..., str],
+    sample_file_set: Callable[..., dict[str, str]],
+    sample_config_text: Callable[..., str],
+) -> None:
+    """.gitignore した設定を先頭に置くと、設定はディスクから、スキーマは default_ref から読んで配信する（正常系）。"""
+    # 準備
+    files = {k: v for k, v in sample_file_set().items() if k != "dev-docs.yaml"}
+    files[".gitignore"] = "dev-docs.local.yaml\n"
+    sample = make_source("sample", files, config_names=("dev-docs.local.yaml",))
+    run_git(sample.folder, "branch", "master")
+    commit_all(
+        sample.folder, {"schemas/kind_a.schema.yaml": SAMPLE_KIND_SCHEMA}, "docs: kind_a を加える"
+    )
+    run_git(sample.folder, "checkout", "master")
+    (sample.folder / "dev-docs.local.yaml").write_text(
+        sample_config_text(_kind_row("kind_a")), encoding="utf-8"
+    )
+    # 実行
+    served = serve(sample)
+    described = served.call("describe", cwd=str(sample.folder), source="sample", format="json")
+    status = served.call_admin("status", format="json")
+    # 検証
+    sources = {item["id"]: item["status"] for item in status.data["sources"]}
+    assert "kind_a" in _kinds(described)
+    assert not (sample.folder / "schemas" / "kind_a.schema.yaml").exists()
+    assert sources["sample"] == "serving"
+
+
+def test_error_when_first_config_not_committed(
+    make_source: Callable[..., Any],
+    serve: Callable[..., Any],
+    sample_file_set: Callable[..., dict[str, str]],
+    sample_config_text: Callable[..., str],
+) -> None:
+    """.gitignore していない先頭の設定が default_ref に無い配信元を外し、他の配信元を配信する（異常系）。"""
+    # 準備
+    sample = make_source("sample")
+    files = {k: v for k, v in sample_file_set().items() if k != "dev-docs.yaml"}
+    uncommitted = make_source("uncommitted", files)
+    (uncommitted.folder / "dev-docs.yaml").write_text(
+        sample_config_text(name="uncommitted"), encoding="utf-8"
+    )
+    # 実行
+    served = serve(sample, uncommitted)
+    missing = served.get("/_api/sources/uncommitted/docs")
+    sample_docs = served.get("/_api/sources/sample/docs")
+    # 検証
+    assert missing.status_code == 404
+    assert sample_docs.status_code == 200
+    assert "uncommitted: config[0]: develop に dev-docs.yaml がありません" in served.stderr()
+
+
+def test_normal_when_xdg_dirs_set(
+    make_source: Callable[..., Any],
+    launch: Callable[..., Any],
+    free_port: Callable[[], int],
+    wait_for_server: Callable[..., None],
+    tmp_path: Path,
+) -> None:
+    """DEV_DOCS_CONFIG が無ければ XDG_CONFIG_HOME の下の端末の設定を読み、状態とログを XDG_STATE_HOME か DEV_DOCS_STATE_DIR に書く（正常系）。"""
+    # 準備
+    sample = make_source("sample")
+    config_home = tmp_path / "xdg-config"
+    state_home = tmp_path / "xdg-state"
+    override = tmp_path / "override"
+    settings = config_home / "dev-docs" / "settings.yaml"
+    settings.parent.mkdir(parents=True)
+    settings.write_text(
+        'version: "1"\n'
+        f"clone: {tmp_path / 'clone'}\n"
+        "sources:\n"
+        "  - id: sample\n"
+        f"    config: [{sample.config[0]}]\n"
+        f"    scope: {{read: [{sample.folder}]}}\n",
+        encoding="utf-8",
+    )
+    env = {"XDG_CONFIG_HOME": str(config_home), "XDG_STATE_HOME": str(state_home)}
+
+    def serve_once(extra: dict[str, str]) -> int:
+        port = free_port()
+        served = launch(None, port, extra_env={**env, **extra})
+        wait_for_server(port)
+        code: int = served.get("/_api/sources/sample/docs").status_code
+        served.process.terminate()
+        served.process.wait(timeout=EXIT_TIMEOUT_SEC)
+        return code
+
+    # 実行
+    first = serve_once({})
+    first_log = (state_home / "dev-docs" / "logs" / "dev-docs.log").is_file()
+    second = serve_once({"DEV_DOCS_STATE_DIR": str(override)})
+    # 検証
+    assert first == 200
+    assert first_log
+    assert second == 200
+    assert (override / "logs" / "dev-docs.log").is_file()
+
+
+def test_normal_when_started_by_session_start_with_xdg_config_home(
+    tmp_path: Path,
+    claude_home: Any,
+    make_clone: Callable[..., Any],
+    make_source: Callable[..., Any],
+    add_worktree: Callable[..., Path],
+    wait_for_server: Callable[..., None],
+    list_mcp_tools: Callable[..., list[str]],
+    serve_pid_count: Callable[[int], int],
+) -> None:
+    """DEV_DOCS_CONFIG を書かずに XDG_CONFIG_HOME の下に置いた端末の設定から、SessionStart のフックが起動する（正常系）。"""
+    # 準備
+    clone = make_clone()
+    sample = make_source("sample")
+    worktree = add_worktree(sample.folder, "x")
+    config_home = tmp_path / "xdg-config"
+    settings = config_home / "dev-docs" / "settings.yaml"
+    settings.parent.mkdir(parents=True)
+    settings.write_text(
+        'version: "1"\n'
+        f"clone: {clone.clone}\n"
+        f"state_dir: {tmp_path / 'state'}\n"
+        "sources:\n"
+        "  - id: sample\n"
+        f"    config: [{sample.config[0]}]\n"
+        f"    scope: {{read: [{sample.folder}, {sample.folder}/**]}}\n",
+        encoding="utf-8",
+    )
+    claude_home.env["XDG_CONFIG_HOME"] = str(config_home)
+    port = claude_home.port
+    # 実行
+    first = claude_home.run(SESSION_PROMPT, cwd=worktree)
+    wait_for_server(port)
+    # 検証
+    exit_code, context = first.session_start_context()
+    assert "DEV_DOCS_CONFIG" not in claude_home.settings_json().get("env", {})
+    assert exit_code == 0
+    assert "つなぎ直" in context
+    assert serve_pid_count(port) == 1
+    assert sorted(list_mcp_tools(port)) == TOOL_NAMES
