@@ -17,7 +17,7 @@ use_cases:
   - kind: single
     scenario: dev/設計書/シナリオ/単一ユースケース/エージェントが書き込む.yaml
     impact: run_only
-    detail: 文書の書き込みのツールの説明と、画面の構成の書き込みの引数の説明の文言が変わる。シナリオの期待値は説明の文言を引用していない
+    detail: 文書の書き込みのツールの説明の文言が変わる。シナリオの期待値は説明の文言を引用していない
     depends_on: []
   - kind: single
     scenario: dev/設計書/シナリオ/単一ユースケース/dev-docsを更新する.yaml
@@ -28,6 +28,11 @@ use_cases:
     scenario: dev/設計書/シナリオ/単一ユースケース/配信元を追加する.yaml
     impact: run_only
     detail: 管理用の YAML に記載するファイルの一覧を出すコマンドのヘルプの文言が変わる。シナリオの期待値は文言を引用していない
+    depends_on: []
+  - kind: single
+    scenario: dev/設計書/シナリオ/単一ユースケース/設定・スクリプトを変える.yaml
+    impact: run_only
+    detail: 管理の MCP の nav の書き込み・配信元の検査の引数の説明と、nav の書き込みのツールの説明の文言が変わる。シナリオの期待値は説明の文言を引用していない
     depends_on: []
 scope_out:
   - item: '`templates/` のスキーマと設定のひな形の `title`・`description`・コメントの文言（`templates/prompt.schema.yaml` の `値の出どころ` など）'
