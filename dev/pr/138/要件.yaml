@@ -8,30 +8,48 @@ docs:
   - page: scripts/dev-docs-server-wait.sh
     new: false
     change: '`listening` の新しいサーバーの判定を、ログの待ち受けを始めた行の最後の時刻にする。起動し直した時刻を出すサブコマンドを追加し、反映作業のスクリプトから呼べるようにする'
-    status: todo
+    status: done
+    updated_by: planner
+    updated_at: '2026-11-09T02:08:27.323032+00:00'
   - page: dev/pr/128/反映作業/dev-docs のサーバーの再起動/実行.sh
     new: false
     change: '`running_new` を、待ちのスクリプトが出す起動し直した時刻と修正したファイルの更新時刻の比較にする。`dry-run.log` を取り直す'
-    status: todo
+    status: done
+    updated_by: planner
+    updated_at: '2026-11-09T02:08:27.323032+00:00'
   - page: dev/pr/130/反映作業/dev-docs のサーバーの再起動/実行.sh
     new: false
     change: '#128 の `実行.sh` と同じ変更。`dry-run.log` を取り直す'
-    status: todo
+    status: done
+    updated_by: planner
+    updated_at: '2026-11-09T02:08:27.323032+00:00'
   - page: dev/pr/130/反映作業/dev-docs のサーバーの再起動/確認.sh
     new: false
     change: 新しいコードのサーバーの判定を、待ちのスクリプトが出す起動し直した時刻と `decisions.py` の更新時刻の比較にする
-    status: todo
+    status: done
+    updated_by: planner
+    updated_at: '2026-11-09T02:08:27.323032+00:00'
   - page: dev/pr/130/反映作業/index.yaml
     new: false
     change: 『dev-docs のサーバーの再起動』の確認方法の起動時刻を、ログの待ち受けを始めた行の時刻にする
-    status: todo
+    status: done
+    updated_by: planner
+    updated_at: '2026-11-09T02:08:27.323032+00:00'
   - page: dev/設計書/開発コマンド/開発コマンド.yaml
     new: false
     change: '`管理作業` に起動し直した時刻を出すサブコマンドの呼び方を記載し、`verification` を実際の再起動で確認した記録にする'
-    status: todo
+    status: done
+    updated_by: planner
+    updated_at: '2026-11-09T02:08:27.323032+00:00'
+  - page: dev/pr/133/反映作業/dev-docs のサーバーの再起動/実行.sh
+    new: false
+    change: '#128 の `実行.sh` と同じ変更（#133 はこの PR の作業中に develop へマージされた）。`dry-run.log` を取り直す'
+    status: done
+    updated_by: planner
+    updated_at: '2026-11-09T02:10:46.146682+00:00'
 scope_out:
-  - item: 'open の作業 PR #131・#133 の反映作業『dev-docs のサーバーの再起動』のスクリプトが持つ同じ判定（`ps -o lstart=`）'
-    reason: 他の作業 PR のファイルで、この PR で追加する起動し直した時刻のサブコマンドを前提に書き換える
+  - item: 'open の作業 PR #131 の反映作業『dev-docs のサーバーの再起動』のスクリプトが持つ同じ判定（`ps -o lstart=`）と、#131 が状態の置き場を XDG に揃えた後の待ちのスクリプトの `LOG_DIR`'
+    reason: 他の作業 PR のファイルと変更で、この PR で追加する `started` を前提に書き換える（#133 はこの PR の作業中に develop へマージされたため、この PR で書き換えた）
     plan: to_file
   - item: '#120 の反映作業のスクリプトの判定'
     reason: 回数が `1 回限り` で実行を終えており、以後の再起動は新しい作業 PR の作業として記載するため
