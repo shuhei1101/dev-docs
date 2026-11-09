@@ -27,12 +27,13 @@ DESCRIBE='{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"descri
 
 # 127.0.0.1:8781 で待ち受けるサーバーが最後に起動した時刻（UNIX 時刻）。待ち受けていなければ空。
 # 再起動は os.execv で同じプロセスを置き換え、PID も ps の起動時刻も変わらないため、
-# ログの uvicorn が待ち受けを始めた行の最後の時刻を使用する（回転した古いファイルから順に参照する）
+# ログの uvicorn が待ち受けを始めた行の最後の時刻を使用する。
+# 同じログに記録する複数のプロセスが回転させ、ファイル名の順と時刻の順が一致しないため、行の先頭の時刻で並べ替える
 server_started() {
   [ -n "$(ss -ltnH "sport = :$PORT" 2>/dev/null)" ] || return 0
   line=$(for file in "$LOG_DIR/dev-docs.log.3" "$LOG_DIR/dev-docs.log.2" "$LOG_DIR/dev-docs.log.1" "$LOG_DIR/dev-docs.log"; do
     [ -f "$file" ] && grep -a "Uvicorn running on http://127.0.0.1:$PORT " "$file"
-  done | tail -n 1)
+  done | sort | tail -n 1)
   [ -n "$line" ] || return 0
   date -d "$(printf '%s' "$line" | cut -c 1-19)" +%s
 }
