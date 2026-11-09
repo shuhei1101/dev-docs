@@ -16,8 +16,9 @@ flows:
         participant C as クライアント
         participant T as status
 
+        C->>T: 配信元の検査が済むのを待つ
         C->>T: 引数なし
-        T->>T: 配信元ごとの状態と同期の件数を求める
+        T->>T: 配信元ごとの状態と、検査の最後の同期の件数を読む
         T-->>C: アドレス・バージョン・配信元の表
       ```
     expected:

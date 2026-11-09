@@ -108,14 +108,13 @@ categories:
       sh scripts/dev-docs-server-wait.sh listening "$requested"
       ```
 
-      2. 確認スクリプトの最初に、配信元の読み込みが終わり文書の MCP の `describe` が応答するまで待つ
+      2. 確認スクリプトの最初に、管理の MCP の `status` が `loading: false` を返す（全ての配信元の読み込みが終わる）まで待つ
 
       ```bash
       sh scripts/dev-docs-server-wait.sh loaded
       ```
     effects: '`listening` は最長 120 秒、`loaded` は最長 540 秒待つ（上限の導き方はスクリプトの冒頭のコメント）。待ちきれなければ `failed` の行を出して終了コード 1 で終わる。サーバーの状態は変えない'
     verification:
-      state: 済
-      date: '2026-11-08'
-      detail: 稼働中のサーバー（配信元の読み込みが終わった後）へ `loaded` と `listening 0` を走らせ、どちらも `ok` で終了コード 0 になることを確かめた。引数の誤りでは `failed` で終了コード 1 になった
+      state: 未確認
+      detail: '`loaded` の待つ条件を `status` の `loading: false` に替えるため、PR #136 の実装の後に稼働中のサーバーへ走らせて確かめ直す'
 lead: dev-docs の開発で使うコマンド。
