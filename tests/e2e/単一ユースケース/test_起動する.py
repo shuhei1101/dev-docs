@@ -358,7 +358,7 @@ def test_normal_when_started_by_session_start(
     list_mcp_tools: Callable[..., list[str]],
     serve_pid_count: Callable[[int], int],
 ) -> None:
-    """SessionStart のフックが落ちている dev-docs を切り離して起動し、つなぎ直しを案内する（正常系）。"""
+    """SessionStart のフックが落ちている dev-docs を切り離して起動し、再接続を案内する（正常系）。"""
     # 準備
     clone = make_clone()
     sample = make_source("sample")
@@ -380,7 +380,7 @@ def test_normal_when_started_by_session_start(
     assert before == 0
     assert exit_code == 0
     assert "/mcp" in context
-    assert "つなぎ直" in context
+    assert "再接続" in context
     assert after_exit == 1
     assert sorted(list_mcp_tools(port)) == TOOL_NAMES
     assert reconnected == [DOCS_TOOL_PREFIX + name for name in TOOL_NAMES]

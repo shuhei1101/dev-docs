@@ -254,12 +254,12 @@ scenarios:
         CC->>HK: SessionStart
         HK->>DD: ポートにつながるか確かめる（つながらない）
         HK->>DD: 端末の設定の clone で dev-docs serve を切り離して起動する
-        HK-->>CC: 待たずに戻り、/mcp のつなぎ直しの案内を文脈に追加する
+        HK-->>CC: 待たずに戻り、/mcp の再接続の案内を文脈に追加する
         U->>CC: /mcp でつなぎ直す
         CC->>DD: /mcp のツールの一覧を取る
       ```
     expected:
-      - フックが 0 の終了コードで戻り、セッションの文脈に `/mcp` のつなぎ直しの案内が入る
+      - フックが 0 の終了コードで戻り、セッションの文脈に `/mcp` の再接続の案内が入る
       - '`127.0.0.1:8781` を待ち受ける dev-docs のプロセスが 1 つだけあり、セッションを終えても残る'
       - つなぎ直した後、`/mcp` のツールが 6 つ返る
     test: test_normal_when_started_by_session_start
@@ -286,12 +286,12 @@ scenarios:
         HK->>DD: ポートにつながるか確かめる（つながらない）
         HK->>HK: $XDG_CONFIG_HOME/dev-docs/settings.yaml の clone を読む
         HK->>DD: clone で dev-docs serve を切り離して起動する
-        HK-->>CC: 待たずに戻り、/mcp のつなぎ直しの案内を文脈に追加する
+        HK-->>CC: 待たずに戻り、/mcp の再接続の案内を文脈に追加する
         U->>CC: /mcp でつなぎ直す
         CC->>DD: /mcp のツールの一覧を取る
       ```
     expected:
-      - フックが 0 の終了コードで戻り、セッションの文脈に `/mcp` のつなぎ直しの案内が入る
+      - フックが 0 の終了コードで戻り、セッションの文脈に `/mcp` の再接続の案内が入る
       - '`127.0.0.1:8781` を待ち受ける dev-docs のプロセスが 1 つだけあり、端末の設定の `clone` のクローンから起動している'
       - つなぎ直した後、`/mcp` のツールが 6 つ返る
     test: test_normal_when_started_by_session_start_with_xdg_config_home
@@ -316,7 +316,7 @@ scenarios:
         CC->>DD: /mcp につながる
       ```
     expected:
-      - フックが 0 の終了コードで戻り、セッションの文脈に dev-docs の配信元の一覧・使い方・警告・つなぎ直しの案内が入らない
+      - フックが 0 の終了コードで戻り、セッションの文脈に dev-docs の配信元の一覧・使い方・警告・再接続の案内が入らない
       - dev-docs のプロセスは増えない
     test: test_normal_when_listening_server_not_injected
   - name: 異常シナリオ（SessionStart で起動できない）

@@ -31,7 +31,7 @@ FORGET_REASONS = frozenset({"clear", "compact"})
 # 起動したときに文脈に入れる文
 RECONNECT_GUIDE = (
     "dev-docs を起動しました。"
-    "このセッションで文書の MCP を使うには /mcp で dev-docs につなぎ直してください。"
+    "このセッションで文書の MCP を使用するには /mcp で dev-docs に再接続してください。"
 )
 CLONE_KEY = "clone:"
 
@@ -95,7 +95,7 @@ def request_forget(port: int, payload: dict[str, str]) -> None:
     with urllib.request.urlopen(request, timeout=FORGET_TIMEOUT_SEC) as response:
         body = json.load(response)
     if not isinstance(body, dict):
-        raise ValueError("応答が読めません")
+        raise ValueError("応答を読み込めません")
 
 
 def _unavailable(reason: str) -> str:
@@ -140,8 +140,8 @@ def _forget_context(port: int, event: dict[str, Any]) -> str | None:
         )
         detail = f"{FORGET_TIMEOUT_SEC} 秒で打ち切りました" if timed_out else str(error)
         return (
-            f"dev-docs の返し済みの記録を削除できませんでした（{detail}）。"
-            "前に返した文書は repeat_seen: true で取り直せます。"
+            f"dev-docs の返却済みの記録を削除できませんでした（{detail}）。"
+            "前に返却した文書は repeat_seen: true で再取得できます。"
         )
     return None
 

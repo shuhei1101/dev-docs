@@ -1,0 +1,28 @@
+use_cases:
+  - kind: composite
+    scenario: dev/設計書/シナリオ/複合ユースケース/dev-docsで文書を配信して読み書きする.yaml
+    impact: none
+    detail: 流れは変わらない
+    depends_on: []
+  - kind: single
+    scenario: dev/設計書/シナリオ/単一ユースケース/起動する.yaml
+    impact: changed
+    detail: フックがサーバーを起動したときに文脈へ入る /mcp の案内の文言が、つなぎ直しから再接続に変わる
+    depends_on: []
+scope_out:
+  - item: '`plugins/dev-docs/hooks/session_start.py` の docstring・コメント（`返し済みの記録`・`読む`・`見る` など）と、`plugins/dev-docs/hooks/hooks.json` の `_description` の `返し済みの記録`'
+    reason: '文脈へ返却されず、Claude Code にも画面にも出ない（PR #133・PR #116 と同じ扱い）'
+    plan: none
+  - item: 設計書の地の文で、フックの案内の中身を指さない `返し済みの記録`（サーバーの記録の名前。インターフェース定義『セッションの開始』『文書の検索』など）と、単一ユースケース『起動する』・複合ユースケース『dev-docsで文書を配信して読み書きする』の利用者の操作の `/mcp でつなぎ直す`
+    reason: '`docs/`・`dev/` の文書の修正は #95 の範囲。本 PR は修正する文言を引用する、または文言の中身を指す項目だけを修正する'
+    plan: '#95'
+  - item: '`docs/リファレンス/文書のMCP.md` の `repeat_seen: true で取り直せます。`'
+    reason: 'フックではなく MCP の取得済みの文書の説明で、`docs/` の地の文の修正は #95 の範囲'
+    plan: '#95'
+  - item: モジュール構成『features/lifecycle/control.py』の `next_steps` の説明の `/mcp でつなぎ直して`
+    reason: 'フックではなく MCP の応答を言い換えて説明する設計書の地の文で、`dev/` の地の文の修正は #95 の範囲'
+    plan: '#95'
+  - item: 単一ユースケース『起動する』の `scenarios[].test` のうち、`tests/e2e/単一ユースケース/test_起動する.py` に関数が無い 4 件（`test_normal_when_ignored_config_first`・`test_normal_when_started_by_session_start_with_xdg_config_home`・`test_normal_when_xdg_dirs_set`・`test_error_when_first_config_not_committed`。設計書の検証の `テスト関数がありません`）
+    reason: '#131 が追加したシナリオの欠けで、今回の要望に含まれない。#145 のユーザーの決定（D-307: E2E は開発の間は作らず、メジャーのリリースの前に作る。D-311: 今ある E2E を develop から削除し、`test_file` は対応の印として残す）を拠り所に、E2E を作らずにマージする。`test_file` が指すテストが無いときの点検の扱いは #145 の範囲'
+    plan: '#145'
+docs: []
