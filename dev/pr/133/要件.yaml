@@ -37,11 +37,11 @@ scope_out:
     reason: '画面にも MCP の応答にも出ない（PR #116 と同じ扱い）'
     plan: none
   - item: ツールの引数の説明（`features/*/types.py` の `Field` の `description`。`scope に当たらない配信元を…読む` など）
-    reason: MCP のツールの入力スキーマとしてエージェントに出るが、応答ではないため、Issue の範囲（エラー・注記・ヒント）に含めないと判断した（レビューで確定する）
-    plan: to_file
+    reason: MCP のツールの入力スキーマとしてエージェントに出るが、応答ではないため、Issue の範囲（エラー・注記・ヒント）に含めない（レビューで確定）
+    plan: '#139'
   - item: CLI の出力とヘルプ（`__main__.py`・`features/migrate/`・`features/prompt_doc/` の文言）
-    reason: 端末で開発者が参照する出力で MCP の応答ではないため、Issue の範囲に含めないと判断した（レビューで確定する）
-    plan: to_file
+    reason: 端末で開発者が参照する出力で MCP の応答ではないため、Issue の範囲に含めない（レビューで確定）
+    plan: '#140'
   - item: '`docs/`・`dev/` の地の文（応答の文言を言い換えて説明する文・シナリオの名前の `前回読んだ時点` など）'
     reason: '`docs/`・`dev/` の文書の修正は #95 の範囲。本 PR は修正する文言と同じ文を持つ項目だけを修正する'
     plan: '#95'
