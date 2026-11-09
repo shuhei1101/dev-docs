@@ -97,6 +97,8 @@ def _source_states(handlers: Handlers) -> list[SourceState]:
         if status.status == "serving":
             source = handlers.registry.get(status.id)
             config_version = source.config.version
+            # 裏で実行した検査の最後の結果を読み、配信元のファイルはたどらない
+            check = handlers.checks.get(status.id)
             states.append(
                 SourceState(
                     id=status.id,
@@ -104,7 +106,7 @@ def _source_states(handlers: Handlers) -> list[SourceState]:
                     errors=[],
                     config_version=config_version,
                     version_state=version_state(config_version, SOURCE_CONFIG_VERSION),
-                    sync=SyncCounts.of(check_sync(handlers.store, source)),
+                    sync=None if check is None else SyncCounts.of(check.report),
                 )
             )
             continue

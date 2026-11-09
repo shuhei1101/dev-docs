@@ -14,7 +14,10 @@ from dev_docs.features.admin.types import (
 from dev_docs.shared.errors import Violation
 
 TABLE_HEADER = ("| source | 状態 | 設定のバージョン | 索引の同期 |", "| --- | --- | --- | --- |")
-LOADING_LINE = "配信元: 読み込み中（終わるまで文書の MCP の呼び出しは待たされます）"
+LOADING_LINE = (
+    "配信元: 読み込み中（読み込みが終わっていない配信元を指す文書の MCP の呼び出しは待たされます）"
+)
+CHECKING_CELL = "検査中"
 SYNC_LABELS = {
     "missing_refs": "metadata の列の欠け",
     "unindexed_files": "管理用の YAML に無いファイル",
@@ -31,7 +34,8 @@ def _source_row(state: SourceState) -> str:
     version = (
         "-" if state.config_version is None else f"{state.config_version}（{state.version_state}）"
     )
-    sync = "-"
+    # 配信中で同期の件数が無いのは、裏の検査がまだ済んでいないとき
+    sync = CHECKING_CELL if state.status == "serving" else "-"
     if state.sync is not None:
         sync = str(
             state.sync.missing_refs
