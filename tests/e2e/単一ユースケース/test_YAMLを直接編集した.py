@@ -9,7 +9,7 @@ from dev_docs.shared.hashing import content_hash
 from dev_docs.shared.yaml_io import load_yaml
 
 DOC_1 = {"field": "id", "op": "eq", "values": ["doc-1"]}
-SEEN = "（この会話で返し済み）"
+SEEN = "（この会話で返却済み）"
 DOC_URL = "/_api/sources/sample/docs/docs/doc-1"
 
 
