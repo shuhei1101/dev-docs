@@ -109,7 +109,7 @@ data_models:
     container: features/search/types.py
     usecase: 検索
     role: DTO
-    summary: 条件を AND・OR で束ねるか、否定する
+    summary: 条件を AND・OR でまとめるか、否定する
     description: '`pydantic.BaseModel`（`extra="forbid"`）。`and`・`or`・`not` のどれか 1 つだけを持つ（Python の属性は `all_of`・`any_of`・`not_`、別名が `and`・`or`・`not`）。#16 の画面の `nav` のタグの式も同じスキーマで書く。'
     properties:
       - name: all_of
@@ -154,7 +154,7 @@ data_models:
     container: features/search/types.py
     usecase: 検索
     role: DTO
-    summary: 本文の代わりに条件に当たった行と前後の行だけを行番号つきで返す指定
+    summary: 本文の代わりに条件に該当した行と前後の行だけを行番号つきで返却する指定
     description: '`pydantic.BaseModel`（`extra="forbid"`）。各項目の説明は `Field(description=...)` で入力のスキーマに出す。'
     properties:
       - name: context_lines
