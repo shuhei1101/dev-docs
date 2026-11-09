@@ -42,6 +42,16 @@ else
   exit 1
 fi
 
+# skipped で終わるときも確認が比べられるよう、計画の前に今の配信元の一覧を記録する
+if ! sh scripts/dev-docs-server-wait.sh loaded; then
+  echo "再起動の前の配信元: failed（読み込みが終わらない）"
+  exit 1
+fi
+curl -s --max-time 60 -X POST http://127.0.0.1:8781/_admin/mcp \
+  -H "$HEADERS_ACCEPT" -H "$HEADERS_TYPE" -d "$STATUS" \
+  | grep -o '| [a-z0-9-]* | serving' | sort > "$BEFORE"
+echo "再起動の前の配信元: ok（$(wc -l < "$BEFORE") 件）"
+
 # 計画
 if running_new; then
   echo "サーバーの再起動: skipped（develop の worktree の $FIXED の更新より後に起動している）"
@@ -54,14 +64,6 @@ if [ "${1:-}" = "--dry-run" ]; then
 fi
 
 # 適用
-if ! sh scripts/dev-docs-server-wait.sh loaded; then
-  echo "再起動の前の配信元: failed（読み込みが終わらない）"
-  exit 1
-fi
-curl -s --max-time 60 -X POST http://127.0.0.1:8781/_admin/mcp \
-  -H "$HEADERS_ACCEPT" -H "$HEADERS_TYPE" -d "$STATUS" \
-  | grep -o '| [a-z0-9-]* | serving' | sort > "$BEFORE"
-echo "再起動の前の配信元: ok（$(wc -l < "$BEFORE") 件）"
 requested=$(date +%s)
 code=$(curl -s -o /dev/null -w '%{http_code}' -X POST http://127.0.0.1:8781/_admin/mcp \
   -H "$HEADERS_ACCEPT" -H "$HEADERS_TYPE" -d "$RESTART")
