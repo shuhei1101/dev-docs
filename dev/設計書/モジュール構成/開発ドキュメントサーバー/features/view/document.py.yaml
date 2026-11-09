@@ -104,6 +104,7 @@ functions:
       1. 画面の読む場所で読む場所を作り、文書を集める（文書のストア.文書を集める）
       2. タブとサイドバーを組み立てる
       3. 返す文書を決める
+         - `path` が検討事項の文書のパスの読み取りで ID になれば、検討事項の文書を探す（`find_decisions`）の結果をその ID で引く。無ければ `DocumentNotFoundError`（`missing` に `path`）。あれば、`path` を `path`、`markdown` をファイルの本文、`body_path`・`diff`・`conversion_error` を `None`、`tabs` をどのタブも `active` にしない値、`updated_at` をファイルの `st_mtime`、`table_keys`・`aliases` を空にして返却する（以降の手順は実行しない）
          - `path` が無ければ、一番左のタブのタブの最初の文書。文書が 1 つも無ければ `DocumentNotFoundError`
          - `path` があれば文書のページの特定。無く、集めたときの `unreadable` の読めなかったファイルのうち拡張子を落としたパスが `path` と同じものがあれば、`markdown` を `None`、`conversion_error` を `reason` が `invalid_yaml`（`kind` は文書の行.行に当たるかが `True` になる最初の行、`file`・`line`・`column`・`detail` は読めなかったファイルの値）にして 6 へ進む。どちらにも無ければ `DocumentNotFoundError`（`missing` に `path`）
       4. 文書を変換する（変換.変換する）。`failure` があれば `markdown` を `None`、`conversion_error` を同じフィールドの `ConversionError` にする
@@ -172,6 +173,19 @@ functions:
         mock: なし（一時フォルダの配信元）
         expected: '`aliases` が 2 件で、作業範囲の `avoid` が `[担当領域]`、設定のリファレンスは `avoid` を持たない（JSON にキーが無い）'
         exception: '-'
+      - name: test_get_document_when_decision
+        case: 正常
+        summary: 検討事項の文書を返す
+        condition: '`decision_folders` が `[tmp/a, tmp/b]`、`tmp/a` に `D-1.md`、両方に `D-2.md`。`path="_decisions/D-1"`'
+        mock: なし（一時フォルダの配信元）
+        expected: '`markdown` が `tmp/a` の `D-1.md` の本文、`path` が `_decisions/D-1`、`diff`・`body_path` が `None`、どのタブも `active` でない'
+      - name: test_get_document_when_decision_ambiguous
+        case: 異常
+        summary: 2 つのフォルダにある検討事項
+        condition: '`path="_decisions/D-2"`'
+        mock: なし（一時フォルダの配信元）
+        expected: '`DocumentNotFoundError`'
+        exception: 無い文書
       - name: test_get_document_when_body_path
         case: 正常
         summary: 管理用の YAML の行の文書の本文のファイルのパス

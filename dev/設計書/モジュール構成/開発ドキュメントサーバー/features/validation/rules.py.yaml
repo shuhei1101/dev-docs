@@ -115,7 +115,7 @@ functions:
     process: |-
       1. `fmt` が `None` なら空の並びを返す
       2. `fmt` を正規表現にする。`{kind}` は `kind` をエスケープした文字列、`{slug}` は `SLUG_PATTERN`、それ以外の文字はエスケープしてそのまま。知らない `{...}` は `[^/]+` にする
-      3. `re.fullmatch` で合わなければ、`path` が `id`、`rule` が `ids.format`、`fix` が `{fmt} の形にしてください（例 {kind を入れた例}）` の `Violation` を返す
+      3. `re.fullmatch` で合わなければ、`path` が `id`、`rule` が `ids.format`、`fix` が `{fmt} の形式にしてください（例 {kind を入れた例}）` の `Violation` を返す
     unit_tests:
       - name: test_check_id_format
         case: 正常

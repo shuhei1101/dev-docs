@@ -19,7 +19,7 @@ SYNC_LABELS = {
     "missing_refs": "metadata の列の欠け",
     "unindexed_files": "管理用の YAML に無いファイル",
     "missing_body_files": "ファイルが無い行",
-    "unresolved_related": "どの文書にも当たらない関連",
+    "unresolved_related": "どの文書にも該当しない関連",
 }
 
 
@@ -119,7 +119,7 @@ def render_check(result: CheckProjectResult) -> str:
 def render_write_nav(result: WriteNavResult) -> str:
     """画面の構成の書き込みの結果を Markdown にする。"""
     lines = [
-        f"{result.path} の nav を書きました",
+        f"{result.path} の nav を書き込みました",
         "| 条件 | タブ | 文書の数 |",
         "| --- | --- | --- |",
     ]

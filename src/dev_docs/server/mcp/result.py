@@ -75,7 +75,7 @@ def mcp_prompt_ids() -> list[str]:
     ]
 
 
-DESCRIBE_HINT = "describe で使い方（使える配信元・種類・スキーマ）を見てください"
+DESCRIBE_HINT = "describe で使用方法（使用できる配信元・種類・スキーマ）を確認してください"
 
 
 def _fields(value: Any) -> dict[str, Any]:

@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Literal
 
-SEEN_MARK = "（この会話で返し済み）"
+SEEN_MARK = "（この会話で返却済み）"
 
 type ReturnKind = Literal["body", "related"]
 type ActivityKind = Literal["viewed", "edited"]

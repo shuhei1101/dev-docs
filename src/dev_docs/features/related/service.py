@@ -66,7 +66,7 @@ def trace_related(
 ) -> RelatedResult:
     """`trace_related` の要求を処理して関連のたどりの結果を返す。"""
     if (request.from_ids is None) == (request.code_paths is None):
-        raise _invalid("from_ids か code_paths のどちらか 1 つを渡してください", "from_ids")
+        raise _invalid("from_ids か code_paths のどちらか 1 つを指定してください", "from_ids")
     if request.depth < 1:
         raise _invalid("depth は 1 以上にしてください", "depth")
     notes: list[str] = []
@@ -96,7 +96,7 @@ def trace_related(
             raise DocumentNotFoundError(
                 message=f"文書がありません: {', '.join(missing)}",
                 missing=missing,
-                next_steps=["search_docs で body_path を確かめてください"],
+                next_steps=["search_docs で body_path を確認してください"],
             )
         start = [by_path[path] for path in wanted]
     other_cache: dict[str, dict[str, Document]] = {}

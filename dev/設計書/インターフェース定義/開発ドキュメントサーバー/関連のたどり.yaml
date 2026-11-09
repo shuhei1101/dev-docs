@@ -122,10 +122,10 @@ flows:
         T->>SD: 返した相手を記録する
         T-->>C: 文書 2 と文書 3 の名前と概要文
         C->>T: 同じ引数
-        T-->>C: ID と（この会話で返し済み）
+        T-->>C: ID と（この会話で返却済み）
       ```
     expected:
-      - 2 回目の文書 2・3 の `name`・`description` が `（この会話で返し済み）` になり、json の項目に `path`・`scope` が無い
+      - 2 回目の文書 2・3 の `name`・`description` が `（この会話で返却済み）` になり、json の項目に `path`・`scope` が無い
       - 3 回目は名前と概要文を返す
     test: test_normal_when_seen
   - name: 異常系（無い起点・DocumentNotFoundError）
@@ -337,7 +337,7 @@ response:
   - name: items[].name
     type: str
     description: 文書の名前
-    notes: 返し済みなら `（この会話で返し済み）`。読めない配信元の文書は返さない
+    notes: 返し済みなら `（この会話で返却済み）`。読めない配信元の文書は返さない
   - name: items[].description
     type: str
     description: 概要文

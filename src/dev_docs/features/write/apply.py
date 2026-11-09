@@ -91,7 +91,7 @@ def apply_operation(current: Mapping[str, Any] | None, operation: Operation) -> 
             continue
         set_field(content, edit.field, text.replace(edit.old, edit.new))
     if violations:
-        raise InvalidArgumentError(message="操作を当てられません", violations=violations)
+        raise InvalidArgumentError(message="操作を適用できません", violations=violations)
     return content
 
 
@@ -115,7 +115,7 @@ def _check_overlap(
         Violation(
             path=f"operations[{index}].{item}.{path}",
             rule=f"{path} と {_to_column(path, metadata)} は同じ列を指します",
-            fix="どちらか 1 つだけを渡してください",
+            fix="どちらか 1 つだけを指定してください",
         )
         for path in given
         if (column := _to_column(path, metadata)) != path and column in given
@@ -304,7 +304,7 @@ def expand_array_keys(
         violations.extend(
             Violation(
                 path=f"operations[{index}].{field}.{key}",
-                rule=f"{key} は名前（文字列）の配列で渡します",
+                rule=f"{key} は名前（文字列）の配列で指定します",
             )
             for key, value in values.items()
             if key in collected

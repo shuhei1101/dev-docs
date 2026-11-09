@@ -59,7 +59,7 @@ def parse_field_path(path: str) -> list[Token]:
     for part in path.split("."):
         matched = PART_PATTERN.match(part)
         if matched is None:
-            raise _invalid(path, f"項目のパス {path} の書き方が誤っています（{PATH_EXAMPLE}）")
+            raise _invalid(path, f"項目のパス {path} の記載方法が誤っています（{PATH_EXAMPLE}）")
         tokens.append(matched.group(1))
         for inner in INDEX_PATTERN.findall(matched.group(2)):
             if not inner:

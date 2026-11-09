@@ -59,7 +59,7 @@ def describe(
                     Violation(
                         path="kind",
                         rule="kind には source が要ります",
-                        fix="source も渡してください",
+                        fix="source も指定してください",
                     )
                 ],
             )

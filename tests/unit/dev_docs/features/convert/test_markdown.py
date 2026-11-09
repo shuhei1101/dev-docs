@@ -482,6 +482,29 @@ def test_render_table_when_closed_and_hidden() -> None:
     assert "| 表示 | ID | 形 | 種類 |" in result
 
 
+def test_schema_to_markdown_when_decisions(make_document: Callable[..., Document]) -> None:
+    """箇条書きの検討事項のリンク（正常系）。"""
+    # 準備
+    schema = {
+        "properties": {
+            "name": {"type": "string"},
+            "decisions": {"type": "array", "title": "検討事項"},
+            "tags": {"type": "array", "title": "タグ"},
+        }
+    }
+    document = make_document(data={"name": "N", "decisions": ["D-1", "D-2"], "tags": ["D-1"]})
+    context = RenderContext(
+        links={}, issue_url=None, path="rules/doc-1.yaml", decisions=frozenset({"D-1"})
+    )
+    # 実行
+    result = schema_to_markdown(document, schema, context)
+    # 検証
+    assert "[D-1](../_decisions/D-1)" in result
+    assert result.count("[D-1]") == 1
+    assert "D-2" in result
+    assert "[D-2]" not in result
+
+
 def test_render_table_when_wide() -> None:
     """説明の列（正常系）。"""
     # 準備
@@ -491,6 +514,20 @@ def test_render_table_when_wide() -> None:
     result = render_table(rows, schema, table_key="d:items", context=CONTEXT)
     # 検証
     assert "<!-- table: data wide=説明 -->" in result
+
+
+def test_render_table_when_decisions() -> None:
+    """表のセルの検討事項のリンク（正常系）。"""
+    # 準備
+    schema = {"properties": {"name": {"title": "名前"}, "decisions": {"title": "検討事項"}}}
+    rows = [{"name": "a", "decisions": ["D-1", "D-2"]}]
+    context = RenderContext(
+        links={}, issue_url=None, path="rules/doc-1.yaml", decisions=frozenset({"D-1"})
+    )
+    # 実行
+    result = render_table(rows, schema, table_key="d:items", context=context)
+    # 検証
+    assert "| a | [D-1](../_decisions/D-1)・D-2 |" in result
 
 
 def test_render_attributes() -> None:
