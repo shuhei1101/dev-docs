@@ -95,7 +95,7 @@ data_models:
         type: Literal['markdown', 'json']
         access: 公開
         default: '"markdown"'
-        description: 返す形式
+        description: 返却する形式
       - name: cwd
         title: 作業場所
         type: str | None
@@ -107,7 +107,7 @@ data_models:
         type: bool
         access: 公開
         default: 'False'
-        description: '`True` のとき、`scope` に当たらない配信元を `outside_read` が真なら作業範囲の外（参考）として読む（`source` が ID 1 つのときだけ効く）'
+        description: '`True` のとき、`scope` に該当しない配信元を `outside_read` が真なら作業範囲の外（参考）として参照する（`source` が ID 1 つのときだけ有効）'
       - name: session_id
         title: セッションの ID
         type: str | None
@@ -267,13 +267,13 @@ data_models:
         title: 語
         type: str
         access: 公開
-        description: 探す語か正規表現。1 文字以上
+        description: 探す単語か正規表現。1 文字以上
       - name: regex
         title: 正規表現
         type: bool
         access: 公開
         default: 'False'
-        description: '`value` を正規表現として当てるか'
+        description: '`value` を正規表現として適用するか'
       - name: case_sensitive
         title: 区別する
         type: bool

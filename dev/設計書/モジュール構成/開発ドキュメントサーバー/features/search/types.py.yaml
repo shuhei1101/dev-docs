@@ -84,7 +84,7 @@ data_models:
         title: 比べ方
         type: Literal['eq', 'ne', 'prefix', 'suffix', 'contains', 'not_contains', 'regex', 'glob', 'gt', 'gte', 'lt', 'lte', 'exists', 'not_exists']
         access: 公開
-        description: 比べ方。`regex` は値の各行に当たる（`^`・`$` は各行の先頭・末尾。値全体の先頭・末尾は `\A`・`\Z`）。`glob` は値全体に当て、`**` は `/` をまたぎ、`*`・`?` は `/` をまたがない
+        description: 比べ方。`regex` は値の各行に適用する（`^`・`$` は各行の先頭・末尾。値全体の先頭・末尾は `\A`・`\Z`）。`glob` は値全体に適用し、`**` は `/` をまたぎ、`*`・`?` は `/` をまたがない
         notes: 説明は `Field(description=...)` で入力のスキーマに出す
       - name: values
         title: 値
@@ -129,7 +129,7 @@ data_models:
         type: Condition | Group | None
         access: 公開
         default: None
-        description: 別名 `not`。中の条件か束に当たらない文書に当たる
+        description: 別名 `not`。中の条件か束に該当しない文書に該当する
   - name: OrderKey
     title: 並べ替えのキー
     container: features/search/types.py
@@ -168,19 +168,19 @@ data_models:
         type: int
         access: 公開
         default: '3'
-        description: 1 つの文書で返す箇所の数（1〜20）
+        description: 1 つの文書で返却する箇所の数（1〜20）
       - name: before
         title: 前の行数
         type: int | None
         access: 公開
         default: None
-        description: 当たった行の前に返す行の数（`Field(ge=0)`）。`None` は `context_lines`
+        description: 該当した行の前に返却する行の数（`Field(ge=0)`）。`None` は `context_lines`
       - name: after
         title: 後ろの行数
         type: int | None
         access: 公開
         default: None
-        description: 当たった行の後ろに返す行の数（`Field(ge=0)`）。`None` は `context_lines`
+        description: 該当した行の後ろに返却する行の数（`Field(ge=0)`）。`None` は `context_lines`
   - name: SearchRequest
     title: 検索の要求
     container: features/search/types.py
@@ -218,7 +218,7 @@ data_models:
         type: str | None
         access: 公開
         default: None
-        description: '`alias_type` を持つ行の文書のうち、`name` か `aliases` がこの語に一致する文書だけに絞る'
+        description: '`alias_type` を持つ行の文書のうち、`name` か `aliases` がこの単語に一致する文書だけに絞る'
       - name: view
         title: 返す量
         type: Literal['ids', 'summary', 'full', 'count']
@@ -296,7 +296,7 @@ data_models:
         type: Literal['markdown', 'json']
         access: 公開
         default: '"markdown"'
-        description: 返す形式
+        description: 返却する形式
       - name: cwd
         title: 作業場所
         type: str | None
@@ -308,7 +308,7 @@ data_models:
         type: bool
         access: 公開
         default: 'False'
-        description: '`True` のとき、`scope` に当たらない配信元を `outside_read` が真なら作業範囲の外（参考）として読む（`source` が ID 1 つのときだけ効く）'
+        description: '`True` のとき、`scope` に該当しない配信元を `outside_read` が真なら作業範囲の外（参考）として参照する（`source` が ID 1 つのときだけ有効）'
       - name: session_id
         title: セッションの ID
         type: str | None
@@ -326,13 +326,13 @@ data_models:
         type: list[str] | None
         access: 公開
         default: None
-        description: 'Markdown の本文から返す節の見出しの文字列。`view: full` のときだけ。`lines` と同時に渡せない'
+        description: 'Markdown の本文から返却するセクションの見出しの文字列。`view: full` のときだけ。`lines` と同時に指定できない'
       - name: lines
         title: 返す行
         type: LineRange | None
         access: 公開
         default: None
-        description: '本文から返す行の範囲。`view: full` のときだけ。`sections` と同時に渡せない'
+        description: '本文から返却する行の範囲。`view: full` のときだけ。`sections` と同時に指定できない'
   - name: SearchItem
     title: 検索の結果の文書
     container: features/search/types.py
@@ -510,7 +510,7 @@ data_models:
     container: features/search/types.py
     usecase: 検索
     role: DTO
-    summary: 本文から返す行の範囲（`lines` の引数）
+    summary: 本文から返却する行の範囲（`lines` の引数）
     description: '`pydantic.BaseModel`（`extra="forbid"`）。1 未満の値は要求のモデルの検証で断る（`InvalidArgumentError: 引数が正しくありません` と `lines.offset` などのパス）。'
     properties:
       - name: offset
@@ -518,13 +518,13 @@ data_models:
         type: int
         access: 公開
         default: '1'
-        description: 返す最初の行の行番号（1 始まり）。`Field(ge=1)`
+        description: 返却する最初の行の行番号（1 始まり）。`Field(ge=1)`
       - name: limit
         title: 行の数
         type: int | None
         access: 公開
         default: None
-        description: 返す行の数。`None` は本文の末尾まで。`Field(ge=1)`
+        description: 返却する行の数。`None` は本文の末尾まで。`Field(ge=1)`
     status: planned
   - name: BodyRange
     title: 本文の範囲
@@ -593,7 +593,7 @@ data_models:
         type: Literal['markdown', 'json']
         access: 公開
         default: '"markdown"'
-        description: 返す形式
+        description: 返却する形式
       - name: cwd
         title: 作業場所
         type: str | None
