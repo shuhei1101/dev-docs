@@ -122,7 +122,7 @@ def test_render_changes_markdown_when_contains() -> None:
     # 実行
     markdown = render_changes_markdown(result, source_label="sample")
     # 検証
-    assert "語の増減" in markdown
+    assert "単語の増減" in markdown
     assert "| doc-1 | unchanged |  | added 3f2a9c1・removed 8b1d4e0 |" in markdown
 
 
