@@ -230,7 +230,7 @@ scenarios:
       - '`/_api/sources/sample/docs` が 200 を返す'
       - 警告のログに sample の id と、行 `rules` の `metadata` の列の欠け 1 件（`name` の `title`）が残る
       - 警告のログに行 `src` の索引に無いファイル 1 件（`src/d.py`）とファイルが無い行 1 件（`c.py`）が残る
-      - '警告のログにどの文書にも当たらない関連 1 件（`src: src/a.py: src/z.py`）が残る'
+      - '警告のログにどの文書にも該当しない関連 1 件（`src: src/a.py: src/z.py`）が残る'
       - '`search_docs` が `title` の無い文書も返し、その `name` はファイル名から拡張子を除いた名前になる'
     test: test_normal_when_metadata_out_of_sync
   - name: 正常シナリオ（SessionStart で起動する）

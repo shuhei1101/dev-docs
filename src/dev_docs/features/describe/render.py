@@ -6,7 +6,7 @@ from dev_docs.features.describe.types import KindSchemaResult, SourceGuideResult
 from dev_docs.features.search.render import OUTSIDE_SCOPE_LINE
 
 OUTSIDE_NONE_LINE = "なし"
-NO_SOURCE_LINE = "使える配信元はありません。配信元にするときは /dev-docs:setup を実行します。"
+NO_SOURCE_LINE = "使用できる配信元はありません。配信元にするときは /dev-docs:setup を実行します。"
 WARNINGS_LINE = "注意:"
 
 

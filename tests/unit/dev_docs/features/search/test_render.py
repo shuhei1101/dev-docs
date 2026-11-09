@@ -31,7 +31,7 @@ def test_render_search_markdown() -> None:
     # 実行
     markdown = render_search_markdown(result, source_label="sample")
     # 検証
-    assert markdown.splitlines()[0] == "sample: 該当 2 件・返した 2 件"
+    assert markdown.splitlines()[0] == "sample: 該当 2 件・返却した 2 件"
     assert "| id | kind | name | description | chars | version |" in markdown
 
 

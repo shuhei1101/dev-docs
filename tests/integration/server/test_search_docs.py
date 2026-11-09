@@ -90,7 +90,7 @@ def test_normal(make_source: Callable[..., Any], make_server: Callable[..., Any]
     # 検証
     rows = [line for line in result.text.splitlines() if line.startswith("| doc-")]
     assert not result.is_error
-    assert result.text.startswith("sample: 該当 2 件・返した 2 件")
+    assert result.text.startswith("sample: 該当 2 件・返却した 2 件")
     assert [row.split("|")[1].strip() for row in rows] == ["doc-1", "doc-2"]
     assert all(re.search(r"\| [0-9a-f]{6} \|$", row) for row in rows)
     assert result.structured is None
@@ -190,7 +190,7 @@ def test_normal_when_snippets(
     # 検証
     lines = markdown.text.splitlines()
     item = as_json.data["items"][0]
-    assert markdown.text.startswith("sample: 該当 1 件・返した 1 件")
+    assert markdown.text.startswith("sample: 該当 1 件・返却した 1 件")
     assert "3:## 手順" in lines
     assert "4-description: 1 件目" in lines
     assert not any(line.startswith(("2-", "2:", "8-", "8:")) for line in lines)
@@ -360,7 +360,7 @@ def test_normal_when_seen(
     changed = env.call("search_docs", session_id="s1", **arguments)
     # 検証
     assert body in first.text
-    assert "（この会話で返し済み）" in second.text
+    assert "（この会話で返却済み）" in second.text
     assert body not in second.text
     assert "<document>" in second.text
     assert "path=" not in second.text
@@ -559,11 +559,11 @@ def test_error_when_invalid_argument(
     assert both_keys.is_error
     assert "and・or・not のどれか 1 つだけを持ってください" in both_keys.text
     assert matches_condition.is_error
-    assert "@matches は条件に使えません" in matches_condition.text
+    assert "@matches は条件に使用できません" in matches_condition.text
     assert sections_and_lines.is_error
-    assert "sections と lines は同時に渡せません" in sections_and_lines.text
+    assert "sections と lines は同時に指定できません" in sections_and_lines.text
     assert sections_in_summary.is_error
-    assert "view: full のときだけ渡せます" in sections_in_summary.text
+    assert "view: full のときだけ指定できます" in sections_in_summary.text
 
 
 def test_error_when_ref_not_found(
