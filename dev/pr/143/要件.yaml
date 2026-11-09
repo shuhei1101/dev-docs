@@ -44,8 +44,8 @@ scope_out:
   - item: '`docs/`・`dev/` の地の文（`docs/リファレンス/CLI.md`・`docs/リファレンス/文書のMCP.md` が引数・オプションを言い換えて説明する文など）'
     reason: '`docs/`・`dev/` の文書の修正は #95 の範囲（PR #133 と同じ扱い）。本 PR は修正する文言と同じ文を持つ設計書の項目だけを修正する'
     plan: '#95'
-  - item: '`src/dev_docs/` の docstring・コメント・ログの文言'
-    reason: 'MCP の入力スキーマにも CLI の出力にも出ない（PR #133 と同じ扱い）'
+  - item: '`src/dev_docs/` の docstring・コメント・ログの文言（入力スキーマ・応答のスキーマの `description` になる `BaseModel` の docstring を除く。`PromptDoc`・`TerminalConfig` など、MCP の入力スキーマにも `session-start` の応答にも出ないモデルの docstring を含む）'
+    reason: 'MCP の入力スキーマ・応答のスキーマにも CLI の出力にも出ない（PR #133 と同じ扱い）'
     plan: none
   - item: '`dev/mock/` の過去のモックの HTML の文言（`出どころ`・`使わなかった部品`）'
     reason: 採用を決めた時点の記録で、配信も実装もしない
