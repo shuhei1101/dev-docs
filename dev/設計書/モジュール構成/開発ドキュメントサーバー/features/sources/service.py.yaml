@@ -385,12 +385,14 @@ functions:
         description: '`sources[].config` の先頭のファイル'
     returns:
       type: tuple[str, str] | None
-      description: （`default_ref` の commit, そのリビジョンの設定の内容）。Git の作業ツリーでなければ `None`
+      description: （`default_ref` の commit, そのリビジョンの設定の内容）。先頭の設定を無視していれば内容はディスクの設定。Git の作業ツリーでなければ `None`
     process: |-
       1. `first` のフォルダのリポジトリの直下を引く（リポジトリの直下）。無ければ `None` を返す
       2. ディスクの `first` を YAML として読み、`default_ref`（無ければスキーマの既定）を取る
       3. `default_ref` を commit に解く（リビジョンの解決）。解けない場合、`default_ref` のパスの違反の `ValidationFailedError` を送る
-      4. その commit の `first` の相対パスのファイルを読む（リビジョンのファイル）。無い場合、`config[0]` のパスの違反の `ValidationFailedError` を送る
+      4. その commit の `first` の相対パスのファイルを読む（リビジョンのファイル）
+         - 無く、`first` が無視されている場合（無視されているファイル）、ディスクの `first` の内容を使う
+         - 無く、無視されていない場合、`config[0]` のパスの違反の `ValidationFailedError` を送る
       5. commit と内容を返す
     exceptions:
       - name: ValidationFailedError
@@ -418,6 +420,20 @@ functions:
         mock: なし
         expected: '`ValidationFailedError` の違反のパスが `default_ref`'
         exception: '`default_ref` が解けない'
+      - name: test_read_default_ref_config_when_ignored
+        case: 正常
+        summary: 無視されている先頭の設定はディスクから読む
+        condition: '`develop` に無く `.gitignore` した `dev-docs.local.yaml`（`default_ref: develop`）'
+        mock: なし（一時フォルダで `git init`）
+        expected: '`develop` の commit と、ディスクの `dev-docs.local.yaml` の内容'
+        exception: '-'
+      - name: test_read_default_ref_config_when_not_committed
+        case: 異常
+        summary: 無視していない先頭の設定が default_ref に無い
+        condition: '`develop` に無く `.gitignore` もしていない `dev-docs.yaml`'
+        mock: なし（一時フォルダで `git init`）
+        expected: '`ValidationFailedError` の違反のパスが `config[0]` で、`develop に dev-docs.yaml がありません`'
+        exception: そのリビジョンに設定のファイルが無い
   - name: load_source_at
     title: 作業場所の配信元の読み込み
     kind: 関数

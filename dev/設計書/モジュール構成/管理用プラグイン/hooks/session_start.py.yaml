@@ -16,12 +16,18 @@ constants:
     usecase: 起動
     summary: '`DEV_DOCS_PORT` が無いときのポート'
     value: '8781'
-  - name: DEFAULT_CONFIG
-    title: 既定の端末の設定
+  - name: DEFAULT_CONFIG_HOME
+    title: 設定の置き場の既定の親
     container: hooks/session_start.py
     usecase: 起動
-    summary: '`DEV_DOCS_CONFIG` が無いときの端末の設定のパス'
-    value: '"~/.config/dev-docs/settings.yaml"'
+    summary: '`XDG_CONFIG_HOME` が無いか空の文字列か相対パスのときの設定の置き場の親'
+    value: '"~/.config"'
+  - name: CONFIG_FILE
+    title: 端末の設定の相対パス
+    container: hooks/session_start.py
+    usecase: 起動
+    summary: 設定の置き場の親から端末の設定までの相対パス
+    value: '"dev-docs/settings.yaml"'
   - name: CONNECT_TIMEOUT_SEC
     title: 接続の打ち切り
     container: hooks/session_start.py
@@ -67,7 +73,7 @@ functions:
       3. つながる場合、`source` が `FORGET_REASONS` で `session_id` があるときだけ記録の削除を依頼する（記録の削除の依頼。`reason` に `source`）。依頼しないときと依頼が成功したときは文を作らない
          - `TimeoutError`、または `reason` が `TimeoutError` の `urllib.error.URLError` の場合、`dev-docs の返し済みの記録を削除できませんでした（{FORGET_TIMEOUT_SEC} 秒で打ち切りました）。前に返した文書は repeat_seen: true で取り直せます。` を `additionalContext` にする
          - そのほかの `OSError`・`ValueError` の場合、`dev-docs の返し済みの記録を削除できませんでした（{理由}）。前に返した文書は repeat_seen: true で取り直せます。` を `additionalContext` にする
-      4. つながらない場合、端末の設定（`DEV_DOCS_CONFIG`、無ければ `DEFAULT_CONFIG`）からクローンを読み（クローンの読み取り）、サーバーを起動し（サーバーの起動）、`RECONNECT_GUIDE` を `additionalContext` にする
+      4. つながらない場合、端末の設定（端末の設定のパス）からクローンを読み（クローンの読み取り）、サーバーを起動し（サーバーの起動）、`RECONNECT_GUIDE` を `additionalContext` にする
          - 端末の設定・`clone`・`{clone}/.venv/bin/python` のどれかが無い場合、`dev-docs を起動できませんでした（{無いもののパス}）。/dev-docs:global-setup で端末の設定を作ってください。` を `additionalContext` にする
          - 起動が `OSError` の場合、理由を添えて同じ文を `additionalContext` にする
       5. 文を作った場合だけ `{"hookSpecificOutput": {"hookEventName": "SessionStart", "additionalContext": ...}}` を標準出力に出す。予期しない例外も含め 0 を返す
@@ -149,6 +155,47 @@ functions:
         condition: OS が払い出して閉じたポート
         mock: なし
         expected: '`False`'
+  - name: config_path
+    title: 端末の設定のパス
+    container: hooks/session_start.py
+    usecase: 起動
+    role: 解決
+    summary: サーバーと同じ規則で端末の設定のパスを決める
+    kind: 関数
+    scope: public
+    is_async: false
+    args:
+      - name: env
+        title: 環境変数
+        type: Mapping[str, str]
+        required: true
+        passing: positional
+        description: '`os.environ`'
+    returns:
+      type: Path
+      description: '`~` を展開した端末の設定のパス'
+    process: |-
+      1. `DEV_DOCS_CONFIG` が空でなければ、その値の `~` を展開して返す
+      2. `XDG_CONFIG_HOME` が空でなく絶対パスならその値、そうでなければ `DEFAULT_CONFIG_HOME` の `~` を展開し、その下の `CONFIG_FILE` を返す
+    unit_tests:
+      - name: test_config_path
+        case: 正常
+        summary: DEV_DOCS_CONFIG が優先
+        condition: '`{"DEV_DOCS_CONFIG": "/tmp/x/settings.yaml", "XDG_CONFIG_HOME": "/tmp/c"}`'
+        mock: なし
+        expected: '`Path("/tmp/x/settings.yaml")`'
+      - name: test_config_path_when_xdg_config_home_set
+        case: 正常
+        summary: XDG_CONFIG_HOME の下
+        condition: '`{"XDG_CONFIG_HOME": "/tmp/c"}`'
+        mock: なし
+        expected: '`Path("/tmp/c/dev-docs/settings.yaml")`'
+      - name: test_config_path_when_unset_or_relative
+        case: 正常
+        summary: 未設定・空の文字列・相対パスは既定
+        condition: '`{}`・`{"XDG_CONFIG_HOME": ""}`・`{"XDG_CONFIG_HOME": "rel"}`（`HOME` を `/home/u` に monkeypatch）'
+        mock: なし
+        expected: どれも `Path("/home/u/.config/dev-docs/settings.yaml")`
   - name: read_clone
     title: クローンの読み取り
     container: hooks/session_start.py
