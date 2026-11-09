@@ -1,0 +1,51 @@
+use_cases:
+  - kind: composite
+    scenario: dev/設計書/シナリオ/複合ユースケース/dev-docsで文書を配信して読み書きする.yaml
+    impact: none
+    detail: 流れは変わらない
+    depends_on: []
+  - kind: single
+    scenario: dev/設計書/シナリオ/単一ユースケース/エージェントが調べる.yaml
+    impact: changed
+    detail: 期待値が引用する、取得済みの文書のマーカー（この会話で返し済み）と検索の件数の行（返した件数）の文言が変わる
+    depends_on: []
+  - kind: single
+    scenario: dev/設計書/シナリオ/単一ユースケース/YAMLを直接編集した.yaml
+    impact: changed
+    detail: 期待値が引用する、取得済みの文書のマーカー（この会話で返し済み）の文言が変わる
+    depends_on: []
+  - kind: single
+    scenario: dev/設計書/シナリオ/単一ユースケース/起動する.yaml
+    impact: changed
+    detail: 期待値が引用する、配信元の検査の分類名（どの文書にも当たらない関連）が変わる
+    depends_on: []
+  - kind: single
+    scenario: dev/設計書/シナリオ/単一ユースケース/変更をレビューする.yaml
+    impact: run_only
+    detail: 変更の一覧のエラーと注記の文言が変わる。シナリオの期待値は応答の文言を引用していない
+    depends_on: []
+  - kind: single
+    scenario: dev/設計書/シナリオ/単一ユースケース/エージェントが書き込む.yaml
+    impact: run_only
+    detail: 書き込み・削除の違反とエラーの文言が変わる。シナリオの期待値は応答の文言を引用していない
+    depends_on: []
+scope_out:
+  - item: 管理用プラグインのセッション開始のフック（`plugins/dev-docs/hooks/session_start.py`）が文脈へ返却する文言
+    reason: MCP の応答ではなく `src/dev_docs/` の外のフックの文言で、#117 の範囲に入らない
+    plan: '#134'
+  - item: ログの文言（`作業範囲の外を読んだ`・`設定を読み直した` など。配信元の検査の分類名を除く）
+    reason: '画面にも MCP の応答にも出ない（PR #116 と同じ扱い）'
+    plan: none
+  - item: ツールの引数の説明（`features/*/types.py` の `Field` の `description`。`scope に当たらない配信元を…読む` など）
+    reason: MCP のツールの入力スキーマとしてエージェントに出るが、応答ではないため、Issue の範囲（エラー・注記・ヒント）に含めないと判断した（レビューで確定する）
+    plan: to_file
+  - item: CLI の出力とヘルプ（`__main__.py`・`features/migrate/`・`features/prompt_doc/` の文言）
+    reason: 端末で開発者が参照する出力で MCP の応答ではないため、Issue の範囲に含めないと判断した（レビューで確定する）
+    plan: to_file
+  - item: '`docs/`・`dev/` の地の文（応答の文言を言い換えて説明する文・シナリオの名前の `前回読んだ時点` など）'
+    reason: '`docs/`・`dev/` の文書の修正は #95 の範囲。本 PR は修正する文言と同じ文を持つ項目だけを修正する'
+    plan: '#95'
+  - item: '`src/dev_docs/` の docstring・コメント'
+    reason: '画面にも MCP の応答にも出ない（PR #116 と同じ扱い）'
+    plan: none
+docs: []
