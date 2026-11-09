@@ -1,0 +1,75 @@
+use_cases:
+  - kind: composite
+    scenario: dev/設計書/シナリオ/複合ユースケース/dev-docsで文書を配信して読み書きする.yaml
+    impact: none
+    detail: 文書の置き場所とファイル名だけが変わり、配信・読み書きの流れは変わらない
+    depends_on: []
+  - kind: single
+    scenario: dev/設計書/シナリオ/単一ユースケース/dev-docsを入れる.yaml
+    impact: none
+    detail: 入れ方・起動に関わるファイル（package.json・pyproject.toml・プラグインの定義）を変えない
+    depends_on: []
+  - kind: single
+    scenario: dev/設計書/シナリオ/単一ユースケース/利用者が画面で読む.yaml
+    impact: none
+    detail: dev-docs 自身の文書の置き場所だけが変わり、画面で読む流れは変わらない
+    depends_on: []
+docs:
+  - page: dev/設計書/
+    new: false
+    change: YAML の設計書に id を振り、docs/{kind}/{ID}.yaml（言語の規約を注入する種別は {ID}.{lang}.yaml）へ移す。設計書どうしの参照をパスから {ID}#{項目のパス} へ書き換える。デザイン方針.md は docs/design-policy.md へ移す
+    status: todo
+  - page: dev/設計書/アーキテクチャ図/アーキテクチャ図.yaml
+    new: false
+    change: repository.layout を移した後の構成（docs/ の種類のフォルダ・schemas/）に合わせる
+    status: todo
+  - page: dev/テンプレート/
+    new: false
+    change: '*.schema.yaml を schemas/{kind}.schema.yaml（common・index を含む）へ移す'
+    status: todo
+  - page: dev/コーディング規約/
+    new: false
+    change: docs/rule/ へ移す（中身は目次だけのため、移し先の目次の行にまとめる）
+    status: todo
+  - page: dev/mock/
+    new: false
+    change: docs/mock/ へ移す
+    status: todo
+  - page: dev/pr/
+    new: false
+    change: マージ済みの作業 PR の PR ドキュメントを docs/pr/ へ移す（open の作業 PR の分は ai-monitor#3307 の反映作業が移す）
+    status: todo
+  - page: dev/index.yaml
+    new: false
+    change: 削除する。行は docs/index.yaml へ合わせる（dev/README.md も削除する）
+    status: todo
+  - page: docs/index.yaml
+    new: false
+    change: 起点を 1 つにし、行が種類のフォルダを指すようにする（docs/README.md も作り直す）
+    status: todo
+  - page: docs/はじめに/
+    new: false
+    change: docs/はじめに/・使い方/・リファレンス/ を docs/guide/ へまとめ、分類をメタデータ category で持つ（サブフォルダにあったものは {サブフォルダ}-{ファイル名}）
+    status: todo
+  - page: docs/_config.yml
+    new: true
+    change: Pages の除外。visibility が internal の種類のフォルダ・文書と pr/・mock/・generated/ を exclude に載せる
+    status: todo
+  - page: README.md
+    new: false
+    change: 開発コマンドのリンクを移した後の置き場所へ合わせる
+    status: todo
+  - page: CLAUDE.md
+    new: false
+    change: 「開発ドキュメント dev/ と公開ドキュメント docs/」の記載と画面のモジュール構成のリンクを移した後の置き場所へ合わせる
+    status: todo
+scope_out:
+  - item: dev-docs.yaml を置いて dev-docs 自身の文書を配信し、タグを付ける
+    reason: 別の Issue の範囲。移した後の置き場所で paths[] を決める
+    plan: '#24'
+  - item: AI Monitor v0.4.0 の配布物への追従のうち id の振り付け以外（テーマの取り込み・その他の変換・ai-monitor-version.ini の更新）
+    reason: '#74 に残した範囲（#74 はこの PR の後に置き場所を移した後で変換を当てる）'
+    plan: '#74'
+  - item: ai-monitor の手順・ツールを docs/ 前提にする対応
+    reason: ai-monitor 側の作業（shuhei1101/ai-monitor#2973 の作業 PR shuhei1101/ai-monitor#3307）
+    plan: none
