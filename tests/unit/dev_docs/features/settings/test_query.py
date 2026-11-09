@@ -9,7 +9,9 @@ from dev_docs.features.settings.query import (
     config_path,
     listen_port,
     load_terminal_config,
+    state_dir_path,
     validate_terminal_config,
+    xdg_base_dir,
 )
 from dev_docs.features.settings.types import TerminalConfig, TerminalConfigInvalidError
 
@@ -35,6 +37,79 @@ def test_config_path_when_unset(monkeypatch: pytest.MonkeyPatch) -> None:
     assert result == Path("/home/u/.config/dev-docs/settings.yaml")
 
 
+def test_config_path_when_xdg_config_home_set() -> None:
+    """XDG_CONFIG_HOME の下（正常系）。"""
+    # 準備
+    env = {"XDG_CONFIG_HOME": "/tmp/c"}
+    # 実行
+    result = config_path(env)
+    # 検証
+    assert result == Path("/tmp/c/dev-docs/settings.yaml")
+
+
+def test_xdg_base_dir() -> None:
+    """絶対パスの値（正常系）。"""
+    # 準備
+    env = {"XDG_STATE_HOME": "/tmp/s"}
+    # 実行
+    result = xdg_base_dir(env, "XDG_STATE_HOME", "~/.local/state")
+    # 検証
+    assert result == Path("/tmp/s")
+
+
+@pytest.mark.parametrize("env", [{}, {"XDG_STATE_HOME": ""}, {"XDG_STATE_HOME": "rel"}])
+def test_xdg_base_dir_when_unset_or_relative(
+    env: dict[str, str], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """未設定・空の文字列・相対パスは既定（正常系）。"""
+    # 準備
+    monkeypatch.setenv("HOME", "/home/u")
+    # 実行
+    result = xdg_base_dir(env, "XDG_STATE_HOME", "~/.local/state")
+    # 検証
+    assert result == Path("/home/u/.local/state")
+
+
+def test_state_dir_path() -> None:
+    """環境変数が端末の設定より優先（正常系）。"""
+    # 準備
+    env = {"DEV_DOCS_STATE_DIR": "/tmp/b", "XDG_STATE_HOME": "/tmp/c"}
+    # 実行
+    result = state_dir_path("/tmp/a", env)
+    # 検証
+    assert result == Path("/tmp/b")
+
+
+def test_state_dir_path_when_config_value() -> None:
+    """端末の設定の値（正常系）。"""
+    # 準備
+    env = {"XDG_STATE_HOME": "/tmp/c"}
+    # 実行
+    result = state_dir_path("/tmp/a", env)
+    # 検証
+    assert result == Path("/tmp/a")
+
+
+def test_state_dir_path_when_xdg_state_home_set() -> None:
+    """XDG_STATE_HOME の下（正常系）。"""
+    # 準備
+    env = {"XDG_STATE_HOME": "/tmp/c"}
+    # 実行
+    result = state_dir_path(None, env)
+    # 検証
+    assert result == Path("/tmp/c/dev-docs")
+
+
+def test_state_dir_path_when_unset(monkeypatch: pytest.MonkeyPatch) -> None:
+    """どれも無い（正常系）。"""
+    # 準備
+    monkeypatch.setenv("HOME", "/home/u")
+    # 実行
+    result = state_dir_path(None, {})
+    # 検証
+    assert result == Path("/home/u/.local/state/dev-docs")
+
+
 def test_load_terminal_config(tmp_path: Path) -> None:
     """既定値を埋める（正常系）。"""
     # 準備
@@ -50,6 +125,22 @@ def test_load_terminal_config(tmp_path: Path) -> None:
     assert result.bind == "127.0.0.1"
     assert result.sources[0].config == ["/tmp/a/dev-docs.yaml"]
     assert result.log_dir == result.state_dir / "logs"
+
+
+def test_load_terminal_config_when_state_dir_env_set(tmp_path: Path) -> None:
+    """状態の置き場を環境変数で決める（正常系）。"""
+    # 準備
+    path = tmp_path / "settings.yaml"
+    path.write_text(
+        'version: "1"\nclone: /tmp/clone\nstate_dir: /tmp/a\n',
+        encoding="utf-8",
+    )
+    env = {"DEV_DOCS_STATE_DIR": "/tmp/b"}
+    # 実行
+    result = load_terminal_config(path, env=env)
+    # 検証
+    assert result.state_dir == Path("/tmp/b")
+    assert result.log_dir == Path("/tmp/b/logs")
 
 
 def test_load_terminal_config_when_missing(tmp_path: Path) -> None:
