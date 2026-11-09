@@ -217,9 +217,9 @@ data_models:
         title: 書く前の設定
         type: str | None
         default: None
-        description: '`dev-docs.yaml` の中身（YAML の文字列）。`None` はファイルを読む'
+        description: '`dev-docs.yaml` の中身（YAML の文字列）。`None` はファイルを読み込む'
       - name: format
-        title: 返す形式
+        title: 返却する形式
         type: Literal['markdown', 'json']
         default: "'markdown'"
         description: '`markdown` は `render_check` の文、`json` は結果の辞書'
@@ -295,7 +295,7 @@ data_models:
         title: 書く前の設定
         type: str | None
         default: None
-        description: '`dev-docs.yaml` の中身（YAML の文字列）。`None` はファイルを読む'
+        description: '`dev-docs.yaml` の中身（YAML の文字列）。`None` はファイルを読み込む'
   - name: TryConvertResult
     title: 試しの変換の結果
     container: features/admin/types.py
@@ -358,7 +358,7 @@ data_models:
         type: list[SyncItem]
         description: '`missing_refs`・`unindexed_files`・`missing_body_files`・`unresolved_related` の順に並べ、先頭 `SYNC_ITEMS_LIMIT` 件まで'
   - name: FormatRequest
-    title: 返す形式の指定
+    title: 返却する形式の指定
     container: features/admin/types.py
     usecase: 共通
     role: DTO
@@ -366,7 +366,7 @@ data_models:
     description: '`pydantic.BaseModel`（`extra="forbid"`）。'
     properties:
       - name: format
-        title: 返す形式
+        title: 返却する形式
         type: Literal['markdown', 'json']
         default: "'markdown'"
         description: '`markdown` は `render_status`・`render_reload` の文、`json` は結果の辞書'
@@ -417,9 +417,9 @@ data_models:
         title: 操作
         type: list[NavOperation]
         access: 公開
-        description: 並べた順に当てる操作（1 件以上）
+        description: 並べた順に適用する操作（1 件以上）
       - name: format
-        title: 返す形式
+        title: 返却する形式
         type: Literal['markdown', 'json']
         access: 公開
         default: "'markdown'"

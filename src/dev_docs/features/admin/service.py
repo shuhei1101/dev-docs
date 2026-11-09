@@ -345,7 +345,7 @@ def try_convert(request: TryConvertRequest, *, handlers: Handlers) -> TryConvert
         raise ValidationFailedError(
             message=f"{candidate.root}: 配信元の設定に違反が {count} 件あります",
             violations=[*candidate.violations, *candidate.script_violations],
-            next_steps=["check_project で違反を確かめてください"],
+            next_steps=["check_project で違反を確認してください"],
         )
     # 配信元の外を指すファイルは断る
     file = normalize_path(candidate.root / request.file)
@@ -359,7 +359,8 @@ def try_convert(request: TryConvertRequest, *, handlers: Handlers) -> TryConvert
         (row for row in source.config.documents if row.enabled and row.matches(relative)), None
     )
     not_matched = DocumentNotFoundError(
-        message=f"{request.file}: 文書の種類の範囲に当たる文書がありません", missing=[request.file]
+        message=f"{request.file}: 文書の種類の範囲に該当する文書がありません",
+        missing=[request.file],
     )
     target = Target(source, candidate.root, None, None, "read")
     if table is None:
@@ -522,7 +523,7 @@ def write_nav(request: WriteNavRequest, *, handlers: Handlers) -> WriteNavResult
         doc = load_roundtrip(config_file.read_text(encoding="utf-8"), file=str(config_file))
     except YamlLoadError as error:
         raise ConfigParseError(
-            message=f"配信元の設定を読めません: {config_file}（{error}）",
+            message=f"配信元の設定を読み込めません: {config_file}（{error}）",
             line=error.line,
             column=error.column,
         ) from error
@@ -537,7 +538,7 @@ def write_nav(request: WriteNavRequest, *, handlers: Handlers) -> WriteNavResult
                         f"重ねた設定のファイル {overlaid} が nav を持つため、"
                         "配信に出るのはそちらの nav です"
                     ),
-                    fix="重ねた設定のファイルの nav を外してください",
+                    fix="重ねた設定のファイルの nav を削除してください",
                 )
             ],
         )

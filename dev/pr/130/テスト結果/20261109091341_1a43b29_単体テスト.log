@@ -1,0 +1,28 @@
+$ uv run pytest tests/unit/
+============================= test session starts ==============================
+platform linux -- Python 3.14.3, pytest-9.1.1, pluggy-1.7.0
+rootdir: /mnt/c/Users/shuhe/repo/dev-docs/.claude/worktrees/chore-convert-decisions-link
+configfile: pyproject.toml
+plugins: anyio-4.15.1
+collected 865 items / 2 errors
+
+==================================== ERRORS ====================================
+___ ERROR collecting tests/unit/dev_docs/features/convert/test_decisions.py ____
+ImportError while importing test module '/mnt/c/Users/shuhe/repo/dev-docs/.claude/worktrees/chore-convert-decisions-link/tests/unit/dev_docs/features/convert/test_decisions.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+tests/unit/dev_docs/features/convert/test_decisions.py:8: in <module>
+    from dev_docs.features.convert.decisions import decision_page_id, find_decisions
+E   ModuleNotFoundError: No module named 'dev_docs.features.convert.decisions'
+_____ ERROR collecting tests/unit/dev_docs/features/convert/test_inline.py _____
+ImportError while importing test module '/mnt/c/Users/shuhe/repo/dev-docs/.claude/worktrees/chore-convert-decisions-link/tests/unit/dev_docs/features/convert/test_inline.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+tests/unit/dev_docs/features/convert/test_inline.py:3: in <module>
+    from dev_docs.features.convert.inline import (
+E   ImportError: cannot import name 'link_decisions' from 'dev_docs.features.convert.inline' (/mnt/c/Users/shuhe/repo/dev-docs/.claude/worktrees/chore-convert-decisions-link/src/dev_docs/features/convert/inline.py)
+=========================== short test summary info ============================
+ERROR tests/unit/dev_docs/features/convert/test_decisions.py
+ERROR tests/unit/dev_docs/features/convert/test_inline.py
+!!!!!!!!!!!!!!!!!!! Interrupted: 2 errors during collection !!!!!!!!!!!!!!!!!!!!
+============================== 2 errors in 46.96s ==============================

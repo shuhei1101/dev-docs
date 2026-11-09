@@ -302,7 +302,7 @@ def _pre_text_length(tab: str) -> int:
 
 def _char_count(tab: str) -> int:
     """タブの字数の行の字数を返す。"""
-    found = re.search(r": ([\d,]+) 字 / 使わなかった部品", tab)
+    found = re.search(r": ([\d,]+) 字 / 使用しなかった部品", tab)
     assert found is not None
     return int(found.group(1).replace(",", ""))
 
@@ -326,7 +326,7 @@ def test_normal(monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[s
     assert "出力: write_trait_changes を 1 回呼んで終える" in out
     # 変数の表
     variables = _section(out, "## 変数")
-    assert "| 変数 | 型 | 必須 | 例 | 説明 | 出どころ |" in variables
+    assert "| 変数 | 型 | 必須 | 例 | 説明 | 出典 |" in variables
     assert "| `character.display_name` | string | ✅ | `ひな` | 表示名 | - |" in variables
     assert "| `traits[].name` | string | ✅ | `好奇心` | 特性の名前 | - |" in variables
     # 部品のセクション
@@ -345,8 +345,8 @@ def test_normal(monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[s
     assert "**system**" in _tab(default_example, "en")
     assert "**user**" in _tab(default_example, "en")
     assert "注入する本文（en）: " in _tab(default_example, "en")
-    assert "使わなかった部品: no-logs" in _tab(default_example, "en")
-    assert "使わなかった部品: logs" in _tab(no_logs_example, "en")
+    assert "使用しなかった部品: no-logs" in _tab(default_example, "en")
+    assert "使用しなかった部品: logs" in _tab(no_logs_example, "en")
     assert '<mark data-hint="character.display_name: 表示名">ひな</mark>' in default_example
     # 言語のタブ
     assert "<!-- tabs: group=lang -->" in out
@@ -461,7 +461,7 @@ def test_error_when_yaml_unreadable(
     captured = capsys.readouterr()
     assert code == 1
     assert captured.out == ""
-    assert "YAML を読めません: " in captured.err
+    assert "YAML を読み込めません: " in captured.err
 
 
 def test_error_when_required_key_missing(

@@ -41,9 +41,9 @@ class Condition(BaseModel):
         "not_exists",
     ] = Field(
         description=(
-            "比べ方。regex は値の各行に当たる"
+            "比べ方。regex は値の各行に適用する"
             "（^・$ は各行の先頭・末尾。値全体の先頭・末尾は \\A・\\Z）。"
-            "glob は値全体に当て、** は / をまたぎ、*・? は / をまたがない"
+            "glob は値全体に適用し、** は / をまたぎ、*・? は / をまたがない"
         )
     )
     values: list[str] = Field(default_factory=list)
@@ -58,7 +58,7 @@ class Condition(BaseModel):
 
 
 class Group(BaseModel):
-    """条件を AND・OR で束ねるか、否定する。"""
+    """条件を AND・OR でまとめるか、否定する。"""
 
     model_config = ConfigDict(extra="forbid", populate_by_name=True)
 
@@ -67,7 +67,7 @@ class Group(BaseModel):
     not_: Condition | Group | None = Field(
         default=None,
         alias="not",
-        description="中の条件か束に当たらない文書に当たる。and・or の中にも置ける",
+        description="中の条件か束に該当しない文書に該当する。and・or の中にも配置できる",
     )
 
 
@@ -81,29 +81,31 @@ class OrderKey(BaseModel):
 
 
 class Snippets(BaseModel):
-    """本文の代わりに条件に当たった行と前後の行だけを行番号つきで返す指定。"""
+    """本文の代わりに条件に該当した行と前後の行だけを行番号つきで返却する指定。"""
 
     model_config = ConfigDict(extra="forbid")
 
     context_lines: int = Field(
         default=1, description="before・after を省いたときの前と後ろの行の数（0〜10）"
     )
-    max_per_doc: int = Field(default=3, description="1 つの文書で返す箇所の数（1〜20）")
+    max_per_doc: int = Field(default=3, description="1 つの文書で返却する箇所の数（1〜20）")
     before: int | None = Field(
-        default=None, ge=0, description="当たった行の前に返す行の数。省けば context_lines"
+        default=None, ge=0, description="該当した行の前に返却する行の数。省けば context_lines"
     )
     after: int | None = Field(
-        default=None, ge=0, description="当たった行の後ろに返す行の数。省けば context_lines"
+        default=None, ge=0, description="該当した行の後ろに返却する行の数。省けば context_lines"
     )
 
 
 class LineRange(BaseModel):
-    """本文から返す行の範囲。"""
+    """本文から返却する行の範囲。"""
 
     model_config = ConfigDict(extra="forbid")
 
-    offset: int = Field(default=1, ge=1, description="返す最初の行の行番号（1 始まり）")
-    limit: int | None = Field(default=None, ge=1, description="返す行の数。省けば本文の末尾まで")
+    offset: int = Field(default=1, ge=1, description="返却する最初の行の行番号（1 始まり）")
+    limit: int | None = Field(
+        default=None, ge=1, description="返却する行の数。省けば本文の末尾まで"
+    )
 
 
 class SearchRequest(BaseModel):
@@ -117,7 +119,7 @@ class SearchRequest(BaseModel):
     filter: Condition | Group | None = None
     term: str | None = Field(
         default=None,
-        description="alias_type を持つ行の文書のうち、name か aliases がこの語に一致する文書だけに絞る",
+        description="alias_type を持つ行の文書のうち、name か aliases がこの単語に一致する文書だけに絞る",
     )
     view: Literal["ids", "summary", "full", "count"] = "summary"
     fields: list[str] = Field(default_factory=list)
@@ -136,8 +138,8 @@ class SearchRequest(BaseModel):
     outside_scope: bool = Field(
         default=False,
         description=(
-            "true のとき、scope に当たらない配信元を outside_read が真なら"
-            "作業範囲の外（参考）として読む（source が ID 1 つのときだけ効く）"
+            "true のとき、scope に該当しない配信元を outside_read が真なら"
+            "作業範囲の外（参考）として参照する（source が ID 1 つのときだけ有効）"
         ),
     )
     session_id: str | None = None
@@ -145,13 +147,13 @@ class SearchRequest(BaseModel):
     sections: list[str] | None = Field(
         default=None,
         description=(
-            "Markdown の本文から返すセクションの見出しの文字列"
-            "（# と前後の空白を除いた文字列と完全一致）。view: full のときだけ。lines と同時に渡せない"
+            "Markdown の本文から返却するセクションの見出しの文字列"
+            "（# と前後の空白を除いた文字列と完全一致）。view: full のときだけ。lines と同時に指定できない"
         ),
     )
     lines: LineRange | None = Field(
         default=None,
-        description="本文から返す行の範囲。view: full のときだけ。sections と同時に渡せない",
+        description="本文から返却する行の範囲。view: full のときだけ。sections と同時に指定できない",
     )
 
 

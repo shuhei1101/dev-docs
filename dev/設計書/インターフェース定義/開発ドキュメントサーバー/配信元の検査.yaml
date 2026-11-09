@@ -188,7 +188,7 @@ flows:
       - '`violations` に `documents[0].schema` があり、`rule` にスキーマが `properties.files.items` を定めないことがある'
       - 結果は配信中の配信元の状態に反映しない
     test: test_normal_when_records_schema_mismatch
-  - name: 正常系（どの文書にも当たらない関連）
+  - name: 正常系（どの文書にも該当しない関連）
     summary: '`related[].to` がどの文書の ID にも当たらない関連を、同期の件数と内訳で返す'
     setup:
       - name: Mock
@@ -242,7 +242,7 @@ request:
     required: false
     default: '`markdown`'
     location: argument
-    description: 返す形式
+    description: 返却する形式
 request_example: |-
   ```json
   {"path": "/home/u/repo/sample"}

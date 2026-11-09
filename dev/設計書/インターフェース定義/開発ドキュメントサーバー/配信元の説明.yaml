@@ -363,7 +363,7 @@ request:
     required: false
     default: '`markdown`'
     location: argument
-    description: 返す形式
+    description: 返却する形式
   - name: cwd
     type: str
     required: false
@@ -376,7 +376,7 @@ request:
     required: false
     default: '`false`'
     location: argument
-    description: '`true` のとき、`cwd` が `scope` に当たらない配信元も、端末の設定の `sources[].outside_read` が真なら作業範囲の外（参考）として読む'
+    description: '`true` のとき、`cwd` が `scope` に該当しない配信元も、端末の設定の `sources[].outside_read` が真なら作業範囲の外（参考）として参照する'
     constraints: '`source` を渡したときはその配信元を作業範囲の外として読む。`source` を省いたときは、使える配信元の一覧に作業範囲の外で読める配信元の一覧を加える'
     notes: '`outside_scope` を省いた引数なしの一覧には作業範囲の外の配信元を載せない'
     status: planned
@@ -411,7 +411,7 @@ response:
     description: 配信元の設定の `description`
   - name: warnings[]
     type: str
-    description: 使える配信元の同期のずれ（metadata の列の欠け・管理用の YAML に無いファイル・ファイルが無い行・どの文書にも当たらない関連）とエイリアスのキーの違反、配信元・端末の設定のバージョンが古いこと、どの文書にも当たらない `nav` の条件、検証で外した配信元
+    description: 使える配信元の同期のずれ（metadata の列の欠け・管理用の YAML に無いファイル・ファイルが無い行・どの文書にも該当しない関連）とエイリアスのキーの違反、配信元・端末の設定のバージョンが古いこと、どの文書にも当たらない `nav` の条件、検証で外した配信元
     notes: '引数なしのとき。同期のずれ・エイリアス・`nav`・配信元の設定のバージョンは使える配信元だけを対象にし、端末の設定のバージョンと検証で外した配信元は使える配信元が 0 件のときも載せる。`format: markdown` は使える配信元の表の後の「注意」の見出しの下に 1 行ずつ出し、0 件は見出しごと出さない。`format: json` は 0 件のときキーを持たない'
   - name: instructions
     type: str

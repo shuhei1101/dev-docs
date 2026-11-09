@@ -102,7 +102,7 @@ def test_render_match_words_markdown() -> None:
     results = [render_match_words_markdown(words), render_match_words_markdown(MatchWordsResult())]
     # 検証
     assert results[0].splitlines() == [
-        "| 語 | 文書 | 種類 |",
+        "| 単語 | 文書 | 種類 |",
         "| --- | --- | --- |",
         "| 作業範囲 | glossary/scope | name |",
         "| scope | glossary/scope | alias |",

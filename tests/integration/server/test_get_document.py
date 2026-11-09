@@ -918,3 +918,116 @@ def test_normal_when_id_link_resolved(
     assert "[無い文書](id:no-such-doc)" in body["markdown"]
     assert "`[コード](id:doc-2)`" in body["markdown"]
     assert body["conversionError"] is None
+
+
+DECIDED_ROW = (
+    "  - id: decided\n    paths: [decided/*.yaml]\n    schema: schemas/decided.schema.yaml\n"
+    "decisions:\n  folders: [tmp/a, tmp/b]\n"
+)
+# 表の行・「項目 / 値」の表を持つ見出しの要素・文書の直下に `decisions` を持つ種類のスキーマ
+DECIDED_SCHEMA = """\
+type: object
+title: 検討事項を持つ文書
+properties:
+  id: {type: string, title: ID}
+  title: {type: string, title: タイトル}
+  items:
+    title: 一覧
+    x-heading: 一覧
+    x-shape: table
+    items:
+      properties: {name: {title: 名前}, decisions: {title: 検討事項}}
+  spec:
+    type: object
+    title: 仕様
+    x-heading: 仕様
+    properties:
+      kind: {title: 種類}
+      limit: {title: 上限}
+      owner: {title: 担当}
+      decisions: {type: array, title: 検討事項}
+  decisions: {type: array, title: 検討事項}
+"""
+DECIDED_DOC = """\
+id: doc-8
+title: 検討事項の文書 8
+items:
+  - {name: 項目 1, decisions: [D-1, D-2, D-3]}
+spec: {kind: 定期, limit: 3, owner: 運用, decisions: [D-1, D-2, D-3]}
+decisions: [D-1, D-2, D-3]
+"""
+
+
+def _decided_files(
+    sample_file_set: Callable[..., dict[str, str]],
+    sample_config_text: Callable[..., str],
+) -> dict[str, str]:
+    """`decisions.folders` に 2 つの話し合いの記録のフォルダを持つ配信元のファイル一式を返す。"""
+    return sample_file_set(
+        **{
+            "dev-docs.yaml": sample_config_text(DECIDED_ROW),
+            "schemas/decided.schema.yaml": DECIDED_SCHEMA,
+            "decided/doc-8.yaml": DECIDED_DOC,
+            "tmp/a/.mindstella/docs/D-1.md": "# D-1 の本文\n",
+            "tmp/a/.mindstella/docs/D-2.md": "# D-2 a\n",
+            "tmp/b/.mindstella/docs/D-2.md": "# D-2 b\n",
+        }
+    )
+
+
+def test_normal_when_decision_linked(
+    make_source: Callable[..., Any],
+    make_server: Callable[..., Any],
+    sample_file_set: Callable[..., dict[str, str]],
+    sample_config_text: Callable[..., str],
+) -> None:
+    """`decisions` の ID のうち、話し合いの記録のフォルダで 1 つに決まる ID を、検討事項の文書の画面のパスへのリンクにする（正常系）。"""
+    # 準備
+    files = _decided_files(sample_file_set, sample_config_text)
+    env = make_server(make_source("sample", files))
+    # 実行
+    response = env.client.get("/_api/sources/sample/docs/decided/doc-8")
+    # 検証
+    body = response.json()
+    markdown = body["markdown"]
+    assert response.status_code == 200
+    assert "| 項目 1 | [D-1](../_decisions/D-1)・D-2・D-3 |" in markdown
+    assert markdown.count("- [D-1](../_decisions/D-1)") == 2
+    assert markdown.count("- D-2") == 2
+    assert markdown.count("- D-3") == 2
+    assert "[D-2]" not in markdown
+    assert "[D-3]" not in markdown
+    assert body["conversionError"] is None
+
+
+def test_normal_when_decision_document_returned(
+    make_source: Callable[..., Any],
+    make_server: Callable[..., Any],
+    sample_file_set: Callable[..., dict[str, str]],
+    sample_config_text: Callable[..., str],
+) -> None:
+    """`path` が `_decisions/{ID}` のとき、話し合いの記録のフォルダの検討事項の文書を Markdown で返す（正常系）。"""
+    # 準備
+    files = _decided_files(sample_file_set, sample_config_text)
+    spec = make_source("sample", files)
+    env = make_server(spec)
+    decision_file = spec.folder / "tmp/a/.mindstella/docs/D-1.md"
+    # 実行
+    found = env.client.get("/_api/sources/sample/docs/_decisions/D-1")
+    ambiguous = env.client.get("/_api/sources/sample/docs/_decisions/D-2")
+    missing = env.client.get("/_api/sources/sample/docs/_decisions/D-3")
+    # 検証
+    body = found.json()
+    assert found.status_code == 200
+    assert body["path"] == "_decisions/D-1"
+    assert body["markdown"] == "# D-1 の本文\n"
+    assert [tab["active"] for tab in body["tabs"]] == [False, False]
+    assert datetime.fromisoformat(body["updatedAt"]).timestamp() == pytest.approx(
+        decision_file.stat().st_mtime
+    )
+    assert body["bodyPath"] is None
+    assert body["diff"] is None
+    assert ambiguous.status_code == 404
+    assert (ambiguous.json()["missing"], ambiguous.json()["value"]) == ("doc", "_decisions/D-2")
+    assert missing.status_code == 404
+    assert (missing.json()["missing"], missing.json()["value"]) == ("doc", "_decisions/D-3")

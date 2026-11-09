@@ -108,13 +108,19 @@ categories:
       sh scripts/dev-docs-server-wait.sh listening "$requested"
       ```
 
-      2. 確認スクリプトの最初に、管理の MCP の `status` が `loading: false` を返す（全ての配信元の読み込みが終わる）まで待つ
+      2. 修正したファイルの更新より後にサーバーが起動し直したかを判定するときは、サーバーが最後に起動した時刻（UNIX 時刻）を取得する。再起動は `os.execv` で同じプロセスを置き換え、PID と `ps` の起動時刻が変わらないため、ログの uvicorn が待ち受けを始めた行の時刻を出す
+
+      ```bash
+      started=$(sh scripts/dev-docs-server-wait.sh started)
+      ```
+
+      3. 確認スクリプトの最初に、管理の MCP の `status` が `loading: false` を返す（全ての配信元の読み込みが終わる）まで待つ
 
       ```bash
       sh scripts/dev-docs-server-wait.sh loaded
       ```
-    effects: '`listening` は最長 120 秒、`loaded` は最長 540 秒待つ（上限の導き方はスクリプトの冒頭のコメント）。待ちきれなければ `failed` の行を出して終了コード 1 で終わる。サーバーの状態は変えない'
+    effects: '`listening` は最長 120 秒、`loaded` は最長 540 秒待つ（上限の導き方はスクリプトの冒頭のコメント）。待ちきれなければ `failed` の行を出して終了コード 1 で終わる。`started` は待ち受けていないか、ログ（端末の設定の `log_dir` の既定 `~/.local/state/dev-docs/logs/`）に待ち受けを始めた行が無ければ、標準エラーに `failed` の行を出して終了コード 1 で終わる。サーバーの状態は変えない'
     verification:
       state: 未確認
-      detail: '`loaded` の待つ条件を `status` の `loading: false` に替えるため、PR #136 の実装の後に稼働中のサーバーへ走らせて確かめ直す'
+      detail: '`started`・`listening` は PR #138 で稼働中のサーバーへ走らせて確認した（2026-11-09）。`loaded` は待つ条件を `status` の `loading: false` に替えるため、PR #136 の実装の後に稼働中のサーバーへ走らせて確認する'
 lead: dev-docs の開発で使うコマンド。

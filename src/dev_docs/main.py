@@ -298,7 +298,7 @@ def check_sources(sources: list[ServedSource], *, store: Any, checks: SourceChec
             ("metadata の列の欠け", report.missing_refs),
             ("管理用の YAML に無いファイル", report.unindexed_files),
             ("ファイルが無い行", report.missing_body_files),
-            ("どの文書にも当たらない関連", report.unresolved_related),
+            ("どの文書にも該当しない関連", report.unresolved_related),
         ):
             if values:
                 logger.warning(

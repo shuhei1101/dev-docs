@@ -1,6 +1,11 @@
 from __future__ import annotations
 
-from dev_docs.features.convert.inline import heading_anchor, link_reference, rewrite_text
+from dev_docs.features.convert.inline import (
+    heading_anchor,
+    link_decisions,
+    link_reference,
+    rewrite_text,
+)
 from dev_docs.features.convert.types import DiagramHead, DocumentLink, RenderContext
 
 HEAD = DiagramHead(title="図", scope="文書", updated="2026-11-03")
@@ -138,6 +143,18 @@ def test_link_reference_when_unknown() -> None:
     result = link_reference("dev/z#x", CONTEXT)
     # 検証
     assert result is None
+
+
+def test_link_decisions() -> None:
+    """リンクにする ID とそれ以外（正常系）。"""
+    # 準備
+    context = RenderContext(
+        links={}, issue_url=None, path="dev/a/b.yaml", decisions=frozenset({"D-1"})
+    )
+    # 実行
+    result = link_decisions(["D-1", "D-2", 3], context)
+    # 検証
+    assert result == ["[D-1](../../_decisions/D-1)", "D-2", 3]
 
 
 def test_heading_anchor() -> None:

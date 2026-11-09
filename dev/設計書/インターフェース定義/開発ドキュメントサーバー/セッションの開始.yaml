@@ -43,7 +43,7 @@ flows:
       ```
     expected:
       - '`forgotten` が `false`'
-      - 同じ `session_id` で続けて呼んだ `search_docs` が、前に返した文書の本文を `（この会話で返し済み）` にする
+      - 同じ `session_id` で続けて呼んだ `search_docs` が、前に返した文書の本文を `（この会話で返却済み）` にする
     test: test_normal_when_not_forget_reason
   - name: 正常系（配信元を読み込んでいる）
     summary: 配信元の読み込みを待たずに、記録を削除して答える
@@ -116,7 +116,7 @@ request_example: |-
 response:
   - name: forgotten
     type: bool
-    description: 返し済みの記録を削除したか
+    description: 返却済みの記録を削除したか
 response_example: |-
   ```json
   {"forgotten": true}

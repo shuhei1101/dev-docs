@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Any
 
 from dev_docs.features.access.types import Target, script_at
+from dev_docs.features.convert.decisions import find_decisions
 from dev_docs.features.convert.embed import EMBED_PATTERN, expand_embeds
 from dev_docs.features.convert.markdown import item_heading, schema_to_markdown
 from dev_docs.features.convert.types import (
@@ -183,6 +184,7 @@ class ConvertService:
             issue_url=f"https://github.com/{repository}/issues/" if repository else None,
             path=document.path,
             item_heading=heading,
+            decisions=frozenset(find_decisions(target.source)),
         )
 
     def convert(self, target: Target, document: Document) -> Converted:

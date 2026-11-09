@@ -14,11 +14,11 @@ RECURSIVE = "**/"
 def _undecided(table: DocumentTable) -> InvalidArgumentError:
     """置き場所を決められないエラーを作る（添字は書き込みが付ける）。"""
     return InvalidArgumentError(
-        message=f"{table.id} の新しい文書の置き場所を決められません",
+        message=f"{table.id} の新しい文書の配置先を決められません",
         violations=[
             Violation(
                 path="kind",
-                rule=f"{table.id} の新しい文書の置き場所を決められません",
+                rule=f"{table.id} の新しい文書の配置先を決められません",
                 fix="documents[].paths の先頭を glob にしてください",
             )
         ],
@@ -27,14 +27,14 @@ def _undecided(table: DocumentTable) -> InvalidArgumentError:
 
 def _excluded(table: DocumentTable, path: str) -> InvalidArgumentError:
     """置き場所が除外の名前に当たるエラーを作る（添字は書き込みが付ける）。"""
-    rule = f"置き場所 {path} が {table.id} の exclude に当たります"
+    rule = f"配置先 {path} が {table.id} の exclude に該当します"
     return InvalidArgumentError(
         message=rule,
         violations=[
             Violation(
                 path="kind",
                 rule=rule,
-                fix="id を変えるか、documents[].exclude から外してください",
+                fix="id を変えるか、documents[].exclude から削除してください",
             )
         ],
     )

@@ -136,7 +136,7 @@ functions:
         expected: '`walk_files` が 1 回だけ呼ばれ、結果が test_check_sync と同じ'
       - name: test_check_sync_when_related_unresolved
         case: 正常
-        summary: どの文書にも当たらない関連
+        summary: どの文書にも該当しない関連
         condition: '行 `src` の `src/files.yaml` が `a.py`（`related: [{to: src/b.py}, {to: src/z.py}, {to: other-doc, source: other}]`）・`b.py` を持ち、`src/a.py`・`src/b.py` を置く'
         mock: なし（一時フォルダの配信元）
         expected: '`unresolved_related` が `["src: src/a.py: src/z.py"]`'

@@ -220,7 +220,7 @@ request:
     required: false
     default: なし（破壊的な手順があれば止める）
     location: argument
-    description: キーの削除など、値を捨てる手順も当てる
+    description: キーの削除など、値を捨てる手順も適用する
 request_example: |-
   ```bash
   dev-docs migrate --plan
@@ -262,6 +262,6 @@ constraints:
   - item: 配信元の設定の 1 → 2 の手順
     constraint: '`type: yaml` を削除し、`metadata` の `{type: ref, field: X}` を列名の文字列 `X` に、`metadata.alias_type` の `{type: custom, value: X}` を行の `alias_type: X` にする。`type: markdown`・`defaults[]`・`alias_type` 以外の `custom` は書き換えず、新しいスキーマの違反として MigrationFailed にする。どの手順も破壊的ではない'
   - item: 配信元の設定の 2 → 3 の手順
-    constraint: 最上位の `tags`（タグのマスター）を、`value` を持たない `delete` で削除する。値を捨てる破壊的な手順で、`--allow-destructive` が要る。マスターのファイルは消さない
+    constraint: 最上位の `tags`（タグのマスター）を、`value` を持たない `delete` で削除する。値を捨てる破壊的な手順で、`--allow-destructive` が要る。マスターのファイルは削除しない
     notes: '破壊的かは手順で決まるため、`tags` を持たない設定でも `version: "2"` 以前から移すには `--allow-destructive` が要る'
 test_file: tests/integration/server/test_migrate.py

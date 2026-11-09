@@ -755,7 +755,7 @@ def test_normal_when_prompt_document(
     )
     # 変数の表
     variables = _section(page, "変数").locator("table")
-    expect(variables.locator("th")).to_have_text(["変数", "型", "必須", "例", "説明", "出どころ"])
+    expect(variables.locator("th")).to_have_text(["変数", "型", "必須", "例", "説明", "出典"])
     expect(
         variables.locator("td code").filter(has_text=re.compile(r"^character\.display_name$"))
     ).to_be_visible()
@@ -781,7 +781,7 @@ def test_normal_when_prompt_document(
     expect(_section_toggle(page, "ログが無い")).to_have_attribute("aria-expanded", "false")
     default_example = _section(page, "既定の例")
     expect(default_example.locator("strong")).to_contain_text(["system", "user"])
-    expect(default_example).to_contain_text(re.compile(r"[\d,]+ 字 / 使わなかった部品: no-logs"))
+    expect(default_example).to_contain_text(re.compile(r"[\d,]+ 字 / 使用しなかった部品: no-logs"))
     # 言語のタブを ja にすると全てのセクションが揃って ja になる
     expect(_section(page, "role").get_by_role("tab")).to_have_text(["en", "ja"])
     _section(page, "role").get_by_role("tab", name="ja").click()
@@ -793,7 +793,7 @@ def test_normal_when_prompt_document(
     no_logs = _section(page, "ログが無い")
     expect(no_logs.locator("pre:visible").first).to_contain_text("### 役割")
     expect(no_logs.locator("pre:visible").last).to_contain_text("- なし")
-    expect(no_logs).to_contain_text(re.compile(r"[\d,]+ 字 / 使わなかった部品: logs"))
+    expect(no_logs).to_contain_text(re.compile(r"[\d,]+ 字 / 使用しなかった部品: logs"))
     # 開き直しても ja のまま
     page.reload()
     expect(_heading(page)).to_have_text("振り返りのノード")
@@ -826,10 +826,10 @@ def test_normal_when_prompt_set_flagged(
     expect(cautions.last).to_be_visible()
     # 他の組・変数の表・テンプレートは描かれる
     expect(_section(page, "既定の例")).to_contain_text(
-        re.compile(r"[\d,]+ 字 / 使わなかった部品: no-logs")
+        re.compile(r"[\d,]+ 字 / 使用しなかった部品: no-logs")
     )
     expect(_section(page, "ログが無い")).to_contain_text(
-        re.compile(r"[\d,]+ 字 / 使わなかった部品: logs")
+        re.compile(r"[\d,]+ 字 / 使用しなかった部品: logs")
     )
     expect(_section(page, "変数").locator("table")).to_be_visible()
     expect(_section(page, "role").locator("pre:visible")).to_contain_text(
@@ -1183,3 +1183,88 @@ def test_normal_when_id_link_opened(
     assert missing_links == 0
     assert missing_texts == 1
     assert "[コード](id:doc-2)" in codes
+
+
+DECISIONS_EXTRA = DRAWN_ROW + "decisions:\n  folders: [tmp/a, tmp/b]\n"
+# 文書 6 の種類に、表の行・「項目 / 値」の表を持つ見出しの要素・文書の直下の `decisions` を加えたスキーマ
+DECIDED_SCHEMA = DRAWN_SCHEMA.replace(
+    "    properties: {kind: {title: 種類}, limit: {title: 上限}, owner: {title: 担当}}\n",
+    "    properties:\n"
+    "      kind: {title: 種類}\n"
+    "      limit: {title: 上限}\n"
+    "      owner: {title: 担当}\n"
+    "      decisions: {type: array, title: 検討事項}\n"
+    "  items:\n"
+    "    title: 一覧\n"
+    "    x-heading: 一覧\n"
+    "    x-shape: table\n"
+    "    items:\n"
+    "      properties: {name: {title: 名前}, decisions: {title: 検討事項}}\n"
+    "  decisions: {type: array, title: 検討事項}\n",
+)
+DECIDED_DOC = DRAWN_DOC.replace(
+    "spec: {kind: 定期, limit: 3, owner: 運用}\n",
+    "spec: {kind: 定期, limit: 3, owner: 運用, decisions: [D-1, D-2, D-3]}\n"
+    "items:\n"
+    "  - {name: 項目 1, decisions: [D-1, D-2, D-3]}\n"
+    "decisions: [D-1, D-2, D-3]\n",
+)
+
+
+def test_normal_when_decision_link_opened(
+    make_source: Callable[..., Any],
+    serve: Callable[..., Any],
+    sample_file_set: Callable[..., dict[str, str]],
+    sample_config_text: Callable[..., str],
+    page: Page,
+) -> None:
+    """設計書の検討事項のリンクを開く（正常系）。"""
+    # 準備
+    sample = make_source(
+        "sample",
+        sample_file_set(
+            **{
+                "dev-docs.yaml": sample_config_text(DECISIONS_EXTRA),
+                "schemas/drawn.schema.yaml": DECIDED_SCHEMA,
+                "drawn/doc-6.yaml": DECIDED_DOC,
+                "tmp/a/.mindstella/docs/D-1.md": "# 検討事項 D-1\n\n設定の置き場所を決めた。\n",
+                "tmp/a/.mindstella/docs/D-2.md": "# 検討事項 D-2 a\n",
+                "tmp/b/.mindstella/docs/D-2.md": "# 検討事項 D-2 b\n",
+            }
+        ),
+    )
+    plain = make_source(
+        "plain",
+        sample_file_set(
+            **{
+                "dev-docs.yaml": sample_config_text(DRAWN_ROW, name="plain"),
+                "schemas/drawn.schema.yaml": DECIDED_SCHEMA,
+                "drawn/doc-6.yaml": DECIDED_DOC,
+            }
+        ),
+    )
+    served = serve(sample, plain)
+    main = page.get_by_role("main")
+    # 実行
+    page.goto(served.url("/sample/drawn/doc-6"))
+    expect(_heading(page)).to_have_text("図の文書 6")
+    sample_links = main.get_by_role("link", name="D-1", exact=True).count()
+    ambiguous_links = main.get_by_role("link", name="D-2", exact=True).count()
+    missing_links = main.get_by_role("link", name="D-3", exact=True).count()
+    main.get_by_role("link", name="D-1", exact=True).first.click()
+    expect(_heading(page)).to_have_text("検討事項 D-1")
+    decision_url = page.url
+    decision_text = main.get_by_text("設定の置き場所を決めた。").count()
+    page.goto(served.url("/plain/drawn/doc-6"))
+    expect(_heading(page)).to_have_text("図の文書 6")
+    plain_links = main.get_by_role("link", name="D-1", exact=True).count()
+    plain_texts = main.get_by_text("D-1").count()
+    # 検証
+    assert sample_links == 3
+    assert ambiguous_links == 0
+    assert missing_links == 0
+    assert decision_url == served.url("/sample/_decisions/D-1")
+    assert decision_text == 1
+    assert plain_links == 0
+    assert plain_texts == 3
+    expect(main.get_by_role("heading", name="仕様")).to_be_visible()

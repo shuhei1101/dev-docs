@@ -10,6 +10,11 @@ from typing import TYPE_CHECKING, Literal
 
 from dev_docs.features.access.types import Target
 from dev_docs.features.changes.compare import changed_keys
+from dev_docs.features.convert.decisions import (
+    DECISION_PAGE_PREFIX,
+    decision_page_id,
+    find_decisions,
+)
 from dev_docs.features.documents.aliases import collect_aliases
 from dev_docs.features.documents.types import Document, LoadProblem
 from dev_docs.features.sources.types import ServedSource
@@ -157,6 +162,30 @@ def get_document(
         if source.config.github_repository
         else None
     )
+
+    # 検討事項の文書のパス: 話し合いの記録のフォルダの文書を変換せずに返す
+    decision = decision_page_id(path) if path is not None else None
+    if decision is not None:
+        decision_path = f"{DECISION_PAGE_PREFIX}{decision}"
+        file = find_decisions(source).get(decision)
+        if file is None:
+            raise DocumentNotFoundError(
+                message=f"文書がありません: {decision_path}", missing=[decision_path]
+            )
+        return DocumentResponse(
+            source=source.id,
+            ref=shown_ref,
+            path=decision_path,
+            body_path=None,
+            markdown=file.read_text(encoding="utf-8"),
+            conversion_error=None,
+            tabs=_activate(tabs, None),
+            github=github,
+            columns=columns,
+            table_keys=[],
+            diff=None,
+            updated_at=datetime.fromtimestamp(file.stat().st_mtime, tz=UTC),
+        )
 
     # 返す文書を決める
     document: Document | None

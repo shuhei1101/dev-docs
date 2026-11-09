@@ -295,7 +295,7 @@ def test_render_write_nav() -> None:
         warnings=[
             Violation(
                 path="nav.tabs[1].items[0].auto.filter",
-                rule="none: 条件 {} に当たる文書がありません",
+                rule="none: 条件 {} に該当する文書がありません",
             )
         ],
     )
@@ -303,13 +303,13 @@ def test_render_write_nav() -> None:
     result = render_write_nav(write_result)
     # 検証
     lines = result.splitlines()
-    assert lines[0] == "/home/u/repo/sample/dev-docs.yaml の nav を書きました"
+    assert lines[0] == "/home/u/repo/sample/dev-docs.yaml の nav を書き込みました"
     header = lines.index("| 条件 | タブ | 文書の数 |")
     assert len([line for line in lines[header + 2 :] if line.startswith("|")]) == 2
     assert lines[header + 2].endswith("| mcp | 2 |")
     assert lines[header + 3].endswith("| none | 0 |")
     warning = lines.index("警告: 1 件")
     assert lines[warning + 1] == (
-        "- nav.tabs[1].items[0].auto.filter: none: 条件 {} に当たる文書がありません"
+        "- nav.tabs[1].items[0].auto.filter: none: 条件 {} に該当する文書がありません"
     )
     assert result.rstrip().endswith(f"```yaml\n{nav}```")

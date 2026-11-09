@@ -23,8 +23,8 @@ from dev_docs.shared.paths import match_glob, normalize_path
 logger = logging.getLogger(__name__)
 
 MULTI_SOURCE_MIN = 2
-DESCRIBE_HINT = "describe() で、今の作業場所から使える配信元を見てください"
-OUTSIDE_HINT = "outside_scope: true を渡すと、作業範囲の外（参考）として読めます"
+DESCRIBE_HINT = "describe() で、今の作業場所から使用できる配信元を確認してください"
+OUTSIDE_HINT = "outside_scope: true を指定すると、作業範囲の外（参考）として参照できます"
 
 
 def _normalize(value: str | None) -> Path | None:
@@ -127,7 +127,7 @@ def _not_readable(
 ) -> SourceNotReadableError:
     """読めない配信元のエラーを、使える配信元を添えて作る。"""
     return SourceNotReadableError(
-        message=f"{source_id} はこの作業場所（{cwd}）から読めません",
+        message=f"{source_id} はこの作業場所（{cwd}）から参照できません",
         available=available_sources(cwd, registry=registry),
         next_steps=[DESCRIBE_HINT, *([OUTSIDE_HINT] if guide_outside else [])],
     )
@@ -184,7 +184,7 @@ def resolve_read_targets(
             violations=[
                 Violation(
                     path=argument,
-                    rule=f"{argument} は 1 つの Git の配信元を指すときだけ渡せます",
+                    rule=f"{argument} は 1 つの Git の配信元を指すときだけ指定できます",
                 )
             ],
         )
@@ -211,7 +211,7 @@ def _target_of(
         wt = find_worktree(item, normalize_path(worktree))
         if wt is None:
             raise WorktreeNotMatchedError(
-                message=f"{worktree} は {item.id} のワークツリーに当たりません",
+                message=f"{worktree} は {item.id} のワークツリーに該当しません",
                 given=worktree,
                 patterns=item.worktree_globs,
             )
@@ -223,7 +223,7 @@ def _target_of(
                 violations=[
                     Violation(
                         path="ref",
-                        rule="ref は 1 つの Git の配信元を指すときだけ渡せます",
+                        rule="ref は 1 つの Git の配信元を指すときだけ指定できます",
                         fix=f"{item.id} は Git の管理外なので ref を省いてください",
                     )
                 ],
@@ -274,7 +274,7 @@ def resolve_write_target(
         wt = find_worktree(item, normalize_path(worktree))
         if wt is None:
             raise WorktreeNotMatchedError(
-                message=f"{worktree} は {item.id} のワークツリーに当たりません",
+                message=f"{worktree} は {item.id} のワークツリーに該当しません",
                 given=worktree,
                 patterns=item.worktree_globs,
             )
@@ -286,6 +286,6 @@ def resolve_write_target(
         raise TargetIsCloneError(
             message=f"{clone} はクローン本体です。worktree でワークツリーを指してください",
             clone=str(clone),
-            next_steps=["worktree 引数にワークツリーのパスを渡してください"],
+            next_steps=["worktree 引数にワークツリーのパスを指定してください"],
         )
     return Target(item, _base_of(item, wt), None, wt, "write")
