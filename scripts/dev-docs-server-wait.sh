@@ -4,7 +4,7 @@
 #   sh scripts/dev-docs-server-wait.sh listening {UNIX 時刻}
 #     127.0.0.1:8781 で、{UNIX 時刻} 以後に起動したプロセスが待ち受けるまで待つ
 #   sh scripts/dev-docs-server-wait.sh loaded
-#     配信元の読み込みが終わり、文書の MCP の describe が応答するまで待つ
+#     管理の MCP の status が loading: false を返す（全ての配信元の読み込みが終わる）まで待つ
 #
 # 上限は規約『資源の値の決め方』の下流を待つタイムアウト（実測 + 50%）で導いた。
 # - 待ち受け: 2026-11-08 の実測 78 秒 + 50% = 117 秒 → 120 秒
@@ -14,12 +14,8 @@ set -u
 PORT=8781
 LISTENING_LIMIT=120
 LOADED_LIMIT=540
-# 読み込み中の describe は読み込みの終わりまで応答しないため、1 回の要求を LOADED_TRY 秒で切って送り直す。
-# 読み込みの後の describe の実測 1.1 秒 + 50% = 1.7 秒を下限とし、送り直す回数を抑えるため 30 秒にした
-# （実測は 2026-11-08 の 2 回だけの仮の値で、p99.9 を測る作業が残る）。
-# 1 回の要求は LOADED_LIMIT の残りを超えない
-LOADED_TRY=30
-DESCRIBE='{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"describe","arguments":{}}}'
+# status は読み込みを待たずに応答する。1 回の要求は LOADED_LIMIT の残りを超えない
+STATUS='{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"status","arguments":{"format":"json"}}}'
 
 # 127.0.0.1:8781 で待ち受けるプロセスの起動時刻（UNIX 時刻）。無ければ空
 server_started() {
@@ -50,15 +46,14 @@ wait_loaded() {
   while :; do
     left=$((LOADED_LIMIT - ($(date +%s) - start)))
     if [ "$left" -le 0 ]; then
-      echo "配信元の読み込み: failed（$LOADED_LIMIT 秒待っても describe が応答しない）"
+      echo "配信元の読み込み: failed（$LOADED_LIMIT 秒待っても status が loading: false を返さない）"
       return 1
     fi
-    try=$LOADED_TRY
-    [ "$left" -lt "$try" ] && try=$left
-    body=$(curl -s --max-time "$try" -X POST "http://127.0.0.1:$PORT/mcp" \
+    body=$(curl -s --max-time "$left" -X POST "http://127.0.0.1:$PORT/_admin/mcp" \
       -H 'Accept: application/json, text/event-stream' -H 'Content-Type: application/json' \
-      -d "$DESCRIBE")
-    if printf '%s' "$body" | grep -q '"isError":false'; then
+      -d "$STATUS")
+    # structuredContent の loading（text の JSON は字下げつきで、この形に当たらない）
+    if printf '%s' "$body" | grep -q '"loading":false'; then
       echo "配信元の読み込み: ok（$(($(date +%s) - start)) 秒）"
       return 0
     fi
