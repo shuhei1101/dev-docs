@@ -1,0 +1,28 @@
+use_cases:
+  - kind: single
+    scenario: dev/設計書/シナリオ/単一ユースケース/利用者が画面で読む.yaml
+    impact: changed
+    detail: 設計書の根拠の検討事項が、ID の文字ではなく話し合いの記録の検討事項へのリンクで出る
+    depends_on: []
+  - kind: single
+    scenario: dev/設計書/シナリオ/単一ユースケース/エージェントが調べる.yaml
+    impact: run_only
+    detail: 文書の検索・取得で返る本文も同じ変換で出る
+    depends_on: []
+docs:
+  - page: docs/リファレンス/設定.md
+    new: false
+    change: 配信元の設定の全体の表に `decisions.folders[]`（話し合いの記録のフォルダ）の行を追加する
+    status: done
+    updated_by: planner
+    updated_at: '2026-11-08T23:44:45.730040+00:00'
+scope_out:
+  - item: dev-docs 自身の `dev/テンプレート/*.schema.yaml` と設計書を、`decisions` を持つ新しいスキーマへ移す
+    reason: AI Monitor の新しいスキーマの配布物への追従の作業で、変換 `v0.4.0.py` が移す。追従の Issue は配布元が v0.4.0 のタグを打つときに起票する
+    plan: none
+  - item: 設計書の本文の文の中に残る検討事項の ID（`（D-313）` など）をリンクにする
+    reason: 規約『表し方の優先順位』の hidden-content-02 は ID を文の中に記載せず `decisions` へ移すと定めており、文の中の ID は変換の対象にしない
+    plan: none
+  - item: 各配信元の `dev-docs.yaml` に `decisions.folders` を記載する
+    reason: どの話し合いをどの配信元に結び付けるかは配信元ごとに利用者が決める設定で、キーの説明はリファレンス『設定』に記載した。この作業 PR は変換と文書の取得の仕組みだけを持つ
+    plan: none

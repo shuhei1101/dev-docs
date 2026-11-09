@@ -4,9 +4,11 @@ from __future__ import annotations
 
 import posixpath
 import re
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
+from typing import Any
 from urllib.parse import quote
 
+from dev_docs.features.convert.decisions import DECISION_PAGE_PREFIX
 from dev_docs.features.convert.diagrams import render_mermaid
 from dev_docs.features.convert.types import DiagramHead, RenderContext
 
@@ -123,3 +125,17 @@ def link_reference(value: str, context: RenderContext) -> str | None:
     name = context.links[document_id].title
     title = f"{name} / {item}" if item else name
     return f"[{_escape(title)}]({target})"
+
+
+def link_decisions(values: Sequence[Any], context: RenderContext) -> list[Any]:
+    """`decisions` の並びのうち、文脈の `decisions` にある ID を検討事項の文書へのリンクの Markdown にする。"""
+    folder = posixpath.dirname(context.path) or "."
+    linked: list[Any] = []
+    for value in values:
+        # リンク先の決まる ID: 文書のフォルダから検討事項の文書のパスへの相対パスのリンク
+        if isinstance(value, str) and value in context.decisions:
+            relative = quote(posixpath.relpath(f"{DECISION_PAGE_PREFIX}{value}", folder), safe="/")
+            linked.append(f"[{value}]({relative})")
+        else:
+            linked.append(value)
+    return linked

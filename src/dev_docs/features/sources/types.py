@@ -83,6 +83,8 @@ class SourceConfig:
     diff_ignore_keys: list[str] = field(default_factory=lambda: ["updated"])
     github_repository: str | None = None
     github_issue_labels: list[str] = field(default_factory=list)
+    # `decisions.folders`。設計書の `decisions` の検討事項の文書を探す話し合いの記録のフォルダ
+    decision_folders: list[str] = field(default_factory=list)
     description: str = ""
     instructions: str = ""
 
