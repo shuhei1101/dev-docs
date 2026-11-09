@@ -721,7 +721,7 @@ def test_normal_when_ignored_config_first(
     result = env.call("describe", cwd=str(sample.folder), source="sample", format="json")
     # 検証
     assert result.is_error is False
-    data = result.data()
+    data = result.data
     assert "kind_a" in {kind["id"] for kind in data["kinds"]}
     assert not (sample.folder / "schemas" / "a.schema.yaml").exists()
     assert env.handlers.registry.get("sample").root == sample.folder
