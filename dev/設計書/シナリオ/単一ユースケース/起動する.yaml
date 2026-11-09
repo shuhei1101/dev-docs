@@ -263,6 +263,38 @@ scenarios:
       - '`127.0.0.1:8781` を待ち受ける dev-docs のプロセスが 1 つだけあり、セッションを終えても残る'
       - つなぎ直した後、`/mcp` のツールが 6 つ返る
     test: test_normal_when_started_by_session_start
+  - name: 正常シナリオ（SessionStart で XDG_CONFIG_HOME の下の端末の設定から起動する）
+    setup:
+      - name: Mock
+        description: なし（実環境で実行。Claude Code は `claude -p` で動かす）
+      - name: Claude Code の設定の場所
+        description: '`CLAUDE_CONFIG_DIR` が指すテスト用の一時フォルダ。プラグイン `dev-docs` をユーザースコープに入れ、env に `DEV_DOCS_CONFIG` が無い'
+        notes: '`claude -p` を動かす環境の `XDG_CONFIG_HOME` にテスト用の一時フォルダを入れる'
+      - name: 端末の設定
+        description: '`$XDG_CONFIG_HOME/dev-docs/settings.yaml`。`clone` がテスト用のクローン、`sources` に sample の 1 行'
+        notes: dev-docs は待ち受けていない。ポート 8781 が空き
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        actor U as 利用者
+        participant CC as Claude Code
+        participant HK as SessionStart のフック
+        participant DD as dev-docs
+
+        U->>CC: sample のワークツリーでセッションを始める
+        CC->>HK: SessionStart
+        HK->>DD: ポートにつながるか確かめる（つながらない）
+        HK->>HK: $XDG_CONFIG_HOME/dev-docs/settings.yaml の clone を読む
+        HK->>DD: clone で dev-docs serve を切り離して起動する
+        HK-->>CC: 待たずに戻り、/mcp のつなぎ直しの案内を文脈に追加する
+        U->>CC: /mcp でつなぎ直す
+        CC->>DD: /mcp のツールの一覧を取る
+      ```
+    expected:
+      - フックが 0 の終了コードで戻り、セッションの文脈に `/mcp` のつなぎ直しの案内が入る
+      - '`127.0.0.1:8781` を待ち受ける dev-docs のプロセスが 1 つだけあり、端末の設定の `clone` のクローンから起動している'
+      - つなぎ直した後、`/mcp` のツールが 6 つ返る
+    test: test_normal_when_started_by_session_start_with_xdg_config_home
   - name: 正常シナリオ（待ち受けているサーバーがあるときは文脈を注入しない）
     setup:
       - name: Mock
@@ -418,7 +450,7 @@ scenarios:
         notes: id `sample`
       - name: commit していない設定
         description: 配信元 `uncommitted` のクローン本体に、`.gitignore` していない `dev-docs.yaml` を置き、どのブランチにも commit しない
-        notes: '`default_ref` は `develop`'
+        notes: '`default_ref` は `develop`。`uncommitted` に `develop` ブランチがあり、`develop` は `dev-docs.yaml` を持たない'
       - name: 端末の設定
         description: '`DEV_DOCS_CONFIG` が指す `settings.yaml`'
         notes: '`sources` に sample と uncommitted の 2 行'

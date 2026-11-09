@@ -86,12 +86,15 @@ scenarios:
         actor U as 利用者
         participant SK as global-setup のスキル
         participant CF as 端末の設定・Claude Code の設定
+        participant DD as dev-docs
 
         U->>SK: /dev-docs:global-setup {クローンのパス}
         SK->>CF: $XDG_CONFIG_HOME/dev-docs/settings.yaml が無いことを確かめる
         SK->>U: 端末の設定の場所を聞く（既定は $XDG_CONFIG_HOME/dev-docs/settings.yaml）
         U-->>SK: 既定の場所
         SK->>CF: 雛形から端末の設定を作る
+        SK->>DD: dev-docs serve を切り離して起動する
+        SK->>DD: /mcp につながり、ツールの一覧を取る
         SK-->>U: 作ったもの・つながった結果を出す
       ```
     expected:
