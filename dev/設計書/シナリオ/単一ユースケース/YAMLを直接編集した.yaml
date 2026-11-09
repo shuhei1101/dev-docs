@@ -28,7 +28,7 @@ scenarios:
       ```
     expected:
       - '`search_docs` が直接編集した内容を返し、`version` が読んだときと違う'
-      - 同じ会話で一度返した文書でも、本文を `（この会話で返し済み）` にしない
+      - 同じ会話で一度返した文書でも、本文を `（この会話で返却済み）` にしない
       - '直接編集した内容を `default_ref` へ commit した後は、`/_api/sources/{配信元の id}/docs/{文書 1 のパス}` の `markdown` も直接編集した内容になる（画面の API は `ref` を省くと `default_ref` の commit を読む）'
       - dev-docs を起動し直していない
     test: test_normal
