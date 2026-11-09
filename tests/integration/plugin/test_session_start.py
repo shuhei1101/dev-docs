@@ -96,7 +96,7 @@ def test_normal_when_cleared(
 def test_normal_when_server_down(
     tmp_path: Path, run_hook: Callable[..., Any], free_port: Callable[[], int]
 ) -> None:
-    """つながらなければ `dev-docs serve` を切り離して起動し、つなぎ直しを案内する（正常系）。"""
+    """つながらなければ `dev-docs serve` を切り離して起動し、再接続を案内する（正常系）。"""
     # 準備
     clone, args_file, pid_file = _clone_with_recorder(tmp_path)
     settings = tmp_path / "settings.yaml"
@@ -116,7 +116,7 @@ def test_normal_when_server_down(
         assert result.code == 0
         assert recorded == "-m dev_docs serve"
         assert "/mcp" in context
-        assert "つなぎ直して" in context
+        assert "再接続して" in context
         # 起動したプロセスは 30 秒動き続けるので、待たずに戻っている
         assert elapsed < 10
     finally:
@@ -201,5 +201,5 @@ def test_normal_when_forget_failed(
     assert elapsed < 2
     assert "削除できませんでした" in context
     assert "1 秒で打ち切りました" in context
-    assert "repeat_seen: true" in context
+    assert "repeat_seen: true で再取得できます" in context
     assert "起動しました" not in context
