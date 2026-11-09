@@ -49,9 +49,36 @@ flows:
       ```
     expected:
       - '合図の前の `status` が読み込みを待たずに `loading: true` と空の `sources` を返す'
-      - 合図の前の markdown に、読み込み中であることと文書の MCP の呼び出しが待たされることが出る
+      - 合図の前の markdown に、読み込み中であることと、読み込みが終わっていない配信元を指す文書の MCP の呼び出しが待たされることが出る
       - '合図の後の `status` が `loading: false` で、sample が `serving`'
     test: test_normal_when_loading
+  - name: 正常系（配信元の検査が済んでいない）
+    summary: 配信元のファイルをたどらず、検査が済んでいない配信元は同期の件数を持たずに返す
+    setup:
+      - name: Mock
+        description: 配信元の検査（`check_sync`）を、呼んだ回数を数え、テストが合図を出すまで止めるものに差し替える
+        notes: 合図は `threading.Event`
+      - name: 配信元
+        description: 検証に通る sample（管理用の YAML に無いファイル 1 件）の 1 行
+        notes: '-'
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        participant C as クライアント
+        participant T as status
+
+        C->>T: format: json
+        T-->>C: sample が serving・sync: null
+        C->>T: 配信元の検査の合図を出す
+        C->>T: format: json
+        T-->>C: sample が serving・sync.unindexed_files: 1
+      ```
+    expected:
+      - '合図の前の `status` が検査を待たずに、sample を `serving`・`sync: null` で返す'
+      - 合図の前の markdown の索引の同期の列に、検査中であることが出る
+      - '合図の後の `status` の `sync.unindexed_files` が 1'
+      - '`status` を 2 回呼んでも、`check_sync` を呼んだ回数は起動の後の検査の 1 回のまま'
+    test: test_normal_when_checking
 lead: 待ち受けのアドレス・dev-docs のバージョン・端末の設定・配信元ごとの状態を返す。
 identifier: status
 permissions: なし（`127.0.0.1` でだけ待ち受ける）
@@ -103,6 +130,10 @@ response:
   - name: sources[].version_state
     type: Literal['current', 'old', 'newer'] | None
     description: 配信元の設定のバージョンの比較
+  - name: sources[].sync
+    type: SyncCounts | None
+    description: 索引の同期の件数
+    notes: '`serving` で、配信元の検査が済んでいるとき。検査が済んでいなければ `null` で、markdown に検査中であることを出す'
   - name: sources[].sync.missing_refs
     type: int
     description: '`metadata` に書いた列が無い文書の件数'
@@ -118,7 +149,7 @@ response:
     description: '`related[].to` が配信元のどの文書の ID にも当たらない関連の件数（`check_project` と同じ）'
   - name: loading
     type: bool
-    description: 配信元を読み込んでいる間は `true`。その間は `sources` が空で、markdown に読み込み中であることと、終わるまで文書の MCP の呼び出しが待たされることを出す
+    description: 配信元を読み込んでいる間は `true`。その間は `sources` が空で、markdown に読み込み中であることと、読み込みが終わっていない配信元を指す文書の MCP の呼び出しが待たされることを出す
     notes: '-'
 response_example: |-
   ```markdown
@@ -136,7 +167,8 @@ constraints:
   - item: 注釈
     constraint: '`readOnlyHint: true`'
   - item: 同期の件数
-    constraint: 呼ばれるたびに起動時と同じ関数で求め直す
+    constraint: 配信元の読み込み・読み直し・`default_ref` の組み立て直しの後と、`write_docs`・`delete_docs` の後に裏で実行する検査の最後の結果を読み、`status` は配信元のファイルをたどらない
+    notes: 直接編集したファイルのずれは、次の検査まで件数に出ない。今のファイルで求め直すときは `check_project`
   - item: 権限
     constraint: 作業場所で絞らず、全ての配信元を返す
   - item: タイムアウト
