@@ -14,11 +14,14 @@ import subprocess
 import sys
 import urllib.error
 import urllib.request
+from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
 
 DEFAULT_PORT = 8781
-DEFAULT_CONFIG = "~/.config/dev-docs/settings.yaml"
+# `XDG_CONFIG_HOME` が無いか空の文字列か相対パスのときの設定の置き場の親
+DEFAULT_CONFIG_HOME = "~/.config"
+CONFIG_FILE = "dev-docs/settings.yaml"
 # ポートへの TCP 接続を打ち切る秒数
 CONNECT_TIMEOUT_SEC = 0.5
 # `POST /_admin/session-start` を打ち切る秒数（実装の後に応答の時間を測って決め直す）
@@ -40,6 +43,16 @@ def is_listening(port: int) -> bool:
     except OSError:
         return False
     return True
+
+
+def config_path(env: Mapping[str, str]) -> Path:
+    """サーバーと同じ規則で端末の設定のパスを決める。"""
+    value = env.get("DEV_DOCS_CONFIG")
+    if value:
+        return Path(value).expanduser()
+    home = env.get("XDG_CONFIG_HOME") or ""
+    base = Path(home) if os.path.isabs(home) else Path(DEFAULT_CONFIG_HOME).expanduser()
+    return base / CONFIG_FILE
 
 
 def read_clone(config: Path) -> Path | None:
@@ -140,7 +153,7 @@ def _context(event: dict[str, Any]) -> str | None:
     if is_listening(port):
         return _forget_context(port, event)
     # 落ちているサーバーは、端末の設定のクローンで起動する
-    config = Path(os.environ.get("DEV_DOCS_CONFIG") or DEFAULT_CONFIG).expanduser()
+    config = config_path(os.environ)
     return _start_context(read_clone(config), config)
 
 

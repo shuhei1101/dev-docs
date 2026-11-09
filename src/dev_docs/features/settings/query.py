@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 from collections.abc import Mapping
 from importlib import resources
 from pathlib import Path
@@ -13,19 +14,44 @@ from dev_docs.shared.paths import normalize_path
 from dev_docs.shared.schema_check import schema_violations
 from dev_docs.shared.yaml_io import YamlLoadError, load_yaml
 
-DEFAULT_CONFIG_PATH = "~/.config/dev-docs/settings.yaml"
+DEFAULT_CONFIG_HOME = "~/.config"
+CONFIG_FILE = "dev-docs/settings.yaml"
+DEFAULT_STATE_HOME = "~/.local/state"
+STATE_SUBDIR = "dev-docs"
+XDG_CONFIG_HOME_ENV = "XDG_CONFIG_HOME"
+XDG_STATE_HOME_ENV = "XDG_STATE_HOME"
 CONFIG_ENV = "DEV_DOCS_CONFIG"
 PORT_ENV = "DEV_DOCS_PORT"
+STATE_DIR_ENV = "DEV_DOCS_STATE_DIR"
 SETTINGS_SCHEMA = "schemas/settings.schema.yaml"
 SETTINGS_VERSION = "1"
-DEFAULT_STATE_DIR = "~/.local/state/dev-docs"
 PORT_MIN = 1
 PORT_MAX = 65535
 
 
+def xdg_base_dir(env: Mapping[str, str], name: str, default: str) -> Path:
+    """XDG の環境変数の値を、空の文字列か相対パスなら既定に替えて返す。"""
+    value = env.get(name) or ""
+    # XDG Base Directory Specification は相対パスを無効として無視する
+    return normalize_path(value if os.path.isabs(value) else default)
+
+
 def config_path(env: Mapping[str, str]) -> Path:
     """環境変数から端末の設定のパスを決める。"""
-    return normalize_path(env.get(CONFIG_ENV) or DEFAULT_CONFIG_PATH)
+    value = env.get(CONFIG_ENV)
+    if value:
+        return normalize_path(value)
+    return xdg_base_dir(env, XDG_CONFIG_HOME_ENV, DEFAULT_CONFIG_HOME) / CONFIG_FILE
+
+
+def state_dir_path(value: str | None, env: Mapping[str, str]) -> Path:
+    """環境変数と端末の設定の `state_dir` から状態の置き場を決める。"""
+    override = env.get(STATE_DIR_ENV)
+    if override:
+        return normalize_path(override)
+    if value:
+        return normalize_path(value)
+    return xdg_base_dir(env, XDG_STATE_HOME_ENV, DEFAULT_STATE_HOME) / STATE_SUBDIR
 
 
 def _settings_schema() -> dict[str, Any]:
@@ -80,7 +106,7 @@ def validate_terminal_config(value: Any) -> list[Violation]:
     return violations
 
 
-def load_terminal_config(path: Path) -> TerminalConfig:
+def load_terminal_config(path: Path, *, env: Mapping[str, str] | None = None) -> TerminalConfig:
     """`settings.yaml` を読み、スキーマの違反を全て集めてから端末の設定にする。"""
     if not path.is_file():
         raise TerminalConfigInvalidError(file=path, message=f"{path}: 端末の設定が見つかりません")
@@ -101,7 +127,7 @@ def load_terminal_config(path: Path) -> TerminalConfig:
             violations=violations,
         )
     value = value or {}
-    state_dir = normalize_path(value.get("state_dir", DEFAULT_STATE_DIR))
+    state_dir = state_dir_path(value.get("state_dir"), os.environ if env is None else env)
     log_dir = normalize_path(value["log_dir"]) if "log_dir" in value else state_dir / "logs"
     values: dict[str, Any] = {
         key: value[key]
