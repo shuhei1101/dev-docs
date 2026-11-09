@@ -110,6 +110,48 @@ def test_get_document_when_not_git(make_view_env: Callable[..., SimpleNamespace]
     assert response.ref is None
 
 
+def test_get_document_when_decision(make_view_env: Callable[..., SimpleNamespace]) -> None:
+    """検討事項の文書を返す（正常系）。"""
+    # 準備
+    env = make_view_env(
+        {
+            "docs/a.yaml": "id: a\nname: A\n",
+            "tmp/a/.mindstella/docs/D-1.md": "# D-1 の本文\n",
+            "tmp/a/.mindstella/docs/D-2.md": "# D-2 a\n",
+            "tmp/b/.mindstella/docs/D-2.md": "# D-2 b\n",
+        },
+        decision_folders=["tmp/a", "tmp/b"],
+    )
+    # 実行
+    response = get_document(
+        "sample", "_decisions/D-1", handlers=env.handlers, ref=None, diff_ref=None
+    )
+    # 検証
+    assert response.markdown == "# D-1 の本文\n"
+    assert response.path == "_decisions/D-1"
+    assert response.diff is None
+    assert response.body_path is None
+    assert [tab.active for tab in response.tabs] == [False]
+
+
+def test_get_document_when_decision_ambiguous(
+    make_view_env: Callable[..., SimpleNamespace],
+) -> None:
+    """2 つのフォルダにある検討事項（異常系）。"""
+    # 準備
+    env = make_view_env(
+        {
+            "docs/a.yaml": "id: a\nname: A\n",
+            "tmp/a/.mindstella/docs/D-2.md": "# D-2 a\n",
+            "tmp/b/.mindstella/docs/D-2.md": "# D-2 b\n",
+        },
+        decision_folders=["tmp/a", "tmp/b"],
+    )
+    # 実行・検証
+    with pytest.raises(DocumentNotFoundError, match="_decisions/D-2"):
+        get_document("sample", "_decisions/D-2", handlers=env.handlers, ref=None, diff_ref=None)
+
+
 def test_get_document_when_convert_failed(make_view_env: Callable[..., SimpleNamespace]) -> None:
     """変換の失敗（正常系）。"""
     # 準備
