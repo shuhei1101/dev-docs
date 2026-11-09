@@ -412,7 +412,7 @@ def test_source_registry_load_when_requested(
 ) -> None:
     """待っている要求が指す行を先に読み込む（正常系）。"""
     # 準備
-    loader = _Loader(make_served_source, make_status, blocked=("a",))
+    loader = _Loader(make_served_source, make_status, blocked=("a", "b"))
     monkeypatch.setattr(registry_module, "load_source", loader)
     terminal = make_terminal_config(sources=_entries(make_entry, "a", "b", "c"))
     waiting = threading.Event()
@@ -427,14 +427,16 @@ def test_source_registry_load_when_requested(
         await asyncio.to_thread(waiting.wait, 5)
         loader.release["a"].set()
         await asyncio.wait_for(waiter, timeout=5)
-        observed["order_when_done"] = list(loader.order)
+        # b は止めてあるので、待ちが済んだ時点で b の読み込みは終わっていない
+        observed["b_loaded_when_done"] = registry.loading is False
+        loader.release["b"].set()
         await asyncio.to_thread(worker.join, 5)
 
     # 実行
     asyncio.run(scenario())
     # 検証
     assert loader.order == ["a", "c", "b"]
-    assert "b" not in observed["order_when_done"]  # type: ignore[operator]
+    assert observed["b_loaded_when_done"] is False
 
 
 def test_source_registry_load_when_row_failed(
