@@ -114,7 +114,7 @@ class ServedSource:
         raise UnknownKindError(
             message=f"{self.id}: 種類 {kind} はありません",
             kinds=[row.id for row in enabled],
-            next_steps=["describe(source) で種類の一覧を見てください"],
+            next_steps=["describe(source) で種類の一覧を確認してください"],
         )
 
     def script(

@@ -61,7 +61,7 @@ def _snippet_lines(snippets: list[Snippet]) -> list[str]:
 def _range_line(item: SearchItem) -> str:
     """切り出した範囲と本文の全体の行数を `<document>` の前の行にする。"""
     if not item.ranges:
-        return f"{item.id}: 返す行なし / 全 {item.total_lines} 行"
+        return f"{item.id}: 返却する行なし / 全 {item.total_lines} 行"
     spans = "・".join(f"{span.start_line}-{span.end_line} 行目" for span in item.ranges)
     return f"{item.id}: {spans} / 全 {item.total_lines} 行"
 
@@ -94,7 +94,7 @@ def _full(item: SearchItem, *, outside_scope: bool = False) -> list[str]:
 
 def render_search_markdown(result: SearchResult, *, source_label: str) -> str:
     """`format: markdown` の本文を作る。"""
-    head = f"{source_label}: 該当 {result.total_count} 件・返した {result.returned} 件"
+    head = f"{source_label}: 該当 {result.total_count} 件・返却した {result.returned} 件"
     if result.per_source:
         counts = "・".join(f"{name} {count} 件" for name, count in result.per_source.items())
         head += f"（{counts}）"

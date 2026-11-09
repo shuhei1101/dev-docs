@@ -8,7 +8,7 @@ import json
 
 from dev_docs.shared.errors import InvalidArgumentError, Violation
 
-CURSOR_MESSAGE = "cursor は前回と同じ引数で渡してください"
+CURSOR_MESSAGE = "cursor は前回と同じ引数で指定してください"
 
 
 def _invalid(rule: str) -> InvalidArgumentError:
@@ -16,7 +16,7 @@ def _invalid(rule: str) -> InvalidArgumentError:
     return InvalidArgumentError(
         message=CURSOR_MESSAGE,
         violations=[
-            Violation(path="cursor", rule=rule, fix="前回の next_cursor をそのまま渡してください")
+            Violation(path="cursor", rule=rule, fix="前回の next_cursor をそのまま指定してください")
         ],
     )
 
@@ -33,9 +33,9 @@ def decode_cursor(cursor: str, fingerprint: str) -> int:
         payload = json.loads(base64.urlsafe_b64decode(cursor.encode("ascii")))
         offset, saved = payload["o"], payload["f"]
     except (binascii.Error, ValueError, KeyError, TypeError) as error:
-        raise _invalid("cursor を読めません") from error
+        raise _invalid("cursor を読み込めません") from error
     if not isinstance(offset, int) or isinstance(offset, bool) or offset < 0:
-        raise _invalid("cursor を読めません")
+        raise _invalid("cursor を読み込めません")
     if saved != fingerprint:
         raise _invalid("cursor は前回と別の引数で作られています")
     return offset

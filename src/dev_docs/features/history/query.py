@@ -33,7 +33,7 @@ SHORT_SHA_LENGTH = 7
 CO_CHANGE_COMMITS = 50
 DATE_PATTERN = re.compile(r"^\d{4}-\d{2}-\d{2}([T ].*)?$")
 QUOTE_OFF = ["-c", "core.quotepath=off"]
-NEXT_STEPS = ["画面のリビジョンの一覧か `git log` で確かめてください"]
+NEXT_STEPS = ["画面のリビジョンの一覧か `git log` で確認してください"]
 
 
 def _text(args: Sequence[str], cwd: Path) -> str:

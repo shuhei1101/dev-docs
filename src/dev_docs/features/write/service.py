@@ -69,11 +69,11 @@ def check_version(
         return
     diff = diff_lines(last_read.content, document.body) if last_read is not None else ""
     raise VersionMismatchError(
-        message=f"{document.id} は読んだ後に変わっています（今のバージョン {document.version}）",
+        message=f"{document.id} は参照した後に変わっています（今のバージョン {document.version}）",
         doc_id=document.id,
         current=document.version,
         diff=diff,
-        next_steps=["search_docs で読み直してから、新しいバージョンで呼び直してください"],
+        next_steps=["search_docs で再取得してから、新しいバージョンで再実行してください"],
     )
 
 
@@ -313,7 +313,7 @@ def _check_and_commit(
     if not documents:
         raise ValidationFailedError(
             message="検査に通らない操作があります: 1 件",
-            violations=[Violation(path="$", rule="文書として読めません")],
+            violations=[Violation(path="$", rule="文書として読み込めません")],
         )
     document = _new_document(documents, index, doc_id)
     violations = checker.check(session.target, document, on="write", new=new)
@@ -422,7 +422,7 @@ def write_docs(
                 raise ValidationFailedError(
                     message=f"検査に通らない操作があります: {len(violations)} 件",
                     violations=violations,
-                    next_steps=["違反を直してから呼び直してください"],
+                    next_steps=["違反を修正してから再実行してください"],
                 )
             # 最初に失敗した操作の違反を、添字つきのパスにして送る
             if isinstance(first, InvalidArgumentError):
@@ -461,7 +461,7 @@ def _apply_one(
                     Violation(
                         path="kind",
                         rule=f"{table.id} は書き込みを許していません",
-                        fix="documents[].writable を確かめてください",
+                        fix="documents[].writable を確認してください",
                     )
                 ]
             )
@@ -477,7 +477,7 @@ def _apply_one(
                         Violation(
                             path="id",
                             rule="id が要ります（ids.format が無いため作れません）",
-                            fix="id を渡すか、dev-docs.yaml に ids.format を設定してください",
+                            fix="id を指定するか、dev-docs.yaml に ids.format を設定してください",
                         )
                     ]
                 )
@@ -534,7 +534,7 @@ def _apply_one(
                 Violation(
                     path="id",
                     rule=f"{table.id} は書き込みを許していません",
-                    fix="documents[].writable を確かめてください",
+                    fix="documents[].writable を確認してください",
                 )
             ]
         )
@@ -667,7 +667,7 @@ def delete_docs(
                         message=f"{item.id} は {names} から参照されています",
                         doc_id=item.id,
                         referrers=[referrer.id for referrer in referrers],
-                        next_steps=["on_referenced に unlink を渡すと、参照も外して消せます"],
+                        next_steps=["on_referenced に unlink を指定すると、参照も除外して削除できます"],
                     )
                 for referrer in referrers:
                     unlink_plan.setdefault(referrer.id, set()).add(item.id)

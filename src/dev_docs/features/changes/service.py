@@ -281,7 +281,7 @@ def list_changes(
     """`list_changes` の要求を処理して変更の結果を返す。"""
     if request.to is not None and request.from_ is None:
         raise _invalid(
-            [Violation(path="to", rule="to には from が要ります", fix="from も渡してください")]
+            [Violation(path="to", rule="to には from が要ります", fix="from も指定してください")]
         )
     query = request.contains
     if query is not None and query.regex:
@@ -292,7 +292,7 @@ def list_changes(
                 [
                     Violation(
                         path="contains.value",
-                        rule=f"正規表現として読めません（{error}）",
+                        rule=f"正規表現として読み込めません（{error}）",
                         fix="正規表現として正しい値にしてください",
                     )
                 ]
@@ -312,7 +312,7 @@ def list_changes(
                         Violation(
                             path="from",
                             rule=f"{target.source.id} は Git の管理外なので区間を指せません",
-                            fix="from を省くと、この会話で前回読んだ時点からの変更を返します",
+                            fix="from を省くと、この会話で前回読んだ時点からの変更を返却します",
                         )
                     ]
                 )
@@ -420,8 +420,8 @@ def list_changes(
             entries.append((index, target, item, judged))
     if request.from_ is None and not any_last_read:
         raise LastReadNotFoundError(
-            message="この会話で読んだ記録がありません。from を渡してください",
-            next_steps=["from に commit やブランチを渡してください"],
+            message="この会話で参照した記録がありません。from を指定してください",
+            next_steps=["from に commit やブランチを指定してください"],
         )
     limit = request.limit
     if limit < 1:
@@ -454,7 +454,7 @@ def list_changes(
         encode_cursor(next_position, fingerprint) if next_position < len(entries) else None
     )
     if truncated:
-        notes.append(f"max_chars {max_chars} で打ち切りました。cursor を渡すと続きを取れます")
+        notes.append(f"max_chars {max_chars} で打ち切りました。cursor を指定すると続きを取得できます")
     if len(points) >= MULTI_SOURCE_MIN:
         for target, (from_point, to_point) in zip(targets, points, strict=True):
             notes.insert(
