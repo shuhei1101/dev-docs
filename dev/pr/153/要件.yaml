@@ -1,0 +1,38 @@
+use_cases:
+  - kind: single
+    scenario: dev/設計書/シナリオ/単一ユースケース/dev-docsを更新する.yaml
+    impact: none
+    detail: サーバーの再起動の流れは変わらず、マージの後の反映作業で再起動の前後の状態を取るときの待ち方と、取れなかったときの扱いだけを変える
+    depends_on: []
+docs:
+  - page: dev/pr/131/反映作業/dev-docs のサーバーの再起動/実行.sh
+    new: false
+    change: 再起動の前の配信元の一覧を取る `status` の打ち切りの秒数を応答時間から導いた値にし、打ち切り・空の応答のときは理由を出して失敗にする。`dry-run.log` を取り直す
+    status: done
+    updated_by: planner
+    updated_at: '2026-11-09T07:48:00.683764+00:00'
+  - page: dev/pr/131/反映作業/dev-docs のサーバーの再起動/確認.sh
+    new: false
+    change: '`status` の打ち切りの秒数と、打ち切り・空の応答のときの扱いを `実行.sh` と同じにする'
+    status: done
+    updated_by: planner
+    updated_at: '2026-11-09T07:48:00.683764+00:00'
+  - page: dev/pr/131/反映作業/index.yaml
+    new: false
+    change: 『dev-docs のサーバーの再起動』の `説明` の最長の実行時間を、変えた打ち切りの秒数で数え直す
+    status: done
+    updated_by: planner
+    updated_at: '2026-11-09T07:48:00.683764+00:00'
+scope_out:
+  - item: 管理の MCP の `status` 自体の応答の遅さ
+    reason: サーバーのコードの修正で、別の Issue が扱う
+    plan: '#126'
+  - item: '#131 の `実行.sh` の再起動の判定と、待ちのスクリプトの `LOG_DIR`'
+    reason: 目的が違い、`status` を呼ぶ行を変えない
+    plan: '#141'
+  - item: ほかの反映作業の確認スクリプトの `curl --max-time 60`（#128・#130・#133・#143）
+    reason: 管理の MCP の `status` でなく `/_api/`・`/mcp` を呼び、HTTP の状態コードで判定するため、空の応答を ok にしない
+    plan: none
+  - item: '#112 での #131 の反映作業の再実施の依頼'
+    reason: この PR のマージの後に task-planner が依頼する
+    plan: none

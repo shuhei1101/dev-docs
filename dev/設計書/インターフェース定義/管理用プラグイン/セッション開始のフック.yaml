@@ -55,7 +55,7 @@ flows:
       - 終了コード 0、プロセスを起動していない
     test: test_normal_when_cleared
   - name: 正常系（落ちている）
-    summary: つながらなければ `dev-docs serve` を切り離して起動し、つなぎ直しを案内する
+    summary: つながらなければ `dev-docs serve` を切り離して起動し、再接続を案内する
     setup:
       - name: Mock
         description: '`{clone}/.venv/bin/python` を、受けた引数をファイルに書いて終わるスクリプトに差し替える'
@@ -74,11 +74,11 @@ flows:
         H->>H: ポートにつながらない
         H-->>H: 端末の設定の clone を読む
         H->>S: 切り離して起動する
-        H-->>C: additionalContext（つなぎ直しの案内）
+        H-->>C: additionalContext（再接続の案内）
       ```
     expected:
       - Mock が `-m dev_docs serve` を受けている
-      - '`additionalContext` が `/mcp` のつなぎ直しの案内'
+      - '`additionalContext` が `/mcp` の再接続の案内'
       - フックが起動したプロセスの終了を待たずに終了コード 0 で戻る
     test: test_normal_when_server_down
   - name: 正常系（XDG_CONFIG_HOME の下の端末の設定）
@@ -102,7 +102,7 @@ flows:
         H->>H: ポートにつながらない
         H-->>H: $XDG_CONFIG_HOME/dev-docs/settings.yaml の clone を読む
         H->>S: 切り離して起動する
-        H-->>C: additionalContext（つなぎ直しの案内）
+        H-->>C: additionalContext（再接続の案内）
       ```
     expected:
       - '`$XDG_CONFIG_HOME/dev-docs/settings.yaml` の `clone` の Mock が `-m dev_docs serve` を受けている'
@@ -155,10 +155,10 @@ flows:
       ```
     expected:
       - '`FORGET_TIMEOUT_SEC` + 1 秒以内に終了コード 0 で戻る'
-      - '`additionalContext` に返し済みの記録を削除できなかったこと、打ち切った秒数（`FORGET_TIMEOUT_SEC`）と、前に返した文書は `repeat_seen: true` で取り直せる旨がある'
+      - '`additionalContext` に返却済みの記録を削除できなかったこと、打ち切った秒数（`FORGET_TIMEOUT_SEC`）と、前に返却した文書は `repeat_seen: true` で再取得できる旨がある'
       - プロセスを起動していない
     test: test_normal_when_forget_failed
-lead: ポートにつながらなければ `dev-docs serve` を切り離して起動し、つなぎ直しか起動できない理由を文脈に入れる。つながったときは文脈を入れず、`/clear`・圧縮のときだけ `POST /_admin/session-start` で返し済みの記録の削除を依頼する。入力は stdin の JSON と環境変数。
+lead: ポートにつながらなければ `dev-docs serve` を切り離して起動し、再接続の案内か起動できない理由を文脈に入れる。つながったときは文脈を入れず、`/clear`・圧縮のときだけ `POST /_admin/session-start` で返し済みの記録の削除を依頼する。入力は stdin の JSON と環境変数。
 identifier: hooks/session_start.py
 permissions: 利用者の権限で動く
 idempotent: true
@@ -223,23 +223,23 @@ response:
     description: 常に `SessionStart`
   - name: hookSpecificOutput.additionalContext
     type: str
-    description: 起動したときは `/mcp` のつなぎ直しの案内。起動できないとき・記録の削除を依頼できないときは理由と次の手。つながって記録の削除が要らないか成功したときは出力しない
+    description: 起動したときは `/mcp` の再接続の案内。起動できないとき・記録の削除を依頼できないときは理由と次の手。つながって記録の削除が要らないか成功したときは出力しない
   - name: 終了コード
     type: int
     description: 常に 0
 response_example: |-
   ```json
-  {"hookSpecificOutput": {"hookEventName": "SessionStart", "additionalContext": "dev-docs を起動しました。このセッションで文書の MCP を使うには /mcp で dev-docs につなぎ直してください。"}}
+  {"hookSpecificOutput": {"hookEventName": "SessionStart", "additionalContext": "dev-docs を起動しました。このセッションで文書の MCP を使用するには /mcp で dev-docs に再接続してください。"}}
   ```
 exceptions:
   - name: なし（正常終了）
-    condition: 文脈を入れずに戻った、または起動してつなぎ直しを案内した
+    condition: 文脈を入れずに戻った、または起動して再接続を案内した
   - name: なし（起動できない）
     condition: 端末の設定が無い・`clone` が無い・`{clone}/.venv/bin/python` が無い
     notes: 終了コード 0 で、理由と `/dev-docs:global-setup` の案内を文脈に入れる
   - name: なし（記録の削除を依頼できない）
     condition: '`clear`・`compact` でつながったが `POST /_admin/session-start` がタイムアウト・200 以外になった'
-    notes: '終了コード 0 で、理由と `repeat_seen: true` で取り直せる案内を文脈に入れる。打ち切ったときは打ち切った秒数も入れる'
+    notes: '終了コード 0 で、理由と `repeat_seen: true` で再取得できる案内を文脈に入れる。打ち切ったときは打ち切った秒数も入れる'
 constraints:
   - item: 言語
     constraint: Python 3.14 の標準ライブラリだけ。`uv` を前提にしない
