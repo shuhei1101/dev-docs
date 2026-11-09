@@ -377,6 +377,97 @@ scenarios:
       - '`worktrees[]` の相対パスをメインのリポジトリの直下から数え、ワークツリー `.claude/worktrees/develop` に当たる'
       - Git でない配信元はディスクの設定を読む
     test: test_normal_when_config_read_from_default_ref
+  - name: 正常シナリオ（.gitignore した設定を先頭に置く）
+    setup:
+      - name: Mock
+        description: なし（実環境で実行）
+      - name: default_ref のブランチ
+        description: sample の `develop` ブランチに、文書の種類 `kind_a` のスキーマを commit する
+        notes: クローン本体は `master` を checkout したままで、`master` は `kind_a` のスキーマを持たない
+      - name: Git 管理外の設定
+        description: sample のクローン本体の直下に `.gitignore` した `dev-docs.local.yaml` を置く
+        notes: '`default_ref: develop` と、`kind_a` の `documents[]` の行を持つ。どのブランチにも commit しない'
+      - name: 端末の設定
+        description: '`sources[].config` が `dev-docs.local.yaml` の 1 つだけを指す'
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        actor U as 利用者
+        participant S as dev-docs のサーバー
+        participant G as sample のリポジトリ
+
+        U->>S: 起動する
+        S->>G: develop に dev-docs.local.yaml があるか確かめる（無い）
+        S->>G: dev-docs.local.yaml が .gitignore で無視されているか確かめる（無視されている）
+        S->>G: ディスクの dev-docs.local.yaml を読む
+        S->>G: develop のスキーマを読む
+        S->>S: 配信元を組み立てる
+        S-->>U: sample を配信する
+      ```
+    expected:
+      - '`describe(source: sample)` の種類の一覧に `kind_a` が載る'
+      - '`documents[].schema` のスキーマを `develop` から読む'
+      - 配信元のフォルダが `dev-docs.local.yaml` のフォルダ（クローン本体の直下）になる
+    test: test_normal_when_ignored_config_first
+  - name: 異常シナリオ（先頭の設定が default_ref に無く無視もしていない）
+    setup:
+      - name: Mock
+        description: なし（実環境で実行）
+      - name: サンプルの配信元
+        description: 検証に通る配信元
+        notes: id `sample`
+      - name: commit していない設定
+        description: 配信元 `uncommitted` のクローン本体に、`.gitignore` していない `dev-docs.yaml` を置き、どのブランチにも commit しない
+        notes: '`default_ref` は `develop`'
+      - name: 端末の設定
+        description: '`DEV_DOCS_CONFIG` が指す `settings.yaml`'
+        notes: '`sources` に sample と uncommitted の 2 行'
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        actor U as 利用者
+        participant DD as dev-docs
+
+        U->>DD: dev-docs serve
+        DD->>DD: uncommitted の develop に dev-docs.yaml が無く、.gitignore でも無視されていない
+        DD->>DD: uncommitted を配信せず、エラーログに残す
+        DD-->>U: sample だけを配信する
+      ```
+    expected:
+      - '`/_api/sources/uncommitted/docs` が 404 を返し、`/_api/sources/sample/docs` は応答する'
+      - 'エラーログに `uncommitted: config[0]: develop に dev-docs.yaml がありません` が残る'
+    test: test_error_when_first_config_not_committed
+  - name: 正常シナリオ（XDG の環境変数で置き場を決める）
+    setup:
+      - name: Mock
+        description: なし（実環境で実行）
+      - name: 環境変数
+        description: '`DEV_DOCS_CONFIG` を設定せず、`XDG_CONFIG_HOME`・`XDG_STATE_HOME` にテスト用の一時フォルダを入れる'
+      - name: 端末の設定
+        description: '`$XDG_CONFIG_HOME/dev-docs/settings.yaml`'
+        notes: '`sources` に sample の 1 行。`state_dir`・`log_dir` を持たない'
+      - name: 状態の置き場の上書き
+        description: 2 回目の起動だけ `DEV_DOCS_STATE_DIR` に別の一時フォルダを入れる
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        actor U as 利用者
+        participant DD as dev-docs
+        participant FS as ディスク
+
+        U->>DD: dev-docs serve
+        DD->>FS: $XDG_CONFIG_HOME/dev-docs/settings.yaml を読む
+        DD->>FS: 状態とログを $XDG_STATE_HOME/dev-docs に書く
+        DD-->>U: sample を配信する
+        U->>DD: DEV_DOCS_STATE_DIR を入れて dev-docs serve
+        DD->>FS: 状態とログを DEV_DOCS_STATE_DIR に書く
+        DD-->>U: sample を配信する
+      ```
+    expected:
+      - 1 回目の起動で `/_api/sources/sample/docs` が 200 を返す
+      - 1 回目の起動のログが `$XDG_STATE_HOME/dev-docs/logs` にでき、`~/.local/state/dev-docs` には書かない
+      - 2 回目の起動のログが `$DEV_DOCS_STATE_DIR/logs` にでき、`$XDG_STATE_HOME/dev-docs` には書かない
+    test: test_normal_when_xdg_dirs_set
   - name: 正常シナリオ（エイリアスのキーと nav の条件を検証する）
     setup:
       - name: Mock
@@ -412,7 +503,7 @@ stakeholders:
     interest: 起動の後、`/mcp` の 1 つにつなげば使える配信元の文書を読める
 trigger: '利用者が `dev-docs serve` を実行するか、ポートにつながらないときに SessionStart のフックが切り離して起動する'
 preconditions:
-  - '`DEV_DOCS_CONFIG`（既定 `~/.config/dev-docs/settings.yaml`）に端末の設定がある'
+  - '`DEV_DOCS_CONFIG`（既定 `${XDG_CONFIG_HOME:-~/.config}/dev-docs/settings.yaml`）に端末の設定がある'
   - '`DEV_DOCS_PORT`（既定 8781）のポートが空いている'
 success_guarantee: 検証に通った配信元が `/_api/sources/{配信元の id}/docs` の画面の API と `/mcp` の文書の MCP で読める。`/mcp` のツールは配信元の数によらず 6 つ。
 minimal_guarantee: 検証に失敗した配信元があっても、他の配信元と `/_admin/mcp` は配信する。失敗した配信元の id・違反したキーのパス・理由がエラーログに残る。
