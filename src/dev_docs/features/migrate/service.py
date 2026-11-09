@@ -59,13 +59,13 @@ def plan_migration(target: MigrationTarget) -> tuple[CommentedMap, list[Migratio
     version = str(data["version"]) if "version" in data else ""
     if not version.isdecimal():
         raise MigrationConfigInvalidError(
-            f"{target.file}: version が整数の文字列で書かれていません"
+            f"{target.file}: version が整数の文字列で記載されていません"
         )
     state = version_state(version, target.current)
     # 新しすぎる設定は移し替えない
     if state == "newer":
         raise ConfigNewerError(
-            f"{target.file}: 設定のバージョン {version} が dev-docs の読める {target.current}"
+            f"{target.file}: 設定のバージョン {version} が dev-docs で読み込める {target.current}"
             " より新しい。dev-docs を更新してください"
         )
     if state == "current":
@@ -94,12 +94,12 @@ def apply_migration(
     if destructive and not allow_destructive:
         lines = [f"{step.version}: {step.description}" for step in destructive]
         raise DestructiveStepBlockedError(
-            "\n".join(["破壊的な手順があります", *lines, "--allow-destructive で当てられます"])
+            "\n".join(["破壊的な手順があります", *lines, "--allow-destructive で適用できます"])
         )
     # 読んだ後にファイルが変わっていないかを、読んだ内容との比較とハッシュで確かめる
     original = target.file.read_text(encoding="utf-8")
     if dump_roundtrip(load_roundtrip(original)) != dump_roundtrip(data):
-        raise MigrationFailedError(f"{target.file}: 読んだ後に変わったため書き換えません")
+        raise MigrationFailedError(f"{target.file}: 読み込んだ後に変わったため書き換えません")
     digest = content_hash(original)
     for step in steps:
         apply_step(data, step)
@@ -114,7 +114,7 @@ def apply_migration(
             lines.append(SETUP_GUIDE)
         raise MigrationFailedError("\n".join(lines))
     if content_hash(target.file.read_text(encoding="utf-8")) != digest:
-        raise MigrationFailedError(f"{target.file}: 読んだ後に変わったため書き換えません")
+        raise MigrationFailedError(f"{target.file}: 読み込んだ後に変わったため書き換えません")
     backup = target.file.with_name(
         BACKUP_FORMAT.format(name=target.file.name, time=now.strftime(BACKUP_TIME_FORMAT))
     )

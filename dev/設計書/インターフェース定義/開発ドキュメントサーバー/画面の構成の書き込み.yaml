@@ -209,7 +209,7 @@ request:
     type: list[NavOperation]
     required: true
     location: argument
-    description: 並べた順に当てる操作
+    description: 並べた順に適用する操作
     constraints: 1 件以上
   - name: operations[].op
     type: Literal['add', 'update', 'remove']
@@ -241,7 +241,7 @@ request:
     required: false
     default: '`markdown`'
     location: argument
-    description: 返す形式
+    description: 返却する形式
 request_example: |-
   ```json
   {"path": "/home/u/repo/sample/.claude/worktrees/x", "operations": [{"op": "add", "tab": "mcp", "value": {"title": "mcp", "items": [{"auto": {"document": "docs", "filter": {"field": "tags", "op": "eq", "values": ["mcp"]}}}]}}]}

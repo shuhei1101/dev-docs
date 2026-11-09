@@ -51,7 +51,7 @@ def convert_prompt(text: str) -> str:
     try:
         data = load_yaml(text)
     except YamlLoadError as error:
-        raise PromptYamlError(f"YAML を読めません: {error}") from error
+        raise PromptYamlError(f"YAML を読み込めません: {error}") from error
     try:
         doc = PromptDoc.model_validate(data)
     except pydantic.ValidationError as error:
@@ -164,7 +164,7 @@ def _cell(value: str) -> str:
 
 def var_table(vars_: Mapping[str, PromptVar]) -> list[str]:
     """変数のパスごとの行を持つ表の Markdown を作る。"""
-    lines = ["| 変数 | 型 | 必須 | 例 | 説明 | 出どころ |", "| --- | --- | --- | --- | --- | --- |"]
+    lines = ["| 変数 | 型 | 必須 | 例 | 説明 | 出典 |", "| --- | --- | --- | --- | --- | --- |"]
     for path, var in flatten_vars(vars_):
         example = f"`{flow_yaml(var.example)}`" if "example" in var.model_fields_set else EMPTY_CELL
         cells = [
@@ -272,7 +272,7 @@ def example_body(
         ]
     heading = f"注入する本文（{lang}）" if lang == doc.lang else f"{lang} の本文"
     unused = "、".join(rendered.unused) or "なし"
-    lines.append(f"{heading}: {rendered.char_count:,} 字 / 使わなかった部品: {unused}")
+    lines.append(f"{heading}: {rendered.char_count:,} 字 / 使用しなかった部品: {unused}")
     return lines
 
 

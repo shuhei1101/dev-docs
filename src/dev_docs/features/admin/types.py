@@ -118,9 +118,9 @@ class CheckProjectRequest(BaseModel):
     path: str = Field(description="配信元のフォルダか `dev-docs.yaml` の絶対パス")
     config: str | None = Field(
         default=None,
-        description="ファイルに記載する前の `dev-docs.yaml` の中身（YAML の文字列）。省くとファイルを読む",
+        description="ファイルに記載する前の `dev-docs.yaml` の中身（YAML の文字列）。省くとファイルを読み込む",
     )
-    format: Literal["markdown", "json"] = Field(default="markdown", description="返す形式")
+    format: Literal["markdown", "json"] = Field(default="markdown", description="返却する形式")
 
 
 @dataclass(frozen=True)
@@ -155,7 +155,7 @@ class TryConvertRequest(BaseModel):
     file: str = Field(description="変換するファイルの、配信元からの相対パス")
     config: str | None = Field(
         default=None,
-        description="ファイルに記載する前の `dev-docs.yaml` の中身（YAML の文字列）。省くとファイルを読む",
+        description="ファイルに記載する前の `dev-docs.yaml` の中身（YAML の文字列）。省くとファイルを読み込む",
     )
 
 
@@ -184,7 +184,7 @@ class FormatRequest(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    format: Literal["markdown", "json"] = Field(default="markdown", description="返す形式")
+    format: Literal["markdown", "json"] = Field(default="markdown", description="返却する形式")
 
 
 class NavOperation(BaseModel):
@@ -210,8 +210,8 @@ class WriteNavRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     path: str = Field(description="配信元のフォルダか `dev-docs.yaml` の絶対パス")
-    operations: list[NavOperation] = Field(description="並べた順に当てる操作（1 件以上）")
-    format: Literal["markdown", "json"] = Field(default="markdown", description="返す形式")
+    operations: list[NavOperation] = Field(description="並べた順に適用する操作（1 件以上）")
+    format: Literal["markdown", "json"] = Field(default="markdown", description="返却する形式")
 
 
 @dataclass(frozen=True)
