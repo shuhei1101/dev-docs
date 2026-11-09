@@ -92,9 +92,9 @@ def read_schema_ref(ref: SchemaRef, *, lookup: SchemaRefLookup) -> RefSchema:
     try:
         raw = load_yaml(text, file=ref.path)
     except YamlLoadError as error:
-        raise SchemaRefError(f"{ref.path} を読めません") from error
+        raise SchemaRefError(f"{ref.path} を読み込めません") from error
     if not isinstance(raw, dict):
-        raise SchemaRefError(f"{ref.path} を読めません")
+        raise SchemaRefError(f"{ref.path} を読み込めません")
     # 同じ commit のファイルを読み、読めなかったパスを控える
     missing: list[str] = []
 
