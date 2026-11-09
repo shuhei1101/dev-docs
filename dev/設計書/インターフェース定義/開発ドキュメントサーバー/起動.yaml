@@ -579,7 +579,7 @@ constraints:
     notes: 件数は配信元を受け取って求める関数で求め、配信元の状態には持たない。読み直しのときも同じ関数で求め直す
   - item: 設定・スキーマ・スクリプトの読み元
     constraint: Git の配信元は、ディスクの `dev-docs.yaml` から `default_ref` だけを読み（ディスクに無いか読めないときは既定の `develop`）、`dev-docs.yaml`・`documents[].schema` のスキーマ・`validators`・`converters` のスクリプトを `default_ref` から読む（`generators` は書き込み先のワークツリーのスクリプトで動く）。要求ごとに `default_ref` の commit を確かめ、変わっていれば配信元を組み立て直す。Git でない配信元はディスクの設定を読む。先頭の設定が `default_ref` に無く、`git check-ignore` で無視されていれば、先頭の設定はディスクから読み、スキーマとスクリプトは `default_ref` から読む。無視されていなければ `config[0]` の `{default_ref} に {パス} がありません` で配信しない
-    notes: '`worktree` の引数で作業ツリー・ワークツリーを指して読むときは、そのフォルダの設定とスクリプトを使う'
+    notes: '`worktree` の引数で作業ツリー・ワークツリーを指して読むときは、そのフォルダの設定とスクリプトを使う。そのフォルダに無く、無視されている設定のファイルは、クローン本体のディスクのファイルを使う'
   - item: 端末の設定と状態の置き場
     constraint: 端末の設定は `DEV_DOCS_CONFIG`、無ければ `${XDG_CONFIG_HOME:-~/.config}/dev-docs/settings.yaml`。状態の置き場は `DEV_DOCS_STATE_DIR` → 端末の設定の `state_dir` → `${XDG_STATE_HOME:-~/.local/state}/dev-docs` の順。ログの置き場は端末の設定の `log_dir`、無ければ決めた状態の置き場の `logs`。`XDG_CONFIG_HOME`・`XDG_STATE_HOME` が空の文字列か相対パスなら未設定として扱う
     notes: 環境変数が端末の設定より先に有効になる並びは `DEV_DOCS_CONFIG`・`DEV_DOCS_PORT` と同じ。相対パスの扱いは XDG Base Directory Specification に従う。セッション開始のフックも同じ規則で端末の設定のパスを決める

@@ -461,6 +461,7 @@ functions:
       description: '`root` の設定で作った配信元（ID・`scope_read`・`scope_write`・`outside_read` は `source` のまま）'
     process: |-
       1. `source.config_files` を `source.repo_root`（無ければ `source.root`）からの相対パスにし、`root` の下の同じパスにする
+         - `root` の下の同じパスにファイルが無く、元のファイルが無視されている場合（無視されているファイル）、元のファイル（クローン本体のディスク）を使う
       2. 配信元の読み込みの手順 2〜6・8〜9 を、ディスクの設定・スキーマ・スクリプトで（`default_ref` を読まずに）、配信元の読み込みと同じ内部の関数で行う（設定のバージョンは比べない）
          - 違反がある場合、その違反を持つ `ValidationFailedError` を送る
       3. 作った配信元を返す
@@ -482,6 +483,13 @@ functions:
         mock: なし
         expected: '`ValidationFailedError` で違反のパスが `config[0]`'
         exception: 設定が無い
+      - name: test_load_source_at_when_ignored_config
+        case: 正常
+        summary: 無視した先頭の設定はクローン本体のものを使う
+        condition: クローン本体の直下に `.gitignore` した `dev-docs.local.yaml` を先頭に持つ配信元を、`git worktree add` したワークツリーで読み直す
+        mock: なし（一時フォルダで `git init` と `git worktree add`）
+        expected: '`config_files` の先頭がクローン本体の `dev-docs.local.yaml` で、`root` がワークツリーの直下'
+        exception: '-'
       - name: test_load_source_at_when_invalid
         case: 異常
         summary: 検証に通らない
