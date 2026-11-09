@@ -1,0 +1,36 @@
+use_cases:
+  - kind: single
+    scenario: dev/設計書/シナリオ/単一ユースケース/dev-docsを入れる.yaml
+    impact: run_only
+    detail: pyproject.toml の開発用の依存（dependency-groups の dev）から Python の playwright を外し、配布物の依存は変えない。E2E は削除するため、入れて起動できることは単体・結合テストの全件で確かめる
+    depends_on: []
+docs:
+  - page: dev/設計書/テスト/テスト実行方法.yaml
+    new: false
+    change: E2E テストの層の実行方法（description・prerequisites・run_one・carry_over・monitoring・abort・duration・external_cost・results）を削除し、外部疎通テストと同じく run_all を「未確定」にする
+    status: todo
+  - page: dev/設計書/外部ライブラリ/playwright.yaml
+    new: false
+    change: 用途を E2E から結合テスト（フロント）のランナーに直し、used_in から tests/e2e/ を外して tests/integration/frontend/playwright.config.ts にする
+    status: todo
+  - page: dev/設計書/外部ライブラリ/index.yaml
+    new: false
+    change: playwright の行の summary を、playwright.yaml の lead に合わせる
+    status: todo
+  - page: dev/設計書/外部ライブラリ/README.md
+    new: false
+    change: playwright の行の概要を、playwright.yaml の lead に合わせる
+    status: todo
+scope_out:
+  - item: シナリオの test_file と、テンプレート『シナリオ』・『テスト実行方法』の E2E の記述
+    reason: D-311 A で test_file は作り直すときの対応の印として残す。引き先が無い test_file は画面で行内のコードとして描かれ、点検は止まらない
+    plan: none
+  - item: 過去の作業 PR の PR ドキュメント（dev/pr/*）と外部ライブラリ mdmark.yaml の verification が載せる E2E の記録
+    reason: その時点の実施の記録で、今の状態を表す記述ではない
+    plan: none
+  - item: npm の @playwright/test・@axe-core/playwright、tests/integration/frontend/playwright.config.ts、.gitignore の playwright-report/
+    reason: 結合テスト（フロント）が使う
+    plan: none
+  - item: 0.x の間に release を master へ入れるときに回す E2E の扱い
+    reason: ai-monitor 側の運用の変更で、このリポジトリの変更ではない
+    plan: shuhei1101/ai-monitor#3317
