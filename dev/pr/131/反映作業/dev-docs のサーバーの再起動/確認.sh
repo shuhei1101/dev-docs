@@ -17,8 +17,12 @@ if [ "$rc" -eq 28 ]; then
   echo "状態の取得: failed（status が $STATUS_LIMIT 秒で応答しない）"
   exit 1
 fi
+if [ "$rc" -ne 0 ]; then
+  echo "状態の取得: failed（status の取得が curl の終了コード $rc で止まった）"
+  exit 1
+fi
 if [ -z "$status" ]; then
-  echo "状態の取得: failed（status の応答が空。curl の終了コード $rc）"
+  echo "状態の取得: failed（status の応答が空）"
   exit 1
 fi
 

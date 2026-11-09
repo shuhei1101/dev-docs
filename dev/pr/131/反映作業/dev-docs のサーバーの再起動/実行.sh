@@ -55,11 +55,19 @@ if [ "$rc" -eq 28 ]; then
   echo "再起動の前の配信元: failed（status が $STATUS_LIMIT 秒で応答しない）"
   exit 1
 fi
+if [ "$rc" -ne 0 ]; then
+  echo "再起動の前の配信元: failed（status の取得が curl の終了コード $rc で止まった）"
+  exit 1
+fi
 if [ -z "$status" ]; then
-  echo "再起動の前の配信元: failed（status の応答が空。curl の終了コード $rc）"
+  echo "再起動の前の配信元: failed（status の応答が空）"
   exit 1
 fi
 printf '%s' "$status" | grep -o '| [a-z0-9-]* | serving' | sort > "$BEFORE"
+if [ ! -s "$BEFORE" ]; then
+  echo "再起動の前の配信元: failed（status の応答に配信中の配信元が無い）"
+  exit 1
+fi
 echo "再起動の前の配信元: ok（$(wc -l < "$BEFORE") 件）"
 
 # 計画
