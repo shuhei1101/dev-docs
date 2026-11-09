@@ -15,12 +15,12 @@ WORKTREE_LABEL = "作業ツリー"
 
 
 class ContainsQuery(BaseModel):
-    """`list_changes` の `contains`（変更の中身の語）。"""
+    """`list_changes` の `contains`（変更の中身の単語）。"""
 
     model_config = ConfigDict(extra="forbid")
 
-    value: str = Field(min_length=1, description="探す語か正規表現")
-    regex: bool = Field(default=False, description="value を正規表現として当てるか")
+    value: str = Field(min_length=1, description="探す単語か正規表現")
+    regex: bool = Field(default=False, description="value を正規表現として適用するか")
     case_sensitive: bool = Field(
         default=False, description="大文字小文字と全角半角（NFKC）を区別するか"
     )
@@ -45,8 +45,8 @@ class ChangesRequest(BaseModel):
     outside_scope: bool = Field(
         default=False,
         description=(
-            "true のとき、scope に当たらない配信元を outside_read が真なら"
-            "作業範囲の外（参考）として読む（source が ID 1 つのときだけ効く）"
+            "true のとき、scope に該当しない配信元を outside_read が真なら"
+            "作業範囲の外（参考）として参照する（source が ID 1 つのときだけ有効）"
         ),
     )
     session_id: str | None = None
@@ -54,8 +54,8 @@ class ChangesRequest(BaseModel):
     contains: ContainsQuery | None = Field(
         default=None,
         description=(
-            "語の出現数が変わった文書だけを返し、語が入った・消えた区間を添える。"
-            "filter と同時に渡すと両方に当たる文書を返す"
+            "単語の出現数が変わった文書だけを返却し、単語が入った・消えた区間を添える。"
+            "filter と同時に指定すると両方に該当する文書を返却する"
         ),
     )
 

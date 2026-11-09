@@ -30,10 +30,10 @@ data_models:
         default: None
         description: 「既定の例」と、組で省いた変数の値
       - name: source
-        title: 出どころ
+        title: 出典
         type: str | None
         default: None
-        description: 変数の表の出どころの列
+        description: 変数の表の出典の列
       - name: items
         title: 要素の定義
         type: PromptVar | None
@@ -71,7 +71,7 @@ data_models:
       - name: id
         title: ID
         type: str
-        description: セクションの見出しと、使わなかった部品の名前
+        description: セクションの見出しと、使用しなかった部品の名前
       - name: role
         title: 役割
         type: Literal['system', 'user', 'assistant'] | None
@@ -190,7 +190,7 @@ data_models:
         type: list[RenderedMessage]
         description: '`kind: llm` は役割ごと（`ROLES` の順）、それ以外は 1 件'
       - name: unused
-        title: 使わなかった部品
+        title: 使用しなかった部品
         type: list[str]
         description: '`when` が偽か、その言語の本文が無い部品の `id`'
       - name: char_count

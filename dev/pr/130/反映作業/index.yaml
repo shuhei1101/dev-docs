@@ -11,5 +11,5 @@ dev-docs のサーバーの再起動:
   確認: dev-docs のサーバーの再起動/確認.sh
   切り戻し: null
   失敗時: 既定の対処を 1 回、2 回連続で失敗したら依頼元へ返す
-  確認方法: 配信元の読み込みが終わった後に、127.0.0.1:8781 で待ち受けるプロセスの起動時刻が develop の worktree の `src/dev_docs/features/convert/decisions.py` の更新時刻より後で、配信元 ai-monitor の `dev/設計書/ER図/セッション.yaml` の本文の取得が 200 を返す（どの配信元も `decisions.folders` を持たないうちは、`decisions` の ID は ID の文字のまま出る）
+  確認方法: 配信元の読み込みが終わった後に、127.0.0.1:8781 で待ち受けるサーバーが最後に起動した時刻（`sh scripts/dev-docs-server-wait.sh started`。サーバーのログの uvicorn が待ち受けを始めた行の最後の時刻）が develop の worktree の `src/dev_docs/features/convert/decisions.py` の更新時刻より後で、配信元 ai-monitor の `dev/設計書/ER図/セッション.yaml` の本文の取得が 200 を返す（どの配信元も `decisions.folders` を持たないうちは、`decisions` の ID は ID の文字のまま出る）
   状態: "-"

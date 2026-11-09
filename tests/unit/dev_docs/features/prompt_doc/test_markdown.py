@@ -129,7 +129,7 @@ def test_var_table() -> None:
     # 実行
     result = var_table(vars_)
     # 検証
-    assert result[0] == "| 変数 | 型 | 必須 | 例 | 説明 | 出どころ |"
+    assert result[0] == "| 変数 | 型 | 必須 | 例 | 説明 | 出典 |"
     assert "[{name: 好奇心}]" in result[2]
     assert "traits[].name" in result[3]
 

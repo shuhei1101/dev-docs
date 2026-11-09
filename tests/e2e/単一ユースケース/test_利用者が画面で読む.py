@@ -755,7 +755,7 @@ def test_normal_when_prompt_document(
     )
     # 変数の表
     variables = _section(page, "変数").locator("table")
-    expect(variables.locator("th")).to_have_text(["変数", "型", "必須", "例", "説明", "出どころ"])
+    expect(variables.locator("th")).to_have_text(["変数", "型", "必須", "例", "説明", "出典"])
     expect(
         variables.locator("td code").filter(has_text=re.compile(r"^character\.display_name$"))
     ).to_be_visible()
@@ -781,7 +781,7 @@ def test_normal_when_prompt_document(
     expect(_section_toggle(page, "ログが無い")).to_have_attribute("aria-expanded", "false")
     default_example = _section(page, "既定の例")
     expect(default_example.locator("strong")).to_contain_text(["system", "user"])
-    expect(default_example).to_contain_text(re.compile(r"[\d,]+ 字 / 使わなかった部品: no-logs"))
+    expect(default_example).to_contain_text(re.compile(r"[\d,]+ 字 / 使用しなかった部品: no-logs"))
     # 言語のタブを ja にすると全てのセクションが揃って ja になる
     expect(_section(page, "role").get_by_role("tab")).to_have_text(["en", "ja"])
     _section(page, "role").get_by_role("tab", name="ja").click()
@@ -793,7 +793,7 @@ def test_normal_when_prompt_document(
     no_logs = _section(page, "ログが無い")
     expect(no_logs.locator("pre:visible").first).to_contain_text("### 役割")
     expect(no_logs.locator("pre:visible").last).to_contain_text("- なし")
-    expect(no_logs).to_contain_text(re.compile(r"[\d,]+ 字 / 使わなかった部品: logs"))
+    expect(no_logs).to_contain_text(re.compile(r"[\d,]+ 字 / 使用しなかった部品: logs"))
     # 開き直しても ja のまま
     page.reload()
     expect(_heading(page)).to_have_text("振り返りのノード")
@@ -826,10 +826,10 @@ def test_normal_when_prompt_set_flagged(
     expect(cautions.last).to_be_visible()
     # 他の組・変数の表・テンプレートは描かれる
     expect(_section(page, "既定の例")).to_contain_text(
-        re.compile(r"[\d,]+ 字 / 使わなかった部品: no-logs")
+        re.compile(r"[\d,]+ 字 / 使用しなかった部品: no-logs")
     )
     expect(_section(page, "ログが無い")).to_contain_text(
-        re.compile(r"[\d,]+ 字 / 使わなかった部品: logs")
+        re.compile(r"[\d,]+ 字 / 使用しなかった部品: logs")
     )
     expect(_section(page, "変数").locator("table")).to_be_visible()
     expect(_section(page, "role").locator("pre:visible")).to_contain_text(
