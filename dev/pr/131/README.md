@@ -13,6 +13,7 @@
 
 [#114](https://github.com/shuhei1101/dev-docs/issues/114)（project-index への切り出し）の依存として着手する。
 進行中の [PR #101](https://github.com/shuhei1101/dev-docs/pull/101) が同じ `src/dev_docs/features/sources/service.py` を変更していて、競合は後にマージする側で解消する。
+[#141](https://github.com/shuhei1101/dev-docs/issues/141)（反映作業の判定の `started` への差し替えと、待ちのスクリプトのログの置き場の XDG への統一）もこの PR で解消し、マージの後に閉じる。
 
 ## 計画書
 
