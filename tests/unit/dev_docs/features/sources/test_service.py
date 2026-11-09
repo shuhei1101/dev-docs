@@ -859,6 +859,8 @@ def test_read_default_ref_config_when_not_committed(
     root = git_repo(files)
     (root / "dev-docs.yaml").write_text(sample_files["dev-docs.yaml"], encoding="utf-8")
     # 実行・検証
-    with pytest.raises(ValidationFailedError, match="develop に dev-docs.yaml がありません") as exc_info:
+    with pytest.raises(
+        ValidationFailedError, match=r"develop に dev-docs\.yaml がありません"
+    ) as exc_info:
         read_default_ref_config(root / "dev-docs.yaml")
     assert [item.path for item in exc_info.value.violations] == ["config[0]"]
