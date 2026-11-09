@@ -6,6 +6,9 @@ FIXED=src/dev_docs/features/settings/query.py
 # 再起動の前に配信していた配信元の一覧を、確認のスクリプトへ渡す
 BEFORE="${TMPDIR:-/tmp}/dev-docs-pr131-serving.txt"
 STATUS='{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"status","arguments":{}}}'
+# status の応答を待つ上限。規約『資源の値の決め方』の下流を待つタイムアウト（実測 + 50%）で導いた。
+# 2026-11-09 の実測 119 秒・126 秒・169 秒の最大 + 50% = 254 秒 → 255 秒
+STATUS_LIMIT=255
 HEADERS_ACCEPT='Accept: application/json, text/event-stream'
 HEADERS_TYPE='Content-Type: application/json'
 RESTART='{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"restart","arguments":{}}}'
@@ -45,9 +48,18 @@ if ! sh scripts/dev-docs-server-wait.sh loaded; then
   echo "再起動の前の配信元: failed（読み込みが終わらない）"
   exit 1
 fi
-curl -s --max-time 60 -X POST http://127.0.0.1:8781/_admin/mcp \
-  -H "$HEADERS_ACCEPT" -H "$HEADERS_TYPE" -d "$STATUS" \
-  | grep -o '| [a-z0-9-]* | serving' | sort > "$BEFORE"
+status=$(curl -s --max-time "$STATUS_LIMIT" -X POST http://127.0.0.1:8781/_admin/mcp \
+  -H "$HEADERS_ACCEPT" -H "$HEADERS_TYPE" -d "$STATUS")
+rc=$?
+if [ "$rc" -eq 28 ]; then
+  echo "再起動の前の配信元: failed（status が $STATUS_LIMIT 秒で応答しない）"
+  exit 1
+fi
+if [ -z "$status" ]; then
+  echo "再起動の前の配信元: failed（status の応答が空。curl の終了コード $rc）"
+  exit 1
+fi
+printf '%s' "$status" | grep -o '| [a-z0-9-]* | serving' | sort > "$BEFORE"
 echo "再起動の前の配信元: ok（$(wc -l < "$BEFORE") 件）"
 
 # 計画
