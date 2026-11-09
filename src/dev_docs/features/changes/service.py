@@ -454,7 +454,9 @@ def list_changes(
         encode_cursor(next_position, fingerprint) if next_position < len(entries) else None
     )
     if truncated:
-        notes.append(f"max_chars {max_chars} で打ち切りました。cursor を指定すると続きを取得できます")
+        notes.append(
+            f"max_chars {max_chars} で打ち切りました。cursor を指定すると続きを取得できます"
+        )
     if len(points) >= MULTI_SOURCE_MIN:
         for target, (from_point, to_point) in zip(targets, points, strict=True):
             notes.insert(

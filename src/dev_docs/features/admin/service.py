@@ -357,7 +357,8 @@ def try_convert(request: TryConvertRequest, *, handlers: Handlers) -> TryConvert
         (row for row in source.config.documents if row.enabled and row.matches(relative)), None
     )
     not_matched = DocumentNotFoundError(
-        message=f"{request.file}: 文書の種類の範囲に該当する文書がありません", missing=[request.file]
+        message=f"{request.file}: 文書の種類の範囲に該当する文書がありません",
+        missing=[request.file],
     )
     target = Target(source, candidate.root, None, None, "read")
     if table is None:

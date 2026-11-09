@@ -76,7 +76,9 @@ def _walk(node: Condition | Group, path: str) -> list[tuple[str, Condition | Gro
 def _unknown_field(path: str, field: str, fields: Mapping[str, str]) -> Violation:
     """知らない項目の違反を、近い項目を添えて作る。"""
     close = difflib.get_close_matches(field, list(fields), n=CLOSE_FIELDS)
-    fix = f"近い項目: {', '.join(close)}" if close else "describe で使用できる項目を確認してください"
+    fix = (
+        f"近い項目: {', '.join(close)}" if close else "describe で使用できる項目を確認してください"
+    )
     return Violation(path=path, rule=f"知らない項目です（{field}）", fix=fix)
 
 
@@ -111,7 +113,8 @@ def _check_condition(condition: Condition, path: str, fields: Mapping[str, str])
             except re.error as error:
                 violations.append(
                     Violation(
-                        path=f"{path}.values[{index}]", rule=f"正規表現として読み込めません（{error}）"
+                        path=f"{path}.values[{index}]",
+                        rule=f"正規表現として読み込めません（{error}）",
                     )
                 )
         elif condition.op in COMPARE_OPS and condition.field in fields:

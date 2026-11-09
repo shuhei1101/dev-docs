@@ -667,7 +667,9 @@ def delete_docs(
                         message=f"{item.id} は {names} から参照されています",
                         doc_id=item.id,
                         referrers=[referrer.id for referrer in referrers],
-                        next_steps=["on_referenced に unlink を指定すると、参照も除外して削除できます"],
+                        next_steps=[
+                            "on_referenced に unlink を指定すると、参照も除外して削除できます"
+                        ],
                     )
                 for referrer in referrers:
                     unlink_plan.setdefault(referrer.id, set()).add(item.id)
