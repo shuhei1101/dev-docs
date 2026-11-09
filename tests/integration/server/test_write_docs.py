@@ -691,7 +691,7 @@ def test_normal_when_tool_description(
     # 検証
     tools = {tool["name"]: tool for tool in response.json()["result"]["tools"]}
     assert (
-        "範囲のファイルを作った・消した・改名したら、管理用の YAML の行を修正する"
+        "範囲のファイルを作成・削除・改名したら、管理用の YAML の行を修正する"
         in tools["write_docs"]["description"]
     )
 
