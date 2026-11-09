@@ -103,7 +103,9 @@ class LineRange(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     offset: int = Field(default=1, ge=1, description="返却する最初の行の行番号（1 始まり）")
-    limit: int | None = Field(default=None, ge=1, description="返却する行の数。省けば本文の末尾まで")
+    limit: int | None = Field(
+        default=None, ge=1, description="返却する行の数。省けば本文の末尾まで"
+    )
 
 
 class SearchRequest(BaseModel):
