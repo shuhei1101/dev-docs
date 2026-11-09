@@ -14,8 +14,11 @@ dev-docs serve・dev-docs migrate・dev-docs files・dev-docs prompt-doc のサ�
 
 | 環境変数 | 既定 | 説明 |
 | --- | --- | --- |
-| `DEV_DOCS_CONFIG` | `~/.config/dev-docs/settings.yaml` | 端末の設定のパス |
+| `DEV_DOCS_CONFIG` | `${XDG_CONFIG_HOME:-~/.config}/dev-docs/settings.yaml` | 端末の設定のパス |
 | `DEV_DOCS_PORT` | 端末の設定の `port`（既定 `8781`） | 待ち受けのポート。設定の `port` より優先する |
+| `XDG_CONFIG_HOME` | `~/.config` | `DEV_DOCS_CONFIG` が無いときに端末の設定を探すフォルダの親。空の文字列か相対パスは未設定として扱う |
+| `DEV_DOCS_STATE_DIR` | 端末の設定の `state_dir` | 状態の置き場。端末の設定の `state_dir` より優先する |
+| `XDG_STATE_HOME` | `~/.local/state` | `DEV_DOCS_STATE_DIR` と `state_dir` が無いときの状態の置き場の親。空の文字列か相対パスは未設定として扱う |
 | `DEV_DOCS_PROMPTS_DIR` | クローンの直下の `content/prompts/` | 文書の MCP の instructions・2 つの MCP のツールの description のプロンプトの YAML を読むフォルダ |
 
 ```bash

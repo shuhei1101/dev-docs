@@ -12,7 +12,7 @@ argument-hint: "[クローンのパス]"
 ## 手順
 
 1. 端末の設定のパスを決める。
-   - 環境変数 `DEV_DOCS_CONFIG` があればその値、無ければ `~/.config/dev-docs/settings.yaml`
+   - 環境変数 `DEV_DOCS_CONFIG` があればその値、無ければ `${XDG_CONFIG_HOME:-~/.config}/dev-docs/settings.yaml`（`XDG_CONFIG_HOME` が空の文字列か相対パスなら `~/.config/dev-docs/settings.yaml`）
    - ファイルがあるかを確かめる
 
 2. 端末の設定がある場合、バージョンを確かめる。
@@ -24,7 +24,7 @@ argument-hint: "[クローンのパス]"
    - スキーマの検証で足りないキーがあれば、そのキーだけを聞いて書き足す。`sources` の行とほかのキーは変えない
 
 3. 端末の設定が無い場合、端末の設定を作る。
-   - 端末の設定の場所を聞く（既定は `~/.config/dev-docs/settings.yaml`）
+   - 端末の設定の場所を聞く（既定は `${XDG_CONFIG_HOME:-~/.config}/dev-docs/settings.yaml`）
    - `$ARGUMENTS` が空ならクローンの場所を聞く
    - クローンが無ければ `git clone https://github.com/shuhei1101/dev-docs {クローンのパス}` を実行する
    - クローンで `uv sync` を実行して依存を入れる
