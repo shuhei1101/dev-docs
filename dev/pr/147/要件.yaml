@@ -22,4 +22,7 @@ scope_out:
   - item: モジュール構成『features/lifecycle/control.py』の `next_steps` の説明の `/mcp でつなぎ直して`
     reason: 'フックではなく MCP の応答を言い換えて説明する設計書の地の文で、`dev/` の地の文の修正は #95 の範囲'
     plan: '#95'
+  - item: 単一ユースケース『起動する』の `scenarios[].test` のうち、`tests/e2e/単一ユースケース/test_起動する.py` に関数が無い 4 件（`test_normal_when_ignored_config_first`・`test_normal_when_started_by_session_start_with_xdg_config_home`・`test_normal_when_xdg_dirs_set`・`test_error_when_first_config_not_committed`。設計書の検証の `テスト関数がありません`）
+    reason: '#131 が追加したシナリオの欠けで、今回の要望に含まれない。#145 のユーザーの決定（D-307: E2E は開発の間は作らず、メジャーのリリースの前に作る。D-311: 今ある E2E を develop から削除し、`test_file` は対応の印として残す）を拠り所に、E2E を作らずにマージする。`test_file` が指すテストが無いときの点検の扱いは #145 の範囲'
+    plan: '#145'
 docs: []
