@@ -23,12 +23,13 @@ docs:
   - page: docs/リファレンス/管理のMCP.md
     new: false
     change: 読み込み中に文書の MCP の呼び出しが待たされる記述と、`status` の同期の件数の求め方を、直した後の答え方に合わせる
-    status: todo
-  - page: dev/設計書/非機能要件/非機能要件.yaml
-    new: false
-    change: 起動直後の文書の MCP の応答時間と、読み込みの後の `status` の応答時間の決定値を、Claude Code の MCP の呼び出しの時間切れから逆算して足す
-    status: todo
+    status: done
+    updated_by: planner
+    updated_at: '2026-11-09T01:10:59.242322+00:00'
 scope_out:
-  - item: 画面の API（`view/route.py`・`settings/route.py`）と管理の MCP の `status` 以外のツールが、起動直後に配信元の読み込みの終わりまで待つこと
-    reason: 判断が分かれる。#123 の終わりの条件は MCP の要求で、画面は含まない。ただし同じ `SourceRegistry.wait_loaded` を呼ぶため、待ちを配信元ごとに変える直し方なら一緒に直る。今の判断は、直し方が `wait_loaded` の共通の変更になるなら含め、文書の MCP の入口だけを変えるなら外す（インターフェース定義設計のレビューで確定する）
-    plan: to_file
+  - item: 画面の設定の API・管理の MCP の `status` 以外のツール・`describe` の作業範囲の外の一覧が、起動直後に全ての配信元の読み込みの終わりまで待つこと
+    reason: 要望に含まれない。どれも全ての配信元の一覧を返すか差し替える操作で、全ての行の読み込みを待つ必要がある。画面の文書の API は配信元を指すため、文書の MCP と同じく指す配信元の読み込みだけを待つようにしてスコープに含めた
+    plan: none
+  - item: 起動直後の文書の MCP の応答時間と `status` の応答時間の決定値を非機能要件に記載すること
+    reason: 'PR #120 と同じく、Claude Code の MCP の呼び出しの時間切れの値に公式の出典が無く、決定値を逆算できない。修正の前後の応答時間は計画書の `## テスト結果` に記録する'
+    plan: none
