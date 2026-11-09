@@ -166,13 +166,16 @@ def get_document(
     # 検討事項の文書のパス: 話し合いの記録のフォルダの文書を変換せずに返す
     decision = decision_page_id(path) if path is not None else None
     if decision is not None:
+        decision_path = f"{DECISION_PAGE_PREFIX}{decision}"
         file = find_decisions(source).get(decision)
         if file is None:
-            raise DocumentNotFoundError(message=f"文書がありません: {path}", missing=[path])
+            raise DocumentNotFoundError(
+                message=f"文書がありません: {decision_path}", missing=[decision_path]
+            )
         return DocumentResponse(
             source=source.id,
             ref=shown_ref,
-            path=f"{DECISION_PAGE_PREFIX}{decision}",
+            path=decision_path,
             body_path=None,
             markdown=file.read_text(encoding="utf-8"),
             conversion_error=None,
