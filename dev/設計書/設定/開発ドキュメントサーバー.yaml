@@ -51,6 +51,14 @@ settings:
     default: '[./.claude/worktrees/*]'
     description: ワークツリーの場所の glob。メインのリポジトリの直下（Git でない配信元は配信元のフォルダ）からの相対パスか絶対パス。端末の設定がワークツリーの設定を指してもメインのリポジトリから数える
     reload: reload
+  - key: decisions.folders
+    title: 話し合いの記録のフォルダ
+    file: dev-docs.yaml
+    type: list[str]
+    default: '[]'
+    description: 設計書の `decisions`（検討事項の ID）のリンク先を探す話し合いの記録（MindStella のワークスペース）のフォルダ。メインのリポジトリの直下（Git でない配信元は配信元のフォルダ）からの相対パスか絶対パス。各フォルダの `.mindstella/docs/{ID}.md` を検討事項の文書にする
+    reload: reload
+    allowed: 'フォルダのパスの並び（例 `[tmp/dev-docs改善]`）。無いフォルダは検討事項を持たないものとして扱い、違反にしない'
   - key: description
     title: 配信元の説明
     file: dev-docs.yaml

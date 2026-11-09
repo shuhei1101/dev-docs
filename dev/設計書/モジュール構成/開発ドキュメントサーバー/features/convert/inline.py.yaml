@@ -189,6 +189,41 @@ functions:
         condition: '`links` に無い ID'
         mock: なし
         expected: '`None`'
+  - name: link_decisions
+    title: 検討事項のリンク
+    kind: 関数
+    container: features/convert/inline.py
+    usecase: 文書の取得
+    role: 変換
+    summary: '`decisions` の並びのうち、文脈の `decisions` にある ID を、検討事項の文書の画面へのリンクの Markdown にする'
+    scope: public
+    thread_safe: true
+    args:
+      - name: values
+        title: 値の並び
+        type: Sequence[Any]
+        required: true
+        passing: positional
+        description: '`decisions` のキーの値'
+      - name: context
+        title: 描画の文脈
+        type: RenderContext
+        required: true
+        passing: positional
+        description: リンクにする検討事項と、相対パスの起点
+    returns:
+      type: list[Any]
+      description: 要素ごとに、リンクにする ID は `[{ID}]({相対パス})`、それ以外はそのままの値の並び
+    process: |-
+      1. 要素が文字列で文脈の `decisions` にあれば、文書のパスのフォルダから `{DECISION_PAGE_PREFIX}{ID}` への相対パス（`/` 区切り・URL エンコード）へのリンクにする
+      2. それ以外の要素はそのまま返却する
+    unit_tests:
+      - name: test_link_decisions
+        case: 正常
+        summary: リンクにする ID とそれ以外
+        condition: '`["D-1", "D-2", 3]`、文脈の `decisions` が `{"D-1"}`、文書のパスが `dev/a/b.yaml`'
+        mock: なし
+        expected: '`["[D-1](../../_decisions/D-1)", "D-2", 3]`'
   - name: heading_anchor
     title: 見出しのアンカー
     kind: 関数

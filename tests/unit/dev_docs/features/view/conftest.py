@@ -38,6 +38,7 @@ def make_view_env(
         tables: list[DocumentTable] | None = None,
         nav: dict[str, Any] | None = None,
         extra_sources: list[ServedSource] | None = None,
+        decision_folders: list[str] | None = None,
         **source_overrides: Any,
     ) -> SimpleNamespace:
         if root is None:
@@ -50,7 +51,12 @@ def make_view_env(
             schema_path="schemas/rule.schema.yaml",
             converter="c" if converters else None,
         )
-        config = make_source_config(documents=tables or [row], converters=converters or [], nav=nav)
+        config = make_source_config(
+            documents=tables or [row],
+            converters=converters or [],
+            nav=nav,
+            decision_folders=decision_folders or [],
+        )
         source = make_served_source(id="sample", root=root, config=config, **source_overrides)
         store = DocumentStore(SnapshotStore(tmp_path / "snapshots"))
         columns_dir = tmp_path / "columns"

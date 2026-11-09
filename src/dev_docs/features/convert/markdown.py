@@ -10,8 +10,14 @@ from datetime import date, datetime
 from typing import Any
 from urllib.parse import quote
 
+from dev_docs.features.convert.decisions import DECISIONS_KEY
 from dev_docs.features.convert.diagrams import er_table_titles, render_diagram
-from dev_docs.features.convert.inline import heading_anchor, link_reference, rewrite_text
+from dev_docs.features.convert.inline import (
+    heading_anchor,
+    link_decisions,
+    link_reference,
+    rewrite_text,
+)
 from dev_docs.features.convert.types import DiagramHead, DiagramKind, RenderContext
 from dev_docs.features.documents.types import Document
 
@@ -169,9 +175,15 @@ def render_table(
         f"| {' | '.join(title(key) for key in columns)} |",
         f"| {' | '.join('---' for _ in columns)} |",
     ]
-    lines.extend(
-        f"| {' | '.join(_cell(row.get(key), context) for key in columns)} |" for row in rows
-    )
+
+    def cell(row: Mapping[str, Any], key: str) -> str:
+        value = row.get(key)
+        # 検討事項の列: リンク先の決まる ID を先にリンクにする
+        if key == DECISIONS_KEY and isinstance(value, list) and context is not None:
+            value = link_decisions(value, context)
+        return _cell(value, context)
+
+    lines.extend(f"| {' | '.join(cell(row, key) for key in columns)} |" for row in rows)
     lines.append("<!-- /table -->")
     return "\n".join(lines)
 
@@ -323,6 +335,9 @@ class _Builder:
         title = str(sub.get("title") or key)
         heading = sub.get("x-heading")
         shape = sub.get("x-shape")
+        # 検討事項の並び: リンク先の決まる ID を先にリンクにしてから組み立てる
+        if key == DECISIONS_KEY and isinstance(value, list):
+            value = link_decisions(value, self.context)
         content_level = level
         if heading:
             self.heading(str(heading), level)

@@ -4,6 +4,8 @@
 
 ## 目次
 
+<!-- table: data -->
+
 | ページ | 概要 |
 | --- | --- |
 | [types.py](./types.py.yaml) | 変換の結果・失敗・表し方・図の種類・図の中間データ・描画の文脈の型 |
@@ -13,4 +15,7 @@
 | [mermaid.py](./mermaid.py.yaml) | 手で書く Mermaid の `flowchart`・`sequenceDiagram` の読み取り |
 | [inline.py](./inline.py.yaml) | 文字列の値の中の、図・ファイルツリー・手順・参照・Issue 番号・値の選択肢の書き換え |
 | [embed.py](./embed.py.yaml) | 埋め込みのマーカーの表への展開 |
+| [decisions.py](./decisions.py.yaml) | `decisions.folders` からの、設計書の `decisions` の検討事項の文書の検索 |
 | [markdown.py](./markdown.py.yaml) | スキーマ駆動の文書の Markdown への変換と表の描画 |
+
+<!-- /table -->

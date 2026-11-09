@@ -706,6 +706,47 @@ scenarios:
       - '`無い文書` の文字は出て、文書へのリンクにならず、文書 1 の他のリンクと本文は描かれる'
       - 行内のコードの中の `id:` のリンクは書き換わらず、コードのまま出る
     test: test_normal_when_id_link_opened
+  - name: 正常シナリオ（設計書の検討事項のリンクを開く）
+    setup:
+      - name: Mock
+        description: なし（実環境で実行。ブラウザは Playwright で操作する）
+        notes: '-'
+      - name: 話し合いの記録のフォルダ
+        description: 'sample の `tmp/` の下に、話し合い a（`.mindstella/docs/D-1.md`・`D-2.md`）と話し合い b（`.mindstella/docs/D-2.md`）のフォルダを配置する'
+        notes: '`D-2` は 2 つの話し合いにある ID。`D-3` はどちらにも無い ID'
+      - name: 検討事項の参照先
+        description: sample の `dev-docs.yaml` の `decisions.folders` に、話し合い a・b のフォルダを記載する
+        notes: plain の `dev-docs.yaml` には記載しない
+      - name: decisions を持つ文書
+        description: 'sample の文書 6 の表の行と、「項目 / 値」の表を持つ見出しのセクションに、`decisions: [D-1, D-2, D-3]` を持たせる。plain の文書にも `decisions: [D-1]` を持たせる'
+        notes: 文書 6 は正常シナリオ（スキーマ駆動の文書を図と表で読む）の文書
+      - name: dev-docs
+        description: sample と plain を配信している dev-docs
+        notes: '-'
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        actor U as 利用者
+        participant UI as dev-docs の画面
+        participant API as 画面の API
+
+        U->>UI: 文書 6 を開く
+        UI->>API: 文書の取得（文書 6）
+        API->>API: decisions の ID を、話し合いの記録のフォルダで 1 つに決まる検討事項の画面へのリンクにする
+        API-->>UI: 文書 6 の Markdown
+        U->>UI: リンク D-1 を押す
+        UI->>API: 検討事項 D-1 の文書の取得
+        UI-->>U: 話し合い a の検討事項 D-1 の本文
+        U->>UI: plain の文書を開く
+        UI-->>U: decisions を ID の文字で出した本文
+      ```
+    expected:
+      - 文書 6 の表のセルと箇条書き（「項目 / 値」の表を持つセクションの `decisions` を含む）のどちらでも、`D-1` が検討事項へのリンクで出る
+      - リンク `D-1` を押すと、URL が dev-docs の画面のまま、話し合い a の `D-1.md` の本文が mdmark で描かれる
+      - 2 つの話し合いにある `D-2` と、どちらにも無い `D-3` は、リンクにならず ID の文字で出る
+      - plain の文書の `D-1` は、リンクにならず ID の文字で出て、他の本文は描かれる
+      - '`decisions` 以外の文字列の並びの出し方は変わらない'
+    test: test_normal_when_decision_link_opened
 lead: 利用者がブラウザで配信元の文書の画面を開き、タブ・サイドバー・検索・リビジョンの切り替え・差分で文書を読む。
 issue: 17
 primary_actor: 利用者
