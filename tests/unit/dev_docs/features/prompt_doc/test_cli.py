@@ -38,4 +38,4 @@ def test_run_prompt_doc_when_invalid(
     out, err = capsys.readouterr()
     assert code == 1
     assert out == ""
-    assert "YAML を読めません" in err
+    assert "YAML を読み込めません" in err
