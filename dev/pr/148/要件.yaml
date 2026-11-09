@@ -1,0 +1,29 @@
+use_cases:
+  - kind: single
+    scenario: dev/設計書/シナリオ/単一ユースケース/配信元を追加する.yaml
+    impact: run_only
+    detail: 配信元の追加でコピーする雛形とスキーマの説明の文言が変わる。検査の結果は変わらない
+    depends_on: []
+scope_out:
+  - item: docs/リファレンス/設定.md の管理用の YAML のキーの表（files.schema.yaml の description と同じ文）
+    reason: docs/ の文書の文言は文書の移行の範囲
+    plan: '#95'
+  - item: モジュール構成の prompt_doc/types.py.yaml・render.py.yaml の when の title「使う条件」
+    reason: 設計書の文言は文書の移行の範囲で、スキーマの文言の修正と独立に成り立つ
+    plan: '#95'
+  - item: 管理用プラグインのスキル（setup・global-setup）の文言（setup/SKILL.md は files.schema.yaml の description と同じ文を持つ）
+    reason: 要望の範囲は templates/ だけ
+    plan: '#149'
+  - item: src/dev_docs/ のコメントと docstring の文言（prompt_doc/markdown.py の「使う条件」など）
+    reason: 要望の範囲は templates/ だけ
+    plan: '#150'
+  - item: knowledge の schemas/ の prompt・common・files のスキーマ（templates/ の原本）の文言
+    reason: 別のリポジトリ
+    plan: shuhei1101/knowledge#236
+  - item: templates/prompt.schema.yaml の text の description の「そろえる」
+    reason: 対応表の pattern は漢字の「揃」だけにヒットし、ひらがなの「そろえる」は対象外
+    plan: none
+  - item: サーバーが持つスキーマ（src/dev_docs/schemas/ の aliases・settings・dev-docs の schema.yaml と schemas/dev-docs.schema.json）の title・description の文言
+    reason: 要望の範囲は templates/ だけで、サーバーのスキーマは配信元にコピーしない別のファイル
+    plan: '#151'
+docs: []

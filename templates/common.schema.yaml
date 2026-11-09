@@ -1,6 +1,6 @@
 $schema: https://json-schema.org/draft/2020-12/schema
 title: 共通の型
-description: 種類をまたいで使う型（ID・タグ・関連・項目・メタデータ）の定義。各種類のスキーマから `$ref` で指す。
+description: 種類をまたいで使用する型（ID・タグ・関連・項目・メタデータ）の定義。各種類のスキーマから `$ref` で指す。
 $defs:
   id:
     title: ID
@@ -69,13 +69,13 @@ $defs:
           - part_of
           - change_together
       when:
-        title: いつ読むか
-        description: 関連先をいつ読むかを 1 文で記載する。
+        title: いつ参照するか
+        description: 関連先をいつ参照するかを 1 文で記載する。
         type: string
         minLength: 1
       paths:
         title: 対象のパス
-        description: 機械で判定できるときだけ、関連が当たるファイルの glob を併記する。
+        description: 機械で判定できるときだけ、関連が該当するファイルの glob を併記する。
         type: array
         items:
           type: string
@@ -88,7 +88,7 @@ $defs:
       $ref: '#/$defs/related_item'
   source:
     title: 出典
-    description: 文書が拠り所にした出典 1 件。公式ドキュメントなどの URL と、確かめたライブラリのバージョン・日付を持つ。
+    description: 文書が拠り所にした出典 1 件。公式ドキュメントなどの URL と、確認したライブラリのバージョン・日付を持つ。
     type: object
     additionalProperties: false
     required:
@@ -132,16 +132,16 @@ $defs:
         examples:
           - JSON Schema
       version:
-        title: 確かめたバージョン
-        description: 出典を確かめたときの、ライブラリ・仕様のバージョン。
+        title: 確認したバージョン
+        description: 出典を確認したときの、ライブラリ・仕様のバージョン。
         type: string
         minLength: 1
         examples:
           - '2020-12'
       checked:
         $ref: '#/$defs/date'
-        title: 確かめた日
-        description: 出典を確かめた日。
+        title: 確認した日
+        description: 出典を確認した日。
         examples:
           - '2026-10-30'
   item:
@@ -165,7 +165,7 @@ $defs:
         minLength: 1
       name:
         title: 項目名
-        description: 項目の中身を表す 15 字程度の見出し語。
+        description: 項目の中身を表す 15 字程度の見出し。
         type: string
         minLength: 1
       body:
@@ -203,7 +203,7 @@ $defs:
         minLength: 1
       description:
         title: 概要文
-        description: 本文を読まずに中身が分かる 1 文。何を受け持つか／何について書いてあるかと、どんなときに読むかを記載する。
+        description: 本文を参照せずに中身が分かる 1 文。何を受け持つか／何について記載してあるかと、どんなときに参照するかを記載する。
         type: string
         minLength: 1
       aliases:
@@ -234,12 +234,12 @@ $defs:
       last_reviewed:
         $ref: '#/$defs/date'
         title: 最終確認日
-        description: 最後に内容を確かめた日。
+        description: 最後に内容を確認した日。
       related:
         $ref: '#/$defs/related'
       sources:
         title: 出典の一覧
-        description: 文書が拠り所にした出典。本文には決めたことだけを記載し、参考にした公式ドキュメントの URL・ライブラリとバージョン・確かめた日はここに記載する。
+        description: 文書が拠り所にした出典。本文には決めたことだけを記載し、参考にした公式ドキュメントの URL・ライブラリとバージョン・確認した日はここに記載する。
         type: array
         minItems: 1
         items:
