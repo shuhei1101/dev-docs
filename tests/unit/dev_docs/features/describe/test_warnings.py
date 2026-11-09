@@ -130,7 +130,7 @@ def test_collect_warnings_when_alias_and_nav(
         terminal=handlers.terminal,
     )
     # 検証
-    assert result[0] == "a: エイリアスのキーの違反が 1 件あります（check_project で確かめられます）"
+    assert result[0] == "a: エイリアスのキーの違反が 1 件あります（check_project で確認できます）"
     assert result[1].startswith("a: nav.tabs[1].items[0].auto.filter: none:")
     assert len(result) == 2
 

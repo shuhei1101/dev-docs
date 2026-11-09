@@ -124,7 +124,7 @@ functions:
     exceptions:
       - name: VersionMismatchError
         condition: バージョンが違う
-        message: '`{id} は読んだ後に変わっています（今のバージョン {version}）`'
+        message: '`{id} は参照した後に変わっています（今のバージョン {version}）`'
     unit_tests:
       - name: test_check_version_when_fields
         case: 正常
@@ -231,7 +231,7 @@ functions:
         message: '`検査に通らない操作があります: {違反の数} 件`'
       - name: VersionMismatchError
         condition: '`atomic` でバージョンが違う'
-        message: '`{id} は読んだ後に変わっています（今のバージョン {version}）`'
+        message: '`{id} は参照した後に変わっています（今のバージョン {version}）`'
       - name: DocumentNotFoundError
         condition: '`atomic` で無い文書を指した'
         message: '`文書がありません: {id}`'
@@ -397,7 +397,7 @@ functions:
         message: '`{kind} は削除を許していません（documents[].writable）`'
       - name: VersionMismatchError
         condition: バージョンが違う
-        message: '`{id} は読んだ後に変わっています（今のバージョン {version}）`'
+        message: '`{id} は参照した後に変わっています（今のバージョン {version}）`'
       - name: DocumentNotFoundError
         condition: 無い文書を指した
         message: '`文書がありません: {id}`'

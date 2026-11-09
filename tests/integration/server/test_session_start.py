@@ -6,7 +6,7 @@ from typing import Any
 from fastapi.testclient import TestClient
 
 ENDPOINT = "/_admin/session-start"
-RETURNED = "この会話で返し済み"
+RETURNED = "この会話で返却済み"
 
 
 def _post(env: Any, body: dict[str, Any]) -> Any:

@@ -246,7 +246,7 @@ functions:
         message: '`配信元の設定がありません: {path}`'
       - name: ConfigParseError
         condition: '`dev-docs.yaml` が YAML として読めない'
-        message: '`配信元の設定を読めません: {path}`'
+        message: '`配信元の設定を読み込めません: {path}`'
       - name: InvalidArgumentError
         condition: 指したタブ・group が無い・group でない項目を指す・同じ名前がある・`value` が無い・重ねた設定が `nav` を持つ
         message: '`引数が正しくありません: {違反の数} 件`'
@@ -346,7 +346,7 @@ functions:
         message: '`{file}: 配信元の外です`'
       - name: DocumentNotFoundError
         condition: どの文書の種類の範囲にも当たらない、またはファイルが無い
-        message: '`{file}: 文書の種類の範囲に当たる文書がありません`'
+        message: '`{file}: 文書の種類の範囲に該当する文書がありません`'
       - name: ConvertScriptError
         condition: 変換スクリプトが 0 以外で終わった、または `script_timeout_sec` を超えた
         message: '`ConvertFailure` の理由（終了コードと stderr の末尾）'

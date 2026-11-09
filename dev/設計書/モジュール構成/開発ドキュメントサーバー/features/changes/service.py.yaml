@@ -109,7 +109,7 @@ functions:
       description: 変更の結果
     process: |-
       1. `to` があって `from_` が無い場合、`InvalidArgumentError`（`to` には `from` が要ります）を送る
-      2. `contains.regex` が真で `contains.value` を `compile_regex` で読めない場合、`InvalidArgumentError`（`path` は `contains.value`、`rule` は `正規表現として読めません（{エラー}）`）を送る
+      2. `contains.regex` が真で `contains.value` を `compile_regex` で読めない場合、`InvalidArgumentError`（`path` は `contains.value`、`rule` は `正規表現として読み込めません（{エラー}）`）を送る
       3. 読む場所を解く（読む場所の解決。`ref` は渡さず、`outside_scope` を渡す。結果の `outside_scope` は読んだ場所のどれかが作業範囲の外なら `True`）。`from_` があり Git 管理外の配信元を含む場合、`InvalidArgumentError` を送る
       4. 配信元ごとに前と後の文書を作る
          - `from_` がある場合、始点・終点をリビジョンの解決（`argument` は `from`・`to`）で commit にし、2 つの commit（終点が無ければ作業ツリー）の間の前後の文書を作る。文書の行に当たる変わったファイル（`enabled` の行を上から見て、文書の行.行に当たるかが `True` の最初の行）ごとに、前はリビジョンのファイル、後は終点の commit のリビジョンのファイルか作業ツリーのファイルを、文字列からの文書の組み立てで文書にする（この組み立ては次の `contains` の commit ごとの比較でも使う）。`body_file` の本文は、ファイルと同じ端（前は始点の commit、後は終点の commit のリビジョンのファイルか作業ツリーのファイル）から読む（文字列からの文書の組み立ての `read_body`）。変わったファイルが今の文書（文書のストア.読み込み）の `body_path` に当たる場合、その文書の索引のファイル（`path`）も変わったファイルに加える
@@ -130,13 +130,13 @@ functions:
         message: '`{argument} の {value} を解決できません`'
       - name: LastReadNotFoundError
         condition: '`from` を省き、この会話で本文を読んだ記録が無い'
-        message: '`この会話で読んだ記録がありません。from を渡してください`'
+        message: '`この会話で参照した記録がありません。from を指定してください`'
       - name: InvalidArgumentError
         condition: Git 管理外の配信元への区間・`from` の無い `to`・知らない項目・正規表現として読めない `contains.value`
         message: '`引数が正しくありません: {違反の数} 件`'
       - name: SourceNotReadableError
         condition: 読む場所の解決が送る
-        message: '`{id} はこの作業場所（{cwd}）から読めません`'
+        message: '`{id} はこの作業場所（{cwd}）から参照できません`'
     unit_tests:
       - name: test_list_changes
         case: 正常

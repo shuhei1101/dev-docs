@@ -39,17 +39,17 @@ def collect_warnings(
             ("metadata の列の欠け", report.missing_refs),
             ("管理用の YAML に無いファイル", report.unindexed_files),
             ("ファイルが無い行", report.missing_body_files),
-            ("どの文書にも当たらない関連", report.unresolved_related),
+            ("どの文書にも該当しない関連", report.unresolved_related),
         ):
             if values:
                 warnings.append(
                     f"{item.source_id}: {label}が {len(values)} 件あります"
-                    "（check_project で確かめられます）"
+                    "（check_project で確認できます）"
                 )
         if report.alias_violations:
             config_warnings.append(
                 f"{item.source_id}: エイリアスのキーの違反が {len(report.alias_violations)} 件"
-                "あります（check_project で確かめられます）"
+                "あります（check_project で確認できます）"
             )
         config_warnings.extend(
             f"{item.source_id}: {warning.path}: {warning.rule}" for warning in check.nav
@@ -65,7 +65,7 @@ def collect_warnings(
             first = status.errors[0]
             warnings.append(
                 f"{status.id}: 配信していません（{first.path}: {first.rule}）。"
-                "check_project で確かめられます"
+                "check_project で確認できます"
             )
     return warnings
 
@@ -73,6 +73,6 @@ def collect_warnings(
 def _old_version(label: str, mine: str, current: str) -> str:
     """設定のバージョンが古いことを知らせる文を作る。"""
     return (
-        f"{label}: 設定のバージョンが古い（{mine}・読める {current}）。"
+        f"{label}: 設定のバージョンが古い（{mine}・読み込める {current}）。"
         "dev-docs migrate で移し替えます"
     )

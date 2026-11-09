@@ -395,7 +395,7 @@ def test_normal_when_metadata_out_of_sync(
     )
     assert any("ファイルが無い行 1 件" in m and "c.py" in m for m in sample_warnings)
     assert any(
-        "どの文書にも当たらない関連 1 件" in m and "src: src/a.py: src/z.py" in m
+        "どの文書にも該当しない関連 1 件" in m and "src: src/a.py: src/z.py" in m
         for m in sample_warnings
     )
     assert not any("src: src/files.yaml" in m for m in sample_warnings)

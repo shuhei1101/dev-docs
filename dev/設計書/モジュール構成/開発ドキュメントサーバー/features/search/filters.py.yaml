@@ -74,11 +74,11 @@ functions:
       description: 違反。項目のパスは引数のパス（`filter.and[1].field`・`filter.not.field`）
     process: |-
       1. 条件の木を `and`・`or`・`not` の下までたどり、`field` が `fields` に無い・`exists` 以外で `values` が空・`regex` が正規表現にならない（正規表現の組み立て）・`gt` などで値が項目の型に合わない（比べる値の解釈）を違反にする。`fix` には近い項目（`difflib.get_close_matches`）か期待する型
-      2. `field` が `@matches` の条件を違反にする（`rule`: `@matches は条件に使えません`、`fix`: `fields か order_by に渡してください`）
+      2. `field` が `@matches` の条件を違反にする（`rule`: `@matches は条件に使用できません`、`fix`: `fields か order_by に指定してください`）
       3. `Group` が `and`・`or`・`not` のうち 1 つだけを持たないものを違反にする（`rule`: `and・or・not のどれか 1 つだけを持ってください`）
       4. `order_by[].field` が `fields` に無いもの、`group_by` が `fields` に無いか `@matches` のものを違反にする
-      5. `sections` と `lines` を両方持つ場合、`sections` のパスで違反にする（`rule`: `sections と lines は同時に渡せません`）
-      6. `view` が `full` 以外で `sections`・`lines` を持つ場合、そのパスで違反にする（`rule`: `view: full のときだけ渡せます`）
+      5. `sections` と `lines` を両方持つ場合、`sections` のパスで違反にする（`rule`: `sections と lines は同時に指定できません`）
+      6. `view` が `full` 以外で `sections`・`lines` を持つ場合、そのパスで違反にする（`rule`: `view: full のときだけ指定できます`）
     unit_tests:
       - name: test_check_filter_when_group_keys
         case: 異常
@@ -103,7 +103,7 @@ functions:
         summary: 本文の範囲の引数の組み合わせ
         condition: '`view: full` で `sections: [a]` と `lines: {offset: 1}` を両方と、`view: summary` で `sections: [a]`'
         mock: なし
-        expected: '1 つ目は違反の `path` が `sections`、2 つ目は `path` が `sections` で `rule` が `view: full のときだけ渡せます`'
+        expected: '1 つ目は違反の `path` が `sections`、2 つ目は `path` が `sections` で `rule` が `view: full のときだけ指定できます`'
   - name: parse_compare_value
     title: 比べる値の解釈
     kind: 関数
@@ -142,7 +142,7 @@ functions:
     exceptions:
       - name: ValueError
         condition: 型に合わない値
-        message: '`{value} を {field_type} として読めません`'
+        message: '`{value} を {field_type} として読み込めません`'
     unit_tests:
       - name: test_parse_compare_value
         case: 正常

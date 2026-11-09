@@ -89,7 +89,7 @@ def check_id_format(doc_id: str, fmt: str | None, *, kind: str) -> list[Violatio
         Violation(
             path="id",
             rule="ids.format",
-            fix=f"{fmt} の形にしてください（例 {example}）",
+            fix=f"{fmt} の形式にしてください（例 {example}）",
         )
     ]
 

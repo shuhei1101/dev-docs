@@ -73,7 +73,7 @@ functions:
       type: RelatedResult
       description: 関連のたどりの結果
     process: |-
-      1. `from_ids` と `code_paths` の両方がある・どちらも無い場合、`InvalidArgumentError`（`from_ids` か `code_paths` のどちらか 1 つを渡してください）を送る
+      1. `from_ids` と `code_paths` の両方がある・どちらも無い場合、`InvalidArgumentError`（`from_ids` か `code_paths` のどちらか 1 つを指定してください）を送る
       2. `depth` が 1 未満なら `InvalidArgumentError`、`DEPTH_MAX` を超えれば丸めて `notes` で知らせる
       3. 読む場所を解き（読む場所の解決。`outside_scope` を渡す）、文書を集めて ID の辞書にする
       4. 起点を決める
@@ -88,13 +88,13 @@ functions:
     exceptions:
       - name: InvalidArgumentError
         condition: 起点の指定の誤り・`depth` が 1 未満
-        message: '`from_ids か code_paths のどちらか 1 つを渡してください`'
+        message: '`from_ids か code_paths のどちらか 1 つを指定してください`'
       - name: DocumentNotFoundError
         condition: 無い起点
         message: '`文書がありません: {id}`'
       - name: SourceNotReadableError
         condition: 読む場所の解決が送る
-        message: '`{id} はこの作業場所（{cwd}）から読めません`'
+        message: '`{id} はこの作業場所（{cwd}）から参照できません`'
     unit_tests:
       - name: test_trace_related
         case: 正常

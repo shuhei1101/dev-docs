@@ -66,7 +66,7 @@ def _invalid(violations: list[Violation]) -> InvalidArgumentError:
     return InvalidArgumentError(
         message=f"引数が正しくありません: {len(violations)} 件",
         violations=violations,
-        next_steps=["describe(source, kind) でスキーマを見てください"],
+        next_steps=["describe(source, kind) でスキーマを確認してください"],
     )
 
 
@@ -225,11 +225,11 @@ def _cut_body(
     if request.sections is not None and not ranges:
         if plain_document:
             notes.append(
-                f"{document.id}: YAML の文書は sections で切り出せません。lines を使ってください"
+                f"{document.id}: YAML の文書は sections で切り出せません。lines を使用してください"
             )
         else:
             notes.append(
-                f"{document.id}: sections に当たる見出しがありません"
+                f"{document.id}: sections に該当する見出しがありません"
                 f"（{', '.join(request.sections)}）"
             )
     return join_ranges(lines, ranges), ranges, len(lines)
@@ -261,7 +261,7 @@ def search_docs(
     for index, target in enumerate(targets):
         result = store.load(target)
         notes.extend(
-            f"{problem.path} を読めないので除きました（{problem.detail}）"
+            f"{problem.path} を読み込めないので除きました（{problem.detail}）"
             for problem in result.problems
         )
         documents = result.documents
@@ -270,7 +270,7 @@ def search_docs(
             if not collection.has_alias_rows:
                 notes.append(
                     f"{target.source.id}: alias_type を持つ documents の行が無いので"
-                    " term に当たる文書はありません"
+                    " term に該当する文書はありません"
                 )
             ids = term_ids(collection.entries, request.term)
             documents = [document for document in documents if document.id in ids]
@@ -428,8 +428,8 @@ def search_docs(
         next_cursor = encode_cursor(next_position - request.skip, fingerprint)
     if truncated:
         notes.append(
-            f"max_chars {max_chars} で打ち切りました。cursor を渡して続きを取るか、"
-            "fields を絞るか view: ids で取り直してください"
+            f"max_chars {max_chars} で打ち切りました。cursor を指定して続きを取得するか、"
+            "fields を絞るか view: ids で再取得してください"
         )
     # sections・lines の呼び出しは返し済みに記録しない
     if not cuts_body:

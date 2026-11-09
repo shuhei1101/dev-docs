@@ -397,14 +397,14 @@ functions:
     exceptions:
       - name: SourceNotReadableError
         condition: '`cwd` が配信元の `scope` に当たらない（`outside_scope` が `True` のときは、加えて `outside_read` が偽か `source` が ID 1 つでない）、または `source` を省いて作業中の配信元が無い'
-        message: '`{id} はこの作業場所（{cwd}）から読めません`'
+        message: '`{id} はこの作業場所（{cwd}）から参照できません`'
         notes: '`available` に使える配信元、`next_steps` に `describe()` で使える配信元を見ること'
       - name: WorktreeNotMatchedError
         condition: '`worktree` が配信元の `worktrees` に当たらない'
-        message: '`{worktree} は {id} のワークツリーに当たりません`'
+        message: '`{worktree} は {id} のワークツリーに該当しません`'
       - name: InvalidArgumentError
         condition: 複数の配信元に `ref`・`worktree` を渡した、または Git の管理外の配信元に `ref` を渡した
-        message: '`ref は 1 つの Git の配信元を指すときだけ渡せます`'
+        message: '`ref は 1 つの Git の配信元を指すときだけ指定できます`'
       - name: RefNotFoundError
         condition: '`ref`（渡されなければ `default_ref`）を commit に解けない'
         message: 履歴の『リビジョンの解決』のまま
@@ -550,7 +550,7 @@ functions:
         message: '`{id} にはこの作業場所（{cwd}）から書き込めません`'
       - name: WorktreeNotMatchedError
         condition: '`worktree` が配信元の `worktrees` に当たらない'
-        message: '`{worktree} は {id} のワークツリーに当たりません`'
+        message: '`{worktree} は {id} のワークツリーに該当しません`'
       - name: TargetIsCloneError
         condition: Git の配信元で、書く先がクローン本体になる
         message: '`{clone} はクローン本体です。worktree でワークツリーを指してください`'

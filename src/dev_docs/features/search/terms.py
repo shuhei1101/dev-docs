@@ -22,9 +22,9 @@ def list_match_words(
 
 
 def render_match_words_markdown(result: MatchWordsResult) -> str:
-    """用語の一覧の結果を `| 語 | 文書 | 種類 |` の表にする。"""
+    """用語の一覧の結果を `| 単語 | 文書 | 種類 |` の表にする。"""
     if not result.words:
         return "用語はありません"
-    lines = ["| 語 | 文書 | 種類 |", "| --- | --- | --- |"]
+    lines = ["| 単語 | 文書 | 種類 |", "| --- | --- | --- |"]
     lines.extend(f"| {word.word} | {word.id} | {word.kind} |" for word in result.words)
     return "\n".join(lines)
