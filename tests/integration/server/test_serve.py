@@ -692,3 +692,123 @@ def test_normal_when_requested_while_loading(
     assert answered_before is False
     assert responses["docs"].status_code == 200
     assert responses["docs"].json()["path"] == "docs/doc-1"
+
+
+IGNORED_KIND_ROW = "  - id: kind_a\n    paths: [kind_a/*.yaml]\n    schema: schemas/a.schema.yaml\n"
+
+
+def test_normal_when_ignored_config_first(
+    make_source: Callable[..., Any],
+    make_server: Callable[..., Any],
+    commit_all: Callable[..., str],
+    run_git: Callable[..., str],
+    sample_file_set: Callable[..., dict[str, str]],
+    sample_config_text: Callable[..., str],
+) -> None:
+    """先頭の設定が default_ref に無く .gitignore で無視されていれば、設定をディスクから、スキーマを default_ref から読む（正常系）。"""
+    # 準備
+    files = {k: v for k, v in sample_file_set().items() if k != "dev-docs.yaml"}
+    files[".gitignore"] = "dev-docs.local.yaml\n"
+    sample = make_source("sample", files, config_names=("dev-docs.local.yaml",))
+    run_git(sample.folder, "branch", "master")
+    schema = (sample.folder / "schemas" / "sample.schema.yaml").read_text(encoding="utf-8")
+    commit_all(sample.folder, {"schemas/a.schema.yaml": schema})
+    run_git(sample.folder, "checkout", "master")
+    local = sample.folder / "dev-docs.local.yaml"
+    local.write_text(sample_config_text(IGNORED_KIND_ROW), encoding="utf-8")
+    # 実行
+    env = make_server(sample)
+    result = env.call("describe", cwd=str(sample.folder), source="sample", format="json")
+    # 検証
+    assert result.is_error is False
+    data = result.data()
+    assert "kind_a" in {kind["id"] for kind in data["kinds"]}
+    assert not (sample.folder / "schemas" / "a.schema.yaml").exists()
+    assert env.handlers.registry.get("sample").root == sample.folder
+
+
+def test_normal_when_first_config_not_committed(
+    make_source: Callable[..., Any],
+    make_server: Callable[..., Any],
+    sample_file_set: Callable[..., dict[str, str]],
+    sample_config_text: Callable[..., str],
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """.gitignore していない先頭の設定が default_ref に無い配信元を外して配信する（正常系）。"""
+    # 準備
+    sample = make_source("sample")
+    files = {k: v for k, v in sample_file_set().items() if k != "dev-docs.yaml"}
+    uncommitted = make_source("uncommitted", files)
+    (uncommitted.folder / "dev-docs.yaml").write_text(
+        sample_config_text(name="uncommitted"), encoding="utf-8"
+    )
+    caplog.set_level(logging.ERROR)
+    # 実行
+    env = make_server(sample, uncommitted)
+    # 検証
+    assert env.client.get("/_api/sources/uncommitted/docs").status_code == 404
+    assert env.client.get("/_api/sources/sample/docs").status_code == 200
+    assert "uncommitted: config[0]: develop に dev-docs.yaml がありません" in caplog.text
+
+
+def test_normal_when_xdg_dirs_set(
+    make_source: Callable[..., Any],
+    free_port: Callable[[], int],
+    start_serve: Callable[..., Any],
+    wait_until_serving: Callable[..., None],
+    tmp_path: Path,
+) -> None:
+    """DEV_DOCS_CONFIG が無ければ XDG_CONFIG_HOME の下の端末の設定を読み、状態とログを決めた置き場に書く（正常系）。"""
+    # 準備
+    sample = make_source("sample")
+    config_home = tmp_path / "xdg-config"
+    state_home = tmp_path / "xdg-state"
+    override = tmp_path / "override"
+    configured = tmp_path / "configured"
+    home = tmp_path / "home"
+    settings = config_home / "dev-docs" / "settings.yaml"
+    settings.parent.mkdir(parents=True)
+    base = (
+        'version: "1"\n'
+        f"clone: {tmp_path / 'clone'}\n"
+        "sources:\n"
+        "  - id: sample\n"
+        f"    config: [{sample.config[0]}]\n"
+        f"    scope: {{read: [{sample.folder}]}}\n"
+    )
+    env = {
+        "XDG_CONFIG_HOME": str(config_home),
+        "XDG_STATE_HOME": str(state_home),
+        "HOME": str(home),
+    }
+
+    def serve_once(extra_env: dict[str, str]) -> int:
+        port = free_port()
+        process = start_serve(None, port, extra_env={**env, **extra_env})
+        wait_until_serving(process, port)
+        code = httpx.get(
+            f"http://127.0.0.1:{port}/_api/sources/sample/docs", timeout=30
+        ).status_code
+        process.terminate()
+        process.wait(timeout=15)
+        return code
+
+    # 実行
+    settings.write_text(base, encoding="utf-8")
+    first = serve_once({})
+    first_log = (state_home / "dev-docs" / "logs" / "dev-docs.log").is_file()
+    shutil.rmtree(state_home)
+    settings.write_text(base + f"state_dir: {configured}\n", encoding="utf-8")
+    second = serve_once({"DEV_DOCS_STATE_DIR": str(override)})
+    settings.write_text(base, encoding="utf-8")
+    third = serve_once({"XDG_STATE_HOME": "rel"})
+    # 検証
+    assert first == 200
+    assert first_log
+    assert second == 200
+    assert (override / "logs" / "dev-docs.log").is_file()
+    assert not configured.exists()
+    assert third == 200
+    assert (home / ".local" / "state" / "dev-docs" / "logs" / "dev-docs.log").is_file()
+    assert not (Path.cwd() / "rel").exists()
+    assert not state_home.exists()
