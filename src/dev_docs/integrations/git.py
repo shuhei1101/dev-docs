@@ -88,3 +88,14 @@ def main_repo_root(path: Path) -> Path | None:
         return None
     text = output if isinstance(output, str) else output.decode("utf-8")
     return normalize_path(str(Path(text.rstrip("\n")).parent))
+
+
+def is_ignored(path: Path, top: Path) -> bool:
+    """ファイルが `.gitignore` などで無視されているかを返す。"""
+    try:
+        relative = Path(os.path.abspath(path)).relative_to(top).as_posix()
+        run_git(["check-ignore", "-q", "--", relative], cwd=top)
+    except GitError, ValueError, FileNotFoundError, NotADirectoryError:
+        # 無視されていない（終了コード 1）と、失敗（128）は区別しない
+        return False
+    return True

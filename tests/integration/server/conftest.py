@@ -603,12 +603,15 @@ def start_serve() -> Iterator[Callable[..., subprocess.Popen[str]]]:
     """`dev-docs serve` を子プロセスで起動する関数を返す（終了時に止める）。"""
     processes: list[subprocess.Popen[str]] = []
 
-    def _start(settings: Path, port: int) -> subprocess.Popen[str]:
-        env = {
-            **os.environ,
-            "DEV_DOCS_CONFIG": str(settings),
-            "DEV_DOCS_PORT": str(port),
-        }
+    def _start(
+        settings: Path | None, port: int, *, extra_env: dict[str, str] | None = None
+    ) -> subprocess.Popen[str]:
+        # settings が None のときは DEV_DOCS_CONFIG を渡さず、既定のパスを読ませる
+        env = {key: value for key, value in os.environ.items() if key != "DEV_DOCS_CONFIG"}
+        env["DEV_DOCS_PORT"] = str(port)
+        if settings is not None:
+            env["DEV_DOCS_CONFIG"] = str(settings)
+        env.update(extra_env or {})
         process = subprocess.Popen(
             [sys.executable, "-m", "dev_docs", "serve"],
             env=env,

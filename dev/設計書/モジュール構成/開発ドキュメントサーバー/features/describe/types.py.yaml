@@ -32,7 +32,7 @@ data_models:
         type: Literal['markdown', 'json']
         access: 公開
         default: '"markdown"'
-        description: 返す形式
+        description: 返却する形式
       - name: cwd
         title: 作業場所
         type: str | None
@@ -44,7 +44,7 @@ data_models:
         type: bool
         access: 公開
         default: 'False'
-        description: '`True` のとき、`scope` に当たらない配信元を `outside_read` が真なら作業範囲の外（参考）として読む（`source` が ID 1 つのとき）。`source` を省いたときは、使える配信元の一覧に作業範囲の外で読める配信元の一覧を加える'
+        description: '`True` のとき、`scope` に該当しない配信元を `outside_read` が真なら作業範囲の外（参考）として参照する（`source` が ID 1 つのとき）。`source` を省いたときは、使用できる配信元の一覧に作業範囲の外で参照できる配信元の一覧を加える'
   - name: KindSummary
     title: 種類の概要
     container: features/describe/types.py

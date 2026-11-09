@@ -24,9 +24,9 @@ class DescribeRequest(BaseModel):
     outside_scope: bool = Field(
         default=False,
         description=(
-            "true のとき、scope に当たらない配信元を outside_read が真なら"
-            "作業範囲の外（参考）として読む（source が ID 1 つのとき）。"
-            "source を省くと、使える配信元の一覧に作業範囲の外で読める配信元の一覧を加える"
+            "true のとき、scope に該当しない配信元を outside_read が真なら"
+            "作業範囲の外（参考）として参照する（source が ID 1 つのとき）。"
+            "source を省くと、使用できる配信元の一覧に作業範囲の外で参照できる配信元の一覧を加える"
         ),
     )
 

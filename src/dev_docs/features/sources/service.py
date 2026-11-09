@@ -34,7 +34,7 @@ from dev_docs.features.sources.types import (
     SourceConfig,
     SourceStatus,
 )
-from dev_docs.integrations.git import main_repo_root
+from dev_docs.integrations.git import is_ignored, main_repo_root
 from dev_docs.integrations.git import repo_root as git_repo_root
 from dev_docs.integrations.scripts import ScriptNotFoundError, check_runnable
 from dev_docs.shared.errors import DevDocsError, ValidationFailedError, Violation
@@ -408,6 +408,9 @@ def read_default_ref_config(first: Path) -> tuple[str, str] | None:
         ) from error
     relative = Path(os.path.abspath(first)).relative_to(top).as_posix()
     text = read_file_at(top, commit, relative)
+    if text is None and first.is_file() and is_ignored(first, top):
+        # どのブランチにも入らない設定は、ディスクの内容で組み立てる
+        text = first.read_text(encoding="utf-8")
     if text is None:
         rule = f"{default_ref} に {relative} がありません"
         raise ValidationFailedError(
@@ -592,10 +595,16 @@ def load_source_at(source: ServedSource, root: Path) -> ServedSource:
     files: list[Path] = []
     for file in source.config_files:
         try:
-            files.append(root / file.relative_to(base))
+            target = root / file.relative_to(base)
         except ValueError:
             # 配信元のリポジトリの外のファイルはそのまま使う
             files.append(file)
+            continue
+        # 無視されている設定はワークツリーに無いので、クローン本体のファイルを使う
+        if not target.is_file() and source.repo_root and is_ignored(file, source.repo_root):
+            files.append(file)
+            continue
+        files.append(target)
     relative_root = source.root.relative_to(base) if source.root.is_relative_to(base) else Path()
     served, _, violations = assemble_source(
         files,

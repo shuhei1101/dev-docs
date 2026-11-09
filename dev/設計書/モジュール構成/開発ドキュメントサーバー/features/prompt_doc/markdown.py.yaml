@@ -49,7 +49,7 @@ functions:
     exceptions:
       - name: PromptYamlError
         condition: YAML として読めない
-        message: '`YAML を読めません: {行}:{列}: {理由}`'
+        message: '`YAML を読み込めません: {行}:{列}: {理由}`'
       - name: InvalidPrompt
         condition: 変換に使うキーが無いか型が違う（YAML が辞書でないときも）
         message: '`{キーのパス}: {理由}`（誤りごとに 1 行）'
@@ -146,7 +146,7 @@ functions:
       type: list[str]
       description: 表の行
     process: |-
-      1. 列を変数・型・必須・例・説明・出どころにする
+      1. 列を変数・型・必須・例・説明・出典にする
       2. 変数のパスの展開（`flatten_vars`）の順に 1 行ずつ置く。例は YAML のフロー形式の 1 行、必須は `✅`、無い値は `-`。セルの `|` と改行はエスケープする
     unit_tests:
       - name: test_var_table
@@ -154,7 +154,7 @@ functions:
         summary: 入れ子のパスと例
         condition: '`traits`（`items.properties` に `name`、`example` に 1 件）'
         mock: なし
-        expected: 見出しの行が `\| 変数 \| 型 \| 必須 \| 例 \| 説明 \| 出どころ \|`、`traits[].name` の行があり、`traits` の例がフロー形式の 1 行
+        expected: 見出しの行が `\| 変数 \| 型 \| 必須 \| 例 \| 説明 \| 出典 \|`、`traits[].name` の行があり、`traits` の例がフロー形式の 1 行
   - name: template_html
     title: テンプレートの本文の HTML
     kind: 関数
@@ -248,7 +248,7 @@ functions:
       1. `problems` がある場合、`[!CAUTION]` に「この組は描画できません。」と理由の箇条書きを置いて返す
       2. `kind` が `hook` で `char_count` が `HOOK_TEXT_WARN_CHARS` を超える場合、`[!WARNING]` に字数と上限を置く
       3. メッセージごとに、`role` があれば `**{role}**` の行を置き、`marked` を `html.escape` してから `VALUE_MARK_PATTERN` を `<mark data-hint="{ヒント}">{値}</mark>`（ヒントは `{パス}: {説明}` をエスケープしたもの。説明は `template_html` と同じく、定義に無い `[]` で終わるパスは配列の `items` から引く）に置き換えた `<pre><code>` を `<!-- html -->` で囲んで置く
-      4. `{字数の見出し}: {char_count:,} 字 / 使わなかった部品: {unused か なし}` の行を置く。字数の見出しは、`lang` が注入する言語なら `注入する本文（{lang}）`、それ以外は `{lang} の本文`
+      4. `{字数の見出し}: {char_count:,} 字 / 使用しなかった部品: {unused か なし}` の行を置く。字数の見出しは、`lang` が注入する言語なら `注入する本文（{lang}）`、それ以外は `{lang} の本文`
     unit_tests:
       - name: test_example_body
         case: 正常

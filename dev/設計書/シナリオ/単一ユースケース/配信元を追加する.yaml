@@ -560,6 +560,29 @@ scenarios:
       - '`describe(source)` のワークツリーの一覧に `.claude/worktrees/develop` が載る'
       - '`worktree` に `.claude/worktrees/x` のパスを渡した `search_docs` が、そのワークツリーの文書を返す'
     test: test_normal_when_worktree_config_registered
+  - name: 正常シナリオ（.gitignore した設定を指して追加する）
+    setup:
+      - name: Mock
+        description: なし（実環境で実行）
+      - name: 配信元にするリポジトリ
+        description: '`develop` に文書とスキーマを commit し、`dev-docs.yaml` を持たない Git のリポジトリ。メインのリポジトリの直下に `.gitignore` した `dev-docs.local.yaml` を置く'
+        notes: '`dev-docs.local.yaml` の `default_ref` は `develop`'
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        actor U as 利用者
+        participant S as dev-docs のサーバー
+        participant G as 配信元のリポジトリ
+
+        U->>S: 端末の設定の sources[].config に dev-docs.local.yaml を書き、reload する
+        S->>G: dev-docs.local.yaml が develop に無く、.gitignore で無視されていると確かめる
+        S->>G: ディスクの dev-docs.local.yaml と、develop の文書・スキーマで組み立てる
+        S-->>U: 配信の開始
+      ```
+    expected:
+      - '`reload` の後、`describe(source)` がその配信元を返し、エラーが無い'
+      - '`search_docs` が `develop` に commit した文書を返す'
+    test: test_normal_when_ignored_config_registered
   - name: 異常シナリオ（records の行のスキーマが行に合わない）
     setup:
       - name: Mock

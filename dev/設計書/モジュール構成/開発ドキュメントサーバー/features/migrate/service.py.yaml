@@ -79,7 +79,7 @@ functions:
         message: '`{ファイル}: {理由}`'
       - name: ConfigNewerError
         condition: 対象の `version` が `target.current` より新しい
-        message: '`{ファイル}: 設定のバージョン {対象} が dev-docs の読める {現在} より新しい。dev-docs を更新してください`'
+        message: '`{ファイル}: 設定のバージョン {対象} が dev-docs で読み込める {現在} より新しい。dev-docs を更新してください`'
     unit_tests:
       - name: test_plan_migration
         case: 正常
@@ -180,7 +180,7 @@ functions:
         message: '違反を `{キーのパス}: {理由}` で 1 行ずつ並べる（`dev-docs` は `/dev-docs:setup` の案内を続ける）'
       - name: MigrationFailedError
         condition: 読んだ後に対象のファイルが変わった
-        message: '`{ファイル}: 読んだ後に変わったため書き換えません`'
+        message: '`{ファイル}: 読み込んだ後に変わったため書き換えません`'
     unit_tests:
       - name: test_apply_migration
         case: 正常

@@ -514,6 +514,31 @@ def test_load_source_at_when_config_missing(cloned_source: ServedSource, worktre
     assert [v.path for v in exc_info.value.violations] == ["config[0]"]
 
 
+def test_load_source_at_when_ignored_config(
+    git_repo: Callable[..., Path],
+    run_git: Callable[..., str],
+    sample_files: dict[str, str],
+    make_served_source: Callable[..., ServedSource],
+    tmp_path: Path,
+) -> None:
+    """無視した先頭の設定はクローン本体のものを使う（正常系）。"""
+    # 準備
+    files = {k: v for k, v in sample_files.items() if k != "dev-docs.yaml"}
+    root = git_repo({**files, ".gitignore": "dev-docs.local.yaml\n"})
+    local = root / "dev-docs.local.yaml"
+    local.write_text(sample_files["dev-docs.yaml"], encoding="utf-8")
+    source = make_served_source(
+        id="sample", root=root, config_files=[local], is_git=True, repo_root=root
+    )
+    path = tmp_path / "wt"
+    run_git(root, "worktree", "add", "-b", "feat/x", str(path))
+    # 実行
+    result = load_source_at(source, path)
+    # 検証
+    assert result.config_files[0] == local
+    assert result.root == path
+
+
 def test_load_source_at_when_invalid(cloned_source: ServedSource, worktree: Path) -> None:
     """検証に通らない（異常系）。"""
     # 準備
@@ -803,3 +828,39 @@ def test_read_default_ref_config_when_ref_missing(
     with pytest.raises(ValidationFailedError, match="none を解けません") as exc_info:
         read_default_ref_config(root / "dev-docs.yaml")
     assert [item.path for item in exc_info.value.violations] == ["default_ref"]
+
+
+def test_read_default_ref_config_when_ignored(
+    git_repo: Callable[..., Path], run_git: Callable[..., str], sample_files: dict[str, str]
+) -> None:
+    """無視されている先頭の設定はディスクから読む（正常系）。"""
+    from dev_docs.features.sources.service import read_default_ref_config
+
+    # 準備
+    files = {k: v for k, v in sample_files.items() if k != "dev-docs.yaml"}
+    root = git_repo({**files, ".gitignore": "dev-docs.local.yaml\n"})
+    text = sample_files["dev-docs.yaml"] + "default_ref: develop\n"
+    (root / "dev-docs.local.yaml").write_text(text, encoding="utf-8")
+    develop = run_git(root, "rev-parse", "develop").strip()
+    # 実行
+    result = read_default_ref_config(root / "dev-docs.local.yaml")
+    # 検証
+    assert result == (develop, text)
+
+
+def test_read_default_ref_config_when_not_committed(
+    git_repo: Callable[..., Path], sample_files: dict[str, str]
+) -> None:
+    """無視していない先頭の設定が default_ref に無い（異常系）。"""
+    from dev_docs.features.sources.service import read_default_ref_config
+
+    # 準備
+    files = {k: v for k, v in sample_files.items() if k != "dev-docs.yaml"}
+    root = git_repo(files)
+    (root / "dev-docs.yaml").write_text(sample_files["dev-docs.yaml"], encoding="utf-8")
+    # 実行・検証
+    with pytest.raises(
+        ValidationFailedError, match=r"develop に dev-docs\.yaml がありません"
+    ) as exc_info:
+        read_default_ref_config(root / "dev-docs.yaml")
+    assert [item.path for item in exc_info.value.violations] == ["config[0]"]
