@@ -9,12 +9,11 @@ if ! sh scripts/dev-docs-server-wait.sh loaded; then
 fi
 
 # 稼働中のサーバーが、develop の worktree の decisions.py の更新より後に起動しているか
-pid=$(ss -ltnpH 'sport = :8781' 2>/dev/null | sed -n 's/.*pid=\([0-9]*\).*/\1/p' | head -n 1)
-if [ -z "$pid" ] || [ ! -f "$DEVELOP/$FIXED" ]; then
-  echo "新しいコードのサーバー: failed（待ち受けるプロセスか $FIXED が無い）"
+started=$(sh scripts/dev-docs-server-wait.sh started 2>/dev/null)
+if [ -z "$started" ] || [ ! -f "$DEVELOP/$FIXED" ]; then
+  echo "新しいコードのサーバー: failed（サーバーの起動時刻か $FIXED が無い）"
   exit 1
 fi
-started=$(date -d "$(ps -o lstart= -p "$pid")" +%s)
 fixed_at=$(stat -c %Y "$DEVELOP/$FIXED")
 if [ "$started" -gt "$fixed_at" ]; then
   echo "新しいコードのサーバー: ok（起動 $started > 更新 $fixed_at）"

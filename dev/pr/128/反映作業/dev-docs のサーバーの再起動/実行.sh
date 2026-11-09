@@ -7,11 +7,9 @@ HEADERS_ACCEPT='Accept: application/json, text/event-stream'
 HEADERS_TYPE='Content-Type: application/json'
 RESTART='{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"restart","arguments":{}}}'
 
-# 127.0.0.1:8781 で待ち受けるプロセスの起動時刻（UNIX 時刻）。無ければ空
+# 127.0.0.1:8781 で待ち受けるサーバーが最後に起動した時刻（UNIX 時刻）。無ければ空
 server_started() {
-  pid=$(ss -ltnpH 'sport = :8781' 2>/dev/null | sed -n 's/.*pid=\([0-9]*\).*/\1/p' | head -n 1)
-  [ -n "$pid" ] || return 0
-  date -d "$(ps -o lstart= -p "$pid")" +%s
+  sh scripts/dev-docs-server-wait.sh started 2>/dev/null
 }
 
 # 新しいコードのサーバーは、develop の worktree の修正したファイルが更新された後に起動している
@@ -35,7 +33,7 @@ FIXED_AT=$(stat -c %Y "$DEVELOP/$FIXED")
 if [ -n "$(server_started)" ]; then
   echo "稼働中のサーバー: ok"
 else
-  echo "稼働中のサーバー: failed（127.0.0.1:8781 で待ち受けるプロセスが無い）"
+  echo "稼働中のサーバー: failed（127.0.0.1:8781 で待ち受けていないか、ログに待ち受けを始めた行が無い）"
   exit 1
 fi
 
