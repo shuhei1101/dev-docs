@@ -232,6 +232,7 @@ def build_source_config(value: dict[str, Any]) -> SourceConfig:
     related = value.get("related", {})
     diff = value.get("diff", {})
     github = value.get("github", {})
+    decisions = value.get("decisions", {})
     options: dict[str, Any] = {}
     for key in ("version", "enabled", "default_ref", "visibility", "worktrees", "nav"):
         if key in value:
@@ -246,6 +247,8 @@ def build_source_config(value: dict[str, Any]) -> SourceConfig:
         options["github_issue_labels"] = list(github["issue_labels"])
     if "format" in ids:
         options["ids_format"] = ids["format"]
+    if "folders" in decisions:
+        options["decision_folders"] = list(decisions["folders"])
     return SourceConfig(
         name=value["name"],
         description=value.get("description", ""),

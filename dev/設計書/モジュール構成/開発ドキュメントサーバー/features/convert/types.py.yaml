@@ -400,3 +400,9 @@ data_models:
         access: 公開
         default: 常に `None` を返す関数
         description: 文書の ID と項目のパスから、リンク先の文書でその項目が出す見出し（無ければ `None`）を引く。参照のリンクと本文の id のリンクのアンカーに使う
+      - name: decisions
+        title: リンクにする検討事項
+        type: frozenset[str]
+        access: 公開
+        default: 空
+        description: 検討事項の文書を探す（`find_decisions`）が返した検討事項の ID。`decisions` の値のうち、この ID だけを検討事項の文書へのリンクにする

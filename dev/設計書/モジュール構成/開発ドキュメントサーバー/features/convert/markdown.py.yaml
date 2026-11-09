@@ -161,6 +161,7 @@ functions:
          - キーが `EXAMPLE_SUFFIX` で終わる値が続く間は、`<!-- tabs -->` の範囲に、値ごとに今の深さの見出し（項目の `title`）と本文の書き換えにかけた値を置く
          - `x-shape` が無いスカラーは、参照のリンクに当たればそのリンクを、当たらなければ本文の書き換えにかけた値を使う。改行を含むか ``` で始まる値は `**{title}**` の行の次のブロックに、それ以外は `**{title}**: {値}` の段落にする
          - 文字列のリストは、要素ごとに参照のリンクか本文の書き換えにかけた箇条書き、オブジェクトは子を順に組み立てる
+         - キーが `DECISIONS_KEY` のリストは、先に検討事項のリンクにかけてから組み立てる
       3. 図の元データの表は、閉じた表（`closed=True`）にし、`LABEL_KEYS` の列を先頭へ移し、`DIAGRAM_HIDDEN_KEYS` のうちその表にある列を `hidden` にする
       4. 行を空行で繋いで返す
     unit_tests:
@@ -230,6 +231,12 @@ functions:
         condition: '`x-shape: diagram`・`x-diagram: er` の `er`（`columns` を持たない実体 `顧客`）と、`title: 顧客` のテーブルを持つ `tables`'
         mock: なし
         expected: '`<!-- er -->` の範囲の JSON の `顧客` の `columns` が `tables` のテーブルの列'
+      - name: test_schema_to_markdown_when_decisions
+        case: 正常
+        summary: 箇条書きの検討事項のリンク
+        condition: '`decisions: [D-1, D-2]`（`x-shape` 無し）と `tags: [D-1]`、文脈の `decisions` が `{"D-1"}`'
+        mock: なし
+        expected: '`decisions` の `D-1` だけが `[D-1](…_decisions/D-1)` で、`D-2` と `tags` の `D-1` は文字のまま'
   - name: item_heading
     title: 項目の見出し
     kind: 関数
@@ -345,7 +352,7 @@ functions:
       description: '表のキーのマーカーと、`<!-- table: data … -->` で囲んだ表'
     process: |-
       1. 列をスキーマの `properties` の順に決める（要素のどれも値を持たない列と、スキーマに `x-hidden: true` を持つ列は除く）。`first` が列にあれば先頭へ移す
-      2. セルは、真偽の値は `CHECK_MARK` か空、参照のリンクに当たる文字列はリンク、それ以外のスカラーはそのまま（`|` はエスケープ、改行は `<br>`）、文字列のリストは `・` で繋ぐ。`table` を持つオブジェクト（外部キー）は、`table` の値を最後の `.` でテーブルとカラムに分け、テーブルが `{分類}/{テーブル}` なら同じフォルダの `{分類}.yaml` の文書へのリンク、そうでなければ、テーブル名を `table_titles` で論理名にし（当たらなければテーブル名のまま）、`anchors` でその論理名から引いた見出しのアンカー（見出しのアンカー）へのリンク（どちらも引けなければ値の文字のまま）、それ以外のオブジェクトは `{キー}: {値}` を `、` で繋ぎ、オブジェクトのリストは要素ごとのセルを `<br>` で繋ぐ
+      2. セルは、真偽の値は `CHECK_MARK` か空、参照のリンクに当たる文字列はリンク、それ以外のスカラーはそのまま（`|` はエスケープ、改行は `<br>`）、文字列のリストは `・` で繋ぐ（列のキーが `DECISIONS_KEY` のリストは、先に検討事項のリンクにかける）。`table` を持つオブジェクト（外部キー）は、`table` の値を最後の `.` でテーブルとカラムに分け、テーブルが `{分類}/{テーブル}` なら同じフォルダの `{分類}.yaml` の文書へのリンク、そうでなければ、テーブル名を `table_titles` で論理名にし（当たらなければテーブル名のまま）、`anchors` でその論理名から引いた見出しのアンカー（見出しのアンカー）へのリンク（どちらも引けなければ値の文字のまま）、それ以外のオブジェクトは `{キー}: {値}` を `、` で繋ぎ、オブジェクトのリストは要素ごとのセルを `<br>` で繋ぐ
       3. 表のマーカーの引数は、`data` に、`closed` なら `closed`、隠す列があれば `+columns hide={列名,…}`、`WIDE_KEYS` の列があれば `wide={列名,…}` を続ける（空白を含む列名は記載しない）
       4. `<!-- dev-docs-table: {table_key} -->`・表のマーカー・見出しの行・区切りの行・データの行・`<!-- /table -->` の順に置いて返す
     unit_tests:
@@ -391,6 +398,12 @@ functions:
         condition: '`name`・`description` の列の行'
         mock: なし
         expected: 'マーカーに `wide={description の列名}` がある'
+      - name: test_render_table_when_decisions
+        case: 正常
+        summary: 表のセルの検討事項のリンク
+        condition: '`decisions` の列の値が `[D-1, D-2]` の行、文脈の `decisions` が `{"D-1"}`'
+        mock: なし
+        expected: 'セルが `[D-1](…_decisions/D-1)・D-2`'
   - name: render_attributes
     title: 属性の表の組み立て
     kind: 関数

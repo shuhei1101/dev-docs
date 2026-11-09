@@ -135,3 +135,5 @@ class RenderContext:
     table_titles: Mapping[str, str] = field(default_factory=dict)
     # 文書の ID と項目のパスから、リンク先の文書でその項目が出す見出し。参照と本文の id のリンクのアンカーに使う
     item_heading: Callable[[str, str], str | None] = field(default=lambda document_id, item: None)
+    # 検討事項の文書を探した結果の ID。`decisions` の値のうち、この ID だけを検討事項の文書へのリンクにする
+    decisions: frozenset[str] = field(default_factory=frozenset)
