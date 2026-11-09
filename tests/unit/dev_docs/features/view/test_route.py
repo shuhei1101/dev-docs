@@ -175,3 +175,66 @@ def test_build_view_router_when_loading(
     assert observed["ticks"] == 10
     assert observed["done_before"] == [False, False]
     assert [response.status_code for response in responses] == [200, 200]
+
+
+def test_build_view_router_when_other_source_loading(
+    monkeypatch: Any,
+    make_source_dir: Callable[..., Path],
+    make_terminal_config: Callable[..., TerminalConfig],
+    make_entry: Callable[..., SourceEntry],
+    make_view_env: Callable[..., SimpleNamespace],
+) -> None:
+    """読み込み済みの配信元は、他の配信元の読み込み中でも答える（正常系）。"""
+    # 準備
+    import threading
+
+    from dev_docs.features.sources import registry as registry_module
+
+    sample = make_source_dir("sample")
+    notes = make_source_dir("notes")
+    terminal = make_terminal_config(
+        sources=[
+            make_entry(str(sample), source_id="sample"),
+            make_entry(str(notes), source_id="notes"),
+        ]
+    )
+    entered = threading.Event()
+    release = threading.Event()
+    original = registry_module.load_source
+
+    def blocking_load(entry: SourceEntry, *, index: int) -> Any:
+        if entry.id == "notes":
+            entered.set()
+            release.wait(timeout=5)
+        return original(entry, index=index)
+
+    monkeypatch.setattr(registry_module, "load_source", blocking_load)
+    registry = SourceRegistry(loading=True)
+    handlers = dataclasses.replace(make_view_env(root=sample.parent).handlers, registry=registry)
+    app = FastAPI()
+    register_error_handlers(app)
+    app.include_router(build_view_router(handlers))
+    observed: dict[str, Any] = {}
+
+    async def scenario() -> httpx.Response:
+        worker = asyncio.ensure_future(asyncio.to_thread(registry.load, terminal))
+        await asyncio.to_thread(entered.wait, 5)
+        transport = httpx.ASGITransport(app=app)
+        async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+            observed["sample"] = await asyncio.wait_for(
+                client.get("/_api/sources/sample/docs"), timeout=5
+            )
+            notes_request = asyncio.ensure_future(client.get("/_api/sources/notes/docs"))
+            await asyncio.sleep(0.1)
+            observed["notes_before"] = notes_request.done()
+            release.set()
+            response = await asyncio.wait_for(notes_request, timeout=10)
+        await asyncio.wait_for(worker, timeout=10)
+        return response
+
+    # 実行
+    notes_response = asyncio.run(scenario())
+    # 検証
+    assert observed["sample"].status_code == 200
+    assert observed["notes_before"] is False
+    assert notes_response.status_code == 200

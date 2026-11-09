@@ -300,3 +300,382 @@ def test_source_registry_reload_when_failed(
     assert [str(error) for error in errors] == ["読めない"]
     assert registry.loading is False
     assert registry.served() == []
+
+
+class _Loader:
+    """名前ごとに結果を返し、読んだ順を記録し、指定した名前で止まる配信元の読み込みの偽物。"""
+
+    def __init__(
+        self,
+        make_served_source: Callable[..., ServedSource],
+        make_status: Callable[..., SourceStatus],
+        *,
+        blocked: tuple[str, ...] = (),
+        failing: tuple[str, ...] = (),
+        names: dict[str, str] | None = None,
+    ) -> None:
+        self.order: list[str] = []
+        self.entered = {name: threading.Event() for name in blocked}
+        self.release = {name: threading.Event() for name in blocked}
+        self._failing = failing
+        self._names = names or {}
+        self._make_served_source = make_served_source
+        self._make_status = make_status
+
+    def __call__(self, entry: SourceEntry, *, index: int) -> LoadResult:
+        # 設定のパス `/tmp/{名前}/dev-docs.yaml` から名前を取る
+        name = Path(entry.config[0]).parent.name
+        self.order.append(name)
+        if name in self.entered:
+            self.entered[name].set()
+            self.release[name].wait(timeout=5)
+        if name in self._failing:
+            raise RuntimeError(f"{name} を読めない")
+        source_id = entry.id or self._names.get(name, name)
+        return (
+            self._make_served_source(id=source_id, root=Path("/tmp") / name),
+            self._make_status(source_id, index),
+        )
+
+
+def _entries(
+    make_entry: Callable[..., SourceEntry], *names: str, with_id: bool = True
+) -> list[SourceEntry]:
+    """名前ごとに `/tmp/{名前}/dev-docs.yaml` を読む行を作る。"""
+    return [
+        make_entry(f"/tmp/{name}/dev-docs.yaml", source_id=name if with_id else None)
+        for name in names
+    ]
+
+
+def test_source_registry_load(
+    monkeypatch: pytest.MonkeyPatch,
+    make_terminal_config: Callable[..., TerminalConfig],
+    make_entry: Callable[..., SourceEntry],
+    make_served_source: Callable[..., ServedSource],
+    make_status: Callable[..., SourceStatus],
+) -> None:
+    """行ごとに読み込み、全ての行を読み込むと読み込み中が終わる（正常系）。"""
+    # 準備
+    results: list[LoadResult] = [
+        (make_served_source(id="a"), make_status("a", 0)),
+        (make_served_source(id="b"), make_status("b", 1)),
+        (None, make_status("c", 2, "disabled")),
+    ]
+    monkeypatch.setattr(registry_module, "load_source", lambda entry, *, index: results[index])
+    terminal = make_terminal_config(sources=_entries(make_entry, "a", "b", "c"))
+    registry = SourceRegistry(loading=True)
+    # 実行
+    registry.load(terminal)
+    # 検証
+    assert registry.loading is False
+    assert [(status.id, status.status) for status in registry.statuses()] == [
+        ("a", "serving"),
+        ("b", "serving"),
+        ("c", "disabled"),
+    ]
+    assert len(registry.served()) == 2
+
+
+def test_source_registry_load_when_row_loading(
+    monkeypatch: pytest.MonkeyPatch,
+    make_terminal_config: Callable[..., TerminalConfig],
+    make_entry: Callable[..., SourceEntry],
+    make_served_source: Callable[..., ServedSource],
+    make_status: Callable[..., SourceStatus],
+) -> None:
+    """読み込んだ行は、他の行の読み込み中でも引ける（正常系）。"""
+    # 準備
+    loader = _Loader(make_served_source, make_status, blocked=("b",))
+    monkeypatch.setattr(registry_module, "load_source", loader)
+    terminal = make_terminal_config(sources=_entries(make_entry, "a", "b"))
+    registry = SourceRegistry(loading=True)
+    worker = threading.Thread(target=registry.load, args=(terminal,))
+    worker.start()
+    loader.entered["b"].wait(timeout=5)
+    # 実行
+    result = registry.get("a")
+    loading = registry.loading
+    loader.release["b"].set()
+    worker.join(timeout=5)
+    # 検証
+    assert result.id == "a"
+    assert loading is True
+
+
+def test_source_registry_load_when_requested(
+    monkeypatch: pytest.MonkeyPatch,
+    make_terminal_config: Callable[..., TerminalConfig],
+    make_entry: Callable[..., SourceEntry],
+    make_served_source: Callable[..., ServedSource],
+    make_status: Callable[..., SourceStatus],
+) -> None:
+    """待っている要求が指す行を先に読み込む（正常系）。"""
+    # 準備
+    loader = _Loader(make_served_source, make_status, blocked=("a",))
+    monkeypatch.setattr(registry_module, "load_source", loader)
+    terminal = make_terminal_config(sources=_entries(make_entry, "a", "b", "c"))
+    waiting = threading.Event()
+    registry = SourceRegistry(loading=True, on_waiting=waiting.set)
+    observed: dict[str, object] = {}
+
+    async def scenario() -> None:
+        worker = threading.Thread(target=registry.load, args=(terminal,))
+        worker.start()
+        await asyncio.to_thread(loader.entered["a"].wait, 5)
+        waiter = asyncio.ensure_future(registry.wait_for(ids=["c"]))
+        await asyncio.to_thread(waiting.wait, 5)
+        loader.release["a"].set()
+        await asyncio.wait_for(waiter, timeout=5)
+        observed["order_when_done"] = list(loader.order)
+        await asyncio.to_thread(worker.join, 5)
+
+    # 実行
+    asyncio.run(scenario())
+    # 検証
+    assert loader.order == ["a", "c", "b"]
+    assert "b" not in observed["order_when_done"]  # type: ignore[operator]
+
+
+def test_source_registry_load_when_row_failed(
+    monkeypatch: pytest.MonkeyPatch,
+    make_terminal_config: Callable[..., TerminalConfig],
+    make_entry: Callable[..., SourceEntry],
+    make_served_source: Callable[..., ServedSource],
+    make_status: Callable[..., SourceStatus],
+) -> None:
+    """行の読み込みが例外で止まっても、その行を配信せずに残りの行を読み込む（異常系）。"""
+    # 準備
+    loader = _Loader(make_served_source, make_status, failing=("broken",))
+    monkeypatch.setattr(registry_module, "load_source", loader)
+    terminal = make_terminal_config(sources=_entries(make_entry, "broken", "sample"))
+    registry = SourceRegistry(loading=True)
+
+    async def scenario() -> None:
+        waiter = asyncio.ensure_future(registry.wait_for(ids=["broken"]))
+        await asyncio.sleep(0)
+        await asyncio.to_thread(registry.load, terminal)
+        await asyncio.wait_for(waiter, timeout=5)
+
+    # 実行
+    asyncio.run(scenario())
+    # 検証
+    with pytest.raises(SourceNotServedError) as exc_info:
+        registry.get("broken")
+    assert [error.path for error in exc_info.value.violations] == ["sources[0]"]
+    assert registry.get("sample").id == "sample"
+    assert registry.loading is False
+
+
+def test_source_registry_load_when_duplicate_loaded_later(
+    monkeypatch: pytest.MonkeyPatch,
+    make_terminal_config: Callable[..., TerminalConfig],
+    make_entry: Callable[..., SourceEntry],
+    make_served_source: Callable[..., ServedSource],
+    make_status: Callable[..., SourceStatus],
+) -> None:
+    """後の行が先に読み込まれて ID が重なる（正常系）。"""
+    # 準備
+    loader = _Loader(
+        make_served_source, make_status, blocked=("x",), names={"x": "a", "y": "a"}
+    )
+    monkeypatch.setattr(registry_module, "load_source", loader)
+    terminal = make_terminal_config(sources=_entries(make_entry, "x", "y", with_id=False))
+    waiting = threading.Event()
+    registry = SourceRegistry(loading=True, on_waiting=waiting.set)
+
+    async def scenario() -> None:
+        worker = threading.Thread(target=registry.load, args=(terminal,))
+        worker.start()
+        await asyncio.to_thread(loader.entered["x"].wait, 5)
+        waiter = asyncio.ensure_future(registry.wait_for(ids=["a"]))
+        await asyncio.to_thread(waiting.wait, 5)
+        loader.release["x"].set()
+        await asyncio.wait_for(waiter, timeout=5)
+        await asyncio.to_thread(worker.join, 5)
+
+    # 実行
+    asyncio.run(scenario())
+    # 検証
+    statuses = registry.statuses()
+    assert [status.status for status in statuses] == ["serving", "not_served"]
+    assert [error.path for error in statuses[1].errors] == ["sources[1].id"]
+
+
+def test_source_registry_wait_for(
+    monkeypatch: pytest.MonkeyPatch,
+    make_terminal_config: Callable[..., TerminalConfig],
+    make_entry: Callable[..., SourceEntry],
+    make_served_source: Callable[..., ServedSource],
+    make_status: Callable[..., SourceStatus],
+) -> None:
+    """指す行の読み込みだけを待つ（正常系）。"""
+    # 準備
+    loader = _Loader(make_served_source, make_status, blocked=("b",))
+    monkeypatch.setattr(registry_module, "load_source", loader)
+    terminal = make_terminal_config(sources=_entries(make_entry, "a", "b"))
+    registry = SourceRegistry(loading=True)
+    observed: dict[str, object] = {}
+
+    async def scenario() -> None:
+        worker = threading.Thread(target=registry.load, args=(terminal,))
+        worker.start()
+        await asyncio.to_thread(loader.entered["b"].wait, 5)
+        await asyncio.wait_for(registry.wait_for(ids=["a"]), timeout=5)
+        waiter_b = asyncio.ensure_future(registry.wait_for(ids=["b"]))
+        await asyncio.sleep(0.05)
+        observed["b_before"] = waiter_b.done()
+        loader.release["b"].set()
+        await asyncio.wait_for(waiter_b, timeout=5)
+        await asyncio.to_thread(worker.join, 5)
+
+    # 実行
+    asyncio.run(scenario())
+    # 検証
+    assert observed["b_before"] is False
+
+
+def test_source_registry_wait_for_when_cwd(
+    monkeypatch: pytest.MonkeyPatch,
+    make_terminal_config: Callable[..., TerminalConfig],
+    make_entry: Callable[..., SourceEntry],
+    make_served_source: Callable[..., ServedSource],
+    make_status: Callable[..., SourceStatus],
+) -> None:
+    """作業場所が scope に当たる行を待つ（正常系）。"""
+    # 準備
+    from dev_docs.features.settings.types import SourceScope
+
+    loader = _Loader(make_served_source, make_status, blocked=("b",))
+    monkeypatch.setattr(registry_module, "load_source", loader)
+    terminal = make_terminal_config(
+        sources=[
+            make_entry("/tmp/a/dev-docs.yaml", source_id="a", scope=SourceScope(read=["/w/a/**"])),
+            make_entry("/tmp/b/dev-docs.yaml", source_id="b", scope=SourceScope(read=["/w/b/**"])),
+        ]
+    )
+    registry = SourceRegistry(loading=True)
+    observed: dict[str, object] = {}
+
+    async def scenario() -> None:
+        worker = threading.Thread(target=registry.load, args=(terminal,))
+        worker.start()
+        await asyncio.to_thread(loader.entered["b"].wait, 5)
+        await asyncio.wait_for(registry.wait_for(cwd="/w/a/x"), timeout=5)
+        waiter_c = asyncio.ensure_future(registry.wait_for(cwd="/w/c"))
+        await asyncio.sleep(0.05)
+        observed["c_before"] = waiter_c.done()
+        loader.release["b"].set()
+        await asyncio.wait_for(waiter_c, timeout=5)
+        await asyncio.to_thread(worker.join, 5)
+
+    # 実行
+    asyncio.run(scenario())
+    # 検証
+    assert observed["c_before"] is False
+
+
+def test_source_registry_wait_for_when_id_less_row(
+    monkeypatch: pytest.MonkeyPatch,
+    make_terminal_config: Callable[..., TerminalConfig],
+    make_entry: Callable[..., SourceEntry],
+    make_served_source: Callable[..., ServedSource],
+    make_status: Callable[..., SourceStatus],
+) -> None:
+    """ID を持たない行は、ID で指す要求でも待つ（正常系）。"""
+    # 準備
+    loader = _Loader(make_served_source, make_status, blocked=("m",), names={"m": "n"})
+    monkeypatch.setattr(registry_module, "load_source", loader)
+    terminal = make_terminal_config(
+        sources=[
+            make_entry("/tmp/a/dev-docs.yaml", source_id="a"),
+            make_entry("/tmp/m/dev-docs.yaml"),
+        ]
+    )
+    registry = SourceRegistry(loading=True)
+    observed: dict[str, object] = {}
+
+    async def scenario() -> None:
+        worker = threading.Thread(target=registry.load, args=(terminal,))
+        worker.start()
+        await asyncio.to_thread(loader.entered["m"].wait, 5)
+        waiter = asyncio.ensure_future(registry.wait_for(ids=["n"]))
+        await asyncio.sleep(0.05)
+        observed["before"] = waiter.done()
+        loader.release["m"].set()
+        await asyncio.wait_for(waiter, timeout=5)
+        await asyncio.to_thread(worker.join, 5)
+
+    # 実行
+    asyncio.run(scenario())
+    # 検証
+    assert observed["before"] is False
+    assert registry.get("n").id == "n"
+
+
+def test_source_registry_wait_for_when_cancelled(
+    monkeypatch: pytest.MonkeyPatch,
+    make_terminal_config: Callable[..., TerminalConfig],
+    make_entry: Callable[..., SourceEntry],
+    make_served_source: Callable[..., ServedSource],
+    make_status: Callable[..., SourceStatus],
+) -> None:
+    """取り消された待ちを外す（正常系）。"""
+    # 準備
+    loader = _Loader(make_served_source, make_status, blocked=("b",))
+    monkeypatch.setattr(registry_module, "load_source", loader)
+    terminal = make_terminal_config(sources=_entries(make_entry, "a", "b"))
+    registry = SourceRegistry(loading=True)
+    observed: dict[str, object] = {}
+
+    async def scenario() -> None:
+        worker = threading.Thread(target=registry.load, args=(terminal,))
+        worker.start()
+        await asyncio.to_thread(loader.entered["b"].wait, 5)
+        task = asyncio.ensure_future(registry.wait_for(ids=["b"]))
+        await asyncio.sleep(0.05)
+        task.cancel()
+        try:
+            await task
+        except asyncio.CancelledError:
+            observed["cancelled"] = True
+        observed["waiters"] = list(registry._waiters)
+        loader.release["b"].set()
+        await asyncio.to_thread(worker.join, 5)
+
+    # 実行
+    asyncio.run(scenario())
+    # 検証
+    assert observed["cancelled"] is True
+    assert observed["waiters"] == []
+
+
+def test_source_registry_get_when_row_loading(
+    monkeypatch: pytest.MonkeyPatch,
+    make_terminal_config: Callable[..., TerminalConfig],
+    make_entry: Callable[..., SourceEntry],
+    make_served_source: Callable[..., ServedSource],
+    make_status: Callable[..., SourceStatus],
+) -> None:
+    """読み込んでいない行の ID を引くと、その行の読み込みを待つ（正常系）。"""
+    # 準備
+    loader = _Loader(make_served_source, make_status, blocked=("a",))
+    monkeypatch.setattr(registry_module, "load_source", loader)
+    terminal = make_terminal_config(sources=_entries(make_entry, "a", "b"))
+    registry = SourceRegistry(loading=True)
+    worker = threading.Thread(target=registry.load, args=(terminal,))
+    worker.start()
+    loader.entered["a"].wait(timeout=5)
+    results: list[ServedSource] = []
+    getter = threading.Thread(target=lambda: results.append(registry.get("b")))
+    getter.start()
+    getter.join(timeout=0.2)
+    # 実行
+    returned_before = bool(results)
+    loader.release["a"].set()
+    getter.join(timeout=5)
+    worker.join(timeout=5)
+    # 検証
+    assert returned_before is False
+    assert [source.id for source in results] == ["b"]
+    assert loader.order == ["a", "b"]

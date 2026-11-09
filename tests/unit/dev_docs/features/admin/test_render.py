@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import dataclasses
+
 from dev_docs.features.admin.render import (
     _source_row,
     render_check,
@@ -113,7 +115,7 @@ def test_render_status_when_loading() -> None:
     # 検証
     assert (
         result.splitlines()[2]
-        == "配信元: 読み込み中（終わるまで文書の MCP の呼び出しは待たされます）"
+        == "配信元: 読み込み中（読み込みが終わっていない配信元を指す文書の MCP の呼び出しは待たされます）"
     )
 
 
@@ -257,6 +259,16 @@ def test_source_row_when_not_served() -> None:
         "| broken | not_served（name: 必須のキーが無い、documents[0].paths: 必須のキーが無い）"
         " | - | - |"
     )
+
+
+def test_source_row_when_checking() -> None:
+    """検査が済んでいない配信中の行（正常系）。"""
+    # 準備
+    state = dataclasses.replace(_serving("sample"), sync=None)
+    # 実行
+    result = _source_row(state)
+    # 検証
+    assert result == "| sample | serving | 1（current） | 検査中 |"
 
 
 def test_render_write_nav() -> None:

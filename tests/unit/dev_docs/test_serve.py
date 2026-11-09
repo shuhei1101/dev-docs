@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import argparse
-import dataclasses
 import json
 import logging
 import os
@@ -31,6 +30,7 @@ from dev_docs.main import (
     PortInUseError,
     build_handlers,
     check_port,
+    check_sources,
     reload_sources,
     run_migrate,
     run_serve,
@@ -765,6 +765,7 @@ def test_start_loading(
     # 検証
     assert handlers.registry.loading is False
     assert len(handlers.registry.served()) == 1
+    assert handlers.checks.get("sample") is not None
     assert "sample" in capsys.readouterr().out.splitlines()
 
 
@@ -782,15 +783,49 @@ def test_start_loading_when_failed(
     terminal = make_terminal_config(sources=[make_entry(str(tmp_path / "ws" / "dev-docs.yaml"))])
     handlers = build_handlers(terminal)
 
-    def failing_reload(terminal: TerminalConfig) -> list[SourceStatus]:
-        handlers.registry.reload(terminal)
+    def failing_refresh(store: DocumentStore, source: Any) -> Any:
         raise RuntimeError("検査に失敗した")
 
-    failing = dataclasses.replace(handlers, reload_sources=failing_reload)
+    handlers.checks.refresh = failing_refresh  # type: ignore[method-assign]
     # 実行
     with caplog.at_level(logging.ERROR):
-        thread = main_module.start_loading(failing)
+        thread = main_module.start_loading(handlers)
         thread.join(timeout=30)
     # 検証
     assert len([record for record in caplog.records if record.levelno == logging.ERROR]) == 1
     assert handlers.registry.loading is False
+
+
+def test_check_sources(
+    tmp_path: Path,
+    write_files: Callable[[Path, dict[str, str]], None],
+    make_terminal_config: Callable[..., TerminalConfig],
+    make_entry: Callable[..., SourceEntry],
+) -> None:
+    """控えを捨てずに検査の結果を持たせる（正常系）。"""
+    # 準備
+    write_files(
+        tmp_path / "sample",
+        {
+            "dev-docs.yaml": SYNC_RULES_CONFIG.format(name="sample") + SYNC_SRC_CONFIG,
+            "schemas/rule.schema.yaml": SYNC_SCHEMA,
+            "docs/rule/doc-1.yaml": "id: doc-1\ntitle: 文書 1\n",
+            "src/files.yaml": "files:\n  - path: a.py\n",
+            "src/a.py": "a = 1\n",
+            "src/d.py": "d = 4\n",
+        },
+    )
+    terminal = make_terminal_config(sources=[make_entry(str(tmp_path / "sample" / "dev-docs.yaml"))])
+    registry = SourceRegistry()
+    registry.reload(terminal)
+    store = DocumentStore(SnapshotStore(tmp_path / "snapshots"))
+    cleared: list[bool] = []
+    store.clear = lambda: cleared.append(True)  # type: ignore[method-assign]
+    checks = SourceChecks()
+    # 実行
+    check_sources(registry.served(), store=store, checks=checks)
+    # 検証
+    check = checks.get("sample")
+    assert check is not None
+    assert len(check.report.unindexed_files) == 1
+    assert cleared == []
