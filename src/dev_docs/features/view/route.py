@@ -44,7 +44,7 @@ def build_view_router(handlers: Handlers) -> APIRouter:
         source: str, path: str | None, ref: str | None, diff: str | None
     ) -> Response | DocumentResponse:
         """文書を取得し、見つからなかったときは何が無いかを足した 404 にする。"""
-        await handlers.registry.wait_loaded()
+        await handlers.registry.wait_for(ids=[source])
         try:
             return await asyncio.to_thread(
                 get_document, source, path, handlers=handlers, ref=ref, diff_ref=diff
@@ -91,7 +91,7 @@ def build_view_router(handlers: Handlers) -> APIRouter:
             ]
             return screen_search(documents, q, limit)
 
-        await handlers.registry.wait_loaded()
+        await handlers.registry.wait_for(ids=[source])
         return await asyncio.to_thread(work)
 
     @router.get("/_api/sources/{source}/refs", name="list_refs")
@@ -99,7 +99,7 @@ def build_view_router(handlers: Handlers) -> APIRouter:
         source: str,
         commits: Annotated[int, Query(ge=0, le=REFS_COMMITS_MAX)] = REFS_COMMITS_DEFAULT,
     ) -> RefsResponse:
-        await handlers.registry.wait_loaded()
+        await handlers.registry.wait_for(ids=[source])
         result = await asyncio.to_thread(
             lambda: list_refs(handlers.registry.get(source), commits=commits)
         )
@@ -117,7 +117,7 @@ def build_view_router(handlers: Handlers) -> APIRouter:
             handlers.registry.get(source)
             settings.save(source, body.table, body.hidden)
 
-        await handlers.registry.wait_loaded()
+        await handlers.registry.wait_for(ids=[source])
         await asyncio.to_thread(work)
         return body
 

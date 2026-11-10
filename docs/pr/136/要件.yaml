@@ -1,0 +1,44 @@
+use_cases:
+  - kind: composite
+    scenario: docs/scenario/SC-155-13.yaml
+    impact: none
+    detail: 起動・読み書きの連鎖は変わらない
+    depends_on: []
+  - kind: single
+    scenario: docs/scenario/SC-155-10.yaml
+    impact: run_only
+    detail: 起動した直後に配信元を読み込む間の答え方を変えるが、シナリオの期待値は変わらない
+    depends_on: []
+  - kind: single
+    scenario: docs/scenario/SC-155-5.yaml
+    impact: run_only
+    detail: 起動した直後でもエージェントが文書を調べられるようにするが、シナリオの期待値は変わらない
+    depends_on: []
+  - kind: single
+    scenario: docs/scenario/SC-155-3.yaml
+    impact: run_only
+    detail: 更新の後の状態の確かめ方（status）の答えの速さを変えるが、シナリオの期待値は変わらない
+    depends_on: []
+docs:
+  - page: docs/guide/管理のMCP.md
+    new: false
+    change: 読み込み中に文書の MCP の呼び出しが待たされる記述と、`status` の同期の件数の求め方を、直した後の答え方に合わせる
+    status: done
+    updated_by: planner
+    updated_at: '2026-11-09T01:10:59.242322+00:00'
+  - page: scripts/dev-docs-server-wait.sh
+    new: false
+    change: '`loaded` の待つ条件を、引数なしの `describe` の応答から、管理の MCP の `status` が `loading: false` を返すことに替え、1 回の要求を `LOADED_TRY` 秒で区切って送り直す処理を除く'
+    status: done
+    updated_by: planner
+    updated_at: '2026-11-09T01:47:45.512670+00:00'
+scope_out:
+  - item: 画面の設定の API・管理の MCP の `status` 以外のツール・`describe` の作業範囲の外の一覧が、起動直後に全ての配信元の読み込みの終わりまで待つこと
+    reason: 要望に含まれない。どれも全ての配信元の一覧を返すか差し替える操作で、全ての行の読み込みを待つ必要がある。画面の文書の API は配信元を指すため、文書の MCP と同じく指す配信元の読み込みだけを待つようにしてスコープに含めた
+    plan: none
+  - item: ID が重なる設定で、後の位置の行が先に配信された間に文書のストアの控えに入った文書を、先の位置の行へ入れ替えたときに捨てる
+    reason: registry は文書のストアを持たず、捨てるには入れ替えを知らせる口を足す設計の変更が要る。設定の誤り（`not_served` で見える）のときだけ起き、次の `reload` で解消する
+    plan: '#160'
+  - item: 起動直後の文書の MCP の応答時間と `status` の応答時間の決定値を非機能要件に記載すること
+    reason: 'PR #120 と同じく、Claude Code の MCP の呼び出しの時間切れの値に公式の出典が無く、決定値を逆算できない。修正の前後の応答時間は計画書の `## テスト結果` に記録する'
+    plan: none

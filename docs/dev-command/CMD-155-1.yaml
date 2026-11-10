@@ -115,14 +115,13 @@ categories:
       started=$(sh scripts/dev-docs-server-wait.sh started)
       ```
 
-      3. 確認スクリプトの最初に、配信元の読み込みが終わり文書の MCP の `describe` が応答するまで待つ
+      3. 確認スクリプトの最初に、管理の MCP の `status` が `loading: false` を返す（全ての配信元の読み込みが終わる）まで待つ
 
       ```bash
       sh scripts/dev-docs-server-wait.sh loaded
       ```
     effects: '`listening` は最長 120 秒、`loaded` は最長 540 秒待つ（上限の導き方はスクリプトの冒頭のコメント）。待ちきれなければ `failed` の行を出して終了コード 1 で終わる。`started` は待ち受けていないか、ログ（端末の設定の `log_dir` の既定 `${XDG_STATE_HOME:-~/.local/state}/dev-docs/logs/`）に待ち受けを始めた行が無ければ、標準エラーに `failed` の行を出して終了コード 1 で終わる。サーバーの状態は変えない'
     verification:
-      state: 済
-      date: '2026-11-09'
-      detail: 稼働中のサーバー（2026-11-09 10:24:41 に `restart` を要求し、10:25:09 に同じ PID で起動し直した）で、`started` が 10:25:09 の UNIX 時刻を出すこと、`listening` に要求の時刻を指定すると `ok` で終了コード 0 になり、10:25:10 を指定すると待ち続けることを確認した。同じ要求の時刻で、変更の前の `listening` は待ち続けた。`loaded` は `ok` で終了コード 0 になり、引数の誤りでは `failed` で終了コード 1 になった
+      state: 未確認
+      detail: '`started`・`listening` は PR #138 で稼働中のサーバーへ走らせて確認した（2026-11-09）。`loaded` は待つ条件を `status` の `loading: false` に替えるため、PR #136 の実装の後に稼働中のサーバーへ走らせて確認する'
 lead: dev-docs の開発で使うコマンド。

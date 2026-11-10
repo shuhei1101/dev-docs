@@ -189,3 +189,28 @@ def test_build_docs_mcp_when_loading(
     assert observed["executor_threads"] == []
     assert len(results) == 13
     assert all(isinstance(result, CallToolResult) and not result.is_error for result in results)
+
+
+def test_wait_target() -> None:
+    """要求ごとの待つ行の決め方（正常系）。"""
+    # 準備
+    from dev_docs.features.describe.types import DescribeRequest
+    from dev_docs.features.write.types import WriteRequest
+
+    requests = [
+        SearchRequest(source="a"),
+        SearchRequest(source=["a", "*"]),
+        DescribeRequest(outside_scope=True),
+        WriteRequest(cwd="/w/a", operations=[]),
+        DescribeRequest(),
+    ]
+    # 実行
+    targets = [docs_module._wait_target(request) for request in requests]
+    # 検証
+    assert targets == [
+        {"ids": ["a"]},
+        {"every": True},
+        {"every": True},
+        {"cwd": "/w/a"},
+        {},
+    ]

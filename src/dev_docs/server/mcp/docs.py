@@ -93,14 +93,14 @@ def _register(
     call: Callable[[Any], Any],
     render: Callable[[Any, Any], str] | None,
     *,
-    wait_loaded: Callable[[], Awaitable[None]],
+    wait_sources: Callable[[BaseModel], Awaitable[None]],
 ) -> None:
-    """要求のモデルを引数に持つツールを 1 つ登録する（呼ぶ前に配信元の読み込みを待つ）。"""
+    """要求のモデルを引数に持つツールを 1 つ登録する（呼ぶ前に要求が指す配信元の読み込みを待つ）。"""
 
     async def tool(**arguments: Any) -> CallToolResult:
         try:
             request = model(**arguments)
-            await wait_loaded()
+            await wait_sources(request)
             result = await asyncio.to_thread(call, request)
             fmt: Literal["markdown", "json"] = getattr(request, "format", "json")
             return to_tool_result(
@@ -115,6 +115,22 @@ def _register(
     tool.__signature__ = _signature(model)  # type: ignore[attr-defined]
     tool.__doc__ = description
     mcp.tool(name=name, description=description, annotations=TOOL_ANNOTATIONS[name])(tool)
+
+
+def _wait_target(request: BaseModel) -> dict[str, Any]:
+    """要求のモデルから、待つ配信元の行を決める指す行の待ちの引数を作る。"""
+    source = getattr(request, "source", None)
+    if source == "*" or (isinstance(source, list) and "*" in source):
+        return {"every": True}
+    if isinstance(source, str):
+        return {"ids": [source]}
+    if isinstance(source, list):
+        return {"ids": list(source)}
+    # 作業範囲の外の一覧は、全ての配信元の説明を並べる
+    if getattr(request, "outside_scope", False):
+        return {"every": True}
+    cwd = getattr(request, "worktree", None) or getattr(request, "cwd", None)
+    return {"cwd": cwd} if cwd else {}
 
 
 def _recheck_after[R: (WriteResult, DeleteResult)](
@@ -137,7 +153,10 @@ def build_docs_mcp(handlers: Handlers) -> MCPServer:
         DOCS_MCP_NAME, instructions=handlers.prompts.render(DOCS_INSTRUCTIONS_PROMPT_ID)
     )
     timeout = handlers.terminal.script_timeout_sec
-    register = functools.partial(_register, wait_loaded=lambda: handlers.registry.wait_loaded())
+    register = functools.partial(
+        _register,
+        wait_sources=lambda request: handlers.registry.wait_for(**_wait_target(request)),
+    )
 
     register(
         mcp,

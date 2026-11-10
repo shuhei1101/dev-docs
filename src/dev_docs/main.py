@@ -166,11 +166,12 @@ def run_serve(args: argparse.Namespace) -> int:
 
 
 def start_loading(handlers: Handlers) -> threading.Thread:
-    """配信元の読み直しとその後の検査を裏のスレッドで始める。"""
+    """配信元の行ごとの読み込みと、全ての行の後の検査を裏のスレッドで始める。"""
 
     def work() -> None:
         try:
-            handlers.reload_sources(handlers.terminal)
+            handlers.registry.load(handlers.terminal)
+            check_sources(handlers.registry.served(), store=handlers.store, checks=handlers.checks)
             for source in handlers.registry.served():
                 print(source.id, flush=True)
         except Exception:
@@ -284,6 +285,11 @@ def discard_source_caches(
     store.clear()
     checker.clear()
     converter.clear()
+    check_sources(sources, store=store, checks=checks)
+
+
+def check_sources(sources: list[ServedSource], *, store: Any, checks: SourceChecks) -> None:
+    """渡した配信元ごとに検査して結果を持たせ、ずれと警告をログに書く。"""
     for source in sources:
         # 検査の結果を控えに持たせ、`describe` の警告が読めるようにする
         check = checks.refresh(store, source)

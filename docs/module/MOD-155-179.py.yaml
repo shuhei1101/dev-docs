@@ -90,7 +90,7 @@ functions:
          - 引数の型の誤り・`Literal` に無い値は、SDK が関数を呼ぶ前に `isError` の結果にする。入力のスキーマに無いキーは SDK が捨てる
       3. 各ツールは次の順で処理する
          - 引数で要求のモデル（`SearchRequest` など）を作る
-         - `await handlers.registry.wait_loaded()` で配信元の読み込みを待つ（初期化とツールの一覧は待たない）
+         - 要求が指す配信元を決め（指す配信元の決定）、`await handlers.registry.wait_for(...)` でその行の読み込みだけを待つ（初期化とツールの一覧は待たない）
          - サービスを `asyncio.to_thread` で呼ぶ（引数は `handlers` の属性）
          - `write_docs`・`delete_docs` の結果の `applied` が `True` の場合、`cwd` から書ける配信元を裏で検査し直す（配信元の検査の控え.裏での検査の流し直し）
          - 結果をツールの結果にする（`write_docs`・`delete_docs` の `render` は `None`。`search_docs` は `functools.partial(render_search_markdown, source_label=result.source_label)`、`list_changes` は `functools.partial(render_changes_markdown, source_label=request.source or "作業中の配信元")`、`list_match_words` は用語の一覧の文を渡す）
@@ -129,10 +129,40 @@ functions:
         expected: '`instructions` が `prompts.render(DOCS_INSTRUCTIONS_PROMPT_ID)` と同じで、`grep`・`action:`・`topic:`・`tool:` を含む'
       - name: test_build_docs_mcp_when_loading
         case: 正常
-        summary: ツールの呼び出しは読み込みを待ち、スレッドを持たない
-        condition: '`SourceRegistry(loading=True)` のまま `search_docs` を 13 本並べて呼び、`tools/list` を呼ぶ。その後 `reload` する'
+        summary: ツールの呼び出しは指す配信元の読み込みを待ち、スレッドを持たない
+        condition: '`SourceRegistry(loading=True)` のまま `search_docs(source="sample")` を 13 本並べて呼び、`tools/list` を呼ぶ。その後 `reload` する'
         mock: なし（一時フォルダの配信元）
         expected: '`reload` の前に `tools/list` が答え、`search_docs` はまだ答えない（既定の executor のスレッドを使っていない）。`reload` の後に 13 本とも結果を返す'
+  - name: _wait_target
+    title: 指す配信元の決定
+    kind: 関数
+    container: server/mcp/docs.py
+    usecase: 共通
+    role: 変換
+    summary: 要求のモデルから、待つ配信元の行を決める指す行の待ちの引数を作る
+    scope: internal
+    args:
+      - name: request
+        title: 要求
+        type: BaseModel
+        required: true
+        passing: positional
+        description: 文書の MCP のツールの要求のモデル（`source`・`cwd`・`worktree`・`outside_scope` を持つものだけを見る）
+    returns:
+      type: dict[str, Any]
+      description: 指す行の待ちのキーワード引数（`ids`・`cwd`・`every` のどれか 1 つ）
+    process: |-
+      1. `source` が `"*"` か、並びが `"*"` を含む場合、`every=True`
+      2. `source` が文字列か並びの場合、`ids` にその ID を並べる
+      3. `source` が無く、`outside_scope` が `True` の場合（作業範囲の外の一覧）、`every=True`
+      4. `source` が無い場合、`cwd` に `worktree` か `cwd` を入れる（どちらも無ければ空の引数にし、待たない）
+    unit_tests:
+      - name: test_wait_target
+        case: 正常
+        summary: 要求ごとの待つ行の決め方
+        condition: '`SearchRequest(source="a")`・`SearchRequest(source=["a", "*"])`・`DescribeRequest(outside_scope=True)`・`WriteRequest(cwd="/w/a", operations=[])`・`DescribeRequest()`'
+        mock: なし
+        expected: '`{"ids": ["a"]}`・`{"every": True}`・`{"every": True}`・`{"cwd": "/w/a"}`・`{}`'
 refs:
   - IF-155-12#
   - IF-155-11#

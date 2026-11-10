@@ -1,0 +1,781 @@
+$ uv run pytest tests/unit/
+============================= test session starts ==============================
+platform linux -- Python 3.14.3, pytest-9.1.1, pluggy-1.7.0
+rootdir: /mnt/c/Users/shuhe/repo/dev-docs/.claude/worktrees/fix-server-startup-wait-and-status-latency
+configfile: pyproject.toml
+plugins: anyio-4.15.1
+collected 889 items
+
+tests/unit/dev_docs/features/access/test_service.py .................... [  2%]
+............                                                             [  3%]
+tests/unit/dev_docs/features/admin/test_render.py ..F.......F.           [  4%]
+tests/unit/dev_docs/features/admin/test_service.py ..................... [  7%]
+.............F                                                           [  8%]
+tests/unit/dev_docs/features/changes/test_compare.py .....               [  9%]
+tests/unit/dev_docs/features/changes/test_render.py ....                 [  9%]
+tests/unit/dev_docs/features/changes/test_service.py ..............      [ 11%]
+tests/unit/dev_docs/features/convert/test_diagrams.py .................. [ 13%]
+................                                                         [ 15%]
+tests/unit/dev_docs/features/convert/test_embed.py ...                   [ 15%]
+tests/unit/dev_docs/features/convert/test_flow_layout.py .........       [ 16%]
+tests/unit/dev_docs/features/convert/test_inline.py .............        [ 18%]
+tests/unit/dev_docs/features/convert/test_markdown.py .................. [ 20%]
+.....                                                                    [ 20%]
+tests/unit/dev_docs/features/convert/test_mermaid.py ......              [ 21%]
+tests/unit/dev_docs/features/convert/test_service.py .........           [ 22%]
+tests/unit/dev_docs/features/describe/test_render.py .......             [ 23%]
+tests/unit/dev_docs/features/describe/test_service.py ..........         [ 24%]
+tests/unit/dev_docs/features/describe/test_source_checks.py .....        [ 24%]
+tests/unit/dev_docs/features/describe/test_warnings.py .....             [ 25%]
+tests/unit/dev_docs/features/documents/test_aliases.py ..........        [ 26%]
+tests/unit/dev_docs/features/documents/test_fields.py .................. [ 28%]
+........                                                                 [ 29%]
+tests/unit/dev_docs/features/documents/test_indexable.py ............    [ 30%]
+tests/unit/dev_docs/features/documents/test_loader.py .................  [ 32%]
+tests/unit/dev_docs/features/documents/test_schema.py .......            [ 33%]
+tests/unit/dev_docs/features/documents/test_store.py ................... [ 35%]
+............                                                             [ 37%]
+tests/unit/dev_docs/features/history/test_query.py .................     [ 38%]
+tests/unit/dev_docs/features/history/test_snapshot.py ....               [ 39%]
+tests/unit/dev_docs/features/lifecycle/test_control.py ...               [ 39%]
+tests/unit/dev_docs/features/lifecycle/test_update.py ..........         [ 40%]
+tests/unit/dev_docs/features/migrate/test_service.py ............        [ 42%]
+tests/unit/dev_docs/features/migrate/test_steps.py ...........           [ 43%]
+tests/unit/dev_docs/features/prompt_doc/test_cli.py ..                   [ 43%]
+tests/unit/dev_docs/features/prompt_doc/test_markdown.py ............... [ 45%]
+..                                                                       [ 45%]
+tests/unit/dev_docs/features/prompt_doc/test_render.py ...............   [ 47%]
+tests/unit/dev_docs/features/prompt_doc/test_runtime.py ............     [ 48%]
+tests/unit/dev_docs/features/related/test_graph.py ...                   [ 48%]
+tests/unit/dev_docs/features/related/test_service.py .......             [ 49%]
+tests/unit/dev_docs/features/related/test_suggest.py .                   [ 49%]
+tests/unit/dev_docs/features/search/test_body_parts.py ....              [ 50%]
+tests/unit/dev_docs/features/search/test_cursor.py ..                    [ 50%]
+tests/unit/dev_docs/features/search/test_fields.py ..                    [ 50%]
+tests/unit/dev_docs/features/search/test_filters.py .............        [ 52%]
+tests/unit/dev_docs/features/search/test_render.py .....                 [ 52%]
+tests/unit/dev_docs/features/search/test_service.py .................... [ 55%]
+.                                                                        [ 55%]
+tests/unit/dev_docs/features/search/test_snippets.py ........            [ 56%]
+tests/unit/dev_docs/features/search/test_terms.py ...                    [ 56%]
+tests/unit/dev_docs/features/seen/test_store.py ......                   [ 57%]
+tests/unit/dev_docs/features/seen/test_types.py .                        [ 57%]
+tests/unit/dev_docs/features/session_start/test_route.py ...             [ 57%]
+tests/unit/dev_docs/features/session_start/test_service.py ...           [ 57%]
+tests/unit/dev_docs/features/settings/test_query.py .............        [ 59%]
+tests/unit/dev_docs/features/settings/test_route.py ....                 [ 59%]
+tests/unit/dev_docs/features/settings/test_service.py ....               [ 60%]
+tests/unit/dev_docs/features/sources/test_merge.py ....                  [ 60%]
+tests/unit/dev_docs/features/sources/test_registry.py ..........FFFFFFFF [ 62%]
+FF                                                                       [ 62%]
+tests/unit/dev_docs/features/sources/test_service.py ................... [ 65%]
+.....................                                                    [ 67%]
+tests/unit/dev_docs/features/sources/test_types.py ......                [ 68%]
+tests/unit/dev_docs/features/validation/test_markdown.py ..........      [ 69%]
+tests/unit/dev_docs/features/validation/test_rules.py ........           [ 70%]
+tests/unit/dev_docs/features/validation/test_scripts.py ....             [ 70%]
+tests/unit/dev_docs/features/validation/test_service.py .......          [ 71%]
+tests/unit/dev_docs/features/view/test_columns.py .                      [ 71%]
+tests/unit/dev_docs/features/view/test_document.py .........             [ 72%]
+tests/unit/dev_docs/features/view/test_nav.py ................           [ 74%]
+tests/unit/dev_docs/features/view/test_paths.py ......                   [ 74%]
+tests/unit/dev_docs/features/view/test_route.py ........F                [ 75%]
+tests/unit/dev_docs/features/view/test_search.py .                       [ 76%]
+tests/unit/dev_docs/features/write/test_apply.py ....................... [ 78%]
+                                                                         [ 78%]
+tests/unit/dev_docs/features/write/test_ids.py ..                        [ 78%]
+tests/unit/dev_docs/features/write/test_locks.py .                       [ 78%]
+tests/unit/dev_docs/features/write/test_placement.py ...                 [ 79%]
+tests/unit/dev_docs/features/write/test_service.py ...................   [ 81%]
+tests/unit/dev_docs/integrations/test_git.py .......                     [ 82%]
+tests/unit/dev_docs/integrations/test_mdmark.py .......                  [ 83%]
+tests/unit/dev_docs/integrations/test_scripts.py ..........              [ 84%]
+tests/unit/dev_docs/server/mcp/test_admin.py ....                        [ 84%]
+tests/unit/dev_docs/server/mcp/test_docs.py ......F                      [ 85%]
+tests/unit/dev_docs/server/mcp/test_result.py ..........                 [ 86%]
+tests/unit/dev_docs/server/test_app.py ...........                       [ 87%]
+tests/unit/dev_docs/server/test_error_handlers.py .....                  [ 88%]
+tests/unit/dev_docs/server/test_lifespan.py .                            [ 88%]
+tests/unit/dev_docs/server/test_origin.py ....                           [ 88%]
+tests/unit/dev_docs/server/test_screen.py ............                   [ 90%]
+tests/unit/dev_docs/shared/test_errors.py ..                             [ 90%]
+tests/unit/dev_docs/shared/test_files.py ...                             [ 90%]
+tests/unit/dev_docs/shared/test_hashing.py ..                            [ 91%]
+tests/unit/dev_docs/shared/test_paths.py .....                           [ 91%]
+tests/unit/dev_docs/shared/test_schema_check.py .............            [ 93%]
+tests/unit/dev_docs/shared/test_yaml_io.py .......                       [ 93%]
+tests/unit/dev_docs/test_main.py .........                               [ 94%]
+tests/unit/dev_docs/test_serve.py ..........................F            [ 97%]
+tests/unit/plugins/dev_docs/hooks/test_pre_tool_use.py ....              [ 98%]
+tests/unit/plugins/dev_docs/hooks/test_session_start.py ...............  [100%]
+
+=================================== FAILURES ===================================
+_______________________ test_render_status_when_loading ________________________
+
+    def test_render_status_when_loading() -> None:
+        """読み込み中（正常系）。"""
+        # 準備
+        status = ServerStatus(
+            address="http://127.0.0.1:8781/",
+            version="0.2.0",
+            pid=4242,
+            terminal=TerminalState(
+                file="/home/u/.config/dev-docs/settings.yaml", version_state="current"
+            ),
+            sources=[],
+            loading=True,
+        )
+        # 実行
+        result = render_status(status)
+        # 検証
+>       assert (
+            result.splitlines()[2]
+            == "配信元: 読み込み中（読み込みが終わっていない配信元を指す文書の MCP の呼び出しは待たされます）"
+        )
+E       AssertionError: assert '配信元: 読み込み中（終...の呼び出しは待たされます）' == '配信元: 読み込み中（読...の呼び出しは待たされます）'
+E         
+E         - 配信元: 読み込み中（読み込みが終わっていない配信元を指す文書の MCP の呼び出しは待たされます）
+E         ?            -----  ^^^^^^^^^^^
+E         + 配信元: 読み込み中（終わるまで文書の MCP の呼び出しは待たされます）
+E         ?              ^^^
+
+tests/unit/dev_docs/features/admin/test_render.py:116: AssertionError
+________________________ test_source_row_when_checking _________________________
+
+    def test_source_row_when_checking() -> None:
+        """検査が済んでいない配信中の行（正常系）。"""
+        # 準備
+        state = dataclasses.replace(_serving("sample"), sync=None)
+        # 実行
+        result = _source_row(state)
+        # 検証
+>       assert result == "| sample | serving | 1（current） | 検査中 |"
+E       AssertionError: assert '| sample | s...urrent） | - |' == '| sample | s...rent） | 検査中 |'
+E         
+E         - | sample | serving | 1（current） | 検査中 |
+E         ?                                   ^^^
+E         + | sample | serving | 1（current） | - |
+E         ?                                   ^
+
+tests/unit/dev_docs/features/admin/test_render.py:271: AssertionError
+_____________________ test_source_states_when_not_checked ______________________
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x72c7cdc3a8d0>
+make_source_dir = <function make_source_dir.<locals>._make at 0x72c7cdeb9e80>
+make_terminal_config = <function make_terminal_config.<locals>._make at 0x72c7cdeb87d0>
+make_entry = <function make_entry.<locals>._make at 0x72c7cdeb9430>
+
+    def test_source_states_when_not_checked(
+        monkeypatch: pytest.MonkeyPatch,
+        make_source_dir: Callable[..., Path],
+        make_terminal_config: Callable[..., TerminalConfig],
+        make_entry: Callable[..., SourceEntry],
+    ) -> None:
+        """検査が済んでいない配信元は同期の件数を持たず、ファイルをたどらない（正常系）。"""
+        # 準備
+        from dev_docs.features.admin import service as service_module
+    
+        alpha = make_source_dir("alpha", unindexed=1)
+        terminal = make_terminal_config(sources=[make_entry(str(alpha), source_id="alpha")])
+        handlers = build_handlers(terminal)
+        handlers.registry.reload(terminal)
+        calls: list[str] = []
+    
+        def failing_check_sync(store: Any, source: Any) -> Any:
+            calls.append(source.id)
+            raise AssertionError("check_sync を呼んだ")
+    
+        monkeypatch.setattr(service_module, "check_sync", failing_check_sync, raising=False)
+        # 実行
+>       states = _source_states(handlers)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/unit/dev_docs/features/admin/test_service.py:844: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+src/dev_docs/features/admin/service.py:107: in _source_states
+    sync=SyncCounts.of(check_sync(handlers.store, source)),
+                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+store = <dev_docs.features.documents.store.DocumentStore object at 0x72c7cdc1d250>
+source = ServedSource(id='alpha', root=PosixPath('/tmp/pytest-of-shuhei2441/pytest-7116/test_source_states_when_not_ch0/alpha')...s': {'files': {'type': 'array', 'items': {'type': 'object'}}}}}, main_root=None, config_commit=None, outside_read=True)
+
+    def failing_check_sync(store: Any, source: Any) -> Any:
+        calls.append(source.id)
+>       raise AssertionError("check_sync を呼んだ")
+E       AssertionError: check_sync を呼んだ
+
+tests/unit/dev_docs/features/admin/test_service.py:840: AssertionError
+__________________________ test_source_registry_load ___________________________
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x72c7cdcc3540>
+make_terminal_config = <function make_terminal_config.<locals>._make at 0x72c7bf3101a0>
+make_entry = <function make_entry.<locals>._make at 0x72c7bf310f60>
+make_served_source = <function make_served_source.<locals>._make at 0x72c7bf3122a0>
+make_status = <function make_status.<locals>._make at 0x72c7bf311f30>
+
+    def test_source_registry_load(
+        monkeypatch: pytest.MonkeyPatch,
+        make_terminal_config: Callable[..., TerminalConfig],
+        make_entry: Callable[..., SourceEntry],
+        make_served_source: Callable[..., ServedSource],
+        make_status: Callable[..., SourceStatus],
+    ) -> None:
+        """行ごとに読み込み、全ての行を読み込むと読み込み中が終わる（正常系）。"""
+        # 準備
+        results: list[LoadResult] = [
+            (make_served_source(id="a"), make_status("a", 0)),
+            (make_served_source(id="b"), make_status("b", 1)),
+            (None, make_status("c", 2, "disabled")),
+        ]
+        monkeypatch.setattr(registry_module, "load_source", lambda entry, *, index: results[index])
+        terminal = make_terminal_config(sources=_entries(make_entry, "a", "b", "c"))
+        registry = SourceRegistry(loading=True)
+        # 実行
+>       registry.load(terminal)
+        ^^^^^^^^^^^^^
+E       AttributeError: 'SourceRegistry' object has no attribute 'load'. Did you mean: 'reload'?
+
+tests/unit/dev_docs/features/sources/test_registry.py:369: AttributeError
+__________________ test_source_registry_load_when_row_loading __________________
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x72c7cde46f20>
+make_terminal_config = <function make_terminal_config.<locals>._make at 0x72c7bf312140>
+make_entry = <function make_entry.<locals>._make at 0x72c7bf312da0>
+make_served_source = <function make_served_source.<locals>._make at 0x72c7bf3131c0>
+make_status = <function make_status.<locals>._make at 0x72c7bf3133d0>
+
+    def test_source_registry_load_when_row_loading(
+        monkeypatch: pytest.MonkeyPatch,
+        make_terminal_config: Callable[..., TerminalConfig],
+        make_entry: Callable[..., SourceEntry],
+        make_served_source: Callable[..., ServedSource],
+        make_status: Callable[..., SourceStatus],
+    ) -> None:
+        """読み込んだ行は、他の行の読み込み中でも引ける（正常系）。"""
+        # 準備
+        loader = _Loader(make_served_source, make_status, blocked=("b",))
+        monkeypatch.setattr(registry_module, "load_source", loader)
+        terminal = make_terminal_config(sources=_entries(make_entry, "a", "b"))
+        registry = SourceRegistry(loading=True)
+>       worker = threading.Thread(target=registry.load, args=(terminal,))
+                                         ^^^^^^^^^^^^^
+E       AttributeError: 'SourceRegistry' object has no attribute 'load'. Did you mean: 'reload'?
+
+tests/unit/dev_docs/features/sources/test_registry.py:393: AttributeError
+___________________ test_source_registry_load_when_requested ___________________
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x72c7cde47bd0>
+make_terminal_config = <function make_terminal_config.<locals>._make at 0x72c7cda83060>
+make_entry = <function make_entry.<locals>._make at 0x72c7cda81850>
+make_served_source = <function make_served_source.<locals>._make at 0x72c7cda80bf0>
+make_status = <function make_status.<locals>._make at 0x72c7cda81c70>
+
+    def test_source_registry_load_when_requested(
+        monkeypatch: pytest.MonkeyPatch,
+        make_terminal_config: Callable[..., TerminalConfig],
+        make_entry: Callable[..., SourceEntry],
+        make_served_source: Callable[..., ServedSource],
+        make_status: Callable[..., SourceStatus],
+    ) -> None:
+        """待っている要求が指す行を先に読み込む（正常系）。"""
+        # 準備
+        loader = _Loader(make_served_source, make_status, blocked=("a",))
+        monkeypatch.setattr(registry_module, "load_source", loader)
+        terminal = make_terminal_config(sources=_entries(make_entry, "a", "b", "c"))
+        waiting = threading.Event()
+>       registry = SourceRegistry(loading=True, on_waiting=waiting.set)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       TypeError: SourceRegistry.__init__() got an unexpected keyword argument 'on_waiting'
+
+tests/unit/dev_docs/features/sources/test_registry.py:419: TypeError
+__________________ test_source_registry_load_when_row_failed ___________________
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x72c7cde465f0>
+make_terminal_config = <function make_terminal_config.<locals>._make at 0x72c7cda83b60>
+make_entry = <function make_entry.<locals>._make at 0x72c7cda81dd0>
+make_served_source = <function make_served_source.<locals>._make at 0x72c7cda81b10>
+make_status = <function make_status.<locals>._make at 0x72c7cda81640>
+
+    def test_source_registry_load_when_row_failed(
+        monkeypatch: pytest.MonkeyPatch,
+        make_terminal_config: Callable[..., TerminalConfig],
+        make_entry: Callable[..., SourceEntry],
+        make_served_source: Callable[..., ServedSource],
+        make_status: Callable[..., SourceStatus],
+    ) -> None:
+        """行の読み込みが例外で止まっても、その行を配信せずに残りの行を読み込む（異常系）。"""
+        # 準備
+        loader = _Loader(make_served_source, make_status, failing=("broken",))
+        monkeypatch.setattr(registry_module, "load_source", loader)
+        terminal = make_terminal_config(sources=_entries(make_entry, "broken", "sample"))
+        registry = SourceRegistry(loading=True)
+    
+        async def scenario() -> None:
+            waiter = asyncio.ensure_future(registry.wait_for(ids=["broken"]))
+            await asyncio.sleep(0)
+            await asyncio.to_thread(registry.load, terminal)
+            await asyncio.wait_for(waiter, timeout=5)
+    
+        # 実行
+>       asyncio.run(scenario())
+
+tests/unit/dev_docs/features/sources/test_registry.py:461: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/home/shuhei2441/.local/share/uv/python/cpython-3.14.3-linux-x86_64-gnu/lib/python3.14/asyncio/runners.py:204: in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+/home/shuhei2441/.local/share/uv/python/cpython-3.14.3-linux-x86_64-gnu/lib/python3.14/asyncio/runners.py:127: in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/home/shuhei2441/.local/share/uv/python/cpython-3.14.3-linux-x86_64-gnu/lib/python3.14/asyncio/base_events.py:719: in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    async def scenario() -> None:
+>       waiter = asyncio.ensure_future(registry.wait_for(ids=["broken"]))
+                                       ^^^^^^^^^^^^^^^^^
+E       AttributeError: 'SourceRegistry' object has no attribute 'wait_for'
+
+tests/unit/dev_docs/features/sources/test_registry.py:455: AttributeError
+____________ test_source_registry_load_when_duplicate_loaded_later _____________
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x72c7cdcc33f0>
+make_terminal_config = <function make_terminal_config.<locals>._make at 0x72c7cda82610>
+make_entry = <function make_entry.<locals>._make at 0x72c7cda81170>
+make_served_source = <function make_served_source.<locals>._make at 0x72c7cda83270>
+make_status = <function make_status.<locals>._make at 0x72c7cda80670>
+
+    def test_source_registry_load_when_duplicate_loaded_later(
+        monkeypatch: pytest.MonkeyPatch,
+        make_terminal_config: Callable[..., TerminalConfig],
+        make_entry: Callable[..., SourceEntry],
+        make_served_source: Callable[..., ServedSource],
+        make_status: Callable[..., SourceStatus],
+    ) -> None:
+        """後の行が先に読み込まれて ID が重なる（正常系）。"""
+        # 準備
+        loader = _Loader(
+            make_served_source, make_status, blocked=("x",), names={"x": "a", "y": "a"}
+        )
+        monkeypatch.setattr(registry_module, "load_source", loader)
+        terminal = make_terminal_config(sources=_entries(make_entry, "x", "y", with_id=False))
+        waiting = threading.Event()
+>       registry = SourceRegistry(loading=True, on_waiting=waiting.set)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       TypeError: SourceRegistry.__init__() got an unexpected keyword argument 'on_waiting'
+
+tests/unit/dev_docs/features/sources/test_registry.py:485: TypeError
+________________________ test_source_registry_wait_for _________________________
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x72c7ce959470>
+make_terminal_config = <function make_terminal_config.<locals>._make at 0x72c7cda837f0>
+make_entry = <function make_entry.<locals>._make at 0x72c7cda82560>
+make_served_source = <function make_served_source.<locals>._make at 0x72c7cda801a0>
+make_status = <function make_status.<locals>._make at 0x72c7bf697cc0>
+
+    def test_source_registry_wait_for(
+        monkeypatch: pytest.MonkeyPatch,
+        make_terminal_config: Callable[..., TerminalConfig],
+        make_entry: Callable[..., SourceEntry],
+        make_served_source: Callable[..., ServedSource],
+        make_status: Callable[..., SourceStatus],
+    ) -> None:
+        """指す行の読み込みだけを待つ（正常系）。"""
+        # 準備
+        loader = _Loader(make_served_source, make_status, blocked=("b",))
+        monkeypatch.setattr(registry_module, "load_source", loader)
+        terminal = make_terminal_config(sources=_entries(make_entry, "a", "b"))
+        registry = SourceRegistry(loading=True)
+        observed: dict[str, object] = {}
+    
+        async def scenario() -> None:
+            worker = threading.Thread(target=registry.load, args=(terminal,))
+            worker.start()
+            await asyncio.to_thread(loader.entered["b"].wait, 5)
+            await asyncio.wait_for(registry.wait_for(ids=["a"]), timeout=5)
+            waiter_b = asyncio.ensure_future(registry.wait_for(ids=["b"]))
+            await asyncio.sleep(0.05)
+            observed["b_before"] = waiter_b.done()
+            loader.release["b"].set()
+            await asyncio.wait_for(waiter_b, timeout=5)
+            await asyncio.to_thread(worker.join, 5)
+    
+        # 実行
+>       asyncio.run(scenario())
+
+tests/unit/dev_docs/features/sources/test_registry.py:533: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/home/shuhei2441/.local/share/uv/python/cpython-3.14.3-linux-x86_64-gnu/lib/python3.14/asyncio/runners.py:204: in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+/home/shuhei2441/.local/share/uv/python/cpython-3.14.3-linux-x86_64-gnu/lib/python3.14/asyncio/runners.py:127: in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/home/shuhei2441/.local/share/uv/python/cpython-3.14.3-linux-x86_64-gnu/lib/python3.14/asyncio/base_events.py:719: in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    async def scenario() -> None:
+>       worker = threading.Thread(target=registry.load, args=(terminal,))
+                                         ^^^^^^^^^^^^^
+E       AttributeError: 'SourceRegistry' object has no attribute 'load'. Did you mean: 'reload'?
+
+tests/unit/dev_docs/features/sources/test_registry.py:521: AttributeError
+____________________ test_source_registry_wait_for_when_cwd ____________________
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x72c7ce0cc600>
+make_terminal_config = <function make_terminal_config.<locals>._make at 0x72c7bf696e50>
+make_entry = <function make_entry.<locals>._make at 0x72c7bf6975e0>
+make_served_source = <function make_served_source.<locals>._make at 0x72c7bf6977f0>
+make_status = <function make_status.<locals>._make at 0x72c7bf6956f0>
+
+    def test_source_registry_wait_for_when_cwd(
+        monkeypatch: pytest.MonkeyPatch,
+        make_terminal_config: Callable[..., TerminalConfig],
+        make_entry: Callable[..., SourceEntry],
+        make_served_source: Callable[..., ServedSource],
+        make_status: Callable[..., SourceStatus],
+    ) -> None:
+        """作業場所が scope に当たる行を待つ（正常系）。"""
+        # 準備
+        from dev_docs.features.settings.types import SourceScope
+    
+        loader = _Loader(make_served_source, make_status, blocked=("b",))
+        monkeypatch.setattr(registry_module, "load_source", loader)
+        terminal = make_terminal_config(
+            sources=[
+                make_entry("/tmp/a/dev-docs.yaml", source_id="a", scope=SourceScope(read=["/w/a/**"])),
+                make_entry("/tmp/b/dev-docs.yaml", source_id="b", scope=SourceScope(read=["/w/b/**"])),
+            ]
+        )
+        registry = SourceRegistry(loading=True)
+        observed: dict[str, object] = {}
+    
+        async def scenario() -> None:
+            worker = threading.Thread(target=registry.load, args=(terminal,))
+            worker.start()
+            await asyncio.to_thread(loader.entered["b"].wait, 5)
+            await asyncio.wait_for(registry.wait_for(cwd="/w/a/x"), timeout=5)
+            waiter_c = asyncio.ensure_future(registry.wait_for(cwd="/w/c"))
+            await asyncio.sleep(0.05)
+            observed["c_before"] = waiter_c.done()
+            loader.release["b"].set()
+            await asyncio.wait_for(waiter_c, timeout=5)
+            await asyncio.to_thread(worker.join, 5)
+    
+        # 実行
+>       asyncio.run(scenario())
+
+tests/unit/dev_docs/features/sources/test_registry.py:573: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/home/shuhei2441/.local/share/uv/python/cpython-3.14.3-linux-x86_64-gnu/lib/python3.14/asyncio/runners.py:204: in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+/home/shuhei2441/.local/share/uv/python/cpython-3.14.3-linux-x86_64-gnu/lib/python3.14/asyncio/runners.py:127: in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/home/shuhei2441/.local/share/uv/python/cpython-3.14.3-linux-x86_64-gnu/lib/python3.14/asyncio/base_events.py:719: in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    async def scenario() -> None:
+>       worker = threading.Thread(target=registry.load, args=(terminal,))
+                                         ^^^^^^^^^^^^^
+E       AttributeError: 'SourceRegistry' object has no attribute 'load'. Did you mean: 'reload'?
+
+tests/unit/dev_docs/features/sources/test_registry.py:561: AttributeError
+________________ test_source_registry_wait_for_when_id_less_row ________________
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x72c7cde78360>
+make_terminal_config = <function make_terminal_config.<locals>._make at 0x72c7cdf241a0>
+make_entry = <function make_entry.<locals>._make at 0x72c7cdf24250>
+make_served_source = <function make_served_source.<locals>._make at 0x72c7cde994e0>
+make_status = <function make_status.<locals>._make at 0x72c7cde99220>
+
+    def test_source_registry_wait_for_when_id_less_row(
+        monkeypatch: pytest.MonkeyPatch,
+        make_terminal_config: Callable[..., TerminalConfig],
+        make_entry: Callable[..., SourceEntry],
+        make_served_source: Callable[..., ServedSource],
+        make_status: Callable[..., SourceStatus],
+    ) -> None:
+        """ID を持たない行は、ID で指す要求でも待つ（正常系）。"""
+        # 準備
+        loader = _Loader(make_served_source, make_status, blocked=("m",), names={"m": "n"})
+        monkeypatch.setattr(registry_module, "load_source", loader)
+        terminal = make_terminal_config(
+            sources=[
+                make_entry("/tmp/a/dev-docs.yaml", source_id="a"),
+                make_entry("/tmp/m/dev-docs.yaml"),
+            ]
+        )
+        registry = SourceRegistry(loading=True)
+        observed: dict[str, object] = {}
+    
+        async def scenario() -> None:
+            worker = threading.Thread(target=registry.load, args=(terminal,))
+            worker.start()
+            await asyncio.to_thread(loader.entered["m"].wait, 5)
+            waiter = asyncio.ensure_future(registry.wait_for(ids=["n"]))
+            await asyncio.sleep(0.05)
+            observed["before"] = waiter.done()
+            loader.release["m"].set()
+            await asyncio.wait_for(waiter, timeout=5)
+            await asyncio.to_thread(worker.join, 5)
+    
+        # 実行
+>       asyncio.run(scenario())
+
+tests/unit/dev_docs/features/sources/test_registry.py:610: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/home/shuhei2441/.local/share/uv/python/cpython-3.14.3-linux-x86_64-gnu/lib/python3.14/asyncio/runners.py:204: in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+/home/shuhei2441/.local/share/uv/python/cpython-3.14.3-linux-x86_64-gnu/lib/python3.14/asyncio/runners.py:127: in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/home/shuhei2441/.local/share/uv/python/cpython-3.14.3-linux-x86_64-gnu/lib/python3.14/asyncio/base_events.py:719: in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    async def scenario() -> None:
+>       worker = threading.Thread(target=registry.load, args=(terminal,))
+                                         ^^^^^^^^^^^^^
+E       AttributeError: 'SourceRegistry' object has no attribute 'load'. Did you mean: 'reload'?
+
+tests/unit/dev_docs/features/sources/test_registry.py:599: AttributeError
+_________________ test_source_registry_wait_for_when_cancelled _________________
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x72c7cde782f0>
+make_terminal_config = <function make_terminal_config.<locals>._make at 0x72c7cdf26fb0>
+make_entry = <function make_entry.<locals>._make at 0x72c7cde9ac40>
+make_served_source = <function make_served_source.<locals>._make at 0x72c7cde99d20>
+make_status = <function make_status.<locals>._make at 0x72c7cde9a820>
+
+    def test_source_registry_wait_for_when_cancelled(
+        monkeypatch: pytest.MonkeyPatch,
+        make_terminal_config: Callable[..., TerminalConfig],
+        make_entry: Callable[..., SourceEntry],
+        make_served_source: Callable[..., ServedSource],
+        make_status: Callable[..., SourceStatus],
+    ) -> None:
+        """取り消された待ちを外す（正常系）。"""
+        # 準備
+        loader = _Loader(make_served_source, make_status, blocked=("b",))
+        monkeypatch.setattr(registry_module, "load_source", loader)
+        terminal = make_terminal_config(sources=_entries(make_entry, "a", "b"))
+        registry = SourceRegistry(loading=True)
+        observed: dict[str, object] = {}
+    
+        async def scenario() -> None:
+            worker = threading.Thread(target=registry.load, args=(terminal,))
+            worker.start()
+            await asyncio.to_thread(loader.entered["b"].wait, 5)
+            task = asyncio.ensure_future(registry.wait_for(ids=["b"]))
+            await asyncio.sleep(0.05)
+            task.cancel()
+            try:
+                await task
+            except asyncio.CancelledError:
+                observed["cancelled"] = True
+            observed["waiters"] = list(registry._waiters)
+            loader.release["b"].set()
+            await asyncio.to_thread(worker.join, 5)
+    
+        # 実行
+>       asyncio.run(scenario())
+
+tests/unit/dev_docs/features/sources/test_registry.py:647: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/home/shuhei2441/.local/share/uv/python/cpython-3.14.3-linux-x86_64-gnu/lib/python3.14/asyncio/runners.py:204: in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+/home/shuhei2441/.local/share/uv/python/cpython-3.14.3-linux-x86_64-gnu/lib/python3.14/asyncio/runners.py:127: in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/home/shuhei2441/.local/share/uv/python/cpython-3.14.3-linux-x86_64-gnu/lib/python3.14/asyncio/base_events.py:719: in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    async def scenario() -> None:
+>       worker = threading.Thread(target=registry.load, args=(terminal,))
+                                         ^^^^^^^^^^^^^
+E       AttributeError: 'SourceRegistry' object has no attribute 'load'. Did you mean: 'reload'?
+
+tests/unit/dev_docs/features/sources/test_registry.py:632: AttributeError
+__________________ test_source_registry_get_when_row_loading ___________________
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x72c7cde7a270>
+make_terminal_config = <function make_terminal_config.<locals>._make at 0x72c7cde9bd70>
+make_entry = <function make_entry.<locals>._make at 0x72c7cdebb7f0>
+make_served_source = <function make_served_source.<locals>._make at 0x72c7cdebbc10>
+make_status = <function make_status.<locals>._make at 0x72c7cdb5f5e0>
+
+    def test_source_registry_get_when_row_loading(
+        monkeypatch: pytest.MonkeyPatch,
+        make_terminal_config: Callable[..., TerminalConfig],
+        make_entry: Callable[..., SourceEntry],
+        make_served_source: Callable[..., ServedSource],
+        make_status: Callable[..., SourceStatus],
+    ) -> None:
+        """読み込んでいない行の ID を引くと、その行の読み込みを待つ（正常系）。"""
+        # 準備
+        loader = _Loader(make_served_source, make_status, blocked=("a",))
+        monkeypatch.setattr(registry_module, "load_source", loader)
+        terminal = make_terminal_config(sources=_entries(make_entry, "a", "b"))
+        registry = SourceRegistry(loading=True)
+>       worker = threading.Thread(target=registry.load, args=(terminal,))
+                                         ^^^^^^^^^^^^^
+E       AttributeError: 'SourceRegistry' object has no attribute 'load'. Did you mean: 'reload'?
+
+tests/unit/dev_docs/features/sources/test_registry.py:666: AttributeError
+_______________ test_build_view_router_when_other_source_loading _______________
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x72c7bf6b8d70>
+make_source_dir = <function make_source_dir.<locals>._make at 0x72c7bf393a00>
+make_terminal_config = <function make_terminal_config.<locals>._make at 0x72c7bf392ae0>
+make_entry = <function make_entry.<locals>._make at 0x72c7bf392cf0>
+make_view_env = <function make_view_env.<locals>._make at 0x72c7bf1300f0>
+
+    def test_build_view_router_when_other_source_loading(
+        monkeypatch: Any,
+        make_source_dir: Callable[..., Path],
+        make_terminal_config: Callable[..., TerminalConfig],
+        make_entry: Callable[..., SourceEntry],
+        make_view_env: Callable[..., SimpleNamespace],
+    ) -> None:
+        """読み込み済みの配信元は、他の配信元の読み込み中でも答える（正常系）。"""
+        # 準備
+        import threading
+    
+        from dev_docs.features.sources import registry as registry_module
+    
+        sample = make_source_dir("sample")
+        notes = make_source_dir("notes")
+        terminal = make_terminal_config(
+            sources=[
+                make_entry(str(sample), source_id="sample"),
+                make_entry(str(notes), source_id="notes"),
+            ]
+        )
+        entered = threading.Event()
+        release = threading.Event()
+        original = registry_module.load_source
+    
+        def blocking_load(entry: SourceEntry, *, index: int) -> Any:
+            if entry.id == "notes":
+                entered.set()
+                release.wait(timeout=5)
+            return original(entry, index=index)
+    
+        monkeypatch.setattr(registry_module, "load_source", blocking_load)
+        registry = SourceRegistry(loading=True)
+        handlers = dataclasses.replace(make_view_env(root=sample.parent).handlers, registry=registry)
+        app = FastAPI()
+        register_error_handlers(app)
+        app.include_router(build_view_router(handlers))
+        observed: dict[str, Any] = {}
+    
+        async def scenario() -> httpx.Response:
+            worker = asyncio.ensure_future(asyncio.to_thread(registry.load, terminal))
+            await asyncio.to_thread(entered.wait, 5)
+            transport = httpx.ASGITransport(app=app)
+            async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+                observed["sample"] = await asyncio.wait_for(
+                    client.get("/_api/sources/sample/docs"), timeout=5
+                )
+                notes_request = asyncio.ensure_future(client.get("/_api/sources/notes/docs"))
+                await asyncio.sleep(0.1)
+                observed["notes_before"] = notes_request.done()
+                release.set()
+                response = await asyncio.wait_for(notes_request, timeout=10)
+            await asyncio.wait_for(worker, timeout=10)
+            return response
+    
+        # 実行
+>       notes_response = asyncio.run(scenario())
+                         ^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/unit/dev_docs/features/view/test_route.py:236: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/home/shuhei2441/.local/share/uv/python/cpython-3.14.3-linux-x86_64-gnu/lib/python3.14/asyncio/runners.py:204: in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+/home/shuhei2441/.local/share/uv/python/cpython-3.14.3-linux-x86_64-gnu/lib/python3.14/asyncio/runners.py:127: in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/home/shuhei2441/.local/share/uv/python/cpython-3.14.3-linux-x86_64-gnu/lib/python3.14/asyncio/base_events.py:719: in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    async def scenario() -> httpx.Response:
+>       worker = asyncio.ensure_future(asyncio.to_thread(registry.load, terminal))
+                                                         ^^^^^^^^^^^^^
+E       AttributeError: 'SourceRegistry' object has no attribute 'load'. Did you mean: 'reload'?
+
+tests/unit/dev_docs/features/view/test_route.py:220: AttributeError
+_______________________________ test_wait_target _______________________________
+
+    def test_wait_target() -> None:
+        """要求ごとの待つ行の決め方（正常系）。"""
+        # 準備
+        from dev_docs.features.describe.types import DescribeRequest
+        from dev_docs.features.write.types import WriteRequest
+    
+        requests = [
+            SearchRequest(source="a"),
+            SearchRequest(source=["a", "*"]),
+            DescribeRequest(outside_scope=True),
+            WriteRequest(cwd="/w/a", operations=[]),
+            DescribeRequest(),
+        ]
+        # 実行
+>       targets = [docs_module._wait_target(request) for request in requests]
+                   ^^^^^^^^^^^^^^^^^^^^^^^^
+E       AttributeError: module 'dev_docs.server.mcp.docs' has no attribute '_wait_target'
+
+tests/unit/dev_docs/server/mcp/test_docs.py:208: AttributeError
+______________________________ test_check_sources ______________________________
+
+tmp_path = PosixPath('/tmp/pytest-of-shuhei2441/pytest-7116/test_check_sources0')
+write_files = <function write_files.<locals>._write at 0x72c7bef43950>
+make_terminal_config = <function make_terminal_config.<locals>._make at 0x72c7bef43320>
+make_entry = <function make_entry.<locals>._make at 0x72c7bef43060>
+
+    def test_check_sources(
+        tmp_path: Path,
+        write_files: Callable[[Path, dict[str, str]], None],
+        make_terminal_config: Callable[..., TerminalConfig],
+        make_entry: Callable[..., SourceEntry],
+    ) -> None:
+        """控えを捨てずに検査の結果を持たせる（正常系）。"""
+        # 準備
+>       from dev_docs.main import check_sources
+E       ImportError: cannot import name 'check_sources' from 'dev_docs.main' (/mnt/c/Users/shuhe/repo/dev-docs/.claude/worktrees/fix-server-startup-wait-and-status-latency/src/dev_docs/main.py)
+
+tests/unit/dev_docs/test_serve.py:806: ImportError
+=========================== short test summary info ============================
+FAILED tests/unit/dev_docs/features/admin/test_render.py::test_render_status_when_loading
+FAILED tests/unit/dev_docs/features/admin/test_render.py::test_source_row_when_checking
+FAILED tests/unit/dev_docs/features/admin/test_service.py::test_source_states_when_not_checked
+FAILED tests/unit/dev_docs/features/sources/test_registry.py::test_source_registry_load
+FAILED tests/unit/dev_docs/features/sources/test_registry.py::test_source_registry_load_when_row_loading
+FAILED tests/unit/dev_docs/features/sources/test_registry.py::test_source_registry_load_when_requested
+FAILED tests/unit/dev_docs/features/sources/test_registry.py::test_source_registry_load_when_row_failed
+FAILED tests/unit/dev_docs/features/sources/test_registry.py::test_source_registry_load_when_duplicate_loaded_later
+FAILED tests/unit/dev_docs/features/sources/test_registry.py::test_source_registry_wait_for
+FAILED tests/unit/dev_docs/features/sources/test_registry.py::test_source_registry_wait_for_when_cwd
+FAILED tests/unit/dev_docs/features/sources/test_registry.py::test_source_registry_wait_for_when_id_less_row
+FAILED tests/unit/dev_docs/features/sources/test_registry.py::test_source_registry_wait_for_when_cancelled
+FAILED tests/unit/dev_docs/features/sources/test_registry.py::test_source_registry_get_when_row_loading
+FAILED tests/unit/dev_docs/features/view/test_route.py::test_build_view_router_when_other_source_loading
+FAILED tests/unit/dev_docs/server/mcp/test_docs.py::test_wait_target - Attrib...
+FAILED tests/unit/dev_docs/test_serve.py::test_check_sources - ImportError: c...
+================== 16 failed, 873 passed in 159.27s (0:02:39) ==================

@@ -17,8 +17,10 @@ from typing import Any
 import pytest
 from fastapi.testclient import TestClient
 
+from dev_docs import main as main_module
 from dev_docs.features.settings.query import load_terminal_config
 from dev_docs.features.sources import registry as registry_module
+from dev_docs.features.sources.registry import SourceRegistry
 from dev_docs.main import Handlers, build_handlers, start_loading
 from dev_docs.server.app import build_app
 
@@ -484,10 +486,19 @@ class LoadingServerEnv:
     env: ServerEnv
     release: threading.Event
     thread: threading.Thread
+    # 読み込みを始めた配信元の ID の順
+    order: list[str] = field(default_factory=list)
+    # 配信元を指す要求の待ちを受け取ったときに立つ
+    waiting: threading.Event = field(default_factory=threading.Event)
+    # 読み込みを終えた配信元の ID の順
+    loaded: list[str] = field(default_factory=list)
+    # `held` の配信元の読み込みの合図
+    hold: threading.Event = field(default_factory=threading.Event)
 
     def finish(self) -> None:
         """読み込みの合図を出し、読み込みが終わるまで待つ。"""
         self.release.set()
+        self.hold.set()
         self.thread.join(timeout=LOADING_WAIT_SEC)
 
 
@@ -500,14 +511,40 @@ def make_loading_server(
     started: list[LoadingServerEnv] = []
     original = registry_module.load_source
 
-    def _make(*specs: SourceSpec) -> LoadingServerEnv:
+    def _make(
+        *specs: SourceSpec,
+        blocked: tuple[str, ...] | None = None,
+        failing: tuple[str, ...] = (),
+        held: tuple[str, ...] = (),
+    ) -> LoadingServerEnv:
+        """`blocked` は合図まで止める配信元の ID（省くと全て）、`failing` は例外を投げる配信元の ID。
+
+        `held` は `blocked` と別の合図（`hold`）まで止める配信元の ID。
+        """
         release = threading.Event()
+        hold = threading.Event()
+        order: list[str] = []
+        loaded: list[str] = []
+        waiting = threading.Event()
 
-        def blocked(entry: Any, *, index: int, lookup: Any = None) -> Any:
-            release.wait(timeout=LOADING_WAIT_SEC)
-            return original(entry, index=index, lookup=lookup)
+        def load(entry: Any, *, index: int, lookup: Any = None) -> Any:
+            order.append(entry.id)
+            if blocked is None or entry.id in blocked:
+                release.wait(timeout=LOADING_WAIT_SEC)
+            if entry.id in held:
+                hold.wait(timeout=LOADING_WAIT_SEC)
+            if entry.id in failing:
+                raise RuntimeError(f"{entry.id} を読み込めない")
+            result = original(entry, index=index, lookup=lookup)
+            loaded.append(entry.id)
+            return result
 
-        monkeypatch.setattr(registry_module, "load_source", blocked)
+        monkeypatch.setattr(registry_module, "load_source", load)
+        monkeypatch.setattr(
+            main_module,
+            "SourceRegistry",
+            lambda **kwargs: SourceRegistry(**kwargs, on_waiting=waiting.set),
+        )
         state_dir = tmp_path / "state"
         settings_path = tmp_path / "settings.yaml"
         settings_path.write_text(
@@ -526,7 +563,15 @@ def make_loading_server(
             client=client,
             folders={spec.id: spec.folder for spec in specs},
         )
-        loading = LoadingServerEnv(env=env, release=release, thread=thread)
+        loading = LoadingServerEnv(
+            env=env,
+            release=release,
+            thread=thread,
+            order=order,
+            waiting=waiting,
+            loaded=loaded,
+            hold=hold,
+        )
         started.append(loading)
         return loading
 

@@ -238,16 +238,19 @@ def test_error_when_restart_in_progress(
     head = dev_docs_clone.head()
     dev_docs_clone.push_upstream(dev_docs_clone.bump_version("0.3.0"), "upstream")
     started = started_count(state_dir)
-    converting = threading.Thread(
-        target=lambda: call_tool(
-            httpx.Client(timeout=30),
-            port,
-            "/_admin/mcp/",
-            "try_convert",
-            path=str(slow.folder),
-            file="docs/doc-1.yaml",
-        )
-    )
+
+    def convert() -> None:
+        with httpx.Client(timeout=30) as client:
+            call_tool(
+                client,
+                port,
+                "/_admin/mcp/",
+                "try_convert",
+                path=str(slow.folder),
+                file="docs/doc-1.yaml",
+            )
+
+    converting = threading.Thread(target=convert)
     # 実行（眠る変換の途中で、update の要求を送りかけたまま restart を呼び、残りを送る）
     converting.start()
     time.sleep(1)

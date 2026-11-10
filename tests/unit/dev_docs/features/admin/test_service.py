@@ -817,3 +817,60 @@ def test_write_nav_when_overlaid_nav(
     # 実行・検証
     with pytest.raises(InvalidArgumentError, match="引数が正しくありません"):
         write_nav(request, handlers=handlers)
+
+
+def test_source_states_when_not_checked(
+    monkeypatch: pytest.MonkeyPatch,
+    make_source_dir: Callable[..., Path],
+    make_terminal_config: Callable[..., TerminalConfig],
+    make_entry: Callable[..., SourceEntry],
+) -> None:
+    """検査が済んでいない配信元は同期の件数を持たず、ファイルをたどらない（正常系）。"""
+    # 準備
+    from dev_docs.features.admin import service as service_module
+
+    alpha = make_source_dir("alpha", unindexed=1)
+    terminal = make_terminal_config(sources=[make_entry(str(alpha), source_id="alpha")])
+    handlers = build_handlers(terminal)
+    handlers.registry.reload(terminal)
+    calls: list[str] = []
+
+    def failing_check_sync(store: Any, source: Any) -> Any:
+        calls.append(source.id)
+        raise AssertionError("check_sync を呼んだ")
+
+    monkeypatch.setattr(service_module, "check_sync", failing_check_sync, raising=False)
+    # 実行
+    states = _source_states(handlers)
+    # 検証
+    assert [(state.id, state.status) for state in states] == [("alpha", "serving")]
+    assert states[0].sync is None
+    assert calls == []
+
+
+def test_source_states_without_refresh(
+    monkeypatch: pytest.MonkeyPatch,
+    make_source_dir: Callable[..., Path],
+    make_terminal_config: Callable[..., TerminalConfig],
+    make_entry: Callable[..., SourceEntry],
+) -> None:
+    """配信元ごとの `default_ref` の commit を確かめず、いま配信中の組を読む（正常系）。"""
+    # 準備
+    alpha = make_source_dir("alpha", unindexed=1)
+    terminal = make_terminal_config(sources=[make_entry(str(alpha), source_id="alpha")])
+    handlers = build_handlers(terminal)
+    handlers.registry.reload(terminal)
+    [served] = handlers.registry.served()
+    calls: list[str] = []
+
+    def failing_get(source_id: str) -> Any:
+        calls.append(source_id)
+        raise AssertionError("registry.get を呼んだ")
+
+    monkeypatch.setattr(handlers.registry, "get", failing_get)
+    # 実行
+    states = _source_states(handlers)
+    # 検証
+    assert [(state.id, state.status) for state in states] == [("alpha", "serving")]
+    assert states[0].config_version == served.config.version
+    assert calls == []
