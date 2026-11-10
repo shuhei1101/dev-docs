@@ -156,6 +156,31 @@ flows:
       - '`format: json` ではスキーマを JSON のオブジェクトで、`metadata` を `{name: title, description: meta.summary}` で structuredContent と text に入れる'
       - '`metadata` を持たない種類では対応の表を出さず、`format: json` の `metadata` が無いか空になる'
     test: test_normal_when_kind
+  - name: 正常系（ほかの配信元のスキーマ）
+    summary: '`documents[].schema` でほかの配信元を指す種類は、参照したリビジョンのスキーマを `$ref` を解いて返す'
+    setup:
+      - name: Mock
+        description: なし
+      - name: スキーマの配信元
+        description: '`schemas/note.schema.yaml` と、そこから `$ref` で指す `schemas/common.schema.yaml` を持つ Git のリポジトリ'
+        notes: id `schemas`。タグ `v1` の後の commit で `common.schema.yaml` の定義に項目 `extra` を追加し、作業ツリーはその commit
+      - name: 入力
+        description: '`source: sample`, `kind: note`（sample の行は `schema: {source: schemas, path: schemas/note.schema.yaml, ref: v1}`）'
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        participant C as クライアント
+        participant T as describe
+        participant G as schemas のリポジトリ
+
+        C->>T: source: sample, kind: note
+        T-->>G: v1 の note.schema.yaml と common.schema.yaml
+        T-->>C: v1 のスキーマ
+      ```
+    expected:
+      - 返すスキーマに、`common.schema.yaml` の定義が v1 の内容で入り、`extra` が無い
+      - '`worktree` を渡しても、参照したリビジョンのスキーマを返す'
+    test: test_normal_when_kind_from_other_source
   - name: 異常系（読めない配信元・SourceNotReadableError）
     summary: '`scope` に当たらない配信元の説明を断る'
     setup:
@@ -428,7 +453,7 @@ response:
   - name: schema
     type: str
     description: 種類のスキーマ（YAML のまま）
-    notes: '`source`・`kind` のとき'
+    notes: '`source`・`kind` のとき。`documents[].schema` でほかの配信元を指す種類は、参照したリビジョンのスキーマの `$ref` を解いた YAML'
   - name: metadata
     type: dict[str, str]
     description: 種類の共通のキーと列名の対応（種類の行の `metadata`）。書いていないキーは同じ名前の列を読む
@@ -486,6 +511,8 @@ constraints:
     notes: 配信元のフォルダをたどる検査は /mnt/c の配信元で 1 件 3〜12 秒かかる（2026-11-04 の実測）。直接編集したファイルのずれは、次の検査まで警告に出ない
   - item: 作業範囲の外の記録
     constraint: '`outside_scope: true` で作業範囲の外の配信元を読んだ呼び出しは、作業場所（`cwd`）と配信元の ID を要求のログに残す'
+  - item: ほかの配信元のスキーマの参照
+    constraint: '`documents[].schema` でほかの配信元を指す行は、配信元の検査の制約「ほかの配信元のスキーマの参照」のとおりに読む'
 refs:
   - SC-155-5#scenarios[正常シナリオ]
 test_file: tests/integration/server/test_describe.py

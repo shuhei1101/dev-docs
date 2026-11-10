@@ -17,9 +17,9 @@ components:
         required: true
         description: 文書の取得の応答
       - name: baseMarkdown
-        type: string | null
+        type: '{markdown: string; tableKeys: string[]} | null'
         required: false
-        description: 比較元の本文（差分の強調。mdmark#222 の後）
+        description: 比較元の文書の本文と表のキー（`{markdown, tableKeys}`。差分の強調）。`null`・省略は強調しない
       - name: onHeadings
         type: '(items: TocItem[]) => void'
         required: true
@@ -31,16 +31,18 @@ components:
       - name: locating
         type: DocComment | null
         required: true
-        description: コメントのパネルで場所を選ばれたコメント。`docId` が同じ文書の印（`.mdmark-comment-mark`）が描かれたら、その印が画面の中ほどに入るまでスクロールして `onLocated` を呼ぶ
+        description: コメントのパネルで場所を選ばれたコメント。`docId` が同じ文書を描き終えたら、`reloadComments()` の後に `focusComment(id)` を呼び、`onLocated` を呼ぶ
       - name: onLocated
         type: () => void
         required: true
-        description: '`locating` の印までスクロールしたとき'
+        description: '`locating` のコメントへ移ったとき'
     description: |-
-      - 列の初期の非表示は、`columns` のその表のキーの列を `+columns` の表の `hide=` に入れた Markdown を渡す（表のキーは `tableKeys` の同じ番号）
-      - 列の出し入れは `useColumnPersistence` で保存する
+      - 列の初期の非表示は、`columns` のその表のキーの列を `+columns` の表の `hide=` に入れた Markdown を渡す（`applyHiddenColumns`。表のキーは `findTables` で本文の表と対にする）
+      - 比較元は、本文と同じく最初の見出し 1 を除き、比較元の `tableKeys` で `columns` の隠す列を書き込んでから `baseMarkdown` に渡す
+      - 列の出し入れは `useColumnPersistence` が返す関数を `onColumnsChange` に渡して保存する
+      - コメントの置き場所のこの文書のコメント（`id`・`body` の並び）が変わったら、描き終えた本文で `reloadComments()` を呼んでマーカーを描き直す（パネルの修正・削除と、mdmark の追加・修正・削除のどれも同じ経路）
       - 本文のクリックを拾い、同じ配信元の文書への相対リンクは、`document.bodyPath` があればそれを、無ければ `document.path` を基準に解決して `navigate`（`rev` を保つ）、外の URL は `target="_blank" rel="noopener"` で開く
-      - mdmark の `commentStore` はコメントのストアへつなぐ（`docId` は `{source}@{ref}:{path}`）
+      - mdmark の `commentStore` はコメントのストアへつなぐ（`docId` は `{source}@{ref}:{path}`。`update`・`remove` はストアの `update(id, body)`・`remove(id)`）
     unit_tests:
       - name: test_doc_body
         case: 正常
@@ -60,6 +62,24 @@ components:
         condition: '`path` が `notes/files/a`・`bodyPath` が `notes/a.md` の文書で、本文の `./b.md` を押す（`rev` が `v1`）'
         mock: mdmark（本文にリンクを描く偽物）
         expected: ルーターの位置が `/s/notes/b.md?rev=v1` になり、ページは読み込み直さない
+      - name: test_doc_body_when_base
+        case: 正常
+        summary: 比較元を mdmark に渡す
+        condition: '`baseMarkdown` に `# A` で始まり `+columns` の表を持つ本文と表のキー、`columns` にその表のキーで `["備考"]`'
+        mock: mdmark（`mount` を記録する偽物）
+        expected: '`mount` の `baseMarkdown` が `# A` を含まず、表に `hide=備考`'
+      - name: test_doc_body_when_comments_changed
+        case: 正常
+        summary: コメントが変わるとマーカーを描き直す
+        condition: 描き終えた後に、ストアのこの文書のコメントを 1 件削除する
+        mock: mdmark（`reloadComments` を記録する偽物）
+        expected: '`reloadComments` が 1 回'
+      - name: test_doc_body_when_locating
+        case: 正常
+        summary: 場所を選ばれたコメントへ移る
+        condition: 描き終えた後に、同じ `docId` のコメントを `locating` に渡す
+        mock: mdmark（`reloadComments`・`focusComment` を記録する偽物）
+        expected: '`reloadComments` の後に `focusComment` がそのコメントの `id` で 1 回、`onLocated` が 1 回'
 refs:
   - SCR-155-1#elements[本文]
   - SCR-155-1#elements[列の表示のメニュー]

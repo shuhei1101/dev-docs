@@ -154,10 +154,11 @@ settings:
   - key: documents[].schema
     title: 文書のスキーマ
     file: dev-docs.yaml
-    type: str
+    type: 'str | {source: str, path: str, ref: str}'
     required: true
-    description: この行の文書（`records` があれば要素）を検査する JSON Schema のファイル。スキーマの `title` が種類の名前になる
-    missing: 検証で違反
+    description: この行の文書（`records` があれば要素）を検査する JSON Schema のファイル。スキーマの `title` が種類の名前になる。文字列は配信元の root からの相対パス。オブジェクトは、端末の設定の `sources` の ID が `source` の配信元のリポジトリの、リビジョン `ref`（タグ・commit）の `path`（リポジトリの直下からのパス）のファイルを指す
+    allowed: オブジェクトの `source`・`path`・`ref` は全て必須の空でない文字列で、ほかのキーを持たない
+    missing: 検証で違反。参照先の配信元が端末の設定に無い・Git のリポジトリでない、`ref` を解けない、そのリビジョンに `path` が無いときも `documents[{番号}].schema` の違反
     reload: reload
   - key: documents[].validators
     title: 通す検査

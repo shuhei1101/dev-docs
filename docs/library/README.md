@@ -19,7 +19,7 @@
 | [mdmark](./LIB-155-9.yaml) | Markdown を描いてコメントを付けるブラウザの JS |
 | [msw](./LIB-155-10.yaml) | ネットワークの層で HTTP を差し替える API のモック |
 | [orval](./LIB-155-11.yaml) | OpenAPI から API の関数・型・MSW のハンドラを生成する CLI |
-| [playwright](./LIB-155-12.yaml) | 実際のブラウザで流す E2E テストのランナー |
+| [playwright](./LIB-155-12.yaml) | 実際のブラウザで画面を操作する結合テスト（フロント）のランナー |
 | [pydantic](./LIB-155-13.yaml) | 要求のモデルを型ヒントで検証するデータ検証ライブラリ |
 | [react](./LIB-155-14.yaml) | コンポーネントで UI を組むライブラリと React Compiler |
 | [react-error-boundary](./LIB-155-15.yaml) | 描画中の例外の代わりの表示 |

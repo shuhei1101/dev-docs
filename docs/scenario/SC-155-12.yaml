@@ -652,6 +652,80 @@ scenarios:
       - '`tools/files.yaml` に `README.md` の行が追加される'
       - '`check_project` が索引の同期の件数を 0 で返す'
     test: test_normal_when_rerun_with_row_exclude
+  - name: 正常シナリオ（ほかの配信元のスキーマを参照する）
+    setup:
+      - name: Mock
+        description: なし（実環境で実行。Claude Code は `claude -p` で動かし、AskUserQuestion には既定の選択肢で答える）
+      - name: スキーマの配信元
+        description: 種類のスキーマ `schemas/note.schema.yaml` と、そこから `$ref` で指す `schemas/common.schema.yaml` と、`dev-docs.yaml` を持つ git リポジトリ。`dev-docs.yaml` は検証に通り、配信中
+        notes: id `schemas`。タグ `v1` の後の commit で `note.schema.yaml` に必須のキー `owner` を、`common.schema.yaml` の定義に項目 `extra` を追加し、作業ツリーはその commit
+      - name: サンプルの配信元
+        description: '`documents[0].schema` で、スキーマの配信元の `schemas/note.schema.yaml` をリビジョン `v1` で指す Git 管理外のフォルダ'
+        notes: id `sample`。文書は `owner` を持たない
+      - name: dev-docs
+        description: 端末の設定の `sources` に schemas の 1 行を持つ dev-docs
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        actor U as 利用者
+        actor A as エージェント
+        participant SK as setup のスキル
+        participant AD as 管理の MCP
+        participant CF as 端末の設定
+        participant DM as 文書の MCP
+        participant SG as schemas のリポジトリ
+
+        U->>SK: /dev-docs:setup {sample のパス}
+        SK->>AD: check_project（sample のパス）
+        AD->>SG: v1 の note.schema.yaml と common.schema.yaml を読む
+        AD-->>SK: 違反 0 件
+        SK->>U: scope.write・scope.read を既定の値つきで聞く
+        U-->>SK: 既定の値
+        SK-->>U: 書き込む行を表で示して確かめる
+        U-->>SK: 了承
+        SK->>CF: sources に sample の行を書く
+        SK->>AD: reload
+        SK-->>U: 追加した配信元と check_project の結果を出す
+        A->>DM: describe(source: sample, kind: note)
+        DM-->>A: v1 のスキーマ
+        A->>DM: write_docs（owner を持たない文書を作る）
+        DM-->>A: 新しいバージョン
+      ```
+    expected:
+      - '`check_project` が違反を 0 件で返す'
+      - 端末の設定の `sources` に sample の行がある
+      - '`describe(source: sample, kind: note)` が返すスキーマに、`common.schema.yaml` の `$ref` が v1 の内容で解かれて入り、`owner` と `extra` が無い'
+      - '`owner` を持たない文書の `write_docs` が通り、sample の作業ツリーに文書ができる'
+      - スキーマの配信元の作業ツリーのファイルは変わらない
+    test: test_normal_when_schema_from_other_source
+  - name: 異常シナリオ（参照先のスキーマが見つからない）
+    setup:
+      - name: Mock
+        description: なし（実環境で実行。Claude Code は `claude -p` で動かし、AskUserQuestion には既定の選択肢で答える）
+      - name: スキーマの配信元
+        description: 正常シナリオ（ほかの配信元のスキーマを参照する）と同じ schemas
+      - name: サンプルの配信元
+        description: '`documents[0].schema` で、スキーマの配信元の `schemas/note.schema.yaml` を、無いリビジョン `v9` で指す Git 管理外のフォルダ'
+      - name: 端末の設定
+        description: '`sources` に schemas の 1 行'
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        actor U as 利用者
+        participant SK as setup のスキル
+        participant AD as 管理の MCP
+
+        U->>SK: /dev-docs:setup {sample のパス}
+        SK->>U: scope・範囲を聞き、表で確かめる
+        U-->>SK: 了承
+        SK->>AD: check_project
+        AD-->>SK: 違反（キーのパスと理由）
+        SK-->>U: 違反を示して止まる
+      ```
+    expected:
+      - 端末の設定は変わらず、schemas の配信は続く
+      - スキルの応答に `documents[0].schema` と、リビジョン `v9` が見つからない理由が出る
+    test: test_error_when_schema_ref_not_found
 lead: 利用者が `/dev-docs:setup [path]` で、フォルダを配信元として端末の設定に並べ、文書の MCP で読めるようにする。2 回目以降は範囲のファイルの増減・改名を管理用の YAML に合わせる。
 issue: 4
 primary_actor: 利用者

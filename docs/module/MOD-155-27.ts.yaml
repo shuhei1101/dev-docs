@@ -47,7 +47,7 @@ functions:
     container: features/docs/doc-view/queries.ts
     usecase: 文書を読む
     role: 問い合わせ
-    summary: 目次の変更のマーカーに使う、比較元のリビジョンの同じ文書の `markdown` を取る
+    summary: 目次の変更のマーカーと本文の強調に使う、比較元のリビジョンの同じ文書の `markdown` と `tableKeys` を取る
     scope: public
     args:
       - name: source
@@ -66,18 +66,18 @@ functions:
         passing: positional
         description: 文書の取得の `diff.base`
     returns:
-      type: UseQueryOptions<string | null, AppError>
+      type: 'UseQueryOptions<{markdown: string; tableKeys: string[]} | null, AppError>'
       description: '`base` が null のときは `enabled: false`。比較元に文書が無い（404）ときは null を返す'
     process: |-
       1. `rev` を `base` にし、`base` を付けずに文書の取得を呼ぶ
-      2. 応答の `markdown` を返す。NotFoundError は null（比較元で追加された文書）
+      2. 応答の `markdown` と `tableKeys` を返す。`markdown` が無い（変換に失敗した）ときと NotFoundError は null（NotFoundError は比較元で追加された文書）
     unit_tests:
       - name: test_base_markdown_query_options
         case: 正常
         summary: 比較元の本文を取る
-        condition: '`base` が `v1`、MSW が `rev=v1` に `# A` を返す'
+        condition: '`base` が `v1`、MSW が `rev=v1` に `markdown: # A`・`tableKeys: [t1]` を返す'
         mock: MSW のハンドラ
-        expected: '`# A`'
+        expected: '`{markdown: # A, tableKeys: [t1]}`'
       - name: test_base_markdown_query_options_when_added
         case: 正常
         summary: 比較元に無い文書

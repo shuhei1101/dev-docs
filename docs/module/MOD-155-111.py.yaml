@@ -326,7 +326,7 @@ classes:
           description: JSON Schema
         process: |-
           1. `source.table(kind)` で行を引く
-          2. `target.ref` と `target.worktree` がどちらも `None` の場合、起動時に読んだ `source.schemas[kind]` を使う
+          2. `target.ref` と `target.worktree` がどちらも `None` の場合と、行の `schema_path` が `SchemaRef` の場合、起動時のスキーマを返す（読む場所によらず参照したリビジョンのスキーマ）
           3. `target.ref` がある場合、`repo_root`・読む場所の commit（`load` と同じ）・スキーマのファイルの `repo_root` からの相対パスで `_revision_schemas` を引き、当たればそのまま返す（リビジョンの書き出しとファイルの `stat` をしない）。
              当たらなければ、`load` と同じ読むフォルダの `schema_path` を『YAMLの読み込み』で読み、`$ref` を解いた結果を `_revision_schemas` に控える
              - ファイルが無い・読めない場合、手順 2 のスキーマを使い、控えない

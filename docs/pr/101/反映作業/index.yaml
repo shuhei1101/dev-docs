@@ -1,0 +1,15 @@
+dev-docs のサーバーの再起動:
+  説明: develop の worktree から起動して稼働中の dev-docs のサーバー（127.0.0.1:8781）を、マージした develop のコードで再起動し、ほかの配信元のスキーマの参照（#94）・write_docs の違反へのスキーマの説明の添付（#96）・画面の mdmark#222 へのつなぎ込み（#44）を有効にする
+  タグ: [再起動]
+  実行者: planner
+  時期: マージの後
+  回数: 1 回限り
+  起動し直す対象: dev-docs のサーバー（127.0.0.1:8781）
+  可逆: true
+  疎通確認: dev-docs のサーバーの再起動/疎通確認.sh
+  実行: dev-docs のサーバーの再起動/実行.sh
+  確認: dev-docs のサーバーの再起動/確認.sh
+  切り戻し: null
+  失敗時: 既定の対処を 1 回、2 回連続で失敗したら依頼元へ返却する
+  確認方法: 配信元の読み込みが終わった後に、稼働中の dev-docs のサーバーの check_project へ、documents[].schema で配信元 knowledge の schemas/rule.schema.yaml を v0.4.0 で指した設定の文字列を指定し、違反が 0 件になる（修正の前のサーバーは documents[0].schema を `型が違う（期待: string）` の違反にする）
+  状態: "-"

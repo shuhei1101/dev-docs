@@ -67,6 +67,28 @@ def _update(doc_id: str, version: str, **operation: Any) -> dict[str, Any]:
     return {"op": "update", "id": doc_id, "expected_version": version, **operation}
 
 
+# 必須の `name` が説明・例を持ち、`count` が型だけを持つスキーマ
+HINT_SCHEMA = (
+    "type: object\n"
+    "title: サンプル\n"
+    "required: [id, name]\n"
+    "properties:\n"
+    "  id:\n"
+    "    type: string\n"
+    "  name:\n"
+    "    type: string\n"
+    "    title: 名前\n"
+    "    description: 文書の名前\n"
+    "    examples: [設定のリファレンス]\n"
+    "  description:\n"
+    "    type: string\n"
+    "  tags:\n"
+    "    type: array\n"
+    "  count:\n"
+    "    type: integer\n"
+)
+
+
 def _setup(
     make_source: Callable[..., Any],
     make_server: Callable[..., Any],
@@ -314,10 +336,12 @@ def test_error_when_validation_failed(
     make_source: Callable[..., Any],
     make_server: Callable[..., Any],
     add_worktree: Callable[..., Path],
+    sample_file_set: Callable[..., dict[str, str]],
 ) -> None:
     """1 件でも検査に通らなければ何も書かない（異常系）。"""
     # 準備
-    source, env, worktree = _setup(make_source, make_server, add_worktree)
+    files = sample_file_set(**{"schemas/sample.schema.yaml": HINT_SCHEMA})
+    source, env, worktree = _setup(make_source, make_server, add_worktree, files)
     first = worktree / "docs" / "doc-1.yaml"
     second = worktree / "docs" / "doc-2.yaml"
     first_before = first.read_text(encoding="utf-8")
@@ -328,7 +352,7 @@ def test_error_when_validation_failed(
         worktree=str(worktree),
         operations=[
             _update("doc-1", _version(first), set={"name": "新しい名前"}),
-            _update("doc-2", _version(second), unset=["name"]),
+            _update("doc-2", _version(second), unset=["name"], set={"count": "3"}),
         ],
     )
     # 検証
@@ -337,6 +361,13 @@ def test_error_when_validation_failed(
     assert "operations[1]" in result.text
     assert "name" in result.text
     assert "fix" in result.text
+    assert "count" in result.text
+    # `unset` した `name` の違反だけが、スキーマの title・description・examples を持つ
+    assert result.text.count("schema:") == 1
+    assert "title: 名前" in result.text
+    assert "description: 文書の名前" in result.text
+    assert "- 設定のリファレンス" in result.text
+    assert "x-rules" not in result.text
     assert first.read_text(encoding="utf-8") == first_before
 
 

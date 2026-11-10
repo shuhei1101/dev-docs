@@ -405,3 +405,35 @@ def test_normal_when_refs_and_worktrees(
     assert worktrees == {str(worktree): "feat/x"}
     assert "refs" not in plain.data
     assert "worktrees" not in plain.data
+
+
+def test_normal_when_kind_from_other_source(
+    make_source: Callable[..., Any],
+    make_schemas_source: Callable[..., Any],
+    make_server: Callable[..., Any],
+    ref_config_text: Callable[..., str],
+) -> None:
+    """documents[].schema でほかの配信元を指す種類は、参照したリビジョンのスキーマを $ref を解いて返す（正常系）。"""
+    # 準備
+    schemas = make_schemas_source(
+        {"schemas/common.schema.yaml": "$defs:\n  text:\n    type: string\n    extra: true\n"}
+    )
+    sample = make_source(
+        "sample",
+        {
+            "dev-docs.yaml": ref_config_text(
+                "sample",
+                [{"source": "schemas", "path": "schemas/note.schema.yaml", "ref": "v1"}],
+            ),
+            "notes/a.yaml": "id: a\nname: A\n",
+        },
+        git=False,
+    )
+    env = make_server(sample, schemas)
+    # 実行
+    result = env.call(
+        "describe", cwd=str(sample.folder), source="sample", kind="note", format="json"
+    )
+    # 検証
+    assert not result.is_error
+    assert result.data["schema"]["properties"]["body"] == {"type": "string"}

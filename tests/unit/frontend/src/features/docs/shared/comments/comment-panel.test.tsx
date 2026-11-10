@@ -30,7 +30,7 @@ const addThree = () => {
 
 const renderPanel = () =>
   render(
-    <CommentPanel open onOpenChange={vi.fn()} github={null} onLocate={vi.fn()} onChanged={vi.fn()} />,
+    <CommentPanel open onOpenChange={vi.fn()} github={null} onLocate={vi.fn()} />,
   );
 
 beforeEach(() => {

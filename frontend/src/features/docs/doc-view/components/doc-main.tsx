@@ -25,6 +25,8 @@ type Props = {
   onCommentSaved: () => void;
   locating: DocComment | null;
   onLocated: () => void;
+  /** 比較元の本文と表のキー（`DocBody` へそのまま渡す） */
+  baseMarkdown?: { markdown: string; tableKeys: string[] } | null;
   onRetry: () => void;
   onCompare: (rev: string | undefined, base: string) => void;
   onClearDiff: () => void;
@@ -61,6 +63,7 @@ const DocContent = ({ doc, active, refs, ...handlers }: ContentProps) => (
         onCommentSaved={handlers.onCommentSaved}
         locating={handlers.locating}
         onLocated={handlers.onLocated}
+        baseMarkdown={handlers.baseMarkdown}
       />
     )}
   </>

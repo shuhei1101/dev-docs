@@ -28,7 +28,7 @@ functions:
       description: 場所を選ばれたコメントと、戻す関数、選ぶ関数
     process: |-
       1. `locate(comment)` は `locating` にコメントを入れ、コメントの `docId` が今開いている `docId` と違うときだけ `openDoc(comment)` を呼ぶ（開いている文書は移動しない）
-      2. `onLocated()` は `locating` を null に戻す（本文が印までスクロールしたとき）
+      2. `onLocated()` は `locating` を null に戻す（本文がそのコメントへ移ったとき）
       3. 開いている `docId` が変わったとき、変わった先が `locating` の文書と違うなら `locating` を null に戻す（印が見つからないまま残った `locating` を、後で同じ文書を開き直したときに使わない）
     unit_tests:
       - name: test_use_locating

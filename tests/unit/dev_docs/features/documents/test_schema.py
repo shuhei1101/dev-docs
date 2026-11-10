@@ -2,12 +2,14 @@ from __future__ import annotations
 
 import logging
 from collections.abc import Callable
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 
 import pytest
 
 from dev_docs.features.documents import schema as schema_module
-from dev_docs.features.documents.schema import resolve_schema_refs
+from dev_docs.features.documents.schema import resolve_schema_refs, startup_schema
+from dev_docs.features.sources.schema_ref import SchemaRef
+from dev_docs.features.sources.types import DocumentTable, ServedSource, SourceConfig
 from dev_docs.shared.yaml_io import load_yaml
 
 FILES_SCHEMA_TEMPLATE = Path(__file__).parents[5] / "templates" / "files.schema.yaml"
@@ -66,6 +68,55 @@ def test_resolve_schema_refs_when_missing(tmp_path: Path, caplog: pytest.LogCapt
     # 検証
     assert result["properties"]["a"] == {"$ref": "無い.schema.yaml#/$defs/x"}
     assert len([r for r in caplog.records if r.levelno == logging.WARNING]) == 1
+
+
+def test_resolve_schema_refs_when_read(caplog: pytest.LogCaptureFixture) -> None:
+    """読み取りの関数で参照先を読む（正常系）。"""
+    # 準備
+    files = {"schemas/共通.schema.yaml": "$defs:\n  x:\n    type: integer\n"}
+    schema = {
+        "properties": {
+            "a": {"$ref": "共通.schema.yaml#/$defs/x"},
+            "b": {"$ref": "../../out.schema.yaml#/$defs/y"},
+        }
+    }
+    # 実行
+    with caplog.at_level(logging.WARNING):
+        result = resolve_schema_refs(
+            schema, PurePosixPath("schemas/note.schema.yaml"), read=files.get
+        )
+    # 検証
+    assert result["properties"]["a"] == {"type": "integer"}
+    assert result["properties"]["b"] == {"$ref": "../../out.schema.yaml#/$defs/y"}
+
+
+def test_startup_schema(
+    tmp_path: Path,
+    write_files: Callable[[Path, dict[str, str]], None],
+    make_served_source: Callable[..., ServedSource],
+) -> None:
+    """相対パスとほかの配信元の参照（正常系）。"""
+    # 準備
+    write_files(tmp_path / "sample", {"schemas/共通.schema.yaml": COMMON_SCHEMA})
+    local = DocumentTable(id="local", paths=["a/*.yaml"], schema_path="schemas/rule.schema.yaml")
+    remote = DocumentTable(
+        id="remote",
+        paths=["b/*.yaml"],
+        schema_path=SchemaRef(source="schemas", path="schemas/note.schema.yaml", ref="v1"),
+    )
+    source = make_served_source(
+        config=SourceConfig(name="sample", documents=[local, remote]),
+        schemas={
+            "local": {"properties": {"body": {"$ref": "共通.schema.yaml#/$defs/markdown"}}},
+            "remote": {"properties": {"body": {"$ref": "keep.schema.yaml#/$defs/x"}}},
+        },
+    )
+    # 実行
+    resolved_local = startup_schema(source, local)
+    resolved_remote = startup_schema(source, remote)
+    # 検証
+    assert resolved_local == {"properties": {"body": {"type": "string", "title": "Markdown"}}}
+    assert resolved_remote == {"properties": {"body": {"$ref": "keep.schema.yaml#/$defs/x"}}}
 
 
 def test_records_item_schema() -> None:

@@ -27,18 +27,14 @@ components:
       - name: onLocate
         type: '(comment: DocComment) => void'
         required: true
-        description: コメントの場所を押したとき（画面がその文書を開き、`DocBody` が本文のコメントのマーカーまでスクロールする）
-      - name: onChanged
-        type: () => void
-        required: true
-        description: 修正・削除の後（本文のマーカーを描き直す）
+        description: コメントの場所を押したとき（画面がその文書を開き、`DocBody` が本文のコメントの箇所へ移る）
     state:
       - name: editingId
         type: string | null
         initial: 'null'
         description: 修正中のコメント
         notes: '`useState`。修正欄で Esc を押すと、イベントをパネルへ伝えず（`stopPropagation`）null に戻す'
-    description: コピーは `navigator.clipboard.writeText(formatComments(選んだコメント))`。起票は全文をコピーしてから `buildIssueUrl` の URL を `window.open(url, "_blank", "noopener")` で開く。結果は sonner の通知で出す（文言は画面設計の通知）
+    description: 修正・削除はコメントの置き場所の `update`・`remove` を呼ぶ（本文のマーカーは `DocBody` が置き場所の変化を受けて描き直す）。コピーは `navigator.clipboard.writeText(formatComments(選んだコメント))`。起票は全文をコピーしてから `buildIssueUrl` の URL を `window.open(url, "_blank", "noopener")` で開く。結果は sonner の通知で出す（文言は画面設計の通知）
     unit_tests:
       - name: test_comment_panel
         case: 正常

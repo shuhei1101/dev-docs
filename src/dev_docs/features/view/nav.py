@@ -14,7 +14,7 @@ from pydantic import ValidationError
 
 from dev_docs.features.access.types import Target
 from dev_docs.features.documents.fields import get_field
-from dev_docs.features.documents.schema import records_item_schema, resolve_schema_refs
+from dev_docs.features.documents.schema import records_item_schema, startup_schema
 from dev_docs.features.documents.store import DocumentStore
 from dev_docs.features.documents.types import Document
 from dev_docs.features.search.fields import known_fields
@@ -246,7 +246,7 @@ def _tab_title(row: DocumentTable) -> str:
 
 def _row_schema(source: ServedSource, row: DocumentTable) -> dict[str, Any]:
     """行の文書 1 件に当てるスキーマ（`records` を持つ行は 1 行のスキーマ）を返す。"""
-    schema = resolve_schema_refs(source.schemas.get(row.id, {}), source.root / row.schema_path)
+    schema = startup_schema(source, row)
     if row.records is None:
         return schema
     return records_item_schema(schema, row.records) or {}

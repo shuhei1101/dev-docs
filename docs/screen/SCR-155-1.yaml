@@ -186,20 +186,20 @@ elements:
     action_ref: IF-155-10#
     notes:
       mdmark に渡す値: '`docId` は `{配信元の ID}:{文書のパス}`、`commentStore` はコメントの置き場所の読み書き。`diffSource` は渡さず、mdmark の「変更を見る」を出さない'
-      差分: '`base` があるときは、`ref` を `diff.base` にして取った `markdown` と比べ、変わった行・表の行を強調して描く。描き方は mdmark の付け替え口を通し、mdmark 側の機能が入るまでは付け替え口のモックで作る'
+      差分: '`base` があるときは、`ref` を `diff.base` にして取った `markdown` を mdmark の `baseMarkdown` に渡し、変わったブロックと削除したブロックの位置を本文の中で強調する。`base` を外したら `baseMarkdown` を `null` にして強調を解除する'
   - name: 列の表示のメニュー
     kind: menu
     position: 本文 > 表の上
     description: mdmark が `+columns` の表に描く列の表示の切り替え。隠した列を文書ごとに記憶する
-    label: mdmark の `列の表示` のボタンと列のチェックボックス。隠した列があるときは表の上に `{件数} 列を隠しています`
+    label: 表の上の mdmark の `テーブル設定` のボタンと、ボタンで開く `テーブル設定` のダイアログの列ごとの `「{列名}」を隠す`（隠した列は `「{列名}」を表示`）のボタン。隠した列があるときはボタンに件数のバッジを出し、読み上げ名を `テーブル設定（{件数} 列を非表示）` にする
     visible_when: 本文に `+columns` の表があるとき（表ごと）
-    initial_value: '`columns` のその表のキーの列を隠した状態（表のキーは `tableKeys` の同じ順番）'
+    initial_value: '`columns` のその表のキーの列を隠した状態（表のキーは、本文の表を出る順に `tableKeys` と対にして引く）'
     source: 文書の取得.columns・文書の取得.tableKeys
     target: 表の列の設定の保存.hidden（`table` はその表のキー）
     action: 列の出し入れのたびに、その表の隠した列を保存する。保存に失敗したら通知に `列の表示を保存できませんでした。` を出し、表は切り替えたままにする
     action_ref: IF-155-21#
     notes:
-      mdmark とのつなぎ: 初めに隠す列は、`mount` の前に `markdown` の `+columns` の表のマーカーへ `columns` の値を `hide=` で書いて渡す（mdmark の今の記法）。列の出し入れを知らせる受け取りは mdmark のアダプターを通し、mdmark 側の機能が入るまではアダプターのモックで作る
+      mdmark とのつなぎ: 初めに隠す列は、`mount` の前に `markdown` の `+columns` の表のマーカーへ `columns` の値を `hide=` で書いて渡す（mdmark の今の記法）。列の出し入れは mdmark の `onColumnsChange` で受ける。`tableIndex` は `+columns` の表だけの出る順の番号のため、本文の表を出る順に `tableKeys` と対にし、そのうち `+columns` の表のキーだけを出る順に並べた中の `tableIndex` 番目のキーで保存する
   - name: 目次
     kind: nav
     position: 本文の右
@@ -268,7 +268,7 @@ elements:
     description: コメントした文書と直前の見出しの並び
     label: '`{文書の名前} › {見出し} › {見出し}`（見出しが無いときは `{文書の名前} › 冒頭`）'
     visible_when: 溜めたコメントごと
-    action: クリックで本文のその箇所へ移る。他の文書のコメントは、コメントしたリビジョンのその文書を開いてから移る
+    action: クリックで本文のその箇所を画面に入れて強調する（mdmark の `focusComment`）。他の文書のコメントは、コメントしたリビジョンのその文書を開いてから移る
     action_ref: IF-155-10#
     notes:
       見出しの求め方: 保存したときに、描いた本文の中で `prefix`・`quote`・`suffix` に当たる箇所の前にある見出しを階層ごとに取る
@@ -298,7 +298,7 @@ elements:
     description: コメントを削除する
     label: ごみ箱のアイコン
     visible_when: 溜めたコメントごと（修正中を除く）
-    action: クリックでそのコメントを置き場所から削除し、一覧・件数・本文のマーカー（mdmark の `update`）を描き直す
+    action: クリックでそのコメントを置き場所から削除し、一覧・件数・本文のマーカー（mdmark の `reloadComments`）を描き直す
     notes:
       読み上げ名: '`削除`'
   - name: コメントの修正欄
@@ -326,7 +326,7 @@ elements:
     description: 修正した本文を置き場所へ書き戻す
     label: '`保存`（プライマリ）'
     visible_when: 修正中
-    action: クリックで本文を書き戻し、一覧と本文のマーカー（mdmark の `update`）を描き直す
+    action: クリックで本文を書き戻し、一覧と本文のマーカー（mdmark の `reloadComments`）を描き直す
   - name: 選択をコピー
     kind: button
     position: コメントのパネル > フッター

@@ -1,0 +1,519 @@
+$ npm run test:integration
+
+> test:integration
+> playwright test --config tests/integration/frontend/playwright.config.ts
+
+
+Running 225 tests using 4 workers
+
+  ✓    1 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:137:3 › ページのタイトル › page_title (1.9s)
+  ✓    2 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:170:3 › トップバー › topbar_source_select (2.6s)
+  ✓    3 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:154:3 › 本文へスキップ › skip_link (2.4s)
+  ✓    4 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:143:3 › ページのタイトル › page_title_when_empty_tab (2.6s)
+  ✓    5 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:178:3 › トップバー › topbar_ref_select (2.4s)
+  ✓    7 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:194:3 › トップバー › topbar_compare_start_when_other_ref (1.7s)
+  ✓    6 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:186:3 › トップバー › topbar_compare_start_when_default_ref (2.2s)
+  ✓    8 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:202:3 › トップバー › topbar_search_open (1.6s)
+  ✓    9 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:209:3 › トップバー › topbar_comment_panel_toggle (1.0s)
+  ✓   10 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:219:3 › トップバー › topbar_sidebar_open (1.0s)
+  ✓   11 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:227:3 › トップバー › topbar_color_scheme_toggle (1.1s)
+  ✓   12 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:237:3 › トップバー › topbar_sources_from_settings (1.0s)
+  ✓   13 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:259:3 › 種類のタブ › tabs_order_and_current (1.1s)
+  ✓   14 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:267:3 › 種類のタブ › tabs_click (1.1s)
+  ✓   16 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:289:3 › 種類のタブ › tabs_click_when_empty (1.4s)
+  ✓   15 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:274:3 › 種類のタブ › tabs_click_when_doc_in_two_tabs (1.4s)
+  ✓   18 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:308:3 › 文書の一覧 › sidebar_click_keeps_rev_and_base (1.1s)
+  ✓   17 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:299:3 › 文書の一覧 › sidebar_groups_and_pages (1.2s)
+  ✓   20 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:322:3 › 文書の一覧 › sidebar_hidden_when_narrow (1.6s)
+  ✓   21 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:331:3 › 文書の変化のマーカー › change_markers (1.2s)
+  ✓   19 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:315:3 › 文書の一覧 › sidebar_click_when_deleted (1.7s)
+  ✓   22 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:341:3 › 文書の変化のマーカー › change_markers_without_base (1.3s)
+  ✓   26 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:372:3 › パンくず › breadcrumb (973ms)
+  ✓   25 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:381:3 › パンくず › breadcrumb_source_link (1.0s)
+  ✓   24 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:360:3 › 文書の一覧のドロワー › drawer_closes_on_escape (1.2s)
+  ✓   23 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:351:3 › 文書の一覧のドロワー › drawer_closes_on_navigate (1.6s)
+  ✓   28 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:397:3 › 文書のタイトル › doc_title (990ms)
+  ✓   27 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:388:3 › パンくず › breadcrumb_tab_link (1.1s)
+  ✓   29 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:405:3 › 文書の情報 › doc_info (995ms)
+  ✓   33 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:463:3 › 差分の案内 › diff_banner_hidden_without_base (1.2s)
+  ✓   32 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:454:3 › 差分の案内 › diff_banner_visible (1.3s)
+  ✓   34 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:469:3 › 差分の案内 › diff_banner_hidden_when_non_git (809ms)
+  ✓   35 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:482:3 › 比較元の選択 › base_select (989ms)
+  ✓   36 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:504:3 › 比較先の選択 › head_select (707ms)
+  ✓   37 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:516:3 › 差分の強調を解除 › diff_clear (639ms)
+  ✓   30 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:419:3 › 読み込み中の表示 › loading_skeleton (3.6s)
+  ✓   31 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:434:3 › 読み込み中の表示 › loading_keeps_previous_doc (3.5s)
+  ✓   38 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:533:3 › 変換の失敗 › conversion_error_when_timeout (705ms)
+  ✓   39 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:549:3 › 変換の失敗 › conversion_error_when_invalid_yaml (778ms)
+  ✓   40 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:566:3 › 再読み込み › reload_button (946ms)
+  ✓   41 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:591:3 › 文書が無いことの表示 › empty_tab_message (1.0s)
+  ✓   42 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:601:3 › 文書が無いことの表示 › empty_tab_message_when_non_git (1.1s)
+  ✓   43 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:616:3 › 本文 › body_without_first_h1 (1.3s)
+  ✓   44 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:622:3 › 本文 › body_internal_link (1.4s)
+  ✓   46 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:650:3 › 本文 › body_internal_link_when_missing (1.0s)
+  ✓   45 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:636:3 › 本文 › body_external_link (1.2s)
+  ✘   48 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:673:3 › 列の表示のメニュー › columns_menu_hidden_columns (15.9s)
+  ✘   47 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:667:3 › 列の表示のメニュー › columns_menu_visible (16.6s)
+  ✓   51 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:716:3 › 目次 › toc_items (1.4s)
+  ✓   52 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:724:3 › 目次 › toc_after_doc_changed (1.4s)
+  ✓   54 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:757:3 › 目次 › toc_click (633ms)
+  ✓   53 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:750:3 › 目次 › toc_hidden_when_narrow (1.3s)
+  ✓   55 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:764:3 › 目次 › toc_current_heading (1.3s)
+  ✓   56 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:787:3 › 目次の変更のマーカー › toc_change_marker (1.2s)
+  ✓   58 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:811:3 › コメントのパネル › panel_heading (529ms)
+  ✓   59 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:820:3 › コメントのパネル › panel_lists_other_docs (563ms)
+  ✓   57 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:797:3 › コメントの追加 › comment_add (1.5s)
+  ✓   60 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:830:3 › コメントのパネルの位置 › panel_position_on_the_right (515ms)
+  ✓   61 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:839:3 › コメントのパネルの位置 › panel_position_when_narrow (547ms)
+  ✓   63 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:862:3 › コメントのパネルを閉じる › panel_close_by_escape (547ms)
+  ✓   62 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:852:3 › コメントのパネルを閉じる › panel_close_button (1.1s)
+  ✓   64 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:880:3 › すべて選択 › select_all_state (751ms)
+  ✓   65 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:889:3 › すべて選択 › select_all_toggle (886ms)
+  ✓   66 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:900:3 › すべて選択 › select_all_hidden_when_empty (488ms)
+  ✓   68 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:926:3 › コメントの場所 › place_text (604ms)
+  ✓   69 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:933:3 › コメントの場所 › place_click_other_doc (516ms)
+  ✓   67 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:908:3 › コメントの選択 › comment_select (1.8s)
+  ✓   70 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:953:3 › コメントの場所への移動 › place_scroll_same_doc (1.6s)
+  ✓   71 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:968:3 › コメントの場所への移動 › place_scroll_cleared_when_doc_left (1.9s)
+  ✓   72 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1005:3 › コメントの場所への移動 › place_scroll_other_doc (1.5s)
+  ✓   73 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1022:3 › コメントの引用 › quote_text (703ms)
+  ✓   74 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1034:3 › コメントの本文 › comment_body (609ms)
+  ✓   75 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1050:3 › コメントの修正 › edit_button (891ms)
+  ✓   76 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1058:3 › コメントの修正 › edit_field_focus (851ms)
+  ✓   77 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1065:3 › コメントの修正 › edit_save (905ms)
+  ✓   78 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1075:3 › コメントの修正 › edit_cancel (880ms)
+  ✓   79 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1084:3 › コメントの修正 › edit_cancel_by_escape (837ms)
+  ✓   80 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1093:3 › コメントの修正 › edit_save_when_blank (922ms)
+  ✓   81 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1105:3 › コメントの削除 › delete_button (562ms)
+  ✓   82 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1123:3 › 選択をコピー › copy_button (669ms)
+  ✓   83 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1139:3 › 選択をコピー › copy_button_disabled_when_none_selected (610ms)
+  ✓   84 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1146:3 › 選択をコピー › copy_button_when_clipboard_denied (871ms)
+  ✓   85 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1166:3 › Issue を作成 › issue_button (848ms)
+  ✓   86 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1186:3 › Issue を作成 › issue_button_hidden_without_github (597ms)
+  ✓   87 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1196:3 › Issue を作成 › issue_button_disabled_when_none_selected (679ms)
+  ✓   89 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1230:3 › コメントが無いことの表示 › comment_empty_message (553ms)
+  ✓   88 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1203:3 › Issue を作成 › issue_button_when_url_too_long (706ms)
+  ✓   90 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1239:3 › 通知 › toast_position (693ms)
+  ✓   91 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1255:3 › 検索のダイアログ › search_dialog_result_select (986ms)
+  ✓   92 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1270:3 › ショートカットの一覧 › shortcut_dialog (536ms)
+  ✓   93 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1281:3 › キーボードのショートカット › shortcut_ctrl_k (633ms)
+  ✓   94 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1288:3 › キーボードのショートカット › shortcut_slash (681ms)
+  ✓   95 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1295:3 › キーボードのショートカット › shortcut_ignored_in_input (665ms)
+  ✓   96 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1309:3 › キーボードのショートカット › shortcut_ignored_in_dialog (522ms)
+  ✓   97 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1317:3 › キーボードのショートカット › shortcut_single_key_off (660ms)
+  ✓   99 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1371:3 › 本文の用語のツールチップ › term_tooltip (1.4s)
+  ✓   98 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1338:3 › ランドマーク › landmarks_unique (2.2s)
+  ✓  100 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1385:3 › 本文の用語のツールチップ › term_tooltip_when_doc_alias (792ms)
+  ✓  102 [chromium] › tests/integration/frontend/not-found-screen.spec.ts:43:3 › ページのタイトル › page_title (449ms)
+  ✓  103 [chromium] › tests/integration/frontend/not-found-screen.spec.ts:53:3 › 本文へスキップ › skip_link (511ms)
+  ✓  101 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1398:3 › 本文の用語のツールチップ › term_tooltip_when_no_aliases (1.8s)
+  ✓  104 [chromium] › tests/integration/frontend/not-found-screen.spec.ts:69:3 › トップバー › topbar_source_select (771ms)
+  ✓  105 [chromium] › tests/integration/frontend/not-found-screen.spec.ts:80:3 › トップバー › topbar_ref_select (768ms)
+  ✓  106 [chromium] › tests/integration/frontend/not-found-screen.spec.ts:91:3 › トップバー › topbar_search_open (605ms)
+  ✓  107 [chromium] › tests/integration/frontend/not-found-screen.spec.ts:101:3 › トップバー › topbar_color_scheme_toggle (604ms)
+  ✓  108 [chromium] › tests/integration/frontend/not-found-screen.spec.ts:116:3 › トップバー › topbar_without_comment (555ms)
+  ✓  109 [chromium] › tests/integration/frontend/not-found-screen.spec.ts:126:3 › 見出し › heading_when_doc_missing (566ms)
+  ✓  110 [chromium] › tests/integration/frontend/not-found-screen.spec.ts:132:3 › 見出し › heading_when_ref_missing (560ms)
+  ✓  111 [chromium] › tests/integration/frontend/not-found-screen.spec.ts:138:3 › 見出し › heading_when_source_not_served (512ms)
+  ✓  112 [chromium] › tests/integration/frontend/not-found-screen.spec.ts:144:3 › 見出し › heading_when_source_unknown (562ms)
+  ✓  113 [chromium] › tests/integration/frontend/not-found-screen.spec.ts:152:3 › 説明 › description_when_doc_missing (590ms)
+  ✓  114 [chromium] › tests/integration/frontend/not-found-screen.spec.ts:158:3 › 説明 › description_when_doc_missing_in_non_git_source (576ms)
+  ✓  115 [chromium] › tests/integration/frontend/not-found-screen.spec.ts:171:3 › 説明 › description_when_ref_missing (547ms)
+  ✓  116 [chromium] › tests/integration/frontend/not-found-screen.spec.ts:177:3 › 説明 › description_when_source_not_served (579ms)
+  ✓  117 [chromium] › tests/integration/frontend/not-found-screen.spec.ts:183:3 › 説明 › description_when_source_unknown (551ms)
+  ✓  118 [chromium] › tests/integration/frontend/not-found-screen.spec.ts:191:3 › 見つからなかったものの詳細 › details_when_doc_missing (595ms)
+  ✓  119 [chromium] › tests/integration/frontend/not-found-screen.spec.ts:198:3 › 見つからなかったものの詳細 › details_when_ref_missing (603ms)
+  ✓  120 [chromium] › tests/integration/frontend/not-found-screen.spec.ts:207:3 › 見つからなかったものの詳細 › details_when_source_not_served (544ms)
+  ✓  121 [chromium] › tests/integration/frontend/not-found-screen.spec.ts:216:3 › 見つからなかったものの詳細 › details_when_source_unknown (495ms)
+  ✓  122 [chromium] › tests/integration/frontend/not-found-screen.spec.ts:224:3 › 配信元のトップを開く › top_link_when_doc_missing (615ms)
+  ✓  123 [chromium] › tests/integration/frontend/not-found-screen.spec.ts:236:3 › 配信元のトップを開く › top_link_when_ref_missing (526ms)
+  ✓  124 [chromium] › tests/integration/frontend/not-found-screen.spec.ts:242:3 › 配信元のトップを開く › top_link_when_source_unavailable (516ms)
+  ✓  125 [chromium] › tests/integration/frontend/not-found-screen.spec.ts:250:3 › 設定を開く › settings_link_variant (1.0s)
+  ✓  126 [chromium] › tests/integration/frontend/not-found-screen.spec.ts:262:3 › 設定を開く › settings_link_click (683ms)
+  ✓  128 [chromium] › tests/integration/frontend/not-found-screen.spec.ts:282:3 › 配信中の配信元 › serving_sources_when_doc_missing (568ms)
+  ✓  127 [chromium] › tests/integration/frontend/not-found-screen.spec.ts:271:3 › 配信中の配信元 › serving_sources_when_unavailable (659ms)
+  ✓  129 [chromium] › tests/integration/frontend/not-found-screen.spec.ts:288:3 › 配信中の配信元 › serving_sources_when_none_serving (625ms)
+  ✓  130 [chromium] › tests/integration/frontend/not-found-screen.spec.ts:296:3 › 検索のダイアログ › search_dialog_result_select (1.1s)
+  ✓  131 [chromium] › tests/integration/frontend/not-found-screen.spec.ts:317:3 › 検索のダイアログ › search_dialog_when_source_not_served (519ms)
+  ✓  132 [chromium] › tests/integration/frontend/not-found-screen.spec.ts:326:3 › ショートカットの一覧 › shortcut_dialog (416ms)
+  ✘   49 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:684:3 › 列の表示のメニュー › columns_menu_save (1.0m)
+  ✘   50 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:700:3 › 列の表示のメニュー › columns_menu_save_failure (1.0m)
+  ✘  133 [chromium] › tests/integration/frontend/search-dialog.spec.ts:10:3 › Empty › empty (19.7s)
+  ✘  134 [chromium] › tests/integration/frontend/search-dialog.spec.ts:23:3 › Results › results (19.3s)
+  ✘  135 [chromium] › tests/integration/frontend/search-dialog.spec.ts:50:3 › NoResults › no_results (16.1s)
+  ✘  136 [chromium] › tests/integration/frontend/search-dialog.spec.ts:35:3 › Results › results_keyboard (16.1s)
+  ✓  139 [chromium] › tests/integration/frontend/settings-screen.spec.ts:50:3 › ページのタイトル › page_title (634ms)
+  ✓  141 [chromium] › tests/integration/frontend/settings-screen.spec.ts:58:3 › 本文へスキップ › skip_link (498ms)
+  ✓  142 [chromium] › tests/integration/frontend/settings-screen.spec.ts:74:3 › トップバー › topbar_home_link (466ms)
+  ✓  143 [chromium] › tests/integration/frontend/settings-screen.spec.ts:81:3 › トップバー › topbar_color_scheme_toggle (443ms)
+  ✓  144 [chromium] › tests/integration/frontend/settings-screen.spec.ts:96:3 › トップバー › topbar_only_title_and_color_scheme (452ms)
+  ✓  145 [chromium] › tests/integration/frontend/settings-screen.spec.ts:106:3 › 文書の画面に戻る › back_link_to_previous_doc (596ms)
+  ✓  146 [chromium] › tests/integration/frontend/settings-screen.spec.ts:121:3 › 文書の画面に戻る › back_link_without_previous_doc (474ms)
+  ✓  147 [chromium] › tests/integration/frontend/settings-screen.spec.ts:128:3 › 文書の画面に戻る › back_link_when_none_serving (421ms)
+  ✓  148 [chromium] › tests/integration/frontend/settings-screen.spec.ts:136:3 › 見出し › heading (434ms)
+  ✓  149 [chromium] › tests/integration/frontend/settings-screen.spec.ts:142:3 › 見出し › sources_heading (438ms)
+  ✓  150 [chromium] › tests/integration/frontend/settings-screen.spec.ts:148:3 › 見出し › keyboard_heading (441ms)
+  ✓  151 [chromium] › tests/integration/frontend/settings-screen.spec.ts:156:3 › 配信元の読み込み中の表示 › loading_skeleton (3.2s)
+  ✓  152 [chromium] › tests/integration/frontend/settings-screen.spec.ts:175:3 › 配信元が無いことの表示 › empty_message (584ms)
+  ✓  153 [chromium] › tests/integration/frontend/settings-screen.spec.ts:184:3 › 配信元の一覧 › table_columns_and_order (477ms)
+  ✘  137 [chromium] › tests/integration/frontend/search-dialog.spec.ts:61:3 › Loading › loading (17.2s)
+  ✘  138 [chromium] › tests/integration/frontend/search-dialog.spec.ts:71:3 › Failed › failed (17.2s)
+  ✓  154 [chromium] › tests/integration/frontend/settings-screen.spec.ts:200:3 › 配信元の ID › id_link_when_serving (569ms)
+  ✓  155 [chromium] › tests/integration/frontend/settings-screen.spec.ts:238:3 › 状態 › status_serving (442ms)
+  ✓  156 [chromium] › tests/integration/frontend/settings-screen.spec.ts:244:3 › 状態 › status_not_served (481ms)
+  ✓  157 [chromium] › tests/integration/frontend/settings-screen.spec.ts:252:3 › 状態 › status_disabled (707ms)
+  ✓  158 [chromium] › tests/integration/frontend/settings-screen.spec.ts:210:3 › 配信元の ID › id_not_link_when_not_serving (933ms)
+  ✓  159 [chromium] › tests/integration/frontend/settings-screen.spec.ts:221:3 › 設定ファイル › config_paths (896ms)
+  ✓  160 [chromium] › tests/integration/frontend/settings-screen.spec.ts:260:3 › 状態 › status_pending_reload (813ms)
+  ✓  161 [chromium] › tests/integration/frontend/settings-screen.spec.ts:270:3 › 状態の補足 › status_note_when_not_served (768ms)
+  ✓  162 [chromium] › tests/integration/frontend/settings-screen.spec.ts:284:3 › 状態の補足 › status_note_when_config_version_old (930ms)
+  ✓  163 [chromium] › tests/integration/frontend/settings-screen.spec.ts:294:3 › 状態の補足 › status_note_when_disabled (903ms)
+  ✓  164 [chromium] › tests/integration/frontend/settings-screen.spec.ts:302:3 › 状態の補足 › status_note_when_pending_reload (946ms)
+  ✓  140 [chromium] › tests/integration/frontend/search-dialog.spec.ts:80:3 › NonGitSource › non_git_source (15.0s)
+  ✓  165 [chromium] › tests/integration/frontend/settings-screen.spec.ts:310:3 › 状態の補足 › status_note_when_serving (1.7s)
+  ✓  167 [chromium] › tests/integration/frontend/settings-screen.spec.ts:328:3 › 編集ボタン › edit_button (2.1s)
+  ✓  166 [chromium] › tests/integration/frontend/settings-screen.spec.ts:319:3 › 配信元を追加 › add_button (2.6s)
+  ✓  168 [chromium] › tests/integration/frontend/settings-screen.spec.ts:358:3 › 1 文字のショートカットのスイッチ › single_key_switch_initial (1.2s)
+  ✓  169 [chromium] › tests/integration/frontend/settings-screen.spec.ts:349:3 › 削除ボタン › delete_button (1.4s)
+  ✓  171 [chromium] › tests/integration/frontend/settings-screen.spec.ts:387:3 › ショートカットの一覧 › shortcut_open_button (1.2s)
+  ✓  170 [chromium] › tests/integration/frontend/settings-screen.spec.ts:367:3 › 1 文字のショートカットのスイッチ › single_key_switch_toggle (1.2s)
+  ✓  172 [chromium] › tests/integration/frontend/settings-screen.spec.ts:394:3 › ショートカットの一覧 › shortcut_key (1.1s)
+  ✓  173 [chromium] › tests/integration/frontend/settings-screen.spec.ts:403:3 › 配信元のダイアログのタイトル › dialog_title_when_add (1.2s)
+  ✓  174 [chromium] › tests/integration/frontend/settings-screen.spec.ts:410:3 › 配信元のダイアログのタイトル › dialog_title_when_edit (1.2s)
+  ✓  175 [chromium] › tests/integration/frontend/settings-screen.spec.ts:420:3 › 配信元の ID の入力欄 › id_input_when_add (1.3s)
+  ✓  176 [chromium] › tests/integration/frontend/settings-screen.spec.ts:436:3 › 配信元の ID の入力欄 › id_input_when_edit (1.2s)
+  ✓  177 [chromium] › tests/integration/frontend/settings-screen.spec.ts:443:3 › 配信元の ID の入力欄 › id_input_keeps_value (1.1s)
+  ✓  178 [chromium] › tests/integration/frontend/settings-screen.spec.ts:453:3 › 設定ファイルの入力欄 › config_input_when_add (976ms)
+  ✓  179 [chromium] › tests/integration/frontend/settings-screen.spec.ts:465:3 › 設定ファイルの入力欄 › config_input_when_edit (969ms)
+  ✓  180 [chromium] › tests/integration/frontend/settings-screen.spec.ts:483:3 › 配信のスイッチ › enabled_switch_heading (1.1s)
+  ✓  181 [chromium] › tests/integration/frontend/settings-screen.spec.ts:492:3 › 配信のスイッチ › enabled_switch_when_add (1.1s)
+  ✓  182 [chromium] › tests/integration/frontend/settings-screen.spec.ts:502:3 › 配信のスイッチ › enabled_switch_when_edit (1.2s)
+  ✓  183 [chromium] › tests/integration/frontend/settings-screen.spec.ts:513:3 › 読み取りの範囲の入力欄 › read_input_when_add (1.3s)
+  ✓  184 [chromium] › tests/integration/frontend/settings-screen.spec.ts:525:3 › 読み取りの範囲の入力欄 › read_input_when_edit (1.3s)
+  ✓  185 [chromium] › tests/integration/frontend/settings-screen.spec.ts:538:3 › 書き込みの範囲の入力欄 › write_input_when_add (1.3s)
+  ✓  188 [chromium] › tests/integration/frontend/settings-screen.spec.ts:587:3 › 配信元のダイアログのキャンセル › cancel_by_escape (877ms)
+  ✓  186 [chromium] › tests/integration/frontend/settings-screen.spec.ts:549:3 › 書き込みの範囲の入力欄 › write_input_when_edit (1.2s)
+  ✓  187 [chromium] › tests/integration/frontend/settings-screen.spec.ts:572:3 › 配信元のダイアログのキャンセル › cancel_button (1.3s)
+  ✓  189 [chromium] › tests/integration/frontend/settings-screen.spec.ts:598:3 › 追加・保存ボタン › submit_label (1.1s)
+  ✓  190 [chromium] › tests/integration/frontend/settings-screen.spec.ts:608:3 › 追加・保存ボタン › submit_add_success (1.2s)
+  ✓  192 [chromium] › tests/integration/frontend/settings-screen.spec.ts:655:3 › 追加・保存ボタン › submit_failure_422 (1.2s)
+  ✓  193 [chromium] › tests/integration/frontend/settings-screen.spec.ts:676:3 › 保存の失敗のまとめ › failure_summary_when_invalid (1.0s)
+  ✓  196 [chromium] › tests/integration/frontend/settings-screen.spec.ts:731:3 › 削除の確認 › delete_title (898ms)
+  ✓  194 [chromium] › tests/integration/frontend/settings-screen.spec.ts:687:3 › 保存の失敗のまとめ › failure_summary_when_422 (1.2s)
+  ✓  195 [chromium] › tests/integration/frontend/settings-screen.spec.ts:711:3 › 保存の失敗のまとめ › failure_summary_row_click (1.4s)
+  ✓  191 [chromium] › tests/integration/frontend/settings-screen.spec.ts:639:3 › 追加・保存ボタン › submit_disabled_while_saving (3.0s)
+  ✓  197 [chromium] › tests/integration/frontend/settings-screen.spec.ts:738:3 › 削除の確認 › delete_description (1.2s)
+  ✓  198 [chromium] › tests/integration/frontend/settings-screen.spec.ts:749:3 › 削除の確認 › delete_cancel (1.2s)
+  ✓  199 [chromium] › tests/integration/frontend/settings-screen.spec.ts:764:3 › 削除の確認 › delete_confirm_success (1.4s)
+[WebServer] 5:33:03 PM [vite] (client) [console.error] {"ts":"2026-11-10T08:33:03.015Z","level":"error","event":"app_error","status":500,"type":"urn:dev-docs:error:Error","error":{"name":"AppError","message":"端末の設定を書き込めませんでした","stack":"AppError: 端末の設定を書き込めませんでした\n    at AppError.fromResponse (http://127.0.0.1:5199/src/shared/core/app-error.ts:28:20)\n    at async apiClient (http://127.0.0.1:5199/src/shared/adapters/api-client.ts:19:26)"}}
+  ✓  200 [chromium] › tests/integration/frontend/settings-screen.spec.ts:792:3 › 削除の確認 › delete_confirm_failure (1.3s)
+  ✓  201 [chromium] › tests/integration/frontend/settings-screen.spec.ts:805:3 › 削除の確認 › delete_confirm_disabled_while_saving (1.1s)
+  ✓  202 [chromium] › tests/integration/frontend/settings-screen.spec.ts:825:3 › 入力チェック › id_input_check_when_empty (1.4s)
+  ✓  203 [chromium] › tests/integration/frontend/settings-screen.spec.ts:832:3 › 入力チェック › id_input_check_when_invalid_char (1.4s)
+  ✓  204 [chromium] › tests/integration/frontend/settings-screen.spec.ts:842:3 › 入力チェック › id_input_check_when_duplicated (1.4s)
+  ✓  205 [chromium] › tests/integration/frontend/settings-screen.spec.ts:852:3 › 入力チェック › id_input_check_revalidates_on_input (1.4s)
+  ✓  206 [chromium] › tests/integration/frontend/settings-screen.spec.ts:862:3 › 入力チェック › config_input_check_when_blank (1.2s)
+  ✓  208 [chromium] › tests/integration/frontend/settings-screen.spec.ts:877:3 › 入力チェック › read_input_check_when_contains_blank (1.1s)
+  ✓  207 [chromium] › tests/integration/frontend/settings-screen.spec.ts:870:3 › 入力チェック › read_input_check_when_blank (1.2s)
+  ✓  209 [chromium] › tests/integration/frontend/settings-screen.spec.ts:887:3 › 入力チェック › write_input_check_when_contains_blank (1.1s)
+  ✓  210 [chromium] › tests/integration/frontend/shortcut-dialog.spec.ts:10:3 › DocView › doc_view (4.3s)
+  ✓  213 [chromium] › tests/integration/frontend/shortcut-dialog.spec.ts:42:3 › SingleKeyOff › single_key_off (3.6s)
+  ✓  211 [chromium] › tests/integration/frontend/shortcut-dialog.spec.ts:22:3 › Settings › settings (3.9s)
+  ✓  212 [chromium] › tests/integration/frontend/shortcut-dialog.spec.ts:32:3 › NotFound › not_found (3.9s)
+  ✘  214 [chromium] › tests/integration/frontend/topbar.spec.ts:14:3 › DocView › doc_view (16.8s)
+  ✓  216 [chromium] › tests/integration/frontend/topbar.spec.ts:42:3 › DocView › doc_view_ref_menu (18.7s)
+  ✓  215 [chromium] › tests/integration/frontend/topbar.spec.ts:31:3 › DocView › doc_view_source_menu (18.8s)
+  ✓  217 [chromium] › tests/integration/frontend/topbar.spec.ts:53:3 › DocView › doc_view_menu_keyboard (18.8s)
+  ✓  219 [chromium] › tests/integration/frontend/topbar.spec.ts:82:3 › DocViewNoComments › doc_view_no_comments (2.8s)
+  ✓  218 [chromium] › tests/integration/frontend/topbar.spec.ts:69:3 › DocViewNarrow › doc_view_narrow (3.1s)
+  ✓  221 [chromium] › tests/integration/frontend/topbar.spec.ts:103:3 › Settings › settings (2.8s)
+  ✓  220 [chromium] › tests/integration/frontend/topbar.spec.ts:93:3 › NonGitSource › non_git_source (2.9s)
+  ✓  222 [chromium] › tests/integration/frontend/topbar.spec.ts:115:3 › NotFound › not_found (2.9s)
+  ✓  225 [chromium] › tests/integration/frontend/topbar.spec.ts:153:3 › DarkScheme › dark_scheme (2.8s)
+  ✓  224 [chromium] › tests/integration/frontend/topbar.spec.ts:141:3 › NotFoundWithoutSource › not_found_without_source (2.8s)
+  ✓  223 [chromium] › tests/integration/frontend/topbar.spec.ts:130:3 › NotFoundNarrow › not_found_narrow (3.0s)
+
+
+  1) [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:667:3 › 列の表示のメニュー › columns_menu_visible 
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: getByRole('button', { name: /^列の表示/ })
+    Expected: visible
+    Timeout: 15000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" getByRole('button', { name: /^列の表示/ }) with timeout 15000ms
+      - waiting for getByRole('button', { name: /^列の表示/ })
+
+
+      667 |   test("columns_menu_visible", async ({ page }) => {
+      668 |     await openRendered(page);
+    > 669 |     await expect(page.getByRole("button", { name: /^列の表示/ })).toBeVisible();
+          |                                                               ^
+      670 |   });
+      671 |
+      672 |   // 隠した列を表から除き、件数を `列の表示` に添える（正常系）
+        at /mnt/c/Users/shuhe/repo/dev-docs/.claude/worktrees/test-e2e-remove-existing-e2e/tests/integration/frontend/doc-view-screen.spec.ts:669:63
+
+    Error Context: test-results/doc-view-screen-列の表示のメニュー-columns-menu-visible-chromium/error-context.md
+
+  2) [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:673:3 › 列の表示のメニュー › columns_menu_hidden_columns 
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: getByRole('button', { name: /1 列を隠しています/ })
+    Expected: visible
+    Timeout: 15000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" getByRole('button', { name: /1 列を隠しています/ }) with timeout 15000ms
+      - waiting for getByRole('button', { name: /1 列を隠しています/ })
+
+
+      678 |     });
+      679 |     await expect(page.locator("th:visible")).toHaveText(["キー", "名称"]);
+    > 680 |     await expect(page.getByRole("button", { name: /1 列を隠しています/ })).toBeVisible();
+          |                                                                    ^
+      681 |   });
+      682 |
+      683 |   // 列の出し入れのたびに、その表の隠した列を保存する（正常系）
+        at /mnt/c/Users/shuhe/repo/dev-docs/.claude/worktrees/test-e2e-remove-existing-e2e/tests/integration/frontend/doc-view-screen.spec.ts:680:68
+
+    Error Context: test-results/doc-view-screen-列の表示のメニュー-columns-menu-hidden-columns-chromium/error-context.md
+
+  3) [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:684:3 › 列の表示のメニュー › columns_menu_save 
+
+    Test timeout of 60000ms exceeded.
+
+    Error: locator.click: Test timeout of 60000ms exceeded.
+    Call log:
+      - waiting for getByRole('button', { name: /^列の表示/ })
+
+
+      685 |     // 準備
+      686 |     const api = await openRendered(page);
+    > 687 |     await page.getByRole("button", { name: /^列の表示/ }).click();
+          |                                                       ^
+      688 |     // 実行
+      689 |     await page.getByRole("dialog", { name: "表示する列" }).getByLabel("備考").uncheck();
+      690 |     // 検証
+        at /mnt/c/Users/shuhe/repo/dev-docs/.claude/worktrees/test-e2e-remove-existing-e2e/tests/integration/frontend/doc-view-screen.spec.ts:687:55
+
+    Error Context: test-results/doc-view-screen-列の表示のメニュー-columns-menu-save-chromium/error-context.md
+
+  4) [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:700:3 › 列の表示のメニュー › columns_menu_save_failure 
+
+    Test timeout of 60000ms exceeded.
+
+    Error: locator.click: Test timeout of 60000ms exceeded.
+    Call log:
+      - waiting for getByRole('button', { name: /^列の表示/ })
+
+
+      703 |       putColumns: () => problem(500),
+      704 |     });
+    > 705 |     await page.getByRole("button", { name: /^列の表示/ }).click();
+          |                                                       ^
+      706 |     // 実行
+      707 |     await page.getByRole("dialog", { name: "表示する列" }).getByLabel("備考").uncheck();
+      708 |     // 検証
+        at /mnt/c/Users/shuhe/repo/dev-docs/.claude/worktrees/test-e2e-remove-existing-e2e/tests/integration/frontend/doc-view-screen.spec.ts:705:55
+
+    Error Context: test-results/doc-view-screen-列の表示のメニュー-columns-menu-save-failure-chromium/error-context.md
+
+  5) [chromium] › tests/integration/frontend/search-dialog.spec.ts:10:3 › Empty › empty ────────────
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: getByRole('dialog', { name: '文書を検索' }).getByRole('combobox')
+    Expected: visible
+    Timeout: 15000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" getByRole('dialog', { name: '文書を検索' }).getByRole('combobox') with timeout 15000ms
+      - waiting for getByRole('dialog', { name: '文書を検索' }).getByRole('combobox')
+
+
+      11 |     await openStory(page, "docs-searchdialog--empty");
+      12 |     const input = dialog(page).getByRole("combobox");
+    > 13 |     await expect(input).toBeVisible();
+         |                         ^
+      14 |     await expect(input).toHaveValue("");
+      15 |     await expect(dialog(page).getByRole("option")).toHaveCount(0);
+      16 |     await expect(dialog(page).locator('[role="status"]')).toHaveText("");
+        at /mnt/c/Users/shuhe/repo/dev-docs/.claude/worktrees/test-e2e-remove-existing-e2e/tests/integration/frontend/search-dialog.spec.ts:13:25
+
+    Error Context: test-results/search-dialog-Empty-empty-chromium/error-context.md
+
+  6) [chromium] › tests/integration/frontend/search-dialog.spec.ts:23:3 › Results › results ────────
+
+    Error: expect(locator).toHaveText(expected) failed
+
+    Locator: getByRole('dialog', { name: '文書を検索' }).getByRole('status')
+    Expected: "2 件（リビジョン develop）"
+    Timeout: 15000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toHaveText" getByRole('dialog', { name: '文書を検索' }).getByRole('status') with timeout 15000ms
+      - waiting for getByRole('dialog', { name: '文書を検索' }).getByRole('status')
+
+
+      24 |     await openStory(page, "docs-searchdialog--results");
+      25 |     const status = dialog(page).getByRole("status");
+    > 26 |     await expect(status).toHaveText("2 件（リビジョン develop）");
+         |                          ^
+      27 |     const options = dialog(page).getByRole("option");
+      28 |     await expect(options).toHaveCount(2);
+      29 |     await expect(options.first()).toHaveAttribute("aria-selected", "true");
+        at /mnt/c/Users/shuhe/repo/dev-docs/.claude/worktrees/test-e2e-remove-existing-e2e/tests/integration/frontend/search-dialog.spec.ts:26:26
+
+    Error Context: test-results/search-dialog-Results-results-chromium/error-context.md
+
+  7) [chromium] › tests/integration/frontend/search-dialog.spec.ts:35:3 › Results › results_keyboard 
+
+    Error: expect(locator).toHaveText(expected) failed
+
+    Locator: getByRole('dialog', { name: '文書を検索' }).getByRole('status')
+    Expected: "2 件（リビジョン develop）"
+    Timeout: 15000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toHaveText" getByRole('dialog', { name: '文書を検索' }).getByRole('status') with timeout 15000ms
+      - waiting for getByRole('dialog', { name: '文書を検索' }).getByRole('status')
+
+
+      35 |   test("results_keyboard", async ({ page }) => {
+      36 |     await openStory(page, "docs-searchdialog--results");
+    > 37 |     await expect(dialog(page).getByRole("status")).toHaveText("2 件（リビジョン develop）");
+         |                                                    ^
+      38 |     const input = dialog(page).getByRole("combobox");
+      39 |     await expect(input).toHaveAttribute("aria-controls", /.+/);
+      40 |     await expect(input).toHaveAttribute("aria-activedescendant", /.+/);
+        at /mnt/c/Users/shuhe/repo/dev-docs/.claude/worktrees/test-e2e-remove-existing-e2e/tests/integration/frontend/search-dialog.spec.ts:37:52
+
+    Error Context: test-results/search-dialog-Results-results-keyboard-chromium/error-context.md
+
+  8) [chromium] › tests/integration/frontend/search-dialog.spec.ts:50:3 › NoResults › no_results ───
+
+    Error: expect(locator).toHaveText(expected) failed
+
+    Locator: getByRole('dialog', { name: '文書を検索' }).getByRole('status')
+    Expected: "該当する文書はありません。別の条件を試してください。"
+    Timeout: 15000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toHaveText" getByRole('dialog', { name: '文書を検索' }).getByRole('status') with timeout 15000ms
+      - waiting for getByRole('dialog', { name: '文書を検索' }).getByRole('status')
+
+
+      50 |   test("no_results", async ({ page }) => {
+      51 |     await openStory(page, "docs-searchdialog--no-results");
+    > 52 |     await expect(dialog(page).getByRole("status")).toHaveText(
+         |                                                    ^
+      53 |       "該当する文書はありません。別の条件を試してください。",
+      54 |     );
+      55 |     expect(await axeViolations(page)).toEqual([]);
+        at /mnt/c/Users/shuhe/repo/dev-docs/.claude/worktrees/test-e2e-remove-existing-e2e/tests/integration/frontend/search-dialog.spec.ts:52:52
+
+    Error Context: test-results/search-dialog-NoResults-no-results-chromium/error-context.md
+
+  9) [chromium] › tests/integration/frontend/search-dialog.spec.ts:61:3 › Loading › loading ────────
+
+    Error: expect(locator).toHaveText(expected) failed
+
+    Locator: getByRole('dialog', { name: '文書を検索' }).getByRole('status')
+    Expected: "検索しています"
+    Timeout: 15000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toHaveText" getByRole('dialog', { name: '文書を検索' }).getByRole('status') with timeout 15000ms
+      - waiting for getByRole('dialog', { name: '文書を検索' }).getByRole('status')
+        - waiting for "http://127.0.0.1:6199/iframe.html?id=docs-searchdialog--loading&viewMode=story" navigation to finish...
+        - navigated to "http://127.0.0.1:6199/iframe.html?id=docs-searchdialog--loading&viewMode=story"
+
+
+      61 |   test("loading", async ({ page }) => {
+      62 |     await openStory(page, "docs-searchdialog--loading");
+    > 63 |     await expect(dialog(page).getByRole("status")).toHaveText("検索しています");
+         |                                                    ^
+      64 |     await expect(dialog(page).getByRole("option")).toHaveCount(0);
+      65 |     expect(await axeViolations(page)).toEqual([]);
+      66 |   });
+        at /mnt/c/Users/shuhe/repo/dev-docs/.claude/worktrees/test-e2e-remove-existing-e2e/tests/integration/frontend/search-dialog.spec.ts:63:52
+
+    Error Context: test-results/search-dialog-Loading-loading-chromium/error-context.md
+
+  10) [chromium] › tests/integration/frontend/search-dialog.spec.ts:71:3 › Failed › failed ─────────
+
+    Error: expect(locator).toHaveText(expected) failed
+
+    Locator: getByRole('dialog', { name: '文書を検索' }).getByRole('status')
+    Expected: "検索する単語が正しくありません"
+    Timeout: 15000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toHaveText" getByRole('dialog', { name: '文書を検索' }).getByRole('status') with timeout 15000ms
+      - waiting for getByRole('dialog', { name: '文書を検索' }).getByRole('status')
+        - waiting for "http://127.0.0.1:6199/iframe.html?id=docs-searchdialog--failed&viewMode=story" navigation to finish...
+        - navigated to "http://127.0.0.1:6199/iframe.html?id=docs-searchdialog--failed&viewMode=story"
+
+
+      71 |   test("failed", async ({ page }) => {
+      72 |     await openStory(page, "docs-searchdialog--failed");
+    > 73 |     await expect(dialog(page).getByRole("status")).toHaveText("検索する単語が正しくありません");
+         |                                                    ^
+      74 |     expect(await axeViolations(page)).toEqual([]);
+      75 |   });
+      76 | });
+        at /mnt/c/Users/shuhe/repo/dev-docs/.claude/worktrees/test-e2e-remove-existing-e2e/tests/integration/frontend/search-dialog.spec.ts:73:52
+
+    Error Context: test-results/search-dialog-Failed-failed-chromium/error-context.md
+
+  11) [chromium] › tests/integration/frontend/topbar.spec.ts:14:3 › DocView › doc_view ─────────────
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: getByRole('banner').getByRole('button', { name: '配信元を切り替える。今は sample' })
+    Expected: visible
+    Timeout: 15000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" getByRole('banner').getByRole('button', { name: '配信元を切り替える。今は sample' }) with timeout 15000ms
+      - waiting for getByRole('banner').getByRole('button', { name: '配信元を切り替える。今は sample' })
+
+
+      16 |     await openStory(page, "layout-topbar--doc-view");
+      17 |     // 検証
+    > 18 |     await expect(bar(page).getByRole("button", { name: "配信元を切り替える。今は sample" })).toBeVisible();
+         |                                                                                  ^
+      19 |     await expect(bar(page).getByRole("button", { name: "リビジョンを切り替える。今は develop" })).toBeVisible();
+      20 |     const search = bar(page).getByRole("button", { name: "検索 Ctrl K" });
+      21 |     await expect(search).toHaveAttribute("aria-keyshortcuts", "Control+K /");
+        at /mnt/c/Users/shuhe/repo/dev-docs/.claude/worktrees/test-e2e-remove-existing-e2e/tests/integration/frontend/topbar.spec.ts:18:82
+
+    Error Context: test-results/topbar-DocView-doc-view-chromium/error-context.md
+
+  11 failed
+    [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:667:3 › 列の表示のメニュー › columns_menu_visible 
+    [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:673:3 › 列の表示のメニュー › columns_menu_hidden_columns 
+    [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:684:3 › 列の表示のメニュー › columns_menu_save 
+    [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:700:3 › 列の表示のメニュー › columns_menu_save_failure 
+    [chromium] › tests/integration/frontend/search-dialog.spec.ts:10:3 › Empty › empty ─────────────
+    [chromium] › tests/integration/frontend/search-dialog.spec.ts:23:3 › Results › results ─────────
+    [chromium] › tests/integration/frontend/search-dialog.spec.ts:35:3 › Results › results_keyboard 
+    [chromium] › tests/integration/frontend/search-dialog.spec.ts:50:3 › NoResults › no_results ────
+    [chromium] › tests/integration/frontend/search-dialog.spec.ts:61:3 › Loading › loading ─────────
+    [chromium] › tests/integration/frontend/search-dialog.spec.ts:71:3 › Failed › failed ───────────
+    [chromium] › tests/integration/frontend/topbar.spec.ts:14:3 › DocView › doc_view ───────────────
+  214 passed (3.3m)
+exit=1
