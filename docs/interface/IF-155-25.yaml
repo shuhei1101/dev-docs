@@ -509,7 +509,7 @@ flows:
         T-->>C: notes の文書
       ```
     expected:
-      - 合図を出す前に、`source: sample` の `search_docs` が sample の文書を返す
+      - '合図を出す前に、`source: sample` の `search_docs` が sample の文書を返す'
       - 合図を出す前に、`GET /_api/sources/sample/docs` が 200 を返す
       - '`source: notes` の `search_docs` は合図を出すまで応答せず、出した後に notes の文書を返す'
       - '合図を出す前の `status` が `loading: true`'
@@ -572,7 +572,7 @@ flows:
     expected:
       - '`source: broken` の `search_docs` が待ち続けずに `SourceNotServedError` を返す'
       - '`source: sample` の `search_docs` が sample の文書を返す'
-      - 全ての行を読み込もうとした後の `status` が `loading: false` で、broken が `not_served`（`errors` に `sources[0]` と読み込みの失敗の理由）、sample が `serving`
+      - '全ての行を読み込もうとした後の `status` が `loading: false` で、broken が `not_served`（`errors` に `sources[0]` と読み込みの失敗の理由）、sample が `serving`'
       - エラーログに broken の読み込みの例外が残る
     test: test_error_when_source_load_failed
   - name: 正常系（ほかの配信元のスキーマを参照する）
