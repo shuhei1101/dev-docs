@@ -35,6 +35,25 @@ import { usePreferencesStore } from "@/shared/stores/preferences";
 
 const NEXT_SCHEME = { system: "dark", dark: "light", light: "dark" } as const;
 
+type BaseDocument = { markdown: string; tableKeys: string[] } | null;
+
+/** 差分を見ているときの、本文の強調に渡す比較元と、目次の変更のマーカーの見出し */
+const diffView = (
+  doc: { diff?: unknown; markdown?: string | null },
+  base: BaseDocument | undefined,
+): { base: BaseDocument; changed: Set<string> | undefined } => {
+  // 差分を見ていないか、比較元をまだ取っていない
+  if (!doc.diff || base === undefined)
+    return { base: null, changed: undefined };
+  return {
+    base,
+    changed:
+      doc.markdown == null
+        ? undefined
+        : changedSections(doc.markdown, base?.markdown ?? null),
+  };
+};
+
 type Panels = {
   search: boolean;
   help: boolean;
@@ -83,10 +102,7 @@ export const DocViewScreen = () => {
   const baseMarkdown = useQuery(
     baseMarkdownQueryOptions(source, doc.path, doc.diff?.base ?? null),
   ).data;
-  const changed =
-    doc.diff && doc.markdown !== null && baseMarkdown !== undefined
-      ? changedSections(doc.markdown, baseMarkdown)
-      : undefined;
+  const diff = diffView(doc, baseMarkdown);
 
   useDocScreenEffects(pageTitle(active, source, emptyTab), source);
   const idle = !panels.search && !panels.help;
@@ -145,6 +161,7 @@ export const DocViewScreen = () => {
           onHeadings={setHeadings}
           onCommentSaved={() => open("comments")}
           locating={place.locating}
+          baseMarkdown={diff.base}
           onLocated={place.onLocated}
           onRetry={() => void query.refetch()}
           onCompare={nav.compare}
@@ -152,7 +169,7 @@ export const DocViewScreen = () => {
         />
         <div className="sticky top-24 hidden max-h-screen w-56 shrink-0 self-start overflow-y-auto py-6 xl:block">
           {!emptyTab && !doc.conversionError && (
-            <DocToc items={headings} changed={changed} />
+            <DocToc items={headings} changed={diff.changed} />
           )}
         </div>
       </div>
@@ -180,7 +197,6 @@ export const DocViewScreen = () => {
         onOpenChange={(value) => open("comments", value)}
         github={doc.github ?? null}
         onLocate={place.locate}
-        onChanged={() => undefined}
       />
     </div>
   );

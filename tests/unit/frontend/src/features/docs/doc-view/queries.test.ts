@@ -48,12 +48,15 @@ test("test_base_markdown_query_options", async () => {
   server.use(
     http.get("/_api/sources/s/docs/a.md", ({ request }) =>
       new URL(request.url).searchParams.get("ref") === "v1"
-        ? HttpResponse.json(documentResponse({ markdown: "# A" }))
+        ? HttpResponse.json(documentResponse({ markdown: "# A", tableKeys: ["t1"] }))
         : HttpResponse.json(documentResponse()),
     ),
   );
 
-  expect(await run(baseMarkdownQueryOptions("s", "a.md", "v1"))).toBe("# A");
+  expect(await run(baseMarkdownQueryOptions("s", "a.md", "v1"))).toEqual({
+    markdown: "# A",
+    tableKeys: ["t1"],
+  });
 });
 
 test("test_base_markdown_query_options_when_added", async () => {

@@ -27,7 +27,14 @@ export type MdmarkCommentStore = {
     docId: string;
     comment: MdmarkCommentDraft;
   }) => Promise<MdmarkComment>;
+  update: (target: { docId: string; id: string; body: string }) => Promise<void>;
+  remove: (target: { docId: string; id: string }) => Promise<void>;
 };
+
+/** `onColumnsChange` が受け取る列の表示（`tableIndex` は `+columns` の表だけの出る順の番号） */
+export type MdmarkColumnsChange = { tableIndex: number; hidden: string[] };
+
+export type MdmarkColumnsChangeHandler = (event: MdmarkColumnsChange) => void;
 
 export type MdmarkOptions = {
   markdown: string;
@@ -37,6 +44,10 @@ export type MdmarkOptions = {
   commentStore: MdmarkCommentStore;
   /** 機能のオン・オフ（`comments` は既定でオフ） */
   config?: { features?: Record<string, boolean> };
+  /** 比較元の本文（変わった箇所を本文で強調する。null は強調しない） */
+  baseMarkdown?: string | null;
+  /** `+columns` の表で列を出し入れしたとき */
+  onColumnsChange?: MdmarkColumnsChangeHandler;
 };
 
 export type MdmarkIndexDoc = {
@@ -60,8 +71,10 @@ export type MdmarkIndex = { docs: MdmarkIndexDoc[]; terms: MdmarkIndexTerm[] };
 type MdmarkMountOptions = Omit<MdmarkOptions, "aliases"> & { index: MdmarkIndex };
 
 export type MdmarkHandle = {
-  update: (markdown: string) => void;
+  update: (markdown: string, options?: { baseMarkdown?: string | null }) => void;
   destroy: () => void;
+  reloadComments: () => Promise<void>;
+  focusComment: (id: string) => void;
 };
 
 type MdmarkModule = {
@@ -137,7 +150,10 @@ export const useMdmark = (
     docId: null,
   });
   const latest = useRef(options);
-  const rendered = useRef(options.markdown);
+  const rendered = useRef({
+    markdown: options.markdown,
+    baseMarkdown: options.baseMarkdown ?? null,
+  });
   useEffect(() => {
     latest.current = options;
   });
@@ -151,8 +167,22 @@ export const useMdmark = (
         const element = ref.current;
         if (cancelled || element === null) return;
         const { aliases = [], ...rest } = latest.current;
-        rendered.current = rest.markdown;
-        handle = module.mount(element, { ...rest, index: toMdmarkIndex(aliases) });
+        const baseMarkdown = rest.baseMarkdown ?? null;
+        rendered.current = { markdown: rest.markdown, baseMarkdown };
+        // mount は文書ごとに 1 回のため、関数は呼ばれたときの最新の options の関数を呼ぶ
+        const current = () => latest.current;
+        handle = module.mount(element, {
+          ...rest,
+          baseMarkdown,
+          index: toMdmarkIndex(aliases),
+          commentStore: {
+            load: (target) => current().commentStore.load(target),
+            save: (target) => current().commentStore.save(target),
+            update: (target) => current().commentStore.update(target),
+            remove: (target) => current().commentStore.remove(target),
+          },
+          onColumnsChange: (event) => current().onColumnsChange?.(event),
+        });
         setState({
           handle,
           ready: true,
@@ -171,15 +201,18 @@ export const useMdmark = (
     };
   }, [options.docId, ref]);
 
-  // 同じ文書で本文が変わったら更新する
+  // 同じ文書で本文か比較元が変わったら更新する
   const { handle } = state;
   const mounted = state.docId === options.docId;
+  const baseMarkdown = options.baseMarkdown ?? null;
   useEffect(() => {
-    if (!mounted || handle === null || rendered.current === options.markdown)
+    if (!mounted || handle === null) return;
+    const previous = rendered.current;
+    if (previous.markdown === options.markdown && previous.baseMarkdown === baseMarkdown)
       return;
-    rendered.current = options.markdown;
-    handle.update(options.markdown);
-  }, [handle, mounted, options.markdown]);
+    rendered.current = { markdown: options.markdown, baseMarkdown };
+    handle.update(options.markdown, { baseMarkdown });
+  }, [handle, mounted, options.markdown, baseMarkdown]);
 
   return { ...state, ready: state.ready && mounted };
 };

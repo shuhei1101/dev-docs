@@ -27,7 +27,6 @@ type Props = {
   onOpenChange: (open: boolean) => void;
   github: GitHubTarget | null;
   onLocate: (comment: DocComment) => void;
-  onChanged: () => void;
 };
 
 const placeOf = (comment: DocComment): string =>
@@ -42,7 +41,6 @@ export const CommentPanel = ({
   onOpenChange,
   github,
   onLocate,
-  onChanged,
 }: Props) => {
   const { comments, setSelected, update, remove } = useCommentStore();
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -98,7 +96,6 @@ export const CommentPanel = ({
     }
     if (editingId !== null) update(editingId, draft);
     setEditingId(null);
-    onChanged();
   };
 
   return (
@@ -188,7 +185,6 @@ export const CommentPanel = ({
                             aria-label="削除"
                             onClick={() => {
                               remove(comment.id);
-                              onChanged();
                             }}
                           >
                             <Trash2 />

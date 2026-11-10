@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import dataclasses
 import logging
 from collections.abc import Mapping
 from dataclasses import dataclass, field
@@ -25,6 +26,7 @@ from dev_docs.features.sources.types import DocumentTable
 from dev_docs.features.validation.markdown import UncheckedKey
 from dev_docs.features.validation.service import DocumentChecker
 from dev_docs.features.write.apply import apply_operation, expand_array_keys, to_columns
+from dev_docs.features.write.hints import attach_schema_hints
 from dev_docs.features.write.ids import generate_id
 from dev_docs.features.write.locks import SourceLocks
 from dev_docs.features.write.placement import new_document_path
@@ -183,14 +185,15 @@ class _Session:
 def _prefixed(index: int, error: DevDocsError) -> list[Violation]:
     """失敗した操作の違反を、添字つきのパスにそろえる。"""
     if isinstance(error, InvalidArgumentError | ValidationFailedError):
+        # `replace` で、書き込みの違反が持つスキーマの説明（`schema`）も保つ
         return [
-            Violation(
+            dataclasses.replace(
+                violation,
                 path=violation.path
                 if violation.path.startswith("operations[")
                 else f"operations[{index}].{violation.path}",
-                rule=violation.rule,
-                fix=violation.fix,
                 index=index,
+                doc=None,
             )
             for violation in error.violations
         ]
@@ -327,6 +330,9 @@ def _check_and_commit(
         violations = markdown.violations
         unchecked = markdown.unchecked
     if violations:
+        # スキーマの違反に、違反した項目のスキーマの説明を添える
+        schema = checker.store.row_schema(session.target, document.kind)
+        violations = list(attach_schema_hints(violations, schema=schema, data=document.data))
         raise ValidationFailedError(
             message=f"検査に通らない操作があります: {len(violations)} 件", violations=violations
         )
