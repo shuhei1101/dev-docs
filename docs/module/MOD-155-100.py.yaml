@@ -1,0 +1,409 @@
+id: MOD-155-100
+title: 開発ドキュメントサーバー / 変換 / types.py
+lead: 変換の結果・失敗・表し方・図の種類・図の中間データ・描画の文脈の型。
+diagrams:
+  - name: 全体
+    diagram: |-
+      classDiagram
+        direction TD
+        変換 ..> 変換の結果 : 返す
+        変換の結果 o-- 変換の失敗
+        class 変換 {
+          +変換する(読み書きの場所, 文書) 変換の結果
+          +控えを捨てる() None
+        }
+        class 変換の結果 {
+          +Markdown: str
+        }
+        class 変換の失敗 {
+          +理由: str
+        }
+        click 変換 href "./MOD-155-99.py.yaml#変換"
+data_models:
+  - name: ConvertFailure
+    title: 変換の失敗
+    container: features/convert/types.py
+    usecase: 文書の取得
+    role: DTO
+    summary: 変換できなかった理由
+    description: '`dataclass(frozen=True)`。文書の取得は同じフィールドの `conversion_error` で返す。'
+    properties:
+      - name: reason
+        title: 理由
+        type: Literal['timeout', 'exit', 'not_runnable', 'invalid_yaml']
+        access: 公開
+        description: 制限時間を超えた・0 以外で終わった・実行できない・YAML を読めない
+      - name: kind
+        title: 種類
+        type: str
+        access: 公開
+        description: 文書の行の ID
+      - name: script
+        title: スクリプト
+        type: str | None
+        access: 公開
+        default: None
+        description: '`converters[].run` を空白で繋いだもの。YAML を読めないときは `None`'
+      - name: detail
+        title: 詳細
+        type: str
+        access: 公開
+        description: 制限時間の秒数・終了コードと標準エラーの末尾・読めなかった理由
+      - name: file
+        title: ファイル
+        type: str | None
+        access: 公開
+        default: None
+        description: YAML を読めないときのファイルのパス（配信元の直下から）
+      - name: line
+        title: 行
+        type: int | None
+        access: 公開
+        default: None
+        description: YAML を読めないときの行（1 始まり）
+      - name: column
+        title: 列
+        type: int | None
+        access: 公開
+        default: None
+        description: YAML を読めないときの列（1 始まり）
+  - name: Converted
+    title: 変換の結果
+    container: features/convert/types.py
+    usecase: 文書の取得
+    role: DTO
+    summary: 文書の取得で返す Markdown か、変換の失敗
+    description: '`dataclass(frozen=True)`。`failure` があるときの `markdown` は空。'
+    properties:
+      - name: markdown
+        title: Markdown
+        type: str
+        access: 公開
+        description: 返す Markdown（埋め込みを展開し、表のキーのマーカーを取り除いた後）
+      - name: table_keys
+        title: 表のキー
+        type: list[str]
+        access: 公開
+        default: '[]'
+        description: 本文の表の出る順の表のキー。画面の列の表示が、隠す列の設定を表に当てるときに使う
+      - name: failure
+        title: 変換の失敗
+        type: ConvertFailure | None
+        access: 公開
+        default: None
+        description: 失敗したときだけ
+  - name: DiagramHead
+    title: 図の見出し
+    container: features/convert/types.py
+    usecase: 文書の取得
+    role: DTO
+    summary: mdmark の図の部品の定義に入れる題名・範囲・更新日
+    description: '`dataclass(frozen=True)`。'
+    properties:
+      - name: title
+        title: 題名
+        type: str
+        access: 公開
+        description: 図の項目の `title`（無ければキーの名前）
+      - name: scope
+        title: 範囲
+        type: str
+        access: 公開
+        description: 文書の名前
+      - name: updated
+        title: 更新日
+        type: str
+        access: 公開
+        description: '文書の `updated`（無ければ `created`）の `YYYY-MM-DD`。どちらも無ければ `-`'
+  - name: FlowNode
+    title: フロー図の箱
+    container: features/convert/types.py
+    usecase: 文書の取得
+    role: DTO
+    summary: 配置の前のフロー図の箱
+    description: '`dataclass(frozen=True)`。'
+    properties:
+      - name: id
+        title: ID
+        type: str
+        access: 公開
+        description: 線の端に指す ID
+      - name: name
+        title: 名前
+        type: str
+        access: 公開
+        description: 箱に出す名前
+      - name: kind
+        title: 種類
+        type: Literal['llm', 'dm', 'script', 'mcp', 'data', 'external', 'start', 'question', 'action', 'result']
+        access: 公開
+        description: mdmark の箱の種類
+      - name: hint
+        title: 説明
+        type: str | None
+        access: 公開
+        default: None
+        description: 箱のツールチップに出す説明（`x-diagram` のノードの `hint`）
+  - name: FlowEdge
+    title: フロー図の線
+    container: features/convert/types.py
+    usecase: 文書の取得
+    role: DTO
+    summary: 配置の前のフロー図の線
+    description: '`dataclass(frozen=True)`。'
+    properties:
+      - name: source
+        title: 元
+        type: str
+        access: 公開
+        description: 元の箱の ID
+      - name: target
+        title: 先
+        type: str
+        access: 公開
+        description: 先の箱の ID
+      - name: label
+        title: ラベル
+        type: str | None
+        access: 公開
+        default: None
+        description: 線のラベル
+      - name: line
+        title: 線の種類
+        type: Literal['flow', 'read', 'write', 'reply', 'loop']
+        access: 公開
+        default: '''flow'''
+        description: mdmark の線の種類。配置で戻る線になった線は `loop` で描く
+      - name: tip
+        title: 詳細
+        type: str | None
+        access: 公開
+        default: None
+        description: 線のラベルのツールチップに出す詳細（`x-diagram` の辺の `tip`）
+  - name: FlowGraph
+    title: フロー図の中間データ
+    container: features/convert/types.py
+    usecase: 文書の取得
+    role: DTO
+    summary: '`x-diagram` の値か手で書く Mermaid の `flowchart` から作る、配置の前のフロー図'
+    description: '`dataclass(frozen=True)`。'
+    properties:
+      - name: direction
+        title: 向き
+        type: Literal['TD', 'LR']
+        access: 公開
+        description: 箱を並べる向き（`TD` は上から下、`LR` は左から右）
+      - name: nodes
+        title: 箱
+        type: list[FlowNode]
+        access: 公開
+        description: 出た順の箱
+      - name: edges
+        title: 線
+        type: list[FlowEdge]
+        access: 公開
+        description: 出た順の線
+      - name: frame
+        title: 枠
+        type: FlowFrame | None
+        access: 公開
+        default: None
+        description: 中の箱を囲む枠（`x-diagram` の `frame`）
+  - name: FlowFrame
+    title: フロー図の枠
+    container: features/convert/types.py
+    usecase: 文書の取得
+    role: DTO
+    summary: 配置の前のフロー図の、中の箱を囲む枠
+    description: '`dataclass(frozen=True)`。'
+    properties:
+      - name: label
+        title: 表示
+        type: str
+        access: 公開
+        description: 枠に出す名前
+      - name: nodes
+        title: 中の箱
+        type: frozenset[str]
+        access: 公開
+        description: 枠で囲む箱の ID
+  - name: SequenceParticipant
+    title: シーケンス図の相手
+    container: features/convert/types.py
+    usecase: 文書の取得
+    role: DTO
+    summary: シーケンス図の相手 1 つ
+    description: '`dataclass(frozen=True)`。'
+    properties:
+      - name: id
+        title: ID
+        type: str
+        access: 公開
+        description: Mermaid の相手の ID
+      - name: name
+        title: 名前
+        type: str
+        access: 公開
+        description: '`as` の後ろの名前（無ければ ID）'
+      - name: kind
+        title: 種類
+        type: Literal['script', 'external']
+        access: 公開
+        description: '`actor` は `external`、`participant` と宣言の無い相手は `script`'
+  - name: SequenceMessage
+    title: シーケンス図のメッセージ
+    container: features/convert/types.py
+    usecase: 文書の取得
+    role: DTO
+    summary: シーケンス図のメッセージ 1 つ
+    description: '`dataclass(frozen=True)`。'
+    properties:
+      - name: source
+        title: 元
+        type: str
+        access: 公開
+        description: 元の相手の ID
+      - name: target
+        title: 先
+        type: str
+        access: 公開
+        description: 先の相手の ID
+      - name: label
+        title: ラベル
+        type: str
+        access: 公開
+        description: '`:` の後ろの文（無ければ空）'
+      - name: reply
+        title: 返す線
+        type: bool
+        access: 公開
+        description: 破線の矢印（`-->>`・`-->`・`--x`・`--)`）なら `True`
+  - name: SequenceGraph
+    title: シーケンス図の中間データ
+    container: features/convert/types.py
+    usecase: 文書の取得
+    role: DTO
+    summary: 手で書く Mermaid の `sequenceDiagram` から作るシーケンス図
+    description: '`dataclass(frozen=True)`。'
+    properties:
+      - name: participants
+        title: 相手
+        type: list[SequenceParticipant]
+        access: 公開
+        description: 宣言か初めて出た順の相手
+      - name: messages
+        title: メッセージ
+        type: list[SequenceMessage]
+        access: 公開
+        description: 時刻の順のメッセージ
+  - name: DocumentLink
+    title: 文書へのリンク
+    container: features/convert/types.py
+    usecase: 文書の取得
+    role: DTO
+    summary: 本文の参照から張る、同じ配信元の文書へのリンク
+    description: '`dataclass(frozen=True)`。'
+    properties:
+      - name: title
+        title: タイトル
+        type: str
+        access: 公開
+        description: リンクの文字にする文書の名前
+      - name: path
+        title: パス
+        type: str
+        access: 公開
+        description: 文書のパス（配信元の直下から）
+  - name: RenderContext
+    title: 描画の文脈
+    container: features/convert/types.py
+    usecase: 文書の取得
+    role: DTO
+    summary: スキーマ駆動の変換が、文書の外から受け取るリンクの引き先と更新日
+    description: '`dataclass(frozen=True)`。'
+    properties:
+      - name: links
+        title: リンクの引き先
+        type: Mapping[str, DocumentLink]
+        access: 公開
+        description: 文書の ID と、文書のファイル・本文のファイルのパス（配信元の直下から）から、その文書へのリンク
+      - name: issue_url
+        title: Issue の URL
+        type: str | None
+        access: 公開
+        description: '`https://github.com/{github.repository}/issues/`。配信元に `github.repository` が無ければ `None`'
+      - name: path
+        title: 文書のパス
+        type: str
+        access: 公開
+        description: 変換する文書のパス。リンクの相対パスの起点
+      - name: anchors
+        title: 同じ文書のテーブルの見出し
+        type: Mapping[str, str]
+        access: 公開
+        description: '`x-key` を持つ `sections` の要素の `title` から、その要素の見出し（`x-key` の値）。外部キーのリンクのアンカーに使う。既定は空'
+      - name: table_titles
+        title: 同じ文書のテーブルの論理名
+        type: Mapping[str, str]
+        access: 公開
+        description: 同じ文書の `tables[]` のテーブルの物理名か論理名から、そのテーブルの論理名（テーブルの論理名の引き方の結果）。外部キーのリンクで `anchors` を引く前にテーブル名を論理名にする。既定は空
+      - name: item_heading
+        title: 項目の見出しの引き方
+        type: Callable[[str, str], str | None]
+        access: 公開
+        default: 常に `None` を返す関数
+        description: 文書の ID と項目のパスから、リンク先の文書でその項目が出す見出し（無ければ `None`）を引く。参照のリンクと本文の id のリンクのアンカーに使う
+      - name: decisions
+        title: リンクにする検討事項
+        type: frozenset[str]
+        access: 公開
+        default: 空
+        description: 検討事項の文書を探す（`find_decisions`）が返した検討事項の ID。`decisions` の値のうち、この ID だけを検討事項の文書へのリンクにする
+enums:
+  - name: Shape
+    title: 節の形
+    container: features/convert/types.py
+    usecase: 文書の取得
+    summary: スキーマの `x-shape` に書く、項目を Markdown にする形（ai-monitor の生成と同じ）
+    description: '`Literal` の型エイリアス。`x-shape` が無い文字列は `body`、オブジェクトは子を順に組み立てる。'
+    values:
+      - value: body
+        title: 本文
+        description: 文字列をそのまま段落にする
+      - value: table
+        title: 表
+        description: オブジェクトのリストを表にする。列は要素のスキーマの `properties` の順で、列名は `title`
+      - value: sections
+        title: 節
+        description: 要素・子を 1 つ深い見出しの節にする。要素の見出しは `x-key` の値
+      - value: list
+        title: 並び
+        description: 文字列のリストを箇条書きにする
+      - value: diagram
+        title: 図
+        description: 値から図を組み立て、続けて同じ値の閉じた表を置く。`er` 以外は mdmark の部品
+      - value: attributes
+        title: 属性
+        description: 子のスカラーを「項目 / 値」の表にする
+  - name: DiagramKind
+    title: 図の種類
+    container: features/convert/types.py
+    usecase: 文書の取得
+    summary: スキーマの `x-diagram`
+    description: '`Literal` の型エイリアス。'
+    values:
+      - value: flowchart
+        title: フローチャート
+        description: '`nodes`・`edges` から mdmark のフロー図（上から下）'
+      - value: dataflow
+        title: データフロー
+        description: '`flowchart` と同じ値から、mdmark のフロー図（左から右）'
+      - value: architecture
+        title: アーキテクチャ
+        description: '`dataflow` と同じ'
+      - value: state
+        title: 状態遷移
+        description: '`states`・`transitions` から mdmark のフロー図（状態を箱、遷移を線にする）'
+      - value: er
+        title: ER 図
+        description: '`entities`・`relations` から Mermaid の `erDiagram`'

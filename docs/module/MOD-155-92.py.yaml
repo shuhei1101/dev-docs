@@ -1,0 +1,128 @@
+id: MOD-155-92
+title: 開発ドキュメントサーバー / 変換 / decisions.py
+lead: 配信元の `decisions.folders` から、設計書の `decisions` の検討事項の文書を探す。
+test_files:
+  - tests/unit/dev_docs/features/convert/test_decisions.py
+diagrams:
+  - name: 全体
+    diagram: |-
+      classDiagram
+        direction TD
+        変換 ..> 検討事項の文書を探す
+        文書の取得 ..> 検討事項の文書を探す
+        文書の取得 ..> 検討事項の文書のパスの読み取り
+        class 変換 {
+          +変換する(読み書きの場所, 文書) 変換の結果
+        }
+        class 文書の取得 {
+          <<function>>
+        }
+        class 検討事項の文書を探す {
+          <<function>>
+        }
+        class 検討事項の文書のパスの読み取り {
+          <<function>>
+        }
+        click 変換 href "./MOD-155-99.py.yaml#変換"
+        click 文書の取得 href "./MOD-155-159.py.yaml#文書の取得"
+constants:
+  - name: DECISIONS_KEY
+    title: 検討事項のキー
+    container: features/convert/decisions.py
+    usecase: 文書の取得
+    summary: 設計書のスキーマで、検討事項の ID の並びを持つキー
+    value: '`"decisions"`'
+  - name: DECISION_ID
+    title: 検討事項の ID の形式
+    container: features/convert/decisions.py
+    usecase: 文書の取得
+    summary: 検討事項の ID に適用する正規表現（AI Monitor の `共通.schema.yaml` の `decision` の `pattern` と同じ）
+    value: '`re.compile(r"^[A-Z]+-[0-9]+$")`'
+  - name: DECISION_PAGE_PREFIX
+    title: 検討事項の文書のパスの頭
+    container: features/convert/decisions.py
+    usecase: 文書の取得
+    summary: 文書の取得の `path` のうち、検討事項の文書を指すパスの頭
+    value: '`"_decisions/"`'
+  - name: DECISION_DOCS_DIR
+    title: 検討事項の文書のフォルダ
+    container: features/convert/decisions.py
+    usecase: 文書の取得
+    summary: 話し合いの記録のフォルダの中で、検討事項の文書（`{ID}.md`）を配置するフォルダ
+    value: '`".mindstella/docs"`'
+functions:
+  - name: find_decisions
+    title: 検討事項の文書を探す
+    kind: 関数
+    container: features/convert/decisions.py
+    usecase: 文書の取得
+    role: 読み込み
+    summary: 配信元の `decisions.folders` のうち、ちょうど 1 つのフォルダに文書がある検討事項の ID と、その文書のパスを返却する
+    scope: public
+    thread_safe: true
+    args:
+      - name: source
+        title: 配信元
+        type: ServedSource
+        required: true
+        passing: positional
+        description: 配信している配信元
+    returns:
+      type: dict[str, Path]
+      description: 検討事項の ID → 文書のファイルの絶対パス。`decisions.folders` が空なら空
+    process: |-
+      1. 起点を `source.main_root`、無ければ `source.repo_root`、無ければ `source.root` にする
+      2. `decision_folders` の各フォルダを、絶対パスはそのまま、相対パスは起点と結合し、`{フォルダ}/{DECISION_DOCS_DIR}` の直下の `*.md` のうち拡張子を落とした名前が `DECISION_ID` に該当するファイルを集める（フォルダが無ければ飛ばす）
+      3. ID ごとに該当したフォルダの数を数え、ちょうど 1 つの ID だけをそのファイルのパスで返却する
+    unit_tests:
+      - name: test_find_decisions
+        case: 正常
+        summary: 1 つのフォルダにだけある ID を返却する
+        condition: '`decision_folders` が `[tmp/a, tmp/b]`。`tmp/a` に `D-1.md`・`D-2.md`、`tmp/b` に `D-2.md`・`notes.md`、`tmp/c` は無い'
+        mock: なし（一時フォルダ）
+        expected: '`{"D-1": tmp/a の D-1.md}` だけ（`D-2` と `notes` は含まない）'
+      - name: test_find_decisions_when_absolute_and_worktree
+        case: 正常
+        summary: 絶対パスと、ワークツリーから配信している配信元
+        condition: '`main_root` がメインのリポジトリ、`root` がワークツリー。`decision_folders` に相対パス 1 つと絶対パス 1 つ'
+        mock: なし（一時フォルダ）
+        expected: 相対パスはメインのリポジトリから、絶対パスはそのまま探した ID が返却される
+      - name: test_find_decisions_when_no_folders
+        case: 正常
+        summary: '`decisions.folders` が無い'
+        condition: '`decision_folders` が空'
+        mock: なし
+        expected: 空の辞書
+  - name: decision_page_id
+    title: 検討事項の文書のパスの読み取り
+    kind: 関数
+    container: features/convert/decisions.py
+    usecase: 文書の取得
+    role: 判定
+    summary: 文書の取得の `path` が検討事項の文書を指すなら、その検討事項の ID を返却する
+    scope: public
+    thread_safe: true
+    args:
+      - name: path
+        title: 文書のパス
+        type: str
+        required: true
+        passing: positional
+        description: 文書の取得の `path`
+    returns:
+      type: str | None
+      description: '`path` が `{DECISION_PAGE_PREFIX}{ID}` で `{ID}` が `DECISION_ID` に該当すれば ID、それ以外は `None`'
+    process: 1. `path` が `DECISION_PAGE_PREFIX` で始まり、残りが `DECISION_ID` に該当すれば残りを返却し、それ以外は `None` を返却する
+    unit_tests:
+      - name: test_decision_page_id
+        case: 正常
+        summary: 検討事項の文書のパス
+        condition: '`_decisions/D-1`'
+        mock: なし
+        expected: '`D-1`'
+      - name: test_decision_page_id_when_other
+        case: 正常
+        summary: 検討事項の文書でないパスと、形式に合わない ID
+        condition: '`dev/a`・`_decisions/../x`・`_decisions/d-1`'
+        mock: なし
+        expected: どれも `None`

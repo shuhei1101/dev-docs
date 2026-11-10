@@ -1,0 +1,729 @@
+id: IF-155-10
+title: "文書の取得"
+entry:
+  kind: endpoint
+  value: GET `/_api/sources/{source}/docs[/{path}]`
+flows:
+  - name: 正常系
+    summary: 配信元の一番左のタブの一番上の文書と、文書のパスで指した文書を返す
+    setup:
+      - name: Mock
+        description: なし（一時フォルダに配信元を作り、dev-docs のアプリを HTTP のテストのクライアントで呼ぶ）
+        notes: '-'
+      - name: サンプルの配信元
+        description: 文書の種類を 1 つ（スキーマと YAML 2 件）と、`nav` を持つ `dev-docs.yaml` を持つ git リポジトリ
+        notes: id `sample`。`nav.tabs[]` は 2 つ（最初のタブに YAML 2 件）
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        participant C as クライアント
+        participant E as GET /_api/sources/{source}/docs/{path}
+        participant ST as 配信元のファイル
+
+        C->>E: GET /_api/sources/sample/docs
+        E-->>ST: nav と文書を読む
+        E->>E: 一番左のタブの一番上の文書 1 をスキーマ駆動で Markdown にする
+        E-->>C: 200（文書 1）
+        C->>E: GET /_api/sources/sample/docs/{文書 2 のパス}
+        E-->>C: 200（文書 2）
+      ```
+    expected:
+      - '`/_api/sources/sample/docs` が 200 で、`path` が文書 1、`tabs` が `nav` の 2 つのタブで一番左だけが `active`'
+      - '`markdown` に、スキーマの `x-heading` の項目が見出し、`x-key` の配列が表になった文書 1 がある'
+      - '`conversionError` と `diff` が `null`、`tabs[].items[].change` が全て `null`'
+      - '`updatedAt` が文書 1 のファイルを最後に変えた commit の日時'
+      - '`/_api/sources/sample/docs/{文書 2 のパス}` が 200 で文書 2 の `markdown` を返す'
+    test: test_normal
+  - name: 正常系（nav が無い）
+    summary: '`nav` が無い配信元は種類ごとにタブを作る'
+    setup:
+      - name: Mock
+        description: なし
+        notes: '-'
+      - name: nav の無い配信元
+        description: 文書の種類を 2 つ持ち、`nav` を持たない配信元
+        notes: id `plain`
+      - name: サブフォルダの文書
+        description: 1 つ目の種類の行の `paths` を `docs/**/*.yaml` にし、`docs/` の直下に 1 件、`docs/lang/` に `index.yaml` を含む 2 件、`docs/lang/py/` に 1 件の文書を置く
+        notes: 2 つ目の種類の行の `paths` はサブフォルダを含まない glob
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        participant C as クライアント
+        participant E as GET /_api/sources/{source}/docs/{path}
+
+        C->>E: GET /_api/sources/plain/docs
+        E->>E: 種類ごとにタブを作り、文書をフォルダで束ねる
+        E-->>C: 200（1 つ目の種類のタブの一番上の文書）
+      ```
+    expected:
+      - '`tabs` が `documents[]` の 2 つの種類ごとに 1 つずつ並ぶ'
+      - 各タブの `items` にその種類の文書だけが並ぶ
+      - 1 つ目のタブの `items` の先頭が `docs/` の直下の文書の page、次が group `lang`
+      - group `lang` の先頭が `docs/lang/index.yaml` の文書の page で、中に group `py` がある
+      - 2 つ目のタブの `items` は group を持たない
+    test: test_normal_when_nav_missing
+  - name: 正常系（リビジョンを指す）
+    summary: '`ref` のリビジョンの文書を返す'
+    setup:
+      - name: Mock
+        description: なし
+      - name: 古い commit
+        description: sample の文書 1 の `name` を変える前の commit
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        participant C as クライアント
+        participant E as GET /_api/sources/{source}/docs/{path}
+        participant G as sample の Git の履歴
+
+        C->>E: GET /_api/sources/sample/docs/{文書 1 のパス}?ref={古い commit}
+        E-->>G: そのリビジョンを書き出して読む
+        E-->>C: 200（古い commit の文書 1）
+      ```
+    expected:
+      - '`markdown` の `name` が古い commit の値になる'
+      - '`ref` が古い commit'
+      - '`ref` を省くと、`ref` に `default_ref` の名前を返す'
+    test: test_normal_when_ref_given
+  - name: 正常系（差分を求める）
+    summary: '`diff` のリビジョンから変わった項目と、サイドバーの page ごとの変化を返す'
+    setup:
+      - name: Mock
+        description: なし
+      - name: 変更の commit
+        description: 文書 1 の `name` を変え、文書 3 を削除し、文書 4 を追加した commit とその親の commit
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        participant C as クライアント
+        participant E as GET /_api/sources/{source}/docs/{path}
+        participant G as sample の Git の履歴
+
+        C->>E: GET /_api/sources/sample/docs/{文書 1 のパス}?ref={変更の commit}&diff={親の commit}
+        E-->>G: 両端の文書と nav を読んで変わった項目と page を求める
+        E-->>C: 200（diff と change つき）
+      ```
+    expected:
+      - '`diff.base` が親の commit、`diff.change` が `modified`、`diff.changedItems` が `name` だけになる'
+      - '`markdown` は変更の commit の文書 1'
+      - '`tabs[].items[]` の文書 1 の `change` が `modified`、文書 4 が `added`、変わっていない文書 2 が `null`'
+      - '変更の commit に無い文書 3 が、親の commit の `nav` の位置に `change: deleted` で並ぶ'
+    test: test_normal_when_diff_given
+  - name: 正常系（配信元の変換を使う）
+    summary: '`converters[]` のスクリプトの Markdown と、埋め込みのマーカーの表を返す'
+    setup:
+      - name: Mock
+        description: なし
+        notes: '-'
+      - name: 変換を持つ配信元
+        description: '`converters[]` に、標準入力の YAML から決まった見出しの Markdown を出すスクリプトを持ち、種類の 1 つがそれを指す配信元'
+        notes: id `custom`
+      - name: 埋め込みのマーカー
+        description: custom の Markdown の文書。本文に別の YAML を表として入れるマーカーを置く
+        notes: '-'
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        participant C as クライアント
+        participant E as GET /_api/sources/{source}/docs/{path}
+        participant SC as 配信元のスクリプト
+
+        C->>E: GET /_api/sources/custom/docs/{converters を指す種類の文書}
+        E->>SC: 標準入力に YAML を渡す
+        SC-->>E: 標準出力の Markdown
+        E-->>C: 200
+        C->>E: GET /_api/sources/custom/docs/{埋め込みのマーカーを持つ文書}
+        E->>E: マーカーを YAML の表の Markdown に置き換える
+        E-->>C: 200
+      ```
+    expected:
+      - converters を指す種類の文書の `markdown` に、スクリプトが出した見出しがある
+      - 埋め込みのマーカーの場所に指した YAML の表があり、マーカーの文字列は無い
+    test: test_normal_when_custom_converter
+  - name: 正常系（変換に失敗する）
+    summary: 制限時間を超えたスクリプトを止め、`conversionError` に失敗を入れる
+    setup:
+      - name: Mock
+        description: なし
+        notes: '-'
+      - name: 止まらないスクリプト
+        description: custom の `converters[]` のスクリプトを、制限時間より長く待つものに差し替える
+        notes: 制限時間はテストで短くしてよい
+      - name: 壊れた YAML
+        description: sample の文書 1 の YAML を、YAML として読めない内容にする
+        notes: '-'
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        participant C as クライアント
+        participant E as GET /_api/sources/{source}/docs/{path}
+        participant SC as 配信元のスクリプト
+
+        C->>E: GET /_api/sources/custom/docs/{converters を指す種類の文書}
+        E->>SC: 標準入力に YAML を渡す
+        E->>SC: 制限時間を超えたので止める
+        E-->>C: 200（conversionError つき）
+      ```
+    expected:
+      - '`markdown` が `null` で、`conversionError` に種類・スクリプトのパス・制限時間を超えたことがある'
+      - スクリプトのプロセスが残っていない
+      - 同じ配信元のスキーマ駆動で変換する文書は 200 で `markdown` を返す
+      - 壊れた YAML の文書 1 は、`conversionError` にファイルのパスと読めなかった行と列を入れて 200 を返す
+    test: test_normal_when_conversion_failed
+  - name: 異常系（無い配信元・リビジョン・文書・404）
+    summary: 無いものを指すと 404 で何が無いかを返す
+    setup:
+      - name: Mock
+        description: なし
+        notes: '-'
+      - name: 検証に失敗する配信元
+        description: '`documents[0]` に必須のキー `paths` が無い配信元'
+        notes: id `broken`
+      - name: 入力
+        description: '`/_api/sources/sample/docs/no-such-doc`・`/_api/sources/sample/docs?ref=no-such-branch`・`/_api/sources/broken/docs`・`/_api/sources/unknown/docs`'
+        notes: '-'
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        participant C as クライアント
+        participant E as GET /_api/sources/{source}/docs/{path}
+
+        C->>E: GET /_api/sources/sample/docs/no-such-doc
+        E-->>C: 404（missing: doc）
+        C->>E: GET /_api/sources/broken/docs
+        E-->>C: 404（missing: not_served と外した理由）
+      ```
+    expected:
+      - '`/_api/sources/sample/docs/no-such-doc` が 404 で、`missing` が `doc`、値が開こうとしたパス'
+      - '`ref=no-such-branch` が 404 で、`missing` が `ref`、値が `no-such-branch`'
+      - '`/_api/sources/broken/docs` が 404 で、`missing` が `not_served`、`errors[]` に `documents[0]` に必須のキー `paths` が無いことがある'
+      - '`/_api/sources/unknown/docs` が 404 で、`missing` が `source`'
+    test: test_error_when_not_found
+  - name: 正常系（nav をタグの式で絞る）
+    summary: '`auto` の `filter` に当たる文書だけをタブのサイドバーに並べる'
+    setup:
+      - name: Mock
+        description: なし
+      - name: nav の auto のタグの式
+        description: sample の `nav` に、`auto` の `filter` が `tags が mcp かつ tags が 設計 でない` のタブ `mcp` と、`filter` を書かないタブ `すべて` を置く
+        notes: 文書 1 の `tags` は `[mcp]`、文書 2 は `[mcp, 設計]`、文書 3 は `[設計]`
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        participant C as クライアント
+        participant E as GET /_api/sources/{source}/docs/{path}
+
+        C->>E: GET /_api/sources/sample/docs
+        E->>E: auto の filter を check_filter で検証し、match_filter で当たる文書を並べる
+        E-->>C: 200（tabs）
+      ```
+    expected:
+      - タブ `mcp` の `items` に文書 1 だけが並ぶ
+      - タブ `すべて` の `items` に文書 1〜3 が並ぶ
+    test: test_normal_when_nav_filtered_by_tags
+  - name: 正常系（エイリアスを返す）
+    summary: 配信元の `alias_type` を持つ行の文書のエイリアスを、取り込んだスキーマの形で文書といっしょに返す
+    setup:
+      - name: Mock
+        description: なし
+      - name: 用語の種類
+        description: 'sample の `alias_type: term` の行の文書「作業範囲」'
+        notes: '`aliases` は `[scope, 担当範囲]`、`avoid` は `[担当領域]`、`description` を持つ'
+      - name: 文書の別名の種類
+        description: 'sample の `alias_type: doc` の行の文書「設定のリファレンス」'
+        notes: '`aliases` は `[settings]`、`description` を持ち、`avoid` を持たない'
+      - name: エイリアスの無い配信元
+        description: '`alias_type` を持つ行が無い配信元 `plain`'
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        participant C as クライアント
+        participant E as GET /_api/sources/{source}/docs/{path}
+
+        C->>E: GET /_api/sources/sample/docs/{文書 1 のパス}
+        E->>E: alias_type を持つ行の文書のエイリアスを集める
+        E-->>C: 200（markdown と aliases）
+        C->>E: GET /_api/sources/plain/docs
+        E-->>C: 200（aliases は空）
+      ```
+    expected:
+      - sample の応答の `aliases` に、`alias_type` が `term`・`name` が `作業範囲`・`aliases` が `[scope, 担当範囲]`・`avoid` が `[担当領域]` で `description` を持つ要素がある
+      - sample の応答の `aliases` に、`alias_type` が `doc`・`name` が `設定のリファレンス`・`aliases` が `[settings]` で `avoid` が `null` の要素がある
+      - plain の応答の `aliases` が空
+    test: test_normal_when_aliases_returned
+  - name: 正常系（本文のファイルのパスで引く）
+    summary: 管理用の YAML の行の文書に `bodyPath` を返し、本文のファイルのパスで指した文書を返す
+    setup:
+      - name: Mock
+        description: なし
+      - name: 管理用の YAML
+        description: sample の `notes/files.yaml`。`files[]` に `a.md` と `b.md` の 2 行。`notes/a.md`・`notes/b.md` を置く
+        notes: '行 `notes` は `paths: [notes/files.yaml]`・`records: files`・`body_file: path`。スキーマは `templates/files.schema.yaml`'
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        participant C as クライアント
+        participant E as GET /_api/sources/{source}/docs/{path}
+        participant ST as 配信元のファイル
+
+        C->>E: GET /_api/sources/sample/docs/{a の画面のパス}
+        E-->>ST: notes/files.yaml と行の body_file を読む
+        E-->>C: 200（a・bodyPath: notes/a.md）
+        C->>E: GET /_api/sources/sample/docs/notes/b.md
+        E->>E: 画面のパスで当たらないので、本文のファイルのパスで引く
+        E-->>C: 200（b）
+      ```
+    expected:
+      - a の `bodyPath` が `notes/a.md`、`path` が a の画面のパス
+      - '`/_api/sources/sample/docs/notes/b.md` が 200 で、`path` が b の画面のパス、`markdown` が b の本文、`bodyPath` が `notes/b.md`'
+      - ファイル 1 つが 1 文書の sample の文書 1 を開くと `bodyPath` が `null`
+    test: test_normal_when_body_path_given
+  - name: 正常系（変換の結果をキャッシュしない）
+    summary: '`cache: false` の変換は要求のたびにスクリプトを動かし、控えを書かない'
+    setup:
+      - name: Mock
+        description: なし
+      - name: 変換を持つ配信元
+        description: '`converters[]` に `cache: false` の行を持ち、種類の 1 つがそれを指す配信元。スクリプトは本文の外の参照先の YAML の値を見出しに出す'
+        notes: id `custom`
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        participant C as クライアント
+        participant E as GET /_api/sources/{source}/docs/{path}
+        participant SC as 配信元のスクリプト
+
+        C->>E: GET /_api/sources/custom/docs/{cache: false の変換を指す種類の文書}
+        E->>SC: 標準入力に YAML を渡す
+        SC-->>E: 標準出力の Markdown
+        E-->>C: 200
+        C->>C: 参照先の YAML の値を書き換える
+        C->>E: 同じ GET
+        E->>SC: 標準入力に YAML を渡す
+        SC-->>E: 標準出力の Markdown
+        E-->>C: 200
+      ```
+    expected:
+      - 2 回目の `markdown` に、書き換えた後の参照先の値の見出しがある
+      - '`state_dir` の変換の結果の控えに、この文書の控えのファイルが無い'
+    test: test_normal_when_converter_cache_disabled
+  - name: 正常系（変換の結果をキャッシュする）
+    summary: '`cache` を書かない変換は控えを書き、本文が変わらなければ控えを返す'
+    setup:
+      - name: Mock
+        description: なし
+      - name: 変換を持つ配信元
+        description: '`converters[]` に `cache` を書かない行を持ち、種類の 1 つがそれを指す配信元。スクリプトは本文の外の参照先の YAML の値を見出しに出す'
+        notes: id `custom`
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        participant C as クライアント
+        participant E as GET /_api/sources/{source}/docs/{path}
+        participant SC as 配信元のスクリプト
+
+        C->>E: GET /_api/sources/custom/docs/{cache を書かない変換を指す種類の文書}
+        E->>SC: 標準入力に YAML を渡す
+        SC-->>E: 標準出力の Markdown
+        E->>E: 控えを書く
+        E-->>C: 200
+        C->>C: 参照先の YAML の値を書き換える
+        C->>E: 同じ GET
+        E-->>C: 200（控えの Markdown）
+      ```
+    expected:
+      - 2 回目の `markdown` が 1 回目と同じ
+      - '`state_dir` の変換の結果の控えに、この文書の控えのファイルが 1 つある'
+    test: test_normal_when_converter_cache_enabled
+  - name: 正常系（nav をフォルダで束ねる）
+    summary: "`group_by: '@folder'` の `auto` が、手で書いた page の文書を除いてフォルダごとの group を作る"
+    setup:
+      - name: Mock
+        description: なし
+        notes: '-'
+      - name: フォルダごとの文書
+        description: 'sample に `paths: [rules/**/*.yaml]` の行 `rules` を追加し、`rules/common.yaml`・`rules/lang/index.yaml`・`rules/lang/ts.yaml`・`rules/lang/py/style.yaml` を置く'
+        notes: '-'
+      - name: nav のフォルダの束ね
+        description: "sample の `nav` にタブ `ルール` を追加し、`rules/common.yaml` の文書を指す `page` と `{auto: {document: rules, group_by: '@folder'}}` をこの順で置く"
+        notes: '-'
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        participant C as クライアント
+        participant E as GET /_api/sources/{source}/docs/{path}
+
+        C->>E: GET /_api/sources/sample/docs
+        E->>E: 手で書いた page を並べる
+        E->>E: auto の文書から手で書いた page の文書を除き、行の paths の起点からのフォルダごとの group にする
+        E-->>C: 200（tabs）
+      ```
+    expected:
+      - タブ `ルール` の `items` の先頭が `rules/common.yaml` の文書の page で、`auto` の並びに同じ文書は出ない
+      - 次の項目が group `lang` で、中の並びは `rules/lang/index.yaml` の文書・`rules/lang/ts.yaml` の文書・group `py` の順
+      - group `py` に `rules/lang/py/style.yaml` の文書が入る
+    test: test_normal_when_nav_grouped_by_folder
+  - name: 正常系（スキーマ駆動の文書を図と表にする）
+    summary: スキーマ駆動の変換が、図を mdmark の部品に、スカラーの並びを「項目 / 値」の表にした Markdown を返す
+    setup:
+      - name: Mock
+        description: なし
+        notes: '-'
+      - name: 図と属性を持つ文書
+        description: 'sample に、`x-shape: diagram`・`x-diagram: flowchart` の項目（ノード 2 つ・辺 1 つ）、`x-shape: diagram`・`x-diagram: state` の項目、`sequenceDiagram` を書いた Mermaid の文字列の項目、`flowchart` を書いた Mermaid の文字列の項目、スカラーが 3 つ以上並ぶオブジェクト、改行を含む値、`x-hidden: true` の項目、説明の列を持つ表の項目を持つスキーマと、その文書 6 を置く'
+        notes: 文書 6 の `title`・`lead` は見出しとリードに使う
+      - name: フローチャートと状態遷移
+        description: '`x-diagram: flowchart` の項目は、`kind: question`・`hint` を持つノード `q` と `kind: result` のノード `r`、`label`・`line: read`・`tip` を持つ `q` から `r` への辺、`q`・`r` を囲む `frame`（`label: 判定`）を持つ。`x-diagram: state` の項目は、状態 `下書き`・`公開` と `下書き` から `公開` への遷移、`initial: 下書き`・`final: [公開]` を持つ'
+        notes: '-'
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        participant C as クライアント
+        participant E as GET /_api/sources/{source}/docs/{path}
+
+        C->>E: GET /_api/sources/sample/docs/{文書 6 のパス}
+        E->>E: 文書 6 をスキーマ駆動で Markdown にする
+        E-->>C: 200（文書 6）
+      ```
+    expected:
+      - '`markdown` に `<!-- flow -->` の範囲が 3 つと `<!-- sequence -->` の範囲が 1 つあり、`` ```mermaid `` のコードブロックが無い'
+      - 'flowchart の `<!-- flow -->` の JSON で、`q` の `kind` が `question`・`hint` が文書の `hint`、`r` の `kind` が `result`、`q` から `r` への線の `label` が文書の `label`・`line` が `read`・`tip` が文書の `tip` で、`frame` の `title` が `判定` で `q`・`r` の位置を囲む'
+      - 'state の `<!-- flow -->` の JSON に、`kind` が `start` のノードから `下書き` への線と、`公開` から `kind` が `result` のノードへの線があり、`下書き`・`公開` のノードの `kind` が `action`'
+      - 図の元データの表が `closed` の表のマーカーで囲まれ、ノードの表の先頭の列が `表示` で、`+columns hide=` に ID の列名がある。辺の表のマーカーは `hide=` を持たない
+      - スカラーが並ぶオブジェクトが、列名が `項目`・`値` の表になっている
+      - 改行を含む値の `**{title}**` が値と別の行にある
+      - '`title`・`lead` の値が見出しとリードの後に `**…**:` の行で出ず、`x-hidden: true` の項目の値が `markdown` に無い'
+      - 説明の列を持つ表のマーカーに `wide=` と説明の列名がある
+    test: test_normal_when_schema_document_drawn
+  - name: 正常系（読み取れない Mermaid を残す）
+    summary: 変換が読み取れない行を含む Mermaid の文字列は、図ごと Mermaid のコードブロックのまま返す
+    setup:
+      - name: Mock
+        description: なし
+        notes: '-'
+      - name: 読み取れない行を含む図
+        description: 'sample に、Mermaid の文字列の項目を持つスキーマと、その項目に `sequenceDiagram` の行と Mermaid の構文でない行を書いた文書 7 を置く'
+        notes: '-'
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        participant C as クライアント
+        participant E as GET /_api/sources/{source}/docs/{path}
+
+        C->>E: GET /_api/sources/sample/docs/{文書 7 のパス}
+        E->>E: 文書 7 をスキーマ駆動で Markdown にする
+        E-->>C: 200（文書 7）
+      ```
+    expected:
+      - '`markdown` に `<!-- sequence -->` の範囲が無く、文書 7 の Mermaid の文字列の全ての行が `` ```mermaid `` のコードブロックにある'
+      - '`conversionError` が `null`'
+    test: test_normal_when_mermaid_unreadable
+  - name: 正常系（ER 図を部品にする）
+    summary: '`x-diagram: er` の項目を、テーブルの列で補った mdmark の ER 図の部品にする'
+    setup:
+      - name: Mock
+        description: なし
+        notes: '-'
+      - name: ER 図を持つ文書
+        description: 'sample に、`x-shape: diagram`・`x-diagram: er` の項目 `er` と `tables[]` を持つスキーマと、その文書 8 を置く'
+        notes: '`er` と `tables` の構造は AI Monitor の ER 図のテンプレートと同じ'
+      - name: 実体とテーブル
+        description: '実体 `顧客` は `columns` を持たず、`tables[]` に `name` が `customers`・`title` が `顧客` のテーブル（列 `id`（`primary_key: true`・`not_null: true`）と `email`）がある。実体 `注文` は `columns` に列 `id`（`key: PK`）と、`key: FK`・`comment: 参照: 顧客.id` の列 `customer_id` を持つ。実体 `商品` は名前だけを持つ。実体 `支払い` は `columns` を持たず、`tables[]` に `name` が `payments`・`title` が `支払い` のテーブル（列 `id`（`primary_key: true`）と、`foreign_key.table` が `customers.id` の列 `customer_id`）がある'
+        notes: '-'
+      - name: 関連
+        description: '`顧客` の `id`（`1`）から `注文` の `customer_id`（`0..n`）へラベル `注文する` の関連と、`顧客` の `id`（`1`）から `支払い` の `customer_id`（`0..n`）への関連と、`注文` の `product_id`（`0..n`）から `商品` の `id`（`1`）への関連（`from_column`・`to_column`・`from_cardinality`・`to_cardinality`）'
+        notes: '`注文` から `商品` への関連は、両端の列が実体の列に無い'
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        participant C as クライアント
+        participant E as GET /_api/sources/{source}/docs/{path}
+
+        C->>E: GET /_api/sources/sample/docs/{文書 8 のパス}
+        E->>E: er の実体の列を tables で補い、関連の両端の列と多重度で ER 図の部品にする
+        E-->>C: 200（文書 8）
+      ```
+    expected:
+      - '`markdown` に `<!-- er -->` の範囲が 1 つあり、`erDiagram` の `` ```mermaid `` のコードブロックが無い'
+      - '範囲の JSON の `tables` に `顧客`・`注文`・`商品`・`支払い` の 4 つがあり、`顧客` の `columns` が `id`（`pk: true`・`nn: true`）と `email`、`注文` の `columns` が `id`（`pk: true`）と `customer_id`（`fk: true`）、`商品` の `columns` が空、`支払い` の `columns` が `id`（`pk: true`）と `customer_id`（`fk: true`）'
+      - '範囲の JSON の `relations` が 2 件で、1 件目は `from` が `顧客`・`fromColumn` が `id`・`fromCard` が `1`・`to` が `注文`・`toColumn` が `customer_id`・`toCard` が `0..n`・`label` が `注文する`、2 件目は `from` が `顧客`・`fromColumn` が `id`・`fromCard` が `1`・`to` が `支払い`・`toColumn` が `customer_id`・`toCard` が `0..n`'
+      - '`注文` から `商品` への関連は `relations` に無く、図の元データの表の関連の行にある'
+      - 図の元データの表が `closed` の表のマーカーで囲まれている
+    test: test_normal_when_er_diagram_drawn
+  - name: 正常系（本文の id のリンクを解決する）
+    summary: 本文の `id:` のリンクを、同じ配信元の文書と、その項目の見出しのアンカーへのリンクにする
+    setup:
+      - name: Mock
+        description: なし
+        notes: '-'
+      - name: id のリンクを持つ文書
+        description: 'sample の文書 1 の Markdown の文字列の値に、`[文書 2](id:{文書 2 の ID})`・`[項目](id:{文書 6 の ID}#flow)`・`[無い項目](id:{文書 6 の ID}#no-such-item)`・`[無い文書](id:no-such-doc)` のリンクと、行内のコード `` `[コード](id:{文書 2 の ID})` `` を置く'
+        notes: '文書 6 のスキーマの `flow` の項目は `x-heading: 処理の流れ` を持つ'
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        participant C as クライアント
+        participant E as GET /_api/sources/{source}/docs/{path}
+
+        C->>E: GET /_api/sources/sample/docs/{文書 1 のパス}
+        E->>E: 本文の id のリンクを、文書の相対パスと項目の見出しのアンカーに書き換える
+        E-->>C: 200（文書 1）
+      ```
+    expected:
+      - '`markdown` に、文書 2 の相対パスを指す `[文書 2](…)` がある'
+      - '`markdown` に、文書 6 の相対パスに見出し `処理の流れ` のアンカーを付けた `[項目](…#処理の流れ)` がある'
+      - '`[無い項目](…)` は文書 6 の相対パスをアンカーなしで指す'
+      - '`[無い文書](id:no-such-doc)` と、行内のコードの `` `[コード](id:{文書 2 の ID})` `` は書き換わらない'
+      - '`conversionError` が `null`'
+    test: test_normal_when_id_link_resolved
+  - name: 正常系（decisions を検討事項のリンクにする）
+    summary: '`decisions` の ID のうち、話し合いの記録のフォルダで 1 つに決まる ID を、検討事項の文書の画面のパスへのリンクにする'
+    setup:
+      - name: Mock
+        description: なし
+        notes: '-'
+      - name: 話し合いの記録のフォルダ
+        description: 'sample のメインのリポジトリの `tmp/a/.mindstella/docs/` に `D-1.md`・`D-2.md`、`tmp/b/.mindstella/docs/` に `D-2.md` を配置し、`dev-docs.yaml` の `decisions.folders` を `[tmp/a, tmp/b]` にする'
+        notes: '`D-2` は 2 つのフォルダにある ID、`D-3` はどちらにも無い ID'
+      - name: decisions を持つ文書
+        description: 'sample の文書 6 の表の行と、「項目 / 値」の表を持つ見出しの要素に `decisions: [D-1, D-2, D-3]` を持たせる'
+        notes: '-'
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        participant C as クライアント
+        participant E as GET /_api/sources/{source}/docs/{path}
+        participant WS as 話し合いの記録のフォルダ
+
+        C->>E: GET /_api/sources/sample/docs/{文書 6 のパス}
+        E-->>WS: decisions.folders の .mindstella/docs/{ID}.md を探す
+        E->>E: 1 つのフォルダにだけある ID を、検討事項の文書のパスへのリンクにする
+        E-->>C: 200（文書 6）
+      ```
+    expected:
+      - '`markdown` の表のセルと箇条書き（「項目 / 値」の表を持つ要素の `decisions` を含む）のどちらでも、`D-1` が文書 6 のフォルダから `_decisions/D-1` への相対パスを指す `[D-1](…)` になる'
+      - '`D-2`・`D-3` はリンクにならず、ID の文字のまま出る'
+      - '`decisions` 以外の文字列の並びの出し方は変わらない'
+      - '`conversionError` が `null`'
+    test: test_normal_when_decision_linked
+  - name: 正常系（検討事項の文書を返す）
+    summary: '`path` が `_decisions/{ID}` のとき、話し合いの記録のフォルダの検討事項の文書を Markdown で返す'
+    setup:
+      - name: Mock
+        description: なし
+        notes: '-'
+      - name: 話し合いの記録のフォルダ
+        description: 正常系（decisions を検討事項のリンクにする）と同じフォルダと `decisions.folders`
+        notes: '-'
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        participant C as クライアント
+        participant E as GET /_api/sources/{source}/docs/{path}
+        participant WS as 話し合いの記録のフォルダ
+
+        C->>E: GET /_api/sources/sample/docs/_decisions/D-1
+        E-->>WS: tmp/a/.mindstella/docs/D-1.md を読む
+        E-->>C: 200（検討事項 D-1）
+        C->>E: GET /_api/sources/sample/docs/_decisions/D-2
+        E-->>C: 404
+      ```
+    expected:
+      - '`_decisions/D-1` が 200 で、`path` が `_decisions/D-1`、`markdown` が `tmp/a/.mindstella/docs/D-1.md` の本文のまま'
+      - '`tabs` は sample の `nav` のタブで、どのサイドバーの項目も選ばれていない'
+      - '`updatedAt` が `D-1.md` のファイルの更新日時で、`bodyPath`・`diff` が `null`'
+      - '2 つのフォルダにある `_decisions/D-2` と、どこにも無い `_decisions/D-3` は 404 で、`missing` が `doc`'
+    test: test_normal_when_decision_document_returned
+lead: '#17 の画面が文書を開くときに呼ぶ。配信元の文書を変換した Markdown と、タブ・サイドバー・差分の項目・画面の状態を JSON で返す。`path` を省くと一番左のタブのサイドバーの一番上の文書を返す。'
+identifier: get_document
+permissions: なし（`127.0.0.1` でだけ待ち受ける）
+idempotent: true
+side_effects: 'なし。変換の結果は `state_dir` に保存し、文書が変わるまで使い回す（`converters[]` の `cache: false` の行の変換は保存しない）'
+exclusivity: 読み取りだけで排他しない。同じ文書・同じバージョンの変換が同時に来たときは 1 回だけ変換する
+request:
+  - name: source
+    type: str
+    required: true
+    location: path
+    description: 配信元の ID
+  - name: path
+    type: str
+    required: false
+    default: なし（一番左のタブのサイドバーの一番上の文書）
+    location: path
+    description: 文書のパス（配信元の直下から、拡張子を落とした形）。画面のパスで当たる文書が無いときは、文書のファイルか本文のファイルのパス（拡張子つき）として引く
+  - name: ref
+    type: str
+    required: false
+    default: なし（配信元の `default_ref`。Git 管理外の配信元は今のフォルダ）
+    location: query
+    description: 開くリビジョン（ブランチ・コミット・タグ）
+    constraints: Git 管理外の配信元では持たない
+  - name: diff
+    type: str
+    required: false
+    default: なし（変わった項目を返さない）
+    location: query
+    description: 比べるリビジョン。このリビジョンから変わった項目を返す
+    constraints: Git 管理外の配信元では無視する
+request_example: |-
+  ```text
+  GET /_api/sources/sample/docs/docs/doc-1?ref=8b1d4e0&diff=3f2a9c1
+  ```
+response:
+  - name: source
+    type: str
+    description: 配信元の ID
+  - name: ref
+    type: str | None
+    description: 開いているリビジョン。`ref` を省いたときは `default_ref` の名前
+    notes: Git 管理外の配信元は `null`
+  - name: path
+    type: str
+    description: 返した文書のパス
+  - name: markdown
+    type: str | None
+    description: 変換した Markdown（埋め込みのマーカーは表に置き換え済み）
+    notes: 変換に失敗したときは `null`
+  - name: conversionError
+    type: ConversionError | None
+    description: 変換に失敗したときの種類・スクリプトのパス・原因。YAML を読めないときはファイルのパスと行と列
+    notes: 成功したときは `null`
+  - name: tabs[].title
+    type: str
+    description: タブの名前（`nav` が無いときは種類の名前）
+  - name: tabs[].active
+    type: bool
+    description: 返した文書を含むタブか
+  - name: tabs[].items
+    type: list[NavItem]
+    description: サイドバーの項目（group と page の入れ子）。page は文書のパスを持つ
+  - name: github
+    type: GitHubTarget | None
+    description: '`dev-docs.yaml` に書いた GitHub のリポジトリと起票のラベル'
+    notes: 書いていない配信元は `null`
+  - name: columns
+    type: dict[str, list[str]]
+    description: 表ごとの隠す列（表の列の設定の保存で書いたもの）
+  - name: tableKeys
+    type: list[str]
+    description: '`markdown` の表の出る順の表のキー。`columns` を表に当てるときと、表の列の設定の保存の `table` に使う'
+    notes: 変換に失敗したときは空
+  - name: tabs[].items[].change
+    type: Literal['added', 'modified', 'deleted'] | None
+    description: page の文書の `diff` のリビジョンからの変化。`deleted` の page は `diff` のリビジョンの `nav` の位置に並べる
+    notes: '`diff` を省いたとき・変わっていない page・group は `null`'
+  - name: diff
+    type: DocumentDiff | None
+    description: '`diff` のリビジョンと比べた結果'
+    notes: '`diff` を省いたとき・Git 管理外の配信元は `null`'
+  - name: diff.base
+    type: str
+    description: 比べたリビジョン（`diff` の値）
+  - name: diff.change
+    type: Literal['added', 'modified'] | None
+    description: 返した文書の `diff` のリビジョンからの変化
+    notes: 変わっていない文書は `null`
+  - name: diff.changedItems
+    type: list[str]
+    description: '`diff` のリビジョンから変わった項目のパス'
+    notes: 追加した文書・変わっていない文書は空
+  - name: updatedAt
+    type: str
+    format: date-time
+    description: 返した文書のファイルの更新日時。Git の配信元は開いているリビジョンでそのファイルを最後に変えた commit の日時、Git 管理外の配信元はファイルの更新日時
+    notes: 文書の画面の文書の情報に出す
+  - name: aliases
+    type: list[AliasItem]
+    description: 配信元の `alias_type` を持つ行の文書のエイリアス。要素は取り込んだエイリアスのスキーマ（alias-inject の「エイリアスの元の行」）の共通の形で、画面が mdmark の `mount`・`render` の引数へ読み替えて渡す
+    notes: '`alias_type` を持つ行が無い配信元・変換に失敗したときは空。エイリアスのキーに違反する文書は載せない'
+  - name: aliases[].id
+    type: str
+    description: 用語の文書の ID
+  - name: aliases[].name
+    type: str
+    description: 用語の名前（共通のキー `name`）
+  - name: aliases[].aliases
+    type: list[str]
+    description: 本文で用語に当てる語（取り込んだエイリアスの共通のスキーマの `aliases`）
+  - name: aliases[].description
+    type: str | None
+    description: ツールチップに出す説明（共通のキー `description`）
+    notes: 持たない文書は `null`
+  - name: aliases[].alias_type
+    type: Literal['term', 'doc', 'command', 'url', 'skill', 'tool', 'path', 'env', 'avoid']
+    description: 文書の行の引用の種類（取り込んだスキーマの `alias_type` の enum）
+    notes: 画面は `term` を用語、`doc` を文書の別名として mdmark へ分けて渡す
+  - name: aliases[].avoid
+    type: list[str] | None
+    description: 用語のやめた言い方（エイリアスのキー `avoid`）
+    notes: 持たない文書は `null`。`related`・`command`・`cwd`・`url`・`skill` など他のエイリアスのキーも、取り込んだスキーマの `metadata` のキー名で同じ階層に持ち、値を持たないキーは載せない
+  - name: bodyPath
+    type: str | None
+    description: 本文のファイルのパス（配信元の直下から、拡張子つき）。管理用の YAML の行の文書は `body_file` が指すファイル
+    notes: 本文のファイルを持たない文書（ファイル 1 つが 1 文書）は `null`。画面は本文の相対リンクを、これがあればこのパス、無ければ `path` を基準に解決する
+response_notes: '本文の描画（mdmark）・リンクの組み立て・コメント・目次の変わった見出しのマーカーは #17 の画面が持つ。目次のマーカーは、`ref` を `diff.base` にして取った `markdown` と見出しごとに比べて付ける。'
+status_codes:
+  - code: '200'
+    condition: 文書を返した（変換に失敗したとき・YAML を読めないときも `conversionError` を入れて 200）
+  - code: '404'
+    condition: 配信元が無い・配信していない、リビジョンを解決できない、文書が無い
+    notes: '`missing`（`source`・`not_served`・`ref`・`doc`）と値、配信していない配信元は `errors[]` に外した理由'
+constraints:
+  - item: 変換の制限時間
+    constraint: '`converters[]` のスクリプトを制限時間で止める'
+    decided_by: NFR-155-1#requirements[スクリプトの制限時間]
+  - item: 認可
+    constraint: 制限なし（`127.0.0.1` でだけ待ち受ける）
+    decided_by: NFR-155-1#requirements[待ち受けのアドレス]
+  - item: 読み直し
+    constraint: ファイルの更新日時か大きさが変わった文書は、次の要求で読み直す
+  - item: operationId
+    constraint: '`{tag}-{関数名}`。`path` を含む入口は `view-get_document`、`path` を省く入口は `view-get_document_default`'
+  - item: JSON のキー
+    constraint: レスポンスのキーは camelCase。パス・クエリのパラメータ名は変えない
+  - item: nav の auto の絞り込み
+    constraint: '`nav` の `auto` は `document`（種類）に加えて `filter` を持てる。`filter` は `search_docs` の `filter` と同じ書式で、`check_filter` で検証し `match_filter` で当たる文書だけをサイドバーに並べる。`filter` を書かない `auto` はその種類の文書を全て並べる。`document` を省いた `auto` は配信元の全ての行の文書を対象にする'
+    notes: '`check_filter` に通らない `filter` はそのタブを空にし、起動と配信元の検査が違反を返す'
+  - item: 文書の引き方
+    constraint: '`path` を画面のパスで引き、当たらなければ文書のファイルか本文のファイルのパスが `path` と同じ最初の文書を返す'
+    notes: 管理の MCP の `try_convert` と同じ引き方。同じ本文のファイルを複数の行が指すときは最初の文書に当たる
+  - item: 変換の結果の控え
+    constraint: '`converters[]` の行の `cache` が `true`（既定）なら、控えがあればスクリプトを動かさずに返し、無ければ動かして控えを書く。`false` なら控えを読まず書かず、要求のたびにスクリプトを動かす'
+    notes: '控えのキーは本文の外のファイルを含まない。本文の外のファイルを読む変換は `cache: false` にする'
+  - item: nav の auto のフォルダの束ね
+    constraint: "`auto` の `group_by` が `'@folder'` のとき、文書が当たった行の `paths` の glob（複数当たるときは `paths` で先に並ぶ glob）のうちワイルドカードより前のフォルダを起点に、起点からのフォルダごとにフォルダ名の group を作り、入れ子のフォルダは入れ子の group にする。起点の直下の文書は group に入れない。各階層で page（フォルダの `index.yaml` の文書が先頭、残りはページのパスの順）を先に、入れ子の group をフォルダ名の順に後に並べる。管理用の YAML の行（`records`）の文書は束ねず、そのまま並べる。`'@folder'` 以外の `group_by` は今と同じく項目のパスとして読む"
+    notes: "`nav` が無い配信元は、種類ごとのタブを `group_by: '@folder'` の `auto` として組み立てる"
+  - item: スキーマ駆動の Markdown の表し方
+    constraint: '`converters[]` を持たない種類の文書は、図を mdmark の部品（`x-diagram` の flow 系と `state`、Mermaid の文字列の `flowchart` はフロー図、Mermaid の文字列の `sequenceDiagram` はシーケンス図）で、スカラーが並ぶオブジェクトを「項目 / 値」の表で返す。`x-diagram: er` は ER 図の部品にする。mdmark に部品の無い Mermaid の文字列と、変換が読み取れない行を 1 つでも含む Mermaid の文字列は、図ごと `` ```mermaid `` のまま返す。図の元データの表は閉じた表にする。スキーマに `x-hidden: true` を持つ項目と、見出し・リードに使った項目は本文に出さない'
+    notes: 表し方は knowledge の規約『表し方の優先順位』に沿う
+  - item: データの図のフロー図
+    constraint: '`x-diagram` の flow 系（`flowchart`・`dataflow`・`architecture`）は、ノードの `kind` を mdmark のノードの種類にする（`actor`・`external` は `external`、`process`・`system` は `script`、`store` は `data`、`start`・`question`・`action`・`result` は同じ値。`kind` が無いノードは `process`）。ノードの `hint`、辺の `line`（無ければ `flow`）・`tip` を mdmark の定義に入れ、戻る線は `loop` にする。`direction` が無ければ `flowchart` は `TD`、`dataflow`・`architecture` は `LR`。`frame` は、中のノードを余白つきで囲む mdmark の枠にする。`state` は、状態を `action` のノードにし、`start` のノードから `initial` の状態へ、`final` の各状態から `result` のノードへ線を描画する。`全状態` の元・`元の状態` の先の遷移は `representative` の状態との 1 本にし、元と先が同じ遷移は `loop` にする'
+    notes: 対応は AI Monitor のインターフェース定義『設計書のMarkdown生成』の「図」の制約と同じ。ノードの `shape` と Mermaid の記法の `line`・`subgraphs` は参照しない（`shape` だけのノードは `script`、5 つの値に無い `line` は `flow` になる）
+  - item: ER 図の部品
+    constraint: '`x-diagram: er` の実体のうち `columns` を持たない実体は、同じ文書の `tables[]` のうち `title` が実体の `name` に当たるテーブルの `columns` から列（`name`・`type`・主キー・外部キー・NOT NULL）を作る。当たるテーブルが無い実体は列なしにする。関連は `from_column`・`to_column` を両端の列に、`from_cardinality`・`to_cardinality`（`1`・`0..1`・`1..n`・`0..n`）を両端の多重度にする'
+    notes: 両端の列のどちらかが実体の列に無い関連と、多重度が 4 つの値に無い関連は、mdmark の図全体が書き方の警告になるため図から除外し、図の元データの表にだけ残す。Mermaid の記法の `cardinality` は参照しない。ER 図の部品は mdmark#298 から
+  - item: 本文の id のリンク
+    constraint: 'スキーマ駆動の変換で、Markdown の文字列の値のうちコードブロック・行内のコードの外の `[名前](id:{文書の ID})` を、同じ配信元のその文書への相対パスのリンクにする。`[名前](id:{文書の ID}#{項目のパス})` は、項目のパスがリンク先の文書で見出しになる項目（`x-heading` を持つ項目、`x-shape: sections` の要素）を指すとき、その見出しのアンカーを付ける。型 `ref` の値のリンクも同じアンカーを付ける'
+    notes: どの文書の ID にも当たらないリンクは書き換えず、警告も出さない。見出しにならない項目を指すリンクはアンカーを付けずに文書を指す。`converters[]` の出力と Markdown の本文の文書は書き換えない
+  - item: 手で書いた page と auto の重なり
+    constraint: 同じタブの中で、手で書いた `page`（`group` の中を含む）が指す文書を `auto` の結果から除く。手で書いた `group`・`page` の並びは変えない
+    notes: '-'
+  - item: 検討事項のリンク
+    constraint: 'スキーマ駆動の変換で、項目 `decisions` の要素（検討事項の ID）を、配信元の `decisions.folders` のうちちょうど 1 つのフォルダに `.mindstella/docs/{ID}.md` がある ID だけ、文書のフォルダから `_decisions/{ID}` への相対パスのリンクにする。0 個か 2 個以上のフォルダにある ID は ID の文字のまま出す。表のセルは `・` でつなぎ、それ以外は箇条書きにする今の並べ方は変えない'
+    notes: '`decisions.folders` を持たない配信元は全ての ID を文字のまま出す。リンクの相対パスは本文の id のリンクと同じく画面が `/{source}@{ref}/_decisions/{ID}` に解決する'
+  - item: 検討事項の文書
+    constraint: '`path` が `_decisions/{ID}`（`{ID}` は `^[A-Z]+-[0-9]+$`）のとき、`decisions.folders` のうちちょうど 1 つのフォルダにある `.mindstella/docs/{ID}.md` の本文を、変換せずに `markdown` で返す。`ref` は解決するが、検討事項の文書は Git の管理外のためリビジョンによらず今のファイルを読む'
+    notes: '当たるフォルダが 0 個か 2 個以上なら 404（`missing`: `doc`）。`diff` は求めず `null` を返す。フォルダの外を指す `{ID}` は形式で弾く'
+refs:
+  - SC-155-1#scenarios[異常シナリオ（YAML を壊した）]
+test_file: tests/integration/server/test_get_document.py
+error_format: RFC 9457 の `application/problem+json`（`type`・`title`・`status`・`detail`）。拡張メンバーは camelCase（`nextSteps`・`missing`・`errors[]` の `{path, reason}`）
+callers:
+  - SC-155-7#scenarios[正常シナリオ（スキーマ駆動の文書を図と表で読む）]
+  - SC-155-7#scenarios[正常シナリオ（変換の結果をキャッシュしない）]
+  - SC-155-7#scenarios[正常シナリオ（変換の結果をキャッシュする）]
+  - SC-155-7#scenarios[正常シナリオ（ER 図を読む）]
+  - SC-155-7#scenarios[正常シナリオ（本文の id のリンクを開く）]
+  - SC-155-7#scenarios[正常シナリオ（設計書の検討事項のリンクを開く）]

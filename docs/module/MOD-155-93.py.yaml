@@ -1,0 +1,372 @@
+id: MOD-155-93
+title: 開発ドキュメントサーバー / 変換 / diagrams.py
+lead: '`x-diagram` の値と手で書く Mermaid の、mdmark の図の部品か Mermaid のコードブロックへの描画。'
+test_files:
+  - tests/unit/dev_docs/features/convert/test_diagrams.py
+diagrams:
+  - name: 全体
+    diagram: |-
+      classDiagram
+        direction TD
+        スキーマ駆動の変換 ..> 図の組み立て
+        スキーマ駆動の変換 ..> テーブルの論理名の引き方
+        本文の書き換え ..> 手で書く図の組み立て
+        図の組み立て ..> フロー図の配置
+        手で書く図の組み立て ..> Mermaidの読み取り
+        手で書く図の組み立て ..> フロー図の配置
+        class スキーマ駆動の変換 {
+          <<function>>
+        }
+        class 本文の書き換え {
+          <<function>>
+        }
+        class 図の組み立て {
+          <<function>>
+        }
+        class テーブルの論理名の引き方 {
+          <<function>>
+        }
+        class 手で書く図の組み立て {
+          <<function>>
+        }
+        class フロー図の配置 {
+          <<function>>
+        }
+        class Mermaidの読み取り {
+          <<function>>
+        }
+        click スキーマ駆動の変換 href "./MOD-155-97.py.yaml#スキーマ駆動の変換"
+        click 本文の書き換え href "./MOD-155-96.py.yaml#本文の書き換え"
+        click フロー図の配置 href "./MOD-155-95.py.yaml#フロー図の配置"
+        click Mermaidの読み取り href "./MOD-155-98.py.yaml#Mermaid の読み取り"
+constants:
+  - name: FLOW_KINDS
+    title: フロー図にする種類
+    container: features/convert/diagrams.py
+    usecase: 文書の取得
+    summary: mdmark のフロー図にする `x-diagram`
+    value: '`flowchart`・`dataflow`・`architecture`・`state`'
+  - name: NODE_KINDS
+    title: ノードの種類の対応
+    container: features/convert/diagrams.py
+    usecase: 文書の取得
+    summary: '`x-diagram` のノードの `kind` から mdmark のノードの種類'
+    entries:
+      - key: '`actor`・`external`'
+        value: '`external`'
+      - key: '`process`・`system`'
+        value: '`script`'
+      - key: '`store`'
+        value: '`data`'
+      - key: '`start`・`question`・`action`・`result`'
+        value: 同じ値
+  - name: DEFAULT_NODE_KIND
+    title: ノードの種類の既定
+    container: features/convert/diagrams.py
+    usecase: 文書の取得
+    summary: '`kind` が無いノードと、`NODE_KINDS` に無い `kind` のノードの種類（スキーマの既定）'
+    value: '`process`'
+  - name: LINE_KINDS
+    title: 線の種類
+    container: features/convert/diagrams.py
+    usecase: 文書の取得
+    summary: 辺の `line` に書ける線の種類。これ以外の `line` と、`line` が無い辺は `DEFAULT_LINE`
+    value: '`flow`・`read`・`write`・`reply`・`loop`'
+  - name: DEFAULT_LINE
+    title: 線の種類の既定
+    container: features/convert/diagrams.py
+    usecase: 文書の取得
+    summary: '`line` が無い辺と、`LINE_KINDS` に無い `line` の辺の種類'
+    value: '`flow`'
+  - name: STATE_START
+    title: 状態遷移の始点
+    container: features/convert/diagrams.py
+    usecase: 文書の取得
+    summary: 状態遷移の図の始点のノードの ID と名前
+    value: '`start`・`開始`'
+  - name: STATE_END
+    title: 状態遷移の終点
+    container: features/convert/diagrams.py
+    usecase: 文書の取得
+    summary: 状態遷移の図の終点のノードの ID と名前
+    value: '`end`・`終了`'
+  - name: ALL_STATES
+    title: どの状態からも入る遷移の元
+    container: features/convert/diagrams.py
+    usecase: 文書の取得
+    summary: 遷移の `from` のこの値は、`representative` の状態から引く
+    value: '`全状態`'
+  - name: PREVIOUS_STATE
+    title: 元の状態へ戻る遷移の先
+    container: features/convert/diagrams.py
+    usecase: 文書の取得
+    summary: 遷移の `to` のこの値は、`representative` の状態へ引く
+    value: '`元の状態`'
+  - name: ER_CARDINALITIES
+    title: ER 図の多重度
+    container: features/convert/diagrams.py
+    usecase: 文書の取得
+    summary: 関連の `from_cardinality`・`to_cardinality` に書ける多重度（mdmark の ER 図の部品の多重度と同じ値）。これ以外の値の関連は図に出さない
+    value: '`1`・`0..1`・`1..n`・`0..n`'
+  - name: ER_LAYOUT
+    title: ER 図の配置の寸法
+    container: features/convert/diagrams.py
+    usecase: 文書の取得
+    summary: ER 図のテーブルを格子に置く寸法（px）。`head`・`row`・`frame` は mdmark の ER 図の寸法（`ER_METRICS`）と同じ値
+    entries:
+      - key: per_row
+        value: '3'
+        description: 1 段に並べるテーブルの数
+      - key: width
+        value: '240'
+        description: テーブルの幅
+      - key: gap_x
+        value: '96'
+        description: テーブルの横の間隔（関連の線の縦の部分を通す）
+      - key: gap_y
+        value: '48'
+        description: 段の縦の間隔
+      - key: margin
+        value: '24'
+        description: 図の端の余白
+      - key: head
+        value: '44'
+        description: テーブルの見出しの高さ
+      - key: row
+        value: '26'
+        description: 列の行の高さ
+      - key: frame
+        value: '4'
+        description: テーブルの枠と余白
+functions:
+  - name: render_diagram
+    title: 図の組み立て
+    kind: 関数
+    container: features/convert/diagrams.py
+    usecase: 文書の取得
+    role: 変換
+    summary: '`x-diagram` の種類で、値から本文に置く図のブロックを組み立てる'
+    scope: public
+    thread_safe: true
+    args:
+      - name: value
+        title: 値
+        type: Mapping[str, Any]
+        required: true
+        passing: positional
+        description: 図の値
+      - name: kind
+        title: 図の種類
+        type: DiagramKind
+        required: true
+        passing: positional
+        description: スキーマの `x-diagram`
+      - name: head
+        title: 図の見出し
+        type: DiagramHead
+        required: true
+        passing: positional
+        description: mdmark の図の部品の定義の `title`・`scope`・`updated`
+      - name: tables
+        title: テーブル
+        type: Sequence[Mapping[str, Any]]
+        required: false
+        default: ()
+        passing: keyword
+        description: '`er` のとき、同じ文書の `tables[]`。`columns` を持たない実体の列を補う'
+    returns:
+      type: str
+      description: '`<!-- flow -->`・`<!-- er -->` で囲んだ定義の JSON のコードブロック'
+    process: |-
+      1. `flowchart`・`dataflow`・`architecture` は、フロー図の中間データにする
+         - `nodes` をノードにする。名前は `label`（無ければ `id`）、種類は `kind`（無ければ `DEFAULT_NODE_KIND`）を `NODE_KINDS` で引いた値（無ければ `DEFAULT_NODE_KIND` を引いた値）、説明は `hint`
+         - `edges` を線にする。種類は `line`（`LINE_KINDS` に無いか、無ければ `DEFAULT_LINE`）、ラベルは `label`、詳細は `tip`。宣言の無い端は、名前を ID にした `DEFAULT_NODE_KIND` のノードを足す
+         - 向きは `direction` が `TD`・`LR` ならその値、それ以外は種類が `dataflow`・`architecture` なら `LR`、`flowchart` なら `TD`
+         - `frame` がオブジェクトなら、`label` と `nodes` の ID の集合を枠にする。`clicks` は描かず、図の元データの表に残す
+      2. `state` は、フロー図の中間データ（向きは `TD`）にする
+         - 先頭に `STATE_START` の `start` のノードを置き、`states` の状態を出た順に `action` のノード（ID は `s{n}`、`n` は 1 始まり）にする。遷移の端（`from` の `ALL_STATES`・`to` の `PREVIOUS_STATE` は `representative` へ置き換えた後）に出た `states` に無い状態も、出た順に `action` のノードにする
+         - `initial` があれば、始点から初期状態のノードへ線を引く
+         - 遷移ごとに線を引く。`from` が `ALL_STATES` なら元を、`to` が `PREVIOUS_STATE` なら先を `representative` の状態にする。`representative` が無く元か先が決まらない遷移は線を引かない（図の元データの表に残る）。元と先が同じ遷移は `loop`、それ以外は `DEFAULT_LINE`。ラベルは `{trigger} [{condition}]`（どちらも無ければ無し）
+         - `final` があれば、末尾に `STATE_END` の `result` のノードを置き、各終了状態のノードから線を引く
+      3. 中間データをフロー図の配置にかけ、定義を JSON（`ensure_ascii=False`・字下げ 2）にして `<!-- flow -->`・```json・定義・```・`<!-- /flow -->` の順に置く
+      4. `er` は、mdmark の ER 図の部品の定義（`title`・`scope`・`updated`・`width`・`tables`・`relations`）を組み立て、JSON にして `<!-- er -->` で囲む
+         - 実体（`entities[]`）を出た順にテーブルにする。`id`・`label` は実体の `name`。`tables` のうち `title` が実体の `name` に当たるテーブルがあれば、`name` をそのテーブルの `name`（物理名）、`desc` をその `summary` にする（無ければ `name` は実体の `name`）
+         - 列は、実体が `columns` を持てばその要素（`name`・`type`、`key` の `PK` は `pk: true`、`FK` は `fk: true`）、持たなければ当たったテーブルの `columns` の要素（`name`・`type`・`desc` は `title`、`primary_key` は `pk`、`foreign_key` は `fk`、`not_null` は `nn` を `true`）にする。どちらも無ければ空
+         - 関連（`relations[]`）ごとに、`from`・`from_column`・`from_cardinality`・`to`・`to_column`・`to_cardinality` を `from`・`fromColumn`・`fromCard`・`to`・`toColumn`・`toCard` にし、`label` はそのまま入れる
+           - 元と先の実体がテーブルにあり、`from_column` が元の、`to_column` が先のテーブルの列にあり、両端の多重度が `ER_CARDINALITIES` にある関連だけを `relations` に入れる。それ以外の関連は mdmark の図全体を書き方の警告にするため入れない（図の元データの表に残る）
+         - テーブルの位置は `ER_LAYOUT` で格子に置く。`per_row` 個ずつ段にし、`x` は `margin + 列の番号 * (width + gap_x)`、`y` は前の段の `y` に前の段で一番高いテーブルの高さ（`head + 列の数 * row + frame`）と `gap_y` を足した値（最初の段は `margin`）。`w` は `width`。図の `width` は `margin * 2 + 段のテーブルの数の最大 * width + (その数 - 1) * gap_x`
+    exceptions:
+      - name: ValueError
+        condition: 知らない図の種類
+        message: '`x-diagram {kind} は描けません`'
+    unit_tests:
+      - name: test_render_diagram
+        case: 正常
+        summary: フローチャート
+        condition: '`nodes` 2 つ（`label` が `A`・`B`）・ラベル `x` の `edges` 1 つ・`direction` 無し'
+        mock: なし
+        expected: '`<!-- flow -->` で囲んだ JSON で、`title`・`scope`・`updated` が見出しの値、`nodes` の `name` が `A`・`B`、`wires` 1 本の `label` が `x`・`line` が `flow`。```mermaid が無い'
+      - name: test_render_diagram_when_node_kinds
+        case: 正常
+        summary: ノードの種類
+        condition: 'パラメータ（`kind` が `actor`・`external`・`process`・`system`・`store`・`start`・`question`・`action`・`result`・無し）ごとに、パラメータの `kind` のノード 1 つ'
+        mock: なし
+        expected: 'ノードの `kind` が `external`・`external`・`script`・`script`・`data`・`start`・`question`・`action`・`result`・`script`'
+      - name: test_render_diagram_when_shape_only
+        case: 正常
+        summary: 古いキーの `shape` だけを持つノード
+        condition: '`kind` が無く `shape: diamond` のノード'
+        mock: なし
+        expected: 'ノードの `kind` が `script`'
+      - name: test_render_diagram_when_hint_and_tip
+        case: 正常
+        summary: ノードの説明と線の種類・詳細
+        condition: '`hint` を持つノード `a`、`label`・`line: read`・`tip` を持つ辺 `a → b`'
+        mock: なし
+        expected: 'ノード `a` の `hint` が文書の `hint`、線の `line` が `read`・`label` と `tip` が文書の値'
+      - name: test_render_diagram_when_unknown_line
+        case: 正常
+        summary: '`LINE_KINDS` に無い線の種類'
+        condition: '`line: dotted` の辺'
+        mock: なし
+        expected: '線の `line` が `flow`'
+      - name: test_render_diagram_when_direction
+        case: 正常
+        summary: 向きの既定と指定
+        condition: 'パラメータ（（種類, `direction`）が（`flowchart`, 無し）・（`dataflow`, 無し）・（`architecture`, 無し）・（`dataflow`, `TD`））ごとに、パラメータの種類と `direction` で、辺 `a → b`'
+        mock: なし
+        expected: '`b` が `a` の下（`TD`）か右（`LR`）にあり、順に `TD`・`LR`・`LR`・`TD`'
+      - name: test_render_diagram_when_frame
+        case: 正常
+        summary: 枠
+        condition: 'ノード `a`・`b`・`c` と、`label: 判定`・`nodes: [a, b]` の `frame`'
+        mock: なし
+        expected: '定義の `frame` の `title` が `判定` で、`a`・`b` を囲み `c` を囲まない'
+      - name: test_render_diagram_when_state
+        case: 正常
+        summary: 状態遷移
+        condition: '`states` が `下書き`・`公開`、`initial: 下書き`・`final: [公開]`・`transitions` 2 つ（`下書き → 公開` は `trigger` と `condition` を持つ。`公開 → 公開` は `trigger` だけを持つ）'
+        mock: なし
+        expected: 'ノードが `start`（`kind: start`・名前 `開始`）・`s1`（`下書き`）・`s2`（`公開`）・`end`（`kind: result`・名前 `終了`）で、`s1`・`s2` の `kind` が `action`。線が `start → s1`・`s1 → s2`（ラベル `{trigger} [{condition}]`）・`s2 → s2`（`line: loop`）・`s2 → end`'
+      - name: test_render_diagram_when_state_representative
+        case: 正常
+        summary: どの状態からも入る遷移と元の状態へ戻る遷移
+        condition: '`from: 全状態`・`representative: 公開` の `下書き` への遷移と、`下書き` から `to: 元の状態`・`representative: 公開` の遷移'
+        mock: なし
+        expected: '線が `公開` のノードから `下書き` のノードへ 1 本と、`下書き` のノードから `公開` のノードへ 1 本で、`全状態`・`元の状態` のノードが無い'
+      - name: test_render_diagram_when_state_without_representative
+        case: 正常
+        summary: '`representative` の無い `全状態`・`元の状態` の遷移'
+        condition: '`states` が `下書き`、`from: 全状態`・`to: 下書き` の遷移（`representative` 無し）'
+        mock: なし
+        expected: '例外を送出せず、ノードが始点と `下書き` だけで、線が無い'
+      - name: test_render_diagram_when_er
+        case: 正常
+        summary: ER 図
+        condition: '`kind="er"`、実体 `顧客`（`columns` 無し）・`注文`（`columns` に `id`（`key: PK`）と `customer_id`（`key: FK`））、関連 `顧客.id`（`1`）→ `注文.customer_id`（`0..n`）・`label: 注文する`、`tables` に `name: customers`・`title: 顧客` のテーブル（`id`（`primary_key: true`・`not_null: true`）と `email`）'
+        mock: なし
+        expected: '`<!-- er -->` で囲んだ JSON で、`tables` の `顧客` の `name` が `customers`・`columns` が `id`（`pk`・`nn`）と `email`、`注文` の `columns` が `id`（`pk`）と `customer_id`（`fk`）。`relations` 1 件が `fromColumn: id`・`toColumn: customer_id`・`fromCard: 1`・`toCard: 0..n`・`label: 注文する`。```mermaid が無い'
+      - name: test_render_diagram_when_er_excluded
+        case: 正常
+        summary: 図に出さない関連
+        condition: 'パラメータ（列が実体に無い（`to_column: product_id` で先の実体 `商品` が列を持たない）・多重度が 4 つの値に無い（`to_cardinality: many`）・古いキーの `cardinality` だけを持つ・先の実体が `entities` に無い）ごとに、`kind="er"`、実体 `顧客`（列 `id`）と、パラメータの関連 1 件'
+        mock: なし
+        expected: '`relations` が空'
+      - name: test_render_diagram_when_er_layout
+        case: 正常
+        summary: 格子の配置
+        condition: '`kind="er"`、列 2 つの実体 4 つ'
+        mock: なし
+        expected: '1 段目の 3 つの `y` が 24、`x` が 24・360・696。4 つ目の `x` が 24、`y` が `24 + 44 + 2 * 26 + 4 + 48`。図の `width` が `24 * 2 + 3 * 240 + 2 * 96`'
+      - name: test_render_diagram_when_unknown
+        case: 異常
+        summary: 知らない種類
+        condition: '`kind="gantt"`'
+        mock: なし
+        expected: '`ValueError`'
+        exception: 知らない図の種類
+  - name: er_table_titles
+    title: テーブルの論理名の引き方
+    kind: 関数
+    container: features/convert/diagrams.py
+    usecase: 文書の取得
+    role: 変換
+    summary: 同じ文書の `tables[]` から、テーブルの物理名（`name`）と論理名（`title`）のどちらからも論理名を引く表を作る
+    description: 表の外部キーのセルのリンクが、物理名と論理名のどちらで書いたテーブル名も当てる。
+    scope: public
+    thread_safe: true
+    args:
+      - name: tables
+        title: テーブル
+        type: Sequence[Mapping[str, Any]]
+        required: true
+        passing: positional
+        description: 同じ文書の `tables[]`
+    returns:
+      type: dict[str, str]
+      description: 物理名か論理名から、そのテーブルの論理名
+    process: |-
+      1. `title` を持つテーブルを出た順に見て、`name` と `title` の値（文字列にする）をそれぞれキーに、`title` を値にして入れる。同じキーが既にあるときは先に入れた値を残す
+      2. `title` を持たないテーブルは入れない
+    unit_tests:
+      - name: test_er_table_titles
+        case: 正常
+        summary: 物理名と論理名
+        condition: '`name: customers`・`title: 顧客` と `name: payments`・`title: 支払い` のテーブル'
+        mock: なし
+        expected: '`{customers: 顧客, 顧客: 顧客, payments: 支払い, 支払い: 支払い}`'
+      - name: test_er_table_titles_when_duplicated_or_untitled
+        case: 正常
+        summary: 重なるキーと論理名の無いテーブル
+        condition: '`name: a`・`title: A` のテーブル、`name: A`・`title: B` のテーブル、`name: c` だけのテーブル'
+        mock: なし
+        expected: '`A` の値が `A`（先に入れた値）で、`c` のキーが無い'
+  - name: render_mermaid
+    title: 手で書く図の組み立て
+    kind: 関数
+    container: features/convert/diagrams.py
+    usecase: 文書の取得
+    role: 変換
+    summary: 手で書く Mermaid のコードを、読み取れれば mdmark の図の部品に、読み取れなければ Mermaid のコードブロックのまま組み立てる
+    scope: public
+    thread_safe: true
+    args:
+      - name: code
+        title: コード
+        type: str
+        required: true
+        passing: positional
+        description: '```mermaid のコードブロックの中身'
+      - name: head
+        title: 図の見出し
+        type: DiagramHead
+        required: true
+        passing: positional
+        description: mdmark の図の部品の定義の `title`・`scope`・`updated`
+    returns:
+      type: str
+      description: '`<!-- flow -->`・`<!-- sequence -->` で囲んだ定義の JSON のコードブロックか、元の ```mermaid のコードブロック'
+    process: |-
+      1. Mermaid の読み取りにかける
+      2. フロー図の中間データは、フロー図の配置にかけて `<!-- flow -->` で囲む
+      3. シーケンス図の中間データは、`participants`（`id`・`kind`・`name`）と `steps`（`from`・`to`・`label`、返す線は `reply: true`）の定義にして `<!-- sequence -->` で囲む
+      4. `None` なら、`code` を ```mermaid のコードブロックにして返す
+    unit_tests:
+      - name: test_render_mermaid
+        case: 正常
+        summary: シーケンス図
+        condition: '`participant A as 画面` と `A->>B: 読む` のコード'
+        mock: なし
+        expected: '`<!-- sequence -->` で囲んだ JSON で、`participants` の `name` が `画面`・`B`、`steps` 1 つの `label` が `読む`'
+      - name: test_render_mermaid_when_flowchart
+        case: 正常
+        summary: フローチャート
+        condition: '`flowchart TD` と `a --> b` のコード'
+        mock: なし
+        expected: '`<!-- flow -->` で囲んだ JSON'
+      - name: test_render_mermaid_when_unreadable
+        case: 正常
+        summary: 読み取れないコード
+        condition: '`Note over A: 補足` の行を含む `sequenceDiagram`'
+        mock: なし
+        expected: '元のコードの全ての行を持つ ```mermaid のコードブロック'

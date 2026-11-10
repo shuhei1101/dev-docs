@@ -1,0 +1,43 @@
+id: MOD-155-21
+title: 画面 / 文書の画面 / use-column-persistence.ts
+lead: mdmark の列の表示のメニューで出し入れした列を保存するフック。
+functions:
+  - name: useColumnPersistence
+    title: 列の表示の保存
+    container: features/docs/doc-view/hooks/use-column-persistence.ts
+    usecase: 文書を読む
+    role: アダプター
+    summary: mdmark の `onColumnsChange` に渡す関数を返し、受けた表の隠す列を表の列の設定の保存へ送信する
+    kind: フック
+    scope: public
+    args:
+      - name: params
+        type: '{source: string; columnKeys: string[]}'
+        required: true
+        passing: positional
+        description: '`source` は配信元の ID、`columnKeys` は `+columns` の表のキーを出る順に並べたもの（`findTables` の `columns` が真の表の `key`）'
+    returns:
+      type: '(event: MdmarkColumnsChange) => void'
+      description: mdmark の `onColumnsChange` に渡す関数
+    process: |-
+      1. `columnKeys[event.tableIndex]` で表のキーを引く。無ければ何もしない
+      2. `viewPutColumns(source, {table, hidden: event.hidden})` を呼ぶ
+      3. 成功したら文書の取得のクエリを無効にする。失敗は `列の表示を保存できませんでした。` を通知し、表は切り替えたままにする
+    unit_tests:
+      - name: test_use_column_persistence
+        case: 正常
+        summary: '`tableIndex` を `+columns` の表のキーにして保存する'
+        condition: '`columnKeys` が `[t2]`、`{tableIndex: 0, hidden: [備考]}` で呼ぶ'
+        mock: '`viewPutColumns`（`vi.mock`）'
+        expected: '`viewPutColumns` が `(source, {table: t2, hidden: [備考]})` で 1 回'
+      - name: test_use_column_persistence_when_failed
+        case: 異常
+        summary: 保存の失敗
+        condition: '`viewPutColumns` が失敗する'
+        mock: '`viewPutColumns`（例外を送る偽物）・sonner の `toast`（`vi.mock`）'
+        expected: 通知が `列の表示を保存できませんでした。`
+refs:
+  - LIB-155-9#
+  - SCR-155-1#elements[列の表示のメニュー]
+test_files:
+  - tests/unit/frontend/src/features/docs/doc-view/hooks/use-column-persistence.test.ts
