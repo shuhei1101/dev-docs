@@ -93,10 +93,12 @@ def version_state(mine: str, current: str) -> VersionState:
 def _source_states(handlers: Handlers) -> list[SourceState]:
     """登録簿の状態を配信元の状態の行にする。"""
     states: list[SourceState] = []
+    # 配信元ごとの `default_ref` の commit を確かめず、いま配信中の組を読む
+    served = {source.id: source for source in handlers.registry.served()}
     for status in handlers.registry.statuses():
         # 配信中だけ、設定のバージョンの新旧と索引の同期の件数を持つ
-        if status.status == "serving":
-            source = handlers.registry.get(status.id)
+        if status.status == "serving" and status.id in served:
+            source = served[status.id]
             config_version = source.config.version
             # 裏で実行した検査の最後の結果を読み、配信元のファイルはたどらない
             check = handlers.checks.get(status.id)
