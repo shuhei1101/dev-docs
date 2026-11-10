@@ -161,11 +161,11 @@ class SourceRegistry:
         with self._waiters_lock:
             self._rows = list(terminal.sources)
             self._rows_done = [threading.Event() for _ in self._rows]
-        # ほかの配信元のスキーマの参照先は端末の設定から引き、行の読み込みを待たない
-        lookup = terminal_lookup(terminal)
-        with self._reload_lock:
-            self._lookup = lookup
         try:
+            # ほかの配信元のスキーマの参照先は端末の設定から引き、行の読み込みを待たない
+            lookup = terminal_lookup(terminal)
+            with self._reload_lock:
+                self._lookup = lookup
             while (index := self._next_row()) is not None:
                 entry = self._rows[index]
                 served, status = self._load_row(entry, index, lookup)
