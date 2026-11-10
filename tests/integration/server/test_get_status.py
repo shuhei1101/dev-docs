@@ -9,6 +9,7 @@ from typing import Any
 import pytest
 
 from dev_docs.features.describe import source_checks as source_checks_module
+from dev_docs.features.documents.store import check_sync
 
 LOADING_LINE = (
     "配信元: 読み込み中（読み込みが終わっていない配信元を指す文書の MCP の呼び出しは待たされます）"
@@ -78,13 +79,12 @@ def test_normal_when_checking(
     entered = threading.Event()
     release = threading.Event()
     calls: list[str] = []
-    original = source_checks_module.check_sync
 
     def blocked_check(store: Any, source: Any) -> Any:
         calls.append(source.id)
         entered.set()
         release.wait(timeout=CHECK_WAIT_SEC)
-        return original(store, source)
+        return check_sync(store, source)
 
     monkeypatch.setattr(source_checks_module, "check_sync", blocked_check)
     loading = make_loading_server(make_source("sample", sample_sync_file_set(1)), blocked=())
