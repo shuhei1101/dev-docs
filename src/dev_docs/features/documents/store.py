@@ -15,7 +15,11 @@ from dev_docs.features.documents.aliases import collect_aliases
 from dev_docs.features.documents.fields import missing_ref_fields, unresolved_related
 from dev_docs.features.documents.indexable import walk_files
 from dev_docs.features.documents.loader import collect_files, load_file, unindexed_files
-from dev_docs.features.documents.schema import records_item_schema, resolve_schema_refs
+from dev_docs.features.documents.schema import (
+    records_item_schema,
+    resolve_schema_refs,
+    startup_schema,
+)
 from dev_docs.features.documents.types import Document, LoadProblem, LoadResult, SyncReport
 from dev_docs.features.history.query import file_dates, resolve_ref
 from dev_docs.features.history.snapshot import SnapshotStore
@@ -371,17 +375,20 @@ class DocumentStore:
         """読む場所に合わせた種類のスキーマを返す。"""
         source = target.source
         table = source.table(kind)
+        # 起動時のスキーマを使う: クローン本体を読むときと、ほかの配信元のリビジョンを指す行
+        if (target.ref is None and target.worktree is None) or not isinstance(
+            table.schema_path, str
+        ):
+            return startup_schema(source, table)
         startup = source.schemas.get(kind, {})
         base = source.root / table.schema_path
-        if target.ref is None and target.worktree is None:
-            return resolve_schema_refs(startup, base)
         if target.ref is not None:
-            return self._revision_schema(target, table, startup, base)
+            return self._revision_schema(target, table.schema_path, startup, base)
         path = self.read_root(target) / table.schema_path
         try:
             stat = path.stat()
         except OSError:
-            return resolve_schema_refs(startup, base)
+            return startup_schema(source, table)
         with self._lock:
             cached = self._schemas.get(path)
         if cached is not None and cached[:2] == (stat.st_mtime_ns, stat.st_size):
@@ -389,28 +396,28 @@ class DocumentStore:
         try:
             raw = load_yaml(path.read_text(encoding="utf-8"), file=str(path))
         except OSError, UnicodeDecodeError, YamlLoadError:
-            return resolve_schema_refs(startup, base)
+            return startup_schema(source, table)
         if not isinstance(raw, dict):
-            return resolve_schema_refs(startup, base)
+            return startup_schema(source, table)
         resolved = resolve_schema_refs(raw, path)
         with self._lock:
             self._schemas[path] = (stat.st_mtime_ns, stat.st_size, resolved)
         return resolved
 
     def _revision_schema(
-        self, target: Target, table: DocumentTable, startup: dict[str, Any], base: Path
+        self, target: Target, schema_path: str, startup: dict[str, Any], base: Path
     ) -> dict[str, Any]:
         """リビジョンの種類のスキーマを、commit とスキーマのファイルの相対パスで控えて返す。"""
         source = target.source
         repo_root = source.repo_root or source.root
         commit = self._commit_of(target)
-        relative = (source.root.relative_to(repo_root) / table.schema_path).as_posix()
+        relative = (source.root.relative_to(repo_root) / schema_path).as_posix()
         key = (repo_root, commit, relative)
         with self._lock:
             cached = self._revision_schemas.get(key)
         if cached is not None:
             return cached
-        path = self._revision_root(target, commit) / table.schema_path
+        path = self._revision_root(target, commit) / schema_path
         try:
             raw = load_yaml(path.read_text(encoding="utf-8"), file=str(path))
         except OSError, UnicodeDecodeError, YamlLoadError:

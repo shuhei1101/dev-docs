@@ -369,6 +369,78 @@ def _settings_text(root: Path, state_dir: Path, specs: list[SourceSpec], extra: 
     return "\n".join(line for line in lines if line != "") + "\n"
 
 
+# ほかの配信元から参照されるスキーマの配信元（タグ `v1` の後の commit で書き換える）
+NOTE_SCHEMA_V1 = (
+    "title: note\n"
+    "type: object\n"
+    "required: [id]\n"
+    "properties:\n"
+    "  id:\n"
+    "    type: string\n"
+    "  name:\n"
+    "    type: string\n"
+    "  body:\n"
+    "    $ref: common.schema.yaml#/$defs/text\n"
+)
+COMMON_SCHEMA_V1 = "$defs:\n  text:\n    type: string\n"
+SCHEMAS_CONFIG = (
+    "name: schemas\n"
+    "documents:\n"
+    "  - id: note\n"
+    "    paths: [notes/*.yaml]\n"
+    "    schema: schemas/note.schema.yaml\n"
+)
+
+
+@pytest.fixture
+def make_schemas_source(
+    make_source: Callable[..., SourceSpec],
+    commit_all: Callable[..., str],
+    run_git: Callable[..., str],
+) -> Callable[..., SourceSpec]:
+    """タグ `v1` のスキーマを持ち、その後の commit で `after` のファイルに書き換えた配信元 schemas を作る関数を返す。"""
+
+    def _make(after: dict[str, str], *, config: str = SCHEMAS_CONFIG) -> SourceSpec:
+        spec = make_source(
+            "schemas",
+            {
+                "dev-docs.yaml": config,
+                "schemas/note.schema.yaml": NOTE_SCHEMA_V1,
+                "schemas/common.schema.yaml": COMMON_SCHEMA_V1,
+            },
+        )
+        run_git(spec.folder, "tag", "v1")
+        # 書き換えるファイルが無ければ、タグの commit のままにする
+        if after:
+            commit_all(spec.folder, after)
+        return spec
+
+    return _make
+
+
+def ref_config(name: str, rows: list[dict[str, str]]) -> str:
+    """`documents[].schema` でほかの配信元のスキーマを指す行を並べた配信元の設定の YAML を作る。"""
+    lines = [f"name: {name}", "documents:"]
+    for index, row in enumerate(rows):
+        lines.extend(
+            [
+                f"  - id: note{index or ''}",
+                f"    paths: [notes{index or ''}/*.yaml]",
+                "    schema:",
+                f"      source: {row['source']}",
+                f"      path: {row['path']}",
+                f"      ref: {row['ref']}",
+            ]
+        )
+    return "\n".join(lines) + "\n"
+
+
+@pytest.fixture
+def ref_config_text() -> Callable[..., str]:
+    """ほかの配信元のスキーマを指す行を並べた配信元の設定の YAML を作る関数を返す。"""
+    return ref_config
+
+
 @pytest.fixture
 def make_server(tmp_path: Path) -> Iterator[Callable[..., ServerEnv]]:
     """端末の設定を書いてアプリを起動し、HTTP のテストのクライアントを持つ環境を作る関数を返す。"""
@@ -455,7 +527,7 @@ def make_loading_server(
         loaded: list[str] = []
         waiting = threading.Event()
 
-        def load(entry: Any, *, index: int) -> Any:
+        def load(entry: Any, *, index: int, lookup: Any = None) -> Any:
             order.append(entry.id)
             if blocked is None or entry.id in blocked:
                 release.wait(timeout=LOADING_WAIT_SEC)
@@ -463,7 +535,7 @@ def make_loading_server(
                 hold.wait(timeout=LOADING_WAIT_SEC)
             if entry.id in failing:
                 raise RuntimeError(f"{entry.id} を読み込めない")
-            result = original(entry, index=index)
+            result = original(entry, index=index, lookup=lookup)
             loaded.append(entry.id)
             return result
 

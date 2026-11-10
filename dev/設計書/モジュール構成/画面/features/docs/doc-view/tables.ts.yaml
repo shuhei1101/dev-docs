@@ -1,0 +1,89 @@
+title: "画面 / 文書の画面 / tables.ts"
+lead: 本文の Markdown の表と、文書の取得の表のキーを対にする関数。
+functions:
+  - name: findTables
+    title: 本文の表と表のキーの対
+    kind: 関数
+    container: features/docs/doc-view/tables.ts
+    usecase: 文書を読む
+    role: 変換
+    summary: Markdown の表を出る順に表のキーと対にし、直前の表のマーカーと `+columns` の有無を返す
+    scope: public
+    args:
+      - name: params
+        type: '{markdown: string; tableKeys: string[]}'
+        required: true
+        passing: positional
+        description: '`markdown` は描く本文、`tableKeys` は文書の取得の `tableKeys`（サーバーが本文の表の出る順に並べたもの）'
+    returns:
+      type: '{key: string; marker: {line: number; text: string} | null; columns: boolean}[]'
+      description: 表ごとの表のキー・直前の表のマーカーの行（無ければ null）・マーカーが `+columns` を持つか
+    process: |-
+      1. 行を先頭から見て、コードブロック（```・~~~）の中は飛ばす
+      2. `|` で始まる行で表の中でなく、次の行が区切りの行（`---` の並び）なら表の始まりにし、`tableKeys` の同じ番号のキーと対にする（サーバーの表のキーの数え方と同じ）
+      3. 表の始まりより前の、空行でない最後の行が表のマーカー（`<!-- table: ... -->`）なら、その行をマーカーにする
+      4. `tableKeys` より表が多いときは、余った表を返さない
+    unit_tests:
+      - name: test_find_tables
+        case: 正常
+        summary: '`+columns` でない表と `+columns` の表'
+        condition: 'マーカーの無い表、`<!-- table: data +columns -->` の表、コードブロックの中の表の順の本文と、`tableKeys` の `[t1, t2]`'
+        mock: なし
+        expected: '`[{key: t1, marker: null, columns: false}, {key: t2, marker: {…}, columns: true}]`'
+  - name: applyHiddenColumns
+    title: 隠す列の書き込み
+    kind: 関数
+    container: features/docs/doc-view/tables.ts
+    usecase: 文書を読む
+    role: 変換
+    summary: 隠す列を、その表のマーカー（`+columns` の表）へ `hide=` で書き込む
+    scope: public
+    args:
+      - name: params
+        type: '{markdown: string; tableKeys: string[]; columns: Record<string, string[]>}'
+        required: true
+        passing: positional
+        description: '`columns` は文書の取得の `columns`（表のキー → 隠す列）'
+    returns:
+      type: string
+      description: 隠す列を書き込んだ Markdown
+    process: |-
+      1. `findTables` で表を引く
+      2. `columns` が真で、`columns[key]` が空でない表のマーカーの行の末尾（`-->` の前）に ` hide={列名をカンマでつないだもの}` を入れる
+    unit_tests:
+      - name: test_apply_hidden_columns
+        case: 正常
+        summary: '`+columns` の表のキーで隠す列を書き込む'
+        condition: 'マーカーの無い表の後に `+columns` の表がある本文、`tableKeys` の `[t1, t2]`、`columns` の `{t1: [a], t2: [備考]}`'
+        mock: なし
+        expected: 2 つ目の表のマーカーだけに `hide=備考` が入り、1 つ目の表は変わらない
+  - name: columnTableKeys
+    title: '`+columns` の表のキー'
+    kind: 関数
+    container: features/docs/doc-view/tables.ts
+    usecase: 文書を読む
+    role: 変換
+    summary: '`+columns` の表のキーだけを出る順に並べる（mdmark の `tableIndex` の番号に対応する）'
+    scope: public
+    args:
+      - name: params
+        type: '{markdown: string; tableKeys: string[]}'
+        required: true
+        passing: positional
+        description: '`findTables` と同じ'
+    returns:
+      type: string[]
+      description: '`+columns` の表のキーの並び'
+    process: |-
+      1. `findTables` の結果のうち `columns` が真の表の `key` を出る順に返す
+    unit_tests:
+      - name: test_column_table_keys
+        case: 正常
+        summary: '`+columns` の表だけを返す'
+        condition: '`test_find_tables` と同じ本文'
+        mock: なし
+        expected: '`[t2]`'
+refs:
+  - dev/設計書/画面設計/文書の画面#elements[列の表示のメニュー]
+test_files:
+  - tests/unit/frontend/src/features/docs/doc-view/tables.test.ts

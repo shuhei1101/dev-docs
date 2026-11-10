@@ -294,7 +294,16 @@ def test_write_docs_when_not_git(
 def test_write_docs_when_invalid(make_env: Callable[..., WriteEnv]) -> None:
     """検査に通らない（異常系）。"""
     # 準備
-    env = make_env()
+    env = make_env(
+        {
+            "docs/rule/doc-1.yaml": DOC_1,
+            "docs/rule/doc-2.yaml": DOC_2,
+            "schemas/rule.schema.yaml": (
+                "title: rule\ntype: object\nrequired: [id, name]\n"
+                "properties:\n  name:\n    type: string\n    title: 名前\n"
+            ),
+        }
+    )
     operations = [
         Operation(
             op="update", id="doc-1", expected_version=content_hash(DOC_1), set={"name": "通る"}
@@ -305,6 +314,7 @@ def test_write_docs_when_invalid(make_env: Callable[..., WriteEnv]) -> None:
     with pytest.raises(ValidationFailedError) as exc_info:
         env.write(operations=operations)
     assert exc_info.value.violations[0].index == 1
+    assert getattr(exc_info.value.violations[0], "schema", None) == {"title": "名前"}
     assert (env.worktree / "docs/rule/doc-1.yaml").read_text(encoding="utf-8") == DOC_1
     assert (env.worktree / "docs/rule/doc-2.yaml").read_text(encoding="utf-8") == DOC_2
 

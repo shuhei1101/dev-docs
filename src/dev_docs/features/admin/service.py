@@ -40,7 +40,7 @@ from dev_docs.features.admin.types import (
 from dev_docs.features.convert.service import ConvertService
 from dev_docs.features.documents.aliases import alias_schema_version
 from dev_docs.features.documents.loader import collect_files
-from dev_docs.features.documents.schema import records_item_schema, resolve_schema_refs
+from dev_docs.features.documents.schema import records_item_schema, startup_schema
 from dev_docs.features.documents.store import check_sync
 from dev_docs.features.search.fields import known_fields
 from dev_docs.features.settings.query import (
@@ -48,6 +48,7 @@ from dev_docs.features.settings.query import (
     listen_port,
     load_terminal_config,
 )
+from dev_docs.features.sources.schema_ref import SchemaRefLookup, terminal_lookup
 from dev_docs.features.sources.service import assemble_source
 from dev_docs.features.sources.types import SOURCE_CONFIG_VERSION, ServedSource
 from dev_docs.features.view.nav import (
@@ -175,7 +176,9 @@ def _serving_ids(handlers: Handlers) -> list[str]:
     return [status.id for status in handlers.registry.statuses() if status.status == "serving"]
 
 
-def _load_candidate(path: str, *, config: str | None) -> CandidateSource:
+def _load_candidate(
+    path: str, *, config: str | None, lookup: SchemaRefLookup | None = None
+) -> CandidateSource:
     """パスか書く前の設定の文字列から、端末の設定によらず配信元を組み立てる。"""
     target = normalize_path(path)
     # `.yaml` で終わるパスは設定のファイル、それ以外は配信元のフォルダ
@@ -206,7 +209,12 @@ def _load_candidate(path: str, *, config: str | None) -> CandidateSource:
             file = Path(directory) / CONFIG_FILE
             file.write_text(text, encoding="utf-8")
         served, loaded, violations = assemble_source(
-            [file], source_id=None, scope_read=[], scope_write=None, root_override=root
+            [file],
+            source_id=None,
+            scope_read=[],
+            scope_write=None,
+            root_override=root,
+            lookup=lookup,
         )
     if loaded is None:
         return CandidateSource(
@@ -250,7 +258,9 @@ def _registered_id(handlers: Handlers, root: Path) -> str | None:
 
 def check_project(request: CheckProjectRequest, *, handlers: Handlers) -> CheckProjectResult:
     """端末の設定に無い配信元も含め、設定・スクリプト・索引の同期を検査する。"""
-    candidate = _load_candidate(request.path, config=request.config)
+    candidate = _load_candidate(
+        request.path, config=request.config, lookup=terminal_lookup(handlers.terminal)
+    )
     registered_id = _registered_id(handlers, candidate.root)
     state = (
         version_state(candidate.config_version, SOURCE_CONFIG_VERSION)
@@ -320,9 +330,7 @@ def _records_schema_violations(source: ServedSource) -> list[Violation]:
     for index, table in enumerate(source.config.documents):
         if not table.enabled or table.records is None:
             continue
-        schema = resolve_schema_refs(
-            source.schemas.get(table.id, {}), source.root / table.schema_path
-        )
+        schema = startup_schema(source, table)
         if records_item_schema(schema, table.records) is None:
             violations.append(
                 Violation(
@@ -338,7 +346,9 @@ def _records_schema_violations(source: ServedSource) -> list[Violation]:
 
 def try_convert(request: TryConvertRequest, *, handlers: Handlers) -> TryConvertResult:
     """指した配信元のファイルを、配信元の変換で Markdown にする。"""
-    candidate = _load_candidate(request.path, config=request.config)
+    candidate = _load_candidate(
+        request.path, config=request.config, lookup=terminal_lookup(handlers.terminal)
+    )
     source = candidate.source
     if source is None:
         count = len(candidate.violations) + len(candidate.script_violations)
@@ -555,7 +565,12 @@ def write_nav(request: WriteNavRequest, *, handlers: Handlers) -> WriteNavResult
         file = Path(directory) / CONFIG_FILE
         file.write_text(text, encoding="utf-8")
         source, _, violations = assemble_source(
-            [file], source_id=None, scope_read=[], scope_write=None, root_override=root
+            [file],
+            source_id=None,
+            scope_read=[],
+            scope_write=None,
+            root_override=root,
+            lookup=terminal_lookup(handlers.terminal),
         )
     nav_violations = [
         item for item in violations if item.path == "nav" or item.path.startswith("nav.")

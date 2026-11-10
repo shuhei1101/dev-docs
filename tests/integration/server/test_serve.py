@@ -340,6 +340,37 @@ def test_normal_when_source_invalid(
     assert env.client.post("/_admin/mcp/", headers=MCP_HEADERS, json=INITIALIZE).status_code == 200
 
 
+def test_normal_when_schema_from_other_source(
+    make_source: Callable[..., Any],
+    make_schemas_source: Callable[..., Any],
+    make_server: Callable[..., Any],
+    ref_config_text: Callable[..., str],
+) -> None:
+    """参照先の配信元が検証で外れていても、ほかの配信元のリビジョンのスキーマで参照する側の配信元を組み立てる（正常系）。"""
+    # 準備
+    schemas = make_schemas_source({}, config="name: schemas\ndocuments:\n  - id: note\n")
+    sample = make_source(
+        "sample",
+        {
+            "dev-docs.yaml": ref_config_text(
+                "sample",
+                [{"source": "schemas", "path": "schemas/note.schema.yaml", "ref": "v1"}],
+            ),
+            "notes/a.yaml": "id: a\nname: A\n",
+        },
+        git=False,
+    )
+    # 実行
+    env = make_server(sample, schemas)
+    # 検証
+    assert env.client.get("/_api/sources/sample/docs").status_code == 200
+    assert env.client.get("/_api/sources/schemas/docs").status_code == 404
+    result = env.call(
+        "describe", cwd=str(sample.folder), source="sample", kind="note", format="json"
+    )
+    assert result.data["schema"]["title"] == "note"
+
+
 def test_normal_when_metadata_out_of_sync(
     make_source: Callable[..., Any],
     make_server: Callable[..., Any],

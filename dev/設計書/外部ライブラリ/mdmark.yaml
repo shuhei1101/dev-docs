@@ -8,7 +8,7 @@ version:
   pinning: '固定しない。リリースのたびに `dist/` が入る master ブランチを読み、中身が変わるため integrity を付けない。jsDelivr は `@master` を CDN で 12 時間、ブラウザで 7 日キャッシュする（`cache-control: public, max-age=604800, s-maxage=43200`）。リリースをすぐ届けるときは purge.jsdelivr.net で CDN のキャッシュを削除する'
 catalogs:
   - name: API
-    version: v0.8.0
+    version: v0.10.0
     entries:
       - name: mount
         kind: 関数
@@ -19,23 +19,19 @@ catalogs:
       - name: commentStore.update / remove
         kind: コールバック
         purpose: コメントの修正と削除
-        status: planned
-        description: '[mdmark#222](https://github.com/shuhei1101/mdmark/issues/222) で入る'
+        description: '[mdmark#222](https://github.com/shuhei1101/mdmark/issues/222) で入り、v0.10.0 の master にある'
       - name: baseMarkdown
         kind: 引数
         purpose: 比較元の Markdown から変わった箇所を強調する
-        status: planned
-        description: '[mdmark#222](https://github.com/shuhei1101/mdmark/issues/222) で入る'
+        description: '[mdmark#222](https://github.com/shuhei1101/mdmark/issues/222) で入り、v0.10.0 の master にある。変わったブロックは `.mdmark-diff-block[data-kind="add"]`（変更後の内容）、比較元にだけあるブロックは `[data-kind="del"]` で描く'
       - name: onColumnsChange
         kind: コールバック
         purpose: 表の列の出し入れを知らせる
-        status: planned
-        description: '[mdmark#222](https://github.com/shuhei1101/mdmark/issues/222) で入る'
+        description: '[mdmark#222](https://github.com/shuhei1101/mdmark/issues/222) で入り、v0.10.0 の master にある。引数は `{tableIndex, hidden}` で、`tableIndex` は `+columns` の表だけの出る順の番号。列の出し入れは `テーブル設定` のボタンで開くダイアログの `「{列名}」を隠す`・`「{列名}」を表示` のボタンで行い、隠した列があるときはボタンの読み上げ名が `テーブル設定（{件数} 列を非表示）` になる'
       - name: reloadComments / focusComment
         kind: メソッド
         purpose: コメントのマーカーの描き直しとスクロール
-        status: planned
-        description: '[mdmark#222](https://github.com/shuhei1101/mdmark/issues/222) で入る'
+        description: '[mdmark#222](https://github.com/shuhei1101/mdmark/issues/222) で入り、v0.10.0 の master にある'
       - name: opts.index
         kind: 引数
         purpose: 索引の `terms`（用語）と `docs`（文書の別名）で本文の語にツールチップを付ける
@@ -85,6 +81,6 @@ used_in:
 upstream: shuhei1101/mdmark
 verification:
   state: 済
-  date: '2026-11-01'
-  detail: '`dev-docs serve` を起動し、Chromium で文書の画面を開いて、jsDelivr の `dist/index.js`（200）を読み込み、`dist/index.css` を置き、見出し・表・コードブロックが本文に描かれ、目次が出ることを確かめた。本文の文字列を選んでコメントを追加すると、`commentStore.save` が呼ばれ、コメントのパネルに見出しつきで並ぶ。`mount` は `commentStore.load({docId})`・`save({docId, comment})` を受け、`update` は Markdown の文字列を受ける。`comments` の機能は既定でオフのため、`config.features.comments` を `true` にして渡す。`v0.9.0` のタグに `dist/mount.js` は無い。v0.9.0 では、描く先の要素の幅が 48rem 未満のとき `.mdmark-content [id]` に `scroll-margin-block-start: calc(var(--mdmark-sticky-top, 0px) + 3.5rem)` が当たり、`side-toc`（右側の目次）の機能が既定でオンになる。E2E `test_利用者がコメントを渡す.py` の 4 件が v0.9.0 の master で pass する。CLI の `check --text` は未確認（v0.9.0 の master と develop の `dist/cli.js` は `--text` を持たず、develop の `src/cli/main.ts` を esbuild で束ねると依存（`ajv/dist/2020.js`）を解けないため、リリース前の CLI を動かせない。単体テストは同じ出力を返す偽の `mdmark` で確かめる）'
+  date: '2026-11-09'
+  detail: 'v0.10.0 の master を jsDelivr から読み、画面の結合テストの環境の Chromium で、`テーブル設定` のボタン・ダイアログの `「{列名}」を隠す`・`「{列名}」を表示` のボタンと、隠した列があるときの読み上げ名 `テーブル設定（1 列を非表示）` を確認した。以下は v0.9.0 で確認した内容。`dev-docs serve` を起動し、Chromium で文書の画面を開いて、jsDelivr の `dist/index.js`（200）を読み込み、`dist/index.css` を置き、見出し・表・コードブロックが本文に描かれ、目次が出ることを確かめた。本文の文字列を選んでコメントを追加すると、`commentStore.save` が呼ばれ、コメントのパネルに見出しつきで並ぶ。`mount` は `commentStore.load({docId})`・`save({docId, comment})` を受け、`update` は Markdown の文字列を受ける。`comments` の機能は既定でオフのため、`config.features.comments` を `true` にして渡す。`v0.9.0` のタグに `dist/mount.js` は無い。v0.9.0 では、描く先の要素の幅が 48rem 未満のとき `.mdmark-content [id]` に `scroll-margin-block-start: calc(var(--mdmark-sticky-top, 0px) + 3.5rem)` が当たり、`side-toc`（右側の目次）の機能が既定でオンになる。E2E `test_利用者がコメントを渡す.py` の 4 件が v0.9.0 の master で pass する。CLI の `check --text` は未確認（v0.9.0 の master と develop の `dist/cli.js` は `--text` を持たず、develop の `src/cli/main.ts` を esbuild で束ねると依存（`ajv/dist/2020.js`）を解けないため、リリース前の CLI を動かせない。単体テストは同じ出力を返す偽の `mdmark` で確かめる）'
 official_url: https://github.com/shuhei1101/mdmark

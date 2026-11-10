@@ -520,6 +520,54 @@ test.describe("差分の強調を解除", () => {
     await expect(page.getByRole("region", { name: "差分" })).toHaveCount(0);
     await expect(page.getByRole("navigation", { name: "文書の一覧" }).getByRole("img")).toHaveCount(0);
   });
+
+  // base を外したら、本文の差分の強調を解除する（正常系）
+  test("diff_clear_body", async ({ page }) => {
+    await openRendered(page, "/sample/docs/doc-1?base=7c0aa11", { document: withDiff });
+    await expect(page.locator(".mdmark-diff-block")).not.toHaveCount(0);
+    await page.getByRole("button", { name: "差分の強調を解除" }).click();
+    await expect(page).toHaveURL(/\/sample\/docs\/doc-1$/);
+    await expect(page.locator(".mdmark-diff-block")).toHaveCount(0);
+    await expect(page.getByText("変更後の本文")).toBeVisible();
+  });
+});
+
+test.describe("文書の本文の差分", () => {
+  const block = (page: Page, kind: "add" | "del") =>
+    page.locator(`.mdmark-diff-block[data-kind="${kind}"]`);
+
+  // base があるときは比較元の本文と比べ、変わったブロックを本文の中で強調する（正常系）
+  test("body_diff_highlight", async ({ page }) => {
+    await openRendered(page, "/sample/docs/doc-1?base=7c0aa11", { document: withDiff });
+    await expect(block(page, "add")).toContainText("変更後の本文");
+    await expect(page.locator(".mdmark-diff-block").filter({ hasText: "同じ本文" })).toHaveCount(0);
+  });
+
+  // 比較元にだけあるブロックを、削除したブロックとして本文の中で強調する（正常系）
+  test("body_diff_highlight_when_block_deleted", async ({ page }) => {
+    await openRendered(page, "/sample/docs/doc-1?base=7c0aa11", {
+      document: ({ path, query }) => {
+        const before = query.get("diff") === null && query.get("ref") === "7c0aa11";
+        return {
+          body: documentResponse({
+            path,
+            ref: before ? "7c0aa11" : "develop",
+            markdown: `# 文書 1\n\n## 概要\n\n同じ本文\n\n${before ? "削除した本文\n\n" : ""}## 関連\n\n末尾の本文\n`,
+            diff: before ? null : { base: "7c0aa11", change: "modified", changedItems: ["概要"] },
+          }),
+        };
+      },
+    });
+    await expect(block(page, "del")).toContainText("削除した本文");
+    await expect(page.locator(".mdmark-diff-block").filter({ hasText: "同じ本文" })).toHaveCount(0);
+  });
+
+  // base が無いときは強調しない（正常系）
+  test("body_diff_highlight_without_base", async ({ page }) => {
+    await openRendered(page, "/sample/docs/doc-1", { document: withDiff });
+    await expect(page.getByText("変更後の本文")).toBeVisible();
+    await expect(page.locator(".mdmark-diff-block")).toHaveCount(0);
+  });
 });
 
 test.describe("変換の失敗", () => {
@@ -663,13 +711,13 @@ test.describe("本文", () => {
 });
 
 test.describe("列の表示のメニュー", () => {
-  // `+columns` の表に `列の表示` を出す（正常系）
+  // `+columns` の表に `テーブル設定` を出す（正常系）
   test("columns_menu_visible", async ({ page }) => {
     await openRendered(page);
-    await expect(page.getByRole("button", { name: /^列の表示/ })).toBeVisible();
+    await expect(page.getByRole("button", { name: "テーブル設定" })).toBeVisible();
   });
 
-  // 隠した列を表から除き、件数を `列の表示` に添える（正常系）
+  // 隠した列を表から除き、件数を `テーブル設定` の読み上げ名に添える（正常系）
   test("columns_menu_hidden_columns", async ({ page }) => {
     await openRendered(page, "/sample/docs/doc-1", {
       document: ({ path }) => ({
@@ -677,16 +725,16 @@ test.describe("列の表示のメニュー", () => {
       }),
     });
     await expect(page.locator("th:visible")).toHaveText(["キー", "名称"]);
-    await expect(page.getByRole("button", { name: /1 列を隠しています/ })).toBeVisible();
+    await expect(page.getByRole("button", { name: "テーブル設定（1 列を非表示）" })).toBeVisible();
   });
 
   // 列の出し入れのたびに、その表の隠した列を保存する（正常系）
   test("columns_menu_save", async ({ page }) => {
     // 準備
     const api = await openRendered(page);
-    await page.getByRole("button", { name: /^列の表示/ }).click();
+    await page.getByRole("button", { name: "テーブル設定" }).click();
     // 実行
-    await page.getByRole("dialog", { name: "表示する列" }).getByLabel("備考").uncheck();
+    await page.getByRole("dialog", { name: "テーブル設定" }).getByRole("button", { name: "「備考」を隠す" }).click();
     // 検証
     await expect.poll(() => api.callsOf("putColumns").length).toBe(1);
     expect(api.callsOf("putColumns")[0]?.request.body).toEqual({
@@ -702,12 +750,42 @@ test.describe("列の表示のメニュー", () => {
     await openRendered(page, "/sample/docs/doc-1", {
       putColumns: () => problem(500),
     });
-    await page.getByRole("button", { name: /^列の表示/ }).click();
+    await page.getByRole("button", { name: "テーブル設定" }).click();
     // 実行
-    await page.getByRole("dialog", { name: "表示する列" }).getByLabel("備考").uncheck();
+    await page.getByRole("dialog", { name: "テーブル設定" }).getByRole("button", { name: "「備考」を隠す" }).click();
     // 検証
     await expect(page.getByText("列の表示を保存できませんでした。")).toBeVisible();
     await expect(page.locator("th:visible")).toHaveText(["キー", "名称"]);
+  });
+
+  // `+columns` でない表を挟んでも、onColumnsChange の表の番号を `+columns` の表のキーにして保存する（正常系）
+  test("columns_menu_save_when_tables_mixed", async ({ page }) => {
+    // 準備（1 つ目は `+columns` でない表、2・3 つ目が `+columns` の表）
+    const table = (marker: string, head: string) =>
+      [marker, "", `| ${head} | 名称 | 備考 |`, "| --- | --- | --- |", "| k1 | 名称 1 | 備考 1 |", "", "<!-- /table -->", ""].join("\n");
+    const markdown = [
+      "# 文書 1",
+      "",
+      "## 概要",
+      "",
+      table("<!-- table: data -->", "固定"),
+      table("<!-- table: data +columns -->", "表 A"),
+      table("<!-- table: data +columns -->", "表 B"),
+    ].join("\n");
+    const api = await openRendered(page, "/sample/docs/doc-1", {
+      document: ({ path }) => ({
+        body: documentResponse({ path, markdown, tableKeys: ["sample:fixed", "sample:a", "sample:b"] }),
+      }),
+    });
+    // 実行（3 つ目の表の `テーブル設定` で備考を隠す）
+    await page.getByRole("button", { name: "テーブル設定" }).nth(1).click();
+    await page.getByRole("dialog", { name: "テーブル設定" }).getByRole("button", { name: "「備考」を隠す" }).click();
+    // 検証
+    await expect.poll(() => api.callsOf("putColumns").length).toBe(1);
+    expect(api.callsOf("putColumns")[0]?.request.body).toEqual({
+      table: "sample:b",
+      hidden: ["備考"],
+    });
   });
 });
 
@@ -949,7 +1027,7 @@ test.describe("コメントの場所への移動", () => {
   const mark = (page: Page, text: string) =>
     page.locator(".mdmark-comment-mark").filter({ hasText: text });
 
-  // 同じ文書のコメントは、本文のその印が画面に入るまでスクロールする（正常系）
+  // 同じ文書のコメントは、本文のその印が画面に入るまでスクロールして強調する（正常系）
   test("place_scroll_same_doc", async ({ page }) => {
     // 準備
     await seed(page, [
@@ -962,6 +1040,7 @@ test.describe("コメントの場所への移動", () => {
     await panel(page).getByRole("button", { name: "文書 1 › 関連" }).click();
     // 検証
     await expect(mark(page, "文書 1 の末尾の文")).toBeInViewport();
+    await expect(mark(page, "文書 1 の末尾の文")).toHaveAttribute("data-focused");
   });
 
   // 印が見つからないまま別の文書へ移ったら、後で元の文書を開き直して同じ文字列の印が付いてもスクロールしない（正常系）
@@ -1001,7 +1080,7 @@ test.describe("コメントの場所への移動", () => {
     expect(Math.abs((await page.evaluate(() => window.scrollY)) - before)).toBeLessThan(5);
   });
 
-  // 他の文書のコメントは、その文書を開いた後に本文の印が画面に入るまでスクロールする（正常系）
+  // 他の文書のコメントは、その文書を開いた後に本文の印が画面に入るまでスクロールして強調する（正常系）
   test("place_scroll_other_doc", async ({ page }) => {
     // 準備
     await seed(page, [
@@ -1014,6 +1093,7 @@ test.describe("コメントの場所への移動", () => {
     // 検証
     await expect(page.getByRole("main").getByRole("heading", { level: 1 })).toHaveText("文書 2");
     await expect(mark(page, "文書 2 の末尾の文")).toBeInViewport();
+    await expect(mark(page, "文書 2 の末尾の文")).toHaveAttribute("data-focused");
   });
 });
 
@@ -1071,6 +1151,20 @@ test.describe("コメントの修正", () => {
     await expect(panel(page).getByRole("textbox")).toHaveCount(0);
   });
 
+  // 保存しても、本文のマーカーが消えない（正常系）
+  test("edit_save_redraws_mark", async ({ page }) => {
+    await seed(page, TWO_COMMENTS);
+    await openRendered(page);
+    const mark = page.locator(".mdmark-comment-mark").filter({ hasText: "一覧のページングは先頭から数えます" });
+    await expect(mark).toHaveCount(1);
+    await page.getByRole("button", { name: /^コメント \d+ 件$/ }).click();
+    await panel(page).getByRole("button", { name: "修正" }).first().click();
+    await panel(page).getByRole("textbox", { name: "コメント" }).fill("修正した本文");
+    await panel(page).getByRole("button", { name: "保存" }).click();
+    await expect(panel(page).getByText("修正した本文")).toBeVisible();
+    await expect(mark).toHaveCount(1);
+  });
+
   // キャンセルで元の本文に戻す（正常系）
   test("edit_cancel", async ({ page }) => {
     await openPanel(page);
@@ -1109,6 +1203,17 @@ test.describe("コメントの削除", () => {
     await panel(page).getByRole("button", { name: "削除" }).first().click();
     await expect(panel(page).getByRole("listitem")).toHaveCount(1);
     await expect(page.getByRole("button", { name: "コメント 1 件" })).toBeVisible();
+  });
+
+  // 削除したコメントの本文のマーカーを、mdmark の reloadComments で描き直して削除する（正常系）
+  test("delete_button_redraws_mark", async ({ page }) => {
+    await seed(page, TWO_COMMENTS);
+    await openRendered(page);
+    await expect(page.locator(".mdmark-comment-mark")).toHaveCount(1);
+    await page.getByRole("button", { name: /^コメント \d+ 件$/ }).click();
+    await panel(page).getByRole("listitem").filter({ hasText: "ページングの数え方を確認したい" }).getByRole("button", { name: "削除" }).click();
+    await expect(panel(page).getByRole("listitem")).toHaveCount(1);
+    await expect(page.locator(".mdmark-comment-mark")).toHaveCount(0);
   });
 });
 

@@ -245,3 +245,63 @@ def test_normal_when_alias_and_nav_checked(
     assert len(result.data["warnings"]) == 1
     assert "none" in result.data["warnings"][0]["rule"]
     assert result.data["alias_schema_version"] == ALIAS_SCHEMA_VERSION
+
+
+def test_normal_when_schema_from_other_source(
+    tmp_path: Path,
+    make_schemas_source: Callable[..., Any],
+    make_server: Callable[..., Any],
+    ref_config_text: Callable[..., str],
+) -> None:
+    """documents[].schema で指したほかの配信元のリビジョンのスキーマを読み、違反 0 件を返す（正常系）。"""
+    # 準備
+    schemas = make_schemas_source({"schemas/note.schema.yaml": "title: [壊れた\n"})
+    env = make_server(schemas)
+    folder = tmp_path / "sample"
+    folder.mkdir()
+    (folder / "dev-docs.yaml").write_text(
+        ref_config_text(
+            "sample",
+            [{"source": "schemas", "path": "schemas/note.schema.yaml", "ref": "v1"}],
+        ),
+        encoding="utf-8",
+    )
+    # 実行
+    result = env.call_admin("check_project", path=str(folder), format="json")
+    # 検証
+    assert result.data.get("violations", []) == []
+
+
+def test_normal_when_schema_ref_not_found(
+    tmp_path: Path,
+    make_schemas_source: Callable[..., Any],
+    make_server: Callable[..., Any],
+    ref_config_text: Callable[..., str],
+) -> None:
+    """documents[].schema の参照先の配信元・リビジョン・パスが見つからないとき、その行の schema を違反にする（正常系）。"""
+    # 準備
+    schemas = make_schemas_source({"notes/a.yaml": "id: a\n"})
+    env = make_server(schemas)
+    before = env.handlers.registry.statuses()
+    folder = tmp_path / "sample"
+    folder.mkdir()
+    (folder / "dev-docs.yaml").write_text(
+        ref_config_text(
+            "sample",
+            [
+                {"source": "nothing", "path": "schemas/note.schema.yaml", "ref": "v1"},
+                {"source": "schemas", "path": "schemas/note.schema.yaml", "ref": "v9"},
+                {"source": "schemas", "path": "schemas/none.schema.yaml", "ref": "v1"},
+            ],
+        ),
+        encoding="utf-8",
+    )
+    # 実行
+    result = env.call_admin("check_project", path=str(folder), format="json")
+    # 検証
+    assert [(item["path"], item["rule"]) for item in result.data["violations"]] == [
+        ("documents[0].schema", "配信元 nothing が端末の設定にありません"),
+        ("documents[1].schema", "配信元 schemas に v9 がありません"),
+        ("documents[2].schema", "v1 に schemas/none.schema.yaml がありません"),
+    ]
+    assert env.handlers.registry.statuses() == before

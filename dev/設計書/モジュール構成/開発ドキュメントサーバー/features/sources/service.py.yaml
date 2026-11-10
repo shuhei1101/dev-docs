@@ -80,6 +80,13 @@ functions:
         required: true
         passing: keyword
         description: 相対パスを解くフォルダ
+      - name: lookup
+        title: 参照先の配信元の引き当て
+        type: SchemaRefLookup | None
+        required: false
+        default: None
+        passing: keyword
+        description: '`documents[].schema` がオブジェクトの行の参照先を引く。`None` は端末の設定のファイル（`config_path`）を読んで作る（端末の設定からの引き当て）'
     returns:
       type: list[Violation]
       description: 違反の並び。無ければ空
@@ -89,6 +96,7 @@ functions:
       3. 行の参照を確かめる。`documents[].validators[]`・`documents[].converter`・`documents[].after_write[]` が、それぞれ `validators[]`・`converters[]`・`generators[]` に無い ID を指す場合、その要素のパスに `存在しない ID` の違反を加える
       4. `body_file` を `records` なしで書いた行は `documents[{n}].body_file` に違反を加える
       5. `documents[].schema` のファイルが `root` の下に無いか YAML として読めない場合、そのキーに違反を加える（YAMLの読み込み）。スキーマは Draft 2020-12 の `check_schema` も通す
+         - `schema` がオブジェクトの行は、参照先のスキーマの読み取りで読み、`SchemaRefError` は `documents[{n}].schema` の違反（理由は例外の `rule`）にする。読めたスキーマは `check_schema` を通す
       6. パス（`documents[].paths[]`・`schema`）が `..` で `root` の外を指す場合、その要素に違反を加える
       7. 違反を返す
     unit_tests:
@@ -266,6 +274,13 @@ functions:
         required: true
         passing: keyword
         description: '`sources[]` の中の位置'
+      - name: lookup
+        title: 参照先の配信元の引き当て
+        type: SchemaRefLookup | None
+        required: false
+        default: None
+        passing: keyword
+        description: 読み直す端末の設定から作った引き当て（配信元の設定の検証へ渡す。`None` は端末の設定のファイルから作る）
     returns:
       type: tuple[ServedSource | None, SourceStatus]
       description: 配信するときは配信中の配信元と `serving` の状態、配信しないときは `None` と `not_served` か `disabled` の状態
@@ -284,7 +299,7 @@ functions:
          - `older` の場合、状態の `config_version` に `(設定, SOURCE_CONFIG_VERSION)` を入れる
          - `[warning]` 配信元の設定のバージョンが古い（ID・設定のバージョン・サーバーが読めるバージョン）
       8. `root` が Git の作業ツリーかとその直下を引く（履歴の『リポジトリの直下』）
-      9. 種類ごとのスキーマを読み（設定の commit がある場合はそのリビジョンのファイル）、`worktrees` をメインのリポジトリの直下（Git でなければ `root`）からの絶対パスにして、`ServedSource` を作る。ID は `entry.id`、無ければ `config.name`。`outside_read` は `entry.outside_read`
+      9. 種類ごとのスキーマを読み（設定の commit がある場合はそのリビジョンのファイル。`schema_path` が `SchemaRef` の行は参照先のスキーマの読み取りの結果）、`worktrees` をメインのリポジトリの直下（Git でなければ `root`）からの絶対パスにして、`ServedSource` を作る。ID は `entry.id`、無ければ `config.name`。`outside_read` は `entry.outside_read`
       10. `ServedSource` と `serving` を返す
 
       違反で返すときは `[error]` 配信元を配信しない（違反ごとに `{id}: {パス}: {理由}`）を書く。
@@ -546,6 +561,12 @@ functions:
         default: None
         passing: keyword
         description: '`None` は先頭のファイルのフォルダ'
+      - name: lookup
+        title: 参照先の配信元の引き当て
+        type: SchemaRefLookup | None
+        default: None
+        passing: keyword
+        description: 配信元の設定の検証へ渡す（`None` は端末の設定のファイルから作る）
     returns:
       type: tuple[ServedSource | None, SourceConfig | None, list[Violation]]
       description: 配信中の配信元・設定・違反。読めないか検証に失敗したら `(None, None, 違反)`、スクリプトの確かめに失敗したら `(None, 設定, 違反)`

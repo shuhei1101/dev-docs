@@ -106,6 +106,61 @@ test("test_use_mdmark_when_aliases", async () => {
   expect(opts.index.terms).toHaveLength(1);
 });
 
+test("test_use_mdmark_when_base_changes", async () => {
+  const { handle, mount } = fake();
+  vi.doMock(MDMARK_URL, () => ({ mount }));
+  const useMdmark = await loadHook();
+  const ref = { current: document.createElement("div") };
+
+  const view = renderHook(
+    ({ baseMarkdown }) =>
+      useMdmark(ref, { ...(options("# A") as object), baseMarkdown } as never),
+    { initialProps: { baseMarkdown: null as string | null } },
+  );
+  await waitFor(() => expect(mount).toHaveBeenCalledTimes(1));
+  view.rerender({ baseMarkdown: "# Z" });
+  await waitFor(() => expect(handle.update).toHaveBeenCalledTimes(1));
+  view.rerender({ baseMarkdown: null });
+  await waitFor(() => expect(handle.update).toHaveBeenCalledTimes(2));
+
+  expect(handle.update.mock.calls).toEqual([
+    ["# A", { baseMarkdown: "# Z" }],
+    ["# A", { baseMarkdown: null }],
+  ]);
+});
+
+test("test_use_mdmark_when_callbacks_change", async () => {
+  const { mount } = fake();
+  vi.doMock(MDMARK_URL, () => ({ mount }));
+  const useMdmark = await loadHook();
+  const ref = { current: document.createElement("div") };
+  const first = { onColumnsChange: vi.fn(), update: vi.fn() };
+  const second = { onColumnsChange: vi.fn(), update: vi.fn(() => Promise.resolve()) };
+  const props = (fns: typeof first) =>
+    ({
+      ...(options("# A") as object),
+      onColumnsChange: fns.onColumnsChange,
+      commentStore: { load: vi.fn(), save: vi.fn(), update: fns.update, remove: vi.fn() },
+    }) as never;
+
+  const view = renderHook(({ fns }) => useMdmark(ref, props(fns)), {
+    initialProps: { fns: first },
+  });
+  await waitFor(() => expect(mount).toHaveBeenCalledTimes(1));
+  view.rerender({ fns: second });
+  const opts = (mount.mock.calls[0] as unknown[])[1] as {
+    onColumnsChange: (event: unknown) => void;
+    commentStore: { update: (target: unknown) => Promise<void> };
+  };
+  opts.onColumnsChange({ tableIndex: 0, hidden: ["a"] });
+  await opts.commentStore.update({ docId: "s@main:a.md", id: "c1", body: "b" });
+
+  expect(second.onColumnsChange).toHaveBeenCalledWith({ tableIndex: 0, hidden: ["a"] });
+  expect(second.update).toHaveBeenCalledWith({ docId: "s@main:a.md", id: "c1", body: "b" });
+  expect(first.onColumnsChange).not.toHaveBeenCalled();
+  expect(mount).toHaveBeenCalledTimes(1);
+});
+
 test("test_to_mdmark_index", async () => {
   const { toMdmarkIndex } = await import("@/features/docs/doc-view/hooks/use-mdmark");
   const aliases = [
