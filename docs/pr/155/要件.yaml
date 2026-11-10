@@ -29,7 +29,7 @@ docs:
     updated_at: '2026-11-09T17:18:43.885513+00:00'
   - page: dev/テンプレート/
     new: false
-    change: '*.schema.yaml を削除し、shuhei1101/ai-monitor#3307 の schemas/{kind}.schema.yaml（common・index・files を含む）を配置する（移す前の Schema は ai-monitor v0.3.0 と同じで、目次の例だけが違う）。適用した v0.4.0 の変換（schemas/conversions/）は dev-docs の lint の対象になるため配置しない'
+    change: '*.schema.yaml を削除し、shuhei1101/ai-monitor#3307 の schemas/{kind}.schema.yaml（common・index・files と変換の schemas/conversions/ を含む）を配置する（移す前の Schema は ai-monitor v0.3.0 と同じで、目次の例だけが違う）。schemas/conversions/ は ai-monitor から写した変換のため、pyproject.toml で ruff・mypy の対象から外す'
     status: done
     updated_by: planner
     updated_at: '2026-11-09T17:18:43.885513+00:00'
@@ -99,6 +99,12 @@ docs:
     status: done
     updated_by: planner
     updated_at: '2026-11-09T17:18:49.650426+00:00'
+  - page: pyproject.toml
+    new: false
+    change: ruff の extend-exclude の dev（廃止した）を schemas/conversions に替え、mypy の exclude に schemas/conversions/ を追加する
+    status: done
+    updated_by: planner
+    updated_at: '2026-11-10T13:05:53.557273+00:00'
 scope_out:
   - item: dev-docs.yaml を置いて dev-docs 自身の文書を配信し、タグを付ける
     reason: 別の Issue の範囲。移した後の置き場所で paths[] を決める
