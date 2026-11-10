@@ -694,6 +694,97 @@ def test_normal_when_requested_while_loading(
     assert responses["docs"].json()["path"] == "docs/doc-1"
 
 
+def test_normal_when_other_source_loading(
+    make_source: Callable[..., Any], make_loading_server: Callable[..., Any]
+) -> None:
+    """読み込み済みの配信元への要求は、他の配信元の読み込みを待たない（正常系）。"""
+    # 準備
+    sample = make_source("sample")
+    notes = make_source("notes")
+    loading = make_loading_server(sample, notes, blocked=("notes",))
+    env = loading.env
+    results: dict[str, Any] = {}
+
+    def search_notes() -> None:
+        results["notes"] = env.call("search_docs", cwd=str(notes.folder), source="notes")
+
+    # 実行
+    found = env.call("search_docs", cwd=str(sample.folder), source="sample", view="ids")
+    docs = env.client.get("/_api/sources/sample/docs")
+    notes_thread = threading.Thread(target=search_notes)
+    notes_thread.start()
+    notes_thread.join(timeout=LOADING_HOLD_SEC)
+    answered_before = "notes" in results
+    status = env.call_admin("status", format="json")
+    loading.finish()
+    notes_thread.join(timeout=LOADING_REQUEST_SEC)
+    # 検証
+    assert not found.is_error
+    assert "doc-1" in found.text
+    assert docs.status_code == 200
+    assert answered_before is False
+    assert status.data["loading"] is True
+    assert not results["notes"].is_error
+    assert results["notes"].text.startswith("notes: ")
+
+
+def test_normal_when_requested_source_loaded_first(
+    make_source: Callable[..., Any], make_loading_server: Callable[..., Any]
+) -> None:
+    """待っている要求が指す配信元を、端末の設定の順より先に読み込む（正常系）。"""
+    # 準備
+    a, b, c = (make_source(source_id) for source_id in ("a", "b", "c"))
+    loading = make_loading_server(a, b, c, blocked=("a",))
+    env = loading.env
+    results: dict[str, Any] = {}
+
+    def search_c() -> None:
+        results["c"] = env.call("search_docs", cwd=str(c.folder), source="c")
+
+    # 実行
+    c_thread = threading.Thread(target=search_c)
+    c_thread.start()
+    received = loading.waiting.wait(timeout=LOADING_REQUEST_SEC)
+    loading.finish()
+    c_thread.join(timeout=LOADING_REQUEST_SEC)
+    # 検証
+    assert received
+    assert loading.order == ["a", "c", "b"]
+    assert not results["c"].is_error
+    assert results["c"].text.startswith("c: ")
+
+
+def test_error_when_source_load_failed(
+    make_source: Callable[..., Any],
+    make_loading_server: Callable[..., Any],
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """読み込みが例外で止まった行を配信せず、残りの行を読み込み続ける（異常系）。"""
+    # 準備
+    broken = make_source("broken")
+    sample = make_source("sample")
+    caplog.set_level(logging.ERROR)
+    loading = make_loading_server(broken, sample, blocked=(), failing=("broken",))
+    env = loading.env
+    # 実行
+    failed = env.call("search_docs", cwd=str(broken.folder), source="broken")
+    found = env.call("search_docs", cwd=str(sample.folder), source="sample", view="ids")
+    loading.thread.join(timeout=LOADING_REQUEST_SEC)
+    status = env.call_admin("status", format="json")
+    # 検証
+    sources = {item["id"]: item for item in status.data["sources"]}
+    assert failed.is_error
+    assert "SourceNotServedError" in failed.text
+    assert not found.is_error
+    assert "doc-1" in found.text
+    assert status.data["loading"] is False
+    assert sources["broken"]["status"] == "not_served"
+    assert any("sources[0]" in error for error in sources["broken"]["errors"])
+    assert any("broken を読み込めない" in error for error in sources["broken"]["errors"])
+    assert sources["sample"]["status"] == "serving"
+    assert "broken を読み込めない" in caplog.text
+
+
 IGNORED_KIND_ROW = "  - id: kind_a\n    paths: [kind_a/*.yaml]\n    schema: schemas/a.schema.yaml\n"
 
 

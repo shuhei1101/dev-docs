@@ -1,11 +1,20 @@
 from __future__ import annotations
 
 import json
+import threading
 from collections.abc import Callable
 from importlib.metadata import version
 from typing import Any
 
-LOADING_LINE = "配信元: 読み込み中（終わるまで文書の MCP の呼び出しは待たされます）"
+import pytest
+
+from dev_docs.features.describe import source_checks as source_checks_module
+
+LOADING_LINE = (
+    "配信元: 読み込み中（読み込みが終わっていない配信元を指す文書の MCP の呼び出しは待たされます）"
+)
+# 検査を止めた合図を待つ上限
+CHECK_WAIT_SEC = 30
 BROKEN_CONFIG = "name: broken\ndocuments:\n  - id: sample\n    schema: schemas/sample.schema.yaml\n"
 
 
@@ -56,3 +65,45 @@ def test_normal_when_loading(
     assert [(item["id"], item["status"]) for item in after.data["sources"]] == [
         ("sample", "serving")
     ]
+
+
+def test_normal_when_checking(
+    make_source: Callable[..., Any],
+    make_loading_server: Callable[..., Any],
+    sample_sync_file_set: Callable[..., dict[str, str]],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """検査が済んでいない配信元は、同期の件数を持たずに返す（正常系）。"""
+    # 準備
+    entered = threading.Event()
+    release = threading.Event()
+    calls: list[str] = []
+    original = source_checks_module.check_sync
+
+    def blocked_check(store: Any, source: Any) -> Any:
+        calls.append(source.id)
+        entered.set()
+        release.wait(timeout=CHECK_WAIT_SEC)
+        return original(store, source)
+
+    monkeypatch.setattr(source_checks_module, "check_sync", blocked_check)
+    loading = make_loading_server(make_source("sample", sample_sync_file_set(1)), blocked=())
+    env = loading.env
+    # 実行
+    reached = entered.wait(timeout=CHECK_WAIT_SEC)
+    before = env.call_admin("status", format="json")
+    markdown = env.call_admin("status")
+    release.set()
+    loading.thread.join(timeout=CHECK_WAIT_SEC)
+    after = env.call_admin("status", format="json")
+    # 検証
+    [source_before] = before.data["sources"]
+    [source_after] = after.data["sources"]
+    assert reached
+    assert source_before["status"] == "serving"
+    # 空の値は MCP の結果から落ちる
+    assert source_before.get("sync") is None
+    assert "| sample | serving |" in markdown.text
+    assert "検査中" in markdown.text
+    assert source_after["sync"]["unindexed_files"] == 1
+    assert calls == ["sample"]
