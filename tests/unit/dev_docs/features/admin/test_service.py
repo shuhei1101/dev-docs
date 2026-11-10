@@ -846,3 +846,31 @@ def test_source_states_when_not_checked(
     assert [(state.id, state.status) for state in states] == [("alpha", "serving")]
     assert states[0].sync is None
     assert calls == []
+
+
+def test_source_states_without_refresh(
+    monkeypatch: pytest.MonkeyPatch,
+    make_source_dir: Callable[..., Path],
+    make_terminal_config: Callable[..., TerminalConfig],
+    make_entry: Callable[..., SourceEntry],
+) -> None:
+    """配信元ごとの `default_ref` の commit を確かめず、いま配信中の組を読む（正常系）。"""
+    # 準備
+    alpha = make_source_dir("alpha", unindexed=1)
+    terminal = make_terminal_config(sources=[make_entry(str(alpha), source_id="alpha")])
+    handlers = build_handlers(terminal)
+    handlers.registry.reload(terminal)
+    [served] = handlers.registry.served()
+    calls: list[str] = []
+
+    def failing_get(source_id: str) -> Any:
+        calls.append(source_id)
+        raise AssertionError("registry.get を呼んだ")
+
+    monkeypatch.setattr(handlers.registry, "get", failing_get)
+    # 実行
+    states = _source_states(handlers)
+    # 検証
+    assert [(state.id, state.status) for state in states] == [("alpha", "serving")]
+    assert states[0].config_version == served.config.version
+    assert calls == []
