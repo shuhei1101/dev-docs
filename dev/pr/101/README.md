@@ -39,4 +39,4 @@
 - [x] 単体テスト作成
 - [x] 実装
 - [x] 結合テスト作成
-- [ ] E2E テスト作成
+- [x] ~~E2E テスト作成~~（E2E は開発の間は作らない決定（[#145](https://github.com/shuhei1101/dev-docs/issues/145) の D-307）により、develop から E2E が削除された）
