@@ -283,6 +283,94 @@ flows:
       - '`describe(source: sample)` の `worktrees[]` に `.claude/worktrees/develop` が載る'
       - Git でない配信元はディスクの設定を読む
     test: test_normal_when_config_read_from_default_ref
+  - name: 正常系（.gitignore した設定を先頭に置く）
+    summary: 先頭の設定が `default_ref` に無く `.gitignore` で無視されていれば、設定をディスクから、スキーマを `default_ref` から読んで組み立てる
+    setup:
+      - name: Mock
+        description: なし（`dev-docs serve` を子プロセスで起動する）
+      - name: default_ref のブランチ
+        description: sample の `develop` に文書の種類 `kind_a` のスキーマを commit する
+        notes: クローン本体は `master` を checkout し、`master` は `kind_a` のスキーマを持たない
+      - name: Git 管理外の設定
+        description: sample のクローン本体の直下に `.gitignore` した `dev-docs.local.yaml` を置く
+        notes: '`default_ref: develop` と `kind_a` の `documents[]` の行を持つ。どのブランチにも commit しない'
+      - name: 端末の設定
+        description: '`sources[].config` が `dev-docs.local.yaml` の 1 つだけ'
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        participant C as テスト
+        participant S as dev-docs serve
+        participant G as sample のリポジトリ
+
+        C->>S: 起動する
+        S->>G: develop の dev-docs.local.yaml を読む（無い）
+        S->>G: git check-ignore で dev-docs.local.yaml が無視されていると確かめる
+        S->>G: ディスクの dev-docs.local.yaml と、develop のスキーマを読む
+        S-->>C: 配信を始める
+      ```
+    expected:
+      - '`describe(source: sample)` の種類の一覧に `kind_a` が載る'
+      - '`documents[].schema` のスキーマを `develop` から読む'
+      - 配信元のフォルダがクローン本体の直下になる
+    test: test_normal_when_ignored_config_first
+  - name: 正常系（先頭の設定が default_ref に無く無視もしていない）
+    summary: '`.gitignore` していない先頭の設定が `default_ref` に無い配信元を外して配信する'
+    setup:
+      - name: Mock
+        description: なし（`dev-docs serve` を子プロセスで起動する）
+      - name: commit していない設定
+        description: 配信元 `uncommitted` のクローン本体に、`.gitignore` していない `dev-docs.yaml` を置き、どのブランチにも commit しない
+        notes: '`default_ref` は `develop`。`develop` ブランチはあり、`dev-docs.yaml` を持たない'
+      - name: 端末の設定
+        description: '`sources` に sample と uncommitted の 2 行'
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        participant U as クライアント
+        participant T as dev-docs serve
+
+        U->>T: dev-docs serve
+        T->>T: uncommitted の develop に dev-docs.yaml が無く、git check-ignore でも無視されていない
+        T->>T: uncommitted を配信せず、エラーログに残す
+        T-->>U: sample だけを配信する
+      ```
+    expected:
+      - '`/_api/sources/uncommitted/docs` が 404、`/_api/sources/sample/docs` は応答する'
+      - 'エラーログに `uncommitted: config[0]: develop に dev-docs.yaml がありません` がある'
+    test: test_normal_when_first_config_not_committed
+  - name: 正常系（XDG の環境変数で置き場を決める）
+    summary: '`DEV_DOCS_CONFIG` が無ければ `XDG_CONFIG_HOME` の下の端末の設定を読み、状態とログを `DEV_DOCS_STATE_DIR`・`XDG_STATE_HOME` から決めた置き場に書く'
+    setup:
+      - name: Mock
+        description: なし（`dev-docs serve` を子プロセスで起動し、空きポートを `DEV_DOCS_PORT` に入れる）
+      - name: 環境変数
+        description: '`DEV_DOCS_CONFIG` を外し、`XDG_CONFIG_HOME`・`XDG_STATE_HOME`・`HOME` にテスト用の一時フォルダを入れる'
+      - name: 端末の設定
+        description: '`$XDG_CONFIG_HOME/dev-docs/settings.yaml`。`sources` に sample の 1 行'
+        notes: 1 回目は `state_dir`・`log_dir` を持たない
+      - name: 上書き
+        description: 2 回目は端末の設定に `state_dir` を書き、`DEV_DOCS_STATE_DIR` に別の一時フォルダを入れる。3 回目は `state_dir` と `DEV_DOCS_STATE_DIR` を外し、`XDG_STATE_HOME` に相対パス `rel` を入れる
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        participant C as テスト
+        participant S as dev-docs serve
+        participant FS as ディスク
+
+        C->>S: 1 回目の起動
+        S->>FS: $XDG_CONFIG_HOME/dev-docs/settings.yaml を読む
+        S->>FS: ログを $XDG_STATE_HOME/dev-docs/logs に書く
+        C->>S: 2 回目の起動（DEV_DOCS_STATE_DIR と state_dir がある）
+        S->>FS: ログを $DEV_DOCS_STATE_DIR/logs に書く
+        C->>S: 3 回目の起動（XDG_STATE_HOME が相対パス）
+        S->>FS: ログを $HOME/.local/state/dev-docs/logs に書く
+      ```
+    expected:
+      - 1 回目の起動で `/_api/sources/sample/docs` が 200 を返し、ログが `$XDG_STATE_HOME/dev-docs/logs` にできる
+      - 2 回目の起動のログが `$DEV_DOCS_STATE_DIR/logs` にでき、端末の設定の `state_dir` には書かない
+      - 3 回目の起動のログが `$HOME/.local/state/dev-docs/logs` にでき、作業場所からの相対の `rel` には書かない
+    test: test_normal_when_xdg_dirs_set
   - name: 正常系（エイリアスのキーと nav の条件を警告する）
     summary: エイリアスのキーの違反と 0 件に当たる `nav` の条件を警告のログに出し、配信を始める
     setup:
@@ -494,6 +582,9 @@ side_effects: '`bind`:`port` で待ち受ける。`log_dir` に検証の失敗�
 callers:
   - dev/設計書/シナリオ/単一ユースケース/起動する#scenarios[正常シナリオ]
   - dev/設計書/シナリオ/単一ユースケース/起動する#scenarios[正常シナリオ（設定とスキーマを default_ref から読む）]
+  - dev/設計書/シナリオ/単一ユースケース/起動する#scenarios[正常シナリオ（.gitignore した設定を先頭に置く）]
+  - dev/設計書/シナリオ/単一ユースケース/起動する#scenarios[異常シナリオ（先頭の設定が default_ref に無く無視もしていない）]
+  - dev/設計書/シナリオ/単一ユースケース/起動する#scenarios[正常シナリオ（XDG の環境変数で置き場を決める）]
   - dev/設計書/シナリオ/単一ユースケース/起動する#scenarios[正常シナリオ（エイリアスのキーと nav の条件を検証する）]
   - dev/設計書/シナリオ/単一ユースケース/エージェントが調べる#scenarios[正常シナリオ（MCP を使う場面の案内を受け取る）]
 exclusivity: 同じポートで待ち受けるプロセスは 1 つだけ（後からの起動はポート使用中で終わる）
@@ -501,9 +592,27 @@ request:
   - name: DEV_DOCS_CONFIG
     type: str
     required: false
-    default: '`~/.config/dev-docs/settings.yaml`'
+    default: '`${XDG_CONFIG_HOME:-~/.config}/dev-docs/settings.yaml`'
     description: 端末の設定のパス
     notes: 環境変数で渡す
+  - name: XDG_CONFIG_HOME
+    type: str
+    required: false
+    default: '`~/.config`'
+    description: '`DEV_DOCS_CONFIG` が無いときに端末の設定を探すフォルダの親'
+    notes: 環境変数で渡す。空の文字列か相対パスは未設定として扱う
+  - name: DEV_DOCS_STATE_DIR
+    type: str
+    required: false
+    default: 端末の設定の `state_dir`、無ければ `${XDG_STATE_HOME:-~/.local/state}/dev-docs`
+    description: 状態の置き場。端末の設定の `state_dir` より優先
+    notes: 環境変数で渡す
+  - name: XDG_STATE_HOME
+    type: str
+    required: false
+    default: '`~/.local/state`'
+    description: '`DEV_DOCS_STATE_DIR` と `state_dir` が無いときの状態の置き場の親'
+    notes: 環境変数で渡す。空の文字列か相対パスは未設定として扱う
   - name: DEV_DOCS_PORT
     type: int
     required: false
@@ -567,8 +676,11 @@ constraints:
     constraint: 管理用の YAML のフォルダの配下（下のフォルダを含む）のファイルから、管理用の YAML 自身と `SKIP_DIRS` を除いたもの
     notes: 件数は配信元を受け取って求める関数で求め、配信元の状態には持たない。読み直しのときも同じ関数で求め直す
   - item: 設定・スキーマ・スクリプトの読み元
-    constraint: Git の配信元は、ディスクの `dev-docs.yaml` から `default_ref` だけを読み（ディスクに無いか読めないときは既定の `develop`）、`dev-docs.yaml`・`documents[].schema` のスキーマ・`validators`・`converters` のスクリプトを `default_ref` から読む（`generators` は書き込み先のワークツリーのスクリプトで動く）。要求ごとに `default_ref` の commit を確かめ、変わっていれば配信元を組み立て直す。Git でない配信元はディスクの設定を読む
-    notes: '`worktree` の引数で作業ツリー・ワークツリーを指して読むときは、そのフォルダの設定とスクリプトを使う'
+    constraint: Git の配信元は、ディスクの `dev-docs.yaml` から `default_ref` だけを読み（ディスクに無いか読めないときは既定の `develop`）、`dev-docs.yaml`・`documents[].schema` のスキーマ・`validators`・`converters` のスクリプトを `default_ref` から読む（`generators` は書き込み先のワークツリーのスクリプトで動く）。要求ごとに `default_ref` の commit を確かめ、変わっていれば配信元を組み立て直す。Git でない配信元はディスクの設定を読む。先頭の設定が `default_ref` に無く、`git check-ignore` で無視されていれば、先頭の設定はディスクから読み、スキーマとスクリプトは `default_ref` から読む。無視されていなければ `config[0]` の `{default_ref} に {パス} がありません` で配信しない
+    notes: '`worktree` の引数で作業ツリー・ワークツリーを指して読むときは、そのフォルダの設定とスクリプトを使う。そのフォルダに無く、無視されている設定のファイルは、クローン本体のディスクのファイルを使う'
+  - item: 端末の設定と状態の置き場
+    constraint: 端末の設定は `DEV_DOCS_CONFIG`、無ければ `${XDG_CONFIG_HOME:-~/.config}/dev-docs/settings.yaml`。状態の置き場は `DEV_DOCS_STATE_DIR` → 端末の設定の `state_dir` → `${XDG_STATE_HOME:-~/.local/state}/dev-docs` の順。ログの置き場は端末の設定の `log_dir`、無ければ決めた状態の置き場の `logs`。`XDG_CONFIG_HOME`・`XDG_STATE_HOME` が空の文字列か相対パスなら未設定として扱う
+    notes: 環境変数が端末の設定より先に有効になる並びは `DEV_DOCS_CONFIG`・`DEV_DOCS_PORT` と同じ。相対パスの扱いは XDG Base Directory Specification に従う。セッション開始のフックも同じ規則で端末の設定のパスを決める
   - item: ワークツリーの数え方
     constraint: '`worktrees[]` の相対パスは、`git rev-parse --git-common-dir` の親（メインのリポジトリの直下）から数える'
   - item: MCP の文の出どころ

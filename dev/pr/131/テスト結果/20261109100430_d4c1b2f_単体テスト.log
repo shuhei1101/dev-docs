@@ -1,0 +1,40 @@
+$ uv run pytest tests/unit/
+
+==================================== ERRORS ====================================
+_____ ERROR collecting tests/unit/dev_docs/features/settings/test_query.py _____
+ImportError while importing test module '/mnt/c/Users/shuhe/repo/dev-docs/.claude/worktrees/chore-settings-untracked-config-and-xdg/tests/unit/dev_docs/features/settings/test_query.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+tests/unit/dev_docs/features/settings/test_query.py:8: in <module>
+    from dev_docs.features.settings.query import (
+E   ImportError: cannot import name 'state_dir_path' from 'dev_docs.features.settings.query' (/mnt/c/Users/shuhe/repo/dev-docs/.claude/worktrees/chore-settings-untracked-config-and-xdg/src/dev_docs/features/settings/query.py)
+________ ERROR collecting tests/unit/dev_docs/integrations/test_git.py _________
+ImportError while importing test module '/mnt/c/Users/shuhe/repo/dev-docs/.claude/worktrees/chore-settings-untracked-config-and-xdg/tests/unit/dev_docs/integrations/test_git.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+tests/unit/dev_docs/integrations/test_git.py:11: in <module>
+    from dev_docs.integrations.git import GitError, is_ignored, repo_root, run_git
+E   ImportError: cannot import name 'is_ignored' from 'dev_docs.integrations.git' (/mnt/c/Users/shuhe/repo/dev-docs/.claude/worktrees/chore-settings-untracked-config-and-xdg/src/dev_docs/integrations/git.py)
+=========================== short test summary info ============================
+ERROR tests/unit/dev_docs/features/settings/test_query.py
+ERROR tests/unit/dev_docs/integrations/test_git.py
+!!!!!!!!!!!!!!!!!!! Interrupted: 2 errors during collection !!!!!!!!!!!!!!!!!!!!
+2 errors in 87.33s (0:01:27)
+
+# 収集で止まった 2 ファイル以外の新しいテストの Red の確認
+$ uv run pytest tests/unit/dev_docs/features/sources/test_service.py tests/unit/plugins/dev_docs/hooks/test_session_start.py
+E           dev_docs.shared.errors.ValidationFailedError: sample: config[0]: 設定のファイルが無い: /tmp/pytest-of-shuhei2441/pytest-7106/test_load_source_at_when_ignor0/wt/dev-docs.local.yaml
+E           dev_docs.shared.errors.ValidationFailedError: develop に dev-docs.local.yaml がありません
+E       AttributeError: module 'hook_session_start' has no attribute 'config_path'
+E       AttributeError: module 'hook_session_start' has no attribute 'config_path'
+E       AttributeError: module 'hook_session_start' has no attribute 'config_path'
+E       AttributeError: module 'hook_session_start' has no attribute 'config_path'
+E       AttributeError: module 'hook_session_start' has no attribute 'config_path'
+FAILED tests/unit/dev_docs/features/sources/test_service.py::test_load_source_at_when_ignored_config
+FAILED tests/unit/dev_docs/features/sources/test_service.py::test_read_default_ref_config_when_ignored
+FAILED tests/unit/plugins/dev_docs/hooks/test_session_start.py::test_config_path
+FAILED tests/unit/plugins/dev_docs/hooks/test_session_start.py::test_config_path_when_xdg_config_home_set
+FAILED tests/unit/plugins/dev_docs/hooks/test_session_start.py::test_config_path_when_unset_or_relative[env0]
+FAILED tests/unit/plugins/dev_docs/hooks/test_session_start.py::test_config_path_when_unset_or_relative[env1]
+FAILED tests/unit/plugins/dev_docs/hooks/test_session_start.py::test_config_path_when_unset_or_relative[env2]
+7 failed, 56 passed in 22.84s

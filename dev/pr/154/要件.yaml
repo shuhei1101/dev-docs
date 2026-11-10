@@ -1,0 +1,22 @@
+use_cases:
+  - kind: single
+    scenario: dev/設計書/シナリオ/単一ユースケース/dev-docsを入れる.yaml
+    impact: run_only
+    detail: 端末に dev-docs を用意する手順の文言が変わる。手順の中身は変わらない
+    depends_on: []
+  - kind: single
+    scenario: dev/設計書/シナリオ/単一ユースケース/配信元を追加する.yaml
+    impact: run_only
+    detail: 配信元を登録する手順の文言が変わる。手順の中身は変わらない
+    depends_on: []
+scope_out:
+  - item: 単一ユースケース『dev-docsを入れる』の `入れ直し`（`interest`・`frequency`）と、単一ユースケース『配信元を追加する』のシーケンスの `管理用の YAML の行を直す`・`行のパスを直す`
+    reason: 'スキルの文言を引用しない設計書の地の文で、`dev/` の地の文の修正は #95 の範囲（PR #147・PR #148 と同じ扱い）'
+    plan: '#95'
+  - item: '`setup/SKILL.md` の `作った`・`直接書く` と、`global-setup/SKILL.md` の `返る` など、対応表の `pattern` にヒットしない文言'
+    reason: 対応表の `pattern` にヒットしない（`直接` は漢字の後読みで、`作る`・`返る` は対応表の行が無いか活用語尾が対象外）
+    plan: none
+  - item: '`docs/使い方/dev-docsを入れる.md` の `入れ直し・端末の移行・dev-docs の更新のあとも`（`global-setup` の `description` と同じ文言）'
+    reason: '`docs/` の地の文の修正は #95 の範囲（PR #147・PR #148 と同じ扱い）'
+    plan: '#95'
+docs: []

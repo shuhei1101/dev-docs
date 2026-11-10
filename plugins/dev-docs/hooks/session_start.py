@@ -14,11 +14,14 @@ import subprocess
 import sys
 import urllib.error
 import urllib.request
+from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
 
 DEFAULT_PORT = 8781
-DEFAULT_CONFIG = "~/.config/dev-docs/settings.yaml"
+# `XDG_CONFIG_HOME` が無いか空の文字列か相対パスのときの設定の置き場の親
+DEFAULT_CONFIG_HOME = "~/.config"
+CONFIG_FILE = "dev-docs/settings.yaml"
 # ポートへの TCP 接続を打ち切る秒数
 CONNECT_TIMEOUT_SEC = 0.5
 # `POST /_admin/session-start` を打ち切る秒数（実装の後に応答の時間を測って決め直す）
@@ -28,7 +31,7 @@ FORGET_REASONS = frozenset({"clear", "compact"})
 # 起動したときに文脈に入れる文
 RECONNECT_GUIDE = (
     "dev-docs を起動しました。"
-    "このセッションで文書の MCP を使うには /mcp で dev-docs につなぎ直してください。"
+    "このセッションで文書の MCP を使用するには /mcp で dev-docs に再接続してください。"
 )
 CLONE_KEY = "clone:"
 
@@ -40,6 +43,16 @@ def is_listening(port: int) -> bool:
     except OSError:
         return False
     return True
+
+
+def config_path(env: Mapping[str, str]) -> Path:
+    """サーバーと同じ規則で端末の設定のパスを決める。"""
+    value = env.get("DEV_DOCS_CONFIG")
+    if value:
+        return Path(value).expanduser()
+    home = env.get("XDG_CONFIG_HOME") or ""
+    base = Path(home) if os.path.isabs(home) else Path(DEFAULT_CONFIG_HOME).expanduser()
+    return base / CONFIG_FILE
 
 
 def read_clone(config: Path) -> Path | None:
@@ -82,7 +95,7 @@ def request_forget(port: int, payload: dict[str, str]) -> None:
     with urllib.request.urlopen(request, timeout=FORGET_TIMEOUT_SEC) as response:
         body = json.load(response)
     if not isinstance(body, dict):
-        raise ValueError("応答が読めません")
+        raise ValueError("応答を読み込めません")
 
 
 def _unavailable(reason: str) -> str:
@@ -127,8 +140,8 @@ def _forget_context(port: int, event: dict[str, Any]) -> str | None:
         )
         detail = f"{FORGET_TIMEOUT_SEC} 秒で打ち切りました" if timed_out else str(error)
         return (
-            f"dev-docs の返し済みの記録を削除できませんでした（{detail}）。"
-            "前に返した文書は repeat_seen: true で取り直せます。"
+            f"dev-docs の返却済みの記録を削除できませんでした（{detail}）。"
+            "前に返却した文書は repeat_seen: true で再取得できます。"
         )
     return None
 
@@ -140,7 +153,7 @@ def _context(event: dict[str, Any]) -> str | None:
     if is_listening(port):
         return _forget_context(port, event)
     # 落ちているサーバーは、端末の設定のクローンで起動する
-    config = Path(os.environ.get("DEV_DOCS_CONFIG") or DEFAULT_CONFIG).expanduser()
+    config = config_path(os.environ)
     return _start_context(read_clone(config), config)
 
 

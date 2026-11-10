@@ -13,7 +13,7 @@ scenarios:
         notes: 引数にこのパスを渡す。ポート 8781 が空き
       - name: 端末の設定の場所
         description: テスト用の一時フォルダの `settings.yaml`
-        notes: ファイルは無い。場所の質問にこのパスを答える（既定の `~/.config/dev-docs/settings.yaml` と違う場所）
+        notes: ファイルは無い。場所の質問にこのパスを答える（既定の `${XDG_CONFIG_HOME:-~/.config}/dev-docs/settings.yaml` と違う場所）
     flow: |-
       ```mermaid
       sequenceDiagram
@@ -71,6 +71,37 @@ scenarios:
       - '`settings.yaml` に `clone` が入り、`sources` の sample の行とほかのキーの値は変わらない'
       - env の `DEV_DOCS_CONFIG` は変わらない
     test: test_normal_when_terminal_config_lacks_keys
+  - name: 正常シナリオ（XDG_CONFIG_HOME の下に作る）
+    setup:
+      - name: Mock
+        description: なし（実環境で実行。Claude Code は `claude -p` で動かし、AskUserQuestion には既定の選択肢で答える）
+      - name: Claude Code の設定の場所
+        description: 正常シナリオと同じ。env に `DEV_DOCS_CONFIG` が無い
+        notes: '`claude -p` を動かす環境の `XDG_CONFIG_HOME` にテスト用の一時フォルダを入れる'
+      - name: dev-docs のクローン
+        description: 正常シナリオと同じ
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        actor U as 利用者
+        participant SK as global-setup のスキル
+        participant CF as 端末の設定・Claude Code の設定
+        participant DD as dev-docs
+
+        U->>SK: /dev-docs:global-setup {クローンのパス}
+        SK->>CF: $XDG_CONFIG_HOME/dev-docs/settings.yaml が無いことを確かめる
+        SK->>U: 端末の設定の場所を聞く（既定は $XDG_CONFIG_HOME/dev-docs/settings.yaml）
+        U-->>SK: 既定の場所
+        SK->>CF: 雛形から端末の設定を作る
+        SK->>DD: dev-docs serve を切り離して起動する
+        SK->>DD: /mcp につながり、ツールの一覧を取る
+        SK-->>U: 作ったもの・つながった結果を出す
+      ```
+    expected:
+      - '端末の設定が `$XDG_CONFIG_HOME/dev-docs/settings.yaml` にでき、`~/.config/dev-docs` は変わらない'
+      - 既定の場所なので、Claude Code の設定の場所の `settings.json` の env に `DEV_DOCS_CONFIG` が無い
+      - '`127.0.0.1:8781` を待ち受ける dev-docs のプロセスが 1 つだけあり、`/mcp` のツールが 6 つ返る'
+    test: test_normal_when_xdg_config_home_set
   - name: 正常シナリオ（端末の設定が古い）
     setup:
       - name: Mock
