@@ -418,10 +418,15 @@ class LoadingServerEnv:
     order: list[str] = field(default_factory=list)
     # 配信元を指す要求の待ちを受け取ったときに立つ
     waiting: threading.Event = field(default_factory=threading.Event)
+    # 読み込みを終えた配信元の ID の順
+    loaded: list[str] = field(default_factory=list)
+    # `held` の配信元の読み込みの合図
+    hold: threading.Event = field(default_factory=threading.Event)
 
     def finish(self) -> None:
         """読み込みの合図を出し、読み込みが終わるまで待つ。"""
         self.release.set()
+        self.hold.set()
         self.thread.join(timeout=LOADING_WAIT_SEC)
 
 
@@ -438,19 +443,29 @@ def make_loading_server(
         *specs: SourceSpec,
         blocked: tuple[str, ...] | None = None,
         failing: tuple[str, ...] = (),
+        held: tuple[str, ...] = (),
     ) -> LoadingServerEnv:
-        """`blocked` は合図まで止める配信元の ID（省くと全て）、`failing` は例外を投げる配信元の ID。"""
+        """`blocked` は合図まで止める配信元の ID（省くと全て）、`failing` は例外を投げる配信元の ID。
+
+        `held` は `blocked` と別の合図（`hold`）まで止める配信元の ID。
+        """
         release = threading.Event()
+        hold = threading.Event()
         order: list[str] = []
+        loaded: list[str] = []
         waiting = threading.Event()
 
         def load(entry: Any, *, index: int) -> Any:
             order.append(entry.id)
             if blocked is None or entry.id in blocked:
                 release.wait(timeout=LOADING_WAIT_SEC)
+            if entry.id in held:
+                hold.wait(timeout=LOADING_WAIT_SEC)
             if entry.id in failing:
                 raise RuntimeError(f"{entry.id} を読み込めない")
-            return original(entry, index=index)
+            result = original(entry, index=index)
+            loaded.append(entry.id)
+            return result
 
         monkeypatch.setattr(registry_module, "load_source", load)
         monkeypatch.setattr(
@@ -477,7 +492,13 @@ def make_loading_server(
             folders={spec.id: spec.folder for spec in specs},
         )
         loading = LoadingServerEnv(
-            env=env, release=release, thread=thread, order=order, waiting=waiting
+            env=env,
+            release=release,
+            thread=thread,
+            order=order,
+            waiting=waiting,
+            loaded=loaded,
+            hold=hold,
         )
         started.append(loading)
         return loading

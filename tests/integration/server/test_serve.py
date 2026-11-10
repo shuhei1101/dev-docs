@@ -734,24 +734,28 @@ def test_normal_when_requested_source_loaded_first(
     """待っている要求が指す配信元を、端末の設定の順より先に読み込む（正常系）。"""
     # 準備
     a, b, c = (make_source(source_id) for source_id in ("a", "b", "c"))
-    loading = make_loading_server(a, b, c, blocked=("a",))
+    loading = make_loading_server(a, b, c, blocked=("a",), held=("b",))
     env = loading.env
     results: dict[str, Any] = {}
 
     def search_c() -> None:
         results["c"] = env.call("search_docs", cwd=str(c.folder), source="c")
+        # c の答えが届いた時点で読み込みを終えていた配信元
+        results["loaded"] = list(loading.loaded)
 
     # 実行
     c_thread = threading.Thread(target=search_c)
     c_thread.start()
     received = loading.waiting.wait(timeout=LOADING_REQUEST_SEC)
-    loading.finish()
+    loading.release.set()
     c_thread.join(timeout=LOADING_REQUEST_SEC)
+    loading.finish()
     # 検証
     assert received
     assert loading.order == ["a", "c", "b"]
     assert not results["c"].is_error
     assert results["c"].text.startswith("c: ")
+    assert results["loaded"] == ["a", "c"]
 
 
 def test_error_when_source_load_failed(
