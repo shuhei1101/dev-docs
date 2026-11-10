@@ -1027,7 +1027,7 @@ test.describe("コメントの場所への移動", () => {
   const mark = (page: Page, text: string) =>
     page.locator(".mdmark-comment-mark").filter({ hasText: text });
 
-  // 同じ文書のコメントは、本文のその印が画面に入るまでスクロールする（正常系）
+  // 同じ文書のコメントは、本文のその印が画面に入るまでスクロールして強調する（正常系）
   test("place_scroll_same_doc", async ({ page }) => {
     // 準備
     await seed(page, [
@@ -1040,6 +1040,7 @@ test.describe("コメントの場所への移動", () => {
     await panel(page).getByRole("button", { name: "文書 1 › 関連" }).click();
     // 検証
     await expect(mark(page, "文書 1 の末尾の文")).toBeInViewport();
+    await expect(mark(page, "文書 1 の末尾の文")).toHaveAttribute("data-focused");
   });
 
   // 印が見つからないまま別の文書へ移ったら、後で元の文書を開き直して同じ文字列の印が付いてもスクロールしない（正常系）
@@ -1079,7 +1080,7 @@ test.describe("コメントの場所への移動", () => {
     expect(Math.abs((await page.evaluate(() => window.scrollY)) - before)).toBeLessThan(5);
   });
 
-  // 他の文書のコメントは、その文書を開いた後に本文の印が画面に入るまでスクロールする（正常系）
+  // 他の文書のコメントは、その文書を開いた後に本文の印が画面に入るまでスクロールして強調する（正常系）
   test("place_scroll_other_doc", async ({ page }) => {
     // 準備
     await seed(page, [
@@ -1092,6 +1093,7 @@ test.describe("コメントの場所への移動", () => {
     // 検証
     await expect(page.getByRole("main").getByRole("heading", { level: 1 })).toHaveText("文書 2");
     await expect(mark(page, "文書 2 の末尾の文")).toBeInViewport();
+    await expect(mark(page, "文書 2 の末尾の文")).toHaveAttribute("data-focused");
   });
 });
 
@@ -1149,7 +1151,7 @@ test.describe("コメントの修正", () => {
     await expect(panel(page).getByRole("textbox")).toHaveCount(0);
   });
 
-  // 保存した後も、本文のマーカーを描き直して残す（正常系）
+  // 保存しても、本文のマーカーが消えない（正常系）
   test("edit_save_redraws_mark", async ({ page }) => {
     await seed(page, TWO_COMMENTS);
     await openRendered(page);
