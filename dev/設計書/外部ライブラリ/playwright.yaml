@@ -11,19 +11,19 @@ catalogs:
     entries:
       - name: '@playwright/test'
         kind: CLI
-        purpose: E2E テストを流す（`webServer` で dev-docs を起動する）
+        purpose: 結合テスト（フロント）を流す（`webServer` で画面の開発サーバーと Storybook を起動する）
       - name: '@axe-core/playwright'
         kind: ライブラリ
         purpose: 画面ごとのアクセシビリティの検査
         notes:
           版: 4.14.0（ライセンス MPL-2.0）
-lead: 実際のブラウザで画面を操作する E2E テストのランナー。
+lead: 実際のブラウザで画面を操作する結合テスト（フロント）のランナー。
 purl: pkg:npm/%40playwright/test
 dependency_scope: 開発のみ
 adoption: 採用
 used_in:
-  - frontend/playwright.config.ts
-  - tests/e2e/
+  - tests/integration/frontend/playwright.config.ts
+  - tests/integration/frontend/
 upstream: microsoft/playwright
 verification:
   state: 未確認
