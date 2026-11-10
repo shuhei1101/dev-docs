@@ -202,11 +202,11 @@ def test_build_view_router_when_other_source_loading(
     release = threading.Event()
     original = registry_module.load_source
 
-    def blocking_load(entry: SourceEntry, *, index: int) -> Any:
+    def blocking_load(entry: SourceEntry, *, index: int, lookup: Any) -> Any:
         if entry.id == "notes":
             entered.set()
             release.wait(timeout=5)
-        return original(entry, index=index)
+        return original(entry, index=index, lookup=lookup)
 
     monkeypatch.setattr(registry_module, "load_source", blocking_load)
     registry = SourceRegistry(loading=True)

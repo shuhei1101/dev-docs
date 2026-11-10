@@ -165,10 +165,10 @@ classes:
           type: None
           description: なし
         process: |-
-          1. `_waiters_lock` を持って `_rows` を `sources[]` にし、`_rows_done` を行の数だけ立てずに作る
+          1. `_waiters_lock` を持って `_rows` を `sources[]` にし、`_rows_done` を行の数だけ立てずに作る。続けて `terminal_lookup(terminal)` でほかの配信元のスキーマの参照先の引き当てを作り、`_reload_lock` を持って `_lookup` に持たせる
           2. 読み込みの済んでいない行が無くなるまで、次の行を選んで読み込む
              - 次の行は、`_requested` の先頭から見て読み込みの済んでいない最初の行。無ければ、読み込みの済んでいない行のうち位置が一番小さい行
-             - 行を配信元の読み込みで読む。例外の場合、`[error]` 配信元の行の読み込みに失敗した（行の位置・例外のスタックトレース）を書き、状態を `not_served`・ID を行の `id`（無ければ `sources[{n}]`）・違反を `Violation(path="sources[{n}]", rule="読み込みに失敗しました（{例外の型}: {本文}）", fix="エラーログを確かめ、reload で読み直してください")` にする
+             - 行を配信元の読み込み（`lookup` に手順 1 の引き当て）で読む。例外の場合、`[error]` 配信元の行の読み込みに失敗した（行の位置・例外のスタックトレース）を書き、状態を `not_served`・ID を行の `id`（無ければ `sources[{n}]`）・違反を `Violation(path="sources[{n}]", rule="読み込みに失敗しました（{例外の型}: {本文}）", fix="エラーログを確かめ、reload で読み直してください")` にする
           3. 読み込んだ行ごとに `_reload_lock` を取り、今の組に行を加えた新しい組を作って `_snapshot` と `_entries` を入れ替える。状態は行の位置の順に並べる
              - 配信する配信元の ID が、先の位置の行の配信中の ID と重なる場合、その行を `sources[{n}].id` の重複の違反を持つ `not_served` にする
              - 後の位置の行が先に読み込まれて同じ ID で配信中の場合、その後の行を同じ違反の `not_served` に替え、この行を配信する
@@ -182,6 +182,12 @@ classes:
             condition: '`SourceRegistry(loading=True)`。`sources` に配信できる 2 行と無効の 1 行'
             mock: 配信元の読み込み（行ごとに決めた結果を返す偽物）
             expected: '`load` の後に `loading` が `False`、`statuses()` が行の順に 3 つ、`served()` が 2 つ'
+          - name: test_source_registry_load_when_schema_ref
+            case: 正常
+            summary: 行ごとの読み込みに、端末の設定から作ったほかの配信元の引き当てを渡す
+            condition: '`SourceRegistry(loading=True)`。`sources` に `id` が a・b の 2 行'
+            mock: 配信元の読み込み（受け取った `lookup` を記録する偽物）
+            expected: 2 行の読み込みが同じ `lookup` を受け取り、`lookup("b")` が b の行の先頭の設定のパス、`lookup("missing")` が `None`
           - name: test_source_registry_load_when_row_loading
             case: 正常
             summary: 読み込んだ行は、他の行の読み込み中でも引ける

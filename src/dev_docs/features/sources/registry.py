@@ -161,10 +161,14 @@ class SourceRegistry:
         with self._waiters_lock:
             self._rows = list(terminal.sources)
             self._rows_done = [threading.Event() for _ in self._rows]
+        # ほかの配信元のスキーマの参照先は端末の設定から引き、行の読み込みを待たない
+        lookup = terminal_lookup(terminal)
+        with self._reload_lock:
+            self._lookup = lookup
         try:
             while (index := self._next_row()) is not None:
                 entry = self._rows[index]
-                served, status = self._load_row(entry, index)
+                served, status = self._load_row(entry, index, lookup)
                 self._publish(entry, index, served, status)
                 self._rows_done[index].set()
                 self._finish_waiters(every=False)
@@ -187,10 +191,12 @@ class SourceRegistry:
         return None
 
     @staticmethod
-    def _load_row(entry: SourceEntry, index: int) -> tuple[ServedSource | None, SourceStatus]:
+    def _load_row(
+        entry: SourceEntry, index: int, lookup: SchemaRefLookup
+    ) -> tuple[ServedSource | None, SourceStatus]:
         """行を読む。例外のときは、その行を配信しない状態にする。"""
         try:
-            return load_source(entry, index=index)
+            return load_source(entry, index=index, lookup=lookup)
         except Exception as error:
             logger.exception("配信元の行の読み込みに失敗した（sources[%s]）", index)
             return None, SourceStatus(

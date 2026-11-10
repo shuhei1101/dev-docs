@@ -10,6 +10,7 @@ import pytest
 from dev_docs.features.settings.types import SourceEntry, TerminalConfig
 from dev_docs.features.sources import registry as registry_module
 from dev_docs.features.sources.registry import SourceRegistry
+from dev_docs.features.sources.schema_ref import SchemaRefLookup
 from dev_docs.features.sources.types import ServedSource, SourceStatus
 from dev_docs.shared.errors import SourceNotServedError, UnknownSourceError, Violation
 
@@ -317,6 +318,7 @@ class _Loader:
         names: dict[str, str] | None = None,
     ) -> None:
         self.order: list[str] = []
+        self.lookups: list[SchemaRefLookup] = []
         self.entered = {name: threading.Event() for name in blocked}
         self.release = {name: threading.Event() for name in blocked}
         self._failing = failing
@@ -324,10 +326,11 @@ class _Loader:
         self._make_served_source = make_served_source
         self._make_status = make_status
 
-    def __call__(self, entry: SourceEntry, *, index: int) -> LoadResult:
+    def __call__(self, entry: SourceEntry, *, index: int, lookup: SchemaRefLookup) -> LoadResult:
         # 設定のパス `/tmp/{名前}/dev-docs.yaml` から名前を取る
         name = Path(entry.config[0]).parent.name
         self.order.append(name)
+        self.lookups.append(lookup)
         if name in self.entered:
             self.entered[name].set()
             self.release[name].wait(timeout=5)
@@ -364,7 +367,9 @@ def test_source_registry_load(
         (make_served_source(id="b"), make_status("b", 1)),
         (None, make_status("c", 2, "disabled")),
     ]
-    monkeypatch.setattr(registry_module, "load_source", lambda entry, *, index: results[index])
+    monkeypatch.setattr(
+        registry_module, "load_source", lambda entry, *, index, lookup: results[index]
+    )
     terminal = make_terminal_config(sources=_entries(make_entry, "a", "b", "c"))
     registry = SourceRegistry(loading=True)
     # 実行
@@ -377,6 +382,28 @@ def test_source_registry_load(
         ("c", "disabled"),
     ]
     assert len(registry.served()) == 2
+
+
+def test_source_registry_load_when_schema_ref(
+    monkeypatch: pytest.MonkeyPatch,
+    make_terminal_config: Callable[..., TerminalConfig],
+    make_entry: Callable[..., SourceEntry],
+    make_served_source: Callable[..., ServedSource],
+    make_status: Callable[..., SourceStatus],
+) -> None:
+    """行ごとの読み込みに、端末の設定から作ったほかの配信元の引き当てを渡す（正常系）。"""
+    # 準備
+    loader = _Loader(make_served_source, make_status)
+    monkeypatch.setattr(registry_module, "load_source", loader)
+    terminal = make_terminal_config(sources=_entries(make_entry, "a", "b"))
+    registry = SourceRegistry(loading=True)
+    # 実行
+    registry.load(terminal)
+    # 検証
+    assert len(loader.lookups) == 2
+    assert loader.lookups[0] is loader.lookups[1]
+    assert loader.lookups[0]("b") == Path("/tmp/b/dev-docs.yaml")
+    assert loader.lookups[0]("missing") is None
 
 
 def test_source_registry_load_when_row_loading(
