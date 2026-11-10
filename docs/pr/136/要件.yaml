@@ -1,26 +1,26 @@
 use_cases:
   - kind: composite
-    scenario: dev/設計書/シナリオ/複合ユースケース/dev-docsで文書を配信して読み書きする.yaml
+    scenario: docs/scenario/SC-155-13.yaml
     impact: none
     detail: 起動・読み書きの連鎖は変わらない
     depends_on: []
   - kind: single
-    scenario: dev/設計書/シナリオ/単一ユースケース/起動する.yaml
+    scenario: docs/scenario/SC-155-10.yaml
     impact: run_only
     detail: 起動した直後に配信元を読み込む間の答え方を変えるが、シナリオの期待値は変わらない
     depends_on: []
   - kind: single
-    scenario: dev/設計書/シナリオ/単一ユースケース/エージェントが調べる.yaml
+    scenario: docs/scenario/SC-155-5.yaml
     impact: run_only
     detail: 起動した直後でもエージェントが文書を調べられるようにするが、シナリオの期待値は変わらない
     depends_on: []
   - kind: single
-    scenario: dev/設計書/シナリオ/単一ユースケース/dev-docsを更新する.yaml
+    scenario: docs/scenario/SC-155-3.yaml
     impact: run_only
     detail: 更新の後の状態の確かめ方（status）の答えの速さを変えるが、シナリオの期待値は変わらない
     depends_on: []
 docs:
-  - page: docs/リファレンス/管理のMCP.md
+  - page: docs/guide/管理のMCP.md
     new: false
     change: 読み込み中に文書の MCP の呼び出しが待たされる記述と、`status` の同期の件数の求め方を、直した後の答え方に合わせる
     status: done
