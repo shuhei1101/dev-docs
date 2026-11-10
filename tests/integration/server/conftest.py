@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import gc
 import json
 import os
 import shutil
@@ -511,8 +510,6 @@ def serve_in_thread() -> Iterator[Callable[[Any, int], None]]:
     for server, thread in servers:
         server.should_exit = True
         thread.join(timeout=LOADING_WAIT_SEC)
-    # 止めたサーバーのイベントループが持つ接続を、後のテストの途中で回収させない
-    gc.collect()
 
 
 @pytest.fixture
