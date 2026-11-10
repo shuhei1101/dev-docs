@@ -1,7 +1,7 @@
-$ (rc=0; uv run ruff check . || rc=1; uv run ruff format --check . || rc=1; uv run mypy . || rc=1; claude plugin validate . || rc=1; npm run lint || rc=1; npm run typecheck || rc=1; exit $rc)
+$ (uv run ruff check . ; uv run ruff format --check . ; uv run mypy . ; claude plugin validate . ; npm run lint ; npm run typecheck)
 All checks passed!
-281 files already formatted
-Success: no issues found in 282 source files
+287 files already formatted
+Success: no issues found in 288 source files
 Validating marketplace manifest: /mnt/c/Users/shuhe/repo/dev-docs/.claude/worktrees/chore-dev-docs-mdmark-222-schema-ref-violation-detail/.claude-plugin/marketplace.json
 
 ⚠ Found 3 warnings:
