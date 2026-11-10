@@ -406,6 +406,42 @@ def test_source_registry_load_when_schema_ref(
     assert loader.lookups[0]("missing") is None
 
 
+def test_source_registry_load_when_lookup_failed(
+    monkeypatch: pytest.MonkeyPatch,
+    make_terminal_config: Callable[..., TerminalConfig],
+    make_entry: Callable[..., SourceEntry],
+) -> None:
+    """引き当ての作成が例外で止まっても、待ちを解いて読み込み中を終える（異常系）。"""
+    # 準備
+
+    def failing_lookup(terminal: TerminalConfig) -> SchemaRefLookup:
+        raise RuntimeError("引き当てを作れない")
+
+    monkeypatch.setattr(registry_module, "terminal_lookup", failing_lookup)
+    terminal = make_terminal_config(sources=_entries(make_entry, "a"))
+    registry = SourceRegistry(loading=True)
+    errors: list[BaseException] = []
+
+    def work() -> None:
+        try:
+            registry.load(terminal)
+        except RuntimeError as error:
+            errors.append(error)
+
+    async def scenario() -> None:
+        waiter = asyncio.ensure_future(registry.wait_loaded())
+        worker = threading.Thread(target=work)
+        worker.start()
+        await asyncio.wait_for(waiter, timeout=5)
+        await asyncio.to_thread(worker.join, 5)
+
+    # 実行
+    asyncio.run(scenario())
+    # 検証
+    assert registry.loading is False
+    assert [str(error) for error in errors] == ["引き当てを作れない"]
+
+
 def test_source_registry_load_when_row_loading(
     monkeypatch: pytest.MonkeyPatch,
     make_terminal_config: Callable[..., TerminalConfig],

@@ -188,6 +188,13 @@ classes:
             condition: '`SourceRegistry(loading=True)`。`sources` に `id` が a・b の 2 行'
             mock: 配信元の読み込み（受け取った `lookup` を記録する偽物）
             expected: 2 行の読み込みが同じ `lookup` を受け取り、`lookup("b")` が b の行の先頭の設定のパス、`lookup("missing")` が `None`
+          - name: test_source_registry_load_when_lookup_failed
+            case: 異常
+            summary: 引き当ての作成が例外で止まっても、待ちを解いて読み込み中を終える
+            condition: '`SourceRegistry(loading=True)` を `wait_loaded()` で待っている間に、`terminal_lookup` が例外を送る `load`'
+            mock: '`terminal_lookup`（例外を送る偽物）'
+            expected: '`wait_loaded()` が済み、`loading` が `False`、`load` が例外を送り直す'
+            exception: 引き当ての作成の例外
           - name: test_source_registry_load_when_row_loading
             case: 正常
             summary: 読み込んだ行は、他の行の読み込み中でも引ける
