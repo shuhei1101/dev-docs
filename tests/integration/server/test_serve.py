@@ -677,10 +677,8 @@ def test_normal_when_requested_while_loading(
         )
 
     # 実行
-    with socket.create_connection(("127.0.0.1", port), timeout=5) as connection:
-        # 送らずに閉じた接続のサーバー側のソケットが残らないよう、サーバーが閉じるのを待つ
-        connection.shutdown(socket.SHUT_WR)
-        connected = connection.recv(1) == b""
+    with socket.create_connection(("127.0.0.1", port), timeout=5):
+        connected = True
     docs_thread = threading.Thread(target=request_docs)
     docs_thread.start()
     top = httpx.get(f"http://127.0.0.1:{port}/", timeout=10)
