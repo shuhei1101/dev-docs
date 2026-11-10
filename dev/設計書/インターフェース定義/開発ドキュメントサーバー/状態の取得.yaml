@@ -170,6 +170,9 @@ constraints:
   - item: 同期の件数
     constraint: 配信元の読み込み・読み直し・`default_ref` の組み立て直しの後と、`write_docs`・`delete_docs` の後に裏で実行する検査の最後の結果を読み、`status` は配信元のファイルをたどらない
     notes: 直接編集したファイルのずれは、次の検査まで件数に出ない。今のファイルで求め直すときは `check_project`
+  - item: 配信中の配信元の組
+    constraint: 配信元ごとの `default_ref` の commit を確かめず、いま配信中の組の設定を読む（組み立て直さない）
+    notes: '`default_ref` が進んだ配信元の設定のバージョンは、その配信元を使う次の要求で組み立て直した後に出る'
   - item: 権限
     constraint: 作業場所で絞らず、全ての配信元を返す
   - item: タイムアウト

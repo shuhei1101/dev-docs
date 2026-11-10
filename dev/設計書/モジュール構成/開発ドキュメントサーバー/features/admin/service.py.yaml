@@ -496,7 +496,7 @@ functions:
       description: '`sources[]` の順の配信元の状態'
     process: |-
       1. `handlers.registry.statuses()` の行ごとに作る
-         - `serving` の場合、`registry.get(id)` の `config.version` を `config_version` にし、新旧を求め（バージョンの新旧）、`handlers.checks.get(id)` の最後の検査の結果があればその `report` から索引の同期の件数を作る。検査の結果が無ければ `sync` を `None` にする。配信元のファイルはたどらない（`check_sync` を呼ばない）
+         - `serving` の場合、`registry.served()` の同じ ID の配信元（`default_ref` の commit を確かめない） の `config.version` を `config_version` にし、新旧を求め（バージョンの新旧）、`handlers.checks.get(id)` の最後の検査の結果があればその `report` から索引の同期の件数を作る。検査の結果が無ければ `sync` を `None` にする。配信元のファイルはたどらない（`check_sync` を呼ばない）
          - `not_served` の場合、`errors` を `{path}: {rule}` の文字列にし、他は `None` にする
          - `disabled` の場合、`errors` を空、他は `None` にする
     unit_tests:
@@ -512,6 +512,12 @@ functions:
         condition: '`serving` の 1 行で、配信元の検査の控えに結果が無い。`check_sync` を呼ぶと失敗する偽物に差し替える'
         mock: '`check_sync`（呼ばれたら `AssertionError` を送る偽物）'
         expected: '`serving` の行の `sync` が `None` で、`check_sync` が呼ばれない'
+      - name: test_source_states_without_refresh
+        case: 正常
+        summary: 配信元ごとの `default_ref` の commit を確かめず、いま配信中の組を読む
+        condition: '`serving` の 1 行で、`registry.get` を呼ぶと失敗する偽物に差し替える'
+        mock: '`registry.get`（呼ばれたら `AssertionError` を送る偽物）'
+        expected: '`serving` の行の `config_version` が配信中の配信元の設定のバージョンで、`registry.get` が呼ばれない'
     callers:
       - '#functions[get_status]'
       - '#functions[reload_config]'
