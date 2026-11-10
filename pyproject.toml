@@ -39,7 +39,7 @@ addopts = ["-ra", "--import-mode=importlib", "--strict-markers", "--strict-confi
 [tool.ruff]
 line-length = 100
 target-version = "py314"
-extend-exclude = ["dev", "docs"]
+extend-exclude = ["schemas/conversions", "docs"]
 
 [tool.ruff.lint]
 select = [
@@ -75,3 +75,4 @@ strict = true
 pretty = true
 mypy_path = "src"
 explicit_package_bases = true
+exclude = ["^schemas/conversions/"]

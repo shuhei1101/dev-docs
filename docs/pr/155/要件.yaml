@@ -1,0 +1,123 @@
+use_cases:
+  - kind: composite
+    scenario: dev/設計書/シナリオ/複合ユースケース/dev-docsで文書を配信して読み書きする.yaml
+    impact: none
+    detail: 文書の置き場所とファイル名だけが変わり、配信・読み書きの流れは変わらない
+    depends_on: []
+  - kind: single
+    scenario: dev/設計書/シナリオ/単一ユースケース/dev-docsを入れる.yaml
+    impact: none
+    detail: 入れ方・起動に関わるファイル（package.json・pyproject.toml・プラグインの定義）を変えない
+    depends_on: []
+  - kind: single
+    scenario: dev/設計書/シナリオ/単一ユースケース/利用者が画面で読む.yaml
+    impact: none
+    detail: dev-docs 自身の文書の置き場所だけが変わり、画面で読む流れは変わらない
+    depends_on: []
+docs:
+  - page: dev/設計書/
+    new: false
+    change: YAML の設計書に id を振り、docs/{kind}/{ID}.yaml（言語の規約を注入する種別は {ID}.{lang}.yaml）へ移す。設計書どうしの参照をパスから {ID}#{項目のパス} へ書き換える。デザイン方針.md は docs/design-policy.md へ移す
+    status: done
+    updated_by: planner
+    updated_at: '2026-11-09T17:18:43.885513+00:00'
+  - page: dev/設計書/アーキテクチャ図/アーキテクチャ図.yaml
+    new: false
+    change: repository.layout を移した後の構成（docs/ の種類のフォルダ・schemas/）に合わせる
+    status: done
+    updated_by: planner
+    updated_at: '2026-11-09T17:18:43.885513+00:00'
+  - page: dev/テンプレート/
+    new: false
+    change: '*.schema.yaml を削除し、shuhei1101/ai-monitor#3307 の schemas/{kind}.schema.yaml（common・index・files と変換の schemas/conversions/ を含む）を配置する（移す前の Schema は ai-monitor v0.3.0 と同じで、目次の例だけが違う）。schemas/conversions/ は ai-monitor から写した変換のため、pyproject.toml で ruff・mypy の対象から外す'
+    status: done
+    updated_by: planner
+    updated_at: '2026-11-09T17:18:43.885513+00:00'
+  - page: dev/コーディング規約/
+    new: false
+    change: '中身が空の目次（items: []）だけのため、docs/rule/ へ移さずに削除する'
+    status: done
+    updated_by: planner
+    updated_at: '2026-11-09T17:18:43.885513+00:00'
+  - page: dev/mock/
+    new: false
+    change: docs/mock/ へ移す
+    status: done
+    updated_by: planner
+    updated_at: '2026-11-09T17:18:43.885513+00:00'
+  - page: dev/pr/
+    new: false
+    change: 'マージ済みの作業 PR の PR ドキュメント（develop から取り込んだ #101 を含む）と、この PR の PR ドキュメントを docs/pr/ へ移す（shuhei1101/ai-monitor#3307 のマージの後、AI Monitor のツールは docs/pr/ を参照する）'
+    status: done
+    updated_by: planner
+    updated_at: '2026-11-09T17:18:43.885513+00:00'
+  - page: dev/index.yaml
+    new: false
+    change: 削除する。行は docs/index.yaml へ合わせる（dev/README.md も削除する）
+    status: done
+    updated_by: planner
+    updated_at: '2026-11-09T17:18:43.885513+00:00'
+  - page: docs/index.yaml
+    new: false
+    change: 起点を 1 つにし、行が種類のフォルダを指すようにする（docs/README.md も作り直す）
+    status: done
+    updated_by: planner
+    updated_at: '2026-11-09T17:18:43.885513+00:00'
+  - page: docs/はじめに/
+    new: false
+    change: docs/はじめに/・使い方/・リファレンス/ を docs/guide/ へまとめ、分類をメタデータ category で持つ（サブフォルダにあったものは {サブフォルダ}-{ファイル名}）
+    status: done
+    updated_by: planner
+    updated_at: '2026-11-09T17:18:43.885513+00:00'
+  - page: docs/_config.yml
+    new: true
+    change: Pages の除外。visibility が internal の種類のフォルダ・文書と pr/・mock/・generated/ を exclude に載せる
+    status: done
+    updated_by: planner
+    updated_at: '2026-11-09T17:18:43.885513+00:00'
+  - page: README.md
+    new: false
+    change: 導入・画面の使い方・開発コマンドのリンクを移した後の置き場所へ合わせる
+    status: done
+    updated_by: planner
+    updated_at: '2026-11-09T17:18:43.885513+00:00'
+  - page: CLAUDE.md
+    new: false
+    change: 「開発ドキュメント dev/ と公開ドキュメント docs/」の記載と画面のモジュール構成のリンクを移した後の置き場所へ合わせる
+    status: done
+    updated_by: planner
+    updated_at: '2026-11-09T17:18:43.885513+00:00'
+  - page: docs/_root/files.yml
+    new: true
+    change: 'docs/ の直下の design-policy.md を visibility: internal にし、Pages の exclude に載せる'
+    status: done
+    updated_by: planner
+    updated_at: '2026-11-09T17:18:49.650426+00:00'
+  - page: .gitignore
+    new: false
+    change: 生成物の置き場所を dev/generated/ から docs/generated/ へ変える
+    status: done
+    updated_by: planner
+    updated_at: '2026-11-09T17:18:49.650426+00:00'
+  - page: pyproject.toml
+    new: false
+    change: ruff の extend-exclude の dev（廃止した）を schemas/conversions に替え、mypy の exclude に schemas/conversions/ を追加する
+    status: done
+    updated_by: planner
+    updated_at: '2026-11-10T13:05:53.557273+00:00'
+scope_out:
+  - item: dev-docs.yaml を置いて dev-docs 自身の文書を配信し、タグを付ける
+    reason: 別の Issue の範囲。移した後の置き場所で paths[] を決める
+    plan: '#24'
+  - item: AI Monitor v0.4.0 の配布物への追従のうち、テーマの取り込み・変わった規約の読み直し・ai-monitor-version.ini の更新
+    reason: '#74 に残した範囲。v0.4.0 の変換は id の振り付けを含めてこの PR で全て適用した（変換は移した後の置き場所でしか通らないため）'
+    plan: '#74'
+  - item: ai-monitor の手順・ツールを docs/ 前提にする対応
+    reason: ai-monitor 側の作業（shuhei1101/ai-monitor#2973 の作業 PR shuhei1101/ai-monitor#3307）
+    plan: none
+  - item: v0.4.0 の変換が、モジュール構成の title の末尾にファイル名を重ね、文字列の中のリンクと分類の図の click を壊す不具合
+    reason: ai-monitor の変換の不具合。この PR では変換の後に元の設計書と比べて戻した
+    plan: shuhei1101/ai-monitor#3335
+  - item: 'PR #101 の反映作業の一覧（docs/pr/101/反映作業/index.yaml）が確認方法の値のコロンで YAML として読めない'
+    reason: develop の dev/pr/101/ のときからの内容で、この PR は置き場所を移すだけで中身を変えない（reviewer の対象外の逸脱の指摘）
+    plan: '#159'

@@ -1,0 +1,18 @@
+# develop の取り込みの後（作業ブランチ 0386c24）
+$ cd ai-monitor（develop 01eaa7f78。#3307 のマージ後） && PYTHONPATH=src uv run python -m ai_monitor.design_docs validate --root {dev-docs の作業ツリー}
+docs/scenario/SC-155-1.yaml:test_file: 対応テストファイルがありません: tests/e2e/単一ユースケース/test_YAMLを直接編集した.py
+docs/scenario/SC-155-10.yaml:test_file: 対応テストファイルがありません: tests/e2e/単一ユースケース/test_起動する.py
+docs/scenario/SC-155-11.yaml:test_file: 対応テストファイルがありません: tests/e2e/単一ユースケース/test_配信元を外す.py
+docs/scenario/SC-155-12.yaml:test_file: 対応テストファイルがありません: tests/e2e/単一ユースケース/test_配信元を追加する.py
+docs/scenario/SC-155-13.yaml:test_file: 対応テストファイルがありません: tests/e2e/複合ユースケース/test_dev-docsで文書を配信して読み書きする.py
+docs/scenario/SC-155-2.yaml:test_file: 対応テストファイルがありません: tests/e2e/単一ユースケース/test_dev-docsを入れる.py
+docs/scenario/SC-155-3.yaml:test_file: 対応テストファイルがありません: tests/e2e/単一ユースケース/test_dev-docsを更新する.py
+docs/scenario/SC-155-4.yaml:test_file: 対応テストファイルがありません: tests/e2e/単一ユースケース/test_エージェントが書き込む.py
+docs/scenario/SC-155-5.yaml:test_file: 対応テストファイルがありません: tests/e2e/単一ユースケース/test_エージェントが調べる.py
+docs/scenario/SC-155-6.yaml:test_file: 対応テストファイルがありません: tests/e2e/単一ユースケース/test_利用者がコメントを渡す.py
+docs/scenario/SC-155-7.yaml:test_file: 対応テストファイルがありません: tests/e2e/単一ユースケース/test_利用者が画面で読む.py
+docs/scenario/SC-155-8.yaml:test_file: 対応テストファイルがありません: tests/e2e/単一ユースケース/test_変更をレビューする.py
+docs/scenario/SC-155-9.yaml:test_file: 対応テストファイルがありません: tests/e2e/単一ユースケース/test_設定・スクリプトを変える.py
+件数: 13
+
+13 件は全て、develop の #152（9f1b5ab）が tests/e2e/ を削除した後もシナリオの test_file が指している対応テストファイル。この PR の取り込みで増えたものではない
