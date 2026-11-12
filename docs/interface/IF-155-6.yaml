@@ -141,7 +141,8 @@ constraints:
   - item: 認可
     constraint: 制限なし（`127.0.0.1` でだけ待ち受ける）
   - item: タイムアウト
-    constraint: 制限なし
+    constraint: project-index への問い合わせを制限時間で打ち切り、打ち切ったら project-index につながらないときと同じ 503 と理由を返す
+    decided_by: NFR-155-1#requirements[project-index への問い合わせの制限時間]
   - item: JSON のキー
     constraint: レスポンスのキーは camelCase。パス・クエリのパラメータ名は変えない
   - item: operationId

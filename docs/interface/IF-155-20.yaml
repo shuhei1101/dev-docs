@@ -128,6 +128,9 @@ constraints:
     constraint: 行と状態は要求ごとに project-index の端末の設定の API から取得し、dev-docs の中に控えない
   - item: project-index につながらないとき
     constraint: 503 と、つながらなかった project-index のアドレス・理由を返す
+  - item: タイムアウト
+    constraint: project-index への問い合わせを制限時間で打ち切り、打ち切ったら project-index につながらないときと同じ 503 と理由を返す
+    decided_by: NFR-155-1#requirements[project-index への問い合わせの制限時間]
   - item: 返すキー
     constraint: '`sources[]` だけ。`port`・`bind`・`state_dir` など再起動が要るキーは返さない'
   - item: JSON のキー

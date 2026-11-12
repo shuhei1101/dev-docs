@@ -195,8 +195,8 @@ constraints:
     constraint: '`{clone}/.venv/bin/python -m dev_docs serve` を `start_new_session=True`・入出力を `DEVNULL` で起動し、待たずに戻る'
     notes: 'PR #9 の PoC のとおり'
   - item: タイムアウト
-    constraint: '`hooks.json` の `timeout` は 1 秒'
-    notes: 内側の待ち 0.5 秒（接続）に 50% を乗せて切り上げた値（規約『資源の値の決め方』の入れ子の待ち）。記録の削除の依頼（3 秒）は project-index のフックへ移した
+    constraint: '`hooks.json` の `timeout` は 2 秒'
+    notes: 落ちているときの流れ（接続の失敗 → `Popen` → 出力）のフック全体を、`/mnt/c` の上のフックのファイルで 5 回測って 0.53〜0.70 秒（2026-11-12、Python 3.12）。最大の 0.70 秒に 50% を乗せて切り上げた値（規約『資源の値の決め方』の入れ子の待ち）。記録の削除の依頼（3 秒）は project-index のフックへ移した
   - item: 失敗の扱い
     constraint: どの失敗でも終了コード 0 で戻り、セッションを止めない
 test_file: tests/integration/plugin/test_session_start.py

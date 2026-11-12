@@ -156,12 +156,39 @@ flows:
       - 422 で、`errors` に `sources[1].id` と `sources[1].scope.read` がそれぞれの理由つきである
       - モックが保存を受けず、`/_api/sources/sample/docs` は 200 を返す
     test: test_error_when_schema_invalid
+  - name: 異常系（project-index が保存を断る・422・502）
+    summary: project-index が 422 を返したら違反をそのまま 422 で返し、それ以外の失敗は 502 で返す
+    setup:
+      - name: Mock
+        description: 1 回目は `errors[]` つきの 422、2 回目は 500 を返す project-index の端末の設定の API のモック
+      - name: 入力
+        description: 画面と同じ `Origin` で、dev-docs のスキーマに通る sample と extra の 2 行
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        participant C as クライアント
+        participant E as PUT /_api/settings/sources
+        participant PI as project-index（モック）
+
+        C->>E: sources: sample, extra
+        E->>PI: 端末の設定の配信元の保存
+        PI-->>E: 422（errors[]）
+        E-->>C: 422（project-index の errors[]）
+        C->>E: sources: sample, extra
+        E->>PI: 端末の設定の配信元の保存
+        PI-->>E: 500
+        E-->>C: 502（project-index の応答の要約）
+      ```
+    expected:
+      - 1 回目が 422 で、`errors` がモックの返した `errors[]` と同じ
+      - 2 回目が 502 で、モックの応答のステータス 500 と要約がある
+    test: test_error_when_project_index_rejects
 lead: '#17 の設定画面が配信元の追加・編集・削除の後の `sources[]` を丸ごと送信する。スキーマに通ったときだけ project-index の端末の設定の API へ保存を依頼し、読み直した後の配信元の状態を返す。'
 identifier: put_settings_sources
 permissions: 画面と同じオリジンからの要求だけ
 idempotent: true
 side_effects: project-index に端末の設定の `sources` の保存を依頼する。dev-docs は端末の設定と配信元のフォルダのファイルを書き換えない
-exclusivity: 端末の設定の排他ロックの中で、検証・書き込み・読み直しを行う。読み直しの間の要求は、読み直す前の配信元で応える
+exclusivity: dev-docs は排他しない。保存と読み直しの排他は project-index が持つ
 request:
   - name: sources
     type: list[Source]
@@ -248,20 +275,24 @@ status_codes:
   - code: '403'
     condition: 画面と別のオリジンからの要求
   - code: '422'
-    condition: 保存後の端末の設定がスキーマに通らない
-    notes: '`errors[]` に違反したキーのパスと理由を全て並べる'
+    condition: 要求の本文がスキーマに通らない、または project-index が 422 を返した
+    notes: '`errors[]` に違反したキーのパスと理由を全て並べる。project-index の 422 は、project-index の `errors[]` をそのまま返す'
+  - code: '502'
+    condition: project-index が 200・422 以外を返した
+    notes: project-index の応答のステータスと要約
 error_format: RFC 9457 の `application/problem+json`。拡張メンバーは camelCase（`nextSteps`・`errors[]`）。検証の違反は `errors[]` に `{path, reason}` で並べる（`path` は `sources[1].id` の形）
 constraints:
   - item: オリジンの確認
     constraint: '`Origin` が画面のオリジンと同じか、`Origin` が無く `Sec-Fetch-Site` が `same-origin` のときだけ受ける'
   - item: 保存の依頼先
-    constraint: 保存と読み直しは project-index の端末の設定の API が行う。dev-docs は送信された行を project-index へ送り、返った配信元の状態をそのまま返す
+    constraint: 保存と読み直しは project-index の端末の設定の API が行う。dev-docs は送信された行を project-index へ送り、200 のときは返った配信元の状態をそのまま返す。422 は project-index の `errors[]` を 422 で、それ以外の 200 以外は 502 で返す
   - item: project-index につながらないとき
     constraint: 503 と、つながらなかった project-index のアドレス・理由を返す。端末の設定は変わらない
   - item: 認可
     constraint: 制限なし（`127.0.0.1` でだけ待ち受ける）
   - item: タイムアウト
-    constraint: 制限なし
+    constraint: project-index への問い合わせを制限時間で打ち切り、打ち切ったら project-index につながらないときと同じ 503 と理由を返す
+    decided_by: NFR-155-1#requirements[project-index への問い合わせの制限時間]
   - item: JSON のキー
     constraint: リクエストの本文とレスポンスのキーは camelCase
   - item: operationId

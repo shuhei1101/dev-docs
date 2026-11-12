@@ -47,12 +47,21 @@ endpoints:
   - name: GET /sources/{source}/docs/{path}
     method: GET
     path: /sources/{source}/docs/{path}
-    summary: 指定のリビジョンの文書の値・種類のスキーマ・メタデータを返す。`converters[]` を指す種類は、スクリプトが出した Markdown か変換の失敗を返す
+    summary: 指定のリビジョンの文書の値・種類のスキーマ・メタデータ・本文の文字列・本文のファイルのパス（管理用の YAML の行の文書）を返す。`converters[]` を指す種類は、スクリプトが出した Markdown か変換の失敗を返す。パスは文書のファイルか本文のファイルのパスで引ける
     status_codes:
       - code: '200'
         condition: 返した（変換に失敗したときも失敗を入れて 200）
       - code: '404'
         condition: 配信元・リビジョン・文書が無い
+  - name: GET /sources/{source}/decisions
+    method: GET
+    path: /sources/{source}/decisions
+    summary: '`decisions.folders` にある検討事項の ID と、ID ごとに当たるフォルダの数を返す'
+    status_codes:
+      - code: '200'
+        condition: 返した（`decisions.folders` を持たない配信元は空の一覧）
+      - code: '404'
+        condition: 配信元が無い・配信していない
   - name: GET /sources/{source}/decisions/{id}
     method: GET
     path: /sources/{source}/decisions/{id}

@@ -441,7 +441,7 @@ flows:
         participant PI as project-index（モック）
 
         C->>E: GET /_api/sources/sample/docs/{文書 6 のパス}
-        E->>PI: decisions.folders の検討事項の文書の ID の一覧を取得する
+        E->>PI: 検討事項の ID と、ID ごとに当たるフォルダの数を取得する
         E->>E: 1 つのフォルダにだけある ID を、検討事項の文書のパスへのリンクにする
         E-->>C: 200（文書 6）
       ```
@@ -500,6 +500,28 @@ flows:
       - 応答が 503 の `application/problem+json` で、つながらなかった project-index のアドレスと理由を持つ
       - モックが接続を受け付けるようにした後、同じ要求が 200 を返す（dev-docs のアプリを作り直さない）
     test: test_error_when_project_index_unreachable
+  - name: 異常系（project-index が応答しない・503）
+    summary: project-index が接続を受けたまま応答しないとき、制限時間で打ち切って 503 を返す
+    setup:
+      - name: Mock
+        description: 接続を受けたまま応答しない project-index の読み取り API のモック
+        notes: 制限時間はテストで短くする
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        participant C as クライアント
+        participant E as GET /_api/sources/{source}/docs/{path}
+        participant PI as project-index（モック）
+
+        C->>E: GET /_api/sources/sample/docs
+        E->>PI: 配信元の設定の nav と文書の一覧を取得する（応答しない）
+        E->>E: 制限時間で打ち切る
+        E-->>C: 503（打ち切ったことと project-index のアドレス）
+      ```
+    expected:
+      - 制限時間を過ぎた後に 503 の `application/problem+json` を返し、打ち切ったことと project-index のアドレスを持つ
+      - 制限時間より大きく遅れずに返る
+    test: test_error_when_project_index_timed_out
 lead: '#17 の画面が文書を開くときに呼ぶ。配信元の文書を変換した Markdown と、タブ・サイドバー・差分の項目・画面の状態を JSON で返す。`path` を省くと一番左のタブのサイドバーの一番上の文書を返す。'
 identifier: get_document
 permissions: なし（`127.0.0.1` でだけ待ち受ける）

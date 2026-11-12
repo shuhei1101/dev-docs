@@ -274,7 +274,10 @@ constraints:
   - item: 反映
     constraint: 動いているサーバーには反映しない。利用者が続けて `restart` を呼ぶ
   - item: タイムアウト
-    constraint: 制限なし
+    constraint: project-index への 1 行の追加を制限時間で打ち切り、打ち切ったらつながらないときと同じく端末の設定をバックアップから戻して終了コード 7 で止める
+    decided_by: NFR-155-1#requirements[project-index への問い合わせの制限時間]
+  - item: project-index の応答が 201・409 以外のとき
+    constraint: 端末の設定をバックアップから戻し、project-index の応答のステータスと要約を stderr に出して終了コード 4（MigrationFailed）で止める
   - item: sources を移す手順
     constraint: '`sources` を持つ端末の設定の行を、project-index の端末の設定の API で 1 行ずつ追加する。同じ id の行が project-index にあれば、内容も同じなら追加済みとして扱い、内容が違えば追加せずに `sources` に残して id を stdout に出す。追加した行を `sources` から除き、`project_index` を書き足す。破壊的な手順ではない'
     notes: 1 行ずつの追加は project-index#14 の端末の設定の API（1 行ずつの API は shuhei1101/project-index#10）。途中でつながらなくなったら、追加済みの行も含めて端末の設定をバックアップから戻す（project-index に追加した行はそのまま残り、やり直したときは同じ id・同じ内容の行として追加済みに扱う）
