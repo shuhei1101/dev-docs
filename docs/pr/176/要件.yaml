@@ -1,0 +1,21 @@
+scope_out:
+  - item: dev-docs.schema.yaml・schemas/dev-docs.schema.json の文言（「控えを読まず書かず」「束ねる」）と、settings.schema.yaml の「読める作業場所」「読み書きできる作業場所」
+    reason: '#163 で配信元の設定のスキーマとともに project-index へ移り、dev-docs の develop には残っていない'
+    plan: shuhei1101/project-index#40
+  - item: src/dev_docs/schemas/aliases.schema.yaml の文言
+    reason: alias-inject の v0.3.0 からタグで取り込んだコピー（aliases.source.yaml）のため、alias-inject で修正してそのリリースのタグの取り込みで入れる（#151 の扱いの判断）
+    plan: shuhei1101/alias-inject#82
+  - item: docs/config/CFG-155-2.yaml の lead・ほかのキーの description と、用語集・設定.md・MOD-155-205 の「状態の置き場所」など文書の本文の文言
+    reason: '文書の文言の AI slop の修正は #95 の手順で行う。この PR はスキーマの title・description と、それを写した設定の設計書の項目だけを揃える'
+    plan: '#95'
+use_cases:
+  - kind: single
+    scenario: docs/scenario/SC-155-10.yaml
+    impact: none
+    detail: 起動のときに端末の設定をスキーマで検証するが、変えるのは項目の名前と説明の文言だけで、検証の結果は変わらない
+    depends_on: []
+docs:
+  - page: docs/config/CFG-155-2.yaml
+    new: false
+    change: state_dir・log_dir の title と sources の description を、settings.schema.yaml の修正後の文言に合わせる
+    status: todo
