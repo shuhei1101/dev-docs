@@ -1,0 +1,1 @@
+# dev-docs の画面のサーバーの project-index の付け替え口を、モックから本物の project-index の API へつなぐ
