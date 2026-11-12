@@ -399,7 +399,7 @@ flows:
         notes: '-'
       - name: mdmark の CLI
         description: '`package.json` の `devDependencies` でバージョンを固定した mdmark の CLI（`node_modules/.bin/mdmark`）'
-        notes: 返った `markdown` を `mdmark check --text -` の標準入力に指定する
+        notes: 返った `markdown` を `mdmark check --text -` の標準入力に指定する。CLI が無いときはテストを失敗にする
       - name: フロー図を持つ文書
         description: 'sample に、`x-shape: diagram`・`x-diagram: flowchart` の項目・`x-diagram: state` の項目・`flowchart` を書いた Mermaid の文字列の項目を持つスキーマと、その文書 9 を配置する'
         notes: '-'
@@ -418,7 +418,7 @@ flows:
       ```
     expected:
       - '`markdown` に `<!-- flow -->` の範囲が 3 つある'
-      - '`markdown` を `mdmark check --text -` にかけた結果に、`diagram_wire_crosses_node`・`diagram_label_too_long`・`diagram_node_overflow` が 1 件も無い'
+      - '`markdown` を `mdmark check --text -` にかけた結果に、`diagram_invalid`・`diagram_node_overlap`・`diagram_node_overflow`・`diagram_wire_crosses_node`・`diagram_label_too_long` が 1 件も無い'
     test: test_normal_when_flow_layout_checked
   - name: 正常系（本文の id のリンクを解決する）
     summary: 本文の `id:` のリンクを、同じ配信元の文書と、その項目の見出しのアンカーへのリンクにする
