@@ -1,0 +1,604 @@
+id: MOD-155-214
+title: 開発ドキュメントサーバー / project-indexの呼び出し / types.py
+lead: project-index の読み取り API と端末の設定の API の応答の型。
+test_files:
+  - tests/unit/dev_docs/integrations/project_index/test_types.py
+diagrams:
+  - name: 全体
+    diagram: |-
+      classDiagram
+        direction TD
+        配信元の表示の設定 *-- 文書の行
+        文書の一覧 *-- 索引の文書
+        文書の詳細 *-- 索引の文書
+        文書の詳細 *-- 索引の変換の失敗
+        class 配信元の表示の設定 {
+          +nav: dict
+          +文書の行: list
+        }
+        class 文書の行 {
+          +ID: str
+          +スキーマ: dict
+        }
+        class 文書の一覧 {
+          +リビジョン: str
+          +文書: list
+        }
+        class 索引の文書 {
+          +ID: str
+          +値: dict
+        }
+        class 文書の詳細 {
+          +本文: str
+          +変換した Markdown: str
+        }
+        class 索引の変換の失敗 {
+          +理由: str
+        }
+data_models:
+  - name: IndexedDocument
+    title: 索引の文書
+    container: integrations/project_index/types.py
+    usecase: 文書の取得
+    role: DTO
+    summary: project-index が返した 1 件の文書（ファイル 1 つか `records` の要素 1 つ）
+    description: '`@dataclass(frozen=True, slots=True, kw_only=True)`。今の文書のストアの `Document` と同じ項目を持ち、`body` だけは文書の詳細でしか埋めない。タブとサイドバーの組み立て・条件の照合・エイリアスの集め・変わったキー・変換がこの型を読む。'
+    properties:
+      - name: id
+        title: 文書の ID
+        type: str
+        access: 公開
+        description: 配信元の中で一意な ID
+      - name: kind
+        title: 種類
+        type: str
+        access: 公開
+        description: 文書の行の ID
+      - name: source_id
+        title: 配信元の ID
+        type: str
+        access: 公開
+        description: 文書の配信元
+      - name: path
+        title: 文書のパス
+        type: str
+        access: 公開
+        description: 配信元の直下からのファイルのパス（拡張子つき）
+      - name: record_index
+        title: 要素の添字
+        type: int | None
+        access: 公開
+        default: None
+        description: 管理用の YAML の行の文書の要素の添字。ファイル 1 つが 1 文書なら `None`
+      - name: data
+        title: 値
+        type: dict[str, Any]
+        access: 公開
+        description: 文書の YAML の値（Markdown の文書は front matter）
+      - name: body
+        title: 本文
+        type: str
+        access: 公開
+        default: '""'
+        description: Markdown の本文。文書の一覧では空で、文書の詳細でだけ埋まる
+      - name: body_path
+        title: 本文のファイルのパス
+        type: str | None
+        access: 公開
+        default: None
+        description: 管理用の YAML の行の `body_file` が指すファイル
+      - name: metadata
+        title: メタデータ
+        type: dict[str, Any]
+        access: 公開
+        description: 共通のキー（`name`・`description`・`tags`・`alias_type` など）に読み替えた値
+      - name: version
+        title: バージョン
+        type: str
+        access: 公開
+        description: 値の内容のハッシュ。差分の変化の判定に使う
+      - name: created
+        title: 作成日時
+        type: datetime | None
+        access: 公開
+        default: None
+        description: Git の配信元はファイルを最初に足した commit の日時
+      - name: updated
+        title: 更新日時
+        type: datetime | None
+        access: 公開
+        default: None
+        description: Git の配信元は開いているリビジョンでファイルを最後に変えた commit の日時、Git 管理外はファイルの更新日時
+  - name: DocumentRow
+    title: 文書の行
+    container: integrations/project_index/types.py
+    usecase: 文書の取得
+    role: DTO
+    summary: 配信元の設定の `documents[]` の有効な 1 行のうち、画面が使うキー
+    description: '`@dataclass(frozen=True, slots=True, kw_only=True)`。'
+    properties:
+      - name: id
+        title: 行の ID
+        type: str
+        access: 公開
+        description: 種類の名前
+      - name: title
+        title: 行の名前
+        type: str | None
+        access: 公開
+        default: None
+        description: '`nav` が無いときのタブの名前。`None` は `id`'
+      - name: paths
+        title: ファイルの glob
+        type: list[str]
+        access: 公開
+        description: フォルダの束ねの起点に使う
+      - name: schema
+        title: 種類のスキーマ
+        type: dict[str, Any]
+        access: 公開
+        description: '`$ref` を解き、`records` を持つ行は 1 要素のスキーマにしたもの。スキーマ駆動の変換と、`nav` の条件の使える項目に使う'
+      - name: records
+        title: 管理用の YAML の配列のキー
+        type: str | None
+        access: 公開
+        default: None
+        description: '`records` を持たない行は `None`'
+      - name: search
+        title: 検索に載せるか
+        type: bool
+        access: 公開
+        default: 'True'
+        description: '`false` の行の文書は画面の検索に出ない（project-index が絞る）'
+      - name: converter
+        title: 変換のスクリプト
+        type: str | None
+        access: 公開
+        default: None
+        description: '`converters[]` を指す行のスクリプトの ID。変換は project-index が行い、dev-docs はスキーマ駆動の変換をしない'
+      - name: alias_type
+        title: 引用の種類
+        type: str | None
+        access: 公開
+        default: None
+        description: エイリアスを集める行か
+  - name: SourceView
+    title: 配信元の表示の設定
+    container: integrations/project_index/types.py
+    usecase: 文書の取得
+    role: DTO
+    summary: '`GET /sources/{source}/config` の応答。配信元の設定のうち画面が使うキー'
+    description: '`@dataclass(frozen=True, slots=True, kw_only=True)`。'
+    properties:
+      - name: id
+        title: 配信元の ID
+        type: str
+        access: 公開
+        description: 配信元の ID
+      - name: git
+        title: Git の配信元か
+        type: bool
+        access: 公開
+        description: '`False` は `ref`・`diff` を持たない'
+      - name: default_ref
+        title: 既定のリビジョン
+        type: str | None
+        access: 公開
+        description: Git 管理外は `None`
+      - name: nav
+        title: 画面の構成
+        type: dict[str, Any] | None
+        access: 公開
+        default: None
+        description: '`project-index.yaml` の `nav`'
+      - name: documents
+        title: 文書の行
+        type: list[DocumentRow]
+        access: 公開
+        description: 有効な `documents[]` の行
+      - name: decision_folders
+        title: 話し合いの記録のフォルダ
+        type: list[str]
+        access: 公開
+        default: '[]'
+        description: '`decisions.folders`'
+      - name: diff_ignore_keys
+        title: 差分で比べないキー
+        type: list[str]
+        access: 公開
+        default: '["updated"]'
+        description: 変わったキーの `ignore`
+      - name: github_repository
+        title: GitHub のリポジトリ
+        type: str | None
+        access: 公開
+        default: None
+        description: '`github.repository`'
+      - name: github_issue_labels
+        title: 起票のラベル
+        type: list[str]
+        access: 公開
+        default: '[]'
+        description: '`github.issue_labels`'
+    methods:
+      - name: row
+        title: 文書の行の引き当て
+        kind: メソッド
+        summary: 行の ID から `DocumentRow` を返す
+        scope: public
+        returns:
+          type: DocumentRow | None
+          description: 無ければ `None`
+        process: 1. `documents` から `id` が同じ最初の行を返す
+  - name: DocumentList
+    title: 文書の一覧
+    container: integrations/project_index/types.py
+    usecase: 文書の取得
+    role: DTO
+    summary: '`GET /sources/{source}/docs` の応答'
+    description: '`@dataclass(frozen=True, slots=True, kw_only=True)`。'
+    properties:
+      - name: ref
+        title: リビジョン
+        type: str | None
+        access: 公開
+        description: 解決したリビジョン。`ref` を省いたときは `default_ref` の名前、Git 管理外は `None`
+      - name: documents
+        title: 文書
+        type: list[IndexedDocument]
+        access: 公開
+        description: そのリビジョンの全ての文書（`body` は空）
+      - name: unreadable
+        title: 読めなかったファイル
+        type: list[IndexFailure]
+        access: 公開
+        default: '[]'
+        description: YAML として読めず文書にできなかったファイル（`reason` は `invalid_yaml`）
+  - name: IndexFailure
+    title: 索引の変換の失敗
+    container: integrations/project_index/types.py
+    usecase: 文書の取得
+    role: DTO
+    summary: project-index が返した、変換か読み込みの失敗
+    description: '`@dataclass(frozen=True, slots=True, kw_only=True)`。変換の `ConvertFailure` と同じフィールドを持ち、文書の取得がそのまま `conversion_error` に写す。'
+    properties:
+      - name: reason
+        title: 理由
+        type: Literal['timeout', 'exit', 'not_runnable', 'invalid_yaml']
+        access: 公開
+        description: '制限時間を超えた・0 以外で終わった・実行できない（project-index の `converters[]` のスクリプト）・YAML を読めない'
+      - name: kind
+        title: 種類
+        type: str
+        access: 公開
+        description: 文書の行の ID
+      - name: script
+        title: スクリプト
+        type: str | None
+        access: 公開
+        default: None
+        description: '`converters[].run` を空白で繋いだもの。YAML を読めないときは `None`'
+      - name: file
+        title: ファイル
+        type: str | None
+        access: 公開
+        default: None
+        description: 読めなかったファイルのパス
+      - name: line
+        title: 行
+        type: int | None
+        access: 公開
+        default: None
+        description: 読めなかった行
+      - name: column
+        title: 列
+        type: int | None
+        access: 公開
+        default: None
+        description: 読めなかった列
+      - name: detail
+        title: 原因
+        type: str
+        access: 公開
+        default: '""'
+        description: 標準エラーの末尾か、YAML のパーサーの理由
+  - name: DocumentDetail
+    title: 文書の詳細
+    container: integrations/project_index/types.py
+    usecase: 文書の取得
+    role: DTO
+    summary: '`GET /sources/{source}/docs/{path}` の応答'
+    description: '`@dataclass(frozen=True, slots=True, kw_only=True)`。'
+    properties:
+      - name: document
+        title: 文書
+        type: IndexedDocument | None
+        access: 公開
+        description: '`body` を埋めた文書。YAML を読めないときは `None`'
+      - name: markdown
+        title: 変換した Markdown
+        type: str | None
+        access: 公開
+        default: None
+        description: '`converters[]` を指す行の文書でスクリプトが出した Markdown。それ以外は `None`（dev-docs がスキーマ駆動で変換する）'
+      - name: failure
+        title: 失敗
+        type: IndexFailure | None
+        access: 公開
+        default: None
+        description: '`converters[]` の失敗か YAML を読めないこと'
+  - name: SourceState
+    title: 配信元の状態
+    container: integrations/project_index/types.py
+    usecase: 状態の取得
+    role: DTO
+    summary: '`GET /sources`・`GET /settings/sources`・`PUT /settings/sources` が返す配信元 1 つの状態'
+    description: '`@dataclass(frozen=True, slots=True, kw_only=True)`。'
+    properties:
+      - name: id
+        title: 配信元の ID
+        type: str | None
+        access: 公開
+        description: '`pending_reload` で `id` を省いた行は `None`'
+      - name: status
+        title: 状態
+        type: Literal['serving', 'not_served', 'disabled', 'pending_reload']
+        access: 公開
+        description: '`pending_reload` は端末の設定の API だけが返す'
+      - name: errors
+        title: 外した理由
+        type: list[Violation]
+        access: 公開
+        default: '[]'
+        description: '`not_served` のときの `{path, reason}` を `Violation` にしたもの'
+      - name: config
+        title: 配信元の設定のパス
+        type: list[str]
+        access: 公開
+        default: '[]'
+        description: 端末の設定の行と突き合わせる
+      - name: config_version
+        title: 設定のバージョン
+        type: tuple[str, str] | None
+        access: 公開
+        default: None
+        description: 配信元の設定のバージョンと project-index が読めるバージョン。古いときだけ
+  - name: DecisionIndex
+    title: 検討事項の一覧
+    container: integrations/project_index/types.py
+    usecase: 文書の取得
+    role: DTO
+    summary: '`GET /sources/{source}/decisions` の応答'
+    description: '`@dataclass(frozen=True, slots=True, kw_only=True)`。'
+    properties:
+      - name: counts
+        title: 当たるフォルダの数
+        type: dict[str, int]
+        access: 公開
+        description: 検討事項の ID → `decisions.folders` のうちその ID の文書があるフォルダの数
+    methods:
+      - name: linkable
+        title: リンクにできる ID
+        kind: メソッド
+        summary: 当たるフォルダがちょうど 1 つの ID を返す（`property`）
+        scope: public
+        returns:
+          type: set[str]
+          description: '`counts` が 1 の ID'
+        process: 1. `counts` の値が 1 の ID の集合を返す
+  - name: SearchHits
+    title: 検索の結果
+    container: integrations/project_index/types.py
+    usecase: 画面の検索
+    role: DTO
+    summary: '`GET /sources/{source}/search` の応答'
+    description: '`@dataclass(frozen=True, slots=True, kw_only=True)`。`items` の要素は `{path, name, snippets}`。`path` は文書のファイルのパス'
+    properties:
+      - name: total_count
+        title: 総件数
+        type: int
+        access: 公開
+        description: 一致した文書の総件数
+      - name: items
+        title: 一致した文書
+        type: list[SearchHit]
+        access: 公開
+        description: '`SearchHit(path, name, record_index, snippets)` の並び'
+  - name: SearchHit
+    title: 検索に一致した文書
+    container: integrations/project_index/types.py
+    usecase: 画面の検索
+    role: DTO
+    summary: 検索の結果の 1 件
+    description: '`@dataclass(frozen=True, slots=True, kw_only=True)`。'
+    properties:
+      - name: id
+        title: 文書の ID
+        type: str
+        access: 公開
+        description: 管理用の YAML の行の文書の画面のパスに使う
+      - name: path
+        title: 文書のパス
+        type: str
+        access: 公開
+        description: 配信元の直下からのファイルのパス（拡張子つき）
+      - name: record_index
+        title: 要素の添字
+        type: int | None
+        access: 公開
+        default: None
+        description: 管理用の YAML の行の文書の要素の添字
+      - name: name
+        title: 文書の名前
+        type: str
+        access: 公開
+        description: 共通のキー `name`
+      - name: snippets
+        title: 一致した箇所
+        type: list[str]
+        access: 公開
+        description: 一致した行と前後の文字（文書ごとに 3 件まで）
+  - name: NamedRef
+    title: 名前のあるリビジョン
+    container: integrations/project_index/types.py
+    usecase: リビジョンの一覧
+    role: DTO
+    summary: ブランチかタグ 1 つ
+    description: '`@dataclass(frozen=True, slots=True, kw_only=True)`。'
+    properties:
+      - name: name
+        title: 名前
+        type: str
+        access: 公開
+        description: ブランチ名かタグ名
+      - name: commit
+        title: commit
+        type: str
+        access: 公開
+        description: 指す commit（短縮）
+  - name: CommitSummary
+    title: commit の要約
+    container: integrations/project_index/types.py
+    usecase: リビジョンの一覧
+    role: DTO
+    summary: 最近の commit 1 つ
+    description: '`@dataclass(frozen=True, slots=True, kw_only=True)`。'
+    properties:
+      - name: commit
+        title: commit
+        type: str
+        access: 公開
+        description: commit（短縮）
+      - name: date
+        title: 日時
+        type: datetime
+        access: 公開
+        description: commit の日時
+      - name: subject
+        title: 件名
+        type: str
+        access: 公開
+        description: commit のメッセージの 1 行目
+  - name: RefList
+    title: リビジョンの一覧
+    container: integrations/project_index/types.py
+    usecase: リビジョンの一覧
+    role: DTO
+    summary: '`GET /sources/{source}/refs` の応答'
+    description: '`@dataclass(frozen=True, slots=True, kw_only=True)`。キーは画面の API のリビジョンの一覧と同じ（`git`・`default_ref`・`branches[]`・`tags[]`・`commits[]`）。'
+    properties:
+      - name: git
+        title: Git の配信元か
+        type: bool
+        access: 公開
+        description: '`False` のときは他の並びが空'
+      - name: default_ref
+        title: 既定のリビジョン
+        type: str
+        access: 公開
+        description: 配信元の `default_ref`
+      - name: branches
+        title: ブランチ
+        type: list[NamedRef]
+        access: 公開
+        description: '`NamedRef(name, commit)`'
+      - name: tags
+        title: タグ
+        type: list[NamedRef]
+        access: 公開
+        description: '`NamedRef(name, commit)`'
+      - name: commits
+        title: 最近の commit
+        type: list[CommitSummary]
+        access: 公開
+        description: '`CommitSummary(commit, date, subject)`'
+  - name: SettingsSourcesView
+    title: 端末の設定の配信元の行
+    container: integrations/project_index/types.py
+    usecase: 端末の設定
+    role: DTO
+    summary: '`GET /settings/sources`・`PUT /settings/sources` の応答'
+    description: '`@dataclass(frozen=True, slots=True, kw_only=True)`。'
+    properties:
+      - name: settings_path
+        title: 端末の設定のパス
+        type: str
+        access: 公開
+        description: project-index の端末の設定のパス
+      - name: rows
+        title: 行
+        type: list[dict[str, Any]]
+        access: 公開
+        description: '端末の設定の `sources[]` の行（`outside_read` を含む全てのキー）。設定画面の行の型への読み替えは端末の設定の入口が行う'
+      - name: states
+        title: 状態
+        type: list[SourceState]
+        access: 公開
+        description: 行ごとの状態
+  - name: AddSourceResult
+    title: 配信元の行の追加の結果
+    container: integrations/project_index/types.py
+    usecase: 設定の移し替え
+    role: DTO
+    summary: '`POST /settings/sources` の結果'
+    description: '`@dataclass(frozen=True, slots=True, kw_only=True)`。'
+    properties:
+      - name: added
+        title: 追加したか
+        type: bool
+        access: 公開
+        description: 201 なら `True`、409 なら `False`
+      - name: same
+        title: 内容が同じか
+        type: bool
+        access: 公開
+        default: 'False'
+        description: 409 のとき、project-index にある同じ id の行と内容が同じか
+functions:
+  - name: parse_document
+    title: 索引の文書の読み取り
+    kind: 関数
+    container: integrations/project_index/types.py
+    usecase: 文書の取得
+    role: 変換
+    summary: project-index の文書の JSON を `IndexedDocument` にする
+    scope: public
+    thread_safe: true
+    args:
+      - name: source_id
+        title: 配信元の ID
+        type: str
+        required: true
+        passing: positional
+        description: 文書の配信元
+      - name: value
+        title: 文書の JSON
+        type: Mapping[str, Any]
+        required: true
+        passing: positional
+        description: 応答の 1 件
+    returns:
+      type: IndexedDocument
+      description: 読み取った文書
+    process: |-
+      1. `id`・`kind`・`path`・`version`・`data`・`metadata` を取り出し、無ければ `ProjectIndexResponseError`（`summary` に無いキー）を送る
+      2. `recordIndex`・`bodyPath`・`body` を取り出し、無ければ既定値にする
+      3. `created`・`updated` を ISO 8601 の日時として読み、無いか読めなければ `None` にする
+    exceptions:
+      - name: ProjectIndexResponseError
+        condition: 必須のキーが無い
+        message: '`project-index の応答に {key} がありません`'
+    unit_tests:
+      - name: test_parse_document
+        case: 正常
+        summary: 全てのキー
+        condition: '`recordIndex: 1`・`bodyPath: notes/a.md`・`updated: 2026-11-12T10:00:00+09:00` を持つ JSON'
+        mock: なし
+        expected: '`record_index` が 1、`body_path` が `notes/a.md`、`updated` がタイムゾーン付きの日時、`body` が空'
+      - name: test_parse_document_when_key_missing
+        case: 異常
+        summary: 必須のキーが無い
+        condition: '`version` の無い JSON'
+        mock: なし
+        expected: '`ProjectIndexResponseError` で、`summary` に `version`'
+        exception: 必須のキーが無い

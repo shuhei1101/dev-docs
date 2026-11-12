@@ -9,8 +9,8 @@ diagrams:
         変換 ..> 変換の結果 : 返す
         変換の結果 o-- 変換の失敗
         class 変換 {
-          +変換する(読み書きの場所, 文書) 変換の結果
-          +控えを捨てる() None
+          +描画する(配信元, 文書の詳細, 文書) str
+          +仕上げる(Markdown, 種類, 埋め込む値) 変換の結果
         }
         class 変換の結果 {
           +Markdown: str
@@ -358,7 +358,7 @@ data_models:
         type: frozenset[str]
         access: 公開
         default: 空
-        description: 検討事項の文書を探す（`find_decisions`）が返した検討事項の ID。`decisions` の値のうち、この ID だけを検討事項の文書へのリンクにする
+        description: project-index の検討事項の一覧の `linkable`（ちょうど 1 つのフォルダに文書がある ID）。`decisions` の値のうち、この ID だけを検討事項の文書へのリンクにする
 enums:
   - name: Shape
     title: 節の形

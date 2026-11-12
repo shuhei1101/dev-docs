@@ -18,8 +18,8 @@ diagrams:
         表の組み立て ..> 参照のリンク
         埋め込みの展開 ..> 表の組み立て
         class 変換 {
-          +変換する(読み書きの場所, 文書) 変換の結果
-          +控えを捨てる() None
+          +描画する(配信元, 文書の詳細, 文書) str
+          +仕上げる(Markdown, 種類, 埋め込む値) 変換の結果
         }
         class スキーマ駆動の変換 {
           <<function>>
@@ -135,7 +135,7 @@ functions:
     args:
       - name: document
         title: 文書
-        type: Document
+        type: IndexedDocument
         required: true
         passing: positional
         description: YAML の文書（`records` の行は要素）

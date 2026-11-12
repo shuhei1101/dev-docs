@@ -159,37 +159,19 @@ items:
 - page: MOD-155-46.ts.yaml
   summary: 配信元のダイアログのフォームの状態と保存
 - page: MOD-155-80.py.yaml
-  summary: サーバーの起動と、`/clear`・圧縮のときの返し済みの記録の削除の依頼
-- page: MOD-155-79.py.yaml
-  summary: 文書の MCP のツールの入力への `cwd`・`session_id`・`agent_id` の上書き
-- page: MOD-155-191.yaml
-  summary: '`validators[]`・`converters[]`・`generators[]` の制限時間つきの実行'
-- page: MOD-155-172.py.yaml
-  summary: mdmark の CLI の `check --text -` による Markdown の点検と、出力の解釈
-- page: MOD-155-173.py.yaml
-  summary: '`validators[]`・`converters[]`・`generators[]` のスクリプトの制限時間つきの実行と、実行できるかの確かめ'
-- page: MOD-155-143.py.yaml
-  summary: '`POST /_admin/session-start` のルーター'
-- page: MOD-155-144.py.yaml
-  summary: 返し済みの記録の削除
-- page: MOD-155-145.py.yaml
-  summary: 要求・応答のモデルと記録を削除する理由
-- page: MOD-155-122.py.yaml
-  summary: 標準入出力と終了コード
-- page: MOD-155-123.py.yaml
-  summary: 変数の表・テンプレート・例の組の Markdown の組み立て
+  summary: サーバーが落ちていれば起動する
+- page: MOD-155-213.yaml
+  summary: project-index の読み取り API と端末の設定の API の呼び出し
+- page: MOD-155-215.py.yaml
+  summary: project-index の読み取り API と端末の設定の API を制限時間つきで呼び、応答を型にする
+- page: MOD-155-214.py.yaml
+  summary: project-index の読み取り API と端末の設定の API の応答の型
 - page: MOD-155-124.py.yaml
   summary: Jinja2 での部品の描画と変数の値の区切り
 - page: MOD-155-125.py.yaml
   summary: 起動のときのプロンプトの YAML の読み込み・検査と、注入する文の描画
 - page: MOD-155-126.py.yaml
   summary: プロンプトの YAML のモデル・描画の結果・例外
-- page: MOD-155-192.yaml
-  summary: 会話キーごとの返し済み・前回読んだ内容・閲覧と編集の記録
-- page: MOD-155-141.py.yaml
-  summary: 会話キーごとの返し済み・前回読んだ内容・閲覧と編集の SQLite への記録と読み出し
-- page: MOD-155-142.py.yaml
-  summary: 会話の記録の会話キー・前回読んだ内容・閲覧と編集の記録の型
 - page: MOD-155-193.yaml
   summary: '`dev-docs` コマンドの引数の組み立てと main'
 - page: MOD-155-81.py.yaml
@@ -197,7 +179,7 @@ items:
 - page: MOD-155-82.py.yaml
   summary: '`dev-docs` コマンドの引数の組み立てと main'
 - page: MOD-155-194.yaml
-  summary: 例外の階層・YAML の読み書き・ハッシュ・パスの照合・オリジンの確認
+  summary: 例外の階層・YAML の読み書き・ハッシュ・パスの正規化・オリジンの確認
 - page: MOD-155-183.py.yaml
   summary: 画面の API の DTO の基底（キーは camelCase）
 - page: MOD-155-184.py.yaml
@@ -209,7 +191,7 @@ items:
 - page: MOD-155-181.py.yaml
   summary: 画面と同じオリジンからの要求かの確認
 - page: MOD-155-187.py.yaml
-  summary: 作業場所の glob の照合とパスの正規化
+  summary: パスの正規化
 - page: MOD-155-188.py.yaml
   summary: JSON Schema の違反を項目のパスつきの `Violation` にする
 - page: MOD-155-189.py.yaml
@@ -223,13 +205,13 @@ items:
 - page: MOD-155-118.py.yaml
   summary: '`git pull --ff-only`・`uv sync` によるクローンの更新'
 - page: MOD-155-195.yaml
-  summary: スキーマ駆動か `converters[]` による文書の Markdown への変換
+  summary: スキーマ駆動の変換と、project-index の `converters[]` の結果の Markdown
 - page: MOD-155-92.py.yaml
-  summary: '`decisions.folders` からの、設計書の `decisions` の検討事項の文書の検索'
+  summary: 設計書の `decisions` の検討事項の ID と、検討事項の文書のパスの読み取り
 - page: MOD-155-93.py.yaml
   summary: '`x-diagram` の値と手で書く Mermaid の、mdmark の図の部品か Mermaid への描画'
 - page: MOD-155-94.py.yaml
-  summary: 埋め込みのマーカーの表への展開
+  summary: 埋め込みのマーカーのパスの取り出しと、表への展開
 - page: MOD-155-95.py.yaml
   summary: フロー図の中間データの、mdmark のフロー図の部品の定義への配置
 - page: MOD-155-96.py.yaml
@@ -239,188 +221,82 @@ items:
 - page: MOD-155-98.py.yaml
   summary: 手で書く Mermaid の `flowchart`・`sequenceDiagram` の読み取り
 - page: MOD-155-99.py.yaml
-  summary: 変換の選択・`converters[]` の実行・結果の控え
+  summary: 変換の選択と、表のキーの取り出し
 - page: MOD-155-100.py.yaml
   summary: 変換の結果・失敗・表し方・図の種類・図の中間データ・描画の文脈の型
 - page: MOD-155-196.yaml
-  summary: '`list_changes` の区間か前回読んだ時点からの変わった文書と差分'
+  summary: 文書の取得の差分が使う変わったキーの比べ方
 - page: MOD-155-88.py.yaml
-  summary: 変わったキー・差分の行・語の出現数の比べ方
-- page: MOD-155-89.py.yaml
-  summary: '`list_changes` の結果の Markdown'
-- page: MOD-155-90.py.yaml
-  summary: '`list_changes` の区間か前回読んだ時点からの変わった文書と差分'
-- page: MOD-155-91.py.yaml
-  summary: '`list_changes` の要求と結果の型'
-- page: MOD-155-197.yaml
-  summary: git によるリビジョンの解決・一覧・変わったファイル・ファイルの日時
-- page: MOD-155-171.py.yaml
-  summary: git の実行と、リポジトリの直下の解決
-- page: MOD-155-113.py.yaml
-  summary: git によるリビジョンの解決・一覧・変わったファイル・ファイルの日時・ワークツリーの一覧
-- page: MOD-155-114.py.yaml
-  summary: リビジョンの書き出し
-- page: MOD-155-115.py.yaml
-  summary: リビジョン・変わったファイル・ファイルの日時・commit・ワークツリーの型
-- page: MOD-155-198.yaml
-  summary: 文書の MCP と管理の MCP の組み立てと、ツールの結果・エラーの変換
-- page: MOD-155-178.py.yaml
-  summary: 管理の MCP の組み立て（ツールの登録）
-- page: MOD-155-179.py.yaml
-  summary: 文書の MCP の組み立て（ツールの登録）
-- page: MOD-155-180.py.yaml
-  summary: ツールの結果・エラーの変換と、2 つの MCP のツール名とプロンプトの ID
+  summary: 変わったキーの比べ方
 - page: MOD-155-199.yaml
-  summary: 文書のファイルの収集と、メタデータ・バージョン・日時を付けた文書
+  summary: project-index が返した文書の項目の値とエイリアス
 - page: MOD-155-106.py.yaml
-  summary: エイリアスのキーの検証と、用語の収集・照合
+  summary: エイリアスのキーの検証と、エイリアスの集め
 - page: MOD-155-107.py.yaml
-  summary: 項目のパスの解釈と、項目の値の取得・設定・削除・メタデータの解決
-- page: MOD-155-108.py.yaml
-  summary: たどるフォルダと、載せるファイルの判定
-- page: MOD-155-109.py.yaml
-  summary: ファイルの収集と、ファイルからの文書の作成
-- page: MOD-155-110.py.yaml
-  summary: 種類のスキーマの `$ref` の解決と、`records` の行のスキーマ
-- page: MOD-155-111.py.yaml
-  summary: 文書のキャッシュ・ID の引き当て・種類のスキーマ・文書の場所と、メタデータのずれの確かめ
+  summary: 項目のパスの分解と、項目の値の取得
 - page: MOD-155-112.py.yaml
-  summary: 文書・読み込みの誤りと結果・同期のずれ・エイリアスの型
-- page: MOD-155-200.yaml
-  summary: '`write_docs`・`delete_docs` の操作の適用・検査・書き換え'
-- page: MOD-155-165.py.yaml
-  summary: 項目の操作の適用と、共通のキーの列名への読み替え
-- page: MOD-155-210.py.yaml
-  summary: 違反へのスキーマの説明の添付
-- page: MOD-155-166.py.yaml
-  summary: '`ids.format` からの ID の生成'
-- page: MOD-155-167.py.yaml
-  summary: 配信元ごとの書き込みの排他
-- page: MOD-155-168.py.yaml
-  summary: 新しい文書の置き場所
-- page: MOD-155-169.py.yaml
-  summary: '`write_docs`・`delete_docs` の操作の適用・検査・書き換えと、バージョンの確かめ'
-- page: MOD-155-170.py.yaml
-  summary: '`write_docs`・`delete_docs` の要求と結果の型'
-- page: MOD-155-201.yaml
-  summary: スキーマ・ID の形・関連の種類・`validators[]` による文書の検査
-- page: MOD-155-154.py.yaml
-  summary: 変えた Markdown の値の mdmark による点検
-- page: MOD-155-155.py.yaml
-  summary: スキーマ・ID の形・関連の種類の検査
-- page: MOD-155-156.py.yaml
-  summary: '`validators[]` の出力の解釈'
-- page: MOD-155-157.py.yaml
-  summary: 検査をまとめて通す処理と、読み取りの結果のキャッシュ
-- page: MOD-155-202.yaml
-  summary: '`search_docs` の条件の木・並べ替え・集計・量の上限'
-- page: MOD-155-132.py.yaml
-  summary: 本文の切り出し
-- page: MOD-155-133.py.yaml
-  summary: 続きのカーソルの作成と解読
-- page: MOD-155-134.py.yaml
-  summary: 項目の値・計算項目・使える項目・見出しの行
-- page: MOD-155-135.py.yaml
-  summary: 条件の木の確かめと照合・語の照合・正規表現・比べる値の解釈
-- page: MOD-155-136.py.yaml
-  summary: '`search_docs` の結果の Markdown'
-- page: MOD-155-137.py.yaml
-  summary: '`search_docs` の条件の木・並べ替え・集計・量の上限'
-- page: MOD-155-138.py.yaml
-  summary: 行の分割・抜粋の検索・当たった行の数・一致した箇所の抜き出し
-- page: MOD-155-139.py.yaml
-  summary: 用語の一覧と、その Markdown
-- page: MOD-155-140.py.yaml
-  summary: '`search_docs`・用語の一覧の要求と結果の型'
-- page: MOD-155-203.yaml
-  summary: 作業場所からの権限と、MCP の引数からの読み書きする場所の解決
-- page: MOD-155-83.py.yaml
-  summary: 作業場所からの権限と、MCP の引数からの読み書きする場所の解決
-- page: MOD-155-84.py.yaml
-  summary: 配信元の権限・作業場所・読み書きする場所・権限のレベルの型
+  summary: エイリアスの型
 - page: MOD-155-204.yaml
-  summary: 文書の取得・画面の検索・リビジョンの一覧・表の列の設定の API
+  summary: 文書の取得・画面の検索・リビジョンの一覧・表の列の設定の API（project-index から取得）
 - page: MOD-155-158.py.yaml
   summary: 表の列の設定の読み書き
 - page: MOD-155-159.py.yaml
   summary: 画面の文書の取得と、見つからない項目
 - page: MOD-155-160.py.yaml
-  summary: 画面のナビゲーションの組み立てと、変わったページ・自動の件数・絞り込みの確かめ・警告
+  summary: 画面のナビゲーションの組み立てと、変わったページ
 - page: MOD-155-161.py.yaml
-  summary: 画面のページのパスと、文書の場所の解決
+  summary: 画面のページのパスと、文書のページの特定
 - page: MOD-155-162.py.yaml
   summary: 画面の API のルーター（`/_api/sources/{source}/docs`・`search`・`refs`・`columns`）
 - page: MOD-155-163.py.yaml
-  summary: 画面の検索
+  summary: 画面の検索（project-index の検索の結果を画面の形にする）
 - page: MOD-155-164.py.yaml
   summary: 画面の API の要求と結果の型
 - page: MOD-155-205.yaml
-  summary: 端末の設定の検証と読み込み、`sources[]` の取得と保存
+  summary: 端末の設定の検証と読み込み、`sources[]` の取得と保存の依頼
 - page: MOD-155-146.py.yaml
   summary: 端末の設定の場所・読み込みと検証・待ち受けのポート
 - page: MOD-155-147.py.yaml
   summary: 端末の設定のルーター（`GET`・`PUT /_api/settings/sources`）
 - page: MOD-155-148.py.yaml
-  summary: '`sources[]` の保存'
+  summary: '`sources[]` の保存の依頼'
 - page: MOD-155-149.py.yaml
   summary: 端末の設定と、画面の `sources[]` の要求と結果の型
 - page: MOD-155-85.py.yaml
-  summary: 状態・読み直し・検査の Markdown
+  summary: '管理の MCP の `status` の `format: markdown` の応答の文を組み立てる。値は service.py の結果をそのまま使い、計算しない'
 - page: MOD-155-86.py.yaml
-  summary: 状態の取得・設定の読み直し・配信元の検査・試しの変換
+  summary: 管理の MCP の `status` の中身。端末の設定を読み、配信元の状態は project-index から取る
+- page: MOD-155-198.yaml
+  summary: 管理の MCP の組み立てと、ツールの結果・エラーの変換
+- page: MOD-155-178.py.yaml
+  summary: 管理の MCP の組み立て（ツールの登録）
+- page: MOD-155-180.py.yaml
+  summary: ツールの結果・エラーの変換と、管理の MCP のツール名とプロンプトの ID
 - page: MOD-155-87.py.yaml
-  summary: 管理の MCP の要求と結果の型
+  summary: 管理の MCP の `status` の要求と結果の型
+- page: MOD-155-202.yaml
+  summary: '`nav` の `auto` の `filter` の条件の確かめと照合'
+- page: MOD-155-134.py.yaml
+  summary: 項目の値・計算項目・使える項目・見出しの行
+- page: MOD-155-135.py.yaml
+  summary: 条件の木の確かめと照合・正規表現・比べる値の解釈（`nav` の `auto` の `filter`）
+- page: MOD-155-140.py.yaml
+  summary: '`nav` の `auto` の `filter` の条件の木と、見出しの型'
 - page: MOD-155-119.py.yaml
-  summary: 対象の決定・当てる手順・バックアップを取った適用
+  summary: 対象の決定・当てる手順・バックアップを取った適用と、`sources` の project-index への書き出し
 - page: MOD-155-120.py.yaml
   summary: 手順の読み込みと適用
 - page: MOD-155-121.py.yaml
   summary: 手順・対象・例外・終了コード
-- page: MOD-155-206.yaml
-  summary: '`describe` の使える配信元・説明書と種類・種類のスキーマ'
-- page: MOD-155-101.py.yaml
-  summary: '`describe` の結果の Markdown'
-- page: MOD-155-102.py.yaml
-  summary: '`describe` の使える配信元・説明書と種類・種類のスキーマ'
-- page: MOD-155-103.py.yaml
-  summary: 配信元ごとの検査の結果
-- page: MOD-155-104.py.yaml
-  summary: '`describe` の要求と結果の型'
-- page: MOD-155-105.py.yaml
-  summary: 引数なしの `describe` に添える警告
 - page: MOD-155-207.yaml
-  summary: '`dev-docs serve`・`dev-docs migrate` の部品の配線と、画面の API・文書の MCP・管理の MCP・セッションの開始を 1 つにまとめたアプリ'
+  summary: '`dev-docs serve`・`dev-docs migrate` の部品の配線と、画面の API・管理の MCP を 1 つにまとめたアプリ'
 - page: MOD-155-175.py.yaml
   summary: ルートと MCP のマウントをまとめたアプリの組み立て
 - page: MOD-155-176.py.yaml
   summary: 例外の problem+json への変換
 - page: MOD-155-177.py.yaml
-  summary: MCP のセッションの管理と、記録の削除
+  summary: マウントした管理の MCP のセッションの管理と、project-indexの呼び出しを閉じるアプリの寿命
 - page: MOD-155-174.py.yaml
-  summary: '`dev-docs serve`・`dev-docs migrate` の部品の配線と、配信元の読み直し'
+  summary: '`dev-docs serve`・`dev-docs migrate` の部品の配線と、起動のときの配信元の知らせ'
 - page: MOD-155-182.py.yaml
   summary: 画面のビルドの配信
-- page: MOD-155-208.yaml
-  summary: 配信元の設定のマージと検証、配信する配信元の一覧
-- page: MOD-155-150.py.yaml
-  summary: 設定の YAML のマージ
-- page: MOD-155-151.py.yaml
-  summary: 配信する配信元の一覧と読み直し
-- page: MOD-155-211.py.yaml
-  summary: ほかの配信元のリビジョンのスキーマの参照と読み取り
-- page: MOD-155-152.py.yaml
-  summary: 配信元の設定の読み込みと検証、スクリプトとバージョンの確かめ
-- page: MOD-155-153.py.yaml
-  summary: 配信元の設定・文書の行・スクリプト・配信中の配信元・状態の型
-- page: MOD-155-209.yaml
-  summary: '`trace_related` の関連のたどりと関連の候補'
-- page: MOD-155-127.py.yaml
-  summary: 関連の取り出しとたどり
-- page: MOD-155-128.py.yaml
-  summary: '`trace_related` の結果の Markdown'
-- page: MOD-155-129.py.yaml
-  summary: '`trace_related` の関連のたどりと関連の候補'
-- page: MOD-155-130.py.yaml
-  summary: 関連の候補の提案
-- page: MOD-155-131.py.yaml
-  summary: '`trace_related` の要求と結果の型'

@@ -8,16 +8,18 @@ diagrams:
     diagram: |-
       classDiagram
         direction TD
-        開発ドキュメントサーバーのエラー <|-- 読めない配信元
-        開発ドキュメントサーバーのエラー <|-- 書き込めない配信元
         開発ドキュメントサーバーのエラー <|-- 配信していない配信元
         開発ドキュメントサーバーのエラー <|-- 引数の誤り
-        開発ドキュメントサーバーのエラー <|-- 検査の不合格
-        開発ドキュメントサーバーのエラー <|-- バージョンの不一致
+        開発ドキュメントサーバーのエラー <|-- project-indexにつながらない
+        開発ドキュメントサーバーのエラー <|-- project-indexが受け付けない
         class 開発ドキュメントサーバーのエラー {
           +エラーの名前: str
           +本文: str
           +次の手: list
+        }
+        class project-indexにつながらない {
+          +接続先: str
+          +理由: str
         }
 data_models:
   - name: Violation
@@ -68,36 +70,26 @@ classes:
     kind: クラス
     inherits: Exception
     description: |-
-      文書の MCP はこの例外を `isError: true` の本文に、画面の API は RFC 9457 の problem+json に変換する（文書の MCP の『ツールのエラーの変換』・起動の『例外の変換の登録』）。
+      管理の MCP はこの例外を `isError: true` の本文に、画面の API は RFC 9457 の problem+json に変換する（管理の MCP の『ツールのエラーの変換』・起動の『例外の変換の登録』）。
       下の表の子クラスはどれもこの基底を継承し、プロパティを足さない限り `name` と `message` だけを持つ。
 
       | 子クラス | 論理名 | 追加のプロパティ | HTTP |
       | --- | --- | --- | --- |
       | `UnknownSourceError` | 無い配信元 | `source_id` | 404 |
-      | `SourceNotReadableError` | 読めない配信元 | `available: list[SourceAccess]` | 403 |
-      | `SourceNotWritableError` | 書き込めない配信元 | `available: list[SourceAccess]` | 403 |
       | `SourceNotServedError` | 配信していない配信元 | `violations: list[Violation]`・`disabled: bool` | 404 |
-      | `WorktreeNotMatchedError` | ワークツリーに当たらない | `given: str`・`patterns: list[str]` | 400 |
-      | `TargetIsCloneError` | 書く先がクローン本体 | `clone: str` | 409 |
       | `InvalidArgumentError` | 引数の誤り | `violations: list[Violation]` | 400 |
-      | `NavInvalidError` | 画面の構成の違反 | `violations: list[Violation]` | 400 |
       | `RefNotFoundError` | 無いリビジョン | `argument: str`・`value: str` | 404 |
-      | `UnknownKindError` | 知らない種類 | `kinds: list[str]` | 400 |
       | `DocumentNotFoundError` | 無い文書 | `missing: list[str]`・`candidates: dict[str, list[str]]` | 404 |
-      | `ValidationFailedError` | 検査の不合格 | `violations: list[Violation]` | 422 |
-      | `VersionMismatchError` | バージョンの不一致 | `doc_id: str`・`current: str`・`diff: str` | 409 |
-      | `DocumentReferencedError` | 参照されている | `doc_id: str`・`referrers: list[str]` | 409 |
-      | `DeleteNotAllowedError` | 削除を許していない種類 | `kind: str` | 403 |
-      | `LastReadNotFoundError` | 前回読んだ記録が無い | - | 400 |
       | `CrossOriginError` | 別のオリジンからの要求 | - | 403 |
-      | `ConfigNotFoundError` | 配信元の設定が無い | `path: str` | 404 |
-      | `ConfigParseError` | 配信元の設定が読めない | `line: int \| None`・`column: int \| None` | 400 |
-      | `ConvertScriptError` | 変換スクリプトの失敗 | `script: str` | 422 |
       | `RestartInProgressError` | 再起動か更新の途中 | - | 409 |
       | `UpdateFailedError` | 更新のコマンドの失敗 | `command: list[str]`・`stderr: str` | 500 |
       | `ScreenBuildMissingError` | 画面のビルドが無い | - | 503 |
+      | `ProjectIndexUnreachableError` | project-index につながらない | `address: str`・`reason: str` | 503 |
+      | `ProjectIndexRejectedError` | project-index が受け付けない | `violations: list[Violation]` | 422 |
+      | `ProjectIndexResponseError` | project-index の想定しない応答 | `status_code: int`・`summary: str` | 502 |
 
-      `SourceAccess` は権限と作業場所の『使える配信元』。
+      `ProjectIndexUnreachableError` の `message` は `project-index（{address}）に接続できませんでした。{reason}`、`next_steps` は `project-index を起動してから、再読み込みしてください。`。
+      読み書きの権限・書き込み・検査・配信元の設定の読み込みのエラーは、それを送る処理ごと project-index へ移した。
     properties:
       - name: name
         title: エラーの名前
@@ -114,7 +106,7 @@ classes:
         type: list[str]
         access: 公開
         default: '[]'
-        description: 呼び出し側が次にできること（`describe()` で使える配信元を見る・`worktree` を渡す など）
+        description: 呼び出し側が次にできること（project-index を起動する・`dev-docs migrate` を実行する など）
       - name: status
         title: HTTP のステータス
         type: int
@@ -128,10 +120,10 @@ classes:
         scope: public
         returns:
           type: dict[str, Any]
-          description: 追加のプロパティ名 → 値。`Violation` と `SourceAccess` は辞書にする
+          description: 追加のプロパティ名 → 値。`Violation` は辞書にする
         process: |-
           1. `dataclasses.fields` で子クラスの追加のプロパティを並べ、名前 → 値の辞書にして返す
-          2. 値が `Violation`・`SourceAccess` のときは `dataclasses.asdict` で辞書にする
+          2. 値が `Violation` のときは `dataclasses.asdict` で辞書にする
         unit_tests:
           - name: test_dev_docs_error_details
             case: 正常
@@ -142,6 +134,12 @@ classes:
           - name: test_dev_docs_error_details_when_no_extra
             case: 正常
             summary: 追加のプロパティが無い
-            condition: '`LastReadNotFoundError(message="…")`'
+            condition: '`CrossOriginError(message="…")`'
             mock: なし
             expected: '`{}`'
+          - name: test_project_index_unreachable_error
+            case: 正常
+            summary: つながらないときの本文と詳細
+            condition: '`ProjectIndexUnreachableError(address="http://127.0.0.1:8786", reason="接続を拒否されました（Connection refused）")`'
+            mock: なし
+            expected: '`message` が `project-index（http://127.0.0.1:8786）に接続できませんでした。接続を拒否されました（Connection refused）`、`details()` が `{"address": …, "reason": …}`、`status` が 503'

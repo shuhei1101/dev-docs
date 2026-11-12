@@ -1,0 +1,39 @@
+id: LIB-155-32
+title: "httpx"
+kind: "ライブラリ"
+version:
+  current: 0.28.1
+  latest: 0.28.1
+  checked_on: '2026-11-12'
+  source: pyproject.toml・uv.lock
+  pinning: pyproject.toml に下限、uv.lock で固定
+catalogs:
+  - name: API
+    version: 0.28.1
+    entries:
+      - name: AsyncClient
+        kind: クラス
+        purpose: project-index の読み取り API と端末の設定の API を `base_url` と制限時間つきで呼ぶ（project-indexの呼び出し）
+      - name: Timeout
+        kind: クラス
+        purpose: 1 回の要求の上限（`PROJECT_INDEX_TIMEOUT_SEC`）
+      - name: ConnectError・TimeoutException・TransportError
+        kind: 例外
+        purpose: 接続を断られた・制限時間を超えたことを、project-index につながらない（503）に変える
+      - name: MockTransport
+        kind: クラス
+        purpose: 単体テストで project-index の応答を返す
+lead: Python の HTTP クライアント。同期と非同期のクライアントを持つ。
+purl: pkg:pypi/httpx
+dependency_scope: 必須
+adoption: 採用
+upstream: encode/httpx
+license: BSD-3-Clause
+official_url: https://www.python-httpx.org/
+docs_url: https://www.python-httpx.org/async/
+verification:
+  state: 未確認
+  detail: project-index の読み取り API の呼び出しでの動作は実装で確かめる。今は開発の依存（FastAPI の `TestClient`・結合テスト）として 0.28.1 を使っている
+selection:
+  candidates: 標準ライブラリの `urllib.request` と比べた。
+  decision: 開発の依存として既に使っていて追加の取り込みが無く、`AsyncClient` で FastAPI のイベントループを止めずに待て、`MockTransport` で単体テストの応答を差し替えられるため。`urllib.request` は同期だけで、待つ間 `asyncio.to_thread` が要る。

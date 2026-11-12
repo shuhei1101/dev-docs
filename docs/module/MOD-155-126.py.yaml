@@ -1,11 +1,11 @@
 id: MOD-155-126
-title: 開発ドキュメントサーバー / プロンプトの文書の変換 / types.py
-lead: '`dev-docs prompt-doc` が読むプロンプトの YAML のモデルと、描画の結果・例外の型。モデルは変換に使うキーだけを持ち、他のキーは読み捨てる。サーバーが起動のときに読むプロンプトの違反の型も持つ。'
+title: 開発ドキュメントサーバー / プロンプト / types.py
+lead: 'サーバーが起動のときに読むプロンプトの YAML のモデルと、描画の結果・プロンプトの違反の型。モデルは描画に使うキーだけを持ち、他のキーは読み捨てる。'
 data_models:
   - name: PromptVar
     title: 変数の定義
     container: features/prompt_doc/types.py
-    usecase: プロンプトの文書の変換
+    usecase: プロンプトの描画
     role: DTO
     summary: '`vars` の 1 件（入れ子の `items`・`properties` を含む）'
     description: 'Pydantic の `BaseModel`（`extra="ignore"`）。`example` が無いことと `example: null` を分けるため、`model_fields_set` で有無を見る。'
@@ -48,7 +48,7 @@ data_models:
   - name: PromptText
     title: 部品の本文
     container: features/prompt_doc/types.py
-    usecase: プロンプトの文書の変換
+    usecase: プロンプトの描画
     role: DTO
     summary: 部品の 1 言語の本文
     description: Pydantic の `BaseModel`（`extra="ignore"`）。
@@ -64,7 +64,7 @@ data_models:
   - name: PromptPart
     title: 部品
     container: features/prompt_doc/types.py
-    usecase: プロンプトの文書の変換
+    usecase: プロンプトの描画
     role: DTO
     summary: '`parts` の 1 件'
     description: Pydantic の `BaseModel`（`extra="ignore"`）。
@@ -95,7 +95,7 @@ data_models:
   - name: PromptExample
     title: 例の組
     container: features/prompt_doc/types.py
-    usecase: プロンプトの文書の変換
+    usecase: プロンプトの描画
     role: DTO
     summary: '`examples` の 1 件'
     description: Pydantic の `BaseModel`（`extra="ignore"`）。
@@ -112,7 +112,7 @@ data_models:
   - name: PromptDoc
     title: プロンプト
     container: features/prompt_doc/types.py
-    usecase: プロンプトの文書の変換
+    usecase: プロンプトの描画
     role: DTO
     summary: プロンプトの YAML 1 件のうち変換に使うキー
     description: Pydantic の `BaseModel`（`extra="ignore"`）。キーは knowledge の `schemas/prompt.schema.yaml` に合わせる。
@@ -161,7 +161,7 @@ data_models:
   - name: RenderedMessage
     title: 描画したメッセージ
     container: features/prompt_doc/types.py
-    usecase: プロンプトの文書の変換
+    usecase: プロンプトの描画
     role: DTO
     summary: 例の組を 1 言語で描画した本文 1 件
     description: '`dataclass(frozen=True, slots=True, kw_only=True)`。'
@@ -181,7 +181,7 @@ data_models:
   - name: RenderedExample
     title: 描画した例の組
     container: features/prompt_doc/types.py
-    usecase: プロンプトの文書の変換
+    usecase: プロンプトの描画
     role: DTO
     summary: 例の組を 1 言語で描画した結果
     description: '`dataclass(frozen=True, slots=True, kw_only=True)`。`problems` があるときは `messages` が空。'
@@ -205,7 +205,7 @@ data_models:
   - name: PartSyntaxError
     title: 部品の構文の誤り
     container: features/prompt_doc/types.py
-    usecase: プロンプトの文書の変換
+    usecase: プロンプトの描画
     role: DTO
     summary: テンプレートにできなかった部品の本文か `when` 1 件
     description: '`dataclass(frozen=True, slots=True, kw_only=True)`。'
@@ -247,31 +247,6 @@ data_models:
         type: str
         description: 違反の理由
 classes:
-  - name: PromptDocError
-    title: プロンプトの文書の変換の失敗
-    container: features/prompt_doc/types.py
-    usecase: プロンプトの文書の変換
-    role: 例外
-    summary: '`dev-docs prompt-doc` が終了コード 1 で終える例外の基底'
-    description: '`Exception` を継承する。メッセージは標準エラーにそのまま出す。'
-    inherits: Exception
-    kind: クラス
-  - name: PromptYamlError
-    title: 読めない YAML
-    container: features/prompt_doc/types.py
-    usecase: プロンプトの文書の変換
-    role: 例外
-    summary: 標準入力が YAML として読めない
-    inherits: PromptDocError
-    kind: クラス
-  - name: InvalidPrompt
-    title: 変換に使うキーの誤り
-    container: features/prompt_doc/types.py
-    usecase: プロンプトの文書の変換
-    role: 例外
-    summary: 変換に使うキーが無いか型が違う
-    inherits: PromptDocError
-    kind: クラス
   - name: PromptInvalidError
     title: プロンプトの YAML の違反
     container: features/prompt_doc/types.py

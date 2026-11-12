@@ -1,16 +1,16 @@
 id: MOD-155-207
 title: 開発ドキュメントサーバー / 起動
 lead: |-
-  `dev-docs serve` と `dev-docs migrate` の処理。端末の設定と配信元を読み、部品を配線して、画面の API・文書の MCP・管理の MCP・セッションの開始を 1 つのアプリとして待ち受ける。
+  `dev-docs serve` と `dev-docs migrate` の処理。端末の設定を読み、部品を配線して、画面の API・管理の MCP・画面の配信を 1 つのアプリとして待ち受ける。配信元の文書は project-index に要求ごとに問い合わせ、dev-docs は配信元を読まない。
   再起動を要求されて止まったときは、同じプロセスを `serve` で置き換える。
   例外から problem+json への変換もここで登録する。
 directory: |-
   ```text
   src/dev_docs/
-  ├─ main.py                    # Handlers / build_handlers / reload_sources / discard_source_caches / run_serve / run_migrate / PortInUseError
+  ├─ main.py                    # Handlers / build_handlers / announce_sources / run_serve / run_migrate / PortInUseError
   └─ server/
-     ├─ app.py                  # build_app / route_operation_id / SlashlessMcpPathMiddleware（ルートと MCP のマウント）
-     ├─ lifespan.py             # build_lifespan（MCP のセッションの管理と記録の削除）
+     ├─ app.py                  # build_app / route_operation_id / SlashlessMcpPathMiddleware（ルートと管理の MCP のマウント）
+     ├─ lifespan.py             # build_lifespan（MCP のセッションの管理と project-index の呼び出しの後始末）
      ├─ error_handlers.py       # register_error_handlers（problem+json）
      └─ screen.py               # build_screen_router / SCREEN_DIST_DIR（画面のビルドの配信）
   ```
@@ -24,18 +24,14 @@ diagrams:
         待ち受けの開始 ..> 部品の配線
         待ち受けの開始 ..> アプリの組み立て
         待ち受けの開始 ..> 再起動の制御 : 取り付ける
-        部品の配線 ..> 配信元の一覧 : 読み直す
+        待ち受けの開始 ..> 配信元の知らせ : 待ち受けの後
+        部品の配線 ..> project-indexの呼び出し : 作る
+        配信元の知らせ ..> project-indexの呼び出し
         部品の配線 ..> 再起動の制御 : 作る
         部品の配線 ..> 配線済みの関数 : 作る
-        部品の配線 ..> 配信元の読み直し : 束ねる
-        配信元の読み直し ..> 配信元の一覧 : 読み直す
-        配信元の読み直し ..> 配信元の控えの破棄
-        配信元の一覧 ..> 配信元の控えの破棄 : 組み立て直した後に呼ぶ
-        アプリの組み立て ..> 文書の MCP の組み立て
         アプリの組み立て ..> 管理の MCP の組み立て
         アプリの組み立て ..> 端末の設定の入口
         アプリの組み立て ..> 画面の入口
-        アプリの組み立て ..> セッションの開始のルーター
         アプリの組み立て ..> 例外の変換の登録
         アプリの組み立て ..> 画面の配信
         アプリの組み立て ..> 操作の識別子
@@ -59,14 +55,11 @@ diagrams:
         class MCPのパスの補い {
           +__call__(scope, receive, send) None
         }
-        class 配信元の読み直し {
+        class 配信元の知らせ {
           <<function>>
         }
-        class 配信元の控えの破棄 {
-          <<function>>
-        }
-        class 配信元の一覧 {
-          +読み直す(端末の設定) list
+        class project-indexの呼び出し {
+          <<class>>
         }
         class 再起動の制御 {
           +サーバーの取り付け(サーバー) None
@@ -74,11 +67,8 @@ diagrams:
         }
         class 配線済みの関数 {
           +端末の設定: TerminalConfig
-          +配信元の一覧: SourceRegistry
+          +project-indexの呼び出し: ProjectIndexClient
           +再起動の制御: RestartControl
-        }
-        class 文書の MCP の組み立て {
-          <<function>>
         }
         class 管理の MCP の組み立て {
           <<function>>
@@ -87,9 +77,6 @@ diagrams:
           <<function>>
         }
         class 画面の入口 {
-          <<function>>
-        }
-        class セッションの開始のルーター {
           <<function>>
         }
         class 例外の変換の登録 {
@@ -109,16 +96,13 @@ diagrams:
         click ポートの確かめ href "./MOD-155-174.py.yaml#ポートの確かめ"
         click 部品の配線 href "./MOD-155-174.py.yaml#部品の配線"
         click アプリの組み立て href "./MOD-155-175.py.yaml#アプリの組み立て"
+        click 配信元の知らせ href "./MOD-155-174.py.yaml#配信元の知らせ"
+        click project-indexの呼び出し href "./MOD-155-215.py.yaml#project-indexの呼び出し"
         click 再起動の制御 href "./MOD-155-116.py.yaml#再起動の制御"
-        click 配信元の一覧 href "./MOD-155-151.py.yaml#配信元の一覧"
         click 配線済みの関数 href "./MOD-155-174.py.yaml#配線済みの関数"
-        click 配信元の読み直し href "./MOD-155-174.py.yaml#配信元の読み直し"
-        click 配信元の控えの破棄 href "./MOD-155-174.py.yaml#配信元の控えの破棄"
-        click 文書の MCP の組み立て href "./MOD-155-179.py.yaml#文書の MCP の組み立て"
         click 管理の MCP の組み立て href "./MOD-155-178.py.yaml#管理の MCP の組み立て"
         click 端末の設定の入口 href "./MOD-155-147.py.yaml#端末の設定の入口"
         click 画面の入口 href "./MOD-155-162.py.yaml#画面の入口"
-        click セッションの開始のルーター href "./MOD-155-143.py.yaml#セッションの開始のルーター"
         click 例外の変換の登録 href "./MOD-155-176.py.yaml#例外の変換の登録"
         click 画面の配信 href "./MOD-155-182.py.yaml#画面の配信"
         click 操作の識別子 href "./MOD-155-175.py.yaml#操作の識別子"

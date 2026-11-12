@@ -1,5 +1,5 @@
 id: MOD-155-134
-title: 開発ドキュメントサーバー / 検索 / fields.py
+title: 開発ドキュメントサーバー / 絞り込み / fields.py
 lead: 項目の値・計算項目・使える項目・見出しの行。
 test_files:
   - tests/unit/dev_docs/features/search/test_fields.py
@@ -10,7 +10,7 @@ diagrams:
         direction TD
         条件の確かめ ..> 使える項目
         条件の照合 ..> 項目の値
-        本文の範囲の選択 ..> 見出しの行
+        項目の値 ..> 見出しの行
         class 条件の確かめ {
           <<function>>
         }
@@ -26,12 +26,8 @@ diagrams:
         class 見出しの行 {
           <<function>>
         }
-        class 本文の範囲の選択 {
-          <<function>>
-        }
         click 条件の確かめ href "./MOD-155-135.py.yaml#条件の確かめ"
         click 条件の照合 href "./MOD-155-135.py.yaml#条件の照合"
-        click 本文の範囲の選択 href "./MOD-155-132.py.yaml#本文の範囲の選択"
 constants:
   - name: COMPUTED_FIELDS
     title: 計算項目
@@ -50,7 +46,7 @@ functions:
     title: 項目の値
     kind: 関数
     container: features/search/fields.py
-    usecase: 検索
+    usecase: 文書の取得
     role: 読み取り
     summary: 文書から項目の値を引き、比べられる値の並びにする
     scope: public
@@ -58,7 +54,7 @@ functions:
     args:
       - name: document
         title: 文書
-        type: Document
+        type: IndexedDocument
         required: true
         passing: positional
         description: 引く文書
@@ -76,10 +72,10 @@ functions:
          - `id`・`kind` の場合、文書の属性
          - `created`・`updated` の場合、文書の日時（無ければ空）
          - メタデータのキー（`METADATA_KEYS`）の場合、`document.metadata`
-         - `body` の場合、本文
+         - `body` の場合、本文（文書の一覧の文書は本文を持たず空）
          - `*` の場合、`data` の全ての文字列の葉と本文
          - `@chars` は本文の文字数、`@path` は `document.path`（`records` の行は `{path}#{record_index}`）、`@sections` は Markdownの本文かが `True` の文書なら本文の見出しの文字列、それ以外は `data` の最上位のキーの並び
-         - `@matches` は条件で決まり文書だけでは決まらないので、値を持たない（文書の検索が当たった行の数で数える）
+         - `@matches` は値を持たない（条件の確かめが条件に使うことを断る）
          - それ以外は `data` を項目の取得で引く
       2. 値が配列なら要素を、`None` なら空、それ以外は 1 要素の並びを返す
     unit_tests:
@@ -93,9 +89,9 @@ functions:
     title: 使える項目
     kind: 関数
     container: features/search/fields.py
-    usecase: 検索
+    usecase: 文書の取得
     role: 読み取り
-    summary: 配信元の種類のスキーマから、条件・並べ替え・集計に使える項目の一覧を作る
+    summary: 文書の行のスキーマから、`nav` の `auto` の `filter` に使える項目の一覧を作る
     scope: public
     thread_safe: true
     args:
@@ -116,7 +112,7 @@ functions:
     title: 見出しの行
     kind: 関数
     container: features/search/fields.py
-    usecase: 検索
+    usecase: 文書の取得
     role: 読み取り
     summary: Markdown の行の並びから、見出しの行番号・階層・文字列を集める（コードブロックの中は除く）
     description: '`@sections` の見出しの文字列（内部の `_headings`）もこの関数で作る。`HEADING` は `#` の並びを名前つきのグループで取り、階層にする。'

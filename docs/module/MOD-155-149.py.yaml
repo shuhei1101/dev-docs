@@ -11,7 +11,7 @@ diagrams:
           <<function>>
         }
         class 端末の設定 {
-          +配信元: list
+          +project-indexの接続先: str
           +状態の置き場所: Path
         }
         click 端末の設定の読み込み href "./MOD-155-146.py.yaml#端末の設定の読み込み"
@@ -35,21 +35,21 @@ data_models:
         type: list[str] | None
         access: 公開
         default: None
-        description: この配信元を読み書きできる作業場所の glob。`None` は配信元のフォルダだけ（配信元の『配信元の読み込み』が解く）
+        description: この配信元を読み書きできる作業場所の glob。`None` は配信元のフォルダだけ（project-index が解く）
   - name: SourceEntry
     title: 配信元の行
     container: features/settings/types.py
     usecase: 端末の設定
     role: DTO
-    summary: 端末の設定の `sources[]` の 1 行
-    description: '`pydantic.BaseModel`（`extra="forbid"`）。端末の設定の保存の要求の `sources[]` もこの形。'
+    summary: 設定画面が送る `sources[]` の 1 行
+    description: '`pydantic.BaseModel`（`extra="forbid"`）。端末の設定の保存の要求の `sources[]` の形。project-index の端末の設定の API へ送るときの行もこの形'
     properties:
       - name: id
         title: 配信元の ID
         type: str | None
         access: 公開
         default: None
-        description: 主キー。`None` は配信元の設定の `name`（配信元の『配信元の読み込み』が解く）
+        description: 主キー。`None` は配信元の設定の `name`（project-index が解く）
         notes: 英小文字・数字・`-` だけ（スキーマの `pattern`）
       - name: config
         title: 配信元の設定のパス
@@ -109,36 +109,30 @@ data_models:
         access: 公開
         default: '"127.0.0.1"'
         description: 非機能要件の `bind_address`
-      - name: sources
-        title: 配信元
-        type: list[SourceEntry]
+      - name: project_index
+        title: project-index の接続先
+        type: str
+        access: 公開
+        default: PROJECT_INDEX_DEFAULT
+        description: project-index の読み取り API と端末の設定の API のアドレス
+      - name: leftover_sources
+        title: 前のバージョンから残った配信元
+        type: list[str]
         access: 公開
         default: '[]'
-        description: 配信元のテーブル
+        description: '`sources` に残った行の ID（無ければ `config` の先頭）。配信には使わず、起動と `status` が知らせる（`dev-docs migrate` が project-index に同じ ID の行があって移さなかった行）'
       - name: state_dir
         title: 状態の置き場所
         type: Path
         access: 公開
         default: '`DEV_DOCS_STATE_DIR` → 端末の設定の `state_dir` → `${XDG_STATE_HOME:-~/.local/state}/dev-docs`'
-        description: 会話の記録・変換の結果・リビジョンの書き出し・表の列の設定を置くフォルダ（`~` を展開した絶対パス）
+        description: 表の列の設定を置くフォルダ（`~` を展開した絶対パス）
       - name: log_dir
         title: ログの置き場所
         type: Path
         access: 公開
         default: '{state_dir}/logs'
-        description: 検証の失敗と警告のログを書くフォルダ
-      - name: seen_retention_days
-        title: 返し済みの記録の保持日数
-        type: int
-        access: 公開
-        default: '7'
-        description: この日数を過ぎた会話の記録を消す
-      - name: script_timeout_sec
-        title: スクリプトの制限時間
-        type: int
-        access: 公開
-        default: 非機能要件の `script_timeout` の決定値
-        description: 検査・変換・生成のスクリプト 1 回の上限（秒）
+        description: project-index につながらないことと警告のログを書くフォルダ
   - name: SettingsSourcesRequest
     title: 配信元の保存の要求
     container: features/settings/types.py
@@ -158,7 +152,7 @@ data_models:
     usecase: 端末の設定
     role: DTO
     summary: 再読み込みした後の配信元ごとの状態
-    description: '共通の『画面の API のモデル』（`ApiModel`。JSON のキーは camelCase）を継承する。`from_statuses(statuses)` で配信元の状態の並びから作る。'
+    description: '共通の『画面の API のモデル』（`ApiModel`。JSON のキーは camelCase）を継承する。`from_states(states)` で project-index の配信元の状態（`SourceState`）の並びから作る。'
     properties:
       - name: sources
         title: 配信元
@@ -177,27 +171,27 @@ data_models:
         title: 配信元の ID
         type: str | None
         access: 公開
-        description: 配信元の状態の `id`（行で省いたときは配信元の設定の `name`）。`pending_reload` の行は行の `id`（省いたときは `None`）
+        description: project-index の行の `id`。`pending_reload` で `id` を省いた行は `None`
       - name: config
         title: 配信元の設定のパス
         type: list[str]
         access: 公開
-        description: 行の `config`
+        description: project-index の行の `config`
       - name: enabled
         title: 配信するか
         type: bool
         access: 公開
-        description: 行の `enabled`
+        description: project-index の行の `enabled`
       - name: scope
         title: 権限の範囲
         type: SourceScope
         access: 公開
-        description: 行の `scope`
+        description: project-index の行の `scope`
       - name: status
         title: 状態
         type: Literal['serving', 'not_served', 'disabled', 'pending_reload']
         access: 公開
-        description: 配信元の状態の `status`。当たる配信元の状態が無い行（読み直していない行）は `pending_reload`
+        description: project-index が返した状態
       - name: errors
         title: 除外した理由
         type: list[dict[str, str]]
@@ -210,6 +204,12 @@ data_models:
         access: 公開
         default: None
         description: '`{config, server}`。設定のバージョンが古いときだけ'
+      - name: outside_read
+        title: 作業範囲の外から読めるか
+        type: bool
+        access: 公開
+        default: 'True'
+        description: project-index の行の `outside_read`
   - name: SettingsSourcesView
     title: 端末の設定の取得の応答
     container: features/settings/types.py
@@ -222,7 +222,7 @@ data_models:
         title: 端末の設定のパス
         type: str
         access: 公開
-        description: 端末の設定の `file`
+        description: project-index が返した、project-index の端末の設定のパス
       - name: sources
         title: 配信元
         type: list[SettingsSourceRow]

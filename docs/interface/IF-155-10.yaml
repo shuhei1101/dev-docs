@@ -526,8 +526,8 @@ lead: '#17 の画面が文書を開くときに呼ぶ。配信元の文書を変
 identifier: get_document
 permissions: なし（`127.0.0.1` でだけ待ち受ける）
 idempotent: true
-side_effects: 'なし。変換の結果は `state_dir` に保存し、文書が変わるまで使い回す（`converters[]` の `cache: false` の行の変換は保存しない）'
-exclusivity: 読み取りだけで排他しない。同じ文書・同じバージョンの変換が同時に来たときは 1 回だけ変換する
+side_effects: なし（変換の結果を控えない。`converters[]` の変換の控えは project-index が持つ）
+exclusivity: 読み取りだけで排他しない
 request:
   - name: source
     type: str

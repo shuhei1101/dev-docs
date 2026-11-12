@@ -322,31 +322,3 @@ data_models:
         access: 公開
         default: None
         description: 用語のやめた言い方
-  - name: NavAutoCount
-    title: nav の条件の数
-    container: features/view/types.py
-    usecase: 画面の構成の書き込み
-    role: DTO
-    summary: '`nav` の `auto` 1 つと、その条件に当たる文書の数'
-    description: '`dataclass(frozen=True, slots=True, kw_only=True)`。'
-    properties:
-      - name: path
-        title: キーのパス
-        type: str
-        access: 公開
-        description: '`auto` のキーのパス（`nav.tabs[2].items[0].auto`）'
-      - name: tab
-        title: タブの名前
-        type: str
-        access: 公開
-        description: '`auto` を持つタブの `title`'
-      - name: filter
-        title: 条件
-        type: dict[str, Any] | None
-        access: 公開
-        description: '`auto.filter`。無ければ `None`'
-      - name: count
-        title: 文書の数
-        type: int
-        access: 公開
-        description: '`auto` の `document` と `filter` に当たる文書の数'

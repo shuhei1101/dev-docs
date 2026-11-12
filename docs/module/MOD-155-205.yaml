@@ -1,18 +1,18 @@
 id: MOD-155-205
 title: 開発ドキュメントサーバー / 端末の設定
 lead: |-
-  端末の設定 `settings.yaml` をスキーマで検証して読み、設定画面から送られた `sources[]` を、他のキーとコメントを保って書き換える。
-  端末の設定の取得・保存の入口も持つ。
+  端末の設定 `settings.yaml` をスキーマで検証して読む（project-index の接続先・待ち受け・状態の置き場）。
+  設定画面の `sources[]` の取得・保存は、project-index の端末の設定の API へ依頼する入口を持つ。
 directory: |-
   ```text
   src/dev_docs/features/settings/
   ├─ __init__.py   # 公開する型と関数の再エクスポート
   ├─ types.py      # TerminalConfig / SourceEntry / SourceScope / SettingsSourceRow / SettingsSourcesView / SettingsSourcesRequest / SettingsSourcesResponse
   ├─ query.py      # config_path / load_terminal_config / listen_port
-  ├─ service.py    # save_sources
+  ├─ service.py    # save_sources（project-index へ保存を依頼する）
   └─ route.py      # build_settings_router（GET・PUT /_api/settings/sources）
-  schemas/
-  └─ settings.schema.yaml   # 端末の設定のスキーマ（JSON Schema 2020-12）
+  src/dev_docs/schemas/
+  └─ settings.schema.yaml   # 端末の設定のスキーマ（JSON Schema 2020-12。version 2）
   ```
 diagrams:
   - name: 全体
@@ -21,9 +21,9 @@ diagrams:
         direction TD
         端末の設定の入口 ..> 配信元の保存 : PUT
         端末の設定の入口 ..> 同じオリジンの確認 : PUT の前
-        配信元の保存 ..> 端末の設定の検証 : 書く前
+        端末の設定の入口 ..> project-indexの呼び出し : GET
+        配信元の保存 ..> project-indexの呼び出し
         端末の設定の読み込み ..> 端末の設定の検証 : 読んだ後
-        配信元の保存 ..> 配信元の読み直し : 書いた後
         端末の設定の読み込み ..> 端末の設定 : 返す
         class 端末の設定の入口 {
           <<function>>
@@ -40,11 +40,11 @@ diagrams:
         class 同じオリジンの確認 {
           <<function>>
         }
-        class 配信元の読み直し {
-          <<function>>
+        class project-indexの呼び出し {
+          <<class>>
         }
         class 端末の設定 {
-          +配信元: list
+          +project-indexの接続先: str
           +状態の置き場所: Path
         }
         click 端末の設定の入口 href "./MOD-155-147.py.yaml#端末の設定の入口"
@@ -52,5 +52,5 @@ diagrams:
         click 同じオリジンの確認 href "./MOD-155-181.py.yaml#同じオリジンの確認"
         click 端末の設定の検証 href "./MOD-155-146.py.yaml#端末の設定の検証"
         click 端末の設定の読み込み href "./MOD-155-146.py.yaml#端末の設定の読み込み"
-        click 配信元の読み直し href "./MOD-155-174.py.yaml#配信元の読み直し"
+        click project-indexの呼び出し href "./MOD-155-215.py.yaml#project-indexの呼び出し"
         click 端末の設定 href "./MOD-155-149.py.yaml#端末の設定"

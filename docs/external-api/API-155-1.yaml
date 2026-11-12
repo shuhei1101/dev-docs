@@ -22,14 +22,14 @@ endpoints:
   - name: GET /sources
     method: GET
     path: /sources
-    summary: 配信元の一覧と、配信元ごとの状態・配信していない理由を返す
+    summary: 配信元の一覧と、配信元ごとの状態・配信していない理由（`{path, reason}`）・設定のバージョンが古いときの新旧を返す
     status_codes:
       - code: '200'
         condition: 返した（配信元が 0 件でも 200）
   - name: GET /sources/{source}/config
     method: GET
     path: /sources/{source}/config
-    summary: 配信元の設定のうち、画面が使うキー（`nav`・`documents[]`・`decisions.folders`・`github`）を返す
+    summary: 配信元の設定のうち、画面が使うキー（`nav`・`decisions.folders`・`github`・`diff_ignore_keys`・`default_ref`・Git の配信元か）と、有効な `documents[]` の行（`id`・`title`・`paths`・`records`・`search`・`converter`・`alias_type` と、`$ref` を解き `records` の行は 1 要素にした種類のスキーマ）を返す
     status_codes:
       - code: '200'
         condition: 返した
@@ -38,7 +38,7 @@ endpoints:
   - name: GET /sources/{source}/docs
     method: GET
     path: /sources/{source}/docs
-    summary: 指定のリビジョンの文書の一覧（ID・パス・種類・メタデータ）を返す
+    summary: 指定のリビジョンの文書の一覧（ID・パス・種類・要素の添字・本文のファイルのパス・メタデータ・値・バージョン・作成と更新の日時）と、YAML として読めなかったファイル（パス・行・列・理由）を返す。本文は返さない
     status_codes:
       - code: '200'
         condition: 返した
@@ -47,7 +47,7 @@ endpoints:
   - name: GET /sources/{source}/docs/{path}
     method: GET
     path: /sources/{source}/docs/{path}
-    summary: 指定のリビジョンの文書の値・種類のスキーマ・メタデータ・本文の文字列・本文のファイルのパス（管理用の YAML の行の文書）を返す。`converters[]` を指す種類は、スクリプトが出した Markdown か変換の失敗を返す。パスは文書のファイルか本文のファイルのパスで引ける
+    summary: 指定のリビジョンの文書の値・本文・メタデータ・本文のファイルのパス（管理用の YAML の行の文書）を返す。`converters[]` を指す種類は、スクリプトが出した Markdown か変換の失敗（理由・スクリプト・原因）を返す。YAML を読めないファイルは読めなかった位置を失敗で返す。パスは文書のファイルか本文のファイルのパスで引け、管理用の YAML の行の文書は `id` のクエリで要素を選ぶ
     status_codes:
       - code: '200'
         condition: 返した（変換に失敗したときも失敗を入れて 200）
@@ -74,7 +74,7 @@ endpoints:
   - name: GET /sources/{source}/search
     method: GET
     path: /sources/{source}/search
-    summary: 語を含む文書と一致した箇所を返す
+    summary: '語を含む文書（ID・パス・要素の添字・名前）と一致した箇所を返す。`search: false` の行の文書は除く'
     status_codes:
       - code: '200'
         condition: 返した
@@ -117,4 +117,5 @@ endpoints:
       - code: '409'
         condition: 同じ id の行がある（内容が同じかを応答に入れる）
 notes:
-  契約: 正本は提供する側の shuhei1101/project-index#14 のインターフェース定義。パスと入出力はこの Issue に記載した入出力から作った仮のもので、契約が決まったら #164 で合わせる
+  契約: '正本は提供する側の shuhei1101/project-index#14 のインターフェース定義。パスと入出力はこの Issue に記載した入出力から作った仮のもので、契約が決まったら #164 で合わせる' #164 で合わせる
+  dev-docs が前提にする応答: 文書の一覧に値を含めること（`nav` の `auto` の `filter` と差分の変わったキーを dev-docs が求めるため）、配信元の設定の応答に解いた種類のスキーマを含めること（スキーマ駆動の変換のため）、文書の詳細の `id` のクエリ、検索の結果の ID と要素の添字は、モジュール構成設計で決めた前提。project-index#14 に書き足して合わせる

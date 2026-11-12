@@ -16,12 +16,12 @@ data_models:
         description: 手順を当てた後の `version`（手順のフォルダ名）
       - name: op
         title: 操作
-        type: Literal['rename', 'add', 'delete', 'lift', 'unwrap']
-        description: キーの改名・既定値つきの追加・削除・値の引き上げ・値の取り出し
+        type: Literal['rename', 'add', 'delete', 'lift', 'unwrap', 'export_sources']
+        description: キーの改名・既定値つきの追加・削除・値の引き上げ・値の取り出し・`sources` の行の project-index への書き出し
       - name: path
         title: キーのパス
         type: str
-        description: ドットで結ぶ。配列の要素の子は `sources[].scope`。末尾の `*` は親の辞書の全てのキー
+        description: ドットで結ぶ。配列の要素の子は `sources[].scope`。末尾の `*` は親の辞書の全てのキー。`export_sources` は `sources`
       - name: to
         title: 新しいキー
         type: str | None
@@ -61,13 +61,13 @@ data_models:
     container: features/migrate/types.py
     usecase: 設定の移し替え
     role: DTO
-    summary: 移し替える設定のファイルと種類
+    summary: 移し替える端末の設定のファイル
     description: '`dataclass(frozen=True)`。'
     properties:
       - name: kind
         title: 種類
-        type: Literal['settings', 'dev-docs']
-        description: 端末の設定か配信元の設定か。手順のフォルダ名になる
+        type: Literal['settings']
+        description: 手順のフォルダ名。配信元の設定の移し替えは project-index へ移した
       - name: file
         title: ファイル
         type: Path
@@ -75,7 +75,24 @@ data_models:
       - name: current
         title: 読めるバージョン
         type: str
-        description: '`SETTINGS_VERSION` か `SOURCE_CONFIG_VERSION`'
+        description: '`SETTINGS_VERSION`'
+  - name: MigrationOutcome
+    title: 移し替えの結果
+    container: features/migrate/types.py
+    usecase: 設定の移し替え
+    role: DTO
+    summary: バックアップのパスと、project-index へ移さなかった行
+    description: '`dataclass(frozen=True)`。'
+    properties:
+      - name: backup
+        title: バックアップ
+        type: Path
+        description: 元の内容を保存したファイル
+      - name: kept
+        title: 移さなかった行
+        type: list[str]
+        default: '[]'
+        description: project-index に同じ id で内容の違う行があり、`sources` に残した行の ID
 classes:
   - name: MigrationError
     title: 移し替えの失敗
@@ -147,6 +164,32 @@ classes:
         access: 公開
         default: EXIT_CONFIG_NEWER
         description: '6'
+  - name: ProjectIndexUnreachableMigrationError
+    title: 移す先の project-index につながらない
+    container: features/migrate/types.py
+    usecase: 設定の移し替え
+    role: 例外
+    summary: '`export_sources` の手順で、project-index の端末の設定の API につながらないことを表す'
+    kind: クラス
+    inherits: MigrationError
+    description: 対象のファイルには書かない（全ての手順を当ててから 1 回だけ書くため、元の内容のまま）。project-index に追加済みの行はそのまま残り、やり直したときは同じ id・同じ内容の行として追加済みに扱う。
+    properties:
+      - name: address
+        title: 接続先
+        type: str
+        access: 公開
+        description: つながらなかった project-index のアドレス
+      - name: reason
+        title: 理由
+        type: str
+        access: 公開
+        description: '`ProjectIndexUnreachableError.reason`'
+      - name: exit_code
+        title: 終了コード
+        type: ClassVar[int]
+        access: 公開
+        default: EXIT_PROJECT_INDEX_UNREACHABLE
+        description: '7'
 constants:
   - name: MIGRATIONS_DIR
     title: 手順の置き場所
@@ -184,3 +227,15 @@ constants:
     usecase: 設定の移し替え
     summary: 対象の設定のバージョンが dev-docs より新しい
     value: '6'
+  - name: EXIT_PROJECT_INDEX_UNREACHABLE
+    title: 移す先につながらない終了コード
+    container: features/migrate/types.py
+    usecase: 設定の移し替え
+    summary: '`sources` を移す先の project-index につながらない'
+    value: '7'
+  - name: SOURCES_EXPORT_VERSION
+    title: sources を移すバージョン
+    container: features/migrate/types.py
+    usecase: 設定の移し替え
+    summary: '`sources` を project-index へ移す手順を持つ端末の設定の `version`（`migrations/settings/2/steps.yaml` の `export_sources`）'
+    value: "'2'"

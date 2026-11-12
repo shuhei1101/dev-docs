@@ -1,6 +1,6 @@
 id: MOD-155-119
 title: 開発ドキュメントサーバー / 設定の移し替え / service.py
-lead: '`dev-docs migrate` の対象を決め、当てる手順を求め、バックアップを取ってから 1 回だけ書き込む。動いているサーバーには反映しない。'
+lead: '対象の決定・当てる手順・バックアップを取った適用と、`sources` の project-index への書き出し。'
 test_files:
   - tests/unit/dev_docs/features/migrate/test_service.py
 functions:
@@ -10,17 +10,11 @@ functions:
     container: features/migrate/service.py
     usecase: 設定の移し替え
     role: 解決
-    summary: '`--source` の有無で移し替える設定を決める'
+    summary: '移し替える端末の設定を決める'
     scope: public
     is_async: false
     thread_safe: true
     args:
-      - name: source
-        title: 配信元の設定
-        type: str | None
-        required: true
-        passing: positional
-        description: '`--source` の値'
       - name: env
         title: 環境変数
         type: Mapping[str, str]
@@ -31,22 +25,14 @@ functions:
       type: MigrationTarget
       description: 移し替えの対象
     process: |-
-      1. `source` に応じて分ける
-         - ある場合、`kind` を `dev-docs`、`file` を `source` を正規化したパス、`current` を `SOURCE_CONFIG_VERSION` にする
-         - 無い場合、`kind` を `settings`、`file` を `config_path(env)`、`current` を `SETTINGS_VERSION` にする
+      1. `kind` を `settings`、`file` を `config_path(env)`、`current` を `SETTINGS_VERSION` にする
     unit_tests:
       - name: test_resolve_target
         case: 正常
         summary: 端末の設定を対象にする
-        condition: '`source` が `None`、`DEV_DOCS_CONFIG` が `/tmp/s.yaml`'
+        condition: '`DEV_DOCS_CONFIG` が `/tmp/s.yaml`'
         mock: なし
         expected: '`kind` が `settings`、`file` が `/tmp/s.yaml`'
-      - name: test_resolve_target_when_source
-        case: 正常
-        summary: 配信元の設定を対象にする
-        condition: '`source` が `~/repo/a/dev-docs.yaml`'
-        mock: なし
-        expected: '`kind` が `dev-docs`、`file` が `~` を展開したパス'
     callers:
       - MOD-155-174#functions[run_migrate]
   - name: plan_migration
@@ -152,6 +138,18 @@ functions:
         required: true
         passing: keyword
         description: '`--allow-destructive`'
+      - name: export_source
+        title: 配信元の行の書き出し
+        type: Callable[[Mapping[str, Any]], AddSourceResult] | None
+        required: true
+        passing: keyword
+        description: '`export_sources` の手順で 1 行ずつ呼ぶ。入口が project-indexの呼び出し.端末の設定の配信元の行の追加 を `asyncio.run` で包んで渡す。`--record` と `export_sources` の無い手順では `None`'
+      - name: project_index
+        title: project-index の接続先
+        type: str
+        required: true
+        passing: keyword
+        description: '`export_sources` の後に端末の設定の `project_index` に書く値'
       - name: now
         title: 時刻
         type: datetime
@@ -159,31 +157,41 @@ functions:
         passing: keyword
         description: バックアップの名前に使う時刻
     returns:
-      type: Path
-      description: バックアップのパス
+      type: MigrationOutcome
+      description: バックアップのパスと、移さなかった行の ID
     process: |-
       1. 手順に破壊的なものがあり `allow_destructive` が `False` の場合、`DestructiveStepBlockedError` を送出する
       2. ファイルを読み直して `data` と同じ内容かを比べ、ハッシュを控える（`content_hash`）
          - 違う場合、`MigrationFailedError` を送出する
-      3. 手順を順に当てる（手順の適用）
+      3. 手順を順に当てる（手順の適用）。`export_sources` の手順では、`sources` の行ごとに `export_source` を呼ぶ
+         - `added` か `same` の行は `sources` から除き、それ以外（同じ id で内容の違う行）は残して ID を `kept` に加える
+         - `sources` が空になったら `sources` のキーを削除し、`project_index` が無ければ `project_index` を書き足す
+         - `ProjectIndexUnreachableError` の場合、`ProjectIndexUnreachableMigrationError` を送出する（ファイルには書かない）
+         - `ProjectIndexResponseError`・`ProjectIndexRejectedError` の場合、応答のステータスと要約で `MigrationFailedError` を送出する（ファイルには書かない）
       4. `version` を `target.current` にする
-      5. 新しいスキーマで検証する（`settings` は `validate_terminal_config`、`dev-docs` は `validate_source_config`）
-         - 違反がある場合、`MigrationFailedError` を送出する（ファイルには書かない）。`dev-docs` は末尾に `手順で移せない設定です。/dev-docs:setup で移し替えてください` の行を置く
+      5. 新しいスキーマで検証する（`validate_terminal_config`）
+         - 違反がある場合、`MigrationFailedError` を送出する（ファイルには書かない）
       6. ファイルを読み直してハッシュを比べる
          - 変わっている場合、`MigrationFailedError` を送出する
       7. 同じフォルダに `BACKUP_FORMAT` の名前で元の内容を保存する
       8. 対象を書き換える（`dump_roundtrip`・`replace_file`）
-         - `[INFO]` 設定を移し替えた（ファイル・前のバージョン・後のバージョン・バックアップ）
+         - `[INFO]` 設定を移し替えた（ファイル・前のバージョン・後のバージョン・バックアップ・移さなかった行）
     exceptions:
       - name: DestructiveStepBlockedError
         condition: 破壊的な手順があり `allow_destructive` が `False`
         message: '破壊的な手順を `{バージョン}: {説明}` で 1 行ずつ並べ、`--allow-destructive` を案内する'
       - name: MigrationFailedError
         condition: 当てた結果が新しいスキーマに違反する
-        message: '違反を `{キーのパス}: {理由}` で 1 行ずつ並べる（`dev-docs` は `/dev-docs:setup` の案内を続ける）'
+        message: '違反を `{キーのパス}: {理由}` で 1 行ずつ並べる'
       - name: MigrationFailedError
         condition: 読んだ後に対象のファイルが変わった
         message: '`{ファイル}: 読み込んだ後に変わったため書き換えません`'
+      - name: ProjectIndexUnreachableMigrationError
+        condition: '`export_sources` の手順で project-index につながらない・制限時間を超えた'
+        message: '`project-index（{address}）に接続できませんでした。{reason}` と、project-index を起動してから実行し直す案内'
+      - name: MigrationFailedError
+        condition: '`export_sources` の手順で project-index が 201・409 以外を返した'
+        message: '`project-index が {status} を返しました: {summary}`'
     unit_tests:
       - name: test_apply_migration
         case: 正常
@@ -218,13 +226,26 @@ functions:
         mock: 新しいスキーマの検証
         expected: '`MigrationFailedError`。対象は書き換えた内容のまま'
         exception: 読んだ後に変わった
-      - name: test_apply_migration_when_source_needs_setup
+      - name: test_apply_migration_when_export_sources
+        case: 正常
+        summary: sources を project-index へ移す
+        condition: '`version: "1"` で `sources` に sample・notes・extra の 3 行、`2` の手順に `export_sources`。偽物は sample を `added`、notes を `same`、extra を `added=False`・`same=False` で返す'
+        mock: 配信元の行の書き出し（id ごとの結果を返すか例外を送る偽物）
+        expected: '`sources` が extra の 1 行、`project_index` と `version: "2"` があり、`kept` が `[extra]`。バックアップが元の内容'
+      - name: test_apply_migration_when_export_unreachable
         case: 異常
-        summary: 手順で移せない配信元の設定
-        condition: '`version: "1"` で `type: markdown` の行を持つ `dev-docs.yaml` に `2/steps.yaml` の手順'
-        mock: なし
-        expected: '`MigrationFailedError` のメッセージに `documents[0].type` の違反と `/dev-docs:setup`。対象は元の内容のまま'
-        exception: 新しいスキーマの違反
+        summary: 移す先につながらない
+        condition: 偽物が 2 行目で `ProjectIndexUnreachableError` を送る
+        mock: 配信元の行の書き出し（id ごとの結果を返すか例外を送る偽物）
+        expected: '`ProjectIndexUnreachableMigrationError`。対象もバックアップも書かない'
+        exception: project-index につながらない
+      - name: test_apply_migration_when_export_unexpected_status
+        case: 異常
+        summary: project-index の想定しない応答
+        condition: 偽物が `ProjectIndexResponseError(status_code=500)` を送る
+        mock: 配信元の行の書き出し（id ごとの結果を返すか例外を送る偽物）
+        expected: '`MigrationFailedError` の本文に 500。対象は元の内容のまま'
+        exception: project-index が 201・409 以外を返した
     callers:
       - MOD-155-174#functions[run_migrate]
     callees:

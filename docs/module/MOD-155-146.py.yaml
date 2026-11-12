@@ -8,12 +8,8 @@ diagrams:
     diagram: |-
       classDiagram
         direction TD
-        配信元の保存 ..> 端末の設定の検証 : 書く前
         端末の設定の読み込み ..> 端末の設定の検証 : 読んだ後
         端末の設定の読み込み ..> 端末の設定 : 返す
-        class 配信元の保存 {
-          <<function>>
-        }
         class 端末の設定の読み込み {
           <<function>>
         }
@@ -21,10 +17,9 @@ diagrams:
           <<function>>
         }
         class 端末の設定 {
-          +配信元: list
+          +project-indexの接続先: str
           +状態の置き場所: Path
         }
-        click 配信元の保存 href "./MOD-155-148.py.yaml#配信元の保存"
         click 端末の設定 href "./MOD-155-149.py.yaml#端末の設定"
 constants:
   - name: DEFAULT_CONFIG_HOME
@@ -91,8 +86,8 @@ constants:
     title: 端末の設定の読めるバージョン
     container: features/settings/query.py
     usecase: 端末の設定
-    summary: このサーバーが読める端末の設定の `version`
-    value: '"1"'
+    summary: このサーバーが読める端末の設定の `version`（`sources` を project-index へ移し、`project_index` を足したバージョン）
+    value: '"2"'
 functions:
   - name: xdg_base_dir
     title: XDG の置き場の親
@@ -265,7 +260,7 @@ functions:
          - 読めない場合、行と列を `Violation` にして `TerminalConfigInvalidError` を送る
       3. 端末の設定の値を検証する（端末の設定の検証）
          - 違反が 1 つでもある場合、全ての違反を載せた `TerminalConfigInvalidError` を送る
-      4. `TerminalConfig` を作る。`state_dir` は端末の設定の `state_dir` と `env` から決め（状態の置き場）、`log_dir` は『パスの正規化』にかけ、無ければ `{state_dir}/logs` にする
+      4. `TerminalConfig` を作る。`project_index` が無ければ `PROJECT_INDEX_DEFAULT`、`sources` の行は ID（無ければ `config` の先頭）だけを `leftover_sources` にする。`state_dir` は端末の設定の `state_dir` と `env` から決め（状態の置き場）、`log_dir` は『パスの正規化』にかけ、無ければ `{state_dir}/logs` にする
     exceptions:
       - name: TerminalConfigInvalidError
         condition: ファイルが無い
@@ -280,9 +275,9 @@ functions:
       - name: test_load_terminal_config
         case: 正常
         summary: 既定値を埋める
-        condition: '`version`・`clone` と `sources` 1 行（`config` は文字列）だけの設定'
+        condition: '`version`・`clone` だけの設定'
         mock: なし（一時フォルダ）
-        expected: '`port` が 8781、`bind` が `127.0.0.1`、`sources[0].config` が配列、`log_dir` が `{state_dir}/logs`'
+        expected: '`port` が 8781、`bind` が `127.0.0.1`、`project_index` が `http://127.0.0.1:8786`、`leftover_sources` が空、`log_dir` が `{state_dir}/logs`'
       - name: test_load_terminal_config_when_state_dir_env_set
         case: 正常
         summary: 状態の置き場を環境変数で決める
@@ -310,6 +305,12 @@ functions:
         mock: なし
         expected: '`TerminalConfigInvalidError` の違反に `sources[0].config` と `port` の 2 つ'
         exception: スキーマに違反する
+      - name: test_load_terminal_config_when_leftover_sources
+        case: 正常
+        summary: 前のバージョンから残った sources
+        condition: '`sources` に `id: sample` の行と `id` の無い行（`config: /x/project-index.yaml`）'
+        mock: なし（一時フォルダ）
+        expected: '`leftover_sources` が `[sample, /x/project-index.yaml]`'
   - name: validate_terminal_config
     title: 端末の設定の検証
     kind: 関数
@@ -330,10 +331,9 @@ functions:
       type: list[Violation]
       description: 違反の並び。無ければ空
     process: |-
-      1. `SETTINGS_SCHEMA` を読み、スキーマの違反を全て集める（スキーマの違反）
-      2. `sources[].id` が行の間で重なる場合、後の行の `sources[{n}].id` に重複の違反を加える（`id` を省いた行はここでは比べず、配信元の読み込みで比べる）
-      3. `scope.read`・`scope.write` に空の文字列がある場合、その要素のパスに違反を加える
-      4. `version` が `SETTINGS_VERSION` より新しい場合、`version` に「このサーバーより新しい設定」の違反を加える
+      1. `SETTINGS_SCHEMA` を読み、スキーマの違反を全て集める（スキーマの違反）。`project_index` は `http://`・`https://` で始まる URL
+      2. 前のバージョンから残った `sources` は検証しない（スキーマは型を問わずに受け、起動が警告のログに出す）
+      3. `version` が `SETTINGS_VERSION` より新しい場合、`version` に「このサーバーより新しい設定」の違反を加える
     unit_tests:
       - name: test_validate_terminal_config
         case: 正常
@@ -341,24 +341,24 @@ functions:
         condition: 必須のキーを持つ設定
         mock: なし
         expected: 空
-      - name: test_validate_terminal_config_when_duplicate_id
-        case: 正常
-        summary: 行の ID が重なる
-        condition: '`sources` の 2 行がどちらも `id: a`'
-        mock: なし
-        expected: '`sources[1].id` の違反 1 つで、`rule` が `a は既に使用されています`'
-      - name: test_validate_terminal_config_when_empty_glob
-        case: 正常
-        summary: 空の glob
-        condition: '`scope.read: [""]`'
-        mock: なし
-        expected: '`sources[0].scope.read[0]` の違反で、`rule` が `空の文字列は記載できません`'
       - name: test_validate_terminal_config_when_newer_version
         case: 正常
         summary: 新しいバージョンの設定
-        condition: '`version: "2"`'
+        condition: '`version: "3"`'
         mock: なし
         expected: '`version` の違反'
+      - name: test_validate_terminal_config_when_project_index_invalid
+        case: 正常
+        summary: project-index の接続先が URL でない
+        condition: '`project_index: 127.0.0.1:8786`'
+        mock: なし
+        expected: '`project_index` の違反'
+      - name: test_validate_terminal_config_when_leftover_sources
+        case: 正常
+        summary: 残った sources を違反にしない
+        condition: '`version: "2"` で、`sources` に `config` の無い行と `id` の重なる 2 行'
+        mock: なし
+        expected: 空
   - name: listen_port
     title: 待ち受けのポート
     kind: 関数
