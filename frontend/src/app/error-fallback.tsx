@@ -14,11 +14,12 @@ type Props = {
 
 /** 描画中の例外の表示。ErrorBoundary とルートの `errorComponent` が使う。project-index に接続できなかったときは、接続先と理由を出す */
 export const ErrorFallback = ({ error, reset }: Props) => {
-  const unreachable = toProjectIndexUnreachable(error);
   useEffect(() => {
-    if (unreachable) logger.error("project_index_unreachable", unreachable);
+    const target = toProjectIndexUnreachable(error);
+    if (target) logger.error("project_index_unreachable", target);
     else logger.error("render_failed", { error });
-  }, [error, unreachable]);
+  }, [error]);
+  const unreachable = toProjectIndexUnreachable(error);
   const reload = reset ?? (() => location.reload());
 
   if (unreachable) {
