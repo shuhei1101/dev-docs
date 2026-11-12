@@ -38,7 +38,7 @@ classes:
         title: 制限時間
         type: float
         access: 公開
-        description: 1 回の要求の上限（秒）。`PROJECT_INDEX_TIMEOUT_SEC`
+        description: 要求 1 回の全体の上限（秒）。`PROJECT_INDEX_TIMEOUT_SEC`。`httpx` の接続・読み取りなど待ちごとの上限にも同じ値を入れる
       - name: _client
         title: HTTP のクライアント
         type: httpx.AsyncClient
@@ -83,17 +83,16 @@ classes:
           type: httpx.Response
           description: 2xx・409 の応答
         process: |-
-          1. `self._client` で要求し、制限時間（`timeout`）を超えるか接続できなければ `ProjectIndexUnreachableError` を送る
+          1. `asyncio.timeout(self.timeout)` の中で `self._client` で要求する。要求全体が `timeout` を超えるか接続できなければ `ProjectIndexUnreachableError`（`address` は `self.address`）を送る
              - 接続を断られた（`httpx.ConnectError`）: `reason` を `接続を拒否されました（Connection refused）`
-             - 制限時間を超えた（`httpx.TimeoutException`）: `reason` を `{timeout} 秒以内に応答がありませんでした`
+             - 制限時間を超えた（`TimeoutError`・`httpx.TimeoutException`）: `reason` を `{timeout} 秒以内に応答がありませんでした`
              - そのほかの `httpx.TransportError`: `reason` を例外の文字列
-             - `address` は `self.address`
           2. 応答のステータスで分ける
              - 2xx・409: 応答を返す
-             - 404: problem+json の `missing` が `source` なら `UnknownSourceError`、`not_served` なら `SourceNotServedError`（`errors[]` を `Violation` にして持たせる）、`ref` なら `RefNotFoundError`（`value`）、それ以外は `DocumentNotFoundError` を送る
-             - 400: `InvalidArgumentError`（`detail` と `errors[]`）を送る
-             - 422: `ProjectIndexRejectedError`（`errors[]` をそのまま）を送る
-             - それ以外: `ProjectIndexResponseError`（`status` と本文の先頭 200 文字の `summary`）を送る
+             - 404: problem+json の `missing` で分ける。`source` なら `UnknownSourceError`（`source_id` は `value`）、`not_served` なら `SourceNotServedError`（`violations` は `errors[]` の `{path, reason}` を `Violation(path, rule=reason)` にしたもの、`disabled` は応答の `disabled`）、`ref` なら `RefNotFoundError`（`argument` は応答の `argument`、無ければ `ref`。`value` は応答の `value`）、それ以外は `DocumentNotFoundError`（`missing` は `[value]`、`candidates` は空）
+             - 400: `InvalidArgumentError`（`message` は `detail`、`violations` は `errors[]` を `Violation` にしたもの）を送る
+             - 422: `ProjectIndexRejectedError`（`violations` は `errors[]` を `Violation` にしたもの）を送る
+             - それ以外: `ProjectIndexResponseError`（`status_code` は応答のステータス、`summary` は本文の先頭 200 文字）を送る
         exceptions:
           - name: ProjectIndexUnreachableError
             condition: 接続できない・制限時間を超えた
@@ -136,15 +135,22 @@ classes:
             summary: 404 の missing ごとの例外
             condition: 404 の problem+json の `missing` が `source`・`not_served`（`errors[]` 1 件）・`ref`・`doc`
             mock: '`httpx.MockTransport` で project-index の応答を返す'
-            expected: 順に `UnknownSourceError`・`SourceNotServedError`（`errors` 1 件）・`RefNotFoundError`・`DocumentNotFoundError`
+            expected: 順に `UnknownSourceError`・`SourceNotServedError`（`violations` 1 件）・`RefNotFoundError`（`argument` が `ref`）・`DocumentNotFoundError`（`missing` が `[value]`）
             exception: 404 で `missing` が `source`
           - name: test_request_when_unexpected_status
             case: 異常
             summary: 想定しないステータス
             condition: 500 で本文が 300 文字
             mock: '`httpx.MockTransport` で project-index の応答を返す'
-            expected: '`ProjectIndexResponseError` で、`status` が 500、`summary` が本文の先頭 200 文字'
+            expected: '`ProjectIndexResponseError` で、`status_code` が 500、`summary` が本文の先頭 200 文字'
             exception: 2xx・400・404・409・422 以外
+          - name: test_request_when_total_timeout
+            case: 異常
+            summary: 要求全体の上限
+            condition: '`timeout` を 0.2 にし、`MockTransport` がヘッダーを返した後に本文を 0.15 秒ずつ 3 回に分けて返す'
+            mock: '`httpx.MockTransport` で project-index の応答を返す'
+            expected: '`ProjectIndexUnreachableError` で、`reason` が `0.2 秒以内に応答がありませんでした`'
+            exception: 接続できない・制限時間を超えた
       - name: list_sources
         title: 配信元の状態の一覧
         kind: メソッド
@@ -240,11 +246,18 @@ classes:
             passing: positional
             description: 文書のファイルか本文のファイルのパス（拡張子つき）
           - *id002
+          - name: document_id
+            title: 文書の ID
+            type: str | None
+            required: false
+            default: None
+            passing: keyword
+            description: 管理用の YAML の行の文書の要素を選ぶ。ファイル 1 つが 1 文書なら `None`
         returns:
           type: DocumentDetail
           description: 文書の詳細
         process: |-
-          1. 呼び出しの共通の手順で `GET /sources/{source}/docs/{path}` を呼ぶ
+          1. 呼び出しの共通の手順で `GET /sources/{source}/docs/{path}` を呼ぶ。クエリは `ref` と、`document_id` があれば `id`
           2. `document` を索引の文書の読み取りで `IndexedDocument` にし（無ければ `None`）、`markdown`・`failure` を写して返す
         unit_tests:
           - name: test_document_when_failure
@@ -253,6 +266,12 @@ classes:
             condition: '`failure` に `reason: timeout`・`script` を持つ応答'
             mock: '`httpx.MockTransport` で project-index の応答を返す'
             expected: '`markdown` が `None`、`failure.reason` が `timeout`'
+          - name: test_document_when_record
+            case: 正常
+            summary: 管理用の YAML の行の要素を選ぶ
+            condition: '`path="notes/files.yaml"`・`document_id="n-1"`'
+            mock: '`httpx.MockTransport` で project-index の応答を返す'
+            expected: 要求のクエリに `id=n-1` があり、応答の文書を返す
       - name: decisions
         title: 検討事項の一覧の取得
         kind: メソッド
@@ -414,7 +433,7 @@ classes:
             summary: スキーマに通らない
             condition: 422 で `errors[]` 1 件
             mock: '`httpx.MockTransport` で project-index の応答を返す'
-            expected: '`ProjectIndexRejectedError` で、`errors` が応答の 1 件'
+            expected: '`ProjectIndexRejectedError` で、`violations` が応答の 1 件'
             exception: '422'
       - name: add_settings_source
         title: 端末の設定の配信元の行の追加

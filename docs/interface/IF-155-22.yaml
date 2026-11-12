@@ -76,7 +76,7 @@ flows:
       - 端末の設定が変わらず、バックアップも作らない
     test: test_error_when_config_invalid
   - name: 異常系（手順が失敗する・MigrationFailed）
-    summary: 当てた結果が新しいスキーマに違反すると、バックアップから戻して終了コード 4 で止める
+    summary: 当てた結果が新しいスキーマに違反すると、端末の設定を書き換えずに終了コード 4 で止める
     setup:
       - name: Mock
         description: 正常系と同じ差し替え
@@ -90,14 +90,13 @@ flows:
         participant F as 端末の設定
 
         C->>M: フラグなし
-        M->>F: バックアップを取る
+        M->>F: 端末の設定を読む
         M->>M: 手順を当てる（スキーマに違反）
-        M->>F: バックアップから戻す
         M-->>C: 失敗した手順と理由（終了コード 4）
       ```
     expected:
       - 終了コード 4 で stderr に失敗した手順と違反したキーを出す
-      - 端末の設定の中身が適用前と同じ
+      - 端末の設定の中身が適用前と同じで、バックアップも作らない
     test: test_error_when_step_fails
   - name: 異常系（破壊的な手順がある・DestructiveStepBlocked）
     summary: 破壊的な手順を `--allow-destructive` なしで当てようとすると、触らずに終了コード 5 で止める
@@ -158,11 +157,12 @@ flows:
         participant PI as project-index（モック）
 
         C->>M: --project-index {アドレス}
-        M->>F: バックアップを取る
+        M->>F: 端末の設定を読む
         loop sources の各行
           M->>PI: 配信元の行の追加
           PI-->>M: 追加した、または同じ id の行がある
         end
+        M->>F: バックアップを取る
         M->>F: 追加した行を sources から除き、project_index と version を書き換える
         M-->>C: 当てた手順と、移さなかった行の id（終了コード 0）
       ```
@@ -173,7 +173,7 @@ flows:
       - '`--project-index` を省くと `PROJECT_INDEX_PORT`（無ければ 8786）から組んだ `http://127.0.0.1:{ポート}` へ追加する'
     test: test_normal_when_sources_moved_to_project_index
   - name: 異常系（project-index につながらない・ProjectIndexUnreachable）
-    summary: project-index につながらないと、端末の設定をバックアップから戻して終了コード 7 で止める
+    summary: project-index につながらないと、端末の設定を書き換えずに終了コード 7 で止める
     setup:
       - name: Mock
         description: なし
@@ -189,14 +189,13 @@ flows:
         participant F as 端末の設定
 
         C->>M: --project-index {アドレス}
-        M->>F: バックアップを取る
+        M->>F: 端末の設定を読む
         M->>M: 配信元の行の追加がつながらない
-        M->>F: バックアップから戻す
         M-->>C: つながらなかったアドレスと、project-index を起動してからやり直す案内（終了コード 7）
       ```
     expected:
       - 終了コード 7 で、stderr につながらなかったアドレスと案内がある
-      - 端末の設定が `migrate` の前と同じ中身になる
+      - 端末の設定が `migrate` の前と同じ中身で、バックアップも作らない
     test: test_error_when_project_index_unreachable
 lead: 端末の設定の `version` を dev-docs が読めるバージョンと比べ、移し替えの手順を古い順に当てる。前のバージョンの `sources` は project-index の端末の設定へ移す。
 identifier: migrate
@@ -260,7 +259,7 @@ exceptions:
     notes: ファイルに触らず、破壊的な手順を stderr に出す
   - name: ProjectIndexUnreachable
     condition: '`sources` を移す手順で、project-index の端末の設定の API につながらない（終了コード 7）'
-    notes: 端末の設定をバックアップから戻し、つながらなかったアドレスと案内を stderr に出す
+    notes: 全ての手順を当ててから書き込むため、端末の設定には触らない（バックアップも作らない）。つながらなかったアドレスと案内を stderr に出す
   - name: ConfigNewer
     condition: 対象の `version` が dev-docs が読めるバージョンより新しい（終了コード 6）
     notes: dev-docs の更新を案内する
@@ -270,15 +269,15 @@ constraints:
   - item: 当てる順
     constraint: 対象の `version` より新しく、dev-docs が読めるバージョン以下の手順を古い順に全て当てる。途中で止めず、全て当ててから 1 回だけ書き込む
   - item: バックアップ
-    constraint: 適用の前に必ず取る。成功しても消さない
+    constraint: 全ての手順を当てて検証に通った後、書き込む前に必ず取る。成功しても消さない。失敗して書き込まないときは作らない
   - item: 反映
     constraint: 動いているサーバーには反映しない。利用者が続けて `restart` を呼ぶ
   - item: タイムアウト
-    constraint: project-index への 1 行の追加を制限時間で打ち切り、打ち切ったらつながらないときと同じく端末の設定をバックアップから戻して終了コード 7 で止める
+    constraint: project-index への 1 行の追加を制限時間で打ち切り、打ち切ったらつながらないときと同じく端末の設定を書き換えずに終了コード 7 で止める
     decided_by: NFR-155-1#requirements[project-index への問い合わせの制限時間]
   - item: project-index の応答が 201・409 以外のとき
-    constraint: 端末の設定をバックアップから戻し、project-index の応答のステータスと要約を stderr に出して終了コード 4（MigrationFailed）で止める
+    constraint: 端末の設定を書き換えず、project-index の応答のステータスと要約を stderr に出して終了コード 4（MigrationFailed）で止める
   - item: sources を移す手順
     constraint: '`sources` を持つ端末の設定の行を、project-index の端末の設定の API で 1 行ずつ追加する。同じ id の行が project-index にあれば、内容も同じなら追加済みとして扱い、内容が違えば追加せずに `sources` に残して id を stdout に出す。追加した行を `sources` から除き、`project_index` を書き足す。破壊的な手順ではない'
-    notes: 1 行ずつの追加は project-index#14 の端末の設定の API（1 行ずつの API は shuhei1101/project-index#10）。途中でつながらなくなったら、追加済みの行も含めて端末の設定をバックアップから戻す（project-index に追加した行はそのまま残り、やり直したときは同じ id・同じ内容の行として追加済みに扱う）
+    notes: 1 行ずつの追加は project-index#14 の端末の設定の API（1 行ずつの API は shuhei1101/project-index#10）。途中でつながらなくなったら、追加済みの行も含めて端末の設定を書き換えない（project-index に追加した行はそのまま残り、やり直したときは同じ id・同じ内容の行として追加済みに扱う）
 test_file: tests/integration/server/test_migrate.py

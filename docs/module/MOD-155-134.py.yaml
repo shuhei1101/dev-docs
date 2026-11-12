@@ -2,7 +2,7 @@ id: MOD-155-134
 title: 開発ドキュメントサーバー / 絞り込み / fields.py
 lead: 項目の値・計算項目・使える項目・見出しの行。
 test_files:
-  - tests/unit/dev_docs/features/search/test_fields.py
+  - tests/unit/dev_docs/features/filter/test_fields.py
 diagrams:
   - name: 全体
     diagram: |-
@@ -31,13 +31,13 @@ diagrams:
 constants:
   - name: COMPUTED_FIELDS
     title: 計算項目
-    container: features/search/fields.py
+    container: features/filter/fields.py
     usecase: 検索
     summary: 文書から計算する項目
     value: '("@chars", "@path", "@sections", "@matches")'
   - name: DATE_FIELDS
     title: 日時の項目
-    container: features/search/fields.py
+    container: features/filter/fields.py
     usecase: 検索
     summary: 値を日時として比べ、空なら並べ替えの末尾にする項目
     value: '("created", "updated")'
@@ -45,7 +45,7 @@ functions:
   - name: field_values
     title: 項目の値
     kind: 関数
-    container: features/search/fields.py
+    container: features/filter/fields.py
     usecase: 文書の取得
     role: 読み取り
     summary: 文書から項目の値を引き、比べられる値の並びにする
@@ -88,7 +88,7 @@ functions:
   - name: known_fields
     title: 使える項目
     kind: 関数
-    container: features/search/fields.py
+    container: features/filter/fields.py
     usecase: 文書の取得
     role: 読み取り
     summary: 文書の行のスキーマから、`nav` の `auto` の `filter` に使える項目の一覧を作る
@@ -111,7 +111,7 @@ functions:
   - name: heading_lines
     title: 見出しの行
     kind: 関数
-    container: features/search/fields.py
+    container: features/filter/fields.py
     usecase: 文書の取得
     role: 読み取り
     summary: Markdown の行の並びから、見出しの行番号・階層・文字列を集める（コードブロックの中は除く）

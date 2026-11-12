@@ -16,7 +16,7 @@ catalogs:
         purpose: project-index の読み取り API と端末の設定の API を `base_url` と制限時間つきで呼ぶ（project-indexの呼び出し）
       - name: Timeout
         kind: クラス
-        purpose: 1 回の要求の上限（`PROJECT_INDEX_TIMEOUT_SEC`）
+        purpose: 接続・読み取りなど、待ちごとの上限（`PROJECT_INDEX_TIMEOUT_SEC`）。要求全体の上限は `asyncio.timeout` で別にかける
       - name: ConnectError・TimeoutException・TransportError
         kind: 例外
         purpose: 接続を断られた・制限時間を超えたことを、project-index につながらない（503）に変える

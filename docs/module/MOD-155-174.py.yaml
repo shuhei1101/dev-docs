@@ -393,7 +393,9 @@ functions:
       2. `plan` の場合、手順ごとに `{version}: {description}` を標準出力に 1 行ずつ出し（破壊的な手順は末尾に ` [destructive]`）、0 を返す。手順が空なら何も出さない
       3. `record` の場合、手順を空にして適用し（移し替えの適用）、`{ファイル} の version を {current} にしました（バックアップ: {パス}）` を標準出力に出して 0 を返す
       4. それ以外で手順が空の場合、`移し替えは要りません（version {current}）` を標準出力に出して 0 を返す
-      5. 手順を当て（移し替えの適用。`allow_destructive` は解析結果、`project_index` は解析結果か `http://127.0.0.1:{PROJECT_INDEX_PORT}`（無ければ 8786）、`now` は現在時刻）、`{ファイル} を version {current} に移し替えました（バックアップ: {パス}）` を標準出力に出して 0 を返す。project-index に同じ id で内容の違う行があって移さなかった行は、`{id}: project-index に同じ id の別の行があるため移しませんでした` を 1 行ずつ出す
+      5. 手順を当て（移し替えの適用。`allow_destructive` は解析結果、`project_index` は解析結果か `http://127.0.0.1:{PROJECT_INDEX_PORT}`（無ければ 8786）、`now` は現在時刻）
+         - 手順に `export_sources` がある場合、`export_source` は「行を受け取り、1 回の `asyncio.run` の中で `project_index` のアドレスと `PROJECT_INDEX_TIMEOUT_SEC` で project-indexの呼び出しを作り、端末の設定の配信元の行の追加を呼んで、`aclose` してから結果を返す関数」にする（行ごとにイベントループと HTTP のクライアントを作って閉じ、ループをまたいで使い回さない）
+         - `--record` の場合と、手順に `export_sources` が無い場合は `export_source` を `None` にする、`{ファイル} を version {current} に移し替えました（バックアップ: {パス}）` を標準出力に出して 0 を返す。project-index に同じ id で内容の違う行があって移さなかった行は、`{id}: project-index に同じ id の別の行があるため移しませんでした` を 1 行ずつ出す
          - 手順 1〜5 で `MigrationError` の場合、本文を標準エラーに出し、例外の `exit_code` を返す
     exceptions:
       - name: なし（終了コード 2）
@@ -470,6 +472,12 @@ functions:
         mock: なし
         expected: 7 を返し、端末の設定が元のまま。標準エラーにアドレス
         exception: なし（終了コード 7）
+      - name: test_run_migrate_when_no_export
+        case: 正常
+        summary: export_sources の無い手順では project-index を呼ばない
+        condition: '`version: "1"` で `sources` を持たない端末の設定。`2` の手順に `add` だけ、`--project-index` が何も待ち受けていないアドレス'
+        mock: 手順の置き場所・`SETTINGS_VERSION`（`2`）
+        expected: 0 を返し、project-index へ接続しない（`export_source` に `None` が渡る）
     callees:
       - MOD-155-119#functions[resolve_target]
       - MOD-155-119#functions[plan_migration]

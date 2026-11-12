@@ -2,7 +2,7 @@ id: MOD-155-135
 title: 開発ドキュメントサーバー / 絞り込み / filters.py
 lead: 条件の木の確かめと照合・正規表現・比べる値の解釈（`nav` の `auto` の `filter`）。
 test_files:
-  - tests/unit/dev_docs/features/search/test_filters.py
+  - tests/unit/dev_docs/features/filter/test_filters.py
 diagrams:
   - name: 全体
     diagram: |-
@@ -43,7 +43,7 @@ functions:
   - name: check_filter
     title: 条件の確かめ
     kind: 関数
-    container: features/search/filters.py
+    container: features/filter/filters.py
     usecase: 文書の取得
     role: 検証
     summary: 条件の木の項目と値が使えるかを確かめる
@@ -91,7 +91,7 @@ functions:
   - name: parse_compare_value
     title: 比べる値の解釈
     kind: 関数
-    container: features/search/filters.py
+    container: features/filter/filters.py
     usecase: 文書の取得
     role: 変換
     summary: 条件の値を項目の型で解釈する
@@ -144,7 +144,7 @@ functions:
   - name: match_filter
     title: 条件の照合
     kind: 関数
-    container: features/search/filters.py
+    container: features/filter/filters.py
     usecase: 文書の取得
     role: 判定
     summary: 文書が条件の木に当たるかを判定する
@@ -226,7 +226,7 @@ functions:
   - name: compile_regex
     title: 正規表現の組み立て
     kind: 関数
-    container: features/search/filters.py
+    container: features/filter/filters.py
     usecase: 文書の取得
     role: 変換
     summary: '`regex` の値を、各行に当たる正規表現にする'

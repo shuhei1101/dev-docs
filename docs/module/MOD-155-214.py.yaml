@@ -42,7 +42,7 @@ data_models:
     usecase: 文書の取得
     role: DTO
     summary: project-index が返した 1 件の文書（ファイル 1 つか `records` の要素 1 つ）
-    description: '`@dataclass(frozen=True, slots=True, kw_only=True)`。今の文書のストアの `Document` と同じ項目を持ち、`body` だけは文書の詳細でしか埋めない。タブとサイドバーの組み立て・条件の照合・エイリアスの集め・変わったキー・変換がこの型を読む。'
+    description: '`@dataclass(frozen=True, slots=True, kw_only=True)`。`body` だけは文書の詳細でしか埋めない。タブとサイドバーの組み立て・条件の照合・エイリアスの集め・変わったキー・変換がこの型を読む。'
     properties:
       - name: id
         title: 文書の ID
@@ -392,7 +392,7 @@ data_models:
     usecase: 画面の検索
     role: DTO
     summary: '`GET /sources/{source}/search` の応答'
-    description: '`@dataclass(frozen=True, slots=True, kw_only=True)`。`items` の要素は `{path, name, snippets}`。`path` は文書のファイルのパス'
+    description: '`@dataclass(frozen=True, slots=True, kw_only=True)`。'
     properties:
       - name: total_count
         title: 総件数
@@ -403,7 +403,7 @@ data_models:
         title: 一致した文書
         type: list[SearchHit]
         access: 公開
-        description: '`SearchHit(path, name, record_index, snippets)` の並び'
+        description: '`SearchHit` の並び'
   - name: SearchHit
     title: 検索に一致した文書
     container: integrations/project_index/types.py

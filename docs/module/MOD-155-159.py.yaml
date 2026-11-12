@@ -120,7 +120,7 @@ functions:
       4. 返す文書を決める
          - `path` が無ければ、一番左のタブのタブの最初の文書。文書が 1 つも無ければ `DocumentNotFoundError`
          - `path` があれば文書のページの特定。無く、`listed.unreadable` のうち `file` から拡張子を落としたパスが `path` と同じものがあれば、`markdown` を `None`、`conversion_error` をその `IndexFailure` と同じフィールドの `ConversionError` にして 8 へ進む。どちらにも無ければ `DocumentNotFoundError`（`missing` に `path`）
-      5. project-indexの呼び出し.文書の詳細の取得（文書の `path`・`ref`。管理用の YAML の行の文書は `id` のクエリで要素を選ぶ）と、`view.decision_folders` があれば project-indexの呼び出し.検討事項の一覧の取得 を同時に呼ぶ
+      5. project-indexの呼び出し.文書の詳細の取得（文書の `path`・`ref`。管理用の YAML の行の文書は `document_id` に文書の ID を渡す）と、`view.decision_folders` があれば project-indexの呼び出し.検討事項の一覧の取得 を同時に呼ぶ
       6. 変換.描画する を `asyncio.to_thread` で呼ぶ（`documents` は `listed.documents`、`linkable` は検討事項の一覧の `linkable`、無ければ空）。`ConvertFailure` なら `markdown` を `None`、`conversion_error` を同じフィールドの `ConversionError` にして 8 へ進む
       7. 埋め込みのパスの取り出しのパスごとに project-indexの呼び出し.文書の詳細の取得（`ref`）を同時に呼び、値（文書が無い・`DocumentNotFoundError` のときは `None`）を集めて、変換.仕上げる で `markdown` と `table_keys` を作る
       8. `diff_ref` があり `view.git` なら、project-indexの呼び出し.文書の一覧の取得（`diff_ref`）で比較元の文書を取り、`diff` を `DocumentDiff(base=diff_ref, ...)` にする。Git 管理外は `diff` を `None` にする

@@ -29,7 +29,7 @@ diagrams:
 data_models:
   - name: Condition
     title: 条件
-    container: features/search/types.py
+    container: features/filter/types.py
     usecase: 検索
     role: DTO
     summary: 1 つの項目を比べる条件
@@ -66,7 +66,7 @@ data_models:
         description: '`False` は NFKC と `casefold` をした後に比べる（`regex` はパターンに正規化をかけず、`re.IGNORECASE` と NFKC にした値で比べる）'
   - name: Group
     title: 条件のまとまり
-    container: features/search/types.py
+    container: features/filter/types.py
     usecase: 検索
     role: DTO
     summary: 条件を AND・OR でまとめるか、否定する
@@ -92,7 +92,7 @@ data_models:
         description: 別名 `not`。中の条件か束に該当しない文書に該当する
   - name: Heading
     title: 見出しの行
-    container: features/search/types.py
+    container: features/filter/types.py
     usecase: 検索
     role: DTO
     summary: Markdown の本文の見出し 1 つ
