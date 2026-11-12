@@ -1,0 +1,1 @@
+# プロンプトファイルの kind に agent を追加し、templates/prompt.schema.yaml と prompt_doc の型へ反映する
