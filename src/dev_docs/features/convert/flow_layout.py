@@ -92,7 +92,7 @@ def _is_wide(char: str) -> bool:
 
 
 def _label_lines(text: str, width: float) -> int:
-    """全角を文字の大きさ、半角をその `half_width` 倍の幅とみなし、幅で改行した行の数を返却する。"""
+    """全角を文字の大きさ、半角をその `half_width` 倍の幅とみなし、幅で折り返した行の数を返却する。"""
     if not text:
         return 0
     size = LABEL_METRICS["name_size"]
@@ -108,7 +108,7 @@ def _label_lines(text: str, width: float) -> int:
 
 
 def _node_height(name: str) -> int:
-    """名前が改行して収まるノードの高さを返却する（`NODE_HEIGHT` より低くはしない）。"""
+    """名前が折り返して収まるノードの高さを返却する（`NODE_HEIGHT` より低くはしない）。"""
     width = NODE_WIDTH - LABEL_METRICS["pad_x"] * 2
     lines = _label_lines(name, width)
     text = (LABEL_METRICS["kind_size"] + lines * LABEL_METRICS["name_size"]) * LABEL_METRICS[

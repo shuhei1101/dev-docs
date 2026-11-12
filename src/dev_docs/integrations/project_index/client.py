@@ -184,7 +184,7 @@ class ProjectIndexClient:
             )
         summary = response.text[:SUMMARY_CHARS]
         raise ProjectIndexResponseError(
-            message=f"project-index が {status} を返しました: {summary}",
+            message=f"project-index が {status} を返却しました: {summary}",
             status_code=status,
             summary=summary,
         )
