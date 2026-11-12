@@ -115,6 +115,8 @@ scenarios:
       - 設定画面の一覧で、broken が配信していない配信元として出る
       - broken の `project-index.yaml` を修正して project-index が読み直した後、dev-docs を再起動せずに broken の文書の画面が開ける
     test: test_error_when_source_config_invalid
+    notes:
+      修正と読み直し: S2 と S3 の間で、テストが broken の `project-index.yaml` を修正し、project-index に読み直させる（dev-docs は再起動しない）。S3 は broken の文書の画面を開く
     uses:
       - SC-155-10#scenarios[正常シナリオ]
       - SC-155-7#scenarios[異常シナリオ（配信していない配信元を開く）]
