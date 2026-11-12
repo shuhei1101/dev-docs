@@ -1,0 +1,57 @@
+use_cases:
+  - kind: composite
+    scenario: docs/scenario/SC-155-13.yaml
+    impact: run_only
+    detail: 配信元の文書を画面で読み、配信元を追加・削除する流れは変わらないが、文書と配信元の情報の取得先が本物の project-index に変わる
+    depends_on: []
+  - kind: single
+    scenario: docs/scenario/SC-155-7.yaml
+    impact: run_only
+    detail: 文書の画面のタブ・サイドバー・検索・リビジョン・差分の手順は変わらないが、文書・検索・リビジョンの取得先が本物の project-index に変わる
+    depends_on: []
+  - kind: single
+    scenario: docs/scenario/SC-155-10.yaml
+    impact: run_only
+    detail: 起動して project-index へつなぐ手順は変わらないが、つなぐ先が本物の project-index に変わる
+    depends_on: []
+  - kind: single
+    scenario: docs/scenario/SC-155-11.yaml
+    impact: run_only
+    detail: 配信元の配信の停止と削除の手順は変わらないが、端末の設定の保存先が本物の project-index に変わる
+    depends_on: []
+  - kind: single
+    scenario: docs/scenario/SC-155-12.yaml
+    impact: run_only
+    detail: 配信元の登録と、配信できない配信元の表示の手順は変わらないが、端末の設定の保存先と状態の取得先が本物の project-index に変わる
+    depends_on: []
+  - kind: single
+    scenario: docs/scenario/SC-155-3.yaml
+    impact: run_only
+    detail: 端末の設定の移し替えの手順は変わらないが、配信元の行の移し先が本物の project-index に変わる
+    depends_on: []
+  - kind: single
+    scenario: docs/scenario/SC-155-6.yaml
+    impact: none
+    detail: コメントの追加・コピー・起票は画面の中で完結し、project-index の入出力に関わらない
+    depends_on: []
+  - kind: single
+    scenario: docs/scenario/SC-155-2.yaml
+    impact: none
+    detail: 端末の設定と env の用意は project-index の入出力に関わらない
+    depends_on: []
+docs:
+  - page: docs/external-api/API-155-1.yaml
+    new: false
+    change: エンドポイントの入出力を shuhei1101/project-index のインターフェース定義（IF-22〜IF-32）に合わせ、`verification`・`version`・`notes` を本物と照合した結果と参照した契約の版（project-index の commit）へ書き換える
+    status: todo
+  - page: docs/dev-command/CMD-155-1.yaml
+    new: false
+    change: 本物の project-index に対する結合テストの前提（project-index の用意と起動）を書き足す
+    status: todo
+scope_out:
+  - item: E2E のテストの作成
+    reason: D-307 で E2E は開発の間は作らず、メジャーのリリースの前に作ると決まっている（#164 の task-reviewer の指摘）
+    plan: none
+  - item: project-index の読み取り API への入出力の追加（文書の一覧の値・配信元の設定の解いたスキーマ 等）
+    reason: 本物の API が返す値から dev-docs の側で組み立てられないものがあるかは、インターフェース定義設計で決まる。そのときは規約『複数リポジトリのAPI契約』に沿って project-index へ起票する。この作業 PR は dev-docs のリポジトリだけを変更する
+    plan: to_file

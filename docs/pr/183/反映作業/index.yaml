@@ -1,0 +1,29 @@
+端末の設定の移し替え:
+  説明: '`dev-docs migrate --project-index` で、dev-docs の端末の設定（`~/.config/dev-docs/settings.yaml`）を今の版へ移し、`sources[]` の配信元の行を本物の project-index の端末の設定へ移す。実行の前に両方の端末の設定の控えを取り、控えを書き戻すと戻せる'
+  タグ: [設定の移し替え]
+  実行者: planner
+  時期: マージの後
+  回数: 1 回限り
+  可逆: true
+  疎通確認: null
+  実行: null
+  確認: null
+  切り戻し: null
+  失敗時: 控えを書き戻し、原因を確かめて 1 回やり直す。2 回連続で失敗したら依頼元へ返す
+  確認方法: dev-docs の端末の設定の `version` が今の版で、project-index の GET `/settings/sources` の行に dev-docs の端末の設定にあった配信元の ID が並ぶ
+  状態: "-"
+dev-docs のサーバーの再起動:
+  説明: 稼働中の dev-docs のサーバー（`python -m dev_docs serve`）を止めて develop の worktree から起動し直し、本物の project-index へつなぐ
+  タグ: [再起動]
+  実行者: planner
+  時期: マージの後
+  回数: 1 回限り
+  起動し直す対象: dev-docs serve
+  可逆: true
+  疎通確認: null
+  実行: null
+  確認: null
+  切り戻し: null
+  失敗時: 既定の対処を 1 回、2 回連続で失敗したら依頼元へ返す
+  確認方法: 127.0.0.1:8781 の画面の API で dev-docs の配信元の文書の一覧が 200 で返り、管理の MCP の `status` が project-index につながっている旨を返す
+  状態: "-"
