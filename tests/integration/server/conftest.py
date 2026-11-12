@@ -29,6 +29,9 @@ MCP_HEADERS = {
     "Content-Type": "application/json",
 }
 SAME_ORIGIN = {"Sec-Fetch-Site": "same-origin"}
+# 起動の待ち受けを待つ上限。2026-11-12 の実測で、負荷の低いときは 1 回 18 秒、
+# ロードアベレージ 20 では 30 秒を超えたため、30 秒 + 50% の余裕を持たせて 60 秒にする
+SERVE_WAIT_SEC = 60
 # 保留した応答を待つ上限
 HOLD_WAIT_SEC = 60
 SETTINGS_PATH = "/home/u/.config/project-index/settings.yaml"
@@ -497,7 +500,9 @@ def wait_until_serving() -> Callable[..., None]:
     """子プロセスが画面の API で応答するまで待つ関数を返す。"""
     import httpx
 
-    def _wait(process: subprocess.Popen[str], port: int, timeout_sec: float = 30) -> None:
+    def _wait(
+        process: subprocess.Popen[str], port: int, timeout_sec: float = SERVE_WAIT_SEC
+    ) -> None:
         deadline = time.monotonic() + timeout_sec
         while time.monotonic() < deadline:
             assert process.poll() is None, "dev-docs serve が先に終わった"
