@@ -13,7 +13,7 @@ use_cases:
   - kind: single
     scenario: docs/scenario/SC-155-3.yaml
     impact: changed
-    detail: 更新と端末の設定の移し替えが、画面の側と索引の側の 2 つに分かれる
+    detail: 配信元の設定の移し替えは project-index へ移る。端末の設定の sources を project-index へ写して除く移し替えが加わる
     depends_on:
       - docs/scenario/SC-155-13.yaml
   - kind: single
@@ -49,19 +49,19 @@ use_cases:
   - kind: single
     scenario: docs/scenario/SC-155-10.yaml
     impact: changed
-    detail: 画面のサーバーの起動は、project-index から配信元を読む前提に変わる
+    detail: 画面のサーバーの起動は project-index へつなぐだけになり、配信元ごとの起動時の検証と文脈の注入は project-index へ移る。project-index につながらないときの振る舞いが加わる
     depends_on:
       - docs/scenario/SC-155-13.yaml
   - kind: single
     scenario: docs/scenario/SC-155-11.yaml
     impact: following
-    detail: 配信元を外す操作で書き換える配信元の一覧を、project-index と共有するものに追随する
+    detail: 配信元を外す操作を、project-index の端末の設定の配信元の API で保存する流れに追随する
     depends_on:
       - docs/scenario/SC-155-13.yaml
   - kind: single
     scenario: docs/scenario/SC-155-12.yaml
     impact: changed
-    detail: 配信元を追加するときに作る設定の既定の名前が project-index.yaml になり、追加した配信元を project-index と共有する
+    detail: 配信元の追加は設定画面だけになり、project-index の端末の設定へ保存する。`/dev-docs:setup` での登録と管理用の YAML の突き合わせは project-index へ移る
     depends_on:
       - docs/scenario/SC-155-13.yaml
   - kind: single
@@ -72,9 +72,10 @@ use_cases:
       - docs/scenario/SC-155-13.yaml
   - kind: single
     scenario: docs/scenario/SC-155-6.yaml
-    impact: run_only
-    detail: コメントを渡す流れは変わらないが、本文の取得元が変わるため壊れうる
-    depends_on: []
+    impact: following
+    detail: コメントを渡す流れは変わらず、配信元の設定の名前を project-index.yaml に追随する
+    depends_on:
+      - docs/scenario/SC-155-13.yaml
 docs:
   - page: README.md
     new: false
