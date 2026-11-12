@@ -114,12 +114,12 @@ functions:
       type: DocumentResponse
       description: 文書の取得の応答
     process: |-
-      1. project-indexの呼び出し.配信元の表示の設定の取得 で `view` を、project-indexの呼び出し.文書の一覧の取得（`ref`）で `listed` を取る（2 つは `asyncio.gather` で同時に呼ぶ）
+      1. project-indexの呼び出し.配信元の表示の設定の取得 で `view` を取り、続けて project-indexの呼び出し.文書の一覧の取得（`ref`。`record_kinds` は `view.documents` のうち `records` を持つ行の ID）で `listed` を取る
       2. `path` が検討事項の文書のパスの読み取りで ID になれば、project-indexの呼び出し.検討事項の文書の取得 の本文を `markdown` にし、`path` を `path`、`body_path`・`diff`・`conversion_error` を `None`、`tabs` をタブとサイドバーの組み立ての結果でどのタブも `active` にしない値、`updated_at` を今の日時、`table_keys`・`aliases` を空にして返却する（以降の手順は実行しない）。当たるフォルダが 0 個か 2 個以上なら project-index の 404 の `DocumentNotFoundError` がそのまま伝わる
       3. タブとサイドバーの組み立て（`view`・`listed.documents`）をする
       4. 返す文書を決める
          - `path` が無ければ、一番左のタブのタブの最初の文書。文書が 1 つも無ければ `DocumentNotFoundError`
-         - `path` があれば文書のページの特定。無く、`listed.unreadable` のうち `file` から拡張子を落としたパスが `path` と同じものがあれば、`markdown` を `None`、`conversion_error` をその `IndexFailure` と同じフィールドの `ConversionError` にして 8 へ進む。どちらにも無ければ `DocumentNotFoundError`（`missing` に `path`）
+         - `path` があれば文書のページの特定。無ければ project-indexの呼び出し.文書の詳細の取得（`{path}.yaml`・`ref`）を呼び、`failure` の `reason` が `invalid_yaml` なら、`markdown` を `None`、`conversion_error` をその `IndexFailure` と同じフィールドの `ConversionError` にして 8 へ進む。それ以外か `DocumentNotFoundError` なら `DocumentNotFoundError`（`missing` に `path`）
       5. project-indexの呼び出し.文書の詳細の取得（文書の `path`・`ref`。管理用の YAML の行の文書は `document_id` に文書の ID を渡す）と、`view.decision_folders` があれば project-indexの呼び出し.検討事項の一覧の取得 を同時に呼ぶ
       6. 変換.描画する を `asyncio.to_thread` で呼ぶ（`documents` は `listed.documents`、`linkable` は検討事項の一覧の `linkable`、無ければ空）。`ConvertFailure` なら `markdown` を `None`、`conversion_error` を同じフィールドの `ConversionError` にして 8 へ進む
       7. 埋め込みのパスの取り出しのパスごとに project-indexの呼び出し.文書の詳細の取得（`ref`）を同時に呼び、値（文書が無い・`DocumentNotFoundError` のときは `None`）を集めて、変換.仕上げる で `markdown` と `table_keys` を作る
@@ -151,76 +151,76 @@ functions:
         case: 正常
         summary: 配信元のトップ
         condition: '`path=None`、`nav` のタブが 2 つ'
-        mock: project-indexの呼び出し（`httpx.MockTransport` で project-index#14 の入出力を返す偽物）
+        mock: project-indexの呼び出し（`httpx.MockTransport` で project-index の develop の `f36ba69` の入出力を返す偽物）
         expected: 一番左のタブの一番上の文書の `markdown` と `path`、一番左のタブだけが `active`
       - name: test_get_document_when_diff
         case: 正常
         summary: 差分の結果とサイドバーの変化
         condition: '`docs/a` の `name` を変え、`docs/c` を削除し、`docs/d` を追加した commit を `ref`、親の commit を `diff_ref`、`path="docs/a"`'
-        mock: project-indexの呼び出し（`httpx.MockTransport` で project-index#14 の入出力を返す偽物）
+        mock: project-indexの呼び出し（`httpx.MockTransport` で project-index の develop の `f36ba69` の入出力を返す偽物）
         expected: '`diff` が `base` 親の commit・`change` `modified`・`changed_items` `["name"]`。サイドバーの `docs/a` が `modified`、`docs/d` が `added`、`docs/c` が `deleted`'
       - name: test_get_document_when_convert_failed
         case: 正常
         summary: 変換の失敗
         condition: 'project-index が `failure` に `reason: timeout` を入れた文書の詳細を返す'
-        mock: project-indexの呼び出し（`httpx.MockTransport` で project-index#14 の入出力を返す偽物）
+        mock: project-indexの呼び出し（`httpx.MockTransport` で project-index の develop の `f36ba69` の入出力を返す偽物）
         expected: '`markdown` が `None` で、`conversion_error.reason` が `timeout`'
       - name: test_get_document_when_yaml_unreadable
         case: 正常
         summary: YAML を読めない
-        condition: project-index の文書の一覧の `unreadable` に `docs/a.yaml`（`line`・`column` つき）があり、`path="docs/a"`
-        mock: project-indexの呼び出し（`httpx.MockTransport` で project-index#14 の入出力を返す偽物）
+        condition: '`path="docs/a"` が文書の一覧に無く、文書の取得（`docs/a.yaml`）が `value: null` と `conversionError`（`reason: invalid_yaml`・`file: docs/a.yaml`・`line`・`column`）を返す'
+        mock: project-indexの呼び出し（`httpx.MockTransport` で project-index の develop の `f36ba69` の入出力を返す偽物）
         expected: '`conversion_error` が `invalid_yaml` で、`file` が `docs/a.yaml`、`line`・`column` が読めなかった位置'
       - name: test_get_document_when_missing
         case: 異常
         summary: 無い文書
         condition: '`path="docs/none"`'
-        mock: project-indexの呼び出し（`httpx.MockTransport` で project-index#14 の入出力を返す偽物）
+        mock: project-indexの呼び出し（`httpx.MockTransport` で project-index の develop の `f36ba69` の入出力を返す偽物）
         expected: '`DocumentNotFoundError`'
         exception: 無い文書
       - name: test_get_document_when_not_git
         case: 正常
         summary: Git 管理外の更新日時と差分
         condition: '`git: false` の配信元の `docs/a`（`updated` がファイルの更新日時）、`diff_ref="main"`'
-        mock: project-indexの呼び出し（`httpx.MockTransport` で project-index#14 の入出力を返す偽物）
+        mock: project-indexの呼び出し（`httpx.MockTransport` で project-index の develop の `f36ba69` の入出力を返す偽物）
         expected: '`updated_at` が project-index の `updated`、`diff` が `None`、`ref` が `None`'
       - name: test_get_document_when_aliases
         case: 正常
         summary: エイリアスを返す
         condition: '`alias_type: term` の行の「作業範囲」（`aliases: [scope, 担当範囲]`・`avoid: [担当領域]`・`description` あり）と、`alias_type: doc` の行の「設定のリファレンス」（`aliases: [settings]`）を持つ配信元の文書を開く'
-        mock: project-indexの呼び出し（`httpx.MockTransport` で project-index#14 の入出力を返す偽物）
+        mock: project-indexの呼び出し（`httpx.MockTransport` で project-index の develop の `f36ba69` の入出力を返す偽物）
         expected: '`aliases` が 2 件で、作業範囲の `avoid` が `[担当領域]`、設定のリファレンスは `avoid` を持たない（JSON にキーが無い）'
         exception: '-'
       - name: test_get_document_when_decision
         case: 正常
         summary: 検討事項の文書を返す
         condition: '`decision_folders` が `[tmp/a, tmp/b]` で、project-index が `D-1` の本文を返す。`path="_decisions/D-1"`'
-        mock: project-indexの呼び出し（`httpx.MockTransport` で project-index#14 の入出力を返す偽物）
+        mock: project-indexの呼び出し（`httpx.MockTransport` で project-index の develop の `f36ba69` の入出力を返す偽物）
         expected: '`markdown` が project-index の本文、`path` が `_decisions/D-1`、`diff`・`body_path` が `None`、どのタブも `active` でない'
       - name: test_get_document_when_decision_ambiguous
         case: 異常
         summary: 2 つのフォルダにある検討事項
         condition: 'project-index が `_decisions/D-2` に 404（`missing: doc`）を返す'
-        mock: project-indexの呼び出し（`httpx.MockTransport` で project-index#14 の入出力を返す偽物）
+        mock: project-indexの呼び出し（`httpx.MockTransport` で project-index の develop の `f36ba69` の入出力を返す偽物）
         expected: '`DocumentNotFoundError`'
         exception: 無い文書
       - name: test_get_document_when_body_path
         case: 正常
         summary: 管理用の YAML の行の文書の本文のファイルのパス
         condition: '`records: files`・`body_file: path` の行の要素 `{path: notes/b.md}` の文書を、画面のパスと `notes/b.md` の 2 通りで開く。ファイル 1 つが 1 文書の文書も開く'
-        mock: project-indexの呼び出し（`httpx.MockTransport` で project-index#14 の入出力を返す偽物）
+        mock: project-indexの呼び出し（`httpx.MockTransport` で project-index の develop の `f36ba69` の入出力を返す偽物）
         expected: どちらも `body_path` が `notes/b.md` で `path` が画面のパス。ファイル 1 つが 1 文書の文書は `body_path` が `None`
       - name: test_get_document_when_embed
         case: 正常
         summary: 埋め込む値を project-index から取る
         condition: '本文に `<!-- embed: data/list.yaml#items -->` を持つ Markdown の文書と、project-index が `data/list.yaml` の値を返す'
-        mock: project-indexの呼び出し（`httpx.MockTransport` で project-index#14 の入出力を返す偽物）
+        mock: project-indexの呼び出し（`httpx.MockTransport` で project-index の develop の `f36ba69` の入出力を返す偽物）
         expected: '`markdown` に 2 行の表、`table_keys` に `embed:data/list.yaml#items`'
       - name: test_get_document_when_unreachable
         case: 異常
         summary: project-index につながらない
         condition: 偽物が接続を断る
-        mock: project-indexの呼び出し（`httpx.MockTransport` で project-index#14 の入出力を返す偽物）
+        mock: project-indexの呼び出し（`httpx.MockTransport` で project-index の develop の `f36ba69` の入出力を返す偽物）
         expected: '`ProjectIndexUnreachableError`'
         exception: project-index につながらない・制限時間を超えた
     is_async: true

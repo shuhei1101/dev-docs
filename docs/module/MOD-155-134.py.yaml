@@ -35,12 +35,6 @@ constants:
     usecase: 検索
     summary: 文書から計算する項目
     value: '("@chars", "@path", "@sections", "@matches")'
-  - name: DATE_FIELDS
-    title: 日時の項目
-    container: features/filter/fields.py
-    usecase: 検索
-    summary: 値を日時として比べ、空なら並べ替えの末尾にする項目
-    value: '("created", "updated")'
 functions:
   - name: field_values
     title: 項目の値
@@ -70,7 +64,6 @@ functions:
     process: |-
       1. 項目で引き方を決める
          - `id`・`kind` の場合、文書の属性
-         - `created`・`updated` の場合、文書の日時（無ければ空）
          - メタデータのキー（`METADATA_KEYS`）の場合、`document.metadata`
          - `body` の場合、本文（文書の一覧の文書は本文を持たず空）
          - `*` の場合、`data` の全ての文字列の葉と本文
@@ -105,7 +98,7 @@ functions:
       type: dict[str, str]
       description: 項目のパス → 型（`string`・`number`・`boolean`・`array`・`object`・`date`）
     process: |-
-      1. `id`・`kind`・`created`・`updated`・`METADATA_KEYS`・`body`・`*`・`COMPUTED_FIELDS` を入れる
+      1. `id`・`kind`・`METADATA_KEYS`・`body`・`*`・`COMPUTED_FIELDS` を入れる
       2. スキーマの `properties` を再帰でたどり、`a.b` のパスと `type`（`format: date`・`date-time` は `date`）を足す。配列の要素の `properties` は `a.b` の形で足す
       3. 型の食い違う同じパスは `string` にする
   - name: heading_lines
