@@ -112,18 +112,6 @@ class PartSyntaxError:
     message: str
 
 
-class PromptDocError(Exception):
-    """`dev-docs prompt-doc` が終了コード 1 で終える例外の基底。"""
-
-
-class PromptYamlError(PromptDocError):
-    """標準入力が YAML として読めない。"""
-
-
-class InvalidPrompt(PromptDocError):
-    """変換に使うキーが無いか型が違う。"""
-
-
 @dataclass(frozen=True, slots=True, kw_only=True)
 class PromptProblem:
     """起動のときに読んだプロンプトの YAML の違反 1 件。"""

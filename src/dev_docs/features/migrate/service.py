@@ -3,9 +3,8 @@
 from __future__ import annotations
 
 import logging
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from datetime import datetime
-from pathlib import Path
 from typing import Any
 
 from ruamel.yaml.comments import CommentedMap
@@ -20,33 +19,34 @@ from dev_docs.features.migrate.types import (
     DestructiveStepBlockedError,
     MigrationConfigInvalidError,
     MigrationFailedError,
+    MigrationOutcome,
     MigrationStep,
     MigrationTarget,
+    ProjectIndexUnreachableMigrationError,
 )
 from dev_docs.features.settings.query import (
     SETTINGS_VERSION,
     config_path,
     validate_terminal_config,
 )
-from dev_docs.features.sources.service import validate_source_config
-from dev_docs.features.sources.types import SOURCE_CONFIG_VERSION
-from dev_docs.shared.errors import Violation
+from dev_docs.integrations.project_index.types import AddSourceResult
+from dev_docs.shared.errors import (
+    ProjectIndexRejectedError,
+    ProjectIndexResponseError,
+    ProjectIndexUnreachableError,
+)
 from dev_docs.shared.files import replace_file
 from dev_docs.shared.hashing import content_hash
-from dev_docs.shared.paths import normalize_path
 from dev_docs.shared.yaml_io import YamlLoadError, dump_roundtrip, load_roundtrip, load_yaml
 
 logger = logging.getLogger(__name__)
 
-SETUP_GUIDE = "手順で移せない設定です。/dev-docs:setup で移し替えてください"
+PROJECT_INDEX_KEY = "project_index"
+SOURCES_KEY = "sources"
 
 
-def resolve_target(source: str | None, *, env: Mapping[str, str]) -> MigrationTarget:
-    """`--source` の有無で移し替える設定を決める。"""
-    if source is not None:
-        return MigrationTarget(
-            kind="dev-docs", file=normalize_path(source), current=SOURCE_CONFIG_VERSION
-        )
+def resolve_target(*, env: Mapping[str, str]) -> MigrationTarget:
+    """移し替える端末の設定を決める。"""
     return MigrationTarget(kind="settings", file=config_path(env), current=SETTINGS_VERSION)
 
 
@@ -73,11 +73,43 @@ def plan_migration(target: MigrationTarget) -> tuple[CommentedMap, list[Migratio
     return data, load_steps(target.kind, mine=version, current=target.current)
 
 
-def _violations(target: MigrationTarget, value: dict[str, Any]) -> list[Violation]:
-    """当てた結果を、対象の種類の新しいスキーマで確かめる。"""
-    if target.kind == "settings":
-        return validate_terminal_config(value)
-    return validate_source_config(value, root=target.file.parent)
+def _export_sources(
+    data: CommentedMap,
+    export_source: Callable[[Mapping[str, Any]], AddSourceResult],
+    project_index: str,
+) -> list[str]:
+    """`sources` の行を 1 行ずつ project-index へ追加し、移さなかった行の ID を返す。"""
+    rows = data.get(SOURCES_KEY)
+    kept_rows: list[Any] = []
+    kept: list[str] = []
+    for row in rows if isinstance(rows, list) else []:
+        plain = _plain_row(row)
+        try:
+            result = export_source(plain)
+        except ProjectIndexUnreachableError as error:
+            raise ProjectIndexUnreachableMigrationError(error.address, error.reason) from error
+        except (ProjectIndexResponseError, ProjectIndexRejectedError) as error:
+            raise MigrationFailedError(str(error.message)) from error
+        if result.added or result.same:
+            continue
+        kept_rows.append(row)
+        kept.append(str(plain.get("id") or plain.get("config")))
+    if kept_rows:
+        data[SOURCES_KEY] = kept_rows
+    elif SOURCES_KEY in data:
+        del data[SOURCES_KEY]
+    if PROJECT_INDEX_KEY not in data:
+        data[PROJECT_INDEX_KEY] = project_index
+    return kept
+
+
+def _plain_row(row: Any) -> dict[str, Any]:
+    """往復編集の行を、`config` を配列にした素の辞書にする。"""
+    plain = load_yaml(dump_roundtrip(row)) if isinstance(row, CommentedMap) else dict(row)
+    config = plain.get("config")
+    if isinstance(config, str):
+        plain["config"] = [config]
+    return dict(plain)
 
 
 def apply_migration(
@@ -86,8 +118,10 @@ def apply_migration(
     steps: list[MigrationStep],
     *,
     allow_destructive: bool,
+    export_source: Callable[[Mapping[str, Any]], AddSourceResult] | None,
+    project_index: str,
     now: datetime,
-) -> Path:
+) -> MigrationOutcome:
     """手順を全て当てて新しいスキーマで検証し、バックアップを取ってから 1 回だけ書き込む。"""
     # 破壊的な手順は、許されたときだけ当てる
     destructive = [step for step in steps if step.destructive]
@@ -101,18 +135,19 @@ def apply_migration(
     if dump_roundtrip(load_roundtrip(original)) != dump_roundtrip(data):
         raise MigrationFailedError(f"{target.file}: 読み込んだ後に変わったため書き換えません")
     digest = content_hash(original)
+    kept: list[str] = []
     for step in steps:
+        if step.op == "export_sources" and export_source is not None:
+            kept = _export_sources(data, export_source, project_index)
+            continue
         apply_step(data, step)
     previous_version = str(data["version"])
     data["version"] = DoubleQuotedScalarString(target.current)
     text = dump_roundtrip(data)
-    violations = _violations(target, load_yaml(text))
+    violations = validate_terminal_config(load_yaml(text))
     # 当てた結果が新しいスキーマに違反するときは書かない
     if violations:
-        lines = [f"{v.path}: {v.rule}" for v in violations]
-        if target.kind == "dev-docs":
-            lines.append(SETUP_GUIDE)
-        raise MigrationFailedError("\n".join(lines))
+        raise MigrationFailedError("\n".join(f"{v.path}: {v.rule}" for v in violations))
     if content_hash(target.file.read_text(encoding="utf-8")) != digest:
         raise MigrationFailedError(f"{target.file}: 読み込んだ後に変わったため書き換えません")
     backup = target.file.with_name(
@@ -121,10 +156,11 @@ def apply_migration(
     replace_file(backup, original)
     replace_file(target.file, text)
     logger.info(
-        "設定を移し替えた（%s・%s から %s・バックアップ %s）",
+        "設定を移し替えた（%s・%s から %s・バックアップ %s・移さなかった行 %s）",
         target.file,
         previous_version,
         target.current,
         backup,
+        kept,
     )
-    return backup
+    return MigrationOutcome(backup=backup, kept=kept)

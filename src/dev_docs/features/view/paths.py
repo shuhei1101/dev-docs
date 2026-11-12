@@ -1,18 +1,14 @@
-"""文書のページのパスと読む場所。"""
+"""文書のページのパスと、文書のページの特定。"""
 
 from __future__ import annotations
 
 from collections.abc import Sequence
 from pathlib import PurePosixPath
 
-from dev_docs.features.access.types import Target
-from dev_docs.features.documents.types import Document
-from dev_docs.features.history.query import resolve_ref
-from dev_docs.features.history.types import ResolvedRef
-from dev_docs.features.sources.registry import SourceRegistry
+from dev_docs.integrations.project_index.types import IndexedDocument, SearchHit
 
 
-def page_path(document: Document) -> str:
+def page_path(document: IndexedDocument | SearchHit) -> str:
     """文書を URL のパスにする。"""
     path = PurePosixPath(document.path).with_suffix("").as_posix()
     if document.record_index is not None:
@@ -20,7 +16,7 @@ def page_path(document: Document) -> str:
     return path
 
 
-def find_page(documents: Sequence[Document], page: str) -> Document | None:
+def find_page(documents: Sequence[IndexedDocument], page: str) -> IndexedDocument | None:
     """文書のページのパスに当たる文書を探す。
 
     無ければ、文書のファイルか本文のファイルのパスが `page` と同じ最初の文書を返す
@@ -33,17 +29,3 @@ def find_page(documents: Sequence[Document], page: str) -> Document | None:
         (document for document in documents if page in (document.path, document.body_path)),
         None,
     )
-
-
-def screen_target(
-    source_id: str, ref: str | None, *, registry: SourceRegistry
-) -> tuple[Target, ResolvedRef | None]:
-    """画面のパスの配信元とリビジョンから読む場所を作る。"""
-    source = registry.get(source_id)
-    # 画面は 127.0.0.1 だけで待ち受けるので、作業場所の権限は見ない
-    if not source.is_git or source.repo_root is None:
-        return Target(source, source.root, None, None, "read"), None
-    default_ref = source.config.default_ref
-    resolved = resolve_ref(source.repo_root, ref or default_ref, date_base=default_ref)
-    target = Target(source, source.root, resolved.commit, None, "read", commit=resolved.commit)
-    return target, resolved

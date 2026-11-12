@@ -3,13 +3,13 @@
 from __future__ import annotations
 
 import re
-from pathlib import Path
+from collections.abc import Mapping
+from pathlib import PurePosixPath
 from typing import Any
 
 from dev_docs.features.convert.markdown import render_table
 from dev_docs.features.documents.fields import get_field
 from dev_docs.shared.errors import InvalidArgumentError
-from dev_docs.shared.yaml_io import YamlLoadError, load_yaml
 
 EMBED_PATTERN = r"<!--\s*embed:\s*(?P<path>[^#\s]+)(?:#(?P<item>\S+))?\s*-->"
 
@@ -22,18 +22,11 @@ def _warning(message: str) -> str:
     return f"> [!WARNING]\n> 埋め込めません: {message}"
 
 
-def _render(path: str, item: str | None, base: Path) -> str:
+def _render(path: str, item: str | None, embedded: Mapping[str, Any | None]) -> str:
     """マーカー 1 つを、指した値の Markdown にする。"""
-    root = base.resolve()
-    target = (base / path).resolve()
-    if not target.is_relative_to(root):
-        return _warning(f"{path}（配信元の外を指しています）")
-    if not target.is_file():
-        return _warning(f"{path}（ファイルがありません）")
-    try:
-        data: Any = load_yaml(target.read_text(encoding="utf-8"), file=path)
-    except (OSError, UnicodeDecodeError, YamlLoadError) as error:
-        return _warning(f"{path}（{error}）")
+    data = embedded.get(path)
+    if data is None:
+        return _warning(path)
     value: Any = data
     if item is not None:
         try:
@@ -53,13 +46,14 @@ def _render(path: str, item: str | None, base: Path) -> str:
     return "" if value is None else str(value)
 
 
-def expand_embeds(markdown: str, base: Path) -> str:
-    """Markdown の中の埋め込みのマーカーを、指した YAML の値の表に置き換える。"""
+def _markers(markdown: str) -> list[tuple[str, re.Match[str] | None]]:
+    """行ごとに、コードブロックの外のマーカーに当たればその一致を添えて並べる。"""
     pattern = re.compile(EMBED_PATTERN)
-    output: list[str] = []
+    result: list[tuple[str, re.Match[str] | None]] = []
     fence: str | None = None
     for line in markdown.splitlines(keepends=True):
         opened = FENCE.match(line)
+        matched: re.Match[str] | None = None
         if fence is None and opened:
             fence = opened.group("mark")
         elif (
@@ -71,9 +65,34 @@ def expand_embeds(markdown: str, base: Path) -> str:
             fence = None
         elif fence is None:
             matched = pattern.fullmatch(line.strip())
-            if matched:
-                ending = "\n" if line.endswith("\n") else ""
-                output.append(_render(matched.group("path"), matched.group("item"), base) + ending)
-                continue
-        output.append(line)
+        result.append((line, matched))
+    return result
+
+
+def _outside(path: str) -> bool:
+    """配信元の外を指すパス（`..` の要素を持つか `/` で始まる）か。"""
+    return path.startswith("/") or ".." in PurePosixPath(path).parts
+
+
+def embed_paths(markdown: str) -> list[str]:
+    """Markdown のコードブロックの外にある埋め込みのマーカーのパスを、出る順に重ねずに返す。"""
+    paths: list[str] = []
+    for _, matched in _markers(markdown):
+        if matched is None:
+            continue
+        path = matched.group("path")
+        if not _outside(path) and path not in paths:
+            paths.append(path)
+    return paths
+
+
+def expand_embeds(markdown: str, embedded: Mapping[str, Any | None]) -> str:
+    """Markdown の中の埋め込みのマーカーを、指した文書の値の表に置き換える。"""
+    output: list[str] = []
+    for line, matched in _markers(markdown):
+        if matched is None:
+            output.append(line)
+            continue
+        ending = "\n" if line.endswith("\n") else ""
+        output.append(_render(matched.group("path"), matched.group("item"), embedded) + ending)
     return "".join(output)

@@ -12,7 +12,7 @@ from fastapi.responses import JSONResponse, PlainTextResponse, Response
 from pydantic.alias_generators import to_camel
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
-from dev_docs.shared.errors import DevDocsError, InvalidArgumentError
+from dev_docs.shared.errors import DevDocsError, InvalidArgumentError, ProjectIndexUnreachableError
 from dev_docs.shared.schema_check import format_path
 
 logger = logging.getLogger(__name__)
@@ -53,9 +53,14 @@ def _problem(
 
 def problem_of(error: DevDocsError, fields: dict[str, Any] | None = None) -> JSONResponse:
     """`DevDocsError` を problem+json の応答にする（`fields` は本文に足す値）。"""
+    details = error.details()
+    if isinstance(error, ProjectIndexUnreachableError):
+        # つながらなかった接続先と理由は 1 段目に置かず `projectIndex` にまとめる
+        details = {"project_index": {"address": error.address, "reason": error.reason}}
+        logger.error("project-index につながらない（%s・%s）", error.address, error.reason)
     extra: dict[str, Any] = {
         "nextSteps": error.next_steps,
-        **{to_camel(key): _camelize(value) for key, value in error.details().items()},
+        **{to_camel(key): _camelize(value) for key, value in details.items()},
     }
     violations = getattr(error, "violations", None)
     if violations:

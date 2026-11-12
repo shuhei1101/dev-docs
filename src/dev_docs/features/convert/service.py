@@ -1,17 +1,12 @@
-"""変換の選択と `converters[]` の実行。"""
+"""変換の選択と、表のキーの取り出し。"""
 
 from __future__ import annotations
 
-import hashlib
-import logging
 import re
-from collections.abc import Mapping
-from pathlib import Path
+from collections.abc import Collection, Mapping, Sequence
 from typing import Any
 
-from dev_docs.features.access.types import Target, script_at
-from dev_docs.features.convert.decisions import find_decisions
-from dev_docs.features.convert.embed import EMBED_PATTERN, expand_embeds
+from dev_docs.features.convert.embed import expand_embeds
 from dev_docs.features.convert.markdown import item_heading, schema_to_markdown
 from dev_docs.features.convert.types import (
     Converted,
@@ -20,28 +15,17 @@ from dev_docs.features.convert.types import (
     RenderContext,
 )
 from dev_docs.features.documents.fields import is_markdown_body
-from dev_docs.features.documents.store import DocumentStore
-from dev_docs.features.documents.types import Document
-from dev_docs.integrations.scripts import (
-    ScriptError,
-    ScriptFailedError,
-    ScriptTimeoutError,
-    run_script,
+from dev_docs.integrations.project_index.types import (
+    DocumentDetail,
+    IndexedDocument,
+    SourceView,
 )
-from dev_docs.shared.files import replace_file
-from dev_docs.shared.hashing import value_hash
-from dev_docs.shared.version import RUNNING_VERSION
-
-logger = logging.getLogger(__name__)
 
 TABLE_KEY_PATTERN = r"^<!-- dev-docs-table: (?P<key>.+) -->$"
-CONVERT_CACHE_KEEP = 2000
 
 TABLE_DATA_MARKER = "<!-- table: data -->"
 SEPARATOR_ROW = re.compile(r"^\s*\|?\s*:?-{3,}:?\s*(\|\s*:?-{3,}:?\s*)*\|?\s*$")
 FENCE = re.compile(r"^\s{0,3}(?P<mark>`{3,}|~{3,})")
-
-__all__ = ["CONVERT_CACHE_KEEP", "TABLE_KEY_PATTERN", "ConvertService", "run_script"]
 
 
 def _strip_table_keys(markdown: str, kind: str) -> tuple[str, list[str]]:
@@ -86,134 +70,79 @@ def _strip_table_keys(markdown: str, kind: str) -> tuple[str, list[str]]:
 
 
 class ConvertService:
-    """文書の行の設定で変換を選び、埋め込みを展開した Markdown を返す。"""
+    """文書の行の設定で変換を選んで Markdown を描き、埋め込みを展開して表のキーを取り出す。
 
-    def __init__(self, cache_dir: Path, store: DocumentStore, timeout_sec: float) -> None:
-        self.cache_dir = cache_dir
-        self.store = store
-        self.timeout_sec = timeout_sec
+    `converters[]` のスクリプトは project-index が実行して結果を返すため、状態を持たない。
+    """
 
-    def _cache_path(
-        self, target: Target, document: Document, converter: str, run: list[str]
-    ) -> Path:
-        """`converters[]` の結果の控えのファイルを返す。"""
-        # dev-docs が持つ変換（`dev-docs prompt-doc`）の出力は dev-docs の更新で変わるため、バージョンも含める
-        parts = (
-            target.source.id,
-            document.kind,
-            converter,
-            document.version,
-            value_hash(run),
-            RUNNING_VERSION,
-        )
-        name = hashlib.sha256("\0".join(parts).encode("utf-8")).hexdigest()[:32]
-        return self.cache_dir / f"{name}.md"
-
-    def _prune(self) -> None:
-        """控えが `CONVERT_CACHE_KEEP` を超えたら、更新日時が古いものから消す。"""
-        files = [item for item in self.cache_dir.glob("*.md") if item.is_file()]
-        excess = len(files) - CONVERT_CACHE_KEEP
-        if excess <= 0:
-            return
-        for item in sorted(files, key=lambda file: file.stat().st_mtime)[:excess]:
-            item.unlink(missing_ok=True)
-
-    def _run_converter(
-        self, target: Target, document: Document, converter: str
-    ) -> str | ConvertFailure:
-        """`converters[]` のスクリプトで Markdown にする（`cache` の行は控えがあればそれを使う）。"""
-        entry = target.source.script("converters", converter)
-        cache = self._cache_path(target, document, converter, entry.run) if entry.cache else None
-        if cache is not None and cache.is_file():
-            return cache.read_text(encoding="utf-8")
-        script = " ".join(entry.run)
-        try:
-            result = run_script(
-                entry.run,
-                cwd=target.base,
-                stdin=document.body,
-                timeout_sec=self.timeout_sec,
-                at=script_at(target),
-            )
-        except ScriptTimeoutError:
-            return ConvertFailure(
-                reason="timeout",
-                kind=document.kind,
-                script=script,
-                detail=f"{self.timeout_sec:g} 秒",
-            )
-        except ScriptFailedError as error:
-            return ConvertFailure(
-                reason="exit", kind=document.kind, script=script, detail=error.reason
-            )
-        except ScriptError as error:
-            return ConvertFailure(
-                reason="not_runnable", kind=document.kind, script=script, detail=error.reason
-            )
-        # `cache: false` の行の変換は控えを書かない
-        if cache is not None:
-            self.cache_dir.mkdir(parents=True, exist_ok=True)
-            replace_file(cache, result.stdout)
-            self._prune()
-        return result.stdout
-
-    def _context(self, target: Target, document: Document) -> RenderContext:
-        """同じ配信元の文書を ID・パスで引くリンクの引き先と、Issue の URL を集める。"""
+    def _context(
+        self,
+        view: SourceView,
+        document: IndexedDocument,
+        documents: Sequence[IndexedDocument],
+        linkable: Collection[str],
+    ) -> RenderContext:
+        """同じリビジョンの文書を ID・パスで引くリンクの引き先と、Issue の URL を集める。"""
         links: dict[str, DocumentLink] = {}
-        documents: dict[str, Document] = {}
-        for found in self.store.load(target).documents:
-            link = DocumentLink(title=str(found.metadata["name"]), path=found.path)
-            documents.setdefault(found.id, found)
+        by_id: dict[str, IndexedDocument] = {}
+        for found in documents:
+            link = DocumentLink(title=str(found.metadata.get("name") or found.id), path=found.path)
+            by_id.setdefault(found.id, found)
             for key in (found.id, found.path, found.body_path):
                 if key is not None:
                     links.setdefault(key, link)
-        schemas: dict[str, Mapping[str, Any]] = {}
 
         def heading(document_id: str, item: str) -> str | None:
-            """ID の文書の値とスキーマで、項目の見出しを引く（同じ種類のスキーマは 1 回だけ引く）。"""
-            found = documents.get(document_id)
-            if found is None:
+            """ID の文書の値と行のスキーマで、項目の見出しを引く。"""
+            found = by_id.get(document_id)
+            row = view.row(found.kind) if found is not None else None
+            if found is None or row is None:
                 return None
-            if found.kind not in schemas:
-                schemas[found.kind] = self.store.row_schema(target, found.kind)
-            return item_heading(found.data, schemas[found.kind], item)
+            return item_heading(found.data, row.schema, item)
 
-        repository = target.source.config.github_repository
+        repository = view.github_repository
         return RenderContext(
             links=links,
             issue_url=f"https://github.com/{repository}/issues/" if repository else None,
             path=document.path,
             item_heading=heading,
-            decisions=frozenset(find_decisions(target.source)),
+            decisions=frozenset(linkable),
         )
 
-    def convert(self, target: Target, document: Document) -> Converted:
-        """1 件の文書を Markdown にする。"""
-        table = target.source.table(document.kind)
-        if table.converter is not None:
-            produced = self._run_converter(target, document, table.converter)
-            if isinstance(produced, ConvertFailure):
-                return Converted(markdown="", failure=produced)
-            markdown = produced
-        elif is_markdown_body(document):
-            markdown = document.body
-        else:
-            markdown = schema_to_markdown(
-                document,
-                self.store.row_schema(target, document.kind),
-                self._context(target, document),
+    def render(
+        self,
+        view: SourceView,
+        detail: DocumentDetail,
+        documents: Sequence[IndexedDocument],
+        *,
+        linkable: Collection[str],
+    ) -> str | ConvertFailure:
+        """1 件の文書を、埋め込みのマーカーを残した Markdown にする。"""
+        failure = detail.failure
+        if failure is not None:
+            return ConvertFailure(
+                reason=failure.reason,
+                kind=failure.kind,
+                script=failure.script,
+                detail=failure.detail,
+                file=failure.file,
+                line=failure.line,
+                column=failure.column,
             )
-        # ref を読むときだけ、埋め込みのマーカーがあればそのリビジョンを取り出した場所から読む
-        base = target.base
-        if target.ref is not None and re.search(EMBED_PATTERN, markdown):
-            base = self.store.read_root(target)
-        stripped, keys = _strip_table_keys(expand_embeds(markdown, base), document.kind)
-        return Converted(markdown=stripped, table_keys=keys)
+        if detail.markdown is not None:
+            return detail.markdown
+        document = detail.document
+        if document is None:
+            return ConvertFailure(reason="invalid_yaml", kind="", detail="文書がありません")
+        if is_markdown_body(document):
+            return document.body
+        row = view.row(document.kind)
+        schema: Mapping[str, Any] = row.schema if row is not None else {}
+        return schema_to_markdown(
+            document, schema, self._context(view, document, documents, linkable)
+        )
 
-    def clear(self) -> None:
-        """`cache_dir` の控えを全て消す。"""
-        if not self.cache_dir.is_dir():
-            return
-        for item in self.cache_dir.iterdir():
-            if item.is_file():
-                item.unlink(missing_ok=True)
+    def finish(self, markdown: str, kind: str, embedded: Mapping[str, Any | None]) -> Converted:
+        """埋め込みを展開し、表のキーを取り出した変換の結果にする。"""
+        stripped, keys = _strip_table_keys(expand_embeds(markdown, embedded), kind)
+        return Converted(markdown=stripped, table_keys=keys)

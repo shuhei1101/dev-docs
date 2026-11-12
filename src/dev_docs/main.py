@@ -1,44 +1,50 @@
-"""`dev-docs serve` の処理と部品の配線。"""
+"""`dev-docs serve`・`dev-docs migrate` の処理と部品の配線。"""
 
 from __future__ import annotations
 
 import argparse
+import asyncio
 import errno
 import logging
 import os
 import socket
 import sys
 import threading
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from contextlib import closing
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
+from dev_docs.features.convert.service import ConvertService
 from dev_docs.features.lifecycle.control import RestartControl
 from dev_docs.features.lifecycle.types import SERVE_ARGV, SHUTDOWN_WAIT_FACTOR
 from dev_docs.features.prompt_doc.runtime import PromptSet, load_prompts, prompts_dir
 from dev_docs.features.prompt_doc.types import PromptInvalidError
 from dev_docs.features.settings.query import config_path, listen_port, load_terminal_config
 from dev_docs.features.settings.types import TerminalConfig, TerminalConfigInvalidError
-from dev_docs.features.sources.registry import SourceRegistry
-from dev_docs.features.sources.types import ServedSource, SourceStatus
+from dev_docs.features.view.columns import COLUMNS_DIR, ColumnSettings
+from dev_docs.integrations.project_index.client import (
+    PROJECT_INDEX_TIMEOUT_SEC,
+    ProjectIndexClient,
+)
+from dev_docs.integrations.project_index.types import AddSourceResult
 from dev_docs.server.mcp.result import mcp_prompt_ids
-
-if TYPE_CHECKING:
-    from dev_docs.features.describe.source_checks import SourceChecks
+from dev_docs.shared.errors import ProjectIndexUnreachableError
 
 EXIT_CONFIG_INVALID = 2
 EXIT_PORT_IN_USE = 3
 EXIT_PROMPT_INVALID = 4
-EXIT_ROOT_NOT_FOUND = 2
 LOG_FILE = "dev-docs.log"
 LOG_MAX_BYTES = 5_000_000
 LOG_BACKUPS = 3
 LOG_FORMAT = "%(asctime)s %(levelname)s %(name)s: %(message)s"
 BIND_ERRORS = (errno.EADDRINUSE, errno.EACCES)
+PROJECT_INDEX_PORT_ENV = "PROJECT_INDEX_PORT"
+PROJECT_INDEX_PORT_DEFAULT = "8786"
+START_GUIDE = "project-index を起動してから、再読み込みしてください。"
 
 logger = logging.getLogger(__name__)
 
@@ -57,19 +63,11 @@ class Handlers:
     """入口（画面・MCP）が使う部品を 1 回だけ作って束ねたもの。"""
 
     terminal: TerminalConfig
-    registry: SourceRegistry
-    store: Any
-    snapshots: Any
-    converter: Any
-    seen: Any
-    locks: Any
-    settings_lock: threading.Lock
-    checker: Any
-    columns: Any
-    reload_sources: Callable[[TerminalConfig], list[SourceStatus]]
+    project_index: ProjectIndexClient
+    converter: ConvertService
+    columns: ColumnSettings
     restart: RestartControl
     prompts: PromptSet
-    checks: SourceChecks
 
 
 def _setup_logging(log_dir: Path) -> list[logging.Handler]:
@@ -113,7 +111,7 @@ def _report_port(bind: str, port: int) -> None:
 
 
 def run_serve(args: argparse.Namespace) -> int:
-    """端末の設定を読み、配信元を配線して待ち受け、停止の合図まで動く。"""
+    """端末の設定を読み、部品を配線して待ち受け、停止の合図まで動く。"""
     import uvicorn
 
     from dev_docs.server.app import build_app
@@ -139,15 +137,20 @@ def run_serve(args: argparse.Namespace) -> int:
             return EXIT_PROMPT_INVALID
         app = build_app(handlers)
         print(f"http://{terminal.bind}:{port}/", flush=True)
-        start_loading(handlers)
+        if terminal.leftover_sources:
+            logger.warning(
+                "端末の設定に前のバージョンの sources が残っている（%s）。project-index の端末の設定へ追加してください",
+                "・".join(terminal.leftover_sources),
+            )
+        announce_sources(terminal)
         server = uvicorn.Server(
             uvicorn.Config(
                 app,
                 host=terminal.bind,
                 port=port,
                 log_config=None,
-                # 処理中の要求を待つ上限（スクリプトの実行が一番長い要求になる）
-                timeout_graceful_shutdown=int(terminal.script_timeout_sec * SHUTDOWN_WAIT_FACTOR),
+                # 処理中の要求を待つ上限（project-index の応答を待つ要求が一番長い）
+                timeout_graceful_shutdown=int(PROJECT_INDEX_TIMEOUT_SEC * SHUTDOWN_WAIT_FACTOR),
             )
         )
         handlers.restart.attach(server)
@@ -165,19 +168,30 @@ def run_serve(args: argparse.Namespace) -> int:
         _close_logging(log_handlers)
 
 
-def start_loading(handlers: Handlers) -> threading.Thread:
-    """配信元の行ごとの読み込みと、全ての行の後の検査を裏のスレッドで始める。"""
+def announce_sources(terminal: TerminalConfig) -> threading.Thread:
+    """待ち受けの後に project-index の配信元の状態を問い合わせ、配信中の配信元か、つながらないことを知らせる。"""
+
+    async def ask() -> None:
+        client = ProjectIndexClient(terminal.project_index, timeout=PROJECT_INDEX_TIMEOUT_SEC)
+        try:
+            for state in await client.list_sources():
+                if state.status == "serving":
+                    print(state.id, flush=True)
+        finally:
+            await client.aclose()
 
     def work() -> None:
         try:
-            handlers.registry.load(handlers.terminal)
-            check_sources(handlers.registry.served(), store=handlers.store, checks=handlers.checks)
-            for source in handlers.registry.served():
-                print(source.id, flush=True)
+            asyncio.run(ask())
+        except ProjectIndexUnreachableError as error:
+            print(f"{error.message}\n{START_GUIDE}", file=sys.stderr, flush=True)
+            logger.error(  # noqa: TRY400 つながらないことだけを記録し、スタックトレースは要らない
+                "project-index につながらない（%s・%s）", error.address, error.reason
+            )
         except Exception:
-            logger.exception("配信元の読み込みに失敗した")
+            logger.exception("配信元の知らせに失敗した")
 
-    thread = threading.Thread(target=work, name="dev-docs-loading", daemon=True)
+    thread = threading.Thread(target=work, name="dev-docs-announce", daemon=True)
     thread.start()
     return thread
 
@@ -196,137 +210,43 @@ def check_port(bind: str, port: int) -> None:
 
 
 def build_handlers(terminal: TerminalConfig) -> Handlers:
-    """端末の設定から部品を 1 回だけ作り、配線済みの関数にする（配信元は読まない）。"""
-    from dev_docs.features.convert.service import ConvertService
-    from dev_docs.features.describe.source_checks import SourceChecks
-    from dev_docs.features.documents.store import DocumentStore
-    from dev_docs.features.history.snapshot import SnapshotStore
-    from dev_docs.features.seen.store import SeenStore
-    from dev_docs.features.validation.service import DocumentChecker
-    from dev_docs.features.view.columns import COLUMNS_DIR, ColumnSettings
-    from dev_docs.features.write.locks import SourceLocks
-
+    """端末の設定から部品を 1 回だけ作り、配線済みの関数にする（project-index にはまだ問い合わせない）。"""
     # プロンプトの YAML が違反するときは、state_dir を作る前に止める
     prompts = load_prompts(prompts_dir(os.environ), required=mcp_prompt_ids())
     state_dir = terminal.state_dir
     state_dir.mkdir(parents=True, exist_ok=True)
-    snapshots = SnapshotStore(state_dir / "snapshots")
-    store = DocumentStore(snapshots)
-    converter = ConvertService(state_dir / "converted", store, terminal.script_timeout_sec)
-    seen = SeenStore(state_dir / "seen.sqlite3", terminal.seen_retention_days)
-    checker = DocumentChecker(store, terminal.script_timeout_sec)
-    columns = ColumnSettings(state_dir / COLUMNS_DIR)
-    checks = SourceChecks()
-
-    def on_rebuilt(source: ServedSource) -> None:
-        discard_source_caches(
-            [source], store=store, checker=checker, converter=converter, checks=checks
-        )
-
-    registry = SourceRegistry(on_rebuilt=on_rebuilt, loading=True)
-
-    def reload(new_terminal: TerminalConfig) -> list[SourceStatus]:
-        statuses = reload_sources(
-            new_terminal,
-            registry=registry,
-            store=store,
-            checker=checker,
-            converter=converter,
-            checks=checks,
-        )
-        # 設定画面が起動時の一覧ではなく保存した一覧を見せるよう、起動時の端末の設定の一覧を差し替える
-        terminal.sources[:] = new_terminal.sources
-        return statuses
-
     return Handlers(
         terminal=terminal,
-        registry=registry,
-        store=store,
-        snapshots=snapshots,
-        converter=converter,
-        seen=seen,
-        locks=SourceLocks(),
-        settings_lock=threading.Lock(),
-        checker=checker,
-        columns=columns,
-        reload_sources=reload,
+        project_index=ProjectIndexClient(terminal.project_index, timeout=PROJECT_INDEX_TIMEOUT_SEC),
+        converter=ConvertService(),
+        columns=ColumnSettings(state_dir / COLUMNS_DIR),
         restart=RestartControl(),
         prompts=prompts,
-        checks=checks,
     )
 
 
-def reload_sources(
-    terminal: TerminalConfig,
-    *,
-    registry: SourceRegistry,
-    store: Any,
-    checker: Any,
-    converter: Any,
-    checks: SourceChecks,
-) -> list[SourceStatus]:
-    """配信元の一覧を読み直し、配信元の内容を控えた部品の控えを捨てる。"""
-    statuses = registry.reload(terminal)
-    discard_source_caches(
-        registry.served(), store=store, checker=checker, converter=converter, checks=checks
-    )
-    return statuses
+def _project_index_address(given: str | None, env: Mapping[str, str]) -> str:
+    """`--project-index`、無ければ `PROJECT_INDEX_PORT`（無ければ 8786）から接続先を決める。"""
+    if given:
+        return given
+    port = env.get(PROJECT_INDEX_PORT_ENV) or PROJECT_INDEX_PORT_DEFAULT
+    return f"http://127.0.0.1:{port}"
 
 
-def discard_source_caches(
-    sources: list[ServedSource],
-    *,
-    store: Any,
-    checker: Any,
-    converter: Any,
-    checks: SourceChecks,
-) -> None:
-    """配信元の内容を控えた部品の控えを捨て、渡した配信元ごとのずれと警告をログに書く。"""
-    store.clear()
-    checker.clear()
-    converter.clear()
-    check_sources(sources, store=store, checks=checks)
+def _exporter(address: str) -> Callable[[Mapping[str, Any]], AddSourceResult]:
+    """行ごとに 1 回の `asyncio.run` で project-index の呼び出しを作って閉じ、行を追加する関数を返す。"""
 
+    def export(row: Mapping[str, Any]) -> AddSourceResult:
+        async def add() -> AddSourceResult:
+            client = ProjectIndexClient(address, timeout=PROJECT_INDEX_TIMEOUT_SEC)
+            try:
+                return await client.add_settings_source(row)
+            finally:
+                await client.aclose()
 
-def check_sources(sources: list[ServedSource], *, store: Any, checks: SourceChecks) -> None:
-    """渡した配信元ごとに検査して結果を持たせ、ずれと警告をログに書く。"""
-    for source in sources:
-        # 検査の結果を控えに持たせ、`describe` の警告が読めるようにする
-        check = checks.refresh(store, source)
-        report = check.report
-        for label, values in (
-            ("metadata の列の欠け", report.missing_refs),
-            ("管理用の YAML に無いファイル", report.unindexed_files),
-            ("ファイルが無い行", report.missing_body_files),
-            ("どの文書にも該当しない関連", report.unresolved_related),
-        ):
-            if values:
-                logger.warning(
-                    "%s: %s %d 件: %s", report.source_id, label, len(values), "、".join(values)
-                )
-        for violation in report.alias_violations:
-            logger.warning(
-                "%s: エイリアスのキーの違反: %s: %s: %s",
-                report.source_id,
-                violation.doc,
-                violation.path,
-                violation.rule,
-            )
-        for warning in check.nav:
-            logger.warning("%s: nav: %s: %s", source.id, warning.path, warning.rule)
+        return asyncio.run(add())
 
-
-def run_files(args: argparse.Namespace) -> int:
-    """`dev-docs files` の解析結果で範囲を集め、載せるファイルを 1 行ずつ出す。"""
-    from dev_docs.features.documents.indexable import indexable_files
-
-    root = Path(args.root)
-    if not root.is_dir():
-        print(f"{root}: フォルダがありません", file=sys.stderr)
-        return EXIT_ROOT_NOT_FOUND
-    for path in indexable_files(root, args.paths, exclude=args.exclude):
-        print(path)
-    return 0
+    return export
 
 
 def run_migrate(args: argparse.Namespace) -> int:
@@ -334,8 +254,9 @@ def run_migrate(args: argparse.Namespace) -> int:
     from dev_docs.features.migrate.service import apply_migration, plan_migration, resolve_target
     from dev_docs.features.migrate.types import MigrationError
 
+    address = _project_index_address(args.project_index, os.environ)
     try:
-        target = resolve_target(args.source, env=os.environ)
+        target = resolve_target(env=os.environ)
         data, steps = plan_migration(target)
         # 手順を表示するだけで、書き換えない
         if args.plan:
@@ -345,26 +266,37 @@ def run_migrate(args: argparse.Namespace) -> int:
             return 0
         # `--record` は手順を当てず、バージョンだけを書き換える
         if args.record:
-            backup = apply_migration(
-                target, data, [], allow_destructive=False, now=datetime.now(UTC)
+            outcome = apply_migration(
+                target,
+                data,
+                [],
+                allow_destructive=False,
+                export_source=None,
+                project_index=address,
+                now=datetime.now(UTC),
             )
             print(
-                f"{target.file} の version を {target.current} にしました（バックアップ: {backup}）"
+                f"{target.file} の version を {target.current} にしました（バックアップ: {outcome.backup}）"
             )
             return 0
         if not steps:
             print(f"移し替えは要りません（version {target.current}）")
             return 0
-        backup = apply_migration(
+        exports = any(step.op == "export_sources" for step in steps)
+        outcome = apply_migration(
             target,
             data,
             steps,
             allow_destructive=args.allow_destructive,
+            export_source=_exporter(address) if exports else None,
+            project_index=address,
             now=datetime.now(UTC),
         )
         print(
-            f"{target.file} を version {target.current} に移し替えました（バックアップ: {backup}）"
+            f"{target.file} を version {target.current} に移し替えました（バックアップ: {outcome.backup}）"
         )
+        for kept in outcome.kept:
+            print(f"{kept}: project-index に同じ id の別の行があるため移しませんでした")
         return 0
     except MigrationError as error:
         print(str(error), file=sys.stderr)

@@ -2,22 +2,19 @@
 
 from __future__ import annotations
 
-import asyncio
-from collections.abc import Sequence
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from fastapi import APIRouter, Depends
 
-from dev_docs.features.settings.query import load_terminal_config
 from dev_docs.features.settings.service import save_sources
 from dev_docs.features.settings.types import (
     SettingsSourceRow,
     SettingsSourcesRequest,
     SettingsSourcesResponse,
     SettingsSourcesView,
-    SourceEntry,
+    SourceScope,
 )
-from dev_docs.features.sources.types import SourceStatus
+from dev_docs.integrations.project_index.types import SourceState
 from dev_docs.server.origin import require_same_origin
 
 if TYPE_CHECKING:
@@ -26,59 +23,20 @@ if TYPE_CHECKING:
 __all__ = ["build_settings_router", "save_sources"]
 
 
-def _match_status(
-    entry: SourceEntry, statuses: Sequence[SourceStatus], used: set[int]
-) -> SourceStatus | None:
-    """行と `config`（行に `id` があれば `id` も）が同じ、まだ重ねていない配信元の状態を探す。"""
-    for status in statuses:
-        if status.index in used or status.config != tuple(entry.config):
-            continue
-        if entry.id is not None and status.id != entry.id:
-            continue
-        return status
-    return None
-
-
-def _settings_view(handlers: Handlers) -> SettingsSourcesView:
-    """端末の設定を読み直し、`sources[]` の各行に同じ `config` の配信元の状態を重ねる。"""
-    terminal = load_terminal_config(handlers.terminal.file)
-    statuses = handlers.registry.statuses()
-    items = {
-        status.index: item
-        for status, item in zip(
-            statuses, SettingsSourcesResponse.from_statuses(statuses).sources, strict=True
-        )
-    }
-    rows: list[SettingsSourceRow] = []
-    used: set[int] = set()
-    for entry in terminal.sources:
-        status = _match_status(entry, statuses, used)
-        # 当たる状態が無い行は、読み直していない行
-        if status is None:
-            rows.append(
-                SettingsSourceRow(
-                    id=entry.id,
-                    config=list(entry.config),
-                    enabled=entry.enabled,
-                    scope=entry.scope,
-                    status="pending_reload",
-                )
-            )
-            continue
-        used.add(status.index)
-        item = items[status.index]
-        rows.append(
-            SettingsSourceRow(
-                id=item.id,
-                config=list(entry.config),
-                enabled=entry.enabled,
-                scope=entry.scope,
-                status=item.status,
-                errors=item.errors,
-                config_version=item.config_version,
-            )
-        )
-    return SettingsSourcesView(settings_path=str(terminal.file), sources=rows)
+def _row(raw: dict[str, Any], state: SourceState | None, item: Any) -> SettingsSourceRow:
+    """project-index の行に状態を重ねる。"""
+    config = raw.get("config") or []
+    scope = raw.get("scope") or {}
+    return SettingsSourceRow(
+        id=state.id if state is not None and state.id is not None else raw.get("id"),
+        config=[config] if isinstance(config, str) else list(config),
+        enabled=bool(raw.get("enabled", True)),
+        scope=SourceScope(read=list(scope.get("read") or []), write=scope.get("write")),
+        status=state.status if state is not None else "pending_reload",
+        errors=item.errors if item is not None else [],
+        config_version=item.config_version if item is not None else None,
+        outside_read=bool(raw.get("outside_read", True)),
+    )
 
 
 def build_settings_router(handlers: Handlers) -> APIRouter:
@@ -87,8 +45,17 @@ def build_settings_router(handlers: Handlers) -> APIRouter:
 
     @router.get("/_api/settings/sources", name="get_settings_sources")
     async def get_sources() -> SettingsSourcesView:
-        await handlers.registry.wait_loaded()
-        return await asyncio.to_thread(_settings_view, handlers)
+        view = await handlers.project_index.settings_sources()
+        items = SettingsSourcesResponse.from_states(view.states).sources
+        rows = [
+            _row(
+                raw,
+                view.states[index] if index < len(view.states) else None,
+                items[index] if index < len(items) else None,
+            )
+            for index, raw in enumerate(view.rows)
+        ]
+        return SettingsSourcesView(settings_path=view.settings_path, sources=rows)
 
     @router.put(
         "/_api/settings/sources",
@@ -96,14 +63,7 @@ def build_settings_router(handlers: Handlers) -> APIRouter:
         dependencies=[Depends(require_same_origin)],
     )
     async def put_sources(body: SettingsSourcesRequest) -> SettingsSourcesResponse:
-        await handlers.registry.wait_loaded()
-        statuses = await asyncio.to_thread(
-            save_sources,
-            body.sources,
-            path=handlers.terminal.file,
-            reload=handlers.reload_sources,
-            lock=handlers.settings_lock,
-        )
-        return SettingsSourcesResponse.from_statuses(statuses)
+        states = await save_sources(handlers.project_index, body.sources)
+        return SettingsSourcesResponse.from_states(states)
 
     return router

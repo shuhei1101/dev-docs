@@ -1,36 +1,23 @@
-"""画面の検索。"""
+"""画面の検索（project-index の検索の結果を画面の形にする）。"""
 
 from __future__ import annotations
 
-from collections.abc import Sequence
-
-from dev_docs.features.documents.types import Document
-from dev_docs.features.search.filters import match_words, normalize
-from dev_docs.features.search.snippets import snippet_lines
 from dev_docs.features.view.paths import page_path
 from dev_docs.features.view.types import ScreenSearchItem, ScreenSearchResult
+from dev_docs.integrations.project_index.client import ProjectIndexClient
 
 SEARCH_QUERY_MAX = 200
 SEARCH_LIMIT_DEFAULT = 20
 SEARCH_LIMIT_MAX = 100
-SNIPPETS_PER_DOC = 3
-CONTEXT_LINES = 1
 
 
-def screen_search(documents: Sequence[Document], q: str, limit: int) -> ScreenSearchResult:
-    """語を全て含む文書と一致した箇所を返す。"""
-    words = normalize(q).split()
-    matched = sorted(
-        (document for document in documents if match_words(document, words)), key=page_path
-    )
+async def screen_search(
+    client: ProjectIndexClient, source_id: str, q: str, *, ref: str | None, limit: int
+) -> ScreenSearchResult:
+    """project-index の検索の結果を、文書のページのパスの画面の検索の結果にする。"""
+    hits = await client.search(source_id, q, ref=ref, limit=limit)
     items = [
-        ScreenSearchItem(
-            path=page_path(document),
-            name=str(document.metadata["name"]),
-            snippets=snippet_lines(
-                document.body, words, context_lines=CONTEXT_LINES, max_count=SNIPPETS_PER_DOC
-            ),
-        )
-        for document in matched[:limit]
+        ScreenSearchItem(path=page_path(hit), name=hit.name, snippets=list(hit.snippets))
+        for hit in hits.items
     ]
-    return ScreenSearchResult(total_count=len(matched), items=items)
+    return ScreenSearchResult(total_count=hits.total_count, items=items)

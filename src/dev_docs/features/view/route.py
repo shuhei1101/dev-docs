@@ -3,16 +3,12 @@
 from __future__ import annotations
 
 import asyncio
-import dataclasses
 from typing import TYPE_CHECKING, Annotated
 
 from fastapi import APIRouter, Depends, Query
 from fastapi.responses import Response
 
-from dev_docs.features.history.query import list_refs
-from dev_docs.features.view.columns import ColumnSettings
 from dev_docs.features.view.document import get_document, not_found_fields
-from dev_docs.features.view.paths import screen_target
 from dev_docs.features.view.search import (
     SEARCH_LIMIT_DEFAULT,
     SEARCH_LIMIT_MAX,
@@ -21,13 +17,15 @@ from dev_docs.features.view.search import (
 )
 from dev_docs.features.view.types import (
     ColumnsRequest,
+    CommitItem,
     DocumentResponse,
+    RefItem,
     RefsResponse,
     ScreenSearchResult,
 )
 from dev_docs.server.error_handlers import problem_of
 from dev_docs.server.origin import require_same_origin
-from dev_docs.shared.errors import DevDocsError
+from dev_docs.shared.errors import DevDocsError, ProjectIndexUnreachableError
 
 if TYPE_CHECKING:
     from dev_docs.main import Handlers
@@ -44,11 +42,10 @@ def build_view_router(handlers: Handlers) -> APIRouter:
         source: str, path: str | None, ref: str | None, diff: str | None
     ) -> Response | DocumentResponse:
         """文書を取得し、見つからなかったときは何が無いかを足した 404 にする。"""
-        await handlers.registry.wait_for(ids=[source])
         try:
-            return await asyncio.to_thread(
-                get_document, source, path, handlers=handlers, ref=ref, diff_ref=diff
-            )
+            return await get_document(source, path, handlers=handlers, ref=ref, diff_ref=diff)
+        except ProjectIndexUnreachableError:
+            raise
         except DevDocsError as error:
             fields = not_found_fields(error, path, source_id=source)
             if fields is None:
@@ -82,28 +79,24 @@ def build_view_router(handlers: Handlers) -> APIRouter:
         ref: str | None = None,
         limit: Annotated[int, Query(ge=1, le=SEARCH_LIMIT_MAX)] = SEARCH_LIMIT_DEFAULT,
     ) -> ScreenSearchResult:
-        def work() -> ScreenSearchResult:
-            target, _ = screen_target(source, ref, registry=handlers.registry)
-            documents = [
-                found
-                for found in handlers.store.load(target).documents
-                if target.source.table(found.kind).search
-            ]
-            return screen_search(documents, q, limit)
-
-        await handlers.registry.wait_for(ids=[source])
-        return await asyncio.to_thread(work)
+        return await screen_search(handlers.project_index, source, q, ref=ref, limit=limit)
 
     @router.get("/_api/sources/{source}/refs", name="list_refs")
     async def refs(
         source: str,
         commits: Annotated[int, Query(ge=0, le=REFS_COMMITS_MAX)] = REFS_COMMITS_DEFAULT,
     ) -> RefsResponse:
-        await handlers.registry.wait_for(ids=[source])
-        result = await asyncio.to_thread(
-            lambda: list_refs(handlers.registry.get(source), commits=commits)
+        result = await handlers.project_index.refs(source, commits=commits)
+        return RefsResponse(
+            git=result.git,
+            default_ref=result.default_ref,
+            branches=[RefItem(name=b.name, commit=b.commit) for b in result.branches],
+            tags=[RefItem(name=t.name, commit=t.commit) for t in result.tags],
+            commits=[
+                CommitItem(commit=c.commit, date=c.date.isoformat(), subject=c.subject)
+                for c in result.commits
+            ],
         )
-        return RefsResponse.model_validate(dataclasses.asdict(result))
 
     @router.put(
         "/_api/sources/{source}/columns",
@@ -111,14 +104,8 @@ def build_view_router(handlers: Handlers) -> APIRouter:
         dependencies=[Depends(require_same_origin)],
     )
     async def columns(source: str, body: ColumnsRequest) -> ColumnsRequest:
-        settings: ColumnSettings = handlers.columns
-
-        def work() -> None:
-            handlers.registry.get(source)
-            settings.save(source, body.table, body.hidden)
-
-        await handlers.registry.wait_for(ids=[source])
-        await asyncio.to_thread(work)
+        await handlers.project_index.source_view(source)
+        await asyncio.to_thread(handlers.columns.save, source, body.table, body.hidden)
         return body
 
     return router

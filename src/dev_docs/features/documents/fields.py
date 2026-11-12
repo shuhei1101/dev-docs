@@ -1,15 +1,14 @@
-"""文書の項目のパスの読み書きと、メタデータの解決。"""
+"""文書の項目のパスの分解と、値の取得。"""
 
 from __future__ import annotations
 
 import re
-from collections.abc import Mapping, MutableMapping, Sequence, Set
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import PurePosixPath
 from typing import Any
 
-from dev_docs.features.documents.types import Document
-from dev_docs.features.sources.types import DocumentTable
+from dev_docs.integrations.project_index.types import IndexedDocument
 from dev_docs.shared.errors import InvalidArgumentError, Violation
 
 METADATA_KEYS = (
@@ -138,101 +137,7 @@ def get_field(data: Mapping[str, Any], path: str, *, default: Any = None) -> Any
     return _select(data, parse_field_path(path), default)
 
 
-def set_field(data: MutableMapping[str, Any], path: str, value: Any) -> None:
-    """項目のパスで指した場所へ値を書く。"""
-    tokens = _plain_tokens(path, "には書き込めません")
-    current: Any = data
-    for depth, token in enumerate(tokens[:-1]):
-        following = tokens[depth + 1]
-        if isinstance(token, int):
-            if not isinstance(current, list):
-                raise _invalid(path, f"{path}: {_join(tokens[:depth])} は配列ではありません")
-            if token > len(current):
-                raise _invalid(
-                    path, f"{path}: 位置 {token} は配列の長さ {len(current)} を超えています"
-                )
-            if token == len(current):
-                current.append([] if isinstance(following, int) else {})
-            current = current[token]
-        else:
-            if not isinstance(current, MutableMapping):
-                raise _invalid(path, f"{path}: {_join(tokens[:depth])} は辞書ではありません")
-            if token not in current:
-                current[token] = [] if isinstance(following, int) else {}
-            current = current[token]
-    last = tokens[-1]
-    if isinstance(last, int):
-        if not isinstance(current, list):
-            raise _invalid(path, f"{path}: {_join(tokens[:-1])} は配列ではありません")
-        if last > len(current):
-            raise _invalid(path, f"{path}: 位置 {last} は配列の長さ {len(current)} を超えています")
-        if last == len(current):
-            current.append(value)
-        else:
-            current[last] = value
-        return
-    if not isinstance(current, MutableMapping):
-        raise _invalid(path, f"{path}: {_join(tokens[:-1])} は辞書ではありません")
-    current[last] = value
-
-
-def delete_field(data: MutableMapping[str, Any], path: str) -> bool:
-    """項目のパスで指した値を削除する。"""
-    tokens = _plain_tokens(path, "は削除できません")
-    found, parent = _walk(data, tokens[:-1])
-    if not found:
-        return False
-    last = tokens[-1]
-    if isinstance(last, int):
-        if not isinstance(parent, list) or last >= len(parent):
-            return False
-        del parent[last]
-        return True
-    if not isinstance(parent, MutableMapping) or last not in parent:
-        return False
-    del parent[last]
-    return True
-
-
-def resolve_metadata(data: Mapping[str, Any], table: DocumentTable) -> dict[str, Any]:
-    """文書の行の `metadata` の列名の対応で、文書の内容から共通のキーの値を取る。"""
-    result: dict[str, Any] = {}
-    for key in METADATA_KEYS:
-        value = get_field(data, table.metadata.get(key, key))
-        if value is not None:
-            result[key] = value
-    if table.alias_type is not None:
-        result["alias_type"] = table.alias_type
-    return result
-
-
-def missing_ref_fields(data: Mapping[str, Any], table: DocumentTable) -> list[tuple[str, str]]:
-    """`metadata` に書いた列のうち、文書の内容に値が無い列を `(キー, 列名)` で返す。"""
-    return [
-        (key, column) for key, column in table.metadata.items() if get_field(data, column) is None
-    ]
-
-
-def unresolved_related(metadata: Mapping[str, Any], ids: Set[str]) -> list[str]:
-    """`related` のうち、`to` が配信元の文書の ID の集合に無い関連の `to` を返す。"""
-    rows = metadata.get("related")
-    # related が配列でない: 照合する関連が無い
-    if not isinstance(rows, list):
-        return []
-    unresolved: list[str] = []
-    for row in rows:
-        # 文字列の to を持たない要素は関連の行ではない（related_links と同じ読み方）
-        if not isinstance(row, dict) or not isinstance(row.get("to"), str):
-            continue
-        # 文字列の source を持つ関連は別の配信元を指すので照合しない
-        if isinstance(row.get("source"), str):
-            continue
-        if row["to"] not in ids:
-            unresolved.append(row["to"])
-    return unresolved
-
-
-def is_markdown_body(document: Document) -> bool:
+def is_markdown_body(document: IndexedDocument) -> bool:
     """文書の本文が Markdown のファイルか（`body_path` の拡張子が `.md`）。"""
     return (
         document.body_path is not None and PurePosixPath(document.body_path).suffix.lower() == ".md"

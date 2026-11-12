@@ -6,7 +6,7 @@ from dataclasses import dataclass
 
 # `git pull`・`uv sync`・`migrate --plan` それぞれの打ち切りの秒数
 COMMAND_TIMEOUT_SEC = 300
-# 処理中の要求を待つ上限を `script_timeout_sec` の何倍にするか
+# 処理中の要求を待つ上限を `PROJECT_INDEX_TIMEOUT_SEC` の何倍にするか
 SHUTDOWN_WAIT_FACTOR = 1.5
 # `os.execv` に渡す `sys.executable` の後ろの引数
 SERVE_ARGV = ("-m", "dev_docs", "serve")

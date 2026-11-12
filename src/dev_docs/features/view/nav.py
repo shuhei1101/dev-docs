@@ -2,30 +2,21 @@
 
 from __future__ import annotations
 
-import json
-import logging
-from collections.abc import Collection, Iterator, Mapping, Sequence
+from collections.abc import Collection, Mapping, Sequence
 from dataclasses import dataclass, field
 from datetime import date
 from pathlib import PurePosixPath
 from typing import Any
 
-from pydantic import ValidationError
+from pydantic import TypeAdapter, ValidationError
 
-from dev_docs.features.access.types import Target
 from dev_docs.features.documents.fields import get_field
-from dev_docs.features.documents.schema import records_item_schema, startup_schema
-from dev_docs.features.documents.store import DocumentStore
-from dev_docs.features.documents.types import Document
-from dev_docs.features.search.fields import known_fields
-from dev_docs.features.search.filters import check_filter, match_filter
-from dev_docs.features.search.types import Condition, Group, SearchRequest
-from dev_docs.features.sources.types import DocumentTable, ServedSource
+from dev_docs.features.filter.fields import known_fields
+from dev_docs.features.filter.filters import check_filter, match_filter
+from dev_docs.features.filter.types import Condition, Group
 from dev_docs.features.view.paths import page_path
-from dev_docs.features.view.types import NavAutoCount, NavItem, NavTab
-from dev_docs.shared.errors import Violation
-
-logger = logging.getLogger(__name__)
+from dev_docs.features.view.types import NavItem, NavTab
+from dev_docs.integrations.project_index.types import DocumentRow, IndexedDocument, SourceView
 
 OTHER_GROUP = "その他"
 FOLDER_GROUP_BY = "@folder"
@@ -33,7 +24,7 @@ INDEX_FILE = "index.yaml"
 GLOB_CHARS = ("*", "?", "[")
 
 
-def _link(document: Document, title: str | None = None) -> NavItem:
+def _link(document: IndexedDocument, title: str | None = None) -> NavItem:
     """文書をサイドバーの `page` の項目にする。"""
     return NavItem(
         kind="page",
@@ -42,7 +33,7 @@ def _link(document: Document, title: str | None = None) -> NavItem:
     )
 
 
-def _documents_of(documents: Sequence[Document], kind: str) -> list[Document]:
+def _documents_of(documents: Sequence[IndexedDocument], kind: str) -> list[IndexedDocument]:
     """文書の行の文書を、文書のページのパスの昇順で返す。"""
     return sorted((d for d in documents if d.kind == kind), key=page_path)
 
@@ -50,16 +41,19 @@ def _documents_of(documents: Sequence[Document], kind: str) -> list[Document]:
 def _filter_of(spec: Mapping[str, Any]) -> Condition | Group | None:
     """`auto.filter` を条件の木にする（読めない条件は `ValidationError`）。"""
     raw = spec.get("filter")
-    return None if raw is None else SearchRequest(filter=raw).filter
+    if raw is None:
+        return None
+    node: Condition | Group = TypeAdapter(Condition | Group).validate_python(raw)
+    return node
 
 
 def _select(
-    documents: Sequence[Document],
+    documents: Sequence[IndexedDocument],
     spec: Mapping[str, Any],
     *,
     fields: Mapping[str, str],
     today: date,
-) -> list[Document]:
+) -> list[IndexedDocument]:
     """`auto` の `document` と `filter` に当たる文書を、文書のページのパスの昇順で返す。"""
     kind = spec.get("document")
     found = sorted((d for d in documents if kind is None or d.kind == str(kind)), key=page_path)
@@ -69,16 +63,19 @@ def _select(
         return []
     if node is None:
         return found
+    # 使えない項目・値の条件はタブを空にする（検査は project-index が警告する）
+    if check_filter(node, fields):
+        return []
     return [d for d in found if match_filter(node, d, fields=fields, today=today)]
 
 
 def _auto(
-    documents: Sequence[Document],
+    documents: Sequence[IndexedDocument],
     spec: Mapping[str, Any],
     *,
     fields: Mapping[str, str],
     today: date,
-    rows: Mapping[str, DocumentTable],
+    rows: Mapping[str, DocumentRow],
     excluded: Collection[str] = (),
 ) -> list[NavItem]:
     """`auto` の文書を並べる（`group_by` があれば値ごと・フォルダごとの `group` の項目にする）。
@@ -110,10 +107,12 @@ def _auto(
     return [NavItem(kind="group", title=name, items=links) for name, links in buckets.items()]
 
 
-def _page(source: ServedSource, documents: Sequence[Document], value: str) -> Document | None:
+def _page(
+    view: SourceView, documents: Sequence[IndexedDocument], value: str
+) -> IndexedDocument | None:
     """`page` の値（行の id か `{行の id}/{文書の ID}`）が指す文書を探す。"""
     kind, _, doc_id = value.partition("/")
-    rows = {row.id: row for row in source.config.documents}
+    rows = {row.id: row for row in view.documents}
     if kind not in rows:
         return None
     found = _documents_of(documents, kind)
@@ -126,11 +125,11 @@ def _page(source: ServedSource, documents: Sequence[Document], value: str) -> Do
 class _Folder:
     """フォルダの束ねの木の 1 階層。"""
 
-    pages: list[Document] = field(default_factory=list)
+    pages: list[IndexedDocument] = field(default_factory=list)
     children: dict[str, _Folder] = field(default_factory=dict)
 
 
-def _folder_parts(document: Document, rows: Mapping[str, DocumentTable]) -> tuple[str, ...]:
+def _folder_parts(document: IndexedDocument, rows: Mapping[str, DocumentRow]) -> tuple[str, ...]:
     """文書が属する、行の `paths` の起点からのフォルダの並びを返す。"""
     row = rows.get(document.kind)
     if document.record_index is not None or row is None:
@@ -162,7 +161,7 @@ def _folder_nav(folder: _Folder) -> list[NavItem]:
 
 
 def _folder_items(
-    documents: Sequence[Document], *, rows: Mapping[str, DocumentTable]
+    documents: Sequence[IndexedDocument], *, rows: Mapping[str, DocumentRow]
 ) -> list[NavItem]:
     """`auto` が選んだ文書を、行の `paths` の起点からのフォルダごとの入れ子の `group` にする。"""
     root = _Folder()
@@ -175,23 +174,23 @@ def _folder_items(
 
 
 def _manual_pages(
-    source: ServedSource, documents: Sequence[Document], items: Sequence[Mapping[str, Any]]
+    view: SourceView, documents: Sequence[IndexedDocument], items: Sequence[Mapping[str, Any]]
 ) -> set[str]:
     """`items[]` を `group` の入れ子までたどり、手で書いた `page` が指す文書のページのパスを集める。"""
     found: set[str] = set()
     for item in items:
         if "group" in item:
-            found |= _manual_pages(source, documents, item.get("items") or [])
+            found |= _manual_pages(view, documents, item.get("items") or [])
         elif "page" in item:
-            document = _page(source, documents, str(item["page"]))
+            document = _page(view, documents, str(item["page"]))
             if document is not None:
                 found.add(page_path(document))
     return found
 
 
 def _items(
-    source: ServedSource,
-    documents: Sequence[Document],
+    view: SourceView,
+    documents: Sequence[IndexedDocument],
     items: Sequence[Mapping[str, Any]],
     *,
     fields: Mapping[str, str],
@@ -203,7 +202,7 @@ def _items(
     for item in items:
         if "group" in item:
             children = _items(
-                source,
+                view,
                 documents,
                 item.get("items") or [],
                 fields=fields,
@@ -212,9 +211,9 @@ def _items(
             )
             result.append(NavItem(kind="group", title=str(item["group"]), items=children))
         elif "page" in item:
-            document = _page(source, documents, str(item["page"]))
+            document = _page(view, documents, str(item["page"]))
+            # 無い文書は飛ばす（nav の検査は project-index が行う）
             if document is None:
-                logger.warning("nav の文書が無い（%s・%s）", source.id, item["page"])
                 continue
             result.append(_link(document, item.get("title")))
         elif "auto" in item:
@@ -223,7 +222,7 @@ def _items(
                 item["auto"],
                 fields=fields,
                 today=today,
-                rows={row.id: row for row in source.config.documents},
+                rows={row.id: row for row in view.documents},
                 excluded=excluded,
             )
             title = item.get("title")
@@ -239,28 +238,20 @@ def _link_titled(entry: NavItem, title: str) -> NavItem:
     return NavItem(kind="page", title=title, path=entry.path)
 
 
-def _tab_title(row: DocumentTable) -> str:
+def _tab_title(row: DocumentRow) -> str:
     """nav が無いときのタブの名前（行の `title`、無ければ `id`）。"""
     return row.title or row.id
 
 
-def _row_schema(source: ServedSource, row: DocumentTable) -> dict[str, Any]:
-    """行の文書 1 件に当てるスキーマ（`records` を持つ行は 1 行のスキーマ）を返す。"""
-    schema = startup_schema(source, row)
-    if row.records is None:
-        return schema
-    return records_item_schema(schema, row.records) or {}
+def _source_fields(view: SourceView) -> dict[str, str]:
+    """配信元の行のスキーマ（`records` を持つ行は 1 要素のスキーマ）から使える項目を作る。"""
+    return known_fields(row.schema for row in view.documents)
 
 
-def _source_fields(source: ServedSource) -> dict[str, str]:
-    """配信元の有効な行の文書に当てるスキーマから使える項目を作る。"""
-    return known_fields(_row_schema(source, row) for row in source.config.documents if row.enabled)
-
-
-def build_nav(source: ServedSource, documents: Sequence[Document]) -> list[NavTab]:
+def build_nav(view: SourceView, documents: Sequence[IndexedDocument]) -> list[NavTab]:
     """配信元の `nav` と文書から、上のタブとサイドバーを作る（`active` は全て `False`）。"""
-    nav = source.config.nav
-    fields = _source_fields(source)
+    nav = view.nav
+    fields = _source_fields(view)
     today = date.today()  # noqa: DTZ011
     # nav が無い: 有効な文書の行ごとに 1 つのタブを作る
     if not nav:
@@ -276,126 +267,22 @@ def build_nav(source: ServedSource, documents: Sequence[Document]) -> list[NavTa
                     rows={row.id: row},
                 ),
             )
-            for row in source.config.documents
-            if row.enabled
+            for row in view.documents
         ]
     return [
         NavTab(
             title=str(tab["title"]),
             active=False,
             items=_items(
-                source,
+                view,
                 documents,
                 tab.get("items") or [],
                 fields=fields,
                 today=today,
-                excluded=_manual_pages(source, documents, tab.get("items") or []),
+                excluded=_manual_pages(view, documents, tab.get("items") or []),
             ),
         )
         for tab in nav.get("tabs", [])
-    ]
-
-
-def _walk_autos(
-    items: Sequence[Mapping[str, Any]], path: str
-) -> Iterator[tuple[str, Mapping[str, Any]]]:
-    """`items[]` を `group` の入れ子までたどり、`auto` のキーのパスと値を返す。"""
-    for index, item in enumerate(items):
-        item_path = f"{path}[{index}]"
-        if "group" in item:
-            yield from _walk_autos(item.get("items") or [], f"{item_path}.items")
-        elif "auto" in item:
-            yield f"{item_path}.auto", item["auto"]
-
-
-def _autos(nav: Mapping[str, Any]) -> Iterator[tuple[str, str, Mapping[str, Any]]]:
-    """`nav` を上からたどり、`auto` ごとのキーのパス・タブの名前・値を返す。"""
-    for index, tab in enumerate(nav.get("tabs") or []):
-        for path, spec in _walk_autos(tab.get("items") or [], f"nav.tabs[{index}].items"):
-            yield path, str(tab.get("title", "")), spec
-
-
-def nav_auto_counts(
-    nav: Mapping[str, Any],
-    documents: Sequence[Document],
-    *,
-    fields: Mapping[str, str],
-    today: date,
-) -> list[NavAutoCount]:
-    """`nav` の全ての `auto` について、条件に当たる文書を数える。"""
-    return [
-        NavAutoCount(
-            path=path,
-            tab=tab,
-            filter=spec.get("filter"),
-            count=len(_select(documents, spec, fields=fields, today=today)),
-        )
-        for path, tab, spec in _autos(nav)
-    ]
-
-
-def check_nav_filters(
-    nav: Mapping[str, Any], *, table_ids: Collection[str], fields: Mapping[str, str]
-) -> list[Violation]:
-    """`nav` の `auto` の `document` と `filter` が使えるかを確かめる。"""
-    violations: list[Violation] = []
-    for path, _, spec in _autos(nav):
-        document = spec.get("document")
-        if document is not None and str(document) not in table_ids:
-            violations.append(Violation(path=f"{path}.document", rule="存在しない ID"))
-        if spec.get("filter") is None:
-            continue
-        try:
-            request = SearchRequest(filter=spec["filter"])
-        except ValidationError as error:
-            violations.append(
-                Violation(path=f"{path}.filter", rule=f"条件として読み込めません（{error}）")
-            )
-            continue
-        violations.extend(
-            Violation(
-                path=f"{path}.{violation.path}" if violation.path.startswith("filter") else path,
-                rule=violation.rule,
-                fix=violation.fix,
-            )
-            for violation in check_filter(request, fields)
-        )
-    return violations
-
-
-def nav_warnings(
-    store: DocumentStore, source: ServedSource, *, today: date | None = None
-) -> list[Violation]:
-    """配信元のクローン本体の文書で、使えない条件とどの文書にも当たらない条件を警告にする。"""
-    nav = source.config.nav
-    if not nav:
-        return []
-    today = today or date.today()  # noqa: DTZ011
-    target = Target(source, source.root, None, None, "read")
-    documents = store.load(target).documents
-    fields = known_fields(
-        store.row_schema(target, row.id) for row in source.config.documents if row.enabled
-    )
-    table_ids = [row.id for row in source.config.documents if row.enabled]
-    counts = nav_auto_counts(nav, documents, fields=fields, today=today)
-    return [
-        *check_nav_filters(nav, table_ids=table_ids, fields=fields),
-        *zero_count_warnings(counts),
-    ]
-
-
-def zero_count_warnings(counts: Sequence[NavAutoCount]) -> list[Violation]:
-    """`count` が 0 の `auto` を警告にする。"""
-    return [
-        Violation(
-            path=f"{count.path}.filter" if count.filter is not None else count.path,
-            rule=(
-                f"{count.tab}: 条件 {json.dumps(count.filter, ensure_ascii=False)}"
-                " に該当する文書がありません"
-            ),
-        )
-        for count in counts
-        if not count.count
     ]
 
 

@@ -14,51 +14,16 @@ from mcp.types import CallToolResult, TextContent, ToolAnnotations
 from pydantic import ValidationError
 from ruamel.yaml import YAML
 
-from dev_docs.features.changes.types import ChangesResult, ContainsChange
-from dev_docs.features.related.types import RelatedItem
-from dev_docs.features.search.types import SearchItem, SnippetLine
-from dev_docs.features.write.types import DeleteResult
 from dev_docs.shared.errors import DevDocsError
 
 TOOL_ANNOTATIONS = {
-    "search_docs": ToolAnnotations(read_only_hint=True),
-    "describe": ToolAnnotations(read_only_hint=True),
-    "list_changes": ToolAnnotations(read_only_hint=True),
-    "trace_related": ToolAnnotations(read_only_hint=True),
-    "write_docs": ToolAnnotations(read_only_hint=False, destructive_hint=False),
-    "delete_docs": ToolAnnotations(read_only_hint=False, destructive_hint=True),
-    "list_match_words": ToolAnnotations(read_only_hint=True),
     "status": ToolAnnotations(read_only_hint=True),
-    "reload": ToolAnnotations(read_only_hint=False, destructive_hint=False),
     "restart": ToolAnnotations(read_only_hint=False, destructive_hint=True),
     "update": ToolAnnotations(read_only_hint=False, destructive_hint=True),
-    "check_project": ToolAnnotations(read_only_hint=True),
-    "try_convert": ToolAnnotations(read_only_hint=True),
-    "write_nav": ToolAnnotations(read_only_hint=False, destructive_hint=False),
 }
 
-# 文書の MCP が登録するツールの名前（登録の順）
-DOCS_TOOL_NAMES = (
-    "search_docs",
-    "describe",
-    "list_changes",
-    "trace_related",
-    "write_docs",
-    "delete_docs",
-    "list_match_words",
-)
 # 管理の MCP が登録するツールの名前（登録の順）
-ADMIN_TOOL_NAMES = (
-    "status",
-    "reload",
-    "restart",
-    "update",
-    "check_project",
-    "try_convert",
-    "write_nav",
-)
-# 文書の MCP の instructions を描画するプロンプトの ID
-DOCS_INSTRUCTIONS_PROMPT_ID = "mcp/docs/instructions"
+ADMIN_TOOL_NAMES = ("status", "restart", "update")
 
 
 def tool_prompt_id(server: str, tool: str) -> str:
@@ -67,15 +32,8 @@ def tool_prompt_id(server: str, tool: str) -> str:
 
 
 def mcp_prompt_ids() -> list[str]:
-    """2 つの MCP が描画するプロンプトの ID を並べる。"""
-    return [
-        DOCS_INSTRUCTIONS_PROMPT_ID,
-        *(tool_prompt_id("docs", name) for name in DOCS_TOOL_NAMES),
-        *(tool_prompt_id("admin", name) for name in ADMIN_TOOL_NAMES),
-    ]
-
-
-DESCRIBE_HINT = "describe で使用方法（使用できる配信元・種類・スキーマ）を確認してください"
+    """管理の MCP が描画するプロンプトの ID を並べる。"""
+    return [tool_prompt_id("admin", name) for name in ADMIN_TOOL_NAMES]
 
 
 def _fields(value: Any) -> dict[str, Any]:
@@ -89,37 +47,6 @@ def _fields(value: Any) -> dict[str, Any]:
 
 def _plain(value: Any) -> Any:
     """結果を JSON にできる辞書・配列・文字列にする（`None` と空の値は落とす）。"""
-    if isinstance(value, ChangesResult):
-        data = _fields(value)
-        data["range"] = {"from": data.pop("range_from"), "to": data.pop("range_to")}
-        return _plain(data)
-    if isinstance(value, RelatedItem):
-        data = _fields(value)
-        data["via"] = {
-            "from": data.pop("via_from"),
-            "type": data.pop("via_type"),
-            "direction": data.pop("via_direction"),
-        }
-        return _plain(data)
-    if isinstance(value, DeleteResult):
-        data = _fields(value)
-        data["unlinked"] = [
-            {"id": doc_id, "version": version} for doc_id, version in value.unlinked
-        ]
-        return _plain(data)
-    if isinstance(value, ContainsChange):
-        data = _fields(value)
-        data["from"] = data.pop("from_")
-        return _plain(data)
-    if isinstance(value, SearchItem):
-        data = _plain(_fields(value))
-        if value.ranges is not None:
-            # 返す行が無くても、切り出したことが分かるよう `ranges: []` を出す
-            data["ranges"] = [_plain(item) for item in value.ranges]
-        return data
-    if isinstance(value, SnippetLine):
-        # 空の行も `line`・`text`・`hit` を全て出す
-        return {"line": value.line, "text": value.text, "hit": value.hit}
     if dataclasses.is_dataclass(value) and not isinstance(value, type):
         return _plain(_fields(value))
     if isinstance(value, dict):
@@ -165,7 +92,6 @@ def tool_error(error: DevDocsError | ValidationError) -> CallToolResult:
             f"{'.'.join(str(part) for part in item['loc'])}: {item['msg']}"
             for item in error.errors()
         )
-        lines.append(f"- {DESCRIBE_HINT}")
     else:
         lines = [f"{error.name}: {error.message}"]
         details = _plain(error.details())

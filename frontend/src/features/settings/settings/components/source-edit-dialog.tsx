@@ -188,7 +188,7 @@ export const SourceEditDialog = ({
           >
             <Textarea
               id="source-config"
-              placeholder="~/repo/sample-docs/dev-docs.yaml"
+              placeholder="~/repo/sample-docs/project-index.yaml"
               aria-invalid={errors.config !== undefined}
               {...configField}
               ref={(element) => {

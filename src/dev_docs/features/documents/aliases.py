@@ -1,25 +1,18 @@
-"""エイリアスのキーの検証と、照合する語の一覧。"""
+"""エイリアスのキーの検証と、エイリアスの集め。"""
 
 from __future__ import annotations
 
 import functools
-import unicodedata
 from collections.abc import Sequence
 from importlib import resources
 from typing import Any
 
-from dev_docs.features.documents.types import (
-    AliasCollection,
-    AliasEntry,
-    Document,
-    MatchWord,
-)
-from dev_docs.features.sources.types import ServedSource
+from dev_docs.features.documents.types import AliasCollection, AliasEntry
+from dev_docs.integrations.project_index.types import IndexedDocument, SourceView
 from dev_docs.shared.errors import Violation
 from dev_docs.shared.yaml_io import load_yaml
 
 ALIAS_SCHEMA_PATH = "schemas/aliases.schema.yaml"
-ALIAS_SOURCE_PATH = "schemas/aliases.source.yaml"
 ALIAS_REQUIRED_KEYS: dict[str, tuple[str | tuple[str, ...], ...]] = {
     "term": ("id", "name", "description"),
     "doc": ("id", "name", "description"),
@@ -45,11 +38,6 @@ def alias_schema() -> dict[str, Any]:
     """同梱した alias-inject のエイリアスのスキーマを返す。"""
     schema: dict[str, Any] = _read(ALIAS_SCHEMA_PATH)
     return schema
-
-
-def alias_schema_version() -> str:
-    """エイリアスのスキーマの取り込み元のタグを返す。"""
-    return str(_read(ALIAS_SOURCE_PATH)["tag"])
 
 
 def _alias_keys() -> list[str]:
@@ -83,7 +71,7 @@ def _type_rule(key: str, value: Any) -> str | None:
     return None if isinstance(value, str) else "文字列ではありません"
 
 
-def check_alias_document(document: Document) -> list[Violation]:
+def check_alias_document(document: IndexedDocument) -> list[Violation]:
     """文書 1 件のエイリアスのキーの値を、スキーマのキーと引用の種類の必須で検証する。"""
     metadata = document.metadata
     violations: list[Violation] = []
@@ -114,11 +102,9 @@ def _as_list(value: Any) -> list[str]:
     return [value] if isinstance(value, str) else list(value)
 
 
-def collect_aliases(source: ServedSource, documents: Sequence[Document]) -> AliasCollection:
+def collect_aliases(view: SourceView, documents: Sequence[IndexedDocument]) -> AliasCollection:
     """`alias_type` を持つ行の文書を検証し、通った文書のエイリアスと違反を返す。"""
-    has_alias_rows = any(
-        row.enabled and row.alias_type is not None for row in source.config.documents
-    )
+    has_alias_rows = any(row.alias_type is not None for row in view.documents)
     entries: list[AliasEntry] = []
     violations: list[Violation] = []
     keys = _alias_keys()
@@ -147,23 +133,3 @@ def collect_aliases(source: ServedSource, documents: Sequence[Document]) -> Alia
             )
         )
     return AliasCollection(entries=entries, violations=violations, has_alias_rows=has_alias_rows)
-
-
-def match_words(entries: Sequence[AliasEntry]) -> list[MatchWord]:
-    """エイリアスから、照合する語を指す文書の ID とともに並べる。"""
-    words: list[MatchWord] = []
-    for entry in entries:
-        words.append(MatchWord(word=entry.name, id=entry.id, kind="name"))
-        words.extend(MatchWord(word=alias, id=entry.id, kind="alias") for alias in entry.aliases)
-    return words
-
-
-def _normalize(text: str) -> str:
-    """条件の比較と同じ正規化（NFKC と `casefold`）。"""
-    return unicodedata.normalize("NFKC", text).casefold()
-
-
-def term_ids(entries: Sequence[AliasEntry], term: str) -> set[str]:
-    """`name` か `aliases` が用語に一致するエイリアスの文書の ID を返す。"""
-    target = _normalize(term)
-    return {word.id for word in match_words(entries) if _normalize(word.word) == target}

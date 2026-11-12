@@ -1,10 +1,11 @@
 [project]
 name = "dev-docs"
 version = "0.0.0"
-description = "各リポジトリの YAML の開発ドキュメントを、人には画面で、AI には MCP で出すサーバー"
+description = "project-index が配信している開発ドキュメントを、人が読む画面で出すサーバー"
 requires-python = ">=3.14"
 dependencies = [
     "fastapi>=0.162.0",
+    "httpx>=0.28.1",
     "jinja2>=3.1.6",
     "jsonschema>=4.26.0",
     "mcp>=2.3.0",
@@ -18,7 +19,6 @@ dev-docs = "dev_docs.__main__:main"
 
 [dependency-groups]
 dev = [
-    "httpx>=0.28.1",
     "mypy",
     "pytest",
     "ruff",
