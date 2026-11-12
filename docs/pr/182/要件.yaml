@@ -1,0 +1,14 @@
+use_cases:
+  - kind: single
+    scenario: docs/scenario/SC-155-7.yaml
+    impact: run_only
+    detail: 画面で読む文書のフロー図の箱の大きさと線の通り道が変わる。読む手順は変わらない
+    depends_on: []
+docs: []
+scope_out:
+  - item: flow_layout.py のコメント・docstring の文言の AI slop の単語の対応表への合わせ込み（作り替えない箇所）
+    reason: '要望に含まれない。#150 が #162 の後ろで扱う'
+    plan: '#150'
+  - item: layout_flow の出力へのノードのリンクの追加
+    reason: 要望に含まれない（座標・高さ・線の経路の修正に閉じる）
+    plan: '#98'
