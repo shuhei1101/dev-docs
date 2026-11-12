@@ -8,15 +8,15 @@ flows:
     summary: 配信元の一覧を配信中で返す
     setup:
       - name: Mock
-        description: project-index の端末の設定の API のモック（shuhei1101/project-index#14 の入出力で、setup の端末の設定の行と配信元の状態を返し、保存を受ける）。dev-docs のアプリを HTTP のテストのクライアントで呼ぶ
+        description: テストの中で起動した project-index（shuhei1101/project-index の develop の `81f0e70` に shuhei1101/project-index#46 を足した版。一時フォルダの端末の設定を `PROJECT_INDEX_CONFIG` で指し、空きポートで子プロセスとして起動する）が、端末の設定の行と配信元の状態を返し、保存を受ける。dev-docs のアプリを HTTP のテストのクライアントで呼ぶ
       - name: 端末の設定
-        description: モックの端末の設定の `sources` に sample の 1 行
+        description: project-index の端末の設定の `sources` に sample の 1 行
     flow: |-
       ```mermaid
       sequenceDiagram
         participant C as クライアント
         participant E as GET /_api/settings/sources
-        participant PI as project-index（モック）
+        participant PI as project-index
 
         C->>E: GET /_api/settings/sources
         E->>PI: 端末の設定の配信元の行と、配信元ごとの状態を取得する
@@ -63,7 +63,7 @@ flows:
       - name: Mock
         description: なし
       - name: 端末の設定
-        description: モックが fresh・notes・sample の順の行と、fresh を `pending_reload` にした状態を返す
+        description: project-index の起動の後に、project-index の端末の設定のファイルへ fresh の行を直接書き足し、fresh・notes・sample の順の行にする（読み直さない）
         notes: fresh は `id` を省いた新しい行
     flow: |-
       sequenceDiagram

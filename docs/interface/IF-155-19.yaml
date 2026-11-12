@@ -8,9 +8,9 @@ flows:
     summary: 配信元を追加して保存し、再起動せずに配信する
     setup:
       - name: Mock
-        description: project-index の端末の設定の API のモック（shuhei1101/project-index#14 の入出力で、setup の端末の設定の行と配信元の状態を返し、保存を受ける）。dev-docs のアプリを HTTP のテストのクライアントで呼ぶ
+        description: テストの中で起動した project-index（shuhei1101/project-index の develop の `81f0e70` に shuhei1101/project-index#46 を足した版。一時フォルダの端末の設定を `PROJECT_INDEX_CONFIG` で指し、空きポートで子プロセスとして起動する）が、端末の設定の行と配信元の状態を返し、保存を受ける。dev-docs のアプリを HTTP のテストのクライアントで呼ぶ
       - name: 端末の設定
-        description: モックの端末の設定の `sources` に sample の 1 行
+        description: project-index の端末の設定の `sources` に sample の 1 行
       - name: 追加する配信元
         description: 文書の種類を 1 つと `project-index.yaml` を持つ git リポジトリ
         notes: id `extra`
@@ -21,7 +21,7 @@ flows:
       sequenceDiagram
         participant C as クライアント
         participant E as PUT /_api/settings/sources
-        participant PI as project-index（モック）
+        participant PI as project-index
 
         C->>E: sources: sample, extra
         E->>E: オリジンを確かめる
@@ -31,8 +31,8 @@ flows:
       ```
     expected:
       - 200 で、sample と extra が `serving`
-      - モックが受けた保存の行が sample と extra の 2 行で、sample の行の値は送信したとおり
-      - 文字列で送った extra の `config` が、モックが受けた行では要素 1 つの配列になる
+      - project-index の端末の設定のファイルの `sources` が sample と extra の 2 行で、sample の行の値は送信したとおり
+      - 文字列で送った extra の `config` が、project-index の端末の設定のファイルでは要素 1 つの配列になる
       - 再起動せずに `/_api/sources/extra/docs` が 200 を返す
     test: test_normal
   - name: 正常系（配信を止める）
@@ -41,7 +41,7 @@ flows:
       - name: Mock
         description: なし
       - name: 端末の設定
-        description: モックの端末の設定の `sources` に sample と extra の 2 行
+        description: project-index の端末の設定の `sources` に sample と extra の 2 行
       - name: 入力
         description: 'extra の行を `enabled: false` にした 2 行'
     flow: |-
@@ -49,7 +49,7 @@ flows:
       sequenceDiagram
         participant C as クライアント
         participant E as PUT /_api/settings/sources
-        participant PI as project-index（モック）
+        participant PI as project-index
 
         C->>E: sources: sample, extra（enabled: false）
         E->>PI: 端末の設定の配信元の保存
@@ -58,7 +58,7 @@ flows:
       ```
     expected:
       - extra が `disabled`
-      - モックが受けた extra の行の `enabled` が `false`
+      - project-index の端末の設定のファイルの extra の行の `enabled` が `false`
       - '`/_api/sources/extra/docs` が 404、`/_api/sources/sample/docs` が 200 を返す'
     test: test_normal_when_source_disabled
   - name: 正常系（配信元を削除する）
@@ -67,7 +67,7 @@ flows:
       - name: Mock
         description: なし
       - name: 端末の設定
-        description: モックの端末の設定の `sources` に sample と extra の 2 行
+        description: project-index の端末の設定の `sources` に sample と extra の 2 行
       - name: 入力
         description: sample の 1 行だけ
     flow: |-
@@ -75,7 +75,7 @@ flows:
       sequenceDiagram
         participant C as クライアント
         participant E as PUT /_api/settings/sources
-        participant PI as project-index（モック）
+        participant PI as project-index
 
         C->>E: sources: sample
         E->>PI: 端末の設定の配信元の保存（extra の行を除く）
@@ -83,7 +83,7 @@ flows:
         E-->>C: 200（sample だけ）
       ```
     expected:
-      - モックが受けた保存の行が sample だけで、sample の行の値は変わらない
+      - project-index の端末の設定のファイルの `sources` が sample だけで、sample の行の値は変わらない
       - extra のフォルダのファイルは変わらない
       - '`/_api/sources/extra/docs` が 404 を返す'
     test: test_normal_when_source_deleted
@@ -102,7 +102,7 @@ flows:
       sequenceDiagram
         participant C as クライアント
         participant E as PUT /_api/settings/sources
-        participant PI as project-index（モック）
+        participant PI as project-index
 
         C->>E: sources: sample, broken
         E->>PI: 端末の設定の配信元の保存
@@ -111,7 +111,7 @@ flows:
       ```
     expected:
       - 200 で、broken が `not_served`、`errors` に `documents[0].paths` がある
-      - モックが受けた保存の行に broken の行がある
+      - project-index の端末の設定のファイルの `sources` に broken の行がある
       - '`/_api/sources/broken/docs` が 404、`/_api/sources/sample/docs` が 200 を返す'
     test: test_normal_when_added_source_invalid
   - name: 異常系（別のオリジン・403）
@@ -132,7 +132,7 @@ flows:
       ```
     expected:
       - 403 を返す
-      - モックが保存を受けず、`/_api/sources/sample/docs` は 200 を返す
+      - project-index の端末の設定のファイルが変わらず、`/_api/sources/sample/docs` は 200 を返す
       - '`Origin` が無く `Sec-Fetch-Site: cross-site` の要求も 403'
     test: test_error_when_cross_origin
   - name: 異常系（本文の型の誤り・400）
@@ -154,7 +154,7 @@ flows:
       ```
     expected:
       - 400 で、`errors` に `sources[1].config` と `sources[1].enabled` がそれぞれの理由つきである
-      - モックが保存を受けず、`/_api/sources/sample/docs` は 200 を返す
+      - project-index の端末の設定のファイルが変わらず、`/_api/sources/sample/docs` は 200 を返す
     test: test_error_when_body_invalid
   - name: 異常系（project-index が保存を断る・422・502）
     summary: project-index が 422 を返したら違反をそのまま 422 で返し、それ以外の失敗は 502 で返す
