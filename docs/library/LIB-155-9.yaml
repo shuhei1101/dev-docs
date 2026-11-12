@@ -5,8 +5,8 @@ version:
   current: master
   latest: v0.10.0
   checked_on: '2026-11-09'
-  source: https://cdn.jsdelivr.net/gh/shuhei1101/mdmark@master/
-  pinning: '固定しない。リリースのたびに `dist/` が入る master ブランチを読み、中身が変わるため integrity を付けない。jsDelivr は `@master` を CDN で 12 時間、ブラウザで 7 日キャッシュする（`cache-control: public, max-age=604800, s-maxage=43200`）。リリースをすぐ届けるときは purge.jsdelivr.net で CDN のキャッシュを削除する'
+  source: https://cdn.jsdelivr.net/gh/shuhei1101/mdmark@master/・`package.json` の `devDependencies`
+  pinning: '固定しない。リリースのたびに `dist/` が入る master ブランチを読み、中身が変わるため integrity を付けない。jsDelivr は `@master` を CDN で 12 時間、ブラウザで 7 日キャッシュする（`cache-control: public, max-age=604800, s-maxage=43200`）。リリースをすぐ届けるときは purge.jsdelivr.net で CDN のキャッシュを削除する。文書の取得の結合テストで図を点検する CLI は、`devDependencies` の `github:shuhei1101/mdmark#v0.10.0` で固定する'
 catalogs:
   - name: API
     version: v0.10.0
@@ -47,13 +47,12 @@ catalogs:
         purpose: 'スキーマ駆動の変換の `x-diagram` の flow 系・`state` と、手で書く Mermaid の `flowchart` をフロー図の部品で描く'
         description: 'ノードの `kind` は `llm`・`dm`・`script`・`mcp`・`data`・`external` と、判定の `start`・`question`・`action`・`result`（[mdmark#268](https://github.com/shuhei1101/mdmark/pull/268) で入り、v0.10.0 の master にある）。ノードは `hint`（ツールチップの説明）、線は `line`（`flow`・`read`・`write`・`reply`・`loop`）・`label`・`labelAt`・`tip`（ラベルのツールチップ。ラベルの無い線には出ない）、定義は中の箱を囲む `frame`（`title`・`x`・`y`・`w`・`h`）を持てる'
   - name: コマンド
-    version: develop（mdmark#328 のマージ後）
+    version: v0.10.0
     entries:
       - name: mdmark check --text
         kind: コマンド
         purpose: Markdown の文字列を、描画時の書き方の警告・知らない印・図の配置のずれで点検する
-        status: planned
-        description: '[mdmark#328](https://github.com/shuhei1101/mdmark/pull/328) で develop に入り、v0.9.0 の master には無い。npm のレジストリに公開されず、Node 24 以降で動く。設定ファイルを渡さないときは、起動したフォルダから上へ `mdmark.config.yaml` を探し、無ければ既定の設定で点検する'
+        description: '[mdmark#328](https://github.com/shuhei1101/mdmark/pull/328) で入り、v0.10.0 から使用できる。npm のレジストリに公開されず、Node 24 以降で動く。設定ファイルを渡さないときは、起動したフォルダから上へ `mdmark.config.yaml` を探し、無ければ既定の設定で点検する'
         params:
           - name: --text
             type: str
@@ -79,6 +78,7 @@ adoption: 採用
 used_in:
   - frontend/src/features/docs/doc-view/hooks/use-mdmark.ts
   - src/dev_docs/integrations/mdmark.py
+  - tests/integration/server/test_get_document.py
 upstream: shuhei1101/mdmark
 verification:
   state: 済
