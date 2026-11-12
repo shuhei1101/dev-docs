@@ -13,19 +13,27 @@ docs:
   - page: docs/guide/新しく作るか修正するかの判定.md
     new: false
     change: front matter の tags を files.yml の行へ移して front matter を削除する（YAML に変換する場合は変換後の文書の列に持たせる）
-    status: todo
+    status: done
+    updated_by: planner
+    updated_at: '2026-11-12T17:08:49.257523+00:00'
   - page: docs/guide/documentsの行の判定.md
     new: false
     change: front matter の tags を files.yml の行へ移して front matter を削除する（YAML に変換する場合は変換後の文書の列に持たせる）
-    status: todo
+    status: done
+    updated_by: planner
+    updated_at: '2026-11-12T17:08:49.257523+00:00'
   - page: docs/guide/files.yml
     new: false
     change: 各行に name・description・tags を書き、docs/guide/ の Markdown を検索で参照できるようにする。README.md の行を追加するかも決める
-    status: todo
+    status: done
+    updated_by: planner
+    updated_at: '2026-11-12T17:08:49.257523+00:00'
   - page: docs/_root/files.yml
     new: false
     change: design-policy.md の行に name・description・tags を書く
-    status: todo
+    status: done
+    updated_by: planner
+    updated_at: '2026-11-12T17:08:49.257523+00:00'
   - page: docs/index.yaml
     new: false
     change: YAML に変換して種類のフォルダを新しく作る場合、そのフォルダの行を追加する
@@ -37,15 +45,21 @@ docs:
   - page: README.md
     new: false
     change: dev-docs 自身の文書を直下の project-index.yaml で配信していることを記載する
-    status: todo
+    status: done
+    updated_by: planner
+    updated_at: '2026-11-12T17:08:49.257523+00:00'
   - page: CLAUDE.md
     new: false
     change: 文書の調査に project-index の配信元 dev-docs を使うことと、Markdown のメタデータを files.yml に書くことが既存の記載で足りるかを確かめ、足りなければ修正する
-    status: todo
+    status: done
+    updated_by: planner
+    updated_at: '2026-11-12T17:08:49.257523+00:00'
   - page: docs/mock/files.yml
     new: true
     change: docs/mock/ の目次の Markdown（index.md）を載せる管理用の YAML を作る（ai-monitor の配信元の files_mock の行と同じ持ち方）
-    status: todo
+    status: done
+    updated_by: planner
+    updated_at: '2026-11-12T17:08:49.257523+00:00'
 scope_out:
   - item: 既存の文書の書き方を mdmark の書き方と表し方の優先順位へ移す
     reason: 本文の書き方の移行は別の目的で、この Issue は配信とメタデータと形式の変換だけを扱う
@@ -56,3 +70,6 @@ scope_out:
   - item: docs/pr/ の配信
     reason: 作業 PR の記録で、文書の正本ではない（ai-monitor・knowledge の配信元も載せていない）
     plan: none
+  - item: docs/ の YAML の設計書（scenario・interface・module など）への tags の付与
+    reason: 設計書は title・lead を名前・概要文として metadata の対応で配信でき、検索で見つかる。tags は任意のキーで、付けるには設計書の種類ごとに主題を決める別の作業が要る。付けた tags はこの作業 PR の project-index.yaml の metadata の対応が入って初めて検索に効く
+    plan: to_file

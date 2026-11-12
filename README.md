@@ -3,6 +3,7 @@
 project-index が配信している配信元の文書を、人が読む画面で出す開発ドキュメントサーバー。
 文書とソースコードの索引・検索・書き込みの MCP は [project-index](https://github.com/shuhei1101/project-index) が持つ。検索の MCP だけを使う端末は project-index だけを入れ、画面を使う端末にだけ dev-docs を入れる。
 配信元の設定の既定のファイル名は `project-index.yaml`（Git 管理外の値は `project-index.local.yaml`）。
+dev-docs 自身の `docs/` の文書は、直下の `project-index.yaml` で配信元 `dev-docs` として配信する。
 
 ## 導入
 
