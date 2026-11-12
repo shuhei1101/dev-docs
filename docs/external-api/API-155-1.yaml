@@ -29,7 +29,7 @@ endpoints:
   - name: GET /sources/{source}/config
     method: GET
     path: /sources/{source}/config
-    summary: 配信元の設定の `nav`・`documents[]`（スクリプトのコマンドを除き、キーは配信元の設定のまま）・`decisions.folders`・`github`（`repository`・`labels`）・`diff.ignore_keys` を返す（IF-23）。`?schemas=true` で `schemas` に `documents[].id` ごとの `$ref` を解いた種類のスキーマを入れる。`default_ref` と Git の配信元かは GET `/sources/{source}/refs` から取る
+    summary: 配信元の設定の `nav`・`documents[]`（スクリプトのコマンドを除き、キーは配信元の設定のまま）・`decisions.folders`・`github`（`repository`・`issueLabels`）・`diff.ignore_keys` を返す（IF-23）。`?schemas=true` で `schemas` に `documents[].id` ごとの `$ref` を解いた種類のスキーマを入れる。`default_ref` と Git の配信元かは GET `/sources/{source}/refs` から取る
     status_codes:
       - code: '200'
         condition: 返した
