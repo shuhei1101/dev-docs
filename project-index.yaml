@@ -1,0 +1,139 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/shuhei1101/project-index/develop/schemas/project-index.schema.json
+version: "3"
+name: dev-docs
+default_ref: develop
+worktrees:
+  - ./.claude/worktrees/*
+description: project-index の文書を画面で出す開発ドキュメントサーバーの設計書・公開ドキュメント・デザイン方針・モック
+github:
+  repository: shuhei1101/dev-docs
+documents:
+  - id: architecture
+    title: アーキテクチャ図
+    paths: ["docs/architecture/*.yaml"]
+    exclude: [index.yaml]
+    schema: schemas/architecture.schema.yaml
+    metadata:
+      name: title
+      description: lead
+  - id: nonfunctional
+    title: 非機能要件
+    paths: ["docs/nonfunctional/*.yaml"]
+    exclude: [index.yaml]
+    schema: schemas/nonfunctional.schema.yaml
+    metadata:
+      name: title
+      description: lead
+  - id: scenario
+    title: シナリオ
+    paths: ["docs/scenario/*.yaml"]
+    exclude: [index.yaml]
+    schema: schemas/scenario.schema.yaml
+    metadata:
+      name: title
+      description: lead
+  - id: interface
+    title: インターフェース定義
+    paths: ["docs/interface/*.yaml"]
+    exclude: [index.yaml]
+    schema: schemas/interface.schema.yaml
+    metadata:
+      name: title
+      description: lead
+  - id: module
+    title: モジュール構成
+    paths: ["docs/module/*.yaml"]
+    exclude: [index.yaml]
+    schema: schemas/module.schema.yaml
+    metadata:
+      name: title
+      description: lead
+  - id: screen
+    title: 画面設計
+    paths: ["docs/screen/*.yaml"]
+    exclude: [index.yaml]
+    schema: schemas/screen.schema.yaml
+    metadata:
+      name: title
+      description: lead
+  - id: component
+    title: 部品設計
+    paths: ["docs/component/*.yaml"]
+    exclude: [index.yaml]
+    schema: schemas/component.schema.yaml
+    metadata:
+      name: title
+      description: lead
+  - id: config
+    title: 設定
+    paths: ["docs/config/*.yaml"]
+    exclude: [index.yaml]
+    schema: schemas/config.schema.yaml
+    metadata:
+      name: title
+      description: lead
+  - id: api
+    title: 外部API
+    paths: ["docs/external-api/*.yaml"]
+    exclude: [index.yaml]
+    schema: schemas/external-api.schema.yaml
+    metadata:
+      name: title
+      description: lead
+  - id: library
+    title: 外部ライブラリ
+    paths: ["docs/library/*.yaml"]
+    exclude: [index.yaml]
+    schema: schemas/library.schema.yaml
+    metadata:
+      name: title
+      description: lead
+  - id: test_procedure
+    title: テスト実行方法
+    paths: ["docs/test-procedure/*.yaml"]
+    exclude: [index.yaml]
+    schema: schemas/test-procedure.schema.yaml
+    metadata:
+      name: title
+      description: lead
+  - id: dev_command
+    title: 開発コマンド
+    paths: ["docs/dev-command/*.yaml"]
+    exclude: [index.yaml]
+    schema: schemas/dev-command.schema.yaml
+    metadata:
+      name: title
+      description: lead
+  - id: index
+    title: 目次
+    paths:
+      - docs/index.yaml
+      - "docs/*/index.yaml"
+    schema: schemas/index.schema.yaml
+    metadata:
+      description: summary
+  - id: files_root
+    title: docs 直下の Markdown
+    paths: ["docs/_root/files.yml"]
+    schema: schemas/files.schema.yaml
+    records: files
+    body_file: path
+    metadata:
+      visibility: visibility
+  - id: files_guide
+    title: 公開ドキュメントの Markdown
+    paths: ["docs/guide/files.yml"]
+    exclude: ["*.yaml", README.md, はじめに.md, 使い方.md, リファレンス.md]
+    schema: schemas/files.schema.yaml
+    records: files
+    body_file: path
+    metadata:
+      visibility: visibility
+      category: category
+  - id: files_mock
+    title: モックの Markdown
+    paths: ["docs/mock/files.yml"]
+    exclude: ["*.html", "*.js", "*.css"]
+    schema: schemas/files.schema.yaml
+    records: files
+    body_file: path
