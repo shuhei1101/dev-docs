@@ -70,7 +70,7 @@ class PromptDoc(BaseModel):
     name: str
     description: str = ""
     # `llm` はメッセージに分け、`hook` は字数の注意を出す
-    kind: Literal["llm", "hook", "instructions", "tool"]
+    kind: Literal["llm", "hook", "instructions", "tool", "agent"]
     # 注入する言語
     lang: str
     tags: list[str] = Field(default_factory=list)
