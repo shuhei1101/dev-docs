@@ -2,6 +2,9 @@
 
 update と dev-docs migrate で dev-docs を更新し、端末の設定を移し替える手順
 
+画面の側（dev-docs）と索引の側（project-index）は別々に更新します。
+project-index の更新は [project-indexを更新する](https://github.com/shuhei1101/project-index/blob/develop/docs/guide/project-index%E3%82%92%E6%9B%B4%E6%96%B0%E3%81%99%E3%82%8B.md) にあります。
+
 ## 手順
 
 <!-- steps -->
@@ -10,7 +13,7 @@ update と dev-docs migrate で dev-docs を更新し、端末の設定を移し
    クローンで `git pull --ff-only` と `uv sync` を実行し、新しいバージョンのコードで `dev-docs migrate --plan` を実行して移し替えの要否を確かめる。
 2. 応答の `updated`・`migration_needed`・`restarting` で次の動きを決める（下の表）。
 3. 起動し直したら、`/mcp` でつなぎ直す。
-4. 管理の MCP の `status` で、新しいバージョンと配信元が `serving` であることを確かめる。
+4. 管理の MCP の `status` で、新しいバージョンと、project-index につながって配信元が `serving` であることを確かめる。
 
 <!-- /steps -->
 
@@ -42,33 +45,33 @@ update と dev-docs migrate で dev-docs を更新し、端末の設定を移し
 
 <!-- /steps -->
 
-配信元の `dev-docs.yaml` を移し替えるときは、`--source` にそのパスを渡し、続けて `reload` を呼びます。
 手で移し替えた設定は、`--record` で `version` だけを今のバージョンに書き換えます。
 オプションと終了コードは [CLI](./CLI.md) にあります。
 
-## 配信元の設定を移し替える
+## 今の端末から移る
 
-`dev-docs.yaml` の `version` が古い配信元は、起動時の警告のログと、管理の MCP の `status`・`check_project` に出ます。
+文書の MCP と配信元の読み込みを dev-docs が持っていた端末（端末の設定の `version: "1"`）から、project-index を使う形へ移る手順です。
+文書の MCP を使用できない期間を作らないよう、project-index を先に入れてから dev-docs を更新します。
 
 <!-- steps -->
 
-1. 当てる手順を確かめる。
-   `dev-docs.yaml` は書き換わらない。
+1. project-index を入れ、待ち受けていることを確かめる（[project-indexを入れる](https://github.com/shuhei1101/project-index/blob/develop/docs/guide/project-index%E3%82%92%E5%85%A5%E3%82%8C%E3%82%8B.md)）。
+2. 管理の MCP の `update` を呼ぶ。`migration_needed: true` が返る。
+3. 当てる手順を確かめる。`2: ` で始まる `sources` を project-index へ移す手順が出る。
    ```bash
-   dev-docs migrate --source {配信元の dev-docs.yaml} --plan
+   dev-docs migrate --plan
    ```
-2. 手順を当てる。
-   当てる前に、同じフォルダへ `{ファイル名}.bak-{時刻}` のバックアップを取る。
+4. 手順を当てる。端末の設定の `sources` の行を project-index の端末の設定へ 1 行ずつ追加し、`project_index` を書き足す。
    ```bash
-   dev-docs migrate --source {配信元の dev-docs.yaml}
+   dev-docs migrate --project-index http://127.0.0.1:8786
    ```
-3. 管理の MCP の `reload` を呼ぶ。
-4. `/dev-docs:setup {配信元のパス}` を実行し、`dev-docs.yaml` の 1 行目のスキーマの行のタグを dev-docs のバージョンに書き換える。
+5. 標準出力に移さなかった行（project-index に同じ id で内容の違う行がある）が出たら、project-index で行を直してから、端末の設定の `sources` に残った行を消す。
+6. 管理の MCP の `restart` を呼び、`/mcp` でつなぎ直す。
+7. Claude Code の `/mcp` で、文書の MCP が project-index の接続先につながっていることを確かめる。
 
 <!-- /steps -->
 
-機械的に移せない設定が残るときは、終了コード 4 で止まり、`dev-docs.yaml` は書き換わりません。
-標準エラーの違反と案内のとおり、`/dev-docs:setup` で管理用の YAML の行へ移します。
+配信元の設定（`dev-docs.yaml`）の移し替えと、`project-index.yaml` への改名は project-index で行います（[project-indexを更新する](https://github.com/shuhei1101/project-index/blob/develop/docs/guide/project-index%E3%82%92%E6%9B%B4%E6%96%B0%E3%81%99%E3%82%8B.md)）。
 
 ## 失敗したとき
 
@@ -81,6 +84,7 @@ update と dev-docs migrate で dev-docs を更新し、端末の設定を移し
 | 移し替えの手順が失敗する、または当てた結果がスキーマに違反する | 端末の設定を書き換えず、失敗した手順と理由を標準エラーに出す |
 | 当てる手順に破壊的なもの（キーの削除）がある | 触らずに止まる。内容を確かめ、了承できれば `--allow-destructive` を付けて実行する |
 | 端末の設定の `version` が dev-docs より新しい | 触らずに止まる。`update` で dev-docs を更新する |
+| `sources` を移す先の project-index につながらない | 端末の設定を書き換えずに終了コード 7 で止まる。project-index を起動してからやり直す |
 | `restart`・`update` の再起動が終わる前に呼んだ | `RestartInProgressError` で断る。起動し直した後に呼び直す |
 
 <!-- /table -->

@@ -1,6 +1,8 @@
 # dev-docs
 
-YAML の正本を読み、文書の MCP（HTTP）と画面の API を出す汎用の開発ドキュメントサーバー。端末の設定に配信元を並べて起動する。
+project-index が配信している配信元の文書を、人が読む画面で出す開発ドキュメントサーバー。
+文書とソースコードの索引・検索・書き込みの MCP は [project-index](https://github.com/shuhei1101/project-index) が持つ。検索の MCP だけを使う端末は project-index だけを入れ、画面を使う端末にだけ dev-docs を入れる。
+配信元の設定の既定のファイル名は `project-index.yaml`（Git 管理外の値は `project-index.local.yaml`）。
 
 ## 導入
 
