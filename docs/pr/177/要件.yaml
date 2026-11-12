@@ -1,0 +1,10 @@
+use_cases:
+  - kind: single
+    scenario: docs/scenario/SC-155-7.yaml
+    impact: run_only
+    detail: プロンプトの文書を画面で読む流れは変わらないが、プロンプトの種類の受け付けが変わるため回帰を確かめる
+    depends_on: []
+scope_out:
+  - item: templates/prompt.schema.yaml の examples と $ref の参照先（common.schema.yaml）を原本に合わせること
+    reason: 要望は kind の agent の追加に限られ、examples は dev-docs の実在のプロンプトに替えた差（#103）で、$ref の参照先は dev-docs の置き場所に合わせた差のため
+    plan: none
