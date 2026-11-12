@@ -116,6 +116,8 @@ endpoints:
     status_codes:
       - code: '201'
         condition: 追加した
+      - code: '403'
+        condition: 別のオリジンの要求（dev-docs はサーバーの側から `Origin` を付けずに呼ぶ）
       - code: '409'
         condition: 同じ id の行がある
       - code: '422'
