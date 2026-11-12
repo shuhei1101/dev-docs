@@ -1,5 +1,5 @@
 文書の MCP の接続先の付け替え:
-  説明: project-index を入れて 127.0.0.1:8786 で起動し、Claude Code の文書の MCP（describe・search_docs など）の接続先を、dev-docs のプラグインから project-index のプラグインへ付け替える。マージの後に dev-docs のプラグインを更新すると `.mcp.json` から文書の MCP が無くなるため、マージの前に済ませる。dev-docs のサーバーの再起動と `dev-docs migrate` は、project-index の実装の入出力との食い違い（docs/external-api/API-155-1.yaml）を #164 で直した後に #164 で行う（プラグインの導入・セットアップのスキルの対話と `/mcp` の再接続は Claude Code の操作が要り、AI が行えない）
+  説明: 'project-index を入れて 127.0.0.1:8786 で起動し、Claude Code の文書の MCP（describe・search_docs など）の接続先を、dev-docs のプラグインから project-index のプラグインへ付け替える。マージの後に dev-docs のプラグインを更新すると `.mcp.json` から文書の MCP が無くなるため、マージの前に済ませる。dev-docs のサーバーの再起動と `dev-docs migrate` は、project-index の実装の入出力との食い違い（docs/external-api/API-155-1.yaml）を #164 で修正した後に #164 で行う。マージの後、#164 の反映作業までにサーバーが起動し直すと（SessionStart のフックの起動を含む）、画面が project-index につながらず 503・502 になり、端末の設定も `version: "1"` のまま残る（プラグインの導入・セットアップのスキルの対話と `/mcp` の再接続は Claude Code の操作が要り、AI が行えない）'
   タグ: [ユーザーの操作, 接続先]
   実行者: ユーザー
   時期: マージの前
