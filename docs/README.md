@@ -19,6 +19,7 @@ dev-docs のドキュメント全体の目次
 | [nonfunctional](./nonfunctional/) | 外部の制約から逆算したアプリ側の決定値（非機能要件テストの元） |
 | [external-api](./external-api/) | 採用済みの外部 API のリファレンス |
 | [library](./library/) | 採用済みの外部ライブラリのリファレンス |
+| [flowchart](./flowchart/) | 文書の作成と配信元の設定で使用する判定フローチャート |
 | [test-procedure](./test-procedure/) | テストの実行方法 |
 | [dev-command](./dev-command/) | 開発で使うコマンドの分類ごとの前提と手順 |
 | [design-policy](./design-policy.md) | dev-docs の画面全体に通すデザインの方向性 |

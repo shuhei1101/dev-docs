@@ -1,0 +1,14 @@
+端末の設定への配信元の追加:
+  説明: project-index の端末の設定（~/.config/project-index/settings.yaml）の sources に、id dev-docs・config に develop の worktree の project-index.yaml のパスを持つ行と、判定フローチャートのスキーマの参照先の id knowledge・config に knowledge の develop の worktree の dev-docs.yaml のパスを持つ行（無ければ）を追加し、project-index に設定を読み直させる。追加した行の id は ~/.local/state/dev-docs/反映作業-pr171-追加した配信元.json に記録し、切り戻しはその行だけを削除する
+  タグ: [端末の設定]
+  実行者: planner
+  時期: マージの後
+  回数: 1 回限り
+  可逆: true
+  疎通確認: 端末の設定への配信元の追加/疎通確認.py
+  実行: 端末の設定への配信元の追加/実行.py
+  確認: 端末の設定への配信元の追加/確認.py
+  切り戻し: 端末の設定への配信元の追加/切り戻し.py
+  失敗時: 既定の対処を 1 回、2 回連続で失敗したら依頼元へ返す
+  確認方法: project-index の GET /settings/sources で配信元 dev-docs と knowledge の status が serving になり、GET /sources/dev-docs/search?q=判定 で flowchart-new-or-modify と flowchart-documents-row が返る
+  状態: "-"
