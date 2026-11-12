@@ -43,7 +43,9 @@ docs:
   - page: docs/external-api/API-155-1.yaml
     new: false
     change: エンドポイントの入出力を shuhei1101/project-index のインターフェース定義（IF-22〜IF-32）に合わせ、`verification`・`version`・`notes` を本物と照合した結果と参照した契約の版（project-index の commit）へ書き換える
-    status: todo
+    status: done
+    updated_by: planner
+    updated_at: '2026-11-12T21:05:54.690426+00:00'
   - page: docs/dev-command/CMD-155-1.yaml
     new: false
     change: 本物の project-index に対する結合テストの前提（project-index の用意と起動）を書き足す
@@ -53,5 +55,5 @@ scope_out:
     reason: D-307 で E2E は開発の間は作らず、メジャーのリリースの前に作ると決まっている（#164 の task-reviewer の指摘）
     plan: none
   - item: project-index の読み取り API への入出力の追加（文書の一覧の値・配信元の設定の解いたスキーマ 等）
-    reason: 本物の API が返す値から dev-docs の側で組み立てられないものがあるかは、インターフェース定義設計で決まる。そのときは規約『複数リポジトリのAPI契約』に沿って project-index へ起票する。この作業 PR は dev-docs のリポジトリだけを変更する
-    plan: to_file
+    reason: 本物の API の応答から dev-docs の側で組み立てられない入出力が 4 点ある（文書の取得を文書の数だけ呼ぶと 1 回の画面の表示が数百回の要求になる）。規約『複数リポジトリのAPI契約』に沿って提供する側へ起票した。この作業 PR は dev-docs のリポジトリだけを変更する
+    plan: shuhei1101/project-index#46
