@@ -152,6 +152,17 @@ elements:
     visible_when: 差分の案内を出しているとき
     action: クリックで `base` を外した同じ文書を開く。本文の強調・文書の変化のマーカー・目次の変更のマーカーを消す
     action_ref: IF-155-10#
+  - name: project-index に接続できないときの表示
+    kind: alert
+    position: 画面全体（トップバーと本文の代わり）
+    description: 文書の取得が project-index に接続できず 503 を返したとき、接続先と理由を出す
+    label: 見出し `project-index に接続できませんでした`、説明 `project-index を起動してから、再読み込みしてください。`、`接続先`・`理由` の一覧（理由は接続を断られたとき `接続を拒否されました（Connection refused）`、制限時間で打ち切ったとき `45 秒以内に応答がありませんでした`）、ボタン `再読み込み`
+    visible_when: 文書の取得が 503 を返したとき
+    source: 文書の取得（503 の `projectIndex.address`・`projectIndex.reason`）
+    action: '`再読み込み` のクリックで画面を読み込み直す'
+    action_ref: IF-155-10#
+    notes:
+      読み上げ: '`role="alert"` で、出たときに読み上げる'
   - name: 変換の失敗
     kind: alert
     position: 本文
