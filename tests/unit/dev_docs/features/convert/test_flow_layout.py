@@ -54,9 +54,17 @@ def _crosses(points: list[list[int]], box: dict[str, Any]) -> bool:
     return False
 
 
+def _inside(points: list[list[int]], box: dict[str, Any]) -> bool:
+    """全ての点が矩形の中（辺の上を含む）にあるか。"""
+    return all(
+        box["x"] <= x <= box["x"] + box["w"] and box["y"] <= y <= box["y"] + box["h"]
+        for x, y in points
+    )
+
+
 def _overlaps(a: dict[str, Any], b: dict[str, Any]) -> bool:
     """2 つの矩形の内側が重なるか。"""
-    return (
+    return bool(
         a["x"] < b["x"] + b["w"]
         and b["x"] < a["x"] + a["w"]
         and a["y"] < b["y"] + b["h"]
@@ -221,8 +229,8 @@ def test_layout_flow_when_skip_rank_left_to_right() -> None:
     result = layout_flow(graph, HEAD)
     # 検証
     a, b, c = _node(result, "a"), _node(result, "b"), _node(result, "c")
-    assert a["x"] < b["x"] < c["x"]
-    assert c["x"] == max(node["x"] for node in result["nodes"])
+    # c が段 2（右端）
+    assert (a["x"], b["x"], c["x"]) == (20, 244, 468)
     assert not _crosses(result["wires"][2]["points"], b)
 
 
@@ -258,11 +266,10 @@ def test_layout_flow_when_self_loop_beside_node() -> None:
     # 実行
     result = layout_flow(graph, HEAD)
     # 検証
-    a, b = _node(result, "a"), _node(result, "b")
     points = result["wires"][0]["points"]
-    right = a["x"] + a["w"]
-    assert all(right <= x <= right + 20 for x, _ in points)
-    assert not _crosses(points, b)
+    # a の右の辺（x = 180）から ROW_GAP / 2 張り出し、隣の b（x = 220 から）に届かない
+    assert points == [[180, 34], [200, 34], [200, 62], [180, 62]]
+    assert not _crosses(points, _node(result, "b"))
 
 
 def test_layout_flow_when_long_name() -> None:
@@ -316,10 +323,6 @@ def test_layout_flow_when_frame_skip_rank() -> None:
     # 実行
     result = layout_flow(graph, HEAD)
     # 検証
-    frame = result["frame"]
     points = result["wires"][2]["points"]
-    assert all(
-        frame["x"] <= x <= frame["x"] + frame["w"] and frame["y"] <= y <= frame["y"] + frame["h"]
-        for x, y in points
-    )
+    assert _inside(points, result["frame"])
     assert not _crosses(points, _node(result, "b"))
