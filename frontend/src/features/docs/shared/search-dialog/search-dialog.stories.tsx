@@ -108,3 +108,31 @@ export const NonGitSource: Story = {
   },
   play: typeQuery,
 };
+
+export const ProjectIndexUnreachable: Story = {
+  parameters: {
+    msw: [
+      http.get(SEARCH, () =>
+        HttpResponse.json(
+          {
+            type: "about:blank",
+            title: "Service Unavailable",
+            status: 503,
+            detail:
+              "project-index（http://127.0.0.1:8786）に接続できませんでした。接続を拒否されました（Connection refused）",
+            nextSteps: [],
+            projectIndex: {
+              address: "http://127.0.0.1:8786",
+              reason: "接続を拒否されました（Connection refused）",
+            },
+          },
+          {
+            status: 503,
+            headers: { "Content-Type": "application/problem+json" },
+          },
+        ),
+      ),
+    ],
+  },
+  play: typeQuery,
+};

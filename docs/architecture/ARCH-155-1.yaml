@@ -18,8 +18,8 @@ overview:
     - id: REPO
       label: 各リポジトリの文書と設定
       kind: external
-    - id: SCR
-      label: 各リポジトリの検査・変換のスクリプト
+    - id: PI
+      label: project-index
       kind: external
     - id: GIT
       label: git
@@ -43,7 +43,7 @@ overview:
       line: reply
     - from: CC
       to: SRV
-      label: MCP
+      label: 管理の MCP
     - from: CC
       to: PLG
       label: SessionStart
@@ -52,11 +52,11 @@ overview:
       label: 起動
       line: reply
     - from: SRV
+      to: PI
+      label: 読み取り API・端末の設定の API
+    - from: PI
       to: REPO
       label: 読み書き
-    - from: SRV
-      to: SCR
-      label: 子プロセス
     - from: SRV
       to: GIT
       label: 子プロセス
@@ -78,10 +78,9 @@ repository:
     dev-docs/
     ├── frontend/                # 画面（React の SPA）
     ├── src/dev_docs/            # 開発ドキュメントサーバー
-    │   └── migrations/          # 設定の移し替えの手順（{settings|dev-docs}/{バージョン}/steps.yaml）
-    ├── schemas/                 # dev-docs.yaml と端末の設定のスキーマ・設計書の種類のスキーマ
+    │   └── migrations/          # 端末の設定の移し替えの手順（settings/{バージョン}/steps.yaml）
+    ├── schemas/                 # 端末の設定のスキーマ
     ├── plugins/dev-docs/        # 管理用プラグイン
-    ├── templates/               # 各リポジトリに置く雛形
     ├── scripts/                 # 反映作業のスクリプトが呼ぶ共通のスクリプト
     ├── .claude-plugin/marketplace.json
     ├── docs/                    # 文書（種類ごとのフォルダ・guide/・pr/・mock/）
@@ -90,14 +89,14 @@ repository:
 subsystems:
   - name: 開発ドキュメントサーバー
     scope: server
-    role: 端末の設定に並べた配信元を 1 プロセス・1 ポートで配り、画面のビルドを配って、YAML の文書を画面の API・文書の MCP・管理の MCP で出す
+    role: project-index が配信している配信元の文書を project-index の読み取り API で取得して Markdown に変換し、画面のビルドと画面の API で出す。管理の MCP で自分の状態・再起動・更新を受ける
     runtime: Python 3.14
     runs_on: 利用者の端末（`127.0.0.1`）
     implementation: src/dev_docs/__main__.py
     status: implemented
   - name: 管理用プラグイン
     scope: plugin
-    role: SessionStart のフックで落ちているサーバーを起動し、管理の MCP の接続先を Claude Code に渡す
+    role: SessionStart のフックで落ちている画面のサーバーを起動し、管理の MCP の接続先を Claude Code に渡す
     runtime: Claude Code のプラグイン（フックは Python 3.14）
     runs_on: 利用者の端末の Claude Code（ユーザースコープ）
     implementation: plugins/dev-docs/.claude-plugin/plugin.json
@@ -114,26 +113,27 @@ subsystems:
 lead: dev-docs のサブシステムと、境界を越えて通信する外部システム。
 external_systems:
   - name: Claude Code
-    purpose: 文書の MCP（`/mcp`）と管理の MCP（`/_admin/mcp`）の要求を受ける
+    purpose: 管理の MCP（`/_admin/mcp`）の要求を受ける
     direction: 受信のみ
     protocol: MCP（Streamable HTTP）
     status: planned
     notes:
       事前確認: '要否: 不要（受ける側で、こちらから到達を確かめる相手ではない）'
   - name: git
-    purpose: リビジョン（`@{ref}`）の書き出し・区間の差分・ref の解決
+    purpose: '`update` のクローンの更新（`git pull --ff-only`）'
     direction: 双方向
     protocol: CLI（子プロセス）
     status: planned
     notes:
-      事前確認: '要否: 要。時点: 起動時に `git` が実行できるかを確かめ、無ければ起動を止める'
-  - name: 各リポジトリの検査・変換のスクリプト
-    purpose: '`dev-docs.yaml` が指す検査・変換・書き込み後の生成'
+      事前確認: '要否: 要。時点: `update` の前に `git` が実行できるかを確かめ、無ければ git のエラーを返す'
+  - name: project-index
+    purpose: 配信元の一覧と状態・文書の一覧と値・`converters[]` の変換の結果・検索・リビジョンの一覧を読み取り API で取得し、端末の設定の配信元の行を端末の設定の API で保存する
     direction: 双方向
-    protocol: CLI（子プロセス。標準入力に YAML、標準出力に Markdown）
+    protocol: HTTP（REST）
+    detail: API-155-1#
     status: planned
     notes:
-      事前確認: '要否: 要。時点: 起動時・再読込時と管理の MCP の `check_project` で実行できるかを確かめ、失敗した配信元は配信しない'
+      事前確認: '要否: 要。時点: 起動時と要求ごとに問い合わせ、つながらなければ 503 と理由を返す（待ち受けは止めない）'
   - name: jsDelivr
     purpose: 画面が mdmark（`dist/index.js`・`dist/index.css`）を実行時に読み込む
     direction: 受信のみ

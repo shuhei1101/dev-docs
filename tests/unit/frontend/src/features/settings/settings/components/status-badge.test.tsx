@@ -22,5 +22,5 @@ test("test_status_badge_when_old_config_version", () => {
 
   render(<StatusBadge source={source as never} />);
 
-  expect(screen.getByText("設定のバージョン 1（サーバーが読み込めるのは 2）")).toBeInTheDocument();
+  expect(screen.getByText("設定のバージョン 1（project-index が読み込めるのは 2）")).toBeInTheDocument();
 });

@@ -5,12 +5,9 @@
 #     127.0.0.1:8781 で、{UNIX 時刻} 以後に起動したサーバーが待ち受けるまで待つ
 #   sh scripts/dev-docs-server-wait.sh started
 #     127.0.0.1:8781 で待ち受けるサーバーが最後に起動した時刻（UNIX 時刻）を出す
-#   sh scripts/dev-docs-server-wait.sh loaded
-#     管理の MCP の status が loading: false を返す（全ての配信元の読み込みが終わる）まで待つ
 #
 # 上限は規約『資源の値の決め方』の下流を待つタイムアウト（実測 + 50%）で導いた。
 # - 待ち受け: 2026-11-08 の実測 78 秒 + 50% = 117 秒 → 120 秒
-# - 読み込み: 2026-11-08 の実測 357 秒・308 秒の最大 + 50% = 536 秒 → 540 秒
 set -u
 
 PORT=8781
@@ -19,9 +16,6 @@ XDG_STATE_HOME=${XDG_STATE_HOME:-}
 case "$XDG_STATE_HOME" in /*) ;; *) XDG_STATE_HOME= ;; esac
 LOG_DIR="${DEV_DOCS_STATE_DIR:-${XDG_STATE_HOME:-$HOME/.local/state}/dev-docs}/logs"
 LISTENING_LIMIT=120
-LOADED_LIMIT=540
-# status は読み込みを待たずに応答する。1 回の要求は LOADED_LIMIT の残りを超えない
-STATUS='{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"status","arguments":{"format":"json"}}}'
 
 # 127.0.0.1:8781 で待ち受けるサーバーが最後に起動した時刻（UNIX 時刻）。待ち受けていなければ空。
 # 再起動は os.execv で同じプロセスを置き換え、PID も ps の起動時刻も変わらないため、
@@ -62,26 +56,6 @@ wait_listening() {
   done
 }
 
-wait_loaded() {
-  start=$(date +%s)
-  while :; do
-    left=$((LOADED_LIMIT - ($(date +%s) - start)))
-    if [ "$left" -le 0 ]; then
-      echo "配信元の読み込み: failed（$LOADED_LIMIT 秒待っても status が loading: false を返さない）"
-      return 1
-    fi
-    body=$(curl -s --max-time "$left" -X POST "http://127.0.0.1:$PORT/_admin/mcp" \
-      -H 'Accept: application/json, text/event-stream' -H 'Content-Type: application/json' \
-      -d "$STATUS")
-    # structuredContent の loading（text の JSON は字下げつきで、この形に当たらない）
-    if printf '%s' "$body" | grep -q '"loading":false'; then
-      echo "配信元の読み込み: ok（$(($(date +%s) - start)) 秒）"
-      return 0
-    fi
-    sleep 1
-  done
-}
-
 case "${1:-}" in
   listening)
     if [ $# -ne 2 ]; then
@@ -97,15 +71,8 @@ case "${1:-}" in
     fi
     print_started
     ;;
-  loaded)
-    if [ $# -ne 1 ]; then
-      echo "引数: failed（loaded は引数を取らない）"
-      exit 1
-    fi
-    wait_loaded
-    ;;
   *)
-    echo "引数: failed（listening・started・loaded のどれかを指定する）"
+    echo "引数: failed（listening・started のどちらかを指定する）"
     exit 1
     ;;
 esac

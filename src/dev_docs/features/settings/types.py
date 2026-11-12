@@ -8,11 +8,12 @@ from typing import TYPE_CHECKING, Any, ClassVar, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
+from dev_docs.integrations.project_index.client import PROJECT_INDEX_DEFAULT
 from dev_docs.shared.api_model import ApiModel
 from dev_docs.shared.errors import DevDocsError, Violation
 
 if TYPE_CHECKING:
-    from dev_docs.features.sources.types import SourceStatus
+    from dev_docs.integrations.project_index.types import SourceState
 
 
 class SourceScope(BaseModel):
@@ -25,7 +26,7 @@ class SourceScope(BaseModel):
 
 
 class SourceEntry(BaseModel):
-    """端末の設定の `sources[]` の 1 行。"""
+    """設定画面が送る `sources[]` の 1 行（project-index の端末の設定の行の形）。"""
 
     model_config = ConfigDict(extra="forbid")
 
@@ -54,9 +55,8 @@ class TerminalConfig(BaseModel):
     log_dir: Path
     port: int = 8781
     bind: str = "127.0.0.1"
-    sources: list[SourceEntry] = Field(default_factory=list)
-    seen_retention_days: int = 7
-    script_timeout_sec: int = 30
+    project_index: str = PROJECT_INDEX_DEFAULT
+    leftover_sources: list[str] = Field(default_factory=list)
 
 
 class SettingsSourcesRequest(ApiModel):
@@ -84,8 +84,8 @@ class SourceConfigVersion(ApiModel):
 class SettingsSourceStatus(ApiModel):
     """再読み込みした後の配信元 1 つの状態。"""
 
-    id: str
-    status: Literal["serving", "not_served", "disabled"]
+    id: str | None
+    status: Literal["serving", "not_served", "disabled", "pending_reload"]
     errors: list[SourceViolation] = Field(default_factory=list)
     config_version: SourceConfigVersion | None = None
 
@@ -96,10 +96,10 @@ class SettingsSourcesResponse(ApiModel):
     sources: list[SettingsSourceStatus]
 
     @classmethod
-    def from_statuses(cls, statuses: list[SourceStatus]) -> SettingsSourcesResponse:
-        """配信元の状態の並びから作る。"""
+    def from_states(cls, states: list[SourceState]) -> SettingsSourcesResponse:
+        """project-index の配信元の状態の並びから作る。"""
         items: list[SettingsSourceStatus] = []
-        for status in statuses:
+        for status in states:
             item = SettingsSourceStatus(
                 id=status.id,
                 status=status.status,
@@ -126,6 +126,7 @@ class SettingsSourceRow(ApiModel):
     status: Literal["serving", "not_served", "disabled", "pending_reload"]
     errors: list[SourceViolation] = Field(default_factory=list)
     config_version: SourceConfigVersion | None = None
+    outside_read: bool = True
 
 
 class SettingsSourcesView(ApiModel):

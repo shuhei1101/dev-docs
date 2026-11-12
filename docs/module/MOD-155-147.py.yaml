@@ -36,41 +36,56 @@ functions:
         type: Handlers
         required: true
         passing: positional
-        description: 起動の『配線済みの関数』。端末の設定・配信元の状態・`reload_sources`・`settings_lock` を引く
+        description: 起動の『配線済みの関数』。project-indexの呼び出しを引く
     returns:
       type: fastapi.APIRouter
       description: 2 つのルートを持つルーター
     process: |-
-      1. 両方のルートは、先頭で `await handlers.registry.wait_loaded()` を呼び、配信元の初回の読み込みが終わるまで待つ（起動.待ち受けまでの順番）
-      2. GET `/_api/settings/sources` は、`handlers.terminal.file` を `settings_path` にし、`sources[]` の各行に、`config`（行に `id` があれば `id` も）が同じ配信元の状態の `id`・`status`・`errors`・`config_version` を重ねた（1 つの状態は 1 行にだけ重ねる。当たる状態が無い行は `status` を `pending_reload`・`id` を行の `id` にする） `SettingsSourcesView` を返す（配信元の一覧.状態の一覧）。`sources[]` は `handlers.terminal.file` を端末の設定の読み込みで読み直した値（配信元の保存の後も新しい行を返す）
-      3. PUT `/_api/settings/sources` は、同じオリジンの確認を依存に持ち（同じオリジンの確認）、本文を `SettingsSourcesRequest` で受けて『配信元の保存』を `reload=handlers.reload_sources`・`lock=handlers.settings_lock` で `asyncio.to_thread` で呼び、`SettingsSourcesResponse` を返す（配信元の保存）
-         - `TerminalConfigInvalidError` は例外の変換で 422 の problem+json になる
-      4. ルーターは `APIRouter(tags=["settings"])` にする。各ルートの `name`（`operation_id` は渡さず、アプリの組み立てが operationId を `settings-{name}` にする）は、GET が `get_settings_sources`、PUT が `put_settings_sources`
+      1. GET `/_api/settings/sources` は、project-indexの呼び出し.端末の設定の配信元の行の取得 を呼び、`settings_path` を project-index の `settings_path`、`sources[]` を行ごとに状態（同じ添字の `states`）を重ねた `SettingsSourceRow` にした `SettingsSourcesView` を返す
+      2. PUT `/_api/settings/sources` は、同じオリジンの確認を依存に持ち（同じオリジンの確認）、本文を `SettingsSourcesRequest` で受けて配信元の保存を呼び、`SettingsSourcesResponse.from_states` を返す
+         - `ProjectIndexRejectedError` は 422、`ProjectIndexUnreachableError` は 503、`ProjectIndexResponseError` は 502 の problem+json に例外の変換がする
+      3. ルーターは `APIRouter(tags=["settings"])` にする。各ルートの `name`（`operation_id` は渡さず、アプリの組み立てが operationId を `settings-{name}` にする）は、GET が `get_settings_sources`、PUT が `put_settings_sources`
+      4. どちらのルートも、dev-docs の中に行と状態を控えない
     unit_tests:
       - name: test_build_settings_router_when_get
         case: 正常
         summary: 行に状態を重ねる
-        condition: GET `/_api/settings/sources`、状態は `serving` 1 つと `not_served` 1 つ
-        mock: 配線済みの関数（偽物）
-        expected: 200 で `settingsPath` と `sources` の 2 行、`not_served` の行に `errors`
+        condition: GET `/_api/settings/sources`、project-index の行 2 つと状態 `serving`・`not_served`
+        mock: project-indexの呼び出し（`httpx.MockTransport` で project-index#14 の入出力を返す）
+        expected: 200 で `settingsPath` が project-index の値、`sources` の 2 行、`not_served` の行に `errors`
       - name: test_build_settings_router_when_put
         case: 正常
-        summary: 保存して状態を返す
+        summary: 保存を依頼して状態を返す
         condition: 'PUT `/_api/settings/sources` を `Sec-Fetch-Site: same-origin` で'
-        mock: 配線済みの関数（`save_sources` が状態を返す偽物）
-        expected: 200 で `sources[].status`。`save_sources` に送った行が渡る
+        mock: project-indexの呼び出し（`httpx.MockTransport` で project-index#14 の入出力を返す）
+        expected: 200 で `sources[].status`。project-index へ送った行の `config` が配列
       - name: test_build_settings_router_when_pending_reload
         case: 正常
-        summary: 読み直していない行を pending_reload で返す
-        condition: GET `/_api/settings/sources`、ファイルは状態より行が 1 つ多く、既存の 2 行の並びが状態と逆
-        mock: 配線済みの関数（偽物）
-        expected: 200 でファイルの順に 3 行。追加した行は `pending_reload`、他の 2 行は自分の `config` の状態
-      - name: test_build_settings_router_when_loading
-        case: 正常
-        summary: 読み込みが終わるまで待ってから行に状態を重ねる
-        condition: GET `/_api/settings/sources` を、registry が `loading=True` のまま送り、応答の前に読み込みを終える
-        mock: 配線済みの関数（偽物。registry は `SourceRegistry(loading=True)`）
-        expected: 読み込みが終わるまで応答しない。終えた後に 200 で、各行に読み込んだ配信元の状態が重なる（`pending_reload` にならない）
+        summary: 読み直していない行
+        condition: GET `/_api/settings/sources`、project-index の 3 行目の状態が `pending_reload`
+        mock: project-indexの呼び出し（`httpx.MockTransport` で project-index#14 の入出力を返す）
+        expected: 200 で 3 行目が `pending_reload`
+      - name: test_build_settings_router_when_rejected
+        case: 異常
+        summary: project-index の 422 をそのまま返す
+        condition: PUT で project-index が 422（`errors[]` 1 件）を返す
+        mock: project-indexの呼び出し（`httpx.MockTransport` で project-index#14 の入出力を返す）
+        expected: 422 の problem+json で、`errors` が project-index の 1 件
+        exception: '-'
+      - name: test_build_settings_router_when_unexpected_status
+        case: 異常
+        summary: project-index の想定しない応答
+        condition: PUT で project-index が 500 を返す
+        mock: project-indexの呼び出し（`httpx.MockTransport` で project-index#14 の入出力を返す）
+        expected: 502 の problem+json
+        exception: '-'
+      - name: test_build_settings_router_when_unreachable
+        case: 異常
+        summary: project-index につながらない
+        condition: GET・PUT で project-index が接続を断る
+        mock: project-indexの呼び出し（`httpx.ConnectError` を送る `MockTransport`）
+        expected: どちらも 503 の problem+json で `projectIndex.address`・`projectIndex.reason` がある
+        exception: '-'
 refs:
   - IF-155-20#
   - IF-155-19#

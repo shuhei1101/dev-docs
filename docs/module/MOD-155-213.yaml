@@ -1,0 +1,54 @@
+id: MOD-155-213
+title: 開発ドキュメントサーバー / project-indexの呼び出し
+lead: |-
+  project-index の読み取り API と端末の設定の API（外部 API『project-index の読み取り API』）を、制限時間つきの HTTP で呼ぶ。
+  応答を型にして返し、つながらない・打ち切った・断られたことを dev-docs の例外に変える。
+directory: |-
+  ```text
+  src/dev_docs/integrations/project_index/
+  ├─ __init__.py   # 公開する型と ProjectIndexClient の再エクスポート
+  ├─ types.py      # IndexedDocument / DocumentRow / SourceView / DocumentList / DocumentDetail / IndexFailure / SourceState / DecisionIndex / SearchHits / RefList / SettingsSourcesView / AddSourceResult
+  └─ client.py     # ProjectIndexClient（要求ごとに問い合わせ、dev-docs の中に控えない）
+  ```
+diagrams:
+  - name: 全体
+    diagram: |-
+      classDiagram
+        direction TD
+        文書の取得 ..> project-indexの呼び出し
+        画面の検索 ..> project-indexの呼び出し
+        端末の設定の入口 ..> project-indexの呼び出し
+        状態の取得 ..> project-indexの呼び出し
+        設定の移し替え ..> project-indexの呼び出し
+        project-indexの呼び出し ..> 文書の型
+        class project-indexの呼び出し {
+          <<class>>
+        }
+        class 文書の型 {
+          <<dataclass>>
+        }
+        class 文書の取得 {
+          <<function>>
+        }
+        class 画面の検索 {
+          <<function>>
+        }
+        class 端末の設定の入口 {
+          <<function>>
+        }
+        class 状態の取得 {
+          <<function>>
+        }
+        class 設定の移し替え {
+          <<function>>
+        }
+        click project-indexの呼び出し href "./MOD-155-215.py.yaml#project-indexの呼び出し"
+        click 文書の型 href "./MOD-155-214.py.yaml#索引の文書"
+        click 文書の取得 href "./MOD-155-159.py.yaml#文書の取得"
+        click 画面の検索 href "./MOD-155-163.py.yaml#画面の検索"
+        click 端末の設定の入口 href "./MOD-155-147.py.yaml#端末の設定の入口"
+        click 状態の取得 href "./MOD-155-86.py.yaml#状態の取得"
+        click 設定の移し替え href "./MOD-155-174.py.yaml#設定の移し替えの実行"
+notes:
+  依存の向き: '`features/` の画面の API・端末の設定・状態・移し替えがこの分類を呼び、この分類は `shared/` だけに依存する。project-index は dev-docs を呼ばない'
+  契約: 入出力の正本は shuhei1101/project-index#14。この分類の型は外部 API『project-index の読み取り API』の仮の入出力から作り、契約が決まったら #164 で合わせる

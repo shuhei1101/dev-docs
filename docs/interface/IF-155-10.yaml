@@ -8,20 +8,20 @@ flows:
     summary: 配信元の一番左のタブの一番上の文書と、文書のパスで指した文書を返す
     setup:
       - name: Mock
-        description: なし（一時フォルダに配信元を作り、dev-docs のアプリを HTTP のテストのクライアントで呼ぶ）
+        description: project-index の読み取り API のモック（shuhei1101/project-index#14 の入出力で、setup の配信元の文書・リビジョンを返す）。dev-docs のアプリを HTTP のテストのクライアントで呼ぶ
         notes: '-'
       - name: サンプルの配信元
-        description: 文書の種類を 1 つ（スキーマと YAML 2 件）と、`nav` を持つ `dev-docs.yaml` を持つ git リポジトリ
+        description: 文書の種類を 1 つ（スキーマと YAML 2 件）と、`nav` を持つ `project-index.yaml` を持つ git リポジトリ
         notes: id `sample`。`nav.tabs[]` は 2 つ（最初のタブに YAML 2 件）
     flow: |-
       ```mermaid
       sequenceDiagram
         participant C as クライアント
         participant E as GET /_api/sources/{source}/docs/{path}
-        participant ST as 配信元のファイル
+        participant PI as project-index（モック）
 
         C->>E: GET /_api/sources/sample/docs
-        E-->>ST: nav と文書を読む
+        E->>PI: 配信元の設定の nav と文書の一覧・文書 1 の値を取得する
         E->>E: 一番左のタブの一番上の文書 1 をスキーマ駆動で Markdown にする
         E-->>C: 200（文書 1）
         C->>E: GET /_api/sources/sample/docs/{文書 2 のパス}
@@ -75,10 +75,10 @@ flows:
       sequenceDiagram
         participant C as クライアント
         participant E as GET /_api/sources/{source}/docs/{path}
-        participant G as sample の Git の履歴
+        participant PI as project-index（モック）
 
         C->>E: GET /_api/sources/sample/docs/{文書 1 のパス}?ref={古い commit}
-        E-->>G: そのリビジョンを書き出して読む
+        E->>PI: そのリビジョンの文書の値を取得する
         E-->>C: 200（古い commit の文書 1）
       ```
     expected:
@@ -98,10 +98,11 @@ flows:
       sequenceDiagram
         participant C as クライアント
         participant E as GET /_api/sources/{source}/docs/{path}
-        participant G as sample の Git の履歴
+        participant PI as project-index（モック）
 
         C->>E: GET /_api/sources/sample/docs/{文書 1 のパス}?ref={変更の commit}&diff={親の commit}
-        E-->>G: 両端の文書と nav を読んで変わった項目と page を求める
+        E->>PI: 両端のリビジョンの文書の一覧と値・nav を取得する
+        E->>E: 変わった項目と page を求める
         E-->>C: 200（diff と change つき）
       ```
     expected:
@@ -127,11 +128,11 @@ flows:
       sequenceDiagram
         participant C as クライアント
         participant E as GET /_api/sources/{source}/docs/{path}
-        participant SC as 配信元のスクリプト
+        participant PI as project-index（モック）
 
         C->>E: GET /_api/sources/custom/docs/{converters を指す種類の文書}
-        E->>SC: 標準入力に YAML を渡す
-        SC-->>E: 標準出力の Markdown
+        E->>PI: 文書の取得
+        PI-->>E: converters[] のスクリプトが出した Markdown
         E-->>C: 200
         C->>E: GET /_api/sources/custom/docs/{埋め込みのマーカーを持つ文書}
         E->>E: マーカーを YAML の表の Markdown に置き換える
@@ -142,32 +143,28 @@ flows:
       - 埋め込みのマーカーの場所に指した YAML の表があり、マーカーの文字列は無い
     test: test_normal_when_custom_converter
   - name: 正常系（変換に失敗する）
-    summary: 制限時間を超えたスクリプトを止め、`conversionError` に失敗を入れる
+    summary: project-index が返した変換の失敗と読めなかった YAML を、`conversionError` に入れる
     setup:
       - name: Mock
-        description: なし
+        description: custom の `converters[]` を指す種類の文書に、制限時間を超えた変換の失敗（種類・スクリプト・理由）を返す
         notes: '-'
-      - name: 止まらないスクリプト
-        description: custom の `converters[]` のスクリプトを、制限時間より長く待つものに差し替える
-        notes: 制限時間はテストで短くしてよい
       - name: 壊れた YAML
-        description: sample の文書 1 の YAML を、YAML として読めない内容にする
+        description: モックが sample の文書 1 のファイルを、文書の一覧の読めなかったファイル（行と列）として返す
         notes: '-'
     flow: |-
       ```mermaid
       sequenceDiagram
         participant C as クライアント
         participant E as GET /_api/sources/{source}/docs/{path}
-        participant SC as 配信元のスクリプト
+        participant PI as project-index（モック）
 
         C->>E: GET /_api/sources/custom/docs/{converters を指す種類の文書}
-        E->>SC: 標準入力に YAML を渡す
-        E->>SC: 制限時間を超えたので止める
+        E->>PI: 文書の取得
+        PI-->>E: 変換の失敗（制限時間を超えた）
         E-->>C: 200（conversionError つき）
       ```
     expected:
       - '`markdown` が `null` で、`conversionError` に種類・スクリプトのパス・制限時間を超えたことがある'
-      - スクリプトのプロセスが残っていない
       - 同じ配信元のスキーマ駆動で変換する文書は 200 で `markdown` を返す
       - 壊れた YAML の文書 1 は、`conversionError` にファイルのパスと読めなかった行と列を入れて 200 を返す
     test: test_normal_when_conversion_failed
@@ -265,10 +262,10 @@ flows:
       sequenceDiagram
         participant C as クライアント
         participant E as GET /_api/sources/{source}/docs/{path}
-        participant ST as 配信元のファイル
+        participant PI as project-index（モック）
 
         C->>E: GET /_api/sources/sample/docs/{a の画面のパス}
-        E-->>ST: notes/files.yaml と行の body_file を読む
+        E->>PI: notes/files.yaml の行の文書と、行の body_file の本文を取得する
         E-->>C: 200（a・bodyPath: notes/a.md）
         C->>E: GET /_api/sources/sample/docs/notes/b.md
         E->>E: 画面のパスで当たらないので、本文のファイルのパスで引く
@@ -279,63 +276,6 @@ flows:
       - '`/_api/sources/sample/docs/notes/b.md` が 200 で、`path` が b の画面のパス、`markdown` が b の本文、`bodyPath` が `notes/b.md`'
       - ファイル 1 つが 1 文書の sample の文書 1 を開くと `bodyPath` が `null`
     test: test_normal_when_body_path_given
-  - name: 正常系（変換の結果をキャッシュしない）
-    summary: '`cache: false` の変換は要求のたびにスクリプトを動かし、控えを書かない'
-    setup:
-      - name: Mock
-        description: なし
-      - name: 変換を持つ配信元
-        description: '`converters[]` に `cache: false` の行を持ち、種類の 1 つがそれを指す配信元。スクリプトは本文の外の参照先の YAML の値を見出しに出す'
-        notes: id `custom`
-    flow: |-
-      ```mermaid
-      sequenceDiagram
-        participant C as クライアント
-        participant E as GET /_api/sources/{source}/docs/{path}
-        participant SC as 配信元のスクリプト
-
-        C->>E: GET /_api/sources/custom/docs/{cache: false の変換を指す種類の文書}
-        E->>SC: 標準入力に YAML を渡す
-        SC-->>E: 標準出力の Markdown
-        E-->>C: 200
-        C->>C: 参照先の YAML の値を書き換える
-        C->>E: 同じ GET
-        E->>SC: 標準入力に YAML を渡す
-        SC-->>E: 標準出力の Markdown
-        E-->>C: 200
-      ```
-    expected:
-      - 2 回目の `markdown` に、書き換えた後の参照先の値の見出しがある
-      - '`state_dir` の変換の結果の控えに、この文書の控えのファイルが無い'
-    test: test_normal_when_converter_cache_disabled
-  - name: 正常系（変換の結果をキャッシュする）
-    summary: '`cache` を書かない変換は控えを書き、本文が変わらなければ控えを返す'
-    setup:
-      - name: Mock
-        description: なし
-      - name: 変換を持つ配信元
-        description: '`converters[]` に `cache` を書かない行を持ち、種類の 1 つがそれを指す配信元。スクリプトは本文の外の参照先の YAML の値を見出しに出す'
-        notes: id `custom`
-    flow: |-
-      ```mermaid
-      sequenceDiagram
-        participant C as クライアント
-        participant E as GET /_api/sources/{source}/docs/{path}
-        participant SC as 配信元のスクリプト
-
-        C->>E: GET /_api/sources/custom/docs/{cache を書かない変換を指す種類の文書}
-        E->>SC: 標準入力に YAML を渡す
-        SC-->>E: 標準出力の Markdown
-        E->>E: 控えを書く
-        E-->>C: 200
-        C->>C: 参照先の YAML の値を書き換える
-        C->>E: 同じ GET
-        E-->>C: 200（控えの Markdown）
-      ```
-    expected:
-      - 2 回目の `markdown` が 1 回目と同じ
-      - '`state_dir` の変換の結果の控えに、この文書の控えのファイルが 1 つある'
-    test: test_normal_when_converter_cache_enabled
   - name: 正常系（nav をフォルダで束ねる）
     summary: "`group_by: '@folder'` の `auto` が、手で書いた page の文書を除いてフォルダごとの group を作る"
     setup:
@@ -484,7 +424,7 @@ flows:
         description: なし
         notes: '-'
       - name: 話し合いの記録のフォルダ
-        description: 'sample のメインのリポジトリの `tmp/a/.mindstella/docs/` に `D-1.md`・`D-2.md`、`tmp/b/.mindstella/docs/` に `D-2.md` を配置し、`dev-docs.yaml` の `decisions.folders` を `[tmp/a, tmp/b]` にする'
+        description: 'sample のメインのリポジトリの `tmp/a/.mindstella/docs/` に `D-1.md`・`D-2.md`、`tmp/b/.mindstella/docs/` に `D-2.md` を配置し、`project-index.yaml` の `decisions.folders` を `[tmp/a, tmp/b]` にする'
         notes: '`D-2` は 2 つのフォルダにある ID、`D-3` はどちらにも無い ID'
       - name: decisions を持つ文書
         description: 'sample の文書 6 の表の行と、「項目 / 値」の表を持つ見出しの要素に `decisions: [D-1, D-2, D-3]` を持たせる'
@@ -494,10 +434,10 @@ flows:
       sequenceDiagram
         participant C as クライアント
         participant E as GET /_api/sources/{source}/docs/{path}
-        participant WS as 話し合いの記録のフォルダ
+        participant PI as project-index（モック）
 
         C->>E: GET /_api/sources/sample/docs/{文書 6 のパス}
-        E-->>WS: decisions.folders の .mindstella/docs/{ID}.md を探す
+        E->>PI: 検討事項の ID と、ID ごとに当たるフォルダの数を取得する
         E->>E: 1 つのフォルダにだけある ID を、検討事項の文書のパスへのリンクにする
         E-->>C: 200（文書 6）
       ```
@@ -521,10 +461,10 @@ flows:
       sequenceDiagram
         participant C as クライアント
         participant E as GET /_api/sources/{source}/docs/{path}
-        participant WS as 話し合いの記録のフォルダ
+        participant PI as project-index（モック）
 
         C->>E: GET /_api/sources/sample/docs/_decisions/D-1
-        E-->>WS: tmp/a/.mindstella/docs/D-1.md を読む
+        E->>PI: 検討事項の文書 D-1 を取得する
         E-->>C: 200（検討事項 D-1）
         C->>E: GET /_api/sources/sample/docs/_decisions/D-2
         E-->>C: 404
@@ -532,15 +472,58 @@ flows:
     expected:
       - '`_decisions/D-1` が 200 で、`path` が `_decisions/D-1`、`markdown` が `tmp/a/.mindstella/docs/D-1.md` の本文のまま'
       - '`tabs` は sample の `nav` のタブで、どのサイドバーの項目も選ばれていない'
-      - '`updatedAt` が `D-1.md` のファイルの更新日時で、`bodyPath`・`diff` が `null`'
+      - '`updatedAt` が要求した時点の日時で、`bodyPath`・`diff` が `null`'
       - '2 つのフォルダにある `_decisions/D-2` と、どこにも無い `_decisions/D-3` は 404 で、`missing` が `doc`'
     test: test_normal_when_decision_document_returned
+  - name: 異常系（project-index につながらない・503）
+    summary: project-index の読み取り API につながらないとき、503 とつながらなかった理由を返す
+    setup:
+      - name: Mock
+        description: 接続を断る project-index の読み取り API のモック
+        notes: '-'
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        participant C as クライアント
+        participant E as GET /_api/sources/{source}/docs/{path}
+        participant PI as project-index（モック）
+
+        C->>E: GET /_api/sources/sample/docs
+        E->>PI: 配信元の設定の nav と文書の一覧を取得する（接続を断られる）
+        E-->>C: 503（つながらなかった project-index のアドレスと理由）
+      ```
+    expected:
+      - 応答が 503 の `application/problem+json` で、つながらなかった project-index のアドレスと理由を持つ
+      - モックが接続を受け付けるようにした後、同じ要求が 200 を返す（dev-docs のアプリを作り直さない）
+    test: test_error_when_project_index_unreachable
+  - name: 異常系（project-index が応答しない・503）
+    summary: project-index が接続を受けたまま応答しないとき、制限時間で打ち切って 503 を返す
+    setup:
+      - name: Mock
+        description: 接続を受けたまま応答しない project-index の読み取り API のモック
+        notes: 制限時間はテストで短くする
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        participant C as クライアント
+        participant E as GET /_api/sources/{source}/docs/{path}
+        participant PI as project-index（モック）
+
+        C->>E: GET /_api/sources/sample/docs
+        E->>PI: 配信元の設定の nav と文書の一覧を取得する（応答しない）
+        E->>E: 制限時間で打ち切る
+        E-->>C: 503（打ち切ったことと project-index のアドレス）
+      ```
+    expected:
+      - 制限時間を過ぎた後に 503 の `application/problem+json` を返し、打ち切ったことと project-index のアドレスを持つ
+      - 制限時間より大きく遅れずに返る
+    test: test_error_when_project_index_timed_out
 lead: '#17 の画面が文書を開くときに呼ぶ。配信元の文書を変換した Markdown と、タブ・サイドバー・差分の項目・画面の状態を JSON で返す。`path` を省くと一番左のタブのサイドバーの一番上の文書を返す。'
 identifier: get_document
 permissions: なし（`127.0.0.1` でだけ待ち受ける）
 idempotent: true
-side_effects: 'なし。変換の結果は `state_dir` に保存し、文書が変わるまで使い回す（`converters[]` の `cache: false` の行の変換は保存しない）'
-exclusivity: 読み取りだけで排他しない。同じ文書・同じバージョンの変換が同時に来たときは 1 回だけ変換する
+side_effects: なし（変換の結果を控えない。`converters[]` の変換の控えは project-index が持つ）
+exclusivity: 読み取りだけで排他しない
 request:
   - name: source
     type: str
@@ -601,7 +584,7 @@ response:
     description: サイドバーの項目（group と page の入れ子）。page は文書のパスを持つ
   - name: github
     type: GitHubTarget | None
-    description: '`dev-docs.yaml` に書いた GitHub のリポジトリと起票のラベル'
+    description: '`project-index.yaml` に書いた GitHub のリポジトリと起票のラベル'
     notes: 書いていない配信元は `null`
   - name: columns
     type: dict[str, list[str]]
@@ -670,15 +653,21 @@ status_codes:
   - code: '404'
     condition: 配信元が無い・配信していない、リビジョンを解決できない、文書が無い
     notes: '`missing`（`source`・`not_served`・`ref`・`doc`）と値、配信していない配信元は `errors[]` に外した理由'
+  - code: '503'
+    condition: project-index につながらない
+    notes: 'つながらなかった project-index のアドレスと理由（`projectIndex.address`・`projectIndex.reason`）。`detail` は `project-index（{address}）に接続できませんでした。{reason}`'
 constraints:
   - item: 変換の制限時間
-    constraint: '`converters[]` のスクリプトを制限時間で止める'
-    decided_by: NFR-155-1#requirements[スクリプトの制限時間]
+    constraint: '`converters[]` のスクリプトは project-index が実行し、制限時間で止めた結果を変換の失敗として返す。dev-docs は project-index の変換の失敗を `conversionError` に入れる'
   - item: 認可
     constraint: 制限なし（`127.0.0.1` でだけ待ち受ける）
     decided_by: NFR-155-1#requirements[待ち受けのアドレス]
-  - item: 読み直し
-    constraint: ファイルの更新日時か大きさが変わった文書は、次の要求で読み直す
+  - item: project-index への問い合わせ
+    constraint: 配信元の一覧・状態・文書の一覧・文書の値は、要求ごとに project-index の読み取り API へ問い合わせ、dev-docs の中に控えない
+    notes: project-index が読み直した配信元と文書は、dev-docs を再起動せずに次の要求から返る
+  - item: project-index につながらないとき
+    constraint: project-index の読み取り API が制限時間で応答しないか接続を断られたら、503 と、つながらなかった project-index のアドレス・理由を返す
+    decided_by: NFR-155-1#requirements[project-index への問い合わせの制限時間]
   - item: operationId
     constraint: '`{tag}-{関数名}`。`path` を含む入口は `view-get_document`、`path` を省く入口は `view-get_document_default`'
   - item: JSON のキー
@@ -689,9 +678,6 @@ constraints:
   - item: 文書の引き方
     constraint: '`path` を画面のパスで引き、当たらなければ文書のファイルか本文のファイルのパスが `path` と同じ最初の文書を返す'
     notes: 管理の MCP の `try_convert` と同じ引き方。同じ本文のファイルを複数の行が指すときは最初の文書に当たる
-  - item: 変換の結果の控え
-    constraint: '`converters[]` の行の `cache` が `true`（既定）なら、控えがあればスクリプトを動かさずに返し、無ければ動かして控えを書く。`false` なら控えを読まず書かず、要求のたびにスクリプトを動かす'
-    notes: '控えのキーは本文の外のファイルを含まない。本文の外のファイルを読む変換は `cache: false` にする'
   - item: nav の auto のフォルダの束ね
     constraint: "`auto` の `group_by` が `'@folder'` のとき、文書が当たった行の `paths` の glob（複数当たるときは `paths` で先に並ぶ glob）のうちワイルドカードより前のフォルダを起点に、起点からのフォルダごとにフォルダ名の group を作り、入れ子のフォルダは入れ子の group にする。起点の直下の文書は group に入れない。各階層で page（フォルダの `index.yaml` の文書が先頭、残りはページのパスの順）を先に、入れ子の group をフォルダ名の順に後に並べる。管理用の YAML の行（`records`）の文書は束ねず、そのまま並べる。`'@folder'` 以外の `group_by` は今と同じく項目のパスとして読む"
     notes: "`nav` が無い配信元は、種類ごとのタブを `group_by: '@folder'` の `auto` として組み立てる"
@@ -717,13 +703,11 @@ constraints:
     constraint: '`path` が `_decisions/{ID}`（`{ID}` は `^[A-Z]+-[0-9]+$`）のとき、`decisions.folders` のうちちょうど 1 つのフォルダにある `.mindstella/docs/{ID}.md` の本文を、変換せずに `markdown` で返す。`ref` は解決するが、検討事項の文書は Git の管理外のためリビジョンによらず今のファイルを読む'
     notes: '当たるフォルダが 0 個か 2 個以上なら 404（`missing`: `doc`）。`diff` は求めず `null` を返す。フォルダの外を指す `{ID}` は形式で弾く'
 refs:
-  - SC-155-1#scenarios[異常シナリオ（YAML を壊した）]
+  - SC-155-10#scenarios[異常シナリオ（project-index につながらない）]
 test_file: tests/integration/server/test_get_document.py
 error_format: RFC 9457 の `application/problem+json`（`type`・`title`・`status`・`detail`）。拡張メンバーは camelCase（`nextSteps`・`missing`・`errors[]` の `{path, reason}`）
 callers:
   - SC-155-7#scenarios[正常シナリオ（スキーマ駆動の文書を図と表で読む）]
-  - SC-155-7#scenarios[正常シナリオ（変換の結果をキャッシュしない）]
-  - SC-155-7#scenarios[正常シナリオ（変換の結果をキャッシュする）]
   - SC-155-7#scenarios[正常シナリオ（ER 図を読む）]
   - SC-155-7#scenarios[正常シナリオ（本文の id のリンクを開く）]
   - SC-155-7#scenarios[正常シナリオ（設計書の検討事項のリンクを開く）]

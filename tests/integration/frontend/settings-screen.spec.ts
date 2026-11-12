@@ -276,7 +276,7 @@ test.describe("状態の補足", () => {
         }),
       ),
     });
-    await expect(page.getByText("起動時の検証で除外しました。")).toBeVisible();
+    await expect(page.getByText("project-index が起動時の検証で除外しました。")).toBeVisible();
     await expect(page.getByText("documents[0].paths 必須のキーがありません")).toBeVisible();
   });
 
@@ -287,7 +287,7 @@ test.describe("状態の補足", () => {
         settingsSource("a", { configVersion: { config: "0", server: "3" } }),
       ),
     });
-    await expect(page.getByText("設定のバージョン 0（サーバーが読み込めるのは 3）")).toBeVisible();
+    await expect(page.getByText("設定のバージョン 0（project-index が読み込めるのは 3）")).toBeVisible();
   });
 
   // 無効のとき `enabled が false です` を出す（正常系）
@@ -455,7 +455,7 @@ test.describe("設定ファイルの入力欄", () => {
     await openAdd(page);
     const input = page.getByLabel("設定ファイル");
     await expect(input).toHaveValue("");
-    await expect(input).toHaveAttribute("placeholder", "~/repo/sample-docs/dev-docs.yaml");
+    await expect(input).toHaveAttribute("placeholder", "~/repo/sample-docs/project-index.yaml");
     await expect(
       dialog(page).getByText("1 行に 1 つ。後のファイルが前のファイルの同じキーを上書きします。"),
     ).toBeVisible();
@@ -891,5 +891,52 @@ test.describe("入力チェック", () => {
     await expect(
       dialog(page).getByText("書き込みの範囲に空の行があります。空の行を削除してください。"),
     ).toBeVisible();
+  });
+});
+
+const UNREACHABLE = {
+  detail: "project-index（http://127.0.0.1:8786）に接続できませんでした。接続を拒否されました（Connection refused）",
+  projectIndex: {
+    address: "http://127.0.0.1:8786",
+    reason: "接続を拒否されました（Connection refused）",
+  },
+};
+
+test.describe("project-index に接続できないときの表示", () => {
+  // 端末の設定の取得が 503 のとき、配信元の一覧の代わりに接続先と理由を出し、配信元の追加を押せなくする（異常系）
+  test("project_index_unreachable_alert", async ({ page }) => {
+    // 準備
+    const api = await mockApi(page, { settings: () => problem(503, UNREACHABLE) });
+    // 実行
+    await page.goto("/_settings");
+    const alert = page.getByRole("alert").filter({ hasText: "project-index に接続できませんでした" });
+    await expect(alert).toBeVisible();
+    const before = api.callsOf("settings").length;
+    await alert.getByRole("button", { name: "再読み込み" }).click();
+    // 検証
+    await expect(alert.locator("dd")).toHaveText([
+      "http://127.0.0.1:8786",
+      "接続を拒否されました（Connection refused）",
+    ]);
+    const add = page.getByRole("button", { name: "配信元を追加" });
+    await expect(add).toBeDisabled();
+    await expect(add).toHaveAccessibleDescription("project-index に接続できませんでした");
+    await expect.poll(() => api.callsOf("settings").length).toBeGreaterThan(before);
+  });
+});
+
+test.describe("保存の失敗の通知", () => {
+  // 保存が 503 のとき、ダイアログを開いたまま、失敗と接続先・理由の通知を出す（異常系）
+  test("save_failure_toast_when_unreachable", async ({ page }) => {
+    // 準備
+    await open(page, { putSettings: () => problem(503, UNREACHABLE) });
+    await openAdd(page);
+    await fillValid(page);
+    // 実行
+    await dialog(page).getByRole("button", { name: "追加", exact: true }).click();
+    // 検証
+    await expect(page.getByText("端末の設定を保存できませんでした。")).toBeVisible();
+    await expect(page.getByText(UNREACHABLE.detail)).toBeVisible();
+    await expect(page.getByText(TOAST)).toHaveCount(0);
   });
 });

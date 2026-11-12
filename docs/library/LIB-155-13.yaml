@@ -13,19 +13,19 @@ catalogs:
     entries:
       - name: BaseModel
         kind: クラス
-        purpose: MCP のツールの引数・画面の API の本文を要求のモデルとして検証する
+        purpose: 管理の MCP のツールの引数・画面の API の本文・端末の設定を要求のモデルとして検証する
       - name: ConfigDict
         kind: クラス
         purpose: '`extra="forbid"`・`populate_by_name` など要求のモデルの設定'
       - name: Field
         kind: 関数
-        purpose: '`from_` の別名 `from`・`schema_path` の別名 `schema` と既定値・範囲を付ける'
+        purpose: 画面の API の DTO の既定値・範囲を付ける
       - name: field_validator
         kind: 関数
         purpose: 文字列 1 つで書かれた値を配列にするなどの前処理
       - name: ValidationError
         kind: クラス
-        purpose: 要求のモデルの検証の誤り。文書の MCP のツールのエラーの変換が `isError` の結果にする
+        purpose: 要求のモデルの検証の誤り。管理の MCP のツールのエラーの変換が `isError` の結果にする
 lead: 型ヒントから値の検証と変換を行う Python のデータ検証ライブラリ。
 purl: pkg:pypi/pydantic
 dependency_scope: 必須

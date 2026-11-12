@@ -8,8 +8,7 @@ from collections.abc import Callable
 from importlib.metadata import version
 
 from dev_docs import DIST_NAME
-from dev_docs.features.prompt_doc.cli import run_prompt_doc
-from dev_docs.main import run_files, run_migrate, run_serve
+from dev_docs.main import run_migrate, run_serve
 
 PROG = "dev-docs"
 
@@ -29,23 +28,12 @@ def build_parser() -> argparse.ArgumentParser:
     mode.add_argument("--plan", action="store_true", help="適用する手順を出して終わる")
     mode.add_argument("--record", action="store_true", help="version だけを今のバージョンにする")
     migrate.add_argument(
-        "--source", default=None, help="移し替える配信元の dev-docs.yaml（省くと端末の設定）"
+        "--project-index", default=None, help="sources を移す先の project-index のアドレス"
     )
     migrate.add_argument(
         "--allow-destructive", action="store_true", help="キーの削除など値を捨てる手順も適用する"
     )
     migrate.set_defaults(handler=run_migrate)
-    files = subparsers.add_parser("files", help="管理用の YAML に記載するファイルの一覧を出す")
-    files.add_argument("--root", required=True, help="配信元のフォルダ")
-    files.add_argument(
-        "--paths", required=True, action="append", help="範囲の glob（--root からの相対）"
-    )
-    files.add_argument("--exclude", action="append", default=[], help="除外するファイル名の glob")
-    files.set_defaults(handler=run_files)
-    prompt_doc = subparsers.add_parser(
-        "prompt-doc", help="標準入力のプロンプトの YAML を Markdown にして標準出力に出す"
-    )
-    prompt_doc.set_defaults(handler=run_prompt_doc)
     return parser
 
 

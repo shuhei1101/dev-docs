@@ -6,7 +6,7 @@ tags: [判定フローチャート, documents, 設定]
 
 文書を既存の documents の行に入れるか、新しい行（新しいスキーマ）を作るかを決める判定フローチャート
 
-documents の行は、`dev-docs.yaml` の `documents[]` の 1 行です。
+documents の行は、`project-index.yaml` の `documents[]` の 1 行です。
 各キーは [設定](./設定.md) の `documents[]` にあります。
 
 ## 判定フローチャート

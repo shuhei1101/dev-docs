@@ -8,10 +8,8 @@ from typing import Any
 
 import httpx
 
-MCP_HEADERS = {
-    "Accept": "application/json, text/event-stream",
-    "Content-Type": "application/json",
-}
+from .conftest import MCP_HEADERS, MockIndex
+
 INITIALIZE = {
     "jsonrpc": "2.0",
     "id": 1,
@@ -22,37 +20,20 @@ INITIALIZE = {
         "clientInfo": {"name": "integration-test", "version": "0"},
     },
 }
-SLOW_CONFIG = (
-    "name: slow\n"
-    "documents:\n"
-    "  - id: note\n"
-    "    paths: [docs/*.yaml]\n"
-    "    schema: schemas/sample.schema.yaml\n"
-    "    converter: sleepy\n"
-    "converters:\n"
-    "  - id: sleepy\n"
-    "    run: [python3, scripts/sleepy.py]\n"
-)
-# 起動し直した後に配信元の読み込みが終わるのを待つ上限と、status を呼び直す間隔
-LOADING_WAIT_SEC = 60
-LOADING_POLL_SEC = 0.3
-SLEEPY = "import sys\nimport time\nsys.stdin.read()\ntime.sleep(3)\nprint('# 眠ってから返した')\n"
+# 保留した要求がモックへ届くのを待つ上限
+REQUEST_WAIT_SEC = 30
 
 
-def _status_after_loading(
-    call_tool: Callable[..., dict[str, Any]], client: httpx.Client, port: int
-) -> dict[str, Any]:
-    """`status` を `loading` が `false` になるまで呼び直し、その結果を返す。"""
-    deadline = time.monotonic() + LOADING_WAIT_SEC
-    while True:
-        status = call_tool(client, port, "/_admin/mcp/", "status", format="json")
-        if not status["structuredContent"].get("loading") or time.monotonic() > deadline:
-            return status
-        time.sleep(LOADING_POLL_SEC)
+def _wait_for_docs_request(mock: MockIndex) -> None:
+    """文書の一覧の要求がモックへ届くまで待つ。"""
+    deadline = time.monotonic() + REQUEST_WAIT_SEC
+    while not any("/docs" in path for _, path, _ in mock.received):
+        assert time.monotonic() < deadline, "文書の取得がモックへ届かなかった"
+        time.sleep(0.05)
 
 
 def test_normal(
-    make_source: Callable[..., Any],
+    sample_index: MockIndex,
     write_settings: Callable[..., Path],
     free_port: Callable[[], int],
     start_serve: Callable[..., Any],
@@ -63,83 +44,72 @@ def test_normal(
 ) -> None:
     """応答を返した後に起動し直し、同じプロセス ID で待ち受ける（正常系）。"""
     # 準備
-    sample = make_source("sample")
-    settings = write_settings(sample)
+    settings = write_settings(sample_index.address)
     state_dir = settings.parent / "state"
     port = free_port()
     process = start_serve(settings, port)
     wait_until_serving(process, port)
     started = started_count(state_dir)
-    # 実行（/mcp の接続を張ったまま restart を呼ぶ）
+    # 実行（/_admin/mcp の接続を張ったまま restart を呼ぶ）
     with httpx.Client(timeout=15) as client:
-        client.post(f"http://127.0.0.1:{port}/mcp/", headers=MCP_HEADERS, json=INITIALIZE)
+        client.post(f"http://127.0.0.1:{port}/_admin/mcp/", headers=MCP_HEADERS, json=INITIALIZE)
         restarted = call_tool(client, port, "/_admin/mcp/", "restart")
     wait_for_restart(state_dir, port, started)
     with httpx.Client(timeout=15) as client:
-        status = _status_after_loading(call_tool, client, port)
+        status = call_tool(client, port, "/_admin/mcp/", "status", format="json")
         reopened = client.post(
-            f"http://127.0.0.1:{port}/mcp/", headers=MCP_HEADERS, json=INITIALIZE
+            f"http://127.0.0.1:{port}/_admin/mcp/", headers=MCP_HEADERS, json=INITIALIZE
         )
     # 検証
     sources = {item["id"]: item for item in status["structuredContent"]["sources"]}
     assert process.poll() is None
     assert restarted["structuredContent"] == {"pid": process.pid, "restarting": True}
     assert status["structuredContent"]["pid"] == process.pid
-    assert status["structuredContent"]["loading"] is False
     assert sources["sample"]["status"] == "serving"
     assert started_count(state_dir) == started + 1
     assert reopened.status_code == 200
 
 
 def test_error_when_restart_in_progress(
-    make_source: Callable[..., Any],
+    sample_index: MockIndex,
     write_settings: Callable[..., Path],
     free_port: Callable[[], int],
     start_serve: Callable[..., Any],
     wait_until_serving: Callable[..., None],
-    sample_file_set: Callable[..., dict[str, str]],
     call_tool: Callable[..., dict[str, Any]],
     started_count: Callable[[Path], int],
     wait_for_restart: Callable[..., None],
 ) -> None:
     """停止を待っている間に 2 回目の restart を呼ぶと断る（異常系）。"""
     # 準備
-    files = sample_file_set(
-        **{"dev-docs.yaml": SLOW_CONFIG, "scripts/sleepy.py": SLEEPY},
-    )
-    slow = make_source("slow", files, git=False)
-    settings = write_settings(slow, extra="script_timeout_sec: 4")
+    settings = write_settings(sample_index.address)
     state_dir = settings.parent / "state"
     port = free_port()
     process = start_serve(settings, port)
     wait_until_serving(process, port)
     started = started_count(state_dir)
+    sample_index.received.clear()
+    sample_index.hold.clear()
     results: dict[str, dict[str, Any]] = {}
 
-    def convert() -> None:
-        with httpx.Client(timeout=30) as client:
-            results["convert"] = call_tool(
-                client,
-                port,
-                "/_admin/mcp/",
-                "try_convert",
-                path=str(slow.folder),
-                file="docs/doc-1.yaml",
-            )
+    def fetch() -> None:
+        httpx.get(f"http://127.0.0.1:{port}/_api/sources/sample/docs", timeout=60)
 
     def restart(label: str) -> None:
         with httpx.Client(timeout=30) as client:
             results[label] = call_tool(client, port, "/_admin/mcp/", "restart")
 
-    # 実行（眠る変換の途中で、restart を 2 つ同時に呼ぶ）
-    threads = [threading.Thread(target=convert)]
-    threads[0].start()
-    time.sleep(1)
-    threads += [threading.Thread(target=restart, args=(label,)) for label in ("first", "second")]
-    for thread in threads[1:]:
+    # 実行（project-index が応答しない文書の取得の途中で、restart を 2 つ同時に呼ぶ）
+    pending = threading.Thread(target=fetch)
+    pending.start()
+    _wait_for_docs_request(sample_index)
+    restarts = [threading.Thread(target=restart, args=(label,)) for label in ("first", "second")]
+    for thread in restarts:
         thread.start()
-    for thread in threads:
+    for thread in restarts:
         thread.join(timeout=60)
+    sample_index.hold.set()
+    pending.join(timeout=60)
     wait_for_restart(state_dir, port, started)
     # 検証
     outcomes = sorted(

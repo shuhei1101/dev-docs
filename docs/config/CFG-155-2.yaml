@@ -1,0 +1,73 @@
+id: CFG-155-2
+title: "設定: 端末の設定"
+lead: dev-docs の端末の設定 `settings.yaml` のキーの一覧。正本のスキーマは `src/dev_docs/schemas/settings.schema.yaml`、雛形は `templates/settings.yaml`。配信元の設定（`project-index.yaml`）と端末の設定の `sources[]` は project-index が持つ。
+files:
+  - file: settings.yaml
+    manages: dev-docs の待ち受け・クローン・project-index の接続先・状態の置き場
+    notes: '`DEV_DOCS_CONFIG`、無ければ `${XDG_CONFIG_HOME:-~/.config}/dev-docs/settings.yaml`'
+settings:
+  - key: version
+    title: 設定のバージョン
+    file: settings.yaml
+    type: str
+    required: true
+    description: 設定を記載したときのスキーマのバージョン。古ければ `dev-docs migrate` で移し替える
+    missing: 起動が終了コード 2 で終わる
+    reload: restart
+    allowed: 整数の文字列。`SETTINGS_VERSION`（`"2"`）以下
+  - key: clone
+    title: クローンの場所
+    file: settings.yaml
+    type: str
+    required: true
+    description: dev-docs のクローン。管理用プラグインのフックが `dev-docs serve` を起動し、`update` が更新する
+    missing: 起動が終了コード 2 で終わる
+    reload: restart
+  - key: port
+    title: 待ち受けのポート
+    file: settings.yaml
+    type: int
+    default: '8781'
+    env_var: DEV_DOCS_PORT
+    description: 画面・画面の API・管理の MCP を待ち受ける 1 つのポート
+    reload: restart
+    allowed: 1〜65535
+  - key: bind
+    title: 待ち受けのアドレス
+    file: settings.yaml
+    type: str
+    default: 127.0.0.1
+    description: 待ち受けのアドレス
+    reload: restart
+  - key: project_index
+    title: project-index の接続先
+    file: settings.yaml
+    type: str
+    default: http://127.0.0.1:8786
+    description: 文書・検索・リビジョン・配信元の状態を問い合わせ、`sources[]` の保存を依頼する project-index のアドレス
+    reload: restart
+    allowed: '`http://`・`https://` で始まる URL'
+  - key: state_dir
+    title: 状態の置き場所
+    file: settings.yaml
+    type: str
+    default: '`${XDG_STATE_HOME:-~/.local/state}/dev-docs`'
+    env_var: DEV_DOCS_STATE_DIR
+    description: 表の列の設定を置くフォルダ
+    reload: restart
+  - key: log_dir
+    title: ログの置き場所
+    file: settings.yaml
+    type: str
+    default: '`{state_dir}/logs`'
+    description: project-index につながらないことと警告のログを書くフォルダ
+    reload: restart
+  - key: sources
+    title: 前のバージョンから残った配信元
+    file: settings.yaml
+    type: list
+    description: 'version 1 の端末の設定の配信元の行。`dev-docs migrate` が project-index へ移し、同じ id で内容の違う行だけが残る。配信には使わず、スキーマの違反にもせず、起動と `status` が行の ID を知らせる'
+    reload: restart
+refs:
+  - MOD-155-146#
+  - MOD-155-149#

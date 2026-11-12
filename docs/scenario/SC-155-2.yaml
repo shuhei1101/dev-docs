@@ -28,18 +28,21 @@ scenarios:
         SK->>U: 端末の設定の場所を聞く
         U-->>SK: テスト用の一時フォルダの settings.yaml
         SK->>DD: クローンで依存を入れる（uv sync）
-        SK->>CF: 雛形から端末の設定を作る（version・clone・sources は空）
+        SK->>U: project-index の待ち受けのアドレスを聞く（既定は http://127.0.0.1:8786）
+        U-->>SK: テスト用に起動した project-index のアドレス
+        SK->>CF: 雛形から端末の設定を作る（version・clone・project_index）
         SK->>CF: 既定と違う場所なので settings.json の env に DEV_DOCS_CONFIG を書く
         SK->>SK: PATH に mdmark の CLI が無いことを確かめる
         SK->>DD: dev-docs serve を切り離して起動する
-        SK->>DD: /mcp につながり、ツールの一覧を取る
-        SK-->>U: 作ったもの・つながった結果・mdmark の CLI の入れ方と、次に /dev-docs:setup を実行する案内を出す
+        SK->>DD: /_admin/mcp につながり、画面の API で project-index の配信元の一覧が取れることを確かめる
+        SK-->>U: 作ったもの・つながった結果・mdmark の CLI の入れ方と、配信元は project-index で追加する案内を出す
       ```
     expected:
-      - '端末の設定の `settings.yaml` が、`version` に dev-docs のバージョン、`clone` に引数のパス、`sources: []` を持ち、端末の設定のスキーマの検証に通る'
+      - '端末の設定の `settings.yaml` が、`version` に dev-docs のバージョン、`clone` に引数のパス、`project_index` に答えたアドレスを持ち、`sources` を持たず、端末の設定のスキーマの検証に通る'
       - Claude Code の設定の場所の `settings.json` の env の `DEV_DOCS_CONFIG` が、その `settings.yaml` の絶対パスを指す。env のほかのキーは変わらない
-      - '`127.0.0.1:8781` を待ち受ける dev-docs のプロセスが 1 つだけあり、`/mcp` のツールが 6 つ返る'
-      - スキルの最後の応答に、作った端末の設定のパスと `/dev-docs:setup` の案内がある
+      - '`127.0.0.1:8781` を待ち受ける dev-docs のプロセスが 1 つだけあり、`/_admin/mcp` のツールが 3 つ返る'
+      - 画面の API の配信元の一覧に、project-index が配信している配信元が並ぶ
+      - スキルの最後の応答に、作った端末の設定のパスと、配信元を project-index で追加する案内がある
       - スキルの最後の応答に、mdmark の CLI の入れ方（`npm install -g github:shuhei1101/mdmark`）の案内がある
       - テストを流した端末の `~/.claude` と `~/.config/dev-docs` は変わらない
     test: test_normal
@@ -51,7 +54,7 @@ scenarios:
         description: 正常シナリオと同じ。env の `DEV_DOCS_CONFIG` が端末の設定を指す
       - name: 端末の設定
         description: '`version` が dev-docs と同じで、必須のキー `clone` が無い `settings.yaml`'
-        notes: '`sources` に配信元 sample の 1 行を持つ'
+        notes: '`project_index` に project-index のアドレスを持つ'
     flow: |-
       ```mermaid
       sequenceDiagram
@@ -69,7 +72,7 @@ scenarios:
       ```
     expected:
       - 利用者への質問は `clone` の 1 つだけで、端末の設定の場所は聞かない
-      - '`settings.yaml` に `clone` が入り、`sources` の sample の行とほかのキーの値は変わらない'
+      - '`settings.yaml` に `clone` が入り、`project_index` とほかのキーの値は変わらない'
       - env の `DEV_DOCS_CONFIG` は変わらない
     test: test_normal_when_terminal_config_lacks_keys
   - name: 正常シナリオ（XDG_CONFIG_HOME の下に作る）
@@ -93,15 +96,17 @@ scenarios:
         SK->>CF: $XDG_CONFIG_HOME/dev-docs/settings.yaml が無いことを確かめる
         SK->>U: 端末の設定の場所を聞く（既定は $XDG_CONFIG_HOME/dev-docs/settings.yaml）
         U-->>SK: 既定の場所
+        SK->>U: project-index の待ち受けのアドレスを聞く（既定は http://127.0.0.1:8786）
+        U-->>SK: 既定のアドレス
         SK->>CF: 雛形から端末の設定を作る
         SK->>DD: dev-docs serve を切り離して起動する
-        SK->>DD: /mcp につながり、ツールの一覧を取る
+        SK->>DD: /_admin/mcp につながり、ツールの一覧を取る
         SK-->>U: 作ったもの・つながった結果を出す
       ```
     expected:
       - '端末の設定が `$XDG_CONFIG_HOME/dev-docs/settings.yaml` にでき、`~/.config/dev-docs` は変わらない'
       - 既定の場所なので、Claude Code の設定の場所の `settings.json` の env に `DEV_DOCS_CONFIG` が無い
-      - '`127.0.0.1:8781` を待ち受ける dev-docs のプロセスが 1 つだけあり、`/mcp` のツールが 6 つ返る'
+      - '`127.0.0.1:8781` を待ち受ける dev-docs のプロセスが 1 つだけあり、`/_admin/mcp` のツールが 3 つ返る'
     test: test_normal_when_xdg_config_home_set
   - name: 正常シナリオ（端末の設定が古い）
     setup:
@@ -158,20 +163,19 @@ scenarios:
       - '`settings.yaml` と、Claude Code の設定の場所の `settings.json` は変わらない'
       - スキルの応答に、設定のバージョン・dev-docs のバージョンと、管理の MCP の `update` で dev-docs を更新する案内がある
     test: test_error_when_terminal_config_newer
-lead: 利用者が `/dev-docs:global-setup` で、端末に dev-docs のクローン・依存・端末の設定・Claude Code の env を用意し、`/mcp` につながることを確かめる。
+lead: 利用者が `/dev-docs:global-setup` で、端末に dev-docs のクローン・依存・端末の設定・Claude Code の env を用意し、画面のサーバーが project-index につながることを確かめる。
 issue: 4
 primary_actor: 利用者
 stakeholders:
   - name: 利用者
-    interest: 設定ファイルと env を手で書かずに dev-docs を使えるようになる。入れ直しでも今の配信元の行を失わない
-  - name: エージェント（Claude Code）
-    interest: 次のセッションから、どの作業場所でも `/mcp` につながる
+    interest: 設定ファイルと env を手で書かずに dev-docs の画面を使えるようになる。入れ直しでも今の設定のキーを失わない
 trigger: 利用者が `/dev-docs:global-setup [クローンのパス]` を実行する
 preconditions:
   - 端末に uv・git・Claude Code がある
   - プラグイン `dev-docs` をユーザースコープで入れてある
-success_guarantee: 端末の設定が dev-docs のバージョンの `version` とクローンの場所 `clone` を持ち、Claude Code の env の `DEV_DOCS_CONFIG` がその設定を指す。dev-docs が待ち受け、`/mcp` につながる。
-minimal_guarantee: 端末の設定が dev-docs より新しいときと、移し替えを断ったときは、端末の設定も env も書き換えない。既にある `sources` の行は消えない。
+  - project-index を入れて起動してある
+success_guarantee: 端末の設定が dev-docs のバージョンの `version`・クローンの場所 `clone`・project-index のアドレス `project_index` を持ち、Claude Code の env の `DEV_DOCS_CONFIG` がその設定を指す。dev-docs が待ち受け、project-index の配信元を画面の API で返す。
+minimal_guarantee: 端末の設定が dev-docs より新しいときと、移し替えを断ったときは、端末の設定も env も書き換えない。既にある設定のキーは消えない。
 frequency: 端末ごとに 1 回。入れ直し・端末の移行・dev-docs の更新のとき
 priority: 高
 refs:

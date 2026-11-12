@@ -19,7 +19,7 @@ from dev_docs.features.convert.inline import (
     rewrite_text,
 )
 from dev_docs.features.convert.types import DiagramHead, DiagramKind, RenderContext
-from dev_docs.features.documents.types import Document
+from dev_docs.integrations.project_index.types import IndexedDocument
 
 MAX_HEADING_LEVEL = 6
 FIRST_HEADING_LEVEL = 2
@@ -227,7 +227,7 @@ def _date(value: Any) -> str | None:
 class _Builder:
     """文書の値をスキーマに沿って Markdown の塊の並びにする。"""
 
-    def __init__(self, document: Document, context: RenderContext, scope: str) -> None:
+    def __init__(self, document: IndexedDocument, context: RenderContext, scope: str) -> None:
         self.kind = document.kind
         self.data = document.data
         self.context = context
@@ -547,7 +547,7 @@ def _first(data: Mapping[str, Any], keys: Sequence[str]) -> str | None:
 
 
 def schema_to_markdown(
-    document: Document, schema: Mapping[str, Any], context: RenderContext
+    document: IndexedDocument, schema: Mapping[str, Any], context: RenderContext
 ) -> str:
     """YAML の文書をスキーマの `x-heading`・`x-shape`・`x-key`・`x-diagram`・`x-hidden`・`title` に沿って Markdown にする。"""
     data = document.data

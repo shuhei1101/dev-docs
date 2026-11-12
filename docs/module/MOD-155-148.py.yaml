@@ -1,6 +1,6 @@
 id: MOD-155-148
 title: 開発ドキュメントサーバー / 端末の設定 / service.py
-lead: '`sources[]` の保存。'
+lead: '`sources[]` の保存の依頼。'
 test_files:
   - tests/unit/dev_docs/features/settings/test_service.py
 diagrams:
@@ -9,23 +9,18 @@ diagrams:
       classDiagram
         direction TD
         端末の設定の入口 ..> 配信元の保存 : PUT
-        配信元の保存 ..> 端末の設定の検証 : 書く前
-        配信元の保存 ..> 配信元の読み直し : 書いた後
+        配信元の保存 ..> project-indexの呼び出し
         class 端末の設定の入口 {
           <<function>>
         }
         class 配信元の保存 {
           <<function>>
         }
-        class 端末の設定の検証 {
-          <<function>>
-        }
-        class 配信元の読み直し {
-          <<function>>
+        class project-indexの呼び出し {
+          <<class>>
         }
         click 端末の設定の入口 href "./MOD-155-147.py.yaml#端末の設定の入口"
-        click 端末の設定の検証 href "./MOD-155-146.py.yaml#端末の設定の検証"
-        click 配信元の読み直し href "./MOD-155-174.py.yaml#配信元の読み直し"
+        click project-indexの呼び出し href "./MOD-155-215.py.yaml#project-indexの呼び出し"
 functions:
   - name: save_sources
     title: 配信元の保存
@@ -33,74 +28,67 @@ functions:
     container: features/settings/service.py
     usecase: 端末の設定の保存
     role: サービス
-    summary: '`settings.yaml` の `sources` だけを書き換え、検証に通ったら書いて配信元を読み直す'
+    summary: '送られた `sources[]` を project-index の端末の設定の API へ渡し、読み直した後の状態を返す'
     scope: public
     thread_safe: true
-    side_effects: 端末の設定のファイルを書き換え、配信元の一覧を入れ替える
+    side_effects: project-index に端末の設定の `sources` の保存と読み直しを依頼する。dev-docs は端末の設定を書き換えない
     args:
+      - name: client
+        title: project-indexの呼び出し
+        type: ProjectIndexClient
+        required: true
+        passing: positional
+        description: 保存を依頼する
       - name: sources
         title: 配信元
         type: Sequence[SourceEntry]
         required: true
         passing: positional
         description: 保存する `sources[]` の全行
-      - name: path
-        title: 設定のファイル
-        type: Path
-        required: true
-        passing: injected
-        description: 端末の設定のパス
-      - name: reload
-        title: 配信元の読み直し
-        type: Callable[[TerminalConfig], list[SourceStatus]]
-        required: true
-        passing: injected
-        description: 起動の『配線済みの関数』の `reload_sources`
-      - name: lock
-        title: 端末の設定の排他
-        type: threading.Lock
-        required: true
-        passing: injected
-        description: 端末の設定の読み書きと読み直しの排他
     returns:
-      type: list[SourceStatus]
-      description: 読み直した後の配信元ごとの状態（配信元の『配信元の状態』）
+      type: list[SourceState]
+      description: project-index が読み直した後の配信元ごとの状態
     process: |-
-      1. `lock` を取る
-      2. 端末の設定を往復編集の形で読み（往復編集の読み込み）、`sources` だけを送られた行に置き換える。`config` は要素の数によらず配列で書く。既定値と同じキー（`enabled: true`・`outside_read: true`・空の `scope.read` など）は書かない
-      3. 置き換えた値を検証する（端末の設定の検証）
-         - 違反がある場合、ファイルを書かずに `TerminalConfigInvalidError` を送る
-      4. 一時ファイルに書いてから置き換える（往復編集の書き出し・ファイルの置き換え）
-         - `[info]` 端末の設定の sources を保存した（パス・行数）
-      5. 端末の設定を読み直し（端末の設定の読み込み）、`reload` で配信元を読み直して状態を返す（起動の『配信元の読み直し』）
+      1. 行ごとに JSON にする。`config` は要素の数によらず配列にし、既定値と同じキー（`enabled: true`・`outside_read: true`・空の `scope.read`・`None` の `scope.write`・`None` の `id`）は送らない
+      2. project-indexの呼び出し.端末の設定の配信元の行の保存 を呼び、`states` を返す
+         - `[info]` 端末の設定の sources の保存を依頼した（行数）
     exceptions:
-      - name: TerminalConfigInvalidError
-        condition: 置き換えた後の端末の設定がスキーマに通らない
-        message: '違反ごとに `{キーのパス}: {理由}`'
-        notes: 入口が 422 にする
+      - name: ProjectIndexRejectedError
+        condition: project-index が 422 を返した
+        message: '`project-index が要求を受け付けませんでした`'
+        notes: 例外の変換で 422 の problem+json（`errors[]` は project-index のまま）
+      - name: ProjectIndexUnreachableError
+        condition: project-index につながらない・制限時間を超えた
+        message: '`project-index（{address}）に接続できませんでした。{reason}`'
+        notes: 例外の変換で 503
+      - name: ProjectIndexResponseError
+        condition: project-index が 200・422 以外を返した
+        message: '`project-index が {status} を返しました: {summary}`'
+        notes: 例外の変換で 502
     unit_tests:
       - name: test_save_sources
         case: 正常
-        summary: sources だけを書き換えコメントを保つ
-        condition: '`port` にコメントを持つ設定に、行を 1 つ足した `sources`'
-        mock: 配信元の読み直し（`serving` を 2 つ返す偽物）
-        expected: ファイルの `sources` が 2 行で、`port` の行とコメントはそのまま。`reload` が書いた後の設定で 1 回呼ばれる
+        summary: 行を配列の config で送り、状態を返す
+        condition: '`config` が文字列 1 つの行と、`scope.read` を持つ行'
+        mock: project-indexの呼び出し（送った行を記録し、状態を返す偽物）
+        expected: 偽物に 2 行が送られ、1 行目の `config` が要素 1 つの配列。偽物の状態がそのまま返る
       - name: test_save_sources_when_defaults
         case: 正常
-        summary: 既定値のキーを書かない
-        condition: '`enabled: true`・`scope.read: []`・`config` が要素 1 つの行'
-        mock: 配信元の読み直し（偽物）
-        expected: ファイルの行に `enabled` と `scope` が無く、`config` が要素 1 つの配列
+        summary: 既定値のキーを送らない
+        condition: '`enabled: true`・`outside_read: true`・`scope.read: []` の行'
+        mock: project-indexの呼び出し（送った行を記録し、状態を返す偽物）
+        expected: 送った行に `enabled`・`outside_read`・`scope` が無い
       - name: test_save_sources_when_outside_read_false
         case: 正常
-        summary: 既定値と違う outside_read を書く
+        summary: 既定値と違う outside_read を送る
         condition: '`outside_read: false` の行'
-        mock: 配信元の読み直し（偽物）
-        expected: 'ファイルの行に `outside_read: false` がある'
-      - name: test_save_sources_when_invalid
+        mock: project-indexの呼び出し（送った行を記録し、状態を返す偽物）
+        expected: '送った行に `outside_read: false` がある'
+      - name: test_save_sources_when_rejected
         case: 異常
-        summary: 検証に通らない
-        condition: '2 行とも `id: a`'
-        mock: 配信元の読み直し（偽物）
-        expected: '`TerminalConfigInvalidError` で、ファイルは元のまま、`reload` は呼ばれない'
-        exception: 置き換えた後がスキーマに通らない
+        summary: project-index が受け付けない
+        condition: 偽物が `ProjectIndexRejectedError` を送る
+        mock: project-indexの呼び出し（例外を送る偽物）
+        expected: '`ProjectIndexRejectedError` がそのまま伝わる'
+        exception: project-index が 422 を返した
+    is_async: true

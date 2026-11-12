@@ -8,7 +8,16 @@ import pytest
 from dev_docs.__main__ import main
 from dev_docs.shared.yaml_io import load_yaml
 
+from .conftest import MockIndex
+
 SETTINGS_V1 = 'version: "1"\nclone: /x\nlog_dir: /logs\n'
+SOURCES_V1 = (
+    'version: "1"\nclone: /x\nsources:\n'
+    "  - id: sample\n    config: /repo/sample/dev-docs.yaml\n"
+    "  - id: notes\n    config: /repo/notes/dev-docs.yaml\n"
+    "  - id: extra\n    config: /repo/extra/dev-docs.yaml\n"
+)
+EXPORT_SOURCES = {"op": "export_sources", "path": "sources", "description": "project-index へ移す"}
 RENAME_LOG_DIR = {"op": "rename", "path": "log_dir", "to": "state_dir", "description": "改名"}
 
 
@@ -26,7 +35,6 @@ def _backups(folder: Path) -> list[Path]:
     return sorted(folder.glob("*.bak-*"))
 
 
-@pytest.mark.usefixtures("versions_2")
 def test_normal(
     settings_file: Path,
     write_steps: Callable[..., None],
@@ -58,7 +66,6 @@ def test_normal(
     assert settings_file.read_text(encoding="utf-8") == after
 
 
-@pytest.mark.usefixtures("versions_2")
 def test_normal_when_record_only(settings_file: Path, write_steps: Callable[..., None]) -> None:
     """`--record` で手順を当てずに version だけを書き換える（正常系）。"""
     # 準備
@@ -72,86 +79,6 @@ def test_normal_when_record_only(settings_file: Path, write_steps: Callable[...,
         "clone": "/x",
         "log_dir": "/logs",
     }
-
-
-def test_normal_when_source_config(tmp_path: Path, settings_file: Path) -> None:
-    """`--source --allow-destructive` で配信元の `dev-docs.yaml` に手順を当てる（正常系）。"""
-    # 準備
-    folder = tmp_path / "sample"
-    (folder / "schemas").mkdir(parents=True)
-    (folder / "schemas" / "rule.schema.yaml").write_text("type: object\n", encoding="utf-8")
-    config = folder / "dev-docs.yaml"
-    (folder / "tags.yaml").write_text("python: Python の規約\n", encoding="utf-8")
-    config.write_text(
-        'version: "1"\nname: sample\ndescription: 説明\ntags: tags.yaml\n'
-        "documents:\n"
-        "  - id: rules\n"
-        "    type: yaml\n"
-        "    paths: [docs/rule/*.yaml]\n"
-        "    schema: schemas/rule.schema.yaml\n"
-        "    metadata:\n"
-        "      name: {type: ref, field: title}\n"
-        "      alias_type: {type: custom, value: term}\n",
-        encoding="utf-8",
-    )
-    # 実行
-    code = main(["migrate", "--source", str(config), "--allow-destructive"])
-    # 検証
-    value = load_yaml(config.read_text(encoding="utf-8"))
-    row = value["documents"][0]
-    assert code == 0
-    assert value["version"] == "3"
-    assert "tags" not in value
-    assert (folder / "tags.yaml").exists()
-    assert "type" not in row
-    assert row["metadata"] == {"name": "title"}
-    assert row["alias_type"] == "term"
-    assert settings_file.read_text(encoding="utf-8") == SETTINGS_V1
-
-
-def test_error_when_source_config_unmigratable(
-    tmp_path: Path, settings_file: Path, capsys: pytest.CaptureFixture[str]
-) -> None:
-    """配信元の設定に移せない設定があると、書き換えず終了コード 4 で止める（異常系）。"""
-    # 準備
-    folder = tmp_path / "sample"
-    (folder / "schemas").mkdir(parents=True)
-    (folder / "schemas" / "rule.schema.yaml").write_text("type: object\n", encoding="utf-8")
-    config = folder / "dev-docs.yaml"
-    text = (
-        'version: "1"\nname: sample\n'
-        "documents:\n"
-        "  - id: rules\n"
-        "    type: yaml\n"
-        "    paths: [docs/rule/*.yaml]\n"
-        "    schema: schemas/rule.schema.yaml\n"
-        "    metadata:\n"
-        "      name: {type: ref, field: title}\n"
-        "  - id: notes\n"
-        "    type: markdown\n"
-        "    paths: [docs/note/*.md]\n"
-        "    schema: schemas/rule.schema.yaml\n"
-        "    defaults:\n"
-        "      - paths: [docs/**]\n"
-        "        tags: [doc]\n"
-        "  - id: others\n"
-        "    paths: [docs/other/*.yaml]\n"
-        "    schema: schemas/rule.schema.yaml\n"
-        "    metadata:\n"
-        "      tags: {type: custom, value: [x]}\n"
-    )
-    config.write_text(text, encoding="utf-8")
-    # 実行
-    code = main(["migrate", "--source", str(config), "--allow-destructive"])
-    # 検証
-    error = capsys.readouterr().err
-    assert code == 4
-    assert "documents[1].type" in error
-    assert "documents[1].defaults" in error
-    assert "documents[2].metadata.tags" in error
-    assert "/dev-docs:setup" in error
-    assert config.read_text(encoding="utf-8") == text
-    assert _backups(folder) == []
 
 
 def test_error_when_config_invalid(
@@ -174,7 +101,6 @@ def test_error_when_config_invalid(
     assert _backups(tmp_path) == []
 
 
-@pytest.mark.usefixtures("versions_2")
 def test_error_when_step_fails(
     settings_file: Path,
     write_steps: Callable[..., None],
@@ -196,7 +122,6 @@ def test_error_when_step_fails(
     assert settings_file.read_text(encoding="utf-8") == SETTINGS_V1
 
 
-@pytest.mark.usefixtures("versions_2")
 def test_error_when_destructive_step_blocked(
     settings_file: Path,
     write_steps: Callable[..., None],
@@ -237,3 +162,68 @@ def test_error_when_config_newer(
     assert code == 6
     assert "dev-docs を更新してください" in capsys.readouterr().err
     assert settings.read_text(encoding="utf-8") == text
+
+
+def _write_v1(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, name: str) -> Path:
+    """`sources` を持つ前のバージョンの端末の設定を書き、`DEV_DOCS_CONFIG` で指す。"""
+    path = tmp_path / name
+    path.write_text(SOURCES_V1, encoding="utf-8")
+    monkeypatch.setenv("DEV_DOCS_CONFIG", str(path))
+    return path
+
+
+def test_normal_when_sources_moved_to_project_index(
+    tmp_path: Path,
+    mock_index: MockIndex,
+    write_steps: Callable[..., None],
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """sources の行を project-index へ 1 行ずつ追加し、移せた行を除いて project_index を書き足す（正常系）。"""
+    # 準備
+    write_steps("settings", "2", [EXPORT_SOURCES])
+    mock_index.rows.append({"id": "extra", "config": ["/repo/other/project-index.yaml"]})
+    settings = _write_v1(tmp_path, monkeypatch, "settings.yaml")
+    # 実行
+    code = main(["migrate", "--project-index", mock_index.address])
+    out = capsys.readouterr().out
+    added = [body for method, _, body in mock_index.received if method == "POST"]
+    mock_index.received.clear()
+    mock_index.rows = []
+    monkeypatch.setenv("PROJECT_INDEX_PORT", str(mock_index.port))
+    _write_v1(tmp_path, monkeypatch, "default.yaml")
+    default_code = main(["migrate"])
+    # 検証
+    written = load_yaml(settings.read_text(encoding="utf-8"))
+    assert code == 0
+    assert [body["id"] for body in added] == ["sample", "notes", "extra"]
+    assert added[0]["config"] == ["/repo/sample/dev-docs.yaml"]
+    assert written["sources"] == [{"id": "extra", "config": "/repo/extra/dev-docs.yaml"}]
+    assert (written["project_index"], written["version"]) == (mock_index.address, "2")
+    assert "extra" in out
+    assert "移しませんでした" in out
+    assert default_code == 0
+    assert len([1 for method, _, _ in mock_index.received if method == "POST"]) == 3
+
+
+def test_error_when_project_index_unreachable(
+    tmp_path: Path,
+    free_port: Callable[[], int],
+    write_steps: Callable[..., None],
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """project-index につながらないと、端末の設定を書き換えずに終了コード 7 で止める（異常系）。"""
+    # 準備
+    write_steps("settings", "2", [EXPORT_SOURCES])
+    settings = _write_v1(tmp_path, monkeypatch, "settings.yaml")
+    address = f"http://127.0.0.1:{free_port()}"
+    # 実行
+    code = main(["migrate", "--project-index", address])
+    # 検証
+    error = capsys.readouterr().err
+    assert code == 7
+    assert address in error
+    assert "project-index を起動してから" in error
+    assert settings.read_text(encoding="utf-8") == SOURCES_V1
+    assert _backups(tmp_path) == []

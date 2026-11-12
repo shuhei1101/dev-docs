@@ -1,0 +1,151 @@
+# 作業ブランチ（eab49ba）
+$ (rc=0; uv run ruff check . || rc=1; uv run ruff format --check . || rc=1; uv run mypy . || rc=1; claude plugin validate . || rc=1; npm run lint || rc=1; npm run typecheck || rc=1; exit $rc)
+All checks passed!
+163 files already formatted
+tests/integration/server/test_get_status.py:11: error: Skipping analyzing
+"dev_docs.features.describe": module is installed, but missing library stubs or
+py.typed marker  [import-untyped]
+    from dev_docs.features.describe import source_checks as source_checks_...
+    ^
+tests/integration/server/test_get_status.py:12: error: Skipping analyzing
+"dev_docs.features.documents.store": module is installed, but missing library
+stubs or py.typed marker  [import-untyped]
+    from dev_docs.features.documents.store import check_sync
+    ^
+tests/integration/server/test_put_settings_sources.py:31: error:
+"TerminalConfig" has no attribute "sources"  [attr-defined]
+        sample_before = load_terminal_config(env.settings_path).sources[0]
+                        ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+tests/integration/server/test_put_settings_sources.py:48: error:
+"TerminalConfig" has no attribute "sources"  [attr-defined]
+        assert [entry.id for entry in saved.sources] == ["sample", "extra"...
+                                      ^~~~~~~~~~~~~
+tests/integration/server/test_put_settings_sources.py:49: error:
+"TerminalConfig" has no attribute "sources"  [attr-defined]
+        assert saved.sources[0] == sample_before
+               ^~~~~~~~~~~~~
+tests/integration/server/test_serve.py:16: error: Module
+"dev_docs.features.admin.types" has no attribute "CheckProjectRequest" 
+[attr-defined]
+    from dev_docs.features.admin.types import (
+    ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+tests/integration/server/test_serve.py:16: error: Module
+"dev_docs.features.admin.types" has no attribute "TryConvertRequest" 
+[attr-defined]
+    from dev_docs.features.admin.types import (
+    ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+tests/integration/server/test_serve.py:16: error: Module
+"dev_docs.features.admin.types" has no attribute "WriteNavRequest" 
+[attr-defined]
+    from dev_docs.features.admin.types import (
+    ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+tests/integration/server/test_serve.py:22: error: Skipping analyzing
+"dev_docs.features.changes.types": module is installed, but missing library
+stubs or py.typed marker  [import-untyped]
+    from dev_docs.features.changes.types import ChangesRequest
+    ^
+tests/integration/server/test_serve.py:23: error: Skipping analyzing
+"dev_docs.features.describe.types": module is installed, but missing library
+stubs or py.typed marker  [import-untyped]
+    from dev_docs.features.describe.types import DescribeRequest
+    ^
+tests/integration/server/test_serve.py:25: error: Skipping analyzing
+"dev_docs.features.related.types": module is installed, but missing library
+stubs or py.typed marker  [import-untyped]
+    from dev_docs.features.related.types import RelatedRequest
+    ^
+tests/integration/server/test_serve.py:26: error: Skipping analyzing
+"dev_docs.features.search.types": module is installed, but missing library stubs
+or py.typed marker  [import-untyped]
+    from dev_docs.features.search.types import MatchWordsRequest, SearchRe...
+    ^
+tests/integration/server/test_serve.py:27: error: Skipping analyzing
+"dev_docs.features.write.types": module is installed, but missing library stubs
+or py.typed marker  [import-untyped]
+    from dev_docs.features.write.types import DeleteRequest, WriteRequest
+    ^
+tests/integration/server/test_serve.py:30: error: Module
+"dev_docs.server.mcp.result" has no attribute "DOCS_INSTRUCTIONS_PROMPT_ID" 
+[attr-defined]
+    from dev_docs.server.mcp.result import DOCS_INSTRUCTIONS_PROMPT_ID, mc...
+    ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~...
+tests/integration/server/conftest.py:22: error: Skipping analyzing
+"dev_docs.features.sources": module is installed, but missing library stubs or
+py.typed marker  [import-untyped]
+    from dev_docs.features.sources import registry as registry_module
+    ^
+tests/integration/server/conftest.py:23: error: Skipping analyzing
+"dev_docs.features.sources.registry": module is installed, but missing library
+stubs or py.typed marker  [import-untyped]
+    from dev_docs.features.sources.registry import SourceRegistry
+    ^
+tests/integration/server/conftest.py:23: note: See https://mypy.readthedocs.io/en/stable/running_mypy.html#missing-imports
+tests/integration/server/conftest.py:24: error: Module "dev_docs.main" has no
+attribute "start_loading"  [attr-defined]
+    from dev_docs.main import Handlers, build_handlers, start_loading
+    ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+tests/integration/server/conftest.py:459: error: "Handlers" has no attribute
+"reload_sources"  [attr-defined]
+            handlers.reload_sources(terminal)
+            ^~~~~~~~~~~~~~~~~~~~~~~
+Found 18 errors in 4 files (checked 165 source files)
+Validating marketplace manifest: <作業ブランチの worktree>/.claude-plugin/marketplace.json
+
+⚠ Found 3 warnings:
+
+  ❯ description: No marketplace description provided. Adding a description helps users understand what this marketplace offers
+  ❯ plugins[0] plugin.json → version: No version specified. Consider adding a version following semver (e.g., "1.0.0")
+  ❯ plugins[0] plugin.json → author: No author information provided. Consider adding author details for plugin attribution
+
+ℹ Advice (does not change the verdict):
+
+  ❯ <作業ブランチの worktree>/README.md: This README has no line that installs "dev-docs" from a marketplace. Add the install line, which works in one step on Claude Code 2.1.275 or later. In it, replace <owner>/<repo> with the repository that holds the marketplace.
+      /plugin install dev-docs --marketplace <owner>/<repo>
+
+✔ Validation passed with warnings
+
+> lint
+> eslint frontend tests/unit/frontend tests/integration/frontend eslint.config.js
+
+
+> typecheck
+> node node_modules/typescript-native/bin/tsc --noEmit -p frontend/tsconfig.json
+
+exit=1
+
+# base ブランチ（origin/develop adecc6c）
+$ (rc=0; uv run ruff check . || rc=1; uv run ruff format --check . || rc=1; uv run mypy . || rc=1; claude plugin validate . || rc=1; npm run lint || rc=1; npm run typecheck || rc=1; exit $rc)
+Using CPython 3.14.3
+Creating virtual environment at: .venv
+   Building dev-docs @ file://<base の worktree>
+      Built dev-docs @ file://<base の worktree>
+warning: Failed to hardlink files; falling back to full copy. This may lead to degraded performance.
+         If the cache and target directories are on different filesystems, hardlinking may not be supported.
+         If this is intentional, set `export UV_LINK_MODE=copy` or use `--link-mode=copy` to suppress this warning.
+Installed 49 packages in 57.20s
+All checks passed!
+273 files already formatted
+Success: no issues found in 274 source files
+Validating marketplace manifest: <base の worktree>/.claude-plugin/marketplace.json
+
+⚠ Found 3 warnings:
+
+  ❯ description: No marketplace description provided. Adding a description helps users understand what this marketplace offers
+  ❯ plugins[0] plugin.json → version: No version specified. Consider adding a version following semver (e.g., "1.0.0")
+  ❯ plugins[0] plugin.json → author: No author information provided. Consider adding author details for plugin attribution
+
+ℹ Advice (does not change the verdict):
+
+  ❯ <base の worktree>/README.md: This README has no line that installs "dev-docs" from a marketplace. Add the install line, which works in one step on Claude Code 2.1.275 or later. In it, replace <owner>/<repo> with the repository that holds the marketplace.
+      /plugin install dev-docs --marketplace <owner>/<repo>
+
+✔ Validation passed with warnings
+
+> lint
+> eslint frontend tests/unit/frontend tests/integration/frontend eslint.config.js
+
+
+> typecheck
+> node node_modules/typescript-native/bin/tsc --noEmit -p frontend/tsconfig.json
+
+exit=0

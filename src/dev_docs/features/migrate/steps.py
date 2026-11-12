@@ -17,14 +17,13 @@ from dev_docs.features.migrate.types import (
 )
 from dev_docs.shared.yaml_io import YamlLoadError, load_yaml
 
-OPERATIONS = ("rename", "add", "delete", "lift", "unwrap")
+OPERATIONS = ("rename", "add", "delete", "lift", "unwrap", "export_sources")
+EXPORT_PATH = "sources"
 ARRAY_SUFFIX = "[]"
 WILDCARD = "*"
 
 
-def load_steps(
-    kind: Literal["settings", "dev-docs"], *, mine: str, current: str
-) -> list[MigrationStep]:
+def load_steps(kind: Literal["settings"], *, mine: str, current: str) -> list[MigrationStep]:
     """対象のバージョンより新しく読めるバージョン以下の手順を、古い順に読む。"""
     root = resources.files("dev_docs") / MIGRATIONS_DIR / kind
     if not root.is_dir():
@@ -62,6 +61,8 @@ def _read_version(file: Any, version: str) -> list[MigrationStep]:
             )
         if row["op"] == "lift" and not row.get("take"):
             raise MigrationFailedError(f"{label}: lift には take が要ります（{row.get('path')}）")
+        if row["op"] == "export_sources" and row.get("path") != EXPORT_PATH:
+            raise MigrationFailedError(f"{label}: export_sources の path は {EXPORT_PATH} です")
         steps.append(
             MigrationStep(
                 version=version,
@@ -173,7 +174,9 @@ def _apply_key(parent: _Parent, step: MigrationStep, key: str) -> None:
 
 
 def apply_step(data: CommentedMap, step: MigrationStep) -> None:
-    """メモリの上の YAML に 1 つの手順を当てる。"""
+    """メモリの上の YAML に 1 つの手順を当てる（`export_sources` は移し替えの適用が行う）。"""
+    if step.op == "export_sources":
+        return
     *parents_path, key = step.path.split(".")
     for parent in _parents(data, parents_path):
         # 末尾が `*` なら親の辞書の全てのキーに当てる（キーが無い親では何もしない）

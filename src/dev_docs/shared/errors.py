@@ -47,7 +47,7 @@ class DevDocsError(Exception):
 
 
 def _plain(value: Any) -> Any:
-    """違反と権限の dataclass を辞書に、パスを文字列にし、配列と辞書は中身を再帰で直す。"""
+    """違反の dataclass を辞書に、パスを文字列にし、配列と辞書は中身を再帰で直す。"""
     if dataclasses.is_dataclass(value) and not isinstance(value, type):
         return dataclasses.asdict(value)
     if isinstance(value, list):
@@ -68,22 +68,6 @@ class UnknownSourceError(DevDocsError):
 
 
 @dataclass(kw_only=True)
-class SourceNotReadableError(DevDocsError):
-    """読めない配信元。"""
-
-    status: ClassVar[int] = 403
-    available: list[Any] = field(default_factory=list)
-
-
-@dataclass(kw_only=True)
-class SourceNotWritableError(DevDocsError):
-    """書き込めない配信元。"""
-
-    status: ClassVar[int] = 403
-    available: list[Any] = field(default_factory=list)
-
-
-@dataclass(kw_only=True)
 class SourceNotServedError(DevDocsError):
     """配信していない配信元。"""
 
@@ -93,33 +77,8 @@ class SourceNotServedError(DevDocsError):
 
 
 @dataclass(kw_only=True)
-class WorktreeNotMatchedError(DevDocsError):
-    """ワークツリーに当たらない。"""
-
-    status: ClassVar[int] = 400
-    given: str = ""
-    patterns: list[str] = field(default_factory=list)
-
-
-@dataclass(kw_only=True)
-class TargetIsCloneError(DevDocsError):
-    """書く先がクローン本体。"""
-
-    status: ClassVar[int] = 409
-    clone: str = ""
-
-
-@dataclass(kw_only=True)
 class InvalidArgumentError(DevDocsError):
     """引数の誤り。"""
-
-    status: ClassVar[int] = 400
-    violations: list[Violation] = field(default_factory=list)
-
-
-@dataclass(kw_only=True)
-class NavInvalidError(DevDocsError):
-    """画面の構成の違反。"""
 
     status: ClassVar[int] = 400
     violations: list[Violation] = field(default_factory=list)
@@ -135,14 +94,6 @@ class RefNotFoundError(DevDocsError):
 
 
 @dataclass(kw_only=True)
-class UnknownKindError(DevDocsError):
-    """知らない種類。"""
-
-    status: ClassVar[int] = 400
-    kinds: list[str] = field(default_factory=list)
-
-
-@dataclass(kw_only=True)
 class DocumentNotFoundError(DevDocsError):
     """無い文書。"""
 
@@ -152,77 +103,10 @@ class DocumentNotFoundError(DevDocsError):
 
 
 @dataclass(kw_only=True)
-class ValidationFailedError(DevDocsError):
-    """検査の不合格。"""
-
-    status: ClassVar[int] = 422
-    violations: list[Violation] = field(default_factory=list)
-
-
-@dataclass(kw_only=True)
-class VersionMismatchError(DevDocsError):
-    """バージョンの不一致。"""
-
-    status: ClassVar[int] = 409
-    doc_id: str = ""
-    current: str = ""
-    diff: str = ""
-
-
-@dataclass(kw_only=True)
-class DocumentReferencedError(DevDocsError):
-    """参照されている。"""
-
-    status: ClassVar[int] = 409
-    doc_id: str = ""
-    referrers: list[str] = field(default_factory=list)
-
-
-@dataclass(kw_only=True)
-class DeleteNotAllowedError(DevDocsError):
-    """削除を許していない種類。"""
-
-    status: ClassVar[int] = 403
-    kind: str = ""
-
-
-@dataclass(kw_only=True)
-class LastReadNotFoundError(DevDocsError):
-    """前回読んだ記録が無い。"""
-
-    status: ClassVar[int] = 400
-
-
-@dataclass(kw_only=True)
 class CrossOriginError(DevDocsError):
     """別のオリジンからの要求。"""
 
     status: ClassVar[int] = 403
-
-
-@dataclass(kw_only=True)
-class ConfigNotFoundError(DevDocsError):
-    """配信元の設定が無い。"""
-
-    status: ClassVar[int] = 404
-    path: str = ""
-
-
-@dataclass(kw_only=True)
-class ConfigParseError(DevDocsError):
-    """配信元の設定が YAML として読めない。"""
-
-    status: ClassVar[int] = 400
-    line: int | None = None
-    column: int | None = None
-
-
-@dataclass(kw_only=True)
-class ConvertScriptError(DevDocsError):
-    """変換スクリプトの失敗。"""
-
-    status: ClassVar[int] = 422
-    script: str = ""
 
 
 @dataclass(kw_only=True)
@@ -246,3 +130,35 @@ class ScreenBuildMissingError(DevDocsError):
     """画面のビルドが無い。"""
 
     status: ClassVar[int] = 503
+
+
+@dataclass(kw_only=True)
+class ProjectIndexUnreachableError(DevDocsError):
+    """project-index につながらない・制限時間を超えた。"""
+
+    status: ClassVar[int] = 503
+    address: str = ""
+    reason: str = ""
+
+    def __post_init__(self) -> None:
+        if not self.message:
+            self.message = f"project-index（{self.address}）に接続できませんでした。{self.reason}"
+        if not self.next_steps:
+            self.next_steps = ["project-index を起動してから、再読み込みしてください。"]
+
+
+@dataclass(kw_only=True)
+class ProjectIndexRejectedError(DevDocsError):
+    """project-index が要求を受け付けない（422）。"""
+
+    status: ClassVar[int] = 422
+    violations: list[Violation] = field(default_factory=list)
+
+
+@dataclass(kw_only=True)
+class ProjectIndexResponseError(DevDocsError):
+    """project-index の想定しない応答。"""
+
+    status: ClassVar[int] = 502
+    status_code: int = 0
+    summary: str = ""

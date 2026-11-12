@@ -25,7 +25,7 @@ functions:
     args:
       - name: kind
         title: 種類
-        type: Literal['settings', 'dev-docs']
+        type: Literal['settings']
         required: true
         passing: positional
         description: 手順のフォルダ名
@@ -48,10 +48,10 @@ functions:
       1. `importlib.resources.files("dev_docs") / MIGRATIONS_DIR / kind` の直下のフォルダのうち、名前が整数で `mine` より大きく `current` 以下のものを整数の順に並べる
          - フォルダが無い場合、空を返す
       2. 各フォルダの `STEPS_FILE` を読み、`steps` の行ごとに `MigrationStep` を作る（`load_yaml`）
-         - `op` が選択肢の外、`rename`・`lift` に `to` が無い、`lift` に `take` が無い場合、`MigrationFailedError` を送出する
+         - `op` が選択肢の外、`rename`・`lift` に `to` が無い、`lift` に `take` が無い、`export_sources` の `path` が `sources` でない場合、`MigrationFailedError` を送出する
     exceptions:
       - name: MigrationFailedError
-        condition: 手順のファイルが読めない、`op` が選択肢の外、`rename`・`lift` に `to` が無い、`lift` に `take` が無い
+        condition: 手順のファイルが読めない、`op` が選択肢の外、`rename`・`lift` に `to` が無い、`lift` に `take` が無い、`export_sources` の `path` が `sources` でない
         message: '`{バージョン}/steps.yaml: {理由}`'
     unit_tests:
       - name: test_load_steps
@@ -111,6 +111,7 @@ functions:
          - `delete` の場合、キーがあれば削除する。`value` があるときは値が `value` と等しいときだけ削除する
          - `lift` の場合、値が `match` に当たる辞書なら、親の辞書を持つ辞書の `to` に値の `take` を置き、キーを削除する。親の辞書が空になったら親の辞書も削除する。`to` が既にあれば `MigrationFailedError` を送出する
          - `unwrap` の場合、値が `match` に当たる辞書なら、値を辞書の `take` の値（無ければキー名）に置き換える
+      3. `export_sources` は何もしない（project-index への書き出しは移し替えの適用が行う）
     exceptions:
       - name: MigrationFailedError
         condition: '`rename`・`lift` の `to` が既にある'

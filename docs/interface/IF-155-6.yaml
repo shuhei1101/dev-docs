@@ -8,7 +8,7 @@ flows:
     summary: ブランチ・タグ・最近の commit を返す
     setup:
       - name: Mock
-        description: なし（一時フォルダに配信元を作り、dev-docs のアプリを HTTP のテストのクライアントで呼ぶ）
+        description: project-index の読み取り API のモック（shuhei1101/project-index#14 の入出力で、setup の配信元の文書・リビジョンを返す）。dev-docs のアプリを HTTP のテストのクライアントで呼ぶ
       - name: サンプルの配信元
         description: commit 2 つ・タグ 1 つ・ワークツリーのブランチ 1 つを持つ sample
     flow: |-
@@ -16,10 +16,10 @@ flows:
       sequenceDiagram
         participant C as クライアント
         participant E as GET /_api/sources/{source}/refs
-        participant G as sample の Git の履歴
+        participant PI as project-index（モック）
 
         C->>E: GET /_api/sources/sample/refs
-        E-->>G: ブランチ・タグ・最近の commit を読む
+        E->>PI: リビジョンの一覧を取得する
         E-->>C: 200 リビジョンの一覧
       ```
     expected:
@@ -127,6 +127,9 @@ response_example: |-
    "commits": [{"commit": "8b1d4e0", "date": "2026-10-26T11:30:00+09:00", "subject": "docs: 文書 1 の名前を変える"}]}
   ```
 status_codes:
+  - code: '503'
+    condition: project-index につながらない
+    notes: 'つながらなかった project-index のアドレスと理由（`projectIndex.address`・`projectIndex.reason`）。`detail` は `project-index（{address}）に接続できませんでした。{reason}`'
   - code: '200'
     condition: '返した（Git 管理外の配信元は `git: false` で 200）'
   - code: '404'
@@ -138,7 +141,8 @@ constraints:
   - item: 認可
     constraint: 制限なし（`127.0.0.1` でだけ待ち受ける）
   - item: タイムアウト
-    constraint: 制限なし
+    constraint: project-index への問い合わせを制限時間で打ち切り、打ち切ったら project-index につながらないときと同じ 503 と理由を返す
+    decided_by: NFR-155-1#requirements[project-index への問い合わせの制限時間]
   - item: JSON のキー
     constraint: レスポンスのキーは camelCase。パス・クエリのパラメータ名は変えない
   - item: operationId

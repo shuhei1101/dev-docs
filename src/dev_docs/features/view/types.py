@@ -2,9 +2,8 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 from datetime import datetime
-from typing import Any, Literal
+from typing import Literal
 
 from pydantic import ConfigDict, Field
 
@@ -152,13 +151,3 @@ class RefsResponse(ApiModel):
     branches: list[RefItem] = Field(default_factory=list)
     tags: list[RefItem] = Field(default_factory=list)
     commits: list[CommitItem] = Field(default_factory=list)
-
-
-@dataclass(frozen=True, slots=True, kw_only=True)
-class NavAutoCount:
-    """`nav` の `auto` 1 つと、その条件に当たる文書の数。"""
-
-    path: str
-    tab: str
-    filter: dict[str, Any] | None
-    count: int

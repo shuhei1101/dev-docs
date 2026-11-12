@@ -1,0 +1,121 @@
+id: API-155-1
+title: "project-index の読み取り API"
+visibility: internal
+lead: project-index が配信している配信元の一覧と状態・文書・検索・リビジョンを返し、端末の設定の配信元の行を保存する HTTP の API。
+used_in:
+  - src/dev_docs/integrations/project_index/
+verification:
+  state: 未確認
+  detail: '提供する側の shuhei1101/project-index#14 は project-index の c19c617（#15）で実装されたが、入出力がこの設計書と異なる（文書の一覧に値・バージョン・`unreadable` が無い、配信元の設定に `id`・`git`・`defaultRef`・`diffIgnoreKeys` と解いたスキーマが無い、文書の詳細を project-index が変換して `value`・`markdown`・`updatedAt` で返す、検討事項の一覧が `decisions[].folders`、端末の設定の行が `row` に包まれず `outside_read` を返さない、行の追加の本文が `{source}` で応答が `result: added | exists`）。この作業 PR は Issue に記載した入出力に沿ったモックで確かめ、本物との照合と付け替えは #164 で行う'
+version:
+  api_version: 未定（shuhei1101/project-index#14 で決まる）
+  checked_on: '2026-11-12'
+base_urls:
+  - env: 手元の端末
+    url: http://127.0.0.1:8786
+official_url: https://github.com/shuhei1101/project-index
+auth:
+  method: なし（`127.0.0.1` でだけ待ち受ける）
+error_format: RFC 9457 の `application/problem+json`（shuhei1101/project-index#14 で決まる）
+timeout: 45 秒（dev-docs の非機能要件『project-index への問い合わせの制限時間』）
+endpoints:
+  - name: GET /sources
+    method: GET
+    path: /sources
+    summary: 配信元の一覧と、配信元ごとの状態・配信していない理由（`{path, reason}`）・設定のバージョンが古いときの新旧を返す
+    status_codes:
+      - code: '200'
+        condition: 返した（配信元が 0 件でも 200）
+  - name: GET /sources/{source}/config
+    method: GET
+    path: /sources/{source}/config
+    summary: 配信元の設定のうち、画面が使うキー（`nav`・`decisions.folders`・`github`・`diff_ignore_keys`・`default_ref`・Git の配信元か）と、有効な `documents[]` の行（`id`・`title`・`paths`・`records`・`search`・`converter`・`alias_type` と、`$ref` を解き `records` の行は 1 要素にした種類のスキーマ）を返す
+    status_codes:
+      - code: '200'
+        condition: 返した
+      - code: '404'
+        condition: 配信元が無い・配信していない
+  - name: GET /sources/{source}/docs
+    method: GET
+    path: /sources/{source}/docs
+    summary: 指定のリビジョンの文書の一覧（ID・パス・種類・要素の添字・本文のファイルのパス・メタデータ・値・バージョン・作成と更新の日時）と、YAML として読めなかったファイル（パス・行・列・理由）を返す。本文は返さない
+    status_codes:
+      - code: '200'
+        condition: 返した
+      - code: '404'
+        condition: 配信元が無い・配信していない、リビジョンを解決できない
+  - name: GET /sources/{source}/docs/{path}
+    method: GET
+    path: /sources/{source}/docs/{path}
+    summary: 指定のリビジョンの文書の値・本文・メタデータ・本文のファイルのパス（管理用の YAML の行の文書）を返す。`converters[]` を指す種類は、スクリプトが出した Markdown か変換の失敗（理由・スクリプト・原因）を返す。YAML を読めないファイルは読めなかった位置を失敗で返す。パスは文書のファイルか本文のファイルのパスで引け、管理用の YAML の行の文書は `id` のクエリで要素を選ぶ
+    status_codes:
+      - code: '200'
+        condition: 返した（変換に失敗したときも失敗を入れて 200）
+      - code: '404'
+        condition: 配信元・リビジョン・文書が無い
+  - name: GET /sources/{source}/decisions
+    method: GET
+    path: /sources/{source}/decisions
+    summary: '`decisions.folders` にある検討事項の ID と、ID ごとに当たるフォルダの数を返す'
+    status_codes:
+      - code: '200'
+        condition: 返した（`decisions.folders` を持たない配信元は空の一覧）
+      - code: '404'
+        condition: 配信元が無い・配信していない
+  - name: GET /sources/{source}/decisions/{id}
+    method: GET
+    path: /sources/{source}/decisions/{id}
+    summary: '`decisions.folders` のうちちょうど 1 つのフォルダにある検討事項の文書の本文を返す'
+    status_codes:
+      - code: '200'
+        condition: 返した
+      - code: '404'
+        condition: 当たるフォルダが 0 個か 2 個以上
+  - name: GET /sources/{source}/search
+    method: GET
+    path: /sources/{source}/search
+    summary: '語を含む文書（ID・パス・要素の添字・名前）と一致した箇所を返す。`search: false` の行の文書は除く'
+    status_codes:
+      - code: '200'
+        condition: 返した
+      - code: '400'
+        condition: 語が空・長すぎる
+      - code: '404'
+        condition: 配信元が無い・リビジョンを解決できない
+  - name: GET /sources/{source}/refs
+    method: GET
+    path: /sources/{source}/refs
+    summary: 配信元のブランチ・タグ・最近の commit を返す
+    status_codes:
+      - code: '200'
+        condition: '返した（Git 管理外の配信元は `git: false`）'
+      - code: '404'
+        condition: 配信元が無い・配信していない
+  - name: GET /settings/sources
+    method: GET
+    path: /settings/sources
+    summary: 端末の設定の配信元の行（`outside_read` を含む全てのキー）と、配信元ごとの状態を返す
+    status_codes:
+      - code: '200'
+        condition: 返した
+  - name: PUT /settings/sources
+    method: PUT
+    path: /settings/sources
+    summary: 端末の設定の配信元の行を保存して読み直し、配信元ごとの状態を返す
+    status_codes:
+      - code: '200'
+        condition: 保存した
+      - code: '422'
+        condition: スキーマに通らない
+  - name: POST /settings/sources
+    method: POST
+    path: /settings/sources
+    summary: 端末の設定へ配信元の行を 1 行追加する（shuhei1101/project-index#10）。同じ id の行があれば追加せずに知らせる
+    status_codes:
+      - code: '201'
+        condition: 追加した
+      - code: '409'
+        condition: 同じ id の行がある（内容が同じかを応答に入れる）
+notes:
+  契約: '正本は提供する側の shuhei1101/project-index#14 のインターフェース定義。パスと入出力はこの Issue に記載した入出力から作った仮のもので、契約が決まったら #164 で合わせる'
+  dev-docs が前提にする応答: 文書の一覧に値を含めること（`nav` の `auto` の `filter` と差分の変わったキーを dev-docs が求めるため）、配信元の設定の応答に解いた種類のスキーマを含めること（スキーマ駆動の変換のため）、文書の詳細の `id` のクエリ、検索の結果の ID と要素の添字は、モジュール構成設計で決めた前提。project-index#14 に書き足して合わせる

@@ -8,7 +8,7 @@ from importlib import resources
 from pathlib import Path
 from typing import Any
 
-from dev_docs.features.settings.types import SourceEntry, TerminalConfig, TerminalConfigInvalidError
+from dev_docs.features.settings.types import TerminalConfig, TerminalConfigInvalidError
 from dev_docs.shared.errors import Violation
 from dev_docs.shared.paths import normalize_path
 from dev_docs.shared.schema_check import schema_violations
@@ -24,7 +24,7 @@ CONFIG_ENV = "DEV_DOCS_CONFIG"
 PORT_ENV = "DEV_DOCS_PORT"
 STATE_DIR_ENV = "DEV_DOCS_STATE_DIR"
 SETTINGS_SCHEMA = "schemas/settings.schema.yaml"
-SETTINGS_VERSION = "1"
+SETTINGS_VERSION = "2"
 PORT_MIN = 1
 PORT_MAX = 65535
 
@@ -66,39 +66,7 @@ def validate_terminal_config(value: Any) -> list[Violation]:
     violations = schema_violations(_settings_schema(), value)
     if not isinstance(value, dict):
         return violations
-    sources = value.get("sources")
-    if isinstance(sources, list):
-        seen: set[str] = set()
-        for index, row in enumerate(sources):
-            if not isinstance(row, dict):
-                continue
-            # 行の ID が先の行と重なる（id を省いた行は配信元の読み込みで比べる）
-            row_id = row.get("id")
-            if isinstance(row_id, str):
-                if row_id in seen:
-                    violations.append(
-                        Violation(
-                            path=f"sources[{index}].id",
-                            rule=f"{row_id} は既に使用されています",
-                            fix="別の ID にしてください",
-                        )
-                    )
-                seen.add(row_id)
-            # 作業場所の glob に空の文字列がある
-            scope = row.get("scope")
-            if isinstance(scope, dict):
-                for key in ("read", "write"):
-                    globs = scope.get(key)
-                    if not isinstance(globs, list):
-                        continue
-                    for position, glob in enumerate(globs):
-                        if glob == "":
-                            violations.append(
-                                Violation(
-                                    path=f"sources[{index}].scope.{key}[{position}]",
-                                    rule="空の文字列は記載できません",
-                                )
-                            )
+    # 前のバージョンから残った sources は検証しない（起動が警告のログに出す）
     # 読めるバージョンより新しい設定
     version = value.get("version")
     if isinstance(version, str) and version.isdigit() and int(version) > int(SETTINGS_VERSION):
@@ -130,9 +98,7 @@ def load_terminal_config(path: Path, *, env: Mapping[str, str] | None = None) ->
     state_dir = state_dir_path(value.get("state_dir"), os.environ if env is None else env)
     log_dir = normalize_path(value["log_dir"]) if "log_dir" in value else state_dir / "logs"
     values: dict[str, Any] = {
-        key: value[key]
-        for key in ("port", "bind", "seen_retention_days", "script_timeout_sec")
-        if key in value
+        key: value[key] for key in ("port", "bind", "project_index") if key in value
     }
     return TerminalConfig(
         file=path,
@@ -140,9 +106,25 @@ def load_terminal_config(path: Path, *, env: Mapping[str, str] | None = None) ->
         clone=normalize_path(value["clone"]),
         state_dir=state_dir,
         log_dir=log_dir,
-        sources=[SourceEntry.model_validate(row) for row in value.get("sources", [])],
+        leftover_sources=_leftover_ids(value.get("sources")),
         **values,
     )
+
+
+def _leftover_ids(sources: Any) -> list[str]:
+    """前のバージョンから残った `sources` の行の ID（無ければ `config` の先頭）を並べる。"""
+    if not isinstance(sources, list):
+        return []
+    ids: list[str] = []
+    for row in sources:
+        if not isinstance(row, dict):
+            continue
+        config = row.get("config")
+        first = config[0] if isinstance(config, list) and config else config
+        name = row.get("id") or first
+        if name:
+            ids.append(str(name))
+    return ids
 
 
 def listen_port(config: TerminalConfig, env: Mapping[str, str]) -> int:

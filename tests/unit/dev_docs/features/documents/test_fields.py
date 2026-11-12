@@ -1,20 +1,11 @@
 from __future__ import annotations
 
 from collections.abc import Callable
-from typing import Any
 
 import pytest
 
-from dev_docs.features.documents import fields as fields_module
-from dev_docs.features.documents.fields import (
-    delete_field,
-    get_field,
-    parse_field_path,
-    resolve_metadata,
-    set_field,
-)
-from dev_docs.features.documents.types import Document
-from dev_docs.features.sources.types import DocumentTable
+from dev_docs.features.documents.fields import get_field, parse_field_path
+from dev_docs.integrations.project_index.types import IndexedDocument as Document
 from dev_docs.shared.errors import InvalidArgumentError
 
 
@@ -85,143 +76,6 @@ def test_get_field_when_selector() -> None:
     assert results == [["a", "b"], ["a"], None]
 
 
-def test_set_field() -> None:
-    """途中の辞書を作る（正常系）。"""
-    # 準備
-    data: dict[str, Any] = {}
-    # 実行
-    set_field(data, "a.b.c", 1)
-    # 検証
-    assert data == {"a": {"b": {"c": 1}}}
-
-
-def test_set_field_when_append() -> None:
-    """末尾へ追加（正常系）。"""
-    # 準備
-    data: dict[str, Any] = {"a": [1]}
-    # 実行
-    set_field(data, "a[1]", 2)
-    # 検証
-    assert data == {"a": [1, 2]}
-
-
-def test_set_field_when_type_mismatch() -> None:
-    """途中が文字列（異常系）。"""
-    # 準備
-    data: dict[str, Any] = {"a": "x"}
-    # 実行・検証
-    with pytest.raises(InvalidArgumentError):
-        set_field(data, "a.b", 1)
-
-
-def test_set_field_when_out_of_range() -> None:
-    """飛んだ位置（異常系）。"""
-    # 準備
-    data: dict[str, Any] = {"a": [1]}
-    # 実行・検証
-    with pytest.raises(InvalidArgumentError):
-        set_field(data, "a[3]", 2)
-
-
-def test_set_field_when_selector() -> None:
-    """要素の選び方を含むパス（異常系）。"""
-    # 準備
-    data: dict[str, Any] = {"tags": []}
-    # 実行・検証
-    with pytest.raises(InvalidArgumentError, match="を含む項目のパスには書き込めません"):
-        set_field(data, "tags[].name", "a")
-
-
-def test_delete_field() -> None:
-    """キーと位置（正常系）。"""
-    # 準備
-    data: dict[str, Any] = {"a": {"b": 1}, "c": [1, 2]}
-    # 実行
-    key_deleted = delete_field(data, "a.b")
-    index_deleted = delete_field(data, "c[0]")
-    # 検証
-    assert key_deleted is True
-    assert index_deleted is True
-    assert data == {"a": {}, "c": [2]}
-
-
-def test_delete_field_when_missing() -> None:
-    """無い値（正常系）。"""
-    # 準備
-    data: dict[str, Any] = {}
-    # 実行
-    result = delete_field(data, "a.b")
-    # 検証
-    assert result is False
-    assert data == {}
-
-
-def test_resolve_metadata() -> None:
-    """列名の対応と同じ名前の列（正常系）。"""
-    # 準備
-    table = DocumentTable(
-        id="rules",
-        paths=["docs/*.yaml"],
-        schema_path="schemas/rule.schema.yaml",
-        metadata={"name": "title"},
-        alias_type="term",
-    )
-    data = {"id": "a", "title": "A", "tags": ["x"]}
-    # 実行
-    result = resolve_metadata(data, table)
-    # 検証
-    assert result == {"id": "a", "name": "A", "tags": ["x"], "alias_type": "term"}
-
-
-def test_resolve_metadata_when_nested_field() -> None:
-    """入れ子の列（正常系）。"""
-    # 準備
-    table = DocumentTable(
-        id="rules",
-        paths=["docs/*.yaml"],
-        schema_path="schemas/rule.schema.yaml",
-        metadata={"description": "meta.summary"},
-    )
-    data = {"meta": {"summary": "s"}}
-    # 実行
-    result = resolve_metadata(data, table)
-    # 検証
-    assert result["description"] == "s"
-
-
-def test_resolve_metadata_when_object_array() -> None:
-    """オブジェクトの配列のタグ（正常系）。"""
-    # 準備
-    table = DocumentTable(
-        id="rules",
-        paths=["docs/*.yaml"],
-        schema_path="schemas/rule.schema.yaml",
-        metadata={"tags": "tags[].name", "main_tags": "tags[main].name"},
-    )
-    data = {"tags": [{"name": "mcp", "main": True}, {"name": "設計"}]}
-    # 実行
-    result = resolve_metadata(data, table)
-    # 検証
-    assert result["tags"] == ["mcp", "設計"]
-    assert result["main_tags"] == ["mcp"]
-
-
-def test_missing_ref_fields() -> None:
-    """metadata に書いた列だけを数える（正常系）。"""
-    # 準備
-    table = DocumentTable(
-        id="rules",
-        paths=["docs/*.yaml"],
-        schema_path="schemas/rule.schema.yaml",
-        metadata={"name": "title", "description": "summary"},
-    )
-    data = {"summary": "s"}
-    # 実行
-    result = fields_module.missing_ref_fields(data, table)
-    # 検証
-    assert result == [("name", "title")]
-
-
 @pytest.mark.parametrize(
     ("body_path", "expected"),
     [
@@ -243,34 +97,3 @@ def test_is_markdown_body(
     result = is_markdown_body(document)
     # 検証
     assert result is expected
-
-
-def test_unresolved_related() -> None:
-    """source を持たない関連だけを照合する（正常系）。"""
-    # 準備
-    metadata = {
-        "related": [
-            {"to": "src/b.py"},
-            {"to": "src/z.py"},
-            {"to": "other-doc", "source": "other"},
-            {"to": "src/y.py", "source": None},
-            {"type": "tests"},
-        ]
-    }
-    ids = {"src/a.py", "src/b.py"}
-    # 実行
-    result = fields_module.unresolved_related(metadata, ids)
-    # 検証
-    assert result == ["src/z.py", "src/y.py"]
-
-
-def test_unresolved_related_when_not_list() -> None:
-    """related が配列でない（正常系）。"""
-    # 準備
-    ids = {"src/a.py"}
-    # 実行
-    missing = fields_module.unresolved_related({"name": "a"}, ids)
-    text = fields_module.unresolved_related({"related": "src/z.py"}, ids)
-    # 検証
-    assert missing == []
-    assert text == []

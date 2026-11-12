@@ -1,6 +1,6 @@
 # dev-docs
 
-YAML の正本を読み、人が読む画面と文書の MCP（HTTP）を出す汎用の開発ドキュメントサーバー。各リポジトリは設定ファイルを渡して起動する。
+project-index が配信している配信元の文書を、人が読む画面で出す開発ドキュメントサーバー。配信元の読み込み・文書の MCP・端末の設定の `sources[]` は project-index が持ち、dev-docs は project-index の読み取り API を呼ぶ。
 
 ## ドキュメント
 

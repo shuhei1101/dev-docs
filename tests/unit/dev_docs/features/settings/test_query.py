@@ -110,31 +110,31 @@ def test_state_dir_path_when_unset(monkeypatch: pytest.MonkeyPatch) -> None:
     assert result == Path("/home/u/.local/state/dev-docs")
 
 
+def _write(tmp_path: Path, text: str) -> Path:
+    """端末の設定をファイルに書き、そのパスを返す。"""
+    path = tmp_path / "settings.yaml"
+    path.write_text(text, encoding="utf-8")
+    return path
+
+
 def test_load_terminal_config(tmp_path: Path) -> None:
     """既定値を埋める（正常系）。"""
     # 準備
-    path = tmp_path / "settings.yaml"
-    path.write_text(
-        'version: "1"\nclone: /tmp/clone\nsources:\n  - config: /tmp/a/dev-docs.yaml\n',
-        encoding="utf-8",
-    )
+    path = _write(tmp_path, 'version: "2"\nclone: /tmp/clone\n')
     # 実行
     result = load_terminal_config(path)
     # 検証
     assert result.port == 8781
     assert result.bind == "127.0.0.1"
-    assert result.sources[0].config == ["/tmp/a/dev-docs.yaml"]
+    assert result.project_index == "http://127.0.0.1:8786"
+    assert result.leftover_sources == []
     assert result.log_dir == result.state_dir / "logs"
 
 
 def test_load_terminal_config_when_state_dir_env_set(tmp_path: Path) -> None:
     """状態の置き場を環境変数で決める（正常系）。"""
     # 準備
-    path = tmp_path / "settings.yaml"
-    path.write_text(
-        'version: "1"\nclone: /tmp/clone\nstate_dir: /tmp/a\n',
-        encoding="utf-8",
-    )
+    path = _write(tmp_path, 'version: "2"\nclone: /tmp/clone\nstate_dir: /tmp/a\n')
     env = {"DEV_DOCS_STATE_DIR": "/tmp/b"}
     # 実行
     result = load_terminal_config(path, env=env)
@@ -156,8 +156,7 @@ def test_load_terminal_config_when_missing(tmp_path: Path) -> None:
 def test_load_terminal_config_when_yaml_broken(tmp_path: Path) -> None:
     """YAML として読めない（異常系）。"""
     # 準備
-    path = tmp_path / "settings.yaml"
-    path.write_text("sources: [\n", encoding="utf-8")
+    path = _write(tmp_path, "sources: [\n")
     # 実行・検証
     with pytest.raises(TerminalConfigInvalidError) as exc_info:
         load_terminal_config(path)
@@ -168,20 +167,33 @@ def test_load_terminal_config_when_yaml_broken(tmp_path: Path) -> None:
 def test_load_terminal_config_when_schema_invalid(tmp_path: Path) -> None:
     """違反を全て集める（異常系）。"""
     # 準備
-    path = tmp_path / "settings.yaml"
-    path.write_text(
-        'version: "1"\nclone: /tmp/clone\nport: abc\nsources:\n  - id: a\n',
-        encoding="utf-8",
+    path = _write(
+        tmp_path, 'version: "2"\nclone: /tmp/clone\nport: abc\nproject_index: 127.0.0.1:8786\n'
     )
     # 実行・検証
     with pytest.raises(TerminalConfigInvalidError) as exc_info:
         load_terminal_config(path)
-    assert sorted(v.path for v in exc_info.value.violations) == ["port", "sources[0].config"]
+    assert sorted(v.path for v in exc_info.value.violations) == ["port", "project_index"]
+
+
+def test_load_terminal_config_when_leftover_sources(tmp_path: Path) -> None:
+    """前のバージョンから残った sources（正常系）。"""
+    # 準備
+    path = _write(
+        tmp_path,
+        'version: "2"\nclone: /tmp/clone\nsources:\n'
+        "  - id: sample\n    config: /s/project-index.yaml\n"
+        "  - config: /x/project-index.yaml\n",
+    )
+    # 実行
+    result = load_terminal_config(path)
+    # 検証
+    assert result.leftover_sources == ["sample", "/x/project-index.yaml"]
 
 
 def _valid_settings() -> dict[str, object]:
     """必須のキーだけを持つ端末の設定の値を返す。"""
-    return {"version": "1", "clone": "/tmp/clone", "sources": [{"config": "/tmp/a/dev-docs.yaml"}]}
+    return {"version": "2", "clone": "/tmp/clone"}
 
 
 def test_validate_terminal_config() -> None:
@@ -194,42 +206,37 @@ def test_validate_terminal_config() -> None:
     assert result == []
 
 
-def test_validate_terminal_config_when_duplicate_id() -> None:
-    """行の ID が重なる（正常系）。"""
-    # 準備
-    value = _valid_settings()
-    value["sources"] = [
-        {"id": "a", "config": "/tmp/a/dev-docs.yaml"},
-        {"id": "a", "config": "/tmp/b/dev-docs.yaml"},
-    ]
-    # 実行
-    result = validate_terminal_config(value)
-    # 検証
-    assert [v.path for v in result] == ["sources[1].id"]
-    assert [v.rule for v in result] == ["a は既に使用されています"]
-
-
-def test_validate_terminal_config_when_empty_glob() -> None:
-    """空の glob（正常系）。"""
-    # 準備
-    value = _valid_settings()
-    value["sources"] = [{"config": "/tmp/a/dev-docs.yaml", "scope": {"read": [""]}}]
-    # 実行
-    result = validate_terminal_config(value)
-    # 検証
-    assert [v.path for v in result] == ["sources[0].scope.read[0]"]
-    assert [v.rule for v in result] == ["空の文字列は記載できません"]
-
-
 def test_validate_terminal_config_when_newer_version() -> None:
     """新しいバージョンの設定（正常系）。"""
     # 準備
     value = _valid_settings()
-    value["version"] = "2"
+    value["version"] = "3"
     # 実行
     result = validate_terminal_config(value)
     # 検証
     assert [v.path for v in result] == ["version"]
+
+
+def test_validate_terminal_config_when_project_index_invalid() -> None:
+    """project-index の接続先が URL でない（正常系）。"""
+    # 準備
+    value = _valid_settings()
+    value["project_index"] = "127.0.0.1:8786"
+    # 実行
+    result = validate_terminal_config(value)
+    # 検証
+    assert [v.path for v in result] == ["project_index"]
+
+
+def test_validate_terminal_config_when_leftover_sources() -> None:
+    """残った sources を違反にしない（正常系）。"""
+    # 準備
+    value = _valid_settings()
+    value["sources"] = [{"id": "a"}, {"id": "a", "config": "/b"}]
+    # 実行
+    result = validate_terminal_config(value)
+    # 検証
+    assert result == []
 
 
 def test_listen_port(make_terminal_config: Callable[..., TerminalConfig]) -> None:

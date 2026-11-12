@@ -5,24 +5,15 @@ from collections.abc import Callable
 from types import SimpleNamespace
 from typing import Any, cast
 
-import pytest
 from mcp.types import CallToolResult, TextContent
 
-from dev_docs.features.admin.types import CheckProjectRequest, CheckProjectResult
 from dev_docs.features.lifecycle.control import RestartControl
-from dev_docs.server.mcp import admin as admin_module
 from dev_docs.server.mcp.admin import build_admin_mcp
 from dev_docs.server.mcp.result import tool_prompt_id
 
-TOOL_NAMES = {
-    "status",
-    "reload",
-    "restart",
-    "update",
-    "check_project",
-    "try_convert",
-    "write_nav",
-}
+from ...conftest import FakeIndex
+
+TOOL_NAMES = {"status", "restart", "update"}
 
 
 def test_build_admin_mcp(make_mcp_handlers: Callable[..., Any]) -> None:
@@ -38,43 +29,23 @@ def test_build_admin_mcp(make_mcp_handlers: Callable[..., Any]) -> None:
         name: by_name[name].annotations.destructive_hint  # type: ignore[union-attr]
         for name in ("restart", "update")
     } == {"restart": True, "update": True}
-    assert {
-        name: by_name[name].annotations.read_only_hint  # type: ignore[union-attr]
-        for name in ("status", "check_project", "try_convert")
-    } == {"status": True, "check_project": True, "try_convert": True}
-    assert by_name["write_nav"].annotations is not None
-    assert by_name["write_nav"].annotations.destructive_hint is False
+    assert by_name["status"].annotations.read_only_hint is True  # type: ignore[union-attr]
 
 
-def test_build_admin_mcp_when_call(
-    make_mcp_handlers: Callable[..., Any], monkeypatch: pytest.MonkeyPatch
+def test_build_admin_mcp_when_status(
+    fake_index: FakeIndex, make_mcp_handlers: Callable[..., Any]
 ) -> None:
-    """サービスへの受け渡し（正常系）。"""
+    """状態を JSON で返す（正常系）。"""
     # 準備
-    received: list[CheckProjectRequest] = []
-
-    def fake_check_project(request: CheckProjectRequest, **kwargs: Any) -> CheckProjectResult:
-        received.append(request)
-        return CheckProjectResult(
-            path="/tmp/a",
-            registered_id=None,
-            config_version=None,
-            version_state=None,
-            violations=[],
-            missing_paths=[],
-            script_errors=[],
-            sync=None,
-        )
-
-    monkeypatch.setattr(admin_module, "check_project", fake_check_project)
+    fake_index.sources = [{"id": "sample", "status": "serving", "errors": []}]
     mcp = build_admin_mcp(make_mcp_handlers())
     # 実行
-    result = asyncio.run(mcp.call_tool("check_project", {"path": "/tmp/a", "format": "json"}))
+    result = asyncio.run(mcp.call_tool("status", {"format": "json"}))
     # 検証
     assert isinstance(result, CallToolResult)
-    assert received[0].path == "/tmp/a"
     assert result.is_error is False
     assert result.structured_content is not None
+    assert {"project_index", "sources"} <= set(result.structured_content)
 
 
 def test_build_admin_mcp_when_restart_in_progress(make_mcp_handlers: Callable[..., Any]) -> None:

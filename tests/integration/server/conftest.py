@@ -11,78 +11,361 @@ import time
 from collections.abc import Callable, Iterator
 from contextlib import ExitStack
 from dataclasses import dataclass, field
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
+from urllib.parse import parse_qs, unquote, urlsplit
 
 import pytest
 from fastapi.testclient import TestClient
 
-from dev_docs import main as main_module
 from dev_docs.features.settings.query import load_terminal_config
-from dev_docs.features.sources import registry as registry_module
-from dev_docs.features.sources.registry import SourceRegistry
-from dev_docs.main import Handlers, build_handlers, start_loading
+from dev_docs.main import Handlers, build_handlers
 from dev_docs.server.app import build_app
 
 LOCAL_BASE_URL = "http://127.0.0.1:8781"
-# 読み込みを止めた配信元の合図を待つ上限と、読み込みのスレッドの終わりを待つ上限
-LOADING_WAIT_SEC = 60
 MCP_HEADERS = {
     "Accept": "application/json, text/event-stream",
     "Content-Type": "application/json",
 }
 SAME_ORIGIN = {"Sec-Fetch-Site": "same-origin"}
+# 起動の待ち受けを待つ上限。2026-11-12 の実測で、負荷の低いときは 1 回 18 秒、
+# ロードアベレージ 20 では 30 秒を超えたため、30 秒 + 50% の余裕を持たせて 60 秒にする
+SERVE_WAIT_SEC = 60
+# 保留した応答を待つ上限
+HOLD_WAIT_SEC = 60
+SETTINGS_PATH = "/home/u/.config/project-index/settings.yaml"
 
-SAMPLE_SCHEMA = """\
-type: object
-title: サンプル
-properties:
-  id:
-    type: string
-    title: ID
-  name:
-    type: string
-    title: 名前
-  description:
-    type: string
-    title: 概要
-  weight:
-    type: integer
-    title: 重み
-  tags:
-    type: array
-    title: タグ
-    items:
-      type: string
-  related:
-    type: array
-    title: 関連
-    items:
-      type: object
-      properties:
-        to:
-          type: string
-        type:
-          type: string
-      required: [to, type]
-  items:
-    type: array
-    title: 項目
-    x-heading: 項目
-    items:
-      type: object
-      properties:
-        key:
-          type: string
-          title: キー
-        label:
-          type: string
-          title: 名称
-        notes:
-          type: string
-          title: 備考
-required: [id, name]
-"""
+# 名前・概要・タグ・項目の表を持つ種類のスキーマ（project-index が解いて返す値）
+SAMPLE_SCHEMA: dict[str, Any] = {
+    "type": "object",
+    "title": "サンプル",
+    "properties": {
+        "id": {"type": "string", "title": "ID"},
+        "name": {"type": "string", "title": "名前"},
+        "description": {"type": "string", "title": "概要"},
+        "tags": {"type": "array", "title": "タグ", "items": {"type": "string"}},
+        "items": {
+            "type": "array",
+            "title": "項目",
+            "x-heading": "項目",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "key": {"type": "string", "title": "キー"},
+                    "label": {"type": "string", "title": "名称"},
+                    "notes": {"type": "string", "title": "備考"},
+                },
+            },
+        },
+    },
+    "required": ["id", "name"],
+}
+
+
+def row(
+    row_id: str, paths: list[str], schema: dict[str, Any] | None = None, **extra: Any
+) -> dict[str, Any]:
+    """配信元の設定の文書の行の JSON を作る。"""
+    return {"id": row_id, "paths": paths, "schema": schema or SAMPLE_SCHEMA, **extra}
+
+
+def doc(
+    doc_id: str,
+    path: str,
+    *,
+    kind: str = "sample",
+    data: dict[str, Any] | None = None,
+    metadata: dict[str, Any] | None = None,
+    version: str | None = None,
+    record_index: int | None = None,
+    body_path: str | None = None,
+    body: str = "",
+    updated: str = "2026-11-01T10:00:00+09:00",
+) -> dict[str, Any]:
+    """project-index の文書 1 件の JSON を作る（`data` を省くと `id` と `name` だけ）。"""
+    values = data if data is not None else {"id": doc_id, "name": doc_id}
+    return {
+        "id": doc_id,
+        "kind": kind,
+        "path": path,
+        "recordIndex": record_index,
+        "bodyPath": body_path,
+        "data": values,
+        "metadata": metadata if metadata is not None else values,
+        "version": version if version is not None else f"v-{doc_id}",
+        "body": body,
+        "updated": updated,
+    }
+
+
+@dataclass
+class IndexSource:
+    """モックが配信する配信元 1 つ。`docs` はリビジョン（`None` は既定）→ 文書の並び。"""
+
+    documents: list[dict[str, Any]] = field(
+        default_factory=lambda: [row("sample", ["docs/*.yaml"])]
+    )
+    docs: dict[str | None, list[dict[str, Any]]] = field(default_factory=dict)
+    nav: dict[str, Any] | None = None
+    git: bool = True
+    default_ref: str = "develop"
+    decision_folders: list[str] = field(default_factory=list)
+    unreadable: list[dict[str, Any]] = field(default_factory=list)
+    details: dict[str, dict[str, Any]] = field(default_factory=dict)
+    decisions: dict[str, int] = field(default_factory=dict)
+    decision_texts: dict[str, str] = field(default_factory=dict)
+    search: dict[str, Any] = field(default_factory=lambda: {"totalCount": 0, "items": []})
+    refs: dict[str, Any] | None = None
+    errors: list[dict[str, str]] = field(default_factory=list)
+    config_version: dict[str, str] | None = None
+
+    def config(self, source_id: str) -> dict[str, Any]:
+        """`GET /sources/{source}/config` の応答。"""
+        return {
+            "id": source_id,
+            "git": self.git,
+            "defaultRef": self.default_ref if self.git else None,
+            "nav": self.nav,
+            "documents": self.documents,
+            "decisions": {"folders": self.decision_folders},
+            "github": {},
+            "diffIgnoreKeys": ["updated"],
+        }
+
+
+class MockIndex:
+    """project-index の読み取り API と端末の設定の API を、127.0.0.1 の空きポートで待ち受ける偽物。
+
+    端末の設定の行（`rows`）の順に配信元の状態を決め、`sources` の配信元の文書を返す。
+
+    入出力は shuhei1101/project-index#14 の Issue に記載した入出力に沿う（本物との食い違いは
+    `docs/external-api/API-155-1.yaml`、本物への付け替えは #164）。
+    """
+
+    def __init__(self) -> None:
+        self.sources: dict[str, IndexSource] = {}
+        self.rows: list[dict[str, Any]] = []
+        self.pending: set[int] = set()
+        self.queued: dict[tuple[str, str], list[tuple[int, Any]]] = {}
+        self.received: list[tuple[str, str, Any]] = []
+        self.delay_sec = 0.0
+        self.hold = threading.Event()
+        self.hold.set()
+        self.port = 0
+        self._server: ThreadingHTTPServer | None = None
+        self._thread: threading.Thread | None = None
+
+    @property
+    def address(self) -> str:
+        """待ち受けているアドレス。"""
+        return f"http://127.0.0.1:{self.port}"
+
+    def serve(
+        self, source_id: str, source: IndexSource | None = None, **row_values: Any
+    ) -> IndexSource:
+        """配信元を足し、端末の設定の行にも並べる。"""
+        found = source or IndexSource()
+        self.sources[source_id] = found
+        self.rows.append(
+            {"id": source_id, "config": [f"/repo/{source_id}/project-index.yaml"], **row_values}
+        )
+        return found
+
+    def start(self, port: int = 0) -> None:
+        """待ち受けを始める（`port` が 0 なら空きポート）。"""
+        mock = self
+
+        class Handler(BaseHTTPRequestHandler):
+            def _answer(self) -> None:
+                length = int(self.headers.get("Content-Length") or 0)
+                raw = self.rfile.read(length) if length else b""
+                body = json.loads(raw) if raw else None
+                status, value = mock.answer(self.command, self.path, body)
+                payload = json.dumps(value, ensure_ascii=False).encode("utf-8")
+                try:
+                    self.send_response(status)
+                    self.send_header("Content-Type", "application/json")
+                    self.send_header("Content-Length", str(len(payload)))
+                    self.end_headers()
+                    self.wfile.write(payload)
+                except OSError:
+                    return
+
+            do_GET = do_POST = do_PUT = _answer
+
+            def log_message(self, format: str, *args: Any) -> None:
+                return
+
+        self._server = ThreadingHTTPServer(("127.0.0.1", port), Handler)
+        self._server.daemon_threads = True
+        self.port = int(self._server.server_address[1])
+        self._thread = threading.Thread(target=self._server.serve_forever, daemon=True)
+        self._thread.start()
+
+    def stop(self) -> None:
+        """待ち受けを止める（ポートは閉じる）。"""
+        self.hold.set()
+        if self._server is not None:
+            self._server.shutdown()
+            self._server.server_close()
+            self._server = None
+
+    def _state(self, index: int, values: dict[str, Any]) -> dict[str, Any]:
+        """端末の設定の行の配信元の状態。"""
+        source_id = values.get("id")
+        if index in self.pending:
+            return {"id": None, "status": "pending_reload", "errors": []}
+        if values.get("enabled") is False:
+            return {"id": source_id, "status": "disabled", "errors": []}
+        source = self.sources.get(str(source_id))
+        if source is None or source.errors:
+            errors = (
+                source.errors if source is not None else [{"path": "config[0]", "reason": "無い"}]
+            )
+            return {"id": source_id, "status": "not_served", "errors": errors}
+        state: dict[str, Any] = {"id": source_id, "status": "serving", "errors": []}
+        if source.config_version is not None:
+            state["configVersion"] = source.config_version
+        return state
+
+    def _settings(self) -> dict[str, Any]:
+        """`GET /settings/sources` の応答。"""
+        return {
+            "settingsPath": SETTINGS_PATH,
+            "sources": [
+                {"row": values, **self._state(index, values)}
+                for index, values in enumerate(self.rows)
+            ],
+        }
+
+    def _served(self, source_id: str) -> tuple[IndexSource | None, tuple[int, Any] | None]:
+        """配信中の配信元か、配信していない理由の 404 を返す。"""
+        for index, values in enumerate(self.rows):
+            if values.get("id") != source_id:
+                continue
+            state = self._state(index, values)
+            if state["status"] == "serving":
+                return self.sources[source_id], None
+            if state["status"] == "not_served":
+                missing = {"missing": "not_served", "value": source_id, "errors": state["errors"]}
+                return None, (404, missing)
+        return None, (404, {"missing": "source", "value": source_id})
+
+    def answer(self, method: str, raw_path: str, body: Any) -> tuple[int, Any]:
+        """要求 1 つに答える。"""
+        self.received.append((method, raw_path, body))
+        self.hold.wait(HOLD_WAIT_SEC)
+        if self.delay_sec:
+            time.sleep(self.delay_sec)
+        url = urlsplit(raw_path)
+        path = unquote(url.path)
+        query = {key: values[0] for key, values in parse_qs(url.query).items()}
+        queued = self.queued.get((method, path))
+        if queued:
+            return queued.pop(0)
+        parts = path.strip("/").split("/")
+        if parts == ["sources"]:
+            return 200, {
+                "sources": [
+                    self._state(i, r) for i, r in enumerate(self.rows) if i not in self.pending
+                ]
+            }
+        if parts == ["settings", "sources"]:
+            return self._settings_answer(method, body)
+        source, missing = self._served(parts[1])
+        if source is None:
+            return missing or (404, {})
+        return self._source_answer(parts[1], source, parts[2:], query)
+
+    def _settings_answer(self, method: str, body: Any) -> tuple[int, Any]:
+        """端末の設定の API に答える。"""
+        if method == "PUT":
+            self.rows = list(body["sources"])
+            self.pending = set()
+            return 200, self._settings()
+        if method == "POST":
+            same_id = next((r for r in self.rows if r.get("id") == body.get("id")), None)
+            if same_id is not None:
+                return 409, {"same": same_id == body}
+            self.rows.append(body)
+            return 201, {}
+        return 200, self._settings()
+
+    def _source_answer(
+        self, source_id: str, source: IndexSource, rest: list[str], query: dict[str, str]
+    ) -> tuple[int, Any]:
+        """`/sources/{source}/...` に答える。"""
+        ref = query.get("ref")
+        if rest == ["config"]:
+            return 200, source.config(source_id)
+        if rest[0] == "docs":
+            if ref is not None and ref not in source.docs:
+                return 404, {"missing": "ref", "value": ref}
+            listed = source.docs.get(ref, [])
+            if len(rest) == 1:
+                return 200, {
+                    "ref": ref or (source.default_ref if source.git else None),
+                    "documents": listed,
+                    "unreadable": source.unreadable,
+                }
+            file = "/".join(rest[1:])
+            found = next(
+                (
+                    item
+                    for item in listed
+                    if file in (item["path"], item.get("bodyPath"))
+                    and query.get("id") in (None, item["id"])
+                ),
+                None,
+            )
+            extra = source.details.get(file)
+            if found is None and extra is None:
+                return 404, {"missing": "doc", "value": file}
+            return 200, {"document": found, **(extra or {})}
+        if rest == ["decisions"]:
+            return 200, {"counts": source.decisions}
+        if rest[0] == "decisions":
+            text = source.decision_texts.get(rest[1])
+            if text is None:
+                return 404, {"missing": "doc", "value": rest[1]}
+            return 200, {"markdown": text}
+        if rest == ["search"]:
+            if ref is not None and ref not in source.docs:
+                return 404, {"missing": "ref", "value": ref}
+            return 200, source.search
+        refs = source.refs or {
+            "git": source.git,
+            "defaultRef": source.default_ref,
+            "branches": [],
+            "tags": [],
+            "commits": [],
+        }
+        return 200, refs
+
+
+@pytest.fixture
+def mock_index() -> Iterator[MockIndex]:
+    """空きポートで待ち受ける project-index の偽物を返す（終了時に止める）。"""
+    mock = MockIndex()
+    mock.start()
+    yield mock
+    mock.stop()
+
+
+def sample_docs() -> list[dict[str, Any]]:
+    """配信元 sample の文書 1・文書 2 を作る。"""
+    return [
+        doc("doc-1", "docs/doc-1.yaml", data={"id": "doc-1", "name": "文書 1"}),
+        doc("doc-2", "docs/doc-2.yaml", data={"id": "doc-2", "name": "文書 2"}),
+    ]
+
+
+@pytest.fixture
+def sample_index(mock_index: MockIndex) -> MockIndex:
+    """文書 1・文書 2 を持つ配信元 sample を配信している project-index の偽物を返す。"""
+    mock_index.serve("sample", IndexSource(docs={None: sample_docs()}))
+    return mock_index
 
 
 @dataclass(frozen=True)
@@ -100,58 +383,18 @@ class ToolResult:
 
 
 @dataclass
-class SourceSpec:
-    """端末の設定に並べる配信元 1 つ（フォルダと権限）。"""
-
-    id: str
-    folder: Path
-    config: list[Path]
-    scope_read: list[Path]
-    scope_write: list[Path] | None = None
-    enabled: bool = True
-    outside_read: bool | None = None
-
-
-@dataclass
 class ServerEnv:
-    """端末の設定から起動したアプリと、呼び出しの道具。"""
+    """端末の設定から作ったアプリと、呼び出しの道具。"""
 
-    root: Path
     settings_path: Path
     state_dir: Path
     handlers: Handlers
     client: TestClient
-    folders: dict[str, Path] = field(default_factory=dict)
-    settings_extra: str = ""
-
-    def rewrite_settings(self, *specs: SourceSpec) -> None:
-        """起動後に端末の設定の `sources` を手で書き換えたことにする（配信元は読み直さない）。"""
-        self.settings_path.write_text(
-            _settings_text(self.root, self.state_dir, list(specs), self.settings_extra),
-            encoding="utf-8",
-        )
-
-    def call(self, name: str, **arguments: Any) -> ToolResult:
-        """`/mcp` のツールを HTTP で呼ぶ。"""
-        return self._call("/mcp/", name, arguments)
 
     def call_admin(self, name: str, **arguments: Any) -> ToolResult:
         """`/_admin/mcp` のツールを HTTP で呼ぶ。"""
-        return self._call("/_admin/mcp/", name, arguments)
-
-    def tool_names(self) -> list[str]:
-        """`/mcp` のツールの名前を並べる。"""
         response = self.client.post(
-            "/mcp/",
-            headers=MCP_HEADERS,
-            json={"jsonrpc": "2.0", "id": 1, "method": "tools/list"},
-        )
-        return [tool["name"] for tool in response.json()["result"]["tools"]]
-
-    def _call(self, path: str, name: str, arguments: dict[str, Any]) -> ToolResult:
-        """JSON-RPC の `tools/call` を送って結果を読む。"""
-        response = self.client.post(
-            path,
+            "/_admin/mcp/",
             headers=MCP_HEADERS,
             json={
                 "jsonrpc": "2.0",
@@ -168,464 +411,42 @@ class ServerEnv:
         )
 
 
-def sample_config(
-    extra: str = "", *, name: str = "sample", description: str = "", version: str = ""
-) -> str:
-    """文書の種類 `sample` を 1 つ持つ配信元の設定の YAML を作る。"""
-    description_line = f"description: {description}\n" if description else ""
-    version_line = f'version: "{version}"\n' if version else ""
+def settings_text(tmp_path: Path, address: str, extra: str = "") -> str:
+    """dev-docs の端末の設定（version 2）の本文を作る。"""
     return (
-        f"{version_line}"
-        f"name: {name}\n"
-        f"{description_line}"
-        "default_ref: develop\n"
-        "documents:\n"
-        "  - id: sample\n"
-        "    paths: [docs/*.yaml]\n"
-        "    schema: schemas/sample.schema.yaml\n"
-        f"{extra}"
+        f'version: "2"\nclone: {tmp_path / "clone"}\nstate_dir: {tmp_path / "state"}\n'
+        f"project_index: {address}\n{extra}"
     )
-
-
-def sample_doc(doc_id: str, name: str, **fields: Any) -> str:
-    """`sample` の種類の文書の YAML を作る。"""
-    lines = [f"id: {doc_id}", f"name: {name}"]
-    for key, value in fields.items():
-        lines.append(f"{key}: {json.dumps(value, ensure_ascii=False)}")
-    return "\n".join(lines) + "\n"
-
-
-def sample_files(**overrides: str) -> dict[str, str]:
-    """文書 2 件（doc-1・doc-2）と設定・スキーマの、配信元のファイル一式を返す。"""
-    files = {
-        "dev-docs.yaml": sample_config(),
-        "schemas/sample.schema.yaml": SAMPLE_SCHEMA,
-        "docs/doc-1.yaml": sample_doc("doc-1", "文書 1", description="1 件目", tags=["a"]),
-        "docs/doc-2.yaml": sample_doc("doc-2", "文書 2", description="2 件目", tags=["a", "b"]),
-    }
-    files.update(overrides)
-    return files
-
-
-# `/dev-docs:setup` が配信元にコピーする管理用の YAML のスキーマ
-FILES_SCHEMA_TEMPLATE = Path(__file__).parents[3] / "templates" / "files.schema.yaml"
-
-FILES_ROW = (
-    "  - id: src\n"
-    "    paths: [src/files.yaml]\n"
-    "    schema: schemas/files.schema.yaml\n"
-    "    records: files\n"
-    "    body_file: path\n"
-)
-
-
-def sample_sync_files(unindexed: int = 1, *, version: str = "3") -> dict[str, str]:
-    """管理用の YAML に無いファイルを `unindexed` 件持つ、配信元のファイル一式を返す。"""
-    files = sample_files(**{"dev-docs.yaml": sample_config(FILES_ROW, version=version)})
-    files["schemas/files.schema.yaml"] = FILES_SCHEMA_TEMPLATE.read_text(encoding="utf-8")
-    files["src/files.yaml"] = "files:\n  - path: a.py\n"
-    files["src/a.py"] = "a = 1\n"
-    files.update({f"src/extra{index}.py": "x = 1\n" for index in range(unindexed)})
-    return files
-
-
-ALIAS_ROWS = (
-    "  - id: terms\n"
-    "    paths: [terms/*.yaml]\n"
-    "    schema: schemas/term.schema.yaml\n"
-    "    alias_type: term\n"
-    "  - id: refs\n"
-    "    paths: [refs/*.yaml]\n"
-    "    schema: schemas/term.schema.yaml\n"
-    "    alias_type: doc\n"
-)
-TERM_SCHEMA = "title: 用語\ntype: object\n"
-# 数値の `aliases` を持ち、エイリアスのキーに違反する用語
-BROKEN_TERM = "id: broken\nname: 壊れた用語\ndescription: 型の違う別名\naliases: 3\n"
-
-
-def alias_files(extra: str = "", *, broken: bool = False, **overrides: str) -> dict[str, str]:
-    """用語「作業範囲」と文書の別名「設定のリファレンス」を持つ配信元のファイル一式を返す。
-
-    `extra` は設定の YAML の `documents` の後ろに続ける。`broken` は「壊れた用語」を置くか。
-    """
-    files = sample_files(
-        **{
-            "dev-docs.yaml": sample_config(ALIAS_ROWS + extra),
-            "schemas/term.schema.yaml": TERM_SCHEMA,
-            "terms/scope.yaml": (
-                "id: scope\n"
-                "name: 作業範囲\n"
-                "description: 触ってよい範囲\n"
-                "aliases: [scope, 担当範囲]\n"
-                "avoid: [担当領域]\n"
-            ),
-            "refs/settings.yaml": (
-                "id: settings\n"
-                "name: 設定のリファレンス\n"
-                "description: 設定のキーの一覧\n"
-                "aliases: [settings]\n"
-            ),
-        }
-    )
-    if broken:
-        files["terms/broken.yaml"] = BROKEN_TERM
-    files.update(overrides)
-    return files
-
-
-@pytest.fixture
-def alias_file_set() -> Callable[..., dict[str, str]]:
-    """エイリアスの行を持つ配信元のファイル一式を作る関数を返す。"""
-    return alias_files
-
-
-@pytest.fixture
-def sample_sync_file_set() -> Callable[..., dict[str, str]]:
-    """管理用の YAML に無いファイルを持つ配信元のファイル一式を作る関数を返す。"""
-    return sample_sync_files
-
-
-@pytest.fixture
-def sample_config_text() -> Callable[..., str]:
-    """配信元の設定の YAML を作る関数を返す。"""
-    return sample_config
-
-
-@pytest.fixture
-def sample_doc_text() -> Callable[..., str]:
-    """`sample` の種類の文書の YAML を作る関数を返す。"""
-    return sample_doc
-
-
-@pytest.fixture
-def sample_file_set() -> Callable[..., dict[str, str]]:
-    """配信元のファイル一式を作る関数を返す。"""
-    return sample_files
-
-
-@pytest.fixture
-def make_source(
-    tmp_path: Path,
-    git_repo: Callable[..., Path],
-    write_files: Callable[[Path, dict[str, str]], None],
-) -> Callable[..., SourceSpec]:
-    """配信元のフォルダ（git リポジトリか Git 管理外）を作って端末の設定に並べる情報を返す関数を返す。"""
-
-    def _make(
-        source_id: str,
-        files: dict[str, str] | None = None,
-        *,
-        git: bool = True,
-        config_names: tuple[str, ...] = ("dev-docs.yaml",),
-        scope_read: list[Path] | None = None,
-        scope_write: list[Path] | None = None,
-        enabled: bool = True,
-        date: str | None = None,
-        outside_read: bool | None = None,
-    ) -> SourceSpec:
-        content = files if files is not None else sample_files()
-        if git:
-            folder = git_repo(content, name=source_id, date=date)
-        else:
-            folder = tmp_path / source_id
-            write_files(folder, content)
-        return SourceSpec(
-            id=source_id,
-            folder=folder,
-            config=[folder / name for name in config_names],
-            scope_read=scope_read if scope_read is not None else [folder],
-            scope_write=scope_write,
-            enabled=enabled,
-            outside_read=outside_read,
-        )
-
-    return _make
-
-
-def _settings_text(root: Path, state_dir: Path, specs: list[SourceSpec], extra: str) -> str:
-    """端末の設定の YAML を組み立てる。"""
-    lines = [
-        'version: "1"',
-        f"clone: {root / 'clone'}",
-        f"state_dir: {state_dir}",
-        extra.rstrip("\n"),
-        "sources:" if specs else "sources: []",
-    ]
-    for spec in specs:
-        lines.append(f"  - id: {spec.id}")
-        lines.append("    config:")
-        lines.extend(f"      - {path}" for path in spec.config)
-        if not spec.enabled:
-            lines.append("    enabled: false")
-        if spec.outside_read is not None:
-            lines.append(f"    outside_read: {str(spec.outside_read).lower()}")
-        lines.append("    scope:")
-        lines.append("      read:")
-        lines.extend(f"        - {path}" for path in spec.scope_read)
-        if spec.scope_write is not None:
-            lines.append("      write:")
-            lines.extend(f"        - {path}" for path in spec.scope_write)
-    return "\n".join(line for line in lines if line != "") + "\n"
-
-
-# ほかの配信元から参照されるスキーマの配信元（タグ `v1` の後の commit で書き換える）
-NOTE_SCHEMA_V1 = (
-    "title: note\n"
-    "type: object\n"
-    "required: [id]\n"
-    "properties:\n"
-    "  id:\n"
-    "    type: string\n"
-    "  name:\n"
-    "    type: string\n"
-    "  body:\n"
-    "    $ref: common.schema.yaml#/$defs/text\n"
-)
-COMMON_SCHEMA_V1 = "$defs:\n  text:\n    type: string\n"
-SCHEMAS_CONFIG = (
-    "name: schemas\n"
-    "documents:\n"
-    "  - id: note\n"
-    "    paths: [notes/*.yaml]\n"
-    "    schema: schemas/note.schema.yaml\n"
-)
-
-
-@pytest.fixture
-def make_schemas_source(
-    make_source: Callable[..., SourceSpec],
-    commit_all: Callable[..., str],
-    run_git: Callable[..., str],
-) -> Callable[..., SourceSpec]:
-    """タグ `v1` のスキーマを持ち、その後の commit で `after` のファイルに書き換えた配信元 schemas を作る関数を返す。"""
-
-    def _make(after: dict[str, str], *, config: str = SCHEMAS_CONFIG) -> SourceSpec:
-        spec = make_source(
-            "schemas",
-            {
-                "dev-docs.yaml": config,
-                "schemas/note.schema.yaml": NOTE_SCHEMA_V1,
-                "schemas/common.schema.yaml": COMMON_SCHEMA_V1,
-            },
-        )
-        run_git(spec.folder, "tag", "v1")
-        # 書き換えるファイルが無ければ、タグの commit のままにする
-        if after:
-            commit_all(spec.folder, after)
-        return spec
-
-    return _make
-
-
-def ref_config(name: str, rows: list[dict[str, str]]) -> str:
-    """`documents[].schema` でほかの配信元のスキーマを指す行を並べた配信元の設定の YAML を作る。"""
-    lines = [f"name: {name}", "documents:"]
-    for index, row in enumerate(rows):
-        lines.extend(
-            [
-                f"  - id: note{index or ''}",
-                f"    paths: [notes{index or ''}/*.yaml]",
-                "    schema:",
-                f"      source: {row['source']}",
-                f"      path: {row['path']}",
-                f"      ref: {row['ref']}",
-            ]
-        )
-    return "\n".join(lines) + "\n"
-
-
-@pytest.fixture
-def ref_config_text() -> Callable[..., str]:
-    """ほかの配信元のスキーマを指す行を並べた配信元の設定の YAML を作る関数を返す。"""
-    return ref_config
 
 
 @pytest.fixture
 def make_server(tmp_path: Path) -> Iterator[Callable[..., ServerEnv]]:
-    """端末の設定を書いてアプリを起動し、HTTP のテストのクライアントを持つ環境を作る関数を返す。"""
-    stack = ExitStack()
+    """project-index の偽物につなぐ端末の設定でアプリを作り、テストのクライアントを返す関数を返す。"""
+    with ExitStack() as stack:
 
-    def _make(
-        *specs: SourceSpec, settings_extra: str = "", screen_dir: Path | None = None
-    ) -> ServerEnv:
-        state_dir = tmp_path / "state"
-        settings_path = tmp_path / "settings.yaml"
-        settings_path.write_text(
-            _settings_text(tmp_path, state_dir, list(specs), settings_extra), encoding="utf-8"
-        )
-        terminal = load_terminal_config(settings_path)
-        handlers = build_handlers(terminal)
-        handlers.reload_sources(terminal)
-        app = (
-            build_app(handlers)
-            if screen_dir is None
-            else build_app(handlers, screen_dir=screen_dir)
-        )
-        client = stack.enter_context(
-            TestClient(app, base_url=LOCAL_BASE_URL, raise_server_exceptions=False)
-        )
-        return ServerEnv(
-            root=tmp_path,
-            settings_path=settings_path,
-            state_dir=state_dir,
-            handlers=handlers,
-            client=client,
-            folders={spec.id: spec.folder for spec in specs},
-            settings_extra=settings_extra,
-        )
+        def _make(mock: MockIndex, *, screen_dir: Path | None = None, extra: str = "") -> ServerEnv:
+            path = tmp_path / "settings.yaml"
+            path.write_text(settings_text(tmp_path, mock.address, extra), encoding="utf-8")
+            terminal = load_terminal_config(path)
+            handlers = build_handlers(terminal)
+            app = (
+                build_app(handlers)
+                if screen_dir is None
+                else build_app(handlers, screen_dir=screen_dir)
+            )
+            client = stack.enter_context(TestClient(app, base_url=LOCAL_BASE_URL))
+            return ServerEnv(path, terminal.state_dir, handlers, client)
 
-    with stack:
         yield _make
-
-
-@dataclass
-class LoadingServerEnv:
-    """配信元の読み込みを合図まで止めたまま起動したアプリ。"""
-
-    env: ServerEnv
-    release: threading.Event
-    thread: threading.Thread
-    # 読み込みを始めた配信元の ID の順
-    order: list[str] = field(default_factory=list)
-    # 配信元を指す要求の待ちを受け取ったときに立つ
-    waiting: threading.Event = field(default_factory=threading.Event)
-    # 読み込みを終えた配信元の ID の順
-    loaded: list[str] = field(default_factory=list)
-    # `held` の配信元の読み込みの合図
-    hold: threading.Event = field(default_factory=threading.Event)
-
-    def finish(self) -> None:
-        """読み込みの合図を出し、読み込みが終わるまで待つ。"""
-        self.release.set()
-        self.hold.set()
-        self.thread.join(timeout=LOADING_WAIT_SEC)
-
-
-@pytest.fixture
-def make_loading_server(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> Iterator[Callable[..., LoadingServerEnv]]:
-    """配信元の読み込み（`load_source`）を合図まで止めて、裏で読み込みを始めたアプリを作る関数を返す。"""
-    stack = ExitStack()
-    started: list[LoadingServerEnv] = []
-    original = registry_module.load_source
-
-    def _make(
-        *specs: SourceSpec,
-        blocked: tuple[str, ...] | None = None,
-        failing: tuple[str, ...] = (),
-        held: tuple[str, ...] = (),
-    ) -> LoadingServerEnv:
-        """`blocked` は合図まで止める配信元の ID（省くと全て）、`failing` は例外を投げる配信元の ID。
-
-        `held` は `blocked` と別の合図（`hold`）まで止める配信元の ID。
-        """
-        release = threading.Event()
-        hold = threading.Event()
-        order: list[str] = []
-        loaded: list[str] = []
-        waiting = threading.Event()
-
-        def load(entry: Any, *, index: int, lookup: Any = None) -> Any:
-            order.append(entry.id)
-            if blocked is None or entry.id in blocked:
-                release.wait(timeout=LOADING_WAIT_SEC)
-            if entry.id in held:
-                hold.wait(timeout=LOADING_WAIT_SEC)
-            if entry.id in failing:
-                raise RuntimeError(f"{entry.id} を読み込めない")
-            result = original(entry, index=index, lookup=lookup)
-            loaded.append(entry.id)
-            return result
-
-        monkeypatch.setattr(registry_module, "load_source", load)
-        monkeypatch.setattr(
-            main_module,
-            "SourceRegistry",
-            lambda **kwargs: SourceRegistry(**kwargs, on_waiting=waiting.set),
-        )
-        state_dir = tmp_path / "state"
-        settings_path = tmp_path / "settings.yaml"
-        settings_path.write_text(
-            _settings_text(tmp_path, state_dir, list(specs), ""), encoding="utf-8"
-        )
-        handlers = build_handlers(load_terminal_config(settings_path))
-        thread = start_loading(handlers)
-        client = stack.enter_context(
-            TestClient(build_app(handlers), base_url=LOCAL_BASE_URL, raise_server_exceptions=False)
-        )
-        env = ServerEnv(
-            root=tmp_path,
-            settings_path=settings_path,
-            state_dir=state_dir,
-            handlers=handlers,
-            client=client,
-            folders={spec.id: spec.folder for spec in specs},
-        )
-        loading = LoadingServerEnv(
-            env=env,
-            release=release,
-            thread=thread,
-            order=order,
-            waiting=waiting,
-            loaded=loaded,
-            hold=hold,
-        )
-        started.append(loading)
-        return loading
-
-    with stack:
-        yield _make
-        for loading in started:
-            loading.finish()
-
-
-@pytest.fixture
-def serve_in_thread() -> Iterator[Callable[[Any, int], None]]:
-    """アプリを uvicorn で 127.0.0.1 のポートに待ち受けさせる関数を返す（終了時に止める）。"""
-    import uvicorn
-
-    servers: list[tuple[uvicorn.Server, threading.Thread]] = []
-
-    def _serve(app: Any, port: int) -> None:
-        server = uvicorn.Server(uvicorn.Config(app, host="127.0.0.1", port=port, log_config=None))
-        thread = threading.Thread(target=server.run, daemon=True)
-        thread.start()
-        servers.append((server, thread))
-        deadline = time.monotonic() + LOADING_WAIT_SEC
-        while not server.started:
-            assert thread.is_alive(), "uvicorn が待ち受けの前に終わった"
-            assert time.monotonic() < deadline, "uvicorn が待ち受けを始めなかった"
-            time.sleep(0.05)
-
-    yield _serve
-    for server, thread in servers:
-        server.should_exit = True
-        thread.join(timeout=LOADING_WAIT_SEC)
-
-
-@pytest.fixture
-def add_worktree(run_git: Callable[..., str]) -> Callable[..., Path]:
-    """git リポジトリの `.claude/worktrees/{name}` にワークツリーを作り、そのパスを返す関数を返す。"""
-
-    def _add(repo: Path, name: str = "x") -> Path:
-        path = repo / ".claude" / "worktrees" / name
-        run_git(repo, "worktree", "add", "-b", f"feat/{name}", str(path))
-        return path
-
-    return _add
 
 
 @pytest.fixture
 def write_settings(tmp_path: Path) -> Callable[..., Path]:
-    """端末の設定の YAML を書いて、そのパスを返す関数を返す。"""
+    """dev-docs の端末の設定を書いて、そのパスを返す関数を返す。"""
 
-    def _write(*specs: SourceSpec, extra: str = "", name: str = "settings.yaml") -> Path:
+    def _write(address: str, *, extra: str = "", name: str = "settings.yaml") -> Path:
         path = tmp_path / name
-        path.write_text(
-            _settings_text(tmp_path, tmp_path / "state", list(specs), extra), encoding="utf-8"
-        )
+        path.write_text(settings_text(tmp_path, address, extra), encoding="utf-8")
         return path
 
     return _write
@@ -682,7 +503,9 @@ def wait_until_serving() -> Callable[..., None]:
     """子プロセスが画面の API で応答するまで待つ関数を返す。"""
     import httpx
 
-    def _wait(process: subprocess.Popen[str], port: int, timeout_sec: float = 30) -> None:
+    def _wait(
+        process: subprocess.Popen[str], port: int, timeout_sec: float = SERVE_WAIT_SEC
+    ) -> None:
         deadline = time.monotonic() + timeout_sec
         while time.monotonic() < deadline:
             assert process.poll() is None, "dev-docs serve が先に終わった"
@@ -719,21 +542,6 @@ def write_steps(migrations_root: Path) -> Callable[..., None]:
         target.write_text(json.dumps({"steps": steps}, ensure_ascii=False), encoding="utf-8")
 
     return _write
-
-
-@pytest.fixture
-def versions_2(monkeypatch: pytest.MonkeyPatch) -> None:
-    """dev-docs が読める端末の設定と配信元の設定のバージョンを `2` に差し替える。"""
-    for name in ("SETTINGS_VERSION", "SOURCE_CONFIG_VERSION"):
-        for module in (
-            "dev_docs.features.settings.query",
-            "dev_docs.features.sources.types",
-            "dev_docs.features.sources.service",
-            "dev_docs.features.migrate.service",
-            "dev_docs.features.admin.service",
-            "dev_docs.main",
-        ):
-            monkeypatch.setattr(f"{module}.{name}", "2", raising=False)
 
 
 REPO_ROOT = Path(__file__).parents[3]

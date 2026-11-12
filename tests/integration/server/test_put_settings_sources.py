@@ -1,176 +1,194 @@
 from __future__ import annotations
 
 from collections.abc import Callable
+from pathlib import Path
 from typing import Any
 
-from dev_docs.features.settings.query import load_terminal_config
-from dev_docs.shared.yaml_io import load_yaml
+from .conftest import IndexSource, MockIndex, ServerEnv, sample_docs
 
 ORIGIN = {"Origin": "http://127.0.0.1:8781"}
-SETTINGS_EXTRA = "# 取り込みの保持日数（コメントは保つ）\nseen_retention_days: 5\n"
-BROKEN_CONFIG = "name: broken\ndocuments:\n  - id: sample\n    schema: schemas/sample.schema.yaml\n"
+SAMPLE_ROW: dict[str, Any] = {
+    "id": "sample",
+    "config": ["/repo/sample/project-index.yaml"],
+    "scope": {"read": ["/repo/**"]},
+}
+EXTRA_ROW: dict[str, Any] = {"id": "extra", "config": ["/repo/extra/project-index.yaml"]}
 
 
-def _row(source: Any, **overrides: Any) -> dict[str, Any]:
-    """PUT の本文の `sources[]` の 1 行を作る。"""
-    row: dict[str, Any] = {
-        "id": source.id,
-        "config": [str(path) for path in source.config],
-        "scope": {"read": [str(path) for path in source.scope_read]},
-    }
-    row.update(overrides)
-    return row
+def _two_sources(mock: MockIndex) -> None:
+    """sample を端末の設定の行に並べ、extra は配信元の設定だけを用意する。"""
+    mock.serve("sample", IndexSource(docs={None: sample_docs()}), scope={"read": ["/repo/**"]})
+    mock.sources["extra"] = IndexSource(docs={None: sample_docs()})
 
 
-def test_normal(make_source: Callable[..., Any], make_server: Callable[..., Any]) -> None:
+def _saved_rows(mock: MockIndex) -> list[list[dict[str, Any]]]:
+    """モックが受けた保存の行の並び。"""
+    return [body["sources"] for method, _, body in mock.received if method == "PUT"]
+
+
+def test_normal(mock_index: MockIndex, make_server: Callable[..., ServerEnv]) -> None:
     """配信元を追加して保存し、再起動せずに配信する（正常系）。"""
     # 準備
-    sample = make_source("sample")
-    extra = make_source("extra")
-    env = make_server(sample, settings_extra=SETTINGS_EXTRA)
-    sample_before = load_terminal_config(env.settings_path).sources[0]
+    _two_sources(mock_index)
+    env = make_server(mock_index)
     # 実行
     response = env.client.put(
         "/_api/settings/sources",
-        json={"sources": [_row(sample), _row(extra, config=str(extra.config[0]))]},
+        json={"sources": [SAMPLE_ROW, {**EXTRA_ROW, "config": EXTRA_ROW["config"][0]}]},
         headers=ORIGIN,
     )
-    # 検証
-    text = env.settings_path.read_text(encoding="utf-8")
     docs = env.client.get("/_api/sources/extra/docs")
-    described = env.call("describe", cwd=str(extra.folder))
+    # 検証
+    [saved] = _saved_rows(mock_index)
     assert response.status_code == 200
-    assert [(row["id"], row["status"]) for row in response.json()["sources"]] == [
+    assert [(item["id"], item["status"]) for item in response.json()["sources"]] == [
         ("sample", "serving"),
         ("extra", "serving"),
     ]
-    saved = load_terminal_config(env.settings_path)
-    assert [entry.id for entry in saved.sources] == ["sample", "extra"]
-    assert saved.sources[0] == sample_before
-    assert SETTINGS_EXTRA in text
-    assert load_yaml(text)["sources"][1]["config"] == [str(extra.config[0])]
+    assert saved == [SAMPLE_ROW, EXTRA_ROW]
     assert docs.status_code == 200
-    assert "extra" in described.text
 
 
 def test_normal_when_source_disabled(
-    make_source: Callable[..., Any], make_server: Callable[..., Any]
+    mock_index: MockIndex, make_server: Callable[..., ServerEnv]
 ) -> None:
     """enabled: false で保存し、配信を止める（正常系）。"""
     # 準備
-    sample = make_source("sample")
-    extra = make_source("extra")
-    env = make_server(sample, extra)
+    _two_sources(mock_index)
+    mock_index.rows.append(dict(EXTRA_ROW))
+    env = make_server(mock_index)
     # 実行
     response = env.client.put(
         "/_api/settings/sources",
-        json={"sources": [_row(sample), _row(extra, enabled=False)]},
+        json={"sources": [SAMPLE_ROW, {**EXTRA_ROW, "enabled": False}]},
         headers=ORIGIN,
     )
+    extra = env.client.get("/_api/sources/extra/docs")
+    sample = env.client.get("/_api/sources/sample/docs")
     # 検証
-    text = env.settings_path.read_text(encoding="utf-8")
-    assert response.status_code == 200
-    assert {row["id"]: row["status"] for row in response.json()["sources"]} == {
-        "sample": "serving",
-        "extra": "disabled",
-    }
-    assert "enabled: false" in text
-    assert env.client.get("/_api/sources/extra/docs").status_code == 404
-    assert env.client.get("/_api/sources/sample/docs").status_code == 200
+    [saved] = _saved_rows(mock_index)
+    statuses = {item["id"]: item["status"] for item in response.json()["sources"]}
+    assert statuses["extra"] == "disabled"
+    assert saved[1]["enabled"] is False
+    assert extra.status_code == 404
+    assert sample.status_code == 200
 
 
 def test_normal_when_source_deleted(
-    make_source: Callable[..., Any], make_server: Callable[..., Any]
+    mock_index: MockIndex, make_server: Callable[..., ServerEnv], tmp_path: Path
 ) -> None:
     """行を除いて保存し、配信元のフォルダは残す（正常系）。"""
     # 準備
-    sample = make_source("sample")
-    extra = make_source("extra")
-    env = make_server(sample, extra)
-    extra_files = sorted(str(path) for path in extra.folder.rglob("*.yaml"))
+    _two_sources(mock_index)
+    mock_index.rows.append(dict(EXTRA_ROW))
+    folder = tmp_path / "extra"
+    folder.mkdir()
+    (folder / "project-index.yaml").write_text("name: extra\n", encoding="utf-8")
+    env = make_server(mock_index)
     # 実行
     response = env.client.put(
-        "/_api/settings/sources", json={"sources": [_row(sample)]}, headers=ORIGIN
+        "/_api/settings/sources", json={"sources": [SAMPLE_ROW]}, headers=ORIGIN
     )
+    extra = env.client.get("/_api/sources/extra/docs")
     # 検証
-    text = env.settings_path.read_text(encoding="utf-8")
     assert response.status_code == 200
-    assert "id: extra" not in text
-    assert "id: sample" in text
-    assert sorted(str(path) for path in extra.folder.rglob("*.yaml")) == extra_files
-    assert env.client.get("/_api/sources/extra/docs").status_code == 404
+    assert _saved_rows(mock_index) == [[SAMPLE_ROW]]
+    assert (folder / "project-index.yaml").read_text(encoding="utf-8") == "name: extra\n"
+    assert extra.status_code == 404
 
 
 def test_normal_when_added_source_invalid(
-    make_source: Callable[..., Any], make_server: Callable[..., Any]
+    mock_index: MockIndex, make_server: Callable[..., ServerEnv]
 ) -> None:
-    """端末の設定は保存し、読み直しの検証で配信元を外す（正常系）。"""
+    """端末の設定は保存し、読み直しの検証で外した配信元を not_served で返す（正常系）。"""
     # 準備
-    sample = make_source("sample")
-    broken = make_source("broken", {"dev-docs.yaml": BROKEN_CONFIG})
-    env = make_server(sample)
+    _two_sources(mock_index)
+    mock_index.sources["broken"] = IndexSource(
+        errors=[{"path": "documents[0].paths", "reason": "必須のキーが無い"}]
+    )
+    broken_row = {"id": "broken", "config": ["/repo/broken/project-index.yaml"]}
+    env = make_server(mock_index)
     # 実行
     response = env.client.put(
-        "/_api/settings/sources",
-        json={"sources": [_row(sample), _row(broken)]},
-        headers=ORIGIN,
+        "/_api/settings/sources", json={"sources": [SAMPLE_ROW, broken_row]}, headers=ORIGIN
     )
+    broken = env.client.get("/_api/sources/broken/docs")
+    sample = env.client.get("/_api/sources/sample/docs")
     # 検証
-    rows = {row["id"]: row for row in response.json()["sources"]}
+    statuses = {item["id"]: item for item in response.json()["sources"]}
     assert response.status_code == 200
-    assert rows["broken"]["status"] == "not_served"
-    assert any(error["path"] == "documents[0].paths" for error in rows["broken"]["errors"])
-    assert "id: broken" in env.settings_path.read_text(encoding="utf-8")
-    assert env.client.get("/_api/sources/broken/docs").status_code == 404
-    assert env.client.get("/_api/sources/sample/docs").status_code == 200
+    assert statuses["broken"]["status"] == "not_served"
+    assert [error["path"] for error in statuses["broken"]["errors"]] == ["documents[0].paths"]
+    assert broken_row in _saved_rows(mock_index)[0]
+    assert broken.status_code == 404
+    assert sample.status_code == 200
 
 
 def test_error_when_cross_origin(
-    make_source: Callable[..., Any], make_server: Callable[..., Any]
+    mock_index: MockIndex, make_server: Callable[..., ServerEnv]
 ) -> None:
     """画面と別のオリジンからの保存を断る（異常系）。"""
     # 準備
-    sample = make_source("sample")
-    extra = make_source("extra")
-    env = make_server(sample)
-    before = env.settings_path.read_bytes()
-    body = {"sources": [_row(sample), _row(extra)]}
+    _two_sources(mock_index)
+    env = make_server(mock_index)
+    body = {"sources": [SAMPLE_ROW]}
     # 実行
-    cross_origin = env.client.put(
+    other = env.client.put(
         "/_api/settings/sources", json=body, headers={"Origin": "http://127.0.0.1:9999"}
     )
     cross_site = env.client.put(
         "/_api/settings/sources", json=body, headers={"Sec-Fetch-Site": "cross-site"}
     )
+    sample = env.client.get("/_api/sources/sample/docs")
     # 検証
-    assert cross_origin.status_code == 403
+    assert other.status_code == 403
     assert cross_site.status_code == 403
-    assert env.settings_path.read_bytes() == before
-    assert env.client.get("/_api/sources/sample/docs").status_code == 200
+    assert _saved_rows(mock_index) == []
+    assert sample.status_code == 200
 
 
-def test_error_when_schema_invalid(
-    make_source: Callable[..., Any], make_server: Callable[..., Any]
+def test_error_when_body_invalid(
+    mock_index: MockIndex, make_server: Callable[..., ServerEnv]
 ) -> None:
-    """スキーマに通らない保存を断り、違反を全て返す（異常系）。"""
+    """型の合わない本文を project-index へ送らずに断り、違反を全て返す（異常系）。"""
     # 準備
-    sample = make_source("sample")
-    extra = make_source("extra")
-    env = make_server(sample)
-    snapshot = env.settings_path.read_bytes()
-    body = {
-        "sources": [
-            _row(sample),
-            _row(extra, id="Sample Docs", scope={"read": [""]}),
-        ]
-    }
+    _two_sources(mock_index)
+    env = make_server(mock_index)
     # 実行
-    response = env.client.put("/_api/settings/sources", json=body, headers=ORIGIN)
+    response = env.client.put(
+        "/_api/settings/sources",
+        json={"sources": [SAMPLE_ROW, {"id": "extra", "enabled": "maybe"}]},
+        headers=ORIGIN,
+    )
+    sample = env.client.get("/_api/sources/sample/docs")
     # 検証
-    paths = [error["path"] for error in response.json()["errors"]]
-    assert response.status_code == 422
-    assert "sources[1].id" in paths
-    assert any(path.startswith("sources[1].scope.read") for path in paths)
-    assert all(error["reason"] for error in response.json()["errors"])
-    assert env.settings_path.read_bytes() == snapshot
-    assert env.client.get("/_api/sources/sample/docs").status_code == 200
+    assert response.status_code == 400
+    assert {error["path"] for error in response.json()["errors"]} == {
+        "sources[1].config",
+        "sources[1].enabled",
+    }
+    assert _saved_rows(mock_index) == []
+    assert sample.status_code == 200
+
+
+def test_error_when_project_index_rejects(
+    mock_index: MockIndex, make_server: Callable[..., ServerEnv]
+) -> None:
+    """project-index の 422 はそのまま 422 で、それ以外の失敗は 502 で返す（異常系）。"""
+    # 準備
+    _two_sources(mock_index)
+    errors = [{"path": "sources[1].id", "reason": "英小文字・数字・- だけ"}]
+    mock_index.queued[("PUT", "/settings/sources")] = [
+        (422, {"detail": "検証に失敗", "errors": errors}),
+        (500, {"detail": "壊れた"}),
+    ]
+    env = make_server(mock_index)
+    body = {"sources": [SAMPLE_ROW, EXTRA_ROW]}
+    # 実行
+    rejected = env.client.put("/_api/settings/sources", json=body, headers=ORIGIN)
+    failed = env.client.put("/_api/settings/sources", json=body, headers=ORIGIN)
+    # 検証
+    assert rejected.status_code == 422
+    assert rejected.json()["errors"] == errors
+    assert failed.status_code == 502
+    assert "500" in failed.json()["detail"]

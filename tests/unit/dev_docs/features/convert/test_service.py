@@ -1,24 +1,17 @@
 from __future__ import annotations
 
-import sys
 from collections.abc import Callable
-from pathlib import Path
-from types import SimpleNamespace
 from typing import Any
 
-import pytest
-
-from dev_docs.features.access.types import Target
-from dev_docs.features.convert import service as service_module
 from dev_docs.features.convert.service import ConvertService
-from dev_docs.features.documents.store import DocumentStore
-from dev_docs.features.documents.types import Document, LoadResult
-from dev_docs.features.history.snapshot import SnapshotStore
-from dev_docs.features.sources.types import DocumentTable, ScriptEntry, ServedSource, SourceConfig
-from dev_docs.integrations.scripts import ScriptResult
-from dev_docs.shared.yaml_io import load_yaml
-
-FILES_SCHEMA_TEMPLATE = Path(__file__).parents[5] / "templates" / "files.schema.yaml"
+from dev_docs.features.convert.types import ConvertFailure
+from dev_docs.integrations.project_index.types import (
+    DocumentDetail,
+    DocumentRow,
+    IndexedDocument,
+    IndexFailure,
+    SourceView,
+)
 
 ITEMS_SCHEMA = {
     "properties": {
@@ -32,253 +25,106 @@ ITEMS_SCHEMA = {
     }
 }
 
+# 本文の `body` と、`x-heading: 処理の流れ` の `flow` を持つスキーマ
+LINK_SCHEMA = {
+    "properties": {
+        "name": {"type": "string"},
+        "body": {"type": "string", "title": "本文"},
+        "flow": {"type": "string", "x-heading": "処理の流れ"},
+    }
+}
 
-def _service(tmp_path: Path, schema: dict[str, Any], timeout_sec: float = 10) -> ConvertService:
-    """決めたスキーマを返す文書のストアの偽物で、変換を作る。"""
-    store = SimpleNamespace(
-        schema=lambda target, kind: schema,
-        row_schema=lambda target, kind: schema,
-        load=lambda target: LoadResult(),
-    )
-    return ConvertService(tmp_path / "converted", store, timeout_sec)  # type: ignore[arg-type]
-
-
-@pytest.fixture
-def make_converted_target(
-    tmp_path: Path,
-    make_source_config: Callable[..., SourceConfig],
-    make_served_source: Callable[..., ServedSource],
-    make_target: Callable[..., Target],
-) -> Callable[..., Target]:
-    """変換の設定を持つ文書の行の読み書きの場所を作る関数を返す。"""
-
-    def _make(
-        *, body_file: bool = False, converter: str | None = None, converters: list[ScriptEntry]
-    ) -> Target:
-        root = tmp_path / "ws"
-        root.mkdir(exist_ok=True)
-        table = DocumentTable(
-            id="rules",
-            paths=["rules/*.yaml"],
-            schema_path="schemas/rule.schema.yaml",
-            converter=converter,
-            records="files" if body_file else None,
-            body_file="path" if body_file else None,
-        )
-        config = make_source_config(documents=[table], converters=converters)
-        return make_target(make_served_source(root=root, config=config))
-
-    return _make
+# records の行の 1 要素のスキーマ
+RECORD_SCHEMA = {
+    "properties": {
+        "path": {"type": "string", "title": "ファイルのパス"},
+        "summary": {"type": "string"},
+    }
+}
 
 
-def test_convert_service_convert(
-    tmp_path: Path,
-    make_converted_target: Callable[..., Target],
-    make_document: Callable[..., Document],
+def _view(make_view: Callable[..., SourceView], schema: dict[str, Any], **row: Any) -> SourceView:
+    """行 rules を 1 つ持つ配信元の表示の設定を作る。"""
+    values: dict[str, Any] = {"id": "rules", "paths": ["rules/*.yaml"], "schema": schema, **row}
+    return make_view(documents=[DocumentRow(**values)])
+
+
+def test_convert_service_render(
+    make_view: Callable[..., SourceView], make_document: Callable[..., IndexedDocument]
 ) -> None:
     """スキーマ駆動（正常系）。"""
     # 準備
-    target = make_converted_target(converters=[])
     document = make_document(data={"name": "N", "items": [{"id": "a"}]})
+    detail = DocumentDetail(document=document)
     # 実行
-    result = _service(tmp_path, ITEMS_SCHEMA).convert(target, document)
-    # 検証
-    assert result.failure is None
-    assert result.markdown.startswith("# N")
-    assert "dev-docs-table" not in result.markdown
-    assert result.table_keys == ["rules:items"]
-
-
-def test_convert_service_convert_when_converter(
-    tmp_path: Path,
-    make_converted_target: Callable[..., Target],
-    make_document: Callable[..., Document],
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """スクリプトで変換し、2 回目は控えを使う（正常系）。"""
-    # 準備
-    calls: list[list[str]] = []
-
-    def fake_run_script(run: Any, **kwargs: Any) -> ScriptResult:
-        calls.append(list(run))
-        return ScriptResult(stdout="# 変換した\n", stderr="")
-
-    monkeypatch.setattr(service_module, "run_script", fake_run_script)
-    target = make_converted_target(
-        converter="c", converters=[ScriptEntry(id="c", run=["python3", "scripts/c.py"])]
+    result = ConvertService().render(
+        _view(make_view, ITEMS_SCHEMA), detail, [document], linkable=[]
     )
-    service = _service(tmp_path, {})
-    document = make_document()
-    # 実行
-    first = service.convert(target, document)
-    second = service.convert(target, document)
     # 検証
-    assert first.markdown.startswith("# 変換した")
-    assert second.markdown.startswith("# 変換した")
-    assert len(calls) == 1
+    assert isinstance(result, str)
+    assert result.startswith("# N")
 
 
-def test_convert_service_convert_when_cache_disabled(
-    tmp_path: Path,
-    make_converted_target: Callable[..., Target],
-    make_document: Callable[..., Document],
-    monkeypatch: pytest.MonkeyPatch,
+def test_convert_service_render_when_converter(
+    make_view: Callable[..., SourceView], make_document: Callable[..., IndexedDocument]
 ) -> None:
-    """cache: false の変換は毎回スクリプトを動かし、控えを書かない（正常系）。"""
+    """project-index の変換の結果を使う（正常系）。"""
     # 準備
-    calls: list[list[str]] = []
-
-    def fake_run_script(run: Any, **kwargs: Any) -> ScriptResult:
-        calls.append(list(run))
-        return ScriptResult(stdout="# 変換した\n", stderr="")
-
-    monkeypatch.setattr(service_module, "run_script", fake_run_script)
-    target = make_converted_target(
-        converter="c",
-        converters=[ScriptEntry(id="c", run=["python3", "scripts/c.py"], cache=False)],
+    document = make_document(data={"name": "N"})
+    detail = DocumentDetail(document=document, markdown="# 変換した\n")
+    # 実行
+    result = ConvertService().render(
+        _view(make_view, ITEMS_SCHEMA, converter="c"), detail, [document], linkable=[]
     )
-    service = _service(tmp_path, {})
-    document = make_document()
-    # 実行
-    first = service.convert(target, document)
-    second = service.convert(target, document)
     # 検証
-    assert first.markdown.startswith("# 変換した")
-    assert second.markdown.startswith("# 変換した")
-    assert len(calls) == 2
-    assert list((tmp_path / "converted").glob("**/*.*")) == []
+    assert result == "# 変換した\n"
 
 
-def test_convert_service_convert_when_dev_docs_updated(
-    tmp_path: Path,
-    make_converted_target: Callable[..., Target],
-    make_document: Callable[..., Document],
-    monkeypatch: pytest.MonkeyPatch,
+def test_convert_service_render_when_failure(
+    make_view: Callable[..., SourceView], make_document: Callable[..., IndexedDocument]
 ) -> None:
-    """dev-docs のバージョンが変わったら変換し直す（正常系）。"""
+    """project-index の変換の失敗（正常系）。"""
     # 準備
-    calls: list[list[str]] = []
-
-    def fake_run_script(run: Any, **kwargs: Any) -> ScriptResult:
-        calls.append(list(run))
-        return ScriptResult(stdout="# 変換した\n", stderr="")
-
-    monkeypatch.setattr(service_module, "run_script", fake_run_script)
-    target = make_converted_target(
-        converter="c", converters=[ScriptEntry(id="c", run=["python3", "scripts/c.py"])]
-    )
-    service = _service(tmp_path, {})
-    document = make_document()
+    failure = IndexFailure(reason="timeout", kind="rules", detail="45 秒", script="python conv.py")
+    detail = DocumentDetail(document=make_document(), failure=failure)
     # 実行
-    monkeypatch.setattr(service_module, "RUNNING_VERSION", "0.1.0", raising=False)
-    service.convert(target, document)
-    monkeypatch.setattr(service_module, "RUNNING_VERSION", "0.2.0", raising=False)
-    service.convert(target, document)
+    result = ConvertService().render(_view(make_view, {}), detail, [], linkable=[])
     # 検証
-    assert len(calls) == 2
+    assert isinstance(result, ConvertFailure)
+    assert (result.reason, result.script) == ("timeout", "python conv.py")
 
 
-def test_convert_service_convert_when_timeout(
-    tmp_path: Path,
-    make_converted_target: Callable[..., Target],
-    make_document: Callable[..., Document],
-) -> None:
-    """制限時間を超える（異常系）。"""
-    # 準備
-    run = [sys.executable, "-c", "import time; time.sleep(5)"]
-    target = make_converted_target(converter="c", converters=[ScriptEntry(id="c", run=run)])
-    # 実行
-    result = _service(tmp_path, {}, timeout_sec=1).convert(target, make_document())
-    # 検証
-    assert result.failure is not None
-    assert result.failure.reason == "timeout"
-    assert result.failure.script == " ".join(run)
-    assert "1" in result.failure.detail
-
-
-def test_convert_service_convert_when_markdown(
-    tmp_path: Path,
-    make_converted_target: Callable[..., Target],
-    make_document: Callable[..., Document],
+def test_convert_service_render_when_markdown(
+    make_view: Callable[..., SourceView], make_document: Callable[..., IndexedDocument]
 ) -> None:
     """Markdown の本文（正常系）。"""
     # 準備
-    target = make_converted_target(body_file=True, converters=[])
+    view = _view(make_view, ITEMS_SCHEMA, records="files")
     markdown = make_document(body="# 本文\n\n段落\n", body_path="docs/a.md")
     code = make_document(
         data={"name": "部品", "path": "a.py"}, body="a = 1\n", body_path="src/a.py"
     )
-    service = _service(tmp_path, ITEMS_SCHEMA)
+    service = ConvertService()
     # 実行
-    markdown_result = service.convert(target, markdown)
-    code_result = service.convert(target, code)
+    markdown_result = service.render(view, DocumentDetail(document=markdown), [], linkable=[])
+    code_result = service.render(view, DocumentDetail(document=code), [], linkable=[])
     # 検証
-    assert markdown_result.markdown == "# 本文\n\n段落\n"
-    assert code_result.markdown.startswith("# 部品")
+    assert markdown_result == "# 本文\n\n段落\n"
+    assert isinstance(code_result, str)
+    assert code_result.startswith("# 部品")
 
 
-def test_convert_service_convert_when_default_ref(
-    tmp_path: Path,
-    git_repo: Callable[..., Path],
-    run_git: Callable[..., str],
-    commit_all: Callable[..., str],
-    make_source_config: Callable[..., SourceConfig],
-    make_served_source: Callable[..., ServedSource],
-    make_target: Callable[..., Target],
-    make_document: Callable[..., Document],
-) -> None:
-    """`default_ref` のスクリプトで変換する（正常系）。"""
-    # 準備
-    root = git_repo({"scripts/c.py": 'print("# develop")\n'})
-    develop = run_git(root, "rev-parse", "HEAD").strip()
-    run_git(root, "checkout", "-b", "master")
-    commit_all(root, {"scripts/c.py": 'print("# master")\n'})
-    table = DocumentTable(
-        id="rules", paths=["rules/*.yaml"], schema_path="schemas/rule.schema.yaml", converter="c"
-    )
-    config = make_source_config(
-        documents=[table],
-        converters=[ScriptEntry(id="c", run=[sys.executable, "scripts/c.py"])],
-    )
-    source = make_served_source(
-        root=root,
-        config=config,
-        is_git=True,
-        repo_root=root,
-        main_root=root,
-        config_commit=develop,
-    )
-    target = make_target(source, ref=develop, access="read")
-    # 実行
-    result = _service(tmp_path, {}).convert(target, make_document())
-    # 検証
-    assert result.failure is None
-    assert result.markdown.strip() == "# develop"
-
-
-def test_convert_service_convert_when_records(
-    tmp_path: Path,
-    make_source_config: Callable[..., SourceConfig],
-    make_served_source: Callable[..., ServedSource],
-    make_target: Callable[..., Target],
-    make_document: Callable[..., Document],
+def test_convert_service_render_when_records(
+    make_view: Callable[..., SourceView], make_document: Callable[..., IndexedDocument]
 ) -> None:
     """records の行の要素を 1 行のスキーマで変換する（正常系）。"""
     # 準備
-    root = tmp_path / "ws"
-    root.mkdir()
-    table = DocumentTable(
-        id="notes",
-        paths=["notes/files.yaml"],
-        schema_path="schemas/files.schema.yaml",
-        records="files",
-        body_file="path",
-    )
-    files_schema = load_yaml(FILES_SCHEMA_TEMPLATE.read_text(encoding="utf-8"))
-    source = make_served_source(
-        root=root,
-        config=make_source_config(documents=[table]),
-        schemas={"notes": files_schema},
+    view = make_view(
+        documents=[
+            DocumentRow(
+                id="notes", paths=["notes/files.yaml"], schema=RECORD_SCHEMA, records="files"
+            )
+        ]
     )
     document = make_document(
         id="notes/a",
@@ -289,30 +135,16 @@ def test_convert_service_convert_when_records(
         body="",
         metadata={"id": "notes/a", "name": "a"},
     )
-    store = DocumentStore(SnapshotStore(tmp_path / "snapshots"))
-    service = ConvertService(tmp_path / "converted", store, 10)
     # 実行
-    result = service.convert(make_target(source), document)
+    result = ConvertService().render(view, DocumentDetail(document=document), [], linkable=[])
     # 検証
-    assert result.failure is None
-    assert "**ファイルのパス**: a.md" in result.markdown
-    assert "**summary**: 説明" in result.markdown
+    assert isinstance(result, str)
+    assert "a.md" in result
+    assert "説明" in result
 
 
-# 本文の `body` と、`x-heading: 処理の流れ` の `flow` を持つスキーマ
-LINK_SCHEMA = {
-    "properties": {
-        "name": {"type": "string"},
-        "body": {"type": "string", "title": "本文"},
-        "flow": {"type": "string", "x-heading": "処理の流れ"},
-    }
-}
-
-
-def test_convert_service_convert_when_id_link(
-    tmp_path: Path,
-    make_converted_target: Callable[..., Target],
-    make_document: Callable[..., Document],
+def test_convert_service_render_when_id_link(
+    make_view: Callable[..., SourceView], make_document: Callable[..., IndexedDocument]
 ) -> None:
     """本文の id のリンクを他の文書の見出しへ解決する（正常系）。"""
     # 準備
@@ -328,14 +160,40 @@ def test_convert_service_convert_when_id_link(
         data={"name": "B", "flow": "流れ"},
         metadata={"id": "b", "name": "B"},
     )
-    store = SimpleNamespace(
-        schema=lambda target, kind: LINK_SCHEMA,
-        row_schema=lambda target, kind: LINK_SCHEMA,
-        load=lambda target: LoadResult(documents=[document_a, document_b]),
-    )
-    service = ConvertService(tmp_path / "converted", store, 10)  # type: ignore[arg-type]
     # 実行
-    result = service.convert(make_converted_target(converters=[]), document_a)
+    result = ConvertService().render(
+        _view(make_view, LINK_SCHEMA),
+        DocumentDetail(document=document_a),
+        [document_a, document_b],
+        linkable=[],
+    )
     # 検証
-    assert result.failure is None
-    assert "[B](b.yaml#処理の流れ) を読む" in result.markdown
+    assert isinstance(result, str)
+    assert "[B](b.yaml#処理の流れ) を読む" in result
+
+
+def test_convert_service_finish() -> None:
+    """表のキーを取り出す（正常系）。"""
+    # 準備
+    markdown = (
+        "<!-- dev-docs-table: sample:items -->\n| a |\n| --- |\n| 1 |\n\n"
+        "段落\n\n| b |\n| --- |\n| 2 |\n"
+    )
+    # 実行
+    result = ConvertService().finish(markdown, "sample", {})
+    # 検証
+    assert "dev-docs-table" not in result.markdown
+    assert result.table_keys == ["sample:items", "sample:table[1]"]
+
+
+def test_convert_service_finish_when_embed() -> None:
+    """埋め込んだ表のキー（正常系）。"""
+    # 準備
+    markdown = "<!-- embed: data/list.yaml#items -->\n"
+    embedded = {"data/list.yaml": {"items": [{"id": "a"}, {"id": "b"}]}}
+    # 実行
+    result = ConvertService().finish(markdown, "sample", embedded)
+    # 検証
+    assert "| a |" in result.markdown
+    assert "| b |" in result.markdown
+    assert "embed:data/list.yaml#items" in result.table_keys

@@ -1,0 +1,26 @@
+$ uv run pytest tests/unit/
+Using CPython 3.14.3
+Creating virtual environment at: .venv
+   Building dev-docs @ file://<61d1176 の worktree>
+      Built dev-docs @ file://<61d1176 の worktree>
+warning: Failed to hardlink files; falling back to full copy. This may lead to degraded performance.
+         If the cache and target directories are on different filesystems, hardlinking may not be supported.
+         If this is intentional, set `export UV_LINK_MODE=copy` or use `--link-mode=copy` to suppress this warning.
+Installed 49 packages in 1m 55s
+============================= test session starts ==============================
+platform linux -- Python 3.14.3, pytest-9.1.1, pluggy-1.7.0
+rootdir: <61d1176 の worktree>
+configfile: pyproject.toml
+plugins: anyio-4.15.1
+collected 16 items / 1 error
+
+==================================== ERRORS ====================================
+_____________________ ERROR collecting tests/unit/dev_docs _____________________
+tests/unit/dev_docs/conftest.py:14: in <module>
+    from dev_docs.integrations.project_index.client import ProjectIndexClient
+E   ModuleNotFoundError: No module named 'dev_docs.integrations.project_index'
+=========================== short test summary info ============================
+ERROR tests/unit/dev_docs - ModuleNotFoundError: No module named 'dev_docs.in...
+!!!!!!!!!!!!!!!!!!!! Interrupted: 1 error during collection !!!!!!!!!!!!!!!!!!!!
+============================== 1 error in 15.93s ===============================
+exit=2

@@ -1,7 +1,7 @@
 id: MOD-155-80
 title: 管理用プラグイン / セッション開始のフック / session_start.py
 lead: |-
-  SessionStart のフック。ポートにつながらなければ `dev-docs serve` を切り離して起動し、つながれば文脈を入れず、`/clear`・圧縮のときだけ `POST /_admin/session-start` で返し済みの記録の削除を依頼する。
+  SessionStart のフック。ポートにつながらなければ `dev-docs serve` を切り離して起動し、つながれば文脈を入れずに戻る。返し済みの記録の削除の依頼は project-index のフックへ移した。
   Python 3.14 の標準ライブラリだけで書き、どの失敗でも終了コード 0 で戻る。
 test_files:
   - tests/unit/plugins/dev_docs/hooks/test_session_start.py
@@ -9,8 +9,8 @@ directory: |-
   ```text
   plugins/dev-docs/
   ├─ hooks/
-  │  ├─ hooks.json          # SessionStart（timeout 6）・PreToolUse（timeout 5）の登録
-  │  └─ session_start.py    # main / is_listening / read_clone / start_server / request_forget
+  │  ├─ hooks.json          # SessionStart（timeout 2）の登録
+  │  └─ session_start.py    # main / is_listening / config_path / read_clone / start_server
   ```
 constants:
   - name: DEFAULT_PORT
@@ -37,31 +37,19 @@ constants:
     usecase: 起動
     summary: ポートへの TCP 接続を打ち切る秒数
     value: '0.5'
-  - name: FORGET_TIMEOUT_SEC
-    title: 記録の削除の依頼の打ち切り
-    container: hooks/session_start.py
-    usecase: 起動
-    summary: '`POST /_admin/session-start` を打ち切る秒数（実装の後に応答の時間を測って決め直す）'
-    value: '3'
-  - name: FORGET_REASONS
-    title: 記録の削除を依頼する理由
-    container: hooks/session_start.py
-    usecase: 起動
-    summary: '`POST /_admin/session-start` を呼ぶ `source`'
-    value: frozenset({'clear', 'compact'})
   - name: RECONNECT_GUIDE
     title: 再接続の案内
     container: hooks/session_start.py
     usecase: 起動
     summary: 起動したときに文脈に入れる文
-    value: '"dev-docs を起動しました。このセッションで文書の MCP を使用するには /mcp で dev-docs に再接続してください。"'
+    value: '"dev-docs を起動しました。このセッションで dev-docs の管理の MCP を使用するには /mcp で dev-docs に再接続してください。"'
 functions:
   - name: main
     title: フックの入口
     container: hooks/session_start.py
     usecase: 起動
     role: 入口
-    summary: stdin の JSON を読み、サーバーを起動するか記録の削除を依頼して、入れる文があるときだけ `additionalContext` を標準出力に出す
+    summary: stdin の JSON を読み、サーバーが落ちていれば起動して、入れる文があるときだけ `additionalContext` を標準出力に出す
     kind: 関数
     scope: public
     is_async: false
@@ -70,29 +58,26 @@ functions:
       type: int
       description: 常に 0
     process: |-
-      1. stdin を JSON として読み、`session_id`・`cwd`・`source`・`agent_id` を取る。ポートは `DEV_DOCS_PORT`（無ければ `DEFAULT_PORT`）
+      1. stdin を JSON として読む。ポートは `DEV_DOCS_PORT`（無ければ `DEFAULT_PORT`）
          - JSON として読めない場合、何も出さず 0 を返す
-      2. ポートにつながるか確かめる（待ち受けの確かめ）
-      3. つながる場合、`source` が `FORGET_REASONS` で `session_id` があるときだけ記録の削除を依頼する（記録の削除の依頼。`reason` に `source`）。依頼しないときと依頼が成功したときは文を作らない
-         - `TimeoutError`、または `reason` が `TimeoutError` の `urllib.error.URLError` の場合、`dev-docs の返却済みの記録を削除できませんでした（{FORGET_TIMEOUT_SEC} 秒で打ち切りました）。前に返却した文書は repeat_seen: true で再取得できます。` を `additionalContext` にする
-         - そのほかの `OSError`・`ValueError` の場合、`dev-docs の返却済みの記録を削除できませんでした（{理由}）。前に返却した文書は repeat_seen: true で再取得できます。` を `additionalContext` にする
-      4. つながらない場合、端末の設定（端末の設定のパス）からクローンを読み（クローンの読み取り）、サーバーを起動し（サーバーの起動）、`RECONNECT_GUIDE` を `additionalContext` にする
+      2. ポートにつながるか確かめる（待ち受けの確かめ）。つながる場合、`source` によらず文を作らない
+      3. つながらない場合、端末の設定（端末の設定のパス）からクローンを読み（クローンの読み取り）、サーバーを起動し（サーバーの起動）、`RECONNECT_GUIDE` を `additionalContext` にする
          - 端末の設定・`clone`・`{clone}/.venv/bin/python` のどれかが無い場合、`dev-docs を起動できませんでした（{無いもののパス}）。/dev-docs:global-setup で端末の設定を作ってください。` を `additionalContext` にする
          - 起動が `OSError` の場合、理由を添えて同じ文を `additionalContext` にする
-      5. 文を作った場合だけ `{"hookSpecificOutput": {"hookEventName": "SessionStart", "additionalContext": ...}}` を標準出力に出す。予期しない例外も含め 0 を返す
+      4. 文を作った場合だけ `{"hookSpecificOutput": {"hookEventName": "SessionStart", "additionalContext": ...}}` を標準出力に出す。予期しない例外も含め 0 を返す
     unit_tests:
       - name: test_main_when_listening
         case: 正常
         summary: つながれば何も出さない
         condition: 'stdin に `source: startup` の JSON'
-        mock: 待ち受けの確かめ（`True`）・記録の削除の依頼（呼ばれないことを確かめる）
-        expected: 0 を返し、標準出力が空で、記録の削除の依頼を呼ばない
+        mock: 待ち受けの確かめ（`True`）・サーバーの起動（呼ばれないことを確かめる）
+        expected: 0 を返し、標準出力が空で、起動を呼ばない
       - name: test_main_when_cleared
         case: 正常
-        summary: '`/clear` の後は記録の削除を依頼し、何も出さない'
+        summary: '`/clear` の後もつながれば何も出さない'
         condition: 'stdin に `source: clear` と `session_id` の JSON'
-        mock: 待ち受けの確かめ（`True`）・記録の削除の依頼（呼ばれた引数を記録する）
-        expected: '0 を返し、標準出力が空で、記録の削除の依頼に `session_id`・`reason: clear` が渡り `cwd` が渡らない'
+        mock: 待ち受けの確かめ（`True`）
+        expected: '0 を返し、標準出力が空で、HTTP の要求を送らない'
       - name: test_main_when_down
         case: 正常
         summary: つながらなければ起動して案内する
@@ -105,24 +90,12 @@ functions:
         condition: '`DEV_DOCS_CONFIG` が無いファイル'
         mock: 待ち受けの確かめ（`False`）・サーバーの起動（呼ばれないことを確かめる）
         expected: 0 を返し、`additionalContext` にパスと `/dev-docs:global-setup`。起動を呼ばない
-      - name: test_main_when_forget_failed
-        case: 異常
-        summary: 記録の削除を依頼できなければ repeat_seen を案内する
-        condition: 'stdin に `source: compact` と `session_id` の JSON'
-        mock: 待ち受けの確かめ（`True`）・記録の削除の依頼（`TimeoutError` を送出する）
-        expected: '0 を返し、`additionalContext` に `3 秒で打ち切りました` と `repeat_seen: true` の案内'
       - name: test_main_when_input_unparsable
         case: 異常
         summary: 読めない入力では何も出さない
         condition: stdin が `{`
         mock: なし
         expected: 0 を返し、標準出力が空
-      - name: test_main_when_forget_refused
-        case: 異常
-        summary: 打ち切り以外の失敗は秒数を入れない
-        condition: 'stdin に `source: clear` と `session_id` の JSON'
-        mock: 待ち受けの確かめ（`True`）・記録の削除の依頼（`reason` が `ConnectionRefusedError` の `urllib.error.URLError` を送出する）
-        expected: '0 を返し、`additionalContext` に理由と `repeat_seen: true` の案内があり、`秒で打ち切りました` が無い'
   - name: is_listening
     title: 待ち受けの確かめ
     container: hooks/session_start.py
@@ -278,60 +251,5 @@ functions:
         mock: なし
         expected: '`FileNotFoundError`'
         exception: FileNotFoundError
-  - name: request_forget
-    title: 記録の削除の依頼
-    container: hooks/session_start.py
-    usecase: 起動
-    role: 外部との境界
-    summary: '`POST /_admin/session-start` を 1 回呼ぶ'
-    kind: 関数
-    scope: public
-    is_async: false
-    side_effects: サーバーがその会話の返し済みの記録を削除する
-    args:
-      - name: port
-        title: ポート
-        type: int
-        required: true
-        passing: positional
-        description: サーバーのポート
-      - name: payload
-        title: 本文
-        type: dict[str, str]
-        required: true
-        passing: positional
-        description: '`session_id`・`agent_id`（あれば）・`reason`'
-    returns:
-      type: None
-      description: なし
-    process: |-
-      1. `urllib.request.Request` で `http://127.0.0.1:{port}/_admin/session-start` に `Content-Type: application/json` で本文を POST し、`timeout=FORGET_TIMEOUT_SEC` で開く
-      2. 応答を JSON として読む
-         - 200 以外は `urllib.error.HTTPError`、打ち切りは `TimeoutError` のまま伝える
-         - 応答が JSON の辞書でない場合、`ValueError` を送出する
-    exceptions:
-      - name: urllib.error.URLError
-        condition: つながらない・200 以外を返した（`HTTPError`）
-        message: urllib の理由
-      - name: TimeoutError
-        condition: '`FORGET_TIMEOUT_SEC` で返らない'
-        message: urllib の理由
-      - name: ValueError
-        condition: 応答が JSON の辞書でない
-        message: '`応答を読み込めません`'
-    unit_tests:
-      - name: test_request_forget
-        case: 正常
-        summary: 本文を POST する
-        condition: '一時のポートの HTTP サーバーが `{"forgotten": true}` を返す'
-        mock: '`POST /_admin/session-start` を真似る HTTP サーバー'
-        expected: 例外を送出せず、サーバーが受けた本文が渡した `payload`
-      - name: test_request_forget_when_timeout
-        case: 異常
-        summary: '`FORGET_TIMEOUT_SEC` で打ち切る'
-        condition: '`FORGET_TIMEOUT_SEC` を 1 に差し替え、2 秒応答しない HTTP サーバー'
-        mock: 応答しない HTTP サーバー
-        expected: 2 秒以内に `TimeoutError`
-        exception: TimeoutError
 refs:
   - IF-155-1#

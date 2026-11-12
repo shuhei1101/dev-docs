@@ -8,6 +8,10 @@ import { SourceSkeleton } from "@/features/settings/settings/components/source-s
 import { SourceTable } from "@/features/settings/settings/components/source-table";
 import type { SettingsSourceRow } from "@/shared/api/generated/model";
 import { useSettingsGetSettingsSources } from "@/shared/api/generated/settings/settings";
+import {
+  ProjectIndexUnreachableAlert,
+  toProjectIndexUnreachable,
+} from "@/shared/components/project-index-unreachable";
 import { ShortcutDialog } from "@/shared/components/shortcut-dialog/shortcut-dialog";
 import { SkipLink } from "@/shared/components/skip-link";
 import { Topbar } from "@/shared/components/topbar/topbar";
@@ -21,6 +25,7 @@ import { useLastDocStore } from "@/shared/stores/last-doc";
 import { usePreferencesStore } from "@/shared/stores/preferences";
 
 const LOADING_DELAY_MS = 1000;
+const UNREACHABLE_TITLE_ID = "project-index-unreachable-title";
 
 type Dialog =
   | { kind: "edit"; index: number | null }
@@ -37,7 +42,12 @@ type SourceListProps = {
 };
 
 /** 配信元の一覧。取得を待つ間は読み込み中の表示、0 件のときは配信元が無いことの表示を出す */
-const SourceList = ({ sources, loading, onEdit, onRemove }: SourceListProps) => {
+const SourceList = ({
+  sources,
+  loading,
+  onEdit,
+  onRemove,
+}: SourceListProps) => {
   if (sources === undefined) return loading ? <SourceSkeleton /> : null;
   if (sources.length === 0) {
     return (
@@ -51,6 +61,7 @@ const SourceList = ({ sources, loading, onEdit, onRemove }: SourceListProps) => 
 export const SettingsScreen = () => {
   const query = useSettingsGetSettingsSources();
   const sources = query.data?.sources;
+  const unreachable = toProjectIndexUnreachable(query.error);
   const loading = useDelayedFlag(query.isPending, LOADING_DELAY_MS);
   const router = useRouter();
   const lastDoc = useLastDocStore((state) => state.href);
@@ -62,6 +73,8 @@ export const SettingsScreen = () => {
     setSingleKeyShortcuts,
   } = usePreferencesStore();
   const [dialog, setDialog] = useState<Dialog>(null);
+  const handleEdit = (index: number) => setDialog({ kind: "edit", index });
+  const handleRemove = (index: number) => setDialog({ kind: "remove", index });
   const [helpOpen, setHelpOpen] = useState(false);
   const serving = (sources ?? []).some(
     (item) => item.status === "serving" && item.id,
@@ -104,18 +117,28 @@ export const SettingsScreen = () => {
             </h2>
             <Button
               size="sm"
+              disabled={unreachable !== null}
+              aria-describedby={unreachable ? UNREACHABLE_TITLE_ID : undefined}
               onClick={() => setDialog({ kind: "edit", index: null })}
             >
               <Plus />
               配信元を追加
             </Button>
           </div>
-          <SourceList
-            sources={sources}
-            loading={loading}
-            onEdit={(index) => setDialog({ kind: "edit", index })}
-            onRemove={(index) => setDialog({ kind: "remove", index })}
-          />
+          {unreachable ? (
+            <ProjectIndexUnreachableAlert
+              {...unreachable}
+              titleId={UNREACHABLE_TITLE_ID}
+              onReload={() => void query.refetch()}
+            />
+          ) : (
+            <SourceList
+              sources={sources}
+              loading={loading}
+              onEdit={handleEdit}
+              onRemove={handleRemove}
+            />
+          )}
         </section>
         <section aria-labelledby="keyboard-heading" className="space-y-3">
           <h2 id="keyboard-heading" className="text-lg font-semibold">
@@ -123,7 +146,9 @@ export const SettingsScreen = () => {
           </h2>
           <div className="flex items-center justify-between gap-4">
             <div>
-              <Label htmlFor="single-key">1 文字のショートカットを使用する</Label>
+              <Label htmlFor="single-key">
+                1 文字のショートカットを使用する
+              </Label>
               <p className="text-xs text-muted-foreground">
                 / で検索、?
                 でショートカットの一覧を開きます。この端末のブラウザに保存します。

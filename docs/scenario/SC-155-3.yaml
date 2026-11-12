@@ -9,7 +9,7 @@ scenarios:
         description: テスト用の bare リポジトリを上流にしたクローン
         notes: 上流に 1 つ新しいバージョンの commit がある。端末の設定の移し替えの手順は無い
       - name: 端末の設定
-        description: '`sources` に sample と notes の 2 行'
+        description: '`project_index` が sample と notes を配信している project-index のアドレス'
     flow: |-
       ```mermaid
       sequenceDiagram
@@ -23,11 +23,11 @@ scenarios:
         AD-->>U: 新しいバージョン
         AD->>DD: 再起動する
         U->>AD: status
-        AD-->>U: 新しいバージョンと配信中の配信元
+        AD-->>U: 新しいバージョンと、project-index が配信している配信元
       ```
     expected:
       - '`update` が新しいバージョンを返す'
-      - 再起動の後の `status` が新しいバージョンを返し、`sample` と `notes` を配信している
+      - 再起動の後の `status` が新しいバージョンを返し、`sample` と `notes` の文書を画面で読める
       - '`127.0.0.1:8781` を待ち受ける dev-docs のプロセスが 1 つだけある'
     test: test_normal
   - name: 正常シナリオ（端末の設定が古くなる）
@@ -59,8 +59,76 @@ scenarios:
       - '`migrate --plan` は端末の設定を変えず、当てる手順を返す'
       - '`migrate` の後、端末の設定の `version` が新しいバージョンになり、改名したキーが新しい名前で元の値を持つ'
       - 当てる前の端末の設定のバックアップがある
-      - '`restart` の後、`status` が新しいバージョンを返し、`sample` と `notes` を配信している'
+      - '`restart` の後、`status` が新しいバージョンを返し、`sample` と `notes` の文書を画面で読める'
     test: test_normal_when_terminal_config_old
+  - name: 正常シナリオ（端末の設定の sources を project-index へ移す）
+    setup:
+      - name: Mock
+        description: なし（実環境で実行）
+      - name: dev-docs のクローン
+        description: 正常シナリオと同じ
+        notes: 新しいバージョンが、文書の MCP と配信元の読み込みを project-index へ移したバージョン
+      - name: 端末の設定
+        description: '`sources` に sample と notes の 2 行を持ち、`project_index` を持たない前のバージョンの `settings.yaml`'
+      - name: project-index
+        description: テスト用の一時フォルダで、空きポートで起動した project-index。端末の設定の `sources` に extra の 1 行がある
+        notes: '`migrate` の引数 `--project-index` にそのアドレスを渡す'
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        actor U as 利用者
+        participant AD as 管理の MCP
+        participant MG as dev-docs migrate
+        participant CF as 端末の設定
+        participant PI as project-index
+
+        U->>AD: update
+        AD-->>U: 新しいバージョンと、移し替えが要ること（再起動しない）
+        U->>MG: dev-docs migrate --plan
+        MG-->>U: 当てる手順の一覧（sources を project-index へ写して除く・project_index を書き足す）
+        U->>MG: dev-docs migrate --project-index {アドレス}
+        MG->>CF: バックアップを取る
+        MG->>PI: 端末の設定の配信元の行の追加（sample と notes。既にある行は変えない）
+        MG->>CF: sources を除き、project_index と version を書き換える
+        MG-->>U: 当てた手順
+        U->>AD: restart
+      ```
+    expected:
+      - project-index の端末の設定の `sources` に、extra の行が変わらずに残り、sample と notes の行が前の値のまま加わる
+      - dev-docs の端末の設定が `sources` を持たず、`project_index` に `--project-index` で渡したアドレス、`version` に新しいバージョンを持つ
+      - 当てる前の dev-docs の端末の設定のバックアップがある
+      - '`restart` の後、`sample` と `notes` の文書を画面で読める'
+    test: test_normal_when_sources_moved_to_project_index
+    notes:
+      project-index のアドレス: '`--project-index` を省くと、`PROJECT_INDEX_PORT`（無ければ既定の 8786）から `http://127.0.0.1:{ポート}` を組む'
+      既にある行: project-index の端末の設定の行は変えず、行ごとに追加する。同じ id で内容が違う行があれば、その行は移さずに id と、dev-docs の端末の設定に残したことを応答に出す（dev-docs の `sources` からも除かない）。同じ id で内容も同じ行は移した行として扱う
+  - name: 異常シナリオ（sources を移すときに project-index につながらない）
+    setup:
+      - name: Mock
+        description: なし（実環境で実行）
+      - name: 端末の設定
+        description: 正常シナリオ（端末の設定の sources を project-index へ移す）と同じ前のバージョンの `settings.yaml`
+      - name: project-index
+        description: 起動していない
+        notes: '`--project-index` に、何も待ち受けていない空きポートのアドレスを渡す'
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        actor U as 利用者
+        participant MG as dev-docs migrate
+        participant CF as 端末の設定
+        participant PI as project-index
+
+        U->>MG: dev-docs migrate --project-index {アドレス}
+        MG->>CF: バックアップを取る
+        MG->>PI: 端末の設定の配信元の行の追加（つながらない）
+        MG->>CF: バックアップから戻す
+        MG-->>U: project-index につながらないことと、project-index を起動してからやり直す案内
+      ```
+    expected:
+      - dev-docs の端末の設定が `migrate` の前と同じ中身になる
+      - 0 以外の終了コードで終わり、標準エラーにつながらなかった project-index のアドレスと、起動してからやり直す案内が出る
+    test: test_error_when_project_index_unreachable_on_migrate
   - name: 異常シナリオ（移し替えの手順が失敗する）
     setup:
       - name: Mock
@@ -106,77 +174,17 @@ scenarios:
       - '`update` が git のエラーを返す'
       - dev-docs は再起動せず、`status` が前のバージョンを返す
     test: test_error_when_pull_fails
-  - name: 正常シナリオ（配信元の設定が古くなる）
-    setup:
-      - name: Mock
-        description: なし（実環境で実行）
-        notes: '-'
-      - name: dev-docs のクローン
-        description: 正常シナリオと同じ
-        notes: 新しいバージョンが配信元の設定の移し替えの手順を持つ
-      - name: 前の形式の配信元
-        description: '`version: "1"` の `dev-docs.yaml` を持ち、最上位にタグのマスター `tags: tags.yaml`、`documents[0]` が `type: yaml`・`metadata: {name: {type: ref, field: title}}` を持つ配信元'
-        notes: 機械的に移せる設定だけを持つ。`tags.yaml` を置く
-    flow: |-
-      ```mermaid
-      sequenceDiagram
-        actor U as 利用者
-        participant MG as dev-docs migrate
-        participant SC as 配信元の dev-docs.yaml
-
-        U->>MG: dev-docs migrate --source {配信元の dev-docs.yaml} --plan
-        MG-->>U: 当てる手順の一覧（tags の削除は破壊的な手順）
-        U->>MG: dev-docs migrate --source {配信元の dev-docs.yaml}
-        MG-->>U: 破壊的な手順があるので当てずに止まる
-        U->>MG: dev-docs migrate --source {配信元の dev-docs.yaml} --allow-destructive
-        MG->>SC: バックアップを取り、type を消し、ref の metadata を列名の文字列にし、tags を消し、version を書き換える
-        MG-->>U: 当てた手順
-      ```
-    expected:
-      - '`migrate --source --plan` は `dev-docs.yaml` を変えず、当てる手順と、`tags` の削除が破壊的な手順であることを返す'
-      - '`--allow-destructive` を付けない `migrate --source` は `dev-docs.yaml` を変えず、終了コード 5 で終わる'
-      - '`--allow-destructive` を付けた `migrate --source` の後、`tags` が無くなり、`documents[0]` が `type` を持たず、`metadata` が `{name: title}` になる。`tags.yaml` は残る'
-      - '`version` が新しいバージョンになり、当てる前の `dev-docs.yaml` のバックアップがある'
-    test: test_normal_when_source_config_old
-  - name: 異常シナリオ（配信元の設定に移せない設定がある）
-    setup:
-      - name: Mock
-        description: なし（実環境で実行）
-        notes: '-'
-      - name: dev-docs のクローン
-        description: 正常シナリオと同じ
-        notes: 新しいバージョンが配信元の設定の移し替えの手順を持つ
-      - name: 移せない設定を持つ配信元
-        description: '`version: "1"` の `dev-docs.yaml` を持ち、`documents[0]` が `type: yaml`・`metadata: {name: {type: ref, field: title}}`、`documents[1]` が `type: markdown`・`defaults: [{paths: [docs/**], tags: [doc]}]` を持つ配信元'
-        notes: '`documents[1]` は機械的に移せない'
-    flow: |-
-      ```mermaid
-      sequenceDiagram
-        actor U as 利用者
-        participant MG as dev-docs migrate
-
-        U->>MG: dev-docs migrate --source {配信元の dev-docs.yaml} --allow-destructive
-        MG->>MG: 手順を当てた結果を新しいスキーマで検証し、違反が残る
-        MG-->>U: 違反と、/dev-docs:setup で移す案内
-      ```
-    expected:
-      - '`dev-docs.yaml` が `migrate` の前と同じ中身になる'
-      - 0 以外の終了コードで終わる
-      - 標準エラーに `documents[1].type`（Markdown の範囲）と `documents[1].defaults` の違反と、`/dev-docs:setup` で移す案内が出る
-    test: test_error_when_source_config_unmigratable
 lead: 利用者が管理の MCP の `update` で dev-docs のクローンを新しいバージョンにし、端末の設定が古くなったら `dev-docs migrate` で移し替える。
 issue: 4
 primary_actor: 利用者
 stakeholders:
   - name: 利用者
-    interest: 1 つの操作で dev-docs を更新でき、端末の設定の移し替えは中身を確かめてから当てられる。失敗しても元に戻る
-  - name: エージェント（Claude Code）
-    interest: 更新の後も、同じ配信元を `/mcp` で使える
+    interest: 1 つの操作で dev-docs を更新でき、端末の設定の移し替えは中身を確かめてから当てられる。失敗しても元に戻る。更新の後も同じ配信元を画面で読める
 trigger: 利用者が管理の MCP の `update` を呼ぶ
 preconditions:
   - dev-docs が待ち受けている
   - クローンの上流に新しいバージョンの commit がある
-success_guarantee: dev-docs が新しいバージョンで待ち受け、端末の設定の `version` がそのバージョンになり、配信元を配信している。
+success_guarantee: dev-docs が新しいバージョンで待ち受け、端末の設定の `version` がそのバージョンになり、project-index が配信している配信元を画面で読める。
 minimal_guarantee: '`git pull` に失敗したときは、前のバージョンのまま配信を続ける。移し替えの手順が失敗したときは、端末の設定をバックアップから戻す。'
 frequency: dev-docs の新しいバージョンが出るたび
 priority: 中

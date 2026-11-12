@@ -14,6 +14,11 @@ export const ProblemSchema = z
   })
   .passthrough();
 
+/** 画面の API の 503 の problem+json の最上位。project-index に接続できなかったアドレスと理由 */
+export const ProjectIndexUnreachableSchema = z.object({
+  projectIndex: z.object({ address: z.string(), reason: z.string() }),
+});
+
 /** 文書の取得の 404 の problem+json の最上位 */
 export const MissingSchema = z.object({
   missing: z.enum(["source", "not_served", "ref", "doc"]),

@@ -1,6 +1,6 @@
 id: MOD-155-177
 title: 開発ドキュメントサーバー / 起動 / lifespan.py
-lead: MCP のセッションの管理と、記録の削除。
+lead: マウントした管理の MCP のセッションの管理と、project-indexの呼び出しを閉じるアプリの寿命。
 test_files:
   - tests/unit/dev_docs/server/test_lifespan.py
 diagrams:
@@ -23,7 +23,7 @@ functions:
     container: server/lifespan.py
     usecase: 起動
     role: 寿命
-    summary: マウントした MCP のセッションの管理を親のアプリの寿命で動かし、起動時に古い会話の記録を削除する
+    summary: マウントした MCP のセッションの管理を親のアプリの寿命で動かし、止まるときに project-indexの呼び出しを閉じる
     scope: public
     args:
       - name: mcps
@@ -31,25 +31,23 @@ functions:
         type: Sequence[MCPServer]
         required: true
         passing: positional
-        description: 文書の MCP と管理の MCP
-      - name: seen
-        title: 会話の記録
-        type: SeenStore
+        description: 管理の MCP
+      - name: project_index
+        title: project-indexの呼び出し
+        type: ProjectIndexClient
         required: true
         passing: keyword
-        description: 保持日数を過ぎた記録を削除する
+        description: 止まるときに閉じる
     returns:
       type: Callable[[FastAPI], AbstractAsyncContextManager[None]]
       description: FastAPI の `lifespan` に渡す関数
     process: |-
-      1. 返す関数は、`contextlib.AsyncExitStack` に各 MCP の `session_manager.run()` を入れる（マウントした子のアプリの寿命は動かないため）
-      2. 会話の記録の古い記録を `asyncio.to_thread` で削除する（会話の記録.古い記録の削除）
-         - `[info]` 古い会話の記録を削除した（件数）
-      3. `yield` し、止まるときにスタックを閉じる
+      1. 返す関数は、`contextlib.AsyncExitStack` に各 MCP の `session_manager.run()` を入れる（マウントした子のアプリの寿命は動かないため）。`project_index.aclose` をスタックの後始末に入れる
+      2. `yield` し、止まるときにスタックを閉じる
     unit_tests:
       - name: test_build_lifespan
         case: 正常
-        summary: MCP のセッションの管理を動かす
-        condition: 2 つの MCP を渡して寿命に入る
-        mock: MCP（`session_manager.run()` が入った・出たを記録する偽物）・会話の記録（偽物）
-        expected: 入ると 2 つとも run が入り、古い記録の削除が 1 回呼ばれ、出ると 2 つとも出る
+        summary: MCP のセッションの管理を動かし、止まるときに閉じる
+        condition: 管理の MCP を渡して寿命に入り、出る
+        mock: MCP（`session_manager.run()` が入った・出たを記録する偽物）・project-indexの呼び出し（`aclose` を数える偽物）
+        expected: 入ると run が入り、出ると run が出て `aclose` が 1 回呼ばれる

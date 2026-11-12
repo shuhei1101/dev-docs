@@ -3,8 +3,8 @@ from __future__ import annotations
 from collections.abc import Callable
 from typing import Any
 
-from dev_docs.features.documents.types import Document
-from dev_docs.features.sources.types import DocumentTable, ServedSource, SourceConfig
+from dev_docs.integrations.project_index.types import DocumentRow, SourceView
+from dev_docs.integrations.project_index.types import IndexedDocument as Document
 
 
 def _alias_document(
@@ -15,24 +15,22 @@ def _alias_document(
     return make_document(id=doc_id, kind=kind, path=path, data=values, metadata=values)
 
 
-def _alias_tables() -> list[DocumentTable]:
+def _alias_tables() -> list[DocumentRow]:
     """`alias_type: term` の行 terms・`alias_type: doc` の行 refs・`alias_type` の無い行 rules を返す。"""
     return [
-        DocumentTable(
+        DocumentRow(
             id="terms",
             paths=["docs/term/*.yaml"],
-            schema_path="schemas/term.schema.yaml",
+            schema={},
             alias_type="term",
         ),
-        DocumentTable(
+        DocumentRow(
             id="refs",
             paths=["docs/ref/*.yaml"],
-            schema_path="schemas/term.schema.yaml",
+            schema={},
             alias_type="doc",
         ),
-        DocumentTable(
-            id="rules", paths=["docs/rule/*.yaml"], schema_path="schemas/rule.schema.yaml"
-        ),
+        DocumentRow(id="rules", paths=["docs/rule/*.yaml"], schema={}),
     ]
 
 
@@ -46,16 +44,6 @@ def test_alias_schema() -> None:
     keys = result["$defs"]["alias"]["properties"]["metadata"]["properties"]
     assert {"name", "aliases", "description", "avoid", "replacement"} <= set(keys)
     assert len(result["$defs"]["alias"]["properties"]["alias_type"]["enum"]) == 9
-
-
-def test_alias_schema_version() -> None:
-    """取り込み元のタグ（正常系）。"""
-    from dev_docs.features.documents.aliases import alias_schema_version
-
-    # 実行
-    result = alias_schema_version()
-    # 検証
-    assert result == "v0.3.0"
 
 
 def test_check_alias_document(make_document: Callable[..., Document]) -> None:
@@ -152,14 +140,13 @@ def test_check_alias_document_when_aliases_string(make_document: Callable[..., D
 
 def test_collect_aliases(
     make_document: Callable[..., Document],
-    make_served_source: Callable[..., ServedSource],
-    make_source_config: Callable[..., SourceConfig],
+    make_view: Callable[..., SourceView],
 ) -> None:
     """用語と文書の別名と違反（正常系）。"""
     from dev_docs.features.documents.aliases import collect_aliases
 
     # 準備
-    source = make_served_source(config=make_source_config(documents=_alias_tables()))
+    view = make_view(documents=_alias_tables())
     documents = [
         _alias_document(
             make_document,
@@ -195,7 +182,7 @@ def test_collect_aliases(
         _alias_document(make_document, "doc-1", "rules", "docs/rule/doc-1.yaml", name="文書 1"),
     ]
     # 実行
-    result = collect_aliases(source, documents)
+    result = collect_aliases(view, documents)
     # 検証
     assert [(entry.id, entry.aliases, entry.avoid) for entry in result.entries] == [
         ("scope", ["scope", "担当範囲"], ["担当領域"]),
@@ -207,61 +194,19 @@ def test_collect_aliases(
 
 def test_collect_aliases_when_no_alias_rows(
     make_document: Callable[..., Document],
-    make_served_source: Callable[..., ServedSource],
-    make_source_config: Callable[..., SourceConfig],
+    make_view: Callable[..., SourceView],
 ) -> None:
     """エイリアスの行が無い（正常系）。"""
     from dev_docs.features.documents.aliases import collect_aliases
 
     # 準備
-    source = make_served_source(config=make_source_config(documents=_alias_tables()[2:]))
+    view = make_view(documents=_alias_tables()[2:])
     documents = [
         _alias_document(make_document, "doc-1", "rules", "docs/rule/doc-1.yaml", name="文書 1")
     ]
     # 実行
-    result = collect_aliases(source, documents)
+    result = collect_aliases(view, documents)
     # 検証
     assert result.entries == []
     assert result.violations == []
     assert result.has_alias_rows is False
-
-
-def _scope_entry() -> Any:
-    """「作業範囲」（`aliases: [scope, 担当範囲]`）のエイリアスを作る。"""
-    from dev_docs.features.documents.types import AliasEntry
-
-    return AliasEntry(
-        id="scope",
-        name="作業範囲",
-        aliases=["scope", "担当範囲"],
-        description="触ってよい範囲",
-        alias_type="term",
-    )
-
-
-def test_match_words() -> None:
-    """名前と別名（正常系）。"""
-    from dev_docs.features.documents.aliases import match_words
-
-    # 準備
-    entries = [_scope_entry()]
-    # 実行
-    result = match_words(entries)
-    # 検証
-    assert [(word.word, word.kind, word.id) for word in result] == [
-        ("作業範囲", "name", "scope"),
-        ("scope", "alias", "scope"),
-        ("担当範囲", "alias", "scope"),
-    ]
-
-
-def test_term_ids() -> None:
-    """正規化した完全一致（正常系）。"""
-    from dev_docs.features.documents.aliases import term_ids
-
-    # 準備
-    entries = [_scope_entry()]
-    # 実行
-    results = [term_ids(entries, "担当範囲"), term_ids(entries, "SCOPE"), term_ids(entries, "担当")]
-    # 検証
-    assert results == [{"scope"}, {"scope"}, set()]

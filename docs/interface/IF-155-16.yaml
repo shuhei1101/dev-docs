@@ -8,7 +8,7 @@ flows:
     summary: 語を含む文書だけを一致した箇所つきで返す
     setup:
       - name: Mock
-        description: なし（一時フォルダに配信元を作り、dev-docs のアプリを HTTP のテストのクライアントで呼ぶ）
+        description: project-index の読み取り API のモック（shuhei1101/project-index#14 の入出力で、setup の配信元の文書・リビジョンを返す）。dev-docs のアプリを HTTP のテストのクライアントで呼ぶ
       - name: サンプルの配信元
         description: 文書 2 の本文だけが含む語を持つ sample
     flow: |-
@@ -16,10 +16,10 @@ flows:
       sequenceDiagram
         participant C as クライアント
         participant E as GET /_api/sources/{source}/search
-        participant ST as 配信元の文書
+        participant PI as project-index（モック）
 
         C->>E: q: 文書 2 だけが含む語
-        E-->>ST: 文書を読む
+        E->>PI: 語での検索
         E-->>C: 200 文書 2 と一致した箇所
       ```
     expected:
@@ -123,6 +123,9 @@ response_example: |-
   ]}
   ```
 status_codes:
+  - code: '503'
+    condition: project-index につながらない
+    notes: 'つながらなかった project-index のアドレスと理由（`projectIndex.address`・`projectIndex.reason`）。`detail` は `project-index（{address}）に接続できませんでした。{reason}`'
   - code: '200'
     condition: 検索した（一致が 0 件のときも 200）
   - code: '400'
@@ -136,7 +139,8 @@ constraints:
   - item: 認可
     constraint: 制限なし（`127.0.0.1` でだけ待ち受ける）
   - item: タイムアウト
-    constraint: 制限なし
+    constraint: project-index への問い合わせを制限時間で打ち切り、打ち切ったら project-index につながらないときと同じ 503 と理由を返す
+    decided_by: NFR-155-1#requirements[project-index への問い合わせの制限時間]
   - item: JSON のキー
     constraint: レスポンスのキーは camelCase。パス・クエリのパラメータ名は変えない
   - item: operationId

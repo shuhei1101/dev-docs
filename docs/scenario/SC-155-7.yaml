@@ -6,7 +6,7 @@ scenarios:
       - name: Mock
         description: なし（実環境で実行。ブラウザで画面を開く）
       - name: サンプルの配信元
-        description: 文書の種類を 1 つ（スキーマと YAML 2 件）と、`nav` を持つ `dev-docs.yaml` を持つ git リポジトリ
+        description: 文書の種類を 1 つ（スキーマと YAML 2 件）と、`nav` を持つ `project-index.yaml` を持つ git リポジトリ
         notes: id `sample`。`nav.tabs[]` は 2 つ（最初のタブに YAML 2 件を並べる）。文書 1 は画面の高さを超える長さ
       - name: dev-docs
         description: sample を配信している dev-docs
@@ -42,7 +42,7 @@ scenarios:
         description: なし（実環境で実行）
         notes: '-'
       - name: nav の無い配信元
-        description: 文書の種類を 2 つ持ち、`dev-docs.yaml` に `nav` を持たない配信元
+        description: 文書の種類を 2 つ持ち、`project-index.yaml` に `nav` を持たない配信元
         notes: id `plain`
       - name: サブフォルダの文書
         description: 1 つ目の種類の行の `paths` を `docs/**/*.yaml` にし、`docs/` の直下に 1 件、`docs/lang/` に 2 件、`docs/lang/py/` に 1 件の文書を置く。`docs/lang/` の 2 件のうち 1 件は `docs/lang/index.yaml`
@@ -204,12 +204,13 @@ scenarios:
         actor U as 利用者
         participant UI as dev-docs の画面
         participant API as 画面の API
-        participant SC as 配信元のスクリプト
+        participant PI as project-index
 
         U->>UI: converters を指す種類の文書を開く
         UI->>API: 文書の取得
-        API->>SC: 標準入力に YAML を渡す
-        SC-->>API: 標準出力の Markdown
+        API->>PI: 文書の取得
+        PI->>PI: 配信元のスクリプトの標準入力に YAML を渡し、標準出力の Markdown を受け取る
+        PI-->>API: スクリプトの Markdown
         API-->>UI: スクリプトの Markdown
         UI-->>U: mdmark で描いた本文
         U->>UI: 埋め込みのマーカーを持つ Markdown の文書を開く
@@ -235,12 +236,13 @@ scenarios:
         actor U as 利用者
         participant UI as dev-docs の画面
         participant API as 画面の API
-        participant SC as 配信元のスクリプト
+        participant PI as project-index
 
         U->>UI: converters を指す種類の文書を開く
         UI->>API: 文書の取得
-        API->>SC: 標準入力に YAML を渡す
-        API->>SC: 制限時間を超えたので止める
+        API->>PI: 文書の取得
+        PI->>PI: 配信元のスクリプトの標準入力に YAML を渡し、制限時間を超えたので止める
+        PI-->>API: 変換の失敗
         API-->>UI: 変換の失敗
         UI-->>U: 本文の場所に変換の失敗を出す
       ```
@@ -299,10 +301,10 @@ scenarios:
       - name: Mock
         description: なし（実環境で実行）
       - name: 検証に失敗する配信元
-        description: '`dev-docs.yaml` の `documents[0]` に必須のキー `paths` が無い配信元'
-        notes: id `broken`。起動時の検証で配信から外れる
+        description: '`project-index.yaml` の `documents[0]` に必須のキー `paths` が無い配信元'
+        notes: id `broken`。project-index の起動時の検証で配信から外れる
       - name: dev-docs
-        description: sample と broken を端末の設定に並べて起動した dev-docs
+        description: sample と broken を端末の設定に並べた project-index につないで起動した dev-docs
     flow: |-
       ```mermaid
       sequenceDiagram
@@ -316,7 +318,7 @@ scenarios:
         UI-->>U: not-found（無いのは配信元）
       ```
     expected:
-      - 見つからない画面に、`broken` を配信していないことと、起動時の検証で外した理由（`documents[0]` に必須のキー `paths` が無い）が出る
+      - 見つからない画面に、`broken` を配信していないことと、project-index が起動時の検証で外した理由（`documents[0]` に必須のキー `paths` が無い）が出る
       - トップバーの配信元の切り替えに sample が出て、設定画面へのリンクがある
     test: test_error_when_source_not_served
   - name: 正常シナリオ（プロンプトを読む）
@@ -324,7 +326,7 @@ scenarios:
       - name: Mock
         description: なし（実環境で実行）
       - name: プロンプトを配信する配信元
-        description: '配信元を追加するの `正常シナリオ（content/prompts/ を見つける）` を終えた sample。例 2（`kind: llm`、`lang: en`、本文は `en`・`ja`、組 `no-logs`）と例 1（`kind: hook`）を持つ'
+        description: '`project-index.yaml` に `content/prompts/` の `documents` の行を持つ sample。例 2（`kind: llm`、`lang: en`、本文は `en`・`ja`、組 `no-logs`）と例 1（`kind: hook`）を持つ'
         notes: id `sample`
       - name: dev-docs
         description: sample を配信している dev-docs
@@ -402,7 +404,7 @@ scenarios:
       - name: Mock
         description: なし（実環境で実行。ブラウザは Playwright で操作する）
       - name: nav の auto のタグの式
-        description: sample の `dev-docs.yaml` の `nav` に、`auto` の `filter` が `tags が mcp かつ tags が 設計 でない` のタブ `mcp` を置く
+        description: sample の `project-index.yaml` の `nav` に、`auto` の `filter` が `tags が mcp かつ tags が 設計 でない` のタブ `mcp` を置く
         notes: 文書 1 の `tags` は `[mcp]`、文書 2 は `[mcp, 設計]`、文書 3 は `[設計]`
       - name: filter を書かない auto
         description: 同じ `nav` に、`auto` が `document` だけを書き `filter` を書かないタブ `すべて` を置く
@@ -471,7 +473,7 @@ scenarios:
         description: sample の `notes/files.yaml`。`files[]` に `a.md` と `b.md` の 2 行。`notes/a.md` の本文に相対リンク `[B](./b.md)` を置き、`notes/b.md` を置く
         notes: スキーマは `templates/files.schema.yaml`
       - name: 文書の行
-        description: 'sample の `dev-docs.yaml` の行 `notes`（`paths: [notes/files.yaml]`・`records: files`・`body_file: path`）'
+        description: 'sample の `project-index.yaml` の行 `notes`（`paths: [notes/files.yaml]`・`records: files`・`body_file: path`）'
       - name: nav のタブ
         description: 'sample の `nav.tabs[]` に、行 `notes` を並べるタブ（`items: [{auto: {document: notes}}]`）を加える'
         notes: サイドバーに a と b が出る
@@ -498,80 +500,16 @@ scenarios:
       - リンク B を押すと b の本文が出て、「文書が見つかりません」にならない
       - サイドバーで b が選ばれた状態になる
     test: test_normal_when_files_index_relative_link
-  - name: 正常シナリオ（変換の結果をキャッシュしない）
-    setup:
-      - name: Mock
-        description: なし（実環境で実行）
-      - name: 変換を持つ配信元
-        description: '`converters[]` に `cache: false` の行を持ち、文書の種類の 1 つがそれを指す配信元。スクリプトは本文の外の参照先の YAML を読んで Markdown を出す'
-        notes: id `custom`
-      - name: dev-docs
-        description: custom を配信している dev-docs
-    flow: |-
-      ```mermaid
-      sequenceDiagram
-        actor U as 利用者
-        participant UI as dev-docs の画面
-        participant API as 画面の API
-        participant SC as 配信元のスクリプト
-
-        U->>UI: cache: false の変換を指す種類の文書を開く
-        UI->>API: 文書の取得
-        API->>SC: 標準入力に YAML を渡す
-        SC-->>API: 参照先の内容を入れた Markdown
-        API-->>UI: スクリプトの Markdown
-        U->>U: 本文の外の参照先の YAML を書き換える
-        U->>UI: 同じ文書を開き直す
-        UI->>API: 文書の取得
-        API->>SC: 標準入力に YAML を渡す
-        SC-->>API: 書き換えた後の参照先の内容を入れた Markdown
-        API-->>UI: スクリプトの Markdown
-      ```
-    expected:
-      - 開き直した本文に、書き換えた後の参照先の内容が出る
-      - 変換の結果の控えのフォルダに、その変換の控えのファイルができない
-    test: test_normal_when_converter_cache_disabled
-  - name: 正常シナリオ（変換の結果をキャッシュする）
-    setup:
-      - name: Mock
-        description: なし（実環境で実行）
-      - name: 変換を持つ配信元
-        description: '`converters[]` に `cache` を書かない行を持ち、文書の種類の 1 つがそれを指す配信元。スクリプトは本文の外の参照先の YAML を読んで Markdown を出す'
-        notes: id `custom`
-      - name: dev-docs
-        description: custom を配信している dev-docs
-    flow: |-
-      ```mermaid
-      sequenceDiagram
-        actor U as 利用者
-        participant UI as dev-docs の画面
-        participant API as 画面の API
-        participant SC as 配信元のスクリプト
-
-        U->>UI: cache を書かない変換を指す種類の文書を開く
-        UI->>API: 文書の取得
-        API->>SC: 標準入力に YAML を渡す
-        SC-->>API: 参照先の内容を入れた Markdown
-        API-->>UI: スクリプトの Markdown
-        U->>U: 本文の外の参照先の YAML を書き換える
-        U->>UI: 同じ文書を開き直す
-        UI->>API: 文書の取得
-        API-->>UI: 控えの Markdown
-      ```
-    expected:
-      - 開き直した本文が 1 回目と同じで、書き換えた後の参照先の内容は出ない
-      - 変換の結果の控えのフォルダに、その変換の控えのファイルができる
-    test: test_normal_when_converter_cache_enabled
   - name: 正常シナリオ（フォルダで束ねる）
     setup:
       - name: Mock
         description: なし（実環境で実行。ブラウザは Playwright で操作する）
         notes: '-'
       - name: フォルダごとの文書
-        description: 'sample の `dev-docs.yaml` に、`paths: [rules/**/*.yaml]`・`schema: schemas/sample.schema.yaml` の行 `rules` を追加し、`rules/` の直下に `common.yaml`、`rules/lang/` に `index.yaml`・`ts.yaml`、`rules/lang/py/` に `style.yaml` を置く'
+        description: 'sample の `project-index.yaml` に、`paths: [rules/**/*.yaml]`・`schema: schemas/sample.schema.yaml` の行 `rules` を追加し、`rules/` の直下に `common.yaml`、`rules/lang/` に `index.yaml`・`ts.yaml`、`rules/lang/py/` に `style.yaml` を置く'
         notes: '-'
       - name: nav のフォルダの束ね
-        description: 'sample の `dev-docs.yaml` の `nav` にタブ `ルール` を追加し、手で書いた `page`（`rules/common.yaml` の文書）と、`document: rules` の `auto` の `group_by` にフォルダの指定を書いた項目を、この順で置く'
+        description: 'sample の `project-index.yaml` の `nav` にタブ `ルール` を追加し、手で書いた `page`（`rules/common.yaml` の文書）と、`document: rules` の `auto` の `group_by` にフォルダの指定を書いた項目を、この順で置く'
         notes: フォルダの指定の書き方はインターフェース定義『文書の取得』が決める
       - name: dev-docs
         description: sample を配信している dev-docs
@@ -718,8 +656,8 @@ scenarios:
         description: 'sample の `tmp/` の下に、話し合い a（`.mindstella/docs/D-1.md`・`D-2.md`）と話し合い b（`.mindstella/docs/D-2.md`）のフォルダを配置する'
         notes: '`D-2` は 2 つの話し合いにある ID。`D-3` はどちらにも無い ID'
       - name: 検討事項の参照先
-        description: sample の `dev-docs.yaml` の `decisions.folders` に、話し合い a・b のフォルダを記載する
-        notes: plain の `dev-docs.yaml` には記載しない
+        description: sample の `project-index.yaml` の `decisions.folders` に、話し合い a・b のフォルダを記載する
+        notes: plain の `project-index.yaml` には記載しない
       - name: decisions を持つ文書
         description: 'sample の文書 6 の表の行と、「項目 / 値」の表を持つ見出しのセクションに、`decisions: [D-1, D-2, D-3]` を持たせる。plain の文書にも `decisions: [D-1]` を持たせる'
         notes: 文書 6 は正常シナリオ（スキーマ駆動の文書を図と表で読む）の文書
@@ -760,11 +698,13 @@ stakeholders:
     interest: '`nav` と `converters[]` を書けば、画面の構成と本文の変換を配信元の設定だけで決められる'
 trigger: 利用者がブラウザで配信元の文書の画面の URL を開く
 preconditions:
-  - dev-docs が起動し、画面のビルドと配信元を配信している
+  - dev-docs が起動し、画面のビルドを配信している
+  - dev-docs がつながる project-index が、配信元を配信している
 success_guarantee: 開いた配信元・リビジョンの文書が、変換した Markdown を mdmark で描いた本文で出る。
 minimal_guarantee: 無い配信元・文書・リビジョンは見つからない画面で、何が無いかを出す。変換に失敗した文書は、失敗したことと原因を出し、他の文書は読める。
 frequency: 作業のたび
 priority: 高
 refs:
   - SC-155-13#scenarios[正常シナリオ]
+  - SC-155-13#scenarios[異常シナリオ（配信できない配信元がある）]
 test_file: tests/e2e/単一ユースケース/test_利用者が画面で読む.py

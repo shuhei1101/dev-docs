@@ -12,4 +12,5 @@ export const SettingsSourceStatusStatus = {
   serving: 'serving',
   not_served: 'not_served',
   disabled: 'disabled',
+  pending_reload: 'pending_reload',
 } as const;

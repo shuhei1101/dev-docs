@@ -1,21 +1,49 @@
 from __future__ import annotations
 
+import asyncio
 from collections.abc import Callable
 
-from dev_docs.features.documents.types import Document
+import pytest
+
 from dev_docs.features.view.search import screen_search
+from dev_docs.integrations.project_index.client import ProjectIndexClient
+from dev_docs.shared.errors import ProjectIndexUnreachableError
+
+from ...conftest import FakeIndex, config_json
 
 
-def test_screen_search(make_document: Callable[..., Document]) -> None:
-    """全ての語を含む文書だけ（正常系）。"""
+def test_screen_search(
+    fake_index: FakeIndex, make_client: Callable[..., ProjectIndexClient]
+) -> None:
+    """文書のページのパスにする（正常系）。"""
     # 準備
-    both = make_document(
-        id="both", path="docs/both.yaml", body="先頭の行\nfoo の説明\nbar の説明\n"
-    )
-    only_foo = make_document(id="only-foo", path="docs/only-foo.yaml", body="foo だけ\n")
+    fake_index.configs["sample"] = config_json("sample")
+    fake_index.search_results = {
+        "totalCount": 5,
+        "items": [
+            {"id": "a", "path": "docs/a.yaml", "name": "A", "snippets": ["foo"]},
+            {
+                "id": "n-1",
+                "path": "notes/files.yaml",
+                "name": "N",
+                "snippets": [],
+                "recordIndex": 0,
+            },
+        ],
+    }
     # 実行
-    result = screen_search([both, only_foo], "foo bar", 20)
+    result = asyncio.run(screen_search(make_client(), "sample", "foo", ref=None, limit=20))
     # 検証
-    assert result.total_count == 1
-    assert result.items[0].path == "docs/both"
-    assert any("foo" in line or "bar" in line for line in result.items[0].snippets)
+    assert [item.path for item in result.items] == ["docs/a", "notes/files/n-1"]
+    assert result.total_count == 5
+
+
+def test_screen_search_when_unreachable(
+    fake_index: FakeIndex, make_client: Callable[..., ProjectIndexClient]
+) -> None:
+    """project-index につながらない（異常系）。"""
+    # 準備
+    fake_index.refused = True
+    # 実行・検証
+    with pytest.raises(ProjectIndexUnreachableError):
+        asyncio.run(screen_search(make_client(), "sample", "foo", ref=None, limit=20))

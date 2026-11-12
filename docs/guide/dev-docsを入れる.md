@@ -2,9 +2,13 @@
 
 プラグインを入れ、global-setup で端末の設定と起動を用意して、/mcp につなぐ手順
 
+文書の MCP（検索・書き込み）だけを使う端末は dev-docs を入れず、project-index だけを入れます（[project-indexを入れる](https://github.com/shuhei1101/project-index/blob/develop/docs/guide/project-index%E3%82%92%E5%85%A5%E3%82%8C%E3%82%8B.md)）。
+画面で文書を読む端末にだけ、project-index に加えて dev-docs を入れます。
+
 ## 前提
 
 - 端末に uv・git・Claude Code がある
+- project-index を入れ、待ち受けている（既定 `http://127.0.0.1:8786`）
 - dev-docs のリポジトリをクローンしてある（`/dev-docs:global-setup` の引数に渡すパス）
 
 ## 手順
@@ -30,7 +34,7 @@
 5. スキルの最後の応答にある、作った端末の設定のパスと接続の結果を確かめる。
 6. Claude Code で `/mcp` を開き、`dev-docs` につなぎ直す。
 7. 配信元を登録する。
-   手順は [配信元を配信する](./配信元を配信する.md) の「スキルで登録する」にある。
+   手順は [配信元を配信する](./配信元を配信する.md) にある。
 
 <!-- /steps -->
 
@@ -39,11 +43,10 @@
 | 対象 | 内容 |
 | --- | --- |
 | 依存 | クローンで `uv sync` を実行する |
-| 端末の設定 | 雛形から作る。`version` に dev-docs のバージョン、`clone` に引数のパス、`sources: []` を持つ |
+| 端末の設定 | 雛形から作る。`version` に dev-docs のバージョン、`clone` に引数のパス、`project_index` に project-index のアドレスを持つ |
 | Claude Code の env | 端末の設定が既定の場所と違うときだけ、`settings.json` の env に `DEV_DOCS_CONFIG` を記載する。env のほかのキーは変えない |
-| mdmark の CLI | `PATH` にあるかを確かめる。無いときは、入れると `write_docs` が Markdown の値を点検することと入れ方（`npm install -g github:shuhei1101/mdmark`。Node 24 以降）を案内する。無くても `write_docs` は点検せずに書き込む |
 | 起動 | `dev-docs serve` を切り離して起動する |
-| 接続の確認 | `/mcp` につながり、文書の MCP のツールが 7 つ返ることを確かめる |
+| 接続の確認 | `/mcp` につながり、管理の MCP の `status` で project-index につながっていることを確かめる |
 
 ## つなぎ直す理由
 
@@ -56,7 +59,7 @@
 
 入れ直し・端末の移行・dev-docs の更新のあとも、同じ `/dev-docs:global-setup` を実行します。
 端末の設定がある場合は、`version` を dev-docs のバージョンと比べて進め方を決めます。
-既にある `sources[]` の行は消えません。
+前のバージョンの `sources[]` の行は、移し替えで project-index へ移します。
 
 | 比べた結果 | 動き |
 | --- | --- |

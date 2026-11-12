@@ -13,25 +13,9 @@ from mcp.server.mcpserver import MCPServer
 from mcp.types import CallToolResult
 from pydantic import BaseModel, ConfigDict, ValidationError
 
-from dev_docs.features.admin.render import (
-    render_check,
-    render_reload,
-    render_status,
-    render_write_nav,
-)
-from dev_docs.features.admin.service import (
-    check_project,
-    get_status,
-    reload_config,
-    try_convert,
-    write_nav,
-)
-from dev_docs.features.admin.types import (
-    CheckProjectRequest,
-    FormatRequest,
-    TryConvertRequest,
-    WriteNavRequest,
-)
+from dev_docs.features.admin.render import render_status
+from dev_docs.features.admin.service import get_status
+from dev_docs.features.admin.types import FormatRequest
 from dev_docs.features.lifecycle.update import update_clone
 from dev_docs.server.mcp.result import (
     TOOL_ANNOTATIONS,
@@ -48,16 +32,7 @@ logger = logging.getLogger(__name__)
 
 ADMIN_MCP_NAME = "dev-docs-admin"
 
-__all__ = [
-    "ADMIN_MCP_NAME",
-    "build_admin_mcp",
-    "check_project",
-    "get_status",
-    "reload_config",
-    "try_convert",
-    "update_clone",
-    "write_nav",
-]
+__all__ = ["ADMIN_MCP_NAME", "build_admin_mcp", "get_status", "update_clone"]
 
 
 class NoArguments(BaseModel):
@@ -90,16 +65,17 @@ def _register(
     call: Callable[[Any], Any],
     render: Callable[[Any], str] | None = None,
     *,
-    wait_loaded: Callable[[], Awaitable[None]] | None = None,
+    awaited: Callable[[Any], Awaitable[Any]] | None = None,
 ) -> None:
-    """要求のモデルを引数に持つツールを 1 つ登録する（`wait_loaded` があれば呼ぶ前に待つ）。"""
+    """要求のモデルを引数に持つツールを 1 つ登録する（`awaited` は await で、`call` はスレッドで呼ぶ）。"""
 
     async def tool(**arguments: Any) -> CallToolResult:
         try:
             request = model(**arguments)
-            if wait_loaded is not None:
-                await wait_loaded()
-            result = await asyncio.to_thread(call, request)
+            if awaited is not None:
+                result = await awaited(request)
+            else:
+                result = await asyncio.to_thread(call, request)
             fmt: Literal["markdown", "json"] = getattr(request, "format", "json")
             return to_tool_result(result, fmt, render)
         except (DevDocsError, ValidationError) as error:
@@ -114,24 +90,16 @@ def _register(
 
 
 def build_admin_mcp(handlers: Handlers) -> MCPServer:
-    """6 つのツールを持つ管理の MCP を作る。"""
+    """3 つのツールを持つ管理の MCP を作る。"""
     mcp = MCPServer(ADMIN_MCP_NAME)
     _register(
         mcp,
         "status",
         handlers.prompts.render(tool_prompt_id("admin", "status")),
         FormatRequest,
-        lambda request: get_status(handlers, env=os.environ),
+        lambda request: None,
         render_status,
-    )
-    _register(
-        mcp,
-        "reload",
-        handlers.prompts.render(tool_prompt_id("admin", "reload")),
-        FormatRequest,
-        lambda request: reload_config(handlers),
-        render_reload,
-        wait_loaded=lambda: handlers.registry.wait_loaded(),
+        awaited=lambda request: get_status(handlers, env=os.environ),
     )
     _register(
         mcp,
@@ -146,32 +114,5 @@ def build_admin_mcp(handlers: Handlers) -> MCPServer:
         handlers.prompts.render(tool_prompt_id("admin", "update")),
         NoArguments,
         lambda request: update_clone(handlers.terminal.clone, control=handlers.restart),
-        wait_loaded=lambda: handlers.registry.wait_loaded(),
-    )
-    _register(
-        mcp,
-        "check_project",
-        handlers.prompts.render(tool_prompt_id("admin", "check_project")),
-        CheckProjectRequest,
-        lambda request: check_project(request, handlers=handlers),
-        render_check,
-        wait_loaded=lambda: handlers.registry.wait_loaded(),
-    )
-    _register(
-        mcp,
-        "try_convert",
-        handlers.prompts.render(tool_prompt_id("admin", "try_convert")),
-        TryConvertRequest,
-        lambda request: try_convert(request, handlers=handlers),
-        wait_loaded=lambda: handlers.registry.wait_loaded(),
-    )
-    _register(
-        mcp,
-        "write_nav",
-        handlers.prompts.render(tool_prompt_id("admin", "write_nav")),
-        WriteNavRequest,
-        lambda request: write_nav(request, handlers=handlers),
-        render_write_nav,
-        wait_loaded=lambda: handlers.registry.wait_loaded(),
     )
     return mcp

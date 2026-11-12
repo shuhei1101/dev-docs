@@ -1,0 +1,81 @@
+tasks:
+  - process: 初期構築
+    status: skipped
+    reason: 既存のリポジトリのため対象外
+    updated_by: planner
+    updated_at: '2026-11-12T00:27:06.412698+00:00'
+  - process: リバースエンジニアリング
+    status: skipped
+    reason: 設計書が揃っているため対象外
+    updated_by: planner
+    updated_at: '2026-11-12T00:27:06.412698+00:00'
+  - process: 方針決め
+    status: skipped
+    reason: 方針決めを依頼する Issue ではない（D-150・D-154 で方針は決まっている）
+    updated_by: planner
+    updated_at: '2026-11-12T00:27:06.412698+00:00'
+  - process: PoC 検証
+    status: skipped
+    reason: 今の dev-docs で動いている処理を移すだけで、未検証の技術機構に依存しない
+    updated_by: planner
+    updated_at: '2026-11-12T00:27:06.412698+00:00'
+  - process: 複合ユースケース設計
+    status: done
+    updated_by: planner
+    updated_at: '2026-11-12T00:40:22.358639+00:00'
+  - process: デザインスタイル選定
+    status: skipped
+    reason: 見た目の変化は設定画面の入力例の文言だけで、docs/design-policy.md があり見た目の方向を変えない
+    updated_by: planner
+    updated_at: '2026-11-12T00:27:06.412698+00:00'
+  - process: 画面一覧・画面遷移
+    status: skipped
+    reason: 画面の追加・削除・遷移の変更が無い
+    updated_by: planner
+    updated_at: '2026-11-12T00:27:06.412698+00:00'
+  - process: 単一ユースケース設計
+    status: done
+    note: removed の SC-155-1・4・5・8・9 のファイルは、参照しているインターフェース定義と一緒にインターフェース定義設計で削除する
+    updated_by: planner
+    updated_at: '2026-11-12T01:02:33.497854+00:00'
+  - process: モック作成
+    status: done
+    updated_by: planner
+    updated_at: '2026-11-12T04:52:59.703931+00:00'
+    note: 単一ユースケース設計で、project-index につながらないときに画面へ理由を出す状態が加わった。どの画面にどの文言で出すかは作り手が決める余地があるため、変わる画面だけモックを作る（判定フローチャート『モック要否』の A2）
+  - process: インターフェース定義設計
+    status: done
+    note: 移したインターフェース定義を指すモジュール構成（26 件の参照）はモジュール構成設計で削除・修正する
+    updated_by: planner
+    updated_at: '2026-11-12T01:30:04.507138+00:00'
+  - process: 部品設計
+    status: skipped
+    reason: 部品の引数・スロット・イベント・状態は変わらない
+    updated_by: planner
+    updated_at: '2026-11-12T00:27:06.412698+00:00'
+  - process: 画面設計
+    status: done
+    updated_by: planner
+    updated_at: '2026-11-12T04:55:45.362904+00:00'
+  - process: モジュール構成設計
+    status: done
+    updated_by: planner
+    updated_at: '2026-11-12T08:49:41.686679+00:00'
+  - process: ドキュメント修正
+    status: done
+    updated_by: planner
+    updated_at: '2026-11-12T09:20:50.197588+00:00'
+  - process: 単体テスト作成
+    status: done
+    agent: planner
+    updated_by: planner
+    updated_at: '2026-11-12T10:31:11.989548+00:00'
+  - process: 実装
+    status: done
+    agent: planner
+    updated_by: planner
+    updated_at: '2026-11-12T11:13:42.401928+00:00'
+  - process: 結合テスト作成
+    status: done
+    updated_by: planner
+    updated_at: '2026-11-12T16:27:10.266166+00:00'

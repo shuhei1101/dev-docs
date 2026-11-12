@@ -1,17 +1,11 @@
-"""内容の比較。"""
+"""変わったキーの比べ方。"""
 
 from __future__ import annotations
 
-import difflib
-import unicodedata
 from collections.abc import Collection, Mapping
 from typing import Any
 
-from dev_docs.features.changes.types import ContainsQuery
-from dev_docs.features.search.filters import compile_regex, normalize
-
 MATCH_KEYS = ("id", "name")
-GAP_LINE = "…"
 
 
 def _match_key(items: list[Any]) -> str | None:
@@ -57,31 +51,3 @@ def changed_keys(
             continue
         _walk(before.get(key), after.get(key), str(key), found)
     return found
-
-
-def diff_lines(before: str, after: str) -> str:
-    """2 つの文字列の違う行を、git と同じ `-`・`+` の行にする。"""
-    lines: list[str] = []
-    hunks = 0
-    for line in difflib.unified_diff(before.splitlines(), after.splitlines(), lineterm="", n=0):
-        if line.startswith(("---", "+++")):
-            continue
-        if line.startswith("@@"):
-            hunks += 1
-            if hunks > 1:
-                lines.append(GAP_LINE)
-            continue
-        lines.append(f"{line[0]} {line[1:]}")
-    return "\n".join(lines)
-
-
-def count_occurrences(text: str, query: ContainsQuery) -> int:
-    """文字列の中の語の出現数（正規表現なら当たった数）を返す。"""
-    if query.regex:
-        pattern = compile_regex(query.value, case_sensitive=query.case_sensitive)
-        # 区別しないときは文書の値だけを NFKC にする（パターンには正規化をかけない）
-        target = text if query.case_sensitive else unicodedata.normalize("NFKC", text)
-        return len(list(pattern.finditer(target)))
-    if query.case_sensitive:
-        return text.count(query.value)
-    return normalize(text).count(normalize(query.value))

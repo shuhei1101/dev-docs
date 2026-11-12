@@ -54,7 +54,19 @@ elements:
     description: 追加のダイアログを開く
     label: プラスのアイコンと `配信元を追加`
     visible_when: 常時
+    enabled_when: project-index に接続できているとき（接続できない間は押せず、`aria-describedby` で project-index に接続できないときの表示の見出しを指す）
     action: クリックで配信元のダイアログを追加で開く
+  - name: project-index に接続できないときの表示
+    kind: alert
+    position: 本文 > 配信元のセクション（配信元の一覧の代わり）
+    description: 端末の設定の取得が project-index に接続できず 503 を返したとき、接続先と理由を出す
+    label: 見出し `project-index に接続できませんでした`、説明 `project-index を起動してから、再読み込みしてください。`、`接続先`・`理由` の一覧（理由は接続を断られたとき `接続を拒否されました（Connection refused）`、制限時間で打ち切ったとき `45 秒以内に応答がありませんでした`）、ボタン `再読み込み`
+    visible_when: 端末の設定の取得が 503 を返したとき
+    source: 端末の設定の取得（503 の `projectIndex.address`・`projectIndex.reason`）
+    action: '`再読み込み` のクリックで端末の設定の取得を呼び直す'
+    action_ref: IF-155-20#
+    notes:
+      読み上げ: '`role="alert"` で、出たときに読み上げる'
   - name: 配信元の読み込み中の表示
     kind: skeleton
     position: 本文 > 配信元のセクション
@@ -113,7 +125,7 @@ elements:
     kind: label
     position: 配信元の一覧 > 状態 > バッジの下
     description: 状態の理由と注意
-    label: 配信停止のときは `起動時の検証で除外しました。` と `errors[]` ごとの `{path} {reason}`。設定のバージョンが古いときは `設定のバージョン {config}（サーバーが読み込めるのは {server}）`。無効のときは `enabled が false です`。再読み込み待ちのときは `ファイルにありますが、まだ再読み込みしていません。`
+    label: 配信停止のときは `project-index が起動時の検証で除外しました。` と `errors[]` ごとの `{path} {reason}`。設定のバージョンが古いときは `設定のバージョン {config}（project-index が読み込めるのは {server}）`。無効のときは `enabled が false です`。再読み込み待ちのときは `ファイルにありますが、まだ再読み込みしていません。`
     visible_when: 配信停止・設定のバージョンが古い・無効・再読み込み待ちのいずれかのとき
     source: 端末の設定の取得.sources[].errors・端末の設定の取得.sources[].configVersion
   - name: 編集ボタン
@@ -203,7 +215,7 @@ elements:
     required: true
     required_label: '`必須`'
     hint: '`1 行に 1 つ。後のファイルが前のファイルの同じキーを上書きします。`'
-    placeholder: '`~/repo/sample-docs/dev-docs.yaml`'
+    placeholder: '`~/repo/sample-docs/project-index.yaml`'
     initial_value: 追加は空、編集はその行の `config` を 1 行に 1 つ
     target: 端末の設定の保存.sources[].config（1 行のときは文字列、2 行以上は配列）
     notes:
@@ -292,6 +304,15 @@ elements:
     enabled_when: 保存の応答を待っていないとき
     action: クリックでその行を除いた `sources[]` を丸ごと送信し、200 ならダイアログを閉じて一覧を取り直し、通知を出す。失敗したらダイアログに Problem Details の `detail` を出す
     action_ref: IF-155-19#
+  - name: 保存の失敗の通知
+    kind: toast
+    position: 画面の右下
+    description: 保存が 422 以外で失敗した結果
+    label: '`端末の設定を保存できませんでした。`。502・503 のときは続けて応答の `detail`（503 は `project-index（{接続先}）に接続できませんでした。{理由}`）'
+    visible_when: 追加・保存が 422 以外で失敗したとき
+    source: 端末の設定の保存（502・503 の `detail`）
+    notes:
+      読み上げ: '`role="alert"` で読み上げる'
   - name: 保存の通知
     kind: toast
     position: 画面の右下

@@ -1,6 +1,6 @@
 id: MOD-155-106
-title: 開発ドキュメントサーバー / 文書のストア / aliases.py
-lead: エイリアスのキーの検証と、用語の収集・照合。
+title: 開発ドキュメントサーバー / 文書 / aliases.py
+lead: エイリアスのキーの検証と、エイリアスの集め。
 test_files:
   - tests/unit/dev_docs/features/documents/test_aliases.py
 constants:
@@ -10,12 +10,6 @@ constants:
     usecase: 共通
     summary: 配布に同梱する alias-inject の「エイリアスの元の行」のスキーマのパス（`importlib.resources` で引く）。alias-inject の `schemas/aliases.schema.yaml` を書き換えずに置く
     value: '"schemas/aliases.schema.yaml"'
-  - name: ALIAS_SOURCE_PATH
-    title: エイリアスのスキーマの取り込み元
-    container: features/documents/aliases.py
-    usecase: 共通
-    summary: 取り込み元を記録したファイルのパス。`repository`（`shuhei1101/alias-inject`）・`tag`（`v0.3.0`）・`path`（`schemas/aliases.schema.yaml`）を持つ。スキーマを取り込み直すときに一緒に書き換える
-    value: '"schemas/aliases.source.yaml"'
   - name: ALIAS_REQUIRED_KEYS
     title: 引用の種類ごとの必須のキー
     container: features/documents/aliases.py
@@ -51,26 +45,6 @@ functions:
         condition: 引数なし
         mock: なし
         expected: '`$defs.alias.properties.metadata.properties` に `name`・`aliases`・`description`・`avoid`・`replacement` があり、`$defs.alias.properties.alias_type` の `enum` が 9 個'
-  - name: alias_schema_version
-    title: エイリアスのスキーマの取り込み元のタグ
-    kind: 関数
-    container: features/documents/aliases.py
-    usecase: 配信元の検査
-    role: 読み込み
-    summary: '`ALIAS_SOURCE_PATH` の `tag` を返す'
-    scope: public
-    thread_safe: true
-    returns:
-      type: str
-      description: 取り込み元のタグ（`v0.3.0`）
-    process: 1. `importlib.resources.files("dev_docs") / ALIAS_SOURCE_PATH` を YAML として読み、`tag` を返す
-    unit_tests:
-      - name: test_alias_schema_version
-        case: 正常
-        summary: 取り込み元のタグ
-        condition: 引数なし
-        mock: なし
-        expected: '`v0.3.0`'
   - name: check_alias_document
     title: エイリアスのキーの検証
     kind: 関数
@@ -83,7 +57,7 @@ functions:
     args:
       - name: document
         title: 文書
-        type: Document
+        type: IndexedDocument
         required: true
         passing: positional
         description: '`metadata` に `alias_type` を持つ文書'
@@ -128,29 +102,29 @@ functions:
     title: エイリアスの集め
     kind: 関数
     container: features/documents/aliases.py
-    usecase: 共通
+    usecase: 文書の取得
     role: 変換
     summary: 文書のうち `alias_type` を持つ行の文書を検証し、通った文書のエイリアスと違反を返す
     scope: public
     thread_safe: true
     args:
-      - name: source
-        title: 配信中の配信元
-        type: ServedSource
+      - name: view
+        title: 配信元の表示の設定
+        type: SourceView
         required: true
         passing: positional
         description: documents の行の `alias_type` を読む
       - name: documents
         title: 文書
-        type: Sequence[Document]
+        type: Sequence[IndexedDocument]
         required: true
         passing: positional
-        description: 集めた文書
+        description: project-index が返した文書
     returns:
       type: AliasCollection
       description: エイリアスと違反
     process: |-
-      1. 有効な documents の行に `alias_type` を持つ行があるかを `has_alias_rows` にする
+      1. `view.documents` の行に `alias_type` を持つ行があるかを `has_alias_rows` にする
       2. `metadata` に `alias_type` を持つ文書ごとにエイリアスのキーの検証をする
          - 違反があれば `violations` に加え、エイリアスにしない
          - 違反が無ければ `ALIAS_LIST_KEYS` の文字列を要素 1 つの並びにし、`AliasEntry` にして `entries` に加える（`extra` は取り込んだスキーマの `metadata` のキーのうち `AliasEntry` の項目以外で値を持つもの）
@@ -168,67 +142,3 @@ functions:
         condition: '`alias_type` を持つ行が無い配信元'
         mock: なし
         expected: '`entries`・`violations` が空で、`has_alias_rows` が `False`'
-  - name: match_words
-    title: 照合する語の一覧
-    kind: 関数
-    container: features/documents/aliases.py
-    usecase: 用語の一覧
-    role: 変換
-    summary: エイリアスから、照合する語（`name` と `aliases`）を指す文書の ID とともに並べる
-    scope: public
-    thread_safe: true
-    args:
-      - name: entries
-        title: エイリアス
-        type: Sequence[AliasEntry]
-        required: true
-        passing: positional
-        description: エイリアスの集めの `entries`
-    returns:
-      type: list[MatchWord]
-      description: エイリアスの順に、`name`、`aliases` の順で並べた語
-    process: |-
-      1. エイリアスごとに `name` を `kind: name`、`aliases` の各要素を `kind: alias` の照合する語にする
-      2. 並べて返す
-    unit_tests:
-      - name: test_match_words
-        case: 正常
-        summary: 名前と別名
-        condition: '「作業範囲」（`aliases: [scope, 担当範囲]`）のエイリアス 1 件'
-        mock: なし
-        expected: '`作業範囲`（`name`）・`scope`（`alias`）・`担当範囲`（`alias`）の順で、`id` がどれも作業範囲の ID'
-  - name: term_ids
-    title: 用語に当たる文書の ID
-    kind: 関数
-    container: features/documents/aliases.py
-    usecase: 検索
-    role: 判定
-    summary: '`name` か `aliases` が用語に一致するエイリアスの文書の ID を返す'
-    scope: public
-    thread_safe: true
-    args:
-      - name: entries
-        title: エイリアス
-        type: Sequence[AliasEntry]
-        required: true
-        passing: positional
-        description: エイリアスの集めの `entries`
-      - name: term
-        title: 用語
-        type: str
-        required: true
-        passing: positional
-        description: '`search_docs` の `term`'
-    returns:
-      type: set[str]
-      description: 当たった文書の ID
-    process: |-
-      1. 用語と各エイリアスの照合する語を、条件の比較と同じ正規化（NFKC と `casefold`）にする
-      2. 完全一致する語を持つエイリアスの `id` を集めて返す
-    unit_tests:
-      - name: test_term_ids
-        case: 正常
-        summary: 正規化した完全一致
-        condition: '「作業範囲」（`aliases: [scope, 担当範囲]`）のエイリアスに、`担当範囲`・`SCOPE`・`担当` を順に渡す'
-        mock: なし
-        expected: 1 つ目と 2 つ目は作業範囲の ID、3 つ目は空

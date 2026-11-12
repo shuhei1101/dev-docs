@@ -20,4 +20,5 @@ export interface SettingsSourceRow {
   status: SettingsSourceRowStatus;
   errors?: SourceViolation[];
   configVersion?: SourceConfigVersion | null;
+  outsideRead?: boolean;
 }

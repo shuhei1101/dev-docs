@@ -1,0 +1,282 @@
+use_cases:
+  - kind: composite
+    scenario: docs/scenario/SC-155-13.yaml
+    impact: changed
+    detail: 利用者が project-index で配信している配信元の文書を dev-docs の画面で読む流れに変わる。エージェントが調べる・書き込む・変わった文書を引く・設定とスクリプトを確かめる段は project-index へ移る
+    depends_on: []
+  - kind: single
+    scenario: docs/scenario/SC-155-2.yaml
+    impact: changed
+    detail: 検索の MCP を使う端末は project-index を別に入れる。画面を使う端末だけ dev-docs を入れる
+    depends_on:
+      - docs/scenario/SC-155-13.yaml
+  - kind: single
+    scenario: docs/scenario/SC-155-3.yaml
+    impact: changed
+    detail: 配信元の設定の移し替えは project-index へ移る。端末の設定の sources を project-index へ写して除く移し替えが加わる
+    depends_on:
+      - docs/scenario/SC-155-13.yaml
+  - kind: single
+    scenario: docs/scenario/SC-155-4.yaml
+    impact: removed
+    detail: エージェントが書き込む流れは project-index が持ち、dev-docs から外す
+    depends_on:
+      - docs/scenario/SC-155-13.yaml
+  - kind: single
+    scenario: docs/scenario/SC-155-5.yaml
+    impact: removed
+    detail: エージェントが調べる流れは project-index が持ち、dev-docs から外す
+    depends_on:
+      - docs/scenario/SC-155-13.yaml
+  - kind: single
+    scenario: docs/scenario/SC-155-8.yaml
+    impact: removed
+    detail: エージェントが変わった文書を引く流れは project-index が持ち、dev-docs から除外する。画面で差分を見る流れは利用者が画面で読む（SC-155-7）が持つ
+    depends_on:
+      - docs/scenario/SC-155-13.yaml
+  - kind: single
+    scenario: docs/scenario/SC-155-1.yaml
+    impact: removed
+    detail: 直接編集した文書の読み直しと、読んだ後に変わった文書への書き込みは project-index が持ち、dev-docs から除外する
+    depends_on:
+      - docs/scenario/SC-155-13.yaml
+  - kind: single
+    scenario: docs/scenario/SC-155-9.yaml
+    impact: removed
+    detail: 配信元の設定・スクリプトの確認と反映は project-index が持ち、dev-docs から除外する
+    depends_on:
+      - docs/scenario/SC-155-13.yaml
+  - kind: single
+    scenario: docs/scenario/SC-155-10.yaml
+    impact: changed
+    detail: 画面のサーバーの起動は project-index へつなぐだけになり、配信元ごとの起動時の検証と文脈の注入は project-index へ移る。project-index につながらないときの振る舞いが加わる
+    depends_on:
+      - docs/scenario/SC-155-13.yaml
+  - kind: single
+    scenario: docs/scenario/SC-155-11.yaml
+    impact: following
+    detail: 配信元を外す操作を、project-index の端末の設定の配信元の API で保存する流れに追随する
+    depends_on:
+      - docs/scenario/SC-155-13.yaml
+  - kind: single
+    scenario: docs/scenario/SC-155-12.yaml
+    impact: changed
+    detail: 配信元の追加は設定画面だけになり、project-index の端末の設定へ保存する。`/dev-docs:setup` での登録と管理用の YAML の突き合わせは project-index へ移る
+    depends_on:
+      - docs/scenario/SC-155-13.yaml
+  - kind: single
+    scenario: docs/scenario/SC-155-7.yaml
+    impact: changed
+    detail: 画面で読む・差分を見る・検索する流れは変わらないが、文書の取得元が project-index になり、配信元の設定の名前が project-index.yaml になる
+    depends_on:
+      - docs/scenario/SC-155-13.yaml
+  - kind: single
+    scenario: docs/scenario/SC-155-6.yaml
+    impact: following
+    detail: コメントを渡す流れは変わらず、配信元の設定の名前を project-index.yaml に追随する
+    depends_on:
+      - docs/scenario/SC-155-13.yaml
+docs:
+  - page: README.md
+    new: false
+    change: dev-docs を画面のサーバーとして紹介し直し、検索・書き込みの MCP は project-index を入れることと、配信元の設定の既定の名前 project-index.yaml を書く
+    status: done
+    updated_by: planner
+    updated_at: '2026-11-12T09:19:58.104419+00:00'
+  - page: CLAUDE.md
+    new: false
+    change: リポジトリの構成の説明から、project-index へ移した機能を外す
+    status: done
+    updated_by: planner
+    updated_at: '2026-11-12T09:19:58.104419+00:00'
+  - page: docs/guide/はじめに.md
+    new: false
+    change: dev-docs と project-index の役割の分担を書く
+    status: done
+    updated_by: planner
+    updated_at: '2026-11-12T09:19:58.104419+00:00'
+  - page: docs/guide/コアコンセプト-配信元と権限.md
+    new: false
+    change: 配信元の読み込みと権限を project-index が持ち、dev-docs はその結果を読むことに書き換える。既定の名前を project-index.yaml にする
+    status: done
+    updated_by: planner
+    updated_at: '2026-11-12T09:19:58.104419+00:00'
+  - page: docs/guide/コアコンセプト-文書のメタデータ.md
+    new: false
+    change: 索引とメタデータの解決を project-index が持つことに書き換える
+    status: done
+    updated_by: planner
+    updated_at: '2026-11-12T09:19:58.104419+00:00'
+  - page: docs/guide/コアコンセプト-管理用プラグイン.md
+    new: false
+    change: 管理用プラグインが起動するものと、project-index のプラグインとの分担を書く
+    status: done
+    updated_by: planner
+    updated_at: '2026-11-12T09:19:58.104419+00:00'
+  - page: docs/guide/dev-docsを入れる.md
+    new: false
+    change: 検索の MCP を使う端末は project-index を入れ、画面を使う端末だけ dev-docs を入れる手順にする
+    status: done
+    updated_by: planner
+    updated_at: '2026-11-12T09:19:58.104419+00:00'
+  - page: docs/guide/dev-docsを更新する.md
+    new: false
+    change: 画面の側と索引の側の更新を分け、今の端末から移る手順を書く
+    status: done
+    updated_by: planner
+    updated_at: '2026-11-12T09:19:58.104419+00:00'
+  - page: docs/guide/配信元を配信する.md
+    new: false
+    change: 配信元の設定の既定の名前を project-index.yaml・project-index.local.yaml にし、今の dev-docs.yaml の移行を書く
+    status: done
+    updated_by: planner
+    updated_at: '2026-11-12T09:19:58.104419+00:00'
+  - page: docs/guide/documentsの行の判定.md
+    new: false
+    change: 例のファイル名を project-index.yaml にする
+    status: done
+    updated_by: planner
+    updated_at: '2026-11-12T09:19:58.104419+00:00'
+  - page: docs/guide/新しく作るか修正するかの判定.md
+    new: false
+    change: 例のファイル名を project-index.yaml にする
+    status: done
+    updated_by: planner
+    updated_at: '2026-11-12T09:19:58.104419+00:00'
+  - page: docs/guide/画面で読む.md
+    new: false
+    change: 画面が project-index から文書を読む前提を書く
+    status: done
+    updated_by: planner
+    updated_at: '2026-11-12T09:19:58.104419+00:00'
+  - page: docs/guide/文書のMCP.md
+    new: false
+    change: 文書の MCP のリファレンスを project-index へ移し、dev-docs 側は project-index のリファレンスへの案内だけにする
+    status: done
+    updated_by: planner
+    updated_at: '2026-11-12T09:19:58.104419+00:00'
+  - page: docs/guide/管理のMCP.md
+    new: false
+    change: project-index へ移す管理のツール（check_project・reload・try_convert・write_nav など）を外し、画面のサーバーに残るツールだけにする
+    status: done
+    updated_by: planner
+    updated_at: '2026-11-12T09:19:58.104419+00:00'
+  - page: docs/guide/CLI.md
+    new: false
+    change: project-index へ移すコマンド（files・prompt-doc など）を外し、dev-docs に残るコマンドだけにする
+    status: done
+    updated_by: planner
+    updated_at: '2026-11-12T09:19:58.104419+00:00'
+  - page: docs/guide/設定.md
+    new: false
+    change: 端末の設定の sources[] を project-index と共有する仕組みと、配信元の設定の既定の名前を書く
+    status: done
+    updated_by: planner
+    updated_at: '2026-11-12T09:19:58.104419+00:00'
+  - page: docs/guide/用語集.md
+    new: false
+    change: project-index と、配信元の設定（project-index.yaml）の用語を追加・修正する
+    status: done
+    updated_by: planner
+    updated_at: '2026-11-12T09:19:58.104419+00:00'
+  - page: docs/guide/使い方.md
+    new: false
+    change: 使い方の目次から project-index へ移したページを外す
+    status: done
+    updated_by: planner
+    updated_at: '2026-11-12T09:19:58.104419+00:00'
+  - page: docs/guide/リファレンス.md
+    new: false
+    change: リファレンスの目次から project-index へ移したページを外す
+    status: done
+    updated_by: planner
+    updated_at: '2026-11-12T09:19:58.104419+00:00'
+  - page: docs/guide/files.yml
+    new: false
+    change: 移した・名前を変えたページの行を修正する
+    status: done
+    updated_by: planner
+    updated_at: '2026-11-12T09:19:58.104419+00:00'
+  - page: templates/dev-docs.yaml
+    new: false
+    change: project-index.yaml に改名し、索引の側の雛形は project-index へ移す
+    status: done
+    agent: planner
+    updated_by: planner
+    updated_at: '2026-11-12T10:53:57.359324+00:00'
+  - page: templates/settings.yaml
+    new: false
+    change: 例の config のファイル名を project-index.yaml にする
+    status: done
+    agent: planner
+    updated_by: planner
+    updated_at: '2026-11-12T10:53:57.359324+00:00'
+  - page: plugins/dev-docs/skills/setup/SKILL.md
+    new: false
+    change: 配信元の登録を project-index のスキルへ移し、dev-docs から `setup` を削除する
+    status: done
+    agent: planner
+    updated_by: planner
+    updated_at: '2026-11-12T10:53:57.359324+00:00'
+  - page: plugins/dev-docs/skills/global-setup/SKILL.md
+    new: false
+    change: 画面のサーバーの用意だけにし、検索の MCP の用意は project-index へ案内する
+    status: done
+    agent: planner
+    updated_by: planner
+    updated_at: '2026-11-12T10:53:57.359324+00:00'
+  - page: content/prompts/mcp/admin/tools/write-nav.yaml
+    new: false
+    change: 管理のツールの説明を project-index へ移すか、残す場合はファイル名を project-index.yaml にする
+    status: done
+    agent: planner
+    updated_by: planner
+    updated_at: '2026-11-12T10:53:57.359324+00:00'
+  - page: content/prompts/mcp/admin/tools/check-project.yaml
+    new: false
+    change: 管理のツールの説明を project-index へ移す
+    status: done
+    agent: planner
+    updated_by: planner
+    updated_at: '2026-11-12T10:53:57.359324+00:00'
+  - page: schemas/dev-docs.schema.json
+    new: false
+    change: 配信元の設定のスキーマを project-index へ移し、dev-docs から参照する先を付け替える
+    status: done
+    agent: planner
+    updated_by: planner
+    updated_at: '2026-11-12T10:53:57.359324+00:00'
+  - page: docs/dev-command/CMD-155-1.yaml
+    new: false
+    change: 起動・停止の前提に project-index の待ち受けを足し、管理作業から配信元の読み込みの待ち（loaded）を外す
+    status: done
+    updated_by: planner
+    updated_at: '2026-11-12T10:54:19.558499+00:00'
+scope_out:
+  - item: project-index のリポジトリの作成
+    reason: ユーザーが作成し、立ち上げ Issue shuhei1101/project-index#2 で土台ができている（#114 のユーザーのコメント）
+    plan: none
+  - item: project-index のリポジトリへのコード・テスト・設計書の追加（移す先の受け入れ）
+    reason: この作業 PR は dev-docs のリポジトリだけを変更できるため。規約『複数リポジトリのAPI契約』に沿って、提供する側の Issue を project-index へ起票した。#119 の修正とテストの移行と、所要時間の測り直しもその Issue に含めた
+    plan: shuhei1101/project-index#14
+  - item: project-index へ移した文書の置き場所・`id`・書き方の移行（#7・#74・#95 の内容を移した文書に当てる）
+    reason: '#114 の扱いの判断で、この作業 PR に含めず project-index へ起票すると決まった。移す文書の範囲が設計で決まってから起票する'
+    plan: shuhei1101/project-index#18
+  - item: alias-inject の設計書・公開ドキュメント・`settings.sample.yaml`・コメントの例のファイル名の修正
+    reason: 別のリポジトリのため。#114 の扱いの判断で、先後を固定せず alias-inject へ起票すると決まった
+    plan: shuhei1101/alias-inject#74
+  - item: dev-docs 自身の直下の配信元の設定（project-index.yaml）の作成
+    reason: '#24 が担当する（#114 の扱いの判断で #24 が project-index.yaml を作る内容に書き直された）'
+    plan: '#24'
+  - item: dev-docs の画面のサーバーの付け替え口を、モックから本物の project-index の API へつなぐ作業と、複合ユースケースの E2E
+    reason: 規約『複数リポジトリのAPI契約』で、本物につなぐ作業は別の Issue にする。この作業 PR は project-index#14 の入出力に沿ったモックで作る
+    plan: '#164'
+  - item: 状態のバッジ「配信停止」（`badge.tsx` の `destructive`）のコントラスト
+    reason: axe の `color-contrast` の基準に届かない。今回の要望に含まれない既存の部品
+    plan: '#165'
+  - item: 設定画面の既存の部品の高さの transition
+    reason: Impeccable の `layout-transition` に該当する。今回の要望に含まれない既存の部品
+    plan: '#166'
+  - item: 画面の結合テストの全件実行で、search-dialog.spec.ts と topbar.spec.ts の doc_view が時間切れで fail する
+    reason: origin/develop の全件実行でも同じ spec が fail する不具合で、今回の要望に含まれない
+    plan: '#170'

@@ -11,7 +11,7 @@ import {
 import { toFieldErrors } from "@/features/settings/settings/problem-errors";
 import { useSaveSources } from "@/features/settings/settings/queries";
 import type { SettingsSourceRow } from "@/shared/api/generated/model";
-import { ClientValueError } from "@/shared/core/app-error";
+import { AppError, ClientValueError } from "@/shared/core/app-error";
 import { handleAppError } from "@/shared/core/handle-app-error";
 
 type Options = {
@@ -57,7 +57,16 @@ export const useSourceForm = ({ sources, index, onSaved }: Options) => {
         );
         return;
       }
-      handleAppError(error, { message: "端末の設定を保存できませんでした。" });
+      const detail =
+        error instanceof AppError &&
+        (error.status === 502 || error.status === 503)
+          ? error.problem?.detail
+          : undefined;
+      handleAppError(error, {
+        message: detail
+          ? `端末の設定を保存できませんでした。${detail}`
+          : "端末の設定を保存できませんでした。",
+      });
     }
   });
 

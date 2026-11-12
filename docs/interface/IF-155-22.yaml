@@ -55,31 +55,6 @@ flows:
     expected:
       - '`version` が `"2"` で、改名前のキーがそのまま残る'
     test: test_normal_when_record_only
-  - name: 正常系（配信元の設定）
-    summary: '`--source` と `--allow-destructive` で配信元の `dev-docs.yaml` に手順を当てる'
-    setup:
-      - name: Mock
-        description: 正常系と同じ差し替え
-      - name: 配信元
-        description: '`version: "1"` の `dev-docs.yaml` を持つ sample。最上位にタグのマスター `tags: tags.yaml` を持ち、`documents[0]` が `type: yaml`・`metadata: {name: {type: ref, field: title}, alias_type: {type: custom, value: term}}` を持つ'
-        notes: '`tags.yaml` を置く'
-    flow: |-
-      ```mermaid
-      sequenceDiagram
-        participant C as クライアント
-        participant M as dev-docs migrate
-        participant F as dev-docs.yaml
-
-        C->>M: --source --allow-destructive
-        M->>F: バックアップを取り、手順を当てる
-        M-->>C: 終了コード 0
-      ```
-    expected:
-      - '`dev-docs.yaml` の `version` が `"3"`'
-      - '`documents[0]` が `type` を持たず、`metadata` が `{name: title}`、行の `alias_type` が `term` になる'
-      - '`tags` が無くなり、`tags.yaml` は残る'
-      - 端末の設定が変わらない
-    test: test_normal_when_source_config
   - name: 異常系（設定が読めない・ConfigInvalid）
     summary: '`version` の無い設定は移し替えずに終了コード 2 で止める'
     setup:
@@ -101,7 +76,7 @@ flows:
       - 端末の設定が変わらず、バックアップも作らない
     test: test_error_when_config_invalid
   - name: 異常系（手順が失敗する・MigrationFailed）
-    summary: 当てた結果が新しいスキーマに違反すると、バックアップから戻して終了コード 4 で止める
+    summary: 当てた結果が新しいスキーマに違反すると、端末の設定を書き換えずに終了コード 4 で止める
     setup:
       - name: Mock
         description: 正常系と同じ差し替え
@@ -115,14 +90,13 @@ flows:
         participant F as 端末の設定
 
         C->>M: フラグなし
-        M->>F: バックアップを取る
+        M->>F: 端末の設定を読む
         M->>M: 手順を当てる（スキーマに違反）
-        M->>F: バックアップから戻す
         M-->>C: 失敗した手順と理由（終了コード 4）
       ```
     expected:
       - 終了コード 4 で stderr に失敗した手順と違反したキーを出す
-      - 端末の設定の中身が適用前と同じ
+      - 端末の設定の中身が適用前と同じで、バックアップも作らない
     test: test_error_when_step_fails
   - name: 異常系（破壊的な手順がある・DestructiveStepBlocked）
     summary: 破壊的な手順を `--allow-destructive` なしで当てようとすると、触らずに終了コード 5 で止める
@@ -165,36 +139,73 @@ flows:
       - 終了コード 6 で stderr に dev-docs の更新の案内を出す
       - 端末の設定が変わらない
     test: test_error_when_config_newer
-  - name: 異常系（配信元の設定に移せない設定がある・MigrationFailed）
-    summary: 機械的に移せない設定を持つ配信元の設定は書き換えず、違反と `/dev-docs:setup` の案内を出して終了コード 4 で止める
+  - name: 正常系（端末の設定の sources を project-index へ移す）
+    summary: 前のバージョンの端末の設定の `sources` の行を project-index の端末の設定へ 1 行ずつ追加し、dev-docs の端末の設定から除いて `project_index` を書き足す
     setup:
       - name: Mock
-        description: 正常系と同じ差し替え
-      - name: 配信元
-        description: '`version: "1"` の `dev-docs.yaml` を持つ sample。`documents[0]` が `type: yaml`・`metadata: {name: {type: ref, field: title}}`、`documents[1]` が `type: markdown`・`defaults: [{paths: [docs/**], tags: [doc]}]`、`documents[2]` が `metadata: {tags: {type: custom, value: [x]}}` を持つ'
+        description: project-index の端末の設定の API のモック（shuhei1101/project-index#14 の入出力で、行の追加を受け、extra の行を既に持つ）
+      - name: 端末の設定
+        description: '`sources` に sample・notes・extra の 3 行を持ち、`project_index` を持たない前のバージョンの `settings.yaml`'
+      - name: 入力
+        description: '`--project-index` にモックのアドレス'
     flow: |-
       ```mermaid
       sequenceDiagram
         participant C as クライアント
         participant M as dev-docs migrate
-        participant F as dev-docs.yaml
+        participant F as 端末の設定
+        participant PI as project-index（モック）
 
-        C->>M: --source --allow-destructive
-        M->>M: 手順を当てた結果を新しいスキーマで検証し、違反が残る
-        M-->>C: 違反と /dev-docs:setup の案内（終了コード 4）
+        C->>M: --project-index {アドレス}
+        M->>F: 端末の設定を読む
+        loop sources の各行
+          M->>PI: 配信元の行の追加
+          PI-->>M: 追加した、または同じ id の行がある
+        end
+        M->>F: バックアップを取る
+        M->>F: 追加した行を sources から除き、project_index と version を書き換える
+        M-->>C: 当てた手順と、移さなかった行の id（終了コード 0）
       ```
     expected:
-      - 終了コード 4 で stderr に `documents[1].type`・`documents[1].defaults`・`documents[2].metadata.tags` の違反と、`/dev-docs:setup` で管理用の YAML へ移す案内を出す
-      - '`dev-docs.yaml` の中身が適用前と同じ（`documents[0]` も書き換わらない）'
-    test: test_error_when_source_config_unmigratable
-lead: 端末の設定か配信元の `dev-docs.yaml` の `version` を dev-docs が読めるバージョンと比べ、移し替えの手順を古い順に当てる。
+      - モックが sample・notes・extra の 3 行の追加を受け、extra は同じ id の行があると返す
+      - 端末の設定の `sources` が extra の 1 行だけになり、`project_index` が `--project-index` のアドレス、`version` が新しいバージョンになる
+      - stdout に、extra を移さずに残したことと、project-index で行を直す案内がある
+      - '`--project-index` を省くと `PROJECT_INDEX_PORT`（無ければ 8786）から組んだ `http://127.0.0.1:{ポート}` へ追加する'
+    test: test_normal_when_sources_moved_to_project_index
+  - name: 異常系（project-index につながらない・ProjectIndexUnreachable）
+    summary: project-index につながらないと、端末の設定を書き換えずに終了コード 7 で止める
+    setup:
+      - name: Mock
+        description: なし
+      - name: 端末の設定
+        description: 正常系（端末の設定の sources を project-index へ移す）と同じ前のバージョンの `settings.yaml`
+      - name: 入力
+        description: '`--project-index` に、何も待ち受けていない空きポートのアドレス'
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        participant C as クライアント
+        participant M as dev-docs migrate
+        participant F as 端末の設定
+
+        C->>M: --project-index {アドレス}
+        M->>F: 端末の設定を読む
+        M->>M: 配信元の行の追加がつながらない
+        M-->>C: つながらなかったアドレスと、project-index を起動してからやり直す案内（終了コード 7）
+      ```
+    expected:
+      - 終了コード 7 で、stderr につながらなかったアドレスと案内がある
+      - 端末の設定が `migrate` の前と同じ中身で、バックアップも作らない
+    test: test_error_when_project_index_unreachable
+lead: 端末の設定の `version` を dev-docs が読めるバージョンと比べ、移し替えの手順を古い順に当てる。前のバージョンの `sources` は project-index の端末の設定へ移す。
 identifier: migrate
 permissions: 対象の設定ファイルを書き換えられる利用者
 idempotent: true
-side_effects: 適用では対象の設定ファイルを書き換え、同じフォルダに `{ファイル名}.bak-{時刻}` を残す。`--plan` は書き換えない
+side_effects: 適用では端末の設定を書き換え、同じフォルダに `{ファイル名}.bak-{時刻}` を残す。`sources` を移す手順では、project-index の端末の設定へ行を追加する。`--plan` は書き換えない
 callers:
   - SC-155-3#scenarios[正常シナリオ（端末の設定が古くなる）]
-  - SC-155-3#scenarios[正常シナリオ（配信元の設定が古くなる）]
+  - SC-155-3#scenarios[正常シナリオ（端末の設定の sources を project-index へ移す）]
+  - SC-155-3#scenarios[異常シナリオ（sources を移すときに project-index につながらない）]
 exclusivity: 端末の設定は動いているサーバーと同じファイルを書き換えるため、適用は書き換えの前後でファイルの中身を比べ、変わっていたら書かずに失敗とする
 request:
   - name: --plan
@@ -210,12 +221,12 @@ request:
     location: argument
     description: 手順を当てず、`version` だけを今のバージョンに書き換える
     notes: 利用者が手で移し替えたときに使う。`--plan` とは併用しない
-  - name: --source
+  - name: --project-index
     type: str
     required: false
-    default: なし（`DEV_DOCS_CONFIG` が指す端末の設定）
+    default: '`http://127.0.0.1:{PROJECT_INDEX_PORT}`（`PROJECT_INDEX_PORT` が無ければ 8786）'
     location: argument
-    description: 配信元の `dev-docs.yaml` のパス。渡すとその配信元の設定を対象にする
+    description: '`sources` を移す先の project-index のアドレス。端末の設定の `project_index` にも書く'
   - name: --allow-destructive
     type: flag
     required: false
@@ -225,7 +236,7 @@ request:
 request_example: |-
   ```bash
   dev-docs migrate --plan
-  dev-docs migrate --source ~/repo/sample/dev-docs.yaml
+  dev-docs migrate --project-index http://127.0.0.1:8786
   ```
 response:
   - name: 標準出力
@@ -233,7 +244,7 @@ response:
     description: '`--plan` は当てる手順を 1 行ずつ（`{バージョン}: {手順の説明}`。破壊的な手順には `[destructive]`）。適用は当てた手順とバックアップのパス'
   - name: 終了コード
     type: int
-    description: 0 正常（当てる手順が無いときも 0）・2 設定の違反・4 失敗して書き換えなかった・5 破壊的な手順で止めた・6 設定のバージョンが dev-docs より新しい
+    description: 0 正常（当てる手順が無いときも 0）・2 設定の違反・4 失敗して書き換えなかった・5 破壊的な手順で止めた・6 設定のバージョンが dev-docs より新しい・7 `sources` を移す先の project-index につながらない
     notes: 2 は `dev-docs serve` の EXIT_CONFIG_INVALID と同じ値。3 は `serve` のポートが使用中に使っているため使わない
 exceptions:
   - name: なし（正常終了）
@@ -246,23 +257,27 @@ exceptions:
   - name: DestructiveStepBlocked
     condition: 当てる手順に破壊的なものがあり、`--allow-destructive` が無い（終了コード 5）
     notes: ファイルに触らず、破壊的な手順を stderr に出す
+  - name: ProjectIndexUnreachable
+    condition: '`sources` を移す手順で、project-index の端末の設定の API につながらない（終了コード 7）'
+    notes: 全ての手順を当ててから書き込むため、端末の設定には触らない（バックアップも作らない）。つながらなかったアドレスと案内を stderr に出す
   - name: ConfigNewer
     condition: 対象の `version` が dev-docs が読めるバージョンより新しい（終了コード 6）
     notes: dev-docs の更新を案内する
 constraints:
   - item: 手順の置き場所
-    constraint: '`src/dev_docs/migrations/{settings|dev-docs}/{バージョン}/steps.yaml`。パッケージに同梱し、`importlib.resources` で読む'
+    constraint: '`src/dev_docs/migrations/settings/{バージョン}/steps.yaml`。パッケージに同梱し、`importlib.resources` で読む。配信元の設定の手順は project-index へ移した'
   - item: 当てる順
     constraint: 対象の `version` より新しく、dev-docs が読めるバージョン以下の手順を古い順に全て当てる。途中で止めず、全て当ててから 1 回だけ書き込む
   - item: バックアップ
-    constraint: 適用の前に必ず取る。成功しても消さない
+    constraint: 全ての手順を当てて検証に通った後、書き込む前に必ず取る。成功しても消さない。失敗して書き込まないときは作らない
   - item: 反映
-    constraint: 動いているサーバーには反映しない。利用者が続けて `restart`（配信元の設定だけなら `reload`）を呼ぶ
+    constraint: 動いているサーバーには反映しない。利用者が続けて `restart` を呼ぶ
   - item: タイムアウト
-    constraint: 制限なし
-  - item: 配信元の設定の 1 → 2 の手順
-    constraint: '`type: yaml` を削除し、`metadata` の `{type: ref, field: X}` を列名の文字列 `X` に、`metadata.alias_type` の `{type: custom, value: X}` を行の `alias_type: X` にする。`type: markdown`・`defaults[]`・`alias_type` 以外の `custom` は書き換えず、新しいスキーマの違反として MigrationFailed にする。どの手順も破壊的ではない'
-  - item: 配信元の設定の 2 → 3 の手順
-    constraint: 最上位の `tags`（タグのマスター）を、`value` を持たない `delete` で削除する。値を捨てる破壊的な手順で、`--allow-destructive` が要る。マスターのファイルは削除しない
-    notes: '破壊的かは手順で決まるため、`tags` を持たない設定でも `version: "2"` 以前から移すには `--allow-destructive` が要る'
+    constraint: project-index への 1 行の追加を制限時間で打ち切り、打ち切ったらつながらないときと同じく端末の設定を書き換えずに終了コード 7 で止める
+    decided_by: NFR-155-1#requirements[project-index への問い合わせの制限時間]
+  - item: project-index の応答が 201・409 以外のとき
+    constraint: 端末の設定を書き換えず、project-index の応答のステータスと要約を stderr に出して終了コード 4（MigrationFailed）で止める
+  - item: sources を移す手順
+    constraint: '`sources` を持つ端末の設定の行を、project-index の端末の設定の API で 1 行ずつ追加する。同じ id の行が project-index にあれば、内容も同じなら追加済みとして扱い、内容が違えば追加せずに `sources` に残して id を stdout に出す。追加した行を `sources` から除き、`project_index` を書き足す。破壊的な手順ではない'
+    notes: 1 行ずつの追加は project-index#14 の端末の設定の API（1 行ずつの API は shuhei1101/project-index#10）。途中でつながらなくなったら、追加済みの行も含めて端末の設定を書き換えない（project-index に追加した行はそのまま残り、やり直したときは同じ id・同じ内容の行として追加済みに扱う）
 test_file: tests/integration/server/test_migrate.py

@@ -176,7 +176,7 @@ test.describe("説明", () => {
   // 配信していない配信元は起動時の検証で外した理由を出す（正常系）
   test("description_when_source_not_served", async ({ page }) => {
     await open(page, "/broken/docs/a", notServed, BROKEN_VIEW);
-    await expect(page.getByText("起動時の検証で、配信から除外しました。")).toBeVisible();
+    await expect(page.getByText("project-index が起動時の検証で、配信から除外しました。")).toBeVisible();
   });
 
   // 無い配信元は端末の設定に無いことを出す（正常系）

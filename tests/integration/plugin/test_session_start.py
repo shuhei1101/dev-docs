@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import contextlib
 import os
-import re
 import signal
 import time
 from collections.abc import Callable
@@ -11,8 +10,6 @@ from typing import Any
 
 HOOKS_DIR = Path(__file__).parents[3] / "plugins" / "dev-docs" / "hooks"
 EVENT = {"session_id": "s1", "cwd": "/repo/sample", "source": "startup"}
-CLEARED = {"session_id": "s1", "cwd": "/repo/sample", "source": "clear"}
-COMPACTED = {"session_id": "s1", "cwd": "/repo/sample", "source": "compact"}
 
 
 def _clone_with_recorder(tmp_path: Path) -> tuple[Path, Path, Path]:
@@ -28,20 +25,6 @@ def _clone_with_recorder(tmp_path: Path) -> tuple[Path, Path, Path]:
     )
     python.chmod(0o755)
     return clone, args_file, pid_file
-
-
-def _hooks_with_forget_timeout(tmp_path: Path, seconds: int) -> Path:
-    """`FORGET_TIMEOUT_SEC` を `seconds` に差し替えたセッション開始のフックのコピーを置き、そのフォルダを返す。"""
-    source = HOOKS_DIR / "session_start.py"
-    text = source.read_text(encoding="utf-8")
-    replaced = re.sub(
-        r"^FORGET_TIMEOUT_SEC = \d+$", f"FORGET_TIMEOUT_SEC = {seconds}", text, flags=re.M
-    )
-    assert replaced != text
-    folder = tmp_path / "hooks"
-    folder.mkdir()
-    (folder / "session_start.py").write_text(replaced, encoding="utf-8")
-    return folder
 
 
 def _wait_for(path: Path, timeout_sec: float = 5) -> str:
@@ -70,27 +53,6 @@ def test_normal_when_server_listening(
     assert result.code == 0
     assert result.stdout == ""
     assert server.bodies == []
-
-
-def test_normal_when_cleared(
-    tmp_path: Path, run_hook: Callable[..., Any], context_server: Callable[..., Any]
-) -> None:
-    """`/clear` の後は `POST /_admin/session-start` で記録の削除を依頼し、文脈を入れずに戻る（正常系）。"""
-    # 準備・実行
-    with context_server() as server:
-        result = run_hook(
-            "session_start",
-            CLEARED,
-            {
-                "DEV_DOCS_PORT": str(server.port),
-                "DEV_DOCS_CONFIG": str(tmp_path / "missing.yaml"),
-            },
-        )
-    # 検証
-    assert result.code == 0
-    assert result.stdout == ""
-    assert server.bodies == [{"session_id": "s1", "reason": "clear"}]
-    assert server.paths == ["/_admin/session-start"]
 
 
 def test_normal_when_server_down(
@@ -174,32 +136,3 @@ def test_normal_when_terminal_config_missing(
     assert result.code == 0
     assert str(config) in context
     assert "/dev-docs:global-setup" in context
-
-
-def test_normal_when_forget_failed(
-    tmp_path: Path, run_hook: Callable[..., Any], context_server: Callable[..., Any]
-) -> None:
-    """`POST /_admin/session-start` が `FORGET_TIMEOUT_SEC` 秒で返らなければ、削除できなかったことと打ち切った秒数・repeat_seen の案内を入れて戻る（正常系）。"""
-    # 準備
-    hooks_dir = _hooks_with_forget_timeout(tmp_path, 1)
-    started = time.monotonic()
-    # 実行
-    with context_server(hold_sec=3) as server:
-        result = run_hook(
-            "session_start",
-            COMPACTED,
-            {
-                "DEV_DOCS_PORT": str(server.port),
-                "DEV_DOCS_CONFIG": str(tmp_path / "missing.yaml"),
-            },
-            hooks_dir=hooks_dir,
-        )
-    elapsed = time.monotonic() - started
-    # 検証
-    context = result.output["hookSpecificOutput"]["additionalContext"]
-    assert result.code == 0
-    assert elapsed < 2
-    assert "削除できませんでした" in context
-    assert "1 秒で打ち切りました" in context
-    assert "repeat_seen: true で再取得できます" in context
-    assert "起動しました" not in context

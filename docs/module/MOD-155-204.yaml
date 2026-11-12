@@ -2,14 +2,15 @@ id: MOD-155-204
 title: 開発ドキュメントサーバー / 画面のAPI
 lead: |-
   #17 の画面が呼ぶ画面の API（文書の取得・画面の検索・リビジョンの一覧・表の列の設定の保存）。
+  配信元の文書・検索・リビジョンは project-index の呼び出しで要求ごとに取得し、スキーマ駆動の変換・タブとサイドバー・差分は dev-docs が組み立てる。
   端末の設定の取得・保存は端末の設定の入口が持つ。
 directory: |-
   ```text
   src/dev_docs/features/view/
   ├─ __init__.py   # 公開する型と関数の再エクスポート
-  ├─ types.py      # NavItem / NavTab / ConversionError / GitHubTarget / AliasItem / NavAutoCount / DocumentResponse / DocumentDiff / ScreenSearchItem / ScreenSearchResult / ColumnsRequest
-  ├─ paths.py      # page_path / find_page / screen_target
-  ├─ nav.py        # build_nav / first_page / mark_nav_changes / nav_auto_counts / check_nav_filters / nav_warnings
+  ├─ types.py      # NavItem / NavTab / ConversionError / GitHubTarget / AliasItem / DocumentResponse / DocumentDiff / ScreenSearchItem / ScreenSearchResult / ColumnsRequest
+  ├─ paths.py      # page_path / find_page
+  ├─ nav.py        # build_nav / first_page / mark_nav_changes
   ├─ columns.py    # ColumnSettings
   ├─ search.py     # screen_search
   ├─ document.py   # get_document / not_found_fields
@@ -22,11 +23,10 @@ diagrams:
         direction TD
         画面の入口 ..> 文書の取得
         画面の入口 ..> 見つからなかったもの
-        画面の入口 ..> 画面の読む場所
         画面の入口 ..> 画面の検索
         画面の入口 ..> 表の列の設定
-        画面の入口 ..> リビジョンの一覧
-        文書の取得 ..> 画面の読む場所
+        画面の入口 ..> project-indexの呼び出し
+        文書の取得 ..> project-indexの呼び出し
         文書の取得 ..> タブとサイドバーの組み立て
         文書の取得 ..> タブの最初の文書
         文書の取得 ..> 文書のページの特定
@@ -34,8 +34,8 @@ diagrams:
         文書の取得 ..> 変わったキー
         文書の取得 ..> 表の列の設定
         文書の取得 ..> サイドバーの変化
-        画面の検索 ..> 語の照合
-        画面の検索 ..> 一致した箇所の抜き出し
+        画面の検索 ..> project-indexの呼び出し
+        タブとサイドバーの組み立て ..> 条件の照合
         class 画面の入口 {
           <<function>>
         }
@@ -45,17 +45,14 @@ diagrams:
         class 見つからなかったもの {
           <<function>>
         }
-        class 画面の読む場所 {
-          <<function>>
-        }
         class 画面の検索 {
           <<function>>
         }
         class 表の列の設定 {
           <<class>>
         }
-        class リビジョンの一覧 {
-          <<function>>
+        class project-indexの呼び出し {
+          <<class>>
         }
         class タブとサイドバーの組み立て {
           <<function>>
@@ -75,24 +72,19 @@ diagrams:
         class 変わったキー {
           <<function>>
         }
-        class 語の照合 {
-          <<function>>
-        }
-        class 一致した箇所の抜き出し {
+        class 条件の照合 {
           <<function>>
         }
         click 画面の入口 href "./MOD-155-162.py.yaml#画面の入口"
         click 文書の取得 href "./MOD-155-159.py.yaml#文書の取得"
         click 見つからなかったもの href "./MOD-155-159.py.yaml#見つからなかったもの"
-        click 画面の読む場所 href "./MOD-155-161.py.yaml#画面の読む場所"
         click 画面の検索 href "./MOD-155-163.py.yaml#画面の検索"
         click 表の列の設定 href "./MOD-155-158.py.yaml#表の列の設定"
-        click リビジョンの一覧 href "./MOD-155-113.py.yaml#リビジョンの一覧"
+        click project-indexの呼び出し href "./MOD-155-215.py.yaml#project-indexの呼び出し"
         click タブとサイドバーの組み立て href "./MOD-155-160.py.yaml#タブとサイドバーの組み立て"
         click タブの最初の文書 href "./MOD-155-160.py.yaml#タブの最初の文書"
         click 文書のページの特定 href "./MOD-155-161.py.yaml#文書のページの特定"
         click 変換 href "./MOD-155-99.py.yaml#変換"
         click 変わったキー href "./MOD-155-88.py.yaml#変わったキー"
         click サイドバーの変化 href "./MOD-155-160.py.yaml#サイドバーの変化"
-        click 語の照合 href "./MOD-155-135.py.yaml#語の照合"
-        click 一致した箇所の抜き出し href "./MOD-155-138.py.yaml#一致した箇所の抜き出し"
+        click 条件の照合 href "./MOD-155-135.py.yaml#条件の照合"

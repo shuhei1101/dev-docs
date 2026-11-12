@@ -58,51 +58,9 @@ requirements:
     source_kind: ユーザー要望
     source: 設定の資料 A-25（`port`・`DEV_DOCS_PORT` の既定値）
     value: '8781'
-    rationale: 画面・文書の MCP・管理の MCP を 1 つのポートで待ち受ける。`.mcp.json` も同じ値を読むため `DEV_DOCS_PORT` で上書きする
+    rationale: 画面・管理の MCP を 1 つのポートで待ち受ける。`.mcp.json` も同じ値を読むため `DEV_DOCS_PORT` で上書きする
     overflow: 使用中のときは起動を止め、ポートと `DEV_DOCS_PORT` で変えられることを出す。確かめる時点は起動時
     status: planned
-  - id: NFR-7
-    name: スクリプトの制限時間
-    english_name: script_timeout
-    category: 耐障害
-    external_constraint: 制限なし
-    source_kind: 制限なし
-    value: '30'
-    unit: 秒
-    rationale: '検査・変換・生成のスクリプトは配信元の利用者が書くため、外部の上限は無い。画面と MCP を待たせすぎず、通常の検査・変換が終わる時間として、設定の資料 A-25 の既定値 30 秒をそのまま採用した。端末の設定の `script_timeout_sec` で変えられる'
-    overflow: 制限時間を超えたスクリプトを止め、検査・変換の失敗として返す
-    status: planned
-    source: 設定の資料 A-25（`script_timeout_sec` の既定値）
-  - id: NFR-8
-    name: 検索の件数の上限
-    english_name: search_limit
-    category: 性能
-    external_constraint: 制限なし
-    source_kind: 制限なし
-    value: '100'
-    unit: 件
-    rationale: エージェントの文脈に載せる量を抑えるため。`search_docs`・`list_changes` の `limit` の上限で、既定は 20
-    overflow: 100 を超えた値は 100 に丸め、`notes` で知らせる。黙って切り捨てない
-  - id: NFR-9
-    name: 結果全体の文字数の上限
-    english_name: result_max_chars
-    category: 性能
-    external_constraint: 制限なし
-    source_kind: 制限なし
-    value: '40000'
-    unit: 文字
-    rationale: エージェントの文脈に載せる量を抑えるため。`search_docs`・`list_changes` の `max_chars` の上限で、既定は 20,000
-    overflow: 上限を超える手前で打ち切り、`truncated` と、続きを取る `next_cursor` を返す
-  - id: NFR-10
-    name: 1 回の操作の件数の上限
-    english_name: operations_max
-    category: 性能
-    external_constraint: 制限なし
-    source_kind: 制限なし
-    value: '50'
-    unit: 件
-    rationale: 1 回の書き込み・削除で配信元の排他を握る時間と、検査の実行の時間を抑えるため。`write_docs` の `operations`・`delete_docs` の `targets` の件数の上限
-    overflow: 50 件を超える要求は `InvalidArgumentError` で断り、何も書かない
   - id: NFR-11
     name: Issue の作成画面の URL の長さ
     english_name: issue_url_length
@@ -142,7 +100,7 @@ requirements:
     source: https://github.com/shuhei1101/dev-docs/issues/65
     value: '20'
     unit: 秒
-    rationale: 待ち受けの前に残るのは import と端末の設定・プロンプトの YAML の読み込みだけで、負荷のある端末の計測で約 8 秒。配信元の読み込み（計測で約 95 秒）と検査（約 125 秒）は待ち受けの後に回すため含めない。60 秒に対して計測値の 2 倍強を決定値にする
+    rationale: 待ち受けの前に残るのは import と端末の設定・プロンプトの YAML の読み込みだけで、負荷のある端末の計測で約 8 秒。project-index への配信元の状態の問い合わせ（配信元の知らせ）は待ち受けの後に回すため含めない。60 秒に対して計測値の 2 倍強を決定値にする
     measurement: '`dev-docs serve` を子プロセスで起動してから、待ち受けのポートへの TCP の接続が通るまでの時間'
     test_file: tests/nfr/test_listen_start_time.py
     overflow: 超えても起動は止めない。再起動のスクリプトが 60 秒で打ち切る
@@ -150,14 +108,26 @@ requirements:
       - part: import とプロンプトの YAML の読み込み
         value: 約 8 秒
         notes: 他のプロセスが動いている端末での計測
-      - part: 配信元の読み込みと検査
+      - part: project-index への配信元の状態の問い合わせ（配信元の知らせ）
         value: 0 秒
         notes: 待ち受けの後に回す
     tests:
       - name: test_listen_start_time
-        summary: 配信元の読み込みが終わらなくても、決定値以内に接続を受け付ける
-        condition: 配信元 1 つ。配信元の読み込み（`load_source`）を 60 秒止めるものに差し替えて、`dev-docs serve` を子プロセスで起動する
+        summary: project-index が応答しなくても、決定値以内に接続を受け付ける
+        condition: '`project_index` に、接続を受けて応答を返さない偽物の HTTP サーバーを向けて、`dev-docs serve` を子プロセスで起動する'
         measurement: 起動から TCP の接続が通るまでの時間を測る
-        expected: 20 秒以内で、配信元の読み込みが終わる前に接続が通る
+        expected: 20 秒以内で、project-index への問い合わせが終わる前に接続が通る
+    status: planned
+  - id: NFR-14
+    name: project-index への問い合わせの制限時間
+    english_name: project_index_timeout
+    category: 耐障害
+    external_constraint: project-index が配信元の変換のスクリプトを止める制限時間（project-index のスクリプトの制限時間。既定 30 秒）
+    source_kind: 外部 API の制限
+    source: shuhei1101/project-index#14（project-index の読み取り API）
+    value: '45'
+    unit: 秒
+    rationale: 文書の取得は project-index が `converters[]` のスクリプトを動かす間待つため、下流の制限時間 30 秒に 50% を乗せて切り上げた（規約『資源の値の決め方』の入れ子の待ち）。project-index のスクリプトの制限時間を変えたら合わせて決め直す
+    overflow: 打ち切った要求は、project-index につながらないときと同じ 503 と理由を返す
     status: planned
 lead: 外部の制約から逆算した dev-docs の決定値。

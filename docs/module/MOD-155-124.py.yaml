@@ -1,5 +1,5 @@
 id: MOD-155-124
-title: 開発ドキュメントサーバー / プロンプトの文書の変換 / render.py
+title: 開発ドキュメントサーバー / プロンプト / render.py
 lead: プロンプトの部品を Jinja2 で描画する。変数の値にパスを持たせて描画し、描画結果の値を区切りで囲む。
 test_files:
   - tests/unit/dev_docs/features/prompt_doc/test_render.py
@@ -7,7 +7,7 @@ data_models:
   - name: TracedStr
     title: パス付きの文字列
     container: features/prompt_doc/render.py
-    usecase: プロンプトの文書の変換
+    usecase: プロンプトの描画
     role: 値オブジェクト
     summary: 変数のパスを持つ `str`
     description: '`str` を継承し `path` を持つ。比較・フィルターは `str` と同じに動き、`{{ }}` の出力だけを描画の環境の `finalize` が区切りで囲む。同じ形で `int` を継承する `TracedInt`、`float` を継承する `TracedFloat` を持つ（`bool` は継承できないため囲まない）。'
@@ -20,7 +20,7 @@ data_models:
   - name: CompiledPart
     title: 部品のテンプレート
     container: features/prompt_doc/render.py
-    usecase: プロンプトの文書の変換
+    usecase: プロンプトの描画
     role: DTO
     summary: 部品 1 件の `when` と言語ごとの本文のテンプレート
     description: '`dataclass(frozen=True, slots=True, kw_only=True)`。'
@@ -41,31 +41,31 @@ constants:
   - name: ROLES
     title: 役割の並び
     container: features/prompt_doc/render.py
-    usecase: プロンプトの文書の変換
+    usecase: プロンプトの描画
     summary: '`kind: llm` のメッセージを並べる順'
     value: ("system", "user", "assistant")
   - name: HOOK_TEXT_WARN_CHARS
     title: フックの注入文の字数の注意
     container: features/prompt_doc/render.py
-    usecase: プロンプトの文書の変換
+    usecase: プロンプトの描画
     summary: '`kind: hook` で描画した結果がこの字数を超えた組に `[!WARNING]` を出す'
     value: '1000'
   - name: VALUE_MARK_PATTERN
     title: 値の区切り
     container: features/prompt_doc/render.py
-    usecase: プロンプトの文書の変換
+    usecase: プロンプトの描画
     summary: 描画結果の変数の値を囲む区切り（私用領域の文字 `` パス `` 値 ``）に当てる正規表現
     value: re.compile("(?P<path>[^]*)(?P<value>[^]*)")
   - name: LLM_PART_SEPARATOR
     title: 役割の本文の区切り
     container: features/prompt_doc/render.py
-    usecase: プロンプトの文書の変換
+    usecase: プロンプトの描画
     summary: '`kind: llm` で同じ役割の部品の本文をつなぐ区切り'
     value: '"\n\n"'
   - name: FLOW_QUOTE_PATTERN
     title: フロー形式で引用符が要る文字
     container: features/prompt_doc/render.py
-    usecase: プロンプトの文書の変換
+    usecase: プロンプトの描画
     summary: フローの区切り・コメント・キーの区切り・前後の空白・改行に当てる正規表現
     value: 're.compile(r"[,\[\]{}#\n]|: |:$|^\s|\s$")'
 functions:
@@ -73,7 +73,7 @@ functions:
     title: 変数のパスの展開
     kind: 関数
     container: features/prompt_doc/render.py
-    usecase: プロンプトの文書の変換
+    usecase: プロンプトの描画
     role: 変換
     summary: '`vars` を深さ優先で辿り、パスと定義の組にする'
     scope: public
@@ -111,7 +111,7 @@ functions:
     title: 描画の環境
     kind: 関数
     container: features/prompt_doc/render.py
-    usecase: プロンプトの文書の変換
+    usecase: プロンプトの描画
     role: 組み立て
     summary: 部品を描画する Jinja2 の Environment を作る
     scope: public
@@ -140,7 +140,7 @@ functions:
     title: 例の組の値
     kind: 関数
     container: features/prompt_doc/render.py
-    usecase: プロンプトの文書の変換
+    usecase: プロンプトの描画
     role: 変換
     summary: 例の組の値を `example` で埋め、型を確かめてパス付きの値にする
     scope: public
@@ -184,7 +184,7 @@ functions:
     title: 部品のテンプレート化
     kind: 関数
     container: features/prompt_doc/render.py
-    usecase: プロンプトの文書の変換
+    usecase: プロンプトの描画
     role: 変換
     summary: 部品の本文と `when` をテンプレートにし、構文の誤りを集める
     scope: public
@@ -232,7 +232,7 @@ functions:
     title: 例の組の描画
     kind: 関数
     container: features/prompt_doc/render.py
-    usecase: プロンプトの文書の変換
+    usecase: プロンプトの描画
     role: 変換
     summary: 例の組を 1 言語で描画し、メッセージ・使用しなかった部品・字数を返す
     scope: public
@@ -331,7 +331,7 @@ functions:
     title: YAML のフロー形式
     kind: 関数
     container: features/prompt_doc/render.py
-    usecase: プロンプトの文書の変換
+    usecase: プロンプトの描画
     role: 変換
     summary: 値を YAML のフロー形式の 1 行にする
     description: 'ruamel.yaml のフロー形式は配列の中のキーが 1 つの辞書を `[name: 好奇心]` と書くため、自前で組み立てる。'
