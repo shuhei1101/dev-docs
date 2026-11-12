@@ -199,6 +199,12 @@ functions:
         condition: '一時フォルダに `a.yaml`（`id: a`、`kind: tool`）と `mcp/b.yaml`（`id: mcp/b`）、`required=["a", "mcp/b"]`'
         mock: なし
         expected: '`prompts` のキーが `a`・`mcp/b`'
+      - name: test_load_prompts_when_agent
+        case: 正常
+        summary: エージェントのシステムプロンプトを読む
+        condition: '一時フォルダに `a.yaml`（`id: a`、`kind: agent`）、`required=["a"]`'
+        mock: なし
+        expected: '`prompts["a"]` の `kind` が `agent`'
       - name: test_load_prompts_when_schema_violation
         case: 異常
         summary: 必須のキーが無い
