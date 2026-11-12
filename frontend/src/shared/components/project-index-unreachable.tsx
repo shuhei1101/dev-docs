@@ -32,7 +32,9 @@ export const ProjectIndexUnreachableAlert = ({
     <CircleAlert aria-hidden="true" />
     <AlertTitle>project-index に接続できませんでした</AlertTitle>
     <AlertDescription className="space-y-3">
-      <p>project-index を起動してから、再読み込みしてください。</p>
+      <p className="text-pretty text-foreground">
+        project-index を起動してから、再読み込みしてください。
+      </p>
       <dl className="space-y-1 text-sm text-foreground">
         <div className="flex gap-4">
           <dt className="w-16 shrink-0 font-medium">接続先</dt>
@@ -40,10 +42,10 @@ export const ProjectIndexUnreachableAlert = ({
         </div>
         <div className="flex gap-4">
           <dt className="w-16 shrink-0 font-medium">理由</dt>
-          <dd className="text-xs break-all">{reason}</dd>
+          <dd className="text-xs break-words">{reason}</dd>
         </div>
       </dl>
-      <Button variant="outline" onClick={onReload}>
+      <Button variant="outline" className="text-foreground" onClick={onReload}>
         再読み込み
       </Button>
     </AlertDescription>
