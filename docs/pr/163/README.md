@@ -1,0 +1,1 @@
+# 文書とソースコードの索引・検索・書き込みの MCP を project-index へ切り出し、配信元の設定の既定のファイル名を project-index.yaml にする
