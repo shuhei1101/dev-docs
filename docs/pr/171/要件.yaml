@@ -1,0 +1,58 @@
+use_cases:
+  - kind: single
+    scenario: docs/scenario/SC-155-12.yaml
+    impact: none
+    detail: dev-docs 自身を配信元にするのはこのリポジトリの設定と文書の変更で、配信元を追加する流れは変わらない
+    depends_on: []
+  - kind: single
+    scenario: docs/scenario/SC-155-13.yaml
+    impact: none
+    detail: 読める文書が増えるだけで、画面で読む流れは変わらない
+    depends_on: []
+docs:
+  - page: docs/guide/新しく作るか修正するかの判定.md
+    new: false
+    change: front matter の tags を files.yml の行へ移して front matter を削除する（YAML に変換する場合は変換後の文書の列に持たせる）
+    status: todo
+  - page: docs/guide/documentsの行の判定.md
+    new: false
+    change: front matter の tags を files.yml の行へ移して front matter を削除する（YAML に変換する場合は変換後の文書の列に持たせる）
+    status: todo
+  - page: docs/guide/files.yml
+    new: false
+    change: 各行に name・description・tags を書き、docs/guide/ の Markdown を検索で参照できるようにする。README.md の行を追加するかも決める
+    status: todo
+  - page: docs/_root/files.yml
+    new: false
+    change: design-policy.md の行に name・description・tags を書く
+    status: todo
+  - page: docs/index.yaml
+    new: false
+    change: YAML に変換して種類のフォルダを新しく作る場合、そのフォルダの行を追加する
+    status: todo
+  - page: docs/_config.yml
+    new: false
+    change: YAML に変換して種類のフォルダを新しく作る場合、exclude と Pages の公開範囲を合わせる
+    status: todo
+  - page: README.md
+    new: false
+    change: dev-docs 自身の文書を直下の project-index.yaml で配信していることを記載する
+    status: todo
+  - page: CLAUDE.md
+    new: false
+    change: 文書の調査に project-index の配信元 dev-docs を使うことと、Markdown のメタデータを files.yml に書くことが既存の記載で足りるかを確かめ、足りなければ修正する
+    status: todo
+  - page: docs/mock/files.yml
+    new: true
+    change: docs/mock/ の目次の Markdown（index.md）を載せる管理用の YAML を作る（ai-monitor の配信元の files_mock の行と同じ持ち方）
+    status: todo
+scope_out:
+  - item: 既存の文書の書き方を mdmark の書き方と表し方の優先順位へ移す
+    reason: 本文の書き方の移行は別の目的で、この Issue は配信とメタデータと形式の変換だけを扱う
+    plan: '#95'
+  - item: docs/guide/ の Markdown の permalink の front matter
+    reason: GitHub Pages の URL を決める Jekyll の設定で、メタデータではない。削除すると公開ページの URL が変わる
+    plan: none
+  - item: docs/pr/ の配信
+    reason: 作業 PR の記録で、文書の正本ではない（ai-monitor・knowledge の配信元も載せていない）
+    plan: none
