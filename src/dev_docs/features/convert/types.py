@@ -29,7 +29,7 @@ class ConvertFailure:
 
 @dataclass(frozen=True)
 class Converted:
-    """画面に渡す Markdown か、変換の失敗。"""
+    """画面へ返却する Markdown か、変換の失敗。"""
 
     markdown: str
     table_keys: list[str] = field(default_factory=list)
@@ -47,12 +47,12 @@ class DiagramHead:
 
 @dataclass(frozen=True)
 class FlowNode:
-    """配置の前のフロー図の箱。"""
+    """配置の前のフロー図のノード。"""
 
     id: str
     name: str
     kind: NodeKind
-    # 箱のツールチップに出す説明
+    # ノードのツールチップに出す説明
     hint: str | None = None
 
 
@@ -71,7 +71,7 @@ class FlowEdge:
 
 @dataclass(frozen=True)
 class FlowFrame:
-    """配置の前のフロー図の、中の箱を囲む枠。"""
+    """配置の前のフロー図の、中のノードを囲むフレーム。"""
 
     label: str
     nodes: frozenset[str]
@@ -79,7 +79,7 @@ class FlowFrame:
 
 @dataclass(frozen=True)
 class FlowGraph:
-    """`x-diagram` の値か手で書く Mermaid の `flowchart` から作る、配置の前のフロー図。"""
+    """`x-diagram` の値か手で記載する Mermaid の `flowchart` から作る、配置の前のフロー図。"""
 
     direction: Literal["TD", "LR"]
     nodes: list[FlowNode]
@@ -108,7 +108,7 @@ class SequenceMessage:
 
 @dataclass(frozen=True)
 class SequenceGraph:
-    """手で書く Mermaid の `sequenceDiagram` から作るシーケンス図。"""
+    """手で記載する Mermaid の `sequenceDiagram` から作るシーケンス図。"""
 
     participants: list[SequenceParticipant]
     messages: list[SequenceMessage]
@@ -129,11 +129,11 @@ class RenderContext:
     links: Mapping[str, DocumentLink]
     issue_url: str | None
     path: str
-    # 同じ文書のテーブルの `title` から見出し（`x-key` の値）。外部キーのリンクのアンカーに使う
+    # 同じ文書のテーブルの `title` から見出し（`x-key` の値）。外部キーのリンクのアンカーに使用する
     anchors: Mapping[str, str] = field(default_factory=dict)
-    # 同じ文書のテーブルの物理名か論理名から論理名。外部キーのリンクで `anchors` を引く前に論理名にする
+    # 同じ文書のテーブルの物理名か論理名から論理名。外部キーのリンクで `anchors` を検索する前に論理名にする
     table_titles: Mapping[str, str] = field(default_factory=dict)
-    # 文書の ID と項目のパスから、リンク先の文書でその項目が出す見出し。参照と本文の id のリンクのアンカーに使う
+    # 文書の ID と項目のパスから、リンク先の文書でその項目が出す見出し。参照と本文の id のリンクのアンカーに使用する
     item_heading: Callable[[str, str], str | None] = field(default=lambda document_id, item: None)
     # 検討事項の文書を探した結果の ID。`decisions` の値のうち、この ID だけを検討事項の文書へのリンクにする
     decisions: frozenset[str] = field(default_factory=frozenset)

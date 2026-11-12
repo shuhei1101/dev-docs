@@ -1,4 +1,4 @@
-"""`nav` の `auto` の `filter` の条件の確かめと照合。"""
+"""`nav` の `auto` の `filter` の条件の確認と照合。"""
 
 from __future__ import annotations
 
@@ -30,8 +30,8 @@ def normalize(text: str) -> str:
 
 
 def compile_regex(value: str, *, case_sensitive: bool) -> re.Pattern[str]:
-    """`regex` の値を、各行に当たる正規表現にする。"""
-    # ^・$ を各行の先頭・末尾に当てる。大文字小文字を区別しないときは IGNORECASE を加える
+    """`regex` の値を、各行に適用する正規表現にする。"""
+    # ^・$ を各行の先頭・末尾に適用する。大文字小文字を区別しないときは IGNORECASE を加える
     flags = re.MULTILINE if case_sensitive else re.MULTILINE | re.IGNORECASE
     return re.compile(value, flags)
 
@@ -62,7 +62,7 @@ def parse_compare_value(value: str, field_type: str, *, today: date) -> Any:
 
 
 def _walk(node: Condition | Group, path: str) -> list[tuple[str, Condition | Group]]:
-    """条件の木をたどり、(引数のパス, 節) を上から並べる。"""
+    """条件の木をたどり、(引数のパス, ノード) を上から並べる。"""
     nodes: list[tuple[str, Condition | Group]] = [(path, node)]
     if isinstance(node, Group):
         for key, children in (("and", node.all_of), ("or", node.any_of)):
@@ -83,10 +83,10 @@ def _unknown_field(path: str, field: str, fields: Mapping[str, str]) -> Violatio
 
 
 def _check_condition(condition: Condition, path: str, fields: Mapping[str, str]) -> list[Violation]:
-    """条件 1 つの項目と値を確かめる。"""
+    """条件 1 つの項目と値を確認する。"""
     violations: list[Violation] = []
     if condition.field == MATCHES_FIELD:
-        # 文書ごとの数なので、条件ではなく fields・order_by に渡す
+        # 文書ごとの数なので、条件ではなく fields・order_by に指定する
         return [
             Violation(
                 path=f"{path}.field",
@@ -131,7 +131,7 @@ def _check_condition(condition: Condition, path: str, fields: Mapping[str, str])
 
 
 def check_filter(node: Condition | Group, fields: Mapping[str, str]) -> list[Violation]:
-    """条件の木の項目と値が使えるかを確かめる。"""
+    """条件の木の項目と値が使用できるかを確認する。"""
     violations: list[Violation] = []
     for path, item in _walk(node, "filter"):
         if isinstance(item, Condition):
@@ -172,14 +172,14 @@ def _comparable(value: Any, field_type: str) -> Any:
 
 
 def _nfkc_unless(condition: Condition, text: str) -> str:
-    """区別しない条件なら NFKC にした文字列を返す。"""
+    """区別しない条件なら NFKC にした文字列を返却する。"""
     return text if condition.case_sensitive else unicodedata.normalize("NFKC", text)
 
 
 def _test(
     condition: Condition, values: list[Any], expected: str, field_type: str, today: date
 ) -> bool:
-    """比べる値 1 つが、文書の値の並びのどれかに当たるかを返す。"""
+    """比べる値 1 つが、文書の値の並びのどれかに該当するかを返却する。"""
     op = condition.op
     fold: Callable[[str], str] = (lambda text: text) if condition.case_sensitive else normalize
     if op == "regex":
@@ -222,7 +222,7 @@ def _test(
 def _match_condition(
     condition: Condition, document: IndexedDocument, fields: Mapping[str, str], today: date
 ) -> bool:
-    """条件 1 つに当たるかを判定する。"""
+    """条件 1 つに該当するかを判定する。"""
     values = field_values(document, condition.field)
     if condition.op == "exists":
         return bool(values)
@@ -242,7 +242,7 @@ def match_filter(
     fields: Mapping[str, str],
     today: date,
 ) -> bool:
-    """文書が条件の木に当たるかを判定する。"""
+    """文書が条件の木に該当するかを判定する。"""
     if node is None:
         return True
     if isinstance(node, Group):

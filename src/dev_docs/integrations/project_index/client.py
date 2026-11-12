@@ -66,7 +66,7 @@ def _violations(errors: Any) -> list[Violation]:
 
 
 def _failure(value: Any) -> IndexFailure | None:
-    """変換か読み込みの失敗の JSON を読む。"""
+    """変換か読み込みの失敗の JSON を解析する。"""
     if not isinstance(value, Mapping):
         return None
     return IndexFailure(
@@ -81,7 +81,7 @@ def _failure(value: Any) -> IndexFailure | None:
 
 
 def _state(value: Mapping[str, Any]) -> SourceState:
-    """配信元の状態の JSON を読む。"""
+    """配信元の状態の JSON を解析する。"""
     version = value.get("configVersion")
     return SourceState(
         id=value.get("id"),
@@ -184,18 +184,18 @@ class ProjectIndexClient:
             )
         summary = response.text[:SUMMARY_CHARS]
         raise ProjectIndexResponseError(
-            message=f"project-index が {status} を返しました: {summary}",
+            message=f"project-index が {status} を返却しました: {summary}",
             status_code=status,
             summary=summary,
         )
 
     async def list_sources(self) -> list[SourceState]:
-        """配信元の一覧と配信元ごとの状態を返す。"""
+        """配信元の一覧と配信元ごとの状態を返却する。"""
         response = await self.request("GET", "/sources")
         return [_state(item) for item in response.json().get("sources", [])]
 
     async def source_view(self, source: str) -> SourceView:
-        """配信元の設定のうち画面が使うキーを返す。"""
+        """配信元の設定のうち画面が使用するキーを返却する。"""
         response = await self.request("GET", f"/sources/{_seg(source)}/config")
         value = response.json()
         decisions = value.get("decisions") or {}
@@ -225,7 +225,7 @@ class ProjectIndexClient:
         )
 
     async def list_documents(self, source: str, *, ref: str | None = None) -> DocumentList:
-        """リビジョンの全ての文書を返す。"""
+        """リビジョンの全ての文書を返却する。"""
         response = await self.request("GET", f"/sources/{_seg(source)}/docs", params={"ref": ref})
         value = response.json()
         return DocumentList(
@@ -246,7 +246,7 @@ class ProjectIndexClient:
         ref: str | None = None,
         document_id: str | None = None,
     ) -> DocumentDetail:
-        """1 件の文書の値・本文と、`converters[]` の Markdown か失敗を返す。"""
+        """1 件の文書の値・本文と、`converters[]` の Markdown か失敗を返却する。"""
         encoded = "/".join(_seg(part) for part in path.split("/"))
         response = await self.request(
             "GET",
@@ -262,14 +262,14 @@ class ProjectIndexClient:
         )
 
     async def decisions(self, source: str) -> DecisionIndex:
-        """検討事項の ID ごとの当たるフォルダの数を返す。"""
+        """検討事項の ID ごとの該当するフォルダの数を返却する。"""
         response = await self.request("GET", f"/sources/{_seg(source)}/decisions")
         return DecisionIndex(
             counts={str(k): int(v) for k, v in (response.json().get("counts") or {}).items()}
         )
 
     async def decision(self, source: str, decision_id: str) -> str:
-        """ちょうど 1 つのフォルダにある検討事項の文書の本文を返す。"""
+        """ちょうど 1 つのフォルダにある検討事項の文書の本文を返却する。"""
         response = await self.request(
             "GET", f"/sources/{_seg(source)}/decisions/{_seg(decision_id)}"
         )
@@ -278,7 +278,7 @@ class ProjectIndexClient:
     async def search(
         self, source: str, q: str, *, ref: str | None = None, limit: int
     ) -> SearchHits:
-        """語を含む文書と一致した箇所を返す。"""
+        """単語を含む文書と一致した箇所を返却する。"""
         response = await self.request(
             "GET",
             f"/sources/{_seg(source)}/search",
@@ -300,7 +300,7 @@ class ProjectIndexClient:
         )
 
     async def refs(self, source: str, *, commits: int) -> RefList:
-        """配信元のブランチ・タグ・最近の commit を返す。"""
+        """配信元のブランチ・タグ・最近の commit を返却する。"""
         response = await self.request(
             "GET", f"/sources/{_seg(source)}/refs", params={"commits": commits}
         )
@@ -331,12 +331,12 @@ class ProjectIndexClient:
         )
 
     async def settings_sources(self) -> SettingsSourcesView:
-        """project-index の端末の設定の `sources[]` の行と状態を返す。"""
+        """project-index の端末の設定の `sources[]` の行と状態を返却する。"""
         response = await self.request("GET", "/settings/sources")
         return self._settings(response.json())
 
     async def put_settings_sources(self, rows: list[dict[str, Any]]) -> SettingsSourcesView:
-        """`sources[]` の全行の保存と読み直しを依頼する。"""
+        """`sources[]` の全行の保存と再読み込みを依頼する。"""
         response = await self.request("PUT", "/settings/sources", body={"sources": rows})
         return self._settings(response.json())
 

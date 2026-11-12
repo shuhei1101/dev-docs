@@ -10,7 +10,7 @@ from typing import Any, ClassVar
 
 @dataclass(frozen=True, slots=True, kw_only=True)
 class Violation:
-    """違反 1 件の項目のパス・決まり・直し方。"""
+    """違反 1 件の項目のパス・決まり・修正方法。"""
 
     path: str
     rule: str
@@ -36,7 +36,7 @@ class DevDocsError(Exception):
         return type(self).__name__
 
     def details(self) -> dict[str, Any]:
-        """子クラスが持つ追加のプロパティを辞書で返す。"""
+        """子クラスが持つ追加のプロパティを辞書で返却する。"""
         base = {item.name for item in dataclasses.fields(DevDocsError)}
         result: dict[str, Any] = {}
         for item in dataclasses.fields(self):
@@ -47,7 +47,7 @@ class DevDocsError(Exception):
 
 
 def _plain(value: Any) -> Any:
-    """違反の dataclass を辞書に、パスを文字列にし、配列と辞書は中身を再帰で直す。"""
+    """違反の dataclass を辞書に、パスを文字列にし、配列と辞書は中身を再帰で変換する。"""
     if dataclasses.is_dataclass(value) and not isinstance(value, type):
         return dataclasses.asdict(value)
     if isinstance(value, list):
