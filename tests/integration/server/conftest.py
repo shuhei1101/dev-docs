@@ -138,6 +138,9 @@ class MockIndex:
     """project-index の読み取り API と端末の設定の API を、127.0.0.1 の空きポートで待ち受ける偽物。
 
     端末の設定の行（`rows`）の順に配信元の状態を決め、`sources` の配信元の文書を返す。
+
+    入出力は shuhei1101/project-index#14 の Issue に記載した入出力に沿う（本物との食い違いは
+    `docs/external-api/API-155-1.yaml`、本物への付け替えは #164）。
     """
 
     def __init__(self) -> None:

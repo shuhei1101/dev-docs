@@ -80,6 +80,9 @@ def config_json(
 class FakeIndex:
     """project-index の読み取り API と端末の設定の API の偽物（`httpx.MockTransport` の受け手）。
 
+    入出力は shuhei1101/project-index#14 の Issue に記載した入出力に沿う（本物との食い違いは
+    `docs/external-api/API-155-1.yaml`、本物への付け替えは #164）。
+
     `docs` は配信元 → リビジョン（`None` は既定）→ 文書の JSON の並び、
     `details` は（配信元・パス）→ 文書の詳細に足す値（`markdown`・`failure`）、
     `responses` は（メソッド・パス）→（ステータス・本文）の上書き。
