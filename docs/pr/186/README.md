@@ -1,0 +1,1 @@
+# 共有の UI 部品の destructive のコントラストと transition の指定を修正する
