@@ -1,6 +1,6 @@
 import { Skeleton } from "@/shared/components/ui/skeleton";
 
-/** 端末の設定の取得を待つ間に出す、表の行の形の枠 */
+/** 端末の設定の取得を待つ間に出す、表の行の形状のスケルトン */
 export const SourceSkeleton = () => (
   <div
     aria-busy="true"

@@ -6,7 +6,7 @@ const DEFAULT_OFFSET = 96;
 /** 目次のリンクで移った見出し(スクロール位置の余白でバーの直下に着く)も、過ぎたものとして数える余白（px） */
 const SETTLE_MARGIN = 48;
 
-/** 渡した見出しの ID のうち、画面の一番上を過ぎた最後の見出しを返す */
+/** 指定した見出しの ID のうち、画面の一番上を過ぎた最後の見出しを返却する */
 export const useActiveHeading = (
   ids: string[],
   offset: number = DEFAULT_OFFSET,
@@ -17,14 +17,14 @@ export const useActiveHeading = (
   useEffect(() => {
     const list = key === "" ? [] : key.split("\n");
     const passed = new Set<string>();
-    // スクロールの位置から求めた後は、遅れて届く交差の通知を使わない
+    // スクロールの位置から求めた後は、遅れて届く交差の通知を使用しない
     let measured = false;
     const observer = new IntersectionObserver(
       (entries) => {
         if (measured) return;
         for (const entry of entries) {
           const id = (entry.target as HTMLElement).id;
-          // 上の線を越えた（上へ出た）見出しを記録し、戻ったら外す
+          // 上の線を越えた（上へ出た）見出しを記録し、戻ったら除外する
           if (
             !entry.isIntersecting &&
             entry.boundingClientRect.top < offset + SETTLE_MARGIN
@@ -41,13 +41,13 @@ export const useActiveHeading = (
       const element = document.getElementById(id);
       if (element) observer.observe(element);
     }
-    // 目次のリンクなどで見出しを飛び越えたときは交差の変化が起きないため、スクロールのたびに位置から求め直す
+    // 目次のリンクなどで見出しを飛び越えたときは交差の変化が起きないため、スクロールのたびに位置から再計算する
     const onScroll = () => {
       measured = true;
       const last = list.filter((id) => {
         const element = document.getElementById(id);
         if (!element) return false;
-        // mdmark が見出しに当てる移る先の余白（scroll-margin-top）の分だけ線を下げる
+        // mdmark が見出しに適用する移る先の余白（scroll-margin-top）の分だけ線を下げる
         const margin = Number.parseFloat(getComputedStyle(element).scrollMarginTop) || 0;
         return element.getBoundingClientRect().top < offset + SETTLE_MARGIN + margin;
       });

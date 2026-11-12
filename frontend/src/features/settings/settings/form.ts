@@ -102,7 +102,7 @@ const fromValues = (values: SourceFormValues): SourceEntry => {
   };
 };
 
-/** 入力を反映した、端末の設定の保存へ送る `sources[]` を作る（追加は末尾に加える） */
+/** 入力を反映した、端末の設定の保存へ送信する `sources[]` を作る（追加は末尾に加える） */
 export const applySource = (
   sources: SettingsSource[],
   values: SourceFormValues,
@@ -114,7 +114,7 @@ export const applySource = (
   return rows.map((row, position) => (position === index ? next : row));
 };
 
-/** `index` の行を除いた、端末の設定の保存へ送る `sources[]` を作る */
+/** `index` の行を除いた、端末の設定の保存へ送信する `sources[]` を作る */
 export const removeSource = (
   sources: SettingsSource[],
   index: number,

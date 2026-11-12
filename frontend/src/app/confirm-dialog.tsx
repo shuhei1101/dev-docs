@@ -70,10 +70,10 @@ export const ConfirmDialogProvider = ({
   );
 };
 
-/** 確認のダイアログを開き、確定なら true を返す関数を返す */
+/** 確認のダイアログを開き、確定なら true を返却する関数を返却する */
 export const useConfirmDialog = (): Confirm => {
   const confirm = useContext(ConfirmContext);
   if (confirm === null)
-    throw new Error("ConfirmDialogProvider の中で使ってください");
+    throw new Error("ConfirmDialogProvider の中で使用してください");
   return confirm;
 };

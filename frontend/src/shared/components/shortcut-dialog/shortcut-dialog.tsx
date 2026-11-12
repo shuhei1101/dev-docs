@@ -19,7 +19,7 @@ const IS_MAC =
   typeof navigator !== "undefined" &&
   /Mac|iPhone|iPad/.test(navigator.platform);
 
-/** TanStack Hotkeys の書き方を画面に出すキーにする（`Shift+/` は `?`） */
+/** TanStack Hotkeys の記法を画面に出すキーにする（`Shift+/` は `?`） */
 const display = (hotkey: string): string[] =>
   hotkey === "Shift+/"
     ? ["?"]
@@ -27,7 +27,7 @@ const display = (hotkey: string): string[] =>
         .split("+")
         .map((key) => (key === "Mod" ? (IS_MAC ? "⌘" : "Ctrl") : key));
 
-/** 画面で使えるキーを並べるダイアログ */
+/** 画面で使用できるキーを並べるダイアログ */
 export const ShortcutDialog = ({
   open,
   onOpenChange,
