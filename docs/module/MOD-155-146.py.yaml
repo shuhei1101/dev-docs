@@ -301,9 +301,9 @@ functions:
       - name: test_load_terminal_config_when_schema_invalid
         case: 異常
         summary: 違反を全て集める
-        condition: '`sources[0]` に `config` が無く、`port` が文字列'
+        condition: '`project_index` が URL でなく、`port` が文字列'
         mock: なし
-        expected: '`TerminalConfigInvalidError` の違反に `sources[0].config` と `port` の 2 つ'
+        expected: '`TerminalConfigInvalidError` の違反に `port` と `project_index` の 2 つ'
         exception: スキーマに違反する
       - name: test_load_terminal_config_when_leftover_sources
         case: 正常

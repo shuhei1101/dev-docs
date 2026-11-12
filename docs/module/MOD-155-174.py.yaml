@@ -231,7 +231,7 @@ functions:
         summary: 再起動の要求で同じプロセスを置き換える
         condition: '`uvicorn.Server.run` の中で `handlers.restart.request()` を呼ぶ'
         mock: '`uvicorn.Server.run`（`started` を `True` にして再起動を要求して戻る）・`os.execv`（呼ばれた引数を記録する偽物）'
-        expected: '`os.execv` が `sys.executable` と `[sys.executable, "-m", "dev_docs", "serve"]` で 1 回呼ばれる。`uvicorn.Config` の `timeout_graceful_shutdown` が `PROJECT_INDEX_TIMEOUT_SEC * 1.5`'
+        expected: '`os.execv` が `sys.executable` と `[sys.executable, "-m", "dev_docs", "serve"]` で 1 回呼ばれる。`uvicorn.Config` の `timeout_graceful_shutdown` が `int(PROJECT_INDEX_TIMEOUT_SEC * 1.5)`'
       - name: test_run_serve_when_leftover_sources
         case: 正常
         summary: 残った sources を警告する
