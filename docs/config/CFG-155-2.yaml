@@ -48,7 +48,7 @@ settings:
     reload: restart
     allowed: '`http://`・`https://` で始まる URL'
   - key: state_dir
-    title: 状態の置き場所
+    title: 状態の配置先
     file: settings.yaml
     type: str
     default: '`${XDG_STATE_HOME:-~/.local/state}/dev-docs`'
@@ -56,7 +56,7 @@ settings:
     description: 表の列の設定を置くフォルダ
     reload: restart
   - key: log_dir
-    title: ログの置き場所
+    title: ログの配置先
     file: settings.yaml
     type: str
     default: '`{state_dir}/logs`'
@@ -66,7 +66,7 @@ settings:
     title: 前のバージョンから残った配信元
     file: settings.yaml
     type: list
-    description: 'version 1 の端末の設定の配信元の行。`dev-docs migrate` が project-index へ移し、同じ id で内容の違う行だけが残る。配信には使わず、スキーマの違反にもせず、起動と `status` が行の ID を知らせる'
+    description: 'version 1 の端末の設定の配信元の行。`dev-docs migrate` が project-index へ移し、同じ id で内容の違う行だけが残る。配信には使用せず、スキーマの違反にもせず、起動と `status` が行の ID を知らせる'
     reload: restart
 refs:
   - MOD-155-146#
