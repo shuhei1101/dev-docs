@@ -160,4 +160,16 @@ requirements:
         measurement: 起動から TCP の接続が通るまでの時間を測る
         expected: 20 秒以内で、配信元の読み込みが終わる前に接続が通る
     status: planned
+  - id: NFR-14
+    name: project-index への問い合わせの制限時間
+    english_name: project_index_timeout
+    category: 耐障害
+    external_constraint: project-index が配信元の変換のスクリプトを止める制限時間（project-index のスクリプトの制限時間。既定 30 秒）
+    source_kind: 外部 API の制限
+    source: shuhei1101/project-index#14（project-index の読み取り API）
+    value: '45'
+    unit: 秒
+    rationale: 文書の取得は project-index が `converters[]` のスクリプトを動かす間待つため、下流の制限時間 30 秒に 50% を乗せて切り上げた（規約『資源の値の決め方』の入れ子の待ち）。project-index のスクリプトの制限時間を変えたら合わせて決め直す
+    overflow: 打ち切った要求は、project-index につながらないときと同じ 503 と理由を返す
+    status: planned
 lead: 外部の制約から逆算した dev-docs の決定値。

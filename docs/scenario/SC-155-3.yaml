@@ -101,7 +101,7 @@ scenarios:
     test: test_normal_when_sources_moved_to_project_index
     notes:
       project-index のアドレス: '`--project-index` を省くと、`PROJECT_INDEX_PORT`（無ければ既定の 8786）から `http://127.0.0.1:{ポート}` を組む'
-      既にある行: project-index の端末の設定の行は変えず、行ごとに追加する。同じ id の行があれば、その行は移さずに id と、dev-docs の端末の設定に残したことを応答に出す（dev-docs の `sources` からも除かない）
+      既にある行: project-index の端末の設定の行は変えず、行ごとに追加する。同じ id で内容が違う行があれば、その行は移さずに id と、dev-docs の端末の設定に残したことを応答に出す（dev-docs の `sources` からも除かない）。同じ id で内容も同じ行は移した行として扱う
   - name: 異常シナリオ（sources を移すときに project-index につながらない）
     setup:
       - name: Mock
