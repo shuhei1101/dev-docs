@@ -1,0 +1,12 @@
+docs:
+  - page: docs/architecture/ARCH-155-1.yaml
+    new: false
+    change: 'overview のデータの図の辺 SRV → FE（配信）と PLG → SRV（起動）から、AI Monitor v0.4.0 のスキーマで無くなった line: reply を削除する'
+    status: todo
+scope_out:
+  - item: design_docs convert --from v0.3.0 --to v0.4.0 の実行
+    reason: docs/module/MOD-155-*.yaml を物理ファイルのパス名へ改名してしまうため、手で 2 行を削除する（convert の不具合は AI Monitor 側で扱う）
+    plan: none
+  - item: テーマの取り込み・変わった規約の読み直し・ai-monitor-version.ini の更新
+    reason: AI Monitor v0.4.0 への追従の残りで、この Issue の要望に含まれない
+    plan: '#74'
