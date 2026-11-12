@@ -143,16 +143,13 @@ flows:
       - 埋め込みのマーカーの場所に指した YAML の表があり、マーカーの文字列は無い
     test: test_normal_when_custom_converter
   - name: 正常系（変換に失敗する）
-    summary: 制限時間を超えたスクリプトを止め、`conversionError` に失敗を入れる
+    summary: project-index が返した変換の失敗と読めなかった YAML を、`conversionError` に入れる
     setup:
       - name: Mock
-        description: なし
+        description: custom の `converters[]` を指す種類の文書に、制限時間を超えた変換の失敗（種類・スクリプト・理由）を返す
         notes: '-'
-      - name: 止まらないスクリプト
-        description: custom の `converters[]` のスクリプトを、制限時間より長く待つものに差し替える
-        notes: 制限時間はテストで短くしてよい
       - name: 壊れた YAML
-        description: sample の文書 1 の YAML を、YAML として読めない内容にする
+        description: モックが sample の文書 1 のファイルを、文書の一覧の読めなかったファイル（行と列）として返す
         notes: '-'
     flow: |-
       ```mermaid
@@ -168,7 +165,6 @@ flows:
       ```
     expected:
       - '`markdown` が `null` で、`conversionError` に種類・スクリプトのパス・制限時間を超えたことがある'
-      - スクリプトのプロセスが残っていない
       - 同じ配信元のスキーマ駆動で変換する文書は 200 で `markdown` を返す
       - 壊れた YAML の文書 1 は、`conversionError` にファイルのパスと読めなかった行と列を入れて 200 を返す
     test: test_normal_when_conversion_failed
@@ -476,7 +472,7 @@ flows:
     expected:
       - '`_decisions/D-1` が 200 で、`path` が `_decisions/D-1`、`markdown` が `tmp/a/.mindstella/docs/D-1.md` の本文のまま'
       - '`tabs` は sample の `nav` のタブで、どのサイドバーの項目も選ばれていない'
-      - '`updatedAt` が `D-1.md` のファイルの更新日時で、`bodyPath`・`diff` が `null`'
+      - '`updatedAt` が要求した時点の日時で、`bodyPath`・`diff` が `null`'
       - '2 つのフォルダにある `_decisions/D-2` と、どこにも無い `_decisions/D-3` は 404 で、`missing` が `doc`'
     test: test_normal_when_decision_document_returned
   - name: 異常系（project-index につながらない・503）

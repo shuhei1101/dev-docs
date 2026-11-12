@@ -135,27 +135,27 @@ flows:
       - モックが保存を受けず、`/_api/sources/sample/docs` は 200 を返す
       - '`Origin` が無く `Sec-Fetch-Site: cross-site` の要求も 403'
     test: test_error_when_cross_origin
-  - name: 異常系（スキーマに通らない・422）
-    summary: スキーマに通らない保存を断り、違反を全て返す
+  - name: 異常系（本文の型の誤り・400）
+    summary: 型の合わない本文を project-index へ送らずに断り、違反を全て返す
     setup:
       - name: Mock
         description: なし
       - name: 入力
-        description: 2 行目の `id` が `Sample Docs`、`scope.read` が空の文字列を含む
+        description: 2 行目の `config` が無く、`enabled` が真偽値でない文字列
     flow: |-
       ```mermaid
       sequenceDiagram
         participant C as クライアント
         participant E as PUT /_api/settings/sources
 
-        C->>E: sources: sample, 違反を含む行
-        E->>E: 要求の本文をスキーマで検証して失敗する
-        E-->>C: 422 problem+json（違反したキーと理由）
+        C->>E: sources: sample, 型の合わない行
+        E->>E: 要求の本文を型で検証して失敗する
+        E-->>C: 400 problem+json（違反したキーと理由）
       ```
     expected:
-      - 422 で、`errors` に `sources[1].id` と `sources[1].scope.read` がそれぞれの理由つきである
+      - 400 で、`errors` に `sources[1].config` と `sources[1].enabled` がそれぞれの理由つきである
       - モックが保存を受けず、`/_api/sources/sample/docs` は 200 を返す
-    test: test_error_when_schema_invalid
+    test: test_error_when_body_invalid
   - name: 異常系（project-index が保存を断る・422・502）
     summary: project-index が 422 を返したら違反をそのまま 422 で返し、それ以外の失敗は 502 で返す
     setup:
@@ -274,9 +274,12 @@ status_codes:
     condition: 保存して配信元を読み直した（読み直しで外した配信元があっても 200）
   - code: '403'
     condition: 画面と別のオリジンからの要求
+  - code: '400'
+    condition: 要求の本文の型が合わない
+    notes: '`errors[]` に違反したキーのパスと理由を全て並べる'
   - code: '422'
-    condition: 要求の本文がスキーマに通らない、または project-index が 422 を返した
-    notes: '`errors[]` に違反したキーのパスと理由を全て並べる。project-index の 422 は、project-index の `errors[]` をそのまま返す'
+    condition: project-index が 422 を返した（`id` の形・`scope` の空の文字列など、行の値の検証は project-index が行う）
+    notes: project-index の `errors[]` をそのまま返す
   - code: '502'
     condition: project-index が 200・422 以外を返した
     notes: project-index の応答のステータスと要約
