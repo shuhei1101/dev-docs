@@ -1,0 +1,201 @@
+use_cases:
+  - kind: composite
+    scenario: docs/scenario/SC-155-13.yaml
+    impact: changed
+    detail: 文書を MCP で読み書きするには project-index を入れ、画面で読むには dev-docs を入れる流れに変わる。配信元の設定の既定の名前が project-index.yaml になる
+    depends_on: []
+  - kind: single
+    scenario: docs/scenario/SC-155-2.yaml
+    impact: changed
+    detail: 検索の MCP を使う端末は project-index を別に入れる。画面を使う端末だけ dev-docs を入れる
+    depends_on:
+      - docs/scenario/SC-155-13.yaml
+  - kind: single
+    scenario: docs/scenario/SC-155-3.yaml
+    impact: changed
+    detail: 更新と端末の設定の移し替えが、画面の側と索引の側の 2 つに分かれる
+    depends_on:
+      - docs/scenario/SC-155-13.yaml
+  - kind: single
+    scenario: docs/scenario/SC-155-4.yaml
+    impact: removed
+    detail: エージェントが書き込む流れは project-index が持ち、dev-docs から外す
+    depends_on:
+      - docs/scenario/SC-155-13.yaml
+  - kind: single
+    scenario: docs/scenario/SC-155-5.yaml
+    impact: removed
+    detail: エージェントが調べる流れは project-index が持ち、dev-docs から外す
+    depends_on:
+      - docs/scenario/SC-155-13.yaml
+  - kind: single
+    scenario: docs/scenario/SC-155-8.yaml
+    impact: changed
+    detail: 変更のレビューのうち、エージェントが変わった文書を引く流れは project-index が持ち、画面で差分を見る流れだけが残る
+    depends_on:
+      - docs/scenario/SC-155-13.yaml
+  - kind: single
+    scenario: docs/scenario/SC-155-1.yaml
+    impact: changed
+    detail: 直接編集した文書の読み直しは project-index が行い、画面はその結果を表示する
+    depends_on:
+      - docs/scenario/SC-155-13.yaml
+  - kind: single
+    scenario: docs/scenario/SC-155-9.yaml
+    impact: changed
+    detail: 配信元の設定・スクリプトの確認と反映は project-index が行い、既定の名前が project-index.yaml になる
+    depends_on:
+      - docs/scenario/SC-155-13.yaml
+  - kind: single
+    scenario: docs/scenario/SC-155-10.yaml
+    impact: changed
+    detail: 画面のサーバーの起動は、project-index から配信元を読む前提に変わる
+    depends_on:
+      - docs/scenario/SC-155-13.yaml
+  - kind: single
+    scenario: docs/scenario/SC-155-11.yaml
+    impact: following
+    detail: 配信元を外す操作で書き換える配信元の一覧を、project-index と共有するものに追随する
+    depends_on:
+      - docs/scenario/SC-155-13.yaml
+  - kind: single
+    scenario: docs/scenario/SC-155-12.yaml
+    impact: changed
+    detail: 配信元を追加するときに作る設定の既定の名前が project-index.yaml になり、追加した配信元を project-index と共有する
+    depends_on:
+      - docs/scenario/SC-155-13.yaml
+  - kind: single
+    scenario: docs/scenario/SC-155-7.yaml
+    impact: run_only
+    detail: 画面で読む流れは変わらないが、文書の取得元が project-index に変わるため壊れうる
+    depends_on: []
+  - kind: single
+    scenario: docs/scenario/SC-155-6.yaml
+    impact: run_only
+    detail: コメントを渡す流れは変わらないが、本文の取得元が変わるため壊れうる
+    depends_on: []
+docs:
+  - page: README.md
+    new: false
+    change: dev-docs を画面のサーバーとして紹介し直し、検索・書き込みの MCP は project-index を入れることと、配信元の設定の既定の名前 project-index.yaml を書く
+    status: todo
+  - page: CLAUDE.md
+    new: false
+    change: リポジトリの構成の説明から、project-index へ移した機能を外す
+    status: todo
+  - page: docs/guide/はじめに.md
+    new: false
+    change: dev-docs と project-index の役割の分担を書く
+    status: todo
+  - page: docs/guide/コアコンセプト-配信元と権限.md
+    new: false
+    change: 配信元の読み込みと権限を project-index が持ち、dev-docs はその結果を読むことに書き換える。既定の名前を project-index.yaml にする
+    status: todo
+  - page: docs/guide/コアコンセプト-文書のメタデータ.md
+    new: false
+    change: 索引とメタデータの解決を project-index が持つことに書き換える
+    status: todo
+  - page: docs/guide/コアコンセプト-管理用プラグイン.md
+    new: false
+    change: 管理用プラグインが起動するものと、project-index のプラグインとの分担を書く
+    status: todo
+  - page: docs/guide/dev-docsを入れる.md
+    new: false
+    change: 検索の MCP を使う端末は project-index を入れ、画面を使う端末だけ dev-docs を入れる手順にする
+    status: todo
+  - page: docs/guide/dev-docsを更新する.md
+    new: false
+    change: 画面の側と索引の側の更新を分け、今の端末から移る手順を書く
+    status: todo
+  - page: docs/guide/配信元を配信する.md
+    new: false
+    change: 配信元の設定の既定の名前を project-index.yaml・project-index.local.yaml にし、今の dev-docs.yaml の移行を書く
+    status: todo
+  - page: docs/guide/documentsの行の判定.md
+    new: false
+    change: 例のファイル名を project-index.yaml にする
+    status: todo
+  - page: docs/guide/新しく作るか修正するかの判定.md
+    new: false
+    change: 例のファイル名を project-index.yaml にする
+    status: todo
+  - page: docs/guide/画面で読む.md
+    new: false
+    change: 画面が project-index から文書を読む前提を書く
+    status: todo
+  - page: docs/guide/文書のMCP.md
+    new: false
+    change: 文書の MCP のリファレンスを project-index へ移し、dev-docs 側は project-index のリファレンスへの案内だけにする
+    status: todo
+  - page: docs/guide/管理のMCP.md
+    new: false
+    change: project-index へ移す管理のツール（check_project・reload・try_convert・write_nav など）を外し、画面のサーバーに残るツールだけにする
+    status: todo
+  - page: docs/guide/CLI.md
+    new: false
+    change: project-index へ移すコマンド（files・prompt-doc など）を外し、dev-docs に残るコマンドだけにする
+    status: todo
+  - page: docs/guide/設定.md
+    new: false
+    change: 端末の設定の sources[] を project-index と共有する仕組みと、配信元の設定の既定の名前を書く
+    status: todo
+  - page: docs/guide/用語集.md
+    new: false
+    change: project-index と、配信元の設定（project-index.yaml）の用語を追加・修正する
+    status: todo
+  - page: docs/guide/使い方.md
+    new: false
+    change: 使い方の目次から project-index へ移したページを外す
+    status: todo
+  - page: docs/guide/リファレンス.md
+    new: false
+    change: リファレンスの目次から project-index へ移したページを外す
+    status: todo
+  - page: docs/guide/files.yml
+    new: false
+    change: 移した・名前を変えたページの行を修正する
+    status: todo
+  - page: templates/dev-docs.yaml
+    new: false
+    change: project-index.yaml に改名し、索引の側の雛形は project-index へ移す
+    status: todo
+  - page: templates/settings.yaml
+    new: false
+    change: 例の config のファイル名を project-index.yaml にする
+    status: todo
+  - page: plugins/dev-docs/skills/setup/SKILL.md
+    new: false
+    change: 配信元の登録を project-index のスキルへ移すか、既定の名前を project-index.yaml にして残すかを設計で決め、そのとおりに修正する
+    status: todo
+  - page: plugins/dev-docs/skills/global-setup/SKILL.md
+    new: false
+    change: 画面のサーバーの用意だけにし、検索の MCP の用意は project-index へ案内する
+    status: todo
+  - page: content/prompts/mcp/admin/tools/write-nav.yaml
+    new: false
+    change: 管理のツールの説明を project-index へ移すか、残す場合はファイル名を project-index.yaml にする
+    status: todo
+  - page: content/prompts/mcp/admin/tools/check-project.yaml
+    new: false
+    change: 管理のツールの説明を project-index へ移す
+    status: todo
+  - page: schemas/dev-docs.schema.json
+    new: false
+    change: 配信元の設定のスキーマを project-index へ移し、dev-docs から参照する先を付け替える
+    status: todo
+scope_out:
+  - item: project-index のリポジトリの作成
+    reason: ユーザーが作成し、立ち上げ Issue shuhei1101/project-index#2 で土台ができている（#114 のユーザーのコメント）
+    plan: none
+  - item: project-index のリポジトリへのコード・テスト・設計書の追加（移す先の受け入れ）
+    reason: 判断が分かれるためレビューで確定する。この作業 PR は dev-docs のリポジトリだけを変えられるので、project-index 側の受け入れは、設計で移す範囲と project-index の API を決めた後に project-index へ起票し、この作業 PR の dev-docs 側の削除・付け替えより先に入れる案を推す
+    plan: to_file
+  - item: project-index へ移した文書の置き場所・`id`・書き方の移行（#7・#74・#95 の内容を移した文書に当てる）
+    reason: '#114 の扱いの判断で、この作業 PR に含めず project-index へ起票すると決まった。移す文書の範囲が設計で決まってから起票する'
+    plan: to_file
+  - item: alias-inject の設計書・公開ドキュメント・`settings.sample.yaml`・コメントの例のファイル名の修正
+    reason: 別のリポジトリのため。#114 の扱いの判断で、先後を固定せず alias-inject へ起票すると決まった
+    plan: shuhei1101/alias-inject#74
+  - item: dev-docs 自身の直下の配信元の設定（project-index.yaml）の作成
+    reason: '#24 が担当する（#114 の扱いの判断で #24 が project-index.yaml を作る内容に書き直された）'
+    plan: '#24'
