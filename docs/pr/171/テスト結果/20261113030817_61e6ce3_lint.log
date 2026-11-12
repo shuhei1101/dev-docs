@@ -1,0 +1,38 @@
+$ (rc=0; uv run ruff check . || rc=1; uv run ruff format --check . || rc=1; uv run mypy . || rc=1; claude plugin validate . || rc=1; npm run lint || rc=1; npm run typecheck || rc=1; exit $rc)
+   Building dev-docs @ file:///mnt/c/Users/shuhe/repo/dev-docs/.claude/worktrees/chore-docs-serve-own-docs-with-project-index
+      Built dev-docs @ file:///mnt/c/Users/shuhe/repo/dev-docs/.claude/worktrees/chore-docs-serve-own-docs-with-project-index
+Uninstalled 1 package in 43ms
+warning: Failed to hardlink files; falling back to full copy. This may lead to degraded performance.
+         If the cache and target directories are on different filesystems, hardlinking may not be supported.
+         If this is intentional, set `export UV_LINK_MODE=copy` or use `--link-mode=copy` to suppress this warning.
+Installed 1 package in 197ms
+All checks passed!
+148 files already formatted
+Success: no issues found in 145 source files
+Validating marketplace manifest: /mnt/c/Users/shuhe/repo/dev-docs/.claude/worktrees/chore-docs-serve-own-docs-with-project-index/.claude-plugin/marketplace.json
+
+⚠ Found 3 warnings:
+
+  ❯ description: No marketplace description provided. Adding a description helps users understand what this marketplace offers
+  ❯ plugins[0] plugin.json → version: No version specified. Consider adding a version following semver (e.g., "1.0.0")
+  ❯ plugins[0] plugin.json → author: No author information provided. Consider adding author details for plugin attribution
+
+ℹ Advice (does not change the verdict):
+
+  ❯ /mnt/c/Users/shuhe/repo/dev-docs/.claude/worktrees/chore-docs-serve-own-docs-with-project-index/README.md: This README has no line that installs "dev-docs" from a marketplace. Add the install line, which works in one step on Claude Code 2.1.275 or later. In it, replace <owner>/<repo> with the repository that holds the marketplace.
+      /plugin install dev-docs --marketplace <owner>/<repo>
+
+✔ Validation passed with warnings
+
+> lint
+> eslint frontend tests/unit/frontend tests/integration/frontend eslint.config.js
+
+
+> typecheck
+> node node_modules/typescript-native/bin/tsc --noEmit -p frontend/tsconfig.json
+
+exit code: 0
+
+# 61e6ce3 の前（8964595）の同じコマンドの mypy の出力（exit code: 1）
+docs/pr/50/反映作業/端末の設定の配信元をメインのリポジトリへ戻す/切り戻し.py: error: Duplicate module named
+"切り戻し" (also at "./docs/pr/171/反映作業/端末の設定への配信元の追加/切り戻し.py")
