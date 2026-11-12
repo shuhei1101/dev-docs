@@ -38,12 +38,12 @@ OBJECT_JOINER = "、"
 NO_DATE = "-"
 # ER 図の実体の列を補うテーブルを持つ、文書のキー
 ER_TABLES_KEY = "tables"
-# 項目のパスの 1 段（`{キー}` か `{キー}[{x-key の値}]`）
+# 項目のパスの 1 階層（`{キー}` か `{キー}[{x-key の値}]`）
 ITEM_STEP = re.compile(r"(?P<key>[^.\[\]]+)(?:\[(?P<label>[^\]]*)\])?")
 
 
 def _is_empty(value: Any) -> bool:
-    """値が空（組み立てずに飛ばす）かを返す。"""
+    """値が空（組み立てずに飛ばす）かを返却する。"""
     return value is None or value == "" or value == [] or value == {}
 
 
@@ -57,17 +57,17 @@ def _scalar(value: Any) -> str:
 
 
 def _is_scalar(value: Any) -> bool:
-    """辞書でも配列でもない値かを返す。"""
+    """辞書でも配列でもない値かを返却する。"""
     return not isinstance(value, Mapping | list)
 
 
 def _is_rows(value: Any) -> bool:
-    """辞書だけの配列かを返す。"""
+    """辞書だけの配列かを返却する。"""
     return isinstance(value, list) and bool(value) and all(isinstance(v, Mapping) for v in value)
 
 
 def _is_hidden(sub: Any) -> bool:
-    """スキーマが `x-hidden: true` を持つかを返す。"""
+    """スキーマが `x-hidden: true` を持つかを返却する。"""
     return isinstance(sub, Mapping) and sub.get("x-hidden") is True
 
 
@@ -82,7 +82,7 @@ def _escape_cell(text: str) -> str:
 
 
 def _foreign_key(reference: str, context: RenderContext | None) -> str:
-    """外部キーの `{分類}/{テーブル}.{カラム}` を、参照先のテーブルへのリンクにする（引けなければ文字のまま）。"""
+    """外部キーの `{分類}/{テーブル}.{カラム}` を、参照先のテーブルへのリンクにする（見つからなければ文字のまま）。"""
     if context is None:
         return _escape_cell(reference)
     table = reference.rpartition(".")[0]
@@ -197,7 +197,7 @@ def render_attributes(
     for position, (name, value) in enumerate(pairs, start=1):
         text = _scalar(value)
         link = link_reference(text, context) if isinstance(value, str) else None
-        # 長い値・複数行の値: セルは最初の行の先頭だけにし、全文は行の詳細に置く
+        # 長い値・複数行の値: セルは最初の行の先頭だけにし、全文は行の詳細に配置する
         if link is None and (len(text) > LONG_VALUE_CHARS or "\n" in text):
             cell = f"{_escape_cell(text.splitlines()[0][:LONG_VALUE_CHARS])}…"
             details.append(
@@ -240,7 +240,7 @@ class _Builder:
         return DiagramHead(title=title, scope=self.scope, updated=self.updated)
 
     def heading(self, text: str, level: int) -> None:
-        """見出しを置く（深さは `MAX_HEADING_LEVEL` で止める）。"""
+        """見出しを配置する（深さは `MAX_HEADING_LEVEL` で止める）。"""
         self.blocks.append(f"{'#' * min(level, MAX_HEADING_LEVEL)} {text}")
 
     def text(self, value: Any, title: str) -> str:
@@ -319,7 +319,7 @@ class _Builder:
         sub_of: Any,
         level: int,
     ) -> None:
-        """例の値ごとに見出しと本文を置き、`<!-- tabs -->` の範囲で囲む。"""
+        """例の値ごとに見出しと本文を配置し、`<!-- tabs -->` の範囲で囲む。"""
         self.blocks.append("<!-- tabs -->")
         for key in keys:
             title = str(sub_of(key).get("title") or key)
@@ -390,9 +390,9 @@ class _Builder:
     def diagram(
         self, title: str, value: Mapping[str, Any], sub: Mapping[str, Any], path: str
     ) -> None:
-        """図と、続けて同じ値の閉じた元データの表を置く。"""
+        """図と、続けて同じ値の閉じた元データの表を配置する。"""
         kind: DiagramKind = sub.get("x-diagram", "flowchart")
-        # ER 図の列を補う同じ文書のテーブル（ER 図以外は使わない）
+        # ER 図の列を補う同じ文書のテーブル（ER 図以外は使用しない）
         tables = self.data.get(ER_TABLES_KEY) if isinstance(self.data, Mapping) else None
         self.blocks.append(render_diagram(value, kind, self.head(title), tables=_items(tables)))
         properties: Mapping[str, Any] = sub.get("properties") or {}
@@ -426,7 +426,7 @@ class _Builder:
             self.blocks.append(render_attributes(pairs, self.context, self.head(self.scope)))
 
     def sections(self, value: Any, sub: Mapping[str, Any], path: str, level: int) -> None:
-        """要素・子を 1 つ深い見出しの節にする。"""
+        """要素・子を 1 つ深い見出しのセクションにする。"""
         if isinstance(value, list):
             items = sub.get("items") if isinstance(sub.get("items"), Mapping) else {}
             x_key = sub.get("x-key")
@@ -467,10 +467,10 @@ class _Builder:
         """`x-shape` が無い値を、種類ごとの既定の表し方で組み立てる。"""
         if _is_scalar(value):
             text = self.text(value, title)
-            # 見出しの下の値: そのまま置く
+            # 見出しの下の値: そのまま配置する
             if not labeled:
                 self.blocks.append(text)
-            # 複数行・ブロックで始まる値: ラベルを独立した行にし、値を次のブロックに置く
+            # 複数行・ブロックで始まる値: ラベルを独立した行にし、値を次のブロックに配置する
             elif "\n" in text or text.startswith(("```", "<!--")):
                 self.blocks.append(f"**{title}**")
                 self.blocks.append(text)
@@ -510,7 +510,7 @@ def _anchors(data: Any, schema: Any, found: dict[str, str]) -> dict[str, str]:
 
 
 def item_heading(data: Mapping[str, Any], schema: Mapping[str, Any], item: str) -> str | None:
-    """文書の項目のパスが、スキーマ駆動の変換で見出しになる項目を指すとき、その見出しを返す。"""
+    """文書の項目のパスが、スキーマ駆動の変換で見出しになる項目を指すとき、その見出しを返却する。"""
     value: Any = data
     sub: Any = schema
     heading: Any = None
@@ -523,11 +523,11 @@ def item_heading(data: Mapping[str, Any], schema: Mapping[str, Any], item: str) 
         if not isinstance(sub, Mapping):
             return None
         label = step["label"]
-        # `{キー}`: キーの `x-heading` がこの段の見出し
+        # `{キー}`: キーの `x-heading` がこの階層の見出し
         if label is None:
             heading = sub.get("x-heading")
             continue
-        # `{キー}[{値}]`: `sections` の要素のうち `x-key` が値に当たる要素へ進み、その値が見出し
+        # `{キー}[{値}]`: `sections` の要素のうち `x-key` が値に該当する要素へ進み、その値が見出し
         x_key = sub.get("x-key")
         if sub.get("x-shape") != "sections" or not x_key or not isinstance(value, list):
             return None
@@ -542,7 +542,7 @@ def item_heading(data: Mapping[str, Any], schema: Mapping[str, Any], item: str) 
 
 
 def _first(data: Mapping[str, Any], keys: Sequence[str]) -> str | None:
-    """`keys` のうち最初に値を持つキーを返す。"""
+    """`keys` のうち最初に値を持つキーを返却する。"""
     return next((key for key in keys if not _is_empty(data.get(key))), None)
 
 

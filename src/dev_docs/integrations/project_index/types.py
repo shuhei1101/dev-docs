@@ -17,7 +17,7 @@ REQUIRED_DOCUMENT_KEYS = ("id", "kind", "path", "version", "data", "metadata")
 
 @dataclass(frozen=True, slots=True, kw_only=True)
 class IndexedDocument:
-    """project-index が返した 1 件の文書（ファイル 1 つか `records` の要素 1 つ）。"""
+    """project-index が返却した 1 件の文書（ファイル 1 つか `records` の要素 1 つ）。"""
 
     id: str
     kind: str
@@ -35,7 +35,7 @@ class IndexedDocument:
 
 @dataclass(frozen=True, slots=True, kw_only=True)
 class DocumentRow:
-    """配信元の設定の `documents[]` の有効な 1 行のうち、画面が使うキー。"""
+    """配信元の設定の `documents[]` の有効な 1 行のうち、画面が使用するキー。"""
 
     id: str
     paths: list[str]
@@ -49,7 +49,7 @@ class DocumentRow:
 
 @dataclass(frozen=True, slots=True, kw_only=True)
 class SourceView:
-    """`GET /sources/{source}/config` の応答。配信元の設定のうち画面が使うキー。"""
+    """`GET /sources/{source}/config` の応答。配信元の設定のうち画面が使用するキー。"""
 
     id: str
     git: bool
@@ -62,13 +62,13 @@ class SourceView:
     github_issue_labels: list[str] = field(default_factory=list)
 
     def row(self, kind: str) -> DocumentRow | None:
-        """行の ID から `DocumentRow` を返す（無ければ `None`）。"""
+        """行の ID から `DocumentRow` を返却する（無ければ `None`）。"""
         return next((row for row in self.documents if row.id == kind), None)
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
 class IndexFailure:
-    """project-index が返した、変換か読み込みの失敗。"""
+    """project-index が返却した、変換か読み込みの失敗。"""
 
     reason: FailureReason
     kind: str
@@ -116,7 +116,7 @@ class DecisionIndex:
 
     @property
     def linkable(self) -> set[str]:
-        """当たるフォルダがちょうど 1 つの ID を返す。"""
+        """該当するフォルダがちょうど 1 つの ID を返却する。"""
         return {decision for decision, count in self.counts.items() if count == 1}
 
 
@@ -185,7 +185,7 @@ class AddSourceResult:
 
 
 def _datetime(value: Any) -> datetime | None:
-    """ISO 8601 の日時を読む（無いか読めなければ `None`）。"""
+    """ISO 8601 の日時を解析する（無いか解析できなければ `None`）。"""
     if not isinstance(value, str):
         return None
     try:

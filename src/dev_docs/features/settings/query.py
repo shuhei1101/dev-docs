@@ -30,7 +30,7 @@ PORT_MAX = 65535
 
 
 def xdg_base_dir(env: Mapping[str, str], name: str, default: str) -> Path:
-    """XDG の環境変数の値を、空の文字列か相対パスなら既定に替えて返す。"""
+    """XDG の環境変数の値を、空の文字列か相対パスなら既定に替えて返却する。"""
     value = env.get(name) or ""
     # XDG Base Directory Specification は相対パスを無効として無視する
     return normalize_path(value if os.path.isabs(value) else default)
@@ -45,7 +45,7 @@ def config_path(env: Mapping[str, str]) -> Path:
 
 
 def state_dir_path(value: str | None, env: Mapping[str, str]) -> Path:
-    """環境変数と端末の設定の `state_dir` から状態の置き場を決める。"""
+    """環境変数と端末の設定の `state_dir` から状態の配置先を決める。"""
     override = env.get(STATE_DIR_ENV)
     if override:
         return normalize_path(override)
@@ -55,19 +55,19 @@ def state_dir_path(value: str | None, env: Mapping[str, str]) -> Path:
 
 
 def _settings_schema() -> dict[str, Any]:
-    """配布に同梱した端末の設定のスキーマを読む。"""
+    """配布に同梱した端末の設定のスキーマを読み込む。"""
     text = resources.files("dev_docs").joinpath(SETTINGS_SCHEMA).read_text(encoding="utf-8")
     schema: dict[str, Any] = load_yaml(text)
     return schema
 
 
 def validate_terminal_config(value: Any) -> list[Violation]:
-    """端末の設定の値をスキーマと行の間の決まりで確かめ、違反を全て返す。"""
+    """端末の設定の値をスキーマと行の間の決まりで確認し、違反を全て返却する。"""
     violations = schema_violations(_settings_schema(), value)
     if not isinstance(value, dict):
         return violations
     # 前のバージョンから残った sources は検証しない（起動が警告のログに出す）
-    # 読めるバージョンより新しい設定
+    # 読み込めるバージョンより新しい設定
     version = value.get("version")
     if isinstance(version, str) and version.isdigit() and int(version) > int(SETTINGS_VERSION):
         violations.append(Violation(path="version", rule="このサーバーより新しい設定です"))
@@ -75,7 +75,7 @@ def validate_terminal_config(value: Any) -> list[Violation]:
 
 
 def load_terminal_config(path: Path, *, env: Mapping[str, str] | None = None) -> TerminalConfig:
-    """`settings.yaml` を読み、スキーマの違反を全て集めてから端末の設定にする。"""
+    """`settings.yaml` を読み込み、スキーマの違反を全て集めてから端末の設定にする。"""
     if not path.is_file():
         raise TerminalConfigInvalidError(file=path, message=f"{path}: 端末の設定が見つかりません")
     try:

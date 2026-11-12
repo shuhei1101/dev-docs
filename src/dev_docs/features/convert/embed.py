@@ -47,7 +47,7 @@ def _render(path: str, item: str | None, embedded: Mapping[str, Any | None]) -> 
 
 
 def _markers(markdown: str) -> list[tuple[str, re.Match[str] | None]]:
-    """行ごとに、コードブロックの外のマーカーに当たればその一致を添えて並べる。"""
+    """行ごとに、コードブロックの外のマーカーに該当すればその一致を添えて並べる。"""
     pattern = re.compile(EMBED_PATTERN)
     result: list[tuple[str, re.Match[str] | None]] = []
     fence: str | None = None
@@ -75,7 +75,7 @@ def _outside(path: str) -> bool:
 
 
 def embed_paths(markdown: str) -> list[str]:
-    """Markdown のコードブロックの外にある埋め込みのマーカーのパスを、出る順に重ねずに返す。"""
+    """Markdown のコードブロックの外にある埋め込みのマーカーのパスを、出る順に重ねずに返却する。"""
     paths: list[str] = []
     for _, matched in _markers(markdown):
         if matched is None:

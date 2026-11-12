@@ -52,10 +52,10 @@ def _problem(
 
 
 def problem_of(error: DevDocsError, fields: dict[str, Any] | None = None) -> JSONResponse:
-    """`DevDocsError` を problem+json の応答にする（`fields` は本文に足す値）。"""
+    """`DevDocsError` を problem+json の応答にする（`fields` は本文に追加する値）。"""
     details = error.details()
     if isinstance(error, ProjectIndexUnreachableError):
-        # つながらなかった接続先と理由は 1 段目に置かず `projectIndex` にまとめる
+        # つながらなかった接続先と理由は 1 階層目に配置せず `projectIndex` にまとめる
         details = {"project_index": {"address": error.address, "reason": error.reason}}
         logger.error("project-index につながらない（%s・%s）", error.address, error.reason)
     extra: dict[str, Any] = {
@@ -103,7 +103,7 @@ def register_error_handlers(app: FastAPI) -> None:
     @app.exception_handler(StarletteHTTPException)
     async def http_error(request: Request, error: Exception) -> Response:
         assert isinstance(error, StarletteHTTPException)  # noqa: S101
-        # 例外のヘッダー（405 の `Allow` など）は応答に載せる
+        # 例外のヘッダー（405 の `Allow` など）は応答に含める
         return _problem(
             "HttpError",
             error.status_code,

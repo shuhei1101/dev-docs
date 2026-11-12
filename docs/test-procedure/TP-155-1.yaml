@@ -28,6 +28,7 @@ layers:
       - '`git` と、`PATH` の `python3`（配信元のスクリプトに使う）が使えること'
       - Linux の `/proc/net/tcp` を読めること（待ち受けのアドレスの確認）
       - '`127.0.0.1` の空きポートが使えること（起動のテストが子プロセスで待ち受ける）'
+      - '文書の取得の結合テスト（`tests/integration/server/test_get_document.py`）は、`package.json` の `devDependencies` でバージョンを固定した mdmark の CLI（`node_modules/.bin/mdmark`）で図を点検する。Node 24 以上で、リポジトリの直下で `npm ci` を済ませておくこと'
     run_one:
       label: ファイル
       command: |-

@@ -1,6 +1,6 @@
-"""`dev-docs prompt-doc` が読むプロンプトの YAML のモデルと、描画の結果・例外の型。
+"""`dev-docs prompt-doc` が読み込むプロンプトの YAML のモデルと、描画の結果・例外の型。
 
-サーバーが起動のときに読むプロンプトの違反の型も持つ。
+サーバーが起動のときに読み込むプロンプトの違反の型も持つ。
 """
 
 from __future__ import annotations
@@ -20,7 +20,7 @@ class PromptVar(BaseModel):
 
     model_config = ConfigDict(extra="ignore")
 
-    # 無ければ型を確かめない
+    # 無ければ型を確認しない
     type: VarType | None = None
     required: bool = False
     description: str = ""
@@ -48,7 +48,7 @@ class PromptPart(BaseModel):
     id: str
     role: Role | None = None
     tags: list[str] = Field(default_factory=list)
-    # Jinja2 の式。偽なら部品を使わない
+    # Jinja2 の式。偽なら部品を使用しない
     when: str | None = None
     texts: list[PromptText] = Field(min_length=1)
 
@@ -63,7 +63,7 @@ class PromptExample(BaseModel):
 
 
 class PromptDoc(BaseModel):
-    """プロンプトの YAML 1 件のうち変換に使うキー。"""
+    """プロンプトの YAML 1 件のうち変換に使用するキー。"""
 
     model_config = ConfigDict(extra="ignore")
 
@@ -114,7 +114,7 @@ class PartSyntaxError:
 
 @dataclass(frozen=True, slots=True, kw_only=True)
 class PromptProblem:
-    """起動のときに読んだプロンプトの YAML の違反 1 件。"""
+    """起動のときに読み込んだプロンプトの YAML の違反 1 件。"""
 
     # 違反した YAML の絶対パス。無いファイルはあるはずのパス
     file: Path
@@ -128,7 +128,7 @@ class PromptProblem:
 
 
 class PromptInvalidError(Exception):
-    """起動のときに読むプロンプトの YAML が無い・読めない・スキーマに違反する・描画できない。"""
+    """起動のときに読み込むプロンプトの YAML が無い・読み込めない・スキーマに違反する・描画できない。"""
 
     def __init__(self, problems: list[PromptProblem]) -> None:
         super().__init__("\n".join(problem.line() for problem in problems))

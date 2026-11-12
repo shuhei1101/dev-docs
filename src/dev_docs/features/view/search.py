@@ -1,4 +1,4 @@
-"""画面の検索（project-index の検索の結果を画面の形にする）。"""
+"""画面の検索（project-index の検索の結果を画面の構造にする）。"""
 
 from __future__ import annotations
 
