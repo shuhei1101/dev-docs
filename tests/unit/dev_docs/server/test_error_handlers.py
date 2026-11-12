@@ -1,14 +1,21 @@
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass, field
 from typing import ClassVar
 
+import pytest
 from fastapi import FastAPI, HTTPException
 from fastapi.testclient import TestClient
 from pydantic import BaseModel
 
 from dev_docs.server.error_handlers import register_error_handlers
-from dev_docs.shared.errors import DevDocsError, ValidationFailedError, Violation
+from dev_docs.shared.errors import (
+    DevDocsError,
+    ProjectIndexRejectedError,
+    ProjectIndexUnreachableError,
+    Violation,
+)
 
 
 class HiddenBody(BaseModel):
@@ -37,8 +44,8 @@ def test_register_error_handlers() -> None:
 
     @app.post("/boom")
     def boom() -> None:
-        raise ValidationFailedError(
-            message="検査に通りません", violations=[Violation(path="name", rule="必須")]
+        raise ProjectIndexRejectedError(
+            message="検証に失敗", violations=[Violation(path="sources[0].config", rule="必須")]
         )
 
     client = TestClient(app)
@@ -48,8 +55,8 @@ def test_register_error_handlers() -> None:
     body = response.json()
     assert response.status_code == 422
     assert response.headers["content-type"].startswith("application/problem+json")
-    assert body["type"] == "urn:dev-docs:error:ValidationFailedError"
-    assert body["errors"] == [{"path": "name", "reason": "必須"}]
+    assert body["type"] == "urn:dev-docs:error:ProjectIndexRejectedError"
+    assert body["errors"] == [{"path": "sources[0].config", "reason": "必須"}]
 
 
 def test_register_error_handlers_when_request_invalid() -> None:
@@ -123,3 +130,31 @@ def test_register_error_handlers_when_details_snake() -> None:
     assert body["candidates"] == {"tests/test_main": ["rule-auth"]}
     assert "nextSteps" in body
     assert not any("_" in key for key in body)
+
+
+def test_register_error_handlers_when_project_index_unreachable(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """project-index につながらないことを 503 にする（正常系）。"""
+    # 準備
+    app = FastAPI()
+    register_error_handlers(app)
+    reason = "45 秒以内に応答がありませんでした"
+
+    @app.get("/boom")
+    def boom() -> None:
+        raise ProjectIndexUnreachableError(address="http://127.0.0.1:8786", reason=reason)
+
+    client = TestClient(app)
+    # 実行
+    with caplog.at_level(logging.ERROR):
+        response = client.get("/boom")
+    # 検証
+    body = response.json()
+    assert response.status_code == 503
+    assert (
+        body["detail"] == f"project-index（http://127.0.0.1:8786）に接続できませんでした。{reason}"
+    )
+    assert body["projectIndex"] == {"address": "http://127.0.0.1:8786", "reason": reason}
+    assert "address" not in body
+    assert len([r for r in caplog.records if r.levelno == logging.ERROR]) == 1

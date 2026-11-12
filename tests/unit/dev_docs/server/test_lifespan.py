@@ -23,17 +23,17 @@ def _fake_mcp(name: str, events: list[str]) -> SimpleNamespace:
 
 
 def test_build_lifespan() -> None:
-    """MCP のセッションの管理を動かす（正常系）。"""
+    """MCP のセッションの管理を動かし、出るときに project-index の呼び出しを閉じる（正常系）。"""
     # 準備
     events: list[str] = []
 
-    def purge_expired() -> int:
-        events.append("purge")
-        return 0
+    async def aclose() -> None:
+        events.append("aclose")
 
-    seen = SimpleNamespace(purge_expired=purge_expired)
-    mcps = [_fake_mcp("docs", events), _fake_mcp("admin", events)]
-    lifespan = build_lifespan(mcps, seen=seen)  # type: ignore[arg-type]
+    lifespan = build_lifespan(
+        [_fake_mcp("admin", events)],  # type: ignore[list-item]
+        project_index=SimpleNamespace(aclose=aclose),  # type: ignore[arg-type]
+    )
 
     async def scenario() -> list[str]:
         async with lifespan(FastAPI()):
@@ -42,8 +42,5 @@ def test_build_lifespan() -> None:
     # 実行
     inside = asyncio.run(scenario())
     # 検証
-    assert inside.count("docs.enter") == 1
-    assert inside.count("admin.enter") == 1
-    assert inside.count("purge") == 1
-    assert "docs.exit" in events
-    assert "admin.exit" in events
+    assert inside == ["admin.enter"]
+    assert events == ["admin.enter", "admin.exit", "aclose"]

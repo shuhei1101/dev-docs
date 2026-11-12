@@ -1,119 +1,106 @@
 from __future__ import annotations
 
-import threading
+import asyncio
+import json
 from collections.abc import Callable
-from pathlib import Path
+from typing import Any
 
 import pytest
 
 from dev_docs.features.settings.service import save_sources
-from dev_docs.features.settings.types import SourceEntry, TerminalConfig, TerminalConfigInvalidError
-from dev_docs.features.sources.types import SourceStatus
-from dev_docs.shared.yaml_io import load_yaml
+from dev_docs.features.settings.types import SourceEntry
+from dev_docs.integrations.project_index.client import ProjectIndexClient
+from dev_docs.shared.errors import ProjectIndexRejectedError
 
-SETTINGS_TEXT = (
-    'version: "1"\n'
-    "clone: /tmp/clone\n"
-    "port: 8781  # ポート\n"
-    "sources:\n"
-    "  - config: /tmp/a/dev-docs.yaml\n"
-)
+from ...conftest import FakeIndex
 
 
-@pytest.fixture
-def settings_path(tmp_path: Path) -> Path:
-    """端末の設定のファイルを書いてパスを返す。"""
-    path = tmp_path / "settings.yaml"
-    path.write_text(SETTINGS_TEXT, encoding="utf-8")
-    return path
-
-
-@pytest.fixture
-def fake_reload(
-    make_status: Callable[..., SourceStatus],
-) -> tuple[Callable[[TerminalConfig], list[SourceStatus]], list[TerminalConfig]]:
-    """`serving` を 2 つ返し、呼ばれた端末の設定を記録する配信元の読み直しの偽物。"""
-    calls: list[TerminalConfig] = []
-
-    def _reload(terminal: TerminalConfig) -> list[SourceStatus]:
-        calls.append(terminal)
-        return [make_status("a", 0), make_status("b", 1)]
-
-    return _reload, calls
+def _save(
+    fake_index: FakeIndex,
+    make_client: Callable[..., ProjectIndexClient],
+    entries: list[SourceEntry],
+) -> tuple[Any, list[dict[str, Any]]]:
+    """保存を依頼し、返った状態と project-index へ送った行を返す。"""
+    states = asyncio.run(save_sources(make_client(), entries))
+    sent = json.loads(fake_index.requests[-1].content)["sources"]
+    return states, sent
 
 
 def test_save_sources(
-    settings_path: Path,
-    fake_reload: tuple[Callable[[TerminalConfig], list[SourceStatus]], list[TerminalConfig]],
-    make_entry: Callable[..., SourceEntry],
+    fake_index: FakeIndex, make_client: Callable[..., ProjectIndexClient]
 ) -> None:
-    """sources だけを書き換えコメントを保つ（正常系）。"""
+    """行を送り、状態を返す（正常系）。"""
     # 準備
-    reload, calls = fake_reload
-    sources = [
-        make_entry("/tmp/a/dev-docs.yaml", source_id="a"),
-        make_entry("/tmp/b/dev-docs.yaml", source_id="b"),
+    fake_index.responses[("PUT", "/settings/sources")] = (
+        200,
+        {
+            "settingsPath": "/pi/settings.yaml",
+            "sources": [
+                {"row": {}, "id": "a", "status": "serving", "errors": []},
+                {"row": {}, "id": "b", "status": "disabled", "errors": []},
+            ],
+        },
+    )
+    entries = [
+        SourceEntry.model_validate({"id": "a", "config": "/a/project-index.yaml"}),
+        SourceEntry.model_validate(
+            {"id": "b", "config": ["/b/project-index.yaml"], "scope": {"read": ["/b"]}}
+        ),
     ]
     # 実行
-    result = save_sources(sources, path=settings_path, reload=reload, lock=threading.Lock())
+    states, sent = _save(fake_index, make_client, entries)
     # 検証
-    text = settings_path.read_text(encoding="utf-8")
-    assert text.count("config:") == 2
-    assert "port: 8781  # ポート" in text
-    assert len(calls) == 1
-    assert len(calls[0].sources) == 2
-    assert [status.id for status in result] == ["a", "b"]
+    assert len(sent) == 2
+    assert sent[0]["config"] == ["/a/project-index.yaml"]
+    assert sent[1]["scope"] == {"read": ["/b"]}
+    assert [(state.id, state.status) for state in states] == [
+        ("a", "serving"),
+        ("b", "disabled"),
+    ]
 
 
 def test_save_sources_when_defaults(
-    settings_path: Path,
-    fake_reload: tuple[Callable[[TerminalConfig], list[SourceStatus]], list[TerminalConfig]],
-    make_entry: Callable[..., SourceEntry],
+    fake_index: FakeIndex, make_client: Callable[..., ProjectIndexClient]
 ) -> None:
-    """既定値のキーを書かない（正常系）。"""
+    """既定値と同じキーを送らない（正常系）。"""
     # 準備
-    reload, _ = fake_reload
-    sources = [make_entry("/tmp/a/dev-docs.yaml", source_id="a", enabled=True)]
+    entry = SourceEntry.model_validate(
+        {
+            "id": "a",
+            "config": ["/a"],
+            "enabled": True,
+            "outside_read": True,
+            "scope": {"read": []},
+        }
+    )
     # 実行
-    save_sources(sources, path=settings_path, reload=reload, lock=threading.Lock())
+    _, sent = _save(fake_index, make_client, [entry])
     # 検証
-    text = settings_path.read_text(encoding="utf-8")
-    row = load_yaml(text)["sources"][0]
-    assert "enabled" not in text
-    assert "scope" not in text
-    assert row["config"] == ["/tmp/a/dev-docs.yaml"]
+    assert sent == [{"id": "a", "config": ["/a"]}]
 
 
 def test_save_sources_when_outside_read_false(
-    settings_path: Path,
-    fake_reload: tuple[Callable[[TerminalConfig], list[SourceStatus]], list[TerminalConfig]],
-    make_entry: Callable[..., SourceEntry],
+    fake_index: FakeIndex, make_client: Callable[..., ProjectIndexClient]
 ) -> None:
-    """既定値と違う outside_read を書く（正常系）。"""
+    """outside_read: false を送る（正常系）。"""
     # 準備
-    reload, _ = fake_reload
-    sources = [make_entry("/tmp/a/dev-docs.yaml", source_id="a", outside_read=False)]
+    entry = SourceEntry.model_validate({"id": "a", "config": ["/a"], "outside_read": False})
     # 実行
-    save_sources(sources, path=settings_path, reload=reload, lock=threading.Lock())
+    _, sent = _save(fake_index, make_client, [entry])
     # 検証
-    text = settings_path.read_text(encoding="utf-8")
-    assert "outside_read: false" in text
+    assert sent[0]["outside_read"] is False
 
 
-def test_save_sources_when_invalid(
-    settings_path: Path,
-    fake_reload: tuple[Callable[[TerminalConfig], list[SourceStatus]], list[TerminalConfig]],
-    make_entry: Callable[..., SourceEntry],
+def test_save_sources_when_rejected(
+    fake_index: FakeIndex, make_client: Callable[..., ProjectIndexClient]
 ) -> None:
-    """検証に通らない（異常系）。"""
+    """project-index が受け付けない（異常系）。"""
     # 準備
-    reload, calls = fake_reload
-    sources = [
-        make_entry("/tmp/a/dev-docs.yaml", source_id="a"),
-        make_entry("/tmp/b/dev-docs.yaml", source_id="a"),
-    ]
+    fake_index.responses[("PUT", "/settings/sources")] = (
+        422,
+        {"errors": [{"path": "sources[0].config", "reason": "無い"}]},
+    )
+    entry = SourceEntry.model_validate({"id": "a", "config": ["/a"]})
     # 実行・検証
-    with pytest.raises(TerminalConfigInvalidError):
-        save_sources(sources, path=settings_path, reload=reload, lock=threading.Lock())
-    assert settings_path.read_text(encoding="utf-8") == SETTINGS_TEXT
-    assert calls == []
+    with pytest.raises(ProjectIndexRejectedError):
+        asyncio.run(save_sources(make_client(), [entry]))

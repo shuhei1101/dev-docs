@@ -14,7 +14,7 @@ from dev_docs.features.convert.markdown import (
     schema_to_markdown,
 )
 from dev_docs.features.convert.types import DiagramHead, DocumentLink, RenderContext
-from dev_docs.features.documents.types import Document
+from dev_docs.integrations.project_index.types import IndexedDocument as Document
 
 CONTEXT = RenderContext(links={}, issue_url=None, path="rules/doc-1.yaml")
 HEAD = DiagramHead(title="図", scope="文書", updated="-")

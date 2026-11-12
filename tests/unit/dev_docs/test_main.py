@@ -5,7 +5,6 @@ from pathlib import Path
 
 import pytest
 
-from dev_docs import main as main_module
 from dev_docs.__main__ import build_parser, main
 from dev_docs.main import run_migrate, run_serve
 
@@ -36,43 +35,14 @@ def test_build_parser_when_migrate() -> None:
     # 準備
     parser = build_parser()
     # 実行
-    args = parser.parse_args(["migrate", "--plan", "--source", "/tmp/a/dev-docs.yaml"])
+    args = parser.parse_args(["migrate", "--plan", "--project-index", "http://127.0.0.1:8786"])
     # 検証
     assert args.cmd == "migrate"
     assert args.plan is True
     assert args.record is False
     assert args.allow_destructive is False
-    assert args.source == "/tmp/a/dev-docs.yaml"
+    assert args.project_index == "http://127.0.0.1:8786"
     assert args.handler is run_migrate
-
-
-def test_build_parser_when_files() -> None:
-    """files の引数と処理を引く（正常系）。"""
-    # 準備
-    parser = build_parser()
-    # 実行
-    args = parser.parse_args(
-        ["files", "--root", "/tmp/a", "--paths", "src/**", "--paths", "docs/**"]
-    )
-    # 検証
-    assert args.cmd == "files"
-    assert args.root == "/tmp/a"
-    assert args.paths == ["src/**", "docs/**"]
-    assert args.exclude == []
-    assert args.handler is main_module.run_files
-
-
-def test_build_parser_when_prompt_doc() -> None:
-    """prompt-doc の処理を引く（正常系）。"""
-    # 準備
-    from dev_docs.features.prompt_doc.cli import run_prompt_doc
-
-    parser = build_parser()
-    # 実行
-    args = parser.parse_args(["prompt-doc"])
-    # 検証
-    assert args.cmd == "prompt-doc"
-    assert args.handler is run_prompt_doc
 
 
 def test_build_parser_when_plan_and_record() -> None:
@@ -82,6 +52,24 @@ def test_build_parser_when_plan_and_record() -> None:
     # 実行・検証
     with pytest.raises(SystemExit) as exc_info:
         parser.parse_args(["migrate", "--plan", "--record"])
+    assert exc_info.value.code == 2
+
+
+@pytest.mark.parametrize(
+    "argv",
+    [
+        pytest.param(["files", "--root", "/tmp/a"], id="files"),
+        pytest.param(["prompt-doc"], id="prompt-doc"),
+        pytest.param(["migrate", "--source", "/tmp/a/project-index.yaml"], id="migrate-source"),
+    ],
+)
+def test_build_parser_when_removed_command(argv: list[str]) -> None:
+    """削除したコマンドと引数（異常系）。"""
+    # 準備
+    parser = build_parser()
+    # 実行・検証
+    with pytest.raises(SystemExit) as exc_info:
+        parser.parse_args(argv)
     assert exc_info.value.code == 2
 
 

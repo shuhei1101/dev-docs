@@ -1,90 +1,42 @@
 from __future__ import annotations
 
+import asyncio
 from collections.abc import Callable
-from datetime import UTC, datetime
-from pathlib import Path
-from types import SimpleNamespace
+from datetime import datetime
+from typing import Any
 
 import pytest
 
-from dev_docs.features.sources.types import DocumentTable, ScriptEntry
 from dev_docs.features.view.document import get_document, not_found_fields
-from dev_docs.features.view.types import NavItem
-from dev_docs.shared.errors import DocumentNotFoundError, RefNotFoundError
+from dev_docs.features.view.types import DocumentResponse, NavItem
+from dev_docs.shared.errors import (
+    DocumentNotFoundError,
+    ProjectIndexUnreachableError,
+    RefNotFoundError,
+)
+
+from ...conftest import RULE_SCHEMA, FakeIndex, config_json, doc_json
+
+UPDATED = "2026-11-01T10:00:00+09:00"
+LIST_VALUE = {"items": [{"id": "a", "name": "A"}, {"id": "b", "name": "B"}]}
 
 
-def test_get_document(make_view_env: Callable[..., SimpleNamespace]) -> None:
-    """配信元のトップ（正常系）。"""
-    # 準備
-    tables = [
-        DocumentTable(id="rules", paths=["docs/*.yaml"], schema_path="schemas/rule.schema.yaml"),
-        DocumentTable(
-            id="notes",
-            paths=["notes/files.yaml"],
-            schema_path="schemas/rule.schema.yaml",
-            records="files",
-            body_file="path",
-        ),
-    ]
-    nav = {
-        "tabs": [
-            {"title": "規約", "items": [{"auto": {"document": "rules"}}]},
-            {"title": "メモ", "items": [{"auto": {"document": "notes"}}]},
-        ]
-    }
-    env = make_view_env(
-        {
-            "docs/a.yaml": "id: a\nname: A\n",
-            "notes/files.yaml": "files:\n  - path: x.md\n",
-            "notes/x.md": "# X\n",
-        },
-        tables=tables,
-        nav=nav,
-    )
-    # 実行
-    response = get_document("sample", None, handlers=env.handlers, ref=None, diff_ref=None)
-    # 検証
-    assert response.path == "docs/a"
-    assert response.markdown is not None
-    assert "# A" in response.markdown
-    assert [tab.title for tab in response.tabs] == ["規約", "メモ"]
-    assert [tab.active for tab in response.tabs] == [True, False]
+def _row(row_id: str, paths: list[str], **extra: Any) -> dict[str, Any]:
+    """配信元の表示の設定の文書の行の JSON を作る。"""
+    return {"id": row_id, "paths": paths, "schema": RULE_SCHEMA, **extra}
 
 
-def test_get_document_when_diff(
-    git_repo: Callable[..., Path],
-    commit_all: Callable[..., str],
-    run_git: Callable[..., str],
-    make_view_env: Callable[..., SimpleNamespace],
-) -> None:
-    """差分の結果とサイドバーの変化（正常系）。"""
-    # 準備
-    root = git_repo(
-        {
-            "docs/a.yaml": "id: a\nname: A\n",
-            "docs/b.yaml": "id: b\nname: B\n",
-            "docs/c.yaml": "id: c\nname: C\n",
-        }
-    )
-    previous = run_git(root, "rev-parse", "HEAD").strip()
-    run_git(root, "rm", "-q", "docs/c.yaml")
-    current = commit_all(
-        root, {"docs/a.yaml": "id: a\nname: A2\n", "docs/d.yaml": "id: d\nname: D\n"}
-    )
-    env = make_view_env(root=root, is_git=True, repo_root=root)
-    # 実行
-    response = get_document(
-        "sample", "docs/a", handlers=env.handlers, ref=current, diff_ref=previous
-    )
-    # 検証
-    assert response.diff is not None
-    assert response.diff.base == previous
-    assert response.diff.change == "modified"
-    assert response.diff.changed_items == ["name"]
-    changes = {item.path: item.change for tab in response.tabs for item in _pages(tab.items)}
-    assert changes["docs/a"] == "modified"
-    assert changes["docs/d"] == "added"
-    assert changes["docs/c"] == "deleted"
+def _serve(fake_index: FakeIndex, docs: list[dict[str, Any]], **config: Any) -> None:
+    """偽物の project-index に配信元 sample と既定のリビジョンの文書を置く。"""
+    fake_index.configs["sample"] = config_json("sample", **config)
+    fake_index.docs["sample"] = {None: docs}
+
+
+def _get(
+    handlers: Any, path: str | None, *, ref: str | None = None, diff_ref: str | None = None
+) -> DocumentResponse:
+    """文書の取得を実行する。"""
+    return asyncio.run(get_document("sample", path, handlers=handlers, ref=ref, diff_ref=diff_ref))
 
 
 def _pages(items: list[NavItem]) -> list[NavItem]:
@@ -97,35 +49,190 @@ def _pages(items: list[NavItem]) -> list[NavItem]:
     return pages
 
 
-def test_get_document_when_not_git(make_view_env: Callable[..., SimpleNamespace]) -> None:
+def test_get_document(fake_index: FakeIndex, make_handlers: Callable[..., Any]) -> None:
+    """配信元のトップ（正常系）。"""
+    # 準備
+    nav = {
+        "tabs": [
+            {"title": "規約", "items": [{"auto": {"document": "rules"}}]},
+            {"title": "メモ", "items": [{"auto": {"document": "notes"}}]},
+        ]
+    }
+    documents = [
+        doc_json("a", "docs/a.yaml", name="A"),
+        doc_json("n-1", "notes/files.yaml", kind="notes", record_index=0, name="N"),
+    ]
+    _serve(
+        fake_index,
+        documents,
+        nav=nav,
+        documents=[
+            _row("rules", ["docs/*.yaml"]),
+            _row("notes", ["notes/files.yaml"], records="files"),
+        ],
+    )
+    # 実行
+    response = _get(make_handlers(), None)
+    # 検証
+    assert response.path == "docs/a"
+    assert response.markdown is not None
+    assert "# A" in response.markdown
+    assert [tab.title for tab in response.tabs] == ["規約", "メモ"]
+    assert [tab.active for tab in response.tabs] == [True, False]
+
+
+def test_get_document_when_diff(fake_index: FakeIndex, make_handlers: Callable[..., Any]) -> None:
+    """差分の結果とサイドバーの変化（正常系）。"""
+    # 準備
+    fake_index.configs["sample"] = config_json("sample")
+    fake_index.docs["sample"] = {
+        "current": [
+            doc_json("a", "docs/a.yaml", name="A2", version="v-a2"),
+            doc_json("b", "docs/b.yaml", name="B"),
+            doc_json("d", "docs/d.yaml", name="D"),
+        ],
+        "previous": [
+            doc_json("a", "docs/a.yaml", name="A", version="v-a1"),
+            doc_json("b", "docs/b.yaml", name="B"),
+            doc_json("c", "docs/c.yaml", name="C"),
+        ],
+    }
+    # 実行
+    response = _get(make_handlers(), "docs/a", ref="current", diff_ref="previous")
+    # 検証
+    assert response.diff is not None
+    assert response.diff.base == "previous"
+    assert response.diff.change == "modified"
+    assert response.diff.changed_items == ["name"]
+    changes = {item.path: item.change for tab in response.tabs for item in _pages(tab.items)}
+    assert changes["docs/a"] == "modified"
+    assert changes["docs/d"] == "added"
+    assert changes["docs/c"] == "deleted"
+
+
+def test_get_document_when_convert_failed(
+    fake_index: FakeIndex, make_handlers: Callable[..., Any]
+) -> None:
+    """project-index の変換の失敗（正常系）。"""
+    # 準備
+    _serve(fake_index, [doc_json("a", "docs/a.yaml")])
+    fake_index.details[("sample", "docs/a.yaml")] = {
+        "failure": {"reason": "timeout", "kind": "rules", "detail": "45 秒", "script": "conv"}
+    }
+    # 実行
+    response = _get(make_handlers(), "docs/a")
+    # 検証
+    assert response.markdown is None
+    assert response.conversion_error is not None
+    assert response.conversion_error.reason == "timeout"
+
+
+def test_get_document_when_yaml_unreadable(
+    fake_index: FakeIndex, make_handlers: Callable[..., Any]
+) -> None:
+    """YAML を読めない（正常系）。"""
+    # 準備
+    _serve(fake_index, [doc_json("b", "docs/b.yaml")])
+    fake_index.unreadable["sample"] = [
+        {
+            "reason": "invalid_yaml",
+            "kind": "rules",
+            "detail": "閉じていない",
+            "file": "docs/a.yaml",
+            "line": 1,
+            "column": 4,
+        }
+    ]
+    # 実行
+    response = _get(make_handlers(), "docs/a")
+    # 検証
+    error = response.conversion_error
+    assert response.markdown is None
+    assert error is not None
+    assert (error.reason, error.file, error.line, error.column) == (
+        "invalid_yaml",
+        "docs/a.yaml",
+        1,
+        4,
+    )
+
+
+def test_get_document_when_missing(
+    fake_index: FakeIndex, make_handlers: Callable[..., Any]
+) -> None:
+    """無い文書（異常系）。"""
+    # 準備
+    _serve(fake_index, [doc_json("a", "docs/a.yaml")])
+    # 実行・検証
+    with pytest.raises(DocumentNotFoundError, match="docs/none"):
+        _get(make_handlers(), "docs/none")
+
+
+def test_get_document_when_not_git(
+    fake_index: FakeIndex, make_handlers: Callable[..., Any]
+) -> None:
     """Git 管理外の更新日時と差分（正常系）。"""
     # 準備
-    env = make_view_env()
-    file = env.root / "docs" / "a.yaml"
+    _serve(fake_index, [doc_json("a", "docs/a.yaml", updated=UPDATED)], git=False)
     # 実行
-    response = get_document("sample", "docs/a", handlers=env.handlers, ref=None, diff_ref="main")
+    response = _get(make_handlers(), "docs/a", diff_ref="main")
     # 検証
-    assert response.updated_at == datetime.fromtimestamp(file.stat().st_mtime, tz=UTC)
+    assert response.updated_at == datetime.fromisoformat(UPDATED)
     assert response.diff is None
     assert response.ref is None
 
 
-def test_get_document_when_decision(make_view_env: Callable[..., SimpleNamespace]) -> None:
-    """検討事項の文書を返す（正常系）。"""
+def test_get_document_when_aliases(
+    fake_index: FakeIndex, make_handlers: Callable[..., Any]
+) -> None:
+    """エイリアスを返す（正常系）。"""
     # 準備
-    env = make_view_env(
-        {
-            "docs/a.yaml": "id: a\nname: A\n",
-            "tmp/a/.mindstella/docs/D-1.md": "# D-1 の本文\n",
-            "tmp/a/.mindstella/docs/D-2.md": "# D-2 a\n",
-            "tmp/b/.mindstella/docs/D-2.md": "# D-2 b\n",
-        },
-        decision_folders=["tmp/a", "tmp/b"],
+    scope = {
+        "id": "scope",
+        "name": "作業範囲",
+        "description": "触ってよい範囲",
+        "aliases": ["scope", "担当範囲"],
+        "avoid": ["担当領域"],
+        "alias_type": "term",
+    }
+    settings = {
+        "id": "settings",
+        "name": "設定のリファレンス",
+        "description": "設定のキーの一覧",
+        "aliases": ["settings"],
+        "alias_type": "doc",
+    }
+    _serve(
+        fake_index,
+        [
+            doc_json("scope", "docs/term/scope.yaml", kind="terms", data=scope, metadata=scope),
+            doc_json(
+                "settings", "docs/ref/settings.yaml", kind="refs", data=settings, metadata=settings
+            ),
+        ],
+        documents=[
+            _row("terms", ["docs/term/*.yaml"], aliasType="term"),
+            _row("refs", ["docs/ref/*.yaml"], aliasType="doc"),
+        ],
     )
     # 実行
-    response = get_document(
-        "sample", "_decisions/D-1", handlers=env.handlers, ref=None, diff_ref=None
-    )
+    response = _get(make_handlers(), "docs/term/scope")
+    # 検証
+    aliases = response.model_dump(mode="json")["aliases"]
+    assert [item["id"] for item in aliases] == ["scope", "settings"]
+    assert aliases[0]["avoid"] == ["担当領域"]
+    assert "avoid" not in aliases[1]
+
+
+def test_get_document_when_decision(
+    fake_index: FakeIndex, make_handlers: Callable[..., Any]
+) -> None:
+    """検討事項の文書を返す（正常系）。"""
+    # 準備
+    _serve(fake_index, [doc_json("a", "docs/a.yaml")], decisions=["tmp/a", "tmp/b"])
+    fake_index.decision_texts[("sample", "D-1")] = "# D-1 の本文\n"
+    # 実行
+    response = _get(make_handlers(), "_decisions/D-1")
     # 検証
     assert response.markdown == "# D-1 の本文\n"
     assert response.path == "_decisions/D-1"
@@ -135,99 +242,86 @@ def test_get_document_when_decision(make_view_env: Callable[..., SimpleNamespace
 
 
 def test_get_document_when_decision_ambiguous(
-    make_view_env: Callable[..., SimpleNamespace],
+    fake_index: FakeIndex, make_handlers: Callable[..., Any]
 ) -> None:
-    """2 つのフォルダにある検討事項（異常系）。"""
+    """project-index が検討事項の文書を返さない（異常系）。"""
     # 準備
-    env = make_view_env(
-        {
-            "docs/a.yaml": "id: a\nname: A\n",
-            "tmp/a/.mindstella/docs/D-2.md": "# D-2 a\n",
-            "tmp/b/.mindstella/docs/D-2.md": "# D-2 b\n",
-        },
-        decision_folders=["tmp/a", "tmp/b"],
-    )
+    _serve(fake_index, [doc_json("a", "docs/a.yaml")], decisions=["tmp/a", "tmp/b"])
     # 実行・検証
-    with pytest.raises(DocumentNotFoundError, match="_decisions/D-2"):
-        get_document("sample", "_decisions/D-2", handlers=env.handlers, ref=None, diff_ref=None)
+    with pytest.raises(DocumentNotFoundError):
+        _get(make_handlers(), "_decisions/D-2")
 
 
-def test_get_document_when_convert_failed(make_view_env: Callable[..., SimpleNamespace]) -> None:
-    """変換の失敗（正常系）。"""
-    # 準備
-    run = ["python3", "-c", "import time; time.sleep(5)"]
-    env = make_view_env(converters=[ScriptEntry(id="c", run=run)], converter_timeout=1)
-    # 実行
-    response = get_document("sample", "docs/a", handlers=env.handlers, ref=None, diff_ref=None)
-    # 検証
-    assert response.markdown is None
-    assert response.conversion_error is not None
-    assert response.conversion_error.reason == "timeout"
-
-
-def test_get_document_when_yaml_unreadable(make_view_env: Callable[..., SimpleNamespace]) -> None:
-    """YAML を読めない（正常系）。"""
-    # 準備
-    env = make_view_env({"docs/a.yaml": "a: [1\n"})
-    # 実行
-    response = get_document("sample", "docs/a", handlers=env.handlers, ref=None, diff_ref=None)
-    # 検証
-    error = response.conversion_error
-    assert response.markdown is None
-    assert error is not None
-    assert error.reason == "invalid_yaml"
-    assert error.kind == "rules"
-    assert error.file == "docs/a.yaml"
-    assert error.line is not None
-    assert error.line >= 1
-    assert error.column is not None
-    assert error.column >= 1
-
-
-def test_get_document_when_body_path(make_view_env: Callable[..., SimpleNamespace]) -> None:
+def test_get_document_when_body_path(
+    fake_index: FakeIndex, make_handlers: Callable[..., Any]
+) -> None:
     """管理用の YAML の行の文書の本文のファイルのパス（正常系）。"""
     # 準備
-    tables = [
-        DocumentTable(id="rules", paths=["docs/*.yaml"], schema_path="schemas/rule.schema.yaml"),
-        DocumentTable(
-            id="notes",
-            paths=["notes/files.yaml"],
-            schema_path="schemas/rule.schema.yaml",
-            records="files",
-            body_file="path",
-        ),
-    ]
-    env = make_view_env(
-        {
-            "docs/a.yaml": "id: a\nname: A\n",
-            "notes/files.yaml": "files:\n  - path: b.md\n",
-            "notes/b.md": "# B\n",
-        },
-        tables=tables,
+    _serve(
+        fake_index,
+        [
+            doc_json("a", "docs/a.yaml", name="A"),
+            doc_json(
+                "notes/b.md",
+                "notes/files.yaml",
+                kind="notes",
+                record_index=0,
+                body_path="notes/b.md",
+                body="# B\n",
+                data={"path": "b.md"},
+            ),
+        ],
+        documents=[
+            _row("rules", ["docs/*.yaml"]),
+            _row("notes", ["notes/files.yaml"], records="files"),
+        ],
     )
+    handlers = make_handlers()
     # 実行
-    by_page = get_document(
-        "sample", "notes/files/notes/b.md", handlers=env.handlers, ref=None, diff_ref=None
-    )
-    by_body_path = get_document(
-        "sample", "notes/b.md", handlers=env.handlers, ref=None, diff_ref=None
-    )
-    plain = get_document("sample", "docs/a", handlers=env.handlers, ref=None, diff_ref=None)
+    by_page = _get(handlers, "notes/files/notes/b.md")
+    by_body_path = _get(handlers, "notes/b.md")
+    plain = _get(handlers, "docs/a")
     # 検証
-    assert by_page.body_path == "notes/b.md"
-    assert by_page.path == "notes/files/notes/b.md"
-    assert by_body_path.body_path == "notes/b.md"
-    assert by_body_path.path == "notes/files/notes/b.md"
+    assert (by_page.body_path, by_page.path) == ("notes/b.md", "notes/files/notes/b.md")
+    assert (by_body_path.body_path, by_body_path.path) == ("notes/b.md", "notes/files/notes/b.md")
     assert plain.body_path is None
 
 
-def test_get_document_when_missing(make_view_env: Callable[..., SimpleNamespace]) -> None:
-    """無い文書（異常系）。"""
+def test_get_document_when_embed(fake_index: FakeIndex, make_handlers: Callable[..., Any]) -> None:
+    """埋め込みの値を project-index から取る（正常系）。"""
     # 準備
-    env = make_view_env()
+    _serve(
+        fake_index,
+        [
+            doc_json(
+                "m",
+                "docs/m.yaml",
+                body_path="docs/m.md",
+                body="# M\n\n<!-- embed: data/list.yaml#items -->\n",
+            )
+        ],
+    )
+    fake_index.details[("sample", "data/list.yaml")] = {
+        "document": doc_json("list", "data/list.yaml", data=LIST_VALUE)
+    }
+    # 実行
+    response = _get(make_handlers(), "docs/m.md")
+    # 検証
+    assert response.markdown is not None
+    assert "| a | A |" in response.markdown
+    assert "| b | B |" in response.markdown
+    assert "embed:data/list.yaml#items" in response.table_keys
+
+
+def test_get_document_when_unreachable(
+    fake_index: FakeIndex, make_handlers: Callable[..., Any]
+) -> None:
+    """project-index につながらない（異常系）。"""
+    # 準備
+    fake_index.refused = True
     # 実行・検証
-    with pytest.raises(DocumentNotFoundError, match="docs/none"):
-        get_document("sample", "docs/none", handlers=env.handlers, ref=None, diff_ref=None)
+    with pytest.raises(ProjectIndexUnreachableError):
+        _get(make_handlers(), "docs/a")
 
 
 def test_not_found_fields() -> None:
@@ -245,47 +339,3 @@ def test_not_found_fields() -> None:
     # 検証
     assert ref_fields == {"missing": "ref", "value": "no-such-branch"}
     assert doc_fields == {"missing": "doc", "value": "no-such-doc"}
-
-
-def test_get_document_when_aliases(make_view_env: Callable[..., SimpleNamespace]) -> None:
-    """エイリアスを返す（正常系）。"""
-    # 準備
-    tables = [
-        DocumentTable(
-            id="terms",
-            paths=["docs/term/*.yaml"],
-            schema_path="schemas/rule.schema.yaml",
-            alias_type="term",
-        ),
-        DocumentTable(
-            id="refs",
-            paths=["docs/ref/*.yaml"],
-            schema_path="schemas/rule.schema.yaml",
-            alias_type="doc",
-        ),
-    ]
-    env = make_view_env(
-        {
-            "docs/term/scope.yaml": (
-                "id: scope\n"
-                "name: 作業範囲\n"
-                "description: 触ってよい範囲\n"
-                "aliases: [scope, 担当範囲]\n"
-                "avoid: [担当領域]\n"
-            ),
-            "docs/ref/settings.yaml": (
-                "id: settings\nname: 設定のリファレンス\ndescription: 設定のキーの一覧\n"
-                "aliases: [settings]\n"
-            ),
-        },
-        tables=tables,
-    )
-    # 実行
-    response = get_document(
-        "sample", "docs/term/scope", handlers=env.handlers, ref=None, diff_ref=None
-    )
-    # 検証
-    aliases = response.model_dump(mode="json")["aliases"]
-    assert [item["id"] for item in aliases] == ["scope", "settings"]
-    assert aliases[0]["avoid"] == ["担当領域"]
-    assert "avoid" not in aliases[1]

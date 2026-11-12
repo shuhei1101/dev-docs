@@ -4,7 +4,6 @@ import io
 import json
 import socket
 import time
-import urllib.error
 from collections.abc import Callable, Iterator
 from contextlib import closing, contextmanager
 from pathlib import Path
@@ -43,23 +42,16 @@ def test_main_when_listening(
     """つながれば何も出さない（正常系）。"""
     # 準備
     hook = load_hook("session_start")
-    requested: list[tuple[int, dict[str, str]]] = []
-
-    def fake_forget(port: int, payload: dict[str, str]) -> None:
-        requested.append((port, payload))
-
+    started: list[Path] = []
     monkeypatch.setattr(hook, "is_listening", lambda port: True)
-    monkeypatch.setattr(hook, "request_forget", fake_forget)
-    _stdin(
-        monkeypatch,
-        json.dumps({"session_id": "s1", "cwd": "/repo", "source": "startup"}),
-    )
+    monkeypatch.setattr(hook, "start_server", started.append)
+    _stdin(monkeypatch, json.dumps({"session_id": "s1", "cwd": "/repo", "source": "startup"}))
     # 実行
     code = hook.main()
     # 検証
     assert code == 0
     assert capsys.readouterr().out == ""
-    assert requested == []
+    assert started == []
 
 
 def test_main_when_cleared(
@@ -67,27 +59,19 @@ def test_main_when_cleared(
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
-    """/clear の後は記録の削除を依頼し、何も出さない（正常系）。"""
+    """/clear の後も HTTP の要求を送らず、何も出さない（正常系）。"""
     # 準備
     hook = load_hook("session_start")
-    requested: list[tuple[int, dict[str, str]]] = []
-
-    def fake_forget(port: int, payload: dict[str, str]) -> None:
-        requested.append((port, payload))
-
+    opened: list[Any] = []
     monkeypatch.setattr(hook, "is_listening", lambda port: True)
-    monkeypatch.setattr(hook, "request_forget", fake_forget)
-    monkeypatch.setenv("DEV_DOCS_PORT", "8799")
-    _stdin(
-        monkeypatch,
-        json.dumps({"session_id": "s1", "cwd": "/repo", "source": "clear"}),
-    )
+    monkeypatch.setattr("urllib.request.urlopen", lambda *args, **kwargs: opened.append(args))
+    _stdin(monkeypatch, json.dumps({"session_id": "s1", "cwd": "/repo", "source": "clear"}))
     # 実行
     code = hook.main()
     # 検証
     assert code == 0
     assert capsys.readouterr().out == ""
-    assert requested == [(8799, {"session_id": "s1", "reason": "clear"})]
+    assert opened == []
 
 
 def test_main_when_down(
@@ -149,33 +133,6 @@ def test_main_when_config_missing(
     assert started == []
 
 
-def test_main_when_forget_failed(
-    load_hook: Callable[[str], ModuleType],
-    monkeypatch: pytest.MonkeyPatch,
-    capsys: pytest.CaptureFixture[str],
-) -> None:
-    """記録の削除を依頼できなければ repeat_seen を案内する（異常系）。"""
-    # 準備
-    hook = load_hook("session_start")
-
-    def failing_forget(port: int, payload: dict[str, str]) -> None:
-        raise TimeoutError("timed out")
-
-    monkeypatch.setattr(hook, "is_listening", lambda port: True)
-    monkeypatch.setattr(hook, "request_forget", failing_forget)
-    _stdin(
-        monkeypatch,
-        json.dumps({"session_id": "s1", "cwd": "/repo", "source": "compact"}),
-    )
-    # 実行
-    code = hook.main()
-    # 検証
-    context = json.loads(capsys.readouterr().out)["hookSpecificOutput"]["additionalContext"]
-    assert code == 0
-    assert "3 秒で打ち切りました" in context
-    assert "repeat_seen: true" in context
-
-
 def test_main_when_input_unparsable(
     load_hook: Callable[[str], ModuleType],
     monkeypatch: pytest.MonkeyPatch,
@@ -190,34 +147,6 @@ def test_main_when_input_unparsable(
     # 検証
     assert code == 0
     assert capsys.readouterr().out == ""
-
-
-def test_main_when_forget_refused(
-    load_hook: Callable[[str], ModuleType],
-    monkeypatch: pytest.MonkeyPatch,
-    capsys: pytest.CaptureFixture[str],
-) -> None:
-    """打ち切り以外の失敗は秒数を入れない（異常系）。"""
-    # 準備
-    hook = load_hook("session_start")
-
-    def refused_forget(port: int, payload: dict[str, str]) -> None:
-        raise urllib.error.URLError(ConnectionRefusedError(111, "Connection refused"))
-
-    monkeypatch.setattr(hook, "is_listening", lambda port: True)
-    monkeypatch.setattr(hook, "request_forget", refused_forget)
-    _stdin(
-        monkeypatch,
-        json.dumps({"session_id": "s1", "cwd": "/repo", "source": "clear"}),
-    )
-    # 実行
-    code = hook.main()
-    # 検証
-    context = json.loads(capsys.readouterr().out)["hookSpecificOutput"]["additionalContext"]
-    assert code == 0
-    assert "Connection refused" in context
-    assert "repeat_seen: true" in context
-    assert "秒で打ち切りました" not in context
 
 
 def test_is_listening(load_hook: Callable[[str], ModuleType]) -> None:
@@ -334,37 +263,3 @@ def test_start_server_when_no_venv(load_hook: Callable[[str], ModuleType], tmp_p
     # 実行・検証
     with pytest.raises(FileNotFoundError):
         hook.start_server(tmp_path)
-
-
-def test_request_forget(
-    load_hook: Callable[[str], ModuleType],
-    context_server: Callable[..., Any],
-) -> None:
-    """本文を POST する（正常系）。"""
-    # 準備
-    hook = load_hook("session_start")
-    payload = {"session_id": "s1", "reason": "clear"}
-    # 実行
-    with context_server({"forgotten": True}) as server:
-        result = hook.request_forget(server.port, payload)
-    # 検証
-    assert result is None
-    assert server.bodies == [payload]
-
-
-def test_request_forget_when_timeout(
-    load_hook: Callable[[str], ModuleType],
-    context_server: Callable[..., Any],
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """`FORGET_TIMEOUT_SEC` で打ち切る（異常系）。"""
-    # 準備
-    hook = load_hook("session_start")
-    monkeypatch.setattr(hook, "FORGET_TIMEOUT_SEC", 1)
-    payload: dict[str, Any] = {"session_id": "s1", "reason": "compact"}
-    started = time.monotonic()
-    # 実行
-    with context_server({"forgotten": True}, hold_sec=2) as server, pytest.raises(TimeoutError):
-        hook.request_forget(server.port, payload)
-    # 検証
-    assert time.monotonic() - started < 2

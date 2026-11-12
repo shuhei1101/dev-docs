@@ -12,12 +12,10 @@ from dev_docs.features.prompt_doc.runtime import (
     prompts_dir,
 )
 from dev_docs.features.prompt_doc.types import PromptInvalidError
-from dev_docs.server.mcp.result import DOCS_INSTRUCTIONS_PROMPT_ID, mcp_prompt_ids
+from dev_docs.server.mcp.result import mcp_prompt_ids
 
 # 本文に置かない言い回し
 FORBIDDEN_WORDS = ("MUST", "必ず", "禁止")
-# 文書の MCP の instructions の字数の上限
-INSTRUCTIONS_MAX_CHARS = 4096
 
 
 def _prompt(prompt_id: str, **overrides: Any) -> dict[str, Any]:
@@ -233,4 +231,3 @@ def test_load_prompts_when_bundled() -> None:
         for text in part.texts
     ]
     assert [text for text in texts if any(word in text for word in FORBIDDEN_WORDS)] == []
-    assert len(result.render(DOCS_INSTRUCTIONS_PROMPT_ID)) <= INSTRUCTIONS_MAX_CHARS

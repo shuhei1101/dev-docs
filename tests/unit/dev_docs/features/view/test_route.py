@@ -1,20 +1,32 @@
 from __future__ import annotations
 
-import asyncio
-import dataclasses
 from collections.abc import Callable
 from pathlib import Path
-from types import SimpleNamespace
 from typing import Any
 
-import httpx
+import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from dev_docs.features.settings.types import SourceEntry, TerminalConfig
-from dev_docs.features.sources.registry import SourceRegistry
+from dev_docs.features.view.columns import ColumnSettings
 from dev_docs.features.view.route import build_view_router
 from dev_docs.server.error_handlers import register_error_handlers
+
+from ...conftest import FakeIndex, config_json, doc_json
+
+COLUMNS_BODY = {"table": "rules:items", "hidden": ["a"]}
+
+
+@pytest.fixture
+def sample_index(fake_index: FakeIndex) -> FakeIndex:
+    """配信元 sample（`docs/a.yaml`・`docs/b.yaml`）と Git 管理外の notes を置いた偽物を返す。"""
+    fake_index.configs["sample"] = config_json("sample")
+    fake_index.docs["sample"] = {
+        None: [doc_json("a", "docs/a.yaml", name="A"), doc_json("b", "docs/b.yaml", name="B")]
+    }
+    fake_index.configs["notes"] = config_json("notes", git=False)
+    fake_index.refs_results = {"git": False, "branches": [], "tags": [], "commits": []}
+    return fake_index
 
 
 def _client(handlers: Any) -> TestClient:
@@ -25,10 +37,12 @@ def _client(handlers: Any) -> TestClient:
     return TestClient(app)
 
 
-def test_build_view_router_when_document(make_view_env: Callable[..., SimpleNamespace]) -> None:
+def test_build_view_router_when_document(
+    sample_index: FakeIndex, make_handlers: Callable[..., Any]
+) -> None:
     """文書の取得（正常系）。"""
     # 準備
-    client = _client(make_view_env().handlers)
+    client = _client(make_handlers())
     # 実行
     response = client.get("/_api/sources/sample/docs")
     # 検証
@@ -43,26 +57,30 @@ def test_build_view_router_when_document(make_view_env: Callable[..., SimpleName
 
 
 def test_build_view_router_when_document_missing(
-    make_view_env: Callable[..., SimpleNamespace],
+    sample_index: FakeIndex, make_handlers: Callable[..., Any]
 ) -> None:
     """無い文書（異常系）。"""
     # 準備
-    client = _client(make_view_env().handlers)
+    client = _client(make_handlers())
     # 実行
     response = client.get("/_api/sources/sample/docs/no-such-doc")
     # 検証
     body = response.json()
     assert response.status_code == 404
     assert response.headers["content-type"].startswith("application/problem+json")
-    assert body["missing"] == "doc"
-    assert body["value"] == "no-such-doc"
+    assert (body["missing"], body["value"]) == ("doc", "no-such-doc")
 
 
-def test_build_view_router_when_search(make_view_env: Callable[..., SimpleNamespace]) -> None:
+def test_build_view_router_when_search(
+    sample_index: FakeIndex, make_handlers: Callable[..., Any]
+) -> None:
     """画面の検索（正常系）。"""
     # 準備
-    env = make_view_env({"docs/a.yaml": "id: a\nname: foo の文書\n"})
-    client = _client(env.handlers)
+    sample_index.search_results = {
+        "totalCount": 1,
+        "items": [{"id": "a", "path": "docs/a.yaml", "name": "A", "snippets": ["foo"]}],
+    }
+    client = _client(make_handlers())
     # 実行
     response = client.get("/_api/sources/sample/search", params={"q": "foo"})
     # 検証
@@ -73,11 +91,11 @@ def test_build_view_router_when_search(make_view_env: Callable[..., SimpleNamesp
 
 
 def test_build_view_router_when_query_too_long(
-    make_view_env: Callable[..., SimpleNamespace],
+    sample_index: FakeIndex, make_handlers: Callable[..., Any]
 ) -> None:
     """長すぎる語（異常系）。"""
     # 準備
-    client = _client(make_view_env().handlers)
+    client = _client(make_handlers())
     # 実行
     response = client.get("/_api/sources/sample/search", params={"q": "x" * 201})
     # 検証
@@ -86,26 +104,28 @@ def test_build_view_router_when_query_too_long(
 
 
 def test_build_view_router_when_refs(
-    make_view_env: Callable[..., SimpleNamespace],
+    sample_index: FakeIndex, make_handlers: Callable[..., Any]
 ) -> None:
     """Git 管理外のリビジョンの一覧（正常系）。"""
     # 準備
-    client = _client(make_view_env(is_git=False).handlers)
+    client = _client(make_handlers())
     # 実行
-    response = client.get("/_api/sources/sample/refs")
+    response = client.get("/_api/sources/notes/refs")
     # 検証
     assert response.status_code == 200
     assert response.json()["git"] is False
 
 
-def test_build_view_router_when_columns(make_view_env: Callable[..., SimpleNamespace]) -> None:
+def test_build_view_router_when_columns(
+    sample_index: FakeIndex, make_handlers: Callable[..., Any]
+) -> None:
     """列の設定の保存（正常系）。"""
     # 準備
-    client = _client(make_view_env().handlers)
+    client = _client(make_handlers())
     # 実行
     saved = client.put(
         "/_api/sources/sample/columns",
-        json={"table": "rules:items", "hidden": ["a"]},
+        json=COLUMNS_BODY,
         headers={"Sec-Fetch-Site": "same-origin"},
     )
     document = client.get("/_api/sources/sample/docs")
@@ -115,126 +135,38 @@ def test_build_view_router_when_columns(make_view_env: Callable[..., SimpleNames
 
 
 def test_build_view_router_when_cross_origin(
-    make_view_env: Callable[..., SimpleNamespace],
+    sample_index: FakeIndex, make_handlers: Callable[..., Any], tmp_path: Path
 ) -> None:
     """別のオリジン（異常系）。"""
     # 準備
-    env = make_view_env()
-    client = _client(env.handlers)
+    columns_dir = tmp_path / "cross-columns"
+    client = _client(make_handlers(columns=ColumnSettings(columns_dir)))
     # 実行
     response = client.put(
         "/_api/sources/sample/columns",
-        json={"table": "rules:items", "hidden": ["a"]},
+        json=COLUMNS_BODY,
         headers={"Origin": "http://evil.example"},
     )
     # 検証
     assert response.status_code == 403
-    assert not (env.columns_dir / "sample.json").exists()
+    assert not (columns_dir / "sample.json").exists()
 
 
-def test_build_view_router_when_loading(
-    make_source_dir: Callable[..., Path],
-    make_terminal_config: Callable[..., TerminalConfig],
-    make_entry: Callable[..., SourceEntry],
-    make_view_env: Callable[..., SimpleNamespace],
+def test_build_view_router_when_project_index_unreachable(
+    fake_index: FakeIndex, make_handlers: Callable[..., Any]
 ) -> None:
-    """読み込みの間は待たせ、イベントループを止めない（正常系）。"""
+    """project-index につながらない（異常系）。"""
     # 準備
-    config = make_source_dir("sample")
-    terminal = make_terminal_config(sources=[make_entry(str(config), source_id="sample")])
-    registry = SourceRegistry(loading=True)
-    handlers = dataclasses.replace(make_view_env(root=config.parent).handlers, registry=registry)
-    app = FastAPI()
-    register_error_handlers(app)
-    app.include_router(build_view_router(handlers))
-    observed: dict[str, Any] = {}
-
-    async def ticker() -> int:
-        ticks = 0
-        for _ in range(10):
-            await asyncio.sleep(0)
-            ticks += 1
-        return ticks
-
-    async def scenario() -> list[httpx.Response]:
-        transport = httpx.ASGITransport(app=app)
-        async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
-            requests = [
-                asyncio.ensure_future(client.get("/_api/sources/sample/refs")),
-                asyncio.ensure_future(client.get("/_api/sources/sample/docs")),
-            ]
-            observed["ticks"] = await asyncio.wait_for(ticker(), timeout=5)
-            await asyncio.sleep(0.1)
-            observed["done_before"] = [request.done() for request in requests]
-            await asyncio.to_thread(registry.reload, terminal)
-            return await asyncio.wait_for(asyncio.gather(*requests), timeout=10)
-
+    fake_index.refused = True
+    client = _client(make_handlers())
     # 実行
-    responses = asyncio.run(scenario())
+    responses = [
+        client.get("/_api/sources/sample/docs"),
+        client.get("/_api/sources/sample/search", params={"q": "x"}),
+        client.get("/_api/sources/sample/refs"),
+    ]
     # 検証
-    assert observed["ticks"] == 10
-    assert observed["done_before"] == [False, False]
-    assert [response.status_code for response in responses] == [200, 200]
-
-
-def test_build_view_router_when_other_source_loading(
-    monkeypatch: Any,
-    make_source_dir: Callable[..., Path],
-    make_terminal_config: Callable[..., TerminalConfig],
-    make_entry: Callable[..., SourceEntry],
-    make_view_env: Callable[..., SimpleNamespace],
-) -> None:
-    """読み込み済みの配信元は、他の配信元の読み込み中でも答える（正常系）。"""
-    # 準備
-    import threading
-
-    from dev_docs.features.sources import registry as registry_module
-
-    sample = make_source_dir("sample")
-    notes = make_source_dir("notes")
-    terminal = make_terminal_config(
-        sources=[
-            make_entry(str(sample), source_id="sample"),
-            make_entry(str(notes), source_id="notes"),
-        ]
-    )
-    entered = threading.Event()
-    release = threading.Event()
-    original = registry_module.load_source
-
-    def blocking_load(entry: SourceEntry, *, index: int, lookup: Any) -> Any:
-        if entry.id == "notes":
-            entered.set()
-            release.wait(timeout=5)
-        return original(entry, index=index, lookup=lookup)
-
-    monkeypatch.setattr(registry_module, "load_source", blocking_load)
-    registry = SourceRegistry(loading=True)
-    handlers = dataclasses.replace(make_view_env(root=sample.parent).handlers, registry=registry)
-    app = FastAPI()
-    register_error_handlers(app)
-    app.include_router(build_view_router(handlers))
-    observed: dict[str, Any] = {}
-
-    async def scenario() -> httpx.Response:
-        worker = asyncio.ensure_future(asyncio.to_thread(registry.load, terminal))
-        await asyncio.to_thread(entered.wait, 5)
-        transport = httpx.ASGITransport(app=app)
-        async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
-            observed["sample"] = await asyncio.wait_for(
-                client.get("/_api/sources/sample/docs"), timeout=5
-            )
-            notes_request = asyncio.ensure_future(client.get("/_api/sources/notes/docs"))
-            await asyncio.sleep(0.1)
-            observed["notes_before"] = notes_request.done()
-            release.set()
-            response = await asyncio.wait_for(notes_request, timeout=10)
-        await asyncio.wait_for(worker, timeout=10)
-        return response
-
-    # 実行
-    notes_response = asyncio.run(scenario())
-    # 検証
-    assert observed["sample"].status_code == 200
-    assert observed["notes_before"] is False
-    assert notes_response.status_code == 200
+    assert [response.status_code for response in responses] == [503, 503, 503]
+    assert [sorted(response.json()["projectIndex"]) for response in responses] == [
+        ["address", "reason"]
+    ] * 3

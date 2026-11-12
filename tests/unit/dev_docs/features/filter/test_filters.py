@@ -5,14 +5,14 @@ from datetime import UTC, date, datetime
 
 import pytest
 
-from dev_docs.features.documents.types import Document
-from dev_docs.features.search.filters import (
+from dev_docs.features.filter.filters import (
     check_filter,
     compile_regex,
     match_filter,
     parse_compare_value,
 )
-from dev_docs.features.search.types import Condition, Group, LineRange, OrderKey, SearchRequest
+from dev_docs.features.filter.types import Condition, Group
+from dev_docs.integrations.project_index.types import IndexedDocument as Document
 
 TODAY = date(2026, 10, 28)
 FIELDS = {
@@ -170,9 +170,8 @@ def test_check_filter_when_group_keys() -> None:
             "not": {"field": "tags", "op": "eq", "values": ["x"]},
         }
     )
-    request = SearchRequest(filter=node)
     # 実行
-    violations = check_filter(request, FIELDS)
+    violations = check_filter(node, FIELDS)
     # 検証
     assert [(violation.path, violation.rule) for violation in violations] == [
         ("filter", "and・or・not のどれか 1 つだけを持ってください")
@@ -183,9 +182,8 @@ def test_check_filter_when_not_child() -> None:
     """`not` の下の知らない項目（異常系）。"""
     # 準備
     node = Group.model_validate({"not": {"field": "nmae", "op": "eq", "values": ["x"]}})
-    request = SearchRequest(filter=node)
     # 実行
-    violations = check_filter(request, FIELDS)
+    violations = check_filter(node, FIELDS)
     # 検証
     assert [violation.path for violation in violations] == ["filter.not.field"]
 
@@ -193,31 +191,11 @@ def test_check_filter_when_not_child() -> None:
 def test_check_filter_when_matches() -> None:
     """`@matches` を条件に使う（異常系）。"""
     # 準備
-    in_filter = SearchRequest(filter=Condition(field="@matches", op="gt", values=["1"]))
-    in_order_by = SearchRequest(order_by=[OrderKey(field="@matches")])
+    node = Condition(field="@matches", op="gt", values=["1"])
     # 実行
-    filter_violations = check_filter(in_filter, FIELDS)
-    order_by_violations = check_filter(in_order_by, FIELDS)
+    violations = check_filter(node, FIELDS)
     # 検証
-    assert [violation.path for violation in filter_violations] == ["filter.field"]
-    assert order_by_violations == []
-
-
-def test_check_filter_when_body_range() -> None:
-    """本文の範囲の引数の組み合わせ（異常系）。"""
-    # 準備
-    both = SearchRequest(view="full", sections=["a"], lines=LineRange(offset=1))
-    not_full = SearchRequest(view="summary", sections=["a"])
-    # 実行
-    both_violations = check_filter(both, FIELDS)
-    not_full_violations = check_filter(not_full, FIELDS)
-    # 検証
-    assert [(violation.path, violation.rule) for violation in both_violations] == [
-        ("sections", "sections と lines は同時に指定できません")
-    ]
-    assert [(violation.path, violation.rule) for violation in not_full_violations] == [
-        ("sections", "view: full のときだけ指定できます")
-    ]
+    assert [violation.path for violation in violations] == ["filter.field"]
 
 
 def test_compile_regex() -> None:

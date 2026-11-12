@@ -3,7 +3,6 @@ from __future__ import annotations
 import asyncio
 from collections.abc import Callable
 from pathlib import Path
-from types import SimpleNamespace
 from typing import Any
 
 import pytest
@@ -13,6 +12,8 @@ from starlette.types import Message, Receive, Scope, Send
 
 from dev_docs.server import app as app_module
 from dev_docs.server.app import build_app, route_operation_id
+
+from ..conftest import FakeIndex
 
 LOCAL_BASE_URL = "http://127.0.0.1:8781"
 MCP_HEADERS = {
@@ -59,22 +60,15 @@ def _pass_through(scope: Scope) -> list[Scope]:
     async def next_app(scope: Scope, receive: Receive, send: Send) -> None:
         received.append(scope)
 
-    middleware = app_module.SlashlessMcpPathMiddleware(next_app, paths=("/mcp", "/_admin/mcp"))
+    middleware = app_module.SlashlessMcpPathMiddleware(next_app, paths=("/_admin/mcp",))
     asyncio.run(middleware(scope, _noop_receive, _noop_send))
     return received
 
 
-def _handlers(make_mcp_handlers: Callable[..., Any], make_registry: Callable[..., Any]) -> Any:
-    """配信元が空の配線済みの関数を作る。"""
-    return make_mcp_handlers(registry=make_registry())
-
-
-def test_build_app(
-    make_mcp_handlers: Callable[..., Any], make_registry: Callable[..., Any]
-) -> None:
-    """入口を全て持つ（正常系）。"""
+def test_build_app(make_mcp_handlers: Callable[..., Any]) -> None:
+    """管理の MCP と画面の API を持つ（正常系）。"""
     # 準備
-    app = build_app(_handlers(make_mcp_handlers, make_registry))
+    app = build_app(make_mcp_handlers())
     client = TestClient(app)
     # 実行
     response = client.get("/_api/openapi.json")
@@ -83,24 +77,15 @@ def test_build_app(
     assert response.status_code == 200
     assert "/_api/sources/{source}/docs" in response.json()["paths"]
     assert "/_api/settings/sources" in response.json()["paths"]
-    assert "/mcp" in mounted
     assert "/_admin/mcp" in mounted
-    session_start = client.post(
-        "/_admin/session-start", json={"session_id": "s1", "reason": "startup"}
-    )
-    assert session_start.status_code == 200
-    assert "/_admin/session-context" not in mounted
+    assert "/mcp" not in mounted
+    assert "/_admin/session-start" not in mounted
 
 
-def test_build_app_when_openapi(
-    make_mcp_handlers: Callable[..., Any], make_registry: Callable[..., Any], tmp_path: Path
-) -> None:
+def test_build_app_when_openapi(make_mcp_handlers: Callable[..., Any], tmp_path: Path) -> None:
     """OpenAPI の画面を出さない（正常系）。"""
     # 準備
-    screen_dir = _screen_dir(tmp_path)
-    client = TestClient(
-        build_app(_handlers(make_mcp_handlers, make_registry), screen_dir=screen_dir)
-    )
+    client = TestClient(build_app(make_mcp_handlers(), screen_dir=_screen_dir(tmp_path)))
     # 実行
     docs = client.get("/docs")
     schema = client.get("/_api/openapi.json")
@@ -127,13 +112,11 @@ def test_build_app_when_openapi(
 
 
 def test_build_app_when_screen(
-    make_mcp_handlers: Callable[..., Any], make_registry: Callable[..., Any], tmp_path: Path
+    fake_index: FakeIndex, make_mcp_handlers: Callable[..., Any], tmp_path: Path
 ) -> None:
-    """API と MCP を画面の配信より先に当てる（正常系）。"""
+    """API を画面の配信より先に当てる（正常系）。"""
     # 準備
-    client = TestClient(
-        build_app(_handlers(make_mcp_handlers, make_registry), screen_dir=_screen_dir(tmp_path))
-    )
+    client = TestClient(build_app(make_mcp_handlers(), screen_dir=_screen_dir(tmp_path)))
     # 実行
     screen = client.get("/default/a.md")
     api = client.get("/_api/sources/none/docs")
@@ -145,53 +128,46 @@ def test_build_app_when_screen(
 
 
 def test_build_app_when_mcp_without_slash(
-    make_mcp_handlers: Callable[..., Any], make_registry: Callable[..., Any], tmp_path: Path
+    make_mcp_handlers: Callable[..., Any], tmp_path: Path
 ) -> None:
-    """スラッシュ無しの MCP のパスへの POST を画面の配信でなく MCP が受ける（正常系）。"""
+    """スラッシュ無しの管理の MCP のパスへの POST を MCP が受ける（正常系）。"""
     # 準備
-    handlers = make_mcp_handlers(
-        registry=make_registry(), seen=SimpleNamespace(purge_expired=lambda: 0)
-    )
-    app = build_app(handlers, screen_dir=_screen_dir(tmp_path))
+    app = build_app(make_mcp_handlers(), screen_dir=_screen_dir(tmp_path))
     with TestClient(app, base_url=LOCAL_BASE_URL, follow_redirects=False) as client:
         # 実行
-        docs = client.post("/mcp", headers=MCP_HEADERS, json=INITIALIZE)
         admin = client.post("/_admin/mcp", headers=MCP_HEADERS, json=INITIALIZE)
-        screen = client.get("/mcpx")
+        docs = client.post("/mcp", headers=MCP_HEADERS, json=INITIALIZE)
+        other = client.get("/_admin/mcpx")
     # 検証
-    assert docs.status_code == 200
-    assert "serverInfo" in docs.json()["result"]
     assert admin.status_code == 200
     assert "serverInfo" in admin.json()["result"]
-    assert screen.status_code == 200
-    assert screen.text == "<html>screen</html>"
+    assert docs.status_code == 404
+    assert docs.headers["content-type"].startswith("application/problem+json")
+    assert other.status_code == 404
 
 
 def test_slashless_mcp_path_middleware() -> None:
     """スラッシュ無しの MCP のパスにスラッシュを補う（正常系）。"""
     # 準備
-    docs_scope = {"type": "http", "path": "/mcp", "raw_path": b"/mcp"}
     admin_scope = {"type": "http", "path": "/_admin/mcp", "raw_path": b"/_admin/mcp"}
     # 実行
-    docs = _pass_through(docs_scope)
     admin = _pass_through(admin_scope)
     # 検証
-    assert docs[0]["path"] == "/mcp/"
-    assert docs[0]["raw_path"] == b"/mcp/"
     assert admin[0]["path"] == "/_admin/mcp/"
     assert admin[0]["raw_path"] == b"/_admin/mcp/"
-    assert docs_scope["path"] == "/mcp"
     assert admin_scope["path"] == "/_admin/mcp"
 
 
 @pytest.mark.parametrize(
     "scope",
     [
-        pytest.param({"type": "http", "path": "/mcp/", "raw_path": b"/mcp/"}, id="with_slash"),
-        pytest.param({"type": "http", "path": "/mcpx", "raw_path": b"/mcpx"}, id="prefix"),
         pytest.param(
-            {"type": "http", "path": "/sample/mcp", "raw_path": b"/sample/mcp"}, id="nested"
+            {"type": "http", "path": "/_admin/mcp/", "raw_path": b"/_admin/mcp/"}, id="with_slash"
         ),
+        pytest.param(
+            {"type": "http", "path": "/_admin/mcpx", "raw_path": b"/_admin/mcpx"}, id="prefix"
+        ),
+        pytest.param({"type": "http", "path": "/mcp", "raw_path": b"/mcp"}, id="removed"),
         pytest.param({"type": "lifespan"}, id="lifespan"),
     ],
 )

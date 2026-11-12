@@ -2,9 +2,9 @@ from __future__ import annotations
 
 from collections.abc import Callable
 
-from dev_docs.features.documents.types import Document
-from dev_docs.features.search.fields import field_values, heading_lines
-from dev_docs.features.search.types import Heading
+from dev_docs.features.filter.fields import field_values, heading_lines
+from dev_docs.features.filter.types import Heading
+from dev_docs.integrations.project_index.types import IndexedDocument as Document
 
 
 def test_field_values(make_document: Callable[..., Document]) -> None:

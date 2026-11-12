@@ -1,189 +1,154 @@
 from __future__ import annotations
 
-import asyncio
-import threading
+import json
 from collections.abc import Callable
-from pathlib import Path
 from typing import Any
 
-import httpx
-import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from dev_docs.features.settings import route as route_module
-from dev_docs.features.settings.query import load_terminal_config
 from dev_docs.features.settings.route import build_settings_router
-from dev_docs.features.settings.types import SourceEntry, TerminalConfig
-from dev_docs.features.sources.registry import SourceRegistry
-from dev_docs.features.sources.types import SourceStatus
-from dev_docs.shared.errors import Violation
+from dev_docs.server.error_handlers import register_error_handlers
 
-SETTINGS = (
-    'version: "1"\n'
-    "clone: /tmp/clone\n"
-    "sources:\n"
-    "  - id: a\n"
-    "    config: /tmp/a/dev-docs.yaml\n"
-    "  - id: b\n"
-    "    config: /tmp/b/dev-docs.yaml\n"
-)
+from ...conftest import FakeIndex
+
+SAME_ORIGIN = {"Sec-Fetch-Site": "same-origin"}
+PUT_BODY = {"sources": [{"id": "a", "config": "/tmp/a/project-index.yaml"}]}
 
 
-class FakeRegistry(SourceRegistry):
-    """決めた状態を返す配信元の一覧の偽物。"""
+def _item(row: dict[str, Any], status: str, **extra: Any) -> dict[str, Any]:
+    """project-index の端末の設定の `sources[]` の 1 件（行と状態）を作る。"""
+    return {"row": row, "id": row.get("id"), "status": status, "errors": [], **extra}
 
-    def __init__(self, statuses: list[SourceStatus]) -> None:
-        super().__init__()
-        self._statuses = statuses
 
-    def statuses(self) -> list[SourceStatus]:
-        return self._statuses
+def _client(make_handlers: Callable[..., Any]) -> TestClient:
+    """設定のルートと例外のハンドラを持つアプリの TestClient を作る。"""
+    app = FastAPI()
+    register_error_handlers(app)
+    app.include_router(build_settings_router(make_handlers()))
+    return TestClient(app)
 
 
 def test_build_settings_router_when_get(
-    tmp_path: Path,
-    write_files: Callable[[Path, dict[str, str]], None],
-    make_handlers: Callable[..., Any],
-    make_terminal_config: Callable[..., TerminalConfig],
-    make_status: Callable[..., SourceStatus],
+    fake_index: FakeIndex, make_handlers: Callable[..., Any]
 ) -> None:
     """行に状態を重ねる（正常系）。"""
     # 準備
-    write_files(tmp_path, {"settings.yaml": SETTINGS})
-    statuses = [
-        make_status("a", 0, config=("/tmp/a/dev-docs.yaml",)),
-        make_status(
-            "b",
-            1,
-            "not_served",
-            config=("/tmp/b/dev-docs.yaml",),
-            errors=[Violation(path="documents[0].paths", rule="必須のキーが無い")],
-        ),
-    ]
-    terminal = make_terminal_config(file=tmp_path / "settings.yaml")
-    handlers = make_handlers(terminal=terminal, registry=FakeRegistry(statuses))
-    app = FastAPI()
-    app.include_router(build_settings_router(handlers))
-    client = TestClient(app)
+    fake_index.settings = {
+        "settingsPath": "/pi/settings.yaml",
+        "sources": [
+            _item({"id": "a", "config": ["/tmp/a/project-index.yaml"]}, "serving"),
+            _item(
+                {"id": "b", "config": ["/tmp/b/project-index.yaml"]},
+                "not_served",
+                errors=[{"path": "documents[0].paths", "reason": "必須のキーが無い"}],
+            ),
+        ],
+    }
     # 実行
-    response = client.get("/_api/settings/sources")
+    response = _client(make_handlers).get("/_api/settings/sources")
     # 検証
     body = response.json()
     assert response.status_code == 200
-    assert body["settingsPath"] == str(terminal.file)
-    assert [row["id"] for row in body["sources"]] == ["a", "b"]
-    assert body["sources"][0]["config"] == ["/tmp/a/dev-docs.yaml"]
-    assert body["sources"][0]["status"] == "serving"
-    assert body["sources"][1]["status"] == "not_served"
+    assert body["settingsPath"] == "/pi/settings.yaml"
+    assert [(row["id"], row["status"]) for row in body["sources"]] == [
+        ("a", "serving"),
+        ("b", "not_served"),
+    ]
     assert body["sources"][1]["errors"] == [
         {"path": "documents[0].paths", "reason": "必須のキーが無い"}
     ]
 
 
-def test_build_settings_router_when_pending_reload(
-    tmp_path: Path,
-    write_files: Callable[[Path, dict[str, str]], None],
-    make_handlers: Callable[..., Any],
-    make_terminal_config: Callable[..., TerminalConfig],
-    make_status: Callable[..., SourceStatus],
-) -> None:
-    """読み直していない行を pending_reload で返す（正常系）。"""
-    # 準備
-    settings = (
-        'version: "1"\n'
-        "clone: /tmp/clone\n"
-        "sources:\n"
-        "  - id: b\n"
-        "    config: /tmp/b/dev-docs.yaml\n"
-        "  - id: a\n"
-        "    config: /tmp/a/dev-docs.yaml\n"
-        "  - id: fresh\n"
-        "    config: /tmp/fresh/dev-docs.yaml\n"
-    )
-    write_files(tmp_path, {"settings.yaml": settings})
-    statuses = [
-        make_status("a", 0, config=("/tmp/a/dev-docs.yaml",)),
-        make_status("b", 1, config=("/tmp/b/dev-docs.yaml",)),
-    ]
-    terminal = make_terminal_config(file=tmp_path / "settings.yaml")
-    handlers = make_handlers(terminal=terminal, registry=FakeRegistry(statuses))
-    app = FastAPI()
-    app.include_router(build_settings_router(handlers))
-    client = TestClient(app)
-    # 実行
-    response = client.get("/_api/settings/sources")
-    # 検証
-    rows = response.json()["sources"]
-    assert response.status_code == 200
-    assert [(row["id"], row["status"]) for row in rows] == [
-        ("b", "serving"),
-        ("a", "serving"),
-        ("fresh", "pending_reload"),
-    ]
-
-
 def test_build_settings_router_when_put(
-    make_handlers: Callable[..., Any],
-    make_status: Callable[..., SourceStatus],
-    monkeypatch: pytest.MonkeyPatch,
+    fake_index: FakeIndex, make_handlers: Callable[..., Any]
 ) -> None:
-    """保存して状態を返す（正常系）。"""
+    """保存を依頼して状態を返す（正常系）。"""
     # 準備
-    saved: list[list[SourceEntry]] = []
-
-    def fake_save_sources(sources: list[SourceEntry], **kwargs: Any) -> list[SourceStatus]:
-        saved.append(list(sources))
-        return [make_status("a", 0)]
-
-    monkeypatch.setattr(route_module, "save_sources", fake_save_sources)
-    handlers = make_handlers(settings_lock=threading.Lock(), registry=SourceRegistry())
-    app = FastAPI()
-    app.include_router(build_settings_router(handlers))
-    client = TestClient(app)
-    body = {"sources": [{"id": "a", "config": ["/tmp/a/dev-docs.yaml"]}]}
+    fake_index.responses[("PUT", "/settings/sources")] = (
+        200,
+        {"settingsPath": "/pi/settings.yaml", "sources": [_item({"id": "a"}, "serving")]},
+    )
     # 実行
-    response = client.put(
-        "/_api/settings/sources", json=body, headers={"Sec-Fetch-Site": "same-origin"}
+    response = _client(make_handlers).put(
+        "/_api/settings/sources", json=PUT_BODY, headers=SAME_ORIGIN
     )
     # 検証
+    sent = json.loads(fake_index.requests[-1].content)
     assert response.status_code == 200
     assert response.json()["sources"][0]["status"] == "serving"
-    assert saved[0][0].id == "a"
+    assert sent["sources"][0]["config"] == ["/tmp/a/project-index.yaml"]
 
 
-def test_build_settings_router_when_loading(
-    tmp_path: Path,
-    write_files: Callable[[Path, dict[str, str]], None],
-    make_source_dir: Callable[..., Path],
-    make_handlers: Callable[..., Any],
+def test_build_settings_router_when_pending_reload(
+    fake_index: FakeIndex, make_handlers: Callable[..., Any]
 ) -> None:
-    """読み込みが終わるまで待ってから行に状態を重ねる（正常系）。"""
+    """読み直していない行（正常系）。"""
     # 準備
-    config = make_source_dir("sample")
-    settings = f'version: "1"\nclone: /tmp/clone\nsources:\n  - id: sample\n    config: {config}\n'
-    write_files(tmp_path, {"settings.yaml": settings})
-    terminal = load_terminal_config(tmp_path / "settings.yaml")
-    registry = SourceRegistry(loading=True)
-    handlers = make_handlers(terminal=terminal, registry=registry)
-    app = FastAPI()
-    app.include_router(build_settings_router(handlers))
-    observed: dict[str, Any] = {}
-
-    async def scenario() -> httpx.Response:
-        transport = httpx.ASGITransport(app=app)
-        async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
-            request = asyncio.ensure_future(client.get("/_api/settings/sources"))
-            await asyncio.sleep(0.1)
-            observed["done_before"] = request.done()
-            await asyncio.to_thread(registry.reload, terminal)
-            return await asyncio.wait_for(request, timeout=10)
-
+    fake_index.settings = {
+        "settingsPath": "/pi/settings.yaml",
+        "sources": [
+            _item({"id": "a", "config": ["/a"]}, "serving"),
+            _item({"id": "b", "config": ["/b"]}, "serving"),
+            _item({"id": "fresh", "config": ["/fresh"]}, "pending_reload"),
+        ],
+    }
     # 実行
-    response = asyncio.run(scenario())
+    response = _client(make_handlers).get("/_api/settings/sources")
     # 検証
-    assert observed["done_before"] is False
     assert response.status_code == 200
-    assert [(row["id"], row["status"]) for row in response.json()["sources"]] == [
-        ("sample", "serving")
+    assert response.json()["sources"][2]["status"] == "pending_reload"
+
+
+def test_build_settings_router_when_rejected(
+    fake_index: FakeIndex, make_handlers: Callable[..., Any]
+) -> None:
+    """project-index が行を受け付けない（異常系）。"""
+    # 準備
+    fake_index.responses[("PUT", "/settings/sources")] = (
+        422,
+        {"detail": "検証に失敗", "errors": [{"path": "sources[0].config", "reason": "無い"}]},
+    )
+    # 実行
+    response = _client(make_handlers).put(
+        "/_api/settings/sources", json=PUT_BODY, headers=SAME_ORIGIN
+    )
+    # 検証
+    assert response.status_code == 422
+    assert response.headers["content-type"] == "application/problem+json"
+    assert response.json()["errors"] == [{"path": "sources[0].config", "reason": "無い"}]
+
+
+def test_build_settings_router_when_unexpected_status(
+    fake_index: FakeIndex, make_handlers: Callable[..., Any]
+) -> None:
+    """project-index が予期しないステータスを返す（異常系）。"""
+    # 準備
+    fake_index.responses[("PUT", "/settings/sources")] = (500, "boom")
+    # 実行
+    response = _client(make_handlers).put(
+        "/_api/settings/sources", json=PUT_BODY, headers=SAME_ORIGIN
+    )
+    # 検証
+    assert response.status_code == 502
+    assert response.headers["content-type"] == "application/problem+json"
+
+
+def test_build_settings_router_when_unreachable(
+    fake_index: FakeIndex, make_handlers: Callable[..., Any]
+) -> None:
+    """project-index につながらない（異常系）。"""
+    # 準備
+    fake_index.refused = True
+    client = _client(make_handlers)
+    # 実行
+    responses = [
+        client.get("/_api/settings/sources"),
+        client.put("/_api/settings/sources", json=PUT_BODY, headers=SAME_ORIGIN),
+    ]
+    # 検証
+    assert [response.status_code for response in responses] == [503, 503]
+    assert [sorted(response.json()["projectIndex"]) for response in responses] == [
+        ["address", "reason"],
+        ["address", "reason"],
     ]
