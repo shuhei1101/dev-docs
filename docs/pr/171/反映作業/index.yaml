@@ -5,10 +5,10 @@
   時期: マージの後
   回数: 1 回限り
   可逆: true
-  疎通確認: null
-  実行: null
-  確認: null
-  切り戻し: null
+  疎通確認: 端末の設定への配信元の追加/疎通確認.py
+  実行: 端末の設定への配信元の追加/実行.py
+  確認: 端末の設定への配信元の追加/確認.py
+  切り戻し: 端末の設定への配信元の追加/切り戻し.py
   失敗時: 既定の対処を 1 回、2 回連続で失敗したら依頼元へ返す
-  確認方法: project-index の search_docs を source dev-docs・filter の tags に要件で付けたタグで呼ぶと、docs/guide/ の判定フローチャートが返る
+  確認方法: project-index の GET /settings/sources で配信元 dev-docs と knowledge の status が serving になり、GET /sources/dev-docs/search?q=判定 で flowchart-new-or-modify と flowchart-documents-row が返る
   状態: "-"

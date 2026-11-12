@@ -37,11 +37,15 @@ docs:
   - page: docs/index.yaml
     new: false
     change: YAML に変換して種類のフォルダを新しく作る場合、そのフォルダの行を追加する
-    status: todo
+    status: done
+    updated_by: planner
+    updated_at: '2026-11-12T17:45:26.947162+00:00'
   - page: docs/_config.yml
     new: false
     change: YAML に変換して種類のフォルダを新しく作る場合、exclude と Pages の公開範囲を合わせる
-    status: todo
+    status: done
+    updated_by: planner
+    updated_at: '2026-11-12T17:45:26.947162+00:00'
   - page: README.md
     new: false
     change: dev-docs 自身の文書を直下の project-index.yaml で配信していることを記載する
@@ -60,6 +64,30 @@ docs:
     status: done
     updated_by: planner
     updated_at: '2026-11-12T17:08:49.257523+00:00'
+  - page: docs/flowchart/index.yaml
+    new: true
+    change: 判定フローチャートの種類のフォルダの目次を作り、README.md を生成する
+    status: done
+    updated_by: planner
+    updated_at: '2026-11-12T17:45:30.517228+00:00'
+  - page: docs/guide/index.yaml
+    new: false
+    change: YAML に変換した 2 文書の行を削除し、README.md を生成し直す
+    status: done
+    updated_by: planner
+    updated_at: '2026-11-12T17:45:30.517228+00:00'
+  - page: docs/guide/使い方.md
+    new: false
+    change: 目次から YAML に変換した 2 文書の行を削除する
+    status: done
+    updated_by: planner
+    updated_at: '2026-11-12T17:45:30.517228+00:00'
+  - page: docs/_theme/_data/nav.project.yml
+    new: false
+    change: Pages のサイドバーから YAML に変換した 2 文書の行を削除する
+    status: done
+    updated_by: planner
+    updated_at: '2026-11-12T17:45:30.517228+00:00'
 scope_out:
   - item: 既存の文書の書き方を mdmark の書き方と表し方の優先順位へ移す
     reason: 本文の書き方の移行は別の目的で、この Issue は配信とメタデータと形式の変換だけを扱う
@@ -72,4 +100,7 @@ scope_out:
     plan: none
   - item: docs/ の YAML の設計書（scenario・interface・module など）への tags の付与
     reason: 設計書は title・lead を名前・概要文として metadata の対応で配信でき、検索で見つかる。tags は任意のキーで、付けるには設計書の種類ごとに主題を決める別の作業が要る。付けた tags はこの作業 PR の project-index.yaml の metadata の対応が入って初めて検索に効く
+    plan: to_file
+  - item: docs/flowchart/ の YAML から GitHub Pages の公開ページを生成する手段
+    reason: Pages は develop の docs/ を Jekyll でそのまま描くビルドで、生成を入れるにはビルドの作り直しが要る。変換した 2 文書を Pages から外すことはユーザーが決めた（確認ログ）
     plan: to_file
