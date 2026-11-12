@@ -4,7 +4,24 @@ use_cases:
     impact: run_only
     detail: 画面で読む文書のフロー図の箱の大きさと線の通り道が変わる。読む手順は変わらない
     depends_on: []
-docs: []
+  - kind: single
+    scenario: docs/scenario/SC-155-2.yaml
+    impact: run_only
+    detail: 開発用の依存（mdmark）を足すため、利用者の入れ方で入れて起動できることを確かめる
+    depends_on: []
+docs:
+  - page: docs/library/LIB-155-9.yaml
+    new: false
+    change: 文書の取得の結合テストで図を点検する CLI を `devDependencies` の v0.10.0 で固定する旨と、`mdmark check --text` を v0.10.0 から使用できる旨を記載する
+    status: done
+    updated_by: planner
+    updated_at: '2026-11-12T20:36:28.845609+00:00'
+  - page: docs/test-procedure/TP-155-1.yaml
+    new: false
+    change: 結合テスト（バック）の前提に、mdmark の CLI のための Node 24 以上と `npm ci` を記載する
+    status: done
+    updated_by: planner
+    updated_at: '2026-11-12T20:36:28.845609+00:00'
 scope_out:
   - item: flow_layout.py のコメント・docstring の文言の AI slop の単語の対応表への合わせ込み（作り替えない箇所）
     reason: '要望に含まれない。#150 が #162 の後ろで扱う'

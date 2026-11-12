@@ -391,6 +391,35 @@ flows:
       - '`注文` から `商品` への関連は `relations` に無く、図の元データの表の関連の行にある'
       - 図の元データの表が `closed` の表のマーカーで囲まれている
     test: test_normal_when_er_diagram_drawn
+  - name: 正常系（フロー図が mdmark の定義の検査を通る）
+    summary: 線がノードを横切りやすい構造のフロー図を、mdmark の定義の検査で配置のずれが出ない部品にする
+    setup:
+      - name: Mock
+        description: なし
+        notes: '-'
+      - name: mdmark の CLI
+        description: '`package.json` の `devDependencies` でバージョンを固定した mdmark の CLI（`node_modules/.bin/mdmark`）'
+        notes: 返った `markdown` を `mdmark check --text -` の標準入力に指定する
+      - name: フロー図を持つ文書
+        description: 'sample に、`x-shape: diagram`・`x-diagram: flowchart` の項目・`x-diagram: state` の項目・`flowchart` を書いた Mermaid の文字列の項目を持つスキーマと、その文書 9 を配置する'
+        notes: '-'
+      - name: 線がノードを横切りやすい構造
+        description: '`x-diagram: flowchart` の項目は、`a → b → c` と `a → c`（ランクを飛ばす線）、`c → a`（戻る線）、名前が全角 30 文字のノード、`a`・`c` を囲み `b` を囲まない `frame` を持つ。`x-diagram: state` の項目は、自分へ戻る遷移とランクを飛ばす遷移を持つ。Mermaid の `flowchart LR` は、ランクを飛ばす線と戻る線を持つ'
+        notes: '-'
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        participant C as クライアント
+        participant E as GET /_api/sources/{source}/docs/{path}
+
+        C->>E: GET /_api/sources/sample/docs/{文書 9 のパス}
+        E->>E: フロー図を mdmark のフロー図の部品にする
+        E-->>C: 200（文書 9）
+      ```
+    expected:
+      - '`markdown` に `<!-- flow -->` の範囲が 3 つある'
+      - '`markdown` を `mdmark check --text -` にかけた結果に、`diagram_wire_crosses_node`・`diagram_label_too_long`・`diagram_node_overflow` が 1 件も無い'
+    test: test_normal_when_flow_layout_checked
   - name: 正常系（本文の id のリンクを解決する）
     summary: 本文の `id:` のリンクを、同じ配信元の文書と、その項目の見出しのアンカーへのリンクにする
     setup:
