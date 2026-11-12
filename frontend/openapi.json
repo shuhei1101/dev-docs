@@ -1047,6 +1047,11 @@
                 "type": "null"
               }
             ]
+          },
+          "outsideRead": {
+            "type": "boolean",
+            "title": "Outsideread",
+            "default": true
           }
         },
         "type": "object",
@@ -1063,7 +1068,14 @@
       "SettingsSourceStatus": {
         "properties": {
           "id": {
-            "type": "string",
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Id"
           },
           "status": {
@@ -1071,7 +1083,8 @@
             "enum": [
               "serving",
               "not_served",
-              "disabled"
+              "disabled",
+              "pending_reload"
             ],
             "title": "Status"
           },
@@ -1220,7 +1233,7 @@
           "config"
         ],
         "title": "SourceEntry",
-        "description": "端末の設定の `sources[]` の 1 行。"
+        "description": "設定画面が送る `sources[]` の 1 行（project-index の端末の設定の行の形）。"
       },
       "SourceScope": {
         "properties": {
