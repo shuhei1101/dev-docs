@@ -3,13 +3,13 @@ import { type RefObject, useEffect, useRef, useState } from "react";
 import type { AliasItem } from "@/shared/api/generated/model";
 import { logger } from "@/shared/lib/logger";
 
-/** mdmark の読み込み先（jsDelivr の GitHub の master ブランチの URL。master に入った mdmark のリリースを読み込む） */
+/** mdmark の読み込み先（jsDelivr の GitHub の、mdmark の develop に打ったタグの URL。上げるときはタグを書き換える） */
 export const MDMARK_URL =
-  "https://cdn.jsdelivr.net/gh/shuhei1101/mdmark@master/dist/index.js";
+  "https://cdn.jsdelivr.net/gh/shuhei1101/mdmark@v0.11.0/dist/index.js";
 
 /** mdmark のスタイル */
 export const MDMARK_CSS_URL =
-  "https://cdn.jsdelivr.net/gh/shuhei1101/mdmark@master/dist/index.css";
+  "https://cdn.jsdelivr.net/gh/shuhei1101/mdmark@v0.11.0/dist/index.css";
 
 export type MdmarkComment = {
   id: string;
