@@ -3,7 +3,7 @@ export type HighlightPart = { text: string; match: boolean };
 const escape = (word: string): string =>
   word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
-/** 抜粋を、語に一致する箇所とそれ以外の並びに分ける（つなぐと `text` に戻る） */
+/** 抜粋を、単語に一致する箇所とそれ以外の並びに分ける（つなぐと `text` に戻る） */
 export const splitHighlight = (
   text: string,
   query: string,

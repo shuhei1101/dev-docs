@@ -6,7 +6,7 @@ import { cn } from "@/shared/lib/utils";
 
 type Props = {
   items: TocItem[];
-  /** `changedSections` の結果（差分を出していないときは渡さない） */
+  /** `changedSections` の結果（差分を出していないときは指定しない） */
   changed?: Set<string>;
 };
 

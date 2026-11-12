@@ -36,7 +36,7 @@ export const docIdOf = (doc: {
   path: string;
 }) => `${doc.source}@${doc.ref ?? ""}:${doc.path}`;
 
-/** `docId` のコメントを、mdmark の `commentStore.load` が返す形で追加した順に返す */
+/** `docId` のコメントを、mdmark の `commentStore.load` が返却する構造で追加した順に返却する */
 export const commentsOf = (comments: DocComment[], docId: string) =>
   comments
     .filter((comment) => comment.docId === docId)
@@ -48,7 +48,7 @@ export const commentsOf = (comments: DocComment[], docId: string) =>
       body,
     }));
 
-/** このブラウザのタブで溜めたコメントの置き場所（`sessionStorage`） */
+/** このブラウザのタブで溜めたコメントの保存先（`sessionStorage`） */
 export const useCommentStore = create<CommentState>()(
   persist(
     (set) => ({

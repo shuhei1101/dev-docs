@@ -19,7 +19,7 @@ export const useLocating = (
   return {
     locating,
     onLocated: () => setLocating(null),
-    // 開いている文書のコメントは移動せず、本文の印までスクロールするだけにする
+    // 開いている文書のコメントは移動せず、本文のマーカーまでスクロールするだけにする
     locate: (comment: DocComment) => {
       setLocating(comment);
       if (comment.docId !== docId) openDoc(comment);

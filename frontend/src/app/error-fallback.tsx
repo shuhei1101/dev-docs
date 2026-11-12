@@ -12,7 +12,7 @@ type Props = {
   reset?: () => void;
 };
 
-/** 描画中の例外の表示。ErrorBoundary とルートの `errorComponent` が使う。project-index に接続できなかったときは、接続先と理由を出す */
+/** 描画中の例外の表示。ErrorBoundary とルートの `errorComponent` が使用する。project-index に接続できなかったときは、接続先と理由を出す */
 export const ErrorFallback = ({ error, reset }: Props) => {
   useEffect(() => {
     const target = toProjectIndexUnreachable(error);

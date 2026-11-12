@@ -3,7 +3,7 @@ import { type RefObject, useEffect, useRef, useState } from "react";
 import type { AliasItem } from "@/shared/api/generated/model";
 import { logger } from "@/shared/lib/logger";
 
-/** mdmark の読み込み先（jsDelivr の GitHub の master ブランチの URL。master に入った mdmark のリリースを読む） */
+/** mdmark の読み込み先（jsDelivr の GitHub の master ブランチの URL。master に入った mdmark のリリースを読み込む） */
 export const MDMARK_URL =
   "https://cdn.jsdelivr.net/gh/shuhei1101/mdmark@master/dist/index.js";
 
@@ -39,7 +39,7 @@ export type MdmarkColumnsChangeHandler = (event: MdmarkColumnsChange) => void;
 export type MdmarkOptions = {
   markdown: string;
   docId: string;
-  /** 文書の取得の `aliases`（mdmark の索引にして渡す） */
+  /** 文書の取得の `aliases`（mdmark の索引にして指定する） */
   aliases?: AliasItem[];
   commentStore: MdmarkCommentStore;
   /** 機能のオン・オフ（`comments` は既定でオフ） */
@@ -89,7 +89,7 @@ export const toMdmarkIndex = (aliases: AliasItem[]): MdmarkIndex => {
   const docs: MdmarkIndexDoc[] = [];
   for (const item of aliases) {
     if (item.aliasType === "term") {
-      // 説明の無い用語は mdmark が除くので載せない
+      // 説明の無い用語は mdmark が除くので含めない
       if (!item.description) continue;
       terms.push({
         id: item.id,
@@ -111,7 +111,7 @@ export const toMdmarkIndex = (aliases: AliasItem[]): MdmarkIndex => {
   return { docs, terms };
 };
 
-/** スタイルを `document.head` に 1 回だけ置く */
+/** スタイルを `document.head` に 1 回だけ追加する */
 const ensureStylesheet = (): void => {
   if (document.head.querySelector(`link[href="${MDMARK_CSS_URL}"]`)) return;
   const link = document.createElement("link");
@@ -120,7 +120,7 @@ const ensureStylesheet = (): void => {
   document.head.append(link);
 };
 
-/** mdmark をモジュールの中で 1 回だけ読む */
+/** mdmark をモジュールの中で 1 回だけ読み込む */
 const load = (): Promise<MdmarkModule> => {
   ensureStylesheet();
   loading ??= import(/* @vite-ignore */ MDMARK_URL).catch((error: unknown) => {
@@ -138,7 +138,7 @@ type State = {
   docId: string | null;
 };
 
-/** 要素に mdmark で本文を描き、本文の変更で `update`、外れるときに `destroy` する。`ready` は今の文書を描き終えたとき `true` */
+/** 要素に mdmark で本文を描き、本文の変更で `update`、アンマウントするときに `destroy` する。`ready` は今の文書を描き終えたとき `true` */
 export const useMdmark = (
   ref: RefObject<HTMLElement | null>,
   options: MdmarkOptions,
@@ -158,7 +158,7 @@ export const useMdmark = (
     latest.current = options;
   });
 
-  // 文書が変わったら破棄して描き直す
+  // 文書が変わったら破棄して再描画する
   useEffect(() => {
     let cancelled = false;
     let handle: MdmarkHandle | null = null;

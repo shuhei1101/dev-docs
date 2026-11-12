@@ -39,7 +39,7 @@ export const findActivePage = (
   return { tab, group: found?.group ?? null, page: found?.page ?? null };
 };
 
-/** タブのサイドバーの一番上の page のパスを返す */
+/** タブのサイドバーの一番上の page のパスを返却する */
 export const firstPagePath = (tab: NavTab): string | null => {
   const walk = (items: NavItem[]): string | null => {
     for (const item of items) {
