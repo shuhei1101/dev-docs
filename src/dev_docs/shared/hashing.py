@@ -10,7 +10,7 @@ VERSION_LENGTH = 6
 
 
 def content_hash(data: str | bytes) -> str:
-    """内容の SHA-256 の先頭 VERSION_LENGTH 桁を返す。"""
+    """内容の SHA-256 の先頭 VERSION_LENGTH 桁を返却する。"""
     raw = data.encode("utf-8") if isinstance(data, str) else data
     return hashlib.sha256(raw).hexdigest()[:VERSION_LENGTH]
 

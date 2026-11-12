@@ -1,4 +1,4 @@
-"""クローンの更新と、移し替えの要否の確かめ。"""
+"""クローンの更新と、移し替えの要否の確認。"""
 
 from __future__ import annotations
 
@@ -18,7 +18,7 @@ STDERR_TAIL_CHARS = 500
 
 
 def _run(argv: list[str], *, cwd: Path) -> str:
-    """クローンで 1 つのコマンドを打ち切りつきで実行し、標準出力を返す。"""
+    """クローンで 1 つのコマンドを打ち切りつきで実行し、標準出力を返却する。"""
     command = " ".join(argv)
     try:
         result = subprocess.run(
@@ -80,7 +80,7 @@ def _update(clone: Path, control: RestartControl) -> UpdateResult:
     _run(["uv", "sync"], cwd=clone)
     with (clone / "pyproject.toml").open("rb") as file:
         version = str(tomllib.load(file)["project"]["version"])
-    # 新しいコードで移し替えの要否を確かめる
+    # 新しいコードで移し替えの要否を確認する
     python = clone / ".venv" / "bin" / "python"
     plan = _run([str(python), "-m", "dev_docs", "migrate", "--plan"], cwd=clone)
     migration_needed = bool(plan.strip())

@@ -72,7 +72,7 @@ def _strip_table_keys(markdown: str, kind: str) -> tuple[str, list[str]]:
 class ConvertService:
     """文書の行の設定で変換を選んで Markdown を描き、埋め込みを展開して表のキーを取り出す。
 
-    `converters[]` のスクリプトは project-index が実行して結果を返すため、状態を持たない。
+    `converters[]` のスクリプトは project-index が実行して結果を返却するため、状態を持たない。
     """
 
     def _context(
@@ -82,7 +82,7 @@ class ConvertService:
         documents: Sequence[IndexedDocument],
         linkable: Collection[str],
     ) -> RenderContext:
-        """同じリビジョンの文書を ID・パスで引くリンクの引き先と、Issue の URL を集める。"""
+        """同じリビジョンの文書を ID・パスで参照するリンクのリンク先と、Issue の URL を集める。"""
         links: dict[str, DocumentLink] = {}
         by_id: dict[str, IndexedDocument] = {}
         for found in documents:
@@ -93,7 +93,7 @@ class ConvertService:
                     links.setdefault(key, link)
 
         def heading(document_id: str, item: str) -> str | None:
-            """ID の文書の値と行のスキーマで、項目の見出しを引く。"""
+            """ID の文書の値と行のスキーマで、項目の見出しを検索する。"""
             found = by_id.get(document_id)
             row = view.row(found.kind) if found is not None else None
             if found is None or row is None:

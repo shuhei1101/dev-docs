@@ -71,7 +71,7 @@ def parse_field_path(path: str) -> list[Token]:
 
 
 def _plain_tokens(path: str, verb: str) -> list[str | int]:
-    """要素の選び方を含まないパスを分ける。含めば `InvalidArgumentError` を送る。"""
+    """要素の選び方を含まないパスを分ける。含めば `InvalidArgumentError` を送出する。"""
     tokens = parse_field_path(path)
     if any(isinstance(token, ArraySelector) for token in tokens):
         raise _invalid(path, f"{path}: `[]`・`[{{キー}}]` を含む項目のパス{verb}")
@@ -107,7 +107,7 @@ def _select(data: Any, tokens: Sequence[Token], default: Any) -> Any:
 
 
 def _walk(data: Any, tokens: Sequence[str | int]) -> tuple[bool, Any]:
-    """先頭からたどり、たどれたか・たどり着いた値を返す。"""
+    """先頭からたどり、たどれたか・たどり着いた値を返却する。"""
     current = data
     for token in tokens:
         if isinstance(token, int):
@@ -133,7 +133,7 @@ def _join(tokens: Sequence[str | int]) -> str:
 
 
 def get_field(data: Mapping[str, Any], path: str, *, default: Any = None) -> Any:
-    """項目のパスで指した値を返す。"""
+    """項目のパスで指した値を返却する。"""
     return _select(data, parse_field_path(path), default)
 
 

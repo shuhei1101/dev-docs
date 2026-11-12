@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 
 
 def _to_row(entry: SourceEntry) -> dict[str, Any]:
-    """既定値と同じキーを送らない `sources[]` の 1 行にする。"""
+    """既定値と同じキーを送信しない `sources[]` の 1 行にする。"""
     row: dict[str, Any] = {}
     if entry.id is not None:
         row["id"] = entry.id
@@ -36,7 +36,7 @@ def _to_row(entry: SourceEntry) -> dict[str, Any]:
 async def save_sources(
     client: ProjectIndexClient, sources: Sequence[SourceEntry]
 ) -> list[SourceState]:
-    """送られた `sources[]` を project-index の端末の設定の API へ渡し、読み直した後の状態を返す。"""
+    """送信された `sources[]` を project-index の端末の設定の API へ指定し、再読み込みした後の状態を返却する。"""
     view = await client.put_settings_sources([_to_row(entry) for entry in sources])
     logger.info("端末の設定の sources の保存を依頼した（%s 行）", len(sources))
     return view.states

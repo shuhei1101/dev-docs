@@ -51,7 +51,7 @@ def resolve_target(*, env: Mapping[str, str]) -> MigrationTarget:
 
 
 def plan_migration(target: MigrationTarget) -> tuple[CommentedMap, list[MigrationStep]]:
-    """対象の `version` を読み、当てる手順を求める。"""
+    """対象の `version` を読み込み、適用する手順を求める。"""
     try:
         data = load_roundtrip(target.file.read_text(encoding="utf-8"), file=str(target.file))
     except (OSError, YamlLoadError) as error:
@@ -78,7 +78,7 @@ def _export_sources(
     export_source: Callable[[Mapping[str, Any]], AddSourceResult],
     project_index: str,
 ) -> list[str]:
-    """`sources` の行を 1 行ずつ project-index へ追加し、移さなかった行の ID を返す。"""
+    """`sources` の行を 1 行ずつ project-index へ追加し、移行しなかった行の ID を返却する。"""
     rows = data.get(SOURCES_KEY)
     kept_rows: list[Any] = []
     kept: list[str] = []
@@ -122,15 +122,15 @@ def apply_migration(
     project_index: str,
     now: datetime,
 ) -> MigrationOutcome:
-    """手順を全て当てて新しいスキーマで検証し、バックアップを取ってから 1 回だけ書き込む。"""
-    # 破壊的な手順は、許されたときだけ当てる
+    """手順を全て適用して新しいスキーマで検証し、バックアップを取ってから 1 回だけ書き込む。"""
+    # 破壊的な手順は、許されたときだけ適用する
     destructive = [step for step in steps if step.destructive]
     if destructive and not allow_destructive:
         lines = [f"{step.version}: {step.description}" for step in destructive]
         raise DestructiveStepBlockedError(
             "\n".join(["破壊的な手順があります", *lines, "--allow-destructive で適用できます"])
         )
-    # 読んだ後にファイルが変わっていないかを、読んだ内容との比較とハッシュで確かめる
+    # 読み込んだ後にファイルが変わっていないかを、読み込んだ内容との比較とハッシュで確認する
     original = target.file.read_text(encoding="utf-8")
     if dump_roundtrip(load_roundtrip(original)) != dump_roundtrip(data):
         raise MigrationFailedError(f"{target.file}: 読み込んだ後に変わったため書き換えません")
@@ -145,7 +145,7 @@ def apply_migration(
     data["version"] = DoubleQuotedScalarString(target.current)
     text = dump_roundtrip(data)
     violations = validate_terminal_config(load_yaml(text))
-    # 当てた結果が新しいスキーマに違反するときは書かない
+    # 適用した結果が新しいスキーマに違反するときは書き込まない
     if violations:
         raise MigrationFailedError("\n".join(f"{v.path}: {v.rule}" for v in violations))
     if content_hash(target.file.read_text(encoding="utf-8")) != digest:

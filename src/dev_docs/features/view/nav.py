@@ -34,12 +34,12 @@ def _link(document: IndexedDocument, title: str | None = None) -> NavItem:
 
 
 def _documents_of(documents: Sequence[IndexedDocument], kind: str) -> list[IndexedDocument]:
-    """文書の行の文書を、文書のページのパスの昇順で返す。"""
+    """文書の行の文書を、文書のページのパスの昇順で返却する。"""
     return sorted((d for d in documents if d.kind == kind), key=page_path)
 
 
 def _filter_of(spec: Mapping[str, Any]) -> Condition | Group | None:
-    """`auto.filter` を条件の木にする（読めない条件は `ValidationError`）。"""
+    """`auto.filter` を条件の木にする（読み取れない条件は `ValidationError`）。"""
     raw = spec.get("filter")
     if raw is None:
         return None
@@ -54,7 +54,7 @@ def _select(
     fields: Mapping[str, str],
     today: date,
 ) -> list[IndexedDocument]:
-    """`auto` の `document` と `filter` に当たる文書を、文書のページのパスの昇順で返す。"""
+    """`auto` の `document` と `filter` に該当する文書を、文書のページのパスの昇順で返却する。"""
     kind = spec.get("document")
     found = sorted((d for d in documents if kind is None or d.kind == str(kind)), key=page_path)
     try:
@@ -63,7 +63,7 @@ def _select(
         return []
     if node is None:
         return found
-    # 使えない項目・値の条件はタブを空にする（検査は project-index が警告する）
+    # 使用できない項目・値の条件はタブを空にする（検査は project-index が警告する）
     if check_filter(node, fields):
         return []
     return [d for d in found if match_filter(node, d, fields=fields, today=today)]
@@ -80,7 +80,7 @@ def _auto(
 ) -> list[NavItem]:
     """`auto` の文書を並べる（`group_by` があれば値ごと・フォルダごとの `group` の項目にする）。
 
-    `excluded` は同じタブで手で書いた `page` が指す文書のページのパスで、結果から除く。
+    `excluded` は同じタブで手で記載した `page` が指す文書のページのパスで、結果から除く。
     """
     found = [
         document
@@ -123,14 +123,14 @@ def _page(
 
 @dataclass
 class _Folder:
-    """フォルダの束ねの木の 1 階層。"""
+    """フォルダのグループ化の木の 1 階層。"""
 
     pages: list[IndexedDocument] = field(default_factory=list)
     children: dict[str, _Folder] = field(default_factory=dict)
 
 
 def _folder_parts(document: IndexedDocument, rows: Mapping[str, DocumentRow]) -> tuple[str, ...]:
-    """文書が属する、行の `paths` の起点からのフォルダの並びを返す。"""
+    """文書が属する、行の `paths` の起点からのフォルダの並びを返却する。"""
     row = rows.get(document.kind)
     if document.record_index is not None or row is None:
         return ()
@@ -176,7 +176,7 @@ def _folder_items(
 def _manual_pages(
     view: SourceView, documents: Sequence[IndexedDocument], items: Sequence[Mapping[str, Any]]
 ) -> set[str]:
-    """`items[]` を `group` の入れ子までたどり、手で書いた `page` が指す文書のページのパスを集める。"""
+    """`items[]` を `group` の入れ子までたどり、手で記載した `page` が指す文書のページのパスを集める。"""
     found: set[str] = set()
     for item in items:
         if "group" in item:
@@ -197,7 +197,7 @@ def _items(
     today: date,
     excluded: Collection[str] = (),
 ) -> list[NavItem]:
-    """`items[]` を上から読み、サイドバーの項目の並びを作る。"""
+    """`items[]` を上から読み取り、サイドバーの項目の並びを作る。"""
     result: list[NavItem] = []
     for item in items:
         if "group" in item:
@@ -244,7 +244,7 @@ def _tab_title(row: DocumentRow) -> str:
 
 
 def _source_fields(view: SourceView) -> dict[str, str]:
-    """配信元の行のスキーマ（`records` を持つ行は 1 要素のスキーマ）から使える項目を作る。"""
+    """配信元の行のスキーマ（`records` を持つ行は 1 要素のスキーマ）から使用できる項目を作る。"""
     return known_fields(row.schema for row in view.documents)
 
 
@@ -287,7 +287,7 @@ def build_nav(view: SourceView, documents: Sequence[IndexedDocument]) -> list[Na
 
 
 def first_page(tab: NavTab) -> str | None:
-    """タブのサイドバーの一番上の文書のページのパスを返す。"""
+    """タブのサイドバーの一番上の文書のページのパスを返却する。"""
 
     def walk(items: Sequence[NavItem]) -> str | None:
         for item in items:
@@ -384,7 +384,7 @@ def mark_nav_changes(
     }
     if not deleted:
         return marked
-    # 比較元のタブごとに、同じ title のタブへ差し込む。無ければ一番左のタブの末尾に置く
+    # 比較元のタブごとに、同じ title のタブへ差し込む。無ければ一番左のタブの末尾に配置する
     for base_tab in base_tabs:
         target_index = next(
             (i for i, tab in enumerate(marked) if tab.title == base_tab.title), None
