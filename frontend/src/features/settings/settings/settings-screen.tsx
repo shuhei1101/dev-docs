@@ -73,6 +73,8 @@ export const SettingsScreen = () => {
     setSingleKeyShortcuts,
   } = usePreferencesStore();
   const [dialog, setDialog] = useState<Dialog>(null);
+  const handleEdit = (index: number) => setDialog({ kind: "edit", index });
+  const handleRemove = (index: number) => setDialog({ kind: "remove", index });
   const [helpOpen, setHelpOpen] = useState(false);
   const serving = (sources ?? []).some(
     (item) => item.status === "serving" && item.id,
@@ -133,8 +135,8 @@ export const SettingsScreen = () => {
             <SourceList
               sources={sources}
               loading={loading}
-              onEdit={(index) => setDialog({ kind: "edit", index })}
-              onRemove={(index) => setDialog({ kind: "remove", index })}
+              onEdit={handleEdit}
+              onRemove={handleRemove}
             />
           )}
         </section>
