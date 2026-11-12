@@ -104,6 +104,17 @@ documents:
     metadata:
       name: title
       description: lead
+  - id: flowchart
+    title: 判定フローチャート
+    paths: ["docs/flowchart/*.yaml"]
+    exclude: [index.yaml]
+    schema:
+      source: knowledge
+      path: schemas/flowchart.schema.yaml
+      ref: 84c29878db60c2e374582270437504786a89fa4e
+    metadata:
+      tags: tags[].name
+      main_tags: tags[main].name
   - id: index
     title: 目次
     paths:
