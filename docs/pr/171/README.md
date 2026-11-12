@@ -1,0 +1,1 @@
+# dev-docs 自身の文書を project-index.yaml で配信し、タグで引けるようにする
