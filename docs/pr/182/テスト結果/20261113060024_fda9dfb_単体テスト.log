@@ -1,0 +1,238 @@
+$ uv run pytest tests/unit/dev_docs/features/convert/test_flow_layout.py
+============================= test session starts ==============================
+platform linux -- Python 3.14.3, pytest-9.1.1, pluggy-1.7.0
+rootdir: /mnt/c/Users/shuhe/repo/dev-docs/.claude/worktrees/fix-convert-flow-layout-mdmark-check
+configfile: pyproject.toml
+plugins: anyio-4.15.1
+collected 17 items
+
+tests/unit/dev_docs/features/convert/test_flow_layout.py ...F.F.F.FFFFFF [ 88%]
+FF                                                                       [100%]
+
+=================================== FAILURES ===================================
+__________________________ test_layout_flow_when_loop __________________________
+
+    def test_layout_flow_when_loop() -> None:
+        """戻る線（正常系）。"""
+        # 準備
+        graph = _graph("TD", [("a", "b", None), ("b", "a", None)])
+        # 実行
+        result = layout_flow(graph, HEAD)
+        # 検証
+        wire = result["wires"][1]
+        assert wire["line"] == "loop"
+        # b の上の辺から a の下の辺へ
+>       assert wire["points"] == [[140, 140], [140, 76]]
+E       assert [[180, 168], ...8], [180, 48]] == [[140, 140], [140, 76]]
+E         
+E         At index 0 diff: [180, 168] != [140, 140]
+E         Left contains 2 more items, first extra item: [200, 48]
+E         Use -v to get more diff
+
+tests/unit/dev_docs/features/convert/test_flow_layout.py:118: AssertionError
+_______________________ test_layout_flow_when_self_loop ________________________
+
+    def test_layout_flow_when_self_loop() -> None:
+        """元と先が同じ線（正常系）。"""
+        # 準備
+        graph = _graph("TD", [("a", "b", None), ("b", "b", None)])
+        # 実行
+        result = layout_flow(graph, HEAD)
+        # 検証
+        wire = result["wires"][1]
+        assert wire["line"] == "loop"
+        # b の右の辺から ROW_GAP / 2 張り出す輪
+        assert wire["points"] == [[180, 154], [200, 154], [200, 182], [180, 182]]
+>       assert result["width"] == 220
+E       assert 240 == 220
+
+tests/unit/dev_docs/features/convert/test_flow_layout.py:144: AssertionError
+_________________________ test_layout_flow_when_frame __________________________
+
+    def test_layout_flow_when_frame() -> None:
+        """枠（正常系）。"""
+        # 準備
+        base = _graph("TD", [("a", "b", None), ("b", "c", None)])
+        graph = FlowGraph(
+            direction=base.direction,
+            nodes=base.nodes,
+            edges=base.edges,
+            frame=FlowFrame(label="判定", nodes=frozenset({"a", "b"})),
+        )
+        # 実行
+        result = layout_flow(graph, HEAD)
+        # 検証
+>       assert (_node(result, "a")["x"], _node(result, "a")["y"]) == (40, 40)
+E       assert (20, 20) == (40, 40)
+E         
+E         At index 0 diff: 20 != 40
+E         Use -v to get more diff
+
+tests/unit/dev_docs/features/convert/test_flow_layout.py:180: AssertionError
+_______________________ test_layout_flow_when_skip_rank ________________________
+
+    def test_layout_flow_when_skip_rank() -> None:
+        """段を飛ばす線（正常系）。"""
+        # 準備
+        graph = _graph("TD", [("a", "b", None), ("b", "c", None), ("a", "c", None)])
+        # 実行
+        result = layout_flow(graph, HEAD)
+        # 検証
+        assert _node(result, "c")["y"] == 260
+        points = result["wires"][2]["points"]
+>       assert points == [[100, 76], [100, 108], [220, 108], [220, 228], [100, 228], [100, 260]]
+E       assert [[100, 76], [100, 260]] == [[100, 76], [...], [100, 260]]
+E         
+E         At index 1 diff: [100, 260] != [100, 108]
+E         Right contains 4 more items, first extra item: [220, 108]
+E         Use -v to get more diff
+
+tests/unit/dev_docs/features/convert/test_flow_layout.py:212: AssertionError
+________________ test_layout_flow_when_skip_rank_left_to_right _________________
+
+    def test_layout_flow_when_skip_rank_left_to_right() -> None:
+        """左から右の段を飛ばす線（正常系）。"""
+        # 準備
+        graph = _graph("LR", [("a", "b", None), ("b", "c", None), ("a", "c", None)])
+        # 実行
+        result = layout_flow(graph, HEAD)
+        # 検証
+        a, b, c = _node(result, "a"), _node(result, "b"), _node(result, "c")
+        assert a["x"] < b["x"] < c["x"]
+        assert c["x"] == max(node["x"] for node in result["nodes"])
+>       assert not _crosses(result["wires"][2]["points"], b)
+E       AssertionError: assert not True
+E        +  where True = _crosses([[180, 48], [468, 48]], {'id': 'b', 'kind': 'script', 'x': 244, 'y': 20, ...})
+
+tests/unit/dev_docs/features/convert/test_flow_layout.py:226: AssertionError
+__________________ test_layout_flow_when_back_edge_skip_rank ___________________
+
+    def test_layout_flow_when_back_edge_skip_rank() -> None:
+        """段を飛ばして戻る線（正常系）。"""
+        # 準備
+        graph = _graph("TD", [("a", "b", None), ("b", "c", None), ("c", "a", None)])
+        # 実行
+        result = layout_flow(graph, HEAD)
+        # 検証
+        a, b, c = _node(result, "a"), _node(result, "b"), _node(result, "c")
+        wire = result["wires"][2]
+        assert wire["line"] == "loop"
+        # c の上の辺から出て a の下の辺へ入る
+>       assert wire["points"][0][1] == c["y"]
+E       assert 288 == 260
+
+tests/unit/dev_docs/features/convert/test_flow_layout.py:240: AssertionError
+_________________ test_layout_flow_when_self_loop_beside_node __________________
+
+    def test_layout_flow_when_self_loop_beside_node() -> None:
+        """同じ段に箱が並ぶ元と先が同じ線（正常系）。"""
+        # 準備
+        graph = FlowGraph(
+            direction="TD",
+            nodes=[
+                FlowNode(id="a", name="A", kind="script"),
+                FlowNode(id="b", name="B", kind="script"),
+            ],
+            edges=[FlowEdge(source="a", target="a")],
+        )
+        # 実行
+        result = layout_flow(graph, HEAD)
+        # 検証
+        a, b = _node(result, "a"), _node(result, "b")
+        points = result["wires"][0]["points"]
+        right = a["x"] + a["w"]
+>       assert all(right <= x <= right + 20 for x, _ in points)
+E       assert False
+E        +  where False = all(<generator object test_layout_flow_when_self_loop_beside_node.<locals>.<genexpr> at 0x7aa2dbafa6b0>)
+
+tests/unit/dev_docs/features/convert/test_flow_layout.py:264: AssertionError
+_______________________ test_layout_flow_when_long_name ________________________
+
+    def test_layout_flow_when_long_name() -> None:
+        """折り返す名前（正常系）。"""
+        # 準備
+        graph = FlowGraph(
+            direction="TD",
+            nodes=[
+                FlowNode(id="a", name="あ" * 30, kind="script"),
+                FlowNode(id="b", name="B", kind="script"),
+            ],
+            edges=[FlowEdge(source="a", target="b")],
+        )
+        # 実行
+        result = layout_flow(graph, HEAD)
+        # 検証
+        a, b = _node(result, "a"), _node(result, "b")
+>       assert (a["h"], b["h"]) == (87, 56)
+E       assert (56, 56) == (87, 56)
+E         
+E         At index 0 diff: 56 != 87
+E         Use -v to get more diff
+
+tests/unit/dev_docs/features/convert/test_flow_layout.py:283: AssertionError
+____________________ test_layout_flow_when_half_width_name _____________________
+
+    def test_layout_flow_when_half_width_name() -> None:
+        """半角を含む名前（正常系）。"""
+        # 準備
+        graph = FlowGraph(
+            direction="TD", nodes=[FlowNode(id="a", name="x" * 30, kind="script")], edges=[]
+        )
+        # 実行
+        result = layout_flow(graph, HEAD)
+        # 検証
+>       assert _node(result, "a")["h"] == 67
+E       assert 56 == 67
+
+tests/unit/dev_docs/features/convert/test_flow_layout.py:297: AssertionError
+___________________ test_layout_flow_when_frame_outside_rank ___________________
+
+    def test_layout_flow_when_frame_outside_rank() -> None:
+        """枠の中の箱が無い段の枠の外の箱（正常系）。"""
+        # 準備
+        graph = _with_frame(_graph("TD", [("a", "b", None), ("b", "c", None)]), {"a", "c"})
+        # 実行
+        result = layout_flow(graph, HEAD)
+        # 検証
+>       assert not _overlaps(_node(result, "b"), result["frame"])
+E       AssertionError: assert not True
+E        +  where True = _overlaps({'id': 'b', 'kind': 'script', 'x': 20, 'y': 140, ...}, {'title': '枠', 'x': 0, 'y': 0, 'w': 200, ...})
+E        +    where {'id': 'b', 'kind': 'script', 'x': 20, 'y': 140, ...} = _node({'title': '図', 'scope': '文書', 'updated': '2026-11-03', 'width': 220, ...}, 'b')
+
+tests/unit/dev_docs/features/convert/test_flow_layout.py:307: AssertionError
+____________________ test_layout_flow_when_frame_skip_rank _____________________
+
+    def test_layout_flow_when_frame_skip_rank() -> None:
+        """枠の中の箱どうしの段を飛ばす線（正常系）。"""
+        # 準備
+        graph = _with_frame(
+            _graph("LR", [("a", "b", None), ("b", "c", None), ("a", "c", None)]), {"a", "b", "c"}
+        )
+        # 実行
+        result = layout_flow(graph, HEAD)
+        # 検証
+        frame = result["frame"]
+        points = result["wires"][2]["points"]
+        assert all(
+            frame["x"] <= x <= frame["x"] + frame["w"] and frame["y"] <= y <= frame["y"] + frame["h"]
+            for x, y in points
+        )
+>       assert not _crosses(points, _node(result, "b"))
+E       AssertionError: assert not True
+E        +  where True = _crosses([[180, 48], [468, 48]], {'id': 'b', 'kind': 'script', 'x': 244, 'y': 20, ...})
+E        +    where {'id': 'b', 'kind': 'script', 'x': 244, 'y': 20, ...} = _node({'title': '図', 'scope': '文書', 'updated': '2026-11-03', 'width': 668, ...}, 'b')
+
+tests/unit/dev_docs/features/convert/test_flow_layout.py:325: AssertionError
+=========================== short test summary info ============================
+FAILED tests/unit/dev_docs/features/convert/test_flow_layout.py::test_layout_flow_when_loop
+FAILED tests/unit/dev_docs/features/convert/test_flow_layout.py::test_layout_flow_when_self_loop
+FAILED tests/unit/dev_docs/features/convert/test_flow_layout.py::test_layout_flow_when_frame
+FAILED tests/unit/dev_docs/features/convert/test_flow_layout.py::test_layout_flow_when_skip_rank
+FAILED tests/unit/dev_docs/features/convert/test_flow_layout.py::test_layout_flow_when_skip_rank_left_to_right
+FAILED tests/unit/dev_docs/features/convert/test_flow_layout.py::test_layout_flow_when_back_edge_skip_rank
+FAILED tests/unit/dev_docs/features/convert/test_flow_layout.py::test_layout_flow_when_self_loop_beside_node
+FAILED tests/unit/dev_docs/features/convert/test_flow_layout.py::test_layout_flow_when_long_name
+FAILED tests/unit/dev_docs/features/convert/test_flow_layout.py::test_layout_flow_when_half_width_name
+FAILED tests/unit/dev_docs/features/convert/test_flow_layout.py::test_layout_flow_when_frame_outside_rank
+FAILED tests/unit/dev_docs/features/convert/test_flow_layout.py::test_layout_flow_when_frame_skip_rank
+========================= 11 failed, 6 passed in 3.35s =========================
