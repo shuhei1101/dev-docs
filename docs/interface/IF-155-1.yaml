@@ -166,7 +166,6 @@ idempotent: true
 side_effects: サーバーが待ち受けていなければ `dev-docs serve` のプロセスを 1 つ起動する。`clear`・`compact` ではサーバーがそのセッションの返し済みの記録を削除する
 callers:
   - SC-155-10#scenarios[正常シナリオ（SessionStart で起動する）]
-  - SC-155-10#scenarios[正常シナリオ（待ち受けているサーバーがあるときは文脈を注入しない）]
   - SC-155-10#scenarios[異常シナリオ（SessionStart で起動できない）]
   - SC-155-10#scenarios[正常シナリオ（SessionStart で XDG_CONFIG_HOME の下の端末の設定から起動する）]
 exclusivity: 同時に開いた複数のセッションがどれも起動してもよい。後から起動した `dev-docs serve` はポートが使用中（終了コード 3）で止まり、待ち受けるのは 1 つだけ

@@ -611,11 +611,7 @@ idempotent: false
 side_effects: '`bind`:`port` で待ち受ける。`log_dir` に検証の失敗と警告のログを書く'
 callers:
   - SC-155-10#scenarios[正常シナリオ]
-  - SC-155-10#scenarios[正常シナリオ（設定とスキーマを default_ref から読む）]
-  - SC-155-10#scenarios[正常シナリオ（.gitignore した設定を先頭に置く）]
-  - SC-155-10#scenarios[異常シナリオ（先頭の設定が default_ref に無く無視もしていない）]
   - SC-155-10#scenarios[正常シナリオ（XDG の環境変数で置き場を決める）]
-  - SC-155-10#scenarios[正常シナリオ（エイリアスのキーと nav の条件を検証する）]
   - SC-155-5#scenarios[正常シナリオ（MCP を使う場面の案内を受け取る）]
 exclusivity: 同じポートで待ち受けるプロセスは 1 つだけ（後からの起動はポート使用中で終わる）
 request:
