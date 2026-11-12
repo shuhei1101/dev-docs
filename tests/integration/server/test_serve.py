@@ -14,7 +14,7 @@ from dev_docs.features.prompt_doc.runtime import DEFAULT_PROMPTS_DIR, load_promp
 from dev_docs.server.mcp.result import mcp_prompt_ids, tool_prompt_id
 from dev_docs.shared.yaml_io import load_yaml
 
-from .conftest import MCP_HEADERS, IndexSource, MockIndex, sample_docs
+from .conftest import MCP_HEADERS, SERVE_WAIT_SEC, IndexSource, MockIndex, sample_docs
 
 ADMIN_TOOL_NAMES = ["restart", "status", "update"]
 # ツールの名前 → 引数のスキーマのキー
@@ -159,11 +159,11 @@ def test_error_when_terminal_config_invalid(
     port = free_port()
     # 実行
     invalid = start_serve(settings, port)
-    invalid_code = invalid.wait(timeout=30)
+    invalid_code = invalid.wait(timeout=SERVE_WAIT_SEC)
     invalid_error = invalid.stderr.read() if invalid.stderr else ""
     missing_file = tmp_path / "no-such-settings.yaml"
     missing = start_serve(missing_file, port)
-    missing_code = missing.wait(timeout=30)
+    missing_code = missing.wait(timeout=SERVE_WAIT_SEC)
     missing_error = missing.stderr.read() if missing.stderr else ""
     # 検証
     assert invalid_code == 2
@@ -189,7 +189,7 @@ def test_error_when_port_in_use(
         occupied.listen()
         # 実行
         process = start_serve(settings, port)
-        code = process.wait(timeout=30)
+        code = process.wait(timeout=SERVE_WAIT_SEC)
         error = process.stderr.read() if process.stderr else ""
     # 検証
     assert code == 3
@@ -328,7 +328,7 @@ def test_error_when_prompt_invalid(
     port = free_port()
     # 実行
     process = start_serve(settings, port)
-    code = process.wait(timeout=30)
+    code = process.wait(timeout=SERVE_WAIT_SEC)
     error = process.stderr.read() if process.stderr else ""
     # 検証
     assert code == 4
