@@ -2,7 +2,7 @@ use_cases:
   - kind: composite
     scenario: docs/scenario/SC-155-13.yaml
     impact: changed
-    detail: 文書を MCP で読み書きするには project-index を入れ、画面で読むには dev-docs を入れる流れに変わる。配信元の設定の既定の名前が project-index.yaml になる
+    detail: 利用者が project-index で配信している配信元の文書を dev-docs の画面で読む流れに変わる。エージェントが調べる・書き込む・変わった文書を引く・設定とスクリプトを確かめる段は project-index へ移る
     depends_on: []
   - kind: single
     scenario: docs/scenario/SC-155-2.yaml
@@ -30,20 +30,20 @@ use_cases:
       - docs/scenario/SC-155-13.yaml
   - kind: single
     scenario: docs/scenario/SC-155-8.yaml
-    impact: changed
-    detail: 変更のレビューのうち、エージェントが変わった文書を引く流れは project-index が持ち、画面で差分を見る流れだけが残る
+    impact: removed
+    detail: エージェントが変わった文書を引く流れは project-index が持ち、dev-docs から除外する。画面で差分を見る流れは利用者が画面で読む（SC-155-7）が持つ
     depends_on:
       - docs/scenario/SC-155-13.yaml
   - kind: single
     scenario: docs/scenario/SC-155-1.yaml
-    impact: changed
-    detail: 直接編集した文書の読み直しは project-index が行い、画面はその結果を表示する
+    impact: removed
+    detail: 直接編集した文書の読み直しと、読んだ後に変わった文書への書き込みは project-index が持ち、dev-docs から除外する
     depends_on:
       - docs/scenario/SC-155-13.yaml
   - kind: single
     scenario: docs/scenario/SC-155-9.yaml
-    impact: changed
-    detail: 配信元の設定・スクリプトの確認と反映は project-index が行い、既定の名前が project-index.yaml になる
+    impact: removed
+    detail: 配信元の設定・スクリプトの確認と反映は project-index が持ち、dev-docs から除外する
     depends_on:
       - docs/scenario/SC-155-13.yaml
   - kind: single
@@ -66,9 +66,10 @@ use_cases:
       - docs/scenario/SC-155-13.yaml
   - kind: single
     scenario: docs/scenario/SC-155-7.yaml
-    impact: run_only
-    detail: 画面で読む流れは変わらないが、文書の取得元が project-index に変わるため壊れうる
-    depends_on: []
+    impact: changed
+    detail: 画面で読む・差分を見る・検索する流れは変わらないが、文書の取得元が project-index になり、配信元の設定の名前が project-index.yaml になる
+    depends_on:
+      - docs/scenario/SC-155-13.yaml
   - kind: single
     scenario: docs/scenario/SC-155-6.yaml
     impact: run_only
@@ -188,8 +189,8 @@ scope_out:
     reason: ユーザーが作成し、立ち上げ Issue shuhei1101/project-index#2 で土台ができている（#114 のユーザーのコメント）
     plan: none
   - item: project-index のリポジトリへのコード・テスト・設計書の追加（移す先の受け入れ）
-    reason: 判断が分かれるためレビューで確定する。この作業 PR は dev-docs のリポジトリだけを変えられるので、project-index 側の受け入れは、設計で移す範囲と project-index の API を決めた後に project-index へ起票し、この作業 PR の dev-docs 側の削除・付け替えより先に入れる案を推す
-    plan: to_file
+    reason: この作業 PR は dev-docs のリポジトリだけを変更できるため。規約『複数リポジトリのAPI契約』に沿って、提供する側の Issue を project-index へ起票した。#119 の修正とテストの移行と、所要時間の測り直しもその Issue に含めた
+    plan: shuhei1101/project-index#14
   - item: project-index へ移した文書の置き場所・`id`・書き方の移行（#7・#74・#95 の内容を移した文書に当てる）
     reason: '#114 の扱いの判断で、この作業 PR に含めず project-index へ起票すると決まった。移す文書の範囲が設計で決まってから起票する'
     plan: to_file
@@ -199,3 +200,6 @@ scope_out:
   - item: dev-docs 自身の直下の配信元の設定（project-index.yaml）の作成
     reason: '#24 が担当する（#114 の扱いの判断で #24 が project-index.yaml を作る内容に書き直された）'
     plan: '#24'
+  - item: dev-docs の画面のサーバーの付け替え口を、モックから本物の project-index の API へつなぐ作業と、複合ユースケースの E2E
+    reason: 規約『複数リポジトリのAPI契約』で、本物につなぐ作業は別の Issue にする。この作業 PR は project-index#14 の入出力に沿ったモックで作る
+    plan: '#164'
