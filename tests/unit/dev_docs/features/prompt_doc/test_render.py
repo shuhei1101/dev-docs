@@ -255,6 +255,7 @@ def test_render_example_when_agent() -> None:
     assert result.messages[0].role is None
     assert result.messages[0].text.index("はじめ") < result.messages[0].text.index("おわり")
 
+
 def test_render_example_when_lang_missing() -> None:
     """その言語の本文が無い部品（正常系）。"""
     # 準備

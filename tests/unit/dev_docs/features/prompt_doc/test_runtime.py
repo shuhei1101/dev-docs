@@ -127,6 +127,7 @@ def test_load_prompts_when_agent(tmp_path: Path) -> None:
     # 検証
     assert result.prompts["a"].doc.kind == "agent"
 
+
 def test_load_prompts_when_schema_violation(tmp_path: Path) -> None:
     """必須のキーが無い（異常系）。"""
     # 準備
