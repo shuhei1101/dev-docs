@@ -2,7 +2,8 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from pathlib import Path
-from typing import Any
+
+from .conftest import MockIndex, ServerEnv
 
 INDEX_HTML = "<!doctype html><title>dev-docs</title><script src=/assets/app-1a2b3c.js></script>"
 ASSET_JS = "console.log('screen');"
@@ -19,11 +20,11 @@ def _build_dir(tmp_path: Path, *, with_index: bool) -> Path:
 
 
 def test_normal(
-    make_source: Callable[..., Any], make_server: Callable[..., Any], tmp_path: Path
+    sample_index: MockIndex, make_server: Callable[..., ServerEnv], tmp_path: Path
 ) -> None:
     """画面のパスに index.html を、assets/ のパスに静的ファイルを返す（正常系）。"""
     # 準備
-    env = make_server(make_source("sample"), screen_dir=_build_dir(tmp_path, with_index=True))
+    env = make_server(sample_index, screen_dir=_build_dir(tmp_path, with_index=True))
     # 実行
     top = env.client.get("/")
     doc = env.client.get("/sample/docs/doc-1")
@@ -44,11 +45,11 @@ def test_normal(
 
 
 def test_error_when_not_found(
-    make_source: Callable[..., Any], make_server: Callable[..., Any], tmp_path: Path
+    sample_index: MockIndex, make_server: Callable[..., ServerEnv], tmp_path: Path
 ) -> None:
     """assets/ の無いファイルと /_api/ の無いパスは index.html を返さず 404 を返す（異常系）。"""
     # 準備
-    env = make_server(make_source("sample"), screen_dir=_build_dir(tmp_path, with_index=True))
+    env = make_server(sample_index, screen_dir=_build_dir(tmp_path, with_index=True))
     # 実行
     asset = env.client.get("/assets/no-such.js")
     api = env.client.get("/_api/no-such")
@@ -60,11 +61,11 @@ def test_error_when_not_found(
 
 
 def test_error_when_excluded_not_get(
-    make_source: Callable[..., Any], make_server: Callable[..., Any], tmp_path: Path
+    sample_index: MockIndex, make_server: Callable[..., ServerEnv], tmp_path: Path
 ) -> None:
     """/_api/・/_admin/ の下の、どの入口にも当たらないパスへの GET 以外の要求は 404 を返す（異常系）。"""
     # 準備
-    env = make_server(make_source("sample"), screen_dir=_build_dir(tmp_path, with_index=True))
+    env = make_server(sample_index, screen_dir=_build_dir(tmp_path, with_index=True))
     # 実行
     session_context = env.client.post("/_admin/session-context", json={"cwd": "/"})
     admin = env.client.post("/_admin/no-such", json={})
@@ -79,11 +80,11 @@ def test_error_when_excluded_not_get(
 
 
 def test_error_when_build_missing(
-    make_source: Callable[..., Any], make_server: Callable[..., Any], tmp_path: Path
+    sample_index: MockIndex, make_server: Callable[..., ServerEnv], tmp_path: Path
 ) -> None:
     """index.html が無いとき、画面のパスは 503 でビルドを促し、画面の API は応え続ける（異常系）。"""
     # 準備
-    env = make_server(make_source("sample"), screen_dir=_build_dir(tmp_path, with_index=False))
+    env = make_server(sample_index, screen_dir=_build_dir(tmp_path, with_index=False))
     # 実行
     doc = env.client.get("/sample/docs/doc-1")
     api = env.client.get("/_api/sources/sample/docs")

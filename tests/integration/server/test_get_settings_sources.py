@@ -1,78 +1,81 @@
 from __future__ import annotations
 
 from collections.abc import Callable
-from typing import Any
 
-BROKEN_CONFIG = "name: broken\ndocuments:\n  - id: sample\n    schema: schemas/sample.schema.yaml\n"
+from .conftest import SETTINGS_PATH, IndexSource, MockIndex, ServerEnv, sample_docs
 
 
-def test_normal(make_source: Callable[..., Any], make_server: Callable[..., Any]) -> None:
+def test_normal(mock_index: MockIndex, make_server: Callable[..., ServerEnv]) -> None:
     """配信元の一覧を配信中で返す（正常系）。"""
     # 準備
-    source = make_source("sample")
-    env = make_server(source)
+    mock_index.serve(
+        "sample", IndexSource(docs={None: sample_docs()}), scope={"read": ["/repo/**"]}
+    )
+    env = make_server(mock_index)
     # 実行
     response = env.client.get("/_api/settings/sources")
-    env.rewrite_settings()
+    mock_index.rows = []
     empty = env.client.get("/_api/settings/sources")
     # 検証
     body = response.json()
+    [sample] = body["sources"]
     assert response.status_code == 200
-    assert body["settingsPath"] == str(env.settings_path)
-    assert [(row["id"], row["status"]) for row in body["sources"]] == [("sample", "serving")]
-    assert body["sources"][0]["config"] == [str(source.config[0])]
-    assert body["sources"][0]["scope"]["read"] == [str(source.folder)]
+    assert body["settingsPath"] == SETTINGS_PATH
+    assert (sample["id"], sample["status"]) == ("sample", "serving")
+    assert sample["config"] == ["/repo/sample/project-index.yaml"]
+    assert sample["scope"] == {"read": ["/repo/**"], "write": None}
     assert empty.status_code == 200
     assert empty.json()["sources"] == []
 
 
 def test_normal_when_source_not_served(
-    make_source: Callable[..., Any],
-    make_server: Callable[..., Any],
-    sample_file_set: Callable[..., dict[str, str]],
-    sample_config_text: Callable[..., str],
+    mock_index: MockIndex, make_server: Callable[..., ServerEnv]
 ) -> None:
     """配信していない・無効・設定が古い配信元を状態と理由つきで返す（正常系）。"""
     # 準備
-    sample = make_source("sample")
-    legacy_config = sample_config_text(name="legacy", version="0")
-    legacy = make_source("legacy", sample_file_set(**{"dev-docs.yaml": legacy_config}))
-    broken = make_source("broken", {"dev-docs.yaml": BROKEN_CONFIG})
-    archive = make_source("archive", enabled=False)
-    env = make_server(sample, legacy, broken, archive)
+    mock_index.serve("sample", IndexSource(docs={None: sample_docs()}))
+    mock_index.serve(
+        "broken",
+        IndexSource(errors=[{"path": "documents[0].paths", "reason": "必須のキーが無い"}]),
+    )
+    mock_index.serve(
+        "legacy",
+        IndexSource(docs={None: sample_docs()}, config_version={"config": "1", "server": "2"}),
+    )
+    mock_index.serve("archive", IndexSource(docs={None: sample_docs()}), enabled=False)
+    env = make_server(mock_index)
     # 実行
     response = env.client.get("/_api/settings/sources")
     # 検証
-    rows = {row["id"]: row for row in response.json()["sources"]}
+    sources = {item["id"]: item for item in response.json()["sources"]}
     assert response.status_code == 200
-    assert rows["sample"]["status"] == "serving"
-    assert rows["legacy"]["status"] == "serving"
-    assert rows["legacy"]["configVersion"] == {"config": "0", "server": "3"}
-    assert rows["broken"]["status"] == "not_served"
-    assert any(
-        error["path"] == "documents[0].paths" and "必須" in error["reason"]
-        for error in rows["broken"]["errors"]
-    )
-    assert rows["archive"]["status"] == "disabled"
+    assert (sources["sample"]["status"], sources["legacy"]["status"]) == ("serving", "serving")
+    assert sources["broken"]["status"] == "not_served"
+    assert sources["broken"]["errors"] == [
+        {"path": "documents[0].paths", "reason": "必須のキーが無い"}
+    ]
+    assert sources["legacy"]["configVersion"] == {"config": "1", "server": "2"}
+    assert (sources["archive"]["status"], sources["archive"]["enabled"]) == ("disabled", False)
 
 
 def test_normal_when_pending_reload(
-    make_source: Callable[..., Any], make_server: Callable[..., Any]
+    mock_index: MockIndex, make_server: Callable[..., ServerEnv]
 ) -> None:
-    """手で直して読み直していない行を pending_reload で返す（正常系）。"""
+    """読み直していない行を pending_reload で返し、他の行は自分の状態で返す（正常系）。"""
     # 準備
-    sample = make_source("sample")
-    other = make_source("other")
-    fresh = make_source("fresh")
-    env = make_server(sample, other)
-    env.rewrite_settings(other, fresh, sample)
+    mock_index.rows.append({"config": ["/repo/fresh/project-index.yaml"]})
+    mock_index.serve("notes", IndexSource(docs={None: sample_docs()}))
+    mock_index.serve("sample", IndexSource(docs={None: sample_docs()}))
+    mock_index.pending = {0}
+    env = make_server(mock_index)
     # 実行
     response = env.client.get("/_api/settings/sources")
     # 検証
-    rows = response.json()["sources"]
+    sources = response.json()["sources"]
     assert response.status_code == 200
-    assert [(row["id"], row["status"]) for row in rows] == [
-        ("other", "serving"),
-        ("fresh", "pending_reload"),
+    assert [(item["id"], item["status"]) for item in sources] == [
+        (None, "pending_reload"),
+        ("notes", "serving"),
         ("sample", "serving"),
     ]
+    assert sources[0]["config"] == ["/repo/fresh/project-index.yaml"]

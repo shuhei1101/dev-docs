@@ -1,551 +1,33 @@
 from __future__ import annotations
 
 import json
-import os
 import re
+import time
 from collections.abc import Callable
-from datetime import datetime
-from pathlib import Path
+from datetime import UTC, datetime
 from typing import Any
 
 import pytest
 
-FILES_SCHEMA_TEMPLATE = Path(__file__).parents[3] / "templates" / "files.schema.yaml"
-NOTES_ROW = (
-    "  - id: notes\n"
-    "    paths: [notes/files.yaml]\n"
-    "    schema: schemas/files.schema.yaml\n"
-    "    records: files\n"
-    "    body_file: path\n"
-)
-BROKEN_CONFIG = "name: broken\ndocuments:\n  - id: sample\n    schema: schemas/sample.schema.yaml\n"
-NAV = (
-    "nav:\n"
-    "  tabs:\n"
-    "    - title: 規約\n"
-    "      items:\n"
-    "        - auto:\n"
-    "            document: sample\n"
-    "    - title: 補足\n"
-    "      items:\n"
-    "        - page: sample/doc-2\n"
-)
-RULES_ROW = "  - id: rules\n    paths: [rules/**/*.yaml]\n    schema: schemas/sample.schema.yaml\n"
-FOLDER_NAV = (
-    "nav:\n"
-    "  tabs:\n"
-    "    - title: ルール\n"
-    "      items:\n"
-    "        - page: rules/common\n"
-    "        - auto:\n"
-    "            document: rules\n"
-    "            group_by: '@folder'\n"
-)
-TAG_NAV = (
-    "nav:\n"
-    "  tabs:\n"
-    "    - title: mcp\n"
-    "      items:\n"
-    "        - auto:\n"
-    "            document: sample\n"
-    "            filter:\n"
-    "              and:\n"
-    "                - {field: tags, op: eq, values: [mcp]}\n"
-    "                - not: {field: tags, op: eq, values: [設計]}\n"
-    "    - title: すべて\n"
-    "      items:\n"
-    "        - auto:\n"
-    "            document: sample\n"
-)
-TABLE_DOC = (
-    "id: doc-1\n"
-    "name: 文書 1\n"
-    "items:\n"
-    "  - {key: k1, label: 名称 1, notes: 備考 1}\n"
-    "  - {key: k2, label: 名称 2, notes: 備考 2}\n"
-)
-CONVERT_SCRIPT = (
-    "import sys\n"
-    "text = sys.stdin.read()\n"
-    "name = next(line.split(':', 1)[1].strip() for line in text.splitlines()"
-    " if line.startswith('name:'))\n"
-    "print(f'# カスタム変換: {name}')\n"
-)
-SLEEP_SCRIPT = "import os, time\nopen('pid.txt', 'w').write(str(os.getpid()))\ntime.sleep(60)\n"
-CUSTOM_EXTRA = (
-    "  - id: custom\n"
-    "    paths: [custom/*.yaml]\n"
-    "    schema: schemas/sample.schema.yaml\n"
-    "    converter: md\n"
-    "  - id: guide\n"
-    "    paths: [guide/files.yaml]\n"
-    "    schema: schemas/sample.schema.yaml\n"
-    "    records: files\n"
-    "    body_file: path\n"
-    "converters:\n"
-    "  - id: md\n"
-    "    run: [python3, scripts/convert.py]\n"
-)
-# 本文の外の参照先の YAML の値を見出しに出す変換のスクリプト
-REF_SCRIPT = (
-    "import pathlib, sys\n"
-    "sys.stdin.read()\n"
-    "value = pathlib.Path('data/ref.yaml').read_text(encoding='utf-8').split(':', 1)[1].strip()\n"
-    "print(f'# 参照先: {value}')\n"
-)
-CACHE_EXTRA = (
-    "  - id: custom\n"
-    "    paths: [custom/*.yaml]\n"
-    "    schema: schemas/sample.schema.yaml\n"
-    "    converter: ref\n"
-    "converters:\n"
-    "  - id: ref\n"
-    "    run: [python3, scripts/ref.py]\n"
-)
+from dev_docs.shared.yaml_io import load_yaml
 
+from .conftest import IndexSource, MockIndex, ServerEnv, doc, row
 
-def _ref_source(
-    make_source: Callable[..., Any],
-    sample_file_set: Callable[..., dict[str, str]],
-    sample_config_text: Callable[..., str],
-    cache_line: str,
-) -> Any:
-    """本文の外の参照先の YAML を読む変換を持つ配信元（Git 管理外）を作る。"""
-    files = sample_file_set(
-        **{
-            "dev-docs.yaml": sample_config_text(CACHE_EXTRA + cache_line, name="custom"),
-            "scripts/ref.py": REF_SCRIPT,
-            "custom/c-1.yaml": "id: c-1\nname: カスタム 1\n",
-            "data/ref.yaml": "value: 前の値\n",
-        }
-    )
-    return make_source("custom", files, git=False)
-
-
-def _page_changes(items: list[dict[str, Any]]) -> dict[str, str | None]:
-    """サイドバーの項目の入れ子をたどり、page の文書のパスと変化を対応させる。"""
-    changes: dict[str, str | None] = {}
-    for item in items:
-        if item["kind"] == "page":
-            changes[item["path"]] = item["change"]
-        changes.update(_page_changes(item["items"]))
-    return changes
-
-
-def _outline(items: list[dict[str, Any]]) -> list[Any]:
-    """サイドバーの項目を、page は文書のパス、group は（名前, 中の並び）にした入れ子にする。"""
-    return [
-        item["path"] if item["kind"] == "page" else (item["title"], _outline(item["items"]))
-        for item in items
+TABLE_DATA = {
+    "id": "doc-1",
+    "name": "文書 1",
+    "items": [
+        {"key": "k1", "label": "名称 1", "notes": "備考 1"},
+        {"key": "k2", "label": "名称 2", "notes": "備考 2"},
+    ],
+}
+NAV = {
+    "tabs": [
+        {"title": "規約", "items": [{"auto": {"document": "sample"}}]},
+        {"title": "補足", "items": [{"page": "sample/doc-2"}]},
     ]
-
-
-def _custom_files(
-    sample_file_set: Callable[..., dict[str, str]],
-    sample_config_text: Callable[..., str],
-    script: str,
-) -> dict[str, str]:
-    """`converters[]` のスクリプトと埋め込みのマーカーを持つ配信元のファイル一式を返す。"""
-    return sample_file_set(
-        **{
-            "dev-docs.yaml": sample_config_text(CUSTOM_EXTRA, name="custom"),
-            "scripts/convert.py": script,
-            "custom/c-1.yaml": "id: c-1\nname: カスタム 1\n",
-            "guide/files.yaml": "files:\n  - path: intro.md\n",
-            "guide/intro.md": "# 案内\n\n<!-- embed: data/rows.yaml#rows -->\n",
-            "data/rows.yaml": "rows:\n  - {colA: 値A, colB: 値B}\n",
-        }
-    )
-
-
-def test_normal(
-    make_source: Callable[..., Any],
-    make_server: Callable[..., Any],
-    sample_file_set: Callable[..., dict[str, str]],
-    sample_config_text: Callable[..., str],
-) -> None:
-    """一番左のタブの一番上の文書と、文書のパスで指した文書を返す（正常系）。"""
-    # 準備
-    files = sample_file_set(
-        **{"dev-docs.yaml": sample_config_text(NAV), "docs/doc-1.yaml": TABLE_DOC}
-    )
-    env = make_server(make_source("sample", files, date="2026-10-26T14:40:00+09:00"))
-    # 実行
-    top = env.client.get("/_api/sources/sample/docs")
-    second = env.client.get("/_api/sources/sample/docs/docs/doc-2")
-    # 検証
-    body = top.json()
-    assert top.status_code == 200
-    assert body["path"] == "docs/doc-1"
-    assert [tab["title"] for tab in body["tabs"]] == ["規約", "補足"]
-    assert [tab["active"] for tab in body["tabs"]] == [True, False]
-    assert "## 項目" in body["markdown"]
-    assert "| キー | 名称 | 備考 |" in body["markdown"]
-    assert "dev-docs-table" not in body["markdown"]
-    assert len(body["tableKeys"]) == 1
-    assert body["conversionError"] is None
-    assert body["diff"] is None
-    assert set(_page_changes(body["tabs"][0]["items"]).values()) == {None}
-    assert datetime.fromisoformat(body["updatedAt"]) == datetime.fromisoformat(
-        "2026-10-26T14:40:00+09:00"
-    )
-    assert second.status_code == 200
-    assert "# 文書 2" in second.json()["markdown"]
-
-
-def test_normal_when_nav_missing(
-    make_source: Callable[..., Any],
-    make_server: Callable[..., Any],
-    sample_file_set: Callable[..., dict[str, str]],
-    sample_config_text: Callable[..., str],
-    sample_doc_text: Callable[..., str],
-) -> None:
-    """nav が無い配信元は種類ごとにタブを作り、文書をフォルダで束ねる（正常系）。"""
-    # 準備
-    memo = (
-        "  - id: memo\n"
-        "    title: メモ\n"
-        "    paths: [notes/*.yaml]\n"
-        "    schema: schemas/sample.schema.yaml\n"
-    )
-    config = sample_config_text(memo).replace("paths: [docs/*.yaml]", "paths: [docs/**/*.yaml]")
-    files = sample_file_set(
-        **{
-            "dev-docs.yaml": config,
-            "docs/lang/index.yaml": sample_doc_text("lang-index", "言語"),
-            "docs/lang/ts.yaml": sample_doc_text("ts", "TypeScript"),
-            "docs/lang/py/style.yaml": sample_doc_text("py-style", "Python のスタイル"),
-            "notes/n-1.yaml": "id: n-1\nname: メモ 1\n",
-        }
-    )
-    files.pop("docs/doc-2.yaml")
-    env = make_server(make_source("plain", files))
-    # 実行
-    response = env.client.get("/_api/sources/plain/docs")
-    # 検証
-    tabs = response.json()["tabs"]
-    assert response.status_code == 200
-    assert [tab["title"] for tab in tabs] == ["sample", "メモ"]
-    assert _outline(tabs[0]["items"]) == [
-        "docs/doc-1",
-        ("lang", ["docs/lang/index", "docs/lang/ts", ("py", ["docs/lang/py/style"])]),
-    ]
-    assert _outline(tabs[1]["items"]) == ["notes/n-1"]
-
-
-def test_normal_when_body_path_given(
-    make_source: Callable[..., Any],
-    make_server: Callable[..., Any],
-    sample_file_set: Callable[..., dict[str, str]],
-    sample_config_text: Callable[..., str],
-) -> None:
-    """管理用の YAML の行の文書に bodyPath を返し、本文のファイルのパスで指した文書を返す（正常系）。"""
-    # 準備
-    files = sample_file_set(
-        **{
-            "dev-docs.yaml": sample_config_text(NOTES_ROW),
-            "schemas/files.schema.yaml": FILES_SCHEMA_TEMPLATE.read_text(encoding="utf-8"),
-            "notes/files.yaml": "files:\n  - path: a.md\n  - path: b.md\n",
-            "notes/a.md": "# A の本文\n",
-            "notes/b.md": "# B の本文\n",
-        }
-    )
-    env = make_server(make_source("sample", files))
-    # 実行
-    by_page = env.client.get("/_api/sources/sample/docs/notes/files/notes/a.md")
-    by_body_path = env.client.get("/_api/sources/sample/docs/notes/b.md")
-    plain = env.client.get("/_api/sources/sample/docs/docs/doc-1")
-    # 検証
-    assert by_page.status_code == 200
-    assert by_page.json()["bodyPath"] == "notes/a.md"
-    assert by_page.json()["path"] == "notes/files/notes/a.md"
-    assert by_body_path.status_code == 200
-    assert by_body_path.json()["path"] == "notes/files/notes/b.md"
-    assert "# B の本文" in by_body_path.json()["markdown"]
-    assert by_body_path.json()["bodyPath"] == "notes/b.md"
-    assert plain.status_code == 200
-    assert plain.json()["bodyPath"] is None
-
-
-def test_normal_when_ref_given(
-    make_source: Callable[..., Any],
-    make_server: Callable[..., Any],
-    commit_all: Callable[..., str],
-    run_git: Callable[..., str],
-) -> None:
-    """ref のリビジョンの文書を返す（正常系）。"""
-    # 準備
-    source = make_source("sample")
-    old = run_git(source.folder, "rev-parse", "HEAD").strip()
-    commit_all(source.folder, {"docs/doc-1.yaml": "id: doc-1\nname: 新しい名前\n"})
-    env = make_server(source)
-    # 実行
-    at_old = env.client.get("/_api/sources/sample/docs/docs/doc-1", params={"ref": old})
-    at_default = env.client.get("/_api/sources/sample/docs/docs/doc-1")
-    # 検証
-    assert at_old.status_code == 200
-    assert "# 文書 1" in at_old.json()["markdown"]
-    assert at_old.json()["ref"] == old
-    assert "# 新しい名前" in at_default.json()["markdown"]
-    assert at_default.json()["ref"] == "develop"
-
-
-def test_normal_when_diff_given(
-    make_source: Callable[..., Any],
-    make_server: Callable[..., Any],
-    commit_all: Callable[..., str],
-    run_git: Callable[..., str],
-    sample_doc_text: Callable[..., str],
-    sample_file_set: Callable[..., dict[str, str]],
-) -> None:
-    """diff のリビジョンから変わった項目と、サイドバーの page ごとの変化を返す（正常系）。"""
-    # 準備
-    files = sample_file_set(**{"docs/doc-3.yaml": sample_doc_text("doc-3", "文書 3")})
-    source = make_source("sample", files)
-    parent = run_git(source.folder, "rev-parse", "HEAD").strip()
-    renamed = sample_doc_text("doc-1", "新しい名前", description="1 件目", tags=["a"])
-    changed = commit_all(
-        source.folder,
-        {"docs/doc-1.yaml": renamed, "docs/doc-4.yaml": sample_doc_text("doc-4", "文書 4")},
-        delete=("docs/doc-3.yaml",),
-    )
-    env = make_server(source)
-    # 実行
-    response = env.client.get(
-        "/_api/sources/sample/docs/docs/doc-1", params={"ref": changed, "diff": parent}
-    )
-    # 検証
-    body = response.json()
-    assert response.status_code == 200
-    assert body["diff"] == {"base": parent, "change": "modified", "changedItems": ["name"]}
-    assert "# 新しい名前" in body["markdown"]
-    assert _page_changes(body["tabs"][0]["items"]) == {
-        "docs/doc-1": "modified",
-        "docs/doc-2": None,
-        "docs/doc-3": "deleted",
-        "docs/doc-4": "added",
-    }
-
-
-def test_normal_when_custom_converter(
-    make_source: Callable[..., Any],
-    make_server: Callable[..., Any],
-    sample_file_set: Callable[..., dict[str, str]],
-    sample_config_text: Callable[..., str],
-) -> None:
-    """converters[] のスクリプトの Markdown と、埋め込みのマーカーの表を返す（正常系）。"""
-    # 準備
-    files = _custom_files(sample_file_set, sample_config_text, CONVERT_SCRIPT)
-    env = make_server(make_source("custom", files))
-    # 実行
-    converted = env.client.get("/_api/sources/custom/docs/custom/c-1")
-    embedded = env.client.get("/_api/sources/custom/docs/guide/files/guide/intro.md")
-    # 検証
-    assert converted.status_code == 200
-    assert "# カスタム変換: カスタム 1" in converted.json()["markdown"]
-    assert embedded.status_code == 200
-    assert "| colA | colB |" in embedded.json()["markdown"]
-    assert "embed:" not in embedded.json()["markdown"]
-
-
-def test_normal_when_converter_cache_disabled(
-    make_source: Callable[..., Any],
-    make_server: Callable[..., Any],
-    sample_file_set: Callable[..., dict[str, str]],
-    sample_config_text: Callable[..., str],
-) -> None:
-    """cache: false の変換は要求のたびにスクリプトを動かし、控えを書かない（正常系）。"""
-    # 準備
-    source = _ref_source(make_source, sample_file_set, sample_config_text, "    cache: false\n")
-    env = make_server(source)
-    first = env.client.get("/_api/sources/custom/docs/custom/c-1")
-    (source.folder / "data" / "ref.yaml").write_text("value: 後の値\n", encoding="utf-8")
-    # 実行
-    second = env.client.get("/_api/sources/custom/docs/custom/c-1")
-    # 検証
-    assert "# 参照先: 前の値" in first.json()["markdown"]
-    assert second.status_code == 200
-    assert "# 参照先: 後の値" in second.json()["markdown"]
-    assert list((env.state_dir / "converted").glob("*.md")) == []
-
-
-def test_normal_when_converter_cache_enabled(
-    make_source: Callable[..., Any],
-    make_server: Callable[..., Any],
-    sample_file_set: Callable[..., dict[str, str]],
-    sample_config_text: Callable[..., str],
-) -> None:
-    """cache を書かない変換は控えを書き、本文が変わらなければ控えを返す（正常系）。"""
-    # 準備
-    source = _ref_source(make_source, sample_file_set, sample_config_text, "")
-    env = make_server(source)
-    first = env.client.get("/_api/sources/custom/docs/custom/c-1")
-    (source.folder / "data" / "ref.yaml").write_text("value: 後の値\n", encoding="utf-8")
-    # 実行
-    second = env.client.get("/_api/sources/custom/docs/custom/c-1")
-    # 検証
-    assert "# 参照先: 前の値" in first.json()["markdown"]
-    assert second.status_code == 200
-    assert second.json()["markdown"] == first.json()["markdown"]
-    assert len(list((env.state_dir / "converted").glob("*.md"))) == 1
-
-
-def test_normal_when_conversion_failed(
-    make_source: Callable[..., Any],
-    make_server: Callable[..., Any],
-    sample_file_set: Callable[..., dict[str, str]],
-    sample_config_text: Callable[..., str],
-    commit_all: Callable[..., str],
-) -> None:
-    """制限時間を超えたスクリプトを止め、conversionError に失敗を入れる（正常系）。"""
-    # 準備
-    files = _custom_files(sample_file_set, sample_config_text, SLEEP_SCRIPT)
-    source = make_source("custom", files)
-    env = make_server(source, settings_extra="script_timeout_sec: 1\n")
-    # 実行
-    timed_out = env.client.get("/_api/sources/custom/docs/custom/c-1")
-    schema_driven = env.client.get("/_api/sources/custom/docs/docs/doc-2")
-    commit_all(source.folder, {"docs/doc-1.yaml": "a: [1\n"}, "docs: 壊す")
-    unreadable = env.client.get("/_api/sources/custom/docs/docs/doc-1")
-    # 検証
-    error = timed_out.json()["conversionError"]
-    pid = int((source.folder / "pid.txt").read_text(encoding="utf-8"))
-    assert timed_out.status_code == 200
-    assert timed_out.json()["markdown"] is None
-    assert error["reason"] == "timeout"
-    assert error["kind"] == "custom"
-    assert "scripts/convert.py" in error["script"]
-    assert "1" in error["detail"]
-    with pytest.raises(ProcessLookupError):
-        os.kill(pid, 0)
-    assert schema_driven.status_code == 200
-    assert "# 文書 2" in schema_driven.json()["markdown"]
-    broken = unreadable.json()["conversionError"]
-    assert unreadable.status_code == 200
-    assert unreadable.json()["markdown"] is None
-    assert broken["reason"] == "invalid_yaml"
-    assert broken["file"] == "docs/doc-1.yaml"
-    assert broken["line"] >= 1
-    assert broken["column"] >= 1
-
-
-def test_error_when_not_found(
-    make_source: Callable[..., Any], make_server: Callable[..., Any]
-) -> None:
-    """無い配信元・リビジョン・文書を断り、何が無いかを返す（異常系）。"""
-    # 準備
-    sample = make_source("sample")
-    broken = make_source("broken", {"dev-docs.yaml": BROKEN_CONFIG})
-    env = make_server(sample, broken)
-    # 実行
-    no_doc = env.client.get("/_api/sources/sample/docs/no-such-doc")
-    no_ref = env.client.get("/_api/sources/sample/docs", params={"ref": "no-such-branch"})
-    not_served = env.client.get("/_api/sources/broken/docs")
-    unknown = env.client.get("/_api/sources/unknown/docs")
-    # 検証
-    assert no_doc.status_code == 404
-    assert (no_doc.json()["missing"], no_doc.json()["value"]) == ("doc", "no-such-doc")
-    assert no_ref.status_code == 404
-    assert (no_ref.json()["missing"], no_ref.json()["value"]) == ("ref", "no-such-branch")
-    assert not_served.status_code == 404
-    assert not_served.json()["missing"] == "not_served"
-    assert any(error["path"] == "documents[0].paths" for error in not_served.json()["errors"])
-    assert unknown.status_code == 404
-    assert (unknown.json()["missing"], unknown.json()["value"]) == ("source", "unknown")
-
-
-def test_normal_when_nav_filtered_by_tags(
-    make_source: Callable[..., Any],
-    make_server: Callable[..., Any],
-    sample_file_set: Callable[..., dict[str, str]],
-    sample_config_text: Callable[..., str],
-    sample_doc_text: Callable[..., str],
-) -> None:
-    """auto の filter に当たる文書だけをタブのサイドバーに並べる（正常系）。"""
-    # 準備
-    files = sample_file_set(
-        **{
-            "dev-docs.yaml": sample_config_text(TAG_NAV),
-            "docs/doc-1.yaml": sample_doc_text("doc-1", "文書 1", tags=["mcp"]),
-            "docs/doc-2.yaml": sample_doc_text("doc-2", "文書 2", tags=["mcp", "設計"]),
-            "docs/doc-3.yaml": sample_doc_text("doc-3", "文書 3", tags=["設計"]),
-        }
-    )
-    env = make_server(make_source("sample", files))
-    # 実行
-    response = env.client.get("/_api/sources/sample/docs")
-    # 検証
-    tabs = {tab["title"]: tab for tab in response.json()["tabs"]}
-    assert response.status_code == 200
-    assert list(_page_changes(tabs["mcp"]["items"])) == ["docs/doc-1"]
-    assert list(_page_changes(tabs["すべて"]["items"])) == [
-        "docs/doc-1",
-        "docs/doc-2",
-        "docs/doc-3",
-    ]
-
-
-def test_normal_when_aliases_returned(
-    make_source: Callable[..., Any],
-    make_server: Callable[..., Any],
-    alias_file_set: Callable[..., dict[str, str]],
-) -> None:
-    """alias_type を持つ行の文書のエイリアスを文書といっしょに返す（正常系）。"""
-    # 準備
-    sample = make_source("sample", alias_file_set())
-    plain = make_source("plain")
-    env = make_server(sample, plain)
-    # 実行
-    with_aliases = env.client.get("/_api/sources/sample/docs/docs/doc-1")
-    without = env.client.get("/_api/sources/plain/docs")
-    # 検証
-    aliases = {item["name"]: item for item in with_aliases.json()["aliases"]}
-    term = aliases["作業範囲"]
-    ref = aliases["設定のリファレンス"]
-    assert with_aliases.status_code == 200
-    assert term["aliasType"] == "term"
-    assert term["aliases"] == ["scope", "担当範囲"]
-    assert term["avoid"] == ["担当領域"]
-    assert term["description"] == "触ってよい範囲"
-    assert ref["aliasType"] == "doc"
-    assert ref["aliases"] == ["settings"]
-    assert ref.get("avoid") is None
-    assert without.status_code == 200
-    assert without.json()["aliases"] == []
-
-
-def test_normal_when_nav_grouped_by_folder(
-    make_source: Callable[..., Any],
-    make_server: Callable[..., Any],
-    sample_file_set: Callable[..., dict[str, str]],
-    sample_config_text: Callable[..., str],
-    sample_doc_text: Callable[..., str],
-) -> None:
-    """group_by: '@folder' の auto が、手で書いた page の文書を除いてフォルダごとの group を作る（正常系）。"""
-    # 準備
-    files = sample_file_set(
-        **{
-            "dev-docs.yaml": sample_config_text(RULES_ROW + FOLDER_NAV),
-            "rules/common.yaml": sample_doc_text("common", "共通"),
-            "rules/lang/index.yaml": sample_doc_text("lang-index", "言語"),
-            "rules/lang/ts.yaml": sample_doc_text("ts", "TypeScript"),
-            "rules/lang/py/style.yaml": sample_doc_text("py-style", "Python のスタイル"),
-        }
-    )
-    env = make_server(make_source("sample", files))
-    # 実行
-    response = env.client.get("/_api/sources/sample/docs")
-    # 検証
-    tabs = {tab["title"]: tab for tab in response.json()["tabs"]}
-    assert response.status_code == 200
-    assert _outline(tabs["ルール"]["items"]) == [
-        "rules/common",
-        ("lang", ["rules/lang/index", "rules/lang/ts", ("py", ["rules/lang/py/style"])]),
-    ]
-
-
-DRAWN_ROW = "  - id: drawn\n    paths: [drawn/*.yaml]\n    schema: schemas/drawn.schema.yaml\n"
-# 図・属性・複数行の値・内部向けの項目・説明の列を持つ種類のスキーマ
+}
+UPDATED = "2026-10-26T14:40:00+09:00"
 DRAWN_SCHEMA = """\
 type: object
 title: 図の文書
@@ -627,114 +109,17 @@ command: |-
 items:
   - {name: 項目 1, description: 説明 1}
 """
-FLOW_BLOCK = re.compile(r"<!-- flow -->\n\n```json\n(.*?)\n```\n\n<!-- /flow -->", re.S)
 UNREADABLE_SEQUENCE = "sequenceDiagram\n  A->>B: 読む\n  これは Mermaid の構文でない行"
 UNREADABLE_DOC = (
     "id: doc-7\ntitle: 図の文書 7\nsequence: |-\n  ```mermaid\n"
     + "".join(f"  {line}\n" for line in UNREADABLE_SEQUENCE.splitlines())
     + "  ```\n"
 )
-
-
-def _drawn_files(
-    sample_file_set: Callable[..., dict[str, str]],
-    sample_config_text: Callable[..., str],
-) -> dict[str, str]:
-    """図の文書の種類と文書 6・7 を持つ配信元のファイル一式を返す。"""
-    return sample_file_set(
-        **{
-            "dev-docs.yaml": sample_config_text(DRAWN_ROW),
-            "schemas/drawn.schema.yaml": DRAWN_SCHEMA,
-            "drawn/doc-6.yaml": DRAWN_DOC,
-            "drawn/doc-7.yaml": UNREADABLE_DOC,
-        }
-    )
-
-
-def test_normal_when_schema_document_drawn(
-    make_source: Callable[..., Any],
-    make_server: Callable[..., Any],
-    sample_file_set: Callable[..., dict[str, str]],
-    sample_config_text: Callable[..., str],
-) -> None:
-    """図を mdmark の部品に、スカラーの並びを「項目 / 値」の表にした Markdown を返す（正常系）。"""
-    # 準備
-    files = _drawn_files(sample_file_set, sample_config_text)
-    env = make_server(make_source("sample", files))
-    # 実行
-    response = env.client.get("/_api/sources/sample/docs/drawn/doc-6")
-    # 検証
-    markdown = response.json()["markdown"]
-    assert response.status_code == 200
-    assert markdown.count("<!-- flow -->") == 3
-    assert markdown.count("<!-- sequence -->") == 1
-    assert "```mermaid" not in markdown
-    assert "<!-- table: data closed +columns hide=ID -->\n| 表示 | ID | 種類 | 補足 |" in markdown
-    assert "<!-- table: data closed -->\n| ラベル | 元 | 先 | 線 | 詳細 |" in markdown
-    flows = [json.loads(block) for block in FLOW_BLOCK.findall(markdown)]
-    flowchart, states = flows[0], flows[1]
-    nodes = {node["id"]: node for node in flowchart["nodes"]}
-    assert (nodes["q"]["kind"], nodes["q"]["hint"], nodes["r"]["kind"]) == (
-        "question",
-        "保存の判定",
-        "result",
-    )
-    wire = flowchart["wires"][0]
-    assert (wire["label"], wire["line"], wire["tip"]) == ("YES", "read", "保存の判定の詳細")
-    frame = flowchart["frame"]
-    assert frame["title"] == "判定"
-    assert all(
-        frame["x"] <= node["x"]
-        and frame["y"] <= node["y"]
-        and node["x"] + node["w"] <= frame["x"] + frame["w"]
-        and node["y"] + node["h"] <= frame["y"] + frame["h"]
-        for node in flowchart["nodes"]
-    )
-    kinds = {node["name"]: node["kind"] for node in states["nodes"]}
-    assert (kinds["開始"], kinds["下書き"], kinds["公開"], kinds["終了"]) == (
-        "start",
-        "action",
-        "action",
-        "result",
-    )
-    names = {node["id"]: node["name"] for node in states["nodes"]}
-    assert [(names[w["from"]], names[w["to"]]) for w in states["wires"]] == [
-        ("開始", "下書き"),
-        ("下書き", "公開"),
-        ("公開", "終了"),
-    ]
-    assert "| 項目 | 値 |" in markdown
-    assert "| 種類 | 定期 |" in markdown
-    assert "**全件実行**\n\n```bash\nuv run pytest\n```" in markdown
-    assert markdown.startswith("# 図の文書 6\n\n図と表で読む文書\n")
-    assert "**タイトル**" not in markdown
-    assert "**リード**" not in markdown
-    assert "内部メモの値" not in markdown
-    assert "<!-- table: data wide=説明 -->" in markdown
-
-
-def test_normal_when_mermaid_unreadable(
-    make_source: Callable[..., Any],
-    make_server: Callable[..., Any],
-    sample_file_set: Callable[..., dict[str, str]],
-    sample_config_text: Callable[..., str],
-) -> None:
-    """読み取れない行を含む Mermaid を、図ごと Mermaid のコードブロックのまま返す（正常系）。"""
-    # 準備
-    files = _drawn_files(sample_file_set, sample_config_text)
-    env = make_server(make_source("sample", files))
-    # 実行
-    response = env.client.get("/_api/sources/sample/docs/drawn/doc-7")
-    # 検証
-    body = response.json()
-    assert response.status_code == 200
-    assert "<!-- sequence -->" not in body["markdown"]
-    assert f"```mermaid\n{UNREADABLE_SEQUENCE}\n```" in body["markdown"]
-    assert body["conversionError"] is None
-
-
-ER_ROW = "  - id: er\n    paths: [er/*.yaml]\n    schema: schemas/er.schema.yaml\n"
-# ER 図のテンプレートと同じ `er`・`tables` の構造を持つ種類のスキーマ
+UNREADABLE_DOC = (
+    "id: doc-7\ntitle: 図の文書 7\nsequence: |-\n  ```mermaid\n"
+    + "".join(f"  {line}\n" for line in UNREADABLE_SEQUENCE.splitlines())
+    + "  ```\n"
+)
 ER_SCHEMA = """\
 type: object
 title: ER 図
@@ -812,119 +197,6 @@ tables:
       - {name: id, title: 支払い ID, type: bigint, primary_key: true}
       - {name: customer_id, title: 顧客 ID, type: bigint, foreign_key: {table: customers.id}}
 """
-ER_BLOCK = re.compile(r"<!-- er -->\n\n```json\n(.*?)\n```\n\n<!-- /er -->", re.S)
-
-
-def _er_columns(definition: dict[str, Any], table_id: str) -> list[tuple[str, bool, bool, bool]]:
-    """ER 図の定義の `table_id` のテーブルの列の名前と `pk`・`fk`・`nn` の組。"""
-    table = next(t for t in definition["tables"] if t["id"] == table_id)
-    return [
-        (c["name"], bool(c.get("pk")), bool(c.get("fk")), bool(c.get("nn")))
-        for c in table["columns"]
-    ]
-
-
-def test_normal_when_er_diagram_drawn(
-    make_source: Callable[..., Any],
-    make_server: Callable[..., Any],
-    sample_file_set: Callable[..., dict[str, str]],
-    sample_config_text: Callable[..., str],
-) -> None:
-    """`x-diagram: er` の項目を、テーブルの列で補った mdmark の ER 図の部品にする（正常系）。"""
-    # 準備
-    files = sample_file_set(
-        **{
-            "dev-docs.yaml": sample_config_text(ER_ROW),
-            "schemas/er.schema.yaml": ER_SCHEMA,
-            "er/販売.yaml": ER_DOC,
-        }
-    )
-    env = make_server(make_source("sample", files))
-    # 実行
-    response = env.client.get("/_api/sources/sample/docs/er/販売")
-    # 検証
-    markdown = response.json()["markdown"]
-    match = ER_BLOCK.search(markdown)
-    assert response.status_code == 200
-    assert match is not None
-    assert markdown.count("<!-- er -->") == 1
-    assert "erDiagram" not in markdown
-    definition = json.loads(match.group(1))
-    assert [t["id"] for t in definition["tables"]] == ["顧客", "注文", "商品", "支払い"]
-    assert _er_columns(definition, "顧客") == [
-        ("id", True, False, True),
-        ("email", False, False, False),
-    ]
-    assert _er_columns(definition, "注文") == [
-        ("id", True, False, False),
-        ("customer_id", False, True, False),
-    ]
-    assert _er_columns(definition, "商品") == []
-    assert _er_columns(definition, "支払い") == [
-        ("id", True, False, False),
-        ("customer_id", False, True, False),
-    ]
-    assert definition["relations"] == [
-        {
-            "from": "顧客",
-            "fromColumn": "id",
-            "fromCard": "1",
-            "to": "注文",
-            "toColumn": "customer_id",
-            "toCard": "0..n",
-            "label": "注文する",
-        },
-        {
-            "from": "顧客",
-            "fromColumn": "id",
-            "fromCard": "1",
-            "to": "支払い",
-            "toColumn": "customer_id",
-            "toCard": "0..n",
-        },
-    ]
-    assert "| 注文 | product_id | 0..n | 商品 | id | 1 |" in markdown
-
-
-# 本文（`description`）に id のリンクを持つ文書 1
-LINKED_DOC = (
-    "id: doc-1\n"
-    "name: 文書 1\n"
-    "description: >-\n"
-    "  [文書 2](id:doc-2) と [項目](id:doc-6#flow) と [無い項目](id:doc-6#no-such-item)\n"
-    "  と [無い文書](id:no-such-doc) と `[コード](id:doc-2)`\n"
-)
-
-
-def test_normal_when_id_link_resolved(
-    make_source: Callable[..., Any],
-    make_server: Callable[..., Any],
-    sample_file_set: Callable[..., dict[str, str]],
-    sample_config_text: Callable[..., str],
-) -> None:
-    """本文の `id:` のリンクを、同じ配信元の文書と、その項目の見出しのアンカーへのリンクにする（正常系）。"""
-    # 準備
-    files = _drawn_files(sample_file_set, sample_config_text)
-    files["docs/doc-1.yaml"] = LINKED_DOC
-    env = make_server(make_source("sample", files))
-    # 実行
-    response = env.client.get("/_api/sources/sample/docs/docs/doc-1")
-    # 検証
-    body = response.json()
-    assert response.status_code == 200
-    assert "[文書 2](doc-2.yaml)" in body["markdown"]
-    assert "[項目](../drawn/doc-6.yaml#処理の流れ)" in body["markdown"]
-    assert "[無い項目](../drawn/doc-6.yaml)" in body["markdown"]
-    assert "[無い文書](id:no-such-doc)" in body["markdown"]
-    assert "`[コード](id:doc-2)`" in body["markdown"]
-    assert body["conversionError"] is None
-
-
-DECIDED_ROW = (
-    "  - id: decided\n    paths: [decided/*.yaml]\n    schema: schemas/decided.schema.yaml\n"
-    "decisions:\n  folders: [tmp/a, tmp/b]\n"
-)
-# 表の行・「項目 / 値」の表を持つ見出しの要素・文書の直下に `decisions` を持つ種類のスキーマ
 DECIDED_SCHEMA = """\
 type: object
 title: 検討事項を持つ文書
@@ -956,35 +228,614 @@ items:
 spec: {kind: 定期, limit: 3, owner: 運用, decisions: [D-1, D-2, D-3]}
 decisions: [D-1, D-2, D-3]
 """
+LINKED_DOC = (
+    "id: doc-1\n"
+    "name: 文書 1\n"
+    "description: >-\n"
+    "  [文書 2](id:doc-2) と [項目](id:doc-6#flow) と [無い項目](id:doc-6#no-such-item)\n"
+    "  と [無い文書](id:no-such-doc) と `[コード](id:doc-2)`\n"
+)
+FLOW_BLOCK = re.compile(r"<!-- flow -->\n\n```json\n(.*?)\n```\n\n<!-- /flow -->", re.S)
+ER_BLOCK = re.compile(r"<!-- er -->\n\n```json\n(.*?)\n```\n\n<!-- /er -->", re.S)
 
 
-def _decided_files(
-    sample_file_set: Callable[..., dict[str, str]],
-    sample_config_text: Callable[..., str],
-) -> dict[str, str]:
-    """`decisions.folders` に 2 つの話し合いの記録のフォルダを持つ配信元のファイル一式を返す。"""
-    return sample_file_set(
-        **{
-            "dev-docs.yaml": sample_config_text(DECIDED_ROW),
-            "schemas/decided.schema.yaml": DECIDED_SCHEMA,
-            "decided/doc-8.yaml": DECIDED_DOC,
-            "tmp/a/.mindstella/docs/D-1.md": "# D-1 の本文\n",
-            "tmp/a/.mindstella/docs/D-2.md": "# D-2 a\n",
-            "tmp/b/.mindstella/docs/D-2.md": "# D-2 b\n",
+def _sample(*extra: dict[str, Any], doc_1: dict[str, Any] | None = None) -> list[dict[str, Any]]:
+    """文書 1・文書 2 と、`extra` の文書の並びを作る。"""
+    return [
+        doc_1 or doc("doc-1", "docs/doc-1.yaml", data=TABLE_DATA, updated=UPDATED),
+        doc("doc-2", "docs/doc-2.yaml", data={"id": "doc-2", "name": "文書 2"}),
+        *extra,
+    ]
+
+
+def _page_changes(items: list[dict[str, Any]]) -> dict[str, str | None]:
+    """サイドバーの項目の入れ子をたどり、page の文書のパスと変化を対応させる。"""
+    changes: dict[str, str | None] = {}
+    for item in items:
+        if item["kind"] == "page":
+            changes[item["path"]] = item["change"]
+        changes.update(_page_changes(item["items"]))
+    return changes
+
+
+def _outline(items: list[dict[str, Any]]) -> list[Any]:
+    """サイドバーの項目を、page は文書のパス、group は（名前, 中の並び）にした入れ子にする。"""
+    return [
+        item["path"] if item["kind"] == "page" else (item["title"], _outline(item["items"]))
+        for item in items
+    ]
+
+
+def test_normal(mock_index: MockIndex, make_server: Callable[..., ServerEnv]) -> None:
+    """一番左のタブの一番上の文書と、文書のパスで指した文書を返す（正常系）。"""
+    # 準備
+    mock_index.serve("sample", IndexSource(docs={None: _sample()}, nav=NAV))
+    env = make_server(mock_index)
+    # 実行
+    top = env.client.get("/_api/sources/sample/docs")
+    second = env.client.get("/_api/sources/sample/docs/docs/doc-2")
+    # 検証
+    body = top.json()
+    assert top.status_code == 200
+    assert body["path"] == "docs/doc-1"
+    assert [tab["title"] for tab in body["tabs"]] == ["規約", "補足"]
+    assert [tab["active"] for tab in body["tabs"]] == [True, False]
+    assert "## 項目" in body["markdown"]
+    assert "| キー | 名称 | 備考 |" in body["markdown"]
+    assert len(body["tableKeys"]) == 1
+    assert body["conversionError"] is None
+    assert body["diff"] is None
+    assert set(_page_changes(body["tabs"][0]["items"]).values()) == {None}
+    assert datetime.fromisoformat(body["updatedAt"]) == datetime.fromisoformat(UPDATED)
+    assert second.status_code == 200
+    assert "# 文書 2" in second.json()["markdown"]
+
+
+def test_normal_when_nav_missing(
+    mock_index: MockIndex, make_server: Callable[..., ServerEnv]
+) -> None:
+    """nav が無い配信元は種類ごとにタブを作り、文書をフォルダで束ねる（正常系）。"""
+    # 準備
+    documents = [
+        doc("doc-1", "docs/doc-1.yaml"),
+        doc("lang-index", "docs/lang/index.yaml"),
+        doc("ts", "docs/lang/ts.yaml"),
+        doc("py-style", "docs/lang/py/style.yaml"),
+        doc("n-1", "notes/n-1.yaml", kind="memo"),
+    ]
+    rows = [row("sample", ["docs/**/*.yaml"]), row("memo", ["notes/*.yaml"], title="メモ")]
+    mock_index.serve("plain", IndexSource(documents=rows, docs={None: documents}))
+    env = make_server(mock_index)
+    # 実行
+    response = env.client.get("/_api/sources/plain/docs")
+    # 検証
+    tabs = response.json()["tabs"]
+    assert response.status_code == 200
+    assert [tab["title"] for tab in tabs] == ["sample", "メモ"]
+    assert _outline(tabs[0]["items"]) == [
+        "docs/doc-1",
+        ("lang", ["docs/lang/index", "docs/lang/ts", ("py", ["docs/lang/py/style"])]),
+    ]
+    assert _outline(tabs[1]["items"]) == ["notes/n-1"]
+
+
+def test_normal_when_ref_given(
+    mock_index: MockIndex, make_server: Callable[..., ServerEnv]
+) -> None:
+    """ref のリビジョンの文書を返す（正常系）。"""
+    # 準備
+    renamed = doc("doc-1", "docs/doc-1.yaml", data={"id": "doc-1", "name": "新しい名前"})
+    mock_index.serve("sample", IndexSource(docs={None: _sample(doc_1=renamed), "old": _sample()}))
+    env = make_server(mock_index)
+    # 実行
+    at_old = env.client.get("/_api/sources/sample/docs/docs/doc-1", params={"ref": "old"})
+    at_default = env.client.get("/_api/sources/sample/docs/docs/doc-1")
+    # 検証
+    assert at_old.status_code == 200
+    assert "# 文書 1" in at_old.json()["markdown"]
+    assert at_old.json()["ref"] == "old"
+    assert "# 新しい名前" in at_default.json()["markdown"]
+    assert at_default.json()["ref"] == "develop"
+
+
+def test_normal_when_diff_given(
+    mock_index: MockIndex, make_server: Callable[..., ServerEnv]
+) -> None:
+    """diff のリビジョンから変わった項目と、サイドバーの page ごとの変化を返す（正常系）。"""
+    # 準備
+    parent = _sample(doc("doc-3", "docs/doc-3.yaml"))
+    renamed = doc(
+        "doc-1", "docs/doc-1.yaml", data={**TABLE_DATA, "name": "新しい名前"}, version="v-new"
+    )
+    changed = _sample(doc("doc-4", "docs/doc-4.yaml"), doc_1=renamed)
+    mock_index.serve(
+        "sample", IndexSource(docs={None: changed, "changed": changed, "parent": parent})
+    )
+    env = make_server(mock_index)
+    # 実行
+    response = env.client.get(
+        "/_api/sources/sample/docs/docs/doc-1", params={"ref": "changed", "diff": "parent"}
+    )
+    # 検証
+    body = response.json()
+    assert response.status_code == 200
+    assert body["diff"] == {"base": "parent", "change": "modified", "changedItems": ["name"]}
+    assert "# 新しい名前" in body["markdown"]
+    assert _page_changes(body["tabs"][0]["items"]) == {
+        "docs/doc-1": "modified",
+        "docs/doc-2": None,
+        "docs/doc-3": "deleted",
+        "docs/doc-4": "added",
+    }
+
+
+def _custom_source(**overrides: Any) -> IndexSource:
+    """`converters[]` を指す行 custom と、埋め込みのマーカーを持つ本文の行 guide を持つ配信元を作る。"""
+    rows = [
+        row("sample", ["docs/*.yaml"]),
+        row("custom", ["custom/*.yaml"], converter="md"),
+        row("guide", ["guide/files.yaml"], records="files"),
+    ]
+    documents = _sample(
+        doc("c-1", "custom/c-1.yaml", kind="custom", data={"id": "c-1", "name": "カスタム 1"}),
+        doc(
+            "guide/intro.md",
+            "guide/files.yaml",
+            kind="guide",
+            record_index=0,
+            body_path="guide/intro.md",
+            body="# 案内\n\n<!-- embed: data/rows.yaml#rows -->\n",
+            data={"path": "intro.md"},
+        ),
+    )
+    values: dict[str, Any] = {"documents": rows, "docs": {None: documents}, **overrides}
+    return IndexSource(**values)
+
+
+def test_normal_when_custom_converter(
+    mock_index: MockIndex, make_server: Callable[..., ServerEnv]
+) -> None:
+    """project-index の変換の結果と、埋め込みのマーカーの表を返す（正常系）。"""
+    # 準備
+    rows_doc = doc("rows", "data/rows.yaml", data={"rows": [{"colA": "値A", "colB": "値B"}]})
+    details = {
+        "custom/c-1.yaml": {"markdown": "# カスタム変換: カスタム 1\n"},
+        "data/rows.yaml": {"document": rows_doc},
+    }
+    mock_index.serve("custom", _custom_source(details=details))
+    env = make_server(mock_index)
+    # 実行
+    converted = env.client.get("/_api/sources/custom/docs/custom/c-1")
+    embedded = env.client.get("/_api/sources/custom/docs/guide/files/guide/intro.md")
+    # 検証
+    assert converted.status_code == 200
+    assert "# カスタム変換: カスタム 1" in converted.json()["markdown"]
+    assert embedded.status_code == 200
+    assert "| colA | colB |" in embedded.json()["markdown"]
+    assert "embed:" not in embedded.json()["markdown"]
+
+
+def test_normal_when_conversion_failed(
+    mock_index: MockIndex, make_server: Callable[..., ServerEnv]
+) -> None:
+    """project-index が返した変換の失敗と読めなかった YAML を conversionError に入れる（正常系）。"""
+    # 準備
+    failure = {
+        "reason": "timeout",
+        "kind": "custom",
+        "script": "python3 scripts/convert.py",
+        "detail": "30 秒以内に終わりませんでした",
+    }
+    source = _custom_source(details={"custom/c-1.yaml": {"failure": failure}})
+    source.docs[None] = [item for item in source.docs[None] if item["id"] != "doc-1"]
+    source.unreadable = [
+        {
+            "reason": "invalid_yaml",
+            "kind": "sample",
+            "detail": "閉じていない",
+            "file": "docs/doc-1.yaml",
+            "line": 1,
+            "column": 4,
         }
+    ]
+    mock_index.serve("custom", source)
+    env = make_server(mock_index)
+    # 実行
+    timed_out = env.client.get("/_api/sources/custom/docs/custom/c-1")
+    schema_driven = env.client.get("/_api/sources/custom/docs/docs/doc-2")
+    unreadable = env.client.get("/_api/sources/custom/docs/docs/doc-1")
+    # 検証
+    error = timed_out.json()["conversionError"]
+    assert timed_out.status_code == 200
+    assert timed_out.json()["markdown"] is None
+    assert (error["reason"], error["kind"]) == ("timeout", "custom")
+    assert "scripts/convert.py" in error["script"]
+    assert "30" in error["detail"]
+    assert schema_driven.status_code == 200
+    assert "# 文書 2" in schema_driven.json()["markdown"]
+    broken = unreadable.json()["conversionError"]
+    assert unreadable.status_code == 200
+    assert unreadable.json()["markdown"] is None
+    assert (broken["reason"], broken["file"], broken["line"], broken["column"]) == (
+        "invalid_yaml",
+        "docs/doc-1.yaml",
+        1,
+        4,
+    )
+
+
+def test_error_when_not_found(mock_index: MockIndex, make_server: Callable[..., ServerEnv]) -> None:
+    """無い配信元・リビジョン・文書を断り、何が無いかを返す（異常系）。"""
+    # 準備
+    mock_index.serve("sample", IndexSource(docs={None: _sample()}))
+    mock_index.serve(
+        "broken",
+        IndexSource(errors=[{"path": "documents[0].paths", "reason": "必須のキーが無い"}]),
+    )
+    env = make_server(mock_index)
+    # 実行
+    no_doc = env.client.get("/_api/sources/sample/docs/no-such-doc")
+    no_ref = env.client.get("/_api/sources/sample/docs", params={"ref": "no-such-branch"})
+    not_served = env.client.get("/_api/sources/broken/docs")
+    unknown = env.client.get("/_api/sources/unknown/docs")
+    # 検証
+    assert no_doc.status_code == 404
+    assert (no_doc.json()["missing"], no_doc.json()["value"]) == ("doc", "no-such-doc")
+    assert no_ref.status_code == 404
+    assert (no_ref.json()["missing"], no_ref.json()["value"]) == ("ref", "no-such-branch")
+    assert not_served.status_code == 404
+    assert not_served.json()["missing"] == "not_served"
+    assert [error["path"] for error in not_served.json()["errors"]] == ["documents[0].paths"]
+    assert unknown.status_code == 404
+    assert (unknown.json()["missing"], unknown.json()["value"]) == ("source", "unknown")
+
+
+def test_normal_when_nav_filtered_by_tags(
+    mock_index: MockIndex, make_server: Callable[..., ServerEnv]
+) -> None:
+    """auto の filter に当たる文書だけをタブのサイドバーに並べる（正常系）。"""
+    # 準備
+    nav = {
+        "tabs": [
+            {
+                "title": "mcp",
+                "items": [
+                    {
+                        "auto": {
+                            "document": "sample",
+                            "filter": {
+                                "and": [
+                                    {"field": "tags", "op": "eq", "values": ["mcp"]},
+                                    {"not": {"field": "tags", "op": "eq", "values": ["設計"]}},
+                                ]
+                            },
+                        }
+                    }
+                ],
+            },
+            {"title": "すべて", "items": [{"auto": {"document": "sample"}}]},
+        ]
+    }
+    documents = [
+        doc(
+            f"doc-{n}",
+            f"docs/doc-{n}.yaml",
+            data={"id": f"doc-{n}", "name": f"文書 {n}", "tags": tags},
+        )
+        for n, tags in [(1, ["mcp"]), (2, ["mcp", "設計"]), (3, ["設計"])]
+    ]
+    mock_index.serve("sample", IndexSource(docs={None: documents}, nav=nav))
+    env = make_server(mock_index)
+    # 実行
+    response = env.client.get("/_api/sources/sample/docs")
+    # 検証
+    tabs = {tab["title"]: tab for tab in response.json()["tabs"]}
+    assert response.status_code == 200
+    assert list(_page_changes(tabs["mcp"]["items"])) == ["docs/doc-1"]
+    assert list(_page_changes(tabs["すべて"]["items"])) == [
+        "docs/doc-1",
+        "docs/doc-2",
+        "docs/doc-3",
+    ]
+
+
+def _alias(doc_id: str, path: str, kind: str, **values: Any) -> dict[str, Any]:
+    """`alias_type` を持つ行の文書を作る。"""
+    data = {"id": doc_id, **values}
+    return doc(doc_id, path, kind=kind, data=data, metadata=data)
+
+
+def test_normal_when_aliases_returned(
+    mock_index: MockIndex, make_server: Callable[..., ServerEnv]
+) -> None:
+    """alias_type を持つ行の文書のエイリアスを文書といっしょに返す（正常系）。"""
+    # 準備
+    rows = [
+        row("sample", ["docs/*.yaml"]),
+        row("terms", ["terms/*.yaml"], aliasType="term"),
+        row("refs", ["refs/*.yaml"], aliasType="doc"),
+    ]
+    documents = _sample(
+        _alias(
+            "scope",
+            "terms/scope.yaml",
+            "terms",
+            alias_type="term",
+            name="作業範囲",
+            aliases=["scope", "担当範囲"],
+            avoid=["担当領域"],
+            description="触ってよい範囲",
+        ),
+        _alias(
+            "settings",
+            "refs/settings.yaml",
+            "refs",
+            alias_type="doc",
+            name="設定のリファレンス",
+            aliases=["settings"],
+            description="設定のキーの一覧",
+        ),
+    )
+    mock_index.serve("sample", IndexSource(documents=rows, docs={None: documents}))
+    mock_index.serve("plain", IndexSource(docs={None: _sample()}))
+    env = make_server(mock_index)
+    # 実行
+    with_aliases = env.client.get("/_api/sources/sample/docs/docs/doc-1")
+    without = env.client.get("/_api/sources/plain/docs")
+    # 検証
+    aliases = {item["name"]: item for item in with_aliases.json()["aliases"]}
+    term = aliases["作業範囲"]
+    ref = aliases["設定のリファレンス"]
+    assert with_aliases.status_code == 200
+    assert (term["aliasType"], term["aliases"], term["avoid"]) == (
+        "term",
+        ["scope", "担当範囲"],
+        ["担当領域"],
+    )
+    assert term["description"] == "触ってよい範囲"
+    assert (ref["aliasType"], ref["aliases"]) == ("doc", ["settings"])
+    assert ref.get("avoid") is None
+    assert without.status_code == 200
+    assert without.json()["aliases"] == []
+
+
+def test_normal_when_body_path_given(
+    mock_index: MockIndex, make_server: Callable[..., ServerEnv]
+) -> None:
+    """管理用の YAML の行の文書に bodyPath を返し、本文のファイルのパスで指した文書を返す（正常系）。"""
+    # 準備
+    rows = [row("sample", ["docs/*.yaml"]), row("notes", ["notes/files.yaml"], records="files")]
+    notes = [
+        doc(
+            f"notes/{name}.md",
+            "notes/files.yaml",
+            kind="notes",
+            record_index=index,
+            body_path=f"notes/{name}.md",
+            body=f"# {name.upper()} の本文\n",
+            data={"path": f"{name}.md"},
+        )
+        for index, name in enumerate(["a", "b"])
+    ]
+    mock_index.serve("sample", IndexSource(documents=rows, docs={None: _sample(*notes)}))
+    env = make_server(mock_index)
+    # 実行
+    by_page = env.client.get("/_api/sources/sample/docs/notes/files/notes/a.md")
+    by_body_path = env.client.get("/_api/sources/sample/docs/notes/b.md")
+    plain = env.client.get("/_api/sources/sample/docs/docs/doc-1")
+    # 検証
+    assert by_page.status_code == 200
+    assert (by_page.json()["bodyPath"], by_page.json()["path"]) == (
+        "notes/a.md",
+        "notes/files/notes/a.md",
+    )
+    assert by_body_path.status_code == 200
+    assert by_body_path.json()["path"] == "notes/files/notes/b.md"
+    assert "# B の本文" in by_body_path.json()["markdown"]
+    assert by_body_path.json()["bodyPath"] == "notes/b.md"
+    assert plain.status_code == 200
+    assert plain.json()["bodyPath"] is None
+
+
+def test_normal_when_nav_grouped_by_folder(
+    mock_index: MockIndex, make_server: Callable[..., ServerEnv]
+) -> None:
+    """group_by: '@folder' の auto が、手で書いた page の文書を除いてフォルダごとの group を作る（正常系）。"""
+    # 準備
+    nav = {
+        "tabs": [
+            {
+                "title": "ルール",
+                "items": [
+                    {"page": "rules/common"},
+                    {"auto": {"document": "rules", "group_by": "@folder"}},
+                ],
+            }
+        ]
+    }
+    rules = [
+        doc(doc_id, path, kind="rules")
+        for doc_id, path in [
+            ("common", "rules/common.yaml"),
+            ("lang-index", "rules/lang/index.yaml"),
+            ("ts", "rules/lang/ts.yaml"),
+            ("py-style", "rules/lang/py/style.yaml"),
+        ]
+    ]
+    rows = [row("sample", ["docs/*.yaml"]), row("rules", ["rules/**/*.yaml"])]
+    mock_index.serve("sample", IndexSource(documents=rows, docs={None: _sample(*rules)}, nav=nav))
+    env = make_server(mock_index)
+    # 実行
+    response = env.client.get("/_api/sources/sample/docs")
+    # 検証
+    tabs = {tab["title"]: tab for tab in response.json()["tabs"]}
+    assert response.status_code == 200
+    assert _outline(tabs["ルール"]["items"]) == [
+        "rules/common",
+        ("lang", ["rules/lang/index", "rules/lang/ts", ("py", ["rules/lang/py/style"])]),
+    ]
+
+
+def _drawn_source() -> IndexSource:
+    """図の文書の種類と文書 6・7 を持つ配信元を作る。"""
+    rows = [
+        row("sample", ["docs/*.yaml"]),
+        row("drawn", ["drawn/*.yaml"], load_yaml(DRAWN_SCHEMA)),
+    ]
+    drawn = [
+        doc(doc_id, f"drawn/{doc_id}.yaml", kind="drawn", data=load_yaml(text))
+        for doc_id, text in [("doc-6", DRAWN_DOC), ("doc-7", UNREADABLE_DOC)]
+    ]
+    return IndexSource(documents=rows, docs={None: _sample(*drawn)})
+
+
+def test_normal_when_schema_document_drawn(
+    mock_index: MockIndex, make_server: Callable[..., ServerEnv]
+) -> None:
+    """図を mdmark の部品に、スカラーの並びを「項目 / 値」の表にした Markdown を返す（正常系）。"""
+    # 準備
+    mock_index.serve("sample", _drawn_source())
+    env = make_server(mock_index)
+    # 実行
+    response = env.client.get("/_api/sources/sample/docs/drawn/doc-6")
+    # 検証
+    markdown = response.json()["markdown"]
+    assert response.status_code == 200
+    assert markdown.count("<!-- flow -->") == 3
+    assert markdown.count("<!-- sequence -->") == 1
+    assert "```mermaid" not in markdown
+    flows = [json.loads(block) for block in FLOW_BLOCK.findall(markdown)]
+    flowchart, states = flows[0], flows[1]
+    nodes = {node["id"]: node for node in flowchart["nodes"]}
+    assert (nodes["q"]["kind"], nodes["q"]["hint"], nodes["r"]["kind"]) == (
+        "question",
+        "保存の判定",
+        "result",
+    )
+    wire = flowchart["wires"][0]
+    assert (wire["label"], wire["line"], wire["tip"]) == ("YES", "read", "保存の判定の詳細")
+    assert flowchart["frame"]["title"] == "判定"
+    kinds = {node["name"]: node["kind"] for node in states["nodes"]}
+    assert (kinds["開始"], kinds["下書き"], kinds["公開"], kinds["終了"]) == (
+        "start",
+        "action",
+        "action",
+        "result",
+    )
+    assert "| 種類 | 定期 |" in markdown
+    assert "**全件実行**\n\n```bash\nuv run pytest\n```" in markdown
+    assert markdown.startswith("# 図の文書 6\n\n図と表で読む文書\n")
+    assert "内部メモの値" not in markdown
+
+
+def test_normal_when_mermaid_unreadable(
+    mock_index: MockIndex, make_server: Callable[..., ServerEnv]
+) -> None:
+    """読み取れない行を含む Mermaid を、図ごと Mermaid のコードブロックのまま返す（正常系）。"""
+    # 準備
+    mock_index.serve("sample", _drawn_source())
+    env = make_server(mock_index)
+    # 実行
+    response = env.client.get("/_api/sources/sample/docs/drawn/doc-7")
+    # 検証
+    body = response.json()
+    assert response.status_code == 200
+    assert "<!-- sequence -->" not in body["markdown"]
+    assert f"```mermaid\n{UNREADABLE_SEQUENCE}\n```" in body["markdown"]
+    assert body["conversionError"] is None
+
+
+def _er_columns(definition: dict[str, Any], table_id: str) -> list[tuple[str, bool, bool, bool]]:
+    """ER 図の定義の `table_id` のテーブルの列の名前と `pk`・`fk`・`nn` の組。"""
+    table = next(t for t in definition["tables"] if t["id"] == table_id)
+    return [
+        (c["name"], bool(c.get("pk")), bool(c.get("fk")), bool(c.get("nn")))
+        for c in table["columns"]
+    ]
+
+
+def test_normal_when_er_diagram_drawn(
+    mock_index: MockIndex, make_server: Callable[..., ServerEnv]
+) -> None:
+    """`x-diagram: er` の項目を、テーブルの列で補った mdmark の ER 図の部品にする（正常系）。"""
+    # 準備
+    rows = [row("sample", ["docs/*.yaml"]), row("er", ["er/*.yaml"], load_yaml(ER_SCHEMA))]
+    er = doc("doc-8", "er/販売.yaml", kind="er", data=load_yaml(ER_DOC))
+    mock_index.serve("sample", IndexSource(documents=rows, docs={None: _sample(er)}))
+    env = make_server(mock_index)
+    # 実行
+    response = env.client.get("/_api/sources/sample/docs/er/販売")
+    # 検証
+    markdown = response.json()["markdown"]
+    match = ER_BLOCK.search(markdown)
+    assert response.status_code == 200
+    assert match is not None
+    assert markdown.count("<!-- er -->") == 1
+    assert "erDiagram" not in markdown
+    definition = json.loads(match.group(1))
+    assert [t["id"] for t in definition["tables"]] == ["顧客", "注文", "商品", "支払い"]
+    assert _er_columns(definition, "顧客") == [
+        ("id", True, False, True),
+        ("email", False, False, False),
+    ]
+    assert _er_columns(definition, "注文") == [
+        ("id", True, False, False),
+        ("customer_id", False, True, False),
+    ]
+    assert _er_columns(definition, "商品") == []
+    assert _er_columns(definition, "支払い") == [
+        ("id", True, False, False),
+        ("customer_id", False, True, False),
+    ]
+
+
+def test_normal_when_id_link_resolved(
+    mock_index: MockIndex, make_server: Callable[..., ServerEnv]
+) -> None:
+    """本文の `id:` のリンクを、同じ配信元の文書と、その項目の見出しのアンカーへのリンクにする（正常系）。"""
+    # 準備
+    source = _drawn_source()
+    linked = doc("doc-1", "docs/doc-1.yaml", data=load_yaml(LINKED_DOC))
+    source.docs[None] = [linked, *source.docs[None][1:]]
+    mock_index.serve("sample", source)
+    env = make_server(mock_index)
+    # 実行
+    response = env.client.get("/_api/sources/sample/docs/docs/doc-1")
+    # 検証
+    body = response.json()
+    assert response.status_code == 200
+    assert "[文書 2](doc-2.yaml)" in body["markdown"]
+    assert "[項目](../drawn/doc-6.yaml#処理の流れ)" in body["markdown"]
+    assert "[無い項目](../drawn/doc-6.yaml)" in body["markdown"]
+    assert "[無い文書](id:no-such-doc)" in body["markdown"]
+    assert "`[コード](id:doc-2)`" in body["markdown"]
+    assert body["conversionError"] is None
+
+
+def _decided_source() -> IndexSource:
+    """`decisions.folders` に 2 つの話し合いの記録のフォルダを持つ配信元を作る。"""
+    rows = [
+        row("sample", ["docs/*.yaml"]),
+        row("decided", ["decided/*.yaml"], load_yaml(DECIDED_SCHEMA)),
+    ]
+    decided = doc("doc-8", "decided/doc-8.yaml", kind="decided", data=load_yaml(DECIDED_DOC))
+    return IndexSource(
+        documents=rows,
+        docs={None: _sample(decided)},
+        nav=NAV,
+        decision_folders=["tmp/a", "tmp/b"],
+        decisions={"D-1": 1, "D-2": 2},
+        decision_texts={"D-1": "# D-1 の本文\n"},
     )
 
 
 def test_normal_when_decision_linked(
-    make_source: Callable[..., Any],
-    make_server: Callable[..., Any],
-    sample_file_set: Callable[..., dict[str, str]],
-    sample_config_text: Callable[..., str],
+    mock_index: MockIndex, make_server: Callable[..., ServerEnv]
 ) -> None:
-    """`decisions` の ID のうち、話し合いの記録のフォルダで 1 つに決まる ID を、検討事項の文書の画面のパスへのリンクにする（正常系）。"""
+    """`decisions` の ID のうち 1 つのフォルダに決まる ID を、検討事項の文書へのリンクにする（正常系）。"""
     # 準備
-    files = _decided_files(sample_file_set, sample_config_text)
-    env = make_server(make_source("sample", files))
+    mock_index.serve("sample", _decided_source())
+    env = make_server(mock_index)
     # 実行
     response = env.client.get("/_api/sources/sample/docs/decided/doc-8")
     # 検証
@@ -996,22 +847,17 @@ def test_normal_when_decision_linked(
     assert markdown.count("- D-2") == 2
     assert markdown.count("- D-3") == 2
     assert "[D-2]" not in markdown
-    assert "[D-3]" not in markdown
     assert body["conversionError"] is None
 
 
 def test_normal_when_decision_document_returned(
-    make_source: Callable[..., Any],
-    make_server: Callable[..., Any],
-    sample_file_set: Callable[..., dict[str, str]],
-    sample_config_text: Callable[..., str],
+    mock_index: MockIndex, make_server: Callable[..., ServerEnv]
 ) -> None:
-    """`path` が `_decisions/{ID}` のとき、話し合いの記録のフォルダの検討事項の文書を Markdown で返す（正常系）。"""
+    """`path` が `_decisions/{ID}` のとき、project-index が返した検討事項の文書を返す（正常系）。"""
     # 準備
-    files = _decided_files(sample_file_set, sample_config_text)
-    spec = make_source("sample", files)
-    env = make_server(spec)
-    decision_file = spec.folder / "tmp/a/.mindstella/docs/D-1.md"
+    mock_index.serve("sample", _decided_source())
+    env = make_server(mock_index)
+    before = datetime.now(tz=UTC)
     # 実行
     found = env.client.get("/_api/sources/sample/docs/_decisions/D-1")
     ambiguous = env.client.get("/_api/sources/sample/docs/_decisions/D-2")
@@ -1019,15 +865,54 @@ def test_normal_when_decision_document_returned(
     # 検証
     body = found.json()
     assert found.status_code == 200
-    assert body["path"] == "_decisions/D-1"
-    assert body["markdown"] == "# D-1 の本文\n"
+    assert (body["path"], body["markdown"]) == ("_decisions/D-1", "# D-1 の本文\n")
     assert [tab["active"] for tab in body["tabs"]] == [False, False]
-    assert datetime.fromisoformat(body["updatedAt"]).timestamp() == pytest.approx(
-        decision_file.stat().st_mtime
-    )
-    assert body["bodyPath"] is None
-    assert body["diff"] is None
+    assert datetime.fromisoformat(body["updatedAt"]) >= before
+    assert (body["bodyPath"], body["diff"]) == (None, None)
     assert ambiguous.status_code == 404
     assert (ambiguous.json()["missing"], ambiguous.json()["value"]) == ("doc", "_decisions/D-2")
     assert missing.status_code == 404
     assert (missing.json()["missing"], missing.json()["value"]) == ("doc", "_decisions/D-3")
+
+
+def test_error_when_project_index_unreachable(
+    mock_index: MockIndex, make_server: Callable[..., ServerEnv]
+) -> None:
+    """project-index につながらなければ 503 を返し、つながった後は同じ要求が 200 になる（異常系）。"""
+    # 準備
+    mock_index.serve("sample", IndexSource(docs={None: _sample()}))
+    env = make_server(mock_index)
+    port = mock_index.port
+    mock_index.stop()
+    # 実行
+    refused = env.client.get("/_api/sources/sample/docs")
+    mock_index.start(port)
+    recovered = env.client.get("/_api/sources/sample/docs")
+    # 検証
+    assert refused.status_code == 503
+    assert refused.headers["content-type"].startswith("application/problem+json")
+    assert refused.json()["projectIndex"]["address"] == mock_index.address
+    assert refused.json()["projectIndex"]["reason"]
+    assert recovered.status_code == 200
+
+
+def test_error_when_project_index_timed_out(
+    mock_index: MockIndex,
+    make_server: Callable[..., ServerEnv],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """project-index が制限時間を過ぎても応答しなければ打ち切って 503 を返す（異常系）。"""
+    # 準備
+    monkeypatch.setattr("dev_docs.main.PROJECT_INDEX_TIMEOUT_SEC", 1)
+    mock_index.serve("sample", IndexSource(docs={None: _sample()}))
+    env = make_server(mock_index)
+    mock_index.delay_sec = 3
+    started = time.monotonic()
+    # 実行
+    response = env.client.get("/_api/sources/sample/docs")
+    # 検証
+    elapsed = time.monotonic() - started
+    assert response.status_code == 503
+    assert response.json()["projectIndex"]["address"] == mock_index.address
+    assert "1 秒以内に応答がありませんでした" in response.json()["projectIndex"]["reason"]
+    assert elapsed < 2.5

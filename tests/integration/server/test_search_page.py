@@ -1,25 +1,32 @@
 from __future__ import annotations
 
 from collections.abc import Callable
-from typing import Any
+
+from .conftest import IndexSource, MockIndex, ServerEnv, sample_docs
+
+SEARCH_RESULT = {
+    "totalCount": 1,
+    "items": [
+        {
+            "id": "doc-2",
+            "path": "docs/doc-2.yaml",
+            "name": "文書 2",
+            "snippets": ["一覧のページングは先頭から"],
+        }
+    ],
+}
 
 
-def _source(make_source: Callable[..., Any], sample_file_set: Callable[..., dict[str, str]]) -> Any:
-    """文書 2 の本文だけが語「ページング」を含む sample を作る。"""
-    files = sample_file_set(
-        **{"docs/doc-2.yaml": "id: doc-2\nname: 文書 2\ndescription: 一覧のページングは先頭から\n"}
-    )
-    return make_source("sample", files)
+def _server(mock: MockIndex, make_server: Callable[..., ServerEnv]) -> ServerEnv:
+    """文書 2 だけが語「ページング」に当たる検索の結果を返す sample につなぐ。"""
+    mock.serve("sample", IndexSource(docs={None: sample_docs()}, search=SEARCH_RESULT))
+    return make_server(mock)
 
 
-def test_normal(
-    make_source: Callable[..., Any],
-    make_server: Callable[..., Any],
-    sample_file_set: Callable[..., dict[str, str]],
-) -> None:
+def test_normal(mock_index: MockIndex, make_server: Callable[..., ServerEnv]) -> None:
     """語を含む文書だけを一致した箇所つきで返す（正常系）。"""
     # 準備
-    env = make_server(_source(make_source, sample_file_set))
+    env = _server(mock_index, make_server)
     # 実行
     found = env.client.get("/_api/sources/sample/search", params={"q": "ページング"})
     body = found.json()
@@ -34,13 +41,11 @@ def test_normal(
 
 
 def test_error_when_query_invalid(
-    make_source: Callable[..., Any],
-    make_server: Callable[..., Any],
-    sample_file_set: Callable[..., dict[str, str]],
+    mock_index: MockIndex, make_server: Callable[..., ServerEnv]
 ) -> None:
     """空の語と長すぎる語を断る（異常系）。"""
     # 準備
-    env = make_server(_source(make_source, sample_file_set))
+    env = _server(mock_index, make_server)
     # 実行
     empty = env.client.get("/_api/sources/sample/search", params={"q": ""})
     long = env.client.get("/_api/sources/sample/search", params={"q": "x" * 201})
@@ -53,14 +58,10 @@ def test_error_when_query_invalid(
     assert "at most 200 characters" in long.json()["errors"][0]["reason"]
 
 
-def test_error_when_not_found(
-    make_source: Callable[..., Any],
-    make_server: Callable[..., Any],
-    sample_file_set: Callable[..., dict[str, str]],
-) -> None:
+def test_error_when_not_found(mock_index: MockIndex, make_server: Callable[..., ServerEnv]) -> None:
     """無い配信元・解決できないリビジョンを断る（異常系）。"""
     # 準備
-    env = make_server(_source(make_source, sample_file_set))
+    env = _server(mock_index, make_server)
     # 実行
     unknown = env.client.get("/_api/sources/unknown/search", params={"q": "a"})
     no_ref = env.client.get(

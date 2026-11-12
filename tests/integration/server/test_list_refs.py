@@ -1,24 +1,29 @@
 from __future__ import annotations
 
 from collections.abc import Callable
-from pathlib import Path
-from typing import Any
+
+from .conftest import IndexSource, MockIndex, ServerEnv, sample_docs
+
+REFS = {
+    "git": True,
+    "defaultRef": "develop",
+    "branches": [
+        {"name": "develop", "commit": "b2"},
+        {"name": "feat/x", "commit": "b2"},
+    ],
+    "tags": [{"name": "v0.1.0", "commit": "b2"}],
+    "commits": [
+        {"commit": "b2", "date": "2026-11-02T10:00:00+09:00", "subject": "docs: 改名"},
+        {"commit": "a1", "date": "2026-11-01T10:00:00+09:00", "subject": "init"},
+    ],
+}
 
 
-def test_normal(
-    make_source: Callable[..., Any],
-    make_server: Callable[..., Any],
-    add_worktree: Callable[..., Path],
-    commit_all: Callable[..., str],
-    run_git: Callable[..., str],
-) -> None:
+def test_normal(mock_index: MockIndex, make_server: Callable[..., ServerEnv]) -> None:
     """ブランチ・タグ・最近の commit を返す（正常系）。"""
     # 準備
-    source = make_source("sample")
-    commit_all(source.folder, {"docs/doc-1.yaml": "id: doc-1\nname: 新しい名前\n"}, "docs: 改名")
-    run_git(source.folder, "tag", "v0.1.0")
-    add_worktree(source.folder, "x")
-    env = make_server(source)
+    mock_index.serve("sample", IndexSource(docs={None: sample_docs()}, refs=REFS))
+    env = make_server(mock_index)
     # 実行
     response = env.client.get("/_api/sources/sample/refs")
     # 検証
@@ -32,32 +37,30 @@ def test_normal(
 
 
 def test_normal_when_non_git_source(
-    make_source: Callable[..., Any], make_server: Callable[..., Any]
+    mock_index: MockIndex, make_server: Callable[..., ServerEnv]
 ) -> None:
     """Git 管理外の配信元は git: false を返す（正常系）。"""
     # 準備
-    env = make_server(make_source("notes", git=False))
+    mock_index.serve("notes", IndexSource(docs={None: sample_docs()}, git=False))
+    env = make_server(mock_index)
     # 実行
     response = env.client.get("/_api/sources/notes/refs")
     # 検証
     body = response.json()
     assert response.status_code == 200
     assert body["git"] is False
-    assert body["branches"] == []
-    assert body["tags"] == []
-    assert body["commits"] == []
+    assert (body["branches"], body["tags"], body["commits"]) == ([], [], [])
 
 
 def test_error_when_source_not_found(
-    make_source: Callable[..., Any], make_server: Callable[..., Any]
+    sample_index: MockIndex, make_server: Callable[..., ServerEnv]
 ) -> None:
     """無い配信元を断る（異常系）。"""
     # 準備
-    env = make_server(make_source("sample"))
+    env = make_server(sample_index)
     # 実行
     response = env.client.get("/_api/sources/unknown/refs")
     # 検証
-    body = response.json()
     assert response.status_code == 404
     assert response.headers["content-type"].startswith("application/problem+json")
-    assert "unknown" in body["detail"]
+    assert "unknown" in response.json()["detail"]

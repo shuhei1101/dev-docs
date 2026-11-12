@@ -10,22 +10,12 @@ from typing import Any
 
 import httpx
 
+from .conftest import MockIndex
+
 SETTINGS_QUERY = "src/dev_docs/features/settings/query.py"
 MIGRATION_STEPS = (
     "steps:\n  - op: add\n    path: port\n    value: 8781\n    description: ポートを足す\n"
 )
-SLOW_CONFIG = (
-    "name: slow\n"
-    "documents:\n"
-    "  - id: note\n"
-    "    paths: [docs/*.yaml]\n"
-    "    schema: schemas/sample.schema.yaml\n"
-    "    converter: sleepy\n"
-    "converters:\n"
-    "  - id: sleepy\n"
-    "    run: [python3, scripts/sleepy.py]\n"
-)
-SLEEPY = "import sys\nimport time\nsys.stdin.read()\ntime.sleep(3)\nprint('# 眠ってから返した')\n"
 UPDATE_CALL = json.dumps(
     {
         "jsonrpc": "2.0",
@@ -35,6 +25,16 @@ UPDATE_CALL = json.dumps(
     }
 )
 NO_RESTART_WAIT_SEC = 3
+# 保留した要求がモックへ届くのを待つ上限
+REQUEST_WAIT_SEC = 30
+
+
+def _wait_for_docs_request(mock: MockIndex) -> None:
+    """文書の一覧の要求がモックへ届くまで待つ。"""
+    deadline = time.monotonic() + REQUEST_WAIT_SEC
+    while not any("/docs" in path for _, path, _ in mock.received):
+        assert time.monotonic() < deadline, "文書の取得がモックへ届かなかった"
+        time.sleep(0.05)
 
 
 def _slow_update(port: int) -> tuple[socket.socket, bytes]:
@@ -64,7 +64,7 @@ def _read_result(sock: socket.socket) -> dict[str, Any]:
 
 
 def test_normal(
-    make_source: Callable[..., Any],
+    sample_index: MockIndex,
     write_settings: Callable[..., Path],
     free_port: Callable[[], int],
     dev_docs_clone: Any,
@@ -76,7 +76,7 @@ def test_normal(
 ) -> None:
     """新しい commit を取り込み、依存を入れ直して起動し直す（正常系）。"""
     # 準備
-    settings = write_settings(make_source("sample"))
+    settings = write_settings(sample_index.address)
     state_dir = settings.parent / "state"
     port = free_port()
     process = start_serve_from_clone(dev_docs_clone.clone, settings, port)
@@ -102,7 +102,7 @@ def test_normal(
 
 
 def test_normal_when_up_to_date(
-    make_source: Callable[..., Any],
+    sample_index: MockIndex,
     write_settings: Callable[..., Path],
     free_port: Callable[[], int],
     dev_docs_clone: Any,
@@ -113,7 +113,7 @@ def test_normal_when_up_to_date(
 ) -> None:
     """上流に新しい commit が無ければ、何も変えずに返す（正常系）。"""
     # 準備
-    settings = write_settings(make_source("sample"))
+    settings = write_settings(sample_index.address)
     state_dir = settings.parent / "state"
     port = free_port()
     process = start_serve_from_clone(dev_docs_clone.clone, settings, port)
@@ -135,7 +135,7 @@ def test_normal_when_up_to_date(
 
 
 def test_normal_when_migration_needed(
-    make_source: Callable[..., Any],
+    sample_index: MockIndex,
     write_settings: Callable[..., Path],
     free_port: Callable[[], int],
     dev_docs_clone: Any,
@@ -146,7 +146,7 @@ def test_normal_when_migration_needed(
 ) -> None:
     """新しいバージョンに移し替えの手順があると、再起動せずに返す（正常系）。"""
     # 準備
-    settings = write_settings(make_source("sample"))
+    settings = write_settings(sample_index.address)
     state_dir = settings.parent / "state"
     port = free_port()
     process = start_serve_from_clone(dev_docs_clone.clone, settings, port)
@@ -155,8 +155,8 @@ def test_normal_when_migration_needed(
     dev_docs_clone.push_upstream(
         {
             **dev_docs_clone.bump_version("0.3.0"),
-            SETTINGS_QUERY: query.replace('SETTINGS_VERSION = "1"', 'SETTINGS_VERSION = "2"'),
-            "src/dev_docs/migrations/settings/2/steps.yaml": MIGRATION_STEPS,
+            SETTINGS_QUERY: query.replace('SETTINGS_VERSION = "2"', 'SETTINGS_VERSION = "3"'),
+            "src/dev_docs/migrations/settings/3/steps.yaml": MIGRATION_STEPS,
         },
         "migration",
     )
@@ -179,7 +179,7 @@ def test_normal_when_migration_needed(
 
 
 def test_error_when_pull_fails(
-    make_source: Callable[..., Any],
+    sample_index: MockIndex,
     write_settings: Callable[..., Path],
     free_port: Callable[[], int],
     dev_docs_clone: Any,
@@ -190,7 +190,7 @@ def test_error_when_pull_fails(
 ) -> None:
     """fast-forward できないと、クローンに触らず再起動もしない（異常系）。"""
     # 準備
-    settings = write_settings(make_source("sample"))
+    settings = write_settings(sample_index.address)
     state_dir = settings.parent / "state"
     port = free_port()
     process = start_serve_from_clone(dev_docs_clone.clone, settings, port)
@@ -215,7 +215,7 @@ def test_error_when_pull_fails(
 
 
 def test_error_when_restart_in_progress(
-    make_source: Callable[..., Any],
+    sample_index: MockIndex,
     write_settings: Callable[..., Path],
     free_port: Callable[[], int],
     dev_docs_clone: Any,
@@ -224,13 +224,10 @@ def test_error_when_restart_in_progress(
     call_tool: Callable[..., dict[str, Any]],
     started_count: Callable[[Path], int],
     wait_for_restart: Callable[..., None],
-    sample_file_set: Callable[..., dict[str, str]],
 ) -> None:
     """`restart` の停止を待っている間に `update` を呼ぶと、クローンに触らず断る（異常系）。"""
     # 準備
-    files = sample_file_set(**{"dev-docs.yaml": SLOW_CONFIG, "scripts/sleepy.py": SLEEPY})
-    slow = make_source("slow", files, git=False)
-    settings = write_settings(slow, extra="script_timeout_sec: 4")
+    settings = write_settings(sample_index.address)
     state_dir = settings.parent / "state"
     port = free_port()
     process = start_serve_from_clone(dev_docs_clone.clone, settings, port)
@@ -238,32 +235,27 @@ def test_error_when_restart_in_progress(
     head = dev_docs_clone.head()
     dev_docs_clone.push_upstream(dev_docs_clone.bump_version("0.3.0"), "upstream")
     started = started_count(state_dir)
+    sample_index.received.clear()
+    sample_index.hold.clear()
 
-    def convert() -> None:
-        with httpx.Client(timeout=30) as client:
-            call_tool(
-                client,
-                port,
-                "/_admin/mcp/",
-                "try_convert",
-                path=str(slow.folder),
-                file="docs/doc-1.yaml",
-            )
+    def fetch() -> None:
+        httpx.get(f"http://127.0.0.1:{port}/_api/sources/sample/docs", timeout=60)
 
-    converting = threading.Thread(target=convert)
-    # 実行（眠る変換の途中で、update の要求を送りかけたまま restart を呼び、残りを送る）
-    converting.start()
-    time.sleep(1)
+    pending = threading.Thread(target=fetch)
+    # 実行（project-index が応答しない文書の取得の途中で、update の要求を送りかけたまま restart を呼び、残りを送る）
+    pending.start()
+    _wait_for_docs_request(sample_index)
     sock, rest = _slow_update(port)
     with httpx.Client(timeout=30) as client:
         call_tool(client, port, "/_admin/mcp/", "restart")
-    time.sleep(0.3)
     sock.sendall(rest)
     result = _read_result(sock)
     sock.close()
-    converting.join(timeout=60)
+    sample_index.hold.set()
+    pending.join(timeout=60)
     wait_for_restart(state_dir, port, started)
     # 検証
     assert result["isError"] is True
     assert result["content"][0]["text"].startswith("RestartInProgressError")
     assert dev_docs_clone.head() == head
+    assert process.poll() is None

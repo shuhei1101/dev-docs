@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 from collections.abc import Callable
-from typing import Any
+
+from .conftest import MockIndex, ServerEnv
 
 EXPECTED_OPERATION_IDS = [
     "settings-get_settings_sources",
@@ -14,10 +15,10 @@ EXPECTED_OPERATION_IDS = [
 ]
 
 
-def test_normal(make_source: Callable[..., Any], make_server: Callable[..., Any]) -> None:
+def test_normal(sample_index: MockIndex, make_server: Callable[..., ServerEnv]) -> None:
     """画面の API だけを載せたスキーマを返す（正常系）。"""
     # 準備
-    env = make_server(make_source("sample"))
+    env = make_server(sample_index)
     # 実行
     response = env.client.get("/_api/openapi.json")
     # 検証

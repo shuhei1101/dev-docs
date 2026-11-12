@@ -1509,3 +1509,33 @@ test.describe("本文の用語のツールチップ", () => {
     await expect(page.getByRole("tooltip")).toHaveCount(0);
   });
 });
+
+test.describe("project-index に接続できないときの表示", () => {
+  // 文書の取得が 503 のとき、接続先と理由を画面全体のアラートに出し、再読み込みで取得を呼び直す（異常系）
+  test("project_index_unreachable_alert", async ({ page }) => {
+    // 準備
+    const api = await mockApi(page, {
+      document: () =>
+        problem(503, {
+          detail: "project-index（http://127.0.0.1:8786）に接続できませんでした。接続を拒否されました（Connection refused）",
+          projectIndex: {
+            address: "http://127.0.0.1:8786",
+            reason: "接続を拒否されました（Connection refused）",
+          },
+        }),
+    });
+    // 実行
+    await page.goto("/sample/docs/doc-1");
+    const alert = page.getByRole("alert").filter({ hasText: "project-index に接続できませんでした" });
+    await expect(alert).toBeVisible();
+    const before = api.callsOf("document").length;
+    await alert.getByRole("button", { name: "再読み込み" }).click();
+    // 検証
+    await expect(alert).toContainText("project-index を起動してから、再読み込みしてください。");
+    await expect(alert.locator("dd")).toHaveText([
+      "http://127.0.0.1:8786",
+      "接続を拒否されました（Connection refused）",
+    ]);
+    await expect.poll(() => api.callsOf("document").length).toBeGreaterThan(before);
+  });
+});
