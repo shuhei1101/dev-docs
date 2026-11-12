@@ -37,12 +37,12 @@ const NEXT_SCHEME = { system: "dark", dark: "light", light: "dark" } as const;
 
 type BaseDocument = { markdown: string; tableKeys: string[] } | null;
 
-/** 差分を見ているときの、本文の強調に渡す比較元と、目次の変更のマーカーの見出し */
+/** 差分を表示しているときの、本文の強調に指定する比較元と、目次の変更のマーカーの見出し */
 const diffView = (
   doc: { diff?: unknown; markdown?: string | null },
   base: BaseDocument | undefined,
 ): { base: BaseDocument; changed: Set<string> | undefined } => {
-  // 差分を見ていないか、比較元をまだ取っていない
+  // 差分を表示していないか、比較元をまだ取っていない
   if (!doc.diff || base === undefined)
     return { base: null, changed: undefined };
   return {

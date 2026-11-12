@@ -4,14 +4,14 @@ import { createRouter } from "@tanstack/react-router";
 import { ErrorFallback } from "@/app/error-fallback";
 import { routeTree } from "@/route-tree.gen";
 
-/** ルートの `loader` が使う依存 */
+/** ルートの `loader` が使用する依存 */
 export type RouterContext = { queryClient: QueryClient };
 
-/** クエリを文字列のまま読む（数字だけのリビジョン＝commit の短縮 ID を数値にしない） */
+/** クエリを文字列のまま解析する（数字だけのリビジョン＝commit の短縮 ID を数値にしない） */
 export const parseSearch = (search: string): Record<string, string> =>
   Object.fromEntries(new URLSearchParams(search));
 
-/** クエリを文字列のまま書く（値が `undefined` のキーは書かない） */
+/** クエリを文字列のまま生成する（値が `undefined` のキーは含めない） */
 export const stringifySearch = (search: Record<string, unknown>): string => {
   const params = new URLSearchParams();
   for (const [key, value] of Object.entries(search)) {

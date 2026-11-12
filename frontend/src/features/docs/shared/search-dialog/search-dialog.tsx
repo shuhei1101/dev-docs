@@ -34,7 +34,7 @@ type StatusProps = {
   revision: string | undefined;
 };
 
-/** 件数・読み込み中・失敗・一致なしの文言（変わるたびに読み上げる） */
+/** 件数・読み込み中・失敗・一致なしの文言（変わるたびに支援技術へ通知する） */
 const SearchStatus = ({
   sent,
   pending,
@@ -62,7 +62,7 @@ const SearchStatus = ({
   );
 };
 
-/** 開いている配信元・リビジョンの文書を語で探すダイアログ */
+/** 開いている配信元・リビジョンの文書を単語で検索するダイアログ */
 export const SearchDialog = ({
   open,
   onOpenChange,

@@ -27,7 +27,7 @@ export const SHORTCUTS = [
   },
 ] as const satisfies readonly ShortcutDef[];
 
-/** 画面と 1 文字のショートカットの設定に合う定義とキーを返す */
+/** 画面と 1 文字のショートカットの設定に合う定義とキーを返却する */
 export const shortcutsFor = (
   screen: ScreenId,
   singleKey: boolean,

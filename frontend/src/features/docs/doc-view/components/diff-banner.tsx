@@ -16,7 +16,7 @@ type Props = {
   onClear: () => void;
 };
 
-/** リビジョンのメニューと同じ並び（`defaultRef`・ブランチ・タグ・最近の commit）。一覧に無い値は先頭に足す */
+/** リビジョンのメニューと同じ並び（`defaultRef`・ブランチ・タグ・最近の commit）。一覧に無い値は先頭に追加する */
 const choices = (refs: RefsResponse, current: string): string[] => {
   const all = [
     refs.defaultRef,

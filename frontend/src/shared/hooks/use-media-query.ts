@@ -1,6 +1,6 @@
 import { useSyncExternalStore } from "react";
 
-/** CSS のメディアクエリに今当たっているかを返す(画面幅の変化にも追従する) */
+/** CSS のメディアクエリに今一致しているかを返却する(画面幅の変化にも追従する) */
 export const useMediaQuery = (query: string): boolean =>
   useSyncExternalStore(
     (notify) => {

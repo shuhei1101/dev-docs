@@ -1,4 +1,4 @@
-/** 表の直前に置く表のマーカー（`<!-- table: ... -->`） */
+/** 表の直前に配置する表のマーカー（`<!-- table: ... -->`） */
 const TABLE_MARKER = /^<!--\s*table:[^>]*-->\s*$/;
 /** コードブロックの始まりと終わり（```・~~~） */
 const FENCE = /^\s{0,3}(`{3,}|~{3,})/;
@@ -22,7 +22,7 @@ type Scan = {
   lastText: { line: number; text: string } | null;
 };
 
-/** コードブロックの始まり・中・終わりの行なら状態を進めて true を返す */
+/** コードブロックの始まり・中・終わりの行なら状態を進めて true を返却する */
 const scanFence = (scan: Scan, line: string): boolean => {
   const opened = FENCE.exec(line);
   if (scan.fence !== null) {
@@ -41,13 +41,13 @@ const scanFence = (scan: Scan, line: string): boolean => {
   return true;
 };
 
-/** 表の直前の行が表のマーカーなら、その行を返す */
+/** 表の直前の行が表のマーカーなら、その行を返却する */
 const markerOf = (scan: Scan): TableBlock["marker"] =>
   scan.lastText !== null && TABLE_MARKER.test(scan.lastText.text)
     ? scan.lastText
     : null;
 
-/** Markdown の表を出る順に表のキーと対にし、直前の表のマーカーと `+columns` の有無を返す */
+/** Markdown の表を出る順に表のキーと対にし、直前の表のマーカーと `+columns` の有無を返却する */
 export const findTables = ({
   markdown,
   tableKeys,
