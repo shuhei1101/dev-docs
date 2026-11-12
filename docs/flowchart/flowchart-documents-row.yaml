@@ -1,7 +1,7 @@
 # yaml-language-server: $schema=https://raw.githubusercontent.com/shuhei1101/knowledge/84c29878db60c2e374582270437504786a89fa4e/schemas/flowchart.schema.yaml
 id: flowchart-documents-row
 kind: flowchart
-name: documentsの行の判定
+name: documentsの行の判定 判定フローチャート
 description: 文書を既存の documents の行に入れるか、新しい行（新しいスキーマ）を作るかを判定し、配信元の設定に文書の種類を追加するときに参照する。
 tags:
 - name: topic:判定フローチャート
@@ -17,12 +17,12 @@ items:
 - id: overview
   name: 概要
   body: |-
-    文書を既存の documents の行に入れるか、新しい行（新しいスキーマ）を作るかを決める判定フローチャート
+    文書を既存の documents の行に入れるか、新しい行（新しいスキーマ）を作るかを判定し、配信元の設定に文書の種類を追加するときに参照する。
 
     documents の行は、`project-index.yaml` の `documents[]` の 1 行です。
     各キーは [設定](id:docs/guide/設定.md) の `documents[]` にあります。
-- id: flow-01
-  group: 判定フローチャート
+- id: documents-row-flow-01
+  group: documentsの行の判定 判定フローチャート
   name: 判定フロー
   body: |-
     ```mermaid
@@ -51,8 +51,8 @@ items:
       Q5 -->|YES| R1
       Q5 -->|NO| R2
     ```
-- id: flow-02
-  group: 判定フローチャート
+- id: documents-row-flow-02
+  group: documentsの行の判定 判定フローチャート
   name: ※1〜※3 の説明
   body: |-
     - **※1 種類**: 文書が説明する対象の種類（規約・シナリオ・設計書 など）。`describe(source)` の `kinds[]` の名前（行の `title`・スキーマの `title`）と比べる

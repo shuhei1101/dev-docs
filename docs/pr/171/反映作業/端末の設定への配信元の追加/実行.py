@@ -7,6 +7,8 @@ import urllib.request
 from pathlib import Path
 
 API = "http://127.0.0.1:8786/settings/sources"
+# 追加した行の id の記録（切り戻しは、ここに記録した行だけを削除する）
+STATE = Path("~/.local/state/dev-docs/反映作業-pr171-追加した配信元.json").expanduser()
 ROWS = [
     {
         "id": "dev-docs",
@@ -76,6 +78,9 @@ for row in ROWS:
     # 適用（サーバーが端末の設定を書き換えて読み直す）
     status, body = request("POST", {"source": row})
     if status == 201 and body.get("result") == "added":
+        added = json.loads(STATE.read_text(encoding="utf-8")) if STATE.is_file() else []
+        STATE.parent.mkdir(parents=True, exist_ok=True)
+        STATE.write_text(json.dumps(sorted({*added, row["id"]})), encoding="utf-8")
         print(f"{step}: changed")
     else:
         print(f"{step}: failed")

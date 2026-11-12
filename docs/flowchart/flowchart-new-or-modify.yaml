@@ -1,7 +1,7 @@
 # yaml-language-server: $schema=https://raw.githubusercontent.com/shuhei1101/knowledge/84c29878db60c2e374582270437504786a89fa4e/schemas/flowchart.schema.yaml
 id: flowchart-new-or-modify
 kind: flowchart
-name: 新しく作るか修正するかの判定
+name: 新しく作るか修正するかの判定 判定フローチャート
 description: 同じ話題の文書を検索して、新しく作るか既存の文書を修正するかを判定し、文書を記載する前に参照する。
 tags:
 - name: topic:判定フローチャート
@@ -14,9 +14,9 @@ items:
 - id: overview
   name: 概要
   body: |-
-    文書を記載する前に、同じ話題の文書を検索で引き、新しく作るか既存の文書を修正するかを決める判定フローチャート
-- id: flow-01
-  group: 判定フローチャート
+    同じ話題の文書を検索して、新しく作るか既存の文書を修正するかを判定し、文書を記載する前に参照する。
+- id: new-or-modify-flow-01
+  group: 新しく作るか修正するかの判定 判定フローチャート
   name: 判定フロー
   body: |-
     ```mermaid
@@ -42,15 +42,15 @@ items:
       Q4 -->|YES| R2
       Q4 -->|NO| R3
     ```
-- id: flow-02
-  group: 判定フローチャート
+- id: new-or-modify-flow-02
+  group: 新しく作るか修正するかの判定 判定フローチャート
   name: ※1〜※4 の説明
   body: |-
     - **※1 タグ**: 文書の `tags`。`search_docs` の `filter` で `tags` を指して引く。配信元のタグは `group_by: tags` で一覧できる
     - **※2 エイリアス**: 文書の別名。`search_docs` の用語の検索で、`alias_type` を持つ文書の `name` と `aliases` の値を照合して引く（[#11](https://github.com/shuhei1101/dev-docs/issues/11) の仕様）
     - **※3 全文**: 文書の本文。`search_docs` の `filter` で `body` を指して引く
     - **※4 主題**: 文書が説明する対象 1 つ
-- id: next-01
+- id: new-or-modify-next-01
   name: 続けて決めること
   body: |-
     新しい文書を作るときは、続けて [documentsの行の判定](id:flowchart-documents-row) で入れる行を決めます。
