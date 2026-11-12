@@ -25,6 +25,7 @@ import { useLastDocStore } from "@/shared/stores/last-doc";
 import { usePreferencesStore } from "@/shared/stores/preferences";
 
 const LOADING_DELAY_MS = 1000;
+const UNREACHABLE_TITLE_ID = "project-index-unreachable-title";
 
 type Dialog =
   | { kind: "edit"; index: number | null }
@@ -41,7 +42,12 @@ type SourceListProps = {
 };
 
 /** 配信元の一覧。取得を待つ間は読み込み中の表示、0 件のときは配信元が無いことの表示を出す */
-const SourceList = ({ sources, loading, onEdit, onRemove }: SourceListProps) => {
+const SourceList = ({
+  sources,
+  loading,
+  onEdit,
+  onRemove,
+}: SourceListProps) => {
   if (sources === undefined) return loading ? <SourceSkeleton /> : null;
   if (sources.length === 0) {
     return (
@@ -109,6 +115,8 @@ export const SettingsScreen = () => {
             </h2>
             <Button
               size="sm"
+              disabled={unreachable !== null}
+              aria-describedby={unreachable ? UNREACHABLE_TITLE_ID : undefined}
               onClick={() => setDialog({ kind: "edit", index: null })}
             >
               <Plus />
@@ -118,6 +126,7 @@ export const SettingsScreen = () => {
           {unreachable ? (
             <ProjectIndexUnreachableAlert
               {...unreachable}
+              titleId={UNREACHABLE_TITLE_ID}
               onReload={() => void query.refetch()}
             />
           ) : (
@@ -135,7 +144,9 @@ export const SettingsScreen = () => {
           </h2>
           <div className="flex items-center justify-between gap-4">
             <div>
-              <Label htmlFor="single-key">1 文字のショートカットを使用する</Label>
+              <Label htmlFor="single-key">
+                1 文字のショートカットを使用する
+              </Label>
               <p className="text-xs text-muted-foreground">
                 / で検索、?
                 でショートカットの一覧を開きます。この端末のブラウザに保存します。

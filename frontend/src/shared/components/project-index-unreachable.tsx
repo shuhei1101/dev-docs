@@ -20,17 +20,22 @@ export const toProjectIndexUnreachable = (
   return parsed.success ? parsed.data.projectIndex : null;
 };
 
-type Props = ProjectIndexUnreachable & { onReload: () => void };
+type Props = ProjectIndexUnreachable & {
+  onReload: () => void;
+  /** 見出しの要素の id。接続できない間に押せない操作の `aria-describedby` から指す */
+  titleId?: string;
+};
 
 /** project-index に接続できなかったことと、接続先・理由・再読み込みを出す */
 export const ProjectIndexUnreachableAlert = ({
   address,
   reason,
   onReload,
+  titleId,
 }: Props) => (
   <Alert variant="destructive">
     <CircleAlert aria-hidden="true" />
-    <AlertTitle>project-index に接続できませんでした</AlertTitle>
+    <AlertTitle id={titleId}>project-index に接続できませんでした</AlertTitle>
     <AlertDescription className="space-y-3">
       <p className="text-pretty text-foreground">
         project-index を起動してから、再読み込みしてください。

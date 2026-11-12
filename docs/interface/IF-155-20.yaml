@@ -120,7 +120,7 @@ status_codes:
     condition: 返した（配信元が 0 件でも 200）
   - code: '503'
     condition: project-index につながらない
-    notes: つながらなかった project-index のアドレスと理由
+    notes: 'つながらなかった project-index のアドレスと理由（`projectIndex.address`・`projectIndex.reason`）。`detail` は `project-index（{address}）に接続できませんでした。{reason}`'
 constraints:
   - item: 認可
     constraint: 制限なし（`127.0.0.1` でだけ待ち受ける）

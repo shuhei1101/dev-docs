@@ -659,7 +659,7 @@ status_codes:
     notes: '`missing`（`source`・`not_served`・`ref`・`doc`）と値、配信していない配信元は `errors[]` に外した理由'
   - code: '503'
     condition: project-index につながらない
-    notes: つながらなかった project-index のアドレスと理由
+    notes: 'つながらなかった project-index のアドレスと理由（`projectIndex.address`・`projectIndex.reason`）。`detail` は `project-index（{address}）に接続できませんでした。{reason}`'
 constraints:
   - item: 変換の制限時間
     constraint: '`converters[]` のスクリプトは project-index が実行し、制限時間で止めた結果を変換の失敗として返す。dev-docs は project-index の変換の失敗を `conversionError` に入れる'
