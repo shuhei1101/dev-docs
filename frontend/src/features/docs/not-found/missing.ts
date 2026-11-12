@@ -61,7 +61,7 @@ export const describeMissing = (
       return {
         kind: "not_served",
         heading: `配信元 ${value} を配信していません`,
-        description: "起動時の検証で、配信から除外しました。",
+        description: "project-index が起動時の検証で、配信から除外しました。",
         details: [
           ...(errors ?? []).map((error) => ({
             label: "除外した理由",

@@ -8,6 +8,10 @@ import { SourceSkeleton } from "@/features/settings/settings/components/source-s
 import { SourceTable } from "@/features/settings/settings/components/source-table";
 import type { SettingsSourceRow } from "@/shared/api/generated/model";
 import { useSettingsGetSettingsSources } from "@/shared/api/generated/settings/settings";
+import {
+  ProjectIndexUnreachableAlert,
+  toProjectIndexUnreachable,
+} from "@/shared/components/project-index-unreachable";
 import { ShortcutDialog } from "@/shared/components/shortcut-dialog/shortcut-dialog";
 import { SkipLink } from "@/shared/components/skip-link";
 import { Topbar } from "@/shared/components/topbar/topbar";
@@ -51,6 +55,7 @@ const SourceList = ({ sources, loading, onEdit, onRemove }: SourceListProps) => 
 export const SettingsScreen = () => {
   const query = useSettingsGetSettingsSources();
   const sources = query.data?.sources;
+  const unreachable = toProjectIndexUnreachable(query.error);
   const loading = useDelayedFlag(query.isPending, LOADING_DELAY_MS);
   const router = useRouter();
   const lastDoc = useLastDocStore((state) => state.href);
@@ -110,12 +115,19 @@ export const SettingsScreen = () => {
               配信元を追加
             </Button>
           </div>
-          <SourceList
-            sources={sources}
-            loading={loading}
-            onEdit={(index) => setDialog({ kind: "edit", index })}
-            onRemove={(index) => setDialog({ kind: "remove", index })}
-          />
+          {unreachable ? (
+            <ProjectIndexUnreachableAlert
+              {...unreachable}
+              onReload={() => void query.refetch()}
+            />
+          ) : (
+            <SourceList
+              sources={sources}
+              loading={loading}
+              onEdit={(index) => setDialog({ kind: "edit", index })}
+              onRemove={(index) => setDialog({ kind: "remove", index })}
+            />
+          )}
         </section>
         <section aria-labelledby="keyboard-heading" className="space-y-3">
           <h2 id="keyboard-heading" className="text-lg font-semibold">

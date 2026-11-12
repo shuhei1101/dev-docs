@@ -30,7 +30,7 @@ export const StatusBadge = ({ source }: Props) => {
   const { text, Icon, variant } = LABELS[source.status];
   const notes: string[] = [];
   if (source.status === "not_served") {
-    notes.push("起動時の検証で除外しました。");
+    notes.push("project-index が起動時の検証で除外しました。");
     for (const error of source.errors ?? [])
       notes.push(`${error.path} ${error.reason}`);
   }
@@ -40,7 +40,7 @@ export const StatusBadge = ({ source }: Props) => {
   }
   if (source.configVersion) {
     notes.push(
-      `設定のバージョン ${source.configVersion.config}（サーバーが読み込めるのは ${source.configVersion.server}）`,
+      `設定のバージョン ${source.configVersion.config}（project-index が読み込めるのは ${source.configVersion.server}）`,
     );
   }
   return (
