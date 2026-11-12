@@ -236,6 +236,25 @@ def test_render_example_when_hook() -> None:
     assert result.messages[0].text.index("はじめ") < result.messages[0].text.index("おわり")
 
 
+def test_render_example_when_agent() -> None:
+    """エージェントのシステムプロンプトは 1 件につなぐ（正常系）。"""
+    # 準備
+    doc = _doc(
+        kind="agent",
+        lang="ja",
+        parts=[
+            {"id": "first", "texts": [{"lang": "ja", "text": "はじめ\n"}]},
+            {"id": "second", "texts": [{"lang": "ja", "text": "おわり\n"}]},
+        ],
+    )
+    compiled, errors = compile_parts(doc, env=build_environment())
+    # 実行
+    result = render_example(doc, compiled=compiled, syntax_errors=errors, values={}, lang="ja")
+    # 検証
+    assert len(result.messages) == 1
+    assert result.messages[0].role is None
+    assert result.messages[0].text.index("はじめ") < result.messages[0].text.index("おわり")
+
 def test_render_example_when_lang_missing() -> None:
     """その言語の本文が無い部品（正常系）。"""
     # 準備

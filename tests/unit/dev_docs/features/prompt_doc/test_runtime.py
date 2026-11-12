@@ -118,6 +118,15 @@ def test_load_prompts(tmp_path: Path) -> None:
     assert set(result.prompts) == {"a", "mcp/b"}
 
 
+def test_load_prompts_when_agent(tmp_path: Path) -> None:
+    """エージェントのシステムプロンプトを読む（正常系）。"""
+    # 準備
+    _write(tmp_path, "a.yaml", _prompt("a", kind="agent"))
+    # 実行
+    result = load_prompts(tmp_path, required=["a"])
+    # 検証
+    assert result.prompts["a"].doc.kind == "agent"
+
 def test_load_prompts_when_schema_violation(tmp_path: Path) -> None:
     """必須のキーが無い（異常系）。"""
     # 準備
