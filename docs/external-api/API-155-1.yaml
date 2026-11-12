@@ -6,7 +6,7 @@ used_in:
   - src/dev_docs/integrations/project_index/
 verification:
   state: 未確認
-  detail: 提供する側の shuhei1101/project-index#14 が未実装のため、Issue に記載した入出力に沿ったモックで確かめる。本物との照合は #164
+  detail: '提供する側の shuhei1101/project-index#14 は project-index の c19c617（#15）で実装されたが、入出力がこの設計書と異なる（文書の一覧に値・バージョン・`unreadable` が無い、配信元の設定に `id`・`git`・`defaultRef`・`diffIgnoreKeys` と解いたスキーマが無い、文書の詳細を project-index が変換して `value`・`markdown`・`updatedAt` で返す、検討事項の一覧が `decisions[].folders`、端末の設定の行が `row` に包まれず `outside_read` を返さない、行の追加の本文が `{source}` で応答が `result: added | exists`）。この作業 PR は Issue に記載した入出力に沿ったモックで確かめ、本物との照合と付け替えは #164 で行う'
 version:
   api_version: 未定（shuhei1101/project-index#14 で決まる）
   checked_on: '2026-11-12'

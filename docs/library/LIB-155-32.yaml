@@ -32,8 +32,9 @@ license: BSD-3-Clause
 official_url: https://www.python-httpx.org/
 docs_url: https://www.python-httpx.org/async/
 verification:
-  state: 未確認
-  detail: project-index の読み取り API の呼び出しでの動作は実装で確かめる。今は開発の依存（FastAPI の `TestClient`・結合テスト）として 0.28.1 を使っている
+  state: 済
+  date: '2026-11-12'
+  detail: httpx 0.28.1 の `AsyncClient` で、`MockTransport` の応答を `base_url` 付きの要求で受けられること、待ち受けていないポートへの要求が `ConnectError` になること、本文を分けて返す応答を `asyncio.timeout` で要求全体ごと打ち切れることを確かめた。`params` の `None` の値は省かれず `ref=` のように空の値で送られるため、呼び出しは `None` の値を除いて渡す
 selection:
   candidates: 標準ライブラリの `urllib.request` と比べた。
   decision: 開発の依存として既に使っていて追加の取り込みが無く、`AsyncClient` で FastAPI のイベントループを止めずに待て、`MockTransport` で単体テストの応答を差し替えられるため。`urllib.request` は同期だけで、待つ間 `asyncio.to_thread` が要る。
