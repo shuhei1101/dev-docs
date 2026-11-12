@@ -80,13 +80,13 @@ requirements:
     name: mdmark の読み込み元
     english_name: mdmark_source
     category: 保守性
-    external_constraint: 'jsDelivr は `@master` を CDN で 12 時間、ブラウザで 7 日キャッシュする（`cache-control: public, max-age=604800, s-maxage=43200`）'
+    external_constraint: 'jsDelivr はタグを 1 年キャッシュし（`cache-control: public, max-age=31536000, s-maxage=31536000, immutable`）、ブランチを CDN で 12 時間、ブラウザで 7 日キャッシュする。mdmark は 0.x の間 master を更新せず、スプリントの区切りで develop にタグを打つ'
     source_kind: ユーザー要望
     source: https://github.com/shuhei1101/dev-docs/issues/15
-    value: jsDelivr の mdmark の master ブランチ（`@master` の `dist/index.js`・`dist/index.css`）を読み、タグを固定せず integrity を付けない
-    rationale: mdmark のリリースのたびに読み込み先を書き換えずに追従するため。develop はそのたびに `dist/` をビルドする手間がかかるので、リリースのたびに `dist/` が入る master を読む。中身が変わるため integrity は付けられない
-    measurement: 文書の画面を開き、`@master` の `dist/index.js`・`dist/index.css` が 200 で読まれることを確かめる
-    overflow: リリースはキャッシュが切れるまで届かない。すぐ届けるときは purge.jsdelivr.net で CDN のキャッシュを削除する
+    value: jsDelivr の mdmark の develop に打ったタグ（`@v0.11.0` の `dist/index.js`・`dist/index.css`）を参照し、integrity を付けない
+    rationale: ビルドが要る mdmark の `dist/` は、develop に打ったタグで配られる。タグで固定し、develop の壊れた変更をすぐには受け取らない。上げるときは `MDMARK_URL`・`MDMARK_CSS_URL` のタグを書き換える
+    measurement: 文書の画面を開き、`@v0.11.0` の `dist/index.js`・`dist/index.css` が 200 で読まれることを確かめる
+    overflow: 新しいタグの機能は、読み込み先のタグを書き換えるまで届かない
     refs:
       - LIB-155-9#
       - MOD-155-25#constants[MDMARK_URL]

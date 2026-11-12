@@ -2,11 +2,11 @@ id: LIB-155-9
 title: "mdmark"
 kind: "CDN の JS"
 version:
-  current: master
+  current: v0.11.0
   latest: v0.10.0
   checked_on: '2026-11-09'
-  source: https://cdn.jsdelivr.net/gh/shuhei1101/mdmark@master/・`package.json` の `devDependencies`
-  pinning: '固定しない。リリースのたびに `dist/` が入る master ブランチを読み、中身が変わるため integrity を付けない。jsDelivr は `@master` を CDN で 12 時間、ブラウザで 7 日キャッシュする（`cache-control: public, max-age=604800, s-maxage=43200`）。リリースをすぐ届けるときは purge.jsdelivr.net で CDN のキャッシュを削除する。文書の取得の結合テストで図を点検する CLI は、`devDependencies` の `github:shuhei1101/mdmark#v0.10.0` で固定する'
+  source: https://cdn.jsdelivr.net/gh/shuhei1101/mdmark@v0.11.0/・`package.json` の `devDependencies`
+  pinning: 'mdmark の develop にスプリントの区切りで打つタグで固定する。上げるときは、タグを書き換える。jsDelivr はタグを 1 年キャッシュする（`cache-control: public, max-age=31536000, s-maxage=31536000, immutable`）。integrity は付けない。文書の取得の結合テストで図を点検する CLI は、`devDependencies` の `github:shuhei1101/mdmark#v0.10.0` で固定する'
 catalogs:
   - name: API
     version: v0.10.0
