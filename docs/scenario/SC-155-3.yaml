@@ -71,7 +71,8 @@ scenarios:
       - name: 端末の設定
         description: '`sources` に sample と notes の 2 行を持ち、`project_index` を持たない前のバージョンの `settings.yaml`'
       - name: project-index
-        description: テスト用の一時フォルダで起動した project-index。端末の設定の `sources` は空
+        description: テスト用の一時フォルダで、空きポートで起動した project-index。端末の設定の `sources` に extra の 1 行がある
+        notes: '`migrate` の引数 `--project-index` にそのアドレスを渡す'
     flow: |-
       ```mermaid
       sequenceDiagram
@@ -85,19 +86,22 @@ scenarios:
         AD-->>U: 新しいバージョンと、移し替えが要ること（再起動しない）
         U->>MG: dev-docs migrate --plan
         MG-->>U: 当てる手順の一覧（sources を project-index へ写して除く・project_index を書き足す）
-        U->>MG: dev-docs migrate
+        U->>MG: dev-docs migrate --project-index {アドレス}
         MG->>CF: バックアップを取る
-        MG->>PI: 端末の設定の配信元の保存（sample と notes）
+        MG->>PI: 端末の設定の配信元の行の追加（sample と notes。既にある行は変えない）
         MG->>CF: sources を除き、project_index と version を書き換える
         MG-->>U: 当てた手順
         U->>AD: restart
       ```
     expected:
-      - project-index の端末の設定の `sources` に、sample と notes の行が前の値のまま並ぶ
-      - dev-docs の端末の設定が `sources` を持たず、`project_index` に project-index のアドレス、`version` に新しいバージョンを持つ
+      - project-index の端末の設定の `sources` に、extra の行が変わらずに残り、sample と notes の行が前の値のまま加わる
+      - dev-docs の端末の設定が `sources` を持たず、`project_index` に `--project-index` で渡したアドレス、`version` に新しいバージョンを持つ
       - 当てる前の dev-docs の端末の設定のバックアップがある
       - '`restart` の後、`sample` と `notes` の文書を画面で読める'
     test: test_normal_when_sources_moved_to_project_index
+    notes:
+      project-index のアドレス: '`--project-index` を省くと、`PROJECT_INDEX_PORT`（無ければ既定の 8786）から `http://127.0.0.1:{ポート}` を組む'
+      既にある行: project-index の端末の設定の行は変えず、行ごとに追加する。同じ id の行があれば、その行は移さずに id と、dev-docs の端末の設定に残したことを応答に出す（dev-docs の `sources` からも除かない）
   - name: 異常シナリオ（sources を移すときに project-index につながらない）
     setup:
       - name: Mock
@@ -106,6 +110,7 @@ scenarios:
         description: 正常シナリオ（端末の設定の sources を project-index へ移す）と同じ前のバージョンの `settings.yaml`
       - name: project-index
         description: 起動していない
+        notes: '`--project-index` に、何も待ち受けていない空きポートのアドレスを渡す'
     flow: |-
       ```mermaid
       sequenceDiagram
@@ -114,9 +119,9 @@ scenarios:
         participant CF as 端末の設定
         participant PI as project-index
 
-        U->>MG: dev-docs migrate
+        U->>MG: dev-docs migrate --project-index {アドレス}
         MG->>CF: バックアップを取る
-        MG->>PI: 端末の設定の配信元の保存（つながらない）
+        MG->>PI: 端末の設定の配信元の行の追加（つながらない）
         MG->>CF: バックアップから戻す
         MG-->>U: project-index につながらないことと、project-index を起動してからやり直す案内
       ```

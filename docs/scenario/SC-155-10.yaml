@@ -172,6 +172,30 @@ scenarios:
       - '`127.0.0.1:8781` を待ち受ける dev-docs のプロセスが 1 つだけあり、端末の設定の `clone` のクローンから起動している'
       - つなぎ直した後、管理の MCP（`/_admin/mcp`）のツールが 3 つ返る
     test: test_normal_when_started_by_session_start_with_xdg_config_home
+  - name: 正常シナリオ（待ち受けているサーバーがあるときは文脈を注入しない）
+    setup:
+      - name: Mock
+        description: なし（実環境で実行。Claude Code は `claude -p` で動かす）
+      - name: dev-docs
+        description: SessionStart で起動する正常シナリオと同じ端末の設定で待ち受けている dev-docs
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        actor U as 利用者
+        participant CC as Claude Code
+        participant HK as SessionStart のフック
+        participant DD as dev-docs
+
+        U->>CC: sample のワークツリーでセッションを始める
+        CC->>HK: SessionStart
+        HK->>DD: ポートにつながる
+        HK-->>CC: 文脈を追加せずに戻る
+        CC->>DD: /_admin/mcp につながる
+      ```
+    expected:
+      - フックが 0 の終了コードで戻り、セッションの文脈に `/mcp` の再接続の案内が入らない
+      - dev-docs のプロセスは増えない
+    test: test_normal_when_listening_server_not_injected
   - name: 異常シナリオ（SessionStart で起動できない）
     setup:
       - name: Mock
