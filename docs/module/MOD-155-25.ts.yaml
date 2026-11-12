@@ -8,14 +8,14 @@ constants:
     title: mdmark の読み込み先
     container: features/docs/doc-view/hooks/use-mdmark.ts
     usecase: 文書を読む
-    summary: jsDelivr の GitHub の master ブランチの URL（`mount` を公開する入口）。タグを固定せず、master に入った mdmark のリリースを読む。integrity は付けない
-    value: '"https://cdn.jsdelivr.net/gh/shuhei1101/mdmark@master/dist/index.js"'
+    summary: jsDelivr の GitHub の、mdmark の develop に打ったタグの URL（`mount` を公開する入口）。タグで中身を固定し、上げるときはタグを書き換える。integrity は付けない
+    value: '"https://cdn.jsdelivr.net/gh/shuhei1101/mdmark@v0.11.0/dist/index.js"'
   - name: MDMARK_CSS_URL
     title: mdmark の CSS の読み込み先
     container: features/docs/doc-view/hooks/use-mdmark.ts
     usecase: 文書を読む
-    summary: '`MDMARK_URL` と同じブランチの `dist/index.css`'
-    value: '"https://cdn.jsdelivr.net/gh/shuhei1101/mdmark@master/dist/index.css"'
+    summary: '`MDMARK_URL` と同じタグの `dist/index.css`'
+    value: '"https://cdn.jsdelivr.net/gh/shuhei1101/mdmark@v0.11.0/dist/index.css"'
 functions:
   - name: useMdmark
     title: mdmark の描画
