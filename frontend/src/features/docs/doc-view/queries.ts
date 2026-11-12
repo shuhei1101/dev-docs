@@ -31,7 +31,7 @@ export const documentQueryOptions = (
     placeholderData: keepPreviousData,
   });
 
-/** 目次の変更のマーカーと本文の強調に使う、比較元のリビジョンの同じ文書の `markdown` と `tableKeys`。比較元に無いか本文が無ければ null */
+/** 目次の変更のマーカーと本文の強調に使用する、比較元のリビジョンの同じ文書の `markdown` と `tableKeys`。比較元に無いか本文が無ければ null */
 export const baseMarkdownQueryOptions = (
   source: string,
   path: string,
@@ -62,7 +62,7 @@ export const baseMarkdownQueryOptions = (
 
 type LoaderContext = { queryClient: QueryClient };
 
-/** ルートの loader。文書を読み、404 は見つからない画面へ回す */
+/** ルートの loader。文書を取得し、404 は見つからない画面へ回す */
 export const loadDocument = async ({
   context,
   params,

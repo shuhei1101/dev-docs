@@ -46,7 +46,7 @@ const sections = (markdown: string): Map<string, string> => {
   return result;
 };
 
-/** 2 つの Markdown を見出し 2・3 で区切り、中身が違う・比較元に無い見出しの文字列を返す */
+/** 2 つの Markdown を見出し 2・3 で区切り、中身が違う・比較元に無い見出しの文字列を返却する */
 export const changedSections = (
   markdown: string,
   baseMarkdown: string | null,

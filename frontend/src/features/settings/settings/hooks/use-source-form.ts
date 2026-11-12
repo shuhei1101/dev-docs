@@ -31,7 +31,7 @@ export const useSourceForm = ({ sources, index, onSaved }: Options) => {
     mode: "onSubmit",
     reValidateMode: "onChange",
   });
-  // 項目のエラーを描画で読んで購読する
+  // 項目のエラーを描画で参照して購読する
   const { errors } = form.formState;
   const [summary, setSummary] = useState<{ path: string; message: string }[]>(
     [],

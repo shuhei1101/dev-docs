@@ -6,12 +6,12 @@ import { useSettingsGetSettingsSources } from "@/shared/api/generated/settings/s
 import { useViewListRefs } from "@/shared/api/generated/view/view";
 import { MissingSchema } from "@/shared/core/schema";
 
-/** 見つからない画面に出す内容と、読んだ配信元・リビジョンの一覧 */
+/** 見つからない画面に出す内容と、取得した配信元・リビジョンの一覧 */
 export const useMissingView = (data: unknown) => {
   const params = useParams({ strict: false }) as { source?: string };
   const search = useSearch({ strict: false }) as { rev?: string };
   const kind = MissingSchema.safeParse(data).data?.missing;
-  // 無い配信元・配信していない配信元のときは、リビジョンの一覧を読まない
+  // 無い配信元・配信していない配信元のときは、リビジョンの一覧を取得しない
   const source =
     kind === "source" || kind === "not_served" ? undefined : params.source;
   const settings = useSettingsGetSettingsSources().data;

@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-/** 文書の画面の URL のクエリ。読めない値は捨てる */
+/** 文書の画面の URL のクエリ。解析できない値は捨てる */
 export const DocViewSearchSchema = z.object({
   rev: z.string().min(1).optional().catch(undefined),
   base: z.string().min(1).optional().catch(undefined),

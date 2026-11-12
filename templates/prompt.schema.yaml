@@ -1,6 +1,6 @@
 $schema: https://json-schema.org/draft/2020-12/schema
 title: プロンプト
-description: LLM の呼び出し・フックの注入文・MCP の instructions・ツールの description の本文を、部品の配列と変数の定義で記載する YAML。1 ファイル = 1 プロンプト。`x-` で始まるキーはどの階層にも配置でき、検査では無視する。
+description: LLM の呼び出し・フックの注入文・MCP の instructions・ツールの description・エージェントのシステムプロンプトの本文を、部品の配列と変数の定義で記載する YAML。1 ファイル = 1 プロンプト。`x-` で始まるキーはどの階層にも配置でき、検査では無視する。
 type: object
 required:
   - id
@@ -34,13 +34,14 @@ properties:
       - 文書の MCP を使用する場面と grep・Read が向く場面を伝える
   kind:
     title: 種類
-    description: 文の種類。`llm` は LLM の呼び出し、`hook` はフックの注入文、`instructions` は MCP のサーバーの instructions、`tool` はツールの description。
+    description: 文の種類。`llm` は LLM の呼び出し、`hook` はフックの注入文、`instructions` は MCP のサーバーの instructions、`tool` はツールの description、`agent` は Claude Code のエージェントに `--append-system-prompt` で指定するシステムプロンプト。
     type: string
     enum:
       - llm
       - hook
       - instructions
       - tool
+      - agent
     examples:
       - hook
   lang:

@@ -4,7 +4,7 @@ import { toast } from "sonner";
 import { useSettingsPutSettingsSources } from "@/shared/api/generated/settings/settings";
 import type { SourceEntry } from "@/shared/api/generated/model";
 
-/** 端末の設定の保存。成功後に全ての問い合わせを読み直し、通知を出す */
+/** 端末の設定の保存。成功後に全ての問い合わせを再取得し、通知を出す */
 export const useSaveSources = () => {
   const queryClient = useQueryClient();
   const mutation = useSettingsPutSettingsSources({

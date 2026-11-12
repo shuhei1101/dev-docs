@@ -303,6 +303,12 @@ functions:
         condition: '`kind: hook` で部品 2 件（`ja` だけ）'
         mock: なし
         expected: メッセージが `role=None` の 1 件で、本文が 2 件をつないだもの
+      - name: test_render_example_when_agent
+        case: 正常
+        summary: エージェントのシステムプロンプトは 1 件につなぐ
+        condition: '`kind: agent` で部品 2 件（`ja` だけ）'
+        mock: なし
+        expected: メッセージが `role=None` の 1 件で、本文が 2 件をつないだもの
       - name: test_render_example_when_lang_missing
         case: 正常
         summary: その言語の本文が無い部品

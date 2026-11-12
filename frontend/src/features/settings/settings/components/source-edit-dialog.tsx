@@ -66,7 +66,7 @@ type FailureSummaryProps = {
   rowIndex: number;
 };
 
-/** 末尾の句点と直し方（最初の句点より後ろ）を除いた違反の文言 */
+/** 末尾の句点と修正方法（最初の句点より後ろ）を除いた違反の文言 */
 const headline = (message: string): string => message.replace(/。.*$/s, "");
 
 /** 保存の失敗のまとめ（入力チェックに引っかかったときと、保存の 422 のとき） */

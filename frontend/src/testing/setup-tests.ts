@@ -3,7 +3,7 @@ import "@testing-library/jest-dom/vitest";
 import { cleanup } from "@testing-library/react";
 import { afterEach } from "vitest";
 
-// jsdom は相対 URL の fetch を解けないため、画面のオリジンに直す
+// jsdom は相対 URL の fetch を解けないため、画面のオリジンの絶対 URL に変換する
 const originalFetch = globalThis.fetch;
 globalThis.fetch = (input, init) =>
   originalFetch(
