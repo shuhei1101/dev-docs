@@ -45,6 +45,7 @@ class DocumentRow:
     search: bool = True
     converter: str | None = None
     alias_type: str | None = None
+    metadata: dict[str, str] = field(default_factory=dict)
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)

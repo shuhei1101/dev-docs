@@ -13,6 +13,7 @@ from dev_docs.features.convert.decisions import DECISION_PAGE_PREFIX, decision_p
 from dev_docs.features.convert.embed import embed_paths
 from dev_docs.features.convert.types import ConvertFailure
 from dev_docs.features.documents.aliases import collect_aliases
+from dev_docs.features.documents.fields import with_row_metadata
 from dev_docs.features.view.nav import build_nav, first_page, mark_nav_changes
 from dev_docs.features.view.paths import find_page, page_path
 from dev_docs.features.view.types import (
@@ -26,6 +27,7 @@ from dev_docs.features.view.types import (
 )
 from dev_docs.integrations.project_index.types import (
     DecisionIndex,
+    DocumentList,
     IndexedDocument,
     IndexFailure,
     SourceView,
@@ -109,8 +111,11 @@ async def _diff(
     diff_ref: str,
 ) -> tuple[DocumentDiff, list[NavTab]]:
     """`diff_ref` と比べた差分の結果と、サイドバーの変化を付けたタブを作る。"""
-    base = await handlers.project_index.list_documents(
+    listed_base = await handlers.project_index.list_documents(
         view.id, ref=diff_ref, record_kinds=view.record_kinds()
+    )
+    base = DocumentList(
+        ref=listed_base.ref, documents=with_row_metadata(view, listed_base.documents)
     )
     before = next((d for d in base.documents if d.id == document.id), None)
     change: Literal["added", "modified"] | None
@@ -174,6 +179,7 @@ async def get_document(
     client = handlers.project_index
     view = await client.source_view(source_id)
     listed = await client.list_documents(source_id, ref=ref, record_kinds=view.record_kinds())
+    listed = DocumentList(ref=listed.ref, documents=with_row_metadata(view, listed.documents))
     tabs = build_nav(view, listed.documents)
     columns = await asyncio.to_thread(handlers.columns.get, view.id)
     github = (

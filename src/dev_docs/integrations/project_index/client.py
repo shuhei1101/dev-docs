@@ -234,6 +234,7 @@ class ProjectIndexClient:
                     search=bool(row.get("search", True)),
                     converter=row.get("converter"),
                     alias_type=row.get("alias_type"),
+                    metadata={str(k): str(v) for k, v in (row.get("metadata") or {}).items()},
                 )
                 for row in value.get("documents") or []
             ],
@@ -267,7 +268,7 @@ class ProjectIndexClient:
                 record_index = positions.get(path, 0)
                 positions[path] = record_index + 1
             documents.append(parse_document(source, item, record_index=record_index))
-        return DocumentList(ref=value.get("ref"), documents=documents)
+        return DocumentList(ref=value.get("ref") or None, documents=documents)
 
     async def document(
         self,
