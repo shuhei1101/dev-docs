@@ -6,7 +6,6 @@ import asyncio
 import logging
 from collections.abc import Sequence
 from datetime import UTC, datetime
-from pathlib import PurePosixPath
 from typing import TYPE_CHECKING, Any, Literal
 
 from dev_docs.features.changes.compare import changed_keys
@@ -14,6 +13,7 @@ from dev_docs.features.convert.decisions import DECISION_PAGE_PREFIX, decision_p
 from dev_docs.features.convert.embed import embed_paths
 from dev_docs.features.convert.types import ConvertFailure
 from dev_docs.features.documents.aliases import collect_aliases
+from dev_docs.features.documents.fields import with_row_metadata
 from dev_docs.features.view.nav import build_nav, first_page, mark_nav_changes
 from dev_docs.features.view.paths import find_page, page_path
 from dev_docs.features.view.types import (
@@ -27,6 +27,7 @@ from dev_docs.features.view.types import (
 )
 from dev_docs.integrations.project_index.types import (
     DecisionIndex,
+    DocumentList,
     IndexedDocument,
     IndexFailure,
     SourceView,
@@ -71,17 +72,18 @@ def _pages(items: Sequence[NavItem]) -> list[str]:
     return pages
 
 
-def _unreadable(problems: Sequence[IndexFailure], path: str) -> IndexFailure | None:
-    """拡張子を落としたパスが `path` と同じ、YAML を読み込めなかったファイルを探す。"""
-    return next(
-        (
-            problem
-            for problem in problems
-            if problem.file is not None
-            and PurePosixPath(problem.file).with_suffix("").as_posix() == path
-        ),
-        None,
-    )
+async def _unreadable(
+    handlers: Handlers, source_id: str, path: str, ref: str | None
+) -> IndexFailure | None:
+    """文書の一覧に無いページのパスが、YAML を読み込めないファイルなら、その失敗を返却する。"""
+    try:
+        detail = await handlers.project_index.document(source_id, path, ref=ref)
+    except DocumentNotFoundError:
+        return None
+    failure = detail.failure
+    if failure is not None and failure.reason == "invalid_yaml":
+        return failure
+    return None
 
 
 def _activate(tabs: list[NavTab], path: str | None) -> list[NavTab]:
@@ -109,7 +111,12 @@ async def _diff(
     diff_ref: str,
 ) -> tuple[DocumentDiff, list[NavTab]]:
     """`diff_ref` と比べた差分の結果と、サイドバーの変化を付けたタブを作る。"""
-    base = await handlers.project_index.list_documents(view.id, ref=diff_ref)
+    listed_base = await handlers.project_index.list_documents(
+        view.id, ref=diff_ref, record_kinds=view.record_kinds()
+    )
+    base = DocumentList(
+        ref=listed_base.ref, documents=with_row_metadata(view, listed_base.documents)
+    )
     before = next((d for d in base.documents if d.id == document.id), None)
     change: Literal["added", "modified"] | None
     if before is None:
@@ -170,9 +177,9 @@ async def get_document(
 ) -> DocumentResponse:
     """配信元の文書を変換した Markdown と、タブ・差分の項目・列の設定を返却する。"""
     client = handlers.project_index
-    view, listed = await asyncio.gather(
-        client.source_view(source_id), client.list_documents(source_id, ref=ref)
-    )
+    view = await client.source_view(source_id)
+    listed = await client.list_documents(source_id, ref=ref, record_kinds=view.record_kinds())
+    listed = DocumentList(ref=listed.ref, documents=with_row_metadata(view, listed.documents))
     tabs = build_nav(view, listed.documents)
     columns = await asyncio.to_thread(handlers.columns.get, view.id)
     github = (
@@ -211,7 +218,7 @@ async def get_document(
     else:
         document = find_page(listed.documents, path)
     if document is None:
-        broken = _unreadable(listed.unreadable, path)
+        broken = await _unreadable(handlers, view.id, path, ref)
         if broken is None:
             raise DocumentNotFoundError(message=f"文書がありません: {path}", missing=[path])
         # YAML を読み込めない: 変換せずに読み込めなかった位置を返却する
@@ -276,7 +283,7 @@ async def get_document(
         table_keys=table_keys,
         aliases=[] if conversion_error is not None else _aliases(view, listed.documents),
         diff=diff,
-        updated_at=_updated_at(view, document),
+        updated_at=_updated_at(view, detail.document or document),
     )
 
 

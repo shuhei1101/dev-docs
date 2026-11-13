@@ -37,10 +37,10 @@ functions:
     args:
       - name: document
         title: 文書
-        type: IndexedDocument | SearchHit
+        type: IndexedDocument
         required: true
         passing: positional
-        description: 文書か検索に一致した文書（`path`・`record_index`・`id` を読む）
+        description: 文書（`path`・`record_index`・`id` を参照する）
     returns:
       type: str
       description: '`path` から拡張子を落とした形。`records` の文書は `{拡張子を落とした path}/{id}`'

@@ -4,11 +4,11 @@ from __future__ import annotations
 
 import re
 from collections.abc import Mapping, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import PurePosixPath
 from typing import Any
 
-from dev_docs.integrations.project_index.types import IndexedDocument
+from dev_docs.integrations.project_index.types import IndexedDocument, SourceView
 from dev_docs.shared.errors import InvalidArgumentError, Violation
 
 METADATA_KEYS = (
@@ -135,6 +135,29 @@ def _join(tokens: Sequence[str | int]) -> str:
 def get_field(data: Mapping[str, Any], path: str, *, default: Any = None) -> Any:
     """項目のパスで指した値を返却する。"""
     return _select(data, parse_field_path(path), default)
+
+
+def with_row_metadata(
+    view: SourceView, documents: Sequence[IndexedDocument]
+) -> list[IndexedDocument]:
+    """文書の一覧の文書の `metadata` に、文書の行の `metadata` の対応で値から取った共通のキーを加える。"""
+    result: list[IndexedDocument] = []
+    for document in documents:
+        row = view.row(document.kind)
+        if row is None:
+            result.append(document)
+            continue
+        metadata = dict(document.metadata)
+        for key in METADATA_KEYS:
+            if metadata.get(key) is not None:
+                continue
+            value = get_field(document.data, row.metadata.get(key, key))
+            if value is not None:
+                metadata[key] = value
+        if row.alias_type is not None:
+            metadata["alias_type"] = row.alias_type
+        result.append(replace(document, metadata=metadata))
+    return result
 
 
 def is_markdown_body(document: IndexedDocument) -> bool:

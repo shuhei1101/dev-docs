@@ -2,31 +2,27 @@ from __future__ import annotations
 
 from collections.abc import Callable
 
-from .conftest import IndexSource, MockIndex, ServerEnv, sample_docs
-
-SEARCH_RESULT = {
-    "totalCount": 1,
-    "items": [
-        {
-            "id": "doc-2",
-            "path": "docs/doc-2.yaml",
-            "name": "文書 2",
-            "snippets": ["一覧のページングは先頭から"],
-        }
-    ],
-}
+from .conftest import IndexSource, RealIndex, ServerEnv, doc
 
 
-def _server(mock: MockIndex, make_server: Callable[..., ServerEnv]) -> ServerEnv:
-    """文書 2 だけが語「ページング」に当たる検索の結果を返す sample につなぐ。"""
-    mock.serve("sample", IndexSource(docs={None: sample_docs()}, search=SEARCH_RESULT))
-    return make_server(mock)
+def _server(index: RealIndex, make_server: Callable[..., ServerEnv]) -> ServerEnv:
+    """文書 2 の本文だけが語「ページング」を含む sample を配信する本物の project-index につなぐ。"""
+    documents = [
+        doc("doc-1", "docs/doc-1.yaml", data={"id": "doc-1", "name": "文書 1"}),
+        doc(
+            "doc-2",
+            "docs/doc-2.yaml",
+            data={"id": "doc-2", "name": "文書 2", "description": "一覧のページングは先頭から"},
+        ),
+    ]
+    index.serve("sample", IndexSource(docs={None: documents}))
+    return make_server(index)
 
 
-def test_normal(mock_index: MockIndex, make_server: Callable[..., ServerEnv]) -> None:
+def test_normal(real_index: RealIndex, make_server: Callable[..., ServerEnv]) -> None:
     """語を含む文書だけを一致した箇所つきで返す（正常系）。"""
     # 準備
-    env = _server(mock_index, make_server)
+    env = _server(real_index, make_server)
     # 実行
     found = env.client.get("/_api/sources/sample/search", params={"q": "ページング"})
     body = found.json()
@@ -41,11 +37,11 @@ def test_normal(mock_index: MockIndex, make_server: Callable[..., ServerEnv]) ->
 
 
 def test_error_when_query_invalid(
-    mock_index: MockIndex, make_server: Callable[..., ServerEnv]
+    real_index: RealIndex, make_server: Callable[..., ServerEnv]
 ) -> None:
     """空の語と長すぎる語を断る（異常系）。"""
     # 準備
-    env = _server(mock_index, make_server)
+    env = _server(real_index, make_server)
     # 実行
     empty = env.client.get("/_api/sources/sample/search", params={"q": ""})
     long = env.client.get("/_api/sources/sample/search", params={"q": "x" * 201})
@@ -58,10 +54,10 @@ def test_error_when_query_invalid(
     assert "at most 200 characters" in long.json()["errors"][0]["reason"]
 
 
-def test_error_when_not_found(mock_index: MockIndex, make_server: Callable[..., ServerEnv]) -> None:
+def test_error_when_not_found(real_index: RealIndex, make_server: Callable[..., ServerEnv]) -> None:
     """無い配信元・解決できないリビジョンを断る（異常系）。"""
     # 準備
-    env = _server(mock_index, make_server)
+    env = _server(real_index, make_server)
     # 実行
     unknown = env.client.get("/_api/sources/unknown/search", params={"q": "a"})
     no_ref = env.client.get(

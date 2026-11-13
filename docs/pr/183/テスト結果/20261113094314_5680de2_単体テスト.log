@@ -1,0 +1,13 @@
+$ git checkout 5680de2 && uv run pytest tests/unit/
+==================================== ERRORS ====================================
+____ ERROR collecting tests/unit/dev_docs/features/documents/test_fields.py ____
+ImportError while importing test module '/mnt/c/Users/shuhe/repo/dev-docs/.claude/worktrees/pr183-red-5680de2/tests/unit/dev_docs/features/documents/test_fields.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+tests/unit/dev_docs/features/documents/test_fields.py:7: in <module>
+    from dev_docs.features.documents.fields import get_field, parse_field_path, with_row_metadata
+E   ImportError: cannot import name 'with_row_metadata' from 'dev_docs.features.documents.fields' (/mnt/c/Users/shuhe/repo/dev-docs/.claude/worktrees/pr183-red-5680de2/src/dev_docs/features/documents/fields.py)
+=========================== short test summary info ============================
+ERROR tests/unit/dev_docs/features/documents/test_fields.py
+!!!!!!!!!!!!!!!!!!!! Interrupted: 1 error during collection !!!!!!!!!!!!!!!!!!!!
+============================== 1 error in 26.33s ===============================

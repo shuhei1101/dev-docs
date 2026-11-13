@@ -83,20 +83,37 @@ def doc(
     body: str = "",
     updated: str = "2026-11-01T10:00:00+09:00",
 ) -> dict[str, Any]:
-    """project-index の文書 1 件の JSON を作る（`data` を省くと `id` と `name` だけ）。"""
+    """偽物・本物の project-index に置く文書 1 件を作る（`data` を省くと `id` と `name` だけ）。
+
+    `record_index` は使わない（行の文書の添字は、配信元の設定の `records` の行から呼び出し側が決める）。
+    `body`・`updated` は文書の取得でだけ返す。本物の project-index へ置くときは、`data` をファイルに書き、
+    `updated` を commit の日時にする。
+    """
+    del record_index
     values = data if data is not None else {"id": doc_id, "name": doc_id}
+    meta = metadata if metadata is not None else values
     return {
         "id": doc_id,
-        "kind": kind,
         "path": path,
-        "recordIndex": record_index,
+        "kind": kind,
+        "name": str(meta.get("name") or doc_id),
+        "description": meta.get("description"),
+        "tags": list(meta.get("tags") or []),
+        "visibility": meta.get("visibility"),
         "bodyPath": body_path,
-        "data": values,
-        "metadata": metadata if metadata is not None else values,
         "version": version if version is not None else f"v-{doc_id}",
-        "body": body,
-        "updated": updated,
+        "value": values,
+        "_body": body,
+        "_updated": updated,
     }
+
+
+def list_entry(document: dict[str, Any], *, values: bool) -> dict[str, Any]:
+    """偽物に置いた文書を、文書の一覧の 1 件（IF-24）にする。"""
+    entry = {key: value for key, value in document.items() if not key.startswith("_")}
+    if not values:
+        entry["value"] = None
+    return entry
 
 
 @dataclass
@@ -120,18 +137,28 @@ class IndexSource:
     errors: list[dict[str, str]] = field(default_factory=list)
     config_version: dict[str, str] | None = None
 
-    def config(self, source_id: str) -> dict[str, Any]:
-        """`GET /sources/{source}/config` の応答。"""
+    def config(self, *, schemas: bool) -> dict[str, Any]:
+        """`GET /sources/{source}/config` の応答（IF-23）。"""
         return {
-            "id": source_id,
-            "git": self.git,
-            "defaultRef": self.default_ref if self.git else None,
             "nav": self.nav,
-            "documents": self.documents,
+            "documents": [
+                {**item, "schema": f"schemas/{item['id']}.schema.yaml"} for item in self.documents
+            ],
             "decisions": {"folders": self.decision_folders},
-            "github": {},
-            "diffIgnoreKeys": ["updated"],
+            "github": None,
+            "diff": {"ignore_keys": ["updated"]},
+            "schemas": (
+                {item["id"]: dict(item.get("schema") or {}) for item in self.documents}
+                if schemas
+                else None
+            ),
         }
+
+    def ref_name(self, ref: str | None) -> str:
+        """文書の一覧・文書の取得の `ref`（Git 管理外は空の文字列）。"""
+        if not self.git:
+            return ""
+        return ref or self.default_ref
 
 
 class MockIndex:
@@ -139,8 +166,10 @@ class MockIndex:
 
     端末の設定の行（`rows`）の順に配信元の状態を決め、`sources` の配信元の文書を返す。
 
-    入出力は shuhei1101/project-index#14 の Issue に記載した入出力に沿う（本物との食い違いは
-    `docs/external-api/API-155-1.yaml`、本物への付け替えは #164）。
+    入出力は shuhei1101/project-index の develop の `f36ba69` の IF-22〜IF-32 に沿う。
+    文書の取得・画面の検索・リビジョンの一覧・端末の設定の取得と保存の正常系は、本物の project-index
+    （`RealIndex`）で確かめ、この偽物はつながらない・応答しない・500 を返す異常系と、それ以外の
+    インターフェースで使う。
     """
 
     def __init__(self) -> None:
@@ -230,14 +259,27 @@ class MockIndex:
         return state
 
     def _settings(self) -> dict[str, Any]:
-        """`GET /settings/sources` の応答。"""
-        return {
-            "settingsPath": SETTINGS_PATH,
-            "sources": [
-                {"row": values, **self._state(index, values)}
-                for index, values in enumerate(self.rows)
-            ],
-        }
+        """`GET /settings/sources` の応答（IF-30）。"""
+        sources: list[dict[str, Any]] = []
+        for index, values in enumerate(self.rows):
+            state = self._state(index, values)
+            config = values.get("config") or []
+            sources.append(
+                {
+                    "id": values.get("id"),
+                    "config": config if isinstance(config, list) else [config],
+                    "enabled": values.get("enabled", True),
+                    "scope": {
+                        "read": (values.get("scope") or {}).get("read", []),
+                        "write": (values.get("scope") or {}).get("write"),
+                    },
+                    "outsideRead": values.get("outside_read", True),
+                    "status": state["status"],
+                    "errors": state["errors"],
+                    "configVersion": state.get("configVersion"),
+                }
+            )
+        return {"settingsPath": SETTINGS_PATH, "sources": sources}
 
     def _served(self, source_id: str) -> tuple[IndexSource | None, tuple[int, Any] | None]:
         """配信中の配信元か、配信していない理由の 404 を返す。"""
@@ -283,14 +325,59 @@ class MockIndex:
         if method == "PUT":
             self.rows = list(body["sources"])
             self.pending = set()
-            return 200, self._settings()
+            return 200, {
+                "sources": [
+                    {key: state[key] for key in ("id", "status", "errors")}
+                    for state in (self._state(i, r) for i, r in enumerate(self.rows))
+                ]
+            }
         if method == "POST":
-            same_id = next((r for r in self.rows if r.get("id") == body.get("id")), None)
+            added = body["source"]
+            same_id = next((r for r in self.rows if r.get("id") == added.get("id")), None)
             if same_id is not None:
-                return 409, {"same": same_id == body}
-            self.rows.append(body)
-            return 201, {}
+                return 409, {"result": "exists", "same": same_id == added, "sources": []}
+            self.rows.append(added)
+            return 201, {"result": "added", "same": None, "sources": []}
         return 200, self._settings()
+
+    def _detail(
+        self, source: IndexSource, file: str, ref: str | None, doc_id: str | None
+    ) -> tuple[int, Any]:
+        """文書の取得（IF-25）に答える。"""
+        found = next(
+            (
+                item
+                for item in source.docs.get(ref, [])
+                if file in (item["path"], item.get("bodyPath")) and doc_id in (None, item["id"])
+            ),
+            None,
+        )
+        extra = dict(source.details.get(file) or {})
+        document = extra.pop("document", None) or found
+        broken = next(
+            (
+                problem
+                for problem in source.unreadable
+                if file in (problem["file"], problem["file"].rsplit(".", 1)[0])
+            ),
+            None,
+        )
+        if document is None and not extra and broken is None:
+            return 404, {"missing": "doc", "value": file}
+        keys = ("id", "kind", "name", "description", "tags", "visibility")
+        return 200, {
+            "source": "",
+            "ref": source.ref_name(ref),
+            "path": document["path"] if document is not None else file,
+            "value": None if document is None or broken is not None else document["value"],
+            "schema": None,
+            "metadata": None if document is None else {key: document[key] for key in keys},
+            "body": None if document is None else document["_body"] or None,
+            "bodyPath": None if document is None else document["bodyPath"],
+            "markdown": extra.get("markdown"),
+            "conversionError": extra.get("failure") or broken,
+            "updatedAt": (document or {}).get("_updated") or "2026-11-01T10:00:00+09:00",
+        }
 
     def _source_answer(
         self, source_id: str, source: IndexSource, rest: list[str], query: dict[str, str]
@@ -298,38 +385,29 @@ class MockIndex:
         """`/sources/{source}/...` に答える。"""
         ref = query.get("ref")
         if rest == ["config"]:
-            return 200, source.config(source_id)
+            return 200, source.config(schemas=query.get("schemas") == "true")
         if rest[0] == "docs":
             if ref is not None and ref not in source.docs:
                 return 404, {"missing": "ref", "value": ref}
             listed = source.docs.get(ref, [])
             if len(rest) == 1:
+                values = query.get("values") == "true"
                 return 200, {
-                    "ref": ref or (source.default_ref if source.git else None),
-                    "documents": listed,
-                    "unreadable": source.unreadable,
+                    "ref": source.ref_name(ref),
+                    "documents": [list_entry(item, values=values) for item in listed],
                 }
-            file = "/".join(rest[1:])
-            found = next(
-                (
-                    item
-                    for item in listed
-                    if file in (item["path"], item.get("bodyPath"))
-                    and query.get("id") in (None, item["id"])
-                ),
-                None,
-            )
-            extra = source.details.get(file)
-            if found is None and extra is None:
-                return 404, {"missing": "doc", "value": file}
-            return 200, {"document": found, **(extra or {})}
+            return self._detail(source, "/".join(rest[1:]), ref, query.get("id"))
         if rest == ["decisions"]:
-            return 200, {"counts": source.decisions}
+            return 200, {
+                "decisions": [
+                    {"id": key, "folders": value} for key, value in source.decisions.items()
+                ]
+            }
         if rest[0] == "decisions":
             text = source.decision_texts.get(rest[1])
             if text is None:
                 return 404, {"missing": "doc", "value": rest[1]}
-            return 200, {"markdown": text}
+            return 200, {"id": rest[1], "folder": "/talks", "body": text}
         if rest == ["search"]:
             if ref is not None and ref not in source.docs:
                 return 404, {"missing": "ref", "value": ref}
@@ -424,7 +502,9 @@ def make_server(tmp_path: Path) -> Iterator[Callable[..., ServerEnv]]:
     """project-index の偽物につなぐ端末の設定でアプリを作り、テストのクライアントを返す関数を返す。"""
     with ExitStack() as stack:
 
-        def _make(mock: MockIndex, *, screen_dir: Path | None = None, extra: str = "") -> ServerEnv:
+        def _make(
+            mock: MockIndex | RealIndex, *, screen_dir: Path | None = None, extra: str = ""
+        ) -> ServerEnv:
             path = tmp_path / "settings.yaml"
             path.write_text(settings_text(tmp_path, mock.address, extra), encoding="utf-8")
             terminal = load_terminal_config(path)
@@ -701,3 +781,317 @@ def wait_for_restart(started_count: Callable[[Path], int]) -> Callable[..., None
         raise AssertionError(message)
 
     return _wait
+
+
+# 結合テストの相手にする本物の project-index（shuhei1101/project-index の develop の f36ba69。
+# shuhei1101/project-index#46 をマージした commit）。パッケージとして入れるとクローンの
+# `templates/`・`content/` が見つからないため、クローンを用意してそこから起動する
+PROJECT_INDEX_REPOSITORY = "https://github.com/shuhei1101/project-index"
+PROJECT_INDEX_COMMIT = "f36ba692e6fa7bb15e31f0398e20953a6b8201ec"
+# 起動の待ち受けを待つ上限。2026-11-13 の実測で 1 回 4〜6 秒。負荷の高いときの dev-docs の起動
+# （SERVE_WAIT_SEC）と同じ 60 秒にする
+REAL_INDEX_WAIT_SEC = 60
+DEFAULT_UPDATED = "2026-11-01T10:00:00+09:00"
+# 配信元の文書は JSON（YAML として読める）で書くため、変換のスクリプトは標準入力を JSON として読む
+CONVERTER_ECHO = (
+    "import json, sys\n"
+    "value = json.loads(sys.stdin.read())\n"
+    "print(f\"# カスタム変換: {value.get('name', '')}\")\n"
+)
+CONVERTER_FAIL = "import sys\nsys.stderr.write('変換に失敗しました\\n')\nsys.exit(1)\n"
+
+
+def project_index_clone() -> Path:
+    """commit を固定した project-index のクローン（`.venv` つき）を用意して、その場所を返す。"""
+    cache = Path(os.environ.get("XDG_CACHE_HOME") or Path.home() / ".cache")
+    clone = cache / "dev-docs" / f"project-index-{PROJECT_INDEX_COMMIT[:7]}"
+    if not (clone / ".git").is_dir():
+        clone.parent.mkdir(parents=True, exist_ok=True)
+        subprocess.run(
+            ["git", "clone", "-q", PROJECT_INDEX_REPOSITORY, str(clone)],
+            check=True,
+            capture_output=True,
+        )
+    head = subprocess.run(
+        ["git", "rev-parse", "HEAD"], cwd=clone, check=True, capture_output=True, text=True
+    ).stdout.strip()
+    if head != PROJECT_INDEX_COMMIT:
+        subprocess.run(
+            ["git", "-c", "advice.detachedHead=false", "checkout", "-q", PROJECT_INDEX_COMMIT],
+            cwd=clone,
+            check=True,
+            capture_output=True,
+        )
+    if not (clone / ".venv" / "bin" / "python").exists() or head != PROJECT_INDEX_COMMIT:
+        subprocess.run(["uv", "sync", "--frozen", "-q"], cwd=clone, check=True, capture_output=True)
+    return clone
+
+
+def _git(cwd: Path, *args: str, date: str | None = None) -> None:
+    """配信元のリポジトリで git を実行する（commit の日時を `date` にする）。"""
+    env = {
+        **os.environ,
+        "GIT_AUTHOR_NAME": "test",
+        "GIT_AUTHOR_EMAIL": "test@example.com",
+        "GIT_COMMITTER_NAME": "test",
+        "GIT_COMMITTER_EMAIL": "test@example.com",
+    }
+    if date is not None:
+        env["GIT_AUTHOR_DATE"] = date
+        env["GIT_COMMITTER_DATE"] = date
+    subprocess.run(["git", *args], cwd=cwd, check=True, capture_output=True, env=env)
+
+
+def _write(root: Path, path: str, text: str) -> None:
+    """配信元のフォルダにファイルを書く。"""
+    target = root / path
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text(text, encoding="utf-8")
+
+
+def _files(source: IndexSource, documents: list[dict[str, Any]]) -> dict[str, tuple[str, str]]:
+    """文書の並びを、パス →（内容, 更新日時）にする。`records` の行の文書は 1 つのファイルにまとめる。"""
+    records = {item["id"]: str(item["records"]) for item in source.documents if item.get("records")}
+    files: dict[str, tuple[str, str]] = {}
+    grouped: dict[str, list[dict[str, Any]]] = {}
+    for document in documents:
+        updated = document.get("_updated") or DEFAULT_UPDATED
+        if document["kind"] in records:
+            grouped.setdefault(document["path"], []).append(document)
+            if document.get("bodyPath"):
+                files[document["bodyPath"]] = (document["_body"], updated)
+            continue
+        files[document["path"]] = (json.dumps(document["value"], ensure_ascii=False), updated)
+    for path, items in grouped.items():
+        key = records[items[0]["kind"]]
+        value = {key: [item["value"] for item in items]}
+        updated = max(item.get("_updated") or DEFAULT_UPDATED for item in items)
+        files[path] = (json.dumps(value, ensure_ascii=False), updated)
+    for problem in source.unreadable:
+        files[problem["file"]] = ("id: [閉じていない\n", DEFAULT_UPDATED)
+    return files
+
+
+def _config(source_id: str, source: IndexSource, documents: list[dict[str, Any]]) -> str:
+    """配信元の設定 `project-index.yaml` の内容を作る（JSON は YAML として読める）。"""
+    body_kinds = {document["kind"] for document in documents if document.get("bodyPath")}
+    converters = {
+        str(item["converter"]) for item in source.documents if item.get("converter") is not None
+    }
+    rows: list[dict[str, Any]] = []
+    for item in source.documents:
+        values = {key: value for key, value in item.items() if key not in ("schema", "aliasType")}
+        values["schema"] = f"schemas/{item['id']}.schema.yaml"
+        if item.get("aliasType") is not None:
+            values["alias_type"] = item["aliasType"]
+        if item["id"] in body_kinds:
+            values["body_file"] = "path"
+        if source.errors:
+            values.pop("paths", None)
+        rows.append(values)
+    config: dict[str, Any] = {"name": source_id, "documents": rows}
+    if source.git:
+        config["default_ref"] = source.default_ref
+    if source.config_version is not None:
+        config["version"] = source.config_version["config"]
+    if source.nav is not None:
+        config["nav"] = source.nav
+    if source.decision_folders:
+        config["decisions"] = {"folders": source.decision_folders}
+    if converters:
+        failing = any("failure" in extra for extra in source.details.values())
+        script = "convert_fail.py" if failing else "convert.py"
+        config["converters"] = [
+            {"id": name, "run": [sys.executable, f"scripts/{script}"], "cache": False}
+            for name in sorted(converters)
+        ]
+    return json.dumps(config, ensure_ascii=False)
+
+
+def materialize(root: Path, source_id: str, source: IndexSource) -> Path:
+    """偽物の配信元の定義を、本物の project-index が配信するフォルダ（Git の配信元は git リポジトリ）に書く。
+
+    `docs` のリビジョン（`None` は既定）ごとにブランチを作り、ファイルを更新日時の古い順に commit する。
+    `details` の `document` の文書も既定のリビジョンに置く。`decisions` は `decision_folders` の先頭から
+    ID ごとの数のフォルダに、`decision_texts` の本文（無ければ見出しだけ）を置く。
+    返り値は `project-index.yaml` のパス。
+    """
+    repo = root / source_id
+    repo.mkdir(parents=True)
+    extra_docs = [extra["document"] for extra in source.details.values() if "document" in extra]
+    default_docs = [*source.docs.get(None, []), *extra_docs]
+
+    def write_common() -> None:
+        _write(repo, "project-index.yaml", _config(source_id, source, default_docs))
+        for item in source.documents:
+            _write(
+                repo,
+                f"schemas/{item['id']}.schema.yaml",
+                json.dumps(item.get("schema") or {}, ensure_ascii=False),
+            )
+        _write(repo, "scripts/convert.py", CONVERTER_ECHO)
+        _write(repo, "scripts/convert_fail.py", CONVERTER_FAIL)
+
+    def write_files(documents: list[dict[str, Any]], *, commit: bool) -> None:
+        files = _files(source, documents)
+        for when in sorted({updated for _, updated in files.values()}):
+            for path, (text, updated) in files.items():
+                if updated == when:
+                    _write(repo, path, text)
+            if commit:
+                _git(repo, "add", "-A")
+                _git(repo, "commit", "-q", "--allow-empty", "-m", f"文書（{when}）", date=when)
+
+    if not source.git:
+        write_common()
+        write_files(default_docs, commit=False)
+    else:
+        _git(repo, "init", "-q", "-b", source.default_ref)
+        write_common()
+        _git(repo, "add", "-A")
+        _git(repo, "commit", "-q", "-m", "配信元の設定", date="2026-10-01T00:00:00+09:00")
+        base = source.default_ref
+        for ref, documents in source.docs.items():
+            if ref is None:
+                continue
+            _git(repo, "checkout", "-q", "-b", ref, base)
+            write_files(documents, commit=True)
+        _git(repo, "checkout", "-q", source.default_ref)
+        write_files(default_docs, commit=True)
+    for decision_id, count in source.decisions.items():
+        for folder in source.decision_folders[:count]:
+            text = source.decision_texts.get(decision_id, f"# {decision_id}\n")
+            _write(repo, f"{folder}/.mindstella/docs/{decision_id}.md", text)
+    return repo / "project-index.yaml"
+
+
+class RealIndex:
+    """テストの中で子プロセスとして起動する本物の project-index。
+
+    `serve` で配信元の定義を一時フォルダのリポジトリに書き、端末の設定の行に並べる。
+    最初に `address` を読んだときに起動し、起動した後の `serve` は PUT `/settings/sources` で読み直させる。
+    """
+
+    def __init__(self, root: Path, clone: Path, port: int) -> None:
+        self.root = root
+        self.clone = clone
+        self.port = port
+        self.settings_path = root / "project-index-settings.yaml"
+        self.sources: dict[str, IndexSource] = {}
+        self.rows: list[dict[str, Any]] = []
+        self._process: subprocess.Popen[str] | None = None
+        self._log: Any = None
+
+    def serve(
+        self, source_id: str, source: IndexSource | None = None, **row_values: Any
+    ) -> IndexSource:
+        """配信元を書いて端末の設定の行に並べる（起動の後は読み直させる）。"""
+        found = source or IndexSource()
+        self.sources[source_id] = found
+        config = materialize(self.root / "sources", source_id, found)
+        values: dict[str, Any] = {"id": source_id, "config": [str(config)], **row_values}
+        values.setdefault("scope", {"read": [f"{self.root}/**"]})
+        self.rows.append(values)
+        if self._process is not None:
+            self.put_rows(self.rows)
+        return found
+
+    def write_rows(self, rows: list[dict[str, Any]]) -> None:
+        """端末の設定のファイルの `sources` を書き換える（project-index には読み直させない）。"""
+        settings = {
+            "version": "1",
+            "clone": str(self.clone),
+            "port": self.port,
+            "state_dir": str(self.root / "project-index-state"),
+            "sources": rows,
+        }
+        self.settings_path.write_text(json.dumps(settings, ensure_ascii=False), encoding="utf-8")
+
+    def file_rows(self) -> list[dict[str, Any]]:
+        """端末の設定のファイルの `sources` を読む。"""
+        from dev_docs.shared.yaml_io import load_yaml
+
+        return list(load_yaml(self.settings_path.read_text(encoding="utf-8")).get("sources") or [])
+
+    def put_rows(self, rows: list[dict[str, Any]]) -> None:
+        """PUT `/settings/sources` で行を保存させ、読み直させる。"""
+        import urllib.request
+
+        request = urllib.request.Request(
+            f"{self.address}/settings/sources",
+            data=json.dumps({"sources": rows}).encode("utf-8"),
+            headers={"Content-Type": "application/json"},
+            method="PUT",
+        )
+        with urllib.request.urlopen(request, timeout=REAL_INDEX_WAIT_SEC) as response:
+            response.read()
+
+    @property
+    def address(self) -> str:
+        """待ち受けているアドレス（まだ起動していなければ起動する）。"""
+        if self._process is None:
+            self.start()
+        return f"http://127.0.0.1:{self.port}"
+
+    def start(self) -> None:
+        """端末の設定を書いて起動し、`GET /sources` が応答するまで待つ。"""
+        import urllib.request
+
+        self.write_rows(self.rows)
+        log = self._log = (self.root / "project-index.log").open("w", encoding="utf-8")
+        self._process = subprocess.Popen(
+            [str(self.clone / ".venv" / "bin" / "python"), "-m", "project_index", "serve"],
+            cwd=self.clone,
+            env={
+                **os.environ,
+                "PROJECT_INDEX_CONFIG": str(self.settings_path),
+                "PROJECT_INDEX_PORT": str(self.port),
+            },
+            stdout=log,
+            stderr=subprocess.STDOUT,
+            text=True,
+        )
+        deadline = time.monotonic() + REAL_INDEX_WAIT_SEC
+        while time.monotonic() < deadline:
+            if self._process.poll() is not None:
+                break
+            try:
+                with urllib.request.urlopen(
+                    f"http://127.0.0.1:{self.port}/sources", timeout=5
+                ) as response:
+                    if response.status == 200:
+                        return
+            except OSError:
+                time.sleep(0.2)
+        log_text = (self.root / "project-index.log").read_text(encoding="utf-8")
+        raise RuntimeError(f"project-index が待ち受けない:\n{log_text[-2000:]}")
+
+    def stop(self) -> None:
+        """止める。"""
+        if self._process is not None:
+            self._process.terminate()
+            try:
+                self._process.wait(timeout=REAL_INDEX_WAIT_SEC)
+            except subprocess.TimeoutExpired:
+                self._process.kill()
+            self._process = None
+        if self._log is not None:
+            self._log.close()
+            self._log = None
+
+
+@pytest.fixture(scope="session")
+def real_index_clone() -> Path:
+    """commit を固定した project-index のクローンを返す（テストの実行ごとに 1 回用意する）。"""
+    return project_index_clone()
+
+
+@pytest.fixture
+def real_index(
+    tmp_path: Path, real_index_clone: Path, free_port: Callable[[], int]
+) -> Iterator[RealIndex]:
+    """テストの中で起動する本物の project-index を返す（終了時に止める）。"""
+    index = RealIndex(tmp_path / "real-index", real_index_clone, free_port())
+    index.root.mkdir()
+    yield index
+    index.stop()

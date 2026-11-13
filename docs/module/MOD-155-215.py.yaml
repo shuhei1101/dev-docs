@@ -191,15 +191,23 @@ classes:
           type: SourceView
           description: 配信元の表示の設定
         process: |-
-          1. 呼び出しの共通の手順で `GET /sources/{source}/config` を呼ぶ
-          2. `documents[]` を `DocumentRow` に、`decisions.folders` を `decision_folders` に、`github.repository`・`github.issue_labels` をそれぞれのキーにして返す
+          1. 呼び出しの共通の手順で `GET /sources/{source}/config?schemas=true` と `GET /sources/{source}/refs?commits=0` を `asyncio.gather` で同時に呼ぶ
+          2. `id` を引数の `source`、`git`・`default_ref` を refs の応答の `git`・`defaultRef`（`git` が `false` なら `None`）にする
+          3. `documents[]` の行ごとに、配信元の設定のままのキー `id`・`title`・`paths`・`records`・`search`・`converter`・`alias_type`・`metadata` と、`schemas[id]`（無ければ空）を `schema` にした `DocumentRow` を作る
+          4. `decisions.folders` を `decision_folders`、`diff.ignore_keys` を `diff_ignore_keys`、`github.repository`・`github.issueLabels` を `github_repository`・`github_issue_labels` にして返す
         unit_tests:
           - name: test_source_view
             case: 正常
             summary: 画面の構成と文書の行
-            condition: '`nav` と `documents[]` 2 行（1 行は `records: files`）を返す'
+            condition: 'config が `nav`・`documents[]` 2 行（1 行は `records: files`）・`schemas` 2 件・`diff.ignore_keys: [updated, rev]`・`github.issueLabels: [docs]`、refs が `git: true`・`defaultRef: main` を返す'
             mock: '`httpx.MockTransport` で project-index の応答を返す'
-            expected: '`nav` が応答の値、`documents` が 2 件で `records` が `files` の行を持つ'
+            expected: config の要求のクエリに `schemas=true`、refs の要求のクエリに `commits=0` がある。`documents` が 2 件で各行の `schema` が `schemas` の値、`diff_ignore_keys` が `[updated, rev]`、`github_issue_labels` が `[docs]`、`git` が `True`、`default_ref` が `main`
+          - name: test_source_view_when_not_git
+            case: 正常
+            summary: Git 管理外の配信元
+            condition: 'refs が `git: false` を返す'
+            mock: '`httpx.MockTransport` で project-index の応答を返す'
+            expected: '`git` が `False`、`default_ref` が `None`'
       - name: list_documents
         title: 文書の一覧の取得
         kind: メソッド
@@ -208,28 +216,53 @@ classes:
         is_async: true
         thread_safe: true
         args:
-          - *id001
-          - &id002
-            name: ref
+          - name: source
+            title: 配信元の ID
+            type: str
+            required: true
+            passing: positional
+            description: 問い合わせる配信元
+          - name: ref
             title: リビジョン
             type: str | None
             required: false
             passing: keyword
             description: '`None` は配信元の `default_ref`'
             default: None
+          - name: record_kinds
+            title: 行の文書の種類
+            type: Collection[str]
+            required: false
+            passing: keyword
+            description: '`records` を持つ `documents[]` の行の ID（呼び出し側が配信元の表示の設定.行の文書の種類で指定する）'
+            default: ()
+          - name: values
+            title: 値を求めるか
+            type: bool
+            required: false
+            passing: keyword
+            description: '`False` は `values=true` を付けず、`data` を空にする'
+            default: 'True'
         returns:
           type: DocumentList
-          description: '`body` を空にした文書と読めなかったファイル'
+          description: '値を入れ、`body` を空にした文書'
         process: |-
-          1. 呼び出しの共通の手順で `GET /sources/{source}/docs` を呼ぶ
-          2. `documents[]` を索引の文書の読み取りで `IndexedDocument` にし、`unreadable[]` を `IndexFailure` にして返す
+          1. 呼び出しの共通の手順で `GET /sources/{source}/docs?ref={ref}` を呼ぶ。`values` が `True` ならクエリに `values=true` を付ける
+          2. `documents[]` を応答の順に索引の文書の読み取りで `IndexedDocument` にする。`kind` が `record_kinds` にある文書は、同じ `path` の文書の中で何番目か（0 始まり）を `record_index` に指定する。同じ `path` の中の並びは project-index が管理用の YAML を読み込んだ順（`f36ba69` の安定ソート）を前提にする
+          3. 応答の `ref`（Git 管理外の空の文字列は `None`）とともに `DocumentList` にして返す
         unit_tests:
           - name: test_list_documents
             case: 正常
-            summary: ref を渡す
+            summary: ref と値を求める
             condition: '`ref="8b1d4e0"`'
             mock: '`httpx.MockTransport` で project-index の応答を返す'
-            expected: 要求のクエリに `ref=8b1d4e0` があり、応答の `ref` と文書 2 件を返す
+            expected: 要求のクエリに `ref=8b1d4e0` と `values=true` があり、応答の `ref` と文書 2 件を返す
+          - name: test_list_documents_when_records
+            case: 正常
+            summary: 行の文書の添字
+            condition: '`notes/files.yaml` の種類 `files` の文書 2 件と `docs/a.yaml` の種類 `design` の文書 1 件を返し、`record_kinds=["files"]`'
+            mock: '`httpx.MockTransport` で project-index の応答を返す'
+            expected: '`files` の 2 件の `record_index` が 0・1、`design` の文書の `record_index` が `None`'
       - name: document
         title: 文書の詳細の取得
         kind: メソッド
@@ -245,7 +278,14 @@ classes:
             required: true
             passing: positional
             description: 文書のファイルか本文のファイルのパス（拡張子つき）
-          - *id002
+          - &id002
+            name: ref
+            title: リビジョン
+            type: str | None
+            required: false
+            passing: keyword
+            description: '`None` は配信元の `default_ref`'
+            default: None
           - name: document_id
             title: 文書の ID
             type: str | None
@@ -258,20 +298,27 @@ classes:
           description: 文書の詳細
         process: |-
           1. 呼び出しの共通の手順で `GET /sources/{source}/docs/{path}` を呼ぶ。クエリは `ref` と、`document_id` があれば `id`
-          2. `document` を索引の文書の読み取りで `IndexedDocument` にし（無ければ `None`）、`markdown`・`failure` を写して返す
+          2. `value` が `null` なら `document` を `None` にする。それ以外は `metadata` の `id`・`kind`、応答の `path`・`value`・`body`・`bodyPath`、`updatedAt` を日時にした `updated` で `IndexedDocument` を作る（`version` は空、`record_index` は `None`）
+          3. `markdown` と、`conversionError` を `IndexFailure` にした `failure` を入れて返す
         unit_tests:
           - name: test_document_when_failure
             case: 正常
             summary: 変換の失敗
-            condition: '`failure` に `reason: timeout`・`script` を持つ応答'
+            condition: '`conversionError` に `reason: exit`・`script` を持ち、`markdown` が `null` の応答'
             mock: '`httpx.MockTransport` で project-index の応答を返す'
-            expected: '`markdown` が `None`、`failure.reason` が `timeout`'
+            expected: '`markdown` が `None`、`failure.reason` が `exit`、`failure.script` が応答の値'
           - name: test_document_when_record
             case: 正常
             summary: 管理用の YAML の行の要素を選ぶ
-            condition: '`path="notes/files.yaml"`・`document_id="n-1"`'
+            condition: '`path="notes/files.yaml"`・`document_id="n-1"`、応答が `body`・`bodyPath`・`updatedAt` を持つ'
             mock: '`httpx.MockTransport` で project-index の応答を返す'
-            expected: 要求のクエリに `id=n-1` があり、応答の文書を返す
+            expected: 要求のクエリに `id=n-1` があり、`document` の `id` が `n-1`、`body`・`body_path` が応答の値、`updated` がタイムゾーン付きの日時
+          - name: test_document_when_yaml_unreadable
+            case: 正常
+            summary: YAML を読めない
+            condition: '`value: null` で、`conversionError` が `reason: invalid_yaml`・`file`・`line`・`column` を持つ応答'
+            mock: '`httpx.MockTransport` で project-index の応答を返す'
+            expected: '`document` が `None`、`failure` の `reason` が `invalid_yaml` で `file`・`line`・`column` が応答の値'
       - name: decisions
         title: 検討事項の一覧の取得
         kind: メソッド
@@ -286,12 +333,12 @@ classes:
           description: 検討事項の一覧
         process: |-
           1. 呼び出しの共通の手順で `GET /sources/{source}/decisions` を呼ぶ
-          2. `counts` をそのまま `DecisionIndex` にして返す
+          2. `decisions[]` の `id` をキー、`folders` を値にした `counts` で `DecisionIndex` を返す
         unit_tests:
           - name: test_decisions
             case: 正常
             summary: リンクにできる ID
-            condition: '`counts` が `{D-1: 1, D-2: 2}`'
+            condition: '`decisions` が `[{id: D-1, folders: 1}, {id: D-2, folders: 2}]`'
             mock: '`httpx.MockTransport` で project-index の応答を返す'
             expected: '`linkable` が `{D-1}`'
       - name: decision
@@ -314,7 +361,7 @@ classes:
           description: 文書の本文
         process: |-
           1. 呼び出しの共通の手順で `GET /sources/{source}/decisions/{id}` を呼ぶ
-          2. 応答の `markdown` を返す。当たるフォルダが 0 個か 2 個以上なら呼び出しの共通の手順が `DocumentNotFoundError` を送る
+          2. 応答の `body` を返す。当たるフォルダが 0 個か 2 個以上なら呼び出しの共通の手順が `DocumentNotFoundError` を送る
         unit_tests:
           - name: test_decision_when_ambiguous
             case: 異常
@@ -350,14 +397,14 @@ classes:
           description: 検索の結果
         process: |-
           1. 呼び出しの共通の手順で `GET /sources/{source}/search` を呼ぶ
-          2. `totalCount`・`items[]` を `SearchHits` にして返す
+          2. `items[]` の `id`・`filePath`・`name`・`snippets` を `SearchHit` の `id`・`path`・`name`・`snippets` にし、`totalCount` とともに `SearchHits` にして返す
         unit_tests:
           - name: test_search
             case: 正常
             summary: クエリを渡す
-            condition: '`q="ページング"`・`limit=5`'
+            condition: '`q="ページング"`・`limit=5`、応答の `items[]` が `path`・`id`・`filePath` を持つ'
             mock: '`httpx.MockTransport` で project-index の応答を返す'
-            expected: 要求のクエリに `q`・`limit` があり、`total_count` と `items` を返す
+            expected: 要求のクエリに `q`・`limit` があり、`total_count` と、`path` が `filePath` の値の `items` を返す
       - name: refs
         title: リビジョンの一覧の取得
         kind: メソッド
@@ -399,14 +446,14 @@ classes:
           description: 行と状態
         process: |-
           1. 呼び出しの共通の手順で `GET /settings/sources` を呼ぶ
-          2. `settingsPath`・`sources[]`・状態を `SettingsSourcesView` にして返す
+          2. `sources[]` の行ごとに、`id`・`config`・`enabled`・`scope` と `outsideRead` を `outside_read` にした辞書を `rows`、`id`・`status`・`errors`・`config`・`configVersion` を `SourceState` にしたものを `states` にし、`settingsPath` とともに `SettingsSourcesView` にして返す
         unit_tests:
           - name: test_settings_sources
             case: 正常
             summary: 行と状態
-            condition: 2 行と状態 2 件
+            condition: '`sources[]` 2 行（1 行は `outsideRead: false`、もう 1 行は `status: pending_reload`）'
             mock: '`httpx.MockTransport` で project-index の応答を返す'
-            expected: '`rows` が 2 件、`states` が 2 件'
+            expected: '`rows` が 2 件で 1 行目の `outside_read` が `False`、`states` が 2 件で 2 件目の `status` が `pending_reload`'
       - name: put_settings_sources
         title: 端末の設定の配信元の行の保存
         kind: メソッド
@@ -425,15 +472,21 @@ classes:
           type: SettingsSourcesView
           description: 読み直した後の行と状態
         process: |-
-          1. 呼び出しの共通の手順で `PUT /settings/sources` を呼ぶ
-          2. 応答を `SettingsSourcesView` にして返す。422 は呼び出しの共通の手順が `ProjectIndexRejectedError` を送る
+          1. 呼び出しの共通の手順で `PUT /settings/sources`（本文 `{sources: rows}`）を呼ぶ。422 は呼び出しの共通の手順が `ProjectIndexRejectedError` を送る
+          2. 応答は状態だけのため、端末の設定の取得（`GET /settings/sources`）を呼んでその結果を返す
         unit_tests:
+          - name: test_put_settings_sources
+            case: 正常
+            summary: 保存して行を取り直す
+            condition: PUT が 200 で状態 2 件、GET が 2 行を返す
+            mock: '`httpx.MockTransport` で project-index の応答を返す'
+            expected: 'PUT の本文が `{sources: rows}`、続けて GET を呼び、`rows` が GET の 2 行'
           - name: test_put_settings_sources_when_rejected
             case: 異常
             summary: スキーマに通らない
             condition: 422 で `errors[]` 1 件
             mock: '`httpx.MockTransport` で project-index の応答を返す'
-            expected: '`ProjectIndexRejectedError` で、`violations` が応答の 1 件'
+            expected: '`ProjectIndexRejectedError` で、`violations` が応答の 1 件。GET を呼ばない'
             exception: '422'
       - name: add_settings_source
         title: 端末の設定の配信元の行の追加
@@ -453,13 +506,19 @@ classes:
           type: AddSourceResult
           description: 追加したか・内容が同じか
         process: |-
-          1. 呼び出しの共通の手順で `POST /settings/sources` を呼ぶ
-          2. 201 なら `added=True`、409 なら `added=False`・`same` を応答の `same` にして返す
+          1. 呼び出しの共通の手順で `POST /settings/sources`（本文 `{source: row}`）を呼ぶ
+          2. 応答の `result` が `added` なら `added=True`、`exists` なら `added=False`・`same` を応答の `same` にして返す
         unit_tests:
+          - name: test_add_settings_source
+            case: 正常
+            summary: 行を追加する
+            condition: '201 で `result: added`'
+            mock: '`httpx.MockTransport` で project-index の応答を返す'
+            expected: '要求の本文が `{source: row}`、`added` が `True`'
           - name: test_add_settings_source_when_conflict
             case: 正常
             summary: 同じ id の行がある
-            condition: '409 で `same: true`'
+            condition: '409 で `result: exists`・`same: true`'
             mock: '`httpx.MockTransport` で project-index の応答を返す'
             expected: '`added` が `False`、`same` が `True`'
       - name: aclose

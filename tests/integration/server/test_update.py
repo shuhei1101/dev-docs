@@ -30,9 +30,9 @@ REQUEST_WAIT_SEC = 30
 
 
 def _wait_for_docs_request(mock: MockIndex) -> None:
-    """文書の一覧の要求がモックへ届くまで待つ。"""
+    """文書の取得が sample の配信元へ送った最初の要求（配信元の設定・リビジョン）がモックへ届くまで待つ。"""
     deadline = time.monotonic() + REQUEST_WAIT_SEC
-    while not any("/docs" in path for _, path, _ in mock.received):
+    while not any(path.startswith("/sources/sample/") for _, path, _ in mock.received):
         assert time.monotonic() < deadline, "文書の取得がモックへ届かなかった"
         time.sleep(0.05)
 

@@ -790,12 +790,22 @@ test.describe("列の表示のメニュー", () => {
 });
 
 test.describe("目次", () => {
-  // 見出し `目次` と、本文の見出し 2・3 を階層どおりに並べる（正常系）
+  /** mdmark が本文に描く右側の目次の枠 */
+  const sideToc = (page: Page) => page.getByRole("navigation", { name: "右側の目次", includeHidden: true });
+
+  /** 右側の目次を出す（既定の hover の出し方で、右端の線を指す） */
+  const openSideToc = async (page: Page) => {
+    await page.locator(".mdmark-side-toc-rail").hover();
+    await expect(sideToc(page)).toBeVisible();
+  };
+
+  // mdmark の右側の目次だけを出し、本文の右の列に別の目次を配置しない。線を指すと本文の見出しが並ぶ（正常系）
   test("toc_items", async ({ page }) => {
     await openRendered(page);
-    const toc = page.getByRole("navigation", { name: "目次" });
-    await expect(toc.getByRole("heading", { level: 2, name: "目次" })).toBeVisible();
-    await expect(toc.getByRole("link")).toHaveText(["概要", "項目", "項目の表", "関連"]);
+    await expect(sideToc(page)).toHaveCount(1);
+    await expect(page.getByRole("navigation", { name: "目次", exact: true, includeHidden: true })).toHaveCount(0);
+    await openSideToc(page);
+    await expect(sideToc(page).getByRole("link")).toHaveText(["概要", "項目", "項目の表", "関連"]);
   });
 
   // 画面の中で別の文書へ移ると、移った先の文書の見出しで目次を描き直す（正常系）
@@ -812,8 +822,7 @@ test.describe("目次", () => {
         }),
       }),
     });
-    const toc = page.getByRole("navigation", { name: "目次" });
-    await expect(toc.getByRole("link")).toHaveText(["概要", "関連"]);
+    await expect(sideToc(page).getByRole("link", { includeHidden: true })).toHaveText(["概要", "関連"]);
     // 実行
     await page
       .getByRole("navigation", { name: "文書の一覧" })
@@ -821,52 +830,26 @@ test.describe("目次", () => {
       .click();
     // 検証
     await expect(page.getByRole("heading", { level: 2, name: "別の概要" })).toBeVisible();
-    await expect(toc.getByRole("link")).toHaveText(["別の概要", "別の関連"]);
+    await expect(sideToc(page).getByRole("link", { includeHidden: true })).toHaveText(["別の概要", "別の関連"]);
   });
 
-  // 画面幅が 80rem 未満のときは出さない（正常系）
-  test("toc_hidden_when_narrow", async ({ page }) => {
-    await page.setViewportSize({ width: 1100, height: 800 });
-    await openRendered(page);
-    await expect(page.getByRole("navigation", { name: "目次" })).toBeHidden();
-  });
-
-  // クリックでその見出しへ移る（正常系）
-  test("toc_click", async ({ page }) => {
-    await openRendered(page);
-    await page.getByRole("navigation", { name: "目次" }).getByRole("link", { name: "関連" }).click();
-    await expect(page).toHaveURL(/#関連$|#%E9%96%A2%E9%80%A3$/);
-  });
-
-  // 画面の一番上にある見出しを現在地にし、スクロールに合わせて移す（正常系）
-  test("toc_current_heading", async ({ page }) => {
-    // 準備
-    await openRendered(page, "/sample/docs/doc-1", {
+  // 本文に見出し 1〜3 が無いときは出さない（正常系）
+  test("toc_hidden_without_headings", async ({ page }) => {
+    await openDoc(page, "/sample/docs/doc-1", {
       document: ({ path }) => ({
-        body: documentResponse({
-          path,
-          markdown: `# 文書 1\n\n## 概要\n\n${"本文\n\n".repeat(60)}## 関連\n\n${"本文\n\n".repeat(60)}`,
-        }),
+        body: documentResponse({ path, markdown: "# 文書 1\n\n見出しの無い本文です。\n" }),
       }),
     });
-    const toc = page.getByRole("navigation", { name: "目次" });
-    await expect(toc.getByRole("link", { name: "概要" })).toHaveAttribute("aria-current", "true");
-    // 実行
-    await page
-      .getByRole("heading", { level: 2, name: "関連" })
-      .evaluate((element) => element.scrollIntoView({ block: "start" }));
-    // 検証
-    await expect(toc.getByRole("link", { name: "関連" })).toHaveAttribute("aria-current", "true");
+    await expect(page.getByText("見出しの無い本文です。")).toBeVisible();
+    await expect(sideToc(page)).toHaveCount(0);
   });
-});
 
-test.describe("目次の変更のマーカー", () => {
-  // base と中身が違うセクションの見出しに変更のマーカーを付ける（正常系）
-  test("toc_change_marker", async ({ page }) => {
-    await openRendered(page, "/sample/docs/doc-1?base=7c0aa11", { document: withDiff });
-    const toc = page.getByRole("navigation", { name: "目次" });
-    await expect(toc.getByRole("link", { name: /概要/ })).toContainText("変更");
-    await expect(toc.getByRole("link", { name: /関連/ })).not.toContainText("変更");
+  // 目次の見出しのクリックでその見出しへ移る（正常系）
+  test("toc_click", async ({ page }) => {
+    await openRendered(page);
+    await openSideToc(page);
+    await sideToc(page).getByRole("link", { name: "関連" }).click();
+    await expect(page).toHaveURL(/#関連$|#%E9%96%A2%E9%80%A3$/);
   });
 });
 

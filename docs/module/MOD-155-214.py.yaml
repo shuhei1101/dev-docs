@@ -69,12 +69,12 @@ data_models:
         type: int | None
         access: 公開
         default: None
-        description: 管理用の YAML の行の文書の要素の添字。ファイル 1 つが 1 文書なら `None`
+        description: 管理用の YAML の行の文書の、同じファイルの中の要素の添字。ファイル 1 つが 1 文書なら `None`
       - name: data
         title: 値
         type: dict[str, Any]
         access: 公開
-        description: 文書の YAML の値（Markdown の文書は front matter）
+        description: 文書の値（project-index の `value`。行の文書は行の値）
       - name: body
         title: 本文
         type: str
@@ -91,24 +91,18 @@ data_models:
         title: メタデータ
         type: dict[str, Any]
         access: 公開
-        description: 共通のキー（`name`・`description`・`tags`・`alias_type` など）に読み替えた値
+        description: project-index の文書の一覧・文書の取得の `id`・`kind`・`name`・`description`・`tags`・`visibility`。文書の一覧の文書は、文書.行のメタデータの補いが、そのほかの共通のキー（`alias_type`・`aliases`・`status` など）を加える
       - name: version
         title: バージョン
         type: str
         access: 公開
-        description: 値の内容のハッシュ。差分の変化の判定に使う
-      - name: created
-        title: 作成日時
-        type: datetime | None
-        access: 公開
-        default: None
-        description: Git の配信元はファイルを最初に足した commit の日時
+        description: 文書の内容のハッシュ（project-index の文書の一覧の `version`）。差分の変化の判定に使う。文書の詳細では空
       - name: updated
         title: 更新日時
         type: datetime | None
         access: 公開
         default: None
-        description: Git の配信元は開いているリビジョンでファイルを最後に変えた commit の日時、Git 管理外はファイルの更新日時
+        description: project-index の文書の取得の `updatedAt`（Git の配信元は開いているリビジョンでファイルを最後に変えた commit の日時、Git 管理外はファイルの更新日時）。文書の一覧では `None`
   - name: DocumentRow
     title: 文書の行
     container: integrations/project_index/types.py
@@ -162,6 +156,12 @@ data_models:
         access: 公開
         default: None
         description: エイリアスを集める行か
+      - name: metadata
+        title: メタデータの対応
+        type: dict[str, str]
+        access: 公開
+        default: '{}'
+        description: 配信元の設定の行の `metadata`（共通のキー → 文書の値の項目のパス）
   - name: SourceView
     title: 配信元の表示の設定
     container: integrations/project_index/types.py
@@ -230,6 +230,15 @@ data_models:
           type: DocumentRow | None
           description: 無ければ `None`
         process: 1. `documents` から `id` が同じ最初の行を返す
+      - name: record_kinds
+        title: 行の文書の種類
+        kind: メソッド
+        summary: '`records` を持つ文書の行の ID を返す'
+        scope: public
+        returns:
+          type: set[str]
+          description: '`records` が `None` でない行の `id`'
+        process: 1. `documents` のうち `records` を持つ行の `id` を集めて返す
   - name: DocumentList
     title: 文書の一覧
     container: integrations/project_index/types.py
@@ -248,12 +257,6 @@ data_models:
         type: list[IndexedDocument]
         access: 公開
         description: そのリビジョンの全ての文書（`body` は空）
-      - name: unreadable
-        title: 読めなかったファイル
-        type: list[IndexFailure]
-        access: 公開
-        default: '[]'
-        description: YAML として読めず文書にできなかったファイル（`reason` は `invalid_yaml`）
   - name: IndexFailure
     title: 索引の変換の失敗
     container: integrations/project_index/types.py
@@ -314,7 +317,7 @@ data_models:
         title: 文書
         type: IndexedDocument | None
         access: 公開
-        description: '`body` を埋めた文書。YAML を読めないときは `None`'
+        description: '`body`・`updated` を埋めた文書。YAML を読めないとき（`value` が `null`）は `None`'
       - name: markdown
         title: 変換した Markdown
         type: str | None
@@ -416,18 +419,12 @@ data_models:
         title: 文書の ID
         type: str
         access: 公開
-        description: 管理用の YAML の行の文書の画面のパスに使う
+        description: project-index の検索の結果の `id`。文書の一覧の文書と組で引き当てる
       - name: path
         title: 文書のパス
         type: str
         access: 公開
-        description: 配信元の直下からのファイルのパス（拡張子つき）
-      - name: record_index
-        title: 要素の添字
-        type: int | None
-        access: 公開
-        default: None
-        description: 管理用の YAML の行の文書の要素の添字
+        description: project-index の検索の結果の `filePath`（配信元の直下からのファイルのパス、拡張子つき）
       - name: name
         title: 文書の名前
         type: str
@@ -576,14 +573,21 @@ functions:
         type: Mapping[str, Any]
         required: true
         passing: positional
-        description: 応答の 1 件
+        description: project-index の文書の一覧の `documents[]` の 1 件
+      - name: record_index
+        title: 要素の添字
+        type: int | None
+        required: false
+        passing: keyword
+        default: None
+        description: 管理用の YAML の行の文書の要素の添字（呼び出し側が決める）
     returns:
       type: IndexedDocument
       description: 読み取った文書
     process: |-
-      1. `id`・`kind`・`path`・`version`・`data`・`metadata` を取り出し、無ければ `ProjectIndexResponseError`（`summary` に無いキー）を送る
-      2. `recordIndex`・`bodyPath`・`body` を取り出し、無ければ既定値にする
-      3. `created`・`updated` を ISO 8601 の日時として読み、無いか読めなければ `None` にする
+      1. `id`・`kind`・`path`・`version` を取り出し、無ければ `ProjectIndexResponseError`（`summary` に無いキー）を送る
+      2. `value` を `data`（`null` なら空）、`id`・`kind`・`name`・`description`・`tags`・`visibility` を `metadata`、`bodyPath` を `body_path` にする
+      3. `record_index` は引数の `record_index`、`body` は空、`updated` は `None` にする
     exceptions:
       - name: ProjectIndexResponseError
         condition: 必須のキーが無い
@@ -591,10 +595,16 @@ functions:
     unit_tests:
       - name: test_parse_document
         case: 正常
-        summary: 全てのキー
-        condition: '`recordIndex: 1`・`bodyPath: notes/a.md`・`updated: 2026-11-12T10:00:00+09:00` を持つ JSON'
+        summary: 文書の一覧の 1 件
+        condition: '`id`・`kind`・`path`・`name`・`tags`・`visibility`・`bodyPath: notes/a.md`・`version`・`value` を持つ JSON と `record_index=1`'
         mock: なし
-        expected: '`record_index` が 1、`body_path` が `notes/a.md`、`updated` がタイムゾーン付きの日時、`body` が空'
+        expected: '`data` が `value`、`metadata` が `id`・`kind`・`name`・`description`・`tags`・`visibility`、`body_path` が `notes/a.md`、`record_index` が 1、`body` が空、`updated` が `None`'
+      - name: test_parse_document_when_value_null
+        case: 正常
+        summary: 値を求めなかった
+        condition: '`value: null` の JSON'
+        mock: なし
+        expected: '`data` が空の辞書'
       - name: test_parse_document_when_key_missing
         case: 異常
         summary: 必須のキーが無い

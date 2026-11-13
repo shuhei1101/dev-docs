@@ -87,10 +87,14 @@ categories:
          ```bash
          npm run build-storybook
          ```
+      4. GitHub Pages の公開ページ（公開の文書と判定フローチャートを mdmark の build でまとめた 1 枚の HTML）を手元で作る（出力先は `tmp/pages/`。実行のたびに作り直す。Node 24 以降の `npx` が要る。Pages への配信では `.github/workflows/pages.yml` が同じコマンドを `--out _site` で実行する）
+         ```bash
+         uv run --frozen python scripts/build_pages.py --out tmp/pages
+         ```
     verification:
       state: 済
-      date: '2026-10-30'
-      detail: worktree で `npm run build`・`npm run api:generate`・`npm run build-storybook` を実行し、終了コード 0 で成果物ができることを確かめた。Storybook は、ビルドだけを確かめ、ブラウザで開いて描画することは確かめていない。
+      date: '2026-11-13'
+      detail: worktree で `npm run build`・`npm run api:generate`・`npm run build-storybook` を実行し、終了コード 0 で成果物ができることを確かめた（2026-10-30）。Storybook は、ビルドだけを確かめ、ブラウザで開いて描画することは確かめていない。`uv run --frozen python scripts/build_pages.py --out tmp/pages` を Node 24 の環境で実行し、終了コード 0 で `tmp/pages/index.html` に文書 14 件（公開ドキュメント 12 件と判定フローチャート 2 件）がまとまることを確かめた（2026-11-13）
   - name: 取り込み前の検査
     commands: |-
       `frontend/` を変えた commit では、lefthook の pre-commit が画面をビルドし直して `src/dev_docs/screen/` をステージへ戻す。

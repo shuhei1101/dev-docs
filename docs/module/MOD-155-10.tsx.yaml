@@ -10,7 +10,7 @@ components:
     container: features/docs/doc-view/components/doc-body.tsx
     usecase: 文書を読む
     role: 部品
-    summary: 最初の見出し 1 を除いた Markdown を `useMdmark` で描き、描いた後の見出しを `onHeadings` で返す
+    summary: 最初の見出し 1 を除いた Markdown を `useMdmark` で描く（右側の目次は mdmark が描く）
     props:
       - name: document
         type: DocumentResponse
@@ -20,10 +20,6 @@ components:
         type: '{markdown: string; tableKeys: string[]} | null'
         required: false
         description: 比較元の文書の本文と表のキー（`{markdown, tableKeys}`。差分の強調）。`null`・省略は強調しない
-      - name: onHeadings
-        type: '(items: TocItem[]) => void'
-        required: true
-        description: 描いた後の見出し（`readToc`）
       - name: onCommentSaved
         type: () => void
         required: true

@@ -91,12 +91,13 @@ functions:
       description: project-index の並びのまま
     process: |-
       1. project-indexの呼び出し.検索（`q`・`ref`・`limit`）を呼ぶ。語の照合・`search: false` の行の除外・一致した箇所の抜き出しは project-index が行う
-      2. `items` を `ScreenSearchItem(path=文書のページのパス(hit), name, snippets)` にし、`total_count` とともに返す
+      2. project-indexの呼び出し.配信元の表示の設定の取得と文書の一覧の取得（`ref`。`record_kinds` は `records` を持つ行の ID、`values` は `False`）で、結果ごとに `path` と `id` が同じ文書を引き当てる。引き当てられない結果は `path` から拡張子を落としたパスにする
+      3. `items` を `ScreenSearchItem(path=文書のページのパス(引き当てた文書), name, snippets)` にし、`total_count` とともに返す
     unit_tests:
       - name: test_screen_search
         case: 正常
         summary: 画面のパスにする
-        condition: 'project-index が `docs/a.yaml` の文書と、`notes/files.yaml` の `record_index: 0`・`id: n-1` の文書を返す'
+        condition: '検索の結果が `docs/a.yaml`（`id: a`）と `notes/files.yaml`（`id: n-1`）を返し、文書の一覧が `notes/files.yaml` の `n-1` を `record_index: 0` で返す'
         mock: project-indexの呼び出し（検索の結果を返す偽物）
         expected: '`items[].path` が `docs/a` と `notes/files/n-1`、`total_count` が偽物の値'
       - name: test_screen_search_when_unreachable

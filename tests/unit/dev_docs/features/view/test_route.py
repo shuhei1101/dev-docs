@@ -78,7 +78,15 @@ def test_build_view_router_when_search(
     # 準備
     sample_index.search_results = {
         "totalCount": 1,
-        "items": [{"id": "a", "path": "docs/a.yaml", "name": "A", "snippets": ["foo"]}],
+        "items": [
+            {
+                "path": "docs/a",
+                "id": "a",
+                "filePath": "docs/a.yaml",
+                "name": "A",
+                "snippets": ["foo"],
+            }
+        ],
     }
     client = _client(make_handlers())
     # 実行

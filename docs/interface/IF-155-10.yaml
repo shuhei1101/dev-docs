@@ -8,7 +8,7 @@ flows:
     summary: 配信元の一番左のタブの一番上の文書と、文書のパスで指した文書を返す
     setup:
       - name: Mock
-        description: project-index の読み取り API のモック（shuhei1101/project-index#14 の入出力で、setup の配信元の文書・リビジョンを返す）。dev-docs のアプリを HTTP のテストのクライアントで呼ぶ
+        description: 'テストの中で起動した project-index（shuhei1101/project-index の develop の `f36ba69`（shuhei1101/project-index#46 をマージした commit）。一時フォルダの端末の設定を `PROJECT_INDEX_CONFIG` で指し、空きポートで子プロセスとして起動する）が、setup の配信元を配信する。dev-docs のアプリを HTTP のテストのクライアントで呼ぶ'
         notes: '-'
       - name: サンプルの配信元
         description: 文書の種類を 1 つ（スキーマと YAML 2 件）と、`nav` を持つ `project-index.yaml` を持つ git リポジトリ
@@ -18,7 +18,7 @@ flows:
       sequenceDiagram
         participant C as クライアント
         participant E as GET /_api/sources/{source}/docs/{path}
-        participant PI as project-index（モック）
+        participant PI as project-index
 
         C->>E: GET /_api/sources/sample/docs
         E->>PI: 配信元の設定の nav と文書の一覧・文書 1 の値を取得する
@@ -75,7 +75,7 @@ flows:
       sequenceDiagram
         participant C as クライアント
         participant E as GET /_api/sources/{source}/docs/{path}
-        participant PI as project-index（モック）
+        participant PI as project-index
 
         C->>E: GET /_api/sources/sample/docs/{文書 1 のパス}?ref={古い commit}
         E->>PI: そのリビジョンの文書の値を取得する
@@ -98,7 +98,7 @@ flows:
       sequenceDiagram
         participant C as クライアント
         participant E as GET /_api/sources/{source}/docs/{path}
-        participant PI as project-index（モック）
+        participant PI as project-index
 
         C->>E: GET /_api/sources/sample/docs/{文書 1 のパス}?ref={変更の commit}&diff={親の commit}
         E->>PI: 両端のリビジョンの文書の一覧と値・nav を取得する
@@ -128,7 +128,7 @@ flows:
       sequenceDiagram
         participant C as クライアント
         participant E as GET /_api/sources/{source}/docs/{path}
-        participant PI as project-index（モック）
+        participant PI as project-index
 
         C->>E: GET /_api/sources/custom/docs/{converters を指す種類の文書}
         E->>PI: 文書の取得
@@ -145,26 +145,26 @@ flows:
   - name: 正常系（変換に失敗する）
     summary: project-index が返した変換の失敗と読めなかった YAML を、`conversionError` に入れる
     setup:
-      - name: Mock
-        description: custom の `converters[]` を指す種類の文書に、制限時間を超えた変換の失敗（種類・スクリプト・理由）を返す
+      - name: 失敗する変換
+        description: custom の `converters[]` を指す種類の文書 1 件で、スクリプトが終了コード 1 で終わる
         notes: '-'
       - name: 壊れた YAML
-        description: モックが sample の文書 1 のファイルを、文書の一覧の読めなかったファイル（行と列）として返す
+        description: sample の文書 1 のファイルを YAML として読めない内容にした commit
         notes: '-'
     flow: |-
       ```mermaid
       sequenceDiagram
         participant C as クライアント
         participant E as GET /_api/sources/{source}/docs/{path}
-        participant PI as project-index（モック）
+        participant PI as project-index
 
         C->>E: GET /_api/sources/custom/docs/{converters を指す種類の文書}
         E->>PI: 文書の取得
-        PI-->>E: 変換の失敗（制限時間を超えた）
+        PI-->>E: 変換の失敗（スクリプトが終了コード 1 で終わった）
         E-->>C: 200（conversionError つき）
       ```
     expected:
-      - '`markdown` が `null` で、`conversionError` に種類・スクリプトのパス・制限時間を超えたことがある'
+      - '`markdown` が `null` で、`conversionError` に種類・スクリプトのパス・終了コードがある'
       - 同じ配信元のスキーマ駆動で変換する文書は 200 で `markdown` を返す
       - 壊れた YAML の文書 1 は、`conversionError` にファイルのパスと読めなかった行と列を入れて 200 を返す
     test: test_normal_when_conversion_failed
@@ -262,7 +262,7 @@ flows:
       sequenceDiagram
         participant C as クライアント
         participant E as GET /_api/sources/{source}/docs/{path}
-        participant PI as project-index（モック）
+        participant PI as project-index
 
         C->>E: GET /_api/sources/sample/docs/{a の画面のパス}
         E->>PI: notes/files.yaml の行の文書と、行の body_file の本文を取得する
@@ -463,7 +463,7 @@ flows:
       sequenceDiagram
         participant C as クライアント
         participant E as GET /_api/sources/{source}/docs/{path}
-        participant PI as project-index（モック）
+        participant PI as project-index
 
         C->>E: GET /_api/sources/sample/docs/{文書 6 のパス}
         E->>PI: 検討事項の ID と、ID ごとに当たるフォルダの数を取得する
@@ -490,7 +490,7 @@ flows:
       sequenceDiagram
         participant C as クライアント
         participant E as GET /_api/sources/{source}/docs/{path}
-        participant PI as project-index（モック）
+        participant PI as project-index
 
         C->>E: GET /_api/sources/sample/docs/_decisions/D-1
         E->>PI: 検討事項の文書 D-1 を取得する
@@ -515,7 +515,7 @@ flows:
       sequenceDiagram
         participant C as クライアント
         participant E as GET /_api/sources/{source}/docs/{path}
-        participant PI as project-index（モック）
+        participant PI as project-index
 
         C->>E: GET /_api/sources/sample/docs
         E->>PI: 配信元の設定の nav と文書の一覧を取得する（接続を断られる）
@@ -536,7 +536,7 @@ flows:
       sequenceDiagram
         participant C as クライアント
         participant E as GET /_api/sources/{source}/docs/{path}
-        participant PI as project-index（モック）
+        participant PI as project-index
 
         C->>E: GET /_api/sources/sample/docs
         E->>PI: 配信元の設定の nav と文書の一覧を取得する（応答しない）
@@ -675,7 +675,7 @@ response:
     type: str | None
     description: 本文のファイルのパス（配信元の直下から、拡張子つき）。管理用の YAML の行の文書は `body_file` が指すファイル
     notes: 本文のファイルを持たない文書（ファイル 1 つが 1 文書）は `null`。画面は本文の相対リンクを、これがあればこのパス、無ければ `path` を基準に解決する
-response_notes: '本文の描画（mdmark）・リンクの組み立て・コメント・目次の変わった見出しのマーカーは #17 の画面が持つ。目次のマーカーは、`ref` を `diff.base` にして取った `markdown` と見出しごとに比べて付ける。'
+response_notes: '本文の描画（mdmark）・リンクの組み立て・コメント・本文の差分の強調は #17 の画面が持つ。差分の強調は、`ref` を `diff.base` にして取った `markdown` を mdmark の `baseMarkdown` に指定して付ける。'
 status_codes:
   - code: '200'
     condition: 文書を返した（変換に失敗したとき・YAML を読めないときも `conversionError` を入れて 200）
