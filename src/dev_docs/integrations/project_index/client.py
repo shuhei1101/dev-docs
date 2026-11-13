@@ -11,7 +11,7 @@ from urllib.parse import quote
 import httpx
 
 from dev_docs.integrations.project_index.types import (
-    METADATA_KEYS,
+    LISTED_METADATA_KEYS,
     AddSourceResult,
     CommitSummary,
     DecisionIndex,
@@ -295,7 +295,7 @@ class ProjectIndexClient:
                 source_id=source,
                 path=str(value.get("path", path)),
                 data=dict(value["value"]),
-                metadata={key: metadata.get(key) for key in METADATA_KEYS},
+                metadata={key: metadata.get(key) for key in LISTED_METADATA_KEYS},
                 version="",
                 body=str(value.get("body") or ""),
                 body_path=value.get("bodyPath"),

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 from pathlib import PurePosixPath
 
 from dev_docs.features.view.paths import page_path
@@ -18,8 +19,9 @@ async def screen_search(
     client: ProjectIndexClient, source_id: str, q: str, *, ref: str | None, limit: int
 ) -> ScreenSearchResult:
     """project-index の検索の結果を、文書のページのパスの画面の検索の結果にする。"""
-    hits = await client.search(source_id, q, ref=ref, limit=limit)
-    view = await client.source_view(source_id)
+    hits, view = await asyncio.gather(
+        client.search(source_id, q, ref=ref, limit=limit), client.source_view(source_id)
+    )
     listed = await client.list_documents(
         source_id, ref=ref, record_kinds=view.record_kinds(), values=False
     )

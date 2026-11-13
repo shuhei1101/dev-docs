@@ -13,7 +13,7 @@ type SourceStateKind = Literal["serving", "not_served", "disabled", "pending_rel
 type FailureReason = Literal["timeout", "exit", "not_runnable", "invalid_yaml"]
 
 REQUIRED_DOCUMENT_KEYS = ("id", "kind", "path", "version")
-METADATA_KEYS = ("id", "kind", "name", "description", "tags", "visibility")
+LISTED_METADATA_KEYS = ("id", "kind", "name", "description", "tags", "visibility")
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -213,7 +213,7 @@ def parse_document(
         source_id=source_id,
         path=str(value["path"]),
         data=dict(value.get("value") or {}),
-        metadata={key: value.get(key) for key in METADATA_KEYS},
+        metadata={key: value.get(key) for key in LISTED_METADATA_KEYS},
         version=str(value["version"]),
         record_index=record_index,
         body_path=value.get("bodyPath"),
