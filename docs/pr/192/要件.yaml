@@ -1,19 +1,11 @@
 docs:
   - page: docs/flowchart/flowchart-new-or-modify.yaml
     new: false
-    change: visibility を internal から public にし、公開ページの生成の対象にする
+    change: visibility を internal から public にし、公開ページにまとめる対象にする
     status: todo
   - page: docs/flowchart/flowchart-documents-row.yaml
     new: false
-    change: visibility を internal から public にし、公開ページの生成の対象にする
-    status: todo
-  - page: docs/guide/使い方.md
-    new: false
-    change: 目次の表に、生成する 2 ページ（./flowchart-new-or-modify.md・./flowchart-documents-row.md）の行を追加する
-    status: todo
-  - page: docs/_config.yml
-    new: false
-    change: 生成したページは docs/guide/ へ書き出し、flowchart/ の YAML は公開しないため exclude は変えないことを確認する
+    change: visibility を internal から public にし、公開ページにまとめる対象にする
     status: todo
   - page: docs/architecture/ARCH-155-1.yaml
     new: false
@@ -35,11 +27,14 @@ docs:
     updated_at: '2026-11-13T02:00:53.397423+00:00'
 scope_out:
   - item: docs/flowchart/ 以外の YAML の設計書（scenario・interface・module など）の公開ページの生成
-    reason: Issue は判定フローチャートの 2 文書を「使い方」へ戻す作業で、設計書は _config.yml で公開から外している
+    reason: Issue は判定フローチャートの 2 文書を公開ページへ戻す作業で、設計書は visibility を持たず公開しない
     plan: none
   - item: AI Monitor のテーマのバージョンの取り込み（docs/_theme/・ai-monitor-theme.yaml）
-    reason: テーマのバージョンを上げる別の作業で、この PR は今のテーマのまま描く
+    reason: テーマのバージョンを上げる別の作業。この PR の後は公開ページがテーマを使用しないため、要否は Jekyll の設定とページの削除の行で見直す
     plan: '#74'
   - item: 文書の書き方を mdmark の書き方へ移す
     reason: この PR は公開ページの生成と公開の設定だけで、文書の中身を触らない
     plan: '#95'
+  - item: Pages を mdmark の build に切り替えた後に使用しなくなる Jekyll の設定とページ（docs/_config.yml・docs/_theme/・docs/guide/ の分類のトップページ・ai-monitor-theme.yaml）の削除
+    reason: AI Monitor の配布物（テーマと publish が書き出すページ）の受け取り方を変える別の作業で、#74 の要否の見直しを含む。この PR を前提にする
+    plan: to_file

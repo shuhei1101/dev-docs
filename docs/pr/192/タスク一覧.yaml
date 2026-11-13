@@ -26,12 +26,12 @@ tasks:
     updated_at: '2026-11-13T01:41:58.021193+00:00'
   - process: デザインスタイル選定
     status: skipped
-    reason: モック要否の Q1 が NO（公開ページの見た目は今の AI Monitor のテーマのまま。増えるのはサイドバー・目次の行と本文で、要素・配置・色は変わらない）
+    reason: モック要否の Q1 は YES（公開ページを mdmark の build の 1 枚の HTML にする）、Q2 は NO（公開する文書の並びは今の分類のままで、画面を足し引きしない）、Q3 は NO（文書の一覧・本文・図は mdmark の既定の見た目で描き、作り手が決める余地が無い）。Q4 は YES（Issue は見た目の方向を決めない）
     updated_by: planner
     updated_at: '2026-11-13T01:41:58.021193+00:00'
   - process: 画面一覧・画面遷移
     status: skipped
-    reason: モック要否の Q1 が NO
+    reason: モック要否の Q2 が NO、Q3 が NO（mdmark の既定の文書の一覧で行き来し、画面と遷移をこの PR で設計しない）
     updated_by: planner
     updated_at: '2026-11-13T01:41:58.021193+00:00'
   - process: 単一ユースケース設計
@@ -41,7 +41,7 @@ tasks:
     updated_at: '2026-11-13T01:41:58.021193+00:00'
   - process: モック作成
     status: skipped
-    reason: モック要否の Q1 が NO
+    reason: モック要否の Q3 が NO（見た目は mdmark の build の出力そのもので、作り手が決める余地が無い）
     updated_by: planner
     updated_at: '2026-11-13T01:41:58.021193+00:00'
   - process: インターフェース定義設計
@@ -56,14 +56,14 @@ tasks:
     updated_at: '2026-11-13T01:41:58.021193+00:00'
   - process: 画面設計
     status: skipped
-    reason: 画面設計要否の Q2 が NO（サイドバーの行と目次の表の行が増えるだけで、UI 項目・操作は増えない）
+    reason: 画面設計要否の Q2 が NO（UI 項目・操作は mdmark の build が持つもので、この PR で足し変えしない）
     updated_by: planner
     updated_at: '2026-11-13T01:41:58.021193+00:00'
   - process: モジュール構成設計
-    status: done
-    note: MOD-192-1（scripts/build_pages.py）
+    status: todo
+    note: ユーザーの回答（確認ログ）でビルドの方式を mdmark の build に変えたため、MOD-192-1 を作り直す
     updated_by: planner
-    updated_at: '2026-11-13T02:02:25.818205+00:00'
+    updated_at: '2026-11-13T02:41:38.566846+00:00'
   - process: ドキュメント修正
     status: todo
   - process: 単体テスト作成
