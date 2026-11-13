@@ -1,0 +1,362 @@
+title: 開発用のスクリプト / 公開ページのビルド / build_pages.py
+lead: |-
+  `docs/flowchart/` の YAML のうち `visibility: public` の文書を、GitHub Pages の Jekyll が描く Markdown に変換して書き出す。
+  GitHub Actions の Pages のワークフローが、Jekyll のビルドの前に呼ぶ。
+directory: |-
+  ```text
+  scripts/
+  └─ build_pages.py    # main / load_public_flowcharts / index_document_paths / render_page / rewrite_references
+  .github/
+  └─ workflows/
+     └─ pages.yml      # develop への push で build_pages.py → Jekyll → Pages へ配信
+  ```
+classes:
+  - name: BuildError
+    title: ビルドの失敗
+    container: scripts/build_pages.py
+    usecase: 公開ページのビルド
+    role: 例外
+    summary: 入力の誤りで公開ページを書き出せないことを表す例外
+    kind: クラス
+    inherits: Exception
+    description: メッセージに原因のファイルのパスか参照の文字列を含める。`main` が捕まえて標準エラーに出し、`EXIT_INPUT_ERROR` で終わる。
+constants:
+  - name: FLOWCHART_DIR
+    title: 判定フローチャートのフォルダ
+    container: scripts/build_pages.py
+    usecase: 公開ページのビルド
+    summary: 変換する YAML を配置するフォルダの、リポジトリの直下からのパス
+    value: '"docs/flowchart"'
+  - name: DOCS_DIR
+    title: 文書のフォルダ
+    container: scripts/build_pages.py
+    usecase: 公開ページのビルド
+    summary: 文書の ID を集めるフォルダの、リポジトリの直下からのパス
+    value: '"docs"'
+  - name: SKIPPED_DIRS
+    title: ID を集めないフォルダ
+    container: scripts/build_pages.py
+    usecase: 公開ページのビルド
+    summary: 文書の原本でないため ID を集めない `docs/` 直下のフォルダ
+    entries:
+      - key: '0'
+        value: '"pr"'
+      - key: '1'
+        value: '"mock"'
+      - key: '2'
+        value: '"generated"'
+  - name: SKIPPED_FILES
+    title: ID を集めないファイル名
+    container: scripts/build_pages.py
+    usecase: 公開ページのビルド
+    summary: 文書ではなく目次・管理用の YAML のファイル名
+    entries:
+      - key: '0'
+        value: '"index.yaml"'
+      - key: '1'
+        value: '"files.yml"'
+  - name: GUIDE_DIR
+    title: 公開ドキュメントのフォルダ
+    container: scripts/build_pages.py
+    usecase: 公開ページのビルド
+    summary: 生成したページと同じ階層として相対リンクにするフォルダの、リポジトリの直下からのパス
+    value: '"docs/guide"'
+  - name: BLOB_URL
+    title: 公開しない文書のリンクの頭
+    container: scripts/build_pages.py
+    usecase: 公開ページのビルド
+    summary: 公開ページを持たない文書への参照を書き換える GitHub の URL の頭
+    value: '"https://github.com/shuhei1101/dev-docs/blob/develop/"'
+  - name: PUBLIC
+    title: 公開する値
+    container: scripts/build_pages.py
+    usecase: 公開ページのビルド
+    summary: 変換の対象にする `visibility` の値
+    value: '"public"'
+  - name: OVERVIEW_ID
+    title: 概要の項目の ID
+    container: scripts/build_pages.py
+    usecase: 公開ページのビルド
+    summary: 見出しを付けずに冒頭リードにする項目の `id`
+    value: '"overview"'
+  - name: GROUP_SEPARATOR
+    title: group のレイヤーの区切り
+    container: scripts/build_pages.py
+    usecase: 公開ページのビルド
+    summary: 項目の `group` を入れ子の見出しに分ける区切り
+    value: '" > "'
+  - name: ITEM_HEADING_LEVEL
+    title: 項目の見出しの最初の深さ
+    container: scripts/build_pages.py
+    usecase: 公開ページのビルド
+    summary: '`group` を持たない項目と、`group` の 1 つ目のレイヤーの見出しの深さ'
+    value: '2'
+  - name: EXIT_INPUT_ERROR
+    title: 入力の誤りの終了コード
+    container: scripts/build_pages.py
+    usecase: 公開ページのビルド
+    summary: '`BuildError` で終わるときの終了コード'
+    value: '2'
+functions:
+  - name: main
+    title: スクリプトの入口
+    container: scripts/build_pages.py
+    usecase: 公開ページのビルド
+    role: 入口
+    summary: 公開の判定フローチャートを Markdown にして `--out` のフォルダへ `{ID}.md` で書き出し、終了コードを返却する
+    kind: 関数
+    scope: public
+    is_async: false
+    side_effects: '`--out` のフォルダを作り、ファイルを記載する。標準出力・標準エラーに出力する'
+    args:
+      - name: argv
+        title: 引数
+        type: Sequence[str] | None
+        required: false
+        default: None
+        passing: positional
+        description: コマンドの引数。`None` は `sys.argv[1:]`。`--root`（リポジトリの直下。既定 `.`）・`--out`（書き出すフォルダ。必須）
+    args_example: |-
+      ```bash
+      uv run --frozen python scripts/build_pages.py --out docs/guide
+      ```
+    returns:
+      type: int
+      description: 成功は 0、`BuildError` は `EXIT_INPUT_ERROR`、予期しない例外は 1
+    process: |-
+      1. argparse で `--root`・`--out` を解析する
+      2. 公開の判定フローチャートを読み込み（公開の判定フローチャートの読み込み）、文書の ID の場所を集める（文書の ID の場所の収集）
+      3. 文書ごとに Markdown にし（ページの描画）、`{out}/{id}.md` へ UTF-8 で記載する
+         - `{out}/{id}.md` が既にある場合、記載する前に `BuildError` を送出する（手で記載したページを上書きしない）
+         - [INFO] 書き出したページ（`{out}/{id}.md`）を標準出力に 1 行ずつ出す
+      4. 0 を返却する
+         - `BuildError` の場合、メッセージを標準エラーに出して `EXIT_INPUT_ERROR` を返却する
+         - 予期しない例外の場合、`traceback.print_exc()` を呼んで 1 を返却する
+    unit_tests:
+      - name: test_main
+        case: 正常
+        summary: 公開の文書だけを書き出す
+        condition: 一時フォルダの `docs/flowchart/` に public の文書 1 つと internal の文書 1 つ
+        mock: なし（一時ディレクトリ）
+        expected: 0 を返却し、`--out` に public の文書の `{id}.md` だけができる
+      - name: test_main_when_page_exists
+        case: 異常
+        summary: 同じ名前のページがあれば記載しない
+        condition: '`--out` に `{id}.md` が既にある'
+        mock: なし（一時ディレクトリ）
+        expected: '`EXIT_INPUT_ERROR` を返却し、既存のファイルの中身が変わらず、標準エラーにパスが出る'
+        exception: 同じ名前のページがある
+      - name: test_main_when_reference_unresolved
+        case: 異常
+        summary: 解決できない参照で止まる
+        condition: public の文書の本文に、どの文書にも無い ID への参照
+        mock: なし（一時ディレクトリ）
+        expected: '`EXIT_INPUT_ERROR` を返却し、ファイルを記載しない'
+        exception: 参照の解決の失敗
+  - name: load_public_flowcharts
+    title: 公開の判定フローチャートの読み込み
+    container: scripts/build_pages.py
+    usecase: 公開ページのビルド
+    role: 読み込み
+    summary: '`{root}/FLOWCHART_DIR` の直下の YAML のうち `visibility` が `PUBLIC` の文書を、ファイル名の順に返却する'
+    kind: 関数
+    scope: public
+    is_async: false
+    args:
+      - name: root
+        title: リポジトリの直下
+        type: Path
+        required: true
+        passing: positional
+        description: リポジトリの直下
+    returns:
+      type: list[dict[str, Any]]
+      description: 公開の文書の YAML の中身。無ければ空のリスト
+    process: |-
+      1. `{root}/FLOWCHART_DIR` の直下の `*.yaml` のうち、`SKIPPED_FILES` に無いものをファイル名の順に ruamel.yaml（`typ="safe"`）で読み込む
+         - フォルダが無い場合、空のリストを返却する
+         - YAML として読み込めないか、トップレベルがマッピングでないか、`id`・`name` が文字列でない場合、ファイルのパスを添えて `BuildError` を送出する
+      2. `visibility` が `PUBLIC` の文書だけを返却する
+    exceptions:
+      - name: BuildError
+        condition: YAML として読み込めないか、トップレベルがマッピングでないか、`id`・`name` が文字列でない
+        message: '`{パス}: {理由}`'
+    unit_tests:
+      - name: test_load_public_flowcharts
+        case: 正常
+        summary: public だけをファイル名の順に返却する
+        condition: '`b.yaml`（public）・`a.yaml`（public）・`c.yaml`（internal）・`index.yaml`'
+        mock: なし（一時ディレクトリ）
+        expected: '`a.yaml`・`b.yaml` の順の 2 件'
+      - name: test_load_public_flowcharts_when_no_folder
+        case: 正常
+        summary: フォルダが無い
+        condition: '`docs/flowchart/` の無い一時フォルダ'
+        mock: なし（一時ディレクトリ）
+        expected: 空のリスト
+      - name: test_load_public_flowcharts_when_invalid
+        case: 異常
+        summary: 読み込めない YAML
+        condition: '`{` だけのファイル'
+        mock: なし（一時ディレクトリ）
+        expected: パスを含む `BuildError`
+        exception: YAML として読み込めない
+  - name: index_document_paths
+    title: 文書の ID の場所の収集
+    container: scripts/build_pages.py
+    usecase: 公開ページのビルド
+    role: 読み込み
+    summary: '`{root}/DOCS_DIR` の配下の YAML の文書のトップレベルの `id` から、ID → リポジトリの直下からのパスを作る'
+    kind: 関数
+    scope: public
+    is_async: false
+    args:
+      - name: root
+        title: リポジトリの直下
+        type: Path
+        required: true
+        passing: positional
+        description: リポジトリの直下
+    returns:
+      type: dict[str, str]
+      description: ID → `docs/` から始まるパス
+    process: |-
+      1. `{root}/DOCS_DIR` の配下の `*.yaml` を辿る。`DOCS_DIR` 直下の `SKIPPED_DIRS` の配下と、ファイル名が `SKIPPED_FILES` のものは飛ばす
+      2. トップレベルがマッピングで `id` が文字列の文書を、ID → パスに入れる
+         - YAML として読み込めない文書は飛ばす（変換する文書の読み込みは公開の判定フローチャートの読み込みが確認する）
+    unit_tests:
+      - name: test_index_document_paths
+        case: 正常
+        summary: 文書の ID だけを集める
+        condition: '`docs/module/MOD-1.py.yaml`（`id: MOD-1`）・`docs/pr/1/x.yaml`（`id: X`）・`docs/flowchart/index.yaml`・読み込めない YAML'
+        mock: なし（一時ディレクトリ）
+        expected: '`{"MOD-1": "docs/module/MOD-1.py.yaml"}`'
+  - name: render_page
+    title: ページの描画
+    container: scripts/build_pages.py
+    usecase: 公開ページのビルド
+    role: 変換
+    summary: 判定フローチャートの文書 1 つを、`# {name}` と項目の見出し・本文の Markdown にする
+    kind: 関数
+    scope: public
+    is_async: false
+    args:
+      - name: document
+        title: 文書
+        type: Mapping[str, Any]
+        required: true
+        passing: positional
+        description: 公開の判定フローチャートの YAML の中身
+      - name: public_ids
+        title: 公開ページの ID
+        type: Collection[str]
+        required: true
+        passing: keyword
+        description: 公開ページを書き出す文書の ID
+      - name: paths
+        title: 文書の ID の場所
+        type: Mapping[str, str]
+        required: true
+        passing: keyword
+        description: 文書の ID の場所の収集の結果
+    returns:
+      type: str
+      description: 末尾に改行を 1 つ持つ Markdown
+    process: |-
+      1. `# {name}` を配置する
+      2. `items` を並びの順に描く。本文は参照の書き換えを実行する（参照の書き換え）
+         - `id` が `OVERVIEW_ID` の項目は、見出しを付けずに本文だけを配置する
+         - `group` を持たない項目は、`ITEM_HEADING_LEVEL` の見出し `{name} {#{id}}` の下に本文を配置する
+         - `group` を持つ項目は、`group` を `GROUP_SEPARATOR` で分けたレイヤーごとに `ITEM_HEADING_LEVEL` から 1 つずつ深い見出しを、直前の項目とレイヤーが違うところから配置し、最後のレイヤーの 1 つ下の深さの見出し `{name} {#{id}}` の下に本文を配置する
+      3. ブロックを空行でつなぐ
+    unit_tests:
+      - name: test_render_page
+        case: 正常
+        summary: 概要・group・group 無しの項目
+        condition: '`overview`・同じ `group` の 2 項目・`group` の無い 1 項目を持つ文書'
+        mock: なし
+        expected: '`# {name}`、見出しの無い概要の本文、`## {group}` が 1 つと `### {name} {#{id}}` が 2 つ、`## {name} {#{id}}` の順の Markdown'
+      - name: test_render_page_when_nested_group
+        case: 正常
+        summary: group の入れ子
+        condition: '`group` が `A > B` と `A > C` の 2 項目'
+        mock: なし
+        expected: '`## A` が 1 つ、`### B`・`### C` の下にそれぞれ `#### {name} {#{id}}`'
+  - name: rewrite_references
+    title: 参照の書き換え
+    container: scripts/build_pages.py
+    usecase: 公開ページのビルド
+    role: 変換
+    summary: 本文の文書への参照（`](id:{ID か パス})` と `#{項目}` 付き）を、公開ページどうしの相対リンクか GitHub の URL に書き換える
+    kind: 関数
+    scope: public
+    is_async: false
+    args:
+      - name: text
+        title: 本文
+        type: str
+        required: true
+        passing: positional
+        description: 項目の本文の Markdown
+      - name: public_ids
+        title: 公開ページの ID
+        type: Collection[str]
+        required: true
+        passing: keyword
+        description: 公開ページを書き出す文書の ID
+      - name: paths
+        title: 文書の ID の場所
+        type: Mapping[str, str]
+        required: true
+        passing: keyword
+        description: 文書の ID の場所の収集の結果
+    returns:
+      type: str
+      description: 参照を書き換えた本文
+    process: |-
+      1. コードブロック（` ``` ` か `~~~` の囲み）の中の行は書き換えない
+      2. それ以外の行の `](id:{対象})` と `](id:{対象}#{項目})` を、対象ごとに次のリンク先へ書き換える
+         - 対象が `public_ids` にある場合、`./{対象}.md`（項目があれば `#{項目}` を付ける）
+         - 対象が `GUIDE_DIR` の配下のパスの場合、`GUIDE_DIR` からの相対パスに `./` を付けたもの（項目があれば付ける）
+         - 対象が `paths` の ID か、`docs/` から始まりリポジトリに実在するパスの場合、`BLOB_URL` にパスのセグメントを URL エンコードして付けたもの（項目は付けない）
+         - どれにも該当しない場合、参照の文字列を添えて `BuildError` を送出する
+    exceptions:
+      - name: BuildError
+        condition: 参照の対象が公開ページ・公開ドキュメントのパス・文書の ID・実在するパスのどれでもない
+        message: '`参照を解決できません: id:{対象}`'
+    unit_tests:
+      - name: test_rewrite_references
+        case: 正常
+        summary: 公開ページの ID
+        condition: '`[x](id:flowchart-a)` と `[y](id:flowchart-a#q1)`、`public_ids` に `flowchart-a`'
+        mock: なし
+        expected: '`[x](./flowchart-a.md)` と `[y](./flowchart-a.md#q1)`'
+      - name: test_rewrite_references_when_guide_path
+        case: 正常
+        summary: 公開ドキュメントのパス
+        condition: '`[設定](id:docs/guide/設定.md)`'
+        mock: なし
+        expected: '`[設定](./設定.md)`'
+      - name: test_rewrite_references_when_internal_document
+        case: 正常
+        summary: 公開ページを持たない文書
+        condition: '`[m](id:MOD-1#functions[main])`、`paths` に `MOD-1` → `docs/module/MOD-1.py.yaml`'
+        mock: なし
+        expected: '`[m](https://github.com/shuhei1101/dev-docs/blob/develop/docs/module/MOD-1.py.yaml)`'
+      - name: test_rewrite_references_when_in_code_block
+        case: 正常
+        summary: コードブロックの中は書き換えない
+        condition: '` ``` ` の囲みの中の `](id:flowchart-a)`'
+        mock: なし
+        expected: 入力と同じ本文
+      - name: test_rewrite_references_when_unresolved
+        case: 異常
+        summary: 解決できない参照
+        condition: '`[z](id:NOPE-1)`、`public_ids`・`paths` が空'
+        mock: なし
+        expected: '`id:NOPE-1` を含む `BuildError`'
+        exception: 参照の対象がどれでもない
+refs:
+  - ARCH-155-1#
+  - CMD-155-1#
+id: MOD-192-1

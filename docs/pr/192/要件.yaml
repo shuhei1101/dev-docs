@@ -9,24 +9,34 @@ docs:
     status: todo
   - page: docs/guide/使い方.md
     new: false
-    change: 目次の表に 2 文書（新しく作るか修正するかの判定・documentsの行の判定）の生成したページへの行を戻す
+    change: 目次の表に、生成する 2 ページ（./flowchart-new-or-modify.md・./flowchart-documents-row.md）の行を追加する
     status: todo
   - page: docs/_theme/_data/nav.project.yml
     new: false
-    change: サイドバーの「使い方」に 2 文書の生成したページを戻す（ファイルの頭の「publish が書き出す（直接編集しない）」に沿って、書き出す元の分類で載せるか直接書くかを設計で決める）
+    change: pages に生成する 2 ページ（guide/flowchart-new-or-modify.md・guide/flowchart-documents-row.md）を「使い方」で追加する
     status: todo
   - page: docs/_config.yml
     new: false
-    change: 生成したページを Jekyll の描画に含めるよう exclude を見直す（ビルドの方式による）
+    change: 生成したページは docs/guide/ へ書き出し、flowchart/ の YAML は公開しないため exclude は変えないことを確認する
     status: todo
   - page: docs/architecture/ARCH-155-1.yaml
     new: false
     change: repository.layout に .github/workflows/ と Pages の生成のスクリプトの置き場所を加える
-    status: todo
+    status: done
+    updated_by: planner
+    updated_at: '2026-11-13T02:00:47.416790+00:00'
   - page: docs/dev-command/CMD-155-1.yaml
     new: false
     change: ビルド・生成に Pages の公開ページを手元で生成するコマンドを加える
-    status: todo
+    status: done
+    updated_by: planner
+    updated_at: '2026-11-13T02:00:47.416790+00:00'
+  - page: docs/module/index.yaml
+    new: false
+    change: MOD-192-1 の行を追加する（README.md も同じ行を追加する）
+    status: done
+    updated_by: planner
+    updated_at: '2026-11-13T02:00:53.397423+00:00'
 scope_out:
   - item: docs/flowchart/ 以外の YAML の設計書（scenario・interface・module など）の公開ページの生成
     reason: Issue は判定フローチャートの 2 文書を「使い方」へ戻す作業で、設計書は _config.yml で公開から外している
