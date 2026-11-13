@@ -23,13 +23,13 @@ layers:
       ```bash
       uv run pytest tests/integration/
       ```
-    description: pytest で実行する。一時フォルダに配信元と端末の設定を作り、dev-docs のアプリを HTTP のテストのクライアントで呼ぶ。文書の取得・画面の検索・リビジョンの一覧・端末の設定の取得と保存は、開発用の依存の project-index をテストの中で子プロセスとして起動して相手にする。起動のテストだけは `dev-docs serve` を子プロセスで起動する。
+    description: pytest で実行する。一時フォルダに配信元と端末の設定を作り、dev-docs のアプリを HTTP のテストのクライアントで呼ぶ。文書の取得・画面の検索・リビジョンの一覧・端末の設定の取得と保存は、commit を固定した project-index のクローンを、一時フォルダの端末の設定で子プロセスとして起動して相手にする。起動のテストだけは `dev-docs serve` を子プロセスで起動する。
     prerequisites:
       - '`git` と、`PATH` の `python3`（配信元のスクリプトに使う）が使えること'
       - Linux の `/proc/net/tcp` を読めること（待ち受けのアドレスの確認）
       - '`127.0.0.1` の空きポートが使えること（起動のテストが子プロセスで待ち受ける）'
-      - '文書の取得の結合テスト（`tests/integration/server/test_get_document.py`）は、`package.json` の `devDependencies` でバージョンを固定した mdmark の CLI（`node_modules/.bin/mdmark`）で図を点検する。Node 24 以上で、リポジトリの直下で `npm ci` を済ませておくこと'
-      - '`uv sync` で、`pyproject.toml` の開発用の依存に commit を固定した project-index を入れておくこと（端末で動いている project-index は使用しない）'
+      - 文書の取得の結合テスト（`tests/integration/server/test_get_document.py`）は、`package.json` の `devDependencies` でバージョンを固定した mdmark の CLI（`node_modules/.bin/mdmark`）で図を点検する。Node 24 以上で、リポジトリの直下で `npm ci` を済ませておくこと
+      - '`tests/integration/server/conftest.py` の `PROJECT_INDEX_COMMIT` の project-index を、初回に `${XDG_CACHE_HOME:-~/.cache}/dev-docs/project-index-{短縮 SHA}` へ GitHub から clone して `uv sync --frozen` する（ネットワークと `uv` が要る。端末で動いている project-index は使用しない）'
     run_one:
       label: ファイル
       command: |-
