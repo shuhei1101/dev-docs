@@ -3,6 +3,8 @@ title: 開発用のスクリプト / 公開ページのビルド / build_pages.p
 lead: |-
   `docs/guide/` の公開の Markdown と、`docs/flowchart/` の公開の YAML を Markdown にしたものを、mdmark の `build` で 1 枚の HTML にまとめる。
   GitHub Actions の Pages のワークフローが呼び、出力のフォルダを Pages へ配信する。
+test_files:
+  - tests/unit/scripts/test_build_pages.py
 directory: |-
   ```text
   scripts/
@@ -468,6 +470,12 @@ functions:
         required: true
         passing: keyword
         description: 文書の ID の場所の収集の結果
+      - name: root
+        title: リポジトリの直下
+        type: Path
+        required: true
+        passing: keyword
+        description: '`docs/` から始まるパスの実在を確認するリポジトリの直下'
     returns:
       type: str
       description: 参照を書き換えた本文
