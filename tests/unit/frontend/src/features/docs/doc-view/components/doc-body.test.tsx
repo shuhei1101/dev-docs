@@ -9,7 +9,7 @@ import { renderInRouter } from "@tests/helpers/render";
 
 const mount = vi.hoisted(() => vi.fn());
 
-vi.mock("https://cdn.jsdelivr.net/gh/shuhei1101/mdmark@master/dist/index.js", () => ({ mount }));
+vi.mock("https://cdn.jsdelivr.net/gh/shuhei1101/mdmark@v0.11.0/dist/index.js", () => ({ mount }));
 
 const handle = () => ({
   update: vi.fn(),

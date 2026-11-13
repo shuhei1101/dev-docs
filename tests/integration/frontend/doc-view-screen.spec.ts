@@ -87,7 +87,7 @@ const addComment = async (page: Page, text: string, body: string) => {
   await expect(page.locator("#mdmark-comment-hint")).toBeAttached();
   await page.getByText(text).selectText();
   await page.getByRole("button", { name: "コメント", exact: true }).click();
-  await page.getByRole("dialog", { name: "コメントを書く" }).getByRole("textbox").fill(body);
+  await page.getByRole("dialog", { name: "コメント追加" }).getByRole("textbox").fill(body);
   await page.getByRole("button", { name: "コメントを保存" }).click();
 };
 
@@ -1055,7 +1055,7 @@ test.describe("コメントの場所への移動", () => {
     await expect(page.locator("#mdmark-comment-hint")).toBeAttached();
     await target.selectText();
     await page.getByRole("button", { name: "コメント", exact: true }).click();
-    await page.getByRole("dialog", { name: "コメントを書く" }).getByRole("textbox").fill("開き直した後の確認");
+    await page.getByRole("dialog", { name: "コメント追加" }).getByRole("textbox").fill("開き直した後の確認");
     await page.getByRole("button", { name: "コメントを保存" }).click();
     // 検証
     await expect(mark(page, "中ほどの文")).toHaveCount(1);
