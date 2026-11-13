@@ -31,16 +31,16 @@ def _doc(doc_id: str, visibility: str, items: list[dict[str, str]] | None = None
         "id": doc_id,
         "name": f"{doc_id} 判定フローチャート",
         "visibility": visibility,
-        "items": items if items is not None else [{"id": "overview", "name": "概要", "body": "概要の本文"}],
+        "items": items
+        if items is not None
+        else [{"id": "overview", "name": "概要", "body": "概要の本文"}],
     }
 
 
 # --- main ---
 
 
-def test_main(
-    build_pages: ModuleType, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_main(build_pages: ModuleType, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """公開の文書を分類の順に並べて mdmark に渡し、`OUTPUT_HTML` を `--out` に置く。"""
     root = tmp_path / "repo"
     _guide_files(
@@ -146,7 +146,9 @@ def test_list_public_guides_when_no_file(build_pages: ModuleType, tmp_path: Path
     ("row", "create"),
     [
         pytest.param({"path": "a.md", "visibility": "public"}, True, id="no_category"),
-        pytest.param({"path": "a.md", "visibility": "public", "category": "使い方"}, False, id="no_file"),
+        pytest.param(
+            {"path": "a.md", "visibility": "public", "category": "使い方"}, False, id="no_file"
+        ),
     ],
 )
 def test_list_public_guides_when_invalid_row(
@@ -157,7 +159,7 @@ def test_list_public_guides_when_invalid_row(
     if create:
         _write(tmp_path / "docs/guide/a.md", "x")
 
-    with pytest.raises(build_pages.BuildError, match="a.md"):
+    with pytest.raises(build_pages.BuildError, match=r"a\.md"):
         build_pages.list_public_guides(tmp_path)
 
 
@@ -185,7 +187,7 @@ def test_load_public_flowcharts_when_invalid(build_pages: ModuleType, tmp_path: 
     """読み込めない YAML はパスを添えて `BuildError` にする。"""
     _write(tmp_path / "docs/flowchart/broken.yaml", "{")
 
-    with pytest.raises(build_pages.BuildError, match="broken.yaml"):
+    with pytest.raises(build_pages.BuildError, match=r"broken\.yaml"):
         build_pages.load_public_flowcharts(tmp_path)
 
 
@@ -270,7 +272,12 @@ def test_item_anchors_when_in_code_block(build_pages: ModuleType) -> None:
 
 def _rewrite(build_pages: ModuleType, text: str, **kwargs: Any) -> str:
     """既定の空の対応で `rewrite_references` を呼ぶ。"""
-    options: dict[str, Any] = {"public_ids": {}, "anchors": {}, "paths": {}, "root": Path("/nonexistent")}
+    options: dict[str, Any] = {
+        "public_ids": {},
+        "anchors": {},
+        "paths": {},
+        "root": Path("/nonexistent"),
+    }
     options.update(kwargs)
     result: str = build_pages.rewrite_references(text, **options)
     return result
@@ -305,7 +312,10 @@ def test_rewrite_references_when_internal_document(build_pages: ModuleType) -> N
         build_pages, "[m](id:MOD-1#functions[main])", paths={"MOD-1": "docs/module/MOD-1.py.yaml"}
     )
 
-    assert result == "[m](https://github.com/shuhei1101/dev-docs/blob/develop/docs/module/MOD-1.py.yaml)"
+    assert (
+        result
+        == "[m](https://github.com/shuhei1101/dev-docs/blob/develop/docs/module/MOD-1.py.yaml)"
+    )
 
 
 def test_rewrite_references_when_in_code_block(build_pages: ModuleType) -> None:
