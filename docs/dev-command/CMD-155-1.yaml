@@ -87,8 +87,9 @@ categories:
          ```bash
          npm run build-storybook
          ```
-      4. GitHub Pages の公開ページのうち、公開の判定フローチャートの YAML から生成する Markdown を手元で確認する（出力先は `tmp/pages/`。Pages への配信では `.github/workflows/pages.yml` が `docs/guide/` へ生成して Jekyll で描く）
+      4. GitHub Pages の公開ページのうち、公開の判定フローチャートの YAML から生成する Markdown を手元で確認する（出力先は `tmp/pages/`。前回の出力があると止まるため、消してから生成する。Pages への配信では `.github/workflows/pages.yml` が `docs/guide/` へ生成して Jekyll で描く）
          ```bash
+         rm -rf tmp/pages
          uv run --frozen python scripts/build_pages.py --out tmp/pages
          ```
     verification:
