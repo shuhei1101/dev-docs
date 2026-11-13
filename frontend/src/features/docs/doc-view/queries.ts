@@ -31,7 +31,7 @@ export const documentQueryOptions = (
     placeholderData: keepPreviousData,
   });
 
-/** 目次の変更のマーカーと本文の強調に使用する、比較元のリビジョンの同じ文書の `markdown` と `tableKeys`。比較元に無いか本文が無ければ null */
+/** 本文の差分の強調に使用する、比較元のリビジョンの同じ文書の `markdown` と `tableKeys`。比較元に無いか本文が無ければ null */
 export const baseMarkdownQueryOptions = (
   source: string,
   path: string,

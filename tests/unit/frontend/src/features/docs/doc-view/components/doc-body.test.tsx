@@ -49,7 +49,7 @@ test("test_doc_body", async () => {
   });
 
   renderInRouter(
-    <DocBody document={document as never} onHeadings={vi.fn()} onCommentSaved={vi.fn()} locating={null} onLocated={vi.fn()} />,
+    <DocBody document={document as never} onCommentSaved={vi.fn()} locating={null} onLocated={vi.fn()} />,
   );
 
   await waitFor(() => expect(mount).toHaveBeenCalled());
@@ -64,7 +64,7 @@ test("test_doc_body_when_internal_link", async () => {
     return { update: vi.fn(), destroy: vi.fn() };
   });
   const { router } = renderInRouter(
-    <DocBody document={documentResponse() as never} onHeadings={vi.fn()} onCommentSaved={vi.fn()} locating={null} onLocated={vi.fn()} />,
+    <DocBody document={documentResponse() as never} onCommentSaved={vi.fn()} locating={null} onLocated={vi.fn()} />,
     "/s/a.md?rev=v1",
   );
 
@@ -83,7 +83,7 @@ test("test_doc_body_when_body_path", async () => {
   });
   const document = documentResponse({ path: "notes/files/a", bodyPath: "notes/a.md" });
   const { router } = renderInRouter(
-    <DocBody document={document as never} onHeadings={vi.fn()} onCommentSaved={vi.fn()} locating={null} onLocated={vi.fn()} />,
+    <DocBody document={document as never} onCommentSaved={vi.fn()} locating={null} onLocated={vi.fn()} />,
     "/s/notes/files/a?rev=v1",
   );
 
@@ -104,7 +104,7 @@ test("test_doc_body_when_base", async () => {
   };
 
   renderInRouter(
-    <DocBody document={document as never} baseMarkdown={baseMarkdown} onHeadings={vi.fn()} onCommentSaved={vi.fn()} locating={null} onLocated={vi.fn()} />,
+    <DocBody document={document as never} baseMarkdown={baseMarkdown} onCommentSaved={vi.fn()} locating={null} onLocated={vi.fn()} />,
   );
 
   await waitFor(() => expect(mount).toHaveBeenCalled());
@@ -121,7 +121,7 @@ test("test_doc_body_when_comments_changed", async () => {
   mount.mockReturnValue(current);
 
   renderInRouter(
-    <DocBody document={document as never} onHeadings={vi.fn()} onCommentSaved={vi.fn()} locating={null} onLocated={vi.fn()} />,
+    <DocBody document={document as never} onCommentSaved={vi.fn()} locating={null} onLocated={vi.fn()} />,
   );
   await waitFor(() => expect(mount).toHaveBeenCalled());
   current.reloadComments.mockClear();
@@ -138,7 +138,7 @@ test("test_doc_body_when_locating", async () => {
   const onLocated = vi.fn();
 
   renderInRouter(
-    <DocBody document={document as never} onHeadings={vi.fn()} onCommentSaved={vi.fn()} locating={comment(docId, "c1")} onLocated={onLocated} />,
+    <DocBody document={document as never} onCommentSaved={vi.fn()} locating={comment(docId, "c1")} onLocated={onLocated} />,
   );
 
   await waitFor(() => expect(current.focusComment).toHaveBeenCalledWith("c1"));

@@ -18,7 +18,6 @@ const renderDocMain = (doc: ReturnType<typeof documentResponse>, emptyTab: unkno
       refs={refsResponse() as never}
       emptyTab={emptyTab as never}
       busy={false}
-      onHeadings={vi.fn()}
       onCommentSaved={vi.fn()}
       locating={null}
       onLocated={vi.fn()}

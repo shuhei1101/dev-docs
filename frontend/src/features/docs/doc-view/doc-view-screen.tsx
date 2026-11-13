@@ -5,7 +5,6 @@ import { useState } from "react";
 import { DocMain } from "@/features/docs/doc-view/components/doc-main";
 import { DocSidebar } from "@/features/docs/doc-view/components/doc-sidebar";
 import { DocTabs } from "@/features/docs/doc-view/components/doc-tabs";
-import { DocToc } from "@/features/docs/doc-view/components/doc-toc";
 import { SidebarDrawer } from "@/features/docs/doc-view/components/sidebar-drawer";
 import { useDocNavigation } from "@/features/docs/doc-view/hooks/use-doc-navigation";
 import { useLocating } from "@/features/docs/doc-view/hooks/use-locating";
@@ -16,7 +15,6 @@ import {
   documentQueryOptions,
 } from "@/features/docs/doc-view/queries";
 import type { DocViewSearch } from "@/features/docs/doc-view/search";
-import { type TocItem, changedSections } from "@/features/docs/doc-view/toc";
 import { CommentPanel } from "@/features/docs/shared/comments/comment-panel";
 import {
   docIdOf,
@@ -37,22 +35,11 @@ const NEXT_SCHEME = { system: "dark", dark: "light", light: "dark" } as const;
 
 type BaseDocument = { markdown: string; tableKeys: string[] } | null;
 
-/** 差分を表示しているときの、本文の強調に指定する比較元と、目次の変更のマーカーの見出し */
-const diffView = (
-  doc: { diff?: unknown; markdown?: string | null },
+/** 差分を表示しているときに、本文の強調に指定する比較元（差分を表示していないか、比較元をまだ取っていなければ null） */
+const diffBase = (
+  doc: { diff?: unknown },
   base: BaseDocument | undefined,
-): { base: BaseDocument; changed: Set<string> | undefined } => {
-  // 差分を表示していないか、比較元をまだ取っていない
-  if (!doc.diff || base === undefined)
-    return { base: null, changed: undefined };
-  return {
-    base,
-    changed:
-      doc.markdown == null
-        ? undefined
-        : changedSections(doc.markdown, base?.markdown ?? null),
-  };
-};
+): BaseDocument => (!doc.diff || base === undefined ? null : base);
 
 type Panels = {
   search: boolean;
@@ -61,7 +48,7 @@ type Panels = {
   comments: boolean;
 };
 
-/** 文書の画面。トップバー・種類のタブ・サイドバー・本文・目次・コメントのパネルを並べる */
+/** 文書の画面。トップバー・種類のタブ・サイドバー・本文・コメントのパネルを並べる */
 export const DocViewScreen = () => {
   const params = useParams({ strict: false }) as {
     source: string;
@@ -82,7 +69,6 @@ export const DocViewScreen = () => {
   const [empty, setEmpty] = useState<{ tab: NavTab; path: string } | null>(
     null,
   );
-  const [headings, setHeadings] = useState<TocItem[]>([]);
 
   const { colorScheme, singleKeyShortcuts, setColorScheme } =
     usePreferencesStore();
@@ -102,7 +88,7 @@ export const DocViewScreen = () => {
   const baseMarkdown = useQuery(
     baseMarkdownQueryOptions(source, doc.path, doc.diff?.base ?? null),
   ).data;
-  const diff = diffView(doc, baseMarkdown);
+  const base = diffBase(doc, baseMarkdown);
 
   useDocScreenEffects(pageTitle(active, source, emptyTab), source);
   const idle = !panels.search && !panels.help;
@@ -158,20 +144,14 @@ export const DocViewScreen = () => {
           refs={refs}
           emptyTab={emptyTab}
           busy={query.isFetching}
-          onHeadings={setHeadings}
           onCommentSaved={() => open("comments")}
           locating={place.locating}
-          baseMarkdown={diff.base}
+          baseMarkdown={base}
           onLocated={place.onLocated}
           onRetry={() => void query.refetch()}
           onCompare={nav.compare}
           onClearDiff={nav.clearDiff}
         />
-        <div className="sticky top-24 hidden max-h-screen w-56 shrink-0 self-start overflow-y-auto py-6 xl:block">
-          {!emptyTab && !doc.conversionError && (
-            <DocToc items={headings} changed={diff.changed} />
-          )}
-        </div>
       </div>
       <SidebarDrawer
         open={panels.drawer}

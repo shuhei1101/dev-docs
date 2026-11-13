@@ -6,7 +6,6 @@ import { DocHeader } from "@/features/docs/doc-view/components/doc-header";
 import { EmptyTab } from "@/features/docs/doc-view/components/empty-tab";
 import type { ActivePage } from "@/features/docs/doc-view/nav";
 import type { DocViewSearch } from "@/features/docs/doc-view/search";
-import type { TocItem } from "@/features/docs/doc-view/toc";
 import type { DocComment } from "@/features/docs/shared/comments/comment-store";
 import type {
   DocumentResponse,
@@ -21,7 +20,6 @@ type Props = {
   refs: RefsResponse | undefined;
   emptyTab: NavTab | null;
   busy: boolean;
-  onHeadings: (items: TocItem[]) => void;
   onCommentSaved: () => void;
   locating: DocComment | null;
   onLocated: () => void;
@@ -59,7 +57,6 @@ const DocContent = ({ doc, active, refs, ...handlers }: ContentProps) => (
     ) : (
       <DocBody
         document={doc}
-        onHeadings={handlers.onHeadings}
         onCommentSaved={handlers.onCommentSaved}
         locating={handlers.locating}
         onLocated={handlers.onLocated}
