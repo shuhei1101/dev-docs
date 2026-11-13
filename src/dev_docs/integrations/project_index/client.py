@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import asyncio
-from collections.abc import Mapping
+from collections.abc import Collection, Mapping
 from datetime import datetime
 from typing import Any
 from urllib.parse import quote
@@ -11,12 +11,14 @@ from urllib.parse import quote
 import httpx
 
 from dev_docs.integrations.project_index.types import (
+    METADATA_KEYS,
     AddSourceResult,
     CommitSummary,
     DecisionIndex,
     DocumentDetail,
     DocumentList,
     DocumentRow,
+    IndexedDocument,
     IndexFailure,
     NamedRef,
     RefList,
@@ -25,6 +27,7 @@ from dev_docs.integrations.project_index.types import (
     SettingsSourcesView,
     SourceState,
     SourceView,
+    parse_datetime,
     parse_document,
 )
 from dev_docs.shared.errors import (
@@ -42,6 +45,7 @@ from dev_docs.shared.errors import (
 PROJECT_INDEX_DEFAULT = "http://127.0.0.1:8786"
 PROJECT_INDEX_TIMEOUT_SEC = 45
 SUMMARY_CHARS = 200
+ROW_KEYS = ("id", "config", "enabled", "scope")
 REFUSED_REASON = "接続を拒否されました（Connection refused）"
 HTTP_CONFLICT = 409
 HTTP_BAD_REQUEST = 400
@@ -78,6 +82,14 @@ def _failure(value: Any) -> IndexFailure | None:
         line=value.get("line"),
         column=value.get("column"),
     )
+
+
+def _row(value: Mapping[str, Any]) -> dict[str, Any]:
+    """端末の設定の取得の 1 件から、端末の設定の行のキーの辞書を作る。"""
+    row = {key: value[key] for key in ROW_KEYS if key in value}
+    if "outsideRead" in value:
+        row["outside_read"] = value["outsideRead"]
+    return row
 
 
 def _state(value: Mapping[str, Any]) -> SourceState:
@@ -195,48 +207,67 @@ class ProjectIndexClient:
         return [_state(item) for item in response.json().get("sources", [])]
 
     async def source_view(self, source: str) -> SourceView:
-        """配信元の設定のうち画面が使用するキーを返却する。"""
-        response = await self.request("GET", f"/sources/{_seg(source)}/config")
-        value = response.json()
+        """配信元の設定のうち画面が使用するキーと、Git の配信元か・既定のリビジョンを返却する。"""
+        config_response, refs_response = await asyncio.gather(
+            self.request("GET", f"/sources/{_seg(source)}/config", params={"schemas": "true"}),
+            self.request("GET", f"/sources/{_seg(source)}/refs", params={"commits": 0}),
+        )
+        value = config_response.json()
+        refs = refs_response.json()
+        git = bool(refs.get("git", False))
+        schemas = value.get("schemas") or {}
         decisions = value.get("decisions") or {}
         github = value.get("github") or {}
+        diff = value.get("diff") or {}
         return SourceView(
-            id=str(value.get("id", source)),
-            git=bool(value.get("git", False)),
-            default_ref=value.get("defaultRef"),
+            id=source,
+            git=git,
+            default_ref=str(refs.get("defaultRef")) if git else None,
             nav=value.get("nav"),
             documents=[
                 DocumentRow(
                     id=str(row["id"]),
                     paths=list(row.get("paths") or []),
-                    schema=dict(row.get("schema") or {}),
+                    schema=dict(schemas.get(str(row["id"])) or {}),
                     title=row.get("title"),
                     records=row.get("records"),
                     search=bool(row.get("search", True)),
                     converter=row.get("converter"),
-                    alias_type=row.get("aliasType"),
+                    alias_type=row.get("alias_type"),
                 )
                 for row in value.get("documents") or []
             ],
             decision_folders=list(decisions.get("folders") or []),
-            diff_ignore_keys=list(value.get("diffIgnoreKeys") or ["updated"]),
+            diff_ignore_keys=list(diff.get("ignore_keys") or ["updated"]),
             github_repository=github.get("repository"),
             github_issue_labels=list(github.get("issueLabels") or []),
         )
 
-    async def list_documents(self, source: str, *, ref: str | None = None) -> DocumentList:
+    async def list_documents(
+        self,
+        source: str,
+        *,
+        ref: str | None = None,
+        record_kinds: Collection[str] = (),
+        values: bool = True,
+    ) -> DocumentList:
         """リビジョンの全ての文書を返却する。"""
-        response = await self.request("GET", f"/sources/{_seg(source)}/docs", params={"ref": ref})
-        value = response.json()
-        return DocumentList(
-            ref=value.get("ref"),
-            documents=[parse_document(source, item) for item in value.get("documents") or []],
-            unreadable=[
-                failure
-                for item in value.get("unreadable") or []
-                if (failure := _failure(item)) is not None
-            ],
+        response = await self.request(
+            "GET",
+            f"/sources/{_seg(source)}/docs",
+            params={"ref": ref, "values": "true" if values else None},
         )
+        value = response.json()
+        positions: dict[str, int] = {}
+        documents: list[IndexedDocument] = []
+        for item in value.get("documents") or []:
+            record_index: int | None = None
+            if item.get("kind") in record_kinds:
+                path = str(item.get("path", ""))
+                record_index = positions.get(path, 0)
+                positions[path] = record_index + 1
+            documents.append(parse_document(source, item, record_index=record_index))
+        return DocumentList(ref=value.get("ref"), documents=documents)
 
     async def document(
         self,
@@ -254,18 +285,35 @@ class ProjectIndexClient:
             params={"ref": ref, "id": document_id},
         )
         value = response.json()
-        raw = value.get("document")
+        metadata = value.get("metadata") or {}
+        document: IndexedDocument | None = None
+        if value.get("value") is not None:
+            document = IndexedDocument(
+                id=str(metadata.get("id", "")),
+                kind=str(metadata.get("kind", "")),
+                source_id=source,
+                path=str(value.get("path", path)),
+                data=dict(value["value"]),
+                metadata={key: metadata.get(key) for key in METADATA_KEYS},
+                version="",
+                body=str(value.get("body") or ""),
+                body_path=value.get("bodyPath"),
+                updated=parse_datetime(value.get("updatedAt")),
+            )
         return DocumentDetail(
-            document=parse_document(source, raw) if isinstance(raw, Mapping) else None,
+            document=document,
             markdown=value.get("markdown"),
-            failure=_failure(value.get("failure")),
+            failure=_failure(value.get("conversionError")),
         )
 
     async def decisions(self, source: str) -> DecisionIndex:
-        """検討事項の ID ごとの該当するフォルダの数を返却する。"""
+        """検討事項の ID ごとの当たるフォルダの数を返却する。"""
         response = await self.request("GET", f"/sources/{_seg(source)}/decisions")
         return DecisionIndex(
-            counts={str(k): int(v) for k, v in (response.json().get("counts") or {}).items()}
+            counts={
+                str(item["id"]): int(item.get("folders", 0))
+                for item in response.json().get("decisions") or []
+            }
         )
 
     async def decision(self, source: str, decision_id: str) -> str:
@@ -273,7 +321,7 @@ class ProjectIndexClient:
         response = await self.request(
             "GET", f"/sources/{_seg(source)}/decisions/{_seg(decision_id)}"
         )
-        return str(response.json().get("markdown", ""))
+        return str(response.json().get("body", ""))
 
     async def search(
         self, source: str, q: str, *, ref: str | None = None, limit: int
@@ -290,10 +338,9 @@ class ProjectIndexClient:
             items=[
                 SearchHit(
                     id=str(item.get("id", "")),
-                    path=str(item["path"]),
+                    path=str(item.get("filePath", "")),
                     name=str(item.get("name", "")),
                     snippets=list(item.get("snippets") or []),
-                    record_index=item.get("recordIndex"),
                 )
                 for item in value.get("items") or []
             ],
@@ -326,7 +373,7 @@ class ProjectIndexClient:
         sources = list(value.get("sources") or [])
         return SettingsSourcesView(
             settings_path=str(value.get("settingsPath", "")),
-            rows=[dict(item.get("row") or {}) for item in sources],
+            rows=[_row(item) for item in sources],
             states=[_state(item) for item in sources],
         )
 
@@ -336,13 +383,14 @@ class ProjectIndexClient:
         return self._settings(response.json())
 
     async def put_settings_sources(self, rows: list[dict[str, Any]]) -> SettingsSourcesView:
-        """`sources[]` の全行の保存と再読み込みを依頼する。"""
-        response = await self.request("PUT", "/settings/sources", body={"sources": rows})
-        return self._settings(response.json())
+        """`sources[]` の全行の保存と読み直しを依頼し、保存した後の行と状態を返却する。"""
+        await self.request("PUT", "/settings/sources", body={"sources": rows})
+        return await self.settings_sources()
 
     async def add_settings_source(self, row: Mapping[str, Any]) -> AddSourceResult:
         """配信元の行を 1 行追加する。同じ id の行があれば追加しない。"""
-        response = await self.request("POST", "/settings/sources", body=dict(row))
-        if response.status_code == HTTP_CONFLICT:
-            return AddSourceResult(added=False, same=bool(response.json().get("same", False)))
+        response = await self.request("POST", "/settings/sources", body={"source": dict(row)})
+        value = response.json()
+        if value.get("result") == "exists":
+            return AddSourceResult(added=False, same=bool(value.get("same", False)))
         return AddSourceResult(added=True)

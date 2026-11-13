@@ -232,7 +232,7 @@ class _Builder:
         self.data = document.data
         self.context = context
         self.scope = scope
-        self.updated = _date(document.updated) or _date(document.created) or NO_DATE
+        self.updated = _date(document.updated) or NO_DATE
         self.blocks: list[str] = []
 
     def head(self, title: str) -> DiagramHead:

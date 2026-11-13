@@ -12,7 +12,8 @@ from dev_docs.shared.errors import ProjectIndexResponseError, Violation
 type SourceStateKind = Literal["serving", "not_served", "disabled", "pending_reload"]
 type FailureReason = Literal["timeout", "exit", "not_runnable", "invalid_yaml"]
 
-REQUIRED_DOCUMENT_KEYS = ("id", "kind", "path", "version", "data", "metadata")
+REQUIRED_DOCUMENT_KEYS = ("id", "kind", "path", "version")
+METADATA_KEYS = ("id", "kind", "name", "description", "tags", "visibility")
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -29,7 +30,6 @@ class IndexedDocument:
     record_index: int | None = None
     body: str = ""
     body_path: str | None = None
-    created: datetime | None = None
     updated: datetime | None = None
 
 
@@ -65,6 +65,10 @@ class SourceView:
         """行の ID から `DocumentRow` を返却する（無ければ `None`）。"""
         return next((row for row in self.documents if row.id == kind), None)
 
+    def record_kinds(self) -> set[str]:
+        """`records` を持つ文書の行の ID を返却する。"""
+        return {row.id for row in self.documents if row.records is not None}
+
 
 @dataclass(frozen=True, slots=True, kw_only=True)
 class IndexFailure:
@@ -85,7 +89,6 @@ class DocumentList:
 
     ref: str | None
     documents: list[IndexedDocument]
-    unreadable: list[IndexFailure] = field(default_factory=list)
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -128,7 +131,6 @@ class SearchHit:
     path: str
     name: str
     snippets: list[str]
-    record_index: int | None = None
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -184,8 +186,8 @@ class AddSourceResult:
     same: bool = False
 
 
-def _datetime(value: Any) -> datetime | None:
-    """ISO 8601 の日時を解析する（無いか解析できなければ `None`）。"""
+def parse_datetime(value: Any) -> datetime | None:
+    """ISO 8601 の日時を読む（無いか読めなければ `None`）。"""
     if not isinstance(value, str):
         return None
     try:
@@ -194,8 +196,10 @@ def _datetime(value: Any) -> datetime | None:
         return None
 
 
-def parse_document(source_id: str, value: Mapping[str, Any]) -> IndexedDocument:
-    """project-index の文書の JSON を `IndexedDocument` にする。"""
+def parse_document(
+    source_id: str, value: Mapping[str, Any], *, record_index: int | None = None
+) -> IndexedDocument:
+    """project-index の文書の一覧の 1 件を `IndexedDocument` にする。"""
     for key in REQUIRED_DOCUMENT_KEYS:
         if key not in value:
             raise ProjectIndexResponseError(
@@ -207,12 +211,9 @@ def parse_document(source_id: str, value: Mapping[str, Any]) -> IndexedDocument:
         kind=str(value["kind"]),
         source_id=source_id,
         path=str(value["path"]),
-        data=dict(value["data"] or {}),
-        metadata=dict(value["metadata"] or {}),
+        data=dict(value.get("value") or {}),
+        metadata={key: value.get(key) for key in METADATA_KEYS},
         version=str(value["version"]),
-        record_index=value.get("recordIndex"),
-        body=str(value.get("body") or ""),
+        record_index=record_index,
         body_path=value.get("bodyPath"),
-        created=_datetime(value.get("created")),
-        updated=_datetime(value.get("updated")),
     )

@@ -5,10 +5,10 @@ from __future__ import annotations
 from collections.abc import Sequence
 from pathlib import PurePosixPath
 
-from dev_docs.integrations.project_index.types import IndexedDocument, SearchHit
+from dev_docs.integrations.project_index.types import IndexedDocument
 
 
-def page_path(document: IndexedDocument | SearchHit) -> str:
+def page_path(document: IndexedDocument) -> str:
     """文書を URL のパスにする。"""
     path = PurePosixPath(document.path).with_suffix("").as_posix()
     if document.record_index is not None:
