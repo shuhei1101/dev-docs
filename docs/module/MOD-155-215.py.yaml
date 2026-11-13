@@ -193,7 +193,7 @@ classes:
         process: |-
           1. 呼び出しの共通の手順で `GET /sources/{source}/config?schemas=true` と `GET /sources/{source}/refs?commits=0` を `asyncio.gather` で同時に呼ぶ
           2. `id` を引数の `source`、`git`・`default_ref` を refs の応答の `git`・`defaultRef`（`git` が `false` なら `None`）にする
-          3. `documents[]` の行ごとに、配信元の設定のままのキー `id`・`title`・`paths`・`records`・`search`・`converter`・`alias_type` と、`schemas[id]`（無ければ空）を `schema` にした `DocumentRow` を作る
+          3. `documents[]` の行ごとに、配信元の設定のままのキー `id`・`title`・`paths`・`records`・`search`・`converter`・`alias_type`・`metadata` と、`schemas[id]`（無ければ空）を `schema` にした `DocumentRow` を作る
           4. `decisions.folders` を `decision_folders`、`diff.ignore_keys` を `diff_ignore_keys`、`github.repository`・`github.issueLabels` を `github_repository`・`github_issue_labels` にして返す
         unit_tests:
           - name: test_source_view
@@ -234,7 +234,7 @@ classes:
             type: Collection[str]
             required: false
             passing: keyword
-            description: '`records` を持つ `documents[]` の行の ID（配信元の表示の設定の `documents` から呼び出し側が指定する）'
+            description: '`records` を持つ `documents[]` の行の ID（呼び出し側が配信元の表示の設定.行の文書の種類で指定する）'
             default: ()
           - name: values
             title: 値を求めるか
@@ -249,7 +249,7 @@ classes:
         process: |-
           1. 呼び出しの共通の手順で `GET /sources/{source}/docs?ref={ref}` を呼ぶ。`values` が `True` ならクエリに `values=true` を付ける
           2. `documents[]` を応答の順に索引の文書の読み取りで `IndexedDocument` にする。`kind` が `record_kinds` にある文書は、同じ `path` の文書の中で何番目か（0 始まり）を `record_index` に指定する。同じ `path` の中の並びは project-index が管理用の YAML を読み込んだ順（`f36ba69` の安定ソート）を前提にする
-          3. 応答の `ref` とともに `DocumentList` にして返す
+          3. 応答の `ref`（Git 管理外の空の文字列は `None`）とともに `DocumentList` にして返す
         unit_tests:
           - name: test_list_documents
             case: 正常

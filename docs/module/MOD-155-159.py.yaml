@@ -114,7 +114,7 @@ functions:
       type: DocumentResponse
       description: 文書の取得の応答
     process: |-
-      1. project-indexの呼び出し.配信元の表示の設定の取得 で `view` を取り、続けて project-indexの呼び出し.文書の一覧の取得（`ref`。`record_kinds` は `view.documents` のうち `records` を持つ行の ID）で `listed` を取る
+      1. project-indexの呼び出し.配信元の表示の設定の取得 で `view` を取り、続けて project-indexの呼び出し.文書の一覧の取得（`ref`。`record_kinds` は `view.documents` のうち `records` を持つ行の ID）で `listed` を取り、文書.行のメタデータの補い（`view`）をかけた文書を以降の `listed.documents` にする
       2. `path` が検討事項の文書のパスの読み取りで ID になれば、project-indexの呼び出し.検討事項の文書の取得 の本文を `markdown` にし、`path` を `path`、`body_path`・`diff`・`conversion_error` を `None`、`tabs` をタブとサイドバーの組み立ての結果でどのタブも `active` にしない値、`updated_at` を今の日時、`table_keys`・`aliases` を空にして返却する（以降の手順は実行しない）。当たるフォルダが 0 個か 2 個以上なら project-index の 404 の `DocumentNotFoundError` がそのまま伝わる
       3. タブとサイドバーの組み立て（`view`・`listed.documents`）をする
       4. 返す文書を決める
@@ -123,12 +123,12 @@ functions:
       5. project-indexの呼び出し.文書の詳細の取得（文書の `path`・`ref`。管理用の YAML の行の文書は `document_id` に文書の ID を渡す）と、`view.decision_folders` があれば project-indexの呼び出し.検討事項の一覧の取得 を同時に呼ぶ
       6. 変換.描画する を `asyncio.to_thread` で呼ぶ（`documents` は `listed.documents`、`linkable` は検討事項の一覧の `linkable`、無ければ空）。`ConvertFailure` なら `markdown` を `None`、`conversion_error` を同じフィールドの `ConversionError` にして 8 へ進む
       7. 埋め込みのパスの取り出しのパスごとに project-indexの呼び出し.文書の詳細の取得（`ref`）を同時に呼び、値（文書が無い・`DocumentNotFoundError` のときは `None`）を集めて、変換.仕上げる で `markdown` と `table_keys` を作る
-      8. `diff_ref` があり `view.git` なら、project-indexの呼び出し.文書の一覧の取得（`diff_ref`）で比較元の文書を取り、`diff` を `DocumentDiff(base=diff_ref, ...)` にする。Git 管理外は `diff` を `None` にする
+      8. `diff_ref` があり `view.git` なら、project-indexの呼び出し.文書の一覧の取得（`diff_ref`）で比較元の文書を取って文書.行のメタデータの補いをかけ、`diff` を `DocumentDiff(base=diff_ref, ...)` にする。Git 管理外は `diff` を `None` にする
          - `change` は、比較元に同じ ID の文書が無ければ `added`、`version` が違えば `modified`、同じなら `None`
          - `changed_items` は、`change` が `modified` のとき比較元の同じ ID の文書の `data` と比べた変わったキー（`ignore` は `view.diff_ignore_keys`）のパス。他は空
          - 比較元の文書でタブとサイドバーを組み立て、文書のページのパス → `version` を両方で作って、タブにサイドバーの変化を付ける
       9. 返した文書を含むタブの `active` を `True` にする
-      10. `updated_at` は文書の `updated`（project-index が Git の配信元は commit の日時、Git 管理外はファイルの更新日時を入れる）。`None` なら今の日時にして `[warning]` 更新日時が無い（配信元・パス）を書く
+      10. `updated_at` は文書の詳細の文書の `updated`（project-index が Git の配信元は commit の日時、Git 管理外はファイルの更新日時を入れる）。`None` なら今の日時にして `[warning]` 更新日時が無い（配信元・パス）を書く
       11. `body_path` は返した文書の `body_path`、`ref` は `listed.ref`、`github` は `view.github_repository` があれば `github_repository`・`github_issue_labels`、`columns` は表の列の設定.列の設定を読む の結果、`aliases` はエイリアスの集め（`view`・`listed.documents`）の `entries` を `AliasItem` にしたもの（手順 6 で変換に失敗したときは空）にして返す
     exceptions:
       - name: UnknownSourceError

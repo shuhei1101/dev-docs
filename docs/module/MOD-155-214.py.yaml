@@ -91,7 +91,7 @@ data_models:
         title: メタデータ
         type: dict[str, Any]
         access: 公開
-        description: project-index の文書の一覧・文書の取得の `id`・`kind`・`name`・`description`・`tags`・`visibility`
+        description: project-index の文書の一覧・文書の取得の `id`・`kind`・`name`・`description`・`tags`・`visibility`。文書の一覧の文書は、文書.行のメタデータの補いが、そのほかの共通のキー（`alias_type`・`aliases`・`status` など）を加える
       - name: version
         title: バージョン
         type: str
@@ -156,6 +156,12 @@ data_models:
         access: 公開
         default: None
         description: エイリアスを集める行か
+      - name: metadata
+        title: メタデータの対応
+        type: dict[str, str]
+        access: 公開
+        default: '{}'
+        description: 配信元の設定の行の `metadata`（共通のキー → 文書の値の項目のパス）
   - name: SourceView
     title: 配信元の表示の設定
     container: integrations/project_index/types.py
@@ -224,6 +230,15 @@ data_models:
           type: DocumentRow | None
           description: 無ければ `None`
         process: 1. `documents` から `id` が同じ最初の行を返す
+      - name: record_kinds
+        title: 行の文書の種類
+        kind: メソッド
+        summary: '`records` を持つ文書の行の ID を返す'
+        scope: public
+        returns:
+          type: set[str]
+          description: '`records` が `None` でない行の `id`'
+        process: 1. `documents` のうち `records` を持つ行の `id` を集めて返す
   - name: DocumentList
     title: 文書の一覧
     container: integrations/project_index/types.py
