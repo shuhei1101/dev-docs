@@ -38,7 +38,6 @@
 | [画面 / 共通 / shortcuts.ts](./MOD-155-64.ts.yaml) | キーボードのショートカットの定義 |
 | [画面 / 共通 / skip-link.tsx](./MOD-155-59.tsx.yaml) | 本文の領域へフォーカスを移すリンク |
 | [画面 / 共通 / topbar.tsx](./MOD-155-60.tsx.yaml) | 3 画面に共通のトップバー |
-| [画面 / 共通 / use-active-heading.ts](./MOD-155-65.ts.yaml) | 画面の一番上にある見出しを追うフック |
 | [画面 / 共通 / use-delayed-flag.ts](./MOD-155-66.ts.yaml) | 待ちが続いたときだけ true にするフック |
 | [画面 / 共通 / use-media-query.ts](./MOD-155-67.ts.yaml) | メディアクエリに今当たっているかを返すフック |
 | [画面 / 共通 / use-shortcut.ts](./MOD-155-68.ts.yaml) | ショートカットの定義の ID でキーを受けるフック |
@@ -55,7 +54,6 @@
 | [画面 / 文書の画面 / doc-sidebar.tsx](./MOD-155-14.tsx.yaml) | 選んでいるタブの文書の一覧 |
 | [画面 / 文書の画面 / doc-skeleton.tsx](./MOD-155-15.tsx.yaml) | 文書の取得を待つ間の読み込み中の表示 |
 | [画面 / 文書の画面 / doc-tabs.tsx](./MOD-155-16.tsx.yaml) | 配信元の文書の種類のタブ |
-| [画面 / 文書の画面 / doc-toc.tsx](./MOD-155-17.tsx.yaml) | 本文の右の目次 |
 | [画面 / 文書の画面 / doc-view-screen.tsx](./MOD-155-20.tsx.yaml) | 文書の画面の最上位 |
 | [画面 / 文書の画面 / empty-tab.tsx](./MOD-155-18.tsx.yaml) | 選んだタブに文書が無いことの表示 |
 | [画面 / 文書の画面 / highlight.ts](./MOD-155-37.ts.yaml) | 検索の結果の抜粋の一致した箇所を分ける |
@@ -69,7 +67,6 @@
 | [画面 / 文書の画面 / serving-sources.ts](./MOD-155-39.ts.yaml) | 端末の設定の取得から配信中の配信元を取り出す |
 | [画面 / 文書の画面 / sidebar-drawer.tsx](./MOD-155-19.tsx.yaml) | 狭い幅で文書の一覧を重ねて出すドロワー |
 | [画面 / 文書の画面 / tables.ts](./MOD-155-212.ts.yaml) | 本文の表と表のキーを対にし、隠す列を書き込む関数 |
-| [画面 / 文書の画面 / toc.ts](./MOD-155-29.ts.yaml) | 目次と、比較元から変わったセクションを引く関数 |
 | [画面 / 文書の画面 / use-column-persistence.ts](./MOD-155-21.ts.yaml) | mdmark の列の表示のメニューで出し入れした列を保存するフック |
 | [画面 / 文書の画面 / use-doc-navigation.ts](./MOD-155-22.ts.yaml) | 別の文書・リビジョン・配信元へ移る操作のフック |
 | [画面 / 文書の画面 / use-doc-screen-effects.ts](./MOD-155-23.ts.yaml) | タブのタイトルと直前の文書を合わせるフック |
@@ -158,5 +155,6 @@
 | [開発ドキュメントサーバー / 起動 / lifespan.py](./MOD-155-177.py.yaml) | マウントした管理の MCP のセッションの管理と、project-indexの呼び出しを閉じるアプリの寿命 |
 | [開発ドキュメントサーバー / 起動 / main.py](./MOD-155-174.py.yaml) | `dev-docs serve`・`dev-docs migrate` の部品の配線と、起動のときの配信元の知らせ |
 | [開発ドキュメントサーバー / 起動 / screen.py](./MOD-155-182.py.yaml) | 画面のビルドの配信 |
+| [開発用のスクリプト / 公開ページのビルド / build_pages.py](./MOD-192-1.py.yaml) | 公開の文書と判定フローチャートを mdmark の build で Pages の 1 枚の HTML にまとめる |
 
 <!-- /table -->

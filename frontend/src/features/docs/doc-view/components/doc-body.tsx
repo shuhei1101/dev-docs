@@ -5,7 +5,6 @@ import { useColumnPersistence } from "@/features/docs/doc-view/hooks/use-column-
 import { useMdmark } from "@/features/docs/doc-view/hooks/use-mdmark";
 import { findActivePage } from "@/features/docs/doc-view/nav";
 import { applyHiddenColumns, columnTableKeys } from "@/features/docs/doc-view/tables";
-import { type TocItem, readToc } from "@/features/docs/doc-view/toc";
 import {
   type DocComment,
   commentsOf,
@@ -18,7 +17,6 @@ type Props = {
   document: DocumentResponse;
   /** 比較元の文書の本文と表のキー（差分の強調）。null・省略は強調しない */
   baseMarkdown?: { markdown: string; tableKeys: string[] } | null;
-  onHeadings: (items: TocItem[]) => void;
   onCommentSaved: () => void;
   /** コメントのパネルで場所を選ばれたコメント。その箇所へ移ったら `onLocated` で戻す */
   locating: DocComment | null;
@@ -62,7 +60,6 @@ const headingsBefore = (
 export const DocBody = ({
   document: doc,
   baseMarkdown,
-  onHeadings,
   onCommentSaved,
   locating,
   onLocated,
@@ -160,10 +157,6 @@ export const DocBody = ({
     shown.current = { docId, signature: commentSignature };
     void handle.reloadComments();
   }, [ready, handle, docId, commentSignature]);
-
-  useEffect(() => {
-    if (ready && ref.current) onHeadings(readToc(ref.current));
-  }, [ready, markdown, onHeadings]);
 
   // 場所を選ばれたコメントへ移る（コメントを再取得してから、その箇所を画面に入れて強調する）
   useEffect(() => {

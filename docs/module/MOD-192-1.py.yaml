@@ -1,0 +1,618 @@
+id: MOD-192-1
+title: 開発用のスクリプト / 公開ページのビルド / build_pages.py
+lead: |-
+  `docs/guide/` の公開の Markdown と、`docs/flowchart/` の公開の YAML を Markdown にしたものを、mdmark の `build` で 1 枚の HTML にまとめる。
+  GitHub Actions の Pages のワークフローが呼び、出力のフォルダを Pages へ配信する。
+test_files:
+  - tests/unit/scripts/test_build_pages.py
+directory: |-
+  ```text
+  scripts/
+  └─ build_pages.py    # main / list_public_guides / load_public_flowcharts / index_document_paths / render_page / item_anchors / rewrite_references / write_bundle_config / run_mdmark
+  .github/
+  └─ workflows/
+     └─ pages.yml      # develop への push で build_pages.py を実行し、出力を Pages へ配信
+  ```
+data_models:
+  - name: GuidePage
+    title: 公開ドキュメントの文書
+    container: scripts/build_pages.py
+    usecase: 公開ページのビルド
+    role: 値
+    summary: '`docs/guide/files.yml` の公開の行 1 つ'
+    description: frozen の dataclass。
+    properties:
+      - name: path
+        type: str
+        description: '`docs/guide/` からのファイル名'
+        example: dev-docsを入れる.md
+      - name: category
+        type: str
+        description: 分類（`CATEGORIES` のどれか）
+        example: 使い方
+classes:
+  - name: BuildError
+    title: ビルドの失敗
+    container: scripts/build_pages.py
+    usecase: 公開ページのビルド
+    role: 例外
+    summary: 入力の誤り・mdmark の build の失敗で公開ページを作れないことを表す例外
+    kind: クラス
+    inherits: Exception
+    description: メッセージに原因のファイルのパスか参照の文字列を含める。`main` が捕まえて標準エラーに出し、`EXIT_FAILED` で終わる。
+constants:
+  - name: DOCS_DIR
+    title: 文書のフォルダ
+    container: scripts/build_pages.py
+    usecase: 公開ページのビルド
+    summary: 文書の ID を集めるフォルダの、リポジトリの直下からのパス
+    value: '"docs"'
+  - name: GUIDE_DIR
+    title: 公開ドキュメントのフォルダ
+    container: scripts/build_pages.py
+    usecase: 公開ページのビルド
+    summary: 公開の Markdown を配置するフォルダの、リポジトリの直下からのパス
+    value: '"docs/guide"'
+  - name: GUIDE_FILES
+    title: 公開ドキュメントの管理用の YAML
+    container: scripts/build_pages.py
+    usecase: 公開ページのビルド
+    summary: '`GUIDE_DIR` の Markdown の公開範囲・分類を持つファイル名'
+    value: '"files.yml"'
+  - name: FLOWCHART_DIR
+    title: 判定フローチャートのフォルダ
+    container: scripts/build_pages.py
+    usecase: 公開ページのビルド
+    summary: 変換する YAML を配置するフォルダの、リポジトリの直下からのパス
+    value: '"docs/flowchart"'
+  - name: CATEGORIES
+    title: 分類の並び
+    container: scripts/build_pages.py
+    usecase: 公開ページのビルド
+    summary: 公開ページの文書の一覧に並べる分類の順
+    entries:
+      - key: '0'
+        value: '"はじめに"'
+      - key: '1'
+        value: '"使い方"'
+      - key: '2'
+        value: '"リファレンス"'
+  - name: FLOWCHART_CATEGORY
+    title: 判定フローチャートの分類
+    container: scripts/build_pages.py
+    usecase: 公開ページのビルド
+    summary: 公開の判定フローチャートを並べる分類
+    value: '"使い方"'
+  - name: SKIPPED_DIRS
+    title: ID を集めないフォルダ
+    container: scripts/build_pages.py
+    usecase: 公開ページのビルド
+    summary: 文書の原本でないため ID を集めない `docs/` 直下のフォルダ
+    entries:
+      - key: '0'
+        value: '"pr"'
+      - key: '1'
+        value: '"mock"'
+      - key: '2'
+        value: '"generated"'
+  - name: SKIPPED_FILES
+    title: ID を集めないファイル名
+    container: scripts/build_pages.py
+    usecase: 公開ページのビルド
+    summary: 文書ではなく目次・管理用の YAML のファイル名
+    entries:
+      - key: '0'
+        value: '"index.yaml"'
+      - key: '1'
+        value: '"files.yml"'
+  - name: BLOB_URL
+    title: 公開しない文書のリンクの頭
+    container: scripts/build_pages.py
+    usecase: 公開ページのビルド
+    summary: 公開ページにまとめない文書への参照を書き換える GitHub の URL の頭
+    value: '"https://github.com/shuhei1101/dev-docs/blob/develop/"'
+  - name: PUBLIC
+    title: 公開する値
+    container: scripts/build_pages.py
+    usecase: 公開ページのビルド
+    summary: 公開ページにまとめる `visibility` の値
+    value: '"public"'
+  - name: OVERVIEW_ID
+    title: 概要の項目の ID
+    container: scripts/build_pages.py
+    usecase: 公開ページのビルド
+    summary: 見出しを付けずに冒頭リードにする項目の `id`
+    value: '"overview"'
+  - name: GROUP_SEPARATOR
+    title: group のレイヤーの区切り
+    container: scripts/build_pages.py
+    usecase: 公開ページのビルド
+    summary: 項目の `group` を入れ子の見出しに分ける区切り
+    value: '" > "'
+  - name: ITEM_HEADING_LEVEL
+    title: 項目の見出しの最初の深さ
+    container: scripts/build_pages.py
+    usecase: 公開ページのビルド
+    summary: '`group` を持たない項目と、`group` の 1 つ目のレイヤーの見出しの深さ'
+    value: '2'
+  - name: MAX_HEADING_LEVEL
+    title: 見出しの最大の深さ
+    container: scripts/build_pages.py
+    usecase: 公開ページのビルド
+    summary: これより深い見出しはこの深さで描く
+    value: '6'
+  - name: MDMARK_TAG
+    title: mdmark のバージョン
+    container: scripts/build_pages.py
+    usecase: 公開ページのビルド
+    summary: '`npx` で呼ぶ mdmark のタグ（[mdmark](id:LIB-155-9) の採用バージョンと同じ）'
+    value: '"v0.10.0"'
+  - name: OUTPUT_HTML
+    title: 公開ページの HTML
+    container: scripts/build_pages.py
+    usecase: 公開ページのビルド
+    summary: 出力のフォルダに配置する、Pages のトップになる HTML のファイル名
+    value: '"index.html"'
+  - name: LIMIT_SEC
+    title: mdmark の build の打ち切り
+    container: scripts/build_pages.py
+    usecase: 公開ページのビルド
+    summary: mdmark の build を打ち切る秒数（初回の `npx` の取得を含む）
+    value: '300'
+  - name: EXIT_FAILED
+    title: 失敗の終了コード
+    container: scripts/build_pages.py
+    usecase: 公開ページのビルド
+    summary: '`BuildError` と予期しない例外で終わるときの終了コード'
+    value: '1'
+  - name: EXIT_NOT_STARTED
+    title: 作り始めなかった終了コード
+    container: scripts/build_pages.py
+    usecase: 公開ページのビルド
+    summary: 公開の文書が 1 つも無く、出力のフォルダを触らずに終わるときの終了コード
+    value: '2'
+functions:
+  - name: main
+    title: スクリプトの入口
+    container: scripts/build_pages.py
+    usecase: 公開ページのビルド
+    role: 入口
+    summary: 公開の文書を 1 枚の HTML にして `--out` のフォルダに置き、終了コードを返却する
+    kind: 関数
+    scope: public
+    is_async: false
+    side_effects: '`--out` のフォルダを削除して作り直す。一時フォルダを作って消す。標準出力・標準エラーに出力する'
+    args:
+      - name: argv
+        title: 引数
+        type: Sequence[str] | None
+        required: false
+        default: None
+        passing: positional
+        description: コマンドの引数。`None` は `sys.argv[1:]`。`--root`（リポジトリの直下。既定 `.`）・`--out`（出力のフォルダ。必須）
+    args_example: |-
+      ```bash
+      uv run --frozen python scripts/build_pages.py --out _site
+      ```
+    returns:
+      type: int
+      description: 成功は 0、公開の文書が無ければ `EXIT_NOT_STARTED`、`BuildError` と予期しない例外は `EXIT_FAILED`
+    process: |-
+      1. argparse で `--root`・`--out` を解析する
+      2. 公開ドキュメントの文書を集め（公開ドキュメントの文書の収集）、公開の判定フローチャートを読み込み（公開の判定フローチャートの読み込み）、文書の ID の場所を集める（文書の ID の場所の収集）
+         - 公開の文書が 1 つも無い場合、標準エラーに出して `EXIT_NOT_STARTED` を返却する
+      3. `--out` のフォルダを削除して作り直す
+      4. 一時フォルダに、まとめる文書を `CATEGORIES` の順に並べて配置する。分類ごとに、公開ドキュメントの文書を `files.yml` の行の順にそのままコピーし、分類が `FLOWCHART_CATEGORY` なら続けて公開の判定フローチャートを `{ID}.md` で記載する
+         - 判定フローチャートは、先に全てを Markdown にして（ページの描画）項目の見出しの ID を集め（項目の見出しの ID の収集）、その後に参照を書き換える（参照の書き換え）
+      5. mdmark の設定を記載し（mdmark の設定の記載）、mdmark の build を実行して（mdmark の build の実行）、出力の `OUTPUT_HTML` を `--out` のフォルダへコピーする
+         - [INFO] mdmark の build の標準出力をそのまま標準出力に出す
+      6. 0 を返却する
+         - `BuildError` の場合、メッセージを標準エラーに出して `EXIT_FAILED` を返却する
+         - 予期しない例外の場合、`traceback.print_exc()` を呼んで `EXIT_FAILED` を返却する
+    unit_tests:
+      - name: test_main
+        case: 正常
+        summary: 公開の文書を並べて mdmark に渡す
+        condition: 一時フォルダに、`files.yml` で public の文書 2 つ（はじめに・使い方）と internal の文書 1 つ、public の判定フローチャート 1 つ
+        mock: mdmark の build の実行（渡された設定を記録し、`OUTPUT_HTML` を記載する）
+        expected: 0 を返却し、`--out` に `OUTPUT_HTML` ができる。設定の `include` が はじめにの文書・使い方の文書・`{ID}.md` の順で、internal の文書を含まない
+      - name: test_main_when_no_public
+        case: 異常
+        summary: 公開の文書が無い
+        condition: public の行も public の判定フローチャートも無い一時フォルダ
+        mock: mdmark の build の実行（呼ばれないことを確かめる）
+        expected: '`EXIT_NOT_STARTED` を返却し、`--out` を作らない'
+      - name: test_main_when_build_failed
+        case: 異常
+        summary: mdmark の build の失敗
+        condition: public の文書 1 つ
+        mock: mdmark の build の実行（`BuildError` を送出する）
+        expected: '`EXIT_FAILED` を返却し、標準エラーにメッセージが出る'
+        exception: mdmark の build の失敗
+  - name: list_public_guides
+    title: 公開ドキュメントの文書の収集
+    container: scripts/build_pages.py
+    usecase: 公開ページのビルド
+    role: 読み込み
+    summary: '`{root}/GUIDE_DIR/GUIDE_FILES` の行のうち `visibility` が `PUBLIC` の文書を、行の順に返却する'
+    kind: 関数
+    scope: public
+    is_async: false
+    args:
+      - name: root
+        title: リポジトリの直下
+        type: Path
+        required: true
+        passing: positional
+        description: リポジトリの直下
+    returns:
+      type: list[GuidePage]
+      description: 公開の文書。ファイルが無ければ空のリスト
+    process: |-
+      1. `{root}/GUIDE_DIR/GUIDE_FILES` を ruamel.yaml（`typ="safe"`）で読み込む
+         - ファイルが無い場合、空のリストを返却する
+      2. `files` の行のうち `visibility` が `PUBLIC` の行を、行の順に `GuidePage` にする
+         - `category` が `CATEGORIES` に無いか、`{root}/GUIDE_DIR/{path}` が無い場合、行の `path` を添えて `BuildError` を送出する
+    exceptions:
+      - name: BuildError
+        condition: 公開の行の `category` が `CATEGORIES` に無いか、ファイルが無い
+        message: '`{GUIDE_DIR}/{path}: {理由}`'
+    unit_tests:
+      - name: test_list_public_guides
+        case: 正常
+        summary: public の行だけを行の順に返却する
+        condition: public（使い方）・internal・public（はじめに）の 3 行と、3 つのファイル
+        mock: なし（一時ディレクトリ）
+        expected: 使い方・はじめにの順の 2 件
+      - name: test_list_public_guides_when_no_file
+        case: 正常
+        summary: 管理用の YAML が無い
+        condition: '`docs/guide/files.yml` の無い一時フォルダ'
+        mock: なし（一時ディレクトリ）
+        expected: 空のリスト
+      - name: test_list_public_guides_when_invalid_row
+        case: 異常
+        summary: 分類が無いか、ファイルが無い
+        condition: '`category` の無い public の行と、ファイルの無い public の行（2 ケース）'
+        mock: なし（一時ディレクトリ）
+        expected: どちらも行の `path` を含む `BuildError`
+        exception: 分類かファイルが無い
+  - name: load_public_flowcharts
+    title: 公開の判定フローチャートの読み込み
+    container: scripts/build_pages.py
+    usecase: 公開ページのビルド
+    role: 読み込み
+    summary: '`{root}/FLOWCHART_DIR` の直下の YAML のうち `visibility` が `PUBLIC` の文書を、ファイル名の順に返却する'
+    kind: 関数
+    scope: public
+    is_async: false
+    args:
+      - name: root
+        title: リポジトリの直下
+        type: Path
+        required: true
+        passing: positional
+        description: リポジトリの直下
+    returns:
+      type: list[dict[str, Any]]
+      description: 公開の文書の YAML の中身。無ければ空のリスト
+    process: |-
+      1. `{root}/FLOWCHART_DIR` の直下の `*.yaml` のうち、`SKIPPED_FILES` に無いものをファイル名の順に ruamel.yaml（`typ="safe"`）で読み込む
+         - フォルダが無い場合、空のリストを返却する
+         - YAML として読み込めないか、トップレベルがマッピングでないか、`id`・`name` が文字列でない場合、ファイルのパスを添えて `BuildError` を送出する
+      2. `visibility` が `PUBLIC` の文書だけを返却する
+    exceptions:
+      - name: BuildError
+        condition: YAML として読み込めないか、トップレベルがマッピングでないか、`id`・`name` が文字列でない
+        message: '`{パス}: {理由}`'
+    unit_tests:
+      - name: test_load_public_flowcharts
+        case: 正常
+        summary: public だけをファイル名の順に返却する
+        condition: '`b.yaml`（public）・`a.yaml`（public）・`c.yaml`（internal）・`index.yaml`'
+        mock: なし（一時ディレクトリ）
+        expected: '`a.yaml`・`b.yaml` の順の 2 件'
+      - name: test_load_public_flowcharts_when_no_folder
+        case: 正常
+        summary: フォルダが無い
+        condition: '`docs/flowchart/` の無い一時フォルダ'
+        mock: なし（一時ディレクトリ）
+        expected: 空のリスト
+      - name: test_load_public_flowcharts_when_invalid
+        case: 異常
+        summary: 読み込めない YAML
+        condition: '`{` だけのファイル'
+        mock: なし（一時ディレクトリ）
+        expected: パスを含む `BuildError`
+        exception: YAML として読み込めない
+  - name: index_document_paths
+    title: 文書の ID の場所の収集
+    container: scripts/build_pages.py
+    usecase: 公開ページのビルド
+    role: 読み込み
+    summary: '`{root}/DOCS_DIR` の配下の YAML の文書のトップレベルの `id` から、ID → リポジトリの直下からのパスを作る'
+    kind: 関数
+    scope: public
+    is_async: false
+    args:
+      - name: root
+        title: リポジトリの直下
+        type: Path
+        required: true
+        passing: positional
+        description: リポジトリの直下
+    returns:
+      type: dict[str, str]
+      description: ID → `docs/` から始まるパス
+    process: |-
+      1. `{root}/DOCS_DIR` の配下の `*.yaml` を辿る。`DOCS_DIR` 直下の `SKIPPED_DIRS` の配下と、ファイル名が `SKIPPED_FILES` のものは飛ばす
+      2. トップレベルがマッピングで `id` が文字列の文書を、ID → パスに入れる
+         - YAML として読み込めない文書は飛ばす（変換する文書は公開の判定フローチャートの読み込みが確認する）
+    unit_tests:
+      - name: test_index_document_paths
+        case: 正常
+        summary: 文書の ID だけを集める
+        condition: '`docs/module/MOD-1.py.yaml`（`id: MOD-1`）・`docs/pr/1/x.yaml`（`id: X`）・`docs/flowchart/index.yaml`・読み込めない YAML'
+        mock: なし（一時ディレクトリ）
+        expected: '`{"MOD-1": "docs/module/MOD-1.py.yaml"}`'
+  - name: render_page
+    title: ページの描画
+    container: scripts/build_pages.py
+    usecase: 公開ページのビルド
+    role: 変換
+    summary: 判定フローチャートの文書 1 つを、`# {name}` と項目の見出し・本文の Markdown にする（参照は書き換えない）
+    kind: 関数
+    scope: public
+    is_async: false
+    args:
+      - name: document
+        title: 文書
+        type: Mapping[str, Any]
+        required: true
+        passing: positional
+        description: 公開の判定フローチャートの YAML の中身
+    returns:
+      type: str
+      description: 末尾に改行を 1 つ持つ Markdown
+    process: |-
+      1. `# {name}` を配置する
+      2. `items` を並びの順に描く
+         - `id` が `OVERVIEW_ID` の項目は、見出しを付けずに本文だけを配置する
+         - `group` を持たない項目は、`ITEM_HEADING_LEVEL` の見出し `{name}` の下に本文を配置する
+         - `group` を持つ項目は、`group` を `GROUP_SEPARATOR` で分けたレイヤーごとに `ITEM_HEADING_LEVEL` から 1 つずつ深い見出しを、直前の項目とレイヤーが違うところから配置し、最後のレイヤーの 1 つ下の深さの見出し `{name}` の下に本文を配置する
+         - 見出しの深さは `MAX_HEADING_LEVEL` を超えない
+      3. ブロックを空行でつなぐ
+    unit_tests:
+      - name: test_render_page
+        case: 正常
+        summary: 概要・group・group 無しの項目
+        condition: '`overview`・同じ `group` の 2 項目・`group` の無い 1 項目を持つ文書'
+        mock: なし
+        expected: '`# {name}`、見出しの無い概要の本文、`## {group}` が 1 つと `### {name}` が 2 つ、`## {name}` の順の Markdown'
+      - name: test_render_page_when_nested_group
+        case: 正常
+        summary: group の入れ子
+        condition: '`group` が `A > B` と `A > C` の 2 項目'
+        mock: なし
+        expected: '`## A` が 1 つ、`### B`・`### C` の下にそれぞれ `#### {name}`'
+  - name: item_anchors
+    title: 項目の見出しの ID の収集
+    container: scripts/build_pages.py
+    usecase: 公開ページのビルド
+    role: 変換
+    summary: 描いた Markdown の見出しを文書の項目と突き合わせ、項目の `id` → mdmark が振る見出しの ID を返却する
+    kind: 関数
+    scope: public
+    is_async: false
+    args:
+      - name: markdown
+        title: 描いた Markdown
+        type: str
+        required: true
+        passing: positional
+        description: ページの描画の結果
+      - name: document
+        title: 文書
+        type: Mapping[str, Any]
+        required: true
+        passing: positional
+        description: 同じ判定フローチャートの YAML の中身
+    returns:
+      type: dict[str, str]
+      description: 項目の `id` → 見出しの ID。`OVERVIEW_ID` の項目は含めない
+    process: |-
+      1. コードブロックの外の ATX の見出しを上から並べ、見出しの文字から GitHub の規則（小文字にし、文字・数字・`_`・`-`・空白のほかを除き、空白を `-` にする）で ID を作る。同じ ID の 2 つ目からは `-1`・`-2` を付ける
+      2. `items` を順に、直前に対応づけた見出しより後の、ページの描画が項目に付ける深さ（`ITEM_HEADING_LEVEL` に `group` のレイヤーの数を足し、`MAX_HEADING_LEVEL` で抑えた深さ）で `name` と同じ文字の最初の見出しに対応づける
+    unit_tests:
+      - name: test_item_anchors
+        case: 正常
+        summary: 項目と見出しを対応づける
+        condition: '`group` と同じ名前の項目を持つ文書を描いた Markdown'
+        mock: なし
+        expected: 項目の見出しの ID（2 つ目の同じ ID は `-1` 付き）
+      - name: test_item_anchors_when_in_code_block
+        case: 正常
+        summary: コードブロックの中の見出しを数えない
+        condition: 本文のコードブロックに `## x` を持つ文書
+        mock: なし
+        expected: コードブロックの中の行を見出しにしない
+  - name: rewrite_references
+    title: 参照の書き換え
+    container: scripts/build_pages.py
+    usecase: 公開ページのビルド
+    role: 変換
+    summary: 本文の文書への参照（`](id:{ID か パス})` と `#{項目}` 付き）を、まとめた中のリンクか GitHub の URL に書き換える
+    kind: 関数
+    scope: public
+    is_async: false
+    args:
+      - name: text
+        title: 本文
+        type: str
+        required: true
+        passing: positional
+        description: ページの描画の結果の Markdown
+      - name: public_ids
+        title: 公開の文書の名前
+        type: Mapping[str, str]
+        required: true
+        passing: keyword
+        description: 公開ページにまとめる文書の、文書の ID か `docs/guide/` のパス → まとめた中の名前（`{ID}.md` か `{ファイル名}`）
+      - name: anchors
+        title: 項目の見出しの ID
+        type: Mapping[str, Mapping[str, str]]
+        required: true
+        passing: keyword
+        description: 公開の判定フローチャートの ID → 項目の `id` → 見出しの ID（項目の見出しの ID の収集の結果）
+      - name: paths
+        title: 文書の ID の場所
+        type: Mapping[str, str]
+        required: true
+        passing: keyword
+        description: 文書の ID の場所の収集の結果
+      - name: root
+        title: リポジトリの直下
+        type: Path
+        required: true
+        passing: keyword
+        description: '`docs/` から始まるパスの実在を確認するリポジトリの直下'
+    returns:
+      type: str
+      description: 参照を書き換えた本文
+    process: |-
+      1. コードブロック（` ``` ` か `~~~` の囲み）の中の行は書き換えない
+      2. それ以外の行の `](id:{対象})` と `](id:{対象}#{項目})` を、対象ごとに次のリンク先へ書き換える
+         - 対象が `public_ids` にある場合、`./{まとめた中の名前}`。項目が判定フローチャートの項目で `anchors` にあれば `#{見出しの ID}` を付け、無ければ項目を落とす
+         - 対象が `paths` の ID か、`docs/` から始まりリポジトリに実在するパスの場合、`BLOB_URL` にパスのセグメントを URL エンコードして付けたもの（項目は付けない）
+         - どれにも該当しない場合、参照の文字列を添えて `BuildError` を送出する
+    exceptions:
+      - name: BuildError
+        condition: 参照の対象がまとめる文書・文書の ID・実在するパスのどれでもない
+        message: '`参照を解決できません: id:{対象}`'
+    unit_tests:
+      - name: test_rewrite_references
+        case: 正常
+        summary: 公開の判定フローチャート
+        condition: '`[x](id:flowchart-a)` と `[y](id:flowchart-a#q1)`、`public_ids` に `flowchart-a` → `flowchart-a.md`、`anchors` に `q1` → `判定`'
+        mock: なし
+        expected: '`[x](./flowchart-a.md)` と `[y](./flowchart-a.md#判定)`'
+      - name: test_rewrite_references_when_guide_path
+        case: 正常
+        summary: 公開ドキュメントのパス
+        condition: '`[設定](id:docs/guide/設定.md)`、`public_ids` に `docs/guide/設定.md` → `設定.md`'
+        mock: なし
+        expected: '`[設定](./設定.md)`'
+      - name: test_rewrite_references_when_internal_document
+        case: 正常
+        summary: まとめない文書
+        condition: '`[m](id:MOD-1#functions[main])`、`paths` に `MOD-1` → `docs/module/MOD-1.py.yaml`'
+        mock: なし
+        expected: '`[m](https://github.com/shuhei1101/dev-docs/blob/develop/docs/module/MOD-1.py.yaml)`'
+      - name: test_rewrite_references_when_in_code_block
+        case: 正常
+        summary: コードブロックの中は書き換えない
+        condition: '` ``` ` の囲みの中の `](id:flowchart-a)`'
+        mock: なし
+        expected: 入力と同じ本文
+      - name: test_rewrite_references_when_unresolved
+        case: 異常
+        summary: 解決できない参照
+        condition: '`[z](id:NOPE-1)`、`public_ids`・`anchors`・`paths` が空'
+        mock: なし
+        expected: '`id:NOPE-1` を含む `BuildError`'
+        exception: 参照の対象がどれでもない
+  - name: write_bundle_config
+    title: mdmark の設定の記載
+    container: scripts/build_pages.py
+    usecase: 公開ページのビルド
+    role: 変換
+    summary: 一時フォルダに、まとめる文書を並びのとおりにまとめる mdmark の設定を記載する
+    kind: 関数
+    scope: public
+    is_async: false
+    args:
+      - name: workdir
+        title: 一時フォルダ
+        type: Path
+        required: true
+        passing: positional
+        description: まとめる文書を置いたフォルダ
+      - name: names
+        title: まとめる文書の名前
+        type: Sequence[str]
+        required: true
+        passing: positional
+        description: 一時フォルダからのファイル名の並び（1 つ以上）
+    returns:
+      type: Path
+      description: 記載した `mdmark.config.yaml` のパス
+    process: |-
+      1. `{"version": MDMARK_TAG, "build": {"include": names, "entry": names[0], "out": OUTPUT_HTML}}` を JSON（YAML として読める）で `{workdir}/mdmark.config.yaml` に記載する
+    unit_tests:
+      - name: test_write_bundle_config
+        case: 正常
+        summary: 並びのとおりの設定
+        condition: '`names` が `["a.md", "b.md"]`'
+        mock: なし（一時ディレクトリ）
+        expected: '`include` が同じ並び、`entry` が `a.md`、`out` が `OUTPUT_HTML`、`version` が `MDMARK_TAG`'
+  - name: run_mdmark
+    title: mdmark の build の実行
+    container: scripts/build_pages.py
+    usecase: 公開ページのビルド
+    role: 外部との境界
+    summary: '`npx` で mdmark の `build` を実行し、標準出力を返却する'
+    kind: 関数
+    scope: public
+    is_async: false
+    side_effects: 子プロセスを起動する。一時フォルダに `OUTPUT_HTML` ができる
+    args:
+      - name: config
+        title: mdmark の設定
+        type: Path
+        required: true
+        passing: positional
+        description: mdmark の設定の記載の結果
+    returns:
+      type: str
+      description: mdmark の build の標準出力
+    process: |-
+      1. `["npx", "-y", "github:shuhei1101/mdmark#{MDMARK_TAG}", "build", "--config", str(config)]` を、`cwd` を設定のフォルダにして `LIMIT_SEC` で打ち切って実行する
+         - `npx` が無い場合、Node を入れる案内を添えて `BuildError` を送出する
+         - `LIMIT_SEC` で終わらない場合、`BuildError` を送出する
+         - 終了コードが 0 でない場合、終了コードと標準エラーを添えて `BuildError` を送出する
+      2. 標準エラーがあれば（mdmark の警告）標準エラーにそのまま出し、標準出力を返却する
+    exceptions:
+      - name: BuildError
+        condition: '`npx` が無い'
+        message: npx が PATH にありません。Node 24 以降を入れてください
+      - name: BuildError
+        condition: '`LIMIT_SEC` で終わらない'
+        message: mdmark の build が {LIMIT_SEC} 秒で終わりませんでした
+      - name: BuildError
+        condition: 終了コードが 0 でない
+        message: mdmark の build が終了コード {終了コード} で失敗しました\n{標準エラー}
+    unit_tests:
+      - name: test_run_mdmark
+        case: 正常
+        summary: build の引数
+        condition: '`subprocess.run` が終了コード 0 と標準出力を返却する'
+        mock: '`subprocess.run`'
+        expected: 標準出力を返却し、引数が `npx -y github:shuhei1101/mdmark#{MDMARK_TAG} build --config {config}` で `cwd` が設定のフォルダ
+      - name: test_run_mdmark_when_failed
+        case: 異常
+        summary: build の失敗
+        condition: '`subprocess.run` が終了コード 1 と標準エラーを返却する'
+        mock: '`subprocess.run`'
+        expected: 終了コードと標準エラーを含む `BuildError`
+        exception: 終了コードが 0 でない
+      - name: test_run_mdmark_when_npx_missing
+        case: 異常
+        summary: npx が無い
+        condition: '`subprocess.run` が `FileNotFoundError` を送出する'
+        mock: '`subprocess.run`'
+        expected: Node を入れる案内を含む `BuildError`
+        exception: npx が無い
+refs:
+  - ARCH-155-1#
+  - CMD-155-1#
+  - LIB-155-9#

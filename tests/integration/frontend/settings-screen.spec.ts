@@ -1,3 +1,4 @@
+import AxeBuilder from "@axe-core/playwright";
 import { type Page, expect, test } from "@playwright/test";
 
 import { mockApi, problem } from "./support/api-mock";
@@ -28,6 +29,16 @@ const withSources =
   () => ({ body: settingsView(rows) });
 
 const dialog = (page: Page) => page.getByRole("dialog");
+
+const contrastViolations = async (page: Page, selector: string) => {
+  const result = await new AxeBuilder({ page })
+    .include(selector)
+    .withRules(["color-contrast"])
+    .analyze();
+  return result.violations.map((violation) => violation.id);
+};
+
+const HTML_CLASS = { light: /^(?!.*\bdark\b)/, dark: /\bdark\b/ } as const;
 
 const openAdd = async (page: Page) => {
   await page.getByRole("button", { name: "配信元を追加" }).click();
@@ -262,6 +273,44 @@ test.describe("状態", () => {
       settings: withSources(settingsSource("fresh", { id: null, status: "pending_reload" })),
     });
     await expect(page.getByText("再読み込み待ち", { exact: true })).toBeVisible();
+  });
+
+  for (const colorScheme of ["light", "dark"] as const) {
+    // 配信停止のバッジの文字と背景が axe の color-contrast を満たす（正常系）
+    test(`status_not_served_contrast_${colorScheme}`, async ({ page }) => {
+      // 準備
+      await page.emulateMedia({ colorScheme });
+      await open(page, {
+        settings: withSources(settingsSource("a", { status: "not_served" })),
+      });
+      await expect(page.locator("html")).toHaveClass(HTML_CLASS[colorScheme]);
+      // 実行
+      const badge = page.locator('[data-slot="badge"]', { hasText: "配信停止" });
+      await expect(badge).toBeVisible();
+      // 検証
+      expect(await contrastViolations(page, '[data-slot="badge"]')).toEqual([]);
+    });
+  }
+
+  // 状態のバッジと操作のボタンが高さ・幅を transition の対象にしない（正常系）
+  test("no_layout_transition", async ({ page }) => {
+    // 準備
+    await open(page, {
+      settings: withSources(settingsSource("a", { status: "not_served" })),
+    });
+    // 実行
+    const properties = await page
+      .locator('[data-slot="badge"], [data-slot="button"], [data-slot="switch"]')
+      .evaluateAll((elements) =>
+        elements.map((element) => getComputedStyle(element).transitionProperty),
+      );
+    // 検証
+    expect(properties.length).toBeGreaterThan(0);
+    for (const property of properties) {
+      expect(property.split(", ")).not.toEqual(expect.arrayContaining(["all"]));
+      expect(property.split(", ")).not.toEqual(expect.arrayContaining(["height"]));
+      expect(property.split(", ")).not.toEqual(expect.arrayContaining(["width"]));
+    }
   });
 });
 
@@ -727,6 +776,22 @@ test.describe("保存の失敗のまとめ", () => {
 });
 
 test.describe("削除の確認", () => {
+  for (const colorScheme of ["light", "dark"] as const) {
+    // 削除の確定ボタンの文字と背景が axe の color-contrast を満たす（正常系）
+    test(`delete_confirm_contrast_${colorScheme}`, async ({ page }) => {
+      // 準備
+      await page.emulateMedia({ colorScheme });
+      await open(page);
+      await expect(page.locator("html")).toHaveClass(HTML_CLASS[colorScheme]);
+      await page.getByRole("button", { name: "sample を削除" }).click();
+      // 実行
+      const confirm = page.getByRole("alertdialog").getByRole("button", { name: "削除" });
+      await expect(confirm).toBeVisible();
+      // 検証
+      expect(await contrastViolations(page, '[role="alertdialog"]')).toEqual([]);
+    });
+  }
+
   // タイトルに `{id} を削除しますか?` を出す（正常系）
   test("delete_title", async ({ page }) => {
     await open(page);

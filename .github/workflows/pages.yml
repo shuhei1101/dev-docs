@@ -1,0 +1,52 @@
+# develop の公開の文書と判定フローチャートを mdmark の build で 1 枚の HTML にし、YAML が無いことを確認してから GitHub Pages へ配信する
+name: pages
+
+on:
+  push:
+    branches:
+      - develop
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# 配信は 1 つずつ実行し、実行中の配信は取り消さない
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      # mdmark を npx で呼ぶ
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - uses: astral-sh/setup-uv@v6
+      - uses: actions/configure-pages@v5
+      # Python と依存は uv.lock から uv が入れる
+      - name: 公開の文書を 1 枚の HTML にまとめる
+        run: uv run --frozen python scripts/build_pages.py --out _site
+      # 該当した YAML のパスを出して失敗する
+      - name: 成果物に YAML が無いことを確認する
+        shell: bash
+        run: "! find _site -type f \\( -name '*.yaml' -o -name '*.yml' \\) | grep ."
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

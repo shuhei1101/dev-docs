@@ -10,8 +10,8 @@ components:
     container: features/docs/doc-view/doc-view-screen.tsx
     usecase: 文書を読む
     role: 画面
-    summary: ルートの引数で文書を読み、トップバー・種類のタブ・サイドバー・本文・目次・コメントのパネルを並べる
-    description: 文書は `useSuspenseQuery(documentQueryOptions(...))`、配信元とリビジョンの一覧は orval が生成した問い合わせで読む。URL の変更は `search` を書き換える（`rev`・`base` を保つ。文書の画面の移動）。トップバーへは配信中の配信元を渡す（配信中の配信元の取り出し）。文書は本文の領域に出し、画面の先頭に本文へのスキップを置く。`document.title` は `pageTitle` で書き換える。幅の切り替え（48rem・80rem）は Tailwind の `md:`・`xl:` で行い、JavaScript では幅を読まない
+    summary: ルートの引数で文書を読み、トップバー・種類のタブ・サイドバー・本文・コメントのパネルを並べる
+    description: 文書は `useSuspenseQuery(documentQueryOptions(...))`、配信元とリビジョンの一覧は orval が生成した問い合わせで読む。URL の変更は `search` を書き換える（`rev`・`base` を保つ。文書の画面の移動）。トップバーへは配信中の配信元を渡す（配信中の配信元の取り出し）。文書は本文の領域に出し（目次は mdmark が本文に描き、画面は目次の列を配置しない）、画面の先頭に本文へのスキップを置く。`document.title` は `pageTitle` で書き換える。幅の切り替え（48rem）は Tailwind の `md:` で行い、JavaScript では幅を読まない
     state:
       - name: searchOpen
         type: boolean
