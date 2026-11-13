@@ -57,6 +57,6 @@ scope_out:
   - item: AI Monitor v0.4.0 のテーマの取り込み（`import-site --version v0.4.0`。#74 から移した範囲）
     reason: Pages は mdmark の build で描き、`docs/_theme/` を読むものが無いためテーマを残さない。残さないと決めたため取り込まない
     plan: none
-  - item: AI Monitor の追従 Issue で、テーマを受け取らない配布先に「サイトのレイアウト」「配信設定」の行を出さない・`import-site` が `docs/_theme/` を作り直さない扱い
-    reason: 配布元（AI Monitor）の `distribution.yaml`・`import-site` の変更で、dev-docs の変更では完結しない。受け取り方は `要件.md` の `未確定` で決める（控えが無いと `import-site` は `copy` として扱い、`docs/_theme/` を作り直す）
+  - item: AI Monitor で、テーマを受け取らない配布先に、追従 Issue の「サイトのレイアウト」「配信設定」の行を出さず、`import-site` が `docs/_theme/` を作り直さず、`design_docs publish` が分類のトップページと `nav.project.yml` を書き出さない扱い
+    reason: 配布元（AI Monitor）の `distribution.yaml`・`import-site`・`publish` の変更で、dev-docs の変更では完結しない。対応が入るまでの扱いは `要件.md` の `## 配布物の受け取り方`
     plan: to_file
