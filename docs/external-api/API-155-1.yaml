@@ -5,11 +5,12 @@ lead: project-index が配信している配信元の一覧と状態・文書・
 used_in:
   - src/dev_docs/integrations/project_index/
 verification:
-  state: 未確認
-  detail: '提供する側の shuhei1101/project-index#14 は project-index の c19c617（#15）で実装されたが、入出力がこの設計書と異なる（文書の一覧に値・バージョン・`unreadable` が無い、配信元の設定に `id`・`git`・`defaultRef`・`diffIgnoreKeys` と解いたスキーマが無い、文書の詳細を project-index が変換して `value`・`markdown`・`updatedAt` で返す、検討事項の一覧が `decisions[].folders`、端末の設定の行が `row` に包まれず `outside_read` を返さない、行の追加の本文が `{source}` で応答が `result: added | exists`）。この作業 PR は Issue に記載した入出力に沿ったモックで確かめ、本物との照合と付け替えは #164 で行う'
+  state: 済
+  detail: '提供する側の shuhei1101/project-index の develop の `f36ba69`（#14・#15 と #46・#49）の IF-22〜IF-32 と照合した。パス・状態コード・`application/problem+json` の `missing` は一致する。応答のキーは camelCase で、検討事項の一覧が `decisions[].folders`、検討事項の文書が `body`、端末の設定の行が `row` に包まれず `outsideRead` を持ち、保存の応答が状態だけ、行の追加の本文が `{source}` で応答が `result`（`added`・`exists`）になる。`f36ba69` に固定した本物の project-index を相手に、結合テストの文書の取得・画面の検索・リビジョンの一覧・端末の設定の取得と保存が pass した（`docs/pr/183/テスト結果/20261113204913_e168fba_結合テスト.log`）'
+  date: '2026-11-13'
 version:
-  api_version: 未定（shuhei1101/project-index#14 で決まる）
-  checked_on: '2026-11-12'
+  api_version: shuhei1101/project-index の develop の `f36ba69`
+  checked_on: '2026-11-13'
 base_urls:
   - env: 手元の端末
     url: http://127.0.0.1:8786
@@ -22,41 +23,41 @@ endpoints:
   - name: GET /sources
     method: GET
     path: /sources
-    summary: 配信元の一覧と、配信元ごとの状態・配信していない理由（`{path, reason}`）・設定のバージョンが古いときの新旧を返す
+    summary: 配信元ごとの ID・状態（`serving`・`not_served`・`disabled`）と、配信していない理由（`errors[]` の `{path, reason}`）を返す（IF-22）
     status_codes:
       - code: '200'
         condition: 返した（配信元が 0 件でも 200）
   - name: GET /sources/{source}/config
     method: GET
     path: /sources/{source}/config
-    summary: 配信元の設定のうち、画面が使うキー（`nav`・`decisions.folders`・`github`・`diff_ignore_keys`・`default_ref`・Git の配信元か）と、有効な `documents[]` の行（`id`・`title`・`paths`・`records`・`search`・`converter`・`alias_type` と、`$ref` を解き `records` の行は 1 要素にした種類のスキーマ）を返す
+    summary: 配信元の設定の `nav`・`documents[]`（スクリプトのコマンドを除き、キーは配信元の設定のまま）・`decisions.folders`・`github`（`repository`・`issueLabels`）・`diff.ignore_keys` を返す（IF-23）。`?schemas=true` で `schemas` に `documents[].id` ごとの `$ref` を解いた種類のスキーマを入れる。`default_ref` と Git の配信元かは GET `/sources/{source}/refs` から取る
     status_codes:
       - code: '200'
         condition: 返した
       - code: '404'
-        condition: 配信元が無い・配信していない
+        condition: 配信元が無い・配信していない（`missing` が `source`・`not_served`）
   - name: GET /sources/{source}/docs
     method: GET
     path: /sources/{source}/docs
-    summary: 指定のリビジョンの文書の一覧（ID・パス・種類・要素の添字・本文のファイルのパス・メタデータ・値・バージョン・作成と更新の日時）と、YAML として読めなかったファイル（パス・行・列・理由）を返す。本文は返さない
+    summary: 指定のリビジョンの文書の ID・パス・種類・名前・概要・タグ・公開範囲・本文のファイルのパス・バージョン（`version`）を返す（IF-24）。`?values=true` で文書ごとの値（`value`）も入れる。YAML として読めなかったファイルは一覧に入らず、文書の取得の `conversionError` で返る
     status_codes:
       - code: '200'
-        condition: 返した
+        condition: 返した（文書が 0 件でも 200）
       - code: '404'
-        condition: 配信元が無い・配信していない、リビジョンを解決できない
+        condition: 配信元が無い・配信していない、リビジョンを解決できない（`missing` が `source`・`not_served`・`ref`）
   - name: GET /sources/{source}/docs/{path}
     method: GET
     path: /sources/{source}/docs/{path}
-    summary: 指定のリビジョンの文書の値・本文・メタデータ・本文のファイルのパス（管理用の YAML の行の文書）を返す。`converters[]` を指す種類は、スクリプトが出した Markdown か変換の失敗（理由・スクリプト・原因）を返す。YAML を読めないファイルは読めなかった位置を失敗で返す。パスは文書のファイルか本文のファイルのパスで引け、管理用の YAML の行の文書は `id` のクエリで要素を選ぶ
+    summary: 指定のリビジョンの文書の値・`$ref` を解いた種類のスキーマ・メタデータ・本文と本文のファイルのパス（管理用の YAML の行の文書）・`converters[]` の Markdown か変換の失敗（`conversionError`）・更新日時を返す（IF-25）。パスは文書のファイルか本文のファイルのパスで引き、`records` の行の文書は `?id=` に文書の ID を指して 1 つに選ぶ
     status_codes:
       - code: '200'
-        condition: 返した（変換に失敗したときも失敗を入れて 200）
+        condition: 返した（変換に失敗したとき・YAML を読み込めないときも `conversionError` を入れて 200）
       - code: '404'
-        condition: 配信元・リビジョン・文書が無い
+        condition: 配信元・リビジョン・文書が無い（`missing` が `source`・`not_served`・`ref`・`doc`）
   - name: GET /sources/{source}/decisions
     method: GET
     path: /sources/{source}/decisions
-    summary: '`decisions.folders` にある検討事項の ID と、ID ごとに当たるフォルダの数を返す'
+    summary: '`decisions.folders` にある検討事項の ID と、ID ごとに当たるフォルダの数（`decisions[]` の `{id, folders}`）を返す（IF-26）'
     status_codes:
       - code: '200'
         condition: 返した（`decisions.folders` を持たない配信元は空の一覧）
@@ -65,27 +66,27 @@ endpoints:
   - name: GET /sources/{source}/decisions/{id}
     method: GET
     path: /sources/{source}/decisions/{id}
-    summary: '`decisions.folders` のうちちょうど 1 つのフォルダにある検討事項の文書の本文を返す'
+    summary: '`decisions.folders` のうちちょうど 1 つのフォルダにある検討事項の文書の本文（`body`）と、あったフォルダを返す（IF-27）'
     status_codes:
       - code: '200'
         condition: 返した
       - code: '404'
-        condition: 当たるフォルダが 0 個か 2 個以上
+        condition: 当たるフォルダが 0 個か 2 個以上（`missing` が `doc`、`reason` が `not_found`・`ambiguous`）
   - name: GET /sources/{source}/search
     method: GET
     path: /sources/{source}/search
-    summary: '語を含む文書（ID・パス・要素の添字・名前）と一致した箇所を返す。`search: false` の行の文書は除く'
+    summary: 単語を含む文書の ID（`id`）・文書のファイルのパス（`filePath`）・名前と一致した箇所、一致した総件数を返す（IF-28）
     status_codes:
       - code: '200'
-        condition: 返した
+        condition: 返した（一致が 0 件のときも 200）
       - code: '400'
-        condition: 語が空・長すぎる
+        condition: '`q` が空か 200 文字を超える'
       - code: '404'
-        condition: 配信元が無い・リビジョンを解決できない
+        condition: 配信元が無い・配信していない、リビジョンを解決できない
   - name: GET /sources/{source}/refs
     method: GET
     path: /sources/{source}/refs
-    summary: 配信元のブランチ・タグ・最近の commit を返す
+    summary: Git の配信元か・`defaultRef`・ブランチ・タグ・最近の commit を返す（IF-29）
     status_codes:
       - code: '200'
         condition: '返した（Git 管理外の配信元は `git: false`）'
@@ -94,28 +95,34 @@ endpoints:
   - name: GET /settings/sources
     method: GET
     path: /settings/sources
-    summary: 端末の設定の配信元の行（`outside_read` を含む全てのキー）と、配信元ごとの状態を返す
+    summary: 端末の設定のパス（`settingsPath`）と、`sources[]` の行ごとの `id`・`config`・`enabled`・`scope`・`outsideRead` と状態（`status`・`errors`・`configVersion`）を返す（IF-30）
     status_codes:
       - code: '200'
         condition: 返した
   - name: PUT /settings/sources
     method: PUT
     path: /settings/sources
-    summary: 端末の設定の配信元の行を保存して読み直し、配信元ごとの状態を返す
+    summary: '`sources[]` を丸ごと保存して読み直し、配信元ごとの状態（`id`・`status`・`errors`）を返す（IF-31）。送らなかったキーはファイルの同じ配信元の行の今の値で残る'
     status_codes:
       - code: '200'
         condition: 保存した
+      - code: '403'
+        condition: 別のオリジンの要求（dev-docs はサーバーの側から `Origin` を付けずに呼ぶ）
       - code: '422'
-        condition: スキーマに通らない
+        condition: スキーマに通らない（`errors[]`）
   - name: POST /settings/sources
     method: POST
     path: /settings/sources
-    summary: 端末の設定へ配信元の行を 1 行追加する（shuhei1101/project-index#10）。同じ id の行があれば追加せずに知らせる
+    summary: 本文 `{source}` の配信元の行を 1 行追加して読み直す（IF-32）。応答の `result` が `added`・`exists`、`exists` のときは `same` に内容が同じか
     status_codes:
       - code: '201'
         condition: 追加した
+      - code: '403'
+        condition: 別のオリジンの要求（dev-docs はサーバーの側から `Origin` を付けずに呼ぶ）
       - code: '409'
-        condition: 同じ id の行がある（内容が同じかを応答に入れる）
+        condition: 同じ id の行がある
+      - code: '422'
+        condition: スキーマに通らない
 notes:
-  契約: '正本は提供する側の shuhei1101/project-index#14 のインターフェース定義。パスと入出力はこの Issue に記載した入出力から作った仮のもので、契約が決まったら #164 で合わせる'
-  dev-docs が前提にする応答: 文書の一覧に値を含めること（`nav` の `auto` の `filter` と差分の変わったキーを dev-docs が求めるため）、配信元の設定の応答に解いた種類のスキーマを含めること（スキーマ駆動の変換のため）、文書の詳細の `id` のクエリ、検索の結果の ID と要素の添字は、モジュール構成設計で決めた前提。project-index#14 に書き足して合わせる
+  契約: 正本は提供する側の shuhei1101/project-index のインターフェース定義 IF-22〜IF-32。付け替え口のモックはこの版の入出力で書き、版を記録する
+  dev-docs が前提にする応答: 文書の一覧の値とバージョン（`nav` の `auto` の `filter`・`group_by` と差分の変わったキー・変わった文書のマーカーのため）、`records` の行の文書の `?id=` での指定、検索の結果の `id`・`filePath`、配信元の設定の `diff.ignore_keys` と `schemas`（絞り込みのフィールドの一覧のため）。shuhei1101/project-index#46 で追加された

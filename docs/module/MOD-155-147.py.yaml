@@ -51,32 +51,32 @@ functions:
         case: 正常
         summary: 行に状態を重ねる
         condition: GET `/_api/settings/sources`、project-index の行 2 つと状態 `serving`・`not_served`
-        mock: project-indexの呼び出し（`httpx.MockTransport` で project-index#14 の入出力を返す）
+        mock: project-indexの呼び出し（`httpx.MockTransport` で project-index の develop の `f36ba69` の入出力を返す）
         expected: 200 で `settingsPath` が project-index の値、`sources` の 2 行、`not_served` の行に `errors`
       - name: test_build_settings_router_when_put
         case: 正常
         summary: 保存を依頼して状態を返す
         condition: 'PUT `/_api/settings/sources` を `Sec-Fetch-Site: same-origin` で'
-        mock: project-indexの呼び出し（`httpx.MockTransport` で project-index#14 の入出力を返す）
+        mock: project-indexの呼び出し（`httpx.MockTransport` で project-index の develop の `f36ba69` の入出力を返す）
         expected: 200 で `sources[].status`。project-index へ送った行の `config` が配列
       - name: test_build_settings_router_when_pending_reload
         case: 正常
         summary: 読み直していない行
         condition: GET `/_api/settings/sources`、project-index の 3 行目の状態が `pending_reload`
-        mock: project-indexの呼び出し（`httpx.MockTransport` で project-index#14 の入出力を返す）
+        mock: project-indexの呼び出し（`httpx.MockTransport` で project-index の develop の `f36ba69` の入出力を返す）
         expected: 200 で 3 行目が `pending_reload`
       - name: test_build_settings_router_when_rejected
         case: 異常
         summary: project-index の 422 をそのまま返す
         condition: PUT で project-index が 422（`errors[]` 1 件）を返す
-        mock: project-indexの呼び出し（`httpx.MockTransport` で project-index#14 の入出力を返す）
+        mock: project-indexの呼び出し（`httpx.MockTransport` で project-index の develop の `f36ba69` の入出力を返す）
         expected: 422 の problem+json で、`errors` が project-index の 1 件
         exception: '-'
       - name: test_build_settings_router_when_unexpected_status
         case: 異常
         summary: project-index の想定しない応答
         condition: PUT で project-index が 500 を返す
-        mock: project-indexの呼び出し（`httpx.MockTransport` で project-index#14 の入出力を返す）
+        mock: project-indexの呼び出し（`httpx.MockTransport` で project-index の develop の `f36ba69` の入出力を返す）
         expected: 502 の problem+json
         exception: '-'
       - name: test_build_settings_router_when_unreachable

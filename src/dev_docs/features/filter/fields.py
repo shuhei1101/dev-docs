@@ -13,7 +13,6 @@ from dev_docs.integrations.project_index.types import IndexedDocument
 from dev_docs.shared.errors import InvalidArgumentError
 
 COMPUTED_FIELDS = ("@chars", "@path", "@sections", "@matches")
-DATE_FIELDS = ("created", "updated")
 
 ARRAY_METADATA = ("tags", "related", "aliases", "avoid")
 NUMBER_METADATA = ("port",)
@@ -60,8 +59,6 @@ def _raw_values(document: IndexedDocument, field: str) -> Any:
         return document.kind
     if field == "version":
         return document.version
-    if field in DATE_FIELDS:
-        return getattr(document, field)
     if field == "body":
         return document.body
     if field == "*":
@@ -94,7 +91,7 @@ def field_values(document: IndexedDocument, field: str) -> list[Any]:
 
 def _base_fields() -> dict[str, str]:
     """スキーマに依らず使用できる項目と型。"""
-    fields = {"id": "string", "kind": "string", "created": "date", "updated": "date"}
+    fields = {"id": "string", "kind": "string"}
     for key in METADATA_KEYS:
         if key in ARRAY_METADATA:
             fields[key] = "array"

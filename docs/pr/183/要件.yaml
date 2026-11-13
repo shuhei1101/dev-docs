@@ -1,0 +1,67 @@
+use_cases:
+  - kind: composite
+    scenario: docs/scenario/SC-155-13.yaml
+    impact: run_only
+    detail: 配信元の文書を画面で読み、配信元を追加・削除する流れは変わらないが、文書と配信元の情報の取得先が本物の project-index に変わる
+    depends_on: []
+  - kind: single
+    scenario: docs/scenario/SC-155-7.yaml
+    impact: run_only
+    detail: 文書の画面のタブ・サイドバー・検索・リビジョン・差分の手順は変わらないが、文書・検索・リビジョンの取得先が本物の project-index に変わる
+    depends_on: []
+  - kind: single
+    scenario: docs/scenario/SC-155-10.yaml
+    impact: run_only
+    detail: 起動して project-index へつなぐ手順は変わらないが、つなぐ先が本物の project-index に変わる
+    depends_on: []
+  - kind: single
+    scenario: docs/scenario/SC-155-11.yaml
+    impact: run_only
+    detail: 配信元の配信の停止と削除の手順は変わらないが、端末の設定の保存先が本物の project-index に変わる
+    depends_on: []
+  - kind: single
+    scenario: docs/scenario/SC-155-12.yaml
+    impact: run_only
+    detail: 配信元の登録と、配信できない配信元の表示の手順は変わらないが、端末の設定の保存先と状態の取得先が本物の project-index に変わる
+    depends_on: []
+  - kind: single
+    scenario: docs/scenario/SC-155-3.yaml
+    impact: run_only
+    detail: 端末の設定の移し替えの手順は変わらないが、配信元の行の移し先が本物の project-index に変わる
+    depends_on: []
+  - kind: single
+    scenario: docs/scenario/SC-155-6.yaml
+    impact: none
+    detail: コメントの追加・コピー・起票は画面の中で完結し、project-index の入出力に関わらない
+    depends_on: []
+  - kind: single
+    scenario: docs/scenario/SC-155-2.yaml
+    impact: none
+    detail: 端末の設定と env の用意は project-index の入出力に関わらない
+    depends_on: []
+docs:
+  - page: docs/external-api/API-155-1.yaml
+    new: false
+    change: エンドポイントの入出力を shuhei1101/project-index のインターフェース定義（IF-22〜IF-32）に合わせ、`verification`・`version`・`notes` を本物と照合した結果と参照した契約の版（project-index の commit）へ書き換える
+    status: done
+    updated_by: planner
+    updated_at: '2026-11-12T21:05:54.690426+00:00'
+  - page: docs/test-procedure/TP-155-1.yaml
+    new: false
+    change: 結合テスト（バック）の説明と前提に、commit を固定した project-index のクローンをテストの中で起動して相手にすることを書き足す
+    status: done
+    updated_by: planner
+    updated_at: '2026-11-12T23:55:21.744676+00:00'
+scope_out:
+  - item: E2E のテストの作成
+    reason: D-307 で E2E は開発の間は作らず、メジャーのリリースの前に作ると決まっている（#164 の task-reviewer の指摘）
+    plan: none
+  - item: project-index の読み取り API への入出力の追加（文書の一覧の値・配信元の設定の解いたスキーマ 等）
+    reason: 本物の API の応答から dev-docs の側で組み立てられない入出力が 4 点ある（文書の取得を文書の数だけ呼ぶと 1 回の画面の表示が数百回の要求になる）。規約『複数リポジトリのAPI契約』に沿って提供する側へ起票した。この作業 PR は dev-docs のリポジトリだけを変更する
+    plan: shuhei1101/project-index#46
+  - item: project-index の IF-23 の応答の例と公開ドキュメントの `github.labels` を、実装の `issueLabels` に合わせる
+    reason: 提供する側の設計書と実装の食い違いで、別のリポジトリのため。この作業 PR の付け替え口は実装の `issueLabels` で読む
+    plan: shuhei1101/project-index#51
+  - item: 文書の一覧に解決済みの共通のキーを返却させ、dev-docs の行のメタデータの補いを削除する
+    reason: '提供する側の入出力の追加は shuhei1101/project-index#53（shuhei1101/project-index#54 で実装済み）。dev-docs の側の補いの削除は、この作業 PR のマージの後に #191 で行う'
+    plan: '#191'

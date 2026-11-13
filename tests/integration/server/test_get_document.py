@@ -12,7 +12,7 @@ import pytest
 
 from dev_docs.shared.yaml_io import load_yaml
 
-from .conftest import REPO_ROOT, IndexSource, MockIndex, ServerEnv, doc, row
+from .conftest import REPO_ROOT, IndexSource, MockIndex, RealIndex, ServerEnv, doc, row
 
 TABLE_DATA = {
     "id": "doc-1",
@@ -312,11 +312,11 @@ def _outline(items: list[dict[str, Any]]) -> list[Any]:
     ]
 
 
-def test_normal(mock_index: MockIndex, make_server: Callable[..., ServerEnv]) -> None:
+def test_normal(real_index: RealIndex, make_server: Callable[..., ServerEnv]) -> None:
     """一番左のタブの一番上の文書と、文書のパスで指した文書を返す（正常系）。"""
     # 準備
-    mock_index.serve("sample", IndexSource(docs={None: _sample()}, nav=NAV))
-    env = make_server(mock_index)
+    real_index.serve("sample", IndexSource(docs={None: _sample()}, nav=NAV))
+    env = make_server(real_index)
     # 実行
     top = env.client.get("/_api/sources/sample/docs")
     second = env.client.get("/_api/sources/sample/docs/docs/doc-2")
@@ -338,7 +338,7 @@ def test_normal(mock_index: MockIndex, make_server: Callable[..., ServerEnv]) ->
 
 
 def test_normal_when_nav_missing(
-    mock_index: MockIndex, make_server: Callable[..., ServerEnv]
+    real_index: RealIndex, make_server: Callable[..., ServerEnv]
 ) -> None:
     """nav が無い配信元は種類ごとにタブを作り、文書をフォルダで束ねる（正常系）。"""
     # 準備
@@ -350,8 +350,8 @@ def test_normal_when_nav_missing(
         doc("n-1", "notes/n-1.yaml", kind="memo"),
     ]
     rows = [row("sample", ["docs/**/*.yaml"]), row("memo", ["notes/*.yaml"], title="メモ")]
-    mock_index.serve("plain", IndexSource(documents=rows, docs={None: documents}))
-    env = make_server(mock_index)
+    real_index.serve("plain", IndexSource(documents=rows, docs={None: documents}))
+    env = make_server(real_index)
     # 実行
     response = env.client.get("/_api/sources/plain/docs")
     # 検証
@@ -366,13 +366,13 @@ def test_normal_when_nav_missing(
 
 
 def test_normal_when_ref_given(
-    mock_index: MockIndex, make_server: Callable[..., ServerEnv]
+    real_index: RealIndex, make_server: Callable[..., ServerEnv]
 ) -> None:
     """ref のリビジョンの文書を返す（正常系）。"""
     # 準備
     renamed = doc("doc-1", "docs/doc-1.yaml", data={"id": "doc-1", "name": "新しい名前"})
-    mock_index.serve("sample", IndexSource(docs={None: _sample(doc_1=renamed), "old": _sample()}))
-    env = make_server(mock_index)
+    real_index.serve("sample", IndexSource(docs={None: _sample(doc_1=renamed), "old": _sample()}))
+    env = make_server(real_index)
     # 実行
     at_old = env.client.get("/_api/sources/sample/docs/docs/doc-1", params={"ref": "old"})
     at_default = env.client.get("/_api/sources/sample/docs/docs/doc-1")
@@ -385,7 +385,7 @@ def test_normal_when_ref_given(
 
 
 def test_normal_when_diff_given(
-    mock_index: MockIndex, make_server: Callable[..., ServerEnv]
+    real_index: RealIndex, make_server: Callable[..., ServerEnv]
 ) -> None:
     """diff のリビジョンから変わった項目と、サイドバーの page ごとの変化を返す（正常系）。"""
     # 準備
@@ -394,10 +394,10 @@ def test_normal_when_diff_given(
         "doc-1", "docs/doc-1.yaml", data={**TABLE_DATA, "name": "新しい名前"}, version="v-new"
     )
     changed = _sample(doc("doc-4", "docs/doc-4.yaml"), doc_1=renamed)
-    mock_index.serve(
+    real_index.serve(
         "sample", IndexSource(docs={None: changed, "changed": changed, "parent": parent})
     )
-    env = make_server(mock_index)
+    env = make_server(real_index)
     # 実行
     response = env.client.get(
         "/_api/sources/sample/docs/docs/doc-1", params={"ref": "changed", "diff": "parent"}
@@ -439,17 +439,22 @@ def _custom_source(**overrides: Any) -> IndexSource:
 
 
 def test_normal_when_custom_converter(
-    mock_index: MockIndex, make_server: Callable[..., ServerEnv]
+    real_index: RealIndex, make_server: Callable[..., ServerEnv]
 ) -> None:
     """project-index の変換の結果と、埋め込みのマーカーの表を返す（正常系）。"""
     # 準備
-    rows_doc = doc("rows", "data/rows.yaml", data={"rows": [{"colA": "値A", "colB": "値B"}]})
+    rows_doc = doc(
+        "rows", "data/rows.yaml", kind="data", data={"rows": [{"colA": "値A", "colB": "値B"}]}
+    )
     details = {
         "custom/c-1.yaml": {"markdown": "# カスタム変換: カスタム 1\n"},
         "data/rows.yaml": {"document": rows_doc},
     }
-    mock_index.serve("custom", _custom_source(details=details))
-    env = make_server(mock_index)
+    source = _custom_source(details=details)
+    # 埋め込みの元の文書は、本物の project-index が配信する行に置く
+    source.documents.append(row("data", ["data/*.yaml"], {"type": "object"}))
+    real_index.serve("custom", source)
+    env = make_server(real_index)
     # 実行
     converted = env.client.get("/_api/sources/custom/docs/custom/c-1")
     embedded = env.client.get("/_api/sources/custom/docs/guide/files/guide/intro.md")
@@ -462,16 +467,11 @@ def test_normal_when_custom_converter(
 
 
 def test_normal_when_conversion_failed(
-    mock_index: MockIndex, make_server: Callable[..., ServerEnv]
+    real_index: RealIndex, make_server: Callable[..., ServerEnv]
 ) -> None:
     """project-index が返した変換の失敗と読めなかった YAML を conversionError に入れる（正常系）。"""
-    # 準備
-    failure = {
-        "reason": "timeout",
-        "kind": "custom",
-        "script": "python3 scripts/convert.py",
-        "detail": "30 秒以内に終わりませんでした",
-    }
+    # 準備（custom の converters[] のスクリプトは終了コード 1 で終わる）
+    failure = {"reason": "exit", "kind": "custom", "detail": "終了コード 1"}
     source = _custom_source(details={"custom/c-1.yaml": {"failure": failure}})
     source.docs[None] = [item for item in source.docs[None] if item["id"] != "doc-1"]
     source.unreadable = [
@@ -481,22 +481,22 @@ def test_normal_when_conversion_failed(
             "detail": "閉じていない",
             "file": "docs/doc-1.yaml",
             "line": 1,
-            "column": 4,
+            "column": 1,
         }
     ]
-    mock_index.serve("custom", source)
-    env = make_server(mock_index)
+    real_index.serve("custom", source)
+    env = make_server(real_index)
     # 実行
-    timed_out = env.client.get("/_api/sources/custom/docs/custom/c-1")
+    failed = env.client.get("/_api/sources/custom/docs/custom/c-1")
     schema_driven = env.client.get("/_api/sources/custom/docs/docs/doc-2")
     unreadable = env.client.get("/_api/sources/custom/docs/docs/doc-1")
     # 検証
-    error = timed_out.json()["conversionError"]
-    assert timed_out.status_code == 200
-    assert timed_out.json()["markdown"] is None
-    assert (error["reason"], error["kind"]) == ("timeout", "custom")
-    assert "scripts/convert.py" in error["script"]
-    assert "30" in error["detail"]
+    error = failed.json()["conversionError"]
+    assert failed.status_code == 200
+    assert failed.json()["markdown"] is None
+    assert (error["reason"], error["kind"]) == ("exit", "custom")
+    assert "scripts/convert_fail.py" in error["script"]
+    assert "変換に失敗しました" in error["detail"]
     assert schema_driven.status_code == 200
     assert "# 文書 2" in schema_driven.json()["markdown"]
     broken = unreadable.json()["conversionError"]
@@ -506,19 +506,19 @@ def test_normal_when_conversion_failed(
         "invalid_yaml",
         "docs/doc-1.yaml",
         1,
-        4,
+        1,
     )
 
 
-def test_error_when_not_found(mock_index: MockIndex, make_server: Callable[..., ServerEnv]) -> None:
+def test_error_when_not_found(real_index: RealIndex, make_server: Callable[..., ServerEnv]) -> None:
     """無い配信元・リビジョン・文書を断り、何が無いかを返す（異常系）。"""
     # 準備
-    mock_index.serve("sample", IndexSource(docs={None: _sample()}))
-    mock_index.serve(
+    real_index.serve("sample", IndexSource(docs={None: _sample()}))
+    real_index.serve(
         "broken",
         IndexSource(errors=[{"path": "documents[0].paths", "reason": "必須のキーが無い"}]),
     )
-    env = make_server(mock_index)
+    env = make_server(real_index)
     # 実行
     no_doc = env.client.get("/_api/sources/sample/docs/no-such-doc")
     no_ref = env.client.get("/_api/sources/sample/docs", params={"ref": "no-such-branch"})
@@ -537,7 +537,7 @@ def test_error_when_not_found(mock_index: MockIndex, make_server: Callable[..., 
 
 
 def test_normal_when_nav_filtered_by_tags(
-    mock_index: MockIndex, make_server: Callable[..., ServerEnv]
+    real_index: RealIndex, make_server: Callable[..., ServerEnv]
 ) -> None:
     """auto の filter に当たる文書だけをタブのサイドバーに並べる（正常系）。"""
     # 準備
@@ -570,8 +570,8 @@ def test_normal_when_nav_filtered_by_tags(
         )
         for n, tags in [(1, ["mcp"]), (2, ["mcp", "設計"]), (3, ["設計"])]
     ]
-    mock_index.serve("sample", IndexSource(docs={None: documents}, nav=nav))
-    env = make_server(mock_index)
+    real_index.serve("sample", IndexSource(docs={None: documents}, nav=nav))
+    env = make_server(real_index)
     # 実行
     response = env.client.get("/_api/sources/sample/docs")
     # 検証
@@ -592,7 +592,7 @@ def _alias(doc_id: str, path: str, kind: str, **values: Any) -> dict[str, Any]:
 
 
 def test_normal_when_aliases_returned(
-    mock_index: MockIndex, make_server: Callable[..., ServerEnv]
+    real_index: RealIndex, make_server: Callable[..., ServerEnv]
 ) -> None:
     """alias_type を持つ行の文書のエイリアスを文書といっしょに返す（正常系）。"""
     # 準備
@@ -622,9 +622,9 @@ def test_normal_when_aliases_returned(
             description="設定のキーの一覧",
         ),
     )
-    mock_index.serve("sample", IndexSource(documents=rows, docs={None: documents}))
-    mock_index.serve("plain", IndexSource(docs={None: _sample()}))
-    env = make_server(mock_index)
+    real_index.serve("sample", IndexSource(documents=rows, docs={None: documents}))
+    real_index.serve("plain", IndexSource(docs={None: _sample()}))
+    env = make_server(real_index)
     # 実行
     with_aliases = env.client.get("/_api/sources/sample/docs/docs/doc-1")
     without = env.client.get("/_api/sources/plain/docs")
@@ -646,7 +646,7 @@ def test_normal_when_aliases_returned(
 
 
 def test_normal_when_body_path_given(
-    mock_index: MockIndex, make_server: Callable[..., ServerEnv]
+    real_index: RealIndex, make_server: Callable[..., ServerEnv]
 ) -> None:
     """管理用の YAML の行の文書に bodyPath を返し、本文のファイルのパスで指した文書を返す（正常系）。"""
     # 準備
@@ -663,8 +663,8 @@ def test_normal_when_body_path_given(
         )
         for index, name in enumerate(["a", "b"])
     ]
-    mock_index.serve("sample", IndexSource(documents=rows, docs={None: _sample(*notes)}))
-    env = make_server(mock_index)
+    real_index.serve("sample", IndexSource(documents=rows, docs={None: _sample(*notes)}))
+    env = make_server(real_index)
     # 実行
     by_page = env.client.get("/_api/sources/sample/docs/notes/files/notes/a.md")
     by_body_path = env.client.get("/_api/sources/sample/docs/notes/b.md")
@@ -684,7 +684,7 @@ def test_normal_when_body_path_given(
 
 
 def test_normal_when_nav_grouped_by_folder(
-    mock_index: MockIndex, make_server: Callable[..., ServerEnv]
+    real_index: RealIndex, make_server: Callable[..., ServerEnv]
 ) -> None:
     """group_by: '@folder' の auto が、手で書いた page の文書を除いてフォルダごとの group を作る（正常系）。"""
     # 準備
@@ -709,8 +709,8 @@ def test_normal_when_nav_grouped_by_folder(
         ]
     ]
     rows = [row("sample", ["docs/*.yaml"]), row("rules", ["rules/**/*.yaml"])]
-    mock_index.serve("sample", IndexSource(documents=rows, docs={None: _sample(*rules)}, nav=nav))
-    env = make_server(mock_index)
+    real_index.serve("sample", IndexSource(documents=rows, docs={None: _sample(*rules)}, nav=nav))
+    env = make_server(real_index)
     # 実行
     response = env.client.get("/_api/sources/sample/docs")
     # 検証
@@ -736,12 +736,12 @@ def _drawn_source() -> IndexSource:
 
 
 def test_normal_when_schema_document_drawn(
-    mock_index: MockIndex, make_server: Callable[..., ServerEnv]
+    real_index: RealIndex, make_server: Callable[..., ServerEnv]
 ) -> None:
     """図を mdmark の部品に、スカラーの並びを「項目 / 値」の表にした Markdown を返す（正常系）。"""
     # 準備
-    mock_index.serve("sample", _drawn_source())
-    env = make_server(mock_index)
+    real_index.serve("sample", _drawn_source())
+    env = make_server(real_index)
     # 実行
     response = env.client.get("/_api/sources/sample/docs/drawn/doc-6")
     # 検証
@@ -775,12 +775,12 @@ def test_normal_when_schema_document_drawn(
 
 
 def test_normal_when_mermaid_unreadable(
-    mock_index: MockIndex, make_server: Callable[..., ServerEnv]
+    real_index: RealIndex, make_server: Callable[..., ServerEnv]
 ) -> None:
     """読み取れない行を含む Mermaid を、図ごと Mermaid のコードブロックのまま返す（正常系）。"""
     # 準備
-    mock_index.serve("sample", _drawn_source())
-    env = make_server(mock_index)
+    real_index.serve("sample", _drawn_source())
+    env = make_server(real_index)
     # 実行
     response = env.client.get("/_api/sources/sample/docs/drawn/doc-7")
     # 検証
@@ -801,14 +801,14 @@ def _er_columns(definition: dict[str, Any], table_id: str) -> list[tuple[str, bo
 
 
 def test_normal_when_er_diagram_drawn(
-    mock_index: MockIndex, make_server: Callable[..., ServerEnv]
+    real_index: RealIndex, make_server: Callable[..., ServerEnv]
 ) -> None:
     """`x-diagram: er` の項目を、テーブルの列で補った mdmark の ER 図の部品にする（正常系）。"""
     # 準備
     rows = [row("sample", ["docs/*.yaml"]), row("er", ["er/*.yaml"], load_yaml(ER_SCHEMA))]
     er = doc("doc-8", "er/販売.yaml", kind="er", data=load_yaml(ER_DOC))
-    mock_index.serve("sample", IndexSource(documents=rows, docs={None: _sample(er)}))
-    env = make_server(mock_index)
+    real_index.serve("sample", IndexSource(documents=rows, docs={None: _sample(er)}))
+    env = make_server(real_index)
     # 実行
     response = env.client.get("/_api/sources/sample/docs/er/販売")
     # 検証
@@ -836,15 +836,15 @@ def test_normal_when_er_diagram_drawn(
 
 
 def test_normal_when_flow_layout_checked(
-    mock_index: MockIndex, make_server: Callable[..., ServerEnv]
+    real_index: RealIndex, make_server: Callable[..., ServerEnv]
 ) -> None:
     """線がノードを横切りやすい構造のフロー図を、mdmark の定義の検査で配置のずれが出ない部品にする（正常系）。"""
     # 準備
     assert MDMARK_CLI.exists(), "mdmark の CLI が無い。リポジトリの直下で `npm ci` を実行する"
     rows = [row("sample", ["docs/*.yaml"]), row("drawn", ["drawn/*.yaml"], load_yaml(DRAWN_SCHEMA))]
     crossing = doc("doc-9", "drawn/doc-9.yaml", kind="drawn", data=load_yaml(CROSSING_DOC))
-    mock_index.serve("sample", IndexSource(documents=rows, docs={None: _sample(crossing)}))
-    env = make_server(mock_index)
+    real_index.serve("sample", IndexSource(documents=rows, docs={None: _sample(crossing)}))
+    env = make_server(real_index)
     # 実行
     response = env.client.get("/_api/sources/sample/docs/drawn/doc-9")
     markdown = response.json()["markdown"]
@@ -865,15 +865,15 @@ def test_normal_when_flow_layout_checked(
 
 
 def test_normal_when_id_link_resolved(
-    mock_index: MockIndex, make_server: Callable[..., ServerEnv]
+    real_index: RealIndex, make_server: Callable[..., ServerEnv]
 ) -> None:
     """本文の `id:` のリンクを、同じ配信元の文書と、その項目の見出しのアンカーへのリンクにする（正常系）。"""
     # 準備
     source = _drawn_source()
     linked = doc("doc-1", "docs/doc-1.yaml", data=load_yaml(LINKED_DOC))
     source.docs[None] = [linked, *source.docs[None][1:]]
-    mock_index.serve("sample", source)
-    env = make_server(mock_index)
+    real_index.serve("sample", source)
+    env = make_server(real_index)
     # 実行
     response = env.client.get("/_api/sources/sample/docs/docs/doc-1")
     # 検証
@@ -905,12 +905,12 @@ def _decided_source() -> IndexSource:
 
 
 def test_normal_when_decision_linked(
-    mock_index: MockIndex, make_server: Callable[..., ServerEnv]
+    real_index: RealIndex, make_server: Callable[..., ServerEnv]
 ) -> None:
     """`decisions` の ID のうち 1 つのフォルダに決まる ID を、検討事項の文書へのリンクにする（正常系）。"""
     # 準備
-    mock_index.serve("sample", _decided_source())
-    env = make_server(mock_index)
+    real_index.serve("sample", _decided_source())
+    env = make_server(real_index)
     # 実行
     response = env.client.get("/_api/sources/sample/docs/decided/doc-8")
     # 検証
@@ -926,12 +926,12 @@ def test_normal_when_decision_linked(
 
 
 def test_normal_when_decision_document_returned(
-    mock_index: MockIndex, make_server: Callable[..., ServerEnv]
+    real_index: RealIndex, make_server: Callable[..., ServerEnv]
 ) -> None:
     """`path` が `_decisions/{ID}` のとき、project-index が返した検討事項の文書を返す（正常系）。"""
     # 準備
-    mock_index.serve("sample", _decided_source())
-    env = make_server(mock_index)
+    real_index.serve("sample", _decided_source())
+    env = make_server(real_index)
     before = datetime.now(tz=UTC)
     # 実行
     found = env.client.get("/_api/sources/sample/docs/_decisions/D-1")

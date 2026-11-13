@@ -187,7 +187,7 @@ def test_normal_when_sources_moved_to_project_index(
     # 実行
     code = main(["migrate", "--project-index", mock_index.address])
     out = capsys.readouterr().out
-    added = [body for method, _, body in mock_index.received if method == "POST"]
+    added = [body["source"] for method, _, body in mock_index.received if method == "POST"]
     mock_index.received.clear()
     mock_index.rows = []
     monkeypatch.setenv("PROJECT_INDEX_PORT", str(mock_index.port))

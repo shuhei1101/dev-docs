@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import asyncio
+import json
 from collections.abc import AsyncIterator, Callable
+from datetime import datetime
 from typing import Any
 
 import httpx
@@ -149,25 +151,53 @@ def test_source_view(fake_index: FakeIndex, make_client: Callable[..., ProjectIn
     """画面の構成と文書の行（正常系）。"""
     # 準備
     nav = {"tabs": [{"title": "規約", "items": [{"auto": {"document": "rules"}}]}]}
-    fake_index.configs["sample"] = config_json(
+    config = config_json(
         nav=nav,
         documents=[
-            {"id": "rules", "paths": ["docs/*.yaml"], "schema": {}},
-            {"id": "notes", "paths": ["notes/files.yaml"], "schema": {}, "records": "files"},
+            {"id": "rules", "paths": ["docs/*.yaml"], "schema": {"title": "rules"}},
+            {
+                "id": "notes",
+                "paths": ["notes/files.yaml"],
+                "schema": {"title": "notes"},
+                "records": "files",
+            },
         ],
+        github={"repository": "owner/sample", "issueLabels": ["docs"]},
     )
+    config["diff"] = {"ignore_keys": ["updated", "rev"]}
+    fake_index.configs["sample"] = config
+    fake_index.refs_results = {"git": True, "defaultRef": "main"}
     # 実行
     view = asyncio.run(make_client().source_view("sample"))
     # 検証
+    params = {request.url.path: request.url.params for request in fake_index.requests}
+    assert params["/sources/sample/config"]["schemas"] == "true"
+    assert params["/sources/sample/refs"]["commits"] == "0"
     assert view.nav == nav
-    assert len(view.documents) == 2
+    assert [row.schema for row in view.documents] == [{"title": "rules"}, {"title": "notes"}]
     assert view.documents[1].records == "files"
+    assert view.diff_ignore_keys == ["updated", "rev"]
+    assert view.github_issue_labels == ["docs"]
+    assert (view.git, view.default_ref) == (True, "main")
+
+
+def test_source_view_when_not_git(
+    fake_index: FakeIndex, make_client: Callable[..., ProjectIndexClient]
+) -> None:
+    """Git 管理外の配信元（正常系）。"""
+    # 準備
+    fake_index.configs["notes"] = config_json("notes", git=False)
+    fake_index.refs_results = {"git": False, "defaultRef": ""}
+    # 実行
+    view = asyncio.run(make_client().source_view("notes"))
+    # 検証
+    assert (view.git, view.default_ref) == (False, None)
 
 
 def test_list_documents(
     fake_index: FakeIndex, make_client: Callable[..., ProjectIndexClient]
 ) -> None:
-    """ref を渡す（正常系）。"""
+    """ref と値を求める（正常系）。"""
     # 準備
     fake_index.configs["sample"] = config_json()
     fake_index.docs["sample"] = {
@@ -176,9 +206,35 @@ def test_list_documents(
     # 実行
     listed = asyncio.run(make_client().list_documents("sample", ref="8b1d4e0"))
     # 検証
-    assert fake_index.requests[-1].url.params["ref"] == "8b1d4e0"
+    params = fake_index.requests[-1].url.params
+    assert params["ref"] == "8b1d4e0"
+    assert params["values"] == "true"
     assert listed.ref == "8b1d4e0"
     assert [document.id for document in listed.documents] == ["a", "b"]
+    assert listed.documents[0].data == {"id": "a", "name": "A"}
+
+
+def test_list_documents_when_records(
+    fake_index: FakeIndex, make_client: Callable[..., ProjectIndexClient]
+) -> None:
+    """行の文書の添字（正常系）。"""
+    # 準備
+    fake_index.configs["sample"] = config_json()
+    fake_index.docs["sample"] = {
+        None: [
+            doc_json("n-0", "notes/files.yaml", kind="files"),
+            doc_json("a", "docs/a.yaml", kind="design"),
+            doc_json("n-1", "notes/files.yaml", kind="files"),
+        ]
+    }
+    # 実行
+    listed = asyncio.run(make_client().list_documents("sample", record_kinds=["files"]))
+    # 検証
+    assert [(d.id, d.record_index) for d in listed.documents] == [
+        ("n-0", 0),
+        ("a", None),
+        ("n-1", 1),
+    ]
 
 
 def test_document_when_failure(
@@ -187,12 +243,13 @@ def test_document_when_failure(
     """変換の失敗（正常系）。"""
     # 準備
     fake_index.configs["sample"] = config_json()
+    fake_index.docs["sample"] = {None: [doc_json("a", "docs/a.yaml")]}
     fake_index.details[("sample", "docs/a.yaml")] = {
         "failure": {
-            "reason": "timeout",
+            "reason": "exit",
             "kind": "rules",
             "script": "python conv.py",
-            "detail": "30 秒",
+            "detail": "終了コード 1",
         }
     }
     # 実行
@@ -200,7 +257,8 @@ def test_document_when_failure(
     # 検証
     assert detail.markdown is None
     assert detail.failure is not None
-    assert detail.failure.reason == "timeout"
+    assert detail.failure.reason == "exit"
+    assert detail.failure.script == "python conv.py"
 
 
 def test_document_when_record(
@@ -211,8 +269,14 @@ def test_document_when_record(
     fake_index.configs["sample"] = config_json()
     fake_index.docs["sample"] = {
         None: [
-            doc_json("n-0", "notes/files.yaml", record_index=0),
-            doc_json("n-1", "notes/files.yaml", record_index=1),
+            doc_json("n-0", "notes/files.yaml"),
+            doc_json(
+                "n-1",
+                "notes/files.yaml",
+                body_path="notes/n-1.md",
+                body="# N1\n",
+                updated="2026-11-12T10:00:00+09:00",
+            ),
         ]
     }
     # 実行
@@ -221,6 +285,34 @@ def test_document_when_record(
     assert fake_index.requests[-1].url.params["id"] == "n-1"
     assert detail.document is not None
     assert detail.document.id == "n-1"
+    assert (detail.document.body, detail.document.body_path) == ("# N1\n", "notes/n-1.md")
+    assert detail.document.updated == datetime.fromisoformat("2026-11-12T10:00:00+09:00")
+    assert detail.document.updated.tzinfo is not None
+
+
+def test_document_when_yaml_unreadable(
+    fake_index: FakeIndex, make_client: Callable[..., ProjectIndexClient]
+) -> None:
+    """YAML を読めない（正常系）。"""
+    # 準備
+    fake_index.configs["sample"] = config_json()
+    fake_index.unreadable["sample"] = [
+        {
+            "reason": "invalid_yaml",
+            "kind": "rules",
+            "detail": "閉じていない",
+            "file": "docs/a.yaml",
+            "line": 2,
+            "column": 5,
+        }
+    ]
+    # 実行
+    detail = asyncio.run(make_client().document("sample", "docs/a.yaml"))
+    # 検証
+    assert detail.document is None
+    assert detail.failure is not None
+    assert (detail.failure.reason, detail.failure.file) == ("invalid_yaml", "docs/a.yaml")
+    assert (detail.failure.line, detail.failure.column) == (2, 5)
 
 
 def test_decisions(fake_index: FakeIndex, make_client: Callable[..., ProjectIndexClient]) -> None:
@@ -251,7 +343,15 @@ def test_search(fake_index: FakeIndex, make_client: Callable[..., ProjectIndexCl
     fake_index.configs["sample"] = config_json()
     fake_index.search_results = {
         "totalCount": 3,
-        "items": [{"id": "a", "path": "docs/a.yaml", "name": "A", "snippets": ["…ページング…"]}],
+        "items": [
+            {
+                "path": "docs/a",
+                "id": "a",
+                "filePath": "docs/a.yaml",
+                "name": "A",
+                "snippets": ["…ページング…"],
+            }
+        ],
     }
     # 実行
     hits = asyncio.run(make_client().search("sample", "ページング", limit=5))
@@ -260,7 +360,7 @@ def test_search(fake_index: FakeIndex, make_client: Callable[..., ProjectIndexCl
     assert params["q"] == "ページング"
     assert params["limit"] == "5"
     assert hits.total_count == 3
-    assert hits.items[0].path == "docs/a.yaml"
+    assert (hits.items[0].id, hits.items[0].path) == ("a", "docs/a.yaml")
 
 
 def test_refs_when_not_git(
@@ -278,6 +378,21 @@ def test_refs_when_not_git(
     assert refs.commits == []
 
 
+def _settings_row(row_id: str, status: str, **extra: Any) -> dict[str, Any]:
+    """project-index の端末の設定の取得の `sources[]` の 1 件を作る。"""
+    return {
+        "id": row_id,
+        "config": [f"/{row_id}/project-index.yaml"],
+        "enabled": True,
+        "scope": {"read": [], "write": None},
+        "outsideRead": True,
+        "status": status,
+        "errors": [],
+        "configVersion": None,
+        **extra,
+    }
+
+
 def test_settings_sources(
     fake_index: FakeIndex, make_client: Callable[..., ProjectIndexClient]
 ) -> None:
@@ -286,24 +401,36 @@ def test_settings_sources(
     fake_index.settings = {
         "settingsPath": "/pi/settings.yaml",
         "sources": [
-            {
-                "row": {"id": "a", "config": ["/a/project-index.yaml"]},
-                "id": "a",
-                "status": "serving",
-            },
-            {
-                "row": {"id": "b", "config": ["/b/project-index.yaml"]},
-                "id": "b",
-                "status": "disabled",
-            },
+            _settings_row("a", "serving", outsideRead=False),
+            _settings_row("b", "pending_reload"),
         ],
     }
     # 実行
     view = asyncio.run(make_client().settings_sources())
     # 検証
     assert len(view.rows) == 2
-    assert len(view.states) == 2
+    assert view.rows[0]["outside_read"] is False
+    assert "outsideRead" not in view.rows[0]
+    assert [state.status for state in view.states] == ["serving", "pending_reload"]
     assert view.settings_path == "/pi/settings.yaml"
+
+
+def test_put_settings_sources(
+    fake_index: FakeIndex, make_client: Callable[..., ProjectIndexClient]
+) -> None:
+    """保存して行を取り直す（正常系）。"""
+    # 準備
+    rows = [
+        {"id": "a", "config": ["/a/project-index.yaml"]},
+        {"id": "b", "config": ["/b/project-index.yaml"]},
+    ]
+    # 実行
+    view = asyncio.run(make_client().put_settings_sources(rows))
+    # 検証
+    methods = [request.method for request in fake_index.requests]
+    assert methods == ["PUT", "GET"]
+    assert json.loads(fake_index.requests[0].content) == {"sources": rows}
+    assert [row["id"] for row in view.rows] == ["a", "b"]
 
 
 def test_put_settings_sources_when_rejected(
@@ -320,6 +447,20 @@ def test_put_settings_sources_when_rejected(
         asyncio.run(make_client().put_settings_sources([{"id": "a"}]))
     # 検証
     assert [item.path for item in caught.value.violations] == ["sources[0].config"]
+    assert [request.method for request in fake_index.requests] == ["PUT"]
+
+
+def test_add_settings_source(
+    fake_index: FakeIndex, make_client: Callable[..., ProjectIndexClient]
+) -> None:
+    """行を追加する（正常系）。"""
+    # 準備
+    row = {"id": "a", "config": ["/a/project-index.yaml"]}
+    # 実行
+    result = asyncio.run(make_client().add_settings_source(row))
+    # 検証
+    assert json.loads(fake_index.requests[-1].content) == {"source": row}
+    assert result.added is True
 
 
 def test_add_settings_source_when_conflict(
@@ -327,7 +468,10 @@ def test_add_settings_source_when_conflict(
 ) -> None:
     """同じ id の行がある（正常系）。"""
     # 準備
-    fake_index.responses[("POST", "/settings/sources")] = (409, {"same": True})
+    fake_index.responses[("POST", "/settings/sources")] = (
+        409,
+        {"result": "exists", "same": True, "sources": []},
+    )
     # 実行
     result = asyncio.run(
         make_client().add_settings_source({"id": "a", "config": ["/a/project-index.yaml"]})
