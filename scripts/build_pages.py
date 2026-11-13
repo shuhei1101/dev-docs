@@ -399,8 +399,8 @@ def write_bundle_config(workdir: Path, names: Sequence[str]) -> Path:
 def run_mdmark(config: Path) -> str:
     """npx で mdmark の build を実行し、標準出力を返却する。"""
     try:
-        result = subprocess.run(  # noqa: S603 - 引数は配列で指定し、シェルを通さない
-            [  # noqa: S607 - npx は Node のインストールで PATH から検索する
+        result = subprocess.run(
+            [
                 "npx",
                 "-y",
                 f"github:shuhei1101/mdmark#{MDMARK_TAG}",
