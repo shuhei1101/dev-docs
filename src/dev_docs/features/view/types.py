@@ -74,7 +74,7 @@ class AliasItem(ApiModel):
     id: str
     name: str
     aliases: list[str]
-    # 値を持たないキーは載せない
+    # 値を持たないキーは含めない
     description: str | None = Field(default=None, exclude_if=_is_none)
     alias_type: AliasType
     avoid: list[str] | None = Field(default=None, exclude_if=_is_none)

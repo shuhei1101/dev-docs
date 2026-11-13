@@ -1,4 +1,4 @@
-"""画面（React の SPA）のビルドを返す。"""
+"""画面（React の SPA）のビルドを返却する。"""
 
 from __future__ import annotations
 
@@ -21,12 +21,12 @@ ASSETS_PREFIX = "assets/"
 
 
 def build_screen_router(dist_dir: Path) -> APIRouter:
-    """画面のビルド（`index.html` と `assets/`）を返すルーターを作る。"""
+    """画面のビルド（`index.html` と `assets/`）を返却するルーターを作る。"""
     router = APIRouter()
 
     @router.get("/{path:path}", include_in_schema=False)
     def screen(path: str) -> FileResponse:
-        # API・MCP の誤ったパスには画面を返さない
+        # API・MCP の誤ったパスには画面を返却しない
         if path.split("/", 1)[0] in EXCLUDED_PREFIXES:
             raise HTTPException(status_code=404)
         if path.startswith(ASSETS_PREFIX):
@@ -60,14 +60,14 @@ def build_screen_router(dist_dir: Path) -> APIRouter:
 
 
 def _allowed_methods(routes: Sequence[BaseRoute], scope: Scope, own: APIRouter) -> list[str]:
-    """画面の配信のルーターを除くルートのうち、パスに当たりメソッドが合わないルートのメソッドを返す。"""
+    """画面の配信のルーターを除くルートのうち、パスに該当しメソッドが合わないルートのメソッドを返却する。"""
     allowed: list[str] = []
     for route in routes:
-        # 画面の配信のルーター自身（GET の全てのパスに当たる）は照合しない
+        # 画面の配信のルーター自身（GET の全てのパスに該当する）は照合しない
         included = getattr(route, "original_router", None)
         if included is own or route in own.routes:
             continue
-        # 取り込んだルーター: 当たった子のメソッドを返さないため、中のルートを照合する
+        # 取り込んだルーター: 該当した子のメソッドを返却しないため、中のルートを照合する
         if isinstance(included, APIRouter):
             allowed.extend(_allowed_methods(included.routes, scope, own))
             continue

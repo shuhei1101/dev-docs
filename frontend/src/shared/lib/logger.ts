@@ -10,7 +10,7 @@ const plain = (value: unknown): unknown =>
     ? { name: value.name, message: value.message, stack: value.stack }
     : value;
 
-/** `debug`・`info`・`warn`・`error` を持ち、1 行の JSON をコンソールの同じレベルへ書くロガーを作る */
+/** `debug`・`info`・`warn`・`error` を持ち、1 行の JSON をコンソールの同じレベルへ出力するロガーを作る */
 export const createLogger = (sink: Sink = console): Logger => {
   const write =
     (level: Level) =>

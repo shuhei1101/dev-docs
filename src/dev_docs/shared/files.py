@@ -9,7 +9,7 @@ from pathlib import Path
 
 
 def replace_file(path: Path, content: str) -> None:
-    """同じフォルダの一時ファイルに書いてから置き換える。"""
+    """同じフォルダの一時ファイルに書き込んでから置き換える。"""
     path.parent.mkdir(parents=True, exist_ok=True)
     with tempfile.NamedTemporaryFile(
         "w",

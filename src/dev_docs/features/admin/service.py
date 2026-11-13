@@ -23,7 +23,7 @@ if TYPE_CHECKING:
 
 
 def version_state(mine: str, current: str) -> VersionState:
-    """設定のバージョンを dev-docs が読めるバージョンと比べる。"""
+    """設定のバージョンを dev-docs が読み込めるバージョンと比べる。"""
     left, right = int(mine), int(current)
     if left == right:
         return "current"
@@ -37,7 +37,7 @@ def _state(state: IndexSourceState) -> SourceState:
 
 
 async def get_status(handlers: Handlers, *, env: Mapping[str, str]) -> ServerStatus:
-    """待ち受けのアドレス・バージョン・project-index への接続と配信元ごとの状態を返す。"""
+    """待ち受けのアドレス・バージョン・project-index への接続と配信元ごとの状態を返却する。"""
     terminal = handlers.terminal
     port = listen_port(terminal, env)
     client = handlers.project_index

@@ -79,7 +79,7 @@ export const DocBody = ({
     tableKeys: doc.tableKeys,
     columns: doc.columns,
   });
-  // 比較元にも、本文と同じ見出し 1 の除去と隠す列の書き込みを当てて比べる
+  // 比較元にも、本文と同じ見出し 1 の除去と隠す列の書き込みを適用して比べる
   const base = baseMarkdown
     ? applyHiddenColumns({
         markdown: withoutFirstH1(baseMarkdown.markdown),
@@ -91,7 +91,7 @@ export const DocBody = ({
     source: doc.source,
     columnKeys: columnTableKeys({ markdown, tableKeys: doc.tableKeys }),
   });
-  // この文書のコメントの並び（変わったら本文のマーカーを描き直す）
+  // この文書のコメントの並び（変わったら本文のマーカーを再描画する）
   const commentSignature = useCommentStore((state) =>
     commentsOf(state.comments, docId)
       .map((item) => `${item.id}:${item.body}`)
@@ -148,7 +148,7 @@ export const DocBody = ({
     },
   });
 
-  // コメントの置き場所のこの文書のコメントが変わったら、本文のマーカーを描き直す（描いた直後の並びは描き直さない）
+  // コメントの保存先のこの文書のコメントが変わったら、本文のマーカーを再描画する（描いた直後の並びは再描画しない）
   const shown = useRef<{ docId: string; signature: string } | null>(null);
   useEffect(() => {
     if (!ready || handle === null) return;
@@ -165,7 +165,7 @@ export const DocBody = ({
     if (ready && ref.current) onHeadings(readToc(ref.current));
   }, [ready, markdown, onHeadings]);
 
-  // 場所を選ばれたコメントへ移る（コメントを読み直してから、その箇所を画面に入れて強調する）
+  // 場所を選ばれたコメントへ移る（コメントを再取得してから、その箇所を画面に入れて強調する）
   useEffect(() => {
     if (!ready || handle === null || locating === null || locating.docId !== docId)
       return;

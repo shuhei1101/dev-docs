@@ -1,4 +1,4 @@
-"""サーバーが起動のときに読むプロンプトの YAML の検査と描画（画面用のマーカーは付けない）。"""
+"""サーバーが起動のときに読み込むプロンプトの YAML の検査と描画（画面用のマーカーは付けない）。"""
 
 from __future__ import annotations
 
@@ -23,7 +23,7 @@ from dev_docs.shared.errors import Violation
 from dev_docs.shared.schema_check import format_path, schema_violations
 from dev_docs.shared.yaml_io import YamlLoadError, load_yaml
 
-# 読むフォルダを `DEFAULT_PROMPTS_DIR` から差し替える環境変数
+# 読み込むフォルダを `DEFAULT_PROMPTS_DIR` から差し替える環境変数
 PROMPTS_DIR_ENV = "DEV_DOCS_PROMPTS_DIR"
 # クローンの直下の `content/prompts`
 DEFAULT_PROMPTS_DIR = Path(__file__).resolve().parents[4] / "content" / "prompts"
@@ -39,7 +39,7 @@ KEY_RULES = ("必須のキーが無い", "知らないキー")
 
 @dataclass(frozen=True, slots=True, kw_only=True)
 class LoadedPrompt:
-    """検査を通したプロンプト 1 件と部品のテンプレート。"""
+    """検査に合格したプロンプト 1 件と部品のテンプレート。"""
 
     doc: PromptDoc
     compiled: dict[str, CompiledPart]
@@ -47,7 +47,7 @@ class LoadedPrompt:
 
 @dataclass(frozen=True, slots=True, kw_only=True)
 class PromptSet:
-    """起動のときに読んだプロンプトを ID で引いて描画する（読み直さない）。"""
+    """起動のときに読み込んだプロンプトを ID で検索して描画する（再読み込みしない）。"""
 
     prompts: dict[str, LoadedPrompt]
     env: jinja2.Environment
@@ -56,17 +56,17 @@ class PromptSet:
         """ID のプロンプトを変数の値で描画して 1 つの文にする。"""
         loaded = self.prompts[prompt_id]
         doc = loaded.doc
-        # 渡されなかった変数は None にする（StrictUndefined で落とさない）
+        # 指定されなかった変数は None にする（StrictUndefined で落とさない）
         filled: dict[str, Any] = {name: None for name in doc.vars}
         filled.update(values or {})
         rendered: list[str] = []
         for part in doc.parts:
             compiled = loaded.compiled[part.id]
-            # when が偽: 使わない
+            # when が偽: 使用しない
             if compiled.when is not None and not compiled.when(**filled):
                 continue
             template = compiled.texts.get(doc.lang)
-            # 注入する言語の本文が無い: 使わない
+            # 注入する言語の本文が無い: 使用しない
             if template is None:
                 continue
             rendered.append(template.render(**filled))
@@ -74,7 +74,7 @@ class PromptSet:
 
 
 def prompts_dir(env: Mapping[str, str]) -> Path:
-    """読むフォルダを決める。"""
+    """読み込むフォルダを決める。"""
     value = env.get(PROMPTS_DIR_ENV)
     return Path(value).resolve() if value else DEFAULT_PROMPTS_DIR
 
@@ -104,12 +104,12 @@ def _check_file(
     registry: Registry[Any],
     env: jinja2.Environment,
 ) -> tuple[LoadedPrompt | None, list[PromptProblem]]:
-    """プロンプトの YAML 1 枚を読んで検査する（違反があれば先の検査を飛ばす）。"""
+    """プロンプトの YAML 1 枚を読み込んで検査する（違反があれば先の検査を飛ばす）。"""
 
     def problem(path: str, reason: str) -> PromptProblem:
         return PromptProblem(file=file, path=path, reason=reason)
 
-    # YAML として読む
+    # YAML として読み込む
     try:
         value = load_yaml(file.read_text(encoding="utf-8"), file=str(file))
     except (OSError, YamlLoadError) as error:
@@ -147,7 +147,7 @@ def _check_file(
 
 
 def load_prompts(directory: Path, *, required: Collection[str]) -> PromptSet:
-    """フォルダのプロンプトの YAML を全て読んで検査し、描画できる一式にする。"""
+    """フォルダのプロンプトの YAML を全て読み込んで検査し、描画できる一式にする。"""
     schema = load_yaml(PROMPT_SCHEMA_PATH.read_text(encoding="utf-8"))
     registry = _schema_registry()
     env = build_environment()

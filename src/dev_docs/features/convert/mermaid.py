@@ -1,4 +1,4 @@
-"""手で書く Mermaid の `flowchart`・`sequenceDiagram` の読み取り。"""
+"""手で記載する Mermaid の `flowchart`・`sequenceDiagram` の読み取り。"""
 
 from __future__ import annotations
 
@@ -15,7 +15,7 @@ from dev_docs.features.convert.types import (
 )
 
 FLOW_HEADER = re.compile(r"^(flowchart|graph)(\s+(TD|TB|LR))?$")
-# 箱の括弧と mdmark の箱の種類（長い括弧から照らす）
+# ノードの括弧と mdmark のノードの種類（長い括弧から照らす）
 NODE_SHAPES: tuple[tuple[str, str, NodeKind], ...] = (
     ("[(", ")]", "data"),
     ("([", "])", "external"),
@@ -28,7 +28,7 @@ NODE_SHAPES: tuple[tuple[str, str, NodeKind], ...] = (
 )
 FLOW_ARROWS = ("-.->", "==>", "-->", "---")
 SEQUENCE_ARROWS = ("-->>", "->>", "--x", "-x", "--)", "-)", "-->", "->")
-# `-` は語の間にだけ置ける（`a-->b` の `a` を `a--` と読まない）
+# `-` は単語の間にだけ配置できる（`a-->b` の `a` を `a--` と読み取らない）
 ID = r"\w+(?:-\w+)*"
 NODE_ID = re.compile(ID)
 FLOW_ARROW = re.compile(
@@ -43,7 +43,7 @@ MESSAGE = re.compile(
 
 
 def _label(text: str) -> str:
-    """ラベルの `"` の囲みを外し、`<br>` を空白にする。"""
+    """ラベルの `"` の囲みを除去し、`<br>` を空白にする。"""
     text = text.strip()
     if len(text) > 1 and text[0] == text[-1] == '"':
         text = text[1:-1]
@@ -51,7 +51,7 @@ def _label(text: str) -> str:
 
 
 def _read_node(text: str, position: int) -> tuple[str, str | None, NodeKind, int] | None:
-    """`position` から箱の `id` と括弧のラベルを読み、`id`・ラベル・種類・読み終えた位置を返す。"""
+    """`position` からノードの `id` と括弧のラベルを読み取り、`id`・ラベル・種類・読み取りを終えた位置を返却する。"""
     match = NODE_ID.match(text, position)
     if match is None:
         return None
@@ -66,7 +66,7 @@ def _read_node(text: str, position: int) -> tuple[str, str | None, NodeKind, int
 
 
 def _parse_flow_line(line: str, nodes: dict[str, FlowNode], edges: list[FlowEdge]) -> bool:
-    """フローチャートの 1 行を、箱の宣言と箱をつなぐ線の連なりとして読む。"""
+    """フローチャートの 1 行を、ノードの宣言とノードをつなぐ線の連なりとして読み取る。"""
     found: list[tuple[str, str | None]] = []
     position = 0
     while True:
@@ -93,7 +93,7 @@ def _parse_flow(header: re.Match[str], lines: list[str]) -> FlowGraph | None:
     nodes: dict[str, FlowNode] = {}
     edges: list[FlowEdge] = []
     for line in lines:
-        # 箱の宣言でも線でもない行（subgraph・style など）: 図ごと読まない
+        # ノードの宣言でも線でもない行（subgraph・style など）: 図ごと読み取らない
         if not _parse_flow_line(line, nodes, edges):
             return None
     if not nodes:
@@ -118,7 +118,7 @@ def _parse_sequence(lines: list[str]) -> SequenceGraph | None:
         if line == "autonumber":
             continue
         declared = PARTICIPANT.match(line)
-        # 相手の宣言: actor は外部のシステムの箱にする
+        # 相手の宣言: actor は外部のシステムのノードにする
         if declared:
             kind, participant_id, name = declared.groups()
             participants[participant_id] = SequenceParticipant(
@@ -128,7 +128,7 @@ def _parse_sequence(lines: list[str]) -> SequenceGraph | None:
             )
             continue
         message = MESSAGE.match(line)
-        # 相手の宣言でもメッセージでもない行（Note・alt・loop など）: 図ごと読まない
+        # 相手の宣言でもメッセージでもない行（Note・alt・loop など）: 図ごと読み取らない
         if message is None:
             return None
         source, arrow, target, label = message.groups()

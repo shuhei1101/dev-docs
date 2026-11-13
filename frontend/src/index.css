@@ -3,7 +3,7 @@
 
 @custom-variant dark (&:is(.dark *));
 
-/* 標準の色のパレットを削除し、下の 3 ティアのトークンだけを使う */
+/* 標準の色のパレットを削除し、下の 3 ティアのトークンだけを使用する */
 @theme {
   --color-*: initial;
 }
@@ -49,6 +49,7 @@
   --accent: var(--palette-gray-100);
   --accent-foreground: var(--palette-gray-900);
   --destructive: var(--palette-red-500);
+  --destructive-foreground: var(--palette-white);
   --success: var(--palette-green-600);
   --warning: var(--palette-amber-600);
   --border: var(--palette-gray-200);
@@ -72,6 +73,7 @@
   --accent: var(--palette-gray-800);
   --accent-foreground: var(--palette-gray-50);
   --destructive: var(--palette-red-400);
+  --destructive-foreground: var(--palette-gray-950);
   --success: var(--palette-green-400);
   --warning: var(--palette-amber-400);
   --border: var(--palette-gray-800);
@@ -96,6 +98,7 @@
   --color-accent: var(--accent);
   --color-accent-foreground: var(--accent-foreground);
   --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
   --color-success: var(--success);
   --color-warning: var(--warning);
   --color-border: var(--border);
@@ -126,7 +129,7 @@
   }
 }
 
-/* 本文の HTML ブロックの整形済みテキストは、長い行を画面幅で折り返す */
+/* 本文の HTML ブロックの整形済みテキストは、長い行を画面幅で改行する */
 .mdmark-html pre {
   white-space: pre-wrap;
   overflow-wrap: anywhere;

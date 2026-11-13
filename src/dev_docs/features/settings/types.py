@@ -26,7 +26,7 @@ class SourceScope(BaseModel):
 
 
 class SourceEntry(BaseModel):
-    """設定画面が送る `sources[]` の 1 行（project-index の端末の設定の行の形）。"""
+    """設定画面が送信する `sources[]` の 1 行（project-index の端末の設定の行の構造）。"""
 
     model_config = ConfigDict(extra="forbid")
 
@@ -39,12 +39,12 @@ class SourceEntry(BaseModel):
     @field_validator("config", mode="before")
     @classmethod
     def _as_list(cls, value: Any) -> Any:
-        """文字列 1 つで書かれたときも配列にする。"""
+        """文字列 1 つで記載されたときも配列にする。"""
         return [value] if isinstance(value, str) else value
 
 
 class TerminalConfig(BaseModel):
-    """検証を通して既定値を埋めた端末の設定。"""
+    """検証に合格して既定値を埋めた端末の設定。"""
 
     model_config = ConfigDict(frozen=True, arbitrary_types_allowed=True)
 
@@ -138,7 +138,7 @@ class SettingsSourcesView(ApiModel):
 
 @dataclass(kw_only=True)
 class TerminalConfigInvalidError(DevDocsError):
-    """端末の設定が無い・YAML として読めない・スキーマに違反すること。"""
+    """端末の設定が無い・YAML として読み込めない・スキーマに違反すること。"""
 
     status: ClassVar[int] = 422
     file: Path = Path()

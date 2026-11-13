@@ -1,4 +1,4 @@
-"""YAML の読み込みと往復編集の読み書き。"""
+"""YAML の読み込みと往復編集の読み込み・書き込み。"""
 
 from __future__ import annotations
 
@@ -14,7 +14,7 @@ YAML_INDENT = {"mapping": 2, "sequence": 4, "offset": 2}
 
 
 class YamlLoadError(ValueError):
-    """YAML として読めないことを、ファイル・行・列・理由で表す。"""
+    """YAML として読み込めないことを、ファイル・行・列・理由で表す。"""
 
     def __init__(
         self,
@@ -51,7 +51,7 @@ def _error_from(error: Exception, file: str | None, text: str) -> YamlLoadError:
 
 
 def load_yaml(text: str, *, file: str | None = None) -> Any:
-    """YAML の文字列を素の値で読む。"""
+    """YAML の文字列を素の値で読み込む。"""
     yaml = YAML(typ="safe", pure=True)
     try:
         return yaml.load(text)
@@ -60,9 +60,9 @@ def load_yaml(text: str, *, file: str | None = None) -> Any:
 
 
 def load_roundtrip(text: str, *, file: str | None = None) -> CommentedMap:
-    """コメントと順序を保つ往復編集の形で YAML を読む。"""
+    """コメントと順序を保つ往復編集の構造で YAML を読み込む。"""
     yaml = YAML(typ="rt", pure=True)
-    # 引用符つきの文字列を、引用符の種類を持つ文字列で読む（書き出しで同じ引用符になる）
+    # 引用符つきの文字列を、引用符の種類を持つ文字列で読み込む（書き出しで同じ引用符になる）
     yaml.preserve_quotes = True
     try:
         value = yaml.load(text)
@@ -88,7 +88,7 @@ def dump_roundtrip(doc: CommentedMap) -> str:
 
 
 def _represent_str(representer: Any, data: str) -> Any:
-    """改行を含む引用符なしの文字列をブロックのリテラル（`|-`）で書く。"""
+    """改行を含む引用符なしの文字列をブロックのリテラル（`|-`）で書き出す。"""
     if "\n" in data:
         return representer.represent_scalar("tag:yaml.org,2002:str", data, style="|")
     return representer.represent_scalar("tag:yaml.org,2002:str", data)

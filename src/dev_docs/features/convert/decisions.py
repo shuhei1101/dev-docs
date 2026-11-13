@@ -11,7 +11,7 @@ DECISION_PAGE_PREFIX = "_decisions/"
 
 
 def decision_page_id(path: str) -> str | None:
-    """文書の取得の `path` が検討事項の文書を指すなら、その検討事項の ID を返す。"""
+    """文書の取得の `path` が検討事項の文書を指すなら、その検討事項の ID を返却する。"""
     if not path.startswith(DECISION_PAGE_PREFIX):
         return None
     decision = path.removeprefix(DECISION_PAGE_PREFIX)

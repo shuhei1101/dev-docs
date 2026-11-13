@@ -12,7 +12,7 @@ const FIELDS: [RegExp, keyof SourceFormValues][] = [
   [/^scope\.write(\[\d+\])*$/, "write"],
 ];
 
-/** 違反の `path`（`sources[{index}].…`）が指す入力欄を返す。編集・追加した行のものでなければ undefined */
+/** 違反の `path`（`sources[{index}].…`）が指す入力欄を返却する。編集・追加した行のものでなければ undefined */
 export const fieldOf = (
   path: string,
   index: number,
