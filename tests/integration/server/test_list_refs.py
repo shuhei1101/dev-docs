@@ -1,29 +1,19 @@
 from __future__ import annotations
 
+import subprocess
 from collections.abc import Callable
 
-from .conftest import IndexSource, MockIndex, ServerEnv, sample_docs
-
-REFS = {
-    "git": True,
-    "defaultRef": "develop",
-    "branches": [
-        {"name": "develop", "commit": "b2"},
-        {"name": "feat/x", "commit": "b2"},
-    ],
-    "tags": [{"name": "v0.1.0", "commit": "b2"}],
-    "commits": [
-        {"commit": "b2", "date": "2026-11-02T10:00:00+09:00", "subject": "docs: 改名"},
-        {"commit": "a1", "date": "2026-11-01T10:00:00+09:00", "subject": "init"},
-    ],
-}
+from .conftest import IndexSource, RealIndex, ServerEnv, sample_docs
 
 
-def test_normal(mock_index: MockIndex, make_server: Callable[..., ServerEnv]) -> None:
+def test_normal(real_index: RealIndex, make_server: Callable[..., ServerEnv]) -> None:
     """ブランチ・タグ・最近の commit を返す（正常系）。"""
     # 準備
-    mock_index.serve("sample", IndexSource(docs={None: sample_docs()}, refs=REFS))
-    env = make_server(mock_index)
+    real_index.serve("sample", IndexSource(docs={None: sample_docs()}))
+    repo = real_index.root / "sources" / "sample"
+    for args in (["branch", "feat/x"], ["tag", "v0.1.0"]):
+        subprocess.run(["git", *args], cwd=repo, check=True, capture_output=True)
+    env = make_server(real_index)
     # 実行
     response = env.client.get("/_api/sources/sample/refs")
     # 検証
@@ -33,16 +23,19 @@ def test_normal(mock_index: MockIndex, make_server: Callable[..., ServerEnv]) ->
     assert body["defaultRef"] == "develop"
     assert {branch["name"] for branch in body["branches"]} >= {"develop", "feat/x"}
     assert [tag["name"] for tag in body["tags"]] == ["v0.1.0"]
-    assert [commit["subject"] for commit in body["commits"]] == ["docs: 改名", "init"]
+    assert [commit["subject"] for commit in body["commits"]] == [
+        "文書（2026-11-01T10:00:00+09:00）",
+        "配信元の設定",
+    ]
 
 
 def test_normal_when_non_git_source(
-    mock_index: MockIndex, make_server: Callable[..., ServerEnv]
+    real_index: RealIndex, make_server: Callable[..., ServerEnv]
 ) -> None:
     """Git 管理外の配信元は git: false を返す（正常系）。"""
     # 準備
-    mock_index.serve("notes", IndexSource(docs={None: sample_docs()}, git=False))
-    env = make_server(mock_index)
+    real_index.serve("notes", IndexSource(docs={None: sample_docs()}, git=False))
+    env = make_server(real_index)
     # 実行
     response = env.client.get("/_api/sources/notes/refs")
     # 検証
@@ -53,11 +46,12 @@ def test_normal_when_non_git_source(
 
 
 def test_error_when_source_not_found(
-    sample_index: MockIndex, make_server: Callable[..., ServerEnv]
+    real_index: RealIndex, make_server: Callable[..., ServerEnv]
 ) -> None:
     """無い配信元を断る（異常系）。"""
     # 準備
-    env = make_server(sample_index)
+    real_index.serve("sample", IndexSource(docs={None: sample_docs()}))
+    env = make_server(real_index)
     # 実行
     response = env.client.get("/_api/sources/unknown/refs")
     # 検証
