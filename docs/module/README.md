@@ -155,5 +155,6 @@
 | [開発ドキュメントサーバー / 起動 / lifespan.py](./MOD-155-177.py.yaml) | マウントした管理の MCP のセッションの管理と、project-indexの呼び出しを閉じるアプリの寿命 |
 | [開発ドキュメントサーバー / 起動 / main.py](./MOD-155-174.py.yaml) | `dev-docs serve`・`dev-docs migrate` の部品の配線と、起動のときの配信元の知らせ |
 | [開発ドキュメントサーバー / 起動 / screen.py](./MOD-155-182.py.yaml) | 画面のビルドの配信 |
+| [開発用のスクリプト / 公開ページのビルド / build_pages.py](./MOD-192-1.py.yaml) | 公開の文書と判定フローチャートを mdmark の build で Pages の 1 枚の HTML にまとめる |
 
 <!-- /table -->
