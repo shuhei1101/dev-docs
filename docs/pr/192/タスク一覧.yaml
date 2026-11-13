@@ -1,0 +1,74 @@
+tasks:
+  - process: 初期構築
+    status: skipped
+    reason: 既存のリポジトリで、アーキテクチャ図・非機能要件・ドキュメントの骨格がある
+    updated_by: planner
+    updated_at: '2026-11-13T01:41:58.021193+00:00'
+  - process: リバースエンジニアリング
+    status: skipped
+    reason: 設計書が既にあり、棚卸しの依頼ではない
+    updated_by: planner
+    updated_at: '2026-11-13T01:41:58.021193+00:00'
+  - process: 方針決め
+    status: skipped
+    reason: 方針決めを依頼する Issue ではない
+    updated_by: planner
+    updated_at: '2026-11-13T01:41:58.021193+00:00'
+  - process: PoC 検証
+    status: skipped
+    reason: YAML の文書を変換して Actions で Pages へ配信する方式は knowledge の pages.yml・build_pages.py で動いており、未検証の技術機構に依存しない
+    updated_by: planner
+    updated_at: '2026-11-13T01:41:58.021193+00:00'
+  - process: 複合ユースケース設計
+    status: skipped
+    reason: 公開ページのビルドの変更で、dev-docs の利用者の業務フローは変わらない
+    updated_by: planner
+    updated_at: '2026-11-13T01:41:58.021193+00:00'
+  - process: デザインスタイル選定
+    status: skipped
+    reason: モック要否の Q1 が NO（公開ページの見た目は今の AI Monitor のテーマのまま。増えるのはサイドバー・目次の行と本文で、要素・配置・色は変わらない）
+    updated_by: planner
+    updated_at: '2026-11-13T01:41:58.021193+00:00'
+  - process: 画面一覧・画面遷移
+    status: skipped
+    reason: モック要否の Q1 が NO
+    updated_by: planner
+    updated_at: '2026-11-13T01:41:58.021193+00:00'
+  - process: 単一ユースケース設計
+    status: skipped
+    reason: dev-docs のサブシステムの利用者の操作は変わらない（公開ページを読む操作はシナリオを持たない）
+    updated_by: planner
+    updated_at: '2026-11-13T01:41:58.021193+00:00'
+  - process: モック作成
+    status: skipped
+    reason: モック要否の Q1 が NO
+    updated_by: planner
+    updated_at: '2026-11-13T01:41:58.021193+00:00'
+  - process: インターフェース定義設計
+    status: skipped
+    reason: サブシステムの外部インターフェース（API・ツール・コマンド）は変わらない。生成のスクリプトの引数はモジュール構成設計で決める
+    updated_by: planner
+    updated_at: '2026-11-13T01:41:58.021193+00:00'
+  - process: 部品設計
+    status: skipped
+    reason: 画面の部品は変わらない
+    updated_by: planner
+    updated_at: '2026-11-13T01:41:58.021193+00:00'
+  - process: 画面設計
+    status: skipped
+    reason: 画面設計要否の Q2 が NO（サイドバーの行と目次の表の行が増えるだけで、UI 項目・操作は増えない）
+    updated_by: planner
+    updated_at: '2026-11-13T01:41:58.021193+00:00'
+  - process: モジュール構成設計
+    status: todo
+  - process: ドキュメント修正
+    status: todo
+  - process: 単体テスト作成
+    status: todo
+  - process: 実装
+    status: todo
+  - process: 結合テスト作成
+    status: skipped
+    reason: 変わるのは Pages のビルドだけで、インターフェース定義・画面設計を元にした結合テストの対象が無い。生成は単体テストと、Actions の実行で確かめる
+    updated_by: planner
+    updated_at: '2026-11-13T01:41:58.021193+00:00'
