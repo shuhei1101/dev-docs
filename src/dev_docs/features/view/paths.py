@@ -17,10 +17,10 @@ def page_path(document: IndexedDocument | SearchHit) -> str:
 
 
 def find_page(documents: Sequence[IndexedDocument], page: str) -> IndexedDocument | None:
-    """文書のページのパスに当たる文書を探す。
+    """文書のページのパスに該当する文書を探す。
 
-    無ければ、文書のファイルか本文のファイルのパスが `page` と同じ最初の文書を返す
-    （画面が本文の相対リンクを本文のファイルのパスで解決して渡すため）。
+    無ければ、文書のファイルか本文のファイルのパスが `page` と同じ最初の文書を返却する
+    （画面が本文の相対リンクを本文のファイルのパスで解決して指定するため）。
     """
     found = next((document for document in documents if page_path(document) == page), None)
     if found is not None:

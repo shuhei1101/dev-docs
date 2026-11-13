@@ -13,7 +13,7 @@ from dev_docs.shared.errors import Violation
 
 
 def format_path(parts: Iterable[str | int]) -> str:
-    """`sources[0].config` の形の項目のパスにする。"""
+    """`sources[0].config` の構造の項目のパスにする。"""
     result = ""
     for part in parts:
         if isinstance(part, int):
@@ -24,7 +24,7 @@ def format_path(parts: Iterable[str | int]) -> str:
 
 
 def _as_list(value: Any) -> list[str]:
-    """`required` の値を文字列の並びとして読む。"""
+    """`required` の値を文字列の並びとして読み込む。"""
     return [str(item) for item in value] if isinstance(value, list) else []
 
 

@@ -60,7 +60,7 @@ class PortInUseError(OSError):
 
 @dataclass(frozen=True)
 class Handlers:
-    """入口（画面・MCP）が使う部品を 1 回だけ作って束ねたもの。"""
+    """入口（画面・MCP）が使用する部品を 1 回だけ作ってまとめたもの。"""
 
     terminal: TerminalConfig
     project_index: ProjectIndexClient
@@ -71,7 +71,7 @@ class Handlers:
 
 
 def _setup_logging(log_dir: Path) -> list[logging.Handler]:
-    """ログを標準エラーと `{log_dir}/dev-docs.log` に書く設定にし、足したハンドラを返す。"""
+    """ログを標準エラーと `{log_dir}/dev-docs.log` に書き込む設定にし、追加したハンドラを返却する。"""
     log_dir.mkdir(parents=True, exist_ok=True)
     formatter = logging.Formatter(LOG_FORMAT)
     handlers: list[logging.Handler] = [
@@ -89,7 +89,7 @@ def _setup_logging(log_dir: Path) -> list[logging.Handler]:
 
 
 def _close_logging(log_handlers: list[logging.Handler]) -> None:
-    """足したログのハンドラを外して閉じる。"""
+    """追加したログのハンドラを除去して閉じる。"""
     root = logging.getLogger()
     for handler in log_handlers:
         root.removeHandler(handler)
@@ -111,7 +111,7 @@ def _report_port(bind: str, port: int) -> None:
 
 
 def run_serve(args: argparse.Namespace) -> int:
-    """端末の設定を読み、部品を配線して待ち受け、停止の合図まで動く。"""
+    """端末の設定を読み込み、部品を配線して待ち受け、停止の合図まで動く。"""
     import uvicorn
 
     from dev_docs.server.app import build_app
@@ -156,7 +156,7 @@ def run_serve(args: argparse.Namespace) -> int:
         handlers.restart.attach(server)
         server.run()
         if not server.started:
-            # 確かめた後に他のプロセスがポートを取った
+            # 確認した後に他のプロセスがポートを取った
             _report_port(terminal.bind, port)
             return EXIT_PORT_IN_USE
         # 再起動を要求されて止まったときは、同じプロセスを `serve` で置き換える
@@ -169,7 +169,7 @@ def run_serve(args: argparse.Namespace) -> int:
 
 
 def announce_sources(terminal: TerminalConfig) -> threading.Thread:
-    """待ち受けの後に project-index の配信元の状態を問い合わせ、配信中の配信元か、つながらないことを知らせる。"""
+    """待ち受けの後に project-index の配信元の状態を問い合わせ、配信中の配信元か、つながらないことを通知する。"""
 
     async def ask() -> None:
         client = ProjectIndexClient(terminal.project_index, timeout=PROJECT_INDEX_TIMEOUT_SEC)
@@ -189,7 +189,7 @@ def announce_sources(terminal: TerminalConfig) -> threading.Thread:
                 "project-index につながらない（%s・%s）", error.address, error.reason
             )
         except Exception:
-            logger.exception("配信元の知らせに失敗した")
+            logger.exception("配信元の通知に失敗した")
 
     thread = threading.Thread(target=work, name="dev-docs-announce", daemon=True)
     thread.start()
@@ -197,7 +197,7 @@ def announce_sources(terminal: TerminalConfig) -> threading.Thread:
 
 
 def check_port(bind: str, port: int) -> None:
-    """待ち受けのアドレスとポートで待ち受けられるかを、一度 bind して確かめる。"""
+    """待ち受けのアドレスとポートで待ち受けられるかを、一度 bind して確認する。"""
     with closing(socket.socket(socket.AF_INET, socket.SOCK_STREAM)) as sock:
         # uvicorn と同じく SO_REUSEADDR を付け、閉じたばかりの接続が残るポートは使用中にしない
         sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -234,7 +234,7 @@ def _project_index_address(given: str | None, env: Mapping[str, str]) -> str:
 
 
 def _exporter(address: str) -> Callable[[Mapping[str, Any]], AddSourceResult]:
-    """行ごとに 1 回の `asyncio.run` で project-index の呼び出しを作って閉じ、行を追加する関数を返す。"""
+    """行ごとに 1 回の `asyncio.run` で project-index の呼び出しを作って閉じ、行を追加する関数を返却する。"""
 
     def export(row: Mapping[str, Any]) -> AddSourceResult:
         async def add() -> AddSourceResult:
@@ -250,7 +250,7 @@ def _exporter(address: str) -> Callable[[Mapping[str, Any]], AddSourceResult]:
 
 
 def run_migrate(args: argparse.Namespace) -> int:
-    """`dev-docs migrate` の解析結果で対象を決め、当てる手順を表示するか当てる。"""
+    """`dev-docs migrate` の解析結果で対象を決め、適用する手順を表示するか適用する。"""
     from dev_docs.features.migrate.service import apply_migration, plan_migration, resolve_target
     from dev_docs.features.migrate.types import MigrationError
 

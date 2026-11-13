@@ -30,7 +30,7 @@ ANCHOR_DROP = re.compile(r"[^\w\- ]")
 
 
 def _choices(text: str) -> str | None:
-    """値の全体が値の選択肢なら、値ごとのバッジと説明の行を返す。"""
+    """値の全体が値の選択肢なら、値ごとのバッジと説明の行を返却する。"""
     parts = text.split(CHOICE_SEPARATOR)
     matches = [CHOICE.match(part.strip()) for part in parts]
     if not all(matches):
@@ -50,7 +50,7 @@ def _tree(match: re.Match[str]) -> str:
 
 
 def _is_steps(text: str) -> bool:
-    """値の全体が番号付きの箇条書き（字下げの続きの行を含む）かを返す。"""
+    """値の全体が番号付きの箇条書き（字下げの続きの行を含む）かを返却する。"""
     lines = text.splitlines()
     if not lines or not STEP_LINE.match(lines[0]):
         return False
@@ -75,7 +75,7 @@ def heading_anchor(text: str) -> str:
 
 
 def _target(document_id: str, item: str, context: RenderContext) -> str | None:
-    """文書の ID と項目のパスから、リンク先の相対パスとアンカー（引き先に無ければ `None`）を返す。"""
+    """文書の ID と項目のパスから、リンク先の相対パスとアンカー（リンク先に無ければ `None`）を返却する。"""
     link = context.links.get(document_id)
     if link is None:
         return None

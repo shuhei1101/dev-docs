@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import re
+import subprocess
 import time
 from collections.abc import Callable
 from datetime import UTC, datetime
@@ -11,7 +12,7 @@ import pytest
 
 from dev_docs.shared.yaml_io import load_yaml
 
-from .conftest import IndexSource, MockIndex, ServerEnv, doc, row
+from .conftest import REPO_ROOT, IndexSource, MockIndex, ServerEnv, doc, row
 
 TABLE_DATA = {
     "id": "doc-1",
@@ -235,6 +236,51 @@ LINKED_DOC = (
     "  [文書 2](id:doc-2) と [項目](id:doc-6#flow) と [無い項目](id:doc-6#no-such-item)\n"
     "  と [無い文書](id:no-such-doc) と `[コード](id:doc-2)`\n"
 )
+CROSSING_DOC = """\
+id: doc-9
+title: 図の文書 9
+flow:
+  nodes:
+    - {id: a, label: 受付, kind: action}
+    - {id: b, label: 確認, kind: action}
+    - {id: c, label: あいうえおかきくけこさしすせそたちつてとなにぬねのはひふへほ, kind: result}
+  edges:
+    - {from: a, to: b}
+    - {from: b, to: c}
+    - {from: a, to: c, label: 直接}
+    - {from: c, to: a, label: 再送}
+  frame: {label: 処理, nodes: [a, c]}
+states:
+  initial: 下書き
+  final: [マージ済み]
+  states: [{name: 下書き}, {name: レビュー待ち}, {name: 修正中}, {name: マージ済み}]
+  transitions:
+    - {from: 下書き, to: レビュー待ち, trigger: レビューを依頼する}
+    - {from: レビュー待ち, to: 修正中, trigger: 指摘を受ける}
+    - {from: 修正中, to: レビュー待ち, trigger: 依頼し直す}
+    - {from: 修正中, to: 修正中, trigger: commit を積む}
+    - {from: 下書き, to: マージ済み, trigger: そのままマージする}
+chart: |-
+  ```mermaid
+  flowchart LR
+    a[受付] --> b[確認]
+    b --> c[保存]
+    a --> c
+    c --> a
+  ```
+"""
+# 文書の取得の結合テストで図を検査する、`package.json` の `devDependencies` でバージョンを固定した mdmark の CLI
+MDMARK_CLI = REPO_ROOT / "node_modules" / ".bin" / "mdmark"
+# mdmark の定義の検査が出すフロー図のずれの種類
+FLOW_CHECK_KINDS = {
+    "diagram_invalid",
+    "diagram_node_overlap",
+    "diagram_node_overflow",
+    "diagram_wire_crosses_node",
+    "diagram_label_too_long",
+}
+# `mdmark check --text -` の標準出力の、ずれ 1 つの行（`-:{行}: {種類}: {内容}`）の種類
+CHECK_LINE_KIND = re.compile(r"^-:\d+: (\S+?):", re.M)
 FLOW_BLOCK = re.compile(r"<!-- flow -->\n\n```json\n(.*?)\n```\n\n<!-- /flow -->", re.S)
 ER_BLOCK = re.compile(r"<!-- er -->\n\n```json\n(.*?)\n```\n\n<!-- /er -->", re.S)
 
@@ -787,6 +833,35 @@ def test_normal_when_er_diagram_drawn(
         ("id", True, False, False),
         ("customer_id", False, True, False),
     ]
+
+
+def test_normal_when_flow_layout_checked(
+    mock_index: MockIndex, make_server: Callable[..., ServerEnv]
+) -> None:
+    """線がノードを横切りやすい構造のフロー図を、mdmark の定義の検査で配置のずれが出ない部品にする（正常系）。"""
+    # 準備
+    assert MDMARK_CLI.exists(), "mdmark の CLI が無い。リポジトリの直下で `npm ci` を実行する"
+    rows = [row("sample", ["docs/*.yaml"]), row("drawn", ["drawn/*.yaml"], load_yaml(DRAWN_SCHEMA))]
+    crossing = doc("doc-9", "drawn/doc-9.yaml", kind="drawn", data=load_yaml(CROSSING_DOC))
+    mock_index.serve("sample", IndexSource(documents=rows, docs={None: _sample(crossing)}))
+    env = make_server(mock_index)
+    # 実行
+    response = env.client.get("/_api/sources/sample/docs/drawn/doc-9")
+    markdown = response.json()["markdown"]
+    checked = subprocess.run(
+        [str(MDMARK_CLI), "check", "--text", "-"],
+        input=markdown,
+        capture_output=True,
+        text=True,
+        cwd=REPO_ROOT,
+        check=False,
+    )
+    # 検証
+    assert response.status_code == 200
+    assert markdown.count("<!-- flow -->") == 3
+    # 点検を終えた: 最後に `ずれ {件数} 件` の行がある
+    assert "ずれ" in checked.stdout, checked.stderr
+    assert not set(CHECK_LINE_KIND.findall(checked.stdout)) & FLOW_CHECK_KINDS, checked.stdout
 
 
 def test_normal_when_id_link_resolved(

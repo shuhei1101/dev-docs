@@ -33,7 +33,7 @@ class SlashlessMcpPathMiddleware:
         self._paths = frozenset(paths)
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
-        # マウントは `/_admin/mcp/...` にだけ当たり、`/_admin/mcp` は画面の配信のルートに当たって POST が 405 になる
+        # マウントは `/_admin/mcp/...` にだけ該当し、`/_admin/mcp` は画面の配信のルートに該当して POST が 405 になる
         if scope["type"] == "http" and scope["path"] in self._paths:
             scope = {
                 **scope,
@@ -69,6 +69,6 @@ def build_app(handlers: Handlers, *, screen_dir: Path = SCREEN_DIST_DIR) -> Fast
     app.add_middleware(SlashlessMcpPathMiddleware, paths=(ADMIN_MCP_PATH,))
     app.include_router(build_settings_router(handlers))
     app.include_router(build_view_router(handlers))
-    # 全てのパスに当たるため、最後に登録する
+    # 全てのパスに該当するため、最後に登録する
     app.include_router(build_screen_router(screen_dir))
     return app

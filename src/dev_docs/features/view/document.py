@@ -46,7 +46,7 @@ logger = logging.getLogger(__name__)
 
 
 def _aliases(view: SourceView, documents: Sequence[IndexedDocument]) -> list[AliasItem]:
-    """`alias_type` を持つ行の文書のエイリアスを応答の形にする。"""
+    """`alias_type` を持つ行の文書のエイリアスを応答の構造にする。"""
     return [
         AliasItem(
             id=entry.id,
@@ -72,7 +72,7 @@ def _pages(items: Sequence[NavItem]) -> list[str]:
 
 
 def _unreadable(problems: Sequence[IndexFailure], path: str) -> IndexFailure | None:
-    """拡張子を落としたパスが `path` と同じ、YAML を読めなかったファイルを探す。"""
+    """拡張子を落としたパスが `path` と同じ、YAML を読み込めなかったファイルを探す。"""
     return next(
         (
             problem
@@ -85,7 +85,7 @@ def _unreadable(problems: Sequence[IndexFailure], path: str) -> IndexFailure | N
 
 
 def _activate(tabs: list[NavTab], path: str | None) -> list[NavTab]:
-    """返した文書を含むタブの `active` を `True` にする。"""
+    """返却した文書を含むタブの `active` を `True` にする。"""
     return [
         tab.model_copy(update={"active": path is not None and path in _pages(tab.items)})
         for tab in tabs
@@ -93,7 +93,7 @@ def _activate(tabs: list[NavTab], path: str | None) -> list[NavTab]:
 
 
 def _updated_at(view: SourceView, document: IndexedDocument) -> datetime:
-    """文書の更新日時（無ければ今の日時）を返す。"""
+    """文書の更新日時（無ければ今の日時）を返却する。"""
     if document.updated is not None:
         return document.updated
     logger.warning("更新日時が無い（%s・%s）", view.id, document.path)
@@ -168,7 +168,7 @@ async def get_document(
     ref: str | None,
     diff_ref: str | None,
 ) -> DocumentResponse:
-    """配信元の文書を変換した Markdown と、タブ・差分の項目・列の設定を返す。"""
+    """配信元の文書を変換した Markdown と、タブ・差分の項目・列の設定を返却する。"""
     client = handlers.project_index
     view, listed = await asyncio.gather(
         client.source_view(source_id), client.list_documents(source_id, ref=ref)
@@ -181,7 +181,7 @@ async def get_document(
         else None
     )
 
-    # 検討事項の文書のパス: 話し合いの記録のフォルダの文書を変換せずに返す
+    # 検討事項の文書のパス: 話し合いの記録のフォルダの文書を変換せずに返却する
     decision = decision_page_id(path) if path is not None else None
     if decision is not None:
         decision_markdown = await client.decision(view.id, decision)
@@ -200,7 +200,7 @@ async def get_document(
             updated_at=datetime.now(tz=UTC),
         )
 
-    # 返す文書を決める
+    # 返却する文書を決める
     document: IndexedDocument | None
     if path is None:
         first = next((page for tab in tabs if (page := first_page(tab)) is not None), None)
@@ -214,7 +214,7 @@ async def get_document(
         broken = _unreadable(listed.unreadable, path)
         if broken is None:
             raise DocumentNotFoundError(message=f"文書がありません: {path}", missing=[path])
-        # YAML を読めない: 変換せずに読めなかった位置を返す
+        # YAML を読み込めない: 変換せずに読み込めなかった位置を返却する
         return DocumentResponse(
             source=view.id,
             ref=listed.ref,

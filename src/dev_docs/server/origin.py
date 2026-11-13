@@ -18,6 +18,6 @@ def require_same_origin(request: Request) -> None:
         if origin != own:
             raise CrossOriginError(message=f"画面と別のオリジン（{origin}）からの要求は受けません")
         return
-    # Origin が無いときは Sec-Fetch-Site で確かめる
+    # Origin が無いときは Sec-Fetch-Site で確認する
     if request.headers.get("sec-fetch-site") != SAME_ORIGIN:
         raise CrossOriginError(message="画面と同じオリジンからの要求か確認できません")

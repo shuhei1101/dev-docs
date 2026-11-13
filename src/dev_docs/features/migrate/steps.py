@@ -1,4 +1,4 @@
-"""パッケージに入れた移し替えの手順を読み、メモリの上の YAML に当てる。"""
+"""パッケージに同梱した移し替えの手順を読み込み、メモリの上の YAML に適用する。"""
 
 from __future__ import annotations
 
@@ -24,7 +24,7 @@ WILDCARD = "*"
 
 
 def load_steps(kind: Literal["settings"], *, mine: str, current: str) -> list[MigrationStep]:
-    """対象のバージョンより新しく読めるバージョン以下の手順を、古い順に読む。"""
+    """対象のバージョンより新しく読み込めるバージョン以下の手順を、古い順に読み込む。"""
     root = resources.files("dev_docs") / MIGRATIONS_DIR / kind
     if not root.is_dir():
         return []
@@ -80,7 +80,7 @@ def _read_version(file: Any, version: str) -> list[MigrationStep]:
 
 @dataclass(frozen=True)
 class _Parent:
-    """末尾のキーを持つ親の辞書と、その親の辞書を持つ辞書（`lift` が使う）。"""
+    """末尾のキーを持つ親の辞書と、その親の辞書を持つ辞書（`lift` が使用する）。"""
 
     node: CommentedMap
     owner: CommentedMap | None = None
@@ -123,14 +123,14 @@ def _rename(parent: CommentedMap, step: MigrationStep, key: str) -> None:
 
 
 def _matches(value: Any, step: MigrationStep) -> bool:
-    """値が辞書で、`match` のキーと値を全て持つか（`match` が無ければ辞書なら当たる）。"""
+    """値が辞書で、`match` のキーと値を全て持つか（`match` が無ければ辞書なら該当する）。"""
     if not isinstance(value, Mapping):
         return False
     return all(key in value and value[key] == item for key, item in (step.match or {}).items())
 
 
 def _lift(parent: _Parent, step: MigrationStep, key: str) -> None:
-    """値の `take` を、親の辞書を持つ辞書の `to` に置き、キーを削除する。"""
+    """値の `take` を、親の辞書を持つ辞書の `to` に配置し、キーを削除する。"""
     value = parent.node[key]
     take = cast("str", step.take)
     to = cast("str", step.to)
@@ -155,7 +155,7 @@ def _unwrap(parent: CommentedMap, step: MigrationStep, key: str) -> None:
 
 
 def _apply_key(parent: _Parent, step: MigrationStep, key: str) -> None:
-    """親の辞書の 1 つのキーに操作を当てる。"""
+    """親の辞書の 1 つのキーに操作を適用する。"""
     node = parent.node
     if step.op == "rename":
         if key in node:
@@ -174,12 +174,12 @@ def _apply_key(parent: _Parent, step: MigrationStep, key: str) -> None:
 
 
 def apply_step(data: CommentedMap, step: MigrationStep) -> None:
-    """メモリの上の YAML に 1 つの手順を当てる（`export_sources` は移し替えの適用が行う）。"""
+    """メモリの上の YAML に 1 つの手順を適用する（`export_sources` は移し替えの適用が行う）。"""
     if step.op == "export_sources":
         return
     *parents_path, key = step.path.split(".")
     for parent in _parents(data, parents_path):
-        # 末尾が `*` なら親の辞書の全てのキーに当てる（キーが無い親では何もしない）
+        # 末尾が `*` なら親の辞書の全てのキーに適用する（キーが無い親では何もしない）
         keys = list(parent.node) if key == WILDCARD else [key]
         for name in keys:
             _apply_key(parent, step, name)
