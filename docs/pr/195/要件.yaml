@@ -1,0 +1,62 @@
+docs:
+  - page: docs/_config.yml
+    new: false
+    change: 削除する（Jekyll の設定。Pages は mdmark の build に切り替え済み）
+    status: done
+    updated_by: planner
+    updated_at: '2026-11-13T04:03:39.113166+00:00'
+  - page: docs/_theme/_layouts/default.html
+    new: false
+    change: '`docs/_theme/` を丸ごと削除する（`_data/nav.yml`・`_data/nav.project.yml`・`_includes/`・`_layouts/`・`assets/`・`search.json`・`llms.txt`）'
+    status: done
+    updated_by: planner
+    updated_at: '2026-11-13T04:03:39.113166+00:00'
+  - page: ai-monitor-theme.yaml
+    new: false
+    change: 削除する（`docs/_theme/` を取り込んだ版の控え）
+    status: done
+    updated_by: planner
+    updated_at: '2026-11-13T04:03:39.113166+00:00'
+  - page: docs/guide/はじめに.md
+    new: false
+    change: 削除する（Jekyll の分類のトップページ）。`## dev-docs と project-index の分担` の表は `コアコンセプト-配信元と権限.md` へ移す
+    status: done
+    updated_by: planner
+    updated_at: '2026-11-13T04:03:39.113166+00:00'
+  - page: docs/guide/使い方.md
+    new: false
+    change: 削除する（Jekyll の分類のトップページ）
+    status: done
+    updated_by: planner
+    updated_at: '2026-11-13T04:03:39.113166+00:00'
+  - page: docs/guide/リファレンス.md
+    new: false
+    change: 削除する（Jekyll の分類のトップページ）
+    status: done
+    updated_by: planner
+    updated_at: '2026-11-13T04:03:39.113166+00:00'
+  - page: docs/guide/コアコンセプト-配信元と権限.md
+    new: false
+    change: '`はじめに.md` の `## dev-docs と project-index の分担` の表と続く 2 行を移す'
+    status: done
+    updated_by: planner
+    updated_at: '2026-11-13T04:03:39.113166+00:00'
+  - page: project-index.yaml
+    new: false
+    change: '`files_guide` の `exclude` から `はじめに.md`・`使い方.md`・`リファレンス.md` を外す'
+    status: done
+    updated_by: planner
+    updated_at: '2026-11-13T04:03:39.113166+00:00'
+  - page: schemas/files.schema.yaml
+    new: false
+    change: '`category` の説明の「上タブ・分類のトップページ」を、公開ページの文書の一覧の並びに直す'
+    status: done
+    updated_by: planner
+    updated_at: '2026-11-13T04:03:39.113166+00:00'
+scope_out:
+  - item: AI Monitor v0.4.0 のテーマの取り込み（`import-site --version v0.4.0`。#74 から移した範囲）
+    reason: Pages は mdmark の build で描き、`docs/_theme/` を読むものが無いためテーマを残さない。残さないと決めたため取り込まない
+    plan: none
+  - item: AI Monitor で、テーマを受け取らない配布先に、追従 Issue の「サイトのレイアウト」「配信設定」の行を出さず、`import-site` が `docs/_theme/` を作り直さず、`design_docs publish` が分類のトップページと `nav.project.yml` を書き出さない扱い
+    reason: 配布元（AI Monitor）の `distribution.yaml`・`import-site`・`publish` の変更で、dev-docs の変更では完結しない。対応が入るまでの扱いは `要件.md` の `## 配布物の受け取り方`
+    plan: shuhei1101/ai-monitor#3420
