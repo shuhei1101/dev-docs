@@ -1,14 +1,14 @@
 Pages のビルドの切り替え:
-  説明: shuhei1101/dev-docs の GitHub Pages の設定の build_type を legacy（develop の /docs）から workflow へ切り替え、作業 PR のマージで develop に入る .github/workflows/pages.yml が配信できるようにする
+  説明: shuhei1101/dev-docs の GitHub Pages の設定の build_type を legacy（develop の /docs）から workflow へ切り替え、作業 PR のマージで develop に入る .github/workflows/pages.yml が mdmark の build でまとめた公開ページを配信できるようにする
   タグ: [GitHub の設定]
   実行者: planner
   時期: マージの前
   回数: 1 回限り
   可逆: true
-  疎通確認: null
-  実行: null
-  確認: null
-  切り戻し: null
+  疎通確認: Pages のビルドの切り替え/疎通確認.sh
+  実行: Pages のビルドの切り替え/実行.sh
+  確認: Pages のビルドの切り替え/確認.sh
+  切り戻し: Pages のビルドの切り替え/切り戻し.sh
   失敗時: 既定の対処を 1 回、2 回連続で失敗したら依頼元へ返す
   確認方法: "gh api repos/shuhei1101/dev-docs/pages の build_type が workflow になっている"
   状態: 未
