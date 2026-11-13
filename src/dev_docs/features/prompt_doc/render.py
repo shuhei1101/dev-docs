@@ -81,11 +81,11 @@ class CompiledPart:
 
 
 def _flow_scalar(value: Any) -> str:
-    """スカラーをフロー形式の中で読み戻せる 1 語にする。"""
+    """スカラーを、フロー形式の中で再度読み込める 1 単語にする。"""
     if value is None or isinstance(value, bool | int | float):
         return json.dumps(value)
     text = str(value)
-    # フローの区切りの文字を含まず、YAML として読み戻して同じ文字列になるものは引用符で囲まない
+    # フローの区切りの文字を含まず、YAML として再度読み込んで同じ文字列になるものは引用符で囲まない
     if text and not FLOW_QUOTE_PATTERN.search(text) and load_yaml(text) == text:
         return text
     return json.dumps(text, ensure_ascii=False)
@@ -137,7 +137,7 @@ def build_environment() -> jinja2.Environment:
 
 
 def _matches(value: Any, type_: VarType) -> bool:
-    """値が定義の型に合うかを返す（`bool` は `integer`・`number` に合わない）。"""
+    """値が定義の型に合うかを返却する（`bool` は `integer`・`number` に合わない）。"""
     if type_ == "string":
         return isinstance(value, str)
     if type_ == "integer":
@@ -152,7 +152,7 @@ def _matches(value: Any, type_: VarType) -> bool:
 
 
 def _trace(value: Any, var: PromptVar, path: str, problems: list[str]) -> Any:
-    """値を定義と並べて辿り、型を確かめてパス付きの値にする。"""
+    """値を定義と並べて辿り、型を確認してパス付きの値にする。"""
     # 型が合わない: 理由を加え、その下は辿らない
     if var.type is not None and not _matches(value, var.type):
         problems.append(f"`{path}` は {var.type} ですが、`{flow_yaml(value)}` が入っています")
@@ -186,7 +186,7 @@ def _trace(value: Any, var: PromptVar, path: str, problems: list[str]) -> Any:
 def build_values(
     vars_: Mapping[str, PromptVar], values: Mapping[str, Any]
 ) -> tuple[dict[str, Any], list[str]]:
-    """例の組の値を `example` で埋め、型を確かめてパス付きの値にする。"""
+    """例の組の値を `example` で埋め、型を確認してパス付きの値にする。"""
     # 組に無い変数を example で埋める（example: null も値として埋める）
     filled = dict(values)
     for name, var in vars_.items():
@@ -201,7 +201,7 @@ def build_values(
 
 
 def _strip_braces(expr: str) -> str:
-    """前後の空白を除き、`{{ }}` で囲んだ式はそれを外す。"""
+    """前後の空白を除き、`{{ }}` で囲んだ式はその囲みを除去する。"""
     stripped = expr.strip()
     if stripped.startswith("{{") and stripped.endswith("}}"):
         return stripped[2:-2]
@@ -242,7 +242,7 @@ def compile_parts(
                         message=error.message or "",
                     )
                 )
-        # 誤りのある部品は結果から外す
+        # 誤りのある部品は結果から除外する
         if part_errors:
             errors.extend(part_errors)
         else:
@@ -266,7 +266,7 @@ def _messages(doc: PromptDoc, rendered: list[tuple[Role | None, str]]) -> list[R
     # llm 以外: 全てをつないで 1 件にする
     if doc.kind != "llm":
         return [_message(None, "".join(text for _, text in rendered))]
-    # llm: 役割ごとにつなぎ、空でないものを ROLES の順に並べる（役割の無い部品は最後に置く）
+    # llm: 役割ごとにつなぎ、空でないものを ROLES の順に並べる（役割の無い部品は最後に配置する）
     messages: list[RenderedMessage] = []
     for role in (*ROLES, None):
         joined = LLM_PART_SEPARATOR.join(text for part_role, text in rendered if part_role == role)
@@ -276,7 +276,7 @@ def _messages(doc: PromptDoc, rendered: list[tuple[Role | None, str]]) -> list[R
 
 
 def _message(role: Role | None, marked: str) -> RenderedMessage:
-    """区切り付きの本文から、区切りを外した本文を持つメッセージを作る。"""
+    """区切り付きの本文から、区切りを除去した本文を持つメッセージを作る。"""
     return RenderedMessage(
         role=role, text=VALUE_MARK_PATTERN.sub(lambda m: m["value"], marked), marked=marked
     )
@@ -290,7 +290,7 @@ def render_example(
     values: Mapping[str, Any],
     lang: str,
 ) -> RenderedExample:
-    """例の組を 1 言語で描画し、メッセージ・使わなかった部品・字数を返す。"""
+    """例の組を 1 言語で描画し、メッセージ・使用しなかった部品・字数を返却する。"""
     # 構文の誤った部品があると注入文を作れない
     if syntax_errors:
         return _failed([_syntax_problem(error) for error in syntax_errors])
@@ -303,12 +303,12 @@ def render_example(
     for part in doc.parts:
         compiled_part = compiled[part.id]
         try:
-            # when が偽: 使わない
+            # when が偽: 使用しない
             if compiled_part.when is not None and not compiled_part.when(**traced):
                 unused.append(part.id)
                 continue
             template = compiled_part.texts.get(lang)
-            # その言語の本文が無い: 使わない
+            # その言語の本文が無い: 使用しない
             if template is None:
                 unused.append(f"{part.id}（{lang} の本文なし）")
                 continue

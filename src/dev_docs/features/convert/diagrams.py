@@ -1,4 +1,4 @@
-"""`x-diagram` の値と手で書く Mermaid の、mdmark の図の部品か Mermaid のコードブロックへの描画。"""
+"""`x-diagram` の値と手で記載する Mermaid の、mdmark の図の部品か Mermaid のコードブロックへの描画。"""
 
 from __future__ import annotations
 
@@ -35,22 +35,22 @@ NODE_KINDS: dict[str, NodeKind] = {
 }
 # `kind` が無いノードと、`NODE_KINDS` に無い `kind` のノードの種類（スキーマの既定）
 DEFAULT_NODE_KIND = "process"
-# 辺の `line` に書ける線の種類
+# 辺の `line` に記載できる線の種類
 LINE_KINDS: tuple[LineKind, ...] = ("flow", "read", "write", "reply", "loop")
 # `line` が無い辺と、`LINE_KINDS` に無い `line` の辺の種類
 DEFAULT_LINE: LineKind = "flow"
 # 状態遷移の図の始点・終点のノードの ID と名前
 STATE_START = ("start", "開始")
 STATE_END = ("end", "終了")
-# 遷移の `from` のこの値は、`representative` の状態から引く
+# 遷移の `from` のこの値は、`representative` の状態から線を描く
 ALL_STATES = "全状態"
-# 遷移の `to` のこの値は、`representative` の状態へ引く
+# 遷移の `to` のこの値は、`representative` の状態へ線を描く
 PREVIOUS_STATE = "元の状態"
-# 関連の両端に書ける多重度（mdmark の ER 図の部品の多重度と同じ値）
+# 関連の両端に記載できる多重度（mdmark の ER 図の部品の多重度と同じ値）
 ER_CARDINALITIES = ("1", "0..1", "1..n", "0..n")
 # 実体の列の `key` から、mdmark の ER 図の部品の列のマーカー
 ER_COLUMN_KEYS = {"PK": "pk", "FK": "fk"}
-# ER 図のテーブルを格子に置く寸法（px）。`head`・`row`・`frame` は mdmark の ER 図の寸法と同じ値
+# ER 図のテーブルを格子に配置する寸法（px）。`head`・`row`・`frame` は mdmark の ER 図の寸法と同じ値
 ER_LAYOUT = {
     "per_row": 3,
     "width": 240,
@@ -70,7 +70,7 @@ def _items(value: Mapping[str, Any], key: str) -> list[Mapping[str, Any]]:
 
 
 def _block(marker: str, definition: Mapping[str, Any]) -> str:
-    """mdmark の図の部品の範囲に、定義の JSON のコードブロックを置く。"""
+    """mdmark の図の部品の範囲に、定義の JSON のコードブロックを配置する。"""
     code = json.dumps(definition, ensure_ascii=False, indent=2)
     return f"<!-- {marker} -->\n\n```json\n{code}\n```\n\n<!-- /{marker} -->"
 
@@ -114,7 +114,7 @@ def _flow_graph(value: Mapping[str, Any], kind: DiagramKind) -> FlowGraph:
     edges: list[FlowEdge] = []
     for edge in _items(value, "edges"):
         source, target = str(edge["from"]), str(edge["to"])
-        # 宣言の無い端の箱: 名前を ID にして足す
+        # 宣言の無い端のノード: 名前を ID にして追加する
         for end in (source, target):
             if end not in known:
                 nodes.append(FlowNode(id=end, name=end, kind=NODE_KINDS[DEFAULT_NODE_KIND]))
@@ -164,7 +164,7 @@ def _state_graph(value: Mapping[str, Any]) -> FlowGraph:
     """状態遷移の値を、始点・終点と状態のノード、遷移の線にした中間データにする。"""
     transitions = _items(value, "transitions")
     names: list[str] = [str(item["name"]) for item in _items(value, "states")]
-    # 遷移の端に出た `states` に無い状態も足す
+    # 遷移の端に出た `states` に無い状態も追加する
     for transition in transitions:
         for end in _state_ends(transition):
             if end and end not in names:
@@ -179,7 +179,7 @@ def _state_graph(value: Mapping[str, Any]) -> FlowGraph:
         edges.append(FlowEdge(source=STATE_START[0], target=ids[str(initial)]))
     for transition in transitions:
         source, target = _state_ends(transition)
-        # `representative` が無く端が決まらない遷移: 線を引かない（図の元データの表に残る）
+        # `representative` が無く端が決まらない遷移: 線を描かない（図の元データの表に残る）
         if source not in ids or target not in ids:
             continue
         edges.append(
@@ -193,7 +193,7 @@ def _state_graph(value: Mapping[str, Any]) -> FlowGraph:
         )
     final = value.get("final")
     finals = [str(name) for name in final if str(name) in ids] if isinstance(final, list) else []
-    # 終了状態があれば、終点を置いて各終了状態から引く
+    # 終了状態があれば、終点を配置して各終了状態から線を描く
     if finals:
         nodes.append(FlowNode(id=STATE_END[0], name=STATE_END[1], kind="result"))
         edges += [FlowEdge(source=ids[name], target=STATE_END[0]) for name in finals]
@@ -227,10 +227,10 @@ def _er_entity_columns(entity: Mapping[str, Any]) -> list[dict[str, Any]]:
 
 
 def er_table_titles(tables: Sequence[Mapping[str, Any]]) -> dict[str, str]:
-    """同じ文書の `tables[]` から、テーブルの物理名と論理名のどちらからも論理名を引く表を作る。"""
+    """同じ文書の `tables[]` から、テーブルの物理名と論理名のどちらからも論理名を検索する表を作る。"""
     titles: dict[str, str] = {}
     for table in tables:
-        # 論理名を持たないテーブルは、当てる見出し・実体が無いため入れない
+        # 論理名を持たないテーブルは、適用する見出し・実体が無いため入れない
         if table.get("title") is None:
             continue
         for key in ("name", "title"):
@@ -248,11 +248,11 @@ class _ErModel:
         self.entities = _items(value, "entities")
 
     def table(self, entity: Mapping[str, Any]) -> Mapping[str, Any] | None:
-        """実体の `name` が `title` に当たるテーブルを返す。"""
+        """実体の `name` が `title` に該当するテーブルを返却する。"""
         return self.by_title.get(str(entity.get("name")))
 
     def columns(self, entity: Mapping[str, Any]) -> list[dict[str, Any]]:
-        """実体の列（`columns` を持たなければ当たるテーブルの列）を返す。"""
+        """実体の列（`columns` を持たなければ該当するテーブルの列）を返却する。"""
         if _items(entity, "columns"):
             return _er_entity_columns(entity)
         table = self.table(entity)
@@ -260,7 +260,7 @@ class _ErModel:
 
 
 def _er_layout(tables: list[dict[str, Any]]) -> int:
-    """テーブルを格子に置き、図の幅を返す。"""
+    """テーブルを格子に配置し、図の幅を返却する。"""
     y = ER_LAYOUT["margin"]
     for start in range(0, len(tables), ER_LAYOUT["per_row"]):
         row = tables[start : start + ER_LAYOUT["per_row"]]
@@ -319,14 +319,14 @@ def _er(
         name = str(entity["name"])
         node: dict[str, Any] = {"id": name, "name": name, "label": name}
         table = model.table(entity)
-        # テンプレートのテーブルに当たる: 物理名と概要を使う
+        # テンプレートのテーブルに該当する: 物理名と概要を使用する
         if table is not None:
             node["name"] = str(table.get("name", name))
             if table.get("summary"):
                 node["desc"] = str(table["summary"])
         node["columns"] = model.columns(entity)
         nodes.append(node)
-    # 実体ごとの列の名前（関係の両端の列が実体にあるかを見る）
+    # 実体ごとの列の名前（関係の両端の列が実体にあるかを確認する）
     columns = {node["id"]: {str(column["name"]) for column in node["columns"]} for node in nodes}
     relations = [
         item
@@ -351,7 +351,7 @@ def render_diagram(
     *,
     tables: Sequence[Mapping[str, Any]] = (),
 ) -> str:
-    """`x-diagram` の種類で、値から本文に置く図のブロックを組み立てる。"""
+    """`x-diagram` の種類で、値から本文に配置する図のブロックを組み立てる。"""
     if kind == "state":
         return _block("flow", layout_flow(_state_graph(value), head))
     if kind in FLOW_KINDS:
@@ -362,7 +362,7 @@ def render_diagram(
 
 
 def render_mermaid(code: str, head: DiagramHead) -> str:
-    """手で書く Mermaid のコードを、読み取れれば mdmark の図の部品に、読み取れなければ Mermaid のまま組み立てる。"""
+    """手で記載する Mermaid のコードを、読み取れれば mdmark の図の部品に、読み取れなければ Mermaid のまま組み立てる。"""
     graph = parse_mermaid(code)
     # 読み取れない: 元のコードのまま
     if graph is None:

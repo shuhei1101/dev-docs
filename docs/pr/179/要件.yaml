@@ -1,0 +1,10 @@
+use_cases:
+  - kind: single
+    scenario: docs/scenario/SC-155-7.yaml
+    impact: none
+    detail: 文書の画面での読み方・表の列の出し入れ・検索の操作は変わらない。画面の結合テストの照合と、全件実行での待ち方だけを直す
+    depends_on: []
+scope_out:
+  - item: 画面が読む mdmark を `mdmark@master` からタグへ切り替える
+    reason: '#157 の本文のとおり目的が別（読み込み先の固定）'
+    plan: '#127'

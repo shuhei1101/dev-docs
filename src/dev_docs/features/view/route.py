@@ -41,7 +41,7 @@ def build_view_router(handlers: Handlers) -> APIRouter:
     async def document(
         source: str, path: str | None, ref: str | None, diff: str | None
     ) -> Response | DocumentResponse:
-        """文書を取得し、見つからなかったときは何が無いかを足した 404 にする。"""
+        """文書を取得し、見つからなかったときは何が無いかを追加した 404 にする。"""
         try:
             return await get_document(source, path, handlers=handlers, ref=ref, diff_ref=diff)
         except ProjectIndexUnreachableError:

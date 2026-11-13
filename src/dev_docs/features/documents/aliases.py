@@ -29,13 +29,13 @@ ENTRY_KEYS = ("id", "name", "aliases", "description", "avoid")
 
 
 def _read(path: str) -> Any:
-    """配布に同梱したファイルを YAML として読む。"""
+    """配布に同梱したファイルを YAML として読み込む。"""
     return load_yaml(resources.files("dev_docs").joinpath(path).read_text(encoding="utf-8"))
 
 
 @functools.cache
 def alias_schema() -> dict[str, Any]:
-    """同梱した alias-inject のエイリアスのスキーマを返す。"""
+    """同梱した alias-inject のエイリアスのスキーマを返却する。"""
     schema: dict[str, Any] = _read(ALIAS_SCHEMA_PATH)
     return schema
 
@@ -51,7 +51,7 @@ def _empty(value: Any) -> bool:
 
 
 def _type_rule(key: str, value: Any) -> str | None:
-    """エイリアスのキーの値の型の誤りを返す。"""
+    """エイリアスのキーの値の型の誤りを返却する。"""
     if key in ALIAS_LIST_KEYS:
         if isinstance(value, str):
             return None
@@ -103,7 +103,7 @@ def _as_list(value: Any) -> list[str]:
 
 
 def collect_aliases(view: SourceView, documents: Sequence[IndexedDocument]) -> AliasCollection:
-    """`alias_type` を持つ行の文書を検証し、通った文書のエイリアスと違反を返す。"""
+    """`alias_type` を持つ行の文書を検証し、合格した文書のエイリアスと違反を返却する。"""
     has_alias_rows = any(row.alias_type is not None for row in view.documents)
     entries: list[AliasEntry] = []
     violations: list[Violation] = []

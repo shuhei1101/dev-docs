@@ -9,7 +9,7 @@ MATCH_KEYS = ("id", "name")
 
 
 def _match_key(items: list[Any]) -> str | None:
-    """要素を突き合わせるキー（全ての要素が持つ `id` か `name`）を返す。"""
+    """要素を突き合わせるキー（全ての要素が持つ `id` か `name`）を返却する。"""
     if not items or not all(isinstance(item, Mapping) for item in items):
         return None
     for key in MATCH_KEYS:
@@ -43,7 +43,7 @@ def _walk(before: Any, after: Any, path: str, found: dict[str, tuple[Any, Any]])
 def changed_keys(
     before: Mapping[str, Any], after: Mapping[str, Any], *, ignore: Collection[str] = ()
 ) -> dict[str, tuple[Any, Any]]:
-    """2 つの内容を比べ、変わったキーのパスと前後の値を返す。"""
+    """2 つの内容を比べ、変わったキーのパスと前後の値を返却する。"""
     found: dict[str, tuple[Any, Any]] = {}
     keys = [*after, *(key for key in before if key not in after)]
     for key in keys:

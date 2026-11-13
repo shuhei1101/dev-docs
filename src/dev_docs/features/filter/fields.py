@@ -1,4 +1,4 @@
-"""`nav` の `filter` で使う項目の値と使える項目。"""
+"""`nav` の `filter` で使用する項目の値と使用できる項目。"""
 
 from __future__ import annotations
 
@@ -53,7 +53,7 @@ def _headings(body: str) -> list[str]:
 
 
 def _raw_values(document: IndexedDocument, field: str) -> Any:
-    """項目の値を、配列のまま引く。"""
+    """項目の値を、配列のまま取得する。"""
     if field == "id":
         return document.id
     if field == "kind":
@@ -93,7 +93,7 @@ def field_values(document: IndexedDocument, field: str) -> list[Any]:
 
 
 def _base_fields() -> dict[str, str]:
-    """スキーマに依らず使える項目と型。"""
+    """スキーマに依らず使用できる項目と型。"""
     fields = {"id": "string", "kind": "string", "created": "date", "updated": "date"}
     for key in METADATA_KEYS:
         if key in ARRAY_METADATA:
@@ -122,7 +122,7 @@ def _schema_type(schema: Mapping[str, Any]) -> str:
 
 
 def _walk(schema: Mapping[str, Any], prefix: str, fields: dict[str, str]) -> None:
-    """スキーマの `properties` を再帰でたどり、項目のパスと型を足す。"""
+    """スキーマの `properties` を再帰でたどり、項目のパスと型を追加する。"""
     properties = schema.get("properties")
     if isinstance(properties, Mapping):
         for key, sub in properties.items():
@@ -139,7 +139,7 @@ def _walk(schema: Mapping[str, Any], prefix: str, fields: dict[str, str]) -> Non
 
 
 def known_fields(schemas: Iterable[Mapping[str, Any]]) -> dict[str, str]:
-    """配信元の種類のスキーマから、条件・並べ替え・集計に使える項目の一覧を作る。"""
+    """配信元の種類のスキーマから、条件・並べ替え・集計に使用できる項目の一覧を作る。"""
     fields = _base_fields()
     for schema in schemas:
         _walk(schema, "", fields)

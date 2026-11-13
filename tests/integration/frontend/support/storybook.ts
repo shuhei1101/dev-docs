@@ -3,10 +3,13 @@ import AxeBuilder from "@axe-core/playwright";
 
 const STORYBOOK = "http://127.0.0.1:6199";
 
-/** Storybook のストーリーを、サイドバーなしの画面で開く */
+/** Storybook のストーリーを、サイドバーなしの画面で開き、ストーリーの描画が始まる(body に sb-show-main が付く)まで待つ。ストーリーの読み込みが失敗したら Storybook のエラーの表示の文言で失敗させる */
 export const openStory = async (page: Page, id: string): Promise<void> => {
   await page.goto(`${STORYBOOK}/iframe.html?id=${id}&viewMode=story`);
-  await page.locator("#storybook-root > *, #storybook-root").first().waitFor({ state: "attached" });
+  await page.locator("body.sb-show-main, body.sb-show-errordisplay").waitFor({ state: "attached" });
+  if (await page.locator("body.sb-show-errordisplay").count()) {
+    throw new Error(`ストーリー ${id} を開けませんでした: ${await page.locator("#error-message").innerText()}`);
+  }
 };
 
 const AXE_RETRY_LIMIT = 10;

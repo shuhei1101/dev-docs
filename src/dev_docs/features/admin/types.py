@@ -7,13 +7,13 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
-# 設定の `version` と dev-docs が読めるバージョンの比較
+# 設定の `version` と dev-docs が読み込めるバージョンの比較
 type VersionState = Literal["current", "old", "newer"]
 
 
 @dataclass(frozen=True)
 class SourceState:
-    """`status` が返す配信元 1 つの状態（project-index の状態を写したもの）。"""
+    """`status` が返却する配信元 1 つの状態（project-index の状態のコピー）。"""
 
     id: str | None
     status: Literal["serving", "not_served", "disabled", "pending_reload"]
@@ -22,7 +22,7 @@ class SourceState:
 
 @dataclass(frozen=True)
 class TerminalState:
-    """読んだ端末の設定のパスとバージョンの新旧。"""
+    """読み込んだ端末の設定のパスとバージョンの新旧。"""
 
     file: str
     version_state: VersionState
