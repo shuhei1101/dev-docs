@@ -422,7 +422,7 @@ functions:
       description: 項目の `id` → 見出しの ID。`OVERVIEW_ID` の項目は含めない
     process: |-
       1. コードブロックの外の ATX の見出しを上から並べ、見出しの文字から GitHub の規則（小文字にし、文字・数字・`_`・`-`・空白のほかを除き、空白を `-` にする）で ID を作る。同じ ID の 2 つ目からは `-1`・`-2` を付ける
-      2. `items` を順に、直前に対応づけた見出しより後の、`name` と同じ文字の最初の見出しに対応づける
+      2. `items` を順に、直前に対応づけた見出しより後の、ページの描画が項目に付ける深さ（`ITEM_HEADING_LEVEL` に `group` のレイヤーの数を足し、`MAX_HEADING_LEVEL` で抑えた深さ）で `name` と同じ文字の最初の見出しに対応づける
     unit_tests:
       - name: test_item_anchors
         case: 正常
