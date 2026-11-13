@@ -17,8 +17,17 @@ PUT_BODY = {"sources": [{"id": "a", "config": "/tmp/a/project-index.yaml"}]}
 
 
 def _item(row: dict[str, Any], status: str, **extra: Any) -> dict[str, Any]:
-    """project-index の端末の設定の `sources[]` の 1 件（行と状態）を作る。"""
-    return {"row": row, "id": row.get("id"), "status": status, "errors": [], **extra}
+    """project-index の端末の設定の取得の `sources[]` の 1 件（行の値に状態を重ねたもの）を作る。"""
+    return {
+        "enabled": True,
+        "scope": {"read": [], "write": None},
+        "outsideRead": True,
+        **row,
+        "status": status,
+        "errors": [],
+        "configVersion": None,
+        **extra,
+    }
 
 
 def _client(make_handlers: Callable[..., Any]) -> TestClient:
@@ -64,17 +73,14 @@ def test_build_settings_router_when_put(
     fake_index: FakeIndex, make_handlers: Callable[..., Any]
 ) -> None:
     """保存を依頼して状態を返す（正常系）。"""
-    # 準備
-    fake_index.responses[("PUT", "/settings/sources")] = (
-        200,
-        {"settingsPath": "/pi/settings.yaml", "sources": [_item({"id": "a"}, "serving")]},
-    )
+    # 準備（偽物は保存した行を、続く端末の設定の取得で返す）
     # 実行
     response = _client(make_handlers).put(
         "/_api/settings/sources", json=PUT_BODY, headers=SAME_ORIGIN
     )
     # 検証
-    sent = json.loads(fake_index.requests[-1].content)
+    put = next(request for request in fake_index.requests if request.method == "PUT")
+    sent = json.loads(put.content)
     assert response.status_code == 200
     assert response.json()["sources"][0]["status"] == "serving"
     assert sent["sources"][0]["config"] == ["/tmp/a/project-index.yaml"]

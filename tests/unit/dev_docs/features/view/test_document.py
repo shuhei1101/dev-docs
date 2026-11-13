@@ -147,6 +147,8 @@ def test_get_document_when_yaml_unreadable(
     response = _get(make_handlers(), "docs/a")
     # 検証
     error = response.conversion_error
+    paths = [request.url.path for request in fake_index.requests]
+    assert "/sources/sample/docs/docs/a" in paths
     assert response.markdown is None
     assert error is not None
     assert (error.reason, error.file, error.line, error.column) == (
