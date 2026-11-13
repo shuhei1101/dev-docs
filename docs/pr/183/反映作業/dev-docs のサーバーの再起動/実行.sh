@@ -1,62 +1,63 @@
 #!/bin/sh
 set -u
+
 DEVELOP=/mnt/c/Users/shuhe/repo/dev-docs/.claude/worktrees/develop
-LOG="$HOME/.local/state/dev-docs/serve.log"
-PATTERN="^$DEVELOP/.venv/bin/python -m dev_docs serve$"
+FIXED=src/dev_docs/integrations/project_index/client.py
+HEADERS_ACCEPT='Accept: application/json, text/event-stream'
+HEADERS_TYPE='Content-Type: application/json'
+RESTART='{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"restart","arguments":{}}}'
+
+# 127.0.0.1:8781 で待ち受けるサーバーが最後に起動した時刻（UNIX 時刻）。無ければ空
+server_started() {
+  sh scripts/dev-docs-server-wait.sh started 2>/dev/null
+}
+
+# 新しいコードのサーバーは、develop の worktree の付け替え口が更新された後に起動している（ログが回転して起動時刻が分からなければ古いとみなす）
+running_new() {
+  started=$(server_started)
+  [ -n "$started" ] && [ "$started" -gt "$FIXED_AT" ]
+}
 
 # 前提確認
 if [ $# -gt 1 ] || { [ $# -eq 1 ] && [ "$1" != "--dry-run" ]; }; then
-  echo "前提確認: failed"
-  echo "引数は無しか --dry-run だけ: $*"
+  echo "前提確認: failed（引数は無しか --dry-run だけ）"
   exit 1
 fi
-if [ ! -x "$DEVELOP/.venv/bin/python" ]; then
-  echo "前提確認: failed"
-  ls -l "$DEVELOP/.venv/bin/python" 2>&1
+if grep -q 'record_kinds' "$DEVELOP/$FIXED"; then
+  echo "develop の worktree の付け替え口: ok"
+else
+  echo "develop の worktree の付け替え口: failed（$FIXED に本物の project-index の入出力の付け替え（record_kinds）が無い）"
   exit 1
 fi
-pids=$(pgrep -f "$PATTERN" || true)
-count=$(echo "$pids" | grep -c . || true)
-if [ "$count" -gt 1 ]; then
-  echo "前提確認: failed"
-  echo "dev-docs serve が $count 個動いている: $pids"
+FIXED_AT=$(stat -c %Y "$DEVELOP/$FIXED")
+if [ -n "$(ss -ltnH 'sport = :8781' 2>/dev/null)" ]; then
+  echo "稼働中のサーバー: ok"
+else
+  echo "稼働中のサーバー: failed（127.0.0.1:8781 で待ち受けていない）"
   exit 1
 fi
-echo "前提確認: ok"
 
-# 計画（--dry-run もここを通る）
-echo "止める dev-docs serve: ${pids:-なし}"
-echo "起動する: (cd $DEVELOP && setsid nohup $DEVELOP/.venv/bin/python -m dev_docs serve > $LOG 2>&1 &)"
+# 計画
+if running_new; then
+  echo "サーバーの再起動: skipped（develop の worktree の $FIXED の更新より後に起動している）"
+  exit 0
+fi
+echo "再起動するサーバー: 127.0.0.1:8781（$DEVELOP の dev-docs serve）"
 if [ "${1:-}" = "--dry-run" ]; then
-  echo "dev-docs のサーバーの再起動: changed"
+  echo "サーバーの再起動: changed"
   exit 0
 fi
 
-# 適用（止める → 起動する）
-if [ -n "$pids" ]; then
-  kill -TERM "$pids"
-  i=0
-  while kill -0 "$pids" 2>/dev/null; do
-    i=$((i + 1))
-    if [ "$i" -gt 60 ]; then
-      echo "dev-docs serve の停止: failed"
-      echo "kill -TERM $pids の後 60 秒で止まらない"
-      exit 1
-    fi
-    sleep 1
-  done
-  echo "dev-docs serve の停止: changed"
+# 適用
+requested=$(date +%s)
+code=$(curl -s -o /dev/null -w '%{http_code}' -X POST http://127.0.0.1:8781/_admin/mcp \
+  -H "$HEADERS_ACCEPT" -H "$HEADERS_TYPE" -d "$RESTART")
+if [ "$code" != "200" ]; then
+  echo "サーバーの再起動: failed（restart が $code）"
+  exit 1
 fi
-mkdir -p "$(dirname "$LOG")"
-(cd "$DEVELOP" && setsid nohup "$DEVELOP/.venv/bin/python" -m dev_docs serve > "$LOG" 2>&1 < /dev/null &)
-i=0
-until curl -s -m 2 -o /dev/null http://127.0.0.1:8781/_api/settings/sources; do
-  i=$((i + 1))
-  if [ "$i" -gt 60 ]; then
-    echo "dev-docs serve の起動: failed"
-    tail -n 20 "$LOG"
-    exit 1
-  fi
-  sleep 1
-done
-echo "dev-docs serve の起動: changed"
+if ! sh scripts/dev-docs-server-wait.sh listening "$requested"; then
+  echo "サーバーの再起動: failed（付け替え口の更新の後に起動したサーバーが待ち受けない）"
+  exit 1
+fi
+echo "サーバーの再起動: changed"
