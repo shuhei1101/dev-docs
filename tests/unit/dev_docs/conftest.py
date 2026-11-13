@@ -139,7 +139,7 @@ class FakeIndex:
         return httpx.Response(404, json={"missing": missing, "value": value, "detail": ""})
 
     def _default_ref(self, source: str) -> str:
-        return "develop" if self.configs[source]["_git"] else "-"
+        return "develop" if self.configs[source]["_git"] else ""
 
     def _detail(self, source: str, file: str, request: httpx.Request) -> httpx.Response:
         """文書の取得（IF-25）に答える。"""

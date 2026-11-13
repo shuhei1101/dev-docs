@@ -22,7 +22,8 @@ def _save(
 ) -> tuple[Any, list[dict[str, Any]]]:
     """保存を依頼し、返った状態と project-index へ送った行を返す。"""
     states = asyncio.run(save_sources(make_client(), entries))
-    sent = json.loads(fake_index.requests[-1].content)["sources"]
+    put = next(request for request in fake_index.requests if request.method == "PUT")
+    sent = json.loads(put.content)["sources"]
     return states, sent
 
 
@@ -31,13 +32,19 @@ def test_save_sources(
 ) -> None:
     """行を送り、状態を返す（正常系）。"""
     # 準備
-    fake_index.responses[("PUT", "/settings/sources")] = (
+    # 保存した後の端末の設定の取得で返る行と状態
+    fake_index.responses[("GET", "/settings/sources")] = (
         200,
         {
             "settingsPath": "/pi/settings.yaml",
             "sources": [
-                {"row": {}, "id": "a", "status": "serving", "errors": []},
-                {"row": {}, "id": "b", "status": "disabled", "errors": []},
+                {"id": "a", "config": ["/a/project-index.yaml"], "status": "serving", "errors": []},
+                {
+                    "id": "b",
+                    "config": ["/b/project-index.yaml"],
+                    "status": "disabled",
+                    "errors": [],
+                },
             ],
         },
     )

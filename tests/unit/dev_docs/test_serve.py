@@ -576,7 +576,12 @@ def test_run_migrate_when_sources_moved(
         [{"op": "export_sources", "path": "sources", "description": "移す"}],
     )
     fake = FakeIndex()
-    added = iter([(201, {}), (409, {"same": False})])
+    added = iter(
+        [
+            (201, {"result": "added", "same": None, "sources": []}),
+            (409, {"result": "exists", "same": False, "sources": []}),
+        ]
+    )
 
     def handle(request: httpx.Request) -> httpx.Response:
         status, body = next(added)
