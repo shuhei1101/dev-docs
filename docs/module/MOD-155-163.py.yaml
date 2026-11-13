@@ -91,7 +91,7 @@ functions:
       description: project-index の並びのまま
     process: |-
       1. project-indexの呼び出し.検索（`q`・`ref`・`limit`）を呼ぶ。語の照合・`search: false` の行の除外・一致した箇所の抜き出しは project-index が行う
-      2. project-indexの呼び出し.配信元の表示の設定の取得と文書の一覧の取得（`ref`。`record_kinds` は `records` を持つ行の ID）で、結果ごとに `path` と `id` が同じ文書を引き当てる。引き当てられない結果は `path` から拡張子を落としたパスにする
+      2. project-indexの呼び出し.配信元の表示の設定の取得と文書の一覧の取得（`ref`。`record_kinds` は `records` を持つ行の ID、`values` は `False`）で、結果ごとに `path` と `id` が同じ文書を引き当てる。引き当てられない結果は `path` から拡張子を落としたパスにする
       3. `items` を `ScreenSearchItem(path=文書のページのパス(引き当てた文書), name, snippets)` にし、`total_count` とともに返す
     unit_tests:
       - name: test_screen_search

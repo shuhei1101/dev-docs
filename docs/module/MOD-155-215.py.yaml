@@ -234,14 +234,21 @@ classes:
             type: Collection[str]
             required: false
             passing: keyword
-            description: '`records` を持つ `documents[]` の行の ID（配信元の表示の設定の `documents` から呼び出し側が渡す）'
+            description: '`records` を持つ `documents[]` の行の ID（配信元の表示の設定の `documents` から呼び出し側が指定する）'
             default: ()
+          - name: values
+            title: 値を求めるか
+            type: bool
+            required: false
+            passing: keyword
+            description: '`False` は `values=true` を付けず、`data` を空にする'
+            default: 'True'
         returns:
           type: DocumentList
           description: '値を入れ、`body` を空にした文書'
         process: |-
-          1. 呼び出しの共通の手順で `GET /sources/{source}/docs?ref={ref}&values=true` を呼ぶ
-          2. `documents[]` を応答の順に索引の文書の読み取りで `IndexedDocument` にする。`kind` が `record_kinds` にある文書は、同じ `path` の文書の中で何番目か（0 始まり）を `record_index` に渡す
+          1. 呼び出しの共通の手順で `GET /sources/{source}/docs?ref={ref}` を呼ぶ。`values` が `True` ならクエリに `values=true` を付ける
+          2. `documents[]` を応答の順に索引の文書の読み取りで `IndexedDocument` にする。`kind` が `record_kinds` にある文書は、同じ `path` の文書の中で何番目か（0 始まり）を `record_index` に指定する。同じ `path` の中の並びは project-index が管理用の YAML を読み込んだ順（`f36ba69` の安定ソート）を前提にする
           3. 応答の `ref` とともに `DocumentList` にして返す
         unit_tests:
           - name: test_list_documents

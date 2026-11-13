@@ -119,7 +119,7 @@ functions:
       3. タブとサイドバーの組み立て（`view`・`listed.documents`）をする
       4. 返す文書を決める
          - `path` が無ければ、一番左のタブのタブの最初の文書。文書が 1 つも無ければ `DocumentNotFoundError`
-         - `path` があれば文書のページの特定。無ければ project-indexの呼び出し.文書の詳細の取得（`{path}.yaml`・`ref`）を呼び、`failure` の `reason` が `invalid_yaml` なら、`markdown` を `None`、`conversion_error` をその `IndexFailure` と同じフィールドの `ConversionError` にして 8 へ進む。それ以外か `DocumentNotFoundError` なら `DocumentNotFoundError`（`missing` に `path`）
+         - `path` があれば文書のページの特定。無ければ project-indexの呼び出し.文書の詳細の取得（`path` を拡張子を付けずに指定し、`ref`）を呼び、`failure` の `reason` が `invalid_yaml` なら、`markdown` を `None`、`conversion_error` をその `IndexFailure` と同じフィールドの `ConversionError` にして 8 へ進む。それ以外か `DocumentNotFoundError` なら `DocumentNotFoundError`（`missing` に `path`）
       5. project-indexの呼び出し.文書の詳細の取得（文書の `path`・`ref`。管理用の YAML の行の文書は `document_id` に文書の ID を渡す）と、`view.decision_folders` があれば project-indexの呼び出し.検討事項の一覧の取得 を同時に呼ぶ
       6. 変換.描画する を `asyncio.to_thread` で呼ぶ（`documents` は `listed.documents`、`linkable` は検討事項の一覧の `linkable`、無ければ空）。`ConvertFailure` なら `markdown` を `None`、`conversion_error` を同じフィールドの `ConversionError` にして 8 へ進む
       7. 埋め込みのパスの取り出しのパスごとに project-indexの呼び出し.文書の詳細の取得（`ref`）を同時に呼び、値（文書が無い・`DocumentNotFoundError` のときは `None`）を集めて、変換.仕上げる で `markdown` と `table_keys` を作る
@@ -168,7 +168,7 @@ functions:
       - name: test_get_document_when_yaml_unreadable
         case: 正常
         summary: YAML を読めない
-        condition: '`path="docs/a"` が文書の一覧に無く、文書の取得（`docs/a.yaml`）が `value: null` と `conversionError`（`reason: invalid_yaml`・`file: docs/a.yaml`・`line`・`column`）を返す'
+        condition: '`path="docs/a"` が文書の一覧に無く、文書の取得（`docs/a`）が `value: null` と `conversionError`（`reason: invalid_yaml`・`file: docs/a.yaml`・`line`・`column`）を返す'
         mock: project-indexの呼び出し（`httpx.MockTransport` で project-index の develop の `f36ba69` の入出力を返す偽物）
         expected: '`conversion_error` が `invalid_yaml` で、`file` が `docs/a.yaml`、`line`・`column` が読めなかった位置'
       - name: test_get_document_when_missing
