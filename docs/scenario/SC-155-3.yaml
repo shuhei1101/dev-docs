@@ -102,7 +102,7 @@ scenarios:
     notes:
       project-index のアドレス: '`--project-index` を省くと、`PROJECT_INDEX_PORT`（無ければ既定の 8786）から `http://127.0.0.1:{ポート}` を組む'
       既にある行: project-index の端末の設定の行は変えず、行ごとに追加する。同じ id で内容が違う行があれば、その行は移さずに id と、dev-docs の端末の設定に残したことを応答に出す（dev-docs の `sources` からも除かない）。同じ id で内容も同じ行は移した行として扱う
-      書き込みの応答の時間: project-index は行を保存した後に配信元を読み直してから応答するため、行の追加の応答は配信元の数で遅くなる。応答が文書の取得の制限時間を超えても、行が project-index にあれば移した行として扱い、移し替えを続ける
+      書き込みの応答の時間: 行の追加の応答が文書の取得の制限時間（45 秒）を超えても、移し替えを続ける
   - name: 異常シナリオ（sources を移すときに project-index につながらない）
     setup:
       - name: Mock
@@ -181,7 +181,7 @@ scenarios:
         description: なし（実環境で実行）
       - name: 端末の設定
         description: '`sources` に sample と broken の 2 行を持ち、`project_index` を持たない前のバージョンの `settings.yaml`'
-        notes: broken は sample の後に並べ、project-index の端末の設定のスキーマに通らない値（`enabled` が文字列）を持つ
+        notes: broken は sample の後に並べ、`enabled` に bool へ変換できない文字列 `"maybe"` を持つ
       - name: project-index
         description: 正常シナリオ（端末の設定の sources を project-index へ移す）と同じ。端末の設定の `sources` に extra の 1 行がある
     flow: |-
@@ -215,7 +215,7 @@ preconditions:
   - dev-docs が待ち受けている
   - クローンの上流に新しいバージョンの commit がある
 success_guarantee: dev-docs が新しいバージョンで待ち受け、端末の設定の `version` がそのバージョンになり、project-index が配信している配信元を画面で読める。
-minimal_guarantee: '`git pull` に失敗したときは、前のバージョンのまま配信を続ける。移し替えの手順が失敗したときは、端末の設定をバックアップから戻す。`sources` を移す途中で失敗したときは、project-index の端末の設定もその実行で追加した行を取り除き、実行の前の行に戻す。'
+minimal_guarantee: '`git pull` に失敗したときは、前のバージョンのまま配信を続ける。移し替えの手順が失敗したときは、端末の設定をバックアップから戻す。`sources` を移す途中で失敗したときは、その実行で追加した行を project-index から取り除く。取り除けなかったときは、取り除けなかった行の id を出す。'
 frequency: dev-docs の新しいバージョンが出るたび
 priority: 中
 refs:
