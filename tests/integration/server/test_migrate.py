@@ -5,6 +5,7 @@ from pathlib import Path
 
 import pytest
 
+from dev_docs import main as main_module
 from dev_docs.__main__ import main
 from dev_docs.shared.yaml_io import load_yaml
 
@@ -172,6 +173,15 @@ def _write_v1(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, name: str) -> Pat
     return path
 
 
+def _requests(mock_index: MockIndex, method: str) -> list[object]:
+    """偽物が受けた端末の設定の API の要求の本文を、メソッドで絞って返却する。"""
+    return [
+        body
+        for received, path, body in mock_index.received
+        if received == method and path.startswith("/settings/sources")
+    ]
+
+
 def test_normal_when_sources_moved_to_project_index(
     tmp_path: Path,
     mock_index: MockIndex,
@@ -179,7 +189,7 @@ def test_normal_when_sources_moved_to_project_index(
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
-    """sources の行を project-index へ 1 行ずつ追加し、移せた行を除いて project_index を書き足す（正常系）。"""
+    """sources の行を project-index の今の行に加えて 1 回で保存し、dev-docs から除いて project_index を書き足す（正常系）。"""
     # 準備
     write_steps("settings", "2", [EXPORT_SOURCES])
     mock_index.rows.append({"id": "extra", "config": ["/repo/other/project-index.yaml"]})
@@ -187,7 +197,8 @@ def test_normal_when_sources_moved_to_project_index(
     # 実行
     code = main(["migrate", "--project-index", mock_index.address])
     out = capsys.readouterr().out
-    added = [body["source"] for method, _, body in mock_index.received if method == "POST"]
+    fetched = _requests(mock_index, "GET")
+    saved = _requests(mock_index, "PUT")
     mock_index.received.clear()
     mock_index.rows = []
     monkeypatch.setenv("PROJECT_INDEX_PORT", str(mock_index.port))
@@ -196,14 +207,109 @@ def test_normal_when_sources_moved_to_project_index(
     # 検証
     written = load_yaml(settings.read_text(encoding="utf-8"))
     assert code == 0
-    assert [body["id"] for body in added] == ["sample", "notes", "extra"]
-    assert added[0]["config"] == ["/repo/sample/dev-docs.yaml"]
+    assert len(fetched) == 1
+    assert len(saved) == 1
+    body = saved[0]
+    assert isinstance(body, dict)
+    assert [row.get("id") for row in body["sources"]] == ["extra", "sample", "notes"]
+    assert body["sources"][0]["config"] == ["/repo/other/project-index.yaml"]
+    assert body["expectedVersion"] == "1"
     assert written["sources"] == [{"id": "extra", "config": "/repo/extra/dev-docs.yaml"}]
     assert (written["project_index"], written["version"]) == (mock_index.address, "2")
     assert "extra" in out
     assert "移しませんでした" in out
     assert default_code == 0
-    assert len([1 for method, _, _ in mock_index.received if method == "POST"]) == 3
+    assert len(_requests(mock_index, "PUT")) == 1
+
+
+def test_normal_when_save_response_exceeds_timeout(
+    tmp_path: Path,
+    mock_index: MockIndex,
+    write_steps: Callable[..., None],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """保存の応答が制限時間を超えても、取得し直して保存を確認し、移し替えを終える（正常系）。"""
+    # 準備
+    write_steps("settings", "2", [EXPORT_SOURCES])
+    mock_index.rows.append({"id": "extra", "config": ["/repo/other/project-index.yaml"]})
+    mock_index.put_delay_sec = 3
+    monkeypatch.setattr(main_module, "PROJECT_INDEX_TIMEOUT_SEC", 1)
+    settings = _write_v1(tmp_path, monkeypatch, "settings.yaml")
+    # 実行
+    code = main(["migrate", "--project-index", mock_index.address])
+    # 検証
+    written = load_yaml(settings.read_text(encoding="utf-8"))
+    assert code == 0
+    assert written["sources"] == [{"id": "extra", "config": "/repo/extra/dev-docs.yaml"}]
+    assert (written["project_index"], written["version"]) == (mock_index.address, "2")
+    assert len(_requests(mock_index, "GET")) == 2
+    assert len(_requests(mock_index, "PUT")) == 1
+
+
+def test_error_when_project_index_rejects_save(
+    tmp_path: Path,
+    mock_index: MockIndex,
+    write_steps: Callable[..., None],
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """project-index が sources の保存を断ると、どちらの端末の設定も書き換えずに終了コード 4 で止める（異常系）。"""
+    # 準備
+    write_steps("settings", "2", [EXPORT_SOURCES])
+    mock_index.rows.append({"id": "extra", "config": ["/repo/other/project-index.yaml"]})
+    # 送信する行は extra・sample・broken の順で、broken は 3 行目
+    mock_index.queued[("PUT", "/settings/sources")] = [
+        (
+            400,
+            {
+                "detail": "引数が正しくありません: 1 件",
+                "errors": [{"path": "sources[2].enabled", "reason": "bool ではない"}],
+            },
+        )
+    ]
+    text = (
+        'version: "1"\nclone: /x\nsources:\n'
+        "  - id: sample\n    config: /repo/sample/dev-docs.yaml\n"
+        "  - id: broken\n    config: /repo/broken/dev-docs.yaml\n    enabled: maybe\n"
+    )
+    settings = tmp_path / "settings.yaml"
+    settings.write_text(text, encoding="utf-8")
+    monkeypatch.setenv("DEV_DOCS_CONFIG", str(settings))
+    # 実行
+    code = main(["migrate", "--project-index", mock_index.address])
+    # 検証
+    error = capsys.readouterr().err
+    assert code == 4
+    assert "400" in error
+    assert "broken: bool ではない" in error
+    assert mock_index.rows == [{"id": "extra", "config": ["/repo/other/project-index.yaml"]}]
+    assert settings.read_text(encoding="utf-8") == text
+    assert _backups(tmp_path) == []
+
+
+def test_error_when_save_unconfirmed_after_timeout(
+    tmp_path: Path,
+    mock_index: MockIndex,
+    write_steps: Callable[..., None],
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """保存の応答が制限時間を超え、取得し直しても移す行が無ければ、端末の設定を書き換えずに終了コード 7 で止める（異常系）。"""
+    # 準備
+    write_steps("settings", "2", [EXPORT_SOURCES])
+    mock_index.put_saves = False
+    mock_index.put_delay_sec = 3
+    monkeypatch.setattr(main_module, "PROJECT_INDEX_TIMEOUT_SEC", 1)
+    settings = _write_v1(tmp_path, monkeypatch, "settings.yaml")
+    # 実行
+    code = main(["migrate", "--project-index", mock_index.address])
+    # 検証
+    error = capsys.readouterr().err
+    assert code == 7
+    assert "後から反映される" in error
+    assert "再実行" in error
+    assert settings.read_text(encoding="utf-8") == SOURCES_V1
+    assert _backups(tmp_path) == []
 
 
 def test_error_when_project_index_unreachable(

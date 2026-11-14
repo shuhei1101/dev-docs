@@ -12,6 +12,7 @@ import pytest
 from dev_docs.integrations.project_index.client import ProjectIndexClient
 from dev_docs.shared.errors import (
     DocumentNotFoundError,
+    InvalidArgumentError,
     ProjectIndexRejectedError,
     ProjectIndexResponseError,
     ProjectIndexUnreachableError,
@@ -404,6 +405,7 @@ def test_settings_sources(
             _settings_row("a", "serving", outsideRead=False),
             _settings_row("b", "pending_reload"),
         ],
+        "version": "v1",
     }
     # 実行
     view = asyncio.run(make_client().settings_sources())
@@ -413,6 +415,7 @@ def test_settings_sources(
     assert "outsideRead" not in view.rows[0]
     assert [state.status for state in view.states] == ["serving", "pending_reload"]
     assert view.settings_path == "/pi/settings.yaml"
+    assert view.version == "v1"
 
 
 def test_put_settings_sources(
@@ -450,32 +453,52 @@ def test_put_settings_sources_when_rejected(
     assert [request.method for request in fake_index.requests] == ["PUT"]
 
 
-def test_add_settings_source(
+def test_save_settings_sources(
     fake_index: FakeIndex, make_client: Callable[..., ProjectIndexClient]
 ) -> None:
-    """行を追加する（正常系）。"""
+    """照合つきで保存する（正常系）。"""
     # 準備
-    row = {"id": "a", "config": ["/a/project-index.yaml"]}
+    rows = [
+        {"id": "a", "config": ["/a/project-index.yaml"]},
+        {"id": "b", "config": ["/b/project-index.yaml"]},
+    ]
     # 実行
-    result = asyncio.run(make_client().add_settings_source(row))
+    asyncio.run(make_client().save_settings_sources(rows, expected_version="v1"))
     # 検証
-    assert json.loads(fake_index.requests[-1].content) == {"source": row}
-    assert result.added is True
+    assert [request.method for request in fake_index.requests] == ["PUT"]
+    assert json.loads(fake_index.requests[0].content) == {
+        "sources": rows,
+        "expectedVersion": "v1",
+    }
 
 
-def test_add_settings_source_when_conflict(
+def test_save_settings_sources_when_conflict(
     fake_index: FakeIndex, make_client: Callable[..., ProjectIndexClient]
 ) -> None:
-    """同じ id の行がある（正常系）。"""
+    """内容のバージョンが古い（異常系）。"""
     # 準備
-    fake_index.responses[("POST", "/settings/sources")] = (
-        409,
-        {"result": "exists", "same": True, "sources": []},
+    fake_index.responses[("PUT", "/settings/sources")] = (409, {"current": "v2"})
+    # 実行
+    with pytest.raises(ProjectIndexResponseError) as caught:
+        asyncio.run(make_client().save_settings_sources([{"id": "a"}], expected_version="v1"))
+    # 検証
+    assert caught.value.status_code == 409
+
+
+def test_save_settings_sources_when_invalid(
+    fake_index: FakeIndex, make_client: Callable[..., ProjectIndexClient]
+) -> None:
+    """本文の検証に通らない（異常系）。"""
+    # 準備
+    fake_index.responses[("PUT", "/settings/sources")] = (
+        400,
+        {
+            "detail": "引数が正しくありません: 1 件",
+            "errors": [{"path": "sources[1].enabled", "reason": "bool ではない"}],
+        },
     )
     # 実行
-    result = asyncio.run(
-        make_client().add_settings_source({"id": "a", "config": ["/a/project-index.yaml"]})
-    )
+    with pytest.raises(InvalidArgumentError) as caught:
+        asyncio.run(make_client().save_settings_sources([{"id": "a"}], expected_version="v1"))
     # 検証
-    assert result.added is False
-    assert result.same is True
+    assert caught.value.violations[0].path == "sources[1].enabled"

@@ -394,15 +394,15 @@ functions:
       3. `record` の場合、手順を空にして適用し（移し替えの適用）、`{ファイル} の version を {current} にしました（バックアップ: {パス}）` を標準出力に出して 0 を返す
       4. それ以外で手順が空の場合、`移し替えは要りません（version {current}）` を標準出力に出して 0 を返す
       5. 手順を当て（移し替えの適用。`allow_destructive` は解析結果、`project_index` は解析結果か `http://127.0.0.1:{PROJECT_INDEX_PORT}`（無ければ 8786）、`now` は現在時刻）
-         - 手順に `export_sources` がある場合、`export_source` は「行を受け取り、1 回の `asyncio.run` の中で `project_index` のアドレスと `PROJECT_INDEX_TIMEOUT_SEC` で project-indexの呼び出しを作り、端末の設定の配信元の行の追加を呼んで、`aclose` してから結果を返す関数」にする（行ごとにイベントループと HTTP のクライアントを作って閉じ、ループをまたいで使い回さない）
-         - `--record` の場合と、手順に `export_sources` が無い場合は `export_source` を `None` にする、`{ファイル} を version {current} に移し替えました（バックアップ: {パス}）` を標準出力に出して 0 を返す。project-index に同じ id で内容の違う行があって移さなかった行は、`{id}: project-index に同じ id の別の行があるため移しませんでした` を 1 行ずつ出す
+         - 手順に `export_sources` がある場合、`sources_port` は、`fetch`・`save` をそれぞれ「1 回の `asyncio.run` の中で `project_index` のアドレスと `PROJECT_INDEX_TIMEOUT_SEC` で project-indexの呼び出しを作り、端末の設定の配信元の行の取得か照合つきの保存を呼んで、`aclose` してから結果を返す関数」にした `SourcesPort` にする（呼ぶごとにイベントループと HTTP のクライアントを作って閉じ、ループをまたいで使い回さない）
+         - `--record` の場合と、手順に `export_sources` が無い場合は `sources_port` を `None` にする。適用の後、`{ファイル} を version {current} に移し替えました（バックアップ: {パス}）` を標準出力に出して 0 を返す。project-index に同じ id で内容の違う行があって移さなかった行は、`{id}: project-index に同じ id の別の行があるため移しませんでした` を 1 行ずつ出す。ID を求められなかった行は、`{config}: 配信元の ID を求められないため移しませんでした` を 1 行ずつ出す
          - 手順 1〜5 で `MigrationError` の場合、本文を標準エラーに出し、例外の `exit_code` を返す
     exceptions:
       - name: なし（終了コード 2）
         condition: 対象が無い・読めない・`version` が無い（`MigrationConfigInvalidError`）
         message: '`{ファイル}: {理由}`'
       - name: なし（終了コード 4）
-        condition: 当てた結果が新しいスキーマに違反する・読んだ後に変わった（`MigrationFailedError`）
+        condition: 当てた結果が新しいスキーマに違反する・読んだ後に変わった・project-index が取得・保存を受け付けない（`MigrationFailedError`）
         message: '違反を `{キーのパス}: {理由}` で 1 行ずつ'
       - name: なし（終了コード 5）
         condition: 破壊的な手順があり `--allow-destructive` が無い（`DestructiveStepBlockedError`）
@@ -411,7 +411,7 @@ functions:
         condition: 対象の `version` が dev-docs の読めるバージョンより新しい（`ConfigNewerError`）
         message: '`{ファイル}: 設定のバージョン {対象} が dev-docs で読み込める {現在} より新しい。dev-docs を更新してください`'
       - name: なし（終了コード 7）
-        condition: '`sources` を移す先の project-index につながらない（`ProjectIndexUnreachableMigrationError`）'
+        condition: '`sources` を移す先の project-index につながらない・保存を確認できない（`ProjectIndexUnreachableMigrationError`）'
         message: '`project-index（{address}）に接続できませんでした。{reason}` と、project-index を起動してから実行し直す案内'
     unit_tests:
       - name: test_run_migrate_when_plan
@@ -462,9 +462,9 @@ functions:
       - name: test_run_migrate_when_sources_moved
         case: 正常
         summary: sources を project-index へ移す
-        condition: '`version: "1"` で `sources` に sample・notes の 2 行。project-index の偽物が sample を 201、notes を 409（内容が違う）で返す'
+        condition: '`version: "1"` で `sources` に sample・notes の 2 行。project-index の偽物が取得で notes（内容が違う）の 1 行を返却し、保存を 200 で受ける'
         mock: project-index（偽物の HTTP サーバー）
-        expected: '0 を返し、端末の設定の `sources` が notes の 1 行、`project_index` と `version: "2"` がある。標準出力に notes を移さなかった行'
+        expected: '0 を返し、偽物が保存で notes（project-index の行）と sample の 2 行を受ける。端末の設定の `sources` が notes の 1 行、`project_index` と `version: "2"` がある。標準出力に notes を移さなかった行'
       - name: test_run_migrate_when_project_index_unreachable
         case: 異常
         summary: sources を移す先につながらない
@@ -477,7 +477,7 @@ functions:
         summary: export_sources の無い手順では project-index を呼ばない
         condition: '`version: "1"` で `sources` を持たない端末の設定。`2` の手順に `add` だけ、`--project-index` が何も待ち受けていないアドレス'
         mock: 手順の置き場所・`SETTINGS_VERSION`（`2`）
-        expected: 0 を返し、project-index へ接続しない（`export_source` に `None` が渡る）
+        expected: 0 を返し、project-index へ接続しない（`sources_port` に `None` が渡る）
     callees:
       - MOD-155-119#functions[resolve_target]
       - MOD-155-119#functions[plan_migration]

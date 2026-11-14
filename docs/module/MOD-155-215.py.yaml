@@ -446,14 +446,14 @@ classes:
           description: 行と状態
         process: |-
           1. 呼び出しの共通の手順で `GET /settings/sources` を呼ぶ
-          2. `sources[]` の行ごとに、`id`・`config`・`enabled`・`scope` と `outsideRead` を `outside_read` にした辞書を `rows`、`id`・`status`・`errors`・`config`・`configVersion` を `SourceState` にしたものを `states` にし、`settingsPath` とともに `SettingsSourcesView` にして返す
+          2. `sources[]` の行ごとに、`id`・`config`・`enabled`・`scope` と `outsideRead` を `outside_read` にした辞書を `rows`、`id`・`status`・`errors`・`config`・`configVersion` を `SourceState` にしたものを `states` にし、`settingsPath`・`version` とともに `SettingsSourcesView` にして返す
         unit_tests:
           - name: test_settings_sources
             case: 正常
             summary: 行と状態
-            condition: '`sources[]` 2 行（1 行は `outsideRead: false`、もう 1 行は `status: pending_reload`）'
+            condition: '`sources[]` 2 行（1 行は `outsideRead: false`、もう 1 行は `status: pending_reload`）と `version: v1`'
             mock: '`httpx.MockTransport` で project-index の応答を返す'
-            expected: '`rows` が 2 件で 1 行目の `outside_read` が `False`、`states` が 2 件で 2 件目の `status` が `pending_reload`'
+            expected: '`rows` が 2 件で 1 行目の `outside_read` が `False`、`states` が 2 件で 2 件目の `status` が `pending_reload`、`version` が `v1`'
       - name: put_settings_sources
         title: 端末の設定の配信元の行の保存
         kind: メソッド
@@ -488,39 +488,56 @@ classes:
             mock: '`httpx.MockTransport` で project-index の応答を返す'
             expected: '`ProjectIndexRejectedError` で、`violations` が応答の 1 件。GET を呼ばない'
             exception: '422'
-      - name: add_settings_source
-        title: 端末の設定の配信元の行の追加
+      - name: save_settings_sources
+        title: 端末の設定の配信元の行の照合つきの保存
         kind: メソッド
-        summary: 配信元の行を 1 行追加する。同じ id の行があれば追加しない
+        summary: 内容のバージョンを照合して `sources[]` の全行を保存する。保存した後の行は取得しない
         scope: public
         is_async: true
         thread_safe: true
         args:
-          - name: row
+          - name: rows
             title: 行
-            type: dict[str, Any]
+            type: list[dict[str, Any]]
             required: true
             passing: positional
-            description: 追加する行
+            description: 保存する全行（キーは `id`・`config`・`enabled`・`scope`・`outsideRead` だけ）
+          - name: expected_version
+            title: 内容のバージョン
+            type: str | None
+            required: true
+            passing: keyword
+            description: 取得したときの内容のバージョン。`None` は照合しない
         returns:
-          type: AddSourceResult
-          description: 追加したか・内容が同じか
+          type: None
+          description: '-'
         process: |-
-          1. 呼び出しの共通の手順で `POST /settings/sources`（本文 `{source: row}`）を呼ぶ
-          2. 応答の `result` が `added` なら `added=True`、`exists` なら `added=False`・`same` を応答の `same` にして返す
+          1. 呼び出しの共通の手順で `PUT /settings/sources`（本文 `{sources: rows, expectedVersion: expected_version}`）を呼ぶ。400 は `InvalidArgumentError`、422 は `ProjectIndexRejectedError` を呼び出しの共通の手順が送出する
+          2. 応答が 409 の場合、`ProjectIndexResponseError`（`status_code` は 409、`summary` は本文の先頭 200 文字）を送出する
         unit_tests:
-          - name: test_add_settings_source
+          - name: test_save_settings_sources
             case: 正常
-            summary: 行を追加する
-            condition: '201 で `result: added`'
+            summary: 照合つきで保存する
+            condition: PUT が 200 で状態 2 件を返却する
             mock: '`httpx.MockTransport` で project-index の応答を返す'
-            expected: '要求の本文が `{source: row}`、`added` が `True`'
-          - name: test_add_settings_source_when_conflict
-            case: 正常
-            summary: 同じ id の行がある
-            condition: '409 で `result: exists`・`same: true`'
+            expected: 'PUT の本文が `{sources: rows, expectedVersion: v1}` で、GET を呼ばない'
+          - name: test_save_settings_sources_when_conflict
+            case: 異常
+            summary: 内容のバージョンが古い
+            condition: PUT が 409 を返却する
             mock: '`httpx.MockTransport` で project-index の応答を返す'
-            expected: '`added` が `False`、`same` が `True`'
+            expected: '`ProjectIndexResponseError` で、`status_code` が 409'
+            exception: 409（取得した後に端末の設定が変わった）
+          - name: test_save_settings_sources_when_invalid
+            case: 異常
+            summary: 本文の検証に通らない
+            condition: PUT が 400 で `errors[]` に `sources[1].enabled` を 1 件返却する
+            mock: '`httpx.MockTransport` で project-index の応答を返す'
+            expected: '`InvalidArgumentError` で、`violations[0].path` が `sources[1].enabled`'
+        exceptions:
+          - name: ProjectIndexResponseError
+            condition: 409（取得した後に端末の設定が変わった）
+            message: '`project-index が 409 を返しました: {summary}`'
       - name: aclose
         title: 閉じる
         kind: メソッド

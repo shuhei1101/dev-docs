@@ -4,6 +4,7 @@ DEVELOP=/mnt/c/Users/shuhe/repo/dev-docs/.claude/worktrees/develop
 SETTINGS="$HOME/.config/dev-docs/settings.yaml"
 PI_SETTINGS="$HOME/.config/project-index/settings.yaml"
 PI_BACKUP="$HOME/.config/project-index/settings.yaml.bak-pr183"
+BACKUP="$SETTINGS.bak-pr183"
 ADDRESS=http://127.0.0.1:8786
 
 # 前提確認
@@ -41,7 +42,9 @@ if [ "${1:-}" = "--dry-run" ]; then
   exit 0
 fi
 
-# 適用（退避 → 移し替え。dev-docs の端末の設定の控え（.bak-{時刻}）は dev-docs migrate が残す）
+# 適用（両方の端末の設定を退避してから移し替える。切り戻しはこの 2 つの控えだけを書き戻す）
+cp -p "$SETTINGS" "$BACKUP"
+echo "dev-docs の端末の設定の退避: changed"
 cp -p "$PI_SETTINGS" "$PI_BACKUP"
 echo "project-index の端末の設定の退避: changed"
 if ! out=$(cd "$DEVELOP" && uv run dev-docs migrate --project-index "$ADDRESS" 2>&1); then

@@ -10,13 +10,13 @@ import os
 import socket
 import sys
 import threading
-from collections.abc import Callable, Mapping
+from collections.abc import Mapping
 from contextlib import closing
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from dev_docs.features.convert.service import ConvertService
 from dev_docs.features.lifecycle.control import RestartControl
@@ -30,9 +30,12 @@ from dev_docs.integrations.project_index.client import (
     PROJECT_INDEX_TIMEOUT_SEC,
     ProjectIndexClient,
 )
-from dev_docs.integrations.project_index.types import AddSourceResult
+from dev_docs.integrations.project_index.types import SettingsSourcesView
 from dev_docs.server.mcp.result import mcp_prompt_ids
 from dev_docs.shared.errors import ProjectIndexUnreachableError
+
+if TYPE_CHECKING:
+    from dev_docs.features.migrate.types import SourcesPort
 
 EXIT_CONFIG_INVALID = 2
 EXIT_PORT_IN_USE = 3
@@ -233,20 +236,32 @@ def _project_index_address(given: str | None, env: Mapping[str, str]) -> str:
     return f"http://127.0.0.1:{port}"
 
 
-def _exporter(address: str) -> Callable[[Mapping[str, Any]], AddSourceResult]:
-    """行ごとに 1 回の `asyncio.run` で project-index の呼び出しを作って閉じ、行を追加する関数を返却する。"""
+def _sources_port(address: str) -> SourcesPort:
+    """取得・保存を呼ぶたびに 1 回の `asyncio.run` で project-index の呼び出しを作って閉じる API を返却する。"""
+    # 移し替えの型は起動の定数を参照するため、呼ぶときに読み込む
+    from dev_docs.features.migrate.types import SourcesPort
 
-    def export(row: Mapping[str, Any]) -> AddSourceResult:
-        async def add() -> AddSourceResult:
+    def fetch() -> SettingsSourcesView:
+        async def run() -> SettingsSourcesView:
             client = ProjectIndexClient(address, timeout=PROJECT_INDEX_TIMEOUT_SEC)
             try:
-                return await client.add_settings_source(row)
+                return await client.settings_sources()
             finally:
                 await client.aclose()
 
-        return asyncio.run(add())
+        return asyncio.run(run())
 
-    return export
+    def save(rows: list[dict[str, Any]], expected_version: str | None) -> None:
+        async def run() -> None:
+            client = ProjectIndexClient(address, timeout=PROJECT_INDEX_TIMEOUT_SEC)
+            try:
+                await client.save_settings_sources(rows, expected_version=expected_version)
+            finally:
+                await client.aclose()
+
+        asyncio.run(run())
+
+    return SourcesPort(fetch=fetch, save=save)
 
 
 def run_migrate(args: argparse.Namespace) -> int:
@@ -271,7 +286,7 @@ def run_migrate(args: argparse.Namespace) -> int:
                 data,
                 [],
                 allow_destructive=False,
-                export_source=None,
+                sources_port=None,
                 project_index=address,
                 now=datetime.now(UTC),
             )
@@ -288,7 +303,7 @@ def run_migrate(args: argparse.Namespace) -> int:
             data,
             steps,
             allow_destructive=args.allow_destructive,
-            export_source=_exporter(address) if exports else None,
+            sources_port=_sources_port(address) if exports else None,
             project_index=address,
             now=datetime.now(UTC),
         )
@@ -297,6 +312,8 @@ def run_migrate(args: argparse.Namespace) -> int:
         )
         for kept in outcome.kept:
             print(f"{kept}: project-index に同じ id の別の行があるため移しませんでした")
+        for config in outcome.unresolved:
+            print(f"{config}: 配信元の ID を求められないため移しませんでした")
         return 0
     except MigrationError as error:
         print(str(error), file=sys.stderr)

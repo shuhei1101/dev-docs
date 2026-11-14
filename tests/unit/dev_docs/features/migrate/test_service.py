@@ -1,13 +1,18 @@
 from __future__ import annotations
 
-from collections.abc import Callable, Mapping
+from collections.abc import Callable, Iterator
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
 import pytest
 
-from dev_docs.features.migrate.service import apply_migration, plan_migration, resolve_target
+from dev_docs.features.migrate.service import (
+    _export_sources,
+    apply_migration,
+    plan_migration,
+    resolve_target,
+)
 from dev_docs.features.migrate.types import (
     ConfigNewerError,
     DestructiveStepBlockedError,
@@ -16,9 +21,15 @@ from dev_docs.features.migrate.types import (
     MigrationStep,
     MigrationTarget,
     ProjectIndexUnreachableMigrationError,
+    SourcesPort,
 )
-from dev_docs.integrations.project_index.types import AddSourceResult
-from dev_docs.shared.errors import ProjectIndexResponseError, ProjectIndexUnreachableError
+from dev_docs.integrations.project_index.types import SettingsSourcesView, SourceState
+from dev_docs.shared.errors import (
+    InvalidArgumentError,
+    ProjectIndexResponseError,
+    ProjectIndexUnreachableError,
+    Violation,
+)
 from dev_docs.shared.yaml_io import load_roundtrip, load_yaml
 
 SETTINGS_V1 = 'version: "1"\nclone: /x\nlog_dir: /logs\n'
@@ -28,11 +39,12 @@ SOURCES_V1 = (
     "  - id: notes\n    config: /n/dev-docs.yaml\n"
     "  - id: extra\n    config: /e/dev-docs.yaml\n"
 )
+SAMPLE_V1 = 'version: "1"\nclone: /x\nsources:\n  - id: sample\n    config: /s/dev-docs.yaml\n'
 NOW = datetime(2026, 10, 29, 12, 0, 0, tzinfo=UTC)
 BACKUP_NAME = "settings.yaml.bak-20261029T120000"
 PROJECT_INDEX = "http://127.0.0.1:8786"
 # 配信元の行を書き出さない移し替えの引数
-OPTIONS: dict[str, Any] = {"export_source": None, "project_index": PROJECT_INDEX, "now": NOW}
+OPTIONS: dict[str, Any] = {"sources_port": None, "project_index": PROJECT_INDEX, "now": NOW}
 
 
 def _step(op: str, path: str, **overrides: Any) -> MigrationStep:
@@ -191,100 +203,304 @@ def _export_step() -> MigrationStep:
     return _step("export_sources", "sources")
 
 
-def _exporter(
-    results: dict[str, AddSourceResult | Exception], sent: list[dict[str, Any]]
-) -> Callable[[Mapping[str, Any]], AddSourceResult]:
-    """行の id ごとに決めた結果を返すか例外を送る、配信元の行の書き出しの偽物を作る。"""
+def _pi_row(row_id: str | None, config: str, **extra: Any) -> dict[str, Any]:
+    """project-index の端末の設定の取得の行（`SettingsSourcesView.rows` の 1 件）を作る。"""
+    return {
+        "id": row_id,
+        "config": [config],
+        "enabled": True,
+        "scope": {"read": [], "write": None},
+        "outside_read": True,
+        **extra,
+    }
 
-    def _export(row: Mapping[str, Any]) -> AddSourceResult:
-        sent.append(dict(row))
-        result = results[str(row["id"])]
-        if isinstance(result, Exception):
-            raise result
-        return result
 
-    return _export
+def _view(
+    rows: list[dict[str, Any]], *, version: str = "v1", status: str = "serving"
+) -> SettingsSourcesView:
+    """取得の応答を作る。状態の `id` は行の `id` と同じにする。"""
+    return SettingsSourcesView(
+        settings_path="/pi/settings.yaml",
+        rows=rows,
+        states=[SourceState(id=row["id"], status=status, config=row["config"]) for row in rows],  # type: ignore[arg-type]
+        version=version,
+    )
+
+
+class FakePort:
+    """取得の応答を順に返却し、保存を記録するか例外を送出する、移す先の端末の設定の API の偽物。"""
+
+    def __init__(
+        self,
+        views: list[SettingsSourcesView | Exception],
+        *,
+        save_error: Exception | None = None,
+    ) -> None:
+        self._views: Iterator[SettingsSourcesView | Exception] = iter(views)
+        self._save_error = save_error
+        self.fetched = 0
+        self.saved: list[tuple[list[dict[str, Any]], str | None]] = []
+
+    def fetch(self) -> SettingsSourcesView:
+        self.fetched += 1
+        view = next(self._views)
+        if isinstance(view, Exception):
+            raise view
+        return view
+
+    def save(self, rows: list[dict[str, Any]], expected_version: str | None) -> None:
+        self.saved.append((rows, expected_version))
+        if self._save_error is not None:
+            raise self._save_error
+
+    def port(self) -> SourcesPort:
+        return SourcesPort(fetch=self.fetch, save=self.save)
+
+
+UNREACHABLE = ProjectIndexUnreachableError(
+    address=PROJECT_INDEX, reason="45 秒以内に応答がありませんでした"
+)
+SEND_KEYS = {"id", "config", "enabled", "scope", "outsideRead"}
+
+
+def _data(text: str) -> Any:
+    """往復編集で読んだ端末の設定を返却する。"""
+    return load_roundtrip(text)
 
 
 def test_apply_migration_when_export_sources(tmp_path: Path) -> None:
-    """移せた行を消し、移せなかった行を残す（正常系）。"""
+    """sources を project-index へ移す（正常系）。"""
     # 準備
     path = tmp_path / "settings.yaml"
-    path.write_text(SOURCES_V1, encoding="utf-8")
-    data = load_roundtrip(SOURCES_V1)
-    sent: list[dict[str, Any]] = []
-    export = _exporter(
-        {
-            "sample": AddSourceResult(added=True),
-            "notes": AddSourceResult(added=False, same=True),
-            "extra": AddSourceResult(added=False, same=False),
-        },
-        sent,
-    )
+    path.write_text(SAMPLE_V1, encoding="utf-8")
+    fake = FakePort([_view([])])
     # 実行
     outcome = apply_migration(
         _target(path),
-        data,
+        load_roundtrip(SAMPLE_V1),
         [_export_step()],
         allow_destructive=False,
-        export_source=export,
+        sources_port=fake.port(),
         project_index=PROJECT_INDEX,
         now=NOW,
     )
     # 検証
     written = load_yaml(path.read_text(encoding="utf-8"))
-    assert written["sources"] == [{"id": "extra", "config": "/e/dev-docs.yaml"}]
+    assert len(fake.saved) == 1
+    assert "sources" not in written
     assert (written["project_index"], written["version"]) == (PROJECT_INDEX, "2")
-    assert outcome.kept == ["extra"]
-    assert sent[0]["config"] == ["/s/dev-docs.yaml"]
-    assert outcome.backup.read_text(encoding="utf-8") == SOURCES_V1
+    assert outcome.backup.read_text(encoding="utf-8") == SAMPLE_V1
 
 
 def test_apply_migration_when_export_unreachable(tmp_path: Path) -> None:
-    """project-index につながらない（異常系）。"""
+    """移す先につながらない（異常系）。"""
     # 準備
     path = tmp_path / "settings.yaml"
     path.write_text(SOURCES_V1, encoding="utf-8")
-    export = _exporter(
-        {
-            "sample": AddSourceResult(added=True),
-            "notes": ProjectIndexUnreachableError(address=PROJECT_INDEX, reason="拒否"),
-        },
-        [],
-    )
-    # 実行・検証
+    fake = FakePort([UNREACHABLE])
+    # 実行
     with pytest.raises(ProjectIndexUnreachableMigrationError):
         apply_migration(
             _target(path),
             load_roundtrip(SOURCES_V1),
             [_export_step()],
             allow_destructive=False,
-            export_source=export,
+            sources_port=fake.port(),
             project_index=PROJECT_INDEX,
             now=NOW,
         )
+    # 検証
     assert path.read_text(encoding="utf-8") == SOURCES_V1
     assert list(tmp_path.glob("*.bak-*")) == []
 
 
 def test_apply_migration_when_export_unexpected_status(tmp_path: Path) -> None:
-    """project-index が予期しないステータスを返す（異常系）。"""
+    """project-index の想定しない応答（異常系）。"""
     # 準備
     path = tmp_path / "settings.yaml"
     path.write_text(SOURCES_V1, encoding="utf-8")
     error = ProjectIndexResponseError(
         message="project-index が 500 を返しました: boom", status_code=500, summary="boom"
     )
-    export = _exporter({"sample": error}, [])
-    # 実行・検証
+    fake = FakePort([_view([])], save_error=error)
+    # 実行
     with pytest.raises(MigrationFailedError, match="500"):
         apply_migration(
             _target(path),
             load_roundtrip(SOURCES_V1),
             [_export_step()],
             allow_destructive=False,
-            export_source=export,
+            sources_port=fake.port(),
             project_index=PROJECT_INDEX,
             now=NOW,
         )
+    # 検証
     assert path.read_text(encoding="utf-8") == SOURCES_V1
+
+
+def test_export_sources() -> None:
+    """今の行に加えて 1 回で保存する（正常系）。"""
+    # 準備
+    data = _data(SOURCES_V1)
+    fake = FakePort(
+        [
+            _view(
+                [
+                    _pi_row("notes", "/n/dev-docs.yaml"),
+                    _pi_row("extra", "/e/dev-docs.yaml", enabled=False),
+                ]
+            )
+        ]
+    )
+    # 実行
+    kept, unresolved = _export_sources(data, fake.port(), PROJECT_INDEX)
+    # 検証
+    assert len(fake.saved) == 1
+    rows, version = fake.saved[0]
+    assert [row["id"] for row in rows] == ["notes", "extra", "sample"]
+    assert all(set(row) <= SEND_KEYS for row in rows)
+    assert version == "v1"
+    assert [row["id"] for row in data["sources"]] == ["extra"]
+    assert data["project_index"] == PROJECT_INDEX
+    assert (kept, unresolved) == (["extra"], [])
+
+
+def test_export_sources_when_id_omitted(tmp_path: Path) -> None:
+    """`id` を省いた行を `name` で照らす（正常系）。"""
+    # 準備
+    config = tmp_path / "dev-docs.yaml"
+    config.write_text("name: notes\n", encoding="utf-8")
+    data = _data(f'version: "1"\nclone: /x\nsources:\n  - config: {config}\n')
+    fake = FakePort([_view([_pi_row("notes", str(config))])])
+    # 実行
+    _export_sources(data, fake.port(), PROJECT_INDEX)
+    # 検証
+    assert fake.saved == []
+    assert "sources" not in data
+
+
+def test_export_sources_when_name_unresolved(tmp_path: Path) -> None:
+    """ID を求められない行を残す（正常系）。"""
+    # 準備
+    missing = tmp_path / "missing.yaml"
+    data = _data(f'version: "1"\nclone: /x\nsources:\n  - config: {missing}\n')
+    fake = FakePort([_view([])])
+    # 実行
+    kept, unresolved = _export_sources(data, fake.port(), PROJECT_INDEX)
+    # 検証
+    assert fake.saved == []
+    assert [str(row["config"]) for row in data["sources"]] == [str(missing)]
+    assert (kept, unresolved) == ([], [str(missing)])
+
+
+def test_export_sources_when_save_timeout() -> None:
+    """保存を打ち切っても取得し直しで確認する（正常系）。"""
+    # 準備
+    data = _data(SAMPLE_V1)
+    fake = FakePort(
+        [_view([]), _view([_pi_row("sample", "/s/dev-docs.yaml")], status="pending_reload")],
+        save_error=UNREACHABLE,
+    )
+    # 実行
+    _export_sources(data, fake.port(), PROJECT_INDEX)
+    # 検証
+    assert fake.fetched == 2
+    assert "sources" not in data
+
+
+def test_export_sources_when_save_timeout_with_id_omitted(tmp_path: Path) -> None:
+    """読み直しの途中でも `id` を省いた行の保存を確認する（正常系）。"""
+    # 準備
+    config = tmp_path / "dev-docs.yaml"
+    config.write_text("name: notes\n", encoding="utf-8")
+    data = _data(f'version: "1"\nclone: /x\nsources:\n  - config: {config}\n')
+    fake = FakePort(
+        [_view([]), _view([_pi_row(None, str(config))], status="pending_reload")],
+        save_error=UNREACHABLE,
+    )
+    # 実行
+    _export_sources(data, fake.port(), PROJECT_INDEX)
+    # 検証
+    assert "sources" not in data
+
+
+def test_export_sources_when_save_unconfirmed() -> None:
+    """取得し直しても保存を確認できない（異常系）。"""
+    # 準備
+    data = _data(SAMPLE_V1)
+    fake = FakePort([_view([]), _view([])], save_error=UNREACHABLE)
+    # 実行
+    with pytest.raises(ProjectIndexUnreachableMigrationError) as caught:
+        _export_sources(data, fake.port(), PROJECT_INDEX)
+    # 検証
+    assert caught.value.unconfirmed is True
+
+
+def test_export_sources_when_fetch_unreachable() -> None:
+    """最初の取得がつながらない（異常系）。"""
+    # 準備
+    data = _data(SAMPLE_V1)
+    fake = FakePort([UNREACHABLE])
+    # 実行
+    with pytest.raises(ProjectIndexUnreachableMigrationError) as caught:
+        _export_sources(data, fake.port(), PROJECT_INDEX)
+    # 検証
+    assert caught.value.unconfirmed is False
+    assert fake.saved == []
+
+
+def test_export_sources_when_rejected() -> None:
+    """受け付けなかった行を ID で出す（異常系）。"""
+    # 準備
+    text = (
+        'version: "1"\nclone: /x\nsources:\n'
+        "  - id: sample\n    config: /s/dev-docs.yaml\n"
+        "  - id: broken\n    config: /b/dev-docs.yaml\n    enabled: maybe\n"
+    )
+    data = _data(text)
+    error = InvalidArgumentError(
+        message="引数が正しくありません: 1 件",
+        violations=[Violation(path="sources[2].enabled", rule="bool ではない")],
+    )
+    fake = FakePort([_view([_pi_row("extra", "/e/dev-docs.yaml")])], save_error=error)
+    # 実行
+    with pytest.raises(MigrationFailedError, match=r"(?m)^broken: "):
+        _export_sources(data, fake.port(), PROJECT_INDEX)
+    # 検証
+    assert [row["id"] for row in data["sources"]] == ["sample", "broken"]
+
+
+def test_export_sources_when_conflict() -> None:
+    """取得した後に project-index の端末の設定が変わった（異常系）。"""
+    # 準備
+    data = _data(SAMPLE_V1)
+    error = ProjectIndexResponseError(
+        message="project-index が 409 を返しました: conflict", status_code=409, summary="conflict"
+    )
+    fake = FakePort([_view([])], save_error=error)
+    # 実行
+    with pytest.raises(MigrationFailedError, match="409") as caught:
+        _export_sources(data, fake.port(), PROJECT_INDEX)
+    # 検証
+    assert "やり直" in str(caught.value)
+
+
+def test_export_sources_when_disabled_id_omitted(tmp_path: Path) -> None:
+    """配信していない `id` 省略の行を `name` で照らす（正常系）。"""
+    # 準備
+    config = tmp_path / "dev-docs.yaml"
+    config.write_text("name: notes\n", encoding="utf-8")
+    data = _data(
+        f'version: "1"\nclone: /x\nsources:\n  - config: {config}\n'
+        "  - id: sample\n    config: /s/dev-docs.yaml\n"
+    )
+    fake = FakePort([_view([_pi_row("sources[0]", str(config), enabled=False)], status="disabled")])
+    # 実行
+    kept, _ = _export_sources(data, fake.port(), PROJECT_INDEX)
+    # 検証
+    assert len(fake.saved) == 1
+    rows, _ = fake.saved[0]
+    assert "id" not in rows[0]
+    assert rows[1]["id"] == "sample"
+    assert kept == ["notes"]
+    assert [str(row["config"]) for row in data["sources"]] == [str(config)]

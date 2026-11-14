@@ -177,14 +177,8 @@ class SettingsSourcesView:
     settings_path: str
     rows: list[dict[str, Any]]
     states: list[SourceState]
-
-
-@dataclass(frozen=True, slots=True, kw_only=True)
-class AddSourceResult:
-    """`POST /settings/sources` の結果。"""
-
-    added: bool
-    same: bool = False
+    # 照合つきの保存の `expected_version` に指定する内容のバージョン
+    version: str | None = None
 
 
 def parse_datetime(value: Any) -> datetime | None:
