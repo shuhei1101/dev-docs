@@ -1,0 +1,47 @@
+$ uv run ruff check .
+All checks passed!
+exit=0
+$ uv run ruff format --check .
+149 files already formatted
+exit=0
+$ uv run mypy .
+tests/unit/dev_docs/integrations/project_index/test_client.py:13: error: Module
+"dev_docs.shared.errors" has no attribute "SettingsVersionConflictError" 
+[attr-defined]
+    from dev_docs.shared.errors import (
+    ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+tests/unit/dev_docs/integrations/project_index/test_client.py:465: error:
+Unexpected keyword argument "expected_version" for "put_settings_sources" of
+"ProjectIndexClient"  [call-arg]
+        view = asyncio.run(make_client().put_settings_sources(rows, expect...
+                           ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~...
+tests/unit/dev_docs/integrations/project_index/test_client.py:465: note: "put_settings_sources" defined in "dev_docs.integrations.project_index.client"
+tests/unit/dev_docs/integrations/project_index/test_client.py:479: error:
+Unexpected keyword argument "expected_version" for "put_settings_sources" of
+"ProjectIndexClient"  [call-arg]
+            asyncio.run(make_client().put_settings_sources([{"id": "a"}], ...
+                        ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~...
+tests/unit/dev_docs/integrations/project_index/test_client.py:479: note: "put_settings_sources" defined in "dev_docs.integrations.project_index.client"
+tests/unit/dev_docs/features/settings/test_service.py:13: error: Module
+"dev_docs.shared.errors" has no attribute "SettingsVersionConflictError" 
+[attr-defined]
+    from dev_docs.shared.errors import ProjectIndexRejectedError, Settings...
+    ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~...
+tests/unit/dev_docs/features/settings/test_service.py:25: error: Unexpected
+keyword argument "expected_version" for "save_sources"  [call-arg]
+        view = asyncio.run(save_sources(make_client(), entries, expected_v...
+                           ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~...
+tests/unit/dev_docs/features/settings/test_service.py:25: note: "save_sources" defined in "dev_docs.features.settings.service"
+tests/unit/dev_docs/features/settings/test_service.py:145: error: Unexpected
+keyword argument "expected_version" for "save_sources"  [call-arg]
+            asyncio.run(save_sources(make_client(), [entry], expected_vers...
+                        ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~...
+tests/unit/dev_docs/features/settings/test_service.py:145: note: "save_sources" defined in "dev_docs.features.settings.service"
+Found 6 errors in 2 files (checked 146 source files)
+exit=1
+$ npm run -s lint
+exit=0
+$ npm run -s typecheck
+tests/unit/frontend/src/features/settings/settings/queries.test.tsx(56,45): error TS2554: Expected 1 arguments, but got 2.
+tests/unit/frontend/src/features/settings/settings/queries.test.tsx(57,45): error TS2554: Expected 1 arguments, but got 2.
+exit=1

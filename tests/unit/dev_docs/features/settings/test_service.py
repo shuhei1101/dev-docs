@@ -139,5 +139,7 @@ def test_save_sources_when_version_conflict(
     fake_index.responses[("PUT", "/settings/sources")] = (409, {"current": "v2", "detail": ""})
     entry = SourceEntry.model_validate({"id": "a", "config": ["/a"]})
     # 実行・検証
-    with pytest.raises(SettingsVersionConflictError, match="端末の設定は他の書き換えで変わっています"):
+    with pytest.raises(
+        SettingsVersionConflictError, match="端末の設定は他の書き換えで変わっています"
+    ):
         asyncio.run(save_sources(make_client(), [entry], expected_version="v1"))

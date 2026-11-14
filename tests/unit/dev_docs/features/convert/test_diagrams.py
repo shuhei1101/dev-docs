@@ -94,7 +94,10 @@ def test_render_diagram_when_hint_and_tip() -> None:
 def test_render_diagram_when_unknown_line() -> None:
     """`LINE_KINDS` に無い線の種類（正常系）。"""
     # 準備
-    value = {"nodes": [{"id": "a"}, {"id": "b"}], "edges": [{"from": "a", "to": "b", "line": "dotted"}]}
+    value = {
+        "nodes": [{"id": "a"}, {"id": "b"}],
+        "edges": [{"from": "a", "to": "b", "line": "dotted"}],
+    }
     # 実行
     result = render_diagram(value, "flowchart", HEAD)
     # 検証
@@ -166,10 +169,9 @@ def test_render_diagram_when_state_representative() -> None:
     # 準備
     value = {
         "states": [{"name": "編集中"}, {"name": "中断"}],
-        "representative": "編集中",
         "transitions": [
-            {"from": "全状態", "to": "中断"},
-            {"from": "中断", "to": "元の状態"},
+            {"from": "全状態", "to": "中断", "representative": "編集中"},
+            {"from": "中断", "to": "元の状態", "representative": "編集中"},
         ],
     }
     # 実行
