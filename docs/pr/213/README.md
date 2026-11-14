@@ -1,0 +1,1 @@
+# 外部ライブラリ『mdmark』の使用箇所に scripts/build_pages.py と mdmark build のコマンドを追加する
