@@ -9,13 +9,19 @@ constants:
     container: features/docs/doc-view/hooks/use-mdmark.ts
     usecase: 文書を読む
     summary: jsDelivr の GitHub の、mdmark の develop に打ったタグの URL（`mount` を公開する入口）。タグで中身を固定し、上げるときはタグを書き換える。integrity は付けない
-    value: '"https://cdn.jsdelivr.net/gh/shuhei1101/mdmark@v0.11.0/dist/index.js"'
+    value: '"https://cdn.jsdelivr.net/gh/shuhei1101/mdmark@v0.13.0/dist/index.js"'
   - name: MDMARK_CSS_URL
     title: mdmark の CSS の読み込み先
     container: features/docs/doc-view/hooks/use-mdmark.ts
     usecase: 文書を読む
     summary: '`MDMARK_URL` と同じタグの `dist/index.css`'
-    value: '"https://cdn.jsdelivr.net/gh/shuhei1101/mdmark@v0.11.0/dist/index.css"'
+    value: '"https://cdn.jsdelivr.net/gh/shuhei1101/mdmark@v0.13.0/dist/index.css"'
+  - name: MDMARK_MAP
+    title: map の種類の設定
+    container: features/docs/doc-view/hooks/use-mdmark.ts
+    usecase: 文書を読む
+    summary: 変換が出す map の範囲の Mermaid のクラス（`external`・`script`・`data`・`start`・`question`・`action`・`result`）の `map.kinds` と、線の名前（`read`・`write`・`reply`・`loop`）の `map.lines`。値は同じフォルダの `mdmark-map.json` から読み、文書の取得の結合テストの mdmark の点検も同じファイルを使う
+    value: '`mdmark-map.json` の `kinds`・`lines`'
 functions:
   - name: useMdmark
     title: mdmark の描画
@@ -35,7 +41,7 @@ functions:
         type: MdmarkOptions
         required: true
         passing: positional
-        description: '`markdown`・`docId`・`aliases`（文書の取得の `aliases`）・`commentStore`（`load({docId})`・`save({docId, comment})`・`update({docId, id, body})`・`remove({docId, id})` を Promise で返す）・`config`（`features.comments` を `true`。mdmark の既定はオフ）・`baseMarkdown`（比較元の本文。`null` は強調なし）・`onColumnsChange`（`{tableIndex, hidden}` を受ける）'
+        description: '`markdown`・`docId`・`aliases`（文書の取得の `aliases`）・`commentStore`（`load({docId})`・`save({docId, comment})`・`update({docId, id, body})`・`remove({docId, id})` を Promise で返す）・`config`（`features.comments` を `true`。mdmark の既定はオフ。`map` は `MDMARK_MAP` を入れる）・`baseMarkdown`（比較元の本文。`null` は強調なし）・`onColumnsChange`（`{tableIndex, hidden}` を受ける）'
     returns:
       type: '{handle: MdmarkHandle | null; ready: boolean; error: unknown; docId: string | null}'
       description: '`mount` の戻り値（`update(markdown, {baseMarkdown})`・`destroy()`・`reloadComments()`・`focusComment(id)`）と読み込みの状態。`docId` は `handle` が描いている文書で、`ready` は今の `docId` を描き終えたときだけ `true`'
@@ -87,6 +93,12 @@ functions:
         condition: '`mount` の後に `onColumnsChange` と `commentStore.update` を別の関数に替え、mdmark から呼ぶ'
         mock: mdmark（`mount` の引数を記録する偽物）
         expected: 替えた後の関数が呼ばれ、`mount` は 1 回のまま
+      - name: test_use_mdmark_when_map_config
+        case: 正常
+        summary: map の種類の設定を渡す
+        condition: 描く
+        mock: mdmark（`mount` の引数を記録する偽物）
+        expected: '`mount` の `config.map.kinds` に `question` が、`config.map.lines` に `read` がある'
   - name: toMdmarkIndex
     title: mdmark の索引への読み替え
     kind: 関数
