@@ -97,4 +97,3 @@ def test_is_markdown_body(
     result = is_markdown_body(document)
     # 検証
     assert result is expected
-
