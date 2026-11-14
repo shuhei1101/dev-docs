@@ -166,26 +166,27 @@ export const DeleteConflict: Story = {
   },
 };
 
+// 保存の 409 の後の取得し直しでは、private-notes がほかのプロセスに削除された一覧を返す
+const removedAfterConflict = () => {
+  let rejected = false;
+  return [
+    http.get(SETTINGS, () =>
+      HttpResponse.json({
+        settingsPath: "/home/u/.config/project-index/settings.yaml",
+        sources: rejected
+          ? sourcesWithOutsideReadDisabled.slice(0, 1)
+          : sourcesWithOutsideReadDisabled,
+      }),
+    ),
+    http.put(SETTINGS, () => {
+      rejected = true;
+      return conflict();
+    }),
+  ];
+};
+
 export const SaveAfterSourceRemoved: Story = {
-  parameters: {
-    msw: [
-      (() => {
-        // 1 回目は 2 行、409 の後の取得し直しでは private-notes がほかのプロセスに削除された一覧を返す
-        let calls = 0;
-        return http.get(SETTINGS, () => {
-          calls += 1;
-          return HttpResponse.json({
-            settingsPath: "/home/u/.config/project-index/settings.yaml",
-            sources:
-              calls === 1
-                ? sourcesWithOutsideReadDisabled
-                : sourcesWithOutsideReadDisabled.slice(0, 1),
-          });
-        });
-      })(),
-      http.put(SETTINGS, conflict),
-    ],
-  },
+  parameters: { msw: removedAfterConflict() },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await userEvent.click(

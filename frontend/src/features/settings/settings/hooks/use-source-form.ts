@@ -31,16 +31,21 @@ type Options = {
 /** 配信元のダイアログのフォームの状態と保存 */
 export const useSourceForm = ({ sources, index, onSaved }: Options) => {
   // 一覧を取得し直して行の位置がずれても同じ配信元を指すよう、開いたときの行を値で持つ
-  const [targetKey] = useState(() =>
-    index === null ? null : sourceKey(sources[index]),
-  );
+  const [initial] = useState(() => {
+    const source = index === null ? null : sources[index];
+    return {
+      key: source === null ? null : sourceKey(source),
+      values: toFormValues(source),
+    };
+  });
+  const targetKey = initial.key;
   const position = targetKey === null ? null : findSource(sources, targetKey);
   const otherIds = sources
     .filter((_, row) => row !== position)
     .flatMap((source) => (source.id ? [source.id] : []));
   const form = useForm<SourceFormValues>({
     resolver: zodResolver(sourceFormSchema(otherIds)),
-    defaultValues: toFormValues(index === null ? null : sources[index]),
+    defaultValues: initial.values,
     mode: "onSubmit",
     reValidateMode: "onChange",
   });
