@@ -1,0 +1,40 @@
+use_cases:
+  - kind: single
+    scenario: docs/scenario/SC-155-7.yaml
+    impact: changed
+    detail: 2 つのリビジョンを比べているとき、右側の目次で変わったセクションにマーカーが出る。手で記載した図のノードから参照先の文書へ移れる
+    depends_on: []
+  - kind: single
+    scenario: docs/scenario/SC-155-3.yaml
+    impact: run_only
+    detail: 設定の移し替えで、配信元の行が project-index の端末の設定に保存される。シナリオの記述は変わらない
+    depends_on: []
+  - kind: single
+    scenario: docs/scenario/SC-155-2.yaml
+    impact: run_only
+    detail: 結合テストで使用する mdmark を上げた場合も、入れて起動できる。シナリオの記述は変わらない
+    depends_on: []
+docs:
+  - page: docs/external-api/API-155-1.yaml
+    new: false
+    change: PUT /settings/sources の行のキーを本物の project-index の outside_read に合わせ、GET の応答の outsideRead と区別する
+    status: done
+    updated_by: planner
+    updated_at: '2026-11-14T12:24:34.967347+00:00'
+  - page: docs/library/LIB-155-9.yaml
+    new: false
+    change: 画面と点検の CLI の mdmark を mdmark#550・mdmark#570 を含むタグへ上げ、右側の目次の変更のマーカーと Mermaid の `click` のノードのリンクを記載する。タグが打たれた後の実装で修正する
+    status: todo
+  - page: docs/guide/画面で読む.md
+    new: false
+    change: '`## 差分を見る` の手順 3 に、右側の目次の変わったセクションに変更のマーカーが付くことを加える。文書の画面の操作の表に、手で記載した図のノードを押して `click` の参照先の文書へ移る行を加える'
+    status: done
+    updated_by: planner
+    updated_at: '2026-11-14T12:24:34.967347+00:00'
+scope_out:
+  - item: mdmark のフロー図の部品にする Mermaid の図（flowchart・sequenceDiagram）の click の参照を、ノードのリンクへ変換する
+    reason: '#98 のスコープ'
+    plan: '#98'
+  - item: '#183 の反映作業のフォルダ（docs/pr/183/反映作業/）のスクリプトの修正'
+    reason: '#183 の反映作業はこの作業 PR の反映作業へ移り、#183 の作業としては実行しない'
+    plan: none

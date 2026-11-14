@@ -343,6 +343,12 @@ functions:
         required: true
         passing: positional
         description: mdmark の図の部品の定義の `title`・`scope`・`updated`
+      - name: link_clicks
+        title: click の参照の書き換え
+        type: Callable[[str], str]
+        required: true
+        passing: positional
+        description: 読み取れないときに、Mermaid のコードの `click` の `id:` の参照をリンク先へ書き換える関数
     returns:
       type: str
       description: '`<!-- flow -->`・`<!-- sequence -->` で囲んだ定義の JSON のコードブロックか、元の ```mermaid のコードブロック'
@@ -350,7 +356,7 @@ functions:
       1. Mermaid の読み取りにかける
       2. フロー図の中間データは、フロー図の配置にかけて `<!-- flow -->` で囲む
       3. シーケンス図の中間データは、`participants`（`id`・`kind`・`name`）と `steps`（`from`・`to`・`label`、返す線は `reply: true`）の定義にして `<!-- sequence -->` で囲む
-      4. `None` なら、`code` を ```mermaid のコードブロックにして返す
+      4. `None` なら、`code` を `link_clicks` にかけて、```mermaid のコードブロックにして返す
     unit_tests:
       - name: test_render_mermaid
         case: 正常
@@ -370,3 +376,15 @@ functions:
         condition: '`Note over A: 補足` の行を含む `sequenceDiagram`'
         mock: なし
         expected: '元のコードの全ての行を持つ ```mermaid のコードブロック'
+      - name: test_render_mermaid_when_unreadable_with_click
+        case: 正常
+        summary: 読み取れない図の click
+        condition: '`classDiagram` と `click A href "id:a"` のコード、`link_clicks` が `id:a` を `a.yaml` に置き換える'
+        mock: なし
+        expected: '```mermaid のコードブロックで、`click A href "a.yaml"` の行を持つ'
+      - name: test_render_mermaid_when_readable
+        case: 正常
+        summary: 読み取れる図は click の参照の書き換えにかけない
+        condition: '`flowchart TD`・`a --> b` のコード、`link_clicks` が呼ばれた回数を数える'
+        mock: なし
+        expected: '`<!-- flow -->` で囲んだ JSON で、`link_clicks` が呼ばれていない（`click` の行を持つフローチャートは Mermaid の読み取りが `None` を返し、読み取れない図として書き換える）'

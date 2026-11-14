@@ -22,6 +22,11 @@ def _definition(block: str, marker: str) -> dict[str, Any]:
     return definition
 
 
+def _unchanged(code: str) -> str:
+    """click の参照を書き換えない `link_clicks`。"""
+    return code
+
+
 def _node(definition: dict[str, Any], node_id: str) -> dict[str, Any]:
     """フロー図の定義から `id` のノードを取り出す。"""
     node: dict[str, Any] = next(n for n in definition["nodes"] if n["id"] == node_id)
@@ -424,7 +429,7 @@ def test_render_mermaid() -> None:
     # 準備
     code = "sequenceDiagram\n  participant A as 画面\n  A->>B: 読む"
     # 実行
-    result = render_mermaid(code, HEAD)
+    result = render_mermaid(code, HEAD, _unchanged)
     # 検証
     definition = _definition(result, "sequence")
     assert [p["name"] for p in definition["participants"]] == ["画面", "B"]
@@ -434,7 +439,7 @@ def test_render_mermaid() -> None:
 def test_render_mermaid_when_flowchart() -> None:
     """フローチャート（正常系）。"""
     # 実行
-    result = render_mermaid("flowchart TD\n  a --> b", HEAD)
+    result = render_mermaid("flowchart TD\n  a --> b", HEAD, _unchanged)
     # 検証
     assert len(_definition(result, "flow")["nodes"]) == 2
 
@@ -444,6 +449,34 @@ def test_render_mermaid_when_unreadable() -> None:
     # 準備
     code = "sequenceDiagram\n  A->>B: 読む\n  Note over A: 補足"
     # 実行
-    result = render_mermaid(code, HEAD)
+    result = render_mermaid(code, HEAD, _unchanged)
     # 検証
     assert result == f"```mermaid\n{code}\n```"
+
+
+def test_render_mermaid_when_unreadable_with_click() -> None:
+    """読み取れない図の click の参照を書き換える（正常系）。"""
+    # 準備
+    code = 'classDiagram\n  class A\n  click A href "id:a"'
+    # 実行
+    result = render_mermaid(code, HEAD, lambda text: text.replace('"id:a"', '"a.yaml"'))
+    # 検証
+    assert result.startswith("```mermaid\n")
+    assert result.endswith("\n```")
+    assert '  click A href "a.yaml"' in result.splitlines()
+
+
+def test_render_mermaid_when_readable() -> None:
+    """読み取れる図は click の参照の書き換えにかけない（正常系）。"""
+    # 準備
+    calls: list[str] = []
+
+    def link_clicks(text: str) -> str:
+        calls.append(text)
+        return text
+
+    # 実行
+    result = render_mermaid("flowchart TD\n  a --> b", HEAD, link_clicks)
+    # 検証
+    assert len(_definition(result, "flow")["nodes"]) == 2
+    assert calls == []

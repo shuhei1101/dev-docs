@@ -547,6 +547,31 @@ flows:
       - 制限時間を過ぎた後に 503 の `application/problem+json` を返し、打ち切ったことと project-index のアドレスを持つ
       - 制限時間より大きく遅れずに返る
     test: test_error_when_project_index_timed_out
+  - name: 正常系（Mermaid の click の id の参照を解決する）
+    summary: Mermaid のまま返す図の `click` の `id:` の参照を、同じ配信元の文書とその項目の見出しのアンカーへの相対パスにする
+    setup:
+      - name: Mock
+        description: なし
+        notes: '-'
+      - name: クラス図を持つ文書
+        description: sample に、Markdown の文字列の項目を持つスキーマと、その項目に Mermaid のクラス図（`classDiagram`）を記載した文書 10 を配置する
+        notes: 'クラス図は `click A href "id:{文書 6 の ID}#flow"`・`click B "id:{文書 6 の ID}#flow"`・`click C href "id:no-such-doc#"`・`click D href "https://example.com/"` を持つ。文書 6 のスキーマの `flow` の項目は `x-heading: 処理の流れ` を持つ'
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        participant C as クライアント
+        participant E as GET /_api/sources/{source}/docs/{path}
+
+        C->>E: GET /_api/sources/sample/docs/{文書 10 のパス}
+        E->>E: Mermaid のまま返す図の click の id の参照を、文書の相対パスと項目の見出しのアンカーに書き換える
+        E-->>C: 200（文書 10）
+      ```
+    expected:
+      - '`markdown` の `` ```mermaid `` のコードブロックにクラス図がある'
+      - '`click A` と `click B` の URL が、文書 6 の相対パスに見出し `処理の流れ` のアンカーを付けたものになり、`click A` は `href` を持ち、`click B` は `href` を持たない'
+      - '`click C href "id:no-such-doc#"` と `click D href "https://example.com/"` は書き換わらない'
+      - '`conversionError` が `null`'
+    test: test_normal_when_mermaid_click_id_resolved
 lead: '#17 の画面が文書を開くときに呼ぶ。配信元の文書を変換した Markdown と、タブ・サイドバー・差分の項目・画面の状態を JSON で返す。`path` を省くと一番左のタブのサイドバーの一番上の文書を返す。'
 identifier: get_document
 permissions: なし（`127.0.0.1` でだけ待ち受ける）
@@ -731,6 +756,9 @@ constraints:
   - item: 検討事項の文書
     constraint: '`path` が `_decisions/{ID}`（`{ID}` は `^[A-Z]+-[0-9]+$`）のとき、`decisions.folders` のうちちょうど 1 つのフォルダにある `.mindstella/docs/{ID}.md` の本文を、変換せずに `markdown` で返す。`ref` は解決するが、検討事項の文書は Git の管理外のためリビジョンによらず今のファイルを読む'
     notes: '当たるフォルダが 0 個か 2 個以上なら 404（`missing`: `doc`）。`diff` は求めず `null` を返す。フォルダの外を指す `{ID}` は形式で弾く'
+  - item: Mermaid の click の id の参照
+    constraint: スキーマ駆動の変換で、`` ```mermaid `` のまま返す Mermaid の文字列の `click {ノード} href "id:{文書の ID}#{項目のパス}"` と `click {ノード} "id:{文書の ID}#{項目のパス}"` の参照を、本文の id のリンクと同じく、同じ配信元のその文書への相対パス（項目が見出しになるときはその見出しのアンカー付き）に書き換える。`href` の有無とノードは変えない。どの文書の ID にも該当しない参照は書き換えない
+    notes: 'mdmark は Mermaid を `securityLevel: "strict"` で描き `click` が有効にならないため、ノードをリンクにするのは mdmark 側の対応に任せる。mdmark のフロー図の部品にする `flowchart`・`sequenceDiagram` の `click` は対象外'
 refs:
   - SC-155-10#scenarios[異常シナリオ（project-index につながらない）]
 test_file: tests/integration/server/test_get_document.py

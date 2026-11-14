@@ -193,7 +193,7 @@ elements:
     description: 変換した Markdown を mdmark の `mount` で描いた文書の中身。最初の見出し 1 は文書のタイトルに出すため除いて描く
     visible_when: 文書があり、`conversionError` が `null` のとき
     source: 文書の取得.markdown
-    action: 本文の中の同じ配信元の文書へのリンクは、画面を読み込み直さず `rev` を保って開く（無い文書は見つからない画面）。外の URL は別のタブで開く
+    action: 本文の中の同じ配信元の文書へのリンクは、画面を読み込み直さず `rev` を保って開く（無い文書は見つからない画面）。外の URL は別のタブで開く。Mermaid の図の `click` のノードを mdmark がリンクにしたものも、本文のリンクと同じく開く
     action_ref: IF-155-10#
     notes:
       mdmark に渡す値: '`docId` は `{配信元の ID}:{文書のパス}`、`commentStore` はコメントの置き場所の読み書き。`diffSource` は渡さず、mdmark の「変更を見る」を出さない'
@@ -222,7 +222,7 @@ elements:
     notes:
       読み上げ名: 'mdmark が持つ（目次の枠は `右側の目次`、開くボタンは `目次を表示`）'
       mdmark に渡す値: '`config` に `side-toc` を指定せず、既定の出し方（`hover`）で描かせる'
-      差分: 比較元から変わった見出しにマーカーを出さない（mdmark の右側の目次が持たない）
+      差分: '`base` があるとき、mdmark が本文の `baseMarkdown` から変わったセクションの項目に変更のマーカー（橙の塗った円。読み上げは項目の名前に続けて `（変更）`）を出す。画面は本文と同じ `baseMarkdown` を指定するだけで、目次に別の値を指定しない。`base` を外して `baseMarkdown` を `null` にするとマーカーが消える'
   - name: コメントの追加
     kind: button
     position: 本文 > 選んだ文字列の近く

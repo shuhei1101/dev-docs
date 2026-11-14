@@ -56,6 +56,12 @@ constants:
     usecase: 文書の取得
     summary: 見出しのアンカーにするときに落とす記号（mdmark の見出しの `id` と同じ）
     value: '`[^\w\- ]`'
+  - name: MERMAID_CLICK
+    title: Mermaid の click の id の参照
+    container: features/convert/inline.py
+    usecase: 文書の取得
+    summary: Mermaid のコードの `click {ノード} href "id:{文書の ID}#{項目のパス}"`・`click {ノード} "id:{文書の ID}#{項目のパス}"` の行。行ごとに照合し、項目のパスは `"` を含まない
+    value: '`^(?P<head>[ \t]*click[ \t]+\S+[ \t]+(?:href[ \t]+)?)"id:(?P<id>[^"#\s]+)(?:#(?P<item>[^"]*))?"`'
 functions:
   - name: rewrite_text
     title: 本文の書き換え
@@ -90,7 +96,7 @@ functions:
       description: 書き換えた Markdown
     process: |-
       1. 値の全体が値の選択肢（` / ` で区切った全ての部分が `CHOICE`）なら、部分ごとに `` - `badge:{値}` {説明} `` の行にして返す
-      2. ```mermaid のコードブロックを、1 つずつ手で書く図の組み立てで置き換える
+      2. ```mermaid のコードブロックを、1 つずつ手で書く図の組み立てで置き換える。読み取れない図の `click` は、`MERMAID_CLICK` に該当する `id:` の参照を 6 と同じリンク先に書き換え、`click` のノードと `href` の有無は変えない（`links` に無い ID の参照は書き換えない）
       3. 言語の無いコードブロックのうち、2 行以上で全ての行が `TREE_LINE` に当たり、罫線を持つ行が 1 つ以上あるものの言語を `tree` にする
       4. 値の全体が番号付きの箇条書き（全ての行が `{数}. ` で始まるか、その字下げの続き）なら、`<!-- steps -->`・箇条書き・`<!-- /steps -->` にする
       5. コードブロックの外で、`ISSUE_NUMBER` を `[#{番号}]({issue_url}{番号})` にする（`issue_url` が `None` なら書き換えない）
@@ -144,6 +150,12 @@ functions:
         condition: '`[B](id:b#no-such)`、項目の見出しの引き方が `None` を返す'
         mock: なし
         expected: '`[B](b.yaml)`'
+      - name: test_rewrite_text_when_mermaid_click
+        case: 正常
+        summary: Mermaid の click の id の参照
+        condition: '```mermaid の `classDiagram` に `click A href "id:a"`・`click B "id:b#flow"`・`click C href "id:zzz"`・`click D href "https://e.example/"`、`links` に `a`（パス `dev/a.yaml`）と `b`（パス `dev/b.yaml`）、文書のパスが `dev/c.yaml`、項目の見出しの引き方が `b`・`flow` に `処理の流れ` を返却する'
+        mock: なし
+        expected: '```mermaid のコードブロックのままで、`click A href "a.yaml"`・`click B "b.yaml#処理の流れ"`・`click C href "id:zzz"`・`click D href "https://e.example/"` の行を持つ'
   - name: link_reference
     title: 参照のリンク
     kind: 関数

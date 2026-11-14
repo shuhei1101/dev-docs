@@ -1,0 +1,80 @@
+tasks:
+  - process: 初期構築
+    status: skipped
+    reason: 既存リポジトリのため対象外
+    updated_by: planner
+    updated_at: '2026-11-14T11:03:01.220806+00:00'
+  - process: リバースエンジニアリング
+    status: skipped
+    reason: 設計書が揃っている既存の機能の修正のため対象外
+    updated_by: planner
+    updated_at: '2026-11-14T11:03:01.220806+00:00'
+  - process: 方針決め
+    status: skipped
+    reason: 方針決めを依頼する Issue ではない
+    updated_by: planner
+    updated_at: '2026-11-14T11:03:01.220806+00:00'
+  - process: PoC 検証
+    status: skipped
+    reason: 未検証の技術機構に依存しない。#196 のノードのリンクは mdmark#570 の対応に任せる
+    updated_by: planner
+    updated_at: '2026-11-14T11:03:01.220806+00:00'
+  - process: 複合ユースケース設計
+    status: skipped
+    reason: 業務フロー（ユースケースの連鎖）は変わらない
+    updated_by: planner
+    updated_at: '2026-11-14T11:03:01.220806+00:00'
+  - process: デザインスタイル選定
+    status: skipped
+    reason: '『モック要否』: 見た目は変わるが、デザイン方針があり見た目の方向を変えない'
+    updated_by: planner
+    updated_at: '2026-11-14T11:03:01.220806+00:00'
+  - process: 画面一覧・画面遷移
+    status: skipped
+    reason: '『モック要否』: 画面の追加・削除と画面遷移の変更が無い'
+    updated_by: planner
+    updated_at: '2026-11-14T11:03:01.220806+00:00'
+  - process: 単一ユースケース設計
+    status: done
+    note: SC-155-7（比較中の目次のマーカー・図のノードから文書へ移る正常シナリオ）
+    updated_by: planner
+    updated_at: '2026-11-14T11:17:00.557756+00:00'
+  - process: モック作成
+    status: skipped
+    reason: '『モック要否』: 目次のマーカーと図のノードのリンクの見た目は mdmark が持ち（ノードのリンクは mdmark#570）、作り手が決める余地が無い'
+    updated_by: planner
+    updated_at: '2026-11-14T11:03:01.220806+00:00'
+  - process: インターフェース定義設計
+    status: done
+    note: IF-155-10（変換した Mermaid の click）・IF-155-22（送信する行のキー）
+    updated_by: planner
+    updated_at: '2026-11-14T11:42:43.248674+00:00'
+  - process: 部品設計
+    status: skipped
+    reason: 画面の部品の追加・変更が無い
+    updated_by: planner
+    updated_at: '2026-11-14T11:03:01.220806+00:00'
+  - process: 画面設計
+    status: done
+    note: 'SCR-155-1 の目次の要素の差分の記載（『画面設計要否』: 目次の UI 項目が変わる）'
+    updated_by: planner
+    updated_at: '2026-11-14T11:55:51.542098+00:00'
+  - process: モジュール構成設計
+    status: done
+    note: MOD-155-93・MOD-155-96・MOD-155-119・MOD-155-25
+    updated_by: planner
+    updated_at: '2026-11-14T12:09:38.261478+00:00'
+  - process: ドキュメント修正
+    status: done
+    note: API-155-1・docs/guide/画面で読む.md。LIB-155-9 は mdmark のタグが打たれた後の実装で修正する
+    updated_by: planner
+    updated_at: '2026-11-14T12:25:24.900820+00:00'
+  - process: 単体テスト作成
+    status: done
+    updated_by: planner
+    updated_at: '2026-11-14T13:08:09.396009+00:00'
+  - process: 実装
+    status: todo
+    note: 反映作業「端末の設定の移し替え」「dev-docs のサーバーの再起動」のスクリプト（#202 の project-index のサーバーのバージョンの確認を含む）と、mdmark のタグが打たれた後の use-mdmark.ts・package.json・LIB-155-9 の修正もこの工程で行う
+  - process: 結合テスト作成
+    status: todo
