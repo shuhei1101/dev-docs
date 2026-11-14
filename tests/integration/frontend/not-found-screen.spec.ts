@@ -173,7 +173,7 @@ test.describe("説明", () => {
     await expect(page.getByText("配信元 sample に、リビジョン no-such はありません。")).toBeVisible();
   });
 
-  // 配信していない配信元は起動時の検証で外した理由を出す（正常系）
+  // 配信していない配信元は起動時の検証で除外した理由を出す（正常系）
   test("description_when_source_not_served", async ({ page }) => {
     await open(page, "/broken/docs/a", notServed, BROKEN_VIEW);
     await expect(page.getByText("project-index が起動時の検証で、配信から除外しました。")).toBeVisible();
@@ -203,7 +203,7 @@ test.describe("見つからなかったものの詳細", () => {
     await expect(page.locator("dd", { hasText: "develop" })).toBeVisible();
   });
 
-  // 配信していない配信元は外した理由と設定ファイルを出す（正常系）
+  // 配信していない配信元は除外した理由と設定ファイルを出す（正常系）
   test("details_when_source_not_served", async ({ page }) => {
     await open(page, "/broken/docs/a", notServed, BROKEN_VIEW);
     await expect(page.locator("dt", { hasText: "除外した理由" })).toBeVisible();
@@ -232,7 +232,7 @@ test.describe("配信元のトップを開く", () => {
     await expect(page).toHaveURL(/\/sample\?rev=v0\.1\.0$/);
   });
 
-  // 無いリビジョンは rev を外した配信元のトップを開く（正常系）
+  // 無いリビジョンは rev を除いた配信元のトップを開く（正常系）
   test("top_link_when_ref_missing", async ({ page }) => {
     await open(page, "/sample?rev=no-such", missingRef);
     await expect(page.getByRole("link", { name: "sample のトップを開く" })).toHaveAttribute("href", "/sample");

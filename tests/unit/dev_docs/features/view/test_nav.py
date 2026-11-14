@@ -12,7 +12,7 @@ from dev_docs.integrations.project_index.types import IndexedDocument as Documen
 
 
 def _tables() -> list[DocumentRow]:
-    """文書の行を返す。"""
+    """文書の行を返却する。"""
     return [
         DocumentRow(
             id="rules",
@@ -91,7 +91,7 @@ def test_build_nav_when_no_nav(
     make_view: Callable[..., SourceView],
     make_document: Callable[..., Document],
 ) -> None:
-    """nav が無いときは行ごとのタブをフォルダで束ねる（正常系）。"""
+    """nav が無いときは行ごとのタブをフォルダでまとめる（正常系）。"""
     # 準備
     tables = [
         DocumentRow(id="docs", paths=["docs/**/*.yaml"], schema={}),
@@ -115,7 +115,7 @@ def test_build_nav_when_group_by_folder(
     make_view: Callable[..., SourceView],
     make_document: Callable[..., Document],
 ) -> None:
-    """フォルダで束ねる auto と手で書いた page の重なり（正常系）。"""
+    """フォルダでまとめる auto と手で記載した page の重なり（正常系）。"""
     # 準備
     nav = {
         "tabs": [
@@ -148,14 +148,14 @@ def test_build_nav_when_group_by_folder(
 
 
 def _shape(item: NavItem) -> Any:
-    """項目を、page はパス、group は（名前・子の並び）にして返す。"""
+    """項目を、page はパス、group は（名前・子の並び）にして返却する。"""
     if item.kind == "page":
         return item.path
     return (item.title, [_shape(child) for child in item.items])
 
 
 def _folder_tables() -> list[DocumentRow]:
-    """`paths: [rules/**/*.yaml]` の行 `rules` を返す。"""
+    """`paths: [rules/**/*.yaml]` の行 `rules` を返却する。"""
     return [DocumentRow(id="rules", paths=["rules/**/*.yaml"], schema={})]
 
 
@@ -198,7 +198,7 @@ def test_folder_items(make_document: Callable[..., Document]) -> None:
 
 
 def test_folder_items_when_multiple_globs(make_document: Callable[..., Document]) -> None:
-    """先に並ぶ glob の起点を使う（正常系）。"""
+    """先に並ぶ glob の起点を使用する（正常系）。"""
     # 準備
     row = DocumentRow(
         id="docs",
@@ -213,7 +213,7 @@ def test_folder_items_when_multiple_globs(make_document: Callable[..., Document]
 
 
 def test_folder_items_when_records(make_document: Callable[..., Document]) -> None:
-    """管理用の YAML の行の文書は束ねない（正常系）。"""
+    """管理用の YAML の行の文書はまとめない（正常系）。"""
     # 準備
     row = DocumentRow(
         id="notes",

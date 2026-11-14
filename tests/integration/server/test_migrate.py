@@ -24,7 +24,7 @@ RENAME_LOG_DIR = {"op": "rename", "path": "log_dir", "to": "state_dir", "descrip
 
 @pytest.fixture
 def settings_file(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
-    """`version: "1"` の端末の設定を書き、`DEV_DOCS_CONFIG` で指す。"""
+    """`version: "1"` の端末の設定を書き込み、`DEV_DOCS_CONFIG` で指す。"""
     path = tmp_path / "settings.yaml"
     path.write_text(SETTINGS_V1, encoding="utf-8")
     monkeypatch.setenv("DEV_DOCS_CONFIG", str(path))
@@ -107,7 +107,7 @@ def test_error_when_step_fails(
     write_steps: Callable[..., None],
     capsys: pytest.CaptureFixture[str],
 ) -> None:
-    """当てた結果が新しいスキーマに違反すると、書き換えず終了コード 4 で止める（異常系）。"""
+    """適用した結果が新しいスキーマに違反すると、書き換えず終了コード 4 で止める（異常系）。"""
     # 準備
     write_steps(
         "settings",
@@ -166,7 +166,7 @@ def test_error_when_config_newer(
 
 
 def _write_v1(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, name: str) -> Path:
-    """`sources` を持つ前のバージョンの端末の設定を書き、`DEV_DOCS_CONFIG` で指す。"""
+    """`sources` を持つ前のバージョンの端末の設定を書き込み、`DEV_DOCS_CONFIG` で指す。"""
     path = tmp_path / name
     path.write_text(SOURCES_V1, encoding="utf-8")
     monkeypatch.setenv("DEV_DOCS_CONFIG", str(path))
@@ -189,7 +189,7 @@ def test_normal_when_sources_moved_to_project_index(
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
-    """sources の行を project-index の今の行に加えて 1 回で保存し、dev-docs から除いて project_index を書き足す（正常系）。"""
+    """sources の行を project-index の今の行に加えて 1 回で保存し、dev-docs から除いて project_index を追加する（正常系）。"""
     # 準備
     write_steps("settings", "2", [EXPORT_SOURCES])
     mock_index.rows.append({"id": "extra", "config": ["/repo/other/project-index.yaml"]})
@@ -228,7 +228,7 @@ def test_normal_when_save_response_exceeds_timeout(
     write_steps: Callable[..., None],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """保存の応答が制限時間を超えても、取得し直して保存を確認し、移し替えを終える（正常系）。"""
+    """保存の応答が制限時間を超えても、再取得して保存を確認し、移し替えを終える（正常系）。"""
     # 準備
     write_steps("settings", "2", [EXPORT_SOURCES])
     mock_index.rows.append({"id": "extra", "config": ["/repo/other/project-index.yaml"]})
@@ -294,7 +294,7 @@ def test_error_when_save_unconfirmed_after_timeout(
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
-    """保存の応答が制限時間を超え、取得し直しても移す行が無ければ、端末の設定を書き換えずに終了コード 7 で止める（異常系）。"""
+    """保存の応答が制限時間を超え、再取得しても移す行が無ければ、端末の設定を書き換えずに終了コード 7 で止める（異常系）。"""
     # 準備
     write_steps("settings", "2", [EXPORT_SOURCES])
     mock_index.put_saves = False

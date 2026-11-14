@@ -16,7 +16,7 @@ EXPECTED_OPERATION_IDS = [
 
 
 def test_normal(sample_index: MockIndex, make_server: Callable[..., ServerEnv]) -> None:
-    """画面の API だけを載せたスキーマを返す（正常系）。"""
+    """画面の API だけを記載したスキーマを返却する（正常系）。"""
     # 準備
     env = make_server(sample_index)
     # 実行

@@ -1,0 +1,13 @@
+scope_out:
+  - item: 開発用のスクリプトと設定のコード（scripts/build_pages.py、schemas/conversions/v0.4.0.py、eslint.config.js、frontend/.storybook/preview.tsx、frontend/scripts/export_openapi.py）のコメントと docstring
+    reason: tests/ と plugins/dev-docs/ の外
+    plan: '#208'
+  - item: テストのアサーションと fixture が照合する文字列（画面の文言、サーバーとフックが出力する文言）
+    reason: 照合先の画面・サーバー・フックの文言と同じ値で、テストの側だけを修正すると照合が合わなくなる。コメントと docstring ではない
+    plan: none
+  - item: docs/pr/ の反映作業のスクリプトのコメントと docstring
+    reason: マージ済みの作業 PR の実行の記録で、tests/ と plugins/dev-docs/ の外
+    plan: none
+  - item: knowledge の AI slop の単語の対応表の「消す」の pattern が「取り消し線」にもヒットする（doc-view-screen.spec.ts の 330 行目はこのためヒットとして残る）
+    reason: 対応表（knowledge の docs/word-list/word-list-ai-slop.yaml）の allow の不足で、dev-docs のコメントを対応表に合わせる今回の要望に含まれない
+    plan: shuhei1101/knowledge#383

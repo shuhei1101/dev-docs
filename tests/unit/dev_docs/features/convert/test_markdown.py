@@ -49,7 +49,7 @@ def test_schema_to_markdown(make_document: Callable[..., Document]) -> None:
 
 
 def test_schema_to_markdown_when_sections(make_document: Callable[..., Document]) -> None:
-    """節の見出しの深さ（正常系）。"""
+    """セクションの見出しの深さ（正常系）。"""
     # 準備
     schema = {
         "properties": {
@@ -208,7 +208,7 @@ def test_schema_to_markdown_when_diagram(make_document: Callable[..., Document])
 
 
 def test_schema_to_markdown_when_er(make_document: Callable[..., Document]) -> None:
-    """ER 図にテーブルの列を渡す（正常系）。"""
+    """ER 図にテーブルの列を指定する（正常系）。"""
     # 準備
     schema = {
         "properties": {
@@ -355,7 +355,7 @@ def test_schema_to_markdown_when_foreign_key(make_document: Callable[..., Docume
 def test_schema_to_markdown_when_foreign_key_physical_name(
     make_document: Callable[..., Document],
 ) -> None:
-    """物理名で書いた同じ文書のテーブルへの外部キー（正常系）。"""
+    """物理名で記載した同じ文書のテーブルへの外部キー（正常系）。"""
     # 準備
     schema = {
         "properties": {
@@ -390,7 +390,7 @@ def test_schema_to_markdown_when_foreign_key_physical_name(
 
 
 def test_render_table() -> None:
-    """セルの書き方（正常系）。"""
+    """セルの記載方法（正常系）。"""
     # 準備
     rows = [
         {"a": "x|y\nz", "b": ["a", "b"], "c": True},
@@ -439,7 +439,7 @@ def test_render_table_when_objects() -> None:
 
 
 def test_render_table_when_physical_name() -> None:
-    """物理名で書いた同じ文書のテーブルへの外部キー（正常系）。"""
+    """物理名で記載した同じ文書のテーブルへの外部キー（正常系）。"""
     # 準備
     context = RenderContext(
         links={},
