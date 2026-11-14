@@ -1,0 +1,82 @@
+use_cases:
+  - kind: single
+    scenario: docs/scenario/SC-155-12.yaml
+    impact: changed
+    detail: 配信元の追加で、範囲の外から参考として参照できるかを選べる。設定画面を開いた後にほかのプロセスが端末の設定を書き換えていたときは、保存せずにそのことを利用者に示し、最新の一覧で保存し直させる
+    depends_on: []
+  - kind: single
+    scenario: docs/scenario/SC-155-11.yaml
+    impact: changed
+    detail: 配信の停止・削除の保存でも、ほかのプロセスの書き換えが入っていたときは保存せずに利用者に示す
+    depends_on: []
+  - kind: single
+    scenario: docs/scenario/SC-155-7.yaml
+    impact: changed
+    detail: ER 図・状態遷移図を、テーブルの強調や遷移の再生の操作つきで参照できる。フロー図・データフロー・構成図・シーケンス図も同じ操作の図に変わる
+    depends_on: []
+  - kind: single
+    scenario: docs/scenario/SC-155-6.yaml
+    impact: run_only
+    detail: コメントを溜めて渡す手順は変わらないが、本文を描く mdmark のバージョンが変わる
+    depends_on: []
+  - kind: composite
+    scenario: docs/scenario/SC-155-13.yaml
+    impact: run_only
+    detail: 配信元の文書を読み、配信元を追加・削除する流れは変わらないが、設定画面の保存と文書の図の描き方が変わる
+    depends_on: []
+  - kind: single
+    scenario: docs/scenario/SC-155-2.yaml
+    impact: run_only
+    detail: 入れる手順は変わらないが、開発の依存（package.json）の mdmark のバージョンが変わる
+    depends_on: []
+  - kind: single
+    scenario: docs/scenario/SC-155-10.yaml
+    impact: none
+    detail: 起動して project-index へつなぐ手順に関わらない
+    depends_on: []
+  - kind: single
+    scenario: docs/scenario/SC-155-3.yaml
+    impact: none
+    detail: 更新と端末の設定の移し替えに関わらない
+    depends_on: []
+docs:
+  - page: docs/guide/画面で読む.md
+    new: false
+    change: '`## 設定画面を使う` の配信元の追加の手順に `outsideRead` の入力欄を追加し、ほかのプロセスの書き換えが入ったときの表示と保存し直し方を記載する。文書の図の操作（グループの中へ入る・開閉・再生・テーブルの強調）を記載する'
+    status: todo
+  - page: docs/guide/設定.md
+    new: false
+    change: '`x-diagram` の行の説明を、どの種類も mdmark の map で描く（`er` は `erDiagram`、`state` は `stateDiagram-v2`、それ以外は `flowchart`）に修正する'
+    status: todo
+  - page: docs/guide/用語集.md
+    new: false
+    change: '`設定画面` の行に、配信元ごとに範囲の外からの参照（`outsideRead`）を切り替えられることを追加する'
+    status: todo
+  - page: docs/external-api/API-155-1.yaml
+    new: false
+    change: GET・PUT `/settings/sources` の概要に、内容のバージョン（`version`）・`expectedVersion`・409 の `current` を記載する
+    status: todo
+  - page: docs/library/LIB-155-9.yaml
+    new: false
+    change: 採用バージョンを `v0.13.0` にし、`<!-- flow -->` の記法の行を `<!-- map -->`（`flowchart`・`sequenceDiagram`・`erDiagram`・`stateDiagram-v2` と `<!-- map-data -->`・設定の `map.kinds`・`map.lines`）に置き換え、`<!-- er -->` の行を削除し、`verification` を `v0.13.0` で確認した結果にする
+    status: todo
+  - page: docs/nonfunctional/NFR-155-1.yaml
+    new: false
+    change: 『mdmark の読み込み元』の決定値のタグを `@v0.13.0` にする
+    status: todo
+scope_out:
+  - item: 比較中の mdmark の右側の目次の変更のマーカー
+    reason: '#199 の要望で、この作業 PR が上げる mdmark の `v0.13.0` に含まれるが、比較元の指定と画面の結合テストは #201 の対応では入らない'
+    plan: '#199'
+  - item: '`dev-docs migrate` が PUT `/settings/sources` の行の範囲の外の参照を `outsideRead` で送信する不具合と、API-155-1 の PUT の行のキーの修正'
+    reason: 設定画面の保存は既に `outside_read` で送信しており、移し替えの不具合は別の Issue で修正する
+    plan: '#203'
+  - item: 稼働中の project-index のサーバーが `expectedVersion` を受け付けるバージョンかの確認と起動し直し
+    reason: '#183 の反映作業の修正として別の Issue が持つ'
+    plan: '#202'
+  - item: project-index で丸ごとの保存と 1 行の追加の `expectedVersion` を必須に切り替える
+    reason: '#190 の「着手の順番」で、この作業が develop へ入った後に project-index の側で起票すると決まっている。設定画面が送信する前に必須にすると今の画面が保存できなくなる'
+    plan: to_file
+  - item: E2E のテストの作成
+    reason: E2E は開発の間は作らず、メジャーのリリースの前に作ると決まっている（#183 のスコープ外と同じ）
+    plan: none
