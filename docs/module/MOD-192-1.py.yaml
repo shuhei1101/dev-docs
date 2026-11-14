@@ -181,7 +181,7 @@ functions:
     kind: 関数
     scope: public
     is_async: false
-    side_effects: '`--out` のフォルダを削除して作り直す。一時フォルダを作って消す。標準出力・標準エラーに出力する'
+    side_effects: '`--out` のフォルダを削除して再作成する。一時フォルダを作って削除する。標準出力・標準エラーに出力する'
     args:
       - name: argv
         title: 引数
@@ -201,7 +201,7 @@ functions:
       1. argparse で `--root`・`--out` を解析する
       2. 公開ドキュメントの文書を集め（公開ドキュメントの文書の収集）、公開の判定フローチャートを読み込み（公開の判定フローチャートの読み込み）、文書の ID の場所を集める（文書の ID の場所の収集）
          - 公開の文書が 1 つも無い場合、標準エラーに出して `EXIT_NOT_STARTED` を返却する
-      3. `--out` のフォルダを削除して作り直す
+      3. `--out` のフォルダを削除して再作成する
       4. 一時フォルダに、まとめる文書を `CATEGORIES` の順に並べて配置する。分類ごとに、公開ドキュメントの文書を `files.yml` の行の順にそのままコピーし、分類が `FLOWCHART_CATEGORY` なら続けて公開の判定フローチャートを `{ID}.md` で記載する
          - 判定フローチャートは、先に全てを Markdown にして（ページの描画）項目の見出しの ID を集め（項目の見出しの ID の収集）、その後に参照を書き換える（参照の書き換え）
       5. mdmark の設定を記載し（mdmark の設定の記載）、mdmark の build を実行して（mdmark の build の実行）、出力の `OUTPUT_HTML` を `--out` のフォルダへコピーする
@@ -547,7 +547,7 @@ functions:
       type: Path
       description: 記載した `mdmark.config.yaml` のパス
     process: |-
-      1. `{"version": MDMARK_TAG, "build": {"include": names, "entry": names[0], "out": OUTPUT_HTML}}` を JSON（YAML として読める）で `{workdir}/mdmark.config.yaml` に記載する
+      1. `{"version": MDMARK_TAG, "build": {"include": names, "entry": names[0], "out": OUTPUT_HTML}}` を JSON（YAML として読み込める）で `{workdir}/mdmark.config.yaml` に記載する
     unit_tests:
       - name: test_write_bundle_config
         case: 正常

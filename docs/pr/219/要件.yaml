@@ -1,0 +1,23 @@
+docs:
+  - page: docs/module/MOD-192-1.py.yaml
+    new: false
+    change: 'functions[main].side_effects の「作り直す」「消す」・functions[main].process の手順 3 の「作り直す」・functions[write_bundle_config].process の手順 1 の「読める」を、PR #214 と同じ置き換え（再作成する・削除する・読み込める）にする'
+    status: done
+    updated_by: planner
+    updated_at: '2026-11-14T21:29:53.972322+00:00'
+scope_out:
+  - item: docs/module/MOD-192-1.py.yaml の Issue の本文の表に無い箇所（176・179 行目の「入口」、180・539 行目の「置く」、215・217 行目の「渡す」、223 行目の「確かめる」、424 行目の「外の」、425 行目の「足す」）
+    reason: 同じ対応表の同じ設計書のヒットだが、受付判断（pt 1）は Issue の本文の表の 3 か所を対象にしているため含めない（レビューで確定）。今回の作業 PR がマージされなくても同じ内容で成り立つ
+    plan: '#222'
+  - item: docs/module/MOD-192-1.py.yaml の分類の値「使い方」（32・77・85・216・218・264・266 行目）
+    reason: 'docs/guide/files.yml の分類の値と公開ページの分類名で、PR #214 と同じく値の参照のため置き換えない'
+    plan: none
+  - item: 他の設計書・モックの「作り直す」（docs/dev-command/CMD-155-1.yaml・docs/interface/IF-155-10.yaml・docs/library/LIB-155-6.yaml・docs/mock/refs/56/assets/prompt-doc.js）
+    reason: 同じ対応表の同じ単語だが、要望は MOD-192-1 の設計書の文言に限る。今回の作業 PR がマージされなくても同じ内容で成り立つ
+    plan: '#221'
+  - item: 他の文書（docs/ の下。docs/pr/ を除く）の「消す」（約 12 件・8 ファイル。docs/guide/CLI.md・docs/interface/IF-155-22.yaml・docs/screen/SCR-155-1.yaml など）
+    reason: '同じ対応表の同じ単語だが、要望は MOD-192-1 の設計書の 3 か所に限る。docs/ の文書を対応表に合わせる作業は #95 の手順 4（#93 から移管）が持ち、scripts/ にはヒットが無い'
+    plan: '#95'
+  - item: 他の文書（docs/ の下。docs/pr/ を除く）の「読める」（約 150 件・51 ファイル。docs/guide/CLI.md・docs/interface/IF-155-22.yaml・docs/guide/設定.md など）
+    reason: '同じ対応表の同じ単語だが、要望は MOD-192-1 の設計書の 3 か所に限る。docs/ の文書を対応表に合わせる作業は #95 の手順 4（#93 から移管）が持ち、scripts/ にはヒットが無い'
+    plan: '#95'
