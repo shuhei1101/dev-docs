@@ -309,7 +309,7 @@ export const SourceEditDialog = ({
             >
               キャンセル
             </Button>
-            <Button type="submit" disabled={saving}>
+            <Button type="submit" disabled={saving || gone}>
               {editing ? "保存" : "追加"}
             </Button>
           </DialogFooter>
