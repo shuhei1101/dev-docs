@@ -23,6 +23,7 @@ def test_normal(real_index: RealIndex, make_server: Callable[..., ServerEnv]) ->
     assert (sample["id"], sample["status"]) == ("sample", "serving")
     assert sample["config"] == [config]
     assert sample["scope"] == {"read": [f"{real_index.root}/**"], "write": None}
+    assert body["version"]
     assert empty.status_code == 200
     assert empty.json()["sources"] == []
 

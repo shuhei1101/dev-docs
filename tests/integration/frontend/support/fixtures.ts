@@ -128,6 +128,7 @@ export const settingsView = (
 ): SettingsSourcesView => ({
   settingsPath: "/home/me/.config/dev-docs/settings.yaml",
   sources,
+  version: "v1",
 });
 
 export const searchResult = (
