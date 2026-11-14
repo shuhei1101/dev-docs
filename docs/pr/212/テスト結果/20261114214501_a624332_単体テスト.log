@@ -1,0 +1,190 @@
+$ uv run pytest tests/unit/
+============================= test session starts ==============================
+platform linux -- Python 3.14.3, pytest-9.1.1, pluggy-1.7.0
+rootdir: /mnt/c/Users/shuhe/repo/dev-docs/.claude/worktrees/fix-convert-migrate-mermaid-click-toc-marker-outside-read
+configfile: pyproject.toml
+plugins: anyio-4.15.1
+collected 490 items
+
+tests/unit/dev_docs/features/admin/test_render.py ......                 [  1%]
+tests/unit/dev_docs/features/admin/test_service.py ........              [  2%]
+tests/unit/dev_docs/features/changes/test_compare.py .                   [  3%]
+tests/unit/dev_docs/features/convert/test_decisions.py ....              [  3%]
+tests/unit/dev_docs/features/convert/test_diagrams.py .................. [  7%]
+.............FFFFF                                                       [ 11%]
+tests/unit/dev_docs/features/convert/test_embed.py ....                  [ 12%]
+tests/unit/dev_docs/features/convert/test_flow_layout.py ............... [ 15%]
+..                                                                       [ 15%]
+tests/unit/dev_docs/features/convert/test_inline.py .........F.....      [ 18%]
+tests/unit/dev_docs/features/convert/test_markdown.py .................. [ 22%]
+.......                                                                  [ 23%]
+tests/unit/dev_docs/features/convert/test_mermaid.py ......              [ 24%]
+tests/unit/dev_docs/features/convert/test_service.py ........            [ 26%]
+tests/unit/dev_docs/features/documents/test_aliases.py .......           [ 27%]
+tests/unit/dev_docs/features/documents/test_fields.py ...............    [ 31%]
+tests/unit/dev_docs/features/filter/test_fields.py ..                    [ 31%]
+tests/unit/dev_docs/features/filter/test_filters.py ............         [ 33%]
+tests/unit/dev_docs/features/lifecycle/test_control.py ...               [ 34%]
+tests/unit/dev_docs/features/lifecycle/test_update.py ..........         [ 36%]
+tests/unit/dev_docs/features/migrate/test_service.py .............F..... [ 40%]
+....                                                                     [ 41%]
+tests/unit/dev_docs/features/migrate/test_steps.py ...........           [ 43%]
+tests/unit/dev_docs/features/prompt_doc/test_render.py ................  [ 46%]
+tests/unit/dev_docs/features/prompt_doc/test_runtime.py .............    [ 49%]
+tests/unit/dev_docs/features/settings/test_query.py .................... [ 53%]
+....                                                                     [ 54%]
+tests/unit/dev_docs/features/settings/test_route.py ......               [ 55%]
+tests/unit/dev_docs/features/settings/test_service.py ....               [ 56%]
+tests/unit/dev_docs/features/view/test_columns.py .                      [ 56%]
+tests/unit/dev_docs/features/view/test_document.py .............         [ 59%]
+tests/unit/dev_docs/features/view/test_nav.py ...........                [ 61%]
+tests/unit/dev_docs/features/view/test_paths.py ....                     [ 62%]
+tests/unit/dev_docs/features/view/test_route.py ........                 [ 63%]
+tests/unit/dev_docs/features/view/test_search.py ..                      [ 64%]
+tests/unit/dev_docs/integrations/project_index/test_client.py .......... [ 66%]
+................                                                         [ 69%]
+tests/unit/dev_docs/integrations/project_index/test_types.py ...         [ 70%]
+tests/unit/dev_docs/server/mcp/test_admin.py ....                        [ 71%]
+tests/unit/dev_docs/server/mcp/test_result.py ......                     [ 72%]
+tests/unit/dev_docs/server/test_app.py ...........                       [ 74%]
+tests/unit/dev_docs/server/test_error_handlers.py ......                 [ 75%]
+tests/unit/dev_docs/server/test_lifespan.py .                            [ 75%]
+tests/unit/dev_docs/server/test_origin.py ....                           [ 76%]
+tests/unit/dev_docs/server/test_screen.py ............                   [ 79%]
+tests/unit/dev_docs/shared/test_errors.py ...                            [ 79%]
+tests/unit/dev_docs/shared/test_files.py ...                             [ 80%]
+tests/unit/dev_docs/shared/test_hashing.py ..                            [ 80%]
+tests/unit/dev_docs/shared/test_paths.py .                               [ 81%]
+tests/unit/dev_docs/shared/test_schema_check.py .............            [ 83%]
+tests/unit/dev_docs/shared/test_yaml_io.py .......                       [ 85%]
+tests/unit/dev_docs/test_main.py ..........                              [ 87%]
+tests/unit/dev_docs/test_serve.py .......................                [ 91%]
+tests/unit/plugins/dev_docs/hooks/test_session_start.py ................ [ 95%]
+                                                                         [ 95%]
+tests/unit/scripts/test_build_pages.py ........................          [100%]
+
+=================================== FAILURES ===================================
+_____________________________ test_render_mermaid ______________________________
+
+    def test_render_mermaid() -> None:
+        """シーケンス図（正常系）。"""
+        # 準備
+        code = "sequenceDiagram\n  participant A as 画面\n  A->>B: 読む"
+        # 実行
+>       result = render_mermaid(code, HEAD, _unchanged)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       TypeError: render_mermaid() takes 2 positional arguments but 3 were given
+
+tests/unit/dev_docs/features/convert/test_diagrams.py:432: TypeError
+______________________ test_render_mermaid_when_flowchart ______________________
+
+    def test_render_mermaid_when_flowchart() -> None:
+        """フローチャート（正常系）。"""
+        # 実行
+>       result = render_mermaid("flowchart TD\n  a --> b", HEAD, _unchanged)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       TypeError: render_mermaid() takes 2 positional arguments but 3 were given
+
+tests/unit/dev_docs/features/convert/test_diagrams.py:442: TypeError
+_____________________ test_render_mermaid_when_unreadable ______________________
+
+    def test_render_mermaid_when_unreadable() -> None:
+        """読み取れないコード（正常系）。"""
+        # 準備
+        code = "sequenceDiagram\n  A->>B: 読む\n  Note over A: 補足"
+        # 実行
+>       result = render_mermaid(code, HEAD, _unchanged)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       TypeError: render_mermaid() takes 2 positional arguments but 3 were given
+
+tests/unit/dev_docs/features/convert/test_diagrams.py:452: TypeError
+________________ test_render_mermaid_when_unreadable_with_click ________________
+
+    def test_render_mermaid_when_unreadable_with_click() -> None:
+        """読み取れない図の click の参照を書き換える（正常系）。"""
+        # 準備
+        code = 'classDiagram\n  class A\n  click A href "id:a"'
+        # 実行
+>       result = render_mermaid(code, HEAD, lambda text: text.replace('"id:a"', '"a.yaml"'))
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       TypeError: render_mermaid() takes 2 positional arguments but 3 were given
+
+tests/unit/dev_docs/features/convert/test_diagrams.py:462: TypeError
+______________________ test_render_mermaid_when_readable _______________________
+
+    def test_render_mermaid_when_readable() -> None:
+        """読み取れる図は click の参照の書き換えにかけない（正常系）。"""
+        # 準備
+        calls: list[str] = []
+    
+        def link_clicks(text: str) -> str:
+            calls.append(text)
+            return text
+    
+        # 実行
+>       result = render_mermaid("flowchart TD\n  a --> b", HEAD, link_clicks)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       TypeError: render_mermaid() takes 2 positional arguments but 3 were given
+
+tests/unit/dev_docs/features/convert/test_diagrams.py:479: TypeError
+_____________________ test_rewrite_text_when_mermaid_click _____________________
+
+    def test_rewrite_text_when_mermaid_click() -> None:
+        """Mermaid の click の id の参照（正常系）。"""
+        # 準備
+        code = "\n".join(
+            [
+                "classDiagram",
+                "  class A",
+                '  click A href "id:a"',
+                '  click B "id:b#flow"',
+                '  click C href "id:zzz"',
+                '  click D href "https://e.example/"',
+            ]
+        )
+        # 実行
+        result = rewrite_text(f"```mermaid\n{code}\n```", ID_CONTEXT, HEAD)
+        # 検証
+        lines = result.splitlines()
+        assert lines[0] == "```mermaid"
+        assert lines[-1] == "```"
+>       assert '  click A href "a.yaml"' in lines
+E       assert '  click A href "a.yaml"' in ['```mermaid', 'classDiagram', '  class A', '  click A href "id:a"', '  click B "id:b#flow"', '  click C href "id:zzz"', ...]
+
+tests/unit/dev_docs/features/convert/test_inline.py:139: AssertionError
+_____________________________ test_export_sources ______________________________
+
+    def test_export_sources() -> None:
+        """今の行に加えて 1 回で保存する（正常系）。"""
+        # 準備
+        data = _data(SOURCES_V1)
+        fake = FakePort(
+            [
+                _view(
+                    [
+                        _pi_row("notes", "/n/dev-docs.yaml"),
+                        _pi_row("extra", "/e/dev-docs.yaml", enabled=False),
+                    ]
+                )
+            ]
+        )
+        # 実行
+        kept, unresolved = _export_sources(data, fake.port(), PROJECT_INDEX)
+        # 検証
+        assert len(fake.saved) == 1
+        rows, version = fake.saved[0]
+        assert [row["id"] for row in rows] == ["notes", "extra", "sample"]
+>       assert all(set(row) <= SEND_KEYS for row in rows)
+E       assert False
+E        +  where False = all(<generator object test_export_sources.<locals>.<genexpr> at 0x76b14f68a0a0>)
+
+tests/unit/dev_docs/features/migrate/test_service.py:361: AssertionError
+=========================== short test summary info ============================
+FAILED tests/unit/dev_docs/features/convert/test_diagrams.py::test_render_mermaid
+FAILED tests/unit/dev_docs/features/convert/test_diagrams.py::test_render_mermaid_when_flowchart
+FAILED tests/unit/dev_docs/features/convert/test_diagrams.py::test_render_mermaid_when_unreadable
+FAILED tests/unit/dev_docs/features/convert/test_diagrams.py::test_render_mermaid_when_unreadable_with_click
+FAILED tests/unit/dev_docs/features/convert/test_diagrams.py::test_render_mermaid_when_readable
+FAILED tests/unit/dev_docs/features/convert/test_inline.py::test_rewrite_text_when_mermaid_click
+FAILED tests/unit/dev_docs/features/migrate/test_service.py::test_export_sources
+================== 7 failed, 483 passed in 115.85s (0:01:55) ===================
