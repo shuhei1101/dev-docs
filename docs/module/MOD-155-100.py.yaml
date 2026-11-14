@@ -200,7 +200,7 @@ enums:
         description: 文字列のリストを箇条書きにする
       - value: diagram
         title: 図
-        description: 値から図を組み立て、続けて同じ値の閉じた表を置く。`er` 以外は mdmark の部品
+        description: 値から図を組み立て、続けて同じ値の閉じた表を置く。mdmark の map の範囲
       - value: attributes
         title: 属性
         description: 子のスカラーを「項目 / 値」の表にする
@@ -213,16 +213,16 @@ enums:
     values:
       - value: flowchart
         title: フローチャート
-        description: '`nodes`・`edges` から mdmark のフロー図（上から下）'
+        description: '`nodes`・`edges` から Mermaid の `flowchart TD`'
       - value: dataflow
         title: データフロー
-        description: '`flowchart` と同じ値から、mdmark のフロー図（左から右）'
+        description: '`flowchart` と同じ値から、Mermaid の `flowchart LR`'
       - value: architecture
         title: アーキテクチャ
         description: '`dataflow` と同じ'
       - value: state
         title: 状態遷移
-        description: '`states`・`transitions` から mdmark のフロー図（状態を箱、遷移を線にする）'
+        description: '`states`・`transitions` から Mermaid の `stateDiagram-v2`'
       - value: er
         title: ER 図
         description: '`entities`・`relations` から Mermaid の `erDiagram`'
