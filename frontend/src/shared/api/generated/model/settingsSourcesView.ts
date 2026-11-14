@@ -12,4 +12,5 @@ import type { SettingsSourceRow } from './settingsSourceRow';
 export interface SettingsSourcesView {
   settingsPath: string;
   sources: SettingsSourceRow[];
+  version?: string | null;
 }

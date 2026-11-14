@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import { expect, test, vi } from "vitest";
 
 import { SourceDeleteDialog } from "@/features/settings/settings/components/source-delete-dialog";
-import { settingsSource } from "@tests/helpers/fixtures";
+import { PROBLEM_HEADERS, problem, settingsSource } from "@tests/helpers/fixtures";
 import { server } from "@tests/helpers/msw-server";
 import { createTestQueryClient } from "@tests/helpers/render";
 
@@ -57,4 +57,37 @@ test("test_source_delete_dialog_when_failed", async () => {
   );
   expect(onOpenChange).not.toHaveBeenCalledWith(false);
   expect(screen.getByRole("alertdialog")).toBeInTheDocument();
+});
+
+test("test_source_delete_dialog_when_conflict", async () => {
+  server.use(
+    http.put("/_api/settings/sources", () =>
+      HttpResponse.json(problem(409, { current: "v2" }), { status: 409, headers: PROBLEM_HEADERS }),
+    ),
+  );
+  const onOpenChange = renderDialog();
+
+  await userEvent.click(screen.getByRole("button", { name: "削除" }));
+
+  expect(await screen.findByText("他の変更があったため削除できませんでした")).toBeInTheDocument();
+  expect(onOpenChange).not.toHaveBeenCalledWith(false);
+});
+
+test("test_source_delete_dialog_when_gone", () => {
+  const client = createTestQueryClient();
+  const view = render(
+    <QueryClientProvider client={client}>
+      <SourceDeleteDialog open onOpenChange={vi.fn()} sources={sources as never} index={1} />
+    </QueryClientProvider>,
+  );
+
+  view.rerender(
+    <QueryClientProvider client={client}>
+      <SourceDeleteDialog open onOpenChange={vi.fn()} sources={[sources[0]] as never} index={1} />
+    </QueryClientProvider>,
+  );
+
+  expect(screen.getByText("配信元が削除されたため削除できませんでした")).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "削除" })).toBeDisabled();
+  expect(screen.getByText("b を削除しますか?")).toBeInTheDocument();
 });

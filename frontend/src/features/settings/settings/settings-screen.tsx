@@ -57,6 +57,45 @@ const SourceList = ({
   return <SourceTable sources={sources} onEdit={onEdit} onRemove={onRemove} />;
 };
 
+type SourceDialogsProps = {
+  dialog: Dialog;
+  sources: SettingsSourceRow[] | undefined;
+  /** 端末の設定の取得の `version`（保存の `expectedVersion` にする） */
+  version: string | null | undefined;
+  onClose: () => void;
+};
+
+/** 開いている配信元のダイアログか削除の確認のダイアログ */
+const SourceDialogs = ({
+  dialog,
+  sources,
+  version,
+  onClose,
+}: SourceDialogsProps) => {
+  if (sources === undefined || dialog === null) return null;
+  if (dialog.kind === "edit") {
+    return (
+      <SourceEditDialog
+        key={dialog.index ?? "new"}
+        open
+        onOpenChange={(open) => !open && onClose()}
+        sources={sources}
+        index={dialog.index}
+        version={version}
+      />
+    );
+  }
+  return (
+    <SourceDeleteDialog
+      open
+      onOpenChange={(open) => !open && onClose()}
+      sources={sources}
+      index={dialog.index}
+      version={version}
+    />
+  );
+};
+
 /** 設定画面。端末の設定の配信元を状態とともに並べ、追加・編集・削除をダイアログで行う */
 export const SettingsScreen = () => {
   const query = useSettingsGetSettingsSources();
@@ -165,23 +204,12 @@ export const SettingsScreen = () => {
           </Button>
         </section>
       </main>
-      {sources && dialog?.kind === "edit" && (
-        <SourceEditDialog
-          key={dialog.index ?? "new"}
-          open
-          onOpenChange={(open) => !open && setDialog(null)}
-          sources={sources}
-          index={dialog.index}
-        />
-      )}
-      {sources && dialog?.kind === "remove" && (
-        <SourceDeleteDialog
-          open
-          onOpenChange={(open) => !open && setDialog(null)}
-          sources={sources}
-          index={dialog.index}
-        />
-      )}
+      <SourceDialogs
+        dialog={dialog}
+        sources={sources}
+        version={query.data?.version}
+        onClose={() => setDialog(null)}
+      />
       <ShortcutDialog
         open={helpOpen}
         onOpenChange={setHelpOpen}

@@ -36,6 +36,7 @@ from dev_docs.shared.errors import (
     ProjectIndexResponseError,
     ProjectIndexUnreachableError,
     RefNotFoundError,
+    SettingsVersionConflictError,
     SourceNotServedError,
     UnknownSourceError,
     Violation,
@@ -386,9 +387,21 @@ class ProjectIndexClient:
         response = await self.request("GET", "/settings/sources")
         return self._settings(response.json())
 
-    async def put_settings_sources(self, rows: list[dict[str, Any]]) -> SettingsSourcesView:
-        """`sources[]` の全行の保存と読み直しを依頼し、保存した後の行と状態を返却する。"""
-        await self.request("PUT", "/settings/sources", body={"sources": rows})
+    async def put_settings_sources(
+        self, rows: list[dict[str, Any]], *, expected_version: str | None = None
+    ) -> SettingsSourcesView:
+        """`sources[]` の全行の保存と読み直しを依頼し、保存した後の行・状態・内容のバージョンを返却する。"""
+        body: dict[str, Any] = {"sources": rows}
+        if expected_version is not None:
+            body["expectedVersion"] = expected_version
+        response = await self.request("PUT", "/settings/sources", body=body)
+        # 取得した後に端末の設定が変わった: 今の内容のバージョンを添えて例外にする
+        if response.status_code == HTTP_CONFLICT:
+            raise SettingsVersionConflictError(
+                message="端末の設定は他の書き換えで変わっています",
+                current=str(response.json().get("current", "")),
+            )
+        # PUT の応答は行（`config`・`scope`）を持たないため、取得し直す
         return await self.settings_sources()
 
     async def save_settings_sources(

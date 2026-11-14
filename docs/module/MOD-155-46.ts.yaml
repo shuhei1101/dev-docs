@@ -22,19 +22,27 @@ functions:
         type: number | null
         required: true
         passing: keyword
-        description: 編集する行の位置（追加は null）
+        description: 開いたときの編集する行の位置（追加は null）。開いたときに `sourceKey` で行を指す値にして持ち、以降は使わない
       - name: onSaved
         type: () => void
         required: true
         passing: keyword
         description: 保存できたとき（ダイアログを閉じる）
+      - name: version
+        type: string | undefined
+        required: false
+        passing: keyword
+        description: 端末の設定の取得の `version`。保存の `expectedVersion` にする
     returns:
-      type: '{form: UseFormReturn<SourceFormValues>; submit: () => Promise<void>; summary: {path: string; message: string}[]; saving: boolean}'
-      description: '`summary` は保存の失敗のまとめ'
+      type: '{form: UseFormReturn<SourceFormValues>; submit: () => Promise<void>; summary: {path: string; message: string}[]; conflict: boolean; gone: boolean; saving: boolean}'
+      description: '`summary` は保存の失敗のまとめ。`conflict` は直前の保存が 409 だったか、`gone` は編集していた配信元が今の一覧に無いか'
     process: |-
-      1. `submit` は検証を通した入力を `applySource` で `sources[]` にし、`useSaveSources` で保存する
-      2. `ClientValueError` なら `toFieldErrors` の `fields` を `setError`、`summary` を状態に入れ、最初の違反の項目へフォーカスする
-      3. それ以外の失敗は `handleAppError(error, {message: "端末の設定を保存できませんでした。"})`
+      1. 開いたときにだけ、編集する行を `sourceKey` で指す値と、フォームの初期値（`toFormValues`）を作って持つ
+      2. 描画のたびに、指す値で今の `sources` の位置を `findSource` で引く。編集で -1 なら `gone` を `true` にする
+      3. `submit` は、`gone` なら保存しない。それ以外は検証を通した入力を `applySource`（引いた位置）で `sources[]` にし、`useSaveSources` で `version` を添えて保存する
+      4. `VersionConflictError`（409）なら `conflict` を `true` にし、入力を残したまま全ての問い合わせを読み直す
+      5. `ClientValueError` なら `toFieldErrors` の `fields` を `setError`、`summary` を状態に入れ、最初の違反の項目へフォーカスする
+      6. それ以外の失敗は `handleAppError(error, {message: "端末の設定を保存できませんでした。"})`
     unit_tests:
       - name: test_use_source_form
         case: 正常
@@ -48,3 +56,21 @@ functions:
         condition: 通る入力で `submit`
         mock: MSW の端末の設定の保存のハンドラ（422、`sources[1].config[0]` の違反）
         expected: '`config` にエラー、`summary` が 1 件、`onSaved` は呼ばれない'
+      - name: test_use_source_form_when_conflict
+        case: 異常
+        summary: 他の書き換えが入っている
+        condition: PUT が 409 を返す
+        mock: MSW
+        expected: '`conflict` が `true`、`onSaved` が呼ばれず、入力の値が残る'
+      - name: test_use_source_form_when_row_moved
+        case: 正常
+        summary: 取得し直して行の位置がずれた
+        condition: '`a`・`b` の `b` を編集して開き、`sources` を `c`・`a`・`b` にしてから保存する'
+        mock: MSW（PUT の本文を記録する）
+        expected: 送った `sources[2]` が入力の値で、`c`・`a` の行は変わらない
+      - name: test_use_source_form_when_gone
+        case: 異常
+        summary: 編集していた配信元が削除された
+        condition: '`b` を編集して開き、`sources` を `a` だけにしてから保存する'
+        mock: MSW（PUT を記録する）
+        expected: '`gone` が `true` で、PUT が呼ばれない'

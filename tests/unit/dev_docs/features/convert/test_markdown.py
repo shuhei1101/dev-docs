@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import json
 import re
 from collections.abc import Callable
 from datetime import UTC, datetime
@@ -201,8 +200,8 @@ def test_schema_to_markdown_when_diagram(make_document: Callable[..., Document])
     # 実行
     result = schema_to_markdown(document, schema, CONTEXT)
     # 検証
-    assert "<!-- flow -->" in result
-    assert '"updated": "2026-11-03"' in result
+    assert "<!-- map: " in result
+    assert "<!-- /map -->" in result
     assert "<!-- table: data closed +columns hide=ID -->\n| 表示 | ID | 種類 |" in result
     assert "<!-- table: data closed -->\n| 元 | 先 |" in result
 
@@ -232,11 +231,10 @@ def test_schema_to_markdown_when_er(make_document: Callable[..., Document]) -> N
     # 実行
     result = schema_to_markdown(document, schema, CONTEXT)
     # 検証
-    match = re.search(r"<!-- er -->\n\n```json\n(.*?)\n```\n\n<!-- /er -->", result, re.S)
+    match = re.search(r"<!-- map: .*?```mermaid\n(.*?)\n```", result, re.S)
     assert match is not None
-    definition = json.loads(match.group(1))
-    assert definition["tables"][0]["columns"][0]["name"] == "id"
-    assert definition["tables"][0]["columns"][0]["type"] == "bigint"
+    assert match.group(1).splitlines()[0] == "erDiagram"
+    assert "bigint id" in match.group(1)
 
 
 SCENARIO_SCHEMA: dict[str, Any] = {

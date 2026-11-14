@@ -32,7 +32,8 @@ export const SettingsGetSettingsSourcesResponse = zod.object({
   "server": zod.string()
 }).describe('設定のバージョンとサーバーが読み込めるバージョン。'),zod.null()]).optional(),
   "outsideRead": zod.boolean().default(settingsGetSettingsSourcesResponseSourcesItemOutsideReadDefault)
-}).describe('端末の設定の取得の `sources[]` の 1 行（行の値に配信元の状態を重ねたもの）。'))
+}).describe('端末の設定の取得の `sources[]` の 1 行（行の値に配信元の状態を重ねたもの）。')),
+  "version": zod.union([zod.string(),zod.null()]).optional()
 }).describe('GET `/_api/settings/sources` の応答。')
 
 /**
@@ -52,7 +53,8 @@ export const SettingsPutSettingsSourcesBody = zod.object({
   "write": zod.union([zod.array(zod.string()),zod.null()]).optional()
 }).default(settingsPutSettingsSourcesBodySourcesItemScopeDefault).describe('`sources[].scope` の `read`・`write`。'),
   "outside_read": zod.boolean().default(settingsPutSettingsSourcesBodySourcesItemOutsideReadDefault)
-}).describe('設定画面が送る `sources[]` の 1 行（project-index の端末の設定の行の形）。'))
+}).describe('設定画面が送信する `sources[]` の 1 行（project-index の端末の設定の行の構造）。')),
+  "expectedVersion": zod.union([zod.string(),zod.null()]).optional()
 }).describe('PUT `/_api/settings/sources` の本文。')
 
 export const SettingsPutSettingsSourcesResponse = zod.object({
@@ -67,6 +69,7 @@ export const SettingsPutSettingsSourcesResponse = zod.object({
   "config": zod.string(),
   "server": zod.string()
 }).describe('設定のバージョンとサーバーが読み込めるバージョン。'),zod.null()]).optional()
-}).describe('再読み込みした後の配信元 1 つの状態。'))
+}).describe('再読み込みした後の配信元 1 つの状態。')),
+  "version": zod.union([zod.string(),zod.null()]).optional()
 }).describe('再読み込みした後の配信元ごとの状態。')
 

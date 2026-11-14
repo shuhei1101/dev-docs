@@ -24,3 +24,13 @@ test("test_source_table_when_edit", async () => {
   expect(onEdit).toHaveBeenCalledTimes(1);
   expect(onEdit).toHaveBeenCalledWith(1);
 });
+
+test("test_source_table_when_outside_read_disabled", async () => {
+  const rows = [settingsSource("a", { outsideRead: false }), settingsSource("b")];
+  renderInRouter(<SourceTable sources={rows as never} onEdit={vi.fn()} onRemove={vi.fn()} />, "/_settings");
+
+  const notes = await screen.findAllByText("範囲の外から参照できません");
+
+  expect(notes).toHaveLength(1);
+  expect(notes[0].closest("tr")).toHaveTextContent("a");
+});

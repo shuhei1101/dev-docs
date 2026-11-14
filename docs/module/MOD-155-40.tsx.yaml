@@ -27,8 +27,12 @@ components:
       - name: index
         type: number
         required: true
-        description: 削除する行の位置
-    description: '初期フォーカスはキャンセル。保存の失敗は `handleAppError(error, {message: "端末の設定を保存できませんでした。"})` で、ダイアログは開いたまま'
+        description: 開いたときの削除する行の位置
+      - name: version
+        type: string | undefined
+        required: false
+        description: 端末の設定の取得の `version`。保存の `expectedVersion` にする
+    description: '初期フォーカスはキャンセル。開いたときの行を `sourceKey` で指す値・名前・フォルダを持ち、削除のたびに今の `sources` から `findSource` で位置を引いて `removeSource` し、`version` を添えて保存する。位置が無ければ画面設計の『削除する配信元が削除されたときの表示』を出して削除ボタンを無効にする。409 は『削除の他の変更の表示』を出して全ての問い合わせを読み直す。それ以外の保存の失敗は `handleAppError(error, {message: "端末の設定を保存できませんでした。"})` で、ダイアログは開いたまま'
     unit_tests:
       - name: test_source_delete_dialog
         case: 正常
@@ -42,3 +46,15 @@ components:
         condition: '`削除`'
         mock: MSW のハンドラ（500）・sonner の `toast`
         expected: 通知が `端末の設定を保存できませんでした。`、ダイアログは開いたまま
+      - name: test_source_delete_dialog_when_conflict
+        case: 異常
+        summary: 他の書き換えが入っている
+        condition: PUT が 409 を返す
+        mock: MSW
+        expected: 「他の変更があったため削除できませんでした」が出て、ダイアログが開いたまま
+      - name: test_source_delete_dialog_when_gone
+        case: 異常
+        summary: 削除する配信元が削除された
+        condition: '`b` を開いた後に `sources` を `a` だけにする'
+        mock: MSW
+        expected: 「配信元が削除されたため削除できませんでした」が出て、削除ボタンが無効。見出しは `b` のまま

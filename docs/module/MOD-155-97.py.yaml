@@ -215,7 +215,7 @@ functions:
         summary: 図と元データの表
         condition: '`x-shape: diagram`・`x-diagram: flowchart` の `nodes`（`id`・`label`・`kind`）と `edges`'
         mock: なし
-        expected: '`<!-- flow -->` の範囲、先頭の列が `label` の `title` で `+columns hide=` に `id` の `title` だけを持つ閉じたノードの表（`kind` の列は隠さない）、`hide=` の無い閉じた辺の表'
+        expected: 'map の範囲、先頭の列が `label` の `title` で `+columns hide=` に `id` の `title` だけを持つ閉じたノードの表（`kind` の列は隠さない）、`hide=` の無い閉じた辺の表'
       - name: test_schema_to_markdown_when_test_files
         case: 正常
         summary: 対応テストファイル
@@ -233,7 +233,7 @@ functions:
         summary: ER 図にテーブルの列を渡す
         condition: '`x-shape: diagram`・`x-diagram: er` の `er`（`columns` を持たない実体 `顧客`）と、`title: 顧客` のテーブルを持つ `tables`'
         mock: なし
-        expected: '`<!-- er -->` の範囲の JSON の `顧客` の `columns` が `tables` のテーブルの列'
+        expected: 'map の範囲の `erDiagram` の `顧客` の列が `tables` のテーブルの列（`bigint id`）'
       - name: test_schema_to_markdown_when_decisions
         case: 正常
         summary: 箇条書きの検討事項のリンク

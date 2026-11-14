@@ -36,3 +36,26 @@ test("test_use_save_sources", async () => {
   expect(toast.success).toHaveBeenCalledTimes(1);
   expect(toast.success).toHaveBeenCalledWith("端末の設定を保存し、配信元を再読み込みしました。");
 });
+
+test("test_use_save_sources_when_expected_version", async () => {
+  const bodies: unknown[] = [];
+  server.use(
+    http.get("/_api/settings/sources", () => HttpResponse.json(settingsView([settingsSource("a")]))),
+    http.put("/_api/settings/sources", async ({ request }) => {
+      bodies.push(await request.json());
+      return HttpResponse.json({ sources: [{ id: "a", status: "serving", errors: [] }] });
+    }),
+  );
+  const queryClient = createTestQueryClient();
+  const wrapper = ({ children }: { children: ReactNode }) => (
+    <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+  );
+  const { result } = renderHook(() => useSaveSources(), { wrapper });
+  const sources = [{ id: "a", config: ["/a/dev-docs.yaml"] }] as never;
+
+  await result.current.mutateAsync(sources, "v1");
+  await result.current.mutateAsync(sources, undefined);
+
+  expect(bodies[0]).toMatchObject({ expectedVersion: "v1" });
+  expect(bodies[1]).not.toHaveProperty("expectedVersion");
+});

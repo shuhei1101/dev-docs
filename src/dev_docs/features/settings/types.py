@@ -13,6 +13,9 @@ from dev_docs.shared.api_model import ApiModel
 from dev_docs.shared.errors import DevDocsError, Violation
 
 if TYPE_CHECKING:
+    from dev_docs.integrations.project_index.types import (
+        SettingsSourcesView as ProjectIndexSettingsView,
+    )
     from dev_docs.integrations.project_index.types import SourceState
 
 
@@ -65,6 +68,8 @@ class SettingsSourcesRequest(ApiModel):
     model_config = ConfigDict(extra="forbid")
 
     sources: list[SourceEntry]
+    # 画面が端末の設定の取得か前の保存で受けた内容のバージョン。`None` は照合しない
+    expected_version: str | None = None
 
 
 class SourceViolation(ApiModel):
@@ -94,6 +99,8 @@ class SettingsSourcesResponse(ApiModel):
     """再読み込みした後の配信元ごとの状態。"""
 
     sources: list[SettingsSourceStatus]
+    # 保存した後の端末の設定の内容のバージョン
+    version: str | None = None
 
     @classmethod
     def from_states(cls, states: list[SourceState]) -> SettingsSourcesResponse:
@@ -115,6 +122,11 @@ class SettingsSourcesResponse(ApiModel):
             items.append(item)
         return cls(sources=items)
 
+    @classmethod
+    def from_view(cls, view: ProjectIndexSettingsView) -> SettingsSourcesResponse:
+        """project-index の端末の設定の取得の結果の状態と内容のバージョンから作る。"""
+        return cls(sources=cls.from_states(view.states).sources, version=view.version)
+
 
 class SettingsSourceRow(ApiModel):
     """端末の設定の取得の `sources[]` の 1 行（行の値に配信元の状態を重ねたもの）。"""
@@ -134,6 +146,8 @@ class SettingsSourcesView(ApiModel):
 
     settings_path: str
     sources: list[SettingsSourceRow]
+    # project-index の端末の設定の内容のバージョン（ファイル全体の内容のハッシュ）
+    version: str | None = None
 
 
 @dataclass(kw_only=True)

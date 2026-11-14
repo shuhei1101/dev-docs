@@ -1,298 +1,294 @@
 summary: クラス / 関数 / 定数をドメイン分類でまとめる（単体テストの元）
 items:
-- page: MOD-155-50.css.yaml
-  summary: 画面全体の CSS と mdmark の本文への上書き
-- page: MOD-155-75.yaml
-  summary: 入口・プロバイダ・ルーター・ルートの構成
-- page: MOD-155-52.tsx.yaml
-  summary: '`/{配信元の ID}/{文書のパス}` のルート'
-- page: MOD-155-53.tsx.yaml
-  summary: '`/{配信元の ID}` のルート'
-- page: MOD-155-54.tsx.yaml
-  summary: '`/_settings` のルート'
-- page: MOD-155-55.tsx.yaml
-  summary: 全てのルートの親。どのルートにも当たらない URL と描画の例外を受ける
-- page: MOD-155-1.tsx.yaml
-  summary: 画面共通の確認のダイアログと、それを開くフック
-- page: MOD-155-2.tsx.yaml
-  summary: 描画中の例外の表示
-- page: MOD-155-56.tsx.yaml
-  summary: '`/` を開いたときの振り分け'
-- page: MOD-155-3.tsx.yaml
-  summary: 最初の画面の読み込みが長いときだけ出す読み込み中の表示
-- page: MOD-155-51.tsx.yaml
-  summary: SPA の入口。ルーターと Provider を組んで `#root` に描く
-- page: MOD-155-4.ts.yaml
-  summary: 読み込み中の表示を出すまでの待ち時間
-- page: MOD-155-5.tsx.yaml
-  summary: 画面全体の Provider
-- page: MOD-155-6.ts.yaml
-  summary: TanStack Query の QueryClient の既定
-- page: MOD-155-7.tsx.yaml
-  summary: TanStack Router のルーターとルートの文脈
-- page: MOD-155-76.yaml
-  summary: 画面の間で共通に使う型・エラー・API のクライアント・フック・ストア・部品と、テストの MSW のハンドラ
-- page: MOD-155-57.ts.yaml
-  summary: orval が生成した API の関数が通る fetch の mutator
-- page: MOD-155-61.ts.yaml
-  summary: 画面の API の problem+json を受ける例外の階層
-- page: MOD-155-69.ts.yaml
-  summary: 画面に出す日時の書式
-- page: MOD-155-62.ts.yaml
-  summary: 拾った例外を通知とログに振り分ける
-- page: MOD-155-73.ts.yaml
-  summary: 単体テスト・結合テスト・Storybook が使う MSW のハンドラ
-- page: MOD-155-71.ts.yaml
-  summary: 設定画面から戻る直前の文書
-- page: MOD-155-70.ts.yaml
-  summary: ブラウザのコンソールへ JSON Lines で書くロガー
-- page: MOD-155-72.ts.yaml
-  summary: 明暗・1 文字のショートカットの設定
-- page: MOD-155-63.ts.yaml
-  summary: orval が生成しない zod のスキーマ
-- page: MOD-155-74.ts.yaml
-  summary: 単体テストの共通の準備
-- page: MOD-155-58.tsx.yaml
-  summary: '`?` で開くショートカットの一覧'
-- page: MOD-155-64.ts.yaml
-  summary: キーボードのショートカットの定義
-- page: MOD-155-59.tsx.yaml
-  summary: 本文の領域へフォーカスを移すリンク
-- page: MOD-155-60.tsx.yaml
-  summary: 3 画面に共通のトップバー
-- page: MOD-155-66.ts.yaml
-  summary: 待ちが続いたときだけ true にするフック
-- page: MOD-155-67.ts.yaml
-  summary: メディアクエリに今当たっているかを返すフック
-- page: MOD-155-68.ts.yaml
-  summary: ショートカットの定義の ID でキーを受けるフック
-- page: MOD-155-77.yaml
-  summary: 文書の画面・見つからない画面と、両方が使う検索・コメントの構成
-- page: MOD-155-34.ts.yaml
-  summary: 選んだコメントのコピーの本文と、Issue の作成画面の URL
-- page: MOD-155-35.tsx.yaml
-  summary: 溜めたコメントの一覧と、コピー・起票
-- page: MOD-155-36.ts.yaml
-  summary: このブラウザのタブで溜めたコメントの置き場所
-- page: MOD-155-8.tsx.yaml
-  summary: 本文の代わりに出す変換の失敗
-- page: MOD-155-9.tsx.yaml
-  summary: 差分の強調と、比べている 2 つのリビジョンの案内
-- page: MOD-155-10.tsx.yaml
-  summary: mdmark で描く文書の本文
-- page: MOD-155-11.tsx.yaml
-  summary: 開いている文書の階層のパンくず
-- page: MOD-155-12.tsx.yaml
-  summary: 文書のタイトルと情報
-- page: MOD-155-13.tsx.yaml
-  summary: 文書の画面の本文の領域
-- page: MOD-155-14.tsx.yaml
-  summary: 選んでいるタブの文書の一覧
-- page: MOD-155-15.tsx.yaml
-  summary: 文書の取得を待つ間の読み込み中の表示
-- page: MOD-155-16.tsx.yaml
-  summary: 配信元の文書の種類のタブ
-- page: MOD-155-20.tsx.yaml
-  summary: 文書の画面の最上位
-- page: MOD-155-18.tsx.yaml
-  summary: 選んだタブに文書が無いことの表示
-- page: MOD-155-37.ts.yaml
-  summary: 検索の結果の抜粋の一致した箇所を分ける
-- page: MOD-155-30.tsx.yaml
-  summary: 次のリンクと配信中の配信元
-- page: MOD-155-32.ts.yaml
-  summary: 404 の `missing` を見つからない画面の文言にする
-- page: MOD-155-26.ts.yaml
-  summary: 開いているページ・パンくず・ページのタイトルを引く関数
-- page: MOD-155-33.tsx.yaml
-  summary: 見つからない画面
-- page: MOD-155-27.ts.yaml
-  summary: 文書の画面の問い合わせとルートの loader
-- page: MOD-155-38.tsx.yaml
-  summary: 開いている配信元・リビジョンの文書を語で探すダイアログ
-- page: MOD-155-28.ts.yaml
-  summary: 文書の画面の URL のクエリ
-- page: MOD-155-39.ts.yaml
-  summary: 端末の設定の取得から配信中の配信元を取り出す
-- page: MOD-155-19.tsx.yaml
-  summary: 狭い幅で文書の一覧を重ねて出すドロワー
-- page: MOD-155-212.ts.yaml
-  summary: 本文の表と表のキーを対にし、隠す列を書き込む関数
-- page: MOD-155-21.ts.yaml
-  summary: mdmark の列の表示のメニューで出し入れした列を保存するフック
-- page: MOD-155-22.ts.yaml
-  summary: 別の文書・リビジョン・配信元へ移る操作のフック
-- page: MOD-155-23.ts.yaml
-  summary: タブのタイトルと直前の文書を合わせるフック
-- page: MOD-155-24.ts.yaml
-  summary: コメントのパネルで場所を選ばれたコメントを持つフック
-- page: MOD-155-25.ts.yaml
-  summary: mdmark の `mount` を React の寿命に合わせて呼ぶフック
-- page: MOD-155-31.ts.yaml
-  summary: 見つからない画面に出す内容を読むフック
-- page: MOD-155-78.yaml
-  summary: 設定画面の構成
-- page: MOD-155-45.ts.yaml
-  summary: 配信元のダイアログの入力のスキーマと、`sources[]` への反映
-- page: MOD-155-47.ts.yaml
-  summary: 422 の `errors[]` をダイアログの項目のエラーに振り分ける
-- page: MOD-155-48.ts.yaml
-  summary: 端末の設定の保存の mutation
-- page: MOD-155-49.tsx.yaml
-  summary: 設定画面
-- page: MOD-155-40.tsx.yaml
-  summary: 削除の確認のダイアログ
-- page: MOD-155-41.tsx.yaml
-  summary: 配信元のダイアログ（追加・編集）
-- page: MOD-155-42.tsx.yaml
-  summary: 配信元の一覧の読み込み中の表示
-- page: MOD-155-43.tsx.yaml
-  summary: 配信元の一覧の表
-- page: MOD-155-44.tsx.yaml
-  summary: 配信元の状態のバッジと補足
-- page: MOD-155-46.ts.yaml
-  summary: 配信元のダイアログのフォームの状態と保存
-- page: MOD-155-80.py.yaml
-  summary: サーバーが落ちていれば起動する
-- page: MOD-155-213.yaml
-  summary: project-index の読み取り API と端末の設定の API の呼び出し
-- page: MOD-155-215.py.yaml
-  summary: project-index の読み取り API と端末の設定の API を制限時間つきで呼び、応答を型にする
-- page: MOD-155-214.py.yaml
-  summary: project-index の読み取り API と端末の設定の API の応答の型
-- page: MOD-155-124.py.yaml
-  summary: Jinja2 での部品の描画と変数の値の区切り
-- page: MOD-155-125.py.yaml
-  summary: 起動のときのプロンプトの YAML の読み込み・検査と、注入する文の描画
-- page: MOD-155-126.py.yaml
-  summary: プロンプトの YAML のモデル・描画の結果・例外
-- page: MOD-155-193.yaml
-  summary: '`dev-docs` コマンドの引数の組み立てと main'
-- page: MOD-155-81.py.yaml
-  summary: インストール済みのパッケージからバージョンを引くときの配布名
-- page: MOD-155-82.py.yaml
-  summary: '`dev-docs` コマンドの引数の組み立てと main'
-- page: MOD-155-194.yaml
-  summary: 例外の階層・YAML の読み書き・ハッシュ・パスの正規化・オリジンの確認
-- page: MOD-155-183.py.yaml
-  summary: 画面の API の DTO の基底（キーは camelCase）
-- page: MOD-155-184.py.yaml
-  summary: '`DevDocsError` と、MCP・画面が返すエラーの階層'
-- page: MOD-155-185.py.yaml
-  summary: 一時ファイルからのファイルの置き換え
-- page: MOD-155-186.py.yaml
-  summary: 内容のハッシュ（文書のバージョン）
-- page: MOD-155-181.py.yaml
-  summary: 画面と同じオリジンからの要求かの確認
-- page: MOD-155-187.py.yaml
-  summary: パスの正規化
-- page: MOD-155-188.py.yaml
-  summary: JSON Schema の違反を項目のパスつきの `Violation` にする
-- page: MOD-155-189.py.yaml
-  summary: 動いているプロセスが起動した時点の dev-docs のバージョン
-- page: MOD-155-190.py.yaml
-  summary: YAML の読み込みと、往復編集の読み書き
-- page: MOD-155-116.py.yaml
-  summary: 再起動の要求と uvicorn の停止
-- page: MOD-155-117.py.yaml
-  summary: 再起動・更新の結果と定数
-- page: MOD-155-118.py.yaml
-  summary: '`git pull --ff-only`・`uv sync` によるクローンの更新'
-- page: MOD-155-195.yaml
-  summary: スキーマ駆動の変換と、project-index の `converters[]` の結果の Markdown
-- page: MOD-155-92.py.yaml
-  summary: 設計書の `decisions` の検討事項の ID と、検討事項の文書のパスの読み取り
-- page: MOD-155-93.py.yaml
-  summary: '`x-diagram` の値と手で書く Mermaid の、mdmark の図の部品か Mermaid への描画'
-- page: MOD-155-94.py.yaml
-  summary: 埋め込みのマーカーのパスの取り出しと、表への展開
-- page: MOD-155-95.py.yaml
-  summary: フロー図の中間データの、mdmark のフロー図の部品の定義への配置
-- page: MOD-155-96.py.yaml
-  summary: 文字列の値の中の、図・ファイルツリー・手順・参照・Issue 番号・値の選択肢の書き換え
-- page: MOD-155-97.py.yaml
-  summary: スキーマ駆動の文書の Markdown への変換と表の描画
-- page: MOD-155-98.py.yaml
-  summary: 手で書く Mermaid の `flowchart`・`sequenceDiagram` の読み取り
-- page: MOD-155-99.py.yaml
-  summary: 変換の選択と、表のキーの取り出し
-- page: MOD-155-100.py.yaml
-  summary: 変換の結果・失敗・表し方・図の種類・図の中間データ・描画の文脈の型
-- page: MOD-155-196.yaml
-  summary: 文書の取得の差分が使う変わったキーの比べ方
-- page: MOD-155-88.py.yaml
-  summary: 変わったキーの比べ方
-- page: MOD-155-199.yaml
-  summary: project-index が返した文書の項目の値とエイリアス
-- page: MOD-155-106.py.yaml
-  summary: エイリアスのキーの検証と、エイリアスの集め
-- page: MOD-155-107.py.yaml
-  summary: 項目のパスの分解と、項目の値の取得
-- page: MOD-155-112.py.yaml
-  summary: エイリアスの型
-- page: MOD-155-204.yaml
-  summary: 文書の取得・画面の検索・リビジョンの一覧・表の列の設定の API（project-index から取得）
-- page: MOD-155-158.py.yaml
-  summary: 表の列の設定の読み書き
-- page: MOD-155-159.py.yaml
-  summary: 画面の文書の取得と、見つからない項目
-- page: MOD-155-160.py.yaml
-  summary: 画面のナビゲーションの組み立てと、変わったページ
-- page: MOD-155-161.py.yaml
-  summary: 画面のページのパスと、文書のページの特定
-- page: MOD-155-162.py.yaml
-  summary: 画面の API のルーター（`/_api/sources/{source}/docs`・`search`・`refs`・`columns`）
-- page: MOD-155-163.py.yaml
-  summary: 画面の検索（project-index の検索の結果を画面の形にする）
-- page: MOD-155-164.py.yaml
-  summary: 画面の API の要求と結果の型
-- page: MOD-155-205.yaml
-  summary: 端末の設定の検証と読み込み、`sources[]` の取得と保存の依頼
-- page: MOD-155-146.py.yaml
-  summary: 端末の設定の場所・読み込みと検証・待ち受けのポート
-- page: MOD-155-147.py.yaml
-  summary: 端末の設定のルーター（`GET`・`PUT /_api/settings/sources`）
-- page: MOD-155-148.py.yaml
-  summary: '`sources[]` の保存の依頼'
-- page: MOD-155-149.py.yaml
-  summary: 端末の設定と、画面の `sources[]` の要求と結果の型
-- page: MOD-155-85.py.yaml
-  summary: '管理の MCP の `status` の `format: markdown` の応答の文を組み立てる。値は service.py の結果をそのまま使い、計算しない'
-- page: MOD-155-86.py.yaml
-  summary: 管理の MCP の `status` の中身。端末の設定を読み、配信元の状態は project-index から取る
-- page: MOD-155-198.yaml
-  summary: 管理の MCP の組み立てと、ツールの結果・エラーの変換
-- page: MOD-155-178.py.yaml
-  summary: 管理の MCP の組み立て（ツールの登録）
-- page: MOD-155-180.py.yaml
-  summary: ツールの結果・エラーの変換と、管理の MCP のツール名とプロンプトの ID
-- page: MOD-155-87.py.yaml
-  summary: 管理の MCP の `status` の要求と結果の型
-- page: MOD-155-202.yaml
-  summary: '`nav` の `auto` の `filter` の条件の確かめと照合'
-- page: MOD-155-134.py.yaml
-  summary: 項目の値・計算項目・使える項目・見出しの行
-- page: MOD-155-135.py.yaml
-  summary: 条件の木の確かめと照合・正規表現・比べる値の解釈（`nav` の `auto` の `filter`）
-- page: MOD-155-140.py.yaml
-  summary: '`nav` の `auto` の `filter` の条件の木と、見出しの型'
-- page: MOD-155-119.py.yaml
-  summary: 対象の決定・当てる手順・バックアップを取った適用と、`sources` の project-index への書き出し
-- page: MOD-155-120.py.yaml
-  summary: 手順の読み込みと適用
-- page: MOD-155-121.py.yaml
-  summary: 手順・対象・例外・終了コード
-- page: MOD-155-207.yaml
-  summary: '`dev-docs serve`・`dev-docs migrate` の部品の配線と、画面の API・管理の MCP を 1 つにまとめたアプリ'
-- page: MOD-155-175.py.yaml
-  summary: ルートと MCP のマウントをまとめたアプリの組み立て
-- page: MOD-155-176.py.yaml
-  summary: 例外の problem+json への変換
-- page: MOD-155-177.py.yaml
-  summary: マウントした管理の MCP のセッションの管理と、project-indexの呼び出しを閉じるアプリの寿命
-- page: MOD-155-174.py.yaml
-  summary: '`dev-docs serve`・`dev-docs migrate` の部品の配線と、起動のときの配信元の知らせ'
-- page: MOD-155-182.py.yaml
-  summary: 画面のビルドの配信
-- page: MOD-192-1.py.yaml
-  summary: 公開の文書と判定フローチャートを mdmark の build で Pages の 1 枚の HTML にまとめる
+  - page: MOD-155-50.css.yaml
+    summary: 画面全体の CSS と mdmark の本文への上書き
+  - page: MOD-155-75.yaml
+    summary: 入口・プロバイダ・ルーター・ルートの構成
+  - page: MOD-155-52.tsx.yaml
+    summary: '`/{配信元の ID}/{文書のパス}` のルート'
+  - page: MOD-155-53.tsx.yaml
+    summary: '`/{配信元の ID}` のルート'
+  - page: MOD-155-54.tsx.yaml
+    summary: '`/_settings` のルート'
+  - page: MOD-155-55.tsx.yaml
+    summary: 全てのルートの親。どのルートにも当たらない URL と描画の例外を受ける
+  - page: MOD-155-1.tsx.yaml
+    summary: 画面共通の確認のダイアログと、それを開くフック
+  - page: MOD-155-2.tsx.yaml
+    summary: 描画中の例外の表示
+  - page: MOD-155-56.tsx.yaml
+    summary: '`/` を開いたときの振り分け'
+  - page: MOD-155-3.tsx.yaml
+    summary: 最初の画面の読み込みが長いときだけ出す読み込み中の表示
+  - page: MOD-155-51.tsx.yaml
+    summary: SPA の入口。ルーターと Provider を組んで `#root` に描く
+  - page: MOD-155-4.ts.yaml
+    summary: 読み込み中の表示を出すまでの待ち時間
+  - page: MOD-155-5.tsx.yaml
+    summary: 画面全体の Provider
+  - page: MOD-155-6.ts.yaml
+    summary: TanStack Query の QueryClient の既定
+  - page: MOD-155-7.tsx.yaml
+    summary: TanStack Router のルーターとルートの文脈
+  - page: MOD-155-76.yaml
+    summary: 画面の間で共通に使う型・エラー・API のクライアント・フック・ストア・部品と、テストの MSW のハンドラ
+  - page: MOD-155-57.ts.yaml
+    summary: orval が生成した API の関数が通る fetch の mutator
+  - page: MOD-155-61.ts.yaml
+    summary: 画面の API の problem+json を受ける例外の階層
+  - page: MOD-155-69.ts.yaml
+    summary: 画面に出す日時の書式
+  - page: MOD-155-62.ts.yaml
+    summary: 拾った例外を通知とログに振り分ける
+  - page: MOD-155-73.ts.yaml
+    summary: 単体テスト・結合テスト・Storybook が使う MSW のハンドラ
+  - page: MOD-155-71.ts.yaml
+    summary: 設定画面から戻る直前の文書
+  - page: MOD-155-70.ts.yaml
+    summary: ブラウザのコンソールへ JSON Lines で書くロガー
+  - page: MOD-155-72.ts.yaml
+    summary: 明暗・1 文字のショートカットの設定
+  - page: MOD-155-63.ts.yaml
+    summary: orval が生成しない zod のスキーマ
+  - page: MOD-155-74.ts.yaml
+    summary: 単体テストの共通の準備
+  - page: MOD-155-58.tsx.yaml
+    summary: '`?` で開くショートカットの一覧'
+  - page: MOD-155-64.ts.yaml
+    summary: キーボードのショートカットの定義
+  - page: MOD-155-59.tsx.yaml
+    summary: 本文の領域へフォーカスを移すリンク
+  - page: MOD-155-60.tsx.yaml
+    summary: 3 画面に共通のトップバー
+  - page: MOD-155-66.ts.yaml
+    summary: 待ちが続いたときだけ true にするフック
+  - page: MOD-155-67.ts.yaml
+    summary: メディアクエリに今当たっているかを返すフック
+  - page: MOD-155-68.ts.yaml
+    summary: ショートカットの定義の ID でキーを受けるフック
+  - page: MOD-155-77.yaml
+    summary: 文書の画面・見つからない画面と、両方が使う検索・コメントの構成
+  - page: MOD-155-34.ts.yaml
+    summary: 選んだコメントのコピーの本文と、Issue の作成画面の URL
+  - page: MOD-155-35.tsx.yaml
+    summary: 溜めたコメントの一覧と、コピー・起票
+  - page: MOD-155-36.ts.yaml
+    summary: このブラウザのタブで溜めたコメントの置き場所
+  - page: MOD-155-8.tsx.yaml
+    summary: 本文の代わりに出す変換の失敗
+  - page: MOD-155-9.tsx.yaml
+    summary: 差分の強調と、比べている 2 つのリビジョンの案内
+  - page: MOD-155-10.tsx.yaml
+    summary: mdmark で描く文書の本文
+  - page: MOD-155-11.tsx.yaml
+    summary: 開いている文書の階層のパンくず
+  - page: MOD-155-12.tsx.yaml
+    summary: 文書のタイトルと情報
+  - page: MOD-155-13.tsx.yaml
+    summary: 文書の画面の本文の領域
+  - page: MOD-155-14.tsx.yaml
+    summary: 選んでいるタブの文書の一覧
+  - page: MOD-155-15.tsx.yaml
+    summary: 文書の取得を待つ間の読み込み中の表示
+  - page: MOD-155-16.tsx.yaml
+    summary: 配信元の文書の種類のタブ
+  - page: MOD-155-20.tsx.yaml
+    summary: 文書の画面の最上位
+  - page: MOD-155-18.tsx.yaml
+    summary: 選んだタブに文書が無いことの表示
+  - page: MOD-155-37.ts.yaml
+    summary: 検索の結果の抜粋の一致した箇所を分ける
+  - page: MOD-155-30.tsx.yaml
+    summary: 次のリンクと配信中の配信元
+  - page: MOD-155-32.ts.yaml
+    summary: 404 の `missing` を見つからない画面の文言にする
+  - page: MOD-155-26.ts.yaml
+    summary: 開いているページ・パンくず・ページのタイトルを引く関数
+  - page: MOD-155-33.tsx.yaml
+    summary: 見つからない画面
+  - page: MOD-155-27.ts.yaml
+    summary: 文書の画面の問い合わせとルートの loader
+  - page: MOD-155-38.tsx.yaml
+    summary: 開いている配信元・リビジョンの文書を語で探すダイアログ
+  - page: MOD-155-28.ts.yaml
+    summary: 文書の画面の URL のクエリ
+  - page: MOD-155-39.ts.yaml
+    summary: 端末の設定の取得から配信中の配信元を取り出す
+  - page: MOD-155-19.tsx.yaml
+    summary: 狭い幅で文書の一覧を重ねて出すドロワー
+  - page: MOD-155-212.ts.yaml
+    summary: 本文の表と表のキーを対にし、隠す列を書き込む関数
+  - page: MOD-155-21.ts.yaml
+    summary: mdmark の列の表示のメニューで出し入れした列を保存するフック
+  - page: MOD-155-22.ts.yaml
+    summary: 別の文書・リビジョン・配信元へ移る操作のフック
+  - page: MOD-155-23.ts.yaml
+    summary: タブのタイトルと直前の文書を合わせるフック
+  - page: MOD-155-24.ts.yaml
+    summary: コメントのパネルで場所を選ばれたコメントを持つフック
+  - page: MOD-155-25.ts.yaml
+    summary: mdmark の `mount` を React の寿命に合わせて呼ぶフック
+  - page: MOD-155-31.ts.yaml
+    summary: 見つからない画面に出す内容を読むフック
+  - page: MOD-155-78.yaml
+    summary: 設定画面の構成
+  - page: MOD-155-45.ts.yaml
+    summary: 配信元のダイアログの入力のスキーマと、`sources[]` への反映
+  - page: MOD-155-47.ts.yaml
+    summary: 422 の `errors[]` をダイアログの項目のエラーに振り分ける
+  - page: MOD-155-48.ts.yaml
+    summary: 端末の設定の保存の mutation
+  - page: MOD-155-49.tsx.yaml
+    summary: 設定画面
+  - page: MOD-155-40.tsx.yaml
+    summary: 削除の確認のダイアログ
+  - page: MOD-155-41.tsx.yaml
+    summary: 配信元のダイアログ（追加・編集）
+  - page: MOD-155-42.tsx.yaml
+    summary: 配信元の一覧の読み込み中の表示
+  - page: MOD-155-43.tsx.yaml
+    summary: 配信元の一覧の表
+  - page: MOD-155-44.tsx.yaml
+    summary: 配信元の状態のバッジと補足
+  - page: MOD-155-46.ts.yaml
+    summary: 配信元のダイアログのフォームの状態と保存
+  - page: MOD-155-80.py.yaml
+    summary: サーバーが落ちていれば起動する
+  - page: MOD-155-213.yaml
+    summary: project-index の読み取り API と端末の設定の API の呼び出し
+  - page: MOD-155-215.py.yaml
+    summary: project-index の読み取り API と端末の設定の API を制限時間つきで呼び、応答を型にする
+  - page: MOD-155-214.py.yaml
+    summary: project-index の読み取り API と端末の設定の API の応答の型
+  - page: MOD-155-124.py.yaml
+    summary: Jinja2 での部品の描画と変数の値の区切り
+  - page: MOD-155-125.py.yaml
+    summary: 起動のときのプロンプトの YAML の読み込み・検査と、注入する文の描画
+  - page: MOD-155-126.py.yaml
+    summary: プロンプトの YAML のモデル・描画の結果・例外
+  - page: MOD-155-193.yaml
+    summary: '`dev-docs` コマンドの引数の組み立てと main'
+  - page: MOD-155-81.py.yaml
+    summary: インストール済みのパッケージからバージョンを引くときの配布名
+  - page: MOD-155-82.py.yaml
+    summary: '`dev-docs` コマンドの引数の組み立てと main'
+  - page: MOD-155-194.yaml
+    summary: 例外の階層・YAML の読み書き・ハッシュ・パスの正規化・オリジンの確認
+  - page: MOD-155-183.py.yaml
+    summary: 画面の API の DTO の基底（キーは camelCase）
+  - page: MOD-155-184.py.yaml
+    summary: '`DevDocsError` と、MCP・画面が返すエラーの階層'
+  - page: MOD-155-185.py.yaml
+    summary: 一時ファイルからのファイルの置き換え
+  - page: MOD-155-186.py.yaml
+    summary: 内容のハッシュ（文書のバージョン）
+  - page: MOD-155-181.py.yaml
+    summary: 画面と同じオリジンからの要求かの確認
+  - page: MOD-155-187.py.yaml
+    summary: パスの正規化
+  - page: MOD-155-188.py.yaml
+    summary: JSON Schema の違反を項目のパスつきの `Violation` にする
+  - page: MOD-155-189.py.yaml
+    summary: 動いているプロセスが起動した時点の dev-docs のバージョン
+  - page: MOD-155-190.py.yaml
+    summary: YAML の読み込みと、往復編集の読み書き
+  - page: MOD-155-116.py.yaml
+    summary: 再起動の要求と uvicorn の停止
+  - page: MOD-155-117.py.yaml
+    summary: 再起動・更新の結果と定数
+  - page: MOD-155-118.py.yaml
+    summary: '`git pull --ff-only`・`uv sync` によるクローンの更新'
+  - page: MOD-155-195.yaml
+    summary: スキーマ駆動の変換と、project-index の `converters[]` の結果の Markdown
+  - page: MOD-155-92.py.yaml
+    summary: 設計書の `decisions` の検討事項の ID と、検討事項の文書のパスの読み取り
+  - page: MOD-155-93.py.yaml
+    summary: '`x-diagram` の値と手で書く Mermaid の、mdmark の map の範囲か Mermaid への描画'
+  - page: MOD-155-94.py.yaml
+    summary: 埋め込みのマーカーのパスの取り出しと、表への展開
+  - page: MOD-155-96.py.yaml
+    summary: 文字列の値の中の、図・ファイルツリー・手順・参照・Issue 番号・値の選択肢の書き換え
+  - page: MOD-155-97.py.yaml
+    summary: スキーマ駆動の文書の Markdown への変換と表の描画
+  - page: MOD-155-99.py.yaml
+    summary: 変換の選択と、表のキーの取り出し
+  - page: MOD-155-100.py.yaml
+    summary: 変換の結果・失敗・表し方・図の種類・図の見出し・描画の文脈の型
+  - page: MOD-155-196.yaml
+    summary: 文書の取得の差分が使う変わったキーの比べ方
+  - page: MOD-155-88.py.yaml
+    summary: 変わったキーの比べ方
+  - page: MOD-155-199.yaml
+    summary: project-index が返した文書の項目の値とエイリアス
+  - page: MOD-155-106.py.yaml
+    summary: エイリアスのキーの検証と、エイリアスの集め
+  - page: MOD-155-107.py.yaml
+    summary: 項目のパスの分解と、項目の値の取得
+  - page: MOD-155-112.py.yaml
+    summary: エイリアスの型
+  - page: MOD-155-204.yaml
+    summary: 文書の取得・画面の検索・リビジョンの一覧・表の列の設定の API（project-index から取得）
+  - page: MOD-155-158.py.yaml
+    summary: 表の列の設定の読み書き
+  - page: MOD-155-159.py.yaml
+    summary: 画面の文書の取得と、見つからない項目
+  - page: MOD-155-160.py.yaml
+    summary: 画面のナビゲーションの組み立てと、変わったページ
+  - page: MOD-155-161.py.yaml
+    summary: 画面のページのパスと、文書のページの特定
+  - page: MOD-155-162.py.yaml
+    summary: 画面の API のルーター（`/_api/sources/{source}/docs`・`search`・`refs`・`columns`）
+  - page: MOD-155-163.py.yaml
+    summary: 画面の検索（project-index の検索の結果を画面の形にする）
+  - page: MOD-155-164.py.yaml
+    summary: 画面の API の要求と結果の型
+  - page: MOD-155-205.yaml
+    summary: 端末の設定の検証と読み込み、`sources[]` の取得と保存の依頼
+  - page: MOD-155-146.py.yaml
+    summary: 端末の設定の場所・読み込みと検証・待ち受けのポート
+  - page: MOD-155-147.py.yaml
+    summary: 端末の設定のルーター（`GET`・`PUT /_api/settings/sources`）
+  - page: MOD-155-148.py.yaml
+    summary: '`sources[]` の保存の依頼'
+  - page: MOD-155-149.py.yaml
+    summary: 端末の設定と、画面の `sources[]` の要求と結果の型
+  - page: MOD-155-85.py.yaml
+    summary: '管理の MCP の `status` の `format: markdown` の応答の文を組み立てる。値は service.py の結果をそのまま使い、計算しない'
+  - page: MOD-155-86.py.yaml
+    summary: 管理の MCP の `status` の中身。端末の設定を読み、配信元の状態は project-index から取る
+  - page: MOD-155-198.yaml
+    summary: 管理の MCP の組み立てと、ツールの結果・エラーの変換
+  - page: MOD-155-178.py.yaml
+    summary: 管理の MCP の組み立て（ツールの登録）
+  - page: MOD-155-180.py.yaml
+    summary: ツールの結果・エラーの変換と、管理の MCP のツール名とプロンプトの ID
+  - page: MOD-155-87.py.yaml
+    summary: 管理の MCP の `status` の要求と結果の型
+  - page: MOD-155-202.yaml
+    summary: '`nav` の `auto` の `filter` の条件の確かめと照合'
+  - page: MOD-155-134.py.yaml
+    summary: 項目の値・計算項目・使える項目・見出しの行
+  - page: MOD-155-135.py.yaml
+    summary: 条件の木の確かめと照合・正規表現・比べる値の解釈（`nav` の `auto` の `filter`）
+  - page: MOD-155-140.py.yaml
+    summary: '`nav` の `auto` の `filter` の条件の木と、見出しの型'
+  - page: MOD-155-119.py.yaml
+    summary: 対象の決定・当てる手順・バックアップを取った適用と、`sources` の project-index への書き出し
+  - page: MOD-155-120.py.yaml
+    summary: 手順の読み込みと適用
+  - page: MOD-155-121.py.yaml
+    summary: 手順・対象・例外・終了コード
+  - page: MOD-155-207.yaml
+    summary: '`dev-docs serve`・`dev-docs migrate` の部品の配線と、画面の API・管理の MCP を 1 つにまとめたアプリ'
+  - page: MOD-155-175.py.yaml
+    summary: ルートと MCP のマウントをまとめたアプリの組み立て
+  - page: MOD-155-176.py.yaml
+    summary: 例外の problem+json への変換
+  - page: MOD-155-177.py.yaml
+    summary: マウントした管理の MCP のセッションの管理と、project-indexの呼び出しを閉じるアプリの寿命
+  - page: MOD-155-174.py.yaml
+    summary: '`dev-docs serve`・`dev-docs migrate` の部品の配線と、起動のときの配信元の知らせ'
+  - page: MOD-155-182.py.yaml
+    summary: 画面のビルドの配信
+  - page: MOD-192-1.py.yaml
+    summary: 公開の文書と判定フローチャートを mdmark の build で Pages の 1 枚の HTML にまとめる
