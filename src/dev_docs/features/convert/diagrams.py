@@ -147,8 +147,8 @@ def _flowchart(value: Mapping[str, Any], kind: DiagramKind) -> tuple[list[str], 
         for end in (source, target):
             if end not in node_lines:
                 node_lines[end] = f'{end}["{_quote(end)}"]:::{NODE_KINDS[DEFAULT_NODE_KIND]}'
-        label = edge.get("label")
-        arrow = f'-->|"{_quote(label)}"|' if label else "-->"
+        edge_label = edge.get("label")
+        arrow = f'-->|"{_quote(edge_label)}"|' if edge_label else "-->"
         edge_lines.append(f"{source} {arrow} {target}")
         edge_id = f"{source}->{target}"
         data.note(edge_id, edge.get("tip"))
