@@ -1,0 +1,1 @@
+# 画面のサーバーの共通のキーの組み立てを、project-index の文書の一覧の commonKeys に切り替える
