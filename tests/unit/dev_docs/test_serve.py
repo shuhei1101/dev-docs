@@ -576,18 +576,22 @@ def test_run_migrate_when_sources_moved(
         [{"op": "export_sources", "path": "sources", "description": "移す"}],
     )
     fake = FakeIndex()
-    added = iter(
-        [
-            (201, {"result": "added", "same": None, "sources": []}),
-            (409, {"result": "exists", "same": False, "sources": []}),
-        ]
-    )
-
-    def handle(request: httpx.Request) -> httpx.Response:
-        status, body = next(added)
-        return httpx.Response(status, json=body)
-
-    fake.handle = handle  # type: ignore[method-assign]
+    fake.settings = {
+        "settingsPath": "/pi/settings.yaml",
+        "sources": [
+            {
+                "id": "notes",
+                "config": ["/other/dev-docs.yaml"],
+                "enabled": True,
+                "scope": {"read": [], "write": None},
+                "outsideRead": True,
+                "status": "serving",
+                "errors": [],
+                "configVersion": None,
+            }
+        ],
+        "version": "v1",
+    }
     with _http_index(fake) as address:
         # 実行
         code = run_migrate(_migrate_args(project_index=address))
@@ -597,6 +601,11 @@ def test_run_migrate_when_sources_moved(
     assert written["sources"] == [{"id": "notes", "config": "/n/dev-docs.yaml"}]
     assert (written["project_index"], written["version"]) == (address, "2")
     assert "notes" in capsys.readouterr().out
+    saves = [request for request in fake.requests if request.method == "PUT"]
+    assert len(saves) == 1
+    body = json.loads(saves[0].content)
+    assert [row["id"] for row in body["sources"]] == ["notes", "sample"]
+    assert body["expectedVersion"] == "v1"
 
 
 def test_run_migrate_when_project_index_unreachable(
@@ -635,11 +644,11 @@ def test_run_migrate_when_no_export(
         "2",
         [{"op": "add", "path": "bind", "value": "127.0.0.1", "description": "追加"}],
     )
-    exporters: list[str] = []
-    monkeypatch.setattr(main_module, "_exporter", lambda address: exporters.append(address))
+    ports: list[str] = []
+    monkeypatch.setattr(main_module, "_sources_port", lambda address: ports.append(address))
     # 実行
     code = run_migrate(_migrate_args(project_index=_closed_address()))
     # 検証
     assert code == 0
-    assert exporters == []
+    assert ports == []
     assert load_yaml(settings.read_text(encoding="utf-8"))["version"] == "2"
