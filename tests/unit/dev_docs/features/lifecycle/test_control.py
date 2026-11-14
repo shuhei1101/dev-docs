@@ -28,7 +28,7 @@ def test_attach() -> None:
 
 
 def test_request() -> None:
-    """停止を伝えて結果を返す（正常系）。"""
+    """停止を伝えて結果を返却する（正常系）。"""
     # 準備
     control = RestartControl()
     control.attach(_stub_server())

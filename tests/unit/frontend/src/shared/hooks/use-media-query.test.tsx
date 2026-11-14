@@ -5,7 +5,7 @@ import { useMediaQuery } from "@/shared/hooks/use-media-query";
 
 const QUERY = "(max-width: 47.99rem)";
 
-/** `matches` を書き換えて `change` を手で送れる `matchMedia` の偽物 */
+/** `matches` を書き換えて `change` を手で送信できる `matchMedia` の偽物 */
 const stubMatchMedia = (initial: boolean) => {
   const listeners = new Set<() => void>();
   const state = { matches: initial };

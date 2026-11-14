@@ -9,7 +9,7 @@ import { renderInRouter } from "@tests/helpers/render";
 
 type Navigation = ReturnType<typeof useDocNavigation>;
 
-/** フックの返す操作を外へ渡すだけの部品 */
+/** フックが返却する操作をテストへ取り出すだけの部品 */
 const Probe = ({ search, onReady }: { search: DocViewSearch; onReady: (navigation: Navigation) => void }) => {
   onReady(useDocNavigation("s", "a.md", search, refsResponse() as never));
   return <p>probe</p>;

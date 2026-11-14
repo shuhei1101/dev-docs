@@ -72,8 +72,8 @@ def test_build_settings_router_when_get(
 def test_build_settings_router_when_put(
     fake_index: FakeIndex, make_handlers: Callable[..., Any]
 ) -> None:
-    """保存を依頼して状態を返す（正常系）。"""
-    # 準備（偽物は保存した行を、続く端末の設定の取得で返す）
+    """保存を依頼して状態を返却する（正常系）。"""
+    # 準備（偽物は保存した行を、続く端末の設定の取得で返却する）
     # 実行
     response = _client(make_handlers).put(
         "/_api/settings/sources", json=PUT_BODY, headers=SAME_ORIGIN
@@ -89,7 +89,7 @@ def test_build_settings_router_when_put(
 def test_build_settings_router_when_pending_reload(
     fake_index: FakeIndex, make_handlers: Callable[..., Any]
 ) -> None:
-    """読み直していない行（正常系）。"""
+    """再読み込みしていない行（正常系）。"""
     # 準備
     fake_index.settings = {
         "settingsPath": "/pi/settings.yaml",
@@ -128,7 +128,7 @@ def test_build_settings_router_when_rejected(
 def test_build_settings_router_when_unexpected_status(
     fake_index: FakeIndex, make_handlers: Callable[..., Any]
 ) -> None:
-    """project-index が予期しないステータスを返す（異常系）。"""
+    """project-index が予期しないステータスを返却する（異常系）。"""
     # 準備
     fake_index.responses[("PUT", "/settings/sources")] = (500, "boom")
     # 実行

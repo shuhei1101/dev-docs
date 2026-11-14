@@ -6,7 +6,7 @@ from .conftest import IndexSource, RealIndex, ServerEnv, doc
 
 
 def _server(index: RealIndex, make_server: Callable[..., ServerEnv]) -> ServerEnv:
-    """文書 2 の本文だけが語「ページング」を含む sample を配信する本物の project-index につなぐ。"""
+    """文書 2 の本文だけが単語「ページング」を含む sample を配信する本物の project-index につなぐ。"""
     documents = [
         doc("doc-1", "docs/doc-1.yaml", data={"id": "doc-1", "name": "文書 1"}),
         doc(
@@ -20,7 +20,7 @@ def _server(index: RealIndex, make_server: Callable[..., ServerEnv]) -> ServerEn
 
 
 def test_normal(real_index: RealIndex, make_server: Callable[..., ServerEnv]) -> None:
-    """語を含む文書だけを一致した箇所つきで返す（正常系）。"""
+    """単語を含む文書だけを一致した箇所つきで返却する（正常系）。"""
     # 準備
     env = _server(real_index, make_server)
     # 実行
@@ -39,7 +39,7 @@ def test_normal(real_index: RealIndex, make_server: Callable[..., ServerEnv]) ->
 def test_error_when_query_invalid(
     real_index: RealIndex, make_server: Callable[..., ServerEnv]
 ) -> None:
-    """空の語と長すぎる語を断る（異常系）。"""
+    """空の単語と長すぎる単語を断る（異常系）。"""
     # 準備
     env = _server(real_index, make_server)
     # 実行

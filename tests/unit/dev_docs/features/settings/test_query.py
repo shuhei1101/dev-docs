@@ -111,7 +111,7 @@ def test_state_dir_path_when_unset(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 def _write(tmp_path: Path, text: str) -> Path:
-    """端末の設定をファイルに書き、そのパスを返す。"""
+    """端末の設定をファイルに書き込み、そのパスを返却する。"""
     path = tmp_path / "settings.yaml"
     path.write_text(text, encoding="utf-8")
     return path
@@ -132,7 +132,7 @@ def test_load_terminal_config(tmp_path: Path) -> None:
 
 
 def test_load_terminal_config_when_state_dir_env_set(tmp_path: Path) -> None:
-    """状態の置き場を環境変数で決める（正常系）。"""
+    """状態の配置先を環境変数で決める（正常系）。"""
     # 準備
     path = _write(tmp_path, 'version: "2"\nclone: /tmp/clone\nstate_dir: /tmp/a\n')
     env = {"DEV_DOCS_STATE_DIR": "/tmp/b"}
@@ -154,7 +154,7 @@ def test_load_terminal_config_when_missing(tmp_path: Path) -> None:
 
 
 def test_load_terminal_config_when_yaml_broken(tmp_path: Path) -> None:
-    """YAML として読めない（異常系）。"""
+    """YAML として読み込めない（異常系）。"""
     # 準備
     path = _write(tmp_path, "sources: [\n")
     # 実行・検証
@@ -192,7 +192,7 @@ def test_load_terminal_config_when_leftover_sources(tmp_path: Path) -> None:
 
 
 def _valid_settings() -> dict[str, object]:
-    """必須のキーだけを持つ端末の設定の値を返す。"""
+    """必須のキーだけを持つ端末の設定の値を返却する。"""
     return {"version": "2", "clone": "/tmp/clone"}
 
 

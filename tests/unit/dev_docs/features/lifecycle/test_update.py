@@ -21,7 +21,7 @@ def _ok(stdout: str = "") -> Response:
 
 
 class FakeRun:
-    """呼ばれたコマンドを記録し、決めた応答を順に返す `subprocess.run` の偽物。"""
+    """呼ばれたコマンドを記録し、決めた応答を順に返却する `subprocess.run` の偽物。"""
 
     def __init__(self, *responses: Response) -> None:
         self.responses = list(responses)
@@ -39,7 +39,7 @@ class FakeRun:
 
 @pytest.fixture
 def clone(tmp_path: Path) -> Path:
-    """`pyproject.toml` の `version` が `0.3.0` のクローンを返す。"""
+    """`pyproject.toml` の `version` が `0.3.0` のクローンを返却する。"""
     root = tmp_path / "clone"
     root.mkdir()
     (root / "pyproject.toml").write_text(
@@ -50,7 +50,7 @@ def clone(tmp_path: Path) -> Path:
 
 @pytest.fixture
 def control() -> RestartControl:
-    """uvicorn のサーバーのスタブを取り付けた再起動の制御を返す。"""
+    """uvicorn のサーバーのスタブを取り付けた再起動の制御を返却する。"""
     result = RestartControl()
     result.attach(cast("Any", SimpleNamespace(should_exit=False)))
     return result
@@ -136,7 +136,7 @@ def test_update_clone_when_in_progress(
 def test_update_clone_when_up_to_date_then_again(
     monkeypatch: pytest.MonkeyPatch, clone: Path, control: RestartControl
 ) -> None:
-    """新しい commit が無くて返した後にもう一度呼べる（正常系）。"""
+    """新しい commit が無くて返却した後にもう一度呼べる（正常系）。"""
     # 準備
     fake = FakeRun(_ok("aaa\n"), _ok(), _ok("aaa\n"), _ok("aaa\n"), _ok(), _ok("aaa\n"))
     _install(monkeypatch, fake)
@@ -169,7 +169,7 @@ def test_update_clone_when_failed_then_again(
 
 
 def test_run(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
-    """標準出力を返す（正常系）。"""
+    """標準出力を返却する（正常系）。"""
     # 準備
     fake = FakeRun(_ok("abc"))
     _install(monkeypatch, fake)

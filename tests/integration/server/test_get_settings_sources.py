@@ -6,7 +6,7 @@ from .conftest import IndexSource, RealIndex, ServerEnv, materialize, sample_doc
 
 
 def test_normal(real_index: RealIndex, make_server: Callable[..., ServerEnv]) -> None:
-    """配信元の一覧を配信中で返す（正常系）。"""
+    """配信元の一覧を配信中で返却する（正常系）。"""
     # 準備
     real_index.serve("sample", IndexSource(docs={None: sample_docs()}))
     env = make_server(real_index)
@@ -30,7 +30,7 @@ def test_normal(real_index: RealIndex, make_server: Callable[..., ServerEnv]) ->
 def test_normal_when_source_not_served(
     real_index: RealIndex, make_server: Callable[..., ServerEnv]
 ) -> None:
-    """配信していない・無効・設定が古い配信元を状態と理由つきで返す（正常系）。"""
+    """配信していない・無効・設定が古い配信元を状態と理由つきで返却する（正常系）。"""
     # 準備
     real_index.serve("sample", IndexSource(docs={None: sample_docs()}))
     real_index.serve(
@@ -58,13 +58,13 @@ def test_normal_when_source_not_served(
 def test_normal_when_pending_reload(
     real_index: RealIndex, make_server: Callable[..., ServerEnv]
 ) -> None:
-    """読み直していない行を pending_reload で返し、他の行は自分の状態で返す（正常系）。"""
+    """再読み込みしていない行を pending_reload で返却し、他の行は自分の状態で返却する（正常系）。"""
     # 準備
     real_index.serve("notes", IndexSource(docs={None: sample_docs()}))
     real_index.serve("sample", IndexSource(docs={None: sample_docs()}))
     env = make_server(real_index)
     fresh = materialize(real_index.root / "fresh", "fresh", IndexSource(docs={None: sample_docs()}))
-    # project-index の起動の後に、端末の設定のファイルへ行を直接書き足す（読み直さない）
+    # project-index の起動の後に、端末の設定のファイルへ行を直接追加する（再読み込みしない）
     real_index.write_rows([{"config": [str(fresh)]}, *real_index.rows])
     # 実行
     response = env.client.get("/_api/settings/sources")

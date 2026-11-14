@@ -10,7 +10,7 @@ HEAD = DiagramHead(title="図", scope="文書", updated="2026-11-03")
 
 
 def _graph(direction: str, edges: list[tuple[str, str, str | None]]) -> FlowGraph:
-    """線の端に出た順の箱を持つ中間データを作る。"""
+    """線の端に出た順のノードを持つ中間データを作る。"""
     ids: list[str] = []
     for source, target, _ in edges:
         for node_id in (source, target):
@@ -24,12 +24,12 @@ def _graph(direction: str, edges: list[tuple[str, str, str | None]]) -> FlowGrap
 
 
 def _node(definition: dict[str, Any], node_id: str) -> dict[str, Any]:
-    """定義から箱を取り出す。"""
+    """定義からノードを取り出す。"""
     return next(node for node in definition["nodes"] if node["id"] == node_id)
 
 
 def _with_frame(graph: FlowGraph, members: set[str]) -> FlowGraph:
-    """中間データに、表示 `枠` で `members` を中の箱にした枠を付ける。"""
+    """中間データに、表示 `枠` で `members` を中のノードにしたフレームを付ける。"""
     return FlowGraph(
         direction=graph.direction,
         nodes=graph.nodes,
@@ -73,7 +73,7 @@ def _overlaps(a: dict[str, Any], b: dict[str, Any]) -> bool:
 
 
 def test_layout_flow() -> None:
-    """上から下の 2 段（正常系）。"""
+    """上から下の 2 レイヤー（正常系）。"""
     # 準備
     graph = _graph("TD", [("a", "b", "x")])
     # 実行
@@ -101,7 +101,7 @@ def test_layout_flow_when_left_to_right() -> None:
 
 
 def test_layout_flow_when_branch() -> None:
-    """分岐した先を同じ段に並べる（正常系）。"""
+    """分岐した先を同じレイヤーに並べる（正常系）。"""
     # 準備
     graph = _graph("TD", [("a", "b", None), ("a", "c", None)])
     # 実行
@@ -153,7 +153,7 @@ def test_layout_flow_when_self_loop() -> None:
 
 
 def test_layout_flow_when_line_and_tips() -> None:
-    """線の種類・詳細と箱の説明（正常系）。"""
+    """線の種類・詳細とノードの説明（正常系）。"""
     # 準備
     graph = FlowGraph(
         direction="TD",
@@ -193,7 +193,7 @@ def test_layout_flow_when_frame() -> None:
 
 
 def test_layout_flow_when_frame_without_nodes() -> None:
-    """中の箱が置かれていない枠（正常系）。"""
+    """中のノードが配置されていないフレーム（正常系）。"""
     # 準備
     graph = FlowGraph(
         direction="TD",
@@ -209,7 +209,7 @@ def test_layout_flow_when_frame_without_nodes() -> None:
 
 
 def test_layout_flow_when_skip_rank() -> None:
-    """段を飛ばす線（正常系）。"""
+    """レイヤーを飛ばす線（正常系）。"""
     # 準備
     graph = _graph("TD", [("a", "b", None), ("b", "c", None), ("a", "c", None)])
     # 実行
@@ -222,20 +222,20 @@ def test_layout_flow_when_skip_rank() -> None:
 
 
 def test_layout_flow_when_skip_rank_left_to_right() -> None:
-    """左から右の段を飛ばす線（正常系）。"""
+    """左から右のレイヤーを飛ばす線（正常系）。"""
     # 準備
     graph = _graph("LR", [("a", "b", None), ("b", "c", None), ("a", "c", None)])
     # 実行
     result = layout_flow(graph, HEAD)
     # 検証
     a, b, c = _node(result, "a"), _node(result, "b"), _node(result, "c")
-    # c が段 2（右端）
+    # c がレイヤー 2（右端）
     assert (a["x"], b["x"], c["x"]) == (20, 244, 468)
     assert not _crosses(result["wires"][2]["points"], b)
 
 
 def test_layout_flow_when_back_edge_skip_rank() -> None:
-    """段を飛ばして戻る線（正常系）。"""
+    """レイヤーを飛ばして戻る線（正常系）。"""
     # 準備
     graph = _graph("TD", [("a", "b", None), ("b", "c", None), ("c", "a", None)])
     # 実行
@@ -248,12 +248,12 @@ def test_layout_flow_when_back_edge_skip_rank() -> None:
     assert wire["points"][0][1] == c["y"]
     assert wire["points"][-1][1] == a["y"] + a["h"]
     assert not _crosses(wire["points"], b)
-    # 戻る線で段は増えない
+    # 戻る線でレイヤーは増えない
     assert c["y"] == 260
 
 
 def test_layout_flow_when_self_loop_beside_node() -> None:
-    """同じ段に箱が並ぶ元と先が同じ線（正常系）。"""
+    """同じレイヤーにノードが並ぶ元と先が同じ線（正常系）。"""
     # 準備
     graph = FlowGraph(
         direction="TD",
@@ -305,7 +305,7 @@ def test_layout_flow_when_half_width_name() -> None:
 
 
 def test_layout_flow_when_frame_outside_rank() -> None:
-    """枠の中の箱が無い段の枠の外の箱（正常系）。"""
+    """フレームの中のノードが無いレイヤーのフレームの外のノード（正常系）。"""
     # 準備
     graph = _with_frame(_graph("TD", [("a", "b", None), ("b", "c", None)]), {"a", "c"})
     # 実行
@@ -315,7 +315,7 @@ def test_layout_flow_when_frame_outside_rank() -> None:
 
 
 def test_layout_flow_when_frame_skip_rank() -> None:
-    """枠の中の箱どうしの段を飛ばす線（正常系）。"""
+    """フレームの中のノードどうしのレイヤーを飛ばす線（正常系）。"""
     # 準備
     graph = _with_frame(
         _graph("LR", [("a", "b", None), ("b", "c", None), ("a", "c", None)]), {"a", "b", "c"}

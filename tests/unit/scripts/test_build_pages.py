@@ -10,18 +10,18 @@ import pytest
 
 
 def _write(path: Path, text: str) -> None:
-    """親のフォルダを作って UTF-8 で書く。"""
+    """親のフォルダを作って UTF-8 で書き込む。"""
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(text, encoding="utf-8")
 
 
 def _guide_files(root: Path, rows: list[dict[str, str]]) -> None:
-    """`docs/guide/files.yml` を JSON（YAML として読める）で書く。"""
+    """`docs/guide/files.yml` を JSON（YAML として読み込める）で書き込む。"""
     _write(root / "docs/guide/files.yml", json.dumps({"files": rows}, ensure_ascii=False))
 
 
 def _flowchart(root: Path, name: str, doc: dict[str, Any]) -> None:
-    """`docs/flowchart/{name}` に判定フローチャートを JSON（YAML として読める）で書く。"""
+    """`docs/flowchart/{name}` に判定フローチャートを JSON（YAML として読み込める）で書き込む。"""
     _write(root / "docs/flowchart" / name, json.dumps(doc, ensure_ascii=False))
 
 
@@ -41,7 +41,7 @@ def _doc(doc_id: str, visibility: str, items: list[dict[str, str]] | None = None
 
 
 def test_main(build_pages: ModuleType, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    """公開の文書を分類の順に並べて mdmark に渡し、`OUTPUT_HTML` を `--out` に置く。"""
+    """公開の文書を分類の順に並べて mdmark に指定し、`OUTPUT_HTML` を `--out` に配置する。"""
     root = tmp_path / "repo"
     _guide_files(
         root,
@@ -76,7 +76,7 @@ def test_main(build_pages: ModuleType, tmp_path: Path, monkeypatch: pytest.Monke
 def test_main_when_no_public(
     build_pages: ModuleType, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """公開の文書が無ければ `EXIT_NOT_STARTED` を返し、`--out` を作らない。"""
+    """公開の文書が無ければ `EXIT_NOT_STARTED` を返却し、`--out` を作らない。"""
     root = tmp_path / "repo"
     _guide_files(root, [{"path": "secret.md", "visibility": "internal", "category": "使い方"}])
     _write(root / "docs/guide/secret.md", "# secret\n")
@@ -100,7 +100,7 @@ def test_main_when_build_failed(
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
-    """mdmark の build が失敗すれば `EXIT_FAILED` を返し、標準エラーにメッセージを出す。"""
+    """mdmark の build が失敗すれば `EXIT_FAILED` を返却し、標準エラーにメッセージを出す。"""
     root = tmp_path / "repo"
     _guide_files(root, [{"path": "intro.md", "visibility": "public", "category": "はじめに"}])
     _write(root / "docs/guide/intro.md", "# intro\n")
@@ -120,7 +120,7 @@ def test_main_when_build_failed(
 
 
 def test_list_public_guides(build_pages: ModuleType, tmp_path: Path) -> None:
-    """public の行だけを行の順に返す。"""
+    """public の行だけを行の順に返却する。"""
     _guide_files(
         tmp_path,
         [
@@ -138,7 +138,7 @@ def test_list_public_guides(build_pages: ModuleType, tmp_path: Path) -> None:
 
 
 def test_list_public_guides_when_no_file(build_pages: ModuleType, tmp_path: Path) -> None:
-    """管理用の YAML が無ければ空のリストを返す。"""
+    """管理用の YAML が無ければ空のリストを返却する。"""
     assert build_pages.list_public_guides(tmp_path) == []
 
 
@@ -167,7 +167,7 @@ def test_list_public_guides_when_invalid_row(
 
 
 def test_load_public_flowcharts(build_pages: ModuleType, tmp_path: Path) -> None:
-    """public だけをファイル名の順に返す。"""
+    """public だけをファイル名の順に返却する。"""
     _flowchart(tmp_path, "b.yaml", _doc("b", "public"))
     _flowchart(tmp_path, "a.yaml", _doc("a", "public"))
     _flowchart(tmp_path, "c.yaml", _doc("c", "internal"))
@@ -179,7 +179,7 @@ def test_load_public_flowcharts(build_pages: ModuleType, tmp_path: Path) -> None
 
 
 def test_load_public_flowcharts_when_no_folder(build_pages: ModuleType, tmp_path: Path) -> None:
-    """フォルダが無ければ空のリストを返す。"""
+    """フォルダが無ければ空のリストを返却する。"""
     assert build_pages.load_public_flowcharts(tmp_path) == []
 
 
@@ -228,7 +228,7 @@ def test_render_page(build_pages: ModuleType) -> None:
 
 
 def test_render_page_when_nested_group(build_pages: ModuleType) -> None:
-    """group の入れ子はレイヤーごとに見出しを置き、共通のレイヤーは繰り返さない。"""
+    """group の入れ子はレイヤーごとに見出しを配置し、共通のレイヤーは繰り返さない。"""
     doc = {
         "id": "f",
         "name": "判定",
@@ -335,7 +335,7 @@ def test_rewrite_references_when_unresolved(build_pages: ModuleType) -> None:
 
 
 def test_write_bundle_config(build_pages: ModuleType, tmp_path: Path) -> None:
-    """並びのとおりの mdmark の設定を書く。"""
+    """並びのとおりの mdmark の設定を書き込む。"""
     config = build_pages.write_bundle_config(tmp_path, ["a.md", "b.md"])
 
     assert json.loads(config.read_text(encoding="utf-8")) == {
@@ -350,7 +350,7 @@ def test_write_bundle_config(build_pages: ModuleType, tmp_path: Path) -> None:
 def test_run_mdmark(
     build_pages: ModuleType, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """`npx` で mdmark の build を設定のフォルダで実行し、標準出力を返す。"""
+    """`npx` で mdmark の build を設定のフォルダで実行し、標準出力を返却する。"""
     calls: list[tuple[list[str], dict[str, Any]]] = []
 
     def _fake(args: list[str], **kwargs: Any) -> subprocess.CompletedProcess[str]:

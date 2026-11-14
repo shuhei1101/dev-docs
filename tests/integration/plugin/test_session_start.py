@@ -28,7 +28,7 @@ def _clone_with_recorder(tmp_path: Path) -> tuple[Path, Path, Path]:
 
 
 def _wait_for(path: Path, timeout_sec: float = 5) -> str:
-    """ファイルができるまで待ち、中身を返す。"""
+    """ファイルができるまで待ち、中身を返却する。"""
     deadline = time.monotonic() + timeout_sec
     while not path.exists() and time.monotonic() < deadline:
         time.sleep(0.05)

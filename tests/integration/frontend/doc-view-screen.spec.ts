@@ -174,7 +174,7 @@ test.describe("トップバー", () => {
     await expect(page).toHaveURL(/\/knowledge$/);
   });
 
-  // `refSelect` で rev を書き換えて同じ文書を開き直す（正常系）
+  // `refSelect` で rev を書き換えて同じ文書を再度開く（正常系）
   test("topbar_ref_select", async ({ page }) => {
     await openDoc(page);
     await page.getByRole("button", { name: /リビジョンを切り替える/ }).click();
@@ -270,7 +270,7 @@ test.describe("種類のタブ", () => {
     await expect(page).toHaveURL(/\/sample\/notes\/n-1/);
   });
 
-  // 1 つの文書が 2 つのタブに当たるとき、後のタブを押すとそのタブを現在地にしてサイドバーを替える（正常系）
+  // 1 つの文書が 2 つのタブに該当するとき、後のタブを押すとそのタブを現在地にしてサイドバーを替える（正常系）
   test("tabs_click_when_doc_in_two_tabs", async ({ page }) => {
     await openDoc(page, "/sample/docs/doc-1", {
       document: ({ path }) => ({ body: documentResponse({ path, tabs: TABS_SHARING_DOC }) }),
@@ -311,7 +311,7 @@ test.describe("文書の一覧", () => {
     await expect(page).toHaveURL(/\/sample\/docs\/doc-2\?rev=develop&base=7c0aa11$/);
   });
 
-  // 削除された page は rev を base にして base を外した文書を開く（正常系）
+  // 削除された page は rev を base にして base を解除した文書を開く（正常系）
   test("sidebar_click_when_deleted", async ({ page }) => {
     await openDoc(page, "/sample/docs/doc-1?rev=develop&base=7c0aa11", { document: withDiff });
     await page.getByRole("navigation", { name: "文書の一覧" }).getByRole("link", { name: /文書 3/ }).click();
@@ -327,7 +327,7 @@ test.describe("文書の一覧", () => {
 });
 
 test.describe("文書の変化のマーカー", () => {
-  // base があるとき、追加・変更・削除をアイコンで出し、削除の page に取り消し線を引く（正常系）
+  // base があるとき、追加・変更・削除をアイコンで出し、削除の page に取り消し線を付ける（正常系）
   test("change_markers", async ({ page }) => {
     await openDoc(page, "/sample/docs/doc-1?base=7c0aa11", { document: withDiff });
     const list = page.getByRole("navigation", { name: "文書の一覧" });
@@ -415,7 +415,7 @@ test.describe("文書の情報", () => {
 });
 
 test.describe("読み込み中の表示", () => {
-  // 取得が 1 秒を超えたときだけ、タイトル・情報・本文の形の枠を出す（正常系）
+  // 取得が 1 秒を超えたときだけ、タイトル・情報・本文のスケルトンを出す（正常系）
   test("loading_skeleton", async ({ page }) => {
     // 準備
     await mockApi(page, {
@@ -478,7 +478,7 @@ test.describe("差分の案内", () => {
 });
 
 test.describe("比較元の選択", () => {
-  // 選択肢はリビジョンのメニューと同じ並びで、一覧に無い base は先頭に足す。選び直すと base を書き換える（正常系）
+  // 選択肢はリビジョンのメニューと同じ並びで、一覧に無い base は先頭に追加する。再選択すると base を書き換える（正常系）
   test("base_select", async ({ page }) => {
     // 準備
     await openDoc(page, "/sample/docs/doc-1?base=zzz9999", { document: withDiff });
@@ -500,7 +500,7 @@ test.describe("比較元の選択", () => {
 });
 
 test.describe("比較先の選択", () => {
-  // 開いているリビジョンを初期値にし、選び直すと rev を書き換える（正常系）
+  // 開いているリビジョンを初期値にし、再選択すると rev を書き換える（正常系）
   test("head_select", async ({ page }) => {
     await openDoc(page, "/sample/docs/doc-1?base=7c0aa11", { document: withDiff });
     const select = page.getByRole("combobox", { name: "比較先" });
@@ -512,7 +512,7 @@ test.describe("比較先の選択", () => {
 });
 
 test.describe("差分の強調を解除", () => {
-  // クリックで base を外した同じ文書を開き、マーカーを消す（正常系）
+  // クリックで base を解除した同じ文書を開き、マーカーを削除する（正常系）
   test("diff_clear", async ({ page }) => {
     await openDoc(page, "/sample/docs/doc-1?base=7c0aa11", { document: withDiff });
     await page.getByRole("button", { name: "差分の強調を解除" }).click();
@@ -521,7 +521,7 @@ test.describe("差分の強調を解除", () => {
     await expect(page.getByRole("navigation", { name: "文書の一覧" }).getByRole("img")).toHaveCount(0);
   });
 
-  // base を外したら、本文の差分の強調を解除する（正常系）
+  // base を解除したら、本文の差分の強調を解除する（正常系）
   test("diff_clear_body", async ({ page }) => {
     await openRendered(page, "/sample/docs/doc-1?base=7c0aa11", { document: withDiff });
     await expect(page.locator(".mdmark-diff-block")).not.toHaveCount(0);
@@ -593,7 +593,7 @@ test.describe("変換の失敗", () => {
     await expect(page.getByRole("heading", { level: 2, name: "概要" })).toHaveCount(0);
   });
 
-  // YAML を読めないとき、ファイル/場所/原因の一覧を出す（正常系）
+  // YAML を読み込めないとき、ファイル/場所/原因の一覧を出す（正常系）
   test("conversion_error_when_invalid_yaml", async ({ page }) => {
     await openDoc(page, "/sample/docs/doc-1", failed({
       reason: "invalid_yaml",
@@ -610,7 +610,7 @@ test.describe("変換の失敗", () => {
 });
 
 test.describe("再読み込み", () => {
-  // クリックで同じ条件の文書の取得を呼び直す（正常系）
+  // クリックで同じ条件の文書の取得を再度呼び出す（正常系）
   test("reload_button", async ({ page }) => {
     // 準備
     const api = await openDoc(page, "/sample/docs/doc-1", {
@@ -666,7 +666,7 @@ test.describe("本文", () => {
     await expect(page.getByRole("main").getByRole("heading", { level: 1 })).toHaveCount(1);
   });
 
-  // 同じ配信元の文書へのリンクは、画面を読み込み直さず rev を保って開く（正常系）
+  // 同じ配信元の文書へのリンクは、画面を再読み込みせず rev を保って開く（正常系）
   test("body_internal_link", async ({ page }) => {
     // 準備
     await openRendered(page, "/sample/docs/doc-1?rev=develop");
@@ -717,7 +717,7 @@ test.describe("列の表示のメニュー", () => {
     await expect(page.getByRole("button", { name: "テーブル設定" })).toBeVisible();
   });
 
-  // 隠した列を表から除き、件数を `テーブル設定` の読み上げ名に添える（正常系）
+  // 隠した列を表から除き、件数を `テーブル設定` のスクリーンリーダー向けの名前に添える（正常系）
   test("columns_menu_hidden_columns", async ({ page }) => {
     await openRendered(page, "/sample/docs/doc-1", {
       document: ({ path }) => ({
@@ -790,7 +790,7 @@ test.describe("列の表示のメニュー", () => {
 });
 
 test.describe("目次", () => {
-  /** mdmark が本文に描く右側の目次の枠 */
+  /** mdmark が本文に描く右側の目次のブロック */
   const sideToc = (page: Page) => page.getByRole("navigation", { name: "右側の目次", includeHidden: true });
 
   /** 右側の目次を出す（既定の hover の出し方で、右端の線を指す） */
@@ -808,7 +808,7 @@ test.describe("目次", () => {
     await expect(sideToc(page).getByRole("link")).toHaveText(["概要", "項目", "項目の表", "関連"]);
   });
 
-  // 画面の中で別の文書へ移ると、移った先の文書の見出しで目次を描き直す（正常系）
+  // 画面の中で別の文書へ移ると、移った先の文書の見出しで目次を再描画する（正常系）
   test("toc_after_doc_changed", async ({ page }) => {
     // 準備
     await openRendered(page, "/sample/docs/doc-1", {
@@ -854,7 +854,7 @@ test.describe("目次", () => {
 });
 
 test.describe("コメントの追加", () => {
-  // 本文の文字列を選んで保存すると、コメントを溜め、パネルを開いて一覧とトップバーの件数を描き直す（正常系）
+  // 本文の文字列を選んで保存すると、コメントを溜め、パネルを開いて一覧とトップバーの件数を再描画する（正常系）
   test("comment_add", async ({ page }) => {
     // 準備
     await openRendered(page);
@@ -1010,7 +1010,7 @@ test.describe("コメントの場所への移動", () => {
   const mark = (page: Page, text: string) =>
     page.locator(".mdmark-comment-mark").filter({ hasText: text });
 
-  // 同じ文書のコメントは、本文のその印が画面に入るまでスクロールして強調する（正常系）
+  // 同じ文書のコメントは、本文のそのマーカーが画面に入るまでスクロールして強調する（正常系）
   test("place_scroll_same_doc", async ({ page }) => {
     // 準備
     await seed(page, [
@@ -1026,9 +1026,9 @@ test.describe("コメントの場所への移動", () => {
     await expect(mark(page, "文書 1 の末尾の文")).toHaveAttribute("data-focused");
   });
 
-  // 印が見つからないまま別の文書へ移ったら、後で元の文書を開き直して同じ文字列の印が付いてもスクロールしない（正常系）
+  // マーカーが見つからないまま別の文書へ移ったら、後で元の文書を再度開いて同じ文字列のマーカーが付いてもスクロールしない（正常系）
   test("place_scroll_cleared_when_doc_left", async ({ page }) => {
-    // 準備（同じ文字列が 2 か所あり、前後の文字列が合わないため、場所を選んだ時点では印が付かない）
+    // 準備（同じ文字列が 2 か所あり、前後の文字列が合わないため、場所を選んだ時点ではマーカーが付かない）
     const twice = `# 文書 2\n\n## 概要\n\n${"本文です。\n\n".repeat(40)}中ほどの文\n\n${"本文です。\n\n".repeat(40)}中ほどの文\n\n${"本文です。\n\n".repeat(40)}`;
     await seed(page, [
       { id: "c2", path: "docs/doc-2", docTitle: "文書 2", headings: ["概要"], quote: "中ほどの文", prefix: "前の文字列", suffix: "後の文字列", body: "見つからない確認" },
@@ -1044,7 +1044,7 @@ test.describe("コメントの場所への移動", () => {
     await panel(page).getByRole("button", { name: "文書 2 › 概要" }).click();
     await expect(heading).toHaveText("文書 2");
     await expect(page.locator(".mdmark-comment-mark")).toHaveCount(0);
-    // 実行（文書 1 へ移り、文書 2 を開き直して、1 つ目の「中ほどの文」を画面の上端に置いてコメントを付ける）
+    // 実行（文書 1 へ移り、文書 2 を再度開いて、1 つ目の「中ほどの文」を画面の上端に配置してコメントを付ける）
     await sidebar.getByRole("link", { name: "文書 1" }).click();
     await expect(heading).toHaveText("文書 1");
     await sidebar.getByRole("link", { name: "文書 2" }).click();
@@ -1063,7 +1063,7 @@ test.describe("コメントの場所への移動", () => {
     expect(Math.abs((await page.evaluate(() => window.scrollY)) - before)).toBeLessThan(5);
   });
 
-  // 他の文書のコメントは、その文書を開いた後に本文の印が画面に入るまでスクロールして強調する（正常系）
+  // 他の文書のコメントは、その文書を開いた後に本文のマーカーが画面に入るまでスクロールして強調する（正常系）
   test("place_scroll_other_doc", async ({ page }) => {
     // 準備
     await seed(page, [
@@ -1093,7 +1093,7 @@ test.describe("コメントの引用", () => {
 });
 
 test.describe("コメントの本文", () => {
-  // 書いたコメントを出す（正常系）
+  // 記載したコメントを出す（正常系）
   test("comment_body", async ({ page }) => {
     await seed(page, TWO_COMMENTS);
     await openDoc(page);
@@ -1124,7 +1124,7 @@ test.describe("コメントの修正", () => {
     await expect(panel(page).getByRole("textbox", { name: "コメント" })).toBeFocused();
   });
 
-  // 保存で本文を書き戻す（正常系）
+  // 保存で本文を書き込む（正常系）
   test("edit_save", async ({ page }) => {
     await openPanel(page);
     await panel(page).getByRole("button", { name: "修正" }).first().click();
@@ -1178,7 +1178,7 @@ test.describe("コメントの修正", () => {
 });
 
 test.describe("コメントの削除", () => {
-  // クリックでそのコメントを削除し、一覧と件数を描き直す（正常系）
+  // クリックでそのコメントを削除し、一覧と件数を再描画する（正常系）
   test("delete_button", async ({ page }) => {
     await seed(page, TWO_COMMENTS);
     await openDoc(page);
@@ -1188,7 +1188,7 @@ test.describe("コメントの削除", () => {
     await expect(page.getByRole("button", { name: "コメント 1 件" })).toBeVisible();
   });
 
-  // 削除したコメントの本文のマーカーを、mdmark の reloadComments で描き直して削除する（正常系）
+  // 削除したコメントの本文のマーカーを、mdmark の reloadComments で再描画して削除する（正常系）
   test("delete_button_redraws_mark", async ({ page }) => {
     await seed(page, TWO_COMMENTS);
     await openRendered(page);
@@ -1230,7 +1230,7 @@ test.describe("選択をコピー", () => {
     await expect(panel(page).getByRole("button", { name: "選択 0 件をコピー" })).toBeDisabled();
   });
 
-  // クリップボードに書けないとき、失敗の通知を出す（異常系）
+  // クリップボードに書き込めないとき、失敗の通知を出す（異常系）
   test("copy_button_when_clipboard_denied", async ({ page }) => {
     await openPanel(page);
     await page.evaluate(() => {
@@ -1455,7 +1455,7 @@ const withAliases =
   ({ path }) => ({ body: documentResponse({ path, markdown: TERM_MARKDOWN, aliases }) });
 
 test.describe("本文の用語のツールチップ", () => {
-  // 本文の用語の語にポインターを載せると、用語の名前と意味のツールチップを出す（正常系）
+  // 本文の用語の単語にポインターを合わせると、用語の名前と意味のツールチップを出す（正常系）
   test("term_tooltip", async ({ page }) => {
     // 準備
     await openRendered(page, "/sample/docs/doc-1", { document: withAliases(ALIASES) });
@@ -1469,7 +1469,7 @@ test.describe("本文の用語のツールチップ", () => {
     await expect(tooltip).toContainText("触ってよい範囲");
   });
 
-  // 文書の別名の語にポインターを載せると、関連文書のツールチップを出す（正常系）
+  // 文書の別名の単語にポインターを合わせると、関連文書のツールチップを出す（正常系）
   test("term_tooltip_when_doc_alias", async ({ page }) => {
     // 準備
     await openRendered(page, "/sample/docs/doc-1", { document: withAliases(ALIASES) });
@@ -1482,7 +1482,7 @@ test.describe("本文の用語のツールチップ", () => {
     await expect(tooltip).toContainText("設定のリファレンス");
   });
 
-  // aliases が空のときは本文の語にツールチップを付けない（正常系）
+  // aliases が空のときは本文の単語にツールチップを付けない（正常系）
   test("term_tooltip_when_no_aliases", async ({ page }) => {
     // 準備
     await openRendered(page, "/sample/docs/doc-1", { document: withAliases([]) });
@@ -1494,7 +1494,7 @@ test.describe("本文の用語のツールチップ", () => {
 });
 
 test.describe("project-index に接続できないときの表示", () => {
-  // 文書の取得が 503 のとき、接続先と理由を画面全体のアラートに出し、再読み込みで取得を呼び直す（異常系）
+  // 文書の取得が 503 のとき、接続先と理由を画面全体のアラートに出し、再読み込みで取得を再度呼び出す（異常系）
   test("project_index_unreachable_alert", async ({ page }) => {
     // 準備
     const api = await mockApi(page, {
