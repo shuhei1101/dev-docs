@@ -17,11 +17,19 @@ def test_parse_document() -> None:
             "notes/files.yaml",
             kind="files",
             data={"path": "a.md"},
-            metadata={"id": "n-1", "name": "N1", "tags": ["topic:a"], "visibility": "public"},
+            metadata={
+                "id": "n-1",
+                "name": "N1",
+                "tags": ["topic:a"],
+                "visibility": "public",
+                "aliases": ["作業場所"],
+                "alias_type": "term",
+            },
             body_path="notes/a.md",
             body="# A\n",
         ),
         values=True,
+        common_keys=True,
     )
     # 実行
     document = parse_document("sample", value, record_index=1)
@@ -34,6 +42,8 @@ def test_parse_document() -> None:
         "description": None,
         "tags": ["topic:a"],
         "visibility": "public",
+        "aliases": ["作業場所"],
+        "alias_type": "term",
     }
     assert document.body_path == "notes/a.md"
     assert document.record_index == 1
@@ -50,6 +60,27 @@ def test_parse_document_when_value_null() -> None:
     document = parse_document("sample", value)
     # 検証
     assert document.data == {}
+
+
+def test_parse_document_when_common_keys_null() -> None:
+    """共通のキーを求めなかった（正常系）。"""
+    # 準備
+    value = list_entry(
+        doc_json("a", "docs/a.yaml", metadata={"id": "a", "name": "A", "aliases": ["x"]}),
+        values=True,
+    )
+    # 実行
+    document = parse_document("sample", value)
+    # 検証
+    assert value["commonKeys"] is None
+    assert document.metadata == {
+        "id": "a",
+        "kind": "rules",
+        "name": "A",
+        "description": None,
+        "tags": [],
+        "visibility": None,
+    }
 
 
 def test_parse_document_when_key_missing() -> None:

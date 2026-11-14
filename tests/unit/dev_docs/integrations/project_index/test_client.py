@@ -210,6 +210,7 @@ def test_list_documents(
     params = fake_index.requests[-1].url.params
     assert params["ref"] == "8b1d4e0"
     assert params["values"] == "true"
+    assert params["common_keys"] == "true"
     assert listed.ref == "8b1d4e0"
     assert [document.id for document in listed.documents] == ["a", "b"]
     assert listed.documents[0].data == {"id": "a", "name": "A"}
@@ -274,6 +275,7 @@ def test_document_when_record(
             doc_json(
                 "n-1",
                 "notes/files.yaml",
+                metadata={"id": "n-1", "name": "N1", "aliases": ["作業場所"]},
                 body_path="notes/n-1.md",
                 body="# N1\n",
                 updated="2026-11-12T10:00:00+09:00",
@@ -289,6 +291,7 @@ def test_document_when_record(
     assert (detail.document.body, detail.document.body_path) == ("# N1\n", "notes/n-1.md")
     assert detail.document.updated == datetime.fromisoformat("2026-11-12T10:00:00+09:00")
     assert detail.document.updated.tzinfo is not None
+    assert detail.document.metadata["aliases"] == ["作業場所"]
 
 
 def test_document_when_yaml_unreadable(
