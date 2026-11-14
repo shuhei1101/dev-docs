@@ -1,0 +1,15 @@
+dev-docs のサーバーの再起動:
+  説明: 稼働中の dev-docs のサーバー（127.0.0.1:8781）を管理の MCP の `restart` で起動し直し、project-index の `commonKeys` を使う付け替え口へ切り替える。起動し直す前に、project-index（127.0.0.1:8786）の文書の一覧が `common_keys=true` に `commonKeys` を返すことを確かめる。develop の worktree の付け替え口の更新より後に起動していれば何もしない。前のコードへ戻す切り戻しは持たない（develop を戻して同じ実行スクリプトで起動し直す）
+  タグ: [再起動]
+  実行者: planner
+  時期: マージの後
+  回数: 1 回限り
+  起動し直す対象: dev-docs のサーバー（127.0.0.1:8781）
+  可逆: true
+  疎通確認: null
+  実行: null
+  確認: null
+  切り戻し: null
+  失敗時: 既定の対処を 1 回、2 回連続で失敗したら依頼元へ返す
+  確認方法: 127.0.0.1:8781 の画面の API で dev-docs の配信元の文書の一覧が 200 で返り、用語の文書の `aliases`・`alias_type` が project-index の文書の一覧（`common_keys=true`）の `commonKeys` と同じ値になっている
+  状態: "-"

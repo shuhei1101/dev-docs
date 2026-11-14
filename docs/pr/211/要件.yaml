@@ -1,0 +1,15 @@
+use_cases:
+  - kind: single
+    scenario: docs/scenario/SC-155-7.yaml
+    impact: run_only
+    detail: 画面に出る文書の名前・概要・用語のツールチップ・絞り込みの値は変わらないが、それらの元になる値の取り方が変わるため回帰を確かめる
+    depends_on: []
+docs:
+  - page: docs/external-api/API-155-1.yaml
+    new: false
+    change: 文書の一覧のクエリ common_keys と応答の documents[].commonKeys、文書の取得の metadata.commonKeys を追加する
+    status: todo
+scope_out:
+  - item: 端末の project-index の更新
+    reason: 端末で動いている project-index（127.0.0.1:8786）は 2026-11-14 時点で commonKeys を返しており、更新が要らないため。dev-docs のサーバーの起動し直しの疎通確認で、commonKeys が返ることだけを確かめる
+    plan: none
