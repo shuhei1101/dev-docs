@@ -483,3 +483,24 @@ def test_export_sources_when_conflict() -> None:
         _export_sources(data, fake.port(), PROJECT_INDEX)
     # 検証
     assert "やり直" in str(caught.value)
+
+
+def test_export_sources_when_disabled_id_omitted(tmp_path: Path) -> None:
+    """配信していない `id` 省略の行を `name` で照らす（正常系）。"""
+    # 準備
+    config = tmp_path / "dev-docs.yaml"
+    config.write_text("name: notes\n", encoding="utf-8")
+    data = _data(
+        f'version: "1"\nclone: /x\nsources:\n  - config: {config}\n'
+        "  - id: sample\n    config: /s/dev-docs.yaml\n"
+    )
+    fake = FakePort([_view([_pi_row("sources[0]", str(config), enabled=False)], status="disabled")])
+    # 実行
+    kept, _ = _export_sources(data, fake.port(), PROJECT_INDEX)
+    # 検証
+    assert len(fake.saved) == 1
+    rows, _ = fake.saved[0]
+    assert "id" not in rows[0]
+    assert rows[1]["id"] == "sample"
+    assert kept == ["notes"]
+    assert [str(row["config"]) for row in data["sources"]] == [str(config)]
