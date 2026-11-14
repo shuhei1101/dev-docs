@@ -697,8 +697,8 @@ scenarios:
       - name: Mock
         description: なし（実環境で実行）
       - name: クラス図の文書
-        description: sample の Markdown の文書 6。本文に、手で記載した Mermaid のクラス図（`classDiagram`）を配置する
-        notes: ノード A に `click A href "id:{文書 2 の ID}#{文書 2 の項目のパス}"`、ノード B に `href` を持たない `click B "id:{文書 2 の ID}#{文書 2 の項目のパス}"`、ノード C にどの文書の ID にも該当しない `click C href "id:NO-SUCH-1#"`
+        description: sample の Markdown の文書 8。本文に、手で記載した Mermaid のクラス図（`classDiagram`）を配置する
+        notes: 'ノード A に `click A href "id:{文書 6 の ID}#flow"`、ノード B に `href` を持たない `click B "id:{文書 6 の ID}#flow"`、ノード C にどの文書の ID にも該当しない `click C href "id:NO-SUCH-1#"`。文書 6 は正常シナリオ（スキーマ駆動の文書を図と表で読む）の文書で、`flow` は `x-heading: 処理の流れ` を持つ項目'
       - name: dev-docs
         description: 正常シナリオと同じ sample を配信している dev-docs
     flow: |-
@@ -708,19 +708,19 @@ scenarios:
         participant UI as dev-docs の画面
         participant API as 画面の API
 
-        U->>UI: 文書 6 を開く
-        UI->>API: 文書の取得（文書 6）
+        U->>UI: 文書 8 を開く
+        UI->>API: 文書の取得（文書 8）
         API-->>UI: click の id: の参照を文書のページへ解いた Markdown
         UI-->>U: doc-view（クラス図）
         U->>UI: クラス図のノード A を押す
-        UI->>API: 文書の取得（文書 2）
-        UI-->>U: doc-view（文書 2 の参照した項目）
+        UI->>API: 文書の取得（文書 6）
+        UI-->>U: doc-view（文書 6 の項目の見出し）
       ```
     expected:
-      - 文書 6 の本文にクラス図が図として出る
-      - ノード A を押すと、URL が文書 2 を指すものに変わり、文書 2 の参照した項目の見出しが出る
-      - 文書 6 に戻ってノード B を押しても、ノード A と同じく文書 2 の参照した項目の見出しが出る
-      - ノード C を押しても、画面は文書 6 のまま移らない
+      - 文書 8 の本文にクラス図が図として出る
+      - ノード A を押すと、URL が文書 6 を指し、アンカーが見出し `処理の流れ` を指し、その見出しが画面に出る
+      - 文書 8 に戻ってノード B を押しても、URL が文書 6 を指し、アンカーが見出し `処理の流れ` を指し、その見出しが画面に出る
+      - ノード C を押しても、URL は文書 8 を指したまま変わらない
     test: test_normal_when_diagram_node_clicked
 lead: 利用者がブラウザで配信元の文書の画面を開き、タブ・サイドバー・検索・リビジョンの切り替え・差分で文書を読む。
 issue: 17
