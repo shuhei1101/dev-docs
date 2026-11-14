@@ -102,6 +102,7 @@ scenarios:
     notes:
       project-index のアドレス: '`--project-index` を省くと、`PROJECT_INDEX_PORT`（無ければ既定の 8786）から `http://127.0.0.1:{ポート}` を組む'
       既にある行: project-index の端末の設定の行は変えず、行ごとに追加する。同じ id で内容が違う行があれば、その行は移さずに id と、dev-docs の端末の設定に残したことを応答に出す（dev-docs の `sources` からも除かない）。同じ id で内容も同じ行は移した行として扱う
+      書き込みの応答の時間: project-index は行を保存した後に配信元を読み直してから応答するため、行の追加の応答は配信元の数で遅くなる。応答が文書の取得の制限時間を超えても、行が project-index にあれば移した行として扱い、移し替えを続ける
   - name: 異常シナリオ（sources を移すときに project-index につながらない）
     setup:
       - name: Mock
@@ -174,6 +175,35 @@ scenarios:
       - '`update` が git のエラーを返す'
       - dev-docs は再起動せず、`status` が前のバージョンを返す
     test: test_error_when_pull_fails
+  - name: 異常シナリオ（sources を移す途中で project-index が行を受け付けない）
+    setup:
+      - name: Mock
+        description: なし（実環境で実行）
+      - name: 端末の設定
+        description: '`sources` に sample と broken の 2 行を持ち、`project_index` を持たない前のバージョンの `settings.yaml`'
+        notes: broken は sample の後に並べ、project-index の端末の設定のスキーマに通らない値（`enabled` が文字列）を持つ
+      - name: project-index
+        description: 正常シナリオ（端末の設定の sources を project-index へ移す）と同じ。端末の設定の `sources` に extra の 1 行がある
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        actor U as 利用者
+        participant MG as dev-docs migrate
+        participant CF as 端末の設定
+        participant PI as project-index
+
+        U->>MG: dev-docs migrate --project-index {アドレス}
+        MG->>CF: 端末の設定を読む
+        MG->>PI: sample の行の追加（追加される）
+        MG->>PI: broken の行の追加（受け付けない）
+        MG->>PI: sample の行を取り除き、実行の前の行に戻す
+        MG-->>U: 受け付けなかった行と理由
+      ```
+    expected:
+      - project-index の端末の設定の `sources` が extra の 1 行だけで、`migrate` の前と同じになる
+      - dev-docs の端末の設定が `migrate` の前と同じ中身で、バックアップも作らない
+      - 0 以外の終了コードで終わり、標準エラーに受け付けなかった行の id と project-index が返却した理由が出る
+    test: test_error_when_project_index_rejects_row_on_migrate
 lead: 利用者が管理の MCP の `update` で dev-docs のクローンを新しいバージョンにし、端末の設定が古くなったら `dev-docs migrate` で移し替える。
 issue: 4
 primary_actor: 利用者
@@ -185,7 +215,7 @@ preconditions:
   - dev-docs が待ち受けている
   - クローンの上流に新しいバージョンの commit がある
 success_guarantee: dev-docs が新しいバージョンで待ち受け、端末の設定の `version` がそのバージョンになり、project-index が配信している配信元を画面で読める。
-minimal_guarantee: '`git pull` に失敗したときは、前のバージョンのまま配信を続ける。移し替えの手順が失敗したときは、端末の設定をバックアップから戻す。'
+minimal_guarantee: '`git pull` に失敗したときは、前のバージョンのまま配信を続ける。移し替えの手順が失敗したときは、端末の設定をバックアップから戻す。`sources` を移す途中で失敗したときは、project-index の端末の設定もその実行で追加した行を取り除き、実行の前の行に戻す。'
 frequency: dev-docs の新しいバージョンが出るたび
 priority: 中
 refs:
