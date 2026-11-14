@@ -1,0 +1,199 @@
+$ uv run pytest tests/unit/ --continue-on-collection-errors
+（Red: 実装の無いことによる fail だけ。収集の誤りは features/migrate/types.py に SourcesPort が無いため）
+........................................................................ [ 15%]
+........................................................................ [ 31%]
+........................................................................ [ 46%]
+........................................................................ [ 62%]
+.....................F..FFF............................................. [ 77%]
+.............................................................F.F........ [ 93%]
+................................                                         [100%]
+==================================== ERRORS ====================================
+____ ERROR collecting tests/unit/dev_docs/features/migrate/test_service.py _____
+ImportError while importing test module '/mnt/c/Users/shuhe/repo/dev-docs/.claude/worktrees/fix-migrate-project-index-write-timeout/tests/unit/dev_docs/features/migrate/test_service.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+tests/unit/dev_docs/features/migrate/test_service.py:16: in <module>
+    from dev_docs.features.migrate.types import (
+E   ImportError: cannot import name 'SourcesPort' from 'dev_docs.features.migrate.types' (/mnt/c/Users/shuhe/repo/dev-docs/.claude/worktrees/fix-migrate-project-index-write-timeout/src/dev_docs/features/migrate/types.py)
+=================================== FAILURES ===================================
+____________________________ test_settings_sources _____________________________
+
+fake_index = FakeIndex(configs={}, docs={}, unreadable={}, details={}, decisions={}, decision_texts={}, sources=[], search_results=..., 'version': 'v1'}, responses={}, refused=False, requests=[<Request('GET', 'http://127.0.0.1:8786/settings/sources')>])
+make_client = <function make_client.<locals>._make at 0x7d50e921b480>
+
+    def test_settings_sources(
+        fake_index: FakeIndex, make_client: Callable[..., ProjectIndexClient]
+    ) -> None:
+        """行と状態（正常系）。"""
+        # 準備
+        fake_index.settings = {
+            "settingsPath": "/pi/settings.yaml",
+            "sources": [
+                _settings_row("a", "serving", outsideRead=False),
+                _settings_row("b", "pending_reload"),
+            ],
+            "version": "v1",
+        }
+        # 実行
+        view = asyncio.run(make_client().settings_sources())
+        # 検証
+        assert len(view.rows) == 2
+        assert view.rows[0]["outside_read"] is False
+        assert "outsideRead" not in view.rows[0]
+        assert [state.status for state in view.states] == ["serving", "pending_reload"]
+        assert view.settings_path == "/pi/settings.yaml"
+>       assert view.version == "v1"
+               ^^^^^^^^^^^^
+E       AttributeError: 'SettingsSourcesView' object has no attribute 'version'
+
+tests/unit/dev_docs/integrations/project_index/test_client.py:418: AttributeError
+__________________________ test_save_settings_sources __________________________
+
+fake_index = FakeIndex(configs={}, docs={}, unreadable={}, details={}, decisions={}, decision_texts={}, sources=[], search_results=...fs_results={}, settings={'settingsPath': '/pi/settings.yaml', 'sources': []}, responses={}, refused=False, requests=[])
+make_client = <function make_client.<locals>._make at 0x7d50e92619b0>
+
+    def test_save_settings_sources(
+        fake_index: FakeIndex, make_client: Callable[..., ProjectIndexClient]
+    ) -> None:
+        """照合つきで保存する（正常系）。"""
+        # 準備
+        rows = [
+            {"id": "a", "config": ["/a/project-index.yaml"]},
+            {"id": "b", "config": ["/b/project-index.yaml"]},
+        ]
+        # 実行
+>       asyncio.run(make_client().save_settings_sources(rows, expected_version="v1"))
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       AttributeError: 'ProjectIndexClient' object has no attribute 'save_settings_sources'. Did you mean: 'add_settings_source'?
+
+tests/unit/dev_docs/integrations/project_index/test_client.py:466: AttributeError
+___________________ test_save_settings_sources_when_conflict ___________________
+
+fake_index = FakeIndex(configs={}, docs={}, unreadable={}, details={}, decisions={}, decision_texts={}, sources=[], search_results=....yaml', 'sources': []}, responses={('PUT', '/settings/sources'): (409, {'current': 'v2'})}, refused=False, requests=[])
+make_client = <function make_client.<locals>._make at 0x7d50e92621f0>
+
+    def test_save_settings_sources_when_conflict(
+        fake_index: FakeIndex, make_client: Callable[..., ProjectIndexClient]
+    ) -> None:
+        """内容のバージョンが古い（異常系）。"""
+        # 準備
+        fake_index.responses[("PUT", "/settings/sources")] = (409, {"current": "v2"})
+        # 実行
+        with pytest.raises(ProjectIndexResponseError) as caught:
+>           asyncio.run(make_client().save_settings_sources([{"id": "a"}], expected_version="v1"))
+                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E           AttributeError: 'ProjectIndexClient' object has no attribute 'save_settings_sources'. Did you mean: 'add_settings_source'?
+
+tests/unit/dev_docs/integrations/project_index/test_client.py:483: AttributeError
+___________________ test_save_settings_sources_when_invalid ____________________
+
+fake_index = FakeIndex(configs={}, docs={}, unreadable={}, details={}, decisions={}, decision_texts={}, sources=[], search_results=...: '引数が正しくありません: 1 件', 'errors': [{'path': 'sources[1].enabled', 'reason': 'bool ではない'}]})}, refused=False, requests=[])
+make_client = <function make_client.<locals>._make at 0x7d50e9262a30>
+
+    def test_save_settings_sources_when_invalid(
+        fake_index: FakeIndex, make_client: Callable[..., ProjectIndexClient]
+    ) -> None:
+        """本文の検証に通らない（異常系）。"""
+        # 準備
+        fake_index.responses[("PUT", "/settings/sources")] = (
+            400,
+            {
+                "detail": "引数が正しくありません: 1 件",
+                "errors": [{"path": "sources[1].enabled", "reason": "bool ではない"}],
+            },
+        )
+        # 実行
+        with pytest.raises(InvalidArgumentError) as caught:
+>           asyncio.run(make_client().save_settings_sources([{"id": "a"}], expected_version="v1"))
+                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E           AttributeError: 'ProjectIndexClient' object has no attribute 'save_settings_sources'. Did you mean: 'add_settings_source'?
+
+tests/unit/dev_docs/integrations/project_index/test_client.py:502: AttributeError
+_____________________ test_run_migrate_when_sources_moved ______________________
+
+tmp_path = PosixPath('/tmp/pytest-of-shuhei2441/pytest-8055/test_run_migrate_when_sources_0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7d50e8b3e820>
+capsys = <_pytest.capture.CaptureFixture object at 0x7d50e8a40350>
+write_steps = <function write_steps.<locals>._write at 0x7d50e8a02980>
+
+    def test_run_migrate_when_sources_moved(
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        capsys: pytest.CaptureFixture[str],
+        write_steps: Callable[..., None],
+    ) -> None:
+        """sources を project-index へ移す（正常系）。"""
+        # 準備
+        settings = _write_settings(tmp_path, monkeypatch, SOURCES_V1)
+        write_steps(
+            "settings",
+            "2",
+            [{"op": "export_sources", "path": "sources", "description": "移す"}],
+        )
+        fake = FakeIndex()
+        fake.settings = {
+            "settingsPath": "/pi/settings.yaml",
+            "sources": [
+                {
+                    "id": "notes",
+                    "config": ["/other/dev-docs.yaml"],
+                    "enabled": True,
+                    "scope": {"read": [], "write": None},
+                    "outsideRead": True,
+                    "status": "serving",
+                    "errors": [],
+                    "configVersion": None,
+                }
+            ],
+            "version": "v1",
+        }
+        with _http_index(fake) as address:
+            # 実行
+            code = run_migrate(_migrate_args(project_index=address))
+        # 検証
+        written = load_yaml(settings.read_text(encoding="utf-8"))
+        assert code == 0
+>       assert written["sources"] == [{"id": "notes", "config": "/n/dev-docs.yaml"}]
+               ^^^^^^^^^^^^^^^^^^
+E       KeyError: 'sources'
+
+tests/unit/dev_docs/test_serve.py:601: KeyError
+----------------------------- Captured stdout call -----------------------------
+/tmp/pytest-of-shuhei2441/pytest-8055/test_run_migrate_when_sources_0/settings.yaml を version 2 に移し替えました（バックアップ: /tmp/pytest-of-shuhei2441/pytest-8055/test_run_migrate_when_sources_0/settings.yaml.bak-20261114T035215）
+------------------------------ Captured log call -------------------------------
+INFO     httpx:_client.py:1740 HTTP Request: POST http://127.0.0.1:58592/settings/sources "HTTP/1.0 201 Created"
+INFO     httpx:_client.py:1740 HTTP Request: POST http://127.0.0.1:58592/settings/sources "HTTP/1.0 201 Created"
+INFO     dev_docs.features.migrate.service:service.py:158 設定を移し替えた（/tmp/pytest-of-shuhei2441/pytest-8055/test_run_migrate_when_sources_0/settings.yaml・1 から 2・バックアップ /tmp/pytest-of-shuhei2441/pytest-8055/test_run_migrate_when_sources_0/settings.yaml.bak-20261114T035215・移さなかった行 []）
+_______________________ test_run_migrate_when_no_export ________________________
+
+tmp_path = PosixPath('/tmp/pytest-of-shuhei2441/pytest-8055/test_run_migrate_when_no_expor0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7d50e8a444b0>
+write_steps = <function write_steps.<locals>._write at 0x7d50e8b35220>
+
+    def test_run_migrate_when_no_export(
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        write_steps: Callable[..., None],
+    ) -> None:
+        """sources が無ければ project-index へ接続しない（正常系）。"""
+        # 準備
+        settings = _write_settings(tmp_path, monkeypatch, SETTINGS_V1)
+        write_steps(
+            "settings",
+            "2",
+            [{"op": "add", "path": "bind", "value": "127.0.0.1", "description": "追加"}],
+        )
+        ports: list[str] = []
+>       monkeypatch.setattr(main_module, "_sources_port", lambda address: ports.append(address))
+E       AttributeError: <module 'dev_docs.main' from '/mnt/c/Users/shuhe/repo/dev-docs/.claude/worktrees/fix-migrate-project-index-write-timeout/src/dev_docs/main.py'> has no attribute '_sources_port'
+
+tests/unit/dev_docs/test_serve.py:648: AttributeError
+=========================== short test summary info ============================
+ERROR tests/unit/dev_docs/features/migrate/test_service.py
+FAILED tests/unit/dev_docs/integrations/project_index/test_client.py::test_settings_sources
+FAILED tests/unit/dev_docs/integrations/project_index/test_client.py::test_save_settings_sources
+FAILED tests/unit/dev_docs/integrations/project_index/test_client.py::test_save_settings_sources_when_conflict
+FAILED tests/unit/dev_docs/integrations/project_index/test_client.py::test_save_settings_sources_when_invalid
+FAILED tests/unit/dev_docs/test_serve.py::test_run_migrate_when_sources_moved
+FAILED tests/unit/dev_docs/test_serve.py::test_run_migrate_when_no_export - A...
+6 failed, 458 passed, 1 error in 48.53s
