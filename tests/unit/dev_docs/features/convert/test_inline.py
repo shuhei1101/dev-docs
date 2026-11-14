@@ -117,6 +117,31 @@ def test_rewrite_text_when_id_link_no_heading() -> None:
     assert result == "[B](b.yaml)"
 
 
+def test_rewrite_text_when_mermaid_click() -> None:
+    """Mermaid の click の id の参照（正常系）。"""
+    # 準備
+    code = "\n".join(
+        [
+            "classDiagram",
+            "  class A",
+            '  click A href "id:a"',
+            '  click B "id:b#flow"',
+            '  click C href "id:zzz"',
+            '  click D href "https://e.example/"',
+        ]
+    )
+    # 実行
+    result = rewrite_text(f"```mermaid\n{code}\n```", ID_CONTEXT, HEAD)
+    # 検証
+    lines = result.splitlines()
+    assert lines[0] == "```mermaid"
+    assert lines[-1] == "```"
+    assert '  click A href "a.yaml"' in lines
+    assert '  click B "b.yaml#処理の流れ"' in lines
+    assert '  click C href "id:zzz"' in lines
+    assert '  click D href "https://e.example/"' in lines
+
+
 def test_link_reference() -> None:
     """項目を指す参照（正常系）。"""
     # 実行
