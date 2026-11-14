@@ -50,6 +50,8 @@ SOURCES_KEY = "sources"
 HTTP_CONFLICT = 409
 # 保存の違反の `errors[].path` のうち、送信した行の位置を指す先頭
 SENT_ROW_PATH = re.compile(r"\Asources\[(\d+)\]")
+# project-index が配信していない `id` 省略の行の `id` に返却する状態の ID
+PLACEHOLDER_ID = re.compile(r"\Asources\[\d+\]\Z")
 
 
 def resolve_target(*, env: Mapping[str, str]) -> MigrationTarget:
@@ -184,17 +186,19 @@ def _current_rows(view: SettingsSourcesView) -> dict[str, dict[str, Any]]:
 
 
 def _view_id(view: SettingsSourcesView, index: int) -> str | None:
-    """取得した行の配信元の ID（状態の `id`・行の `id`・`config` の `name` の順）を返却する。"""
-    state = view.states[index] if index < len(view.states) else None
-    if state is not None and state.id:
-        return str(state.id)
+    """取得した行の配信元の ID を、行の `id`、無ければ `config` の `name` で求める。
+
+    状態の ID は、配信していない `id` 省略の行で `sources[{n}]` になり、project-index の照合と
+    違う値になるため使用しない。
+    """
     return _source_id(view.rows[index])
 
 
 def _source_id(row: Mapping[str, Any]) -> str | None:
     """行の配信元の ID を、`id`、無ければ `config` の配信元の設定を重ねた `name` で求める。"""
-    if row.get("id"):
-        return str(row["id"])
+    own_id = _own_id(row)
+    if own_id is not None:
+        return own_id
     merged: dict[str, Any] = {}
     for item in row.get("config") or []:
         # 読めない設定のファイルは飛ばし、読めたファイルだけを重ねる（project-index と同じ）
@@ -206,6 +210,14 @@ def _source_id(row: Mapping[str, Any]) -> str | None:
             merged.update(value)
     name = merged.get("name")
     return name if isinstance(name, str) and name else None
+
+
+def _own_id(row: Mapping[str, Any]) -> str | None:
+    """行が持つ `id` を返却する。`sources[{n}]` の書式は状態の ID のため、`id` を省いた行とする。"""
+    value = row.get("id")
+    if not value or PLACEHOLDER_ID.match(str(value)):
+        return None
+    return str(value)
 
 
 def _content(row: Mapping[str, Any]) -> dict[str, Any]:
@@ -229,8 +241,9 @@ def _content(row: Mapping[str, Any]) -> dict[str, Any]:
 def _sent_row(row: Mapping[str, Any]) -> dict[str, Any]:
     """行を、保存で送信する `id`・`config`・`enabled`・`scope`・`outsideRead` のキーだけにする。"""
     sent: dict[str, Any] = {}
-    if row.get("id"):
-        sent["id"] = row["id"]
+    own_id = _own_id(row)
+    if own_id is not None:
+        sent["id"] = own_id
     sent["config"] = list(row.get("config") or [])
     for key in ("enabled", "scope"):
         if key in row:
