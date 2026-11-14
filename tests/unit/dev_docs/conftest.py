@@ -36,10 +36,10 @@ def doc_json(
     body: str = "",
     updated: str | None = "2026-11-01T10:00:00+09:00",
 ) -> dict[str, Any]:
-    """偽物の project-index に置く文書 1 件を作る。
+    """偽物の project-index に配置する文書 1 件を作る。
 
-    `record_index` は使わない（行の文書の添字は、配信元の設定の `records` の行から呼び出し側が決める）。
-    `body`・`updated` は文書の取得でだけ返す。
+    `record_index` は使用しない（行の文書の添字は、配信元の設定の `records` の行から呼び出し側が決める）。
+    `body`・`updated` は文書の取得でだけ返却する。
     """
     del record_index
     label = name if name is not None else doc_id.upper()
@@ -61,7 +61,7 @@ def doc_json(
 
 
 def list_entry(document: dict[str, Any], *, values: bool) -> dict[str, Any]:
-    """偽物に置いた文書を、文書の一覧の 1 件（IF-24）にする。"""
+    """偽物に配置した文書を、文書の一覧の 1 件（IF-24）にする。"""
     entry = {key: value for key, value in document.items() if not key.startswith("_")}
     if not values:
         entry["value"] = None
@@ -77,9 +77,9 @@ def config_json(
     decisions: list[str] | None = None,
     github: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    """偽物の project-index に置く配信元の設定を作る。
+    """偽物の project-index に配置する配信元の設定を作る。
 
-    `documents[].schema` には解いた種類のスキーマを入れる（偽物が `schemas` に分けて返す）。
+    `documents[].schema` には解いた種類のスキーマを格納する（偽物が `schemas` に分けて返却する）。
     """
     return {
         "_source": source,
@@ -95,7 +95,7 @@ def config_json(
 
 
 def _config_response(config: dict[str, Any], *, schemas: bool) -> dict[str, Any]:
-    """偽物に置いた配信元の設定を、配信元の設定の取得の応答（IF-23）にする。"""
+    """偽物に配置した配信元の設定を、配信元の設定の取得の応答（IF-23）にする。"""
     rows = [{**row, "schema": f"schemas/{row['id']}.schema.yaml"} for row in config["documents"]]
     body = {key: value for key, value in config.items() if not key.startswith("_")}
     body["documents"] = rows
@@ -114,8 +114,8 @@ class FakeIndex:
     入出力は shuhei1101/project-index の develop の `f36ba69` の IF-22〜IF-32 に沿う。
 
     `docs` は配信元 → リビジョン（`None` は既定）→ 文書の並び、
-    `details` は（配信元・パス）→ 文書の取得に足す値（`markdown`・`failure`・`document`）、
-    `unreadable` は配信元 → YAML として読めないファイル（文書の取得の `conversionError`）、
+    `details` は（配信元・パス）→ 文書の取得に追加する値（`markdown`・`failure`・`document`）、
+    `unreadable` は配信元 → YAML として読み込めないファイル（文書の取得の `conversionError`）、
     `responses` は（メソッド・パス）→（ステータス・本文）の上書き。
     """
 
@@ -142,7 +142,7 @@ class FakeIndex:
         return "develop" if self.configs[source]["_git"] else ""
 
     def _detail(self, source: str, file: str, request: httpx.Request) -> httpx.Response:
-        """文書の取得（IF-25）に答える。"""
+        """文書の取得（IF-25）に応答する。"""
         ref = request.url.params.get("ref")
         doc_id = request.url.params.get("id")
         found = next(
@@ -193,7 +193,7 @@ class FakeIndex:
         )
 
     def _source(self, parts: list[str], request: httpx.Request) -> httpx.Response:
-        """`/sources/{source}/...` に答える。"""
+        """`/sources/{source}/...` に応答する。"""
         source = parts[1]
         if source not in self.configs:
             return self._not_found("source", source)
@@ -245,7 +245,7 @@ class FakeIndex:
         )
 
     def _settings(self, request: httpx.Request) -> httpx.Response:
-        """端末の設定の API（IF-30〜IF-32）に答える。"""
+        """端末の設定の API（IF-30〜IF-32）に応答する。"""
         if request.method == "POST":
             return httpx.Response(201, json={"result": "added", "same": None, "sources": []})
         if request.method == "PUT":
@@ -303,13 +303,13 @@ class FakeIndex:
 
 @pytest.fixture
 def fake_index() -> FakeIndex:
-    """project-index の偽物を返す。"""
+    """project-index の偽物を返却する。"""
     return FakeIndex()
 
 
 @pytest.fixture
 def make_client(fake_index: FakeIndex) -> Callable[..., ProjectIndexClient]:
-    """偽物の project-index を `httpx.MockTransport` で呼ぶ project-indexの呼び出しを作る関数を返す。"""
+    """偽物の project-index を `httpx.MockTransport` で呼ぶ project-indexの呼び出しを作る関数を返却する。"""
 
     def _make(*, timeout: float = 45) -> ProjectIndexClient:
         return ProjectIndexClient(
@@ -323,7 +323,7 @@ def make_client(fake_index: FakeIndex) -> Callable[..., ProjectIndexClient]:
 
 @pytest.fixture
 def make_terminal_config(tmp_path: Path) -> Callable[..., TerminalConfig]:
-    """端末の設定を作る関数を返す。"""
+    """端末の設定を作る関数を返却する。"""
 
     def _make(**overrides: Any) -> TerminalConfig:
         state_dir = overrides.pop("state_dir", tmp_path / "state")
@@ -346,7 +346,7 @@ def make_handlers(
     make_terminal_config: Callable[..., TerminalConfig],
     make_client: Callable[..., ProjectIndexClient],
 ) -> Callable[..., Any]:
-    """偽物の project-index を呼ぶ配線済みの関数を作る関数を返す（指定した部品だけ差し替える）。"""
+    """偽物の project-index を呼ぶ配線済みの関数を作る関数を返却する（指定した部品だけ差し替える）。"""
     import dataclasses
 
     from dev_docs.features.convert.service import ConvertService
@@ -373,7 +373,7 @@ def make_handlers(
 
 @pytest.fixture
 def bundled_prompts() -> Any:
-    """同梱したプロンプトの YAML を、サーバーが描画する全ての ID で読んだ一式を返す。"""
+    """同梱したプロンプトの YAML を、サーバーが描画する全ての ID で読み込んだ一式を返却する。"""
     from dev_docs.features.prompt_doc.runtime import DEFAULT_PROMPTS_DIR, load_prompts
     from dev_docs.server.mcp.result import mcp_prompt_ids
 
@@ -384,7 +384,7 @@ def bundled_prompts() -> Any:
 def make_mcp_handlers(
     make_handlers: Callable[..., Any], bundled_prompts: Any
 ) -> Callable[..., Any]:
-    """同梱したプロンプトの一式を持たせた配線済みの関数を作る関数を返す。"""
+    """同梱したプロンプトの一式を持たせた配線済みの関数を作る関数を返却する。"""
 
     def _make(**overrides: Any) -> Any:
         return make_handlers(**{"prompts": bundled_prompts, **overrides})
@@ -394,7 +394,7 @@ def make_mcp_handlers(
 
 @pytest.fixture
 def make_document() -> Callable[..., IndexedDocument]:
-    """文書を作る関数を返す。"""
+    """文書を作る関数を返却する。"""
 
     def _make(**overrides: Any) -> IndexedDocument:
         values: dict[str, Any] = {
@@ -418,7 +418,7 @@ def make_document() -> Callable[..., IndexedDocument]:
 
 @pytest.fixture
 def make_view() -> Callable[..., SourceView]:
-    """配信元の表示の設定を作る関数を返す。"""
+    """配信元の表示の設定を作る関数を返却する。"""
 
     def _make(**overrides: Any) -> SourceView:
         values: dict[str, Any] = {
@@ -435,7 +435,7 @@ def make_view() -> Callable[..., SourceView]:
 
 @pytest.fixture
 def write_settings(tmp_path: Path) -> Callable[..., Path]:
-    """端末の設定をファイルに書き、そのパスを返す関数を返す（JSON は YAML として読める）。"""
+    """端末の設定をファイルに書き込み、そのパスを返却する関数を返却する（JSON は YAML として読み込める）。"""
 
     def _write(**top: Any) -> Path:
         values: dict[str, Any] = {
@@ -453,7 +453,7 @@ def write_settings(tmp_path: Path) -> Callable[..., Path]:
 
 @pytest.fixture
 def migrations_root(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
-    """移し替えの手順の置き場所を一時のフォルダに差し替え、そのフォルダを返す。
+    """移し替えの手順の配置先を一時のフォルダに差し替え、そのフォルダを返却する。
 
     絶対パスを手順のフォルダの名前に差し替えると、パッケージのフォルダにつないでも絶対パスが残る。
     """
@@ -466,7 +466,7 @@ def migrations_root(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
 
 @pytest.fixture
 def write_steps(migrations_root: Path) -> Callable[..., None]:
-    """移し替えの手順のファイル（`{kind}/{バージョン}/steps.yaml`）を書く関数を返す。"""
+    """移し替えの手順のファイル（`{kind}/{バージョン}/steps.yaml`）を書き込む関数を返却する。"""
 
     def _write(kind: str, version: str, steps: list[dict[str, Any]]) -> None:
         target = migrations_root / kind / version / "steps.yaml"

@@ -36,7 +36,7 @@ SERVE_WAIT_SEC = 60
 HOLD_WAIT_SEC = 60
 SETTINGS_PATH = "/home/u/.config/project-index/settings.yaml"
 
-# 名前・概要・タグ・項目の表を持つ種類のスキーマ（project-index が解いて返す値）
+# 名前・概要・タグ・項目の表を持つ種類のスキーマ（project-index が解いて返却する値）
 SAMPLE_SCHEMA: dict[str, Any] = {
     "type": "object",
     "title": "サンプル",
@@ -83,10 +83,10 @@ def doc(
     body: str = "",
     updated: str = "2026-11-01T10:00:00+09:00",
 ) -> dict[str, Any]:
-    """偽物・本物の project-index に置く文書 1 件を作る（`data` を省くと `id` と `name` だけ）。
+    """偽物・本物の project-index に配置する文書 1 件を作る（`data` を省くと `id` と `name` だけ）。
 
-    `record_index` は使わない（行の文書の添字は、配信元の設定の `records` の行から呼び出し側が決める）。
-    `body`・`updated` は文書の取得でだけ返す。本物の project-index へ置くときは、`data` をファイルに書き、
+    `record_index` は使用しない（行の文書の添字は、配信元の設定の `records` の行から呼び出し側が決める）。
+    `body`・`updated` は文書の取得でだけ返却する。本物の project-index へ配置するときは、`data` をファイルに書き込み、
     `updated` を commit の日時にする。
     """
     del record_index
@@ -109,7 +109,7 @@ def doc(
 
 
 def list_entry(document: dict[str, Any], *, values: bool) -> dict[str, Any]:
-    """偽物に置いた文書を、文書の一覧の 1 件（IF-24）にする。"""
+    """偽物に配置した文書を、文書の一覧の 1 件（IF-24）にする。"""
     entry = {key: value for key, value in document.items() if not key.startswith("_")}
     if not values:
         entry["value"] = None
@@ -172,12 +172,12 @@ def _saved_row(row: dict[str, Any]) -> dict[str, Any]:
 class MockIndex:
     """project-index の読み取り API と端末の設定の API を、127.0.0.1 の空きポートで待ち受ける偽物。
 
-    端末の設定の行（`rows`）の順に配信元の状態を決め、`sources` の配信元の文書を返す。
+    端末の設定の行（`rows`）の順に配信元の状態を決め、`sources` の配信元の文書を返却する。
 
     入出力は shuhei1101/project-index の develop の `7177d39` の IF-22〜IF-32 に沿う。
     文書の取得・画面の検索・リビジョンの一覧・端末の設定の取得と保存の正常系は、本物の project-index
-    （`RealIndex`）で確かめ、この偽物はつながらない・応答しない・500 を返す異常系と、それ以外の
-    インターフェースで使う。
+    （`RealIndex`）で確認し、この偽物はつながらない・応答しない・500 を返却する異常系と、それ以外の
+    インターフェースで使用する。
     """
 
     def __init__(self) -> None:
@@ -206,7 +206,7 @@ class MockIndex:
     def serve(
         self, source_id: str, source: IndexSource | None = None, **row_values: Any
     ) -> IndexSource:
-        """配信元を足し、端末の設定の行にも並べる。"""
+        """配信元を追加し、端末の設定の行にも並べる。"""
         found = source or IndexSource()
         self.sources[source_id] = found
         self.rows.append(
@@ -295,7 +295,7 @@ class MockIndex:
         return {"settingsPath": SETTINGS_PATH, "sources": sources, "version": str(self.version)}
 
     def _served(self, source_id: str) -> tuple[IndexSource | None, tuple[int, Any] | None]:
-        """配信中の配信元か、配信していない理由の 404 を返す。"""
+        """配信中の配信元か、配信していない理由の 404 を返却する。"""
         for index, values in enumerate(self.rows):
             if values.get("id") != source_id:
                 continue
@@ -308,7 +308,7 @@ class MockIndex:
         return None, (404, {"missing": "source", "value": source_id})
 
     def answer(self, method: str, raw_path: str, body: Any) -> tuple[int, Any]:
-        """要求 1 つに答える。"""
+        """要求 1 つに応答する。"""
         self.received.append((method, raw_path, body))
         self.hold.wait(HOLD_WAIT_SEC)
         if self.delay_sec:
@@ -334,9 +334,9 @@ class MockIndex:
         return self._source_answer(parts[1], source, parts[2:], query)
 
     def _settings_answer(self, method: str, body: Any) -> tuple[int, Any]:
-        """端末の設定の API に答える。"""
+        """端末の設定の API に応答する。"""
         if method == "PUT":
-            # project-index と同じく、保存してから読み直しの間は応答しない
+            # project-index と同じく、保存してから再読み込みの間は応答しない
             if self.put_saves:
                 self.rows = [_saved_row(row) for row in body["sources"]]
                 self.pending = set()
@@ -361,7 +361,7 @@ class MockIndex:
     def _detail(
         self, source: IndexSource, file: str, ref: str | None, doc_id: str | None
     ) -> tuple[int, Any]:
-        """文書の取得（IF-25）に答える。"""
+        """文書の取得（IF-25）に応答する。"""
         found = next(
             (
                 item
@@ -400,7 +400,7 @@ class MockIndex:
     def _source_answer(
         self, source_id: str, source: IndexSource, rest: list[str], query: dict[str, str]
     ) -> tuple[int, Any]:
-        """`/sources/{source}/...` に答える。"""
+        """`/sources/{source}/...` に応答する。"""
         ref = query.get("ref")
         if rest == ["config"]:
             return 200, source.config(schemas=query.get("schemas") == "true")
@@ -442,7 +442,7 @@ class MockIndex:
 
 @pytest.fixture
 def mock_index() -> Iterator[MockIndex]:
-    """空きポートで待ち受ける project-index の偽物を返す（終了時に止める）。"""
+    """空きポートで待ち受ける project-index の偽物を返却する（終了時に止める）。"""
     mock = MockIndex()
     mock.start()
     yield mock
@@ -459,7 +459,7 @@ def sample_docs() -> list[dict[str, Any]]:
 
 @pytest.fixture
 def sample_index(mock_index: MockIndex) -> MockIndex:
-    """文書 1・文書 2 を持つ配信元 sample を配信している project-index の偽物を返す。"""
+    """文書 1・文書 2 を持つ配信元 sample を配信している project-index の偽物を返却する。"""
     mock_index.serve("sample", IndexSource(docs={None: sample_docs()}))
     return mock_index
 
@@ -474,7 +474,7 @@ class ToolResult:
 
     @property
     def data(self) -> Any:
-        """本文を JSON として読んだ値を返す。"""
+        """本文を JSON として読み込んだ値を返却する。"""
         return json.loads(self.text)
 
 
@@ -517,7 +517,7 @@ def settings_text(tmp_path: Path, address: str, extra: str = "") -> str:
 
 @pytest.fixture
 def make_server(tmp_path: Path) -> Iterator[Callable[..., ServerEnv]]:
-    """project-index の偽物につなぐ端末の設定でアプリを作り、テストのクライアントを返す関数を返す。"""
+    """project-index の偽物につなぐ端末の設定でアプリを作り、テストのクライアントを返却する関数を返却する。"""
     with ExitStack() as stack:
 
         def _make(
@@ -540,7 +540,7 @@ def make_server(tmp_path: Path) -> Iterator[Callable[..., ServerEnv]]:
 
 @pytest.fixture
 def write_settings(tmp_path: Path) -> Callable[..., Path]:
-    """dev-docs の端末の設定を書いて、そのパスを返す関数を返す。"""
+    """dev-docs の端末の設定を書き込み、そのパスを返却する関数を返却する。"""
 
     def _write(address: str, *, extra: str = "", name: str = "settings.yaml") -> Path:
         path = tmp_path / name
@@ -552,7 +552,7 @@ def write_settings(tmp_path: Path) -> Callable[..., Path]:
 
 @pytest.fixture
 def free_port() -> Callable[[], int]:
-    """今は空いている 127.0.0.1 のポートを返す関数を返す。"""
+    """今は空いている 127.0.0.1 のポートを返却する関数を返却する。"""
 
     def _find() -> int:
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
@@ -564,13 +564,13 @@ def free_port() -> Callable[[], int]:
 
 @pytest.fixture
 def start_serve() -> Iterator[Callable[..., subprocess.Popen[str]]]:
-    """`dev-docs serve` を子プロセスで起動する関数を返す（終了時に止める）。"""
+    """`dev-docs serve` を子プロセスで起動する関数を返却する（終了時に止める）。"""
     processes: list[subprocess.Popen[str]] = []
 
     def _start(
         settings: Path | None, port: int, *, extra_env: dict[str, str] | None = None
     ) -> subprocess.Popen[str]:
-        # settings が None のときは DEV_DOCS_CONFIG を渡さず、既定のパスを読ませる
+        # settings が None のときは DEV_DOCS_CONFIG を指定せず、既定のパスを読み込ませる
         env = {key: value for key, value in os.environ.items() if key != "DEV_DOCS_CONFIG"}
         env["DEV_DOCS_PORT"] = str(port)
         if settings is not None:
@@ -598,7 +598,7 @@ def start_serve() -> Iterator[Callable[..., subprocess.Popen[str]]]:
 
 @pytest.fixture
 def wait_until_serving() -> Callable[..., None]:
-    """子プロセスが画面の API で応答するまで待つ関数を返す。"""
+    """子プロセスが画面の API で応答するまで待つ関数を返却する。"""
     import httpx
 
     def _wait(
@@ -622,7 +622,7 @@ def wait_until_serving() -> Callable[..., None]:
 
 @pytest.fixture
 def migrations_root(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
-    """移し替えの手順の置き場所を一時のフォルダに差し替え、そのフォルダを返す。"""
+    """移し替えの手順の配置先を一時のフォルダに差し替え、そのフォルダを返却する。"""
     root = tmp_path / "migrations"
     root.mkdir()
     monkeypatch.setattr("dev_docs.features.migrate.types.MIGRATIONS_DIR", str(root))
@@ -632,7 +632,7 @@ def migrations_root(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
 
 @pytest.fixture
 def write_steps(migrations_root: Path) -> Callable[..., None]:
-    """移し替えの手順のファイル（`{kind}/{バージョン}/steps.yaml`）を書く関数を返す。"""
+    """移し替えの手順のファイル（`{kind}/{バージョン}/steps.yaml`）を書き込む関数を返却する。"""
 
     def _write(kind: str, version: str, steps: list[dict[str, Any]]) -> None:
         target = migrations_root / kind / version / "steps.yaml"
@@ -657,7 +657,7 @@ class DevDocsClone:
     run_git: Callable[..., str]
 
     def push_upstream(self, files: dict[str, str], message: str = "upstream") -> str:
-        """上流の作業ツリーでファイルを書き換えて commit し、bare へ push して commit の SHA を返す。"""
+        """上流の作業ツリーでファイルを書き換えて commit し、bare へ push して commit の SHA を返却する。"""
         for name, content in files.items():
             target = self.work / name
             target.parent.mkdir(parents=True, exist_ok=True)
@@ -668,7 +668,7 @@ class DevDocsClone:
         return self.run_git(self.work, "rev-parse", "HEAD").strip()
 
     def bump_version(self, version: str) -> dict[str, str]:
-        """`pyproject.toml` と `uv.lock` の dev-docs のバージョンを書き換えた内容を返す。"""
+        """`pyproject.toml` と `uv.lock` の dev-docs のバージョンを書き換えた内容を返却する。"""
         pyproject = (self.work / "pyproject.toml").read_text(encoding="utf-8")
         lock = (self.work / "uv.lock").read_text(encoding="utf-8")
         old = next(
@@ -684,7 +684,7 @@ class DevDocsClone:
         }
 
     def head(self) -> str:
-        """クローンの HEAD の SHA を返す。"""
+        """クローンの HEAD の SHA を返却する。"""
         return self.run_git(self.clone, "rev-parse", "HEAD").strip()
 
 
@@ -693,7 +693,7 @@ def dev_docs_clone(
     tmp_path: Path, run_git: Callable[..., str], monkeypatch: pytest.MonkeyPatch
 ) -> DevDocsClone:
     """dev-docs 自身の小さなコピーを上流にして、`.venv` を作ったクローンを `{tmp}/clone` に作る。"""
-    # 依存はキャッシュから入れる（ネットワークを使わない）
+    # 依存はキャッシュから入れる（ネットワークを使用しない）
     monkeypatch.setenv("UV_OFFLINE", "1")
     work = tmp_path / "work"
     work.mkdir()
@@ -716,7 +716,7 @@ def dev_docs_clone(
 
 @pytest.fixture
 def start_serve_from_clone() -> Iterator[Callable[..., subprocess.Popen[str]]]:
-    """クローンの `.venv` の Python で `dev-docs serve` を起動する関数を返す（終了時に止める）。"""
+    """クローンの `.venv` の Python で `dev-docs serve` を起動する関数を返却する（終了時に止める）。"""
     processes: list[subprocess.Popen[str]] = []
 
     def _start(clone: Path, settings: Path, port: int) -> subprocess.Popen[str]:
@@ -745,7 +745,7 @@ RESTART_WAIT_SEC = 90
 
 @pytest.fixture
 def call_tool() -> Callable[..., dict[str, Any]]:
-    """起動した子プロセスの MCP のツールを JSON-RPC で呼び、結果の辞書を返す関数を返す。"""
+    """起動した子プロセスの MCP のツールを JSON-RPC で呼び、結果の辞書を返却する関数を返却する。"""
     import httpx
 
     def _call(
@@ -769,7 +769,7 @@ def call_tool() -> Callable[..., dict[str, Any]]:
 
 @pytest.fixture
 def started_count() -> Callable[[Path], int]:
-    """ログに出た「Started server process」の行数を数える関数を返す。"""
+    """ログに出た「Started server process」の行数を数える関数を返却する。"""
 
     def _count(state_dir: Path) -> int:
         log = state_dir / "logs" / "dev-docs.log"
@@ -780,7 +780,7 @@ def started_count() -> Callable[[Path], int]:
 
 @pytest.fixture
 def wait_for_restart(started_count: Callable[[Path], int]) -> Callable[..., None]:
-    """起動の行が増え、画面の API が応答するまで待つ関数を返す。"""
+    """起動の行が増え、画面の API が応答するまで待つ関数を返却する。"""
     import httpx
 
     def _wait(state_dir: Path, port: int, started: int) -> None:
@@ -810,7 +810,7 @@ PROJECT_INDEX_COMMIT = "f36ba692e6fa7bb15e31f0398e20953a6b8201ec"
 # （SERVE_WAIT_SEC）と同じ 60 秒にする
 REAL_INDEX_WAIT_SEC = 60
 DEFAULT_UPDATED = "2026-11-01T10:00:00+09:00"
-# 配信元の文書は JSON（YAML として読める）で書くため、変換のスクリプトは標準入力を JSON として読む
+# 配信元の文書は JSON（YAML として読み込める）で記載するため、変換のスクリプトは標準入力を JSON として読み込む
 CONVERTER_ECHO = (
     "import json, sys\n"
     "value = json.loads(sys.stdin.read())\n"
@@ -820,7 +820,7 @@ CONVERTER_FAIL = "import sys\nsys.stderr.write('変換に失敗しました\\n')
 
 
 def project_index_clone() -> Path:
-    """commit を固定した project-index のクローン（`.venv` つき）を用意して、その場所を返す。"""
+    """commit を固定した project-index のクローン（`.venv` つき）を用意して、その場所を返却する。"""
     cache = Path(os.environ.get("XDG_CACHE_HOME") or Path.home() / ".cache")
     clone = cache / "dev-docs" / f"project-index-{PROJECT_INDEX_COMMIT[:7]}"
     if not (clone / ".git").is_dir():
@@ -861,7 +861,7 @@ def _git(cwd: Path, *args: str, date: str | None = None) -> None:
 
 
 def _write(root: Path, path: str, text: str) -> None:
-    """配信元のフォルダにファイルを書く。"""
+    """配信元のフォルダにファイルを書き込む。"""
     target = root / path
     target.parent.mkdir(parents=True, exist_ok=True)
     target.write_text(text, encoding="utf-8")
@@ -891,7 +891,7 @@ def _files(source: IndexSource, documents: list[dict[str, Any]]) -> dict[str, tu
 
 
 def _config(source_id: str, source: IndexSource, documents: list[dict[str, Any]]) -> str:
-    """配信元の設定 `project-index.yaml` の内容を作る（JSON は YAML として読める）。"""
+    """配信元の設定 `project-index.yaml` の内容を作る（JSON は YAML として読み込める）。"""
     body_kinds = {document["kind"] for document in documents if document.get("bodyPath")}
     converters = {
         str(item["converter"]) for item in source.documents if item.get("converter") is not None
@@ -927,11 +927,11 @@ def _config(source_id: str, source: IndexSource, documents: list[dict[str, Any]]
 
 
 def materialize(root: Path, source_id: str, source: IndexSource) -> Path:
-    """偽物の配信元の定義を、本物の project-index が配信するフォルダ（Git の配信元は git リポジトリ）に書く。
+    """偽物の配信元の定義を、本物の project-index が配信するフォルダ（Git の配信元は git リポジトリ）に書き込む。
 
     `docs` のリビジョン（`None` は既定）ごとにブランチを作り、ファイルを更新日時の古い順に commit する。
-    `details` の `document` の文書も既定のリビジョンに置く。`decisions` は `decision_folders` の先頭から
-    ID ごとの数のフォルダに、`decision_texts` の本文（無ければ見出しだけ）を置く。
+    `details` の `document` の文書も既定のリビジョンに配置する。`decisions` は `decision_folders` の先頭から
+    ID ごとの数のフォルダに、`decision_texts` の本文（無ければ見出しだけ）を配置する。
     返り値は `project-index.yaml` のパス。
     """
     repo = root / source_id
@@ -986,8 +986,8 @@ def materialize(root: Path, source_id: str, source: IndexSource) -> Path:
 class RealIndex:
     """テストの中で子プロセスとして起動する本物の project-index。
 
-    `serve` で配信元の定義を一時フォルダのリポジトリに書き、端末の設定の行に並べる。
-    最初に `address` を読んだときに起動し、起動した後の `serve` は PUT `/settings/sources` で読み直させる。
+    `serve` で配信元の定義を一時フォルダのリポジトリに書き込み、端末の設定の行に並べる。
+    最初に `address` を参照したときに起動し、起動した後の `serve` は PUT `/settings/sources` で再読み込みさせる。
     """
 
     def __init__(self, root: Path, clone: Path, port: int) -> None:
@@ -1003,7 +1003,7 @@ class RealIndex:
     def serve(
         self, source_id: str, source: IndexSource | None = None, **row_values: Any
     ) -> IndexSource:
-        """配信元を書いて端末の設定の行に並べる（起動の後は読み直させる）。"""
+        """配信元を書き込み、端末の設定の行に並べる（起動の後は再読み込みさせる）。"""
         found = source or IndexSource()
         self.sources[source_id] = found
         config = materialize(self.root / "sources", source_id, found)
@@ -1015,7 +1015,7 @@ class RealIndex:
         return found
 
     def write_rows(self, rows: list[dict[str, Any]]) -> None:
-        """端末の設定のファイルの `sources` を書き換える（project-index には読み直させない）。"""
+        """端末の設定のファイルの `sources` を書き換える（project-index には再読み込みさせない）。"""
         settings = {
             "version": "1",
             "clone": str(self.clone),
@@ -1026,13 +1026,13 @@ class RealIndex:
         self.settings_path.write_text(json.dumps(settings, ensure_ascii=False), encoding="utf-8")
 
     def file_rows(self) -> list[dict[str, Any]]:
-        """端末の設定のファイルの `sources` を読む。"""
+        """端末の設定のファイルの `sources` を読み込む。"""
         from dev_docs.shared.yaml_io import load_yaml
 
         return list(load_yaml(self.settings_path.read_text(encoding="utf-8")).get("sources") or [])
 
     def put_rows(self, rows: list[dict[str, Any]]) -> None:
-        """PUT `/settings/sources` で行を保存させ、読み直させる。"""
+        """PUT `/settings/sources` で行を保存させ、再読み込みさせる。"""
         import urllib.request
 
         request = urllib.request.Request(
@@ -1052,7 +1052,7 @@ class RealIndex:
         return f"http://127.0.0.1:{self.port}"
 
     def start(self) -> None:
-        """端末の設定を書いて起動し、`GET /sources` が応答するまで待つ。"""
+        """端末の設定を書き込んで起動し、`GET /sources` が応答するまで待つ。"""
         import urllib.request
 
         self.write_rows(self.rows)
@@ -1100,7 +1100,7 @@ class RealIndex:
 
 @pytest.fixture(scope="session")
 def real_index_clone() -> Path:
-    """commit を固定した project-index のクローンを返す（テストの実行ごとに 1 回用意する）。"""
+    """commit を固定した project-index のクローンを返却する（テストの実行ごとに 1 回用意する）。"""
     return project_index_clone()
 
 
@@ -1108,7 +1108,7 @@ def real_index_clone() -> Path:
 def real_index(
     tmp_path: Path, real_index_clone: Path, free_port: Callable[[], int]
 ) -> Iterator[RealIndex]:
-    """テストの中で起動する本物の project-index を返す（終了時に止める）。"""
+    """テストの中で起動する本物の project-index を返却する（終了時に止める）。"""
     index = RealIndex(tmp_path / "real-index", real_index_clone, free_port())
     index.root.mkdir()
     yield index

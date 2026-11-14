@@ -13,7 +13,7 @@ import type { ReactNode } from "react";
 export const createTestQueryClient = () =>
   new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
 
-/** メモリの履歴のルーターに部品を置く。画面のルートの形（/$source/・/$source/$・/_settings）だけを持つ */
+/** メモリの履歴のルーターに部品を配置する。画面のルートの構造（/$source/・/$source/$・/_settings）だけを持つ */
 export function renderInRouter(ui: ReactNode, path = "/s/a.md", queryClient = createTestQueryClient()) {
   const rootRoute = createRootRoute({ component: () => <>{ui}</> });
   const sourceRoute = createRoute({ getParentRoute: () => rootRoute, path: "/$source/" });
