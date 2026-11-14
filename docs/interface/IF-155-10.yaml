@@ -8,7 +8,7 @@ flows:
     summary: 配信元の一番左のタブの一番上の文書と、文書のパスで指した文書を返す
     setup:
       - name: Mock
-        description: 'テストの中で起動した project-index（shuhei1101/project-index の develop の `f36ba69`（shuhei1101/project-index#46 をマージした commit）。一時フォルダの端末の設定を `PROJECT_INDEX_CONFIG` で指し、空きポートで子プロセスとして起動する）が、setup の配信元を配信する。dev-docs のアプリを HTTP のテストのクライアントで呼ぶ'
+        description: 'テストの中で起動した project-index（shuhei1101/project-index の develop の `7177d39`（shuhei1101/project-index#29 で端末の設定の内容のバージョンが入った後の commit）。一時フォルダの端末の設定を `PROJECT_INDEX_CONFIG` で指し、空きポートで子プロセスとして起動する）が、setup の配信元を配信する。dev-docs のアプリを HTTP のテストのクライアントで呼ぶ'
         notes: '-'
       - name: サンプルの配信元
         description: 文書の種類を 1 つ（スキーマと YAML 2 件）と、`nav` を持つ `project-index.yaml` を持つ git リポジトリ
@@ -305,7 +305,7 @@ flows:
       - group `py` に `rules/lang/py/style.yaml` の文書が入る
     test: test_normal_when_nav_grouped_by_folder
   - name: 正常系（スキーマ駆動の文書を図と表にする）
-    summary: スキーマ駆動の変換が、図を mdmark の部品に、スカラーの並びを「項目 / 値」の表にした Markdown を返す
+    summary: スキーマ駆動の変換が、図を mdmark の map の範囲の Mermaid に、スカラーの並びを「項目 / 値」の表にした Markdown を返す
     setup:
       - name: Mock
         description: なし
@@ -327,23 +327,23 @@ flows:
         E-->>C: 200（文書 6）
       ```
     expected:
-      - '`markdown` に `<!-- flow -->` の範囲が 3 つと `<!-- sequence -->` の範囲が 1 つあり、`` ```mermaid `` のコードブロックが無い'
-      - 'flowchart の `<!-- flow -->` の JSON で、`q` の `kind` が `question`・`hint` が文書の `hint`、`r` の `kind` が `result`、`q` から `r` への線の `label` が文書の `label`・`line` が `read`・`tip` が文書の `tip` で、`frame` の `title` が `判定` で `q`・`r` の位置を囲む'
-      - 'state の `<!-- flow -->` の JSON に、`kind` が `start` のノードから `下書き` への線と、`公開` から `kind` が `result` のノードへの線があり、`下書き`・`公開` のノードの `kind` が `action`'
+      - '`markdown` に `<!-- map` の範囲が 4 つあり、どの範囲も `` ```mermaid `` のコードブロックを 1 つ持つ。`<!-- flow -->`・`<!-- sequence -->` の範囲が無い'
+      - 'flowchart の範囲の Mermaid が `flowchart` で、`q` にクラス `question`、`r` にクラス `result` が付き、`q`・`r` がタイトル `判定` の `subgraph` に入る。補足（`<!-- map-data -->`）の `notes` に `q` の `hint` と `q` から `r` への線の `tip`、`layout` にその線の `line` の `read` がある'
+      - 'state の範囲の Mermaid が `stateDiagram-v2` で、`[*] --> 下書き`・`下書き --> 公開`・`公開 --> [*]` の行がある'
       - 図の元データの表が `closed` の表のマーカーで囲まれ、ノードの表の先頭の列が `表示` で、`+columns hide=` に ID の列名がある。辺の表のマーカーは `hide=` を持たない
       - スカラーが並ぶオブジェクトが、列名が `項目`・`値` の表になっている
       - 改行を含む値の `**{title}**` が値と別の行にある
       - '`title`・`lead` の値が見出しとリードの後に `**…**:` の行で出ず、`x-hidden: true` の項目の値が `markdown` に無い'
       - 説明の列を持つ表のマーカーに `wide=` と説明の列名がある
     test: test_normal_when_schema_document_drawn
-  - name: 正常系（読み取れない Mermaid を残す）
-    summary: 変換が読み取れない行を含む Mermaid の文字列は、図ごと Mermaid のコードブロックのまま返す
+  - name: 正常系（map で描かない Mermaid を残す）
+    summary: 1 行目が map で描けない種類の Mermaid の文字列は、Mermaid のコードブロックのまま返す
     setup:
       - name: Mock
         description: なし
         notes: '-'
-      - name: 読み取れない行を含む図
-        description: 'sample に、Mermaid の文字列の項目を持つスキーマと、その項目に `sequenceDiagram` の行と Mermaid の構文でない行を書いた文書 7 を置く'
+      - name: map で描けない図
+        description: 'sample に、Mermaid の文字列の項目を持つスキーマと、その項目に `classDiagram` の図を書いた文書 7 を置く'
         notes: '-'
     flow: |-
       ```mermaid
@@ -356,11 +356,11 @@ flows:
         E-->>C: 200（文書 7）
       ```
     expected:
-      - '`markdown` に `<!-- sequence -->` の範囲が無く、文書 7 の Mermaid の文字列の全ての行が `` ```mermaid `` のコードブロックにある'
+      - '`markdown` に `<!-- map` の範囲が無く、文書 7 の Mermaid の文字列の全ての行が `` ```mermaid `` のコードブロックにある'
       - '`conversionError` が `null`'
-    test: test_normal_when_mermaid_unreadable
-  - name: 正常系（ER 図を部品にする）
-    summary: '`x-diagram: er` の項目を、テーブルの列で補った mdmark の ER 図の部品にする'
+    test: test_normal_when_mermaid_not_mappable
+  - name: 正常系（ER 図を map にする）
+    summary: '`x-diagram: er` の項目を、テーブルの列で補った `erDiagram` の map の範囲にする'
     setup:
       - name: Mock
         description: なし
@@ -381,25 +381,26 @@ flows:
         participant E as GET /_api/sources/{source}/docs/{path}
 
         C->>E: GET /_api/sources/sample/docs/{文書 8 のパス}
-        E->>E: er の実体の列を tables で補い、関連の両端の列と多重度で ER 図の部品にする
+        E->>E: er の実体の列を tables で補い、関連の両端の列と多重度で erDiagram にする
         E-->>C: 200（文書 8）
       ```
     expected:
-      - '`markdown` に `<!-- er -->` の範囲が 1 つあり、`erDiagram` の `` ```mermaid `` のコードブロックが無い'
-      - '範囲の JSON の `tables` に `顧客`・`注文`・`商品`・`支払い` の 4 つがあり、`顧客` の `columns` が `id`（`pk: true`・`nn: true`）と `email`、`注文` の `columns` が `id`（`pk: true`）と `customer_id`（`fk: true`）、`商品` の `columns` が空、`支払い` の `columns` が `id`（`pk: true`）と `customer_id`（`fk: true`）'
-      - '範囲の JSON の `relations` が 2 件で、1 件目は `from` が `顧客`・`fromColumn` が `id`・`fromCard` が `1`・`to` が `注文`・`toColumn` が `customer_id`・`toCard` が `0..n`・`label` が `注文する`、2 件目は `from` が `顧客`・`fromColumn` が `id`・`fromCard` が `1`・`to` が `支払い`・`toColumn` が `customer_id`・`toCard` が `0..n`'
-      - '`注文` から `商品` への関連は `relations` に無く、図の元データの表の関連の行にある'
+      - '`markdown` に `<!-- map` の範囲が 1 つあり、範囲の Mermaid が `erDiagram`。`<!-- er -->` の範囲が無い'
+      - Mermaid に `顧客`・`注文`・`商品`・`支払い` の 4 つの実体があり、`顧客` の列が `id`（`PK`）と `email`、`注文` の列が `id`（`PK`）と `customer_id`（`FK`）、`支払い` の列が `id`（`PK`）と `customer_id`（`FK`）
+      - '`注文` と `支払い` の `customer_id` の列のコメントが `参照: 顧客.id`'
+      - Mermaid の関連の行が 2 つで、`顧客` から `注文`（多重度 `1` と `0..n`、ラベル `注文する`）と、`顧客` から `支払い`（多重度 `1` と `0..n`）
+      - '`注文` から `商品` への関連は Mermaid に無く、図の元データの表の関連の行にある'
       - 図の元データの表が `closed` の表のマーカーで囲まれている
     test: test_normal_when_er_diagram_drawn
-  - name: 正常系（フロー図が mdmark の定義の検査を通る）
-    summary: 線がノードを横切りやすい構造のフロー図を、mdmark の定義の検査で配置のずれが出ない部品にする
+  - name: 正常系（図が mdmark の点検を通る）
+    summary: 線がノードを横切りやすい構造の図を、mdmark の点検で書き方の警告が出ない map の範囲にする
     setup:
       - name: Mock
         description: なし
         notes: '-'
       - name: mdmark の CLI
         description: '`package.json` の `devDependencies` でバージョンを固定した mdmark の CLI（`node_modules/.bin/mdmark`）'
-        notes: 返った `markdown` を `mdmark check --text -` の標準入力に指定する。CLI が無いときはテストを失敗にする
+        notes: 返った `markdown` を `mdmark check --text -` の標準入力に指定し、`--config` に画面が `mount` に指定するのと同じ map の設定（`map.kinds`・`map.lines`）のファイルを指定する。CLI が無いときはテストを失敗にする
       - name: フロー図を持つ文書
         description: 'sample に、`x-shape: diagram`・`x-diagram: flowchart` の項目・`x-diagram: state` の項目・`flowchart` を書いた Mermaid の文字列の項目を持つスキーマと、その文書 9 を配置する'
         notes: '-'
@@ -413,13 +414,13 @@ flows:
         participant E as GET /_api/sources/{source}/docs/{path}
 
         C->>E: GET /_api/sources/sample/docs/{文書 9 のパス}
-        E->>E: フロー図を mdmark のフロー図の部品にする
+        E->>E: 図を mdmark の map の範囲にする
         E-->>C: 200（文書 9）
       ```
     expected:
-      - '`markdown` に `<!-- flow -->` の範囲が 3 つある'
-      - '`markdown` を `mdmark check --text -` にかけた結果に、`diagram_invalid`・`diagram_node_overlap`・`diagram_node_overflow`・`diagram_wire_crosses_node`・`diagram_label_too_long` が 1 件も無い'
-    test: test_normal_when_flow_layout_checked
+      - '`markdown` に `<!-- map` の範囲が 3 つある'
+      - '`markdown` を `mdmark check --text -` にかけた結果が `ずれ 0 件` で、終了コードが `0`'
+    test: test_normal_when_diagrams_checked
   - name: 正常系（本文の id のリンクを解決する）
     summary: 本文の `id:` のリンクを、同じ配信元の文書と、その項目の見出しのアンカーへのリンクにする
     setup:
@@ -711,14 +712,14 @@ constraints:
     constraint: "`auto` の `group_by` が `'@folder'` のとき、文書が当たった行の `paths` の glob（複数当たるときは `paths` で先に並ぶ glob）のうちワイルドカードより前のフォルダを起点に、起点からのフォルダごとにフォルダ名の group を作り、入れ子のフォルダは入れ子の group にする。起点の直下の文書は group に入れない。各階層で page（フォルダの `index.yaml` の文書が先頭、残りはページのパスの順）を先に、入れ子の group をフォルダ名の順に後に並べる。管理用の YAML の行（`records`）の文書は束ねず、そのまま並べる。`'@folder'` 以外の `group_by` は今と同じく項目のパスとして読む"
     notes: "`nav` が無い配信元は、種類ごとのタブを `group_by: '@folder'` の `auto` として組み立てる"
   - item: スキーマ駆動の Markdown の表し方
-    constraint: '`converters[]` を持たない種類の文書は、図を mdmark の部品（`x-diagram` の flow 系と `state`、Mermaid の文字列の `flowchart` はフロー図、Mermaid の文字列の `sequenceDiagram` はシーケンス図）で、スカラーが並ぶオブジェクトを「項目 / 値」の表で返す。`x-diagram: er` は ER 図の部品にする。mdmark に部品の無い Mermaid の文字列と、変換が読み取れない行を 1 つでも含む Mermaid の文字列は、図ごと `` ```mermaid `` のまま返す。図の元データの表は閉じた表にする。スキーマに `x-hidden: true` を持つ項目と、見出し・リードに使った項目は本文に出さない'
+    constraint: '`converters[]` を持たない種類の文書は、図を mdmark の map の範囲（`<!-- map: {"title": …} -->` 〜 `<!-- /map -->`）に Mermaid のコードブロックと補足（`<!-- map-data -->`）で、スカラーが並ぶオブジェクトを「項目 / 値」の表で返す。`x-diagram` の flow 系は `flowchart`、`state` は `stateDiagram-v2`、`er` は `erDiagram` にする。1 行目が `flowchart`・`sequenceDiagram`・`erDiagram`・`stateDiagram-v2`（`stateDiagram`）の Mermaid の文字列はそのまま map の範囲に入れ、それ以外の Mermaid の文字列は `` ```mermaid `` のまま返す。図の元データの表は閉じた表にする。スキーマに `x-hidden: true` を持つ項目と、見出し・リードに使った項目は本文に出さない'
     notes: 表し方は knowledge の規約『表し方の優先順位』に沿う
   - item: データの図のフロー図
-    constraint: '`x-diagram` の flow 系（`flowchart`・`dataflow`・`architecture`）は、ノードの `kind` を mdmark のノードの種類にする（`actor`・`external` は `external`、`process`・`system` は `script`、`store` は `data`、`start`・`question`・`action`・`result` は同じ値。`kind` が無いノードは `process`）。ノードの `hint`、辺の `line`（無ければ `flow`）・`tip` を mdmark の定義に入れ、戻る線は `loop` にする。`direction` が無ければ `flowchart` は `TD`、`dataflow`・`architecture` は `LR`。`frame` は、中のノードを余白つきで囲む mdmark の枠にする。`state` は、状態を `action` のノードにし、`start` のノードから `initial` の状態へ、`final` の各状態から `result` のノードへ線を描画する。`全状態` の元・`元の状態` の先の遷移は `representative` の状態との 1 本にし、元と先が同じ遷移は `loop` にする'
-    notes: 対応は AI Monitor のインターフェース定義『設計書のMarkdown生成』の「図」の制約と同じ。ノードの `shape` と Mermaid の記法の `line`・`subgraphs` は参照しない（`shape` だけのノードは `script`、5 つの値に無い `line` は `flow` になる）
-  - item: ER 図の部品
-    constraint: '`x-diagram: er` の実体のうち `columns` を持たない実体は、同じ文書の `tables[]` のうち `title` が実体の `name` に当たるテーブルの `columns` から列（`name`・`type`・主キー・外部キー・NOT NULL）を作る。当たるテーブルが無い実体は列なしにする。関連は `from_column`・`to_column` を両端の列に、`from_cardinality`・`to_cardinality`（`1`・`0..1`・`1..n`・`0..n`）を両端の多重度にする'
-    notes: 両端の列のどちらかが実体の列に無い関連と、多重度が 4 つの値に無い関連は、mdmark の図全体が書き方の警告になるため図から除外し、図の元データの表にだけ残す。Mermaid の記法の `cardinality` は参照しない。ER 図の部品は mdmark#298 から
+    constraint: '`x-diagram` の flow 系（`flowchart`・`dataflow`・`architecture`）は、ノードの `kind` を Mermaid のクラスにする（`actor`・`external` は `external`、`process`・`system` は `script`、`store` は `data`、`start`・`question`・`action`・`result` は同じ値。`kind` が無いノードは `process`）。ノードの `hint` と辺の `tip` は補足の `notes`、辺の `line`（`flow` 以外）は補足の `layout` の `line` に入れる。`direction` が無ければ `flowchart` は `TD`、`dataflow`・`architecture` は `LR`。`frame` は中のノードを入れた `subgraph` にする。`state` は、`initial` を `[*] -->`、`final` を `--> [*]` にし、`全状態` の元・`元の状態` の先の遷移は `representative` の状態との 1 本にする。遷移のラベルは `{trigger} [{condition}]`'
+    notes: クラスと線の名前の見た目は、画面が `mount` に指定する mdmark の設定の `map.kinds`・`map.lines` が持つ。ノードの `shape` と Mermaid の記法の `line`・`subgraphs` は参照しない（`shape` だけのノードは `script`、5 つの値に無い `line` は `flow` になる）
+  - item: ER 図
+    constraint: '`x-diagram: er` の実体を `erDiagram` の実体にする。`columns` を持たない実体は、同じ文書の `tables[]` のうち `title` が実体の `name` に当たるテーブルの `columns` から列（`name`・`type`・主キー・外部キー）を作る。関連は `from_cardinality`・`to_cardinality`（`1`・`0..1`・`1..n`・`0..n`）を両端の多重度にし、`to_column` の列のコメントを `参照: {from の実体}.{from_column}` にして線をその列につなぐ。列の説明は補足の `notes` に入れる'
+    notes: 両端の列のどちらかが実体の列に無い関連と、多重度が 4 つの値に無い関連は `erDiagram` に出さず、図の元データの表にだけ残す。mdmark は関連の端の列を、コメントが `参照:` の FK の列から先に選ぶ
   - item: 本文の id のリンク
     constraint: 'スキーマ駆動の変換で、Markdown の文字列の値のうちコードブロック・行内のコードの外の `[名前](id:{文書の ID})` を、同じ配信元のその文書への相対パスのリンクにする。`[名前](id:{文書の ID}#{項目のパス})` は、項目のパスがリンク先の文書で見出しになる項目（`x-heading` を持つ項目、`x-shape: sections` の要素）を指すとき、その見出しのアンカーを付ける。型 `ref` の値のリンクも同じアンカーを付ける'
     notes: どの文書の ID にも当たらないリンクは書き換えず、警告も出さない。見出しにならない項目を指すリンクはアンカーを付けずに文書を指す。`converters[]` の出力と Markdown の本文の文書は書き換えない
