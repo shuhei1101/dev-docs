@@ -10,7 +10,7 @@ import os
 import socket
 import sys
 import threading
-from collections.abc import Callable, Mapping
+from collections.abc import Mapping
 from contextlib import closing
 from dataclasses import dataclass
 from datetime import UTC, datetime
