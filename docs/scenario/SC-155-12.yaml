@@ -229,6 +229,7 @@ scenarios:
         UI->>API: 端末の設定の保存（取得し直した内容のバージョンを添える）
         API->>PI: 端末の設定の配信元の保存
         PI-->>API: 保存した sources と配信元ごとの状態
+        API-->>UI: 保存した sources と配信元ごとの状態
         UI-->>U: settings（extra を加えた一覧）
       ```
     expected:
