@@ -12,7 +12,6 @@ import httpx
 
 from dev_docs.integrations.project_index.types import (
     LISTED_METADATA_KEYS,
-    AddSourceResult,
     CommitSummary,
     DecisionIndex,
     DocumentDetail,
@@ -376,6 +375,7 @@ class ProjectIndexClient:
             settings_path=str(value.get("settingsPath", "")),
             rows=[_row(item) for item in sources],
             states=[_state(item) for item in sources],
+            version=str(value["version"]) if value.get("version") is not None else None,
         )
 
     async def settings_sources(self) -> SettingsSourcesView:
@@ -388,10 +388,20 @@ class ProjectIndexClient:
         await self.request("PUT", "/settings/sources", body={"sources": rows})
         return await self.settings_sources()
 
-    async def add_settings_source(self, row: Mapping[str, Any]) -> AddSourceResult:
-        """配信元の行を 1 行追加する。同じ id の行があれば追加しない。"""
-        response = await self.request("POST", "/settings/sources", body={"source": dict(row)})
-        value = response.json()
-        if value.get("result") == "exists":
-            return AddSourceResult(added=False, same=bool(value.get("same", False)))
-        return AddSourceResult(added=True)
+    async def save_settings_sources(
+        self, rows: list[dict[str, Any]], *, expected_version: str | None
+    ) -> None:
+        """内容のバージョンを照合して `sources[]` の全行を保存する。保存した後の行は取得しない。"""
+        response = await self.request(
+            "PUT",
+            "/settings/sources",
+            body={"sources": rows, "expectedVersion": expected_version},
+        )
+        # 取得した後に端末の設定が変わったときは、呼び出し側でやり直せるよう例外にする
+        if response.status_code == HTTP_CONFLICT:
+            summary = response.text[:SUMMARY_CHARS]
+            raise ProjectIndexResponseError(
+                message=f"project-index が {HTTP_CONFLICT} を返しました: {summary}",
+                status_code=HTTP_CONFLICT,
+                summary=summary,
+            )

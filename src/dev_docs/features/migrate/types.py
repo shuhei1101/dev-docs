@@ -2,11 +2,15 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, ClassVar, Literal
+from typing import TYPE_CHECKING, Any, ClassVar, Literal
 
 from dev_docs.main import EXIT_CONFIG_INVALID
+
+if TYPE_CHECKING:
+    from dev_docs.integrations.project_index.types import SettingsSourcesView
 
 # パッケージの中の手順のフォルダ。`{MIGRATIONS_DIR}/{kind}/{バージョン}/steps.yaml` を読み込む
 MIGRATIONS_DIR = "migrations"
@@ -56,6 +60,17 @@ class MigrationOutcome:
 
     backup: Path
     kept: list[str] = field(default_factory=list)
+    # `id` を省き、配信元の設定の `name` も求められずに `sources` に残した行の `config`
+    unresolved: list[str] = field(default_factory=list)
+
+
+@dataclass(frozen=True)
+class SourcesPort:
+    """`export_sources` の手順が呼ぶ project-index の端末の設定の取得と照合つきの保存。"""
+
+    fetch: Callable[[], SettingsSourcesView]
+    # 行と内容のバージョンを受ける照合つきの保存
+    save: Callable[[list[dict[str, Any]], str | None], None]
 
 
 class MigrationError(Exception):
@@ -89,14 +104,21 @@ class ConfigNewerError(MigrationError):
 
 
 class ProjectIndexUnreachableMigrationError(MigrationError):
-    """`export_sources` の手順で、project-index の端末の設定の API につながらない。"""
+    """`export_sources` の手順で、project-index の端末の設定の API につながらない・保存を確認できない。"""
 
     exit_code = EXIT_PROJECT_INDEX_UNREACHABLE
 
-    def __init__(self, address: str, reason: str) -> None:
-        super().__init__(
-            f"project-index（{address}）に接続できませんでした。{reason}\n"
-            "project-index を起動してから、dev-docs migrate を再実行してください。"
-        )
+    def __init__(self, address: str, reason: str, *, unconfirmed: bool = False) -> None:
+        lines = [
+            f"project-index（{address}）に接続できませんでした。{reason}",
+            "project-index を起動してから、dev-docs migrate を再実行してください。",
+        ]
+        if unconfirmed:
+            lines.append(
+                "保存の応答を待てず、保存を確認できませんでした。保存は後から反映されることがあります。"
+                "再実行すると、保存済みの行は移した行として扱います。"
+            )
+        super().__init__("\n".join(lines))
         self.address = address
         self.reason = reason
+        self.unconfirmed = unconfirmed
