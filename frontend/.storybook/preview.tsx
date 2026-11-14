@@ -12,7 +12,7 @@ import { mswLoader } from "msw-storybook-addon/csf3";
 
 import "../src/index.css";
 
-/** Link が使えるよう、メモリの履歴のルーターに story を置く */
+/** Link を使用できるよう、メモリの履歴のルーターに story を配置する */
 const withRouter: Decorator = (Story) => {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },

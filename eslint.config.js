@@ -97,12 +97,12 @@ export default tseslint.config(
       "@typescript-eslint/no-non-null-assertion": "error",
       "no-restricted-syntax": [
         "error",
-        { selector: "TSEnumDeclaration", message: "enum は使わない" },
+        { selector: "TSEnumDeclaration", message: "enum は使用しない" },
       ],
     },
   },
   {
-    // shadcn/ui のコピーは任意値を含むため検査から外す
+    // shadcn/ui のコピーは任意値を含むため検査から除外する
     files: [`${SRC}/**/*.{ts,tsx}`],
     ignores: [`${SRC}/shared/components/ui/**`],
     rules: {
@@ -123,7 +123,7 @@ export default tseslint.config(
     },
   },
   {
-    // 単体テストは書き方を変えずに通す（func-style は frontend の実装コードにだけ当てる）
+    // 単体テストは記載方法を変えずに合格させる（func-style は frontend の実装コードにだけ適用する）
     files: ["tests/unit/frontend/**/*.{ts,tsx}"],
     rules: { "func-style": "off" },
   },
