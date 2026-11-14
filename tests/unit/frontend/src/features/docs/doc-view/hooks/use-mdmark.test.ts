@@ -1,7 +1,7 @@
 import { renderHook, waitFor } from "@testing-library/react";
 import { beforeEach, expect, test, vi } from "vitest";
 
-const MDMARK_URL = "https://cdn.jsdelivr.net/gh/shuhei1101/mdmark@v0.11.0/dist/index.js";
+const MDMARK_URL = "https://cdn.jsdelivr.net/gh/shuhei1101/mdmark@v0.13.0/dist/index.js";
 
 const fake = () => {
   const handle = { update: vi.fn(), destroy: vi.fn() };
@@ -202,4 +202,20 @@ test("test_to_mdmark_index", async () => {
       aliases: ["settings"],
     },
   ]);
+});
+
+test("test_use_mdmark_when_map_config", async () => {
+  const { mount } = fake();
+  vi.doMock(MDMARK_URL, () => ({ mount }));
+  const useMdmark = await loadHook();
+  const ref = { current: document.createElement("div") };
+
+  renderHook(() => useMdmark(ref, options("# A")));
+
+  await waitFor(() => expect(mount).toHaveBeenCalledTimes(1));
+  const opts = (mount.mock.calls[0] as unknown[])[1] as {
+    config: { map: { kinds: Record<string, unknown>; lines: Record<string, unknown> } };
+  };
+  expect(opts.config.map.kinds).toHaveProperty("question");
+  expect(opts.config.map.lines).toHaveProperty("read");
 });

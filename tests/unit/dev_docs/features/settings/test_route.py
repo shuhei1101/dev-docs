@@ -53,6 +53,7 @@ def test_build_settings_router_when_get(
                 errors=[{"path": "documents[0].paths", "reason": "必須のキーが無い"}],
             ),
         ],
+        "version": "v1",
     }
     # 実行
     response = _client(make_handlers).get("/_api/settings/sources")
@@ -67,6 +68,7 @@ def test_build_settings_router_when_get(
     assert body["sources"][1]["errors"] == [
         {"path": "documents[0].paths", "reason": "必須のキーが無い"}
     ]
+    assert body["version"] == "v1"
 
 
 def test_build_settings_router_when_put(
@@ -74,6 +76,7 @@ def test_build_settings_router_when_put(
 ) -> None:
     """保存を依頼して状態を返す（正常系）。"""
     # 準備（偽物は保存した行を、続く端末の設定の取得で返す）
+    fake_index.settings = {"settingsPath": "/pi/settings.yaml", "sources": [], "version": "v2"}
     # 実行
     response = _client(make_handlers).put(
         "/_api/settings/sources", json=PUT_BODY, headers=SAME_ORIGIN
@@ -83,6 +86,7 @@ def test_build_settings_router_when_put(
     sent = json.loads(put.content)
     assert response.status_code == 200
     assert response.json()["sources"][0]["status"] == "serving"
+    assert response.json()["version"] == "v2"
     assert sent["sources"][0]["config"] == ["/tmp/a/project-index.yaml"]
 
 
@@ -158,3 +162,21 @@ def test_build_settings_router_when_unreachable(
         ["address", "reason"],
         ["address", "reason"],
     ]
+
+
+def test_build_settings_router_when_version_conflict(
+    fake_index: FakeIndex, make_handlers: Callable[..., Any]
+) -> None:
+    """project-index の 409 を current つきで返す（異常系）。"""
+    # 準備
+    fake_index.responses[("PUT", "/settings/sources")] = (409, {"current": "v2", "detail": ""})
+    # 実行
+    response = _client(make_handlers).put(
+        "/_api/settings/sources", json={**PUT_BODY, "expectedVersion": "v1"}, headers=SAME_ORIGIN
+    )
+    # 検証
+    put = next(request for request in fake_index.requests if request.method == "PUT")
+    assert response.status_code == 409
+    assert response.headers["content-type"] == "application/problem+json"
+    assert response.json()["current"] == "v2"
+    assert json.loads(put.content)["expectedVersion"] == "v1"

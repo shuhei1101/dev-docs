@@ -2,8 +2,10 @@ import { expect, test } from "vitest";
 
 import {
   applySource,
+  findSource,
   removeSource,
   sourceFormSchema,
+  sourceKey,
   toFormValues,
 } from "@/features/settings/settings/form";
 
@@ -77,4 +79,37 @@ test("test_remove_source", () => {
   const result = removeSource([row("a"), row("b")] as never, 0);
 
   expect(result.map((item) => item.id)).toEqual(["b"]);
+});
+
+test("test_to_form_values_when_outside_read", () => {
+  const disabled = toFormValues(row("a", { outsideRead: false }) as never);
+  const unset = toFormValues(row("b") as never);
+
+  expect(disabled.outsideRead).toBe(false);
+  expect(unset.outsideRead).toBe(true);
+});
+
+test("test_apply_source_when_outside_read", () => {
+  const sources = [row("a", { outsideRead: false }), row("b", { outsideRead: true })] as never;
+
+  const result = applySource(sources, values({ id: "extra", outsideRead: false }), null);
+
+  expect(result[0]).toMatchObject({ id: "a", outside_read: false });
+  expect(result[1]).not.toHaveProperty("outside_read");
+  expect(result[2]).toMatchObject({ id: "extra", outside_read: false });
+});
+
+test("test_source_key", () => {
+  const withId = sourceKey(row("a") as never);
+  const withoutId = sourceKey(row("x", { id: null, config: ["/p/a.yaml", "/p/b.yaml"] }) as never);
+
+  expect(withId).toBe("a");
+  expect(withoutId).toBe("/p/a.yaml\n/p/b.yaml");
+});
+
+test("test_find_source", () => {
+  const sources = [row("c"), row("a"), row("b")] as never;
+
+  expect(findSource(sources, "b")).toBe(2);
+  expect(findSource(sources, "z")).toBe(-1);
 });

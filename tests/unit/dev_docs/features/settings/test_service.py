@@ -10,7 +10,7 @@ import pytest
 from dev_docs.features.settings.service import save_sources
 from dev_docs.features.settings.types import SourceEntry
 from dev_docs.integrations.project_index.client import ProjectIndexClient
-from dev_docs.shared.errors import ProjectIndexRejectedError
+from dev_docs.shared.errors import ProjectIndexRejectedError, SettingsVersionConflictError
 
 from ...conftest import FakeIndex
 
@@ -19,12 +19,12 @@ def _save(
     fake_index: FakeIndex,
     make_client: Callable[..., ProjectIndexClient],
     entries: list[SourceEntry],
-) -> tuple[Any, list[dict[str, Any]]]:
-    """保存を依頼し、返った状態と project-index へ送った行を返す。"""
-    states = asyncio.run(save_sources(make_client(), entries))
+    expected_version: str | None = None,
+) -> tuple[Any, dict[str, Any]]:
+    """保存を依頼し、返った端末の設定と project-index へ送った本文を返す。"""
+    view = asyncio.run(save_sources(make_client(), entries, expected_version=expected_version))
     put = next(request for request in fake_index.requests if request.method == "PUT")
-    sent = json.loads(put.content)["sources"]
-    return states, sent
+    return view, json.loads(put.content)
 
 
 def test_save_sources(
@@ -55,12 +55,13 @@ def test_save_sources(
         ),
     ]
     # 実行
-    states, sent = _save(fake_index, make_client, entries)
+    view, body = _save(fake_index, make_client, entries)
     # 検証
+    sent = body["sources"]
     assert len(sent) == 2
     assert sent[0]["config"] == ["/a/project-index.yaml"]
     assert sent[1]["scope"] == {"read": ["/b"]}
-    assert [(state.id, state.status) for state in states] == [
+    assert [(state.id, state.status) for state in view.states] == [
         ("a", "serving"),
         ("b", "disabled"),
     ]
@@ -81,9 +82,9 @@ def test_save_sources_when_defaults(
         }
     )
     # 実行
-    _, sent = _save(fake_index, make_client, [entry])
+    _, body = _save(fake_index, make_client, [entry])
     # 検証
-    assert sent == [{"id": "a", "config": ["/a"]}]
+    assert body["sources"] == [{"id": "a", "config": ["/a"]}]
 
 
 def test_save_sources_when_outside_read_false(
@@ -93,9 +94,9 @@ def test_save_sources_when_outside_read_false(
     # 準備
     entry = SourceEntry.model_validate({"id": "a", "config": ["/a"], "outside_read": False})
     # 実行
-    _, sent = _save(fake_index, make_client, [entry])
+    _, body = _save(fake_index, make_client, [entry])
     # 検証
-    assert sent[0]["outside_read"] is False
+    assert body["sources"][0]["outside_read"] is False
 
 
 def test_save_sources_when_rejected(
@@ -111,3 +112,32 @@ def test_save_sources_when_rejected(
     # 実行・検証
     with pytest.raises(ProjectIndexRejectedError):
         asyncio.run(save_sources(make_client(), [entry]))
+
+
+def test_save_sources_when_expected_version(
+    fake_index: FakeIndex, make_client: Callable[..., ProjectIndexClient]
+) -> None:
+    """内容のバージョンを渡し、保存した後のバージョンを返す（正常系）。"""
+    # 準備
+    fake_index.responses[("GET", "/settings/sources")] = (
+        200,
+        {"settingsPath": "/pi/settings.yaml", "sources": [], "version": "v2"},
+    )
+    entry = SourceEntry.model_validate({"id": "a", "config": ["/a"]})
+    # 実行
+    view, body = _save(fake_index, make_client, [entry], expected_version="v1")
+    # 検証
+    assert body["expectedVersion"] == "v1"
+    assert view.version == "v2"
+
+
+def test_save_sources_when_version_conflict(
+    fake_index: FakeIndex, make_client: Callable[..., ProjectIndexClient]
+) -> None:
+    """内容のバージョンが違う（異常系）。"""
+    # 準備
+    fake_index.responses[("PUT", "/settings/sources")] = (409, {"current": "v2", "detail": ""})
+    entry = SourceEntry.model_validate({"id": "a", "config": ["/a"]})
+    # 実行・検証
+    with pytest.raises(SettingsVersionConflictError, match="端末の設定は他の書き換えで変わっています"):
+        asyncio.run(save_sources(make_client(), [entry], expected_version="v1"))

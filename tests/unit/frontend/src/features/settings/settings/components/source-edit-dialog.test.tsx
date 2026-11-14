@@ -5,7 +5,7 @@ import { HttpResponse, http } from "msw";
 import { expect, test, vi } from "vitest";
 
 import { SourceEditDialog } from "@/features/settings/settings/components/source-edit-dialog";
-import { settingsSource } from "@tests/helpers/fixtures";
+import { PROBLEM_HEADERS, problem, settingsSource } from "@tests/helpers/fixtures";
 import { server } from "@tests/helpers/msw-server";
 import { createTestQueryClient } from "@tests/helpers/render";
 
@@ -57,4 +57,37 @@ test("test_source_edit_dialog_when_invalid", async () => {
   expect(screen.getByText("設定ファイルを 1 つ以上入力してください。")).toBeInTheDocument();
   expect(screen.getByText("読み取りの範囲を 1 つ以上入力してください。")).toBeInTheDocument();
   expect(save).not.toHaveBeenCalled();
+});
+
+test("test_source_edit_dialog_when_outside_read", async () => {
+  let body: { sources: Record<string, unknown>[] } | null = null;
+  server.use(
+    http.put("/_api/settings/sources", async ({ request }) => {
+      body = (await request.json()) as typeof body;
+      return HttpResponse.json({ sources: [{ id: "a", status: "serving", errors: [] }] });
+    }),
+  );
+  renderDialog(0);
+  const toggle = screen.getByRole("switch", { name: "範囲の外から参照できるようにする" });
+
+  expect(toggle).toBeChecked();
+  await userEvent.click(toggle);
+  await userEvent.click(screen.getByRole("button", { name: "保存" }));
+
+  await waitFor(() => expect(body?.sources[0]).toMatchObject({ id: "a", outside_read: false }));
+});
+
+test("test_source_edit_dialog_when_conflict", async () => {
+  server.use(
+    http.put("/_api/settings/sources", () =>
+      HttpResponse.json(problem(409, { current: "v2" }), { status: 409, headers: PROBLEM_HEADERS }),
+    ),
+  );
+  const onOpenChange = renderDialog(0);
+
+  await userEvent.click(screen.getByRole("button", { name: "保存" }));
+
+  expect(await screen.findByText("他の変更があったため保存できませんでした")).toBeInTheDocument();
+  expect(onOpenChange).not.toHaveBeenCalledWith(false);
+  expect(screen.getByLabelText(/設定ファイル/)).toHaveValue("/home/me/a/dev-docs.yaml");
 });

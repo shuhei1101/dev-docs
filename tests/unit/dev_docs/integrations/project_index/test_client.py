@@ -17,6 +17,7 @@ from dev_docs.shared.errors import (
     ProjectIndexResponseError,
     ProjectIndexUnreachableError,
     RefNotFoundError,
+    SettingsVersionConflictError,
     SourceNotServedError,
     UnknownSourceError,
 )
@@ -450,6 +451,34 @@ def test_put_settings_sources_when_rejected(
         asyncio.run(make_client().put_settings_sources([{"id": "a"}]))
     # 検証
     assert [item.path for item in caught.value.violations] == ["sources[0].config"]
+    assert [request.method for request in fake_index.requests] == ["PUT"]
+
+
+def test_put_settings_sources_when_expected_version(
+    fake_index: FakeIndex, make_client: Callable[..., ProjectIndexClient]
+) -> None:
+    """内容のバージョンを添えて保存する（正常系）。"""
+    # 準備
+    fake_index.settings = {"settingsPath": "/pi/settings.yaml", "sources": [], "version": "v2"}
+    rows = [{"id": "a", "config": ["/a/project-index.yaml"]}]
+    # 実行
+    view = asyncio.run(make_client().put_settings_sources(rows, expected_version="v1"))
+    # 検証
+    assert json.loads(fake_index.requests[0].content) == {"sources": rows, "expectedVersion": "v1"}
+    assert view.version == "v2"
+
+
+def test_put_settings_sources_when_conflict(
+    fake_index: FakeIndex, make_client: Callable[..., ProjectIndexClient]
+) -> None:
+    """内容のバージョンが古い（異常系）。"""
+    # 準備
+    fake_index.responses[("PUT", "/settings/sources")] = (409, {"current": "v2", "detail": ""})
+    # 実行
+    with pytest.raises(SettingsVersionConflictError) as caught:
+        asyncio.run(make_client().put_settings_sources([{"id": "a"}], expected_version="v1"))
+    # 検証
+    assert caught.value.current == "v2"
     assert [request.method for request in fake_index.requests] == ["PUT"]
 
 

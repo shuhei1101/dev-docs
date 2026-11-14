@@ -12,20 +12,20 @@ from dev_docs.features.convert.types import DiagramHead
 HEAD = DiagramHead(title="図", scope="文書", updated="2026-11-03")
 
 
-def _definition(block: str, marker: str) -> dict[str, Any]:
-    """部品の範囲から定義の JSON を取り出す。"""
-    match = re.search(
-        rf"<!-- {marker} -->\n\n```json\n(.*?)\n```\n\n<!-- /{marker} -->", block, re.S
-    )
+def _mermaid(block: str) -> list[str]:
+    """map の範囲から Mermaid の行（前後の空白を除く）を取り出す。"""
+    match = re.search(r"```mermaid\n(.*?)\n```", block, re.S)
     assert match is not None, block
-    definition: dict[str, Any] = json.loads(match.group(1))
-    return definition
+    return [line.strip() for line in match.group(1).splitlines() if line.strip()]
 
 
-def _node(definition: dict[str, Any], node_id: str) -> dict[str, Any]:
-    """フロー図の定義から `id` のノードを取り出す。"""
-    node: dict[str, Any] = next(n for n in definition["nodes"] if n["id"] == node_id)
-    return node
+def _map_data(block: str) -> dict[str, Any] | None:
+    """map の範囲から補足の JSON を取り出す（無ければ `None`）。"""
+    match = re.search(r"<!-- map-data: (\{.*?\}) -->", block, re.S)
+    if match is None:
+        return None
+    data: dict[str, Any] = json.loads(match.group(1))
+    return data
 
 
 def test_render_diagram() -> None:
@@ -38,15 +38,14 @@ def test_render_diagram() -> None:
     # 実行
     result = render_diagram(value, "flowchart", HEAD)
     # 検証
-    definition = _definition(result, "flow")
-    assert (definition["title"], definition["scope"], definition["updated"]) == (
-        "図",
-        "文書",
-        "2026-11-03",
-    )
-    assert [node["name"] for node in definition["nodes"]] == ["A", "B"]
-    assert [(wire["label"], wire["line"]) for wire in definition["wires"]] == [("x", "flow")]
-    assert "```mermaid" not in result
+    assert result.startswith('<!-- map: {"title": "図"} -->')
+    assert result.endswith("<!-- /map -->")
+    lines = _mermaid(result)
+    assert lines[0] == "flowchart TD"
+    assert 'a["A"]:::script' in lines
+    assert 'b["B"]:::script' in lines
+    assert 'a -->|"x"| b' in lines
+    assert "<!-- map-data" not in result
 
 
 @pytest.mark.parametrize(
@@ -67,80 +66,58 @@ def test_render_diagram() -> None:
 def test_render_diagram_when_node_kinds(kind: str | None, expected: str) -> None:
     """ノードの種類（正常系）。"""
     # 準備
-    node: dict[str, Any] = {"id": "a"}
-    if kind is not None:
-        node["kind"] = kind
+    node: dict[str, Any] = {"id": "a"} if kind is None else {"id": "a", "kind": kind}
     # 実行
     result = render_diagram({"nodes": [node], "edges": []}, "flowchart", HEAD)
     # 検証
-    assert _node(_definition(result, "flow"), "a")["kind"] == expected
-
-
-def test_render_diagram_when_shape_only() -> None:
-    """古いキーの `shape` だけを持つノード（正常系）。"""
-    # 準備
-    value = {"nodes": [{"id": "a", "shape": "diamond"}], "edges": []}
-    # 実行
-    result = render_diagram(value, "flowchart", HEAD)
-    # 検証
-    assert _node(_definition(result, "flow"), "a")["kind"] == "script"
+    assert f'a["a"]:::{expected}' in _mermaid(result)
 
 
 def test_render_diagram_when_hint_and_tip() -> None:
     """ノードの説明と線の種類・詳細（正常系）。"""
     # 準備
     value = {
-        "nodes": [{"id": "a", "label": "A", "hint": "説明"}, {"id": "b", "label": "B"}],
+        "nodes": [{"id": "a", "hint": "説明"}, {"id": "b"}],
         "edges": [{"from": "a", "to": "b", "label": "読む", "line": "read", "tip": "詳細"}],
     }
     # 実行
     result = render_diagram(value, "flowchart", HEAD)
     # 検証
-    definition = _definition(result, "flow")
-    assert _node(definition, "a")["hint"] == "説明"
-    wire = definition["wires"][0]
-    assert (wire["line"], wire["label"], wire["tip"]) == ("read", "読む", "詳細")
+    data = _map_data(result)
+    assert data is not None
+    assert data["version"] == 1
+    assert data["notes"]["a"]["text"] == "説明"
+    assert data["notes"]["a->b"]["text"] == "詳細"
+    assert data["layout"]["a->b"]["line"] == "read"
 
 
 def test_render_diagram_when_unknown_line() -> None:
     """`LINE_KINDS` に無い線の種類（正常系）。"""
     # 準備
-    value = {
-        "nodes": [{"id": "a"}, {"id": "b"}],
-        "edges": [{"from": "a", "to": "b", "line": "dotted"}],
-    }
+    value = {"nodes": [{"id": "a"}, {"id": "b"}], "edges": [{"from": "a", "to": "b", "line": "dotted"}]}
     # 実行
     result = render_diagram(value, "flowchart", HEAD)
     # 検証
-    assert _definition(result, "flow")["wires"][0]["line"] == "flow"
+    assert _map_data(result) is None
 
 
 @pytest.mark.parametrize(
-    ("kind", "direction", "expected"),
+    ("kind", "value", "expected"),
     [
-        pytest.param("flowchart", None, "TD", id="flowchart"),
-        pytest.param("dataflow", None, "LR", id="dataflow"),
-        pytest.param("architecture", None, "LR", id="architecture"),
-        pytest.param("dataflow", "TD", "TD", id="dataflow-td"),
+        pytest.param("flowchart", {}, "flowchart TD", id="flowchart"),
+        pytest.param("dataflow", {}, "flowchart LR", id="dataflow"),
+        pytest.param("architecture", {}, "flowchart LR", id="architecture"),
+        pytest.param("dataflow", {"direction": "TD"}, "flowchart TD", id="dataflow-td"),
     ],
 )
-def test_render_diagram_when_direction(kind: str, direction: str | None, expected: str) -> None:
+def test_render_diagram_when_direction(kind: str, value: dict[str, Any], expected: str) -> None:
     """向きの既定と指定（正常系）。"""
     # 準備
-    value: dict[str, Any] = {
-        "nodes": [{"id": "a"}, {"id": "b"}],
-        "edges": [{"from": "a", "to": "b"}],
-    }
-    if direction is not None:
-        value["direction"] = direction
+    graph = {**value, "nodes": [{"id": "a"}, {"id": "b"}], "edges": [{"from": "a", "to": "b"}]}
     # 実行
-    result = render_diagram(value, kind, HEAD)  # type: ignore[arg-type]
+    result = render_diagram(graph, kind, HEAD)  # type: ignore[arg-type]
     # 検証
-    definition = _definition(result, "flow")
-    a, b = _node(definition, "a"), _node(definition, "b")
-    # 先のノードが下にあれば上から下、右にあれば左から右
-    actual = "TD" if b["y"] > a["y"] else "LR"
-    assert actual == expected
+    assert _mermaid(result)[0] == expected
 
 
 def test_render_diagram_when_frame() -> None:
@@ -154,117 +131,64 @@ def test_render_diagram_when_frame() -> None:
     # 実行
     result = render_diagram(value, "flowchart", HEAD)
     # 検証
-    definition = _definition(result, "flow")
-    frame = definition["frame"]
-    assert frame["title"] == "判定"
-
-    def inside(node: dict[str, Any]) -> bool:
-        return bool(
-            frame["x"] <= node["x"]
-            and frame["y"] <= node["y"]
-            and node["x"] + node["w"] <= frame["x"] + frame["w"]
-            and node["y"] + node["h"] <= frame["y"] + frame["h"]
-        )
-
-    assert inside(_node(definition, "a"))
-    assert inside(_node(definition, "b"))
-    assert not inside(_node(definition, "c"))
-
-
-def _wires(definition: dict[str, Any]) -> list[tuple[str, str, str]]:
-    """フロー図の定義の線の元・先・種類の組。"""
-    return [(w["from"], w["to"], w["line"]) for w in definition["wires"]]
+    lines = _mermaid(result)
+    start = lines.index('subgraph frame ["判定"]')
+    end = lines.index("end", start)
+    assert lines[start + 1 : end] == ['a["a"]:::script', 'b["b"]:::script']
+    assert 'c["c"]:::script' in lines
 
 
 def test_render_diagram_when_state() -> None:
     """状態遷移（正常系）。"""
     # 準備
     value = {
+        "states": [{"name": "下書き"}, {"name": "公開"}],
         "initial": "下書き",
         "final": ["公開"],
-        "states": [{"name": "下書き"}, {"name": "公開"}],
         "transitions": [
-            {"from": "下書き", "to": "公開", "trigger": "公開する", "condition": "承認済み"},
-            {"from": "公開", "to": "公開", "trigger": "更新する"},
+            {"from": "下書き", "to": "公開", "trigger": "公開する", "condition": "承認済み"}
         ],
     }
     # 実行
     result = render_diagram(value, "state", HEAD)
     # 検証
-    definition = _definition(result, "flow")
-    assert [(n["id"], n["kind"], n["name"]) for n in definition["nodes"]] == [
-        ("start", "start", "開始"),
-        ("s1", "action", "下書き"),
-        ("s2", "action", "公開"),
-        ("end", "result", "終了"),
-    ]
-    assert _wires(definition) == [
-        ("start", "s1", "flow"),
-        ("s1", "s2", "flow"),
-        ("s2", "s2", "loop"),
-        ("s2", "end", "flow"),
-    ]
-    assert definition["wires"][1]["label"] == "公開する [承認済み]"
+    lines = _mermaid(result)
+    assert lines[0] == "stateDiagram-v2"
+    assert 'state "下書き" as s1' in lines
+    assert 'state "公開" as s2' in lines
+    assert "[*] --> s1" in lines
+    assert "s1 --> s2 : 公開する [承認済み]" in lines
+    assert "s2 --> [*]" in lines
 
 
 def test_render_diagram_when_state_representative() -> None:
-    """どの状態からも入る遷移と元の状態へ戻る遷移（正常系）。"""
+    """全状態と元の状態（正常系）。"""
     # 準備
     value = {
-        "states": [{"name": "下書き"}, {"name": "公開"}],
+        "states": [{"name": "編集中"}, {"name": "中断"}],
+        "representative": "編集中",
         "transitions": [
-            {"from": "全状態", "to": "下書き", "representative": "公開"},
-            {"from": "下書き", "to": "元の状態", "representative": "公開"},
+            {"from": "全状態", "to": "中断"},
+            {"from": "中断", "to": "元の状態"},
         ],
     }
     # 実行
     result = render_diagram(value, "state", HEAD)
     # 検証
-    definition = _definition(result, "flow")
-    names = [n["name"] for n in definition["nodes"]]
-    assert "全状態" not in names
-    assert "元の状態" not in names
-    assert [(w["from"], w["to"]) for w in definition["wires"]] == [("s2", "s1"), ("s1", "s2")]
+    lines = _mermaid(result)
+    assert "s1 --> s2" in lines
+    assert "s2 --> s1" in lines
+    assert "全状態" not in result.split("```mermaid")[1]
 
 
 def test_render_diagram_when_state_without_representative() -> None:
-    """`representative` の無い `全状態`・`元の状態` の遷移（正常系）。"""
+    """代表の状態が無い（正常系）。"""
     # 準備
-    value = {
-        "states": [{"name": "下書き"}],
-        "transitions": [{"from": "全状態", "to": "下書き"}],
-    }
+    value = {"states": [{"name": "下書き"}], "transitions": [{"from": "全状態", "to": "下書き"}]}
     # 実行
     result = render_diagram(value, "state", HEAD)
     # 検証
-    definition = _definition(result, "flow")
-    assert [n["id"] for n in definition["nodes"]] == ["start", "s1"]
-    assert definition["wires"] == []
-
-
-CUSTOMERS = {
-    "name": "customers",
-    "title": "顧客",
-    "summary": "注文する人",
-    "columns": [
-        {"name": "id", "title": "顧客 ID", "type": "bigint", "primary_key": True, "not_null": True},
-        {"name": "email", "title": "メール", "type": "text"},
-    ],
-}
-
-
-def _table(definition: dict[str, Any], table_id: str) -> dict[str, Any]:
-    """ER 図の定義から `id` のテーブルを取り出す。"""
-    table: dict[str, Any] = next(t for t in definition["tables"] if t["id"] == table_id)
-    return table
-
-
-def _columns(table: dict[str, Any]) -> list[tuple[str, bool, bool, bool]]:
-    """テーブルの列の名前と `pk`・`fk`・`nn` の組。"""
-    return [
-        (column["name"], bool(column.get("pk")), bool(column.get("fk")), bool(column.get("nn")))
-        for column in table["columns"]
-    ]
+    assert _mermaid(result) == ["stateDiagram-v2", 'state "下書き" as s1']
 
 
 def test_render_diagram_when_er() -> None:
@@ -276,8 +200,8 @@ def test_render_diagram_when_er() -> None:
             {
                 "name": "注文",
                 "columns": [
-                    {"type": "bigint", "name": "id", "key": "PK"},
-                    {"type": "bigint", "name": "customer_id", "key": "FK"},
+                    {"name": "id", "type": "int", "key": "PK"},
+                    {"name": "customer_id", "type": "int", "key": "FK"},
                 ],
             },
         ],
@@ -293,105 +217,78 @@ def test_render_diagram_when_er() -> None:
             }
         ],
     }
-    # 実行
-    result = render_diagram(value, "er", HEAD, tables=[CUSTOMERS])
-    # 検証
-    definition = _definition(result, "er")
-    assert _table(definition, "顧客")["name"] == "customers"
-    assert _columns(_table(definition, "顧客")) == [
-        ("id", True, False, True),
-        ("email", False, False, False),
-    ]
-    assert _columns(_table(definition, "注文")) == [
-        ("id", True, False, False),
-        ("customer_id", False, True, False),
-    ]
-    assert definition["relations"] == [
+    tables = [
         {
-            "from": "顧客",
-            "fromColumn": "id",
-            "fromCard": "1",
-            "to": "注文",
-            "toColumn": "customer_id",
-            "toCard": "0..n",
-            "label": "注文する",
+            "name": "customers",
+            "title": "顧客",
+            "columns": [{"name": "id", "primary_key": True}, {"name": "email"}],
         }
     ]
-    assert "```mermaid" not in result
-
-
-# 顧客の id から商品への関連の両端（パラメータごとに一部を差し替える）
-RELATION = {
-    "from": "顧客",
-    "from_column": "id",
-    "from_cardinality": "1",
-    "to": "商品",
-    "to_column": "product_id",
-    "to_cardinality": "0..n",
-}
-
-
-@pytest.mark.parametrize(
-    ("relation", "entities"),
-    [
-        pytest.param(RELATION, [{"name": "商品"}], id="missing-column"),
-        pytest.param(
-            {**RELATION, "to_column": "id", "to_cardinality": "many"},
-            [{"name": "商品", "columns": [{"type": "int", "name": "id"}]}],
-            id="unknown-cardinality",
-        ),
-        pytest.param(
-            {"from": "顧客", "to": "商品", "cardinality": "||--o{"},
-            [{"name": "商品", "columns": [{"type": "int", "name": "id"}]}],
-            id="old-cardinality",
-        ),
-        pytest.param({**RELATION, "to": "無い実体", "to_column": "id"}, [], id="missing-entity"),
-    ],
-)
-def test_render_diagram_when_er_excluded(
-    relation: dict[str, Any], entities: list[dict[str, Any]]
-) -> None:
-    """図に出さない関連（正常系）。"""
-    # 準備
-    value = {
-        "entities": [{"name": "顧客", "columns": [{"type": "int", "name": "id"}]}, *entities],
-        "relations": [relation],
-    }
     # 実行
-    result = render_diagram(value, "er", HEAD)
+    result = render_diagram(value, "er", HEAD, tables=tables)
     # 検証
-    assert _definition(result, "er")["relations"] == []
+    lines = _mermaid(result)
+    assert lines[0] == "erDiagram"
+    assert "any id PK" in lines
+    assert "any email" in lines
+    assert 'int customer_id FK "参照: 顧客.id"' in lines
+    assert '顧客 ||--o{ 注文 : "注文する"' in lines
 
 
-def test_render_diagram_when_er_layout() -> None:
-    """格子の配置（正常系）。"""
+def test_render_diagram_when_er_relation_dropped() -> None:
+    """端の列か多重度が描けない関連（正常系）。"""
     # 準備
-    columns = [{"type": "int", "name": "a"}, {"type": "int", "name": "b"}]
     value = {
         "entities": [
-            {"name": "t0", "columns": columns},
-            {"name": "t1", "columns": columns},
-            {"name": "t2", "columns": columns},
-            {"name": "t3", "columns": columns},
-        ]
+            {"name": "顧客", "columns": [{"name": "id", "key": "PK"}]},
+            {"name": "注文", "columns": [{"name": "id", "key": "PK"}]},
+        ],
+        "relations": [
+            {
+                "from": "顧客",
+                "from_column": "id",
+                "from_cardinality": "1",
+                "to": "注文",
+                "to_column": "customer_id",
+                "to_cardinality": "0..n",
+            },
+            {
+                "from": "顧客",
+                "from_column": "id",
+                "from_cardinality": "many",
+                "to": "注文",
+                "to_column": "id",
+                "to_cardinality": "1",
+            },
+        ],
     }
     # 実行
     result = render_diagram(value, "er", HEAD)
     # 検証
-    definition = _definition(result, "er")
-    assert [(t["x"], t["y"], t["w"]) for t in definition["tables"]] == [
-        (24, 24, 240),
-        (360, 24, 240),
-        (696, 24, 240),
-        (24, 172, 240),
-    ]
-    assert definition["width"] == 960
+    assert _mermaid(result) == ["erDiagram", "顧客 {", "any id PK", "}", "注文 {", "any id PK", "}"]
+    assert "参照:" not in result
 
 
-def test_render_diagram_when_unknown() -> None:
-    """知らない種類（異常系）。"""
+def test_render_diagram_when_marker_text() -> None:
+    """HTML のコメントと Mermaid の文字列を閉じる文字（正常系）。"""
+    # 準備
+    value = {"nodes": [{"id": "a", "label": '"x"', "hint": "a--b"}], "edges": []}
+    # 実行
+    result = render_diagram(value, "flowchart", HEAD)
+    # 検証
+    marker = re.search(r"<!-- map-data: (.*?) -->", result, re.S)
+    assert marker is not None
+    assert "--" not in marker.group(1)
+    data = _map_data(result)
+    assert data is not None
+    assert data["notes"]["a"]["text"] == "a- -b"
+    assert 'a["#quot;x#quot;"]:::script' in _mermaid(result)
+
+
+def test_render_diagram_when_unknown_kind() -> None:
+    """知らない図の種類（異常系）。"""
     # 実行・検証
-    with pytest.raises(ValueError, match="gantt"):
+    with pytest.raises(ValueError, match="x-diagram gantt は描けません"):
         render_diagram({}, "gantt", HEAD)  # type: ignore[arg-type]
 
 
@@ -422,27 +319,37 @@ def test_er_table_titles_when_duplicated_or_untitled() -> None:
 def test_render_mermaid() -> None:
     """シーケンス図（正常系）。"""
     # 準備
-    code = "sequenceDiagram\n  participant A as 画面\n  A->>B: 読む"
+    code = "sequenceDiagram\n  A->>B: 読む"
     # 実行
     result = render_mermaid(code, HEAD)
     # 検証
-    definition = _definition(result, "sequence")
-    assert [p["name"] for p in definition["participants"]] == ["画面", "B"]
-    assert [step["label"] for step in definition["steps"]] == ["読む"]
+    assert result.startswith('<!-- map: {"title": "図"} -->')
+    assert f"```mermaid\n{code}\n```" in result
+    assert result.endswith("<!-- /map -->")
 
 
-def test_render_mermaid_when_flowchart() -> None:
-    """フローチャート（正常系）。"""
+@pytest.mark.parametrize(
+    "first",
+    [
+        pytest.param("flowchart TD", id="flowchart"),
+        pytest.param("graph LR", id="graph"),
+        pytest.param("erDiagram", id="er"),
+        pytest.param("stateDiagram-v2", id="state-v2"),
+        pytest.param("stateDiagram", id="state"),
+    ],
+)
+def test_render_mermaid_when_kinds(first: str) -> None:
+    """map で描く種類（正常系）。"""
     # 実行
-    result = render_mermaid("flowchart TD\n  a --> b", HEAD)
+    result = render_mermaid(f"{first}\n  a --> b", HEAD)
     # 検証
-    assert len(_definition(result, "flow")["nodes"]) == 2
+    assert result.startswith("<!-- map: ")
 
 
-def test_render_mermaid_when_unreadable() -> None:
-    """読み取れないコード（正常系）。"""
+def test_render_mermaid_when_not_mappable() -> None:
+    """map で描かない種類（正常系）。"""
     # 準備
-    code = "sequenceDiagram\n  A->>B: 読む\n  Note over A: 補足"
+    code = "classDiagram\n  class A"
     # 実行
     result = render_mermaid(code, HEAD)
     # 検証
