@@ -187,7 +187,7 @@ functions:
       - name: test_get_document_when_aliases
         case: 正常
         summary: エイリアスを返す
-        condition: '`alias_type: term` の行の「作業範囲」（`aliases: [scope, 担当範囲]`・`avoid: [担当領域]`・`description` あり）と、`alias_type: doc` の行の「設定のリファレンス」（`aliases: [settings]`）を持つ配信元の文書を開く'
+        condition: '`alias_type: term` の行の「作業範囲」（`aliases: [scope, 担当範囲]`・`avoid: [担当領域]`・`description` あり）と、`alias_type: doc` の行の「設定のリファレンス」（`aliases: [settings]`）を持つ配信元の文書を開く。模擬応答の文書の一覧は、どちらの文書も `commonKeys` に `alias_type`・`aliases`（作業範囲は `avoid` も）を持つ'
         mock: project-indexの呼び出し（`httpx.MockTransport` で project-index の develop の `42632c5` の入出力を返す偽物）
         expected: '`aliases` が 2 件で、作業範囲の `avoid` が `[担当領域]`、設定のリファレンスは `avoid` を持たない（JSON にキーが無い）'
         exception: '-'
