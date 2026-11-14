@@ -10,7 +10,7 @@ BROKEN_ERRORS = [{"path": "documents[0].paths", "reason": "必須のキーが無
 
 
 def test_normal(mock_index: MockIndex, make_server: Callable[..., ServerEnv]) -> None:
-    """project-index の配信元の状態を返す（正常系）。"""
+    """project-index の配信元の状態を返却する（正常系）。"""
     # 準備
     mock_index.serve("sample", IndexSource(docs={None: sample_docs()}))
     mock_index.serve("broken", IndexSource(errors=BROKEN_ERRORS))
@@ -34,7 +34,7 @@ def test_normal(mock_index: MockIndex, make_server: Callable[..., ServerEnv]) ->
 def test_normal_when_project_index_unreachable(
     sample_index: MockIndex, make_server: Callable[..., ServerEnv]
 ) -> None:
-    """project-index につながらなくても、つながらないことを返す（正常系）。"""
+    """project-index につながらなくても、つながらないことを返却する（正常系）。"""
     # 準備
     env = make_server(sample_index)
     sample_index.stop()
@@ -53,7 +53,7 @@ def test_normal_when_project_index_unreachable(
 def test_normal_when_leftover_sources(
     sample_index: MockIndex, make_server: Callable[..., ServerEnv]
 ) -> None:
-    """前のバージョンから残った sources を返す（正常系）。"""
+    """前のバージョンから残った sources を返却する（正常系）。"""
     # 準備
     env = make_server(
         sample_index, extra="sources:\n  - id: extra\n    config: /x/project-index.yaml\n"

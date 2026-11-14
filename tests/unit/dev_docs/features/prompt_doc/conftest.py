@@ -182,17 +182,17 @@ parts:
 
 @pytest.fixture
 def reflection_yaml() -> str:
-    """A-42 の例 2（kind: llm）の YAML を返す。"""
+    """A-42 の例 2（kind: llm）の YAML を返却する。"""
     return REFLECTION_YAML
 
 
 @pytest.fixture
 def reflection_without_parts_yaml() -> str:
-    """A-42 の例 2 から parts を除いた YAML を返す。"""
+    """A-42 の例 2 から parts を除いた YAML を返却する。"""
     return REFLECTION_YAML.split("parts:\n", 1)[0]
 
 
 @pytest.fixture
 def session_context_yaml() -> str:
-    """A-42 の例 1（kind: hook）の YAML を返す。"""
+    """A-42 の例 1（kind: hook）の YAML を返却する。"""
     return SESSION_CONTEXT_YAML

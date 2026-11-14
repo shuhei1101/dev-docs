@@ -91,7 +91,7 @@ data_models:
         title: メタデータ
         type: dict[str, Any]
         access: 公開
-        description: project-index の文書の一覧・文書の取得の `id`・`kind`・`name`・`description`・`tags`・`visibility`。文書の一覧の文書は、文書.行のメタデータの補いが、そのほかの共通のキー（`alias_type`・`aliases`・`status` など）を加える
+        description: project-index の文書の一覧・文書の取得の `id`・`kind`・`name`・`description`・`tags`・`visibility` に、共通のキーの値 `commonKeys`（project-index が配信元の設定の行の `metadata`・`alias_type` で解決した `alias_type`・`aliases`・`status` など）を重ねたもの
       - name: version
         title: バージョン
         type: str
@@ -156,12 +156,6 @@ data_models:
         access: 公開
         default: None
         description: エイリアスを集める行か
-      - name: metadata
-        title: メタデータの対応
-        type: dict[str, str]
-        access: 公開
-        default: '{}'
-        description: 配信元の設定の行の `metadata`（共通のキー → 文書の値の項目のパス）
   - name: SourceView
     title: 配信元の表示の設定
     container: integrations/project_index/types.py
@@ -573,7 +567,7 @@ functions:
       description: 読み取った文書
     process: |-
       1. `id`・`kind`・`path`・`version` を取り出し、無ければ `ProjectIndexResponseError`（`summary` に無いキー）を送る
-      2. `value` を `data`（`null` なら空）、`id`・`kind`・`name`・`description`・`tags`・`visibility` を `metadata`、`bodyPath` を `body_path` にする
+      2. `value` を `data`（`null` なら空）、`id`・`kind`・`name`・`description`・`tags`・`visibility` に `commonKeys`（辞書のときだけ）を重ねたものを `metadata`、`bodyPath` を `body_path` にする
       3. `record_index` は引数の `record_index`、`body` は空、`updated` は `None` にする
     exceptions:
       - name: ProjectIndexResponseError
@@ -583,9 +577,9 @@ functions:
       - name: test_parse_document
         case: 正常
         summary: 文書の一覧の 1 件
-        condition: '`id`・`kind`・`path`・`name`・`tags`・`visibility`・`bodyPath: notes/a.md`・`version`・`value` を持つ JSON と `record_index=1`'
+        condition: '`id`・`kind`・`path`・`name`・`tags`・`visibility`・`bodyPath: notes/a.md`・`version`・`value`・`commonKeys: {aliases: [作業場所], alias_type: term}` を持つ JSON と `record_index=1`'
         mock: なし
-        expected: '`data` が `value`、`metadata` が `id`・`kind`・`name`・`description`・`tags`・`visibility`、`body_path` が `notes/a.md`、`record_index` が 1、`body` が空、`updated` が `None`'
+        expected: '`data` が `value`、`metadata` が `id`・`kind`・`name`・`description`・`tags`・`visibility` に `aliases`・`alias_type` を加えたもの、`body_path` が `notes/a.md`、`record_index` が 1、`body` が空、`updated` が `None`'
       - name: test_parse_document_when_value_null
         case: 正常
         summary: 値を求めなかった
@@ -599,3 +593,9 @@ functions:
         mock: なし
         expected: '`ProjectIndexResponseError` で、`summary` に `version`'
         exception: 必須のキーが無い
+      - name: test_parse_document_when_common_keys_null
+        case: 正常
+        summary: 共通のキーを求めなかった
+        condition: '`commonKeys: null` の JSON'
+        mock: なし
+        expected: '`metadata` が `id`・`kind`・`name`・`description`・`tags`・`visibility` だけ'

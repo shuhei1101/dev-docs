@@ -14,7 +14,7 @@ import pytest
 
 
 def _free_port() -> int:
-    """OS が払い出して閉じたポートの番号を返す。"""
+    """OS が払い出して閉じたポートの番号を返却する。"""
     with closing(socket.socket(socket.AF_INET, socket.SOCK_STREAM)) as sock:
         sock.bind(("127.0.0.1", 0))
         return int(sock.getsockname()[1])
@@ -22,7 +22,7 @@ def _free_port() -> int:
 
 @contextmanager
 def _listening() -> Iterator[int]:
-    """テストが `listen` しているポートの番号を渡す。"""
+    """テストが `listen` しているポートの番号を指定する。"""
     with closing(socket.socket(socket.AF_INET, socket.SOCK_STREAM)) as sock:
         sock.bind(("127.0.0.1", 0))
         sock.listen()
@@ -30,7 +30,7 @@ def _listening() -> Iterator[int]:
 
 
 def _stdin(monkeypatch: pytest.MonkeyPatch, text: str) -> None:
-    """標準入力を、渡した文字列に差し替える。"""
+    """標準入力を、指定した文字列に差し替える。"""
     monkeypatch.setattr("sys.stdin", io.StringIO(text))
 
 
@@ -59,7 +59,7 @@ def test_main_when_cleared(
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
-    """/clear の後も HTTP の要求を送らず、何も出さない（正常系）。"""
+    """/clear の後も HTTP の要求を送信せず、何も出さない（正常系）。"""
     # 準備
     hook = load_hook("session_start")
     opened: list[Any] = []
@@ -138,7 +138,7 @@ def test_main_when_input_unparsable(
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
-    """読めない入力では何も出さない（異常系）。"""
+    """読み取れない入力では何も出さない（異常系）。"""
     # 準備
     hook = load_hook("session_start")
     _stdin(monkeypatch, "{")

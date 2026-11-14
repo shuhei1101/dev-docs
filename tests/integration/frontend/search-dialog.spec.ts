@@ -6,7 +6,7 @@ const dialog = (page: import("@playwright/test").Page) =>
   page.getByRole("dialog", { name: "文書を検索" });
 
 test.describe("Empty", () => {
-  // 開いた直後。語が無く、結果の場所に何も出さない（正常系）
+  // 開いた直後。検索の単語が無く、結果の場所に何も出さない（正常系）
   test("empty", async ({ page }) => {
     await openStory(page, "docs-searchdialog--empty");
     const input = dialog(page).getByRole("combobox");
@@ -19,7 +19,7 @@ test.describe("Empty", () => {
 });
 
 test.describe("Results", () => {
-  // 2 件に一致し、1 件目を選んだ状態。一致した語を強調する（正常系）
+  // 2 件に一致し、1 件目を選んだ状態。一致した単語を強調する（正常系）
   test("results", async ({ page }) => {
     await openStory(page, "docs-searchdialog--results");
     const status = dialog(page).getByRole("status");
@@ -67,7 +67,7 @@ test.describe("Loading", () => {
 });
 
 test.describe("Failed", () => {
-  // 画面の検索がエラーを返し、Problem Details の detail を結果の場所に出す（異常系）
+  // 画面の検索がエラーを返却し、Problem Details の detail を結果の場所に出す（異常系）
   test("failed", async ({ page }) => {
     await openStory(page, "docs-searchdialog--failed");
     await expect(dialog(page).getByRole("status")).toHaveText("検索する単語が正しくありません");

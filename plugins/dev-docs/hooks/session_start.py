@@ -1,7 +1,7 @@
 """SessionStart のフック。落ちている dev-docs を起動する。
 
 Usage:
-# Claude Code が stdin に SessionStart の入力の JSON を渡して実行する
+# Claude Code が stdin に SessionStart の入力の JSON を指定して実行する
 python3 session_start.py
 """
 
@@ -17,7 +17,7 @@ from pathlib import Path
 from typing import Any
 
 DEFAULT_PORT = 8781
-# `XDG_CONFIG_HOME` が無いか空の文字列か相対パスのときの設定の置き場の親
+# `XDG_CONFIG_HOME` が無いか空の文字列か相対パスのときの設定の配置先の親
 DEFAULT_CONFIG_HOME = "~/.config"
 CONFIG_FILE = "dev-docs/settings.yaml"
 # ポートへの TCP 接続を打ち切る秒数
@@ -31,7 +31,7 @@ CLONE_KEY = "clone:"
 
 
 def is_listening(port: int) -> bool:
-    """`127.0.0.1:{port}` に TCP でつながるかを返す。"""
+    """`127.0.0.1:{port}` に TCP でつながるかを返却する。"""
     try:
         socket.create_connection(("127.0.0.1", port), timeout=CONNECT_TIMEOUT_SEC).close()
     except OSError:
@@ -50,13 +50,13 @@ def config_path(env: Mapping[str, str]) -> Path:
 
 
 def read_clone(config: Path) -> Path | None:
-    """端末の設定のトップレベルの `clone:` の行だけを読む（標準ライブラリに YAML が無いため）。"""
+    """端末の設定のトップレベルの `clone:` の行だけを読み込む（標準ライブラリに YAML が無いため）。"""
     try:
         text = config.read_text(encoding="utf-8")
     except OSError:
         return None
     for line in text.splitlines():
-        # 行頭が `clone:` の最初の行だけを見る（字下げした行は別のキー）
+        # 行頭が `clone:` の最初の行だけを参照する（字下げした行は別のキー）
         if line.startswith(CLONE_KEY):
             value = line[len(CLONE_KEY) :].split("#", 1)[0].strip().strip("\"'")
             return Path(value).expanduser() if value else None
@@ -79,7 +79,7 @@ def start_server(clone: Path) -> None:
 
 
 def _unavailable(reason: str) -> str:
-    """起動できないことと、端末の設定の作り方を知らせる文を作る。"""
+    """起動できないことと、端末の設定の作り方を通知する文を作る。"""
     return (
         f"dev-docs を起動できませんでした（{reason}）。"
         "/dev-docs:global-setup で端末の設定を作ってください。"
@@ -87,7 +87,7 @@ def _unavailable(reason: str) -> str:
 
 
 def _start_context(clone: Path | None, config: Path) -> str:
-    """サーバーを起動し、起動できたときは案内、できなかったときは理由の文を返す。"""
+    """サーバーを起動し、起動できたときは案内、できなかったときは理由の文を返却する。"""
     # 端末の設定か clone の行が無い
     if clone is None:
         return _unavailable(str(config))
@@ -114,7 +114,7 @@ def _context(event: dict[str, Any]) -> str | None:
 
 
 def main() -> int:
-    """stdin の JSON を読み、サーバーが落ちていれば起動して、入れる文だけを出す。"""
+    """stdin の JSON を読み込み、サーバーが落ちていれば起動して、入れる文だけを出す。"""
     try:
         event = json.load(sys.stdin)
     except ValueError:

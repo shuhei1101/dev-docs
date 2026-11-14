@@ -1,0 +1,133 @@
+$ uv run pytest tests/unit/
+........................................................................ [ 14%]
+........................................................................ [ 29%]
+........................................................................ [ 44%]
+........................................................................ [ 59%]
+.................................F..F...........F....................... [ 74%]
+........................................................................ [ 88%]
+......................................................                   [100%]
+=================================== FAILURES ===================================
+_____________________________ test_list_documents ______________________________
+
+fake_index = FakeIndex(configs={'sample': {'_source': 'sample', '_git': True, 'nav': None, 'documents': [{'id': 'rules', 'paths': [...es={}, refused=False, requests=[<Request('GET', 'http://127.0.0.1:8786/sources/sample/docs?ref=8b1d4e0&values=true')>])
+make_client = <function make_client.<locals>._make at 0x765617003530>
+
+    def test_list_documents(
+        fake_index: FakeIndex, make_client: Callable[..., ProjectIndexClient]
+    ) -> None:
+        """ref と値を求める（正常系）。"""
+        # 準備
+        fake_index.configs["sample"] = config_json()
+        fake_index.docs["sample"] = {
+            "8b1d4e0": [doc_json("a", "docs/a.yaml"), doc_json("b", "docs/b.yaml")]
+        }
+        # 実行
+        listed = asyncio.run(make_client().list_documents("sample", ref="8b1d4e0"))
+        # 検証
+        params = fake_index.requests[-1].url.params
+        assert params["ref"] == "8b1d4e0"
+        assert params["values"] == "true"
+>       assert params["common_keys"] == "true"
+               ^^^^^^^^^^^^^^^^^^^^^
+
+tests/unit/dev_docs/integrations/project_index/test_client.py:213: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = QueryParams('ref=8b1d4e0&values=true'), key = 'common_keys'
+
+    def __getitem__(self, key: typing.Any) -> str:
+>       return self._dict[key][0]
+               ^^^^^^^^^^^^^^^
+E       KeyError: 'common_keys'
+
+.venv/lib/python3.14/site-packages/httpx/_urls.py:601: KeyError
+__________________________ test_document_when_record ___________________________
+
+fake_index = FakeIndex(configs={'sample': {'_source': 'sample', '_git': True, 'nav': None, 'documents': [{'id': 'rules', 'paths': [...es={}, refused=False, requests=[<Request('GET', 'http://127.0.0.1:8786/sources/sample/docs/notes/files.yaml?id=n-1')>])
+make_client = <function make_client.<locals>._make at 0x765615e52980>
+
+    def test_document_when_record(
+        fake_index: FakeIndex, make_client: Callable[..., ProjectIndexClient]
+    ) -> None:
+        """管理用の YAML の行の要素を選ぶ（正常系）。"""
+        # 準備
+        fake_index.configs["sample"] = config_json()
+        fake_index.docs["sample"] = {
+            None: [
+                doc_json("n-0", "notes/files.yaml"),
+                doc_json(
+                    "n-1",
+                    "notes/files.yaml",
+                    metadata={"id": "n-1", "name": "N1", "aliases": ["作業場所"]},
+                    body_path="notes/n-1.md",
+                    body="# N1\n",
+                    updated="2026-11-12T10:00:00+09:00",
+                ),
+            ]
+        }
+        # 実行
+        detail = asyncio.run(make_client().document("sample", "notes/files.yaml", document_id="n-1"))
+        # 検証
+        assert fake_index.requests[-1].url.params["id"] == "n-1"
+        assert detail.document is not None
+        assert detail.document.id == "n-1"
+        assert (detail.document.body, detail.document.body_path) == ("# N1\n", "notes/n-1.md")
+        assert detail.document.updated == datetime.fromisoformat("2026-11-12T10:00:00+09:00")
+        assert detail.document.updated.tzinfo is not None
+>       assert detail.document.metadata["aliases"] == ["作業場所"]
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       KeyError: 'aliases'
+
+tests/unit/dev_docs/integrations/project_index/test_client.py:294: KeyError
+_____________________________ test_parse_document ______________________________
+
+    def test_parse_document() -> None:
+        """文書の一覧の 1 件（正常系）。"""
+        # 準備
+        value = list_entry(
+            doc_json(
+                "n-1",
+                "notes/files.yaml",
+                kind="files",
+                data={"path": "a.md"},
+                metadata={
+                    "id": "n-1",
+                    "name": "N1",
+                    "tags": ["topic:a"],
+                    "visibility": "public",
+                    "aliases": ["作業場所"],
+                    "alias_type": "term",
+                },
+                body_path="notes/a.md",
+                body="# A\n",
+            ),
+            values=True,
+            common_keys=True,
+        )
+        # 実行
+        document = parse_document("sample", value, record_index=1)
+        # 検証
+        assert document.data == {"path": "a.md"}
+>       assert document.metadata == {
+            "id": "n-1",
+            "kind": "files",
+            "name": "N1",
+            "description": None,
+            "tags": ["topic:a"],
+            "visibility": "public",
+            "aliases": ["作業場所"],
+            "alias_type": "term",
+        }
+E       AssertionError: assert {'id': 'n-1',...n': None, ...} == {'id': 'n-1',...n': None, ...}
+E         
+E         Omitting 6 identical items, use -vv to show
+E         Right contains 2 more items:
+E         {'alias_type': 'term', 'aliases': ['作業場所']}
+E         Use -v to get more diff
+
+tests/unit/dev_docs/integrations/project_index/test_types.py:38: AssertionError
+=========================== short test summary info ============================
+FAILED tests/unit/dev_docs/integrations/project_index/test_client.py::test_list_documents
+FAILED tests/unit/dev_docs/integrations/project_index/test_client.py::test_document_when_record
+FAILED tests/unit/dev_docs/integrations/project_index/test_types.py::test_parse_document
+3 failed, 483 passed in 74.34s (0:01:14)

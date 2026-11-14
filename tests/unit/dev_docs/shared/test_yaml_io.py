@@ -12,7 +12,7 @@ from dev_docs.shared.yaml_io import (
 
 
 def test_load_yaml() -> None:
-    """素の値で読む（正常系）。"""
+    """素の値で読み込む（正常系）。"""
     # 準備
     text = "a: [1, 2]\n"
     # 実行

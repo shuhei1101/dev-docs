@@ -30,7 +30,7 @@ REQUEST_WAIT_SEC = 30
 
 
 def _wait_for_docs_request(mock: MockIndex) -> None:
-    """文書の取得が sample の配信元へ送った最初の要求（配信元の設定・リビジョン）がモックへ届くまで待つ。"""
+    """文書の取得が sample の配信元へ送信した最初の要求（配信元の設定・リビジョン）がモックへ届くまで待つ。"""
     deadline = time.monotonic() + REQUEST_WAIT_SEC
     while not any(path.startswith("/sources/sample/") for _, path, _ in mock.received):
         assert time.monotonic() < deadline, "文書の取得がモックへ届かなかった"
@@ -38,7 +38,7 @@ def _wait_for_docs_request(mock: MockIndex) -> None:
 
 
 def _slow_update(port: int) -> tuple[socket.socket, bytes]:
-    """`update` の要求の本文を途中まで送った接続と、残りの本文を返す。"""
+    """`update` の要求の本文を途中まで送信した接続と、残りの本文を返却する。"""
     body = UPDATE_CALL.encode("utf-8")
     head = (
         "POST /_admin/mcp/ HTTP/1.1\r\n"
@@ -54,7 +54,7 @@ def _slow_update(port: int) -> tuple[socket.socket, bytes]:
 
 
 def _read_result(sock: socket.socket) -> dict[str, Any]:
-    """接続が閉じるまで応答を読み、JSON-RPC の結果の辞書を返す。"""
+    """接続が閉じるまで応答を読み込み、JSON-RPC の結果の辞書を返却する。"""
     chunks = []
     while chunk := sock.recv(65536):
         chunks.append(chunk)
@@ -74,7 +74,7 @@ def test_normal(
     started_count: Callable[[Path], int],
     wait_for_restart: Callable[..., None],
 ) -> None:
-    """新しい commit を取り込み、依存を入れ直して起動し直す（正常系）。"""
+    """新しい commit を取り込み、依存を再インストールして再起動する（正常系）。"""
     # 準備
     settings = write_settings(sample_index.address)
     state_dir = settings.parent / "state"
@@ -111,7 +111,7 @@ def test_normal_when_up_to_date(
     call_tool: Callable[..., dict[str, Any]],
     started_count: Callable[[Path], int],
 ) -> None:
-    """上流に新しい commit が無ければ、何も変えずに返す（正常系）。"""
+    """上流に新しい commit が無ければ、何も変えずに返却する（正常系）。"""
     # 準備
     settings = write_settings(sample_index.address)
     state_dir = settings.parent / "state"
@@ -144,7 +144,7 @@ def test_normal_when_migration_needed(
     call_tool: Callable[..., dict[str, Any]],
     started_count: Callable[[Path], int],
 ) -> None:
-    """新しいバージョンに移し替えの手順があると、再起動せずに返す（正常系）。"""
+    """新しいバージョンに移し替えの手順があると、再起動せずに返却する（正常系）。"""
     # 準備
     settings = write_settings(sample_index.address)
     state_dir = settings.parent / "state"
@@ -242,7 +242,7 @@ def test_error_when_restart_in_progress(
         httpx.get(f"http://127.0.0.1:{port}/_api/sources/sample/docs", timeout=60)
 
     pending = threading.Thread(target=fetch)
-    # 実行（project-index が応答しない文書の取得の途中で、update の要求を送りかけたまま restart を呼び、残りを送る）
+    # 実行（project-index が応答しない文書の取得の途中で、update の要求を送信しかけたまま restart を呼び、残りを送信する）
     pending.start()
     _wait_for_docs_request(sample_index)
     sock, rest = _slow_update(port)

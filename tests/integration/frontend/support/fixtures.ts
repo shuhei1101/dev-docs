@@ -161,7 +161,7 @@ export type SeedComment = {
   selected?: boolean;
 };
 
-/** 溜めたコメントを、ブラウザのタブの sessionStorage に置いた状態にする(`page.addInitScript` に渡す値) */
+/** 溜めたコメントを、ブラウザのタブの sessionStorage に保存した状態にする(`page.addInitScript` に指定する値) */
 export const seededComments = (rows: SeedComment[]): string =>
   JSON.stringify({
     state: {

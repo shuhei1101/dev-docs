@@ -1,0 +1,13 @@
+scope_out:
+  - item: schemas/conversions/v0.4.0.py のコメントと docstring
+    reason: AI Monitor の配布物の写しで、#74 の取り込みで配布物から上書きされる（受付判断）
+    plan: none
+  - item: scripts/build_pages.py の分類の値「使い方」（CATEGORIES・FLOWCHART_CATEGORY の値と、それを指す docstring・コメントの「使い方」）
+    reason: docs/guide/files.yml の分類の値と公開ページの分類名で、文言の言い換えではなく値の参照。書き換えると分類の照合が合わなくなる
+    plan: none
+  - item: 設計書 docs/module/MOD-192-1.py.yaml（build_pages.py のモジュール設計書）の文言の「作り直す」「読める」
+    reason: コードのコメント・docstring ではなく設計書の文言で、今回の要望（コードのコメントと docstring）に含まれない（reviewer が案 A で確定）
+    plan: '#216'
+  - item: frontend/openapi.json が生成元の SourceEntry の docstring の変更（#188）に追従していない
+    reason: 生成物と生成元の食い違い。base の export_openapi.py でも同じ差分が出て今回の変更と関係が無く、コメントと docstring を対応表に合わせる今回の要望に含まれない
+    plan: '#215'

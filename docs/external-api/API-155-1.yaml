@@ -6,7 +6,7 @@ used_in:
   - src/dev_docs/integrations/project_index/
 verification:
   state: 済
-  detail: '提供する側の shuhei1101/project-index の develop の `f36ba69`（#14・#15 と #46・#49）の IF-22〜IF-32 と照合した。パス・状態コード・`application/problem+json` の `missing` は一致する。応答のキーは camelCase で、検討事項の一覧が `decisions[].folders`、検討事項の文書が `body`、端末の設定の行が `row` に包まれず `outsideRead` を持ち、保存の応答が状態だけ、行の追加の本文が `{source}` で応答が `result`（`added`・`exists`）になる。`f36ba69` に固定した本物の project-index を相手に、結合テストの文書の取得・画面の検索・リビジョンの一覧・端末の設定の取得と保存が pass した（`docs/pr/183/テスト結果/20261113204913_e168fba_結合テスト.log`）。develop の `7177d39` の IF-30・IF-31 とコードで、`PUT /settings/sources` の `expectedVersion`・400・409、排他ロックを持ったままの読み直し、`GET` がロックを待たないことを照合した'
+  detail: '提供する側の shuhei1101/project-index の develop の `f36ba69`（#14・#15 と #46・#49）の IF-22〜IF-32 と照合した。パス・状態コード・`application/problem+json` の `missing` は一致する。応答のキーは camelCase で、検討事項の一覧が `decisions[].folders`、検討事項の文書が `body`、端末の設定の行が `row` に包まれず `outsideRead` を持ち、保存の応答が状態だけ、行の追加の本文が `{source}` で応答が `result`（`added`・`exists`）になる。`f36ba69` に固定した本物の project-index を相手に、結合テストの文書の取得・画面の検索・リビジョンの一覧・端末の設定の取得と保存が pass した（`docs/pr/183/テスト結果/20261113204913_e168fba_結合テスト.log`）。develop の `7177d39` の IF-30・IF-31 とコードで、`PUT /settings/sources` の `expectedVersion`・400・409、排他ロックを持ったままの読み直し、`GET` がロックを待たないことを照合した。develop の `42632c5` の IF-24・IF-25 で、文書の一覧の `common_keys`・`documents[].commonKeys` と文書の取得の `metadata.commonKeys` を照合し、127.0.0.1:8786 の project-index が `common_keys=true` に `commonKeys` を返却することを確認した'
   date: '2026-11-14'
 version:
   api_version: shuhei1101/project-index の develop の `7177d39`
@@ -39,7 +39,7 @@ endpoints:
   - name: GET /sources/{source}/docs
     method: GET
     path: /sources/{source}/docs
-    summary: 指定のリビジョンの文書の ID・パス・種類・名前・概要・タグ・公開範囲・本文のファイルのパス・バージョン（`version`）を返す（IF-24）。`?values=true` で文書ごとの値（`value`）も入れる。YAML として読めなかったファイルは一覧に入らず、文書の取得の `conversionError` で返る
+    summary: 指定のリビジョンの文書の ID・パス・種類・名前・概要・タグ・公開範囲・本文のファイルのパス・バージョン（`version`）を返す（IF-24）。`?values=true` で文書ごとの値（`value`）も入れる。`?common_keys=true` で、配信元の設定の行の `metadata`・`alias_type` で解決した共通のキー（`commonKeys`。中のキーは project-index の `METADATA_KEYS` の名前のままで、値の無いキーを持たない。指定しないと `null`）も入れる。YAML として読めなかったファイルは一覧に入らず、文書の取得の `conversionError` で返る
     status_codes:
       - code: '200'
         condition: 返した（文書が 0 件でも 200）
@@ -48,7 +48,7 @@ endpoints:
   - name: GET /sources/{source}/docs/{path}
     method: GET
     path: /sources/{source}/docs/{path}
-    summary: 指定のリビジョンの文書の値・`$ref` を解いた種類のスキーマ・メタデータ・本文と本文のファイルのパス（管理用の YAML の行の文書）・`converters[]` の Markdown か変換の失敗（`conversionError`）・更新日時を返す（IF-25）。パスは文書のファイルか本文のファイルのパスで引き、`records` の行の文書は `?id=` に文書の ID を指して 1 つに選ぶ
+    summary: 指定のリビジョンの文書の値・`$ref` を解いた種類のスキーマ・メタデータ（共通のキー `metadata.commonKeys` を常に含む。文書の一覧の `commonKeys` と同じ値）・本文と本文のファイルのパス（管理用の YAML の行の文書）・`converters[]` の Markdown か変換の失敗（`conversionError`）・更新日時を返す（IF-25）。パスは文書のファイルか本文のファイルのパスで引き、`records` の行の文書は `?id=` に文書の ID を指して 1 つに選ぶ
     status_codes:
       - code: '200'
         condition: 返した（変換に失敗したとき・YAML を読み込めないときも `conversionError` を入れて 200）
@@ -129,4 +129,4 @@ endpoints:
         condition: スキーマに通らない
 notes:
   契約: 正本は提供する側の shuhei1101/project-index のインターフェース定義 IF-22〜IF-32。付け替え口のモックはこの版の入出力で書き、版を記録する
-  dev-docs が前提にする応答: 文書の一覧の値とバージョン（`nav` の `auto` の `filter`・`group_by` と差分の変わったキー・変わった文書のマーカーのため）、`records` の行の文書の `?id=` での指定、検索の結果の `id`・`filePath`、配信元の設定の `diff.ignore_keys` と `schemas`（絞り込みのフィールドの一覧のため）。shuhei1101/project-index#46 で追加された
+  dev-docs が前提にする応答: 文書の一覧の値とバージョン（`nav` の `auto` の `filter`・`group_by` と差分の変わったキー・変わった文書のマーカーのため）、`records` の行の文書の `?id=` での指定、検索の結果の `id`・`filePath`、配信元の設定の `diff.ignore_keys` と `schemas`（絞り込みのフィールドの一覧のため）。shuhei1101/project-index#46 で追加された。文書の一覧の `commonKeys` と文書の取得の `metadata.commonKeys`（文書の共通のキーを dev-docs で組み立てないため）。shuhei1101/project-index#54（`42632c5`）で追加された

@@ -20,7 +20,7 @@ def test_page_path(make_document: Callable[..., Document]) -> None:
 
 
 def test_find_page(make_document: Callable[..., Document]) -> None:
-    """文書のページのパスで当たる（正常系）。"""
+    """文書のページのパスで該当する（正常系）。"""
     # 準備
     document = make_document(id="a", path="rules/a.yaml")
     other = make_document(id="b", path="rules/b.yaml")
@@ -31,7 +31,7 @@ def test_find_page(make_document: Callable[..., Document]) -> None:
 
 
 def test_find_page_when_body_path(make_document: Callable[..., Document]) -> None:
-    """本文のファイルのパスで当たる（正常系）。"""
+    """本文のファイルのパスで該当する（正常系）。"""
     # 準備
     plain = make_document(id="a", path="rules/a.yaml")
     record = make_document(
@@ -44,7 +44,7 @@ def test_find_page_when_body_path(make_document: Callable[..., Document]) -> Non
 
 
 def test_find_page_when_missing(make_document: Callable[..., Document]) -> None:
-    """どれにも当たらない（正常系）。"""
+    """どれにも該当しない（正常系）。"""
     # 準備
     plain = make_document(id="a", path="rules/a.yaml")
     record = make_document(

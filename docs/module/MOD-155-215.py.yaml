@@ -193,7 +193,7 @@ classes:
         process: |-
           1. 呼び出しの共通の手順で `GET /sources/{source}/config?schemas=true` と `GET /sources/{source}/refs?commits=0` を `asyncio.gather` で同時に呼ぶ
           2. `id` を引数の `source`、`git`・`default_ref` を refs の応答の `git`・`defaultRef`（`git` が `false` なら `None`）にする
-          3. `documents[]` の行ごとに、配信元の設定のままのキー `id`・`title`・`paths`・`records`・`search`・`converter`・`alias_type`・`metadata` と、`schemas[id]`（無ければ空）を `schema` にした `DocumentRow` を作る
+          3. `documents[]` の行ごとに、配信元の設定のままのキー `id`・`title`・`paths`・`records`・`search`・`converter`・`alias_type` と、`schemas[id]`（無ければ空）を `schema` にした `DocumentRow` を作る
           4. `decisions.folders` を `decision_folders`、`diff.ignore_keys` を `diff_ignore_keys`、`github.repository`・`github.issueLabels` を `github_repository`・`github_issue_labels` にして返す
         unit_tests:
           - name: test_source_view
@@ -247,7 +247,7 @@ classes:
           type: DocumentList
           description: '値を入れ、`body` を空にした文書'
         process: |-
-          1. 呼び出しの共通の手順で `GET /sources/{source}/docs?ref={ref}` を呼ぶ。`values` が `True` ならクエリに `values=true` を付ける
+          1. 呼び出しの共通の手順で `GET /sources/{source}/docs?ref={ref}` を呼ぶ。クエリに `common_keys=true` を常に付け、`values` が `True` なら `values=true` も付ける
           2. `documents[]` を応答の順に索引の文書の読み取りで `IndexedDocument` にする。`kind` が `record_kinds` にある文書は、同じ `path` の文書の中で何番目か（0 始まり）を `record_index` に指定する。同じ `path` の中の並びは project-index が管理用の YAML を読み込んだ順（`f36ba69` の安定ソート）を前提にする
           3. 応答の `ref`（Git 管理外の空の文字列は `None`）とともに `DocumentList` にして返す
         unit_tests:
@@ -256,7 +256,7 @@ classes:
             summary: ref と値を求める
             condition: '`ref="8b1d4e0"`'
             mock: '`httpx.MockTransport` で project-index の応答を返す'
-            expected: 要求のクエリに `ref=8b1d4e0` と `values=true` があり、応答の `ref` と文書 2 件を返す
+            expected: 要求のクエリに `ref=8b1d4e0`・`values=true`・`common_keys=true` があり、応答の `ref` と文書 2 件を返す
           - name: test_list_documents_when_records
             case: 正常
             summary: 行の文書の添字
@@ -298,7 +298,7 @@ classes:
           description: 文書の詳細
         process: |-
           1. 呼び出しの共通の手順で `GET /sources/{source}/docs/{path}` を呼ぶ。クエリは `ref` と、`document_id` があれば `id`
-          2. `value` が `null` なら `document` を `None` にする。それ以外は `metadata` の `id`・`kind`、応答の `path`・`value`・`body`・`bodyPath`、`updatedAt` を日時にした `updated` で `IndexedDocument` を作る（`version` は空、`record_index` は `None`）
+          2. `value` が `null` なら `document` を `None` にする。それ以外は、応答の `metadata` の `id`・`kind` を `id`・`kind` に、応答の `metadata` の `id`・`kind`・`name`・`description`・`tags`・`visibility` に `metadata.commonKeys`（辞書のときだけ）を重ねたものを `metadata` にして、応答の `path`・`value`・`body`・`bodyPath`、`updatedAt` を日時にした `updated` で `IndexedDocument` を作る（`version` は空、`record_index` は `None`）
           3. `markdown` と、`conversionError` を `IndexFailure` にした `failure` を入れて返す
         unit_tests:
           - name: test_document_when_failure
@@ -310,9 +310,9 @@ classes:
           - name: test_document_when_record
             case: 正常
             summary: 管理用の YAML の行の要素を選ぶ
-            condition: '`path="notes/files.yaml"`・`document_id="n-1"`、応答が `body`・`bodyPath`・`updatedAt` を持つ'
+            condition: '`path="notes/files.yaml"`・`document_id="n-1"`、応答が `body`・`bodyPath`・`updatedAt` と `metadata.commonKeys: {aliases: [作業場所]}` を持つ'
             mock: '`httpx.MockTransport` で project-index の応答を返す'
-            expected: 要求のクエリに `id=n-1` があり、`document` の `id` が `n-1`、`body`・`body_path` が応答の値、`updated` がタイムゾーン付きの日時
+            expected: 要求のクエリに `id=n-1` があり、`document` の `id` が `n-1`、`body`・`body_path` が応答の値、`updated` がタイムゾーン付きの日時、`metadata` の `aliases` が `[作業場所]`
           - name: test_document_when_yaml_unreadable
             case: 正常
             summary: YAML を読めない

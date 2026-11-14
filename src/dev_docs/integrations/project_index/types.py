@@ -45,7 +45,6 @@ class DocumentRow:
     search: bool = True
     converter: str | None = None
     alias_type: str | None = None
-    metadata: dict[str, str] = field(default_factory=dict)
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -201,13 +200,17 @@ def parse_document(
                 message=f"project-index の応答に {key} がありません",
                 summary=f"project-index の応答に {key} がありません",
             )
+    metadata = {key: value.get(key) for key in LISTED_METADATA_KEYS}
+    common_keys = value.get("commonKeys")
+    if isinstance(common_keys, Mapping):
+        metadata.update(common_keys)
     return IndexedDocument(
         id=str(value["id"]),
         kind=str(value["kind"]),
         source_id=source_id,
         path=str(value["path"]),
         data=dict(value.get("value") or {}),
-        metadata={key: value.get(key) for key in LISTED_METADATA_KEYS},
+        metadata=metadata,
         version=str(value["version"]),
         record_index=record_index,
         body_path=value.get("bodyPath"),

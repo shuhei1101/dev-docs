@@ -15,7 +15,7 @@ EXTRA_ROW: dict[str, Any] = {"id": "extra", "config": ["/repo/extra/project-inde
 
 
 def _two_sources(index: RealIndex) -> tuple[dict[str, Any], dict[str, Any]]:
-    """sample を端末の設定の行に並べ、extra は配信元の設定だけを用意して、2 つの行を返す。"""
+    """sample を端末の設定の行に並べ、extra は配信元の設定だけを用意して、2 つの行を返却する。"""
     index.serve("sample", IndexSource(docs={None: sample_docs()}))
     extra = materialize(index.root / "sources", "extra", IndexSource(docs={None: sample_docs()}))
     sample_row = dict(index.rows[0])
@@ -102,7 +102,7 @@ def test_normal_when_source_deleted(
 def test_normal_when_added_source_invalid(
     real_index: RealIndex, make_server: Callable[..., ServerEnv]
 ) -> None:
-    """端末の設定は保存し、読み直しの検証で外した配信元を not_served で返す（正常系）。"""
+    """端末の設定は保存し、再読み込みの検証で除外した配信元を not_served で返却する（正常系）。"""
     # 準備
     sample_row, _ = _two_sources(real_index)
     broken = materialize(
@@ -155,7 +155,7 @@ def test_error_when_cross_origin(
 def test_error_when_body_invalid(
     real_index: RealIndex, make_server: Callable[..., ServerEnv]
 ) -> None:
-    """型の合わない本文を project-index へ送らずに断り、違反を全て返す（異常系）。"""
+    """型の合わない本文を project-index へ送信せずに断り、違反を全て返却する（異常系）。"""
     # 準備
     sample_row, _ = _two_sources(real_index)
     env = make_server(real_index)
@@ -180,7 +180,7 @@ def test_error_when_body_invalid(
 def test_error_when_project_index_rejects(
     mock_index: MockIndex, make_server: Callable[..., ServerEnv]
 ) -> None:
-    """project-index の 422 はそのまま 422 で、それ以外の失敗は 502 で返す（異常系）。"""
+    """project-index の 422 はそのまま 422 で、それ以外の失敗は 502 で返却する（異常系）。"""
     # 準備
     mock_index.serve(
         "sample", IndexSource(docs={None: sample_docs()}), scope={"read": ["/repo/**"]}

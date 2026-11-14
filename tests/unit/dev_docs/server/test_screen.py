@@ -13,7 +13,7 @@ INDEX = "<html>index</html>"
 
 
 def _client(dist_dir: Path) -> TestClient:
-    """画面の配信だけを持つアプリのクライアントを返す。"""
+    """画面の配信だけを持つアプリのクライアントを返却する。"""
     app = FastAPI()
     register_error_handlers(app)
     app.include_router(build_screen_router(dist_dir))
@@ -22,7 +22,7 @@ def _client(dist_dir: Path) -> TestClient:
 
 @pytest.fixture
 def dist_dir(tmp_path: Path) -> Path:
-    """index.html と assets の JS を置いたビルドのフォルダ。"""
+    """index.html と assets の JS を配置したビルドのフォルダ。"""
     (tmp_path / "assets").mkdir()
     (tmp_path / "index.html").write_text(INDEX, encoding="utf-8")
     (tmp_path / "assets" / "index-abc.js").write_text("console.log(1)", encoding="utf-8")
@@ -31,7 +31,7 @@ def dist_dir(tmp_path: Path) -> Path:
 
 
 def test_build_screen_router(dist_dir: Path) -> None:
-    """文書の URL に index.html を返す（正常系）。"""
+    """文書の URL に index.html を返却する（正常系）。"""
     # 準備
     client = _client(dist_dir)
     # 実行
@@ -43,7 +43,7 @@ def test_build_screen_router(dist_dir: Path) -> None:
 
 
 def test_build_screen_router_when_asset(dist_dir: Path) -> None:
-    """assets のファイルを長く持たせて返す（正常系）。"""
+    """assets のファイルを長く持たせて返却する（正常系）。"""
     # 準備
     client = _client(dist_dir)
     # 実行
@@ -70,7 +70,7 @@ def test_build_screen_router_when_asset_missing(dist_dir: Path) -> None:
 
 @pytest.mark.parametrize("path", ["/_api/none", "/mcp/none", "/_admin/none"])
 def test_build_screen_router_when_excluded(dist_dir: Path, path: str) -> None:
-    """API・MCP の頭のパスに画面を返さない（異常系）。"""
+    """API・MCP の頭のパスに画面を返却しない（異常系）。"""
     # 準備
     client = _client(dist_dir)
     # 実行
@@ -81,7 +81,7 @@ def test_build_screen_router_when_excluded(dist_dir: Path, path: str) -> None:
 
 
 def _client_with_api(dist_dir: Path) -> TestClient:
-    """画面の配信より先に GET `/_api/x` のルートを持つアプリのクライアントを返す。"""
+    """画面の配信より先に GET `/_api/x` のルートを持つアプリのクライアントを返却する。"""
     app = FastAPI()
     register_error_handlers(app)
 

@@ -19,7 +19,7 @@ COLUMNS_BODY = {"table": "rules:items", "hidden": ["a"]}
 
 @pytest.fixture
 def sample_index(fake_index: FakeIndex) -> FakeIndex:
-    """配信元 sample（`docs/a.yaml`・`docs/b.yaml`）と Git 管理外の notes を置いた偽物を返す。"""
+    """配信元 sample（`docs/a.yaml`・`docs/b.yaml`）と Git 管理外の notes を配置した偽物を返却する。"""
     fake_index.configs["sample"] = config_json("sample")
     fake_index.docs["sample"] = {
         None: [doc_json("a", "docs/a.yaml", name="A"), doc_json("b", "docs/b.yaml", name="B")]
@@ -30,7 +30,7 @@ def sample_index(fake_index: FakeIndex) -> FakeIndex:
 
 
 def _client(handlers: Any) -> TestClient:
-    """画面のルーターと例外の変換を載せたアプリのテスト用のクライアントを作る。"""
+    """画面のルーターと例外の変換を登録したアプリのテスト用のクライアントを作る。"""
     app = FastAPI()
     register_error_handlers(app)
     app.include_router(build_view_router(handlers))
@@ -101,7 +101,7 @@ def test_build_view_router_when_search(
 def test_build_view_router_when_query_too_long(
     sample_index: FakeIndex, make_handlers: Callable[..., Any]
 ) -> None:
-    """長すぎる語（異常系）。"""
+    """長すぎる単語（異常系）。"""
     # 準備
     client = _client(make_handlers())
     # 実行

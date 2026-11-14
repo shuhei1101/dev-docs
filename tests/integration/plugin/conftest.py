@@ -28,16 +28,16 @@ class HookRun:
 
     @property
     def output(self) -> dict[str, Any]:
-        """標準出力を JSON として読んだ値を返す。"""
+        """標準出力を JSON として読み込んだ値を返却する。"""
         value: dict[str, Any] = json.loads(self.stdout)
         return value
 
 
 @pytest.fixture
 def run_hook() -> Callable[..., HookRun]:
-    """プラグインのフックを、標準入力に JSON を渡して子プロセスで実行する関数を返す。
+    """プラグインのフックを、標準入力に JSON を指定して子プロセスで実行する関数を返却する。
 
-    `hooks_dir` は、定数を差し替えたフックのコピーを置いたフォルダを渡すときに使う。
+    `hooks_dir` は、定数を差し替えたフックのコピーを配置したフォルダを指定するときに使用する。
     """
 
     def _run(
@@ -64,7 +64,7 @@ def run_hook() -> Callable[..., HookRun]:
 
 @pytest.fixture
 def free_port() -> Callable[[], int]:
-    """今は空いている 127.0.0.1 のポートを返す関数を返す。"""
+    """今は空いている 127.0.0.1 のポートを返却する関数を返却する。"""
 
     def _find() -> int:
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
@@ -85,7 +85,7 @@ class ContextServer:
 
 @pytest.fixture
 def context_server() -> Callable[..., AbstractContextManager[ContextServer]]:
-    """決めた応答を返す HTTP サーバーを一時のポートで立てる関数を返す。"""
+    """決めた応答を返却する HTTP サーバーを一時のポートで起動する関数を返却する。"""
 
     @contextmanager
     def _serve(*, hold_sec: float = 0.0) -> Iterator[ContextServer]:

@@ -37,7 +37,7 @@ def test_parse_compare_value() -> None:
 
 
 def test_parse_compare_value_when_invalid() -> None:
-    """読めない値（異常系）。"""
+    """読み取れない値（異常系）。"""
     # 実行・検証
     with pytest.raises(ValueError, match="number"):
         parse_compare_value("x", "number", today=TODAY)
@@ -101,7 +101,7 @@ def test_match_filter_when_case_sensitive(make_document: Callable[..., Document]
 
 
 def test_match_filter_when_regex_lines(make_document: Callable[..., Document]) -> None:
-    """正規表現は各行に当たる（正常系）。"""
+    """正規表現は各行に適用する（正常系）。"""
     # 準備
     line_head = Condition(field="body", op="regex", values=["^## "])
     text_head = Condition(field="body", op="regex", values=["\\A## "])
@@ -189,7 +189,7 @@ def test_check_filter_when_not_child() -> None:
 
 
 def test_check_filter_when_matches() -> None:
-    """`@matches` を条件に使う（異常系）。"""
+    """`@matches` を条件に使用する（異常系）。"""
     # 準備
     node = Condition(field="@matches", op="gt", values=["1"])
     # 実行

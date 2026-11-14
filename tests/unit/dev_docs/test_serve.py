@@ -42,20 +42,20 @@ SOURCES_V1 = (
 
 
 def _free_port() -> int:
-    """OS が払い出して閉じたポートの番号を返す。"""
+    """OS が払い出して閉じたポートの番号を返却する。"""
     with closing(socket.socket(socket.AF_INET, socket.SOCK_STREAM)) as sock:
         sock.bind(("127.0.0.1", 0))
         return int(sock.getsockname()[1])
 
 
 def _closed_address() -> str:
-    """何も待ち受けていない project-index のアドレスを返す。"""
+    """何も待ち受けていない project-index のアドレスを返却する。"""
     return f"http://127.0.0.1:{_free_port()}"
 
 
 @contextmanager
 def _listening() -> Iterator[int]:
-    """テストが `listen` しているポートの番号を渡す。"""
+    """テストが `listen` しているポートの番号を指定する。"""
     with closing(socket.socket(socket.AF_INET, socket.SOCK_STREAM)) as sock:
         sock.bind(("127.0.0.1", 0))
         sock.listen()
@@ -64,7 +64,7 @@ def _listening() -> Iterator[int]:
 
 @contextmanager
 def _http_index(fake: FakeIndex) -> Iterator[str]:
-    """`FakeIndex` に答えさせる偽物の project-index の HTTP サーバーを立て、アドレスを渡す。"""
+    """`FakeIndex` に応答させる偽物の project-index の HTTP サーバーを起動し、アドレスを指定する。"""
 
     class Handler(BaseHTTPRequestHandler):
         def _answer(self) -> None:
@@ -99,7 +99,7 @@ def _http_index(fake: FakeIndex) -> Iterator[str]:
 
 
 def _serving_index() -> FakeIndex:
-    """sample・notes を配信中、broken を配信していないと返す偽物を作る。"""
+    """sample・notes を配信中、broken を配信していないと返却する偽物を作る。"""
     return FakeIndex(
         sources=[
             {"id": "sample", "status": "serving", "errors": []},
@@ -110,7 +110,7 @@ def _serving_index() -> FakeIndex:
 
 
 def _write_settings(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, text: str) -> Path:
-    """端末の設定を書いて `DEV_DOCS_CONFIG` に入れ、そのパスを返す。"""
+    """端末の設定を書き込んで `DEV_DOCS_CONFIG` に指定し、そのパスを返却する。"""
     path = tmp_path / "settings.yaml"
     path.write_text(text, encoding="utf-8")
     monkeypatch.setenv("DEV_DOCS_CONFIG", str(path))
@@ -120,7 +120,7 @@ def _write_settings(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, text: str) 
 def _serve_settings(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, address: str, extra: str = ""
 ) -> Path:
-    """`project_index` を持つ端末の設定を `DEV_DOCS_CONFIG` に入れ、そのパスを返す。"""
+    """`project_index` を持つ端末の設定を `DEV_DOCS_CONFIG` に指定し、そのパスを返却する。"""
     text = (
         f'version: "2"\nclone: {tmp_path}\nstate_dir: {tmp_path / "state"}\n'
         f"project_index: {address}\n{extra}"
@@ -129,7 +129,7 @@ def _serve_settings(
 
 
 def _record_config(monkeypatch: pytest.MonkeyPatch) -> list[dict[str, Any]]:
-    """`uvicorn.Config` に渡した引数を記録する。"""
+    """`uvicorn.Config` に指定した引数を記録する。"""
     configs: list[dict[str, Any]] = []
     real_config = uvicorn.Config
 
@@ -142,7 +142,7 @@ def _record_config(monkeypatch: pytest.MonkeyPatch) -> list[dict[str, Any]]:
 
 
 def _record_announce(monkeypatch: pytest.MonkeyPatch) -> list[threading.Thread]:
-    """配信元の知らせのスレッドを記録する。"""
+    """配信元の通知のスレッドを記録する。"""
     threads: list[threading.Thread] = []
     real_announce = main_module.announce_sources
 
@@ -433,7 +433,7 @@ def test_run_migrate_when_plan(
     capsys: pytest.CaptureFixture[str],
     write_steps: Callable[..., None],
 ) -> None:
-    """当てる手順を表示するだけで書き換えない（正常系）。"""
+    """適用する手順を表示するだけで書き換えない（正常系）。"""
     # 準備
     settings = _write_settings(tmp_path, monkeypatch, SETTINGS_V1)
     write_steps(
@@ -458,7 +458,7 @@ def test_run_migrate(
     capsys: pytest.CaptureFixture[str],
     write_steps: Callable[..., None],
 ) -> None:
-    """手順を当ててバックアップを取る（正常系）。"""
+    """手順を適用してバックアップを取る（正常系）。"""
     # 準備
     settings = _write_settings(tmp_path, monkeypatch, SETTINGS_V1)
     write_steps(

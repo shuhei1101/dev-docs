@@ -21,7 +21,7 @@ def _save(
     entries: list[SourceEntry],
     expected_version: str | None = None,
 ) -> tuple[Any, dict[str, Any]]:
-    """保存を依頼し、返った端末の設定と project-index へ送った本文を返す。"""
+    """保存を依頼し、返却された端末の設定と project-index へ送信した本文を返却する。"""
     view = asyncio.run(save_sources(make_client(), entries, expected_version=expected_version))
     put = next(request for request in fake_index.requests if request.method == "PUT")
     return view, json.loads(put.content)
@@ -30,7 +30,7 @@ def _save(
 def test_save_sources(
     fake_index: FakeIndex, make_client: Callable[..., ProjectIndexClient]
 ) -> None:
-    """行を送り、状態を返す（正常系）。"""
+    """行を送信し、状態を返却する（正常系）。"""
     # 準備
     # 保存した後の端末の設定の取得で返る行と状態
     fake_index.responses[("GET", "/settings/sources")] = (
@@ -70,7 +70,7 @@ def test_save_sources(
 def test_save_sources_when_defaults(
     fake_index: FakeIndex, make_client: Callable[..., ProjectIndexClient]
 ) -> None:
-    """既定値と同じキーを送らない（正常系）。"""
+    """既定値と同じキーを送信しない（正常系）。"""
     # 準備
     entry = SourceEntry.model_validate(
         {
@@ -90,7 +90,7 @@ def test_save_sources_when_defaults(
 def test_save_sources_when_outside_read_false(
     fake_index: FakeIndex, make_client: Callable[..., ProjectIndexClient]
 ) -> None:
-    """outside_read: false を送る（正常系）。"""
+    """outside_read: false を送信する（正常系）。"""
     # 準備
     entry = SourceEntry.model_validate({"id": "a", "config": ["/a"], "outside_read": False})
     # 実行

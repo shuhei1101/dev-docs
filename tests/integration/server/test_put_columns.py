@@ -23,7 +23,7 @@ def _setup(mock: MockIndex, make_server: Callable[..., ServerEnv]) -> ServerEnv:
 
 
 def test_normal(mock_index: MockIndex, make_server: Callable[..., ServerEnv]) -> None:
-    """隠す列を書き、次の文書の取得でその列を返す（正常系）。"""
+    """隠す列を書き込み、次の文書の取得でその列を返却する（正常系）。"""
     # 準備
     env = _setup(mock_index, make_server)
     table = env.client.get("/_api/sources/sample/docs/docs/doc-1").json()["tableKeys"][0]
@@ -51,7 +51,7 @@ def test_normal(mock_index: MockIndex, make_server: Callable[..., ServerEnv]) ->
 def test_error_when_body_invalid(
     mock_index: MockIndex, make_server: Callable[..., ServerEnv]
 ) -> None:
-    """形の合わない本文を断る（異常系）。"""
+    """スキーマの合わない本文を断る（異常系）。"""
     # 準備
     env = _setup(mock_index, make_server)
     # 実行
@@ -86,7 +86,7 @@ def test_error_when_cross_origin(
 def test_error_when_source_not_found(
     mock_index: MockIndex, make_server: Callable[..., ServerEnv]
 ) -> None:
-    """無い配信元の列の設定を書かない（異常系）。"""
+    """無い配信元の列の設定を書き込まない（異常系）。"""
     # 準備
     env = _setup(mock_index, make_server)
     # 実行

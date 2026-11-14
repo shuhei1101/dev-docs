@@ -7,7 +7,7 @@ from .conftest import IndexSource, RealIndex, ServerEnv, sample_docs
 
 
 def test_normal(real_index: RealIndex, make_server: Callable[..., ServerEnv]) -> None:
-    """ブランチ・タグ・最近の commit を返す（正常系）。"""
+    """ブランチ・タグ・最近の commit を返却する（正常系）。"""
     # 準備
     real_index.serve("sample", IndexSource(docs={None: sample_docs()}))
     repo = real_index.root / "sources" / "sample"
@@ -32,7 +32,7 @@ def test_normal(real_index: RealIndex, make_server: Callable[..., ServerEnv]) ->
 def test_normal_when_non_git_source(
     real_index: RealIndex, make_server: Callable[..., ServerEnv]
 ) -> None:
-    """Git 管理外の配信元は git: false を返す（正常系）。"""
+    """Git 管理外の配信元は git: false を返却する（正常系）。"""
     # 準備
     real_index.serve("notes", IndexSource(docs={None: sample_docs()}, git=False))
     env = make_server(real_index)

@@ -32,7 +32,7 @@ INITIALIZE = {
 LISTEN_STATE = "0A"
 TCP_TABLES = ("/proc/net/tcp", "/proc/net/tcp6")
 LOOPBACK_V4 = "0100007F"
-# 文に置かない言い回し
+# 文に使用しない言い回し
 FORBIDDEN_WORDS = ("MUST", "必ず", "禁止")
 START_GUIDE = "project-index を起動してから"
 
@@ -50,14 +50,14 @@ def _listening_addresses(port: int) -> set[str]:
 
 
 def _mcp(port: int, path: str, payload: dict[str, Any]) -> httpx.Response:
-    """MCP の JSON-RPC を 1 つ送る。"""
+    """MCP の JSON-RPC を 1 つ送信する。"""
     return httpx.post(
         f"http://127.0.0.1:{port}{path}", headers=MCP_HEADERS, json=payload, timeout=10
     )
 
 
 def _two_sources(mock: MockIndex) -> MockIndex:
-    """sample と notes を配信中として返すように用意する。"""
+    """sample と notes を配信中として返却するように用意する。"""
     mock.serve("sample", IndexSource(docs={None: sample_docs()}))
     mock.serve("notes", IndexSource(docs={None: sample_docs()}, git=False))
     return mock
@@ -228,7 +228,7 @@ def test_normal_when_xdg_dirs_set(
     wait_until_serving: Callable[..., None],
     tmp_path: Path,
 ) -> None:
-    """DEV_DOCS_CONFIG が無ければ XDG_CONFIG_HOME の下の端末の設定を読み、状態とログを決めた置き場に書く（正常系）。"""
+    """DEV_DOCS_CONFIG が無ければ XDG_CONFIG_HOME の下の端末の設定を読み込み、状態とログを決めた配置先に書き込む（正常系）。"""
     # 準備
     config_home = tmp_path / "xdg-config"
     state_home = tmp_path / "xdg-state"
@@ -283,7 +283,7 @@ def test_normal_when_mcp_text_from_prompts(
     start_serve: Callable[..., Any],
     wait_until_serving: Callable[..., None],
 ) -> None:
-    """管理の MCP のツールの description をプロンプトの YAML から描画して返す（正常系）。"""
+    """管理の MCP のツールの description をプロンプトの YAML から描画して返却する（正常系）。"""
     # 準備
     port = free_port()
     process = start_serve(write_settings(sample_index.address), port)

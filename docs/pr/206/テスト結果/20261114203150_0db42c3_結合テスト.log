@@ -1,0 +1,48 @@
+$ uv run pytest tests/integration/
+============================= test session starts ==============================
+platform linux -- Python 3.14.3, pytest-9.1.1, pluggy-1.7.0
+rootdir: /mnt/c/Users/shuhe/repo/dev-docs/.claude/worktrees/refactor-tests-ai-slop-comments
+configfile: pyproject.toml
+plugins: anyio-4.15.1
+collected 78 items
+
+tests/integration/plugin/test_session_start.py ....                      [  5%]
+tests/integration/server/test_api_schema.py .                            [  6%]
+tests/integration/server/test_get_document.py ....................       [ 32%]
+tests/integration/server/test_get_settings_sources.py ...                [ 35%]
+tests/integration/server/test_get_status.py ...                          [ 39%]
+tests/integration/server/test_list_refs.py ...                           [ 43%]
+tests/integration/server/test_migrate.py ...........                     [ 57%]
+tests/integration/server/test_put_columns.py ....                        [ 62%]
+tests/integration/server/test_put_settings_sources.py .......            [ 71%]
+tests/integration/server/test_restart.py ..                              [ 74%]
+tests/integration/server/test_search_page.py ...                         [ 78%]
+tests/integration/server/test_serve.py ........                          [ 88%]
+tests/integration/server/test_serve_screen.py ....                       [ 93%]
+tests/integration/server/test_update.py .....                            [100%]
+
+======================== 78 passed in 369.14s (0:06:09) ========================
+exit=0
+
+# npm run test:integration は 238 件中 search-dialog.spec.ts の 4 件が Storybook のストーリーの読み込みの時間切れで fail したため、そのファイルを単独で再実行した（7 件 pass）。全件の出力の集計:
+  4 failed
+  234 passed (8.8m)
+  ✘  139 [chromium] › tests/integration/frontend/search-dialog.spec.ts:10:3 › Empty › empty (1.0m)
+  ✘  140 [chromium] › tests/integration/frontend/search-dialog.spec.ts:23:3 › Results › results (1.0m)
+  ✘  141 [chromium] › tests/integration/frontend/search-dialog.spec.ts:35:3 › Results › results_keyboard (1.0m)
+  ✘  142 [chromium] › tests/integration/frontend/search-dialog.spec.ts:50:3 › NoResults › no_results (1.0m)
+
+$ npx playwright test --config tests/integration/frontend/playwright.config.ts tests/integration/frontend/search-dialog.spec.ts
+
+Running 7 tests using 4 workers
+
+  ✓  3 [chromium] › tests/integration/frontend/search-dialog.spec.ts:10:3 › Empty › empty (23.1s)
+  ✓  4 [chromium] › tests/integration/frontend/search-dialog.spec.ts:35:3 › Results › results_keyboard (23.1s)
+  ✓  1 [chromium] › tests/integration/frontend/search-dialog.spec.ts:50:3 › NoResults › no_results (24.0s)
+  ✓  2 [chromium] › tests/integration/frontend/search-dialog.spec.ts:23:3 › Results › results (24.1s)
+  ✓  5 [chromium] › tests/integration/frontend/search-dialog.spec.ts:61:3 › Loading › loading (3.9s)
+  ✓  7 [chromium] › tests/integration/frontend/search-dialog.spec.ts:80:3 › NonGitSource › non_git_source (3.3s)
+  ✓  6 [chromium] › tests/integration/frontend/search-dialog.spec.ts:71:3 › Failed › failed (4.0s)
+
+  7 passed (1.4m)
+exit=0

@@ -63,7 +63,7 @@ def _step(op: str, path: str, **overrides: Any) -> MigrationStep:
 
 @pytest.fixture
 def settings_file(tmp_path: Path) -> Path:
-    """`version: "1"` の端末の設定を書いたファイルを返す。"""
+    """`version: "1"` の端末の設定を書き込んだファイルを返却する。"""
     path = tmp_path / "settings.yaml"
     path.write_text(SETTINGS_V1, encoding="utf-8")
     return path
@@ -84,7 +84,7 @@ def test_resolve_target() -> None:
 
 
 def test_plan_migration(settings_file: Path, write_steps: Callable[..., None]) -> None:
-    """当てる手順を返す（正常系）。"""
+    """適用する手順を返却する（正常系）。"""
     # 準備
     write_steps(
         "settings",
@@ -129,7 +129,7 @@ def test_plan_migration_when_no_version(tmp_path: Path) -> None:
 
 
 def test_apply_migration(settings_file: Path) -> None:
-    """手順を当ててバックアップを取る（正常系）。"""
+    """手順を適用してバックアップを取る（正常系）。"""
     # 準備
     data = load_roundtrip(settings_file.read_text(encoding="utf-8"))
     steps = [_step("rename", "log_dir", to="state_dir")]
@@ -186,7 +186,7 @@ def test_apply_migration_when_invalid_result(settings_file: Path) -> None:
 
 
 def test_apply_migration_when_changed(settings_file: Path) -> None:
-    """読んだ後に変わったファイルを書かない（異常系）。"""
+    """読み込んだ後に変わったファイルに書き込まない（異常系）。"""
     # 準備
     data = load_roundtrip(settings_file.read_text(encoding="utf-8"))
     changed = 'version: "1"\nclone: /changed\nlog_dir: /logs\n'
@@ -264,7 +264,7 @@ SEND_KEYS = {"id", "config", "enabled", "scope", "outsideRead"}
 
 
 def _data(text: str) -> Any:
-    """往復編集で読んだ端末の設定を返却する。"""
+    """往復編集で読み込んだ端末の設定を返却する。"""
     return load_roundtrip(text)
 
 
@@ -394,7 +394,7 @@ def test_export_sources_when_name_unresolved(tmp_path: Path) -> None:
 
 
 def test_export_sources_when_save_timeout() -> None:
-    """保存を打ち切っても取得し直しで確認する（正常系）。"""
+    """保存を打ち切っても再取得で確認する（正常系）。"""
     # 準備
     data = _data(SAMPLE_V1)
     fake = FakePort(
@@ -409,7 +409,7 @@ def test_export_sources_when_save_timeout() -> None:
 
 
 def test_export_sources_when_save_timeout_with_id_omitted(tmp_path: Path) -> None:
-    """読み直しの途中でも `id` を省いた行の保存を確認する（正常系）。"""
+    """再読み込みの途中でも `id` を省いた行の保存を確認する（正常系）。"""
     # 準備
     config = tmp_path / "dev-docs.yaml"
     config.write_text("name: notes\n", encoding="utf-8")
@@ -425,7 +425,7 @@ def test_export_sources_when_save_timeout_with_id_omitted(tmp_path: Path) -> Non
 
 
 def test_export_sources_when_save_unconfirmed() -> None:
-    """取得し直しても保存を確認できない（異常系）。"""
+    """再取得しても保存を確認できない（異常系）。"""
     # 準備
     data = _data(SAMPLE_V1)
     fake = FakePort([_view([]), _view([])], save_error=UNREACHABLE)

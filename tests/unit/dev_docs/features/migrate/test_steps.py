@@ -11,7 +11,7 @@ from dev_docs.shared.yaml_io import dump_roundtrip, load_roundtrip
 
 
 def _rename_step(version: str = "2") -> dict[str, Any]:
-    """`steps.yaml` の改名の 1 行を返す。"""
+    """`steps.yaml` の改名の 1 行を返却する。"""
     return {"op": "rename", "path": "a", "to": "b", "description": f"{version} で a を b にする"}
 
 
@@ -30,7 +30,7 @@ def _step(op: str, path: str, **overrides: Any) -> MigrationStep:
 
 
 def test_load_steps(write_steps: Callable[..., None]) -> None:
-    """範囲のバージョンの手順を古い順に読む（正常系）。"""
+    """範囲のバージョンの手順を古い順に読み込む（正常系）。"""
     # 準備
     for version in ("2", "3", "10"):
         write_steps("settings", version, [_rename_step(version)])
@@ -43,7 +43,7 @@ def test_load_steps(write_steps: Callable[..., None]) -> None:
 
 
 def test_load_steps_when_none(write_steps: Callable[..., None]) -> None:
-    """当てる手順が無い（正常系）。"""
+    """適用する手順が無い（正常系）。"""
     # 準備
     write_steps("settings", "2", [_rename_step()])
     # 実行

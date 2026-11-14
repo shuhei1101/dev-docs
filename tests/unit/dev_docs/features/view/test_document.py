@@ -27,7 +27,7 @@ def _row(row_id: str, paths: list[str], **extra: Any) -> dict[str, Any]:
 
 
 def _serve(fake_index: FakeIndex, docs: list[dict[str, Any]], **config: Any) -> None:
-    """偽物の project-index に配信元 sample と既定のリビジョンの文書を置く。"""
+    """偽物の project-index に配信元 sample と既定のリビジョンの文書を配置する。"""
     fake_index.configs["sample"] = config_json("sample", **config)
     fake_index.docs["sample"] = {None: docs}
 
@@ -130,7 +130,7 @@ def test_get_document_when_convert_failed(
 def test_get_document_when_yaml_unreadable(
     fake_index: FakeIndex, make_handlers: Callable[..., Any]
 ) -> None:
-    """YAML を読めない（正常系）。"""
+    """YAML を読み込めない（正常系）。"""
     # 準備
     _serve(fake_index, [doc_json("b", "docs/b.yaml")])
     fake_index.unreadable["sample"] = [
@@ -187,7 +187,7 @@ def test_get_document_when_not_git(
 def test_get_document_when_aliases(
     fake_index: FakeIndex, make_handlers: Callable[..., Any]
 ) -> None:
-    """エイリアスを返す（正常系）。"""
+    """エイリアスを返却する（正常系）。"""
     # 準備
     scope = {
         "id": "scope",
@@ -229,7 +229,7 @@ def test_get_document_when_aliases(
 def test_get_document_when_decision(
     fake_index: FakeIndex, make_handlers: Callable[..., Any]
 ) -> None:
-    """検討事項の文書を返す（正常系）。"""
+    """検討事項の文書を返却する（正常系）。"""
     # 準備
     _serve(fake_index, [doc_json("a", "docs/a.yaml")], decisions=["tmp/a", "tmp/b"])
     fake_index.decision_texts[("sample", "D-1")] = "# D-1 の本文\n"
@@ -246,7 +246,7 @@ def test_get_document_when_decision(
 def test_get_document_when_decision_ambiguous(
     fake_index: FakeIndex, make_handlers: Callable[..., Any]
 ) -> None:
-    """project-index が検討事項の文書を返さない（異常系）。"""
+    """project-index が検討事項の文書を返却しない（異常系）。"""
     # 準備
     _serve(fake_index, [doc_json("a", "docs/a.yaml")], decisions=["tmp/a", "tmp/b"])
     # 実行・検証

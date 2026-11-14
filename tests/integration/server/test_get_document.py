@@ -313,7 +313,7 @@ def _outline(items: list[dict[str, Any]]) -> list[Any]:
 
 
 def test_normal(real_index: RealIndex, make_server: Callable[..., ServerEnv]) -> None:
-    """一番左のタブの一番上の文書と、文書のパスで指した文書を返す（正常系）。"""
+    """一番左のタブの一番上の文書と、文書のパスで指した文書を返却する（正常系）。"""
     # 準備
     real_index.serve("sample", IndexSource(docs={None: _sample()}, nav=NAV))
     env = make_server(real_index)
@@ -340,7 +340,7 @@ def test_normal(real_index: RealIndex, make_server: Callable[..., ServerEnv]) ->
 def test_normal_when_nav_missing(
     real_index: RealIndex, make_server: Callable[..., ServerEnv]
 ) -> None:
-    """nav が無い配信元は種類ごとにタブを作り、文書をフォルダで束ねる（正常系）。"""
+    """nav が無い配信元は種類ごとにタブを作り、文書をフォルダでまとめる（正常系）。"""
     # 準備
     documents = [
         doc("doc-1", "docs/doc-1.yaml"),
@@ -368,7 +368,7 @@ def test_normal_when_nav_missing(
 def test_normal_when_ref_given(
     real_index: RealIndex, make_server: Callable[..., ServerEnv]
 ) -> None:
-    """ref のリビジョンの文書を返す（正常系）。"""
+    """ref のリビジョンの文書を返却する（正常系）。"""
     # 準備
     renamed = doc("doc-1", "docs/doc-1.yaml", data={"id": "doc-1", "name": "新しい名前"})
     real_index.serve("sample", IndexSource(docs={None: _sample(doc_1=renamed), "old": _sample()}))
@@ -387,7 +387,7 @@ def test_normal_when_ref_given(
 def test_normal_when_diff_given(
     real_index: RealIndex, make_server: Callable[..., ServerEnv]
 ) -> None:
-    """diff のリビジョンから変わった項目と、サイドバーの page ごとの変化を返す（正常系）。"""
+    """diff のリビジョンから変わった項目と、サイドバーの page ごとの変化を返却する（正常系）。"""
     # 準備
     parent = _sample(doc("doc-3", "docs/doc-3.yaml"))
     renamed = doc(
@@ -441,7 +441,7 @@ def _custom_source(**overrides: Any) -> IndexSource:
 def test_normal_when_custom_converter(
     real_index: RealIndex, make_server: Callable[..., ServerEnv]
 ) -> None:
-    """project-index の変換の結果と、埋め込みのマーカーの表を返す（正常系）。"""
+    """project-index の変換の結果と、埋め込みのマーカーの表を返却する（正常系）。"""
     # 準備
     rows_doc = doc(
         "rows", "data/rows.yaml", kind="data", data={"rows": [{"colA": "値A", "colB": "値B"}]}
@@ -451,7 +451,7 @@ def test_normal_when_custom_converter(
         "data/rows.yaml": {"document": rows_doc},
     }
     source = _custom_source(details=details)
-    # 埋め込みの元の文書は、本物の project-index が配信する行に置く
+    # 埋め込みの元の文書は、本物の project-index が配信する行に配置する
     source.documents.append(row("data", ["data/*.yaml"], {"type": "object"}))
     real_index.serve("custom", source)
     env = make_server(real_index)
@@ -469,7 +469,7 @@ def test_normal_when_custom_converter(
 def test_normal_when_conversion_failed(
     real_index: RealIndex, make_server: Callable[..., ServerEnv]
 ) -> None:
-    """project-index が返した変換の失敗と読めなかった YAML を conversionError に入れる（正常系）。"""
+    """project-index が返却した変換の失敗と読み込めなかった YAML を conversionError に入れる（正常系）。"""
     # 準備（custom の converters[] のスクリプトは終了コード 1 で終わる）
     failure = {"reason": "exit", "kind": "custom", "detail": "終了コード 1"}
     source = _custom_source(details={"custom/c-1.yaml": {"failure": failure}})
@@ -511,7 +511,7 @@ def test_normal_when_conversion_failed(
 
 
 def test_error_when_not_found(real_index: RealIndex, make_server: Callable[..., ServerEnv]) -> None:
-    """無い配信元・リビジョン・文書を断り、何が無いかを返す（異常系）。"""
+    """無い配信元・リビジョン・文書を断り、何が無いかを返却する（異常系）。"""
     # 準備
     real_index.serve("sample", IndexSource(docs={None: _sample()}))
     real_index.serve(
@@ -539,7 +539,7 @@ def test_error_when_not_found(real_index: RealIndex, make_server: Callable[..., 
 def test_normal_when_nav_filtered_by_tags(
     real_index: RealIndex, make_server: Callable[..., ServerEnv]
 ) -> None:
-    """auto の filter に当たる文書だけをタブのサイドバーに並べる（正常系）。"""
+    """auto の filter に該当する文書だけをタブのサイドバーに並べる（正常系）。"""
     # 準備
     nav = {
         "tabs": [
@@ -594,7 +594,7 @@ def _alias(doc_id: str, path: str, kind: str, **values: Any) -> dict[str, Any]:
 def test_normal_when_aliases_returned(
     real_index: RealIndex, make_server: Callable[..., ServerEnv]
 ) -> None:
-    """alias_type を持つ行の文書のエイリアスを文書といっしょに返す（正常系）。"""
+    """alias_type を持つ行の文書のエイリアスを文書といっしょに返却する（正常系）。"""
     # 準備
     rows = [
         row("sample", ["docs/*.yaml"]),
@@ -648,7 +648,7 @@ def test_normal_when_aliases_returned(
 def test_normal_when_body_path_given(
     real_index: RealIndex, make_server: Callable[..., ServerEnv]
 ) -> None:
-    """管理用の YAML の行の文書に bodyPath を返し、本文のファイルのパスで指した文書を返す（正常系）。"""
+    """管理用の YAML の行の文書に bodyPath を返却し、本文のファイルのパスで指した文書を返却する（正常系）。"""
     # 準備
     rows = [row("sample", ["docs/*.yaml"]), row("notes", ["notes/files.yaml"], records="files")]
     notes = [
@@ -686,7 +686,7 @@ def test_normal_when_body_path_given(
 def test_normal_when_nav_grouped_by_folder(
     real_index: RealIndex, make_server: Callable[..., ServerEnv]
 ) -> None:
-    """group_by: '@folder' の auto が、手で書いた page の文書を除いてフォルダごとの group を作る（正常系）。"""
+    """group_by: '@folder' の auto が、手で記載した page の文書を除いてフォルダごとの group を作る（正常系）。"""
     # 準備
     nav = {
         "tabs": [
@@ -738,7 +738,7 @@ def _drawn_source() -> IndexSource:
 def test_normal_when_schema_document_drawn(
     real_index: RealIndex, make_server: Callable[..., ServerEnv]
 ) -> None:
-    """図を mdmark の部品に、スカラーの並びを「項目 / 値」の表にした Markdown を返す（正常系）。"""
+    """図を mdmark の部品に、スカラーの並びを「項目 / 値」の表にした Markdown を返却する（正常系）。"""
     # 準備
     real_index.serve("sample", _drawn_source())
     env = make_server(real_index)
@@ -777,7 +777,7 @@ def test_normal_when_schema_document_drawn(
 def test_normal_when_mermaid_unreadable(
     real_index: RealIndex, make_server: Callable[..., ServerEnv]
 ) -> None:
-    """読み取れない行を含む Mermaid を、図ごと Mermaid のコードブロックのまま返す（正常系）。"""
+    """読み取れない行を含む Mermaid を、図ごと Mermaid のコードブロックのまま返却する（正常系）。"""
     # 準備
     real_index.serve("sample", _drawn_source())
     env = make_server(real_index)
@@ -928,7 +928,7 @@ def test_normal_when_decision_linked(
 def test_normal_when_decision_document_returned(
     real_index: RealIndex, make_server: Callable[..., ServerEnv]
 ) -> None:
-    """`path` が `_decisions/{ID}` のとき、project-index が返した検討事項の文書を返す（正常系）。"""
+    """`path` が `_decisions/{ID}` のとき、project-index が返却した検討事項の文書を返却する（正常系）。"""
     # 準備
     real_index.serve("sample", _decided_source())
     env = make_server(real_index)
@@ -953,7 +953,7 @@ def test_normal_when_decision_document_returned(
 def test_error_when_project_index_unreachable(
     mock_index: MockIndex, make_server: Callable[..., ServerEnv]
 ) -> None:
-    """project-index につながらなければ 503 を返し、つながった後は同じ要求が 200 になる（異常系）。"""
+    """project-index につながらなければ 503 を返却し、つながった後は同じ要求が 200 になる（異常系）。"""
     # 準備
     mock_index.serve("sample", IndexSource(docs={None: _sample()}))
     env = make_server(mock_index)
@@ -976,7 +976,7 @@ def test_error_when_project_index_timed_out(
     make_server: Callable[..., ServerEnv],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """project-index が制限時間を過ぎても応答しなければ打ち切って 503 を返す（異常系）。"""
+    """project-index が制限時間を過ぎても応答しなければ打ち切って 503 を返却する（異常系）。"""
     # 準備
     monkeypatch.setattr("dev_docs.main.PROJECT_INDEX_TIMEOUT_SEC", 1)
     mock_index.serve("sample", IndexSource(docs={None: _sample()}))

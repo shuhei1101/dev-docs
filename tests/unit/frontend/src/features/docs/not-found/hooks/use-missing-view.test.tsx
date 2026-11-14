@@ -20,7 +20,7 @@ const useHandlers = () => {
   return refs;
 };
 
-/** フックの戻り値を外へ渡すだけの部品 */
+/** フックの戻り値をテストへ取り出すだけの部品 */
 const Probe = ({ data, onRender }: { data: unknown; onRender: (view: MissingView) => void }) => {
   onRender(useMissingView(data));
   return <p>probe</p>;
