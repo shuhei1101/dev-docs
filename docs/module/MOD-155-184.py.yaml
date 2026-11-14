@@ -82,6 +82,7 @@ classes:
       | `DocumentNotFoundError` | 無い文書 | `missing: list[str]`・`candidates: dict[str, list[str]]` | 404 |
       | `CrossOriginError` | 別のオリジンからの要求 | - | 403 |
       | `RestartInProgressError` | 再起動か更新の途中 | - | 409 |
+      | `SettingsVersionConflictError` | 端末の設定の内容のバージョンの食い違い | `current: str`（project-index の今の内容のバージョン） | 409 |
       | `UpdateFailedError` | 更新のコマンドの失敗 | `command: list[str]`・`stderr: str` | 500 |
       | `ScreenBuildMissingError` | 画面のビルドが無い | - | 503 |
       | `ProjectIndexUnreachableError` | project-index につながらない | `address: str`・`reason: str` | 503 |

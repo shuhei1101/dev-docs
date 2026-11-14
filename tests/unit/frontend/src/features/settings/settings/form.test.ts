@@ -24,6 +24,7 @@ const values = (overrides: Record<string, unknown> = {}) => ({
   enabled: true,
   read: "~/repo/**",
   write: "",
+  outsideRead: true,
   ...overrides,
 });
 

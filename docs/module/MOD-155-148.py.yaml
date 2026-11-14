@@ -28,7 +28,7 @@ functions:
     container: features/settings/service.py
     usecase: 端末の設定の保存
     role: サービス
-    summary: '送られた `sources[]` を project-index の端末の設定の API へ渡し、読み直した後の状態を返す'
+    summary: '送られた `sources[]` を内容のバージョンとともに project-index の端末の設定の API へ渡し、読み直した後の行・状態・内容のバージョンを返す'
     scope: public
     thread_safe: true
     side_effects: project-index に端末の設定の `sources` の保存と読み直しを依頼する。dev-docs は端末の設定を書き換えない
@@ -45,12 +45,19 @@ functions:
         required: true
         passing: positional
         description: 保存する `sources[]` の全行
+      - name: expected_version
+        title: 照合する内容のバージョン
+        type: str | None
+        required: false
+        default: None
+        passing: keyword
+        description: 画面が受け取った内容のバージョン。`None` は照合しない
     returns:
-      type: list[SourceState]
-      description: project-index が読み直した後の配信元ごとの状態
+      type: SettingsSourcesView
+      description: project-index が読み直した後の配信元ごとの状態と、保存した後の内容のバージョン（project-indexの呼び出しの型）
     process: |-
       1. 行ごとに JSON にする。`config` は要素の数によらず配列にし、既定値と同じキー（`enabled: true`・`outside_read: true`・空の `scope.read`・`None` の `scope.write`・`None` の `id`）は送らない
-      2. project-indexの呼び出し.端末の設定の配信元の行の保存 を呼び、`states` を返す
+      2. project-indexの呼び出し.端末の設定の配信元の行の保存 を `expected_version` を渡して呼び、返った `SettingsSourcesView` を返す
          - `[info]` 端末の設定の sources の保存を依頼した（行数）
     exceptions:
       - name: ProjectIndexRejectedError
@@ -65,6 +72,10 @@ functions:
         condition: project-index が 200・422 以外を返した
         message: '`project-index が {status} を返しました: {summary}`'
         notes: 例外の変換で 502
+      - name: SettingsVersionConflictError
+        condition: project-index が 409 を返した（`expected_version` が今の内容のバージョンと違う）
+        message: '`端末の設定は他の書き換えで変わっています`'
+        notes: 例外の変換で 409（`current`）
     unit_tests:
       - name: test_save_sources
         case: 正常
@@ -91,4 +102,17 @@ functions:
         mock: project-indexの呼び出し（例外を送る偽物）
         expected: '`ProjectIndexRejectedError` がそのまま伝わる'
         exception: project-index が 422 を返した
+      - name: test_save_sources_when_expected_version
+        case: 正常
+        summary: 内容のバージョンを渡し、保存した後のバージョンを返す
+        condition: '`expected_version: v1`、偽物が `version: v2` の応答を返す'
+        mock: project-indexの呼び出し（受けた引数を記録し、応答を返す偽物）
+        expected: '偽物が `expected_version: v1` で呼ばれ、返った `version` が `v2`'
+      - name: test_save_sources_when_version_conflict
+        case: 異常
+        summary: 内容のバージョンが違う
+        condition: '偽物が `SettingsVersionConflictError`（`current: v2`）を送る'
+        mock: project-indexの呼び出し（例外を送る偽物）
+        expected: '`SettingsVersionConflictError` がそのまま伝わる'
+        exception: project-index が 409 を返した
     is_async: true

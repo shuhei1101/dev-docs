@@ -61,7 +61,9 @@ functions:
     returns:
       type: SourceFormValues
       description: '配列は改行でつなぐ。追加のときは空と `enabled: true`'
-    process: 1. `config`・`scope.read`・`scope.write`（null は空）を改行でつなぐ
+    process: |-
+      1. `config`・`scope.read`・`scope.write`（null は空）を改行でつなぐ
+      2. `outsideRead` は行の `outsideRead`（無ければ `true`）。追加のときは `true`
     unit_tests:
       - name: test_to_form_values
         case: 正常
@@ -69,6 +71,12 @@ functions:
         condition: '`config` が 2 件、`scope.write` が null の行'
         mock: なし
         expected: '`config` が改行でつないだ 2 行、`write` が空'
+      - name: test_to_form_values_when_outside_read
+        case: 正常
+        summary: 範囲の外からの参照
+        condition: '`outsideRead: false` の行と、`outsideRead` を持たない行'
+        mock: なし
+        expected: '`outsideRead` が順に `false`・`true`'
   - name: applySource
     title: 入力の反映
     kind: 関数
@@ -110,6 +118,12 @@ functions:
         condition: '`write` が空の入力で 1 行目を編集'
         mock: なし
         expected: 1 行目の `scope` に `write` が無い
+      - name: test_apply_source_when_outside_read
+        case: 正常
+        summary: 範囲の外からの参照を止める
+        condition: 入力の `outsideRead` が `false`、他の行の `outsideRead` が `false`
+        mock: なし
+        expected: '入力の行と他の行に `outside_read: false` があり、`outsideRead` が `true` の行には `outside_read` が無い'
   - name: removeSource
     title: 行の削除
     kind: 関数
@@ -158,3 +172,58 @@ functions:
       type: SourceInput
       description: '`id`（null は省く）・`config`・`enabled`・`scope`（`write` が null なら省く）'
     process: 1. `status`・`errors`・`configVersion` を除く
+  - name: sourceKey
+    title: 行を指す値
+    kind: 関数
+    container: features/settings/settings/form.ts
+    usecase: 配信元を設定する
+    role: 変換
+    summary: 一覧を取得し直しても同じ配信元を指す値を作る
+    scope: public
+    args:
+      - name: source
+        type: SettingsSource
+        required: true
+        passing: positional
+        description: 端末の設定の取得の `sources[]` の行
+    returns:
+      type: string
+      description: '`id`。ID を持たない行（読み直していない行）は `config` を改行でつないだ値'
+    process: 1. `id` があれば `id`、無ければ `config` を改行でつないだ値を返す
+    unit_tests:
+      - name: test_source_key
+        case: 正常
+        summary: ID と設定ファイル
+        condition: '`id: a` の行と、`id` が null・`config` が 2 つの行'
+        mock: なし
+        expected: '`a` と、`config` を改行でつないだ値'
+  - name: findSource
+    title: 行の位置の引き方
+    kind: 関数
+    container: features/settings/settings/form.ts
+    usecase: 配信元を設定する
+    role: 変換
+    summary: '`sourceKey` の値で、取得し直した一覧の行の位置を引く'
+    scope: public
+    args:
+      - name: sources
+        type: SettingsSource[]
+        required: true
+        passing: positional
+        description: 端末の設定の取得の `sources[]`
+      - name: key
+        type: string
+        required: true
+        passing: positional
+        description: '`sourceKey` の値'
+    returns:
+      type: number
+      description: 行の位置。無ければ -1
+    process: 1. `sourceKey` が `key` と同じ最初の行の位置を返す
+    unit_tests:
+      - name: test_find_source
+        case: 正常
+        summary: 行の位置がずれても同じ配信元を引く
+        condition: '`a`・`b` の行の前に `c` を足した一覧で `b` を引く。無い `z` を引く'
+        mock: なし
+        expected: '`b` が 2、`z` が -1'

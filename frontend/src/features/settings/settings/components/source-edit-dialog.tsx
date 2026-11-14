@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Controller } from "react-hook-form";
 
 import { useSourceForm } from "@/features/settings/settings/hooks/use-source-form";
@@ -124,12 +124,17 @@ export const SourceEditDialog = ({
   sources,
   index,
 }: Props) => {
-  const { form, errors, submit, summary, saving } = useSourceForm({
-    sources,
-    index,
-    onSaved: () => onOpenChange(false),
-  });
+  const { form, errors, submit, summary, conflict, gone, saving } =
+    useSourceForm({
+      sources,
+      index,
+      onSaved: () => onOpenChange(false),
+    });
   const editing = index !== null;
+  // 一覧を取得し直しても見出しの配信元が変わらないよう、開いたときの名前を持つ
+  const [name] = useState(() =>
+    index === null ? "" : (sources[index].id ?? ""),
+  );
   const idRef = useRef<HTMLInputElement | null>(null);
   const configRef = useRef<HTMLTextAreaElement | null>(null);
   const idField = form.register("id");
@@ -148,11 +153,27 @@ export const SourceEditDialog = ({
               {editing ? "配信元を編集" : "配信元を追加"}
             </DialogTitle>
             <DialogDescription>
-              {editing
-                ? `配信元 ${sources[index].id ?? ""}`
-                : "端末の設定に配信元を追加します。"}
+              {editing ? `配信元 ${name}` : "端末の設定に配信元を追加します。"}
             </DialogDescription>
           </DialogHeader>
+          {gone && (
+            <Alert role="alert">
+              <AlertTitle>
+                配信元が削除されたため保存できませんでした
+              </AlertTitle>
+              <AlertDescription>
+                この画面を開いた後に、他のプロセスがこの配信元を端末の設定から削除しました。一覧を確認してください。
+              </AlertDescription>
+            </Alert>
+          )}
+          {conflict && !gone && (
+            <Alert role="alert">
+              <AlertTitle>他の変更があったため保存できませんでした</AlertTitle>
+              <AlertDescription>
+                この画面を開いた後に、他のプロセスが端末の設定を変更しました。一覧を最新の内容にしました。入力した内容を確認し、もう一度保存してください。
+              </AlertDescription>
+            </Alert>
+          )}
           <FailureSummary
             summary={summary}
             invalidCount={invalidCount}
@@ -237,6 +258,34 @@ export const SourceEditDialog = ({
               {...form.register("read")}
             />
           </Field>
+          <div
+            role="group"
+            aria-labelledby="source-outside-read-heading"
+            className="space-y-1.5"
+          >
+            <p id="source-outside-read-heading" className="text-sm font-medium">
+              範囲の外からの参照
+            </p>
+            <div className="flex items-center justify-between">
+              <Label htmlFor="source-outside-read">
+                範囲の外から参照できるようにする
+              </Label>
+              <Controller
+                control={form.control}
+                name="outsideRead"
+                render={({ field }) => (
+                  <Switch
+                    id="source-outside-read"
+                    checked={field.value}
+                    onCheckedChange={field.onChange}
+                  />
+                )}
+              />
+            </div>
+            <p className="text-xs text-muted-foreground">
+              オフにすると、読み取りの範囲に当たらない作業場所からは参照できません。
+            </p>
+          </div>
           <Field
             id="source-write"
             label="書き込みの範囲"
@@ -258,7 +307,7 @@ export const SourceEditDialog = ({
             >
               キャンセル
             </Button>
-            <Button type="submit" disabled={saving}>
+            <Button type="submit" disabled={saving || gone}>
               {editing ? "保存" : "追加"}
             </Button>
           </DialogFooter>

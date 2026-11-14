@@ -41,9 +41,9 @@ functions:
       type: fastapi.APIRouter
       description: 2 つのルートを持つルーター
     process: |-
-      1. GET `/_api/settings/sources` は、project-indexの呼び出し.端末の設定の配信元の行の取得 を呼び、`settings_path` を project-index の `settings_path`、`sources[]` を行ごとに状態（同じ添字の `states`）を重ねた `SettingsSourceRow` にした `SettingsSourcesView` を返す
-      2. PUT `/_api/settings/sources` は、同じオリジンの確認を依存に持ち（同じオリジンの確認）、本文を `SettingsSourcesRequest` で受けて配信元の保存を呼び、`SettingsSourcesResponse.from_states` を返す
-         - `ProjectIndexRejectedError` は 422、`ProjectIndexUnreachableError` は 503、`ProjectIndexResponseError` は 502 の problem+json に例外の変換がする
+      1. GET `/_api/settings/sources` は、project-indexの呼び出し.端末の設定の配信元の行の取得 を呼び、`settings_path` を project-index の `settings_path`、`sources[]` を行ごとに状態（同じ添字の `states`）を重ねた `SettingsSourceRow`、`version` を project-index の `version` にした `SettingsSourcesView` を返す
+      2. PUT `/_api/settings/sources` は、同じオリジンの確認を依存に持ち（同じオリジンの確認）、本文を `SettingsSourcesRequest` で受けて配信元の保存（`expected_version` に本文の `expected_version`）を呼び、返った `SettingsSourcesView` から `SettingsSourcesResponse.from_view` を返す
+         - `SettingsVersionConflictError` は 409（`current`）、`ProjectIndexRejectedError` は 422、`ProjectIndexUnreachableError` は 503、`ProjectIndexResponseError` は 502 の problem+json に例外の変換がする
       3. ルーターは `APIRouter(tags=["settings"])` にする。各ルートの `name`（`operation_id` は渡さず、アプリの組み立てが operationId を `settings-{name}` にする）は、GET が `get_settings_sources`、PUT が `put_settings_sources`
       4. どちらのルートも、dev-docs の中に行と状態を控えない
     unit_tests:
@@ -52,13 +52,13 @@ functions:
         summary: 行に状態を重ねる
         condition: GET `/_api/settings/sources`、project-index の行 2 つと状態 `serving`・`not_served`
         mock: project-indexの呼び出し（`httpx.MockTransport` で project-index の develop の `f36ba69` の入出力を返す）
-        expected: 200 で `settingsPath` が project-index の値、`sources` の 2 行、`not_served` の行に `errors`
+        expected: 200 で `settingsPath` が project-index の値、`sources` の 2 行、`not_served` の行に `errors`、`version` が project-index の `version`
       - name: test_build_settings_router_when_put
         case: 正常
         summary: 保存を依頼して状態を返す
         condition: 'PUT `/_api/settings/sources` を `Sec-Fetch-Site: same-origin` で'
         mock: project-indexの呼び出し（`httpx.MockTransport` で project-index の develop の `f36ba69` の入出力を返す）
-        expected: 200 で `sources[].status`。project-index へ送った行の `config` が配列
+        expected: 200 で `sources[].status` と、保存した後の取得の `version`。project-index へ送った行の `config` が配列
       - name: test_build_settings_router_when_pending_reload
         case: 正常
         summary: 読み直していない行
@@ -85,6 +85,13 @@ functions:
         condition: GET・PUT で project-index が接続を断る
         mock: project-indexの呼び出し（`httpx.ConnectError` を送る `MockTransport`）
         expected: どちらも 503 の problem+json で `projectIndex.address`・`projectIndex.reason` がある
+        exception: '-'
+      - name: test_build_settings_router_when_version_conflict
+        case: 異常
+        summary: project-index の 409 を current つきで返す
+        condition: 'PUT を `expectedVersion: v1` で、project-index が 409（`current: v2`）を返す'
+        mock: project-indexの呼び出し（`httpx.MockTransport` で 409 を返す）
+        expected: 409 の problem+json で `current` が `v2`。project-index へ送った本文の `expectedVersion` が `v1`
         exception: '-'
 refs:
   - IF-155-20#

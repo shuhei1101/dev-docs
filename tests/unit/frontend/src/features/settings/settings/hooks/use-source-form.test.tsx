@@ -25,6 +25,7 @@ const setup = (onSaved = vi.fn()) => {
       enabled: true,
       read: "/x/**",
       write: "",
+      outsideRead: true,
     });
   });
   return { ...view, onSaved };

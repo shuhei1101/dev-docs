@@ -24,7 +24,7 @@ components:
         type: '(index: number) => void'
         required: true
         description: 削除ボタン
-    description: '`status` が `serving` の行の ID だけを配信元のトップへの `Link` にする。編集・削除のボタンは `aria-label` に `{id} を編集`・`{id} を削除` を持つ'
+    description: '`status` が `serving` の行の ID だけを配信元のトップへの `Link` にする。`outsideRead` が `false` の行だけ、ID の下に『範囲の外からの参照の補足』を出す。編集・削除のボタンは `aria-label` に `{id} を編集`・`{id} を削除` を持つ'
     unit_tests:
       - name: test_source_table
         case: 正常
@@ -38,3 +38,9 @@ components:
         condition: 2 行目の編集ボタンを押す
         mock: なし
         expected: '`onEdit` が 1 で 1 回'
+      - name: test_source_table_when_outside_read_disabled
+        case: 正常
+        summary: 範囲の外からの参照を止めている行
+        condition: '`outsideRead: false` の行と `outsideRead` を持たない行'
+        mock: なし
+        expected: '「範囲の外から参照できません」が 1 つだけ、`outsideRead: false` の行に出る'

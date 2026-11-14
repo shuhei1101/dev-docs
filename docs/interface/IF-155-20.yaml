@@ -8,7 +8,7 @@ flows:
     summary: 配信元の一覧を配信中で返す
     setup:
       - name: Mock
-        description: 'テストの中で起動した project-index（shuhei1101/project-index の develop の `f36ba69`（shuhei1101/project-index#46 をマージした commit）。一時フォルダの端末の設定を `PROJECT_INDEX_CONFIG` で指し、空きポートで子プロセスとして起動する）が、端末の設定の行と配信元の状態を返し、保存を受ける。dev-docs のアプリを HTTP のテストのクライアントで呼ぶ'
+        description: 'テストの中で起動した project-index（shuhei1101/project-index の develop の `7177d39`（shuhei1101/project-index#29 で端末の設定の内容のバージョンが入った後の commit）。一時フォルダの端末の設定を `PROJECT_INDEX_CONFIG` で指し、空きポートで子プロセスとして起動する）が、端末の設定の行と配信元の状態を返し、保存を受ける。dev-docs のアプリを HTTP のテストのクライアントで呼ぶ'
       - name: 端末の設定
         description: project-index の端末の設定の `sources` に sample の 1 行
     flow: |-
@@ -26,6 +26,7 @@ flows:
       - 200 で、`sources` に sample が `serving` で並ぶ
       - '`settingsPath` に端末の設定のパス、sample の行に `config`・`scope` がある'
       - 配信元が 0 件の端末の設定でも 200 で、`sources` が空
+      - '`version` に project-index の GET `/settings/sources` が返した内容のバージョンがある'
     test: test_normal
   - name: 正常系（配信していない配信元がある）
     summary: 配信していない・無効・設定が古い配信元を状態と理由つきで返す
@@ -115,6 +116,10 @@ response:
     type: bool
     description: '`scope` に当たらない作業場所からも `outside_scope: true` で作業範囲の外（参考）として読めるか（端末の設定の `outside_read`）'
     notes: 書いていない行は `true`
+  - name: version
+    type: str
+    description: project-index の端末の設定の内容のバージョン（ファイル全体の内容のハッシュ。設定の `version` キーとは別）
+    notes: 端末の設定の保存の `expectedVersion` に指定する
 status_codes:
   - code: '200'
     condition: 返した（配信元が 0 件でも 200）

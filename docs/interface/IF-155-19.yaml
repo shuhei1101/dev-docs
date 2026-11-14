@@ -8,7 +8,7 @@ flows:
     summary: 配信元を追加して保存し、再起動せずに配信する
     setup:
       - name: Mock
-        description: 'テストの中で起動した project-index（shuhei1101/project-index の develop の `f36ba69`（shuhei1101/project-index#46 をマージした commit）。一時フォルダの端末の設定を `PROJECT_INDEX_CONFIG` で指し、空きポートで子プロセスとして起動する）が、端末の設定の行と配信元の状態を返し、保存を受ける。dev-docs のアプリを HTTP のテストのクライアントで呼ぶ'
+        description: 'テストの中で起動した project-index（shuhei1101/project-index の develop の `7177d39`（shuhei1101/project-index#29 で端末の設定の内容のバージョンが入った後の commit）。一時フォルダの端末の設定を `PROJECT_INDEX_CONFIG` で指し、空きポートで子プロセスとして起動する）が、端末の設定の行と配信元の状態を返し、保存を受ける。dev-docs のアプリを HTTP のテストのクライアントで呼ぶ'
       - name: 端末の設定
         description: project-index の端末の設定の `sources` に sample の 1 行
       - name: 追加する配信元
@@ -34,6 +34,7 @@ flows:
       - project-index の端末の設定のファイルの `sources` が sample と extra の 2 行で、sample の行の値は送信したとおり
       - 文字列で送った extra の `config` が、project-index の端末の設定のファイルでは要素 1 つの配列になる
       - 再起動せずに `/_api/sources/extra/docs` が 200 を返す
+      - 200 の `version` が、保存した後の端末の設定の取得の `version` と同じ
     test: test_normal
   - name: 正常系（配信を止める）
     summary: '`enabled: false` で保存し、配信を止める'
@@ -183,6 +184,31 @@ flows:
       - 1 回目が 422 で、`errors` がモックの返した `errors[]` と同じ
       - 2 回目が 502 で、モックの応答のステータス 500 と要約がある
     test: test_error_when_project_index_rejects
+  - name: 異常系（他の書き換えが入っている・409）
+    summary: 取得した後に他のプロセスが端末の設定を書き換えていたら、保存せずに 409 を返す
+    setup:
+      - name: Mock
+        description: '`expectedVersion` が `v1` の保存に 409（`current`: `v2`）を、`v2` の保存に 200（`version`: `v3`）を返す project-index の端末の設定の API のモック。受けた本文を記録する'
+        notes: 他のプロセスの書き換えの代わり
+      - name: 入力
+        description: '画面と同じ `Origin` で、sample と extra の 2 行と `expectedVersion`: `v1`'
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        participant C as クライアント
+        participant E as PUT /_api/settings/sources
+        participant PI as project-index
+
+        C->>E: sources: sample, extra、expectedVersion
+        E->>PI: 端末の設定の配信元の保存（expectedVersion）
+        PI-->>E: 409（今の内容のバージョン）
+        E-->>C: 409 problem+json（current）
+      ```
+    expected:
+      - 409 で、`current` が `v2`
+      - モックが受けた本文の `expectedVersion` が `v1`
+      - '`expectedVersion` を `v2` にして送信し直すと 200 で、応答の `version` が `v3`'
+    test: test_error_when_version_conflict
 lead: '#17 の設定画面が配信元の追加・編集・削除の後の `sources[]` を丸ごと送信する。スキーマに通ったときだけ project-index の端末の設定の API へ保存を依頼し、読み直した後の配信元の状態を返す。'
 identifier: put_settings_sources
 permissions: 画面と同じオリジンからの要求だけ
@@ -239,7 +265,12 @@ request:
     location: body
     description: '`scope` に当たらない作業場所からも `outside_scope: true` で作業範囲の外（参考）として読めるか'
     notes: '`false` の配信元は `scope` の外から一切読めない'
-    status: planned
+  - name: expectedVersion
+    type: str
+    required: false
+    default: なし（照合せずに保存する）
+    location: body
+    description: 画面が端末の設定の取得か前の保存で受け取った内容のバージョン。project-index の PUT `/settings/sources` の `expectedVersion` に指定する
 request_example: |-
   ```json
   {"sources": [
@@ -258,6 +289,10 @@ response:
     type: 'list[{path: str, reason: str}]'
     description: 検証で除外した理由
     notes: '`not_served` のときだけ'
+  - name: version
+    type: str
+    description: 保存した後の端末の設定の内容のバージョン
+    notes: 続けて保存するときの `expectedVersion` に指定する
 response_example: |-
   ```json
   {"sources": [
@@ -283,6 +318,9 @@ status_codes:
   - code: '502'
     condition: project-index が 200・422 以外を返した
     notes: project-index の応答のステータスと要約
+  - code: '409'
+    condition: '`expectedVersion` が project-index の今の端末の設定の内容のバージョンと違う（project-index が 409 を返した）'
+    notes: project-index の今の内容のバージョンを `current` で返す。端末の設定は変わらない
 error_format: RFC 9457 の `application/problem+json`。拡張メンバーは camelCase（`nextSteps`・`errors[]`）。検証の違反は `errors[]` に `{path, reason}` で並べる（`path` は `sources[1].id` の形）
 constraints:
   - item: オリジンの確認
@@ -300,4 +338,7 @@ constraints:
     constraint: リクエストの本文とレスポンスのキーは camelCase
   - item: operationId
     constraint: '`{tag}-{関数名}` の `settings-put_settings_sources`'
+  - item: 内容のバージョンの照合
+    constraint: '`expectedVersion` を受けたときだけ project-index の PUT `/settings/sources` に指定し、照合は project-index が行う。dev-docs は内容のバージョンを記録しない。project-index の 409 は 409 と `current` で返す'
+    notes: '`expectedVersion` を指定しない保存は照合せずに保存する'
 test_file: tests/integration/server/test_put_settings_sources.py

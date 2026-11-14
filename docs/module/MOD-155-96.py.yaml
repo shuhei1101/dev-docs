@@ -101,7 +101,7 @@ functions:
         summary: 中の図を部品にする
         condition: '前後に段落を持つ、```mermaid の `sequenceDiagram` のコードブロック'
         mock: なし
-        expected: 前後の段落が残り、コードブロックが `<!-- sequence -->` の範囲に替わる
+        expected: '前後の段落が残り、コードブロックが map の範囲（`<!-- map: … -->` 〜 `<!-- /map -->`）に替わる'
       - name: test_rewrite_text_when_tree
         case: 正常
         summary: ファイルツリー

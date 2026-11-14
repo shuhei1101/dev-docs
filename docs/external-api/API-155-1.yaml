@@ -95,7 +95,7 @@ endpoints:
   - name: GET /settings/sources
     method: GET
     path: /settings/sources
-    summary: 端末の設定のパス（`settingsPath`）と、`sources[]` の行ごとの `id`・`config`・`enabled`・`scope`・`outsideRead` と状態（`status`・`errors`・`configVersion`）を返す（IF-30）
+    summary: 端末の設定のパス（`settingsPath`）と、`sources[]` の行ごとの `id`・`config`・`enabled`・`scope`・`outsideRead` と状態（`status`・`errors`・`configVersion`）、端末の設定の内容のバージョン（`version`。ファイル全体の内容のハッシュ）を返す（IF-30）
     status_codes:
       - code: '200'
         condition: 返した
@@ -113,7 +113,7 @@ endpoints:
       - code: '400'
         condition: 本文の型の検証に通らない（`errors[].path` は `sources[{n}].enabled` のような行の位置。知らないキーも 400）
       - code: '409'
-        condition: '`expectedVersion` が今の端末の設定の内容のバージョンと違う'
+        condition: '`expectedVersion` が今の端末の設定の内容のバージョンと違う（今の内容のバージョンを `current` で返す）'
   - name: POST /settings/sources
     method: POST
     path: /settings/sources
