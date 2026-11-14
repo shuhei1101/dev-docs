@@ -281,7 +281,7 @@ functions:
       type: tuple[list[str], list[str]]
       description: 移さなかった行の ID（`kept`）と、ID を求められなかった行の `config`（`unresolved`）
     process: |-
-      1. `port.fetch()` で project-index の端末の設定を取得する。取得した行ごとの配信元の ID は、状態の `id`、無ければ行の `id`、どちらも無ければ手順 2 と同じく `config` の設定を重ねた `name` にする（読み直しの途中の `pending_reload` の行は `id` が `null` で返却される。取得し直しも同じ求め方）
+      1. `port.fetch()` で project-index の端末の設定を取得する。取得した行の `id` が `sources[{n}]` の書式のときは、`id` を省いた行として扱う（project-index は、配信していない `id` 省略の行の `id` に状態の ID の `sources[{n}]` を返却し、読み直しの途中の行では `null` を返却する）。取得した行ごとの配信元の ID は、手順 2 と同じく行の `id`、無ければ `config` の設定を重ねた `name` にする（状態の `id` は使用しない。取得し直しも同じ求め方）
          - `ProjectIndexUnreachableError` の場合、`ProjectIndexUnreachableMigrationError`（`unconfirmed` は `False`）を送出する
          - `ProjectIndexResponseError` の場合、ステータスと要約で `MigrationFailedError` を送出する
       2. `sources` の行ごとに、`config` を配列にした素の辞書にし、配信元の ID を求める。ID は `id`、無ければ `config` の各ファイルを YAML として読み、読めた辞書を上から順に重ねた `name`（読めないファイルは飛ばす）
@@ -289,7 +289,7 @@ functions:
          - 取得した行に同じ ID があり、内容が同じ行は移した行にする。内容は、既定値（`enabled` が `true`・`outside_read` が `true`・`scope` が空）と同じキーを除いた `config`・`enabled`・`scope`・`outside_read` で比べる
          - 同じ ID で内容が違う行は `sources` に残し、ID を `kept` に加える
          - それ以外の行は加える行にする
-      3. 加える行がある場合、取得した行と加える行をこの順に `id`・`config`・`enabled`・`scope`・`outsideRead` のキーだけにして並べ、`port.save(rows, view.version)` で保存する
+      3. 加える行がある場合、取得した行と加える行をこの順に `id`・`config`・`enabled`・`scope`・`outsideRead` のキーだけにして並べ（`id` を省いたと扱う行は `id` を送信しない）、`port.save(rows, view.version)` で保存する
          - `ProjectIndexUnreachableError` の場合、もう一度 `port.fetch()` で取得し、加える行が全て同じ ID・同じ内容であれば保存したとして続ける。無い場合は `unconfirmed` を `True`、取得し直しも `ProjectIndexUnreachableError` の場合は `False` にして `ProjectIndexUnreachableMigrationError` を送出する
          - `InvalidArgumentError`・`ProjectIndexRejectedError` の場合、`violations` の `path` が `sources[{n}]` で始まるものを保存した n 番目の行の配信元の ID に読み替え、`{ID}: {rule}` を並べて `MigrationFailedError` を送出する（それ以外の違反は `{path}: {rule}`）
          - `ProjectIndexResponseError` の場合、ステータスと要約で `MigrationFailedError` を送出する。409 は、取得した後に project-index の端末の設定が変わったためやり直す案内を添える
@@ -360,5 +360,11 @@ functions:
         condition: '`sources` に `id` を省き、`config` のファイルの `name` が notes の 1 行。偽物の 1 回目の取得が空の行を返却し、保存が `ProjectIndexUnreachableError` を送出し、2 回目の取得がその行を `id: null`・`status: pending_reload` で返却する'
         mock: 移す先の端末の設定の API（取得の応答を返却し、保存を記録するか例外を送出する偽物）・一時フォルダの配信元の設定
         expected: 例外を送出せず、`data` が `sources` を持たない
+      - name: test_export_sources_when_disabled_id_omitted
+        case: 正常
+        summary: 配信していない `id` 省略の行を `name` で照らす
+        condition: '`sources` に、`config` のファイルの `name` が notes で `id` を省いた行と sample の 2 行。偽物の取得が、同じ `config` で `enabled: false` の行を `id: sources[0]`・`status: disabled` で返却する'
+        mock: 移す先の端末の設定の API（取得の応答を返却し、保存を記録するか例外を送出する偽物）・一時フォルダの配信元の設定
+        expected: 保存が 1 回で、行の 1 つ目が `id` を持たず、2 つ目が sample。`kept` が `[notes]` で、`data` の `sources` が notes の行だけ
     callers:
       - MOD-155-119#functions[apply_migration]
