@@ -532,25 +532,12 @@ data_models:
         type: list[SourceState]
         access: 公開
         description: 行ごとの状態
-  - name: AddSourceResult
-    title: 配信元の行の追加の結果
-    container: integrations/project_index/types.py
-    usecase: 設定の移し替え
-    role: DTO
-    summary: '`POST /settings/sources` の結果'
-    description: '`@dataclass(frozen=True, slots=True, kw_only=True)`。'
-    properties:
-      - name: added
-        title: 追加したか
-        type: bool
+      - name: version
+        title: 内容のバージョン
+        type: str | None
         access: 公開
-        description: 201 なら `True`、409 なら `False`
-      - name: same
-        title: 内容が同じか
-        type: bool
-        access: 公開
-        default: 'False'
-        description: 409 のとき、project-index にある同じ id の行と内容が同じか
+        default: None
+        description: 端末の設定の内容のバージョン（応答の `version`）。照合つきの保存の `expected_version` に指定する
 functions:
   - name: parse_document
     title: 索引の文書の読み取り

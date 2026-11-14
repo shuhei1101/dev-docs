@@ -93,6 +93,27 @@ data_models:
         type: list[str]
         default: '[]'
         description: project-index に同じ id で内容の違う行があり、`sources` に残した行の ID
+      - name: unresolved
+        title: ID を求められなかった行
+        type: list[str]
+        default: '[]'
+        description: '`id` を省き、配信元の設定の `name` も求められずに `sources` に残した行の `config`（`, ` でつなぐ）'
+  - name: SourcesPort
+    title: 移す先の端末の設定の API
+    container: features/migrate/types.py
+    usecase: 設定の移し替え
+    role: DTO
+    summary: '`export_sources` の手順が呼ぶ project-index の端末の設定の取得と照合つきの保存'
+    description: '`dataclass(frozen=True)`。入口が project-indexの呼び出しを `asyncio.run` で包んで作る。'
+    properties:
+      - name: fetch
+        title: 取得
+        type: Callable[[], SettingsSourcesView]
+        description: 端末の設定の配信元の行の取得
+      - name: save
+        title: 照合つきの保存
+        type: Callable[[list[dict[str, Any]], str | None], None]
+        description: 行と内容のバージョンを受ける端末の設定の配信元の行の照合つきの保存
 classes:
   - name: MigrationError
     title: 移し替えの失敗
@@ -169,10 +190,10 @@ classes:
     container: features/migrate/types.py
     usecase: 設定の移し替え
     role: 例外
-    summary: '`export_sources` の手順で、project-index の端末の設定の API につながらないことを表す'
+    summary: '`export_sources` の手順で、project-index の端末の設定の API につながらない、または保存を確認できないことを表す'
     kind: クラス
     inherits: MigrationError
-    description: 対象のファイルには書かない（全ての手順を当ててから 1 回だけ書くため、元の内容のまま）。project-index に追加済みの行はそのまま残り、やり直したときは同じ id・同じ内容の行として追加済みに扱う。
+    description: 対象のファイルには書かない（全ての手順を当ててから 1 回だけ書くため、元の内容のまま）。メッセージは `project-index（{address}）に接続できませんでした。{reason}` と project-index を起動してから実行し直す案内で、`unconfirmed` のときは、保存が後から反映されうることと、やり直せば保存済みの行を移した行として扱うことを加える。
     properties:
       - name: address
         title: 接続先
@@ -190,6 +211,12 @@ classes:
         access: 公開
         default: EXIT_PROJECT_INDEX_UNREACHABLE
         description: '7'
+      - name: unconfirmed
+        title: 保存を確認できなかった
+        type: bool
+        access: 公開
+        default: 'False'
+        description: 保存の応答が制限時間を超え、取得し直しても移す行を確認できなかった
 constants:
   - name: MIGRATIONS_DIR
     title: 手順の置き場所

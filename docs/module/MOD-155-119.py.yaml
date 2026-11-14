@@ -138,12 +138,12 @@ functions:
         required: true
         passing: keyword
         description: '`--allow-destructive`'
-      - name: export_source
-        title: 配信元の行の書き出し
-        type: Callable[[Mapping[str, Any]], AddSourceResult] | None
+      - name: sources_port
+        title: 移す先の端末の設定の API
+        type: SourcesPort | None
         required: true
         passing: keyword
-        description: '`export_sources` の手順で 1 行ずつ呼ぶ。入口が project-indexの呼び出し.端末の設定の配信元の行の追加 を `asyncio.run` で包んで渡す。`--record` と `export_sources` の無い手順では `None`'
+        description: '`export_sources` の手順で sources の書き出しに指定する。入口が作る。`--record` と `export_sources` の無い手順では `None`'
       - name: project_index
         title: project-index の接続先
         type: str
@@ -158,16 +158,13 @@ functions:
         description: バックアップの名前に使う時刻
     returns:
       type: MigrationOutcome
-      description: バックアップのパスと、移さなかった行の ID
+      description: バックアップのパスと、移さなかった行の ID・ID を求められなかった行の `config`
     process: |-
       1. 手順に破壊的なものがあり `allow_destructive` が `False` の場合、`DestructiveStepBlockedError` を送出する
       2. ファイルを読み直して `data` と同じ内容かを比べ、ハッシュを控える（`content_hash`）
          - 違う場合、`MigrationFailedError` を送出する
-      3. 手順を順に当てる（手順の適用）。`export_sources` の手順では、`sources` の行ごとに `export_source` を呼ぶ
-         - `added` か `same` の行は `sources` から除き、それ以外（同じ id で内容の違う行）は残して ID を `kept` に加える
-         - `sources` が空になったら `sources` のキーを削除し、`project_index` が無ければ `project_index` を書き足す
-         - `ProjectIndexUnreachableError` の場合、`ProjectIndexUnreachableMigrationError` を送出する（ファイルには書かない）
-         - `ProjectIndexResponseError`・`ProjectIndexRejectedError` の場合、応答のステータスと要約で `MigrationFailedError` を送出する（ファイルには書かない）
+      3. 手順を順に当てる（手順の適用）。`export_sources` の手順では、sources の書き出しを `sources_port` で呼び、移さなかった行と ID を求められなかった行を受け取る
+         - sources の書き出しが送出した例外はそのまま送出する（ファイルには書かない）
       4. `version` を `target.current` にする
       5. 新しいスキーマで検証する（`validate_terminal_config`）
          - 違反がある場合、`MigrationFailedError` を送出する（ファイルには書かない）
@@ -187,11 +184,11 @@ functions:
         condition: 読んだ後に対象のファイルが変わった
         message: '`{ファイル}: 読み込んだ後に変わったため書き換えません`'
       - name: ProjectIndexUnreachableMigrationError
-        condition: '`export_sources` の手順で project-index につながらない・制限時間を超えた'
+        condition: '`export_sources` の手順で project-index につながらない・制限時間を超えて保存を確認できない（sources の書き出しが送出する）'
         message: '`project-index（{address}）に接続できませんでした。{reason}` と、project-index を起動してから実行し直す案内'
       - name: MigrationFailedError
-        condition: '`export_sources` の手順で project-index が 201・409 以外を返した'
-        message: '`project-index が {status} を返しました: {summary}`'
+        condition: '`export_sources` の手順で project-index が取得・保存を受け付けない（sources の書き出しが送出する）'
+        message: '`project-index が {status} を返しました: {summary}` と、受け付けなかった行ごとの `{ID}: {理由}`'
     unit_tests:
       - name: test_apply_migration
         case: 正常
@@ -229,24 +226,133 @@ functions:
       - name: test_apply_migration_when_export_sources
         case: 正常
         summary: sources を project-index へ移す
-        condition: '`version: "1"` で `sources` に sample・notes・extra の 3 行、`2` の手順に `export_sources`。偽物は sample を `added`、notes を `same`、extra を `added=False`・`same=False` で返す'
-        mock: 配信元の行の書き出し（id ごとの結果を返すか例外を送る偽物）
-        expected: '`sources` が extra の 1 行、`project_index` と `version: "2"` があり、`kept` が `[extra]`。バックアップが元の内容'
+        condition: '`version: "1"` で `sources` に sample の 1 行、`2` の手順に `export_sources`。偽物の取得が空の行を返却し、保存を受ける'
+        mock: 移す先の端末の設定の API（取得の応答を返却し、保存を記録するか例外を送出する偽物）
+        expected: '保存が 1 回。対象が `sources` を持たず、`project_index` と `version: "2"` がある。バックアップが元の内容'
       - name: test_apply_migration_when_export_unreachable
         case: 異常
         summary: 移す先につながらない
-        condition: 偽物が 2 行目で `ProjectIndexUnreachableError` を送る
-        mock: 配信元の行の書き出し（id ごとの結果を返すか例外を送る偽物）
+        condition: 偽物の取得が `ProjectIndexUnreachableError` を送出する
+        mock: 移す先の端末の設定の API（取得の応答を返却し、保存を記録するか例外を送出する偽物）
         expected: '`ProjectIndexUnreachableMigrationError`。対象もバックアップも書かない'
         exception: project-index につながらない
       - name: test_apply_migration_when_export_unexpected_status
         case: 異常
         summary: project-index の想定しない応答
-        condition: 偽物が `ProjectIndexResponseError(status_code=500)` を送る
-        mock: 配信元の行の書き出し（id ごとの結果を返すか例外を送る偽物）
+        condition: 偽物の保存が `ProjectIndexResponseError(status_code=500)` を送出する
+        mock: 移す先の端末の設定の API（取得の応答を返却し、保存を記録するか例外を送出する偽物）
         expected: '`MigrationFailedError` の本文に 500。対象は元の内容のまま'
         exception: project-index が 201・409 以外を返した
     callers:
       - MOD-155-174#functions[run_migrate]
     callees:
       - MOD-155-120#functions[apply_step]
+  - name: _export_sources
+    title: sources の書き出し
+    kind: 関数
+    container: features/migrate/service.py
+    usecase: 設定の移し替え
+    role: サービス
+    summary: '`sources` の行を project-index の端末の設定の今の行に加えて 1 回で保存し、移した行を `sources` から除く'
+    scope: internal
+    is_async: false
+    thread_safe: false
+    side_effects: project-index の端末の設定を書き換え、`data` を書き換える
+    args:
+      - name: data
+        title: 当てている端末の設定
+        type: CommentedMap
+        required: true
+        passing: positional
+        description: 移し替えの適用が手順を当てている内容
+      - name: port
+        title: 移す先の端末の設定の API
+        type: SourcesPort
+        required: true
+        passing: positional
+        description: 取得と照合つきの保存
+      - name: project_index
+        title: project-index の接続先
+        type: str
+        required: true
+        passing: positional
+        description: '`project_index` が無ければ書き足す値'
+    returns:
+      type: tuple[list[str], list[str]]
+      description: 移さなかった行の ID（`kept`）と、ID を求められなかった行の `config`（`unresolved`）
+    process: |-
+      1. `port.fetch()` で project-index の端末の設定を取得する。取得した行ごとの配信元の ID は、状態の `id`、無ければ行の `id` にする
+         - `ProjectIndexUnreachableError` の場合、`ProjectIndexUnreachableMigrationError`（`unconfirmed` は `False`）を送出する
+         - `ProjectIndexResponseError` の場合、ステータスと要約で `MigrationFailedError` を送出する
+      2. `sources` の行ごとに、`config` を配列にした素の辞書にし、配信元の ID を求める。ID は `id`、無ければ `config` の各ファイルを YAML として読み、読めた辞書を上から順に重ねた `name`（読めないファイルは飛ばす）
+         - ID を求められない行は `sources` に残し、`config` を `, ` でつないだ文字列を `unresolved` に加える
+         - 取得した行に同じ ID があり、内容が同じ行は移した行にする。内容は、既定値（`enabled` が `true`・`outside_read` が `true`・`scope` が空）と同じキーを除いた `config`・`enabled`・`scope`・`outside_read` で比べる
+         - 同じ ID で内容が違う行は `sources` に残し、ID を `kept` に加える
+         - それ以外の行は加える行にする
+      3. 加える行がある場合、取得した行と加える行をこの順に `id`・`config`・`enabled`・`scope`・`outsideRead` のキーだけにして並べ、`port.save(rows, view.version)` で保存する
+         - `ProjectIndexUnreachableError` の場合、もう一度 `port.fetch()` で取得し、加える行が全て同じ ID・同じ内容であれば保存したとして続ける。無い場合は `unconfirmed` を `True`、取得し直しも `ProjectIndexUnreachableError` の場合は `False` にして `ProjectIndexUnreachableMigrationError` を送出する
+         - `InvalidArgumentError`・`ProjectIndexRejectedError` の場合、`violations` の `path` が `sources[{n}]` で始まるものを保存した n 番目の行の配信元の ID に読み替え、`{ID}: {rule}` を並べて `MigrationFailedError` を送出する（それ以外の違反は `{path}: {rule}`）
+         - `ProjectIndexResponseError` の場合、ステータスと要約で `MigrationFailedError` を送出する。409 は、取得した後に project-index の端末の設定が変わったためやり直す案内を添える
+      4. 移した行（同じ内容の行と加えた行）を `sources` から除く。`sources` が空になったら `sources` のキーを削除し、`project_index` が無ければ `project_index` を書き足す
+    exceptions:
+      - name: ProjectIndexUnreachableMigrationError
+        condition: project-index につながらない、または保存が制限時間を超えて取得し直しても移す行が無い
+        message: '`project-index（{address}）に接続できませんでした。{reason}` と案内（`unconfirmed` のときは保存が後から反映されうること）'
+      - name: MigrationFailedError
+        condition: project-index が取得・保存を受け付けない（400・409・422 など）
+        message: '`project-index が {status} を返しました: {summary}` と、受け付けなかった行ごとの `{ID}: {理由}`'
+    unit_tests:
+      - name: test_export_sources
+        case: 正常
+        summary: 今の行に加えて 1 回で保存する
+        condition: '`sources` に sample・notes・extra の 3 行。偽物の取得が notes（同じ内容）と extra（`enabled: false` で内容が違う）の 2 行と `version: v1` を返却する'
+        mock: 移す先の端末の設定の API（取得の応答を返却し、保存を記録するか例外を送出する偽物）
+        expected: 保存が 1 回で、行が notes・extra・sample の順、各行のキーが `id`・`config`・`enabled`・`scope`・`outsideRead` だけ、内容のバージョンが `v1`。`data` の `sources` が extra の 1 行で `project_index` があり、`kept` が `[extra]`
+      - name: test_export_sources_when_id_omitted
+        case: 正常
+        summary: '`id` を省いた行を `name` で照らす'
+        condition: '`sources` に `id` を省いた 1 行で、`config` のファイルの `name` が notes。偽物の取得が notes（同じ `config`）を返却する'
+        mock: 移す先の端末の設定の API（取得の応答を返却し、保存を記録するか例外を送出する偽物）・一時フォルダの配信元の設定
+        expected: 保存を呼ばず、`data` が `sources` を持たない
+      - name: test_export_sources_when_name_unresolved
+        case: 正常
+        summary: ID を求められない行を残す
+        condition: '`sources` に `id` を省き、`config` が無いファイルを指す 1 行'
+        mock: 移す先の端末の設定の API（取得の応答を返却し、保存を記録するか例外を送出する偽物）
+        expected: 保存を呼ばず、`data` の `sources` がその 1 行のままで、`unresolved` がその `config`
+      - name: test_export_sources_when_save_timeout
+        case: 正常
+        summary: 保存を打ち切っても取得し直しで確認する
+        condition: '`sources` に sample の 1 行。偽物の保存が `ProjectIndexUnreachableError` を送出し、2 回目の取得が sample を返却する'
+        mock: 移す先の端末の設定の API（取得の応答を返却し、保存を記録するか例外を送出する偽物）
+        expected: 取得が 2 回。`data` が `sources` を持たない
+      - name: test_export_sources_when_save_unconfirmed
+        case: 異常
+        summary: 取得し直しても保存を確認できない
+        condition: 偽物の保存が `ProjectIndexUnreachableError` を送出し、2 回目の取得が sample を返却しない
+        mock: 移す先の端末の設定の API（取得の応答を返却し、保存を記録するか例外を送出する偽物）
+        expected: '`ProjectIndexUnreachableMigrationError` で `unconfirmed` が `True`'
+        exception: project-index につながらない、または保存が制限時間を超えて取得し直しても移す行が無い
+      - name: test_export_sources_when_fetch_unreachable
+        case: 異常
+        summary: 最初の取得がつながらない
+        condition: 偽物の取得が `ProjectIndexUnreachableError` を送出する
+        mock: 移す先の端末の設定の API（取得の応答を返却し、保存を記録するか例外を送出する偽物）
+        expected: '`ProjectIndexUnreachableMigrationError` で `unconfirmed` が `False`。保存を呼ばない'
+        exception: project-index につながらない、または保存が制限時間を超えて取得し直しても移す行が無い
+      - name: test_export_sources_when_rejected
+        case: 異常
+        summary: 受け付けなかった行を ID で出す
+        condition: '`sources` に sample・broken の 2 行。偽物の取得が extra の 1 行を返却し、保存が `violations` に `sources[2].enabled` を持つ `InvalidArgumentError` を送出する'
+        mock: 移す先の端末の設定の API（取得の応答を返却し、保存を記録するか例外を送出する偽物）
+        expected: '`MigrationFailedError` の本文に `broken: ` で始まる行がある。`data` は変わらない'
+        exception: project-index が取得・保存を受け付けない（400・409・422 など）
+      - name: test_export_sources_when_conflict
+        case: 異常
+        summary: 取得した後に project-index の端末の設定が変わった
+        condition: 偽物の保存が `ProjectIndexResponseError(status_code=409)` を送出する
+        mock: 移す先の端末の設定の API（取得の応答を返却し、保存を記録するか例外を送出する偽物）
+        expected: '`MigrationFailedError` の本文に 409 とやり直す案内がある'
+        exception: project-index が取得・保存を受け付けない（400・409・422 など）
+    callers:
+      - MOD-155-119#functions[apply_migration]
