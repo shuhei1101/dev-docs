@@ -200,7 +200,7 @@ def _source_id(row: Mapping[str, Any]) -> str | None:
         # 読めない設定のファイルは飛ばし、読めたファイルだけを重ねる（project-index と同じ）
         try:
             value = load_yaml(Path(str(item)).expanduser().read_text(encoding="utf-8"))
-        except (OSError, YamlLoadError):
+        except OSError, YamlLoadError:
             continue
         if isinstance(value, Mapping):
             merged.update(value)
