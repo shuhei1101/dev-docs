@@ -215,7 +215,9 @@ def _pi_row(row_id: str | None, config: str, **extra: Any) -> dict[str, Any]:
     }
 
 
-def _view(rows: list[dict[str, Any]], *, version: str = "v1", status: str = "serving") -> SettingsSourcesView:
+def _view(
+    rows: list[dict[str, Any]], *, version: str = "v1", status: str = "serving"
+) -> SettingsSourcesView:
     """取得の応答を作る。状態の `id` は行の `id` と同じにする。"""
     return SettingsSourcesView(
         settings_path="/pi/settings.yaml",
@@ -255,7 +257,9 @@ class FakePort:
         return SourcesPort(fetch=self.fetch, save=self.save)
 
 
-UNREACHABLE = ProjectIndexUnreachableError(address=PROJECT_INDEX, reason="45 秒以内に応答がありませんでした")
+UNREACHABLE = ProjectIndexUnreachableError(
+    address=PROJECT_INDEX, reason="45 秒以内に応答がありませんでした"
+)
 SEND_KEYS = {"id", "config", "enabled", "scope", "outsideRead"}
 
 
