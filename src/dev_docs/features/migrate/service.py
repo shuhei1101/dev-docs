@@ -239,17 +239,15 @@ def _content(row: Mapping[str, Any]) -> dict[str, Any]:
 
 
 def _sent_row(row: Mapping[str, Any]) -> dict[str, Any]:
-    """行を、保存で送信する `id`・`config`・`enabled`・`scope`・`outsideRead` のキーだけにする。"""
+    """行を、保存で送信する `id`・`config`・`enabled`・`scope`・`outside_read` のキーだけにする。"""
     sent: dict[str, Any] = {}
     own_id = _own_id(row)
     if own_id is not None:
         sent["id"] = own_id
     sent["config"] = list(row.get("config") or [])
-    for key in ("enabled", "scope"):
+    for key in ("enabled", "scope", "outside_read"):
         if key in row:
             sent[key] = row[key]
-    if "outside_read" in row:
-        sent["outsideRead"] = row["outside_read"]
     return sent
 
 

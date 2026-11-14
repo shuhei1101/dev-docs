@@ -25,6 +25,11 @@ STEP_LINE = re.compile(r"^\d+\. ")
 CODE_SPAN = re.compile(r"```.*?```|`[^`\n]*`", re.S)
 # 本文の `[名前](id:{文書の ID})`・`[名前](id:{文書の ID}#{項目のパス})`
 ID_LINK = re.compile(r"\[(?P<name>[^\]]*)\]\(id:(?P<id>[^)#\s]+)(?:#(?P<item>[^)]+))?\)")
+# Mermaid の `click {ノード} href "id:{文書の ID}#{項目のパス}"`・`click {ノード} "id:{文書の ID}#{項目のパス}"`
+MERMAID_CLICK = re.compile(
+    r'^(?P<head>[ \t]*click[ \t]+\S+[ \t]+(?:href[ \t]+)?)"id:(?P<id>[^"#\s]+)(?:#(?P<item>[^"]*))?"',
+    re.M,
+)
 # 見出しのアンカーで落とす記号（mdmark の見出しの `id` と同じ）
 ANCHOR_DROP = re.compile(r"[^\w\- ]")
 
@@ -96,12 +101,27 @@ def _link_ids(text: str, context: RenderContext) -> str:
     return ID_LINK.sub(replace, text)
 
 
+def _link_clicks(code: str, context: RenderContext) -> str:
+    """Mermaid の `click` の `id:` の参照を、同じ配信元の文書への相対パスにする（引き先に無ければそのまま）。"""
+
+    def replace(match: re.Match[str]) -> str:
+        target = _target(match.group("id"), match.group("item") or "", context)
+        return match.group(0) if target is None else f'{match.group("head")}"{target}"'
+
+    return MERMAID_CLICK.sub(replace, code)
+
+
 def rewrite_text(text: str, context: RenderContext, head: DiagramHead) -> str:
     """文字列の値の中の図・ファイルツリー・手順・Issue 番号・値の選択肢・id のリンクを mdmark の記法に書き換える。"""
     choices = _choices(text)
     if choices is not None:
         return choices
-    text = MERMAID_BLOCK.sub(lambda match: render_mermaid(match.group(1), head), text)
+    text = MERMAID_BLOCK.sub(
+        lambda match: render_mermaid(
+            match.group(1), head, lambda code: _link_clicks(code, context)
+        ),
+        text,
+    )
     text = PLAIN_BLOCK.sub(_tree, text)
     if _is_steps(text):
         text = f"<!-- steps -->\n\n{text}\n\n<!-- /steps -->"

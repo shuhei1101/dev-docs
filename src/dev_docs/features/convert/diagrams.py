@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import json
-from collections.abc import Mapping, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from typing import Any, Literal, cast
 
 from dev_docs.features.convert.flow_layout import layout_flow
@@ -361,12 +361,12 @@ def render_diagram(
     raise ValueError(f"x-diagram {kind} は描けません")
 
 
-def render_mermaid(code: str, head: DiagramHead) -> str:
+def render_mermaid(code: str, head: DiagramHead, link_clicks: Callable[[str], str]) -> str:
     """手で記載する Mermaid のコードを、読み取れれば mdmark の図の部品に、読み取れなければ Mermaid のまま組み立てる。"""
     graph = parse_mermaid(code)
-    # 読み取れない: 元のコードのまま
+    # 読み取れない: click の参照だけを書き換えた元のコード
     if graph is None:
-        return f"```mermaid\n{code}\n```"
+        return f"```mermaid\n{link_clicks(code)}\n```"
     # フローチャート: 配置してフロー図にする
     if isinstance(graph, FlowGraph):
         return _block("flow", layout_flow(graph, head))
