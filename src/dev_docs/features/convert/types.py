@@ -1,4 +1,4 @@
-"""変換の結果・図の中間データ・描画の文脈の型。"""
+"""変換の結果・図の見出し・描画の文脈の型。"""
 
 from __future__ import annotations
 
@@ -8,10 +8,6 @@ from typing import Literal
 
 type Shape = Literal["body", "table", "sections", "list", "diagram", "attributes"]
 type DiagramKind = Literal["flowchart", "dataflow", "architecture", "state", "er"]
-type NodeKind = Literal[
-    "llm", "dm", "script", "mcp", "data", "external", "start", "question", "action", "result"
-]
-type LineKind = Literal["flow", "read", "write", "reply", "loop"]
 
 
 @dataclass(frozen=True)
@@ -38,80 +34,11 @@ class Converted:
 
 @dataclass(frozen=True)
 class DiagramHead:
-    """mdmark の図の部品の定義に入れる題名・範囲・更新日。"""
+    """map の範囲の `title` にする題名と、図の元データの表が使用する範囲・更新日。"""
 
     title: str
     scope: str
     updated: str
-
-
-@dataclass(frozen=True)
-class FlowNode:
-    """配置の前のフロー図のノード。"""
-
-    id: str
-    name: str
-    kind: NodeKind
-    # ノードのツールチップに出す説明
-    hint: str | None = None
-
-
-@dataclass(frozen=True)
-class FlowEdge:
-    """配置の前のフロー図の線。"""
-
-    source: str
-    target: str
-    label: str | None = None
-    # 配置で戻る線になった線は `loop` で描く
-    line: LineKind = "flow"
-    # 線のラベルのツールチップに出す詳細
-    tip: str | None = None
-
-
-@dataclass(frozen=True)
-class FlowFrame:
-    """配置の前のフロー図の、中のノードを囲むフレーム。"""
-
-    label: str
-    nodes: frozenset[str]
-
-
-@dataclass(frozen=True)
-class FlowGraph:
-    """`x-diagram` の値か手で記載する Mermaid の `flowchart` から作る、配置の前のフロー図。"""
-
-    direction: Literal["TD", "LR"]
-    nodes: list[FlowNode]
-    edges: list[FlowEdge]
-    frame: FlowFrame | None = None
-
-
-@dataclass(frozen=True)
-class SequenceParticipant:
-    """シーケンス図の相手 1 つ。"""
-
-    id: str
-    name: str
-    kind: Literal["script", "external"]
-
-
-@dataclass(frozen=True)
-class SequenceMessage:
-    """シーケンス図のメッセージ 1 つ。"""
-
-    source: str
-    target: str
-    label: str
-    reply: bool
-
-
-@dataclass(frozen=True)
-class SequenceGraph:
-    """手で記載する Mermaid の `sequenceDiagram` から作るシーケンス図。"""
-
-    participants: list[SequenceParticipant]
-    messages: list[SequenceMessage]
 
 
 @dataclass(frozen=True)

@@ -7,7 +7,7 @@
 import type { SourceScope } from './sourceScope';
 
 /**
- * 設定画面が送る `sources[]` の 1 行（project-index の端末の設定の行の形）。
+ * 設定画面が送信する `sources[]` の 1 行（project-index の端末の設定の行の構造）。
  */
 export interface SourceEntry {
   config: string[];

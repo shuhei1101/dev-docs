@@ -31,6 +31,8 @@ type Props = {
   onOpenChange: (open: boolean) => void;
   sources: SettingsSourceRow[];
   index: number;
+  /** 端末の設定の取得の `version`（保存の `expectedVersion` にする） */
+  version?: string | null;
 };
 
 const folderOf = (file: string | undefined): string =>
@@ -42,6 +44,7 @@ export const SourceDeleteDialog = ({
   onOpenChange,
   sources,
   index,
+  version,
 }: Props) => {
   const save = useSaveSources();
   const queryClient = useQueryClient();
@@ -66,7 +69,7 @@ export const SourceDeleteDialog = ({
     setConflict(false);
     if (gone) return;
     try {
-      await save.mutateAsync(removeSource(sources, position));
+      await save.mutateAsync(removeSource(sources, position), version);
       onOpenChange(false);
     } catch (error) {
       if (error instanceof VersionConflictError) {

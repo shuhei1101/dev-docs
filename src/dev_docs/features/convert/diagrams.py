@@ -1,28 +1,17 @@
-"""`x-diagram` の値と手で記載する Mermaid の、mdmark の図の部品か Mermaid のコードブロックへの描画。"""
+"""`x-diagram` の値と手で記載する Mermaid の、mdmark の map の範囲か Mermaid のコードブロックへの描画。"""
 
 from __future__ import annotations
 
 import json
 from collections.abc import Mapping, Sequence
-from typing import Any, Literal, cast
+from typing import Any
 
-from dev_docs.features.convert.flow_layout import layout_flow
-from dev_docs.features.convert.mermaid import parse_mermaid
-from dev_docs.features.convert.types import (
-    DiagramHead,
-    DiagramKind,
-    FlowEdge,
-    FlowFrame,
-    FlowGraph,
-    FlowNode,
-    LineKind,
-    NodeKind,
-)
+from dev_docs.features.convert.types import DiagramHead, DiagramKind
 
-FLOW_KINDS = ("flowchart", "dataflow", "architecture", "state")
+FLOW_KINDS = ("flowchart", "dataflow", "architecture")
 LEFT_TO_RIGHT_KINDS = ("dataflow", "architecture")
-# `x-diagram` のノードの `kind` から mdmark のノードの種類
-NODE_KINDS: dict[str, NodeKind] = {
+# `x-diagram` のノードの `kind` から Mermaid のクラス（画面の map の設定の `map.kinds` のキー）
+NODE_KINDS = {
     "actor": "external",
     "external": "external",
     "process": "script",
@@ -35,32 +24,33 @@ NODE_KINDS: dict[str, NodeKind] = {
 }
 # `kind` が無いノードと、`NODE_KINDS` に無い `kind` のノードの種類（スキーマの既定）
 DEFAULT_NODE_KIND = "process"
-# 辺の `line` に記載できる線の種類
-LINE_KINDS: tuple[LineKind, ...] = ("flow", "read", "write", "reply", "loop")
+# 辺の `line` に記載できる線の種類。`flow` 以外は補足の `layout` の `line` に入れる
+LINE_KINDS = ("flow", "read", "write", "reply", "loop")
 # `line` が無い辺と、`LINE_KINDS` に無い `line` の辺の種類
-DEFAULT_LINE: LineKind = "flow"
-# 状態遷移の図の始点・終点のノードの ID と名前
-STATE_START = ("start", "開始")
-STATE_END = ("end", "終了")
+DEFAULT_LINE = "flow"
 # 遷移の `from` のこの値は、`representative` の状態から線を描く
 ALL_STATES = "全状態"
 # 遷移の `to` のこの値は、`representative` の状態へ線を描く
 PREVIOUS_STATE = "元の状態"
-# 関連の両端に記載できる多重度（mdmark の ER 図の部品の多重度と同じ値）
-ER_CARDINALITIES = ("1", "0..1", "1..n", "0..n")
-# 実体の列の `key` から、mdmark の ER 図の部品の列のマーカー
-ER_COLUMN_KEYS = {"PK": "pk", "FK": "fk"}
-# ER 図のテーブルを格子に配置する寸法（px）。`head`・`row`・`frame` は mdmark の ER 図の寸法と同じ値
-ER_LAYOUT = {
-    "per_row": 3,
-    "width": 240,
-    "gap_x": 96,
-    "gap_y": 48,
-    "margin": 24,
-    "head": 44,
-    "row": 26,
-    "frame": 4,
-}
+# 関連の `from_cardinality`・`to_cardinality` から Mermaid の関連の左側・右側の記号
+ER_FROM_MARKS = {"1": "||", "0..1": "|o", "1..n": "}|", "0..n": "}o"}
+ER_TO_MARKS = {"1": "||", "0..1": "o|", "1..n": "|{", "0..n": "o{"}
+# 実体の列の `key` のうち、Mermaid の列のキーにする値
+ER_COLUMN_KEYS = ("PK", "FK", "UK")
+# テンプレートのテーブルの列のフラグから Mermaid の列のキー
+ER_TABLE_KEYS = (("primary_key", "PK"), ("foreign_key", "FK"))
+# `type` を持たない列の Mermaid の型（Mermaid の列の行は型を省けない）
+ER_DEFAULT_TYPE = "any"
+# 手で記載する Mermaid のうち、map の範囲に入れる 1 行目の最初の単語
+MAP_MERMAID_KINDS = (
+    "flowchart",
+    "graph",
+    "sequenceDiagram",
+    "erDiagram",
+    "stateDiagram-v2",
+    "stateDiagram",
+)
+MAP_DATA_VERSION = 1
 
 
 def _items(value: Mapping[str, Any], key: str) -> list[Mapping[str, Any]]:
@@ -69,75 +59,117 @@ def _items(value: Mapping[str, Any], key: str) -> list[Mapping[str, Any]]:
     return [item for item in items if isinstance(item, Mapping)] if isinstance(items, list) else []
 
 
-def _block(marker: str, definition: Mapping[str, Any]) -> str:
-    """mdmark の図の部品の範囲に、定義の JSON のコードブロックを配置する。"""
-    code = json.dumps(definition, ensure_ascii=False, indent=2)
-    return f"<!-- {marker} -->\n\n```json\n{code}\n```\n\n<!-- /{marker} -->"
+def _quote(text: Any) -> str:
+    """Mermaid の文字列を閉じる `"` を `#quot;` にする。"""
+    return str(text).replace('"', "#quot;")
 
 
-def _node_kind(node: Mapping[str, Any]) -> NodeKind:
-    """ノードの `kind` から mdmark のノードの種類を決める。"""
+def _comment_safe(value: Any) -> Any:
+    """マーカーの JSON の文字の値とキーの `--` を `- -` にする（HTML のコメントを閉じないため）。"""
+    if isinstance(value, str):
+        # `---` は 1 回の置き換えで `- --` になるため、無くなるまで置き換える
+        while "--" in value:
+            value = value.replace("--", "- -")
+        return value
+    if isinstance(value, Mapping):
+        return {_comment_safe(key): _comment_safe(item) for key, item in value.items()}
+    if isinstance(value, list):
+        return [_comment_safe(item) for item in value]
+    return value
+
+
+def _marker(name: str, value: Mapping[str, Any]) -> str:
+    """`<!-- {name}: {JSON} -->` のマーカーを組み立てる。"""
+    return f"<!-- {name}: {json.dumps(_comment_safe(value), ensure_ascii=False)} -->"
+
+
+class _MapData:
+    """map の補足の `notes`・`layout`。"""
+
+    def __init__(self) -> None:
+        self.notes: dict[str, dict[str, str]] = {}
+        self.layout: dict[str, dict[str, str]] = {}
+
+    def note(self, key: str, text: Any) -> None:
+        """値があれば、`key` のツールチップに出す説明を入れる。"""
+        if text:
+            self.notes[key] = {"text": str(text)}
+
+    def marker(self) -> str | None:
+        """補足のマーカー（`notes`・`layout` がどちらも空なら `None`）。"""
+        if not self.notes and not self.layout:
+            return None
+        data: dict[str, Any] = {"version": MAP_DATA_VERSION}
+        if self.notes:
+            data["notes"] = self.notes
+        if self.layout:
+            data["layout"] = self.layout
+        return _marker("map-data", data)
+
+
+def _map_block(code: str, head: DiagramHead, data: _MapData | None = None) -> str:
+    """Mermaid のコードを map の範囲で囲み、補足があればコードブロックの後に配置する。"""
+    parts = [_marker("map", {"title": head.title}), f"```mermaid\n{code}\n```"]
+    extra = data.marker() if data is not None else None
+    if extra is not None:
+        parts.append(extra)
+    parts.append("<!-- /map -->")
+    return "\n\n".join(parts)
+
+
+def _node_class(node: Mapping[str, Any]) -> str:
+    """ノードの `kind` から Mermaid のクラスを決める。"""
     return NODE_KINDS.get(str(node.get("kind", DEFAULT_NODE_KIND)), NODE_KINDS[DEFAULT_NODE_KIND])
 
 
-def _line(edge: Mapping[str, Any]) -> LineKind:
-    """辺の `line` から線の種類を決める。"""
-    line = edge.get("line")
-    return cast("LineKind", line) if line in LINE_KINDS else DEFAULT_LINE
-
-
-def _text(value: Any) -> str | None:
-    """値があれば文字列にする。"""
-    return str(value) if value else None
-
-
-def _flow_graph(value: Mapping[str, Any], kind: DiagramKind) -> FlowGraph:
-    """flow 系の値を中間データにする（`clicks` は描かない）。"""
+def _flowchart(value: Mapping[str, Any], kind: DiagramKind) -> tuple[list[str], _MapData]:
+    """flow 系の値を `flowchart` の行と補足にする（`clicks` は描かない）。"""
     # 向き: 指定があればその値、無ければ図の種類の既定
-    direction: Literal["TD", "LR"] = (
-        cast("Literal['TD', 'LR']", value["direction"])
+    direction = (
+        value["direction"]
         if value.get("direction") in ("TD", "LR")
         else "LR"
         if kind in LEFT_TO_RIGHT_KINDS
         else "TD"
     )
-    nodes = [
-        FlowNode(
-            id=str(node["id"]),
-            name=str(node.get("label", node["id"])),
-            kind=_node_kind(node),
-            hint=_text(node.get("hint")),
-        )
-        for node in _items(value, "nodes")
-    ]
-    known = {node.id for node in nodes}
-    edges: list[FlowEdge] = []
+    data = _MapData()
+    # ノードの ID からノードの行（出た順）
+    node_lines: dict[str, str] = {}
+    for node in _items(value, "nodes"):
+        node_id = str(node["id"])
+        label = _quote(node.get("label", node_id))
+        node_lines[node_id] = f'{node_id}["{label}"]:::{_node_class(node)}'
+        data.note(node_id, node.get("hint"))
+    edge_lines: list[str] = []
     for edge in _items(value, "edges"):
         source, target = str(edge["from"]), str(edge["to"])
         # 宣言の無い端のノード: 名前を ID にして追加する
         for end in (source, target):
-            if end not in known:
-                nodes.append(FlowNode(id=end, name=end, kind=NODE_KINDS[DEFAULT_NODE_KIND]))
-                known.add(end)
-        edges.append(
-            FlowEdge(
-                source=source,
-                target=target,
-                label=_text(edge.get("label")),
-                line=_line(edge),
-                tip=_text(edge.get("tip")),
-            )
-        )
-    frame_value = value.get("frame")
-    frame = (
-        FlowFrame(
-            label=str(frame_value.get("label", "")),
-            nodes=frozenset(str(node_id) for node_id in frame_value.get("nodes") or []),
-        )
-        if isinstance(frame_value, Mapping)
-        else None
-    )
-    return FlowGraph(direction=direction, nodes=nodes, edges=edges, frame=frame)
+            if end not in node_lines:
+                node_lines[end] = f'{end}["{_quote(end)}"]:::{NODE_KINDS[DEFAULT_NODE_KIND]}'
+        label = edge.get("label")
+        arrow = f'-->|"{_quote(label)}"|' if label else "-->"
+        edge_lines.append(f"{source} {arrow} {target}")
+        edge_id = f"{source}->{target}"
+        data.note(edge_id, edge.get("tip"))
+        line = edge.get("line")
+        # `flow` 以外の知っている線の種類: 補足の `layout` に入れる（知らない値は `flow` として扱う）
+        if line in LINE_KINDS and line != DEFAULT_LINE:
+            data.layout[edge_id] = {"line": str(line)}
+    lines = [f"flowchart {direction}"]
+    frame = value.get("frame")
+    framed: list[str] = []
+    # 枠がある: 枠のノードの行を `subgraph` で囲む
+    if isinstance(frame, Mapping):
+        framed = [
+            str(node_id) for node_id in frame.get("nodes") or [] if str(node_id) in node_lines
+        ]
+        lines.append(f'  subgraph frame ["{_quote(frame.get("label", ""))}"]')
+        lines += [f"    {node_lines[node_id]}" for node_id in framed]
+        lines.append("  end")
+    lines += [f"  {line}" for node_id, line in node_lines.items() if node_id not in framed]
+    lines += [f"  {line}" for line in edge_lines]
+    return lines, data
 
 
 def _state_ends(transition: Mapping[str, Any]) -> tuple[str, str]:
@@ -160,8 +192,8 @@ def _state_label(transition: Mapping[str, Any]) -> str | None:
     return " ".join(part for part in parts if part) or None
 
 
-def _state_graph(value: Mapping[str, Any]) -> FlowGraph:
-    """状態遷移の値を、始点・終点と状態のノード、遷移の線にした中間データにする。"""
+def _state(value: Mapping[str, Any]) -> list[str]:
+    """状態遷移の値を `stateDiagram-v2` の行にする。"""
     transitions = _items(value, "transitions")
     names: list[str] = [str(item["name"]) for item in _items(value, "states")]
     # 遷移の端に出た `states` に無い状態も追加する
@@ -170,60 +202,22 @@ def _state_graph(value: Mapping[str, Any]) -> FlowGraph:
             if end and end not in names:
                 names.append(end)
     ids = {name: f"s{index + 1}" for index, name in enumerate(names)}
-    nodes = [FlowNode(id=STATE_START[0], name=STATE_START[1], kind="start")]
-    nodes += [FlowNode(id=ids[name], name=name, kind="action") for name in names]
-    edges: list[FlowEdge] = []
-    # 始点から初期状態へ
+    lines = ["stateDiagram-v2"]
+    lines += [f'  state "{_quote(name)}" as {ids[name]}' for name in names]
     initial = value.get("initial")
     if initial is not None and str(initial) in ids:
-        edges.append(FlowEdge(source=STATE_START[0], target=ids[str(initial)]))
+        lines.append(f"  [*] --> {ids[str(initial)]}")
     for transition in transitions:
         source, target = _state_ends(transition)
         # `representative` が無く端が決まらない遷移: 線を描かない（図の元データの表に残る）
         if source not in ids or target not in ids:
             continue
-        edges.append(
-            FlowEdge(
-                source=ids[source],
-                target=ids[target],
-                label=_state_label(transition),
-                # 元と先が同じ遷移は戻る線
-                line="loop" if source == target else DEFAULT_LINE,
-            )
-        )
+        label = _state_label(transition)
+        lines.append(f"  {ids[source]} --> {ids[target]}" + (f" : {label}" if label else ""))
     final = value.get("final")
-    finals = [str(name) for name in final if str(name) in ids] if isinstance(final, list) else []
-    # 終了状態があれば、終点を配置して各終了状態から線を描く
-    if finals:
-        nodes.append(FlowNode(id=STATE_END[0], name=STATE_END[1], kind="result"))
-        edges += [FlowEdge(source=ids[name], target=STATE_END[0]) for name in finals]
-    return FlowGraph(direction="TD", nodes=nodes, edges=edges)
-
-
-def _er_table_columns(table: Mapping[str, Any]) -> list[dict[str, Any]]:
-    """ER 図のテンプレートのテーブルの列を、ER 図の部品の列にする。"""
-    columns: list[dict[str, Any]] = []
-    for column in _items(table, "columns"):
-        item: dict[str, Any] = {"name": str(column["name"]), "type": str(column.get("type", ""))}
-        if column.get("title"):
-            item["desc"] = str(column["title"])
-        for key, flag in (("primary_key", "pk"), ("foreign_key", "fk"), ("not_null", "nn")):
-            if column.get(key):
-                item[flag] = True
-        columns.append(item)
-    return columns
-
-
-def _er_entity_columns(entity: Mapping[str, Any]) -> list[dict[str, Any]]:
-    """実体の `columns` を、ER 図の部品の列にする。"""
-    columns: list[dict[str, Any]] = []
-    for column in _items(entity, "columns"):
-        item: dict[str, Any] = {"name": str(column["name"]), "type": str(column.get("type", ""))}
-        flag = ER_COLUMN_KEYS.get(str(column.get("key")))
-        if flag is not None:
-            item[flag] = True
-        columns.append(item)
-    return columns
+    if isinstance(final, list):
+        lines += [f"  {ids[str(name)]} --> [*]" for name in final if str(name) in ids]
+    return lines
 
 
 def er_table_titles(tables: Sequence[Mapping[str, Any]]) -> dict[str, str]:
@@ -240,108 +234,87 @@ def er_table_titles(tables: Sequence[Mapping[str, Any]]) -> dict[str, str]:
     return titles
 
 
-class _ErModel:
-    """ER 図の実体ごとのテーブルと列の引き方。"""
-
-    def __init__(self, value: Mapping[str, Any], tables: Sequence[Mapping[str, Any]]) -> None:
-        self.by_title = {str(table.get("title")): table for table in tables}
-        self.entities = _items(value, "entities")
-
-    def table(self, entity: Mapping[str, Any]) -> Mapping[str, Any] | None:
-        """実体の `name` が `title` に該当するテーブルを返却する。"""
-        return self.by_title.get(str(entity.get("name")))
-
-    def columns(self, entity: Mapping[str, Any]) -> list[dict[str, Any]]:
-        """実体の列（`columns` を持たなければ該当するテーブルの列）を返却する。"""
-        if _items(entity, "columns"):
-            return _er_entity_columns(entity)
-        table = self.table(entity)
-        return _er_table_columns(table) if table is not None else []
-
-
-def _er_layout(tables: list[dict[str, Any]]) -> int:
-    """テーブルを格子に配置し、図の幅を返却する。"""
-    y = ER_LAYOUT["margin"]
-    for start in range(0, len(tables), ER_LAYOUT["per_row"]):
-        row = tables[start : start + ER_LAYOUT["per_row"]]
-        for index, table in enumerate(row):
-            table["x"] = ER_LAYOUT["margin"] + index * (ER_LAYOUT["width"] + ER_LAYOUT["gap_x"])
-            table["y"] = y
-            table["w"] = ER_LAYOUT["width"]
-        tallest = max(
-            ER_LAYOUT["head"] + len(table["columns"]) * ER_LAYOUT["row"] + ER_LAYOUT["frame"]
-            for table in row
-        )
-        y += tallest + ER_LAYOUT["gap_y"]
-    per_row = min(len(tables), ER_LAYOUT["per_row"])
-    return (
-        ER_LAYOUT["margin"] * 2
-        + per_row * ER_LAYOUT["width"]
-        + max(per_row - 1, 0) * ER_LAYOUT["gap_x"]
-    )
+def _er_columns(
+    entity: Mapping[str, Any], by_title: Mapping[str, Mapping[str, Any]]
+) -> list[dict[str, str]]:
+    """実体の列（`columns` を持たなければ論理名が実体の名前のテーブルの列）を、型・名前・キー・説明にする。"""
+    # 実体が列を持つ: その列の `key` を使用する
+    if _items(entity, "columns"):
+        columns: list[dict[str, str]] = []
+        for column in _items(entity, "columns"):
+            key = str(column.get("key", ""))
+            columns.append(
+                {
+                    "type": str(column.get("type") or ER_DEFAULT_TYPE),
+                    "name": str(column["name"]),
+                    "key": key if key in ER_COLUMN_KEYS else "",
+                    "note": str(column.get("comment") or ""),
+                }
+            )
+        return columns
+    # 列を持たない: テンプレートのテーブルの列のフラグをキーにする
+    table = by_title.get(str(entity.get("name")))
+    return [
+        {
+            "type": str(column.get("type") or ER_DEFAULT_TYPE),
+            "name": str(column["name"]),
+            "key": ", ".join(mark for flag, mark in ER_TABLE_KEYS if column.get(flag)),
+            "note": str(column.get("comment") or column.get("title") or ""),
+        }
+        for column in (_items(table, "columns") if table is not None else [])
+    ]
 
 
-def _er_relation(
-    relation: Mapping[str, Any], columns: Mapping[str, set[str]]
-) -> dict[str, Any] | None:
-    """関連を ER 図の部品の関係にする（両端の列か多重度が図に出せなければ `None`）。"""
-    source, target = str(relation["from"]), str(relation["to"])
-    from_column, to_column = relation.get("from_column"), relation.get("to_column")
-    from_card, to_card = relation.get("from_cardinality"), relation.get("to_cardinality")
-    # 無い列・知らない多重度を指す関係は mdmark の図全体を警告にするため出さない
-    if (
-        from_column not in columns.get(source, set())
-        or to_column not in columns.get(target, set())
-        or from_card not in ER_CARDINALITIES
-        or to_card not in ER_CARDINALITIES
-    ):
-        return None
-    item: dict[str, Any] = {
-        "from": source,
-        "fromColumn": str(from_column),
-        "fromCard": str(from_card),
-        "to": target,
-        "toColumn": str(to_column),
-        "toCard": str(to_card),
-    }
-    if relation.get("label"):
-        item["label"] = str(relation["label"])
-    return item
+def _er_relations(
+    value: Mapping[str, Any], entities: Mapping[str, list[dict[str, str]]]
+) -> tuple[list[str], dict[tuple[str, str], str]]:
+    """描ける関連の行と、先の列に付ける `参照:` のコメントを組み立てる。"""
+    lines: list[str] = []
+    references: dict[tuple[str, str], str] = {}
+    for relation in _items(value, "relations"):
+        source, target = str(relation.get("from")), str(relation.get("to"))
+        from_column, to_column = relation.get("from_column"), relation.get("to_column")
+        from_mark = ER_FROM_MARKS.get(str(relation.get("from_cardinality")))
+        to_mark = ER_TO_MARKS.get(str(relation.get("to_cardinality")))
+        # 無い列・知らない多重度を指す関連: 描かない（図の元データの表に残る）
+        if (
+            from_mark is None
+            or to_mark is None
+            or from_column not in {column["name"] for column in entities.get(source, [])}
+            or to_column not in {column["name"] for column in entities.get(target, [])}
+        ):
+            continue
+        label = _quote(relation.get("label", ""))
+        lines.append(f'  {source} {from_mark}--{to_mark} {target} : "{label}"')
+        # mdmark は関連の端の列を、このコメントを持つ FK の列から選ぶ
+        references[(target, str(to_column))] = f"参照: {source}.{from_column}"
+    return lines, references
 
 
 def _er(
-    value: Mapping[str, Any], head: DiagramHead, tables: Sequence[Mapping[str, Any]]
-) -> dict[str, Any]:
-    """mdmark の ER 図の部品の定義を組み立てる。"""
-    model = _ErModel(value, tables)
-    nodes: list[dict[str, Any]] = []
-    for entity in model.entities:
-        name = str(entity["name"])
-        node: dict[str, Any] = {"id": name, "name": name, "label": name}
-        table = model.table(entity)
-        # テンプレートのテーブルに該当する: 物理名と概要を使用する
-        if table is not None:
-            node["name"] = str(table.get("name", name))
-            if table.get("summary"):
-                node["desc"] = str(table["summary"])
-        node["columns"] = model.columns(entity)
-        nodes.append(node)
-    # 実体ごとの列の名前（関係の両端の列が実体にあるかを確認する）
-    columns = {node["id"]: {str(column["name"]) for column in node["columns"]} for node in nodes}
-    relations = [
-        item
-        for item in (_er_relation(relation, columns) for relation in _items(value, "relations"))
-        if item is not None
-    ]
-    width = _er_layout(nodes)
-    return {
-        "title": head.title,
-        "scope": head.scope,
-        "updated": head.updated,
-        "width": width,
-        "tables": nodes,
-        "relations": relations,
+    value: Mapping[str, Any], tables: Sequence[Mapping[str, Any]]
+) -> tuple[list[str], _MapData]:
+    """ER 図の値を `erDiagram` の行と補足にする。"""
+    by_title = {str(table.get("title")): table for table in tables}
+    entities = {
+        str(entity["name"]): _er_columns(entity, by_title) for entity in _items(value, "entities")
     }
+    relation_lines, references = _er_relations(value, entities)
+    data = _MapData()
+    lines = ["erDiagram"]
+    for name, columns in entities.items():
+        lines.append(f"  {name} {{")
+        for column in columns:
+            row = f"{column['type']} {column['name']}"
+            if column["key"]:
+                row += f" {column['key']}"
+            reference = references.get((name, column["name"]))
+            if reference is not None:
+                row += f' "{_quote(reference)}"'
+            lines.append(f"    {row}")
+            data.note(f"{name}.{column['name']}", column["note"])
+        lines.append("  }")
+    return lines + relation_lines, data
 
 
 def render_diagram(
@@ -351,44 +324,22 @@ def render_diagram(
     *,
     tables: Sequence[Mapping[str, Any]] = (),
 ) -> str:
-    """`x-diagram` の種類で、値から本文に配置する図のブロックを組み立てる。"""
-    if kind == "state":
-        return _block("flow", layout_flow(_state_graph(value), head))
+    """`x-diagram` の種類で、値から本文に配置する map の範囲を組み立てる。"""
     if kind in FLOW_KINDS:
-        return _block("flow", layout_flow(_flow_graph(value, kind), head))
+        lines, data = _flowchart(value, kind)
+        return _map_block("\n".join(lines), head, data)
+    if kind == "state":
+        return _map_block("\n".join(_state(value)), head)
     if kind == "er":
-        return _block("er", _er(value, head, tables))
+        lines, data = _er(value, tables)
+        return _map_block("\n".join(lines), head, data)
     raise ValueError(f"x-diagram {kind} は描けません")
 
 
 def render_mermaid(code: str, head: DiagramHead) -> str:
-    """手で記載する Mermaid のコードを、読み取れれば mdmark の図の部品に、読み取れなければ Mermaid のまま組み立てる。"""
-    graph = parse_mermaid(code)
-    # 読み取れない: 元のコードのまま
-    if graph is None:
-        return f"```mermaid\n{code}\n```"
-    # フローチャート: 配置してフロー図にする
-    if isinstance(graph, FlowGraph):
-        return _block("flow", layout_flow(graph, head))
-    # シーケンス図: 相手とメッセージの定義にする
-    steps: list[dict[str, Any]] = []
-    for message in graph.messages:
-        step: dict[str, Any] = {
-            "from": message.source,
-            "to": message.target,
-            "label": message.label,
-        }
-        if message.reply:
-            step["reply"] = True
-        steps.append(step)
-    definition = {
-        "title": head.title,
-        "scope": head.scope,
-        "updated": head.updated,
-        "participants": [
-            {"id": participant.id, "kind": participant.kind, "name": participant.name}
-            for participant in graph.participants
-        ],
-        "steps": steps,
-    }
-    return _block("sequence", definition)
+    """手で記載する Mermaid のコードを、map で描ける種類なら map の範囲に、それ以外は Mermaid のまま組み立てる。"""
+    first = next((line.split()[0] for line in code.splitlines() if line.strip()), "")
+    # map で描ける種類: 元のコードのまま map の範囲で囲む
+    if first in MAP_MERMAID_KINDS:
+        return _map_block(code, head)
+    return f"```mermaid\n{code}\n```"

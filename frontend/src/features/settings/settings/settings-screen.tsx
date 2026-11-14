@@ -172,6 +172,7 @@ export const SettingsScreen = () => {
           onOpenChange={(open) => !open && setDialog(null)}
           sources={sources}
           index={dialog.index}
+          version={query.data?.version}
         />
       )}
       {sources && dialog?.kind === "remove" && (
@@ -180,6 +181,7 @@ export const SettingsScreen = () => {
           onOpenChange={(open) => !open && setDialog(null)}
           sources={sources}
           index={dialog.index}
+          version={query.data?.version}
         />
       )}
       <ShortcutDialog

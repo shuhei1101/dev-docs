@@ -65,7 +65,7 @@ ITEM_HEADING_LEVEL = 2
 MAX_HEADING_LEVEL = 6
 
 # npx で呼ぶ mdmark のタグ（画面が参照する mdmark の採用バージョンと同じ）
-MDMARK_TAG = "v0.10.0"
+MDMARK_TAG = "v0.13.0"
 
 # 出力のフォルダに配置する、Pages のトップになる HTML
 OUTPUT_HTML = "index.html"

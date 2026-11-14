@@ -117,6 +117,15 @@ class RestartInProgressError(DevDocsError):
 
 
 @dataclass(kw_only=True)
+class SettingsVersionConflictError(DevDocsError):
+    """端末の設定の内容のバージョンが、取得したときから変わっていること。"""
+
+    status: ClassVar[int] = 409
+    # project-index の今の内容のバージョン
+    current: str = ""
+
+
+@dataclass(kw_only=True)
 class UpdateFailedError(DevDocsError):
     """更新のコマンドの失敗。"""
 

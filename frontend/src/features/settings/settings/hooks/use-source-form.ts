@@ -26,10 +26,17 @@ type Options = {
   /** 開いたときの行の位置（追加は null） */
   index: number | null;
   onSaved: () => void;
+  /** 端末の設定の取得の `version`（保存の `expectedVersion` にする） */
+  version?: string | null;
 };
 
 /** 配信元のダイアログのフォームの状態と保存 */
-export const useSourceForm = ({ sources, index, onSaved }: Options) => {
+export const useSourceForm = ({
+  sources,
+  index,
+  onSaved,
+  version,
+}: Options) => {
   // 一覧を取得し直して行の位置がずれても同じ配信元を指すよう、開いたときの行を値で持つ
   const [initial] = useState(() => {
     const source = index === null ? null : sources[index];
@@ -66,7 +73,7 @@ export const useSourceForm = ({ sources, index, onSaved }: Options) => {
     setConflict(false);
     if (gone) return;
     try {
-      await save.mutateAsync(applySource(sources, values, position));
+      await save.mutateAsync(applySource(sources, values, position), version);
       onSaved();
     } catch (error) {
       if (error instanceof VersionConflictError) {

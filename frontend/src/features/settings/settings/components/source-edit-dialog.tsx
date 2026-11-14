@@ -29,6 +29,8 @@ type Props = {
   onOpenChange: (open: boolean) => void;
   sources: SettingsSourceRow[];
   index: number | null;
+  /** 端末の設定の取得の `version`（`useSourceForm` へ渡す） */
+  version?: string | null;
 };
 
 type FieldProps = {
@@ -123,12 +125,14 @@ export const SourceEditDialog = ({
   onOpenChange,
   sources,
   index,
+  version,
 }: Props) => {
   const { form, errors, submit, summary, conflict, gone, saving } =
     useSourceForm({
       sources,
       index,
       onSaved: () => onOpenChange(false),
+      version,
     });
   const editing = index !== null;
   // 一覧を取得し直しても見出しの配信元が変わらないよう、開いたときの名前を持つ
