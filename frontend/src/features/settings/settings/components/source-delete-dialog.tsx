@@ -58,7 +58,7 @@ export const SourceDeleteDialog = ({
     };
   });
   const position = target.key === null ? -1 : findSource(sources, target.key);
-  // 削除する配信元がほかのプロセスに削除されたか
+  // 削除する配信元が他のプロセスに削除されたか
   const gone = position === -1;
 
   const remove = async () => {
@@ -99,15 +99,15 @@ export const SourceDeleteDialog = ({
           <Alert role="alert">
             <AlertTitle>配信元が削除されたため削除できませんでした</AlertTitle>
             <AlertDescription>
-              この画面を開いた後に、ほかのプロセスがこの配信元を端末の設定から削除しました。一覧を確認してください。
+              この画面を開いた後に、他のプロセスがこの配信元を端末の設定から削除しました。一覧を確認してください。
             </AlertDescription>
           </Alert>
         )}
         {conflict && !gone && (
           <Alert role="alert">
-            <AlertTitle>ほかの変更があったため削除できませんでした</AlertTitle>
+            <AlertTitle>他の変更があったため削除できませんでした</AlertTitle>
             <AlertDescription>
-              この画面を開いた後に、ほかのプロセスが端末の設定を変更しました。一覧を最新の内容にしました。内容を確認し、もう一度削除してください。
+              この画面を開いた後に、他のプロセスが端末の設定を変更しました。一覧を最新の内容にしました。内容を確認し、もう一度削除してください。
             </AlertDescription>
           </Alert>
         )}

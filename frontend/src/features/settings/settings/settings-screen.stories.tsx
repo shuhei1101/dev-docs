@@ -58,7 +58,7 @@ const conflict = () =>
       type: "about:blank",
       title: "Conflict",
       status: 409,
-      detail: "端末の設定はほかの書き換えで変わっています",
+      detail: "端末の設定は他の書き換えで変わっています",
       nextSteps: [],
       current: "b2c3d4",
     },
@@ -144,7 +144,7 @@ export const SaveConflict: Story = {
     const body = within(canvasElement.ownerDocument.body);
     await userEvent.click(await body.findByRole("button", { name: "保存" }));
     await expect(
-      await body.findByText("ほかの変更があったため保存できませんでした"),
+      await body.findByText("他の変更があったため保存できませんでした"),
     ).toBeInTheDocument();
   },
 };
@@ -161,12 +161,12 @@ export const DeleteConflict: Story = {
     const body = within(canvasElement.ownerDocument.body);
     await userEvent.click(await body.findByRole("button", { name: "削除" }));
     await expect(
-      await body.findByText(/ほかの変更があったため削除できませんでした/),
+      await body.findByText(/他の変更があったため削除できませんでした/),
     ).toBeInTheDocument();
   },
 };
 
-// 保存の 409 の後の取得し直しでは、private-notes がほかのプロセスに削除された一覧を返す
+// 保存の 409 の後の取得し直しでは、private-notes が他のプロセスに削除された一覧を返す
 const removedAfterConflict = () => {
   let rejected = false;
   return [

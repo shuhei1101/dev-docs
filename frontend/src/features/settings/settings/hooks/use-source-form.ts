@@ -54,9 +54,9 @@ export const useSourceForm = ({ sources, index, onSaved }: Options) => {
   const [summary, setSummary] = useState<{ path: string; message: string }[]>(
     [],
   );
-  // 開いた後にほかのプロセスが端末の設定を変更して、保存を断られたか
+  // 開いた後に他のプロセスが端末の設定を変更して、保存を断られたか
   const [conflict, setConflict] = useState(false);
-  // 編集していた配信元がほかのプロセスに削除されたか
+  // 編集していた配信元が他のプロセスに削除されたか
   const gone = position === -1;
   const save = useSaveSources();
   const queryClient = useQueryClient();
