@@ -1,0 +1,1 @@
+# Mermaid の図の click の id: の参照をリンクへ解き、比較中の右側の目次に変更のマーカーを出し、migrate が outside_read で送信して project-index のサーバーのバージョンを確かめる
