@@ -1,0 +1,17 @@
+docs:
+  - page: docs/library/LIB-155-9.yaml
+    new: false
+    change: 'used_in から実在しない src/dev_docs/integrations/mdmark.py を削除する。mdmark check --text の status: planned を、結合テスト tests/integration/server/test_get_document.py が使用している状態の値へ変える'
+    status: todo
+  - page: docs/library/LIB-155-2.yaml
+    new: false
+    change: used_in の実在しない frontend/eslint.config.js を、実在する eslint.config.js（リポジトリの直下）へ直す
+    status: todo
+  - page: docs/library/LIB-155-18.yaml
+    new: false
+    change: used_in の実在しない frontend/src/components/ui/ を、実在する frontend/src/shared/components/ui/ へ直す
+    status: todo
+scope_out:
+  - item: LIB-155-9.yaml の used_in への scripts/build_pages.py と、catalogs への mdmark build の追加
+    reason: 実在しないパスの削除・修正ではなく、使用箇所の記載漏れで、今回の要望に含まれない
+    plan: '#207'
