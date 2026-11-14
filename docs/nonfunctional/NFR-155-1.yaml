@@ -128,6 +128,6 @@ requirements:
     value: '45'
     unit: 秒
     rationale: 文書の取得は project-index が `converters[]` のスクリプトを動かす間待つため、下流の制限時間 30 秒に 50% を乗せて切り上げた（規約『資源の値の決め方』の入れ子の待ち）。project-index のスクリプトの制限時間を変えたら合わせて決め直す
-    overflow: 打ち切った要求は、project-index につながらないときと同じ 503 と理由を返す
+    overflow: 打ち切った要求は、project-index につながらないときと同じ 503 と理由を返す。`dev-docs migrate` が端末の設定の保存を打ち切ったときは、端末の設定を取得し直して保存を確認する（project-index は保存してから配信元の読み直しを終えるまで応答しないため、応答はこの制限時間を超えうる）
     status: planned
 lead: 外部の制約から逆算した dev-docs の決定値。
