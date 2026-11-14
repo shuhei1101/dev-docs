@@ -327,7 +327,7 @@ test.describe("文書の一覧", () => {
 });
 
 test.describe("文書の変化のマーカー", () => {
-  // base があるとき、追加・変更・削除をアイコンで出し、削除の page にストライクスルーを付ける（正常系）
+  // base があるとき、追加・変更・削除をアイコンで出し、削除の page に取り消し線を付ける（正常系）
   test("change_markers", async ({ page }) => {
     await openDoc(page, "/sample/docs/doc-1?base=7c0aa11", { document: withDiff });
     const list = page.getByRole("navigation", { name: "文書の一覧" });
