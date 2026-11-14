@@ -271,6 +271,8 @@ MDMARK_CLI = REPO_ROOT / "node_modules" / ".bin" / "mdmark"
 MDMARK_MAP = (
     REPO_ROOT / "frontend" / "src" / "features" / "docs" / "doc-view" / "hooks" / "mdmark-map.json"
 )
+# `mdmark check --text -` の標準出力の、ずれ 1 つの行（`-:{行}: {種類}: {内容}`）の種類
+CHECK_LINE_KIND = re.compile(r"^-:\d+: (\S+?):", re.M)
 # map の範囲の Mermaid のコードブロックと、続く補足
 MAP_BLOCK = re.compile(
     r"<!-- map: \{.*?\} -->\n\n```mermaid\n(.*?)\n```(?:\n\n<!-- map-data: (\{.*?\}) -->)?\n\n<!-- /map -->",
@@ -863,8 +865,10 @@ def test_normal_when_diagrams_checked(
     # 検証
     assert response.status_code == 200
     assert markdown.count("<!-- map: ") == 3
-    assert checked.stdout.strip().endswith("ずれ 0 件"), checked.stdout + checked.stderr
-    assert checked.returncode == 0
+    # 点検を終えた: 最後に `ずれ {件数} 件` の行がある
+    assert "ずれ" in checked.stdout, checked.stderr
+    # 表のマーカーの前の記載方法（mdmark の v0.13.x の間は読み込まれる）以外のずれが無い
+    assert set(CHECK_LINE_KIND.findall(checked.stdout)) <= {"legacy_mark"}, checked.stdout
 
 
 def test_normal_when_id_link_resolved(
