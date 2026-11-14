@@ -1,0 +1,1 @@
+# 設計書 docs/module/MOD-192-1.py.yaml（build_pages.py のモジュール設計書）の残りの文言を、AI slop の単語の対応表に合わせて修正する
