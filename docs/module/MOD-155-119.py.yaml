@@ -281,7 +281,7 @@ functions:
       type: tuple[list[str], list[str]]
       description: 移さなかった行の ID（`kept`）と、ID を求められなかった行の `config`（`unresolved`）
     process: |-
-      1. `port.fetch()` で project-index の端末の設定を取得する。取得した行ごとの配信元の ID は、状態の `id`、無ければ行の `id` にする
+      1. `port.fetch()` で project-index の端末の設定を取得する。取得した行ごとの配信元の ID は、状態の `id`、無ければ行の `id`、どちらも無ければ手順 2 と同じく `config` の設定を重ねた `name` にする（読み直しの途中の `pending_reload` の行は `id` が `null` で返却される。取得し直しも同じ求め方）
          - `ProjectIndexUnreachableError` の場合、`ProjectIndexUnreachableMigrationError`（`unconfirmed` は `False`）を送出する
          - `ProjectIndexResponseError` の場合、ステータスと要約で `MigrationFailedError` を送出する
       2. `sources` の行ごとに、`config` を配列にした素の辞書にし、配信元の ID を求める。ID は `id`、無ければ `config` の各ファイルを YAML として読み、読めた辞書を上から順に重ねた `name`（読めないファイルは飛ばす）
@@ -354,5 +354,11 @@ functions:
         mock: 移す先の端末の設定の API（取得の応答を返却し、保存を記録するか例外を送出する偽物）
         expected: '`MigrationFailedError` の本文に 409 とやり直す案内がある'
         exception: project-index が取得・保存を受け付けない（400・409・422 など）
+      - name: test_export_sources_when_save_timeout_with_id_omitted
+        case: 正常
+        summary: 読み直しの途中でも `id` を省いた行の保存を確認する
+        condition: '`sources` に `id` を省き、`config` のファイルの `name` が notes の 1 行。偽物の 1 回目の取得が空の行を返却し、保存が `ProjectIndexUnreachableError` を送出し、2 回目の取得がその行を `id: null`・`status: pending_reload` で返却する'
+        mock: 移す先の端末の設定の API（取得の応答を返却し、保存を記録するか例外を送出する偽物）・一時フォルダの配信元の設定
+        expected: 例外を送出せず、`data` が `sources` を持たない
     callers:
       - MOD-155-119#functions[apply_migration]
