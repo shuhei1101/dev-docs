@@ -121,6 +121,8 @@ scenarios:
         UI->>API: 文書の取得（文書 1・比較元）
         API-->>UI: 比較元の文書 1
         UI-->>U: doc-view（差分の案内・変更のマーカー・本文の強調）
+        U->>UI: 右端の目次の線を指す
+        UI-->>U: 変わったセクションに変更のマーカーを出した目次
         U->>UI: 差分の強調を解除する
         UI-->>U: doc-view（強調の無い本文）
       ```
@@ -128,6 +130,7 @@ scenarios:
       - 差分の案内に比較元と比較先の commit が出て、どちらもその場で選び直せる
       - サイドバーの文書 3 に追加、文書 1 に変更、文書 4 に削除のマーカーが出て、文書 2 にはマーカーが出ない
       - 本文の 2 つ目の見出しの下の変わった箇所が強調され、1 つ目の見出しの下は強調されない
+      - 右側の目次で、2 つ目の見出しの項目に変更のマーカーが出て、1 つ目の見出しの項目には出ない
       - 強調を解除すると、サイドバーのマーカーと本文の強調が消え、比較先の文書 1 が出る
       - URL に比較元と比較先が入り、その URL を開き直しても同じ差分が出る
     test: test_normal_when_diff_shown
@@ -689,6 +692,36 @@ scenarios:
       - plain の文書の `D-1` は、リンクにならず ID の文字で出て、他の本文は描かれる
       - '`decisions` 以外の文字列の並びの出し方は変わらない'
     test: test_normal_when_decision_link_opened
+  - name: 正常シナリオ（図のノードから文書へ移る）
+    setup:
+      - name: Mock
+        description: なし（実環境で実行）
+      - name: クラス図の文書
+        description: sample の Markdown の文書 6。本文に、手で記載した Mermaid のクラス図（`classDiagram`）を配置する
+        notes: ノード A に `click A href "id:{文書 2 の ID}#{文書 2 の項目のパス}"`、ノード B に `href` を持たない `click B "id:{文書 2 の ID}#{文書 2 の項目のパス}"`、ノード C にどの文書の ID にも該当しない `click C href "id:NO-SUCH-1#"`
+      - name: dev-docs
+        description: 正常シナリオと同じ sample を配信している dev-docs
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        actor U as 利用者
+        participant UI as dev-docs の画面
+        participant API as 画面の API
+
+        U->>UI: 文書 6 を開く
+        UI->>API: 文書の取得（文書 6）
+        API-->>UI: click の id: の参照を文書のページへ解いた Markdown
+        UI-->>U: doc-view（クラス図）
+        U->>UI: クラス図のノード A を押す
+        UI->>API: 文書の取得（文書 2）
+        UI-->>U: doc-view（文書 2 の参照した項目）
+      ```
+    expected:
+      - 文書 6 の本文にクラス図が図として出る
+      - ノード A を押すと、URL が文書 2 を指すものに変わり、文書 2 の参照した項目の見出しが出る
+      - 文書 6 に戻ってノード B を押しても、ノード A と同じく文書 2 の参照した項目の見出しが出る
+      - ノード C を押しても、画面は文書 6 のまま移らない
+    test: test_normal_when_diagram_node_clicked
 lead: 利用者がブラウザで配信元の文書の画面を開き、タブ・サイドバー・検索・リビジョンの切り替え・差分で文書を読む。
 issue: 17
 primary_actor: 利用者
