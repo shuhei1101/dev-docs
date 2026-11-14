@@ -2,10 +2,12 @@
 set -u
 
 BASE=http://127.0.0.1:8781
-# 1 回の取得の打ち切り。実測（2026-11-15 の文書の取得 4.7〜12.3 秒）の最大 12.3 秒 + 50% = 18.5 秒 → 20 秒
-TRY_LIMIT=20
-# 再取得を続ける上限。内側の待ち（実行.sh の再起動したサーバーの待ち受けの上限 120 秒）+ 50% = 180 秒
-DEADLINE=180
+# 1 回の取得の打ち切り。サーバーが project-index を待つ上限
+# （src/dev_docs/integrations/project_index/client.py の PROJECT_INDEX_TIMEOUT_SEC 45 秒）+ 50% = 67.5 秒 → 70 秒
+TRY_LIMIT=70
+# fetch_until_ok の 1 回の呼び出しで再取得を続ける上限。前のプロセスの graceful shutdown の上限
+# （src/dev_docs/main.py の PROJECT_INDEX_TIMEOUT_SEC 45 × SHUTDOWN_WAIT_FACTOR 1.5 = 67 秒）+ TRY_LIMIT 70 秒 + 50% ≈ 206 秒 → 210 秒
+DEADLINE=210
 
 BODY=$(mktemp)
 ERR=$(mktemp)
