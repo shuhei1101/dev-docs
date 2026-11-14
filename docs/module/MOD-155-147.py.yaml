@@ -51,13 +51,13 @@ functions:
         case: 正常
         summary: 行に状態を重ねる
         condition: GET `/_api/settings/sources`、project-index の行 2 つと状態 `serving`・`not_served`
-        mock: project-indexの呼び出し（`httpx.MockTransport` で project-index の develop の `7177d39` の入出力を返す）
+        mock: project-indexの呼び出し（`httpx.MockTransport` で project-index の develop の `42632c5` の入出力を返す）
         expected: 200 で `settingsPath` が project-index の値、`sources` の 2 行、`not_served` の行に `errors`、`version` が project-index の `version`
       - name: test_build_settings_router_when_put
         case: 正常
         summary: 保存を依頼して状態を返す
         condition: 'PUT `/_api/settings/sources` を `Sec-Fetch-Site: same-origin` で'
-        mock: project-indexの呼び出し（`httpx.MockTransport` で project-index の develop の `7177d39` の入出力を返す）
+        mock: project-indexの呼び出し（`httpx.MockTransport` で project-index の develop の `42632c5` の入出力を返す）
         expected: 200 で `sources[].status` と、保存した後の取得の `version`。project-index へ送った行の `config` が配列
       - name: test_build_settings_router_when_pending_reload
         case: 正常

@@ -813,11 +813,11 @@ def wait_for_restart(started_count: Callable[[Path], int]) -> Callable[..., None
     return _wait
 
 
-# 結合テストの相手にする本物の project-index（shuhei1101/project-index の develop の 7177d39。
-# shuhei1101/project-index#29 で端末の設定の内容のバージョンが入った後の commit）。パッケージとして入れるとクローンの
+# 結合テストの相手にする本物の project-index（shuhei1101/project-index の develop の 42632c5。
+# shuhei1101/project-index#54 をマージした commit）。パッケージとして入れるとクローンの
 # `templates/`・`content/` が見つからないため、クローンを用意してそこから起動する
 PROJECT_INDEX_REPOSITORY = "https://github.com/shuhei1101/project-index"
-PROJECT_INDEX_COMMIT = "7177d39943a6acb1a83cc78e29e224beb0da0924"
+PROJECT_INDEX_COMMIT = "42632c540624f8e97434951e5c7c19bbe37b1125"
 # 起動の待ち受けを待つ上限。2026-11-13 の実測で 1 回 4〜6 秒。負荷の高いときの dev-docs の起動
 # （SERVE_WAIT_SEC）と同じ 60 秒にする
 REAL_INDEX_WAIT_SEC = 60
