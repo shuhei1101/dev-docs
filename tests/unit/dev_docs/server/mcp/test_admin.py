@@ -35,7 +35,7 @@ def test_build_admin_mcp(make_mcp_handlers: Callable[..., Any]) -> None:
 def test_build_admin_mcp_when_status(
     fake_index: FakeIndex, make_mcp_handlers: Callable[..., Any]
 ) -> None:
-    """状態を JSON で返す（正常系）。"""
+    """状態を JSON で返却する（正常系）。"""
     # 準備
     fake_index.sources = [{"id": "sample", "status": "serving", "errors": []}]
     mcp = build_admin_mcp(make_mcp_handlers())

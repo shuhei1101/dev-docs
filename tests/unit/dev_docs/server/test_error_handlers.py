@@ -26,7 +26,7 @@ class HiddenBody(BaseModel):
 
 @dataclass(kw_only=True)
 class _SnakeError(DevDocsError):
-    """snake_case のキーを持つ詳細を返す例外。"""
+    """snake_case のキーを持つ詳細を返却する例外。"""
 
     status: ClassVar[int] = 400
     settings_path: str = "x"
@@ -92,7 +92,7 @@ def test_register_error_handlers_when_http_error() -> None:
 
 
 def test_register_error_handlers_when_http_error_headers() -> None:
-    """HTTPException のヘッダーを応答に載せる（正常系）。"""
+    """HTTPException のヘッダーを応答に追加する（正常系）。"""
     # 準備
     app = FastAPI()
     register_error_handlers(app)

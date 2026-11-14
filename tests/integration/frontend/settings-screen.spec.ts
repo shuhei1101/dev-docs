@@ -163,7 +163,7 @@ test.describe("見出し", () => {
 });
 
 test.describe("配信元の読み込み中の表示", () => {
-  // 端末の設定の取得が 1 秒を超えたときだけ、表の行の形の枠を出す（正常系）
+  // 端末の設定の取得が 1 秒を超えたときだけ、表の行のスケルトンを出す（正常系）
   test("loading_skeleton", async ({ page }) => {
     // 準備
     await mockApi(page, {
@@ -267,7 +267,7 @@ test.describe("状態", () => {
     await expect(page.getByText("無効", { exact: true })).toBeVisible();
   });
 
-  // 読み直していない行を `再読み込み待ち` で出す（正常系）
+  // 再読み込みしていない行を `再読み込み待ち` で出す（正常系）
   test("status_pending_reload", async ({ page }) => {
     await open(page, {
       settings: withSources(settingsSource("fresh", { id: null, status: "pending_reload" })),
@@ -315,7 +315,7 @@ test.describe("状態", () => {
 });
 
 test.describe("状態の補足", () => {
-  // 配信していないとき、外した旨と errors[] ごとの `{path} {reason}` を出す（正常系）
+  // 配信していないとき、除外した旨と errors[] ごとの `{path} {reason}` を出す（正常系）
   test("status_note_when_not_served", async ({ page }) => {
     await open(page, {
       settings: withSources(
@@ -347,7 +347,7 @@ test.describe("状態の補足", () => {
     await expect(page.getByText("enabled が false です")).toBeVisible();
   });
 
-  // 読み直していないとき、ファイルにあるが読み直していない旨を出す（正常系）
+  // 再読み込みしていないとき、ファイルにあるが再読み込みしていない旨を出す（正常系）
   test("status_note_when_pending_reload", async ({ page }) => {
     await open(page, {
       settings: withSources(settingsSource("a", { status: "pending_reload" })),
@@ -510,7 +510,7 @@ test.describe("設定ファイルの入力欄", () => {
     ).toBeVisible();
   });
 
-  // 編集は行の config を 1 行に 1 つ入れ、初期フォーカスを置く（正常系）
+  // 編集は行の config を 1 行に 1 つ入れ、初期フォーカスを設定する（正常系）
   test("config_input_when_edit", async ({ page }) => {
     // 準備
     await open(page, {
@@ -653,7 +653,7 @@ test.describe("追加・保存ボタン", () => {
     await expect(dialog(page).getByRole("button", { name: "保存", exact: true })).toBeVisible();
   });
 
-  // 追加は今の一覧に入力を反映した sources[] を丸ごと送信し、200 でダイアログを閉じて一覧を取り直し通知を出す（正常系）
+  // 追加は今の一覧に入力を反映した sources[] を丸ごと送信し、200 でダイアログを閉じて一覧を再取得し通知を出す（正常系）
   test("submit_add_success", async ({ page }) => {
     // 準備
     let saved = false;
@@ -825,7 +825,7 @@ test.describe("削除の確認", () => {
     await expect(trigger).toBeFocused();
   });
 
-  // 確定でその行を除いた sources[] を丸ごと送信し、200 で閉じて一覧を取り直し通知を出す（正常系）
+  // 確定でその行を除いた sources[] を丸ごと送信し、200 で閉じて一覧を再取得し通知を出す（正常系）
   test("delete_confirm_success", async ({ page }) => {
     // 準備
     let removed = false;

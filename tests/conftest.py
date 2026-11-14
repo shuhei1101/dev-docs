@@ -19,7 +19,7 @@ GIT_ENV = {
 
 @pytest.fixture
 def run_git() -> Callable[..., str]:
-    """git を実行して標準出力を返す関数を返す。"""
+    """git を実行して標準出力を返却する関数を返却する。"""
 
     def _run(cwd: Path, *args: str, env: dict[str, str] | None = None) -> str:
         result = subprocess.run(
@@ -37,7 +37,7 @@ def run_git() -> Callable[..., str]:
 
 @pytest.fixture
 def write_files() -> Callable[[Path, dict[str, str]], None]:
-    """フォルダの下に、パス → 内容のファイルを書く関数を返す。"""
+    """フォルダの下に、パス → 内容のファイルを書き込む関数を返却する。"""
 
     def _write(root: Path, files: dict[str, str]) -> None:
         for name, content in files.items():
@@ -54,7 +54,7 @@ def git_repo(
     run_git: Callable[..., str],
     write_files: Callable[[Path, dict[str, str]], None],
 ) -> Callable[..., Path]:
-    """ファイルを commit した git リポジトリを作る関数を返す。"""
+    """ファイルを commit した git リポジトリを作る関数を返却する。"""
 
     def _create(
         files: dict[str, str],
@@ -74,7 +74,7 @@ def git_repo(
 
 
 def _date_env(date: str | None) -> dict[str, str]:
-    """commit の日時を固定する環境変数を返す。"""
+    """commit の日時を固定する環境変数を返却する。"""
     if date is None:
         return {}
     return {"GIT_AUTHOR_DATE": date, "GIT_COMMITTER_DATE": date}
@@ -85,7 +85,7 @@ def commit_all(
     run_git: Callable[..., str],
     write_files: Callable[[Path, dict[str, str]], None],
 ) -> Callable[..., str]:
-    """ファイルを書き換えて commit し、commit の SHA を返す関数を返す。"""
+    """ファイルを書き換えて commit し、commit の SHA を返却する関数を返却する。"""
 
     def _commit(
         repo: Path,

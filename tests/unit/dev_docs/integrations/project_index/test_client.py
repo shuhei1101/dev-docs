@@ -130,7 +130,7 @@ def test_request_when_unexpected_status() -> None:
 def test_list_sources(
     fake_index: FakeIndex, make_client: Callable[..., ProjectIndexClient]
 ) -> None:
-    """状態の読み替え（正常系）。"""
+    """状態の変換（正常系）。"""
     # 準備
     fake_index.sources = [
         {"id": "sample", "status": "serving"},
@@ -294,7 +294,7 @@ def test_document_when_record(
 def test_document_when_yaml_unreadable(
     fake_index: FakeIndex, make_client: Callable[..., ProjectIndexClient]
 ) -> None:
-    """YAML を読めない（正常系）。"""
+    """YAML を読み込めない（正常系）。"""
     # 準備
     fake_index.configs["sample"] = config_json()
     fake_index.unreadable["sample"] = [
@@ -339,7 +339,7 @@ def test_decision_when_ambiguous(
 
 
 def test_search(fake_index: FakeIndex, make_client: Callable[..., ProjectIndexClient]) -> None:
-    """クエリを渡す（正常系）。"""
+    """クエリを指定する（正常系）。"""
     # 準備
     fake_index.configs["sample"] = config_json()
     fake_index.search_results = {
@@ -421,7 +421,7 @@ def test_settings_sources(
 def test_put_settings_sources(
     fake_index: FakeIndex, make_client: Callable[..., ProjectIndexClient]
 ) -> None:
-    """保存して行を取り直す（正常系）。"""
+    """保存して行を再取得する（正常系）。"""
     # 準備
     rows = [
         {"id": "a", "config": ["/a/project-index.yaml"]},

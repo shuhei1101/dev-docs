@@ -10,7 +10,7 @@ ASSET_JS = "console.log('screen');"
 
 
 def _build_dir(tmp_path: Path, *, with_index: bool) -> Path:
-    """`assets/` の JS 1 件と、`index.html`（`with_index` のとき）を置いたビルドのフォルダを作る。"""
+    """`assets/` の JS 1 件と、`index.html`（`with_index` のとき）を配置したビルドのフォルダを作る。"""
     folder = tmp_path / "screen-build"
     (folder / "assets").mkdir(parents=True)
     (folder / "assets" / "app-1a2b3c.js").write_text(ASSET_JS, encoding="utf-8")
@@ -22,7 +22,7 @@ def _build_dir(tmp_path: Path, *, with_index: bool) -> Path:
 def test_normal(
     sample_index: MockIndex, make_server: Callable[..., ServerEnv], tmp_path: Path
 ) -> None:
-    """画面のパスに index.html を、assets/ のパスに静的ファイルを返す（正常系）。"""
+    """画面のパスに index.html を、assets/ のパスに静的ファイルを返却する（正常系）。"""
     # 準備
     env = make_server(sample_index, screen_dir=_build_dir(tmp_path, with_index=True))
     # 実行
@@ -47,7 +47,7 @@ def test_normal(
 def test_error_when_not_found(
     sample_index: MockIndex, make_server: Callable[..., ServerEnv], tmp_path: Path
 ) -> None:
-    """assets/ の無いファイルと /_api/ の無いパスは index.html を返さず 404 を返す（異常系）。"""
+    """assets/ の無いファイルと /_api/ の無いパスは index.html を返却せず 404 を返却する（異常系）。"""
     # 準備
     env = make_server(sample_index, screen_dir=_build_dir(tmp_path, with_index=True))
     # 実行
@@ -63,7 +63,7 @@ def test_error_when_not_found(
 def test_error_when_excluded_not_get(
     sample_index: MockIndex, make_server: Callable[..., ServerEnv], tmp_path: Path
 ) -> None:
-    """/_api/・/_admin/ の下の、どの入口にも当たらないパスへの GET 以外の要求は 404 を返す（異常系）。"""
+    """/_api/・/_admin/ の下の、どの入口にも該当しないパスへの GET 以外の要求は 404 を返却する（異常系）。"""
     # 準備
     env = make_server(sample_index, screen_dir=_build_dir(tmp_path, with_index=True))
     # 実行

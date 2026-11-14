@@ -68,7 +68,7 @@ def test_convert_service_render(
 def test_convert_service_render_when_converter(
     make_view: Callable[..., SourceView], make_document: Callable[..., IndexedDocument]
 ) -> None:
-    """project-index の変換の結果を使う（正常系）。"""
+    """project-index の変換の結果を使用する（正常系）。"""
     # 準備
     document = make_document(data={"name": "N"})
     detail = DocumentDetail(document=document, markdown="# 変換した\n")

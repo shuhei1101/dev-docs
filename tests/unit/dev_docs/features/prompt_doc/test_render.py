@@ -15,14 +15,14 @@ from dev_docs.features.prompt_doc.render import (
 )
 from dev_docs.features.prompt_doc.types import PartSyntaxError, PromptDoc, PromptVar
 
-# 描画結果の変数の値を囲む区切り（`VALUE_MARK_PATTERN` が当てる私用領域の文字）
+# 描画結果の変数の値を囲む区切り（`VALUE_MARK_PATTERN` がヒットする私用領域の文字）
 MARK_START = ""
 MARK_SEP = ""
 MARK_END = ""
 
 
 def _doc(**overrides: Any) -> PromptDoc:
-    """変換に使うキーだけを持つプロンプトを作る。"""
+    """変換に使用するキーだけを持つプロンプトを作る。"""
     data: dict[str, Any] = {"name": "N", "kind": "llm", "lang": "en", "vars": {}, "parts": []}
     data.update(overrides)
     return PromptDoc.model_validate(data)
@@ -204,7 +204,7 @@ def test_render_example() -> None:
 
 
 def test_render_example_when_condition_false() -> None:
-    """when が偽の部品を使わない（正常系）。"""
+    """when が偽の部品を使用しない（正常系）。"""
     # 準備
     doc = _doc(vars=LLM_VARS, parts=LLM_PARTS)
     compiled, errors = compile_parts(doc, env=build_environment())

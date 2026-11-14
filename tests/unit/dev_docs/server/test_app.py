@@ -33,11 +33,11 @@ INITIALIZE = {
 
 
 def _endpoint() -> None:
-    """ルートの例に使う何もしない関数。"""
+    """ルートの例に使用する何もしない関数。"""
 
 
 def _screen_dir(tmp_path: Path) -> Path:
-    """index.html だけを置いた画面のビルドのフォルダを返す。"""
+    """index.html だけを配置した画面のビルドのフォルダを返却する。"""
     screen_dir = tmp_path / "screen"
     screen_dir.mkdir()
     (screen_dir / "index.html").write_text("<html>screen</html>", encoding="utf-8")
@@ -50,11 +50,11 @@ async def _noop_receive() -> Message:
 
 
 async def _noop_send(message: Message) -> None:
-    """何も送らない ASGI の send。"""
+    """何も送信しない ASGI の send。"""
 
 
 def _pass_through(scope: Scope) -> list[Scope]:
-    """スラッシュを補うミドルウェアに scope を渡し、次のアプリが受け取った scope を返す。"""
+    """スラッシュを補うミドルウェアに scope を指定し、次のアプリが受け取った scope を返却する。"""
     received: list[Scope] = []
 
     async def next_app(scope: Scope, receive: Receive, send: Send) -> None:
@@ -114,7 +114,7 @@ def test_build_app_when_openapi(make_mcp_handlers: Callable[..., Any], tmp_path:
 def test_build_app_when_screen(
     fake_index: FakeIndex, make_mcp_handlers: Callable[..., Any], tmp_path: Path
 ) -> None:
-    """API を画面の配信より先に当てる（正常系）。"""
+    """API を画面の配信より先に適用する（正常系）。"""
     # 準備
     client = TestClient(build_app(make_mcp_handlers(), screen_dir=_screen_dir(tmp_path)))
     # 実行
@@ -172,7 +172,7 @@ def test_slashless_mcp_path_middleware() -> None:
     ],
 )
 def test_slashless_mcp_path_middleware_when_other_path(scope: dict[str, Any]) -> None:
-    """他のパスと HTTP でない要求はそのまま渡す（正常系）。"""
+    """他のパスと HTTP でない要求はそのまま次のアプリへ転送する（正常系）。"""
     # 実行
     received = _pass_through(scope)
     # 検証

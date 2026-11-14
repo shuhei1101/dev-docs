@@ -15,7 +15,7 @@ export const openStory = async (page: Page, id: string): Promise<void> => {
 const AXE_RETRY_LIMIT = 10;
 const AXE_RETRY_WAIT_MS = 500;
 
-/** ストーリーを単独で置いたために出る検出(ランドマークと見出し 1)を除いた axe の違反の id。Storybook の a11y アドオンが走っている間は待って取り直す */
+/** ストーリーを単独で配置したために出る検出(ランドマークと見出し 1)を除いた axe の違反の id。Storybook の a11y アドオンが走っている間は待って再取得する */
 export const axeViolations = async (page: Page): Promise<string[]> => {
   for (let attempt = 1; ; attempt += 1) {
     try {

@@ -14,12 +14,12 @@ from dev_docs.features.prompt_doc.runtime import (
 from dev_docs.features.prompt_doc.types import PromptInvalidError
 from dev_docs.server.mcp.result import mcp_prompt_ids
 
-# 本文に置かない言い回し
+# 本文に使用しない言い回し
 FORBIDDEN_WORDS = ("MUST", "必ず", "禁止")
 
 
 def _prompt(prompt_id: str, **overrides: Any) -> dict[str, Any]:
-    """検査を通る最小のプロンプトの値を返す。"""
+    """検査を通る最小のプロンプトの値を返却する。"""
     value: dict[str, Any] = {
         "id": prompt_id,
         "name": f"{prompt_id} の名前",
@@ -33,7 +33,7 @@ def _prompt(prompt_id: str, **overrides: Any) -> dict[str, Any]:
 
 
 def _write(directory: Path, relative: str, value: dict[str, Any] | str) -> Path:
-    """プロンプトの YAML を書く（JSON は YAML として読める）。"""
+    """プロンプトの YAML を書き込む（JSON は YAML として読み込める）。"""
     path = directory / relative
     path.parent.mkdir(parents=True, exist_ok=True)
     text = value if isinstance(value, str) else json.dumps(value, ensure_ascii=False)
@@ -88,7 +88,7 @@ def test_prompt_set_render_when_lang_missing(tmp_path: Path) -> None:
 
 
 def test_prompts_dir() -> None:
-    """既定の置き場所（正常系）。"""
+    """既定の配置先（正常系）。"""
     # 準備
     env: dict[str, str] = {}
     # 実行
@@ -108,7 +108,7 @@ def test_prompts_dir_when_env(tmp_path: Path) -> None:
 
 
 def test_load_prompts(tmp_path: Path) -> None:
-    """サブフォルダも含めて読む（正常系）。"""
+    """サブフォルダも含めて読み込む（正常系）。"""
     # 準備
     _write(tmp_path, "a.yaml", _prompt("a"))
     _write(tmp_path, "mcp/b.yaml", _prompt("mcp/b"))
@@ -119,7 +119,7 @@ def test_load_prompts(tmp_path: Path) -> None:
 
 
 def test_load_prompts_when_agent(tmp_path: Path) -> None:
-    """エージェントのシステムプロンプトを読む（正常系）。"""
+    """エージェントのシステムプロンプトを読み込む（正常系）。"""
     # 準備
     _write(tmp_path, "a.yaml", _prompt("a", kind="agent"))
     # 実行
@@ -196,7 +196,7 @@ def test_load_prompts_when_syntax_error(tmp_path: Path) -> None:
 
 
 def test_load_prompts_when_undefined_variable(tmp_path: Path) -> None:
-    """vars に無い変数を使う（異常系）。"""
+    """vars に無い変数を使用する（異常系）。"""
     # 準備
     _write(
         tmp_path,
@@ -228,7 +228,7 @@ def test_load_prompts_when_required_missing(tmp_path: Path) -> None:
 
 
 def test_load_prompts_when_bundled() -> None:
-    """同梱した YAML が読め、言い回しと字数を守る（正常系）。"""
+    """同梱した YAML が読み込め、言い回しと字数を守る（正常系）。"""
     # 準備
     required = mcp_prompt_ids()
     # 実行
