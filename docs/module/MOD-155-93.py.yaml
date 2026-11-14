@@ -382,9 +382,9 @@ functions:
         condition: '`classDiagram` と `click A href "id:a"` のコード、`link_clicks` が `id:a` を `a.yaml` に置き換える'
         mock: なし
         expected: '```mermaid のコードブロックで、`click A href "a.yaml"` の行を持つ'
-      - name: test_render_mermaid_when_readable_with_click
+      - name: test_render_mermaid_when_readable
         case: 正常
-        summary: 読み取れる図は click を書き換えない
-        condition: '`flowchart TD`・`a --> b`・`click a href "id:a"` のコード、`link_clicks` が呼ばれた回数を数える'
+        summary: 読み取れる図は click の参照の書き換えにかけない
+        condition: '`flowchart TD`・`a --> b` のコード、`link_clicks` が呼ばれた回数を数える'
         mock: なし
-        expected: '`<!-- flow -->` で囲んだ JSON で、`link_clicks` が呼ばれていない'
+        expected: '`<!-- flow -->` で囲んだ JSON で、`link_clicks` が呼ばれていない（`click` の行を持つフローチャートは Mermaid の読み取りが `None` を返し、読み取れない図として書き換える）'
