@@ -1,15 +1,15 @@
 docs:
   - page: docs/nonfunctional/NFR-155-1.yaml
     new: false
-    change: project-index への問い合わせの制限時間に、端末の設定の書き込みの扱い（決めた案に合わせて別の値か確認の手順）を加える
+    change: project-index への問い合わせの制限時間の overflow に、dev-docs migrate が端末の設定の保存を打ち切ったときは取得し直して保存を確認することを加える
     status: todo
   - page: docs/external-api/API-155-1.yaml
     new: false
-    change: timeout と POST・PUT /settings/sources の項目に、書き込みの後の読み直しで応答が遅くなることと dev-docs の扱いを加える
+    change: PUT /settings/sources の `expectedVersion` と 409・400、保存の後の読み直しの間も取得は待たないことを加え、照合した版を 7177d39 にする
     status: todo
   - page: docs/guide/CLI.md
     new: false
-    change: dev-docs migrate の終了コードと出力に、途中で失敗したとき project-index を戻すことと戻せなかった行の出力を加える
+    change: dev-docs migrate の終了コード 4・7 に、project-index が保存を受け付けないときと保存を確認できないときを加える
     status: todo
   - page: docs/pr/183/反映作業/端末の設定の移し替え/切り戻し.sh
     new: false
@@ -24,8 +24,8 @@ scope_out:
     reason: '#183 の反映作業で、#164 がこの PR のマージを待って tester へ再依頼する（ユーザーの指示どおり、#197 の close のときに #164 の確認へ返信して #164 へ渡す）'
     plan: '#164'
   - item: project-index の書き込みを読み直しを待たずに応答する契約への変更
-    reason: 要件の 1 つ目の論点で案 C を選んだときだけ要る。インターフェース定義設計で決める
-    plan: to_file
+    reason: 保存を 1 回にし、制限時間を超えたら取得し直して確認する方法に決め、提供する側の変更を要しない
+    plan: none
 use_cases:
   - kind: single
     scenario: docs/scenario/SC-155-3.yaml

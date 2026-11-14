@@ -140,10 +140,10 @@ flows:
       - 端末の設定が変わらない
     test: test_error_when_config_newer
   - name: 正常系（端末の設定の sources を project-index へ移す）
-    summary: 前のバージョンの端末の設定の `sources` の行を project-index の端末の設定へ 1 行ずつ追加し、dev-docs の端末の設定から除いて `project_index` を書き足す
+    summary: 前のバージョンの端末の設定の `sources` の行を、project-index の端末の設定の今の行に加えて 1 回で保存し、dev-docs の端末の設定から除いて `project_index` を書き足す
     setup:
       - name: Mock
-        description: project-index の端末の設定の API のモック（shuhei1101/project-index の develop の `f36ba69` の入出力で、行の追加を受け、extra の行を既に持つ）
+        description: project-index の端末の設定の API のモック（shuhei1101/project-index の develop の `7177d39` の入出力で、端末の設定の取得と保存を受け、extra の行を既に持つ）
       - name: 端末の設定
         description: '`sources` に sample・notes・extra の 3 行を持ち、`project_index` を持たない前のバージョンの `settings.yaml`'
       - name: 入力
@@ -158,19 +158,19 @@ flows:
 
         C->>M: --project-index {アドレス}
         M->>F: 端末の設定を読む
-        loop sources の各行
-          M->>PI: 配信元の行の追加
-          PI-->>M: 追加した、または同じ id の行がある
-        end
+        M->>PI: 端末の設定の取得
+        PI-->>M: 今の行と内容のバージョン
+        M->>PI: 今の行に移す行を加えた sources の保存（内容のバージョンつき）
+        PI-->>M: 保存した
         M->>F: バックアップを取る
-        M->>F: 追加した行を sources から除き、project_index と version を書き換える
+        M->>F: 移した行を sources から除き、project_index と version を書き換える
         M-->>C: 当てた手順と、移さなかった行の id（終了コード 0）
       ```
     expected:
-      - モックが sample・notes・extra の 3 行の追加を受け、extra は同じ id の行があると返す
+      - モックが端末の設定の取得を 1 回と保存を 1 回受け、保存の `sources` がモックの持っていた extra の行と sample・notes の 3 行、`expectedVersion` が取得で返却した内容のバージョンになる。extra は同じ id で内容が違うため、dev-docs の行を送信しない
       - 端末の設定の `sources` が extra の 1 行だけになり、`project_index` が `--project-index` のアドレス、`version` が新しいバージョンになる
       - stdout に、extra を移さずに残したことと、project-index で行を直す案内がある
-      - '`--project-index` を省くと `PROJECT_INDEX_PORT`（無ければ 8786）から組んだ `http://127.0.0.1:{ポート}` へ追加する'
+      - '`--project-index` を省くと `PROJECT_INDEX_PORT`（無ければ 8786）から組んだ `http://127.0.0.1:{ポート}` へ保存する'
     test: test_normal_when_sources_moved_to_project_index
   - name: 異常系（project-index につながらない・ProjectIndexUnreachable）
     summary: project-index につながらないと、端末の設定を書き換えずに終了コード 7 で止める
@@ -197,15 +197,95 @@ flows:
       - 終了コード 7 で、stderr につながらなかったアドレスと案内がある
       - 端末の設定が `migrate` の前と同じ中身で、バックアップも作らない
     test: test_error_when_project_index_unreachable
+  - name: 正常系（保存の応答が制限時間を超える）
+    summary: project-index が保存した後の応答が制限時間を超えても、取得し直して保存を確認し、移し替えを終える
+    setup:
+      - name: Mock
+        description: 正常系（端末の設定の sources を project-index へ移す）と同じモックで、保存を受けたら行を保存してから制限時間より長く応答を遅らせる。制限時間は monkeypatch で 1 秒にし、応答は 3 秒遅らせる
+      - name: 端末の設定
+        description: 正常系（端末の設定の sources を project-index へ移す）と同じ前のバージョンの `settings.yaml`
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        participant C as クライアント
+        participant M as dev-docs migrate
+        participant F as 端末の設定
+        participant PI as project-index（モック）
+
+        C->>M: --project-index {アドレス}
+        M->>PI: 端末の設定の取得
+        M->>PI: sources の保存（制限時間を超えて打ち切る）
+        M->>PI: 端末の設定の取得
+        PI-->>M: 移す行を全て持つ
+        M->>F: バックアップを取り、移した行を除いて project_index と version を書き換える
+        M-->>C: 当てた手順（終了コード 0）
+      ```
+    expected:
+      - 終了コード 0 で、端末の設定が正常系（端末の設定の sources を project-index へ移す）と同じ中身になる
+      - モックが端末の設定の取得を 2 回と保存を 1 回受ける
+    test: test_normal_when_save_response_exceeds_timeout
+  - name: 異常系（project-index が保存を受け付けない・MigrationFailed）
+    summary: project-index が sources の保存を断ると、どちらの端末の設定も書き換えずに終了コード 4 で止める
+    setup:
+      - name: Mock
+        description: 正常系（端末の設定の sources を project-index へ移す）と同じモックで、保存を 400 の problem+json（`errors[]` 1 件）で断り、行を保存しない
+      - name: 端末の設定
+        description: '`sources` に sample と broken の 2 行を持ち、`project_index` を持たない前のバージョンの `settings.yaml`'
+        notes: broken は `enabled` に `"maybe"` を持つ
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        participant C as クライアント
+        participant M as dev-docs migrate
+        participant F as 端末の設定
+        participant PI as project-index（モック）
+
+        C->>M: --project-index {アドレス}
+        M->>PI: 端末の設定の取得
+        M->>PI: sources の保存
+        PI-->>M: 400（保存しない）
+        M-->>C: project-index の応答のステータスと要約（終了コード 4）
+      ```
+    expected:
+      - 終了コード 4 で、stderr に 400 と応答の要約がある
+      - モックの端末の設定の行が extra の 1 行のままである
+      - dev-docs の端末の設定が `migrate` の前と同じ中身で、バックアップも作らない
+    test: test_error_when_project_index_rejects_save
+  - name: 異常系（保存を確認できない・ProjectIndexUnreachable）
+    summary: 保存の応答が制限時間を超え、取得し直しても移す行が無ければ、端末の設定を書き換えずに終了コード 7 で止める
+    setup:
+      - name: Mock
+        description: 正常系（端末の設定の sources を project-index へ移す）と同じモックで、保存を受けても行を保存せず、制限時間より長く応答を遅らせる。制限時間は monkeypatch で 1 秒にし、応答は 3 秒遅らせる
+      - name: 端末の設定
+        description: 正常系（端末の設定の sources を project-index へ移す）と同じ前のバージョンの `settings.yaml`
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        participant C as クライアント
+        participant M as dev-docs migrate
+        participant PI as project-index（モック）
+
+        C->>M: --project-index {アドレス}
+        M->>PI: 端末の設定の取得
+        M->>PI: sources の保存（制限時間を超えて打ち切る）
+        M->>PI: 端末の設定の取得
+        PI-->>M: 移す行が無い
+        M-->>C: 保存を確認できなかったことと、やり直す案内（終了コード 7）
+      ```
+    expected:
+      - 終了コード 7 で、stderr に保存が後から反映されうることとやり直す案内がある
+      - dev-docs の端末の設定が `migrate` の前と同じ中身で、バックアップも作らない
+    test: test_error_when_save_unconfirmed_after_timeout
 lead: 端末の設定の `version` を dev-docs が読めるバージョンと比べ、移し替えの手順を古い順に当てる。前のバージョンの `sources` は project-index の端末の設定へ移す。
 identifier: migrate
 permissions: 対象の設定ファイルを書き換えられる利用者
 idempotent: true
-side_effects: 適用では端末の設定を書き換え、同じフォルダに `{ファイル名}.bak-{時刻}` を残す。`sources` を移す手順では、project-index の端末の設定へ行を追加する。`--plan` は書き換えない
+side_effects: 適用では端末の設定を書き換え、同じフォルダに `{ファイル名}.bak-{時刻}` を残す。`sources` を移す手順では、project-index の端末の設定の `sources` を 1 回の保存で書き換え、移す行を加える。`--plan` は書き換えない
 callers:
   - SC-155-3#scenarios[正常シナリオ（端末の設定が古くなる）]
   - SC-155-3#scenarios[正常シナリオ（端末の設定の sources を project-index へ移す）]
   - SC-155-3#scenarios[異常シナリオ（sources を移すときに project-index につながらない）]
+  - SC-155-3#scenarios[異常シナリオ（sources を移す途中で project-index が行を受け付けない）]
 exclusivity: 端末の設定は動いているサーバーと同じファイルを書き換えるため、適用は書き換えの前後でファイルの中身を比べ、変わっていたら書かずに失敗とする
 request:
   - name: --plan
@@ -252,13 +332,13 @@ exceptions:
   - name: ConfigInvalid
     condition: 対象の設定が無い・YAML として読めない・`version` が無い（終了コード 2）
   - name: MigrationFailed
-    condition: 手順の途中で失敗した、または当てた結果が新しいバージョンのスキーマに違反した（終了コード 4）
+    condition: 手順の途中で失敗した、当てた結果が新しいバージョンのスキーマに違反した、または project-index が `sources` の保存を受け付けなかった（終了コード 4）
     notes: 全ての手順を当てて新しいスキーマで検証してから書き込むため、ファイルには触らない。失敗した手順と理由を stderr に出す
   - name: DestructiveStepBlocked
     condition: 当てる手順に破壊的なものがあり、`--allow-destructive` が無い（終了コード 5）
     notes: ファイルに触らず、破壊的な手順を stderr に出す
   - name: ProjectIndexUnreachable
-    condition: '`sources` を移す手順で、project-index の端末の設定の API につながらない（終了コード 7）'
+    condition: '`sources` を移す手順で、project-index の端末の設定の API につながらない、または保存の応答が制限時間を超えて保存を確認できない（終了コード 7）'
     notes: 全ての手順を当ててから書き込むため、端末の設定には触らない（バックアップも作らない）。つながらなかったアドレスと案内を stderr に出す
   - name: ConfigNewer
     condition: 対象の `version` が dev-docs が読めるバージョンより新しい（終了コード 6）
@@ -273,11 +353,11 @@ constraints:
   - item: 反映
     constraint: 動いているサーバーには反映しない。利用者が続けて `restart` を呼ぶ
   - item: タイムアウト
-    constraint: project-index への 1 行の追加を制限時間で打ち切り、打ち切ったらつながらないときと同じく端末の設定を書き換えずに終了コード 7 で止める
+    constraint: project-index への要求は 1 回ずつ制限時間で打ち切る。保存を打ち切ったら、端末の設定をもう一度取得し、移す行が全て同じ内容であれば保存したとして続ける。無ければ、つながらないときと同じく端末の設定を書き換えずに終了コード 7 で止め、保存が後から反映されうることと、やり直せば保存済みの行を移した行として扱う案内を stderr に出す
     decided_by: NFR-155-1#requirements[project-index への問い合わせの制限時間]
-  - item: project-index の応答が 201・409 以外のとき
-    constraint: 端末の設定を書き換えず、project-index の応答のステータスと要約を stderr に出して終了コード 4（MigrationFailed）で止める
+  - item: project-index が保存を受け付けないとき
+    constraint: 取得・保存の応答が 200 以外（保存の 400・409・422 を含む）のとき、端末の設定を書き換えず、project-index の応答のステータスと要約を stderr に出して終了コード 4（MigrationFailed）で止める。409 は取得の後に project-index の端末の設定が変わったことを示し、やり直す案内を添える
   - item: sources を移す手順
-    constraint: '`sources` を持つ端末の設定の行を、project-index の端末の設定の API で 1 行ずつ追加する。同じ id の行が project-index にあれば、内容も同じなら追加済みとして扱い、内容が違えば追加せずに `sources` に残して id を stdout に出す。追加した行を `sources` から除き、`project_index` を書き足す。破壊的な手順ではない'
-    notes: 1 行ずつの追加は project-index#14 の端末の設定の API（1 行ずつの API は shuhei1101/project-index#10）。途中でつながらなくなったら、追加済みの行も含めて端末の設定を書き換えない（project-index に追加した行はそのまま残り、やり直したときは同じ id・同じ内容の行として追加済みに扱う）
+    constraint: 'project-index の端末の設定を取得し、dev-docs の端末の設定の `sources` の行を id で照らす。同じ id の行があれば、内容も同じなら移した行として扱い、内容が違えば送信せずに `sources` に残して id を stdout に出す。残りの行を project-index の今の行の後ろに加え、取得で返却された内容のバージョンを添えて 1 回で保存する（加える行が無ければ保存しない）。移した行を `sources` から除き、`project_index` を書き足す。破壊的な手順ではない'
+    notes: 取得・保存は project-index の端末の設定の API（shuhei1101/project-index の IF-30・IF-31）。project-index は保存した直後に書き込み、配信元の読み直しが終わるまで端末の設定の排他ロックを持ち続け、取得はそのロックを待たない。保存を 1 回にするので、project-index が受け付けないときは何も書き込まれず、取り除く行が生じない
 test_file: tests/integration/server/test_migrate.py

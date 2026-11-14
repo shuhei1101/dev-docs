@@ -88,7 +88,7 @@ scenarios:
         MG-->>U: 当てる手順の一覧（sources を project-index へ写して除く・project_index を書き足す）
         U->>MG: dev-docs migrate --project-index {アドレス}
         MG->>CF: バックアップを取る
-        MG->>PI: 端末の設定の配信元の行の追加（sample と notes。既にある行は変えない）
+        MG->>PI: 端末の設定の sources の保存（既にある行は変えず、sample と notes を加える）
         MG->>CF: sources を除き、project_index と version を書き換える
         MG-->>U: 当てた手順
         U->>AD: restart
@@ -101,7 +101,7 @@ scenarios:
     test: test_normal_when_sources_moved_to_project_index
     notes:
       project-index のアドレス: '`--project-index` を省くと、`PROJECT_INDEX_PORT`（無ければ既定の 8786）から `http://127.0.0.1:{ポート}` を組む'
-      既にある行: project-index の端末の設定の行は変えず、行ごとに追加する。同じ id で内容が違う行があれば、その行は移さずに id と、dev-docs の端末の設定に残したことを応答に出す（dev-docs の `sources` からも除かない）。同じ id で内容も同じ行は移した行として扱う
+      既にある行: project-index の端末の設定の行は変えず、移す行を加えて 1 回で保存する。同じ id で内容が違う行があれば、その行は移さずに id と、dev-docs の端末の設定に残したことを応答に出す（dev-docs の `sources` からも除かない）。同じ id で内容も同じ行は移した行として扱う
       書き込みの応答の時間: 行の追加の応答が文書の取得の制限時間（45 秒）を超えても、移し替えを続ける
   - name: 異常シナリオ（sources を移すときに project-index につながらない）
     setup:
@@ -194,9 +194,7 @@ scenarios:
 
         U->>MG: dev-docs migrate --project-index {アドレス}
         MG->>CF: 端末の設定を読む
-        MG->>PI: sample の行の追加（追加される）
-        MG->>PI: broken の行の追加（受け付けない）
-        MG->>PI: sample の行を取り除き、実行の前の行に戻す
+        MG->>PI: sample と broken を加えた sources の保存（受け付けず、何も保存しない）
         MG-->>U: 受け付けなかった行と理由
       ```
     expected:
@@ -215,7 +213,7 @@ preconditions:
   - dev-docs が待ち受けている
   - クローンの上流に新しいバージョンの commit がある
 success_guarantee: dev-docs が新しいバージョンで待ち受け、端末の設定の `version` がそのバージョンになり、project-index が配信している配信元を画面で読める。
-minimal_guarantee: '`git pull` に失敗したときは、前のバージョンのまま配信を続ける。移し替えの手順が失敗したときは、端末の設定をバックアップから戻す。`sources` を移す途中で失敗したときは、その実行で追加した行を project-index から取り除く。取り除けなかったときは、取り除けなかった行の id を出す。'
+minimal_guarantee: '`git pull` に失敗したときは、前のバージョンのまま配信を続ける。移し替えの手順が失敗したときは、端末の設定をバックアップから戻す。`sources` を移すとき project-index が保存を受け付けなかったら、project-index の端末の設定も書き換えない。保存を確認できずに止まったときは、やり直せば保存済みの行を移した行として扱う。'
 frequency: dev-docs の新しいバージョンが出るたび
 priority: 中
 refs:
