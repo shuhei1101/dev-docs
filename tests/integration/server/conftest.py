@@ -87,7 +87,7 @@ def doc(
 
     `record_index` は使わない（行の文書の添字は、配信元の設定の `records` の行から呼び出し側が決める）。
     `body`・`updated` は文書の取得でだけ返す。本物の project-index へ置くときは、`data` をファイルに書き、
-    `updated` を commit の日時にする。
+    `updated` を commit の日時にする。偽物が返す共通のキー（`commonKeys`）は、`metadata` のうち値のあるキーにする。
     """
     del record_index
     values = data if data is not None else {"id": doc_id, "name": doc_id}
@@ -105,14 +105,18 @@ def doc(
         "value": values,
         "_body": body,
         "_updated": updated,
+        "_common": {key: value for key, value in meta.items() if value is not None},
     }
 
 
-def list_entry(document: dict[str, Any], *, values: bool) -> dict[str, Any]:
+def list_entry(
+    document: dict[str, Any], *, values: bool, common_keys: bool = False
+) -> dict[str, Any]:
     """偽物に置いた文書を、文書の一覧の 1 件（IF-24）にする。"""
     entry = {key: value for key, value in document.items() if not key.startswith("_")}
     if not values:
         entry["value"] = None
+    entry["commonKeys"] = (document.get("_common") or {}) if common_keys else None
     return entry
 
 
@@ -389,7 +393,12 @@ class MockIndex:
             "path": document["path"] if document is not None else file,
             "value": None if document is None or broken is not None else document["value"],
             "schema": None,
-            "metadata": None if document is None else {key: document[key] for key in keys},
+            "metadata": None
+            if document is None
+            else {
+                **{key: document[key] for key in keys},
+                "commonKeys": document.get("_common") or {},
+            },
             "body": None if document is None else document["_body"] or None,
             "bodyPath": None if document is None else document["bodyPath"],
             "markdown": extra.get("markdown"),
@@ -410,9 +419,12 @@ class MockIndex:
             listed = source.docs.get(ref, [])
             if len(rest) == 1:
                 values = query.get("values") == "true"
+                common_keys = query.get("common_keys") == "true"
                 return 200, {
                     "ref": source.ref_name(ref),
-                    "documents": [list_entry(item, values=values) for item in listed],
+                    "documents": [
+                        list_entry(item, values=values, common_keys=common_keys) for item in listed
+                    ],
                 }
             return self._detail(source, "/".join(rest[1:]), ref, query.get("id"))
         if rest == ["decisions"]:
@@ -801,11 +813,11 @@ def wait_for_restart(started_count: Callable[[Path], int]) -> Callable[..., None
     return _wait
 
 
-# 結合テストの相手にする本物の project-index（shuhei1101/project-index の develop の f36ba69。
-# shuhei1101/project-index#46 をマージした commit）。パッケージとして入れるとクローンの
+# 結合テストの相手にする本物の project-index（shuhei1101/project-index の develop の 42632c5。
+# shuhei1101/project-index#54 をマージした commit）。パッケージとして入れるとクローンの
 # `templates/`・`content/` が見つからないため、クローンを用意してそこから起動する
 PROJECT_INDEX_REPOSITORY = "https://github.com/shuhei1101/project-index"
-PROJECT_INDEX_COMMIT = "f36ba692e6fa7bb15e31f0398e20953a6b8201ec"
+PROJECT_INDEX_COMMIT = "42632c540624f8e97434951e5c7c19bbe37b1125"
 # 起動の待ち受けを待つ上限。2026-11-13 の実測で 1 回 4〜6 秒。負荷の高いときの dev-docs の起動
 # （SERVE_WAIT_SEC）と同じ 60 秒にする
 REAL_INDEX_WAIT_SEC = 60
