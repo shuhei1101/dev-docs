@@ -40,6 +40,7 @@ def doc_json(
 
     `record_index` は使用しない（行の文書の添字は、配信元の設定の `records` の行から呼び出し側が決める）。
     `body`・`updated` は文書の取得でだけ返却する。
+    共通のキー（`commonKeys`）は、`metadata` のうち値のあるキーにする。
     """
     del record_index
     label = name if name is not None else doc_id.upper()
@@ -57,14 +58,18 @@ def doc_json(
         "value": data if data is not None else {"id": doc_id, "name": label},
         "_body": body,
         "_updated": updated,
+        "_common": {key: value for key, value in meta.items() if value is not None},
     }
 
 
-def list_entry(document: dict[str, Any], *, values: bool) -> dict[str, Any]:
+def list_entry(
+    document: dict[str, Any], *, values: bool, common_keys: bool = False
+) -> dict[str, Any]:
     """偽物に配置した文書を、文書の一覧の 1 件（IF-24）にする。"""
     entry = {key: value for key, value in document.items() if not key.startswith("_")}
     if not values:
         entry["value"] = None
+    entry["commonKeys"] = (document.get("_common") or {}) if common_keys else None
     return entry
 
 
@@ -111,7 +116,7 @@ def _config_response(config: dict[str, Any], *, schemas: bool) -> dict[str, Any]
 class FakeIndex:
     """project-index の読み取り API と端末の設定の API の偽物（`httpx.MockTransport` の受け手）。
 
-    入出力は shuhei1101/project-index の develop の `f36ba69` の IF-22〜IF-32 に沿う。
+    入出力は shuhei1101/project-index の develop の `42632c5` の IF-22〜IF-32 に沿う。
 
     `docs` は配信元 → リビジョン（`None` は既定）→ 文書の並び、
     `details` は（配信元・パス）→ 文書の取得に追加する値（`markdown`・`failure`・`document`）、
@@ -171,8 +176,11 @@ class FakeIndex:
             None
             if document is None
             else {
-                key: document[key]
-                for key in ("id", "kind", "name", "description", "tags", "visibility")
+                **{
+                    key: document[key]
+                    for key in ("id", "kind", "name", "description", "tags", "visibility")
+                },
+                "commonKeys": document.get("_common") or {},
             }
         )
         return httpx.Response(
@@ -206,11 +214,15 @@ class FakeIndex:
             if ref is not None and ref not in by_ref:
                 return self._not_found("ref", ref)
             values = request.url.params.get("values") == "true"
+            common_keys = request.url.params.get("common_keys") == "true"
             return httpx.Response(
                 200,
                 json={
                     "ref": ref or self._default_ref(source),
-                    "documents": [list_entry(item, values=values) for item in by_ref.get(ref, [])],
+                    "documents": [
+                        list_entry(item, values=values, common_keys=common_keys)
+                        for item in by_ref.get(ref, [])
+                    ],
                 },
             )
         if parts[2] == "docs":

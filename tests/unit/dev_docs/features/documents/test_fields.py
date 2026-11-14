@@ -4,8 +4,7 @@ from collections.abc import Callable
 
 import pytest
 
-from dev_docs.features.documents.fields import get_field, parse_field_path, with_row_metadata
-from dev_docs.integrations.project_index.types import DocumentRow, SourceView
+from dev_docs.features.documents.fields import get_field, parse_field_path
 from dev_docs.integrations.project_index.types import IndexedDocument as Document
 from dev_docs.shared.errors import InvalidArgumentError
 
@@ -98,46 +97,3 @@ def test_is_markdown_body(
     result = is_markdown_body(document)
     # 検証
     assert result is expected
-
-
-def test_with_row_metadata(
-    make_document: Callable[..., Document], make_view: Callable[..., SourceView]
-) -> None:
-    """対応で値を取る（正常系）。"""
-    # 準備
-    view = make_view(
-        documents=[
-            DocumentRow(
-                id="terms",
-                paths=["terms/*.yaml"],
-                schema={},
-                metadata={"aliases": "synonyms"},
-                alias_type="term",
-            )
-        ]
-    )
-    document = make_document(
-        kind="terms",
-        data={"synonyms": ["作業場所"], "status": "current"},
-        metadata={"id": "doc-1", "name": "作業範囲"},
-    )
-    # 実行
-    [found] = with_row_metadata(view, [document])
-    # 検証
-    assert found.metadata["aliases"] == ["作業場所"]
-    assert found.metadata["status"] == "current"
-    assert found.metadata["alias_type"] == "term"
-    assert found.metadata["name"] == "作業範囲"
-
-
-def test_with_row_metadata_when_row_missing(
-    make_document: Callable[..., Document], make_view: Callable[..., SourceView]
-) -> None:
-    """行が無い種類（正常系）。"""
-    # 準備
-    view = make_view()
-    document = make_document(kind="unknown", data={"status": "current"})
-    # 実行
-    [found] = with_row_metadata(view, [document])
-    # 検証
-    assert found == document
