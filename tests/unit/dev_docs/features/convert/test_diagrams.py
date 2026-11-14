@@ -141,6 +141,28 @@ def test_render_diagram_when_frame() -> None:
     assert 'c["c"]:::script' in lines
 
 
+def test_render_diagram_when_unsafe_id() -> None:
+    """Mermaid の ID にできないノードの ID（正常系）。"""
+    # 準備
+    value = {
+        "nodes": [{"id": "画面 (一覧)", "hint": "説明"}, {"id": "end"}, {"id": "n1"}],
+        "edges": [{"from": "画面 (一覧)", "to": "外部-API", "line": "read"}],
+    }
+    # 実行
+    result = render_diagram(value, "flowchart", HEAD)
+    # 検証
+    lines = _mermaid(result)
+    assert 'n2["画面 (一覧)"]:::script' in lines
+    assert 'n3["end"]:::script' in lines
+    assert 'n1["n1"]:::script' in lines
+    assert 'n4["外部-API"]:::script' in lines
+    assert "n2 --> n4" in lines
+    data = _map_data(result)
+    assert data is not None
+    assert data["notes"]["n2"]["text"] == "説明"
+    assert data["layout"]["n2->n4"]["line"] == "read"
+
+
 def test_render_diagram_when_state() -> None:
     """状態遷移（正常系）。"""
     # 準備
