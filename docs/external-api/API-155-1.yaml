@@ -7,7 +7,7 @@ used_in:
 verification:
   state: 済
   detail: '提供する側の shuhei1101/project-index の develop の `f36ba69`（#14・#15 と #46・#49）の IF-22〜IF-32 と照合した。パス・状態コード・`application/problem+json` の `missing` は一致する。応答のキーは camelCase で、検討事項の一覧が `decisions[].folders`、検討事項の文書が `body`、端末の設定の行が `row` に包まれず `outsideRead` を持ち、保存の応答が状態だけ、行の追加の本文が `{source}` で応答が `result`（`added`・`exists`）になる。`f36ba69` に固定した本物の project-index を相手に、結合テストの文書の取得・画面の検索・リビジョンの一覧・端末の設定の取得と保存が pass した（`docs/pr/183/テスト結果/20261113204913_e168fba_結合テスト.log`）。develop の `7177d39` の IF-30・IF-31 とコードで、`PUT /settings/sources` の `expectedVersion`・400・409、排他ロックを持ったままの読み直し、`GET` がロックを待たないことを照合した'
-  date: '2026-11-13'
+  date: '2026-11-14'
 version:
   api_version: shuhei1101/project-index の develop の `7177d39`
   checked_on: '2026-11-14'
