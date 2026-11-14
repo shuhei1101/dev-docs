@@ -1,0 +1,34 @@
+docs:
+  - page: docs/nonfunctional/NFR-155-1.yaml
+    new: false
+    change: project-index への問い合わせの制限時間に、端末の設定の書き込みの扱い（決めた案に合わせて別の値か確認の手順）を加える
+    status: todo
+  - page: docs/external-api/API-155-1.yaml
+    new: false
+    change: timeout と POST・PUT /settings/sources の項目に、書き込みの後の読み直しで応答が遅くなることと dev-docs の扱いを加える
+    status: todo
+  - page: docs/guide/CLI.md
+    new: false
+    change: dev-docs migrate の終了コードと出力に、途中で失敗したとき project-index を戻すことと戻せなかった行の出力を加える
+    status: todo
+  - page: docs/pr/183/反映作業/端末の設定の移し替え/切り戻し.sh
+    new: false
+    change: ruamel.yaml で控えを参照し、実行.sh が記録した控えだけを書き戻す
+    status: todo
+  - page: docs/pr/183/反映作業/端末の設定の移し替え/実行.sh
+    new: false
+    change: dev-docs migrate の出力から控えのパスを記録する
+    status: todo
+scope_out:
+  - item: '#164 の反映作業「端末の設定の移し替え」「dev-docs のサーバーの再起動」の実行し直し'
+    reason: '#183 の反映作業で、#164 がこの PR のマージを待って tester へ再依頼する（ユーザーの指示どおり、#197 の close のときに #164 の確認へ返信して #164 へ渡す）'
+    plan: '#164'
+  - item: project-index の書き込みを読み直しを待たずに応答する契約への変更
+    reason: 要件の 1 つ目の論点で案 C を選んだときだけ要る。インターフェース定義設計で決める
+    plan: to_file
+use_cases:
+  - kind: single
+    scenario: docs/scenario/SC-155-3.yaml
+    impact: changed
+    detail: 端末の設定の sources を project-index へ移すとき、project-index の書き込みの応答が遅くても移し替えを終え、途中で失敗したら project-index の端末の設定を実行の前へ戻す
+    depends_on: []
