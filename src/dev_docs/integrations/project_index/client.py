@@ -233,7 +233,6 @@ class ProjectIndexClient:
                     search=bool(row.get("search", True)),
                     converter=row.get("converter"),
                     alias_type=row.get("alias_type"),
-                    metadata={str(k): str(v) for k, v in (row.get("metadata") or {}).items()},
                 )
                 for row in value.get("documents") or []
             ],
@@ -255,7 +254,7 @@ class ProjectIndexClient:
         response = await self.request(
             "GET",
             f"/sources/{_seg(source)}/docs",
-            params={"ref": ref, "values": "true" if values else None},
+            params={"ref": ref, "values": "true" if values else None, "common_keys": "true"},
         )
         value = response.json()
         positions: dict[str, int] = {}
@@ -288,13 +287,17 @@ class ProjectIndexClient:
         metadata = value.get("metadata") or {}
         document: IndexedDocument | None = None
         if value.get("value") is not None:
+            listed = {key: metadata.get(key) for key in LISTED_METADATA_KEYS}
+            common_keys = metadata.get("commonKeys")
+            if isinstance(common_keys, Mapping):
+                listed.update(common_keys)
             document = IndexedDocument(
                 id=str(metadata.get("id", "")),
                 kind=str(metadata.get("kind", "")),
                 source_id=source,
                 path=str(value.get("path", path)),
                 data=dict(value["value"]),
-                metadata={key: metadata.get(key) for key in LISTED_METADATA_KEYS},
+                metadata=listed,
                 version="",
                 body=str(value.get("body") or ""),
                 body_path=value.get("bodyPath"),
