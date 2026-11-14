@@ -6,10 +6,10 @@ dev-docs のサーバーの再起動:
   回数: 1 回限り
   起動し直す対象: dev-docs のサーバー（127.0.0.1:8781）
   可逆: true
-  疎通確認: null
-  実行: null
-  確認: null
+  疎通確認: dev-docs のサーバーの再起動/疎通確認.sh
+  実行: dev-docs のサーバーの再起動/実行.sh
+  確認: dev-docs のサーバーの再起動/確認.sh
   切り戻し: null
   失敗時: 既定の対処を 1 回、2 回連続で失敗したら依頼元へ返す
-  確認方法: 127.0.0.1:8781 の GET `/_api/settings/sources` の応答が `version` を持ち、状態遷移の設計書の文書の取得の `markdown` が `<!-- map` を含み `<!-- flow -->` を含まない
+  確認方法: 127.0.0.1:8781 の GET `/_api/settings/sources` の応答が `version` を持ち、インターフェース定義 IF-155-19 の文書の取得の `markdown` が `<!-- map` を含み、`<!-- flow -->`・`<!-- sequence -->`・`<!-- er -->` を含まない
   状態: "-"
