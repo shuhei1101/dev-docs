@@ -72,12 +72,35 @@ catalogs:
             type: int
             description: '`0` はずれが 0 件。`1` はずれが 1 件以上'
             notes: 引数の誤りなどで点検しなかったときも `1` で、標準エラーに原因を出し、`ずれ {件数} 件` の行を出さない
+      - name: mdmark build
+        kind: コマンド
+        purpose: 設定の `build` で決めた複数の Markdown を、文書を行き来できる 1 枚の HTML にまとめる
+        description: v0.10.0 から使用できる。npm のレジストリに公開されず、Node 24 以降で動く。設定の `build.include`（まとめる Markdown の glob）・`build.entry`（最初に開く文書）・`build.out`（書き出す HTML のパス）を参照し、`build.out` が既にあれば上書きする
+        params:
+          - name: --config
+            type: str
+            required: false
+            default: なし（起動したフォルダから上へ `mdmark.config.yaml` を探す）
+            description: 使用する設定ファイルのパス。`build` を持たない設定では終了コード `1` で終わる
+        returns:
+          - name: 標準出力
+            type: str
+            description: '`書き出した: {build.out}（文書 {件数} 件）` の 1 行'
+          - name: 標準エラー
+            type: str
+            description: '警告を `警告: {内容}` の 1 行ずつ出す'
+            notes: まとめた HTML に含まれない文書へのリンクと、`build.entry`・`build.glossary` がまとめる文書に該当しないことを含む
+          - name: 終了コード
+            type: int
+            description: '`0` は書き出した。`1` は設定に `build` が無い・`build.include` に該当する文書が無い・出力先へ書き込めないなどで書き出さなかった'
+            notes: '`1` のときは標準エラーに原因と修正方法を出す'
 lead: Markdown を描き、本文の文字列へコメントを付けられるようにするブラウザの JS。
 dependency_scope: 必須
 adoption: 採用
 used_in:
   - frontend/src/features/docs/doc-view/hooks/use-mdmark.ts
   - tests/integration/server/test_get_document.py
+  - scripts/build_pages.py
 upstream: shuhei1101/mdmark
 verification:
   state: 済
