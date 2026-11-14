@@ -16,7 +16,7 @@ def _alias_document(
 
 
 def _alias_tables() -> list[DocumentRow]:
-    """`alias_type: term` の行 terms・`alias_type: doc` の行 refs・`alias_type` の無い行 rules を返す。"""
+    """`alias_type: term` の行 terms・`alias_type: doc` の行 refs・`alias_type` の無い行 rules を返却する。"""
     return [
         DocumentRow(
             id="terms",

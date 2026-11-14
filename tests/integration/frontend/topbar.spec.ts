@@ -126,7 +126,7 @@ test.describe("NotFound", () => {
 test.describe("NotFoundNarrow", () => {
   test.use({ viewport: { width: 390, height: 844 } });
 
-  // 見つからない画面を幅 48rem 未満の場所に置く（正常系）
+  // 見つからない画面を幅 48rem 未満の場所に配置する（正常系）
   test("not_found_narrow", async ({ page }) => {
     await openStory(page, "layout-topbar--not-found-narrow");
     await expect(bar(page).getByRole("button", { name: "文書の一覧を開く" })).toHaveCount(0);

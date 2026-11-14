@@ -25,7 +25,7 @@ def test_parse_mermaid() -> None:
 
 
 def test_parse_mermaid_when_chain() -> None:
-    """線の連なりとラベルの書き方（正常系）。"""
+    """線の連なりとラベルの記載方法（正常系）。"""
     # 準備
     code = "graph TD\n  a -- はい --> b --> c"
     # 実行
@@ -77,7 +77,7 @@ def test_parse_mermaid_when_unreadable_line() -> None:
 
 
 def test_parse_mermaid_when_empty() -> None:
-    """箱・メッセージが無い（正常系）。"""
+    """ノード・メッセージが無い（正常系）。"""
     # 実行
     sequence = parse_mermaid("sequenceDiagram\n  participant A")
     flow = parse_mermaid("flowchart TD")

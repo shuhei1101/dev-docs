@@ -20,7 +20,7 @@ def test_build_parser() -> None:
 
 
 def test_build_parser_when_serve() -> None:
-    """serve の処理を引く（正常系）。"""
+    """serve の処理を参照する（正常系）。"""
     # 準備
     parser = build_parser()
     # 実行
@@ -31,7 +31,7 @@ def test_build_parser_when_serve() -> None:
 
 
 def test_build_parser_when_migrate() -> None:
-    """migrate の引数と処理を引く（正常系）。"""
+    """migrate の引数と処理を参照する（正常系）。"""
     # 準備
     parser = build_parser()
     # 実行
@@ -46,7 +46,7 @@ def test_build_parser_when_migrate() -> None:
 
 
 def test_build_parser_when_plan_and_record() -> None:
-    """--plan と --record は同時に渡せない（異常系）。"""
+    """--plan と --record は同時に指定できない（異常系）。"""
     # 準備
     parser = build_parser()
     # 実行・検証
@@ -87,7 +87,7 @@ def test_main_when_version(capsys: pytest.CaptureFixture[str]) -> None:
 
 
 def test_main_when_help(capsys: pytest.CaptureFixture[str]) -> None:
-    """使い方を出す（正常系）。"""
+    """使用方法を出す（正常系）。"""
     # 実行
     with pytest.raises(SystemExit) as exc_info:
         main(["--help"])
