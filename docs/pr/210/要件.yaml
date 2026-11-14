@@ -88,7 +88,7 @@ scope_out:
     plan: '#202'
   - item: project-index で丸ごとの保存と 1 行の追加の `expectedVersion` を必須に切り替える
     reason: '#190 の「着手の順番」で、この作業が develop へ入った後に project-index の側で起票すると決まっている。設定画面が送信する前に必須にすると今の画面が保存できなくなる'
-    plan: to_file
+    plan: shuhei1101/project-index#60
   - item: E2E のテストの作成
     reason: E2E は開発の間は作らず、メジャーのリリースの前に作ると決まっている（#183 のスコープ外と同じ）
     plan: none
@@ -97,4 +97,4 @@ scope_out:
     plan: shuhei1101/knowledge#385
   - item: 'スキーマ駆動の変換が出す表のマーカー（`<!-- table: data -->` など）を mdmark の JSON の引数にする'
     reason: mdmark の `v0.13.0` は前の記載方法（`キー=値`・`+機能`）をこのマイナーバージョンの間だけ読み込み、`mdmark check` が `legacy_mark` で返却する。今回の要望は図の map 化で、表は今のまま描かれる。次のマイナーバージョンへ上げる前に移す
-    plan: to_file
+    plan: '#217'
