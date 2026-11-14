@@ -481,7 +481,7 @@ classes:
         process: |-
           1. 呼び出しの共通の手順で `PUT /settings/sources`（本文 `{sources: rows}`。`expected_version` が `None` でなければ `expectedVersion` も添える）を呼ぶ。422 は呼び出しの共通の手順が `ProjectIndexRejectedError` を送る
           2. 応答が 409 の場合、応答の `current` を持つ `SettingsVersionConflictError` を送出する（GET を呼ばない）
-          3. 応答は状態だけのため、端末の設定の取得（`GET /settings/sources`）を呼んでその結果（保存した後の `version` を含む）を返す
+          3. 応答は行（`config`・`scope`）を持たないため、端末の設定の取得（`GET /settings/sources`）を呼んでその結果（保存した後の `version` を含む）を返す
         unit_tests:
           - name: test_put_settings_sources
             case: 正常
