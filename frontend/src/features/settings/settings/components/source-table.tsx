@@ -33,18 +33,26 @@ export const SourceTable = ({ sources, onEdit, onRemove }: Props) => {
     helper.display({
       id: "id",
       header: "配信元",
-      cell: ({ row }) =>
-        row.original.status === "serving" && row.original.id ? (
-          <Link
-            to="/$source"
-            params={{ source: row.original.id }}
-            className="font-mono text-primary hover:underline"
-          >
-            {row.original.id}
-          </Link>
-        ) : (
-          <span className="font-mono">{row.original.id}</span>
-        ),
+      cell: ({ row }) => (
+        <div className="space-y-0.5">
+          {row.original.status === "serving" && row.original.id ? (
+            <Link
+              to="/$source"
+              params={{ source: row.original.id }}
+              className="font-mono text-primary hover:underline"
+            >
+              {row.original.id}
+            </Link>
+          ) : (
+            <span className="font-mono">{row.original.id}</span>
+          )}
+          {row.original.outsideRead === false && (
+            <p className="text-xs text-muted-foreground">
+              範囲の外から参照できません
+            </p>
+          )}
+        </div>
+      ),
     }),
     helper.display({
       id: "config",

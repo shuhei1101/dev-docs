@@ -1,4 +1,5 @@
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 
@@ -11,7 +12,11 @@ import {
 import { toFieldErrors } from "@/features/settings/settings/problem-errors";
 import { useSaveSources } from "@/features/settings/settings/queries";
 import type { SettingsSourceRow } from "@/shared/api/generated/model";
-import { AppError, ClientValueError } from "@/shared/core/app-error";
+import {
+  AppError,
+  ClientValueError,
+  VersionConflictError,
+} from "@/shared/core/app-error";
 import { handleAppError } from "@/shared/core/handle-app-error";
 
 type Options = {
@@ -36,14 +41,24 @@ export const useSourceForm = ({ sources, index, onSaved }: Options) => {
   const [summary, setSummary] = useState<{ path: string; message: string }[]>(
     [],
   );
+  // 開いた後にほかのプロセスが端末の設定を変更して、保存を断られたか
+  const [conflict, setConflict] = useState(false);
   const save = useSaveSources();
+  const queryClient = useQueryClient();
 
   const submit = form.handleSubmit(async (values) => {
     setSummary([]);
+    setConflict(false);
     try {
       await save.mutateAsync(applySource(sources, values, index));
       onSaved();
     } catch (error) {
+      if (error instanceof VersionConflictError) {
+        // 入力を残したまま一覧を最新の内容にし、もう一度保存させる
+        setConflict(true);
+        await queryClient.invalidateQueries({ refetchType: "all" });
+        return;
+      }
       if (error instanceof ClientValueError) {
         const position = index ?? sources.length;
         const { fields, summary: all } = toFieldErrors(
@@ -70,5 +85,12 @@ export const useSourceForm = ({ sources, index, onSaved }: Options) => {
     }
   });
 
-  return { form, errors, submit, summary, saving: save.isPending };
+  return {
+    form,
+    errors,
+    submit,
+    summary,
+    conflict,
+    saving: save.isPending,
+  };
 };

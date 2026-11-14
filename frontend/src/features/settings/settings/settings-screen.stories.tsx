@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { HttpResponse, http } from "msw";
+import { expect, userEvent, within } from "storybook/test";
 
 import { SettingsScreen } from "@/features/settings/settings/settings-screen";
 
@@ -30,6 +31,39 @@ const sources = [
     configVersion: { config: "2", server: "3" },
   },
 ];
+
+const sourcesWithOutsideReadDisabled = [
+  { ...sources[0] },
+  {
+    id: "private-notes",
+    config: ["/home/u/repo/private-notes/project-index.yaml"],
+    enabled: true,
+    scope: { read: ["/home/u/repo/private-notes/**"], write: null },
+    status: "serving",
+    outsideRead: false,
+  },
+];
+
+const listed = (rows: typeof sourcesWithOutsideReadDisabled) =>
+  http.get(SETTINGS, () =>
+    HttpResponse.json({
+      settingsPath: "/home/u/.config/project-index/settings.yaml",
+      sources: rows,
+    }),
+  );
+
+const conflict = () =>
+  HttpResponse.json(
+    {
+      type: "about:blank",
+      title: "Conflict",
+      status: 409,
+      detail: "端末の設定はほかの書き換えで変わっています",
+      nextSteps: [],
+      current: "b2c3d4",
+    },
+    { status: 409, headers: { "Content-Type": "application/problem+json" } },
+  );
 
 const meta = {
   title: "Settings/SettingsScreen",
@@ -75,5 +109,59 @@ export const ProjectIndexUnreachable: Story = {
         ),
       ),
     ],
+  },
+};
+
+export const OutsideReadDisabled: Story = {
+  parameters: { msw: [listed(sourcesWithOutsideReadDisabled)] },
+};
+
+export const EditOutsideRead: Story = {
+  parameters: { msw: [listed(sourcesWithOutsideReadDisabled)] },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(
+      await canvas.findByRole("button", { name: "private-notes を編集" }),
+    );
+    const body = within(canvasElement.ownerDocument.body);
+    await expect(
+      await body.findByRole("switch", {
+        name: "範囲の外から参照できるようにする",
+      }),
+    ).not.toBeChecked();
+  },
+};
+
+export const SaveConflict: Story = {
+  parameters: {
+    msw: [listed(sourcesWithOutsideReadDisabled), http.put(SETTINGS, conflict)],
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(
+      await canvas.findByRole("button", { name: "sample を編集" }),
+    );
+    const body = within(canvasElement.ownerDocument.body);
+    await userEvent.click(await body.findByRole("button", { name: "保存" }));
+    await expect(
+      await body.findByText("ほかの変更があったため保存できませんでした"),
+    ).toBeInTheDocument();
+  },
+};
+
+export const DeleteConflict: Story = {
+  parameters: {
+    msw: [listed(sourcesWithOutsideReadDisabled), http.put(SETTINGS, conflict)],
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(
+      await canvas.findByRole("button", { name: "private-notes を削除" }),
+    );
+    const body = within(canvasElement.ownerDocument.body);
+    await userEvent.click(await body.findByRole("button", { name: "削除" }));
+    await expect(
+      await body.findByText(/ほかの変更があったため削除できませんでした/),
+    ).toBeInTheDocument();
   },
 };

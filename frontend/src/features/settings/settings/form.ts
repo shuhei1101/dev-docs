@@ -11,6 +11,7 @@ export type SourceFormValues = {
   enabled: boolean;
   read: string;
   write: string;
+  outsideRead: boolean;
 };
 
 const ID_PATTERN = /^[a-z0-9-]+$/;
@@ -56,6 +57,7 @@ export const sourceFormSchema = (otherIds: string[]) =>
     write: z.string().refine((value) => !hasBlankLine(value), {
       message: "書き込みの範囲に空の行があります。空の行を削除してください。",
     }),
+    outsideRead: z.boolean(),
   });
 
 /** 先頭と末尾の改行を除いた中に空の行があるか */
@@ -69,13 +71,21 @@ export const toFormValues = (
   source: SettingsSource | null,
 ): SourceFormValues =>
   source === null
-    ? { id: "", config: "", enabled: true, read: "", write: "" }
+    ? {
+        id: "",
+        config: "",
+        enabled: true,
+        read: "",
+        write: "",
+        outsideRead: true,
+      }
     : {
         id: source.id ?? "",
         config: source.config.join("\n"),
         enabled: source.enabled,
         read: (source.scope.read ?? []).join("\n"),
         write: (source.scope.write ?? []).join("\n"),
+        outsideRead: source.outsideRead ?? true,
       };
 
 /** 取得の行から状態の項目を除き、保存の行にする */
@@ -87,6 +97,7 @@ const toSourceInput = (source: SettingsSource): SourceEntry => ({
     read: source.scope.read ?? [],
     ...(source.scope.write ? { write: source.scope.write } : {}),
   },
+  ...(source.outsideRead === false ? { outside_read: false } : {}),
 });
 
 const fromValues = (values: SourceFormValues): SourceEntry => {
@@ -99,6 +110,7 @@ const fromValues = (values: SourceFormValues): SourceEntry => {
       read: filled(values.read),
       ...(write.length > 0 ? { write } : {}),
     },
+    ...(values.outsideRead ? {} : { outside_read: false }),
   };
 };
 

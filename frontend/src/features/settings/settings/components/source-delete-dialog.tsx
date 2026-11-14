@@ -1,3 +1,4 @@
+import { useQueryClient } from "@tanstack/react-query";
 import { useRef, useState } from "react";
 
 import { useSaveSources } from "@/features/settings/settings/queries";
@@ -14,7 +15,7 @@ import {
   AlertDialogTitle,
 } from "@/shared/components/ui/alert-dialog";
 import { Alert } from "@/shared/components/ui/alert";
-import { AppError } from "@/shared/core/app-error";
+import { AppError, VersionConflictError } from "@/shared/core/app-error";
 import { handleAppError } from "@/shared/core/handle-app-error";
 
 type Props = {
@@ -35,6 +36,7 @@ export const SourceDeleteDialog = ({
   index,
 }: Props) => {
   const save = useSaveSources();
+  const queryClient = useQueryClient();
   const [failure, setFailure] = useState<string | null>(null);
   const cancelRef = useRef<HTMLButtonElement>(null);
   const source = sources[index];
@@ -46,6 +48,13 @@ export const SourceDeleteDialog = ({
       await save.mutateAsync(removeSource(sources, index));
       onOpenChange(false);
     } catch (error) {
+      if (error instanceof VersionConflictError) {
+        setFailure(
+          "ほかの変更があったため削除できませんでした。一覧を最新の内容にしました。内容を確認し、もう一度削除してください。",
+        );
+        await queryClient.invalidateQueries({ refetchType: "all" });
+        return;
+      }
       setFailure(
         error instanceof AppError
           ? (error.problem?.detail ?? error.message)

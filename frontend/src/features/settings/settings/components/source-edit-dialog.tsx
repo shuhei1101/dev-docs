@@ -124,7 +124,7 @@ export const SourceEditDialog = ({
   sources,
   index,
 }: Props) => {
-  const { form, errors, submit, summary, saving } = useSourceForm({
+  const { form, errors, submit, summary, conflict, saving } = useSourceForm({
     sources,
     index,
     onSaved: () => onOpenChange(false),
@@ -153,6 +153,16 @@ export const SourceEditDialog = ({
                 : "端末の設定に配信元を追加します。"}
             </DialogDescription>
           </DialogHeader>
+          {conflict && (
+            <Alert role="alert">
+              <AlertTitle>
+                ほかの変更があったため保存できませんでした
+              </AlertTitle>
+              <AlertDescription>
+                この画面を開いた後に、ほかのプロセスが端末の設定を変更しました。一覧を最新の内容にしました。入力した内容を確認し、もう一度保存してください。
+              </AlertDescription>
+            </Alert>
+          )}
           <FailureSummary
             summary={summary}
             invalidCount={invalidCount}
@@ -237,6 +247,34 @@ export const SourceEditDialog = ({
               {...form.register("read")}
             />
           </Field>
+          <div
+            role="group"
+            aria-labelledby="source-outside-read-heading"
+            className="space-y-1.5"
+          >
+            <p id="source-outside-read-heading" className="text-sm font-medium">
+              範囲の外からの参照
+            </p>
+            <div className="flex items-center justify-between">
+              <Label htmlFor="source-outside-read">
+                範囲の外から参照できるようにする
+              </Label>
+              <Controller
+                control={form.control}
+                name="outsideRead"
+                render={({ field }) => (
+                  <Switch
+                    id="source-outside-read"
+                    checked={field.value}
+                    onCheckedChange={field.onChange}
+                  />
+                )}
+              />
+            </div>
+            <p className="text-xs text-muted-foreground">
+              オフにすると、読み取りの範囲に当たらない作業場所からは参照できません。
+            </p>
+          </div>
           <Field
             id="source-write"
             label="書き込みの範囲"
