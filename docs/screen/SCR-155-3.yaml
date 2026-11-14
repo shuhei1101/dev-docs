@@ -377,6 +377,8 @@ elements:
     label: タイトル `他の変更があったため削除できませんでした` と `この画面を開いた後に、他のプロセスが端末の設定を変更しました。一覧を最新の内容にしました。内容を確認し、もう一度削除してください。`
     visible_when: 削除の保存が 409 を返したとき（削除する配信元が削除されたときの表示を出すときは出さない）
     source: 端末の設定の保存（409）
+    notes:
+      読み上げ: '`role="alert"` で、出たときに読み上げる'
   - name: 削除する配信元が削除されたときの表示
     kind: alert
     position: 削除の確認のダイアログ > 削除の説明の下
@@ -384,6 +386,8 @@ elements:
     label: タイトル `配信元が削除されたため削除できませんでした` と `この画面を開いた後に、他のプロセスがこの配信元を端末の設定から削除しました。一覧を確認してください。`
     visible_when: 削除する配信元が、取り直した一覧に ID（ID を持たない行は設定ファイル）で見つからないとき
     source: 端末の設定の取得.sources[]
+    notes:
+      読み上げ: '`role="alert"` で、出たときに読み上げる'
 screen: frontend/src/features/settings/settings/settings-screen.tsx
 mock: frontend/src/features/settings/settings/settings-screen.stories.tsx
 lead: '`/_settings` で、端末の設定の `sources[]` を配信元ごとの状態とともに並べ、追加・編集・削除をダイアログで行う画面。保存は `sources[]` を丸ごと送信し、スキーマに通ったときだけ書き換わる。'
