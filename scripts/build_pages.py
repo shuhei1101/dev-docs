@@ -110,7 +110,7 @@ class BuildError(Exception):
 
 
 def _load_yaml(text: str) -> Any:
-    """YAML の文字列を safe の読み方で読み込む。"""
+    """YAML の文字列を safe の方式で読み込む。"""
     return YAML(typ="safe", pure=True).load(text)
 
 
@@ -121,7 +121,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     )
     parser.add_argument("--root", type=Path, default=Path(), help="リポジトリの直下")
     parser.add_argument(
-        "--out", required=True, type=Path, help="出力のフォルダ（中身を削除して作り直す）"
+        "--out", required=True, type=Path, help="出力のフォルダ（中身を削除して再作成する）"
     )
     args = parser.parse_args(argv)
     root: Path = args.root
@@ -145,7 +145,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         public_ids = {f"{GUIDE_DIR}/{page.path}": page.path for page in guides}
         public_ids.update({doc_id: f"{doc_id}.md" for doc_id in markdowns})
 
-        # 出力のフォルダは作り直し、失敗したときは空のまま残す
+        # 出力のフォルダは再作成し、失敗したときは空のまま残す
         shutil.rmtree(out, ignore_errors=True)
         out.mkdir(parents=True)
 
@@ -391,7 +391,7 @@ def write_bundle_config(workdir: Path, names: Sequence[str]) -> Path:
         "build": {"include": list(names), "entry": names[0], "out": OUTPUT_HTML},
     }
     path = workdir / _BUNDLE_CONFIG
-    # JSON は YAML として読める
+    # JSON は YAML として読み込める
     path.write_text(json.dumps(config, ensure_ascii=False, indent=2), encoding="utf-8")
     return path
 
