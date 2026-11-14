@@ -1,0 +1,1 @@
+# テストコード（tests/）と管理用プラグイン（plugins/dev-docs/）のコメントと docstring の文言を、AI slop の単語の対応表に合わせて修正する
