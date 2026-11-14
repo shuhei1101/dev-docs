@@ -51,7 +51,7 @@ constants:
     title: 共通のキー
     container: features/documents/fields.py
     usecase: 共通
-    summary: '`documents[].metadata` で列名を対応づける共通のキー（エイリアスのキーを含む）'
+    summary: '絞り込みで文書の `metadata` から値を参照する共通のキー（エイリアスのキーを含む）'
     value: ("id", "name", "description", "tags", "main_tags", "related", "status", "alias_type", "aliases", "command", "cwd", "url", "avoid", "skill", "tool", "path", "port", "replacement")
 functions:
   - name: parse_field_path
@@ -195,49 +195,4 @@ functions:
         condition: '`body_path` が `docs/a.md`・`docs/B.MD`・`src/a.py`・`None`（`path` は `docs/x.md`）'
         mock: なし
         expected: '`True`・`True`・`False`・`False`'
-        exception: '-'
-  - name: with_row_metadata
-    title: 行のメタデータの補い
-    kind: 関数
-    container: features/documents/fields.py
-    usecase: 共通
-    role: 変換
-    summary: 文書の一覧の文書の `metadata` に、文書の行の `metadata` の対応で値から取った共通のキーと `alias_type` を加える
-    scope: public
-    thread_safe: true
-    args:
-      - name: view
-        title: 配信元の表示の設定
-        type: SourceView
-        required: true
-        passing: positional
-        description: 文書の行（`metadata`・`alias_type`）を参照する
-      - name: documents
-        title: 文書
-        type: Sequence[IndexedDocument]
-        required: true
-        passing: positional
-        description: project-index の文書の一覧の文書（値つき）
-    returns:
-      type: list[IndexedDocument]
-      description: '`metadata` を補った文書（並びは入力のまま）'
-    process: |-
-      1. 文書ごとに `view.row(kind)` を引く。行が無ければ文書をそのままにする
-      2. `METADATA_KEYS` のうち `metadata` に値が無いキーを、行の `metadata` の対応（無ければ同じ名前）の項目のパスで項目の取得をし、値があれば加える
-      3. 行の `alias_type` があれば `metadata` の `alias_type` にする
-      4. `metadata` を差し替えた文書の並びを返す
-    unit_tests:
-      - name: test_with_row_metadata
-        case: 正常
-        summary: 対応で値を取る
-        condition: '行が `metadata: {aliases: synonyms}`・`alias_type: term`、文書の値が `{synonyms: [作業場所], status: current}`'
-        mock: なし
-        expected: '`metadata` の `aliases` が `[作業場所]`、`status` が `current`、`alias_type` が `term`、元からある `name` は変わらない'
-        exception: '-'
-      - name: test_with_row_metadata_when_row_missing
-        case: 正常
-        summary: 行が無い種類
-        condition: '`view.documents` に無い種類の文書'
-        mock: なし
-        expected: 文書が変わらない
         exception: '-'

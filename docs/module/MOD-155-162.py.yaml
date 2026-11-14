@@ -80,43 +80,43 @@ functions:
         case: 正常
         summary: 文書の取得
         condition: GET `/_api/sources/sample/docs`
-        mock: project-indexの呼び出し（`httpx.MockTransport` で project-index の develop の `f36ba69` の入出力を返す）
+        mock: project-indexの呼び出し（`httpx.MockTransport` で project-index の develop の `42632c5` の入出力を返す）
         expected: 200 で `path`・`markdown`・`tabs`・`updatedAt`・`tableKeys`（キーが camelCase）
       - name: test_build_view_router_when_document_missing
         case: 異常
         summary: 無い文書
         condition: GET `/_api/sources/sample/docs/no-such-doc`
-        mock: project-indexの呼び出し（`httpx.MockTransport` で project-index の develop の `f36ba69` の入出力を返す）
+        mock: project-indexの呼び出し（`httpx.MockTransport` で project-index の develop の `42632c5` の入出力を返す）
         expected: 404 の problem+json で、`missing` が `doc`、`value` が `no-such-doc`
       - name: test_build_view_router_when_search
         case: 正常
         summary: 画面の検索
         condition: GET `/_api/sources/sample/search?q=foo`
-        mock: project-indexの呼び出し（`httpx.MockTransport` で project-index の develop の `f36ba69` の入出力を返す）
+        mock: project-indexの呼び出し（`httpx.MockTransport` で project-index の develop の `42632c5` の入出力を返す）
         expected: 200 で `totalCount` と `items[].path`
       - name: test_build_view_router_when_query_too_long
         case: 異常
         summary: 長すぎる語
         condition: '`q` が 201 文字'
-        mock: project-indexの呼び出し（`httpx.MockTransport` で project-index の develop の `f36ba69` の入出力を返す）
+        mock: project-indexの呼び出し（`httpx.MockTransport` で project-index の develop の `42632c5` の入出力を返す）
         expected: 400 の problem+json
       - name: test_build_view_router_when_refs
         case: 正常
         summary: Git 管理外のリビジョンの一覧
         condition: Git 管理外の配信元で GET `/_api/sources/notes/refs`
-        mock: project-indexの呼び出し（`httpx.MockTransport` で project-index の develop の `f36ba69` の入出力を返す）
+        mock: project-indexの呼び出し（`httpx.MockTransport` で project-index の develop の `42632c5` の入出力を返す）
         expected: 200 で `git` が `false`
       - name: test_build_view_router_when_columns
         case: 正常
         summary: 列の設定の保存
         condition: 'PUT `/_api/sources/sample/columns` を `Sec-Fetch-Site: same-origin` で'
-        mock: project-indexの呼び出し（`httpx.MockTransport` で project-index の develop の `f36ba69` の入出力を返す）
+        mock: project-indexの呼び出し（`httpx.MockTransport` で project-index の develop の `42632c5` の入出力を返す）
         expected: 200 で、次の文書の取得の `columns` に入る
       - name: test_build_view_router_when_cross_origin
         case: 異常
         summary: 別のオリジン
         condition: '`Origin: http://evil.example`'
-        mock: project-indexの呼び出し（`httpx.MockTransport` で project-index の develop の `f36ba69` の入出力を返す）
+        mock: project-indexの呼び出し（`httpx.MockTransport` で project-index の develop の `42632c5` の入出力を返す）
         expected: 403 で、ファイルを書かない
       - name: test_build_view_router_when_project_index_unreachable
         case: 異常
