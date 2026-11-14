@@ -1,0 +1,1 @@
+# 開発用のスクリプト・設定のコード（scripts/・eslint.config.js・frontend/.storybook/・frontend/scripts/）のコメントと docstring の文言を、AI slop の単語の対応表に合わせて修正する
