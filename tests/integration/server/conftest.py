@@ -161,12 +161,20 @@ class IndexSource:
         return ref or self.default_ref
 
 
+def _saved_row(row: dict[str, Any]) -> dict[str, Any]:
+    """保存の本文の行（`outsideRead`）を、偽物の端末の設定の行（`outside_read`）にする。"""
+    saved = {key: value for key, value in row.items() if key != "outsideRead"}
+    if "outsideRead" in row:
+        saved["outside_read"] = row["outsideRead"]
+    return saved
+
+
 class MockIndex:
     """project-index の読み取り API と端末の設定の API を、127.0.0.1 の空きポートで待ち受ける偽物。
 
     端末の設定の行（`rows`）の順に配信元の状態を決め、`sources` の配信元の文書を返す。
 
-    入出力は shuhei1101/project-index の develop の `f36ba69` の IF-22〜IF-32 に沿う。
+    入出力は shuhei1101/project-index の develop の `7177d39` の IF-22〜IF-32 に沿う。
     文書の取得・画面の検索・リビジョンの一覧・端末の設定の取得と保存の正常系は、本物の project-index
     （`RealIndex`）で確かめ、この偽物はつながらない・応答しない・500 を返す異常系と、それ以外の
     インターフェースで使う。
@@ -179,6 +187,11 @@ class MockIndex:
         self.queued: dict[tuple[str, str], list[tuple[int, Any]]] = {}
         self.received: list[tuple[str, str, Any]] = []
         self.delay_sec = 0.0
+        # 端末の設定の内容のバージョン（保存するたびに増やす）
+        self.version = 1
+        # 端末の設定の保存で行を保存するかと、保存した後に応答を遅らせる秒数
+        self.put_saves = True
+        self.put_delay_sec = 0.0
         self.hold = threading.Event()
         self.hold.set()
         self.port = 0
@@ -279,7 +292,7 @@ class MockIndex:
                     "configVersion": state.get("configVersion"),
                 }
             )
-        return {"settingsPath": SETTINGS_PATH, "sources": sources}
+        return {"settingsPath": SETTINGS_PATH, "sources": sources, "version": str(self.version)}
 
     def _served(self, source_id: str) -> tuple[IndexSource | None, tuple[int, Any] | None]:
         """配信中の配信元か、配信していない理由の 404 を返す。"""
@@ -323,8 +336,13 @@ class MockIndex:
     def _settings_answer(self, method: str, body: Any) -> tuple[int, Any]:
         """端末の設定の API に答える。"""
         if method == "PUT":
-            self.rows = list(body["sources"])
-            self.pending = set()
+            # project-index と同じく、保存してから読み直しの間は応答しない
+            if self.put_saves:
+                self.rows = [_saved_row(row) for row in body["sources"]]
+                self.pending = set()
+                self.version += 1
+            if self.put_delay_sec:
+                time.sleep(self.put_delay_sec)
             return 200, {
                 "sources": [
                     {key: state[key] for key in ("id", "status", "errors")}
