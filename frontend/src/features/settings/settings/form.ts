@@ -88,6 +88,14 @@ export const toFormValues = (
         outsideRead: source.outsideRead ?? true,
       };
 
+/** 行を指す値。ID を持たない行（読み直していない行）は設定ファイルで指す */
+export const sourceKey = (source: SettingsSource): string =>
+  source.id ?? source.config.join("\n");
+
+/** `key` の行の位置（無ければ -1）。一覧を取得し直しても同じ配信元を指すために使う */
+export const findSource = (sources: SettingsSource[], key: string): number =>
+  sources.findIndex((source) => sourceKey(source) === key);
+
 /** 取得の行から状態の項目を除き、保存の行にする */
 const toSourceInput = (source: SettingsSource): SourceEntry => ({
   ...(source.id ? { id: source.id } : {}),

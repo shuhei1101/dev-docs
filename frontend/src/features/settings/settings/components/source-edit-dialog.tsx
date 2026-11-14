@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Controller } from "react-hook-form";
 
 import { useSourceForm } from "@/features/settings/settings/hooks/use-source-form";
@@ -124,12 +124,17 @@ export const SourceEditDialog = ({
   sources,
   index,
 }: Props) => {
-  const { form, errors, submit, summary, conflict, saving } = useSourceForm({
-    sources,
-    index,
-    onSaved: () => onOpenChange(false),
-  });
+  const { form, errors, submit, summary, conflict, gone, saving } =
+    useSourceForm({
+      sources,
+      index,
+      onSaved: () => onOpenChange(false),
+    });
   const editing = index !== null;
+  // 一覧を取得し直しても見出しの配信元が変わらないよう、開いたときの名前を持つ
+  const [name] = useState(() =>
+    index === null ? "" : (sources[index].id ?? ""),
+  );
   const idRef = useRef<HTMLInputElement | null>(null);
   const configRef = useRef<HTMLTextAreaElement | null>(null);
   const idField = form.register("id");
@@ -148,12 +153,20 @@ export const SourceEditDialog = ({
               {editing ? "配信元を編集" : "配信元を追加"}
             </DialogTitle>
             <DialogDescription>
-              {editing
-                ? `配信元 ${sources[index].id ?? ""}`
-                : "端末の設定に配信元を追加します。"}
+              {editing ? `配信元 ${name}` : "端末の設定に配信元を追加します。"}
             </DialogDescription>
           </DialogHeader>
-          {conflict && (
+          {gone && (
+            <Alert role="alert">
+              <AlertTitle>
+                配信元が削除されたため保存できませんでした
+              </AlertTitle>
+              <AlertDescription>
+                この画面を開いた後に、ほかのプロセスがこの配信元を端末の設定から削除しました。一覧を確認してください。
+              </AlertDescription>
+            </Alert>
+          )}
+          {conflict && !gone && (
             <Alert role="alert">
               <AlertTitle>
                 ほかの変更があったため保存できませんでした

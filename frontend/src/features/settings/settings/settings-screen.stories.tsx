@@ -165,3 +165,36 @@ export const DeleteConflict: Story = {
     ).toBeInTheDocument();
   },
 };
+
+export const SaveAfterSourceRemoved: Story = {
+  parameters: {
+    msw: [
+      (() => {
+        // 1 回目は 2 行、409 の後の取得し直しでは private-notes がほかのプロセスに削除された一覧を返す
+        let calls = 0;
+        return http.get(SETTINGS, () => {
+          calls += 1;
+          return HttpResponse.json({
+            settingsPath: "/home/u/.config/project-index/settings.yaml",
+            sources:
+              calls === 1
+                ? sourcesWithOutsideReadDisabled
+                : sourcesWithOutsideReadDisabled.slice(0, 1),
+          });
+        });
+      })(),
+      http.put(SETTINGS, conflict),
+    ],
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(
+      await canvas.findByRole("button", { name: "private-notes を編集" }),
+    );
+    const body = within(canvasElement.ownerDocument.body);
+    await userEvent.click(await body.findByRole("button", { name: "保存" }));
+    await expect(
+      await body.findByText("配信元が削除されたため保存できませんでした"),
+    ).toBeInTheDocument();
+  },
+};
