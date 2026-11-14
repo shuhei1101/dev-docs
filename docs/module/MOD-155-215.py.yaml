@@ -468,12 +468,20 @@ classes:
             required: true
             passing: positional
             description: 保存する全行（`config` は配列）
+          - name: expected_version
+            title: 内容のバージョン
+            type: str | None
+            required: false
+            default: None
+            passing: keyword
+            description: 画面が受け取った内容のバージョン。`None` は照合しない
         returns:
           type: SettingsSourcesView
           description: 読み直した後の行と状態
         process: |-
-          1. 呼び出しの共通の手順で `PUT /settings/sources`（本文 `{sources: rows}`）を呼ぶ。422 は呼び出しの共通の手順が `ProjectIndexRejectedError` を送る
-          2. 応答は状態だけのため、端末の設定の取得（`GET /settings/sources`）を呼んでその結果を返す
+          1. 呼び出しの共通の手順で `PUT /settings/sources`（本文 `{sources: rows}`。`expected_version` が `None` でなければ `expectedVersion` も添える）を呼ぶ。422 は呼び出しの共通の手順が `ProjectIndexRejectedError` を送る
+          2. 応答が 409 の場合、応答の `current` を持つ `SettingsVersionConflictError` を送出する（GET を呼ばない）
+          3. 応答は状態だけのため、端末の設定の取得（`GET /settings/sources`）を呼んでその結果（保存した後の `version` を含む）を返す
         unit_tests:
           - name: test_put_settings_sources
             case: 正常
@@ -488,6 +496,23 @@ classes:
             mock: '`httpx.MockTransport` で project-index の応答を返す'
             expected: '`ProjectIndexRejectedError` で、`violations` が応答の 1 件。GET を呼ばない'
             exception: '422'
+          - name: test_put_settings_sources_when_expected_version
+            case: 正常
+            summary: 内容のバージョンを添えて保存する
+            condition: '`expected_version: v1`、PUT が 200、GET が `version: v2` を返す'
+            mock: '`httpx.MockTransport` で project-index の応答を返す'
+            expected: 'PUT の本文が `{sources: rows, expectedVersion: v1}` で、返った `version` が `v2`'
+          - name: test_put_settings_sources_when_conflict
+            case: 異常
+            summary: 内容のバージョンが古い
+            condition: 'PUT が 409（`current: v2`）を返す'
+            mock: '`httpx.MockTransport` で project-index の応答を返す'
+            expected: '`SettingsVersionConflictError` で `current` が `v2`。GET を呼ばない'
+            exception: '409'
+        exceptions:
+          - name: SettingsVersionConflictError
+            condition: 409（`expected_version` が今の内容のバージョンと違う）
+            message: '`端末の設定は他の書き換えで変わっています`'
       - name: save_settings_sources
         title: 端末の設定の配信元の行の照合つきの保存
         kind: メソッド
