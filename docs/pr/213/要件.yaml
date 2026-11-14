@@ -12,7 +12,7 @@ use_cases:
 docs:
   - page: docs/library/LIB-155-9.yaml
     new: false
-    change: '`used_in` に `scripts/build_pages.py` を追加し、`catalogs` の `コマンド` に `mdmark build`（`--config` で渡した設定の `build` の文書を 1 枚の HTML にまとめる。`scripts/build_pages.py` の `run_mdmark` が `npx` で呼ぶ）の項目を追加する'
+    change: '`used_in` に `scripts/build_pages.py` を追加し、`catalogs` の `コマンド` に `mdmark build`（`--config` で渡した設定の `build` の文書を 1 枚の HTML にまとめる。`scripts/build_pages.py` の `run_mdmark` が `npx` で呼ぶ）の項目を追加する。`version.pinning` に、`scripts/build_pages.py` が `npx` で呼ぶ CLI を定数 `MDMARK_TAG` のタグで固定する旨を追加する'
     status: done
     updated_by: planner
     updated_at: '2026-11-14T11:27:14.665510+00:00'
@@ -20,6 +20,3 @@ scope_out:
   - item: '`LIB-155-9.yaml` の `version`（`current` が v0.11.0、`scripts/build_pages.py` の `MDMARK_TAG` と `catalogs` の `version` が v0.10.0）の食い違いの修正'
     reason: 画面が読む mdmark のバージョンの更新を扱う別の Issue の範囲
     plan: '#199'
-  - item: '`LIB-155-9.yaml` の `version.pinning` に、`scripts/build_pages.py` が `npx` で呼ぶ CLI のタグ（`MDMARK_TAG`）での固定を書き足すこと'
-    reason: '要望は `used_in` と `catalogs` の追加で、`pinning` の書き足しは含まれない。ただし固定の方法の記述が使用箇所と揃わなくなるため、含めるかの判断が分かれる。今の判断は含めない（バージョンの固定は #199 がタグを書き換えるときに揃えられる）。レビューで確定する'
-    plan: to_file
