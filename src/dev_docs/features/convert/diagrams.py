@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import re
 from collections.abc import Mapping, Sequence
 from typing import Any
 
@@ -51,6 +52,24 @@ MAP_MERMAID_KINDS = (
     "stateDiagram",
 )
 MAP_DATA_VERSION = 1
+# そのまま Mermaid の `flowchart` のノードの ID にできる ID
+MERMAID_SAFE_ID = re.compile(r"^[A-Za-z0-9_]+$")
+# ID にできない `flowchart` の予約語と枠の ID（大文字と小文字を区別しない）
+MERMAID_RESERVED_IDS = frozenset(
+    {
+        "end",
+        "subgraph",
+        "graph",
+        "flowchart",
+        "direction",
+        "click",
+        "class",
+        "classdef",
+        "style",
+        "linkstyle",
+        "frame",
+    }
+)
 
 
 def _items(value: Mapping[str, Any], key: str) -> list[Mapping[str, Any]]:
@@ -122,6 +141,27 @@ def _node_class(node: Mapping[str, Any]) -> str:
     return NODE_KINDS.get(str(node.get("kind", DEFAULT_NODE_KIND)), NODE_KINDS[DEFAULT_NODE_KIND])
 
 
+class _NodeIds:
+    """`x-diagram` のノードの ID から Mermaid のノードの ID を引く。"""
+
+    def __init__(self, used: set[str]) -> None:
+        self.used = used
+        self.ids: dict[str, str] = {}
+        self.count = 0
+
+    def get(self, original: str) -> str:
+        """ID にできればそのまま、できなければ使用されていない `n{番号}` にする。"""
+        if original not in self.ids:
+            if MERMAID_SAFE_ID.match(original) and original.lower() not in MERMAID_RESERVED_IDS:
+                self.ids[original] = original
+            else:
+                self.count += 1
+                while f"n{self.count}" in self.used:
+                    self.count += 1
+                self.ids[original] = f"n{self.count}"
+        return self.ids[original]
+
+
 def _flowchart(value: Mapping[str, Any], kind: DiagramKind) -> tuple[list[str], _MapData]:
     """flow 系の値を `flowchart` の行と補足にする（`clicks` は描かない）。"""
     # 向き: 指定があればその値、無ければ図の種類の既定
@@ -133,20 +173,25 @@ def _flowchart(value: Mapping[str, Any], kind: DiagramKind) -> tuple[list[str], 
         else "TD"
     )
     data = _MapData()
-    # ノードの ID からノードの行（出た順）
+    nodes, edges = _items(value, "nodes"), _items(value, "edges")
+    ids = _NodeIds(
+        {str(node["id"]) for node in nodes}
+        | {str(edge[end]) for edge in edges for end in ("from", "to")}
+    )
+    # Mermaid のノードの ID からノードの行（出た順）
     node_lines: dict[str, str] = {}
-    for node in _items(value, "nodes"):
-        node_id = str(node["id"])
-        label = _quote(node.get("label", node_id))
+    for node in nodes:
+        node_id = ids.get(str(node["id"]))
+        label = _quote(node.get("label", node["id"]))
         node_lines[node_id] = f'{node_id}["{label}"]:::{_node_class(node)}'
         data.note(node_id, node.get("hint"))
     edge_lines: list[str] = []
-    for edge in _items(value, "edges"):
-        source, target = str(edge["from"]), str(edge["to"])
-        # 宣言の無い端のノード: 名前を ID にして追加する
-        for end in (source, target):
+    for edge in edges:
+        source, target = ids.get(str(edge["from"])), ids.get(str(edge["to"]))
+        # 宣言の無い端のノード: 名前をラベルにして追加する
+        for end, name in ((source, edge["from"]), (target, edge["to"])):
             if end not in node_lines:
-                node_lines[end] = f'{end}["{_quote(end)}"]:::{NODE_KINDS[DEFAULT_NODE_KIND]}'
+                node_lines[end] = f'{end}["{_quote(name)}"]:::{NODE_KINDS[DEFAULT_NODE_KIND]}'
         edge_label = edge.get("label")
         arrow = f'-->|"{_quote(edge_label)}"|' if edge_label else "-->"
         edge_lines.append(f"{source} {arrow} {target}")
@@ -162,7 +207,9 @@ def _flowchart(value: Mapping[str, Any], kind: DiagramKind) -> tuple[list[str], 
     # 枠がある: 枠のノードの行を `subgraph` で囲む
     if isinstance(frame, Mapping):
         framed = [
-            str(node_id) for node_id in frame.get("nodes") or [] if str(node_id) in node_lines
+            ids.get(str(node_id))
+            for node_id in frame.get("nodes") or []
+            if ids.get(str(node_id)) in node_lines
         ]
         lines.append(f'  subgraph frame ["{_quote(frame.get("label", ""))}"]')
         lines += [f"    {node_lines[node_id]}" for node_id in framed]
