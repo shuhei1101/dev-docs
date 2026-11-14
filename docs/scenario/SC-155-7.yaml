@@ -561,13 +561,15 @@ scenarios:
         API->>API: スキーマ駆動で Markdown にする
         API-->>UI: 文書 6 の Markdown
         UI-->>U: 図と表で描いた文書 6 の本文
+        U->>UI: 状態遷移図の下の帯の次へを押す
+        UI-->>U: 次の遷移を強調した状態遷移図
         U->>UI: 図の下の元データの表を開く
         UI-->>U: 元データの表
       ```
     expected:
-      - flowchart と state の項目が mdmark のフロー図で、`sequenceDiagram` の項目が mdmark のシーケンス図で描かれ、Mermaid のコードブロックが本文に出ない
-      - 'flowchart のフロー図で、`kind: question` のノードが質問の形状、`kind: result` のノードが結果の形状で出て、`frame` の 2 つのノードが `label` の枠に囲まれ、`hint` がノードの、`tip` が線のラベルのツールチップに出る'
-      - state のフロー図に、開始のノードから初期状態への線と、終了状態から終了のノードへの線が出る
+      - flowchart と state の項目と `sequenceDiagram` の項目が mdmark の map で描かれ、Mermaid のコードブロックが本文に出ず、書き方の警告が出ない
+      - 'flowchart の map で、`kind: question` のノードが質問の種類、`kind: result` のノードが結果の種類で出て、`frame` の 2 つのノードが `label` のグループに入り、`hint` がノードの、`tip` が線のツールチップに出る'
+      - state の map が状態遷移図で、開始から初期状態への線と、終了状態から終了への線が出て、帯の次へを押すと遷移が記載順に 1 本ずつ強調される
       - 図の下の元データの表は閉じた状態で出て、開くとノードの表の先頭の列が `表示` で、ID の列が隠れている
       - 元データの表に、列名が表に無い・先頭の列を隠せないという mdmark の警告が出ない
       - スカラーが並ぶオブジェクトが「項目 / 値」の 2 列の表で出る
@@ -600,21 +602,24 @@ scenarios:
 
         U->>UI: 文書 7 を開く
         UI->>API: 文書の取得（文書 7）
-        API->>API: er の項目を、tables の列で補った ER 図の部品にする
+        API->>API: er の項目を、tables の列で補った erDiagram の map にする
         API-->>UI: 文書 7 の Markdown
         UI-->>U: ER 図で描いた文書 7 の本文
+        U->>UI: 顧客のテーブルを押す
+        UI-->>U: 顧客と関連の線を強調した ER 図
       ```
     expected:
-      - '`er` の項目が mdmark の ER 図で描かれ、Mermaid のコードブロック（`erDiagram`）が本文に出ない'
+      - '`er` の項目が mdmark の map の ER 図で描かれ、Mermaid のコードブロック（`erDiagram`）が本文に出ない'
       - 実体 `顧客` のテーブルに、`tables[]` のテーブルの列の名前と型が出て、主キーの列に `PK` のマーカーが出る
       - 実体 `注文` のテーブルに、`columns` の列の名前と型が出る
       - '`顧客` から `注文` への関連の線が、`顧客` の列 `id` の行と `注文` の列 `customer_id` の行を結び、`顧客` の端に多重度 `1`、`注文` の端に多重度 `0..n` の記号が出る'
       - '`注文` から `商品` への関連の線は図に出ず、図の元データの表にその関連の行が出る'
       - ER 図に書き方の警告が出ない
       - 図の下の元データの表は閉じた状態で出る
+      - 顧客のテーブルを押すと、顧客のテーブルと顧客から注文への線のほかが薄くなる
     test: test_normal_when_er_diagram_drawn
     notes:
-      mdmark のバージョン: ER 図の部品（mdmark#298）と判定のノードの種類（mdmark#268）は、画面が読み込む mdmark の master（v0.10.0）にある。
+      mdmark のバージョン: map の ER 図・状態遷移図（mdmark#465）は、画面が読み込む mdmark の v0.13.0 にある。
   - name: 正常シナリオ（本文の id のリンクを開く）
     setup:
       - name: Mock

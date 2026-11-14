@@ -159,6 +159,84 @@ scenarios:
       - 応答が 403
       - '`settings.yaml` が変わらず、sample の文書の画面は開ける'
     test: test_error_when_cross_origin
+  - name: 正常シナリオ（範囲の外からの参照を止めて追加する）
+    setup:
+      - name: Mock
+        description: なし（実環境で実行。ブラウザで画面を開く）
+      - name: 追加する配信元
+        description: 文書の種類を 1 つと `project-index.yaml` を持つ git リポジトリ。端末の設定にはまだ無い
+        notes: id `extra`
+      - name: 端末の設定
+        description: project-index の `PROJECT_INDEX_CONFIG` が指す一時フォルダの `settings.yaml`
+        notes: '`sources` に sample の 1 行'
+      - name: dev-docs
+        description: その project-index につないで起動した dev-docs
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        actor U as 利用者
+        participant UI as dev-docs の画面
+        participant API as 画面の API
+        participant PI as project-index
+
+        U->>UI: 配信元を追加し、extra の id・config・scope.read を入れ、範囲の外からの参照を止めて保存する
+        UI->>API: 端末の設定の保存（extra の outside_read が false）
+        API->>PI: 端末の設定の配信元の保存
+        PI->>PI: settings.yaml を書き換え、配信元を読み直す
+        PI-->>API: 保存した sources と配信元ごとの状態
+        API-->>UI: 保存した sources と配信元ごとの状態
+        UI-->>U: settings（extra が範囲の外から参照できない一覧）
+      ```
+    expected:
+      - '`settings.yaml` の extra の行の `outside_read` が `false` になり、sample の行は変わらない'
+      - 一覧の extra に、範囲の外から参照できないことが出て、sample には出ない
+      - extra を編集するダイアログを開くと、範囲の外からの参照が止めた状態で出る
+    test: test_normal_when_outside_read_disabled
+  - name: 異常シナリオ（ほかのプロセスが端末の設定を書き換えた後に保存する）
+    setup:
+      - name: Mock
+        description: なし（実環境で実行。ブラウザで画面を開く）
+      - name: 追加する配信元
+        description: 文書の種類を 1 つと `project-index.yaml` を持つ git リポジトリ。端末の設定にはまだ無い
+        notes: id `extra`
+      - name: 端末の設定
+        description: project-index の `PROJECT_INDEX_CONFIG` が指す一時フォルダの `settings.yaml`
+        notes: '`sources` に sample の 1 行'
+      - name: ほかのプロセスの書き換え
+        description: 設定画面を開いた後に、project-index の 1 行の変更（PATCH `/settings/sources/sample`）で sample の行の `enabled` を `false` にする
+        notes: MindStella などのほかのプロセスの代わり
+      - name: dev-docs
+        description: その project-index につないで起動した dev-docs
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        actor U as 利用者
+        participant UI as dev-docs の画面
+        participant API as 画面の API
+        participant PI as project-index
+
+        U->>UI: 設定画面を開く
+        UI-->>U: settings（sample が配信中の一覧）
+        Note over PI: ほかのプロセスが sample の行を書き換える
+        U->>UI: 配信元を追加し、extra の id・config・scope.read を入れて保存する
+        UI->>API: 端末の設定の保存（開いたときの内容のバージョンを添える）
+        API->>PI: 端末の設定の配信元の保存（内容のバージョンを添える）
+        PI-->>API: 409（今の内容のバージョン）
+        API-->>UI: 409
+        UI->>API: 端末の設定の取得
+        UI-->>U: ほかの書き換えが入ったことと、取得し直した一覧
+        U->>UI: もう一度保存する
+        UI->>API: 端末の設定の保存（取得し直した内容のバージョンを添える）
+        API->>PI: 端末の設定の配信元の保存
+        PI-->>API: 保存した sources と配信元ごとの状態
+        UI-->>U: settings（extra を加えた一覧）
+      ```
+    expected:
+      - 1 回目の保存の後、ほかの書き換えが入って保存しなかったことが出て、一覧の sample が無効で出る
+      - 1 回目の保存の後、`settings.yaml` に extra の行が無く、sample の行の `enabled` は `false` のまま
+      - 1 回目の保存の後も、入れた extra の値が入力欄に残る
+      - もう一度保存すると、`settings.yaml` に extra の行が追加され、sample の行の `enabled` は `false` のまま
+    test: test_error_when_settings_changed_by_another_process
 lead: 利用者が dev-docs の設定画面で配信元を追加し、project-index の端末の設定に並べて画面で読めるようにする。
 issue: 4
 primary_actor: 利用者
@@ -172,7 +250,7 @@ preconditions:
   - dev-docs が起動し、project-index につながっている
   - 追加するフォルダが YAML の文書とそのスキーマと `project-index.yaml` を持つ（git リポジトリか Git 管理外のフォルダ）
 success_guarantee: project-index の端末の設定の `sources` に配信元の行があり、dev-docs と project-index を再起動せずにその配信元の文書を画面で読める。
-minimal_guarantee: 設定画面の保存がスキーマに通らないとき、画面と別のオリジンから書き込んだときは、端末の設定を書き換えない。既にある配信元の配信は止まらない。
+minimal_guarantee: 設定画面の保存がスキーマに通らないとき、画面と別のオリジンから書き込んだとき、設定画面を開いた後にほかのプロセスが端末の設定を書き換えていたときは、端末の設定を書き換えない。既にある配信元の配信は止まらない。
 frequency: 配信元ごとに 1 回
 priority: 高
 refs:
