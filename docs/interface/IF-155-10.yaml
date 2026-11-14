@@ -329,7 +329,7 @@ flows:
     expected:
       - '`markdown` に `<!-- map` の範囲が 4 つあり、どの範囲も `` ```mermaid `` のコードブロックを 1 つ持つ。`<!-- flow -->`・`<!-- sequence -->` の範囲が無い'
       - 'flowchart の範囲の Mermaid が `flowchart` で、`q` にクラス `question`、`r` にクラス `result` が付き、`q`・`r` がタイトル `判定` の `subgraph` に入る。補足（`<!-- map-data -->`）の `notes` に `q` の `hint` と `q` から `r` への線の `tip`、`layout` にその線の `line` の `read` がある'
-      - 'state の範囲の Mermaid が `stateDiagram-v2` で、`[*] --> 下書き`・`下書き --> 公開`・`公開 --> [*]` の行がある'
+      - 'state の範囲の Mermaid が `stateDiagram-v2` で、状態を `state "{名前}" as {ID}` で宣言し、その ID で `[*] --> 下書き`・`下書き --> 公開 : 公開する`・`公開 --> [*]` の行がある'
       - 図の元データの表が `closed` の表のマーカーで囲まれ、ノードの表の先頭の列が `表示` で、`+columns hide=` に ID の列名がある。辺の表のマーカーは `hide=` を持たない
       - スカラーが並ぶオブジェクトが、列名が `項目`・`値` の表になっている
       - 改行を含む値の `**{title}**` が値と別の行にある
