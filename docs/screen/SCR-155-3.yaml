@@ -271,8 +271,8 @@ elements:
     description: 入力を反映した `sources[]` を保存する
     label: 追加は `追加`、編集は `保存`（プライマリ）
     visible_when: 配信元のダイアログを開いたとき
-    enabled_when: 保存の応答を待っていないとき
-    action: クリックで入力チェックを通し、通ったら今の一覧に入力を反映した `sources[]` を丸ごと送信する。200 ならダイアログを閉じて一覧を取り直し、通知を出す。422 ならダイアログを開いたまま保存の失敗のまとめと項目のエラーを出す
+    enabled_when: 保存の応答を待っていないとき。編集していた配信元が他のプロセスに削除されていないとき
+    action: クリックで入力チェックを通し、通ったら今の一覧に入力を反映した `sources[]` を丸ごと、端末の設定の取得か前の保存で受けた `version` を `expectedVersion` に添えて送信する。編集は、開いたときの配信元を ID（ID を持たない行は設定ファイル）で今の一覧から探して置き換える。200 ならダイアログを閉じて一覧を取り直し、通知を出す。422 ならダイアログを開いたまま保存の失敗のまとめと項目のエラーを出す。409 ならダイアログを開いたまま入力を残し、他の変更の表示を出して一覧を取り直す
     action_ref: IF-155-19#
   - name: 削除の確認のタイトル
     kind: label
@@ -301,8 +301,8 @@ elements:
     description: その行を除いた `sources[]` を保存する
     label: '`削除`（危険の色）'
     visible_when: 削除の確認のダイアログを開いたとき
-    enabled_when: 保存の応答を待っていないとき
-    action: クリックでその行を除いた `sources[]` を丸ごと送信し、200 ならダイアログを閉じて一覧を取り直し、通知を出す。失敗したらダイアログに Problem Details の `detail` を出す
+    enabled_when: 保存の応答を待っていないとき。削除する配信元が他のプロセスに削除されていないとき
+    action: クリックで、開いたときの配信元を ID（ID を持たない行は設定ファイル）で今の一覧から探して除いた `sources[]` を丸ごと、`version` を `expectedVersion` に添えて送信し、200 ならダイアログを閉じて一覧を取り直し、通知を出す。409 なら削除の他の変更の表示を出して一覧を取り直す。それ以外の失敗はダイアログに Problem Details の `detail` を出す
     action_ref: IF-155-19#
   - name: 保存の失敗の通知
     kind: toast
@@ -334,8 +334,58 @@ elements:
     position: 画面の中央
     description: この画面で使えるキー
     visible_when: '`?` を押したときか、ショートカットの一覧を開くを押したとき'
+  - name: 範囲の外からの参照の補足
+    kind: label
+    position: 配信元の一覧 > 配信元 > ID の下
+    description: 範囲の外からの参照を止めていること
+    label: '`範囲の外から参照できません`'
+    visible_when: '`outsideRead` が `false` の行だけ'
+    source: 端末の設定の取得.sources[].outsideRead
+  - name: 範囲の外からの参照のスイッチ
+    kind: switch
+    position: 配信元のダイアログ > 読み取りの範囲の下
+    description: '`scope` に当たらない作業場所からも作業範囲の外（参考）として参照できるか'
+    label: '`範囲の外からの参照` と `範囲の外から参照できるようにする`'
+    io: 入力
+    type: 真偽値
+    visible_when: 配信元のダイアログを開いたとき
+    hint: '`オフにすると、読み取りの範囲に当たらない作業場所からは参照できません。`'
+    initial_value: 追加はオン、編集はその行の `outsideRead`（無ければオン）
+    target: 端末の設定の保存.sources[].outside_read（オフのときだけ `false` を送信する）
+  - name: 他の変更の表示
+    kind: alert
+    position: 配信元のダイアログ > タイトルの下
+    description: 開いた後に他のプロセスが端末の設定を変更したため保存できなかったこと
+    label: タイトル `他の変更があったため保存できませんでした` と `この画面を開いた後に、他のプロセスが端末の設定を変更しました。一覧を最新の内容にしました。入力した内容を確認し、もう一度保存してください。`
+    visible_when: 端末の設定の保存が 409 を返したとき（配信元が削除されたときの表示を出すときは出さない）
+    source: 端末の設定の保存（409）
+    notes:
+      読み上げ: '`role="alert"` で、出たときに読み上げる'
+  - name: 配信元が削除されたときの表示
+    kind: alert
+    position: 配信元のダイアログ > タイトルの下
+    description: 編集していた配信元が取り直した一覧に無いこと
+    label: タイトル `配信元が削除されたため保存できませんでした` と `この画面を開いた後に、他のプロセスがこの配信元を端末の設定から削除しました。一覧を確認してください。`
+    visible_when: 編集していた配信元が、取り直した一覧に ID（ID を持たない行は設定ファイル）で見つからないとき
+    source: 端末の設定の取得.sources[]
+    notes:
+      読み上げ: '`role="alert"` で、出たときに読み上げる'
+  - name: 削除の他の変更の表示
+    kind: alert
+    position: 削除の確認のダイアログ > 削除の説明の下
+    description: 開いた後に他のプロセスが端末の設定を変更したため削除できなかったこと
+    label: タイトル `他の変更があったため削除できませんでした` と `この画面を開いた後に、他のプロセスが端末の設定を変更しました。一覧を最新の内容にしました。内容を確認し、もう一度削除してください。`
+    visible_when: 削除の保存が 409 を返したとき（削除する配信元が削除されたときの表示を出すときは出さない）
+    source: 端末の設定の保存（409）
+  - name: 削除する配信元が削除されたときの表示
+    kind: alert
+    position: 削除の確認のダイアログ > 削除の説明の下
+    description: 削除する配信元が取り直した一覧に無いこと
+    label: タイトル `配信元が削除されたため削除できませんでした` と `この画面を開いた後に、他のプロセスがこの配信元を端末の設定から削除しました。一覧を確認してください。`
+    visible_when: 削除する配信元が、取り直した一覧に ID（ID を持たない行は設定ファイル）で見つからないとき
+    source: 端末の設定の取得.sources[]
 screen: frontend/src/features/settings/settings/settings-screen.tsx
-mock: docs/mock/pages/settings/36/default/
+mock: frontend/src/features/settings/settings/settings-screen.stories.tsx
 lead: '`/_settings` で、端末の設定の `sources[]` を配信元ごとの状態とともに並べ、追加・編集・削除をダイアログで行う画面。保存は `sources[]` を丸ごと送信し、スキーマに通ったときだけ書き換わる。'
 input_checks:
   - element: 配信元の ID の入力欄
