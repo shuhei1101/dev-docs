@@ -11,10 +11,9 @@ use_cases:
     depends_on: []
   - kind: composite
     scenario: docs/scenario/SC-155-13.yaml
-    impact: following
-    detail: 配信元の文書を画面で読む流れの、最初の表示の待ちと失敗の扱いに追随する
-    depends_on:
-      - docs/scenario/SC-155-7.yaml
+    impact: run_only
+    detail: 配信元を開く流れの最初の取得を変えるため、壊していないかを実行して確認する
+    depends_on: []
 docs:
   - page: docs/nonfunctional/NFR-155-1.yaml
     new: false
@@ -22,8 +21,11 @@ docs:
     status: todo
 scope_out:
   - item: dev-docs serve のプロセスが 2 つ動いていた件（古いものと起動した直後のもの）の調査と対処
-    reason: Issue の確認で見つかったが、遅さとの関係は確かめていない。原因の計測で関係すると分かったときだけスコープに入れる。判断はレビューで確定する
+    reason: dev-docs serve を 1 つだけ起動した計測でも 1 回目だけ遅い症状が再現したため、遅さとは関係しない。稼働中のログでは、起動し直した新しいプロセスがポートの使用中で終わり、古いプロセスが配信を続けている
     plan: to_file
   - item: mdmark を jsDelivr から読み込む部分（frontend/src/features/docs/doc-view/hooks/use-mdmark.ts）の変更
-    reason: '#228 が使う mdmark のバージョンの指定で同じファイルを変える。原因の計測で CDN からの読み込みが原因に入ったときは #228 と突き合わせる'
+    reason: '計測で jsDelivr からの読み込みは 9〜65 ms で、遅さの原因でない。同じファイルは #228 が変える'
     plan: '#228'
+  - item: project-index が配信元ごとの最初の問い合わせで行うリビジョンの書き出しと文書の一覧の値の作成を速くすること（git archive の 20 秒の上限を含む）
+    reason: 1 回目だけ遅い原因は project-index の中の処理で、dev-docs の側では速くできない。規約『複数リポジトリのAPI契約』に沿って project-index に起票した
+    plan: shuhei1101/project-index#85
