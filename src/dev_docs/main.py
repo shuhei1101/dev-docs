@@ -162,7 +162,12 @@ def run_serve(args: argparse.Namespace) -> int:
             )
         )
         handlers.restart.attach(server)
-        server.run()
+        try:
+            server.run()
+        except SystemExit:
+            # uvicorn は待ち受けに失敗すると sys.exit で抜けるので、待ち受けの前なら下で使用中を出す
+            if server.started:
+                raise
         if not server.started:
             # 確認した後に他のプロセスがポートを取った
             _report_port(terminal.bind, port)
