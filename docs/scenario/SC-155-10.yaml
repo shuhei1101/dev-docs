@@ -108,7 +108,7 @@ scenarios:
       ```
     expected:
       - プロセスが 0 以外の終了コードで終わる
-      - 標準エラーに使用中のポートの番号と、`DEV_DOCS_PORT` で変えられることが出る
+      - 標準エラーに使用中のポートの番号と、ポートを持っているプロセスの pid（取れなければ取れなかったこと）と、`DEV_DOCS_PORT` で変えられることが出る
     test: test_error_when_port_in_use
   - name: 正常シナリオ（SessionStart で起動する）
     setup:
@@ -118,7 +118,7 @@ scenarios:
         description: '`CLAUDE_CONFIG_DIR` が指すテスト用の一時フォルダ。プラグイン `dev-docs` をユーザースコープに入れ、env の `DEV_DOCS_CONFIG` が端末の設定を指す'
       - name: 端末の設定
         description: '`clone` がテスト用のクローン、`project_index` が sample と notes を配信している project-index のアドレス'
-        notes: dev-docs は待ち受けていない。ポート 8781 が空き
+        notes: dev-docs は待ち受けていない。ポート 8781 が空き。env の `DEV_DOCS_UNIT` が空の文字列（unit を使用しない端末）
     flow: |-
       ```mermaid
       sequenceDiagram
@@ -149,7 +149,7 @@ scenarios:
         notes: '`claude -p` を動かす環境の `XDG_CONFIG_HOME` にテスト用の一時フォルダを入れる'
       - name: 端末の設定
         description: '`$XDG_CONFIG_HOME/dev-docs/settings.yaml`。`clone` がテスト用のクローン、`project_index` が sample を配信している project-index のアドレス'
-        notes: dev-docs は待ち受けていない。ポート 8781 が空き
+        notes: dev-docs は待ち受けていない。ポート 8781 が空き。env の `DEV_DOCS_UNIT` が空の文字列（unit を使用しない端末）
     flow: |-
       ```mermaid
       sequenceDiagram
@@ -250,13 +250,126 @@ scenarios:
       - 1 回目の起動のログが `$XDG_STATE_HOME/dev-docs/logs` にでき、`~/.local/state/dev-docs` には書かない
       - 2 回目の起動のログが `$DEV_DOCS_STATE_DIR/logs` にでき、`$XDG_STATE_HOME/dev-docs` には書かない
     test: test_normal_when_xdg_dirs_set
+  - name: 正常シナリオ（SessionStart で unit を起動する）
+    setup:
+      - name: Mock
+        description: なし（実環境で実行。Claude Code は `claude -p` で動かす）
+      - name: unit
+        description: テスト用の名前で作った systemd --user の unit。テスト用のクローンの `dev-docs serve` を起動する。止まっている
+        notes: env の `DEV_DOCS_UNIT` にその名前を入れる。テストの後に unit を止めて削除する
+      - name: 端末の設定
+        description: SessionStart で起動する正常シナリオと同じ
+        notes: dev-docs は待ち受けていない。ポート 8781 が空き
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        actor U as 利用者
+        participant CC as Claude Code
+        participant HK as SessionStart のフック
+        participant SD as systemd --user
+        participant DD as dev-docs
+
+        U->>CC: sample のワークツリーでセッションを始める
+        CC->>HK: SessionStart
+        HK->>DD: ポートにつながるか確かめる（つながらない）
+        HK->>SD: unit があるので unit を起動する
+        SD->>DD: dev-docs serve を起動する
+        HK-->>CC: 待たずに戻り、/mcp の再接続の案内を文脈に追加する
+        U->>CC: /mcp でつなぎ直す
+        CC->>DD: /_admin/mcp のツールの一覧を取る
+      ```
+    expected:
+      - フックが 0 の終了コードで戻り、セッションの文脈に `/mcp` の再接続の案内が入る
+      - '`127.0.0.1:8781` を待ち受ける dev-docs のプロセスが 1 つだけで、その pid が unit の `MainPID` と同じ'
+      - unit の外に dev-docs のプロセスが無い
+      - つなぎ直した後、管理の MCP（`/_admin/mcp`）のツールが 3 つ返る
+    test: test_normal_when_unit_started_by_session_start
+  - name: 正常シナリオ（unit を起動し直す）
+    setup:
+      - name: Mock
+        description: なし（実環境で実行。Claude Code は `claude -p` で動かす）
+      - name: unit
+        description: SessionStart で unit を起動する正常シナリオと同じ unit が動いていて、ポートを持っている
+        notes: 起動し直す前の `MainPID` を記録する
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        actor U as 利用者
+        participant SD as systemd --user
+        participant CC as Claude Code
+        participant HK as SessionStart のフック
+        participant DD as dev-docs
+
+        U->>SD: unit を起動し直す（systemctl --user restart）
+        SD->>DD: 起動し直す前のプロセスを止める
+        U->>CC: 止まっている間にセッションを始める
+        CC->>HK: SessionStart
+        HK->>SD: ポートにつながらないので unit を起動する（起動し直しの途中で増えない）
+        SD->>DD: dev-docs serve を起動する
+        DD->>DD: 127.0.0.1:8781 で待ち受ける
+      ```
+    expected:
+      - '`127.0.0.1:8781` を待ち受ける dev-docs のプロセスが 1 つだけで、その pid が unit の `MainPID` と同じで、起動し直す前の `MainPID` と違う'
+      - 起動し直す前のプロセスが残っていない
+      - unit の外に dev-docs のプロセスが無い
+    test: test_normal_when_unit_restarted
+  - name: 異常シナリオ（同時に 2 回起動する）
+    setup:
+      - name: Mock
+        description: なし（実環境で実行。`dev-docs serve` を子プロセスで 2 つ同時に起動する）
+      - name: 端末の設定
+        description: 正常シナリオと同じ
+        notes: 同じ空きポートを両方の `DEV_DOCS_PORT` に入れる
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        actor U as 利用者
+        participant D1 as dev-docs（1 つ目）
+        participant D2 as dev-docs（2 つ目）
+
+        U->>D1: dev-docs serve
+        U->>D2: dev-docs serve
+        D1->>D1: 127.0.0.1 で待ち受ける
+        D2->>D2: ポートで待ち受けられない
+        D2-->>U: ポートを持っているプロセスの pid を標準エラーに出して終わる
+      ```
+    expected:
+      - ポートを待ち受ける dev-docs のプロセスが 1 つだけで、もう片方は 0 以外の終了コードで終わる
+      - 終わった方の標準エラーに、ポートの番号と、待ち受けている方の pid が出る
+    test: test_error_when_started_twice
+  - name: 異常シナリオ（unit の外のプロセスがポートを持っている）
+    setup:
+      - name: Mock
+        description: なし（実環境で実行）
+      - name: 使用中のポート
+        description: unit の外で起動した `dev-docs serve` が待ち受けているポート
+      - name: unit
+        description: SessionStart で unit を起動する正常シナリオと同じ、同じポートの unit。止まっている
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        actor U as 利用者
+        participant SD as systemd --user
+        participant DD as dev-docs（unit）
+
+        U->>SD: unit を起動する
+        SD->>DD: dev-docs serve を起動する
+        DD->>DD: ポートで待ち受けられない
+        DD-->>SD: ポートを持っているプロセスの pid を出して、ポートの使用中の終了コードで終わる
+        SD->>SD: 起動し直さずに止める
+      ```
+    expected:
+      - unit が failed で止まり、起動し直した回数（`NRestarts`）が 0 のまま
+      - unit のログに、ポートの番号と、ポートを持っているプロセスの pid が出る
+      - unit の外のプロセスは待ち受けを続ける
+    test: test_error_when_port_held_outside_unit
 lead: 利用者が `dev-docs serve` を実行し、project-index が配信している配信元の文書を画面で配信し始める。
 issue: 3
 primary_actor: 利用者
 stakeholders:
   - name: 利用者
     interest: 1 つのコマンドで project-index が配信している配信元を画面で読め、project-index につながらないときはその理由が分かる
-trigger: '利用者が `dev-docs serve` を実行するか、ポートにつながらないときに SessionStart のフックが切り離して起動する'
+trigger: '利用者が `dev-docs serve` を実行するか、ポートにつながらないときに SessionStart のフックが systemd --user の unit を起動する（unit が無ければ `dev-docs serve` を切り離して起動する）。利用者や AI Monitor が unit を起動し直す'
 preconditions:
   - '`DEV_DOCS_CONFIG`（既定 `${XDG_CONFIG_HOME:-~/.config}/dev-docs/settings.yaml`）に端末の設定がある'
   - '`DEV_DOCS_PORT`（既定 8781）のポートが空いている'

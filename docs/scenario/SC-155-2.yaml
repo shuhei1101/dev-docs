@@ -11,7 +11,7 @@ scenarios:
         notes: '`settings.json` の env に `DEV_DOCS_CONFIG` が無い'
       - name: dev-docs のクローン
         description: テスト用の一時フォルダにクローンした dev-docs
-        notes: 引数にこのパスを渡す。ポート 8781 が空き
+        notes: 引数にこのパスを渡す。ポート 8781 が空き。`claude -p` を動かす環境の `DEV_DOCS_UNIT` が空の文字列（unit を使用しない端末）
       - name: 端末の設定の場所
         description: テスト用の一時フォルダの `settings.yaml`
         notes: ファイルは無い。場所の質問にこのパスを答える（既定の `${XDG_CONFIG_HOME:-~/.config}/dev-docs/settings.yaml` と違う場所）
@@ -163,6 +163,40 @@ scenarios:
       - '`settings.yaml` と、Claude Code の設定の場所の `settings.json` は変わらない'
       - スキルの応答に、設定のバージョン・dev-docs のバージョンと、管理の MCP の `update` で dev-docs を更新する案内がある
     test: test_error_when_terminal_config_newer
+  - name: 正常シナリオ（systemd --user の unit で起動する）
+    setup:
+      - name: Mock
+        description: なし（実環境で実行。Claude Code は `claude -p` で動かし、AskUserQuestion には既定の選択肢で答える）
+      - name: Claude Code の設定の場所
+        description: 正常シナリオと同じ
+      - name: dev-docs のクローン
+        description: 正常シナリオと同じ
+        notes: '`claude -p` を動かす環境の `DEV_DOCS_UNIT` にテスト用の unit の名前を入れる。テストの後に unit を止めて削除する'
+      - name: 端末の設定の場所
+        description: 正常シナリオと同じ
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        actor U as 利用者
+        participant SK as global-setup のスキル
+        participant CF as 端末の設定・Claude Code の設定
+        participant SD as systemd --user
+        participant DD as dev-docs
+
+        U->>SK: /dev-docs:global-setup {クローンのパス}
+        SK->>CF: 正常シナリオと同じく端末の設定と env を作る
+        SK->>SD: systemd --user を使用できることを確かめる
+        SK->>SD: クローンの dev-docs serve を起動する unit を書き、有効にして起動する
+        SD->>DD: dev-docs serve を起動する
+        SK->>DD: /_admin/mcp につながり、画面の API で project-index の配信元の一覧が取れることを確かめる
+        SK-->>U: 作ったもの（unit を含む）・つながった結果を出す
+      ```
+    expected:
+      - unit のファイルが、クローンの `.venv` の `python -m dev_docs serve` を起動し、端末の設定のパスを `DEV_DOCS_CONFIG` に渡し、ポートの使用中の終了コードでは起動し直さない
+      - unit が有効で active になり、`127.0.0.1:8781` を待ち受ける dev-docs のプロセスが 1 つだけで、その pid が unit の `MainPID` と同じ
+      - スキルの最後の応答に、作った unit の名前とファイルのパスがある
+      - 同じ名前の unit が既にあるときは、書き換える前の unit のバックアップがある
+    test: test_normal_when_systemd_user_available
 lead: 利用者が `/dev-docs:global-setup` で、端末に dev-docs のクローン・依存・端末の設定・Claude Code の env を用意し、画面のサーバーが project-index につながることを確かめる。
 issue: 4
 primary_actor: 利用者
