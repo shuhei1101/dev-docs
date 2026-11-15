@@ -149,14 +149,14 @@ requirements:
     name: 開き直した配信元の文書の取得の時間
     english_name: document_fetch_time
     category: 性能
-    external_constraint: project-index の読み取り API は、配信元ごとの最初の処理を終えた後も 1 つの問い合わせに 0.1〜9.9 秒かかる（#230 の計測）。配信元ごとの最初の処理の時間は shuhei1101/project-index#85 が扱う
+    external_constraint: project-index の読み取り API は、配信元の commit ごとの最初の処理（リビジョンの書き出し）を終えた後も、1 つの問い合わせに最大で 9.35 秒かかる（#230 の計測）。既定のブランチが進んだ後の最初の問い合わせは、その commit のリビジョンを書き出すため遅くなり、その時間は shuhei1101/project-index#85 が扱う
     source_kind: 外部 API の制限
     source: https://github.com/shuhei1101/dev-docs/pull/230
-    value: '10'
+    value: '18'
     unit: 秒
-    rationale: 稼働中の project-index へ、配信元の設定・リビジョン・文書の一覧を同時に送信し、続けて文書を送信する計測を 14 件の配信元で 3 回ずつ行った（#230 の計画書）。同時に送信した 3 つは最も長いものとほぼ同じ時間で終わり、project-index は並行して処理した。最初の処理を終えた 2・3 回目の合計は 0.41〜6.50 秒で、最大の 6.50 秒（ai-monitor）に規約『資源の値の決め方』の 50% の余裕を乗せて切り上げた。実測は 28 回で、測る作業を残す
+    rationale: 稼働中の project-index へ、配信元の設定・リビジョン・文書の一覧を同時に送信し、続けて文書を送信する計測を 14 件の配信元で 3 回ずつ行った（#230 の計画書）。同時に送信した 3 つは最も長いものとほぼ同じ時間で終わり、project-index は並行して処理した。合計の最大は 11.74 秒（voice-input の 1 回目）で、規約『資源の値の決め方』の 50% の余裕を乗せて切り上げた。1 回目の alias-inject（23.14 秒）と observability（8.78 秒）は、project-index のログでその問い合わせの間に自分の既定のブランチの進んだ後の commit のリビジョンを書き出していたため、external_constraint の前提に回して決定値に使用しない。実測は 40 回で、測る作業を残す
     overflow: 超えても文書の取得の制限時間（NFR-15）までは待つ
-    measurement: 'Issue #225 の `dd2.cjs` で 14 件の配信元を 2 回ずつ開き、project-index の配信元ごとの最初の処理（リビジョンの書き出し）を終えた配信元の 2 回目の文書の取得の時間を測る。結合テストでは、問い合わせごとに一定の時間だけ待ってから返却する偽の project-index で、問い合わせを同時に送信していることを確認する'
+    measurement: 'Issue #225 の `dd2.cjs` で 14 件の配信元を 2 回ずつ開き、project-index のログでリビジョンを書き出していない間の 2 回目の文書の取得の時間を測る。結合テストでは、問い合わせごとに一定の時間だけ待ってから返却する偽の project-index で、問い合わせを同時に送信していることを確認する'
     status: planned
     refs:
       - SC-155-7#scenarios[正常シナリオ（配信元を開き直す）]
