@@ -109,8 +109,13 @@ def _report_invalid(error: TerminalConfigInvalidError) -> None:
 
 
 def _report_port(bind: str, port: int) -> None:
-    """ポートが使用中のことを標準エラーに出す。"""
-    print(f"{bind}:{port} は使用中です。DEV_DOCS_PORT で別のポートを指定できます", file=sys.stderr)
+    """ポートが使用中のことを、ポートを持っているプロセスの pid とともに標準エラーに出す。"""
+    pid = find_port_owner(bind, port)
+    owner = f"pid {pid}" if pid is not None else "pid を取れませんでした"
+    print(
+        f"{bind}:{port} は使用中です（{owner}）。DEV_DOCS_PORT で別のポートを指定できます",
+        file=sys.stderr,
+    )
 
 
 def run_serve(args: argparse.Namespace) -> int:
@@ -210,6 +215,60 @@ def check_port(bind: str, port: int) -> None:
             if error.errno in BIND_ERRORS:
                 raise PortInUseError(bind, port) from error
             raise
+
+
+def _listen_inode(bind: str, port: int, proc: Path) -> str | None:
+    """`/proc/net/tcp`（IPv6 は `tcp6`）から、待ち受けのアドレスとポートで LISTEN している行の inode を返却する。"""
+    ipv6 = ":" in bind
+    table = proc / "net" / ("tcp6" if ipv6 else "tcp")
+    try:
+        lines = table.read_text(encoding="ascii").splitlines()[1:]
+    except OSError:
+        return None
+    # 全てのアドレスと待ち受けのアドレスを、/proc の表記（ホストのバイト順の 16 進）にする
+    if ipv6:
+        addresses = None
+    else:
+        addresses = {"00000000", socket.inet_aton(bind)[::-1].hex().upper()}
+    for line in lines:
+        fields = line.split()
+        if len(fields) < 10:
+            continue
+        address, _, port_hex = fields[1].partition(":")
+        # LISTEN（0A）で、ポートと待ち受けのアドレスが合う行だけ
+        if fields[3] != "0A" or int(port_hex, 16) != port:
+            continue
+        if addresses is not None and address not in addresses:
+            continue
+        return fields[9]
+    return None
+
+
+def find_port_owner(bind: str, port: int, *, proc: Path = Path("/proc")) -> int | None:
+    """待ち受けのアドレスとポートで LISTEN しているプロセスの pid を `/proc` から探す（取れなければ `None`）。"""
+    inode = _listen_inode(bind, port, proc)
+    if inode is None:
+        return None
+    target = f"socket:[{inode}]"
+    try:
+        entries = list(proc.iterdir())
+    except OSError:
+        return None
+    for entry in entries:
+        if not entry.name.isdigit():
+            continue
+        try:
+            fds = list((entry / "fd").iterdir())
+        except OSError:
+            # 権限が無い・終わったプロセスは飛ばす
+            continue
+        for fd in fds:
+            try:
+                if os.readlink(fd) == target:
+                    return int(entry.name)
+            except OSError:
+                continue
+    return None
 
 
 def build_handlers(terminal: TerminalConfig) -> Handlers:
