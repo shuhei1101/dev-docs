@@ -19,14 +19,19 @@ if [ $# -gt 1 ] || { [ $# -eq 1 ] && [ "$1" != "--dry-run" ]; }; then
 fi
 PREVENT=$(systemctl --user show -p RestartPreventExitStatus --value "$UNIT")
 case " $PREVENT " in
-  *" 3 "*) ;;
+  *" 3 "*) echo "前提確認: ok" ;;
   *)
-    echo "前提確認: failed"
-    echo "$UNIT の RestartPreventExitStatus に 3 がありません（作業「unit の起動し直しの設定の追加」が先）"
-    exit 1
+    # 前の作業で満たす前提なので、--dry-run では missing として計画へ進み、適用では止める
+    if [ "${1:-}" = "--dry-run" ]; then
+      echo "前提確認: missing"
+      echo "$UNIT の RestartPreventExitStatus に 3 がありません（作業「unit の起動し直しの設定の追加」が先）"
+    else
+      echo "前提確認: failed"
+      echo "$UNIT の RestartPreventExitStatus に 3 がありません（作業「unit の起動し直しの設定の追加」が先）"
+      exit 1
+    fi
     ;;
 esac
-echo "前提確認: ok"
 
 # 計画（--dry-run もここを通る）
 MAIN=$(systemctl --user show -p MainPID --value "$UNIT")
