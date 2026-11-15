@@ -30,7 +30,7 @@ const MESSAGES: Record<
   failed: {
     title: "project-index が要求を処理できませんでした",
     description:
-      "project-index のログで原因を確認してから、再読み込みしてください。",
+      "時間をおいて再読み込みすると、開けることがあります。続くときは、project-index のログで原因を確認してください。",
   },
 };
 
