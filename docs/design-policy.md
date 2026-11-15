@@ -36,7 +36,7 @@ dev-docs の画面全体に通すデザインの方向性。
 | 役割 | 使う場所 | トークン | 補足 |
 | --- | --- | --- | --- |
 | 主 | 地・本文の外の文字 | `--background` / `--foreground` | 無彩色。本文（mdmark が描く範囲）の文字の色は mdmark の値 |
-| 面 | トップバー・コード・補足の文字 | `--topbar` / `--code` / `--muted` / `--muted-foreground` | - |
+| 面 | トップバー・本文の外のコード・補足の文字 | `--topbar` / `--code` / `--muted` / `--muted-foreground` | - |
 | 線 | 区切り・入力欄の枠 | `--border` / `--input` | - |
 | 差し色 | 主ボタン・リンク・フォーカス・選択中 | `--primary` / `--link` / `--ring` | 青 1 色 |
 | 状態色 | 削除・エラー | `--destructive` | - |
@@ -55,7 +55,7 @@ dev-docs の画面全体に通すデザインの方向性。
 | 操作・本文の外の文章と表 | 端末のサンセリフ | `--text-body` / `--text-control` / `--text-table` |
 | 入力欄 | 端末のサンセリフ | `--text-input`。スマホで入力時に拡大されない 16px |
 | 補足（パンくず・文書の情報） | 端末のサンセリフ | `--text-meta` |
-| コード・パス・ID | 等幅 | `--font-mono` / `--text-code` |
+| 本文の外のコード・パス・ID | 等幅 | `--font-mono` / `--text-code` |
 
 ## 形状と奥行き
 
