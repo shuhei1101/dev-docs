@@ -37,6 +37,10 @@ docs:
     new: false
     change: 手順 5 の起動を、設計で決めた起動の仕組みに合わせる
     status: todo
+  - page: docs/guide/設定.md
+    new: false
+    change: 環境変数 `DEV_DOCS_UNIT`（セッション開始のフックと global-setup が使用する systemd --user の unit の名前。既定 `dev-docs.service`、空の文字列は unit を使用しない）を追加する
+    status: todo
 scope_out:
   - item: AI Monitor の常駐サーバーの設定（`~/.config/ai-monitor/settings.yaml` の `resident_servers` の `restart_command`）の書き換え
     reason: AI Monitor の端末の設定で、dev-docs のリポジトリの外。`systemctl --user restart dev-docs.service` のままで引き継げる設計にする。書き換えが要ると設計で決まったときは反映作業へ回す
