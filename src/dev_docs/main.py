@@ -221,6 +221,16 @@ def check_port(bind: str, port: int) -> None:
 TCP_INODE_FIELD = 9
 
 
+def _ipv4_addresses(bind: str) -> set[str] | None:
+    """全てのアドレスと待ち受けのアドレスを、/proc の表記（ホストのバイト順の 16 進）で返却する。"""
+    try:
+        packed = socket.inet_aton(bind)
+    except OSError:
+        # IPv4 のアドレスでない（ホスト名の）ときは、アドレスで絞らずポートだけで探す
+        return None
+    return {"00000000", packed[::-1].hex().upper()}
+
+
 def _listen_inode(bind: str, port: int, proc: Path) -> str | None:
     """`/proc/net/tcp`（IPv6 は `tcp6`）から、待ち受けのアドレスとポートで LISTEN している行の inode を返却する。"""
     ipv6 = ":" in bind
@@ -229,8 +239,7 @@ def _listen_inode(bind: str, port: int, proc: Path) -> str | None:
         lines = table.read_text(encoding="ascii").splitlines()[1:]
     except OSError:
         return None
-    # 全てのアドレスと待ち受けのアドレスを、/proc の表記（ホストのバイト順の 16 進）にする
-    addresses = None if ipv6 else {"00000000", socket.inet_aton(bind)[::-1].hex().upper()}
+    addresses = None if ipv6 else _ipv4_addresses(bind)
     for line in lines:
         fields = line.split()
         if len(fields) <= TCP_INODE_FIELD:
