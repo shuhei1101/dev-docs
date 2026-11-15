@@ -736,10 +736,10 @@ status_codes:
     notes: '`missing`（`source`・`not_served`・`ref`・`doc`）と値、配信していない配信元は `errors[]` に外した理由'
   - code: '503'
     condition: project-index につながらない、または文書の取得の制限時間の中で project-index から応答が無い
-    notes: 'つながらなかった project-index のアドレス・理由・種類（`projectIndex.address`・`projectIndex.reason`・`projectIndex.kind`）。`kind` は接続を断られたとき `unreachable`、制限時間で打ち切ったとき `timeout`。`detail` は `project-index（{address}）に接続できませんでした。{reason}`'
+    notes: 'つながらなかった project-index のアドレス・理由・種類（`projectIndex.address`・`projectIndex.reason`・`projectIndex.kind`）。`kind` は接続を断られたとき `unreachable`、制限時間で打ち切ったとき `timeout`。`detail` は `kind` が `unreachable` のとき `project-index（{address}）に接続できませんでした。{reason}`、`timeout` のとき `project-index（{address}）から応答がありませんでした。{reason}`'
   - code: '502'
     condition: project-index が 5xx を返した
-    notes: project-index のアドレス・`detail`・種類（`projectIndex.address`・`projectIndex.reason`・`projectIndex.kind` が `failed`）
+    notes: project-index のアドレス・`detail`・種類（`projectIndex.address`・`projectIndex.reason`・`projectIndex.kind` が `failed`）。`detail` は `project-index（{address}）が要求を処理できませんでした。{reason}`
 constraints:
   - item: 変換の制限時間
     constraint: '`converters[]` のスクリプトは project-index が実行し、制限時間で止めた結果を変換の失敗として返す。dev-docs は project-index の変換の失敗を `conversionError` に入れる'
@@ -751,7 +751,7 @@ constraints:
     notes: project-index が読み直した配信元と文書は、dev-docs を再起動せずに次の要求から返る。文書は、文書の一覧から引いた文書のパスと ID で問い合わせるため、文書の一覧を待つ
     decided_by: NFR-155-1#requirements[開き直した配信元の文書の取得の時間]
   - item: project-index から文書を受け取れないとき
-    constraint: project-index の読み取り API が問い合わせの制限時間で応答しないか接続を断られたら、503 と、つながらなかった project-index のアドレス・理由・種類を返す。問い合わせを重ねた合計が文書の取得の制限時間を超えたら、残りの問い合わせをやめて 503（`kind` が `timeout`）を返す。project-index が 5xx を返したら、502 と project-index のアドレス・`detail`（`kind` が `failed`）を返す
+    constraint: project-index の読み取り API が問い合わせの制限時間で応答しないか接続を断られたら、503 と、つながらなかった project-index のアドレス・理由・種類を返す。問い合わせごとの制限時間は、文書の取得の制限時間の残り時間を超えない。問い合わせを重ねた合計が文書の取得の制限時間を超えたら、残りの問い合わせをやめて 503（`kind` が `timeout`）を返す。project-index が 5xx を返したら、502 と project-index のアドレス・`detail`（`kind` が `failed`）を返す
     decided_by: NFR-155-1#requirements[文書の取得の制限時間]
   - item: operationId
     constraint: '`{tag}-{関数名}`。`path` を含む入口は `view-get_document`、`path` を省く入口は `view-get_document_default`'
