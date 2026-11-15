@@ -53,7 +53,8 @@ def run_hook() -> Callable[..., HookRun]:
             input=text,
             capture_output=True,
             text=True,
-            env={**os.environ, **env},
+            # 既定では unit を使用しない（端末の systemd --user の unit を起動しない）。unit のテストは上書きする
+            env={**os.environ, "DEV_DOCS_UNIT": "", **env},
             timeout=30,
             check=False,
         )
