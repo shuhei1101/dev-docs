@@ -184,7 +184,7 @@ functions:
          - `PromptInvalidError` の場合、違反ごとに `{file}: {path}: {reason}` を標準エラーに出し、`EXIT_PROMPT_INVALID` を返す
       5. 標準出力に `http://{bind}:{port}/` を出し、端末の設定の `leftover_sources` があれば `[warning]` 端末の設定に前のバージョンの sources が残っている（行の ID と、project-index で追加する案内）を書く。配信元の知らせを裏で始める
       6. `uvicorn.Server(uvicorn.Config(app, host=bind, port=port, log_config=None, timeout_graceful_shutdown=PROJECT_INDEX_TIMEOUT_SEC * SHUTDOWN_WAIT_FACTOR))` を作り、再起動の制御に取り付けて（サーバーの取り付け）`run()` する
-         - 確かめた後に他のプロセスがポートを取り、uvicorn が待ち受けに失敗して止まった場合（`server.started` が `False`。uvicorn は `sys.exit` で抜けるので、`SystemExit` を捕まえてこの分岐へ進む）、手順 3 と同じ本文を出して `EXIT_PORT_IN_USE` を返す
+         - 確かめた後に他のプロセスがポートを取り、uvicorn が待ち受けに失敗して止まった場合（`server.started` が `False`。uvicorn は `sys.exit` で抜けるので `SystemExit` を捕まえ、ポートを確かめ直して（ポートの確かめ）使用中のときだけこの分岐へ進む。使用中でない（lifespan の起動の失敗など）ときは `SystemExit` をそのまま送出する）、手順 3 と同じ本文を出して `EXIT_PORT_IN_USE` を返す
       7. 止まった後、再起動を要求済み（`handlers.restart.requested`）かで分ける
          - 要求済みの場合、ログのハンドラーを閉じ、`os.execv(sys.executable, [sys.executable, *SERVE_ARGV])` で同じプロセスを置き換える
          - 要求が無い場合、0 を返す
@@ -238,6 +238,13 @@ functions:
         condition: '`sources` に `id: sample` の行を残した端末の設定'
         mock: '`uvicorn.Server.run`（何もせず戻る）'
         expected: 0 を返し、`caplog` に `sample` と project-index で追加する案内の `warning` が 1 件
+      - name: test_run_serve_when_startup_fails
+        case: 異常
+        summary: 待ち受けの前の失敗がポートの使用中でない
+        condition: 空いているポートを `DEV_DOCS_PORT` に入れる
+        mock: '`uvicorn.Server.run`（`started` を `False` のまま `SystemExit(3)` を送出する。lifespan の起動の失敗を真似る）'
+        expected: '`SystemExit` がそのまま送出され、標準エラーに `使用中` が無い'
+        exception: 待ち受けの前の失敗
   - name: check_port
     title: ポートの確かめ
     kind: 関数
