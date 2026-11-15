@@ -1,3 +1,17 @@
+unit の起動し直しの設定の追加:
+  説明: ~/.config/systemd/user/dev-docs.service を同じフォルダへ退避してから、[Service] に RestartPreventExitStatus=3 を追加し、systemctl --user daemon-reload を実行する。WorkingDirectory・ExecStart・Environment（KNOWLEDGE_ROOT）の行は変えない。退避したファイルを戻して daemon-reload すれば元に戻る
+  タグ: [設定]
+  実行者: planner
+  時期: マージの後
+  回数: 1 回限り
+  可逆: true
+  疎通確認: null
+  実行: null
+  確認: null
+  切り戻し: null
+  失敗時: 既定の対処を 1 回、2 回連続で失敗したら依頼元へ返す
+  確認方法: systemctl --user show -p RestartPreventExitStatus dev-docs.service の値に 3 が入り、systemctl --user show -p ExecStart dev-docs.service の値が作業の前と同じ
+  状態: "-"
 unit の外のサーバーの停止:
   説明: 127.0.0.1:8781 を持つ dev-docs serve のうち dev-docs.service の外で動いているプロセスを止め、dev-docs.service を起動し直して unit のプロセスに配信を引き継がせる
   タグ: [再起動]
@@ -11,5 +25,5 @@ unit の外のサーバーの停止:
   確認: null
   切り戻し: null
   失敗時: 既定の対処を 1 回、2 回連続で失敗したら依頼元へ返す
-  確認方法: 127.0.0.1:8781 を持つプロセスの pid が systemctl --user show -p MainPID dev-docs.service の値と同じで、journalctl --user -u dev-docs.service に作業の後のポートの使用中の終了が出ていない
+  確認方法: 127.0.0.1:8781 を持つプロセスの pid が systemctl --user show -p MainPID dev-docs.service の値と同じで、systemctl --user show -p RestartPreventExitStatus dev-docs.service の値に 3 が入り、journalctl --user -u dev-docs.service に作業の後のポートの使用中の終了が出ていない
   状態: "-"

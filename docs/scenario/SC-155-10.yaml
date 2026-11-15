@@ -255,7 +255,7 @@ scenarios:
       - name: Mock
         description: なし（実環境で実行。Claude Code は `claude -p` で動かす）
       - name: unit
-        description: テスト用の名前で作った systemd --user の unit。テスト用のクローンの `dev-docs serve` を起動する。止まっている
+        description: テスト用の名前で作った systemd --user の unit。テスト用のクローンの `dev-docs serve` を起動し、global-setup が作る unit と同じく `Restart=on-failure` と `RestartPreventExitStatus=3` を持つ。止まっている
         notes: env の `DEV_DOCS_UNIT` にその名前を入れる。テストの後に unit を止めて削除する
       - name: 端末の設定
         description: SessionStart で起動する正常シナリオと同じ
@@ -290,7 +290,7 @@ scenarios:
         description: なし（実環境で実行。Claude Code は `claude -p` で動かす）
       - name: unit
         description: SessionStart で unit を起動する正常シナリオと同じ unit が動いていて、ポートを持っている
-        notes: 起動し直す前の `MainPID` を記録する
+        notes: 起動し直す前の `MainPID` を記録する。unit に `ExecStartPre=/bin/sleep 3` を追加して、停止から起動までの間を作る
     flow: |-
       ```mermaid
       sequenceDiagram
@@ -302,7 +302,7 @@ scenarios:
 
         U->>SD: unit を起動し直す（systemctl --user restart）
         SD->>DD: 起動し直す前のプロセスを止める
-        U->>CC: 止まっている間にセッションを始める
+        U->>CC: ExecStartPre で待っている間にセッションを始める
         CC->>HK: SessionStart
         HK->>SD: ポートにつながらないので unit を起動する（起動し直しの途中で増えない）
         SD->>DD: dev-docs serve を起動する
@@ -345,6 +345,7 @@ scenarios:
         description: unit の外で起動した `dev-docs serve` が待ち受けているポート
       - name: unit
         description: SessionStart で unit を起動する正常シナリオと同じ、同じポートの unit。止まっている
+        notes: '`Restart=on-failure` と `RestartPreventExitStatus=3` を持つ（終了コード 3 以外で終われば起動し直す）'
     flow: |-
       ```mermaid
       sequenceDiagram
