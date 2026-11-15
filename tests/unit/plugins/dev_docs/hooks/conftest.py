@@ -23,3 +23,9 @@ def load_hook() -> Callable[[str], ModuleType]:
         return module
 
     return _load
+
+
+@pytest.fixture(autouse=True)
+def _no_unit(monkeypatch: pytest.MonkeyPatch) -> None:
+    """既定では unit を使用しない（端末の systemd --user の unit を起動しない）。unit のテストは上書きする。"""
+    monkeypatch.setenv("DEV_DOCS_UNIT", "")

@@ -851,6 +851,53 @@ test.describe("目次", () => {
     await sideToc(page).getByRole("link", { name: "関連" }).click();
     await expect(page).toHaveURL(/#関連$|#%E9%96%A2%E9%80%A3$/);
   });
+
+  /** 画面を下へスクロールできる長さの本文 */
+  const LONG_MARKDOWN = `# 文書 1\n\n${Array.from(
+    { length: 30 },
+    (_, index) => `## セクション ${index + 1}\n\n${"長い本文の段落です。".repeat(40)}\n`,
+  ).join("\n")}`;
+
+  /** 長い本文を開き、下へ 1400px スクロールする */
+  const openScrolled = async (page: Page) => {
+    await openDoc(page, "/sample/docs/doc-1", {
+      document: ({ path }) => ({ body: documentResponse({ path, markdown: LONG_MARKDOWN }) }),
+    });
+    await expect(page.getByRole("heading", { level: 2, name: /^セクション 1 / })).toBeVisible();
+    await page.mouse.wheel(0, 1400);
+    await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThanOrEqual(1400);
+  };
+
+  /** 種類のタブの下端（画面の上端からの px） */
+  const tabsBottom = async (page: Page) => {
+    const box = await boxOf(page.getByRole("navigation", { name: "文書の種類" }));
+    return box.y + box.height;
+  };
+
+  // スクロールしても、右端の線と目次の枠をトップバーと種類のタブの下に固定する（正常系）
+  test("toc_below_tabs_when_scrolled", async ({ page }) => {
+    // 準備
+    await openScrolled(page);
+    const bottom = await tabsBottom(page);
+    const rail = await boxOf(page.locator(".mdmark-side-toc-rail"));
+    // 実行（開いた目次の枠が右端の線に重なるため、線の位置へポインターを移して出す）
+    await page.mouse.move(rail.x + rail.width / 2, rail.y + rail.height / 2);
+    await expect(sideToc(page)).toBeVisible();
+    // 検証
+    expect(rail.y).toBeGreaterThanOrEqual(bottom);
+    expect((await boxOf(sideToc(page))).y).toBeGreaterThanOrEqual(bottom);
+  });
+
+  // 画面幅が 48rem 未満でも、スクロールした右側の目次をトップバーと種類のタブの下に固定する（正常系）
+  test("toc_below_tabs_when_scrolled_narrow", async ({ page }) => {
+    // 準備
+    await page.setViewportSize({ width: 390, height: 844 });
+    // 実行
+    await openScrolled(page);
+    // 検証
+    const bottom = await tabsBottom(page);
+    expect((await boxOf(page.locator(".mdmark-side-toc"))).y).toBeGreaterThanOrEqual(bottom);
+  });
 });
 
 test.describe("コメントの追加", () => {

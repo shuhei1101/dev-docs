@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 import json
+import os
 import shutil
 import socket
+import time
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any
@@ -194,7 +196,33 @@ def test_error_when_port_in_use(
     # 検証
     assert code == 3
     assert str(port) in error
+    assert f"pid {os.getpid()}" in error
     assert "DEV_DOCS_PORT" in error
+
+
+def test_error_when_started_twice(
+    sample_index: MockIndex,
+    write_settings: Callable[..., Path],
+    free_port: Callable[[], int],
+    start_serve: Callable[..., Any],
+) -> None:
+    """同じポートで 2 つ同時に起動すると、待ち受けるのは 1 つで、もう片方は待ち受けた方の pid を出して終わる（異常系）。"""
+    # 準備
+    settings = write_settings(sample_index.address)
+    port = free_port()
+    # 実行
+    first = start_serve(settings, port)
+    second = start_serve(settings, port)
+    deadline = time.monotonic() + SERVE_WAIT_SEC
+    while first.poll() is None and second.poll() is None and time.monotonic() < deadline:
+        time.sleep(0.2)
+    # 検証
+    ended, alive = (first, second) if first.poll() is not None else (second, first)
+    error = ended.stderr.read() if ended.stderr else ""
+    assert ended.returncode == 3
+    assert alive.poll() is None
+    assert str(port) in error
+    assert f"pid {alive.pid}" in error
 
 
 def test_normal_when_mcp_path_without_slash(

@@ -1,0 +1,47 @@
+$ (frontend/src/index.css を origin/develop の内容に戻して実行) npx playwright test --config tests/integration/frontend/playwright.config.ts tests/integration/frontend/doc-view-screen.spec.ts -g "toc_below" --reporter=line
+
+Running 2 tests using 2 workers
+
+[1/2] [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:878:3 › 目次 › toc_below_tabs_when_scrolled
+[2/2] [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:892:3 › 目次 › toc_below_tabs_when_scrolled_narrow
+  1) [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:878:3 › 目次 › toc_below_tabs_when_scrolled 
+
+    Error: expect(received).toBeGreaterThanOrEqual(expected)
+
+    Expected: >= 87
+    Received:    14
+
+      885 |     await expect(sideToc(page)).toBeVisible();
+      886 |     // 検証
+    > 887 |     expect(rail.y).toBeGreaterThanOrEqual(bottom);
+          |                    ^
+      888 |     expect((await boxOf(sideToc(page))).y).toBeGreaterThanOrEqual(bottom);
+      889 |   });
+      890 |
+        at /mnt/c/Users/shuhe/repo/dev-docs/.claude/worktrees/design-doc-view-side-toc-below-header/tests/integration/frontend/doc-view-screen.spec.ts:887:20
+
+    Error Context: test-results/doc-view-screen-目次-toc-below-tabs-when-scrolled-chromium/error-context.md
+
+
+  2) [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:892:3 › 目次 › toc_below_tabs_when_scrolled_narrow 
+
+    Error: expect(received).toBeGreaterThanOrEqual(expected)
+
+    Expected: >= 87
+    Received:    0
+
+      897 |     // 検証
+      898 |     const bottom = await tabsBottom(page);
+    > 899 |     expect((await boxOf(page.locator(".mdmark-side-toc"))).y).toBeGreaterThanOrEqual(bottom);
+          |                                                               ^
+      900 |   });
+      901 | });
+      902 |
+        at /mnt/c/Users/shuhe/repo/dev-docs/.claude/worktrees/design-doc-view-side-toc-below-header/tests/integration/frontend/doc-view-screen.spec.ts:899:63
+
+    Error Context: test-results/doc-view-screen-目次-toc-below-tabs-when-scrolled-narrow-chromium/error-context.md
+
+
+  2 failed
+    [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:878:3 › 目次 › toc_below_tabs_when_scrolled 
+    [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:892:3 › 目次 › toc_below_tabs_when_scrolled_narrow 

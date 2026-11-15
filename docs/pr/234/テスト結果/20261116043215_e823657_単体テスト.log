@@ -1,0 +1,276 @@
+$ uv run pytest tests/unit/
+........................................................................ [ 14%]
+........................................................................ [ 29%]
+........................................................................ [ 44%]
+........................................................................ [ 59%]
+........................................................................ [ 74%]
+................................................F......FFF.............. [ 89%]
+................FFFFFFFFFF........................                       [100%]
+=================================== FAILURES ===================================
+_______________________ test_run_serve_when_port_in_use ________________________
+
+tmp_path = PosixPath('/tmp/pytest-of-shuhei2441/pytest-8467/test_run_serve_when_port_in_us0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7ab5551b9be0>
+capsys = <_pytest.capture.CaptureFixture object at 0x7ab55445c3b0>
+
+    def test_run_serve_when_port_in_use(
+        tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        """ポートが使用中（異常系）。"""
+        # 準備
+        _serve_settings(tmp_path, monkeypatch, _closed_address())
+        # 実行
+        with _listening() as port:
+            monkeypatch.setenv("DEV_DOCS_PORT", str(port))
+            code = run_serve(argparse.Namespace())
+        # 検証
+        error = capsys.readouterr().err
+        assert code == 3
+        assert str(port) in error
+>       assert f"pid {os.getpid()}" in error
+E       AssertionError: assert 'pid 21594' in '127.0.0.1:59188 は使用中です。DEV_DOCS_PORT で別のポートを指定できます\n'
+
+tests/unit/dev_docs/test_serve.py:218: AssertionError
+_____________________________ test_find_port_owner _____________________________
+
+    def test_find_port_owner() -> None:
+        """テスト自身が待ち受けるポート（正常系）。"""
+        # 準備・実行
+        with _listening() as port:
+>           result = main_module.find_port_owner("127.0.0.1", port)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E           AttributeError: module 'dev_docs.main' has no attribute 'find_port_owner'
+
+tests/unit/dev_docs/test_serve.py:353: AttributeError
+___________________ test_find_port_owner_when_not_listening ____________________
+
+    def test_find_port_owner_when_not_listening() -> None:
+        """待ち受けていないポート（正常系）。"""
+        # 準備
+        port = _free_port()
+        # 実行
+>       result = main_module.find_port_owner("127.0.0.1", port)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       AttributeError: module 'dev_docs.main' has no attribute 'find_port_owner'
+
+tests/unit/dev_docs/test_serve.py:363: AttributeError
+____________________ test_find_port_owner_when_proc_missing ____________________
+
+tmp_path = PosixPath('/tmp/pytest-of-shuhei2441/pytest-8467/test_find_port_owner_when_proc0')
+
+    def test_find_port_owner_when_proc_missing(tmp_path: Path) -> None:
+        """/proc が無い（正常系）。"""
+        # 準備・実行
+        with _listening() as port:
+>           result = main_module.find_port_owner("127.0.0.1", port, proc=tmp_path)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E           AttributeError: module 'dev_docs.main' has no attribute 'find_port_owner'
+
+tests/unit/dev_docs/test_serve.py:372: AttributeError
+__________________________ test_main_when_unit_exists __________________________
+
+load_hook = <function load_hook.<locals>._load at 0x7ab55427b320>
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7ab555443a80>
+capsys = <_pytest.capture.CaptureFixture object at 0x7ab5553f1850>
+
+    def test_main_when_unit_exists(
+        load_hook: Callable[[str], ModuleType],
+        monkeypatch: pytest.MonkeyPatch,
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        """unit があれば unit を起動する（正常系）。"""
+        # 準備
+        hook, started = _down_unit_hook(load_hook, monkeypatch)
+        units: list[str] = []
+>       monkeypatch.setattr(hook, "unit_exists", lambda unit: True)
+E       AttributeError: <module 'hook_session_start' from '/mnt/c/Users/shuhe/repo/dev-docs/.claude/worktrees/fix-server-single-serve-process/plugins/dev-docs/hooks/session_start.py'> has no attribute 'unit_exists'
+
+tests/unit/plugins/dev_docs/hooks/test_session_start.py:303: AttributeError
+_______________________ test_main_when_unit_start_fails ________________________
+
+load_hook = <function load_hook.<locals>._load at 0x7ab5542947d0>
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7ab555229780>
+capsys = <_pytest.capture.CaptureFixture object at 0x7ab5553f24d0>
+
+    def test_main_when_unit_start_fails(
+        load_hook: Callable[[str], ModuleType],
+        monkeypatch: pytest.MonkeyPatch,
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        """unit を起動できなければ理由を案内し、切り離しては起動しない（異常系）。"""
+        # 準備
+        hook, started = _down_unit_hook(load_hook, monkeypatch)
+    
+        def fail(unit: str) -> None:
+            raise hook.UnitStartError("Failed to start")
+    
+>       monkeypatch.setattr(hook, "unit_exists", lambda unit: True)
+E       AttributeError: <module 'hook_session_start' from '/mnt/c/Users/shuhe/repo/dev-docs/.claude/worktrees/fix-server-single-serve-process/plugins/dev-docs/hooks/session_start.py'> has no attribute 'unit_exists'
+
+tests/unit/plugins/dev_docs/hooks/test_session_start.py:327: AttributeError
+_____________________ test_main_when_unit_check_times_out ______________________
+
+load_hook = <function load_hook.<locals>._load at 0x7ab554295dd0>
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7ab55522b850>
+capsys = <_pytest.capture.CaptureFixture object at 0x7ab5554a5250>
+
+    def test_main_when_unit_check_times_out(
+        load_hook: Callable[[str], ModuleType],
+        monkeypatch: pytest.MonkeyPatch,
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        """unit の有無が打ち切られたら理由を案内し、どちらの起動もしない（異常系）。"""
+        # 準備
+        hook, started = _down_unit_hook(load_hook, monkeypatch)
+        units: list[str] = []
+    
+        def timeout(unit: str) -> bool:
+            raise hook.UnitStartError("systemctl --user cat が 0.1 秒で終わらなかった")
+    
+>       monkeypatch.setattr(hook, "unit_exists", timeout)
+E       AttributeError: <module 'hook_session_start' from '/mnt/c/Users/shuhe/repo/dev-docs/.claude/worktrees/fix-server-single-serve-process/plugins/dev-docs/hooks/session_start.py'> has no attribute 'unit_exists'
+
+tests/unit/plugins/dev_docs/hooks/test_session_start.py:352: AttributeError
+________________________________ test_unit_name ________________________________
+
+load_hook = <function load_hook.<locals>._load at 0x7ab554297320>
+
+    def test_unit_name(load_hook: Callable[[str], ModuleType]) -> None:
+        """既定と指定（正常系）。"""
+        # 準備
+        hook = load_hook("session_start")
+        # 実行
+>       default = hook.unit_name({})
+                  ^^^^^^^^^^^^^^
+E       AttributeError: module 'hook_session_start' has no attribute 'unit_name'
+
+tests/unit/plugins/dev_docs/hooks/test_session_start.py:369: AttributeError
+__________________________ test_unit_name_when_empty ___________________________
+
+load_hook = <function load_hook.<locals>._load at 0x7ab5542907d0>
+
+    def test_unit_name_when_empty(load_hook: Callable[[str], ModuleType]) -> None:
+        """空の文字列は unit を使用しない（正常系）。"""
+        # 準備
+        hook = load_hook("session_start")
+        # 実行
+>       result = hook.unit_name({"DEV_DOCS_UNIT": ""})
+                 ^^^^^^^^^^^^^^
+E       AttributeError: module 'hook_session_start' has no attribute 'unit_name'
+
+tests/unit/plugins/dev_docs/hooks/test_session_start.py:381: AttributeError
+_______________________________ test_unit_exists _______________________________
+
+load_hook = <function load_hook.<locals>._load at 0x7ab554291bc0>
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7ab55522a120>
+tmp_path = PosixPath('/tmp/pytest-of-shuhei2441/pytest-8467/test_unit_exists0')
+
+    def test_unit_exists(
+        load_hook: Callable[[str], ModuleType], monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ) -> None:
+        """終了コードで unit の有無を分ける（正常系）。"""
+        # 準備
+        hook = load_hook("session_start")
+        _systemctl(tmp_path, monkeypatch, '[ "$3" = "ok.service" ] && exit 0\nexit 1')
+        # 実行
+>       found = hook.unit_exists("ok.service")
+                ^^^^^^^^^^^^^^^^
+E       AttributeError: module 'hook_session_start' has no attribute 'unit_exists'
+
+tests/unit/plugins/dev_docs/hooks/test_session_start.py:394: AttributeError
+______________________ test_unit_exists_when_no_systemctl ______________________
+
+load_hook = <function load_hook.<locals>._load at 0x7ab554292fb0>
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7ab5552297f0>
+tmp_path = PosixPath('/tmp/pytest-of-shuhei2441/pytest-8467/test_unit_exists_when_no_syste0')
+
+    def test_unit_exists_when_no_systemctl(
+        load_hook: Callable[[str], ModuleType], monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ) -> None:
+        """systemctl が無い（正常系）。"""
+        # 準備
+        hook = load_hook("session_start")
+        empty = tmp_path / "empty"
+        empty.mkdir()
+        monkeypatch.setenv("PATH", str(empty))
+        # 実行
+>       result = hook.unit_exists("dev-docs.service")
+                 ^^^^^^^^^^^^^^^^
+E       AttributeError: module 'hook_session_start' has no attribute 'unit_exists'
+
+tests/unit/plugins/dev_docs/hooks/test_session_start.py:411: AttributeError
+________________________ test_unit_exists_when_timeout _________________________
+
+load_hook = <function load_hook.<locals>._load at 0x7ab5541583b0>
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7ab5555f9d30>
+tmp_path = PosixPath('/tmp/pytest-of-shuhei2441/pytest-8467/test_unit_exists_when_timeout0')
+
+    def test_unit_exists_when_timeout(
+        load_hook: Callable[[str], ModuleType], monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ) -> None:
+        """systemctl が打ち切られる（異常系）。"""
+        # 準備
+        hook = load_hook("session_start")
+        _systemctl(tmp_path, monkeypatch, "sleep 1")
+        # 実行・検証
+>       with pytest.raises(hook.UnitStartError, match="systemctl --user cat"):
+                           ^^^^^^^^^^^^^^^^^^^
+E       AttributeError: module 'hook_session_start' has no attribute 'UnitStartError'
+
+tests/unit/plugins/dev_docs/hooks/test_session_start.py:424: AttributeError
+_______________________________ test_start_unit ________________________________
+
+load_hook = <function load_hook.<locals>._load at 0x7ab5541596f0>
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7ab5555f8c90>
+tmp_path = PosixPath('/tmp/pytest-of-shuhei2441/pytest-8467/test_start_unit0')
+
+    def test_start_unit(
+        load_hook: Callable[[str], ModuleType], monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ) -> None:
+        """unit の起動を依頼する（正常系）。"""
+        # 準備
+        hook = load_hook("session_start")
+        record = tmp_path / "args.txt"
+        _systemctl(tmp_path, monkeypatch, f'echo "$@" > "{record}"')
+        # 実行
+>       hook.start_unit("x.service")
+        ^^^^^^^^^^^^^^^
+E       AttributeError: module 'hook_session_start' has no attribute 'start_unit'
+
+tests/unit/plugins/dev_docs/hooks/test_session_start.py:437: AttributeError
+_________________________ test_start_unit_when_failed __________________________
+
+load_hook = <function load_hook.<locals>._load at 0x7ab55415aa30>
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7ab5555fbf50>
+tmp_path = PosixPath('/tmp/pytest-of-shuhei2441/pytest-8467/test_start_unit_when_failed0')
+
+    def test_start_unit_when_failed(
+        load_hook: Callable[[str], ModuleType], monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ) -> None:
+        """unit の起動に失敗する（異常系）。"""
+        # 準備
+        hook = load_hook("session_start")
+        _systemctl(tmp_path, monkeypatch, 'echo "Failed to start x.service" >&2\nexit 1')
+        # 実行・検証
+>       with pytest.raises(hook.UnitStartError, match="Failed to start"):
+                           ^^^^^^^^^^^^^^^^^^^
+E       AttributeError: module 'hook_session_start' has no attribute 'UnitStartError'
+
+tests/unit/plugins/dev_docs/hooks/test_session_start.py:450: AttributeError
+=========================== short test summary info ============================
+FAILED tests/unit/dev_docs/test_serve.py::test_run_serve_when_port_in_use - A...
+FAILED tests/unit/dev_docs/test_serve.py::test_find_port_owner - AttributeErr...
+FAILED tests/unit/dev_docs/test_serve.py::test_find_port_owner_when_not_listening
+FAILED tests/unit/dev_docs/test_serve.py::test_find_port_owner_when_proc_missing
+FAILED tests/unit/plugins/dev_docs/hooks/test_session_start.py::test_main_when_unit_exists
+FAILED tests/unit/plugins/dev_docs/hooks/test_session_start.py::test_main_when_unit_start_fails
+FAILED tests/unit/plugins/dev_docs/hooks/test_session_start.py::test_main_when_unit_check_times_out
+FAILED tests/unit/plugins/dev_docs/hooks/test_session_start.py::test_unit_name
+FAILED tests/unit/plugins/dev_docs/hooks/test_session_start.py::test_unit_name_when_empty
+FAILED tests/unit/plugins/dev_docs/hooks/test_session_start.py::test_unit_exists
+FAILED tests/unit/plugins/dev_docs/hooks/test_session_start.py::test_unit_exists_when_no_systemctl
+FAILED tests/unit/plugins/dev_docs/hooks/test_session_start.py::test_unit_exists_when_timeout
+FAILED tests/unit/plugins/dev_docs/hooks/test_session_start.py::test_start_unit
+FAILED tests/unit/plugins/dev_docs/hooks/test_session_start.py::test_start_unit_when_failed
+14 failed, 468 passed in 58.31s
+exit=1

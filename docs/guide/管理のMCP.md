@@ -82,7 +82,8 @@ project-index につながらないときもエラーにせず、`reachable` を
 
 処理中の要求は、project-index への問い合わせの制限時間（45 秒）の 1.5 倍を上限に待ちます。
 過ぎたら残りの要求を切って止めます。
-起動に失敗したときは、`dev-docs serve` の終了コードで止まり、次のセッションの SessionStart のフックが起動し直します。
+起動に失敗したときは、`dev-docs serve` の終了コードで止まり、次のセッションの SessionStart のフックが起動し直します（unit があるときは unit を起動する）。
+unit で動いているときも `restart` は同じプロセス ID のまま起動し直すので、unit の `MainPID` は変わりません。
 
 引数はありません。
 

@@ -1,0 +1,31 @@
+docs:
+  - page: docs/screen/SCR-155-1.yaml
+    new: false
+    change: 要素『目次』に、スクロールしてもトップバーと種類のタブの下に固定することを追加する
+    status: done
+    updated_by: planner
+    updated_at: '2026-11-15T16:38:44.824528+00:00'
+  - page: docs/module/MOD-155-50.css.yaml
+    new: false
+    change: mdmark の右側の目次の固定の位置（--mdmark-sticky-top）を、トップバーと種類のタブの高さにするスタイルを追加する
+    status: done
+    updated_by: planner
+    updated_at: '2026-11-15T16:55:36.102571+00:00'
+scope_out:
+  - item: AI Monitor のスクリーンショットの確認の手順（capture_screenshots の手順・規約『モック画面』）に、文書をスクロールした状態の重なりの確認を追加する
+    reason: 手順は AI Monitor のリポジトリが持ち、dev-docs の変更では直せない。この作業 PR の変更が無くても同じ内容で成り立つ。dev-docs の側は、スクロールした状態の重なりを結合テストで確かめる。レビュー（案 A）で、AI Monitor へルール改修 Issue として起票した
+    plan: shuhei1101/ai-monitor#3515
+  - item: mdmark への、目次の固定の位置を指定する手段の追加の起票
+    reason: mdmark v0.13.0 は --mdmark-sticky-top で目次の固定の位置を指定でき、dev-docs の側で足りるため
+    plan: none
+use_cases:
+  - kind: single
+    scenario: docs/scenario/SC-155-7.yaml
+    impact: run_only
+    detail: 文書を読み進めても右側の目次がトップバーと種類のタブに隠れない。シナリオの手順と結果は変わらない
+    depends_on: []
+  - kind: composite
+    scenario: docs/scenario/SC-155-13.yaml
+    impact: none
+    detail: 文書を読む流れの連鎖は変わらない
+    depends_on: []
