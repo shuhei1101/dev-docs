@@ -160,6 +160,31 @@ flows:
       - '`additionalContext` に unit の名前と `Failed to start` があり、終了コード 0'
       - '`{clone}/.venv/bin/python` が呼ばれていない'
     test: test_normal_when_unit_start_fails
+  - name: 正常系（unit の有無の確かめが打ち切られる）
+    summary: '`systemctl --user cat` が打ち切られたら、理由を文脈に入れ、切り離しては起動しない'
+    setup:
+      - name: Mock
+        description: '`PATH` の先頭に、`cat` では 1 秒待ってから終わる `systemctl` を置く。`{clone}/.venv/bin/python` は正常系（unit がある）と同じ'
+        notes: 1 秒は打ち切りの 0.1 秒を超える値
+      - name: 端末の設定・ポート
+        description: 正常系（unit がある）と同じ
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        participant C as Claude Code
+        participant H as セッション開始のフック
+        participant SD as systemctl --user
+
+        C->>H: stdin
+        H->>H: ポートにつながらない
+        H-->>SD: cat dev-docs-test.service（打ち切る）
+        H-->>C: additionalContext（unit の名前と理由）
+      ```
+    expected:
+      - '`additionalContext` に unit の名前と、`systemctl --user cat` が打ち切られたことがあり、終了コード 0'
+      - '`systemctl` が `start` を受けていない'
+      - '`{clone}/.venv/bin/python` が呼ばれていない'
+    test: test_normal_when_unit_check_times_out
 lead: ポートにつながらなければ、systemd --user の unit を起動し、unit が無ければ `dev-docs serve` を切り離して起動して、再接続の案内か起動できない理由を文脈に入れる。つながったときは何も依頼せず、文脈を入れずに戻る。入力は stdin の JSON と環境変数。
 identifier: hooks/session_start.py
 permissions: 利用者の権限で動く
@@ -170,6 +195,8 @@ callers:
   - SC-155-10#scenarios[正常シナリオ（待ち受けているサーバーがあるときは文脈を注入しない）]
   - SC-155-10#scenarios[異常シナリオ（SessionStart で起動できない）]
   - SC-155-10#scenarios[正常シナリオ（SessionStart で XDG_CONFIG_HOME の下の端末の設定から起動する）]
+  - SC-155-10#scenarios[正常シナリオ（SessionStart で unit を起動する）]
+  - SC-155-10#scenarios[正常シナリオ（unit を起動し直す）]
 exclusivity: 同時に開いた複数のセッションがどれも起動してもよい。unit があるときは systemd が unit のプロセスを 1 つに保つ（起動し直しの途中の `start` もプロセスを増やさない）。unit が無いときは、後から起動した `dev-docs serve` がポートの使用中（終了コード 3）で止まり、待ち受けるのは 1 つだけ
 request:
   - name: session_id
@@ -239,7 +266,7 @@ exceptions:
     condition: 端末の設定が無い・`clone` が無い・`{clone}/.venv/bin/python` が無い
     notes: 終了コード 0 で、理由と `/dev-docs:global-setup` の案内を文脈に入れる
   - name: なし（unit を起動できない）
-    condition: unit はあるが `systemctl --user start` が 0 以外で終わるか打ち切られる
+    condition: unit はあるが `systemctl --user start` が 0 以外で終わるか打ち切られる。または `systemctl --user cat` が打ち切られる
     notes: 終了コード 0 で、unit の名前と systemctl の標準エラーを文脈に入れる。切り離して起動する経路へは切り替えない
 constraints:
   - item: 言語
@@ -261,8 +288,8 @@ constraints:
   - item: 失敗の扱い
     constraint: どの失敗でも終了コード 0 で戻り、セッションを止めない
   - item: unit の有無
-    constraint: '`DEV_DOCS_UNIT`（既定 `dev-docs.service`）が空でなく、`systemctl --user cat {unit}` が終了コード 0 なら unit がある。`systemctl` が無い・0 以外・打ち切られたときは unit が無い'
+    constraint: '`DEV_DOCS_UNIT`（既定 `dev-docs.service`）が空でなく、`systemctl --user cat {unit}` が終了コード 0 なら unit がある。`DEV_DOCS_UNIT` が空・`systemctl` が無い・`cat` が 0 以外で終わったときは unit が無い。`cat` が打ち切られたときは、unit を起動できないときと同じく扱う'
   - item: systemctl の打ち切り
-    constraint: '`systemctl --user` の呼び出しをそれぞれ 0.5 秒で打ち切る'
-    notes: '`cat` と `start --no-block` を 5 回ずつ測って 0.01〜0.04 秒（2026-11-16）。接続の確かめと同じ 0.5 秒にし、落ちているときのフック全体（最大 0.70 秒）に 2 回ぶんを追加しても `timeout` の 2 秒に収まる'
+    constraint: '`systemctl --user` の呼び出しをそれぞれ 0.1 秒で打ち切る'
+    notes: '`cat` と `start --no-block` を 5 回ずつ測って 0.01〜0.04 秒（2026-11-16）。最大の 0.04 秒に 50% を乗せて切り上げた値（規約『資源の値の決め方』の下流を待つタイムアウト）。unit がある経路の待ちの上限の合計は、接続の確かめ 0.5 秒 + `cat` 0.1 秒 + `start` 0.1 秒 = 0.7 秒。待ち以外の処理（落ちているときのフック全体の実測の最大 0.70 秒。拒否される接続はすぐ終わる）を加えて 1.4 秒で、`timeout` の 2 秒に 0.6 秒の余裕で収まる'
 test_file: tests/integration/plugin/test_session_start.py
