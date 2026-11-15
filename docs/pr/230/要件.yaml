@@ -1,0 +1,29 @@
+use_cases:
+  - kind: single
+    scenario: docs/scenario/SC-155-7.yaml
+    impact: changed
+    detail: 配信元を選んで最初の文書を開くとき、毎回短い時間で読める。読めないときは、読み込み中か失敗かと、その理由を画面で知る
+    depends_on: []
+  - kind: single
+    scenario: docs/scenario/SC-155-10.yaml
+    impact: run_only
+    detail: 起動の直後に配信元を開く流れ。配信元ごとの最初の読み込みを変えると壊しうるため実行して確かめる
+    depends_on: []
+  - kind: composite
+    scenario: docs/scenario/SC-155-13.yaml
+    impact: following
+    detail: 配信元の文書を画面で読む流れの、最初の表示の待ちと失敗の扱いに追随する
+    depends_on:
+      - docs/scenario/SC-155-7.yaml
+docs:
+  - page: docs/nonfunctional/NFR-155-1.yaml
+    new: false
+    change: 配信元を選んでから最初の文書を表示し終えるまでの時間の決定値と、測り方・超えたときの扱いを追加する（値は原因の計測の結果から決める）
+    status: todo
+scope_out:
+  - item: dev-docs serve のプロセスが 2 つ動いていた件（古いものと起動した直後のもの）の調査と対処
+    reason: Issue の確認で見つかったが、遅さとの関係は確かめていない。原因の計測で関係すると分かったときだけスコープに入れる。判断はレビューで確定する
+    plan: to_file
+  - item: mdmark を jsDelivr から読み込む部分（frontend/src/features/docs/doc-view/hooks/use-mdmark.ts）の変更
+    reason: '#228 が使う mdmark のバージョンの指定で同じファイルを変える。原因の計測で CDN からの読み込みが原因に入ったときは #228 と突き合わせる'
+    plan: '#228'
