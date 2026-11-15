@@ -50,6 +50,8 @@ dev-docs の画面全体に通すデザインの方向性。
 | 役割 | 書体の方向 | 補足 |
 | --- | --- | --- |
 | 見出し | 端末のサンセリフ | 太さ 600。`--text-title` / `--text-h2` |
+| 文書のタイトル | mdmark の見出し 1 と同じ | 大きさ・太さは mdmark の値（`text-doc-title`・`font-doc-title`）。下に区切り線 |
+| 本文（mdmark が描く範囲） | mdmark の書体 | 画面の文字・色のトークンと Tailwind の Preflight を当てず、単独の mdmark と同じ見た目にする |
 | 本文・操作・表 | 端末のサンセリフ | `--text-body` / `--text-control` / `--text-table` |
 | 入力欄 | 端末のサンセリフ | `--text-input`。スマホで入力時に拡大されない 16px |
 | 補足（パンくず・文書の情報） | 端末のサンセリフ | `--text-meta` |
