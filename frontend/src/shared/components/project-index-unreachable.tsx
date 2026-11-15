@@ -11,6 +11,29 @@ import { ProjectIndexUnreachableSchema } from "@/shared/core/schema";
 
 export type ProjectIndexUnreachable = { address: string; reason: string };
 
+/** 表示できない理由の種類（接続を断られた・応答が無かった・project-index が処理に失敗した） */
+export type ProjectIndexFailureKind = "unreachable" | "timeout" | "failed";
+
+const MESSAGES: Record<
+  ProjectIndexFailureKind,
+  { title: string; description: string }
+> = {
+  unreachable: {
+    title: "project-index に接続できませんでした",
+    description: "project-index を起動してから、再読み込みしてください。",
+  },
+  timeout: {
+    title: "project-index から応答がありませんでした",
+    description:
+      "project-index が配信元を初めて読み込む間は、時間がかかることがあります。しばらく待ってから、再読み込みしてください。",
+  },
+  failed: {
+    title: "project-index が要求を処理できませんでした",
+    description:
+      "project-index のログで原因を確認してから、再読み込みしてください。",
+  },
+};
+
 /** 画面の API の 503 から、接続できなかった project-index のアドレスと理由を取り出す */
 export const toProjectIndexUnreachable = (
   error: unknown,
@@ -21,13 +44,16 @@ export const toProjectIndexUnreachable = (
 };
 
 type Props = ProjectIndexUnreachable & {
+  /** 表示できない理由の種類。省くと接続できなかったときの文言 */
+  kind?: ProjectIndexFailureKind;
   onReload: () => void;
   /** 見出しの要素の id。接続できない間に押せない操作の `aria-describedby` から指す */
   titleId?: string;
 };
 
-/** project-index に接続できなかったことと、接続先・理由・再読み込みを出す */
+/** project-index から文書を受け取れなかったことと、接続先・理由・再読み込みを出す */
 export const ProjectIndexUnreachableAlert = ({
+  kind = "unreachable",
   address,
   reason,
   onReload,
@@ -35,19 +61,19 @@ export const ProjectIndexUnreachableAlert = ({
 }: Props) => (
   <Alert variant="destructive">
     <CircleAlert aria-hidden="true" />
-    <AlertTitle id={titleId}>project-index に接続できませんでした</AlertTitle>
+    <AlertTitle id={titleId}>{MESSAGES[kind].title}</AlertTitle>
     <AlertDescription className="space-y-3">
       <p className="text-pretty text-foreground">
-        project-index を起動してから、再読み込みしてください。
+        {MESSAGES[kind].description}
       </p>
       <dl className="space-y-1 text-sm text-foreground">
         <div className="flex gap-4">
           <dt className="w-16 shrink-0 font-medium">接続先</dt>
-          <dd className="font-mono text-xs break-all">{address}</dd>
+          <dd className="min-w-0 font-mono text-xs break-all">{address}</dd>
         </div>
         <div className="flex gap-4">
           <dt className="w-16 shrink-0 font-medium">理由</dt>
-          <dd className="text-xs break-words">{reason}</dd>
+          <dd className="min-w-0 text-xs wrap-anywhere">{reason}</dd>
         </div>
       </dl>
       <Button variant="outline" className="text-foreground" onClick={onReload}>
