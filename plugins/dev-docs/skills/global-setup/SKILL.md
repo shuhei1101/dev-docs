@@ -37,10 +37,15 @@ argument-hint: "[クローンのパス]"
    - `env` のほかのキーと、ファイルのほかの内容は変えない
 
 5. dev-docs を起動して、つながることを確認する。
-   - 待ち受けていなければ、`{clone}/.venv/bin/python -m dev_docs serve` を切り離して起動する。環境変数 `DEV_DOCS_CONFIG` に端末の設定のパスを指定する
+   - unit の名前は環境変数 `DEV_DOCS_UNIT`（無ければ `dev-docs.service`）。空の文字列なら unit を使用しない
+   - unit を使用し、`systemctl --user show-environment` が終了コード 0 なら、`${XDG_CONFIG_HOME:-~/.config}/systemd/user/{unit の名前}` に unit を書く
+     - 同じ名前の unit があるときは、同じフォルダの `{unit の名前}.bak-{yyyymmddHHMMSS}` へ退避してから書き換える
+     - `[Service]` に `WorkingDirectory={clone}`・`ExecStart={clone}/.venv/bin/python -m dev_docs serve`・`Environment=DEV_DOCS_CONFIG={端末の設定のパス}`（`DEV_DOCS_PORT` があれば `Environment=DEV_DOCS_PORT={値}` も）・`Restart=on-failure`・`RestartPreventExitStatus=3` を書き、`[Install]` に `WantedBy=default.target` を書く
+     - `systemctl --user daemon-reload` と `systemctl --user enable --now {unit の名前}` を実行する。既に動いていれば `systemctl --user restart {unit の名前}` を実行する
+   - unit を使用しないか systemd --user を使用できず、待ち受けていなければ、`{clone}/.venv/bin/python -m dev_docs serve` を切り離して起動する。環境変数 `DEV_DOCS_CONFIG` に端末の設定のパスを指定する
    - `http://127.0.0.1:${DEV_DOCS_PORT:-8781}/_admin/mcp` の `status` を呼び、project-index につながっていることを確認する
 
 6. 結果を示す。
-   - 作ったもの（端末の設定のパス・env に記載したキー）と、つながった結果を出す
+   - 作ったもの（端末の設定のパス・env に記載したキー・unit の名前とファイルのパス）と、つながった結果を出す
    - このセッションで管理の MCP を使用するには `/mcp` で再接続することを案内する
    - 配信元の登録は project-index のスキル `setup` か、dev-docs の設定画面の「配信元を追加」で行うことを案内する
