@@ -179,7 +179,7 @@ functions:
          - `TerminalConfigInvalidError` の場合、違反ごとに `{ファイル}: {パス}: {理由}`（違反が無ければ例外の本文）を標準エラーに出し、`EXIT_CONFIG_INVALID` を返す
       2. `log_dir` を作り、`logging` を設定する。ログは標準エラーと `{log_dir}/dev-docs.log`（`RotatingFileHandler`）に書く
       3. ポートで待ち受けられるか確かめる（ポートの確かめ）
-         - `PortInUseError` の場合、`{bind}:{port} は使用中です。DEV_DOCS_PORT で別のポートを指定できます` を標準エラーに出し、`EXIT_PORT_IN_USE` を返す
+         - `PortInUseError` の場合、ポートを持っているプロセスを探し（ポートを持っているプロセス）、`{bind}:{port} は使用中です（pid {pid}）。DEV_DOCS_PORT で別のポートを指定できます`（pid を取れなければ `（pid {pid}）` の代わりに `（pid を取れませんでした）`）を標準エラーに出し、`EXIT_PORT_IN_USE` を返す
       4. 部品を配線し（部品の配線）、アプリを組み立てる（アプリの組み立て）
          - `PromptInvalidError` の場合、違反ごとに `{file}: {path}: {reason}` を標準エラーに出し、`EXIT_PROMPT_INVALID` を返す
       5. 標準出力に `http://{bind}:{port}/` を出し、端末の設定の `leftover_sources` があれば `[warning]` 端末の設定に前のバージョンの sources が残っている（行の ID と、project-index で追加する案内）を書く。配信元の知らせを裏で始める
@@ -194,7 +194,7 @@ functions:
         message: '標準エラーに `{ファイル}: {パス}: {理由}` を全て'
       - name: なし（終了コード 3）
         condition: ポートで待ち受けられない
-        message: '`{bind}:{port} は使用中です。DEV_DOCS_PORT で別のポートを指定できます`'
+        message: '`{bind}:{port} は使用中です（pid {pid}）。DEV_DOCS_PORT で別のポートを指定できます`（pid を取れなければ `（pid を取れませんでした）`）'
       - name: なし（終了コード 4）
         condition: プロンプトの YAML が無い・読めない・スキーマに違反する・描画できない
         message: '標準エラーに `{ファイル}: {キーのパス}: {理由}` を全て'
@@ -217,7 +217,7 @@ functions:
         summary: ポートが使用中
         condition: テストが先に待ち受けたポートを `DEV_DOCS_PORT` に入れる
         mock: なし
-        expected: 3 を返し、標準エラーにポートの番号と `DEV_DOCS_PORT`
+        expected: 3 を返し、標準エラーにポートの番号と、テストのプロセスの pid と `DEV_DOCS_PORT`
         exception: ポートで待ち受けられない
       - name: test_run_serve_when_prompt_invalid
         case: 異常
@@ -482,6 +482,61 @@ functions:
       - MOD-155-119#functions[resolve_target]
       - MOD-155-119#functions[plan_migration]
       - MOD-155-119#functions[apply_migration]
+  - name: find_port_owner
+    title: ポートを持っているプロセス
+    kind: 関数
+    container: main.py
+    usecase: 起動
+    role: 外部との境界
+    summary: 待ち受けのアドレスとポートで LISTEN しているプロセスの pid を `/proc` から探す
+    scope: public
+    args:
+      - name: bind
+        title: 待ち受けのアドレス
+        type: str
+        required: true
+        passing: positional
+        description: 端末の設定の `bind`
+      - name: port
+        title: ポート
+        type: int
+        required: true
+        passing: positional
+        description: 待ち受けのポート
+      - name: proc
+        title: proc の場所
+        type: Path
+        required: false
+        default: '`Path("/proc")`'
+        passing: keyword
+        description: テストで差し替える `/proc` の場所
+    returns:
+      type: int | None
+      description: 見つかった pid。取れなければ `None`
+    process: |-
+      1. `bind` が IPv6 のアドレスなら `{proc}/net/tcp6`、それ以外は `{proc}/net/tcp` を読み、状態が `0A`（LISTEN）でローカルアドレスのポートが `port` の行の inode を引く。アドレスが `bind` か全てのアドレスの行を対象にする
+         - 読めない・行が無い場合、`None` を返す
+      2. `{proc}/{数字}/fd/*` のリンク先が `socket:[{inode}]` のものを探し、見つかった最初の pid を返す
+         - プロセスごとの `OSError`（権限が無い・終わった）は飛ばす。見つからなければ `None` を返す
+    unit_tests:
+      - name: test_find_port_owner
+        case: 正常
+        summary: テスト自身が待ち受けるポート
+        condition: テストが `127.0.0.1` で `listen` しているポート
+        mock: なし（実際の `/proc`）
+        expected: '`os.getpid()`'
+      - name: test_find_port_owner_when_not_listening
+        case: 正常
+        summary: 待ち受けていないポート
+        condition: OS が払い出して閉じたポート
+        mock: なし
+        expected: '`None`'
+      - name: test_find_port_owner_when_proc_missing
+        case: 正常
+        summary: /proc が無い
+        condition: '`proc` に空の一時フォルダ'
+        mock: なし
+        expected: '`None`'
 refs:
   - IF-155-25#
   - IF-155-22#
