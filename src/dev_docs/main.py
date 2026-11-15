@@ -165,8 +165,9 @@ def run_serve(args: argparse.Namespace) -> int:
         try:
             server.run()
         except SystemExit:
-            # uvicorn は待ち受けに失敗すると sys.exit で抜けるので、待ち受けの前なら下で使用中を出す
-            if server.started:
+            # uvicorn は待ち受けの前の失敗（ポート・lifespan）で sys.exit で抜ける。
+            # ポートが使用中のときだけ下で使用中を出し、それ以外の失敗はそのまま送出する
+            if server.started or not _port_in_use(terminal.bind, port):
                 raise
         if not server.started:
             # 確認した後に他のプロセスがポートを取った
@@ -207,6 +208,15 @@ def announce_sources(terminal: TerminalConfig) -> threading.Thread:
     thread = threading.Thread(target=work, name="dev-docs-announce", daemon=True)
     thread.start()
     return thread
+
+
+def _port_in_use(bind: str, port: int) -> bool:
+    """待ち受けのアドレスとポートが使用中かを、ポートの確かめで返却する。"""
+    try:
+        check_port(bind, port)
+    except PortInUseError:
+        return True
+    return False
 
 
 def check_port(bind: str, port: int) -> None:
