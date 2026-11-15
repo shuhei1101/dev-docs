@@ -514,7 +514,7 @@ functions:
       type: int | None
       description: 見つかった pid。取れなければ `None`
     process: |-
-      1. `bind` が IPv6 のアドレスなら `{proc}/net/tcp6`、それ以外は `{proc}/net/tcp` を読み、状態が `0A`（LISTEN）でローカルアドレスのポートが `port` の行の inode を引く。アドレスが `bind` か全てのアドレスの行を対象にする
+      1. `bind` が IPv6 のアドレスなら `{proc}/net/tcp6`、それ以外は `{proc}/net/tcp` を読み、状態が `0A`（LISTEN）でローカルアドレスのポートが `port` の行の inode を引く。アドレスが `bind` か全てのアドレスの行を対象にする。`bind` が IPv4 のアドレスでない（`localhost` などホスト名の）ときは、アドレスで絞らずポートだけで探す
          - 読めない・行が無い場合、`None` を返す
       2. `{proc}/{数字}/fd/*` のリンク先が `socket:[{inode}]` のものを探し、見つかった最初の pid を返す
          - プロセスごとの `OSError`（権限が無い・終わった）は飛ばす。見つからなければ `None` を返す
@@ -537,6 +537,12 @@ functions:
         condition: '`proc` に空の一時フォルダ'
         mock: なし
         expected: '`None`'
+      - name: test_find_port_owner_when_bind_is_hostname
+        case: 正常
+        summary: bind がホスト名
+        condition: テストが `127.0.0.1` で `listen` しているポートを、`bind` に `localhost` を指定して探す
+        mock: なし（実際の `/proc`）
+        expected: '`os.getpid()`（例外を送出しない）'
 refs:
   - IF-155-25#
   - IF-155-22#
