@@ -706,6 +706,18 @@ test.describe("本文", () => {
       "dev-docs serve",
       "```",
       "",
+      '<!-- map: {"title": "フロー"} -->',
+      "",
+      "```mermaid",
+      "sequenceDiagram",
+      "  participant A as 画面",
+      "  participant B as サーバー",
+      "  A->>B: 要求",
+      "  B-->>A: 応答",
+      "```",
+      "",
+      "<!-- /map -->",
+      "",
     ].join("\n");
     await openRendered(page, "/sample/docs/doc-1", {
       document: ({ path }) => ({ body: documentResponse({ path, markdown }) }),
@@ -723,6 +735,7 @@ test.describe("本文", () => {
         preFont: style("pre")?.fontFamily,
         boxSizing: style("p, li")?.boxSizing,
         beforeBoxSizing: style("h2", "::before")?.boxSizing,
+        hiddenLegend: style(".mdmark-diagram-legend[hidden]")?.display,
       };
     });
     // 検証
@@ -732,6 +745,8 @@ test.describe("本文", () => {
     expect(styles.preFont).toBe("monospace");
     expect(styles.boxSizing).toBe("content-box");
     expect(styles.beforeBoxSizing).toBe("content-box");
+    // mdmark が hidden を付けて表示する要素は、mdmark の値で描く（Preflight の [hidden] の !important を当てない）
+    expect(styles.hiddenLegend).toBe("flex");
   });
 
   // 本文の外（文書の一覧）には画面の基本のスタイルを当てたままにする（正常系）
@@ -744,8 +759,16 @@ test.describe("本文", () => {
       .locator("ul")
       .first()
       .evaluate((ul) => ({ listStyle: getComputedStyle(ul).listStyleType, boxSizing: getComputedStyle(ul).boxSizing }));
+    const hiddenDisplay = await page.getByRole("navigation", { name: "文書の一覧" }).evaluate((nav) => {
+      const hidden = document.createElement("ul");
+      hidden.className = "mdmark-diagram-legend";
+      hidden.hidden = true;
+      nav.append(hidden);
+      return getComputedStyle(hidden).display;
+    });
     // 検証
     expect(sidebarList).toEqual({ listStyle: "none", boxSizing: "border-box" });
+    expect(hiddenDisplay).toBe("none");
   });
 
   // 本文の左端をパンくず・文書のタイトルと同じ位置にし、本文の左右と上に余白を置かない（正常系）
