@@ -217,6 +217,10 @@ def check_port(bind: str, port: int) -> None:
             raise
 
 
+# `/proc/net/tcp` の 1 行のうち、inode の列の位置（0 始まり）
+TCP_INODE_FIELD = 9
+
+
 def _listen_inode(bind: str, port: int, proc: Path) -> str | None:
     """`/proc/net/tcp`（IPv6 は `tcp6`）から、待ち受けのアドレスとポートで LISTEN している行の inode を返却する。"""
     ipv6 = ":" in bind
@@ -226,13 +230,10 @@ def _listen_inode(bind: str, port: int, proc: Path) -> str | None:
     except OSError:
         return None
     # 全てのアドレスと待ち受けのアドレスを、/proc の表記（ホストのバイト順の 16 進）にする
-    if ipv6:
-        addresses = None
-    else:
-        addresses = {"00000000", socket.inet_aton(bind)[::-1].hex().upper()}
+    addresses = None if ipv6 else {"00000000", socket.inet_aton(bind)[::-1].hex().upper()}
     for line in lines:
         fields = line.split()
-        if len(fields) < 10:
+        if len(fields) <= TCP_INODE_FIELD:
             continue
         address, _, port_hex = fields[1].partition(":")
         # LISTEN（0A）で、ポートと待ち受けのアドレスが合う行だけ
@@ -240,7 +241,7 @@ def _listen_inode(bind: str, port: int, proc: Path) -> str | None:
             continue
         if addresses is not None and address not in addresses:
             continue
-        return fields[9]
+        return fields[TCP_INODE_FIELD]
     return None
 
 
