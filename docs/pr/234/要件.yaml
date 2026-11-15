@@ -20,27 +20,39 @@ docs:
   - page: docs/guide/CLI.md
     new: false
     change: '`dev-docs serve` の起動し直しと、同時に起動したときの終了コード・出す理由を設計に合わせる'
-    status: todo
+    status: done
+    updated_by: planner
+    updated_at: '2026-11-15T19:21:59.520971+00:00'
   - page: docs/guide/dev-docsを入れる.md
     new: false
     change: global-setup の起動の手順を、設計で決めた起動の仕組みに合わせる
-    status: todo
+    status: done
+    updated_by: planner
+    updated_at: '2026-11-15T19:21:59.520971+00:00'
   - page: docs/guide/管理のMCP.md
     new: false
     change: '`restart` で起動し直したプロセスが配信を引き継ぐことを設計に合わせる'
-    status: todo
+    status: done
+    updated_by: planner
+    updated_at: '2026-11-15T19:21:59.520971+00:00'
   - page: docs/guide/コアコンセプト-管理用プラグイン.md
     new: false
     change: セッション開始のフックの起動の仕組みを設計に合わせる
-    status: todo
+    status: done
+    updated_by: planner
+    updated_at: '2026-11-15T19:21:59.520971+00:00'
   - page: plugins/dev-docs/skills/global-setup/SKILL.md
     new: false
     change: 手順 5 の起動を、設計で決めた起動の仕組みに合わせる
-    status: todo
+    status: done
+    updated_by: planner
+    updated_at: '2026-11-15T19:21:59.520971+00:00'
   - page: docs/guide/設定.md
     new: false
     change: 環境変数 `DEV_DOCS_UNIT`（セッション開始のフックと global-setup が使用する systemd --user の unit の名前。既定 `dev-docs.service`、空の文字列は unit を使用しない）を追加する
-    status: todo
+    status: done
+    updated_by: planner
+    updated_at: '2026-11-15T19:21:59.520971+00:00'
 scope_out:
   - item: AI Monitor の常駐サーバーの設定（`~/.config/ai-monitor/settings.yaml` の `resident_servers` の `restart_command`）の書き換え
     reason: AI Monitor の端末の設定で、dev-docs のリポジトリの外。`systemctl --user restart dev-docs.service` のままで引き継げる設計にする。書き換えが要ると設計で決まったときは反映作業へ回す
