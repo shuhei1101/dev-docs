@@ -10,6 +10,7 @@ from typing import Any
 
 HOOKS_DIR = Path(__file__).parents[3] / "plugins" / "dev-docs" / "hooks"
 EVENT = {"session_id": "s1", "cwd": "/repo/sample", "source": "startup"}
+UNIT = "dev-docs-test.service"
 
 
 def _clone_with_recorder(tmp_path: Path) -> tuple[Path, Path, Path]:
@@ -25,6 +26,31 @@ def _clone_with_recorder(tmp_path: Path) -> tuple[Path, Path, Path]:
     )
     python.chmod(0o755)
     return clone, args_file, pid_file
+
+
+def _fake_systemctl(tmp_path: Path, body: str) -> tuple[Path, Path]:
+    """受けた引数を 1 行ずつ追記してから本文を実行する偽物の `systemctl` を作り、置いたフォルダと記録のファイルを返却する。"""
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    record = tmp_path / "systemctl.txt"
+    script = bin_dir / "systemctl"
+    script.write_text(f'#!/bin/sh\necho "$@" >> "{record}"\n{body}\n', encoding="utf-8")
+    script.chmod(0o755)
+    return bin_dir, record
+
+
+def _unit_env(tmp_path: Path, bin_dir: Path, port: int) -> tuple[dict[str, str], Path, Path]:
+    """unit がある端末の環境変数と、切り離した起動の記録のファイルを返却する。"""
+    clone, args_file, pid_file = _clone_with_recorder(tmp_path)
+    settings = tmp_path / "settings.yaml"
+    settings.write_text(f'version: "1"\nclone: {clone}\n', encoding="utf-8")
+    env = {
+        "DEV_DOCS_PORT": str(port),
+        "DEV_DOCS_CONFIG": str(settings),
+        "DEV_DOCS_UNIT": UNIT,
+        "PATH": f"{bin_dir}:{os.environ.get('PATH', '')}",
+    }
+    return env, args_file, pid_file
 
 
 def _wait_for(path: Path, timeout_sec: float = 5) -> str:
@@ -136,3 +162,61 @@ def test_normal_when_terminal_config_missing(
     assert result.code == 0
     assert str(config) in context
     assert "/dev-docs:global-setup" in context
+
+
+def test_normal_when_unit_exists(
+    tmp_path: Path, run_hook: Callable[..., Any], free_port: Callable[[], int]
+) -> None:
+    """つながらなければ unit を起動し、切り離しては起動しない（正常系）。"""
+    # 準備
+    bin_dir, record = _fake_systemctl(tmp_path, "exit 0")
+    env, args_file, _ = _unit_env(tmp_path, bin_dir, free_port())
+    # 実行
+    result = run_hook("session_start", EVENT, env)
+    # 検証
+    context = result.output["hookSpecificOutput"]["additionalContext"]
+    assert result.code == 0
+    assert record.read_text(encoding="utf-8").splitlines() == [
+        f"--user cat {UNIT}",
+        f"--user start --no-block {UNIT}",
+    ]
+    assert not args_file.exists()
+    assert "/mcp" in context
+    assert "再接続して" in context
+
+
+def test_normal_when_unit_start_fails(
+    tmp_path: Path, run_hook: Callable[..., Any], free_port: Callable[[], int]
+) -> None:
+    """unit の起動が失敗したら、理由を文脈に入れ、切り離しては起動しない（正常系）。"""
+    # 準備
+    bin_dir, _ = _fake_systemctl(
+        tmp_path, '[ "$2" = "start" ] && { echo "Failed to start" >&2; exit 1; }\nexit 0'
+    )
+    env, args_file, _ = _unit_env(tmp_path, bin_dir, free_port())
+    # 実行
+    result = run_hook("session_start", EVENT, env)
+    # 検証
+    context = result.output["hookSpecificOutput"]["additionalContext"]
+    assert result.code == 0
+    assert UNIT in context
+    assert "Failed to start" in context
+    assert not args_file.exists()
+
+
+def test_normal_when_unit_check_times_out(
+    tmp_path: Path, run_hook: Callable[..., Any], free_port: Callable[[], int]
+) -> None:
+    """`systemctl --user cat` が打ち切られたら、理由を文脈に入れ、切り離しては起動しない（正常系）。"""
+    # 準備（1 秒は打ち切りの 0.1 秒を超える値）
+    bin_dir, record = _fake_systemctl(tmp_path, "sleep 1")
+    env, args_file, _ = _unit_env(tmp_path, bin_dir, free_port())
+    # 実行
+    result = run_hook("session_start", EVENT, env)
+    # 検証
+    context = result.output["hookSpecificOutput"]["additionalContext"]
+    assert result.code == 0
+    assert UNIT in context
+    assert "systemctl --user cat" in context
+    assert not any("start" in line for line in record.read_text(encoding="utf-8").splitlines())
+    assert not args_file.exists()

@@ -37,7 +37,7 @@ flows:
       - name: 端末の設定
         description: '`clone:` にその一時フォルダを持つ `settings.yaml` を `DEV_DOCS_CONFIG` で指す'
       - name: ポート
-        description: 空いているポートを `DEV_DOCS_PORT` に渡す
+        description: 空いているポートを `DEV_DOCS_PORT` に渡す。`DEV_DOCS_UNIT` は空の文字列
     flow: |-
       ```mermaid
       sequenceDiagram
@@ -65,7 +65,7 @@ flows:
         description: '`clone:` にその一時フォルダを持つ `settings.yaml` を `$XDG_CONFIG_HOME/dev-docs/` に置き、`DEV_DOCS_CONFIG` を外す'
         notes: 2 回目は `XDG_CONFIG_HOME` に相対パスを入れ、`HOME` の下の `.config/dev-docs/settings.yaml` に別の `clone:` を置く
       - name: ポート
-        description: 空いているポートを `DEV_DOCS_PORT` に渡す
+        description: 空いているポートを `DEV_DOCS_PORT` に渡す。`DEV_DOCS_UNIT` は空の文字列
     flow: |-
       ```mermaid
       sequenceDiagram
@@ -108,17 +108,96 @@ flows:
       - '`additionalContext` に端末の設定のパスと `/dev-docs:global-setup` がある'
       - プロセスを起動していない
     test: test_normal_when_terminal_config_missing
-lead: ポートにつながらなければ `dev-docs serve` を切り離して起動し、再接続の案内か起動できない理由を文脈に入れる。つながったときは何も依頼せず、文脈を入れずに戻る。入力は stdin の JSON と環境変数。
+  - name: 正常系（unit がある）
+    summary: つながらなければ unit を起動し、切り離しては起動しない
+    setup:
+      - name: Mock
+        description: '`PATH` の先頭に、受けた引数をファイルに追記して終了コード 0 で終わる `systemctl` を置く。`{clone}/.venv/bin/python` は、受けた引数を別のファイルに書いて終わるスクリプト'
+      - name: 端末の設定
+        description: '`clone:` にその一時フォルダを持つ `settings.yaml` を `DEV_DOCS_CONFIG` で指す'
+      - name: ポート
+        description: 空いているポートを `DEV_DOCS_PORT` に渡す
+        notes: '`DEV_DOCS_UNIT` に `dev-docs-test.service`'
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        participant C as Claude Code
+        participant H as セッション開始のフック
+        participant SD as systemctl --user
+
+        C->>H: stdin
+        H->>H: ポートにつながらない
+        H-->>SD: cat dev-docs-test.service（終了コード 0）
+        H->>SD: start --no-block dev-docs-test.service
+        H-->>C: additionalContext（再接続の案内）
+      ```
+    expected:
+      - Mock の `systemctl` が `--user cat dev-docs-test.service` と `--user start --no-block dev-docs-test.service` をこの順で受けている
+      - '`{clone}/.venv/bin/python` が呼ばれていない'
+      - '`additionalContext` が `/mcp` の再接続の案内で、終了コード 0'
+    test: test_normal_when_unit_exists
+  - name: 正常系（unit を起動できない）
+    summary: unit の起動が失敗したら、理由を文脈に入れ、切り離しては起動しない
+    setup:
+      - name: Mock
+        description: '`PATH` の先頭に、`cat` では終了コード 0、`start` では標準エラーに `Failed to start` を出して終了コード 1 で終わる `systemctl` を置く。`{clone}/.venv/bin/python` は正常系（unit がある）と同じ'
+      - name: 端末の設定・ポート
+        description: 正常系（unit がある）と同じ
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        participant C as Claude Code
+        participant H as セッション開始のフック
+        participant SD as systemctl --user
+
+        C->>H: stdin
+        H->>H: ポートにつながらない
+        H-->>SD: cat dev-docs-test.service（終了コード 0）
+        H->>SD: start --no-block dev-docs-test.service（終了コード 1）
+        H-->>C: additionalContext（unit の名前と理由）
+      ```
+    expected:
+      - '`additionalContext` に unit の名前と `Failed to start` があり、終了コード 0'
+      - '`{clone}/.venv/bin/python` が呼ばれていない'
+    test: test_normal_when_unit_start_fails
+  - name: 正常系（unit の有無の確かめが打ち切られる）
+    summary: '`systemctl --user cat` が打ち切られたら、理由を文脈に入れ、切り離しては起動しない'
+    setup:
+      - name: Mock
+        description: '`PATH` の先頭に、`cat` では 1 秒待ってから終わる `systemctl` を置く。`{clone}/.venv/bin/python` は正常系（unit がある）と同じ'
+        notes: 1 秒は打ち切りの 0.1 秒を超える値
+      - name: 端末の設定・ポート
+        description: 正常系（unit がある）と同じ
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        participant C as Claude Code
+        participant H as セッション開始のフック
+        participant SD as systemctl --user
+
+        C->>H: stdin
+        H->>H: ポートにつながらない
+        H-->>SD: cat dev-docs-test.service（打ち切る）
+        H-->>C: additionalContext（unit の名前と理由）
+      ```
+    expected:
+      - '`additionalContext` に unit の名前と、`systemctl --user cat` が打ち切られたことがあり、終了コード 0'
+      - '`systemctl` が `start` を受けていない'
+      - '`{clone}/.venv/bin/python` が呼ばれていない'
+    test: test_normal_when_unit_check_times_out
+lead: ポートにつながらなければ、systemd --user の unit を起動し、unit が無ければ `dev-docs serve` を切り離して起動して、再接続の案内か起動できない理由を文脈に入れる。つながったときは何も依頼せず、文脈を入れずに戻る。入力は stdin の JSON と環境変数。
 identifier: hooks/session_start.py
 permissions: 利用者の権限で動く
 idempotent: true
-side_effects: サーバーが待ち受けていなければ `dev-docs serve` のプロセスを 1 つ起動する
+side_effects: サーバーが待ち受けていなければ、unit を起動するか、unit が無ければ `dev-docs serve` のプロセスを 1 つ起動する
 callers:
   - SC-155-10#scenarios[正常シナリオ（SessionStart で起動する）]
   - SC-155-10#scenarios[正常シナリオ（待ち受けているサーバーがあるときは文脈を注入しない）]
   - SC-155-10#scenarios[異常シナリオ（SessionStart で起動できない）]
   - SC-155-10#scenarios[正常シナリオ（SessionStart で XDG_CONFIG_HOME の下の端末の設定から起動する）]
-exclusivity: 同時に開いた複数のセッションがどれも起動してもよい。後から起動した `dev-docs serve` はポートが使用中（終了コード 3）で止まり、待ち受けるのは 1 つだけ
+  - SC-155-10#scenarios[正常シナリオ（SessionStart で unit を起動する）]
+  - SC-155-10#scenarios[正常シナリオ（unit を起動し直す）]
+exclusivity: 同時に開いた複数のセッションがどれも起動してもよい。unit があるときは systemd が unit のプロセスを 1 つに保つ（起動し直しの途中の `start` もプロセスを増やさない）。unit が無いときは、後から起動した `dev-docs serve` がポートの使用中（終了コード 3）で止まり、待ち受けるのは 1 つだけ
 request:
   - name: session_id
     type: str
@@ -156,6 +235,12 @@ request:
     default: '`~/.config`'
     description: '`DEV_DOCS_CONFIG` が無いときに端末の設定を探すフォルダの親'
     notes: 環境変数。空の文字列か相対パスは未設定として扱う
+  - name: DEV_DOCS_UNIT
+    type: str
+    required: false
+    default: '`dev-docs.service`'
+    description: 起動に使用する systemd --user の unit の名前。空の文字列は unit を使用しない
+    notes: 環境変数
 request_example: |-
   ```json
   {"session_id": "8f1c...", "cwd": "/home/u/repo/sample/.claude/worktrees/x", "source": "startup", "hook_event_name": "SessionStart"}
@@ -180,6 +265,9 @@ exceptions:
   - name: なし（起動できない）
     condition: 端末の設定が無い・`clone` が無い・`{clone}/.venv/bin/python` が無い
     notes: 終了コード 0 で、理由と `/dev-docs:global-setup` の案内を文脈に入れる
+  - name: なし（unit を起動できない）
+    condition: unit はあるが `systemctl --user start` が 0 以外で終わるか打ち切られる。または `systemctl --user cat` が打ち切られる
+    notes: 終了コード 0 で、unit の名前と systemctl の標準エラーを文脈に入れる。切り離して起動する経路へは切り替えない
 constraints:
   - item: 言語
     constraint: Python 3.14 の標準ライブラリだけ。`uv` を前提にしない
@@ -192,11 +280,16 @@ constraints:
     constraint: トップレベルの `clone:` の行だけを読む（`~` を展開し、引用符を外す）
     notes: 標準ライブラリに YAML のパーサーが無いため
   - item: 起動
-    constraint: '`{clone}/.venv/bin/python -m dev_docs serve` を `start_new_session=True`・入出力を `DEVNULL` で起動し、待たずに戻る'
+    constraint: 'unit があるときは `systemctl --user start --no-block {unit}` を呼ぶ。unit が無いときは `{clone}/.venv/bin/python -m dev_docs serve` を `start_new_session=True`・入出力を `DEVNULL` で起動し、待たずに戻る'
     notes: 'PR #9 の PoC のとおり'
   - item: タイムアウト
     constraint: '`hooks.json` の `timeout` は 2 秒'
     notes: 落ちているときの流れ（接続の失敗 → `Popen` → 出力）のフック全体を、`/mnt/c` の上のフックのファイルで 5 回測って 0.53〜0.70 秒（2026-11-12、Python 3.12）。最大の 0.70 秒に 50% を乗せて切り上げた値（規約『資源の値の決め方』の入れ子の待ち）。記録の削除の依頼（3 秒）は project-index のフックへ移した
   - item: 失敗の扱い
     constraint: どの失敗でも終了コード 0 で戻り、セッションを止めない
+  - item: unit の有無
+    constraint: '`DEV_DOCS_UNIT`（既定 `dev-docs.service`）が空でなく、`systemctl --user cat {unit}` が終了コード 0 なら unit がある。`DEV_DOCS_UNIT` が空・`systemctl` が無い・`cat` が 0 以外で終わったときは unit が無い。`cat` が打ち切られたときは、unit を起動できないときと同じく扱う'
+  - item: systemctl の打ち切り
+    constraint: '`systemctl --user` の呼び出しをそれぞれ 0.1 秒で打ち切る'
+    notes: '`cat` と `start --no-block` を 5 回ずつ測って 0.01〜0.04 秒（2026-11-16）。最大の 0.04 秒に 50% を乗せて切り上げた値（規約『資源の値の決め方』の下流を待つタイムアウト）。unit がある経路の待ちの上限の合計は、接続の確かめ 0.5 秒 + `cat` 0.1 秒 + `start` 0.1 秒 = 0.7 秒。待ち以外の処理（落ちているときのフック全体の実測の最大 0.70 秒。拒否される接続はすぐ終わる）を加えて 1.4 秒で、`timeout` の 2 秒に 0.6 秒の余裕で収まる'
 test_file: tests/integration/plugin/test_session_start.py

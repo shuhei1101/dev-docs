@@ -98,7 +98,7 @@ flows:
       ```
     expected:
       - 終了コードが 3
-      - 標準エラーに使用中のポートの番号と、`DEV_DOCS_PORT` で変えられることが出る
+      - 標準エラーに使用中のポートの番号と、ポートを持っているプロセスの pid（テストのプロセスの pid）と、`DEV_DOCS_PORT` で変えられることが出る
     test: test_error_when_port_in_use
   - name: 正常系（MCP の入口をスラッシュ無しで呼ぶ）
     summary: プラグインの接続先と同じスラッシュ無しの `/_admin/mcp` への POST に、リダイレクトを挟まずに MCP が応える
@@ -204,6 +204,31 @@ flows:
       - 終了コードが 4 で、ポートを待ち受けない
       - 標準エラーに `status` の YAML のパスと `kind` の違反がある
     test: test_error_when_prompt_invalid
+  - name: 異常系（同時に 2 回起動する・PortInUseError）
+    summary: 同じポートで 2 つ同時に起動すると、待ち受けるのは 1 つで、もう片方は待ち受けた方の pid を出して終わる
+    setup:
+      - name: Mock
+        description: project-index の読み取り API のモック。`dev-docs serve` を子プロセスで 2 つ同時に起動する
+      - name: 端末の設定
+        description: 正常系と同じ
+        notes: 同じ空きポートを両方の `DEV_DOCS_PORT` に入れる
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        participant U as クライアント
+        participant T1 as dev-docs serve（1 つ目）
+        participant T2 as dev-docs serve（2 つ目）
+
+        U->>T1: dev-docs serve
+        U->>T2: dev-docs serve
+        T1->>T1: 127.0.0.1 で待ち受ける
+        T2->>T2: ポートで待ち受けられない
+        T2-->>U: ポートと待ち受けた方の pid を標準エラーに出して終わる
+      ```
+    expected:
+      - 片方が待ち受けを続け、もう片方が終了コード 3 で終わる
+      - 終わった方の標準エラーに、ポートの番号と、待ち受けている方の子プロセスの pid が出る
+    test: test_error_when_started_twice
 lead: 端末の設定を読み、project-index が配信している配信元を、1 プロセス・1 ポートで画面の API と `/_admin/mcp` に配信し始める。
 identifier: serve
 permissions: なし
@@ -277,7 +302,7 @@ exceptions:
     notes: '標準エラーに `{ファイル}: {キーのパス}: {理由}` を全て出し、終了コード 2 で終わる'
   - name: PortInUseError
     condition: ポートで待ち受けられない
-    notes: 標準エラーにポートの番号と `DEV_DOCS_PORT` で変えられることを出し、終了コード 3 で終わる
+    notes: 標準エラーにポートの番号と、ポートを持っているプロセスの pid（取れなければ取れなかったこと）と `DEV_DOCS_PORT` で変えられることを出し、終了コード 3 で終わる
   - name: PromptInvalidError
     condition: プロンプトの YAML（管理の MCP のツールの description）が無い・読めない・`templates/prompt.schema.yaml` に違反する・Jinja2 として解釈できない
     notes: '標準エラーに `{ファイル}: {キーのパス}: {理由}` を全て出し、待ち受けずに終了コード 4 で終わる。代わりの文は持たない'
@@ -308,6 +333,9 @@ constraints:
   - item: 待ち受けまでの順番
     constraint: 端末の設定・ポート・プロンプトの YAML を確かめたら待ち受けを始め、project-index への問い合わせは待ち受けの後に行う
     decided_by: NFR-155-1#requirements[起動から接続を受け付けるまでの時間]
+  - item: ポートを持っているプロセスの pid
+    constraint: '`/proc/net/tcp`（IPv6 のアドレスは `/proc/net/tcp6`）から待ち受けのアドレスとポートの LISTEN の行の inode を引き、`/proc/*/fd` でその inode を持つプロセスを探す。`/proc` が無い・読めない・見つからないときは、pid を取れなかったことを出して終了コード 3 で終わる'
+    notes: 別の利用者のプロセスの `fd` は読めず、取れない扱いになる
 refs:
   - SC-155-10#scenarios[正常シナリオ]
 test_file: tests/integration/server/test_serve.py

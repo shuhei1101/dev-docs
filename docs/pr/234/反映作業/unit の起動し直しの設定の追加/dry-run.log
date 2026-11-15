@@ -1,0 +1,13 @@
+前提確認: ok
+--- /home/shuhei2441/.config/systemd/user/dev-docs.service
++++ /home/shuhei2441/.config/systemd/user/dev-docs.service
+@@ -8,6 +8,7 @@
+ ExecStart=/mnt/c/Users/shuhe/repo/dev-docs/.claude/worktrees/develop/.venv/bin/python -m dev_docs serve
+ Restart=on-failure
+ SuccessExitStatus=143
++RestartPreventExitStatus=3
+ 
+ [Install]
+ WantedBy=default.target
+RestartPreventExitStatus の追加: changed
+daemon-reload: changed
