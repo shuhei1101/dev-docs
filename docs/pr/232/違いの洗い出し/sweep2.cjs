@@ -5,7 +5,7 @@ const fs = require('fs');
 const base = '/mnt/c/Users/shuhe/repo/dev-docs/.claude/worktrees/mdcompare-232';
 const docs = [['SCR-155-1','/dev-docs/docs/screen/SCR-155-1'],['IF-155-1','/dev-docs/docs/interface/IF-155-1'],['CLI','/dev-docs/docs/guide/files/docs/guide/CLI.md'],['TABLE','/mdmark/docs/guide/files/docs/guide/'+encodeURIComponent('記載する-表に機能を付ける.md')]];
 const W = +(process.argv[2]||1440), scheme = process.argv[3]||'light', cssFile = process.argv[4], name = process.argv[5]||`sweep2-${W}-${scheme}`;
-const P = ['content','font-family','font-size','line-height','font-weight','font-style','color','background-color','margin-top','margin-bottom','margin-left','margin-right','padding-top','padding-bottom','padding-left','padding-right','border-top-width','border-top-style','border-top-color','border-bottom-width','border-bottom-color','border-left-width','border-left-color','list-style-type','text-decoration-line','text-align','vertical-align','display','visibility','width','height','max-width','border-radius','box-shadow','box-sizing','white-space','gap','fill','stroke','opacity'];
+const P = ['content','tab-size','-webkit-text-size-adjust','font-feature-settings','font-variation-settings','-webkit-tap-highlight-color','font-family','font-size','line-height','font-weight','font-style','color','background-color','margin-top','margin-bottom','margin-left','margin-right','padding-top','padding-bottom','padding-left','padding-right','border-top-width','border-top-style','border-top-color','border-bottom-width','border-bottom-color','border-left-width','border-left-color','list-style-type','text-decoration-line','text-align','vertical-align','display','visibility','width','height','max-width','border-radius','box-shadow','box-sizing','white-space','gap','fill','stroke','opacity'];
 (async () => {
   const b = await chromium.launch();
   const ctx = await b.newContext({ viewport: { width: W, height: 900 }, colorScheme: scheme });
@@ -34,7 +34,7 @@ const P = ['content','font-family','font-size','line-height','font-weight','font
   for (const [n,url] of docs) {
     await p.goto('file://'+base+'/out/'+n+'.html'); await p.waitForTimeout(1500);
     const e = await p.evaluate(probe, P);
-    await p.goto('http://127.0.0.1:8781'+url,{waitUntil:'networkidle',timeout:180000});
+    await p.goto((process.env.DEVDOCS_ORIGIN||'http://127.0.0.1:8781')+url,{waitUntil:'networkidle',timeout:180000});
     if (css === 'SCOPE') await p.evaluate(() => {
       // 組み上がった CSS の base の層を消し、同じ中身を @scope (html) to (.mdmark) に包んで入れ直す
       for (const sh of document.styleSheets) { let rules; try { rules = sh.cssRules; } catch { continue; }
