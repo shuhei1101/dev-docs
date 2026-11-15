@@ -179,12 +179,12 @@ functions:
          - `TerminalConfigInvalidError` の場合、違反ごとに `{ファイル}: {パス}: {理由}`（違反が無ければ例外の本文）を標準エラーに出し、`EXIT_CONFIG_INVALID` を返す
       2. `log_dir` を作り、`logging` を設定する。ログは標準エラーと `{log_dir}/dev-docs.log`（`RotatingFileHandler`）に書く
       3. ポートで待ち受けられるか確かめる（ポートの確かめ）
-         - `PortInUseError` の場合、`{bind}:{port} は使用中です。DEV_DOCS_PORT で別のポートを指定できます` を標準エラーに出し、`EXIT_PORT_IN_USE` を返す
+         - `PortInUseError` の場合、ポートを持っているプロセスを探し（ポートを持っているプロセス）、`{bind}:{port} は使用中です（pid {pid}）。DEV_DOCS_PORT で別のポートを指定できます`（pid を取れなければ `（pid {pid}）` の代わりに `（pid を取れませんでした）`）を標準エラーに出し、`EXIT_PORT_IN_USE` を返す
       4. 部品を配線し（部品の配線）、アプリを組み立てる（アプリの組み立て）
          - `PromptInvalidError` の場合、違反ごとに `{file}: {path}: {reason}` を標準エラーに出し、`EXIT_PROMPT_INVALID` を返す
       5. 標準出力に `http://{bind}:{port}/` を出し、端末の設定の `leftover_sources` があれば `[warning]` 端末の設定に前のバージョンの sources が残っている（行の ID と、project-index で追加する案内）を書く。配信元の知らせを裏で始める
       6. `uvicorn.Server(uvicorn.Config(app, host=bind, port=port, log_config=None, timeout_graceful_shutdown=PROJECT_INDEX_TIMEOUT_SEC * SHUTDOWN_WAIT_FACTOR))` を作り、再起動の制御に取り付けて（サーバーの取り付け）`run()` する
-         - 確かめた後に他のプロセスがポートを取り、uvicorn が待ち受けに失敗して止まった場合（`server.started` が `False`）、手順 3 と同じ本文を出して `EXIT_PORT_IN_USE` を返す
+         - 確かめた後に他のプロセスがポートを取り、uvicorn が待ち受けに失敗して止まった場合（`server.started` が `False`。uvicorn は `sys.exit` で抜けるので `SystemExit` を捕まえ、ポートを確かめ直して（ポートの確かめ）使用中のときだけこの分岐へ進む。使用中でない（lifespan の起動の失敗など）ときは `SystemExit` をそのまま送出する）、手順 3 と同じ本文を出して `EXIT_PORT_IN_USE` を返す
       7. 止まった後、再起動を要求済み（`handlers.restart.requested`）かで分ける
          - 要求済みの場合、ログのハンドラーを閉じ、`os.execv(sys.executable, [sys.executable, *SERVE_ARGV])` で同じプロセスを置き換える
          - 要求が無い場合、0 を返す
@@ -194,7 +194,7 @@ functions:
         message: '標準エラーに `{ファイル}: {パス}: {理由}` を全て'
       - name: なし（終了コード 3）
         condition: ポートで待ち受けられない
-        message: '`{bind}:{port} は使用中です。DEV_DOCS_PORT で別のポートを指定できます`'
+        message: '`{bind}:{port} は使用中です（pid {pid}）。DEV_DOCS_PORT で別のポートを指定できます`（pid を取れなければ `（pid を取れませんでした）`）'
       - name: なし（終了コード 4）
         condition: プロンプトの YAML が無い・読めない・スキーマに違反する・描画できない
         message: '標準エラーに `{ファイル}: {キーのパス}: {理由}` を全て'
@@ -217,7 +217,7 @@ functions:
         summary: ポートが使用中
         condition: テストが先に待ち受けたポートを `DEV_DOCS_PORT` に入れる
         mock: なし
-        expected: 3 を返し、標準エラーにポートの番号と `DEV_DOCS_PORT`
+        expected: 3 を返し、標準エラーにポートの番号と、テストのプロセスの pid と `DEV_DOCS_PORT`
         exception: ポートで待ち受けられない
       - name: test_run_serve_when_prompt_invalid
         case: 異常
@@ -238,6 +238,13 @@ functions:
         condition: '`sources` に `id: sample` の行を残した端末の設定'
         mock: '`uvicorn.Server.run`（何もせず戻る）'
         expected: 0 を返し、`caplog` に `sample` と project-index で追加する案内の `warning` が 1 件
+      - name: test_run_serve_when_startup_fails
+        case: 異常
+        summary: 待ち受けの前の失敗がポートの使用中でない
+        condition: 空いているポートを `DEV_DOCS_PORT` に入れる
+        mock: '`uvicorn.Server.run`（`started` を `False` のまま `SystemExit(3)` を送出する。lifespan の起動の失敗を真似る）'
+        expected: '`SystemExit` がそのまま送出され、標準エラーに `使用中` が無い'
+        exception: 待ち受けの前の失敗
   - name: check_port
     title: ポートの確かめ
     kind: 関数
@@ -482,6 +489,67 @@ functions:
       - MOD-155-119#functions[resolve_target]
       - MOD-155-119#functions[plan_migration]
       - MOD-155-119#functions[apply_migration]
+  - name: find_port_owner
+    title: ポートを持っているプロセス
+    kind: 関数
+    container: main.py
+    usecase: 起動
+    role: 外部との境界
+    summary: 待ち受けのアドレスとポートで LISTEN しているプロセスの pid を `/proc` から探す
+    scope: public
+    args:
+      - name: bind
+        title: 待ち受けのアドレス
+        type: str
+        required: true
+        passing: positional
+        description: 端末の設定の `bind`
+      - name: port
+        title: ポート
+        type: int
+        required: true
+        passing: positional
+        description: 待ち受けのポート
+      - name: proc
+        title: proc の場所
+        type: Path
+        required: false
+        default: '`Path("/proc")`'
+        passing: keyword
+        description: テストで差し替える `/proc` の場所
+    returns:
+      type: int | None
+      description: 見つかった pid。取れなければ `None`
+    process: |-
+      1. `bind` が IPv6 のアドレスなら `{proc}/net/tcp6`、それ以外は `{proc}/net/tcp` を読み、状態が `0A`（LISTEN）でローカルアドレスのポートが `port` の行の inode を引く。アドレスが `bind` か全てのアドレスの行を対象にする。`bind` が IPv4 のアドレスでない（`localhost` などホスト名の）ときは、アドレスで絞らずポートだけで探す
+         - 読めない・行が無い場合、`None` を返す
+      2. `{proc}/{数字}/fd/*` のリンク先が `socket:[{inode}]` のものを探し、見つかった最初の pid を返す
+         - プロセスごとの `OSError`（権限が無い・終わった）は飛ばす。見つからなければ `None` を返す
+    unit_tests:
+      - name: test_find_port_owner
+        case: 正常
+        summary: テスト自身が待ち受けるポート
+        condition: テストが `127.0.0.1` で `listen` しているポート
+        mock: なし（実際の `/proc`）
+        expected: '`os.getpid()`'
+      - name: test_find_port_owner_when_not_listening
+        case: 正常
+        summary: 待ち受けていないポート
+        condition: OS が払い出して閉じたポート
+        mock: なし
+        expected: '`None`'
+      - name: test_find_port_owner_when_proc_missing
+        case: 正常
+        summary: /proc が無い
+        condition: '`proc` に空の一時フォルダ'
+        mock: なし
+        expected: '`None`'
+      - name: test_find_port_owner_when_bind_is_hostname
+        case: 正常
+        summary: bind がホスト名
+        condition: テストが `127.0.0.1` で `listen` しているポートを、`bind` に `localhost` を指定して探す
+        mock: なし（実際の `/proc`）
+        expected: '`os.getpid()`（例外を送出しない）'
 refs:
   - IF-155-25#
   - IF-155-22#

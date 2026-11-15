@@ -1,0 +1,20 @@
+$ uv run pytest tests/integration/plugin/test_session_start.py tests/integration/server/test_serve.py::test_error_when_port_in_use tests/integration/server/test_serve.py::test_error_when_started_twice
+============================= test session starts ==============================
+platform linux -- Python 3.14.3, pytest-9.1.1, pluggy-1.7.0 -- /mnt/c/Users/shuhe/repo/dev-docs/.claude/worktrees/fix-server-single-serve-process/.venv/bin/python
+rootdir: /mnt/c/Users/shuhe/repo/dev-docs/.claude/worktrees/fix-server-single-serve-process
+configfile: pyproject.toml
+plugins: anyio-4.15.1
+collecting ... collected 9 items
+
+tests/integration/plugin/test_session_start.py::test_normal_when_server_listening PASSED [ 11%]
+tests/integration/plugin/test_session_start.py::test_normal_when_server_down PASSED [ 22%]
+tests/integration/plugin/test_session_start.py::test_normal_when_xdg_config_home_set PASSED [ 33%]
+tests/integration/plugin/test_session_start.py::test_normal_when_terminal_config_missing PASSED [ 44%]
+tests/integration/plugin/test_session_start.py::test_normal_when_unit_exists PASSED [ 55%]
+tests/integration/plugin/test_session_start.py::test_normal_when_unit_start_fails PASSED [ 66%]
+tests/integration/plugin/test_session_start.py::test_normal_when_unit_check_times_out PASSED [ 77%]
+tests/integration/server/test_serve.py::test_error_when_port_in_use PASSED [ 88%]
+tests/integration/server/test_serve.py::test_error_when_started_twice PASSED [100%]
+
+============================== 9 passed in 16.84s ==============================
+exit=0
