@@ -219,6 +219,26 @@ def test_run_serve_when_port_in_use(
     assert "DEV_DOCS_PORT" in error
 
 
+def test_run_serve_when_startup_fails(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """待ち受けの前の失敗がポートの使用中でなければ、使用中を出さずに SystemExit を送出する（異常系）。"""
+    # 準備
+    monkeypatch.setenv("DEV_DOCS_PORT", str(_free_port()))
+    _record_announce(monkeypatch)
+
+    def failing_startup(self: uvicorn.Server) -> None:
+        # lifespan の起動の失敗を真似る（started は False のまま）
+        raise SystemExit(3)
+
+    monkeypatch.setattr(uvicorn.Server, "run", failing_startup)
+    _serve_settings(tmp_path, monkeypatch, _closed_address())
+    # 実行・検証
+    with pytest.raises(SystemExit):
+        run_serve(argparse.Namespace())
+    assert "使用中" not in capsys.readouterr().err
+
+
 def test_run_serve_when_prompt_invalid(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
