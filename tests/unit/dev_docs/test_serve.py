@@ -355,6 +355,15 @@ def test_find_port_owner() -> None:
     assert result == os.getpid()
 
 
+def test_find_port_owner_when_bind_is_hostname() -> None:
+    """bind がホスト名でも例外を送出せず、ポートだけで探す（正常系）。"""
+    # 準備・実行
+    with _listening() as port:
+        result = main_module.find_port_owner("localhost", port)
+    # 検証
+    assert result == os.getpid()
+
+
 def test_find_port_owner_when_not_listening() -> None:
     """待ち受けていないポート（正常系）。"""
     # 準備
