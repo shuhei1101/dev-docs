@@ -398,6 +398,29 @@ test.describe("文書のタイトル", () => {
     await openDoc(page, "/sample/docs/doc-2");
     await expect(page.getByRole("main").getByRole("heading", { level: 1 })).toHaveText("文書 2");
   });
+
+  // 文書のタイトルを mdmark の見出し 1 と同じ大きさ・太さで出し、下に区切り線を表示する（正常系）
+  test("doc_title_matches_mdmark_h1", async ({ page }) => {
+    // 準備
+    await openRendered(page);
+    // 実行
+    const title = await page.getByRole("main").getByRole("heading", { level: 1 }).evaluate((h1) => {
+      const body = document.querySelector(".mdmark");
+      const s = getComputedStyle(h1);
+      return {
+        fontSize: parseFloat(s.fontSize),
+        bodyFontSize: body === null ? 0 : parseFloat(getComputedStyle(body).fontSize),
+        fontWeight: s.fontWeight,
+        borderBottomWidth: s.borderBottomWidth,
+        borderBottomStyle: s.borderBottomStyle,
+      };
+    });
+    // 検証
+    expect(title.fontSize).toBeCloseTo(title.bodyFontSize * 1.9, 1);
+    expect(title.fontWeight).toBe("700");
+    expect(title.borderBottomWidth).toBe("1px");
+    expect(title.borderBottomStyle).toBe("solid");
+  });
 });
 
 test.describe("文書の情報", () => {
@@ -664,6 +687,81 @@ test.describe("本文", () => {
   test("body_without_first_h1", async ({ page }) => {
     await openRendered(page);
     await expect(page.getByRole("main").getByRole("heading", { level: 1 })).toHaveCount(1);
+  });
+
+  // 本文には画面の基本のスタイル（Tailwind の Preflight）を当てず、単独の mdmark と同じ見た目で描く（正常系）
+  test("body_without_preflight", async ({ page }) => {
+    // 準備
+    const markdown = [
+      "# 文書 1",
+      "",
+      "## 概要",
+      "",
+      "- 項目 1",
+      "- 項目 2",
+      "",
+      "#### 見出し 4",
+      "",
+      "```bash",
+      "dev-docs serve",
+      "```",
+      "",
+    ].join("\n");
+    await openRendered(page, "/sample/docs/doc-1", {
+      document: ({ path }) => ({ body: documentResponse({ path, markdown }) }),
+    });
+    // 実行
+    const styles = await page.locator(".mdmark").evaluate((body) => {
+      const style = (selector: string, pseudo: string | null = null) => {
+        const element = body.querySelector(selector);
+        return element === null ? null : getComputedStyle(element, pseudo);
+      };
+      return {
+        listStyle: style("ul:not([class]) > li")?.listStyleType,
+        h4Weight: style("h4")?.fontWeight,
+        h4MarginBottom: style("h4")?.marginBottom,
+        preFont: style("pre")?.fontFamily,
+        boxSizing: style("p, li")?.boxSizing,
+        beforeBoxSizing: style("h2", "::before")?.boxSizing,
+      };
+    });
+    // 検証
+    expect(styles.listStyle).toBe("disc");
+    expect(styles.h4Weight).toBe("700");
+    expect(styles.h4MarginBottom).not.toBe("0px");
+    expect(styles.preFont).toBe("monospace");
+    expect(styles.boxSizing).toBe("content-box");
+    expect(styles.beforeBoxSizing).toBe("content-box");
+  });
+
+  // 本文の外（文書の一覧）には画面の基本のスタイルを当てたままにする（正常系）
+  test("frame_keeps_preflight", async ({ page }) => {
+    // 準備
+    await openRendered(page);
+    // 実行
+    const sidebarList = await page
+      .getByRole("navigation", { name: "文書の一覧" })
+      .locator("ul")
+      .first()
+      .evaluate((ul) => ({ listStyle: getComputedStyle(ul).listStyleType, boxSizing: getComputedStyle(ul).boxSizing }));
+    // 検証
+    expect(sidebarList).toEqual({ listStyle: "none", boxSizing: "border-box" });
+  });
+
+  // 本文の左端をパンくず・文書のタイトルと同じ位置にし、本文の左右と上に余白を置かない（正常系）
+  test("body_left_aligned_with_title", async ({ page }) => {
+    // 準備
+    await openRendered(page);
+    // 実行
+    const title = await boxOf(page.getByRole("main").getByRole("heading", { level: 1 }));
+    const paragraph = await boxOf(page.locator(".mdmark p").first());
+    const padding = await page.locator(".mdmark").evaluate((body) => {
+      const s = getComputedStyle(body);
+      return [s.paddingTop, s.paddingLeft, s.paddingRight];
+    });
+    // 検証
+    expect(Math.round(paragraph.x)).toBe(Math.round(title.x));
+    expect(padding).toEqual(["0px", "0px", "0px"]);
   });
 
   // 同じ配信元の文書へのリンクは、画面を再読み込みせず rev を保って開く（正常系）
