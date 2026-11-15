@@ -6,7 +6,7 @@ for n,v in d.items():
   for k,a in e.items():
     b=g.get(k)
     if b is None: continue
-    tag=k.split('|')[0]
+    tag=k.split('|')[0]+(('::'+k.rsplit('::',1)[1]) if '::' in k.split('|',1)[1] else '')
     for p in a:
       if a[p]==b[p]: continue
       side=p.split('-')[1] if p.startswith('border-') else None
