@@ -42,6 +42,10 @@ argument-hint: "[クローンのパス]"
      - 同じ名前の unit があるときは、同じフォルダの `{unit の名前}.bak-{yyyymmddHHMMSS}` へ退避してから書き換える
      - `[Service]` に `WorkingDirectory={clone}`・`ExecStart={clone}/.venv/bin/python -m dev_docs serve`・`Environment=DEV_DOCS_CONFIG={端末の設定のパス}`（`DEV_DOCS_PORT` があれば `Environment=DEV_DOCS_PORT={値}` も）・`Restart=on-failure`・`RestartPreventExitStatus=3` を書き、`[Install]` に `WantedBy=default.target` を書く
      - `systemctl --user daemon-reload` と `systemctl --user enable --now {unit の名前}` を実行する。既に動いていれば `systemctl --user restart {unit の名前}` を実行する
+     - `systemctl --user show -p MainPID --value {unit の名前}` と、`127.0.0.1:${DEV_DOCS_PORT:-8781}` を待ち受けるプロセスの pid（`ss -ltnpH 'sport = :{ポート}'` で調べる）を照合する
+     - 一致しない（unit が終了コード 3 で止まった）ときは、ポートを持つプロセスの pid とコマンドラインを示し、そのプロセスを止めるかを AskUserQuestion で利用者に確認する
+       - 止めると答えたら、そのプロセスを止めてから `systemctl --user start {unit の名前}` を実行し、照合し直す
+       - 止めないと答えたら、ポートを持つプロセスの pid と、そのプロセスを止めてから `systemctl --user start {unit の名前}` を実行する案内を結果に出す
    - unit を使用しないか systemd --user を使用できず、待ち受けていなければ、`{clone}/.venv/bin/python -m dev_docs serve` を切り離して起動する。環境変数 `DEV_DOCS_CONFIG` に端末の設定のパスを指定する
    - `http://127.0.0.1:${DEV_DOCS_PORT:-8781}/_admin/mcp` の `status` を呼び、project-index につながっていることを確認する
 
