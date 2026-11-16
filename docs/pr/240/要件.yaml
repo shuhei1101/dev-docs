@@ -18,11 +18,15 @@ docs:
   - page: docs/library/LIB-155-9.yaml
     new: false
     change: '`version.source`・`pinning` を、既定で develop の最新を参照し、設定でタグ・commit に固定できる形にする'
-    status: todo
+    status: done
+    updated_by: planner
+    updated_at: '2026-11-16T16:27:06.838340+00:00'
   - page: docs/nonfunctional/NFR-155-1.yaml
     new: false
     change: NFR-12（mdmark の読み込み元）の決定値・理由・計測・溢れたときを、既定で develop の最新を参照する形にする
-    status: todo
+    status: done
+    updated_by: planner
+    updated_at: '2026-11-16T16:27:06.838340+00:00'
   - page: docs/config/CFG-155-2.yaml
     new: false
     change: 端末の設定に `mdmark_version`（既定 `develop`）を追加する
@@ -32,11 +36,15 @@ docs:
   - page: docs/guide/設定.md
     new: false
     change: 端末の設定のキーに `mdmark_version` を追加する
-    status: todo
+    status: done
+    updated_by: planner
+    updated_at: '2026-11-16T16:27:06.838340+00:00'
   - page: docs/test-procedure/TP-155-1.yaml
     new: false
     change: 結合テストの前提を、`npm ci` の `node_modules/.bin/mdmark` から `npx -y github:shuhei1101/mdmark#{参照}` で取る形へ書き換え、描画の確認は作業 PR のテストのときに行うことを記載する
-    status: todo
+    status: done
+    updated_by: planner
+    updated_at: '2026-11-16T16:27:06.838340+00:00'
 scope_out:
   - item: mdmark の側で develop の最新を jsDelivr・npx で参照できるようにすること（develop の `dist/` の更新・`mdmark.config.yaml` の `version` に develop の最新を書けること）
     reason: mdmark のリポジトリの作業で、shuhei1101/mdmark#620 が持つ
