@@ -143,7 +143,7 @@ def run_serve(args: argparse.Namespace) -> int:
             for problem in error.problems:
                 print(problem.line(), file=sys.stderr, flush=True)
             return EXIT_PROMPT_INVALID
-        app = build_app(handlers)
+        app = build_app(handlers, mdmark_version=terminal.mdmark_version)
         print(f"http://{terminal.bind}:{port}/", flush=True)
         if terminal.leftover_sources:
             logger.warning(

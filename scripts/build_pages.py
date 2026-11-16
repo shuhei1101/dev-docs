@@ -64,8 +64,8 @@ GROUP_SEPARATOR = " > "
 ITEM_HEADING_LEVEL = 2
 MAX_HEADING_LEVEL = 6
 
-# npx で呼ぶ mdmark のタグ（画面が参照する mdmark の採用バージョンと同じ）
-MDMARK_TAG = "v0.13.0"
+# npx で呼ぶ mdmark の参照と mdmark.config.yaml の version（既定は develop の最新。固定するときはタグか commit の SHA に書き換える）
+MDMARK_REF = "develop"
 
 # 出力のフォルダに配置する、Pages のトップになる HTML
 OUTPUT_HTML = "index.html"
@@ -387,7 +387,7 @@ def rewrite_references(
 def write_bundle_config(workdir: Path, names: Sequence[str]) -> Path:
     """一時フォルダに、まとめる文書を並びのとおりまとめる mdmark の設定を記載する。"""
     config = {
-        "version": MDMARK_TAG,
+        "version": MDMARK_REF,
         "build": {"include": list(names), "entry": names[0], "out": OUTPUT_HTML},
     }
     path = workdir / _BUNDLE_CONFIG
@@ -403,7 +403,7 @@ def run_mdmark(config: Path) -> str:
             [
                 "npx",
                 "-y",
-                f"github:shuhei1101/mdmark#{MDMARK_TAG}",
+                f"github:shuhei1101/mdmark#{MDMARK_REF}",
                 "build",
                 "--config",
                 str(config),

@@ -60,6 +60,7 @@ class TerminalConfig(BaseModel):
     bind: str = "127.0.0.1"
     project_index: str = PROJECT_INDEX_DEFAULT
     leftover_sources: list[str] = Field(default_factory=list)
+    mdmark_version: str = "develop"
 
 
 class SettingsSourcesRequest(ApiModel):
