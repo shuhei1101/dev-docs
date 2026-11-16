@@ -168,7 +168,7 @@ scenarios:
         notes: '-'
       - name: dev-docs
         description: 正常シナリオと同じ sample を配信している dev-docs
-        notes: 'sample に、`+columns` を持たない表の後に `<!-- table: data +columns -->` のマーカーを付けた 3 列の表を持つ Markdown の文書 5 がある（スキーマから作る表のうち `+columns` を持つのは図の元データの表だけ）'
+        notes: 'sample に、列の表示・非表示の機能を持たない表の後に、`<!-- table: data +columns -->` のマーカーを付けた 3 列の表と、`<!-- table: {"kind": "data", "features": {"columns": {}}} -->` のマーカーを付けた 3 列の表を持つ Markdown の文書 5 がある（スキーマから作る表のうち列の表示・非表示の機能を持つのは図の元データの表だけ）'
     flow: |-
       ```mermaid
       sequenceDiagram
@@ -176,16 +176,16 @@ scenarios:
         participant UI as dev-docs の画面
         participant API as 画面の API
 
-        U->>UI: 文書 5 を開き、表の列の表示から 2 列目を外す
+        U->>UI: 文書 5 を開き、2 つの列の表示・非表示の機能を持つ表のそれぞれで、列の表示から 2 列目を外す
         UI->>API: 表の列の設定の保存（文書 5 の表・隠す列）
-        UI-->>U: 2 列目を隠した表
+        UI-->>U: 2 列目を隠した 2 つの表
         U->>UI: 同じ文書を開き直す
-        UI-->>U: 2 列目を隠した表
+        UI-->>U: 2 列目を隠した 2 つの表
       ```
     expected:
-      - 表の 2 列目が表示されない
-      - 開き直しても 2 列目が表示されない
-      - '`+columns` を持たない先頭の表は、開き直しても全ての列が表示される'
+      - 2 つの表とも、2 列目が表示されない
+      - 開き直しても、2 つの表とも 2 列目が表示されない
+      - '列の表示・非表示の機能を持たない先頭の表は、開き直しても全ての列が表示される'
       - 配信元のフォルダのファイルは変わらない
     test: test_normal_when_column_hidden
   - name: 正常シナリオ（配信元の変換を使う）
