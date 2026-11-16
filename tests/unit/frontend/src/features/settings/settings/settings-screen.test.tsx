@@ -44,3 +44,33 @@ test("test_settings_screen_when_single_key_off", async () => {
 
   expect(screen.queryByRole("dialog")).toBeNull();
 });
+
+test("test_settings_screen_when_project_index_failed", async () => {
+  const cases = [
+    { status: 502, kind: "failed", title: "project-index が要求を処理できませんでした" },
+    { status: 503, kind: "timeout", title: "project-index から応答がありませんでした" },
+  ];
+  for (const { status, kind, title } of cases) {
+    server.use(
+      http.get("/_api/settings/sources", () =>
+        HttpResponse.json(
+          {
+            type: "about:blank",
+            title: "ProjectIndexError",
+            status,
+            detail: title,
+            nextSteps: [],
+            projectIndex: { address: "http://127.0.0.1:8786", reason: "x", kind },
+          },
+          { status, headers: { "Content-Type": "application/problem+json" } },
+        ),
+      ),
+    );
+
+    const { unmount } = renderApp("/_settings");
+
+    expect(await screen.findByText(title)).toBeInTheDocument();
+    expect(screen.queryByText(/project-index を起動してから/)).toBeNull();
+    unmount();
+  }
+});
