@@ -11,7 +11,7 @@ type Props = {
 /** 文書のタイトルと情報（種類・パス・更新日時） */
 export const DocHeader = ({ title, kind, path, updatedAt }: Props) => (
   <header className="space-y-2">
-    <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>
+    <h1 className="border-b border-border pb-2 text-doc-title font-doc-title">{title}</h1>
     {kind !== undefined && (
       <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
         <Badge variant="secondary">{kind}</Badge>

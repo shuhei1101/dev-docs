@@ -1,0 +1,37 @@
+title: 画面 / preflight-outside-mdmark.css
+lead: Tailwind の Preflight を、mdmark が描く本文（`.mdmark` とその子孫）の外だけに当てる CSS。`index.css` が層 `base` として読み込む。
+styles:
+  - name: preflight-html
+    title: html の基本のスタイル
+    container: preflight-outside-mdmark.css
+    usecase: 共通
+    summary: Preflight の `html, :host` の規則を `@scope` の外に置く
+    description: '`@scope (html) to (.mdmark)` の中では根の `html` に規則が当たらないため、この規則だけを `@scope` の外に置く。中身は Tailwind の `preflight.css` の同じ規則の写し'
+    values:
+      - class_name: html, :host
+        target: ページの根
+        value: 'Tailwind の `preflight.css` の `html, :host` の規則（`line-height: 1.5`・`tab-size: 4`・`font-family` など）'
+  - name: preflight-scoped
+    title: 本文の外の Preflight
+    container: preflight-outside-mdmark.css
+    usecase: 共通
+    summary: Preflight の `html, :host` 以外の規則を `@scope (html) to (.mdmark)` で包み、本文の要素と疑似要素に当てない
+    description: '中身は Tailwind の `preflight.css` の写しで、写した元のバージョン（`tailwindcss` の `package.json` の `version`）をファイルの先頭のコメントに書く。Tailwind を上げるときは同じバージョンの `preflight.css` から写し直す。`[hidden]` の `display: none !important` も本文に当たらず、mdmark が `hidden` を付けて表示する要素（凡例・CSV の表）は mdmark の値で描かれる'
+    values:
+      - class_name: '@scope (html) to (.mdmark)'
+        target: 本文の外の全ての要素と疑似要素
+        value: Tailwind の `preflight.css` の `html, :host` 以外の規則
+  - name: mdmark-inherit-reset
+    title: html から本文へ継承する性質の打ち消し
+    container: preflight-outside-mdmark.css
+    usecase: 共通
+    summary: '`html, :host` の規則から本文へ継承する性質を、ブラウザの既定の値に戻す'
+    description: mdmark は本文の書体と行の高さを `.mdmark` に持つが、`tab-size` などは持たない。層 `base` に置くため、mdmark が値を持てば層 `mdmark` の値が勝つ
+    values:
+      - class_name: .mdmark
+        target: 本文の根
+        value: '`tab-size`・`-webkit-text-size-adjust`・`font-feature-settings`・`font-variation-settings`・`-webkit-tap-highlight-color` を `initial`'
+refs:
+  - SCR-155-1#elements[本文]
+  - LIB-155-21#
+id: MOD-232-1
