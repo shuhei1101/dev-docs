@@ -1,0 +1,163 @@
+$ cd docs && cat mdmark.config.yaml  # 移行の間だけ置いた設定（commit しない）
+version: v0.10.0
+check:
+  suggestMarkExtension: false
+build:
+  include: ["**/*.md"]
+  out: /tmp/mdmark-193/out.html
+
+$ npx -y github:shuhei1101/mdmark#v0.13.0 check   # 移行の前
+README.md:7: legacy_mark: table のマーカーの引数が今の書き方です。引数を JSON のオブジェクトで記載してください。mdmark upgrade で書き換えられます。
+design-policy.md:7: legacy_mark: table のマーカーの引数が今の書き方です。引数を JSON のオブジェクトで記載してください。mdmark upgrade で書き換えられます。
+design-policy.md:34: legacy_mark: table のマーカーの引数が今の書き方です。引数を JSON のオブジェクトで記載してください。mdmark upgrade で書き換えられます。
+guide/CLI.md:51: legacy_mark: table のマーカーの引数が今の書き方です。引数を JSON のオブジェクトで記載してください。mdmark upgrade で書き換えられます。
+guide/CLI.md:74: legacy_mark: table のマーカーの引数が今の書き方です。引数を JSON のオブジェクトで記載してください。mdmark upgrade で書き換えられます。
+guide/CLI.md:94: legacy_mark: table のマーカーの引数が今の書き方です。引数を JSON のオブジェクトで記載してください。mdmark upgrade で書き換えられます。
+guide/README.md:7: legacy_mark: table のマーカーの引数が今の書き方です。引数を JSON のオブジェクトで記載してください。mdmark upgrade で書き換えられます。
+guide/dev-docsを更新する.md:78: legacy_mark: table のマーカーの引数が今の書き方です。引数を JSON のオブジェクトで記載してください。mdmark upgrade で書き換えられます。
+guide/用語集.md:5: legacy_mark: table のマーカーの引数が今の書き方です。引数を JSON のオブジェクトで記載してください。mdmark upgrade で書き換えられます。
+guide/画面で読む.md:26: legacy_mark: table のマーカーの引数が今の書き方です。引数を JSON のオブジェクトで記載してください。mdmark upgrade で書き換えられます。
+guide/画面で読む.md:57: legacy_mark: table のマーカーの引数が今の書き方です。引数を JSON のオブジェクトで記載してください。mdmark upgrade で書き換えられます。
+guide/管理のMCP.md:11: legacy_mark: table のマーカーの引数が今の書き方です。引数を JSON のオブジェクトで記載してください。mdmark upgrade で書き換えられます。
+guide/管理のMCP.md:43: legacy_mark: table のマーカーの引数が今の書き方です。引数を JSON のオブジェクトで記載してください。mdmark upgrade で書き換えられます。
+guide/設定.md:31: legacy_mark: table のマーカーの引数が今の書き方です。引数を JSON のオブジェクトで記載してください。mdmark upgrade で書き換えられます。
+guide/設定.md:62: legacy_mark: table のマーカーの引数が今の書き方です。引数を JSON のオブジェクトで記載してください。mdmark upgrade で書き換えられます。
+guide/設定.md:80: legacy_mark: table のマーカーの引数が今の書き方です。引数を JSON のオブジェクトで記載してください。mdmark upgrade で書き換えられます。
+interface/README.md:7: legacy_mark: table のマーカーの引数が今の書き方です。引数を JSON のオブジェクトで記載してください。mdmark upgrade で書き換えられます。
+library/README.md:7: legacy_mark: table のマーカーの引数が今の書き方です。引数を JSON のオブジェクトで記載してください。mdmark upgrade で書き換えられます。
+module/README.md:7: legacy_mark: table のマーカーの引数が今の書き方です。引数を JSON のオブジェクトで記載してください。mdmark upgrade で書き換えられます。
+pr/101/画面.md:5: legacy_mark: table のマーカーの引数が今の書き方です。引数を JSON のオブジェクトで記載してください。mdmark upgrade で書き換えられます。
+pr/101/開発ドキュメントサーバー.md:7: legacy_mark: table のマーカーの引数が今の書き方です。引数を JSON のオブジェクトで記載してください。mdmark upgrade で書き換えられます。
+pr/101/開発ドキュメントサーバー.md:50: legacy_mark: table のマーカーの引数が今の書き方です。引数を JSON のオブジェクトで記載してください。mdmark upgrade で書き換えられます。
+pr/102/開発ドキュメントサーバー.md:5: legacy_mark: table のマーカーの引数が今の書き方です。引数を JSON のオブジェクトで記載してください。mdmark upgrade で書き換えられます。
+pr/105/画面.md:5: legacy_mark: table のマーカーの引数が今の書き方です。引数を JSON のオブジェクトで記載してください。mdmark upgrade で書き換えられます。
+pr/105/画面.md:41: legacy_mark: table のマーカーの引数が今の書き方です。引数を JSON のオブジェクトで記載してください。mdmark upgrade で書き換えられます。
+pr/105/要件.md:23: legacy_mark: table のマーカーの引数が今の書き方です。引数を JSON のオブジェクトで記載してください。mdmark upgrade で書き換えられます。
+pr/105/開発ドキュメントサーバー.md:5: legacy_mark: table のマーカーの引数が今の書き方です。引数を JSON のオブジェクトで記載してください。mdmark upgrade で書き換えられます。
+pr/116/要件.md:21: legacy_mark: table のマーカーの引数が今の書き方です。引数を JSON のオブジェクトで記載してください。mdmark upgrade で書き換えられます。
+pr/116/開発ドキュメントサーバー.md:5: legacy_mark: table のマーカーの引数が今の書き方です。引数を JSON のオブジェクトで記載してください。mdmark upgrade で書き換えられます。
+pr/12/要件.md:9: legacy_mark: table のマーカーの引数が今の書き方です。引数を JSON のオブジェクトで記載してください。mdmark upgrade で書き換えられます。
+pr/12/要件.md:34: legacy_mark: table のマーカーの引数が今の書き方です。引数を JSON のオブジェクトで記載してください。mdmark upgrade で書き換えられます。
+pr/12/要件.md:49: legacy_mark: table のマーカーの引数が今の書き方です。引数を JSON のオブジェクトで記載してください。mdmark upgrade で書き換えられます。
+pr/12/要件.md:69: legacy_mark: table のマーカーの引数が今の書き方です。引数を JSON のオブジェクトで記載してください。mdmark upgrade で書き換えられます。
+pr/12/開発ドキュメントサーバー.md:5: legacy_mark: table のマーカーの引数が今の書き方です。引数を JSON のオブジェクトで記載してください。mdmark upgrade で書き換えられます。
+pr/12/開発ドキュメントサーバー.md:20: legacy_mark: table のマーカーの引数が今の書き方です。引数を JSON のオブジェクトで記載してください。mdmark upgrade で書き換えられます。
+pr/12/開発ドキュメントサーバー.md:49: legacy_mark: table のマーカーの引数が今の書き方です。引数を JSON のオブジェクトで記載してください。mdmark upgrade で書き換えられます。
+pr/120/開発ドキュメントサーバー.md:5: legacy_mark: table のマーカーの引数が今の書き方です。引数を JSON のオブジェクトで記載してください。mdmark upgrade で書き換えられます。
+pr/120/開発ドキュメントサーバー.md:54: legacy_mark: table のマーカーの引数が今の書き方です。引数を JSON のオブジェクトで記載してください。mdmark upgrade で書き換えられます。
+pr/130/開発ドキュメントサーバー.md:5: legacy_mark: table のマーカーの引数が今の書き方です。引数を JSON のオブジェクトで記載してください。mdmark upgrade で書き換えられます。
+pr/131/開発ドキュメントサーバー.md:5: legacy_mark: table のマーカーの引数が今の書き方です。引数を JSON のオブジェクトで記載してください。mdmark upgrade で書き換えられます。
+pr/133/要件.md:19: legacy_mark: table のマーカーの引数が今の書き方です。引数を JSON のオブジェクトで記載してください。mdmark upgrade で書き換えられます。
+pr/133/要件.md:49: legacy_mark: table のマーカーの引数が今の書き方です。引数を JSON のオブジェクトで記載してください。mdmark upgrade で書き換えられます。
+pr/133/開発ドキュメントサーバー.md:5: legacy_mark: table のマーカーの引数が今の書き方です。引数を JSON のオブジェクトで記載してください。mdmark upgrade で書き換えられます。
+pr/143/要件.md:22: legacy_mark: table のマーカーの引数が今の書き方です。引数を JSON のオブジェクトで記載してください。mdmark upgrade で書き換えられます。
+pr/143/開発ドキュメントサーバー.md:5: legacy_mark: table のマーカーの引数が今の書き方です。引数を JSON のオブジェクトで記載してください。mdmark upgrade で書き換えられます。
+pr/147/管理用プラグイン.md:5: legacy_mark: table のマーカーの引数が今の書き方です。引数を JSON のオブジェクトで記載してください。mdmark upgrade で書き換えられます。
+pr/148/要件.md:21: legacy_mark: table のマーカーの引数が今の書き方です。引数を JSON のオブジェクトで記載してください。mdmark upgrade で書き換えられます。
+pr/154/要件.md:18: legacy_mark: table のマーカーの引数が今の書き方です。引数を JSON のオブジェクトで記載してください。mdmark upgrade で書き換えられます。
+pr/187/画面.md:5: legacy_mark: table のマーカーの引数が今の書き方です。引数を JSON のオブジェクトで記載してください。mdmark upgrade で書き換えられます。
+pr/187/画面.md:24: legacy_mark: table のマーカーの引数が今の書き方です。引数を JSON のオブジェクトで記載してください。mdmark upgrade で書き換えられます。
+pr/20/要件.md:9: legacy_mark: table のマーカーの引数が今の書き方です。引数を JSON のオブジェクトで記載してください。mdmark upgrade で書き換えられます。
+pr/20/要件.md:32: legacy_mark: table のマーカーの引数が今の書き方です。引数を JSON のオブジェクトで記載してください。mdmark upgrade で書き換えられます。
+pr/20/要件.md:47: legacy_mark: table のマーカーの引数が今の書き方です。引数を JSON のオブジェクトで記載してください。mdmark upgrade で書き換えられます。
+pr/20/要件.md:62: legacy_mark: table のマーカーの引数が今の書き方です。引数を JSON のオブジェクトで記載してください。mdmark upgrade で書き換えられます。
+pr/20/開発ドキュメントサーバー.md:5: legacy_mark: table のマーカーの引数が今の書き方です。引数を JSON のオブジェクトで記載してください。mdmark upgrade で書き換えられます。
+pr/20/開発ドキュメントサーバー.md:40: legacy_mark: table のマーカーの引数が今の書き方です。引数を JSON のオブジェクトで記載してください。mdmark upgrade で書き換えられます。
+pr/20/開発ドキュメントサーバー.md:59: legacy_mark: table のマーカーの引数が今の書き方です。引数を JSON のオブジェクトで記載してください。mdmark upgrade で書き換えられます。
+pr/20/開発ドキュメントサーバー.md:81: legacy_mark: table のマーカーの引数が今の書き方です。引数を JSON のオブジェクトで記載してください。mdmark upgrade で書き換えられます。
+pr/21/管理用プラグイン.md:12: legacy_mark: table のマーカーの引数が今の書き方です。引数を JSON のオブジェクトで記載してください。mdmark upgrade で書き換えられます。
+pr/21/要件.md:10: legacy_mark: table のマーカーの引数が今の書き方です。引数を JSON のオブジェクトで記載してください。mdmark upgrade で書き換えられます。
+pr/21/要件.md:30: legacy_mark: table のマーカーの引数が今の書き方です。引数を JSON のオブジェクトで記載してください。mdmark upgrade で書き換えられます。
+pr/21/要件.md:47: legacy_mark: table のマーカーの引数が今の書き方です。引数を JSON のオブジェクトで記載してください。mdmark upgrade で書き換えられます。
+pr/21/要件.md:68: legacy_mark: table のマーカーの引数が今の書き方です。引数を JSON のオブジェクトで記載してください。mdmark upgrade で書き換えられます。
+pr/21/開発ドキュメントサーバー.md:5: legacy_mark: table のマーカーの引数が今の書き方です。引数を JSON のオブジェクトで記載してください。mdmark upgrade で書き換えられます。
+pr/21/開発ドキュメントサーバー.md:26: legacy_mark: table のマーカーの引数が今の書き方です。引数を JSON のオブジェクトで記載してください。mdmark upgrade で書き換えられます。
+pr/22/要件.md:19: legacy_mark: table のマーカーの引数が今の書き方です。引数を JSON のオブジェクトで記載してください。mdmark upgrade で書き換えられます。
+pr/22/要件.md:31: legacy_mark: table のマーカーの引数が今の書き方です。引数を JSON のオブジェクトで記載してください。mdmark upgrade で書き換えられます。
+pr/22/要件.md:47: legacy_mark: table のマーカーの引数が今の書き方です。引数を JSON のオブジェクトで記載してください。mdmark upgrade で書き換えられます。
+pr/29/要件.md:11: legacy_mark: table のマーカーの引数が今の書き方です。引数を JSON のオブジェクトで記載してください。mdmark upgrade で書き換えられます。
+pr/29/要件.md:31: legacy_mark: table のマーカーの引数が今の書き方です。引数を JSON のオブジェクトで記載してください。mdmark upgrade で書き換えられます。
+pr/29/開発ドキュメントサーバー.md:5: legacy_mark: table のマーカーの引数が今の書き方です。引数を JSON のオブジェクトで記載してください。mdmark upgrade で書き換えられます。
+pr/29/開発ドキュメントサーバー.md:31: legacy_mark: table のマーカーの引数が今の書き方です。引数を JSON のオブジェクトで記載してください。mdmark upgrade で書き換えられます。
+pr/29/開発ドキュメントサーバー.md:50: legacy_mark: table のマーカーの引数が今の書き方です。引数を JSON のオブジェクトで記載してください。mdmark upgrade で書き換えられます。
+pr/29/開発ドキュメントサーバー.md:65: legacy_mark: table のマーカーの引数が今の書き方です。引数を JSON のオブジェクトで記載してください。mdmark upgrade で書き換えられます。
+pr/30/要件.md:8: legacy_mark: table のマーカーの引数が今の書き方です。引数を JSON のオブジェクトで記載してください。mdmark upgrade で書き換えられます。
+pr/30/要件.md:27: legacy_mark: table のマーカーの引数が今の書き方です。引数を JSON のオブジェクトで記載してください。mdmark upgrade で書き換えられます。
+pr/30/要件.md:48: legacy_mark: table のマーカーの引数が今の書き方です。引数を JSON のオブジェクトで記載してください。mdmark upgrade で書き換えられます。
+pr/30/要件.md:61: legacy_mark: table のマーカーの引数が今の書き方です。引数を JSON のオブジェクトで記載してください。mdmark upgrade で書き換えられます。
+pr/30/開発ドキュメントサーバー.md:5: legacy_mark: table のマーカーの引数が今の書き方です。引数を JSON のオブジェクトで記載してください。mdmark upgrade で書き換えられます。
+pr/30/開発ドキュメントサーバー.md:32: legacy_mark: table のマーカーの引数が今の書き方です。引数を JSON のオブジェクトで記載してください。mdmark upgrade で書き換えられます。
+pr/31/要件.md:8: legacy_mark: table のマーカーの引数が今の書き方です。引数を JSON のオブジェクトで記載してください。mdmark upgrade で書き換えられます。
+pr/31/要件.md:29: legacy_mark: table のマーカーの引数が今の書き方です。引数を JSON のオブジェクトで記載してください。mdmark upgrade で書き換えられます。
+pr/31/要件.md:50: legacy_mark: table のマーカーの引数が今の書き方です。引数を JSON のオブジェクトで記載してください。mdmark upgrade で書き換えられます。
+pr/31/開発ドキュメントサーバー.md:5: legacy_mark: table のマーカーの引数が今の書き方です。引数を JSON のオブジェクトで記載してください。mdmark upgrade で書き換えられます。
+pr/31/開発ドキュメントサーバー.md:34: legacy_mark: table のマーカーの引数が今の書き方です。引数を JSON のオブジェクトで記載してください。mdmark upgrade で書き換えられます。
+pr/33/要件.md:8: legacy_mark: table のマーカーの引数が今の書き方です。引数を JSON のオブジェクトで記載してください。mdmark upgrade で書き換えられます。
+pr/33/要件.md:54: legacy_mark: table のマーカーの引数が今の書き方です。引数を JSON のオブジェクトで記載してください。mdmark upgrade で書き換えられます。
+pr/33/要件.md:72: legacy_mark: table のマーカーの引数が今の書き方です。引数を JSON のオブジェクトで記載してください。mdmark upgrade で書き換えられます。
+pr/33/要件.md:100: legacy_mark: table のマーカーの引数が今の書き方です。引数を JSON のオブジェクトで記載してください。mdmark upgrade で書き換えられます。
+pr/33/開発ドキュメントサーバー.md:5: legacy_mark: table のマーカーの引数が今の書き方です。引数を JSON のオブジェクトで記載してください。mdmark upgrade で書き換えられます。
+pr/33/開発ドキュメントサーバー.md:47: legacy_mark: table のマーカーの引数が今の書き方です。引数を JSON のオブジェクトで記載してください。mdmark upgrade で書き換えられます。
+pr/36/画面.md:7: legacy_mark: table のマーカーの引数が今の書き方です。引数を JSON のオブジェクトで記載してください。mdmark upgrade で書き換えられます。
+pr/36/画面.md:27: legacy_mark: table のマーカーの引数が今の書き方です。引数を JSON のオブジェクトで記載してください。mdmark upgrade で書き換えられます。
+pr/36/画面.md:53: legacy_mark: table のマーカーの引数が今の書き方です。引数を JSON のオブジェクトで記載してください。mdmark upgrade で書き換えられます。
+pr/36/要件.md:9: legacy_mark: table のマーカーの引数が今の書き方です。引数を JSON のオブジェクトで記載してください。mdmark upgrade で書き換えられます。
+pr/36/要件.md:36: legacy_mark: table のマーカーの引数が今の書き方です。引数を JSON のオブジェクトで記載してください。mdmark upgrade で書き換えられます。
+pr/36/要件.md:58: legacy_mark: table のマーカーの引数が今の書き方です。引数を JSON のオブジェクトで記載してください。mdmark upgrade で書き換えられます。
+pr/36/要件.md:74: legacy_mark: table のマーカーの引数が今の書き方です。引数を JSON のオブジェクトで記載してください。mdmark upgrade で書き換えられます。
+pr/36/開発ドキュメントサーバー.md:5: legacy_mark: table のマーカーの引数が今の書き方です。引数を JSON のオブジェクトで記載してください。mdmark upgrade で書き換えられます。
+pr/36/開発ドキュメントサーバー.md:31: legacy_mark: table のマーカーの引数が今の書き方です。引数を JSON のオブジェクトで記載してください。mdmark upgrade で書き換えられます。
+pr/37/要件.md:8: legacy_mark: table のマーカーの引数が今の書き方です。引数を JSON のオブジェクトで記載してください。mdmark upgrade で書き換えられます。
+pr/37/要件.md:24: legacy_mark: table のマーカーの引数が今の書き方です。引数を JSON のオブジェクトで記載してください。mdmark upgrade で書き換えられます。
+pr/37/要件.md:40: legacy_mark: table のマーカーの引数が今の書き方です。引数を JSON のオブジェクトで記載してください。mdmark upgrade で書き換えられます。
+pr/37/要件.md:62: legacy_mark: table のマーカーの引数が今の書き方です。引数を JSON のオブジェクトで記載してください。mdmark upgrade で書き換えられます。
+pr/37/開発ドキュメントサーバー.md:5: legacy_mark: table のマーカーの引数が今の書き方です。引数を JSON のオブジェクトで記載してください。mdmark upgrade で書き換えられます。
+pr/37/開発ドキュメントサーバー.md:37: legacy_mark: table のマーカーの引数が今の書き方です。引数を JSON のオブジェクトで記載してください。mdmark upgrade で書き換えられます。
+pr/38/要件.md:7: legacy_mark: table のマーカーの引数が今の書き方です。引数を JSON のオブジェクトで記載してください。mdmark upgrade で書き換えられます。
+pr/38/要件.md:22: legacy_mark: table のマーカーの引数が今の書き方です。引数を JSON のオブジェクトで記載してください。mdmark upgrade で書き換えられます。
+pr/38/要件.md:86: legacy_mark: table のマーカーの引数が今の書き方です。引数を JSON のオブジェクトで記載してください。mdmark upgrade で書き換えられます。
+pr/38/要件.md:101: legacy_mark: table のマーカーの引数が今の書き方です。引数を JSON のオブジェクトで記載してください。mdmark upgrade で書き換えられます。
+pr/38/開発ドキュメントサーバー.md:5: legacy_mark: table のマーカーの引数が今の書き方です。引数を JSON のオブジェクトで記載してください。mdmark upgrade で書き換えられます。
+pr/50/画面.md:5: legacy_mark: table のマーカーの引数が今の書き方です。引数を JSON のオブジェクトで記載してください。mdmark upgrade で書き換えられます。
+pr/50/画面.md:19: legacy_mark: table のマーカーの引数が今の書き方です。引数を JSON のオブジェクトで記載してください。mdmark upgrade で書き換えられます。
+pr/50/要件.md:8: legacy_mark: table のマーカーの引数が今の書き方です。引数を JSON のオブジェクトで記載してください。mdmark upgrade で書き換えられます。
+pr/50/要件.md:125: legacy_mark: table のマーカーの引数が今の書き方です。引数を JSON のオブジェクトで記載してください。mdmark upgrade で書き換えられます。
+pr/50/要件.md:143: legacy_mark: table のマーカーの引数が今の書き方です。引数を JSON のオブジェクトで記載してください。mdmark upgrade で書き換えられます。
+pr/50/要件.md:164: legacy_mark: table のマーカーの引数が今の書き方です。引数を JSON のオブジェクトで記載してください。mdmark upgrade で書き換えられます。
+pr/50/開発ドキュメントサーバー.md:5: legacy_mark: table のマーカーの引数が今の書き方です。引数を JSON のオブジェクトで記載してください。mdmark upgrade で書き換えられます。
+pr/50/開発ドキュメントサーバー.md:59: legacy_mark: table のマーカーの引数が今の書き方です。引数を JSON のオブジェクトで記載してください。mdmark upgrade で書き換えられます。
+pr/52/要件.md:25: legacy_mark: table のマーカーの引数が今の書き方です。引数を JSON のオブジェクトで記載してください。mdmark upgrade で書き換えられます。
+pr/52/要件.md:46: legacy_mark: table のマーカーの引数が今の書き方です。引数を JSON のオブジェクトで記載してください。mdmark upgrade で書き換えられます。
+pr/54/要件.md:29: legacy_mark: table のマーカーの引数が今の書き方です。引数を JSON のオブジェクトで記載してください。mdmark upgrade で書き換えられます。
+pr/54/開発ドキュメントサーバー.md:5: legacy_mark: table のマーカーの引数が今の書き方です。引数を JSON のオブジェクトで記載してください。mdmark upgrade で書き換えられます。
+pr/63/開発ドキュメントサーバー.md:5: legacy_mark: table のマーカーの引数が今の書き方です。引数を JSON のオブジェクトで記載してください。mdmark upgrade で書き換えられます。
+pr/76/画面.md:5: legacy_mark: table のマーカーの引数が今の書き方です。引数を JSON のオブジェクトで記載してください。mdmark upgrade で書き換えられます。
+pr/76/要件.md:8: legacy_mark: table のマーカーの引数が今の書き方です。引数を JSON のオブジェクトで記載してください。mdmark upgrade で書き換えられます。
+pr/76/要件.md:54: legacy_mark: table のマーカーの引数が今の書き方です。引数を JSON のオブジェクトで記載してください。mdmark upgrade で書き換えられます。
+pr/76/要件.md:76: legacy_mark: table のマーカーの引数が今の書き方です。引数を JSON のオブジェクトで記載してください。mdmark upgrade で書き換えられます。
+pr/76/開発ドキュメントサーバー.md:5: legacy_mark: table のマーカーの引数が今の書き方です。引数を JSON のオブジェクトで記載してください。mdmark upgrade で書き換えられます。
+pr/76/開発ドキュメントサーバー.md:38: legacy_mark: table のマーカーの引数が今の書き方です。引数を JSON のオブジェクトで記載してください。mdmark upgrade で書き換えられます。
+pr/83/要件.md:22: legacy_mark: table のマーカーの引数が今の書き方です。引数を JSON のオブジェクトで記載してください。mdmark upgrade で書き換えられます。
+pr/83/要件.md:37: legacy_mark: table のマーカーの引数が今の書き方です。引数を JSON のオブジェクトで記載してください。mdmark upgrade で書き換えられます。
+pr/83/開発ドキュメントサーバー.md:5: legacy_mark: table のマーカーの引数が今の書き方です。引数を JSON のオブジェクトで記載してください。mdmark upgrade で書き換えられます。
+pr/83/開発ドキュメントサーバー.md:33: legacy_mark: table のマーカーの引数が今の書き方です。引数を JSON のオブジェクトで記載してください。mdmark upgrade で書き換えられます。
+pr/90/要件.md:8: legacy_mark: table のマーカーの引数が今の書き方です。引数を JSON のオブジェクトで記載してください。mdmark upgrade で書き換えられます。
+scenario/README.md:7: legacy_mark: table のマーカーの引数が今の書き方です。引数を JSON のオブジェクトで記載してください。mdmark upgrade で書き換えられます。
+ずれ 136 件
+
+$ npx -y github:shuhei1101/mdmark#v0.13.0 upgrade --yes
+手元のバージョン: v0.10.0
+目標のバージョン: v0.13.0
+v0.11.0:
+  call（壊す手順）: 文書のマーカーの今の書き方の引数を JSON のオブジェクトへ書き換える（書き出さない記載と拡張・`libraries` のマーカーは移行の報告に挙げる）
+v0.13.0:
+  call（壊す手順）: 文書の廃止した `flow`・`sequence` の範囲を map の範囲へ書き換え、使用していた種類を設定の `map.kinds`・`map.lines` へ書き足す（写さない値と読めない範囲は移行の報告に挙げる）
+v0.11.0 の手順「文書のマーカーの今の書き方の引数を JSON のオブジェクトへ書き換える（書き出さない記載と拡張・`libraries` のマーカーは移行の報告に挙げる）」:
+  68 件の文書のマーカーを書き換えました。
+v0.13.0 の手順「文書の廃止した `flow`・`sequence` の範囲を map の範囲へ書き換え、使用していた種類を設定の `map.kinds`・`map.lines` へ書き足す（写さない値と読めない範囲は移行の報告に挙げる）」:
+  0 件の文書の廃止した図を map の範囲へ書き換えました。
+コピー: .mdmark/backup/20261116213132
+バージョンを v0.13.0 にしました
+
+$ npx -y github:shuhei1101/mdmark#v0.13.0 check   # 移行の後
+ずれ 0 件
