@@ -28,7 +28,7 @@ layers:
       - '`git` と、`PATH` の `python3`（配信元のスクリプトに使う）が使えること'
       - Linux の `/proc/net/tcp` を読めること（待ち受けのアドレスの確認）
       - '`127.0.0.1` の空きポートが使えること（起動のテストが子プロセスで待ち受ける）'
-      - 文書の取得の結合テスト（`tests/integration/server/test_get_document.py`）は、`package.json` の `devDependencies` でバージョンを固定した mdmark の CLI（`node_modules/.bin/mdmark`）で図を点検する。Node 24 以上で、リポジトリの直下で `npm ci` を済ませておくこと
+      - 文書の取得の結合テスト（`tests/integration/server/test_get_document.py`）は、`npx -y github:shuhei1101/mdmark#{MDMARK_REF}` で取る mdmark の CLI で図を点検する（`MDMARK_REF` はテストのファイルの定数で、既定は `develop`）。Node 24 以上と、GitHub へのネットワークが要る。mdmark の develop の変更で描画が変わっていないかは、作業 PR のこのテストと画面の結合テストで確かめる
       - '`tests/integration/server/conftest.py` の `PROJECT_INDEX_COMMIT` の project-index を、初回に `${XDG_CACHE_HOME:-~/.cache}/dev-docs/project-index-{短縮 SHA}` へ GitHub から clone して `uv sync --frozen` する（ネットワークと `uv` が要る。端末で動いている project-index は使用しない）'
     run_one:
       label: ファイル
