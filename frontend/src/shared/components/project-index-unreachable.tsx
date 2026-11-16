@@ -9,10 +9,14 @@ import { Button } from "@/shared/components/ui/button";
 import { AppError } from "@/shared/core/app-error";
 import { ProjectIndexUnreachableSchema } from "@/shared/core/schema";
 
-export type ProjectIndexUnreachable = { address: string; reason: string };
-
 /** 表示できない理由の種類（接続を断られた・応答が無かった・project-index が処理に失敗した） */
 export type ProjectIndexFailureKind = "unreachable" | "timeout" | "failed";
+
+export type ProjectIndexUnreachable = {
+  address: string;
+  reason: string;
+  kind: ProjectIndexFailureKind;
+};
 
 const MESSAGES: Record<
   ProjectIndexFailureKind,
@@ -34,16 +38,17 @@ const MESSAGES: Record<
   },
 };
 
-/** 画面の API の 503 から、接続できなかった project-index のアドレスと理由を取り出す */
+/** 画面の API の 503・502 から、project-index のアドレス・理由・理由の種類を取り出す */
 export const toProjectIndexUnreachable = (
   error: unknown,
 ): ProjectIndexUnreachable | null => {
-  if (!(error instanceof AppError) || error.status !== 503) return null;
+  if (!(error instanceof AppError)) return null;
+  if (error.status !== 503 && error.status !== 502) return null;
   const parsed = ProjectIndexUnreachableSchema.safeParse(error.problem);
   return parsed.success ? parsed.data.projectIndex : null;
 };
 
-type Props = ProjectIndexUnreachable & {
+type Props = Omit<ProjectIndexUnreachable, "kind"> & {
   /** 表示できない理由の種類。省くと接続できなかったときの文言 */
   kind?: ProjectIndexFailureKind;
   onReload: () => void;

@@ -29,10 +29,12 @@ from dev_docs.integrations.project_index.types import (
     IndexedDocument,
     IndexFailure,
     SourceView,
+    parse_document_list,
 )
 from dev_docs.shared.errors import (
     DevDocsError,
     DocumentNotFoundError,
+    ProjectIndexUnreachableError,
     RefNotFoundError,
     SourceNotServedError,
     UnknownSourceError,
@@ -42,6 +44,9 @@ if TYPE_CHECKING:
     from dev_docs.main import Handlers
 
 logger = logging.getLogger(__name__)
+
+# 文書の取得全体を打ち切る秒数（非機能要件の document_fetch_timeout）
+DOCUMENT_FETCH_TIMEOUT_SEC: float = 70
 
 
 def _aliases(view: SourceView, documents: Sequence[IndexedDocument]) -> list[AliasItem]:
@@ -171,9 +176,36 @@ async def get_document(
     diff_ref: str | None,
 ) -> DocumentResponse:
     """配信元の文書を変換した Markdown と、タブ・差分の項目・列の設定を返却する。"""
+    # 文書の取得全体の制限時間。途中の問い合わせも取り消すため、問い合わせごとの制限時間は残り時間を超えない
+    limit = DOCUMENT_FETCH_TIMEOUT_SEC
+    try:
+        async with asyncio.timeout(limit):
+            return await _get_document(
+                source_id, path, handlers=handlers, ref=ref, diff_ref=diff_ref
+            )
+    except TimeoutError as error:
+        raise ProjectIndexUnreachableError(
+            address=handlers.project_index.address,
+            reason=f"{limit:g} 秒以内に応答がありませんでした",
+            kind="timeout",
+        ) from error
+
+
+async def _get_document(
+    source_id: str,
+    path: str | None,
+    *,
+    handlers: Handlers,
+    ref: str | None,
+    diff_ref: str | None,
+) -> DocumentResponse:
+    """文書の取得の本体（制限時間の外側は `get_document` が持つ）。"""
     client = handlers.project_index
-    view = await client.source_view(source_id)
-    listed = await client.list_documents(source_id, ref=ref, record_kinds=view.record_kinds())
+    # 配信元の設定・リビジョン（source_view の中）と文書の一覧を同時に問い合わせる
+    view, listed_value = await asyncio.gather(
+        client.source_view(source_id), client.fetch_document_list(source_id, ref=ref)
+    )
+    listed = parse_document_list(source_id, listed_value, record_kinds=view.record_kinds())
     tabs = build_nav(view, listed.documents)
     columns = await asyncio.to_thread(handlers.columns.get, view.id)
     github = (
