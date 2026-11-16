@@ -754,6 +754,47 @@ scenarios:
       - 読み込み中の表示が消え、project-index から応答が無かったことと、接続先のアドレス・再読み込みが出る
       - 画面を開いてから理由が出るまでが、非機能要件の文書の取得の制限時間に、非機能要件で決める許容の時間を加えた時間以内。project-index への問い合わせを何回重ねても同じ
     test: test_error_when_project_index_slow
+  - name: 正常シナリオ（フロー図のノードから文書へ移る）
+    setup:
+      - name: Mock
+        description: なし（実環境で実行。ブラウザは Playwright で操作する）
+        notes: '-'
+      - name: データの図のリンク
+        description: '文書 6 の `x-diagram: flowchart` の項目に、`kind: question` のノードへ `href` が `id:{文書 2 の ID}` の `clicks` の要素と、`kind: result` のノードへ `href` が `id:no-such-doc` の `clicks` の要素を持たせる'
+        notes: 文書 6 は正常シナリオ（スキーマ駆動の文書を図と表で読む）の文書
+      - name: 手で記載したフローチャートのリンク
+        description: 文書 1 の Markdown の文字列の値に、手で記載した Mermaid のフローチャート（`flowchart`）を配置し、ノード A に `click A "id:{文書 6 の ID}#flow"`、ノード B に `click B href "id:{文書 2 の ID}"` を記載する
+        notes: '`flow` は `x-heading: 処理の流れ` を持つ文書 6 の項目'
+      - name: dev-docs
+        description: sample を配信している dev-docs
+        notes: '-'
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        actor U as 利用者
+        participant UI as dev-docs の画面
+        participant API as 画面の API
+
+        U->>UI: 文書 6 を開く
+        UI->>API: 文書の取得（文書 6）
+        API->>API: clicks の id のリンクを、同じ配信元の文書へのリンクにしてノードに付ける（該当しない id の要素は出さない）
+        API-->>UI: 文書 6 の Markdown
+        U->>UI: フロー図の質問のノードを押す
+        UI-->>U: doc-view（文書 2）
+        U->>UI: 文書 1 を開き、フロー図のノード A を押す
+        UI->>API: 文書の取得（文書 1）
+        API->>API: click の id のリンクを、同じ配信元の文書へのリンクに書き換える
+        API-->>UI: 文書 1 の Markdown
+        UI-->>U: doc-view（文書 6 の項目の見出し）
+        U->>UI: 文書 1 に戻り、ノード B を押す
+        UI-->>U: doc-view（文書 2）
+      ```
+    expected:
+      - 文書 6 のフロー図の質問のノードを押すと、URL が文書 2 を指すものに変わり、文書 2 の本文が出る
+      - 文書 6 のフロー図の結果のノードはリンクにならず、図とノードの名前は描かれ、書き方の警告が出ない
+      - 文書 1 のフロー図のノード A を押すと、文書 6 が開き、URL のアンカーが見出し `処理の流れ` を指し、その見出しが画面に出る
+      - 文書 1 に戻ってノード B を押すと、URL が文書 2 を指すものに変わり、文書 2 の本文が出る
+    test: test_normal_when_flow_node_clicked
 lead: 利用者がブラウザで配信元の文書の画面を開き、タブ・サイドバー・検索・リビジョンの切り替え・差分で文書を読む。
 issue: 17
 primary_actor: 利用者

@@ -4,6 +4,7 @@ from dev_docs.features.convert.inline import (
     heading_anchor,
     link_decisions,
     link_reference,
+    link_target,
     rewrite_text,
 )
 from dev_docs.features.convert.types import DiagramHead, DocumentLink, RenderContext
@@ -163,3 +164,21 @@ def test_heading_anchor() -> None:
     result = heading_anchor("正常シナリオ（ER 図を読む）")
     # 検証
     assert result == "正常シナリオer-図を読む"
+
+
+def test_link_target() -> None:
+    """文書と項目（正常系）。"""
+    # 実行
+    with_item = link_target("b#flow", ID_CONTEXT)
+    document = link_target("a", ID_CONTEXT)
+    # 検証
+    assert with_item == "b.yaml#処理の流れ"
+    assert document == "a.yaml"
+
+
+def test_link_target_when_unknown() -> None:
+    """引き先に無い（正常系）。"""
+    # 実行
+    result = link_target("zzz", ID_CONTEXT)
+    # 検証
+    assert result is None
