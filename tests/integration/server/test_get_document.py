@@ -275,6 +275,8 @@ MDMARK_MAP = (
 )
 # `mdmark check --text -` の標準出力の、ずれ 1 つの行（`-:{行}: {種類}: {内容}`）の種類
 CHECK_LINE_KIND = re.compile(r"^-:\d+: (\S+?):", re.M)
+# 表のマーカー（`<!-- table: {JSON} -->`）の JSON の引数
+TABLE_MARKER = re.compile(r"^<!-- table: (\{.*\}) -->$", re.M)
 # map の範囲の Mermaid のコードブロックと、続く補足
 MAP_BLOCK = re.compile(
     r"<!-- map: \{.*?\} -->\n\n```mermaid\n(.*?)\n```(?:\n\n<!-- map-data: (\{.*?\}) -->)?\n\n<!-- /map -->",
@@ -784,6 +786,19 @@ def test_normal_when_schema_document_drawn(
     assert "**全件実行**\n\n```bash\nuv run pytest\n```" in markdown
     assert markdown.startswith("# 図の文書 6\n\n図と表で読む文書\n")
     assert "内部メモの値" not in markdown
+    # 表のマーカーは JSON の記載: 図の元データの表は閉じ、ノードの表は ID の列を隠す
+    markers = _table_markers(markdown)
+    closed = [marker for marker in markers if marker.get("collapse") == {"open": False}]
+    hidden = [
+        name
+        for marker in closed
+        for name, setting in marker.get("columns", {}).items()
+        if setting.get("hidden") is True
+    ]
+    assert closed
+    assert hidden == ["ID"] * len(hidden)
+    assert hidden
+    assert all(" table: data" not in line for line in markdown.splitlines())
 
 
 def test_normal_when_mermaid_not_mappable(
@@ -801,6 +816,11 @@ def test_normal_when_mermaid_not_mappable(
     assert "<!-- map" not in body["markdown"]
     assert f"```mermaid\n{UNMAPPABLE_CLASS}\n```" in body["markdown"]
     assert body["conversionError"] is None
+
+
+def _table_markers(markdown: str) -> list[dict[str, Any]]:
+    """本文の表のマーカーの JSON の引数を、出る順に返却する。"""
+    return [json.loads(args) for args in TABLE_MARKER.findall(markdown)]
 
 
 def _er_entity(lines: list[str], name: str) -> list[str]:
@@ -835,6 +855,8 @@ def test_normal_when_er_diagram_drawn(
     relations = [line for line in lines if "--" in line]
     assert relations == ['顧客 ||--o{ 注文 : "注文する"', '顧客 ||--o{ 支払い : ""']
     assert "product_id" in markdown.split("<!-- /map -->")[1]
+    # 図の元データの表は、`collapse.open` が `false` の JSON の表のマーカーで閉じる
+    assert any(marker.get("collapse") == {"open": False} for marker in _table_markers(markdown))
 
 
 def test_normal_when_diagrams_checked(
@@ -869,8 +891,8 @@ def test_normal_when_diagrams_checked(
     assert markdown.count("<!-- map: ") == 3
     # 点検を終えた: 最後に `ずれ {件数} 件` の行がある
     assert "ずれ" in checked.stdout, checked.stderr
-    # 表のマーカーの前の記載方法（mdmark の v0.13.x の間は読み込まれる）以外のずれが無い
-    assert set(CHECK_LINE_KIND.findall(checked.stdout)) <= {"legacy_mark"}, checked.stdout
+    # ずれが 0 件（表のマーカーの前の記載方法の `legacy_mark` も無い）
+    assert CHECK_LINE_KIND.findall(checked.stdout) == [], checked.stdout
 
 
 def test_normal_when_id_link_resolved(
