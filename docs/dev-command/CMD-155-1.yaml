@@ -87,7 +87,7 @@ categories:
          ```bash
          npm run build-storybook
          ```
-      4. GitHub Pages の公開ページ（公開の文書と判定フローチャートを mdmark の build でまとめた 1 枚の HTML）を手元で作る（出力先は `tmp/pages/`。実行のたびに作り直す。Node 24 以降の `npx` が要る。Pages への配信では `.github/workflows/pages.yml` が同じコマンドを `--out _site` で実行する）
+      4. GitHub Pages の公開ページ（公開の文書と判定フローチャートを mdmark の build でまとめた 1 枚の HTML）を手元で作る（出力先は `tmp/pages/`。実行のたびに再作成する。Node 24 以降の `npx` が要る。Pages への配信では `.github/workflows/pages.yml` が同じコマンドを `--out _site` で実行する）
          ```bash
          uv run --frozen python scripts/build_pages.py --out tmp/pages
          ```

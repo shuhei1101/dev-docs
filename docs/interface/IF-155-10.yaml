@@ -557,7 +557,7 @@ flows:
       ```
     expected:
       - 応答が 503 の `application/problem+json` で、つながらなかった project-index のアドレスと理由を持つ
-      - モックが接続を受け付けるようにした後、同じ要求が 200 を返す（dev-docs のアプリを作り直さない）
+      - モックが接続を受け付けるようにした後、同じ要求が 200 を返す（dev-docs のアプリを再作成しない）
     test: test_error_when_project_index_unreachable
   - name: 異常系（project-index が応答しない・503）
     summary: project-index が接続を受けたまま応答しないとき、制限時間で打ち切って 503 を返す
