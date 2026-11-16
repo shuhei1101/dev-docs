@@ -168,6 +168,7 @@ export const SettingsScreen = () => {
             <ProjectIndexUnreachableAlert
               address={unreachable.address}
               reason={unreachable.reason}
+              kind={unreachable.kind}
               titleId={UNREACHABLE_TITLE_ID}
               onReload={() => void query.refetch()}
             />
