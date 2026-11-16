@@ -44,7 +44,7 @@ functions:
       type: None
       description: 何も返さない
     process: |-
-      1. `DevDocsError` は、`application/problem+json` で `{type: PROBLEM_TYPE_BASE + name, title: name, status, detail: message, nextSteps: next_steps, ...details()}` を返す。`details()` の 1 段目のキーと入れ子のモデルのフィールド名を `pydantic.alias_generators.to_camel` で camelCase にする。`dict[str, ...]` の値のキー（`candidates` の文書の ID など）は変えない。`violations` を持つときは `errors[]`（`{path, reason}`、`reason` は `rule`）にも並べる。`ProjectIndexUnreachableError` は `address`・`reason` を `projectIndex.address`・`projectIndex.reason` に入れ、1 段目には置かない。`ProjectIndexUnreachableError` を返すたびに `[error]` project-index につながらない（アドレス・理由・メソッド・パス）を書く
+      1. `DevDocsError` は、`application/problem+json` で `{type: PROBLEM_TYPE_BASE + name, title: name, status, detail: message, nextSteps: next_steps, ...details()}` を返す。`details()` の 1 段目のキーと入れ子のモデルのフィールド名を `pydantic.alias_generators.to_camel` で camelCase にする。`dict[str, ...]` の値のキー（`candidates` の文書の ID など）は変えない。`violations` を持つときは `errors[]`（`{path, reason}`、`reason` は `rule`）にも並べる。`ProjectIndexUnreachableError` は `address`・`reason`・`kind` を `projectIndex.address`・`projectIndex.reason`・`projectIndex.kind` に入れ、1 段目には置かない。`ProjectIndexResponseError` は `address`・`reason` と `kind` `failed` を同じ `projectIndex` に入れ、`status_code`・`summary` は 1 段目に置き、`detail` を `project-index（{address}）が要求を処理できませんでした。{reason}` にする。どちらかを返すたびに `[error]` project-index につながらない・project-index が処理に失敗した（アドレス・理由・種類・メソッド・パス）を書く
       2. `RequestValidationError` は、400 で `type` が `InvalidArgumentError` の problem+json を返す。`errors[]` は誤りごとに `loc` の `body` を除いたパス（`sources[1].id` の形。項目のパスへの変換）と `msg`
       3. `starlette.exceptions.HTTPException`（ルートの無いパス・画面の配信の 404 を含む）は、その `status_code` で `type` が `PROBLEM_TYPE_BASE + "HttpError"`、`detail` が例外の `detail` の problem+json を返す。例外が `headers`（405 の `Allow` など）を持てば、応答のヘッダーに載せる
       4. これら以外の例外は FastAPI の既定の 500 に任せ、`[error]` 要求の処理に失敗した（メソッド・パス・例外）を書く
@@ -85,3 +85,15 @@ functions:
         condition: '`ProjectIndexUnreachableError(address="http://127.0.0.1:8786", reason="45 秒以内に応答がありませんでした")` を送るルートを GET'
         mock: なし（テスト用のルート）
         expected: 503、`detail` が `project-index（http://127.0.0.1:8786）に接続できませんでした。45 秒以内に応答がありませんでした`、`projectIndex` が `{address, reason}` で、1 段目に `address` が無い。エラーログに 1 行
+      - name: test_register_error_handlers_when_project_index_failed
+        case: 正常
+        summary: project-index が処理に失敗したときの problem+json
+        condition: 'ルートが `ProjectIndexResponseError(address="http://127.0.0.1:8786", status_code=500, summary="…", reason="git archive …: 20 秒を超えたため止めました")` を送る'
+        mock: なし
+        expected: '502 で、`projectIndex` が `{address, reason, kind: "failed"}`、`detail` が `project-index（http://127.0.0.1:8786）が要求を処理できませんでした。git archive …` で始まる'
+      - name: test_register_error_handlers_when_project_index_timed_out
+        case: 正常
+        summary: 応答が無かったときの problem+json
+        condition: ルートが `ProjectIndexUnreachableError(address=…, reason="70 秒以内に応答がありませんでした", kind="timeout")` を送る
+        mock: なし
+        expected: 503 で、`projectIndex.kind` が `timeout`、`detail` が `project-index（…）から応答がありませんでした。` で始まる

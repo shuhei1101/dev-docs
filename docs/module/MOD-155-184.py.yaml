@@ -85,11 +85,12 @@ classes:
       | `SettingsVersionConflictError` | 端末の設定の内容のバージョンの食い違い | `current: str`（project-index の今の内容のバージョン） | 409 |
       | `UpdateFailedError` | 更新のコマンドの失敗 | `command: list[str]`・`stderr: str` | 500 |
       | `ScreenBuildMissingError` | 画面のビルドが無い | - | 503 |
-      | `ProjectIndexUnreachableError` | project-index につながらない | `address: str`・`reason: str` | 503 |
+      | `ProjectIndexUnreachableError` | project-index につながらない | `address: str`・`reason: str`・`kind: Literal["unreachable", "timeout"]`（既定は `unreachable`） | 503 |
       | `ProjectIndexRejectedError` | project-index が受け付けない | `violations: list[Violation]` | 422 |
-      | `ProjectIndexResponseError` | project-index の想定しない応答 | `status_code: int`・`summary: str` | 502 |
+      | `ProjectIndexResponseError` | project-index の想定しない応答 | `status_code: int`・`summary: str`・`address: str`・`reason: str`（project-index の `detail`。読めなければ `summary`） | 502 |
 
-      `ProjectIndexUnreachableError` の `message` は `project-index（{address}）に接続できませんでした。{reason}`、`next_steps` は `project-index を起動してから、再読み込みしてください。`。
+      `ProjectIndexUnreachableError` の `message` は `kind` が `unreachable` のとき `project-index（{address}）に接続できませんでした。{reason}`、`timeout` のとき `project-index（{address}）から応答がありませんでした。{reason}`。`next_steps` は `unreachable` のとき `project-index を起動してから、再読み込みしてください。`、`timeout` のとき `しばらく待ってから、再読み込みしてください。`。
+      `ProjectIndexResponseError` の画面の API の `detail` は `project-index（{address}）が要求を処理できませんでした。{reason}`（起動の『例外の変換の登録』）。
       読み書きの権限・書き込み・検査・配信元の設定の読み込みのエラーは、それを送る処理ごと project-index へ移した。
     properties:
       - name: name
