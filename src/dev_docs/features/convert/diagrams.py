@@ -424,21 +424,17 @@ def render_diagram(
 
 def _link_clicks(code: str, link: Callable[[str], str | None]) -> str:
     """フローチャートの `click` の行の `id:` のリンク先を引いた値にし、引けない行を消す。"""
-
-    def replace(match: re.Match[str]) -> str:
+    lines: list[str] = []
+    for line in code.splitlines():
+        match = MERMAID_ID_CLICK.match(line)
+        if match is None:
+            lines.append(line)
+            continue
         target = link(match.group("target"))
-        if target is None:
-            return ""
-        return f'{match.group("head")}"{_link_href(target)}"{match.group("tail")}'
-
-    rewritten = MERMAID_ID_CLICK.sub(replace, code)
-    # 消した `click` の行の空行を詰める（元から空の行は残す）
-    original_lines = code.splitlines()
-    return "\n".join(
-        line
-        for line, before in zip(rewritten.splitlines(), original_lines, strict=True)
-        if line or not MERMAID_ID_CLICK.match(before)
-    )
+        # 引けないリンク先: mdmark が記載の警告にするため、行ごと出さない
+        if target is not None:
+            lines.append(f'{match.group("head")}"{_link_href(target)}"{match.group("tail")}')
+    return "\n".join(lines)
 
 
 def render_mermaid(code: str, head: DiagramHead, link: Callable[[str], str | None]) -> str:
