@@ -10,8 +10,8 @@ import pytest
 
 from dev_docs.features.view import document as document_module
 from dev_docs.features.view.document import get_document, not_found_fields
-from dev_docs.integrations.project_index.client import ProjectIndexClient
 from dev_docs.features.view.types import DocumentResponse, NavItem
+from dev_docs.integrations.project_index.client import ProjectIndexClient
 from dev_docs.shared.errors import (
     DocumentNotFoundError,
     ProjectIndexUnreachableError,
