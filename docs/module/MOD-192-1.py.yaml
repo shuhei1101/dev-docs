@@ -141,12 +141,12 @@ constants:
     usecase: 公開ページのビルド
     summary: これより深い見出しはこの深さで描く
     value: '6'
-  - name: MDMARK_TAG
+  - name: MDMARK_REF
     title: mdmark のバージョン
     container: scripts/build_pages.py
     usecase: 公開ページのビルド
-    summary: '`npx` で呼ぶ mdmark のタグ（[mdmark](id:LIB-155-9) の採用バージョンと同じ）'
-    value: '"v0.13.0"'
+    summary: '`npx` で呼ぶ mdmark の参照と、`mdmark.config.yaml` の `version`。既定は mdmark の develop の最新で、固定するときはタグか commit の SHA に書き換える（[mdmark](id:LIB-155-9)）'
+    value: '"develop"'
   - name: OUTPUT_HTML
     title: 公開ページの HTML
     container: scripts/build_pages.py
@@ -547,14 +547,14 @@ functions:
       type: Path
       description: 記載した `mdmark.config.yaml` のパス
     process: |-
-      1. `{"version": MDMARK_TAG, "build": {"include": names, "entry": names[0], "out": OUTPUT_HTML}}` を JSON（YAML として読み込める）で `{workdir}/mdmark.config.yaml` に記載する
+      1. `{"version": MDMARK_REF, "build": {"include": names, "entry": names[0], "out": OUTPUT_HTML}}` を JSON（YAML として読み込める）で `{workdir}/mdmark.config.yaml` に記載する
     unit_tests:
       - name: test_write_bundle_config
         case: 正常
         summary: 並びのとおりの設定
         condition: '`names` が `["a.md", "b.md"]`'
         mock: なし（一時ディレクトリ）
-        expected: '`include` が同じ並び、`entry` が `a.md`、`out` が `OUTPUT_HTML`、`version` が `MDMARK_TAG`'
+        expected: '`include` が同じ並び、`entry` が `a.md`、`out` が `OUTPUT_HTML`、`version` が `MDMARK_REF`'
   - name: run_mdmark
     title: mdmark の build の実行
     container: scripts/build_pages.py
@@ -576,7 +576,7 @@ functions:
       type: str
       description: mdmark の build の標準出力
     process: |-
-      1. `["npx", "-y", "github:shuhei1101/mdmark#{MDMARK_TAG}", "build", "--config", str(config)]` を、`cwd` を設定のフォルダにして `LIMIT_SEC` で打ち切って実行する
+      1. `["npx", "-y", "github:shuhei1101/mdmark#{MDMARK_REF}", "build", "--config", str(config)]` を、`cwd` を設定のフォルダにして `LIMIT_SEC` で打ち切って実行する
          - `npx` が無い場合、Node を入れる案内を添えて `BuildError` を送出する
          - `LIMIT_SEC` で終わらない場合、`BuildError` を送出する
          - 終了コードが 0 でない場合、終了コードと標準エラーを添えて `BuildError` を送出する
@@ -597,7 +597,7 @@ functions:
         summary: build の引数
         condition: '`subprocess.run` が終了コード 0 と標準出力を返却する'
         mock: '`subprocess.run`'
-        expected: 標準出力を返却し、引数が `npx -y github:shuhei1101/mdmark#{MDMARK_TAG} build --config {config}` で `cwd` が設定のフォルダ
+        expected: 標準出力を返却し、引数が `npx -y github:shuhei1101/mdmark#{MDMARK_REF} build --config {config}` で `cwd` が設定のフォルダ
       - name: test_run_mdmark_when_failed
         case: 異常
         summary: build の失敗

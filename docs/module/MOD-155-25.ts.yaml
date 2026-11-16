@@ -4,18 +4,24 @@ lead: mdmark の `mount` を React の寿命に合わせて呼ぶフック。mdm
 test_files:
   - tests/unit/frontend/src/features/docs/doc-view/hooks/use-mdmark.test.ts
 constants:
-  - name: MDMARK_URL
-    title: mdmark の読み込み先
+  - name: MDMARK_CDN_BASE
+    title: mdmark の読み込み先の頭
     container: features/docs/doc-view/hooks/use-mdmark.ts
     usecase: 文書を読む
-    summary: jsDelivr の GitHub の、mdmark の develop に打ったタグの URL（`mount` を公開する入口）。タグで中身を固定し、上げるときはタグを書き換える。integrity は付けない
-    value: '"https://cdn.jsdelivr.net/gh/shuhei1101/mdmark@v0.13.0/dist/index.js"'
-  - name: MDMARK_CSS_URL
-    title: mdmark の CSS の読み込み先
+    summary: jsDelivr の GitHub の mdmark の URL の、バージョンより前の部分。integrity は付けない
+    value: '"https://cdn.jsdelivr.net/gh/shuhei1101/mdmark@"'
+  - name: MDMARK_VERSION_META
+    title: mdmark のバージョンの meta の名前
     container: features/docs/doc-view/hooks/use-mdmark.ts
     usecase: 文書を読む
-    summary: '`MDMARK_URL` と同じタグの `dist/index.css`'
-    value: '"https://cdn.jsdelivr.net/gh/shuhei1101/mdmark@v0.13.0/dist/index.css"'
+    summary: 画面の配信が `index.html` に入れる、mdmark のバージョンの `<meta>` の `name`
+    value: '"mdmark-version"'
+  - name: DEFAULT_MDMARK_VERSION
+    title: mdmark のバージョンの既定
+    container: features/docs/doc-view/hooks/use-mdmark.ts
+    usecase: 文書を読む
+    summary: '`<meta>` が無いとき（Vite の開発サーバー・単体テスト）に読み込む mdmark のバージョン（develop の最新）'
+    value: '"develop"'
   - name: MDMARK_MAP
     title: map の種類の設定
     container: features/docs/doc-view/hooks/use-mdmark.ts
@@ -23,6 +29,41 @@ constants:
     summary: 変換が出す map の範囲の Mermaid のクラス（`external`・`script`・`data`・`start`・`question`・`action`・`result`）の `map.kinds` と、線の名前（`read`・`write`・`reply`・`loop`）の `map.lines`。値は同じフォルダの `mdmark-map.json` から読み、文書の取得の結合テストの mdmark の点検も同じファイルを使う
     value: '`mdmark-map.json` の `kinds`・`lines`'
 functions:
+  - name: mdmarkUrls
+    title: mdmark の読み込み先
+    kind: 関数
+    container: features/docs/doc-view/hooks/use-mdmark.ts
+    usecase: 文書を読む
+    role: 変換
+    summary: '`<meta name="mdmark-version">` の値から、mdmark の JS と CSS の URL を組み立てる'
+    scope: public
+    args:
+      - name: doc
+        title: 文書
+        type: Document
+        required: false
+        default: document
+        passing: positional
+        description: '`<meta>` を探す文書'
+    returns:
+      type: '{js: string; css: string}'
+      description: '`{MDMARK_CDN_BASE}{バージョン}/dist/index.js` と `{MDMARK_CDN_BASE}{バージョン}/dist/index.css`'
+    process: |-
+      1. `doc.head` の `meta[name="{MDMARK_VERSION_META}"]` の `content` を取る。無い・空のときは `DEFAULT_MDMARK_VERSION` にする
+      2. JS と CSS の URL を同じバージョンで組み立てて返す
+    unit_tests:
+      - name: test_mdmark_urls
+        case: 正常
+        summary: meta のバージョンで組み立てる
+        condition: '`<meta name="mdmark-version" content="v0.13.0">` を持つ文書'
+        mock: なし
+        expected: '`js` が `https://cdn.jsdelivr.net/gh/shuhei1101/mdmark@v0.13.0/dist/index.js`、`css` が `…@v0.13.0/dist/index.css`'
+      - name: test_mdmark_urls_when_meta_missing
+        case: 正常
+        summary: meta が無いと develop
+        condition: '`<meta>` を持たない文書'
+        mock: なし
+        expected: '`js` が `https://cdn.jsdelivr.net/gh/shuhei1101/mdmark@develop/dist/index.js`'
   - name: useMdmark
     title: mdmark の描画
     kind: フック
@@ -46,7 +87,7 @@ functions:
       type: '{handle: MdmarkHandle | null; ready: boolean; error: unknown; docId: string | null}'
       description: '`mount` の戻り値（`update(markdown, {baseMarkdown})`・`destroy()`・`reloadComments()`・`focusComment(id)`）と読み込みの状態。`docId` は `handle` が描いている文書で、`ready` は今の `docId` を描き終えたときだけ `true`'
     process: |-
-      1. 初回に `import(/* @vite-ignore */ MDMARK_URL)` で mdmark を読み、`document.head` に `MDMARK_CSS_URL` の `<link rel="stylesheet">` を置く（モジュールの中で 1 回だけ。失敗は `error` に入れ `[error]` `mdmark_load_failed` を書く）
+      1. 初回に mdmark の読み込み先（`mdmarkUrls`）を求め、`import(/* @vite-ignore */ js)` で mdmark を読み、`document.head` に `css` の `<link rel="stylesheet">` を置く（モジュールの中で 1 回だけ。失敗は `error` に入れ `[error]` `mdmark_load_failed` を書く）
       2. `docId` が変わったら `destroy` して `mount(el, options)` し直す。`opts.index` には `aliases` を mdmark の索引にしたもの（`toMdmarkIndex`）を渡す。`commentStore` と `onColumnsChange` には、呼ばれたときに最新の `options` の関数を呼ぶ関数を渡す（`mount` は文書ごとに 1 回のため）。描き直す間は `ready` を `false` にし、`mount` が終わると `true` にする
       3. 同じ `docId` で `markdown` か `baseMarkdown` が変わったら `update(markdown, {baseMarkdown})` を呼ぶ（`baseMarkdown` が無いときは `null`）
       4. 外れるときに `destroy` を呼ぶ
