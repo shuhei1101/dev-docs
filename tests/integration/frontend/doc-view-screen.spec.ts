@@ -1661,7 +1661,7 @@ test.describe("本文の用語のツールチップ", () => {
   });
 });
 
-test.describe("project-index に接続できないときの表示", () => {
+test.describe("project-index から文書を受け取れないときの表示", () => {
   // 文書の取得が 503 のとき、接続先と理由を画面全体のアラートに出し、再読み込みで取得を再度呼び出す（異常系）
   test("project_index_unreachable_alert", async ({ page }) => {
     // 準備
@@ -1688,5 +1688,59 @@ test.describe("project-index に接続できないときの表示", () => {
       "接続を拒否されました（Connection refused）",
     ]);
     await expect.poll(() => api.callsOf("document").length).toBeGreaterThan(before);
+  });
+
+  // 文書の取得が 503 の timeout のとき、応答が無かった見出しと説明を出す（異常系）
+  test("project_index_timeout_alert", async ({ page }) => {
+    // 準備
+    await mockApi(page, {
+      document: () =>
+        problem(503, {
+          detail: "project-index（http://127.0.0.1:8786）から応答がありませんでした。70 秒以内に応答がありませんでした",
+          projectIndex: {
+            address: "http://127.0.0.1:8786",
+            reason: "70 秒以内に応答がありませんでした",
+            kind: "timeout",
+          },
+        }),
+    });
+    // 実行
+    await page.goto("/sample/docs/doc-1");
+    // 検証
+    const alert = page.getByRole("alert").filter({ hasText: "project-index から応答がありませんでした" });
+    await expect(alert).toContainText(
+      "project-index が配信元を初めて読み込む間は、時間がかかることがあります。しばらく待ってから、再読み込みしてください。",
+    );
+    await expect(alert.locator("dd")).toHaveText([
+      "http://127.0.0.1:8786",
+      "70 秒以内に応答がありませんでした",
+    ]);
+  });
+
+  // 文書の取得が 502 のとき、処理に失敗した見出しと説明と project-index の理由を出し、スマホ幅で長い理由を折り返す（異常系）
+  test("project_index_failed_alert", async ({ page }) => {
+    // 準備
+    const reason = `git archive --format=tar ${"0123456789abcdef".repeat(5)}: 20 秒を超えたため止めました`;
+    await page.setViewportSize({ width: 390, height: 844 });
+    await mockApi(page, {
+      document: () =>
+        problem(502, {
+          detail: `project-index（http://127.0.0.1:8786）が要求を処理できませんでした。${reason}`,
+          projectIndex: { address: "http://127.0.0.1:8786", reason, kind: "failed" },
+        }),
+    });
+    // 実行
+    await page.goto("/sample/docs/doc-1");
+    // 検証
+    const alert = page.getByRole("alert").filter({ hasText: "project-index が要求を処理できませんでした" });
+    await expect(alert).toContainText(
+      "時間をおいて再読み込みすると、開けることがあります。続くときは、project-index のログで原因を確認してください。",
+    );
+    await expect(alert.locator("dd")).toHaveText(["http://127.0.0.1:8786", reason]);
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= document.documentElement.clientWidth,
+      ),
+    ).toBe(true);
   });
 });

@@ -5,7 +5,7 @@ from __future__ import annotations
 import dataclasses
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, ClassVar
+from typing import Any, ClassVar, Literal
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -148,12 +148,25 @@ class ProjectIndexUnreachableError(DevDocsError):
     status: ClassVar[int] = 503
     address: str = ""
     reason: str = ""
+    # 接続を断られた（unreachable）か、制限時間の中で応答が無かった（timeout）か
+    kind: Literal["unreachable", "timeout"] = "unreachable"
 
     def __post_init__(self) -> None:
         if not self.message:
-            self.message = f"project-index（{self.address}）に接続できませんでした。{self.reason}"
+            if self.kind == "timeout":
+                self.message = (
+                    f"project-index（{self.address}）から応答がありませんでした。{self.reason}"
+                )
+            else:
+                self.message = (
+                    f"project-index（{self.address}）に接続できませんでした。{self.reason}"
+                )
         if not self.next_steps:
-            self.next_steps = ["project-index を起動してから、再読み込みしてください。"]
+            self.next_steps = [
+                "しばらく待ってから、再読み込みしてください。"
+                if self.kind == "timeout"
+                else "project-index を起動してから、再読み込みしてください。"
+            ]
 
 
 @dataclass(kw_only=True)
@@ -171,3 +184,6 @@ class ProjectIndexResponseError(DevDocsError):
     status: ClassVar[int] = 502
     status_code: int = 0
     summary: str = ""
+    address: str = ""
+    # project-index の problem+json の detail（読めなければ summary）
+    reason: str = ""

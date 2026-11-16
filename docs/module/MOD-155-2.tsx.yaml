@@ -10,7 +10,7 @@ components:
     container: app/error-fallback.tsx
     usecase: 共通
     role: 例外の表示
-    summary: '`画面を表示できませんでした。` と再読み込みのボタンを出し、`[error]` `render_failed` を書く'
+    summary: 'project-index から受け取れなかった例外（503・502 で `projectIndex` を持つ）は、project-index から受け取れないときの警告を理由の種類つきで出し、`[error]` `project_index_unreachable` を書く。それ以外は `画面を表示できませんでした。` と再読み込みのボタンを出し、`[error]` `render_failed` を書く'
     props:
       - name: error
         type: unknown
@@ -27,3 +27,9 @@ components:
         condition: '`new Error("x")` を渡す'
         mock: ロガー（`vi.mock`）
         expected: 文言と再読み込みのボタンがあり、ロガーの `error` が `render_failed` で 1 回
+      - name: test_error_fallback_when_project_index_failed
+        case: 正常
+        summary: project-index から受け取れなかった理由の種類を出す
+        condition: '`projectIndex.kind` が `failed` の 502 の `AppError` を渡す'
+        mock: ロガー（`vi.mock`）
+        expected: 見出し `project-index が要求を処理できませんでした` と理由があり、ロガーの `error` が `project_index_unreachable` で 1 回

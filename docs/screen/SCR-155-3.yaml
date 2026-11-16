@@ -54,15 +54,15 @@ elements:
     description: 追加のダイアログを開く
     label: プラスのアイコンと `配信元を追加`
     visible_when: 常時
-    enabled_when: project-index に接続できているとき（接続できない間は押せず、`aria-describedby` で project-index に接続できないときの表示の見出しを指す）
+    enabled_when: project-index に接続できているとき（接続できない間は押せず、`aria-describedby` で project-index から受け取れないときの表示の見出しを指す）
     action: クリックで配信元のダイアログを追加で開く
-  - name: project-index に接続できないときの表示
+  - name: project-index から受け取れないときの表示
     kind: alert
     position: 本文 > 配信元のセクション（配信元の一覧の代わり）
-    description: 端末の設定の取得が project-index に接続できず 503 を返したとき、接続先と理由を出す
-    label: 見出し `project-index に接続できませんでした`、説明 `project-index を起動してから、再読み込みしてください。`、`接続先`・`理由` の一覧（理由は接続を断られたとき `接続を拒否されました（Connection refused）`、制限時間で打ち切ったとき `45 秒以内に応答がありませんでした`）、ボタン `再読み込み`
-    visible_when: 端末の設定の取得が 503 を返したとき
-    source: 端末の設定の取得（503 の `projectIndex.address`・`projectIndex.reason`）
+    description: 端末の設定の取得が project-index から受け取れず 503・502 を返したとき、理由の種類ごとの見出しと説明、接続先と理由を出す
+    label: 文書の画面の『project-index から文書を受け取れないときの表示』と同じ、理由の種類（`projectIndex.kind`）の `unreachable`・`timeout`・`failed` ごとの見出しと説明。続けて `接続先`・`理由` の一覧と、ボタン `再読み込み`
+    visible_when: 端末の設定の取得が 503 か 502 を返したとき
+    source: 端末の設定の取得（503・502 の `projectIndex.address`・`projectIndex.reason`・`projectIndex.kind`）
     action: '`再読み込み` のクリックで端末の設定の取得を呼び直す'
     action_ref: IF-155-20#
     notes:

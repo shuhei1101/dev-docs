@@ -1,0 +1,33 @@
+use_cases:
+  - kind: single
+    scenario: docs/scenario/SC-155-7.yaml
+    impact: changed
+    detail: 配信元を選んで最初の文書を開くとき、毎回短い時間で読める。読めないときは、読み込み中か失敗かと、その理由を画面で知る
+    depends_on: []
+  - kind: single
+    scenario: docs/scenario/SC-155-10.yaml
+    impact: run_only
+    detail: 起動の直後に配信元を開く流れ。配信元ごとの最初の読み込みを変えると壊しうるため実行して確かめる
+    depends_on: []
+  - kind: composite
+    scenario: docs/scenario/SC-155-13.yaml
+    impact: run_only
+    detail: 配信元を開く流れの最初の取得を変えるため、壊していないかを実行して確認する
+    depends_on: []
+docs:
+  - page: docs/nonfunctional/NFR-155-1.yaml
+    new: false
+    change: 文書の取得の制限時間（NFR-15、70 秒）と、開き直した配信元の文書の取得の時間（NFR-16、18 秒）を追加する
+    status: done
+    updated_by: planner
+    updated_at: '2026-11-15T23:37:12.028599+00:00'
+scope_out:
+  - item: dev-docs serve のプロセスが 2 つ動いていた件（古いものと起動した直後のもの）の調査と対処
+    reason: dev-docs serve を 1 つだけ起動した計測でも 1 回目だけ遅い症状が再現したため、遅さとは関係しない。稼働中のログでは、起動し直した新しいプロセスがポートの使用中で終わり、古いプロセスが配信を続けている
+    plan: '#233'
+  - item: mdmark を jsDelivr から読み込む部分（frontend/src/features/docs/doc-view/hooks/use-mdmark.ts）の変更
+    reason: '計測で jsDelivr からの読み込みは 9〜65 ms で、遅さの原因でない。同じファイルは #228 が変える'
+    plan: '#228'
+  - item: project-index が配信元ごとの最初の問い合わせで行うリビジョンの書き出しと文書の一覧の値の作成を速くすること（git archive の 20 秒の上限を含む）
+    reason: 1 回目だけ遅い原因は project-index の中の処理で、dev-docs の側では速くできない。規約『複数リポジトリのAPI契約』に沿って project-index に起票した
+    plan: shuhei1101/project-index#85

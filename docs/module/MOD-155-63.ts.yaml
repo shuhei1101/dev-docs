@@ -14,3 +14,9 @@ constants:
     usecase: 共通
     summary: 文書の取得の 404 の problem+json の最上位（`missing` が `source`・`not_served`・`ref`・`doc`、`value` が開こうとした値、`errors[]` が配信していない理由）
     value: 'z.object({missing: z.enum(["source", "not_served", "ref", "doc"]), value: z.string(), errors: z.array(z.object({path: z.string(), reason: z.string()})).optional()})'
+  - name: ProjectIndexUnreachableSchema
+    title: project-index から受け取れないときのスキーマ
+    container: shared/core/schema.ts
+    usecase: 共通
+    summary: 画面の API の 503・502 の problem+json の `projectIndex`（`address`・`reason`・`kind`。`kind` は `unreachable`・`timeout`・`failed` で、無いときは `unreachable`）
+    value: 'z.object({projectIndex: z.object({address: z.string(), reason: z.string(), kind: z.enum(["unreachable", "timeout", "failed"]).default("unreachable")})})'

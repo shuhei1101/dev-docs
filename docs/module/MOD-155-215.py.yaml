@@ -85,14 +85,14 @@ classes:
         process: |-
           1. `asyncio.timeout(self.timeout)` の中で `self._client` で要求する。要求全体が `timeout` を超えるか接続できなければ `ProjectIndexUnreachableError`（`address` は `self.address`）を送る
              - 接続を断られた（`httpx.ConnectError`）: `reason` を `接続を拒否されました（Connection refused）`
-             - 制限時間を超えた（`TimeoutError`・`httpx.TimeoutException`）: `reason` を `{timeout} 秒以内に応答がありませんでした`
+             - 制限時間を超えた（`TimeoutError`・`httpx.TimeoutException`）: `reason` を `{timeout} 秒以内に応答がありませんでした`、`kind` を `timeout`（他は `unreachable`）
              - そのほかの `httpx.TransportError`: `reason` を例外の文字列
           2. 応答のステータスで分ける
              - 2xx・409: 応答を返す
              - 404: problem+json の `missing` で分ける。`source` なら `UnknownSourceError`（`source_id` は `value`）、`not_served` なら `SourceNotServedError`（`violations` は `errors[]` の `{path, reason}` を `Violation(path, rule=reason)` にしたもの、`disabled` は応答の `disabled`）、`ref` なら `RefNotFoundError`（`argument` は応答の `argument`、無ければ `ref`。`value` は応答の `value`）、それ以外は `DocumentNotFoundError`（`missing` は `[value]`、`candidates` は空）
              - 400: `InvalidArgumentError`（`message` は `detail`、`violations` は `errors[]` を `Violation` にしたもの）を送る
              - 422: `ProjectIndexRejectedError`（`violations` は `errors[]` を `Violation` にしたもの）を送る
-             - それ以外: `ProjectIndexResponseError`（`status_code` は応答のステータス、`summary` は本文の先頭 200 文字）を送る
+             - それ以外: `ProjectIndexResponseError`（`address` は `self.address`、`status_code` は応答のステータス、`summary` は本文の先頭 200 文字、`reason` は problem+json の `detail`（読めなければ `summary`））を送る
         exceptions:
           - name: ProjectIndexUnreachableError
             condition: 接続できない・制限時間を超えた
@@ -247,9 +247,8 @@ classes:
           type: DocumentList
           description: '値を入れ、`body` を空にした文書'
         process: |-
-          1. 呼び出しの共通の手順で `GET /sources/{source}/docs?ref={ref}` を呼ぶ。クエリに `common_keys=true` を常に付け、`values` が `True` なら `values=true` も付ける
-          2. `documents[]` を応答の順に索引の文書の読み取りで `IndexedDocument` にする。`kind` が `record_kinds` にある文書は、同じ `path` の文書の中で何番目か（0 始まり）を `record_index` に指定する。同じ `path` の中の並びは project-index が管理用の YAML を読み込んだ順（`f36ba69` の安定ソート）を前提にする
-          3. 応答の `ref`（Git 管理外の空の文字列は `None`）とともに `DocumentList` にして返す
+          1. 文書の一覧の応答の取得（`source`・`ref`・`values`）で応答の本文を取る
+          2. 文書の一覧の読み取り（`source`・応答の本文・`record_kinds`）で `DocumentList` にして返す
         unit_tests:
           - name: test_list_documents
             case: 正常
@@ -573,6 +572,51 @@ classes:
           type: None
           description: '-'
         process: 1. `self._client.aclose()` を呼ぶ
+      - name: fetch_document_list
+        title: 文書の一覧の応答の取得
+        kind: メソッド
+        scope: public
+        is_async: true
+        thread_safe: true
+        summary: リビジョンの全ての文書の応答の本文を、行の文書の種類を知る前に取る
+        args:
+          - name: source
+            title: 配信元の ID
+            type: str
+            required: true
+            passing: positional
+            description: 問い合わせる配信元
+          - name: ref
+            title: リビジョン
+            type: str | None
+            required: false
+            default: None
+            passing: keyword
+            description: '`None` は配信元の `default_ref`'
+          - name: values
+            title: 値を求めるか
+            type: bool
+            required: false
+            default: 'True'
+            passing: keyword
+            description: '`False` は `values=true` を付けない'
+        returns:
+          type: Mapping[str, Any]
+          description: '`GET /sources/{source}/docs` の応答の本文'
+        process: |-
+          1. 呼び出しの共通の手順で `GET /sources/{source}/docs?ref={ref}` を呼ぶ。クエリに `common_keys=true` を常に付け、`values` が `True` なら `values=true` も付ける
+          2. 応答の本文を JSON として返す
+        exceptions:
+          - name: ProjectIndexUnreachableError
+            condition: 接続できない・制限時間を超えた
+            message: '`project-index（{address}）に接続できませんでした。{reason}`'
+        unit_tests:
+          - name: test_fetch_document_list
+            case: 正常
+            summary: 応答の本文をそのまま返す
+            condition: '`ref="main"`'
+            mock: '`httpx.MockTransport`（`GET /sources/sample/docs` に文書 2 件を返す）'
+            expected: クエリが `ref=main`・`values=true`・`common_keys=true` で、戻り値が応答の本文
 constants:
   - name: PROJECT_INDEX_DEFAULT
     title: project-index の既定の接続先

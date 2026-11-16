@@ -545,9 +545,60 @@ flows:
         E-->>C: 503（打ち切ったことと project-index のアドレス）
       ```
     expected:
-      - 制限時間を過ぎた後に 503 の `application/problem+json` を返し、打ち切ったことと project-index のアドレスを持つ
-      - 制限時間より大きく遅れずに返る
+      - 文書の取得の制限時間の中で 503 の `application/problem+json` を返し、`projectIndex.kind` が `timeout`、打ち切ったことと project-index のアドレスを持つ
+      - 問い合わせごとの制限時間を文書の取得の制限時間より長くしても、503 が返るまでの時間は文書の取得の制限時間より大きく遅れない
     test: test_error_when_project_index_timed_out
+  - name: 正常系（問い合わせを同時に送信する）
+    summary: 配信元の設定・リビジョン・文書の一覧を同時に問い合わせ、文書だけをその後に問い合わせる
+    setup:
+      - name: Mock
+        description: sample を配信する project-index の読み取り API のモック。配信元の設定・リビジョン・文書の一覧・文書の問い合わせごとに一定の時間だけ待ってから返却する
+        notes: 待つ時間はどの問い合わせも同じ値（テストでは短くする）
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        participant C as クライアント
+        participant E as GET /_api/sources/{source}/docs/{path}
+        participant PI as project-index
+
+        C->>E: GET /_api/sources/sample/docs
+        par 同時に問い合わせる
+          E->>PI: 配信元の設定
+        and
+          E->>PI: リビジョン
+        and
+          E->>PI: 文書の一覧
+        end
+        E->>PI: 一番左のタブの一番上の文書
+        E-->>C: 200（文書 1）
+      ```
+    expected:
+      - '`/_api/sources/sample/docs` が 200 で、`path` が文書 1'
+      - 応答までの時間が、モックの待つ時間の 2 回分に収まり、3 回分に届かない
+      - 配信元の設定・リビジョン・文書の一覧の問い合わせを、モックがどれかの応答を返す前に受け付けている
+    test: test_normal_when_requests_sent_concurrently
+  - name: 異常系（project-index が処理に失敗する・502）
+    summary: project-index が 5xx を返したとき、502 と project-index の detail を返す
+    setup:
+      - name: Mock
+        description: 配信元の設定の問い合わせに 500 の `application/problem+json` を返す project-index の読み取り API のモック
+        notes: '`detail` は `git archive --format=tar {commit}: 20 秒を超えたため止めました`'
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        participant C as クライアント
+        participant E as GET /_api/sources/{source}/docs/{path}
+        participant PI as project-index
+
+        C->>E: GET /_api/sources/sample/docs
+        E->>PI: 配信元の設定を取得する
+        PI-->>E: 500（detail）
+        E-->>C: 502（project-index のアドレスと detail）
+      ```
+    expected:
+      - 応答が 502 の `application/problem+json` で、`projectIndex.kind` が `failed`、`projectIndex.address` が project-index のアドレス、`projectIndex.reason` が project-index の `detail`
+      - モックが 200 を返すようにした後、同じ要求が 200 を返す
+    test: test_error_when_project_index_failed
 lead: '#17 の画面が文書を開くときに呼ぶ。配信元の文書を変換した Markdown と、タブ・サイドバー・差分の項目・画面の状態を JSON で返す。`path` を省くと一番左のタブのサイドバーの一番上の文書を返す。'
 identifier: get_document
 permissions: なし（`127.0.0.1` でだけ待ち受ける）
@@ -684,8 +735,11 @@ status_codes:
     condition: 配信元が無い・配信していない、リビジョンを解決できない、文書が無い
     notes: '`missing`（`source`・`not_served`・`ref`・`doc`）と値、配信していない配信元は `errors[]` に外した理由'
   - code: '503'
-    condition: project-index につながらない
-    notes: 'つながらなかった project-index のアドレスと理由（`projectIndex.address`・`projectIndex.reason`）。`detail` は `project-index（{address}）に接続できませんでした。{reason}`'
+    condition: project-index につながらない、または文書の取得の制限時間の中で project-index から応答が無い
+    notes: 'つながらなかった project-index のアドレス・理由・種類（`projectIndex.address`・`projectIndex.reason`・`projectIndex.kind`）。`kind` は接続を断られたとき `unreachable`、制限時間で打ち切ったとき `timeout`。`detail` は `kind` が `unreachable` のとき `project-index（{address}）に接続できませんでした。{reason}`、`timeout` のとき `project-index（{address}）から応答がありませんでした。{reason}`'
+  - code: '502'
+    condition: project-index が 5xx を返した
+    notes: project-index のアドレス・`detail`・種類（`projectIndex.address`・`projectIndex.reason`・`projectIndex.kind` が `failed`）。`detail` は `project-index（{address}）が要求を処理できませんでした。{reason}`
 constraints:
   - item: 変換の制限時間
     constraint: '`converters[]` のスクリプトは project-index が実行し、制限時間で止めた結果を変換の失敗として返す。dev-docs は project-index の変換の失敗を `conversionError` に入れる'
@@ -693,11 +747,12 @@ constraints:
     constraint: 制限なし（`127.0.0.1` でだけ待ち受ける）
     decided_by: NFR-155-1#requirements[待ち受けのアドレス]
   - item: project-index への問い合わせ
-    constraint: 配信元の一覧・状態・文書の一覧・文書の値は、要求ごとに project-index の読み取り API へ問い合わせ、dev-docs の中に控えない
-    notes: project-index が読み直した配信元と文書は、dev-docs を再起動せずに次の要求から返る
-  - item: project-index につながらないとき
-    constraint: project-index の読み取り API が制限時間で応答しないか接続を断られたら、503 と、つながらなかった project-index のアドレス・理由を返す
-    decided_by: NFR-155-1#requirements[project-index への問い合わせの制限時間]
+    constraint: 配信元の一覧・状態・文書の一覧・文書の値は、要求ごとに project-index の読み取り API へ問い合わせ、dev-docs の中に控えない。配信元の設定・リビジョン・文書の一覧は同時に送信し、文書はその 3 つの応答を待ってから送信する
+    notes: project-index が読み直した配信元と文書は、dev-docs を再起動せずに次の要求から返る。文書は、文書の一覧から引いた文書のパスと ID で問い合わせるため、文書の一覧を待つ
+    decided_by: NFR-155-1#requirements[開き直した配信元の文書の取得の時間]
+  - item: project-index から文書を受け取れないとき
+    constraint: project-index の読み取り API が問い合わせの制限時間で応答しないか接続を断られたら、503 と、つながらなかった project-index のアドレス・理由・種類を返す。問い合わせごとの制限時間は、文書の取得の制限時間の残り時間を超えない。問い合わせを重ねた合計が文書の取得の制限時間を超えたら、残りの問い合わせをやめて 503（`kind` が `timeout`）を返す。project-index が 5xx を返したら、502 と project-index のアドレス・`detail`（`kind` が `failed`）を返す
+    decided_by: NFR-155-1#requirements[文書の取得の制限時間]
   - item: operationId
     constraint: '`{tag}-{関数名}`。`path` を含む入口は `view-get_document`、`path` を省く入口は `view-get_document_default`'
   - item: JSON のキー

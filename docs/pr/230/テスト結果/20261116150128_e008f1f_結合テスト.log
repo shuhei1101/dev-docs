@@ -1,0 +1,18 @@
+$ uv run pytest tests/integration/server/test_get_document.py tests/integration/server/test_put_settings_sources.py tests/integration/server/test_search_page.py
+.................................                                        [100%]
+33 passed in 62.86s (0:01:02)
+exit=0
+
+$ npx playwright test --config tests/integration/frontend/playwright.config.ts doc-view-screen.spec.ts settings-screen.spec.ts -g "受け取れないときの表示"
+
+Running 6 tests using 4 workers
+
+  ✓  2 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1721:3 › project-index から文書を受け取れないときの表示 › project_index_failed_alert (2.8s)
+  ✓  3 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1694:3 › project-index から文書を受け取れないときの表示 › project_index_timeout_alert (2.8s)
+  ✓  1 [chromium] › tests/integration/frontend/settings-screen.spec.ts:972:3 › project-index から受け取れないときの表示 › project_index_unreachable_alert (3.1s)
+  ✓  6 [chromium] › tests/integration/frontend/settings-screen.spec.ts:997:5 › project-index から受け取れないときの表示 › project_index_failed_alert (1.2s)
+  ✓  5 [chromium] › tests/integration/frontend/settings-screen.spec.ts:997:5 › project-index から受け取れないときの表示 › project_index_timeout_alert (1.3s)
+  ✓  4 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1666:3 › project-index から文書を受け取れないときの表示 › project_index_unreachable_alert (3.1s)
+
+  6 passed (56.3s)
+exit=0

@@ -599,3 +599,49 @@ functions:
         condition: '`commonKeys: null` の JSON'
         mock: なし
         expected: '`metadata` が `id`・`kind`・`name`・`description`・`tags`・`visibility` だけ'
+  - name: parse_document_list
+    title: 文書の一覧の読み取り
+    kind: 関数
+    container: integrations/project_index/types.py
+    usecase: 文書の取得
+    role: 変換
+    scope: public
+    thread_safe: true
+    summary: project-index の文書の一覧の応答の本文を `DocumentList` にする
+    args:
+      - name: source_id
+        title: 配信元の ID
+        type: str
+        required: true
+        passing: positional
+        description: 文書の配信元
+      - name: value
+        title: 応答の本文
+        type: Mapping[str, Any]
+        required: true
+        passing: positional
+        description: '`GET /sources/{source}/docs` の応答の本文'
+      - name: record_kinds
+        title: 行の文書の種類
+        type: Collection[str]
+        required: false
+        default: ()
+        passing: keyword
+        description: '`records` を持つ `documents[]` の行の ID'
+    returns:
+      type: DocumentList
+      description: 値を入れ、`body` を空にした文書
+    process: |-
+      1. `documents[]` を応答の順に索引の文書の読み取りで `IndexedDocument` にする。`kind` が `record_kinds` にある文書は、同じ `path` の文書の中で何番目か（0 始まり）を `record_index` に指定する。同じ `path` の中の並びは project-index が管理用の YAML を読み込んだ順（`f36ba69` の安定ソート）を前提にする
+      2. 応答の `ref`（Git 管理外の空の文字列は `None`）とともに `DocumentList` にして返す
+    exceptions:
+      - name: ProjectIndexResponseError
+        condition: 必須のキーが無い
+        message: '`project-index の応答に {key} がありません`'
+    unit_tests:
+      - name: test_parse_document_list_when_records
+        case: 正常
+        summary: 行の文書の添字
+        condition: 同じ `path` の `notes` の文書 2 件と `docs` の文書 1 件、`record_kinds=["notes"]`
+        mock: なし
+        expected: '`notes` の 2 件の `record_index` が 0・1、`docs` の文書は `None`'

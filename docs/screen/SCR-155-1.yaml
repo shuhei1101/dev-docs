@@ -154,17 +154,19 @@ elements:
     visible_when: 差分の案内を出しているとき
     action: クリックで `base` を外した同じ文書を開く。本文の強調・文書の変化のマーカーを消す
     action_ref: IF-155-10#
-  - name: project-index に接続できないときの表示
+  - name: project-index から文書を受け取れないときの表示
     kind: alert
     position: 画面全体（トップバーと本文の代わり）
-    description: 文書の取得が project-index に接続できず 503 を返したとき、接続先と理由を出す
-    label: 見出し `project-index に接続できませんでした`、説明 `project-index を起動してから、再読み込みしてください。`、`接続先`・`理由` の一覧（理由は接続を断られたとき `接続を拒否されました（Connection refused）`、制限時間で打ち切ったとき `45 秒以内に応答がありませんでした`）、ボタン `再読み込み`
-    visible_when: 文書の取得が 503 を返したとき
-    source: 文書の取得（503 の `projectIndex.address`・`projectIndex.reason`）
+    description: 文書の取得が 503・502 を返したとき、受け取れなかった理由の種類ごとの見出しと説明、接続先と理由を出す
+    label: 理由の種類（文書の取得の `projectIndex.kind`）ごとの見出しと説明。接続を断られた（`unreachable`）は見出し `project-index に接続できませんでした`・説明 `project-index を起動してから、再読み込みしてください。`、応答が無かった（`timeout`）は見出し `project-index から応答がありませんでした`・説明 `project-index が配信元を初めて読み込む間は、時間がかかることがあります。しばらく待ってから、再読み込みしてください。`、処理に失敗した（`failed`）は見出し `project-index が要求を処理できませんでした`・説明 `時間をおいて再読み込みすると、開けることがあります。続くときは、project-index のログで原因を確認してください。`。続けて `接続先`・`理由` の一覧と、ボタン `再読み込み`
+    visible_when: 文書の取得が 503 か 502 を返したとき
+    source: 文書の取得（503・502 の `projectIndex.address`・`projectIndex.reason`・`projectIndex.kind`）
     action: '`再読み込み` のクリックで画面を読み込み直す'
     action_ref: IF-155-10#
     notes:
       読み上げ: '`role="alert"` で、出たときに読み上げる'
+      長い理由: 理由の欄は、長い理由（project-index の `detail`）をスマホ幅でも横にはみ出さずに折り返す
+      文言: 見出しと説明は確認ログ（#230）で決定した文言
   - name: 変換の失敗
     kind: alert
     position: 本文

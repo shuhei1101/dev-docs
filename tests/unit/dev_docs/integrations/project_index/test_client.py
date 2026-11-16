@@ -217,6 +217,26 @@ def test_list_documents(
     assert listed.documents[0].data == {"id": "a", "name": "A"}
 
 
+def test_fetch_document_list(
+    fake_index: FakeIndex, make_client: Callable[..., ProjectIndexClient]
+) -> None:
+    """応答の本文をそのまま返す（正常系）。"""
+    # 準備
+    fake_index.configs["sample"] = config_json()
+    fake_index.docs["sample"] = {
+        "main": [doc_json("a", "docs/a.yaml"), doc_json("b", "docs/b.yaml")]
+    }
+    # 実行
+    value = asyncio.run(make_client().fetch_document_list("sample", ref="main"))
+    # 検証
+    params = fake_index.requests[-1].url.params
+    assert params["ref"] == "main"
+    assert params["values"] == "true"
+    assert params["common_keys"] == "true"
+    assert value["ref"] == "main"
+    assert [item["id"] for item in value["documents"]] == ["a", "b"]
+
+
 def test_list_documents_when_records(
     fake_index: FakeIndex, make_client: Callable[..., ProjectIndexClient]
 ) -> None:

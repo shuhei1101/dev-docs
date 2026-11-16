@@ -42,5 +42,11 @@ components:
         condition: スイッチを外して `?` を押す
         mock: MSW のハンドラ
         expected: ショートカットの一覧が開かない
+      - name: test_settings_screen_when_project_index_failed
+        case: 正常
+        summary: project-index から受け取れなかった理由の種類を出す
+        condition: 端末の設定の取得が、`projectIndex.kind` が `failed` の 502 と、`timeout` の 503 を返す
+        mock: MSW のハンドラ
+        expected: 見出しがそれぞれ `project-index が要求を処理できませんでした`・`project-index から応答がありませんでした` で、`project-index を起動してから` の案内を出さない
 refs:
   - SCR-155-3#

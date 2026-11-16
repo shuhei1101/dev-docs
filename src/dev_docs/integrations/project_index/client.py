@@ -5,7 +5,7 @@ from __future__ import annotations
 import asyncio
 from collections.abc import Collection, Mapping
 from datetime import datetime
-from typing import Any
+from typing import Any, Literal
 from urllib.parse import quote
 
 import httpx
@@ -27,7 +27,7 @@ from dev_docs.integrations.project_index.types import (
     SourceState,
     SourceView,
     parse_datetime,
-    parse_document,
+    parse_document_list,
 )
 from dev_docs.shared.errors import (
     DocumentNotFoundError,
@@ -128,8 +128,10 @@ class ProjectIndexClient:
         """HTTP のクライアントを閉じる。"""
         await self._client.aclose()
 
-    def _unreachable(self, reason: str) -> ProjectIndexUnreachableError:
-        return ProjectIndexUnreachableError(address=self.address, reason=reason)
+    def _unreachable(
+        self, reason: str, *, kind: Literal["unreachable", "timeout"] = "unreachable"
+    ) -> ProjectIndexUnreachableError:
+        return ProjectIndexUnreachableError(address=self.address, reason=reason, kind=kind)
 
     async def request(
         self,
@@ -149,7 +151,7 @@ class ProjectIndexClient:
         except httpx.ConnectError as error:
             raise self._unreachable(REFUSED_REASON) from error
         except (TimeoutError, httpx.TimeoutException) as error:
-            raise self._unreachable(timed_out) from error
+            raise self._unreachable(timed_out, kind="timeout") from error
         except httpx.TransportError as error:
             raise self._unreachable(str(error)) from error
         status = response.status_code
@@ -199,6 +201,8 @@ class ProjectIndexClient:
             message=f"project-index が {status} を返却しました: {summary}",
             status_code=status,
             summary=summary,
+            address=self.address,
+            reason=detail or summary,
         )
 
     async def list_sources(self) -> list[SourceState]:
@@ -243,6 +247,18 @@ class ProjectIndexClient:
             github_issue_labels=list(github.get("issueLabels") or []),
         )
 
+    async def fetch_document_list(
+        self, source: str, *, ref: str | None = None, values: bool = True
+    ) -> Mapping[str, Any]:
+        """リビジョンの全ての文書の応答の本文を、行の文書の種類を知る前に返却する。"""
+        response = await self.request(
+            "GET",
+            f"/sources/{_seg(source)}/docs",
+            params={"ref": ref, "values": "true" if values else None, "common_keys": "true"},
+        )
+        value = response.json()
+        return value if isinstance(value, Mapping) else {}
+
     async def list_documents(
         self,
         source: str,
@@ -252,22 +268,8 @@ class ProjectIndexClient:
         values: bool = True,
     ) -> DocumentList:
         """リビジョンの全ての文書を返却する。"""
-        response = await self.request(
-            "GET",
-            f"/sources/{_seg(source)}/docs",
-            params={"ref": ref, "values": "true" if values else None, "common_keys": "true"},
-        )
-        value = response.json()
-        positions: dict[str, int] = {}
-        documents: list[IndexedDocument] = []
-        for item in value.get("documents") or []:
-            record_index: int | None = None
-            if item.get("kind") in record_kinds:
-                path = str(item.get("path", ""))
-                record_index = positions.get(path, 0)
-                positions[path] = record_index + 1
-            documents.append(parse_document(source, item, record_index=record_index))
-        return DocumentList(ref=value.get("ref") or None, documents=documents)
+        value = await self.fetch_document_list(source, ref=ref, values=values)
+        return parse_document_list(source, value, record_kinds=record_kinds)
 
     async def document(
         self,
