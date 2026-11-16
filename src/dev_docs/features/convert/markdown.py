@@ -216,7 +216,13 @@ def render_attributes(
             cell = link if link is not None else _escape_cell(text)
         rows.append(f"| {_escape_cell(name)} | {cell} |")
     table = "\n".join(
-        [_table_marker({"kind": "plain"}), "| 項目 | 値 |", "| --- | --- |", *rows, "<!-- /table -->"]
+        [
+            _table_marker({"kind": "plain"}),
+            "| 項目 | 値 |",
+            "| --- | --- |",
+            *rows,
+            "<!-- /table -->",
+        ]
     )
     return "\n\n".join([table, *details])
 
