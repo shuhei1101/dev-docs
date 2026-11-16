@@ -234,6 +234,27 @@ LINKED_DOC = (
     "  [文書 2](id:doc-2) と [項目](id:doc-6#flow) と [無い項目](id:doc-6#no-such-item)\n"
     "  と [無い文書](id:no-such-doc) と `[コード](id:doc-2)`\n"
 )
+CLICKED_DOC = DRAWN_DOC.replace(
+    "  frame: {label: 判定, nodes: [q, r]}\n",
+    "  frame: {label: 判定, nodes: [q, r]}\n"
+    "  clicks:\n"
+    "    - {id: q, href: 'id:doc-2'}\n"
+    "    - {id: r, href: 'id:no-such-doc'}\n"
+    "    - {id: z, href: 'id:doc-2'}\n",
+)
+CLICKED_CHART = (
+    "flowchart TD\n"
+    "  A[受付] --> B[保存]\n"
+    "  B --> C[通知]\n"
+    '  click A "id:doc-6#flow"\n'
+    '  click B href "id:doc-2"\n'
+    '  click C "id:no-such-doc"'
+)
+CLICKED_LINKED_DOC = (
+    "id: doc-1\nname: 文書 1\ndescription: |-\n  ```mermaid\n"
+    + "".join(f"  {line}\n" for line in CLICKED_CHART.splitlines())
+    + "  ```\n"
+)
 CROSSING_DOC = """\
 id: doc-9
 title: 図の文書 9
@@ -902,6 +923,41 @@ def test_normal_when_id_link_resolved(
     assert "[無い文書](id:no-such-doc)" in body["markdown"]
     assert "`[コード](id:doc-2)`" in body["markdown"]
     assert body["conversionError"] is None
+
+
+def test_normal_when_diagram_node_id_link_resolved(
+    real_index: RealIndex, make_server: Callable[..., ServerEnv]
+) -> None:
+    """フロー図の `clicks` と手で記載したフローチャートの `click` の `id:` を、ノードのリンクにする（正常系）。"""
+    # 準備
+    source = _drawn_source()
+    clicked = doc("doc-6", "drawn/doc-6.yaml", kind="drawn", data=load_yaml(CLICKED_DOC))
+    linked = doc("doc-1", "docs/doc-1.yaml", data=load_yaml(CLICKED_LINKED_DOC))
+    source.docs[None] = [
+        linked,
+        *(clicked if item["id"] == "doc-6" else item for item in source.docs[None][1:]),
+    ]
+    real_index.serve("sample", source)
+    env = make_server(real_index)
+    # 実行
+    drawn = env.client.get("/_api/sources/sample/docs/drawn/doc-6")
+    charted = env.client.get("/_api/sources/sample/docs/docs/doc-1")
+    # 検証
+    assert drawn.status_code == 200
+    assert charted.status_code == 200
+    flow = next(lines for lines, _ in _maps(drawn.json()["markdown"]) if lines[0] == "flowchart TD")
+    assert 'click q "../docs/doc-2.yaml"' in flow
+    assert not any(line.startswith(("click r", "click z", "z[")) for line in flow)
+    chart = _maps(charted.json()["markdown"])[0][0]
+    assert 'click A "../drawn/doc-6.yaml#処理の流れ"' in chart
+    assert 'click B href "doc-2.yaml"' in chart
+    assert not any(line.startswith("click C") for line in chart)
+    assert [line for line in chart if not line.startswith("click")] == [
+        line.strip() for line in CLICKED_CHART.splitlines() if not line.strip().startswith("click")
+    ]
+    for response in (drawn, charted):
+        assert not re.search(r'click \S+ (?:href )?"id:', response.json()["markdown"])
+        assert response.json()["conversionError"] is None
 
 
 def _decided_source() -> IndexSource:

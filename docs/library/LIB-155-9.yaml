@@ -41,7 +41,7 @@ catalogs:
       - name: '<!-- map -->'
         kind: 記法
         purpose: 'スキーマ駆動の変換の `x-diagram` と、手で記載する Mermaid の `flowchart`・`graph`・`sequenceDiagram`・`erDiagram`・`stateDiagram-v2`・`stateDiagram` を、座標を記載せずに自動で配置した図で描く'
-        description: 'v0.13.0 で入った。範囲は `<!-- map: {"title": …} -->`・```mermaid のコードブロック・任意の補足 `<!-- map-data: {"version": 1, "notes": {…}, "layout": {…}} -->`・`<!-- /map -->`。ノードの種類は Mermaid のクラス（`:::名前`）で、見た目は `mount` の `opts.config.map.kinds`、補足の `layout` の `line` の線の種類は `map.lines` に記載する（設定に無いクラスと線の名前は記載の警告）。ER 図の関連の端の列は、コメントが `参照: {テーブル}.{列}` の FK の列から選ぶ。補足の ID は、ノードの ID・`{元}->{先}` の線・ER 図の `{テーブル}.{列}`。補足の文字の値に `--` を含めない'
+        description: 'v0.13.0 で入った。範囲は `<!-- map: {"title": …} -->`・```mermaid のコードブロック・任意の補足 `<!-- map-data: {"version": 1, "notes": {…}, "layout": {…}} -->`・`<!-- /map -->`。ノードの種類は Mermaid のクラス（`:::名前`）で、見た目は `mount` の `opts.config.map.kinds`、補足の `layout` の `line` の線の種類は `map.lines` に記載する（設定に無いクラスと線の名前は記載の警告）。ER 図の関連の端の列は、コメントが `参照: {テーブル}.{列}` の FK の列から選ぶ。補足の ID は、ノードの ID・`{元}->{先}` の線・ER 図の `{テーブル}.{列}`。補足の文字の値に `--` を含めない。`flowchart`・`graph` の `click {ID} "{リンク先}"`・`click {ID} href "{リンク先}"` の行は、そのノードを押すとリンク先を開くノードのリンクになる（後ろのツールチップ・`_blank` は読まない）。リンク先に使用できるのは http・https・mailto と相対パスで、それ以外（`id:` など）はリンクにせず記載の警告になる'
   - name: コマンド
     version: v0.13.0
     entries:
