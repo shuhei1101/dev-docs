@@ -74,9 +74,7 @@ def test_normal(
 ) -> None:
     """project-index が配信している 2 つの配信元を画面で配信し始める（正常系）。"""
     # 準備
-    settings = write_settings(
-        _two_sources(mock_index).address, extra="mdmark_version: v0.13.0\n"
-    )
+    settings = write_settings(_two_sources(mock_index).address, extra="mdmark_version: v0.13.0\n")
     port = free_port()
     process = start_serve(settings, port)
     wait_until_serving(process, port)
