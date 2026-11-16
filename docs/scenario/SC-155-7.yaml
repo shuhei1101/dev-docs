@@ -776,7 +776,7 @@ scenarios:
 
         U->>UI: 文書 6 を開く
         UI->>API: 文書の取得（文書 6）
-        API->>API: clicks の id のリンクを、同じ配信元の文書へのリンクにしてノードに付ける
+        API->>API: clicks の id のリンクを、同じ配信元の文書へのリンクにしてノードに付ける（該当しない id の要素は出さない）
         API-->>UI: 文書 6 の Markdown
         U->>UI: フロー図の質問のノードを押す
         UI-->>U: doc-view（文書 2）
@@ -785,6 +785,8 @@ scenarios:
         API->>API: click の id のリンクを、同じ配信元の文書へのリンクに書き換える
         API-->>UI: 文書 1 の Markdown
         UI-->>U: doc-view（文書 6 の項目の見出し）
+        U->>UI: 文書 1 に戻り、ノード B を押す
+        UI-->>U: doc-view（文書 2）
       ```
     expected:
       - 文書 6 のフロー図の質問のノードを押すと、URL が文書 2 を指すものに変わり、文書 2 の本文が出る
