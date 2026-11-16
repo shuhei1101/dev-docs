@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 import re
-from collections.abc import Mapping, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from typing import Any
 
 from dev_docs.features.convert.types import DiagramHead, DiagramKind
@@ -69,6 +69,15 @@ MERMAID_RESERVED_IDS = frozenset(
         "linkstyle",
         "frame",
     }
+)
+# `clicks` の `href` と手で書くフローチャートの `click` の行の、`{文書の ID}#{項目のパス}` を指すリンク先の接頭辞
+ID_LINK_PREFIX = "id:"
+# 手で書く Mermaid のうち、`click` の行のリンク先を書き換える 1 行目の最初の単語
+FLOWCHART_MERMAID_KINDS = ("flowchart", "graph")
+# 手で書くフローチャートの `click {ノード} "id:…"`・`click {ノード} href "id:…"` の行
+MERMAID_ID_CLICK = re.compile(
+    r'^(?P<head>[ \t]*click[ \t]+\S+[ \t]+(?:href[ \t]+)?)"id:(?P<target>[^"]*)"(?P<tail>[^\n]*)$',
+    re.M,
 )
 
 
@@ -162,8 +171,36 @@ class _NodeIds:
         return self.ids[original]
 
 
-def _flowchart(value: Mapping[str, Any], kind: DiagramKind) -> tuple[list[str], _MapData]:
-    """flow 系の値を `flowchart` の行と補足にする（`clicks` は描かない）。"""
+def _link_href(href: str) -> str:
+    """リンク先の `"` を `%22` にする（Mermaid の文字列を閉じないため）。"""
+    return href.replace('"', "%22")
+
+
+def _click_lines(
+    value: Mapping[str, Any],
+    ids: _NodeIds,
+    drawn: Mapping[str, str],
+    link: Callable[[str], str | None],
+) -> list[str]:
+    """`clicks` のうち、図にあるノードを指し、リンク先が決まる要素を `click` の行にする。"""
+    lines: list[str] = []
+    for click in _items(value, "clicks"):
+        original = str(click.get("id", ""))
+        # 図に無いノード: `click` のためだけにノードを増やさない
+        if original not in ids.ids or ids.ids[original] not in drawn:
+            continue
+        href = str(click.get("href", ""))
+        target = link(href[len(ID_LINK_PREFIX) :]) if href.startswith(ID_LINK_PREFIX) else href
+        if target is None:
+            continue
+        lines.append(f'{ids.ids[original]} "{_link_href(target)}"')
+    return [f"click {line}" for line in lines]
+
+
+def _flowchart(
+    value: Mapping[str, Any], kind: DiagramKind, link: Callable[[str], str | None]
+) -> tuple[list[str], _MapData]:
+    """flow 系の値を `flowchart` の行と補足にする。"""
     # 向き: 指定があればその値、無ければ図の種類の既定
     direction = (
         value["direction"]
@@ -216,6 +253,7 @@ def _flowchart(value: Mapping[str, Any], kind: DiagramKind) -> tuple[list[str], 
         lines.append("  end")
     lines += [f"  {line}" for node_id, line in node_lines.items() if node_id not in framed]
     lines += [f"  {line}" for line in edge_lines]
+    lines += [f"  {line}" for line in _click_lines(value, ids, node_lines, link)]
     return lines, data
 
 
@@ -370,10 +408,11 @@ def render_diagram(
     head: DiagramHead,
     *,
     tables: Sequence[Mapping[str, Any]] = (),
+    link: Callable[[str], str | None],
 ) -> str:
     """`x-diagram` の種類で、値から本文に配置する map の範囲を組み立てる。"""
     if kind in FLOW_KINDS:
-        lines, data = _flowchart(value, kind)
+        lines, data = _flowchart(value, kind, link)
         return _map_block("\n".join(lines), head, data)
     if kind == "state":
         return _map_block("\n".join(_state(value)), head)
@@ -383,10 +422,31 @@ def render_diagram(
     raise ValueError(f"x-diagram {kind} は描けません")
 
 
-def render_mermaid(code: str, head: DiagramHead) -> str:
+def _link_clicks(code: str, link: Callable[[str], str | None]) -> str:
+    """フローチャートの `click` の行の `id:` のリンク先を引いた値にし、引けない行を消す。"""
+
+    def replace(match: re.Match[str]) -> str:
+        target = link(match.group("target"))
+        if target is None:
+            return ""
+        return f'{match.group("head")}"{_link_href(target)}"{match.group("tail")}'
+
+    rewritten = MERMAID_ID_CLICK.sub(replace, code)
+    # 消した `click` の行の空行を詰める（元から空の行は残す）
+    original_lines = code.splitlines()
+    return "\n".join(
+        line
+        for line, before in zip(rewritten.splitlines(), original_lines, strict=True)
+        if line or not MERMAID_ID_CLICK.match(before)
+    )
+
+
+def render_mermaid(code: str, head: DiagramHead, link: Callable[[str], str | None]) -> str:
     """手で記載する Mermaid のコードを、map で描ける種類なら map の範囲に、それ以外は Mermaid のまま組み立てる。"""
     first = next((line.split()[0] for line in code.splitlines() if line.strip()), "")
-    # map で描ける種類: 元のコードのまま map の範囲で囲む
+    # map で描ける種類: フローチャートは click の id のリンク先を書き換えて、map の範囲で囲む
     if first in MAP_MERMAID_KINDS:
+        if first in FLOWCHART_MERMAID_KINDS:
+            code = _link_clicks(code, link)
         return _map_block(code, head)
     return f"```mermaid\n{code}\n```"

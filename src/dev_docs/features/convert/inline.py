@@ -86,6 +86,12 @@ def _target(document_id: str, item: str, context: RenderContext) -> str | None:
     return f"{relative}#{heading_anchor(heading)}" if heading else relative
 
 
+def link_target(value: str, context: RenderContext) -> str | None:
+    """`{文書の ID}#{項目のパス}` を、同じ配信元の文書の相対パスとアンカーにする（引き先に無ければ `None`）。"""
+    document_id, _, item = value.partition("#")
+    return _target(document_id, item, context)
+
+
 def _link_ids(text: str, context: RenderContext) -> str:
     """`id:` のリンクを、同じ配信元の文書への相対パスのリンクにする（引き先に無ければそのまま）。"""
 
@@ -101,7 +107,12 @@ def rewrite_text(text: str, context: RenderContext, head: DiagramHead) -> str:
     choices = _choices(text)
     if choices is not None:
         return choices
-    text = MERMAID_BLOCK.sub(lambda match: render_mermaid(match.group(1), head), text)
+    text = MERMAID_BLOCK.sub(
+        lambda match: render_mermaid(
+            match.group(1), head, lambda value: link_target(value, context)
+        ),
+        text,
+    )
     text = PLAIN_BLOCK.sub(_tree, text)
     if _is_steps(text):
         text = f"<!-- steps -->\n\n{text}\n\n<!-- /steps -->"
@@ -118,10 +129,10 @@ def _escape(text: str) -> str:
 
 def link_reference(value: str, context: RenderContext) -> str | None:
     """`{ID}#{項目のパス}` の参照の値を、引き先の文書のタイトル付きのリンクにする（引き先に無ければ `None`）。"""
-    document_id, _, item = value.partition("#")
-    target = _target(document_id, item, context)
+    target = link_target(value, context)
     if target is None:
         return None
+    document_id, _, item = value.partition("#")
     name = context.links[document_id].title
     title = f"{name} / {item}" if item else name
     return f"[{_escape(title)}]({target})"
