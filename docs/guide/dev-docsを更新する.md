@@ -75,7 +75,7 @@ project-index の更新は [project-indexを更新する](https://github.com/shu
 
 ## 失敗したとき
 
-<!-- table: data -->
+<!-- table: {"kind": "data"} -->
 
 | 事象 | 動き |
 | --- | --- |

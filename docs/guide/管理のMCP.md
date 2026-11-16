@@ -8,7 +8,7 @@
 `127.0.0.1` だけで待ち受け、作業場所（`cwd`）での絞り込みは持たず、全ての配信元を扱います。
 配信元の読み直し・検査・試しの変換・`nav` の書き込みは、[project-index](https://github.com/shuhei1101/project-index) の管理の MCP のツールです。
 
-<!-- table: data -->
+<!-- table: {"kind": "data"} -->
 
 | ツール | 種類 | 役割 |
 | --- | --- | --- |
@@ -40,7 +40,7 @@
 | --- | --- | --- | --- |
 | `format` | `markdown` / `json` | `markdown` | 返す形式 |
 
-<!-- table: data -->
+<!-- table: {"kind": "data"} -->
 
 | 返すフィールド | 型 | 説明 |
 | --- | --- | --- |
