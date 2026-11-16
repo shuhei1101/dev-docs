@@ -25,15 +25,17 @@ docs:
     status: todo
   - page: docs/config/CFG-155-2.yaml
     new: false
-    change: mdmark のバージョンを固定する設定のキーを追加する（置き場所を端末の設定にする場合）
-    status: todo
+    change: 端末の設定に `mdmark_version`（既定 `develop`）を追加する
+    status: done
+    updated_by: planner
+    updated_at: '2026-11-16T15:36:42.485242+00:00'
   - page: docs/guide/設定.md
     new: false
-    change: mdmark のバージョンを固定する設定のキーを追加する（置き場所を端末の設定にする場合）
+    change: 端末の設定のキーに `mdmark_version` を追加する
     status: todo
   - page: docs/test-procedure/TP-155-1.yaml
     new: false
-    change: 結合テストの mdmark の CLI の固定の記述を直し、mdmark が上がった後に画面の描画を確かめる手順を追加する
+    change: 結合テストの前提を、`npm ci` の `node_modules/.bin/mdmark` から `npx -y github:shuhei1101/mdmark#{参照}` で取る形へ書き換え、描画の確認は作業 PR のテストのときに行うことを記載する
     status: todo
 scope_out:
   - item: mdmark の側で develop の最新を jsDelivr・npx で参照できるようにすること（develop の `dist/` の更新・`mdmark.config.yaml` の `version` に develop の最新を書けること）
