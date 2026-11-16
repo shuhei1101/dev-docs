@@ -517,7 +517,10 @@ def test_render_table_when_wide() -> None:
     # 実行
     result = render_table(rows, schema, table_key="d:items", context=CONTEXT)
     # 検証
-    assert '<!-- table: {"kind": "data", "columns": {"説明": {"width": {"mode": "nowrap"}}}} -->' in result
+    assert (
+        '<!-- table: {"kind": "data", "columns": {"説明": {"width": {"mode": "nowrap"}}}} -->'
+        in result
+    )
 
 
 def test_render_table_when_decisions() -> None:
