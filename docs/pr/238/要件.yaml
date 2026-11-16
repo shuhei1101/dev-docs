@@ -1,0 +1,18 @@
+use_cases:
+  - kind: single
+    scenario: docs/scenario/SC-155-7.yaml
+    impact: changed
+    detail: スキーマから作る表の列の表示の切り替えと、隠した列の記憶が、新しい表の記載でも今と同じに動く。図の元データの表の列の表示の記憶は、表の見分け方が変わるため引き継がれない
+    depends_on: []
+scope_out:
+  - item: '`docs/` の Markdown の表のマーカーの JSON の記載への移行'
+    reason: 変換のコードが出すマーカーだけを対象にし、文書の移行は別の Issue が持つ
+    plan: '#193'
+  - item: '結合テスト・単体テストの準備の Markdown（`tests/integration/frontend/support/fixtures.ts` などの `<!-- table: data +columns -->`）の JSON の記載への書き換え'
+    reason: 配信元の Markdown の文書を表す準備で、前の記載方法のマーカーを画面が今の動きのまま扱えることの確認に使う。文書の移行（#193）が済んだ後に合わせる
+    plan: '#193'
+docs:
+  - page: docs/library/LIB-155-9.yaml
+    new: false
+    change: '`onColumnsChange` の `tableIndex` の説明を、`+columns` の表から、列の表示・非表示の機能を持つ表（JSON の記載を含む）の出現順へ'
+    status: todo
