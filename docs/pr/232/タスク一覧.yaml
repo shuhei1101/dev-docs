@@ -1,0 +1,81 @@
+tasks:
+  - process: 初期構築
+    status: skipped
+    reason: 既存のリポジトリのため対象外
+    updated_by: planner
+    updated_at: '2026-11-15T16:47:17.789054+00:00'
+  - process: リバースエンジニアリング
+    status: skipped
+    reason: 文書の画面の設計書（画面設計・モジュール構成）が既にあるため対象外
+    updated_by: planner
+    updated_at: '2026-11-15T16:47:17.789054+00:00'
+  - process: 方針決め
+    status: skipped
+    reason: 方針決めを依頼する Issue ではないため
+    updated_by: planner
+    updated_at: '2026-11-15T16:47:17.789054+00:00'
+  - process: PoC 検証
+    status: skipped
+    reason: CSS の適用範囲の調整で、未検証の技術機構に依存しないため
+    updated_by: planner
+    updated_at: '2026-11-15T16:47:17.789054+00:00'
+  - process: 複合ユースケース設計
+    status: skipped
+    reason: 業務フロー（ユースケースの連鎖）が変わらないため
+    updated_by: planner
+    updated_at: '2026-11-15T16:47:17.789054+00:00'
+  - process: デザインスタイル選定
+    status: skipped
+    reason: docs/design-policy.md があり、Issue は本文を単独の mdmark の見た目に揃えるもので、見た目の方向を変えないため（判定フローチャート『モック要否』Q4 YES）
+    updated_by: planner
+    updated_at: '2026-11-15T16:47:17.789054+00:00'
+  - process: 画面一覧・画面遷移
+    status: skipped
+    reason: 画面の追加・削除と画面遷移の変更が無いため（判定フローチャート『モック要否』Q2 NO）
+    updated_by: planner
+    updated_at: '2026-11-15T16:47:17.789054+00:00'
+  - process: 単一ユースケース設計
+    status: skipped
+    reason: 利用者の操作が変わらないため
+    updated_by: planner
+    updated_at: '2026-11-15T16:47:17.789054+00:00'
+  - process: モック作成
+    status: skipped
+    reason: 見た目の結果は Issue が単独の mdmark（mdmark export で書き出した HTML）と同じと決めており、作り手が決める余地が無いため（判定フローチャート『モック要否』Q3 NO）。違いの一覧は設計の段でスクリーンショットで利用者に確認する
+    updated_by: planner
+    updated_at: '2026-11-15T16:47:17.789054+00:00'
+  - process: インターフェース定義設計
+    status: skipped
+    reason: 文書の取得などの API の入出力が変わらないため
+    updated_by: planner
+    updated_at: '2026-11-15T16:47:17.789054+00:00'
+  - process: 部品設計
+    status: skipped
+    reason: 部品設計のある部品（トップバー・検索のダイアログ・ショートカットの一覧）の見た目は変えないため
+    updated_by: planner
+    updated_at: '2026-11-15T16:47:17.789054+00:00'
+  - process: 画面設計
+    status: done
+    updated_by: planner
+    updated_at: '2026-11-15T17:23:25.197735+00:00'
+  - process: モジュール構成設計
+    status: done
+    updated_by: planner
+    updated_at: '2026-11-15T23:00:53.434423+00:00'
+  - process: ドキュメント修正
+    status: done
+    updated_by: planner
+    updated_at: '2026-11-15T23:10:23.467528+00:00'
+  - process: 単体テスト作成
+    status: skipped
+    reason: モジュール構成設計で単体テストの行を足していないため（変更は CSS と doc-header.tsx のクラス名だけ。既存の test_doc_header の期待値は変わらない）。見た目は結合テストで確かめる
+    updated_by: planner
+    updated_at: '2026-11-15T23:10:23.467528+00:00'
+  - process: 実装
+    status: done
+    updated_by: planner
+    updated_at: '2026-11-15T23:39:09.758921+00:00'
+  - process: 結合テスト作成
+    status: done
+    updated_by: planner
+    updated_at: '2026-11-15T23:52:19.906628+00:00'
