@@ -277,6 +277,8 @@ MDMARK_MAP = (
 CHECK_LINE_KIND = re.compile(r"^-:\d+: (\S+?):", re.M)
 # 表のマーカー（`<!-- table: {JSON} -->`）の JSON の引数
 TABLE_MARKER = re.compile(r"^<!-- table: (\{.*\}) -->$", re.M)
+# 表のマーカーと、直後の表の見出しの行
+MARKED_TABLE = re.compile(r"^<!-- table: (\{.*\}) -->\n(\|.*\|)$", re.M)
 # map の範囲の Mermaid のコードブロックと、続く補足
 MAP_BLOCK = re.compile(
     r"<!-- map: \{.*?\} -->\n\n```mermaid\n(.*?)\n```(?:\n\n<!-- map-data: (\{.*?\}) -->)?\n\n<!-- /map -->",
@@ -799,6 +801,19 @@ def test_normal_when_schema_document_drawn(
     assert hidden == ["ID"] * len(hidden)
     assert hidden
     assert all(" table: data" not in line for line in markdown.splitlines())
+    tables = _marked_tables(markdown)
+    # 辺の表（`元`・`先` の列を持つ表）のマーカーは `hidden` の列を持たない
+    edges = [marker for marker, head in tables if head[:2] == ["元", "先"]]
+    assert edges
+    assert all(
+        "hidden" not in setting
+        for marker in edges
+        for setting in marker.get("columns", {}).values()
+    )
+    # 説明の列を持つ表のマーカーは、説明の列を折り返さない
+    described = [marker for marker, head in tables if "説明" in head]
+    assert described
+    assert all(marker["columns"]["説明"] == {"width": {"mode": "nowrap"}} for marker in described)
 
 
 def test_normal_when_mermaid_not_mappable(
@@ -821,6 +836,14 @@ def test_normal_when_mermaid_not_mappable(
 def _table_markers(markdown: str) -> list[dict[str, Any]]:
     """本文の表のマーカーの JSON の引数を、出る順に返却する。"""
     return [json.loads(args) for args in TABLE_MARKER.findall(markdown)]
+
+
+def _marked_tables(markdown: str) -> list[tuple[dict[str, Any], list[str]]]:
+    """本文の表のマーカーの JSON の引数と、直後の表の列名を、出る順に返却する。"""
+    return [
+        (json.loads(args), [cell.strip() for cell in head.strip("|").split("|")])
+        for args, head in MARKED_TABLE.findall(markdown)
+    ]
 
 
 def _er_entity(lines: list[str], name: str) -> list[str]:
