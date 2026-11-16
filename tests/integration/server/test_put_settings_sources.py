@@ -201,7 +201,8 @@ def test_error_when_project_index_rejects(
     assert rejected.status_code == 422
     assert rejected.json()["errors"] == errors
     assert failed.status_code == 502
-    assert "500" in failed.json()["detail"]
+    assert failed.json()["statusCode"] == 500
+    assert "壊れた" in failed.json()["summary"]
 
 
 def test_error_when_version_conflict(
