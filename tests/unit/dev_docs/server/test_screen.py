@@ -104,7 +104,7 @@ def _client_with_api(dist_dir: Path) -> TestClient:
     def api_x() -> dict[str, str]:
         return {"ok": "x"}
 
-    app.include_router(build_screen_router(dist_dir))
+    app.include_router(build_screen_router(dist_dir, mdmark_version="develop"))
     return TestClient(app)
 
 
