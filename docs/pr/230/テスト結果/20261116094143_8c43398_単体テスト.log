@@ -1,0 +1,677 @@
+# 単体テスト（Red。実装の前）
+
+$ uv run pytest tests/unit/ -q -p no:cacheprovider --continue-on-collection-errors
+........................................................................ [ 14%]
+........................................................................ [ 29%]
+........................................................................ [ 44%]
+..................................................FF.................... [ 59%]
+.................F..........................................FFF......... [ 74%]
+........................................................................ [ 89%]
+.....................................................                    [100%]
+==================================== ERRORS ====================================
+_ ERROR collecting tests/unit/dev_docs/integrations/project_index/test_types.py _
+ImportError while importing test module '/mnt/c/Users/shuhe/repo/dev-docs/.claude/worktrees/fix-view-source-first-load/tests/unit/dev_docs/integrations/project_index/test_types.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+tests/unit/dev_docs/integrations/project_index/test_types.py:5: in <module>
+    from dev_docs.integrations.project_index.types import parse_document, parse_document_list
+E   ImportError: cannot import name 'parse_document_list' from 'dev_docs.integrations.project_index.types' (/mnt/c/Users/shuhe/repo/dev-docs/.claude/worktrees/fix-view-source-first-load/src/dev_docs/integrations/project_index/types.py)
+=================================== FAILURES ===================================
+__________________ test_get_document_when_requests_concurrent __________________
+
+fake_index = FakeIndex(configs={'sample': {'_source': 'sample', '_git': True, 'nav': None, 'documents': [{'id': 'rules', 'paths': [...fs_results={}, settings={'settingsPath': '/pi/settings.yaml', 'sources': []}, responses={}, refused=False, requests=[])
+make_handlers = <function make_handlers.<locals>._make at 0x72ad6833ecf0>
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x72ad68357950>
+
+    def test_get_document_when_requests_concurrent(
+        fake_index: FakeIndex,
+        make_handlers: Callable[..., Any],
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """配信元の設定・リビジョン・文書の一覧を同時に問い合わせる（正常系）。"""
+        # 準備
+        _rules_source(fake_index)
+>       monkeypatch.setattr(document_module, "DOCUMENT_FETCH_TIMEOUT_SEC", 2.0)
+E       AttributeError: <module 'dev_docs.features.view.document' from '/mnt/c/Users/shuhe/repo/dev-docs/.claude/worktrees/fix-view-source-first-load/src/dev_docs/features/view/document.py'> has no attribute 'DOCUMENT_FETCH_TIMEOUT_SEC'
+
+tests/unit/dev_docs/features/view/test_document.py:366: AttributeError
+_____________________ test_get_document_when_total_timeout _____________________
+
+fake_index = FakeIndex(configs={'sample': {'_source': 'sample', '_git': True, 'nav': None, 'documents': [{'id': 'rules', 'paths': [...fs_results={}, settings={'settingsPath': '/pi/settings.yaml', 'sources': []}, responses={}, refused=False, requests=[])
+make_handlers = <function make_handlers.<locals>._make at 0x72ad6833f7f0>
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x72ad685cf380>
+
+    def test_get_document_when_total_timeout(
+        fake_index: FakeIndex,
+        make_handlers: Callable[..., Any],
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """文書の取得の制限時間（異常系）。"""
+        # 準備
+        _rules_source(fake_index)
+>       monkeypatch.setattr(document_module, "DOCUMENT_FETCH_TIMEOUT_SEC", 0.2)
+E       AttributeError: <module 'dev_docs.features.view.document' from '/mnt/c/Users/shuhe/repo/dev-docs/.claude/worktrees/fix-view-source-first-load/src/dev_docs/features/view/document.py'> has no attribute 'DOCUMENT_FETCH_TIMEOUT_SEC'
+
+tests/unit/dev_docs/features/view/test_document.py:398: AttributeError
+___________________________ test_fetch_document_list ___________________________
+
+fake_index = FakeIndex(configs={'sample': {'_source': 'sample', '_git': True, 'nav': None, 'documents': [{'id': 'rules', 'paths': [...fs_results={}, settings={'settingsPath': '/pi/settings.yaml', 'sources': []}, responses={}, refused=False, requests=[])
+make_client = <function make_client.<locals>._make at 0x72ad6695afb0>
+
+    def test_fetch_document_list(
+        fake_index: FakeIndex, make_client: Callable[..., ProjectIndexClient]
+    ) -> None:
+        """応答の本文をそのまま返す（正常系）。"""
+        # 準備
+        fake_index.configs["sample"] = config_json()
+        fake_index.docs["sample"] = {
+            "main": [doc_json("a", "docs/a.yaml"), doc_json("b", "docs/b.yaml")]
+        }
+        # 実行
+>       value = asyncio.run(make_client().fetch_document_list("sample", ref="main"))
+                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       AttributeError: 'ProjectIndexClient' object has no attribute 'fetch_document_list'
+
+tests/unit/dev_docs/integrations/project_index/test_client.py:230: AttributeError
+_________ test_register_error_handlers_when_project_index_unreachable __________
+
+caplog = <_pytest.logging.LogCaptureFixture object at 0x72ad66454ec0>
+
+    def test_register_error_handlers_when_project_index_unreachable(
+        caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        """project-index につながらないことを 503 にする（正常系）。"""
+        # 準備
+        app = FastAPI()
+        register_error_handlers(app)
+        reason = "45 秒以内に応答がありませんでした"
+    
+        @app.get("/boom")
+        def boom() -> None:
+            raise ProjectIndexUnreachableError(address="http://127.0.0.1:8786", reason=reason)
+    
+        client = TestClient(app)
+        # 実行
+        with caplog.at_level(logging.ERROR):
+            response = client.get("/boom")
+        # 検証
+        body = response.json()
+        assert response.status_code == 503
+        assert (
+            body["detail"] == f"project-index（http://127.0.0.1:8786）に接続できませんでした。{reason}"
+        )
+>       assert body["projectIndex"] == {
+            "address": "http://127.0.0.1:8786",
+            "reason": reason,
+            "kind": "unreachable",
+        }
+E       AssertionError: assert {'address': '...に応答がありませんでした'} == {'address': '...'unreachable'}
+E         
+E         Omitting 2 identical items, use -vv to show
+E         Right contains 1 more item:
+E         {'kind': 'unreachable'}
+E         Use -v to get more diff
+
+tests/unit/dev_docs/server/test_error_handlers.py:159: AssertionError
+------------------------------ Captured log call -------------------------------
+ERROR    dev_docs.server.error_handlers:error_handlers.py:60 project-index につながらない（http://127.0.0.1:8786・45 秒以内に応答がありませんでした）
+____________ test_register_error_handlers_when_project_index_failed ____________
+
+caplog = <_pytest.logging.LogCaptureFixture object at 0x72ad6642bc50>
+
+    def test_register_error_handlers_when_project_index_failed(
+        caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        """project-index が処理に失敗したときの problem+json（正常系）。"""
+        # 準備
+        app = FastAPI()
+        register_error_handlers(app)
+        reason = "git archive --format=tar 006a490: 20 秒を超えたため止めました"
+    
+        @app.get("/boom")
+        def boom() -> None:
+            raise ProjectIndexResponseError(
+                message="project-index が 500 を返却しました: ...",
+                address="http://127.0.0.1:8786",
+                status_code=500,
+                summary="...",
+                reason=reason,
+            )
+    
+        client = TestClient(app)
+        # 実行
+        with caplog.at_level(logging.ERROR):
+>           response = client.get("/boom")
+                       ^^^^^^^^^^^^^^^^^^^
+
+tests/unit/dev_docs/server/test_error_handlers.py:190: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+.venv/lib/python3.14/site-packages/httpx2/_client.py:1112: in get
+    return self.request(
+.venv/lib/python3.14/site-packages/starlette/testclient.py:518: in request
+    return super().request(
+.venv/lib/python3.14/site-packages/httpx2/_client.py:796: in request
+    return self.send(request, auth=auth, follow_redirects=follow_redirects)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/httpx2/_client.py:993: in send
+    raise exc
+.venv/lib/python3.14/site-packages/httpx2/_client.py:987: in send
+    response.read()
+.venv/lib/python3.14/site-packages/httpx2/_models.py:877: in read
+    self._content = b"".join(self.iter_bytes())
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/httpx2/_models.py:893: in iter_bytes
+    for raw_bytes in self.iter_raw():
+                     ^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/httpx2/_models.py:948: in iter_raw
+    for raw_stream_bytes in self.stream:
+                            ^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/httpx2/_client.py:143: in __iter__
+    yield from self._stream
+.venv/lib/python3.14/site-packages/starlette/testclient.py:384: in iter_body
+    exit_stack.close()
+/home/shuhei2441/.local/share/uv/python/cpython-3.14.3-linux-x86_64-gnu/lib/python3.14/contextlib.py:627: in close
+    self.__exit__(None, None, None)
+/home/shuhei2441/.local/share/uv/python/cpython-3.14.3-linux-x86_64-gnu/lib/python3.14/contextlib.py:619: in __exit__
+    raise exc
+/home/shuhei2441/.local/share/uv/python/cpython-3.14.3-linux-x86_64-gnu/lib/python3.14/contextlib.py:604: in __exit__
+    if cb(*exc_details):
+       ^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/starlette/testclient.py:399: in close_app
+    raise exception
+.venv/lib/python3.14/site-packages/anyio/from_thread.py:265: in _call_func
+    retval = await retval_or_awaitable
+             ^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/starlette/testclient.py:366: in run_app
+    await self.app(scope, receive, send)
+.venv/lib/python3.14/site-packages/fastapi/applications.py:1194: in __call__
+    await super().__call__(scope, receive, send)
+.venv/lib/python3.14/site-packages/starlette/applications.py:96: in __call__
+    await self.middleware_stack(scope, receive, send)
+.venv/lib/python3.14/site-packages/starlette/middleware/errors.py:186: in __call__
+    raise exc
+.venv/lib/python3.14/site-packages/starlette/middleware/errors.py:164: in __call__
+    await self.app(scope, receive, _send)
+.venv/lib/python3.14/site-packages/fastapi/telemetry/_asgi.py:151: in __call__
+    await self.app(scope, receive, send)
+.venv/lib/python3.14/site-packages/starlette/middleware/exceptions.py:63: in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+.venv/lib/python3.14/site-packages/starlette/_exception_handler.py:53: in wrapped_app
+    raise exc
+.venv/lib/python3.14/site-packages/starlette/_exception_handler.py:42: in wrapped_app
+    await app(scope, receive, sender)
+.venv/lib/python3.14/site-packages/fastapi/middleware/asyncexitstack.py:18: in __call__
+    await self.app(scope, receive, send)
+.venv/lib/python3.14/site-packages/starlette/routing.py:683: in __call__
+    await self.middleware_stack(scope, receive, send)
+.venv/lib/python3.14/site-packages/fastapi/routing.py:2811: in app
+    await route.handle(scope, receive, send)
+.venv/lib/python3.14/site-packages/fastapi/routing.py:1330: in handle
+    await super().handle(scope, receive, send)
+.venv/lib/python3.14/site-packages/starlette/routing.py:289: in handle
+    await self.app(scope, receive, send)
+.venv/lib/python3.14/site-packages/fastapi/routing.py:166: in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+.venv/lib/python3.14/site-packages/starlette/_exception_handler.py:53: in wrapped_app
+    raise exc
+.venv/lib/python3.14/site-packages/starlette/_exception_handler.py:42: in wrapped_app
+    await app(scope, receive, sender)
+.venv/lib/python3.14/site-packages/fastapi/routing.py:152: in app
+    response = await f(request)
+               ^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/fastapi/routing.py:745: in app
+    raw_response = await run_endpoint_function(
+.venv/lib/python3.14/site-packages/fastapi/routing.py:374: in run_endpoint_function
+    return await run_in_threadpool(
+.venv/lib/python3.14/site-packages/starlette/concurrency.py:34: in run_in_threadpool
+    return await anyio.to_thread.run_sync(func)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/anyio/to_thread.py:65: in run_sync
+    return await get_async_backend().run_sync_in_worker_thread(
+.venv/lib/python3.14/site-packages/anyio/_backends/_asyncio.py:2706: in run_sync_in_worker_thread
+    return await future
+           ^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/anyio/_backends/_asyncio.py:1100: in run
+    result = context.run(func, *args)
+             ^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/fastapi/telemetry/_api.py:244: in _run_sync_endpoint
+    return function(**arguments)
+           ^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    @app.get("/boom")
+    def boom() -> None:
+>       raise ProjectIndexResponseError(
+            message="project-index が 500 を返却しました: ...",
+            address="http://127.0.0.1:8786",
+            status_code=500,
+            summary="...",
+            reason=reason,
+        )
+E       TypeError: ProjectIndexResponseError.__init__() got an unexpected keyword argument 'address'
+
+tests/unit/dev_docs/server/test_error_handlers.py:179: TypeError
+------------------------------ Captured log call -------------------------------
+ERROR    dev_docs.server.error_handlers:error_handlers.py:117 要求の処理に失敗した（GET・/boom・ProjectIndexResponseError.__init__() got an unexpected keyword argument 'address'）
+Traceback (most recent call last):
+  File "/mnt/c/Users/shuhe/repo/dev-docs/.claude/worktrees/fix-view-source-first-load/.venv/lib/python3.14/site-packages/starlette/middleware/errors.py", line 164, in __call__
+    await self.app(scope, receive, _send)
+  File "/mnt/c/Users/shuhe/repo/dev-docs/.claude/worktrees/fix-view-source-first-load/.venv/lib/python3.14/site-packages/fastapi/telemetry/_asgi.py", line 151, in __call__
+    await self.app(scope, receive, send)
+  File "/mnt/c/Users/shuhe/repo/dev-docs/.claude/worktrees/fix-view-source-first-load/.venv/lib/python3.14/site-packages/starlette/middleware/exceptions.py", line 63, in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+  File "/mnt/c/Users/shuhe/repo/dev-docs/.claude/worktrees/fix-view-source-first-load/.venv/lib/python3.14/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "/mnt/c/Users/shuhe/repo/dev-docs/.claude/worktrees/fix-view-source-first-load/.venv/lib/python3.14/site-packages/starlette/_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "/mnt/c/Users/shuhe/repo/dev-docs/.claude/worktrees/fix-view-source-first-load/.venv/lib/python3.14/site-packages/fastapi/middleware/asyncexitstack.py", line 18, in __call__
+    await self.app(scope, receive, send)
+  File "/mnt/c/Users/shuhe/repo/dev-docs/.claude/worktrees/fix-view-source-first-load/.venv/lib/python3.14/site-packages/starlette/routing.py", line 683, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "/mnt/c/Users/shuhe/repo/dev-docs/.claude/worktrees/fix-view-source-first-load/.venv/lib/python3.14/site-packages/fastapi/routing.py", line 2811, in app
+    await route.handle(scope, receive, send)
+  File "/mnt/c/Users/shuhe/repo/dev-docs/.claude/worktrees/fix-view-source-first-load/.venv/lib/python3.14/site-packages/fastapi/routing.py", line 1330, in handle
+    await super().handle(scope, receive, send)
+  File "/mnt/c/Users/shuhe/repo/dev-docs/.claude/worktrees/fix-view-source-first-load/.venv/lib/python3.14/site-packages/starlette/routing.py", line 289, in handle
+    await self.app(scope, receive, send)
+  File "/mnt/c/Users/shuhe/repo/dev-docs/.claude/worktrees/fix-view-source-first-load/.venv/lib/python3.14/site-packages/fastapi/routing.py", line 166, in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+  File "/mnt/c/Users/shuhe/repo/dev-docs/.claude/worktrees/fix-view-source-first-load/.venv/lib/python3.14/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "/mnt/c/Users/shuhe/repo/dev-docs/.claude/worktrees/fix-view-source-first-load/.venv/lib/python3.14/site-packages/starlette/_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "/mnt/c/Users/shuhe/repo/dev-docs/.claude/worktrees/fix-view-source-first-load/.venv/lib/python3.14/site-packages/fastapi/routing.py", line 152, in app
+    response = await f(request)
+               ^^^^^^^^^^^^^^^^
+  File "/mnt/c/Users/shuhe/repo/dev-docs/.claude/worktrees/fix-view-source-first-load/.venv/lib/python3.14/site-packages/fastapi/routing.py", line 745, in app
+    raw_response = await run_endpoint_function(
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<3 lines>...
+    )
+    ^
+  File "/mnt/c/Users/shuhe/repo/dev-docs/.claude/worktrees/fix-view-source-first-load/.venv/lib/python3.14/site-packages/fastapi/routing.py", line 374, in run_endpoint_function
+    return await run_in_threadpool(
+           ^^^^^^^^^^^^^^^^^^^^^^^^
+        _run_sync_endpoint, function=dependant.call, arguments=values
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/mnt/c/Users/shuhe/repo/dev-docs/.claude/worktrees/fix-view-source-first-load/.venv/lib/python3.14/site-packages/starlette/concurrency.py", line 34, in run_in_threadpool
+    return await anyio.to_thread.run_sync(func)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/c/Users/shuhe/repo/dev-docs/.claude/worktrees/fix-view-source-first-load/.venv/lib/python3.14/site-packages/anyio/to_thread.py", line 65, in run_sync
+    return await get_async_backend().run_sync_in_worker_thread(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        func, args, abandon_on_cancel=abandon_on_cancel, limiter=limiter
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/mnt/c/Users/shuhe/repo/dev-docs/.claude/worktrees/fix-view-source-first-load/.venv/lib/python3.14/site-packages/anyio/_backends/_asyncio.py", line 2706, in run_sync_in_worker_thread
+    return await future
+           ^^^^^^^^^^^^
+  File "/mnt/c/Users/shuhe/repo/dev-docs/.claude/worktrees/fix-view-source-first-load/.venv/lib/python3.14/site-packages/anyio/_backends/_asyncio.py", line 1100, in run
+    result = context.run(func, *args)
+  File "/mnt/c/Users/shuhe/repo/dev-docs/.claude/worktrees/fix-view-source-first-load/.venv/lib/python3.14/site-packages/fastapi/telemetry/_api.py", line 244, in _run_sync_endpoint
+    return function(**arguments)
+  File "/mnt/c/Users/shuhe/repo/dev-docs/.claude/worktrees/fix-view-source-first-load/tests/unit/dev_docs/server/test_error_handlers.py", line 179, in boom
+    raise ProjectIndexResponseError(
+          ~~~~~~~~~~~~~~~~~~~~~~~~~^
+        message="project-index が 500 を返却しました: ...",
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<3 lines>...
+        reason=reason,
+        ^^^^^^^^^^^^^^
+    )
+    ^
+TypeError: ProjectIndexResponseError.__init__() got an unexpected keyword argument 'address'
+__________ test_register_error_handlers_when_project_index_timed_out ___________
+
+    def test_register_error_handlers_when_project_index_timed_out() -> None:
+        """応答が無かったときの problem+json（正常系）。"""
+        # 準備
+        app = FastAPI()
+        register_error_handlers(app)
+        reason = "70 秒以内に応答がありませんでした"
+    
+        @app.get("/boom")
+        def boom() -> None:
+            raise ProjectIndexUnreachableError(
+                address="http://127.0.0.1:8786", reason=reason, kind="timeout"
+            )
+    
+        client = TestClient(app)
+        # 実行
+>       response = client.get("/boom")
+                   ^^^^^^^^^^^^^^^^^^^
+
+tests/unit/dev_docs/server/test_error_handlers.py:220: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+.venv/lib/python3.14/site-packages/httpx2/_client.py:1112: in get
+    return self.request(
+.venv/lib/python3.14/site-packages/starlette/testclient.py:518: in request
+    return super().request(
+.venv/lib/python3.14/site-packages/httpx2/_client.py:796: in request
+    return self.send(request, auth=auth, follow_redirects=follow_redirects)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/httpx2/_client.py:993: in send
+    raise exc
+.venv/lib/python3.14/site-packages/httpx2/_client.py:987: in send
+    response.read()
+.venv/lib/python3.14/site-packages/httpx2/_models.py:877: in read
+    self._content = b"".join(self.iter_bytes())
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/httpx2/_models.py:893: in iter_bytes
+    for raw_bytes in self.iter_raw():
+                     ^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/httpx2/_models.py:948: in iter_raw
+    for raw_stream_bytes in self.stream:
+                            ^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/httpx2/_client.py:143: in __iter__
+    yield from self._stream
+.venv/lib/python3.14/site-packages/starlette/testclient.py:384: in iter_body
+    exit_stack.close()
+/home/shuhei2441/.local/share/uv/python/cpython-3.14.3-linux-x86_64-gnu/lib/python3.14/contextlib.py:627: in close
+    self.__exit__(None, None, None)
+/home/shuhei2441/.local/share/uv/python/cpython-3.14.3-linux-x86_64-gnu/lib/python3.14/contextlib.py:619: in __exit__
+    raise exc
+/home/shuhei2441/.local/share/uv/python/cpython-3.14.3-linux-x86_64-gnu/lib/python3.14/contextlib.py:604: in __exit__
+    if cb(*exc_details):
+       ^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/starlette/testclient.py:399: in close_app
+    raise exception
+.venv/lib/python3.14/site-packages/anyio/from_thread.py:265: in _call_func
+    retval = await retval_or_awaitable
+             ^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/starlette/testclient.py:366: in run_app
+    await self.app(scope, receive, send)
+.venv/lib/python3.14/site-packages/fastapi/applications.py:1194: in __call__
+    await super().__call__(scope, receive, send)
+.venv/lib/python3.14/site-packages/starlette/applications.py:96: in __call__
+    await self.middleware_stack(scope, receive, send)
+.venv/lib/python3.14/site-packages/starlette/middleware/errors.py:186: in __call__
+    raise exc
+.venv/lib/python3.14/site-packages/starlette/middleware/errors.py:164: in __call__
+    await self.app(scope, receive, _send)
+.venv/lib/python3.14/site-packages/fastapi/telemetry/_asgi.py:151: in __call__
+    await self.app(scope, receive, send)
+.venv/lib/python3.14/site-packages/starlette/middleware/exceptions.py:63: in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+.venv/lib/python3.14/site-packages/starlette/_exception_handler.py:53: in wrapped_app
+    raise exc
+.venv/lib/python3.14/site-packages/starlette/_exception_handler.py:42: in wrapped_app
+    await app(scope, receive, sender)
+.venv/lib/python3.14/site-packages/fastapi/middleware/asyncexitstack.py:18: in __call__
+    await self.app(scope, receive, send)
+.venv/lib/python3.14/site-packages/starlette/routing.py:683: in __call__
+    await self.middleware_stack(scope, receive, send)
+.venv/lib/python3.14/site-packages/fastapi/routing.py:2811: in app
+    await route.handle(scope, receive, send)
+.venv/lib/python3.14/site-packages/fastapi/routing.py:1330: in handle
+    await super().handle(scope, receive, send)
+.venv/lib/python3.14/site-packages/starlette/routing.py:289: in handle
+    await self.app(scope, receive, send)
+.venv/lib/python3.14/site-packages/fastapi/routing.py:166: in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+.venv/lib/python3.14/site-packages/starlette/_exception_handler.py:53: in wrapped_app
+    raise exc
+.venv/lib/python3.14/site-packages/starlette/_exception_handler.py:42: in wrapped_app
+    await app(scope, receive, sender)
+.venv/lib/python3.14/site-packages/fastapi/routing.py:152: in app
+    response = await f(request)
+               ^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/fastapi/routing.py:745: in app
+    raw_response = await run_endpoint_function(
+.venv/lib/python3.14/site-packages/fastapi/routing.py:374: in run_endpoint_function
+    return await run_in_threadpool(
+.venv/lib/python3.14/site-packages/starlette/concurrency.py:34: in run_in_threadpool
+    return await anyio.to_thread.run_sync(func)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/anyio/to_thread.py:65: in run_sync
+    return await get_async_backend().run_sync_in_worker_thread(
+.venv/lib/python3.14/site-packages/anyio/_backends/_asyncio.py:2706: in run_sync_in_worker_thread
+    return await future
+           ^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/anyio/_backends/_asyncio.py:1100: in run
+    result = context.run(func, *args)
+             ^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/fastapi/telemetry/_api.py:244: in _run_sync_endpoint
+    return function(**arguments)
+           ^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    @app.get("/boom")
+    def boom() -> None:
+>       raise ProjectIndexUnreachableError(
+            address="http://127.0.0.1:8786", reason=reason, kind="timeout"
+        )
+E       TypeError: ProjectIndexUnreachableError.__init__() got an unexpected keyword argument 'kind'
+
+tests/unit/dev_docs/server/test_error_handlers.py:214: TypeError
+------------------------------ Captured log call -------------------------------
+ERROR    dev_docs.server.error_handlers:error_handlers.py:117 要求の処理に失敗した（GET・/boom・ProjectIndexUnreachableError.__init__() got an unexpected keyword argument 'kind'）
+Traceback (most recent call last):
+  File "/mnt/c/Users/shuhe/repo/dev-docs/.claude/worktrees/fix-view-source-first-load/.venv/lib/python3.14/site-packages/starlette/middleware/errors.py", line 164, in __call__
+    await self.app(scope, receive, _send)
+  File "/mnt/c/Users/shuhe/repo/dev-docs/.claude/worktrees/fix-view-source-first-load/.venv/lib/python3.14/site-packages/fastapi/telemetry/_asgi.py", line 151, in __call__
+    await self.app(scope, receive, send)
+  File "/mnt/c/Users/shuhe/repo/dev-docs/.claude/worktrees/fix-view-source-first-load/.venv/lib/python3.14/site-packages/starlette/middleware/exceptions.py", line 63, in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+  File "/mnt/c/Users/shuhe/repo/dev-docs/.claude/worktrees/fix-view-source-first-load/.venv/lib/python3.14/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "/mnt/c/Users/shuhe/repo/dev-docs/.claude/worktrees/fix-view-source-first-load/.venv/lib/python3.14/site-packages/starlette/_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "/mnt/c/Users/shuhe/repo/dev-docs/.claude/worktrees/fix-view-source-first-load/.venv/lib/python3.14/site-packages/fastapi/middleware/asyncexitstack.py", line 18, in __call__
+    await self.app(scope, receive, send)
+  File "/mnt/c/Users/shuhe/repo/dev-docs/.claude/worktrees/fix-view-source-first-load/.venv/lib/python3.14/site-packages/starlette/routing.py", line 683, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "/mnt/c/Users/shuhe/repo/dev-docs/.claude/worktrees/fix-view-source-first-load/.venv/lib/python3.14/site-packages/fastapi/routing.py", line 2811, in app
+    await route.handle(scope, receive, send)
+  File "/mnt/c/Users/shuhe/repo/dev-docs/.claude/worktrees/fix-view-source-first-load/.venv/lib/python3.14/site-packages/fastapi/routing.py", line 1330, in handle
+    await super().handle(scope, receive, send)
+  File "/mnt/c/Users/shuhe/repo/dev-docs/.claude/worktrees/fix-view-source-first-load/.venv/lib/python3.14/site-packages/starlette/routing.py", line 289, in handle
+    await self.app(scope, receive, send)
+  File "/mnt/c/Users/shuhe/repo/dev-docs/.claude/worktrees/fix-view-source-first-load/.venv/lib/python3.14/site-packages/fastapi/routing.py", line 166, in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+  File "/mnt/c/Users/shuhe/repo/dev-docs/.claude/worktrees/fix-view-source-first-load/.venv/lib/python3.14/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "/mnt/c/Users/shuhe/repo/dev-docs/.claude/worktrees/fix-view-source-first-load/.venv/lib/python3.14/site-packages/starlette/_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "/mnt/c/Users/shuhe/repo/dev-docs/.claude/worktrees/fix-view-source-first-load/.venv/lib/python3.14/site-packages/fastapi/routing.py", line 152, in app
+    response = await f(request)
+               ^^^^^^^^^^^^^^^^
+  File "/mnt/c/Users/shuhe/repo/dev-docs/.claude/worktrees/fix-view-source-first-load/.venv/lib/python3.14/site-packages/fastapi/routing.py", line 745, in app
+    raw_response = await run_endpoint_function(
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<3 lines>...
+    )
+    ^
+  File "/mnt/c/Users/shuhe/repo/dev-docs/.claude/worktrees/fix-view-source-first-load/.venv/lib/python3.14/site-packages/fastapi/routing.py", line 374, in run_endpoint_function
+    return await run_in_threadpool(
+           ^^^^^^^^^^^^^^^^^^^^^^^^
+        _run_sync_endpoint, function=dependant.call, arguments=values
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/mnt/c/Users/shuhe/repo/dev-docs/.claude/worktrees/fix-view-source-first-load/.venv/lib/python3.14/site-packages/starlette/concurrency.py", line 34, in run_in_threadpool
+    return await anyio.to_thread.run_sync(func)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/c/Users/shuhe/repo/dev-docs/.claude/worktrees/fix-view-source-first-load/.venv/lib/python3.14/site-packages/anyio/to_thread.py", line 65, in run_sync
+    return await get_async_backend().run_sync_in_worker_thread(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        func, args, abandon_on_cancel=abandon_on_cancel, limiter=limiter
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/mnt/c/Users/shuhe/repo/dev-docs/.claude/worktrees/fix-view-source-first-load/.venv/lib/python3.14/site-packages/anyio/_backends/_asyncio.py", line 2706, in run_sync_in_worker_thread
+    return await future
+           ^^^^^^^^^^^^
+  File "/mnt/c/Users/shuhe/repo/dev-docs/.claude/worktrees/fix-view-source-first-load/.venv/lib/python3.14/site-packages/anyio/_backends/_asyncio.py", line 1100, in run
+    result = context.run(func, *args)
+  File "/mnt/c/Users/shuhe/repo/dev-docs/.claude/worktrees/fix-view-source-first-load/.venv/lib/python3.14/site-packages/fastapi/telemetry/_api.py", line 244, in _run_sync_endpoint
+    return function(**arguments)
+  File "/mnt/c/Users/shuhe/repo/dev-docs/.claude/worktrees/fix-view-source-first-load/tests/unit/dev_docs/server/test_error_handlers.py", line 214, in boom
+    raise ProjectIndexUnreachableError(
+          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        address="http://127.0.0.1:8786", reason=reason, kind="timeout"
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+TypeError: ProjectIndexUnreachableError.__init__() got an unexpected keyword argument 'kind'
+=========================== short test summary info ============================
+ERROR tests/unit/dev_docs/integrations/project_index/test_types.py
+FAILED tests/unit/dev_docs/features/view/test_document.py::test_get_document_when_requests_concurrent
+FAILED tests/unit/dev_docs/features/view/test_document.py::test_get_document_when_total_timeout
+FAILED tests/unit/dev_docs/integrations/project_index/test_client.py::test_fetch_document_list
+FAILED tests/unit/dev_docs/server/test_error_handlers.py::test_register_error_handlers_when_project_index_unreachable
+FAILED tests/unit/dev_docs/server/test_error_handlers.py::test_register_error_handlers_when_project_index_failed
+FAILED tests/unit/dev_docs/server/test_error_handlers.py::test_register_error_handlers_when_project_index_timed_out
+6 failed, 479 passed, 1 error in 52.21s
+py exit=1
+
+$ npm run test:unit
+
+ RUN  v5.0.5 /mnt/c/Users/shuhe/repo/dev-docs/.claude/worktrees/fix-view-source-first-load
+
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+ ❯ tests/unit/frontend/src/shared/components/project-index-unreachable.test.tsx (7 tests | 2 failed) 244ms
+   × test_to_project_index_unreachable 9ms
+   × test_to_project_index_unreachable_when_kind_missing 3ms
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+ ❯ tests/unit/frontend/src/app/error-fallback.test.tsx (2 tests | 1 failed) 146ms
+   × test_error_fallback_when_project_index_failed 8ms
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 3 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/unit/frontend/src/app/error-fallback.test.tsx > test_error_fallback_when_project_index_failed
+TestingLibraryElementError: Unable to find an element with the text: project-index が要求を処理できませんでした. This could be because the text is broken up by multiple elements. In this case, you can provide a function for your text matcher to make your matcher more flexible.
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div>[39m
+    [36m<div[39m
+      [33mclass[39m=[32m"mx-auto flex max-w-xl flex-col items-start gap-4 p-8"[39m
+      [33mrole[39m=[32m"alert"[39m
+    [36m>[39m
+      [36m<h1[39m
+        [33mclass[39m=[32m"text-lg font-semibold"[39m
+      [36m>[39m
+        [0m画面を表示できませんでした。[0m
+      [36m</h1>[39m
+      [36m<button[39m
+        [33mclass[39m=[32m"group/button inline-flex shrink-0 items-center justify-center rounded-lg border bg-clip-padding text-sm font-medium whitespace-nowrap transition outline-none select-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 active:not-aria-[haspopup]:translate-y-px disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 border-border bg-background hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:border-input dark:bg-input/30 dark:hover:bg-input/50 h-8 gap-1.5 px-2.5 has-data-[icon=inline-end]:pr-2 has-data-[icon=inline-start]:pl-2"[39m
+        [33mdata-slot[39m=[32m"button"[39m
+        [33mtabindex[39m=[32m"0"[39m
+        [33mtype[39m=[32m"button"[39m
+      [36m>[39m
+        [0m再読み込み[0m
+      [36m</button>[39m
+    [36m</div>[39m
+  [36m</div>[39m
+[36m</body>[39m
+ ❯ Object.getElementError node_modules/@testing-library/dom/dist/config.js:37:19
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:76:38
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:52:17
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:95:19
+ ❯ tests/unit/frontend/src/app/error-fallback.test.tsx:46:12
+     44|
+     45|   expect(
+     46|     screen.getByText("project-index が要求を処理できませんでした"),
+       |            ^
+     47|   ).toBeInTheDocument();
+     48|   expect(
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/3]⎯
+
+ FAIL  tests/unit/frontend/src/shared/components/project-index-unreachable.test.tsx > test_to_project_index_unreachable
+AssertionError: expected null to deeply equal { …(3) }
+
+- Expected:
+{
+  "address": "http://127.0.0.1:8786",
+  "kind": "failed",
+  "reason": "r",
+}
+
++ Received:
+null
+
+ ❯ tests/unit/frontend/src/shared/components/project-index-unreachable.test.tsx:30:44
+     28|   });
+     29|
+     30|   expect(toProjectIndexUnreachable(error)).toEqual({
+       |                                            ^
+     31|     address: ADDRESS,
+     32|     reason: "r",
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/3]⎯
+
+ FAIL  tests/unit/frontend/src/shared/components/project-index-unreachable.test.tsx > test_to_project_index_unreachable_when_kind_missing
+AssertionError: expected undefined to be 'unreachable' // Object.is equality
+
+- Expected:
+"unreachable"
+
++ Received:
+undefined
+
+ ❯ tests/unit/frontend/src/shared/components/project-index-unreachable.test.tsx:40:50
+     38|   const error = problemOf(503, { address: ADDRESS, reason: "r" });
+     39|
+     40|   expect(toProjectIndexUnreachable(error)?.kind).toBe("unreachable");
+       |                                                  ^
+     41| });
+     42|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/3]⎯
+
+
+ Test Files  2 failed | 50 passed (52)
+      Tests  3 failed | 158 passed (161)
+   Start at  09:36:32
+   Duration  319.93s (environment 53%, import 23%, setup 20%, transform 3%, tests 1%, worker 1%)
+
+Environment  jsdom was created 52 times · 1084.10s total, 53% of tracked time
+             create it once per worker with pool: 'vmThreads' (keeps per-file isolation) or isolate: false (shares it across files)
+             learn more: https://vitest.dev/guide/improving-performance#test-environments
+
+fe exit=1
