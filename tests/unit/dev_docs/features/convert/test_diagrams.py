@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import re
+from collections.abc import Callable
 from typing import Any
 
 import pytest
@@ -10,6 +11,16 @@ from dev_docs.features.convert.diagrams import er_table_titles, render_diagram, 
 from dev_docs.features.convert.types import DiagramHead
 
 HEAD = DiagramHead(title="図", scope="文書", updated="2026-11-03")
+
+
+def _no_link(target: str) -> str | None:
+    """どの `id:` のリンク先も引けない、リンク先の引き方。"""
+    return None
+
+
+def _links(targets: dict[str, str]) -> Callable[[str], str | None]:
+    """`targets` のキーだけを値のリンク先にする、リンク先の引き方。"""
+    return targets.get
 
 
 def _mermaid(block: str) -> list[str]:
@@ -36,7 +47,7 @@ def test_render_diagram() -> None:
         "edges": [{"from": "a", "to": "b", "label": "x"}],
     }
     # 実行
-    result = render_diagram(value, "flowchart", HEAD)
+    result = render_diagram(value, "flowchart", HEAD, link=_no_link)
     # 検証
     assert result.startswith('<!-- map: {"title": "図"} -->')
     assert result.endswith("<!-- /map -->")
@@ -68,7 +79,7 @@ def test_render_diagram_when_node_kinds(kind: str | None, expected: str) -> None
     # 準備
     node: dict[str, Any] = {"id": "a"} if kind is None else {"id": "a", "kind": kind}
     # 実行
-    result = render_diagram({"nodes": [node], "edges": []}, "flowchart", HEAD)
+    result = render_diagram({"nodes": [node], "edges": []}, "flowchart", HEAD, link=_no_link)
     # 検証
     assert f'a["a"]:::{expected}' in _mermaid(result)
 
@@ -81,7 +92,7 @@ def test_render_diagram_when_hint_and_tip() -> None:
         "edges": [{"from": "a", "to": "b", "label": "読む", "line": "read", "tip": "詳細"}],
     }
     # 実行
-    result = render_diagram(value, "flowchart", HEAD)
+    result = render_diagram(value, "flowchart", HEAD, link=_no_link)
     # 検証
     data = _map_data(result)
     assert data is not None
@@ -99,7 +110,7 @@ def test_render_diagram_when_unknown_line() -> None:
         "edges": [{"from": "a", "to": "b", "line": "dotted"}],
     }
     # 実行
-    result = render_diagram(value, "flowchart", HEAD)
+    result = render_diagram(value, "flowchart", HEAD, link=_no_link)
     # 検証
     assert _map_data(result) is None
 
@@ -118,7 +129,7 @@ def test_render_diagram_when_direction(kind: str, value: dict[str, Any], expecte
     # 準備
     graph = {**value, "nodes": [{"id": "a"}, {"id": "b"}], "edges": [{"from": "a", "to": "b"}]}
     # 実行
-    result = render_diagram(graph, kind, HEAD)  # type: ignore[arg-type]
+    result = render_diagram(graph, kind, HEAD, link=_no_link)  # type: ignore[arg-type]
     # 検証
     assert _mermaid(result)[0] == expected
 
@@ -132,7 +143,7 @@ def test_render_diagram_when_frame() -> None:
         "frame": {"label": "判定", "nodes": ["a", "b"]},
     }
     # 実行
-    result = render_diagram(value, "flowchart", HEAD)
+    result = render_diagram(value, "flowchart", HEAD, link=_no_link)
     # 検証
     lines = _mermaid(result)
     start = lines.index('subgraph frame ["判定"]')
@@ -149,7 +160,7 @@ def test_render_diagram_when_unsafe_id() -> None:
         "edges": [{"from": "画面 (一覧)", "to": "外部-API", "line": "read"}],
     }
     # 実行
-    result = render_diagram(value, "flowchart", HEAD)
+    result = render_diagram(value, "flowchart", HEAD, link=_no_link)
     # 検証
     lines = _mermaid(result)
     assert 'n2["画面 (一覧)"]:::script' in lines
@@ -175,7 +186,7 @@ def test_render_diagram_when_state() -> None:
         ],
     }
     # 実行
-    result = render_diagram(value, "state", HEAD)
+    result = render_diagram(value, "state", HEAD, link=_no_link)
     # 検証
     lines = _mermaid(result)
     assert lines[0] == "stateDiagram-v2"
@@ -197,7 +208,7 @@ def test_render_diagram_when_state_representative() -> None:
         ],
     }
     # 実行
-    result = render_diagram(value, "state", HEAD)
+    result = render_diagram(value, "state", HEAD, link=_no_link)
     # 検証
     lines = _mermaid(result)
     assert "s1 --> s2" in lines
@@ -210,7 +221,7 @@ def test_render_diagram_when_state_without_representative() -> None:
     # 準備
     value = {"states": [{"name": "下書き"}], "transitions": [{"from": "全状態", "to": "下書き"}]}
     # 実行
-    result = render_diagram(value, "state", HEAD)
+    result = render_diagram(value, "state", HEAD, link=_no_link)
     # 検証
     assert _mermaid(result) == ["stateDiagram-v2", 'state "下書き" as s1']
 
@@ -249,7 +260,7 @@ def test_render_diagram_when_er() -> None:
         }
     ]
     # 実行
-    result = render_diagram(value, "er", HEAD, tables=tables)
+    result = render_diagram(value, "er", HEAD, tables=tables, link=_no_link)
     # 検証
     lines = _mermaid(result)
     assert lines[0] == "erDiagram"
@@ -287,7 +298,7 @@ def test_render_diagram_when_er_relation_dropped() -> None:
         ],
     }
     # 実行
-    result = render_diagram(value, "er", HEAD)
+    result = render_diagram(value, "er", HEAD, link=_no_link)
     # 検証
     assert _mermaid(result) == ["erDiagram", "顧客 {", "any id PK", "}", "注文 {", "any id PK", "}"]
     assert "参照:" not in result
@@ -298,7 +309,7 @@ def test_render_diagram_when_marker_text() -> None:
     # 準備
     value = {"nodes": [{"id": "a", "label": '"x"', "hint": "a--b"}], "edges": []}
     # 実行
-    result = render_diagram(value, "flowchart", HEAD)
+    result = render_diagram(value, "flowchart", HEAD, link=_no_link)
     # 検証
     marker = re.search(r"<!-- map-data: (.*?) -->", result, re.S)
     assert marker is not None
@@ -313,7 +324,7 @@ def test_render_diagram_when_unknown_kind() -> None:
     """知らない図の種類（異常系）。"""
     # 実行・検証
     with pytest.raises(ValueError, match="x-diagram gantt は描けません"):
-        render_diagram({}, "gantt", HEAD)  # type: ignore[arg-type]
+        render_diagram({}, "gantt", HEAD, link=_no_link)  # type: ignore[arg-type]
 
 
 def test_er_table_titles() -> None:
@@ -345,7 +356,7 @@ def test_render_mermaid() -> None:
     # 準備
     code = "sequenceDiagram\n  A->>B: 読む"
     # 実行
-    result = render_mermaid(code, HEAD)
+    result = render_mermaid(code, HEAD, _no_link)
     # 検証
     assert result.startswith('<!-- map: {"title": "図"} -->')
     assert f"```mermaid\n{code}\n```" in result
@@ -365,7 +376,7 @@ def test_render_mermaid() -> None:
 def test_render_mermaid_when_kinds(first: str) -> None:
     """map で描く種類（正常系）。"""
     # 実行
-    result = render_mermaid(f"{first}\n  a --> b", HEAD)
+    result = render_mermaid(f"{first}\n  a --> b", HEAD, _no_link)
     # 検証
     assert result.startswith("<!-- map: ")
 
@@ -375,6 +386,84 @@ def test_render_mermaid_when_not_mappable() -> None:
     # 準備
     code = "classDiagram\n  class A"
     # 実行
-    result = render_mermaid(code, HEAD)
+    result = render_mermaid(code, HEAD, _no_link)
+    # 検証
+    assert result == f"```mermaid\n{code}\n```"
+
+
+def test_render_diagram_when_clicks() -> None:
+    """ノードのリンク（正常系）。"""
+    # 準備
+    value = {
+        "nodes": [{"id": "a", "label": "A"}, {"id": "b", "label": "B"}, {"id": "c", "label": "C"}],
+        "edges": [],
+        "clicks": [
+            {"id": "a", "href": "id:doc-2"},
+            {"id": "b", "href": "id:no-such"},
+            {"id": "c", "href": "../x.yaml#y"},
+            {"id": "z", "href": "id:doc-2"},
+        ],
+    }
+    # 実行
+    result = render_diagram(value, "flowchart", HEAD, link=_links({"doc-2": "doc-2.yaml"}))
+    # 検証
+    lines = _mermaid(result)
+    assert 'click a "doc-2.yaml"' in lines
+    assert 'click c "../x.yaml#y"' in lines
+    assert not any(line.startswith(("click b", "click z")) for line in lines)
+    assert not any(line.startswith("z[") for line in lines)
+
+
+def test_render_diagram_when_clicks_unsafe_id() -> None:
+    """Mermaid の ID にできないノードのリンク（正常系）。"""
+    # 準備
+    value = {
+        "nodes": [{"id": "end", "label": "終わり"}, {"id": "画面 (一覧)", "label": "一覧"}],
+        "edges": [],
+        "clicks": [{"id": "end", "href": "id:doc-2"}, {"id": "画面 (一覧)", "href": "id:doc-2"}],
+    }
+    # 実行
+    result = render_diagram(value, "flowchart", HEAD, link=_links({"doc-2": "doc-2.yaml"}))
+    # 検証
+    lines = _mermaid(result)
+    assert 'click n1 "doc-2.yaml"' in lines
+    assert 'click n2 "doc-2.yaml"' in lines
+    assert not any(line.startswith(("click end", "click 画面")) for line in lines)
+
+
+def test_render_mermaid_when_id_click() -> None:
+    """フローチャートの id のリンク（正常系）。"""
+    # 準備
+    code = "\n".join(
+        [
+            "flowchart TD",
+            "  A --> B",
+            'click A "id:doc-6#flow"',
+            '  click B href "id:doc-2" _blank',
+            'click C "id:no-such"',
+            'click D "../x.yaml"',
+        ]
+    )
+    link = _links({"doc-6#flow": "doc-6.yaml#処理の流れ", "doc-2": "doc-2.yaml"})
+    # 実行
+    result = render_mermaid(code, HEAD, link)
+    # 検証
+    match = re.search(r"```mermaid\n(.*?)\n```", result, re.S)
+    assert match is not None
+    assert match.group(1).splitlines() == [
+        "flowchart TD",
+        "  A --> B",
+        'click A "doc-6.yaml#処理の流れ"',
+        '  click B href "doc-2.yaml" _blank',
+        'click D "../x.yaml"',
+    ]
+
+
+def test_render_mermaid_when_id_click_not_flowchart() -> None:
+    """フローチャート以外の click の行（正常系）。"""
+    # 準備
+    code = 'classDiagram\n  class A\nclick A href "id:doc-2"'
+    # 実行
+    result = render_mermaid(code, HEAD, _links({"doc-2": "doc-2.yaml"}))
     # 検証
     assert result == f"```mermaid\n{code}\n```"
