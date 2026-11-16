@@ -1,0 +1,32 @@
+docs:
+  - page: docs/dev-command/CMD-155-1.yaml
+    new: false
+    change: 「ビルド・生成」の手順 4 の「実行のたびに作り直す」を「実行のたびに再作成する」にする
+    status: done
+    updated_by: planner
+    updated_at: '2026-11-16T15:28:43.176405+00:00'
+  - page: docs/interface/IF-155-10.yaml
+    new: false
+    change: 異常系（project-index につながらない・503）の expected の「dev-docs のアプリを作り直さない」を「dev-docs のアプリを再作成しない」にする
+    status: done
+    updated_by: planner
+    updated_at: '2026-11-16T15:28:43.176405+00:00'
+  - page: docs/library/LIB-155-6.yaml
+    new: false
+    change: glob / stage_fixed の purpose の「作り直したファイルをステージへ戻す」を「再作成したファイルをステージへ戻す」にする
+    status: done
+    updated_by: planner
+    updated_at: '2026-11-16T15:28:43.176405+00:00'
+  - page: docs/mock/refs/56/assets/prompt-doc.js
+    new: false
+    change: buildToc の JSDoc の「右の目次を作り直す」を「右の目次を再作成する」にする
+    status: done
+    updated_by: planner
+    updated_at: '2026-11-16T15:28:43.176405+00:00'
+scope_out:
+  - item: 対象の 4 ファイルの「作り直す」以外の「直す」のヒット（CMD-155-1.yaml 100 行目の「ビルドし直して」・117 行目の「起動し直した」、IF-155-10.yaml 751 行目の「読み直した」・752 行目の「開き直した」、prompt-doc.js 46 行目の「描き直された」）
+    reason: '同じ対応表の同じ行（naosu）のヒットだが、受付判断（pt 1）は Issue の本文の表の「作り直す」4 か所を対象にしているため含めない（レビューで確定）。今回の作業 PR がマージされなくても同じ内容で成り立つ。docs/ の文書を対応表に合わせる作業は #95 の手順 4 が持つ'
+    plan: '#95'
+  - item: 他の文書（docs/ の下。docs/pr/ と対象の 4 ファイルを除く）の「直す」のヒット（226 行・58 ファイル。docs/guide/管理のMCP.md・docs/scenario/SC-155-10.yaml・docs/interface/IF-155-7.yaml など。「起動し直す」「つなぎ直す」「読み直す」など）
+    reason: '同じ対応表の同じ行のヒットだが、要望は「作り直す」の 4 か所に限る。docs/ の文書を対応表に合わせる作業は #95 の手順 4 が持つ'
+    plan: '#95'
