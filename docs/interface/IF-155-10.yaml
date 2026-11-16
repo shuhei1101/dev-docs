@@ -399,7 +399,7 @@ flows:
         description: なし
         notes: '-'
       - name: mdmark の CLI
-        description: '`package.json` の `devDependencies` でバージョンを固定した mdmark の CLI（`node_modules/.bin/mdmark`）'
+        description: '結合テストが実行時に `npx -y github:shuhei1101/mdmark#{参照}` で取る mdmark の CLI（参照の既定は `develop`）'
         notes: 返った `markdown` を `mdmark check --text -` の標準入力に指定し、`--config` に画面が `mount` に指定するのと同じ map の設定（`map.kinds`・`map.lines`）のファイルを指定する。CLI が無いときはテストを失敗にする
       - name: フロー図を持つ文書
         description: 'sample に、`x-shape: diagram`・`x-diagram: flowchart` の項目・`x-diagram: state` の項目・`flowchart` を書いた Mermaid の文字列の項目を持つスキーマと、その文書 9 を配置する'
