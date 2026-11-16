@@ -1,0 +1,55 @@
+$ PYTEST_DEBUG_TEMPROOT=/tmp/pytest-root-241 uv run pytest tests/unit/
+# /tmp/pytest-of-shuhei2441 が別の所有者のため、一時フォルダの起点だけを環境変数で変えた
+==================================== ERRORS ====================================
+_____ ERROR collecting tests/unit/dev_docs/features/convert/test_inline.py _____
+ImportError while importing test module '/home/shuhei2441/repo/dev-docs/.claude/worktrees/fix-convert-mermaid-click-node-link/tests/unit/dev_docs/features/convert/test_inline.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+tests/unit/dev_docs/features/convert/test_inline.py:3: in <module>
+    from dev_docs.features.convert.inline import (
+E   ImportError: cannot import name 'link_target' from 'dev_docs.features.convert.inline' (/home/shuhei2441/repo/dev-docs/.claude/worktrees/fix-convert-mermaid-click-node-link/src/dev_docs/features/convert/inline.py)
+=========================== short test summary info ============================
+ERROR tests/unit/dev_docs/features/convert/test_inline.py
+!!!!!!!!!!!!!!!!!!!! Interrupted: 1 error during collection !!!!!!!!!!!!!!!!!!!!
+1 error in 2.35s
+
+$ PYTEST_DEBUG_TEMPROOT=/tmp/pytest-root-241 uv run pytest tests/unit/ --continue-on-collection-errors
+ERROR tests/unit/dev_docs/features/convert/test_inline.py
+FAILED tests/unit/dev_docs/features/convert/test_diagrams.py::test_render_diagram
+FAILED tests/unit/dev_docs/features/convert/test_diagrams.py::test_render_diagram_when_node_kinds[actor]
+FAILED tests/unit/dev_docs/features/convert/test_diagrams.py::test_render_diagram_when_node_kinds[external]
+FAILED tests/unit/dev_docs/features/convert/test_diagrams.py::test_render_diagram_when_node_kinds[process]
+FAILED tests/unit/dev_docs/features/convert/test_diagrams.py::test_render_diagram_when_node_kinds[system]
+FAILED tests/unit/dev_docs/features/convert/test_diagrams.py::test_render_diagram_when_node_kinds[store]
+FAILED tests/unit/dev_docs/features/convert/test_diagrams.py::test_render_diagram_when_node_kinds[start]
+FAILED tests/unit/dev_docs/features/convert/test_diagrams.py::test_render_diagram_when_node_kinds[question]
+FAILED tests/unit/dev_docs/features/convert/test_diagrams.py::test_render_diagram_when_node_kinds[action]
+FAILED tests/unit/dev_docs/features/convert/test_diagrams.py::test_render_diagram_when_node_kinds[result]
+FAILED tests/unit/dev_docs/features/convert/test_diagrams.py::test_render_diagram_when_node_kinds[none]
+FAILED tests/unit/dev_docs/features/convert/test_diagrams.py::test_render_diagram_when_hint_and_tip
+FAILED tests/unit/dev_docs/features/convert/test_diagrams.py::test_render_diagram_when_unknown_line
+FAILED tests/unit/dev_docs/features/convert/test_diagrams.py::test_render_diagram_when_direction[flowchart]
+FAILED tests/unit/dev_docs/features/convert/test_diagrams.py::test_render_diagram_when_direction[dataflow]
+FAILED tests/unit/dev_docs/features/convert/test_diagrams.py::test_render_diagram_when_direction[architecture]
+FAILED tests/unit/dev_docs/features/convert/test_diagrams.py::test_render_diagram_when_direction[dataflow-td]
+FAILED tests/unit/dev_docs/features/convert/test_diagrams.py::test_render_diagram_when_frame
+FAILED tests/unit/dev_docs/features/convert/test_diagrams.py::test_render_diagram_when_unsafe_id
+FAILED tests/unit/dev_docs/features/convert/test_diagrams.py::test_render_diagram_when_state
+FAILED tests/unit/dev_docs/features/convert/test_diagrams.py::test_render_diagram_when_state_representative
+FAILED tests/unit/dev_docs/features/convert/test_diagrams.py::test_render_diagram_when_state_without_representative
+FAILED tests/unit/dev_docs/features/convert/test_diagrams.py::test_render_diagram_when_er
+FAILED tests/unit/dev_docs/features/convert/test_diagrams.py::test_render_diagram_when_er_relation_dropped
+FAILED tests/unit/dev_docs/features/convert/test_diagrams.py::test_render_diagram_when_marker_text
+FAILED tests/unit/dev_docs/features/convert/test_diagrams.py::test_render_diagram_when_unknown_kind
+FAILED tests/unit/dev_docs/features/convert/test_diagrams.py::test_render_mermaid
+FAILED tests/unit/dev_docs/features/convert/test_diagrams.py::test_render_mermaid_when_kinds[flowchart]
+FAILED tests/unit/dev_docs/features/convert/test_diagrams.py::test_render_mermaid_when_kinds[graph]
+FAILED tests/unit/dev_docs/features/convert/test_diagrams.py::test_render_mermaid_when_kinds[er]
+FAILED tests/unit/dev_docs/features/convert/test_diagrams.py::test_render_mermaid_when_kinds[state-v2]
+FAILED tests/unit/dev_docs/features/convert/test_diagrams.py::test_render_mermaid_when_kinds[state]
+FAILED tests/unit/dev_docs/features/convert/test_diagrams.py::test_render_mermaid_when_not_mappable
+FAILED tests/unit/dev_docs/features/convert/test_diagrams.py::test_render_diagram_when_clicks
+FAILED tests/unit/dev_docs/features/convert/test_diagrams.py::test_render_diagram_when_clicks_unsafe_id
+FAILED tests/unit/dev_docs/features/convert/test_diagrams.py::test_render_mermaid_when_id_click
+FAILED tests/unit/dev_docs/features/convert/test_diagrams.py::test_render_mermaid_when_id_click_not_flowchart
+37 failed, 443 passed, 1 error in 13.39s
