@@ -16,6 +16,7 @@ from dev_docs.features.convert.inline import (
     heading_anchor,
     link_decisions,
     link_reference,
+    link_target,
     rewrite_text,
 )
 from dev_docs.features.convert.types import DiagramHead, DiagramKind, RenderContext
@@ -394,7 +395,15 @@ class _Builder:
         kind: DiagramKind = sub.get("x-diagram", "flowchart")
         # ER 図の列を補う同じ文書のテーブル（ER 図以外は使用しない）
         tables = self.data.get(ER_TABLES_KEY) if isinstance(self.data, Mapping) else None
-        self.blocks.append(render_diagram(value, kind, self.head(title), tables=_items(tables)))
+        self.blocks.append(
+            render_diagram(
+                value,
+                kind,
+                self.head(title),
+                tables=_items(tables),
+                link=lambda target: link_target(target, self.context),
+            )
+        )
         properties: Mapping[str, Any] = sub.get("properties") or {}
         for key, rows in value.items():
             if not _is_rows(rows):
