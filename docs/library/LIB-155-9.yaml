@@ -28,7 +28,7 @@ catalogs:
       - name: onColumnsChange
         kind: コールバック
         purpose: 表の列の出し入れを知らせる
-        description: '[mdmark#222](https://github.com/shuhei1101/mdmark/issues/222) で入り、v0.10.0 の master にある。引数は `{tableIndex, hidden}` で、`tableIndex` は `+columns` の表だけの出る順の番号。列の出し入れは `テーブル設定` のボタンで開くダイアログの `「{列名}」を隠す`・`「{列名}」を表示` のボタンで行い、隠した列があるときはボタンの読み上げ名が `テーブル設定（{件数} 列を非表示）` になる'
+        description: '[mdmark#222](https://github.com/shuhei1101/mdmark/issues/222) で入り、v0.10.0 の master にある。引数は `{tableIndex, hidden}` で、`tableIndex` は列の表示・非表示の機能を持つ表（JSON のマーカーは `features.columns` か `columns.{列名}.hidden` で付き、`features.columns.enabled` が `false` なら付かない。前の記載方法は `+columns`）だけの出る順の番号。列の出し入れは `テーブル設定` のボタンで開くダイアログの `「{列名}」を隠す`・`「{列名}」を表示` のボタンで行い、隠した列があるときはボタンの読み上げ名が `テーブル設定（{件数} 列を非表示）` になる'
       - name: reloadComments / focusComment
         kind: メソッド
         purpose: コメントのマーカーの描き直しとスクロール

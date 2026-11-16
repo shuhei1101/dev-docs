@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import posixpath
 import re
 from collections.abc import Mapping, Sequence
@@ -130,6 +131,11 @@ def _cell(value: Any, context: RenderContext | None) -> str:
     return _escape_cell(_scalar(value))
 
 
+def _table_marker(args: Mapping[str, Any]) -> str:
+    """mdmark の表のマーカーを、JSON の引数の 1 行で返す。"""
+    return f"<!-- table: {json.dumps(args, ensure_ascii=False)} -->"
+
+
 def render_table(
     rows: Sequence[Mapping[str, Any]],
     item_schema: Mapping[str, Any],
@@ -161,18 +167,20 @@ def render_table(
         return str(sub.get("title") or key) if isinstance(sub, Mapping) else key
 
     # 表のマーカーの引数（mdmark は先頭の列を隠せないため、先頭の列は隠す列に入れない）
-    marker = ["data"]
+    marker: dict[str, Any] = {"kind": "data"}
     if closed:
-        marker.append("closed")
-    hide = [title(key) for key in columns[1:] if key in hidden and " " not in title(key)]
-    if hide:
-        marker.append(f"+columns hide={','.join(hide)}")
-    wide = [title(key) for key in columns if key in WIDE_KEYS and " " not in title(key)]
-    if wide:
-        marker.append(f"wide={','.join(wide)}")
+        marker["collapse"] = {"open": False}
+    settings: dict[str, dict[str, Any]] = {}
+    for key in columns:
+        if key in hidden and key != columns[0]:
+            settings.setdefault(title(key), {})["hidden"] = True
+        if key in WIDE_KEYS:
+            settings.setdefault(title(key), {})["width"] = {"mode": "nowrap"}
+    if settings:
+        marker["columns"] = settings
     lines = [
         f"<!-- dev-docs-table: {table_key} -->",
-        f"<!-- table: {' '.join(marker)} -->",
+        _table_marker(marker),
         f"| {' | '.join(title(key) for key in columns)} |",
         f"| {' | '.join('---' for _ in columns)} |",
     ]
@@ -209,7 +217,13 @@ def render_attributes(
             cell = link if link is not None else _escape_cell(text)
         rows.append(f"| {_escape_cell(name)} | {cell} |")
     table = "\n".join(
-        ["<!-- table: plain -->", "| 項目 | 値 |", "| --- | --- |", *rows, "<!-- /table -->"]
+        [
+            _table_marker({"kind": "plain"}),
+            "| 項目 | 値 |",
+            "| --- | --- |",
+            *rows,
+            "<!-- /table -->",
+        ]
     )
     return "\n\n".join([table, *details])
 
@@ -362,7 +376,11 @@ class _Builder:
         """対応テストファイルを、引き先があればリンク、無ければ行内のコードの 1 列の閉じた表にする。"""
         paths = [str(item) for item in value] if isinstance(value, list) else [str(value)]
         cells = [link_reference(path, self.context) or f"`{path}`" for path in paths]
-        lines = ["<!-- table: plain closed -->", f"| {title} |", "| --- |"]
+        lines = [
+            _table_marker({"kind": "plain", "collapse": {"open": False}}),
+            f"| {title} |",
+            "| --- |",
+        ]
         lines.extend(f"| {cell} |" for cell in cells)
         lines.append("<!-- /table -->")
         self.blocks.append("\n".join(lines))

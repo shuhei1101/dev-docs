@@ -330,11 +330,11 @@ flows:
       - '`markdown` に `<!-- map` の範囲が 4 つあり、どの範囲も `` ```mermaid `` のコードブロックを 1 つ持つ。`<!-- flow -->`・`<!-- sequence -->` の範囲が無い'
       - 'flowchart の範囲の Mermaid が `flowchart` で、`q` にクラス `question`、`r` にクラス `result` が付き、`q`・`r` がタイトル `判定` の `subgraph` に入る。補足（`<!-- map-data -->`）の `notes` に `q` の `hint` と `q` から `r` への線の `tip`、`layout` にその線の `line` の `read` がある'
       - 'state の範囲の Mermaid が `stateDiagram-v2` で、状態を `state "{名前}" as {ID}` で宣言し、その ID で `[*] --> 下書き`・`下書き --> 公開 : 公開する`・`公開 --> [*]` の行がある'
-      - 図の元データの表が `closed` の表のマーカーで囲まれ、ノードの表の先頭の列が `表示` で、`+columns hide=` に ID の列名がある。辺の表のマーカーは `hide=` を持たない
+      - 図の元データの表が、`collapse.open` が `false` の JSON の表のマーカーで囲まれ、ノードの表の先頭の列が `表示` で、マーカーの `columns` の ID の列の `hidden` が `true`。辺の表のマーカーは `hidden` の列を持たない
       - スカラーが並ぶオブジェクトが、列名が `項目`・`値` の表になっている
       - 改行を含む値の `**{title}**` が値と別の行にある
       - '`title`・`lead` の値が見出しとリードの後に `**…**:` の行で出ず、`x-hidden: true` の項目の値が `markdown` に無い'
-      - 説明の列を持つ表のマーカーに `wide=` と説明の列名がある
+      - 説明の列を持つ表のマーカーの `columns` の説明の列の `width.mode` が `nowrap`
     test: test_normal_when_schema_document_drawn
   - name: 正常系（map で描かない Mermaid を残す）
     summary: 1 行目が map で描けない種類の Mermaid の文字列は、Mermaid のコードブロックのまま返す
@@ -390,7 +390,7 @@ flows:
       - '`注文` と `支払い` の `customer_id` の列のコメントが `参照: 顧客.id`'
       - Mermaid の関連の行が 2 つで、`顧客` から `注文`（多重度 `1` と `0..n`、ラベル `注文する`）と、`顧客` から `支払い`（多重度 `1` と `0..n`）
       - '`注文` から `商品` への関連は Mermaid に無く、図の元データの表の関連の行にある'
-      - 図の元データの表が `closed` の表のマーカーで囲まれている
+      - 図の元データの表が、`collapse.open` が `false` の JSON の表のマーカーで囲まれている
     test: test_normal_when_er_diagram_drawn
   - name: 正常系（図が mdmark の点検を通る）
     summary: 線がノードを横切りやすい構造の図を、mdmark の点検で書き方の警告が出ない map の範囲にする
@@ -419,7 +419,7 @@ flows:
       ```
     expected:
       - '`markdown` に `<!-- map` の範囲が 3 つある'
-      - '`markdown` を `mdmark check --text -` にかけた結果に、表のマーカーの前の記載方法（`legacy_mark`）以外のずれが 1 件も無い'
+      - '`markdown` を `mdmark check --text -` にかけた結果のずれが 0 件'
     test: test_normal_when_diagrams_checked
   - name: 正常系（本文の id のリンクを解決する）
     summary: 本文の `id:` のリンクを、同じ配信元の文書と、その項目の見出しのアンカーへのリンクにする

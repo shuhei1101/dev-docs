@@ -15,7 +15,7 @@ functions:
         type: '{source: string; columnKeys: string[]}'
         required: true
         passing: positional
-        description: '`source` は配信元の ID、`columnKeys` は `+columns` の表のキーを出る順に並べたもの（`findTables` の `columns` が真の表の `key`）'
+        description: '`source` は配信元の ID、`columnKeys` は列の表示・非表示の機能を持つ表のキーを出る順に並べたもの（`findTables` の `columns` が真の表の `key`）'
     returns:
       type: '(event: MdmarkColumnsChange) => void'
       description: mdmark の `onColumnsChange` に渡す関数
@@ -26,7 +26,7 @@ functions:
     unit_tests:
       - name: test_use_column_persistence
         case: 正常
-        summary: '`tableIndex` を `+columns` の表のキーにして保存する'
+        summary: '`tableIndex` を列の表示・非表示の機能を持つ表のキーにして保存する'
         condition: '`columnKeys` が `[t2]`、`{tableIndex: 0, hidden: [備考]}` で呼ぶ'
         mock: '`viewPutColumns`（`vi.mock`）'
         expected: '`viewPutColumns` が `(source, {table: t2, hidden: [備考]})` で 1 回'

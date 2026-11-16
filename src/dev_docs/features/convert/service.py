@@ -23,7 +23,7 @@ from dev_docs.integrations.project_index.types import (
 
 TABLE_KEY_PATTERN = r"^<!-- dev-docs-table: (?P<key>.+) -->$"
 
-TABLE_DATA_MARKER = "<!-- table: data -->"
+TABLE_MARKER_PATTERN = r"^<!-- table:.*-->$"
 SEPARATOR_ROW = re.compile(r"^\s*\|?\s*:?-{3,}:?\s*(\|\s*:?-{3,}:?\s*)*\|?\s*$")
 FENCE = re.compile(r"^\s{0,3}(?P<mark>`{3,}|~{3,})")
 
@@ -31,6 +31,7 @@ FENCE = re.compile(r"^\s{0,3}(?P<mark>`{3,}|~{3,})")
 def _strip_table_keys(markdown: str, kind: str) -> tuple[str, list[str]]:
     """表のキーのマーカーを取り除き、本文の表を出る順に表のキーと並べる。"""
     key_pattern = re.compile(TABLE_KEY_PATTERN)
+    marker_pattern = re.compile(TABLE_MARKER_PATTERN)
     lines = markdown.splitlines(keepends=True)
     kept: list[str] = []
     keys: list[str] = []
@@ -63,7 +64,7 @@ def _strip_table_keys(markdown: str, kind: str) -> tuple[str, list[str]]:
                     pending, in_table = None, True
             elif not is_row:
                 in_table = False
-                if text.strip() and text != TABLE_DATA_MARKER:
+                if text.strip() and not marker_pattern.match(text):
                     pending = None
         kept.append(line)
     return "".join(kept), keys

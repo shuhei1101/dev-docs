@@ -148,7 +148,7 @@ classes:
           description: Markdown と表のキー
         process: |-
           1. 埋め込みの展開（`embedded`）をする
-          2. コードブロックの外の表を出る順にたどり、直前に `TABLE_KEY_PATTERN` の行があればそのキー、無ければ `{種類}:table[{n}]`（`n` は本文の中の 0 始まりの順）を表のキーにする。マーカーの行を取り除いた Markdown と表のキーを返す
+          2. コードブロックの外の表を出る順にたどり、直前に `TABLE_KEY_PATTERN` の行（間に `TABLE_MARKER_PATTERN` の行を挟んでもよい）があればそのキー、無ければ `{種類}:table[{n}]`（`n` は本文の中の 0 始まりの順）を表のキーにする。マーカーの行を取り除いた Markdown と表のキーを返す
         unit_tests:
           - name: test_convert_service_finish
             case: 正常
@@ -162,6 +162,12 @@ classes:
             condition: '`<!-- embed: data/list.yaml#items -->` と、`embedded` の `data/list.yaml` の `items` が 2 行'
             mock: なし
             expected: 2 行の表があり、`table_keys` に `embed:data/list.yaml#items`
+          - name: test_convert_service_finish_when_table_marker
+            case: 正常
+            summary: 表のマーカーを挟んだ表のキー
+            condition: '`<!-- dev-docs-table: sample:items -->` の後に `<!-- table: {"kind": "data", "collapse": {"open": false}} -->` を挟んだ表を持つ Markdown'
+            mock: なし
+            expected: '`table_keys` が `[sample:items]`'
 constants:
   - name: TABLE_KEY_PATTERN
     title: 表のキーのマーカー
@@ -169,5 +175,11 @@ constants:
     usecase: 文書の取得
     summary: 表の組み立てが表の前に置き、変換の最後に取り除く行に当てる正規表現
     value: '`r"^<!-- dev-docs-table: (?P<key>.+) -->$"`'
+  - name: TABLE_MARKER_PATTERN
+    title: 表のマーカー
+    container: features/convert/service.py
+    usecase: 文書の取得
+    summary: 表のキーのマーカーと表の間で読み飛ばす、1 行の表のマーカー（記載方法を問わない）に当てる正規表現
+    value: '`r"^<!-- table:.*-->$"`'
 refs:
   - IF-155-10#

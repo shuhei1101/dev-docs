@@ -186,6 +186,20 @@ def test_convert_service_finish() -> None:
     assert result.table_keys == ["sample:items", "sample:table[1]"]
 
 
+def test_convert_service_finish_when_table_marker() -> None:
+    """表のマーカーを挟んだ表のキー（正常系）。"""
+    # 準備
+    markdown = (
+        "<!-- dev-docs-table: sample:items -->\n"
+        '<!-- table: {"kind": "data", "collapse": {"open": false}} -->\n'
+        "| a |\n| --- |\n| 1 |\n<!-- /table -->\n"
+    )
+    # 実行
+    result = ConvertService().finish(markdown, "sample", {})
+    # 検証
+    assert result.table_keys == ["sample:items"]
+
+
 def test_convert_service_finish_when_embed() -> None:
     """埋め込んだ表のキー（正常系）。"""
     # 準備
