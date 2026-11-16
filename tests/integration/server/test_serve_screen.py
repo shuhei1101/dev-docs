@@ -5,8 +5,17 @@ from pathlib import Path
 
 from .conftest import MockIndex, ServerEnv
 
-INDEX_HTML = "<!doctype html><title>dev-docs</title><script src=/assets/app-1a2b3c.js></script>"
+INDEX_HTML = (
+    "<!doctype html><html><head><title>dev-docs</title></head>"
+    "<body><script src=/assets/app-1a2b3c.js></script></body></html>"
+)
 ASSET_JS = "console.log('screen');"
+
+
+def _with_meta(version: str) -> str:
+    """ビルドの index.html の <head> の直後に mdmark のバージョンの meta を入れた本文。"""
+    meta = f'<meta name="mdmark-version" content="{version}">'
+    return INDEX_HTML.replace("<head>", f"<head>{meta}", 1)
 
 
 def _build_dir(tmp_path: Path, *, with_index: bool) -> Path:
@@ -33,7 +42,7 @@ def test_normal(
     # 検証
     for page in (top, doc):
         assert page.status_code == 200
-        assert page.text == INDEX_HTML
+        assert page.text == _with_meta("develop")
         assert page.headers["content-type"].startswith("text/html")
         assert page.headers["cache-control"] == "no-cache"
     assert asset.status_code == 200
@@ -42,6 +51,22 @@ def test_normal(
     assert "immutable" in asset.headers["cache-control"]
     assert api.status_code == 200
     assert api.json()["source"] == "sample"
+
+
+def test_normal_when_mdmark_version_pinned(
+    sample_index: MockIndex, make_server: Callable[..., ServerEnv], tmp_path: Path
+) -> None:
+    """端末の設定の mdmark_version の値を、index.html の mdmark-version の meta に入れて返却する（正常系）。"""
+    # 準備
+    build = _build_dir(tmp_path, with_index=True)
+    env = make_server(sample_index, screen_dir=build, extra="mdmark_version: v0.13.0\n")
+    # 実行
+    page = env.client.get("/sample/docs/doc-1")
+    # 検証
+    assert page.status_code == 200
+    assert page.text.count('name="mdmark-version"') == 1
+    assert page.text == _with_meta("v0.13.0")
+    assert (build / "index.html").read_text(encoding="utf-8") == INDEX_HTML
 
 
 def test_error_when_not_found(

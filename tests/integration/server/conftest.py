@@ -540,9 +540,11 @@ def make_server(tmp_path: Path) -> Iterator[Callable[..., ServerEnv]]:
             terminal = load_terminal_config(path)
             handlers = build_handlers(terminal)
             app = (
-                build_app(handlers)
+                build_app(handlers, mdmark_version=terminal.mdmark_version)
                 if screen_dir is None
-                else build_app(handlers, screen_dir=screen_dir)
+                else build_app(
+                    handlers, screen_dir=screen_dir, mdmark_version=terminal.mdmark_version
+                )
             )
             client = stack.enter_context(TestClient(app, base_url=LOCAL_BASE_URL))
             return ServerEnv(path, terminal.state_dir, handlers, client)
