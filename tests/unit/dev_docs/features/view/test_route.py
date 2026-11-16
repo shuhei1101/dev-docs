@@ -176,5 +176,5 @@ def test_build_view_router_when_project_index_unreachable(
     # 検証
     assert [response.status_code for response in responses] == [503, 503, 503]
     assert [sorted(response.json()["projectIndex"]) for response in responses] == [
-        ["address", "reason"]
+        ["address", "kind", "reason"]
     ] * 3
