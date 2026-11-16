@@ -58,7 +58,7 @@ functions:
     process: |-
       1. `findTables` で表を引く
       2. `columns` が真で、`columns` にその表のキーがある表のマーカーを書き換える
-         - JSON のマーカーは、全ての列の `hidden` を `columns[key]` と一致させ（`columns[key]` に無い列の `hidden` は削除し、`columns` に設定の無くなった列は削除する）、`hidden` が `true` の列が無くなるときは `features.columns` の `{}` を追加する。マーカーの範囲を 1 行の JSON に置き換える
+         - JSON のマーカーは、全ての列の `hidden` を `columns[key]` と一致させ（`columns[key]` に無い列の `hidden` は削除し、`columns` に設定の無くなった列は削除し、列が無くなった `columns` は削除する）、`hidden` が `true` の列が無くなるときは `features.columns` の `{}` を追加する。マーカーの範囲を 1 行の JSON に置き換える
          - 前の記載方法のマーカーは、`columns[key]` が空でないときだけ、行の末尾（`-->` の前）に ` hide={列名をカンマでつないだもの}` を入れる
     unit_tests:
       - name: test_apply_hidden_columns
