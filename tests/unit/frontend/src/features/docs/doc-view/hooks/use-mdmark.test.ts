@@ -1,7 +1,7 @@
 import { renderHook, waitFor } from "@testing-library/react";
 import { beforeEach, expect, test, vi } from "vitest";
 
-const MDMARK_URL = "https://cdn.jsdelivr.net/gh/shuhei1101/mdmark@v0.13.0/dist/index.js";
+const MDMARK_URL = "https://cdn.jsdelivr.net/gh/shuhei1101/mdmark@develop/dist/index.js";
 
 const fake = () => {
   const handle = { update: vi.fn(), destroy: vi.fn() };
@@ -218,4 +218,27 @@ test("test_use_mdmark_when_map_config", async () => {
   };
   expect(opts.config.map.kinds).toHaveProperty("question");
   expect(opts.config.map.lines).toHaveProperty("read");
+});
+
+test("test_mdmark_urls", async () => {
+  const { mdmarkUrls } = await import("@/features/docs/doc-view/hooks/use-mdmark");
+  const doc = document.implementation.createHTMLDocument("");
+  const meta = doc.createElement("meta");
+  meta.name = "mdmark-version";
+  meta.content = "v0.13.0";
+  doc.head.append(meta);
+
+  const urls = mdmarkUrls(doc);
+
+  expect(urls.js).toBe("https://cdn.jsdelivr.net/gh/shuhei1101/mdmark@v0.13.0/dist/index.js");
+  expect(urls.css).toBe("https://cdn.jsdelivr.net/gh/shuhei1101/mdmark@v0.13.0/dist/index.css");
+});
+
+test("test_mdmark_urls_when_meta_missing", async () => {
+  const { mdmarkUrls } = await import("@/features/docs/doc-view/hooks/use-mdmark");
+  const doc = document.implementation.createHTMLDocument("");
+
+  const urls = mdmarkUrls(doc);
+
+  expect(urls.js).toBe("https://cdn.jsdelivr.net/gh/shuhei1101/mdmark@develop/dist/index.js");
 });

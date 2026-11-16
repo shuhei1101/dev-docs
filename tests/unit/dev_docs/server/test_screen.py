@@ -9,14 +9,14 @@ from fastapi.testclient import TestClient
 from dev_docs.server.error_handlers import register_error_handlers
 from dev_docs.server.screen import build_screen_router
 
-INDEX = "<html>index</html>"
+INDEX = "<html><head><title>dev-docs</title></head><body>index</body></html>"
 
 
-def _client(dist_dir: Path) -> TestClient:
+def _client(dist_dir: Path, mdmark_version: str = "develop") -> TestClient:
     """画面の配信だけを持つアプリのクライアントを返却する。"""
     app = FastAPI()
     register_error_handlers(app)
-    app.include_router(build_screen_router(dist_dir))
+    app.include_router(build_screen_router(dist_dir, mdmark_version=mdmark_version))
     return TestClient(app)
 
 
@@ -38,8 +38,23 @@ def test_build_screen_router(dist_dir: Path) -> None:
     response = client.get("/default/設計書/a.md")
     # 検証
     assert response.status_code == 200
-    assert response.text == INDEX
+    assert response.text == INDEX.replace(
+        "<head>", '<head><meta name="mdmark-version" content="develop">'
+    )
     assert response.headers["cache-control"] == "no-cache"
+
+
+def test_build_screen_router_when_mdmark_version(dist_dir: Path) -> None:
+    """指定した mdmark のバージョンを meta に入れる（正常系）。"""
+    # 準備
+    client = _client(dist_dir, mdmark_version="v0.13.0")
+    # 実行
+    response = client.get("/")
+    # 検証
+    meta = '<meta name="mdmark-version" content="v0.13.0">'
+    assert response.text.count("mdmark-version") == 1
+    assert response.text.startswith(f"<html><head>{meta}")
+    assert (dist_dir / "index.html").read_text(encoding="utf-8") == INDEX
 
 
 def test_build_screen_router_when_asset(dist_dir: Path) -> None:
