@@ -3,11 +3,13 @@ from __future__ import annotations
 import json
 import re
 import subprocess
+import threading
 import time
 from collections.abc import Callable
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlsplit
 
 import pytest
 
@@ -983,9 +985,10 @@ def test_error_when_project_index_timed_out(
     make_server: Callable[..., ServerEnv],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """project-index が制限時間を過ぎても応答しなければ打ち切って 503 を返却する（異常系）。"""
-    # 準備
-    monkeypatch.setattr("dev_docs.main.PROJECT_INDEX_TIMEOUT_SEC", 1)
+    """project-index が文書の取得の制限時間を過ぎても応答しなければ打ち切って 503 を返却する（異常系）。"""
+    # 準備（問い合わせごとの制限時間は、文書の取得の制限時間より長くする）
+    monkeypatch.setattr("dev_docs.main.PROJECT_INDEX_TIMEOUT_SEC", 10)
+    monkeypatch.setattr("dev_docs.features.view.document.DOCUMENT_FETCH_TIMEOUT_SEC", 1)
     mock_index.serve("sample", IndexSource(docs={None: _sample()}))
     env = make_server(mock_index)
     mock_index.delay_sec = 3
@@ -995,6 +998,74 @@ def test_error_when_project_index_timed_out(
     # 検証
     elapsed = time.monotonic() - started
     assert response.status_code == 503
-    assert response.json()["projectIndex"]["address"] == mock_index.address
-    assert "1 秒以内に応答がありませんでした" in response.json()["projectIndex"]["reason"]
+    assert response.headers["content-type"].startswith("application/problem+json")
+    problem = response.json()["projectIndex"]
+    assert problem["kind"] == "timeout"
+    assert problem["address"] == mock_index.address
+    assert "1 秒以内に応答がありませんでした" in problem["reason"]
     assert elapsed < 2.5
+
+
+def _wait_for_requests(mock: MockIndex, count: int) -> None:
+    """偽物が `count` 件の要求を受け付けるまで待つ（5 秒で打ち切る）。"""
+    deadline = time.monotonic() + 5
+    while len(mock.received) < count and time.monotonic() < deadline:
+        time.sleep(0.05)
+
+
+def test_normal_when_requests_sent_concurrently(
+    mock_index: MockIndex, make_server: Callable[..., ServerEnv]
+) -> None:
+    """配信元の設定・リビジョン・文書の一覧を同時に問い合わせ、文書だけをその後に問い合わせる（正常系）。"""
+    # 準備
+    mock_index.serve("sample", IndexSource(docs={None: _sample()}))
+    env = make_server(mock_index)
+    mock_index.received.clear()
+    mock_index.hold.clear()
+    held: dict[str, Any] = {}
+    fetch = threading.Thread(
+        target=lambda: held.update(response=env.client.get("/_api/sources/sample/docs"))
+    )
+    # 実行（偽物が応答を止めている間に受け付けた問い合わせを数える）
+    fetch.start()
+    _wait_for_requests(mock_index, 3)
+    received_while_held = {urlsplit(raw).path for _, raw, _ in mock_index.received}
+    mock_index.hold.set()
+    fetch.join(timeout=10)
+    # 実行（問い合わせごとに 1 秒待つ偽物で、応答までの時間を測る）
+    mock_index.delay_sec = 1
+    started = time.monotonic()
+    response = env.client.get("/_api/sources/sample/docs")
+    elapsed = time.monotonic() - started
+    # 検証
+    assert received_while_held == {
+        "/sources/sample/config",
+        "/sources/sample/refs",
+        "/sources/sample/docs",
+    }
+    assert held["response"].status_code == 200
+    assert response.status_code == 200
+    assert response.json()["path"] == "docs/doc-1"
+    assert 2 <= elapsed < 3
+
+
+def test_error_when_project_index_failed(
+    mock_index: MockIndex, make_server: Callable[..., ServerEnv]
+) -> None:
+    """project-index が 5xx を返却したら 502 と project-index の detail を返却する（異常系）。"""
+    # 準備
+    detail = "git archive --format=tar abc123: 20 秒を超えたため止めました"
+    mock_index.serve("sample", IndexSource(docs={None: _sample()}))
+    env = make_server(mock_index)
+    mock_index.queued[("GET", "/sources/sample/config")] = [(500, {"detail": detail})]
+    # 実行
+    failed = env.client.get("/_api/sources/sample/docs")
+    recovered = env.client.get("/_api/sources/sample/docs")
+    # 検証
+    assert failed.status_code == 502
+    assert failed.headers["content-type"].startswith("application/problem+json")
+    problem = failed.json()["projectIndex"]
+    assert problem["kind"] == "failed"
+    assert problem["address"] == mock_index.address
+    assert problem["reason"] == detail
+    assert recovered.status_code == 200

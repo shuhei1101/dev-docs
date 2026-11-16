@@ -967,7 +967,7 @@ const UNREACHABLE = {
   },
 };
 
-test.describe("project-index に接続できないときの表示", () => {
+test.describe("project-index から受け取れないときの表示", () => {
   // 端末の設定の取得が 503 のとき、配信元の一覧の代わりに接続先と理由を出し、配信元の追加を押せなくする（異常系）
   test("project_index_unreachable_alert", async ({ page }) => {
     // 準備
@@ -988,6 +988,30 @@ test.describe("project-index に接続できないときの表示", () => {
     await expect(add).toHaveAccessibleDescription("project-index に接続できませんでした");
     await expect.poll(() => api.callsOf("settings").length).toBeGreaterThan(before);
   });
+
+  // 端末の設定の取得が 502・503 の timeout のとき、理由の種類ごとの見出しを出し、起動の案内を出さない（異常系）
+  for (const { status, kind, title } of [
+    { status: 502, kind: "failed", title: "project-index が要求を処理できませんでした" },
+    { status: 503, kind: "timeout", title: "project-index から応答がありませんでした" },
+  ]) {
+    test(`project_index_${kind}_alert`, async ({ page }) => {
+      // 準備
+      await mockApi(page, {
+        settings: () =>
+          problem(status, {
+            detail: title,
+            projectIndex: { address: "http://127.0.0.1:8786", reason: "x", kind },
+          }),
+      });
+      // 実行
+      await page.goto("/_settings");
+      // 検証
+      const alert = page.getByRole("alert").filter({ hasText: title });
+      await expect(alert).toBeVisible();
+      await expect(alert).not.toContainText("project-index を起動してから");
+      await expect(page.getByRole("button", { name: "配信元を追加" })).toHaveAccessibleDescription(title);
+    });
+  }
 });
 
 test.describe("保存の失敗の通知", () => {
