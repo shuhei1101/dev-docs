@@ -803,7 +803,7 @@ def test_normal_when_schema_document_drawn(
     assert all(" table: data" not in line for line in markdown.splitlines())
     tables = _marked_tables(markdown)
     # 辺の表（`元`・`先` の列を持つ表）のマーカーは `hidden` の列を持たない
-    edges = [marker for marker, head in tables if head[:2] == ["元", "先"]]
+    edges = [marker for marker, head in tables if {"元", "先"} <= set(head)]
     assert edges
     assert all(
         "hidden" not in setting
