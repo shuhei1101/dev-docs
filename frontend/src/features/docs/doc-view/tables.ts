@@ -143,11 +143,15 @@ export const findTables = ({
 const replaceHidden = (args: MarkerArgs, hidden: string[]): MarkerArgs => {
   const columns: NonNullable<MarkerArgs["columns"]> = {};
   for (const [name, setting] of Object.entries(args.columns ?? {})) {
-    const { hidden: _, ...rest } = setting;
+    const rest = Object.fromEntries(
+      Object.entries(setting).filter(([key]) => key !== "hidden"),
+    );
     if (Object.keys(rest).length > 0) columns[name] = rest;
   }
   for (const name of hidden) columns[name] = { ...columns[name], hidden: true };
-  const { columns: __, ...result } = args;
+  const result: MarkerArgs = Object.fromEntries(
+    Object.entries(args).filter(([key]) => key !== "columns"),
+  );
   if (Object.keys(columns).length > 0) result.columns = columns;
   // 隠す列が無くなっても、列の表示・非表示の機能を残す（mdmark の tableIndex をずらさない）
   if (hidden.length === 0)
