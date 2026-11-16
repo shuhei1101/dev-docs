@@ -27,7 +27,6 @@ from dev_docs.integrations.project_index.types import (
     SourceState,
     SourceView,
     parse_datetime,
-    parse_document,
     parse_document_list,
 )
 from dev_docs.shared.errors import (
