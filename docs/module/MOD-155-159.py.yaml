@@ -115,7 +115,7 @@ functions:
       description: 文書の取得の応答
     process: |-
       0. 手順 1〜11 を `asyncio.timeout(DOCUMENT_FETCH_TIMEOUT_SEC)` の中で行う。超えたら `ProjectIndexUnreachableError`（`address` は project-indexの呼び出しの `address`、`reason` は `{DOCUMENT_FETCH_TIMEOUT_SEC} 秒以内に応答がありませんでした`、`kind` は `timeout`）を送る。制限時間は途中の問い合わせを取り消すため、問い合わせごとの制限時間は残り時間を超えない
-      1. project-indexの呼び出し.配信元の表示の設定の取得 と project-indexの呼び出し.文書の一覧の応答の取得（`ref`）を `asyncio.gather` で同時に呼び、`view` と応答の本文を取る。続けて文書の一覧の読み取り（応答の本文。`record_kinds` は `view.documents` のうち `records` を持つ行の ID）で `listed` にする
+      1. project-indexの呼び出し.配信元の表示の設定の取得（中で配信元の設定とリビジョンを同時に問い合わせる）と project-indexの呼び出し.文書の一覧の応答の取得（`ref`）を `asyncio.gather` で同時に呼び（project-index へは 3 つの要求が同時に届く）、`view` と応答の本文を取る。続けて文書の一覧の読み取り（応答の本文。`record_kinds` は `view.documents` のうち `records` を持つ行の ID）で `listed` にする
       2. `path` が検討事項の文書のパスの読み取りで ID になれば、project-indexの呼び出し.検討事項の文書の取得 の本文を `markdown` にし、`path` を `path`、`body_path`・`diff`・`conversion_error` を `None`、`tabs` をタブとサイドバーの組み立ての結果でどのタブも `active` にしない値、`updated_at` を今の日時、`table_keys`・`aliases` を空にして返却する（以降の手順は実行しない）。当たるフォルダが 0 個か 2 個以上なら project-index の 404 の `DocumentNotFoundError` がそのまま伝わる
       3. タブとサイドバーの組み立て（`view`・`listed.documents`）をする
       4. 返す文書を決める
@@ -146,7 +146,7 @@ functions:
         message: '`文書がありません: {path}`'
       - name: ProjectIndexUnreachableError
         condition: project-index につながらない・問い合わせか文書の取得の制限時間を超えた（`kind` が `timeout`）
-        message: '`project-index（{address}）に接続できませんでした。{reason}`'
+        message: 'MOD-155-184 の `ProjectIndexUnreachableError` の `message`（`kind` が `unreachable` のとき `project-index（{address}）に接続できませんでした。{reason}`、`timeout` のとき `project-index（{address}）から応答がありませんでした。{reason}`）'
       - name: ProjectIndexResponseError
         condition: project-index が 5xx など想定しない応答を返した
         message: '`project-index が {status} を返しました: {summary}`'
