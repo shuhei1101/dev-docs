@@ -144,4 +144,4 @@ classes:
             summary: つながらないときの本文と詳細
             condition: '`ProjectIndexUnreachableError(address="http://127.0.0.1:8786", reason="接続を拒否されました（Connection refused）")`'
             mock: なし
-            expected: '`message` が `project-index（http://127.0.0.1:8786）に接続できませんでした。接続を拒否されました（Connection refused）`、`details()` が `{"address": …, "reason": …}`、`status` が 503'
+            expected: '`message` が `project-index（http://127.0.0.1:8786）に接続できませんでした。接続を拒否されました（Connection refused）`、`details()` が `{"address": …, "reason": …, "kind": "unreachable"}`、`status` が 503'
