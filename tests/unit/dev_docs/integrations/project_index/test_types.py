@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 
-from dev_docs.integrations.project_index.types import parse_document
+from dev_docs.integrations.project_index.types import parse_document, parse_document_list
 from dev_docs.shared.errors import ProjectIndexResponseError
 
 from ...conftest import doc_json, list_entry
@@ -91,3 +91,25 @@ def test_parse_document_when_key_missing() -> None:
     # 実行・検証
     with pytest.raises(ProjectIndexResponseError, match="version"):
         parse_document("sample", value)
+
+
+def test_parse_document_list_when_records() -> None:
+    """行の文書の添字（正常系）。"""
+    # 準備
+    value = {
+        "ref": "develop",
+        "documents": [
+            doc_json("n-0", "notes/files.yaml", kind="notes"),
+            doc_json("d", "docs/d.yaml", kind="docs"),
+            doc_json("n-1", "notes/files.yaml", kind="notes"),
+        ],
+    }
+    # 実行
+    listed = parse_document_list("sample", value, record_kinds=["notes"])
+    # 検証
+    assert listed.ref == "develop"
+    assert [(d.id, d.record_index) for d in listed.documents] == [
+        ("n-0", 0),
+        ("d", None),
+        ("n-1", 1),
+    ]

@@ -13,6 +13,7 @@ from dev_docs.server.error_handlers import register_error_handlers
 from dev_docs.shared.errors import (
     DevDocsError,
     ProjectIndexRejectedError,
+    ProjectIndexResponseError,
     ProjectIndexUnreachableError,
     Violation,
 )
@@ -155,6 +156,72 @@ def test_register_error_handlers_when_project_index_unreachable(
     assert (
         body["detail"] == f"project-index（http://127.0.0.1:8786）に接続できませんでした。{reason}"
     )
-    assert body["projectIndex"] == {"address": "http://127.0.0.1:8786", "reason": reason}
+    assert body["projectIndex"] == {
+        "address": "http://127.0.0.1:8786",
+        "reason": reason,
+        "kind": "unreachable",
+    }
     assert "address" not in body
     assert len([r for r in caplog.records if r.levelno == logging.ERROR]) == 1
+
+
+def test_register_error_handlers_when_project_index_failed(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """project-index が処理に失敗したときの problem+json（正常系）。"""
+    # 準備
+    app = FastAPI()
+    register_error_handlers(app)
+    reason = "git archive --format=tar 006a490: 20 秒を超えたため止めました"
+
+    @app.get("/boom")
+    def boom() -> None:
+        raise ProjectIndexResponseError(
+            message="project-index が 500 を返却しました: ...",
+            address="http://127.0.0.1:8786",
+            status_code=500,
+            summary="...",
+            reason=reason,
+        )
+
+    client = TestClient(app)
+    # 実行
+    with caplog.at_level(logging.ERROR):
+        response = client.get("/boom")
+    # 検証
+    body = response.json()
+    assert response.status_code == 502
+    assert body["projectIndex"] == {
+        "address": "http://127.0.0.1:8786",
+        "reason": reason,
+        "kind": "failed",
+    }
+    assert body["detail"] == (
+        f"project-index（http://127.0.0.1:8786）が要求を処理できませんでした。{reason}"
+    )
+    assert len([r for r in caplog.records if r.levelno == logging.ERROR]) == 1
+
+
+def test_register_error_handlers_when_project_index_timed_out() -> None:
+    """応答が無かったときの problem+json（正常系）。"""
+    # 準備
+    app = FastAPI()
+    register_error_handlers(app)
+    reason = "70 秒以内に応答がありませんでした"
+
+    @app.get("/boom")
+    def boom() -> None:
+        raise ProjectIndexUnreachableError(
+            address="http://127.0.0.1:8786", reason=reason, kind="timeout"
+        )
+
+    client = TestClient(app)
+    # 実行
+    response = client.get("/boom")
+    # 検証
+    body = response.json()
+    assert response.status_code == 503
+    assert body["projectIndex"]["kind"] == "timeout"
+    assert body["detail"] == (
+        f"project-index（http://127.0.0.1:8786）から応答がありませんでした。{reason}"
+    )
