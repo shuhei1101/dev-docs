@@ -689,6 +689,45 @@ def test_schema_to_markdown_when_foreign_key_physical_name(
     assert "[tasks.id](#tasks)" in result
 
 
+def test_schema_to_markdown_when_foreign_key_duplicate_heading(
+    make_document: Callable[..., Document],
+) -> None:
+    """前に同じ文字の見出しがある同じ文書のテーブルへの外部キー（正常系）。"""
+    # 準備
+    schema = {
+        "properties": {
+            "summary": {"x-heading": "tasks"},
+            "tables": {
+                "x-shape": "sections",
+                "x-key": "name",
+                "items": {
+                    "properties": {
+                        "columns": {"x-heading": "カラム", "x-shape": "table", "items": {}},
+                    }
+                },
+            },
+        }
+    }
+    document = make_document(
+        data={
+            "name": "N",
+            "summary": "概要",
+            "tables": [
+                {"name": "tasks", "title": "タスク", "columns": [{"name": "id"}]},
+                {
+                    "name": "comments",
+                    "title": "コメント",
+                    "columns": [{"name": "task_id", "foreign_key": {"table": "タスク.ID"}}],
+                },
+            ],
+        }
+    )
+    # 実行
+    result = schema_to_markdown(document, schema, CONTEXT)
+    # 検証
+    assert "[タスク.ID](#tasks-1)" in result
+
+
 def test_render_table() -> None:
     """セルの記載方法（正常系）。"""
     # 準備

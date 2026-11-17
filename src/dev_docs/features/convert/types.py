@@ -65,7 +65,7 @@ class RenderContext:
     links: Mapping[str, DocumentLink]
     issue_url: str | None
     path: str
-    # 同じ文書のテーブルの `title` から見出し（`x-key` の値）。外部キーのリンクのアンカーに使用する
+    # 同じ文書の `tables` の要素の `title` から、その要素の見出しに mdmark が付ける ID。外部キーのリンクのアンカーに使用する
     anchors: Mapping[str, str] = field(default_factory=dict)
     # 同じ文書のテーブルの物理名か論理名から論理名。外部キーのリンクで `anchors` を検索する前に論理名にする
     table_titles: Mapping[str, str] = field(default_factory=dict)

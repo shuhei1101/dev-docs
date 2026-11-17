@@ -103,11 +103,11 @@ def _foreign_key(reference: str, context: RenderContext | None) -> str:
             return _escape_cell(reference)
         relative = quote(posixpath.relpath(link.path, folder or "."), safe="/")
         return f"[{reference}]({relative})"
-    # 同じ文書のテーブル: 物理名でも論理名にしてから、論理名で見出しのアンカーへのリンク
-    heading = context.anchors.get(context.table_titles.get(name, name))
-    if heading is None:
+    # 同じ文書のテーブル: 物理名でも論理名にしてから、論理名でそのテーブルの見出しのアンカーへのリンク
+    anchor = context.anchors.get(context.table_titles.get(name, name))
+    if anchor is None:
         return _escape_cell(reference)
-    return f"[{reference}](#{heading_anchor(heading)})"
+    return f"[{reference}](#{anchor})"
 
 
 def _object_cell(value: Mapping[str, Any], context: RenderContext | None) -> str:
@@ -524,26 +524,15 @@ class _Builder:
             self.bullets(value, title)
 
 
-def _anchors(data: Any, schema: Any, found: dict[str, str]) -> dict[str, str]:
-    """`x-key` を持つ `sections` の要素の `title` と見出しの組を集める。"""
-    if not isinstance(schema, Mapping):
-        return found
-    if isinstance(data, Mapping):
-        properties: Mapping[str, Any] = schema.get("properties") or {}
-        for key, child in data.items():
-            _anchors(child, properties.get(key), found)
-    elif isinstance(data, list):
-        x_key = schema.get("x-key") if schema.get("x-shape") == "sections" else None
-        for element in data:
-            if (
-                x_key
-                and isinstance(element, Mapping)
-                and element.get("title")
-                and element.get(x_key)
-            ):
-                found.setdefault(str(element["title"]), str(element[x_key]))
-            _anchors(element, schema.get("items"), found)
-    return found
+def _table_paths(tables: Any) -> dict[str, str]:
+    """文書の `tables` の要素の `title` と、その要素の見出しを配置する組み立てのパスの組を集める（同じ `title` は最初の要素）。"""
+    paths: dict[str, str] = {}
+    if not isinstance(tables, list):
+        return paths
+    for index, element in enumerate(tables):
+        if isinstance(element, Mapping) and element.get("title"):
+            paths.setdefault(str(element["title"]), f"{ER_TABLES_KEY}[{index}]")
+    return paths
 
 
 def _item_steps(item: str) -> list[tuple[str, bool]] | None:
@@ -681,17 +670,13 @@ def _first(data: Mapping[str, Any], keys: Sequence[str]) -> str | None:
     return next((key for key in keys if not _is_empty(data.get(key))), None)
 
 
-def _build(
+def _assemble(
     document: IndexedDocument, schema: Mapping[str, Any], context: RenderContext
 ) -> _Builder:
     """文書をスキーマ駆動の変換の組み立てにかけ、塊を並べた組み立てを返却する。"""
     data = document.data
     tables = data.get(ER_TABLES_KEY) if isinstance(data, Mapping) else None
-    context = replace(
-        context,
-        anchors=_anchors(data, schema, {}),
-        table_titles=er_table_titles(_items(tables)),
-    )
+    context = replace(context, table_titles=er_table_titles(_items(tables)))
     heading_key = _first(data, HEADING_KEYS)
     lead_key = _first(data, LEAD_KEYS)
     name = str(data[heading_key]) if heading_key else str(document.metadata["name"])
@@ -702,6 +687,22 @@ def _build(
     used = [key for key in (heading_key, lead_key) if key]
     builder.object(data, schema, "", FIRST_HEADING_LEVEL, skip=used)
     return builder
+
+
+def _build(
+    document: IndexedDocument, schema: Mapping[str, Any], context: RenderContext
+) -> _Builder:
+    """文書を組み立て、同じ文書のテーブルがあれば、その見出しのアンカーを文脈に与えてもう一度組み立てる。"""
+    data = document.data
+    paths = _table_paths(data.get(ER_TABLES_KEY) if isinstance(data, Mapping) else None)
+    builder = _assemble(document, schema, context)
+    # テーブルの `title` が無い: 外部キーのリンクのアンカーが要らないため、1 回の組み立てで返却する
+    if not paths:
+        return builder
+    # テーブルの `title` がある: 組み立てのパスごとの ID から、`title` ごとのアンカーを作ってもう一度組み立てる
+    ids = _path_anchors(builder)
+    anchors = {title: ids[path] for title, path in paths.items() if path in ids}
+    return _assemble(document, schema, replace(context, anchors=anchors))
 
 
 def schema_to_markdown(
@@ -743,7 +744,11 @@ def _heading_ids(block: str, used: dict[str, int]) -> list[str]:
 def heading_anchors(document: IndexedDocument, schema: Mapping[str, Any]) -> dict[str, str]:
     """文書をスキーマ駆動の変換にかけたときに見出しを配置する組み立てのパスごとに、mdmark が付ける ID を返却する。"""
     context = RenderContext(links={}, issue_url=None, path=document.path)
-    builder = _build(document, schema, context)
+    return _path_anchors(_assemble(document, schema, context))
+
+
+def _path_anchors(builder: _Builder) -> dict[str, str]:
+    """組み立ての塊の見出しに mdmark と同じ規則で ID を付け、見出しを配置した組み立てのパスごとの ID を返却する。"""
     paths = {position: path for path, position in builder.heading_blocks.items()}
     used: dict[str, int] = {}
     anchors: dict[str, str] = {}
