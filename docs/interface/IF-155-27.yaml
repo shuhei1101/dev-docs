@@ -1,0 +1,172 @@
+id: IF-155-27
+visibility: internal
+title: 公開ページの配信
+entry:
+  kind: trigger
+  value: '`.github/workflows/pages.yml`（`develop` への `push` と、手動の起動 `workflow_dispatch`）'
+lead: 公開の文書と判定フローチャートを 1 枚の HTML にまとめて GitHub Pages へ配信する workflow `.github/workflows/pages.yml` の起動の条件・制約・正常系と異常系のフローを定め、公開ページの配信を修正するときに参照する。
+impl_files:
+  - .github/workflows/pages.yml
+idempotent: true
+read_only: false
+destructive: true
+permissions: '`contents: read`・`pages: write`・`id-token: write`'
+side_effects: '`build` の job が、`_site` を tar にまとめた `artifact.tar` を成果物 `github-pages` として上げる。`deploy` の job が、その成果物で GitHub Pages の公開ページを上書きする。リポジトリへは書き込まない'
+exclusivity: '実行中の配信があるとき、後から起動した実行は終了を待つ。待機できるのは 1 件で、待機中の実行があれば取り消して入れ替わる（`concurrency` の `group: pages`・`cancel-in-progress: false`。`queue` は既定の `single`）'
+constraints:
+  - item: ランナー
+    constraint: '`ubuntu-latest`'
+  - item: 配信できるブランチ
+    constraint: '`deploy` の job は、起動したブランチが `develop` のときだけ実行する（job の `if: github.ref == ''refs/heads/develop''`）。それ以外のブランチで起動した実行は `build` の job だけを実行し、`deploy` の job を飛ばす'
+    notes: 環境 `github-pages` の配信ブランチの規則（`develop`・`gh-pages`・`master`。Settings の Environments）も、それ以外のブランチの配信を拒否する
+  - item: まとめる文書
+    constraint: 公開範囲が `public` の公開ドキュメントと判定フローチャートを、`scripts/build_pages.py` で 1 枚の HTML にまとめる
+    notes: まとめ方はモジュール構成『公開ページのビルド』が定める
+  - item: 成果物の中身
+    constraint: 成果物のフォルダ `_site` に拡張子 `.yaml`・`.yml` のファイルがあれば、上げずに失敗で終える
+    notes: YAML の原本を公開ページへ出さない
+  - item: タイムアウト
+    constraint: job の `timeout-minutes` を、`build` は 10 分、`deploy` は 5 分にする
+overall_flow: |-
+  <!-- map -->
+
+  ```mermaid
+  flowchart TD
+    s([develop への push か workflow_dispatch で起動]) --> a
+    subgraph build
+      a[ブランチを取得する] -- 成功 --> n[Node.js を入れる]
+      n -- 成功 --> u[uv を入れる]
+      u -- 成功 --> c[Pages の設定を読み込む]
+      c -- 成功 --> h[公開の文書を 1 枚の HTML にまとめる]
+      h -- 成功 --> y[成果物に YAML が無いことを確認する]
+      y -- 成功 --> p[成果物を Pages 用に上げる]
+    end
+    subgraph deploy
+      d[GitHub Pages へ配信する]
+    end
+    p -->|"成功・起動したブランチが develop（if）"| d
+    p -->|"成功・起動したブランチが develop でない"| ok([成功])
+    d -- 成功 --> ok
+    a & n & u & c & h & y & p & d -->|失敗| ng([失敗])
+  ```
+
+  <!-- /map -->
+flows:
+  - name: 正常系
+    summary: develop への push で公開ページをまとめて配信し、成功で終わる
+    setup:
+      - name: Mock
+        description: なし（本物の GitHub Actions で回す）
+      - name: ブランチ
+        description: develop
+        notes: テストからは起動せず、develop への push で起動した直近の実行を取得して確認する
+    flow: |-
+      <!-- map -->
+
+      ```mermaid
+      flowchart TD
+        s([develop への push で起動]) --> a[ブランチを取得する] --> n[Node.js を入れる] --> u[uv を入れる] --> c[Pages の設定を読み込む] --> h[公開の文書を 1 枚の HTML にまとめる] --> y[成果物に YAML が無いことを確認する] --> p[成果物を Pages 用に上げる]
+        p -- develop（if） --> d[GitHub Pages へ配信する] --> e([成功])
+      ```
+
+      <!-- /map -->
+    expected:
+      - 実行の結論が `success`
+      - job `build`・`deploy` の全ての step の結論が `success`
+    test: test_normal
+  - name: 正常系（develop 以外のブランチ）
+    summary: develop 以外のブランチで起動し、まとめて上げるまでを実行して配信を飛ばし、成功で終わる
+    setup:
+      - name: Mock
+        description: なし（本物の GitHub Actions で回す）
+      - name: ブランチ
+        description: develop と同じ中身の検証用のブランチ
+        notes: '`workflow_dispatch` で起動する'
+    flow: |-
+      <!-- map -->
+
+      ```mermaid
+      flowchart TD
+        s([検証用のブランチで workflow_dispatch で起動]) --> a[ブランチを取得する] --> n[Node.js を入れる] --> u[uv を入れる] --> c[Pages の設定を読み込む] --> h[公開の文書を 1 枚の HTML にまとめる] --> y[成果物に YAML が無いことを確認する] --> p[成果物を Pages 用に上げる]
+        p -- develop でない（if） --> e([成功])
+      ```
+
+      <!-- /map -->
+    expected:
+      - 実行の結論が `success`
+      - job `build` の全ての step の結論が `success`
+      - job `deploy` の結論が `skipped`
+      - 成果物 `github-pages` の `artifact.tar` の中に `index.html` がある
+    test: test_normal_when_not_develop
+  - name: 異常系（公開の文書をまとめられない・failure）
+    summary: 公開の文書をまとめる処理が失敗し、上げずに失敗で終わる
+    setup:
+      - name: Mock
+        description: なし（本物の GitHub Actions で回す）
+      - name: ブランチ
+        description: '`docs/guide/files.yml` の公開ドキュメントの 1 行の `category` を、分類に無い値にした検証用のブランチ'
+        notes: '`workflow_dispatch` で起動する'
+    flow: |-
+      <!-- map -->
+
+      ```mermaid
+      flowchart TD
+        s([検証用のブランチで workflow_dispatch で起動]) --> a[ブランチを取得する] --> n[Node.js を入れる] --> u[uv を入れる] --> c[Pages の設定を読み込む] --> h[公開の文書を 1 枚の HTML にまとめる]
+        h -- 失敗 --> e([失敗])
+      ```
+
+      <!-- /map -->
+    expected:
+      - 実行の結論が `failure`
+      - step「成果物に YAML が無いことを確認する」「成果物を Pages 用に上げる」の結論が `skipped`
+      - job `deploy` の結論が `skipped`
+    test: test_error_when_build_fails
+  - name: 異常系（成果物に YAML がある・failure）
+    summary: まとめた成果物に YAML のファイルがあり、上げずに失敗で終わる
+    setup:
+      - name: Mock
+        description: なし（本物の GitHub Actions で回す）
+      - name: ブランチ
+        description: '`scripts/build_pages.py` が出力のフォルダへ YAML のファイルを 1 つ書き出すように変えた検証用のブランチ'
+        notes: '`workflow_dispatch` で起動する'
+    flow: |-
+      <!-- map -->
+
+      ```mermaid
+      flowchart TD
+        s([検証用のブランチで workflow_dispatch で起動]) --> a[ブランチを取得する] --> n[Node.js を入れる] --> u[uv を入れる] --> c[Pages の設定を読み込む] --> h[公開の文書を 1 枚の HTML にまとめる] --> y[成果物に YAML が無いことを確認する]
+        y -- 失敗 --> e([失敗])
+      ```
+
+      <!-- /map -->
+    expected:
+      - 実行の結論が `failure`
+      - step「成果物を Pages 用に上げる」の結論が `skipped`
+      - job `deploy` の結論が `skipped`
+    test: test_error_when_yaml_in_site
+notes:
+  step ごとの中身: |-
+    | job | step | 中身 |
+    | --- | --- | --- |
+    | `build` | ブランチを取得する | `actions/checkout` で起動したブランチを取得する |
+    | `build` | Node.js を入れる | `actions/setup-node` で Node.js 24 を入れる（mdmark の CLI を `npx` で呼ぶため） |
+    | `build` | uv を入れる | `astral-sh/setup-uv` で uv を入れる |
+    | `build` | Pages の設定を読み込む | `actions/configure-pages` で GitHub Pages の設定を読み込む |
+    | `build` | 公開の文書を 1 枚の HTML にまとめる | `uv run --frozen python scripts/build_pages.py --out _site` で、`uv.lock` の Python と依存を入れて 1 枚の HTML を `_site` に出力する |
+    | `build` | 成果物に YAML が無いことを確認する | `_site` の下の `.yaml`・`.yml` のファイルを探し、あればそのパスを出して失敗で終える |
+    | `build` | 成果物を Pages 用に上げる | `actions/upload-pages-artifact` で `_site` を tar にまとめた `artifact.tar` を成果物 `github-pages` に上げる |
+    | `deploy` | GitHub Pages へ配信する | 環境 `github-pages` で `actions/deploy-pages` により成果物 `github-pages` を配信し、公開ページの URL を環境の `url` に出す |
+  正常系のテストの起動: |-
+    正常系のフローは develop でしか通らず、テストから起動すると公開ページを再配信する。
+    そのため、テストからは起動せず、develop への push で起動した直近の完了した実行（`gh run list --workflow pages.yml --branch develop --event push`）の結論と step を確認する。
+refs:
+  - to: MOD-192-1
+    type: requires
+    when: まとめる文書や出力のフォルダを変えるときに、公開ページのビルドの引数と出力と突き合わせる。
+test_file: tests/e2e/workflow/test_pages_yml.py
+tags:
+  - name: topic:ci
+    main: true
+  - name: tool:github
+  - name: tool:mdmark
+  - name: action:配信
