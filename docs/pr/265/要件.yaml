@@ -1,0 +1,46 @@
+use_cases:
+  - kind: single
+    scenario: docs/scenario/SC-155-12.yaml
+    impact: changed
+    detail: 配信元の追加・編集で読み書きの方法（disk / git / 省略）を選べ、保存しても他の配信元の読み書きの方法が消えない
+    depends_on: []
+  - kind: single
+    scenario: docs/scenario/SC-155-10.yaml
+    impact: changed
+    detail: project-index の起動の直後でも、全ての配信元の読み込みを待たずに配信元を通知し、読み込み中の配信元を読み込み中として扱う
+    depends_on: []
+  - kind: single
+    scenario: docs/scenario/SC-155-7.yaml
+    impact: run_only
+    detail: disk の配信元を文書の画面で開いたとき、リビジョンの切り替えを出さずに文書を読める
+    depends_on: []
+  - kind: composite
+    scenario: docs/scenario/SC-155-13.yaml
+    impact: none
+    detail: 配信元の追加・起動・画面で読む流れの連鎖は変わらない
+    depends_on: []
+docs:
+  - page: docs/guide/画面で読む.md
+    new: false
+    change: 設定画面で配信元を追加・編集する手順に、読み書きの方法（disk / git / 省略）の選び方を追加する
+    status: todo
+  - page: docs/guide/管理のMCP.md
+    new: false
+    change: status の配信元ごとの状態に loading（読み込み中）を追加する
+    status: todo
+  - page: docs/guide/CLI.md
+    new: false
+    change: dev-docs serve の起動の後の配信元の通知が、読み込み中の配信元をどう出すかを書き足す（通知の記載がある場合）
+    status: todo
+  - page: docs/guide/用語集.md
+    new: false
+    change: 読み書きの方法（storage）と、配信元の状態の読み込み中（loading）を追加する
+    status: todo
+  - page: docs/external-api/API-155-1.yaml
+    new: false
+    change: GET /sources の include_loading=true と状態 loading、GET・PUT /settings/sources の行の storage を追加する
+    status: todo
+scope_out:
+  - item: 設定画面の配信元の一覧で、状態 loading（読み込み中）を表示すること（#250 のタイトル・「やりたいこと」の「画面で表示する」）
+    reason: 画面の配信元の一覧は /_api/settings/sources → project-index の GET /settings/sources で、loading を返さず読み込みの済んでいない行は pending_reload になる。受付の判断で対象を起動の通知と管理の MCP の status に絞った
+    plan: none
