@@ -311,6 +311,91 @@ def test_item_heading_when_unbalanced_brackets(item: str) -> None:
     assert result is None
 
 
+ORDER_SCHEMA = {"properties": {"functions": {"x-shape": "sections", "x-key": "name"}}}
+ORDER_DATA = {
+    "functions": [
+        {"name": "main"},
+        {"name": "sub"},
+        {"name": "main"},
+        {"name": "main#2"},
+        {"name": "main"},
+    ]
+}
+
+
+@pytest.mark.parametrize(
+    ("item", "expected"),
+    [
+        pytest.param("functions[main#3]", "main", id="order"),
+        pytest.param("functions[main#2]", "main#2", id="same_value_first"),
+    ],
+)
+def test_item_heading_when_order(item: str, expected: str) -> None:
+    """同じ値の要素の順番（正常系）。"""
+    # 実行
+    result = item_heading(ORDER_DATA, ORDER_SCHEMA, item)
+    # 検証
+    assert result == expected
+
+
+@pytest.mark.parametrize(
+    "item",
+    [
+        pytest.param("functions[main#4]", id="over"),
+        pytest.param("functions[main#0]", id="zero"),
+        pytest.param("functions[none#1]", id="no_element"),
+        pytest.param("functions[main#²]", id="superscript"),
+    ],
+)
+def test_item_heading_when_order_out_of_range(item: str) -> None:
+    """要素の数を超える順番（異常系）。"""
+    # 実行
+    result = item_heading(ORDER_DATA, ORDER_SCHEMA, item)
+    # 検証
+    assert result is None
+
+
+@pytest.mark.parametrize(
+    ("item", "expected"),
+    [
+        pytest.param("notes[main.py の補足]", "main.py の補足", id="key"),
+        pytest.param("notes[steps]", "手順の補足", id="title"),
+        pytest.param("notes[無い]", None, id="missing"),
+    ],
+)
+def test_item_heading_when_dict_key(item: str, expected: str | None) -> None:
+    """辞書の sections のキー（正常系）。"""
+    # 準備
+    schema = {
+        "properties": {
+            "notes": {"x-shape": "sections", "properties": {"steps": {"title": "手順の補足"}}}
+        }
+    }
+    data = {"notes": {"main.py の補足": "補足の本文", "steps": "手順の本文"}}
+    # 実行
+    result = item_heading(data, schema, item)
+    # 検証
+    assert result == expected
+
+
+def test_item_heading_when_consecutive_brackets() -> None:
+    """続けて記載した [ ]（正常系）。"""
+    # 準備
+    schema = {
+        "properties": {
+            "notes": {
+                "x-shape": "sections",
+                "properties": {"手順": {"x-shape": "sections", "x-key": "name"}},
+            }
+        }
+    }
+    data = {"notes": {"手順": [{"name": "準備"}]}}
+    # 実行
+    result = item_heading(data, schema, "notes[手順][準備]")
+    # 検証
+    assert result == "準備"
+
+
 def test_schema_to_markdown_when_test_files(make_document: Callable[..., Document]) -> None:
     """対応テストファイル（正常系）。"""
     # 準備
