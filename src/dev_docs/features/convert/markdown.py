@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import json
 import posixpath
-import re
 from collections.abc import Mapping, Sequence
 from dataclasses import replace
 from datetime import date, datetime
@@ -40,8 +39,6 @@ OBJECT_JOINER = "、"
 NO_DATE = "-"
 # ER 図の実体の列を補うテーブルを持つ、文書のキー
 ER_TABLES_KEY = "tables"
-# 項目のパスの 1 階層（`{キー}` か `{キー}[{x-key の値}]`）
-ITEM_STEP = re.compile(r"(?P<key>[^.\[\]]+)(?:\[(?P<label>[^\]]*)\])?")
 
 
 def _is_empty(value: Any) -> bool:
@@ -536,20 +533,70 @@ def _anchors(data: Any, schema: Any, found: dict[str, str]) -> dict[str, str]:
     return found
 
 
+def _item_steps(item: str) -> list[tuple[str, str | None]] | None:
+    """項目のパスを、`[` と `]` の対応を数えて（名前, `[...]` の値）の並びに分ける。
+
+    記載方法の誤ったパス（閉じない `[`・対応する `[` の無い `]`・`[{値}]` の直後が `.` か末尾でない・空の名前）は `None` を返却する。
+    """
+    steps: list[tuple[str, str | None]] = []
+    position = 0
+    while True:
+        # 名前: 次の `.`・`[`・`]` の手前まで
+        end = position
+        while end < len(item) and item[end] not in ".[]":
+            end += 1
+        name = item[position:end]
+        if not name:
+            return None
+        label: str | None = None
+        # `[` が続く: 対応する `]` までを値にする
+        if end < len(item) and item[end] == "[":
+            close = _closing_bracket(item, end)
+            if close is None:
+                return None
+            label = item[end + 1 : close]
+            end = close + 1
+        steps.append((name, label))
+        # 末尾: 分け終えた
+        if end == len(item):
+            return steps
+        # `.` 以外（`]`・`[`・文字）が続く: 記載方法の誤り
+        if item[end] != ".":
+            return None
+        position = end + 1
+
+
+def _closing_bracket(item: str, start: int) -> int | None:
+    """`start` の `[` に対応する `]` の位置を返却する。閉じなければ `None`。"""
+    depth = 0
+    for index in range(start, len(item)):
+        if item[index] == "[":
+            depth += 1
+        elif item[index] == "]":
+            depth -= 1
+            # 深さが 0 に戻った `]` が対応する `]`
+            if depth == 0:
+                return index
+    return None
+
+
 def item_heading(data: Mapping[str, Any], schema: Mapping[str, Any], item: str) -> str | None:
     """文書の項目のパスが、スキーマ駆動の変換で見出しになる項目を指すとき、その見出しを返却する。"""
+    steps = _item_steps(item)
+    # 記載方法の誤った項目のパスは見出しにならない
+    if steps is None:
+        return None
     value: Any = data
     sub: Any = schema
     heading: Any = None
-    for step in ITEM_STEP.finditer(item):
+    for key, label in steps:
         if not isinstance(sub, Mapping) or not isinstance(value, Mapping):
             return None
         properties: Mapping[str, Any] = sub.get("properties") or {}
-        sub = properties.get(step["key"])
-        value = value.get(step["key"])
+        sub = properties.get(key)
+        value = value.get(key)
         if not isinstance(sub, Mapping):
             return None
-        label = step["label"]
         # `{キー}`: キーの `x-heading` がこの階層の見出し
         if label is None:
             heading = sub.get("x-heading")

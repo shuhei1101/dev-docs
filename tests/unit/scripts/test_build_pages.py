@@ -46,8 +46,8 @@ def test_main(build_pages: ModuleType, tmp_path: Path, monkeypatch: pytest.Monke
     _guide_files(
         root,
         [
-            {"path": "use.md", "visibility": "public", "category": "使い方"},
-            {"path": "secret.md", "visibility": "internal", "category": "使い方"},
+            {"path": "use.md", "visibility": "public", "category": "使用方法"},
+            {"path": "secret.md", "visibility": "internal", "category": "使用方法"},
             {"path": "intro.md", "visibility": "public", "category": "はじめに"},
         ],
     )
@@ -78,7 +78,7 @@ def test_main_when_no_public(
 ) -> None:
     """公開の文書が無ければ `EXIT_NOT_STARTED` を返却し、`--out` を作らない。"""
     root = tmp_path / "repo"
-    _guide_files(root, [{"path": "secret.md", "visibility": "internal", "category": "使い方"}])
+    _guide_files(root, [{"path": "secret.md", "visibility": "internal", "category": "使用方法"}])
     _write(root / "docs/guide/secret.md", "# secret\n")
     _flowchart(root, "flowchart-a.yaml", _doc("flowchart-a", "internal"))
 
@@ -124,8 +124,8 @@ def test_list_public_guides(build_pages: ModuleType, tmp_path: Path) -> None:
     _guide_files(
         tmp_path,
         [
-            {"path": "use.md", "visibility": "public", "category": "使い方"},
-            {"path": "secret.md", "visibility": "internal", "category": "使い方"},
+            {"path": "use.md", "visibility": "public", "category": "使用方法"},
+            {"path": "secret.md", "visibility": "internal", "category": "使用方法"},
             {"path": "intro.md", "visibility": "public", "category": "はじめに"},
         ],
     )
@@ -134,7 +134,10 @@ def test_list_public_guides(build_pages: ModuleType, tmp_path: Path) -> None:
 
     pages = build_pages.list_public_guides(tmp_path)
 
-    assert [(p.path, p.category) for p in pages] == [("use.md", "使い方"), ("intro.md", "はじめに")]
+    assert [(p.path, p.category) for p in pages] == [
+        ("use.md", "使用方法"),
+        ("intro.md", "はじめに"),
+    ]
 
 
 def test_list_public_guides_when_no_file(build_pages: ModuleType, tmp_path: Path) -> None:
@@ -147,7 +150,7 @@ def test_list_public_guides_when_no_file(build_pages: ModuleType, tmp_path: Path
     [
         pytest.param({"path": "a.md", "visibility": "public"}, True, id="no_category"),
         pytest.param(
-            {"path": "a.md", "visibility": "public", "category": "使い方"}, False, id="no_file"
+            {"path": "a.md", "visibility": "public", "category": "使用方法"}, False, id="no_file"
         ),
     ],
 )
