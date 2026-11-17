@@ -546,7 +546,10 @@ functions:
       description: 組み立てのパス（項目の見出しの `path` と同じ記載方法）から、その見出しのアンカー（`#` を除く）
     process: |-
       1. スキーマ駆動の変換と同じ組み立て（描画の文脈はリンクの参照先を持たず、`path` を文書のパスにしたもの）で塊の並びを作り、`x-heading` の見出しと `sections` の要素・子の見出しを配置した塊の位置を、その値の組み立てのパスごとに記録する
-      2. 塊を前から順にたどり、コードブロックの外の `#` で始まる見出しの行ごとに、見出しの文字を見出しのアンカーにかけた ID（空なら `heading`）を作る。同じ ID が前に `n` 回出ていれば `{ID}-{n}` にする
+      2. 塊を前から順にたどり、囲みのコードブロックの外にある ATX の見出しの行ごとに、見出しの文字を見出しのアンカーにかけた ID（空なら `heading`）を作る。同じ ID が前に `n` 回出ていれば `{ID}-{n}` にする
+         - ATX の見出しの行: 字下げが 0〜3 個の空白で、`#` が 1〜6 個続き、その後ろが空白か行末の行（CommonMark と同じ）。見出しの文字は、前後の空白と、末尾の空白の後ろに続く閉じの `#` の並びを除いたもの
+         - 囲みのコードブロック: 字下げが 0〜3 個の空白で `` ` `` か `~` が 3 つ以上続く行で始まり、同じ記号が同じ長さ以上続く行で閉じる（埋め込みの展開の `FENCE` と同じ）
+         - 数えない記載方法（setext の見出し・引用や箇条書きの中の見出し・脚注の定義の中の見出し・埋め込みの展開で入る見出し）は、変換が出す見出し（全て ATX）ではなく、本文の値だけが持つ
       3. 記録した位置の塊の見出しの ID を、その組み立てのパスの値にして返却する
     unit_tests:
       - name: test_heading_anchors
@@ -579,6 +582,24 @@ functions:
         condition: '`functions` より前に `x-heading: main`・`x-hidden: true` の `secret` と、`x-heading: main` で値が空の `flow` を持ち、`functions` に `name: main` の要素を持つ文書'
         mock: なし
         expected: '`secret`・`flow` のキーが無く、`functions[0]` が `main`'
+      - name: test_heading_anchors_when_not_atx
+        case: 正常
+        summary: 'ATX の見出しにならない # の行'
+        condition: '`functions` より前に、`#main`・`####### main`・4 つの空白で字下げした `# main` の行を持つ文字列の値と、`functions` に `name: main` の要素を持つ文書'
+        mock: なし
+        expected: '`functions[0]` が `main`'
+      - name: test_heading_anchors_when_closing_hashes
+        case: 正常
+        summary: '閉じの # を持つ見出し'
+        condition: '`functions` より前に `## main ##` の行を持つ文字列の値と、`functions` に `name: main` の要素を持つ文書'
+        mock: なし
+        expected: '`functions[0]` が `main-1`'
+      - name: test_heading_anchors_when_tilde_fence
+        case: 正常
+        summary: ~~~ と長さの違う囲み
+        condition: '`functions` より前に、`~~~` の囲みの中に `# main` と、4 つの `` ` `` で開いた囲みの中に 3 つの `` ` `` だけの行と `# main` の行を持つ文字列の値と、`functions` に `name: main` の要素を持つ文書'
+        mock: なし
+        expected: '`functions[0]` が `main`'
 tags:
   - name: action:変換
     main: true
