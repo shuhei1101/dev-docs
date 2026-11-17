@@ -22,8 +22,10 @@ docs:
     status: todo
   - page: docs/library/LIB-155-9.yaml
     new: false
-    change: '#255: 今の mdmark が Mermaid の click のノードをどう描くかを確かめ、利用方法の記述と食い違う場合に合わせる（mdmark の退行なら変えない）'
-    status: todo
+    change: '#255: mdmark の develop の map のクラス図が click のクラスを <a> にしないのは mdmark の退行（shuhei1101/mdmark#650）なので、利用方法の記述は変えない'
+    status: done
+    updated_by: planner
+    updated_at: '2026-11-17T10:49:56.602673+00:00'
 scope_out:
   - item: nav の auto.group_by で共通のメタデータ（main_tags など）を指定してグループに分けること
     reason: auto.filter の不具合とは別の機能追加で、要望に含まれない
@@ -32,8 +34,8 @@ scope_out:
     reason: 配信元を開いた後の文書の表示ではなく、配信元の一覧の対応で、要望に含まれない
     plan: '#250'
   - item: mdmark 側の Mermaid の click の描画の修正
-    reason: '#255 の調査で mdmark#630 による mdmark#570 の退行と確かめた場合は mdmark へ起票して依存に置き、この作業 PR では直さない。退行かは調査で確定する'
-    plan: to_file
+    reason: '#255 の調査で、mdmark の develop（730b1a5）の map のクラス図（renderMapClassDiagram）が links を参照せず、click のクラスを <a> にしないことを確認した（#570 の退行）。mdmark の中の修正なので、この作業 PR では修正せず、テストの前提も変えない'
+    plan: shuhei1101/mdmark#650
   - item: project-index の配信元の検査（nav_warnings の check_nav_filters）が、行の metadata で対応付けたキー（category）を知らない項目として警告すること
     reason: project-index の develop で knowledge-files のスキーマと category の条件を当てると「知らない項目です（category）」を返した。別のリポジトリの修正で、この作業 PR がマージされなくても同じ内容で成り立つ
     plan: to_file
