@@ -61,3 +61,7 @@ functions:
         condition: '`{name: a, items: [{id: x, v: 1}], updated: d1}` と `{name: b, items: [{id: x, v: 2}], updated: d2}`、`ignore=["updated"]`'
         mock: なし
         expected: '`{"name": ("a", "b"), "items[x].v": (1, 2)}`'
+tags:
+  - name: topic:差分
+    main: true
+  - name: action:比較
