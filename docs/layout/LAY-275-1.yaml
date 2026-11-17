@@ -53,12 +53,27 @@ entries:
     name: docs
     contents: 文書（種類ごとのフォルダ・guide/・pr/・mock/）
     children:
+      - type: file
+        name: README.md
+        contents: トップの目次（index.yaml から生成する）
+      - type: file
+        name: index.yaml
+        contents: トップの目次の原本
+      - type: file
+        name: design-policy.md
+        contents: デザイン方針
       - type: folder
-        name: generated
-        contents: YAML の設計書から生成した Markdown
-        generated_from:
-          path: docs/
-          command: CMD-155-1#categories[ビルド・生成]
+        name: '{kind}'
+        contents: 種類ごとの文書（architecture・layout・module・scenario など。中はフラットで、目次の index.yaml と README.md を持つ）
+      - type: folder
+        name: guide
+        contents: 公開ドキュメント（Markdown）と files.yml
+      - type: folder
+        name: mock
+        contents: モック画面（画面 1 つ = 1 フォルダ）
+      - type: folder
+        name: pr
+        contents: PR ドキュメント（PR 1 件 = 1 フォルダ）
   - type: folder
     name: frontend
     contents: 画面（React の SPA）
@@ -80,6 +95,15 @@ entries:
           - type: file
             name: main.tsx
             contents: MSW の起動（開発のみ）と描画の開始
+          - type: file
+            name: index.css
+            contents: Tailwind のトークンと全体のスタイル
+          - type: file
+            name: preflight-outside-mdmark.css
+            contents: Tailwind の preflight を mdmark の本文の外だけに当てるコピー
+            generated_from:
+              source: npm:tailwindcss@4.3.3
+              tracked: 画面のビルドが読み込む
           - type: folder
             name: app
             contents: プロバイダ・ルーター・最初の読み込みとエラーの表示
@@ -101,6 +125,9 @@ entries:
               - type: file
                 name: error-fallback.tsx
                 contents: ルートのエラーの表示
+              - type: file
+                name: error-fallback.stories.tsx
+                contents: ルートのエラーの表示のストーリー
               - type: file
                 name: initial-loading.tsx
                 contents: 最初の読み込みの表示
@@ -157,10 +184,7 @@ entries:
                     contents: コンソールのロガー
                   - type: file
                     name: utils.ts
-                    contents: shadcn/ui が配置する cn
-                    generated_from:
-                      source: npm:shadcn
-                      tracked: 部品が import する
+                    contents: shadcn/ui が配置した cn
               - type: folder
                 name: core
                 contents: スキーマ・エラー・ショートカットの定義
@@ -215,6 +239,9 @@ entries:
                   - type: file
                     name: preferences.ts
                     contents: ブラウザに保存する好み
+                  - type: file
+                    name: last-doc.ts
+                    contents: 直前に開いていた文書の画面の URL
               - type: folder
                 name: components
                 contents: 画面の間で共通の部品と Storybook のストーリー（*.stories.tsx）
@@ -228,12 +255,15 @@ entries:
                   - type: file
                     name: skip-link.tsx
                     contents: 本文へのスキップ
+                  - type: file
+                    name: project-index-unreachable.tsx
+                    contents: project-index につながらないときの表示
+                  - type: file
+                    name: project-index-unreachable.stories.tsx
+                    contents: project-index につながらないときの表示のストーリー
                   - type: folder
                     name: ui
-                    contents: shadcn/ui が配置する部品
-                    generated_from:
-                      source: npm:shadcn
-                      tracked: 画面の部品が import する
+                    contents: shadcn/ui が配置した部品（配置した後に手で修正している）
           - type: folder
             name: features
             contents: 画面ごとの機能
@@ -257,6 +287,9 @@ entries:
                       - type: file
                         name: nav.ts
                         contents: ナビゲーションからの開いているページ・タイトル
+                      - type: file
+                        name: tables.ts
+                        contents: 本文の表のマーカーと表の区切りの読み取り
                       - type: file
                         name: doc-view-screen.tsx
                         contents: 文書の画面
@@ -282,6 +315,9 @@ entries:
                       - type: file
                         name: not-found-screen.tsx
                         contents: 見つからない画面
+                      - type: file
+                        name: not-found-screen.stories.tsx
+                        contents: 見つからない画面のストーリー
                   - type: folder
                     name: shared
                     contents: 文書の画面と見つからない画面が使用するもの
@@ -320,6 +356,9 @@ entries:
                       - type: file
                         name: settings-screen.tsx
                         contents: 設定画面
+                      - type: file
+                        name: settings-screen.stories.tsx
+                        contents: 設定画面のストーリー
                       - type: folder
                         name: components
                         contents: 配信元の一覧・状態のバッジ・配信元のダイアログ・削除の確認のダイアログ・配信元の一覧の読み込み中の表示
@@ -342,6 +381,21 @@ entries:
           path: src/dev_docs/
           command: CMD-155-1#categories[ビルド・生成]
           tracked: orval の生成の入力にする
+      - type: file
+        name: index.html
+        contents: Vite の入口の HTML
+      - type: file
+        name: orval.config.ts
+        contents: orval の設定
+      - type: file
+        name: tsconfig.json
+        contents: TypeScript の設定
+      - type: file
+        name: vite.config.ts
+        contents: Vite の設定
+      - type: file
+        name: vitest.config.ts
+        contents: Vitest の設定
       - type: file
         name: files.yaml
         contents: 画面のコードの files.yaml の行
@@ -417,6 +471,9 @@ entries:
               - MOD-155-194#
             children:
               - type: file
+                name: __init__.py
+                contents: パッケージの宣言
+              - type: file
                 name: errors.py
                 contents: DevDocsError と MCP・画面が返すエラーの階層
               - type: file
@@ -444,6 +501,9 @@ entries:
             name: features
             contents: 機能ごとの処理
             children:
+              - type: file
+                name: __init__.py
+                contents: パッケージの宣言
               - type: folder
                 name: admin
                 contents: 管理の MCP のツールの処理
@@ -483,6 +543,9 @@ entries:
                   - type: file
                     name: embed.py
                     contents: embed_paths / expand_embeds（埋め込みのマーカーのパスと、表への展開）
+                  - type: file
+                    name: inline.py
+                    contents: 文字列の値の本文の書き換えと、参照の値のリンクへの組み立て
                   - type: file
                     name: service.py
                     contents: ConvertService（変換の選択・表のキーの取り出し）
@@ -588,6 +651,9 @@ entries:
             name: integrations
             contents: 外部システムの呼び出し
             children:
+              - type: file
+                name: __init__.py
+                contents: パッケージの宣言
               - type: folder
                 name: project_index
                 contents: project-index の API を制限時間つきの HTTP で呼ぶ処理
@@ -638,7 +704,7 @@ entries:
                 name: aliases.schema.yaml
                 contents: エイリアスの元の行のスキーマの複製
                 generated_from:
-                  source: shuhei1101/alias-inject@{tag}:schemas/aliases.schema.yaml
+                  source: shuhei1101/alias-inject@v0.3.0:schemas/aliases.schema.yaml
                   tracked: サーバーが実行時に参照する
               - type: file
                 name: aliases.source.yaml
@@ -658,7 +724,11 @@ entries:
             contents: アプリの組み立てと管理の MCP
             used_by:
               - MOD-155-207#
+              - MOD-155-194#
             children:
+              - type: file
+                name: __init__.py
+                contents: パッケージの宣言
               - type: file
                 name: app.py
                 contents: build_app / route_operation_id / SlashlessMcpPathMiddleware（ルートと管理の MCP のマウント）
@@ -711,6 +781,9 @@ entries:
       - type: file
         name: files.yaml
         contents: テストの files.yaml の行
+      - type: file
+        name: conftest.py
+        contents: 全てのテストの共通の準備
   - type: folder
     name: tmp
     contents: レビューのスクリーンショットと、Storybook・公開ページのビルドの出力
@@ -767,7 +840,7 @@ entries:
     contents: dev-docs のバージョン
 gitignore:
   - pattern: docs/generated/
-    reason: YAML の設計書から生成した Markdown
+    reason: 以前の YAML の設計書から生成した Markdown の出力先（今は生成するコマンドが無い）
   - pattern: .venv/
     reason: uv が作る仮想環境
   - pattern: __pycache__/
