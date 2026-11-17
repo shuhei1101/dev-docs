@@ -27,6 +27,9 @@ _VISIBLE_INTERVAL_SEC = 1
 # gh workflow run の出力の実行の URL
 _RUN_URL = re.compile(r"https://\S+/actions/runs/(\d+)")
 
+# ブランチ名に使えない文字（英数字・_・- 以外）
+_UNSAFE_REF_CHARS = re.compile(r"[^A-Za-z0-9_-]")
+
 # 検証用のブランチを push する前に、worktree へ適用する変更
 type Mutation = Callable[[Path], None]
 
@@ -51,7 +54,9 @@ def branch_factory(
     def _create(mutation: Mutation | None = None) -> str:
         # テストの関数名と時刻を含め、同時に回したテストと重ならない名前にする
         stamp = time.strftime("%Y%m%d%H%M%S")
-        branch = f"test-workflow/{request.node.name}-{stamp}-{len(created)}"
+        # parametrize の ID の [] などブランチ名に使えない文字は - に置き換える
+        name = _UNSAFE_REF_CHARS.sub("-", request.node.name)
+        branch = f"test-workflow/{name}-{stamp}-{len(created)}"
         worktree = tmp_path / f"worktree-{len(created)}"
         _run(["git", "worktree", "add", "--detach", str(worktree), "HEAD"], REPO_ROOT)
         created.append((branch, worktree))
