@@ -45,7 +45,7 @@ CATEGORIES = ("はじめに", "使い方", "リファレンス")
 FLOWCHART_CATEGORY = "使い方"
 
 # 文書の原本でないため ID を集めない docs/ 直下のフォルダと、目次・管理用の YAML のファイル名
-SKIPPED_DIRS = ("pr", "mock", "generated")
+SKIPPED_DIRS = ("pr", "mock")
 SKIPPED_FILES = ("index.yaml", "files.yml")
 
 # 公開ページにまとめない文書への参照のリンクの頭
