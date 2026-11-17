@@ -1,0 +1,34 @@
+use_cases:
+  - kind: composite
+    scenario: docs/scenario/SC-155-13.yaml
+    impact: run_only
+    detail: 配信元を開いて文書を読む全体の流れは変えないが、配信元の表示・タブの並び・図のリンクの修正が壊しうる
+    depends_on: []
+  - kind: single
+    scenario: docs/scenario/SC-155-7.yaml
+    impact: run_only
+    detail: 配信元を 1 回目に開いたときの表示、共通のキーで絞り込んだタブの文書の並び、図のノードを押して同じ配信元の文書を開く操作が、シナリオの記述どおりに動くよう直す
+    depends_on: []
+docs:
+  - page: docs/guide/設定.md
+    new: false
+    change: '#249: nav の auto.filter に共通のキー（行の metadata で対応付けたキーを含む）を指定できることを記載する'
+    status: todo
+  - page: docs/nonfunctional/NFR-155-1.yaml
+    new: false
+    change: '#225: project-index#85 の後の 1 回目の表示の計測値から、最初の文書を表示し終えるまでの決定値を見直す'
+    status: todo
+  - page: docs/library/LIB-155-9.yaml
+    new: false
+    change: '#255: 今の mdmark が Mermaid の click のノードをどう描くかを確かめ、利用方法の記述と食い違う場合に合わせる（mdmark の退行なら変えない）'
+    status: todo
+scope_out:
+  - item: nav の auto.group_by で共通のメタデータ（main_tags など）を指定してグループに分けること
+    reason: auto.filter の不具合とは別の機能追加で、要望に含まれない
+    plan: '#251'
+  - item: 起動直後の配信元の一覧で、読み込み中の配信元を表示すること（include_loading）
+    reason: 配信元を開いた後の文書の表示ではなく、配信元の一覧の対応で、要望に含まれない
+    plan: '#250'
+  - item: mdmark 側の Mermaid の click の描画の修正
+    reason: '#255 の調査で mdmark#630 による mdmark#570 の退行と確かめた場合は mdmark へ起票して依存に置き、この作業 PR では直さない。退行かは調査で確定する'
+    plan: to_file
