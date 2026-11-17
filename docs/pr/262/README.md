@@ -1,0 +1,1 @@
+# 画面の不具合を修正する: 配信元の 1 回目の表示・nav の auto.filter の共通のキー・Mermaid の click のリンク
