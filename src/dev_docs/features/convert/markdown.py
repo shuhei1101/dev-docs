@@ -592,7 +592,7 @@ def _select_element(elements: list[Any], x_key: str, label: str) -> Mapping[str,
         return matches[0]
     # 末尾が `#{整数}`: `#{整数}` を除いた値の要素の、整数番目（1 始まり）
     value, sep, order = label.rpartition("#")
-    if not sep or not order.isdigit():
+    if not sep or not order.isdecimal():
         return None
     same = [e for e in elements if isinstance(e, Mapping) and str(e.get(x_key)) == value]
     index = int(order)
@@ -631,7 +631,7 @@ def item_heading(data: Mapping[str, Any], schema: Mapping[str, Any], item: str) 
             value = _select_element(value, str(x_key), step)
             if value is None:
                 return None
-            heading = value.get(x_key)
+            heading = str(value.get(x_key))
             sub = sub.get("items")
         # 辞書: 値をキーにした子へ進み、変換が子に付ける見出しがこのステップの見出し
         elif isinstance(value, Mapping):
