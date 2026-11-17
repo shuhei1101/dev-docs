@@ -104,7 +104,7 @@ categories:
       detail: worktree で `frontend/` の変更をステージして `npx lefthook run pre-commit` を実行し、`frontend-build` だけが実行されて終了コード 0 になり、lint・型検査が実行されないことを確認した。
   - name: 管理作業
     prerequisites:
-      - 127.0.0.1:8781 で dev-docs のサーバーが待ち受けている
+      - 1・2 は、127.0.0.1:8781 で dev-docs のサーバーが待ち受けている
     commands: |-
       dev-docs のサーバーの再起動の反映作業のスクリプトは、再起動の後の待ちに次を呼ぶ（作業ディレクトリはリポジトリの直下）。
 
@@ -119,7 +119,13 @@ categories:
       ```bash
       started=$(sh scripts/dev-docs-server-wait.sh started)
       ```
-    effects: '`listening` は最長 120 秒待つ（上限の導き方はスクリプトの冒頭のコメント）。待ちきれなければ `failed` の行を出して終了コード 1 で終わる。`started` は待ち受けていないか、ログ（端末の設定の `log_dir` の既定 `${XDG_STATE_HOME:-~/.local/state}/dev-docs/logs/`）に待ち受けを始めた行が無ければ、標準エラーに `failed` の行を出して終了コード 1 で終わる。サーバーの状態は変えない'
+
+      3. AI Monitor の設定 `projects[].resident_servers` の `restart_command` が、常駐サーバーを起動し直すときに、稼働しているブランチ（develop）の作業ツリーで次を呼ぶ
+
+      ```bash
+      bash scripts/dev-docs-restart-resident.sh
+      ```
+    effects: '`listening` は最長 120 秒待つ（上限の導き方はスクリプトの冒頭のコメント）。待ちきれなければ `failed` の行を出して終了コード 1 で終わる。`started` は待ち受けていないか、ログ（端末の設定の `log_dir` の既定 `${XDG_STATE_HOME:-~/.local/state}/dev-docs/logs/`）に待ち受けを始めた行が無ければ、標準エラーに `failed` の行を出して終了コード 1 で終わる。サーバーの状態は変えない。`dev-docs-restart-resident.sh` は、前回起動し直した commit からサーバーが実行時に参照するファイル（`src/`・`content/`・`templates/`・`pyproject.toml`・`uv.lock`・`.python-version`）が変わっていれば、`uv sync --frozen` の後に `systemctl --user restart dev-docs.service` を実行し、起動し直した commit を状態のフォルダ（既定 `${XDG_STATE_HOME:-~/.local/state}/dev-docs/`）の `restarted-commit` に記録する。変わっていなければ起動し直さずに記録だけを進める。成功は終了コード 0 で、`uv sync`・`systemctl` が失敗するとその終了コードで終わり、記録を進めない。待ち受けは待たない（呼び出し元が `health_url` で確認する）'
     verification:
       state: 済
       detail: '`started`・`listening` は [再起動の後にも新しいサーバーを見分けられるようにする](https://github.com/shuhei1101/dev-docs/pull/138) で稼働中のサーバーへ走らせて確認した'

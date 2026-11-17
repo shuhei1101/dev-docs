@@ -1,0 +1,118 @@
+id: MOD-266-1
+title: 開発用のスクリプト / 常駐サーバーの起動し直し / dev-docs-restart-resident.sh
+lead: AI Monitor の常駐サーバーの `restart_command` から呼ばれ、実行時に参照するファイルが変わっていれば依存を `uv.lock` どおりにそろえてから `dev-docs.service` を起動し直す処理を受け持ち、常駐サーバーの起動し直しの dev-docs-restart-resident.sh を修正するときに参照する。
+test_files:
+  - tests/unit/scripts/test_restart_resident.py
+constants:
+  - name: RUNTIME_PATHS
+    title: 実行時に参照するファイル
+    container: scripts/dev-docs-restart-resident.sh
+    usecase: 常駐サーバーの起動し直し
+    summary: 変わったら依存をそろえて起動し直す、サーバーが実行時に参照するリポジトリの直下からのパス
+    entries:
+      - key: '0'
+        value: src
+      - key: '1'
+        value: content
+      - key: '2'
+        value: templates
+      - key: '3'
+        value: pyproject.toml
+      - key: '4'
+        value: uv.lock
+      - key: '5'
+        value: .python-version
+  - name: UNIT
+    title: 起動し直す unit
+    container: scripts/dev-docs-restart-resident.sh
+    usecase: 常駐サーバーの起動し直し
+    summary: '`systemctl --user restart` に指定する systemd --user の unit'
+    value: dev-docs.service
+  - name: RECORD_FILE
+    title: 起動し直した commit の記録
+    container: scripts/dev-docs-restart-resident.sh
+    usecase: 常駐サーバーの起動し直し
+    summary: 前回起動し直した commit の SHA を 1 行で持つファイル。状態の配置先は `dev-docs-server-wait.sh` の `LOG_DIR` と同じく `DEV_DOCS_STATE_DIR`、無ければ `XDG_STATE_HOME`（絶対パスでなければ未設定として扱う）の `dev-docs`、無ければ `~/.local/state/dev-docs`
+    value: '"${DEV_DOCS_STATE_DIR:-${XDG_STATE_HOME:-$HOME/.local/state}/dev-docs}/restarted-commit"'
+functions:
+  - name: main
+    title: スクリプトの起点
+    container: scripts/dev-docs-restart-resident.sh
+    usecase: 常駐サーバーの起動し直し
+    role: 起点
+    summary: 前回起動し直した commit から `RUNTIME_PATHS` が変わっていれば、`uv sync --frozen` の後に `UNIT` を起動し直し、`RECORD_FILE` を `HEAD` へ進める
+    kind: 関数
+    scope: public
+    is_async: false
+    side_effects: '`.venv` を `uv.lock` どおりに書き換える。`UNIT` を起動し直す。`RECORD_FILE` を作成・上書きする。標準出力・標準エラーに出力する'
+    args_example: |-
+      ```bash
+      bash scripts/dev-docs-restart-resident.sh
+      ```
+    returns:
+      type: int
+      description: 成功（起動し直した・変わっていないので起動し直さなかった）は 0。`uv sync --frozen` と `systemctl --user restart` の失敗は、そのコマンドの終了コード
+    process: |-
+      1. `set -euo pipefail` を有効にし、スクリプトの実体の親（リポジトリの直下）へ移る
+      2. `RECORD_FILE` があれば 1 行目を前回の commit として読み込む
+      3. 前回の commit があり、`git diff --quiet {前回の commit} HEAD -- RUNTIME_PATHS` が 0 で終わる場合、`RECORD_FILE` に `HEAD` の SHA を記録し、変わっていない旨を標準出力に出して 0 で終わる
+         - 前回の commit が無い・`git diff` が 0 以外（変わった・commit が見つからない）の場合、次へ進む
+      4. `uv sync --frozen` を実行する
+         - 失敗した場合、標準エラーに出してその終了コードで終わる（`RECORD_FILE` を進めない。サーバーは今のコードのまま動き続ける）
+      5. `systemctl --user restart UNIT` を実行する
+         - 失敗した場合、標準エラーに出してその終了コードで終わる（`RECORD_FILE` を進めない）
+      6. `RECORD_FILE` のフォルダを作り、`HEAD` の SHA を記録し、起動し直した旨を標準出力に出して 0 で終わる
+         - [INFO] 待ち受けの確認は呼び出し元（AI Monitor の `health_url`）が行い、このスクリプトは待たない
+    unit_tests:
+      - name: test_restart_when_no_record
+        case: 正常
+        summary: 記録が無い
+        condition: commit 1 つの一時リポジトリ、`RECORD_FILE` 無し
+        mock: '`uv`・`systemctl`（`PATH` の先頭のスタブ。引数を記録して 0 で終わる）'
+        expected: 0 で終わり、`uv sync --frozen` と `systemctl --user restart dev-docs.service` がこの順で呼ばれ、`RECORD_FILE` が `HEAD` の SHA になる
+      - name: test_restart_when_runtime_changed
+        case: 正常
+        summary: 実行時に参照するファイルが変わった
+        condition: '`RECORD_FILE` に前の commit、その後の commit で `src/` のファイルを変更'
+        mock: '`uv`・`systemctl`（同上）'
+        expected: 0 で終わり、両方が呼ばれ、`RECORD_FILE` が `HEAD` の SHA になる
+      - name: test_skip_when_runtime_unchanged
+        case: 正常
+        summary: 実行時に参照するファイルが変わっていない
+        condition: '`RECORD_FILE` に前の commit、その後の commit で `docs/` のファイルだけを変更'
+        mock: '`uv`・`systemctl`（同上）'
+        expected: 0 で終わり、どちらも呼ばれず、`RECORD_FILE` が `HEAD` の SHA になる
+      - name: test_restart_when_record_unknown
+        case: 異常
+        summary: 記録の commit が見つからない
+        condition: '`RECORD_FILE` にリポジトリに無い SHA'
+        mock: '`uv`・`systemctl`（同上）'
+        expected: 0 で終わり、両方が呼ばれ、`RECORD_FILE` が `HEAD` の SHA になる
+      - name: test_fail_when_sync_failed
+        case: 異常
+        summary: 依存の入れ直しの失敗
+        condition: 記録が無い
+        mock: '`uv`（1 で終わる）・`systemctl`（呼ばれないことを確認する）'
+        expected: 0 以外で終わり、`systemctl` は呼ばれず、`RECORD_FILE` を作らない
+      - name: test_fail_when_restart_failed
+        case: 異常
+        summary: 起動し直しの失敗
+        condition: '`RECORD_FILE` に前の commit、その後の commit で `uv.lock` を変更'
+        mock: '`uv`（0 で終わる）・`systemctl`（1 で終わる）'
+        expected: 0 以外で終わり、`RECORD_FILE` は前の commit のまま
+refs:
+  - ARCH-155-1#
+  - CMD-155-1#
+notes:
+  補足: AI Monitor が設定 `projects[].resident_servers` の `restart_command` で、稼働しているブランチ（develop）の作業ツリーを作業ディレクトリにして呼ぶ。実行時に参照するファイルが変わっていないときは起動し直さない（文書だけの変更でサーバーを止めない）。画面のビルドの成果物 `src/dev_docs/screen/` は commit されるため、`npm ci`・`npm run build` は実行しない。
+  フォルダ構成: |-
+    ```text
+    scripts/
+    └─ dev-docs-restart-resident.sh    # main
+    ```
+tags:
+  - name: topic:再起動
+    main: true
+  - name: tool:uv
+  - name: tool:systemd
+  - name: tool:git
