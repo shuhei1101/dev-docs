@@ -821,19 +821,19 @@ test.describe("本文", () => {
     const markdown = [
       "# 文書 1",
       "",
-      "## 構成",
+      "## 概要",
       "",
       "```mermaid",
       "classDiagram",
       "  class 受付",
-      '  click 受付 href "doc-2.yaml"',
+      '  click 受付 href "./doc-2"',
       "```",
       "",
     ].join("\n");
     await openRendered(page, "/sample/docs/doc-1?rev=develop", {
       document: ({ path }) => ({ body: documentResponse({ path, markdown }) }),
     });
-    const node = page.locator('.mdmark a[href="doc-2.yaml"]');
+    const node = page.locator('.mdmark a[href="./doc-2"]:visible');
     await expect(node).toHaveCount(1);
     // 実行
     await node.click();
