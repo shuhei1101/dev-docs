@@ -1,0 +1,11 @@
+use_cases:
+  - kind: single
+    scenario: docs/scenario/SC-155-7.yaml
+    impact: none
+    detail: ER の文書の表の外部キーのリンクが、前に同じ文字の見出しがあるときも参照先のテーブルの見出しへ飛ぶ。参照の流れは変わらない
+    depends_on: []
+scope_out:
+  - item: 見出しのアンカーの一覧が mdmark と同じ ID にならない本文の値の記載方法（setext の見出し・引用や箇条書きの中の見出し・脚注の定義の中の見出し・埋め込みの展開で入る見出しと、行内のコードなどの記法を含む見出しの文字）
+    reason: '#298 で対応しないと確定した `heading_anchors` の数え方の制約で、今回はその数え方を使用するだけのため対象外'
+    plan: none
+docs: []
