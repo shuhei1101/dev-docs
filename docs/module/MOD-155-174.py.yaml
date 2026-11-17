@@ -360,7 +360,7 @@ functions:
       description: 起こしたスレッド（テストが join する）
     process: |-
       1. 次を実行するデーモンのスレッドを起こして返却する（待ち受けとは別のイベントループで動かすため、`asyncio.run` の中で専用の project-indexの呼び出しを作って閉じる）
-         - project-indexの呼び出し.配信元の状態の一覧 を呼び、`serving` の配信元の ID を標準出力に 1 行ずつ出す
+         - project-indexの呼び出し.配信元の状態の一覧 を呼び、`serving` の配信元の ID を、`loading` の配信元は `{ID}（読み込み中）` を、配信元の並びの順に標準出力に 1 行ずつ出す（配信元の状態の一覧は読み込みを待たない）
          - `ProjectIndexUnreachableError` の場合、`project-index（{address}）に接続できませんでした。{reason}` と `project-index を起動してから、再読み込みしてください。` を標準エラーに出し、`[error]` project-index につながらない（アドレス・理由）を記載する。待ち受けは止めない
          - それ以外の例外の場合、`[error]` 配信元の通知に失敗した（例外のスタックトレース）を記載してスレッドを終える
     unit_tests:
@@ -376,6 +376,12 @@ functions:
         condition: '`project_index` が何も待ち受けていないアドレス'
         mock: なし（`capsys`・`caplog`）
         expected: スレッドを join した後、標準エラーにアドレスと `project-index を起動してから` があり、`caplog` に `error` が 1 件
+      - name: test_announce_sources_when_loading
+        case: 正常
+        summary: 読み込み中の配信元を出す
+        condition: '`project_index` が sample を `serving`、slow を `loading` で返却する偽物の HTTP サーバーのアドレス'
+        mock: なし（偽物の HTTP サーバーと `capsys`）
+        expected: スレッドを join した後、標準出力に `sample` と `slow（読み込み中）` の 2 行
   - name: run_migrate
     title: 設定の移し替えの実行
     container: main.py

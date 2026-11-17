@@ -74,6 +74,12 @@ data_models:
         access: 公開
         default: 'True'
         description: '`False` で、`scope` に該当しない作業場所から `outside_scope: true` で参照するのを断る'
+      - name: storage
+        title: 読み書きの方法
+        type: SourceStorage | None
+        access: 公開
+        default: None
+        description: '`None` は送信しない（project-index がファイルの同じ配信元の行の今の値で埋める）'
   - name: TerminalConfig
     title: 端末の設定
     container: features/settings/types.py
@@ -228,6 +234,12 @@ data_models:
         access: 公開
         default: 'True'
         description: project-index の行の `outside_read`
+      - name: storage
+        title: 読み書きの方法
+        type: SourceStorage | None
+        access: 公開
+        default: None
+        description: project-index の行の `storage`。記載していない行は `None`（JSON に `null` で出す）
   - name: SettingsSourcesView
     title: 端末の設定の取得の応答
     container: features/settings/types.py
@@ -252,6 +264,19 @@ data_models:
         access: 公開
         default: None
         description: project-index の端末の設定の内容のバージョン（ファイル全体の内容のハッシュ）
+  - name: SourceStorage
+    title: 読み書きの方法
+    container: features/settings/types.py
+    usecase: 端末の設定
+    role: DTO
+    summary: '`sources[].storage` の `type`'
+    description: '`pydantic.BaseModel`（`extra="forbid"`）。端末の設定の保存の要求と取得の応答で共有する'
+    properties:
+      - name: type
+        title: 読み書きの方法
+        type: Literal['git', 'disk']
+        access: 公開
+        description: '`git` は `default_ref` から参照し、`disk` は Git を参照せずにフォルダのファイルを参照する。他の値は要求の検証で 400'
 classes:
   - name: TerminalConfigInvalidError
     title: 端末の設定の違反

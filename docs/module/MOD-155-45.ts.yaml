@@ -64,6 +64,7 @@ functions:
     process: |-
       1. `config`・`scope.read`・`scope.write`（null は空）を改行でつなぐ
       2. `outsideRead` は行の `outsideRead`（無ければ `true`）。追加のときは `true`
+      3. `storage` は行の `storage.type`（無ければ `auto`）。追加のときは `auto`
     unit_tests:
       - name: test_to_form_values
         case: 正常
@@ -77,6 +78,12 @@ functions:
         condition: '`outsideRead: false` の行と、`outsideRead` を持たない行'
         mock: なし
         expected: '`outsideRead` が順に `false`・`true`'
+      - name: test_to_form_values_when_storage
+        case: 正常
+        summary: 読み書きの方法の初期値
+        condition: '`storage.type: disk` の行と、`storage` の無い行と、追加（null）'
+        mock: なし
+        expected: '`disk`、`auto`、`auto`'
   - name: applySource
     title: 入力の反映
     kind: 関数
@@ -124,6 +131,12 @@ functions:
         condition: 入力の `outsideRead` が `false`、他の行の `outsideRead` が `false`
         mock: なし
         expected: '入力の行と他の行に `outside_read: false` があり、`outsideRead` が `true` の行には `outside_read` が無い'
+      - name: test_apply_source_when_storage
+        case: 正常
+        summary: 読み書きの方法を持ち回す
+        condition: '`storage.type: disk` の local と `storage` の無い sample の 2 行に、`storage: disk` の入力を追加する。続けて sample を `storage: auto` で編集する'
+        mock: なし
+        expected: '追加では local と追加した行に `storage: {type: disk}`、sample に `storage` が無い。編集では sample に `storage` が無く、local は `storage: {type: disk}` のまま'
   - name: removeSource
     title: 行の削除
     kind: 関数
@@ -170,7 +183,7 @@ functions:
         description: 取得の行
     returns:
       type: SourceInput
-      description: '`id`（null は省く）・`config`・`enabled`・`scope`（`write` が null なら省く）'
+      description: '`id`（null は省く）・`config`・`enabled`・`scope`（`write` が null なら省く）・`outside_read`（`false` のときだけ）・`storage`（行が持つときだけ。取得した値のまま）'
     process: 1. `status`・`errors`・`configVersion` を除く
   - name: sourceKey
     title: 行を指す値
@@ -227,6 +240,31 @@ functions:
         condition: '`a`・`b` の行の前に `c` を追加した一覧で `b` を取得する。無い `z` を取得する'
         mock: なし
         expected: '`b` が 2、`z` が -1'
+  - name: storedStorage
+    title: 保存済みの読み書きの方法
+    kind: 関数
+    container: features/settings/settings/form.ts
+    usecase: 配信元を設定する
+    role: 変換
+    summary: 行が保存済みの読み書きの方法を持つかを返却する（持つ行は自動に戻せない）
+    scope: public
+    args:
+      - name: source
+        type: SettingsSource | null
+        required: true
+        passing: positional
+        description: 端末の設定の取得の `sources[]` の行（追加は null）
+    returns:
+      type: "'git' | 'disk' | null"
+      description: 行の `storage.type`。行が null か `storage` を持たないときは null
+    process: 1. 行の `storage?.type` を返却し、無ければ null を返却する（`SettingsSource` は API の生成した型で `storage` を持つ）
+    unit_tests:
+      - name: test_stored_storage
+        case: 正常
+        summary: 保存済みの値の有無
+        condition: '`storage.type: disk` の行、`storage` の無い行、null'
+        mock: なし
+        expected: '`disk`、null、null'
 tags:
   - name: topic:設定画面
     main: true

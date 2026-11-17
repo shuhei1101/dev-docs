@@ -56,7 +56,7 @@ functions:
       type: SettingsSourcesView
       description: project-index が再読み込みした後の配信元ごとの状態と、保存した後の内容のバージョン（project-indexの呼び出しの型）
     process: |-
-      1. 行ごとに JSON にする。`config` は要素の数によらず配列にし、既定値と同じキー（`enabled: true`・`outside_read: true`・空の `scope.read`・`None` の `scope.write`・`None` の `id`）は送信しない
+      1. 行ごとに JSON にする。`config` は要素の数によらず配列にし、既定値と同じキー（`enabled: true`・`outside_read: true`・空の `scope.read`・`None` の `scope.write`・`None` の `id`・`None` の `storage`）は送信しない。`storage` を持つ行は `{type}` を値を変えずに送信する
       2. project-indexの呼び出し.端末の設定の配信元の行の保存 を `expected_version` を指定して呼び、返った `SettingsSourcesView` を返却する
          - `[info]` 端末の設定の sources の保存を依頼した（行数）
     exceptions:
@@ -115,6 +115,12 @@ functions:
         mock: project-indexの呼び出し（例外を送信する偽物）
         expected: '`SettingsVersionConflictError` がそのまま伝わる'
         exception: project-index が 409 を返却した
+      - name: test_save_sources_when_storage
+        case: 正常
+        summary: 読み書きの方法を送信する
+        condition: '`storage` の無い sample と `storage.type: disk` の local'
+        mock: project-indexの呼び出しを偽物に差し替え、送信した行を記録する
+        expected: 'local の行に `storage: {type: disk}` があり、sample の行に `storage` が無い'
     is_async: true
 tags:
   - name: topic:端末の設定

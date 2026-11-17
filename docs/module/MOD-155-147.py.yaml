@@ -41,7 +41,7 @@ functions:
       type: fastapi.APIRouter
       description: 2 つのルートを持つルーター
     process: |-
-      1. GET `/_api/settings/sources` は、project-indexの呼び出し.端末の設定の配信元の行の取得 を呼び、`settings_path` を project-index の `settings_path`、`sources[]` を行ごとに状態（同じ添字の `states`）を重ねた `SettingsSourceRow`、`version` を project-index の `version` にした `SettingsSourcesView` を返却する
+      1. GET `/_api/settings/sources` は、project-indexの呼び出し.端末の設定の配信元の行の取得 を呼び、`settings_path` を project-index の `settings_path`、`sources[]` を行ごとに状態（同じ添字の `states`）を重ねた `SettingsSourceRow`（`storage` は行の `storage.type` を `SourceStorage` にし、行に無ければ `None`。状態が `loading` のときは `pending_reload` にする）、`version` を project-index の `version` にした `SettingsSourcesView` を返却する
       2. PUT `/_api/settings/sources` は、同じオリジンの確認を依存に持ち（同じオリジンの確認）、本文を `SettingsSourcesRequest` で受けて配信元の保存（`expected_version` に本文の `expected_version`）を呼び、返った `SettingsSourcesView` から `SettingsSourcesResponse.from_view` を返却する
          - `SettingsVersionConflictError` は 409（`current`）、`ProjectIndexRejectedError` は 422、`ProjectIndexUnreachableError` は 503、`ProjectIndexResponseError` は 502 の problem+json に例外の変換がする
       3. ルーターは `APIRouter(tags=["settings"])` にする。各ルートの `name`（`operation_id` は指定せず、アプリの組み立てが operationId を `settings-{name}` にする）は、GET が `get_settings_sources`、PUT が `put_settings_sources`
@@ -93,6 +93,12 @@ functions:
         mock: project-indexの呼び出し（`httpx.MockTransport` で 409 を返却する）
         expected: 409 の problem+json で `current` が `v2`。project-index へ送信した本文の `expectedVersion` が `v1`
         exception: '-'
+      - name: test_build_settings_router_when_storage
+        case: 正常
+        summary: 行の読み書きの方法を重ねる
+        condition: 'GET `/_api/settings/sources` で、project-index の行が sample（`storage` なし）と local（`storage.type: disk`）'
+        mock: project-indexの呼び出しを偽物に差し替える
+        expected: local の `storage.type` が `disk`、sample の `storage` が `null`
 refs:
   - IF-155-20#
   - IF-155-19#
