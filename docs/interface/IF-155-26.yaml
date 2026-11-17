@@ -278,7 +278,7 @@ notes:
     | Python の依存を入れる | `uv sync --frozen` で、`.python-version` の Python と依存を入れる |
     | npm の依存を入れる | `npm ci` で直下の依存を入れる |
     | Chromium を入れる | `npx playwright install --with-deps chromium` で Chromium と OS の依存を入れる |
-    | 層の全件を回す | `layer`・`paths` を `env:` の環境変数で受け取り（`run:` に `${{ inputs.* }}` を直接埋め込まない）、層のコマンドを裏で起動して出力を `test.log` に記録し、`test.log` の大きさを 1 秒ごとに確認し、無出力の時間の上限を超えたらテストを止め、止めた旨を `test.log` に記録して失敗で終える。止めなかったときはコマンドの終了コードを step の成否にする |
+    | 層の全件を回す | `layer`・`paths` を `env:` の環境変数で受け取り（`run:` に `${{ inputs.* }}` を直接埋め込まない）、層のコマンドを裏で起動して出力を `tee` で `test.log` と step の標準出力の両方に出し（`gh run view --log` で手元に出るジョブのログにも、テストの名前と集計の行が出る）、`test.log` の大きさを 1 秒ごとに確認し、無出力の時間の上限を超えたらテストを止め、止めた旨を `test.log` に記録して失敗で終える。止めなかったときはコマンドの終了コードを step の成否にする |
     | ログを成果物に上げる | `if: always()` で `actions/upload-artifact` により `test.log` を成果物 `test-log` に上げる |
   タイムアウトの決め方: |-
     判定フローチャート『タイムアウトの決め方』では、自分の処理の完了を待つだけで、進み具合の出力（pytest の `-v`・vitest の `verbose`・Playwright の `list` のテスト 1 件ごとの行）があるため、無出力の時間で止まったことを検知する（制約の「無出力の時間」）。
