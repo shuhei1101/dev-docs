@@ -1,4 +1,4 @@
-# yaml-language-server: $schema=https://raw.githubusercontent.com/shuhei1101/project-index/v0.1.0/schemas/project-index.schema.json
+# yaml-language-server: $schema=https://raw.githubusercontent.com/shuhei1101/project-index/develop/schemas/project-index.schema.json
 version: "3"
 name: dev-docs
 default_ref: develop
@@ -264,6 +264,7 @@ nav:
   tabs:
     - title: はじめに
       items:
+        - {page: root/README.md, title: 概要}
         - group: コアコンセプト
           items:
             - page: files_guide/docs/guide/コアコンセプト-配信元と権限.md
@@ -365,7 +366,7 @@ nav:
             - auto:
                 document: root
                 filter:
-                  not: {field: id, op: eq, values: [docs/design-policy.md]}
+                  not: {field: id, op: eq, values: [docs/design-policy.md, README.md]}
         - group: プロンプト
           items:
             - auto: {document: prompts, group_by: kind}
