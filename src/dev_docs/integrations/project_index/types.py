@@ -45,6 +45,8 @@ class DocumentRow:
     search: bool = True
     converter: str | None = None
     alias_type: str | None = None
+    # 共通のキー → 列名。nav の条件の使用できる項目と項目の値に使用する
+    metadata: dict[str, str] = field(default_factory=dict)
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)

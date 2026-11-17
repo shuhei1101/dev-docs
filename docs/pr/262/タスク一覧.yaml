@@ -1,0 +1,85 @@
+tasks:
+  - process: 初期構築
+    status: skipped
+    reason: 既存リポジトリのため対象外
+    updated_by: planner
+    updated_at: '2026-11-17T10:14:16.146213+00:00'
+  - process: リバースエンジニアリング
+    status: skipped
+    reason: 設計書が揃っている既存リポジトリのため対象外
+    updated_by: planner
+    updated_at: '2026-11-17T10:14:16.146213+00:00'
+  - process: 方針決め
+    status: skipped
+    reason: 方針決めを依頼する Issue ではない
+    updated_by: planner
+    updated_at: '2026-11-17T10:14:16.146213+00:00'
+  - process: PoC 検証
+    status: skipped
+    reason: 未検証の技術機構に依存しない（既存の画面・nav・mdmark の描画の不具合の修正）
+    updated_by: planner
+    updated_at: '2026-11-17T10:14:16.146213+00:00'
+  - process: 複合ユースケース設計
+    status: skipped
+    reason: 利用者の流れは変えない（不具合の修正）
+    updated_by: planner
+    updated_at: '2026-11-17T10:14:16.146213+00:00'
+  - process: デザインスタイル選定
+    status: skipped
+    reason: 新しい画面・見た目の変更を含まない
+    updated_by: planner
+    updated_at: '2026-11-17T10:14:16.146213+00:00'
+  - process: 画面一覧・画面遷移
+    status: skipped
+    reason: 画面と遷移を増やさない
+    updated_by: planner
+    updated_at: '2026-11-17T10:14:16.146213+00:00'
+  - process: 単一ユースケース設計
+    status: skipped
+    reason: SC-155-7 の流れは変えず、既存の要件どおりに動くよう直す
+    updated_by: planner
+    updated_at: '2026-11-17T10:14:16.146213+00:00'
+  - process: モック作成
+    status: skipped
+    reason: 新しい画面・見た目の変更を含まない
+    updated_by: planner
+    updated_at: '2026-11-17T10:14:16.146213+00:00'
+  - process: インターフェース定義設計
+    status: skipped
+    reason: 文書の取得（IF-155-10）の入出力は変えない。#255 の調査で画面側の対応が要ると分かった場合は todo へ戻す
+    updated_by: planner
+    updated_at: '2026-11-17T10:14:16.146213+00:00'
+  - process: 部品設計
+    status: skipped
+    reason: 部品の引数と状態を変えない
+    updated_by: planner
+    updated_at: '2026-11-17T10:14:16.146213+00:00'
+  - process: 画面設計
+    status: skipped
+    reason: 画面の構成を変えない
+    updated_by: planner
+    updated_at: '2026-11-17T10:14:16.146213+00:00'
+  - process: モジュール構成設計
+    status: done
+    note: '#249: nav の auto.filter の使用できる項目の作り方（MOD-155-160 nav.py・MOD-155-134 絞り込み/fields.py・MOD-155-107 文書/fields.py）'
+    updated_by: planner
+    updated_at: '2026-11-17T10:24:36.076268+00:00'
+  - process: ドキュメント修正
+    status: done
+    note: docs/guide/設定.md は設計の段で修正済み。NFR-155-1・LIB-155-9 は実装の工程の関連ドキュメントの修正で扱う
+    updated_by: planner
+    updated_at: '2026-11-17T10:35:16.538552+00:00'
+  - process: 単体テスト作成
+    status: done
+    updated_by: planner
+    updated_at: '2026-11-17T10:49:54.533627+00:00'
+  - process: 実装
+    status: done
+    note: '#249 の実装。#255 は mdmark#650 へ起票して依存に置く（画面の実装は変えない）'
+    updated_by: planner
+    updated_at: '2026-11-17T10:49:54.533627+00:00'
+  - process: 結合テスト作成
+    status: done
+    note: '計画書の結合テストの実行範囲の表を回す。#225: project-index#85 の後の 1 回目の表示を dd2.cjs で計測し、NFR-155-1 の決定値と比べる'
+    updated_by: planner
+    updated_at: '2026-11-17T11:07:01.980308+00:00'

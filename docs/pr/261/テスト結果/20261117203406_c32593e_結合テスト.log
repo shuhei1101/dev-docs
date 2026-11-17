@@ -1,0 +1,622 @@
+# E2E テストの層（TL-6）の全件実行（69a1c78）と、fail した 4 件の個別実行（c32593e）
+# 全件実行で fail した 5 件のうち 4 件（test_error_when_paths_outside_layer）は、parametrize の ID の [] が検証用のブランチ名に入り git が push を拒んだためで、conftest のブランチ名を直して（c32593e）個別実行で 4 件 pass した
+# test_normal_when_frontend_integration の fail は、workflow の結論が failure になったためで、原因は結合テスト（フロント）の層の body_mermaid_click_link の fail（既知の #255、手元でも同じく fail する）。workflow の step はフローどおりに通っている
+
+######## 全件実行
+$ uv run pytest tests/e2e/ -v --basetemp=/tmp/dev-docs-261-measure/pt-e2e
+============================= test session starts ==============================
+platform linux -- Python 3.14.3, pytest-9.1.1, pluggy-1.7.0 -- /home/shuhei2441/repo/dev-docs/.claude/worktrees/chore-test-runner-test-location/.venv/bin/python
+cachedir: .pytest_cache
+rootdir: /home/shuhei2441/repo/dev-docs/.claude/worktrees/chore-test-runner-test-location
+configfile: pyproject.toml
+plugins: anyio-4.15.1
+collecting ... collected 12 items
+
+tests/e2e/workflow/test_test_yml.py::test_normal PASSED                  [  8%]
+tests/e2e/workflow/test_test_yml.py::test_normal_when_backend_integration PASSED [ 16%]
+tests/e2e/workflow/test_test_yml.py::test_normal_when_frontend_unit PASSED [ 25%]
+tests/e2e/workflow/test_test_yml.py::test_normal_when_frontend_integration FAILED [ 33%]
+tests/e2e/workflow/test_test_yml.py::test_normal_when_paths_given PASSED [ 41%]
+tests/e2e/workflow/test_test_yml.py::test_error_when_tests_fail PASSED   [ 50%]
+tests/e2e/workflow/test_test_yml.py::test_error_when_output_stalls PASSED [ 58%]
+tests/e2e/workflow/test_test_yml.py::test_error_when_setup_fails PASSED  [ 66%]
+tests/e2e/workflow/test_test_yml.py::test_error_when_paths_outside_layer[other-layer-folder] FAILED [ 75%]
+tests/e2e/workflow/test_test_yml.py::test_error_when_paths_outside_layer[not-integration-layer] FAILED [ 83%]
+tests/e2e/workflow/test_test_yml.py::test_error_when_paths_outside_layer[parent-directory] FAILED [ 91%]
+tests/e2e/workflow/test_test_yml.py::test_error_when_paths_outside_layer[forbidden-character] FAILED [100%]
+
+=================================== FAILURES ===================================
+____________________ test_normal_when_frontend_integration _____________________
+
+branch_factory = <function branch_factory.<locals>._create at 0x7ebe5adc9b10>
+workflow_runner = <function workflow_runner.<locals>._start at 0x7ebe5adc8f60>
+artifact_reader = <function artifact_reader.<locals>._read at 0x7ebe5adc97a0>
+
+    def test_normal_when_frontend_integration(
+        branch_factory: BranchFactory, workflow_runner: WorkflowRunner, artifact_reader: ArtifactReader
+    ) -> None:
+        """結合テスト（フロント）の層の全件が pass して成功で終わる（正常系）。"""
+        # 準備
+        branch = branch_factory(None)
+    
+        # 実行
+        run_id, conclusion, steps = workflow_runner(WORKFLOW, branch, {"layer": "frontend-integration"})
+    
+        # 検証
+>       assert conclusion == "success"
+E       AssertionError: assert 'failure' == 'success'
+E         
+E         - success
+E         + failure
+
+tests/e2e/workflow/test_test_yml.py:194: AssertionError
+___________ test_error_when_paths_outside_layer[other-layer-folder] ____________
+
+branch_factory = <function branch_factory.<locals>._create at 0x7ebe5acd1010>
+workflow_runner = <function workflow_runner.<locals>._start at 0x7ebe5acd0f60>
+artifact_reader = <function artifact_reader.<locals>._read at 0x7ebe5acd1170>
+inputs = {'layer': 'backend-integration', 'paths': 'tests/integration/frontend/'}
+expected_steps = {'uv を入れる': 'success', 'Python の依存を入れる': 'success'}
+reason = 'paths の値が層の結合テストのフォルダの外（tests/integration/frontend/ は frontend-integration の層）: tests/integration/frontend/'
+
+    @pytest.mark.parametrize(
+        ("inputs", "expected_steps", "reason"),
+        [
+            pytest.param(
+                {"layer": "backend-integration", "paths": "tests/integration/frontend/"},
+                {"uv を入れる": "success", "Python の依存を入れる": "success"},
+                "paths の値が層の結合テストのフォルダの外（tests/integration/frontend/ は frontend-integration の層）: tests/integration/frontend/",
+                id="other-layer-folder",
+            ),
+            pytest.param(
+                {"layer": "backend-unit", "paths": "tests/integration/"},
+                {"uv を入れる": "success", "Python の依存を入れる": "success"},
+                "paths は結合テストの層でだけ指定できる: layer=backend-unit",
+                id="not-integration-layer",
+            ),
+            pytest.param(
+                {"layer": "frontend-integration", "paths": "tests/integration/frontend/../server/"},
+                {
+                    "npm の依存を入れる": "success",
+                    "Chromium を入れる": "success",
+                },
+                "paths の値が .. を含む: tests/integration/frontend/../server/",
+                id="parent-directory",
+            ),
+            pytest.param(
+                {"layer": "backend-integration", "paths": "tests/integration/plugin/;ls"},
+                {"uv を入れる": "success", "Python の依存を入れる": "success"},
+                "paths に許可しない文字がある（英数字・_・.・/・-・空白だけを許可する）: tests/integration/plugin/;ls",
+                id="forbidden-character",
+            ),
+        ],
+    )
+    def test_error_when_paths_outside_layer(
+        branch_factory: BranchFactory,
+        workflow_runner: WorkflowRunner,
+        artifact_reader: ArtifactReader,
+        inputs: Mapping[str, str],
+        expected_steps: Mapping[str, str],
+        reason: str,
+    ) -> None:
+        """paths に層の結合テストのフォルダの外のパスを指定し、テストを回さずに失敗で終わる（異常系）。"""
+        # 準備
+>       branch = branch_factory(None)
+                 ^^^^^^^^^^^^^^^^^^^^
+
+tests/e2e/workflow/test_test_yml.py:364: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/e2e/workflow/conftest.py:72: in _create
+    _run(["git", "push", "--no-verify", "origin", f"HEAD:refs/heads/{branch}"], worktree)
+tests/e2e/workflow/conftest.py:39: in _run
+    return subprocess.run(
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+input = None, capture_output = True, timeout = 120, check = True
+popenargs = (['git', 'push', '--no-verify', 'origin', 'HEAD:refs/heads/test-workflow/test_error_when_paths_outside_layer[other-layer-folder]-20261117202950-0'],)
+kwargs = {'cwd': PosixPath('/tmp/dev-docs-261-measure/pt-e2e/test_error_when_paths_outside_0/worktree-0'), 'text': True, 'stdout': -1, 'stderr': -1}
+
+    def run(*popenargs,
+            input=None, capture_output=False, timeout=None, check=False, **kwargs):
+        """Run command with arguments and return a CompletedProcess instance.
+    
+        The returned instance will have attributes args, returncode, stdout and
+        stderr. By default, stdout and stderr are not captured, and those attributes
+        will be None. Pass stdout=PIPE and/or stderr=PIPE in order to capture them,
+        or pass capture_output=True to capture both.
+    
+        If check is True and the exit code was non-zero, it raises a
+        CalledProcessError. The CalledProcessError object will have the return code
+        in the returncode attribute, and output & stderr attributes if those streams
+        were captured.
+    
+        If timeout (seconds) is given and the process takes too long,
+         a TimeoutExpired exception will be raised.
+    
+        There is an optional argument "input", allowing you to
+        pass bytes or a string to the subprocess's stdin.  If you use this argument
+        you may not also use the Popen constructor's "stdin" argument, as
+        it will be used internally.
+    
+        By default, all communication is in bytes, and therefore any "input" should
+        be bytes, and the stdout and stderr will be bytes. If in text mode, any
+        "input" should be a string, and stdout and stderr will be strings decoded
+        according to locale encoding, or by "encoding" if set. Text mode is
+        triggered by setting any of text, encoding, errors or universal_newlines.
+    
+        The other arguments are the same as for the Popen constructor.
+        """
+        if input is not None:
+            if kwargs.get('stdin') is not None:
+                raise ValueError('stdin and input arguments may not both be used.')
+            kwargs['stdin'] = PIPE
+    
+        if capture_output:
+            if kwargs.get('stdout') is not None or kwargs.get('stderr') is not None:
+                raise ValueError('stdout and stderr arguments may not be used '
+                                 'with capture_output.')
+            kwargs['stdout'] = PIPE
+            kwargs['stderr'] = PIPE
+    
+        with Popen(*popenargs, **kwargs) as process:
+            try:
+                stdout, stderr = process.communicate(input, timeout=timeout)
+            except TimeoutExpired as exc:
+                process.kill()
+                if _mswindows:
+                    # Windows accumulates the output in a single blocking
+                    # read() call run on child threads, with the timeout
+                    # being done in a join() on those threads.  communicate()
+                    # _after_ kill() is required to collect that and add it
+                    # to the exception.
+                    exc.stdout, exc.stderr = process.communicate()
+                else:
+                    # POSIX _communicate already populated the output so
+                    # far into the TimeoutExpired exception.
+                    process.wait()
+                raise
+            except:  # Including KeyboardInterrupt, communicate handled that.
+                process.kill()
+                # We don't call process.wait() as .__exit__ does that for us.
+                raise
+            retcode = process.poll()
+            if check and retcode:
+>               raise CalledProcessError(retcode, process.args,
+                                         output=stdout, stderr=stderr)
+E               subprocess.CalledProcessError: Command '['git', 'push', '--no-verify', 'origin', 'HEAD:refs/heads/test-workflow/test_error_when_paths_outside_layer[other-layer-folder]-20261117202950-0']' returned non-zero exit status 128.
+
+../../../../../.local/share/uv/python/cpython-3.14.3-linux-x86_64-gnu/lib/python3.14/subprocess.py:577: CalledProcessError
+__________ test_error_when_paths_outside_layer[not-integration-layer] __________
+
+branch_factory = <function branch_factory.<locals>._create at 0x7ebe5adc8250>
+workflow_runner = <function workflow_runner.<locals>._start at 0x7ebe5adc8460>
+artifact_reader = <function artifact_reader.<locals>._read at 0x7ebe5adc81a0>
+inputs = {'layer': 'backend-unit', 'paths': 'tests/integration/'}
+expected_steps = {'uv を入れる': 'success', 'Python の依存を入れる': 'success'}
+reason = 'paths は結合テストの層でだけ指定できる: layer=backend-unit'
+
+    @pytest.mark.parametrize(
+        ("inputs", "expected_steps", "reason"),
+        [
+            pytest.param(
+                {"layer": "backend-integration", "paths": "tests/integration/frontend/"},
+                {"uv を入れる": "success", "Python の依存を入れる": "success"},
+                "paths の値が層の結合テストのフォルダの外（tests/integration/frontend/ は frontend-integration の層）: tests/integration/frontend/",
+                id="other-layer-folder",
+            ),
+            pytest.param(
+                {"layer": "backend-unit", "paths": "tests/integration/"},
+                {"uv を入れる": "success", "Python の依存を入れる": "success"},
+                "paths は結合テストの層でだけ指定できる: layer=backend-unit",
+                id="not-integration-layer",
+            ),
+            pytest.param(
+                {"layer": "frontend-integration", "paths": "tests/integration/frontend/../server/"},
+                {
+                    "npm の依存を入れる": "success",
+                    "Chromium を入れる": "success",
+                },
+                "paths の値が .. を含む: tests/integration/frontend/../server/",
+                id="parent-directory",
+            ),
+            pytest.param(
+                {"layer": "backend-integration", "paths": "tests/integration/plugin/;ls"},
+                {"uv を入れる": "success", "Python の依存を入れる": "success"},
+                "paths に許可しない文字がある（英数字・_・.・/・-・空白だけを許可する）: tests/integration/plugin/;ls",
+                id="forbidden-character",
+            ),
+        ],
+    )
+    def test_error_when_paths_outside_layer(
+        branch_factory: BranchFactory,
+        workflow_runner: WorkflowRunner,
+        artifact_reader: ArtifactReader,
+        inputs: Mapping[str, str],
+        expected_steps: Mapping[str, str],
+        reason: str,
+    ) -> None:
+        """paths に層の結合テストのフォルダの外のパスを指定し、テストを回さずに失敗で終わる（異常系）。"""
+        # 準備
+>       branch = branch_factory(None)
+                 ^^^^^^^^^^^^^^^^^^^^
+
+tests/e2e/workflow/test_test_yml.py:364: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/e2e/workflow/conftest.py:72: in _create
+    _run(["git", "push", "--no-verify", "origin", f"HEAD:refs/heads/{branch}"], worktree)
+tests/e2e/workflow/conftest.py:39: in _run
+    return subprocess.run(
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+input = None, capture_output = True, timeout = 120, check = True
+popenargs = (['git', 'push', '--no-verify', 'origin', 'HEAD:refs/heads/test-workflow/test_error_when_paths_outside_layer[not-integration-layer]-20261117202950-0'],)
+kwargs = {'cwd': PosixPath('/tmp/dev-docs-261-measure/pt-e2e/test_error_when_paths_outside_1/worktree-0'), 'text': True, 'stdout': -1, 'stderr': -1}
+
+    def run(*popenargs,
+            input=None, capture_output=False, timeout=None, check=False, **kwargs):
+        """Run command with arguments and return a CompletedProcess instance.
+    
+        The returned instance will have attributes args, returncode, stdout and
+        stderr. By default, stdout and stderr are not captured, and those attributes
+        will be None. Pass stdout=PIPE and/or stderr=PIPE in order to capture them,
+        or pass capture_output=True to capture both.
+    
+        If check is True and the exit code was non-zero, it raises a
+        CalledProcessError. The CalledProcessError object will have the return code
+        in the returncode attribute, and output & stderr attributes if those streams
+        were captured.
+    
+        If timeout (seconds) is given and the process takes too long,
+         a TimeoutExpired exception will be raised.
+    
+        There is an optional argument "input", allowing you to
+        pass bytes or a string to the subprocess's stdin.  If you use this argument
+        you may not also use the Popen constructor's "stdin" argument, as
+        it will be used internally.
+    
+        By default, all communication is in bytes, and therefore any "input" should
+        be bytes, and the stdout and stderr will be bytes. If in text mode, any
+        "input" should be a string, and stdout and stderr will be strings decoded
+        according to locale encoding, or by "encoding" if set. Text mode is
+        triggered by setting any of text, encoding, errors or universal_newlines.
+    
+        The other arguments are the same as for the Popen constructor.
+        """
+        if input is not None:
+            if kwargs.get('stdin') is not None:
+                raise ValueError('stdin and input arguments may not both be used.')
+            kwargs['stdin'] = PIPE
+    
+        if capture_output:
+            if kwargs.get('stdout') is not None or kwargs.get('stderr') is not None:
+                raise ValueError('stdout and stderr arguments may not be used '
+                                 'with capture_output.')
+            kwargs['stdout'] = PIPE
+            kwargs['stderr'] = PIPE
+    
+        with Popen(*popenargs, **kwargs) as process:
+            try:
+                stdout, stderr = process.communicate(input, timeout=timeout)
+            except TimeoutExpired as exc:
+                process.kill()
+                if _mswindows:
+                    # Windows accumulates the output in a single blocking
+                    # read() call run on child threads, with the timeout
+                    # being done in a join() on those threads.  communicate()
+                    # _after_ kill() is required to collect that and add it
+                    # to the exception.
+                    exc.stdout, exc.stderr = process.communicate()
+                else:
+                    # POSIX _communicate already populated the output so
+                    # far into the TimeoutExpired exception.
+                    process.wait()
+                raise
+            except:  # Including KeyboardInterrupt, communicate handled that.
+                process.kill()
+                # We don't call process.wait() as .__exit__ does that for us.
+                raise
+            retcode = process.poll()
+            if check and retcode:
+>               raise CalledProcessError(retcode, process.args,
+                                         output=stdout, stderr=stderr)
+E               subprocess.CalledProcessError: Command '['git', 'push', '--no-verify', 'origin', 'HEAD:refs/heads/test-workflow/test_error_when_paths_outside_layer[not-integration-layer]-20261117202950-0']' returned non-zero exit status 128.
+
+../../../../../.local/share/uv/python/cpython-3.14.3-linux-x86_64-gnu/lib/python3.14/subprocess.py:577: CalledProcessError
+____________ test_error_when_paths_outside_layer[parent-directory] _____________
+
+branch_factory = <function branch_factory.<locals>._create at 0x7ebe5ad8f690>
+workflow_runner = <function workflow_runner.<locals>._start at 0x7ebe5ad8fb60>
+artifact_reader = <function artifact_reader.<locals>._read at 0x7ebe5ad8f8a0>
+inputs = {'layer': 'frontend-integration', 'paths': 'tests/integration/frontend/../server/'}
+expected_steps = {'npm の依存を入れる': 'success', 'Chromium を入れる': 'success'}
+reason = 'paths の値が .. を含む: tests/integration/frontend/../server/'
+
+    @pytest.mark.parametrize(
+        ("inputs", "expected_steps", "reason"),
+        [
+            pytest.param(
+                {"layer": "backend-integration", "paths": "tests/integration/frontend/"},
+                {"uv を入れる": "success", "Python の依存を入れる": "success"},
+                "paths の値が層の結合テストのフォルダの外（tests/integration/frontend/ は frontend-integration の層）: tests/integration/frontend/",
+                id="other-layer-folder",
+            ),
+            pytest.param(
+                {"layer": "backend-unit", "paths": "tests/integration/"},
+                {"uv を入れる": "success", "Python の依存を入れる": "success"},
+                "paths は結合テストの層でだけ指定できる: layer=backend-unit",
+                id="not-integration-layer",
+            ),
+            pytest.param(
+                {"layer": "frontend-integration", "paths": "tests/integration/frontend/../server/"},
+                {
+                    "npm の依存を入れる": "success",
+                    "Chromium を入れる": "success",
+                },
+                "paths の値が .. を含む: tests/integration/frontend/../server/",
+                id="parent-directory",
+            ),
+            pytest.param(
+                {"layer": "backend-integration", "paths": "tests/integration/plugin/;ls"},
+                {"uv を入れる": "success", "Python の依存を入れる": "success"},
+                "paths に許可しない文字がある（英数字・_・.・/・-・空白だけを許可する）: tests/integration/plugin/;ls",
+                id="forbidden-character",
+            ),
+        ],
+    )
+    def test_error_when_paths_outside_layer(
+        branch_factory: BranchFactory,
+        workflow_runner: WorkflowRunner,
+        artifact_reader: ArtifactReader,
+        inputs: Mapping[str, str],
+        expected_steps: Mapping[str, str],
+        reason: str,
+    ) -> None:
+        """paths に層の結合テストのフォルダの外のパスを指定し、テストを回さずに失敗で終わる（異常系）。"""
+        # 準備
+>       branch = branch_factory(None)
+                 ^^^^^^^^^^^^^^^^^^^^
+
+tests/e2e/workflow/test_test_yml.py:364: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/e2e/workflow/conftest.py:72: in _create
+    _run(["git", "push", "--no-verify", "origin", f"HEAD:refs/heads/{branch}"], worktree)
+tests/e2e/workflow/conftest.py:39: in _run
+    return subprocess.run(
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+input = None, capture_output = True, timeout = 120, check = True
+popenargs = (['git', 'push', '--no-verify', 'origin', 'HEAD:refs/heads/test-workflow/test_error_when_paths_outside_layer[parent-directory]-20261117202951-0'],)
+kwargs = {'cwd': PosixPath('/tmp/dev-docs-261-measure/pt-e2e/test_error_when_paths_outside_2/worktree-0'), 'text': True, 'stdout': -1, 'stderr': -1}
+
+    def run(*popenargs,
+            input=None, capture_output=False, timeout=None, check=False, **kwargs):
+        """Run command with arguments and return a CompletedProcess instance.
+    
+        The returned instance will have attributes args, returncode, stdout and
+        stderr. By default, stdout and stderr are not captured, and those attributes
+        will be None. Pass stdout=PIPE and/or stderr=PIPE in order to capture them,
+        or pass capture_output=True to capture both.
+    
+        If check is True and the exit code was non-zero, it raises a
+        CalledProcessError. The CalledProcessError object will have the return code
+        in the returncode attribute, and output & stderr attributes if those streams
+        were captured.
+    
+        If timeout (seconds) is given and the process takes too long,
+         a TimeoutExpired exception will be raised.
+    
+        There is an optional argument "input", allowing you to
+        pass bytes or a string to the subprocess's stdin.  If you use this argument
+        you may not also use the Popen constructor's "stdin" argument, as
+        it will be used internally.
+    
+        By default, all communication is in bytes, and therefore any "input" should
+        be bytes, and the stdout and stderr will be bytes. If in text mode, any
+        "input" should be a string, and stdout and stderr will be strings decoded
+        according to locale encoding, or by "encoding" if set. Text mode is
+        triggered by setting any of text, encoding, errors or universal_newlines.
+    
+        The other arguments are the same as for the Popen constructor.
+        """
+        if input is not None:
+            if kwargs.get('stdin') is not None:
+                raise ValueError('stdin and input arguments may not both be used.')
+            kwargs['stdin'] = PIPE
+    
+        if capture_output:
+            if kwargs.get('stdout') is not None or kwargs.get('stderr') is not None:
+                raise ValueError('stdout and stderr arguments may not be used '
+                                 'with capture_output.')
+            kwargs['stdout'] = PIPE
+            kwargs['stderr'] = PIPE
+    
+        with Popen(*popenargs, **kwargs) as process:
+            try:
+                stdout, stderr = process.communicate(input, timeout=timeout)
+            except TimeoutExpired as exc:
+                process.kill()
+                if _mswindows:
+                    # Windows accumulates the output in a single blocking
+                    # read() call run on child threads, with the timeout
+                    # being done in a join() on those threads.  communicate()
+                    # _after_ kill() is required to collect that and add it
+                    # to the exception.
+                    exc.stdout, exc.stderr = process.communicate()
+                else:
+                    # POSIX _communicate already populated the output so
+                    # far into the TimeoutExpired exception.
+                    process.wait()
+                raise
+            except:  # Including KeyboardInterrupt, communicate handled that.
+                process.kill()
+                # We don't call process.wait() as .__exit__ does that for us.
+                raise
+            retcode = process.poll()
+            if check and retcode:
+>               raise CalledProcessError(retcode, process.args,
+                                         output=stdout, stderr=stderr)
+E               subprocess.CalledProcessError: Command '['git', 'push', '--no-verify', 'origin', 'HEAD:refs/heads/test-workflow/test_error_when_paths_outside_layer[parent-directory]-20261117202951-0']' returned non-zero exit status 128.
+
+../../../../../.local/share/uv/python/cpython-3.14.3-linux-x86_64-gnu/lib/python3.14/subprocess.py:577: CalledProcessError
+___________ test_error_when_paths_outside_layer[forbidden-character] ___________
+
+branch_factory = <function branch_factory.<locals>._create at 0x7ebe5ad8f060>
+workflow_runner = <function workflow_runner.<locals>._start at 0x7ebe5ad8f320>
+artifact_reader = <function artifact_reader.<locals>._read at 0x7ebe5acd0e00>
+inputs = {'layer': 'backend-integration', 'paths': 'tests/integration/plugin/;ls'}
+expected_steps = {'uv を入れる': 'success', 'Python の依存を入れる': 'success'}
+reason = 'paths に許可しない文字がある（英数字・_・.・/・-・空白だけを許可する）: tests/integration/plugin/;ls'
+
+    @pytest.mark.parametrize(
+        ("inputs", "expected_steps", "reason"),
+        [
+            pytest.param(
+                {"layer": "backend-integration", "paths": "tests/integration/frontend/"},
+                {"uv を入れる": "success", "Python の依存を入れる": "success"},
+                "paths の値が層の結合テストのフォルダの外（tests/integration/frontend/ は frontend-integration の層）: tests/integration/frontend/",
+                id="other-layer-folder",
+            ),
+            pytest.param(
+                {"layer": "backend-unit", "paths": "tests/integration/"},
+                {"uv を入れる": "success", "Python の依存を入れる": "success"},
+                "paths は結合テストの層でだけ指定できる: layer=backend-unit",
+                id="not-integration-layer",
+            ),
+            pytest.param(
+                {"layer": "frontend-integration", "paths": "tests/integration/frontend/../server/"},
+                {
+                    "npm の依存を入れる": "success",
+                    "Chromium を入れる": "success",
+                },
+                "paths の値が .. を含む: tests/integration/frontend/../server/",
+                id="parent-directory",
+            ),
+            pytest.param(
+                {"layer": "backend-integration", "paths": "tests/integration/plugin/;ls"},
+                {"uv を入れる": "success", "Python の依存を入れる": "success"},
+                "paths に許可しない文字がある（英数字・_・.・/・-・空白だけを許可する）: tests/integration/plugin/;ls",
+                id="forbidden-character",
+            ),
+        ],
+    )
+    def test_error_when_paths_outside_layer(
+        branch_factory: BranchFactory,
+        workflow_runner: WorkflowRunner,
+        artifact_reader: ArtifactReader,
+        inputs: Mapping[str, str],
+        expected_steps: Mapping[str, str],
+        reason: str,
+    ) -> None:
+        """paths に層の結合テストのフォルダの外のパスを指定し、テストを回さずに失敗で終わる（異常系）。"""
+        # 準備
+>       branch = branch_factory(None)
+                 ^^^^^^^^^^^^^^^^^^^^
+
+tests/e2e/workflow/test_test_yml.py:364: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/e2e/workflow/conftest.py:72: in _create
+    _run(["git", "push", "--no-verify", "origin", f"HEAD:refs/heads/{branch}"], worktree)
+tests/e2e/workflow/conftest.py:39: in _run
+    return subprocess.run(
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+input = None, capture_output = True, timeout = 120, check = True
+popenargs = (['git', 'push', '--no-verify', 'origin', 'HEAD:refs/heads/test-workflow/test_error_when_paths_outside_layer[forbidden-character]-20261117202951-0'],)
+kwargs = {'cwd': PosixPath('/tmp/dev-docs-261-measure/pt-e2e/test_error_when_paths_outside_3/worktree-0'), 'text': True, 'stdout': -1, 'stderr': -1}
+
+    def run(*popenargs,
+            input=None, capture_output=False, timeout=None, check=False, **kwargs):
+        """Run command with arguments and return a CompletedProcess instance.
+    
+        The returned instance will have attributes args, returncode, stdout and
+        stderr. By default, stdout and stderr are not captured, and those attributes
+        will be None. Pass stdout=PIPE and/or stderr=PIPE in order to capture them,
+        or pass capture_output=True to capture both.
+    
+        If check is True and the exit code was non-zero, it raises a
+        CalledProcessError. The CalledProcessError object will have the return code
+        in the returncode attribute, and output & stderr attributes if those streams
+        were captured.
+    
+        If timeout (seconds) is given and the process takes too long,
+         a TimeoutExpired exception will be raised.
+    
+        There is an optional argument "input", allowing you to
+        pass bytes or a string to the subprocess's stdin.  If you use this argument
+        you may not also use the Popen constructor's "stdin" argument, as
+        it will be used internally.
+    
+        By default, all communication is in bytes, and therefore any "input" should
+        be bytes, and the stdout and stderr will be bytes. If in text mode, any
+        "input" should be a string, and stdout and stderr will be strings decoded
+        according to locale encoding, or by "encoding" if set. Text mode is
+        triggered by setting any of text, encoding, errors or universal_newlines.
+    
+        The other arguments are the same as for the Popen constructor.
+        """
+        if input is not None:
+            if kwargs.get('stdin') is not None:
+                raise ValueError('stdin and input arguments may not both be used.')
+            kwargs['stdin'] = PIPE
+    
+        if capture_output:
+            if kwargs.get('stdout') is not None or kwargs.get('stderr') is not None:
+                raise ValueError('stdout and stderr arguments may not be used '
+                                 'with capture_output.')
+            kwargs['stdout'] = PIPE
+            kwargs['stderr'] = PIPE
+    
+        with Popen(*popenargs, **kwargs) as process:
+            try:
+                stdout, stderr = process.communicate(input, timeout=timeout)
+            except TimeoutExpired as exc:
+                process.kill()
+                if _mswindows:
+                    # Windows accumulates the output in a single blocking
+                    # read() call run on child threads, with the timeout
+                    # being done in a join() on those threads.  communicate()
+                    # _after_ kill() is required to collect that and add it
+                    # to the exception.
+                    exc.stdout, exc.stderr = process.communicate()
+                else:
+                    # POSIX _communicate already populated the output so
+                    # far into the TimeoutExpired exception.
+                    process.wait()
+                raise
+            except:  # Including KeyboardInterrupt, communicate handled that.
+                process.kill()
+                # We don't call process.wait() as .__exit__ does that for us.
+                raise
+            retcode = process.poll()
+            if check and retcode:
+>               raise CalledProcessError(retcode, process.args,
+                                         output=stdout, stderr=stderr)
+E               subprocess.CalledProcessError: Command '['git', 'push', '--no-verify', 'origin', 'HEAD:refs/heads/test-workflow/test_error_when_paths_outside_layer[forbidden-character]-20261117202951-0']' returned non-zero exit status 128.
+
+../../../../../.local/share/uv/python/cpython-3.14.3-linux-x86_64-gnu/lib/python3.14/subprocess.py:577: CalledProcessError
+=========================== short test summary info ============================
+FAILED tests/e2e/workflow/test_test_yml.py::test_normal_when_frontend_integration
+FAILED tests/e2e/workflow/test_test_yml.py::test_error_when_paths_outside_layer[other-layer-folder]
+FAILED tests/e2e/workflow/test_test_yml.py::test_error_when_paths_outside_layer[not-integration-layer]
+FAILED tests/e2e/workflow/test_test_yml.py::test_error_when_paths_outside_layer[parent-directory]
+FAILED tests/e2e/workflow/test_test_yml.py::test_error_when_paths_outside_layer[forbidden-character]
+=================== 5 failed, 7 passed in 826.07s (0:13:46) ====================
+exit=1
+
+######## 個別実行
+$ uv run pytest tests/e2e/workflow/test_test_yml.py::test_error_when_paths_outside_layer -v --basetemp=/tmp/dev-docs-261-measure/pt-e2e2
+============================= test session starts ==============================
+platform linux -- Python 3.14.3, pytest-9.1.1, pluggy-1.7.0 -- /home/shuhei2441/repo/dev-docs/.claude/worktrees/chore-test-runner-test-location/.venv/bin/python
+cachedir: .pytest_cache
+rootdir: /home/shuhei2441/repo/dev-docs/.claude/worktrees/chore-test-runner-test-location
+configfile: pyproject.toml
+plugins: anyio-4.15.1
+collecting ... collected 4 items
+
+tests/e2e/workflow/test_test_yml.py::test_error_when_paths_outside_layer[other-layer-folder] PASSED [ 25%]
+tests/e2e/workflow/test_test_yml.py::test_error_when_paths_outside_layer[not-integration-layer] PASSED [ 50%]
+tests/e2e/workflow/test_test_yml.py::test_error_when_paths_outside_layer[parent-directory] PASSED [ 75%]
+tests/e2e/workflow/test_test_yml.py::test_error_when_paths_outside_layer[forbidden-character] PASSED [100%]
+
+======================== 4 passed in 183.92s (0:03:03) =========================
+exit=0

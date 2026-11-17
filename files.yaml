@@ -1,0 +1,144 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/shuhei1101/knowledge/design-schemas/v8.4.0/schemas/knowledge-files.schema.yaml
+files:
+- path: README.md
+  name: dev-docs の概要
+  description: dev-docs が何をするサーバーかと文書の置き場所の案内を受け持ち、リポジトリを初めて開いたときに参照する。
+  tags: [topic:サーバー, topic:文書]
+- path: CLAUDE.md
+  name: エージェント向けの作業の決まり
+  description: エージェントがこのリポジトリで作業するときの文書の引き方・画面のフォルダの分け方・従う規約を受け持ち、エージェントの作業の前提を確認・修正するときに参照する。
+  tags: [tool:claude-code, topic:開発]
+- path: project-index.yaml
+  name: 配信元の設定
+  description: 配信元 dev-docs の配信する文書の行と画面のタブ・サイドバーの構成を受け持ち、検索の対象やタブの並びを修正するときに参照する。
+  tags: [topic:配信元の設定, tool:project-index, topic:ナビゲーション]
+- path: rules.yaml
+  name: ルールの索引
+  description: rule-inject がファイルの操作の前に案内するルールの索引を受け持ち、このリポジトリに固有のルールを登録するときに参照する。
+  tags: [topic:設定]
+- path: pyproject.toml
+  name: サーバーのパッケージの定義
+  description: 開発ドキュメントサーバーの Python のパッケージ・依存・コマンド・検査の設定を受け持ち、依存や lint の設定を修正するときに参照する。
+  tags: [tool:uv, topic:インストール]
+  related:
+  - {to: CMD-155-1, type: see_also}
+- path: .python-version
+  name: Python のバージョンの指定
+  description: uv が使用する Python のバージョンの指定を受け持ち、サーバーの Python のバージョンを上げるときに参照する。
+  tags: [tool:uv, topic:バージョン]
+- path: package.json
+  name: 画面のパッケージの定義
+  description: 画面の npm の依存とビルド・テスト・lint のスクリプトを受け持ち、画面の依存やスクリプトを修正するときに参照する。
+  tags: [tool:npm, topic:ビルド]
+  related:
+  - {to: CMD-155-1, type: see_also}
+- path: components.json
+  name: shadcn の設定
+  description: shadcn が部品を追加するときのスタイル・パスの別名・アイコンの設定を受け持ち、部品の追加の先や見た目の既定を修正するときに参照する。
+  tags: [tool:shadcn, topic:部品]
+  related:
+  - {to: LIB-155-18, type: see_also}
+- path: eslint.config.js
+  name: 画面の lint の設定
+  description: 画面のコードの eslint の規則と import の向きの検査の設定を受け持ち、画面の lint の規則を修正するときに参照する。
+  tags: [tool:eslint, topic:lint]
+  related:
+  - {to: LIB-155-2, type: see_also}
+- path: lefthook.yml
+  name: commit の前の検査の設定
+  description: 画面が変わった commit で画面をビルドし直す lefthook の設定を受け持ち、commit の前の検査を修正するときに参照する。
+  tags: [tool:lefthook, topic:ビルド]
+  related:
+  - {to: LIB-155-6, type: see_also}
+- path: .gitignore
+  name: Git が無視するファイルの一覧
+  description: Git が無視するビルドの成果物・キャッシュ・ローカルの設定の一覧を受け持ち、コミットしないファイルを追加するときに参照する。
+  tags: [tool:git]
+- path: version.ini
+  name: dev-docs のバージョン
+  description: dev-docs のリリースのバージョンを受け持ち、タグを打つときにバージョンを上げるときに参照する。
+  tags: [topic:バージョン]
+- path: ai-monitor-version.ini
+  name: 追従している AI Monitor のバージョン
+  description: このリポジトリが追従している AI Monitor の配布物のバージョンを受け持ち、AI Monitor の配布物へ追従するときに参照する。
+  tags: [topic:バージョン]
+- path: .claude-plugin/marketplace.json
+  name: プラグインのマーケットプレイスの定義
+  description: 管理用プラグインを配るマーケットプレイスの定義を受け持ち、プラグインの配布の名前やバージョンを修正するときに参照する。
+  tags: [tool:claude-code, topic:プラグイン]
+- path: .github/workflows/pages.yml
+  name: 公開ページの配信の workflow
+  description: develop の公開の文書と判定フローチャートを 1 枚の HTML にして GitHub Pages へ配信する workflow を受け持ち、公開ページの配信を修正するときに参照する。
+  tags: [tool:github, topic:ci, tool:mdmark]
+- path: .github/workflows/test.yml
+  name: テストの全件実行の workflow
+  description: テスト実行方法の実行場所が runner の層のテストを GitHub Actions のランナーで回す workflow を受け持ち、ランナーでのテストの実行を修正するときに参照する。
+  tags: [tool:github, topic:ci, topic:テスト]
+  related:
+  - {to: IF-155-26, type: implements}
+- path: docs/design-policy.md
+  visibility: internal
+  name: デザイン方針
+  description: dev-docs の画面全体に通すデザインの方向性（スタイル・色・文字・形状・動き）を定め、画面のデザインを作る・修正するときに参照する。
+  tags: [topic:デザイン方針, topic:デザインスタイル, topic:画面]
+- path: plugins/dev-docs/.claude-plugin/plugin.json
+  name: 管理用プラグインの定義
+  description: 管理用プラグインの名前・バージョン・説明の定義を受け持ち、プラグインのバージョンを上げるときに参照する。
+  tags: [tool:claude-code, topic:プラグイン]
+- path: plugins/dev-docs/.mcp.json
+  name: 管理用プラグインの MCP の接続先
+  description: 管理用プラグインが Claude Code に指定する管理の MCP の接続先を受け持ち、接続先のポートやパスを修正するときに参照する。
+  tags: [tool:claude-code, tool:mcp, topic:プラグイン]
+- path: plugins/dev-docs/hooks/hooks.json
+  name: 管理用プラグインのフックの登録
+  description: 管理用プラグインの SessionStart のフックの登録を受け持ち、フックの出来事や呼ぶコマンドを修正するときに参照する。
+  tags: [tool:claude-code, topic:フック, topic:プラグイン]
+  related:
+  - {to: IF-155-1, type: see_also}
+- path: plugins/dev-docs/hooks/session_start.py
+  name: SessionStart のフック
+  description: SessionStart のフックを受け持ち、セッション開始のフックの session_start.py を修正するときに参照する。
+  tags: [tool:claude-code, topic:フック, topic:起動]
+  related:
+  - {to: MOD-155-80, type: implements}
+- path: plugins/dev-docs/skills/global-setup/SKILL.md
+  name: 端末に dev-docs を用意するスキル
+  description: 端末ごとに dev-docs のクローン・依存・端末の設定・起動を用意する global-setup のスキルの手順を受け持ち、導入の手順を修正するときに参照する。
+  tags: [tool:claude-code, topic:インストール, topic:セットアップ]
+  related:
+  - {to: SC-155-2, type: see_also}
+- path: scripts/build_pages.py
+  name: 公開ページのビルド
+  description: 公開の Markdown と判定フローチャートを mdmark の `build` で 1 枚の HTML にまとめる処理を受け持ち、公開ページのビルドの build_pages.py を修正するときに参照する。
+  tags: [tool:mdmark, topic:ビルド]
+  related:
+  - {to: MOD-192-1, type: implements}
+- path: scripts/dev-docs-restart-resident.sh
+  name: 常駐サーバーの起動し直し
+  description: AI Monitor の常駐サーバーの `restart_command` から呼ばれ、依存をそろえてから `dev-docs.service` を起動し直す処理を受け持ち、常駐サーバーの起動し直しを修正するときに参照する。
+  tags: [tool:systemd, topic:再起動]
+  related:
+  - {to: MOD-266-1, type: implements}
+- path: scripts/dev-docs-server-wait.sh
+  name: 再起動の後のサーバーの待ち
+  description: サーバーの再起動の反映作業が、再起動の後の新しいサーバーが待ち受けるまで待つ共通の処理を受け持ち、反映作業のサーバーの待ちを修正するときに参照する。
+  tags: [topic:再起動, topic:サーバー]
+- path: templates/settings.yaml
+  name: 端末の設定の雛形
+  description: global-setup が端末の設定にする雛形を受け持ち、端末の設定の既定の値を修正するときに参照する。
+  tags: [topic:端末の設定, topic:テンプレート]
+  related:
+  - {to: CFG-155-2, type: see_also}
+- path: templates/prompt.schema.yaml
+  name: プロンプトのスキーマ
+  description: content/prompts/ のプロンプトの YAML のスキーマを受け持ち、プロンプトの YAML のキーを確認するときに参照する。
+  tags: [topic:プロンプト, topic:スキーマ]
+- path: templates/common.schema.yaml
+  name: プロンプトのスキーマの共通の型
+  description: プロンプトのスキーマが参照する共通の型を受け持ち、プロンプトのスキーマの共通の型を確認するときに参照する。
+  tags: [topic:プロンプト, topic:スキーマ]
+checkpoint:
+  commit: 8cef671957407b1791de7bde0a04e31f24c2b048
+  reviewed:
+  - path: project-index.yaml
+    sha256: cb08e9099ce5cec98e484fa1e7ef6667d5bc3e3c0ad4082b233e6265ca2ccf53

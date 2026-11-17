@@ -162,6 +162,7 @@ def test_source_view(fake_index: FakeIndex, make_client: Callable[..., ProjectIn
                 "paths": ["notes/files.yaml"],
                 "schema": {"title": "notes"},
                 "records": "files",
+                "metadata": {"category": "category"},
             },
         ],
         github={"repository": "owner/sample", "issueLabels": ["docs"]},
@@ -178,6 +179,7 @@ def test_source_view(fake_index: FakeIndex, make_client: Callable[..., ProjectIn
     assert view.nav == nav
     assert [row.schema for row in view.documents] == [{"title": "rules"}, {"title": "notes"}]
     assert view.documents[1].records == "files"
+    assert [row.metadata for row in view.documents] == [{}, {"category": "category"}]
     assert view.diff_ignore_keys == ["updated", "rev"]
     assert view.github_issue_labels == ["docs"]
     assert (view.git, view.default_ref) == (True, "main")

@@ -1,0 +1,132 @@
+# テスト実行方法の実行場所が runner の層の全件か、指定した結合テストをランナーで回し、出力を成果物 test-log に上げる
+name: test
+
+on:
+  workflow_dispatch:
+    inputs:
+      layer:
+        description: 全件を回す層
+        type: choice
+        required: true
+        options:
+          - backend-unit
+          - backend-integration
+          - frontend-unit
+          - frontend-integration
+      paths:
+        description: 回す結合テストのファイルかフォルダを空白で区切って並べたもの（結合テストの層のときだけ使用し、省くと全件）
+        type: string
+        required: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: test-${{ github.ref }}-${{ inputs.layer }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: ブランチを取得する
+        uses: actions/checkout@v7
+
+      - name: Node.js を入れる
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+
+      - name: uv を入れる
+        if: ${{ startsWith(inputs.layer, 'backend-') }}
+        uses: astral-sh/setup-uv@v10.3.3
+
+      - name: Python の依存を入れる
+        if: ${{ startsWith(inputs.layer, 'backend-') }}
+        run: uv sync --frozen
+
+      - name: npm の依存を入れる
+        if: ${{ startsWith(inputs.layer, 'frontend-') }}
+        run: npm ci
+
+      - name: Chromium を入れる
+        if: ${{ inputs.layer == 'frontend-integration' }}
+        run: npx playwright install --with-deps chromium
+
+      - name: 層の全件を回す
+        timeout-minutes: ${{ fromJSON('{"backend-unit":1,"backend-integration":17,"frontend-unit":3,"frontend-integration":18}')[inputs.layer] }}
+        env:
+          LAYER: ${{ inputs.layer }}
+          PATHS: ${{ inputs.paths }}
+          PYTHONUNBUFFERED: "1"
+        run: |
+          : > test.log
+          # 結果の行を test.log と step の標準出力の両方に出す
+          say() { echo "$1" | tee -a test.log; }
+          case "$LAYER" in
+            backend-unit) limit=7 ;;
+            backend-integration) limit=62; dir=tests/integration/ ;;
+            frontend-unit) limit=19 ;;
+            frontend-integration) limit=75; dir=tests/integration/frontend/ ;;
+          esac
+          # paths は結合テストの層の、層の結合テストのフォルダの下のパスだけを受け付ける
+          if [ -n "$PATHS" ]; then
+            if [ -z "${dir:-}" ]; then
+              say "paths は結合テストの層でだけ指定できる: layer=$LAYER"
+              exit 1
+            fi
+            if ! printf '%s' "$PATHS" | grep -Eq '^[A-Za-z0-9_./ -]+$'; then
+              say "paths に許可しない文字がある（英数字・_・.・/・-・空白だけを許可する）: $PATHS"
+              exit 1
+            fi
+            for p in $PATHS; do
+              case "$p" in
+                *..*) say "paths の値が .. を含む: $p"; exit 1 ;;
+              esac
+              case "$p" in
+                "$dir"*) ;;
+                *) say "paths の値が層の結合テストのフォルダ（$dir）の外: $p"; exit 1 ;;
+              esac
+              if [ "$LAYER" = backend-integration ]; then
+                case "$p" in
+                  tests/integration/frontend/*) say "paths の値が層の結合テストのフォルダの外（tests/integration/frontend/ は frontend-integration の層）: $p"; exit 1 ;;
+                esac
+              fi
+            done
+          fi
+          case "$LAYER" in
+            backend-unit) cmd="uv run pytest tests/unit/ -v" ;;
+            backend-integration) cmd="uv run pytest ${PATHS:-$dir} -v" ;;
+            frontend-unit) cmd="npx vitest run --config frontend/vitest.config.ts --reporter=verbose" ;;
+            frontend-integration) cmd="npx playwright test --config tests/integration/frontend/playwright.config.ts $PATHS" ;;
+          esac
+          # テストを裏で起動し、出力を test.log と step の標準出力の両方に出す
+          setsid -w bash -c "set -o pipefail; $cmd 2>&1 | tee -a test.log" &
+          pid=$!
+          last=-1
+          idle=0
+          # test.log の大きさを 1 秒ごとに確認し、無出力の時間が上限を超えたらテストを止める
+          while kill -0 "$pid" 2> /dev/null; do
+            sleep 1
+            size=$(stat -c %s test.log)
+            if [ "$size" = "$last" ]; then
+              idle=$((idle + 1))
+            else
+              idle=0
+              last=$size
+            fi
+            if [ "$idle" -gt "$limit" ]; then
+              kill -- "-$pid"
+              say "出力が ${limit} 秒変わらなかったため、テストを止めた"
+              exit 1
+            fi
+          done
+          wait "$pid"
+
+      - name: ログを成果物に上げる
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: test-log
+          path: test.log
+          if-no-files-found: ignore

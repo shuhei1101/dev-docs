@@ -10,13 +10,14 @@ from typing import Any
 
 from pydantic import TypeAdapter, ValidationError
 
-from dev_docs.features.documents.fields import get_field
+from dev_docs.features.documents.fields import METADATA_KEYS, get_field
 from dev_docs.features.filter.fields import known_fields
 from dev_docs.features.filter.filters import check_filter, match_filter
 from dev_docs.features.filter.types import Condition, Group
 from dev_docs.features.view.paths import page_path
 from dev_docs.features.view.types import NavItem, NavTab
 from dev_docs.integrations.project_index.types import DocumentRow, IndexedDocument, SourceView
+from dev_docs.shared.errors import InvalidArgumentError
 
 OTHER_GROUP = "その他"
 FOLDER_GROUP_BY = "@folder"
@@ -53,6 +54,7 @@ def _select(
     *,
     fields: Mapping[str, str],
     today: date,
+    rows: Mapping[str, DocumentRow],
 ) -> list[IndexedDocument]:
     """`auto` の `document` と `filter` に該当する文書を、文書のページのパスの昇順で返却する。"""
     kind = spec.get("document")
@@ -66,7 +68,31 @@ def _select(
     # 使用できない項目・値の条件はタブを空にする（検査は project-index が警告する）
     if check_filter(node, fields):
         return []
-    return [d for d in found if match_filter(node, d, fields=fields, today=today)]
+    return [
+        d
+        for d in found
+        if match_filter(node, d, fields=fields, today=today, columns=_columns(rows, d.kind))
+    ]
+
+
+def _columns(rows: Mapping[str, DocumentRow], kind: str) -> Mapping[str, str]:
+    """文書の行の `metadata`（共通のキー → 列名）。行が無ければ空。"""
+    row = rows.get(kind)
+    return row.metadata if row is not None else {}
+
+
+def _group_value(document: IndexedDocument, key: str, columns: Mapping[str, str]) -> Any:
+    """`group_by` の値を、共通のキー・対応付けた列・文書の YAML の項目のパスの順で取得する。"""
+    # 共通のキー: project-index が組み立てた文書のメタデータから取得する
+    if key in METADATA_KEYS:
+        return document.metadata.get(key)
+    # 行の metadata で対応付けたキー: 対応付けた列から取得する
+    path = columns.get(key, key)
+    try:
+        return get_field(document.data, path)
+    except InvalidArgumentError:
+        # 項目のパスが誤っている: 値なしとして「その他」に入れる
+        return None
 
 
 def _auto(
@@ -84,7 +110,7 @@ def _auto(
     """
     found = [
         document
-        for document in _select(documents, spec, fields=fields, today=today)
+        for document in _select(documents, spec, fields=fields, today=today, rows=rows)
         if page_path(document) not in excluded
     ]
     group_by = spec.get("group_by")
@@ -94,7 +120,7 @@ def _auto(
         return _folder_items(found, rows=rows)
     buckets: dict[str, list[NavItem]] = {}
     for document in found:
-        value = get_field(document.data, str(group_by))
+        value = _group_value(document, str(group_by), _columns(rows, document.kind))
         names = (
             [str(item) for item in value]
             if isinstance(value, list)
@@ -244,8 +270,19 @@ def _tab_title(row: DocumentRow) -> str:
 
 
 def _source_fields(view: SourceView) -> dict[str, str]:
-    """配信元の行のスキーマ（`records` を持つ行は 1 要素のスキーマ）から使用できる項目を作る。"""
-    return known_fields(row.schema for row in view.documents)
+    """配信元の行のスキーマ（`records` を持つ行は 1 要素のスキーマ）から使用できる項目を作る。
+
+    行の `metadata` で対応付けたキーは、対応付けた列の型（列がスキーマに無ければ `string`）で加える。
+    """
+    fields = known_fields(row.schema for row in view.documents)
+    for row in view.documents:
+        row_fields = known_fields([row.schema])
+        for key, column in row.metadata.items():
+            # 既に使用できる項目（共通のキー・スキーマの項目）はそのまま
+            if key in fields:
+                continue
+            fields[key] = row_fields.get(column, "string")
+    return fields
 
 
 def build_nav(view: SourceView, documents: Sequence[IndexedDocument]) -> list[NavTab]:

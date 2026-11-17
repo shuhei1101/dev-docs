@@ -1,0 +1,1380 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/shuhei1101/knowledge/design-schemas/v8.4.0/schemas/knowledge-files.schema.yaml
+files:
+- path: conftest.py
+  name: テスト全体の共通の fixture
+  description: テスト全体で共通に使用する fixture を受け持ち、テストの共通の準備を修正するときに参照する。
+  tags:
+  - topic:テスト
+  - tool:pytest
+- path: e2e/workflow/conftest.py
+  name: workflow の E2E テストの fixture
+  description: 検証用のブランチを push し、gh で workflow を起動して結果を取得する fixture を受け持ち、workflow の E2E テストの準備を修正するときに参照する。
+  tags:
+  - topic:テスト
+  - topic:ci
+  - tool:github
+- path: e2e/workflow/test_test_yml.py
+  name: テストの全件実行の workflow の E2E テスト
+  description: テストの全件実行の workflow をランナーで起動して結果を確かめる E2E テストを受け持ち、workflow の振る舞いのテストを修正するときに参照する。
+  tags:
+  - topic:テスト
+  - topic:ci
+  - tool:github
+  related:
+  - to: .github/workflows/test.yml
+    type: tests
+  - to: IF-155-26
+    type: see_also
+- path: integration/frontend/doc-view-screen.spec.ts
+  name: 文書の画面の結合テスト
+  description: 文書の画面の結合テストを受け持ち、文書の画面の振る舞いのテストを修正するときに参照する。
+  tags:
+  - topic:文書
+  - topic:画面
+  - topic:タブ
+  - topic:サイドバー
+  - topic:パンくず
+  related:
+  - to: SCR-155-1
+    type: see_also
+- path: integration/frontend/not-found-screen.spec.ts
+  name: 見つからない画面の結合テスト
+  description: 見つからない画面の結合テストを受け持ち、見つからない画面の振る舞いのテストを修正するときに参照する。
+  tags:
+  - topic:見つからない画面
+  - topic:画面
+  - topic:エラー
+  - topic:配信元
+  related:
+  - to: SCR-155-2
+    type: see_also
+- path: integration/frontend/playwright.config.ts
+  name: 画面の結合テストの設定
+  description: 画面の結合テストを実行する Playwright の設定を受け持ち、結合テストのブラウザや起動するサーバーを修正するときに参照する。
+  tags:
+  - tool:playwright
+  - topic:結合テスト
+  related:
+  - to: LIB-155-12
+    type: see_also
+  - to: TP-155-1
+    type: see_also
+- path: integration/frontend/search-dialog.spec.ts
+  name: 検索のダイアログの結合テスト
+  description: 検索のダイアログの結合テストを受け持ち、検索のダイアログの振る舞いのテストを修正するときに参照する。
+  tags:
+  - topic:ダイアログ
+  - topic:モーダル
+  - topic:部品
+  related:
+  - to: CMP-155-3
+    type: see_also
+- path: integration/frontend/settings-screen.spec.ts
+  name: 設定画面の結合テスト
+  description: 設定画面の結合テストを受け持ち、設定画面の振る舞いのテストを修正するときに参照する。
+  tags:
+  - topic:設定画面
+  - topic:画面
+  - topic:配信元
+  - topic:端末の設定
+  related:
+  - to: SCR-155-3
+    type: see_also
+- path: integration/frontend/shortcut-dialog.spec.ts
+  name: ショートカットの一覧の結合テスト
+  description: ショートカットの一覧の結合テストを受け持ち、ショートカットの一覧の振る舞いのテストを修正するときに参照する。
+  tags:
+  - topic:ショートカット
+  - topic:キーボード
+  - topic:モーダル
+  - topic:部品
+  related:
+  - to: CMP-155-1
+    type: see_also
+- path: integration/frontend/support/api-mock.ts
+  name: 画面の結合テストの API のモック
+  description: 画面の結合テストで画面の API の応答を差し替える処理を受け持ち、結合テストの API のモックを修正するときに参照する。
+  tags:
+  - tool:playwright
+  - topic:モック
+  - topic:結合テスト
+- path: integration/frontend/support/fixtures.ts
+  name: 画面の結合テストの fixture
+  description: 画面の結合テストで共通に使用する fixture を受け持ち、結合テストの準備を修正するときに参照する。
+  tags:
+  - tool:playwright
+  - topic:結合テスト
+- path: integration/frontend/support/geometry.ts
+  name: 画面の結合テストの要素の位置の検査
+  description: 画面の結合テストで要素の位置と大きさを比べる処理を受け持ち、配置の検査を修正するときに参照する。
+  tags:
+  - tool:playwright
+  - topic:結合テスト
+  - topic:レスポンシブ
+- path: integration/frontend/support/storybook.ts
+  name: 画面の結合テストのストーリーの読み込み
+  description: 画面の結合テストで Storybook のストーリーを開く処理を受け持ち、ストーリーを使う結合テストを修正するときに参照する。
+  tags:
+  - tool:playwright
+  - tool:storybook
+  - topic:結合テスト
+- path: integration/frontend/topbar.spec.ts
+  name: トップバーの結合テスト
+  description: トップバーの結合テストを受け持ち、トップバーの振る舞いのテストを修正するときに参照する。
+  tags:
+  - topic:トップバー
+  - topic:部品
+  - topic:リビジョン
+  - topic:コメント
+  - topic:テーマ
+  related:
+  - to: CMP-155-2
+    type: see_also
+- path: integration/plugin/conftest.py
+  name: 管理用プラグインの結合テストの fixture
+  description: セッション開始のフックの結合テストで使用するサーバーと環境の fixture を受け持ち、フックの結合テストの準備を修正するときに参照する。
+  tags:
+  - topic:結合テスト
+  - topic:プラグイン
+- path: integration/plugin/test_session_start.py
+  name: セッション開始のフックの結合テスト
+  description: セッション開始のフックの結合テストを受け持ち、セッション開始のフックの振る舞いのテストを修正するときに参照する。
+  tags:
+  - topic:フック
+  - topic:セッション
+  - topic:起動
+  - tool:claude-code
+  - tool:systemd
+  related:
+  - to: IF-155-1
+    type: see_also
+- path: integration/server/conftest.py
+  name: サーバーの結合テストの fixture
+  description: 開発ドキュメントサーバーの結合テストで起動するサーバーと project-index の fixture を受け持ち、サーバーの結合テストの準備を修正するときに参照する。
+  tags:
+  - topic:結合テスト
+  - topic:サーバー
+  - tool:project-index
+- path: integration/server/test_api_schema.py
+  name: APIのスキーマの結合テスト
+  description: APIのスキーマの結合テストを受け持ち、APIのスキーマの振る舞いのテストを修正するときに参照する。
+  tags:
+  - topic:api
+  - topic:スキーマ
+  - tool:openapi
+  related:
+  - to: IF-155-3
+    type: see_also
+- path: integration/server/test_get_document.py
+  name: 文書の取得の結合テスト
+  description: 文書の取得の結合テストを受け持ち、文書の取得の振る舞いのテストを修正するときに参照する。
+  tags:
+  - topic:文書
+  - topic:差分
+  - topic:api
+  related:
+  - to: IF-155-10
+    type: see_also
+- path: integration/server/test_get_settings_sources.py
+  name: 端末の設定の取得の結合テスト
+  description: 端末の設定の取得の結合テストを受け持ち、端末の設定の取得の振る舞いのテストを修正するときに参照する。
+  tags:
+  - topic:端末の設定
+  - topic:配信元
+  - topic:状態
+  related:
+  - to: IF-155-20
+    type: see_also
+- path: integration/server/test_get_status.py
+  name: 状態の取得の結合テスト
+  description: 状態の取得の結合テストを受け持ち、状態の取得の振る舞いのテストを修正するときに参照する。
+  tags:
+  - topic:状態
+  - tool:mcp
+  - topic:配信元
+  - topic:端末の設定
+  related:
+  - to: IF-155-14
+    type: see_also
+- path: integration/server/test_list_refs.py
+  name: リビジョンの一覧の結合テスト
+  description: リビジョンの一覧の結合テストを受け持ち、リビジョンの一覧の振る舞いのテストを修正するときに参照する。
+  tags:
+  - topic:リビジョン
+  - tool:git
+  - topic:ブランチ
+  related:
+  - to: IF-155-6
+    type: see_also
+- path: integration/server/test_migrate.py
+  name: 設定の移し替えの結合テスト
+  description: 設定の移し替えの結合テストを受け持ち、設定の移し替えの振る舞いのテストを修正するときに参照する。
+  tags:
+  - topic:移行
+  - topic:端末の設定
+  - topic:cli
+  - topic:バージョン
+  related:
+  - to: IF-155-22
+    type: see_also
+- path: integration/server/test_put_columns.py
+  name: 表の列の設定の保存の結合テスト
+  description: 表の列の設定の保存の結合テストを受け持ち、表の列の設定の保存の振る舞いのテストを修正するときに参照する。
+  tags:
+  - topic:列
+  - topic:表
+  - topic:設定
+  related:
+  - to: IF-155-21
+    type: see_also
+- path: integration/server/test_put_settings_sources.py
+  name: 端末の設定の保存の結合テスト
+  description: 端末の設定の保存の結合テストを受け持ち、端末の設定の保存の振る舞いのテストを修正するときに参照する。
+  tags:
+  - topic:端末の設定
+  - topic:配信元
+  - tool:project-index
+  related:
+  - to: IF-155-19
+    type: see_also
+- path: integration/server/test_restart.py
+  name: 再起動の結合テスト
+  description: 再起動の結合テストを受け持ち、再起動の振る舞いのテストを修正するときに参照する。
+  tags:
+  - topic:再起動
+  - topic:サーバー
+  - tool:mcp
+  related:
+  - to: IF-155-7
+    type: see_also
+- path: integration/server/test_search_page.py
+  name: 画面の検索の結合テスト
+  description: 画面の検索の結合テストを受け持ち、画面の検索の振る舞いのテストを修正するときに参照する。
+  tags:
+  - topic:画面
+  - topic:api
+  related:
+  - to: IF-155-16
+    type: see_also
+- path: integration/server/test_serve.py
+  name: 起動の結合テスト
+  description: 起動の結合テストを受け持ち、起動の振る舞いのテストを修正するときに参照する。
+  tags:
+  - topic:起動
+  - topic:サーバー
+  - topic:cli
+  - tool:mcp
+  - topic:配信元
+  related:
+  - to: IF-155-25
+    type: see_also
+- path: integration/server/test_serve_screen.py
+  name: 画面の配信の結合テスト
+  description: 画面の配信の結合テストを受け持ち、画面の配信の振る舞いのテストを修正するときに参照する。
+  tags:
+  - topic:画面
+  - topic:ビルド
+  related:
+  - to: IF-155-18
+    type: see_also
+- path: integration/server/test_update.py
+  name: 更新の結合テスト
+  description: 更新の結合テストを受け持ち、更新の振る舞いのテストを修正するときに参照する。
+  tags:
+  - topic:更新
+  - tool:mcp
+  - tool:git
+  - tool:uv
+  - topic:再起動
+  related:
+  - to: IF-155-13
+    type: see_also
+- path: unit/dev_docs/conftest.py
+  name: サーバーの単体テストの fixture
+  description: 開発ドキュメントサーバーの単体テストで使用する project-index の偽物と共通の fixture を受け持ち、サーバーの単体テストの準備を修正するときに参照する。
+  tags:
+  - topic:単体テスト
+  - topic:サーバー
+  - tool:project-index
+- path: unit/dev_docs/features/admin/test_render.py
+  name: '管理の MCP の `status` の `format: markdown` の応答の文を組み立てる処理の単体テスト'
+  description: '管理の MCP の `status` の `format: markdown` の応答の文を組み立てる処理の単体テストを受け持ち、render.py の振る舞いのテストを修正するときに参照する。'
+  tags:
+  - tool:mcp
+  - topic:状態
+  related:
+  - to: src/dev_docs/features/admin/render.py
+    type: tests
+- path: unit/dev_docs/features/admin/test_service.py
+  name: 管理の MCP の `status` の中身の単体テスト
+  description: 管理の MCP の `status` の中身の単体テストを受け持ち、service.py の振る舞いのテストを修正するときに参照する。
+  tags:
+  - tool:mcp
+  - topic:状態
+  related:
+  - to: src/dev_docs/features/admin/service.py
+    type: tests
+- path: unit/dev_docs/features/changes/test_compare.py
+  name: 変わったキーの比べ方の単体テスト
+  description: 変わったキーの比べ方の単体テストを受け持ち、compare.py の振る舞いのテストを修正するときに参照する。
+  tags:
+  - topic:差分
+  related:
+  - to: src/dev_docs/features/changes/compare.py
+    type: tests
+- path: unit/dev_docs/features/convert/test_decisions.py
+  name: 設計書の `decisions` の検討事項の ID と、検討事項の文書のパスの読み取りの単体テスト
+  description: 設計書の `decisions` の検討事項の ID と、検討事項の文書のパスの読み取りの単体テストを受け持ち、decisions.py の振る舞いのテストを修正するときに参照する。
+  tags:
+  - topic:markdown
+  related:
+  - to: src/dev_docs/features/convert/decisions.py
+    type: tests
+- path: unit/dev_docs/features/convert/test_diagrams.py
+  name: '`x-diagram` の値と手で記載する Mermaid の、mdmark の map の範囲か Mermaid のコードブロックへの描画の単体テスト'
+  description: '`x-diagram` の値と手で記載する Mermaid の、mdmark の map の範囲か Mermaid のコードブロックへの描画の単体テストを受け持ち、diagrams.py の振る舞いのテストを修正するときに参照する。'
+  tags:
+  - topic:markdown
+  - tool:mdmark
+  - topic:図
+  related:
+  - to: src/dev_docs/features/convert/diagrams.py
+    type: tests
+- path: unit/dev_docs/features/convert/test_embed.py
+  name: 埋め込みのマーカーのパスの取り出しと、表への展開の単体テスト
+  description: 埋め込みのマーカーのパスの取り出しと、表への展開の単体テストを受け持ち、embed.py の振る舞いのテストを修正するときに参照する。
+  tags:
+  - topic:markdown
+  - topic:表
+  related:
+  - to: src/dev_docs/features/convert/embed.py
+    type: tests
+- path: unit/dev_docs/features/convert/test_inline.py
+  name: 文字列の値の中の、図・ファイルツリー・手順・参照・Issue 番号・値の選択肢の書き換えの単体テスト
+  description: 文字列の値の中の、図・ファイルツリー・手順・参照・Issue 番号・値の選択肢の書き換えの単体テストを受け持ち、inline.py の振る舞いのテストを修正するときに参照する。
+  tags:
+  - topic:markdown
+  - topic:図
+  - topic:issue
+  related:
+  - to: src/dev_docs/features/convert/inline.py
+    type: tests
+- path: unit/dev_docs/features/convert/test_markdown.py
+  name: スキーマ駆動の文書の Markdown への変換と表の描画の単体テスト
+  description: スキーマ駆動の文書の Markdown への変換と表の描画の単体テストを受け持ち、markdown.py の振る舞いのテストを修正するときに参照する。
+  tags:
+  - topic:markdown
+  - topic:スキーマ
+  - topic:表
+  related:
+  - to: src/dev_docs/features/convert/markdown.py
+    type: tests
+- path: unit/dev_docs/features/convert/test_service.py
+  name: 変換の選択と、表のキーの取り出しの単体テスト
+  description: 変換の選択と、表のキーの取り出しの単体テストを受け持ち、service.py の振る舞いのテストを修正するときに参照する。
+  tags:
+  - topic:markdown
+  - topic:表
+  related:
+  - to: src/dev_docs/features/convert/service.py
+    type: tests
+- path: unit/dev_docs/features/documents/test_aliases.py
+  name: エイリアスのキーの検証と、エイリアスの集めの単体テスト
+  description: エイリアスのキーの検証と、エイリアスの集めの単体テストを受け持ち、aliases.py の振る舞いのテストを修正するときに参照する。
+  tags:
+  - topic:文書
+  - topic:エイリアス
+  related:
+  - to: src/dev_docs/features/documents/aliases.py
+    type: tests
+- path: unit/dev_docs/features/documents/test_fields.py
+  name: 項目のパスの分解と、項目の値の取得の単体テスト
+  description: 項目のパスの分解と、項目の値の取得の単体テストを受け持ち、fields.py の振る舞いのテストを修正するときに参照する。
+  tags:
+  - topic:文書
+  - topic:パス
+  - topic:項目
+  related:
+  - to: src/dev_docs/features/documents/fields.py
+    type: tests
+- path: unit/dev_docs/features/filter/test_fields.py
+  name: 項目の値・計算項目・使用できる項目・見出しの行の単体テスト
+  description: 項目の値・計算項目・使用できる項目・見出しの行の単体テストを受け持ち、fields.py の振る舞いのテストを修正するときに参照する。
+  tags:
+  - topic:ナビゲーション
+  - topic:条件
+  - topic:項目
+  related:
+  - to: src/dev_docs/features/filter/fields.py
+    type: tests
+- path: unit/dev_docs/features/filter/test_filters.py
+  name: 条件の木の確認と照合・正規表現・比べる値の解釈（`nav` の `auto` の `filter`）の単体テスト
+  description: 条件の木の確認と照合・正規表現・比べる値の解釈（`nav` の `auto` の `filter`）の単体テストを受け持ち、filters.py の振る舞いのテストを修正するときに参照する。
+  tags:
+  - topic:ナビゲーション
+  - topic:条件
+  related:
+  - to: src/dev_docs/features/filter/filters.py
+    type: tests
+- path: unit/dev_docs/features/lifecycle/test_control.py
+  name: 再起動の要求を受けて uvicorn を止め、止まった後に `run_serve` が同じプロセスを置き換えるかを持つ処理の単体テスト
+  description: 再起動の要求を受けて uvicorn を止め、止まった後に `run_serve` が同じプロセスを置き換えるかを持つ処理の単体テストを受け持ち、control.py の振る舞いのテストを修正するときに参照する。
+  tags:
+  - topic:再起動
+  - topic:更新
+  - topic:サーバー
+  - tool:uvicorn
+  related:
+  - to: src/dev_docs/features/lifecycle/control.py
+    type: tests
+- path: unit/dev_docs/features/lifecycle/test_update.py
+  name: クローンの `git pull --ff-only`・`uv sync` での更新と再起動の要求の単体テスト
+  description: クローンの `git pull --ff-only`・`uv sync` での更新と再起動の要求の単体テストを受け持ち、update.py の振る舞いのテストを修正するときに参照する。
+  tags:
+  - topic:再起動
+  - topic:更新
+  - topic:サーバー
+  - tool:git
+  - tool:uv
+  related:
+  - to: src/dev_docs/features/lifecycle/update.py
+    type: tests
+- path: unit/dev_docs/features/migrate/test_service.py
+  name: 対象の決定・適用する手順・バックアップを取った適用と、`sources` の project-index への書き出しの単体テスト
+  description: 対象の決定・適用する手順・バックアップを取った適用と、`sources` の project-index への書き出しの単体テストを受け持ち、service.py の振る舞いのテストを修正するときに参照する。
+  tags:
+  - topic:移行
+  - topic:端末の設定
+  - tool:project-index
+  - topic:バックアップ
+  - topic:端末
+  - topic:設定
+  related:
+  - to: src/dev_docs/features/migrate/service.py
+    type: tests
+- path: unit/dev_docs/features/migrate/test_steps.py
+  name: パッケージに入れた移し替えの手順を参照し、メモリの上の YAML に 1 つずつ適用する処理の単体テスト
+  description: パッケージに入れた移し替えの手順を参照し、メモリの上の YAML に 1 つずつ適用する処理の単体テストを受け持ち、steps.py の振る舞いのテストを修正するときに参照する。
+  tags:
+  - topic:移行
+  - topic:端末の設定
+  - topic:端末
+  - topic:設定
+  related:
+  - to: src/dev_docs/features/migrate/steps.py
+    type: tests
+- path: unit/dev_docs/features/prompt_doc/conftest.py
+  name: プロンプトの変換の単体テストの fixture
+  description: プロンプトの変換の単体テストで使用するプロンプトの YAML の例を受け持ち、プロンプトの変換のテストの入力を修正するときに参照する。
+  tags:
+  - topic:単体テスト
+  - topic:プロンプト
+- path: unit/dev_docs/features/prompt_doc/test_render.py
+  name: プロンプトの部品を Jinja2 で描画する処理の単体テスト
+  description: プロンプトの部品を Jinja2 で描画する処理の単体テストを受け持ち、render.py の振る舞いのテストを修正するときに参照する。
+  tags:
+  - topic:プロンプト
+  - tool:jinja2
+  related:
+  - to: src/dev_docs/features/prompt_doc/render.py
+    type: tests
+- path: unit/dev_docs/features/prompt_doc/test_runtime.py
+  name: 起動のときのプロンプトの YAML の読み込み・検査と、MCP の instructions・ツールの description の描画の単体テスト
+  description: 起動のときのプロンプトの YAML の読み込み・検査と、MCP の instructions・ツールの description の描画の単体テストを受け持ち、runtime.py の振る舞いのテストを修正するときに参照する。
+  tags:
+  - topic:プロンプト
+  - tool:mcp
+  related:
+  - to: src/dev_docs/features/prompt_doc/runtime.py
+    type: tests
+- path: unit/dev_docs/features/settings/test_query.py
+  name: 端末の設定の場所・読み込みと検証・待ち受けのポートの単体テスト
+  description: 端末の設定の場所・読み込みと検証・待ち受けのポートの単体テストを受け持ち、query.py の振る舞いのテストを修正するときに参照する。
+  tags:
+  - topic:端末の設定
+  - topic:設定
+  - topic:端末
+  related:
+  - to: src/dev_docs/features/settings/query.py
+    type: tests
+- path: unit/dev_docs/features/settings/test_route.py
+  name: 端末の設定のルーター（`GET`・`PUT /_api/settings/sources`）の単体テスト
+  description: 端末の設定のルーター（`GET`・`PUT /_api/settings/sources`）の単体テストを受け持ち、route.py の振る舞いのテストを修正するときに参照する。
+  tags:
+  - topic:端末の設定
+  - topic:設定
+  - topic:端末
+  - topic:ルート
+  related:
+  - to: src/dev_docs/features/settings/route.py
+    type: tests
+- path: unit/dev_docs/features/settings/test_service.py
+  name: '`sources[]` の保存の依頼の単体テスト'
+  description: '`sources[]` の保存の依頼の単体テストを受け持ち、service.py の振る舞いのテストを修正するときに参照する。'
+  tags:
+  - topic:端末の設定
+  - topic:設定
+  - topic:端末
+  related:
+  - to: src/dev_docs/features/settings/service.py
+    type: tests
+- path: unit/dev_docs/features/view/test_columns.py
+  name: 表の列の設定の読み書きの単体テスト
+  description: 表の列の設定の読み書きの単体テストを受け持ち、columns.py の振る舞いのテストを修正するときに参照する。
+  tags:
+  - topic:api
+  - topic:画面
+  - topic:表
+  - topic:列
+  related:
+  - to: src/dev_docs/features/view/columns.py
+    type: tests
+- path: unit/dev_docs/features/view/test_document.py
+  name: 画面の文書の取得と、見つからない項目の単体テスト
+  description: 画面の文書の取得と、見つからない項目の単体テストを受け持ち、document.py の振る舞いのテストを修正するときに参照する。
+  tags:
+  - topic:api
+  - topic:画面
+  - topic:見つからない画面
+  - topic:項目
+  related:
+  - to: src/dev_docs/features/view/document.py
+    type: tests
+- path: unit/dev_docs/features/view/test_nav.py
+  name: 画面のナビゲーションの組み立てと、変わったページの単体テスト
+  description: 画面のナビゲーションの組み立てと、変わったページの単体テストを受け持ち、nav.py の振る舞いのテストを修正するときに参照する。
+  tags:
+  - topic:api
+  - topic:画面
+  - topic:ナビゲーション
+  related:
+  - to: src/dev_docs/features/view/nav.py
+    type: tests
+- path: unit/dev_docs/features/view/test_paths.py
+  name: 画面のページのパスと、文書のページの特定の単体テスト
+  description: 画面のページのパスと、文書のページの特定の単体テストを受け持ち、paths.py の振る舞いのテストを修正するときに参照する。
+  tags:
+  - topic:api
+  - topic:画面
+  - topic:パス
+  related:
+  - to: src/dev_docs/features/view/paths.py
+    type: tests
+- path: unit/dev_docs/features/view/test_route.py
+  name: 画面の API のルーター（`/_api/sources/{source}/docs`・`search`・`refs`・`columns`）の単体テスト
+  description: 画面の API のルーター（`/_api/sources/{source}/docs`・`search`・`refs`・`columns`）の単体テストを受け持ち、route.py の振る舞いのテストを修正するときに参照する。
+  tags:
+  - topic:api
+  - topic:画面
+  - topic:ルート
+  related:
+  - to: src/dev_docs/features/view/route.py
+    type: tests
+- path: unit/dev_docs/features/view/test_search.py
+  name: 画面の検索（project-index の検索の結果を画面の形式にする）の単体テスト
+  description: 画面の検索（project-index の検索の結果を画面の形式にする）の単体テストを受け持ち、search.py の振る舞いのテストを修正するときに参照する。
+  tags:
+  - topic:api
+  - topic:画面
+  - tool:project-index
+  related:
+  - to: src/dev_docs/features/view/search.py
+    type: tests
+- path: unit/dev_docs/integrations/project_index/test_client.py
+  name: project-index の読み取り API と端末の設定の API を制限時間つきで呼び、応答を型にする処理の単体テスト
+  description: project-index の読み取り API と端末の設定の API を制限時間つきで呼び、応答を型にする処理の単体テストを受け持ち、client.py の振る舞いのテストを修正するときに参照する。
+  tags:
+  - tool:project-index
+  - topic:api
+  related:
+  - to: src/dev_docs/integrations/project_index/client.py
+    type: tests
+- path: unit/dev_docs/integrations/project_index/test_types.py
+  name: project-index の読み取り API と端末の設定の API の応答の型の単体テスト
+  description: project-index の読み取り API と端末の設定の API の応答の型の単体テストを受け持ち、types.py の振る舞いのテストを修正するときに参照する。
+  tags:
+  - tool:project-index
+  - topic:api
+  - topic:型ヒント
+  - topic:型
+  related:
+  - to: src/dev_docs/integrations/project_index/types.py
+    type: tests
+- path: unit/dev_docs/server/mcp/test_admin.py
+  name: 管理の MCP の組み立て（ツールの登録）の単体テスト
+  description: 管理の MCP の組み立て（ツールの登録）の単体テストを受け持ち、admin.py の振る舞いのテストを修正するときに参照する。
+  tags:
+  - tool:mcp
+  related:
+  - to: src/dev_docs/server/mcp/admin.py
+    type: tests
+- path: unit/dev_docs/server/mcp/test_result.py
+  name: ツールの結果・エラーの変換と、管理の MCP のツール名とプロンプトの ID の単体テスト
+  description: ツールの結果・エラーの変換と、管理の MCP のツール名とプロンプトの ID の単体テストを受け持ち、result.py の振る舞いのテストを修正するときに参照する。
+  tags:
+  - tool:mcp
+  - topic:エラー
+  - topic:プロンプト
+  related:
+  - to: src/dev_docs/server/mcp/result.py
+    type: tests
+- path: unit/dev_docs/server/test_app.py
+  name: ルートと MCP のマウントをまとめたアプリの組み立ての単体テスト
+  description: ルートと MCP のマウントをまとめたアプリの組み立ての単体テストを受け持ち、app.py の振る舞いのテストを修正するときに参照する。
+  tags:
+  - topic:起動
+  - topic:サーバー
+  - tool:mcp
+  - topic:ルート
+  related:
+  - to: src/dev_docs/server/app.py
+    type: tests
+- path: unit/dev_docs/server/test_error_handlers.py
+  name: 例外の problem+json への変換の単体テスト
+  description: 例外の problem+json への変換の単体テストを受け持ち、error_handlers.py の振る舞いのテストを修正するときに参照する。
+  tags:
+  - topic:起動
+  - topic:サーバー
+  - topic:エラー
+  related:
+  - to: src/dev_docs/server/error_handlers.py
+    type: tests
+- path: unit/dev_docs/server/test_lifespan.py
+  name: マウントした管理の MCP のセッションの管理と、project-indexの呼び出しを閉じるアプリの寿命の単体テスト
+  description: マウントした管理の MCP のセッションの管理と、project-indexの呼び出しを閉じるアプリの寿命の単体テストを受け持ち、lifespan.py の振る舞いのテストを修正するときに参照する。
+  tags:
+  - topic:起動
+  - topic:サーバー
+  - tool:project-index
+  - tool:mcp
+  related:
+  - to: src/dev_docs/server/lifespan.py
+    type: tests
+- path: unit/dev_docs/server/test_origin.py
+  name: 画面と同じオリジンからの要求かの確認の単体テスト
+  description: 画面と同じオリジンからの要求かの確認の単体テストを受け持ち、origin.py の振る舞いのテストを修正するときに参照する。
+  tags:
+  - topic:ユーティリティ
+  - topic:セキュリティ
+  related:
+  - to: src/dev_docs/server/origin.py
+    type: tests
+- path: unit/dev_docs/server/test_screen.py
+  name: 画面のビルドの配信の単体テスト
+  description: 画面のビルドの配信の単体テストを受け持ち、screen.py の振る舞いのテストを修正するときに参照する。
+  tags:
+  - topic:起動
+  - topic:サーバー
+  - topic:ビルド
+  related:
+  - to: src/dev_docs/server/screen.py
+    type: tests
+- path: unit/dev_docs/shared/test_errors.py
+  name: '`DevDocsError` と、MCP・画面が返却するエラーの階層の単体テスト'
+  description: '`DevDocsError` と、MCP・画面が返却するエラーの階層の単体テストを受け持ち、errors.py の振る舞いのテストを修正するときに参照する。'
+  tags:
+  - topic:ユーティリティ
+  - topic:エラー
+  - tool:mcp
+  related:
+  - to: src/dev_docs/shared/errors.py
+    type: tests
+- path: unit/dev_docs/shared/test_files.py
+  name: 一時ファイルからのファイルの置き換えの単体テスト
+  description: 一時ファイルからのファイルの置き換えの単体テストを受け持ち、files.py の振る舞いのテストを修正するときに参照する。
+  tags:
+  - topic:ユーティリティ
+  - topic:ファイル
+  related:
+  - to: src/dev_docs/shared/files.py
+    type: tests
+- path: unit/dev_docs/shared/test_hashing.py
+  name: 内容のハッシュ（文書のバージョン）の単体テスト
+  description: 内容のハッシュ（文書のバージョン）の単体テストを受け持ち、hashing.py の振る舞いのテストを修正するときに参照する。
+  tags:
+  - topic:ユーティリティ
+  - topic:バージョン
+  - topic:ハッシュ
+  related:
+  - to: src/dev_docs/shared/hashing.py
+    type: tests
+- path: unit/dev_docs/shared/test_paths.py
+  name: パスの正規化の単体テスト
+  description: パスの正規化の単体テストを受け持ち、paths.py の振る舞いのテストを修正するときに参照する。
+  tags:
+  - topic:ユーティリティ
+  - topic:パス
+  related:
+  - to: src/dev_docs/shared/paths.py
+    type: tests
+- path: unit/dev_docs/shared/test_schema_check.py
+  name: JSON Schema の違反を、項目のパスつきの `Violation` にする処理の単体テスト
+  description: JSON Schema の違反を、項目のパスつきの `Violation` にする処理の単体テストを受け持ち、schema_check.py の振る舞いのテストを修正するときに参照する。
+  tags:
+  - topic:ユーティリティ
+  - tool:jsonschema
+  - topic:項目
+  related:
+  - to: src/dev_docs/shared/schema_check.py
+    type: tests
+- path: unit/dev_docs/shared/test_yaml_io.py
+  name: YAML の読み込みと、往復編集の読み書きの単体テスト
+  description: YAML の読み込みと、往復編集の読み書きの単体テストを受け持ち、yaml_io.py の振る舞いのテストを修正するときに参照する。
+  tags:
+  - topic:ユーティリティ
+  - tool:ruamel.yaml
+  related:
+  - to: src/dev_docs/shared/yaml_io.py
+    type: tests
+- path: unit/dev_docs/test_main.py
+  name: '`dev-docs` コマンドの引数の組み立てと main の単体テスト'
+  description: '`dev-docs` コマンドの引数の組み立てと main の単体テストを受け持ち、__main__.py の振る舞いのテストを修正するときに参照する。'
+  tags:
+  - topic:cli
+  - topic:エントリポイント
+  related:
+  - to: src/dev_docs/__main__.py
+    type: tests
+- path: unit/dev_docs/test_serve.py
+  name: '`dev-docs serve`・`dev-docs migrate` の部品の配線と、起動のときの配信元の通知の単体テスト'
+  description: '`dev-docs serve`・`dev-docs migrate` の部品の配線と、起動のときの配信元の通知の単体テストを受け持ち、main.py の振る舞いのテストを修正するときに参照する。'
+  tags:
+  - topic:起動
+  - topic:サーバー
+  - topic:配信元
+  - topic:通知
+  related:
+  - to: src/dev_docs/main.py
+    type: tests
+- path: unit/frontend/helpers/fixtures.ts
+  name: 画面の単体テストの fixture
+  description: 画面の単体テストで使用するサイドバーの項目などの値を組み立てる関数を受け持ち、画面の単体テストの入力を修正するときに参照する。
+  tags:
+  - topic:単体テスト
+  - topic:画面
+- path: unit/frontend/helpers/msw-server.ts
+  name: 画面の単体テストの MSW のサーバー
+  description: 画面の単体テストで API の応答を差し替える MSW のサーバーを受け持ち、単体テストの API のモックを修正するときに参照する。
+  tags:
+  - topic:単体テスト
+  - tool:msw
+  - topic:モック
+  related:
+  - to: LIB-155-10
+    type: see_also
+- path: unit/frontend/helpers/render-app.tsx
+  name: 画面の単体テストのアプリの描画
+  description: 本物のルートの木で画面を開く描画の関数を受け持ち、ルートを含む画面の単体テストを修正するときに参照する。
+  tags:
+  - topic:単体テスト
+  - tool:tanstack-router
+  - topic:ルート
+- path: unit/frontend/helpers/render.tsx
+  name: 画面の単体テストの部品の描画
+  description: プロバイダーで包んで部品を描画する関数を受け持ち、部品の単体テストの描画を修正するときに参照する。
+  tags:
+  - topic:単体テスト
+  - topic:部品
+- path: unit/frontend/setup-msw.ts
+  name: 画面の単体テストの MSW の起動と停止
+  description: 画面の単体テストの前後で MSW のサーバーを起動・停止する処理を受け持ち、単体テストの MSW の準備を修正するときに参照する。
+  tags:
+  - topic:単体テスト
+  - tool:msw
+  related:
+  - to: LIB-155-10
+    type: see_also
+- path: unit/frontend/src/app/confirm-dialog.test.tsx
+  name: 画面共通の確認のダイアログと、それを開くフックの単体テスト
+  description: 画面共通の確認のダイアログと、それを開くフックの単体テストを受け持ち、confirm-dialog.tsx の振る舞いのテストを修正するときに参照する。
+  tags:
+  - topic:ルート
+  - tool:react
+  - topic:ダイアログ
+  related:
+  - to: frontend/src/app/confirm-dialog.tsx
+    type: tests
+- path: unit/frontend/src/app/error-fallback.test.tsx
+  name: 描画中の例外の表示の単体テスト
+  description: 描画中の例外の表示の単体テストを受け持ち、error-fallback.tsx の振る舞いのテストを修正するときに参照する。
+  tags:
+  - topic:ルート
+  - tool:react
+  - topic:エラー
+  related:
+  - to: frontend/src/app/error-fallback.tsx
+    type: tests
+- path: unit/frontend/src/app/query-client.test.ts
+  name: TanStack Query の QueryClient の既定の単体テスト
+  description: TanStack Query の QueryClient の既定の単体テストを受け持ち、query-client.ts の振る舞いのテストを修正するときに参照する。
+  tags:
+  - topic:ルート
+  - tool:react
+  - tool:tanstack-query
+  related:
+  - to: frontend/src/app/query-client.ts
+    type: tests
+- path: unit/frontend/src/app/router.test.tsx
+  name: TanStack Router のルーターの単体テスト
+  description: TanStack Router のルーターの単体テストを受け持ち、router.tsx の振る舞いのテストを修正するときに参照する。
+  tags:
+  - topic:ルート
+  - tool:react
+  - tool:tanstack-router
+  related:
+  - to: frontend/src/app/router.tsx
+    type: tests
+- path: unit/frontend/src/features/docs/doc-view/components/conversion-error-alert.test.tsx
+  name: 本文の代わりに出す変換の失敗の単体テスト
+  description: 本文の代わりに出す変換の失敗の単体テストを受け持ち、conversion-error-alert.tsx の振る舞いのテストを修正するときに参照する。
+  tags:
+  - topic:文書
+  - topic:画面
+  - topic:エラー
+  related:
+  - to: frontend/src/features/docs/doc-view/components/conversion-error-alert.tsx
+    type: tests
+- path: unit/frontend/src/features/docs/doc-view/components/diff-banner.test.tsx
+  name: 差分を強調していることと、比べている 2 つのリビジョンの案内の単体テスト
+  description: 差分を強調していることと、比べている 2 つのリビジョンの案内の単体テストを受け持ち、diff-banner.tsx の振る舞いのテストを修正するときに参照する。
+  tags:
+  - topic:文書
+  - topic:画面
+  - topic:差分
+  - topic:リビジョン
+  related:
+  - to: frontend/src/features/docs/doc-view/components/diff-banner.tsx
+    type: tests
+- path: unit/frontend/src/features/docs/doc-view/components/doc-body.test.tsx
+  name: mdmark で描く文書の本文の単体テスト
+  description: mdmark で描く文書の本文の単体テストを受け持ち、doc-body.tsx の振る舞いのテストを修正するときに参照する。
+  tags:
+  - topic:文書
+  - topic:画面
+  - tool:mdmark
+  related:
+  - to: frontend/src/features/docs/doc-view/components/doc-body.tsx
+    type: tests
+- path: unit/frontend/src/features/docs/doc-view/components/doc-header.test.tsx
+  name: 文書のタイトルと情報（種類・パス・更新日時）の単体テスト
+  description: 文書のタイトルと情報（種類・パス・更新日時）の単体テストを受け持ち、doc-header.tsx の振る舞いのテストを修正するときに参照する。
+  tags:
+  - topic:文書
+  - topic:画面
+  related:
+  - to: frontend/src/features/docs/doc-view/components/doc-header.tsx
+    type: tests
+- path: unit/frontend/src/features/docs/doc-view/components/doc-main.test.tsx
+  name: 文書の画面の本文の領域（パンくず・文書のヘッダー・差分の帯・本文か変換の失敗か文書の無いタブ）の単体テスト
+  description: 文書の画面の本文の領域（パンくず・文書のヘッダー・差分の帯・本文か変換の失敗か文書の無いタブ）の単体テストを受け持ち、doc-main.tsx の振る舞いのテストを修正するときに参照する。
+  tags:
+  - topic:文書
+  - topic:画面
+  - topic:差分
+  - topic:パンくず
+  - topic:タブ
+  related:
+  - to: frontend/src/features/docs/doc-view/components/doc-main.tsx
+    type: tests
+- path: unit/frontend/src/features/docs/doc-view/components/doc-sidebar.test.tsx
+  name: 選んでいるタブの文書の一覧（サイドバーとドロワーの中身）の単体テスト
+  description: 選んでいるタブの文書の一覧（サイドバーとドロワーの中身）の単体テストを受け持ち、doc-sidebar.tsx の振る舞いのテストを修正するときに参照する。
+  tags:
+  - topic:文書
+  - topic:画面
+  - topic:サイドバー
+  - topic:タブ
+  related:
+  - to: frontend/src/features/docs/doc-view/components/doc-sidebar.tsx
+    type: tests
+- path: unit/frontend/src/features/docs/doc-view/components/doc-tabs.test.tsx
+  name: 配信元の文書の種類のタブの単体テスト
+  description: 配信元の文書の種類のタブの単体テストを受け持ち、doc-tabs.tsx の振る舞いのテストを修正するときに参照する。
+  tags:
+  - topic:文書
+  - topic:画面
+  - topic:タブ
+  - topic:配信元
+  related:
+  - to: frontend/src/features/docs/doc-view/components/doc-tabs.tsx
+    type: tests
+- path: unit/frontend/src/features/docs/doc-view/components/empty-tab.test.tsx
+  name: 選んだタブに文書が無いことの表示の単体テスト
+  description: 選んだタブに文書が無いことの表示の単体テストを受け持ち、empty-tab.tsx の振る舞いのテストを修正するときに参照する。
+  tags:
+  - topic:文書
+  - topic:画面
+  - topic:タブ
+  related:
+  - to: frontend/src/features/docs/doc-view/components/empty-tab.tsx
+    type: tests
+- path: unit/frontend/src/features/docs/doc-view/doc-view-screen.test.tsx
+  name: 文書の画面の最上位の単体テスト
+  description: 文書の画面の最上位の単体テストを受け持ち、doc-view-screen.tsx の振る舞いのテストを修正するときに参照する。
+  tags:
+  - topic:文書
+  - topic:画面
+  related:
+  - to: frontend/src/features/docs/doc-view/doc-view-screen.tsx
+    type: tests
+- path: unit/frontend/src/features/docs/doc-view/hooks/use-column-persistence.test.ts
+  name: mdmark の列の表示のメニューで出し入れした列を保存するフックの単体テスト
+  description: mdmark の列の表示のメニューで出し入れした列を保存するフックの単体テストを受け持ち、use-column-persistence.ts の振る舞いのテストを修正するときに参照する。
+  tags:
+  - topic:文書
+  - topic:画面
+  - tool:mdmark
+  - topic:列
+  related:
+  - to: frontend/src/features/docs/doc-view/hooks/use-column-persistence.ts
+    type: tests
+- path: unit/frontend/src/features/docs/doc-view/hooks/use-doc-navigation.test.tsx
+  name: 文書の画面から別の文書・リビジョン・配信元へ移る操作の単体テスト
+  description: 文書の画面から別の文書・リビジョン・配信元へ移る操作の単体テストを受け持ち、use-doc-navigation.ts の振る舞いのテストを修正するときに参照する。
+  tags:
+  - topic:文書
+  - topic:画面
+  - topic:リビジョン
+  - topic:配信元
+  related:
+  - to: frontend/src/features/docs/doc-view/hooks/use-doc-navigation.ts
+    type: tests
+- path: unit/frontend/src/features/docs/doc-view/hooks/use-locating.test.ts
+  name: コメントのパネルで場所を選ばれたコメントを持ち、文書を開くか本文のマーカーへスクロールするかを決めるフックの単体テスト
+  description: コメントのパネルで場所を選ばれたコメントを持ち、文書を開くか本文のマーカーへスクロールするかを決めるフックの単体テストを受け持ち、use-locating.ts の振る舞いのテストを修正するときに参照する。
+  tags:
+  - topic:文書
+  - topic:画面
+  - topic:コメント
+  related:
+  - to: frontend/src/features/docs/doc-view/hooks/use-locating.ts
+    type: tests
+- path: unit/frontend/src/features/docs/doc-view/hooks/use-mdmark.test.ts
+  name: mdmark の `mount` を React の寿命に合わせて呼ぶフックの単体テスト
+  description: mdmark の `mount` を React の寿命に合わせて呼ぶフックの単体テストを受け持ち、use-mdmark.ts の振る舞いのテストを修正するときに参照する。
+  tags:
+  - topic:文書
+  - topic:画面
+  - tool:mdmark
+  - tool:react
+  related:
+  - to: frontend/src/features/docs/doc-view/hooks/use-mdmark.ts
+    type: tests
+- path: unit/frontend/src/features/docs/doc-view/nav.test.ts
+  name: 文書の取得の `tabs` から、開いているページ・パンくず・ページのタイトルを取得する純粋な関数の単体テスト
+  description: 文書の取得の `tabs` から、開いているページ・パンくず・ページのタイトルを取得する純粋な関数の単体テストを受け持ち、nav.ts の振る舞いのテストを修正するときに参照する。
+  tags:
+  - topic:文書
+  - topic:画面
+  - topic:パンくず
+  related:
+  - to: frontend/src/features/docs/doc-view/nav.ts
+    type: tests
+- path: unit/frontend/src/features/docs/doc-view/queries.test.ts
+  name: 文書の画面の問い合わせとルートの loader の単体テスト
+  description: 文書の画面の問い合わせとルートの loader の単体テストを受け持ち、queries.ts の振る舞いのテストを修正するときに参照する。
+  tags:
+  - topic:文書
+  - topic:画面
+  - tool:tanstack-query
+  - tool:tanstack-router
+  - topic:ルート
+  related:
+  - to: frontend/src/features/docs/doc-view/queries.ts
+    type: tests
+- path: unit/frontend/src/features/docs/doc-view/tables.test.ts
+  name: 本文の Markdown の表と、文書の取得の表のキーを対にする関数の単体テスト
+  description: 本文の Markdown の表と、文書の取得の表のキーを対にする関数の単体テストを受け持ち、tables.ts の振る舞いのテストを修正するときに参照する。
+  tags:
+  - topic:文書
+  - topic:画面
+  - topic:表
+  related:
+  - to: frontend/src/features/docs/doc-view/tables.ts
+    type: tests
+- path: unit/frontend/src/features/docs/not-found/components/missing-links.test.tsx
+  name: 見つからない画面の次のリンク（配信元のトップ・設定画面）と、代わりに開ける配信中の配信元の単体テスト
+  description: 見つからない画面の次のリンク（配信元のトップ・設定画面）と、代わりに開ける配信中の配信元の単体テストを受け持ち、missing-links.tsx の振る舞いのテストを修正するときに参照する。
+  tags:
+  - topic:文書
+  - topic:画面
+  - topic:配信元
+  - topic:見つからない画面
+  related:
+  - to: frontend/src/features/docs/not-found/components/missing-links.tsx
+    type: tests
+- path: unit/frontend/src/features/docs/not-found/hooks/use-missing-view.test.tsx
+  name: 見つからない画面に出す内容と、参照した配信元・リビジョンの一覧の単体テスト
+  description: 見つからない画面に出す内容と、参照した配信元・リビジョンの一覧の単体テストを受け持ち、use-missing-view.ts の振る舞いのテストを修正するときに参照する。
+  tags:
+  - topic:文書
+  - topic:画面
+  - topic:リビジョン
+  - topic:配信元
+  - topic:見つからない画面
+  related:
+  - to: frontend/src/features/docs/not-found/hooks/use-missing-view.ts
+    type: tests
+- path: unit/frontend/src/features/docs/not-found/missing.test.ts
+  name: 文書の取得の 404 の `missing` を、見つからない画面の文言にする処理の単体テスト
+  description: 文書の取得の 404 の `missing` を、見つからない画面の文言にする処理の単体テストを受け持ち、missing.ts の振る舞いのテストを修正するときに参照する。
+  tags:
+  - topic:文書
+  - topic:画面
+  - topic:見つからない画面
+  related:
+  - to: frontend/src/features/docs/not-found/missing.ts
+    type: tests
+- path: unit/frontend/src/features/docs/not-found/not-found-screen.test.tsx
+  name: 見つからない画面の単体テスト
+  description: 見つからない画面の単体テストを受け持ち、not-found-screen.tsx の振る舞いのテストを修正するときに参照する。
+  tags:
+  - topic:文書
+  - topic:画面
+  - topic:見つからない画面
+  related:
+  - to: frontend/src/features/docs/not-found/not-found-screen.tsx
+    type: tests
+- path: unit/frontend/src/features/docs/shared/comments/comment-format.test.ts
+  name: 選んだコメントのコピーの本文と、Issue の作成画面の URL の単体テスト
+  description: 選んだコメントのコピーの本文と、Issue の作成画面の URL の単体テストを受け持ち、comment-format.ts の振る舞いのテストを修正するときに参照する。
+  tags:
+  - topic:文書
+  - topic:画面
+  - topic:コメント
+  - topic:issue
+  related:
+  - to: frontend/src/features/docs/shared/comments/comment-format.ts
+    type: tests
+- path: unit/frontend/src/features/docs/shared/comments/comment-panel.test.tsx
+  name: 溜めたコメントの一覧と、コピー・起票の単体テスト
+  description: 溜めたコメントの一覧と、コピー・起票の単体テストを受け持ち、comment-panel.tsx の振る舞いのテストを修正するときに参照する。
+  tags:
+  - topic:文書
+  - topic:画面
+  - topic:コメント
+  - topic:ストア
+  related:
+  - to: frontend/src/features/docs/shared/comments/comment-panel.tsx
+    type: tests
+- path: unit/frontend/src/features/docs/shared/comments/comment-store.test.ts
+  name: このブラウザのタブで溜めたコメントの配置先の単体テスト
+  description: このブラウザのタブで溜めたコメントの配置先の単体テストを受け持ち、comment-store.ts の振る舞いのテストを修正するときに参照する。
+  tags:
+  - topic:文書
+  - topic:画面
+  - topic:コメント
+  - topic:タブ
+  - topic:ストア
+  related:
+  - to: frontend/src/features/docs/shared/comments/comment-store.ts
+    type: tests
+- path: unit/frontend/src/features/docs/shared/search-dialog/highlight.test.ts
+  name: 検索の結果の抜粋の一致した箇所を分ける処理の単体テスト
+  description: 検索の結果の抜粋の一致した箇所を分ける処理の単体テストを受け持ち、highlight.ts の振る舞いのテストを修正するときに参照する。
+  tags:
+  - topic:文書
+  - topic:画面
+  related:
+  - to: frontend/src/features/docs/shared/search-dialog/highlight.ts
+    type: tests
+- path: unit/frontend/src/features/docs/shared/search-dialog/search-dialog.test.tsx
+  name: 開いている配信元・リビジョンの文書を単語で探すダイアログの単体テスト
+  description: 開いている配信元・リビジョンの文書を単語で探すダイアログの単体テストを受け持ち、search-dialog.tsx の振る舞いのテストを修正するときに参照する。
+  tags:
+  - topic:文書
+  - topic:画面
+  - topic:ダイアログ
+  - topic:リビジョン
+  - topic:配信元
+  related:
+  - to: frontend/src/features/docs/shared/search-dialog/search-dialog.tsx
+    type: tests
+- path: unit/frontend/src/features/docs/shared/serving-sources.test.ts
+  name: 端末の設定の取得から、配信中の配信元を取り出す処理の単体テスト
+  description: 端末の設定の取得から、配信中の配信元を取り出す処理の単体テストを受け持ち、serving-sources.ts の振る舞いのテストを修正するときに参照する。
+  tags:
+  - topic:文書
+  - topic:画面
+  - topic:配信元
+  related:
+  - to: frontend/src/features/docs/shared/serving-sources.ts
+    type: tests
+- path: unit/frontend/src/features/settings/settings/components/source-delete-dialog.test.tsx
+  name: 削除の確認のダイアログの単体テスト
+  description: 削除の確認のダイアログの単体テストを受け持ち、source-delete-dialog.tsx の振る舞いのテストを修正するときに参照する。
+  tags:
+  - topic:設定画面
+  - topic:配信元
+  - topic:ダイアログ
+  - topic:設定
+  - topic:画面
+  related:
+  - to: frontend/src/features/settings/settings/components/source-delete-dialog.tsx
+    type: tests
+- path: unit/frontend/src/features/settings/settings/components/source-edit-dialog.test.tsx
+  name: 配信元のダイアログ（追加・編集）の単体テスト
+  description: 配信元のダイアログ（追加・編集）の単体テストを受け持ち、source-edit-dialog.tsx の振る舞いのテストを修正するときに参照する。
+  tags:
+  - topic:設定画面
+  - topic:配信元
+  - topic:ダイアログ
+  - topic:設定
+  - topic:画面
+  related:
+  - to: frontend/src/features/settings/settings/components/source-edit-dialog.tsx
+    type: tests
+- path: unit/frontend/src/features/settings/settings/components/source-table.test.tsx
+  name: 配信元の一覧の表の単体テスト
+  description: 配信元の一覧の表の単体テストを受け持ち、source-table.tsx の振る舞いのテストを修正するときに参照する。
+  tags:
+  - topic:設定画面
+  - topic:配信元
+  - topic:表
+  - topic:設定
+  - topic:画面
+  related:
+  - to: frontend/src/features/settings/settings/components/source-table.tsx
+    type: tests
+- path: unit/frontend/src/features/settings/settings/components/status-badge.test.tsx
+  name: 配信元の状態のバッジと補足の単体テスト
+  description: 配信元の状態のバッジと補足の単体テストを受け持ち、status-badge.tsx の振る舞いのテストを修正するときに参照する。
+  tags:
+  - topic:設定画面
+  - topic:配信元
+  - topic:状態
+  - topic:設定
+  - topic:画面
+  related:
+  - to: frontend/src/features/settings/settings/components/status-badge.tsx
+    type: tests
+- path: unit/frontend/src/features/settings/settings/form.test.ts
+  name: 配信元のダイアログの入力のスキーマと、`sources[]` への反映の単体テスト
+  description: 配信元のダイアログの入力のスキーマと、`sources[]` への反映の単体テストを受け持ち、form.ts の振る舞いのテストを修正するときに参照する。
+  tags:
+  - topic:設定画面
+  - topic:配信元
+  - topic:ダイアログ
+  - topic:スキーマ
+  - topic:設定
+  - topic:画面
+  related:
+  - to: frontend/src/features/settings/settings/form.ts
+    type: tests
+- path: unit/frontend/src/features/settings/settings/hooks/use-source-form.test.tsx
+  name: 配信元のダイアログのフォームの状態と保存の単体テスト
+  description: 配信元のダイアログのフォームの状態と保存の単体テストを受け持ち、use-source-form.ts の振る舞いのテストを修正するときに参照する。
+  tags:
+  - topic:設定画面
+  - topic:配信元
+  - topic:ダイアログ
+  - topic:フォーム
+  - topic:設定
+  - topic:画面
+  related:
+  - to: frontend/src/features/settings/settings/hooks/use-source-form.ts
+    type: tests
+- path: unit/frontend/src/features/settings/settings/problem-errors.test.ts
+  name: 端末の設定の保存の 422 の `errors[]` を、ダイアログの項目のエラーに振り分ける処理の単体テスト
+  description: 端末の設定の保存の 422 の `errors[]` を、ダイアログの項目のエラーに振り分ける処理の単体テストを受け持ち、problem-errors.ts の振る舞いのテストを修正するときに参照する。
+  tags:
+  - topic:設定画面
+  - topic:配信元
+  - topic:ダイアログ
+  - topic:エラー
+  - topic:項目
+  - topic:設定
+  - topic:画面
+  related:
+  - to: frontend/src/features/settings/settings/problem-errors.ts
+    type: tests
+- path: unit/frontend/src/features/settings/settings/queries.test.tsx
+  name: 端末の設定の保存の mutation の単体テスト
+  description: 端末の設定の保存の mutation の単体テストを受け持ち、queries.ts の振る舞いのテストを修正するときに参照する。
+  tags:
+  - topic:設定画面
+  - topic:配信元
+  - tool:tanstack-query
+  - topic:設定
+  - topic:画面
+  related:
+  - to: frontend/src/features/settings/settings/queries.ts
+    type: tests
+- path: unit/frontend/src/features/settings/settings/settings-screen.test.tsx
+  name: 設定画面の単体テスト
+  description: 設定画面の単体テストを受け持ち、settings-screen.tsx の振る舞いのテストを修正するときに参照する。
+  tags:
+  - topic:設定画面
+  - topic:配信元
+  - topic:設定
+  - topic:画面
+  related:
+  - to: frontend/src/features/settings/settings/settings-screen.tsx
+    type: tests
+- path: unit/frontend/src/routes/index.test.ts
+  name: '`/` を開いたときの振り分けの単体テスト'
+  description: '`/` を開いたときの振り分けの単体テストを受け持ち、index.tsx の振る舞いのテストを修正するときに参照する。'
+  tags:
+  - topic:ルート
+  - tool:react
+  related:
+  - to: frontend/src/routes/index.tsx
+    type: tests
+- path: unit/frontend/src/shared/adapters/api-client.test.ts
+  name: orval が生成した API の関数が通る fetch の mutator の単体テスト
+  description: orval が生成した API の関数が通る fetch の mutator の単体テストを受け持ち、api-client.ts の振る舞いのテストを修正するときに参照する。
+  tags:
+  - topic:ユーティリティ
+  - tool:orval
+  - topic:api
+  related:
+  - to: frontend/src/shared/adapters/api-client.ts
+    type: tests
+- path: unit/frontend/src/shared/components/project-index-unreachable.test.tsx
+  name: project-index から受け取れなかったことを、理由の種類ごとの見出しと説明・接続先・理由・再読み込みで出す警告の単体テスト
+  description: project-index から受け取れなかったことを、理由の種類ごとの見出しと説明・接続先・理由・再読み込みで出す警告の単体テストを受け持ち、project-index-unreachable.tsx の振る舞いのテストを修正するときに参照する。
+  tags:
+  - topic:ユーティリティ
+  - tool:project-index
+  - topic:エラー
+  related:
+  - to: frontend/src/shared/components/project-index-unreachable.tsx
+    type: tests
+- path: unit/frontend/src/shared/components/shortcut-dialog/shortcut-dialog.test.tsx
+  name: '`?` で開くショートカットの一覧の単体テスト'
+  description: '`?` で開くショートカットの一覧の単体テストを受け持ち、shortcut-dialog.tsx の振る舞いのテストを修正するときに参照する。'
+  tags:
+  - topic:ユーティリティ
+  - topic:ショートカット
+  related:
+  - to: frontend/src/shared/components/shortcut-dialog/shortcut-dialog.tsx
+    type: tests
+- path: unit/frontend/src/shared/components/skip-link.test.tsx
+  name: キーボードでフォーカスしたときだけ見える、本文の領域へフォーカスを移すリンクの単体テスト
+  description: キーボードでフォーカスしたときだけ見える、本文の領域へフォーカスを移すリンクの単体テストを受け持ち、skip-link.tsx の振る舞いのテストを修正するときに参照する。
+  tags:
+  - topic:ユーティリティ
+  - topic:キーボード
+  related:
+  - to: frontend/src/shared/components/skip-link.tsx
+    type: tests
+- path: unit/frontend/src/shared/core/app-error.test.ts
+  name: 画面の API の problem+json を受ける例外の階層の単体テスト
+  description: 画面の API の problem+json を受ける例外の階層の単体テストを受け持ち、app-error.ts の振る舞いのテストを修正するときに参照する。
+  tags:
+  - topic:ユーティリティ
+  - topic:エラー
+  related:
+  - to: frontend/src/shared/core/app-error.ts
+    type: tests
+- path: unit/frontend/src/shared/core/handle-app-error.test.ts
+  name: 画面で取得した例外を通知とログに振り分ける処理の単体テスト
+  description: 画面で取得した例外を通知とログに振り分ける処理の単体テストを受け持ち、handle-app-error.ts の振る舞いのテストを修正するときに参照する。
+  tags:
+  - topic:ユーティリティ
+  - topic:エラー
+  - topic:ログ
+  - topic:通知
+  related:
+  - to: frontend/src/shared/core/handle-app-error.ts
+    type: tests
+- path: unit/frontend/src/shared/core/shortcuts.test.ts
+  name: キーボードのショートカットの定義の単体テスト
+  description: キーボードのショートカットの定義の単体テストを受け持ち、shortcuts.ts の振る舞いのテストを修正するときに参照する。
+  tags:
+  - topic:ユーティリティ
+  - topic:ショートカット
+  - topic:キーボード
+  related:
+  - to: frontend/src/shared/core/shortcuts.ts
+    type: tests
+- path: unit/frontend/src/shared/hooks/use-delayed-flag.test.tsx
+  name: 待ちが続いたときだけ true にするフック（短い待ちで読み込み中の表示を出さないため）の単体テスト
+  description: 待ちが続いたときだけ true にするフック（短い待ちで読み込み中の表示を出さないため）の単体テストを受け持ち、use-delayed-flag.ts の振る舞いのテストを修正するときに参照する。
+  tags:
+  - topic:ユーティリティ
+  - topic:ローディング
+  related:
+  - to: frontend/src/shared/hooks/use-delayed-flag.ts
+    type: tests
+- path: unit/frontend/src/shared/hooks/use-media-query.test.tsx
+  name: CSS のメディアクエリに今当たっているかを返却するフックの単体テスト
+  description: CSS のメディアクエリに今当たっているかを返却するフックの単体テストを受け持ち、use-media-query.ts の振る舞いのテストを修正するときに参照する。
+  tags:
+  - topic:ユーティリティ
+  - topic:レスポンシブ
+  - topic:css
+  related:
+  - to: frontend/src/shared/hooks/use-media-query.ts
+    type: tests
+- path: unit/frontend/src/shared/hooks/use-shortcut.test.tsx
+  name: ショートカットの定義の ID でキーを受けるフックの単体テスト
+  description: ショートカットの定義の ID でキーを受けるフックの単体テストを受け持ち、use-shortcut.ts の振る舞いのテストを修正するときに参照する。
+  tags:
+  - topic:ユーティリティ
+  - topic:ショートカット
+  related:
+  - to: frontend/src/shared/hooks/use-shortcut.ts
+    type: tests
+- path: unit/frontend/src/shared/lib/format.test.ts
+  name: 画面に出す日時の書式の単体テスト
+  description: 画面に出す日時の書式の単体テストを受け持ち、format.ts の振る舞いのテストを修正するときに参照する。
+  tags:
+  - topic:ユーティリティ
+  - topic:日時
+  related:
+  - to: frontend/src/shared/lib/format.ts
+    type: tests
+- path: unit/frontend/src/shared/lib/logger.test.ts
+  name: ブラウザのコンソールへ JSON Lines で記載するロガーの単体テスト
+  description: ブラウザのコンソールへ JSON Lines で記載するロガーの単体テストを受け持ち、logger.ts の振る舞いのテストを修正するときに参照する。
+  tags:
+  - topic:ユーティリティ
+  - topic:ログ
+  related:
+  - to: frontend/src/shared/lib/logger.ts
+    type: tests
+- path: unit/plugins/dev_docs/hooks/conftest.py
+  name: セッション開始のフックの単体テストの fixture
+  description: セッション開始のフックのモジュールを読み込む fixture を受け持ち、フックの単体テストの準備を修正するときに参照する。
+  tags:
+  - topic:単体テスト
+  - topic:プラグイン
+- path: unit/plugins/dev_docs/hooks/test_session_start.py
+  name: セッション開始のフックの単体テスト
+  description: SessionStart のフックの単体テストを受け持ち、session_start.py の振る舞いのテストを修正するときに参照する。
+  tags:
+  - topic:単体テスト
+  - topic:プラグイン
+  - tool:claude-code
+  related:
+  - to: plugins/dev-docs/hooks/session_start.py
+    type: tests
+- path: unit/scripts/conftest.py
+  name: 開発用のスクリプトの単体テストの fixture
+  description: 開発用のスクリプトを読み込む fixture を受け持ち、スクリプトの単体テストの準備を修正するときに参照する。
+  tags:
+  - topic:単体テスト
+- path: unit/scripts/test_build_pages.py
+  name: 公開ページのビルドの単体テスト
+  description: 公開ページのビルドの単体テストを受け持ち、build_pages.py の振る舞いのテストを修正するときに参照する。
+  tags:
+  - topic:単体テスト
+  - topic:ビルド
+  - tool:mdmark
+  related:
+  - to: scripts/build_pages.py
+    type: tests
+- path: unit/scripts/test_restart_resident.py
+  name: 常駐サーバーの起動し直しの単体テスト
+  description: 常駐サーバーの起動し直しのスクリプトの単体テストを受け持ち、dev-docs-restart-resident.sh の振る舞いのテストを修正するときに参照する。
+  tags:
+  - topic:単体テスト
+  - topic:再起動
+  - tool:systemd
+  related:
+  - to: scripts/dev-docs-restart-resident.sh
+    type: tests
+checkpoint:
+  commit: 05915628138ff51e7b1be495775c9f556a2a0825
+  reviewed: []
