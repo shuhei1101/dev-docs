@@ -1,0 +1,199 @@
+$ npx playwright test --config tests/integration/frontend/playwright.config.ts tests/integration/frontend/doc-view-screen.spec.ts
+# 実行した commit: c93269a。jsDelivr の @develop は mdmark の ede22beb の dist
+
+Running 118 tests using 4 workers
+
+  ✓    1 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:137:3 › ページのタイトル › page_title (817ms)
+  ✓    2 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:154:3 › 本文へスキップ › skip_link (1.0s)
+  ✓    3 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:143:3 › ページのタイトル › page_title_when_empty_tab (1.0s)
+  ✓    4 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:170:3 › トップバー › topbar_source_select (1.4s)
+  ✓    5 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:178:3 › トップバー › topbar_ref_select (1.0s)
+  ✓    6 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:186:3 › トップバー › topbar_compare_start_when_default_ref (1.0s)
+  ✓    7 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:194:3 › トップバー › topbar_compare_start_when_other_ref (1.1s)
+  ✓    8 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:202:3 › トップバー › topbar_search_open (736ms)
+  ✓    9 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:209:3 › トップバー › topbar_comment_panel_toggle (879ms)
+  ✓   10 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:219:3 › トップバー › topbar_sidebar_open (856ms)
+  ✓   11 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:227:3 › トップバー › topbar_color_scheme_toggle (913ms)
+  ✓   12 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:237:3 › トップバー › topbar_sources_from_settings (981ms)
+  ✓   13 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:259:3 › 種類のタブ › tabs_order_and_current (622ms)
+  ✓   14 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:267:3 › 種類のタブ › tabs_click (1.1s)
+  ✓   15 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:274:3 › 種類のタブ › tabs_click_when_doc_in_two_tabs (1.0s)
+  ✓   17 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:299:3 › 文書の一覧 › sidebar_groups_and_pages (844ms)
+  ✓   16 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:289:3 › 種類のタブ › tabs_click_when_empty (1.1s)
+  ✓   20 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:322:3 › 文書の一覧 › sidebar_hidden_when_narrow (768ms)
+  ✓   21 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:331:3 › 文書の変化のマーカー › change_markers (866ms)
+  ✓   18 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:308:3 › 文書の一覧 › sidebar_click_keeps_rev_and_base (1.1s)
+  ✓   19 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:315:3 › 文書の一覧 › sidebar_click_when_deleted (1.0s)
+  ✓   22 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:341:3 › 文書の変化のマーカー › change_markers_without_base (693ms)
+  ✓   25 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:372:3 › パンくず › breadcrumb (746ms)
+  ✓   24 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:360:3 › 文書の一覧のドロワー › drawer_closes_on_escape (986ms)
+  ✓   26 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:381:3 › パンくず › breadcrumb_source_link (746ms)
+  ✓   23 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:351:3 › 文書の一覧のドロワー › drawer_closes_on_navigate (1.4s)
+  ✓   27 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:388:3 › パンくず › breadcrumb_tab_link (876ms)
+  ✓   28 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:397:3 › 文書のタイトル › doc_title (657ms)
+  ✓   29 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:403:3 › 文書のタイトル › doc_title_matches_mdmark_h1 (890ms)
+  ✓   30 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:428:3 › 文書の情報 › doc_info (833ms)
+  ✓   34 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:486:3 › 差分の案内 › diff_banner_hidden_without_base (549ms)
+  ✓   33 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:477:3 › 差分の案内 › diff_banner_visible (677ms)
+  ✓   35 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:492:3 › 差分の案内 › diff_banner_hidden_when_non_git (506ms)
+  ✓   36 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:505:3 › 比較元の選択 › base_select (755ms)
+  ✓   37 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:527:3 › 比較先の選択 › head_select (716ms)
+  ✓   38 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:539:3 › 差分の強調を解除 › diff_clear (609ms)
+  ✓   39 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:548:3 › 差分の強調を解除 › diff_clear_body (616ms)
+  ✓   32 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:457:3 › 読み込み中の表示 › loading_keeps_previous_doc (3.1s)
+  ✓   40 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:563:3 › 文書の本文の差分 › body_diff_highlight (541ms)
+  ✓   31 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:442:3 › 読み込み中の表示 › loading_skeleton (3.4s)
+  ✓   41 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:570:3 › 文書の本文の差分 › body_diff_highlight_when_block_deleted (783ms)
+  ✓   43 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:604:3 › 変換の失敗 › conversion_error_when_timeout (722ms)
+  ✓   42 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:589:3 › 文書の本文の差分 › body_diff_highlight_without_base (808ms)
+  ✓   44 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:620:3 › 変換の失敗 › conversion_error_when_invalid_yaml (720ms)
+  ✓   45 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:637:3 › 再読み込み › reload_button (723ms)
+  ✓   46 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:662:3 › 文書が無いことの表示 › empty_tab_message (838ms)
+  ✓   47 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:672:3 › 文書が無いことの表示 › empty_tab_message_when_non_git (976ms)
+  ✓   48 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:687:3 › 本文 › body_without_first_h1 (897ms)
+  ✓   49 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:693:3 › 本文 › body_without_preflight (891ms)
+  ✓   50 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:755:3 › 本文 › frame_keeps_preflight (941ms)
+  ✓   51 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:777:3 › 本文 › body_left_aligned_with_title (1.0s)
+  ✓   52 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:793:3 › 本文 › body_internal_link (1.0s)
+  ✓   53 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:807:3 › 本文 › body_external_link (877ms)
+  ✓   55 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:847:3 › 本文 › body_internal_link_when_missing (919ms)
+  ✓   56 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:864:3 › 列の表示のメニュー › columns_menu_visible (851ms)
+  ✓   57 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:870:3 › 列の表示のメニュー › columns_menu_hidden_columns (724ms)
+  ✓   58 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:881:3 › 列の表示のメニュー › columns_menu_save (800ms)
+  ✓   59 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:897:3 › 列の表示のメニュー › columns_menu_save_failure (822ms)
+  ✓   60 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:911:3 › 列の表示のメニュー › columns_menu_save_when_tables_mixed (767ms)
+  ✓   61 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:941:3 › 列の表示のメニュー › columns_menu_json_marker (827ms)
+  ✓   63 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:992:3 › 目次 › toc_change_marker (795ms)
+  ✓   62 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:983:3 › 目次 › toc_items (909ms)
+  ✓   65 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1025:3 › 目次 › toc_hidden_without_headings (709ms)
+  ✓   64 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1000:3 › 目次 › toc_after_doc_changed (813ms)
+  ✓   66 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1036:3 › 目次 › toc_click (911ms)
+  ✓   68 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1080:3 › 目次 › toc_below_tabs_when_scrolled_narrow (745ms)
+  ✓   67 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1066:3 › 目次 › toc_below_tabs_when_scrolled (790ms)
+  ✓   69 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1093:3 › コメントの追加 › comment_add (836ms)
+  ✓   70 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1107:3 › コメントのパネル › panel_heading (690ms)
+  ✓   71 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1116:3 › コメントのパネル › panel_lists_other_docs (674ms)
+  ✓   72 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1126:3 › コメントのパネルの位置 › panel_position_on_the_right (659ms)
+  ✓   73 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1135:3 › コメントのパネルの位置 › panel_position_when_narrow (724ms)
+  ✓   75 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1158:3 › コメントのパネルを閉じる › panel_close_by_escape (677ms)
+  ✓   74 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1148:3 › コメントのパネルを閉じる › panel_close_button (1.3s)
+  ✓   76 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1176:3 › すべて選択 › select_all_state (868ms)
+  ✓   78 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1196:3 › すべて選択 › select_all_hidden_when_empty (576ms)
+  ✓   77 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1185:3 › すべて選択 › select_all_toggle (886ms)
+  ✓   80 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1222:3 › コメントの場所 › place_text (656ms)
+  ✓   79 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1204:3 › コメントの選択 › comment_select (1.1s)
+  ✓   81 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1229:3 › コメントの場所 › place_click_other_doc (966ms)
+  ✓   82 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1249:3 › コメントの場所への移動 › place_scroll_same_doc (953ms)
+  ✓   84 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1302:3 › コメントの場所への移動 › place_scroll_other_doc (858ms)
+  ✓   83 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1265:3 › コメントの場所への移動 › place_scroll_cleared_when_doc_left (1.8s)
+  ✓   85 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1320:3 › コメントの引用 › quote_text (1.1s)
+  ✓   86 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1332:3 › コメントの本文 › comment_body (1.7s)
+  ✓   87 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1348:3 › コメントの修正 › edit_button (1.8s)
+  ✓   88 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1356:3 › コメントの修正 › edit_field_focus (1.7s)
+  ✓   89 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1363:3 › コメントの修正 › edit_save (1.7s)
+  ✓   91 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1387:3 › コメントの修正 › edit_cancel (1.4s)
+  ✓   90 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1373:3 › コメントの修正 › edit_save_redraws_mark (1.6s)
+  ✓   92 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1396:3 › コメントの修正 › edit_cancel_by_escape (1.6s)
+  ✓   94 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1417:3 › コメントの削除 › delete_button (1.4s)
+  ✓   93 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1405:3 › コメントの修正 › edit_save_when_blank (1.6s)
+  ✓   95 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1427:3 › コメントの削除 › delete_button_redraws_mark (1.3s)
+  ✓   97 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1462:3 › 選択をコピー › copy_button_disabled_when_none_selected (1.2s)
+  ✓   96 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1446:3 › 選択をコピー › copy_button (1.2s)
+  ✘   54 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:821:3 › 本文 › body_mermaid_click_link (15.8s)
+  ✓   98 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1469:3 › 選択をコピー › copy_button_when_clipboard_denied (1.3s)
+  ✓  100 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1509:3 › Issue を作成 › issue_button_hidden_without_github (1.1s)
+  ✓   99 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1489:3 › Issue を作成 › issue_button (1.2s)
+  ✓  102 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1526:3 › Issue を作成 › issue_button_when_url_too_long (989ms)
+  ✓  103 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1553:3 › コメントが無いことの表示 › comment_empty_message (820ms)
+  ✓  101 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1519:3 › Issue を作成 › issue_button_disabled_when_none_selected (1.3s)
+  ✓  104 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1562:3 › 通知 › toast_position (1.1s)
+  ✓  105 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1593:3 › ショートカットの一覧 › shortcut_dialog (868ms)
+  ✓  107 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1604:3 › キーボードのショートカット › shortcut_ctrl_k (669ms)
+  ✓  108 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1611:3 › キーボードのショートカット › shortcut_slash (771ms)
+  ✓  106 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1578:3 › 検索のダイアログ › search_dialog_result_select (1.3s)
+  ✓  110 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1632:3 › キーボードのショートカット › shortcut_ignored_in_dialog (886ms)
+  ✓  111 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1640:3 › キーボードのショートカット › shortcut_single_key_off (791ms)
+  ✓  109 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1618:3 › キーボードのショートカット › shortcut_ignored_in_input (1.1s)
+  ✓  112 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1661:3 › ランドマーク › landmarks_unique (1.2s)
+  ✓  113 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1694:3 › 本文の用語のツールチップ › term_tooltip (777ms)
+  ✓  114 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1708:3 › 本文の用語のツールチップ › term_tooltip_when_doc_alias (923ms)
+  ✓  115 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1721:3 › 本文の用語のツールチップ › term_tooltip_when_no_aliases (916ms)
+[WebServer] 4:12:20 PM [vite] (client) [console.error] AppError: project-index（http://127.0.0.1:8786）に接続できませんでした。接続を拒否されました（Connection refused）
+[WebServer]     at AppError.fromResponse (http://127.0.0.1:5199/src/shared/core/app-error.ts:28:20)
+[WebServer]     at async apiClient (http://127.0.0.1:5199/src/shared/adapters/api-client.ts:19:26)
+[WebServer] 
+[WebServer] The above error occurred in the <MatchInnerImpl> component.
+[WebServer] 
+[WebServer] React will try to recreate this component tree from scratch using the error boundary you provided, CatchBoundary.
+[WebServer] 
+[WebServer] 4:12:20 PM [vite] (client) [console.warn] Warning: Error in route match: /$source/$/sample/docs/doc-1{}
+[WebServer] 4:12:20 PM [vite] (client) [console.error] {"ts":"2026-11-17T07:12:20.179Z","level":"error","event":"project_index_unreachable","address":"http://127.0.0.1:8786","reason":"接続を拒否されました（Connection refused）","kind":"unreachable"}
+[WebServer] 4:12:20 PM [vite] (client) [console.error] {"ts":"2026-11-17T07:12:20.180Z","level":"error","event":"project_index_unreachable","address":"http://127.0.0.1:8786","reason":"接続を拒否されました（Connection refused）","kind":"unreachable"}
+[WebServer] 4:12:20 PM [vite] (client) [console.error] AppError: project-index（http://127.0.0.1:8786）から応答がありませんでした。70 秒以内に応答がありませんでした
+[WebServer]     at AppError.fromResponse (http://127.0.0.1:5199/src/shared/core/app-error.ts:28:20)
+[WebServer]     at async apiClient (http://127.0.0.1:5199/src/shared/adapters/api-client.ts:19:26)
+[WebServer] 
+[WebServer] The above error occurred in the <MatchInnerImpl> component.
+[WebServer] 
+[WebServer] React will try to recreate this component tree from scratch using the error boundary you provided, CatchBoundary.
+[WebServer] 
+[WebServer] 4:12:20 PM [vite] (client) [console.warn] Warning: Error in route match: /$source/$/sample/docs/doc-1{}
+[WebServer] 4:12:20 PM [vite] (client) [console.error] {"ts":"2026-11-17T07:12:20.257Z","level":"error","event":"project_index_unreachable","address":"http://127.0.0.1:8786","reason":"70 秒以内に応答がありませんでした","kind":"timeout"}
+[WebServer] 4:12:20 PM [vite] (client) [console.error] {"ts":"2026-11-17T07:12:20.258Z","level":"error","event":"project_index_unreachable","address":"http://127.0.0.1:8786","reason":"70 秒以内に応答がありませんでした","kind":"timeout"}
+  ✓  117 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1761:3 › project-index から文書を受け取れないときの表示 › project_index_timeout_alert (563ms)
+[WebServer] 4:12:20 PM [vite] (client) [console.error] AppError: project-index（http://127.0.0.1:8786）が要求を処理できませんでした。git archive --format=tar 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef: 20 秒を超えたため止めました
+[WebServer]     at AppError.fromResponse (http://127.0.0.1:5199/src/shared/core/app-error.ts:28:20)
+[WebServer]     at async apiClient (http://127.0.0.1:5199/src/shared/adapters/api-client.ts:19:26)
+[WebServer] 
+[WebServer] The above error occurred in the <MatchInnerImpl> component.
+[WebServer] 
+[WebServer] React will try to recreate this component tree from scratch using the error boundary you provided, CatchBoundary.
+[WebServer] 
+[WebServer] 4:12:20 PM [vite] (client) [console.warn] Warning: Error in route match: /$source/$/sample/docs/doc-1{}
+[WebServer] 4:12:20 PM [vite] (client) [console.error] {"ts":"2026-11-17T07:12:20.480Z","level":"error","event":"project_index_unreachable","address":"http://127.0.0.1:8786","reason":"git archive --format=tar 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef: 20 秒を超えたため止めました","kind":"failed"}
+[WebServer] 4:12:20 PM [vite] (client) [console.error] {"ts":"2026-11-17T07:12:20.481Z","level":"error","event":"project_index_unreachable","address":"http://127.0.0.1:8786","reason":"git archive --format=tar 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef: 20 秒を超えたため止めました","kind":"failed"}
+  ✓  118 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1788:3 › project-index から文書を受け取れないときの表示 › project_index_failed_alert (511ms)
+[WebServer] 4:12:20 PM [vite] (client) [console.error] AppError: project-index（http://127.0.0.1:8786）に接続できませんでした。接続を拒否されました（Connection refused）
+[WebServer]     at AppError.fromResponse (http://127.0.0.1:5199/src/shared/core/app-error.ts:28:20)
+[WebServer]     at async apiClient (http://127.0.0.1:5199/src/shared/adapters/api-client.ts:19:26)
+[WebServer] 
+[WebServer] The above error occurred in the <MatchInnerImpl> component.
+[WebServer] 
+[WebServer] React will try to recreate this component tree from scratch using the error boundary you provided, CatchBoundary.
+[WebServer] 
+[WebServer] 4:12:20 PM [vite] (client) [console.warn] Warning: Error in route match: /$source/$/sample/docs/doc-1{}
+[WebServer] 4:12:20 PM [vite] (client) [console.error] {"ts":"2026-11-17T07:12:20.562Z","level":"error","event":"project_index_unreachable","address":"http://127.0.0.1:8786","reason":"接続を拒否されました（Connection refused）","kind":"unreachable"}
+[WebServer] 4:12:20 PM [vite] (client) [console.error] {"ts":"2026-11-17T07:12:20.563Z","level":"error","event":"project_index_unreachable","address":"http://127.0.0.1:8786","reason":"接続を拒否されました（Connection refused）","kind":"unreachable"}
+  ✓  116 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1733:3 › project-index から文書を受け取れないときの表示 › project_index_unreachable_alert (917ms)
+
+
+  1) [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:821:3 › 本文 › body_mermaid_click_link 
+
+    Error: expect(locator).toHaveCount(expected) failed
+
+    Locator:  locator('.mdmark a[href="./doc-2"]:visible')
+    Expected: 1
+    Received: 0
+    Timeout:  15000ms
+
+    Call log:
+      - Expect "toHaveCount" locator('.mdmark a[href="./doc-2"]:visible') with timeout 15000ms
+      - waiting for locator('.mdmark a[href="./doc-2"]:visible')
+        33 × locator resolved to 0 elements
+           - unexpected value "0"
+
+
+      837 |     });
+      838 |     const node = page.locator('.mdmark a[href="./doc-2"]:visible');
+    > 839 |     await expect(node).toHaveCount(1);
+          |                        ^
+      840 |     // 実行
+      841 |     await node.click();
+      842 |     // 検証
+        at /home/shuhei2441/repo/dev-docs/.claude/worktrees/test-doc-view-body-without-preflight-legend/tests/integration/frontend/doc-view-screen.spec.ts:839:24
+
+    Error Context: test-results/doc-view-screen-本文-body-mermaid-click-link-chromium/error-context.md
+
+  1 failed
+    [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:821:3 › 本文 › body_mermaid_click_link 
+  117 passed (37.2s)

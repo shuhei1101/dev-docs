@@ -8,3 +8,6 @@ scope_out:
   - item: mdmark の既定の参照（`DEFAULT_MDMARK_VERSION`）を develop の最新から固定の版へ戻すこと
     reason: '#240 で develop の最新を参照すると決めており、要望に含まれない'
     plan: none
+  - item: 結合テスト `body_mermaid_click_link` が mdmark の develop の最新で fail すること（Mermaid の click のノードが `<a>` で描かれない）
+    reason: '不具合: mdmark の develop の最新がクラス図の click のノードを段落で出し、`.mdmark a[href="./doc-2"]` が 0 件になる。今回の要望（`body_without_preflight` の凡例の前提）に含まれない'
+    plan: '#255'
