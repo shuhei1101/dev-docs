@@ -7,7 +7,7 @@ from collections.abc import Collection, Mapping, Sequence
 from typing import Any
 
 from dev_docs.features.convert.embed import expand_embeds
-from dev_docs.features.convert.markdown import item_heading, schema_to_markdown
+from dev_docs.features.convert.markdown import heading_anchors, item_heading, schema_to_markdown
 from dev_docs.features.convert.types import (
     Converted,
     ConvertFailure,
@@ -93,20 +93,29 @@ class ConvertService:
                 if key is not None:
                     links.setdefault(key, link)
 
-        def heading(document_id: str, item: str) -> str | None:
-            """ID の文書の値と行のスキーマで、項目の見出しを検索する。"""
+        # 文書の ID から見出しのアンカーの一覧。描画する 1 件の中で文書ごとに 1 回だけ作る
+        anchors_by_id: dict[str, dict[str, str]] = {}
+
+        def anchor(document_id: str, item: str) -> str | None:
+            """ID の文書の値と行のスキーマで、項目の見出しのアンカーを検索する。"""
             found = by_id.get(document_id)
             row = view.row(found.kind) if found is not None else None
             if found is None or row is None:
                 return None
-            return item_heading(found.data, row.schema, item)
+            heading = item_heading(found.data, row.schema, item)
+            if heading is None:
+                return None
+            # 見出しのアンカーの一覧がまだ無い文書: 変換と同じ組み立てで作って記録する
+            if document_id not in anchors_by_id:
+                anchors_by_id[document_id] = heading_anchors(found, row.schema)
+            return anchors_by_id[document_id].get(heading.path)
 
         repository = view.github_repository
         return RenderContext(
             links=links,
             issue_url=f"https://github.com/{repository}/issues/" if repository else None,
             path=document.path,
-            item_heading=heading,
+            item_anchor=anchor,
             decisions=frozenset(linkable),
         )
 
