@@ -45,8 +45,10 @@ tasks:
     updated_by: planner
     updated_at: '2026-11-17T10:13:33.433332+00:00'
   - process: インターフェース定義設計
-    status: todo
+    status: done
     note: テストを回す workflow（workflow_dispatch で層を受けて全件か指定の結合テストを回す）のインターフェース定義を新規に作る
+    updated_by: planner
+    updated_at: '2026-11-17T10:32:06.883546+00:00'
   - process: 部品設計
     status: skipped
     reason: 画面の部品を変えない
@@ -70,5 +72,8 @@ tasks:
     status: todo
     note: 'workflow のファイル・lint の層の actionlint と uses: の実在の検査'
   - process: 結合テスト作成
-    status: todo
+    status: skipped
     note: workflow のインターフェース定義のフローを gh で起動して確認するテスト（tests/e2e/workflow/）
+    reason: workflow を起動して確認するテストは E2E テストの層で回すが、E2E テストの層の実行コマンドが未確定のため作らない（IF-155-26 の補足）。フローはランナーでの確認で起動して手で確認する
+    updated_by: planner
+    updated_at: '2026-11-17T10:32:06.883546+00:00'

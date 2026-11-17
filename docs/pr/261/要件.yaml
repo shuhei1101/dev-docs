@@ -8,7 +8,9 @@ docs:
   - page: project-index.yaml
     new: false
     change: 設計書のスキーマの参照（knowledge の design-schemas）を v8.1.0 から、テスト実行方法の location・run_runner とインターフェース定義の workflow を持つ v8.4.0 へ上げる
-    status: todo
+    status: done
+    updated_by: planner
+    updated_at: '2026-11-17T10:32:00.606357+00:00'
   - page: docs/test-procedure/TP-155-1.yaml
     new: false
     change: '層ごとに判定フローチャート『テストの実行場所』で location を記載し、runner の層に run_runner を追加する。run_all・run_one は手元のコマンドのまま残す。lint の層に actionlint と uses: の実在の検査を追加する'
@@ -16,11 +18,15 @@ docs:
   - page: docs/interface/IF-155-26.yaml
     new: true
     change: テストを回す workflow（workflow_dispatch で層と結合テストのパスを受け、全件か指定の結合テストを回す）のインターフェース定義を新規に作る
-    status: todo
+    status: done
+    updated_by: planner
+    updated_at: '2026-11-17T10:32:00.606357+00:00'
   - page: docs/interface/index.yaml
     new: false
     change: IF-155-26 の行を追加する
-    status: todo
+    status: done
+    updated_by: planner
+    updated_at: '2026-11-17T10:32:00.606357+00:00'
   - page: docs/library/LIB-155-33.yaml
     new: true
     change: lint の層で使用する actionlint の外部ライブラリの設計書を新規に作る
@@ -32,7 +38,9 @@ docs:
   - page: docs/architecture/ARCH-155-1.yaml
     new: false
     change: notes のフォルダ構成の .github/workflows/ の説明にテストを回す workflow を追加する
-    status: todo
+    status: done
+    updated_by: planner
+    updated_at: '2026-11-17T10:32:00.606357+00:00'
 scope_out:
   - item: 設計書のスキーマの参照を design-schemas の v9 系へ上げる
     reason: v9.0.0 で設計書の refs が related に変わる破壊的変更で、全ての設計書の書き換えが要る。この Issue が要る location・run_runner・workflow のインターフェース定義は v8.4.0 で揃う
