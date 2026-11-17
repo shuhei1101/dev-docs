@@ -64,37 +64,37 @@ functions:
       6. `RECORD_FILE` のフォルダを作り、`HEAD` の SHA を記録し、起動し直した旨を標準出力に出して 0 で終わる
          - [INFO] 待ち受けの確認は呼び出し元（AI Monitor の `health_url`）が行い、このスクリプトは待たない
     unit_tests:
-      - name: test_restart_when_no_record
+      - name: test_main_when_no_record
         case: 正常
         summary: 記録が無い
         condition: commit 1 つの一時リポジトリ、`RECORD_FILE` 無し
         mock: '`uv`・`systemctl`（`PATH` の先頭のスタブ。引数を記録して 0 で終わる）'
         expected: 0 で終わり、`uv sync --frozen` と `systemctl --user restart dev-docs.service` がこの順で呼ばれ、`RECORD_FILE` が `HEAD` の SHA になる
-      - name: test_restart_when_runtime_changed
+      - name: test_main_when_runtime_changed
         case: 正常
         summary: 実行時に参照するファイルが変わった
         condition: '`RECORD_FILE` に前の commit、その後の commit で `src/` のファイルを変更'
         mock: '`uv`・`systemctl`（同上）'
         expected: 0 で終わり、両方が呼ばれ、`RECORD_FILE` が `HEAD` の SHA になる
-      - name: test_skip_when_runtime_unchanged
+      - name: test_main_when_runtime_unchanged
         case: 正常
         summary: 実行時に参照するファイルが変わっていない
         condition: '`RECORD_FILE` に前の commit、その後の commit で `docs/` のファイルだけを変更'
         mock: '`uv`・`systemctl`（同上）'
         expected: 0 で終わり、どちらも呼ばれず、`RECORD_FILE` が `HEAD` の SHA になる
-      - name: test_restart_when_record_unknown
+      - name: test_main_when_record_unknown
         case: 異常
         summary: 記録の commit が見つからない
         condition: '`RECORD_FILE` にリポジトリに無い SHA'
         mock: '`uv`・`systemctl`（同上）'
         expected: 0 で終わり、両方が呼ばれ、`RECORD_FILE` が `HEAD` の SHA になる
-      - name: test_fail_when_sync_failed
+      - name: test_main_when_sync_failed
         case: 異常
         summary: 依存の入れ直しの失敗
         condition: 記録が無い
         mock: '`uv`（1 で終わる）・`systemctl`（呼ばれないことを確認する）'
         expected: 0 以外で終わり、`systemctl` は呼ばれず、`RECORD_FILE` を作らない
-      - name: test_fail_when_restart_failed
+      - name: test_main_when_restart_failed
         case: 異常
         summary: 起動し直しの失敗
         condition: '`RECORD_FILE` に前の commit、その後の commit で `uv.lock` を変更'
