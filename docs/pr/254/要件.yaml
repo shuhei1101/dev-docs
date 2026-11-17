@@ -1,0 +1,10 @@
+use_cases:
+  - kind: single
+    scenario: docs/scenario/SC-155-7.yaml
+    impact: none
+    detail: 文書の本文の見た目は変わらず、結合テストの確認の前提だけを今の mdmark に合わせる
+    depends_on: []
+scope_out:
+  - item: mdmark の既定の参照（`DEFAULT_MDMARK_VERSION`）を develop の最新から固定の版へ戻すこと
+    reason: '#240 で develop の最新を参照すると決めており、要望に含まれない'
+    plan: none
