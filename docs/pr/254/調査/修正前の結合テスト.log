@@ -1,0 +1,28 @@
+$ npx playwright test --config tests/integration/frontend/playwright.config.ts tests/integration/frontend/doc-view-screen.spec.ts -g "body_without_preflight"
+# 2026-11-17 15:33 JST・作業ブランチ 03546b0（テストを変える前）・jsDelivr の @develop は mdmark の ede22beb の dist
+
+Running 1 test using 1 worker
+
+  ✘  1 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:693:3 › 本文 › body_without_preflight (827ms)
+
+
+  1) [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:693:3 › 本文 › body_without_preflight 
+
+    Error: expect(received).toBe(expected) // Object.is equality
+
+    Expected: "flex"
+    Received: undefined
+
+      747 |     expect(styles.beforeBoxSizing).toBe("content-box");
+      748 |     // mdmark が hidden を付けて表示する要素は、mdmark の値で描く（Preflight の [hidden] の !important を当てない）
+    > 749 |     expect(styles.hiddenLegend).toBe("flex");
+          |                                 ^
+      750 |   });
+      751 |
+      752 |   // 本文の外（文書の一覧）には画面の基本のスタイルを当てたままにする（正常系）
+        at /home/shuhei2441/repo/dev-docs/.claude/worktrees/test-doc-view-body-without-preflight-legend/tests/integration/frontend/doc-view-screen.spec.ts:749:33
+
+    Error Context: test-results/doc-view-screen-本文-body-without-preflight-chromium/error-context.md
+
+  1 failed
+    [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:693:3 › 本文 › body_without_preflight 
