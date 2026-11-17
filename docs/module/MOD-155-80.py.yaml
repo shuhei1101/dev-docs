@@ -4,13 +4,6 @@ lead: |-
   SessionStart のフックを受け持ち、セッション開始のフックの session_start.py を修正するときに参照する。
 test_files:
   - tests/unit/plugins/dev_docs/hooks/test_session_start.py
-directory: |-
-  ```text
-  plugins/dev-docs/
-  ├─ hooks/
-  │  ├─ hooks.json          # SessionStart（timeout 2）の登録
-  │  └─ session_start.py    # main / is_listening / config_path / read_clone / start_server / unit_name / unit_exists / start_unit / UnitStartError
-  ```
 constants:
   - name: DEFAULT_PORT
     title: 既定のポート
@@ -428,3 +421,10 @@ classes:
     inherits: Exception
 notes:
   補足: ポートにつながらなければ、systemd --user の unit を起動し、unit が無ければ `dev-docs serve` を切り離して起動する。つながれば文脈を入れずに戻る。返却済みの記録の削除の依頼は project-index のフックへ移した。Python 3.14 の標準ライブラリだけで記載し、どの失敗でも終了コード 0 で戻る。
+  フォルダ構成: |-
+    ```text
+    plugins/dev-docs/
+    ├─ hooks/
+    │  ├─ hooks.json          # SessionStart（timeout 2）の登録
+    │  └─ session_start.py    # main / is_listening / config_path / read_clone / start_server / unit_name / unit_exists / start_unit / UnitStartError
+    ```

@@ -2,16 +2,6 @@ id: MOD-155-207
 title: 開発ドキュメントサーバー / 起動
 lead: |-
   `dev-docs serve` と `dev-docs migrate` の処理を受け持つ起動の分類のファイルの並びと決まりを定め、この分類のファイルを追加・移動するときに参照する。
-directory: |-
-  ```text
-  src/dev_docs/
-  ├─ main.py                    # Handlers / build_handlers / announce_sources / run_serve / run_migrate / PortInUseError
-  └─ server/
-     ├─ app.py                  # build_app / route_operation_id / SlashlessMcpPathMiddleware（ルートと管理の MCP のマウント）
-     ├─ lifespan.py             # build_lifespan（MCP のセッションの管理と project-index の呼び出しの後始末）
-     ├─ error_handlers.py       # register_error_handlers（problem+json）
-     └─ screen.py               # build_screen_router / SCREEN_DIST_DIR（画面のビルドの配信）
-  ```
 diagrams:
   - name: 全体
     diagram: |-
@@ -131,3 +121,13 @@ diagrams:
         click 移し替えの適用 href "./MOD-155-119.py.yaml#移し替えの適用"
 notes:
   補足: 端末の設定を読み込み、部品を配線して、画面の API・管理の MCP・画面の配信を 1 つのアプリとして待ち受ける。配信元の文書は project-index に要求ごとに問い合わせ、dev-docs は配信元を参照しない。再起動を要求されて止まったときは、同じプロセスを `serve` で置き換える。例外から problem+json への変換もここで登録する。
+  フォルダ構成: |-
+    ```text
+    src/dev_docs/
+    ├─ main.py                    # Handlers / build_handlers / announce_sources / run_serve / run_migrate / PortInUseError
+    └─ server/
+       ├─ app.py                  # build_app / route_operation_id / SlashlessMcpPathMiddleware（ルートと管理の MCP のマウント）
+       ├─ lifespan.py             # build_lifespan（MCP のセッションの管理と project-index の呼び出しの後始末）
+       ├─ error_handlers.py       # register_error_handlers（problem+json）
+       └─ screen.py               # build_screen_router / SCREEN_DIST_DIR（画面のビルドの配信）
+    ```

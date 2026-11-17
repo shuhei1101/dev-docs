@@ -33,8 +33,6 @@ functions:
         condition: '`DEV_DOCS_CONFIG` が `/tmp/s.yaml`'
         mock: なし
         expected: '`kind` が `settings`、`file` が `/tmp/s.yaml`'
-    callers:
-      - MOD-155-174#functions[run_migrate]
   - name: plan_migration
     title: 適用する手順の一覧
     kind: 関数
@@ -96,8 +94,6 @@ functions:
         mock: なし
         expected: '`MigrationConfigInvalidError`'
         exception: 対象の設定の違反
-    callers:
-      - MOD-155-174#functions[run_migrate]
     callees:
       - MOD-155-120#functions[load_steps]
       - MOD-155-86#functions[version_state]
@@ -243,8 +239,6 @@ functions:
         mock: 移す先の端末の設定の API（取得の応答を返却し、保存を記録するか例外を送出する偽物）
         expected: '`MigrationFailedError` の本文に 500。対象は元の内容のまま'
         exception: project-index が 201・409 以外を返却した
-    callers:
-      - MOD-155-174#functions[run_migrate]
     callees:
       - MOD-155-120#functions[apply_step]
   - name: _export_sources
@@ -366,5 +360,3 @@ functions:
         condition: '`sources` に、`config` のファイルの `name` が notes で `id` を省いた行と sample の 2 行。偽物の取得が、同じ `config` で `enabled: false` の行を `id: sources[0]`・`status: disabled` で返却する'
         mock: 移す先の端末の設定の API（取得の応答を返却し、保存を記録するか例外を送出する偽物）・一時フォルダの配信元の設定
         expected: 保存が 1 回で、行の 1 つ目が `id` を持たず、2 つ目が sample。`kept` が `[notes]` で、`data` の `sources` が notes の行だけ
-    callers:
-      - MOD-155-119#functions[apply_migration]

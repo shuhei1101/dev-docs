@@ -2,18 +2,6 @@ id: MOD-155-204
 title: 開発ドキュメントサーバー / 画面のAPI
 lead: |-
   画面が呼ぶ画面の API（文書の取得・画面の検索・リビジョンの一覧・表の列の設定の保存）を受け持つ画面のAPIの分類のファイルの並びと決まりを定め、この分類のファイルを追加・移動するときに参照する。
-directory: |-
-  ```text
-  src/dev_docs/features/view/
-  ├─ __init__.py   # 公開する型と関数の再エクスポート
-  ├─ types.py      # NavItem / NavTab / ConversionError / GitHubTarget / AliasItem / DocumentResponse / DocumentDiff / ScreenSearchItem / ScreenSearchResult / ColumnsRequest
-  ├─ paths.py      # page_path / find_page
-  ├─ nav.py        # build_nav / first_page / mark_nav_changes
-  ├─ columns.py    # ColumnSettings
-  ├─ search.py     # screen_search
-  ├─ document.py   # get_document / not_found_fields
-  └─ route.py      # build_view_router（/_api/sources/{source}/docs・search・refs・columns）
-  ```
 diagrams:
   - name: 全体
     diagram: |-
@@ -88,3 +76,15 @@ diagrams:
         click 条件の照合 href "./MOD-155-135.py.yaml#条件の照合"
 notes:
   補足: 配信元の文書・検索・リビジョンは project-index の呼び出しで要求ごとに取得し、スキーマ駆動の変換・タブとサイドバー・差分は dev-docs が組み立てる。端末の設定の取得・保存は端末の設定のエントリーポイントが持つ。
+  フォルダ構成: |-
+    ```text
+    src/dev_docs/features/view/
+    ├─ __init__.py   # 公開する型と関数の再エクスポート
+    ├─ types.py      # NavItem / NavTab / ConversionError / GitHubTarget / AliasItem / DocumentResponse / DocumentDiff / ScreenSearchItem / ScreenSearchResult / ColumnsRequest
+    ├─ paths.py      # page_path / find_page
+    ├─ nav.py        # build_nav / first_page / mark_nav_changes
+    ├─ columns.py    # ColumnSettings
+    ├─ search.py     # screen_search
+    ├─ document.py   # get_document / not_found_fields
+    └─ route.py      # build_view_router（/_api/sources/{source}/docs・search・refs・columns）
+    ```
