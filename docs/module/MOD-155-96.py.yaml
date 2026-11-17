@@ -144,6 +144,12 @@ functions:
         condition: '`[B](id:b#no-such)`、項目の見出しの引き方が `None` を返す'
         mock: なし
         expected: '`[B](b.yaml)`'
+      - name: test_rewrite_text_when_mermaid_click
+        case: 正常
+        summary: Mermaid のまま返す図の click の id の参照
+        condition: '```mermaid の `classDiagram` に `click A href "id:a"`・`click B "id:b#flow"`・`click C href "id:zzz"`・`click D href "https://e.example/"`、`links` に `a`（パス `dev/a.yaml`）と `b`（パス `dev/b.yaml`）、文書のパスが `dev/c.yaml`、項目の見出しの引き方が `b`・`flow` に `処理の流れ` を返却する'
+        mock: なし
+        expected: '```mermaid のコードブロックのままで、`click A href "a.yaml"`・`click B "b.yaml#処理の流れ"`・`click D href "https://e.example/"` の行を持ち、`click C` の行を持たない'
   - name: link_target
     title: リンク先の引き方
     kind: 関数
