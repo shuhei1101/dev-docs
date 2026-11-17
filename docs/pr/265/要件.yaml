@@ -44,3 +44,6 @@ scope_out:
   - item: 設定画面の配信元の一覧で、状態 loading（読み込み中）を表示すること（#250 のタイトル・「やりたいこと」の「画面で表示する」）
     reason: 画面の配信元の一覧は /_api/settings/sources → project-index の GET /settings/sources で、loading を返さず読み込みの済んでいない行は pending_reload になる。受付の判断で対象を起動の通知と管理の MCP の status に絞った
     plan: none
+  - item: '設定画面のダイアログのストーリーで検出される transition: height（impeccable の layout-transition）'
+    reason: 規約『表示の安定』から外れるが、変更していない EditOutsideRead でも出る共通のダイアログ部品または依存に由来し、今回の要望に含まれない
+    plan: '#272'
