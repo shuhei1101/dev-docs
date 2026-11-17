@@ -1,0 +1,634 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/shuhei1101/knowledge/design-schemas/v8.4.0/schemas/knowledge-files.schema.yaml
+files:
+- path: dev_docs/__init__.py
+  name: インストール済みのパッケージからバージョンを取得するときの配布名
+  description: インストール済みのパッケージからバージョンを取得するときの配布名を受け持ち、エントリーポイントの __init__.py を修正するときに参照する。
+  tags:
+  - topic:cli
+  - topic:エントリポイント
+  - topic:バージョン
+  related:
+  - to: MOD-155-81
+    type: implements
+- path: dev_docs/__main__.py
+  name: '`dev-docs` コマンドの引数の組み立てと main'
+  description: '`dev-docs` コマンドの引数の組み立てと main を受け持ち、エントリーポイントの __main__.py を修正するときに参照する。'
+  tags:
+  - topic:cli
+  - topic:エントリポイント
+  related:
+  - to: MOD-155-82
+    type: implements
+- path: dev_docs/features/admin/render.py
+  name: '管理の MCP の `status` の `format: markdown` の応答の文を組み立てる処理'
+  description: '管理の MCP の `status` の `format: markdown` の応答の文を組み立てる処理を受け持ち、管理の render.py を修正するときに参照する。'
+  tags:
+  - tool:mcp
+  - topic:状態
+  related:
+  - to: MOD-155-85
+    type: implements
+- path: dev_docs/features/admin/service.py
+  name: 管理の MCP の `status` の中身
+  description: 管理の MCP の `status` の中身を受け持ち、管理の service.py を修正するときに参照する。
+  tags:
+  - tool:mcp
+  - topic:状態
+  related:
+  - to: MOD-155-86
+    type: implements
+- path: dev_docs/features/admin/types.py
+  name: 管理の MCP の `status` の要求と結果の型
+  description: 管理の MCP の `status` の要求と結果の型を受け持ち、管理の操作の types.py を修正するときに参照する。
+  tags:
+  - tool:mcp
+  - topic:型ヒント
+  - topic:型
+  related:
+  - to: MOD-155-87
+    type: implements
+- path: dev_docs/features/changes/compare.py
+  name: 変わったキーの比べ方
+  description: 変わったキーの比べ方を受け持ち、変更の compare.py を修正するときに参照する。
+  tags:
+  - topic:差分
+  related:
+  - to: MOD-155-88
+    type: implements
+- path: dev_docs/features/convert/decisions.py
+  name: 設計書の `decisions` の検討事項の ID と、検討事項の文書のパスの読み取り
+  description: 設計書の `decisions` の検討事項の ID と、検討事項の文書のパスの読み取りを受け持ち、変換の decisions.py を修正するときに参照する。
+  tags:
+  - topic:markdown
+  related:
+  - to: MOD-155-92
+    type: implements
+- path: dev_docs/features/convert/diagrams.py
+  name: '`x-diagram` の値と手で記載する Mermaid の、mdmark の map の範囲か Mermaid のコードブロックへの描画'
+  description: '`x-diagram` の値と手で記載する Mermaid の、mdmark の map の範囲か Mermaid のコードブロックへの描画を受け持ち、変換の diagrams.py を修正するときに参照する。'
+  tags:
+  - topic:markdown
+  - tool:mdmark
+  - topic:図
+  related:
+  - to: MOD-155-93
+    type: implements
+- path: dev_docs/features/convert/embed.py
+  name: 埋め込みのマーカーのパスの取り出しと、表への展開
+  description: 埋め込みのマーカーのパスの取り出しと、表への展開を受け持ち、変換の embed.py を修正するときに参照する。
+  tags:
+  - topic:markdown
+  - topic:表
+  related:
+  - to: MOD-155-94
+    type: implements
+- path: dev_docs/features/convert/inline.py
+  name: 文字列の値の中の、図・ファイルツリー・手順・参照・Issue 番号・値の選択肢の書き換え
+  description: 文字列の値の中の、図・ファイルツリー・手順・参照・Issue 番号・値の選択肢の書き換えを受け持ち、変換の inline.py を修正するときに参照する。
+  tags:
+  - topic:markdown
+  - topic:図
+  - topic:issue
+  related:
+  - to: MOD-155-96
+    type: implements
+- path: dev_docs/features/convert/markdown.py
+  name: スキーマ駆動の文書の Markdown への変換と表の描画
+  description: スキーマ駆動の文書の Markdown への変換と表の描画を受け持ち、変換の markdown.py を修正するときに参照する。
+  tags:
+  - topic:markdown
+  - topic:スキーマ
+  - topic:表
+  related:
+  - to: MOD-155-97
+    type: implements
+- path: dev_docs/features/convert/service.py
+  name: 変換の選択と、表のキーの取り出し
+  description: 変換の選択と、表のキーの取り出しを受け持ち、変換の service.py を修正するときに参照する。
+  tags:
+  - topic:markdown
+  - topic:表
+  related:
+  - to: MOD-155-99
+    type: implements
+- path: dev_docs/features/convert/types.py
+  name: 変換の結果・失敗・表し方・図の種類・図の見出し・描画の文脈の型
+  description: 変換の結果・失敗・表し方・図の種類・図の見出し・描画の文脈の型を受け持ち、変換の types.py を修正するときに参照する。
+  tags:
+  - topic:markdown
+  - topic:図
+  - topic:型ヒント
+  - topic:型
+  related:
+  - to: MOD-155-100
+    type: implements
+- path: dev_docs/features/documents/aliases.py
+  name: エイリアスのキーの検証と、エイリアスの集め
+  description: エイリアスのキーの検証と、エイリアスの集めを受け持ち、文書の aliases.py を修正するときに参照する。
+  tags:
+  - topic:文書
+  - topic:エイリアス
+  related:
+  - to: MOD-155-106
+    type: implements
+- path: dev_docs/features/documents/fields.py
+  name: 項目のパスの分解と、項目の値の取得
+  description: 項目のパスの分解と、項目の値の取得を受け持ち、文書の fields.py を修正するときに参照する。
+  tags:
+  - topic:文書
+  - topic:パス
+  - topic:項目
+  related:
+  - to: MOD-155-107
+    type: implements
+- path: dev_docs/features/documents/types.py
+  name: エイリアスの型
+  description: エイリアスの型を受け持ち、文書の types.py を修正するときに参照する。
+  tags:
+  - topic:文書
+  - topic:エイリアス
+  - topic:型ヒント
+  - topic:型
+  related:
+  - to: MOD-155-112
+    type: implements
+- path: dev_docs/features/filter/fields.py
+  name: 項目の値・計算項目・使用できる項目・見出しの行
+  description: 項目の値・計算項目・使用できる項目・見出しの行を受け持ち、絞り込みの fields.py を修正するときに参照する。
+  tags:
+  - topic:ナビゲーション
+  - topic:条件
+  - topic:項目
+  related:
+  - to: MOD-155-134
+    type: implements
+- path: dev_docs/features/filter/filters.py
+  name: 条件の木の確認と照合・正規表現・比べる値の解釈（`nav` の `auto` の `filter`）
+  description: 条件の木の確認と照合・正規表現・比べる値の解釈（`nav` の `auto` の `filter`）を受け持ち、絞り込みの filters.py を修正するときに参照する。
+  tags:
+  - topic:ナビゲーション
+  - topic:条件
+  related:
+  - to: MOD-155-135
+    type: implements
+- path: dev_docs/features/filter/types.py
+  name: '`nav` の `auto` の `filter` の条件の木と、見出しの型'
+  description: '`nav` の `auto` の `filter` の条件の木と、見出しの型を受け持ち、絞り込みの types.py を修正するときに参照する。'
+  tags:
+  - topic:ナビゲーション
+  - topic:条件
+  - topic:型ヒント
+  - topic:型
+  related:
+  - to: MOD-155-140
+    type: implements
+- path: dev_docs/features/lifecycle/control.py
+  name: 再起動の要求を受けて uvicorn を止め、止まった後に `run_serve` が同じプロセスを置き換えるかを持つ処理
+  description: 再起動の要求を受けて uvicorn を止め、止まった後に `run_serve` が同じプロセスを置き換えるかを持つ処理を受け持ち、再起動と更新の control.py を修正するときに参照する。
+  tags:
+  - topic:再起動
+  - topic:更新
+  - topic:サーバー
+  - tool:uvicorn
+  related:
+  - to: MOD-155-116
+    type: implements
+- path: dev_docs/features/lifecycle/types.py
+  name: 管理の MCP の `restart`・`update` の結果の型と定数
+  description: 管理の MCP の `restart`・`update` の結果の型と定数を受け持ち、再起動と更新の types.py を修正するときに参照する。
+  tags:
+  - topic:再起動
+  - topic:更新
+  - topic:サーバー
+  - tool:mcp
+  - topic:型ヒント
+  - topic:型
+  related:
+  - to: MOD-155-117
+    type: implements
+- path: dev_docs/features/lifecycle/update.py
+  name: クローンの `git pull --ff-only`・`uv sync` での更新と再起動の要求
+  description: クローンの `git pull --ff-only`・`uv sync` での更新と再起動の要求を受け持ち、再起動と更新の update.py を修正するときに参照する。
+  tags:
+  - topic:再起動
+  - topic:更新
+  - topic:サーバー
+  - tool:git
+  - tool:uv
+  related:
+  - to: MOD-155-118
+    type: implements
+- path: dev_docs/features/migrate/service.py
+  name: 対象の決定・適用する手順・バックアップを取った適用と、`sources` の project-index への書き出し
+  description: 対象の決定・適用する手順・バックアップを取った適用と、`sources` の project-index への書き出しを受け持ち、設定の移し替えの service.py を修正するときに参照する。
+  tags:
+  - topic:移行
+  - topic:端末の設定
+  - tool:project-index
+  - topic:バックアップ
+  - topic:端末
+  - topic:設定
+  related:
+  - to: MOD-155-119
+    type: implements
+- path: dev_docs/features/migrate/steps.py
+  name: パッケージに入れた移し替えの手順を参照し、メモリの上の YAML に 1 つずつ適用する処理
+  description: パッケージに入れた移し替えの手順を参照し、メモリの上の YAML に 1 つずつ適用する処理を受け持ち、設定の移し替えの steps.py を修正するときに参照する。
+  tags:
+  - topic:移行
+  - topic:端末の設定
+  - topic:端末
+  - topic:設定
+  related:
+  - to: MOD-155-120
+    type: implements
+- path: dev_docs/features/migrate/types.py
+  name: '`dev-docs migrate` の手順・対象・例外の型と終了コード'
+  description: '`dev-docs migrate` の手順・対象・例外の型と終了コードを受け持ち、設定の移し替えの types.py を修正するときに参照する。'
+  tags:
+  - topic:移行
+  - topic:端末の設定
+  - topic:エラー
+  - topic:型ヒント
+  - topic:端末
+  - topic:設定
+  - topic:型
+  related:
+  - to: MOD-155-121
+    type: implements
+- path: dev_docs/features/prompt_doc/__init__.py
+  name: プロンプトの変換のパッケージ
+  description: プロンプトの YAML を mdmark の Markdown にする変換のパッケージを受け持ち、プロンプトの変換の公開する名前を修正するときに参照する。
+  tags:
+  - topic:プロンプト
+  - tool:mdmark
+- path: dev_docs/features/prompt_doc/render.py
+  name: プロンプトの部品を Jinja2 で描画する処理
+  description: プロンプトの部品を Jinja2 で描画する処理を受け持ち、プロンプトの render.py を修正するときに参照する。
+  tags:
+  - topic:プロンプト
+  - tool:jinja2
+  related:
+  - to: MOD-155-124
+    type: implements
+- path: dev_docs/features/prompt_doc/runtime.py
+  name: 起動のときのプロンプトの YAML の読み込み・検査と、MCP の instructions・ツールの description の描画
+  description: 起動のときのプロンプトの YAML の読み込み・検査と、MCP の instructions・ツールの description の描画を受け持ち、プロンプトの runtime.py を修正するときに参照する。
+  tags:
+  - topic:プロンプト
+  - tool:mcp
+  related:
+  - to: MOD-155-125
+    type: implements
+- path: dev_docs/features/prompt_doc/types.py
+  name: サーバーが起動のときに参照するプロンプトの YAML のモデルと、描画の結果・プロンプトの違反の型
+  description: サーバーが起動のときに参照するプロンプトの YAML のモデルと、描画の結果・プロンプトの違反の型を受け持ち、プロンプトの types.py を修正するときに参照する。
+  tags:
+  - topic:プロンプト
+  - topic:型ヒント
+  - topic:型
+  related:
+  - to: MOD-155-126
+    type: implements
+- path: dev_docs/features/settings/query.py
+  name: 端末の設定の場所・読み込みと検証・待ち受けのポート
+  description: 端末の設定の場所・読み込みと検証・待ち受けのポートを受け持ち、端末の設定の query.py を修正するときに参照する。
+  tags:
+  - topic:端末の設定
+  - topic:設定
+  - topic:端末
+  related:
+  - to: MOD-155-146
+    type: implements
+- path: dev_docs/features/settings/route.py
+  name: 端末の設定のルーター（`GET`・`PUT /_api/settings/sources`）
+  description: 端末の設定のルーター（`GET`・`PUT /_api/settings/sources`）を受け持ち、端末の設定の route.py を修正するときに参照する。
+  tags:
+  - topic:端末の設定
+  - topic:設定
+  - topic:端末
+  - topic:ルート
+  related:
+  - to: MOD-155-147
+    type: implements
+- path: dev_docs/features/settings/service.py
+  name: '`sources[]` の保存の依頼'
+  description: '`sources[]` の保存の依頼を受け持ち、端末の設定の service.py を修正するときに参照する。'
+  tags:
+  - topic:端末の設定
+  - topic:設定
+  - topic:端末
+  related:
+  - to: MOD-155-148
+    type: implements
+- path: dev_docs/features/settings/types.py
+  name: 端末の設定と、画面の `sources[]` の要求と結果の型
+  description: 端末の設定と、画面の `sources[]` の要求と結果の型を受け持ち、端末の設定の types.py を修正するときに参照する。
+  tags:
+  - topic:端末の設定
+  - topic:設定
+  - topic:端末
+  - topic:型ヒント
+  - topic:型
+  related:
+  - to: MOD-155-149
+    type: implements
+- path: dev_docs/features/view/columns.py
+  name: 表の列の設定の読み書き
+  description: 表の列の設定の読み書きを受け持ち、画面のAPIの columns.py を修正するときに参照する。
+  tags:
+  - topic:api
+  - topic:画面
+  - topic:表
+  - topic:列
+  related:
+  - to: MOD-155-158
+    type: implements
+- path: dev_docs/features/view/document.py
+  name: 画面の文書の取得と、見つからない項目
+  description: 画面の文書の取得と、見つからない項目を受け持ち、画面のAPIの document.py を修正するときに参照する。
+  tags:
+  - topic:api
+  - topic:画面
+  - topic:見つからない画面
+  - topic:項目
+  related:
+  - to: MOD-155-159
+    type: implements
+- path: dev_docs/features/view/nav.py
+  name: 画面のナビゲーションの組み立てと、変わったページ
+  description: 画面のナビゲーションの組み立てと、変わったページを受け持ち、画面のAPIの nav.py を修正するときに参照する。
+  tags:
+  - topic:api
+  - topic:画面
+  - topic:ナビゲーション
+  related:
+  - to: MOD-155-160
+    type: implements
+- path: dev_docs/features/view/paths.py
+  name: 画面のページのパスと、文書のページの特定
+  description: 画面のページのパスと、文書のページの特定を受け持ち、画面のAPIの paths.py を修正するときに参照する。
+  tags:
+  - topic:api
+  - topic:画面
+  - topic:パス
+  related:
+  - to: MOD-155-161
+    type: implements
+- path: dev_docs/features/view/route.py
+  name: 画面の API のルーター（`/_api/sources/{source}/docs`・`search`・`refs`・`columns`）
+  description: 画面の API のルーター（`/_api/sources/{source}/docs`・`search`・`refs`・`columns`）を受け持ち、画面のAPIの route.py を修正するときに参照する。
+  tags:
+  - topic:api
+  - topic:画面
+  - topic:ルート
+  related:
+  - to: MOD-155-162
+    type: implements
+- path: dev_docs/features/view/search.py
+  name: 画面の検索（project-index の検索の結果を画面の形式にする）
+  description: 画面の検索（project-index の検索の結果を画面の形式にする）を受け持ち、画面のAPIの search.py を修正するときに参照する。
+  tags:
+  - topic:api
+  - topic:画面
+  - tool:project-index
+  related:
+  - to: MOD-155-163
+    type: implements
+- path: dev_docs/features/view/types.py
+  name: 画面の API の要求と結果の型
+  description: 画面の API の要求と結果の型を受け持ち、画面のAPIの types.py を修正するときに参照する。
+  tags:
+  - topic:api
+  - topic:画面
+  - topic:型ヒント
+  - topic:型
+  related:
+  - to: MOD-155-164
+    type: implements
+- path: dev_docs/integrations/project_index/__init__.py
+  name: project-index の呼び出しのパッケージ
+  description: project-index の読み取り API と端末の設定の API の呼び出しのパッケージを受け持ち、project-index の呼び出しの公開する名前を修正するときに参照する。
+  tags:
+  - tool:project-index
+  - topic:api
+  related:
+  - to: API-155-1
+    type: see_also
+- path: dev_docs/integrations/project_index/client.py
+  name: project-index の読み取り API と端末の設定の API を制限時間つきで呼び、応答を型にする処理
+  description: project-index の読み取り API と端末の設定の API を制限時間つきで呼び、応答を型にする処理を受け持ち、project-indexの呼び出しの client.py を修正するときに参照する。
+  tags:
+  - tool:project-index
+  - topic:api
+  related:
+  - to: MOD-155-215
+    type: implements
+- path: dev_docs/integrations/project_index/types.py
+  name: project-index の読み取り API と端末の設定の API の応答の型
+  description: project-index の読み取り API と端末の設定の API の応答の型を受け持ち、project-indexの呼び出しの types.py を修正するときに参照する。
+  tags:
+  - tool:project-index
+  - topic:api
+  - topic:型ヒント
+  - topic:型
+  related:
+  - to: MOD-155-214
+    type: implements
+- path: dev_docs/main.py
+  name: '`dev-docs serve`・`dev-docs migrate` の部品の配線と、起動のときの配信元の通知'
+  description: '`dev-docs serve`・`dev-docs migrate` の部品の配線と、起動のときの配信元の通知を受け持ち、起動の main.py を修正するときに参照する。'
+  tags:
+  - topic:起動
+  - topic:サーバー
+  - topic:配信元
+  - topic:通知
+  related:
+  - to: MOD-155-174
+    type: implements
+- path: dev_docs/migrations/settings/2/steps.yaml
+  name: 端末の設定のバージョン 2 への移し替えの手順
+  description: 文書の MCP と配信元の読み込みを project-index へ移したバージョン 2 への端末の設定の移し替えの手順を受け持ち、バージョン 2 の移し替えの手順を修正するときに参照する。
+  tags:
+  - topic:移行
+  - topic:端末の設定
+  - topic:バージョン
+  related:
+  - to: IF-155-22
+    type: see_also
+- path: dev_docs/schemas/aliases.schema.yaml
+  name: エイリアスの元の行のスキーマ
+  description: alias-inject から取り込んだエイリアスの元の行のスキーマを受け持ち、エイリアスのキーの検証を修正するときに参照する。
+  tags:
+  - topic:エイリアス
+  - topic:スキーマ
+  - tool:alias-inject
+  related:
+  - to: LIB-155-1
+    type: see_also
+- path: dev_docs/schemas/aliases.source.yaml
+  name: エイリアスのスキーマの取り込み元
+  description: エイリアスの元の行のスキーマを取り込む alias-inject のリポジトリ・タグ・パスを受け持ち、取り込むスキーマのタグを変えるときに参照する。
+  tags:
+  - topic:エイリアス
+  - topic:スキーマ
+  - tool:alias-inject
+  related:
+  - to: LIB-155-1
+    type: see_also
+- path: dev_docs/schemas/settings.schema.yaml
+  name: 端末の設定のスキーマ
+  description: dev-docs の端末の設定 settings.yaml のスキーマを受け持ち、端末の設定のキーを追加・修正するときに参照する。
+  tags:
+  - topic:端末の設定
+  - topic:スキーマ
+  related:
+  - to: CFG-155-2
+    type: see_also
+- path: dev_docs/server/app.py
+  name: ルートと MCP のマウントをまとめたアプリの組み立て
+  description: ルートと MCP のマウントをまとめたアプリの組み立てを受け持ち、起動の app.py を修正するときに参照する。
+  tags:
+  - topic:起動
+  - topic:サーバー
+  - tool:mcp
+  - topic:ルート
+  related:
+  - to: MOD-155-175
+    type: implements
+- path: dev_docs/server/error_handlers.py
+  name: 例外の problem+json への変換
+  description: 例外の problem+json への変換を受け持ち、起動の error_handlers.py を修正するときに参照する。
+  tags:
+  - topic:起動
+  - topic:サーバー
+  - topic:エラー
+  related:
+  - to: MOD-155-176
+    type: implements
+- path: dev_docs/server/lifespan.py
+  name: マウントした管理の MCP のセッションの管理と、project-indexの呼び出しを閉じるアプリの寿命
+  description: マウントした管理の MCP のセッションの管理と、project-indexの呼び出しを閉じるアプリの寿命を受け持ち、起動の lifespan.py を修正するときに参照する。
+  tags:
+  - topic:起動
+  - topic:サーバー
+  - tool:project-index
+  - tool:mcp
+  related:
+  - to: MOD-155-177
+    type: implements
+- path: dev_docs/server/mcp/admin.py
+  name: 管理の MCP の組み立て（ツールの登録）
+  description: 管理の MCP の組み立て（ツールの登録）を受け持ち、管理のMCPの admin.py を修正するときに参照する。
+  tags:
+  - tool:mcp
+  related:
+  - to: MOD-155-178
+    type: implements
+- path: dev_docs/server/mcp/result.py
+  name: ツールの結果・エラーの変換と、管理の MCP のツール名とプロンプトの ID
+  description: ツールの結果・エラーの変換と、管理の MCP のツール名とプロンプトの ID を受け持ち、管理のMCPの result.py を修正するときに参照する。
+  tags:
+  - tool:mcp
+  - topic:エラー
+  - topic:プロンプト
+  related:
+  - to: MOD-155-180
+    type: implements
+- path: dev_docs/server/origin.py
+  name: 画面と同じオリジンからの要求かの確認
+  description: 画面と同じオリジンからの要求かの確認を受け持ち、共通の origin.py を修正するときに参照する。
+  tags:
+  - topic:ユーティリティ
+  - topic:セキュリティ
+  related:
+  - to: MOD-155-181
+    type: implements
+- path: dev_docs/server/screen.py
+  name: 画面のビルドの配信
+  description: 画面のビルドの配信を受け持ち、起動の screen.py を修正するときに参照する。
+  tags:
+  - topic:起動
+  - topic:サーバー
+  - topic:ビルド
+  related:
+  - to: MOD-155-182
+    type: implements
+- path: dev_docs/shared/api_model.py
+  name: 画面の API の DTO の基底（キーは camelCase）
+  description: 画面の API の DTO の基底（キーは camelCase）を受け持ち、共通の api_model.py を修正するときに参照する。
+  tags:
+  - topic:ユーティリティ
+  - topic:dto
+  related:
+  - to: MOD-155-183
+    type: implements
+- path: dev_docs/shared/errors.py
+  name: '`DevDocsError` と、MCP・画面が返却するエラーの階層'
+  description: '`DevDocsError` と、MCP・画面が返却するエラーの階層を受け持ち、共通の errors.py を修正するときに参照する。'
+  tags:
+  - topic:ユーティリティ
+  - topic:エラー
+  - tool:mcp
+  related:
+  - to: MOD-155-184
+    type: implements
+- path: dev_docs/shared/files.py
+  name: 一時ファイルからのファイルの置き換え
+  description: 一時ファイルからのファイルの置き換えを受け持ち、共通の files.py を修正するときに参照する。
+  tags:
+  - topic:ユーティリティ
+  - topic:ファイル
+  related:
+  - to: MOD-155-185
+    type: implements
+- path: dev_docs/shared/hashing.py
+  name: 内容のハッシュ（文書のバージョン）
+  description: 内容のハッシュ（文書のバージョン）を受け持ち、共通の hashing.py を修正するときに参照する。
+  tags:
+  - topic:ユーティリティ
+  - topic:バージョン
+  - topic:ハッシュ
+  related:
+  - to: MOD-155-186
+    type: implements
+- path: dev_docs/shared/paths.py
+  name: パスの正規化
+  description: パスの正規化を受け持ち、共通の paths.py を修正するときに参照する。
+  tags:
+  - topic:ユーティリティ
+  - topic:パス
+  related:
+  - to: MOD-155-187
+    type: implements
+- path: dev_docs/shared/schema_check.py
+  name: JSON Schema の違反を、項目のパスつきの `Violation` にする処理
+  description: JSON Schema の違反を、項目のパスつきの `Violation` にする処理を受け持ち、共通の schema_check.py を修正するときに参照する。
+  tags:
+  - topic:ユーティリティ
+  - tool:jsonschema
+  - topic:項目
+  related:
+  - to: MOD-155-188
+    type: implements
+- path: dev_docs/shared/version.py
+  name: 動いているプロセスが起動した時点の dev-docs のバージョン
+  description: 動いているプロセスが起動した時点の dev-docs のバージョンを受け持ち、共通の version.py を修正するときに参照する。
+  tags:
+  - topic:ユーティリティ
+  - topic:バージョン
+  related:
+  - to: MOD-155-189
+    type: implements
+- path: dev_docs/shared/yaml_io.py
+  name: YAML の読み込みと、往復編集の読み書き
+  description: YAML の読み込みと、往復編集の読み書きを受け持ち、共通の yaml_io.py を修正するときに参照する。
+  tags:
+  - topic:ユーティリティ
+  - tool:ruamel.yaml
+  related:
+  - to: MOD-155-190
+    type: implements
+checkpoint:
+  commit: 05915628138ff51e7b1be495775c9f556a2a0825
+  reviewed: []

@@ -1,0 +1,1169 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/shuhei1101/knowledge/design-schemas/v8.4.0/schemas/knowledge-files.schema.yaml
+files:
+- path: .storybook/main.ts
+  name: Storybook の設定
+  description: 部品のストーリーを読む場所・アドオン・ビルドの設定を受け持ち、Storybook の読み込みやアドオンを修正するときに参照する。
+  tags:
+  - tool:storybook
+  - topic:ストーリー
+  related:
+  - to: LIB-155-20
+    type: see_also
+- path: .storybook/preview.tsx
+  name: ストーリーの共通の描画の設定
+  description: 全てのストーリーに当てる共通のプロバイダー・テーマ・MSW のハンドラを受け持ち、ストーリーの共通の描画を修正するときに参照する。
+  tags:
+  - tool:storybook
+  - tool:msw
+  - topic:ストーリー
+  related:
+  - to: LIB-155-20
+    type: see_also
+- path: index.html
+  name: 画面の HTML の入口
+  description: Vite がビルドする SPA の HTML の入口を受け持ち、画面の head の要素や読み込むスクリプトを修正するときに参照する。
+  tags:
+  - topic:画面
+  - topic:エントリポイント
+  - tool:vite
+  related:
+  - to: LIB-155-28
+    type: see_also
+- path: openapi.json
+  name: 画面の API の OpenAPI
+  description: サーバーから書き出した画面の API の OpenAPI のスキーマを受け持ち、orval で API クライアントを生成し直すときに参照する。
+  tags:
+  - topic:api
+  - tool:openapi
+  - tool:orval
+  related:
+  - to: IF-155-3
+    type: see_also
+- path: orval.config.ts
+  name: API クライアントの生成の設定
+  description: OpenAPI から API の関数・型・zod のスキーマ・MSW のハンドラを生成する orval の設定を受け持ち、API クライアントの生成を修正するときに参照する。
+  tags:
+  - tool:orval
+  - topic:コード生成
+  - topic:api
+  related:
+  - to: LIB-155-11
+    type: see_also
+- path: scripts/export_openapi.py
+  name: 画面の API の OpenAPI の書き出し
+  description: 画面の API の OpenAPI を frontend/openapi.json に書き出す処理を受け持ち、orval の入力の書き出しを修正するときに参照する。
+  tags:
+  - tool:openapi
+  - topic:コード生成
+  - topic:api
+  related:
+  - to: IF-155-3
+    type: see_also
+- path: src/app/confirm-dialog.tsx
+  name: 画面共通の確認のダイアログと、それを開くフック
+  description: 画面共通の確認のダイアログと、それを開くフックを受け持ち、アプリとルートの confirm-dialog.tsx を修正するときに参照する。
+  tags:
+  - topic:ルート
+  - tool:react
+  - topic:ダイアログ
+  related:
+  - to: MOD-155-1
+    type: implements
+- path: src/app/error-fallback.stories.tsx
+  name: 描画中の例外の表示のストーリー
+  description: 描画中の例外の表示の状態ごとのストーリーを受け持ち、error-fallback.tsx のストーリーを追加・修正するときに参照する。
+  tags:
+  - tool:react
+  - tool:storybook
+  - topic:エラー
+  - topic:ルート
+  related:
+  - to: frontend/src/app/error-fallback.tsx
+    type: see_also
+- path: src/app/error-fallback.tsx
+  name: 描画中の例外の表示
+  description: 描画中の例外の表示を受け持ち、アプリとルートの error-fallback.tsx を修正するときに参照する。
+  tags:
+  - topic:ルート
+  - tool:react
+  - topic:エラー
+  related:
+  - to: MOD-155-2
+    type: implements
+- path: src/app/initial-loading.tsx
+  name: 最初の画面の読み込みが長いときだけ出す読み込み中の表示
+  description: 最初の画面の読み込みが長いときだけ出す読み込み中の表示を受け持ち、アプリとルートの initial-loading.tsx を修正するときに参照する。
+  tags:
+  - topic:ルート
+  - tool:react
+  - topic:ローディング
+  related:
+  - to: MOD-155-3
+    type: implements
+- path: src/app/pending.ts
+  name: 読み込み中の表示を出すまでの待ち時間
+  description: 読み込み中の表示を出すまでの待ち時間を受け持ち、アプリとルートの pending.ts を修正するときに参照する。
+  tags:
+  - topic:ルート
+  - tool:react
+  - topic:ローディング
+  related:
+  - to: MOD-155-4
+    type: implements
+- path: src/app/providers.tsx
+  name: 画面全体の Provider
+  description: 画面全体の Provider を受け持ち、アプリとルートの providers.tsx を修正するときに参照する。
+  tags:
+  - topic:ルート
+  - tool:react
+  related:
+  - to: MOD-155-5
+    type: implements
+- path: src/app/query-client.ts
+  name: TanStack Query の QueryClient の既定
+  description: TanStack Query の QueryClient の既定を受け持ち、アプリとルートの query-client.ts を修正するときに参照する。
+  tags:
+  - topic:ルート
+  - tool:react
+  - tool:tanstack-query
+  related:
+  - to: MOD-155-6
+    type: implements
+- path: src/app/router.tsx
+  name: TanStack Router のルーター
+  description: TanStack Router のルーターを受け持ち、アプリとルートの router.tsx を修正するときに参照する。
+  tags:
+  - topic:ルート
+  - tool:react
+  - tool:tanstack-router
+  related:
+  - to: MOD-155-7
+    type: implements
+- path: src/features/docs/doc-view/components/conversion-error-alert.tsx
+  name: 本文の代わりに出す変換の失敗
+  description: 本文の代わりに出す変換の失敗を受け持ち、文書の画面の conversion-error-alert.tsx を修正するときに参照する。
+  tags:
+  - topic:文書
+  - topic:画面
+  - topic:エラー
+  related:
+  - to: MOD-155-8
+    type: implements
+- path: src/features/docs/doc-view/components/diff-banner.tsx
+  name: 差分を強調していることと、比べている 2 つのリビジョンの案内
+  description: 差分を強調していることと、比べている 2 つのリビジョンの案内を受け持ち、文書の画面の diff-banner.tsx を修正するときに参照する。
+  tags:
+  - topic:文書
+  - topic:画面
+  - topic:差分
+  - topic:リビジョン
+  related:
+  - to: MOD-155-9
+    type: implements
+- path: src/features/docs/doc-view/components/doc-body.tsx
+  name: mdmark で描く文書の本文
+  description: mdmark で描く文書の本文を受け持ち、文書の画面の doc-body.tsx を修正するときに参照する。
+  tags:
+  - topic:文書
+  - topic:画面
+  - tool:mdmark
+  related:
+  - to: MOD-155-10
+    type: implements
+- path: src/features/docs/doc-view/components/doc-breadcrumb.tsx
+  name: 開いている文書の階層のパンくず
+  description: 開いている文書の階層のパンくずを受け持ち、文書の画面の doc-breadcrumb.tsx を修正するときに参照する。
+  tags:
+  - topic:文書
+  - topic:画面
+  - topic:パンくず
+  related:
+  - to: MOD-155-11
+    type: implements
+- path: src/features/docs/doc-view/components/doc-header.tsx
+  name: 文書のタイトルと情報（種類・パス・更新日時）
+  description: 文書のタイトルと情報（種類・パス・更新日時）を受け持ち、文書の画面の doc-header.tsx を修正するときに参照する。
+  tags:
+  - topic:文書
+  - topic:画面
+  related:
+  - to: MOD-155-12
+    type: implements
+- path: src/features/docs/doc-view/components/doc-main.tsx
+  name: 文書の画面の本文の領域（パンくず・文書のヘッダー・差分の帯・本文か変換の失敗か文書の無いタブ）
+  description: 文書の画面の本文の領域（パンくず・文書のヘッダー・差分の帯・本文か変換の失敗か文書の無いタブ）を受け持ち、文書の画面の doc-main.tsx を修正するときに参照する。
+  tags:
+  - topic:文書
+  - topic:画面
+  - topic:差分
+  - topic:パンくず
+  - topic:タブ
+  related:
+  - to: MOD-155-13
+    type: implements
+- path: src/features/docs/doc-view/components/doc-sidebar.tsx
+  name: 選んでいるタブの文書の一覧（サイドバーとドロワーの中身）
+  description: 選んでいるタブの文書の一覧（サイドバーとドロワーの中身）を受け持ち、文書の画面の doc-sidebar.tsx を修正するときに参照する。
+  tags:
+  - topic:文書
+  - topic:画面
+  - topic:サイドバー
+  - topic:タブ
+  related:
+  - to: MOD-155-14
+    type: implements
+- path: src/features/docs/doc-view/components/doc-skeleton.tsx
+  name: 文書の取得を待つ間の読み込み中の表示
+  description: 文書の取得を待つ間の読み込み中の表示を受け持ち、文書の画面の doc-skeleton.tsx を修正するときに参照する。
+  tags:
+  - topic:文書
+  - topic:画面
+  - topic:ローディング
+  related:
+  - to: MOD-155-15
+    type: implements
+- path: src/features/docs/doc-view/components/doc-tabs.tsx
+  name: 配信元の文書の種類のタブ
+  description: 配信元の文書の種類のタブを受け持ち、文書の画面の doc-tabs.tsx を修正するときに参照する。
+  tags:
+  - topic:文書
+  - topic:画面
+  - topic:タブ
+  - topic:配信元
+  related:
+  - to: MOD-155-16
+    type: implements
+- path: src/features/docs/doc-view/components/empty-tab.tsx
+  name: 選んだタブに文書が無いことの表示
+  description: 選んだタブに文書が無いことの表示を受け持ち、文書の画面の empty-tab.tsx を修正するときに参照する。
+  tags:
+  - topic:文書
+  - topic:画面
+  - topic:タブ
+  related:
+  - to: MOD-155-18
+    type: implements
+- path: src/features/docs/doc-view/components/sidebar-drawer.tsx
+  name: 狭い幅で文書の一覧を重ねて出すドロワー
+  description: 狭い幅で文書の一覧を重ねて出すドロワーを受け持ち、文書の画面の sidebar-drawer.tsx を修正するときに参照する。
+  tags:
+  - topic:文書
+  - topic:画面
+  - topic:サイドバー
+  related:
+  - to: MOD-155-19
+    type: implements
+- path: src/features/docs/doc-view/doc-view-screen.tsx
+  name: 文書の画面の最上位
+  description: 文書の画面の最上位を受け持ち、文書の画面の doc-view-screen.tsx を修正するときに参照する。
+  tags:
+  - topic:文書
+  - topic:画面
+  related:
+  - to: MOD-155-20
+    type: implements
+- path: src/features/docs/doc-view/hooks/mdmark-map.json
+  name: 図の種類の見た目の対応表
+  description: mdmark の図の種類ごとのラベル・アイコン・形・色の対応表を受け持ち、図の種類の見た目を修正するときに参照する。
+  tags:
+  - tool:mdmark
+  - topic:図
+  related:
+  - to: LIB-155-9
+    type: see_also
+- path: src/features/docs/doc-view/hooks/use-column-persistence.ts
+  name: mdmark の列の表示のメニューで出し入れした列を保存するフック
+  description: mdmark の列の表示のメニューで出し入れした列を保存するフックを受け持ち、文書の画面の use-column-persistence.ts を修正するときに参照する。
+  tags:
+  - topic:文書
+  - topic:画面
+  - tool:mdmark
+  - topic:列
+  related:
+  - to: MOD-155-21
+    type: implements
+- path: src/features/docs/doc-view/hooks/use-doc-navigation.ts
+  name: 文書の画面から別の文書・リビジョン・配信元へ移る操作
+  description: 文書の画面から別の文書・リビジョン・配信元へ移る操作を受け持ち、文書の画面の use-doc-navigation.ts を修正するときに参照する。
+  tags:
+  - topic:文書
+  - topic:画面
+  - topic:リビジョン
+  - topic:配信元
+  related:
+  - to: MOD-155-22
+    type: implements
+- path: src/features/docs/doc-view/hooks/use-doc-screen-effects.ts
+  name: 文書の画面が開いている間の画面の外への副作用（タブのタイトル・直前の文書）
+  description: 文書の画面が開いている間の画面の外への副作用（タブのタイトル・直前の文書）を受け持ち、文書の画面の use-doc-screen-effects.ts を修正するときに参照する。
+  tags:
+  - topic:文書
+  - topic:画面
+  - topic:タブ
+  related:
+  - to: MOD-155-23
+    type: implements
+- path: src/features/docs/doc-view/hooks/use-locating.ts
+  name: コメントのパネルで場所を選ばれたコメントを持ち、文書を開くか本文のマーカーへスクロールするかを決めるフック
+  description: コメントのパネルで場所を選ばれたコメントを持ち、文書を開くか本文のマーカーへスクロールするかを決めるフックを受け持ち、文書の画面の use-locating.ts を修正するときに参照する。
+  tags:
+  - topic:文書
+  - topic:画面
+  - topic:コメント
+  related:
+  - to: MOD-155-24
+    type: implements
+- path: src/features/docs/doc-view/hooks/use-mdmark.ts
+  name: mdmark の `mount` を React の寿命に合わせて呼ぶフック
+  description: mdmark の `mount` を React の寿命に合わせて呼ぶフックを受け持ち、文書の画面の use-mdmark.ts を修正するときに参照する。
+  tags:
+  - topic:文書
+  - topic:画面
+  - tool:mdmark
+  - tool:react
+  related:
+  - to: MOD-155-25
+    type: implements
+- path: src/features/docs/doc-view/nav.ts
+  name: 文書の取得の `tabs` から、開いているページ・パンくず・ページのタイトルを取得する純粋な関数
+  description: 文書の取得の `tabs` から、開いているページ・パンくず・ページのタイトルを取得する純粋な関数を受け持ち、文書の画面の nav.ts を修正するときに参照する。
+  tags:
+  - topic:文書
+  - topic:画面
+  - topic:パンくず
+  related:
+  - to: MOD-155-26
+    type: implements
+- path: src/features/docs/doc-view/queries.ts
+  name: 文書の画面の問い合わせとルートの loader
+  description: 文書の画面の問い合わせとルートの loader を受け持ち、文書の画面の queries.ts を修正するときに参照する。
+  tags:
+  - topic:文書
+  - topic:画面
+  - tool:tanstack-query
+  - tool:tanstack-router
+  - topic:ルート
+  related:
+  - to: MOD-155-27
+    type: implements
+- path: src/features/docs/doc-view/search.ts
+  name: 文書の画面の URL のクエリ
+  description: 文書の画面の URL のクエリを受け持ち、文書の画面の search.ts を修正するときに参照する。
+  tags:
+  - topic:文書
+  - topic:画面
+  related:
+  - to: MOD-155-28
+    type: implements
+- path: src/features/docs/doc-view/tables.ts
+  name: 本文の Markdown の表と、文書の取得の表のキーを対にする関数
+  description: 本文の Markdown の表と、文書の取得の表のキーを対にする関数を受け持ち、文書の画面の tables.ts を修正するときに参照する。
+  tags:
+  - topic:文書
+  - topic:画面
+  - topic:表
+  related:
+  - to: MOD-155-212
+    type: implements
+- path: src/features/docs/not-found/components/missing-links.tsx
+  name: 見つからない画面の次のリンク（配信元のトップ・設定画面）と、代わりに開ける配信中の配信元
+  description: 見つからない画面の次のリンク（配信元のトップ・設定画面）と、代わりに開ける配信中の配信元を受け持ち、文書の画面の missing-links.tsx を修正するときに参照する。
+  tags:
+  - topic:文書
+  - topic:画面
+  - topic:配信元
+  - topic:見つからない画面
+  related:
+  - to: MOD-155-30
+    type: implements
+- path: src/features/docs/not-found/hooks/use-missing-view.ts
+  name: 見つからない画面に出す内容と、参照した配信元・リビジョンの一覧
+  description: 見つからない画面に出す内容と、参照した配信元・リビジョンの一覧を受け持ち、文書の画面の use-missing-view.ts を修正するときに参照する。
+  tags:
+  - topic:文書
+  - topic:画面
+  - topic:リビジョン
+  - topic:配信元
+  - topic:見つからない画面
+  related:
+  - to: MOD-155-31
+    type: implements
+- path: src/features/docs/not-found/missing.ts
+  name: 文書の取得の 404 の `missing` を、見つからない画面の文言にする処理
+  description: 文書の取得の 404 の `missing` を、見つからない画面の文言にする処理を受け持ち、文書の画面の missing.ts を修正するときに参照する。
+  tags:
+  - topic:文書
+  - topic:画面
+  - topic:見つからない画面
+  related:
+  - to: MOD-155-32
+    type: implements
+- path: src/features/docs/not-found/not-found-screen.stories.tsx
+  name: 見つからない画面のストーリー
+  description: 見つからない画面の状態ごとのストーリーを受け持ち、not-found-screen.tsx のストーリーを追加・修正するときに参照する。
+  tags:
+  - tool:storybook
+  - topic:文書
+  - topic:画面
+  - topic:見つからない画面
+  related:
+  - to: frontend/src/features/docs/not-found/not-found-screen.tsx
+    type: see_also
+- path: src/features/docs/not-found/not-found-screen.tsx
+  name: 見つからない画面
+  description: 見つからない画面を受け持ち、文書の画面の not-found-screen.tsx を修正するときに参照する。
+  tags:
+  - topic:文書
+  - topic:画面
+  - topic:見つからない画面
+  related:
+  - to: MOD-155-33
+    type: implements
+- path: src/features/docs/shared/comments/comment-format.ts
+  name: 選んだコメントのコピーの本文と、Issue の作成画面の URL
+  description: 選んだコメントのコピーの本文と、Issue の作成画面の URL を受け持ち、文書の画面の comment-format.ts を修正するときに参照する。
+  tags:
+  - topic:文書
+  - topic:画面
+  - topic:コメント
+  - topic:issue
+  related:
+  - to: MOD-155-34
+    type: implements
+- path: src/features/docs/shared/comments/comment-panel.tsx
+  name: 溜めたコメントの一覧と、コピー・起票
+  description: 溜めたコメントの一覧と、コピー・起票を受け持ち、文書の画面の comment-panel.tsx を修正するときに参照する。
+  tags:
+  - topic:文書
+  - topic:画面
+  - topic:コメント
+  - topic:ストア
+  related:
+  - to: MOD-155-35
+    type: implements
+- path: src/features/docs/shared/comments/comment-store.ts
+  name: このブラウザのタブで溜めたコメントの配置先
+  description: このブラウザのタブで溜めたコメントの配置先を受け持ち、文書の画面の comment-store.ts を修正するときに参照する。
+  tags:
+  - topic:文書
+  - topic:画面
+  - topic:コメント
+  - topic:タブ
+  - topic:ストア
+  related:
+  - to: MOD-155-36
+    type: implements
+- path: src/features/docs/shared/search-dialog/highlight.ts
+  name: 検索の結果の抜粋の一致した箇所を分ける処理
+  description: 検索の結果の抜粋の一致した箇所を分ける処理を受け持ち、文書の画面の highlight.ts を修正するときに参照する。
+  tags:
+  - topic:文書
+  - topic:画面
+  related:
+  - to: MOD-155-37
+    type: implements
+- path: src/features/docs/shared/search-dialog/search-dialog.stories.tsx
+  name: 開いている配信元・リビジョンの文書を単語で探すダイアログのストーリー
+  description: 開いている配信元・リビジョンの文書を単語で探すダイアログの状態ごとのストーリーを受け持ち、search-dialog.tsx のストーリーを追加・修正するときに参照する。
+  tags:
+  - tool:storybook
+  - topic:ダイアログ
+  - topic:リビジョン
+  - topic:文書
+  - topic:画面
+  - topic:配信元
+  related:
+  - to: frontend/src/features/docs/shared/search-dialog/search-dialog.tsx
+    type: see_also
+- path: src/features/docs/shared/search-dialog/search-dialog.tsx
+  name: 開いている配信元・リビジョンの文書を単語で探すダイアログ
+  description: 開いている配信元・リビジョンの文書を単語で探すダイアログを受け持ち、文書の画面の search-dialog.tsx を修正するときに参照する。
+  tags:
+  - topic:文書
+  - topic:画面
+  - topic:ダイアログ
+  - topic:リビジョン
+  - topic:配信元
+  related:
+  - to: MOD-155-38
+    type: implements
+- path: src/features/docs/shared/serving-sources.ts
+  name: 端末の設定の取得から、配信中の配信元を取り出す処理
+  description: 端末の設定の取得から、配信中の配信元を取り出す処理を受け持ち、文書の画面の serving-sources.ts を修正するときに参照する。
+  tags:
+  - topic:文書
+  - topic:画面
+  - topic:配信元
+  related:
+  - to: MOD-155-39
+    type: implements
+- path: src/features/settings/settings/components/source-delete-dialog.tsx
+  name: 削除の確認のダイアログ
+  description: 削除の確認のダイアログを受け持ち、設定画面の source-delete-dialog.tsx を修正するときに参照する。
+  tags:
+  - topic:設定画面
+  - topic:配信元
+  - topic:ダイアログ
+  - topic:設定
+  - topic:画面
+  related:
+  - to: MOD-155-40
+    type: implements
+- path: src/features/settings/settings/components/source-edit-dialog.tsx
+  name: 配信元のダイアログ（追加・編集）
+  description: 配信元のダイアログ（追加・編集）を受け持ち、設定画面の source-edit-dialog.tsx を修正するときに参照する。
+  tags:
+  - topic:設定画面
+  - topic:配信元
+  - topic:ダイアログ
+  - topic:設定
+  - topic:画面
+  related:
+  - to: MOD-155-41
+    type: implements
+- path: src/features/settings/settings/components/source-skeleton.tsx
+  name: 端末の設定の取得を待つ間の、配信元の一覧の読み込み中の表示
+  description: 端末の設定の取得を待つ間の、配信元の一覧の読み込み中の表示を受け持ち、設定画面の source-skeleton.tsx を修正するときに参照する。
+  tags:
+  - topic:設定画面
+  - topic:配信元
+  - topic:ローディング
+  - topic:設定
+  - topic:画面
+  related:
+  - to: MOD-155-42
+    type: implements
+- path: src/features/settings/settings/components/source-table.tsx
+  name: 配信元の一覧の表
+  description: 配信元の一覧の表を受け持ち、設定画面の source-table.tsx を修正するときに参照する。
+  tags:
+  - topic:設定画面
+  - topic:配信元
+  - topic:表
+  - topic:設定
+  - topic:画面
+  related:
+  - to: MOD-155-43
+    type: implements
+- path: src/features/settings/settings/components/status-badge.tsx
+  name: 配信元の状態のバッジと補足
+  description: 配信元の状態のバッジと補足を受け持ち、設定画面の status-badge.tsx を修正するときに参照する。
+  tags:
+  - topic:設定画面
+  - topic:配信元
+  - topic:状態
+  - topic:設定
+  - topic:画面
+  related:
+  - to: MOD-155-44
+    type: implements
+- path: src/features/settings/settings/form.ts
+  name: 配信元のダイアログの入力のスキーマと、`sources[]` への反映
+  description: 配信元のダイアログの入力のスキーマと、`sources[]` への反映を受け持ち、設定画面の form.ts を修正するときに参照する。
+  tags:
+  - topic:設定画面
+  - topic:配信元
+  - topic:ダイアログ
+  - topic:スキーマ
+  - topic:設定
+  - topic:画面
+  related:
+  - to: MOD-155-45
+    type: implements
+- path: src/features/settings/settings/hooks/use-source-form.ts
+  name: 配信元のダイアログのフォームの状態と保存
+  description: 配信元のダイアログのフォームの状態と保存を受け持ち、設定画面の use-source-form.ts を修正するときに参照する。
+  tags:
+  - topic:設定画面
+  - topic:配信元
+  - topic:ダイアログ
+  - topic:フォーム
+  - topic:設定
+  - topic:画面
+  related:
+  - to: MOD-155-46
+    type: implements
+- path: src/features/settings/settings/problem-errors.ts
+  name: 端末の設定の保存の 422 の `errors[]` を、ダイアログの項目のエラーに振り分ける処理
+  description: 端末の設定の保存の 422 の `errors[]` を、ダイアログの項目のエラーに振り分ける処理を受け持ち、設定画面の problem-errors.ts を修正するときに参照する。
+  tags:
+  - topic:設定画面
+  - topic:配信元
+  - topic:ダイアログ
+  - topic:エラー
+  - topic:項目
+  - topic:設定
+  - topic:画面
+  related:
+  - to: MOD-155-47
+    type: implements
+- path: src/features/settings/settings/queries.ts
+  name: 端末の設定の保存の mutation
+  description: 端末の設定の保存の mutation を受け持ち、設定画面の queries.ts を修正するときに参照する。
+  tags:
+  - topic:設定画面
+  - topic:配信元
+  - tool:tanstack-query
+  - topic:設定
+  - topic:画面
+  related:
+  - to: MOD-155-48
+    type: implements
+- path: src/features/settings/settings/settings-screen.stories.tsx
+  name: 設定画面のストーリー
+  description: 設定画面の状態ごとのストーリーを受け持ち、settings-screen.tsx のストーリーを追加・修正するときに参照する。
+  tags:
+  - tool:storybook
+  - topic:画面
+  - topic:設定
+  - topic:設定画面
+  - topic:配信元
+  related:
+  - to: frontend/src/features/settings/settings/settings-screen.tsx
+    type: see_also
+- path: src/features/settings/settings/settings-screen.tsx
+  name: 設定画面
+  description: 設定画面を受け持ち、設定画面の settings-screen.tsx を修正するときに参照する。
+  tags:
+  - topic:設定画面
+  - topic:配信元
+  - topic:設定
+  - topic:画面
+  related:
+  - to: MOD-155-49
+    type: implements
+- path: src/index.css
+  name: 画面全体の CSS
+  description: 画面全体の CSS を受け持ち、index.css を修正するときに参照する。
+  tags:
+  - topic:css
+  - topic:スタイル
+  related:
+  - to: MOD-155-50
+    type: implements
+- path: src/main.tsx
+  name: SPA のエントリーポイント
+  description: SPA のエントリーポイントを受け持ち、アプリとルートの main.tsx を修正するときに参照する。
+  tags:
+  - topic:ルート
+  - tool:react
+  - topic:エントリポイント
+  related:
+  - to: MOD-155-51
+    type: implements
+- path: src/preflight-outside-mdmark.css
+  name: Tailwind の Preflight を、mdmark が描く本文（`.mdmark` とその子孫）の外だけに適用する CSS
+  description: Tailwind の Preflight を、mdmark が描く本文（`.mdmark` とその子孫）の外だけに適用する CSS を受け持ち、preflight-outside-mdmark.css を修正するときに参照する。
+  tags:
+  - topic:css
+  - topic:スタイル
+  - tool:mdmark
+  - tool:tailwindcss
+  related:
+  - to: MOD-232-1
+    type: implements
+- path: src/routes/$source/$.tsx
+  name: '`/{配信元の ID}/{文書のパス}` のルート'
+  description: '`/{配信元の ID}/{文書のパス}` のルートを受け持ち、アプリとルートの $source/$.tsx を修正するときに参照する。'
+  tags:
+  - topic:ルート
+  - tool:react
+  - topic:配信元
+  related:
+  - to: MOD-155-52
+    type: implements
+- path: src/routes/$source/index.tsx
+  name: '`/{配信元の ID}` のルート'
+  description: '`/{配信元の ID}` のルートを受け持ち、アプリとルートの $source/index.tsx を修正するときに参照する。'
+  tags:
+  - topic:ルート
+  - tool:react
+  - topic:配信元
+  related:
+  - to: MOD-155-53
+    type: implements
+- path: src/routes/[_]settings.tsx
+  name: '`/_settings` のルート'
+  description: '`/_settings` のルートを受け持ち、アプリとルートの [_]settings.tsx を修正するときに参照する。'
+  tags:
+  - topic:ルート
+  - tool:react
+  - topic:設定画面
+  - topic:設定
+  - topic:画面
+  related:
+  - to: MOD-155-54
+    type: implements
+- path: src/routes/__root.tsx
+  name: 全てのルートの親
+  description: 全てのルートの親を受け持ち、アプリとルートの __root.tsx を修正するときに参照する。
+  tags:
+  - topic:ルート
+  - tool:react
+  related:
+  - to: MOD-155-55
+    type: implements
+- path: src/routes/index.tsx
+  name: '`/` を開いたときの振り分け'
+  description: '`/` を開いたときの振り分けを受け持ち、アプリとルートの index.tsx を修正するときに参照する。'
+  tags:
+  - topic:ルート
+  - tool:react
+  related:
+  - to: MOD-155-56
+    type: implements
+- path: src/shared/adapters/api-client.ts
+  name: orval が生成した API の関数が通る fetch の mutator
+  description: orval が生成した API の関数が通る fetch の mutator を受け持ち、共通の api-client.ts を修正するときに参照する。
+  tags:
+  - topic:ユーティリティ
+  - tool:orval
+  - topic:api
+  related:
+  - to: MOD-155-57
+    type: implements
+- path: src/shared/components/project-index-unreachable.stories.tsx
+  name: project-index から受け取れなかったことを、理由の種類ごとの見出しと説明・接続先・理由・再読み込みで出す警告のストーリー
+  description: project-index から受け取れなかったことを、理由の種類ごとの見出しと説明・接続先・理由・再読み込みで出す警告の状態ごとのストーリーを受け持ち、project-index-unreachable.tsx のストーリーを追加・修正するときに参照する。
+  tags:
+  - tool:project-index
+  - tool:storybook
+  - topic:エラー
+  - topic:ユーティリティ
+  related:
+  - to: frontend/src/shared/components/project-index-unreachable.tsx
+    type: see_also
+- path: src/shared/components/project-index-unreachable.tsx
+  name: project-index から受け取れなかったことを、理由の種類ごとの見出しと説明・接続先・理由・再読み込みで出す警告
+  description: project-index から受け取れなかったことを、理由の種類ごとの見出しと説明・接続先・理由・再読み込みで出す警告を受け持ち、共通の project-index-unreachable.tsx を修正するときに参照する。
+  tags:
+  - topic:ユーティリティ
+  - tool:project-index
+  - topic:エラー
+  related:
+  - to: MOD-230-1
+    type: implements
+- path: src/shared/components/shortcut-dialog/shortcut-dialog.stories.tsx
+  name: '`?` で開くショートカットの一覧のストーリー'
+  description: '`?` で開くショートカットの一覧の状態ごとのストーリーを受け持ち、shortcut-dialog.tsx のストーリーを追加・修正するときに参照する。'
+  tags:
+  - tool:storybook
+  - topic:ショートカット
+  - topic:ユーティリティ
+  related:
+  - to: frontend/src/shared/components/shortcut-dialog/shortcut-dialog.tsx
+    type: see_also
+- path: src/shared/components/shortcut-dialog/shortcut-dialog.tsx
+  name: '`?` で開くショートカットの一覧'
+  description: '`?` で開くショートカットの一覧を受け持ち、共通の shortcut-dialog.tsx を修正するときに参照する。'
+  tags:
+  - topic:ユーティリティ
+  - topic:ショートカット
+  related:
+  - to: MOD-155-58
+    type: implements
+- path: src/shared/components/skip-link.tsx
+  name: キーボードでフォーカスしたときだけ見える、本文の領域へフォーカスを移すリンク
+  description: キーボードでフォーカスしたときだけ見える、本文の領域へフォーカスを移すリンクを受け持ち、共通の skip-link.tsx を修正するときに参照する。
+  tags:
+  - topic:ユーティリティ
+  - topic:キーボード
+  related:
+  - to: MOD-155-59
+    type: implements
+- path: src/shared/components/topbar/topbar.stories.tsx
+  name: 3 画面に共通のトップバーのストーリー
+  description: 3 画面に共通のトップバーの状態ごとのストーリーを受け持ち、topbar.tsx のストーリーを追加・修正するときに参照する。
+  tags:
+  - tool:storybook
+  - topic:トップバー
+  - topic:ユーティリティ
+  related:
+  - to: frontend/src/shared/components/topbar/topbar.tsx
+    type: see_also
+- path: src/shared/components/topbar/topbar.tsx
+  name: 3 画面に共通のトップバー
+  description: 3 画面に共通のトップバーを受け持ち、共通の topbar.tsx を修正するときに参照する。
+  tags:
+  - topic:ユーティリティ
+  - topic:トップバー
+  related:
+  - to: MOD-155-60
+    type: implements
+- path: src/shared/components/ui/alert-dialog.tsx
+  name: shadcn の確認のダイアログの部品
+  description: shadcn から追加した確認のダイアログの部品を受け持ち、確認のダイアログの見た目や振る舞いを修正するときに参照する。
+  tags:
+  - tool:shadcn
+  - topic:部品
+  related:
+  - to: LIB-155-18
+    type: see_also
+- path: src/shared/components/ui/alert.tsx
+  name: shadcn の通知の枠の部品
+  description: shadcn から追加した通知の枠の部品を受け持ち、通知の枠の見た目や振る舞いを修正するときに参照する。
+  tags:
+  - tool:shadcn
+  - topic:部品
+  related:
+  - to: LIB-155-18
+    type: see_also
+- path: src/shared/components/ui/badge.tsx
+  name: shadcn のバッジの部品
+  description: shadcn から追加したバッジの部品を受け持ち、バッジの見た目や振る舞いを修正するときに参照する。
+  tags:
+  - tool:shadcn
+  - topic:部品
+  related:
+  - to: LIB-155-18
+    type: see_also
+- path: src/shared/components/ui/breadcrumb.tsx
+  name: shadcn のパンくずの部品
+  description: shadcn から追加したパンくずの部品を受け持ち、パンくずの見た目や振る舞いを修正するときに参照する。
+  tags:
+  - tool:shadcn
+  - topic:部品
+  related:
+  - to: LIB-155-18
+    type: see_also
+- path: src/shared/components/ui/button.tsx
+  name: shadcn のボタンの部品
+  description: shadcn から追加したボタンの部品を受け持ち、ボタンの見た目や振る舞いを修正するときに参照する。
+  tags:
+  - tool:shadcn
+  - topic:部品
+  related:
+  - to: LIB-155-18
+    type: see_also
+- path: src/shared/components/ui/checkbox.tsx
+  name: shadcn のチェックボックスの部品
+  description: shadcn から追加したチェックボックスの部品を受け持ち、チェックボックスの見た目や振る舞いを修正するときに参照する。
+  tags:
+  - tool:shadcn
+  - topic:部品
+  related:
+  - to: LIB-155-18
+    type: see_also
+- path: src/shared/components/ui/command.tsx
+  name: shadcn のコマンドの一覧の部品
+  description: shadcn から追加したコマンドの一覧の部品を受け持ち、コマンドの一覧の見た目や振る舞いを修正するときに参照する。
+  tags:
+  - tool:shadcn
+  - topic:部品
+  related:
+  - to: LIB-155-18
+    type: see_also
+- path: src/shared/components/ui/dialog.tsx
+  name: shadcn のダイアログの部品
+  description: shadcn から追加したダイアログの部品を受け持ち、ダイアログの見た目や振る舞いを修正するときに参照する。
+  tags:
+  - tool:shadcn
+  - topic:部品
+  related:
+  - to: LIB-155-18
+    type: see_also
+- path: src/shared/components/ui/dropdown-menu.tsx
+  name: shadcn のドロップダウンメニューの部品
+  description: shadcn から追加したドロップダウンメニューの部品を受け持ち、ドロップダウンメニューの見た目や振る舞いを修正するときに参照する。
+  tags:
+  - tool:shadcn
+  - topic:部品
+  related:
+  - to: LIB-155-18
+    type: see_also
+- path: src/shared/components/ui/input-group.tsx
+  name: shadcn の入力欄のグループの部品
+  description: shadcn から追加した入力欄のグループの部品を受け持ち、入力欄のグループの見た目や振る舞いを修正するときに参照する。
+  tags:
+  - tool:shadcn
+  - topic:部品
+  related:
+  - to: LIB-155-18
+    type: see_also
+- path: src/shared/components/ui/input.tsx
+  name: shadcn の入力欄の部品
+  description: shadcn から追加した入力欄の部品を受け持ち、入力欄の見た目や振る舞いを修正するときに参照する。
+  tags:
+  - tool:shadcn
+  - topic:部品
+  related:
+  - to: LIB-155-18
+    type: see_also
+- path: src/shared/components/ui/kbd.tsx
+  name: shadcn のキーの表示の部品
+  description: shadcn から追加したキーの表示の部品を受け持ち、キーの表示の見た目や振る舞いを修正するときに参照する。
+  tags:
+  - tool:shadcn
+  - topic:部品
+  related:
+  - to: LIB-155-18
+    type: see_also
+- path: src/shared/components/ui/label.tsx
+  name: shadcn のラベルの部品
+  description: shadcn から追加したラベルの部品を受け持ち、ラベルの見た目や振る舞いを修正するときに参照する。
+  tags:
+  - tool:shadcn
+  - topic:部品
+  related:
+  - to: LIB-155-18
+    type: see_also
+- path: src/shared/components/ui/select.tsx
+  name: shadcn の選択の一覧の部品
+  description: shadcn から追加した選択の一覧の部品を受け持ち、選択の一覧の見た目や振る舞いを修正するときに参照する。
+  tags:
+  - tool:shadcn
+  - topic:部品
+  related:
+  - to: LIB-155-18
+    type: see_also
+- path: src/shared/components/ui/separator.tsx
+  name: shadcn の区切り線の部品
+  description: shadcn から追加した区切り線の部品を受け持ち、区切り線の見た目や振る舞いを修正するときに参照する。
+  tags:
+  - tool:shadcn
+  - topic:部品
+  related:
+  - to: LIB-155-18
+    type: see_also
+- path: src/shared/components/ui/sheet.tsx
+  name: shadcn のシートの部品
+  description: shadcn から追加したシートの部品を受け持ち、シートの見た目や振る舞いを修正するときに参照する。
+  tags:
+  - tool:shadcn
+  - topic:部品
+  related:
+  - to: LIB-155-18
+    type: see_also
+- path: src/shared/components/ui/skeleton.tsx
+  name: shadcn のスケルトンの部品
+  description: shadcn から追加したスケルトンの部品を受け持ち、スケルトンの見た目や振る舞いを修正するときに参照する。
+  tags:
+  - tool:shadcn
+  - topic:部品
+  related:
+  - to: LIB-155-18
+    type: see_also
+- path: src/shared/components/ui/sonner.tsx
+  name: shadcn のトーストの部品
+  description: shadcn から追加したトーストの部品を受け持ち、トーストの見た目や振る舞いを修正するときに参照する。
+  tags:
+  - tool:shadcn
+  - topic:部品
+  related:
+  - to: LIB-155-18
+    type: see_also
+- path: src/shared/components/ui/switch.tsx
+  name: shadcn のスイッチの部品
+  description: shadcn から追加したスイッチの部品を受け持ち、スイッチの見た目や振る舞いを修正するときに参照する。
+  tags:
+  - tool:shadcn
+  - topic:部品
+  related:
+  - to: LIB-155-18
+    type: see_also
+- path: src/shared/components/ui/table.tsx
+  name: shadcn の表の部品
+  description: shadcn から追加した表の部品を受け持ち、表の見た目や振る舞いを修正するときに参照する。
+  tags:
+  - tool:shadcn
+  - topic:部品
+  related:
+  - to: LIB-155-18
+    type: see_also
+- path: src/shared/components/ui/tabs.tsx
+  name: shadcn のタブの部品
+  description: shadcn から追加したタブの部品を受け持ち、タブの見た目や振る舞いを修正するときに参照する。
+  tags:
+  - tool:shadcn
+  - topic:部品
+  related:
+  - to: LIB-155-18
+    type: see_also
+- path: src/shared/components/ui/textarea.tsx
+  name: shadcn の複数行の入力欄の部品
+  description: shadcn から追加した複数行の入力欄の部品を受け持ち、複数行の入力欄の見た目や振る舞いを修正するときに参照する。
+  tags:
+  - tool:shadcn
+  - topic:部品
+  related:
+  - to: LIB-155-18
+    type: see_also
+- path: src/shared/components/ui/tooltip.tsx
+  name: shadcn のツールチップの部品
+  description: shadcn から追加したツールチップの部品を受け持ち、ツールチップの見た目や振る舞いを修正するときに参照する。
+  tags:
+  - tool:shadcn
+  - topic:部品
+  related:
+  - to: LIB-155-18
+    type: see_also
+- path: src/shared/core/app-error.ts
+  name: 画面の API の problem+json を受ける例外の階層
+  description: 画面の API の problem+json を受ける例外の階層を受け持ち、共通の app-error.ts を修正するときに参照する。
+  tags:
+  - topic:ユーティリティ
+  - topic:エラー
+  related:
+  - to: MOD-155-61
+    type: implements
+- path: src/shared/core/handle-app-error.ts
+  name: 画面で取得した例外を通知とログに振り分ける処理
+  description: 画面で取得した例外を通知とログに振り分ける処理を受け持ち、共通の handle-app-error.ts を修正するときに参照する。
+  tags:
+  - topic:ユーティリティ
+  - topic:エラー
+  - topic:ログ
+  - topic:通知
+  related:
+  - to: MOD-155-62
+    type: implements
+- path: src/shared/core/schema.ts
+  name: 画面の中で共通に使用する zod のスキーマ
+  description: 画面の中で共通に使用する zod のスキーマを受け持ち、共通の schema.ts を修正するときに参照する。
+  tags:
+  - topic:ユーティリティ
+  - topic:スキーマ
+  - tool:zod
+  related:
+  - to: MOD-155-63
+    type: implements
+- path: src/shared/core/shortcuts.ts
+  name: キーボードのショートカットの定義
+  description: キーボードのショートカットの定義を受け持ち、共通の shortcuts.ts を修正するときに参照する。
+  tags:
+  - topic:ユーティリティ
+  - topic:ショートカット
+  - topic:キーボード
+  related:
+  - to: MOD-155-64
+    type: implements
+- path: src/shared/hooks/use-delayed-flag.ts
+  name: 待ちが続いたときだけ true にするフック（短い待ちで読み込み中の表示を出さないため）
+  description: 待ちが続いたときだけ true にするフック（短い待ちで読み込み中の表示を出さないため）を受け持ち、共通の use-delayed-flag.ts を修正するときに参照する。
+  tags:
+  - topic:ユーティリティ
+  - topic:ローディング
+  related:
+  - to: MOD-155-66
+    type: implements
+- path: src/shared/hooks/use-media-query.ts
+  name: CSS のメディアクエリに今当たっているかを返却するフック
+  description: CSS のメディアクエリに今当たっているかを返却するフックを受け持ち、共通の use-media-query.ts を修正するときに参照する。
+  tags:
+  - topic:ユーティリティ
+  - topic:レスポンシブ
+  - topic:css
+  related:
+  - to: MOD-155-67
+    type: implements
+- path: src/shared/hooks/use-shortcut.ts
+  name: ショートカットの定義の ID でキーを受けるフック
+  description: ショートカットの定義の ID でキーを受けるフックを受け持ち、共通の use-shortcut.ts を修正するときに参照する。
+  tags:
+  - topic:ユーティリティ
+  - topic:ショートカット
+  related:
+  - to: MOD-155-68
+    type: implements
+- path: src/shared/lib/format.ts
+  name: 画面に出す日時の書式
+  description: 画面に出す日時の書式を受け持ち、共通の format.ts を修正するときに参照する。
+  tags:
+  - topic:ユーティリティ
+  - topic:日時
+  related:
+  - to: MOD-155-69
+    type: implements
+- path: src/shared/lib/logger.ts
+  name: ブラウザのコンソールへ JSON Lines で記載するロガー
+  description: ブラウザのコンソールへ JSON Lines で記載するロガーを受け持ち、共通の logger.ts を修正するときに参照する。
+  tags:
+  - topic:ユーティリティ
+  - topic:ログ
+  related:
+  - to: MOD-155-70
+    type: implements
+- path: src/shared/lib/utils.ts
+  name: クラス名の結合
+  description: Tailwind CSS のクラス名を結合して重なりを解く関数を受け持ち、部品のクラス名の組み立てを修正するときに参照する。
+  tags:
+  - tool:tailwindcss
+  - topic:ユーティリティ
+  related:
+  - to: LIB-155-21
+    type: see_also
+- path: src/shared/stores/last-doc.ts
+  name: 設定画面から文書の画面へ戻る先（直前に開いていた文書）
+  description: 設定画面から文書の画面へ戻る先（直前に開いていた文書）を受け持ち、共通の last-doc.ts を修正するときに参照する。
+  tags:
+  - topic:ユーティリティ
+  - topic:文書
+  - topic:設定画面
+  - topic:設定
+  - topic:画面
+  related:
+  - to: MOD-155-71
+    type: implements
+- path: src/shared/stores/preferences.ts
+  name: ブラウザに保存する画面の設定（明暗・1 文字のショートカット）
+  description: ブラウザに保存する画面の設定（明暗・1 文字のショートカット）を受け持ち、共通の preferences.ts を修正するときに参照する。
+  tags:
+  - topic:ユーティリティ
+  - topic:ショートカット
+  - topic:テーマ
+  related:
+  - to: MOD-155-72
+    type: implements
+- path: src/testing/msw/handlers.ts
+  name: 単体テスト・結合テスト・Storybook が使用する MSW のハンドラ
+  description: 単体テスト・結合テスト・Storybook が使用する MSW のハンドラを受け持ち、共通の handlers.ts を修正するときに参照する。
+  tags:
+  - topic:ユーティリティ
+  - tool:msw
+  - tool:storybook
+  - topic:単体テスト
+  - topic:テスト
+  related:
+  - to: MOD-155-73
+    type: implements
+- path: src/testing/setup-tests.ts
+  related:
+  - to: MOD-155-74
+    type: implements
+  name: 画面の単体テストの共通の準備
+  description: 画面の単体テストの前に読み込む共通の準備を受け持ち、単体テストの環境を修正するときに参照する。
+  tags:
+  - topic:単体テスト
+  - tool:vitest
+- path: tsconfig.json
+  name: 画面の TypeScript の設定
+  description: 画面のコードの型検査とパスの別名の TypeScript の設定を受け持ち、型検査の設定を修正するときに参照する。
+  tags:
+  - tool:typescript
+  - topic:型
+  related:
+  - to: LIB-155-26
+    type: see_also
+- path: vite.config.ts
+  name: 画面のビルドの設定
+  description: 開発サーバーと本番のビルドの Vite の設定を受け持ち、画面のビルドや開発サーバーを修正するときに参照する。
+  tags:
+  - tool:vite
+  - topic:ビルド
+  related:
+  - to: LIB-155-28
+    type: see_also
+- path: vitest.config.ts
+  name: 画面の単体テストの設定
+  description: 画面の単体テストを実行する Vitest の設定を受け持ち、単体テストの対象や環境を修正するときに参照する。
+  tags:
+  - tool:vitest
+  - topic:単体テスト
+  related:
+  - to: LIB-155-29
+    type: see_also
+  - to: TP-155-1
+    type: see_also
+checkpoint:
+  commit: 05915628138ff51e7b1be495775c9f556a2a0825
+  reviewed: []

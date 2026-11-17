@@ -1,4 +1,4 @@
-# yaml-language-server: $schema=https://raw.githubusercontent.com/shuhei1101/project-index/develop/schemas/project-index.schema.json
+# yaml-language-server: $schema=https://raw.githubusercontent.com/shuhei1101/project-index/v0.1.0/schemas/project-index.schema.json
 version: "3"
 name: dev-docs
 default_ref: develop
@@ -186,17 +186,6 @@ documents:
       ref: design-schemas/v8.4.0
     metadata:
       description: summary
-  - id: files_root
-    title: docs 直下の Markdown
-    paths: ["docs/_root/files.yml"]
-    schema:
-      source: knowledge
-      path: schemas/knowledge-files.schema.yaml
-      ref: design-schemas/v8.4.0
-    records: files
-    body_file: path
-    metadata:
-      visibility: visibility
   - id: files_guide
     title: 公開ドキュメントの Markdown
     paths: ["docs/guide/files.yml"]
@@ -220,3 +209,176 @@ documents:
       ref: design-schemas/v8.4.0
     records: files
     body_file: path
+  - id: root
+    title: リポジトリの設定とスクリプト
+    paths: [files.yaml]
+    exclude: [.git, "docs/pr/**", "docs/**/README.md", package-lock.json, uv.lock]
+    schema:
+      source: knowledge
+      path: schemas/knowledge-files.schema.yaml
+      ref: design-schemas/v8.4.0
+    records: files
+    body_file: path
+  - id: src
+    title: サーバーのコード
+    paths: [src/files.yaml]
+    exclude: ["src/dev_docs/screen/**"]
+    schema:
+      source: knowledge
+      path: schemas/knowledge-files.schema.yaml
+      ref: design-schemas/v8.4.0
+    records: files
+    body_file: path
+  - id: frontend
+    title: 画面のコード
+    paths: [frontend/files.yaml]
+    exclude: ["frontend/src/shared/api/generated/**", route-tree.gen.ts, mockServiceWorker.js]
+    schema:
+      source: knowledge
+      path: schemas/knowledge-files.schema.yaml
+      ref: design-schemas/v8.4.0
+    records: files
+    body_file: path
+  - id: tests
+    title: テスト
+    paths: [tests/files.yaml]
+    schema:
+      source: knowledge
+      path: schemas/knowledge-files.schema.yaml
+      ref: design-schemas/v8.4.0
+    records: files
+    body_file: path
+  - id: prompts
+    title: プロンプト
+    paths: [content/prompts/**/*.yaml]
+    schema: templates/prompt.schema.yaml
+    converter: prompt-doc
+    metadata:
+      name: name
+      description: description
+      tags: tags
+converters:
+  - id: prompt-doc
+    run: [project-index, prompt-doc]
+nav:
+  tabs:
+    - title: はじめに
+      items:
+        - group: コアコンセプト
+          items:
+            - page: files_guide/docs/guide/コアコンセプト-配信元と権限.md
+            - page: files_guide/docs/guide/コアコンセプト-管理用プラグイン.md
+            - page: files_guide/docs/guide/コアコンセプト-文書のメタデータ.md
+    - title: 使い方
+      items:
+        - group: 導入と更新
+          items:
+            - page: files_guide/docs/guide/dev-docsを入れる.md
+            - page: files_guide/docs/guide/配信元を配信する.md
+            - page: files_guide/docs/guide/dev-docsを更新する.md
+        - group: 画面
+          items:
+            - page: files_guide/docs/guide/画面で読む.md
+    - title: 設計書
+      items:
+        - group: 全体
+          items:
+            - page: architecture
+            - page: nonfunctional
+            - page: config
+            - {page: root/docs/design-policy.md, title: デザイン方針}
+        - group: シナリオ
+          items:
+            - page: scenario/SC-155-13
+            - page: scenario/SC-155-2
+            - page: scenario/SC-155-10
+            - page: scenario/SC-155-7
+            - page: scenario/SC-155-6
+            - page: scenario/SC-155-12
+            - page: scenario/SC-155-11
+            - page: scenario/SC-155-3
+            - auto: {document: scenario}
+        - group: インターフェース定義
+          items:
+            - auto: {document: interface}
+        - group: 画面設計
+          items:
+            - auto: {document: screen}
+        - group: 部品設計
+          items:
+            - auto: {document: component}
+        - group: モジュール構成 / 画面
+          items:
+            - auto:
+                document: module
+                filter: {field: name, op: prefix, values: ['画面 / ']}
+        - group: モジュール構成 / 開発ドキュメントサーバー
+          items:
+            - auto:
+                document: module
+                filter: {field: name, op: prefix, values: ['開発ドキュメントサーバー / ']}
+        - group: モジュール構成 / 管理用プラグイン・開発用のスクリプト
+          items:
+            - auto:
+                document: module
+                filter:
+                  or:
+                    - {field: name, op: prefix, values: ['管理用プラグイン / ']}
+                    - {field: name, op: prefix, values: ['開発用のスクリプト / ']}
+        - group: 外部 API・外部ライブラリ
+          items:
+            - page: api
+            - auto: {document: library}
+        - group: テスト・開発コマンド
+          items:
+            - page: test_procedure
+            - page: dev_command
+        - group: モック
+          items:
+            - auto: {document: files_mock}
+    - title: 規約
+      items:
+        - group: 判定フローチャート
+          items:
+            - auto: {document: flowchart}
+    - title: コード
+      items:
+        - group: サーバー
+          items:
+            - auto: {document: src}
+        - group: 画面
+          items:
+            - auto: {document: frontend}
+        - group: テスト / 単体
+          items:
+            - auto:
+                document: tests
+                filter: {field: id, op: prefix, values: [tests/unit/]}
+        - group: テスト / 結合・E2E
+          items:
+            - auto:
+                document: tests
+                filter:
+                  not: {field: id, op: prefix, values: [tests/unit/]}
+        - group: リポジトリの設定とスクリプト
+          items:
+            - auto:
+                document: root
+                filter:
+                  not: {field: id, op: eq, values: [docs/design-policy.md]}
+        - group: プロンプト
+          items:
+            - auto: {document: prompts, group_by: kind}
+    - title: リファレンス
+      items:
+        - group: MCP とコマンド
+          items:
+            - page: files_guide/docs/guide/管理のMCP.md
+            - page: files_guide/docs/guide/文書のMCP.md
+            - page: files_guide/docs/guide/CLI.md
+        - group: 設定
+          items:
+            - page: files_guide/docs/guide/設定.md
+    - title: 用語集
+      items:
+        - page: files_guide/docs/guide/用語集.md
