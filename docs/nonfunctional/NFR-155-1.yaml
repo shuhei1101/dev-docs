@@ -8,7 +8,7 @@ requirements:
     external_constraint: 制限なし
     source_kind: 制限なし
     value: '3.14'
-    rationale: '新規のプロジェクトは最新安定版か 1 つ下を使用する規約に従い、最新安定版 3.15 の 1 つ下を選んだ。依存する MCP の Python SDK・FastAPI が対応しているかを #3 で確認する'
+    rationale: '新規のプロジェクトは最新安定版か 1 つ下を使用する規約に従い、最新安定版 3.15 の 1 つ下を選んだ。依存する MCP の Python SDK・FastAPI が対応しているかを [汎用の開発ドキュメントサーバーを作る](https://github.com/shuhei1101/dev-docs/issues/3) で確認する'
     status: planned
   - id: NFR-2
     name: 対応 OS
@@ -17,7 +17,7 @@ requirements:
     external_constraint: 未確定
     source_kind: 未確定
     value: 未確定
-    rationale: 利用者の手元で動かす。管理用プラグインのフックがサーバーを切り離して起動する方法が OS ごとに違うため、#4 の設計で決める
+    rationale: 利用者の手元で動かす。管理用プラグインのフックがサーバーを切り離して起動する方法が OS ごとに違うため、[管理用のプラグインを作る](https://github.com/shuhei1101/dev-docs/issues/4) の設計で決める
     measurement: 決めた OS の端末で `dev-docs serve` を起動し、画面と MCP につながるかを確認する
     status: planned
   - id: NFR-3
@@ -95,7 +95,7 @@ requirements:
     name: 起動から接続を受け付けるまでの時間
     english_name: listen_start_time
     category: 可用性
-    external_constraint: 再起動のスクリプト（#62）が待ち受けを待つ上限 60 秒
+    external_constraint: 再起動のスクリプト（[プラグインの接続先への POST が 405 になる不具合](https://github.com/shuhei1101/dev-docs/issues/62)）が待ち受けを待つ上限 60 秒
     source_kind: ユーザー要望
     source: https://github.com/shuhei1101/dev-docs/issues/65
     value: '20'
@@ -124,7 +124,7 @@ requirements:
     category: 耐障害
     external_constraint: project-index が配信元の変換のスクリプトを止める制限時間（project-index のスクリプトの制限時間。既定 30 秒）
     source_kind: 外部 API の制限
-    source: shuhei1101/project-index#14（project-index の読み取り API）
+    source: '[読み取り API と端末の設定の API を提供する](https://github.com/shuhei1101/project-index/issues/14)（project-index の読み取り API）'
     value: '45'
     unit: 秒
     rationale: 文書の取得は project-index が `converters[]` のスクリプトを動かす間待つため、下流の制限時間 30 秒に 50% を乗せて切り上げた（規約『資源の値の決め方』の入れ子の待ち）。project-index のスクリプトの制限時間を変えたら合わせて再決定する
@@ -139,7 +139,7 @@ requirements:
     source: https://github.com/shuhei1101/dev-docs/pull/230
     value: '70'
     unit: 秒
-    rationale: 起動の直後に 14 件の配信元を開いた計測（#230 の計画書）で、開けた 1 回目の問い合わせの合計が最大で約 45 秒（claude-balancer。配信元の設定 3.0 秒・文書の一覧 38.2 秒・文書 3.9 秒）だった。規約『資源の値の決め方』の利用者が待つタイムアウトとして、実測の最大に 50% の余裕を乗せて切り上げた。問い合わせごとの制限時間（NFR-14）は、この制限時間の残り時間を超えない。実測は配信元ごとに 1 回で、測る作業を残す
+    rationale: 起動の直後に 14 件の配信元を開いた計測（[配信元を選んだときの最初の表示を短い時間で終わらせる](https://github.com/shuhei1101/dev-docs/pull/230) の計画書）で、開けた 1 回目の問い合わせの合計が最大で約 45 秒（claude-balancer。配信元の設定 3.0 秒・文書の一覧 38.2 秒・文書 3.9 秒）だった。規約『資源の値の決め方』の利用者が待つタイムアウトとして、実測の最大に 50% の余裕を乗せて切り上げた。問い合わせごとの制限時間（NFR-14）は、この制限時間の残り時間を超えない。実測は配信元ごとに 1 回で、測る作業を残す
     overflow: 打ち切った取得は、project-index から応答が無かったことと project-index のアドレスを持つ 503 を返却する。画面は、取得を始めてからこの制限時間に 5 秒を加えた時間以内に、読み込み中の表示をやめて理由を出す
     measurement: 接続を受けたまま応答しない偽の project-index につなぎ、文書の取得を送信してから 503 が返るまでの時間を測る
     status: planned
@@ -149,14 +149,14 @@ requirements:
     name: 再度開いた配信元の文書の取得の時間
     english_name: document_fetch_time
     category: 性能
-    external_constraint: project-index の読み取り API は、配信元の commit ごとの最初の処理（リビジョンの書き出し）を終えた後も、1 つの問い合わせに最大で 9.35 秒かかる（#230 の計測）。既定のブランチが進んだ後の最初の問い合わせは、その commit のリビジョンを書き出すため遅くなり、その時間は shuhei1101/project-index#85 が扱う
+    external_constraint: project-index の読み取り API は、配信元の commit ごとの最初の処理（リビジョンの書き出し）を終えた後も、1 つの問い合わせに最大で 9.35 秒かかる（[配信元を選んだときの最初の表示を短い時間で終わらせる](https://github.com/shuhei1101/dev-docs/pull/230) の計測）。既定のブランチが進んだ後の最初の問い合わせは、その commit のリビジョンを書き出すため遅くなり、その時間は [配信元ごとの最初の問い合わせが数十秒かかる不具合](https://github.com/shuhei1101/project-index/issues/85) が扱う
     source_kind: 外部 API の制限
     source: https://github.com/shuhei1101/dev-docs/pull/230
     value: '18'
     unit: 秒
-    rationale: 稼働中の project-index へ、配信元の設定・リビジョン・文書の一覧を同時に送信し、続けて文書を送信する計測を 14 件の配信元で 3 回ずつ行った（#230 の計画書）。同時に送信した 3 つは最も長いものとほぼ同じ時間で終わり、project-index は並行して処理した。合計の最大は 11.74 秒（voice-input の 1 回目）で、規約『資源の値の決め方』の 50% の余裕を乗せて切り上げた。1 回目の alias-inject（23.14 秒）と observability（8.78 秒）は、project-index のログでその問い合わせの間に自分の既定のブランチの進んだ後の commit のリビジョンを書き出していたため、external_constraint の前提に回して決定値に使用しない。実測は 40 回で、測る作業を残す
+    rationale: 稼働中の project-index へ、配信元の設定・リビジョン・文書の一覧を同時に送信し、続けて文書を送信する計測を 14 件の配信元で 3 回ずつ行った（[配信元を選んだときの最初の表示を短い時間で終わらせる](https://github.com/shuhei1101/dev-docs/pull/230) の計画書）。同時に送信した 3 つは最も長いものとほぼ同じ時間で終わり、project-index は並行して処理した。合計の最大は 11.74 秒（voice-input の 1 回目）で、規約『資源の値の決め方』の 50% の余裕を乗せて切り上げた。1 回目の alias-inject（23.14 秒）と observability（8.78 秒）は、project-index のログでその問い合わせの間に自分の既定のブランチの進んだ後の commit のリビジョンを書き出していたため、external_constraint の前提に回して決定値に使用しない。実測は 40 回で、測る作業を残す
     overflow: 超えても文書の取得の制限時間（NFR-15）までは待つ
-    measurement: 'Issue #225 の `dd2.cjs` で 14 件の配信元を 2 回ずつ開き、project-index のログでリビジョンを書き出していない間の 2 回目の文書の取得の時間を測る。結合テストでは、問い合わせごとに一定の時間だけ待ってから返却する偽の project-index で、問い合わせを同時に送信していることを確認する'
+    measurement: '[配信元を選んでも表示に時間がかかる](https://github.com/shuhei1101/dev-docs/issues/225) の `dd2.cjs` で 14 件の配信元を 2 回ずつ開き、project-index のログでリビジョンを書き出していない間の 2 回目の文書の取得の時間を測る。結合テストでは、問い合わせごとに一定の時間だけ待ってから返却する偽の project-index で、問い合わせを同時に送信していることを確認する'
     status: planned
     refs:
       - SC-155-7#scenarios[正常シナリオ（配信元を再度開く）]

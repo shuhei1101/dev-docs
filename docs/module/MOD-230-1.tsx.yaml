@@ -51,7 +51,7 @@ components:
     usecase: 共通
     role: 部品
     summary: 理由の種類（`kind`）ごとの見出しと説明、`接続先`・`理由` の一覧と再読み込みのボタンを、`variant="destructive"` の Alert で出す
-    description: 見出しと説明は、確認ログ（#230）で決定した文言を `kind` ごとに持つ定数から取得する（文書の画面の『project-index から文書を受け取れないときの表示』）。呼び出し元の文書の画面と設定画面は、どちらも `toProjectIndexUnreachable` の `kind` を指定する。`kind` が無いときは `unreachable` の文言になる。理由の欄は `min-w-0`・`wrap-anywhere` で長い理由を折り返す。名前は「接続できない」を表すままにし、応答が無い・処理に失敗した場合も扱う（呼び出し元 2 画面とストーリーを改名しない）
+    description: 見出しと説明は、[配信元を選んだときの最初の表示の文言の確認ログ](https://github.com/shuhei1101/dev-docs/blob/develop/docs/pr/230/%E7%A2%BA%E8%AA%8D%E3%83%AD%E3%82%B0.yaml)で決定した文言を `kind` ごとに持つ定数から取得する（文書の画面の『project-index から文書を受け取れないときの表示』）。呼び出し元の文書の画面と設定画面は、どちらも `toProjectIndexUnreachable` の `kind` を指定する。`kind` が無いときは `unreachable` の文言になる。理由の欄は `min-w-0`・`wrap-anywhere` で長い理由を折り返す。名前は「接続できない」を表すままにし、応答が無い・処理に失敗した場合も扱う（呼び出し元 2 画面とストーリーを改名しない）
     props:
       - name: address
         type: string

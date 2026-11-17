@@ -8,7 +8,7 @@ flows:
     summary: 配信元の一番左のタブの一番上の文書と、文書のパスで指した文書を返却する
     setup:
       - name: Mock
-        description: 'テストの中で起動した project-index（shuhei1101/project-index の develop の `42632c5`（shuhei1101/project-index#54 をマージした commit）。一時フォルダの端末の設定を `PROJECT_INDEX_CONFIG` で指し、空きポートで子プロセスとして起動する）が、setup の配信元を配信する。dev-docs のアプリを HTTP のテストのクライアントで呼ぶ'
+        description: 'テストの中で起動した project-index（shuhei1101/project-index の develop の `42632c5`（[共通のキーを返却する読み取り API](https://github.com/shuhei1101/project-index/pull/54) をマージした commit）。一時フォルダの端末の設定を `PROJECT_INDEX_CONFIG` で指し、空きポートで子プロセスとして起動する）が、setup の配信元を配信する。dev-docs のアプリを HTTP のテストのクライアントで呼ぶ'
         notes: '-'
       - name: サンプルの配信元
         description: 文書の種類を 1 つ（スキーマと YAML 2 件）と、`nav` を持つ `project-index.yaml` を持つ git リポジトリ
@@ -785,7 +785,7 @@ response:
     type: str | None
     description: 本文のファイルのパス（配信元の直下から、拡張子つき）。管理用の YAML の行の文書は `body_file` が指すファイル
     notes: 本文のファイルを持たない文書（ファイル 1 つが 1 文書）は `null`。画面は本文の相対リンクを、これがあればこのパス、無ければ `path` を基準に解決する
-response_notes: '本文の描画（mdmark）・リンクの組み立て・コメント・本文の差分の強調は #17 の画面が持つ。差分の強調は、`ref` を `diff.base` にして取った `markdown` を mdmark の `baseMarkdown` に指定して付ける。'
+response_notes: '本文の描画（mdmark）・リンクの組み立て・コメント・本文の差分の強調は画面が持つ。差分の強調は、`ref` を `diff.base` にして取った `markdown` を mdmark の `baseMarkdown` に指定して付ける。'
 status_codes:
   - code: '200'
     condition: 文書を返却した（変換に失敗したとき・YAML を読み込めないときも `conversionError` を入れて 200）

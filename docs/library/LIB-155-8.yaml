@@ -40,7 +40,7 @@ docs_url: https://github.com/modelcontextprotocol/python-sdk/tree/main/docs
 verification:
   state: 済
   date: '2026-10-27'
-  detail: 'Python 3.14 で `MCPServer` を 2 つ作り `streamable_http_app(streamable_http_path="/")` を fastapi の `/mcp`・`/_admin/mcp` にマウントし、`streamable_http_client` と `ClientSession` から呼んだ。`$defs` の `$ref` で自分を指す Pydantic のモデルを引数に持つツールの入力スキーマが `$ref` のまま返り、3 段の木で呼べた。`ToolError` を投げると `is_error: true` になった。フックの値の注入は PoC（#13）で確認した'
+  detail: 'Python 3.14 で `MCPServer` を 2 つ作り `streamable_http_app(streamable_http_path="/")` を fastapi の `/mcp`・`/_admin/mcp` にマウントし、`streamable_http_client` と `ClientSession` から呼んだ。`$defs` の `$ref` で自分を指す Pydantic のモデルを引数に持つツールの入力スキーマが `$ref` のまま返り、3 段の木で呼べた。`ToolError` を投げると `is_error: true` になった。フックの値の注入は PoC（[フックの updatedInput で MCP ツールの引数に cwd・session_id・agent_id を入れる](https://github.com/shuhei1101/dev-docs/pull/13)）で確認した'
 selection:
   candidates: mcp 2.3.0・FastMCP 4.1.4 を比べた（[案のレビュー](https://github.com/shuhei1101/dev-docs/pull/12#discussion_r4389749135)）。
   decision: 要件は公式の SDK だけで満たせ、PoC で確認した再帰の入力スキーマのまま使用できるため。FastMCP は既定で `$ref` を展開して書き換える。

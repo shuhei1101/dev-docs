@@ -281,7 +281,7 @@ constraints:
     notes: 標準ライブラリに YAML のパーサーが無いため
   - item: 起動
     constraint: 'unit があるときは `systemctl --user start --no-block {unit}` を呼ぶ。unit が無いときは `{clone}/.venv/bin/python -m dev_docs serve` を `start_new_session=True`・入出力を `DEVNULL` で起動し、待たずに戻る'
-    notes: 'PR #9 の PoC のとおり'
+    notes: '[PoC: SessionStart のフックが起動したサーバーに直後のセッションでつながる](https://github.com/shuhei1101/dev-docs/pull/9) のとおり'
   - item: タイムアウト
     constraint: '`hooks.json` の `timeout` は 2 秒'
     notes: 落ちているときの流れ（接続の失敗 → `Popen` → 出力）のフック全体を、`/mnt/c` の上のフックのファイルで 5 回測って 0.53〜0.70 秒（2026-11-12、Python 3.12）。最大の 0.70 秒に 50% を乗せて切り上げた値（規約『資源の値の決め方』の入れ子の待ち）。記録の削除の依頼（3 秒）は project-index のフックへ移した
