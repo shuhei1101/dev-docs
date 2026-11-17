@@ -134,7 +134,10 @@ def test_list_public_guides(build_pages: ModuleType, tmp_path: Path) -> None:
 
     pages = build_pages.list_public_guides(tmp_path)
 
-    assert [(p.path, p.category) for p in pages] == [("use.md", "使用方法"), ("intro.md", "はじめに")]
+    assert [(p.path, p.category) for p in pages] == [
+        ("use.md", "使用方法"),
+        ("intro.md", "はじめに"),
+    ]
 
 
 def test_list_public_guides_when_no_file(build_pages: ModuleType, tmp_path: Path) -> None:
