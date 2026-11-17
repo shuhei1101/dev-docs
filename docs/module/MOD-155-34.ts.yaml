@@ -85,7 +85,10 @@ functions:
         mock: なし
         expected: '`truncated` が true、URL の長さが `ISSUE_URL_MAX` 以下、戻した `body` が `TRUNCATED_NOTE` で終わる'
 refs:
-  - NFR-155-1#requirements[Issue の作成画面の URL の長さ]
+  - to: NFR-155-1
+    item: requirements[Issue の作成画面の URL の長さ]
+    type: requires
+    when: Issue の作成画面の URL の組み立てを変えるときに、URL の長さの上限を確認する。
 tags:
   - name: topic:文書
     main: true

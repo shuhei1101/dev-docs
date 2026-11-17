@@ -100,7 +100,10 @@ functions:
         mock: なし
         expected: '`[t2]`'
 refs:
-  - SCR-155-1#elements[列の表示のメニュー]
+  - to: SCR-155-1
+    item: elements[列の表示のメニュー]
+    type: requires
+    when: 表とキーの対応を変えるときに、文書の画面の列の表示のメニューの振る舞いと突き合わせる。
 test_files:
   - tests/unit/frontend/src/features/docs/doc-view/tables.test.ts
 tags:

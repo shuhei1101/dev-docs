@@ -872,7 +872,10 @@ constraints:
     constraint: '`path` が `_decisions/{ID}`（`{ID}` は `^[A-Z]+-[0-9]+$`）のとき、`decisions.folders` のうちちょうど 1 つのフォルダにある `.mindstella/docs/{ID}.md` の本文を、変換せずに `markdown` で返却する。`ref` は解決するが、検討事項の文書は Git の管理外のためリビジョンによらず今のファイルを読み込む'
     notes: '該当するフォルダが 0 個か 2 個以上なら 404（`missing`: `doc`）。`diff` は求めず `null` を返却する。フォルダの外を指す `{ID}` は形式で弾く'
 refs:
-  - SC-155-10#scenarios[異常シナリオ（project-index につながらない）]
+  - to: SC-155-10
+    item: scenarios[異常シナリオ（project-index につながらない）]
+    type: references
+    when: project-index につながらないときの応答を変えるときに、起動のシナリオの異常系と突き合わせる。
 test_file: tests/integration/server/test_get_document.py
 error_format: RFC 9457 の `application/problem+json`（`type`・`title`・`status`・`detail`）。拡張メンバーは camelCase（`nextSteps`・`missing`・`errors[]` の `{path, reason}`）
 callers:

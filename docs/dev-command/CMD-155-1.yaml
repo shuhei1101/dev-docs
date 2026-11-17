@@ -69,10 +69,15 @@ categories:
       detail: '`DEV_DOCS_CONFIG` に `project_index` が待ち受けていないアドレスを指す端末の設定を入れて `uv run dev-docs serve` を走らせ、127.0.0.1 の `DEV_DOCS_PORT` で待ち受けて標準出力に URL を出し、標準エラーに project-index の接続先・理由と起動の案内を出すことを確認した。画面の API が 503 の problem+json、`/_admin/mcp` の `status` が project-index につながらない旨を返却し、`/mcp` が 404 で、SIGTERM で止まった（2026-11-12）。ポートの使用中（終了コード 3）と設定の違反（終了コード 2）は単体テストで確認した。`npm run dev` を走らせ、`/` が 200 を返却し、`/_api/settings/sources` が 8781 で動いているサーバーへ転送されて 200 を返却することを確認した（2026-10-31）。`storybook dev -c frontend/.storybook`（`npm run storybook` と同じ設定）を走らせ、`index.json` にストーリー 19 件が載り、各ストーリーが描かれることを確認した（2026-10-30）'
   - name: テスト
     refs:
-      - TP-155-1#
+      - to: TP-155-1
+        type: references
+        when: テストの層ごとの実行コマンドと前提を確認するとき。
   - name: 静的検査
     refs:
-      - TP-155-1#layers[lint]
+      - to: TP-155-1
+        item: layers[lint]
+        type: references
+        when: lint の層の全件実行のコマンドを確認するとき。
   - name: ビルド・生成
     commands: |-
       1. 画面をビルドする（出力先は `src/dev_docs/screen/`。commit する成果物）

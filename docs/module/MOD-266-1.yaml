@@ -101,8 +101,12 @@ functions:
         mock: '`uv`（0 で終わる）・`systemctl`（1 で終わる）'
         expected: 0 以外で終わり、`RECORD_FILE` は前の commit のまま
 refs:
-  - ARCH-155-1#
-  - CMD-155-1#
+  - to: ARCH-155-1
+    type: references
+    when: 常駐サーバーがどのサブシステムを起動し直すかを確認するとき。
+  - to: CMD-155-1
+    type: references
+    when: 依存をそろえるコマンドを確認するとき。
 notes:
   補足: AI Monitor が設定 `projects[].resident_servers` の `restart_command` で、稼働しているブランチ（develop）の作業ツリーを作業ディレクトリにして呼ぶ。実行時に参照するファイルが変わっていないときは起動し直さない（文書だけの変更でサーバーを止めない）。画面のビルドの成果物 `src/dev_docs/screen/` は commit されるため、`npm ci`・`npm run build` は実行しない。
 tags:

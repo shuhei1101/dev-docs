@@ -604,9 +604,15 @@ functions:
         expected: Node を入れる案内を含む `BuildError`
         exception: npx が無い
 refs:
-  - ARCH-155-1#
-  - CMD-155-1#
-  - LIB-155-9#
+  - to: ARCH-155-1
+    type: references
+    when: 公開ページのビルドとサブシステムの境界を確認するとき。
+  - to: CMD-155-1
+    type: references
+    when: 公開ページのビルドを実行するコマンドを確認するとき。
+  - to: LIB-155-9
+    type: requires
+    when: mdmark の `build` の呼び方を変えるときに、mdmark の利用方法を確認する。
 notes:
   補足: GitHub Actions の Pages のワークフローが呼び、出力のフォルダを Pages へ配信する。
 tags:

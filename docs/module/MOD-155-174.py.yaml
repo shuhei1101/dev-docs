@@ -557,8 +557,12 @@ functions:
         mock: なし（実際の `/proc`）
         expected: '`os.getpid()`（例外を送出しない）'
 refs:
-  - IF-155-25#
-  - IF-155-22#
+  - to: IF-155-25
+    type: requires
+    when: '`dev-docs serve` の配線を変えるときに、起動の入出力とフローと突き合わせる。'
+  - to: IF-155-22
+    type: requires
+    when: '`dev-docs migrate` の配線を変えるときに、設定の移し替えの入出力と突き合わせる。'
 tags:
   - name: topic:起動
     main: true

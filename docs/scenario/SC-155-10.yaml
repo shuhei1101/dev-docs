@@ -422,8 +422,14 @@ minimal_guarantee: project-index につながらないときも、画面と `/_a
 frequency: 端末の起動ごと・dev-docs の更新ごと
 priority: 高
 refs:
-  - SC-155-13#scenarios[正常シナリオ]
-  - SC-155-13#scenarios[異常シナリオ（配信できない配信元がある）]
+  - to: SC-155-13
+    item: scenarios[正常シナリオ]
+    type: part_of
+    when: この流れを変えるときに、複合ユースケースの正常シナリオの中の位置づけを確認する。
+  - to: SC-155-13
+    item: scenarios[異常シナリオ（配信できない配信元がある）]
+    type: part_of
+    when: 配信できない配信元があるときの流れを変えるときに、複合ユースケースの異常シナリオと突き合わせる。
 test_file: tests/e2e/単一ユースケース/test_起動する.py
 tags:
   - name: topic:起動

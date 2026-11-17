@@ -409,7 +409,9 @@ functions:
         expected: 本文に `Failed to start` を持つ `UnitStartError`
         exception: 0 以外で終わる
 refs:
-  - IF-155-1#
+  - to: IF-155-1
+    type: requires
+    when: SessionStart のフックの処理を変えるときに、セッション開始のフックの入出力と突き合わせる。
 classes:
   - name: UnitStartError
     title: unit を起動できない

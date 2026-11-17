@@ -37,8 +37,13 @@ functions:
         mock: '`viewPutColumns`（例外を送信する偽物）・sonner の `toast`（`vi.mock`）'
         expected: 通知が `列の表示を保存できませんでした。`
 refs:
-  - LIB-155-9#
-  - SCR-155-1#elements[列の表示のメニュー]
+  - to: LIB-155-9
+    type: requires
+    when: 列の表示のメニューで使用する mdmark の API を確認するとき。
+  - to: SCR-155-1
+    item: elements[列の表示のメニュー]
+    type: requires
+    when: 保存する列の扱いを変えるときに、文書の画面の列の表示のメニューの振る舞いと突き合わせる。
 test_files:
   - tests/unit/frontend/src/features/docs/doc-view/hooks/use-column-persistence.test.ts
 tags:

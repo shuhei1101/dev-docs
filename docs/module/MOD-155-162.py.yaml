@@ -126,10 +126,18 @@ functions:
         expected: どれも 503 の problem+json で、`projectIndex.address` と `projectIndex.reason` がある
         exception: '-'
 refs:
-  - IF-155-10#
-  - IF-155-16#
-  - IF-155-6#
-  - IF-155-21#
+  - to: IF-155-10
+    type: requires
+    when: 文書の取得のルートを変えるときに、文書の取得の入出力と突き合わせる。
+  - to: IF-155-16
+    type: requires
+    when: 検索のルートを変えるときに、画面の検索の入出力と突き合わせる。
+  - to: IF-155-6
+    type: requires
+    when: リビジョンの一覧のルートを変えるときに、リビジョンの一覧の入出力と突き合わせる。
+  - to: IF-155-21
+    type: requires
+    when: 表の列の設定のルートを変えるときに、表の列の設定の保存の入出力と突き合わせる。
 tags:
   - name: topic:api
     main: true
