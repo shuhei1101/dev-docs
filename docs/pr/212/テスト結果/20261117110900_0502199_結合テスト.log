@@ -1,0 +1,167 @@
+## 結合テスト（バック）
+$ uv run pytest tests/integration/server/test_get_document.py tests/integration/server/test_search_page.py tests/integration/server/test_list_refs.py tests/integration/server/test_get_settings_sources.py tests/integration/server/test_put_settings_sources.py tests/integration/server/test_migrate.py --basetemp=/tmp/pr212-pytest/k
+# 既定の /tmp/pytest-of-{ユーザー} が別のユーザーの所有で使えないため --basetemp を指定した
+============================= test session starts ==============================
+platform linux -- Python 3.14.3, pytest-9.1.1, pluggy-1.7.0
+rootdir: /home/shuhei2441/repo/dev-docs/.claude/worktrees/fix-convert-migrate-mermaid-click-toc-marker-outside-read
+configfile: pyproject.toml
+plugins: anyio-4.15.1
+collected 53 items
+
+tests/integration/server/test_get_document.py ........................   [ 45%]
+tests/integration/server/test_search_page.py ...                         [ 50%]
+tests/integration/server/test_list_refs.py ...                           [ 56%]
+tests/integration/server/test_get_settings_sources.py ...                [ 62%]
+tests/integration/server/test_put_settings_sources.py ........           [ 77%]
+tests/integration/server/test_migrate.py ............                    [100%]
+
+============================= 53 passed in 54.94s ==============================
+
+## 結合テスト（フロント）
+$ npx playwright test --config tests/integration/frontend/playwright.config.ts tests/integration/frontend/doc-view-screen.spec.ts
+# jsDelivr の @develop が mdmark#618 の前の dist を返却していた（s-maxage=43200）ため、実行の間だけ use-mdmark.ts の DEFAULT_MDMARK_VERSION を develop の最新の dist の commit 37300976 に置き換えて実行し、元に戻した（commit していない）
+# body_without_preflight の fail はこの作業 PR が変えていないテストで、mdmark の develop の変更による（#245 で起票）
+
+Running 118 tests using 4 workers
+
+  ✓    1 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:137:3 › ページのタイトル › page_title (687ms)
+  ✓    2 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:154:3 › 本文へスキップ › skip_link (1.0s)
+  ✓    3 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:143:3 › ページのタイトル › page_title_when_empty_tab (1.0s)
+  ✓    4 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:170:3 › トップバー › topbar_source_select (1.1s)
+  ✓    5 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:178:3 › トップバー › topbar_ref_select (981ms)
+  ✓    6 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:186:3 › トップバー › topbar_compare_start_when_default_ref (975ms)
+  ✓    8 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:202:3 › トップバー › topbar_search_open (817ms)
+  ✓    7 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:194:3 › トップバー › topbar_compare_start_when_other_ref (973ms)
+  ✓    9 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:209:3 › トップバー › topbar_comment_panel_toggle (837ms)
+  ✓   12 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:237:3 › トップバー › topbar_sources_from_settings (847ms)
+  ✓   11 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:219:3 › トップバー › topbar_sidebar_open (852ms)
+  ✓   10 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:227:3 › トップバー › topbar_color_scheme_toggle (868ms)
+  ✓   13 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:259:3 › 種類のタブ › tabs_order_and_current (533ms)
+  ✓   14 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:267:3 › 種類のタブ › tabs_click (867ms)
+  ✓   16 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:289:3 › 種類のタブ › tabs_click_when_empty (885ms)
+  ✓   17 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:299:3 › 文書の一覧 › sidebar_groups_and_pages (712ms)
+  ✓   15 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:274:3 › 種類のタブ › tabs_click_when_doc_in_two_tabs (1.0s)
+  ✓   20 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:322:3 › 文書の一覧 › sidebar_hidden_when_narrow (704ms)
+  ✓   18 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:308:3 › 文書の一覧 › sidebar_click_keeps_rev_and_base (848ms)
+  ✓   19 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:315:3 › 文書の一覧 › sidebar_click_when_deleted (887ms)
+  ✓   21 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:331:3 › 文書の変化のマーカー › change_markers (790ms)
+  ✓   22 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:341:3 › 文書の変化のマーカー › change_markers_without_base (748ms)
+  ✓   25 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:372:3 › パンくず › breadcrumb (694ms)
+  ✓   24 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:360:3 › 文書の一覧のドロワー › drawer_closes_on_escape (924ms)
+  ✓   26 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:381:3 › パンくず › breadcrumb_source_link (763ms)
+  ✓   23 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:351:3 › 文書の一覧のドロワー › drawer_closes_on_navigate (1.5s)
+  ✓   28 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:397:3 › 文書のタイトル › doc_title (563ms)
+  ✓   27 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:388:3 › パンくず › breadcrumb_tab_link (795ms)
+  ✓   30 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:428:3 › 文書の情報 › doc_info (708ms)
+  ✓   29 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:403:3 › 文書のタイトル › doc_title_matches_mdmark_h1 (848ms)
+  ✓   33 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:477:3 › 差分の案内 › diff_banner_visible (528ms)
+  ✓   34 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:486:3 › 差分の案内 › diff_banner_hidden_without_base (454ms)
+  ✓   35 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:492:3 › 差分の案内 › diff_banner_hidden_when_non_git (502ms)
+  ✓   36 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:505:3 › 比較元の選択 › base_select (714ms)
+  ✓   37 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:527:3 › 比較先の選択 › head_select (631ms)
+  ✓   38 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:539:3 › 差分の強調を解除 › diff_clear (557ms)
+  ✓   39 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:548:3 › 差分の強調を解除 › diff_clear_body (633ms)
+  ✓   40 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:563:3 › 文書の本文の差分 › body_diff_highlight (550ms)
+  ✓   32 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:457:3 › 読み込み中の表示 › loading_keeps_previous_doc (3.1s)
+  ✓   31 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:442:3 › 読み込み中の表示 › loading_skeleton (3.4s)
+  ✓   41 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:570:3 › 文書の本文の差分 › body_diff_highlight_when_block_deleted (633ms)
+  ✓   42 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:589:3 › 文書の本文の差分 › body_diff_highlight_without_base (767ms)
+  ✓   43 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:604:3 › 変換の失敗 › conversion_error_when_timeout (690ms)
+  ✓   44 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:620:3 › 変換の失敗 › conversion_error_when_invalid_yaml (766ms)
+  ✓   45 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:637:3 › 再読み込み › reload_button (942ms)
+  ✓   46 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:662:3 › 文書が無いことの表示 › empty_tab_message (911ms)
+  ✓   47 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:672:3 › 文書が無いことの表示 › empty_tab_message_when_non_git (942ms)
+  ✓   48 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:687:3 › 本文 › body_without_first_h1 (821ms)
+  ✘   49 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:693:3 › 本文 › body_without_preflight (865ms)
+  ✓   50 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:753:3 › 本文 › frame_keeps_preflight (878ms)
+  ✓   51 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:775:3 › 本文 › body_left_aligned_with_title (836ms)
+  ✓   52 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:791:3 › 本文 › body_internal_link (905ms)
+  ✓   54 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:845:3 › 本文 › body_internal_link_when_missing (959ms)
+  ✓   56 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:862:3 › 列の表示のメニュー › columns_menu_visible (729ms)
+  ✓   55 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:805:3 › 本文 › body_external_link (897ms)
+  ✓   53 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:819:3 › 本文 › body_mermaid_click_link (1.7s)
+  ✓   57 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:868:3 › 列の表示のメニュー › columns_menu_hidden_columns (719ms)
+  ✓   58 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:879:3 › 列の表示のメニュー › columns_menu_save (882ms)
+  ✓   59 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:895:3 › 列の表示のメニュー › columns_menu_save_failure (844ms)
+  ✓   60 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:909:3 › 列の表示のメニュー › columns_menu_save_when_tables_mixed (872ms)
+  ✓   61 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:939:3 › 列の表示のメニュー › columns_menu_json_marker (958ms)
+  ✓   62 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:981:3 › 目次 › toc_items (887ms)
+  ✓   63 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:990:3 › 目次 › toc_change_marker (834ms)
+  ✓   64 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:998:3 › 目次 › toc_after_doc_changed (726ms)
+  ✓   65 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1023:3 › 目次 › toc_hidden_without_headings (699ms)
+  ✓   66 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1034:3 › 目次 › toc_click (993ms)
+  ✓   67 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1064:3 › 目次 › toc_below_tabs_when_scrolled (1.1s)
+  ✓   68 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1078:3 › 目次 › toc_below_tabs_when_scrolled_narrow (952ms)
+  ✓   69 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1091:3 › コメントの追加 › comment_add (1.1s)
+  ✓   70 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1105:3 › コメントのパネル › panel_heading (800ms)
+  ✓   71 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1114:3 › コメントのパネル › panel_lists_other_docs (824ms)
+  ✓   72 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1124:3 › コメントのパネルの位置 › panel_position_on_the_right (850ms)
+  ✓   73 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1133:3 › コメントのパネルの位置 › panel_position_when_narrow (806ms)
+  ✓   75 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1156:3 › コメントのパネルを閉じる › panel_close_by_escape (749ms)
+  ✓   74 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1146:3 › コメントのパネルを閉じる › panel_close_button (1.3s)
+  ✓   76 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1174:3 › すべて選択 › select_all_state (1.0s)
+  ✓   78 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1194:3 › すべて選択 › select_all_hidden_when_empty (583ms)
+  ✓   77 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1183:3 › すべて選択 › select_all_toggle (1.0s)
+  ✓   80 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1220:3 › コメントの場所 › place_text (768ms)
+  ✓   79 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1202:3 › コメントの選択 › comment_select (1.2s)
+  ✓   81 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1227:3 › コメントの場所 › place_click_other_doc (1.0s)
+  ✓   82 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1247:3 › コメントの場所への移動 › place_scroll_same_doc (1.0s)
+  ✓   85 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1318:3 › コメントの引用 › quote_text (812ms)
+  ✓   84 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1300:3 › コメントの場所への移動 › place_scroll_other_doc (893ms)
+  ✓   86 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1330:3 › コメントの本文 › comment_body (815ms)
+  ✓   83 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1263:3 › コメントの場所への移動 › place_scroll_cleared_when_doc_left (1.9s)
+  ✓   88 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1354:3 › コメントの修正 › edit_field_focus (864ms)
+  ✓   87 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1346:3 › コメントの修正 › edit_button (1.1s)
+  ✓   89 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1361:3 › コメントの修正 › edit_save (1.1s)
+  ✓   90 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1371:3 › コメントの修正 › edit_save_redraws_mark (1.1s)
+  ✓   91 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1385:3 › コメントの修正 › edit_cancel (1.1s)
+  ✓   92 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1394:3 › コメントの修正 › edit_cancel_by_escape (1.0s)
+  ✓   93 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1403:3 › コメントの修正 › edit_save_when_blank (1.1s)
+  ✓   94 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1415:3 › コメントの削除 › delete_button (1.1s)
+  ✓   95 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1425:3 › コメントの削除 › delete_button_redraws_mark (1.1s)
+  ✓   96 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1444:3 › 選択をコピー › copy_button (1.0s)
+  ✓   97 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1460:3 › 選択をコピー › copy_button_disabled_when_none_selected (1.0s)
+  ✓   98 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1467:3 › 選択をコピー › copy_button_when_clipboard_denied (815ms)
+  ✓  100 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1507:3 › Issue を作成 › issue_button_hidden_without_github (843ms)
+  ✓   99 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1487:3 › Issue を作成 › issue_button (1.2s)
+  ✓  101 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1517:3 › Issue を作成 › issue_button_disabled_when_none_selected (1.2s)
+  ✓  102 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1524:3 › Issue を作成 › issue_button_when_url_too_long (984ms)
+  ✓  103 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1551:3 › コメントが無いことの表示 › comment_empty_message (780ms)
+  ✓  104 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1560:3 › 通知 › toast_position (977ms)
+  ✓  106 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1591:3 › ショートカットの一覧 › shortcut_dialog (714ms)
+  ✓  107 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1602:3 › キーボードのショートカット › shortcut_ctrl_k (706ms)
+  ✓  105 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1576:3 › 検索のダイアログ › search_dialog_result_select (1.4s)
+  ✓  108 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1609:3 › キーボードのショートカット › shortcut_slash (668ms)
+  ✓  110 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1630:3 › キーボードのショートカット › shortcut_ignored_in_dialog (906ms)
+  ✓  109 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1616:3 › キーボードのショートカット › shortcut_ignored_in_input (1.1s)
+  ✓  111 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1638:3 › キーボードのショートカット › shortcut_single_key_off (842ms)
+  ✓  112 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1659:3 › ランドマーク › landmarks_unique (1.1s)
+  ✓  113 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1692:3 › 本文の用語のツールチップ › term_tooltip (745ms)
+  ✓  114 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1706:3 › 本文の用語のツールチップ › term_tooltip_when_doc_alias (791ms)
+  ✓  115 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1719:3 › 本文の用語のツールチップ › term_tooltip_when_no_aliases (718ms)
+  ✓  117 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1759:3 › project-index から文書を受け取れないときの表示 › project_index_timeout_alert (533ms)
+  ✓  118 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1786:3 › project-index から文書を受け取れないときの表示 › project_index_failed_alert (483ms)
+  ✓  116 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1731:3 › project-index から文書を受け取れないときの表示 › project_index_unreachable_alert (906ms)
+
+
+  1) [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:693:3 › 本文 › body_without_preflight 
+
+    Error: expect(received).toBe(expected) // Object.is equality
+
+    Expected: "flex"
+    Received: undefined
+
+      747 |     expect(styles.beforeBoxSizing).toBe("content-box");
+      748 |     // mdmark が hidden を付けて表示する要素は、mdmark の値で描く（Preflight の [hidden] の !important を当てない）
+    > 749 |     expect(styles.hiddenLegend).toBe("flex");
+          |                                 ^
+      750 |   });
+      751 |
+      752 |   // 本文の外（文書の一覧）には画面の基本のスタイルを当てたままにする（正常系）
+        at /home/shuhei2441/repo/dev-docs/.claude/worktrees/fix-convert-migrate-mermaid-click-toc-marker-outside-read/tests/integration/frontend/doc-view-screen.spec.ts:749:33
+
+    Error Context: test-results/doc-view-screen-本文-body-without-preflight-chromium/error-context.md
+
+  1 failed
+    [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:693:3 › 本文 › body_without_preflight 
+  117 passed (31.3s)
