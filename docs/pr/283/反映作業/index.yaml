@@ -1,0 +1,14 @@
+公開ページの配信の確認:
+  説明: この作業 PR のマージで develop へ入った pages.yml（step の名前と deploy の job の条件）で、develop への push の実行が公開ページを配信して成功することを、E2E テストの正常系 test_normal で確認する。リポジトリの外の状態は変えない
+  タグ: [確認, workflow]
+  実行者: tester
+  時期: マージの後
+  回数: 1 回限り
+  可逆: true
+  疎通確認: 公開ページの配信の確認/疎通確認.sh
+  実行: null
+  確認: 公開ページの配信の確認/確認.sh
+  切り戻し: null
+  失敗時: マージの後の develop への push の実行が完了していなければ、完了を待って 1 回だけ確認し直す。それでも failed なら依頼元へ返す
+  確認方法: "gh run list --workflow pages.yml --branch develop --event push の直近の完了した実行の結論が success で、job build の step「ブランチを取得する」〜「成果物を Pages 用に上げる」と job deploy の step「GitHub Pages へ配信する」が全て success"
+  状態: "-"

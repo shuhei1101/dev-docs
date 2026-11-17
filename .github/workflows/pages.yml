@@ -22,13 +22,17 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
+      - name: ブランチを取得する
+        uses: actions/checkout@v4
       # mdmark を npx で呼ぶ
-      - uses: actions/setup-node@v4
+      - name: Node.js を入れる
+        uses: actions/setup-node@v4
         with:
           node-version: 24
-      - uses: astral-sh/setup-uv@v6
-      - uses: actions/configure-pages@v5
+      - name: uv を入れる
+        uses: astral-sh/setup-uv@v6
+      - name: Pages の設定を読み込む
+        uses: actions/configure-pages@v5
       # Python と依存は uv.lock から uv が入れる
       - name: 公開の文書を 1 枚の HTML にまとめる
         run: uv run --frozen python scripts/build_pages.py --out _site
@@ -36,17 +40,21 @@ jobs:
       - name: 成果物に YAML が無いことを確認する
         shell: bash
         run: "! find _site -type f \\( -name '*.yaml' -o -name '*.yml' \\) | grep ."
-      - uses: actions/upload-pages-artifact@v3
+      - name: 成果物を Pages 用に上げる
+        uses: actions/upload-pages-artifact@v3
         with:
           path: _site
 
+  # 配信は develop だけで行い、他のブランチの実行は build までで終える
   deploy:
     needs: build
+    if: github.ref == 'refs/heads/develop'
     runs-on: ubuntu-latest
     timeout-minutes: 5
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
-      - id: deployment
+      - name: GitHub Pages へ配信する
+        id: deployment
         uses: actions/deploy-pages@v4
