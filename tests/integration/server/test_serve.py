@@ -366,3 +366,33 @@ def test_error_when_prompt_invalid(
     assert _listening_addresses(port) == set()
     assert str(broken) in error
     assert "kind" in error
+
+
+def test_normal_when_source_loading(
+    mock_index: MockIndex,
+    write_settings: Callable[..., Path],
+    free_port: Callable[[], int],
+    start_serve: Callable[..., Any],
+    wait_until_serving: Callable[..., None],
+) -> None:
+    """読み込み中の配信元を、読み込みを待たずに読み込み中として標準出力に出す（正常系）。"""
+    # 準備
+    mock_index.serve("sample", IndexSource(docs={None: sample_docs()}))
+    mock_index.serve("slow", IndexSource(docs={None: sample_docs()}))
+    mock_index.loading = {"slow"}
+    settings = write_settings(mock_index.address)
+    port = free_port()
+    process = start_serve(settings, port)
+    wait_until_serving(process, port)
+    # 実行
+    process.terminate()
+    process.wait(timeout=15)
+    output = process.stdout.read() if process.stdout else ""
+    # 検証
+    lines = output.splitlines()
+    queries = [path for method, path, _ in mock_index.received if path.startswith("/sources?")]
+    assert f"http://127.0.0.1:{port}/" in lines
+    assert "sample" in lines
+    assert "slow（読み込み中）" in lines
+    assert queries
+    assert all("include_loading=true" in path for path in queries)

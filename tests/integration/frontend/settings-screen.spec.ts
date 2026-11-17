@@ -1188,3 +1188,62 @@ test.describe("削除する配信元が削除されたときの表示", () => {
     await expect(confirm.getByRole("heading", { name: "sample を削除しますか?" })).toBeVisible();
   });
 });
+
+test.describe("読み書きの方法のセレクト", () => {
+  // 追加は `自動` を選んだ状態で、選択肢は `自動`・`Git`・`ディスク`、補足に自動の説明を出す（正常系）
+  test("storage_select_when_add", async ({ page }) => {
+    await open(page);
+    await openAdd(page);
+    const storage = dialog(page).getByRole("combobox", { name: /読み書きの方法/ });
+    await expect(storage).toHaveText(/自動/);
+    await expect(
+      dialog(page).getByText(
+        "自動は、フォルダが Git の作業ツリーの中なら Git、外ならディスクで読み書きします。コミットしないフォルダはディスクを選択します。",
+      ),
+    ).toBeVisible();
+    await storage.click();
+    await expect(page.getByRole("option")).toHaveText(["自動", "Git", "ディスク"]);
+  });
+
+  // 保存済みの値を持つ行は、その値を選んだ状態で、選択肢は `Git`・`ディスク` だけにする（正常系）
+  test("storage_select_when_stored", async ({ page }) => {
+    await open(page, {
+      settings: withSources(settingsSource("local", { storage: { type: "disk" } })),
+    });
+    await openEdit(page, "local");
+    const storage = dialog(page).getByRole("combobox", { name: /読み書きの方法/ });
+    await expect(storage).toHaveText(/ディスク/);
+    await expect(
+      dialog(page).getByText(
+        "Git はコミットから読み、ディスクはフォルダのファイルをそのまま読みます。保存済みの読み書きの方法は自動に戻せません。",
+      ),
+    ).toBeVisible();
+    await storage.click();
+    await expect(page.getByRole("option")).toHaveText(["Git", "ディスク"]);
+  });
+
+  // ディスクを選んで保存すると、その行に storage を送信し、他の行は取得した storage のまま送信する（正常系）
+  test("storage_select_when_saved", async ({ page }) => {
+    // 準備
+    const api = await open(page, {
+      settings: withSources(
+        settingsSource("local", { storage: { type: "disk" } }),
+        settingsSource("knowledge"),
+      ),
+    });
+    await openEdit(page, "knowledge");
+    // 実行
+    await dialog(page).getByRole("combobox", { name: /読み書きの方法/ }).click();
+    await page.getByRole("option", { name: "ディスク" }).click();
+    await dialog(page).getByRole("button", { name: "保存", exact: true }).click();
+    // 検証
+    await expect(dialog(page)).toHaveCount(0);
+    const body = api.callsOf("putSettings")[0]?.request.body as {
+      sources: { id: string; storage?: { type: string } }[];
+    };
+    expect(body.sources.map((row) => [row.id, row.storage])).toEqual([
+      ["local", { type: "disk" }],
+      ["knowledge", { type: "disk" }],
+    ]);
+  });
+});

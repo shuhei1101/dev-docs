@@ -78,3 +78,21 @@ def test_normal_when_pending_reload(
         ("sample", "serving"),
     ]
     assert sources[0]["config"] == [str(fresh)]
+
+
+def test_normal_when_storage_given(
+    storage_index: RealIndex, make_server: Callable[..., ServerEnv]
+) -> None:
+    """storage を持つ行に storage.type を、持たない行に null を返却する（正常系）。"""
+    # 準備
+    storage_index.serve("sample", IndexSource(docs={None: sample_docs()}))
+    storage_index.serve("local", IndexSource(docs={None: sample_docs()}), storage={"type": "disk"})
+    env = make_server(storage_index)
+    # 実行
+    response = env.client.get("/_api/settings/sources")
+    # 検証
+    sources = {item["id"]: item for item in response.json()["sources"]}
+    assert response.status_code == 200
+    assert sources["local"]["storage"] == {"type": "disk"}
+    assert sources["local"]["status"] == "serving"
+    assert sources["sample"]["storage"] is None

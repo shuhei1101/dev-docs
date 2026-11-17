@@ -180,6 +180,8 @@ class MockIndex:
         self.sources: dict[str, IndexSource] = {}
         self.rows: list[dict[str, Any]] = []
         self.pending: set[int] = set()
+        # 読み込み中の配信元の ID（`GET /sources?include_loading=true` だけが `loading` で返却する）
+        self.loading: set[str] = set()
         self.queued: dict[tuple[str, str], list[tuple[int, Any]]] = {}
         self.received: list[tuple[str, str, Any]] = []
         self.delay_sec = 0.0
@@ -317,17 +319,30 @@ class MockIndex:
             return queued.pop(0)
         parts = path.strip("/").split("/")
         if parts == ["sources"]:
-            return 200, {
-                "sources": [
-                    self._state(i, r) for i, r in enumerate(self.rows) if i not in self.pending
-                ]
-            }
+            return self._sources_answer(query)
         if parts == ["settings", "sources"]:
             return self._settings_answer(method, body)
         source, missing = self._served(parts[1])
         if source is None:
             return missing or (404, {})
         return self._source_answer(parts[1], source, parts[2:], query)
+
+    def _sources_answer(self, query: dict[str, str]) -> tuple[int, Any]:
+        """配信元の一覧と状態（IF-22）に応答する。読み込み中の配信元があるときは `include_loading=true` だけに応答する。"""
+        include_loading = query.get("include_loading") == "true"
+        if self.loading and not include_loading:
+            return 500, {
+                "detail": "読み込み中の配信元があり、include_loading の無い要求には応答しない"
+            }
+        states = []
+        for index, values in enumerate(self.rows):
+            if index in self.pending:
+                continue
+            if values.get("id") in self.loading:
+                states.append({"id": values.get("id"), "status": "loading", "errors": []})
+                continue
+            states.append(self._state(index, values))
+        return 200, {"sources": states}
 
     def _settings_answer(self, method: str, body: Any) -> tuple[int, Any]:
         """端末の設定の API に応答する。"""
@@ -812,6 +827,9 @@ def wait_for_restart(started_count: Callable[[Path], int]) -> Callable[..., None
 # `templates/`・`content/` が見つからないため、クローンを用意してそこから起動する
 PROJECT_INDEX_REPOSITORY = "https://github.com/shuhei1101/project-index"
 PROJECT_INDEX_COMMIT = "9ce7027ab4620b167986375e6370d04bcd9f66a2"
+# 読み書きの方法（`storage`）と `GET /sources?include_loading=true` を持つ commit（develop の 0bbe47b。
+# project-index #90・#103 を含む）。その 2 つを確かめるテストだけがこの commit の project-index を相手にする
+PROJECT_INDEX_STORAGE_COMMIT = "0bbe47b59e03501657a5c619c032ccb724cadb0b"
 # 起動の待ち受けを待つ上限。2026-11-13 の実測で 1 回 4〜6 秒。負荷の高いときの dev-docs の起動
 # （SERVE_WAIT_SEC）と同じ 60 秒にする
 REAL_INDEX_WAIT_SEC = 60
@@ -825,10 +843,10 @@ CONVERTER_ECHO = (
 CONVERTER_FAIL = "import sys\nsys.stderr.write('変換に失敗しました\\n')\nsys.exit(1)\n"
 
 
-def project_index_clone() -> Path:
+def project_index_clone(commit: str = PROJECT_INDEX_COMMIT) -> Path:
     """commit を固定した project-index のクローン（`.venv` つき）を用意して、その場所を返却する。"""
     cache = Path(os.environ.get("XDG_CACHE_HOME") or Path.home() / ".cache")
-    clone = cache / "dev-docs" / f"project-index-{PROJECT_INDEX_COMMIT[:7]}"
+    clone = cache / "dev-docs" / f"project-index-{commit[:7]}"
     if not (clone / ".git").is_dir():
         clone.parent.mkdir(parents=True, exist_ok=True)
         subprocess.run(
@@ -839,14 +857,15 @@ def project_index_clone() -> Path:
     head = subprocess.run(
         ["git", "rev-parse", "HEAD"], cwd=clone, check=True, capture_output=True, text=True
     ).stdout.strip()
-    if head != PROJECT_INDEX_COMMIT:
+    if head != commit:
+        subprocess.run(["git", "fetch", "-q", "origin"], cwd=clone, check=True, capture_output=True)
         subprocess.run(
-            ["git", "-c", "advice.detachedHead=false", "checkout", "-q", PROJECT_INDEX_COMMIT],
+            ["git", "-c", "advice.detachedHead=false", "checkout", "-q", commit],
             cwd=clone,
             check=True,
             capture_output=True,
         )
-    if not (clone / ".venv" / "bin" / "python").exists() or head != PROJECT_INDEX_COMMIT:
+    if not (clone / ".venv" / "bin" / "python").exists() or head != commit:
         subprocess.run(["uv", "sync", "--frozen", "-q"], cwd=clone, check=True, capture_output=True)
     return clone
 
@@ -1120,6 +1139,23 @@ def real_index(
 ) -> Iterator[RealIndex]:
     """テストの中で起動する本物の project-index を返却する（終了時に止める）。"""
     index = RealIndex(tmp_path / "real-index", real_index_clone, free_port())
+    index.root.mkdir()
+    yield index
+    index.stop()
+
+
+@pytest.fixture(scope="session")
+def storage_index_clone() -> Path:
+    """読み書きの方法を持つ commit の project-index のクローンを返却する（テストの実行ごとに 1 回用意する）。"""
+    return project_index_clone(PROJECT_INDEX_STORAGE_COMMIT)
+
+
+@pytest.fixture
+def storage_index(
+    tmp_path: Path, storage_index_clone: Path, free_port: Callable[[], int]
+) -> Iterator[RealIndex]:
+    """読み書きの方法を持つ本物の project-index を返却する（終了時に止める）。"""
+    index = RealIndex(tmp_path / "storage-index", storage_index_clone, free_port())
     index.root.mkdir()
     yield index
     index.stop()
