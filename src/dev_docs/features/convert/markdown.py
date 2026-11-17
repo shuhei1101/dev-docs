@@ -44,8 +44,8 @@ ER_TABLES_KEY = "tables"
 ATX_HEADING = re.compile(r"^ {0,3}#{1,6}(?:[ \t]+(?P<text>.*?))?[ \t]*$")
 # ATX の見出しの末尾の閉じの `#` の並び（前が空白か、見出しの文字が `#` だけ）
 ATX_CLOSING = re.compile(r"(?:^|[ \t]+)#+$")
-# 囲みのコードブロックの開きと閉じの行（埋め込みの展開と同じ規則）
-HEADING_FENCE = re.compile(r"^\s{0,3}(?P<mark>`{3,}|~{3,})")
+# 囲みのコードブロックの開きと閉じの行（見出しのアンカーの一覧と埋め込みの展開が使用する）
+FENCE = re.compile(r"^\s{0,3}(?P<mark>`{3,}|~{3,})")
 # 見出しの文字から ID を作れないときの ID（mdmark と同じ）
 EMPTY_HEADING_ID = "heading"
 
@@ -717,7 +717,7 @@ def _heading_ids(block: str, used: dict[str, int]) -> list[str]:
     ids: list[str] = []
     fence: str | None = None
     for line in block.splitlines():
-        opened = HEADING_FENCE.match(line)
+        opened = FENCE.match(line)
         # 囲みの外で開きの行: 囲みに入る
         if fence is None and opened:
             fence = opened.group("mark")
