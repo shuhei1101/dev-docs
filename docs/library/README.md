@@ -40,5 +40,6 @@
 | [vitest](./LIB-155-29.yaml) | 画面の単体テスト・結合テストのランナーと Testing Library |
 | [zod](./LIB-155-30.yaml) | 型を推論できるスキーマの検証ライブラリ |
 | [zustand](./LIB-155-31.yaml) | クライアントの状態のストア |
+| [actionlint](./LIB-155-33.yaml) | GitHub Actions の workflow のファイルの静的検査 |
 
 <!-- /table -->

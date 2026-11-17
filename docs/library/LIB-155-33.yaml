@@ -1,0 +1,38 @@
+id: LIB-155-33
+title: actionlint
+kind: CLI
+version:
+  current: 1.7.12
+  latest: 1.7.12
+  checked_on: '2026-11-17'
+  source: テスト実行方法の lint の層の `uvx --from actionlint-py==1.7.12.25`
+catalogs:
+  - name: CLI
+    version: 1.7.12
+    entries:
+      - name: actionlint
+        kind: コマンド
+        purpose: 引数を省いて `.github/workflows/` の全ての workflow のファイルを検査し、違反があれば 0 以外で終わる
+      - name: shellcheck との連携
+        kind: 設定
+        purpose: '`PATH` に shellcheck があると `run:` のスクリプトも検査する。`uvx --with shellcheck-py==0.11.0.1` で追加する'
+lead: GitHub Actions の workflow のファイルを静的に検査する actionlint の利用方法を定め、lint の層の workflow の検査を修正するときに参照する。
+purl: pkg:pypi/actionlint-py
+dependency_scope: 開発のみ
+adoption: 採用
+used_in:
+  - docs/test-procedure/TP-155-1.yaml
+upstream: rhysd/actionlint
+verification:
+  state: 済
+  date: '2026-11-17'
+  detail: '`uvx --from actionlint-py==1.7.12.25 --with shellcheck-py==0.11.0.1 actionlint` を直下で実行し、`.github/workflows/pages.yml` に違反が無く終了コード 0 で終わることを確認した。`-version` は 1.7.12 を返却した。'
+license: MIT（商用利用可）
+official_url: https://github.com/rhysd/actionlint
+docs_url: https://github.com/rhysd/actionlint/blob/main/docs/usage.md
+tags:
+  - name: tool:actionlint
+    main: true
+  - name: topic:ライブラリ
+  - name: tool:github
+  - name: topic:ci
