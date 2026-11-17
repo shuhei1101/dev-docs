@@ -504,3 +504,17 @@ def test_export_sources_when_disabled_id_omitted(tmp_path: Path) -> None:
     assert rows[1]["id"] == "sample"
     assert kept == ["notes"]
     assert [str(row["config"]) for row in data["sources"]] == [str(config)]
+
+
+def test_export_sources_when_storage() -> None:
+    """読み書きの方法を持ち回す（正常系）。"""
+    # 準備
+    data = _data(SAMPLE_V1)
+    fake = FakePort([_view([_pi_row("local", "/l/dev-docs.yaml", storage={"type": "disk"})])])
+    # 実行
+    _export_sources(data, fake.port(), PROJECT_INDEX)
+    # 検証
+    rows, _ = fake.saved[0]
+    assert [row["id"] for row in rows] == ["local", "sample"]
+    assert rows[0]["storage"] == {"type": "disk"}
+    assert "storage" not in rows[1]

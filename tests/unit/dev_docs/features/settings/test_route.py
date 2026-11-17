@@ -180,3 +180,32 @@ def test_build_settings_router_when_version_conflict(
     assert response.headers["content-type"] == "application/problem+json"
     assert response.json()["current"] == "v2"
     assert json.loads(put.content)["expectedVersion"] == "v1"
+
+
+def test_build_settings_router_when_storage(
+    fake_index: FakeIndex, make_handlers: Callable[..., Any]
+) -> None:
+    """行の読み書きの方法を重ねる（正常系）。"""
+    # 準備
+    fake_index.settings = {
+        "settingsPath": "/pi/settings.yaml",
+        "sources": [
+            _item({"id": "sample", "config": ["/tmp/sample/project-index.yaml"]}, "serving"),
+            _item(
+                {
+                    "id": "local",
+                    "config": ["/tmp/local/project-index.yaml"],
+                    "storage": {"type": "disk"},
+                },
+                "serving",
+            ),
+        ],
+        "version": "v1",
+    }
+    # 実行
+    response = _client(make_handlers).get("/_api/settings/sources")
+    # 検証
+    rows = response.json()["sources"]
+    assert response.status_code == 200
+    assert rows[0]["storage"] is None
+    assert rows[1]["storage"] == {"type": "disk"}

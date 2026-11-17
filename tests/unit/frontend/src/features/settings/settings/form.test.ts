@@ -6,6 +6,7 @@ import {
   removeSource,
   sourceFormSchema,
   sourceKey,
+  storedStorage,
   toFormValues,
 } from "@/features/settings/settings/form";
 
@@ -39,18 +40,26 @@ test("test_source_form_schema_when_duplicate_id", () => {
 
   expect(result.success).toBe(false);
   const issue = result.error?.issues.find((item) => item.path[0] === "id");
-  expect(issue?.message).toBe("配信元の ID extra は既に使用されています。別の ID を入力してください。");
+  expect(issue?.message).toBe(
+    "配信元の ID extra は既に使用されています。別の ID を入力してください。",
+  );
 });
 
 test("test_source_form_schema_when_blank_line", () => {
-  const result = sourceFormSchema([]).safeParse(values({ read: "~/repo/**\n\n~/work/**" }));
+  const result = sourceFormSchema([]).safeParse(
+    values({ read: "~/repo/**\n\n~/work/**" }),
+  );
 
   const issue = result.error?.issues.find((item) => item.path[0] === "read");
-  expect(issue?.message).toBe("読み取りの範囲に空の行があります。空の行を削除してください。");
+  expect(issue?.message).toBe(
+    "読み取りの範囲に空の行があります。空の行を削除してください。",
+  );
 });
 
 test("test_to_form_values", () => {
-  const result = toFormValues(row("a", { config: ["/a.yaml", "/b.yaml"] }) as never);
+  const result = toFormValues(
+    row("a", { config: ["/a.yaml", "/b.yaml"] }) as never,
+  );
 
   expect(result.config).toBe("/a.yaml\n/b.yaml");
   expect(result.write).toBe("");
@@ -62,13 +71,21 @@ test("test_apply_source", () => {
   const result = applySource(sources, values(), null);
 
   expect(result).toHaveLength(2);
-  expect(result[1]).toMatchObject({ id: "extra", config: ["/a/dev-docs.yaml", "/a/local.yaml"] });
-  expect(result[0]).toMatchObject({ id: "a", config: ["/home/me/a/dev-docs.yaml"] });
+  expect(result[1]).toMatchObject({
+    id: "extra",
+    config: ["/a/dev-docs.yaml", "/a/local.yaml"],
+  });
+  expect(result[0]).toMatchObject({
+    id: "a",
+    config: ["/home/me/a/dev-docs.yaml"],
+  });
   expect(result[0]).not.toHaveProperty("status");
 });
 
 test("test_apply_source_when_edit", () => {
-  const sources = [row("a", { scope: { read: ["/x/**"], write: ["/x"] } })] as never;
+  const sources = [
+    row("a", { scope: { read: ["/x/**"], write: ["/x"] } }),
+  ] as never;
 
   const result = applySource(sources, values({ id: "a", write: "" }), 0);
 
@@ -90,9 +107,16 @@ test("test_to_form_values_when_outside_read", () => {
 });
 
 test("test_apply_source_when_outside_read", () => {
-  const sources = [row("a", { outsideRead: false }), row("b", { outsideRead: true })] as never;
+  const sources = [
+    row("a", { outsideRead: false }),
+    row("b", { outsideRead: true }),
+  ] as never;
 
-  const result = applySource(sources, values({ id: "extra", outsideRead: false }), null);
+  const result = applySource(
+    sources,
+    values({ id: "extra", outsideRead: false }),
+    null,
+  );
 
   expect(result[0]).toMatchObject({ id: "a", outside_read: false });
   expect(result[1]).not.toHaveProperty("outside_read");
@@ -101,7 +125,9 @@ test("test_apply_source_when_outside_read", () => {
 
 test("test_source_key", () => {
   const withId = sourceKey(row("a") as never);
-  const withoutId = sourceKey(row("x", { id: null, config: ["/p/a.yaml", "/p/b.yaml"] }) as never);
+  const withoutId = sourceKey(
+    row("x", { id: null, config: ["/p/a.yaml", "/p/b.yaml"] }) as never,
+  );
 
   expect(withId).toBe("a");
   expect(withoutId).toBe("/p/a.yaml\n/p/b.yaml");
@@ -112,4 +138,40 @@ test("test_find_source", () => {
 
   expect(findSource(sources, "b")).toBe(2);
   expect(findSource(sources, "z")).toBe(-1);
+});
+
+test("test_stored_storage", () => {
+  expect(
+    storedStorage(row("local", { storage: { type: "disk" } }) as never),
+  ).toBe("disk");
+  expect(storedStorage(row("sample") as never)).toBeNull();
+  expect(storedStorage(null)).toBeNull();
+});
+
+test("test_to_form_values_when_storage", () => {
+  expect(
+    toFormValues(row("local", { storage: { type: "disk" } }) as never).storage,
+  ).toBe("disk");
+  expect(toFormValues(row("sample") as never).storage).toBe("auto");
+  expect(toFormValues(null).storage).toBe("auto");
+});
+
+test("test_apply_source_when_storage", () => {
+  const sources = [
+    row("local", { storage: { type: "disk" } }),
+    row("sample"),
+  ] as never;
+
+  const added = applySource(sources, values({ storage: "disk" }), null);
+  const edited = applySource(
+    sources,
+    values({ id: "sample", storage: "auto" }),
+    1,
+  );
+
+  expect(added[0]).toMatchObject({ id: "local", storage: { type: "disk" } });
+  expect(added[1]).not.toHaveProperty("storage");
+  expect(added[2]).toMatchObject({ id: "extra", storage: { type: "disk" } });
+  expect(edited[0]).toMatchObject({ id: "local", storage: { type: "disk" } });
+  expect(edited[1]).not.toHaveProperty("storage");
 });

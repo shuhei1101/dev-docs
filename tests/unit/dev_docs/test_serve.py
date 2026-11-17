@@ -710,3 +710,22 @@ def test_run_migrate_when_no_export(
     assert code == 0
     assert ports == []
     assert load_yaml(settings.read_text(encoding="utf-8"))["version"] == "2"
+
+
+def test_announce_sources_when_loading(
+    make_terminal_config: Callable[..., TerminalConfig], capsys: pytest.CaptureFixture[str]
+) -> None:
+    """読み込み中の配信元を出す（正常系）。"""
+    # 準備
+    fake = FakeIndex(
+        sources=[
+            {"id": "sample", "status": "serving", "errors": []},
+            {"id": "slow", "status": "loading", "errors": []},
+        ]
+    )
+    with _http_index(fake) as address:
+        terminal = make_terminal_config(project_index=address)
+        # 実行
+        announce_sources(terminal).join(timeout=30)
+    # 検証
+    assert capsys.readouterr().out.splitlines() == ["sample", "slow（読み込み中）"]
