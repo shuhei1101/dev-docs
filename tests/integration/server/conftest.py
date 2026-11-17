@@ -334,7 +334,7 @@ class MockIndex:
             return 500, {
                 "detail": "読み込み中の配信元があり、include_loading の無い要求には応答しない"
             }
-        states = []
+        states: list[dict[str, Any]] = []
         for index, values in enumerate(self.rows):
             if index in self.pending:
                 continue
