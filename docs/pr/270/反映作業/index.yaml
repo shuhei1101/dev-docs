@@ -1,0 +1,14 @@
+配信の設定の再読み込み:
+  説明: develop へ入った project-index.yaml と管理用の YAML を、稼働中の project-index の管理の MCP の reload で配信へ入れる。稼働中の project-index が shuhei1101/project-index の 7a95944（直下の管理用の YAML の判定）より前のコードで起動したままなら、reload の代わりに管理の MCP の restart で起動し直す
+  タグ: [再読み込み]
+  実行者: planner
+  時期: マージの後
+  回数: 1 回限り
+  可逆: true
+  疎通確認: null
+  実行: null
+  確認: null
+  切り戻し: null
+  失敗時: reload を 1 回やり直し、2 回続けて配信元 dev-docs が not_served に入ったら依頼元へ返す
+  確認方法: 開発ドキュメントサーバーの画面で配信元 dev-docs の develop を開くと、タブが要件.md の並びで出て、管理の MCP の check_project（配信元 dev-docs）の索引の同期がずれなし
+  状態: "-"
