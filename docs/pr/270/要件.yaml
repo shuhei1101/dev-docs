@@ -13,25 +13,63 @@ docs:
   - page: project-index.yaml
     new: false
     change: nav.tabs[] を規約『開発ドキュメントのナビゲーション』の並びで定義し、目次を除く。documents[] を setup の推奨の範囲に合わせて行を追加・見直す
-    status: todo
+    status: done
+    updated_by: planner
+    updated_at: '2026-11-17T12:25:06.411749+00:00'
   - page: docs/_root/files.yml
     new: false
-    change: setup の結果に合わせて行とメタデータを見直す（直下・docs/ 直下のファイルの置き場所は setup に従う）
-    status: todo
+    change: 直下の files.yaml（行 root）へデザイン方針の行を移して削除する
+    status: done
+    updated_by: planner
+    updated_at: '2026-11-17T12:25:06.411749+00:00'
   - page: docs/guide/files.yml
     new: false
-    change: setup の今の付け方でメタデータを見直す
-    status: todo
+    change: changed で中身が変わった 設定.md のメタデータを見直し（変更なし）、確認の時点を記録する
+    status: done
+    updated_by: planner
+    updated_at: '2026-11-17T12:25:06.411749+00:00'
   - page: docs/mock/files.yml
     new: false
-    change: setup の今の付け方でメタデータを見直す
-    status: todo
+    change: 確認の時点を記録する（中身が変わったファイルは無い）
+    status: done
+    updated_by: planner
+    updated_at: '2026-11-17T12:25:06.411749+00:00'
+  - page: files.yaml
+    new: true
+    change: 直下・docs/ 直下・plugins/・scripts/・templates/・.github/・.claude-plugin/ のファイルの行を記載する
+    status: done
+    updated_by: planner
+    updated_at: '2026-11-17T12:25:06.411749+00:00'
+  - page: src/files.yaml
+    new: true
+    change: サーバーのコードの行を記載し、モジュール構成への implements を張る
+    status: done
+    updated_by: planner
+    updated_at: '2026-11-17T12:25:06.411749+00:00'
+  - page: frontend/files.yaml
+    new: true
+    change: 画面のコードの行を記載し、モジュール構成への implements を張る
+    status: done
+    updated_by: planner
+    updated_at: '2026-11-17T12:25:06.411749+00:00'
+  - page: tests/files.yaml
+    new: true
+    change: テストの行を記載し、単体テストにコードへの tests、結合テストにインターフェース定義・画面設計・部品設計への see_also を張る
+    status: done
+    updated_by: planner
+    updated_at: '2026-11-17T12:25:06.411749+00:00'
+  - page: content/prompts/mcp/admin/tools/status.yaml
+    new: false
+    change: プロンプトの行の metadata の tags の列を持たせるため tags を追加する（restart.yaml・update.yaml も同じ）
+    status: done
+    updated_by: planner
+    updated_at: '2026-11-17T12:25:06.411749+00:00'
 scope_out:
   - item: docs/pr/ を検索の対象に入れる
     reason: 作業 PR ごとの資料で、読む人が参照する文書ではない（shuhei1101/project-index#132 と同じ判断）
     plan: none
   - item: モジュール構成をタグ（main_tags）でサイドバーのグループに分ける
-    reason: auto.group_by で共通のメタデータを指定する機能が入るまで書けない。要件.md の未確定の案 B
+    reason: auto.group_by で共通のメタデータを指定する機能が入るまで書けない。今回はサブシステムごとのグループにとどめる
     plan: '#251'
   - item: documents[].schema の参照を design-schemas の v9 系へ上げる
     reason: 同じ documents の行の別のキーで、目的が別
