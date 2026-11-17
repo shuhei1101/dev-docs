@@ -1,7 +1,7 @@
 #!/bin/sh
 set -u
 
-DEVELOP=/mnt/c/Users/shuhe/repo/dev-docs/.claude/worktrees/develop
+DEVELOP=/home/shuhei2441/repo/dev-docs/.claude/worktrees/develop
 FIXED=src/dev_docs/features/convert/inline.py
 CLIENT=src/dev_docs/integrations/project_index/client.py
 HEADERS_ACCEPT='Accept: application/json, text/event-stream'
