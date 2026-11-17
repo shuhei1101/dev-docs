@@ -1,6 +1,6 @@
 id: MOD-155-176
 title: 開発ドキュメントサーバー / 起動 / error_handlers.py
-lead: 例外の problem+json への変換。
+lead: 例外の problem+json への変換を受け持ち、起動の error_handlers.py を修正するときに参照する。
 test_files:
   - tests/unit/dev_docs/server/test_error_handlers.py
 diagrams:
@@ -21,7 +21,7 @@ constants:
     title: problem+json の type の頭
     container: server/error_handlers.py
     usecase: 共通
-    summary: problem+json の `type` に置く URI の頭（末尾にエラーの名前を付ける）
+    summary: problem+json の `type` に配置する URI の頭（末尾にエラーの名前を付ける）
     value: '"urn:dev-docs:error:"'
 functions:
   - name: register_error_handlers
@@ -29,7 +29,7 @@ functions:
     kind: 関数
     container: server/error_handlers.py
     usecase: 共通
-    role: 入口
+    role: エントリーポイント
     summary: 画面の API・画面の配信の例外を RFC 9457 の problem+json にするハンドラを登録する
     scope: public
     side_effects: アプリに例外のハンドラを登録する
@@ -42,17 +42,17 @@ functions:
         description: 登録先
     returns:
       type: None
-      description: 何も返さない
+      description: 何も返却しない
     process: |-
-      1. `DevDocsError` は、`application/problem+json` で `{type: PROBLEM_TYPE_BASE + name, title: name, status, detail: message, nextSteps: next_steps, ...details()}` を返す。`details()` の 1 段目のキーと入れ子のモデルのフィールド名を `pydantic.alias_generators.to_camel` で camelCase にする。`dict[str, ...]` の値のキー（`candidates` の文書の ID など）は変えない。`violations` を持つときは `errors[]`（`{path, reason}`、`reason` は `rule`）にも並べる。`ProjectIndexUnreachableError` は `address`・`reason`・`kind` を `projectIndex.address`・`projectIndex.reason`・`projectIndex.kind` に入れ、1 段目には置かない。`ProjectIndexResponseError` は `address`・`reason` と `kind` `failed` を同じ `projectIndex` に入れ、`status_code`・`summary` は 1 段目に置き、`detail` を `project-index（{address}）が要求を処理できませんでした。{reason}` にする。どちらかを返すたびに `[error]` project-index につながらない・project-index が処理に失敗した（アドレス・理由・種類・メソッド・パス）を書く
-      2. `RequestValidationError` は、400 で `type` が `InvalidArgumentError` の problem+json を返す。`errors[]` は誤りごとに `loc` の `body` を除いたパス（`sources[1].id` の形。項目のパスへの変換）と `msg`
-      3. `starlette.exceptions.HTTPException`（ルートの無いパス・画面の配信の 404 を含む）は、その `status_code` で `type` が `PROBLEM_TYPE_BASE + "HttpError"`、`detail` が例外の `detail` の problem+json を返す。例外が `headers`（405 の `Allow` など）を持てば、応答のヘッダーに載せる
-      4. これら以外の例外は FastAPI の既定の 500 に任せ、`[error]` 要求の処理に失敗した（メソッド・パス・例外）を書く
+      1. `DevDocsError` は、`application/problem+json` で `{type: PROBLEM_TYPE_BASE + name, title: name, status, detail: message, nextSteps: next_steps, ...details()}` を返却する。`details()` の 1 段目のキーと入れ子のモデルのフィールド名を `pydantic.alias_generators.to_camel` で camelCase にする。`dict[str, ...]` の値のキー（`candidates` の文書の ID など）は変えない。`violations` を持つときは `errors[]`（`{path, reason}`、`reason` は `rule`）にも並べる。`ProjectIndexUnreachableError` は `address`・`reason`・`kind` を `projectIndex.address`・`projectIndex.reason`・`projectIndex.kind` に入れ、1 段目には配置しない。`ProjectIndexResponseError` は `address`・`reason` と `kind` `failed` を同じ `projectIndex` に入れ、`status_code`・`summary` は 1 段目に配置し、`detail` を `project-index（{address}）が要求を処理できませんでした。{reason}` にする。どちらかを返却するたびに `[error]` project-index につながらない・project-index が処理に失敗した（アドレス・理由・種類・メソッド・パス）を記載する
+      2. `RequestValidationError` は、400 で `type` が `InvalidArgumentError` の problem+json を返却する。`errors[]` は誤りごとに `loc` の `body` を除いたパス（`sources[1].id` の形式。項目のパスへの変換）と `msg`
+      3. `starlette.exceptions.HTTPException`（ルートの無いパス・画面の配信の 404 を含む）は、その `status_code` で `type` が `PROBLEM_TYPE_BASE + "HttpError"`、`detail` が例外の `detail` の problem+json を返却する。例外が `headers`（405 の `Allow` など）を持てば、応答のヘッダーに含める
+      4. これら以外の例外は FastAPI の既定の 500 に任せ、`[error]` 要求の処理に失敗した（メソッド・パス・例外）を記載する
     unit_tests:
       - name: test_register_error_handlers
         case: 正常
         summary: DevDocsError を problem+json にする
-        condition: '`ProjectIndexRejectedError(violations=[Violation(path="sources[0].config", rule="必須")])` を送る API のルートを POST'
+        condition: '`ProjectIndexRejectedError(violations=[Violation(path="sources[0].config", rule="必須")])` を送信する API のルートを POST'
         mock: なし（テスト用のルート）
         expected: '422、`Content-Type` が `application/problem+json`、`type` が `urn:dev-docs:error:ProjectIndexRejectedError`、`errors` が `[{path: sources[0].config, reason: 必須}]`'
       - name: test_register_error_handlers_when_request_invalid
@@ -64,36 +64,36 @@ functions:
       - name: test_register_error_handlers_when_http_error
         case: 正常
         summary: ルートの無いパスを problem+json の 404 にする
-        condition: どのルートにも当たらない GET `/_api/none`
+        condition: どのルートにも該当しない GET `/_api/none`
         mock: なし（テスト用のルート）
         expected: 404、`Content-Type` が `application/problem+json`、`type` が `urn:dev-docs:error:HttpError`
       - name: test_register_error_handlers_when_http_error_headers
         case: 正常
-        summary: HTTPException のヘッダーを応答に載せる
-        condition: '`HTTPException(405, headers={"Allow": "GET"})` を送るルートを POST'
+        summary: HTTPException のヘッダーを応答に含める
+        condition: '`HTTPException(405, headers={"Allow": "GET"})` を送信するルートを POST'
         mock: なし（テスト用のルート）
         expected: 405、`Content-Type` が `application/problem+json`、`Allow` が `GET`
       - name: test_register_error_handlers_when_details_snake
         case: 正常
         summary: 詳細のキーを camelCase にする
-        condition: '`details()` が `{"settings_path": "x", "missing": {"source_id": "a"}, "candidates": {"tests/test_main": ["rule-auth"]}}` を返す `DevDocsError` を送るルートを GET'
+        condition: '`details()` が `{"settings_path": "x", "missing": {"source_id": "a"}, "candidates": {"tests/test_main": ["rule-auth"]}}` を返却する `DevDocsError` を送信するルートを GET'
         mock: なし（テスト用のルート）
         expected: 本文に `settingsPath`・`missing.sourceId`・`nextSteps` があり、snake_case のフィールド名が無い。`candidates` のキーは `tests/test_main` のまま
       - name: test_register_error_handlers_when_project_index_unreachable
         case: 正常
         summary: project-index につながらないときの 503
-        condition: '`ProjectIndexUnreachableError(address="http://127.0.0.1:8786", reason="45 秒以内に応答がありませんでした")` を送るルートを GET'
+        condition: '`ProjectIndexUnreachableError(address="http://127.0.0.1:8786", reason="45 秒以内に応答がありませんでした")` を送信するルートを GET'
         mock: なし（テスト用のルート）
         expected: 503、`detail` が `project-index（http://127.0.0.1:8786）に接続できませんでした。45 秒以内に応答がありませんでした`、`projectIndex` が `{address, reason}` で、1 段目に `address` が無い。エラーログに 1 行
       - name: test_register_error_handlers_when_project_index_failed
         case: 正常
         summary: project-index が処理に失敗したときの problem+json
-        condition: 'ルートが `ProjectIndexResponseError(address="http://127.0.0.1:8786", status_code=500, summary="…", reason="git archive …: 20 秒を超えたため止めました")` を送る'
+        condition: 'ルートが `ProjectIndexResponseError(address="http://127.0.0.1:8786", status_code=500, summary="…", reason="git archive …: 20 秒を超えたため止めました")` を送信する'
         mock: なし
         expected: '502 で、`projectIndex` が `{address, reason, kind: "failed"}`、`detail` が `project-index（http://127.0.0.1:8786）が要求を処理できませんでした。git archive …` で始まる'
       - name: test_register_error_handlers_when_project_index_timed_out
         case: 正常
         summary: 応答が無かったときの problem+json
-        condition: ルートが `ProjectIndexUnreachableError(address=…, reason="70 秒以内に応答がありませんでした", kind="timeout")` を送る
+        condition: ルートが `ProjectIndexUnreachableError(address=…, reason="70 秒以内に応答がありませんでした", kind="timeout")` を送信する
         mock: なし
         expected: 503 で、`projectIndex.kind` が `timeout`、`detail` が `project-index（…）から応答がありませんでした。` で始まる

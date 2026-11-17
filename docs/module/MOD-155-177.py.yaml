@@ -1,6 +1,6 @@
 id: MOD-155-177
 title: 開発ドキュメントサーバー / 起動 / lifespan.py
-lead: マウントした管理の MCP のセッションの管理と、project-indexの呼び出しを閉じるアプリの寿命。
+lead: マウントした管理の MCP のセッションの管理と、project-indexの呼び出しを閉じるアプリの寿命を受け持ち、起動の lifespan.py を修正するときに参照する。
 test_files:
   - tests/unit/dev_docs/server/test_lifespan.py
 diagrams:
@@ -40,14 +40,14 @@ functions:
         description: 止まるときに閉じる
     returns:
       type: Callable[[FastAPI], AbstractAsyncContextManager[None]]
-      description: FastAPI の `lifespan` に渡す関数
+      description: FastAPI の `lifespan` に指定する関数
     process: |-
-      1. 返す関数は、`contextlib.AsyncExitStack` に各 MCP の `session_manager.run()` を入れる（マウントした子のアプリの寿命は動かないため）。`project_index.aclose` をスタックの後始末に入れる
+      1. 返却する関数は、`contextlib.AsyncExitStack` に各 MCP の `session_manager.run()` を入れる（マウントした子のアプリの寿命は動かないため）。`project_index.aclose` をスタックの後始末に入れる
       2. `yield` し、止まるときにスタックを閉じる
     unit_tests:
       - name: test_build_lifespan
         case: 正常
         summary: MCP のセッションの管理を動かし、止まるときに閉じる
-        condition: 管理の MCP を渡して寿命に入り、出る
+        condition: 管理の MCP を指定して寿命に入り、出る
         mock: MCP（`session_manager.run()` が入った・出たを記録する偽物）・project-indexの呼び出し（`aclose` を数える偽物）
         expected: 入ると run が入り、出ると run が出て `aclose` が 1 回呼ばれる

@@ -1,6 +1,6 @@
 id: MOD-155-36
 title: 画面 / 文書の画面 / comment-store.ts
-lead: このブラウザのタブで溜めたコメントの置き場所。
+lead: このブラウザのタブで溜めたコメントの配置先を受け持ち、文書の画面の comment-store.ts を修正するときに参照する。
 test_files:
   - tests/unit/frontend/src/features/docs/shared/comments/comment-store.test.ts
 data_models:
@@ -43,7 +43,7 @@ data_models:
         description: 引用の後の文字列（mdmark）
       - name: body
         type: string
-        description: 書いたコメント
+        description: 記載したコメント
       - name: selected
         type: boolean
         description: コピー・起票に含めるか（追加したときは true）
@@ -57,7 +57,7 @@ functions:
     container: features/docs/shared/comments/comment-store.ts
     usecase: コメントを溜める
     role: 変換
-    summary: mdmark の `commentStore.load` が返す、`docId` のコメントの並び
+    summary: mdmark の `commentStore.load` が返却する、`docId` のコメントの並び
     scope: public
     args:
       - name: comments
@@ -73,20 +73,20 @@ functions:
     returns:
       type: '{id: string; quote: string; prefix: string; suffix: string; body: string}[]'
       description: 追加した順
-    process: 1. `docId` が一致するコメントを mdmark の形にして返す
+    process: 1. `docId` が一致するコメントを mdmark の形式にして返却する
     unit_tests:
       - name: test_comments_of
         case: 正常
         summary: 文書で絞る
         condition: 2 つの文書のコメントが 3 件
         mock: なし
-        expected: 渡した `docId` の分だけ、追加した順
+        expected: 指定した `docId` の分だけ、追加した順
   - name: docIdOf
     title: 文書の ID
     container: features/docs/shared/comments/comment-store.ts
     usecase: コメントを溜める
     role: 変換
-    summary: コメントと mdmark の `docId` に使う、文書を指す文字列
+    summary: コメントと mdmark の `docId` に使用する、文書を指す文字列
     kind: 関数
     scope: public
     args:
@@ -98,7 +98,7 @@ functions:
     returns:
       type: string
       description: '`{source}@{ref}:{path}`（`ref` が無ければ空）'
-    process: 1. `DocBody` と `useLocating` が同じ文字列で文書を比べるため、`{source}@{ref ?? ""}:{path}` を返す
+    process: 1. `DocBody` と `useLocating` が同じ文字列で文書を比べるため、`{source}@{ref ?? ""}:{path}` を返却する
 stores:
   - name: useCommentStore
     title: コメントのストア
@@ -115,7 +115,7 @@ stores:
       - name: add
         title: コメントの追加
         kind: 関数
-        summary: コメントを末尾に加え、追加したコメントを返す（mdmark の `commentStore.save`）
+        summary: コメントを末尾に加え、追加したコメントを返却する（mdmark の `commentStore.save`）
         scope: public
         args:
           - name: input
@@ -145,7 +145,7 @@ stores:
             description: 新しい本文
         returns:
           type: void
-          description: 何も返さない
+          description: 何も返却しない
         process: 1. `id` のコメントの `body` を書き換える
       - name: remove
         title: コメントの削除
@@ -160,7 +160,7 @@ stores:
             description: コメント
         returns:
           type: void
-          description: 何も返さない
+          description: 何も返却しない
         process: 1. `id` のコメントを除く
       - name: setSelected
         title: 選択の切り替え
@@ -180,5 +180,5 @@ stores:
             description: 選ぶか
         returns:
           type: void
-          description: 何も返さない
+          description: 何も返却しない
         process: 1. 対象の `selected` を書き換える

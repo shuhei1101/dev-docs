@@ -1,6 +1,6 @@
 id: MOD-155-67
 title: 画面 / 共通 / use-media-query.ts
-lead: CSS のメディアクエリに今当たっているかを返すフック。
+lead: CSS のメディアクエリに今当たっているかを返却するフックを受け持ち、共通の use-media-query.ts を修正するときに参照する。
 test_files:
   - tests/unit/frontend/src/shared/hooks/use-media-query.test.tsx
 functions:
@@ -10,7 +10,7 @@ functions:
     container: shared/hooks/use-media-query.ts
     usecase: 共通
     role: フック
-    summary: '`window.matchMedia` の結果を `useSyncExternalStore` で読み、画面幅の変化に追従する'
+    summary: '`window.matchMedia` の結果を `useSyncExternalStore` で参照し、画面幅の変化に追従する'
     scope: public
     args:
       - name: query
@@ -22,18 +22,18 @@ functions:
       type: boolean
       description: 今当たっているか。サーバーでの描画では false
     process: |-
-      1. `matchMedia(query)` の `change` を購読し、外れるときに購読を外す
-      2. 描画のたびに `matchMedia(query).matches` を読む
+      1. `matchMedia(query)` の `change` を購読し、解除されるときに購読を除外する
+      2. 描画のたびに `matchMedia(query).matches` を参照する
     unit_tests:
       - name: test_use_media_query
         case: 正常
-        summary: 当たっているか
+        summary: 該当しているか
         condition: '`matches` が true の `matchMedia`'
-        mock: '`window.matchMedia`（`change` を手で送る偽物）'
+        mock: '`window.matchMedia`（`change` を手で送信する偽物）'
         expected: 'true'
       - name: test_use_media_query_when_changed
         case: 正常
         summary: 幅の変化に追従する
-        condition: '`matches` を false にして `change` を送る'
+        condition: '`matches` を false にして `change` を送信する'
         mock: '`window.matchMedia`（偽物）'
         expected: false に変わる

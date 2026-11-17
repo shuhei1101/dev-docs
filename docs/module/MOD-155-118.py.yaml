@@ -1,6 +1,6 @@
 id: MOD-155-118
 title: 開発ドキュメントサーバー / 再起動と更新 / update.py
-lead: 端末の設定の `clone` を `git pull --ff-only`・`uv sync` で更新し、新しいコードで移し替えの要否を確かめて、要らなければ再起動を要求する。
+lead: クローンの `git pull --ff-only`・`uv sync` での更新と再起動の要求を受け持ち、再起動と更新の update.py を修正するときに参照する。
 test_files:
   - tests/unit/dev_docs/features/lifecycle/test_update.py
 functions:
@@ -34,14 +34,14 @@ functions:
     process: |-
       1. `control.update_lock` を非ブロッキングで取る
          - 取れない場合、または `control.requested` が `True` の場合、`RestartInProgressError` を送出する
-      2. 手順 3〜9 を `try` に入れ、`finally` で `update_lock` を放す（返す経路・`UpdateFailedError` の経路を含む）
-      3. `previous_version` を 起動時に読んだ値（動いているバージョン。更新で配布のメタデータが入れ替わっても変わらない） で得る
-      4. `git rev-parse HEAD` を実行して前の HEAD を控え、`git pull --ff-only` を実行する（コマンドの実行）
+      2. 手順 3〜9 を `try` に入れ、`finally` で `update_lock` を放す（返却する経路・`UpdateFailedError` の経路を含む）
+      3. `previous_version` を 起動時に参照した値（動いているバージョン。更新で配布のメタデータが入れ替わっても変わらない） で得る
+      4. `git rev-parse HEAD` を実行して前の HEAD を記録し、`git pull --ff-only` を実行する（コマンドの実行）
          - `[INFO]` クローンを更新する（clone）
       5. もう一度 `git rev-parse HEAD` を実行する
-         - 前の HEAD と同じ場合、`updated`・`migration_needed`・`restarting` を `False`、`version` を `previous_version` にして返す
+         - 前の HEAD と同じ場合、`updated`・`migration_needed`・`restarting` を `False`、`version` を `previous_version` にして返却する
       6. `uv sync` を実行する（コマンドの実行）
-      7. `version` を `{clone}/pyproject.toml` の `project.version` から `tomllib` で読む
+      7. `version` を `{clone}/pyproject.toml` の `project.version` から `tomllib` で参照する
       8. `{clone}/.venv/bin/python -m dev_docs migrate --plan` を実行し、標準出力が空でなければ `migration_needed` を `True` にする（コマンドの実行、終了コード 0 だけを成功とする）
       9. `migration_needed` に応じて分ける
          - `True` の場合、`restarting` を `False` にする
@@ -77,12 +77,12 @@ functions:
         case: 異常
         summary: 再起動を要求済みなら断る
         condition: '`control.request()` を呼んだ後'
-        mock: '`subprocess.run`（呼ばれないことを確かめる）'
+        mock: '`subprocess.run`（呼ばれないことを確認する）'
         expected: '`RestartInProgressError`。`subprocess.run` を呼ばない'
         exception: 再起動の途中
       - name: test_update_clone_when_up_to_date_then_again
         case: 正常
-        summary: 新しい commit が無くて返した後にもう一度呼べる
+        summary: 新しい commit が無くて返却した後にもう一度呼べる
         condition: '`git pull` の前後で HEAD が同じ状態で 2 回呼ぶ'
         mock: '`subprocess.run`'
         expected: 2 回目も `RestartInProgressError` にならず、`updated` が `False`
@@ -129,7 +129,7 @@ functions:
          - 打ち切った場合、`UpdateFailedError` を送出する
          - 終了コードが 0 以外の場合、`UpdateFailedError` を送出する
            - `[ERROR]` 更新のコマンドが失敗した（コマンド・終了コード・stderr の末尾）
-      2. 標準出力を返す
+      2. 標準出力を返却する
     exceptions:
       - name: UpdateFailedError
         condition: コマンドが見つからない
@@ -143,7 +143,7 @@ functions:
     unit_tests:
       - name: test_run
         case: 正常
-        summary: 標準出力を返す
+        summary: 標準出力を返却する
         condition: 終了コード 0、標準出力 `abc`
         mock: '`subprocess.run`'
         expected: '`abc`。`timeout` に `COMMAND_TIMEOUT_SEC` が渡る'

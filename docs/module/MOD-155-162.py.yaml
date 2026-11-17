@@ -1,6 +1,6 @@
 id: MOD-155-162
 title: 開発ドキュメントサーバー / 画面のAPI / route.py
-lead: 画面の API のルーター（`/_api/sources/{source}/docs`・`search`・`refs`・`columns`）。
+lead: 画面の API のルーター（`/_api/sources/{source}/docs`・`search`・`refs`・`columns`）を受け持ち、画面のAPIの route.py を修正するときに参照する。
 test_files:
   - tests/unit/dev_docs/features/view/test_route.py
 diagrams:
@@ -8,12 +8,12 @@ diagrams:
     diagram: |-
       classDiagram
         direction TD
-        画面の入口 ..> 文書の取得
-        画面の入口 ..> 見つからなかったもの
-        画面の入口 ..> 画面の検索
-        画面の入口 ..> 表の列の設定
-        画面の入口 ..> project-indexの呼び出し
-        class 画面の入口 {
+        画面のエントリーポイント ..> 文書の取得
+        画面のエントリーポイント ..> 見つからなかったもの
+        画面のエントリーポイント ..> 画面の検索
+        画面のエントリーポイント ..> 表の列の設定
+        画面のエントリーポイント ..> project-indexの呼び出し
+        class 画面のエントリーポイント {
           <<function>>
         }
         class 文書の取得 {
@@ -51,11 +51,11 @@ constants:
     value: '100'
 functions:
   - name: build_view_router
-    title: 画面の入口
+    title: 画面のエントリーポイント
     kind: 関数
     container: features/view/route.py
     usecase: 共通
-    role: 入口
+    role: エントリーポイント
     summary: 画面の API のルートを持つ `APIRouter` を作る
     scope: public
     args:
@@ -69,60 +69,60 @@ functions:
       type: fastapi.APIRouter
       description: 5 つのルートを持つルーター
     process: |-
-      1. GET `/_api/sources/{source}/docs` と `/_api/sources/{source}/docs/{path:path}` は、`ref`・`diff` を受け、文書の取得を `DocumentResponse` で返す。文書の取得の例外は、例外の変換の登録と同じ problem+json に見つからなかったものを加えて 404 で返す（`SourceNotServedError` の `errors[]` もそのまま）。`ProjectIndexUnreachableError` は例外の変換の登録に任せて 503 にする
-      2. GET `/_api/sources/{source}/search` は、`q`（1〜`SEARCH_QUERY_MAX` 文字）・`ref`・`limit`（1〜`SEARCH_LIMIT_MAX`）を受け、画面の検索を返す
-      3. GET `/_api/sources/{source}/refs` は、`commits`（0〜`REFS_COMMITS_MAX`）を受け、project-indexの呼び出し.リビジョンの一覧の取得 の結果を `RefsResponse` にして返す（無い配信元は 404）
-      4. PUT `/_api/sources/{source}/columns` は、同じオリジンの確認を依存に持ち、project-indexの呼び出し.配信元の表示の設定の取得 で配信元があることを確かめてから、本文を `ColumnsRequest` で受けて表の列の設定.列の設定を書く を呼び、同じ値を返す
-      5. ルーターは `APIRouter(tags=["view"])` にする。各ルートの `name`（`operation_id` は渡さず、アプリの組み立てが operationId を `view-{name}` にする）は、`/docs` が `get_document_default`、`/docs/{path:path}` が `get_document`、search が `search_page`、refs が `list_refs`、columns が `put_columns`
-      6. project-index への問い合わせは `await` で呼び、表の列の設定の読み書きだけを `asyncio.to_thread` の内側で呼ぶ。配信元の読み込みを待つ処理は持たない（配信元は project-index が読む）
+      1. GET `/_api/sources/{source}/docs` と `/_api/sources/{source}/docs/{path:path}` は、`ref`・`diff` を受け、文書の取得を `DocumentResponse` で返却する。文書の取得の例外は、例外の変換の登録と同じ problem+json に見つからなかったものを加えて 404 で返却する（`SourceNotServedError` の `errors[]` もそのまま）。`ProjectIndexUnreachableError` は例外の変換の登録に任せて 503 にする
+      2. GET `/_api/sources/{source}/search` は、`q`（1〜`SEARCH_QUERY_MAX` 文字）・`ref`・`limit`（1〜`SEARCH_LIMIT_MAX`）を受け、画面の検索を返却する
+      3. GET `/_api/sources/{source}/refs` は、`commits`（0〜`REFS_COMMITS_MAX`）を受け、project-indexの呼び出し.リビジョンの一覧の取得 の結果を `RefsResponse` にして返却する（無い配信元は 404）
+      4. PUT `/_api/sources/{source}/columns` は、同じオリジンの確認を依存に持ち、project-indexの呼び出し.配信元の表示の設定の取得 で配信元があることを確認してから、本文を `ColumnsRequest` で受けて表の列の設定.列の設定を記載する を呼び、同じ値を返却する
+      5. ルーターは `APIRouter(tags=["view"])` にする。各ルートの `name`（`operation_id` は指定せず、アプリの組み立てが operationId を `view-{name}` にする）は、`/docs` が `get_document_default`、`/docs/{path:path}` が `get_document`、search が `search_page`、refs が `list_refs`、columns が `put_columns`
+      6. project-index への問い合わせは `await` で呼び、表の列の設定の読み書きだけを `asyncio.to_thread` の内側で呼ぶ。配信元の読み込みを待つ処理は持たない（配信元は project-index が参照する）
     unit_tests:
       - name: test_build_view_router_when_document
         case: 正常
         summary: 文書の取得
         condition: GET `/_api/sources/sample/docs`
-        mock: project-indexの呼び出し（`httpx.MockTransport` で project-index の develop の `42632c5` の入出力を返す）
+        mock: project-indexの呼び出し（`httpx.MockTransport` で project-index の develop の `42632c5` の入出力を返却する）
         expected: 200 で `path`・`markdown`・`tabs`・`updatedAt`・`tableKeys`（キーが camelCase）
       - name: test_build_view_router_when_document_missing
         case: 異常
         summary: 無い文書
         condition: GET `/_api/sources/sample/docs/no-such-doc`
-        mock: project-indexの呼び出し（`httpx.MockTransport` で project-index の develop の `42632c5` の入出力を返す）
+        mock: project-indexの呼び出し（`httpx.MockTransport` で project-index の develop の `42632c5` の入出力を返却する）
         expected: 404 の problem+json で、`missing` が `doc`、`value` が `no-such-doc`
       - name: test_build_view_router_when_search
         case: 正常
         summary: 画面の検索
         condition: GET `/_api/sources/sample/search?q=foo`
-        mock: project-indexの呼び出し（`httpx.MockTransport` で project-index の develop の `42632c5` の入出力を返す）
+        mock: project-indexの呼び出し（`httpx.MockTransport` で project-index の develop の `42632c5` の入出力を返却する）
         expected: 200 で `totalCount` と `items[].path`
       - name: test_build_view_router_when_query_too_long
         case: 異常
-        summary: 長すぎる語
+        summary: 長すぎる単語
         condition: '`q` が 201 文字'
-        mock: project-indexの呼び出し（`httpx.MockTransport` で project-index の develop の `42632c5` の入出力を返す）
+        mock: project-indexの呼び出し（`httpx.MockTransport` で project-index の develop の `42632c5` の入出力を返却する）
         expected: 400 の problem+json
       - name: test_build_view_router_when_refs
         case: 正常
         summary: Git 管理外のリビジョンの一覧
         condition: Git 管理外の配信元で GET `/_api/sources/notes/refs`
-        mock: project-indexの呼び出し（`httpx.MockTransport` で project-index の develop の `42632c5` の入出力を返す）
+        mock: project-indexの呼び出し（`httpx.MockTransport` で project-index の develop の `42632c5` の入出力を返却する）
         expected: 200 で `git` が `false`
       - name: test_build_view_router_when_columns
         case: 正常
         summary: 列の設定の保存
         condition: 'PUT `/_api/sources/sample/columns` を `Sec-Fetch-Site: same-origin` で'
-        mock: project-indexの呼び出し（`httpx.MockTransport` で project-index の develop の `42632c5` の入出力を返す）
+        mock: project-indexの呼び出し（`httpx.MockTransport` で project-index の develop の `42632c5` の入出力を返却する）
         expected: 200 で、次の文書の取得の `columns` に入る
       - name: test_build_view_router_when_cross_origin
         case: 異常
         summary: 別のオリジン
         condition: '`Origin: http://evil.example`'
-        mock: project-indexの呼び出し（`httpx.MockTransport` で project-index の develop の `42632c5` の入出力を返す）
-        expected: 403 で、ファイルを書かない
+        mock: project-indexの呼び出し（`httpx.MockTransport` で project-index の develop の `42632c5` の入出力を返却する）
+        expected: 403 で、ファイルを書き込まない
       - name: test_build_view_router_when_project_index_unreachable
         case: 異常
         summary: project-index につながらない
         condition: project-index の偽物が接続を断り、GET `/_api/sources/sample/docs`・`/search?q=x`・`/refs`
-        mock: project-indexの呼び出し（`httpx.ConnectError` を送る `MockTransport`）
+        mock: project-indexの呼び出し（`httpx.ConnectError` を送信する `MockTransport`）
         expected: どれも 503 の problem+json で、`projectIndex.address` と `projectIndex.reason` がある
         exception: '-'
 refs:

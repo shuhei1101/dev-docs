@@ -1,6 +1,6 @@
 id: MOD-155-68
 title: 画面 / 共通 / use-shortcut.ts
-lead: ショートカットの定義の ID でキーを受けるフック。
+lead: ショートカットの定義の ID でキーを受けるフックを受け持ち、共通の use-shortcut.ts を修正するときに参照する。
 test_files:
   - tests/unit/frontend/src/shared/hooks/use-shortcut.test.tsx
 functions:
@@ -30,9 +30,9 @@ functions:
         description: 'ダイアログを開いている間など受けないときは `enabled: false`'
     returns:
       type: void
-      description: 何も返さない
+      description: 何も返却しない
     process: |-
-      1. 設定のストアから 1 文字のショートカットの設定を読む
+      1. 設定のストアから 1 文字のショートカットの設定を読み込む
       2. 定義のキーごとに `useHotkey` を登録する。1 文字のキーは、設定がオフのときと入力欄（`input`・`textarea`・`contenteditable`）にフォーカスがあるときに受けない
       3. 受けたら既定の動きを止めて `handler` を呼ぶ
     unit_tests:

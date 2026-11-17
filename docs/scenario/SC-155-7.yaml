@@ -32,7 +32,7 @@ scenarios:
     expected:
       - '`nav` の 2 つのタブが出て、一番左のタブを選んだ状態になる'
       - タブに文書の件数を出さない
-      - 本文に文書 1 が、スキーマの `x-heading` の項目が見出し、`x-key` の配列が表になった形で出て、本文の右端に mdmark の右側の目次の線が出る。目次はこの 1 つだけで、本文の右の列に別の目次を出さない。線を指すと、目次が本文に重なって出て、その見出しが並ぶ
+      - 本文に文書 1 が、スキーマの `x-heading` の項目が見出し、`x-key` の配列が表になった形式で出て、本文の右端に mdmark の右側の目次の線が出る。目次はこの 1 つだけで、本文の右の列に別の目次を出さない。線を指すと、目次が本文に重なって出て、その見出しが並ぶ
       - 本文の要素が mdmark の描画の要素でできている
       - 本文を下までスクロールしても、種類のタブとサイドバーが画面に残る
       - 文書 2 を選ぶと URL が文書 2 を指すものに変わり、文書 2 の本文と右端の目次の線が出る
@@ -47,7 +47,7 @@ scenarios:
         description: 文書の種類を 2 つ持ち、`project-index.yaml` に `nav` を持たない配信元
         notes: id `plain`
       - name: サブフォルダの文書
-        description: 1 つ目の種類の行の `paths` を `docs/**/*.yaml` にし、`docs/` の直下に 1 件、`docs/lang/` に 2 件、`docs/lang/py/` に 1 件の文書を置く。`docs/lang/` の 2 件のうち 1 件は `docs/lang/index.yaml`
+        description: 1 つ目の種類の行の `paths` を `docs/**/*.yaml` にし、`docs/` の直下に 1 件、`docs/lang/` に 2 件、`docs/lang/py/` に 1 件の文書を配置する。`docs/lang/` の 2 件のうち 1 件は `docs/lang/index.yaml`
         notes: 2 つ目の種類の行の `paths` はサブフォルダを含まない glob にする
       - name: dev-docs
         description: plain を配信している dev-docs
@@ -93,7 +93,7 @@ scenarios:
     expected:
       - 本文の `name` が古い commit の値になる
       - トップバーに今開いているリビジョンとして古い commit が出る
-      - URL に古い commit が入り、その URL を開き直しても古い commit の文書 1 が出る
+      - URL に古い commit が入り、その URL を再度開いても古い commit の文書 1 が出る
       - サイドバー・本文の中のリンクで開いた文書も古い commit で出る
     test: test_normal_when_ref_switched
   - name: 正常シナリオ（差分を見る）
@@ -127,12 +127,12 @@ scenarios:
         UI-->>U: doc-view（強調の無い本文）
       ```
     expected:
-      - 差分の案内に比較元と比較先の commit が出て、どちらもその場で選び直せる
+      - 差分の案内に比較元と比較先の commit が出て、どちらもその場で再選択できる
       - サイドバーの文書 3 に追加、文書 1 に変更、文書 4 に削除のマーカーが出て、文書 2 にはマーカーが出ない
       - 本文の 2 つ目の見出しの下の変わった箇所が強調され、1 つ目の見出しの下は強調されない
       - 右側の目次で、2 つ目の見出しの項目に変更のマーカーが出て、1 つ目の見出しの項目には出ない
       - 強調を解除すると、サイドバーのマーカーと本文の強調が消え、比較先の文書 1 が出る
-      - URL に比較元と比較先が入り、その URL を開き直しても同じ差分が出る
+      - URL に比較元と比較先が入り、その URL を再度開いても同じ差分が出る
     test: test_normal_when_diff_shown
   - name: 正常シナリオ（検索する）
     setup:
@@ -140,7 +140,7 @@ scenarios:
         description: なし（実環境で実行）
       - name: dev-docs
         description: 正常シナリオと同じ sample を配信している dev-docs
-        notes: 文書 2 の本文だけが含む語を検索する
+        notes: 文書 2 の本文だけが含む単語を検索する
     flow: |-
       ```mermaid
       sequenceDiagram
@@ -187,9 +187,9 @@ scenarios:
       ```
     expected:
       - 2 つの表とも、2 列目が表示されない
-      - 開き直しても、2 つの表とも 2 列目が表示されない
-      - JSON のマーカーで最初から隠した 3 列目は、表示に戻すと開き直しても表示される
-      - '列の表示・非表示の機能を持たない先頭の表は、開き直しても全ての列が表示される'
+      - 再度開いても、2 つの表とも 2 列目が表示されない
+      - JSON のマーカーで最初から隠した 3 列目は、表示に戻すと再度開いても表示される
+      - '列の表示・非表示の機能を持たない先頭の表は、再度開いても全ての列が表示される'
       - 配信元のフォルダのファイルは変わらない
     test: test_normal_when_column_hidden
   - name: 正常シナリオ（配信元の変換を使う）
@@ -200,7 +200,7 @@ scenarios:
         description: '`converters[]` に、標準入力の YAML から決まった見出しの Markdown を出すスクリプトを持ち、文書の種類の 1 つがそれを指す配信元'
         notes: id `custom`
       - name: 埋め込みのマーカー
-        description: custom の Markdown の文書。本文に、別の YAML を表として入れる埋め込みのマーカーを置く
+        description: custom の Markdown の文書。本文に、別の YAML を表として入れる埋め込みのマーカーを配置する
       - name: dev-docs
         description: custom を配信している dev-docs
     flow: |-
@@ -319,11 +319,11 @@ scenarios:
 
         U->>UI: broken の文書の画面を開く
         UI->>API: 文書の取得
-        API-->>UI: 404（配信していない配信元と外した理由）
+        API-->>UI: 404（配信していない配信元と除外した理由）
         UI-->>U: not-found（無いのは配信元）
       ```
     expected:
-      - 見つからない画面に、`broken` を配信していないことと、project-index が起動時の検証で外した理由（`documents[0]` に必須のキー `paths` が無い）が出る
+      - 見つからない画面に、`broken` を配信していないことと、project-index が起動時の検証で除外した理由（`documents[0]` に必須のキー `paths` が無い）が出る
       - トップバーの配信元の切り替えに sample が出て、設定画面へのリンクがある
     test: test_error_when_source_not_served
   - name: 正常シナリオ（プロンプトを読む）
@@ -364,7 +364,7 @@ scenarios:
       - 変数の表に `character.display_name`・`traits[].name` のようなパスの行が並び、型・必須・例・説明・出典の列を持つ
       - 「テンプレート」に部品ごとのセクション（`role`・`when` つき）があり、本文は Jinja2 のまま出て、`{{ character.display_name }}` にフォーカスすると「表示名」・`string`・「ひな」のツールチップが開く
       - 「例」に「既定の例」と「ログが無い」のセクションがあり、「ログが無い」は閉じた状態で始まる。各組は `system`・`user` のメッセージに分かれ、使用しなかった部品（既定の例は `no-logs`、ログが無いは `logs`）と字数が出る
-      - 言語のタブは `en`・`ja` の順で並び、`ja` を選ぶと全てのセクションが `ja` の本文になり、文書を開き直しても `ja` のまま残る
+      - 言語のタブは `en`・`ja` の順で並び、`ja` を選ぶと全てのセクションが `ja` の本文になり、文書を再度開いても `ja` のまま残る
       - 画面幅 1280 と 390 で、本文が横にはみ出さない
     test: test_normal_when_prompt_document
   - name: 正常シナリオ（プロンプトに注意の出る組がある）
@@ -409,10 +409,10 @@ scenarios:
       - name: Mock
         description: なし（実環境で実行。ブラウザは Playwright で操作する）
       - name: nav の auto のタグの式
-        description: sample の `project-index.yaml` の `nav` に、`auto` の `filter` が `tags が mcp かつ tags が 設計 でない` のタブ `mcp` を置く
+        description: sample の `project-index.yaml` の `nav` に、`auto` の `filter` が `tags が mcp かつ tags が 設計 でない` のタブ `mcp` を配置する
         notes: 文書 1 の `tags` は `[mcp]`、文書 2 は `[mcp, 設計]`、文書 3 は `[設計]`
       - name: filter を書かない auto
-        description: 同じ `nav` に、`auto` が `document` だけを書き `filter` を書かないタブ `すべて` を置く
+        description: 同じ `nav` に、`auto` が `document` だけを記載し `filter` を記載しないタブ `すべて` を配置する
       - name: dev-docs
         description: sample を配信している dev-docs
     flow: |-
@@ -440,10 +440,10 @@ scenarios:
       - name: Mock
         description: なし（実環境で実行。ブラウザは Playwright で操作する）
       - name: 用語の種類
-        description: エージェントが調べるの正常シナリオ（エイリアスの語で用語を引く）と同じ、`alias_type` を持つ行の文書「作業範囲」
+        description: エージェントが調べるの正常シナリオ（エイリアスの単語で用語を取得する）と同じ、`alias_type` を持つ行の文書「作業範囲」
         notes: '`aliases` は `[scope, 担当範囲]`'
       - name: 本文に用語を含む文書
-        description: sample の文書 1 の本文に `担当範囲` の語を含める
+        description: sample の文書 1 の本文に `担当範囲` の単語を含める
       - name: dev-docs
         description: sample を配信している dev-docs
     flow: |-
@@ -464,7 +464,7 @@ scenarios:
       ```
     expected:
       - 文書の取得の応答が、配信元のエイリアス（`name`・`aliases` と説明）を持つ
-      - 本文の `担当範囲` の語にポインタを載せると、用語「作業範囲」のツールチップが出る
+      - 本文の `担当範囲` の単語にポインタを合わせると、用語「作業範囲」のツールチップが出る
       - '`alias_type` を持つ行が無い配信元の文書は、ツールチップを出さずに今のまま描く'
     test: test_normal_when_term_tooltip_shown
   - name: 正常シナリオ（管理用の YAML の行の文書の本文のリンクを開く）
@@ -473,9 +473,9 @@ scenarios:
         description: なし（実環境で実行。ブラウザで画面を開く）
       - name: サンプルの配信元
         description: 正常シナリオと同じ sample に、下の管理用の YAML・文書の行・`nav` のタブを加える
-        notes: 管理用の YAML と本文のファイルは、既存の行 `sample` の `paths`（`docs/*.yaml`）に当たらない `notes/` に置く
+        notes: 管理用の YAML と本文のファイルは、既存の行 `sample` の `paths`（`docs/*.yaml`）に該当しない `notes/` に配置する
       - name: 管理用の YAML
-        description: sample の `notes/files.yaml`。`files[]` に `a.md` と `b.md` の 2 行。`notes/a.md` の本文に相対リンク `[B](./b.md)` を置き、`notes/b.md` を置く
+        description: sample の `notes/files.yaml`。`files[]` に `a.md` と `b.md` の 2 行。`notes/a.md` の本文に相対リンク `[B](./b.md)` を配置し、`notes/b.md` を配置する
         notes: スキーマは `templates/files.schema.yaml`
       - name: 文書の行
         description: 'sample の `project-index.yaml` の行 `notes`（`paths: [notes/files.yaml]`・`records: files`・`body_file: path`）'
@@ -505,17 +505,17 @@ scenarios:
       - リンク B を押すと b の本文が出て、「文書が見つかりません」にならない
       - サイドバーで b が選ばれた状態になる
     test: test_normal_when_files_index_relative_link
-  - name: 正常シナリオ（フォルダで束ねる）
+  - name: 正常シナリオ（フォルダでまとめる）
     setup:
       - name: Mock
         description: なし（実環境で実行。ブラウザは Playwright で操作する）
         notes: '-'
       - name: フォルダごとの文書
-        description: 'sample の `project-index.yaml` に、`paths: [rules/**/*.yaml]`・`schema: schemas/sample.schema.yaml` の行 `rules` を追加し、`rules/` の直下に `common.yaml`、`rules/lang/` に `index.yaml`・`ts.yaml`、`rules/lang/py/` に `style.yaml` を置く'
+        description: 'sample の `project-index.yaml` に、`paths: [rules/**/*.yaml]`・`schema: schemas/sample.schema.yaml` の行 `rules` を追加し、`rules/` の直下に `common.yaml`、`rules/lang/` に `index.yaml`・`ts.yaml`、`rules/lang/py/` に `style.yaml` を配置する'
         notes: '-'
-      - name: nav のフォルダの束ね
-        description: 'sample の `project-index.yaml` の `nav` にタブ `ルール` を追加し、手で書いた `page`（`rules/common.yaml` の文書）と、`document: rules` の `auto` の `group_by` にフォルダの指定を書いた項目を、この順で置く'
-        notes: フォルダの指定の書き方はインターフェース定義『文書の取得』が決める
+      - name: nav のフォルダのグループ化
+        description: 'sample の `project-index.yaml` の `nav` にタブ `ルール` を追加し、手で記載した `page`（`rules/common.yaml` の文書）と、`document: rules` の `auto` の `group_by` にフォルダの指定を書き込んだ項目を、この順で配置する'
+        notes: フォルダの指定の記載方法はインターフェース定義『文書の取得』が決める
       - name: dev-docs
         description: sample を配信している dev-docs
         notes: '-'
@@ -534,7 +534,7 @@ scenarios:
         B-->>U: rules/lang/index.yaml の文書の本文
       ```
     expected:
-      - サイドバーの一番上に手で書いた page（`rules/common.yaml` の文書）が並び、`auto` の並びに `rules/common.yaml` の文書は出ない
+      - サイドバーの一番上に手で記載した page（`rules/common.yaml` の文書）が並び、`auto` の並びに `rules/common.yaml` の文書は出ない
       - '`auto` の並びに group `lang` があり、その先頭の page が `rules/lang/index.yaml` の文書、次が `rules/lang/ts.yaml` の文書になる'
       - group `lang` の中に group `py` があり、`rules/lang/py/style.yaml` の文書が入る
       - group `lang` の `rules/lang/index.yaml` の文書を押すと、その文書の本文が開く
@@ -545,8 +545,8 @@ scenarios:
         description: なし（実環境で実行。ブラウザは Playwright で操作する）
         notes: '-'
       - name: 図と属性を持つ文書
-        description: 'sample に、`x-shape: diagram`・`x-diagram: flowchart` の項目（ノード 2 つ・辺 1 つ）、`x-shape: diagram`・`x-diagram: state` の項目、`sequenceDiagram` を書いた Mermaid の文字列の項目、スカラーが 3 つ以上並ぶオブジェクト、改行を含む値、`x-hidden: true` の項目を持つスキーマと、その文書 6 を置く'
-        notes: 文書 6 の `title`・`lead` は見出しとリードに使う
+        description: 'sample に、`x-shape: diagram`・`x-diagram: flowchart` の項目（ノード 2 つ・辺 1 つ）、`x-shape: diagram`・`x-diagram: state` の項目、`sequenceDiagram` を記載した Mermaid の文字列の項目、スカラーが 3 つ以上並ぶオブジェクト、改行を含む値、`x-hidden: true` の項目を持つスキーマと、その文書 6 を配置する'
+        notes: 文書 6 の `title`・`lead` は見出しとリードに使用する
       - name: フローチャートと状態遷移
         description: 'flowchart の項目は、`kind: question`・`hint` を持つノードと `kind: result` のノード、`label`・`line: read`・`tip` を持つ辺、2 つのノードを囲む `frame` を持つ。state の項目は `initial` と `final` を持つ'
         notes: 構造は AI Monitor の設計書のスキーマ（`共通.schema.yaml` の `flowchart`・`state_transitions`）と同じ
@@ -571,7 +571,7 @@ scenarios:
         UI-->>U: 元データの表
       ```
     expected:
-      - flowchart と state の項目と `sequenceDiagram` の項目が mdmark の map で描かれ、Mermaid のコードブロックが本文に出ず、書き方の警告が出ない
+      - flowchart と state の項目と `sequenceDiagram` の項目が mdmark の map で描かれ、Mermaid のコードブロックが本文に出ず、記載方法の警告が出ない
       - 'flowchart の map で、`kind: question` のノードが質問の種類、`kind: result` のノードが結果の種類で出て、`frame` の 2 つのノードが `label` のグループに入り、`hint` がノードの、`tip` が線のツールチップに出る'
       - state の map が状態遷移図で、開始から初期状態への線と、終了状態から終了への線が出て、帯の次へを押すと遷移が記載順に 1 本ずつ強調される
       - 図の下の元データの表は閉じた状態で出て、開くとノードの表の先頭の列が `表示` で、ID の列が隠れている
@@ -586,7 +586,7 @@ scenarios:
         description: なし（実環境で実行。ブラウザは Playwright で操作する）
         notes: '-'
       - name: ER 図を持つ文書
-        description: 'sample に、`x-shape: diagram`・`x-diagram: er` の項目 `er`（実体 3 つと関連 2 つ）と、`tables[]` を持つスキーマと、その文書 7 を置く'
+        description: 'sample に、`x-shape: diagram`・`x-diagram: er` の項目 `er`（実体 3 つと関連 2 つ）と、`tables[]` を持つスキーマと、その文書 7 を配置する'
         notes: '`er` と `tables` の構造は AI Monitor の ER 図のテンプレート（`schemas/er.schema.yaml`）と同じ'
       - name: 実体とテーブル
         description: '実体 `顧客` は `columns` を持たず、`tables[]` に `name` が `customers`・`title` が `顧客` のテーブル（列 `id`（`primary_key: true`）と `email`）がある。実体 `注文` は `columns` に列 `id` と、`key: FK`・`comment: 参照: 顧客.id` の列 `customer_id` を持つ。実体 `商品` は他の分類のテーブルとして名前だけを持つ'
@@ -618,7 +618,7 @@ scenarios:
       - 実体 `注文` のテーブルに、`columns` の列の名前と型が出る
       - '`顧客` から `注文` への関連の線が、`顧客` の列 `id` の行と `注文` の列 `customer_id` の行を結び、`顧客` の端に多重度 `1`、`注文` の端に多重度 `0..n` の記号が出る'
       - '`注文` から `商品` への関連の線は図に出ず、図の元データの表にその関連の行が出る'
-      - ER 図に書き方の警告が出ない
+      - ER 図に記載方法の警告が出ない
       - 図の下の元データの表は閉じた状態で出る
       - 顧客のテーブルを押すと、顧客のテーブルと顧客から注文への線のほかが薄くなる
     test: test_normal_when_er_diagram_drawn
@@ -630,8 +630,8 @@ scenarios:
         description: なし（実環境で実行。ブラウザは Playwright で操作する）
         notes: '-'
       - name: id のリンクを持つ文書
-        description: 'sample の文書 1 の Markdown の文字列の値に、`[文書 2](id:{文書 2 の ID})`・`[項目](id:{文書 6 の ID}#flow)`・`[無い文書](id:no-such-doc)` のリンクと、行内のコード `` `[コード](id:{文書 2 の ID})` `` を置く'
-        notes: '文書 6 は正常シナリオ（スキーマ駆動の文書を図と表で読む）の文書。`flow` は文書 6 の `x-diagram: flowchart` の項目のパスで、スキーマでその項目に `x-heading: 処理の流れ` を持たせる'
+        description: 'sample の文書 1 の Markdown の文字列の値に、`[文書 2](id:{文書 2 の ID})`・`[項目](id:{文書 6 の ID}#flow)`・`[無い文書](id:no-such-doc)` のリンクと、行内のコード `` `[コード](id:{文書 2 の ID})` `` を配置する'
+        notes: '文書 6 は正常シナリオ（スキーマ駆動の文書を図と表で参照する）の文書。`flow` は文書 6 の `x-diagram: flowchart` の項目のパスで、スキーマでその項目に `x-heading: 処理の流れ` を持たせる'
       - name: dev-docs
         description: sample を配信している dev-docs
         notes: '-'
@@ -670,7 +670,7 @@ scenarios:
         notes: plain の `project-index.yaml` には記載しない
       - name: decisions を持つ文書
         description: 'sample の文書 6 の表の行と、「項目 / 値」の表を持つ見出しのセクションに、`decisions: [D-1, D-2, D-3]` を持たせる。plain の文書にも `decisions: [D-1]` を持たせる'
-        notes: 文書 6 は正常シナリオ（スキーマ駆動の文書を図と表で読む）の文書
+        notes: 文書 6 は正常シナリオ（スキーマ駆動の文書を図と表で参照する）の文書
       - name: dev-docs
         description: sample と plain を配信している dev-docs
         notes: '-'
@@ -698,7 +698,7 @@ scenarios:
       - plain の文書の `D-1` は、リンクにならず ID の文字で出て、他の本文は描かれる
       - '`decisions` 以外の文字列の並びの出し方は変わらない'
     test: test_normal_when_decision_link_opened
-  - name: 正常シナリオ（配信元を開き直す）
+  - name: 正常シナリオ（配信元を再度開く）
     setup:
       - name: Mock
         description: project-index の代わりに、sample と plain を配信する project-index の応答を、配信元の設定・文書の一覧・文書・リビジョンの一覧の問い合わせごとに一定の時間だけ待ってから返却する HTTP サーバー
@@ -726,9 +726,9 @@ scenarios:
         UI-->>U: doc-view（文書 1）
       ```
     expected:
-      - 開き直した sample は、画面を開いてから本文が出るまでが、非機能要件の最初の文書の表示の時間以内
+      - 再度開いた sample は、画面を開いてから本文が出るまでが、非機能要件の最初の文書の表示の時間以内
       - 初めて開いた sample と plain は、非機能要件の文書の取得の制限時間以内に本文が出る
-      - 開き直した sample の本文・タブ・サイドバーが、初めて開いたときと同じ
+      - 再度開いた sample の本文・タブ・サイドバーが、初めて開いたときと同じ
     test: test_normal_when_source_reopened
   - name: 異常シナリオ（project-index の応答が遅い）
     setup:
@@ -764,7 +764,7 @@ scenarios:
         notes: '-'
       - name: データの図のリンク
         description: '文書 6 の `x-diagram: flowchart` の項目に、`kind: question` のノードへ `href` が `id:{文書 2 の ID}` の `clicks` の要素と、`kind: result` のノードへ `href` が `id:no-such-doc` の `clicks` の要素を持たせる'
-        notes: 文書 6 は正常シナリオ（スキーマ駆動の文書を図と表で読む）の文書
+        notes: 文書 6 は正常シナリオ（スキーマ駆動の文書を図と表で参照する）の文書
       - name: 手で記載したフローチャートのリンク
         description: 文書 1 の Markdown の文字列の値に、手で記載した Mermaid のフローチャート（`flowchart`）を配置し、ノード A に `click A "id:{文書 6 の ID}#flow"`、ノード B に `click B href "id:{文書 2 の ID}"` を記載する
         notes: '`flow` は `x-heading: 処理の流れ` を持つ文書 6 の項目'
@@ -794,7 +794,7 @@ scenarios:
       ```
     expected:
       - 文書 6 のフロー図の質問のノードを押すと、URL が文書 2 を指すものに変わり、文書 2 の本文が出る
-      - 文書 6 のフロー図の結果のノードはリンクにならず、図とノードの名前は描かれ、書き方の警告が出ない
+      - 文書 6 のフロー図の結果のノードはリンクにならず、図とノードの名前は描かれ、記載方法の警告が出ない
       - 文書 1 のフロー図のノード A を押すと、文書 6 が開き、URL のアンカーが見出し `処理の流れ` を指し、その見出しが画面に出る
       - 文書 1 に戻ってノード B を押すと、URL が文書 2 を指すものに変わり、文書 2 の本文が出る
     test: test_normal_when_flow_node_clicked
@@ -804,7 +804,7 @@ scenarios:
         description: なし（実環境で実行）
       - name: クラス図の文書
         description: sample のスキーマ駆動の YAML の文書 8。Markdown の文字列の項目に、手で記載した Mermaid のクラス図（`classDiagram`）を配置する
-        notes: 'ノード A に `click A href "id:{文書 6 の ID}#flow"`、ノード B に `href` を持たない `click B "id:{文書 6 の ID}#flow"`、ノード C にどの文書の ID にも該当しない `click C href "id:NO-SUCH-1#"`。文書 6 は正常シナリオ（スキーマ駆動の文書を図と表で読む）の文書で、`flow` は `x-heading: 処理の流れ` を持つ項目'
+        notes: 'ノード A に `click A href "id:{文書 6 の ID}#flow"`、ノード B に `href` を持たない `click B "id:{文書 6 の ID}#flow"`、ノード C にどの文書の ID にも該当しない `click C href "id:NO-SUCH-1#"`。文書 6 は正常シナリオ（スキーマ駆動の文書を図と表で参照する）の文書で、`flow` は `x-heading: 処理の流れ` を持つ項目'
       - name: dev-docs
         description: 正常シナリオと同じ sample を配信している dev-docs
     flow: |-
@@ -828,20 +828,20 @@ scenarios:
       - 文書 8 に戻ってノード B を押しても、URL が文書 6 を指し、アンカーが見出し `処理の流れ` を指し、その見出しが画面に出る
       - ノード C を押しても、URL は文書 8 を指したまま変わらない
     test: test_normal_when_diagram_node_clicked
-lead: 利用者がブラウザで配信元の文書の画面を開き、タブ・サイドバー・検索・リビジョンの切り替え・差分で文書を読む。
+lead: 利用者が文書の画面をタブ・サイドバー・検索・リビジョンの切り替え・差分で参照するシナリオを定め、文書の画面の流れを変えるときに参照する。
 issue: 17
 primary_actor: 利用者
 stakeholders:
   - name: 利用者
-    interest: YAML の正本の文書が、表・見出し・図に描かれた本文で読める。過去のリビジョンや 2 つのリビジョンの差分も同じ画面で開ける
+    interest: YAML の原本の文書が、表・見出し・図に描かれた本文で参照できる。過去のリビジョンや 2 つのリビジョンの差分も同じ画面で開ける
   - name: 各配信元
-    interest: '`nav` と `converters[]` を書けば、画面の構成と本文の変換を配信元の設定だけで決められる'
+    interest: '`nav` と `converters[]` を記載すれば、画面の構成と本文の変換を配信元の設定だけで決められる'
 trigger: 利用者がブラウザで配信元の文書の画面の URL を開く
 preconditions:
   - dev-docs が起動し、画面のビルドを配信している
   - dev-docs がつながる project-index が、配信元を配信している
 success_guarantee: 開いた配信元・リビジョンの文書が、変換した Markdown を mdmark で描いた本文で出る。
-minimal_guarantee: 無い配信元・文書・リビジョンは見つからない画面で、何が無いかを出す。変換に失敗した文書は、失敗したことと原因を出し、他の文書は読める。project-index から応答が無いときは、文書の取得の制限時間の中で読み込み中の表示をやめ、理由を出す。
+minimal_guarantee: 無い配信元・文書・リビジョンは見つからない画面で、何が無いかを出す。変換に失敗した文書は、失敗したことと原因を出し、他の文書は参照できる。project-index から応答が無いときは、文書の取得の制限時間の中で読み込み中の表示をやめ、理由を出す。
 frequency: 作業のたび
 priority: 高
 refs:

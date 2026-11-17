@@ -1,6 +1,6 @@
 id: MOD-155-146
 title: 開発ドキュメントサーバー / 端末の設定 / query.py
-lead: 端末の設定の場所・読み込みと検証・待ち受けのポート。
+lead: 端末の設定の場所・読み込みと検証・待ち受けのポートを受け持ち、端末の設定の query.py を修正するときに参照する。
 test_files:
   - tests/unit/dev_docs/features/settings/test_query.py
 diagrams:
@@ -18,57 +18,57 @@ diagrams:
         }
         class 端末の設定 {
           +project-indexの接続先: str
-          +状態の置き場所: Path
+          +状態の配置先: Path
         }
         click 端末の設定 href "./MOD-155-149.py.yaml#端末の設定"
 constants:
   - name: DEFAULT_CONFIG_HOME
-    title: 設定の置き場の既定の親
+    title: 設定の配置先の既定の親
     container: features/settings/query.py
     usecase: 端末の設定
-    summary: '`XDG_CONFIG_HOME` が無いときの設定の置き場の親'
+    summary: '`XDG_CONFIG_HOME` が無いときの設定の配置先の親'
     value: '"~/.config"'
   - name: CONFIG_FILE
     title: 端末の設定の相対パス
     container: features/settings/query.py
     usecase: 端末の設定
-    summary: 設定の置き場の親から端末の設定までの相対パス
+    summary: 設定の配置先の親から端末の設定までの相対パス
     value: '"dev-docs/settings.yaml"'
   - name: DEFAULT_STATE_HOME
-    title: 状態の置き場の既定の親
+    title: 状態の配置先の既定の親
     container: features/settings/query.py
     usecase: 端末の設定
-    summary: '`XDG_STATE_HOME` が無いときの状態の置き場の親'
+    summary: '`XDG_STATE_HOME` が無いときの状態の配置先の親'
     value: '"~/.local/state"'
   - name: STATE_SUBDIR
-    title: 状態の置き場のフォルダ名
+    title: 状態の配置先のフォルダ名
     container: features/settings/query.py
     usecase: 端末の設定
-    summary: 状態の置き場の親の下のフォルダ名
+    summary: 状態の配置先の親の下のフォルダ名
     value: '"dev-docs"'
   - name: XDG_CONFIG_HOME_ENV
-    title: 設定の置き場の親の環境変数
+    title: 設定の配置先の親の環境変数
     container: features/settings/query.py
     usecase: 端末の設定
-    summary: XDG Base Directory Specification の設定の置き場の親の環境変数の名前
+    summary: XDG Base Directory Specification の設定の配置先の親の環境変数の名前
     value: '"XDG_CONFIG_HOME"'
   - name: XDG_STATE_HOME_ENV
-    title: 状態の置き場の親の環境変数
+    title: 状態の配置先の親の環境変数
     container: features/settings/query.py
     usecase: 端末の設定
-    summary: XDG Base Directory Specification の状態の置き場の親の環境変数の名前
+    summary: XDG Base Directory Specification の状態の配置先の親の環境変数の名前
     value: '"XDG_STATE_HOME"'
   - name: STATE_DIR_ENV
-    title: 状態の置き場の環境変数
+    title: 状態の配置先の環境変数
     container: features/settings/query.py
     usecase: 端末の設定
-    summary: 状態の置き場を上書きする環境変数の名前
+    summary: 状態の配置先を上書きする環境変数の名前
     value: '"DEV_DOCS_STATE_DIR"'
   - name: CONFIG_ENV
     title: 端末の設定の環境変数
     container: features/settings/query.py
     usecase: 端末の設定
-    summary: 端末の設定のパスを渡す環境変数の名前
+    summary: 端末の設定のパスを指定する環境変数の名前
     value: '"DEV_DOCS_CONFIG"'
   - name: PORT_ENV
     title: ポートの環境変数
@@ -80,22 +80,22 @@ constants:
     title: 端末の設定のスキーマ
     container: features/settings/query.py
     usecase: 端末の設定
-    summary: 配布に同梱する端末の設定のスキーマのパス（`importlib.resources` で引く）
+    summary: 配布に同梱する端末の設定のスキーマのパス（`importlib.resources` で取得する）
     value: '"schemas/settings.schema.yaml"'
   - name: SETTINGS_VERSION
     title: 端末の設定の読めるバージョン
     container: features/settings/query.py
     usecase: 端末の設定
-    summary: このサーバーが読める端末の設定の `version`（`sources` を project-index へ移し、`project_index` を足したバージョン）
+    summary: このサーバーが参照できる端末の設定の `version`（`sources` を project-index へ移し、`project_index` を追加したバージョン）
     value: '"2"'
 functions:
   - name: xdg_base_dir
-    title: XDG の置き場の親
+    title: XDG の配置先の親
     kind: 関数
     container: features/settings/query.py
     usecase: 端末の設定
     role: 読み取り
-    summary: XDG の環境変数の値を、空の文字列か相対パスなら既定に替えて返す
+    summary: XDG の環境変数の値を、空の文字列か相対パスなら既定に替えて返却する
     scope: public
     args:
       - name: env
@@ -120,7 +120,7 @@ functions:
       type: Path
       description: 正規化した絶対パス
     process: |-
-      1. `name` の値が空でなく絶対パスならその値、そうでなければ `default` を『パスの正規化』にかけて返す（パスの正規化）
+      1. `name` の値が空でなく絶対パスならその値、そうでなければ `default` を『パスの正規化』にかけて返却する（パスの正規化）
     unit_tests:
       - name: test_xdg_base_dir
         case: 正常
@@ -151,10 +151,10 @@ functions:
         description: '`os.environ`'
     returns:
       type: Path
-      description: '`CONFIG_ENV` の値、無ければ `{XDG の設定の置き場の親}/CONFIG_FILE` を正規化した絶対パス'
+      description: '`CONFIG_ENV` の値、無ければ `{XDG の設定の配置先の親}/CONFIG_FILE` を正規化した絶対パス'
     process: |-
-      1. `CONFIG_ENV` が空でなければ、その値を『パスの正規化』にかけて返す（パスの正規化）
-      2. 無ければ、`XDG_CONFIG_HOME_ENV` と `DEFAULT_CONFIG_HOME` の XDG の置き場の親の下の `CONFIG_FILE` を返す（XDG の置き場の親）
+      1. `CONFIG_ENV` が空でなければ、その値を『パスの正規化』にかけて返却する（パスの正規化）
+      2. 無ければ、`XDG_CONFIG_HOME_ENV` と `DEFAULT_CONFIG_HOME` の XDG の配置先の親の下の `CONFIG_FILE` を返却する（XDG の配置先の親）
     unit_tests:
       - name: test_config_path
         case: 正常
@@ -175,12 +175,12 @@ functions:
         mock: なし
         expected: '`Path("/tmp/c/dev-docs/settings.yaml")`'
   - name: state_dir_path
-    title: 状態の置き場
+    title: 状態の配置先
     kind: 関数
     container: features/settings/query.py
     usecase: 端末の設定
     role: 読み取り
-    summary: 環境変数と端末の設定の `state_dir` から状態の置き場を決める
+    summary: 環境変数と端末の設定の `state_dir` から状態の配置先を決める
     scope: public
     args:
       - name: value
@@ -199,9 +199,9 @@ functions:
       type: Path
       description: 正規化した絶対パス
     process: |-
-      1. `STATE_DIR_ENV` が空でなければ、その値を『パスの正規化』にかけて返す（パスの正規化）
-      2. `value` があれば、その値を『パスの正規化』にかけて返す
-      3. 無ければ、`XDG_STATE_HOME_ENV` と `DEFAULT_STATE_HOME` の XDG の置き場の親の下の `STATE_SUBDIR` を返す（XDG の置き場の親）
+      1. `STATE_DIR_ENV` が空でなければ、その値を『パスの正規化』にかけて返却する（パスの正規化）
+      2. `value` があれば、その値を『パスの正規化』にかけて返却する
+      3. 無ければ、`XDG_STATE_HOME_ENV` と `DEFAULT_STATE_HOME` の XDG の配置先の親の下の `STATE_SUBDIR` を返却する（XDG の配置先の親）
     unit_tests:
       - name: test_state_dir_path
         case: 正常
@@ -233,7 +233,7 @@ functions:
     container: features/settings/query.py
     usecase: 起動
     role: 読み込み
-    summary: '`settings.yaml` を読み、スキーマの違反を全て集めてから端末の設定にする'
+    summary: '`settings.yaml` を参照し、スキーマの違反を全て集めてから端末の設定にする'
     scope: public
     thread_safe: true
     args:
@@ -249,24 +249,24 @@ functions:
         required: false
         default: None
         passing: keyword
-        description: 状態の置き場を決める環境変数。`None` なら `os.environ`
+        description: 状態の配置先を決める環境変数。`None` なら `os.environ`
     returns:
       type: TerminalConfig
       description: 既定値を埋めた端末の設定
     process: |-
-      1. ファイルを UTF-8 で読む
-         - 無い場合、`TerminalConfigInvalidError` を送る
-      2. YAML として読む（YAMLの読み込み）
-         - 読めない場合、行と列を `Violation` にして `TerminalConfigInvalidError` を送る
+      1. ファイルを UTF-8 で読み込む
+         - 無い場合、`TerminalConfigInvalidError` を送信する
+      2. YAML として読み込む（YAMLの読み込み）
+         - 参照できない場合、行と列を `Violation` にして `TerminalConfigInvalidError` を送信する
       3. 端末の設定の値を検証する（端末の設定の検証）
-         - 違反が 1 つでもある場合、全ての違反を載せた `TerminalConfigInvalidError` を送る
-      4. `TerminalConfig` を作る。`project_index` が無ければ `PROJECT_INDEX_DEFAULT`、`sources` の行は ID（無ければ `config` の先頭）だけを `leftover_sources` にする。`state_dir` は端末の設定の `state_dir` と `env` から決め（状態の置き場）、`log_dir` は『パスの正規化』にかけ、無ければ `{state_dir}/logs` にする。`mdmark_version` は端末の設定の値（無ければ `"develop"`）にする
+         - 違反が 1 つでもある場合、全ての違反を含めた `TerminalConfigInvalidError` を送信する
+      4. `TerminalConfig` を作る。`project_index` が無ければ `PROJECT_INDEX_DEFAULT`、`sources` の行は ID（無ければ `config` の先頭）だけを `leftover_sources` にする。`state_dir` は端末の設定の `state_dir` と `env` から決め（状態の配置先）、`log_dir` は『パスの正規化』にかけ、無ければ `{state_dir}/logs` にする。`mdmark_version` は端末の設定の値（無ければ `"develop"`）にする
     exceptions:
       - name: TerminalConfigInvalidError
         condition: ファイルが無い
         message: '`{path}: 端末の設定が見つかりません`'
       - name: TerminalConfigInvalidError
-        condition: YAML として読めない
+        condition: YAML として読み込めない
         message: '`{path}:{line}:{column}: {reason}`'
       - name: TerminalConfigInvalidError
         condition: スキーマに違反する
@@ -280,13 +280,13 @@ functions:
         expected: '`port` が 8781、`bind` が `127.0.0.1`、`project_index` が `http://127.0.0.1:8786`、`leftover_sources` が空、`log_dir` が `{state_dir}/logs`、`mdmark_version` が `develop`'
       - name: test_load_terminal_config_when_mdmark_version
         case: 正常
-        summary: 記載した mdmark のバージョンを読む
+        summary: 記載した mdmark のバージョンを参照する
         condition: '`version`・`clone` と `mdmark_version: v0.13.0` の設定'
         mock: なし（一時フォルダ）
         expected: '`mdmark_version` が `v0.13.0`'
       - name: test_load_terminal_config_when_state_dir_env_set
         case: 正常
-        summary: 状態の置き場を環境変数で決める
+        summary: 状態の配置先を環境変数で決める
         condition: '`state_dir: /tmp/a` を持つ設定、`env` が `{"DEV_DOCS_STATE_DIR": "/tmp/b"}`'
         mock: なし（一時フォルダ）
         expected: '`state_dir` が `/tmp/b`、`log_dir` が `/tmp/b/logs`'
@@ -299,11 +299,11 @@ functions:
         exception: ファイルが無い
       - name: test_load_terminal_config_when_yaml_broken
         case: 異常
-        summary: YAML として読めない
+        summary: YAML として読み込めない
         condition: '`sources: [`'
         mock: なし
         expected: '`TerminalConfigInvalidError` の違反に行と列'
-        exception: YAML として読めない
+        exception: YAML として読み込めない
       - name: test_load_terminal_config_when_schema_invalid
         case: 異常
         summary: 違反を全て集める
@@ -323,7 +323,7 @@ functions:
     container: features/settings/query.py
     usecase: 端末の設定
     role: 検証
-    summary: 端末の設定の値をスキーマと行の間の決まりで確かめ、違反を全て返す
+    summary: 端末の設定の値をスキーマと行の間の決まりで確認し、違反を全て返却する
     scope: public
     thread_safe: true
     args:
@@ -332,12 +332,12 @@ functions:
         type: Any
         required: true
         passing: positional
-        description: YAML として読んだ素の値
+        description: YAML として読み込んだ素の値
     returns:
       type: list[Violation]
       description: 違反の並び。無ければ空
     process: |-
-      1. `SETTINGS_SCHEMA` を読み、スキーマの違反を全て集める（スキーマの違反）。`project_index` は `http://`・`https://` で始まる URL
+      1. `SETTINGS_SCHEMA` を参照し、スキーマの違反を全て集める（スキーマの違反）。`project_index` は `http://`・`https://` で始まる URL
       2. 前のバージョンから残った `sources` は検証しない（スキーマは型を問わずに受け、起動が警告のログに出す）
       3. `version` が `SETTINGS_VERSION` より新しい場合、`version` に「このサーバーより新しい設定」の違反を加える
     unit_tests:
@@ -379,7 +379,7 @@ functions:
         type: TerminalConfig
         required: true
         passing: positional
-        description: 読んだ端末の設定
+        description: 参照した端末の設定
       - name: env
         title: 環境変数
         type: Mapping[str, str]
@@ -390,9 +390,9 @@ functions:
       type: int
       description: 待ち受けるポート
     process: |-
-      1. `PORT_ENV` が空でなければ整数にして返す
-         - 1〜65535 の整数でない場合、`TerminalConfigInvalidError` を送る
-      2. 無ければ端末の設定の `port` を返す
+      1. `PORT_ENV` が空でなければ整数にして返却する
+         - 1〜65535 の整数でない場合、`TerminalConfigInvalidError` を送信する
+      2. 無ければ端末の設定の `port` を返却する
     exceptions:
       - name: TerminalConfigInvalidError
         condition: '`DEV_DOCS_PORT` が 1〜65535 の整数でない'

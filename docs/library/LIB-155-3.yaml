@@ -16,7 +16,7 @@ catalogs:
         purpose: 画面・設定の API・MCP をまとめる ASGI アプリ。`lifespan` で MCP のセッション管理を起動する
       - name: FastAPI.mount
         kind: 関数
-        purpose: '`/mcp`・`/_admin/mcp` に MCP の ASGI アプリを載せる'
+        purpose: '`/mcp`・`/_admin/mcp` に MCP の ASGI アプリをマウントする'
       - name: FastAPI.middleware
         kind: 関数
         purpose: 画面と別のオリジンからの書き込みを断るミドルウェアを登録する
@@ -25,11 +25,11 @@ catalogs:
         purpose: OpenAPI の operationId を `view-{name}`・`settings-{name}` にする（orval が生成する関数の名前になる）
       - name: FileResponse
         kind: クラス
-        purpose: 画面のビルドの `index.html` と `assets/` のファイルを `Cache-Control` つきで返す
+        purpose: 画面のビルドの `index.html` と `assets/` のファイルを `Cache-Control` つきで返却する
       - name: FastAPI.exception_handler / StarletteHTTPException
         kind: 関数 / クラス
-        purpose: 当たらないパス・メソッドの 404・405 を含め、例外を problem+json にする
-lead: Starlette の上に作られた ASGI の Web フレームワーク。引数の型ヒントからリクエストを検証して受け取る。
+        purpose: 該当しないパス・メソッドの 404・405 を含め、例外を problem+json にする
+lead: 画面の API と管理の MCP を 1 つのアプリにまとめる fastapi の利用方法を定め、HTTP のルートや例外の変換を修正するときに参照する。
 purl: pkg:pypi/fastapi
 dependency_scope: 必須
 adoption: 採用
@@ -40,7 +40,7 @@ docs_url: https://fastapi.tiangolo.com/reference/
 verification:
   state: 済
   date: '2026-10-27'
-  detail: Python 3.14 で fastapi 0.162.0・mcp 2.3.0・uvicorn 0.54.0 を入れ、`FastAPI(lifespan=...)` の lifespan で 2 つの `session_manager.run()` に入り、`app.mount` で `/mcp` と `/_admin/mcp` に MCP を載せ、`HTMLResponse` で Jinja2 のマクロの断片を返すルートと同じポートで動くことを確かめた
+  detail: Python 3.14 で fastapi 0.162.0・mcp 2.3.0・uvicorn 0.54.0 を入れ、`FastAPI(lifespan=...)` の lifespan で 2 つの `session_manager.run()` に入り、`app.mount` で `/mcp` と `/_admin/mcp` に MCP をマウントし、`HTMLResponse` で Jinja2 のマクロの断片を返却するルートと同じポートで動くことを確認した
 selection:
   candidates: fastapi 0.162.0・Starlette 1.10.0・Litestar 2.25.0 を比べた（[案のレビュー](https://github.com/shuhei1101/dev-docs/pull/12#discussion_r4389749135)）。
   decision: ai-monitor の開発ドキュメントサーバーの画面のコードを書き換えずに移せ、設定画面の保存の JSON を Pydantic で受けられるため。starlette・pydantic・anyio・opentelemetry-api は mcp の依存として既に入り、増えるのは fastapi と annotated-doc の 2 件。

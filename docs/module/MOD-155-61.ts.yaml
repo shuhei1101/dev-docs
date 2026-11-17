@@ -1,6 +1,6 @@
 id: MOD-155-61
 title: 画面 / 共通 / app-error.ts
-lead: 画面の API の problem+json を受ける例外の階層。
+lead: 画面の API の problem+json を受ける例外の階層を受け持ち、共通の app-error.ts を修正するときに参照する。
 test_files:
   - tests/unit/frontend/src/shared/core/app-error.test.ts
 data_models:
@@ -64,7 +64,7 @@ classes:
           type: Promise<AppError>
           description: 400・422 は ClientValueError、401 は ClientAuthError、404 は NotFoundError、409 は VersionConflictError、429 は RateLimitError、それ以外は AppError
         process: |-
-          1. `Content-Type` が `application/problem+json` なら本文を `ProblemSchema.safeParse` で読む（読めなければ `problem` は null）
+          1. `Content-Type` が `application/problem+json` なら本文を `ProblemSchema.safeParse` で参照する（参照できなければ `problem` は null）
           2. ステータスでクラスを選び、`message` を `problem.detail`（無ければ `HTTP {status}`）にする
         unit_tests:
           - name: test_from_response
@@ -72,7 +72,7 @@ classes:
             summary: 422 を ClientValueError にする
             condition: '`errors` を持つ problem+json の 422 の `Response`'
             mock: なし
-            expected: ClientValueError、`problem.errors` が渡した並び
+            expected: ClientValueError、`problem.errors` が指定した並び
           - name: test_from_response_when_not_found
             case: 正常
             summary: 404 を NotFoundError にする

@@ -1,6 +1,6 @@
 id: MOD-155-215
 title: 開発ドキュメントサーバー / project-indexの呼び出し / client.py
-lead: project-index の読み取り API と端末の設定の API を制限時間つきで呼び、応答を型にする。
+lead: project-index の読み取り API と端末の設定の API を制限時間つきで呼び、応答を型にする処理を受け持ち、project-indexの呼び出しの client.py を修正するときに参照する。
 test_files:
   - tests/unit/dev_docs/integrations/project_index/test_client.py
 diagrams:
@@ -26,7 +26,7 @@ classes:
     container: integrations/project_index/client.py
     usecase: project-index の呼び出し
     role: ゲートウェイ
-    summary: project-index の API を `httpx.AsyncClient` で呼び、応答を型にする。要求ごとに問い合わせ、応答を控えない
+    summary: project-index の API を `httpx.AsyncClient` で呼び、応答を型にする。要求ごとに問い合わせ、応答を記録しない
     description: 起動の『部品の配線』が端末の設定の `project_index` と非機能要件の `project_index_timeout` で 1 つ作り、アプリの停止で `aclose` する。`dev-docs migrate` は `asyncio.run` の中で同じ型を作る。
     properties:
       - name: address
@@ -70,7 +70,7 @@ classes:
             type: Mapping[str, str | int] | None
             required: false
             passing: keyword
-            description: 値が `None` のキーは送らない
+            description: 値が `None` のキーは送信しない
             default: None
           - name: body
             title: 本文
@@ -83,16 +83,16 @@ classes:
           type: httpx.Response
           description: 2xx・409 の応答
         process: |-
-          1. `asyncio.timeout(self.timeout)` の中で `self._client` で要求する。要求全体が `timeout` を超えるか接続できなければ `ProjectIndexUnreachableError`（`address` は `self.address`）を送る
+          1. `asyncio.timeout(self.timeout)` の中で `self._client` で要求する。要求全体が `timeout` を超えるか接続できなければ `ProjectIndexUnreachableError`（`address` は `self.address`）を送信する
              - 接続を断られた（`httpx.ConnectError`）: `reason` を `接続を拒否されました（Connection refused）`
              - 制限時間を超えた（`TimeoutError`・`httpx.TimeoutException`）: `reason` を `{timeout} 秒以内に応答がありませんでした`、`kind` を `timeout`（他は `unreachable`）
              - そのほかの `httpx.TransportError`: `reason` を例外の文字列
           2. 応答のステータスで分ける
-             - 2xx・409: 応答を返す
+             - 2xx・409: 応答を返却する
              - 404: problem+json の `missing` で分ける。`source` なら `UnknownSourceError`（`source_id` は `value`）、`not_served` なら `SourceNotServedError`（`violations` は `errors[]` の `{path, reason}` を `Violation(path, rule=reason)` にしたもの、`disabled` は応答の `disabled`）、`ref` なら `RefNotFoundError`（`argument` は応答の `argument`、無ければ `ref`。`value` は応答の `value`）、それ以外は `DocumentNotFoundError`（`missing` は `[value]`、`candidates` は空）
-             - 400: `InvalidArgumentError`（`message` は `detail`、`violations` は `errors[]` を `Violation` にしたもの）を送る
-             - 422: `ProjectIndexRejectedError`（`violations` は `errors[]` を `Violation` にしたもの）を送る
-             - それ以外: `ProjectIndexResponseError`（`address` は `self.address`、`status_code` は応答のステータス、`summary` は本文の先頭 200 文字、`reason` は problem+json の `detail`（読めなければ `summary`））を送る
+             - 400: `InvalidArgumentError`（`message` は `detail`、`violations` は `errors[]` を `Violation` にしたもの）を送信する
+             - 422: `ProjectIndexRejectedError`（`violations` は `errors[]` を `Violation` にしたもの）を送信する
+             - それ以外: `ProjectIndexResponseError`（`address` は `self.address`、`status_code` は応答のステータス、`summary` は本文の先頭 200 文字、`reason` は problem+json の `detail`（参照できなければ `summary`））を送信する
         exceptions:
           - name: ProjectIndexUnreachableError
             condition: 接続できない・制限時間を超えた
@@ -119,42 +119,42 @@ classes:
           - name: test_request_when_refused
             case: 異常
             summary: 接続を断られる
-            condition: '`MockTransport` が `httpx.ConnectError` を送る'
-            mock: '`httpx.MockTransport` で project-index の応答を返す'
+            condition: '`MockTransport` が `httpx.ConnectError` を送信する'
+            mock: '`httpx.MockTransport` で project-index の応答を返却する'
             expected: '`ProjectIndexUnreachableError` で、`address` が `self.address`、`reason` が `接続を拒否されました（Connection refused）`'
             exception: 接続できない・制限時間を超えた
           - name: test_request_when_timeout
             case: 異常
             summary: 制限時間を超える
-            condition: '`MockTransport` が `httpx.ReadTimeout` を送り、`timeout` が 45'
-            mock: '`httpx.MockTransport` で project-index の応答を返す'
+            condition: '`MockTransport` が `httpx.ReadTimeout` を送信し、`timeout` が 45'
+            mock: '`httpx.MockTransport` で project-index の応答を返却する'
             expected: '`ProjectIndexUnreachableError` で、`reason` が `45 秒以内に応答がありませんでした`'
             exception: 接続できない・制限時間を超えた
           - name: test_request_when_not_found
             case: 異常
             summary: 404 の missing ごとの例外
             condition: 404 の problem+json の `missing` が `source`・`not_served`（`errors[]` 1 件）・`ref`・`doc`
-            mock: '`httpx.MockTransport` で project-index の応答を返す'
+            mock: '`httpx.MockTransport` で project-index の応答を返却する'
             expected: 順に `UnknownSourceError`・`SourceNotServedError`（`violations` 1 件）・`RefNotFoundError`（`argument` が `ref`）・`DocumentNotFoundError`（`missing` が `[value]`）
             exception: 404 で `missing` が `source`
           - name: test_request_when_unexpected_status
             case: 異常
             summary: 想定しないステータス
             condition: 500 で本文が 300 文字
-            mock: '`httpx.MockTransport` で project-index の応答を返す'
+            mock: '`httpx.MockTransport` で project-index の応答を返却する'
             expected: '`ProjectIndexResponseError` で、`status_code` が 500、`summary` が本文の先頭 200 文字'
             exception: 2xx・400・404・409・422 以外
           - name: test_request_when_total_timeout
             case: 異常
             summary: 要求全体の上限
-            condition: '`timeout` を 0.2 にし、`MockTransport` がヘッダーを返した後に本文を 0.15 秒ずつ 3 回に分けて返す'
-            mock: '`httpx.MockTransport` で project-index の応答を返す'
+            condition: '`timeout` を 0.2 にし、`MockTransport` がヘッダーを返却した後に本文を 0.15 秒ずつ 3 回に分けて返却する'
+            mock: '`httpx.MockTransport` で project-index の応答を返却する'
             expected: '`ProjectIndexUnreachableError` で、`reason` が `0.2 秒以内に応答がありませんでした`'
             exception: 接続できない・制限時間を超えた
       - name: list_sources
         title: 配信元の状態の一覧
         kind: メソッド
-        summary: 配信元の一覧と配信元ごとの状態を返す
+        summary: 配信元の一覧と配信元ごとの状態を返却する
         scope: public
         is_async: true
         thread_safe: true
@@ -164,18 +164,18 @@ classes:
           description: project-index の配信元の並び
         process: |-
           1. 呼び出しの共通の手順で `GET /sources` を呼ぶ
-          2. 応答の `sources[]` を `SourceState` にして返す
+          2. 応答の `sources[]` を `SourceState` にして返却する
         unit_tests:
           - name: test_list_sources
             case: 正常
             summary: 状態の読み替え
             condition: '`sources[]` に `serving` の sample と、`not_served`・`errors[]` 1 件の broken'
-            mock: '`httpx.MockTransport` で project-index の応答を返す'
+            mock: '`httpx.MockTransport` で project-index の応答を返却する'
             expected: 2 件で、broken の `errors` が `Violation` 1 件
       - name: source_view
         title: 配信元の表示の設定の取得
         kind: メソッド
-        summary: 配信元の設定のうち画面が使うキーを返す
+        summary: 配信元の設定のうち画面が使用するキーを返却する
         scope: public
         is_async: true
         thread_safe: true
@@ -194,24 +194,24 @@ classes:
           1. 呼び出しの共通の手順で `GET /sources/{source}/config?schemas=true` と `GET /sources/{source}/refs?commits=0` を `asyncio.gather` で同時に呼ぶ
           2. `id` を引数の `source`、`git`・`default_ref` を refs の応答の `git`・`defaultRef`（`git` が `false` なら `None`）にする
           3. `documents[]` の行ごとに、配信元の設定のままのキー `id`・`title`・`paths`・`records`・`search`・`converter`・`alias_type` と、`schemas[id]`（無ければ空）を `schema` にした `DocumentRow` を作る
-          4. `decisions.folders` を `decision_folders`、`diff.ignore_keys` を `diff_ignore_keys`、`github.repository`・`github.issueLabels` を `github_repository`・`github_issue_labels` にして返す
+          4. `decisions.folders` を `decision_folders`、`diff.ignore_keys` を `diff_ignore_keys`、`github.repository`・`github.issueLabels` を `github_repository`・`github_issue_labels` にして返却する
         unit_tests:
           - name: test_source_view
             case: 正常
             summary: 画面の構成と文書の行
-            condition: 'config が `nav`・`documents[]` 2 行（1 行は `records: files`）・`schemas` 2 件・`diff.ignore_keys: [updated, rev]`・`github.issueLabels: [docs]`、refs が `git: true`・`defaultRef: main` を返す'
-            mock: '`httpx.MockTransport` で project-index の応答を返す'
+            condition: 'config が `nav`・`documents[]` 2 行（1 行は `records: files`）・`schemas` 2 件・`diff.ignore_keys: [updated, rev]`・`github.issueLabels: [docs]`、refs が `git: true`・`defaultRef: main` を返却する'
+            mock: '`httpx.MockTransport` で project-index の応答を返却する'
             expected: config の要求のクエリに `schemas=true`、refs の要求のクエリに `commits=0` がある。`documents` が 2 件で各行の `schema` が `schemas` の値、`diff_ignore_keys` が `[updated, rev]`、`github_issue_labels` が `[docs]`、`git` が `True`、`default_ref` が `main`
           - name: test_source_view_when_not_git
             case: 正常
             summary: Git 管理外の配信元
-            condition: 'refs が `git: false` を返す'
-            mock: '`httpx.MockTransport` で project-index の応答を返す'
+            condition: 'refs が `git: false` を返却する'
+            mock: '`httpx.MockTransport` で project-index の応答を返却する'
             expected: '`git` が `False`、`default_ref` が `None`'
       - name: list_documents
         title: 文書の一覧の取得
         kind: メソッド
-        summary: リビジョンの全ての文書を返す
+        summary: リビジョンの全ての文書を返却する
         scope: public
         is_async: true
         thread_safe: true
@@ -248,24 +248,24 @@ classes:
           description: '値を入れ、`body` を空にした文書'
         process: |-
           1. 文書の一覧の応答の取得（`source`・`ref`・`values`）で応答の本文を取る
-          2. 文書の一覧の読み取り（`source`・応答の本文・`record_kinds`）で `DocumentList` にして返す
+          2. 文書の一覧の読み取り（`source`・応答の本文・`record_kinds`）で `DocumentList` にして返却する
         unit_tests:
           - name: test_list_documents
             case: 正常
             summary: ref と値を求める
             condition: '`ref="8b1d4e0"`'
-            mock: '`httpx.MockTransport` で project-index の応答を返す'
-            expected: 要求のクエリに `ref=8b1d4e0`・`values=true`・`common_keys=true` があり、応答の `ref` と文書 2 件を返す
+            mock: '`httpx.MockTransport` で project-index の応答を返却する'
+            expected: 要求のクエリに `ref=8b1d4e0`・`values=true`・`common_keys=true` があり、応答の `ref` と文書 2 件を返却する
           - name: test_list_documents_when_records
             case: 正常
             summary: 行の文書の添字
-            condition: '`notes/files.yaml` の種類 `files` の文書 2 件と `docs/a.yaml` の種類 `design` の文書 1 件を返し、`record_kinds=["files"]`'
-            mock: '`httpx.MockTransport` で project-index の応答を返す'
+            condition: '`notes/files.yaml` の種類 `files` の文書 2 件と `docs/a.yaml` の種類 `design` の文書 1 件を返却し、`record_kinds=["files"]`'
+            mock: '`httpx.MockTransport` で project-index の応答を返却する'
             expected: '`files` の 2 件の `record_index` が 0・1、`design` の文書の `record_index` が `None`'
       - name: document
         title: 文書の詳細の取得
         kind: メソッド
-        summary: 1 件の文書の値・本文と、`converters[]` の Markdown か失敗を返す
+        summary: 1 件の文書の値・本文と、`converters[]` の Markdown か失敗を返却する
         scope: public
         is_async: true
         thread_safe: true
@@ -298,30 +298,30 @@ classes:
         process: |-
           1. 呼び出しの共通の手順で `GET /sources/{source}/docs/{path}` を呼ぶ。クエリは `ref` と、`document_id` があれば `id`
           2. `value` が `null` なら `document` を `None` にする。それ以外は、応答の `metadata` の `id`・`kind` を `id`・`kind` に、応答の `metadata` の `id`・`kind`・`name`・`description`・`tags`・`visibility` に `metadata.commonKeys`（辞書のときだけ）を重ねたものを `metadata` にして、応答の `path`・`value`・`body`・`bodyPath`、`updatedAt` を日時にした `updated` で `IndexedDocument` を作る（`version` は空、`record_index` は `None`）
-          3. `markdown` と、`conversionError` を `IndexFailure` にした `failure` を入れて返す
+          3. `markdown` と、`conversionError` を `IndexFailure` にした `failure` を入れて返却する
         unit_tests:
           - name: test_document_when_failure
             case: 正常
             summary: 変換の失敗
             condition: '`conversionError` に `reason: exit`・`script` を持ち、`markdown` が `null` の応答'
-            mock: '`httpx.MockTransport` で project-index の応答を返す'
+            mock: '`httpx.MockTransport` で project-index の応答を返却する'
             expected: '`markdown` が `None`、`failure.reason` が `exit`、`failure.script` が応答の値'
           - name: test_document_when_record
             case: 正常
             summary: 管理用の YAML の行の要素を選ぶ
             condition: '`path="notes/files.yaml"`・`document_id="n-1"`、応答が `body`・`bodyPath`・`updatedAt` と `metadata.commonKeys: {aliases: [作業場所]}` を持つ'
-            mock: '`httpx.MockTransport` で project-index の応答を返す'
+            mock: '`httpx.MockTransport` で project-index の応答を返却する'
             expected: 要求のクエリに `id=n-1` があり、`document` の `id` が `n-1`、`body`・`body_path` が応答の値、`updated` がタイムゾーン付きの日時、`metadata` の `aliases` が `[作業場所]`
           - name: test_document_when_yaml_unreadable
             case: 正常
-            summary: YAML を読めない
+            summary: YAML を読み込めない
             condition: '`value: null` で、`conversionError` が `reason: invalid_yaml`・`file`・`line`・`column` を持つ応答'
-            mock: '`httpx.MockTransport` で project-index の応答を返す'
+            mock: '`httpx.MockTransport` で project-index の応答を返却する'
             expected: '`document` が `None`、`failure` の `reason` が `invalid_yaml` で `file`・`line`・`column` が応答の値'
       - name: decisions
         title: 検討事項の一覧の取得
         kind: メソッド
-        summary: 検討事項の ID ごとの当たるフォルダの数を返す
+        summary: 検討事項の ID ごとの該当するフォルダの数を返却する
         scope: public
         is_async: true
         thread_safe: true
@@ -332,18 +332,18 @@ classes:
           description: 検討事項の一覧
         process: |-
           1. 呼び出しの共通の手順で `GET /sources/{source}/decisions` を呼ぶ
-          2. `decisions[]` の `id` をキー、`folders` を値にした `counts` で `DecisionIndex` を返す
+          2. `decisions[]` の `id` をキー、`folders` を値にした `counts` で `DecisionIndex` を返却する
         unit_tests:
           - name: test_decisions
             case: 正常
             summary: リンクにできる ID
             condition: '`decisions` が `[{id: D-1, folders: 1}, {id: D-2, folders: 2}]`'
-            mock: '`httpx.MockTransport` で project-index の応答を返す'
+            mock: '`httpx.MockTransport` で project-index の応答を返却する'
             expected: '`linkable` が `{D-1}`'
       - name: decision
         title: 検討事項の文書の取得
         kind: メソッド
-        summary: ちょうど 1 つのフォルダにある検討事項の文書の本文を返す
+        summary: ちょうど 1 つのフォルダにある検討事項の文書の本文を返却する
         scope: public
         is_async: true
         thread_safe: true
@@ -360,54 +360,54 @@ classes:
           description: 文書の本文
         process: |-
           1. 呼び出しの共通の手順で `GET /sources/{source}/decisions/{id}` を呼ぶ
-          2. 応答の `body` を返す。当たるフォルダが 0 個か 2 個以上なら呼び出しの共通の手順が `DocumentNotFoundError` を送る
+          2. 応答の `body` を返却する。該当するフォルダが 0 個か 2 個以上なら呼び出しの共通の手順が `DocumentNotFoundError` を送信する
         unit_tests:
           - name: test_decision_when_ambiguous
             case: 異常
             summary: 2 つのフォルダにある
             condition: '404 の `missing: doc`'
-            mock: '`httpx.MockTransport` で project-index の応答を返す'
+            mock: '`httpx.MockTransport` で project-index の応答を返却する'
             expected: '`DocumentNotFoundError`'
             exception: 404 で `missing` が `doc`
       - name: search
         title: 検索
         kind: メソッド
-        summary: 語を含む文書と一致した箇所を返す
+        summary: 単語を含む文書と一致した箇所を返却する
         scope: public
         is_async: true
         thread_safe: true
         args:
           - *id001
           - name: q
-            title: 語
+            title: 単語
             type: str
             required: true
             passing: positional
-            description: 空白で区切った語
+            description: 空白で区切った単語
           - *id002
           - name: limit
             title: 件数
             type: int
             required: true
             passing: keyword
-            description: 返す件数
+            description: 返却する件数
         returns:
           type: SearchHits
           description: 検索の結果
         process: |-
           1. 呼び出しの共通の手順で `GET /sources/{source}/search` を呼ぶ
-          2. `items[]` の `id`・`filePath`・`name`・`snippets` を `SearchHit` の `id`・`path`・`name`・`snippets` にし、`totalCount` とともに `SearchHits` にして返す
+          2. `items[]` の `id`・`filePath`・`name`・`snippets` を `SearchHit` の `id`・`path`・`name`・`snippets` にし、`totalCount` とともに `SearchHits` にして返却する
         unit_tests:
           - name: test_search
             case: 正常
-            summary: クエリを渡す
+            summary: クエリを指定する
             condition: '`q="ページング"`・`limit=5`、応答の `items[]` が `path`・`id`・`filePath` を持つ'
-            mock: '`httpx.MockTransport` で project-index の応答を返す'
-            expected: 要求のクエリに `q`・`limit` があり、`total_count` と、`path` が `filePath` の値の `items` を返す
+            mock: '`httpx.MockTransport` で project-index の応答を返却する'
+            expected: 要求のクエリに `q`・`limit` があり、`total_count` と、`path` が `filePath` の値の `items` を返却する
       - name: refs
         title: リビジョンの一覧の取得
         kind: メソッド
-        summary: 配信元のブランチ・タグ・最近の commit を返す
+        summary: 配信元のブランチ・タグ・最近の commit を返却する
         scope: public
         is_async: true
         thread_safe: true
@@ -418,24 +418,24 @@ classes:
             type: int
             required: true
             passing: keyword
-            description: 返す最近の commit の数
+            description: 返却する最近の commit の数
         returns:
           type: RefList
           description: リビジョンの一覧
         process: |-
           1. 呼び出しの共通の手順で `GET /sources/{source}/refs` を呼ぶ
-          2. 応答を `RefList` にして返す
+          2. 応答を `RefList` にして返却する
         unit_tests:
           - name: test_refs_when_not_git
             case: 正常
             summary: Git 管理外
             condition: '`git: false` の応答'
-            mock: '`httpx.MockTransport` で project-index の応答を返す'
+            mock: '`httpx.MockTransport` で project-index の応答を返却する'
             expected: '`git` が `False` で、他の並びが空'
       - name: settings_sources
         title: 端末の設定の配信元の行の取得
         kind: メソッド
-        summary: project-index の端末の設定の `sources[]` の行と状態を返す
+        summary: project-index の端末の設定の `sources[]` の行と状態を返却する
         scope: public
         is_async: true
         thread_safe: true
@@ -445,18 +445,18 @@ classes:
           description: 行と状態
         process: |-
           1. 呼び出しの共通の手順で `GET /settings/sources` を呼ぶ
-          2. `sources[]` の行ごとに、`id`・`config`・`enabled`・`scope` と `outsideRead` を `outside_read` にした辞書を `rows`、`id`・`status`・`errors`・`config`・`configVersion` を `SourceState` にしたものを `states` にし、`settingsPath`・`version` とともに `SettingsSourcesView` にして返す
+          2. `sources[]` の行ごとに、`id`・`config`・`enabled`・`scope` と `outsideRead` を `outside_read` にした辞書を `rows`、`id`・`status`・`errors`・`config`・`configVersion` を `SourceState` にしたものを `states` にし、`settingsPath`・`version` とともに `SettingsSourcesView` にして返却する
         unit_tests:
           - name: test_settings_sources
             case: 正常
             summary: 行と状態
             condition: '`sources[]` 2 行（1 行は `outsideRead: false`、もう 1 行は `status: pending_reload`）と `version: v1`'
-            mock: '`httpx.MockTransport` で project-index の応答を返す'
+            mock: '`httpx.MockTransport` で project-index の応答を返却する'
             expected: '`rows` が 2 件で 1 行目の `outside_read` が `False`、`states` が 2 件で 2 件目の `status` が `pending_reload`、`version` が `v1`'
       - name: put_settings_sources
         title: 端末の設定の配信元の行の保存
         kind: メソッド
-        summary: '`sources[]` の全行の保存と読み直しを依頼する'
+        summary: '`sources[]` の全行の保存と再読み込みを依頼する'
         scope: public
         is_async: true
         thread_safe: true
@@ -476,36 +476,36 @@ classes:
             description: 画面が受け取った内容のバージョン。`None` は照合しない
         returns:
           type: SettingsSourcesView
-          description: 読み直した後の行と状態
+          description: 再読み込みした後の行と状態
         process: |-
-          1. 呼び出しの共通の手順で `PUT /settings/sources`（本文 `{sources: rows}`。`expected_version` が `None` でなければ `expectedVersion` も添える）を呼ぶ。422 は呼び出しの共通の手順が `ProjectIndexRejectedError` を送る
+          1. 呼び出しの共通の手順で `PUT /settings/sources`（本文 `{sources: rows}`。`expected_version` が `None` でなければ `expectedVersion` も添える）を呼ぶ。422 は呼び出しの共通の手順が `ProjectIndexRejectedError` を送信する
           2. 応答が 409 の場合、応答の `current` を持つ `SettingsVersionConflictError` を送出する（GET を呼ばない）
-          3. 応答は行（`config`・`scope`）を持たないため、端末の設定の取得（`GET /settings/sources`）を呼んでその結果（保存した後の `version` を含む）を返す
+          3. 応答は行（`config`・`scope`）を持たないため、端末の設定の取得（`GET /settings/sources`）を呼んでその結果（保存した後の `version` を含む）を返却する
         unit_tests:
           - name: test_put_settings_sources
             case: 正常
-            summary: 保存して行を取り直す
-            condition: PUT が 200 で状態 2 件、GET が 2 行を返す
-            mock: '`httpx.MockTransport` で project-index の応答を返す'
+            summary: 保存して行を再取得する
+            condition: PUT が 200 で状態 2 件、GET が 2 行を返却する
+            mock: '`httpx.MockTransport` で project-index の応答を返却する'
             expected: 'PUT の本文が `{sources: rows}`、続けて GET を呼び、`rows` が GET の 2 行'
           - name: test_put_settings_sources_when_rejected
             case: 異常
             summary: スキーマに通らない
             condition: 422 で `errors[]` 1 件
-            mock: '`httpx.MockTransport` で project-index の応答を返す'
+            mock: '`httpx.MockTransport` で project-index の応答を返却する'
             expected: '`ProjectIndexRejectedError` で、`violations` が応答の 1 件。GET を呼ばない'
             exception: '422'
           - name: test_put_settings_sources_when_expected_version
             case: 正常
             summary: 内容のバージョンを添えて保存する
-            condition: '`expected_version: v1`、PUT が 200、GET が `version: v2` を返す'
-            mock: '`httpx.MockTransport` で project-index の応答を返す'
+            condition: '`expected_version: v1`、PUT が 200、GET が `version: v2` を返却する'
+            mock: '`httpx.MockTransport` で project-index の応答を返却する'
             expected: 'PUT の本文が `{sources: rows, expectedVersion: v1}` で、返った `version` が `v2`'
           - name: test_put_settings_sources_when_conflict
             case: 異常
             summary: 内容のバージョンが古い
-            condition: 'PUT が 409（`current: v2`）を返す'
-            mock: '`httpx.MockTransport` で project-index の応答を返す'
+            condition: 'PUT が 409（`current: v2`）を返却する'
+            mock: '`httpx.MockTransport` で project-index の応答を返却する'
             expected: '`SettingsVersionConflictError` で `current` が `v2`。GET を呼ばない'
             exception: '409'
         exceptions:
@@ -543,20 +543,20 @@ classes:
             case: 正常
             summary: 照合つきで保存する
             condition: PUT が 200 で状態 2 件を返却する
-            mock: '`httpx.MockTransport` で project-index の応答を返す'
+            mock: '`httpx.MockTransport` で project-index の応答を返却する'
             expected: 'PUT の本文が `{sources: rows, expectedVersion: v1}` で、GET を呼ばない'
           - name: test_save_settings_sources_when_conflict
             case: 異常
             summary: 内容のバージョンが古い
             condition: PUT が 409 を返却する
-            mock: '`httpx.MockTransport` で project-index の応答を返す'
+            mock: '`httpx.MockTransport` で project-index の応答を返却する'
             expected: '`ProjectIndexResponseError` で、`status_code` が 409'
             exception: 409（取得した後に端末の設定が変わった）
           - name: test_save_settings_sources_when_invalid
             case: 異常
             summary: 本文の検証に通らない
             condition: PUT が 400 で `errors[]` に `sources[1].enabled` を 1 件返却する
-            mock: '`httpx.MockTransport` で project-index の応答を返す'
+            mock: '`httpx.MockTransport` で project-index の応答を返却する'
             expected: '`InvalidArgumentError` で、`violations[0].path` が `sources[1].enabled`'
         exceptions:
           - name: ProjectIndexResponseError
@@ -605,7 +605,7 @@ classes:
           description: '`GET /sources/{source}/docs` の応答の本文'
         process: |-
           1. 呼び出しの共通の手順で `GET /sources/{source}/docs?ref={ref}` を呼ぶ。クエリに `common_keys=true` を常に付け、`values` が `True` なら `values=true` も付ける
-          2. 応答の本文を JSON として返す
+          2. 応答の本文を JSON として返却する
         exceptions:
           - name: ProjectIndexUnreachableError
             condition: 接続できない・制限時間を超えた
@@ -613,9 +613,9 @@ classes:
         unit_tests:
           - name: test_fetch_document_list
             case: 正常
-            summary: 応答の本文をそのまま返す
+            summary: 応答の本文をそのまま返却する
             condition: '`ref="main"`'
-            mock: '`httpx.MockTransport`（`GET /sources/sample/docs` に文書 2 件を返す）'
+            mock: '`httpx.MockTransport`（`GET /sources/sample/docs` に文書 2 件を返却する）'
             expected: クエリが `ref=main`・`values=true`・`common_keys=true` で、戻り値が応答の本文
 constants:
   - name: PROJECT_INDEX_DEFAULT

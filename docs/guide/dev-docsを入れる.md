@@ -2,14 +2,14 @@
 
 プラグインを入れ、global-setup で端末の設定と起動を用意して、/mcp につなぐ手順
 
-文書の MCP（検索・書き込み）だけを使う端末は dev-docs を入れず、project-index だけを入れます（[project-indexを入れる](https://github.com/shuhei1101/project-index/blob/develop/docs/guide/project-index%E3%82%92%E5%85%A5%E3%82%8C%E3%82%8B.md)）。
-画面で文書を読む端末にだけ、project-index に加えて dev-docs を入れます。
+文書の MCP（検索・書き込み）だけを使用する端末は dev-docs を入れず、project-index だけを入れます（[project-indexを入れる](https://github.com/shuhei1101/project-index/blob/develop/docs/guide/project-index%E3%82%92%E5%85%A5%E3%82%8C%E3%82%8B.md)）。
+画面で文書を参照する端末にだけ、project-index に加えて dev-docs を入れます。
 
 ## 前提
 
 - 端末に uv・git・Claude Code がある
 - project-index を入れ、待ち受けている（既定 `http://127.0.0.1:8786`）
-- dev-docs のリポジトリをクローンしてある（`/dev-docs:global-setup` の引数に渡すパス）
+- dev-docs のリポジトリをクローンしてある（`/dev-docs:global-setup` の引数に指定するパス）
 
 ## 手順
 
@@ -25,14 +25,14 @@
    ```
    インストールの範囲を聞かれたら、ユーザースコープを選ぶ。
 3. `/dev-docs:global-setup` を実行する。
-   引数に dev-docs のクローンのパスを渡す。省くと聞かれる。
+   引数に dev-docs のクローンのパスを指定する。省くと聞かれる。
    ```text
    /dev-docs:global-setup /home/me/repo/dev-docs
    ```
-4. 聞かれた端末の設定の場所に答える。
+4. 聞かれた端末の設定の場所に回答する。
    既定は `${XDG_CONFIG_HOME:-~/.config}/dev-docs/settings.yaml`。
-5. スキルの最後の応答にある、作った端末の設定のパスと接続の結果を確かめる。
-6. Claude Code で `/mcp` を開き、`dev-docs` につなぎ直す。
+5. スキルの最後の応答にある、作った端末の設定のパスと接続の結果を確認する。
+6. Claude Code で `/mcp` を開き、`dev-docs` に再接続する。
 7. 配信元を登録する。
    手順は [配信元を配信する](./配信元を配信する.md) にある。
 
@@ -46,25 +46,25 @@
 | 端末の設定 | 雛形から作る。`version` に dev-docs のバージョン、`clone` に引数のパス、`project_index` に project-index のアドレスを持つ |
 | Claude Code の env | 端末の設定が既定の場所と違うときだけ、`settings.json` の env に `DEV_DOCS_CONFIG` を記載する。env のほかのキーは変えない |
 | 起動 | systemd --user を使用できる端末では、`dev-docs serve` を起動する unit（`DEV_DOCS_UNIT`、既定 `dev-docs.service`）を作り、有効にして起動する。同じ名前の unit があるときは退避してから書き換える。使用できない端末では、`dev-docs serve` を切り離して起動する |
-| 接続の確認 | `/mcp` につながり、管理の MCP の `status` で project-index につながっていることを確かめる |
+| 接続の確認 | `/mcp` につながり、管理の MCP の `status` で project-index につながっていることを確認する |
 
-## つなぎ直す理由
+## 再接続する理由
 
 スキルが起動したサーバーには、そのセッションの MCP の接続が間に合いません。
-`/mcp` でつなぎ直すと、そのセッションから使えます。
-次のセッションからは、プラグインのフックが落ちているサーバーを起動するので（unit があるときは unit を起動する）、つなぎ直しは要りません。
+`/mcp` で再接続すると、そのセッションから使えます。
+次のセッションからは、プラグインのフックが落ちているサーバーを起動するので（unit があるときは unit を起動する）、再接続は要りません。
 フックの動きは [管理用プラグイン](./コアコンセプト-管理用プラグイン.md) にあります。
 
 ## 2 回目以降
 
-入れ直し・端末の移行・dev-docs の更新のあとも、同じ `/dev-docs:global-setup` を実行します。
+再インストール・端末の移行・dev-docs の更新のあとも、同じ `/dev-docs:global-setup` を実行します。
 端末の設定がある場合は、`version` を dev-docs のバージョンと比べて進め方を決めます。
 前のバージョンの `sources[]` の行は、移し替えで project-index へ移します。
 
 | 比べた結果 | 動き |
 | --- | --- |
 | 同じ | スキーマで検証し、足りないキーだけを聞いて記載する。端末の設定の場所は聞かない |
-| 古い | `dev-docs migrate --plan` で当てる手順を示し、了承されたら `dev-docs migrate` で移し替える。当てる前にバックアップを取る |
+| 古い | `dev-docs migrate --plan` で適用する手順を示し、了承されたら `dev-docs migrate` で移し替える。適用する前にバックアップを取る |
 | 新しい | 端末の設定も env も書き換えず、管理の MCP の `update` で dev-docs を更新するよう案内して止まる |
 
 移し替えの詳細は [dev-docsを更新する](./dev-docsを更新する.md) にあります。

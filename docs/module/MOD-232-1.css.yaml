@@ -1,12 +1,12 @@
 title: 画面 / preflight-outside-mdmark.css
-lead: Tailwind の Preflight を、mdmark が描く本文（`.mdmark` とその子孫）の外だけに当てる CSS。`index.css` が層 `base` として読み込む。
+lead: Tailwind の Preflight を、mdmark が描く本文（`.mdmark` とその子孫）の外だけに適用する CSS を受け持ち、preflight-outside-mdmark.css を修正するときに参照する。
 styles:
   - name: preflight-html
     title: html の基本のスタイル
     container: preflight-outside-mdmark.css
     usecase: 共通
-    summary: Preflight の `html, :host` の規則を `@scope` の外に置く
-    description: '`@scope (html) to (.mdmark)` の中では根の `html` に規則が当たらないため、この規則だけを `@scope` の外に置く。中身は Tailwind の `preflight.css` の同じ規則の写し'
+    summary: Preflight の `html, :host` の規則を `@scope` の外に配置する
+    description: '`@scope (html) to (.mdmark)` の中では根の `html` に規則が該当しないため、この規則だけを `@scope` の外に配置する。中身は Tailwind の `preflight.css` の同じ規則の写し'
     values:
       - class_name: html, :host
         target: ページの根
@@ -15,8 +15,8 @@ styles:
     title: 本文の外の Preflight
     container: preflight-outside-mdmark.css
     usecase: 共通
-    summary: Preflight の `html, :host` 以外の規則を `@scope (html) to (.mdmark)` で包み、本文の要素と疑似要素に当てない
-    description: '中身は Tailwind の `preflight.css` の写しで、写した元のバージョン（`tailwindcss` の `package.json` の `version`）をファイルの先頭のコメントに書く。Tailwind を上げるときは同じバージョンの `preflight.css` から写し直す。`[hidden]` の `display: none !important` も本文に当たらず、mdmark が `hidden` を付けて表示する要素（凡例・CSV の表）は mdmark の値で描かれる'
+    summary: Preflight の `html, :host` 以外の規則を `@scope (html) to (.mdmark)` で包み、本文の要素と疑似要素に適用しない
+    description: '中身は Tailwind の `preflight.css` のコピーで、写した元のバージョン（`tailwindcss` の `package.json` の `version`）をファイルの先頭のコメントに書き込む。Tailwind を上げるときは同じバージョンの `preflight.css` から再コピーする。`[hidden]` の `display: none !important` も本文に該当せず、mdmark が `hidden` を付けて表示する要素（凡例・CSV の表）は mdmark の値で描かれる'
     values:
       - class_name: '@scope (html) to (.mdmark)'
         target: 本文の外の全ての要素と疑似要素
@@ -26,7 +26,7 @@ styles:
     container: preflight-outside-mdmark.css
     usecase: 共通
     summary: '`html, :host` の規則から本文へ継承する性質を、ブラウザの既定の値に戻す'
-    description: mdmark は本文の書体と行の高さを `.mdmark` に持つが、`tab-size` などは持たない。層 `base` に置くため、mdmark が値を持てば層 `mdmark` の値が勝つ
+    description: mdmark は本文の書体と行の高さを `.mdmark` に持つが、`tab-size` などは持たない。層 `base` に配置するため、mdmark が値を持てば層 `mdmark` の値が勝つ
     values:
       - class_name: .mdmark
         target: 本文の根
@@ -35,3 +35,5 @@ refs:
   - SCR-155-1#elements[本文]
   - LIB-155-21#
 id: MOD-232-1
+notes:
+  補足: '`index.css` が層 `base` として読み込む。'

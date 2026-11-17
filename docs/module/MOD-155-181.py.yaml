@@ -1,6 +1,6 @@
 id: MOD-155-181
 title: 開発ドキュメントサーバー / 共通 / origin.py
-lead: 画面と同じオリジンからの要求かの確認。
+lead: 画面と同じオリジンからの要求かの確認を受け持ち、共通の origin.py を修正するときに参照する。
 test_files:
   - tests/unit/dev_docs/server/test_origin.py
 constants:
@@ -28,10 +28,10 @@ functions:
         description: 受けた要求
     returns:
       type: None
-      description: 同じオリジンなら何も返さない
+      description: 同じオリジンなら何も返却しない
     process: |-
-      1. `Origin` があれば、要求の `scheme://host:port` と比べ、違えば `CrossOriginError` を送る
-      2. `Origin` が無ければ、`Sec-Fetch-Site` が `SAME_ORIGIN` でなければ `CrossOriginError` を送る（どちらも無いときも断る）
+      1. `Origin` があれば、要求の `scheme://host:port` と比べ、違えば `CrossOriginError` を送信する
+      2. `Origin` が無ければ、`Sec-Fetch-Site` が `SAME_ORIGIN` でなければ `CrossOriginError` を送信する（どちらも無いときも断る）
     exceptions:
       - name: CrossOriginError
         condition: '`Origin` が画面のオリジンと違う'
@@ -46,13 +46,13 @@ functions:
         summary: 同じオリジン
         condition: '`Origin: http://127.0.0.1:8781` を `http://127.0.0.1:8781/_api/...` へ'
         mock: なし（Starlette の Request を組み立てる）
-        expected: 送らない
+        expected: 送信しない
       - name: test_require_same_origin_when_fetch_site
         case: 正常
         summary: '`Origin` が無く `Sec-Fetch-Site` が same-origin'
         condition: '`Sec-Fetch-Site: same-origin` だけ'
         mock: なし
-        expected: 送らない
+        expected: 送信しない
       - name: test_require_same_origin_when_cross_origin
         case: 異常
         summary: 別のオリジン

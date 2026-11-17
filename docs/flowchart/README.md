@@ -6,5 +6,5 @@
 
 | ページ | 概要 |
 | --- | --- |
-| [flowchart-new-or-modify](./flowchart-new-or-modify.yaml) | 文書を記載する前に、同じ話題の文書を検索で引き、新しく作るか既存の文書を修正するかを決める判定フローチャート |
+| [flowchart-new-or-modify](./flowchart-new-or-modify.yaml) | 文書を記載する前に、同じ話題の文書を検索で取得し、新規作成するか既存の文書を修正するかを決める判定フローチャート |
 | [flowchart-documents-row](./flowchart-documents-row.yaml) | 文書を既存の documents の行に入れるか、新しい行（新しいスキーマ）を作るかを決める判定フローチャート |

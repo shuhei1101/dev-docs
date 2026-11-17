@@ -1,6 +1,6 @@
 id: MOD-155-125
 title: 開発ドキュメントサーバー / プロンプト / runtime.py
-lead: サーバーが起動のときに `content/prompts/` のプロンプトの YAML を読んで検査し、MCP の instructions・ツールの description を描画する。画面用のマーカーは付けない。
+lead: 起動のときのプロンプトの YAML の読み込み・検査と、MCP の instructions・ツールの description の描画を受け持ち、プロンプトの runtime.py を修正するときに参照する。
 test_files:
   - tests/unit/dev_docs/features/prompt_doc/test_runtime.py
 data_models:
@@ -25,17 +25,17 @@ data_models:
     container: features/prompt_doc/runtime.py
     usecase: プロンプトの読み込み
     role: サービス
-    summary: 起動のときに読んだプロンプトを ID で引いて描画する
-    description: '`dataclass(frozen=True, slots=True, kw_only=True)`。起動の後は読み直さない（YAML を書き換えたときは再起動で効かせる）。'
+    summary: 起動のときに参照したプロンプトを ID で取得して描画する
+    description: '`dataclass(frozen=True, slots=True, kw_only=True)`。起動の後は再読み込みしない（YAML を書き換えたときは再起動で効かせる）。'
     properties:
       - name: prompts
         title: プロンプト
         type: dict[str, LoadedPrompt]
-        description: ID → 読んだプロンプト
+        description: ID → 参照したプロンプト
       - name: env
         title: 描画の環境
         type: jinja2.Environment
-        description: '`build_environment` の結果（画面の変換と同じ設定で、字数を揃える）'
+        description: '`build_environment` の結果（画面の変換と同じ設定で、字数を統一する）'
     methods:
       - name: render
         title: 描画する
@@ -57,14 +57,14 @@ data_models:
             required: false
             default: '{}'
             passing: positional
-            description: プロンプトの `vars` に渡す値
+            description: プロンプトの `vars` に指定する値
         returns:
           type: str
           description: 描画した文
         process: |-
-          1. `prompts` から `prompt_id` を引く（起動のときに `required` で確かめてあるので、無い ID は `KeyError` のままにする）
-          2. 部品を並び順に辿り、`when` が偽の部品と `doc.lang` の本文が無い部品を飛ばして、残りを `values` で描画する。`values` に無い `vars` の変数は `None` で埋める（描画の例外はそのまま送る）
-          3. 描画した本文をそのままつなぎ、末尾の改行を除いて返す
+          1. `prompts` から `prompt_id` を取得する（起動のときに `required` で確認してあるので、無い ID は `KeyError` のままにする）
+          2. 部品を並び順に辿り、`when` が偽の部品と `doc.lang` の本文が無い部品を飛ばして、残りを `values` で描画する。`values` に無い `vars` の変数は `None` で埋める（描画の例外はそのまま送信する）
+          3. 描画した本文をそのままつなぎ、末尾の改行を除いて返却する
         unit_tests:
           - name: test_prompt_set_render
             case: 正常
@@ -80,13 +80,13 @@ data_models:
             expected: '`a` の本文だけ'
 constants:
   - name: PROMPTS_DIR_ENV
-    title: プロンプトの置き場所の環境変数
+    title: プロンプトの配置先の環境変数
     container: features/prompt_doc/runtime.py
     usecase: プロンプトの読み込み
-    summary: 読むフォルダを `DEFAULT_PROMPTS_DIR` から差し替える環境変数。結合テストが違反する YAML の一時フォルダへ向ける
+    summary: 参照するフォルダを `DEFAULT_PROMPTS_DIR` から差し替える環境変数。結合テストが違反する YAML の一時フォルダへ向ける
     value: '"DEV_DOCS_PROMPTS_DIR"'
   - name: DEFAULT_PROMPTS_DIR
-    title: プロンプトの既定の置き場所
+    title: プロンプトの既定の配置先
     container: features/prompt_doc/runtime.py
     usecase: プロンプトの読み込み
     summary: クローンの直下の `content/prompts`
@@ -107,7 +107,7 @@ constants:
     title: ファイル全体のキーのパス
     container: features/prompt_doc/runtime.py
     usecase: プロンプトの読み込み
-    summary: ファイルが無い・YAML として読めないときの違反のキーのパス
+    summary: ファイルが無い・YAML として読み込めないときの違反のキーのパス
     value: '"$"'
   - name: KEY_RULES
     title: キーの名前を添える違反
@@ -117,12 +117,12 @@ constants:
     value: ("必須のキーが無い", "知らないキー")
 functions:
   - name: prompts_dir
-    title: プロンプトの置き場所
+    title: プロンプトの配置先
     kind: 関数
     container: features/prompt_doc/runtime.py
     usecase: プロンプトの読み込み
     role: 設定
-    summary: 読むフォルダを決める
+    summary: 参照するフォルダを決める
     scope: public
     is_async: false
     thread_safe: true
@@ -135,12 +135,12 @@ functions:
         description: '`os.environ`'
     returns:
       type: Path
-      description: 読むフォルダ
-    process: 1. `env` に `PROMPTS_DIR_ENV` があればその値を絶対パスにしたもの、無ければ `DEFAULT_PROMPTS_DIR` を返す
+      description: 参照するフォルダ
+    process: 1. `env` に `PROMPTS_DIR_ENV` があればその値を絶対パスにしたもの、無ければ `DEFAULT_PROMPTS_DIR` を返却する
     unit_tests:
       - name: test_prompts_dir
         case: 正常
-        summary: 既定の置き場所
+        summary: 既定の配置先
         condition: '`env` が空'
         mock: なし
         expected: '`DEFAULT_PROMPTS_DIR`'
@@ -156,14 +156,14 @@ functions:
     container: features/prompt_doc/runtime.py
     usecase: プロンプトの読み込み
     role: 検証
-    summary: フォルダのプロンプトの YAML を全て読んで検査し、描画できる一式にする
+    summary: フォルダのプロンプトの YAML を全て読み込んで検査し、描画できる一式にする
     scope: public
     is_async: false
     thread_safe: true
-    side_effects: ファイルを読む
+    side_effects: ファイルを読み込む
     args:
       - name: directory
-        title: 置き場所
+        title: 配置先
         type: Path
         required: true
         passing: positional
@@ -178,30 +178,30 @@ functions:
       type: PromptSet
       description: 検査を通したプロンプトの一式
     process: |-
-      1. `PROMPT_SCHEMA_PATH` を読み、描画の環境（`build_environment`）を作る
-      2. `directory` の下の `**/*.yaml` をパスの順に読む。違反はファイルごとに集め、違反のあるファイルはその先の検査を飛ばす
-         - YAML として読めない場合、`$` と読めない理由
+      1. `PROMPT_SCHEMA_PATH` を参照し、描画の環境（`build_environment`）を作る
+      2. `directory` の下の `**/*.yaml` をパスの順に参照する。違反はファイルごとに集め、違反のあるファイルはその先の検査を飛ばす
+         - YAML として読み込めない場合、`$` と参照できない理由
          - スキーマに違反する場合、違反ごとにそのキーのパスと理由（スキーマの違反）
          - `id` が `directory` からのパス（`.yaml` を除く）と違う場合、`id` と `ファイルのパス {パス} と違います`
          - `PromptDoc` にできない場合、誤りごとに `loc` の項目のパス（項目のパスへの変換。空なら `$`）と理由
          - `PromptDoc` にして部品をテンプレートにし（`compile_parts`）、構文の誤りごとに `parts[{部品の id}].{場所}` と `{行} 行目: {理由}`
          - 変数の `example` で `lang` の本文を 1 回描画し（`render_example`）、描画できない理由ごとに `parts` とその理由
       3. `required` の ID のうち読めたプロンプトに無く、ファイルも無いものごとに、`{directory}/{ID}.yaml` と `$` と `ファイルがありません`
-      4. 違反が 1 件でもあれば `PromptInvalidError` を送る。無ければ `PromptSet` を返す
+      4. 違反が 1 件でもあれば `PromptInvalidError` を送信する。無ければ `PromptSet` を返却する
     exceptions:
       - name: PromptInvalidError
-        condition: 要る YAML が無い・読めない・スキーマに違反する・`id` がパスと違う・`PromptDoc` にできない・描画できない
+        condition: 要る YAML が無い・読み込めない・スキーマに違反する・`id` がパスと違う・`PromptDoc` にできない・描画できない
         message: 違反を全て `problems` に持つ
     unit_tests:
       - name: test_load_prompts
         case: 正常
-        summary: サブフォルダも含めて読む
+        summary: サブフォルダも含めて参照する
         condition: '一時フォルダに `a.yaml`（`id: a`、`kind: tool`）と `mcp/b.yaml`（`id: mcp/b`）、`required=["a", "mcp/b"]`'
         mock: なし
         expected: '`prompts` のキーが `a`・`mcp/b`'
       - name: test_load_prompts_when_agent
         case: 正常
-        summary: エージェントのシステムプロンプトを読む
+        summary: エージェントのシステムプロンプトを参照する
         condition: '一時フォルダに `a.yaml`（`id: a`、`kind: agent`）、`required=["a"]`'
         mock: なし
         expected: '`prompts["a"]` の `kind` が `agent`'
@@ -218,7 +218,7 @@ functions:
         condition: '`a.yaml` が YAML として読めず、`b.yaml` の `parts` が文字列'
         mock: なし
         expected: '`problems` が `a.yaml` の `$` と `b.yaml` の `parts` の 2 件'
-        exception: 読めない・スキーマに違反する
+        exception: 参照できない・スキーマに違反する
       - name: test_load_prompts_when_id_mismatch
         case: 異常
         summary: id がファイルのパスと違う
@@ -235,7 +235,7 @@ functions:
         exception: 描画できない
       - name: test_load_prompts_when_undefined_variable
         case: 異常
-        summary: vars に無い変数を使う
+        summary: vars に無い変数を使用する
         condition: 本文が `{{ missing }}` で `vars` が無い
         mock: なし
         expected: '`problems` が `parts` の 1 件で、`reason` に `missing`'
@@ -252,4 +252,6 @@ functions:
         summary: 同梱した YAML が読め、言い回しと字数を守る
         condition: '`DEFAULT_PROMPTS_DIR`、`required` は `mcp_prompt_ids()`'
         mock: なし
-        expected: 送らず、どの部品の本文にも `MUST`・`必ず`・`禁止` が無く、`mcp/docs/instructions` を描画した文が 4,096 字以内
+        expected: 送信せず、どの部品の本文にも `MUST`・`必ず`・`禁止` が無く、`mcp/docs/instructions` を描画した文が 4,096 字以内
+notes:
+  補足: 画面用のマーカーは付けない。

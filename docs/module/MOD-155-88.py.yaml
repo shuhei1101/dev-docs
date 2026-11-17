@@ -1,6 +1,6 @@
 id: MOD-155-88
 title: 開発ドキュメントサーバー / 変更 / compare.py
-lead: 変わったキーの比べ方。
+lead: 変わったキーの比べ方を受け持ち、変更の compare.py を修正するときに参照する。
 test_files:
   - tests/unit/dev_docs/features/changes/test_compare.py
 diagrams:
@@ -23,7 +23,7 @@ functions:
     container: features/changes/compare.py
     usecase: 文書の取得
     role: 判定
-    summary: 2 つの内容を比べ、変わったキーのパスと前後の値を返す
+    summary: 2 つの内容を比べ、変わったキーのパスと前後の値を返却する
     scope: public
     thread_safe: true
     args:
@@ -32,13 +32,13 @@ functions:
         type: Mapping[str, Any]
         required: true
         passing: positional
-        description: 前の内容（足した文書は空）
+        description: 前の内容（追加した文書は空）
       - name: after
         title: 後
         type: Mapping[str, Any]
         required: true
         passing: positional
-        description: 後の内容（消した文書は空）
+        description: 後の内容（削除した文書は空）
       - name: ignore
         title: 無視するキー
         type: Collection[str]

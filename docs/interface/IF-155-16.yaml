@@ -5,12 +5,12 @@ entry:
   value: GET `/_api/sources/{source}/search`
 flows:
   - name: 正常系
-    summary: 語を含む文書だけを一致した箇所つきで返す
+    summary: 単語を含む文書だけを一致した箇所つきで返却する
     setup:
       - name: Mock
-        description: 'テストの中で起動した project-index（shuhei1101/project-index の develop の `42632c5`（shuhei1101/project-index#54 をマージした commit）。一時フォルダの端末の設定を `PROJECT_INDEX_CONFIG` で指し、空きポートで子プロセスとして起動する）が、setup の配信元を配信する。dev-docs のアプリを HTTP のテストのクライアントで呼ぶ'
+        description: 'テストの中で起動した project-index（shuhei1101/project-index の develop の `42632c5`（[共通のキーを返却する読み取り API](https://github.com/shuhei1101/project-index/pull/54) をマージした commit）。一時フォルダの端末の設定を `PROJECT_INDEX_CONFIG` で指し、空きポートで子プロセスとして起動する）が、setup の配信元を配信する。dev-docs のアプリを HTTP のテストのクライアントで呼ぶ'
       - name: サンプルの配信元
-        description: 文書 2 の本文だけが含む語を持つ sample
+        description: 文書 2 の本文だけが含む単語を持つ sample
     flow: |-
       ```mermaid
       sequenceDiagram
@@ -24,11 +24,11 @@ flows:
       ```
     expected:
       - '`totalCount` が 1 で、`items` が文書 2 だけ'
-      - '`snippets` に語を含む行がある'
-      - '`items[0].path` を `path` に渡した文書の取得が文書 2 を返す'
+      - '`snippets` に単語を含む行がある'
+      - '`items[0].path` を `path` に指定した文書の取得が文書 2 を返却する'
     test: test_normal
-  - name: 異常系（語の誤り・400）
-    summary: 空の語と長すぎる語を断る
+  - name: 異常系（単語の誤り・400）
+    summary: 空の単語と長すぎる単語を断る
     setup:
       - name: Mock
         description: なし
@@ -66,7 +66,7 @@ flows:
       - '`unknown` が 404 で、`detail` に無いのが配信元であることがある'
       - '`no-such-branch` が 404 で、`detail` に解決できなかったリビジョンがある'
     test: test_error_when_not_found
-lead: トップバーの検索が呼ぶ。語を含む文書と一致した箇所を返す。
+lead: トップバーの検索が呼び、単語を含む文書と一致した箇所を返却する画面の検索の入出力を定め、画面の検索を修正するときに参照する。
 identifier: search_page
 permissions: なし（`127.0.0.1` でだけ待ち受ける）
 idempotent: true
@@ -82,7 +82,7 @@ request:
     type: str
     required: true
     location: query
-    description: 検索する語。空白で区切った語を全て含む文書に当たる
+    description: 検索する単語。空白で区切った単語を全て含む文書に該当する
     constraints: 1〜200 文字
     notes: 大文字小文字と全角半角（NFKC）を区別しない
   - name: ref
@@ -96,7 +96,7 @@ request:
     required: false
     default: '`20`'
     location: query
-    description: 返す件数
+    description: 返却する件数
     constraints: 1〜100
 request_example: |-
   ```text
@@ -108,7 +108,7 @@ response:
     description: 一致した文書の総件数
   - name: items[].path
     type: str
-    description: 文書のパス（文書の取得の `path` に渡す形）
+    description: 文書のパス（文書の取得の `path` に指定する形式）
   - name: items[].name
     type: str
     description: 文書の名前
@@ -139,7 +139,7 @@ constraints:
   - item: 認可
     constraint: 制限なし（`127.0.0.1` でだけ待ち受ける）
   - item: タイムアウト
-    constraint: project-index への問い合わせを制限時間で打ち切り、打ち切ったら project-index につながらないときと同じ 503 と理由を返す
+    constraint: project-index への問い合わせを制限時間で打ち切り、打ち切ったら project-index につながらないときと同じ 503 と理由を返却する
     decided_by: NFR-155-1#requirements[project-index への問い合わせの制限時間]
   - item: JSON のキー
     constraint: レスポンスのキーは camelCase。パス・クエリのパラメータ名は変えない

@@ -1,6 +1,6 @@
 id: MOD-155-126
 title: 開発ドキュメントサーバー / プロンプト / types.py
-lead: 'サーバーが起動のときに読むプロンプトの YAML のモデルと、描画の結果・プロンプトの違反の型。モデルは描画に使うキーだけを持ち、他のキーは読み捨てる。'
+lead: 'サーバーが起動のときに参照するプロンプトの YAML のモデルと、描画の結果・プロンプトの違反の型を受け持ち、プロンプトの types.py を修正するときに参照する。'
 data_models:
   - name: PromptVar
     title: 変数の定義
@@ -8,13 +8,13 @@ data_models:
     usecase: プロンプトの描画
     role: DTO
     summary: '`vars` の 1 件（入れ子の `items`・`properties` を含む）'
-    description: 'Pydantic の `BaseModel`（`extra="ignore"`）。`example` が無いことと `example: null` を分けるため、`model_fields_set` で有無を見る。'
+    description: 'Pydantic の `BaseModel`（`extra="ignore"`）。`example` が無いことと `example: null` を分けるため、`model_fields_set` で有無を確認する。'
     properties:
       - name: type
         title: 型
         type: Literal['string', 'integer', 'number', 'boolean', 'array', 'object'] | None
         default: None
-        description: 値の型。無ければ型を確かめない
+        description: 値の型。無ければ型を確認しない
       - name: required
         title: 必須
         type: bool
@@ -60,7 +60,7 @@ data_models:
       - name: text
         title: 本文
         type: str
-        description: Jinja2 の構文で書いた本文
+        description: Jinja2 の構文で記載した本文
   - name: PromptPart
     title: 部品
     container: features/prompt_doc/types.py
@@ -84,10 +84,10 @@ data_models:
         default: '[]'
         description: バッジに出す
       - name: when
-        title: 使う条件
+        title: 使用する条件
         type: str | None
         default: None
-        description: Jinja2 の式。偽なら部品を使わない
+        description: Jinja2 の式。偽なら部品を使用しない
       - name: texts
         title: 本文
         type: list[PromptText]
@@ -114,7 +114,7 @@ data_models:
     container: features/prompt_doc/types.py
     usecase: プロンプトの描画
     role: DTO
-    summary: プロンプトの YAML 1 件のうち変換に使うキー
+    summary: プロンプトの YAML 1 件のうち変換に使用するキー
     description: Pydantic の `BaseModel`（`extra="ignore"`）。キーは knowledge の `schemas/prompt.schema.yaml` に合わせる。
     properties:
       - name: name
@@ -231,7 +231,7 @@ data_models:
     container: features/prompt_doc/types.py
     usecase: プロンプトの読み込み
     role: DTO
-    summary: 起動のときに読んだプロンプトの YAML の違反 1 件
+    summary: 起動のときに参照したプロンプトの YAML の違反 1 件
     description: '`dataclass(frozen=True, slots=True, kw_only=True)`。'
     properties:
       - name: file
@@ -252,7 +252,9 @@ classes:
     container: features/prompt_doc/types.py
     usecase: プロンプトの読み込み
     role: 例外
-    summary: 起動のときに読むプロンプトの YAML が無い・読めない・スキーマに違反する・描画できない
+    summary: 起動のときに参照するプロンプトの YAML が無い・読み込めない・スキーマに違反する・描画できない
     description: '`problems: list[PromptProblem]` を持つ。`dev-docs serve` は違反ごとに `{file}: {path}: {reason}` を標準エラーに出し、終了コード 4 で終える。'
     inherits: Exception
     kind: クラス
+notes:
+  補足: モデルは描画に使用するキーだけを持ち、他のキーは無視する。

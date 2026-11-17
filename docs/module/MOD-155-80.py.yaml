@@ -1,8 +1,7 @@
 id: MOD-155-80
 title: 管理用プラグイン / セッション開始のフック / session_start.py
 lead: |-
-  SessionStart のフック。ポートにつながらなければ、systemd --user の unit を起動し、unit が無ければ `dev-docs serve` を切り離して起動する。つながれば文脈を入れずに戻る。返し済みの記録の削除の依頼は project-index のフックへ移した。
-  Python 3.14 の標準ライブラリだけで書き、どの失敗でも終了コード 0 で戻る。
+  SessionStart のフックを受け持ち、セッション開始のフックの session_start.py を修正するときに参照する。
 test_files:
   - tests/unit/plugins/dev_docs/hooks/test_session_start.py
 directory: |-
@@ -20,16 +19,16 @@ constants:
     summary: '`DEV_DOCS_PORT` が無いときのポート'
     value: '8781'
   - name: DEFAULT_CONFIG_HOME
-    title: 設定の置き場の既定の親
+    title: 設定の配置先の既定の親
     container: hooks/session_start.py
     usecase: 起動
-    summary: '`XDG_CONFIG_HOME` が無いか空の文字列か相対パスのときの設定の置き場の親'
+    summary: '`XDG_CONFIG_HOME` が無いか空の文字列か相対パスのときの設定の配置先の親'
     value: '"~/.config"'
   - name: CONFIG_FILE
     title: 端末の設定の相対パス
     container: hooks/session_start.py
     usecase: 起動
-    summary: 設定の置き場の親から端末の設定までの相対パス
+    summary: 設定の配置先の親から端末の設定までの相対パス
     value: '"dev-docs/settings.yaml"'
   - name: CONNECT_TIMEOUT_SEC
     title: 接続の打ち切り
@@ -63,85 +62,85 @@ constants:
     value: '0.1'
 functions:
   - name: main
-    title: フックの入口
+    title: フックのエントリーポイント
     container: hooks/session_start.py
     usecase: 起動
-    role: 入口
-    summary: stdin の JSON を読み、サーバーが落ちていれば起動して、入れる文があるときだけ `additionalContext` を標準出力に出す
+    role: エントリーポイント
+    summary: stdin の JSON を読み込み、サーバーが落ちていれば起動して、入れる文があるときだけ `additionalContext` を標準出力に出す
     kind: 関数
     scope: public
     is_async: false
-    side_effects: 標準出力に書く。サーバーのプロセスを起動することがある
+    side_effects: 標準出力に記載する。サーバーのプロセスを起動することがある
     returns:
       type: int
       description: 常に 0
     process: |-
-      1. stdin を JSON として読む。ポートは `DEV_DOCS_PORT`（無ければ `DEFAULT_PORT`）
-         - JSON として読めない場合、何も出さず 0 を返す
-      2. ポートにつながるか確かめる（待ち受けの確かめ）。つながる場合、`source` によらず文を作らない
+      1. stdin を JSON として読み込む。ポートは `DEV_DOCS_PORT`（無ければ `DEFAULT_PORT`）
+         - JSON として読み込めない場合、何も出さず 0 を返却する
+      2. ポートにつながるか確認する（待ち受けの確認）。つながる場合、`source` によらず文を作らない
       3. つながらない場合、unit の名前を決め（unit の名前）、名前があり unit があれば（unit の有無）unit を起動し（unit の起動）、`RECONNECT_GUIDE` を `additionalContext` にする
          - `UnitStartError` の場合、`dev-docs の unit {unit} を起動できませんでした（{理由}）。systemctl --user status {unit} で状態を確認してください。` を `additionalContext` にし、切り離して起動しない
-      4. unit の名前が無いか unit が無い場合、端末の設定（端末の設定のパス）からクローンを読み（クローンの読み取り）、サーバーを起動し（サーバーの起動）、`RECONNECT_GUIDE` を `additionalContext` にする
+      4. unit の名前が無いか unit が無い場合、端末の設定（端末の設定のパス）からクローンを読み込み（クローンの読み取り）、サーバーを起動し（サーバーの起動）、`RECONNECT_GUIDE` を `additionalContext` にする
          - 端末の設定・`clone`・`{clone}/.venv/bin/python` のどれかが無い場合、`dev-docs を起動できませんでした（{無いもののパス}）。/dev-docs:global-setup で端末の設定を作ってください。` を `additionalContext` にする
          - 起動が `OSError` の場合、理由を添えて同じ文を `additionalContext` にする
-      5. 文を作った場合だけ `{"hookSpecificOutput": {"hookEventName": "SessionStart", "additionalContext": ...}}` を標準出力に出す。予期しない例外も含め 0 を返す
+      5. 文を作った場合だけ `{"hookSpecificOutput": {"hookEventName": "SessionStart", "additionalContext": ...}}` を標準出力に出す。予期しない例外も含め 0 を返却する
     unit_tests:
       - name: test_main_when_listening
         case: 正常
         summary: つながれば何も出さない
         condition: 'stdin に `source: startup` の JSON'
-        mock: 待ち受けの確かめ（`True`）・サーバーの起動（呼ばれないことを確かめる）
-        expected: 0 を返し、標準出力が空で、起動を呼ばない
+        mock: 待ち受けの確認（`True`）・サーバーの起動（呼ばれないことを確認する）
+        expected: 0 を返却し、標準出力が空で、起動を呼ばない
       - name: test_main_when_cleared
         case: 正常
         summary: '`/clear` の後もつながれば何も出さない'
         condition: 'stdin に `source: clear` と `session_id` の JSON'
-        mock: 待ち受けの確かめ（`True`）
-        expected: '0 を返し、標準出力が空で、HTTP の要求を送らない'
+        mock: 待ち受けの確認（`True`）
+        expected: '0 を返却し、標準出力が空で、HTTP の要求を送信しない'
       - name: test_main_when_down
         case: 正常
         summary: つながらなければ起動して案内する
         condition: '`clone:` を持つ端末の設定と `{clone}/.venv/bin/python` があり、`DEV_DOCS_UNIT` が空の文字列'
-        mock: 待ち受けの確かめ（`False`）・サーバーの起動（呼ばれた引数を記録する）
-        expected: 0 を返し、起動がそのクローンで 1 回呼ばれ、`additionalContext` が `RECONNECT_GUIDE`
+        mock: 待ち受けの確認（`False`）・サーバーの起動（呼ばれた引数を記録する）
+        expected: 0 を返却し、起動がそのクローンで 1 回呼ばれ、`additionalContext` が `RECONNECT_GUIDE`
       - name: test_main_when_config_missing
         case: 異常
         summary: 端末の設定が無ければ global-setup を案内する
         condition: '`DEV_DOCS_CONFIG` が無いファイル'
-        mock: 待ち受けの確かめ（`False`）・サーバーの起動（呼ばれないことを確かめる）
-        expected: 0 を返し、`additionalContext` にパスと `/dev-docs:global-setup`。起動を呼ばない
+        mock: 待ち受けの確認（`False`）・サーバーの起動（呼ばれないことを確認する）
+        expected: 0 を返却し、`additionalContext` にパスと `/dev-docs:global-setup`。起動を呼ばない
       - name: test_main_when_input_unparsable
         case: 異常
-        summary: 読めない入力では何も出さない
+        summary: 参照できない入力では何も出さない
         condition: stdin が `{`
         mock: なし
-        expected: 0 を返し、標準出力が空
+        expected: 0 を返却し、標準出力が空
       - name: test_main_when_unit_exists
         case: 正常
         summary: unit があれば unit を起動する
         condition: '`DEV_DOCS_UNIT` に `x.service`'
-        mock: 待ち受けの確かめ（`False`）・unit の有無（`True`）・unit の起動（呼ばれた引数を記録する）・サーバーの起動（呼ばれないことを確かめる）
-        expected: 0 を返し、unit の起動が `x.service` で 1 回、`additionalContext` が `RECONNECT_GUIDE`、サーバーの起動を呼ばない
+        mock: 待ち受けの確認（`False`）・unit の有無（`True`）・unit の起動（呼ばれた引数を記録する）・サーバーの起動（呼ばれないことを確認する）
+        expected: 0 を返却し、unit の起動が `x.service` で 1 回、`additionalContext` が `RECONNECT_GUIDE`、サーバーの起動を呼ばない
       - name: test_main_when_unit_start_fails
         case: 異常
         summary: unit を起動できなければ理由を案内する
         condition: '`DEV_DOCS_UNIT` に `x.service`'
-        mock: 待ち受けの確かめ（`False`）・unit の有無（`True`）・unit の起動（`UnitStartError("Failed to start")`）・サーバーの起動（呼ばれないことを確かめる）
-        expected: 0 を返し、`additionalContext` に `x.service` と `Failed to start`。サーバーの起動を呼ばない
+        mock: 待ち受けの確認（`False`）・unit の有無（`True`）・unit の起動（`UnitStartError("Failed to start")`）・サーバーの起動（呼ばれないことを確認する）
+        expected: 0 を返却し、`additionalContext` に `x.service` と `Failed to start`。サーバーの起動を呼ばない
         exception: unit を起動できない
       - name: test_main_when_unit_check_times_out
         case: 異常
         summary: unit の有無が打ち切られたら理由を案内する
         condition: '`DEV_DOCS_UNIT` に `x.service`'
-        mock: 待ち受けの確かめ（`False`）・unit の有無（`UnitStartError`）・unit の起動とサーバーの起動（呼ばれないことを確かめる）
-        expected: 0 を返し、`additionalContext` に `x.service`。unit の起動もサーバーの起動も呼ばない
+        mock: 待ち受けの確認（`False`）・unit の有無（`UnitStartError`）・unit の起動とサーバーの起動（呼ばれないことを確認する）
+        expected: 0 を返却し、`additionalContext` に `x.service`。unit の起動もサーバーの起動も呼ばない
         exception: unit を起動できない
   - name: is_listening
-    title: 待ち受けの確かめ
+    title: 待ち受けの確認
     container: hooks/session_start.py
     usecase: 起動
     role: 検証
-    summary: '`127.0.0.1:{port}` に TCP でつながるかを返す'
+    summary: '`127.0.0.1:{port}` に TCP でつながるかを返却する'
     kind: 関数
     scope: public
     is_async: false
@@ -156,8 +155,8 @@ functions:
       type: bool
       description: つながれば `True`
     process: |-
-      1. `socket.create_connection(("127.0.0.1", port), timeout=CONNECT_TIMEOUT_SEC)` でつなぎ、すぐに閉じて `True` を返す
-         - `OSError` の場合、`False` を返す
+      1. `socket.create_connection(("127.0.0.1", port), timeout=CONNECT_TIMEOUT_SEC)` でつなぎ、すぐに閉じて `True` を返却する
+         - `OSError` の場合、`False` を返却する
     unit_tests:
       - name: test_is_listening
         case: 正常
@@ -191,8 +190,8 @@ functions:
       type: Path
       description: '`~` を展開した端末の設定のパス'
     process: |-
-      1. `DEV_DOCS_CONFIG` が空でなければ、その値の `~` を展開して返す
-      2. `XDG_CONFIG_HOME` が空でなく絶対パスならその値、そうでなければ `DEFAULT_CONFIG_HOME` の `~` を展開し、その下の `CONFIG_FILE` を返す
+      1. `DEV_DOCS_CONFIG` が空でなければ、その値の `~` を展開して返却する
+      2. `XDG_CONFIG_HOME` が空でなく絶対パスならその値、そうでなければ `DEFAULT_CONFIG_HOME` の `~` を展開し、その下の `CONFIG_FILE` を返却する
     unit_tests:
       - name: test_config_path
         case: 正常
@@ -217,8 +216,8 @@ functions:
     container: hooks/session_start.py
     usecase: 起動
     role: 解決
-    summary: 端末の設定のトップレベルの `clone:` の行だけを読む
-    description: 標準ライブラリに YAML のパーサーが無いため、行を読む。
+    summary: 端末の設定のトップレベルの `clone:` の行だけを参照する
+    description: 標準ライブラリに YAML のパーサーが無いため、行を参照する。
     kind: 関数
     scope: public
     is_async: false
@@ -233,10 +232,10 @@ functions:
       type: Path | None
       description: '`~` を展開したクローンのパス。ファイルか行が無ければ `None`'
     process: |-
-      1. ファイルを UTF-8 で読む
-         - `OSError` の場合、`None` を返す
-      2. 行頭が `clone:` の最初の行の値を取り、`#` 以降のコメントと前後の空白・引用符を外して `~` を展開する
-      3. 行が無いか値が空なら `None` を返す
+      1. ファイルを UTF-8 で読み込む
+         - `OSError` の場合、`None` を返却する
+      2. 行頭が `clone:` の最初の行の値を取り、`#` 以降のコメントと前後の空白・引用符を除外して `~` を展開する
+      3. 行が無いか値が空なら `None` を返却する
     unit_tests:
       - name: test_read_clone
         case: 正常
@@ -281,7 +280,7 @@ functions:
       - name: test_start_server
         case: 正常
         summary: 切り離して起動する
-        condition: '`.venv/bin/python` を受けた引数をファイルに書いて終わるスクリプトにした一時フォルダ'
+        condition: '`.venv/bin/python` を受けた引数をファイルに書き込んで終わるスクリプトにした一時フォルダ'
         mock: なし
         expected: 戻った後にファイルが `-m dev_docs serve` になる
       - name: test_start_server_when_no_venv
@@ -311,8 +310,8 @@ functions:
       type: str | None
       description: unit の名前。unit を使用しないとき `None`
     process: |-
-      1. `UNIT_ENV` が無ければ `DEFAULT_UNIT` を返す
-      2. あれば前後の空白を除いた値を返す。空の文字列なら `None` を返す
+      1. `UNIT_ENV` が無ければ `DEFAULT_UNIT` を返却する
+      2. あれば前後の空白を除いた値を返却する。空の文字列なら `None` を返却する
     unit_tests:
       - name: test_unit_name
         case: 正常
@@ -331,7 +330,7 @@ functions:
     container: hooks/session_start.py
     usecase: 起動
     role: 外部との境界
-    summary: '`systemctl --user cat {unit}` で unit があるかを返す'
+    summary: '`systemctl --user cat {unit}` で unit があるかを返却する'
     kind: 関数
     scope: public
     is_async: false
@@ -347,9 +346,9 @@ functions:
       description: 終了コード 0 なら `True`
     process: |-
       1. `subprocess.run(["systemctl", "--user", "cat", unit], stdin/stdout/stderr=DEVNULL, timeout=SYSTEMCTL_TIMEOUT_SEC)` を呼ぶ
-         - `FileNotFoundError`（`systemctl` が無い）の場合、`False` を返す
+         - `FileNotFoundError`（`systemctl` が無い）の場合、`False` を返却する
          - `subprocess.TimeoutExpired` の場合、`UnitStartError("systemctl --user cat が {秒} 秒で終わらなかった")` を送出する
-      2. 終了コードが 0 なら `True`、それ以外は `False` を返す
+      2. 終了コードが 0 なら `True`、それ以外は `False` を返却する
     exceptions:
       - name: UnitStartError
         condition: '`systemctl --user cat` が打ち切られた'
@@ -358,7 +357,7 @@ functions:
       - name: test_unit_exists
         case: 正常
         summary: 終了コードで分ける
-        condition: '`PATH` の先頭に、引数の unit が `ok.service` なら 0、それ以外は 1 で終わる `systemctl` を置く'
+        condition: '`PATH` の先頭に、引数の unit が `ok.service` なら 0、それ以外は 1 で終わる `systemctl` を配置する'
         mock: '`systemctl`（スクリプト）'
         expected: '`ok.service` は `True`、`ng.service` は `False`'
       - name: test_unit_exists_when_no_systemctl
@@ -370,7 +369,7 @@ functions:
       - name: test_unit_exists_when_timeout
         case: 異常
         summary: 打ち切られる
-        condition: '`PATH` の先頭に、1 秒待って終わる `systemctl` を置く'
+        condition: '`PATH` の先頭に、1 秒待って終わる `systemctl` を配置する'
         mock: '`systemctl`（スクリプト）'
         expected: '`UnitStartError`'
         exception: 打ち切られた
@@ -406,7 +405,7 @@ functions:
       - name: test_start_unit
         case: 正常
         summary: 起動を依頼する
-        condition: '`PATH` の先頭に、受けた引数をファイルに書いて 0 で終わる `systemctl` を置く'
+        condition: '`PATH` の先頭に、受けた引数をファイルに書き込んで 0 で終わる `systemctl` を配置する'
         mock: '`systemctl`（スクリプト）'
         expected: ファイルが `--user start --no-block x.service`
       - name: test_start_unit_when_failed
@@ -427,3 +426,5 @@ classes:
     summary: unit があるか分からないか、unit の起動に失敗したことを表す。本文が理由
     kind: クラス
     inherits: Exception
+notes:
+  補足: ポートにつながらなければ、systemd --user の unit を起動し、unit が無ければ `dev-docs serve` を切り離して起動する。つながれば文脈を入れずに戻る。返却済みの記録の削除の依頼は project-index のフックへ移した。Python 3.14 の標準ライブラリだけで記載し、どの失敗でも終了コード 0 で戻る。

@@ -1,6 +1,6 @@
 id: MOD-155-72
 title: 画面 / 共通 / preferences.ts
-lead: ブラウザに保存する画面の設定（明暗・1 文字のショートカット）。
+lead: ブラウザに保存する画面の設定（明暗・1 文字のショートカット）を受け持ち、共通の preferences.ts を修正するときに参照する。
 stores:
   - name: usePreferencesStore
     title: 設定のストア
@@ -33,7 +33,7 @@ stores:
             description: 新しい明暗
         returns:
           type: void
-          description: 何も返さない
+          description: 何も返却しない
         process: 1. `colorScheme` を書き換える（`<html>` の `dark` クラスは提供元のテーマが合わせる）
       - name: setSingleKeyShortcuts
         title: 1 文字のショートカットの設定
@@ -48,5 +48,5 @@ stores:
             description: 受けるか
         returns:
           type: void
-          description: 何も返さない
+          description: 何も返却しない
         process: 1. `singleKeyShortcuts` を書き換える

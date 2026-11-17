@@ -5,10 +5,10 @@ entry:
   value: GET `/_api/sources/{source}/docs[/{path}]`
 flows:
   - name: 正常系
-    summary: 配信元の一番左のタブの一番上の文書と、文書のパスで指した文書を返す
+    summary: 配信元の一番左のタブの一番上の文書と、文書のパスで指した文書を返却する
     setup:
       - name: Mock
-        description: 'テストの中で起動した project-index（shuhei1101/project-index の develop の `42632c5`（shuhei1101/project-index#54 をマージした commit）。一時フォルダの端末の設定を `PROJECT_INDEX_CONFIG` で指し、空きポートで子プロセスとして起動する）が、setup の配信元を配信する。dev-docs のアプリを HTTP のテストのクライアントで呼ぶ'
+        description: 'テストの中で起動した project-index（shuhei1101/project-index の develop の `42632c5`（[共通のキーを返却する読み取り API](https://github.com/shuhei1101/project-index/pull/54) をマージした commit）。一時フォルダの端末の設定を `PROJECT_INDEX_CONFIG` で指し、空きポートで子プロセスとして起動する）が、setup の配信元を配信する。dev-docs のアプリを HTTP のテストのクライアントで呼ぶ'
         notes: '-'
       - name: サンプルの配信元
         description: 文書の種類を 1 つ（スキーマと YAML 2 件）と、`nav` を持つ `project-index.yaml` を持つ git リポジトリ
@@ -32,7 +32,7 @@ flows:
       - '`markdown` に、スキーマの `x-heading` の項目が見出し、`x-key` の配列が表になった文書 1 がある'
       - '`conversionError` と `diff` が `null`、`tabs[].items[].change` が全て `null`'
       - '`updatedAt` が文書 1 のファイルを最後に変えた commit の日時'
-      - '`/_api/sources/sample/docs/{文書 2 のパス}` が 200 で文書 2 の `markdown` を返す'
+      - '`/_api/sources/sample/docs/{文書 2 のパス}` が 200 で文書 2 の `markdown` を返却する'
     test: test_normal
   - name: 正常系（nav が無い）
     summary: '`nav` が無い配信元は種類ごとにタブを作る'
@@ -44,7 +44,7 @@ flows:
         description: 文書の種類を 2 つ持ち、`nav` を持たない配信元
         notes: id `plain`
       - name: サブフォルダの文書
-        description: 1 つ目の種類の行の `paths` を `docs/**/*.yaml` にし、`docs/` の直下に 1 件、`docs/lang/` に `index.yaml` を含む 2 件、`docs/lang/py/` に 1 件の文書を置く
+        description: 1 つ目の種類の行の `paths` を `docs/**/*.yaml` にし、`docs/` の直下に 1 件、`docs/lang/` に `index.yaml` を含む 2 件、`docs/lang/py/` に 1 件の文書を配置する
         notes: 2 つ目の種類の行の `paths` はサブフォルダを含まない glob
     flow: |-
       ```mermaid
@@ -53,7 +53,7 @@ flows:
         participant E as GET /_api/sources/{source}/docs/{path}
 
         C->>E: GET /_api/sources/plain/docs
-        E->>E: 種類ごとにタブを作り、文書をフォルダで束ねる
+        E->>E: 種類ごとにタブを作り、文書をフォルダでまとめる
         E-->>C: 200（1 つ目の種類のタブの一番上の文書）
       ```
     expected:
@@ -64,7 +64,7 @@ flows:
       - 2 つ目のタブの `items` は group を持たない
     test: test_normal_when_nav_missing
   - name: 正常系（リビジョンを指す）
-    summary: '`ref` のリビジョンの文書を返す'
+    summary: '`ref` のリビジョンの文書を返却する'
     setup:
       - name: Mock
         description: なし
@@ -84,10 +84,10 @@ flows:
     expected:
       - '`markdown` の `name` が古い commit の値になる'
       - '`ref` が古い commit'
-      - '`ref` を省くと、`ref` に `default_ref` の名前を返す'
+      - '`ref` を省くと、`ref` に `default_ref` の名前を返却する'
     test: test_normal_when_ref_given
   - name: 正常系（差分を求める）
-    summary: '`diff` のリビジョンから変わった項目と、サイドバーの page ごとの変化を返す'
+    summary: '`diff` のリビジョンから変わった項目と、サイドバーの page ごとの変化を返却する'
     setup:
       - name: Mock
         description: なし
@@ -112,7 +112,7 @@ flows:
       - '変更の commit に無い文書 3 が、親の commit の `nav` の位置に `change: deleted` で並ぶ'
     test: test_normal_when_diff_given
   - name: 正常系（配信元の変換を使う）
-    summary: '`converters[]` のスクリプトの Markdown と、埋め込みのマーカーの表を返す'
+    summary: '`converters[]` のスクリプトの Markdown と、埋め込みのマーカーの表を返却する'
     setup:
       - name: Mock
         description: なし
@@ -121,7 +121,7 @@ flows:
         description: '`converters[]` に、標準入力の YAML から決まった見出しの Markdown を出すスクリプトを持ち、種類の 1 つがそれを指す配信元'
         notes: id `custom`
       - name: 埋め込みのマーカー
-        description: custom の Markdown の文書。本文に別の YAML を表として入れるマーカーを置く
+        description: custom の Markdown の文書。本文に別の YAML を表として入れるマーカーを配置する
         notes: '-'
     flow: |-
       ```mermaid
@@ -143,13 +143,13 @@ flows:
       - 埋め込みのマーカーの場所に指した YAML の表があり、マーカーの文字列は無い
     test: test_normal_when_custom_converter
   - name: 正常系（変換に失敗する）
-    summary: project-index が返した変換の失敗と読めなかった YAML を、`conversionError` に入れる
+    summary: project-index が返却した変換の失敗と参照できなかった YAML を、`conversionError` に入れる
     setup:
       - name: 失敗する変換
         description: custom の `converters[]` を指す種類の文書 1 件で、スクリプトが終了コード 1 で終わる
         notes: '-'
       - name: 壊れた YAML
-        description: sample の文書 1 のファイルを YAML として読めない内容にした commit
+        description: sample の文書 1 のファイルを YAML として読み込めない内容にした commit
         notes: '-'
     flow: |-
       ```mermaid
@@ -165,11 +165,11 @@ flows:
       ```
     expected:
       - '`markdown` が `null` で、`conversionError` に種類・スクリプトのパス・終了コードがある'
-      - 同じ配信元のスキーマ駆動で変換する文書は 200 で `markdown` を返す
-      - 壊れた YAML の文書 1 は、`conversionError` にファイルのパスと読めなかった行と列を入れて 200 を返す
+      - 同じ配信元のスキーマ駆動で変換する文書は 200 で `markdown` を返却する
+      - 壊れた YAML の文書 1 は、`conversionError` にファイルのパスと読み込めなかった行と列を入れて 200 を返却する
     test: test_normal_when_conversion_failed
   - name: 異常系（無い配信元・リビジョン・文書・404）
-    summary: 無いものを指すと 404 で何が無いかを返す
+    summary: 無いものを指すと 404 で何が無いかを返却する
     setup:
       - name: Mock
         description: なし
@@ -189,7 +189,7 @@ flows:
         C->>E: GET /_api/sources/sample/docs/no-such-doc
         E-->>C: 404（missing: doc）
         C->>E: GET /_api/sources/broken/docs
-        E-->>C: 404（missing: not_served と外した理由）
+        E-->>C: 404（missing: not_served と除外した理由）
       ```
     expected:
       - '`/_api/sources/sample/docs/no-such-doc` が 404 で、`missing` が `doc`、値が開こうとしたパス'
@@ -198,12 +198,12 @@ flows:
       - '`/_api/sources/unknown/docs` が 404 で、`missing` が `source`'
     test: test_error_when_not_found
   - name: 正常系（nav をタグの式で絞る）
-    summary: '`auto` の `filter` に当たる文書だけをタブのサイドバーに並べる'
+    summary: '`auto` の `filter` に該当する文書だけをタブのサイドバーに並べる'
     setup:
       - name: Mock
         description: なし
       - name: nav の auto のタグの式
-        description: sample の `nav` に、`auto` の `filter` が `tags が mcp かつ tags が 設計 でない` のタブ `mcp` と、`filter` を書かないタブ `すべて` を置く
+        description: sample の `nav` に、`auto` の `filter` が `tags が mcp かつ tags が 設計 でない` のタブ `mcp` と、`filter` を記載しないタブ `すべて` を配置する
         notes: 文書 1 の `tags` は `[mcp]`、文書 2 は `[mcp, 設計]`、文書 3 は `[設計]`
     flow: |-
       ```mermaid
@@ -220,7 +220,7 @@ flows:
       - タブ `すべて` の `items` に文書 1〜3 が並ぶ
     test: test_normal_when_nav_filtered_by_tags
   - name: 正常系（エイリアスを返す）
-    summary: 配信元の `alias_type` を持つ行の文書のエイリアスを、取り込んだスキーマの形で文書といっしょに返す
+    summary: 配信元の `alias_type` を持つ行の文書のエイリアスを、取り込んだスキーマの形式で文書といっしょに返却する
     setup:
       - name: Mock
         description: なし
@@ -250,12 +250,12 @@ flows:
       - plain の応答の `aliases` が空
     test: test_normal_when_aliases_returned
   - name: 正常系（本文のファイルのパスで引く）
-    summary: 管理用の YAML の行の文書に `bodyPath` を返し、本文のファイルのパスで指した文書を返す
+    summary: 管理用の YAML の行の文書に `bodyPath` を返却し、本文のファイルのパスで指した文書を返却する
     setup:
       - name: Mock
         description: なし
       - name: 管理用の YAML
-        description: sample の `notes/files.yaml`。`files[]` に `a.md` と `b.md` の 2 行。`notes/a.md`・`notes/b.md` を置く
+        description: sample の `notes/files.yaml`。`files[]` に `a.md` と `b.md` の 2 行。`notes/a.md`・`notes/b.md` を配置する
         notes: '行 `notes` は `paths: [notes/files.yaml]`・`records: files`・`body_file: path`。スキーマは `templates/files.schema.yaml`'
     flow: |-
       ```mermaid
@@ -276,17 +276,17 @@ flows:
       - '`/_api/sources/sample/docs/notes/b.md` が 200 で、`path` が b の画面のパス、`markdown` が b の本文、`bodyPath` が `notes/b.md`'
       - ファイル 1 つが 1 文書の sample の文書 1 を開くと `bodyPath` が `null`
     test: test_normal_when_body_path_given
-  - name: 正常系（nav をフォルダで束ねる）
-    summary: "`group_by: '@folder'` の `auto` が、手で書いた page の文書を除いてフォルダごとの group を作る"
+  - name: 正常系（nav をフォルダでまとめる）
+    summary: "`group_by: '@folder'` の `auto` が、手で記載した page の文書を除いてフォルダごとの group を作る"
     setup:
       - name: Mock
         description: なし
         notes: '-'
       - name: フォルダごとの文書
-        description: 'sample に `paths: [rules/**/*.yaml]` の行 `rules` を追加し、`rules/common.yaml`・`rules/lang/index.yaml`・`rules/lang/ts.yaml`・`rules/lang/py/style.yaml` を置く'
+        description: 'sample に `paths: [rules/**/*.yaml]` の行 `rules` を追加し、`rules/common.yaml`・`rules/lang/index.yaml`・`rules/lang/ts.yaml`・`rules/lang/py/style.yaml` を配置する'
         notes: '-'
-      - name: nav のフォルダの束ね
-        description: "sample の `nav` にタブ `ルール` を追加し、`rules/common.yaml` の文書を指す `page` と `{auto: {document: rules, group_by: '@folder'}}` をこの順で置く"
+      - name: nav のフォルダのグループ化
+        description: "sample の `nav` にタブ `ルール` を追加し、`rules/common.yaml` の文書を指す `page` と `{auto: {document: rules, group_by: '@folder'}}` をこの順で配置する"
         notes: '-'
     flow: |-
       ```mermaid
@@ -305,14 +305,14 @@ flows:
       - group `py` に `rules/lang/py/style.yaml` の文書が入る
     test: test_normal_when_nav_grouped_by_folder
   - name: 正常系（スキーマ駆動の文書を図と表にする）
-    summary: スキーマ駆動の変換が、図を mdmark の map の範囲の Mermaid に、スカラーの並びを「項目 / 値」の表にした Markdown を返す
+    summary: スキーマ駆動の変換が、図を mdmark の map の範囲の Mermaid に、スカラーの並びを「項目 / 値」の表にした Markdown を返却する
     setup:
       - name: Mock
         description: なし
         notes: '-'
       - name: 図と属性を持つ文書
-        description: 'sample に、`x-shape: diagram`・`x-diagram: flowchart` の項目（ノード 2 つ・辺 1 つ）、`x-shape: diagram`・`x-diagram: state` の項目、`sequenceDiagram` を書いた Mermaid の文字列の項目、`flowchart` を書いた Mermaid の文字列の項目、スカラーが 3 つ以上並ぶオブジェクト、改行を含む値、`x-hidden: true` の項目、説明の列を持つ表の項目を持つスキーマと、その文書 6 を置く'
-        notes: 文書 6 の `title`・`lead` は見出しとリードに使う
+        description: 'sample に、`x-shape: diagram`・`x-diagram: flowchart` の項目（ノード 2 つ・辺 1 つ）、`x-shape: diagram`・`x-diagram: state` の項目、`sequenceDiagram` を記載した Mermaid の文字列の項目、`flowchart` を記載した Mermaid の文字列の項目、スカラーが 3 つ以上並ぶオブジェクト、改行を含む値、`x-hidden: true` の項目、説明の列を持つ表の項目を持つスキーマと、その文書 6 を配置する'
+        notes: 文書 6 の `title`・`lead` は見出しとリードに使用する
       - name: フローチャートと状態遷移
         description: '`x-diagram: flowchart` の項目は、`kind: question`・`hint` を持つノード `q` と `kind: result` のノード `r`、`label`・`line: read`・`tip` を持つ `q` から `r` への辺、`q`・`r` を囲む `frame`（`label: 判定`）を持つ。`x-diagram: state` の項目は、状態 `下書き`・`公開` と `下書き` から `公開` への遷移、`initial: 下書き`・`final: [公開]` を持つ'
         notes: '-'
@@ -337,13 +337,13 @@ flows:
       - 説明の列を持つ表のマーカーの `columns` の説明の列の `width.mode` が `nowrap`
     test: test_normal_when_schema_document_drawn
   - name: 正常系（map で描かない Mermaid を残す）
-    summary: 1 行目が map で描けない種類の Mermaid の文字列は、Mermaid のコードブロックのまま返す
+    summary: 1 行目が map で描けない種類の Mermaid の文字列は、Mermaid のコードブロックのまま返却する
     setup:
       - name: Mock
         description: なし
         notes: '-'
       - name: map で描けない図
-        description: 'sample に、Mermaid の文字列の項目を持つスキーマと、その項目に `classDiagram` の図を書いた文書 7 を置く'
+        description: 'sample に、Mermaid の文字列の項目を持つスキーマと、その項目に `classDiagram` の図を記載した文書 7 を配置する'
         notes: '-'
     flow: |-
       ```mermaid
@@ -366,7 +366,7 @@ flows:
         description: なし
         notes: '-'
       - name: ER 図を持つ文書
-        description: 'sample に、`x-shape: diagram`・`x-diagram: er` の項目 `er` と `tables[]` を持つスキーマと、その文書 8 を置く'
+        description: 'sample に、`x-shape: diagram`・`x-diagram: er` の項目 `er` と `tables[]` を持つスキーマと、その文書 8 を配置する'
         notes: '`er` と `tables` の構造は AI Monitor の ER 図のテンプレートと同じ'
       - name: 実体とテーブル
         description: '実体 `顧客` は `columns` を持たず、`tables[]` に `name` が `customers`・`title` が `顧客` のテーブル（列 `id`（`primary_key: true`・`not_null: true`）と `email`）がある。実体 `注文` は `columns` に列 `id`（`key: PK`）と、`key: FK`・`comment: 参照: 顧客.id` の列 `customer_id` を持つ。実体 `商品` は名前だけを持つ。実体 `支払い` は `columns` を持たず、`tables[]` に `name` が `payments`・`title` が `支払い` のテーブル（列 `id`（`primary_key: true`）と、`foreign_key.table` が `customers.id` の列 `customer_id`）がある'
@@ -393,7 +393,7 @@ flows:
       - 図の元データの表が、`collapse.open` が `false` の JSON の表のマーカーで囲まれている
     test: test_normal_when_er_diagram_drawn
   - name: 正常系（図が mdmark の点検を通る）
-    summary: 線がノードを横切りやすい構造の図を、mdmark の点検で書き方の警告が出ない map の範囲にする
+    summary: 線がノードを横切りやすい構造の図を、mdmark の点検で記載方法の警告が出ない map の範囲にする
     setup:
       - name: Mock
         description: なし
@@ -402,7 +402,7 @@ flows:
         description: '結合テストが実行時に `npx -y github:shuhei1101/mdmark#{参照}` で取る mdmark の CLI（参照の既定は `develop`）'
         notes: 返った `markdown` を `mdmark check --text -` の標準入力に指定し、`--config` に画面が `mount` に指定するのと同じ map の設定（`map.kinds`・`map.lines`）のファイルを指定する。CLI が無いときはテストを失敗にする
       - name: フロー図を持つ文書
-        description: 'sample に、`x-shape: diagram`・`x-diagram: flowchart` の項目・`x-diagram: state` の項目・`flowchart` を書いた Mermaid の文字列の項目を持つスキーマと、その文書 9 を配置する'
+        description: 'sample に、`x-shape: diagram`・`x-diagram: flowchart` の項目・`x-diagram: state` の項目・`flowchart` を記載した Mermaid の文字列の項目を持つスキーマと、その文書 9 を配置する'
         notes: '-'
       - name: 線がノードを横切りやすい構造
         description: '`x-diagram: flowchart` の項目は、`a → b → c` と `a → c`（ランクを飛ばす線）、`c → a`（戻る線）、名前が全角 30 文字のノード、`a`・`c` を囲み `b` を囲まない `frame` を持つ。`x-diagram: state` の項目は、自分へ戻る遷移とランクを飛ばす遷移を持つ。Mermaid の `flowchart LR` は、ランクを飛ばす線と戻る線を持つ'
@@ -428,7 +428,7 @@ flows:
         description: なし
         notes: '-'
       - name: id のリンクを持つ文書
-        description: 'sample の文書 1 の Markdown の文字列の値に、`[文書 2](id:{文書 2 の ID})`・`[項目](id:{文書 6 の ID}#flow)`・`[無い項目](id:{文書 6 の ID}#no-such-item)`・`[無い文書](id:no-such-doc)` のリンクと、行内のコード `` `[コード](id:{文書 2 の ID})` `` を置く'
+        description: 'sample の文書 1 の Markdown の文字列の値に、`[文書 2](id:{文書 2 の ID})`・`[項目](id:{文書 6 の ID}#flow)`・`[無い項目](id:{文書 6 の ID}#no-such-item)`・`[無い文書](id:no-such-doc)` のリンクと、行内のコード `` `[コード](id:{文書 2 の ID})` `` を配置する'
         notes: '文書 6 のスキーマの `flow` の項目は `x-heading: 処理の流れ` を持つ'
     flow: |-
       ```mermaid
@@ -454,10 +454,10 @@ flows:
         description: なし
         notes: '-'
       - name: clicks を持つ図
-        description: '文書 6 の `x-diagram: flowchart` の項目に、`q` へ `href` が `id:{文書 2 の ID}` の要素、`r` へ `href` が `id:no-such-doc` の要素、`nodes` にも `edges` の端にも無い `z` へ `href` が `id:{文書 2 の ID}` の要素を持つ `clicks` を置く'
+        description: '文書 6 の `x-diagram: flowchart` の項目に、`q` へ `href` が `id:{文書 2 の ID}` の要素、`r` へ `href` が `id:no-such-doc` の要素、`nodes` にも `edges` の端にも無い `z` へ `href` が `id:{文書 2 の ID}` の要素を持つ `clicks` を配置する'
         notes: '-'
       - name: click を持つフローチャート
-        description: '文書 1 の Markdown の文字列の値に、`flowchart` を書いた Mermaid を置き、`click A "id:{文書 6 の ID}#flow"`・`click B href "id:{文書 2 の ID}"`・`click C "id:no-such-doc"` の行を持たせる'
+        description: '文書 1 の Markdown の文字列の値に、`flowchart` を記載した Mermaid を配置し、`click A "id:{文書 6 の ID}#flow"`・`click B href "id:{文書 2 の ID}"`・`click C "id:no-such-doc"` の行を持たせる'
         notes: '文書 6 のスキーマの `flow` の項目は `x-heading: 処理の流れ` を持つ'
     flow: |-
       ```mermaid
@@ -511,7 +511,7 @@ flows:
       - '`conversionError` が `null`'
     test: test_normal_when_decision_linked
   - name: 正常系（検討事項の文書を返す）
-    summary: '`path` が `_decisions/{ID}` のとき、話し合いの記録のフォルダの検討事項の文書を Markdown で返す'
+    summary: '`path` が `_decisions/{ID}` のとき、話し合いの記録のフォルダの検討事項の文書を Markdown で返却する'
     setup:
       - name: Mock
         description: なし
@@ -539,7 +539,7 @@ flows:
       - '2 つのフォルダにある `_decisions/D-2` と、どこにも無い `_decisions/D-3` は 404 で、`missing` が `doc`'
     test: test_normal_when_decision_document_returned
   - name: 異常系（project-index につながらない・503）
-    summary: project-index の読み取り API につながらないとき、503 とつながらなかった理由を返す
+    summary: project-index の読み取り API につながらないとき、503 とつながらなかった理由を返却する
     setup:
       - name: Mock
         description: 接続を断る project-index の読み取り API のモック
@@ -557,10 +557,10 @@ flows:
       ```
     expected:
       - 応答が 503 の `application/problem+json` で、つながらなかった project-index のアドレスと理由を持つ
-      - モックが接続を受け付けるようにした後、同じ要求が 200 を返す（dev-docs のアプリを再作成しない）
+      - モックが接続を受け付けるようにした後、同じ要求が 200 を返却する（dev-docs のアプリを再作成しない）
     test: test_error_when_project_index_unreachable
   - name: 異常系（project-index が応答しない・503）
-    summary: project-index が接続を受けたまま応答しないとき、制限時間で打ち切って 503 を返す
+    summary: project-index が接続を受けたまま応答しないとき、制限時間で打ち切って 503 を返却する
     setup:
       - name: Mock
         description: 接続を受けたまま応答しない project-index の読み取り API のモック
@@ -578,7 +578,7 @@ flows:
         E-->>C: 503（打ち切ったことと project-index のアドレス）
       ```
     expected:
-      - 文書の取得の制限時間の中で 503 の `application/problem+json` を返し、`projectIndex.kind` が `timeout`、打ち切ったことと project-index のアドレスを持つ
+      - 文書の取得の制限時間の中で 503 の `application/problem+json` を返却し、`projectIndex.kind` が `timeout`、打ち切ったことと project-index のアドレスを持つ
       - 問い合わせごとの制限時間を文書の取得の制限時間より長くしても、503 が返るまでの時間は文書の取得の制限時間より大きく遅れない
     test: test_error_when_project_index_timed_out
   - name: 正常系（問い合わせを同時に送信する）
@@ -608,13 +608,13 @@ flows:
     expected:
       - '`/_api/sources/sample/docs` が 200 で、`path` が文書 1'
       - 応答までの時間が、モックの待つ時間の 2 回分に収まり、3 回分に届かない
-      - 配信元の設定・リビジョン・文書の一覧の問い合わせを、モックがどれかの応答を返す前に受け付けている
+      - 配信元の設定・リビジョン・文書の一覧の問い合わせを、モックがどれかの応答を返却する前に受け付けている
     test: test_normal_when_requests_sent_concurrently
   - name: 異常系（project-index が処理に失敗する・502）
-    summary: project-index が 5xx を返したとき、502 と project-index の detail を返す
+    summary: project-index が 5xx を返却したとき、502 と project-index の detail を返却する
     setup:
       - name: Mock
-        description: 配信元の設定の問い合わせに 500 の `application/problem+json` を返す project-index の読み取り API のモック
+        description: 配信元の設定の問い合わせに 500 の `application/problem+json` を返却する project-index の読み取り API のモック
         notes: '`detail` は `git archive --format=tar {commit}: 20 秒を超えたため止めました`'
     flow: |-
       ```mermaid
@@ -630,10 +630,10 @@ flows:
       ```
     expected:
       - 応答が 502 の `application/problem+json` で、`projectIndex.kind` が `failed`、`projectIndex.address` が project-index のアドレス、`projectIndex.reason` が project-index の `detail`
-      - モックが 200 を返すようにした後、同じ要求が 200 を返す
+      - モックが 200 を返却するようにした後、同じ要求が 200 を返却する
     test: test_error_when_project_index_failed
   - name: 正常系（Mermaid の click の id の参照を解決する）
-    summary: Mermaid のまま返す図の `click` の `id:` の参照を、同じ配信元の文書とその項目の見出しのアンカーへの相対パスにする
+    summary: Mermaid のまま返却する図の `click` の `id:` の参照を、同じ配信元の文書とその項目の見出しのアンカーへの相対パスにする
     setup:
       - name: Mock
         description: なし
@@ -657,11 +657,11 @@ flows:
       - '`click C href "id:no-such-doc#"` の行が出ず、`click D href "https://example.com/"` は書き換わらない'
       - '`conversionError` が `null`'
     test: test_normal_when_mermaid_click_id_resolved
-lead: '#17 の画面が文書を開くときに呼ぶ。配信元の文書を変換した Markdown と、タブ・サイドバー・差分の項目・画面の状態を JSON で返す。`path` を省くと一番左のタブのサイドバーの一番上の文書を返す。'
+lead: '配信元の文書を変換した Markdown とタブ・サイドバー・差分の項目・画面の状態を返却する文書の取得の入出力を定め、文書の取得を修正するときに参照する。'
 identifier: get_document
 permissions: なし（`127.0.0.1` でだけ待ち受ける）
 idempotent: true
-side_effects: なし（変換の結果を控えない。`converters[]` の変換の控えは project-index が持つ）
+side_effects: なし（変換の結果を記録しない。`converters[]` の変換の控えは project-index が持つ）
 exclusivity: 読み取りだけで排他しない
 request:
   - name: source
@@ -674,7 +674,7 @@ request:
     required: false
     default: なし（一番左のタブのサイドバーの一番上の文書）
     location: path
-    description: 文書のパス（配信元の直下から、拡張子を落とした形）。画面のパスで当たる文書が無いときは、文書のファイルか本文のファイルのパス（拡張子つき）として引く
+    description: 文書のパス（配信元の直下から、拡張子を落とした形式）。画面のパスで該当する文書が無いときは、文書のファイルか本文のファイルのパス（拡張子つき）として取得する
   - name: ref
     type: str
     required: false
@@ -685,9 +685,9 @@ request:
   - name: diff
     type: str
     required: false
-    default: なし（変わった項目を返さない）
+    default: なし（変わった項目を返却しない）
     location: query
-    description: 比べるリビジョン。このリビジョンから変わった項目を返す
+    description: 比べるリビジョン。このリビジョンから変わった項目を返却する
     constraints: Git 管理外の配信元では無視する
 request_example: |-
   ```text
@@ -703,34 +703,34 @@ response:
     notes: Git 管理外の配信元は `null`
   - name: path
     type: str
-    description: 返した文書のパス
+    description: 返却した文書のパス
   - name: markdown
     type: str | None
     description: 変換した Markdown（埋め込みのマーカーは表に置き換え済み）
     notes: 変換に失敗したときは `null`
   - name: conversionError
     type: ConversionError | None
-    description: 変換に失敗したときの種類・スクリプトのパス・原因。YAML を読めないときはファイルのパスと行と列
+    description: 変換に失敗したときの種類・スクリプトのパス・原因。YAML を読み込めないときはファイルのパスと行と列
     notes: 成功したときは `null`
   - name: tabs[].title
     type: str
     description: タブの名前（`nav` が無いときは種類の名前）
   - name: tabs[].active
     type: bool
-    description: 返した文書を含むタブか
+    description: 返却した文書を含むタブか
   - name: tabs[].items
     type: list[NavItem]
     description: サイドバーの項目（group と page の入れ子）。page は文書のパスを持つ
   - name: github
     type: GitHubTarget | None
-    description: '`project-index.yaml` に書いた GitHub のリポジトリと起票のラベル'
-    notes: 書いていない配信元は `null`
+    description: '`project-index.yaml` に記載した GitHub のリポジトリと起票のラベル'
+    notes: 記載していない配信元は `null`
   - name: columns
     type: dict[str, list[str]]
-    description: 表ごとの隠す列（表の列の設定の保存で書いたもの）
+    description: 表ごとの隠す列（表の列の設定の保存で記載したもの）
   - name: tableKeys
     type: list[str]
-    description: '`markdown` の表の出る順の表のキー。`columns` を表に当てるときと、表の列の設定の保存の `table` に使う'
+    description: '`markdown` の表の出る順の表のキー。`columns` を表に適用するときと、表の列の設定の保存の `table` に使用する'
     notes: 変換に失敗したときは空
   - name: tabs[].items[].change
     type: Literal['added', 'modified', 'deleted'] | None
@@ -745,7 +745,7 @@ response:
     description: 比べたリビジョン（`diff` の値）
   - name: diff.change
     type: Literal['added', 'modified'] | None
-    description: 返した文書の `diff` のリビジョンからの変化
+    description: 返却した文書の `diff` のリビジョンからの変化
     notes: 変わっていない文書は `null`
   - name: diff.changedItems
     type: list[str]
@@ -754,12 +754,12 @@ response:
   - name: updatedAt
     type: str
     format: date-time
-    description: 返した文書のファイルの更新日時。Git の配信元は開いているリビジョンでそのファイルを最後に変えた commit の日時、Git 管理外の配信元はファイルの更新日時
+    description: 返却した文書のファイルの更新日時。Git の配信元は開いているリビジョンでそのファイルを最後に変えた commit の日時、Git 管理外の配信元はファイルの更新日時
     notes: 文書の画面の文書の情報に出す
   - name: aliases
     type: list[AliasItem]
-    description: 配信元の `alias_type` を持つ行の文書のエイリアス。要素は取り込んだエイリアスのスキーマ（alias-inject の「エイリアスの元の行」）の共通の形で、画面が mdmark の `mount`・`render` の引数へ読み替えて渡す
-    notes: '`alias_type` を持つ行が無い配信元・変換に失敗したときは空。エイリアスのキーに違反する文書は載せない'
+    description: 配信元の `alias_type` を持つ行の文書のエイリアス。要素は取り込んだエイリアスのスキーマ（alias-inject の「エイリアスの元の行」）の共通の形式で、画面が mdmark の `mount`・`render` の引数へ読み替えて指定する
+    notes: '`alias_type` を持つ行が無い配信元・変換に失敗したときは空。エイリアスのキーに違反する文書は含めない'
   - name: aliases[].id
     type: str
     description: 用語の文書の ID
@@ -768,7 +768,7 @@ response:
     description: 用語の名前（共通のキー `name`）
   - name: aliases[].aliases
     type: list[str]
-    description: 本文で用語に当てる語（取り込んだエイリアスの共通のスキーマの `aliases`）
+    description: 本文で用語に適用する単語（取り込んだエイリアスの共通のスキーマの `aliases`）
   - name: aliases[].description
     type: str | None
     description: ツールチップに出す説明（共通のキー `description`）
@@ -776,75 +776,75 @@ response:
   - name: aliases[].alias_type
     type: Literal['term', 'doc', 'command', 'url', 'skill', 'tool', 'path', 'env', 'avoid']
     description: 文書の行の引用の種類（取り込んだスキーマの `alias_type` の enum）
-    notes: 画面は `term` を用語、`doc` を文書の別名として mdmark へ分けて渡す
+    notes: 画面は `term` を用語、`doc` を文書の別名として mdmark へ分けて指定する
   - name: aliases[].avoid
     type: list[str] | None
     description: 用語のやめた言い方（エイリアスのキー `avoid`）
-    notes: 持たない文書は `null`。`related`・`command`・`cwd`・`url`・`skill` など他のエイリアスのキーも、取り込んだスキーマの `metadata` のキー名で同じ階層に持ち、値を持たないキーは載せない
+    notes: 持たない文書は `null`。`related`・`command`・`cwd`・`url`・`skill` など他のエイリアスのキーも、取り込んだスキーマの `metadata` のキー名で同じ階層に持ち、値を持たないキーは含めない
   - name: bodyPath
     type: str | None
     description: 本文のファイルのパス（配信元の直下から、拡張子つき）。管理用の YAML の行の文書は `body_file` が指すファイル
     notes: 本文のファイルを持たない文書（ファイル 1 つが 1 文書）は `null`。画面は本文の相対リンクを、これがあればこのパス、無ければ `path` を基準に解決する
-response_notes: '本文の描画（mdmark）・リンクの組み立て・コメント・本文の差分の強調は #17 の画面が持つ。差分の強調は、`ref` を `diff.base` にして取った `markdown` を mdmark の `baseMarkdown` に指定して付ける。'
+response_notes: '本文の描画（mdmark）・リンクの組み立て・コメント・本文の差分の強調は画面が持つ。差分の強調は、`ref` を `diff.base` にして取った `markdown` を mdmark の `baseMarkdown` に指定して付ける。'
 status_codes:
   - code: '200'
-    condition: 文書を返した（変換に失敗したとき・YAML を読めないときも `conversionError` を入れて 200）
+    condition: 文書を返却した（変換に失敗したとき・YAML を読み込めないときも `conversionError` を入れて 200）
   - code: '404'
     condition: 配信元が無い・配信していない、リビジョンを解決できない、文書が無い
-    notes: '`missing`（`source`・`not_served`・`ref`・`doc`）と値、配信していない配信元は `errors[]` に外した理由'
+    notes: '`missing`（`source`・`not_served`・`ref`・`doc`）と値、配信していない配信元は `errors[]` に除外した理由'
   - code: '503'
     condition: project-index につながらない、または文書の取得の制限時間の中で project-index から応答が無い
     notes: 'つながらなかった project-index のアドレス・理由・種類（`projectIndex.address`・`projectIndex.reason`・`projectIndex.kind`）。`kind` は接続を断られたとき `unreachable`、制限時間で打ち切ったとき `timeout`。`detail` は `kind` が `unreachable` のとき `project-index（{address}）に接続できませんでした。{reason}`、`timeout` のとき `project-index（{address}）から応答がありませんでした。{reason}`'
   - code: '502'
-    condition: project-index が 5xx を返した
+    condition: project-index が 5xx を返却した
     notes: project-index のアドレス・`detail`・種類（`projectIndex.address`・`projectIndex.reason`・`projectIndex.kind` が `failed`）。`detail` は `project-index（{address}）が要求を処理できませんでした。{reason}`
 constraints:
   - item: 変換の制限時間
-    constraint: '`converters[]` のスクリプトは project-index が実行し、制限時間で止めた結果を変換の失敗として返す。dev-docs は project-index の変換の失敗を `conversionError` に入れる'
+    constraint: '`converters[]` のスクリプトは project-index が実行し、制限時間で止めた結果を変換の失敗として返却する。dev-docs は project-index の変換の失敗を `conversionError` に入れる'
   - item: 認可
     constraint: 制限なし（`127.0.0.1` でだけ待ち受ける）
     decided_by: NFR-155-1#requirements[待ち受けのアドレス]
   - item: project-index への問い合わせ
-    constraint: 配信元の一覧・状態・文書の一覧・文書の値は、要求ごとに project-index の読み取り API へ問い合わせ、dev-docs の中に控えない。配信元の設定・リビジョン・文書の一覧は同時に送信し、文書はその 3 つの応答を待ってから送信する
-    notes: project-index が読み直した配信元と文書は、dev-docs を再起動せずに次の要求から返る。文書は、文書の一覧から引いた文書のパスと ID で問い合わせるため、文書の一覧を待つ
-    decided_by: NFR-155-1#requirements[開き直した配信元の文書の取得の時間]
+    constraint: 配信元の一覧・状態・文書の一覧・文書の値は、要求ごとに project-index の読み取り API へ問い合わせ、dev-docs の中に記録しない。配信元の設定・リビジョン・文書の一覧は同時に送信し、文書はその 3 つの応答を待ってから送信する
+    notes: project-index が再読み込みした配信元と文書は、dev-docs を再起動せずに次の要求から返る。文書は、文書の一覧から取得した文書のパスと ID で問い合わせるため、文書の一覧を待つ
+    decided_by: NFR-155-1#requirements[再度開いた配信元の文書の取得の時間]
   - item: project-index から文書を受け取れないとき
-    constraint: project-index の読み取り API が問い合わせの制限時間で応答しないか接続を断られたら、503 と、つながらなかった project-index のアドレス・理由・種類を返す。問い合わせごとの制限時間は、文書の取得の制限時間の残り時間を超えない。問い合わせを重ねた合計が文書の取得の制限時間を超えたら、残りの問い合わせをやめて 503（`kind` が `timeout`）を返す。project-index が 5xx を返したら、502 と project-index のアドレス・`detail`（`kind` が `failed`）を返す
+    constraint: project-index の読み取り API が問い合わせの制限時間で応答しないか接続を断られたら、503 と、つながらなかった project-index のアドレス・理由・種類を返却する。問い合わせごとの制限時間は、文書の取得の制限時間の残り時間を超えない。問い合わせを重ねた合計が文書の取得の制限時間を超えたら、残りの問い合わせをやめて 503（`kind` が `timeout`）を返却する。project-index が 5xx を返却したら、502 と project-index のアドレス・`detail`（`kind` が `failed`）を返却する
     decided_by: NFR-155-1#requirements[文書の取得の制限時間]
   - item: operationId
-    constraint: '`{tag}-{関数名}`。`path` を含む入口は `view-get_document`、`path` を省く入口は `view-get_document_default`'
+    constraint: '`{tag}-{関数名}`。`path` を含むエントリーポイントは `view-get_document`、`path` を省くエントリーポイントは `view-get_document_default`'
   - item: JSON のキー
     constraint: レスポンスのキーは camelCase。パス・クエリのパラメータ名は変えない
   - item: nav の auto の絞り込み
-    constraint: '`nav` の `auto` は `document`（種類）に加えて `filter` を持てる。`filter` は `search_docs` の `filter` と同じ書式で、`check_filter` で検証し `match_filter` で当たる文書だけをサイドバーに並べる。`filter` を書かない `auto` はその種類の文書を全て並べる。`document` を省いた `auto` は配信元の全ての行の文書を対象にする'
-    notes: '`check_filter` に通らない `filter` はそのタブを空にし、起動と配信元の検査が違反を返す'
-  - item: 文書の引き方
-    constraint: '`path` を画面のパスで引き、当たらなければ文書のファイルか本文のファイルのパスが `path` と同じ最初の文書を返す'
-    notes: 管理の MCP の `try_convert` と同じ引き方。同じ本文のファイルを複数の行が指すときは最初の文書に当たる
-  - item: nav の auto のフォルダの束ね
-    constraint: "`auto` の `group_by` が `'@folder'` のとき、文書が当たった行の `paths` の glob（複数当たるときは `paths` で先に並ぶ glob）のうちワイルドカードより前のフォルダを起点に、起点からのフォルダごとにフォルダ名の group を作り、入れ子のフォルダは入れ子の group にする。起点の直下の文書は group に入れない。各階層で page（フォルダの `index.yaml` の文書が先頭、残りはページのパスの順）を先に、入れ子の group をフォルダ名の順に後に並べる。管理用の YAML の行（`records`）の文書は束ねず、そのまま並べる。`'@folder'` 以外の `group_by` は今と同じく項目のパスとして読む"
+    constraint: '`nav` の `auto` は `document`（種類）に加えて `filter` を持てる。`filter` は `search_docs` の `filter` と同じ書式で、`check_filter` で検証し `match_filter` で該当する文書だけをサイドバーに並べる。`filter` を記載しない `auto` はその種類の文書を全て並べる。`document` を省いた `auto` は配信元の全ての行の文書を対象にする'
+    notes: '`check_filter` に通らない `filter` はそのタブを空にし、起動と配信元の検査が違反を返却する'
+  - item: 文書の取得方法
+    constraint: '`path` を画面のパスで取得し、該当しなければ文書のファイルか本文のファイルのパスが `path` と同じ最初の文書を返却する'
+    notes: 管理の MCP の `try_convert` と同じ取得方法。同じ本文のファイルを複数の行が指すときは最初の文書に該当する
+  - item: nav の auto のフォルダのグループ化
+    constraint: "`auto` の `group_by` が `'@folder'` のとき、文書が該当した行の `paths` の glob（複数当たるときは `paths` で先に並ぶ glob）のうちワイルドカードより前のフォルダを起点に、起点からのフォルダごとにフォルダ名の group を作り、入れ子のフォルダは入れ子の group にする。起点の直下の文書は group に入れない。各階層で page（フォルダの `index.yaml` の文書が先頭、残りはページのパスの順）を先に、入れ子の group をフォルダ名の順に後に並べる。管理用の YAML の行（`records`）の文書は束ねず、そのまま並べる。`'@folder'` 以外の `group_by` は今と同じく項目のパスとして読み込む"
     notes: "`nav` が無い配信元は、種類ごとのタブを `group_by: '@folder'` の `auto` として組み立てる"
   - item: スキーマ駆動の Markdown の表し方
-    constraint: '`converters[]` を持たない種類の文書は、図を mdmark の map の範囲（`<!-- map: {"title": …} -->` 〜 `<!-- /map -->`）に Mermaid のコードブロックと補足（`<!-- map-data -->`）で、スカラーが並ぶオブジェクトを「項目 / 値」の表で返す。`x-diagram` の flow 系は `flowchart`、`state` は `stateDiagram-v2`、`er` は `erDiagram` にする。1 行目が `flowchart`（`graph`）・`sequenceDiagram`・`erDiagram`・`stateDiagram-v2`（`stateDiagram`）の Mermaid の文字列はそのまま map の範囲に入れ、それ以外の Mermaid の文字列は `` ```mermaid `` のまま返す。`x-diagram` の flow 系の `clicks` は `click` の行にし、`clicks` と、map の範囲に入れる `flowchart`（`graph`）と `` ```mermaid `` のまま返す Mermaid の文字列の `click` の行の `id:{文書の ID}#{項目のパス}` は、本文の `id:` のリンクと同じ相対パスとアンカーにする。どの文書の ID にも該当しない `id:` の行と、図に無いノードを指す `clicks` の要素は出さない。図の元データの表は閉じた表にする。スキーマに `x-hidden: true` を持つ項目と、見出し・リードに使った項目は本文に出さない'
+    constraint: '`converters[]` を持たない種類の文書は、図を mdmark の map の範囲（`<!-- map: {"title": …} -->` 〜 `<!-- /map -->`）に Mermaid のコードブロックと補足（`<!-- map-data -->`）で、スカラーが並ぶオブジェクトを「項目 / 値」の表で返却する。`x-diagram` の flow 系は `flowchart`、`state` は `stateDiagram-v2`、`er` は `erDiagram` にする。1 行目が `flowchart`（`graph`）・`sequenceDiagram`・`erDiagram`・`stateDiagram-v2`（`stateDiagram`）の Mermaid の文字列はそのまま map の範囲に入れ、それ以外の Mermaid の文字列は `` ```mermaid `` のまま返す。`x-diagram` の flow 系の `clicks` は `click` の行にし、`clicks` と、map の範囲に入れる `flowchart`（`graph`）と `` ```mermaid `` のまま返却する Mermaid の文字列の `click` の行の `id:{文書の ID}#{項目のパス}` は、本文の `id:` のリンクと同じ相対パスとアンカーにする。どの文書の ID にも該当しない `id:` の行と、図に無いノードを指す `clicks` の要素は出さない。図の元データの表は閉じた表にする。スキーマに `x-hidden: true` を持つ項目と、見出し・リードに使用した項目は本文に出さない'
     notes: 表し方は knowledge の規約『表し方の優先順位』に沿う
   - item: データの図のフロー図
     constraint: '`x-diagram` の flow 系（`flowchart`・`dataflow`・`architecture`）は、ノードの `kind` を Mermaid のクラスにする（`actor`・`external` は `external`、`process`・`system` は `script`、`store` は `data`、`start`・`question`・`action`・`result` は同じ値。`kind` が無いノードは `process`）。ノードの `hint` と辺の `tip` は補足の `notes`、辺の `line`（`flow` 以外）は補足の `layout` の `line` に入れる。`direction` が無ければ `flowchart` は `TD`、`dataflow`・`architecture` は `LR`。`frame` は中のノードを入れた `subgraph` にする。`state` は、`initial` を `[*] -->`、`final` を `--> [*]` にし、`全状態` の元・`元の状態` の先の遷移は `representative` の状態との 1 本にする。遷移のラベルは `{trigger} [{condition}]`'
     notes: クラスと線の名前の見た目は、画面が `mount` に指定する mdmark の設定の `map.kinds`・`map.lines` が持つ。ノードの `shape` と Mermaid の記法の `line`・`subgraphs` は参照しない（`shape` だけのノードは `script`、5 つの値に無い `line` は `flow` になる）
   - item: ER 図
-    constraint: '`x-diagram: er` の実体を `erDiagram` の実体にする。`columns` を持たない実体は、同じ文書の `tables[]` のうち `title` が実体の `name` に当たるテーブルの `columns` から列（`name`・`type`・主キー・外部キー）を作る。関連は `from_cardinality`・`to_cardinality`（`1`・`0..1`・`1..n`・`0..n`）を両端の多重度にし、`to_column` の列のコメントを `参照: {from の実体}.{from_column}` にして線をその列につなぐ。列の説明は補足の `notes` に入れる'
+    constraint: '`x-diagram: er` の実体を `erDiagram` の実体にする。`columns` を持たない実体は、同じ文書の `tables[]` のうち `title` が実体の `name` に該当するテーブルの `columns` から列（`name`・`type`・主キー・外部キー）を作る。関連は `from_cardinality`・`to_cardinality`（`1`・`0..1`・`1..n`・`0..n`）を両端の多重度にし、`to_column` の列のコメントを `参照: {from の実体}.{from_column}` にして線をその列につなぐ。列の説明は補足の `notes` に入れる'
     notes: 両端の列のどちらかが実体の列に無い関連と、多重度が 4 つの値に無い関連は `erDiagram` に出さず、図の元データの表にだけ残す。mdmark は関連の端の列を、コメントが `参照:` の FK の列から先に選ぶ
   - item: 本文の id のリンク
     constraint: 'スキーマ駆動の変換で、Markdown の文字列の値のうちコードブロック・行内のコードの外の `[名前](id:{文書の ID})` を、同じ配信元のその文書への相対パスのリンクにする。`[名前](id:{文書の ID}#{項目のパス})` は、項目のパスがリンク先の文書で見出しになる項目（`x-heading` を持つ項目、`x-shape: sections` の要素）を指すとき、その見出しのアンカーを付ける。型 `ref` の値のリンクも同じアンカーを付ける'
-    notes: どの文書の ID にも当たらないリンクは書き換えず、警告も出さない。見出しにならない項目を指すリンクはアンカーを付けずに文書を指す。`converters[]` の出力と Markdown の本文の文書は書き換えない
-  - item: 手で書いた page と auto の重なり
-    constraint: 同じタブの中で、手で書いた `page`（`group` の中を含む）が指す文書を `auto` の結果から除く。手で書いた `group`・`page` の並びは変えない
+    notes: どの文書の ID にも該当しないリンクは書き換えず、警告も出さない。見出しにならない項目を指すリンクはアンカーを付けずに文書を指す。`converters[]` の出力と Markdown の本文の文書は書き換えない
+  - item: 手で記載した page と auto の重なり
+    constraint: 同じタブの中で、手で記載した `page`（`group` の中を含む）が指す文書を `auto` の結果から除く。手で記載した `group`・`page` の並びは変えない
     notes: '-'
   - item: 検討事項のリンク
     constraint: 'スキーマ駆動の変換で、項目 `decisions` の要素（検討事項の ID）を、配信元の `decisions.folders` のうちちょうど 1 つのフォルダに `.mindstella/docs/{ID}.md` がある ID だけ、文書のフォルダから `_decisions/{ID}` への相対パスのリンクにする。0 個か 2 個以上のフォルダにある ID は ID の文字のまま出す。表のセルは `・` でつなぎ、それ以外は箇条書きにする今の並べ方は変えない'
     notes: '`decisions.folders` を持たない配信元は全ての ID を文字のまま出す。リンクの相対パスは本文の id のリンクと同じく画面が `/{source}@{ref}/_decisions/{ID}` に解決する'
   - item: 検討事項の文書
-    constraint: '`path` が `_decisions/{ID}`（`{ID}` は `^[A-Z]+-[0-9]+$`）のとき、`decisions.folders` のうちちょうど 1 つのフォルダにある `.mindstella/docs/{ID}.md` の本文を、変換せずに `markdown` で返す。`ref` は解決するが、検討事項の文書は Git の管理外のためリビジョンによらず今のファイルを読む'
-    notes: '当たるフォルダが 0 個か 2 個以上なら 404（`missing`: `doc`）。`diff` は求めず `null` を返す。フォルダの外を指す `{ID}` は形式で弾く'
+    constraint: '`path` が `_decisions/{ID}`（`{ID}` は `^[A-Z]+-[0-9]+$`）のとき、`decisions.folders` のうちちょうど 1 つのフォルダにある `.mindstella/docs/{ID}.md` の本文を、変換せずに `markdown` で返却する。`ref` は解決するが、検討事項の文書は Git の管理外のためリビジョンによらず今のファイルを読み込む'
+    notes: '該当するフォルダが 0 個か 2 個以上なら 404（`missing`: `doc`）。`diff` は求めず `null` を返却する。フォルダの外を指す `{ID}` は形式で弾く'
 refs:
   - SC-155-10#scenarios[異常シナリオ（project-index につながらない）]
 test_file: tests/integration/server/test_get_document.py
@@ -854,3 +854,5 @@ callers:
   - SC-155-7#scenarios[正常シナリオ（ER 図を読む）]
   - SC-155-7#scenarios[正常シナリオ（本文の id のリンクを開く）]
   - SC-155-7#scenarios[正常シナリオ（設計書の検討事項のリンクを開く）]
+notes:
+  補足: '`path` を省くと一番左のタブのサイドバーの一番上の文書を返却する。'

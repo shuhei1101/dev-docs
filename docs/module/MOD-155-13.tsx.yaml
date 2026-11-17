@@ -1,6 +1,6 @@
 id: MOD-155-13
 title: 画面 / 文書の画面 / doc-main.tsx
-lead: 文書の画面の本文の領域（パンくず・文書のヘッダー・差分の帯・本文か変換の失敗か文書の無いタブ）。
+lead: 文書の画面の本文の領域（パンくず・文書のヘッダー・差分の帯・本文か変換の失敗か文書の無いタブ）を受け持ち、文書の画面の doc-main.tsx を修正するときに参照する。
 test_files:
   - tests/unit/frontend/src/features/docs/doc-view/components/doc-main.test.tsx
 components:
@@ -8,9 +8,9 @@ components:
     title: 本文の領域
     kind: コンポーネント
     container: features/docs/doc-view/components/doc-main.tsx
-    usecase: 文書を読む
+    usecase: 文書を参照する
     role: 部品
-    summary: '`main`（`id="main"`・`tabIndex={-1}`・`aria-busy`）にパンくずを置き、文書の無いタブを選んでいればそのタブの見出しと空のタブを、そうでなければ文書の中身を出す'
+    summary: '`main`（`id="main"`・`tabIndex={-1}`・`aria-busy`）にパンくずを配置し、文書の無いタブを選んでいればそのタブの見出しと空のタブを、そうでなければ文書の中身を出す'
     props:
       - name: doc
         type: DocumentResponse
@@ -27,7 +27,7 @@ components:
       - name: refs
         type: RefsResponse | undefined
         required: true
-        description: リビジョンの一覧（差分の帯に使う）
+        description: リビジョンの一覧（差分の帯に使用する）
       - name: emptyTab
         type: NavTab | null
         required: true
@@ -51,7 +51,7 @@ components:
       - name: baseMarkdown
         type: '{markdown: string; tableKeys: string[]} | null'
         required: false
-        description: 比較元の本文と表のキー（`DocBody` へそのまま渡す）
+        description: 比較元の本文と表のキー（`DocBody` へそのまま指定する）
       - name: onRetry
         type: () => void
         required: true

@@ -5,10 +5,10 @@ entry:
   value: restart
 flows:
   - name: 正常系
-    summary: 応答を返した後に起動し直し、同じプロセス ID で待ち受ける
+    summary: 応答を返却した後に再起動、同じプロセス ID で待ち受ける
     setup:
       - name: Mock
-        description: project-index の読み取り API のモック（sample を配信中として返す）。一時フォルダの端末の設定で `dev-docs serve` を子プロセスとして起動する
+        description: project-index の読み取り API のモック（sample を配信中として返却する）。一時フォルダの端末の設定で `dev-docs serve` を子プロセスとして起動する
       - name: 端末の設定
         description: '`project_index` にモックのアドレス'
     flow: |-
@@ -27,9 +27,9 @@ flows:
       ```
     expected:
       - 応答の `pid` が子プロセスの PID と同じ
-      - '`/_admin/mcp` の接続を張ったまま `restart` を呼んでも、起動し直した子プロセスがポートの確かめで止まらず待ち受ける'
-      - 起動し直した後の `status` の `pid` が同じで、sample が `serving`
-      - 起動し直した後に `/_admin/mcp` を張り直すと呼べる
+      - '`/_admin/mcp` の接続を張ったまま `restart` を呼んでも、再起動した子プロセスがポートの確かめで止まらず待ち受ける'
+      - 再起動した後の `status` の `pid` が同じで、sample が `serving`
+      - 再起動した後に `/_admin/mcp` を再接続すると呼べる
     test: test_normal
   - name: 異常系（再起動の途中で呼ばれる・RestartInProgressError）
     summary: 停止を待っている間に 2 回目の `restart` を呼ぶと断る
@@ -37,7 +37,7 @@ flows:
       - name: Mock
         description: なし
       - name: 処理中の要求
-        description: 応答を返さずに待つ project-index の読み取り API のモックを `project_index` に向け、文書の取得を呼んでおく
+        description: 応答を返却せずに待つ project-index の読み取り API のモックを `project_index` に向け、文書の取得を呼んでおく
         notes: 停止の待ちを長くするため
     flow: |-
       ```mermaid
@@ -51,14 +51,14 @@ flows:
         T-->>C: isError（RestartInProgressError）
       ```
     expected:
-      - '2 回目が `isError: true` で再起動の途中であることを返す'
-      - 起動し直すのは 1 回だけ（ログの起動の行が 1 つ増える）
+      - '2 回目が `isError: true` で再起動の途中であることを返却する'
+      - 再起動するのは 1 回だけ（ログの起動の行が 1 つ増える）
     test: test_error_when_restart_in_progress
-lead: 応答を返してからサーバーを止め、同じプロセス ID・同じ環境変数で `dev-docs serve` を起動し直す。
+lead: 応答を返却してから同じプロセス ID・同じ環境変数で `dev-docs serve` を再起動する管理の MCP の `restart` の入出力を定め、`restart` を修正するときに参照する。
 identifier: restart
 permissions: なし（`127.0.0.1` でだけ待ち受ける）
 idempotent: false
-side_effects: 待ち受けを止めて起動し直す。`/_admin/mcp` の接続は切れる
+side_effects: 待ち受けを止めて再起動する。`/_admin/mcp` の接続は切れる
 callers:
   - SC-155-3#scenarios[正常シナリオ（端末の設定が古くなる）]
 exclusivity: 再起動を始めた後の呼び出しは `RestartInProgressError` で断る
@@ -70,7 +70,7 @@ request_example: |-
 response:
   - name: pid
     type: int
-    description: 起動し直した後も変わらないプロセス ID
+    description: 再起動した後も変わらないプロセス ID
   - name: restarting
     type: bool
     description: 常に `true`
@@ -78,7 +78,7 @@ response_example: |-
   ```json
   {"pid": 4242, "restarting": true}
   ```
-response_notes: 応答を返し終えてから停止を始める。再起動の結果は、つなぎ直した後の `status` で確かめる。
+response_notes: 応答を返却を終えてから停止を始める。再起動の結果は、再接続した後の `status` で確認する。
 exceptions:
   - name: なし（正常終了）
     condition: 再起動を始めた
@@ -90,15 +90,15 @@ constraints:
     constraint: 処理中の要求を待つ上限は project-index への問い合わせの制限時間の 1.5 倍。過ぎたら残りの要求を切って止める
     notes: project-index の応答を待つ要求が一番長い要求になるため
     decided_by: NFR-155-1#requirements[project-index への問い合わせの制限時間]
-  - item: 起動し直す方法
+  - item: 再起動する方法
     constraint: uvicorn の停止の後、`os.execv(sys.executable, [sys.executable, "-m", "dev_docs", "serve"])` で同じプロセスを置き換える
-    notes: SessionStart のフックで切り離して起動したプロセスのまま続くため、親を持たないまま残らない。起動し直した後は『起動』の待ち受けまでの順番に従い、配信元を読む前に待ち受ける
+    notes: SessionStart のフックで切り離して起動したプロセスのまま続くため、親を持たないまま残らない。再起動した後は『起動』の待ち受けまでの順番に従い、配信元を参照する前に待ち受ける
   - item: 起動に失敗したとき
-    constraint: '`dev-docs serve` の終了コードで止まり、次のセッションの SessionStart のフックが起動し直す'
+    constraint: '`dev-docs serve` の終了コードで止まり、次のセッションの SessionStart のフックが再起動する'
   - item: タイムアウト
     constraint: 制限なし
   - item: 接続できない時間
-    constraint: 応答を返してから接続を受け付け直すまでを、非機能要件の決定値以内にする
+    constraint: 応答を返却してから接続の受け付けを再開するまでを、非機能要件の決定値以内にする
     decided_by: NFR-155-1#requirements[起動から接続を受け付けるまでの時間]
     notes: 停止の待ち（処理中の要求）は含めない
 test_file: tests/integration/server/test_restart.py

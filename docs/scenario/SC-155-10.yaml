@@ -7,7 +7,7 @@ scenarios:
         description: なし（実環境で実行。`dev-docs serve` を子プロセスで起動する）
       - name: project-index
         description: テスト用の一時フォルダで起動した project-index。sample と notes を配信している
-        notes: 待ち受けのアドレスを dev-docs の端末の設定の `project_index` に書く
+        notes: 待ち受けのアドレスを dev-docs の端末の設定の `project_index` に記載する
       - name: サンプルの配信元
         description: 文書の種類を 1 つ（スキーマと YAML 2 件）と `project-index.yaml` を持つ git リポジトリ
         notes: id `sample`
@@ -33,9 +33,9 @@ scenarios:
       ```
     expected:
       - '`127.0.0.1:8781` で待ち受け、`0.0.0.0` では待ち受けない'
-      - '`/_api/sources/sample/docs` と `/_api/sources/notes/docs` が 200 を返す'
-      - '`/_api/`・`/_admin/` 以外のパスが画面の `index.html` を返す'
-      - '`/mcp` は 404 を返す（文書の MCP は project-index が持つ）'
+      - '`/_api/sources/sample/docs` と `/_api/sources/notes/docs` が 200 を返却する'
+      - '`/_api/`・`/_admin/` 以外のパスが画面の `index.html` を返却する'
+      - '`/mcp` は 404 を返却する（文書の MCP は project-index が持つ）'
       - '`/_admin/mcp` のツールが `status`・`restart`・`update` の 3 つ'
       - 標準出力に待ち受けたアドレスと、project-index が配信している配信元の id（sample・notes）が出る
     test: test_normal
@@ -61,9 +61,9 @@ scenarios:
     expected:
       - プロセスは終わらず、`127.0.0.1:8781` で待ち受ける
       - 標準エラーに、つながらなかった project-index のアドレスと、project-index を起動する案内が出る
-      - '`/_api/sources/sample/docs` が 503 と、project-index につながらない理由を返す'
+      - '`/_api/sources/sample/docs` が 503 と、project-index につながらない理由を返却する'
       - 画面を開くと、project-index につながらない理由が出る
-      - project-index を起動した後、dev-docs を再起動せずに `/_api/sources/sample/docs` が 200 を返す
+      - project-index を起動した後、dev-docs を再起動せずに `/_api/sources/sample/docs` が 200 を返却する
     test: test_error_when_project_index_unreachable
   - name: 異常シナリオ（端末の設定がスキーマに違反する）
     setup:
@@ -84,7 +84,7 @@ scenarios:
       ```
     expected:
       - プロセスが 0 以外の終了コードで終わり、ポートを待ち受けない
-      - '標準エラーに `{ファイル}: project_index: URL でない` の形で違反が全て並ぶ'
+      - '標準エラーに `{ファイル}: project_index: URL でない` の形式で違反が全て並ぶ'
     test: test_error_when_terminal_config_invalid
   - name: 異常シナリオ（ポートが使用中）
     setup:
@@ -138,7 +138,7 @@ scenarios:
     expected:
       - フックが 0 の終了コードで戻り、セッションの文脈に `/mcp` の再接続の案内が入る
       - '`127.0.0.1:8781` を待ち受ける dev-docs のプロセスが 1 つだけあり、セッションを終えても残る'
-      - つなぎ直した後、管理の MCP（`/_admin/mcp`）のツールが 3 つ返る
+      - 再接続した後、管理の MCP（`/_admin/mcp`）のツールが 3 つ返る
     test: test_normal_when_started_by_session_start
   - name: 正常シナリオ（SessionStart で XDG_CONFIG_HOME の下の端末の設定から起動する）
     setup:
@@ -170,7 +170,7 @@ scenarios:
     expected:
       - フックが 0 の終了コードで戻り、セッションの文脈に `/mcp` の再接続の案内が入る
       - '`127.0.0.1:8781` を待ち受ける dev-docs のプロセスが 1 つだけあり、端末の設定の `clone` のクローンから起動している'
-      - つなぎ直した後、管理の MCP（`/_admin/mcp`）のツールが 3 つ返る
+      - 再接続した後、管理の MCP（`/_admin/mcp`）のツールが 3 つ返る
     test: test_normal_when_started_by_session_start_with_xdg_config_home
   - name: 正常シナリオ（待ち受けているサーバーがあるときは文脈を注入しない）
     setup:
@@ -216,10 +216,10 @@ scenarios:
       ```
     expected:
       - フックが 0 の終了コードで戻り、セッションは続く
-      - セッションの文脈に、端末の設定を読めなかった理由と `/dev-docs:global-setup` の案内が入る
+      - セッションの文脈に、端末の設定を読み込めなかった理由と `/dev-docs:global-setup` の案内が入る
       - dev-docs のプロセスは起動しない
     test: test_error_when_session_start_cannot_start
-  - name: 正常シナリオ（XDG の環境変数で置き場を決める）
+  - name: 正常シナリオ（XDG の環境変数で配置先を決める）
     setup:
       - name: Mock
         description: なし（実環境で実行）
@@ -228,7 +228,7 @@ scenarios:
       - name: 端末の設定
         description: '`$XDG_CONFIG_HOME/dev-docs/settings.yaml`'
         notes: '`project_index` が sample を配信している project-index のアドレス。`state_dir`・`log_dir` を持たない'
-      - name: 状態の置き場の上書き
+      - name: 状態の配置先の上書き
         description: 2 回目の起動だけ `DEV_DOCS_STATE_DIR` に別の一時フォルダを入れる
     flow: |-
       ```mermaid
@@ -246,9 +246,9 @@ scenarios:
         DD-->>U: sample を配信する
       ```
     expected:
-      - 1 回目の起動で `/_api/sources/sample/docs` が 200 を返す
-      - 1 回目の起動のログが `$XDG_STATE_HOME/dev-docs/logs` にでき、`~/.local/state/dev-docs` には書かない
-      - 2 回目の起動のログが `$DEV_DOCS_STATE_DIR/logs` にでき、`$XDG_STATE_HOME/dev-docs` には書かない
+      - 1 回目の起動で `/_api/sources/sample/docs` が 200 を返却する
+      - 1 回目の起動のログが `$XDG_STATE_HOME/dev-docs/logs` にでき、`~/.local/state/dev-docs` には記載しない
+      - 2 回目の起動のログが `$DEV_DOCS_STATE_DIR/logs` にでき、`$XDG_STATE_HOME/dev-docs` には記載しない
     test: test_normal_when_xdg_dirs_set
   - name: 正常シナリオ（SessionStart で unit を起動する）
     setup:
@@ -282,7 +282,7 @@ scenarios:
       - フックが 0 の終了コードで戻り、セッションの文脈に `/mcp` の再接続の案内が入る
       - '`127.0.0.1:8781` を待ち受ける dev-docs のプロセスが 1 つだけで、その pid が unit の `MainPID` と同じ'
       - unit の外に dev-docs のプロセスが無い
-      - つなぎ直した後、管理の MCP（`/_admin/mcp`）のツールが 3 つ返る
+      - 再接続した後、管理の MCP（`/_admin/mcp`）のツールが 3 つ返る
     test: test_normal_when_unit_started_by_session_start
   - name: 正常シナリオ（unit を起動し直す）
     setup:
@@ -290,7 +290,7 @@ scenarios:
         description: なし（実環境で実行。Claude Code は `claude -p` で動かす）
       - name: unit
         description: SessionStart で unit を起動する正常シナリオと同じ unit が動いていて、ポートを持っている
-        notes: 起動し直す前の `MainPID` を記録する。unit に `ExecStartPre=/bin/sleep 3` を追加して、停止から起動までの間を作る
+        notes: 再起動する前の `MainPID` を記録する。unit に `ExecStartPre=/bin/sleep 3` を追加して、停止から起動までの間を作る
     flow: |-
       ```mermaid
       sequenceDiagram
@@ -309,8 +309,8 @@ scenarios:
         DD->>DD: 127.0.0.1:8781 で待ち受ける
       ```
     expected:
-      - '`127.0.0.1:8781` を待ち受ける dev-docs のプロセスが 1 つだけで、その pid が unit の `MainPID` と同じで、起動し直す前の `MainPID` と違う'
-      - 起動し直す前のプロセスが残っていない
+      - '`127.0.0.1:8781` を待ち受ける dev-docs のプロセスが 1 つだけで、その pid が unit の `MainPID` と同じで、再起動する前の `MainPID` と違う'
+      - 再起動する前のプロセスが残っていない
       - unit の外に dev-docs のプロセスが無い
     test: test_normal_when_unit_restarted
   - name: 異常シナリオ（同時に 2 回起動する）
@@ -345,7 +345,7 @@ scenarios:
         description: unit の外で起動した `dev-docs serve` が待ち受けているポート
       - name: unit
         description: SessionStart で unit を起動する正常シナリオと同じ、同じポートの unit。止まっている
-        notes: '`Restart=on-failure` と `RestartPreventExitStatus=3` を持つ（終了コード 3 以外で終われば起動し直す）'
+        notes: '`Restart=on-failure` と `RestartPreventExitStatus=3` を持つ（終了コード 3 以外で終われば再起動する）'
     flow: |-
       ```mermaid
       sequenceDiagram
@@ -360,23 +360,23 @@ scenarios:
         SD->>SD: 起動し直さずに止める
       ```
     expected:
-      - unit が failed で止まり、起動し直した回数（`NRestarts`）が 0 のまま
+      - unit が failed で止まり、再起動した回数（`NRestarts`）が 0 のまま
       - unit のログに、ポートの番号と、ポートを持っているプロセスの pid が出る
       - unit の外のプロセスは待ち受けを続ける
     test: test_error_when_port_held_outside_unit
-lead: 利用者が `dev-docs serve` を実行し、project-index が配信している配信元の文書を画面で配信し始める。
+lead: 利用者が `dev-docs serve` で配信元の文書を画面で配信し始めるシナリオを定め、起動の流れを変えるときに参照する。
 issue: 3
 primary_actor: 利用者
 stakeholders:
   - name: 利用者
     interest: 1 つのコマンドで project-index が配信している配信元を画面で読め、project-index につながらないときはその理由が分かる
-trigger: '利用者が `dev-docs serve` を実行するか、ポートにつながらないときに SessionStart のフックが systemd --user の unit を起動する（unit が無ければ `dev-docs serve` を切り離して起動する）。利用者や AI Monitor が unit を起動し直す'
+trigger: '利用者が `dev-docs serve` を実行するか、ポートにつながらないときに SessionStart のフックが systemd --user の unit を起動する（unit が無ければ `dev-docs serve` を切り離して起動する）。利用者や AI Monitor が unit を再起動する'
 preconditions:
   - '`DEV_DOCS_CONFIG`（既定 `${XDG_CONFIG_HOME:-~/.config}/dev-docs/settings.yaml`）に端末の設定がある'
   - '`DEV_DOCS_PORT`（既定 8781）のポートが空いている'
   - 端末の設定の `project_index` が指す project-index が、配信元を配信している
-success_guarantee: project-index が配信している配信元が `/_api/sources/{配信元の id}/docs` の画面の API と画面で読める。
-minimal_guarantee: project-index につながらないときも、画面と `/_admin/mcp` は待ち受けを続け、つながらない理由を返す。dev-docs は配信元のフォルダと文書を書き換えない。
+success_guarantee: project-index が配信している配信元が `/_api/sources/{配信元の id}/docs` の画面の API と画面で参照できる。
+minimal_guarantee: project-index につながらないときも、画面と `/_admin/mcp` は待ち受けを続け、つながらない理由を返却する。dev-docs は配信元のフォルダと文書を書き換えない。
 frequency: 端末の起動ごと・dev-docs の更新ごと
 priority: 高
 refs:

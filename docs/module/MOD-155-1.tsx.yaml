@@ -1,6 +1,6 @@
 id: MOD-155-1
 title: 画面 / アプリとルート / confirm-dialog.tsx
-lead: 画面共通の確認のダイアログと、それを開くフック。
+lead: 画面共通の確認のダイアログと、それを開くフックを受け持ち、アプリとルートの confirm-dialog.tsx を修正するときに参照する。
 test_files:
   - tests/unit/frontend/src/app/confirm-dialog.test.tsx
 data_models:
@@ -30,14 +30,14 @@ functions:
     container: app/confirm-dialog.tsx
     usecase: 共通
     role: フック
-    summary: 確認のダイアログを開き、確定なら true を返す関数を返す
+    summary: 確認のダイアログを開き、確定なら true を返却する関数を返却する
     scope: public
     returns:
       type: '(request: ConfirmRequest) => Promise<boolean>'
       description: キャンセル・Esc は false
     process: |-
-      1. ConfirmDialogProvider の文脈を読む（無ければ例外を送る）
-      2. 返す関数は `pending` を入れて Promise を返し、ダイアログを閉じたときに結果で解決する
+      1. ConfirmDialogProvider の文脈を参照する（無ければ例外を送信する）
+      2. 返却する関数は `pending` を入れて Promise を返却し、ダイアログを閉じたときに結果で解決する
     unit_tests:
       - name: test_use_confirm_dialog
         case: 正常

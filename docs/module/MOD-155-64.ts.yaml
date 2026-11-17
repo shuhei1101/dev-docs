@@ -1,6 +1,6 @@
 id: MOD-155-64
 title: 画面 / 共通 / shortcuts.ts
-lead: キーボードのショートカットの定義。フックもショートカットの一覧もここから引く。
+lead: キーボードのショートカットの定義を受け持ち、共通の shortcuts.ts を修正するときに参照する。
 test_files:
   - tests/unit/frontend/src/shared/core/shortcuts.test.ts
 data_models:
@@ -9,14 +9,14 @@ data_models:
     container: shared/core/shortcuts.ts
     usecase: 共通
     role: 定義
-    summary: 1 つの操作に当てたキー
+    summary: 1 つの操作に適用したキー
     properties:
       - name: id
         type: ShortcutId
         description: '`search`・`help`'
       - name: hotkeys
         type: string[]
-        description: TanStack Hotkeys のキーの書き方（`Mod+K`・`/`・`Shift+/`）
+        description: TanStack Hotkeys のキーの記載方法（`Mod+K`・`/`・`Shift+/`）
       - name: label
         type: string
         description: ショートカットの一覧に出す操作の名前
@@ -25,7 +25,7 @@ data_models:
         description: '`hotkeys` のうち 1 文字のキー（1 文字のショートカットを切ったときに受けない）'
       - name: screens
         type: ScreenId[]
-        description: 使える画面（`doc-view`・`settings`・`not-found`）
+        description: 使用できる画面（`doc-view`・`settings`・`not-found`）
 constants:
   - name: SHORTCUTS
     title: ショートカットの一覧
@@ -46,7 +46,7 @@ functions:
     container: shared/core/shortcuts.ts
     usecase: 共通
     role: 定義
-    summary: 画面と 1 文字のショートカットの設定に合う定義とキーを返す（ショートカットの一覧が描く）
+    summary: 画面と 1 文字のショートカットの設定に合う定義とキーを返却する（ショートカットの一覧が描く）
     scope: public
     args:
       - name: screen
@@ -61,7 +61,7 @@ functions:
         description: 1 文字のショートカットを受けるか
     returns:
       type: '{def: ShortcutDef; hotkeys: string[]}[]'
-      description: 使えるキーが 1 つも無い定義は除く
+      description: 使用できるキーが 1 つも無い定義は除く
     process: |-
       1. `screens` に `screen` を含む定義だけを残す
       2. `singleKey` が false のときは `hotkeys` から `singleKey` のキーを除き、空になった定義を除く
@@ -84,3 +84,5 @@ functions:
         condition: '`settings`・`true`'
         mock: なし
         expected: '`help` の 1 件'
+notes:
+  補足: フックもショートカットの一覧もここから取得する。

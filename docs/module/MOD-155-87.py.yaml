@@ -1,23 +1,23 @@
 id: MOD-155-87
 title: 開発ドキュメントサーバー / 管理の操作 / types.py
-lead: 管理の MCP の `status` の要求と結果の型。
+lead: 管理の MCP の `status` の要求と結果の型を受け持ち、管理の操作の types.py を修正するときに参照する。
 data_models:
   - name: SourceState
     title: 配信元の状態の行
     container: features/admin/types.py
     usecase: 状態の取得
     role: DTO
-    summary: '`status` が返す配信元 1 つの状態（project-index の状態を写したもの）'
+    summary: '`status` が返却する配信元 1 つの状態（project-index の状態を写したもの）'
     description: '`dataclass(frozen=True)`。'
     properties:
       - name: id
         title: 配信元の ID
         type: str
-        description: 'project-index が返した配信元の ID'
+        description: 'project-index が返却した配信元の ID'
       - name: status
         title: 状態
         type: SourceStatusKind
-        description: project-index が返した状態（配信中・検証で外した・無効）
+        description: project-index が返却した状態（配信中・検証で除外した・無効）
       - name: errors
         title: 配信しない理由
         type: list[str]
@@ -27,7 +27,7 @@ data_models:
     container: features/admin/types.py
     usecase: 状態の取得
     role: DTO
-    summary: 読んだ端末の設定のパスとバージョンの新旧
+    summary: 参照した端末の設定のパスとバージョンの新旧
     description: '`dataclass(frozen=True)`。'
     properties:
       - name: file
@@ -89,7 +89,7 @@ data_models:
       - name: sources
         title: 配信元
         type: list[SourceState]
-        description: 'project-index が返した順。つながらないときは空'
+        description: 'project-index が返却した順。つながらないときは空'
       - name: leftover_sources
         title: 前のバージョンから残った配信元
         type: list[str]
@@ -112,12 +112,12 @@ enums:
     title: 設定のバージョンの新旧
     container: features/admin/types.py
     usecase: 共通
-    summary: 設定の `version` と dev-docs が読めるバージョンの比較
+    summary: 設定の `version` と dev-docs が参照できるバージョンの比較
     description: '`Literal` の型エイリアス。'
     values:
       - value: current
         title: 同じ
-        description: dev-docs が読めるバージョンと同じ
+        description: dev-docs が参照できるバージョンと同じ
       - value: old
         title: 古い
         description: 移し替えで上げられる

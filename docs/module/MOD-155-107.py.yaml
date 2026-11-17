@@ -1,6 +1,6 @@
 id: MOD-155-107
 title: 開発ドキュメントサーバー / 文書 / fields.py
-lead: 項目のパスの分解と、項目の値の取得。
+lead: 項目のパスの分解と、項目の値の取得を受け持ち、文書の fields.py を修正するときに参照する。
 test_files:
   - tests/unit/dev_docs/features/documents/test_fields.py
 diagrams:
@@ -69,15 +69,15 @@ functions:
         type: str
         required: true
         passing: positional
-        description: '`a.b[0].c`・`tags[].name`・`tags[main].name` の形の項目のパス'
+        description: '`a.b[0].c`・`tags[].name`・`tags[main].name` の形式の項目のパス'
     returns:
       type: list[str | int | ArraySelector]
       description: 辞書のキーは `str`、配列の位置は `int`、`[]`・`[{キー}]` は `ArraySelector`
     process: |-
       1. `.` で区切り、各区切りの末尾の `[...]` を切り出す（`b[0][1]` は `b`・`0`・`1`）
       2. `[n]` は位置、`[]` は `ArraySelector(key=None)`、`[{キー}]`（英字で始まる英数字と `_`）は `ArraySelector(key={キー})` にする
-      3. 空のキー・閉じていない `[`・位置にもキーにも当たらない中身がある場合、`InvalidArgumentError` を送る
-      4. 並びを返す
+      3. 空のキー・閉じていない `[`・位置にもキーにも該当しない中身がある場合、`InvalidArgumentError` を送信する
+      4. 並びを返却する
     exceptions:
       - name: InvalidArgumentError
         condition: パスの書式が誤っている
@@ -102,7 +102,7 @@ functions:
         summary: 空のキー
         condition: '`a..b` と `a[x-y]`'
         mock: なし
-        expected: どちらも `InvalidArgumentError` で、`violations[0].path` が渡したパス
+        expected: どちらも `InvalidArgumentError` で、`violations[0].path` が指定したパス
         exception: パスの書式が誤っている
   - name: get_field
     title: 項目の取得
@@ -110,7 +110,7 @@ functions:
     container: features/documents/fields.py
     usecase: 共通
     role: 読み取り
-    summary: 項目のパスで指した値を返す
+    summary: 項目のパスで指した値を返却する
     scope: public
     thread_safe: true
     args:
@@ -132,15 +132,15 @@ functions:
         required: false
         default: None
         passing: keyword
-        description: 途中のキーが無い・位置が範囲の外・型が辞書や配列でないときに返す値
+        description: 途中のキーが無い・位置が範囲の外・型が辞書や配列でないときに返却する値
     returns:
       type: Any
       description: 指した値か `default`。パスが `ArraySelector` を含むときは、選んだ要素ごとに残りのパスをたどった値の配列（たどれない要素は除く）
     process: |-
       1. 『項目のパスの分解』で分ける
-      2. 先頭からたどり、キーは辞書から、位置は配列から引く。たどれない場合は `default` を返す
-      3. `ArraySelector` に当たった場合、値が配列でなければ `default` を返す。配列なら、`key` が `None` は全ての要素、`key` があればそのキーの値が真の辞書の要素を選び、要素ごとに残りのパスをたどった値を並べた配列を返す（残りのパスに `ArraySelector` があれば、その配列を平らにつなぐ）
-      4. たどり着いた値を返す
+      2. 先頭からたどり、キーは辞書から、位置は配列から取得する。たどれない場合は `default` を返却する
+      3. `ArraySelector` に該当した場合、値が配列でなければ `default` を返却する。配列なら、`key` が `None` は全ての要素、`key` があればそのキーの値が真の辞書の要素を選び、要素ごとに残りのパスをたどった値を並べた配列を返却する（残りのパスに `ArraySelector` があれば、その配列を平らにつなぐ）
+      4. たどり着いた値を返却する
     exceptions:
       - name: InvalidArgumentError
         condition: パスの書式が誤っている
@@ -173,7 +173,7 @@ functions:
     container: features/documents/fields.py
     usecase: 共通
     role: 判定
-    summary: 文書の本文が Markdown のファイルかを返す
+    summary: 文書の本文が Markdown のファイルかを返却する
     description: 変換・検索の `sections`・`@sections` が、本文を Markdown として扱うかをこの関数で決める。
     scope: public
     thread_safe: true
@@ -187,7 +187,7 @@ functions:
     returns:
       type: bool
       description: '`body_path` の拡張子が `.md` なら `True`'
-    process: 1. `document.body_path` があり、`PurePosixPath(body_path).suffix.lower()` が `.md` なら `True`、それ以外は `False` を返す
+    process: 1. `document.body_path` があり、`PurePosixPath(body_path).suffix.lower()` が `.md` なら `True`、それ以外は `False` を返却する
     unit_tests:
       - name: test_is_markdown_body
         case: 正常

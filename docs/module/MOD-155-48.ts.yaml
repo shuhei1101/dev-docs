@@ -1,6 +1,6 @@
 id: MOD-155-48
 title: 画面 / 設定画面 / queries.ts
-lead: 端末の設定の保存の mutation。取得は orval が生成した問い合わせ（`getSettingsGetSettingsSourcesQueryOptions`）をそのまま使う。
+lead: 端末の設定の保存の mutation を受け持ち、設定画面の queries.ts を修正するときに参照する。
 test_files:
   - tests/unit/frontend/src/features/settings/settings/queries.test.tsx
 functions:
@@ -10,19 +10,19 @@ functions:
     container: features/settings/settings/queries.ts
     usecase: 配信元を設定する
     role: アダプター
-    summary: orval が生成した `settings-put_settings_sources` の mutation に、成功後の読み直しと通知を加える
+    summary: orval が生成した `settings-put_settings_sources` の mutation に、成功後の再読み込みと通知を加える
     scope: public
     returns:
       type: UseMutationResult<SaveSourcesResponse, AppError, SourceInput[]>
       description: '`mutateAsync(sources, expectedVersion)` で保存する。`expectedVersion` は端末の設定の取得の `version`（無ければ本文に入れない）'
     process: |-
       1. 本文を `{sources, expectedVersion}` にする（`expectedVersion` が無ければ入れない）
-      2. 成功したら `queryClient.invalidateQueries()` で全ての問い合わせを読み直し（配信元の増減は文書の画面の問い合わせにも及ぶ。端末の設定の取得の `version` も保存した後の値になる）、sonner で `端末の設定を保存し、配信元を再読み込みしました。` を出す
-      3. 失敗は呼び出し元へ返す（422 と 409 はダイアログが出し、他は `handleAppError`）
+      2. 成功したら `queryClient.invalidateQueries()` で全ての問い合わせを再読み込みし（配信元の増減は文書の画面の問い合わせにも及ぶ。端末の設定の取得の `version` も保存した後の値になる）、sonner で `端末の設定を保存し、配信元を再読み込みしました。` を出す
+      3. 失敗は呼び出し元へ返却する（422 と 409 はダイアログが出し、他は `handleAppError`）
     unit_tests:
       - name: test_use_save_sources
         case: 正常
-        summary: 保存後に読み直す
+        summary: 保存後に再読み込みする
         condition: '`mutateAsync` に 1 行'
         mock: MSW の端末の設定の保存のハンドラ（200）・sonner の `toast`
         expected: 端末の設定の取得がもう一度呼ばれ、通知が 1 回
@@ -32,3 +32,5 @@ functions:
         condition: '`mutateAsync(sources, "v1")` と `mutateAsync(sources, undefined)`'
         mock: MSW（PUT の本文を記録する）
         expected: 1 回目の本文の `expectedVersion` が `v1`、2 回目の本文に `expectedVersion` が無い
+notes:
+  補足: 取得は orval が生成した問い合わせ（`getSettingsGetSettingsSourcesQueryOptions`）をそのまま使用する。

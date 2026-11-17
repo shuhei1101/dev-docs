@@ -1,6 +1,6 @@
 id: MOD-155-100
 title: 開発ドキュメントサーバー / 変換 / types.py
-lead: 変換の結果・失敗・表し方・図の種類・図の見出し・描画の文脈の型。
+lead: 変換の結果・失敗・表し方・図の種類・図の見出し・描画の文脈の型を受け持ち、変換の types.py を修正するときに参照する。
 diagrams:
   - name: 全体
     diagram: |-
@@ -26,13 +26,13 @@ data_models:
     usecase: 文書の取得
     role: DTO
     summary: 変換できなかった理由
-    description: '`dataclass(frozen=True)`。文書の取得は同じフィールドの `conversion_error` で返す。'
+    description: '`dataclass(frozen=True)`。文書の取得は同じフィールドの `conversion_error` で返却する。'
     properties:
       - name: reason
         title: 理由
         type: Literal['timeout', 'exit', 'not_runnable', 'invalid_yaml']
         access: 公開
-        description: 制限時間を超えた・0 以外で終わった・実行できない・YAML を読めない
+        description: 制限時間を超えた・0 以外で終わった・実行できない・YAML を読み込めない
       - name: kind
         title: 種類
         type: str
@@ -43,49 +43,49 @@ data_models:
         type: str | None
         access: 公開
         default: None
-        description: '`converters[].run` を空白で繋いだもの。YAML を読めないときは `None`'
+        description: '`converters[].run` を空白で繋いだもの。YAML を読み込めないときは `None`'
       - name: detail
         title: 詳細
         type: str
         access: 公開
-        description: 制限時間の秒数・終了コードと標準エラーの末尾・読めなかった理由
+        description: 制限時間の秒数・終了コードと標準エラーの末尾・参照できなかった理由
       - name: file
         title: ファイル
         type: str | None
         access: 公開
         default: None
-        description: YAML を読めないときのファイルのパス（配信元の直下から）
+        description: YAML を読み込めないときのファイルのパス（配信元の直下から）
       - name: line
         title: 行
         type: int | None
         access: 公開
         default: None
-        description: YAML を読めないときの行（1 始まり）
+        description: YAML を読み込めないときの行（1 始まり）
       - name: column
         title: 列
         type: int | None
         access: 公開
         default: None
-        description: YAML を読めないときの列（1 始まり）
+        description: YAML を読み込めないときの列（1 始まり）
   - name: Converted
     title: 変換の結果
     container: features/convert/types.py
     usecase: 文書の取得
     role: DTO
-    summary: 文書の取得で返す Markdown か、変換の失敗
+    summary: 文書の取得で返却する Markdown か、変換の失敗
     description: '`dataclass(frozen=True)`。`failure` があるときの `markdown` は空。'
     properties:
       - name: markdown
         title: Markdown
         type: str
         access: 公開
-        description: 返す Markdown（埋め込みを展開し、表のキーのマーカーを取り除いた後）
+        description: 返却する Markdown（埋め込みを展開し、表のキーのマーカーを取り除いた後）
       - name: table_keys
         title: 表のキー
         type: list[str]
         access: 公開
         default: '[]'
-        description: 本文の表の出る順の表のキー。画面の列の表示が、隠す列の設定を表に当てるときに使う
+        description: 本文の表の出る順の表のキー。画面の列の表示が、隠す列の設定を表に適用するときに使用する
       - name: failure
         title: 変換の失敗
         type: ConvertFailure | None
@@ -97,7 +97,7 @@ data_models:
     container: features/convert/types.py
     usecase: 文書の取得
     role: DTO
-    summary: map の範囲の `title` にする題名と、図の元データの表が使う範囲・更新日
+    summary: map の範囲の `title` にする題名と、図の元データの表が使用する範囲・更新日
     description: '`dataclass(frozen=True)`。'
     properties:
       - name: title
@@ -138,7 +138,7 @@ data_models:
     container: features/convert/types.py
     usecase: 文書の取得
     role: DTO
-    summary: スキーマ駆動の変換が、文書の外から受け取るリンクの引き先と更新日
+    summary: スキーマ駆動の変換が、文書の外から受け取るリンクの参照先と更新日
     description: '`dataclass(frozen=True)`。'
     properties:
       - name: links
@@ -160,18 +160,18 @@ data_models:
         title: 同じ文書のテーブルの見出し
         type: Mapping[str, str]
         access: 公開
-        description: '`x-key` を持つ `sections` の要素の `title` から、その要素の見出し（`x-key` の値）。外部キーのリンクのアンカーに使う。既定は空'
+        description: '`x-key` を持つ `sections` の要素の `title` から、その要素の見出し（`x-key` の値）。外部キーのリンクのアンカーに使用する。既定は空'
       - name: table_titles
         title: 同じ文書のテーブルの論理名
         type: Mapping[str, str]
         access: 公開
-        description: 同じ文書の `tables[]` のテーブルの物理名か論理名から、そのテーブルの論理名（テーブルの論理名の引き方の結果）。外部キーのリンクで `anchors` を引く前にテーブル名を論理名にする。既定は空
+        description: 同じ文書の `tables[]` のテーブルの物理名か論理名から、そのテーブルの論理名（テーブルの論理名の取得方法の結果）。外部キーのリンクで `anchors` を取得する前にテーブル名を論理名にする。既定は空
       - name: item_heading
         title: 項目の見出しの引き方
         type: Callable[[str, str], str | None]
         access: 公開
-        default: 常に `None` を返す関数
-        description: 文書の ID と項目のパスから、リンク先の文書でその項目が出す見出し（無ければ `None`）を引く。参照のリンクと本文の id のリンクのアンカーに使う
+        default: 常に `None` を返却する関数
+        description: 文書の ID と項目のパスから、リンク先の文書でその項目が出す見出し（無ければ `None`）を取得する。参照のリンクと本文の id のリンクのアンカーに使用する
       - name: decisions
         title: リンクにする検討事項
         type: frozenset[str]
@@ -180,10 +180,10 @@ data_models:
         description: project-index の検討事項の一覧の `linkable`（ちょうど 1 つのフォルダに文書がある ID）。`decisions` の値のうち、この ID だけを検討事項の文書へのリンクにする
 enums:
   - name: Shape
-    title: 節の形
+    title: セクションの形式
     container: features/convert/types.py
     usecase: 文書の取得
-    summary: スキーマの `x-shape` に書く、項目を Markdown にする形（ai-monitor の生成と同じ）
+    summary: スキーマの `x-shape` に記載する、項目を Markdown にする形（ai-monitor の生成と同じ）
     description: '`Literal` の型エイリアス。`x-shape` が無い文字列は `body`、オブジェクトは子を順に組み立てる。'
     values:
       - value: body
@@ -193,14 +193,14 @@ enums:
         title: 表
         description: オブジェクトのリストを表にする。列は要素のスキーマの `properties` の順で、列名は `title`
       - value: sections
-        title: 節
-        description: 要素・子を 1 つ深い見出しの節にする。要素の見出しは `x-key` の値
+        title: セクション
+        description: 要素・子を 1 つ深い見出しのセクションにする。要素の見出しは `x-key` の値
       - value: list
         title: 並び
         description: 文字列のリストを箇条書きにする
       - value: diagram
         title: 図
-        description: 値から図を組み立て、続けて同じ値の閉じた表を置く。mdmark の map の範囲
+        description: 値から図を組み立て、続けて同じ値の閉じた表を配置する。mdmark の map の範囲
       - value: attributes
         title: 属性
         description: 子のスカラーを「項目 / 値」の表にする

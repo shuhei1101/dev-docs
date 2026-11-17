@@ -1,6 +1,6 @@
 id: MOD-155-185
 title: 開発ドキュメントサーバー / 共通 / files.py
-lead: 一時ファイルからのファイルの置き換え。
+lead: 一時ファイルからのファイルの置き換えを受け持ち、共通の files.py を修正するときに参照する。
 test_files:
   - tests/unit/dev_docs/shared/test_files.py
 functions:
@@ -10,12 +10,12 @@ functions:
     container: shared/files.py
     usecase: 共通
     role: 書き込み
-    summary: 同じフォルダの一時ファイルに書いてから置き換え、読み手に書きかけの内容を見せない
+    summary: 同じフォルダの一時ファイルに書き込んでから置き換え、読み手に作成途中の内容を見せない
     scope: public
     side_effects: '`path` を書き換える。フォルダが無ければ作る'
     args:
       - name: path
-        title: 書く先
+        title: 書き込み先
         type: Path
         required: true
         passing: positional
@@ -25,16 +25,16 @@ functions:
         type: str
         required: true
         passing: positional
-        description: 書く文字列（UTF-8、改行は `\n` のまま）
+        description: 記載する文字列（UTF-8、改行は `\n` のまま）
     returns:
       type: None
-      description: 何も返さない
+      description: 何も返却しない
     process: |-
       1. `path` の親フォルダを `mkdir(parents=True, exist_ok=True)` で作る
-      2. 同じフォルダに `tempfile.NamedTemporaryFile(delete=False, prefix=".{名前}.", suffix=".tmp")` で一時ファイルを作り、`content` を書いて `flush` と `os.fsync` をする
+      2. 同じフォルダに `tempfile.NamedTemporaryFile(delete=False, prefix=".{名前}.", suffix=".tmp")` で一時ファイルを作り、`content` を記載して `flush` と `os.fsync` をする
       3. 既に `path` があれば、そのパーミッションを一時ファイルへ写す
       4. `os.replace` で `path` に置き換える
-         - 書き込みか置き換えで `OSError` が起きた場合、一時ファイルを削除してからそのまま送る
+         - 書き込みか置き換えで `OSError` が起きた場合、一時ファイルを削除してからそのまま送信する
     exceptions:
       - name: OSError
         condition: 書き込みか置き換えに失敗する
@@ -56,6 +56,6 @@ functions:
         case: 異常
         summary: 置き換えに失敗すると一時ファイルを残さない
         condition: 任意の内容
-        mock: '`os.replace`（`OSError` を送る）'
+        mock: '`os.replace`（`OSError` を送信する）'
         expected: '`OSError` が伝わり、元のファイルは変わらず、`.tmp` のファイルが残らない'
         exception: 書き込みか置き換えに失敗する

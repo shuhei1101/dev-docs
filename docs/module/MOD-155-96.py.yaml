@@ -1,6 +1,6 @@
 id: MOD-155-96
 title: 開発ドキュメントサーバー / 変換 / inline.py
-lead: 文字列の値の中の、図・ファイルツリー・手順・参照・Issue 番号・値の選択肢の書き換え。
+lead: 文字列の値の中の、図・ファイルツリー・手順・参照・Issue 番号・値の選択肢の書き換えを受け持ち、変換の inline.py を修正するときに参照する。
 test_files:
   - tests/unit/dev_docs/features/convert/test_inline.py
 diagrams:
@@ -10,7 +10,7 @@ diagrams:
         direction TD
         スキーマ駆動の変換 ..> 本文の書き換え
         スキーマ駆動の変換 ..> 参照のリンク
-        本文の書き換え ..> 手で書く図の組み立て
+        本文の書き換え ..> 手で記載する図の組み立て
         class スキーマ駆動の変換 {
           <<function>>
         }
@@ -20,29 +20,29 @@ diagrams:
         class 参照のリンク {
           <<function>>
         }
-        class 手で書く図の組み立て {
+        class 手で記載する図の組み立て {
           <<function>>
         }
         click スキーマ駆動の変換 href "./MOD-155-97.py.yaml#スキーマ駆動の変換"
-        click 手で書く図の組み立て href "./MOD-155-93.py.yaml#手で書く図の組み立て"
+        click 手で記載する図の組み立て href "./MOD-155-93.py.yaml#手で記載する図の組み立て"
 constants:
   - name: TREE_LINE
     title: ファイルツリーの罫線
     container: features/convert/inline.py
     usecase: 文書の取得
-    summary: 言語の無いコードブロックの全ての行がこの書き方なら、ファイルツリーにする
+    summary: 言語の無いコードブロックの全ての行がこの記載方法なら、ファイルツリーにする
     value: '^(\S.*|(│   |\|   |    )*(├── |└── |\|-- |`-- ).+)$'
   - name: ISSUE_NUMBER
     title: Issue 番号
     container: features/convert/inline.py
     usecase: 文書の取得
-    summary: リンクにする Issue 番号。前が英数字・`/`・`&`・`[`・`(` の `#` と、行内のコード・リンクの中は当てない
+    summary: リンクにする Issue 番号。前が英数字・`/`・`&`・`[`・`(` の `#` と、行内のコード・リンクの中は適用しない
     value: '(?<![\w/&\[(])#(\d+)\b'
   - name: CHOICE
     title: 値の選択肢の 1 つ
     container: features/convert/inline.py
     usecase: 文書の取得
-    summary: 値の選択肢の 1 つ。` / ` で区切った全ての部分がこの書き方なら、値の選択肢にする
+    summary: 値の選択肢の 1 つ。` / ` で区切った全ての部分がこの記載方法なら、値の選択肢にする
     value: '^''([^'']+)''（(.+)）$'
   - name: ID_LINK
     title: id のリンク
@@ -63,7 +63,7 @@ functions:
     container: features/convert/inline.py
     usecase: 文書の取得
     role: 変換
-    summary: 文字列の値を、mdmark の記法を使った Markdown に書き換える
+    summary: 文字列の値を、mdmark の記法を使用した Markdown に書き換える
     scope: public
     thread_safe: true
     args:
@@ -89,12 +89,12 @@ functions:
       type: str
       description: 書き換えた Markdown
     process: |-
-      1. 値の全体が値の選択肢（` / ` で区切った全ての部分が `CHOICE`）なら、部分ごとに `` - `badge:{値}` {説明} `` の行にして返す
-      2. ```mermaid のコードブロックを、1 つずつ手で書く図の組み立てで置き換える（リンク先の引き方は、`context` を渡したリンク先の引き方）
-      3. 言語の無いコードブロックのうち、2 行以上で全ての行が `TREE_LINE` に当たり、罫線を持つ行が 1 つ以上あるものの言語を `tree` にする
+      1. 値の全体が値の選択肢（` / ` で区切った全ての部分が `CHOICE`）なら、部分ごとに `` - `badge:{値}` {説明} `` の行にして返却する
+      2. ```mermaid のコードブロックを、1 つずつ手で記載する図の組み立てで置き換える（リンク先の引き方は、`context` を指定したリンク先の取得方法）
+      3. 言語の無いコードブロックのうち、2 行以上で全ての行が `TREE_LINE` に該当し、罫線を持つ行が 1 つ以上あるものの言語を `tree` にする
       4. 値の全体が番号付きの箇条書き（全ての行が `{数}. ` で始まるか、その字下げの続き）なら、`<!-- steps -->`・箇条書き・`<!-- /steps -->` にする
       5. コードブロックの外で、`ISSUE_NUMBER` を `[#{番号}]({issue_url}{番号})` にする（`issue_url` が `None` なら書き換えない）
-      6. コードブロック・行内のコードの外で、`ID_LINK` を `[{名前}]({リンク先})` にする。リンク先は参照のリンクと同じ相対パスとアンカー（`{文書の ID}#{項目のパス}` を参照のリンクの引き方で引く）。`links` に無い ID のリンクは書き換えない
+      6. コードブロック・行内のコードの外で、`ID_LINK` を `[{名前}]({リンク先})` にする。リンク先は参照のリンクと同じ相対パスとアンカー（`{文書の ID}#{項目のパス}` を参照のリンクの取得方法で取得する）。`links` に無い ID のリンクは書き換えない
     unit_tests:
       - name: test_rewrite_text_when_mermaid
         case: 正常
@@ -135,19 +135,19 @@ functions:
       - name: test_rewrite_text_when_id_link
         case: 正常
         summary: id のリンク
-        condition: '`[A](id:a)`・`[B](id:b#flow)`・`[C](id:zzz)`・行内のコード `` `[D](id:a)` ``、`links` に `a`（パス `dev/a.yaml`）と `b`（パス `dev/b.yaml`）、文書のパスが `dev/c.yaml`、項目の見出しの引き方が `b`・`flow` に `処理の流れ` を返す'
+        condition: '`[A](id:a)`・`[B](id:b#flow)`・`[C](id:zzz)`・行内のコード `` `[D](id:a)` ``、`links` に `a`（パス `dev/a.yaml`）と `b`（パス `dev/b.yaml`）、文書のパスが `dev/c.yaml`、項目の見出しの取得方法が `b`・`flow` に `処理の流れ` を返却する'
         mock: なし
         expected: '`[A](a.yaml)`・`[B](b.yaml#処理の流れ)`・`[C](id:zzz)`・`` `[D](id:a)` ``'
       - name: test_rewrite_text_when_id_link_no_heading
         case: 正常
         summary: 見出しにならない項目
-        condition: '`[B](id:b#no-such)`、項目の見出しの引き方が `None` を返す'
+        condition: '`[B](id:b#no-such)`、項目の見出しの取得方法が `None` を返却する'
         mock: なし
         expected: '`[B](b.yaml)`'
       - name: test_rewrite_text_when_mermaid_click
         case: 正常
-        summary: Mermaid のまま返す図の click の id の参照
-        condition: '```mermaid の `classDiagram` に `click A href "id:a"`・`click B "id:b#flow"`・`click C href "id:zzz"`・`click D href "https://e.example/"`、`links` に `a`（パス `dev/a.yaml`）と `b`（パス `dev/b.yaml`）、文書のパスが `dev/c.yaml`、項目の見出しの引き方が `b`・`flow` に `処理の流れ` を返却する'
+        summary: Mermaid のまま返却する図の click の id の参照
+        condition: '```mermaid の `classDiagram` に `click A href "id:a"`・`click B "id:b#flow"`・`click C href "id:zzz"`・`click D href "https://e.example/"`、`links` に `a`（パス `dev/a.yaml`）と `b`（パス `dev/b.yaml`）、文書のパスが `dev/c.yaml`、項目の見出しの取得方法が `b`・`flow` に `処理の流れ` を返却する'
         mock: なし
         expected: '```mermaid のコードブロックのままで、`click A href "a.yaml"`・`click B "b.yaml#処理の流れ"`・`click D href "https://e.example/"` の行を持ち、`click C` の行を持たない'
   - name: link_target
@@ -171,24 +171,24 @@ functions:
         type: RenderContext
         required: true
         passing: positional
-        description: リンクの引き先と、相対パスの起点
+        description: リンクの参照先と、相対パスの起点
     returns:
       type: str | None
-      description: '`{相対パス}` か `{相対パス}#{アンカー}`。引き先に無ければ `None`'
+      description: '`{相対パス}` か `{相対パス}#{アンカー}`。参照先に無ければ `None`'
     process: |-
-      1. 値を最初の `#` で文書の ID と項目のパスに分け、`links` を ID で引く（無ければ `None`）
+      1. 値を最初の `#` で文書の ID と項目のパスに分け、`links` を ID で取得する（無ければ `None`）
       2. 相対パスは、文書のパスのフォルダからリンクの先の `path` への相対パス（`/` 区切り・URL エンコード）にする
-      3. 項目のパスがあれば、文脈の項目の見出しの引き方（`item_heading`）で見出しを引き、見出しがあれば見出しのアンカーを `#` で付ける（無ければ付けない）
+      3. 項目のパスがあれば、文脈の項目の見出しの取得方法（`item_heading`）で見出しを取得し、見出しがあれば見出しのアンカーを `#` で付ける（無ければ付けない）
     unit_tests:
       - name: test_link_target
         case: 正常
         summary: 文書と項目
-        condition: '`b#flow` と `a`、`links` に `a`（パス `dev/a.yaml`）と `b`（パス `dev/b.yaml`）、文書のパスが `dev/c.yaml`、項目の見出しの引き方が `b`・`flow` に `処理の流れ` を返す'
+        condition: '`b#flow` と `a`、`links` に `a`（パス `dev/a.yaml`）と `b`（パス `dev/b.yaml`）、文書のパスが `dev/c.yaml`、項目の見出しの取得方法が `b`・`flow` に `処理の流れ` を返却する'
         mock: なし
         expected: '`b.yaml#処理の流れ` と `a.yaml`'
       - name: test_link_target_when_unknown
         case: 正常
-        summary: 引き先に無い
+        summary: 参照先に無い
         condition: '`links` に無い ID'
         mock: なし
         expected: '`None`'
@@ -213,12 +213,12 @@ functions:
         type: RenderContext
         required: true
         passing: positional
-        description: リンクの引き先と、相対パスの起点
+        description: リンクの参照先と、相対パスの起点
     returns:
       type: str | None
-      description: '`[{タイトル}]({相対パス})` か、`[{タイトル} / {項目のパス}]({相対パス}#{アンカー})`。引き先に無ければ `None`'
+      description: '`[{タイトル}]({相対パス})` か、`[{タイトル} / {項目のパス}]({相対パス}#{アンカー})`。参照先に無ければ `None`'
     process: |-
-      1. 値をリンク先の引き方で引き、`None` なら `None` を返却する
+      1. 値をリンク先の取得方法で取得し、`None` なら `None` を返却する
       2. 文書の ID の `links` のタイトルと、項目のパスがあれば ` / {項目のパス}` を続けた文字列（`[`・`]` はエスケープする）を、リンクの文字にする
     unit_tests:
       - name: test_link_reference
@@ -230,12 +230,12 @@ functions:
       - name: test_link_reference_when_heading
         case: 正常
         summary: 見出しになる項目
-        condition: '`dev/a#flows[正常系]`、項目の見出しの引き方が `正常系` を返す'
+        condition: '`dev/a#flows[正常系]`、項目の見出しの取得方法が `正常系` を返却する'
         mock: なし
         expected: '`[A / flows\[正常系\]](a.yaml#正常系)`'
       - name: test_link_reference_when_unknown
         case: 正常
-        summary: 引き先に無い
+        summary: 参照先に無い
         condition: '`links` に無い ID'
         mock: なし
         expected: '`None`'
@@ -294,7 +294,7 @@ functions:
       type: str
       description: アンカー（`#` は付けない）
     process: |-
-      1. 前後の空白を除いて小文字にし、`ANCHOR_DROP` に当たる文字を落とし、空白を `-` にする
+      1. 前後の空白を除いて小文字にし、`ANCHOR_DROP` に該当する文字を落とし、空白を `-` にする
     unit_tests:
       - name: test_heading_anchor
         case: 正常

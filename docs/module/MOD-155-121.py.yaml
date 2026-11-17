@@ -1,6 +1,6 @@
 id: MOD-155-121
 title: 開発ドキュメントサーバー / 設定の移し替え / types.py
-lead: '`dev-docs migrate` の手順・対象・例外の型と終了コード。'
+lead: '`dev-docs migrate` の手順・対象・例外の型と終了コードを受け持ち、設定の移し替えの types.py を修正するときに参照する。'
 data_models:
   - name: MigrationStep
     title: 移し替えの手順
@@ -13,7 +13,7 @@ data_models:
       - name: version
         title: バージョン
         type: str
-        description: 手順を当てた後の `version`（手順のフォルダ名）
+        description: 手順を適用した後の `version`（手順のフォルダ名）
       - name: op
         title: 操作
         type: Literal['rename', 'add', 'delete', 'lift', 'unwrap', 'export_sources']
@@ -31,31 +31,31 @@ data_models:
         title: 値
         type: Any
         default: None
-        description: '`add` では既定値（既にキーがあれば書き換えない）、`delete` では消す値（値が一致するときだけ消す）'
+        description: '`add` では既定値（既にキーがあれば書き換えない）、`delete` では削除する値（値が一致するときだけ削除する）'
       - name: description
         title: 説明
         type: str
         description: '`--plan` に出す 1 行'
       - name: match
-        title: 当てる値の条件
+        title: 適用する値の条件
         type: dict[str, Any] | None
         default: None
-        description: '`lift`・`unwrap` で、値が辞書でこのキーと値を全て持つときだけ当てる。無ければ辞書の値に当てる'
+        description: '`lift`・`unwrap` で、値が辞書でこのキーと値を全て持つときだけ適用する。無ければ辞書の値に適用する'
       - name: take
         title: 取り出すキー
         type: str | None
         default: None
-        description: '`lift`・`unwrap` で、辞書の値から取り出すキー。`unwrap` で辞書がこのキーを持たないときは元のキー名を使う'
+        description: '`lift`・`unwrap` で、辞書の値から取り出すキー。`unwrap` で辞書がこのキーを持たないときは元のキー名を使用する'
     methods:
       - name: destructive
         title: 破壊的か
         kind: メソッド
-        summary: 値を捨てる手順かを返す（`property`）
+        summary: 値を捨てる手順かを返却する（`property`）
         scope: public
         returns:
           type: bool
           description: '`op` が `delete` で `value` が `None` なら `True`'
-        process: 1. `op == "delete" and value is None` を返す
+        process: 1. `op == "delete" and value is None` を返却する
   - name: MigrationTarget
     title: 移し替えの対象
     container: features/migrate/types.py
@@ -104,7 +104,7 @@ data_models:
     usecase: 設定の移し替え
     role: DTO
     summary: '`export_sources` の手順が呼ぶ project-index の端末の設定の取得と照合つきの保存'
-    description: '`dataclass(frozen=True)`。入口が project-indexの呼び出しを `asyncio.run` で包んで作る。'
+    description: '`dataclass(frozen=True)`。エントリーポイントが project-indexの呼び出しを `asyncio.run` で包んで作る。'
     properties:
       - name: fetch
         title: 取得
@@ -134,7 +134,7 @@ classes:
     container: features/migrate/types.py
     usecase: 設定の移し替え
     role: 例外
-    summary: 対象の設定が無い・読めない・`version` が無い
+    summary: 対象の設定が無い・参照できない・`version` が無い
     inherits: MigrationError
     properties:
       - name: exit_code
@@ -148,7 +148,7 @@ classes:
     container: features/migrate/types.py
     usecase: 設定の移し替え
     role: 例外
-    summary: 手順を当てられない、当てた結果が新しいスキーマに違反する、書く前にファイルが変わった
+    summary: 手順を適用できない、適用した結果が新しいスキーマに違反する、書き込む前にファイルが変わった
     inherits: MigrationError
     properties:
       - name: exit_code
@@ -162,7 +162,7 @@ classes:
     container: features/migrate/types.py
     usecase: 設定の移し替え
     role: 例外
-    summary: 当てる手順に破壊的なものがあり `--allow-destructive` が無い
+    summary: 適用する手順に破壊的なものがあり `--allow-destructive` が無い
     inherits: MigrationError
     properties:
       - name: exit_code
@@ -176,7 +176,7 @@ classes:
     container: features/migrate/types.py
     usecase: 設定の移し替え
     role: 例外
-    summary: 対象の `version` が読めるバージョンより新しい
+    summary: 対象の `version` が参照できるバージョンより新しい
     inherits: MigrationError
     properties:
       - name: exit_code
@@ -193,7 +193,7 @@ classes:
     summary: '`export_sources` の手順で、project-index の端末の設定の API につながらない、または保存を確認できないことを表す'
     kind: クラス
     inherits: MigrationError
-    description: 対象のファイルには書かない（全ての手順を当ててから 1 回だけ書くため、元の内容のまま）。メッセージは `project-index（{address}）に接続できませんでした。{reason}` と project-index を起動してから実行し直す案内で、`unconfirmed` のときは、保存が後から反映されうることと、やり直せば保存済みの行を移した行として扱うことを加える。
+    description: 対象のファイルには書き込まない（全ての手順を適用してから 1 回だけ記載するため、元の内容のまま）。メッセージは `project-index（{address}）に接続できませんでした。{reason}` と project-index を起動してから再実行する案内で、`unconfirmed` のときは、保存が後から反映されうることと、再実行すれば保存済みの行を移した行として扱うことを加える。
     properties:
       - name: address
         title: 接続先
@@ -216,13 +216,13 @@ classes:
         type: bool
         access: 公開
         default: 'False'
-        description: 保存の応答が制限時間を超え、取得し直しても移す行を確認できなかった
+        description: 保存の応答が制限時間を超え、再取得しても移す行を確認できなかった
 constants:
   - name: MIGRATIONS_DIR
-    title: 手順の置き場所
+    title: 手順の配置先
     container: features/migrate/types.py
     usecase: 設定の移し替え
-    summary: パッケージの中の手順のフォルダ。`{MIGRATIONS_DIR}/{kind}/{バージョン}/steps.yaml` を `importlib.resources` で読む
+    summary: パッケージの中の手順のフォルダ。`{MIGRATIONS_DIR}/{kind}/{バージョン}/steps.yaml` を `importlib.resources` で参照する
     value: "'migrations'"
   - name: STEPS_FILE
     title: 手順のファイル名
@@ -234,7 +234,7 @@ constants:
     title: バックアップの名前
     container: features/migrate/types.py
     usecase: 設定の移し替え
-    summary: 対象と同じフォルダに置くバックアップのファイル名。時刻は `%Y%m%dT%H%M%S`
+    summary: 対象と同じフォルダに配置するバックアップのファイル名。時刻は `%Y%m%dT%H%M%S`
     value: "'{name}.bak-{time}'"
   - name: EXIT_MIGRATION_FAILED
     title: 手順の失敗の終了コード

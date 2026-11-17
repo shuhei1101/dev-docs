@@ -1,6 +1,6 @@
 id: MOD-155-148
 title: 開発ドキュメントサーバー / 端末の設定 / service.py
-lead: '`sources[]` の保存の依頼。'
+lead: '`sources[]` の保存の依頼を受け持ち、端末の設定の service.py を修正するときに参照する。'
 test_files:
   - tests/unit/dev_docs/features/settings/test_service.py
 diagrams:
@@ -8,9 +8,9 @@ diagrams:
     diagram: |-
       classDiagram
         direction TD
-        端末の設定の入口 ..> 配信元の保存 : PUT
+        端末の設定のエントリーポイント ..> 配信元の保存 : PUT
         配信元の保存 ..> project-indexの呼び出し
-        class 端末の設定の入口 {
+        class 端末の設定のエントリーポイント {
           <<function>>
         }
         class 配信元の保存 {
@@ -19,7 +19,7 @@ diagrams:
         class project-indexの呼び出し {
           <<class>>
         }
-        click 端末の設定の入口 href "./MOD-155-147.py.yaml#端末の設定の入口"
+        click 端末の設定のエントリーポイント href "./MOD-155-147.py.yaml#端末の設定のエントリーポイント"
         click project-indexの呼び出し href "./MOD-155-215.py.yaml#project-indexの呼び出し"
 functions:
   - name: save_sources
@@ -28,10 +28,10 @@ functions:
     container: features/settings/service.py
     usecase: 端末の設定の保存
     role: サービス
-    summary: '送られた `sources[]` を内容のバージョンとともに project-index の端末の設定の API へ渡し、読み直した後の行・状態・内容のバージョンを返す'
+    summary: '送信された `sources[]` を内容のバージョンとともに project-index の端末の設定の API へ指定し、再読み込みした後の行・状態・内容のバージョンを返却する'
     scope: public
     thread_safe: true
-    side_effects: project-index に端末の設定の `sources` の保存と読み直しを依頼する。dev-docs は端末の設定を書き換えない
+    side_effects: project-index に端末の設定の `sources` の保存と再読み込みを依頼する。dev-docs は端末の設定を書き換えない
     args:
       - name: client
         title: project-indexの呼び出し
@@ -54,14 +54,14 @@ functions:
         description: 画面が受け取った内容のバージョン。`None` は照合しない
     returns:
       type: SettingsSourcesView
-      description: project-index が読み直した後の配信元ごとの状態と、保存した後の内容のバージョン（project-indexの呼び出しの型）
+      description: project-index が再読み込みした後の配信元ごとの状態と、保存した後の内容のバージョン（project-indexの呼び出しの型）
     process: |-
-      1. 行ごとに JSON にする。`config` は要素の数によらず配列にし、既定値と同じキー（`enabled: true`・`outside_read: true`・空の `scope.read`・`None` の `scope.write`・`None` の `id`）は送らない
-      2. project-indexの呼び出し.端末の設定の配信元の行の保存 を `expected_version` を渡して呼び、返った `SettingsSourcesView` を返す
+      1. 行ごとに JSON にする。`config` は要素の数によらず配列にし、既定値と同じキー（`enabled: true`・`outside_read: true`・空の `scope.read`・`None` の `scope.write`・`None` の `id`）は送信しない
+      2. project-indexの呼び出し.端末の設定の配信元の行の保存 を `expected_version` を指定して呼び、返った `SettingsSourcesView` を返却する
          - `[info]` 端末の設定の sources の保存を依頼した（行数）
     exceptions:
       - name: ProjectIndexRejectedError
-        condition: project-index が 422 を返した
+        condition: project-index が 422 を返却した
         message: '`project-index が要求を受け付けませんでした`'
         notes: 例外の変換で 422 の problem+json（`errors[]` は project-index のまま）
       - name: ProjectIndexUnreachableError
@@ -69,50 +69,50 @@ functions:
         message: '`project-index（{address}）に接続できませんでした。{reason}`'
         notes: 例外の変換で 503
       - name: ProjectIndexResponseError
-        condition: project-index が 200・422 以外を返した
+        condition: project-index が 200・422 以外を返却した
         message: '`project-index が {status} を返しました: {summary}`'
         notes: 例外の変換で 502
       - name: SettingsVersionConflictError
-        condition: project-index が 409 を返した（`expected_version` が今の内容のバージョンと違う）
+        condition: project-index が 409 を返却した（`expected_version` が今の内容のバージョンと違う）
         message: '`端末の設定は他の書き換えで変わっています`'
         notes: 例外の変換で 409（`current`）
     unit_tests:
       - name: test_save_sources
         case: 正常
-        summary: 行を配列の config で送り、状態を返す
+        summary: 行を配列の config で送信し、状態を返却する
         condition: '`config` が文字列 1 つの行と、`scope.read` を持つ行'
-        mock: project-indexの呼び出し（送った行を記録し、状態を返す偽物）
-        expected: 偽物に 2 行が送られ、1 行目の `config` が要素 1 つの配列。偽物の状態がそのまま返る
+        mock: project-indexの呼び出し（送信した行を記録し、状態を返却する偽物）
+        expected: 偽物に 2 行が送信され、1 行目の `config` が要素 1 つの配列。偽物の状態がそのまま返る
       - name: test_save_sources_when_defaults
         case: 正常
-        summary: 既定値のキーを送らない
+        summary: 既定値のキーを送信しない
         condition: '`enabled: true`・`outside_read: true`・`scope.read: []` の行'
-        mock: project-indexの呼び出し（送った行を記録し、状態を返す偽物）
-        expected: 送った行に `enabled`・`outside_read`・`scope` が無い
+        mock: project-indexの呼び出し（送信した行を記録し、状態を返却する偽物）
+        expected: 送信した行に `enabled`・`outside_read`・`scope` が無い
       - name: test_save_sources_when_outside_read_false
         case: 正常
-        summary: 既定値と違う outside_read を送る
+        summary: 既定値と違う outside_read を送信する
         condition: '`outside_read: false` の行'
-        mock: project-indexの呼び出し（送った行を記録し、状態を返す偽物）
-        expected: '送った行に `outside_read: false` がある'
+        mock: project-indexの呼び出し（送信した行を記録し、状態を返却する偽物）
+        expected: '送信した行に `outside_read: false` がある'
       - name: test_save_sources_when_rejected
         case: 異常
         summary: project-index が受け付けない
-        condition: 偽物が `ProjectIndexRejectedError` を送る
-        mock: project-indexの呼び出し（例外を送る偽物）
+        condition: 偽物が `ProjectIndexRejectedError` を送信する
+        mock: project-indexの呼び出し（例外を送信する偽物）
         expected: '`ProjectIndexRejectedError` がそのまま伝わる'
-        exception: project-index が 422 を返した
+        exception: project-index が 422 を返却した
       - name: test_save_sources_when_expected_version
         case: 正常
-        summary: 内容のバージョンを渡し、保存した後のバージョンを返す
-        condition: '`expected_version: v1`、偽物が `version: v2` の応答を返す'
-        mock: project-indexの呼び出し（受けた引数を記録し、応答を返す偽物）
+        summary: 内容のバージョンを指定し、保存した後のバージョンを返却する
+        condition: '`expected_version: v1`、偽物が `version: v2` の応答を返却する'
+        mock: project-indexの呼び出し（受けた引数を記録し、応答を返却する偽物）
         expected: '偽物が `expected_version: v1` で呼ばれ、返った `version` が `v2`'
       - name: test_save_sources_when_version_conflict
         case: 異常
         summary: 内容のバージョンが違う
-        condition: '偽物が `SettingsVersionConflictError`（`current: v2`）を送る'
-        mock: project-indexの呼び出し（例外を送る偽物）
+        condition: '偽物が `SettingsVersionConflictError`（`current: v2`）を送信する'
+        mock: project-indexの呼び出し（例外を送信する偽物）
         expected: '`SettingsVersionConflictError` がそのまま伝わる'
-        exception: project-index が 409 を返した
+        exception: project-index が 409 を返却した
     is_async: true

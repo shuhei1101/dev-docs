@@ -1,6 +1,6 @@
 id: MOD-155-214
 title: 開発ドキュメントサーバー / project-indexの呼び出し / types.py
-lead: project-index の読み取り API と端末の設定の API の応答の型。
+lead: project-index の読み取り API と端末の設定の API の応答の型を受け持ち、project-indexの呼び出しの types.py を修正するときに参照する。
 test_files:
   - tests/unit/dev_docs/integrations/project_index/test_types.py
 diagrams:
@@ -41,8 +41,8 @@ data_models:
     container: integrations/project_index/types.py
     usecase: 文書の取得
     role: DTO
-    summary: project-index が返した 1 件の文書（ファイル 1 つか `records` の要素 1 つ）
-    description: '`@dataclass(frozen=True, slots=True, kw_only=True)`。`body` だけは文書の詳細でしか埋めない。タブとサイドバーの組み立て・条件の照合・エイリアスの集め・変わったキー・変換がこの型を読む。'
+    summary: project-index が返却した 1 件の文書（ファイル 1 つか `records` の要素 1 つ）
+    description: '`@dataclass(frozen=True, slots=True, kw_only=True)`。`body` だけは文書の詳細でしか埋めない。タブとサイドバーの組み立て・条件の照合・エイリアスの集め・変わったキー・変換がこの型を参照する。'
     properties:
       - name: id
         title: 文書の ID
@@ -96,7 +96,7 @@ data_models:
         title: バージョン
         type: str
         access: 公開
-        description: 文書の内容のハッシュ（project-index の文書の一覧の `version`）。差分の変化の判定に使う。文書の詳細では空
+        description: 文書の内容のハッシュ（project-index の文書の一覧の `version`）。差分の変化の判定に使用する。文書の詳細では空
       - name: updated
         title: 更新日時
         type: datetime | None
@@ -108,7 +108,7 @@ data_models:
     container: integrations/project_index/types.py
     usecase: 文書の取得
     role: DTO
-    summary: 配信元の設定の `documents[]` の有効な 1 行のうち、画面が使うキー
+    summary: 配信元の設定の `documents[]` の有効な 1 行のうち、画面が使用するキー
     description: '`@dataclass(frozen=True, slots=True, kw_only=True)`。'
     properties:
       - name: id
@@ -126,12 +126,12 @@ data_models:
         title: ファイルの glob
         type: list[str]
         access: 公開
-        description: フォルダの束ねの起点に使う
+        description: フォルダのグループ化の起点に使用する
       - name: schema
         title: 種類のスキーマ
         type: dict[str, Any]
         access: 公開
-        description: '`$ref` を解き、`records` を持つ行は 1 要素のスキーマにしたもの。スキーマ駆動の変換と、`nav` の条件の使える項目に使う'
+        description: '`$ref` を解き、`records` を持つ行は 1 要素のスキーマにしたもの。スキーマ駆動の変換と、`nav` の条件の使用できる項目に使用する'
       - name: records
         title: 管理用の YAML の配列のキー
         type: str | None
@@ -161,7 +161,7 @@ data_models:
     container: integrations/project_index/types.py
     usecase: 文書の取得
     role: DTO
-    summary: '`GET /sources/{source}/config` の応答。配信元の設定のうち画面が使うキー'
+    summary: '`GET /sources/{source}/config` の応答。配信元の設定のうち画面が使用するキー'
     description: '`@dataclass(frozen=True, slots=True, kw_only=True)`。'
     properties:
       - name: id
@@ -218,21 +218,21 @@ data_models:
       - name: row
         title: 文書の行の引き当て
         kind: メソッド
-        summary: 行の ID から `DocumentRow` を返す
+        summary: 行の ID から `DocumentRow` を返却する
         scope: public
         returns:
           type: DocumentRow | None
           description: 無ければ `None`
-        process: 1. `documents` から `id` が同じ最初の行を返す
+        process: 1. `documents` から `id` が同じ最初の行を返却する
       - name: record_kinds
         title: 行の文書の種類
         kind: メソッド
-        summary: '`records` を持つ文書の行の ID を返す'
+        summary: '`records` を持つ文書の行の ID を返却する'
         scope: public
         returns:
           type: set[str]
           description: '`records` が `None` でない行の `id`'
-        process: 1. `documents` のうち `records` を持つ行の `id` を集めて返す
+        process: 1. `documents` のうち `records` を持つ行の `id` を集めて返却する
   - name: DocumentList
     title: 文書の一覧
     container: integrations/project_index/types.py
@@ -256,14 +256,14 @@ data_models:
     container: integrations/project_index/types.py
     usecase: 文書の取得
     role: DTO
-    summary: project-index が返した、変換か読み込みの失敗
+    summary: project-index が返却した、変換か読み込みの失敗
     description: '`@dataclass(frozen=True, slots=True, kw_only=True)`。変換の `ConvertFailure` と同じフィールドを持ち、文書の取得がそのまま `conversion_error` に写す。'
     properties:
       - name: reason
         title: 理由
         type: Literal['timeout', 'exit', 'not_runnable', 'invalid_yaml']
         access: 公開
-        description: '制限時間を超えた・0 以外で終わった・実行できない（project-index の `converters[]` のスクリプト）・YAML を読めない'
+        description: '制限時間を超えた・0 以外で終わった・実行できない（project-index の `converters[]` のスクリプト）・YAML を読み込めない'
       - name: kind
         title: 種類
         type: str
@@ -274,25 +274,25 @@ data_models:
         type: str | None
         access: 公開
         default: None
-        description: '`converters[].run` を空白で繋いだもの。YAML を読めないときは `None`'
+        description: '`converters[].run` を空白で繋いだもの。YAML を読み込めないときは `None`'
       - name: file
         title: ファイル
         type: str | None
         access: 公開
         default: None
-        description: 読めなかったファイルのパス
+        description: 参照できなかったファイルのパス
       - name: line
         title: 行
         type: int | None
         access: 公開
         default: None
-        description: 読めなかった行
+        description: 参照できなかった行
       - name: column
         title: 列
         type: int | None
         access: 公開
         default: None
-        description: 読めなかった列
+        description: 参照できなかった列
       - name: detail
         title: 原因
         type: str
@@ -311,7 +311,7 @@ data_models:
         title: 文書
         type: IndexedDocument | None
         access: 公開
-        description: '`body`・`updated` を埋めた文書。YAML を読めないとき（`value` が `null`）は `None`'
+        description: '`body`・`updated` を埋めた文書。YAML を読み込めないとき（`value` が `null`）は `None`'
       - name: markdown
         title: 変換した Markdown
         type: str | None
@@ -323,13 +323,13 @@ data_models:
         type: IndexFailure | None
         access: 公開
         default: None
-        description: '`converters[]` の失敗か YAML を読めないこと'
+        description: '`converters[]` の失敗か YAML を読み込めないこと'
   - name: SourceState
     title: 配信元の状態
     container: integrations/project_index/types.py
     usecase: 状態の取得
     role: DTO
-    summary: '`GET /sources`・`GET /settings/sources`・`PUT /settings/sources` が返す配信元 1 つの状態'
+    summary: '`GET /sources`・`GET /settings/sources`・`PUT /settings/sources` が返却する配信元 1 つの状態'
     description: '`@dataclass(frozen=True, slots=True, kw_only=True)`。'
     properties:
       - name: id
@@ -341,9 +341,9 @@ data_models:
         title: 状態
         type: Literal['serving', 'not_served', 'disabled', 'pending_reload']
         access: 公開
-        description: '`pending_reload` は端末の設定の API だけが返す'
+        description: '`pending_reload` は端末の設定の API だけが返却する'
       - name: errors
-        title: 外した理由
+        title: 除外した理由
         type: list[Violation]
         access: 公開
         default: '[]'
@@ -359,7 +359,7 @@ data_models:
         type: tuple[str, str] | None
         access: 公開
         default: None
-        description: 配信元の設定のバージョンと project-index が読めるバージョン。古いときだけ
+        description: 配信元の設定のバージョンと project-index が参照できるバージョン。古いときだけ
   - name: DecisionIndex
     title: 検討事項の一覧
     container: integrations/project_index/types.py
@@ -377,12 +377,12 @@ data_models:
       - name: linkable
         title: リンクにできる ID
         kind: メソッド
-        summary: 当たるフォルダがちょうど 1 つの ID を返す（`property`）
+        summary: 該当するフォルダがちょうど 1 つの ID を返却する（`property`）
         scope: public
         returns:
           type: set[str]
           description: '`counts` が 1 の ID'
-        process: 1. `counts` の値が 1 の ID の集合を返す
+        process: 1. `counts` の値が 1 の ID の集合を返却する
   - name: SearchHits
     title: 検索の結果
     container: integrations/project_index/types.py
@@ -520,7 +520,7 @@ data_models:
         title: 行
         type: list[dict[str, Any]]
         access: 公開
-        description: '端末の設定の `sources[]` の行（`outside_read` を含む全てのキー）。設定画面の行の型への読み替えは端末の設定の入口が行う'
+        description: '端末の設定の `sources[]` の行（`outside_read` を含む全てのキー）。設定画面の行の型への読み替えは端末の設定のエントリーポイントが行う'
       - name: states
         title: 状態
         type: list[SourceState]
@@ -566,7 +566,7 @@ functions:
       type: IndexedDocument
       description: 読み取った文書
     process: |-
-      1. `id`・`kind`・`path`・`version` を取り出し、無ければ `ProjectIndexResponseError`（`summary` に無いキー）を送る
+      1. `id`・`kind`・`path`・`version` を取り出し、無ければ `ProjectIndexResponseError`（`summary` に無いキー）を送信する
       2. `value` を `data`（`null` なら空）、`id`・`kind`・`name`・`description`・`tags`・`visibility` に `commonKeys`（辞書のときだけ）を重ねたものを `metadata`、`bodyPath` を `body_path` にする
       3. `record_index` は引数の `record_index`、`body` は空、`updated` は `None` にする
     exceptions:
@@ -633,7 +633,7 @@ functions:
       description: 値を入れ、`body` を空にした文書
     process: |-
       1. `documents[]` を応答の順に索引の文書の読み取りで `IndexedDocument` にする。`kind` が `record_kinds` にある文書は、同じ `path` の文書の中で何番目か（0 始まり）を `record_index` に指定する。同じ `path` の中の並びは project-index が管理用の YAML を読み込んだ順（`f36ba69` の安定ソート）を前提にする
-      2. 応答の `ref`（Git 管理外の空の文字列は `None`）とともに `DocumentList` にして返す
+      2. 応答の `ref`（Git 管理外の空の文字列は `None`）とともに `DocumentList` にして返却する
     exceptions:
       - name: ProjectIndexResponseError
         condition: 必須のキーが無い

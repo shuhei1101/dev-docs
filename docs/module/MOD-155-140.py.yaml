@@ -1,15 +1,15 @@
 id: MOD-155-140
 title: 開発ドキュメントサーバー / 絞り込み / types.py
-lead: '`nav` の `auto` の `filter` の条件の木と、見出しの型。'
+lead: '`nav` の `auto` の `filter` の条件の木と、見出しの型を受け持ち、絞り込みの types.py を修正するときに参照する。'
 diagrams:
   - name: 全体
     diagram: |-
       classDiagram
         direction TD
-        条件の確かめ ..> 条件
+        条件の確認 ..> 条件
         条件の照合 ..> 条件
         条件の束 o-- 条件
-        class 条件の確かめ {
+        class 条件の確認 {
           <<function>>
         }
         class 条件の照合 {
@@ -24,7 +24,7 @@ diagrams:
           +or: list
           +not: 条件
         }
-        click 条件の確かめ href "./MOD-155-135.py.yaml#条件の確かめ"
+        click 条件の確認 href "./MOD-155-135.py.yaml#条件の確認"
         click 条件の照合 href "./MOD-155-135.py.yaml#条件の照合"
 data_models:
   - name: Condition
@@ -70,7 +70,7 @@ data_models:
     usecase: 検索
     role: DTO
     summary: 条件を AND・OR でまとめるか、否定する
-    description: '`pydantic.BaseModel`（`extra="forbid"`）。`and`・`or`・`not` のどれか 1 つだけを持つ（Python の属性は `all_of`・`any_of`・`not_`、別名が `and`・`or`・`not`）。#16 の画面の `nav` のタグの式も同じスキーマで書く。'
+    description: '`pydantic.BaseModel`（`extra="forbid"`）。`and`・`or`・`not` のどれか 1 つだけを持つ（Python の属性は `all_of`・`any_of`・`not_`、別名が `and`・`or`・`not`）。画面の `nav` のタグの式も同じスキーマで記載する。'
     properties:
       - name: all_of
         title: AND

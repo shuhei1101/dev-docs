@@ -97,7 +97,7 @@ subsystems:
     status: implemented
   - name: 管理用プラグイン
     scope: plugin
-    role: SessionStart のフックで落ちている画面のサーバーを起動し、管理の MCP の接続先を Claude Code に渡す
+    role: SessionStart のフックで落ちている画面のサーバーを起動し、管理の MCP の接続先を Claude Code に指定する
     runtime: Claude Code のプラグイン（フックは Python 3.14）
     runs_on: 利用者の端末の Claude Code（ユーザースコープ）
     implementation: plugins/dev-docs/.claude-plugin/plugin.json
@@ -111,7 +111,7 @@ subsystems:
     status: planned
     introduced:
       pr: 36
-lead: dev-docs のサブシステムと、境界を越えて通信する外部システム。
+lead: dev-docs のサブシステムと、境界を越えて通信する外部システムを定め、機能をどのサブシステムに配置するかを決めるときに参照する。
 external_systems:
   - name: Claude Code
     purpose: 管理の MCP（`/_admin/mcp`）の要求を受ける
@@ -119,14 +119,14 @@ external_systems:
     protocol: MCP（Streamable HTTP）
     status: planned
     notes:
-      事前確認: '要否: 不要（受ける側で、こちらから到達を確かめる相手ではない）'
+      事前確認: '要否: 不要（受ける側で、こちらから到達を確認する相手ではない）'
   - name: git
     purpose: '`update` のクローンの更新（`git pull --ff-only`）'
     direction: 双方向
     protocol: CLI（子プロセス）
     status: planned
     notes:
-      事前確認: '要否: 要。時点: `update` の前に `git` が実行できるかを確かめ、無ければ git のエラーを返す'
+      事前確認: '要否: 要。時点: `update` の前に `git` が実行できるかを確認し、無ければ git のエラーを返却する'
   - name: project-index
     purpose: 配信元の一覧と状態・文書の一覧と値・`converters[]` の変換の結果・検索・リビジョンの一覧を読み取り API で取得し、端末の設定の配信元の行を端末の設定の API で保存する
     direction: 双方向
@@ -134,7 +134,7 @@ external_systems:
     detail: API-155-1#
     status: planned
     notes:
-      事前確認: '要否: 要。時点: 起動時と要求ごとに問い合わせ、つながらなければ 503 と理由を返す（待ち受けは止めない）'
+      事前確認: '要否: 要。時点: 起動時と要求ごとに問い合わせ、つながらなければ 503 と理由を返却する（待ち受けは止めない）'
   - name: jsDelivr
     purpose: 画面が mdmark（`dist/index.js`・`dist/index.css`）を実行時に読み込む
     direction: 受信のみ

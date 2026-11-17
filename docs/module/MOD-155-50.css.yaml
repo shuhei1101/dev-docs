@@ -1,6 +1,6 @@
 id: MOD-155-50
 title: 画面 / index.css
-lead: 画面全体の CSS。Tailwind の読み込みと色のトークンに加え、mdmark が描く本文への上書きを持つ。
+lead: 画面全体の CSS を受け持ち、index.css を修正するときに参照する。
 styles:
   - name: mdmark-html
     title: HTML ブロックの上書き
@@ -26,8 +26,8 @@ styles:
     title: Tailwind の読み込み
     container: index.css
     usecase: 共通
-    summary: Tailwind を `theme.css`・`utilities.css` に分けて読み込み、Preflight の代わりに本文の外だけに当てる Preflight を読み込む
-    description: '`@import "tailwindcss"` は Preflight を本文にも当てるため使わない。`@import` は `@scope` の中に置けないため、本文の外だけに当てる Preflight は別のファイルにする。層の順の宣言は、`tailwindcss/index.css` の先頭と同じものを最初に置き、`utilities` が `base` より後ろの順を保つ'
+    summary: Tailwind を `theme.css`・`utilities.css` に分けて読み込み、Preflight の代わりに本文の外だけに適用する Preflight を読み込む
+    description: '`@import "tailwindcss"` は Preflight を本文にも適用するため使用しない。`@import` は `@scope` の中に配置できないため、本文の外だけに適用する Preflight は別のファイルにする。層の順の宣言は、`tailwindcss/index.css` の先頭と同じものを最初に配置し、`utilities` が `base` より後ろの順を保つ'
     values:
       - class_name: '@layer'
         target: 層の順
@@ -48,7 +48,7 @@ styles:
     title: 本文の外の枠線と輪郭線の色
     container: index.css
     usecase: 共通
-    summary: 層 `base` の全ての要素の枠線と輪郭線の色を、本文の外だけに当てる
+    summary: 層 `base` の全ての要素の枠線と輪郭線の色を、本文の外だけに適用する
     values:
       - class_name: '@scope (html) to (.mdmark) *'
         target: 本文の外の全ての要素
@@ -58,7 +58,7 @@ styles:
   - name: mdmark-padding
     title: 本文の内側の余白
     container: index.css
-    usecase: 文書を読む
+    usecase: 文書を参照する
     summary: 本文の内側の余白を下だけにし、本文の左端をパンくず・文書のタイトルと同じ位置にする
     description: mdmark は既定値を層 `mdmark` の `:root` に持つため、層に属さない `.mdmark` で上書きする
     values:
@@ -70,9 +70,9 @@ styles:
   - name: doc-title-tokens
     title: 文書のタイトルのトークン
     container: index.css
-    usecase: 文書を読む
+    usecase: 文書を参照する
     summary: 文書のタイトルの大きさ・行の高さ・太さを mdmark の見出し 1 と同じにするトークンを `@theme inline` に割り当てる
-    description: ユーティリティ `text-doc-title`・`font-doc-title` になる。mdmark の CSS を読み込むまでは、mdmark の既定値と同じ値を代わりに使う
+    description: ユーティリティ `text-doc-title`・`font-doc-title` になる。mdmark の CSS を読み込むまでは、mdmark の既定値と同じ値を代わりに使用する
     values:
       - class_name: --text-doc-title
         target: 文書のタイトルの大きさ
@@ -85,3 +85,5 @@ styles:
         value: '`var(--mdmark-heading-weight, 700)`'
     refs:
       - SCR-155-1#elements[文書のタイトル]
+notes:
+  補足: Tailwind の読み込みと色のトークンに加え、mdmark が描く本文への上書きを持つ。

@@ -22,11 +22,11 @@ elements:
       - name: screen
         value: '`not-found`'
       - name: sources
-        value: 端末の設定の取得.sources[]（`status` が `serving` の行の `id` と、`scope.write` が `null`（省いた。配信元のフォルダから書ける）か 1 件以上かを `writable`）
+        value: 端末の設定の取得.sources[]（`status` が `serving` の行の `id` と、`scope.write` が `null`（省いた。配信元のフォルダから書き込める）か 1 件以上かを `writable`）
       - name: currentSource
-        value: URL の配信元の ID（`missing` が `source`・`not_served` のときは渡さない）
+        value: URL の配信元の ID（`missing` が `source`・`not_served` のときは指定しない）
       - name: refs
-        value: リビジョンの一覧（`currentSource` を渡すとき）
+        value: リビジョンの一覧（`currentSource` を指定するとき）
       - name: currentRef
         value: URL の `rev`（無ければ `defaultRef`）
       - name: colorScheme
@@ -53,7 +53,7 @@ elements:
   - name: 見つからなかったものの詳細
     kind: list
     position: 本文 > 説明の下
-    description: 開こうとした値と、外した理由
+    description: 開こうとした値と、除外した理由
     label: 無い文書は `開こうとしたパス`。無いリビジョンは `開こうとしたリビジョン` と `既定のリビジョン`。配信していない配信元は `除外した理由`（`errors[]` ごとの `{path} {reason}`）と `設定ファイル`。値は等幅で出す
     visible_when: 無い配信元のときを除く
     source: 文書の取得（404 の `missing` と値・`errors[]`）・リビジョンの一覧.defaultRef・端末の設定の取得.sources[].config
@@ -63,7 +63,7 @@ elements:
     description: 開こうとした配信元のトップへ戻る
     label: '`{配信元の ID} のトップを開く`（プライマリ）'
     visible_when: 無い文書・無いリビジョンのとき
-    action: 無い文書は `rev` を保った配信元のトップ、無いリビジョンは `rev` を外した配信元のトップを開く
+    action: 無い文書は `rev` を保った配信元のトップ、無いリビジョンは `rev` を除外した配信元のトップを開く
     action_ref: SCR-155-1#
   - name: 設定を開く
     kind: link
@@ -93,9 +93,9 @@ elements:
       - name: source
         value: URL の配信元の ID
       - name: ref
-        value: URL の `rev`（無いリビジョンのときは渡さない）
+        value: URL の `rev`（無いリビジョンのときは指定しない）
     position: 画面の中央の上
-    description: 開こうとした配信元の文書を語で探す
+    description: 開こうとした配信元の文書を単語で探す
     visible_when: 配信元が配信中で、検索を開いたとき
     action: '`resultSelect` でその文書を開く'
     action_ref: IF-155-16#
@@ -110,12 +110,14 @@ elements:
       - name: singleKey
         value: ブラウザに保存した 1 文字のショートカットの設定（無ければ `true`）
     position: 画面の中央
-    description: この画面で使えるキー
+    description: この画面で使用できるキー
     visible_when: '`?` を押したとき'
 screen: frontend/src/features/docs/not-found/not-found-screen.tsx
 mock: docs/mock/pages/not-found/36/default/
-lead: 文書の取得が 404 を返した URL で、見つからなかったもの（文書・リビジョン・配信元）と理由を出し、配信元のトップと設定画面へ案内する画面。URL は開こうとした URL のままにする。
+lead: 見つからなかったものと理由を出し、配信元のトップと設定画面へ案内する見つからない画面の要素と振る舞いを定め、見つからない画面を修正するときに参照する。
 refs:
   - IF-155-10#
   - SC-155-7#
 test_file: tests/integration/frontend/not-found-screen.spec.ts
+notes:
+  補足: URL は開こうとした URL のままにする。

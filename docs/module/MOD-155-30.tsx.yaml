@@ -1,6 +1,6 @@
 id: MOD-155-30
 title: 画面 / 文書の画面 / missing-links.tsx
-lead: 見つからない画面の次のリンク（配信元のトップ・設定画面）と、代わりに開ける配信中の配信元。
+lead: 見つからない画面の次のリンク（配信元のトップ・設定画面）と、代わりに開ける配信中の配信元を受け持ち、文書の画面の missing-links.tsx を修正するときに参照する。
 test_files:
   - tests/unit/frontend/src/features/docs/not-found/components/missing-links.test.tsx
 components:
@@ -8,7 +8,7 @@ components:
     title: 次のリンク
     kind: コンポーネント
     container: features/docs/not-found/components/missing-links.tsx
-    usecase: 文書を読む
+    usecase: 文書を参照する
     role: 部品
     summary: 見つからなかったものに応じて、配信元のトップ・設定画面へのリンクと配信中の配信元の一覧を出す
     props:
@@ -19,7 +19,7 @@ components:
       - name: source
         type: string
         required: false
-        description: リビジョンを読んだ配信元の ID
+        description: リビジョンを参照した配信元の ID
       - name: rev
         type: string
         required: false

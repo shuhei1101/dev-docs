@@ -1,6 +1,6 @@
 id: MOD-155-2
 title: 画面 / アプリとルート / error-fallback.tsx
-lead: 描画中の例外の表示。ErrorBoundary とルートの `errorComponent` が使う。
+lead: 描画中の例外の表示を受け持ち、アプリとルートの error-fallback.tsx を修正するときに参照する。
 test_files:
   - tests/unit/frontend/src/app/error-fallback.test.tsx
 components:
@@ -10,7 +10,7 @@ components:
     container: app/error-fallback.tsx
     usecase: 共通
     role: 例外の表示
-    summary: 'project-index から受け取れなかった例外（503・502 で `projectIndex` を持つ）は、project-index から受け取れないときの警告を理由の種類つきで出し、`[error]` `project_index_unreachable` を書く。それ以外は `画面を表示できませんでした。` と再読み込みのボタンを出し、`[error]` `render_failed` を書く'
+    summary: 'project-index から受け取れなかった例外（503・502 で `projectIndex` を持つ）は、project-index から受け取れないときの警告を理由の種類つきで出し、`[error]` `project_index_unreachable` を記載する。それ以外は `画面を表示できませんでした。` と再読み込みのボタンを出し、`[error]` `render_failed` を記載する'
     props:
       - name: error
         type: unknown
@@ -19,17 +19,19 @@ components:
       - name: reset
         type: () => void
         required: false
-        description: やり直し（無いときは `location.reload()`）
+        description: 再実行（無いときは `location.reload()`）
     unit_tests:
       - name: test_error_fallback
         case: 正常
-        summary: 例外を表示してログを書く
-        condition: '`new Error("x")` を渡す'
+        summary: 例外を表示してログを書き込む
+        condition: '`new Error("x")` を指定する'
         mock: ロガー（`vi.mock`）
         expected: 文言と再読み込みのボタンがあり、ロガーの `error` が `render_failed` で 1 回
       - name: test_error_fallback_when_project_index_failed
         case: 正常
         summary: project-index から受け取れなかった理由の種類を出す
-        condition: '`projectIndex.kind` が `failed` の 502 の `AppError` を渡す'
+        condition: '`projectIndex.kind` が `failed` の 502 の `AppError` を指定する'
         mock: ロガー（`vi.mock`）
         expected: 見出し `project-index が要求を処理できませんでした` と理由があり、ロガーの `error` が `project_index_unreachable` で 1 回
+notes:
+  補足: ErrorBoundary とルートの `errorComponent` が使用する。

@@ -1,6 +1,6 @@
 id: MOD-155-116
 title: 開発ドキュメントサーバー / 再起動と更新 / control.py
-lead: 再起動の要求を受けて uvicorn を止め、止まった後に `run_serve` が同じプロセスを置き換えるかを持つ。
+lead: 再起動の要求を受けて uvicorn を止め、止まった後に `run_serve` が同じプロセスを置き換えるかを持つ処理を受け持ち、再起動と更新の control.py を修正するときに参照する。
 test_files:
   - tests/unit/dev_docs/features/lifecycle/test_control.py
 classes:
@@ -17,7 +17,7 @@ classes:
         type: uvicorn.Server | None
         access: 内部 (_)
         default: None
-        description: '`attach` で渡されたサーバー'
+        description: '`attach` で指定されたサーバー'
       - name: _requested
         title: 要求済み
         type: bool
@@ -38,7 +38,7 @@ classes:
       - name: attach
         title: サーバーの取り付け
         kind: メソッド
-        summary: 停止を伝える uvicorn のサーバーを控える
+        summary: 停止を伝える uvicorn のサーバーを記録する
         scope: public
         is_async: false
         thread_safe: false
@@ -52,7 +52,7 @@ classes:
         returns:
           type: None
           description: なし
-        process: 1. `_server` に控える
+        process: 1. `_server` に記録する
         unit_tests:
           - name: test_attach
             case: 正常
@@ -64,7 +64,7 @@ classes:
         title: 再起動の要求
         kind: メソッド
         summary: 再起動を要求済みにし、uvicorn に停止を伝える
-        description: uvicorn は `should_exit` を見て待ち受けを閉じ、処理中の要求を `timeout_graceful_shutdown` まで待つため、呼んだツールの応答は返ってから止まる。
+        description: uvicorn は `should_exit` を確認して待ち受けを閉じ、処理中の要求を `timeout_graceful_shutdown` まで待つため、呼んだツールの応答は返ってから止まる。
         scope: public
         is_async: false
         thread_safe: true
@@ -73,18 +73,18 @@ classes:
           type: RestartResult
           description: 'プロセス ID と `restarting: True`'
         process: |-
-          1. `_lock` の中で `_requested` を確かめる
+          1. `_lock` の中で `_requested` を確認する
              - `True` の場合、`RestartInProgressError` を送出する
           2. `_requested` を `True` にし、`_server` があれば `should_exit` を `True` にする
              - `[INFO]` 再起動を始める（pid）
         exceptions:
           - name: RestartInProgressError
             condition: 前の要求の再起動がまだ終わっていない
-            message: '`再起動の途中です`（`next_steps` に `/mcp` でつなぎ直して `status` を呼ぶことを示す）'
+            message: '`再起動の途中です`（`next_steps` に `/mcp` で再接続して `status` を呼ぶことを示す）'
         unit_tests:
           - name: test_request
             case: 正常
-            summary: 停止を伝えて結果を返す
+            summary: 停止を伝えて結果を返却する
             condition: 未要求の制御
             mock: uvicorn のサーバー（スタブ）
             expected: '戻り値の `pid` が `os.getpid()` で `restarting` が `True`、制御の `requested` が `True`'
@@ -98,13 +98,13 @@ classes:
       - name: requested
         title: 要求済みか
         kind: メソッド
-        summary: 再起動を要求されたかを返す（`property`）
+        summary: 再起動を要求されたかを返却する（`property`）
         scope: public
         is_async: false
         thread_safe: true
         returns:
           type: bool
           description: '`_requested`'
-        process: 1. `_lock` の中で `_requested` を返す
+        process: 1. `_lock` の中で `_requested` を返却する
         callers:
           - MOD-155-174#functions[run_serve]

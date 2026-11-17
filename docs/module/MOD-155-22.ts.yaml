@@ -1,6 +1,6 @@
 id: MOD-155-22
 title: 画面 / 文書の画面 / use-doc-navigation.ts
-lead: 文書の画面から別の文書・リビジョン・配信元へ移る操作。
+lead: 文書の画面から別の文書・リビジョン・配信元へ移る操作を受け持ち、文書の画面の use-doc-navigation.ts を修正するときに参照する。
 test_files:
   - tests/unit/frontend/src/features/docs/doc-view/hooks/use-doc-navigation.test.tsx
 functions:
@@ -8,7 +8,7 @@ functions:
     title: 比較を始めるときの比較元
     kind: 関数
     container: features/docs/doc-view/hooks/use-doc-navigation.ts
-    usecase: 文書を読む
+    usecase: 文書を参照する
     role: 変換
     summary: 開いているのが既定のリビジョン以外なら既定のリビジョン、既定なら最近の commit の 2 件目を比較元にする
     scope: public
@@ -27,9 +27,9 @@ functions:
       type: string | undefined
       description: 比較元のリビジョン。`refs` が undefined か、既定を開いていて commit が 2 件に満たないときは undefined
     process: |-
-      1. `refs` が undefined なら undefined を返す
-      2. `rev`（無ければ `refs.defaultRef`）が `refs.defaultRef` と違うなら `refs.defaultRef` を返す
-      3. 同じなら `refs.commits` の 2 件目の `commit` を返す
+      1. `refs` が undefined なら undefined を返却する
+      2. `rev`（無ければ `refs.defaultRef`）が `refs.defaultRef` と違うなら `refs.defaultRef` を返却する
+      3. 同じなら `refs.commits` の 2 件目の `commit` を返却する
     unit_tests:
       - name: test_compare_base
         case: 正常
@@ -53,9 +53,9 @@ functions:
     title: 文書の画面の移動
     kind: フック
     container: features/docs/doc-view/hooks/use-doc-navigation.ts
-    usecase: 文書を読む
+    usecase: 文書を参照する
     role: フック
-    summary: TanStack Router の `useNavigate` で、文書・リビジョン・比較・配信元・コメントの文書へ移る操作をまとめて返す
+    summary: TanStack Router の `useNavigate` で、文書・リビジョン・比較・配信元・コメントの文書へ移る操作をまとめて返却する
     scope: public
     args:
       - name: source
@@ -77,14 +77,14 @@ functions:
         type: RefsResponse | undefined
         required: true
         passing: positional
-        description: リビジョンの一覧（比較を始めるときの比較元に使う）
+        description: リビジョンの一覧（比較を始めるときの比較元に使用する）
     returns:
       type: '{openDoc: (splat: string) => void; selectRef: (rev: string) => void; compare: (rev: string | undefined, base: string) => void; clearDiff: () => void; startCompare: () => void; selectSource: (id: string) => void; locate: (comment: DocComment) => void}'
       description: 移る操作
     process: |-
-      1. `openDoc` は同じ配信元の `splat` の文書へ、`rev` を保って移る（`base` は外す）
+      1. `openDoc` は同じ配信元の `splat` の文書へ、`rev` を保って移る（`base` は除外する）
       2. `selectRef` は同じ文書のまま `rev` を替え、`base` を保つ
-      3. `compare` は同じ文書の `rev`・`base` を渡した値にする。`clearDiff` は `base` を外す
+      3. `compare` は同じ文書の `rev`・`base` を指定した値にする。`clearDiff` は `base` を除外する
       4. `startCompare` は比較を始めるときの比較元を `base` にして移る。比較元が無ければ移らない
       5. `selectSource` はその配信元のトップ（`/$source`）へ移る
       6. `locate` はコメントの配信元・パスの文書へ、コメントの `ref` を `rev` にして移る

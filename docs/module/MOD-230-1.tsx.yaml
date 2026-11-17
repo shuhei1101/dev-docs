@@ -1,5 +1,5 @@
 title: 画面 / 共通 / project-index-unreachable.tsx
-lead: project-index から受け取れなかったことを、理由の種類ごとの見出しと説明・接続先・理由・再読み込みで出す警告。
+lead: project-index から受け取れなかったことを、理由の種類ごとの見出しと説明・接続先・理由・再読み込みで出す警告を受け持ち、共通の project-index-unreachable.tsx を修正するときに参照する。
 test_files:
   - tests/unit/frontend/src/shared/components/project-index-unreachable.test.tsx
 functions:
@@ -20,10 +20,10 @@ functions:
         description: 問い合わせの例外
     returns:
       type: ProjectIndexUnreachable | null
-      description: '`address`・`reason`・`kind`。当たらなければ `null`'
+      description: '`address`・`reason`・`kind`。該当しなければ `null`'
     process: |-
-      1. `AppError` でないか、`status` が 503 でも 502 でもなければ `null` を返す
-      2. `problem` を `ProjectIndexUnreachableSchema` で読み、読めれば `projectIndex`（`kind` が無ければ `unreachable`）、読めなければ `null` を返す
+      1. `AppError` でないか、`status` が 503 でも 502 でもなければ `null` を返却する
+      2. `problem` を `ProjectIndexUnreachableSchema` で参照し、読めれば `projectIndex`（`kind` が無ければ `unreachable`）、参照できなければ `null` を返却する
     unit_tests:
       - name: test_to_project_index_unreachable
         case: 正常
@@ -39,7 +39,7 @@ functions:
         expected: '`kind` が `unreachable`'
       - name: test_to_project_index_unreachable_when_other
         case: 正常
-        summary: 当たらない例外
+        summary: 該当しない例外
         condition: 404 の `AppError` と `new Error("x")`
         mock: なし
         expected: どちらも `null`
@@ -51,7 +51,7 @@ components:
     usecase: 共通
     role: 部品
     summary: 理由の種類（`kind`）ごとの見出しと説明、`接続先`・`理由` の一覧と再読み込みのボタンを、`variant="destructive"` の Alert で出す
-    description: 見出しと説明は、確認ログ（#230）で決定した文言を `kind` ごとに持つ定数から引く（文書の画面の『project-index から文書を受け取れないときの表示』）。呼び出し元の文書の画面と設定画面は、どちらも `toProjectIndexUnreachable` の `kind` を指定する。`kind` が無いときは `unreachable` の文言になる。理由の欄は `min-w-0`・`wrap-anywhere` で長い理由を折り返す。名前は「接続できない」を表すままにし、応答が無い・処理に失敗した場合も扱う（呼び出し元 2 画面とストーリーを改名しない）
+    description: 見出しと説明は、[配信元を選んだときの最初の表示の文言の確認ログ](https://github.com/shuhei1101/dev-docs/blob/develop/docs/pr/230/%E7%A2%BA%E8%AA%8D%E3%83%AD%E3%82%B0.yaml)で決定した文言を `kind` ごとに持つ定数から取得する（文書の画面の『project-index から文書を受け取れないときの表示』）。呼び出し元の文書の画面と設定画面は、どちらも `toProjectIndexUnreachable` の `kind` を指定する。`kind` が無いときは `unreachable` の文言になる。理由の欄は `min-w-0`・`wrap-anywhere` で長い理由を折り返す。名前は「接続できない」を表すままにし、応答が無い・処理に失敗した場合も扱う（呼び出し元 2 画面とストーリーを改名しない）
     props:
       - name: address
         type: string

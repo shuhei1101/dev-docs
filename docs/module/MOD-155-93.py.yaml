@@ -1,6 +1,6 @@
 id: MOD-155-93
 title: 開発ドキュメントサーバー / 変換 / diagrams.py
-lead: '`x-diagram` の値と手で書く Mermaid の、mdmark の map の範囲か Mermaid のコードブロックへの描画。'
+lead: '`x-diagram` の値と手で記載する Mermaid の、mdmark の map の範囲か Mermaid のコードブロックへの描画を受け持ち、変換の diagrams.py を修正するときに参照する。'
 test_files:
   - tests/unit/dev_docs/features/convert/test_diagrams.py
 diagrams:
@@ -10,7 +10,7 @@ diagrams:
         direction TD
         スキーマ駆動の変換 ..> 図の組み立て
         スキーマ駆動の変換 ..> テーブルの論理名の引き方
-        本文の書き換え ..> 手で書く図の組み立て
+        本文の書き換え ..> 手で記載する図の組み立て
         class スキーマ駆動の変換 {
           <<function>>
         }
@@ -23,7 +23,7 @@ diagrams:
         class テーブルの論理名の引き方 {
           <<function>>
         }
-        class 手で書く図の組み立て {
+        class 手で記載する図の組み立て {
           <<function>>
         }
         click スキーマ駆動の変換 href "./MOD-155-97.py.yaml#スキーマ駆動の変換"
@@ -59,7 +59,7 @@ constants:
     title: 線の種類
     container: features/convert/diagrams.py
     usecase: 文書の取得
-    summary: 辺の `line` に書ける線の種類。`flow` 以外は補足の `layout` の `line`（画面の map の設定の `map.lines` のキー）に入れる。これ以外の `line` と、`line` が無い辺は `DEFAULT_LINE`
+    summary: 辺の `line` に記載できる線の種類。`flow` 以外は補足の `layout` の `line`（画面の map の設定の `map.lines` のキー）に入れる。これ以外の `line` と、`line` が無い辺は `DEFAULT_LINE`
     value: '`flow`・`read`・`write`・`reply`・`loop`'
   - name: DEFAULT_LINE
     title: 線の種類の既定
@@ -117,7 +117,7 @@ constants:
     title: map で描く Mermaid の種類
     container: features/convert/diagrams.py
     usecase: 文書の取得
-    summary: 手で書く Mermaid のうち、1 行目の最初の語がこの値のものを map の範囲に入れる（mdmark の map が描く種類）
+    summary: 手で記載する Mermaid のうち、1 行目の最初の単語がこの値のものを map の範囲に入れる（mdmark の map が描く種類）
     value: '`flowchart`・`graph`・`sequenceDiagram`・`erDiagram`・`stateDiagram-v2`・`stateDiagram`'
   - name: MAP_DATA_VERSION
     title: 補足のバージョン
@@ -141,19 +141,19 @@ constants:
     title: id のリンクの接頭辞
     container: features/convert/diagrams.py
     usecase: 文書の取得
-    summary: '`clicks` の `href` と、手で書くフローチャートの `click` の行のリンク先のうち、この接頭辞で始まるものを、続く `{文書の ID}#{項目のパス}` をリンク先の引き方で引いた値にする'
+    summary: '`clicks` の `href` と、手で記載するフローチャートの `click` の行のリンク先のうち、この接頭辞で始まるものを、続く `{文書の ID}#{項目のパス}` をリンク先の取得方法で取得した値にする'
     value: '`id:`'
   - name: FLOWCHART_MERMAID_KINDS
     title: click の行を書き換える Mermaid の種類
     container: features/convert/diagrams.py
     usecase: 文書の取得
-    summary: 手で書く Mermaid のうち、1 行目の最初の語がこの値のものの `click` の行のリンク先を書き換える（mdmark の map のフローチャートがノードのリンクにする種類）
+    summary: 手で記載する Mermaid のうち、1 行目の最初の単語がこの値のものの `click` の行のリンク先を書き換える（mdmark の map のフローチャートがノードのリンクにする種類）
     value: '`flowchart`・`graph`'
   - name: MERMAID_ID_CLICK
     title: id のリンク先を持つ click の行
     container: features/convert/diagrams.py
     usecase: 文書の取得
-    summary: 手で書く Mermaid の `click {ノード} "id:…"`・`click {ノード} href "id:…"` の行。`target` は `id:` の後ろの `{文書の ID}#{項目のパス}`、`tail` はリンク先の後ろ（ツールチップ・`_blank` など）
+    summary: 手で記載する Mermaid の `click {ノード} "id:…"`・`click {ノード} href "id:…"` の行。`target` は `id:` の後ろの `{文書の ID}#{項目のパス}`、`tail` はリンク先の後ろ（ツールチップ・`_blank` など）
     value: '`^(?P<head>[ \t]*click[ \t]+\S+[ \t]+(?:href[ \t]+)?)"id:(?P<target>[^"]*)"(?P<tail>[^\n]*)$`（複数行）'
 functions:
   - name: render_diagram
@@ -183,7 +183,7 @@ functions:
         type: DiagramHead
         required: true
         passing: positional
-        description: map の範囲の `title` にする図の題名（`scope`・`updated` は map に対応するキーが無いため使わない）
+        description: map の範囲の `title` にする図の題名（`scope`・`updated` は map に対応するキーが無いため使用しない）
       - name: tables
         title: テーブル
         type: Sequence[Mapping[str, Any]]
@@ -196,27 +196,27 @@ functions:
         type: Callable[[str], str | None]
         required: true
         passing: keyword
-        description: '`{文書の ID}#{項目のパス}` から、同じ配信元の文書の相対パスとアンカーを返却する（引き先に無ければ `None`）。flow 系の `clicks` に使用する'
+        description: '`{文書の ID}#{項目のパス}` から、同じ配信元の文書の相対パスとアンカーを返却する（参照先に無ければ `None`）。flow 系の `clicks` に使用する'
     returns:
       type: str
       description: '`<!-- map: {"title": …} -->`・```mermaid の Mermaid・`<!-- map-data: {…} -->`（補足が空なら置かない）・`<!-- /map -->` を空行で区切って並べた文字列'
     process: |-
       1. `FLOW_KINDS` は `flowchart` にする
          - 向きは `direction` が `TD`・`LR` ならその値、それ以外は `dataflow`・`architecture` なら `LR`、`flowchart` なら `TD`
-         - `nodes` を `{id}["{label}"]:::{class}` の行にする。名前は `label`（無ければ `id`）、クラスは `kind`（無ければ `DEFAULT_NODE_KIND`）を `NODE_KINDS` で引いた値（無ければ `DEFAULT_NODE_KIND` を引いた値）。`hint` は補足の `notes[{id}]` の `text` に入れる
+         - `nodes` を `{id}["{label}"]:::{class}` の行にする。名前は `label`（無ければ `id`）、クラスは `kind`（無ければ `DEFAULT_NODE_KIND`）を `NODE_KINDS` で取得した値（無ければ `DEFAULT_NODE_KIND` を取得した値）。`hint` は補足の `notes[{id}]` の `text` に入れる
          - ノードの ID と辺の端の名前は、`MERMAID_SAFE_ID` に該当し `MERMAID_RESERVED_IDS` に無ければそのまま、それ以外は出た順に、`nodes`・`edges` に出ない `n{番号}`（1 始まり）を Mermaid の ID にする。補足のキーも Mermaid の ID にする
          - `edges` を `{from} --> {to}`（`label` があれば `{from} -->|"{label}"| {to}`）の行にする。宣言の無い端は、名前をラベルにした `DEFAULT_NODE_KIND` のノードを追加する。`tip` は補足の `notes[{from}->{to}]`、`flow` 以外の `line`（`LINE_KINDS` に無い値は `DEFAULT_LINE`）は補足の `layout[{from}->{to}].line` に入れる
          - `frame` がオブジェクトなら、`nodes` の ID のノードの行を `subgraph frame ["{label}"]` 〜 `end` で囲む
-         - `clicks` の要素ごとに、`id` がノードの行か線の端にあるものだけを `click {Mermaid の ID} "{リンク先}"` の行にする。Mermaid の ID はノードの行と同じ置き換えた後の ID にする。リンク先は、`href` が `ID_LINK_PREFIX` で始まれば続く値を `link` で引いた値（`None` ならその要素を行にしない）、それ以外は `href` のまま。リンク先の `"` は `%22` にする（Mermaid の文字列を閉じないため）
+         - `clicks` の要素ごとに、`id` がノードの行か線の端にあるものだけを `click {Mermaid の ID} "{リンク先}"` の行にする。Mermaid の ID はノードの行と同じ置き換えた後の ID にする。リンク先は、`href` が `ID_LINK_PREFIX` で始まれば続く値を `link` で取得した値（`None` ならその要素を行にしない）、それ以外は `href` のまま。リンク先の `"` は `%22` にする（Mermaid の文字列を閉じないため）
       2. `state` は `stateDiagram-v2` にする
          - `states` の状態と、遷移の端（`from` の `ALL_STATES`・`to` の `PREVIOUS_STATE` はその遷移の `representative` へ置き換えた後）に出た `states` に無い状態を、出た順に `state "{名前}" as s{n}`（`n` は 1 始まり）にする
          - `initial` があれば `[*] --> s{n}`、`final` の各状態は `s{n} --> [*]` の行にする
          - 遷移ごとに `s{元} --> s{先}` の行にし、ラベルは `{trigger} [{condition}]`（どちらも無ければ無し）を ` : {ラベル}` で付ける。`representative` が無く元か先が決まらない遷移は行にしない（図の元データの表に残る）
       3. `er` は `erDiagram` にする
-         - 実体（`entities[]`）を出た順に `{name} {` 〜 `}` の実体にする。列は、実体が `columns` を持てばその要素（`type`・`name`・`key` の `PK`・`FK`・`UK`）、持たなければ `tables` のうち `title` が実体の `name` に当たるテーブルの `columns`（`type`・`name`・`primary_key` は `PK`・`foreign_key` は `FK`）にする。`type` が無い列は `ER_DEFAULT_TYPE`。列の説明（`comment`・`title`）は補足の `notes[{実体}.{列}]` に入れる
+         - 実体（`entities[]`）を出た順に `{name} {` 〜 `}` の実体にする。列は、実体が `columns` を持てばその要素（`type`・`name`・`key` の `PK`・`FK`・`UK`）、持たなければ `tables` のうち `title` が実体の `name` に該当するテーブルの `columns`（`type`・`name`・`primary_key` は `PK`・`foreign_key` は `FK`）にする。`type` が無い列は `ER_DEFAULT_TYPE`。列の説明（`comment`・`title`）は補足の `notes[{実体}.{列}]` に入れる
          - 関連（`relations[]`）ごとに、元と先の実体があり、`from_column` が元の、`to_column` が先の実体の列にあり、両端の多重度が `ER_FROM_MARKS`・`ER_TO_MARKS` にある関連だけを `{from} {元の記号}--{先の記号} {to} : "{label}"`（`label` が無ければ `""`）の行にする。それ以外の関連は行にしない（図の元データの表に残る）
          - 行にした関連の `to_column` の列のコメントを `参照: {from}.{from_column}` にする（mdmark は関連の端の列を、このコメントを持つ FK の列から選ぶ）
-      4. Mermaid の行を ```mermaid のコードブロックにし、`<!-- map: {"title": head.title} -->` と `<!-- /map -->` で囲む。補足（`version` は `MAP_DATA_VERSION`、`notes`・`layout` は空でないものだけ）が空でなければ、コードブロックの後に `<!-- map-data: {JSON} -->` を置く
+      4. Mermaid の行を ```mermaid のコードブロックにし、`<!-- map: {"title": head.title} -->` と `<!-- /map -->` で囲む。補足（`version` は `MAP_DATA_VERSION`、`notes`・`layout` は空でないものだけ）が空でなければ、コードブロックの後に `<!-- map-data: {JSON} -->` を配置する
          - マーカーの JSON（`ensure_ascii=False`）の文字の値の `--` は `- -` にする（HTML のコメントを閉じないため）
          - 名前・ラベルの `"` は `#quot;` にする（Mermaid の文字列を閉じないため）
     exceptions:
@@ -312,13 +312,13 @@ functions:
       - name: test_render_diagram_when_clicks
         case: 正常
         summary: ノードのリンク
-        condition: 'ノード `a`・`b`・`c`、`clicks` に `a` の `id:doc-2`・`b` の `id:no-such`・`c` の `../x.yaml#y`・図に無い `z` の `id:doc-2`、`link` が `doc-2` に `doc-2.yaml` を返し、それ以外に `None` を返す'
+        condition: 'ノード `a`・`b`・`c`、`clicks` に `a` の `id:doc-2`・`b` の `id:no-such`・`c` の `../x.yaml#y`・図に無い `z` の `id:doc-2`、`link` が `doc-2` に `doc-2.yaml` を返却し、それ以外に `None` を返却する'
         mock: なし
         expected: '`click a "doc-2.yaml"` と `click c "../x.yaml#y"` の行があり、`b`・`z` の `click` の行と `z` のノードの行が無い'
       - name: test_render_diagram_when_clicks_unsafe_id
         case: 正常
         summary: Mermaid の ID にできないノードのリンク
-        condition: 'ノード `end`・`画面 (一覧)`、`clicks` に両方の `id:doc-2`、`link` が `doc-2.yaml` を返す'
+        condition: 'ノード `end`・`画面 (一覧)`、`clicks` に両方の `id:doc-2`、`link` が `doc-2.yaml` を返却する'
         mock: なし
         expected: '`click n1 "doc-2.yaml"` と `click n2 "doc-2.yaml"` の行があり、`click end`・`click 画面 (一覧)` の行が無い'
   - name: er_table_titles
@@ -327,8 +327,8 @@ functions:
     container: features/convert/diagrams.py
     usecase: 文書の取得
     role: 変換
-    summary: 同じ文書の `tables[]` から、テーブルの物理名（`name`）と論理名（`title`）のどちらからも論理名を引く表を作る
-    description: 表の外部キーのセルのリンクが、物理名と論理名のどちらで書いたテーブル名も当てる。
+    summary: 同じ文書の `tables[]` から、テーブルの物理名（`name`）と論理名（`title`）のどちらからも論理名を取得する表を作る
+    description: 表の外部キーのセルのリンクが、物理名と論理名のどちらで記載したテーブル名も適用する。
     scope: public
     thread_safe: true
     args:
@@ -342,7 +342,7 @@ functions:
       type: dict[str, str]
       description: 物理名か論理名から、そのテーブルの論理名
     process: |-
-      1. `title` を持つテーブルを出た順に見て、`name` と `title` の値（文字列にする）をそれぞれキーに、`title` を値にして入れる。同じキーが既にあるときは先に入れた値を残す
+      1. `title` を持つテーブルを出た順に確認して、`name` と `title` の値（文字列にする）をそれぞれキーに、`title` を値にして入れる。同じキーが既にあるときは先に入れた値を残す
       2. `title` を持たないテーブルは入れない
     unit_tests:
       - name: test_er_table_titles
@@ -358,12 +358,12 @@ functions:
         mock: なし
         expected: '`A` の値が `A`（先に入れた値）で、`c` のキーが無い'
   - name: render_mermaid
-    title: 手で書く図の組み立て
+    title: 手で記載する図の組み立て
     kind: 関数
     container: features/convert/diagrams.py
     usecase: 文書の取得
     role: 変換
-    summary: 手で書く Mermaid のコードを、map で描ける種類なら map の範囲に、それ以外は `click` の `id:` のリンク先を書き換えた Mermaid のコードブロックに組み立てる
+    summary: 手で記載する Mermaid のコードを、map で描ける種類なら map の範囲に、それ以外は `click` の `id:` のリンク先を書き換えた Mermaid のコードブロックに組み立てる
     scope: public
     thread_safe: true
     args:
@@ -384,15 +384,15 @@ functions:
         type: Callable[[str], str | None]
         required: true
         passing: positional
-        description: '`{文書の ID}#{項目のパス}` から、同じ配信元の文書の相対パスとアンカーを返却する（引き先に無ければ `None`）'
+        description: '`{文書の ID}#{項目のパス}` から、同じ配信元の文書の相対パスとアンカーを返却する（参照先に無ければ `None`）'
     returns:
       type: str
       description: 'map の範囲か、元の ```mermaid のコードブロック'
     process: |-
-      1. `code` の空でない最初の行の最初の単語が `MAP_MERMAID_KINDS` にあるかを見る
-      2. あれば、最初の単語が `FLOWCHART_MERMAID_KINDS` にあるとき、`MERMAID_ID_CLICK` に該当する行を `{head}"{リンク先}"{tail}`（リンク先は `target` を `link` で引いた値で、`"` は `%22`）にし、`None` の行は消す。その他の行は変えない
+      1. `code` の空でない最初の行の最初の単語が `MAP_MERMAID_KINDS` にあるかを確認する
+      2. あれば、最初の単語が `FLOWCHART_MERMAID_KINDS` にあるとき、`MERMAID_ID_CLICK` に該当する行を `{head}"{リンク先}"{tail}`（リンク先は `target` を `link` で取得した値で、`"` は `%22`）にし、`None` の行は削除する。その他の行は変えない
       3. 2 の `code` を ```mermaid のコードブロックにして `<!-- map: {"title": head.title} -->` と `<!-- /map -->` で囲む（補足は付けない）
-      4. 無ければ、`code` に 2 と同じ `click` の行の書き換えをかけ、```mermaid のコードブロックにして返す
+      4. 無ければ、`code` に 2 と同じ `click` の行の書き換えをかけ、```mermaid のコードブロックにして返却する
     unit_tests:
       - name: test_render_mermaid
         case: 正常
@@ -415,12 +415,12 @@ functions:
       - name: test_render_mermaid_when_id_click
         case: 正常
         summary: フローチャートの id のリンク
-        condition: '`flowchart TD` と、`click A "id:doc-6#flow"`・`  click B href "id:doc-2" _blank`・`click C "id:no-such"`・`click D "../x.yaml"` の行、`link` が `doc-6#flow` に `doc-6.yaml#処理の流れ`、`doc-2` に `doc-2.yaml` を返し、それ以外に `None` を返す'
+        condition: '`flowchart TD` と、`click A "id:doc-6#flow"`・`  click B href "id:doc-2" _blank`・`click C "id:no-such"`・`click D "../x.yaml"` の行、`link` が `doc-6#flow` に `doc-6.yaml#処理の流れ`、`doc-2` に `doc-2.yaml` を返却し、それ以外に `None` を返却する'
         mock: なし
         expected: 'map の範囲の Mermaid に `click A "doc-6.yaml#処理の流れ"`・`  click B href "doc-2.yaml" _blank`・`click D "../x.yaml"` の行があり、`click C` の行が無く、その他の行は元のまま'
       - name: test_render_mermaid_when_id_click_not_flowchart
         case: 正常
         summary: map で描かない種類の click の行
-        condition: '`classDiagram` と `click A href "id:doc-2"`・`click C "id:no-such"` の行、`link` が `doc-2` に `doc-2.yaml` を返し、それ以外に `None` を返す'
+        condition: '`classDiagram` と `click A href "id:doc-2"`・`click C "id:no-such"` の行、`link` が `doc-2` に `doc-2.yaml` を返却し、それ以外に `None` を返却する'
         mock: なし
         expected: '`<!-- map` が無い ```mermaid のコードブロックで、`click A href "doc-2.yaml"` の行があり、`click C` の行が無く、その他の行は元のまま'

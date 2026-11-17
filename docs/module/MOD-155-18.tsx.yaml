@@ -1,6 +1,6 @@
 id: MOD-155-18
 title: 画面 / 文書の画面 / empty-tab.tsx
-lead: 選んだタブに文書が無いことの表示。
+lead: 選んだタブに文書が無いことの表示を受け持ち、文書の画面の empty-tab.tsx を修正するときに参照する。
 test_files:
   - tests/unit/frontend/src/features/docs/doc-view/components/empty-tab.test.tsx
 components:
@@ -8,9 +8,9 @@ components:
     title: 文書が無いことの表示
     kind: コンポーネント
     container: features/docs/doc-view/components/empty-tab.tsx
-    usecase: 文書を読む
+    usecase: 文書を参照する
     role: 部品
-    summary: '`{タブ名}の文書はありません` と、`nav.tabs[{番号}].paths` に当たる文書が無い説明を出す（Git 管理外はリビジョンを省く）'
+    summary: '`{タブ名}の文書はありません` と、`nav.tabs[{番号}].paths` に該当する文書が無い説明を出す（Git 管理外はリビジョンを省く）'
     props:
       - name: tab
         type: NavTab

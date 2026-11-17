@@ -1,6 +1,6 @@
 id: MOD-155-117
 title: 開発ドキュメントサーバー / 再起動と更新 / types.py
-lead: 管理の MCP の `restart`・`update` の結果の型と定数。
+lead: 管理の MCP の `restart`・`update` の結果の型と定数を受け持ち、再起動と更新の types.py を修正するときに参照する。
 data_models:
   - name: RestartResult
     title: 再起動の結果
@@ -13,9 +13,9 @@ data_models:
       - name: pid
         title: プロセス ID
         type: int
-        description: 起動し直した後も変わらないプロセス ID
+        description: 再起動した後も変わらないプロセス ID
       - name: restarting
-        title: 起動し直すか
+        title: 再起動するか
         type: bool
         default: 'True'
         description: 常に `True`
@@ -44,7 +44,7 @@ data_models:
         type: bool
         description: '`migrate --plan` の標準出力が空でなければ `True`'
       - name: restarting
-        title: 起動し直すか
+        title: 再起動するか
         type: bool
         description: '`updated` で `migration_needed` でなければ `True`'
 constants:
@@ -61,8 +61,8 @@ constants:
     summary: 処理中の要求を待つ上限を `PROJECT_INDEX_TIMEOUT_SEC` の何倍にするか
     value: '1.5'
   - name: SERVE_ARGV
-    title: 起動し直すコマンドの引数
+    title: 再起動するコマンドの引数
     container: features/lifecycle/types.py
     usecase: 再起動
-    summary: '`os.execv` に渡す `sys.executable` の後ろの引数'
+    summary: '`os.execv` に指定する `sys.executable` の後ろの引数'
     value: ('-m', 'dev_docs', 'serve')

@@ -1,6 +1,6 @@
 id: MOD-155-190
 title: 開発ドキュメントサーバー / 共通 / yaml_io.py
-lead: YAML の読み込みと、往復編集の読み書き。
+lead: YAML の読み込みと、往復編集の読み書きを受け持ち、共通の yaml_io.py を修正するときに参照する。
 test_files:
   - tests/unit/dev_docs/shared/test_yaml_io.py
 diagrams:
@@ -22,7 +22,7 @@ classes:
     container: shared/yaml_io.py
     usecase: 共通
     role: 例外
-    summary: YAML として読めないことを、ファイル・行・列・理由で表す
+    summary: YAML として読み込めないことを、ファイル・行・列・理由で表す
     kind: クラス
     inherits: ValueError
     properties:
@@ -31,7 +31,7 @@ classes:
         type: str | None
         access: 公開
         default: None
-        description: 読んだファイルのパス。文字列から読んだときは `None`
+        description: 参照したファイルのパス。文字列から読み込んだときは `None`
       - name: line
         title: 行
         type: int | None
@@ -75,7 +75,7 @@ functions:
     container: shared/yaml_io.py
     usecase: 共通
     role: 読み込み
-    summary: YAML の文字列を素の値（dict・list・str 等）で読む
+    summary: YAML の文字列を素の値（dict・list・str 等）で参照する
     scope: public
     thread_safe: true
     args:
@@ -91,21 +91,21 @@ functions:
         required: false
         default: None
         passing: keyword
-        description: 誤りに載せるファイルのパス
+        description: 誤りに含めるファイルのパス
     returns:
       type: Any
-      description: 読んだ値。空の文字列は `None`
+      description: 参照した値。空の文字列は `None`
     process: |-
-      1. ruamel.yaml の安全なローダー（`typ="safe"`、Python 実装）で読む
-      2. 読めない場合、誤りの位置（`problem_mark`）から行と列を 1 始まりで取り、`YamlLoadError` を送る。キーの重複は重なったキーの名前を理由に添える
+      1. ruamel.yaml の安全なローダー（`typ="safe"`、Python 実装）で参照する
+      2. 参照できない場合、誤りの位置（`problem_mark`）から行と列を 1 始まりで取り、`YamlLoadError` を送信する。キーの重複は重なったキーの名前を理由に添える
     exceptions:
       - name: YamlLoadError
-        condition: YAML として読めない（構文の誤り・キーの重複）
+        condition: YAML として読み込めない（構文の誤り・キーの重複）
         message: '`{file}:{line}:{column}: {reason}`'
     unit_tests:
       - name: test_load_yaml
         case: 正常
-        summary: 素の値で読む
+        summary: 素の値で参照する
         condition: '`a: [1, 2]`'
         mock: なし
         expected: '`{"a": [1, 2]}`'
@@ -115,21 +115,21 @@ functions:
         condition: '`a: [1, 2` を `file="x.yaml"` で'
         mock: なし
         expected: '`YamlLoadError` で、`file` が `x.yaml`、`line` が 1'
-        exception: YAML として読めない
+        exception: YAML として読み込めない
       - name: test_load_yaml_when_duplicate_key
         case: 異常
         summary: キーの重複
         condition: '`a: 1` と `a: 2` の 2 行'
         mock: なし
         expected: '`YamlLoadError` の `reason` に `a` が載る'
-        exception: YAML として読めない
+        exception: YAML として読み込めない
   - name: load_roundtrip
     title: 往復編集の読み込み
     kind: 関数
     container: shared/yaml_io.py
     usecase: 共通
     role: 読み込み
-    summary: コメントと順序を保つ往復編集の形で YAML を読む
+    summary: コメントと順序を保つ往復編集の形式で YAML を読み込む
     scope: public
     thread_safe: true
     args:
@@ -145,17 +145,17 @@ functions:
         required: false
         default: None
         passing: keyword
-        description: 誤りに載せるファイルのパス
+        description: 誤りに含めるファイルのパス
     returns:
       type: CommentedMap
       description: コメントと順序を持つ辞書。空の文字列は空の `CommentedMap`
     process: |-
-      1. 往復編集の YAML（`typ="rt"`、Python 実装。`ruamel.yaml.clib` ではコメントが残らない）に `preserve_quotes = True` を設定して読む。引用符つきの文字列は引用符の種類を持つ文字列（`str` のサブクラス）になる
-      2. 読めない場合、『YAMLの読み込み』と同じ形の `YamlLoadError` を送る
-      3. 最上位が辞書でない場合、`YamlLoadError` を送る
+      1. 往復編集の YAML（`typ="rt"`、Python 実装。`ruamel.yaml.clib` ではコメントが残らない）に `preserve_quotes = True` を設定して参照する。引用符つきの文字列は引用符の種類を持つ文字列（`str` のサブクラス）になる
+      2. 参照できない場合、『YAMLの読み込み』と同じ形の `YamlLoadError` を送信する
+      3. 最上位が辞書でない場合、`YamlLoadError` を送信する
     exceptions:
       - name: YamlLoadError
-        condition: YAML として読めない
+        condition: YAML として読み込めない
         message: '`{file}:{line}:{column}: {reason}`'
       - name: YamlLoadError
         condition: 最上位が辞書でない
@@ -164,13 +164,13 @@ functions:
       - name: test_load_roundtrip
         case: 正常
         summary: コメントを保つ
-        condition: '`# c\na: 1  # x` を読んで『往復編集の書き出し』で書く'
+        condition: '`# c\na: 1  # x` を参照して『往復編集の書き出し』で記載する'
         mock: なし
         expected: 元の文字列と同じ
       - name: test_load_roundtrip_when_quotes
         case: 正常
         summary: 引用符の種類を保つ
-        condition: '`version: ''2020-12''`・`title: "A: b"`・`name: x` の 3 行を読み、`name` だけを `y` に変えて『往復編集の書き出し』で書く'
+        condition: '`version: ''2020-12''`・`title: "A: b"`・`name: x` の 3 行を参照し、`name` だけを `y` に変えて『往復編集の書き出し』で記載する'
         mock: なし
         expected: '`version: ''2020-12''`・`title: "A: b"`・`name: y` の 3 行'
       - name: test_load_roundtrip_when_not_mapping
@@ -201,7 +201,7 @@ functions:
       description: YAML の文字列（末尾は改行 1 つ）
     process: |-
       1. 幅を `YAML_WIDTH`、字下げを `YAML_INDENT` にした往復編集の YAML で書き出す
-      2. 引用符の種類を持つ文字列（往復編集の読み込みで引用符つきで読んだ値）は元の引用符で書く。改行を含む引用符なしの文字列の値は、ブロックのリテラル（`|-`）にして書く
+      2. 引用符の種類を持つ文字列（往復編集の読み込みで引用符つきで参照した値）は元の引用符で記載する。改行を含む引用符なしの文字列の値は、ブロックのリテラル（`|-`）にして記載する
     unit_tests:
       - name: test_dump_roundtrip
         case: 正常

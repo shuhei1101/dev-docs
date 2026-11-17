@@ -5,7 +5,7 @@ entry:
   value: PUT `/_api/sources/{source}/columns`
 flows:
   - name: 正常系
-    summary: 隠す列を書き、次の文書の取得でその列を返す
+    summary: 隠す列を記載し、次の文書の取得でその列を返却する
     setup:
       - name: Mock
         description: なし（一時フォルダに配信元と `state_dir` を作り、dev-docs のアプリを HTTP のテストのクライアントで呼ぶ）
@@ -21,17 +21,17 @@ flows:
         participant SD as state_dir
 
         C->>E: table, hidden: 2 列目
-        E->>SD: 配信元・表ごとの列の設定を書く
+        E->>SD: 配信元・表ごとの列の設定を書き込む
         E-->>C: 200
         C->>E: GET /_api/sources/sample/docs/{文書 1 のパス}（文書の取得）
         E-->>SD: 列の設定を読む
         E-->>C: 200（columns に隠す列）
       ```
     expected:
-      - 200 で、書いた `table` と `hidden` を返す
+      - 200 で、記載した `table` と `hidden` を返却する
       - '`state_dir` に列の設定のファイルがあり、配信元のフォルダは変わらない'
       - 続けて取得した文書 1 の `columns` に、その表の隠す列として 2 列目がある
-      - '`hidden` を空で書くと、次の取得の `columns` からその表のキーが消える（全ての列を出す）'
+      - '`hidden` を空で記載すると、次の取得の `columns` からその表のキーが消える（全ての列を出す）'
     test: test_normal
   - name: 異常系（本文の誤り・400）
     summary: 形の合わない本文を断る
@@ -51,7 +51,7 @@ flows:
       ```
     expected:
       - 400 で、`errors[0].path` が `hidden`
-      - '`state_dir` に列の設定を書かない'
+      - '`state_dir` に列の設定を記載しない'
     test: test_error_when_body_invalid
   - name: 異常系（別のオリジン・403）
     summary: 画面と別のオリジンからの書き込みを断る
@@ -70,11 +70,11 @@ flows:
         E-->>C: 403
       ```
     expected:
-      - 403 を返す
-      - '`state_dir` に列の設定を書かない'
+      - 403 を返却する
+      - '`state_dir` に列の設定を記載しない'
     test: test_error_when_cross_origin
   - name: 異常系（無い配信元・404）
-    summary: 無い配信元の列の設定を書かない
+    summary: 無い配信元の列の設定を記載しない
     setup:
       - name: Mock
         description: なし
@@ -91,14 +91,14 @@ flows:
       ```
     expected:
       - 404 で、`detail` に無いのが配信元 `unknown` であることがある
-      - '`state_dir` に列の設定を書かない'
+      - '`state_dir` に列の設定を記載しない'
     test: test_error_when_source_not_found
-lead: '#17 の画面の表の列の表示が呼ぶ。配信元・表ごとに隠す列を `state_dir` に書き、文書の取得の `columns` で返す。'
+lead: '配信元・表ごとに隠す列を `state_dir` に書き込む表の列の設定の保存の入出力を定め、表の列の設定の保存を修正するときに参照する。'
 identifier: put_columns
 permissions: 画面と同じオリジンからの要求だけ
 idempotent: true
 side_effects: '`state_dir` の列の設定のファイルを書き換える。配信元のフォルダは変えない'
-exclusivity: 列の設定のファイルごとの排他ロックの中で読み、書き換える
+exclusivity: 列の設定のファイルごとの排他ロックの中で参照し、書き換える
 request:
   - name: source
     type: str
@@ -129,17 +129,17 @@ request_example: |-
 response:
   - name: table
     type: str
-    description: 書いた表のキー
+    description: 記載した表のキー
   - name: hidden
     type: list[str]
-    description: 書いた隠す列
+    description: 記載した隠す列
 response_example: |-
   ```json
   {"table": "sample:items", "hidden": ["notes"]}
   ```
 status_codes:
   - code: '200'
-    condition: 書いた
+    condition: 記載した
   - code: '400'
     condition: '`table` が無い・`hidden` が文字列の配列でない'
   - code: '403'

@@ -1,10 +1,10 @@
 id: MOD-155-52
 title: 画面 / アプリとルート / $source/$.tsx
-lead: '`/{配信元の ID}/{文書のパス}` のルート。'
+lead: '`/{配信元の ID}/{文書のパス}` のルートを受け持ち、アプリとルートの $source/$.tsx を修正するときに参照する。'
 constants:
   - name: Route
     title: 文書のルート
     container: routes/$source/$.tsx
-    usecase: 文書を読む
+    usecase: 文書を参照する
     summary: '`createFileRoute("/$source/$")({...})`。`params._splat` を文書のパスにして `loadDocument` を呼ぶ。他の項目は配信元のトップのルートと同じ'
     value: createFileRoute("/$source/$")({...})

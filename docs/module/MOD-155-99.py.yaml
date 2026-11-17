@@ -1,6 +1,6 @@
 id: MOD-155-99
 title: 開発ドキュメントサーバー / 変換 / service.py
-lead: 変換の選択と、表のキーの取り出し。
+lead: 変換の選択と、表のキーの取り出しを受け持ち、変換の service.py を修正するときに参照する。
 test_files:
   - tests/unit/dev_docs/features/convert/test_service.py
 diagrams:
@@ -39,7 +39,7 @@ classes:
     usecase: 文書の取得
     role: サービス
     summary: 文書の行の設定で変換を選んで Markdown を描き、埋め込みを展開して表のキーを取り出す
-    description: '`converters[]` のスクリプトは project-index が実行して結果を返すため、dev-docs はスクリプトを動かさず、変換の結果も控えない（状態を持たない）。'
+    description: '`converters[]` のスクリプトは project-index が実行して結果を返却するため、dev-docs はスクリプトを動かさず、変換の結果も記録しない（状態を持たない）。'
     kind: クラス
     methods:
       - name: render
@@ -60,13 +60,13 @@ classes:
             type: DocumentDetail
             required: true
             passing: positional
-            description: project-index が返した文書の詳細
+            description: project-index が返却した文書の詳細
           - name: documents
             title: 文書
             type: Sequence[IndexedDocument]
             required: true
             passing: positional
-            description: 同じリビジョンの全ての文書（本文の id のリンクと見出しの引き当てに使う）
+            description: 同じリビジョンの全ての文書（本文の id のリンクと見出しの引き当てに使用する）
           - name: linkable
             title: リンクにできる検討事項
             type: Collection[str]
@@ -77,10 +77,10 @@ classes:
           type: str | ConvertFailure
           description: Markdown か変換の失敗
         process: |-
-          1. `detail.failure` があれば、同じフィールドの `ConvertFailure` を返す
-          2. `detail.markdown` があれば（`converters[]` を指す行の文書）、それを返す
-          3. 文書の行（`view.row(document.kind)`）を引き、Markdownの本文かが `True` なら `document.body` を返す
-          4. それ以外は、スキーマ駆動の変換（スキーマは行の `schema`）の結果を返す。描画の文脈は、`links` を `documents` の文書ごとに ID・`path`・`body_path` から `DocumentLink`（タイトルはメタデータの `name`、パスは `path`）を引く辞書、`issue_url` を `view.github_repository` から作った URL（無ければ `None`）、`path` を文書の `path`、`item_heading` を「ID の文書を `documents` から引き、その値と行の `schema` で項目の見出しを返す関数（ID の文書が無ければ `None`）」、`decisions` を `linkable` にする
+          1. `detail.failure` があれば、同じフィールドの `ConvertFailure` を返却する
+          2. `detail.markdown` があれば（`converters[]` を指す行の文書）、それを返却する
+          3. 文書の行（`view.row(document.kind)`）を取得し、Markdownの本文かが `True` なら `document.body` を返却する
+          4. それ以外は、スキーマ駆動の変換（スキーマは行の `schema`）の結果を返却する。描画の文脈は、`links` を `documents` の文書ごとに ID・`path`・`body_path` から `DocumentLink`（タイトルはメタデータの `name`、パスは `path`）を取得する辞書、`issue_url` を `view.github_repository` から作った URL（無ければ `None`）、`path` を文書の `path`、`item_heading` を「ID の文書を `documents` から引き、その値と行の `schema` で項目の見出しを返す関数（ID の文書が無ければ `None`）」、`decisions` を `linkable` にする
         unit_tests:
           - name: test_convert_service_render
             case: 正常
@@ -90,7 +90,7 @@ classes:
             expected: '`# {name}` で始まる Markdown'
           - name: test_convert_service_render_when_converter
             case: 正常
-            summary: project-index の変換の結果を使う
+            summary: project-index の変換の結果を使用する
             condition: '`markdown` が `# 変換した` の文書の詳細'
             mock: なし
             expected: '`# 変換した` で、スキーマ駆動の変換を呼ばない'
@@ -148,7 +148,7 @@ classes:
           description: Markdown と表のキー
         process: |-
           1. 埋め込みの展開（`embedded`）をする
-          2. コードブロックの外の表を出る順にたどり、直前に `TABLE_KEY_PATTERN` の行（間に `TABLE_MARKER_PATTERN` の行を挟んでもよい）があればそのキー、無ければ `{種類}:table[{n}]`（`n` は本文の中の 0 始まりの順）を表のキーにする。マーカーの行を取り除いた Markdown と表のキーを返す
+          2. コードブロックの外の表を出る順にたどり、直前に `TABLE_KEY_PATTERN` の行（間に `TABLE_MARKER_PATTERN` の行を挟んでもよい）があればそのキー、無ければ `{種類}:table[{n}]`（`n` は本文の中の 0 始まりの順）を表のキーにする。マーカーの行を取り除いた Markdown と表のキーを返却する
         unit_tests:
           - name: test_convert_service_finish
             case: 正常
@@ -173,13 +173,13 @@ constants:
     title: 表のキーのマーカー
     container: features/convert/service.py
     usecase: 文書の取得
-    summary: 表の組み立てが表の前に置き、変換の最後に取り除く行に当てる正規表現
+    summary: 表の組み立てが表の前に配置し、変換の最後に取り除く行に適用する正規表現
     value: '`r"^<!-- dev-docs-table: (?P<key>.+) -->$"`'
   - name: TABLE_MARKER_PATTERN
     title: 表のマーカー
     container: features/convert/service.py
     usecase: 文書の取得
-    summary: 表のキーのマーカーと表の間で読み飛ばす、1 行の表のマーカー（記載方法を問わない）に当てる正規表現
+    summary: 表のキーのマーカーと表の間でスキップする、1 行の表のマーカー（記載方法を問わない）に適用する正規表現
     value: '`r"^<!-- table:.*-->$"`'
 refs:
   - IF-155-10#

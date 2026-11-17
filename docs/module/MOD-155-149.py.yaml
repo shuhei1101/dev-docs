@@ -1,6 +1,6 @@
 id: MOD-155-149
 title: 開発ドキュメントサーバー / 端末の設定 / types.py
-lead: 端末の設定と、画面の `sources[]` の要求と結果の型。
+lead: 端末の設定と、画面の `sources[]` の要求と結果の型を受け持ち、端末の設定の types.py を修正するときに参照する。
 diagrams:
   - name: 全体
     diagram: |-
@@ -12,7 +12,7 @@ diagrams:
         }
         class 端末の設定 {
           +project-indexの接続先: str
-          +状態の置き場所: Path
+          +状態の配置先: Path
         }
         click 端末の設定の読み込み href "./MOD-155-146.py.yaml#端末の設定の読み込み"
 data_models:
@@ -29,7 +29,7 @@ data_models:
         type: list[str]
         access: 公開
         default: '[]'
-        description: この配信元を読める作業場所の glob
+        description: この配信元を参照できる作業場所の glob
       - name: write
         title: 読み書きできる作業場所
         type: list[str] | None
@@ -41,8 +41,8 @@ data_models:
     container: features/settings/types.py
     usecase: 端末の設定
     role: DTO
-    summary: 設定画面が送る `sources[]` の 1 行
-    description: '`pydantic.BaseModel`（`extra="forbid"`）。端末の設定の保存の要求の `sources[]` の形。project-index の端末の設定の API へ送るときの行もこの形'
+    summary: 設定画面が送信する `sources[]` の 1 行
+    description: '`pydantic.BaseModel`（`extra="forbid"`）。端末の設定の保存の要求の `sources[]` の形式。project-index の端末の設定の API へ送信するときの行もこの形'
     properties:
       - name: id
         title: 配信元の ID
@@ -55,38 +55,38 @@ data_models:
         title: 配信元の設定のパス
         type: list[str]
         access: 公開
-        description: 配信元の設定の YAML の絶対パスの並び。文字列 1 つで書かれたときも配列にする（`field_validator`）
+        description: 配信元の設定の YAML の絶対パスの並び。文字列 1 つで記載されたときも配列にする（`field_validator`）
       - name: enabled
         title: 配信するか
         type: bool
         access: 公開
         default: 'True'
-        description: '`False` で行を消さずに配信を止める'
+        description: '`False` で行を削除せずに配信を止める'
       - name: scope
         title: 権限の範囲
         type: SourceScope
         access: 公開
         default: SourceScope()
-        description: 読める・読み書きできる作業場所
+        description: 参照できる・読み書きできる作業場所
       - name: outside_read
         title: 作業範囲の外から読めるか
         type: bool
         access: 公開
         default: 'True'
-        description: '`False` で、`scope` に当たらない作業場所から `outside_scope: true` で読むのを断る'
+        description: '`False` で、`scope` に該当しない作業場所から `outside_scope: true` で参照するのを断る'
   - name: TerminalConfig
     title: 端末の設定
     container: features/settings/types.py
     usecase: 端末の設定
     role: DTO
     summary: 検証を通して既定値を埋めた端末の設定
-    description: '`pydantic.BaseModel`（`frozen=True`）。キーの意味と既定値は Issue #3 の資料 A-25 のキー一覧。'
+    description: '`pydantic.BaseModel`（`frozen=True`）。キーの意味と既定値は [汎用の開発ドキュメントサーバーを作る](https://github.com/shuhei1101/dev-docs/issues/3) の資料 A-25 のキー一覧。'
     properties:
       - name: file
         title: 設定のファイル
         type: Path
         access: 公開
-        description: 読んだ `settings.yaml` の絶対パス
+        description: 参照した `settings.yaml` の絶対パス
       - name: version
         title: 設定のバージョン
         type: str
@@ -96,7 +96,7 @@ data_models:
         title: クローンの場所
         type: Path
         access: 公開
-        description: dev-docs のクローン（フックが使う。サーバーは読むだけ）
+        description: dev-docs のクローン（フックが使用する。サーバーは参照するだけ）
       - name: port
         title: 待ち受けのポート
         type: int
@@ -120,19 +120,19 @@ data_models:
         type: list[str]
         access: 公開
         default: '[]'
-        description: '`sources` に残った行の ID（無ければ `config` の先頭）。配信には使わず、起動と `status` が知らせる（`dev-docs migrate` が project-index に同じ ID の行があって移さなかった行）'
+        description: '`sources` に残った行の ID（無ければ `config` の先頭）。配信には使用せず、起動と `status` が通知する（`dev-docs migrate` が project-index に同じ ID の行があって移さなかった行）'
       - name: state_dir
-        title: 状態の置き場所
+        title: 状態の配置先
         type: Path
         access: 公開
         default: '`DEV_DOCS_STATE_DIR` → 端末の設定の `state_dir` → `${XDG_STATE_HOME:-~/.local/state}/dev-docs`'
-        description: 表の列の設定を置くフォルダ（`~` を展開した絶対パス）
+        description: 表の列の設定を配置するフォルダ（`~` を展開した絶対パス）
       - name: log_dir
-        title: ログの置き場所
+        title: ログの配置先
         type: Path
         access: 公開
         default: '{state_dir}/logs'
-        description: project-index につながらないことと警告のログを書くフォルダ
+        description: project-index につながらないことと警告のログを書き込むフォルダ
       - name: mdmark_version
         title: mdmark のバージョン
         type: str
@@ -145,7 +145,7 @@ data_models:
     usecase: 端末の設定
     role: DTO
     summary: PUT `/_api/settings/sources` の本文
-    description: '共通の『画面の API のモデル』（`ApiModel`。JSON のキーは camelCase）を継承する。型の合わない本文は FastAPI が 422 にする前に、起動の『例外の変換の登録』で problem+json の `errors[]` に揃える。'
+    description: '共通の『画面の API のモデル』（`ApiModel`。JSON のキーは camelCase）を継承する。型の合わない本文は FastAPI が 422 にする前に、起動の『例外の変換の登録』で problem+json の `errors[]` に統一する。'
     properties:
       - name: sources
         title: 配信元
@@ -209,7 +209,7 @@ data_models:
         title: 状態
         type: Literal['serving', 'not_served', 'disabled', 'pending_reload']
         access: 公開
-        description: project-index が返した状態
+        description: project-index が返却した状態
       - name: errors
         title: 除外した理由
         type: list[dict[str, str]]
@@ -240,7 +240,7 @@ data_models:
         title: 端末の設定のパス
         type: str
         access: 公開
-        description: project-index が返した、project-index の端末の設定のパス
+        description: project-index が返却した、project-index の端末の設定のパス
       - name: sources
         title: 配信元
         type: list[SettingsSourceRow]
@@ -258,7 +258,7 @@ classes:
     container: features/settings/types.py
     usecase: 端末の設定
     role: 例外
-    summary: 端末の設定が無い・YAML として読めない・スキーマに違反することを、違反の並びで表す
+    summary: 端末の設定が無い・YAML として読み込めない・スキーマに違反することを、違反の並びで表す
     description: '`DevDocsError` の子で HTTP 422。起動では標準エラーに違反ごとに `{file}: {path}: {rule}` を出して終了コード 2 で終わり、画面の API では problem+json の `errors[]`（`{path, reason}`）にする。'
     kind: クラス
     inherits: DevDocsError

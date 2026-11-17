@@ -1,6 +1,6 @@
 id: MOD-155-35
 title: 画面 / 文書の画面 / comment-panel.tsx
-lead: 溜めたコメントの一覧と、コピー・起票。
+lead: 溜めたコメントの一覧と、コピー・起票を受け持ち、文書の画面の comment-panel.tsx を修正するときに参照する。
 test_files:
   - tests/unit/frontend/src/features/docs/shared/comments/comment-panel.test.tsx
 components:
@@ -34,12 +34,12 @@ components:
         initial: 'null'
         description: 修正中のコメント
         notes: '`useState`。修正欄で Esc を押すと、イベントをパネルへ伝えず（`stopPropagation`）null に戻す'
-    description: 修正・削除はコメントの置き場所の `update`・`remove` を呼ぶ（本文のマーカーは `DocBody` が置き場所の変化を受けて描き直す）。コピーは `navigator.clipboard.writeText(formatComments(選んだコメント))`。起票は全文をコピーしてから `buildIssueUrl` の URL を `window.open(url, "_blank", "noopener")` で開く。結果は sonner の通知で出す（文言は画面設計の通知）
+    description: 修正・削除はコメントの配置先の `update`・`remove` を呼ぶ（本文のマーカーは `DocBody` が配置先の変化を受けて再描画する）。コピーは `navigator.clipboard.writeText(formatComments(選んだコメント))`。起票は全文をコピーしてから `buildIssueUrl` の URL を `window.open(url, "_blank", "noopener")` で開く。結果は sonner の通知で出す（文言は画面設計の通知）
     unit_tests:
       - name: test_comment_panel
         case: 正常
         summary: 選んだコメントをコピーする
-        condition: 3 件のうち 1 件の選択を外して「選択 2 件をコピー」
+        condition: 3 件のうち 1 件の選択を除外して「選択 2 件をコピー」
         mock: '`navigator.clipboard`（偽物）・sonner の `toast`（`vi.mock`）'
         expected: '`writeText` に 2 件分の本文、通知が `選択 2 件をクリップボードにコピーしました。`'
       - name: test_comment_panel_when_indeterminate
@@ -52,5 +52,5 @@ components:
         case: 異常
         summary: コピーの失敗
         condition: '`writeText` が失敗する'
-        mock: '`navigator.clipboard`（例外を送る偽物）・sonner の `toast`'
+        mock: '`navigator.clipboard`（例外を送信する偽物）・sonner の `toast`'
         expected: 通知が `クリップボードにコピーできませんでした。`

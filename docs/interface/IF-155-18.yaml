@@ -2,15 +2,15 @@ id: IF-155-18
 title: "画面の配信"
 entry:
   kind: endpoint
-  value: GET `/{path}`（`/_api/`・`/mcp`・`/_admin/` を除く。`/_api/`・`/_admin/` の下で、どの入口にも当たらないパス（`/_admin/mcp/` の下を除く）は、GET・POST・PUT・PATCH・DELETE で 404 を返す）
+  value: GET `/{path}`（`/_api/`・`/mcp`・`/_admin/` を除く。`/_api/`・`/_admin/` の下で、どのエンドポイントにも該当しないパス（`/_admin/mcp/` の下を除く）は、GET・POST・PUT・PATCH・DELETE で 404 を返却する）
 flows:
   - name: 正常系
-    summary: 画面のパスに `index.html` を、`assets/` のパスに静的ファイルを返す
+    summary: 画面のパスに `index.html` を、`assets/` のパスに静的ファイルを返却する
     setup:
       - name: Mock
         description: なし（dev-docs のアプリを HTTP のテストのクライアントで呼ぶ）
       - name: 画面のビルド
-        description: '`index.html` と `assets/` の JS 1 件を置いたビルドのフォルダ'
+        description: '`index.html` と `assets/` の JS 1 件を配置したビルドのフォルダ'
         notes: 中身はテストで作る最小のファイルでよい
     flow: |-
       ```mermaid
@@ -28,11 +28,11 @@ flows:
     expected:
       - '`/` と `/sample/docs/doc-1` が 200 で、本文がビルドの `index.html`、`Content-Type` が `text/html`、`Cache-Control` が `no-cache`'
       - '`/assets/{JS のファイル}` が 200 で、本文がそのファイル、`Content-Type` が JavaScript、`Cache-Control` が `immutable` を含む'
-      - '`/_api/sources/sample/docs` は画面ではなく文書の取得の JSON を返す'
+      - '`/_api/sources/sample/docs` は画面ではなく文書の取得の JSON を返却する'
       - '`index.html` の `<head>` に `<meta name="mdmark-version" content="develop">` がある（端末の設定に `mdmark_version` が無いときの既定）'
     test: test_normal
   - name: 正常系（mdmark のバージョンを固定する）
-    summary: 端末の設定の `mdmark_version` の値を、`index.html` の `mdmark-version` の `<meta>` に入れて返す
+    summary: 端末の設定の `mdmark_version` の値を、`index.html` の `mdmark-version` の `<meta>` に入れて返却する
     setup:
       - name: Mock
         description: なし
@@ -54,7 +54,7 @@ flows:
       - '`<meta>` のほかの `index.html` の中身は、ビルドの `index.html` と同じ'
     test: test_normal_when_mdmark_version_pinned
   - name: 異常系（無い静的ファイル・無い API・404）
-    summary: '`assets/` の無いファイルと `/_api/` の無いパスは `index.html` を返さず 404 を返す'
+    summary: '`assets/` の無いファイルと `/_api/` の無いパスは `index.html` を返却せず 404 を返却する'
     setup:
       - name: Mock
         description: なし
@@ -78,7 +78,7 @@ flows:
       - '`/_api/no-such` が 404 で、`Content-Type` が `application/problem+json`'
     test: test_error_when_not_found
   - name: 異常系（除くパスへの GET 以外の要求・404）
-    summary: '`/_api/`・`/_admin/` の下（`/_admin/mcp/` の下を除く）の、どの入口にも当たらないパスへの要求は、POST・PUT・PATCH・DELETE でも 405 にせず 404 を返す'
+    summary: '`/_api/`・`/_admin/` の下（`/_admin/mcp/` の下を除く）の、どのエンドポイントにも該当しないパスへの要求は、POST・PUT・PATCH・DELETE でも 405 にせず 404 を返却する'
     setup:
       - name: Mock
         description: なし
@@ -122,9 +122,9 @@ flows:
       ```
     expected:
       - '`/sample/docs/doc-1` が 503 で、`nextSteps` に画面をビルドすることがある'
-      - '`/_api/sources/sample/docs` は 200 を返す'
+      - '`/_api/sources/sample/docs` は 200 を返却する'
     test: test_error_when_build_missing
-lead: '#17 の画面を開くときにブラウザが読む。ビルドした画面の `index.html` と静的ファイルを返す。画面のパスは全て `index.html` を返し、どの画面を出すかは画面が決める。'
+lead: 'ビルドした画面の `index.html` と静的ファイルを返却する画面の配信の入出力を定め、画面の配信を修正するときに参照する。'
 identifier: serve_screen
 permissions: なし（`127.0.0.1` でだけ待ち受ける）
 idempotent: true
@@ -148,25 +148,27 @@ response:
     notes: '`Content-Type` はファイルの拡張子から決める'
 status_codes:
   - code: '200'
-    condition: '`index.html` か静的ファイルを返した（画面に無いパスも `index.html` を返し、見つからない画面は画面が出す）'
+    condition: '`index.html` か静的ファイルを返却した（画面に無いパスも `index.html` を返却し、見つからない画面は画面が出す）'
   - code: '404'
-    condition: '`assets/` のパスのファイルが無い。`/_api/`・`/_admin/` の下（`/_admin/mcp/` の下を除く）の、どの入口にも当たらないパスへの要求（GET・POST・PUT・PATCH・DELETE）'
-    notes: '`index.html` を返さない'
+    condition: '`assets/` のパスのファイルが無い。`/_api/`・`/_admin/` の下（`/_admin/mcp/` の下を除く）の、どのエンドポイントにも該当しないパスへの要求（GET・POST・PUT・PATCH・DELETE）'
+    notes: '`index.html` を返却しない'
   - code: '503'
     condition: 画面のビルド（`index.html`）が無い
     notes: '`nextSteps` に画面をビルドすること'
 error_format: RFC 9457 の `application/problem+json`。拡張メンバーは camelCase（`nextSteps`）
 constraints:
   - item: 除くパス
-    constraint: '`/_api/`・`/mcp`・`/_admin/` で始まるパスは画面を返さず、それぞれの入口が応える。スラッシュ無しの `/mcp`・`/_admin/mcp` も画面の配信に当たらず MCP が応える。無い `/_api/` のパスは `application/problem+json` の 404。`/_api/`・`/_admin/` の下（`/_admin/mcp/` の下を除く）の、どの入口にも当たらないパスへの要求は、POST・PUT・PATCH・DELETE でも `application/problem+json` の 404 を返す（除くパスの外への GET 以外の要求は 405）。`/mcp/`・`/_admin/mcp/` の下の無いパスは、マウントした MCP のアプリが応え、メソッドによらず `text/plain` の 404 を返す'
+    constraint: '`/_api/`・`/mcp`・`/_admin/` で始まるパスは画面を返却せず、それぞれのエンドポイントが応える。スラッシュ無しの `/mcp`・`/_admin/mcp` も画面の配信に該当せず MCP が応える。無い `/_api/` のパスは `application/problem+json` の 404。`/_api/`・`/_admin/` の下（`/_admin/mcp/` の下を除く）の、どのエンドポイントにも該当しないパスへの要求は、POST・PUT・PATCH・DELETE でも `application/problem+json` の 404 を返却する（除くパスの外への GET 以外の要求は 405）。`/mcp/`・`/_admin/mcp/` の下の無いパスは、マウントした MCP のアプリが応え、メソッドによらず `text/plain` の 404 を返却する'
   - item: キャッシュ
     constraint: '`index.html` は `Cache-Control: no-cache`。`assets/` のファイルはファイル名に中身のハッシュを持ち、`Cache-Control: public, max-age=31536000, immutable`'
   - item: 認可
     constraint: 制限なし（`127.0.0.1` でだけ待ち受ける）
     decided_by: NFR-155-1#requirements[待ち受けのアドレス]
   - item: OpenAPI
-    constraint: APIのスキーマに載せない
+    constraint: APIのスキーマに含めない
   - item: mdmark のバージョン
-    constraint: 画面のパスに返す `index.html` の `<head>` に、端末の設定の `mdmark_version`（無ければ `develop`）を `<meta name="mdmark-version" content="{値}">` で 1 つ入れる。画面はこの値で mdmark の読み込み先を組み立てる。ビルドの `index.html` のファイルは書き換えない
+    constraint: 画面のパスに返却する `index.html` の `<head>` に、端末の設定の `mdmark_version`（無ければ `develop`）を `<meta name="mdmark-version" content="{値}">` で 1 つ入れる。画面はこの値で mdmark の読み込み先を組み立てる。ビルドの `index.html` のファイルは書き換えない
     decided_by: CFG-155-2#settings[mdmark_version]
 test_file: tests/integration/server/test_serve_screen.py
+notes:
+  補足: 画面のパスは全て `index.html` を返却し、どの画面を出すかは画面が決める。
