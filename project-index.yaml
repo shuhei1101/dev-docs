@@ -12,7 +12,10 @@ documents:
     title: アーキテクチャ図
     paths: ["docs/architecture/*.yaml"]
     exclude: [index.yaml]
-    schema: schemas/architecture.schema.yaml
+    schema:
+      source: knowledge
+      path: schemas/design/architecture.schema.yaml
+      ref: design-schemas/v8.1.0
     metadata:
       name: title
       description: lead
@@ -20,7 +23,10 @@ documents:
     title: 非機能要件
     paths: ["docs/nonfunctional/*.yaml"]
     exclude: [index.yaml]
-    schema: schemas/nonfunctional.schema.yaml
+    schema:
+      source: knowledge
+      path: schemas/design/nonfunctional.schema.yaml
+      ref: design-schemas/v8.1.0
     metadata:
       name: title
       description: lead
@@ -28,7 +34,10 @@ documents:
     title: シナリオ
     paths: ["docs/scenario/*.yaml"]
     exclude: [index.yaml]
-    schema: schemas/scenario.schema.yaml
+    schema:
+      source: knowledge
+      path: schemas/design/scenario.schema.yaml
+      ref: design-schemas/v8.1.0
     metadata:
       name: title
       description: lead
@@ -36,7 +45,10 @@ documents:
     title: インターフェース定義
     paths: ["docs/interface/*.yaml"]
     exclude: [index.yaml]
-    schema: schemas/interface.schema.yaml
+    schema:
+      source: knowledge
+      path: schemas/design/interface.schema.yaml
+      ref: design-schemas/v8.1.0
     metadata:
       name: title
       description: lead
@@ -44,7 +56,10 @@ documents:
     title: モジュール構成
     paths: ["docs/module/*.yaml"]
     exclude: [index.yaml]
-    schema: schemas/module.schema.yaml
+    schema:
+      source: knowledge
+      path: schemas/design/module.schema.yaml
+      ref: design-schemas/v8.1.0
     metadata:
       name: title
       description: lead
@@ -52,7 +67,10 @@ documents:
     title: 画面設計
     paths: ["docs/screen/*.yaml"]
     exclude: [index.yaml]
-    schema: schemas/screen.schema.yaml
+    schema:
+      source: knowledge
+      path: schemas/design/screen.schema.yaml
+      ref: design-schemas/v8.1.0
     metadata:
       name: title
       description: lead
@@ -60,7 +78,10 @@ documents:
     title: 部品設計
     paths: ["docs/component/*.yaml"]
     exclude: [index.yaml]
-    schema: schemas/component.schema.yaml
+    schema:
+      source: knowledge
+      path: schemas/design/component.schema.yaml
+      ref: design-schemas/v8.1.0
     metadata:
       name: title
       description: lead
@@ -68,7 +89,10 @@ documents:
     title: 設定
     paths: ["docs/config/*.yaml"]
     exclude: [index.yaml]
-    schema: schemas/config.schema.yaml
+    schema:
+      source: knowledge
+      path: schemas/design/config.schema.yaml
+      ref: design-schemas/v8.1.0
     metadata:
       name: title
       description: lead
@@ -76,7 +100,10 @@ documents:
     title: 外部API
     paths: ["docs/external-api/*.yaml"]
     exclude: [index.yaml]
-    schema: schemas/external-api.schema.yaml
+    schema:
+      source: knowledge
+      path: schemas/design/external_api.schema.yaml
+      ref: design-schemas/v8.1.0
     metadata:
       name: title
       description: lead
@@ -84,7 +111,10 @@ documents:
     title: 外部ライブラリ
     paths: ["docs/library/*.yaml"]
     exclude: [index.yaml]
-    schema: schemas/library.schema.yaml
+    schema:
+      source: knowledge
+      path: schemas/design/library.schema.yaml
+      ref: design-schemas/v8.1.0
     metadata:
       name: title
       description: lead
@@ -92,7 +122,10 @@ documents:
     title: テスト実行方法
     paths: ["docs/test-procedure/*.yaml"]
     exclude: [index.yaml]
-    schema: schemas/test-procedure.schema.yaml
+    schema:
+      source: knowledge
+      path: schemas/design/test_procedure.schema.yaml
+      ref: design-schemas/v8.1.0
     metadata:
       name: title
       description: lead
@@ -100,7 +133,10 @@ documents:
     title: 開発コマンド
     paths: ["docs/dev-command/*.yaml"]
     exclude: [index.yaml]
-    schema: schemas/dev-command.schema.yaml
+    schema:
+      source: knowledge
+      path: schemas/design/dev_command.schema.yaml
+      ref: design-schemas/v8.1.0
     metadata:
       name: title
       description: lead
@@ -111,7 +147,7 @@ documents:
     schema:
       source: knowledge
       path: schemas/flowchart.schema.yaml
-      ref: 84c29878db60c2e374582270437504786a89fa4e
+      ref: design-schemas/v8.1.0
     metadata:
       tags: tags[].name
       main_tags: tags[main].name
@@ -120,13 +156,19 @@ documents:
     paths:
       - docs/index.yaml
       - "docs/*/index.yaml"
-    schema: schemas/index.schema.yaml
+    schema:
+      source: knowledge
+      path: schemas/design/index.schema.yaml
+      ref: design-schemas/v8.1.0
     metadata:
       description: summary
   - id: files_root
     title: docs 直下の Markdown
     paths: ["docs/_root/files.yml"]
-    schema: schemas/files.schema.yaml
+    schema:
+      source: knowledge
+      path: schemas/knowledge-files.schema.yaml
+      ref: design-schemas/v8.1.0
     records: files
     body_file: path
     metadata:
@@ -135,7 +177,10 @@ documents:
     title: 公開ドキュメントの Markdown
     paths: ["docs/guide/files.yml"]
     exclude: ["*.yaml", README.md]
-    schema: schemas/files.schema.yaml
+    schema:
+      source: knowledge
+      path: schemas/knowledge-files.schema.yaml
+      ref: design-schemas/v8.1.0
     records: files
     body_file: path
     metadata:
@@ -145,6 +190,9 @@ documents:
     title: モックの Markdown
     paths: ["docs/mock/files.yml"]
     exclude: ["*.html", "*.js", "*.css"]
-    schema: schemas/files.schema.yaml
+    schema:
+      source: knowledge
+      path: schemas/knowledge-files.schema.yaml
+      ref: design-schemas/v8.1.0
     records: files
     body_file: path
