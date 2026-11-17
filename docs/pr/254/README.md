@@ -9,7 +9,7 @@
 [#245](https://github.com/shuhei1101/dev-docs/issues/245) の要望。
 [#240](https://github.com/shuhei1101/dev-docs/issues/240) で文書の画面は mdmark の既定の参照を develop の最新（jsDelivr の `@develop`）にした。
 作業 PR [#212](https://github.com/shuhei1101/dev-docs/pull/212) の結合テストを mdmark の develop の最新の dist（shuhei1101/mdmark の [3730097](https://github.com/shuhei1101/mdmark/commit/373009769ef1444847b12c29f003f884125ef6ac)）で実行すると、`body_without_preflight` が `expect(styles.hiddenLegend).toBe("flex")`（Received: `undefined`）で fail した。
-テストは本文の map のシーケンス図に閉じた凡例 `.mdmark-diagram-legend[hidden]` があることを前提にしているが、develop の最新の mdmark はその要素を出さない。
+テストは本文の map のシーケンス図に閉じた凡例 `.mdmark-diagram-legend[hidden]` があることを前提にしているが、テストが算出値を取る時点でその要素が無かった。
 jsDelivr の `@develop` のキャッシュが更新されると、develop の結合テストでも同じ fail が出る。
 
 閉じた凡例の確認は、[#232](https://github.com/shuhei1101/dev-docs/pull/232) で Preflight の `[hidden]` の `display: none !important` を本文に適用しないようにしたことを確認するために配置した。
