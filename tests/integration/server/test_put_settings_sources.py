@@ -22,6 +22,12 @@ def _two_sources(index: RealIndex) -> tuple[dict[str, Any], dict[str, Any]]:
     return sample_row, {"id": "extra", "config": [str(extra)], "scope": sample_row["scope"]}
 
 
+def _version(env: ServerEnv) -> str:
+    """画面の API の端末の設定の取得が返却する、今の内容のバージョン。"""
+    version: str = env.client.get("/_api/settings/sources").json()["version"]
+    return version
+
+
 def _ids(index: RealIndex) -> list[Any]:
     """project-index の端末の設定のファイルの行の ID の並び。"""
     return [item.get("id") for item in index.file_rows()]
@@ -35,7 +41,10 @@ def test_normal(real_index: RealIndex, make_server: Callable[..., ServerEnv]) ->
     # 実行
     response = env.client.put(
         "/_api/settings/sources",
-        json={"sources": [sample_row, {**extra_row, "config": extra_row["config"][0]}]},
+        json={
+            "expectedVersion": _version(env),
+            "sources": [sample_row, {**extra_row, "config": extra_row["config"][0]}],
+        },
         headers=ORIGIN,
     )
     docs = env.client.get("/_api/sources/extra/docs")
@@ -65,7 +74,10 @@ def test_normal_when_source_disabled(
     # 実行
     response = env.client.put(
         "/_api/settings/sources",
-        json={"sources": [sample_row, {**extra_row, "enabled": False}]},
+        json={
+            "expectedVersion": _version(env),
+            "sources": [sample_row, {**extra_row, "enabled": False}],
+        },
         headers=ORIGIN,
     )
     extra = env.client.get("/_api/sources/extra/docs")
@@ -91,7 +103,9 @@ def test_normal_when_source_deleted(
     env = make_server(real_index)
     # 実行
     response = env.client.put(
-        "/_api/settings/sources", json={"sources": [sample_row]}, headers=ORIGIN
+        "/_api/settings/sources",
+        json={"expectedVersion": _version(env), "sources": [sample_row]},
+        headers=ORIGIN,
     )
     extra = env.client.get("/_api/sources/extra/docs")
     # 検証
@@ -116,7 +130,9 @@ def test_normal_when_added_source_invalid(
     env = make_server(real_index)
     # 実行
     response = env.client.put(
-        "/_api/settings/sources", json={"sources": [sample_row, broken_row]}, headers=ORIGIN
+        "/_api/settings/sources",
+        json={"expectedVersion": _version(env), "sources": [sample_row, broken_row]},
+        headers=ORIGIN,
     )
     broken_docs = env.client.get("/_api/sources/broken/docs")
     sample = env.client.get("/_api/sources/sample/docs")

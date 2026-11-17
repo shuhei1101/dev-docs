@@ -1038,12 +1038,16 @@ class RealIndex:
         return list(load_yaml(self.settings_path.read_text(encoding="utf-8")).get("sources") or [])
 
     def put_rows(self, rows: list[dict[str, Any]]) -> None:
-        """PUT `/settings/sources` で行を保存させ、再読み込みさせる。"""
+        """今の内容のバージョンを添えた PUT `/settings/sources` で行を保存させ、再読み込みさせる。"""
         import urllib.request
 
+        with urllib.request.urlopen(
+            f"{self.address}/settings/sources", timeout=REAL_INDEX_WAIT_SEC
+        ) as current:
+            version = json.load(current)["version"]
         request = urllib.request.Request(
             f"{self.address}/settings/sources",
-            data=json.dumps({"sources": rows}).encode("utf-8"),
+            data=json.dumps({"sources": rows, "expectedVersion": version}).encode("utf-8"),
             headers={"Content-Type": "application/json"},
             method="PUT",
         )
