@@ -139,7 +139,7 @@ def test_rewrite_text_when_mermaid_click() -> None:
     assert lines[-1] == "```"
     assert '  click A href "a.yaml"' in lines
     assert '  click B "b.yaml#処理の流れ"' in lines
-    assert '  click C href "id:zzz"' in lines
+    assert not any(line.startswith("  click C") for line in lines)
     assert '  click D href "https://e.example/"' in lines
 
 

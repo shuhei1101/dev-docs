@@ -460,10 +460,10 @@ def test_render_mermaid_when_id_click() -> None:
 
 
 def test_render_mermaid_when_id_click_not_flowchart() -> None:
-    """フローチャート以外の click の行（正常系）。"""
+    """map で描かない種類の click の行（正常系）。"""
     # 準備
-    code = 'classDiagram\n  class A\nclick A href "id:doc-2"'
+    code = 'classDiagram\n  class A\nclick A href "id:doc-2"\nclick C "id:no-such"'
     # 実行
     result = render_mermaid(code, HEAD, _links({"doc-2": "doc-2.yaml"}))
     # 検証
-    assert result == f"```mermaid\n{code}\n```"
+    assert result == '```mermaid\nclassDiagram\n  class A\nclick A href "doc-2.yaml"\n```'
