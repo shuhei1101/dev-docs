@@ -153,7 +153,7 @@ constants:
     title: id のリンク先を持つ click の行
     container: features/convert/diagrams.py
     usecase: 文書の取得
-    summary: 手で書くフローチャートの `click {ノード} "id:…"`・`click {ノード} href "id:…"` の行。`target` は `id:` の後ろの `{文書の ID}#{項目のパス}`、`tail` はリンク先の後ろ（ツールチップ・`_blank` など）
+    summary: 手で書く Mermaid の `click {ノード} "id:…"`・`click {ノード} href "id:…"` の行。`target` は `id:` の後ろの `{文書の ID}#{項目のパス}`、`tail` はリンク先の後ろ（ツールチップ・`_blank` など）
     value: '`^(?P<head>[ \t]*click[ \t]+\S+[ \t]+(?:href[ \t]+)?)"id:(?P<target>[^"]*)"(?P<tail>[^\n]*)$`（複数行）'
 functions:
   - name: render_diagram
@@ -363,7 +363,7 @@ functions:
     container: features/convert/diagrams.py
     usecase: 文書の取得
     role: 変換
-    summary: 手で書く Mermaid のコードを、map で描ける種類なら map の範囲に、それ以外は Mermaid のコードブロックのまま組み立てる
+    summary: 手で書く Mermaid のコードを、map で描ける種類なら map の範囲に、それ以外は `click` の `id:` のリンク先を書き換えた Mermaid のコードブロックに組み立てる
     scope: public
     thread_safe: true
     args:
@@ -392,7 +392,7 @@ functions:
       1. `code` の空でない最初の行の最初の単語が `MAP_MERMAID_KINDS` にあるかを見る
       2. あれば、最初の単語が `FLOWCHART_MERMAID_KINDS` にあるとき、`MERMAID_ID_CLICK` に該当する行を `{head}"{リンク先}"{tail}`（リンク先は `target` を `link` で引いた値で、`"` は `%22`）にし、`None` の行は消す。その他の行は変えない
       3. 2 の `code` を ```mermaid のコードブロックにして `<!-- map: {"title": head.title} -->` と `<!-- /map -->` で囲む（補足は付けない）
-      4. 無ければ、`code` を ```mermaid のコードブロックにして返す
+      4. 無ければ、`code` に 2 と同じ `click` の行の書き換えをかけ、```mermaid のコードブロックにして返す
     unit_tests:
       - name: test_render_mermaid
         case: 正常
@@ -420,7 +420,7 @@ functions:
         expected: 'map の範囲の Mermaid に `click A "doc-6.yaml#処理の流れ"`・`  click B href "doc-2.yaml" _blank`・`click D "../x.yaml"` の行があり、`click C` の行が無く、その他の行は元のまま'
       - name: test_render_mermaid_when_id_click_not_flowchart
         case: 正常
-        summary: フローチャート以外の click の行
-        condition: '`classDiagram` と `click A href "id:doc-2"` の行、`link` が `doc-2.yaml` を返す'
+        summary: map で描かない種類の click の行
+        condition: '`classDiagram` と `click A href "id:doc-2"`・`click C "id:no-such"` の行、`link` が `doc-2` に `doc-2.yaml` を返し、それ以外に `None` を返す'
         mock: なし
-        expected: 元のコードの全ての行が変わらずにある
+        expected: '`<!-- map` が無い ```mermaid のコードブロックで、`click A href "doc-2.yaml"` の行があり、`click C` の行が無く、その他の行は元のまま'

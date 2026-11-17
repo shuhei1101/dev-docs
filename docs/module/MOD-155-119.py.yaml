@@ -289,7 +289,7 @@ functions:
          - 取得した行に同じ ID があり、内容が同じ行は移した行にする。内容は、既定値（`enabled` が `true`・`outside_read` が `true`・`scope` が空）と同じキーを除いた `config`・`enabled`・`scope`・`outside_read` で比べる
          - 同じ ID で内容が違う行は `sources` に残し、ID を `kept` に加える
          - それ以外の行は加える行にする
-      3. 加える行がある場合、取得した行と加える行をこの順に `id`・`config`・`enabled`・`scope`・`outsideRead` のキーだけにして並べ（`id` を省いたと扱う行は `id` を送信しない）、`port.save(rows, view.version)` で保存する
+      3. 加える行がある場合、取得した行と加える行をこの順に `id`・`config`・`enabled`・`scope`・`outside_read` のキーだけにして並べ（取得で返却される `outsideRead` は `outside_read` で送信し、`id` を省いたと扱う行は `id` を送信しない）、`port.save(rows, view.version)` で保存する
          - `ProjectIndexUnreachableError` の場合、もう一度 `port.fetch()` で取得し、加える行が全て同じ ID・同じ内容であれば保存したとして続ける。無い場合は `unconfirmed` を `True`、取得し直しも `ProjectIndexUnreachableError` の場合は `False` にして `ProjectIndexUnreachableMigrationError` を送出する
          - `InvalidArgumentError`・`ProjectIndexRejectedError` の場合、`violations` の `path` が `sources[{n}]` で始まるものを保存した n 番目の行の配信元の ID に読み替え、`{ID}: {rule}` を並べて `MigrationFailedError` を送出する（それ以外の違反は `{path}: {rule}`）
          - `ProjectIndexResponseError` の場合、ステータスと要約で `MigrationFailedError` を送出する。409 は、取得した後に project-index の端末の設定が変わったためやり直す案内を添える
@@ -307,7 +307,7 @@ functions:
         summary: 今の行に加えて 1 回で保存する
         condition: '`sources` に sample・notes・extra の 3 行。偽物の取得が notes（同じ内容）と extra（`enabled: false` で内容が違う）の 2 行と `version: v1` を返却する'
         mock: 移す先の端末の設定の API（取得の応答を返却し、保存を記録するか例外を送出する偽物）
-        expected: 保存が 1 回で、行が notes・extra・sample の順、各行のキーが `id`・`config`・`enabled`・`scope`・`outsideRead` だけ、内容のバージョンが `v1`。`data` の `sources` が extra の 1 行で `project_index` があり、`kept` が `[extra]`
+        expected: 保存が 1 回で、行が notes・extra・sample の順、各行のキーが `id`・`config`・`enabled`・`scope`・`outside_read` だけ、内容のバージョンが `v1`。`data` の `sources` が extra の 1 行で `project_index` があり、`kept` が `[extra]`
       - name: test_export_sources_when_id_omitted
         case: 正常
         summary: '`id` を省いた行を `name` で照らす'

@@ -165,14 +165,6 @@ class IndexSource:
         return ref or self.default_ref
 
 
-def _saved_row(row: dict[str, Any]) -> dict[str, Any]:
-    """保存の本文の行（`outsideRead`）を、偽物の端末の設定の行（`outside_read`）にする。"""
-    saved = {key: value for key, value in row.items() if key != "outsideRead"}
-    if "outsideRead" in row:
-        saved["outside_read"] = row["outsideRead"]
-    return saved
-
-
 class MockIndex:
     """project-index の読み取り API と端末の設定の API を、127.0.0.1 の空きポートで待ち受ける偽物。
 
@@ -342,7 +334,7 @@ class MockIndex:
         if method == "PUT":
             # project-index と同じく、保存してから再読み込みの間は応答しない
             if self.put_saves:
-                self.rows = [_saved_row(row) for row in body["sources"]]
+                self.rows = [dict(row) for row in body["sources"]]
                 self.pending = set()
                 self.version += 1
             if self.put_delay_sec:
@@ -815,11 +807,11 @@ def wait_for_restart(started_count: Callable[[Path], int]) -> Callable[..., None
     return _wait
 
 
-# 結合テストの相手にする本物の project-index（shuhei1101/project-index の develop の 42632c5。
-# shuhei1101/project-index#54 をマージした commit）。パッケージとして入れるとクローンの
+# 結合テストの相手にする本物の project-index（shuhei1101/project-index の develop の 9ce7027。
+# 保存の `expectedVersion` と文書の一覧の `commonKeys` を持つ commit）。パッケージとして入れるとクローンの
 # `templates/`・`content/` が見つからないため、クローンを用意してそこから起動する
 PROJECT_INDEX_REPOSITORY = "https://github.com/shuhei1101/project-index"
-PROJECT_INDEX_COMMIT = "42632c540624f8e97434951e5c7c19bbe37b1125"
+PROJECT_INDEX_COMMIT = "9ce7027ab4620b167986375e6370d04bcd9f66a2"
 # 起動の待ち受けを待つ上限。2026-11-13 の実測で 1 回 4〜6 秒。負荷の高いときの dev-docs の起動
 # （SERVE_WAIT_SEC）と同じ 60 秒にする
 REAL_INDEX_WAIT_SEC = 60
@@ -1046,12 +1038,16 @@ class RealIndex:
         return list(load_yaml(self.settings_path.read_text(encoding="utf-8")).get("sources") or [])
 
     def put_rows(self, rows: list[dict[str, Any]]) -> None:
-        """PUT `/settings/sources` で行を保存させ、再読み込みさせる。"""
+        """今の内容のバージョンを添えた PUT `/settings/sources` で行を保存させ、再読み込みさせる。"""
         import urllib.request
 
+        with urllib.request.urlopen(
+            f"{self.address}/settings/sources", timeout=REAL_INDEX_WAIT_SEC
+        ) as current:
+            version = json.load(current)["version"]
         request = urllib.request.Request(
             f"{self.address}/settings/sources",
-            data=json.dumps({"sources": rows}).encode("utf-8"),
+            data=json.dumps({"sources": rows, "expectedVersion": version}).encode("utf-8"),
             headers={"Content-Type": "application/json"},
             method="PUT",
         )

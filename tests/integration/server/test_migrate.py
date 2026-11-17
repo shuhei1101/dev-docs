@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import json
+import urllib.request
 from collections.abc import Callable
 from pathlib import Path
 
@@ -9,7 +11,7 @@ from dev_docs import main as main_module
 from dev_docs.__main__ import main
 from dev_docs.shared.yaml_io import load_yaml
 
-from .conftest import MockIndex
+from .conftest import IndexSource, MockIndex, RealIndex, materialize
 
 SETTINGS_V1 = 'version: "1"\nclone: /x\nlog_dir: /logs\n'
 SOURCES_V1 = (
@@ -19,6 +21,8 @@ SOURCES_V1 = (
     "  - id: extra\n    config: /repo/extra/dev-docs.yaml\n"
 )
 EXPORT_SOURCES = {"op": "export_sources", "path": "sources", "description": "project-index へ移す"}
+# PUT `/settings/sources` の行が持てるキー（project-index の行のモデル）
+SEND_KEYS = {"id", "config", "enabled", "scope", "outside_read"}
 RENAME_LOG_DIR = {"op": "rename", "path": "log_dir", "to": "state_dir", "description": "改名"}
 
 
@@ -214,6 +218,7 @@ def test_normal_when_sources_moved_to_project_index(
     assert [row.get("id") for row in body["sources"]] == ["extra", "sample", "notes"]
     assert body["sources"][0]["config"] == ["/repo/other/project-index.yaml"]
     assert body["expectedVersion"] == "1"
+    assert all(set(row) <= SEND_KEYS for row in body["sources"])
     assert written["sources"] == [{"id": "extra", "config": "/repo/extra/dev-docs.yaml"}]
     assert (written["project_index"], written["version"]) == (mock_index.address, "2")
     assert "extra" in out
@@ -333,3 +338,37 @@ def test_error_when_project_index_unreachable(
     assert "project-index を起動してから" in error
     assert settings.read_text(encoding="utf-8") == SOURCES_V1
     assert _backups(tmp_path) == []
+
+
+def test_normal_when_sources_moved_to_real_project_index(
+    tmp_path: Path,
+    real_index: RealIndex,
+    write_steps: Callable[..., None],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """本物の project-index が、移す行を外部の読み取りを含めて保存する（正常系）。"""
+    # 準備
+    write_steps("settings", "2", [EXPORT_SOURCES])
+    sample = materialize(real_index.root / "sources", "sample", IndexSource())
+    notes = materialize(real_index.root / "sources", "notes", IndexSource())
+    settings = tmp_path / "settings.yaml"
+    settings.write_text(
+        'version: "1"\nclone: /x\nsources:\n'
+        f"  - id: sample\n    config: {sample}\n"
+        f"  - id: notes\n    config: {notes}\n    outside_read: false\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setenv("DEV_DOCS_CONFIG", str(settings))
+    address = real_index.address
+    # 実行
+    code = main(["migrate", "--project-index", address])
+    # 検証
+    written = load_yaml(settings.read_text(encoding="utf-8"))
+    with urllib.request.urlopen(f"{address}/settings/sources", timeout=30) as response:
+        rows = {row["id"]: row for row in json.load(response)["sources"]}
+    assert code == 0
+    assert "sources" not in written
+    assert (written["project_index"], written["version"]) == (address, "2")
+    assert set(rows) == {"sample", "notes"}
+    assert rows["notes"]["outsideRead"] is False
+    assert rows["sample"]["outsideRead"] is True

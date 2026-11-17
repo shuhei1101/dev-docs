@@ -167,7 +167,7 @@ flows:
         M-->>C: 当てた手順と、移さなかった行の id（終了コード 0）
       ```
     expected:
-      - モックが端末の設定の取得を 1 回と保存を 1 回受け、保存の `sources` がモックの持っていた extra の行と sample・notes の 3 行、`expectedVersion` が取得で返却した内容のバージョンになる。extra は同じ id で内容が違うため、dev-docs の行を送信しない
+      - モックが端末の設定の取得を 1 回と保存を 1 回受け、保存の `sources` がモックの持っていた extra の行と sample・notes の 3 行で、各行のキーが `id`・`config`・`enabled`・`scope`・`outside_read` のうちにあり、`expectedVersion` が取得で返却した内容のバージョンになる。extra は同じ id で内容が違うため、dev-docs の行を送信しない
       - 端末の設定の `sources` が extra の 1 行だけになり、`project_index` が `--project-index` のアドレス、`version` が新しいバージョンになる
       - stdout に、extra を移さずに残したことと、project-index で行を直す案内がある
       - '`--project-index` を省くと `PROJECT_INDEX_PORT`（無ければ 8786）から組んだ `http://127.0.0.1:{ポート}` へ保存する'
@@ -276,6 +276,36 @@ flows:
       - 終了コード 7 で、stderr に保存が後から反映されうることとやり直す案内がある
       - dev-docs の端末の設定が `migrate` の前と同じ中身で、バックアップも作らない
     test: test_error_when_save_unconfirmed_after_timeout
+  - name: 正常系（本物の project-index へ移す）
+    summary: 本物の project-index が、移す行を外部の読み取りを含めて保存する
+    setup:
+      - name: Mock
+        description: テストの中で起動した project-index（結合テストで固定する shuhei1101/project-index の develop の commit。保存の `expectedVersion` を受け付ける `7177d39` 以降。一時フォルダの端末の設定を `PROJECT_INDEX_CONFIG` で指し、空きポートで子プロセスとして起動する）が、端末の設定の取得と保存を受ける
+      - name: 端末の設定
+        description: '`sources` に sample・notes の 2 行を持ち、`project_index` を持たない前のバージョンの `settings.yaml`。project-index の端末の設定の `sources` は空'
+        notes: 'notes は `outside_read: false` を持つ'
+      - name: 入力
+        description: '`--project-index` に起動した project-index のアドレス'
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        participant C as クライアント
+        participant M as dev-docs migrate
+        participant F as 端末の設定
+        participant PI as project-index
+
+        C->>M: --project-index {アドレス}
+        M->>PI: 端末の設定の取得
+        PI-->>M: 空の行と内容のバージョン
+        M->>PI: sample・notes の sources の保存（内容のバージョンつき）
+        PI-->>M: 保存した
+        M->>F: バックアップを取り、移した行を除いて project_index と version を書き換える
+        M-->>C: 当てた手順（終了コード 0）
+      ```
+    expected:
+      - 終了コード 0 で、dev-docs の端末の設定の `sources` が空になり、`project_index` が `--project-index` のアドレス、`version` が新しいバージョンになる
+      - project-index の端末の設定の取得の行に sample・notes が並び、notes の `outsideRead` が `false`、sample の `outsideRead` が `true` になる
+    test: test_normal_when_sources_moved_to_real_project_index
 lead: 端末の設定の `version` を dev-docs が読めるバージョンと比べ、移し替えの手順を古い順に当てる。前のバージョンの `sources` は project-index の端末の設定へ移す。
 identifier: migrate
 permissions: 対象の設定ファイルを書き換えられる利用者
@@ -358,6 +388,6 @@ constraints:
   - item: project-index が保存を受け付けないとき
     constraint: 取得・保存の応答が 200 以外（保存の 400・409・422 を含む）のとき、端末の設定を書き換えず、project-index の応答のステータスと要約を stderr に出して終了コード 4（MigrationFailed）で止める。保存の 400・422 の `errors[].path` が `sources[{n}]` で始まる違反は、送信した n 番目の行の配信元の ID と `reason` を並べて出す。409 は取得の後に project-index の端末の設定が変わったことを示し、やり直す案内を添える
   - item: sources を移す手順
-    constraint: 'project-index の端末の設定を取得し、dev-docs の端末の設定の `sources` の行を、取得した行の `id` と配信元の ID で照らす。配信元の ID は `id`、省いた行は `config` の配信元の設定を重ねた `name` にする（project-index と同じ求め方）。`name` を求められない行は送信せずに `sources` に残し、`config` を stdout に出す。同じ ID の行があれば、内容も同じなら移した行として扱い、内容が違えば送信せずに `sources` に残して ID を stdout に出す。残りの行を project-index の今の行の後ろに加え、取得で返却された内容のバージョンを添えて 1 回で保存する（加える行が無ければ保存しない）。送信する行は、今の行も加える行も `id`・`config`・`enabled`・`scope`・`outsideRead` のキーだけにする（取得で返却される `status`・`errors`・`configVersion` を付けると 400 で断られる）。移した行を `sources` から除き、`project_index` を書き足す。破壊的な手順ではない'
+    constraint: 'project-index の端末の設定を取得し、dev-docs の端末の設定の `sources` の行を、取得した行の `id` と配信元の ID で照らす。配信元の ID は `id`、省いた行は `config` の配信元の設定を重ねた `name` にする（project-index と同じ求め方）。`name` を求められない行は送信せずに `sources` に残し、`config` を stdout に出す。同じ ID の行があれば、内容も同じなら移した行として扱い、内容が違えば送信せずに `sources` に残して ID を stdout に出す。残りの行を project-index の今の行の後ろに加え、取得で返却された内容のバージョンを添えて 1 回で保存する（加える行が無ければ保存しない）。送信する行は、今の行も加える行も `id`・`config`・`enabled`・`scope`・`outside_read` のキーだけにする（取得で返却される `status`・`errors`・`configVersion` を付けると 400 で断られる。取得の応答の外部の読み取りは `outsideRead` だが、保存は `outside_read` だけを受け付け、`outsideRead` を付けると 400 で断られる）。移した行を `sources` から除き、`project_index` を書き足す。破壊的な手順ではない'
     notes: 取得・保存は project-index の端末の設定の API（shuhei1101/project-index の IF-30・IF-31）。project-index は保存した直後に書き込み、配信元の読み直しが終わるまで端末の設定の排他ロックを持ち続け、取得はそのロックを待たない。保存を 1 回にするので、project-index が受け付けないときは何も書き込まれず、取り除く行が生じない
 test_file: tests/integration/server/test_migrate.py

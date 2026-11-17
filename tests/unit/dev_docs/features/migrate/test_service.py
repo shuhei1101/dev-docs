@@ -260,7 +260,7 @@ class FakePort:
 UNREACHABLE = ProjectIndexUnreachableError(
     address=PROJECT_INDEX, reason="45 秒以内に応答がありませんでした"
 )
-SEND_KEYS = {"id", "config", "enabled", "scope", "outsideRead"}
+SEND_KEYS = {"id", "config", "enabled", "scope", "outside_read"}
 
 
 def _data(text: str) -> Any:
