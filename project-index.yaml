@@ -21,6 +21,19 @@ documents:
       description: lead
       tags: tags[].name
       main_tags: tags[main].name
+  - id: layout
+    title: フォルダ構成
+    paths: ["docs/layout/*.yaml"]
+    exclude: [index.yaml]
+    schema:
+      source: knowledge
+      path: schemas/design/layout.schema.yaml
+      ref: design-schemas/v8.4.0
+    metadata:
+      name: title
+      description: lead
+      tags: tags[].name
+      main_tags: tags[main].name
   - id: nonfunctional
     title: 非機能要件
     paths: ["docs/nonfunctional/*.yaml"]
@@ -285,6 +298,7 @@ nav:
         - group: 全体
           items:
             - page: architecture
+            - page: layout
             - page: nonfunctional
             - page: config
             - {page: root/docs/design-policy.md, title: デザイン方針}
