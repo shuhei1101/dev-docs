@@ -170,7 +170,7 @@ functions:
       type: str
       description: Markdown
     process: |-
-      1. 先頭に `# {見出し}`（`HEADING_KEYS` のうち最初に値を持つキー。無ければ文書のメタデータの `name`）を配置し、`LEAD_KEYS` のうち最初に値を持つキーの値を本文の書き換えにかけて段落にする。使用した 2 つのキーは本文の組み立てから除く。`x-key` を持つ `sections` の要素の `title` と見出しの組を文脈の `anchors` に集める。文書の `tables` の値をテーブルの論理名の取得方法にかけ、文脈の `table_titles` にする
+      1. 先頭に `# {見出し}`（`HEADING_KEYS` のうち最初に値を持つキー。無ければ文書のメタデータの `name`）を配置し、`LEAD_KEYS` のうち最初に値を持つキーの値を本文の書き換えにかけて段落にする。使用した 2 つのキーは本文の組み立てから除く。文書の `tables` の値をテーブルの論理名の取得方法にかけ、文脈の `table_titles` にする
       2. スキーマの `properties` の順に値を組み立てる（値が空のキーと、スキーマに `x-hidden: true` を持つキーは飛ばす）
          - `x-heading` を持つ値は、深さ 2 から始まる見出し（`x-heading` の文字列、要素なら `x-key` の値）を配置する。深さは `MAX_HEADING_LEVEL` で止める
          - 見出しも `x-shape` も持たないスカラーが `ATTRIBUTE_MIN` 以上続く間は、まとめて属性の表の組み立てにかける
@@ -181,7 +181,8 @@ functions:
          - 文字列のリストは、要素ごとに参照のリンクか本文の書き換えにかけた箇条書き、オブジェクトは子を順に組み立てる
          - キーが `DECISIONS_KEY` のリストは、先に検討事項のリンクにかけてから組み立てる
       3. 図の元データの表は、閉じた表（`closed=True`）にし、`LABEL_KEYS` の列を先頭へ移し、`DIAGRAM_HIDDEN_KEYS` のうちその表にある列を `hidden` にする
-      4. 行を空行で繋いで返却する
+      4. `x-key` を持つ `sections` の要素の `title` と、その要素の見出しを配置する組み立てのパスの組を集める（同じ `title` は最初の要素）。組が 1 つ以上あれば、1〜3 の組み立ての後に、見出しのアンカーの一覧の 2 と同じ規則で組み立てのパスごとの ID を作り、`title` からその ID（見出しを配置しなかったパスの `title` は除く）を文脈の `anchors` にして 1〜3 をもう一度組み立てる。外部キーのリンクは見出しの行に入らないため、もう一度組み立てても見出しの ID は変わらない
+      5. 行を空行で繋いで返却する
     unit_tests:
       - name: test_schema_to_markdown
         case: 正常
@@ -425,7 +426,7 @@ functions:
       description: '表のキーのマーカーと、`<!-- table: {"kind": "data", …} -->` で囲んだ表'
     process: |-
       1. 列をスキーマの `properties` の順に決める（要素のどれも値を持たない列と、スキーマに `x-hidden: true` を持つ列は除く）。`first` が列にあれば先頭へ移す
-      2. セルは、真偽の値は `CHECK_MARK` か空、参照のリンクに該当する文字列はリンク、それ以外のスカラーはそのまま（`|` はエスケープ、改行は `<br>`）、文字列のリストは `・` で繋ぐ（列のキーが `DECISIONS_KEY` のリストは、先に検討事項のリンクにかける）。`table` を持つオブジェクト（外部キー）は、`table` の値を最後の `.` でテーブルとカラムに分け、テーブルが `{分類}/{テーブル}` なら同じフォルダの `{分類}.yaml` の文書へのリンク、そうでなければ、テーブル名を `table_titles` で論理名にし（該当しなければテーブル名のまま）、`anchors` でその論理名から取得した見出しのアンカー（見出しのアンカー）へのリンク（どちらも取得できなければ値の文字のまま）、それ以外のオブジェクトは `{キー}: {値}` を `、` で繋ぎ、オブジェクトのリストは要素ごとのセルを `<br>` で繋ぐ
+      2. セルは、真偽の値は `CHECK_MARK` か空、参照のリンクに該当する文字列はリンク、それ以外のスカラーはそのまま（`|` はエスケープ、改行は `<br>`）、文字列のリストは `・` で繋ぐ（列のキーが `DECISIONS_KEY` のリストは、先に検討事項のリンクにかける）。`table` を持つオブジェクト（外部キー）は、`table` の値を最後の `.` でテーブルとカラムに分け、テーブルが `{分類}/{テーブル}` なら同じフォルダの `{分類}.yaml` の文書へのリンク、そうでなければ、テーブル名を `table_titles` で論理名にし（該当しなければテーブル名のまま）、`anchors` でその論理名から取得したアンカーへのリンク（どちらも取得できなければ値の文字のまま）、それ以外のオブジェクトは `{キー}: {値}` を `、` で繋ぎ、オブジェクトのリストは要素ごとのセルを `<br>` で繋ぐ
       3. 表のマーカーの引数は、`{"kind": "data"}` に、`closed` なら `"collapse": {"open": false}`、隠す列と `WIDE_KEYS` の列があれば `"columns"` に列名ごとの `{"hidden": true}`・`{"width": {"mode": "nowrap"}}`（同じ列は 1 つのオブジェクトにまとめる）を加えた JSON を、`json.dumps(..., ensure_ascii=False)` の 1 行で記載する
       4. `<!-- dev-docs-table: {table_key} -->`・表のマーカー・見出しの行・区切りの行・データの行・`<!-- /table -->` の順に配置して返却する
     unit_tests:
@@ -477,6 +478,12 @@ functions:
         condition: '`decisions` の列の値が `[D-1, D-2]` の行、文脈の `decisions` が `{"D-1"}`'
         mock: なし
         expected: 'セルが `[D-1](…_decisions/D-1)・D-2`'
+      - name: test_schema_to_markdown_when_foreign_key_duplicate_heading
+        case: 正常
+        summary: 前に同じ文字の見出しがある同じ文書のテーブルへの外部キー
+        condition: '`test_schema_to_markdown_when_foreign_key` と同じ `tables` の前に、`x-heading: tasks` の項目を持つ文書'
+        mock: なし
+        expected: カラムの表に `[タスク.ID](#tasks-1)` のセルがある
   - name: render_attributes
     title: 属性の表の組み立て
     kind: 関数

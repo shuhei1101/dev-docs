@@ -157,10 +157,10 @@ data_models:
         access: 公開
         description: 変換する文書のパス。リンクの相対パスの起点
       - name: anchors
-        title: 同じ文書のテーブルの見出し
+        title: 同じ文書のテーブルのアンカー
         type: Mapping[str, str]
         access: 公開
-        description: '`x-key` を持つ `sections` の要素の `title` から、その要素の見出し（`x-key` の値）。外部キーのリンクのアンカーに使用する。既定は空'
+        description: '`x-key` を持つ `sections` の要素の `title` から、その要素の見出しに mdmark が付ける ID（`#` を除く。前に同じ ID の見出しがあれば `-{n}` 付き）。外部キーのリンクのアンカーに使用する。既定は空'
       - name: table_titles
         title: 同じ文書のテーブルの論理名
         type: Mapping[str, str]
