@@ -213,7 +213,7 @@ def announce_sources(terminal: TerminalConfig) -> threading.Thread:
 
 
 def _port_in_use(bind: str, port: int) -> bool:
-    """待ち受けのアドレスとポートが使用中かを、ポートの確かめで返却する。"""
+    """待ち受けのアドレスとポートが使用中かを、ポートの確認で返却する。"""
     try:
         check_port(bind, port)
     except PortInUseError:
