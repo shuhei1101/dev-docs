@@ -1,0 +1,25 @@
+use_cases:
+  - kind: composite
+    scenario: docs/scenario/SC-155-13.yaml
+    impact: none
+    detail: 版の控えと直下の mdmark の設定を変えるだけで、文書を画面で参照する流れを変えない
+    depends_on: []
+docs:
+  - page: ai-monitor-version.ini
+    new: false
+    change: 先頭行を v0.4.0 から v0.5.0 にする
+    status: todo
+  - page: mdmark.config.yaml
+    new: true
+    change: 反映作業『配布先の mdmark の設定へのノードの種類の記載』の実行スクリプトで作り、map.kinds に AI Monitor の図のノードの種類 7 つ、map.lines に線の種類 2 つを記載する
+    status: todo
+scope_out:
+  - item: サイトのレイアウトの取り込み（import-site で docs/_theme/ と ai-monitor-theme.yaml を取り込む）
+    reason: dev-docs に docs/_theme/・ai-monitor-theme.yaml・docs/_config.yml が無く、公開ページは scripts/build_pages.py が mdmark の build で作る
+    plan: none
+  - item: MCP ツール（settings.yaml の agents[].mcp_tools の見直し）
+    reason: モニターの settings.yaml は全プロジェクトで共有し、dev-docs の作業 PR で変える対象ではない
+    plan: none
+  - item: 'モック HTML（docs/mock/pages/doc-view/56/）に残る旧記載方法のマーカー（<!-- tabs: group=lang -->・<!-- section: closed -->）の書き換え'
+    reason: '#56 で採用の確認に使ったモックの記録で、文書のサイトの本文として描かない'
+    plan: none
