@@ -153,7 +153,7 @@ constants:
     title: id のリンク先を持つ click の行
     container: features/convert/diagrams.py
     usecase: 文書の取得
-    summary: 手で書くフローチャートの `click {ノード} "id:…"`・`click {ノード} href "id:…"` の行。`target` は `id:` の後ろの `{文書の ID}#{項目のパス}`、`tail` はリンク先の後ろ（ツールチップ・`_blank` など）
+    summary: 手で書く Mermaid の `click {ノード} "id:…"`・`click {ノード} href "id:…"` の行。`target` は `id:` の後ろの `{文書の ID}#{項目のパス}`、`tail` はリンク先の後ろ（ツールチップ・`_blank` など）
     value: '`^(?P<head>[ \t]*click[ \t]+\S+[ \t]+(?:href[ \t]+)?)"id:(?P<target>[^"]*)"(?P<tail>[^\n]*)$`（複数行）'
 functions:
   - name: render_diagram
