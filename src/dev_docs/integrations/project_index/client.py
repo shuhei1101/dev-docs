@@ -238,6 +238,10 @@ class ProjectIndexClient:
                     search=bool(row.get("search", True)),
                     converter=row.get("converter"),
                     alias_type=row.get("alias_type"),
+                    metadata={
+                        str(key): str(column)
+                        for key, column in (row.get("metadata") or {}).items()
+                    },
                 )
                 for row in value.get("documents") or []
             ],
