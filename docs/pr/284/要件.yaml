@@ -1,0 +1,20 @@
+docs:
+  - page: docs/layout/LAY-275-1.yaml
+    new: false
+    change: gitignore の docs/generated/・tmp/storybook-static/・tmp/pages/ の行を削除し、tmp のフォルダに子のエントリ .gitignore を追加する
+    status: done
+    updated_by: planner
+    updated_at: '2026-11-17T16:28:16.475894+00:00'
+  - page: docs/module/MOD-192-1.py.yaml
+    new: false
+    change: SKIPPED_DIRS の entries の "generated" を削除する
+    status: done
+    updated_by: planner
+    updated_at: '2026-11-17T16:19:13.797021+00:00'
+scope_out:
+  - item: MOD-155-75 の notes「生成物」の「commit しない」と、生成物を Git で管理している実態の食い違い
+    reason: .gitignore に触れうるが、生成物の管理方針を決める別の要望で、#271・#279 の終わりの条件に含まれない
+    plan: '#276'
+  - item: MOD-192-1 の定数 CATEGORIES・FLOWCHART_CATEGORY の値（使用方法）と scripts/build_pages.py の実装（使い方）の食い違い
+    reason: 'モジュール構成と実装が食い違う不具合で、#271・#279 の完了の条件に含まれない。公開ページの分類の食い違いとして #285 が扱う'
+    plan: '#285'
