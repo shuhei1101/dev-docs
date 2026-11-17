@@ -1,0 +1,18 @@
+$ run_url=$(gh workflow run test.yml --ref "$(git branch --show-current)" -f layer=backend-integration -f paths="tests/integration/server/test_get_document.py::test_normal_when_nav_grouped_by_common_keys" | grep -o ...) ... gh run view "$run_id" --log（TP-155-1 の TL-2 の run_runner）
+test	層の全件を回す	2026-11-17T12:30:37.7612408Z ##[endgroup]
+test	層の全件を回す	2026-11-17T12:30:37.7707023Z paths に許可しない文字がある（英数字・_・.・/・-・空白だけを許可する）: tests/integration/server/test_get_document.py::test_normal_when_nav_grouped_by_common_keys
+test	層の全件を回す	2026-11-17T12:30:37.7721736Z ##[error]Process completed with exit code 1.
+rc=1
+
+# ランナーで回せなかった理由: test.yml の paths がテストの ID の `::` を許可しない（英数字・_・.・/・-・空白だけ）。テストの step の前で止まり集計の行が無いため、手元の個別実行（run_one）で回し直した
+$ TMPDIR=/tmp/claude-pytest-267 uv run pytest tests/integration/server/test_get_document.py::test_normal_when_nav_grouped_by_common_keys
+============================= test session starts ==============================
+platform linux -- Python 3.14.3, pytest-9.1.1, pluggy-1.7.0
+rootdir: /home/shuhei2441/repo/dev-docs/.claude/worktrees/feat-view-nav-group-by-common-metadata
+configfile: pyproject.toml
+plugins: anyio-4.15.1
+collected 1 item
+
+tests/integration/server/test_get_document.py .                          [100%]
+
+============================== 1 passed in 1.63s ===============================
