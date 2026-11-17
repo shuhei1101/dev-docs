@@ -220,10 +220,14 @@ def _test(
 
 
 def _match_condition(
-    condition: Condition, document: IndexedDocument, fields: Mapping[str, str], today: date
+    condition: Condition,
+    document: IndexedDocument,
+    fields: Mapping[str, str],
+    today: date,
+    columns: Mapping[str, str] | None,
 ) -> bool:
     """条件 1 つに該当するかを判定する。"""
-    values = field_values(document, condition.field)
+    values = field_values(document, condition.field, columns=columns)
     if condition.op == "exists":
         return bool(values)
     if condition.op == "not_exists":
@@ -241,6 +245,7 @@ def match_filter(
     *,
     fields: Mapping[str, str],
     today: date,
+    columns: Mapping[str, str] | None = None,
 ) -> bool:
     """文書が条件の木に該当するかを判定する。"""
     if node is None:
@@ -248,13 +253,17 @@ def match_filter(
     if isinstance(node, Group):
         if node.all_of is not None:
             return all(
-                match_filter(child, document, fields=fields, today=today) for child in node.all_of
+                match_filter(child, document, fields=fields, today=today, columns=columns)
+                for child in node.all_of
             )
         if node.any_of is not None:
             return any(
-                match_filter(child, document, fields=fields, today=today) for child in node.any_of
+                match_filter(child, document, fields=fields, today=today, columns=columns)
+                for child in node.any_of
             )
         if node.not_ is not None:
-            return not match_filter(node.not_, document, fields=fields, today=today)
+            return not match_filter(
+                node.not_, document, fields=fields, today=today, columns=columns
+            )
         return True
-    return _match_condition(node, document, fields, today)
+    return _match_condition(node, document, fields, today, columns)

@@ -51,7 +51,9 @@ def _headings(body: str) -> list[str]:
     return [heading.text for heading in heading_lines(body.splitlines())]
 
 
-def _raw_values(document: IndexedDocument, field: str) -> Any:
+def _raw_values(
+    document: IndexedDocument, field: str, columns: Mapping[str, str] | None = None
+) -> Any:
     """項目の値を、配列のまま取得する。"""
     if field == "id":
         return document.id
@@ -75,15 +77,20 @@ def _raw_values(document: IndexedDocument, field: str) -> Any:
         return _headings(document.body) if is_markdown_body(document) else list(document.data)
     if field in METADATA_KEYS:
         return document.metadata.get(field)
+    # 行の metadata で対応付けたキーは、対応付けた列から取得する
+    if columns is not None and field in columns:
+        field = columns[field]
     try:
         return get_field(document.data, field)
     except InvalidArgumentError:
         return None
 
 
-def field_values(document: IndexedDocument, field: str) -> list[Any]:
+def field_values(
+    document: IndexedDocument, field: str, *, columns: Mapping[str, str] | None = None
+) -> list[Any]:
     """文書から項目の値を引き、比べられる値の並びにする。"""
-    value = _raw_values(document, field)
+    value = _raw_values(document, field, columns)
     if value is None:
         return []
     return list(value) if isinstance(value, list) else [value]
