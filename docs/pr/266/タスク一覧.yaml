@@ -1,0 +1,77 @@
+tasks:
+  - process: 初期構築
+    status: skipped
+    reason: 既存リポジトリのため対象外
+    updated_by: planner
+    updated_at: '2026-11-17T11:19:50.303090+00:00'
+  - process: リバースエンジニアリング
+    status: skipped
+    reason: 既存の設計書を起こし直す依頼ではない
+    updated_by: planner
+    updated_at: '2026-11-17T11:19:50.303090+00:00'
+  - process: 方針決め
+    status: skipped
+    reason: 方針決めを依頼する Issue ではない
+    updated_by: planner
+    updated_at: '2026-11-17T11:19:50.303090+00:00'
+  - process: PoC 検証
+    status: skipped
+    reason: git diff・uv sync・systemctl の組み合わせで、未検証の技術機構に依存しない。先例 claude-balancer の bin/restart-resident が同じ機構で動いている
+    updated_by: planner
+    updated_at: '2026-11-17T11:19:50.303090+00:00'
+  - process: 複合ユースケース設計
+    status: skipped
+    reason: 業務フローの変更ではない
+    updated_by: planner
+    updated_at: '2026-11-17T11:19:50.303090+00:00'
+  - process: デザインスタイル選定
+    status: skipped
+    reason: 画面を持たない開発用のスクリプト
+    updated_by: planner
+    updated_at: '2026-11-17T11:19:50.303090+00:00'
+  - process: 画面一覧・画面遷移
+    status: skipped
+    reason: 画面を持たない開発用のスクリプト
+    updated_by: planner
+    updated_at: '2026-11-17T11:19:50.303090+00:00'
+  - process: 単一ユースケース設計
+    status: skipped
+    reason: 利用者の操作のシナリオは変わらない。AI Monitor が呼ぶ開発用のスクリプトで、起動するシナリオ SC-155-10 の流れも変えない
+    updated_by: planner
+    updated_at: '2026-11-17T11:19:50.303090+00:00'
+  - process: モック作成
+    status: skipped
+    reason: 画面を持たない開発用のスクリプト
+    updated_by: planner
+    updated_at: '2026-11-17T11:19:50.303090+00:00'
+  - process: インターフェース定義設計
+    status: skipped
+    reason: 開発用のスクリプトの入出力は、先例の build_pages.py と同じく開発コマンドとモジュール構成で定める
+    updated_by: planner
+    updated_at: '2026-11-17T11:19:50.303090+00:00'
+  - process: 部品設計
+    status: skipped
+    reason: 画面の部品を変えない
+    updated_by: planner
+    updated_at: '2026-11-17T11:19:50.303090+00:00'
+  - process: 画面設計
+    status: skipped
+    reason: 画面を変えない
+    updated_by: planner
+    updated_at: '2026-11-17T11:19:50.303090+00:00'
+  - process: モジュール構成設計
+    status: todo
+    note: scripts/ の再起動のスクリプトのモジュール構成を、先例の MOD-192-1（build_pages.py）と同じ形で新しく作る
+  - process: ドキュメント修正
+    status: todo
+    note: 開発コマンド CMD-155-1 と、アーキテクチャ図 ARCH-155-1 のフォルダ構成の scripts/ の説明
+  - process: 単体テスト作成
+    status: todo
+    note: tests/unit/scripts/ に、systemctl・uv・git を差し替えたスクリプトの振る舞い（変化の有無・失敗時の終了コード・記録の更新）のテスト
+  - process: 実装
+    status: todo
+  - process: 結合テスト作成
+    status: skipped
+    reason: 実際の dev-docs.service を起動し直す確認は、AI Monitor 側の restart_command の差し替えの反映作業で稼働中のサーバーへ走らせて確かめる。単体テストで振る舞いを確かめる
+    updated_by: planner
+    updated_at: '2026-11-17T11:19:50.303090+00:00'
