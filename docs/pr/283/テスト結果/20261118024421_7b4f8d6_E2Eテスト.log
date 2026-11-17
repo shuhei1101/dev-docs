@@ -1,0 +1,632 @@
+# 1 回目: /tmp/pytest-of-shuhei2441 の所有者が root で、tmp_path を使う 3 件はテストの前に失敗した。test_normal は develop の pages.yml に step の名前がまだ無いため失敗した（このブランチのマージの後に pass する）
+$ uv run pytest tests/e2e/workflow/test_pages_yml.py::test_normal_when_not_develop -v
+============================= test session starts ==============================
+platform linux -- Python 3.14.3, pytest-9.1.1, pluggy-1.7.0 -- /home/shuhei2441/repo/dev-docs/.claude/worktrees/chore-ci-pages-workflow-interface/.venv/bin/python
+cachedir: .pytest_cache
+rootdir: /home/shuhei2441/repo/dev-docs/.claude/worktrees/chore-ci-pages-workflow-interface
+configfile: pyproject.toml
+plugins: anyio-4.15.1
+collecting ... collected 1 item
+
+tests/e2e/workflow/test_pages_yml.py::test_normal_when_not_develop ERROR [100%]
+
+==================================== ERRORS ====================================
+________________ ERROR at setup of test_normal_when_not_develop ________________
+
+cls = <class '_pytest.runner.CallInfo'>
+func = <function call_and_report.<locals>.<lambda> at 0x75eeb51ff740>
+when = 'setup'
+reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
+
+    @classmethod
+    def from_call(
+        cls,
+        func: Callable[[], TResult],
+        when: Literal["collect", "setup", "call", "teardown"],
+        reraise: type[BaseException] | tuple[type[BaseException], ...] | None = None,
+    ) -> CallInfo[TResult]:
+        """Call func, wrapping the result in a CallInfo.
+    
+        :param func:
+            The function to call. Called without arguments.
+        :type func: Callable[[], _pytest.runner.TResult]
+        :param when:
+            The phase in which the function is called.
+        :param reraise:
+            Exception or exceptions that shall propagate if raised by the
+            function, instead of being wrapped in the CallInfo.
+        """
+        excinfo = None
+        instant = timing.Instant()
+        try:
+>           result: TResult | None = func()
+                                     ^^^^^^
+
+.venv/lib/python3.14/site-packages/_pytest/runner.py:361: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+.venv/lib/python3.14/site-packages/_pytest/runner.py:250: in <lambda>
+    lambda: runtest_hook(item=item, **kwds),
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/pluggy/_caller.py:197: in __call__
+    return self._hookexec(
+.venv/lib/python3.14/site-packages/pluggy/_manager.py:183: in _hookexec
+    return self._inner_hookexec(hook_name, methods, kwargs, firstresult)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/_pytest/logging.py:858: in pytest_runtest_setup
+    yield
+.venv/lib/python3.14/site-packages/_pytest/capture.py:895: in pytest_runtest_setup
+    return (yield)
+            ^^^^^
+.venv/lib/python3.14/site-packages/_pytest/runner.py:170: in pytest_runtest_setup
+    item.session._setupstate.setup(item)
+.venv/lib/python3.14/site-packages/_pytest/runner.py:536: in setup
+    col.setup()
+.venv/lib/python3.14/site-packages/_pytest/python.py:1710: in setup
+    self._request._fillfixtures()
+.venv/lib/python3.14/site-packages/_pytest/fixtures.py:806: in _fillfixtures
+    item.funcargs[argname] = self.getfixturevalue(argname)
+                             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/_pytest/fixtures.py:630: in getfixturevalue
+    fixturedef = self._get_active_fixturedef(argname)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/_pytest/fixtures.py:726: in _get_active_fixturedef
+    fixturedef.execute(request=subrequest)
+.venv/lib/python3.14/site-packages/_pytest/fixtures.py:1181: in execute
+    fixturedef = request._get_active_fixturedef(argname)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/_pytest/fixtures.py:726: in _get_active_fixturedef
+    fixturedef.execute(request=subrequest)
+.venv/lib/python3.14/site-packages/_pytest/fixtures.py:1232: in execute
+    result: FixtureValue = ihook.pytest_fixture_setup(
+.venv/lib/python3.14/site-packages/pluggy/_caller.py:197: in __call__
+    return self._hookexec(
+.venv/lib/python3.14/site-packages/pluggy/_manager.py:183: in _hookexec
+    return self._inner_hookexec(hook_name, methods, kwargs, firstresult)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/pluggy/_execution.py:64: in run_old_style_hookwrapper
+    return result.get_result()
+           ^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/pluggy/_execution.py:49: in run_old_style_hookwrapper
+    res = yield
+          ^^^^^
+.venv/lib/python3.14/site-packages/_pytest/setuponly.py:36: in pytest_fixture_setup
+    return (yield)
+            ^^^^^
+.venv/lib/python3.14/site-packages/_pytest/fixtures.py:1328: in pytest_fixture_setup
+    result = call_fixture_func(fixturefunc, request, kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/_pytest/fixtures.py:998: in call_fixture_func
+    fixture_result = next(generator)
+                     ^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/_pytest/tmpdir.py:300: in tmp_path
+    path = _mk_tmp(request, tmp_path_factory)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/_pytest/tmpdir.py:287: in _mk_tmp
+    return factory.mktemp(name, numbered=True)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/_pytest/tmpdir.py:136: in mktemp
+    basename = self._ensure_relative_to_basetemp(basename)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/_pytest/tmpdir.py:117: in _ensure_relative_to_basetemp
+    if (self.getbasetemp() / basename).resolve().parent != self.getbasetemp():
+        ^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = TempPathFactory(_given_basetemp=None, _trace=<pluggy._tracing.TagTracerSub object at 0x75eeb576d0f0>, _basetemp=None, _retention_count=3, _retention_policy='all')
+
+    def getbasetemp(self) -> Path:
+        """Return the base temporary directory, creating it if needed.
+    
+        :returns:
+            The base temporary directory.
+        """
+        if self._basetemp is not None:
+            return self._basetemp
+    
+        if self._given_basetemp is not None:
+            basetemp = self._given_basetemp
+            if basetemp.exists():
+                rm_rf(basetemp)
+            basetemp.mkdir(mode=0o700)
+            basetemp = basetemp.resolve()
+        else:
+            from_env = os.environ.get("PYTEST_DEBUG_TEMPROOT")
+            temproot = Path(from_env or tempfile.gettempdir()).resolve()
+            user = get_user() or "unknown"
+            # use a sub-directory in the temproot to speed-up
+            # make_numbered_dir() call
+            rootdir = temproot.joinpath(f"pytest-of-{user}")
+            try:
+                rootdir.mkdir(mode=0o700, exist_ok=True)
+            except OSError:
+                # getuser() likely returned illegal characters for the platform, use unknown back off mechanism
+                rootdir = temproot.joinpath("pytest-of-unknown")
+                rootdir.mkdir(mode=0o700, exist_ok=True)
+            # Because we use exist_ok=True with a predictable name, make sure
+            # we are the owners, to prevent any funny business (on unix, where
+            # temproot is usually shared).
+            # Also, to keep things private, fixup any world-readable temp
+            # rootdir's permissions. Historically 0o755 was used, so we can't
+            # just error out on this, at least for a while.
+            # Don't follow symlinks, otherwise we're open to symlink-swapping
+            # TOCTOU vulnerability.
+            # This check makes us vulnerable to a DoS - a user can `mkdir
+            # /tmp/pytest-of-otheruser` and then `otheruser` will fail this
+            # check. For now we don't consider it a real problem. otheruser can
+            # change their TMPDIR or --basetemp, and maybe give the prankster a
+            # good scolding.
+            uid = get_user_id()
+            if uid is not None:
+                stat_follow_symlinks = (
+                    False if os.stat in os.supports_follow_symlinks else True
+                )
+                rootdir_stat = rootdir.stat(follow_symlinks=stat_follow_symlinks)
+                if stat.S_ISLNK(rootdir_stat.st_mode):
+                    raise OSError(
+                        f"The temporary directory {rootdir} is a symbolic link. "
+                        "Fix this and try again."
+                    )
+                if rootdir_stat.st_uid != uid:
+>                   raise OSError(
+                        f"The temporary directory {rootdir} is not owned by the current user. "
+                        "Fix this and try again."
+                    )
+E                   OSError: The temporary directory /tmp/pytest-of-shuhei2441 is not owned by the current user. Fix this and try again.
+
+.venv/lib/python3.14/site-packages/_pytest/tmpdir.py:198: OSError
+=========================== short test summary info ============================
+ERROR tests/e2e/workflow/test_pages_yml.py::test_normal_when_not_develop - OS...
+=============================== 1 error in 0.17s ===============================
+exit=1
+$ uv run pytest tests/e2e/workflow/test_pages_yml.py::test_error_when_build_fails -v
+============================= test session starts ==============================
+platform linux -- Python 3.14.3, pytest-9.1.1, pluggy-1.7.0 -- /home/shuhei2441/repo/dev-docs/.claude/worktrees/chore-ci-pages-workflow-interface/.venv/bin/python
+cachedir: .pytest_cache
+rootdir: /home/shuhei2441/repo/dev-docs/.claude/worktrees/chore-ci-pages-workflow-interface
+configfile: pyproject.toml
+plugins: anyio-4.15.1
+collecting ... collected 1 item
+
+tests/e2e/workflow/test_pages_yml.py::test_error_when_build_fails ERROR  [100%]
+
+==================================== ERRORS ====================================
+________________ ERROR at setup of test_error_when_build_fails _________________
+
+cls = <class '_pytest.runner.CallInfo'>
+func = <function call_and_report.<locals>.<lambda> at 0x710c86793740>
+when = 'setup'
+reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
+
+    @classmethod
+    def from_call(
+        cls,
+        func: Callable[[], TResult],
+        when: Literal["collect", "setup", "call", "teardown"],
+        reraise: type[BaseException] | tuple[type[BaseException], ...] | None = None,
+    ) -> CallInfo[TResult]:
+        """Call func, wrapping the result in a CallInfo.
+    
+        :param func:
+            The function to call. Called without arguments.
+        :type func: Callable[[], _pytest.runner.TResult]
+        :param when:
+            The phase in which the function is called.
+        :param reraise:
+            Exception or exceptions that shall propagate if raised by the
+            function, instead of being wrapped in the CallInfo.
+        """
+        excinfo = None
+        instant = timing.Instant()
+        try:
+>           result: TResult | None = func()
+                                     ^^^^^^
+
+.venv/lib/python3.14/site-packages/_pytest/runner.py:361: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+.venv/lib/python3.14/site-packages/_pytest/runner.py:250: in <lambda>
+    lambda: runtest_hook(item=item, **kwds),
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/pluggy/_caller.py:197: in __call__
+    return self._hookexec(
+.venv/lib/python3.14/site-packages/pluggy/_manager.py:183: in _hookexec
+    return self._inner_hookexec(hook_name, methods, kwargs, firstresult)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/_pytest/logging.py:858: in pytest_runtest_setup
+    yield
+.venv/lib/python3.14/site-packages/_pytest/capture.py:895: in pytest_runtest_setup
+    return (yield)
+            ^^^^^
+.venv/lib/python3.14/site-packages/_pytest/runner.py:170: in pytest_runtest_setup
+    item.session._setupstate.setup(item)
+.venv/lib/python3.14/site-packages/_pytest/runner.py:536: in setup
+    col.setup()
+.venv/lib/python3.14/site-packages/_pytest/python.py:1710: in setup
+    self._request._fillfixtures()
+.venv/lib/python3.14/site-packages/_pytest/fixtures.py:806: in _fillfixtures
+    item.funcargs[argname] = self.getfixturevalue(argname)
+                             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/_pytest/fixtures.py:630: in getfixturevalue
+    fixturedef = self._get_active_fixturedef(argname)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/_pytest/fixtures.py:726: in _get_active_fixturedef
+    fixturedef.execute(request=subrequest)
+.venv/lib/python3.14/site-packages/_pytest/fixtures.py:1181: in execute
+    fixturedef = request._get_active_fixturedef(argname)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/_pytest/fixtures.py:726: in _get_active_fixturedef
+    fixturedef.execute(request=subrequest)
+.venv/lib/python3.14/site-packages/_pytest/fixtures.py:1232: in execute
+    result: FixtureValue = ihook.pytest_fixture_setup(
+.venv/lib/python3.14/site-packages/pluggy/_caller.py:197: in __call__
+    return self._hookexec(
+.venv/lib/python3.14/site-packages/pluggy/_manager.py:183: in _hookexec
+    return self._inner_hookexec(hook_name, methods, kwargs, firstresult)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/pluggy/_execution.py:64: in run_old_style_hookwrapper
+    return result.get_result()
+           ^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/pluggy/_execution.py:49: in run_old_style_hookwrapper
+    res = yield
+          ^^^^^
+.venv/lib/python3.14/site-packages/_pytest/setuponly.py:36: in pytest_fixture_setup
+    return (yield)
+            ^^^^^
+.venv/lib/python3.14/site-packages/_pytest/fixtures.py:1328: in pytest_fixture_setup
+    result = call_fixture_func(fixturefunc, request, kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/_pytest/fixtures.py:998: in call_fixture_func
+    fixture_result = next(generator)
+                     ^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/_pytest/tmpdir.py:300: in tmp_path
+    path = _mk_tmp(request, tmp_path_factory)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/_pytest/tmpdir.py:287: in _mk_tmp
+    return factory.mktemp(name, numbered=True)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/_pytest/tmpdir.py:136: in mktemp
+    basename = self._ensure_relative_to_basetemp(basename)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/_pytest/tmpdir.py:117: in _ensure_relative_to_basetemp
+    if (self.getbasetemp() / basename).resolve().parent != self.getbasetemp():
+        ^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = TempPathFactory(_given_basetemp=None, _trace=<pluggy._tracing.TagTracerSub object at 0x710c86d010f0>, _basetemp=None, _retention_count=3, _retention_policy='all')
+
+    def getbasetemp(self) -> Path:
+        """Return the base temporary directory, creating it if needed.
+    
+        :returns:
+            The base temporary directory.
+        """
+        if self._basetemp is not None:
+            return self._basetemp
+    
+        if self._given_basetemp is not None:
+            basetemp = self._given_basetemp
+            if basetemp.exists():
+                rm_rf(basetemp)
+            basetemp.mkdir(mode=0o700)
+            basetemp = basetemp.resolve()
+        else:
+            from_env = os.environ.get("PYTEST_DEBUG_TEMPROOT")
+            temproot = Path(from_env or tempfile.gettempdir()).resolve()
+            user = get_user() or "unknown"
+            # use a sub-directory in the temproot to speed-up
+            # make_numbered_dir() call
+            rootdir = temproot.joinpath(f"pytest-of-{user}")
+            try:
+                rootdir.mkdir(mode=0o700, exist_ok=True)
+            except OSError:
+                # getuser() likely returned illegal characters for the platform, use unknown back off mechanism
+                rootdir = temproot.joinpath("pytest-of-unknown")
+                rootdir.mkdir(mode=0o700, exist_ok=True)
+            # Because we use exist_ok=True with a predictable name, make sure
+            # we are the owners, to prevent any funny business (on unix, where
+            # temproot is usually shared).
+            # Also, to keep things private, fixup any world-readable temp
+            # rootdir's permissions. Historically 0o755 was used, so we can't
+            # just error out on this, at least for a while.
+            # Don't follow symlinks, otherwise we're open to symlink-swapping
+            # TOCTOU vulnerability.
+            # This check makes us vulnerable to a DoS - a user can `mkdir
+            # /tmp/pytest-of-otheruser` and then `otheruser` will fail this
+            # check. For now we don't consider it a real problem. otheruser can
+            # change their TMPDIR or --basetemp, and maybe give the prankster a
+            # good scolding.
+            uid = get_user_id()
+            if uid is not None:
+                stat_follow_symlinks = (
+                    False if os.stat in os.supports_follow_symlinks else True
+                )
+                rootdir_stat = rootdir.stat(follow_symlinks=stat_follow_symlinks)
+                if stat.S_ISLNK(rootdir_stat.st_mode):
+                    raise OSError(
+                        f"The temporary directory {rootdir} is a symbolic link. "
+                        "Fix this and try again."
+                    )
+                if rootdir_stat.st_uid != uid:
+>                   raise OSError(
+                        f"The temporary directory {rootdir} is not owned by the current user. "
+                        "Fix this and try again."
+                    )
+E                   OSError: The temporary directory /tmp/pytest-of-shuhei2441 is not owned by the current user. Fix this and try again.
+
+.venv/lib/python3.14/site-packages/_pytest/tmpdir.py:198: OSError
+=========================== short test summary info ============================
+ERROR tests/e2e/workflow/test_pages_yml.py::test_error_when_build_fails - OSE...
+=============================== 1 error in 0.23s ===============================
+exit=1
+$ uv run pytest tests/e2e/workflow/test_pages_yml.py::test_error_when_yaml_in_site -v
+============================= test session starts ==============================
+platform linux -- Python 3.14.3, pytest-9.1.1, pluggy-1.7.0 -- /home/shuhei2441/repo/dev-docs/.claude/worktrees/chore-ci-pages-workflow-interface/.venv/bin/python
+cachedir: .pytest_cache
+rootdir: /home/shuhei2441/repo/dev-docs/.claude/worktrees/chore-ci-pages-workflow-interface
+configfile: pyproject.toml
+plugins: anyio-4.15.1
+collecting ... collected 1 item
+
+tests/e2e/workflow/test_pages_yml.py::test_error_when_yaml_in_site ERROR [100%]
+
+==================================== ERRORS ====================================
+________________ ERROR at setup of test_error_when_yaml_in_site ________________
+
+cls = <class '_pytest.runner.CallInfo'>
+func = <function call_and_report.<locals>.<lambda> at 0x70714190b740>
+when = 'setup'
+reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
+
+    @classmethod
+    def from_call(
+        cls,
+        func: Callable[[], TResult],
+        when: Literal["collect", "setup", "call", "teardown"],
+        reraise: type[BaseException] | tuple[type[BaseException], ...] | None = None,
+    ) -> CallInfo[TResult]:
+        """Call func, wrapping the result in a CallInfo.
+    
+        :param func:
+            The function to call. Called without arguments.
+        :type func: Callable[[], _pytest.runner.TResult]
+        :param when:
+            The phase in which the function is called.
+        :param reraise:
+            Exception or exceptions that shall propagate if raised by the
+            function, instead of being wrapped in the CallInfo.
+        """
+        excinfo = None
+        instant = timing.Instant()
+        try:
+>           result: TResult | None = func()
+                                     ^^^^^^
+
+.venv/lib/python3.14/site-packages/_pytest/runner.py:361: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+.venv/lib/python3.14/site-packages/_pytest/runner.py:250: in <lambda>
+    lambda: runtest_hook(item=item, **kwds),
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/pluggy/_caller.py:197: in __call__
+    return self._hookexec(
+.venv/lib/python3.14/site-packages/pluggy/_manager.py:183: in _hookexec
+    return self._inner_hookexec(hook_name, methods, kwargs, firstresult)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/_pytest/logging.py:858: in pytest_runtest_setup
+    yield
+.venv/lib/python3.14/site-packages/_pytest/capture.py:895: in pytest_runtest_setup
+    return (yield)
+            ^^^^^
+.venv/lib/python3.14/site-packages/_pytest/runner.py:170: in pytest_runtest_setup
+    item.session._setupstate.setup(item)
+.venv/lib/python3.14/site-packages/_pytest/runner.py:536: in setup
+    col.setup()
+.venv/lib/python3.14/site-packages/_pytest/python.py:1710: in setup
+    self._request._fillfixtures()
+.venv/lib/python3.14/site-packages/_pytest/fixtures.py:806: in _fillfixtures
+    item.funcargs[argname] = self.getfixturevalue(argname)
+                             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/_pytest/fixtures.py:630: in getfixturevalue
+    fixturedef = self._get_active_fixturedef(argname)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/_pytest/fixtures.py:726: in _get_active_fixturedef
+    fixturedef.execute(request=subrequest)
+.venv/lib/python3.14/site-packages/_pytest/fixtures.py:1181: in execute
+    fixturedef = request._get_active_fixturedef(argname)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/_pytest/fixtures.py:726: in _get_active_fixturedef
+    fixturedef.execute(request=subrequest)
+.venv/lib/python3.14/site-packages/_pytest/fixtures.py:1232: in execute
+    result: FixtureValue = ihook.pytest_fixture_setup(
+.venv/lib/python3.14/site-packages/pluggy/_caller.py:197: in __call__
+    return self._hookexec(
+.venv/lib/python3.14/site-packages/pluggy/_manager.py:183: in _hookexec
+    return self._inner_hookexec(hook_name, methods, kwargs, firstresult)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/pluggy/_execution.py:64: in run_old_style_hookwrapper
+    return result.get_result()
+           ^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/pluggy/_execution.py:49: in run_old_style_hookwrapper
+    res = yield
+          ^^^^^
+.venv/lib/python3.14/site-packages/_pytest/setuponly.py:36: in pytest_fixture_setup
+    return (yield)
+            ^^^^^
+.venv/lib/python3.14/site-packages/_pytest/fixtures.py:1328: in pytest_fixture_setup
+    result = call_fixture_func(fixturefunc, request, kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/_pytest/fixtures.py:998: in call_fixture_func
+    fixture_result = next(generator)
+                     ^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/_pytest/tmpdir.py:300: in tmp_path
+    path = _mk_tmp(request, tmp_path_factory)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/_pytest/tmpdir.py:287: in _mk_tmp
+    return factory.mktemp(name, numbered=True)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/_pytest/tmpdir.py:136: in mktemp
+    basename = self._ensure_relative_to_basetemp(basename)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/_pytest/tmpdir.py:117: in _ensure_relative_to_basetemp
+    if (self.getbasetemp() / basename).resolve().parent != self.getbasetemp():
+        ^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = TempPathFactory(_given_basetemp=None, _trace=<pluggy._tracing.TagTracerSub object at 0x707141e790f0>, _basetemp=None, _retention_count=3, _retention_policy='all')
+
+    def getbasetemp(self) -> Path:
+        """Return the base temporary directory, creating it if needed.
+    
+        :returns:
+            The base temporary directory.
+        """
+        if self._basetemp is not None:
+            return self._basetemp
+    
+        if self._given_basetemp is not None:
+            basetemp = self._given_basetemp
+            if basetemp.exists():
+                rm_rf(basetemp)
+            basetemp.mkdir(mode=0o700)
+            basetemp = basetemp.resolve()
+        else:
+            from_env = os.environ.get("PYTEST_DEBUG_TEMPROOT")
+            temproot = Path(from_env or tempfile.gettempdir()).resolve()
+            user = get_user() or "unknown"
+            # use a sub-directory in the temproot to speed-up
+            # make_numbered_dir() call
+            rootdir = temproot.joinpath(f"pytest-of-{user}")
+            try:
+                rootdir.mkdir(mode=0o700, exist_ok=True)
+            except OSError:
+                # getuser() likely returned illegal characters for the platform, use unknown back off mechanism
+                rootdir = temproot.joinpath("pytest-of-unknown")
+                rootdir.mkdir(mode=0o700, exist_ok=True)
+            # Because we use exist_ok=True with a predictable name, make sure
+            # we are the owners, to prevent any funny business (on unix, where
+            # temproot is usually shared).
+            # Also, to keep things private, fixup any world-readable temp
+            # rootdir's permissions. Historically 0o755 was used, so we can't
+            # just error out on this, at least for a while.
+            # Don't follow symlinks, otherwise we're open to symlink-swapping
+            # TOCTOU vulnerability.
+            # This check makes us vulnerable to a DoS - a user can `mkdir
+            # /tmp/pytest-of-otheruser` and then `otheruser` will fail this
+            # check. For now we don't consider it a real problem. otheruser can
+            # change their TMPDIR or --basetemp, and maybe give the prankster a
+            # good scolding.
+            uid = get_user_id()
+            if uid is not None:
+                stat_follow_symlinks = (
+                    False if os.stat in os.supports_follow_symlinks else True
+                )
+                rootdir_stat = rootdir.stat(follow_symlinks=stat_follow_symlinks)
+                if stat.S_ISLNK(rootdir_stat.st_mode):
+                    raise OSError(
+                        f"The temporary directory {rootdir} is a symbolic link. "
+                        "Fix this and try again."
+                    )
+                if rootdir_stat.st_uid != uid:
+>                   raise OSError(
+                        f"The temporary directory {rootdir} is not owned by the current user. "
+                        "Fix this and try again."
+                    )
+E                   OSError: The temporary directory /tmp/pytest-of-shuhei2441 is not owned by the current user. Fix this and try again.
+
+.venv/lib/python3.14/site-packages/_pytest/tmpdir.py:198: OSError
+=========================== short test summary info ============================
+ERROR tests/e2e/workflow/test_pages_yml.py::test_error_when_yaml_in_site - OS...
+=============================== 1 error in 0.18s ===============================
+exit=1
+$ uv run pytest tests/e2e/workflow/test_pages_yml.py::test_normal -v
+============================= test session starts ==============================
+platform linux -- Python 3.14.3, pytest-9.1.1, pluggy-1.7.0 -- /home/shuhei2441/repo/dev-docs/.claude/worktrees/chore-ci-pages-workflow-interface/.venv/bin/python
+cachedir: .pytest_cache
+rootdir: /home/shuhei2441/repo/dev-docs/.claude/worktrees/chore-ci-pages-workflow-interface
+configfile: pyproject.toml
+plugins: anyio-4.15.1
+collecting ... collected 1 item
+
+tests/e2e/workflow/test_pages_yml.py::test_normal FAILED                 [100%]
+
+=================================== FAILURES ===================================
+_________________________________ test_normal __________________________________
+
+    def test_normal() -> None:
+        """develop への push で公開ページをまとめて配信し、成功で終わる（正常系）。"""
+        # 準備
+        run_id = _latest_develop_push_run()
+    
+        # 実行
+        conclusion, jobs = _view_run(run_id)
+    
+        # 検証
+        assert conclusion == "success"
+        build_conclusion, build_steps = jobs[BUILD_JOB]
+        assert build_conclusion == "success"
+>       _assert_steps(build_steps, BUILD_STEPS, dict.fromkeys(BUILD_STEPS, "success"))
+
+tests/e2e/workflow/test_pages_yml.py:161: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+steps = {'Set up job': 'success', 'Run actions/checkout@v4': 'success', 'Run actions/setup-node@v4': 'success', 'Run astral-sh/setup-uv@v6': 'success', ...}
+names = ('ブランチを取得する', 'Node.js を入れる', 'uv を入れる', 'Pages の設定を読み込む', '公開の文書を 1 枚の HTML にまとめる', '成果物に YAML が無いことを確認する', ...)
+expected = {'ブランチを取得する': 'success', 'Node.js を入れる': 'success', 'uv を入れる': 'success', 'Pages の設定を読み込む': 'success', ...}
+
+    def _assert_steps(
+        steps: Mapping[str, str], names: tuple[str, ...], expected: Mapping[str, str]
+    ) -> None:
+        """図の step が期待した結論で通り、図に無い step が skipped かを確認する。"""
+        for name in names:
+>           assert steps.get(name) == expected.get(name, "skipped"), name
+E           AssertionError: ブランチを取得する
+E           assert None == 'success'
+E            +  where None = <built-in method get of dict object at 0x76f47c0f65c0>('ブランチを取得する')
+E            +    where <built-in method get of dict object at 0x76f47c0f65c0> = {'Set up job': 'success', 'Run actions/checkout@v4': 'success', 'Run actions/setup-node@v4': 'success', 'Run astral-sh/setup-uv@v6': 'success', ...}.get
+E            +  and   'success' = <built-in method get of dict object at 0x76f47c0f5d40>('ブランチを取得する', 'skipped')
+E            +    where <built-in method get of dict object at 0x76f47c0f5d40> = {'ブランチを取得する': 'success', 'Node.js を入れる': 'success', 'uv を入れる': 'success', 'Pages の設定を読み込む': 'success', ...}.get
+
+tests/e2e/workflow/test_pages_yml.py:130: AssertionError
+=========================== short test summary info ============================
+FAILED tests/e2e/workflow/test_pages_yml.py::test_normal - AssertionError: ブ...
+============================== 1 failed in 2.61s ===============================
+exit=1
+
+# 2 回目: 自分が所有する一時フォルダを PYTEST_DEBUG_TEMPROOT で指定し、検証用のブランチで起動する 3 件を 1 件ずつ回した
+$ PYTEST_DEBUG_TEMPROOT=/tmp/pytest-root-pr283 uv run pytest tests/e2e/workflow/test_pages_yml.py::test_normal_when_not_develop -v
+============================= test session starts ==============================
+platform linux -- Python 3.14.3, pytest-9.1.1, pluggy-1.7.0 -- /home/shuhei2441/repo/dev-docs/.claude/worktrees/chore-ci-pages-workflow-interface/.venv/bin/python
+cachedir: .pytest_cache
+rootdir: /home/shuhei2441/repo/dev-docs/.claude/worktrees/chore-ci-pages-workflow-interface
+configfile: pyproject.toml
+plugins: anyio-4.15.1
+collecting ... collected 1 item
+
+tests/e2e/workflow/test_pages_yml.py::test_normal_when_not_develop PASSED [100%]
+
+========================= 1 passed in 67.35s (0:01:07) =========================
+exit=0
+$ PYTEST_DEBUG_TEMPROOT=/tmp/pytest-root-pr283 uv run pytest tests/e2e/workflow/test_pages_yml.py::test_error_when_build_fails -v
+============================= test session starts ==============================
+platform linux -- Python 3.14.3, pytest-9.1.1, pluggy-1.7.0 -- /home/shuhei2441/repo/dev-docs/.claude/worktrees/chore-ci-pages-workflow-interface/.venv/bin/python
+cachedir: .pytest_cache
+rootdir: /home/shuhei2441/repo/dev-docs/.claude/worktrees/chore-ci-pages-workflow-interface
+configfile: pyproject.toml
+plugins: anyio-4.15.1
+collecting ... collected 1 item
+
+tests/e2e/workflow/test_pages_yml.py::test_error_when_build_fails PASSED [100%]
+
+============================== 1 passed in 32.88s ==============================
+exit=0
+$ PYTEST_DEBUG_TEMPROOT=/tmp/pytest-root-pr283 uv run pytest tests/e2e/workflow/test_pages_yml.py::test_error_when_yaml_in_site -v
+============================= test session starts ==============================
+platform linux -- Python 3.14.3, pytest-9.1.1, pluggy-1.7.0 -- /home/shuhei2441/repo/dev-docs/.claude/worktrees/chore-ci-pages-workflow-interface/.venv/bin/python
+cachedir: .pytest_cache
+rootdir: /home/shuhei2441/repo/dev-docs/.claude/worktrees/chore-ci-pages-workflow-interface
+configfile: pyproject.toml
+plugins: anyio-4.15.1
+collecting ... collected 1 item
+
+tests/e2e/workflow/test_pages_yml.py::test_error_when_yaml_in_site PASSED [100%]
+
+============================== 1 passed in 54.81s ==============================
+exit=0
