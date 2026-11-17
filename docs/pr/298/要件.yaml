@@ -1,0 +1,11 @@
+use_cases:
+  - kind: single
+    scenario: docs/scenario/SC-155-7.yaml
+    impact: none
+    detail: 本文の文書の参照のリンクが、同じ見出しの 2 つ目以降へ飛び、画面に無い見出しのアンカーを付けなくなる。参照の流れは変わらない
+    depends_on: []
+scope_out:
+  - item: 同じ文書のテーブルへの外部キーのセルのリンク（`render_table` が `anchors` の見出しから作るアンカー）で、テーブルの見出しと同じ文字の見出しが前にあるときの連番
+    reason: 要望は文書の参照のリンクで、同じ文書の中の外部キーのリンクは含まない。今回の数え方を使用して修正できるため、今回の変更を前提にした後続にする。含めるかはレビューで確定する
+    plan: to_file
+docs: []
