@@ -1,6 +1,6 @@
 #!/bin/sh
 set -u
-DEVELOP=/mnt/c/Users/shuhe/repo/dev-docs/.claude/worktrees/develop
+DEVELOP=/home/shuhei2441/repo/dev-docs/.claude/worktrees/develop
 SETTINGS="$HOME/.config/dev-docs/settings.yaml"
 PI_SETTINGS="$HOME/.config/project-index/settings.yaml"
 PI_BACKUP="$HOME/.config/project-index/settings.yaml.bak-pr212"

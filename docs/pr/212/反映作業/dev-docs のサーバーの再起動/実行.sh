@@ -1,8 +1,8 @@
 #!/bin/sh
 set -u
 
-DEVELOP=/mnt/c/Users/shuhe/repo/dev-docs/.claude/worktrees/develop
-FIXED=src/dev_docs/features/convert/inline.py
+DEVELOP=/home/shuhei2441/repo/dev-docs/.claude/worktrees/develop
+FIXED=src/dev_docs/features/convert/diagrams.py
 CLIENT=src/dev_docs/integrations/project_index/client.py
 HEADERS_ACCEPT='Accept: application/json, text/event-stream'
 HEADERS_TYPE='Content-Type: application/json'
@@ -30,10 +30,10 @@ else
   echo "develop の worktree の付け替え口: failed（$CLIENT に本物の project-index の入出力の付け替え（record_kinds）が無い）"
   exit 1
 fi
-if grep -q 'MERMAID_CLICK' "$DEVELOP/$FIXED"; then
+if grep -qF 'mermaid\n{_link_clicks(code, link)}' "$DEVELOP/$FIXED"; then
   echo "develop の worktree の変換: ok"
 else
-  echo "develop の worktree の変換: failed（$FIXED に Mermaid の click の参照の書き換え（MERMAID_CLICK）が無い。作業 PR #212 のマージの前）"
+  echo "develop の worktree の変換: failed（$FIXED に Mermaid のまま返す図の click の参照の書き換え（_link_clicks）が無い。作業 PR #212 のマージの前）"
   exit 1
 fi
 FIXED_AT=$(stat -c %Y "$DEVELOP/$FIXED")

@@ -1,7 +1,7 @@
 #!/bin/sh
 set -u
 
-if [ -d /mnt/c/Users/shuhe/repo/dev-docs/.claude/worktrees/develop/src/dev_docs ]; then
+if [ -d /home/shuhei2441/repo/dev-docs/.claude/worktrees/develop/src/dev_docs ]; then
   echo "develop の worktree: ok"
 else
   echo "develop の worktree: failed"
