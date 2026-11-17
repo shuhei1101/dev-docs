@@ -1,0 +1,48 @@
+use_cases:
+  - kind: composite
+    scenario: docs/scenario/SC-155-13.yaml
+    impact: none
+    detail: テストを回す場所が変わるだけで、利用者が画面で文書を読む流れは変わらない
+    depends_on: []
+docs:
+  - page: project-index.yaml
+    new: false
+    change: 設計書のスキーマの参照（knowledge の design-schemas）を v8.1.0 から、テスト実行方法の location・run_runner とインターフェース定義の workflow を持つ v8.4.0 へ上げる
+    status: todo
+  - page: docs/test-procedure/TP-155-1.yaml
+    new: false
+    change: '層ごとに判定フローチャート『テストの実行場所』で location を記載し、runner の層に run_runner を追加する。run_all・run_one は手元のコマンドのまま残す。lint の層に actionlint と uses: の実在の検査を追加する'
+    status: todo
+  - page: docs/interface/IF-155-26.yaml
+    new: true
+    change: テストを回す workflow（workflow_dispatch で層と結合テストのパスを受け、全件か指定の結合テストを回す）のインターフェース定義を新規に作る
+    status: todo
+  - page: docs/interface/index.yaml
+    new: false
+    change: IF-155-26 の行を追加する
+    status: todo
+  - page: docs/library/LIB-155-33.yaml
+    new: true
+    change: lint の層で使用する actionlint の外部ライブラリの設計書を新規に作る
+    status: todo
+  - page: docs/library/index.yaml
+    new: false
+    change: LIB-155-33 の行を追加する
+    status: todo
+  - page: docs/architecture/ARCH-155-1.yaml
+    new: false
+    change: notes のフォルダ構成の .github/workflows/ の説明にテストを回す workflow を追加する
+    status: todo
+scope_out:
+  - item: 設計書のスキーマの参照を design-schemas の v9 系へ上げる
+    reason: v9.0.0 で設計書の refs が related に変わる破壊的変更で、全ての設計書の書き換えが要る。この Issue が要る location・run_runner・workflow のインターフェース定義は v8.4.0 で揃う
+    plan: '#263'
+  - item: AI Monitor v0.5.0 の配布物への追従（ai-monitor-version.ini の版上げ）
+    reason: 受付判断の時点にあった schemas/ のスキーマのコピーは、#256 で knowledge の design-schemas の参照へ移って無くなり、この作業 PR はスキーマを AI Monitor の配布物から取らない。版上げは追従 Issue が行う
+    plan: '#243'
+  - item: 既存の GitHub Pages の workflow（.github/workflows/pages.yml）のインターフェース定義の作成
+    reason: 要望に含まれない。workflow の追加と同じ作業 PR で作るかは、インターフェース定義と workflow のファイルの突き合わせの検査が pages.yml にも及ぶかで決まるため、インターフェース定義設計のレビューで確定する
+    plan: to_file
+  - item: 外部疎通テスト・非機能要件テスト・E2E テストの層の実行場所
+    reason: 3 つの層は run_all が未確定でテストが無く、判定の対象が無い。テストを作る作業で決める
+    plan: none
