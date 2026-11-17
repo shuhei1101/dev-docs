@@ -1,0 +1,26 @@
+diff --git a/frontend/src/index.css b/frontend/src/index.css
+index 41d14e5..73f8e52 100644
+--- a/frontend/src/index.css
++++ b/frontend/src/index.css
+@@ -1,4 +1,7 @@
+-@import "tailwindcss";
++@layer theme, base, components, utilities;
++@import "tailwindcss/theme.css" layer(theme);
++@import "./preflight-outside-mdmark.css" layer(base);
++@import "tailwindcss/utilities.css" layer(utilities);
+ @import "tw-animate-css";
+ 
+ @custom-variant dark (&:is(.dark *));
+@@ -118,8 +121,10 @@
+ }
+ 
+ @layer base {
+-  * {
+-    @apply border-border outline-ring/50;
++  @scope (html) to (.mdmark) {
++    * {
++      @apply border-border outline-ring/50;
++    }
+   }
+   body {
+     @apply bg-background font-sans text-foreground;

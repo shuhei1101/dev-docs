@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 import json
+import os
 import shutil
 import socket
+import time
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any
@@ -72,11 +74,12 @@ def test_normal(
 ) -> None:
     """project-index が配信している 2 つの配信元を画面で配信し始める（正常系）。"""
     # 準備
-    settings = write_settings(_two_sources(mock_index).address)
+    settings = write_settings(_two_sources(mock_index).address, extra="mdmark_version: v0.13.0\n")
     port = free_port()
     process = start_serve(settings, port)
     wait_until_serving(process, port)
     # 実行
+    screen = httpx.get(f"http://127.0.0.1:{port}/", timeout=10)
     sample = httpx.get(f"http://127.0.0.1:{port}/_api/sources/sample/docs", timeout=10)
     notes = httpx.get(f"http://127.0.0.1:{port}/_api/sources/notes/docs", timeout=10)
     docs_mcp = _mcp(port, "/mcp/", INITIALIZE)
@@ -88,6 +91,8 @@ def test_normal(
     output = process.stdout.read() if process.stdout else ""
     # 検証
     assert addresses == {LOOPBACK_V4}
+    assert screen.status_code == 200
+    assert '<meta name="mdmark-version" content="v0.13.0">' in screen.text
     assert sample.status_code == 200
     assert notes.status_code == 200
     assert docs_mcp.status_code == 404
@@ -194,7 +199,33 @@ def test_error_when_port_in_use(
     # 検証
     assert code == 3
     assert str(port) in error
+    assert f"pid {os.getpid()}" in error
     assert "DEV_DOCS_PORT" in error
+
+
+def test_error_when_started_twice(
+    sample_index: MockIndex,
+    write_settings: Callable[..., Path],
+    free_port: Callable[[], int],
+    start_serve: Callable[..., Any],
+) -> None:
+    """同じポートで 2 つ同時に起動すると、待ち受けるのは 1 つで、もう片方は待ち受けた方の pid を出して終わる（異常系）。"""
+    # 準備
+    settings = write_settings(sample_index.address)
+    port = free_port()
+    # 実行
+    first = start_serve(settings, port)
+    second = start_serve(settings, port)
+    deadline = time.monotonic() + SERVE_WAIT_SEC
+    while first.poll() is None and second.poll() is None and time.monotonic() < deadline:
+        time.sleep(0.2)
+    # 検証
+    ended, alive = (first, second) if first.poll() is not None else (second, first)
+    error = ended.stderr.read() if ended.stderr else ""
+    assert ended.returncode == 3
+    assert alive.poll() is None
+    assert str(port) in error
+    assert f"pid {alive.pid}" in error
 
 
 def test_normal_when_mcp_path_without_slash(

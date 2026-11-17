@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 
-from dev_docs.integrations.project_index.types import parse_document
+from dev_docs.integrations.project_index.types import parse_document, parse_document_list
 from dev_docs.shared.errors import ProjectIndexResponseError
 
 from ...conftest import doc_json, list_entry
@@ -17,11 +17,19 @@ def test_parse_document() -> None:
             "notes/files.yaml",
             kind="files",
             data={"path": "a.md"},
-            metadata={"id": "n-1", "name": "N1", "tags": ["topic:a"], "visibility": "public"},
+            metadata={
+                "id": "n-1",
+                "name": "N1",
+                "tags": ["topic:a"],
+                "visibility": "public",
+                "aliases": ["作業場所"],
+                "alias_type": "term",
+            },
             body_path="notes/a.md",
             body="# A\n",
         ),
         values=True,
+        common_keys=True,
     )
     # 実行
     document = parse_document("sample", value, record_index=1)
@@ -34,6 +42,8 @@ def test_parse_document() -> None:
         "description": None,
         "tags": ["topic:a"],
         "visibility": "public",
+        "aliases": ["作業場所"],
+        "alias_type": "term",
     }
     assert document.body_path == "notes/a.md"
     assert document.record_index == 1
@@ -52,6 +62,27 @@ def test_parse_document_when_value_null() -> None:
     assert document.data == {}
 
 
+def test_parse_document_when_common_keys_null() -> None:
+    """共通のキーを求めなかった（正常系）。"""
+    # 準備
+    value = list_entry(
+        doc_json("a", "docs/a.yaml", metadata={"id": "a", "name": "A", "aliases": ["x"]}),
+        values=True,
+    )
+    # 実行
+    document = parse_document("sample", value)
+    # 検証
+    assert value["commonKeys"] is None
+    assert document.metadata == {
+        "id": "a",
+        "kind": "rules",
+        "name": "A",
+        "description": None,
+        "tags": [],
+        "visibility": None,
+    }
+
+
 def test_parse_document_when_key_missing() -> None:
     """必須のキーが無い（異常系）。"""
     # 準備
@@ -60,3 +91,25 @@ def test_parse_document_when_key_missing() -> None:
     # 実行・検証
     with pytest.raises(ProjectIndexResponseError, match="version"):
         parse_document("sample", value)
+
+
+def test_parse_document_list_when_records() -> None:
+    """行の文書の添字（正常系）。"""
+    # 準備
+    value = {
+        "ref": "develop",
+        "documents": [
+            doc_json("n-0", "notes/files.yaml", kind="notes"),
+            doc_json("d", "docs/d.yaml", kind="docs"),
+            doc_json("n-1", "notes/files.yaml", kind="notes"),
+        ],
+    }
+    # 実行
+    listed = parse_document_list("sample", value, record_kinds=["notes"])
+    # 検証
+    assert listed.ref == "develop"
+    assert [(d.id, d.record_index) for d in listed.documents] == [
+        ("n-0", 0),
+        ("d", None),
+        ("n-1", 1),
+    ]

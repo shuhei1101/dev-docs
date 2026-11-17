@@ -141,12 +141,12 @@ constants:
     usecase: 公開ページのビルド
     summary: これより深い見出しはこの深さで描く
     value: '6'
-  - name: MDMARK_TAG
+  - name: MDMARK_REF
     title: mdmark のバージョン
     container: scripts/build_pages.py
     usecase: 公開ページのビルド
-    summary: '`npx` で呼ぶ mdmark のタグ（[mdmark](id:LIB-155-9) の採用バージョンと同じ）'
-    value: '"v0.10.0"'
+    summary: '`npx` で呼ぶ mdmark の参照と、`mdmark.config.yaml` の `version`。既定は mdmark の develop の最新で、固定するときはタグか commit の SHA に書き換える（[mdmark](id:LIB-155-9)）'
+    value: '"develop"'
   - name: OUTPUT_HTML
     title: 公開ページの HTML
     container: scripts/build_pages.py
@@ -173,15 +173,15 @@ constants:
     value: '2'
 functions:
   - name: main
-    title: スクリプトの入口
+    title: スクリプトの起点
     container: scripts/build_pages.py
     usecase: 公開ページのビルド
-    role: 入口
-    summary: 公開の文書を 1 枚の HTML にして `--out` のフォルダに置き、終了コードを返却する
+    role: 起点
+    summary: 公開の文書を 1 枚の HTML にして `--out` のフォルダに配置し、終了コードを返却する
     kind: 関数
     scope: public
     is_async: false
-    side_effects: '`--out` のフォルダを削除して作り直す。一時フォルダを作って消す。標準出力・標準エラーに出力する'
+    side_effects: '`--out` のフォルダを削除して再作成する。一時フォルダを作って削除する。標準出力・標準エラーに出力する'
     args:
       - name: argv
         title: 引数
@@ -201,7 +201,7 @@ functions:
       1. argparse で `--root`・`--out` を解析する
       2. 公開ドキュメントの文書を集め（公開ドキュメントの文書の収集）、公開の判定フローチャートを読み込み（公開の判定フローチャートの読み込み）、文書の ID の場所を集める（文書の ID の場所の収集）
          - 公開の文書が 1 つも無い場合、標準エラーに出して `EXIT_NOT_STARTED` を返却する
-      3. `--out` のフォルダを削除して作り直す
+      3. `--out` のフォルダを削除して再作成する
       4. 一時フォルダに、まとめる文書を `CATEGORIES` の順に並べて配置する。分類ごとに、公開ドキュメントの文書を `files.yml` の行の順にそのままコピーし、分類が `FLOWCHART_CATEGORY` なら続けて公開の判定フローチャートを `{ID}.md` で記載する
          - 判定フローチャートは、先に全てを Markdown にして（ページの描画）項目の見出しの ID を集め（項目の見出しの ID の収集）、その後に参照を書き換える（参照の書き換え）
       5. mdmark の設定を記載し（mdmark の設定の記載）、mdmark の build を実行して（mdmark の build の実行）、出力の `OUTPUT_HTML` を `--out` のフォルダへコピーする
@@ -212,15 +212,15 @@ functions:
     unit_tests:
       - name: test_main
         case: 正常
-        summary: 公開の文書を並べて mdmark に渡す
+        summary: 公開の文書を並べて mdmark に指定する
         condition: 一時フォルダに、`files.yml` で public の文書 2 つ（はじめに・使い方）と internal の文書 1 つ、public の判定フローチャート 1 つ
-        mock: mdmark の build の実行（渡された設定を記録し、`OUTPUT_HTML` を記載する）
+        mock: mdmark の build の実行（指定された設定を記録し、`OUTPUT_HTML` を記載する）
         expected: 0 を返却し、`--out` に `OUTPUT_HTML` ができる。設定の `include` が はじめにの文書・使い方の文書・`{ID}.md` の順で、internal の文書を含まない
       - name: test_main_when_no_public
         case: 異常
         summary: 公開の文書が無い
         condition: public の行も public の判定フローチャートも無い一時フォルダ
-        mock: mdmark の build の実行（呼ばれないことを確かめる）
+        mock: mdmark の build の実行（呼ばれないことを確認する）
         expected: '`EXIT_NOT_STARTED` を返却し、`--out` を作らない'
       - name: test_main_when_build_failed
         case: 異常
@@ -421,8 +421,8 @@ functions:
       type: dict[str, str]
       description: 項目の `id` → 見出しの ID。`OVERVIEW_ID` の項目は含めない
     process: |-
-      1. コードブロックの外の ATX の見出しを上から並べ、見出しの文字から GitHub の規則（小文字にし、文字・数字・`_`・`-`・空白のほかを除き、空白を `-` にする）で ID を作る。同じ ID の 2 つ目からは `-1`・`-2` を付ける
-      2. `items` を順に、直前に対応づけた見出しより後の、ページの描画が項目に付ける深さ（`ITEM_HEADING_LEVEL` に `group` のレイヤーの数を足し、`MAX_HEADING_LEVEL` で抑えた深さ）で `name` と同じ文字の最初の見出しに対応づける
+      1. コードブロック以外の ATX の見出しを上から並べ、見出しの文字から GitHub の規則（小文字にし、文字・数字・`_`・`-`・空白のほかを除き、空白を `-` にする）で ID を作る。同じ ID の 2 つ目からは `-1`・`-2` を付ける
+      2. `items` を順に、直前に対応づけた見出しより後の、ページの描画が項目に付ける深さ（`ITEM_HEADING_LEVEL` に `group` のレイヤーの数を加算し、`MAX_HEADING_LEVEL` で抑えた深さ）で `name` と同じ文字の最初の見出しに対応づける
     unit_tests:
       - name: test_item_anchors
         case: 正常
@@ -536,7 +536,7 @@ functions:
         type: Path
         required: true
         passing: positional
-        description: まとめる文書を置いたフォルダ
+        description: まとめる文書を配置したフォルダ
       - name: names
         title: まとめる文書の名前
         type: Sequence[str]
@@ -547,14 +547,14 @@ functions:
       type: Path
       description: 記載した `mdmark.config.yaml` のパス
     process: |-
-      1. `{"version": MDMARK_TAG, "build": {"include": names, "entry": names[0], "out": OUTPUT_HTML}}` を JSON（YAML として読める）で `{workdir}/mdmark.config.yaml` に記載する
+      1. `{"version": MDMARK_REF, "build": {"include": names, "entry": names[0], "out": OUTPUT_HTML}}` を JSON（YAML として読み込める）で `{workdir}/mdmark.config.yaml` に記載する
     unit_tests:
       - name: test_write_bundle_config
         case: 正常
         summary: 並びのとおりの設定
         condition: '`names` が `["a.md", "b.md"]`'
         mock: なし（一時ディレクトリ）
-        expected: '`include` が同じ並び、`entry` が `a.md`、`out` が `OUTPUT_HTML`、`version` が `MDMARK_TAG`'
+        expected: '`include` が同じ並び、`entry` が `a.md`、`out` が `OUTPUT_HTML`、`version` が `MDMARK_REF`'
   - name: run_mdmark
     title: mdmark の build の実行
     container: scripts/build_pages.py
@@ -576,7 +576,7 @@ functions:
       type: str
       description: mdmark の build の標準出力
     process: |-
-      1. `["npx", "-y", "github:shuhei1101/mdmark#{MDMARK_TAG}", "build", "--config", str(config)]` を、`cwd` を設定のフォルダにして `LIMIT_SEC` で打ち切って実行する
+      1. `["npx", "-y", "github:shuhei1101/mdmark#{MDMARK_REF}", "build", "--config", str(config)]` を、`cwd` を設定のフォルダにして `LIMIT_SEC` で打ち切って実行する
          - `npx` が無い場合、Node を入れる案内を添えて `BuildError` を送出する
          - `LIMIT_SEC` で終わらない場合、`BuildError` を送出する
          - 終了コードが 0 でない場合、終了コードと標準エラーを添えて `BuildError` を送出する
@@ -597,7 +597,7 @@ functions:
         summary: build の引数
         condition: '`subprocess.run` が終了コード 0 と標準出力を返却する'
         mock: '`subprocess.run`'
-        expected: 標準出力を返却し、引数が `npx -y github:shuhei1101/mdmark#{MDMARK_TAG} build --config {config}` で `cwd` が設定のフォルダ
+        expected: 標準出力を返却し、引数が `npx -y github:shuhei1101/mdmark#{MDMARK_REF} build --config {config}` で `cwd` が設定のフォルダ
       - name: test_run_mdmark_when_failed
         case: 異常
         summary: build の失敗

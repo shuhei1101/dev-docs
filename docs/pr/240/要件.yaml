@@ -1,0 +1,57 @@
+use_cases:
+  - kind: single
+    scenario: docs/scenario/SC-155-7.yaml
+    impact: changed
+    detail: 文書の画面が本文を描く mdmark を、既定で mdmark の develop の最新から読み、設定でバージョンを固定したときはその版から読む
+    depends_on: []
+  - kind: composite
+    scenario: docs/scenario/SC-155-13.yaml
+    impact: run_only
+    detail: 文書を画面で読む流れは変わらないが、本文を描く mdmark の版が変わるため描画が壊れていないかを確かめる
+    depends_on: []
+  - kind: single
+    scenario: docs/scenario/SC-155-2.yaml
+    impact: run_only
+    detail: 開発の依存の mdmark の参照を変えるため、利用者の入れ方で入れて起動できることを確かめる
+    depends_on: []
+docs:
+  - page: docs/library/LIB-155-9.yaml
+    new: false
+    change: '`version.source`・`pinning` を、既定で develop の最新を参照し、設定でタグ・commit に固定できる形にする'
+    status: done
+    updated_by: planner
+    updated_at: '2026-11-16T16:27:06.838340+00:00'
+  - page: docs/nonfunctional/NFR-155-1.yaml
+    new: false
+    change: NFR-12（mdmark の読み込み元）の決定値・理由・計測・溢れたときを、既定で develop の最新を参照する形にする
+    status: done
+    updated_by: planner
+    updated_at: '2026-11-16T16:27:06.838340+00:00'
+  - page: docs/config/CFG-155-2.yaml
+    new: false
+    change: 端末の設定に `mdmark_version`（既定 `develop`）を追加する
+    status: done
+    updated_by: planner
+    updated_at: '2026-11-16T15:36:42.485242+00:00'
+  - page: docs/guide/設定.md
+    new: false
+    change: 端末の設定のキーに `mdmark_version` を追加する
+    status: done
+    updated_by: planner
+    updated_at: '2026-11-16T16:27:06.838340+00:00'
+  - page: docs/test-procedure/TP-155-1.yaml
+    new: false
+    change: 結合テストの前提を、`npm ci` の `node_modules/.bin/mdmark` から `npx -y github:shuhei1101/mdmark#{参照}` で取る形へ書き換え、描画の確認は作業 PR のテストのときに行うことを記載する
+    status: done
+    updated_by: planner
+    updated_at: '2026-11-16T16:27:06.838340+00:00'
+scope_out:
+  - item: mdmark の側で develop の最新を jsDelivr・npx で参照できるようにすること（develop の `dist/` の更新・`mdmark.config.yaml` の `version` に develop の最新を書けること）
+    reason: mdmark のリポジトリの作業で、shuhei1101/mdmark#620 が持つ
+    plan: none
+  - item: '作業 PR #212 が予定していた `use-mdmark.ts`・`package.json` の mdmark のタグの引き上げ'
+    reason: '#212 は引き上げをやめ、この PR のマージの後に develop を取り込む（task-planner の判断）'
+    plan: '#209'
+  - item: '`docs/mock/` のモックが参照する mdmark の commit 固定の URL（`@580fae8`）'
+    reason: 過去の案のモックで、作った時点の mdmark で見た目を残すため
+    plan: none

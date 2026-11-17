@@ -129,6 +129,17 @@ def test_load_terminal_config(tmp_path: Path) -> None:
     assert result.project_index == "http://127.0.0.1:8786"
     assert result.leftover_sources == []
     assert result.log_dir == result.state_dir / "logs"
+    assert result.mdmark_version == "develop"
+
+
+def test_load_terminal_config_when_mdmark_version(tmp_path: Path) -> None:
+    """記載した mdmark のバージョンを読む（正常系）。"""
+    # 準備
+    path = _write(tmp_path, 'version: "2"\nclone: /tmp/clone\nmdmark_version: v0.13.0\n')
+    # 実行
+    result = load_terminal_config(path)
+    # 検証
+    assert result.mdmark_version == "v0.13.0"
 
 
 def test_load_terminal_config_when_state_dir_env_set(tmp_path: Path) -> None:

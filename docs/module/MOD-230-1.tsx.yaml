@@ -1,0 +1,89 @@
+title: 画面 / 共通 / project-index-unreachable.tsx
+lead: project-index から受け取れなかったことを、理由の種類ごとの見出しと説明・接続先・理由・再読み込みで出す警告。
+test_files:
+  - tests/unit/frontend/src/shared/components/project-index-unreachable.test.tsx
+functions:
+  - name: toProjectIndexUnreachable
+    title: project-index から受け取れなかった理由の取り出し
+    kind: 関数
+    container: shared/components/project-index-unreachable.tsx
+    usecase: 共通
+    role: 変換
+    scope: public
+    summary: 画面の API の 503・502 から、project-index のアドレス・理由・理由の種類を取り出す
+    args:
+      - name: error
+        title: 例外
+        type: unknown
+        required: true
+        passing: positional
+        description: 問い合わせの例外
+    returns:
+      type: ProjectIndexUnreachable | null
+      description: '`address`・`reason`・`kind`。当たらなければ `null`'
+    process: |-
+      1. `AppError` でないか、`status` が 503 でも 502 でもなければ `null` を返す
+      2. `problem` を `ProjectIndexUnreachableSchema` で読み、読めれば `projectIndex`（`kind` が無ければ `unreachable`）、読めなければ `null` を返す
+    unit_tests:
+      - name: test_to_project_index_unreachable
+        case: 正常
+        summary: 502 の処理に失敗した理由を取り出す
+        condition: '`projectIndex` に `kind: failed` を持つ 502 の `AppError`'
+        mock: なし
+        expected: '`kind` が `failed` で `address`・`reason` を持つ'
+      - name: test_to_project_index_unreachable_when_kind_missing
+        case: 正常
+        summary: '`kind` を持たない 503'
+        condition: '`projectIndex` に `kind` が無い 503 の `AppError`'
+        mock: なし
+        expected: '`kind` が `unreachable`'
+      - name: test_to_project_index_unreachable_when_other
+        case: 正常
+        summary: 当たらない例外
+        condition: 404 の `AppError` と `new Error("x")`
+        mock: なし
+        expected: どちらも `null`
+components:
+  - name: ProjectIndexUnreachableAlert
+    title: project-index から受け取れないときの警告
+    kind: コンポーネント
+    container: shared/components/project-index-unreachable.tsx
+    usecase: 共通
+    role: 部品
+    summary: 理由の種類（`kind`）ごとの見出しと説明、`接続先`・`理由` の一覧と再読み込みのボタンを、`variant="destructive"` の Alert で出す
+    description: 見出しと説明は、確認ログ（#230）で決定した文言を `kind` ごとに持つ定数から引く（文書の画面の『project-index から文書を受け取れないときの表示』）。呼び出し元の文書の画面と設定画面は、どちらも `toProjectIndexUnreachable` の `kind` を指定する。`kind` が無いときは `unreachable` の文言になる。理由の欄は `min-w-0`・`wrap-anywhere` で長い理由を折り返す。名前は「接続できない」を表すままにし、応答が無い・処理に失敗した場合も扱う（呼び出し元 2 画面とストーリーを改名しない）
+    props:
+      - name: address
+        type: string
+        required: true
+        description: project-index のアドレス
+      - name: reason
+        type: string
+        required: true
+        description: 理由
+      - name: kind
+        type: '"unreachable" | "timeout" | "failed"'
+        required: false
+        description: 理由の種類（無いときは `unreachable`）
+      - name: onReload
+        type: () => void
+        required: true
+        description: 再読み込み
+      - name: titleId
+        type: string
+        required: false
+        description: 見出しの要素の id（接続できない間に押せない操作の `aria-describedby` から指す）
+    unit_tests:
+      - name: test_project_index_unreachable_alert
+        case: 正常
+        summary: 理由の種類ごとの見出しと説明
+        condition: '`kind` を `unreachable`・`timeout`・`failed` にして描く'
+        mock: なし
+        expected: 見出しがそれぞれ `project-index に接続できませんでした`・`project-index から応答がありませんでした`・`project-index が要求を処理できませんでした` で、接続先と理由がある
+      - name: test_project_index_unreachable_alert_when_reload
+        case: 正常
+        summary: 再読み込み
+        condition: '`再読み込み` を押す'
+        mock: なし（`@testing-library/user-event`）
+        expected: '`onReload` が 1 回呼ばれる'
+id: MOD-230-1

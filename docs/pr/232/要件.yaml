@@ -1,0 +1,33 @@
+use_cases:
+  - kind: single
+    scenario: docs/scenario/SC-155-7.yaml
+    impact: run_only
+    detail: 文書の本文の見た目が単独の mdmark と揃う。読む操作とシナリオの記述は変わらないが、本文の描画を変えるため回帰を確かめる
+    depends_on: []
+  - kind: single
+    scenario: docs/scenario/SC-155-6.yaml
+    impact: run_only
+    detail: 本文の文字列へのコメントの追加とマーカーは mdmark が描く。本文へ当たるスタイルを変えるため回帰を確かめる
+    depends_on: []
+  - kind: composite
+    scenario: docs/scenario/SC-155-13.yaml
+    impact: none
+    detail: 連鎖は変わらない
+    depends_on: []
+docs:
+  - page: docs/design-policy.md
+    new: false
+    change: 本文（mdmark が描く範囲）は mdmark のスタイルで描き、画面の文字・色のトークンを当てないことを、文字の役割・色の役割に反映する（本文の見出し 2 の `#` のモチーフなど、違いの一覧で当たった行）
+    status: done
+    updated_by: planner
+    updated_at: '2026-11-15T23:00:46.240910+00:00'
+scope_out:
+  - item: mdmark の右側の目次がトップバーと種類のタブに重なる事象
+    reason: '目次の固定の位置は進行中の #226（作業 PR #231）が直す。本文の範囲の CSS と SCR-155-1 を両方が触るため、重なりは作業 PR の最新化で取り込む'
+    plan: '#226'
+  - item: 画面が読み込む mdmark の版の変更（v0.13.0 から develop の最新へ）
+    reason: '版の切り替えは #228 が扱う。この作業は画面が読み込む版と同じ版の mdmark export で書き出して比べ、版の差を違いの一覧に混ぜない'
+    plan: '#228'
+  - item: 配信元を開くのに時間がかかる事象・タブの並びとサイドバーのグループ（調査 R-18 の No.1・3・4・5）
+    reason: 本文の見た目とは別の事象で、Issue の要望に含まれない
+    plan: none

@@ -171,7 +171,7 @@ scenarios:
         notes: '-'
       - name: dev-docs
         description: 正常シナリオと同じ sample を配信している dev-docs
-        notes: 'sample に、`+columns` を持たない表の後に `<!-- table: data +columns -->` のマーカーを付けた 3 列の表を持つ Markdown の文書 5 がある（スキーマから作る表のうち `+columns` を持つのは図の元データの表だけ）'
+        notes: 'sample に、列の表示・非表示の機能を持たない表の後に、`<!-- table: data +columns -->` のマーカーを付けた 3 列の表と、3 列目を最初から隠す JSON のマーカー（`<!-- table: {"kind": "data", "columns": {"{3 列目の列名}": {"hidden": true}}} -->`）を付けた 3 列の表を持つ Markdown の文書 5 がある（スキーマから作る表のうち列の表示・非表示の機能を持つのは図の元データの表だけ）'
     flow: |-
       ```mermaid
       sequenceDiagram
@@ -179,16 +179,17 @@ scenarios:
         participant UI as dev-docs の画面
         participant API as 画面の API
 
-        U->>UI: 文書 5 を開き、表の列の表示から 2 列目を外す
+        U->>UI: 文書 5 を開き、2 つの列の表示・非表示の機能を持つ表のそれぞれで、列の表示から 2 列目を外し、JSON のマーカーの表では 3 列目を表示に戻す
         UI->>API: 表の列の設定の保存（文書 5 の表・隠す列）
-        UI-->>U: 2 列目を隠した表
+        UI-->>U: 2 列目を隠した 2 つの表
         U->>UI: 同じ文書を開き直す
-        UI-->>U: 2 列目を隠した表
+        UI-->>U: 2 列目を隠した 2 つの表
       ```
     expected:
-      - 表の 2 列目が表示されない
-      - 開き直しても 2 列目が表示されない
-      - '`+columns` を持たない先頭の表は、開き直しても全ての列が表示される'
+      - 2 つの表とも、2 列目が表示されない
+      - 開き直しても、2 つの表とも 2 列目が表示されない
+      - JSON のマーカーで最初から隠した 3 列目は、表示に戻すと開き直しても表示される
+      - '列の表示・非表示の機能を持たない先頭の表は、開き直しても全ての列が表示される'
       - 配信元のフォルダのファイルは変わらない
     test: test_normal_when_column_hidden
   - name: 正常シナリオ（配信元の変換を使う）
@@ -564,13 +565,15 @@ scenarios:
         API->>API: スキーマ駆動で Markdown にする
         API-->>UI: 文書 6 の Markdown
         UI-->>U: 図と表で描いた文書 6 の本文
+        U->>UI: 状態遷移図の下の帯の次へを押す
+        UI-->>U: 次の遷移を強調した状態遷移図
         U->>UI: 図の下の元データの表を開く
         UI-->>U: 元データの表
       ```
     expected:
-      - flowchart と state の項目が mdmark のフロー図で、`sequenceDiagram` の項目が mdmark のシーケンス図で描かれ、Mermaid のコードブロックが本文に出ない
-      - 'flowchart のフロー図で、`kind: question` のノードが質問の形状、`kind: result` のノードが結果の形状で出て、`frame` の 2 つのノードが `label` の枠に囲まれ、`hint` がノードの、`tip` が線のラベルのツールチップに出る'
-      - state のフロー図に、開始のノードから初期状態への線と、終了状態から終了のノードへの線が出る
+      - flowchart と state の項目と `sequenceDiagram` の項目が mdmark の map で描かれ、Mermaid のコードブロックが本文に出ず、書き方の警告が出ない
+      - 'flowchart の map で、`kind: question` のノードが質問の種類、`kind: result` のノードが結果の種類で出て、`frame` の 2 つのノードが `label` のグループに入り、`hint` がノードの、`tip` が線のツールチップに出る'
+      - state の map が状態遷移図で、開始から初期状態への線と、終了状態から終了への線が出て、帯の次へを押すと遷移が記載順に 1 本ずつ強調される
       - 図の下の元データの表は閉じた状態で出て、開くとノードの表の先頭の列が `表示` で、ID の列が隠れている
       - 元データの表に、列名が表に無い・先頭の列を隠せないという mdmark の警告が出ない
       - スカラーが並ぶオブジェクトが「項目 / 値」の 2 列の表で出る
@@ -603,21 +606,24 @@ scenarios:
 
         U->>UI: 文書 7 を開く
         UI->>API: 文書の取得（文書 7）
-        API->>API: er の項目を、tables の列で補った ER 図の部品にする
+        API->>API: er の項目を、tables の列で補った erDiagram の map にする
         API-->>UI: 文書 7 の Markdown
         UI-->>U: ER 図で描いた文書 7 の本文
+        U->>UI: 顧客のテーブルを押す
+        UI-->>U: 顧客と関連の線を強調した ER 図
       ```
     expected:
-      - '`er` の項目が mdmark の ER 図で描かれ、Mermaid のコードブロック（`erDiagram`）が本文に出ない'
+      - '`er` の項目が mdmark の map の ER 図で描かれ、Mermaid のコードブロック（`erDiagram`）が本文に出ない'
       - 実体 `顧客` のテーブルに、`tables[]` のテーブルの列の名前と型が出て、主キーの列に `PK` のマーカーが出る
       - 実体 `注文` のテーブルに、`columns` の列の名前と型が出る
       - '`顧客` から `注文` への関連の線が、`顧客` の列 `id` の行と `注文` の列 `customer_id` の行を結び、`顧客` の端に多重度 `1`、`注文` の端に多重度 `0..n` の記号が出る'
       - '`注文` から `商品` への関連の線は図に出ず、図の元データの表にその関連の行が出る'
       - ER 図に書き方の警告が出ない
       - 図の下の元データの表は閉じた状態で出る
+      - 顧客のテーブルを押すと、顧客のテーブルと顧客から注文への線のほかが薄くなる
     test: test_normal_when_er_diagram_drawn
     notes:
-      mdmark のバージョン: ER 図の部品（mdmark#298）と判定のノードの種類（mdmark#268）は、画面が読み込む mdmark の master（v0.10.0）にある。
+      mdmark のバージョン: map の ER 図・状態遷移図（mdmark#465）は、mdmark の v0.13.0 から入っている。画面は、mdmark のバージョンの設定（既定は mdmark の develop の最新）の mdmark を読み込む。
   - name: 正常シナリオ（本文の id のリンクを開く）
     setup:
       - name: Mock
@@ -692,6 +698,106 @@ scenarios:
       - plain の文書の `D-1` は、リンクにならず ID の文字で出て、他の本文は描かれる
       - '`decisions` 以外の文字列の並びの出し方は変わらない'
     test: test_normal_when_decision_link_opened
+  - name: 正常シナリオ（配信元を開き直す）
+    setup:
+      - name: Mock
+        description: project-index の代わりに、sample と plain を配信する project-index の応答を、配信元の設定・文書の一覧・文書・リビジョンの一覧の問い合わせごとに一定の時間だけ待ってから返却する HTTP サーバー
+        notes: 待つ時間は、計測した 2 回目の応答の時間。問い合わせを順に待つと合計が非機能要件の最初の文書の表示の時間を超える値にする。dev-docs の端末の設定の `project_index` がこのサーバーを指す
+      - name: dev-docs
+        description: 偽の project-index につないで起動した dev-docs
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        actor U as 利用者
+        participant UI as dev-docs の画面
+        participant API as 画面の API
+        participant PI as project-index（応答が遅い）
+
+        U->>UI: sample の文書の画面を開く
+        UI->>API: 文書の取得（文書のパスを省く）
+        API->>PI: 配信元の設定・文書の一覧・文書を問い合わせる
+        API-->>UI: 文書 1 の Markdown・タブ・サイドバー
+        UI-->>U: doc-view（文書 1）
+        U->>UI: plain の文書の画面を開く
+        UI-->>U: doc-view（plain の一番上の文書）
+        U->>UI: sample の文書の画面を開き直す
+        UI->>API: 文書の取得（文書のパスを省く）
+        API-->>UI: 文書 1 の Markdown・タブ・サイドバー
+        UI-->>U: doc-view（文書 1）
+      ```
+    expected:
+      - 開き直した sample は、画面を開いてから本文が出るまでが、非機能要件の最初の文書の表示の時間以内
+      - 初めて開いた sample と plain は、非機能要件の文書の取得の制限時間以内に本文が出る
+      - 開き直した sample の本文・タブ・サイドバーが、初めて開いたときと同じ
+    test: test_normal_when_source_reopened
+  - name: 異常シナリオ（project-index の応答が遅い）
+    setup:
+      - name: Mock
+        description: project-index の代わりに、配信元の一覧には応答し、配信元の設定・文書の一覧・文書の問い合わせには接続を受けたまま応答しない HTTP サーバー
+        notes: dev-docs の端末の設定の `project_index` がこのサーバーを指す
+      - name: dev-docs
+        description: 偽の project-index につないで起動した dev-docs
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        actor U as 利用者
+        participant UI as dev-docs の画面
+        participant API as 画面の API
+        participant PI as project-index（応答しない）
+
+        U->>UI: sample の文書の画面を開く
+        UI-->>U: 読み込み中の表示
+        UI->>API: 文書の取得
+        API->>PI: 問い合わせる（応答が無い）
+        API->>API: 文書の取得の制限時間で打ち切る
+        API-->>UI: 503（応答が無かったことと project-index のアドレス）
+        UI-->>U: 応答が無かった理由と再読み込み
+      ```
+    expected:
+      - 読み込み中の表示が消え、project-index から応答が無かったことと、接続先のアドレス・再読み込みが出る
+      - 画面を開いてから理由が出るまでが、非機能要件の文書の取得の制限時間に、非機能要件で決める許容の時間を加えた時間以内。project-index への問い合わせを何回重ねても同じ
+    test: test_error_when_project_index_slow
+  - name: 正常シナリオ（フロー図のノードから文書へ移る）
+    setup:
+      - name: Mock
+        description: なし（実環境で実行。ブラウザは Playwright で操作する）
+        notes: '-'
+      - name: データの図のリンク
+        description: '文書 6 の `x-diagram: flowchart` の項目に、`kind: question` のノードへ `href` が `id:{文書 2 の ID}` の `clicks` の要素と、`kind: result` のノードへ `href` が `id:no-such-doc` の `clicks` の要素を持たせる'
+        notes: 文書 6 は正常シナリオ（スキーマ駆動の文書を図と表で読む）の文書
+      - name: 手で記載したフローチャートのリンク
+        description: 文書 1 の Markdown の文字列の値に、手で記載した Mermaid のフローチャート（`flowchart`）を配置し、ノード A に `click A "id:{文書 6 の ID}#flow"`、ノード B に `click B href "id:{文書 2 の ID}"` を記載する
+        notes: '`flow` は `x-heading: 処理の流れ` を持つ文書 6 の項目'
+      - name: dev-docs
+        description: sample を配信している dev-docs
+        notes: '-'
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        actor U as 利用者
+        participant UI as dev-docs の画面
+        participant API as 画面の API
+
+        U->>UI: 文書 6 を開く
+        UI->>API: 文書の取得（文書 6）
+        API->>API: clicks の id のリンクを、同じ配信元の文書へのリンクにしてノードに付ける（該当しない id の要素は出さない）
+        API-->>UI: 文書 6 の Markdown
+        U->>UI: フロー図の質問のノードを押す
+        UI-->>U: doc-view（文書 2）
+        U->>UI: 文書 1 を開き、フロー図のノード A を押す
+        UI->>API: 文書の取得（文書 1）
+        API->>API: click の id のリンクを、同じ配信元の文書へのリンクに書き換える
+        API-->>UI: 文書 1 の Markdown
+        UI-->>U: doc-view（文書 6 の項目の見出し）
+        U->>UI: 文書 1 に戻り、ノード B を押す
+        UI-->>U: doc-view（文書 2）
+      ```
+    expected:
+      - 文書 6 のフロー図の質問のノードを押すと、URL が文書 2 を指すものに変わり、文書 2 の本文が出る
+      - 文書 6 のフロー図の結果のノードはリンクにならず、図とノードの名前は描かれ、書き方の警告が出ない
+      - 文書 1 のフロー図のノード A を押すと、文書 6 が開き、URL のアンカーが見出し `処理の流れ` を指し、その見出しが画面に出る
+      - 文書 1 に戻ってノード B を押すと、URL が文書 2 を指すものに変わり、文書 2 の本文が出る
+    test: test_normal_when_flow_node_clicked
   - name: 正常シナリオ（図のノードから文書へ移る）
     setup:
       - name: Mock
@@ -735,7 +841,7 @@ preconditions:
   - dev-docs が起動し、画面のビルドを配信している
   - dev-docs がつながる project-index が、配信元を配信している
 success_guarantee: 開いた配信元・リビジョンの文書が、変換した Markdown を mdmark で描いた本文で出る。
-minimal_guarantee: 無い配信元・文書・リビジョンは見つからない画面で、何が無いかを出す。変換に失敗した文書は、失敗したことと原因を出し、他の文書は読める。
+minimal_guarantee: 無い配信元・文書・リビジョンは見つからない画面で、何が無いかを出す。変換に失敗した文書は、失敗したことと原因を出し、他の文書は読める。project-index から応答が無いときは、文書の取得の制限時間の中で読み込み中の表示をやめ、理由を出す。
 frequency: 作業のたび
 priority: 高
 refs:

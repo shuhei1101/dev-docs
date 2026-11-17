@@ -1,0 +1,352 @@
+$ uv run pytest tests/unit/
+============================= test session starts ==============================
+platform linux -- Python 3.14.3, pytest-9.1.1, pluggy-1.7.0
+rootdir: /home/shuhei2441/repo/dev-docs/.claude/worktrees/refactor-convert-mdmark-json-table-marker
+configfile: pyproject.toml
+plugins: anyio-4.15.1
+collected 491 items
+
+tests/unit/dev_docs/features/admin/test_render.py ......                 [  1%]
+tests/unit/dev_docs/features/admin/test_service.py ........              [  2%]
+tests/unit/dev_docs/features/changes/test_compare.py .                   [  3%]
+tests/unit/dev_docs/features/convert/test_decisions.py ....              [  3%]
+tests/unit/dev_docs/features/convert/test_diagrams.py .................. [  7%]
+.................                                                        [ 10%]
+tests/unit/dev_docs/features/convert/test_embed.py ....                  [ 11%]
+tests/unit/dev_docs/features/convert/test_inline.py ..............       [ 14%]
+tests/unit/dev_docs/features/convert/test_markdown.py .......F....F..... [ 18%]
+.F.F...                                                                  [ 19%]
+tests/unit/dev_docs/features/convert/test_service.py .......F.           [ 21%]
+tests/unit/dev_docs/features/documents/test_aliases.py .......           [ 23%]
+tests/unit/dev_docs/features/documents/test_fields.py .............      [ 25%]
+tests/unit/dev_docs/features/filter/test_fields.py ..                    [ 26%]
+tests/unit/dev_docs/features/filter/test_filters.py ............         [ 28%]
+tests/unit/dev_docs/features/lifecycle/test_control.py ...               [ 29%]
+tests/unit/dev_docs/features/lifecycle/test_update.py ..........         [ 31%]
+tests/unit/dev_docs/features/migrate/test_service.py ................... [ 35%]
+....                                                                     [ 35%]
+tests/unit/dev_docs/features/migrate/test_steps.py ...........           [ 38%]
+tests/unit/dev_docs/features/prompt_doc/test_render.py ................  [ 41%]
+tests/unit/dev_docs/features/prompt_doc/test_runtime.py .............    [ 43%]
+tests/unit/dev_docs/features/settings/test_query.py .................... [ 48%]
+....                                                                     [ 48%]
+tests/unit/dev_docs/features/settings/test_route.py .......              [ 50%]
+tests/unit/dev_docs/features/settings/test_service.py ......             [ 51%]
+tests/unit/dev_docs/features/view/test_columns.py .                      [ 51%]
+tests/unit/dev_docs/features/view/test_document.py ...............       [ 54%]
+tests/unit/dev_docs/features/view/test_nav.py ...........                [ 57%]
+tests/unit/dev_docs/features/view/test_paths.py ....                     [ 57%]
+tests/unit/dev_docs/features/view/test_route.py ........                 [ 59%]
+tests/unit/dev_docs/features/view/test_search.py ..                      [ 59%]
+tests/unit/dev_docs/integrations/project_index/test_client.py .......... [ 61%]
+...................                                                      [ 65%]
+tests/unit/dev_docs/integrations/project_index/test_types.py .....       [ 66%]
+tests/unit/dev_docs/server/mcp/test_admin.py ....                        [ 67%]
+tests/unit/dev_docs/server/mcp/test_result.py ......                     [ 68%]
+tests/unit/dev_docs/server/test_app.py ...........                       [ 71%]
+tests/unit/dev_docs/server/test_error_handlers.py ........               [ 72%]
+tests/unit/dev_docs/server/test_lifespan.py .                            [ 72%]
+tests/unit/dev_docs/server/test_origin.py ....                           [ 73%]
+tests/unit/dev_docs/server/test_screen.py ............                   [ 76%]
+tests/unit/dev_docs/shared/test_errors.py ...                            [ 76%]
+tests/unit/dev_docs/shared/test_files.py ...                             [ 77%]
+tests/unit/dev_docs/shared/test_hashing.py ..                            [ 77%]
+tests/unit/dev_docs/shared/test_paths.py .                               [ 78%]
+tests/unit/dev_docs/shared/test_schema_check.py .............            [ 80%]
+tests/unit/dev_docs/shared/test_yaml_io.py .......                       [ 82%]
+tests/unit/dev_docs/test_main.py ..........                              [ 84%]
+tests/unit/dev_docs/test_serve.py ............................           [ 89%]
+tests/unit/plugins/dev_docs/hooks/test_session_start.py ................ [ 93%]
+..........                                                               [ 95%]
+tests/unit/scripts/test_build_pages.py ........................          [100%]
+
+=================================== FAILURES ===================================
+_____________________ test_schema_to_markdown_when_diagram _____________________
+
+make_document = <function make_document.<locals>._make at 0x7ac540559b10>
+
+    def test_schema_to_markdown_when_diagram(make_document: Callable[..., Document]) -> None:
+        """図と元データの表（正常系）。"""
+        # 準備
+        schema = {
+            "properties": {
+                "flow": {
+                    "title": "流れ",
+                    "x-shape": "diagram",
+                    "x-diagram": "flowchart",
+                    "properties": {
+                        "nodes": {
+                            "items": {
+                                "properties": {
+                                    "id": {"title": "ID"},
+                                    "label": {"title": "表示"},
+                                    "kind": {"title": "種類"},
+                                }
+                            }
+                        },
+                        "edges": {
+                            "items": {"properties": {"from": {"title": "元"}, "to": {"title": "先"}}}
+                        },
+                    },
+                }
+            }
+        }
+        document = make_document(
+            data={
+                "name": "N",
+                "flow": {
+                    "nodes": [
+                        {"id": "a", "label": "A", "kind": "process"},
+                        {"id": "b", "label": "B", "kind": "store"},
+                    ],
+                    "edges": [{"from": "a", "to": "b"}],
+                },
+            },
+            updated=datetime(2026, 11, 3, 9, 0, 0, tzinfo=UTC),
+        )
+        # 実行
+        result = schema_to_markdown(document, schema, CONTEXT)
+        # 検証
+        assert "<!-- map: " in result
+        assert "<!-- /map -->" in result
+>       assert (
+            '<!-- table: {"kind": "data", "collapse": {"open": false}, '
+            '"columns": {"ID": {"hidden": true}}} -->\n| 表示 | ID | 種類 |'
+        ) in result
+E       assert '<!-- table: {"kind": "data", "collapse": {"open": false}, "columns": {"ID": {"hidden": true}}} -->\n| 表示 | ID | 種類 |' in '# N\n\n<!-- map: {"title": "流れ"} -->\n\n```mermaid\nflowchart TD\n  a["A"]:::script\n  b["B"]:::data\n  a --> b\n```\...-docs-table: rules:flow.edges -->\n<!-- table: data closed -->\n| 元 | 先 |\n| --- | --- |\n| a | b |\n<!-- /table -->\n'
+
+tests/unit/dev_docs/features/convert/test_markdown.py:205: AssertionError
+___________________ test_schema_to_markdown_when_test_files ____________________
+
+make_document = <function make_document.<locals>._make at 0x7ac540552da0>
+
+    def test_schema_to_markdown_when_test_files(make_document: Callable[..., Document]) -> None:
+        """対応テストファイル（正常系）。"""
+        # 準備
+        context = RenderContext(
+            links={"tests/test_a.py": DocumentLink(title="test_a", path="tests/test_a.py")},
+            issue_url=None,
+            path="rules/doc-1.yaml",
+        )
+        schema = {"properties": {"test_file": {"type": "string", "title": "対応テストファイル"}}}
+        document = make_document(data={"name": "N", "test_file": "tests/test_a.py"})
+        # 実行
+        result = schema_to_markdown(document, schema, context)
+        # 検証
+>       assert '<!-- table: {"kind": "plain", "collapse": {"open": false}} -->' in result
+E       assert '<!-- table: {"kind": "plain", "collapse": {"open": false}} -->' in '# N\n\n<!-- table: plain closed -->\n| 対応テストファイル |\n| --- |\n| [test_a](../tests/test_a.py) |\n<!-- /table -->\n'
+
+tests/unit/dev_docs/features/convert/test_markdown.py:296: AssertionError
+___________________ test_render_table_when_closed_and_hidden ___________________
+
+    def test_render_table_when_closed_and_hidden() -> None:
+        """閉じた表と隠す列（正常系）。"""
+        # 準備
+        schema = {
+            "properties": {
+                "id": {"title": "ID"},
+                "label": {"title": "表示"},
+                "shape": {"title": "形"},
+                "kind": {"title": "種類"},
+            }
+        }
+        rows = [{"id": "a", "label": "A", "shape": "rect", "kind": "process"}]
+        # 実行
+        result = render_table(
+            rows,
+            schema,
+            table_key="d:nodes",
+            context=CONTEXT,
+            closed=True,
+            first="label",
+            hidden=["id", "shape"],
+        )
+        # 検証
+>       assert (
+            '<!-- table: {"kind": "data", "collapse": {"open": false}, '
+            '"columns": {"ID": {"hidden": true}, "形": {"hidden": true}}} -->'
+        ) in result
+E       assert '<!-- table: {"kind": "data", "collapse": {"open": false}, "columns": {"ID": {"hidden": true}, "形": {"hidden": true}}} -->' in '<!-- dev-docs-table: d:nodes -->\n<!-- table: data closed +columns hide=ID,形 -->\n| 表示 | ID | 形 | 種類 |\n| --- | --- | --- | --- |\n| A | a | rect | process |\n<!-- /table -->'
+
+tests/unit/dev_docs/features/convert/test_markdown.py:482: AssertionError
+_________________________ test_render_table_when_wide __________________________
+
+    def test_render_table_when_wide() -> None:
+        """説明の列（正常系）。"""
+        # 準備
+        schema = {"properties": {"name": {"title": "名前"}, "description": {"title": "説明"}}}
+        rows = [{"name": "a", "description": "長い説明"}]
+        # 実行
+        result = render_table(rows, schema, table_key="d:items", context=CONTEXT)
+        # 検証
+>       assert '<!-- table: {"kind": "data", "columns": {"説明": {"width": {"mode": "nowrap"}}}} -->' in result
+E       assert '<!-- table: {"kind": "data", "columns": {"説明": {"width": {"mode": "nowrap"}}}} -->' in '<!-- dev-docs-table: d:items -->\n<!-- table: data wide=説明 -->\n| 名前 | 説明 |\n| --- | --- |\n| a | 長い説明 |\n<!-- /table -->'
+
+tests/unit/dev_docs/features/convert/test_markdown.py:520: AssertionError
+________________ test_convert_service_finish_when_table_marker _________________
+
+    def test_convert_service_finish_when_table_marker() -> None:
+        """表のマーカーを挟んだ表のキー（正常系）。"""
+        # 準備
+        markdown = (
+            "<!-- dev-docs-table: sample:items -->\n"
+            '<!-- table: {"kind": "data", "collapse": {"open": false}} -->\n'
+            "| a |\n| --- |\n| 1 |\n<!-- /table -->\n"
+        )
+        # 実行
+        result = ConvertService().finish(markdown, "sample", {})
+        # 検証
+>       assert result.table_keys == ["sample:items"]
+E       AssertionError: assert ['sample:table[0]'] == ['sample:items']
+E         
+E         At index 0 diff: 'sample:table[0]' != 'sample:items'
+E         Use -v to get more diff
+
+tests/unit/dev_docs/features/convert/test_service.py:200: AssertionError
+=========================== short test summary info ============================
+FAILED tests/unit/dev_docs/features/convert/test_markdown.py::test_schema_to_markdown_when_diagram
+FAILED tests/unit/dev_docs/features/convert/test_markdown.py::test_schema_to_markdown_when_test_files
+FAILED tests/unit/dev_docs/features/convert/test_markdown.py::test_render_table_when_closed_and_hidden
+FAILED tests/unit/dev_docs/features/convert/test_markdown.py::test_render_table_when_wide
+FAILED tests/unit/dev_docs/features/convert/test_service.py::test_convert_service_finish_when_table_marker
+======================== 5 failed, 486 passed in 7.09s =========================
+exit=1
+
+$ npm run test:unit
+
+> test:unit
+> vitest run --config frontend/vitest.config.ts
+
+
+ RUN  v5.0.5 /home/shuhei2441/repo/dev-docs/.claude/worktrees/refactor-convert-mdmark-json-table-marker
+
+ ❯ tests/unit/frontend/src/features/docs/doc-view/tables.test.ts (5 tests | 3 failed) 23ms
+   × test_find_tables 12ms
+   × test_find_tables_when_json_marker 3ms
+   × test_apply_hidden_columns_when_json_marker 1ms
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 3 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/unit/frontend/src/features/docs/doc-view/tables.test.ts > test_find_tables
+AssertionError: expected [ …(2) ] to deeply equal [ …(2) ]
+
+- Expected
++ Received
+
+@@ -6,11 +6,10 @@
+    },
+    {
+      "columns": true,
+      "key": "t2",
+      "marker": {
+-       "end": 4,
+-       "start": 4,
++       "line": 4,
+        "text": "<!-- table: data +columns -->",
+      },
+    },
+  ]
+
+ ❯ tests/unit/frontend/src/features/docs/doc-view/tables.test.ts:32:18
+     30|   const tables = findTables({ markdown: MARKDOWN, tableKeys: ["t1", "t…
+     31|
+     32|   expect(tables).toEqual([
+       |                  ^
+     33|     { key: "t1", marker: null, columns: false },
+     34|     {
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/3]⎯
+
+ FAIL  tests/unit/frontend/src/features/docs/doc-view/tables.test.ts > test_find_tables_when_json_marker
+AssertionError: expected [ false, false, false, false ] to deeply equal [ true, true, false, false ]
+
+- Expected
++ Received
+
+  [
+-   true,
+-   true,
++   false,
++   false,
+    false,
+    false,
+  ]
+
+ ❯ tests/unit/frontend/src/features/docs/doc-view/tables.test.ts:101:48
+     99|   });
+    100|
+    101|   expect(tables.map((table) => table.columns)).toEqual([true, true, fa…
+       |                                                ^
+    102|   expect(tables[1].marker?.start).toBe(8);
+    103|   expect(tables[1].marker?.end).toBe(10);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/3]⎯
+
+ FAIL  tests/unit/frontend/src/features/docs/doc-view/tables.test.ts > test_apply_hidden_columns_when_json_marker
+SyntaxError: Expected property name or '}' in JSON at position 1 (line 1 column 2)
+ ❯ markerArgs tests/unit/frontend/src/features/docs/doc-view/tables.test.ts:108:8
+    106| /** 1 行の表のマーカーの JSON の引数を返す */
+    107| const markerArgs = (line: string): unknown =>
+    108|   JSON.parse(line.replace(/^<!--\s*table:\s*/, "").replace(/\s*-->\s*$…
+       |        ^
+    109|
+    110| test("test_apply_hidden_columns_when_json_marker", () => {
+ ❯ tests/unit/frontend/src/features/docs/doc-view/tables.test.ts:141:10
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/3]⎯
+
+
+ Test Files  1 failed | 51 passed (52)
+      Tests  3 failed | 161 passed (164)
+   Start at  01:09:06
+   Duration  20.16s (environment 49%, import 17%, tests 15%, setup 11%, transform 6%, worker 1%)
+
+Environment  jsdom was created 52 times · 61.35s total, 49% of tracked time
+             create it once per worker with pool: 'vmThreads' (keeps per-file isolation) or isolate: false (shares it across files)
+             learn more: https://vitest.dev/guide/improving-performance#test-environments
+
+exit=1

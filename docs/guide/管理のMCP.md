@@ -8,7 +8,7 @@
 `127.0.0.1` だけで待ち受け、作業場所（`cwd`）での絞り込みは持たず、全ての配信元を扱います。
 配信元の読み直し・検査・試しの変換・`nav` の書き込みは、[project-index](https://github.com/shuhei1101/project-index) の管理の MCP のツールです。
 
-<!-- table: data -->
+<!-- table: {"kind": "data"} -->
 
 | ツール | 種類 | 役割 |
 | --- | --- | --- |
@@ -40,7 +40,7 @@
 | --- | --- | --- | --- |
 | `format` | `markdown` / `json` | `markdown` | 返す形式 |
 
-<!-- table: data -->
+<!-- table: {"kind": "data"} -->
 
 | 返すフィールド | 型 | 説明 |
 | --- | --- | --- |
@@ -82,7 +82,8 @@ project-index につながらないときもエラーにせず、`reachable` を
 
 処理中の要求は、project-index への問い合わせの制限時間（45 秒）の 1.5 倍を上限に待ちます。
 過ぎたら残りの要求を切って止めます。
-起動に失敗したときは、`dev-docs serve` の終了コードで止まり、次のセッションの SessionStart のフックが起動し直します。
+起動に失敗したときは、`dev-docs serve` の終了コードで止まり、次のセッションの SessionStart のフックが起動し直します（unit があるときは unit を起動する）。
+unit で動いているときも `restart` は同じプロセス ID のまま起動し直すので、unit の `MainPID` は変わりません。
 
 引数はありません。
 

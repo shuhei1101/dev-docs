@@ -109,8 +109,13 @@ def _report_invalid(error: TerminalConfigInvalidError) -> None:
 
 
 def _report_port(bind: str, port: int) -> None:
-    """ポートが使用中のことを標準エラーに出す。"""
-    print(f"{bind}:{port} は使用中です。DEV_DOCS_PORT で別のポートを指定できます", file=sys.stderr)
+    """ポートが使用中のことを、ポートを持っているプロセスの pid とともに標準エラーに出す。"""
+    pid = find_port_owner(bind, port)
+    owner = f"pid {pid}" if pid is not None else "pid を取れませんでした"
+    print(
+        f"{bind}:{port} は使用中です（{owner}）。DEV_DOCS_PORT で別のポートを指定できます",
+        file=sys.stderr,
+    )
 
 
 def run_serve(args: argparse.Namespace) -> int:
@@ -138,7 +143,7 @@ def run_serve(args: argparse.Namespace) -> int:
             for problem in error.problems:
                 print(problem.line(), file=sys.stderr, flush=True)
             return EXIT_PROMPT_INVALID
-        app = build_app(handlers)
+        app = build_app(handlers, mdmark_version=terminal.mdmark_version)
         print(f"http://{terminal.bind}:{port}/", flush=True)
         if terminal.leftover_sources:
             logger.warning(
@@ -157,7 +162,13 @@ def run_serve(args: argparse.Namespace) -> int:
             )
         )
         handlers.restart.attach(server)
-        server.run()
+        try:
+            server.run()
+        except SystemExit:
+            # uvicorn は待ち受けの前の失敗（ポート・lifespan）で sys.exit で抜ける。
+            # ポートが使用中のときだけ下で使用中を出し、それ以外の失敗はそのまま送出する
+            if server.started or not _port_in_use(terminal.bind, port):
+                raise
         if not server.started:
             # 確認した後に他のプロセスがポートを取った
             _report_port(terminal.bind, port)
@@ -199,6 +210,15 @@ def announce_sources(terminal: TerminalConfig) -> threading.Thread:
     return thread
 
 
+def _port_in_use(bind: str, port: int) -> bool:
+    """待ち受けのアドレスとポートが使用中かを、ポートの確かめで返却する。"""
+    try:
+        check_port(bind, port)
+    except PortInUseError:
+        return True
+    return False
+
+
 def check_port(bind: str, port: int) -> None:
     """待ち受けのアドレスとポートで待ち受けられるかを、一度 bind して確認する。"""
     with closing(socket.socket(socket.AF_INET, socket.SOCK_STREAM)) as sock:
@@ -210,6 +230,70 @@ def check_port(bind: str, port: int) -> None:
             if error.errno in BIND_ERRORS:
                 raise PortInUseError(bind, port) from error
             raise
+
+
+# `/proc/net/tcp` の 1 行のうち、inode の列の位置（0 始まり）
+TCP_INODE_FIELD = 9
+
+
+def _ipv4_addresses(bind: str) -> set[str] | None:
+    """全てのアドレスと待ち受けのアドレスを、/proc の表記（ホストのバイト順の 16 進）で返却する。"""
+    try:
+        packed = socket.inet_aton(bind)
+    except OSError:
+        # IPv4 のアドレスでない（ホスト名の）ときは、アドレスで絞らずポートだけで探す
+        return None
+    return {"00000000", packed[::-1].hex().upper()}
+
+
+def _listen_inode(bind: str, port: int, proc: Path) -> str | None:
+    """`/proc/net/tcp`（IPv6 は `tcp6`）から、待ち受けのアドレスとポートで LISTEN している行の inode を返却する。"""
+    ipv6 = ":" in bind
+    table = proc / "net" / ("tcp6" if ipv6 else "tcp")
+    try:
+        lines = table.read_text(encoding="ascii").splitlines()[1:]
+    except OSError:
+        return None
+    addresses = None if ipv6 else _ipv4_addresses(bind)
+    for line in lines:
+        fields = line.split()
+        if len(fields) <= TCP_INODE_FIELD:
+            continue
+        address, _, port_hex = fields[1].partition(":")
+        # LISTEN（0A）で、ポートと待ち受けのアドレスが合う行だけ
+        if fields[3] != "0A" or int(port_hex, 16) != port:
+            continue
+        if addresses is not None and address not in addresses:
+            continue
+        return fields[TCP_INODE_FIELD]
+    return None
+
+
+def find_port_owner(bind: str, port: int, *, proc: Path = Path("/proc")) -> int | None:
+    """待ち受けのアドレスとポートで LISTEN しているプロセスの pid を `/proc` から探す（取れなければ `None`）。"""
+    inode = _listen_inode(bind, port, proc)
+    if inode is None:
+        return None
+    target = f"socket:[{inode}]"
+    try:
+        entries = list(proc.iterdir())
+    except OSError:
+        return None
+    for entry in entries:
+        if not entry.name.isdigit():
+            continue
+        try:
+            fds = list((entry / "fd").iterdir())
+        except OSError:
+            # 権限が無い・終わったプロセスは飛ばす
+            continue
+        for fd in fds:
+            try:
+                if os.readlink(fd) == target:
+                    return int(entry.name)
+            except OSError:
+                continue
+    return None
 
 
 def build_handlers(terminal: TerminalConfig) -> Handlers:

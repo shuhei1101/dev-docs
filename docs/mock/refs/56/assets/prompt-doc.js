@@ -23,7 +23,7 @@ for (const link of document.querySelectorAll("[data-doc-link]")) {
   }
 }
 
-/** 本文の ## と ### から、右の目次を作り直す */
+/** 本文の ## と ### から、右の目次を再作成する */
 function buildToc(body) {
   const list = document.getElementById("toc-list");
   const items = [...body.querySelectorAll("h2[id], h3[id]")].map((heading) => {

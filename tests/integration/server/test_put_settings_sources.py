@@ -39,6 +39,7 @@ def test_normal(real_index: RealIndex, make_server: Callable[..., ServerEnv]) ->
         headers=ORIGIN,
     )
     docs = env.client.get("/_api/sources/extra/docs")
+    current = env.client.get("/_api/settings/sources")
     # 検証
     saved = real_index.file_rows()
     assert response.status_code == 200
@@ -50,6 +51,7 @@ def test_normal(real_index: RealIndex, make_server: Callable[..., ServerEnv]) ->
     assert saved[0]["config"] == sample_row["config"]
     assert saved[1]["config"] == extra_row["config"]
     assert docs.status_code == 200
+    assert response.json()["version"] == current.json()["version"]
 
 
 def test_normal_when_source_disabled(
@@ -199,4 +201,40 @@ def test_error_when_project_index_rejects(
     assert rejected.status_code == 422
     assert rejected.json()["errors"] == errors
     assert failed.status_code == 502
-    assert "500" in failed.json()["detail"]
+    assert failed.json()["statusCode"] == 500
+    assert "壊れた" in failed.json()["summary"]
+
+
+def test_error_when_version_conflict(
+    mock_index: MockIndex, make_server: Callable[..., ServerEnv]
+) -> None:
+    """取得した後に端末の設定が書き換わっていたら、保存せずに 409 を返却する（異常系）。"""
+    # 準備
+    mock_index.serve(
+        "sample", IndexSource(docs={None: sample_docs()}), scope={"read": ["/repo/**"]}
+    )
+    mock_index.queued[("PUT", "/settings/sources")] = [
+        (409, {"detail": "内容のバージョンが違う", "current": "v2"}),
+        (200, {"sources": []}),
+    ]
+    env = make_server(mock_index)
+    body = {"sources": [SAMPLE_ROW, EXTRA_ROW]}
+    # 実行
+    conflict = env.client.put(
+        "/_api/settings/sources", json={**body, "expectedVersion": "v1"}, headers=ORIGIN
+    )
+    # 再保存の後の取得は v3 を返却する（他のプロセスの書き換えの後の内容のバージョンの代わり）
+    mock_index.queued[("GET", "/settings/sources")] = [
+        (200, {"settingsPath": "/pi/settings.yaml", "sources": [], "version": "v3"})
+    ]
+    retried = env.client.put(
+        "/_api/settings/sources", json={**body, "expectedVersion": "v2"}, headers=ORIGIN
+    )
+    # 検証
+    puts = [sent for method, path, sent in mock_index.received if method == "PUT"]
+    assert conflict.status_code == 409
+    assert conflict.json()["current"] == "v2"
+    assert puts[0]["expectedVersion"] == "v1"
+    assert retried.status_code == 200
+    assert retried.json()["version"] == "v3"
+    assert puts[1]["expectedVersion"] == "v2"

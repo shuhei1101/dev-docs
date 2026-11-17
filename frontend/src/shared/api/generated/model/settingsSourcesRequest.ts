@@ -11,4 +11,5 @@ import type { SourceEntry } from './sourceEntry';
  */
 export interface SettingsSourcesRequest {
   sources: SourceEntry[];
+  expectedVersion?: string | null;
 }

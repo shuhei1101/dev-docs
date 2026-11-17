@@ -1,0 +1,2320 @@
+$ uv run pytest tests/unit/ -q -p no:cacheprovider --continue-on-collection-errors
+...................FFFFFFFFFFFF.FFFFFFFFFFF...FFFFFF.....F.............. [ 16%]
+......FF................................................................ [ 33%]
+........................................................................ [ 49%]
+........................FF....F......................................... [ 66%]
+........................................................................ [ 82%]
+........................................................................ [ 99%]
+...                                                                      [100%]
+==================================== ERRORS ====================================
+____ ERROR collecting tests/unit/dev_docs/features/settings/test_service.py ____
+ImportError while importing test module '/mnt/c/Users/shuhe/repo/dev-docs/.claude/worktrees/chore-settings-expected-version-outside-read-and-map-diagrams/tests/unit/dev_docs/features/settings/test_service.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+tests/unit/dev_docs/features/settings/test_service.py:13: in <module>
+    from dev_docs.shared.errors import ProjectIndexRejectedError, SettingsVersionConflictError
+E   ImportError: cannot import name 'SettingsVersionConflictError' from 'dev_docs.shared.errors' (/mnt/c/Users/shuhe/repo/dev-docs/.claude/worktrees/chore-settings-expected-version-outside-read-and-map-diagrams/src/dev_docs/shared/errors.py)
+_ ERROR collecting tests/unit/dev_docs/integrations/project_index/test_client.py _
+ImportError while importing test module '/mnt/c/Users/shuhe/repo/dev-docs/.claude/worktrees/chore-settings-expected-version-outside-read-and-map-diagrams/tests/unit/dev_docs/integrations/project_index/test_client.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+tests/unit/dev_docs/integrations/project_index/test_client.py:13: in <module>
+    from dev_docs.shared.errors import (
+E   ImportError: cannot import name 'SettingsVersionConflictError' from 'dev_docs.shared.errors' (/mnt/c/Users/shuhe/repo/dev-docs/.claude/worktrees/chore-settings-expected-version-outside-read-and-map-diagrams/src/dev_docs/shared/errors.py)
+=================================== FAILURES ===================================
+_____________________________ test_render_diagram ______________________________
+
+    def test_render_diagram() -> None:
+        """フローチャート（正常系）。"""
+        # 準備
+        value = {
+            "nodes": [{"id": "a", "label": "A"}, {"id": "b", "label": "B"}],
+            "edges": [{"from": "a", "to": "b", "label": "x"}],
+        }
+        # 実行
+        result = render_diagram(value, "flowchart", HEAD)
+        # 検証
+>       assert result.startswith('<!-- map: {"title": "図"} -->')
+E       assert False
+E        +  where False = <built-in method startswith of str object at 0x408ed2c0>('<!-- map: {"title": "図"} -->')
+E        +    where <built-in method startswith of str object at 0x408ed2c0> = '<!-- flow -->\n\n```json\n{\n  "title": "図",\n  "scope": "文書",\n  "updated": "2026-11-03",\n  "width": 200,\n  "heigh... ],\n      "label": "x",\n      "labelAt": [\n        100,\n        108\n      ]\n    }\n  ]\n}\n```\n\n<!-- /flow -->'.startswith
+
+tests/unit/dev_docs/features/convert/test_diagrams.py:41: AssertionError
+__________________ test_render_diagram_when_node_kinds[actor] __________________
+
+kind = 'actor', expected = 'external'
+
+    @pytest.mark.parametrize(
+        ("kind", "expected"),
+        [
+            pytest.param("actor", "external", id="actor"),
+            pytest.param("external", "external", id="external"),
+            pytest.param("process", "script", id="process"),
+            pytest.param("system", "script", id="system"),
+            pytest.param("store", "data", id="store"),
+            pytest.param("start", "start", id="start"),
+            pytest.param("question", "question", id="question"),
+            pytest.param("action", "action", id="action"),
+            pytest.param("result", "result", id="result"),
+            pytest.param(None, "script", id="none"),
+        ],
+    )
+    def test_render_diagram_when_node_kinds(kind: str | None, expected: str) -> None:
+        """ノードの種類（正常系）。"""
+        # 準備
+        node: dict[str, Any] = {"id": "a"} if kind is None else {"id": "a", "kind": kind}
+        # 実行
+        result = render_diagram({"nodes": [node], "edges": []}, "flowchart", HEAD)
+        # 検証
+>       assert f'a["a"]:::{expected}' in _mermaid(result)
+                                         ^^^^^^^^^^^^^^^^
+
+tests/unit/dev_docs/features/convert/test_diagrams.py:73: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+block = '<!-- flow -->\n\n```json\n{\n  "title": "図",\n  "scope": "文書",\n  "updated": "2026-11-03",\n  "width": 200,\n  "heigh...    "y": 20,\n      "w": 160,\n      "h": 56,\n      "name": "a"\n    }\n  ],\n  "wires": []\n}\n```\n\n<!-- /flow -->'
+
+    def _mermaid(block: str) -> list[str]:
+        """map の範囲から Mermaid の行（前後の空白を除く）を取り出す。"""
+        match = re.search(r"```mermaid\n(.*?)\n```", block, re.S)
+>       assert match is not None, block
+E       AssertionError: <!-- flow -->
+E         
+E         ```json
+E         {
+E           "title": "図",
+E           "scope": "文書",
+E           "updated": "2026-11-03",
+E           "width": 200,
+E           "height": 96,
+E           "nodes": [
+E             {
+E               "id": "a",
+E               "kind": "external",
+E               "x": 20,
+E               "y": 20,
+E               "w": 160,
+E               "h": 56,
+E               "name": "a"
+E             }
+E           ],
+E           "wires": []
+E         }
+E         ```
+E         
+E         <!-- /flow -->
+E       assert None is not None
+
+tests/unit/dev_docs/features/convert/test_diagrams.py:18: AssertionError
+________________ test_render_diagram_when_node_kinds[external] _________________
+
+kind = 'external', expected = 'external'
+
+    @pytest.mark.parametrize(
+        ("kind", "expected"),
+        [
+            pytest.param("actor", "external", id="actor"),
+            pytest.param("external", "external", id="external"),
+            pytest.param("process", "script", id="process"),
+            pytest.param("system", "script", id="system"),
+            pytest.param("store", "data", id="store"),
+            pytest.param("start", "start", id="start"),
+            pytest.param("question", "question", id="question"),
+            pytest.param("action", "action", id="action"),
+            pytest.param("result", "result", id="result"),
+            pytest.param(None, "script", id="none"),
+        ],
+    )
+    def test_render_diagram_when_node_kinds(kind: str | None, expected: str) -> None:
+        """ノードの種類（正常系）。"""
+        # 準備
+        node: dict[str, Any] = {"id": "a"} if kind is None else {"id": "a", "kind": kind}
+        # 実行
+        result = render_diagram({"nodes": [node], "edges": []}, "flowchart", HEAD)
+        # 検証
+>       assert f'a["a"]:::{expected}' in _mermaid(result)
+                                         ^^^^^^^^^^^^^^^^
+
+tests/unit/dev_docs/features/convert/test_diagrams.py:73: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+block = '<!-- flow -->\n\n```json\n{\n  "title": "図",\n  "scope": "文書",\n  "updated": "2026-11-03",\n  "width": 200,\n  "heigh...    "y": 20,\n      "w": 160,\n      "h": 56,\n      "name": "a"\n    }\n  ],\n  "wires": []\n}\n```\n\n<!-- /flow -->'
+
+    def _mermaid(block: str) -> list[str]:
+        """map の範囲から Mermaid の行（前後の空白を除く）を取り出す。"""
+        match = re.search(r"```mermaid\n(.*?)\n```", block, re.S)
+>       assert match is not None, block
+E       AssertionError: <!-- flow -->
+E         
+E         ```json
+E         {
+E           "title": "図",
+E           "scope": "文書",
+E           "updated": "2026-11-03",
+E           "width": 200,
+E           "height": 96,
+E           "nodes": [
+E             {
+E               "id": "a",
+E               "kind": "external",
+E               "x": 20,
+E               "y": 20,
+E               "w": 160,
+E               "h": 56,
+E               "name": "a"
+E             }
+E           ],
+E           "wires": []
+E         }
+E         ```
+E         
+E         <!-- /flow -->
+E       assert None is not None
+
+tests/unit/dev_docs/features/convert/test_diagrams.py:18: AssertionError
+_________________ test_render_diagram_when_node_kinds[process] _________________
+
+kind = 'process', expected = 'script'
+
+    @pytest.mark.parametrize(
+        ("kind", "expected"),
+        [
+            pytest.param("actor", "external", id="actor"),
+            pytest.param("external", "external", id="external"),
+            pytest.param("process", "script", id="process"),
+            pytest.param("system", "script", id="system"),
+            pytest.param("store", "data", id="store"),
+            pytest.param("start", "start", id="start"),
+            pytest.param("question", "question", id="question"),
+            pytest.param("action", "action", id="action"),
+            pytest.param("result", "result", id="result"),
+            pytest.param(None, "script", id="none"),
+        ],
+    )
+    def test_render_diagram_when_node_kinds(kind: str | None, expected: str) -> None:
+        """ノードの種類（正常系）。"""
+        # 準備
+        node: dict[str, Any] = {"id": "a"} if kind is None else {"id": "a", "kind": kind}
+        # 実行
+        result = render_diagram({"nodes": [node], "edges": []}, "flowchart", HEAD)
+        # 検証
+>       assert f'a["a"]:::{expected}' in _mermaid(result)
+                                         ^^^^^^^^^^^^^^^^
+
+tests/unit/dev_docs/features/convert/test_diagrams.py:73: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+block = '<!-- flow -->\n\n```json\n{\n  "title": "図",\n  "scope": "文書",\n  "updated": "2026-11-03",\n  "width": 200,\n  "heigh...    "y": 20,\n      "w": 160,\n      "h": 56,\n      "name": "a"\n    }\n  ],\n  "wires": []\n}\n```\n\n<!-- /flow -->'
+
+    def _mermaid(block: str) -> list[str]:
+        """map の範囲から Mermaid の行（前後の空白を除く）を取り出す。"""
+        match = re.search(r"```mermaid\n(.*?)\n```", block, re.S)
+>       assert match is not None, block
+E       AssertionError: <!-- flow -->
+E         
+E         ```json
+E         {
+E           "title": "図",
+E           "scope": "文書",
+E           "updated": "2026-11-03",
+E           "width": 200,
+E           "height": 96,
+E           "nodes": [
+E             {
+E               "id": "a",
+E               "kind": "script",
+E               "x": 20,
+E               "y": 20,
+E               "w": 160,
+E               "h": 56,
+E               "name": "a"
+E             }
+E           ],
+E           "wires": []
+E         }
+E         ```
+E         
+E         <!-- /flow -->
+E       assert None is not None
+
+tests/unit/dev_docs/features/convert/test_diagrams.py:18: AssertionError
+_________________ test_render_diagram_when_node_kinds[system] __________________
+
+kind = 'system', expected = 'script'
+
+    @pytest.mark.parametrize(
+        ("kind", "expected"),
+        [
+            pytest.param("actor", "external", id="actor"),
+            pytest.param("external", "external", id="external"),
+            pytest.param("process", "script", id="process"),
+            pytest.param("system", "script", id="system"),
+            pytest.param("store", "data", id="store"),
+            pytest.param("start", "start", id="start"),
+            pytest.param("question", "question", id="question"),
+            pytest.param("action", "action", id="action"),
+            pytest.param("result", "result", id="result"),
+            pytest.param(None, "script", id="none"),
+        ],
+    )
+    def test_render_diagram_when_node_kinds(kind: str | None, expected: str) -> None:
+        """ノードの種類（正常系）。"""
+        # 準備
+        node: dict[str, Any] = {"id": "a"} if kind is None else {"id": "a", "kind": kind}
+        # 実行
+        result = render_diagram({"nodes": [node], "edges": []}, "flowchart", HEAD)
+        # 検証
+>       assert f'a["a"]:::{expected}' in _mermaid(result)
+                                         ^^^^^^^^^^^^^^^^
+
+tests/unit/dev_docs/features/convert/test_diagrams.py:73: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+block = '<!-- flow -->\n\n```json\n{\n  "title": "図",\n  "scope": "文書",\n  "updated": "2026-11-03",\n  "width": 200,\n  "heigh...    "y": 20,\n      "w": 160,\n      "h": 56,\n      "name": "a"\n    }\n  ],\n  "wires": []\n}\n```\n\n<!-- /flow -->'
+
+    def _mermaid(block: str) -> list[str]:
+        """map の範囲から Mermaid の行（前後の空白を除く）を取り出す。"""
+        match = re.search(r"```mermaid\n(.*?)\n```", block, re.S)
+>       assert match is not None, block
+E       AssertionError: <!-- flow -->
+E         
+E         ```json
+E         {
+E           "title": "図",
+E           "scope": "文書",
+E           "updated": "2026-11-03",
+E           "width": 200,
+E           "height": 96,
+E           "nodes": [
+E             {
+E               "id": "a",
+E               "kind": "script",
+E               "x": 20,
+E               "y": 20,
+E               "w": 160,
+E               "h": 56,
+E               "name": "a"
+E             }
+E           ],
+E           "wires": []
+E         }
+E         ```
+E         
+E         <!-- /flow -->
+E       assert None is not None
+
+tests/unit/dev_docs/features/convert/test_diagrams.py:18: AssertionError
+__________________ test_render_diagram_when_node_kinds[store] __________________
+
+kind = 'store', expected = 'data'
+
+    @pytest.mark.parametrize(
+        ("kind", "expected"),
+        [
+            pytest.param("actor", "external", id="actor"),
+            pytest.param("external", "external", id="external"),
+            pytest.param("process", "script", id="process"),
+            pytest.param("system", "script", id="system"),
+            pytest.param("store", "data", id="store"),
+            pytest.param("start", "start", id="start"),
+            pytest.param("question", "question", id="question"),
+            pytest.param("action", "action", id="action"),
+            pytest.param("result", "result", id="result"),
+            pytest.param(None, "script", id="none"),
+        ],
+    )
+    def test_render_diagram_when_node_kinds(kind: str | None, expected: str) -> None:
+        """ノードの種類（正常系）。"""
+        # 準備
+        node: dict[str, Any] = {"id": "a"} if kind is None else {"id": "a", "kind": kind}
+        # 実行
+        result = render_diagram({"nodes": [node], "edges": []}, "flowchart", HEAD)
+        # 検証
+>       assert f'a["a"]:::{expected}' in _mermaid(result)
+                                         ^^^^^^^^^^^^^^^^
+
+tests/unit/dev_docs/features/convert/test_diagrams.py:73: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+block = '<!-- flow -->\n\n```json\n{\n  "title": "図",\n  "scope": "文書",\n  "updated": "2026-11-03",\n  "width": 200,\n  "heigh...    "y": 20,\n      "w": 160,\n      "h": 56,\n      "name": "a"\n    }\n  ],\n  "wires": []\n}\n```\n\n<!-- /flow -->'
+
+    def _mermaid(block: str) -> list[str]:
+        """map の範囲から Mermaid の行（前後の空白を除く）を取り出す。"""
+        match = re.search(r"```mermaid\n(.*?)\n```", block, re.S)
+>       assert match is not None, block
+E       AssertionError: <!-- flow -->
+E         
+E         ```json
+E         {
+E           "title": "図",
+E           "scope": "文書",
+E           "updated": "2026-11-03",
+E           "width": 200,
+E           "height": 96,
+E           "nodes": [
+E             {
+E               "id": "a",
+E               "kind": "data",
+E               "x": 20,
+E               "y": 20,
+E               "w": 160,
+E               "h": 56,
+E               "name": "a"
+E             }
+E           ],
+E           "wires": []
+E         }
+E         ```
+E         
+E         <!-- /flow -->
+E       assert None is not None
+
+tests/unit/dev_docs/features/convert/test_diagrams.py:18: AssertionError
+__________________ test_render_diagram_when_node_kinds[start] __________________
+
+kind = 'start', expected = 'start'
+
+    @pytest.mark.parametrize(
+        ("kind", "expected"),
+        [
+            pytest.param("actor", "external", id="actor"),
+            pytest.param("external", "external", id="external"),
+            pytest.param("process", "script", id="process"),
+            pytest.param("system", "script", id="system"),
+            pytest.param("store", "data", id="store"),
+            pytest.param("start", "start", id="start"),
+            pytest.param("question", "question", id="question"),
+            pytest.param("action", "action", id="action"),
+            pytest.param("result", "result", id="result"),
+            pytest.param(None, "script", id="none"),
+        ],
+    )
+    def test_render_diagram_when_node_kinds(kind: str | None, expected: str) -> None:
+        """ノードの種類（正常系）。"""
+        # 準備
+        node: dict[str, Any] = {"id": "a"} if kind is None else {"id": "a", "kind": kind}
+        # 実行
+        result = render_diagram({"nodes": [node], "edges": []}, "flowchart", HEAD)
+        # 検証
+>       assert f'a["a"]:::{expected}' in _mermaid(result)
+                                         ^^^^^^^^^^^^^^^^
+
+tests/unit/dev_docs/features/convert/test_diagrams.py:73: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+block = '<!-- flow -->\n\n```json\n{\n  "title": "図",\n  "scope": "文書",\n  "updated": "2026-11-03",\n  "width": 200,\n  "heigh...    "y": 20,\n      "w": 160,\n      "h": 56,\n      "name": "a"\n    }\n  ],\n  "wires": []\n}\n```\n\n<!-- /flow -->'
+
+    def _mermaid(block: str) -> list[str]:
+        """map の範囲から Mermaid の行（前後の空白を除く）を取り出す。"""
+        match = re.search(r"```mermaid\n(.*?)\n```", block, re.S)
+>       assert match is not None, block
+E       AssertionError: <!-- flow -->
+E         
+E         ```json
+E         {
+E           "title": "図",
+E           "scope": "文書",
+E           "updated": "2026-11-03",
+E           "width": 200,
+E           "height": 96,
+E           "nodes": [
+E             {
+E               "id": "a",
+E               "kind": "start",
+E               "x": 20,
+E               "y": 20,
+E               "w": 160,
+E               "h": 56,
+E               "name": "a"
+E             }
+E           ],
+E           "wires": []
+E         }
+E         ```
+E         
+E         <!-- /flow -->
+E       assert None is not None
+
+tests/unit/dev_docs/features/convert/test_diagrams.py:18: AssertionError
+________________ test_render_diagram_when_node_kinds[question] _________________
+
+kind = 'question', expected = 'question'
+
+    @pytest.mark.parametrize(
+        ("kind", "expected"),
+        [
+            pytest.param("actor", "external", id="actor"),
+            pytest.param("external", "external", id="external"),
+            pytest.param("process", "script", id="process"),
+            pytest.param("system", "script", id="system"),
+            pytest.param("store", "data", id="store"),
+            pytest.param("start", "start", id="start"),
+            pytest.param("question", "question", id="question"),
+            pytest.param("action", "action", id="action"),
+            pytest.param("result", "result", id="result"),
+            pytest.param(None, "script", id="none"),
+        ],
+    )
+    def test_render_diagram_when_node_kinds(kind: str | None, expected: str) -> None:
+        """ノードの種類（正常系）。"""
+        # 準備
+        node: dict[str, Any] = {"id": "a"} if kind is None else {"id": "a", "kind": kind}
+        # 実行
+        result = render_diagram({"nodes": [node], "edges": []}, "flowchart", HEAD)
+        # 検証
+>       assert f'a["a"]:::{expected}' in _mermaid(result)
+                                         ^^^^^^^^^^^^^^^^
+
+tests/unit/dev_docs/features/convert/test_diagrams.py:73: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+block = '<!-- flow -->\n\n```json\n{\n  "title": "図",\n  "scope": "文書",\n  "updated": "2026-11-03",\n  "width": 200,\n  "heigh...    "y": 20,\n      "w": 160,\n      "h": 56,\n      "name": "a"\n    }\n  ],\n  "wires": []\n}\n```\n\n<!-- /flow -->'
+
+    def _mermaid(block: str) -> list[str]:
+        """map の範囲から Mermaid の行（前後の空白を除く）を取り出す。"""
+        match = re.search(r"```mermaid\n(.*?)\n```", block, re.S)
+>       assert match is not None, block
+E       AssertionError: <!-- flow -->
+E         
+E         ```json
+E         {
+E           "title": "図",
+E           "scope": "文書",
+E           "updated": "2026-11-03",
+E           "width": 200,
+E           "height": 96,
+E           "nodes": [
+E             {
+E               "id": "a",
+E               "kind": "question",
+E               "x": 20,
+E               "y": 20,
+E               "w": 160,
+E               "h": 56,
+E               "name": "a"
+E             }
+E           ],
+E           "wires": []
+E         }
+E         ```
+E         
+E         <!-- /flow -->
+E       assert None is not None
+
+tests/unit/dev_docs/features/convert/test_diagrams.py:18: AssertionError
+_________________ test_render_diagram_when_node_kinds[action] __________________
+
+kind = 'action', expected = 'action'
+
+    @pytest.mark.parametrize(
+        ("kind", "expected"),
+        [
+            pytest.param("actor", "external", id="actor"),
+            pytest.param("external", "external", id="external"),
+            pytest.param("process", "script", id="process"),
+            pytest.param("system", "script", id="system"),
+            pytest.param("store", "data", id="store"),
+            pytest.param("start", "start", id="start"),
+            pytest.param("question", "question", id="question"),
+            pytest.param("action", "action", id="action"),
+            pytest.param("result", "result", id="result"),
+            pytest.param(None, "script", id="none"),
+        ],
+    )
+    def test_render_diagram_when_node_kinds(kind: str | None, expected: str) -> None:
+        """ノードの種類（正常系）。"""
+        # 準備
+        node: dict[str, Any] = {"id": "a"} if kind is None else {"id": "a", "kind": kind}
+        # 実行
+        result = render_diagram({"nodes": [node], "edges": []}, "flowchart", HEAD)
+        # 検証
+>       assert f'a["a"]:::{expected}' in _mermaid(result)
+                                         ^^^^^^^^^^^^^^^^
+
+tests/unit/dev_docs/features/convert/test_diagrams.py:73: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+block = '<!-- flow -->\n\n```json\n{\n  "title": "図",\n  "scope": "文書",\n  "updated": "2026-11-03",\n  "width": 200,\n  "heigh...    "y": 20,\n      "w": 160,\n      "h": 56,\n      "name": "a"\n    }\n  ],\n  "wires": []\n}\n```\n\n<!-- /flow -->'
+
+    def _mermaid(block: str) -> list[str]:
+        """map の範囲から Mermaid の行（前後の空白を除く）を取り出す。"""
+        match = re.search(r"```mermaid\n(.*?)\n```", block, re.S)
+>       assert match is not None, block
+E       AssertionError: <!-- flow -->
+E         
+E         ```json
+E         {
+E           "title": "図",
+E           "scope": "文書",
+E           "updated": "2026-11-03",
+E           "width": 200,
+E           "height": 96,
+E           "nodes": [
+E             {
+E               "id": "a",
+E               "kind": "action",
+E               "x": 20,
+E               "y": 20,
+E               "w": 160,
+E               "h": 56,
+E               "name": "a"
+E             }
+E           ],
+E           "wires": []
+E         }
+E         ```
+E         
+E         <!-- /flow -->
+E       assert None is not None
+
+tests/unit/dev_docs/features/convert/test_diagrams.py:18: AssertionError
+_________________ test_render_diagram_when_node_kinds[result] __________________
+
+kind = 'result', expected = 'result'
+
+    @pytest.mark.parametrize(
+        ("kind", "expected"),
+        [
+            pytest.param("actor", "external", id="actor"),
+            pytest.param("external", "external", id="external"),
+            pytest.param("process", "script", id="process"),
+            pytest.param("system", "script", id="system"),
+            pytest.param("store", "data", id="store"),
+            pytest.param("start", "start", id="start"),
+            pytest.param("question", "question", id="question"),
+            pytest.param("action", "action", id="action"),
+            pytest.param("result", "result", id="result"),
+            pytest.param(None, "script", id="none"),
+        ],
+    )
+    def test_render_diagram_when_node_kinds(kind: str | None, expected: str) -> None:
+        """ノードの種類（正常系）。"""
+        # 準備
+        node: dict[str, Any] = {"id": "a"} if kind is None else {"id": "a", "kind": kind}
+        # 実行
+        result = render_diagram({"nodes": [node], "edges": []}, "flowchart", HEAD)
+        # 検証
+>       assert f'a["a"]:::{expected}' in _mermaid(result)
+                                         ^^^^^^^^^^^^^^^^
+
+tests/unit/dev_docs/features/convert/test_diagrams.py:73: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+block = '<!-- flow -->\n\n```json\n{\n  "title": "図",\n  "scope": "文書",\n  "updated": "2026-11-03",\n  "width": 200,\n  "heigh...    "y": 20,\n      "w": 160,\n      "h": 56,\n      "name": "a"\n    }\n  ],\n  "wires": []\n}\n```\n\n<!-- /flow -->'
+
+    def _mermaid(block: str) -> list[str]:
+        """map の範囲から Mermaid の行（前後の空白を除く）を取り出す。"""
+        match = re.search(r"```mermaid\n(.*?)\n```", block, re.S)
+>       assert match is not None, block
+E       AssertionError: <!-- flow -->
+E         
+E         ```json
+E         {
+E           "title": "図",
+E           "scope": "文書",
+E           "updated": "2026-11-03",
+E           "width": 200,
+E           "height": 96,
+E           "nodes": [
+E             {
+E               "id": "a",
+E               "kind": "result",
+E               "x": 20,
+E               "y": 20,
+E               "w": 160,
+E               "h": 56,
+E               "name": "a"
+E             }
+E           ],
+E           "wires": []
+E         }
+E         ```
+E         
+E         <!-- /flow -->
+E       assert None is not None
+
+tests/unit/dev_docs/features/convert/test_diagrams.py:18: AssertionError
+__________________ test_render_diagram_when_node_kinds[none] ___________________
+
+kind = None, expected = 'script'
+
+    @pytest.mark.parametrize(
+        ("kind", "expected"),
+        [
+            pytest.param("actor", "external", id="actor"),
+            pytest.param("external", "external", id="external"),
+            pytest.param("process", "script", id="process"),
+            pytest.param("system", "script", id="system"),
+            pytest.param("store", "data", id="store"),
+            pytest.param("start", "start", id="start"),
+            pytest.param("question", "question", id="question"),
+            pytest.param("action", "action", id="action"),
+            pytest.param("result", "result", id="result"),
+            pytest.param(None, "script", id="none"),
+        ],
+    )
+    def test_render_diagram_when_node_kinds(kind: str | None, expected: str) -> None:
+        """ノードの種類（正常系）。"""
+        # 準備
+        node: dict[str, Any] = {"id": "a"} if kind is None else {"id": "a", "kind": kind}
+        # 実行
+        result = render_diagram({"nodes": [node], "edges": []}, "flowchart", HEAD)
+        # 検証
+>       assert f'a["a"]:::{expected}' in _mermaid(result)
+                                         ^^^^^^^^^^^^^^^^
+
+tests/unit/dev_docs/features/convert/test_diagrams.py:73: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+block = '<!-- flow -->\n\n```json\n{\n  "title": "図",\n  "scope": "文書",\n  "updated": "2026-11-03",\n  "width": 200,\n  "heigh...    "y": 20,\n      "w": 160,\n      "h": 56,\n      "name": "a"\n    }\n  ],\n  "wires": []\n}\n```\n\n<!-- /flow -->'
+
+    def _mermaid(block: str) -> list[str]:
+        """map の範囲から Mermaid の行（前後の空白を除く）を取り出す。"""
+        match = re.search(r"```mermaid\n(.*?)\n```", block, re.S)
+>       assert match is not None, block
+E       AssertionError: <!-- flow -->
+E         
+E         ```json
+E         {
+E           "title": "図",
+E           "scope": "文書",
+E           "updated": "2026-11-03",
+E           "width": 200,
+E           "height": 96,
+E           "nodes": [
+E             {
+E               "id": "a",
+E               "kind": "script",
+E               "x": 20,
+E               "y": 20,
+E               "w": 160,
+E               "h": 56,
+E               "name": "a"
+E             }
+E           ],
+E           "wires": []
+E         }
+E         ```
+E         
+E         <!-- /flow -->
+E       assert None is not None
+
+tests/unit/dev_docs/features/convert/test_diagrams.py:18: AssertionError
+____________________ test_render_diagram_when_hint_and_tip _____________________
+
+    def test_render_diagram_when_hint_and_tip() -> None:
+        """ノードの説明と線の種類・詳細（正常系）。"""
+        # 準備
+        value = {
+            "nodes": [{"id": "a", "hint": "説明"}, {"id": "b"}],
+            "edges": [{"from": "a", "to": "b", "label": "読む", "line": "read", "tip": "詳細"}],
+        }
+        # 実行
+        result = render_diagram(value, "flowchart", HEAD)
+        # 検証
+        data = _map_data(result)
+>       assert data is not None
+E       assert None is not None
+
+tests/unit/dev_docs/features/convert/test_diagrams.py:87: AssertionError
+________________ test_render_diagram_when_direction[flowchart] _________________
+
+kind = 'flowchart', value = {}, expected = 'flowchart TD'
+
+    @pytest.mark.parametrize(
+        ("kind", "value", "expected"),
+        [
+            pytest.param("flowchart", {}, "flowchart TD", id="flowchart"),
+            pytest.param("dataflow", {}, "flowchart LR", id="dataflow"),
+            pytest.param("architecture", {}, "flowchart LR", id="architecture"),
+            pytest.param("dataflow", {"direction": "TD"}, "flowchart TD", id="dataflow-td"),
+        ],
+    )
+    def test_render_diagram_when_direction(kind: str, value: dict[str, Any], expected: str) -> None:
+        """向きの既定と指定（正常系）。"""
+        # 準備
+        graph = {**value, "nodes": [{"id": "a"}, {"id": "b"}], "edges": [{"from": "a", "to": "b"}]}
+        # 実行
+        result = render_diagram(graph, kind, HEAD)  # type: ignore[arg-type]
+        # 検証
+>       assert _mermaid(result)[0] == expected
+               ^^^^^^^^^^^^^^^^
+
+tests/unit/dev_docs/features/convert/test_diagrams.py:120: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+block = '<!-- flow -->\n\n```json\n{\n  "title": "図",\n  "scope": "文書",\n  "updated": "2026-11-03",\n  "width": 200,\n  "heigh...    76\n        ],\n        [\n          100,\n          140\n        ]\n      ]\n    }\n  ]\n}\n```\n\n<!-- /flow -->'
+
+    def _mermaid(block: str) -> list[str]:
+        """map の範囲から Mermaid の行（前後の空白を除く）を取り出す。"""
+        match = re.search(r"```mermaid\n(.*?)\n```", block, re.S)
+>       assert match is not None, block
+E       AssertionError: <!-- flow -->
+E         
+E         ```json
+E         {
+E           "title": "図",
+E           "scope": "文書",
+E           "updated": "2026-11-03",
+E           "width": 200,
+E           "height": 216,
+E           "nodes": [
+E             {
+E               "id": "a",
+E               "kind": "script",
+E               "x": 20,
+E               "y": 20,
+E               "w": 160,
+E               "h": 56,
+E               "name": "a"
+E             },
+E             {
+E               "id": "b",
+E               "kind": "script",
+E               "x": 20,
+E               "y": 140,
+E               "w": 160,
+E               "h": 56,
+E               "name": "b"
+E             }
+E           ],
+E           "wires": [
+E             {
+E               "id": "e1",
+E               "from": "a",
+E               "to": "b",
+E               "line": "flow",
+E               "points": [
+E                 [
+E                   100,
+E                   76
+E                 ],
+E                 [
+E                   100,
+E                   140
+E                 ]
+E               ]
+E             }
+E           ]
+E         }
+E         ```
+E         
+E         <!-- /flow -->
+E       assert None is not None
+
+tests/unit/dev_docs/features/convert/test_diagrams.py:18: AssertionError
+_________________ test_render_diagram_when_direction[dataflow] _________________
+
+kind = 'dataflow', value = {}, expected = 'flowchart LR'
+
+    @pytest.mark.parametrize(
+        ("kind", "value", "expected"),
+        [
+            pytest.param("flowchart", {}, "flowchart TD", id="flowchart"),
+            pytest.param("dataflow", {}, "flowchart LR", id="dataflow"),
+            pytest.param("architecture", {}, "flowchart LR", id="architecture"),
+            pytest.param("dataflow", {"direction": "TD"}, "flowchart TD", id="dataflow-td"),
+        ],
+    )
+    def test_render_diagram_when_direction(kind: str, value: dict[str, Any], expected: str) -> None:
+        """向きの既定と指定（正常系）。"""
+        # 準備
+        graph = {**value, "nodes": [{"id": "a"}, {"id": "b"}], "edges": [{"from": "a", "to": "b"}]}
+        # 実行
+        result = render_diagram(graph, kind, HEAD)  # type: ignore[arg-type]
+        # 検証
+>       assert _mermaid(result)[0] == expected
+               ^^^^^^^^^^^^^^^^
+
+tests/unit/dev_docs/features/convert/test_diagrams.py:120: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+block = '<!-- flow -->\n\n```json\n{\n  "title": "図",\n  "scope": "文書",\n  "updated": "2026-11-03",\n  "width": 424,\n  "heigh...     48\n        ],\n        [\n          244,\n          48\n        ]\n      ]\n    }\n  ]\n}\n```\n\n<!-- /flow -->'
+
+    def _mermaid(block: str) -> list[str]:
+        """map の範囲から Mermaid の行（前後の空白を除く）を取り出す。"""
+        match = re.search(r"```mermaid\n(.*?)\n```", block, re.S)
+>       assert match is not None, block
+E       AssertionError: <!-- flow -->
+E         
+E         ```json
+E         {
+E           "title": "図",
+E           "scope": "文書",
+E           "updated": "2026-11-03",
+E           "width": 424,
+E           "height": 96,
+E           "nodes": [
+E             {
+E               "id": "a",
+E               "kind": "script",
+E               "x": 20,
+E               "y": 20,
+E               "w": 160,
+E               "h": 56,
+E               "name": "a"
+E             },
+E             {
+E               "id": "b",
+E               "kind": "script",
+E               "x": 244,
+E               "y": 20,
+E               "w": 160,
+E               "h": 56,
+E               "name": "b"
+E             }
+E           ],
+E           "wires": [
+E             {
+E               "id": "e1",
+E               "from": "a",
+E               "to": "b",
+E               "line": "flow",
+E               "points": [
+E                 [
+E                   180,
+E                   48
+E                 ],
+E                 [
+E                   244,
+E                   48
+E                 ]
+E               ]
+E             }
+E           ]
+E         }
+E         ```
+E         
+E         <!-- /flow -->
+E       assert None is not None
+
+tests/unit/dev_docs/features/convert/test_diagrams.py:18: AssertionError
+_______________ test_render_diagram_when_direction[architecture] _______________
+
+kind = 'architecture', value = {}, expected = 'flowchart LR'
+
+    @pytest.mark.parametrize(
+        ("kind", "value", "expected"),
+        [
+            pytest.param("flowchart", {}, "flowchart TD", id="flowchart"),
+            pytest.param("dataflow", {}, "flowchart LR", id="dataflow"),
+            pytest.param("architecture", {}, "flowchart LR", id="architecture"),
+            pytest.param("dataflow", {"direction": "TD"}, "flowchart TD", id="dataflow-td"),
+        ],
+    )
+    def test_render_diagram_when_direction(kind: str, value: dict[str, Any], expected: str) -> None:
+        """向きの既定と指定（正常系）。"""
+        # 準備
+        graph = {**value, "nodes": [{"id": "a"}, {"id": "b"}], "edges": [{"from": "a", "to": "b"}]}
+        # 実行
+        result = render_diagram(graph, kind, HEAD)  # type: ignore[arg-type]
+        # 検証
+>       assert _mermaid(result)[0] == expected
+               ^^^^^^^^^^^^^^^^
+
+tests/unit/dev_docs/features/convert/test_diagrams.py:120: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+block = '<!-- flow -->\n\n```json\n{\n  "title": "図",\n  "scope": "文書",\n  "updated": "2026-11-03",\n  "width": 424,\n  "heigh...     48\n        ],\n        [\n          244,\n          48\n        ]\n      ]\n    }\n  ]\n}\n```\n\n<!-- /flow -->'
+
+    def _mermaid(block: str) -> list[str]:
+        """map の範囲から Mermaid の行（前後の空白を除く）を取り出す。"""
+        match = re.search(r"```mermaid\n(.*?)\n```", block, re.S)
+>       assert match is not None, block
+E       AssertionError: <!-- flow -->
+E         
+E         ```json
+E         {
+E           "title": "図",
+E           "scope": "文書",
+E           "updated": "2026-11-03",
+E           "width": 424,
+E           "height": 96,
+E           "nodes": [
+E             {
+E               "id": "a",
+E               "kind": "script",
+E               "x": 20,
+E               "y": 20,
+E               "w": 160,
+E               "h": 56,
+E               "name": "a"
+E             },
+E             {
+E               "id": "b",
+E               "kind": "script",
+E               "x": 244,
+E               "y": 20,
+E               "w": 160,
+E               "h": 56,
+E               "name": "b"
+E             }
+E           ],
+E           "wires": [
+E             {
+E               "id": "e1",
+E               "from": "a",
+E               "to": "b",
+E               "line": "flow",
+E               "points": [
+E                 [
+E                   180,
+E                   48
+E                 ],
+E                 [
+E                   244,
+E                   48
+E                 ]
+E               ]
+E             }
+E           ]
+E         }
+E         ```
+E         
+E         <!-- /flow -->
+E       assert None is not None
+
+tests/unit/dev_docs/features/convert/test_diagrams.py:18: AssertionError
+_______________ test_render_diagram_when_direction[dataflow-td] ________________
+
+kind = 'dataflow', value = {'direction': 'TD'}, expected = 'flowchart TD'
+
+    @pytest.mark.parametrize(
+        ("kind", "value", "expected"),
+        [
+            pytest.param("flowchart", {}, "flowchart TD", id="flowchart"),
+            pytest.param("dataflow", {}, "flowchart LR", id="dataflow"),
+            pytest.param("architecture", {}, "flowchart LR", id="architecture"),
+            pytest.param("dataflow", {"direction": "TD"}, "flowchart TD", id="dataflow-td"),
+        ],
+    )
+    def test_render_diagram_when_direction(kind: str, value: dict[str, Any], expected: str) -> None:
+        """向きの既定と指定（正常系）。"""
+        # 準備
+        graph = {**value, "nodes": [{"id": "a"}, {"id": "b"}], "edges": [{"from": "a", "to": "b"}]}
+        # 実行
+        result = render_diagram(graph, kind, HEAD)  # type: ignore[arg-type]
+        # 検証
+>       assert _mermaid(result)[0] == expected
+               ^^^^^^^^^^^^^^^^
+
+tests/unit/dev_docs/features/convert/test_diagrams.py:120: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+block = '<!-- flow -->\n\n```json\n{\n  "title": "図",\n  "scope": "文書",\n  "updated": "2026-11-03",\n  "width": 200,\n  "heigh...    76\n        ],\n        [\n          100,\n          140\n        ]\n      ]\n    }\n  ]\n}\n```\n\n<!-- /flow -->'
+
+    def _mermaid(block: str) -> list[str]:
+        """map の範囲から Mermaid の行（前後の空白を除く）を取り出す。"""
+        match = re.search(r"```mermaid\n(.*?)\n```", block, re.S)
+>       assert match is not None, block
+E       AssertionError: <!-- flow -->
+E         
+E         ```json
+E         {
+E           "title": "図",
+E           "scope": "文書",
+E           "updated": "2026-11-03",
+E           "width": 200,
+E           "height": 216,
+E           "nodes": [
+E             {
+E               "id": "a",
+E               "kind": "script",
+E               "x": 20,
+E               "y": 20,
+E               "w": 160,
+E               "h": 56,
+E               "name": "a"
+E             },
+E             {
+E               "id": "b",
+E               "kind": "script",
+E               "x": 20,
+E               "y": 140,
+E               "w": 160,
+E               "h": 56,
+E               "name": "b"
+E             }
+E           ],
+E           "wires": [
+E             {
+E               "id": "e1",
+E               "from": "a",
+E               "to": "b",
+E               "line": "flow",
+E               "points": [
+E                 [
+E                   100,
+E                   76
+E                 ],
+E                 [
+E                   100,
+E                   140
+E                 ]
+E               ]
+E             }
+E           ]
+E         }
+E         ```
+E         
+E         <!-- /flow -->
+E       assert None is not None
+
+tests/unit/dev_docs/features/convert/test_diagrams.py:18: AssertionError
+________________________ test_render_diagram_when_frame ________________________
+
+    def test_render_diagram_when_frame() -> None:
+        """枠（正常系）。"""
+        # 準備
+        value = {
+            "nodes": [{"id": "a"}, {"id": "b"}, {"id": "c"}],
+            "edges": [],
+            "frame": {"label": "判定", "nodes": ["a", "b"]},
+        }
+        # 実行
+        result = render_diagram(value, "flowchart", HEAD)
+        # 検証
+>       lines = _mermaid(result)
+                ^^^^^^^^^^^^^^^^
+
+tests/unit/dev_docs/features/convert/test_diagrams.py:134: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+block = '<!-- flow -->\n\n```json\n{\n  "title": "図",\n  "scope": "文書",\n  "updated": "2026-11-03",\n  "width": 620,\n  "heigh...    "y": 40,\n      "w": 160,\n      "h": 56,\n      "name": "c"\n    }\n  ],\n  "wires": []\n}\n```\n\n<!-- /flow -->'
+
+    def _mermaid(block: str) -> list[str]:
+        """map の範囲から Mermaid の行（前後の空白を除く）を取り出す。"""
+        match = re.search(r"```mermaid\n(.*?)\n```", block, re.S)
+>       assert match is not None, block
+E       AssertionError: <!-- flow -->
+E         
+E         ```json
+E         {
+E           "title": "図",
+E           "scope": "文書",
+E           "updated": "2026-11-03",
+E           "width": 620,
+E           "height": 136,
+E           "frame": {
+E             "title": "判定",
+E             "x": 20,
+E             "y": 20,
+E             "w": 400,
+E             "h": 96
+E           },
+E           "nodes": [
+E             {
+E               "id": "a",
+E               "kind": "script",
+E               "x": 40,
+E               "y": 40,
+E               "w": 160,
+E               "h": 56,
+E               "name": "a"
+E             },
+E             {
+E               "id": "b",
+E               "kind": "script",
+E               "x": 240,
+E               "y": 40,
+E               "w": 160,
+E               "h": 56,
+E               "name": "b"
+E             },
+E             {
+E               "id": "c",
+E               "kind": "script",
+E               "x": 440,
+E               "y": 40,
+E               "w": 160,
+E               "h": 56,
+E               "name": "c"
+E             }
+E           ],
+E           "wires": []
+E         }
+E         ```
+E         
+E         <!-- /flow -->
+E       assert None is not None
+
+tests/unit/dev_docs/features/convert/test_diagrams.py:18: AssertionError
+________________________ test_render_diagram_when_state ________________________
+
+    def test_render_diagram_when_state() -> None:
+        """状態遷移（正常系）。"""
+        # 準備
+        value = {
+            "states": [{"name": "下書き"}, {"name": "公開"}],
+            "initial": "下書き",
+            "final": ["公開"],
+            "transitions": [
+                {"from": "下書き", "to": "公開", "trigger": "公開する", "condition": "承認済み"}
+            ],
+        }
+        # 実行
+        result = render_diagram(value, "state", HEAD)
+        # 検証
+>       lines = _mermaid(result)
+                ^^^^^^^^^^^^^^^^
+
+tests/unit/dev_docs/features/convert/test_diagrams.py:155: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+block = '<!-- flow -->\n\n```json\n{\n  "title": "図",\n  "scope": "文書",\n  "updated": "2026-11-03",\n  "width": 200,\n  "heigh...   316\n        ],\n        [\n          100,\n          380\n        ]\n      ]\n    }\n  ]\n}\n```\n\n<!-- /flow -->'
+
+    def _mermaid(block: str) -> list[str]:
+        """map の範囲から Mermaid の行（前後の空白を除く）を取り出す。"""
+        match = re.search(r"```mermaid\n(.*?)\n```", block, re.S)
+>       assert match is not None, block
+E       AssertionError: <!-- flow -->
+E         
+E         ```json
+E         {
+E           "title": "図",
+E           "scope": "文書",
+E           "updated": "2026-11-03",
+E           "width": 200,
+E           "height": 456,
+E           "nodes": [
+E             {
+E               "id": "start",
+E               "kind": "start",
+E               "x": 20,
+E               "y": 20,
+E               "w": 160,
+E               "h": 56,
+E               "name": "開始"
+E             },
+E             {
+E               "id": "s1",
+E               "kind": "action",
+E               "x": 20,
+E               "y": 140,
+E               "w": 160,
+E               "h": 56,
+E               "name": "下書き"
+E             },
+E             {
+E               "id": "s2",
+E               "kind": "action",
+E               "x": 20,
+E               "y": 260,
+E               "w": 160,
+E               "h": 56,
+E               "name": "公開"
+E             },
+E             {
+E               "id": "end",
+E               "kind": "result",
+E               "x": 20,
+E               "y": 380,
+E               "w": 160,
+E               "h": 56,
+E               "name": "終了"
+E             }
+E           ],
+E           "wires": [
+E             {
+E               "id": "e1",
+E               "from": "start",
+E               "to": "s1",
+E               "line": "flow",
+E               "points": [
+E                 [
+E                   100,
+E                   76
+E                 ],
+E                 [
+E                   100,
+E                   140
+E                 ]
+E               ]
+E             },
+E             {
+E               "id": "e2",
+E               "from": "s1",
+E               "to": "s2",
+E               "line": "flow",
+E               "points": [
+E                 [
+E                   100,
+E                   196
+E                 ],
+E                 [
+E                   100,
+E                   260
+E                 ]
+E               ],
+E               "label": "公開する [承認済み]",
+E               "labelAt": [
+E                 100,
+E                 228
+E               ]
+E             },
+E             {
+E               "id": "e3",
+E               "from": "s2",
+E               "to": "end",
+E               "line": "flow",
+E               "points": [
+E                 [
+E                   100,
+E                   316
+E                 ],
+E                 [
+E                   100,
+E                   380
+E                 ]
+E               ]
+E             }
+E           ]
+E         }
+E         ```
+E         
+E         <!-- /flow -->
+E       assert None is not None
+
+tests/unit/dev_docs/features/convert/test_diagrams.py:18: AssertionError
+________________ test_render_diagram_when_state_representative _________________
+
+    def test_render_diagram_when_state_representative() -> None:
+        """全状態と元の状態（正常系）。"""
+        # 準備
+        value = {
+            "states": [{"name": "編集中"}, {"name": "中断"}],
+            "representative": "編集中",
+            "transitions": [
+                {"from": "全状態", "to": "中断"},
+                {"from": "中断", "to": "元の状態"},
+            ],
+        }
+        # 実行
+        result = render_diagram(value, "state", HEAD)
+        # 検証
+>       lines = _mermaid(result)
+                ^^^^^^^^^^^^^^^^
+
+tests/unit/dev_docs/features/convert/test_diagrams.py:178: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+block = '<!-- flow -->\n\n```json\n{\n  "title": "図",\n  "scope": "文書",\n  "updated": "2026-11-03",\n  "width": 600,\n  "heigh...   "y": 20,\n      "w": 160,\n      "h": 56,\n      "name": "中断"\n    }\n  ],\n  "wires": []\n}\n```\n\n<!-- /flow -->'
+
+    def _mermaid(block: str) -> list[str]:
+        """map の範囲から Mermaid の行（前後の空白を除く）を取り出す。"""
+        match = re.search(r"```mermaid\n(.*?)\n```", block, re.S)
+>       assert match is not None, block
+E       AssertionError: <!-- flow -->
+E         
+E         ```json
+E         {
+E           "title": "図",
+E           "scope": "文書",
+E           "updated": "2026-11-03",
+E           "width": 600,
+E           "height": 96,
+E           "nodes": [
+E             {
+E               "id": "start",
+E               "kind": "start",
+E               "x": 20,
+E               "y": 20,
+E               "w": 160,
+E               "h": 56,
+E               "name": "開始"
+E             },
+E             {
+E               "id": "s1",
+E               "kind": "action",
+E               "x": 220,
+E               "y": 20,
+E               "w": 160,
+E               "h": 56,
+E               "name": "編集中"
+E             },
+E             {
+E               "id": "s2",
+E               "kind": "action",
+E               "x": 420,
+E               "y": 20,
+E               "w": 160,
+E               "h": 56,
+E               "name": "中断"
+E             }
+E           ],
+E           "wires": []
+E         }
+E         ```
+E         
+E         <!-- /flow -->
+E       assert None is not None
+
+tests/unit/dev_docs/features/convert/test_diagrams.py:18: AssertionError
+____________ test_render_diagram_when_state_without_representative _____________
+
+    def test_render_diagram_when_state_without_representative() -> None:
+        """代表の状態が無い（正常系）。"""
+        # 準備
+        value = {"states": [{"name": "下書き"}], "transitions": [{"from": "全状態", "to": "下書き"}]}
+        # 実行
+        result = render_diagram(value, "state", HEAD)
+        # 検証
+>       assert _mermaid(result) == ["stateDiagram-v2", 'state "下書き" as s1']
+               ^^^^^^^^^^^^^^^^
+
+tests/unit/dev_docs/features/convert/test_diagrams.py:191: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+block = '<!-- flow -->\n\n```json\n{\n  "title": "図",\n  "scope": "文書",\n  "updated": "2026-11-03",\n  "width": 400,\n  "heigh...  "y": 20,\n      "w": 160,\n      "h": 56,\n      "name": "下書き"\n    }\n  ],\n  "wires": []\n}\n```\n\n<!-- /flow -->'
+
+    def _mermaid(block: str) -> list[str]:
+        """map の範囲から Mermaid の行（前後の空白を除く）を取り出す。"""
+        match = re.search(r"```mermaid\n(.*?)\n```", block, re.S)
+>       assert match is not None, block
+E       AssertionError: <!-- flow -->
+E         
+E         ```json
+E         {
+E           "title": "図",
+E           "scope": "文書",
+E           "updated": "2026-11-03",
+E           "width": 400,
+E           "height": 96,
+E           "nodes": [
+E             {
+E               "id": "start",
+E               "kind": "start",
+E               "x": 20,
+E               "y": 20,
+E               "w": 160,
+E               "h": 56,
+E               "name": "開始"
+E             },
+E             {
+E               "id": "s1",
+E               "kind": "action",
+E               "x": 220,
+E               "y": 20,
+E               "w": 160,
+E               "h": 56,
+E               "name": "下書き"
+E             }
+E           ],
+E           "wires": []
+E         }
+E         ```
+E         
+E         <!-- /flow -->
+E       assert None is not None
+
+tests/unit/dev_docs/features/convert/test_diagrams.py:18: AssertionError
+_________________________ test_render_diagram_when_er __________________________
+
+    def test_render_diagram_when_er() -> None:
+        """ER 図（正常系）。"""
+        # 準備
+        value = {
+            "entities": [
+                {"name": "顧客"},
+                {
+                    "name": "注文",
+                    "columns": [
+                        {"name": "id", "type": "int", "key": "PK"},
+                        {"name": "customer_id", "type": "int", "key": "FK"},
+                    ],
+                },
+            ],
+            "relations": [
+                {
+                    "from": "顧客",
+                    "from_column": "id",
+                    "from_cardinality": "1",
+                    "to": "注文",
+                    "to_column": "customer_id",
+                    "to_cardinality": "0..n",
+                    "label": "注文する",
+                }
+            ],
+        }
+        tables = [
+            {
+                "name": "customers",
+                "title": "顧客",
+                "columns": [{"name": "id", "primary_key": True}, {"name": "email"}],
+            }
+        ]
+        # 実行
+        result = render_diagram(value, "er", HEAD, tables=tables)
+        # 検証
+>       lines = _mermaid(result)
+                ^^^^^^^^^^^^^^^^
+
+tests/unit/dev_docs/features/convert/test_diagrams.py:230: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+block = '<!-- er -->\n\n```json\n{\n  "title": "図",\n  "scope": "文書",\n  "updated": "2026-11-03",\n  "width": 624,\n  "tables"...\n      "toColumn": "customer_id",\n      "toCard": "0..n",\n      "label": "注文する"\n    }\n  ]\n}\n```\n\n<!-- /er -->'
+
+    def _mermaid(block: str) -> list[str]:
+        """map の範囲から Mermaid の行（前後の空白を除く）を取り出す。"""
+        match = re.search(r"```mermaid\n(.*?)\n```", block, re.S)
+>       assert match is not None, block
+E       AssertionError: <!-- er -->
+E         
+E         ```json
+E         {
+E           "title": "図",
+E           "scope": "文書",
+E           "updated": "2026-11-03",
+E           "width": 624,
+E           "tables": [
+E             {
+E               "id": "顧客",
+E               "name": "customers",
+E               "label": "顧客",
+E               "columns": [
+E                 {
+E                   "name": "id",
+E                   "type": "",
+E                   "pk": true
+E                 },
+E                 {
+E                   "name": "email",
+E                   "type": ""
+E                 }
+E               ],
+E               "x": 24,
+E               "y": 24,
+E               "w": 240
+E             },
+E             {
+E               "id": "注文",
+E               "name": "注文",
+E               "label": "注文",
+E               "columns": [
+E                 {
+E                   "name": "id",
+E                   "type": "int",
+E                   "pk": true
+E                 },
+E                 {
+E                   "name": "customer_id",
+E                   "type": "int",
+E                   "fk": true
+E                 }
+E               ],
+E               "x": 360,
+E               "y": 24,
+E               "w": 240
+E             }
+E           ],
+E           "relations": [
+E             {
+E               "from": "顧客",
+E               "fromColumn": "id",
+E               "fromCard": "1",
+E               "to": "注文",
+E               "toColumn": "customer_id",
+E               "toCard": "0..n",
+E               "label": "注文する"
+E             }
+E           ]
+E         }
+E         ```
+E         
+E         <!-- /er -->
+E       assert None is not None
+
+tests/unit/dev_docs/features/convert/test_diagrams.py:18: AssertionError
+_________________ test_render_diagram_when_er_relation_dropped _________________
+
+    def test_render_diagram_when_er_relation_dropped() -> None:
+        """端の列か多重度が描けない関連（正常系）。"""
+        # 準備
+        value = {
+            "entities": [
+                {"name": "顧客", "columns": [{"name": "id", "key": "PK"}]},
+                {"name": "注文", "columns": [{"name": "id", "key": "PK"}]},
+            ],
+            "relations": [
+                {
+                    "from": "顧客",
+                    "from_column": "id",
+                    "from_cardinality": "1",
+                    "to": "注文",
+                    "to_column": "customer_id",
+                    "to_cardinality": "0..n",
+                },
+                {
+                    "from": "顧客",
+                    "from_column": "id",
+                    "from_cardinality": "many",
+                    "to": "注文",
+                    "to_column": "id",
+                    "to_cardinality": "1",
+                },
+            ],
+        }
+        # 実行
+        result = render_diagram(value, "er", HEAD)
+        # 検証
+>       assert _mermaid(result) == ["erDiagram", "顧客 {", "any id PK", "}", "注文 {", "any id PK", "}"]
+               ^^^^^^^^^^^^^^^^
+
+tests/unit/dev_docs/features/convert/test_diagrams.py:268: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+block = '<!-- er -->\n\n```json\n{\n  "title": "図",\n  "scope": "文書",\n  "updated": "2026-11-03",\n  "width": 624,\n  "tables"...  }\n      ],\n      "x": 360,\n      "y": 24,\n      "w": 240\n    }\n  ],\n  "relations": []\n}\n```\n\n<!-- /er -->'
+
+    def _mermaid(block: str) -> list[str]:
+        """map の範囲から Mermaid の行（前後の空白を除く）を取り出す。"""
+        match = re.search(r"```mermaid\n(.*?)\n```", block, re.S)
+>       assert match is not None, block
+E       AssertionError: <!-- er -->
+E         
+E         ```json
+E         {
+E           "title": "図",
+E           "scope": "文書",
+E           "updated": "2026-11-03",
+E           "width": 624,
+E           "tables": [
+E             {
+E               "id": "顧客",
+E               "name": "顧客",
+E               "label": "顧客",
+E               "columns": [
+E                 {
+E                   "name": "id",
+E                   "type": "",
+E                   "pk": true
+E                 }
+E               ],
+E               "x": 24,
+E               "y": 24,
+E               "w": 240
+E             },
+E             {
+E               "id": "注文",
+E               "name": "注文",
+E               "label": "注文",
+E               "columns": [
+E                 {
+E                   "name": "id",
+E                   "type": "",
+E                   "pk": true
+E                 }
+E               ],
+E               "x": 360,
+E               "y": 24,
+E               "w": 240
+E             }
+E           ],
+E           "relations": []
+E         }
+E         ```
+E         
+E         <!-- /er -->
+E       assert None is not None
+
+tests/unit/dev_docs/features/convert/test_diagrams.py:18: AssertionError
+_____________________ test_render_diagram_when_marker_text _____________________
+
+    def test_render_diagram_when_marker_text() -> None:
+        """HTML のコメントと Mermaid の文字列を閉じる文字（正常系）。"""
+        # 準備
+        value = {"nodes": [{"id": "a", "label": '"x"', "hint": "a--b"}], "edges": []}
+        # 実行
+        result = render_diagram(value, "flowchart", HEAD)
+        # 検証
+        marker = re.search(r"<!-- map-data: (.*?) -->", result, re.S)
+>       assert marker is not None
+E       assert None is not None
+
+tests/unit/dev_docs/features/convert/test_diagrams.py:280: AssertionError
+_____________________________ test_render_mermaid ______________________________
+
+    def test_render_mermaid() -> None:
+        """シーケンス図（正常系）。"""
+        # 準備
+        code = "sequenceDiagram\n  A->>B: 読む"
+        # 実行
+        result = render_mermaid(code, HEAD)
+        # 検証
+>       assert result.startswith('<!-- map: {"title": "図"} -->')
+E       assert False
+E        +  where False = <built-in method startswith of str object at 0x3f164aa0>('<!-- map: {"title": "図"} -->')
+E        +    where <built-in method startswith of str object at 0x3f164aa0> = '<!-- sequence -->\n\n```json\n{\n  "title": "図",\n  "scope": "文書",\n  "updated": "2026-11-03",\n  "participants": [\n..."steps": [\n    {\n      "from": "A",\n      "to": "B",\n      "label": "読む"\n    }\n  ]\n}\n```\n\n<!-- /sequence -->'.startswith
+
+tests/unit/dev_docs/features/convert/test_diagrams.py:326: AssertionError
+__________________ test_render_mermaid_when_kinds[flowchart] ___________________
+
+first = 'flowchart TD'
+
+    @pytest.mark.parametrize(
+        "first",
+        [
+            pytest.param("flowchart TD", id="flowchart"),
+            pytest.param("graph LR", id="graph"),
+            pytest.param("erDiagram", id="er"),
+            pytest.param("stateDiagram-v2", id="state-v2"),
+            pytest.param("stateDiagram", id="state"),
+        ],
+    )
+    def test_render_mermaid_when_kinds(first: str) -> None:
+        """map で描く種類（正常系）。"""
+        # 実行
+        result = render_mermaid(f"{first}\n  a --> b", HEAD)
+        # 検証
+>       assert result.startswith("<!-- map: ")
+E       assert False
+E        +  where False = <built-in method startswith of str object at 0x408af0f0>('<!-- map: ')
+E        +    where <built-in method startswith of str object at 0x408af0f0> = '<!-- flow -->\n\n```json\n{\n  "title": "図",\n  "scope": "文書",\n  "updated": "2026-11-03",\n  "width": 200,\n  "heigh...    76\n        ],\n        [\n          100,\n          140\n        ]\n      ]\n    }\n  ]\n}\n```\n\n<!-- /flow -->'.startswith
+
+tests/unit/dev_docs/features/convert/test_diagrams.py:346: AssertionError
+____________________ test_render_mermaid_when_kinds[graph] _____________________
+
+first = 'graph LR'
+
+    @pytest.mark.parametrize(
+        "first",
+        [
+            pytest.param("flowchart TD", id="flowchart"),
+            pytest.param("graph LR", id="graph"),
+            pytest.param("erDiagram", id="er"),
+            pytest.param("stateDiagram-v2", id="state-v2"),
+            pytest.param("stateDiagram", id="state"),
+        ],
+    )
+    def test_render_mermaid_when_kinds(first: str) -> None:
+        """map で描く種類（正常系）。"""
+        # 実行
+        result = render_mermaid(f"{first}\n  a --> b", HEAD)
+        # 検証
+>       assert result.startswith("<!-- map: ")
+E       assert False
+E        +  where False = <built-in method startswith of str object at 0x4051f260>('<!-- map: ')
+E        +    where <built-in method startswith of str object at 0x4051f260> = '<!-- flow -->\n\n```json\n{\n  "title": "図",\n  "scope": "文書",\n  "updated": "2026-11-03",\n  "width": 424,\n  "heigh...     48\n        ],\n        [\n          244,\n          48\n        ]\n      ]\n    }\n  ]\n}\n```\n\n<!-- /flow -->'.startswith
+
+tests/unit/dev_docs/features/convert/test_diagrams.py:346: AssertionError
+______________________ test_render_mermaid_when_kinds[er] ______________________
+
+first = 'erDiagram'
+
+    @pytest.mark.parametrize(
+        "first",
+        [
+            pytest.param("flowchart TD", id="flowchart"),
+            pytest.param("graph LR", id="graph"),
+            pytest.param("erDiagram", id="er"),
+            pytest.param("stateDiagram-v2", id="state-v2"),
+            pytest.param("stateDiagram", id="state"),
+        ],
+    )
+    def test_render_mermaid_when_kinds(first: str) -> None:
+        """map で描く種類（正常系）。"""
+        # 実行
+        result = render_mermaid(f"{first}\n  a --> b", HEAD)
+        # 検証
+>       assert result.startswith("<!-- map: ")
+E       AssertionError: assert False
+E        +  where False = <built-in method startswith of str object at 0x78680123ed80>('<!-- map: ')
+E        +    where <built-in method startswith of str object at 0x78680123ed80> = '```mermaid\nerDiagram\n  a --> b\n```'.startswith
+
+tests/unit/dev_docs/features/convert/test_diagrams.py:346: AssertionError
+___________________ test_render_mermaid_when_kinds[state-v2] ___________________
+
+first = 'stateDiagram-v2'
+
+    @pytest.mark.parametrize(
+        "first",
+        [
+            pytest.param("flowchart TD", id="flowchart"),
+            pytest.param("graph LR", id="graph"),
+            pytest.param("erDiagram", id="er"),
+            pytest.param("stateDiagram-v2", id="state-v2"),
+            pytest.param("stateDiagram", id="state"),
+        ],
+    )
+    def test_render_mermaid_when_kinds(first: str) -> None:
+        """map で描く種類（正常系）。"""
+        # 実行
+        result = render_mermaid(f"{first}\n  a --> b", HEAD)
+        # 検証
+>       assert result.startswith("<!-- map: ")
+E       AssertionError: assert False
+E        +  where False = <built-in method startswith of str object at 0x78680118e670>('<!-- map: ')
+E        +    where <built-in method startswith of str object at 0x78680118e670> = '```mermaid\nstateDiagram-v2\n  a --> b\n```'.startswith
+
+tests/unit/dev_docs/features/convert/test_diagrams.py:346: AssertionError
+____________________ test_render_mermaid_when_kinds[state] _____________________
+
+first = 'stateDiagram'
+
+    @pytest.mark.parametrize(
+        "first",
+        [
+            pytest.param("flowchart TD", id="flowchart"),
+            pytest.param("graph LR", id="graph"),
+            pytest.param("erDiagram", id="er"),
+            pytest.param("stateDiagram-v2", id="state-v2"),
+            pytest.param("stateDiagram", id="state"),
+        ],
+    )
+    def test_render_mermaid_when_kinds(first: str) -> None:
+        """map で描く種類（正常系）。"""
+        # 実行
+        result = render_mermaid(f"{first}\n  a --> b", HEAD)
+        # 検証
+>       assert result.startswith("<!-- map: ")
+E       AssertionError: assert False
+E        +  where False = <built-in method startswith of str object at 0x78680123d7a0>('<!-- map: ')
+E        +    where <built-in method startswith of str object at 0x78680123d7a0> = '```mermaid\nstateDiagram\n  a --> b\n```'.startswith
+
+tests/unit/dev_docs/features/convert/test_diagrams.py:346: AssertionError
+________________________ test_rewrite_text_when_mermaid ________________________
+
+    def test_rewrite_text_when_mermaid() -> None:
+        """中の図を map の範囲にする（正常系）。"""
+        # 準備
+        text = "前の段落\n\n```mermaid\nsequenceDiagram\n  A->>B: 読む\n```\n\n後の段落"
+        # 実行
+        result = rewrite_text(text, CONTEXT, HEAD)
+        # 検証
+        assert result.startswith("前の段落")
+        assert result.endswith("後の段落")
+>       assert '<!-- map: {"title": ' in result
+E       assert '<!-- map: {"title": ' in '前の段落\n\n<!-- sequence -->\n\n```json\n{\n  "title": "図",\n  "scope": "文書",\n  "updated": "2026-11-03",\n  "participan... [\n    {\n      "from": "A",\n      "to": "B",\n      "label": "読む"\n    }\n  ]\n}\n```\n\n<!-- /sequence -->\n\n後の段落'
+
+tests/unit/dev_docs/features/convert/test_inline.py:48: AssertionError
+_____________________ test_schema_to_markdown_when_diagram _____________________
+
+make_document = <function make_document.<locals>._make at 0x7868012f6da0>
+
+    def test_schema_to_markdown_when_diagram(make_document: Callable[..., Document]) -> None:
+        """図と元データの表（正常系）。"""
+        # 準備
+        schema = {
+            "properties": {
+                "flow": {
+                    "title": "流れ",
+                    "x-shape": "diagram",
+                    "x-diagram": "flowchart",
+                    "properties": {
+                        "nodes": {
+                            "items": {
+                                "properties": {
+                                    "id": {"title": "ID"},
+                                    "label": {"title": "表示"},
+                                    "kind": {"title": "種類"},
+                                }
+                            }
+                        },
+                        "edges": {
+                            "items": {"properties": {"from": {"title": "元"}, "to": {"title": "先"}}}
+                        },
+                    },
+                }
+            }
+        }
+        document = make_document(
+            data={
+                "name": "N",
+                "flow": {
+                    "nodes": [
+                        {"id": "a", "label": "A", "kind": "process"},
+                        {"id": "b", "label": "B", "kind": "store"},
+                    ],
+                    "edges": [{"from": "a", "to": "b"}],
+                },
+            },
+            updated=datetime(2026, 11, 3, 9, 0, 0, tzinfo=UTC),
+        )
+        # 実行
+        result = schema_to_markdown(document, schema, CONTEXT)
+        # 検証
+>       assert "<!-- map: " in result
+E       assert '<!-- map: ' in '# N\n\n<!-- flow -->\n\n```json\n{\n  "title": "流れ",\n  "scope": "N",\n  "updated": "2026-11-03",\n  "width": 200,\n ...-docs-table: rules:flow.edges -->\n<!-- table: data closed -->\n| 元 | 先 |\n| --- | --- |\n| a | b |\n<!-- /table -->\n'
+
+tests/unit/dev_docs/features/convert/test_markdown.py:203: AssertionError
+_______________________ test_schema_to_markdown_when_er ________________________
+
+make_document = <function make_document.<locals>._make at 0x7868012f7d70>
+
+    def test_schema_to_markdown_when_er(make_document: Callable[..., Document]) -> None:
+        """ER 図にテーブルの列を渡す（正常系）。"""
+        # 準備
+        schema = {
+            "properties": {
+                "er": {"title": "ER 図", "x-shape": "diagram", "x-diagram": "er"},
+                "tables": {"x-shape": "sections", "x-key": "name"},
+            }
+        }
+        document = make_document(
+            data={
+                "name": "N",
+                "er": {"entities": [{"name": "顧客"}]},
+                "tables": [
+                    {
+                        "name": "customers",
+                        "title": "顧客",
+                        "columns": [{"name": "id", "title": "顧客 ID", "type": "bigint"}],
+                    }
+                ],
+            }
+        )
+        # 実行
+        result = schema_to_markdown(document, schema, CONTEXT)
+        # 検証
+        match = re.search(r"<!-- map: .*?```mermaid\n(.*?)\n```", result, re.S)
+>       assert match is not None
+E       assert None is not None
+
+tests/unit/dev_docs/features/convert/test_markdown.py:235: AssertionError
+_____________________ test_build_settings_router_when_get ______________________
+
+fake_index = FakeIndex(configs={}, docs={}, unreadable={}, details={}, decisions={}, decision_texts={}, sources=[], search_results=..., 'version': 'v1'}, responses={}, refused=False, requests=[<Request('GET', 'http://127.0.0.1:8786/settings/sources')>])
+make_handlers = <function make_handlers.<locals>._make at 0x786800f3ddd0>
+
+    def test_build_settings_router_when_get(
+        fake_index: FakeIndex, make_handlers: Callable[..., Any]
+    ) -> None:
+        """行に状態を重ねる（正常系）。"""
+        # 準備
+        fake_index.settings = {
+            "settingsPath": "/pi/settings.yaml",
+            "sources": [
+                _item({"id": "a", "config": ["/tmp/a/project-index.yaml"]}, "serving"),
+                _item(
+                    {"id": "b", "config": ["/tmp/b/project-index.yaml"]},
+                    "not_served",
+                    errors=[{"path": "documents[0].paths", "reason": "必須のキーが無い"}],
+                ),
+            ],
+            "version": "v1",
+        }
+        # 実行
+        response = _client(make_handlers).get("/_api/settings/sources")
+        # 検証
+        body = response.json()
+        assert response.status_code == 200
+        assert body["settingsPath"] == "/pi/settings.yaml"
+        assert [(row["id"], row["status"]) for row in body["sources"]] == [
+            ("a", "serving"),
+            ("b", "not_served"),
+        ]
+        assert body["sources"][1]["errors"] == [
+            {"path": "documents[0].paths", "reason": "必須のキーが無い"}
+        ]
+>       assert body["version"] == "v1"
+               ^^^^^^^^^^^^^^^
+E       KeyError: 'version'
+
+tests/unit/dev_docs/features/settings/test_route.py:71: KeyError
+_____________________ test_build_settings_router_when_put ______________________
+
+fake_index = FakeIndex(configs={}, docs={}, unreadable={}, details={}, decisions={}, decision_texts={}, sources=[], search_results=...Request('PUT', 'http://127.0.0.1:8786/settings/sources')>, <Request('GET', 'http://127.0.0.1:8786/settings/sources')>])
+make_handlers = <function make_handlers.<locals>._make at 0x786800d06b90>
+
+    def test_build_settings_router_when_put(
+        fake_index: FakeIndex, make_handlers: Callable[..., Any]
+    ) -> None:
+        """保存を依頼して状態を返す（正常系）。"""
+        # 準備（偽物は保存した行を、続く端末の設定の取得で返す）
+        fake_index.settings = {"settingsPath": "/pi/settings.yaml", "sources": [], "version": "v2"}
+        # 実行
+        response = _client(make_handlers).put(
+            "/_api/settings/sources", json=PUT_BODY, headers=SAME_ORIGIN
+        )
+        # 検証
+        put = next(request for request in fake_index.requests if request.method == "PUT")
+        sent = json.loads(put.content)
+        assert response.status_code == 200
+        assert response.json()["sources"][0]["status"] == "serving"
+>       assert response.json()["version"] == "v2"
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       KeyError: 'version'
+
+tests/unit/dev_docs/features/settings/test_route.py:89: KeyError
+_______________ test_build_settings_router_when_version_conflict _______________
+
+fake_index = FakeIndex(configs={}, docs={}, unreadable={}, details={}, decisions={}, decision_texts={}, sources=[], search_results=...es': []}, responses={('PUT', '/settings/sources'): (409, {'current': 'v2', 'detail': ''})}, refused=False, requests=[])
+make_handlers = <function make_handlers.<locals>._make at 0x786800ba7950>
+
+    def test_build_settings_router_when_version_conflict(
+        fake_index: FakeIndex, make_handlers: Callable[..., Any]
+    ) -> None:
+        """project-index の 409 を current つきで返す（異常系）。"""
+        # 準備
+        fake_index.responses[("PUT", "/settings/sources")] = (409, {"current": "v2", "detail": ""})
+        # 実行
+        response = _client(make_handlers).put(
+            "/_api/settings/sources", json={**PUT_BODY, "expectedVersion": "v1"}, headers=SAME_ORIGIN
+        )
+        # 検証
+>       put = next(request for request in fake_index.requests if request.method == "PUT")
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       StopIteration
+
+tests/unit/dev_docs/features/settings/test_route.py:178: StopIteration
+=========================== short test summary info ============================
+ERROR tests/unit/dev_docs/features/settings/test_service.py
+ERROR tests/unit/dev_docs/integrations/project_index/test_client.py
+FAILED tests/unit/dev_docs/features/convert/test_diagrams.py::test_render_diagram
+FAILED tests/unit/dev_docs/features/convert/test_diagrams.py::test_render_diagram_when_node_kinds[actor]
+FAILED tests/unit/dev_docs/features/convert/test_diagrams.py::test_render_diagram_when_node_kinds[external]
+FAILED tests/unit/dev_docs/features/convert/test_diagrams.py::test_render_diagram_when_node_kinds[process]
+FAILED tests/unit/dev_docs/features/convert/test_diagrams.py::test_render_diagram_when_node_kinds[system]
+FAILED tests/unit/dev_docs/features/convert/test_diagrams.py::test_render_diagram_when_node_kinds[store]
+FAILED tests/unit/dev_docs/features/convert/test_diagrams.py::test_render_diagram_when_node_kinds[start]
+FAILED tests/unit/dev_docs/features/convert/test_diagrams.py::test_render_diagram_when_node_kinds[question]
+FAILED tests/unit/dev_docs/features/convert/test_diagrams.py::test_render_diagram_when_node_kinds[action]
+FAILED tests/unit/dev_docs/features/convert/test_diagrams.py::test_render_diagram_when_node_kinds[result]
+FAILED tests/unit/dev_docs/features/convert/test_diagrams.py::test_render_diagram_when_node_kinds[none]
+FAILED tests/unit/dev_docs/features/convert/test_diagrams.py::test_render_diagram_when_hint_and_tip
+FAILED tests/unit/dev_docs/features/convert/test_diagrams.py::test_render_diagram_when_direction[flowchart]
+FAILED tests/unit/dev_docs/features/convert/test_diagrams.py::test_render_diagram_when_direction[dataflow]
+FAILED tests/unit/dev_docs/features/convert/test_diagrams.py::test_render_diagram_when_direction[architecture]
+FAILED tests/unit/dev_docs/features/convert/test_diagrams.py::test_render_diagram_when_direction[dataflow-td]
+FAILED tests/unit/dev_docs/features/convert/test_diagrams.py::test_render_diagram_when_frame
+FAILED tests/unit/dev_docs/features/convert/test_diagrams.py::test_render_diagram_when_state
+FAILED tests/unit/dev_docs/features/convert/test_diagrams.py::test_render_diagram_when_state_representative
+FAILED tests/unit/dev_docs/features/convert/test_diagrams.py::test_render_diagram_when_state_without_representative
+FAILED tests/unit/dev_docs/features/convert/test_diagrams.py::test_render_diagram_when_er
+FAILED tests/unit/dev_docs/features/convert/test_diagrams.py::test_render_diagram_when_er_relation_dropped
+FAILED tests/unit/dev_docs/features/convert/test_diagrams.py::test_render_diagram_when_marker_text
+FAILED tests/unit/dev_docs/features/convert/test_diagrams.py::test_render_mermaid
+FAILED tests/unit/dev_docs/features/convert/test_diagrams.py::test_render_mermaid_when_kinds[flowchart]
+FAILED tests/unit/dev_docs/features/convert/test_diagrams.py::test_render_mermaid_when_kinds[graph]
+FAILED tests/unit/dev_docs/features/convert/test_diagrams.py::test_render_mermaid_when_kinds[er]
+FAILED tests/unit/dev_docs/features/convert/test_diagrams.py::test_render_mermaid_when_kinds[state-v2]
+FAILED tests/unit/dev_docs/features/convert/test_diagrams.py::test_render_mermaid_when_kinds[state]
+FAILED tests/unit/dev_docs/features/convert/test_inline.py::test_rewrite_text_when_mermaid
+FAILED tests/unit/dev_docs/features/convert/test_markdown.py::test_schema_to_markdown_when_diagram
+FAILED tests/unit/dev_docs/features/convert/test_markdown.py::test_schema_to_markdown_when_er
+FAILED tests/unit/dev_docs/features/settings/test_route.py::test_build_settings_router_when_get
+FAILED tests/unit/dev_docs/features/settings/test_route.py::test_build_settings_router_when_put
+FAILED tests/unit/dev_docs/features/settings/test_route.py::test_build_settings_router_when_version_conflict
+35 failed, 400 passed, 2 errors in 145.70s (0:02:25)
+exit=1
+$ npm run -s test:unit -- --pool=threads
+
+ RUN  v5.0.5 /mnt/c/Users/shuhe/repo/dev-docs/.claude/worktrees/chore-settings-expected-version-outside-read-and-map-diagrams
+
+stderr | tests/unit/frontend/src/features/docs/doc-view/hooks/use-mdmark.test.ts > test_use_mdmark
+{"ts":"2026-11-14T15:21:48.321Z","level":"error","event":"mdmark_load_failed","error":{"name":"Error","message":"Only URLs with a scheme in: file and data are supported by the default ESM loader. Received protocol 'https:'","stack":"Error: Only URLs with a scheme in: file and data are supported by the default ESM loader. Received protocol 'https:'\n    at getSourceSync (node:internal/modules/esm/load:46:11)\n    at defaultLoadSync (node:internal/modules/esm/load:153:34)\n    at #loadAndMaybeBlockOnLoaderThread (node:internal/modules/esm/loader:796:12)\n    at #loadSync (node:internal/modules/esm/loader:816:49)\n    at ModuleLoader.load (node:internal/modules/esm/loader:781:26)\n    at ModuleLoader.loadAndTranslate (node:internal/modules/esm/loader:526:31)\n    at #getOrCreateModuleJobAfterResolve (node:internal/modules/esm/loader:577:36)\n    at afterResolve (node:internal/modules/esm/loader:625:52)\n    at ModuleLoader.getOrCreateModuleJob (node:internal/modules/esm/loader:631:12)\n    at onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:650:32)"}}
+
+stderr | tests/unit/frontend/src/features/docs/doc-view/hooks/use-mdmark.test.ts > test_use_mdmark_when_doc_changes
+{"ts":"2026-11-14T15:21:49.884Z","level":"error","event":"mdmark_load_failed","error":{"name":"Error","message":"Only URLs with a scheme in: file and data are supported by the default ESM loader. Received protocol 'https:'","stack":"Error: Only URLs with a scheme in: file and data are supported by the default ESM loader. Received protocol 'https:'\n    at getSourceSync (node:internal/modules/esm/load:46:11)\n    at defaultLoadSync (node:internal/modules/esm/load:153:34)\n    at #loadAndMaybeBlockOnLoaderThread (node:internal/modules/esm/loader:796:12)\n    at #loadSync (node:internal/modules/esm/loader:816:49)\n    at ModuleLoader.load (node:internal/modules/esm/loader:781:26)\n    at ModuleLoader.loadAndTranslate (node:internal/modules/esm/loader:526:31)\n    at #getOrCreateModuleJobAfterResolve (node:internal/modules/esm/loader:577:36)\n    at afterResolve (node:internal/modules/esm/loader:625:52)\n    at ModuleLoader.getOrCreateModuleJob (node:internal/modules/esm/loader:631:12)\n    at onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:650:32)"}}
+
+stderr | tests/unit/frontend/src/features/docs/doc-view/hooks/use-mdmark.test.ts > test_use_mdmark_when_doc_changes_ready
+{"ts":"2026-11-14T15:21:48.723Z","level":"error","event":"mdmark_load_failed","error":{"name":"Error","message":"Only URLs with a scheme in: file and data are supported by the default ESM loader. Received protocol 'https:'","stack":"Error: Only URLs with a scheme in: file and data are supported by the default ESM loader. Received protocol 'https:'\n    at getSourceSync (node:internal/modules/esm/load:46:11)\n    at defaultLoadSync (node:internal/modules/esm/load:153:34)\n    at #loadAndMaybeBlockOnLoaderThread (node:internal/modules/esm/loader:796:12)\n    at #loadSync (node:internal/modules/esm/loader:816:49)\n    at ModuleLoader.load (node:internal/modules/esm/loader:781:26)\n    at ModuleLoader.loadAndTranslate (node:internal/modules/esm/loader:526:31)\n    at #getOrCreateModuleJobAfterResolve (node:internal/modules/esm/loader:577:36)\n    at afterResolve (node:internal/modules/esm/loader:625:52)\n    at ModuleLoader.getOrCreateModuleJob (node:internal/modules/esm/loader:631:12)\n    at onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:650:32)"}}
+
+ ❯ tests/unit/frontend/src/features/docs/doc-view/hooks/use-mdmark.test.ts (9 tests | 7 failed) 13231ms
+   × test_use_mdmark 1863ms
+   × test_use_mdmark_when_doc_changes 1561ms
+   × test_use_mdmark_when_doc_changes_ready 1566ms
+   × test_use_mdmark_when_aliases 1623ms
+   × test_use_mdmark_when_base_changes 2379ms
+   × test_use_mdmark_when_callbacks_change 1572ms
+   × test_use_mdmark_when_map_config 1568ms
+stderr | tests/unit/frontend/src/features/settings/settings/queries.test.tsx > test_use_save_sources_when_expected_version
+An update to TestComponent inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+ ❯ tests/unit/frontend/src/features/settings/settings/queries.test.tsx (2 tests | 1 failed) 161ms
+   × test_use_save_sources_when_expected_version 23ms
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 8 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/unit/frontend/src/features/docs/doc-view/hooks/use-mdmark.test.ts > test_use_mdmark
+AssertionError: expected "vi.fn()" to be called 1 times, but got 0 times
+
+Ignored nodes: comments, script, style
+[36m<html>[39m
+  [36m<head>[39m
+    [36m<link[39m
+      [33mhref[39m=[32m"https://cdn.jsdelivr.net/gh/shuhei1101/mdmark@v0.11.0/dist/index.css"[39m
+      [33mrel[39m=[32m"stylesheet"[39m
+    [36m/>[39m
+  [36m</head>[39m
+  [36m<body>[39m
+    [36m<div />[39m
+  [36m</body>[39m
+[36m</html>[39m
+ ❯ tests/unit/frontend/src/features/docs/doc-view/hooks/use-mdmark.test.ts:34:37
+     32|     initialProps: { markdown: "# A" },
+     33|   });
+     34|   await waitFor(() => expect(mount).toHaveBeenCalledTimes(1));
+       |                                     ^
+     35|   view.rerender({ markdown: "# B" });
+     36|   await waitFor(() => expect(handle.update).toHaveBeenCalledTimes(1));
+ ❯ runWithExpensiveErrorDiagnosticsDisabled node_modules/@testing-library/dom/dist/config.js:47:12
+ ❯ checkCallback node_modules/@testing-library/dom/dist/wait-for.js:124:77
+ ❯ Timeout.checkRealTimersCallback node_modules/@testing-library/dom/dist/wait-for.js:118:16
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/8]⎯
+
+ FAIL  tests/unit/frontend/src/features/docs/doc-view/hooks/use-mdmark.test.ts > test_use_mdmark_when_doc_changes
+AssertionError: expected "vi.fn()" to be called 1 times, but got 0 times
+
+Ignored nodes: comments, script, style
+[36m<html>[39m
+  [36m<head>[39m
+    [36m<link[39m
+      [33mhref[39m=[32m"https://cdn.jsdelivr.net/gh/shuhei1101/mdmark@v0.11.0/dist/index.css"[39m
+      [33mrel[39m=[32m"stylesheet"[39m
+    [36m/>[39m
+  [36m</head>[39m
+  [36m<body>[39m
+    [36m<div />[39m
+  [36m</body>[39m
+[36m</html>[39m
+ ❯ tests/unit/frontend/src/features/docs/doc-view/hooks/use-mdmark.test.ts:52:37
+     50|     initialProps: { docId: "s@main:a.md" },
+     51|   });
+     52|   await waitFor(() => expect(mount).toHaveBeenCalledTimes(1));
+       |                                     ^
+     53|   view.rerender({ docId: "s@main:b.md" });
+     54|
+ ❯ runWithExpensiveErrorDiagnosticsDisabled node_modules/@testing-library/dom/dist/config.js:47:12
+ ❯ checkCallback node_modules/@testing-library/dom/dist/wait-for.js:124:77
+ ❯ Timeout.checkRealTimersCallback node_modules/@testing-library/dom/dist/wait-for.js:118:16
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/8]⎯
+
+ FAIL  tests/unit/frontend/src/features/docs/doc-view/hooks/use-mdmark.test.ts > test_use_mdmark_when_doc_changes_ready
+AssertionError: expected false to be true // Object.is equality
+
+Ignored nodes: comments, script, style
+[36m<html>[39m
+  [36m<head>[39m
+    [36m<link[39m
+      [33mhref[39m=[32m"https://cdn.jsdelivr.net/gh/shuhei1101/mdmark@v0.11.0/dist/index.css"[39m
+      [33mrel[39m=[32m"stylesheet"[39m
+    [36m/>[39m
+  [36m</head>[39m
+  [36m<body>[39m
+    [36m<div />[39m
+  [36m</body>[39m
+[36m</html>[39m
+
+- Expected
++ Received
+
+- true
++ false
+
+ ❯ tests/unit/frontend/src/features/docs/doc-view/hooks/use-mdmark.test.ts:68:57
+     66|     initialProps: { docId: "s@main:a.md" },
+     67|   });
+     68|   await waitFor(() => expect(view.result.current.ready).toBe(true));
+       |                                                         ^
+     69|   view.rerender({ docId: "s@main:b.md" });
+     70|
+ ❯ runWithExpensiveErrorDiagnosticsDisabled node_modules/@testing-library/dom/dist/config.js:47:12
+ ❯ checkCallback node_modules/@testing-library/dom/dist/wait-for.js:124:77
+ ❯ Timeout.checkRealTimersCallback node_modules/@testing-library/dom/dist/wait-for.js:118:16
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/8]⎯
+
+ FAIL  tests/unit/frontend/src/features/docs/doc-view/hooks/use-mdmark.test.ts > test_use_mdmark_when_aliases
+AssertionError: expected "vi.fn()" to be called 1 times, but got 0 times
+
+Ignored nodes: comments, script, style
+[36m<html>[39m
+  [36m<head>[39m
+    [36m<link[39m
+      [33mhref[39m=[32m"https://cdn.jsdelivr.net/gh/shuhei1101/mdmark@v0.11.0/dist/index.css"[39m
+      [33mrel[39m=[32m"stylesheet"[39m
+    [36m/>[39m
+  [36m</head>[39m
+  [36m<body>[39m
+    [36m<div />[39m
+  [36m</body>[39m
+[36m</html>[39m
+ ❯ tests/unit/frontend/src/features/docs/doc-view/hooks/use-mdmark.test.ts:104:37
+    102|   renderHook(() => useMdmark(ref, { ...(options("# A") as object), ali…
+    103|
+    104|   await waitFor(() => expect(mount).toHaveBeenCalledTimes(1));
+       |                                     ^
+    105|   const opts = (mount.mock.calls[0] as unknown[])[1] as { index: { ter…
+    106|   expect(opts.index.terms).toHaveLength(1);
+ ❯ runWithExpensiveErrorDiagnosticsDisabled node_modules/@testing-library/dom/dist/config.js:47:12
+ ❯ checkCallback node_modules/@testing-library/dom/dist/wait-for.js:124:77
+ ❯ Timeout.checkRealTimersCallback node_modules/@testing-library/dom/dist/wait-for.js:118:16
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/8]⎯
+
+ FAIL  tests/unit/frontend/src/features/docs/doc-view/hooks/use-mdmark.test.ts > test_use_mdmark_when_base_changes
+AssertionError: expected "vi.fn()" to be called 1 times, but got 0 times
+
+Ignored nodes: comments, script, style
+[36m<html>[39m
+  [36m<head>[39m
+    [36m<link[39m
+      [33mhref[39m=[32m"https://cdn.jsdelivr.net/gh/shuhei1101/mdmark@v0.11.0/dist/index.css"[39m
+      [33mrel[39m=[32m"stylesheet"[39m
+    [36m/>[39m
+  [36m</head>[39m
+  [36m<body>[39m
+    [36m<div />[39m
+  [36m</body>[39m
+[36m</html>[39m
+ ❯ tests/unit/frontend/src/features/docs/doc-view/hooks/use-mdmark.test.ts:120:37
+    118|     { initialProps: { baseMarkdown: null as string | null } },
+    119|   );
+    120|   await waitFor(() => expect(mount).toHaveBeenCalledTimes(1));
+       |                                     ^
+    121|   view.rerender({ baseMarkdown: "# Z" });
+    122|   await waitFor(() => expect(handle.update).toHaveBeenCalledTimes(1));
+ ❯ runWithExpensiveErrorDiagnosticsDisabled node_modules/@testing-library/dom/dist/config.js:47:12
+ ❯ checkCallback node_modules/@testing-library/dom/dist/wait-for.js:124:77
+ ❯ Timeout.checkRealTimersCallback node_modules/@testing-library/dom/dist/wait-for.js:118:16
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/8]⎯
+
+ FAIL  tests/unit/frontend/src/features/docs/doc-view/hooks/use-mdmark.test.ts > test_use_mdmark_when_callbacks_change
+AssertionError: expected "vi.fn()" to be called 1 times, but got 0 times
+
+Ignored nodes: comments, script, style
+[36m<html>[39m
+  [36m<head>[39m
+    [36m<link[39m
+      [33mhref[39m=[32m"https://cdn.jsdelivr.net/gh/shuhei1101/mdmark@v0.11.0/dist/index.css"[39m
+      [33mrel[39m=[32m"stylesheet"[39m
+    [36m/>[39m
+  [36m</head>[39m
+  [36m<body>[39m
+    [36m<div />[39m
+  [36m</body>[39m
+[36m</html>[39m
+ ❯ tests/unit/frontend/src/features/docs/doc-view/hooks/use-mdmark.test.ts:149:37
+    147|     initialProps: { fns: first },
+    148|   });
+    149|   await waitFor(() => expect(mount).toHaveBeenCalledTimes(1));
+       |                                     ^
+    150|   view.rerender({ fns: second });
+    151|   const opts = (mount.mock.calls[0] as unknown[])[1] as {
+ ❯ runWithExpensiveErrorDiagnosticsDisabled node_modules/@testing-library/dom/dist/config.js:47:12
+ ❯ checkCallback node_modules/@testing-library/dom/dist/wait-for.js:124:77
+ ❯ Timeout.checkRealTimersCallback node_modules/@testing-library/dom/dist/wait-for.js:118:16
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/8]⎯
+
+ FAIL  tests/unit/frontend/src/features/docs/doc-view/hooks/use-mdmark.test.ts > test_use_mdmark_when_map_config
+AssertionError: expected "vi.fn()" to be called 1 times, but got 0 times
+
+Ignored nodes: comments, script, style
+[36m<html>[39m
+  [36m<head>[39m
+    [36m<link[39m
+      [33mhref[39m=[32m"https://cdn.jsdelivr.net/gh/shuhei1101/mdmark@v0.11.0/dist/index.css"[39m
+      [33mrel[39m=[32m"stylesheet"[39m
+    [36m/>[39m
+  [36m</head>[39m
+  [36m<body>[39m
+    [36m<div />[39m
+  [36m</body>[39m
+[36m</html>[39m
+ ❯ tests/unit/frontend/src/features/docs/doc-view/hooks/use-mdmark.test.ts:215:37
+    213|   renderHook(() => useMdmark(ref, options("# A")));
+    214|
+    215|   await waitFor(() => expect(mount).toHaveBeenCalledTimes(1));
+       |                                     ^
+    216|   const opts = (mount.mock.calls[0] as unknown[])[1] as {
+    217|     config: { map: { kinds: Record<string, unknown>; lines: Record<str…
+ ❯ runWithExpensiveErrorDiagnosticsDisabled node_modules/@testing-library/dom/dist/config.js:47:12
+ ❯ checkCallback node_modules/@testing-library/dom/dist/wait-for.js:124:77
+ ❯ Timeout.checkRealTimersCallback node_modules/@testing-library/dom/dist/wait-for.js:118:16
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/8]⎯
+
+ FAIL  tests/unit/frontend/src/features/settings/settings/queries.test.tsx > test_use_save_sources_when_expected_version
+AssertionError: expected { sources: [ { id: 'a', …(1) } ] } to match object { expectedVersion: 'v1' }
+(1 matching property omitted from actual)
+
+- Expected
++ Received
+
+  {
+-   "expectedVersion": "v1",
++   "sources": [
++     {
++       "config": [
++         "/a/dev-docs.yaml",
++       ],
++       "id": "a",
++     },
++   ],
+  }
+
+ ❯ tests/unit/frontend/src/features/settings/settings/queries.test.tsx:59:21
+     57|   await result.current.mutateAsync(sources, undefined);
+     58|
+     59|   expect(bodies[0]).toMatchObject({ expectedVersion: "v1" });
+       |                     ^
+     60|   expect(bodies[1]).not.toHaveProperty("expectedVersion");
+     61| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[8/8]⎯
+
+
+ Test Files  2 failed | 49 passed (51)
+      Tests  8 failed | 145 passed (153)
+   Start at  00:21:19
+   Duration  521.21s (environment 56%, import 21%, setup 21%, transform 1%, tests 1%, worker 1%)
+
+    Isolate  51 workers spawned · ~39.84s startup each (spawn + environment, per file)
+             at least ~250.45s faster with isolate: false — reuses workers across files instead of one per file
+
+exit=1

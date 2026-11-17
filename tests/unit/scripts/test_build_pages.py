@@ -339,7 +339,7 @@ def test_write_bundle_config(build_pages: ModuleType, tmp_path: Path) -> None:
     config = build_pages.write_bundle_config(tmp_path, ["a.md", "b.md"])
 
     assert json.loads(config.read_text(encoding="utf-8")) == {
-        "version": build_pages.MDMARK_TAG,
+        "version": build_pages.MDMARK_REF,
         "build": {"include": ["a.md", "b.md"], "entry": "a.md", "out": build_pages.OUTPUT_HTML},
     }
 
@@ -365,7 +365,7 @@ def test_run_mdmark(
     assert args == [
         "npx",
         "-y",
-        f"github:shuhei1101/mdmark#{build_pages.MDMARK_TAG}",
+        f"github:shuhei1101/mdmark#{build_pages.MDMARK_REF}",
         "build",
         "--config",
         str(config),

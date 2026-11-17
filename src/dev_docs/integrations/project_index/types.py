@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import Collection, Mapping
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any, Literal
@@ -45,7 +45,6 @@ class DocumentRow:
     search: bool = True
     converter: str | None = None
     alias_type: str | None = None
-    metadata: dict[str, str] = field(default_factory=dict)
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -201,14 +200,34 @@ def parse_document(
                 message=f"project-index の応答に {key} がありません",
                 summary=f"project-index の応答に {key} がありません",
             )
+    metadata = {key: value.get(key) for key in LISTED_METADATA_KEYS}
+    common_keys = value.get("commonKeys")
+    if isinstance(common_keys, Mapping):
+        metadata.update(common_keys)
     return IndexedDocument(
         id=str(value["id"]),
         kind=str(value["kind"]),
         source_id=source_id,
         path=str(value["path"]),
         data=dict(value.get("value") or {}),
-        metadata={key: value.get(key) for key in LISTED_METADATA_KEYS},
+        metadata=metadata,
         version=str(value["version"]),
         record_index=record_index,
         body_path=value.get("bodyPath"),
     )
+
+
+def parse_document_list(
+    source_id: str, value: Mapping[str, Any], *, record_kinds: Collection[str] = ()
+) -> DocumentList:
+    """project-index の文書の一覧の応答の本文を `DocumentList` にする。"""
+    positions: dict[str, int] = {}
+    documents: list[IndexedDocument] = []
+    for item in value.get("documents") or []:
+        record_index: int | None = None
+        if item.get("kind") in record_kinds:
+            path = str(item.get("path", ""))
+            record_index = positions.get(path, 0)
+            positions[path] = record_index + 1
+        documents.append(parse_document(source_id, item, record_index=record_index))
+    return DocumentList(ref=value.get("ref") or None, documents=documents)

@@ -11,3 +11,77 @@ styles:
       - class_name: .mdmark-html pre
         target: HTML ブロックの整形済みテキスト
         value: '`white-space: pre-wrap; overflow-wrap: anywhere`'
+  - name: mdmark-sticky-top
+    title: mdmark の固定の位置
+    container: index.css
+    summary: mdmark が右側の目次・見出しの移り先・表の見出し行を留める位置を、トップバーと種類のタブの下にする
+    description: 画面設計『文書の画面』の要素『目次』の `固定の位置`。値は文書の画面のサイドバーの固定の位置（`top-24`）と同じ式にし、トップバー（`h-12`）と種類のタブ（`sticky top-12`）の下端に合わせる。mdmark は既定値を層 `mdmark` の `:root` に持つため、層に属さない `:root` で上書きする
+    values:
+      - class_name: :root
+        target: mdmark の CSS 変数 `--mdmark-sticky-top`
+        value: '`calc(var(--spacing) * 24)`'
+    refs:
+      - SCR-155-1#elements[目次]
+  - name: tailwind-imports
+    title: Tailwind の読み込み
+    container: index.css
+    usecase: 共通
+    summary: Tailwind を `theme.css`・`utilities.css` に分けて読み込み、Preflight の代わりに本文の外だけに当てる Preflight を読み込む
+    description: '`@import "tailwindcss"` は Preflight を本文にも当てるため使わない。`@import` は `@scope` の中に置けないため、本文の外だけに当てる Preflight は別のファイルにする。層の順の宣言は、`tailwindcss/index.css` の先頭と同じものを最初に置き、`utilities` が `base` より後ろの順を保つ'
+    values:
+      - class_name: '@layer'
+        target: 層の順
+        value: '`@layer theme, base, components, utilities;`'
+      - class_name: '@import（theme）'
+        target: Tailwind のトークン
+        value: '`@import "tailwindcss/theme.css" layer(theme);`'
+      - class_name: '@import（base）'
+        target: 本文の外の Preflight
+        value: '`@import "./preflight-outside-mdmark.css" layer(base);`'
+      - class_name: '@import（utilities）'
+        target: Tailwind のユーティリティ
+        value: '`@import "tailwindcss/utilities.css" layer(utilities);`'
+    refs:
+      - SCR-155-1#elements[本文]
+      - MOD-232-1#
+  - name: base-outside-mdmark
+    title: 本文の外の枠線と輪郭線の色
+    container: index.css
+    usecase: 共通
+    summary: 層 `base` の全ての要素の枠線と輪郭線の色を、本文の外だけに当てる
+    values:
+      - class_name: '@scope (html) to (.mdmark) *'
+        target: 本文の外の全ての要素
+        value: '`@apply border-border outline-ring/50`'
+    refs:
+      - SCR-155-1#elements[本文]
+  - name: mdmark-padding
+    title: 本文の内側の余白
+    container: index.css
+    usecase: 文書を読む
+    summary: 本文の内側の余白を下だけにし、本文の左端をパンくず・文書のタイトルと同じ位置にする
+    description: mdmark は既定値を層 `mdmark` の `:root` に持つため、層に属さない `.mdmark` で上書きする
+    values:
+      - class_name: .mdmark
+        target: mdmark の CSS 変数 `--mdmark-padding`
+        value: '`0 0 1.5rem`'
+    refs:
+      - SCR-155-1#elements[本文]
+  - name: doc-title-tokens
+    title: 文書のタイトルのトークン
+    container: index.css
+    usecase: 文書を読む
+    summary: 文書のタイトルの大きさ・行の高さ・太さを mdmark の見出し 1 と同じにするトークンを `@theme inline` に割り当てる
+    description: ユーティリティ `text-doc-title`・`font-doc-title` になる。mdmark の CSS を読み込むまでは、mdmark の既定値と同じ値を代わりに使う
+    values:
+      - class_name: --text-doc-title
+        target: 文書のタイトルの大きさ
+        value: '`calc(var(--mdmark-font-size, 0.875rem) * 1.9)`'
+      - class_name: --text-doc-title--line-height
+        target: 文書のタイトルの行の高さ
+        value: '`1.3`'
+      - class_name: --font-weight-doc-title
+        target: 文書のタイトルの太さ
+        value: '`var(--mdmark-heading-weight, 700)`'
+    refs:
+      - SCR-155-1#elements[文書のタイトル]

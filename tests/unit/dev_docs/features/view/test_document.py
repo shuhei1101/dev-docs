@@ -5,10 +5,13 @@ from collections.abc import Callable
 from datetime import datetime
 from typing import Any
 
+import httpx
 import pytest
 
+from dev_docs.features.view import document as document_module
 from dev_docs.features.view.document import get_document, not_found_fields
 from dev_docs.features.view.types import DocumentResponse, NavItem
+from dev_docs.integrations.project_index.client import ProjectIndexClient
 from dev_docs.shared.errors import (
     DocumentNotFoundError,
     ProjectIndexUnreachableError,
@@ -341,3 +344,71 @@ def test_not_found_fields() -> None:
     # 検証
     assert ref_fields == {"missing": "ref", "value": "no-such-branch"}
     assert doc_fields == {"missing": "doc", "value": "no-such-doc"}
+
+
+def _rules_source(fake_index: FakeIndex) -> None:
+    """規約の種類の文書 1 件を持つ配信元 sample を配置する。"""
+    _serve(
+        fake_index,
+        [doc_json("a", "docs/a.yaml", name="A")],
+        documents=[_row("rules", ["docs/*.yaml"])],
+    )
+
+
+def test_get_document_when_requests_concurrent(
+    fake_index: FakeIndex,
+    make_handlers: Callable[..., Any],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """配信元の設定・リビジョン・文書の一覧を同時に問い合わせる（正常系）。"""
+    # 準備
+    _rules_source(fake_index)
+    monkeypatch.setattr(document_module, "DOCUMENT_FETCH_TIMEOUT_SEC", 2.0)
+    waiting = {"config", "refs", "docs"}
+    arrived: set[str] = set()
+    gate = asyncio.Event()
+
+    async def handle(request: httpx.Request) -> httpx.Response:
+        tail = request.url.path.rstrip("/").rsplit("/", 1)[-1]
+        if tail in waiting:
+            arrived.add(tail)
+            if arrived == waiting:
+                gate.set()
+            await gate.wait()
+        return fake_index.handle(request)
+
+    client = ProjectIndexClient(
+        "http://127.0.0.1:8786", timeout=45, transport=httpx.MockTransport(handle)
+    )
+    # 実行
+    response = _get(make_handlers(project_index=client), None)
+    # 検証
+    assert response.path == "docs/a"
+    assert arrived == waiting
+
+
+def test_get_document_when_total_timeout(
+    fake_index: FakeIndex,
+    make_handlers: Callable[..., Any],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """文書の取得の制限時間（異常系）。"""
+    # 準備
+    _rules_source(fake_index)
+    monkeypatch.setattr(document_module, "DOCUMENT_FETCH_TIMEOUT_SEC", 0.2)
+
+    async def handle(request: httpx.Request) -> httpx.Response:
+        if request.url.path.endswith("/docs/docs/a.yaml"):
+            await asyncio.sleep(0.15)
+        await asyncio.sleep(0.15)
+        return fake_index.handle(request)
+
+    client = ProjectIndexClient(
+        "http://127.0.0.1:8786", timeout=45, transport=httpx.MockTransport(handle)
+    )
+    # 実行
+    with pytest.raises(ProjectIndexUnreachableError) as caught:
+        _get(make_handlers(project_index=client), None)
+    # 検証
+    assert caught.value.kind == "timeout"
+    assert caught.value.reason == "0.2 秒以内に応答がありませんでした"

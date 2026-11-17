@@ -1,0 +1,23 @@
+scope_out:
+  - item: '読み取れずコードブロックのまま出す Mermaid の図の click の id: の解決'
+    reason: '#196 へ移した範囲で、作業 PR #212 が対応する'
+    plan: '#196'
+  - item: 'knowledge の共通の型 flowchart の clicks[].href の説明（相対パス + アンカー）へ id: のリンクを追加する'
+    reason: 'スキーマは knowledge のリポジトリが持ち、変換は説明が変わらなくても id: を解決できる。追加するかの判断はレビューで確定する'
+    plan: shuhei1101/knowledge#432
+  - item: mdmark のバージョンの更新
+    reason: develop が固定する v0.13.0 にフロー図のノードのリンク（mdmark#310）が入っている
+    plan: none
+use_cases:
+  - kind: single
+    scenario: docs/scenario/SC-155-7.yaml
+    impact: changed
+    detail: 文書の画面でフロー図のノードを押すと、ノードのリンクが指す同じ配信元の文書（とその項目）を開く
+    depends_on: []
+docs:
+  - page: docs/library/LIB-155-9.yaml
+    new: false
+    change: 'map のフローチャートの click をノードのリンクにする使用方法（リンク先は相対パスで指定し、id: のスキームは許可されない）を追加する'
+    status: done
+    updated_by: planner
+    updated_at: '2026-11-16T16:21:53.660086+00:00'

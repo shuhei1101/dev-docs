@@ -56,12 +56,6 @@ constants:
     usecase: 文書の取得
     summary: 見出しのアンカーにするときに落とす記号（mdmark の見出しの `id` と同じ）
     value: '`[^\w\- ]`'
-  - name: MERMAID_CLICK
-    title: Mermaid の click の id の参照
-    container: features/convert/inline.py
-    usecase: 文書の取得
-    summary: Mermaid のコードの `click {ノード} href "id:{文書の ID}#{項目のパス}"`・`click {ノード} "id:{文書の ID}#{項目のパス}"` の行。行ごとに照合し、項目のパスは `"` を含まない
-    value: '`^(?P<head>[ \t]*click[ \t]+\S+[ \t]+(?:href[ \t]+)?)"id:(?P<id>[^"#\s]+)(?:#(?P<item>[^"]*))?"`'
 functions:
   - name: rewrite_text
     title: 本文の書き換え
@@ -96,7 +90,7 @@ functions:
       description: 書き換えた Markdown
     process: |-
       1. 値の全体が値の選択肢（` / ` で区切った全ての部分が `CHOICE`）なら、部分ごとに `` - `badge:{値}` {説明} `` の行にして返す
-      2. ```mermaid のコードブロックを、1 つずつ手で書く図の組み立てで置き換える。読み取れない図の `click` は、`MERMAID_CLICK` に該当する `id:` の参照を 6 と同じリンク先に書き換え、`click` のノードと `href` の有無は変えない（`links` に無い ID の参照は書き換えない）
+      2. ```mermaid のコードブロックを、1 つずつ手で書く図の組み立てで置き換える（リンク先の引き方は、`context` を渡したリンク先の引き方）
       3. 言語の無いコードブロックのうち、2 行以上で全ての行が `TREE_LINE` に当たり、罫線を持つ行が 1 つ以上あるものの言語を `tree` にする
       4. 値の全体が番号付きの箇条書き（全ての行が `{数}. ` で始まるか、その字下げの続き）なら、`<!-- steps -->`・箇条書き・`<!-- /steps -->` にする
       5. コードブロックの外で、`ISSUE_NUMBER` を `[#{番号}]({issue_url}{番号})` にする（`issue_url` が `None` なら書き換えない）
@@ -107,7 +101,7 @@ functions:
         summary: 中の図を部品にする
         condition: '前後に段落を持つ、```mermaid の `sequenceDiagram` のコードブロック'
         mock: なし
-        expected: 前後の段落が残り、コードブロックが `<!-- sequence -->` の範囲に替わる
+        expected: '前後の段落が残り、コードブロックが map の範囲（`<!-- map: … -->` 〜 `<!-- /map -->`）に替わる'
       - name: test_rewrite_text_when_tree
         case: 正常
         summary: ファイルツリー
@@ -150,12 +144,48 @@ functions:
         condition: '`[B](id:b#no-such)`、項目の見出しの引き方が `None` を返す'
         mock: なし
         expected: '`[B](b.yaml)`'
-      - name: test_rewrite_text_when_mermaid_click
+  - name: link_target
+    title: リンク先の引き方
+    kind: 関数
+    container: features/convert/inline.py
+    usecase: 文書の取得
+    role: 変換
+    summary: '`{文書の ID}#{項目のパス}` を、同じ配信元の文書の相対パスと項目の見出しのアンカーにする'
+    scope: public
+    thread_safe: true
+    args:
+      - name: value
+        title: 値
+        type: str
+        required: true
+        passing: positional
+        description: '`{文書の ID}` か `{文書の ID}#{項目のパス}`'
+      - name: context
+        title: 描画の文脈
+        type: RenderContext
+        required: true
+        passing: positional
+        description: リンクの引き先と、相対パスの起点
+    returns:
+      type: str | None
+      description: '`{相対パス}` か `{相対パス}#{アンカー}`。引き先に無ければ `None`'
+    process: |-
+      1. 値を最初の `#` で文書の ID と項目のパスに分け、`links` を ID で引く（無ければ `None`）
+      2. 相対パスは、文書のパスのフォルダからリンクの先の `path` への相対パス（`/` 区切り・URL エンコード）にする
+      3. 項目のパスがあれば、文脈の項目の見出しの引き方（`item_heading`）で見出しを引き、見出しがあれば見出しのアンカーを `#` で付ける（無ければ付けない）
+    unit_tests:
+      - name: test_link_target
         case: 正常
-        summary: Mermaid の click の id の参照
-        condition: '```mermaid の `classDiagram` に `click A href "id:a"`・`click B "id:b#flow"`・`click C href "id:zzz"`・`click D href "https://e.example/"`、`links` に `a`（パス `dev/a.yaml`）と `b`（パス `dev/b.yaml`）、文書のパスが `dev/c.yaml`、項目の見出しの引き方が `b`・`flow` に `処理の流れ` を返却する'
+        summary: 文書と項目
+        condition: '`b#flow` と `a`、`links` に `a`（パス `dev/a.yaml`）と `b`（パス `dev/b.yaml`）、文書のパスが `dev/c.yaml`、項目の見出しの引き方が `b`・`flow` に `処理の流れ` を返す'
         mock: なし
-        expected: '```mermaid のコードブロックのままで、`click A href "a.yaml"`・`click B "b.yaml#処理の流れ"`・`click C href "id:zzz"`・`click D href "https://e.example/"` の行を持つ'
+        expected: '`b.yaml#処理の流れ` と `a.yaml`'
+      - name: test_link_target_when_unknown
+        case: 正常
+        summary: 引き先に無い
+        condition: '`links` に無い ID'
+        mock: なし
+        expected: '`None`'
   - name: link_reference
     title: 参照のリンク
     kind: 関数
@@ -182,9 +212,8 @@ functions:
       type: str | None
       description: '`[{タイトル}]({相対パス})` か、`[{タイトル} / {項目のパス}]({相対パス}#{アンカー})`。引き先に無ければ `None`'
     process: |-
-      1. 値を最初の `#` で文書の ID と項目のパスに分け、`links` を ID で引く
-      2. 相対パスは、文書のパスのフォルダからリンクの先の `path` への相対パス（`/` 区切り・URL エンコード）にする
-      3. 項目のパスがあれば、文脈の項目の見出しの引き方（`item_heading`）で見出しを引き、見出しがあれば見出しのアンカーを `#` で付ける（無ければ付けない）
+      1. 値をリンク先の引き方で引き、`None` なら `None` を返却する
+      2. 文書の ID の `links` のタイトルと、項目のパスがあれば ` / {項目のパス}` を続けた文字列（`[`・`]` はエスケープする）を、リンクの文字にする
     unit_tests:
       - name: test_link_reference
         case: 正常

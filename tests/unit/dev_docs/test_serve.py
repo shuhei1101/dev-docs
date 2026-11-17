@@ -215,7 +215,28 @@ def test_run_serve_when_port_in_use(
     error = capsys.readouterr().err
     assert code == 3
     assert str(port) in error
+    assert f"pid {os.getpid()}" in error
     assert "DEV_DOCS_PORT" in error
+
+
+def test_run_serve_when_startup_fails(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """待ち受けの前の失敗がポートの使用中でなければ、使用中を出さずに SystemExit を送出する（異常系）。"""
+    # 準備
+    monkeypatch.setenv("DEV_DOCS_PORT", str(_free_port()))
+    _record_announce(monkeypatch)
+
+    def failing_startup(self: uvicorn.Server) -> None:
+        # lifespan の起動の失敗を真似る（started は False のまま）
+        raise SystemExit(3)
+
+    monkeypatch.setattr(uvicorn.Server, "run", failing_startup)
+    _serve_settings(tmp_path, monkeypatch, _closed_address())
+    # 実行・検証
+    with pytest.raises(SystemExit):
+        run_serve(argparse.Namespace())
+    assert "使用中" not in capsys.readouterr().err
 
 
 def test_run_serve_when_prompt_invalid(
@@ -343,6 +364,43 @@ def test_check_port_when_in_use() -> None:
     with _listening() as port, pytest.raises(PortInUseError) as exc_info:
         check_port("127.0.0.1", port)
     assert exc_info.value.port == port
+
+
+def test_find_port_owner() -> None:
+    """テスト自身が待ち受けるポート（正常系）。"""
+    # 準備・実行
+    with _listening() as port:
+        result = main_module.find_port_owner("127.0.0.1", port)
+    # 検証
+    assert result == os.getpid()
+
+
+def test_find_port_owner_when_bind_is_hostname() -> None:
+    """bind がホスト名でも例外を送出せず、ポートだけで探す（正常系）。"""
+    # 準備・実行
+    with _listening() as port:
+        result = main_module.find_port_owner("localhost", port)
+    # 検証
+    assert result == os.getpid()
+
+
+def test_find_port_owner_when_not_listening() -> None:
+    """待ち受けていないポート（正常系）。"""
+    # 準備
+    port = _free_port()
+    # 実行
+    result = main_module.find_port_owner("127.0.0.1", port)
+    # 検証
+    assert result is None
+
+
+def test_find_port_owner_when_proc_missing(tmp_path: Path) -> None:
+    """/proc が無い（正常系）。"""
+    # 準備・実行
+    with _listening() as port:
+        result = main_module.find_port_owner("127.0.0.1", port, proc=tmp_path)
+    # 検証
+    assert result is None
 
 
 def test_build_handlers(

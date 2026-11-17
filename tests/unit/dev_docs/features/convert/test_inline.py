@@ -4,6 +4,7 @@ from dev_docs.features.convert.inline import (
     heading_anchor,
     link_decisions,
     link_reference,
+    link_target,
     rewrite_text,
 )
 from dev_docs.features.convert.types import DiagramHead, DocumentLink, RenderContext
@@ -37,7 +38,7 @@ ID_CONTEXT = RenderContext(
 
 
 def test_rewrite_text_when_mermaid() -> None:
-    """中の図を部品にする（正常系）。"""
+    """中の図を map の範囲にする（正常系）。"""
     # 準備
     text = "前の段落\n\n```mermaid\nsequenceDiagram\n  A->>B: 読む\n```\n\n後の段落"
     # 実行
@@ -45,8 +46,8 @@ def test_rewrite_text_when_mermaid() -> None:
     # 検証
     assert result.startswith("前の段落")
     assert result.endswith("後の段落")
-    assert "<!-- sequence -->" in result
-    assert "```mermaid" not in result
+    assert '<!-- map: {"title": ' in result
+    assert "<!-- /map -->" in result
 
 
 def test_rewrite_text_when_tree() -> None:
@@ -188,3 +189,21 @@ def test_heading_anchor() -> None:
     result = heading_anchor("正常シナリオ（ER 図を読む）")
     # 検証
     assert result == "正常シナリオer-図を読む"
+
+
+def test_link_target() -> None:
+    """文書と項目（正常系）。"""
+    # 実行
+    with_item = link_target("b#flow", ID_CONTEXT)
+    document = link_target("a", ID_CONTEXT)
+    # 検証
+    assert with_item == "b.yaml#処理の流れ"
+    assert document == "a.yaml"
+
+
+def test_link_target_when_unknown() -> None:
+    """引き先に無い（正常系）。"""
+    # 実行
+    result = link_target("zzz", ID_CONTEXT)
+    # 検証
+    assert result is None

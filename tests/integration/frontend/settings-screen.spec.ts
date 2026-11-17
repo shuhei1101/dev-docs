@@ -967,7 +967,7 @@ const UNREACHABLE = {
   },
 };
 
-test.describe("project-index に接続できないときの表示", () => {
+test.describe("project-index から受け取れないときの表示", () => {
   // 端末の設定の取得が 503 のとき、配信元の一覧の代わりに接続先と理由を出し、配信元の追加を押せなくする（異常系）
   test("project_index_unreachable_alert", async ({ page }) => {
     // 準備
@@ -988,6 +988,30 @@ test.describe("project-index に接続できないときの表示", () => {
     await expect(add).toHaveAccessibleDescription("project-index に接続できませんでした");
     await expect.poll(() => api.callsOf("settings").length).toBeGreaterThan(before);
   });
+
+  // 端末の設定の取得が 502・503 の timeout のとき、理由の種類ごとの見出しを出し、起動の案内を出さない（異常系）
+  for (const { status, kind, title } of [
+    { status: 502, kind: "failed", title: "project-index が要求を処理できませんでした" },
+    { status: 503, kind: "timeout", title: "project-index から応答がありませんでした" },
+  ]) {
+    test(`project_index_${kind}_alert`, async ({ page }) => {
+      // 準備
+      await mockApi(page, {
+        settings: () =>
+          problem(status, {
+            detail: title,
+            projectIndex: { address: "http://127.0.0.1:8786", reason: "x", kind },
+          }),
+      });
+      // 実行
+      await page.goto("/_settings");
+      // 検証
+      const alert = page.getByRole("alert").filter({ hasText: title });
+      await expect(alert).toBeVisible();
+      await expect(alert).not.toContainText("project-index を起動してから");
+      await expect(page.getByRole("button", { name: "配信元を追加" })).toHaveAccessibleDescription(title);
+    });
+  }
 });
 
 test.describe("保存の失敗の通知", () => {
@@ -1003,5 +1027,164 @@ test.describe("保存の失敗の通知", () => {
     await expect(page.getByText("端末の設定を保存できませんでした。")).toBeVisible();
     await expect(page.getByText(UNREACHABLE.detail)).toBeVisible();
     await expect(page.getByText(TOAST)).toHaveCount(0);
+  });
+});
+
+test.describe("範囲の外からの参照の補足", () => {
+  // outsideRead が false の行だけ、ID の下に `範囲の外から参照できません` を出す（正常系）
+  test("outside_read_note", async ({ page }) => {
+    await open(page, {
+      settings: withSources(
+        settingsSource("sample", { outsideRead: false }),
+        settingsSource("knowledge"),
+      ),
+    });
+    const rows = page.getByRole("row");
+    await expect(rows.filter({ hasText: "sample" })).toContainText("範囲の外から参照できません");
+    await expect(rows.filter({ hasText: "knowledge" })).not.toContainText(
+      "範囲の外から参照できません",
+    );
+  });
+});
+
+test.describe("範囲の外からの参照のスイッチ", () => {
+  // 見出しに `範囲の外からの参照` を出し、追加はオンで補助文を出す（正常系）
+  test("outside_read_switch_when_add", async ({ page }) => {
+    await open(page);
+    await openAdd(page);
+    const group = dialog(page).getByRole("group", { name: "範囲の外からの参照" });
+    await expect(group.getByRole("switch", { name: "範囲の外から参照できるようにする" })).toBeChecked();
+    await expect(
+      dialog(page).getByText("オフにすると、読み取りの範囲に当たらない作業場所からは参照できません。"),
+    ).toBeVisible();
+  });
+
+  // 編集は行の outsideRead を初期値にし、オフで保存すると outside_read: false を送信する（正常系）
+  test("outside_read_switch_when_edit", async ({ page }) => {
+    // 準備
+    const api = await open(page, {
+      settings: withSources(settingsSource("sample", { outsideRead: false }), settingsSource("knowledge")),
+    });
+    await openEdit(page, "knowledge");
+    const toggle = dialog(page).getByRole("switch", { name: "範囲の外から参照できるようにする" });
+    await expect(toggle).toBeChecked();
+    // 実行
+    await toggle.click();
+    await dialog(page).getByRole("button", { name: "保存", exact: true }).click();
+    // 検証
+    await expect(dialog(page)).toHaveCount(0);
+    const body = api.callsOf("putSettings")[0]?.request.body as {
+      sources: { id: string; outside_read?: boolean }[];
+      expectedVersion?: string;
+    };
+    expect(body.sources.map((row) => [row.id, row.outside_read])).toEqual([
+      ["sample", false],
+      ["knowledge", false],
+    ]);
+    expect(body.expectedVersion).toBe("v1");
+  });
+});
+
+test.describe("他の変更の表示", () => {
+  // 保存が 409 なら、ダイアログを開いたまま入力を残し、Alert を出して一覧を取り直す（異常系）
+  test("save_conflict", async ({ page }) => {
+    // 準備
+    let conflicted = false;
+    const api = await open(page, {
+      settings: () => ({
+        body: { ...settingsView(), version: conflicted ? "v2" : "v1" },
+      }),
+      putSettings: () => {
+        if (conflicted) return { body: { sources: [] } };
+        conflicted = true;
+        return problem(409, { current: "v2" });
+      },
+    });
+    await openAdd(page);
+    await fillValid(page);
+    // 実行
+    await dialog(page).getByRole("button", { name: "追加", exact: true }).click();
+    // 検証
+    const alert = dialog(page).getByRole("alert");
+    await expect(alert).toContainText("他の変更があったため保存できませんでした");
+    await expect(dialog(page).getByLabel("配信元の ID")).toHaveValue("extra");
+    // 取り直した一覧の version で保存し直す
+    await expect.poll(() => api.callsOf("settings").length).toBeGreaterThan(1);
+    await dialog(page).getByRole("button", { name: "追加", exact: true }).click();
+    await expect(dialog(page)).toHaveCount(0);
+    const versions = api
+      .callsOf("putSettings")
+      .map((call) => (call.request.body as { expectedVersion?: string }).expectedVersion);
+    expect(versions).toEqual(["v1", "v2"]);
+  });
+});
+
+test.describe("配信元が削除されたときの表示", () => {
+  // 409 の後に取り直した一覧に編集していた配信元が無ければ、表示を出して保存ボタンを無効にする（異常系）
+  test("save_after_source_removed", async ({ page }) => {
+    // 準備
+    let conflicted = false;
+    const api = await open(page, {
+      settings: () => ({
+        body: settingsView(
+          conflicted ? [settingsSource("knowledge")] : [settingsSource("sample"), settingsSource("knowledge")],
+        ),
+      }),
+      putSettings: () => {
+        conflicted = true;
+        return problem(409, { current: "v2" });
+      },
+    });
+    await openEdit(page, "sample");
+    // 実行
+    await dialog(page).getByRole("button", { name: "保存", exact: true }).click();
+    // 検証
+    await expect(dialog(page).getByRole("alert")).toContainText(
+      "配信元が削除されたため保存できませんでした",
+    );
+    await expect(dialog(page).getByRole("button", { name: "保存", exact: true })).toBeDisabled();
+    expect(api.callsOf("putSettings")).toHaveLength(1);
+  });
+});
+
+test.describe("削除の他の変更の表示", () => {
+  // 削除の保存が 409 なら、ダイアログを開いたまま Alert を出す（異常系）
+  test("delete_conflict", async ({ page }) => {
+    // 準備
+    await open(page, { putSettings: () => problem(409, { current: "v2" }) });
+    await page.getByRole("button", { name: "sample を削除" }).click();
+    // 実行
+    await page.getByRole("alertdialog").getByRole("button", { name: "削除" }).click();
+    // 検証
+    await expect(page.getByRole("alertdialog").getByRole("alert")).toContainText(
+      "他の変更があったため削除できませんでした",
+    );
+  });
+});
+
+test.describe("削除する配信元が削除されたときの表示", () => {
+  // 409 の後に取り直した一覧に削除する配信元が無ければ、表示を出して削除ボタンを無効にする（異常系）
+  test("delete_after_source_removed", async ({ page }) => {
+    // 準備
+    let conflicted = false;
+    await open(page, {
+      settings: () => ({
+        body: settingsView(
+          conflicted ? [settingsSource("knowledge")] : [settingsSource("sample"), settingsSource("knowledge")],
+        ),
+      }),
+      putSettings: () => {
+        conflicted = true;
+        return problem(409, { current: "v2" });
+      },
+    });
+    await page.getByRole("button", { name: "sample を削除" }).click();
+    // 実行
+    await page.getByRole("alertdialog").getByRole("button", { name: "削除" }).click();
+    // 検証
+    const confirm = page.getByRole("alertdialog");
+    await expect(confirm.getByRole("alert")).toContainText("配信元が削除されたため削除できませんでした");
+    await expect(confirm.getByRole("button", { name: "削除" })).toBeDisabled();
+    await expect(confirm.getByRole("heading", { name: "sample を削除しますか?" })).toBeVisible();
   });
 });

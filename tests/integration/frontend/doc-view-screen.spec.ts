@@ -398,6 +398,29 @@ test.describe("文書のタイトル", () => {
     await openDoc(page, "/sample/docs/doc-2");
     await expect(page.getByRole("main").getByRole("heading", { level: 1 })).toHaveText("文書 2");
   });
+
+  // 文書のタイトルを mdmark の見出し 1 と同じ大きさ・太さで出し、下に区切り線を表示する（正常系）
+  test("doc_title_matches_mdmark_h1", async ({ page }) => {
+    // 準備
+    await openRendered(page);
+    // 実行
+    const title = await page.getByRole("main").getByRole("heading", { level: 1 }).evaluate((h1) => {
+      const body = document.querySelector(".mdmark");
+      const s = getComputedStyle(h1);
+      return {
+        fontSize: parseFloat(s.fontSize),
+        bodyFontSize: body === null ? 0 : parseFloat(getComputedStyle(body).fontSize),
+        fontWeight: s.fontWeight,
+        borderBottomWidth: s.borderBottomWidth,
+        borderBottomStyle: s.borderBottomStyle,
+      };
+    });
+    // 検証
+    expect(title.fontSize).toBeCloseTo(title.bodyFontSize * 1.9, 1);
+    expect(title.fontWeight).toBe("700");
+    expect(title.borderBottomWidth).toBe("1px");
+    expect(title.borderBottomStyle).toBe("solid");
+  });
 });
 
 test.describe("文書の情報", () => {
@@ -666,6 +689,104 @@ test.describe("本文", () => {
     await expect(page.getByRole("main").getByRole("heading", { level: 1 })).toHaveCount(1);
   });
 
+  // 本文には画面の基本のスタイル（Tailwind の Preflight）を当てず、単独の mdmark と同じ見た目で描く（正常系）
+  test("body_without_preflight", async ({ page }) => {
+    // 準備
+    const markdown = [
+      "# 文書 1",
+      "",
+      "## 概要",
+      "",
+      "- 項目 1",
+      "- 項目 2",
+      "",
+      "#### 見出し 4",
+      "",
+      "```bash",
+      "dev-docs serve",
+      "```",
+      "",
+      '<!-- map: {"title": "フロー"} -->',
+      "",
+      "```mermaid",
+      "sequenceDiagram",
+      "  participant A as 画面",
+      "  participant B as サーバー",
+      "  A->>B: 要求",
+      "  B-->>A: 応答",
+      "```",
+      "",
+      "<!-- /map -->",
+      "",
+    ].join("\n");
+    await openRendered(page, "/sample/docs/doc-1", {
+      document: ({ path }) => ({ body: documentResponse({ path, markdown }) }),
+    });
+    // 実行
+    const styles = await page.locator(".mdmark").evaluate((body) => {
+      const style = (selector: string, pseudo: string | null = null) => {
+        const element = body.querySelector(selector);
+        return element === null ? null : getComputedStyle(element, pseudo);
+      };
+      return {
+        listStyle: style("ul:not([class]) > li")?.listStyleType,
+        h4Weight: style("h4")?.fontWeight,
+        h4MarginBottom: style("h4")?.marginBottom,
+        preFont: style("pre")?.fontFamily,
+        boxSizing: style("p, li")?.boxSizing,
+        beforeBoxSizing: style("h2", "::before")?.boxSizing,
+        hiddenLegend: style(".mdmark-diagram-legend[hidden]")?.display,
+      };
+    });
+    // 検証
+    expect(styles.listStyle).toBe("disc");
+    expect(styles.h4Weight).toBe("700");
+    expect(styles.h4MarginBottom).not.toBe("0px");
+    expect(styles.preFont).toBe("monospace");
+    expect(styles.boxSizing).toBe("content-box");
+    expect(styles.beforeBoxSizing).toBe("content-box");
+    // mdmark が hidden を付けて表示する要素は、mdmark の値で描く（Preflight の [hidden] の !important を当てない）
+    expect(styles.hiddenLegend).toBe("flex");
+  });
+
+  // 本文の外（文書の一覧）には画面の基本のスタイルを当てたままにする（正常系）
+  test("frame_keeps_preflight", async ({ page }) => {
+    // 準備
+    await openRendered(page);
+    // 実行
+    const sidebarList = await page
+      .getByRole("navigation", { name: "文書の一覧" })
+      .locator("ul")
+      .first()
+      .evaluate((ul) => ({ listStyle: getComputedStyle(ul).listStyleType, boxSizing: getComputedStyle(ul).boxSizing }));
+    const hiddenDisplay = await page.getByRole("navigation", { name: "文書の一覧" }).evaluate((nav) => {
+      const hidden = document.createElement("ul");
+      hidden.className = "mdmark-diagram-legend";
+      hidden.hidden = true;
+      nav.append(hidden);
+      return getComputedStyle(hidden).display;
+    });
+    // 検証
+    expect(sidebarList).toEqual({ listStyle: "none", boxSizing: "border-box" });
+    expect(hiddenDisplay).toBe("none");
+  });
+
+  // 本文の左端をパンくず・文書のタイトルと同じ位置にし、本文の左右と上に余白を置かない（正常系）
+  test("body_left_aligned_with_title", async ({ page }) => {
+    // 準備
+    await openRendered(page);
+    // 実行
+    const title = await boxOf(page.getByRole("main").getByRole("heading", { level: 1 }));
+    const paragraph = await boxOf(page.locator(".mdmark p").first());
+    const padding = await page.locator(".mdmark").evaluate((body) => {
+      const s = getComputedStyle(body);
+      return [s.paddingTop, s.paddingLeft, s.paddingRight];
+    });
+    // 検証
+    expect(Math.round(paragraph.x)).toBe(Math.round(title.x));
+    expect(padding).toEqual(["0px", "0px", "0px"]);
+  });
+
   // 同じ配信元の文書へのリンクは、画面を再読み込みせず rev を保って開く（正常系）
   test("body_internal_link", async ({ page }) => {
     // 準備
@@ -787,6 +908,37 @@ test.describe("列の表示のメニュー", () => {
       hidden: ["備考"],
     });
   });
+
+  // JSON のマーカーの表: 保存した隠す列でマーカーの隠す列を置き換え、複数行のマーカーの表も表の番号に数える（正常系）
+  test("columns_menu_json_marker", async ({ page }) => {
+    // 準備（1 つ目は備考を最初から隠す JSON のマーカー、2 つ目は列の表示の機能を持つ複数行の JSON のマーカー）
+    const table = (marker: string, head: string) =>
+      [marker, "", `| ${head} | 名称 | 備考 |`, "| --- | --- | --- |", "| k1 | 名称 1 | 備考 1 |", "", "<!-- /table -->", ""].join("\n");
+    const markdown = [
+      "# 文書 1",
+      "",
+      "## 概要",
+      "",
+      table('<!-- table: {"kind": "data", "columns": {"備考": {"hidden": true}}} -->', "表 A"),
+      table('<!-- table: {\n  "kind": "data",\n  "features": {"columns": {}}\n} -->', "表 B"),
+    ].join("\n");
+    const api = await openRendered(page, "/sample/docs/doc-1", {
+      document: ({ path }) => ({
+        body: documentResponse({ path, markdown, tableKeys: ["sample:a", "sample:b"], columns: { "sample:a": [] } }),
+      }),
+    });
+    // 検証（保存した隠す列が空の表 A は、マーカーで隠した備考も表示する）
+    await expect(page.locator("th:visible")).toHaveText(["表 A", "名称", "備考", "表 B", "名称", "備考"]);
+    // 実行（2 つ目の表の `テーブル設定` で備考を隠す）
+    await page.getByRole("button", { name: "テーブル設定" }).nth(1).click();
+    await page.getByRole("dialog", { name: "テーブル設定" }).getByRole("button", { name: "「備考」を隠す" }).click();
+    // 検証
+    await expect.poll(() => api.callsOf("putColumns").length).toBe(1);
+    expect(api.callsOf("putColumns")[0]?.request.body).toEqual({
+      table: "sample:b",
+      hidden: ["備考"],
+    });
+  });
 });
 
 test.describe("目次", () => {
@@ -850,6 +1002,53 @@ test.describe("目次", () => {
     await openSideToc(page);
     await sideToc(page).getByRole("link", { name: "関連" }).click();
     await expect(page).toHaveURL(/#関連$|#%E9%96%A2%E9%80%A3$/);
+  });
+
+  /** 画面を下へスクロールできる長さの本文 */
+  const LONG_MARKDOWN = `# 文書 1\n\n${Array.from(
+    { length: 30 },
+    (_, index) => `## セクション ${index + 1}\n\n${"長い本文の段落です。".repeat(40)}\n`,
+  ).join("\n")}`;
+
+  /** 長い本文を開き、下へ 1400px スクロールする */
+  const openScrolled = async (page: Page) => {
+    await openDoc(page, "/sample/docs/doc-1", {
+      document: ({ path }) => ({ body: documentResponse({ path, markdown: LONG_MARKDOWN }) }),
+    });
+    await expect(page.getByRole("heading", { level: 2, name: /^セクション 1 / })).toBeVisible();
+    await page.mouse.wheel(0, 1400);
+    await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThanOrEqual(1400);
+  };
+
+  /** 種類のタブの下端（画面の上端からの px） */
+  const tabsBottom = async (page: Page) => {
+    const box = await boxOf(page.getByRole("navigation", { name: "文書の種類" }));
+    return box.y + box.height;
+  };
+
+  // スクロールしても、右端の線と目次の枠をトップバーと種類のタブの下に固定する（正常系）
+  test("toc_below_tabs_when_scrolled", async ({ page }) => {
+    // 準備
+    await openScrolled(page);
+    const bottom = await tabsBottom(page);
+    const rail = await boxOf(page.locator(".mdmark-side-toc-rail"));
+    // 実行（開いた目次の枠が右端の線に重なるため、線の位置へポインターを移して出す）
+    await page.mouse.move(rail.x + rail.width / 2, rail.y + rail.height / 2);
+    await expect(sideToc(page)).toBeVisible();
+    // 検証
+    expect(rail.y).toBeGreaterThanOrEqual(bottom);
+    expect((await boxOf(sideToc(page))).y).toBeGreaterThanOrEqual(bottom);
+  });
+
+  // 画面幅が 48rem 未満でも、スクロールした右側の目次をトップバーと種類のタブの下に固定する（正常系）
+  test("toc_below_tabs_when_scrolled_narrow", async ({ page }) => {
+    // 準備
+    await page.setViewportSize({ width: 390, height: 844 });
+    // 実行
+    await openScrolled(page);
+    // 検証
+    const bottom = await tabsBottom(page);
+    expect((await boxOf(page.locator(".mdmark-side-toc"))).y).toBeGreaterThanOrEqual(bottom);
   });
 });
 
@@ -1493,7 +1692,7 @@ test.describe("本文の用語のツールチップ", () => {
   });
 });
 
-test.describe("project-index に接続できないときの表示", () => {
+test.describe("project-index から文書を受け取れないときの表示", () => {
   // 文書の取得が 503 のとき、接続先と理由を画面全体のアラートに出し、再読み込みで取得を再度呼び出す（異常系）
   test("project_index_unreachable_alert", async ({ page }) => {
     // 準備
@@ -1520,5 +1719,59 @@ test.describe("project-index に接続できないときの表示", () => {
       "接続を拒否されました（Connection refused）",
     ]);
     await expect.poll(() => api.callsOf("document").length).toBeGreaterThan(before);
+  });
+
+  // 文書の取得が 503 の timeout のとき、応答が無かった見出しと説明を出す（異常系）
+  test("project_index_timeout_alert", async ({ page }) => {
+    // 準備
+    await mockApi(page, {
+      document: () =>
+        problem(503, {
+          detail: "project-index（http://127.0.0.1:8786）から応答がありませんでした。70 秒以内に応答がありませんでした",
+          projectIndex: {
+            address: "http://127.0.0.1:8786",
+            reason: "70 秒以内に応答がありませんでした",
+            kind: "timeout",
+          },
+        }),
+    });
+    // 実行
+    await page.goto("/sample/docs/doc-1");
+    // 検証
+    const alert = page.getByRole("alert").filter({ hasText: "project-index から応答がありませんでした" });
+    await expect(alert).toContainText(
+      "project-index が配信元を初めて読み込む間は、時間がかかることがあります。しばらく待ってから、再読み込みしてください。",
+    );
+    await expect(alert.locator("dd")).toHaveText([
+      "http://127.0.0.1:8786",
+      "70 秒以内に応答がありませんでした",
+    ]);
+  });
+
+  // 文書の取得が 502 のとき、処理に失敗した見出しと説明と project-index の理由を出し、スマホ幅で長い理由を折り返す（異常系）
+  test("project_index_failed_alert", async ({ page }) => {
+    // 準備
+    const reason = `git archive --format=tar ${"0123456789abcdef".repeat(5)}: 20 秒を超えたため止めました`;
+    await page.setViewportSize({ width: 390, height: 844 });
+    await mockApi(page, {
+      document: () =>
+        problem(502, {
+          detail: `project-index（http://127.0.0.1:8786）が要求を処理できませんでした。${reason}`,
+          projectIndex: { address: "http://127.0.0.1:8786", reason, kind: "failed" },
+        }),
+    });
+    // 実行
+    await page.goto("/sample/docs/doc-1");
+    // 検証
+    const alert = page.getByRole("alert").filter({ hasText: "project-index が要求を処理できませんでした" });
+    await expect(alert).toContainText(
+      "時間をおいて再読み込みすると、開けることがあります。続くときは、project-index のログで原因を確認してください。",
+    );
+    await expect(alert.locator("dd")).toHaveText(["http://127.0.0.1:8786", reason]);
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= document.documentElement.clientWidth,
+      ),
+    ).toBe(true);
   });
 });

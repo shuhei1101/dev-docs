@@ -17,6 +17,7 @@ from dev_docs.shared.errors import (
     ProjectIndexResponseError,
     ProjectIndexUnreachableError,
     RefNotFoundError,
+    SettingsVersionConflictError,
     SourceNotServedError,
     UnknownSourceError,
 )
@@ -210,9 +211,30 @@ def test_list_documents(
     params = fake_index.requests[-1].url.params
     assert params["ref"] == "8b1d4e0"
     assert params["values"] == "true"
+    assert params["common_keys"] == "true"
     assert listed.ref == "8b1d4e0"
     assert [document.id for document in listed.documents] == ["a", "b"]
     assert listed.documents[0].data == {"id": "a", "name": "A"}
+
+
+def test_fetch_document_list(
+    fake_index: FakeIndex, make_client: Callable[..., ProjectIndexClient]
+) -> None:
+    """応答の本文をそのまま返す（正常系）。"""
+    # 準備
+    fake_index.configs["sample"] = config_json()
+    fake_index.docs["sample"] = {
+        "main": [doc_json("a", "docs/a.yaml"), doc_json("b", "docs/b.yaml")]
+    }
+    # 実行
+    value = asyncio.run(make_client().fetch_document_list("sample", ref="main"))
+    # 検証
+    params = fake_index.requests[-1].url.params
+    assert params["ref"] == "main"
+    assert params["values"] == "true"
+    assert params["common_keys"] == "true"
+    assert value["ref"] == "main"
+    assert [item["id"] for item in value["documents"]] == ["a", "b"]
 
 
 def test_list_documents_when_records(
@@ -274,6 +296,7 @@ def test_document_when_record(
             doc_json(
                 "n-1",
                 "notes/files.yaml",
+                metadata={"id": "n-1", "name": "N1", "aliases": ["作業場所"]},
                 body_path="notes/n-1.md",
                 body="# N1\n",
                 updated="2026-11-12T10:00:00+09:00",
@@ -289,6 +312,7 @@ def test_document_when_record(
     assert (detail.document.body, detail.document.body_path) == ("# N1\n", "notes/n-1.md")
     assert detail.document.updated == datetime.fromisoformat("2026-11-12T10:00:00+09:00")
     assert detail.document.updated.tzinfo is not None
+    assert detail.document.metadata["aliases"] == ["作業場所"]
 
 
 def test_document_when_yaml_unreadable(
@@ -450,6 +474,34 @@ def test_put_settings_sources_when_rejected(
         asyncio.run(make_client().put_settings_sources([{"id": "a"}]))
     # 検証
     assert [item.path for item in caught.value.violations] == ["sources[0].config"]
+    assert [request.method for request in fake_index.requests] == ["PUT"]
+
+
+def test_put_settings_sources_when_expected_version(
+    fake_index: FakeIndex, make_client: Callable[..., ProjectIndexClient]
+) -> None:
+    """内容のバージョンを添えて保存する（正常系）。"""
+    # 準備
+    fake_index.settings = {"settingsPath": "/pi/settings.yaml", "sources": [], "version": "v2"}
+    rows = [{"id": "a", "config": ["/a/project-index.yaml"]}]
+    # 実行
+    view = asyncio.run(make_client().put_settings_sources(rows, expected_version="v1"))
+    # 検証
+    assert json.loads(fake_index.requests[0].content) == {"sources": rows, "expectedVersion": "v1"}
+    assert view.version == "v2"
+
+
+def test_put_settings_sources_when_conflict(
+    fake_index: FakeIndex, make_client: Callable[..., ProjectIndexClient]
+) -> None:
+    """内容のバージョンが古い（異常系）。"""
+    # 準備
+    fake_index.responses[("PUT", "/settings/sources")] = (409, {"current": "v2", "detail": ""})
+    # 実行
+    with pytest.raises(SettingsVersionConflictError) as caught:
+        asyncio.run(make_client().put_settings_sources([{"id": "a"}], expected_version="v1"))
+    # 検証
+    assert caught.value.current == "v2"
     assert [request.method for request in fake_index.requests] == ["PUT"]
 
 

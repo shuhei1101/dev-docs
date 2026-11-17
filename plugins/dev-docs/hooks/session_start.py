@@ -1,4 +1,4 @@
-"""SessionStart のフック。落ちている dev-docs を起動する。
+"""SessionStart のフック。落ちている dev-docs を、systemd --user の unit か切り離したプロセスで起動する。
 
 Usage:
 # Claude Code が stdin に SessionStart の入力の JSON を指定して実行する
@@ -28,6 +28,15 @@ RECONNECT_GUIDE = (
     "このセッションで dev-docs の管理の MCP を使用するには /mcp で dev-docs に再接続してください。"
 )
 CLONE_KEY = "clone:"
+# 起動に使用する systemd --user の unit の名前を持つ環境変数（空の文字列は unit を使用しない）
+UNIT_ENV = "DEV_DOCS_UNIT"
+DEFAULT_UNIT = "dev-docs.service"
+# `systemctl --user` の呼び出しを打ち切る秒数（実測の最大 0.04 秒に 50% を乗せて切り上げた値）
+SYSTEMCTL_TIMEOUT_SEC = 0.1
+
+
+class UnitStartError(Exception):
+    """unit があるか分からないか、unit の起動に失敗したことを表す。本文が理由。"""
 
 
 def is_listening(port: int) -> bool:
@@ -78,6 +87,70 @@ def start_server(clone: Path) -> None:
     )
 
 
+def unit_name(env: Mapping[str, str]) -> str | None:
+    """起動に使用する unit の名前を決める（unit を使用しないときは `None`）。"""
+    value = env.get(UNIT_ENV)
+    # 環境変数が無ければ既定の unit
+    if value is None:
+        return DEFAULT_UNIT
+    # 空の文字列は unit を使用しない
+    return value.strip() or None
+
+
+def unit_exists(unit: str) -> bool:
+    """`systemctl --user cat {unit}` で unit があるかを返却する。"""
+    try:
+        completed = subprocess.run(
+            ["systemctl", "--user", "cat", unit],
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            timeout=SYSTEMCTL_TIMEOUT_SEC,
+            check=False,
+        )
+    except FileNotFoundError:
+        # systemctl が無い端末は unit が無い扱い
+        return False
+    except subprocess.TimeoutExpired as error:
+        # 遅いだけで unit はありうるので、unit が無い扱いにはしない
+        raise UnitStartError(
+            f"systemctl --user cat が {SYSTEMCTL_TIMEOUT_SEC} 秒で終わらなかった"
+        ) from error
+    return completed.returncode == 0
+
+
+def start_unit(unit: str) -> None:
+    """`systemctl --user start --no-block {unit}` で unit の起動を依頼し、待たずに戻る。"""
+    try:
+        completed = subprocess.run(
+            ["systemctl", "--user", "start", "--no-block", unit],
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.PIPE,
+            text=True,
+            timeout=SYSTEMCTL_TIMEOUT_SEC,
+            check=False,
+        )
+    except subprocess.TimeoutExpired as error:
+        raise UnitStartError(
+            f"systemctl --user start が {SYSTEMCTL_TIMEOUT_SEC} 秒で終わらなかった"
+        ) from error
+    except OSError as error:
+        raise UnitStartError(str(error)) from error
+    if completed.returncode != 0:
+        # systemctl の標準エラーを理由にする（空なら終了コード）
+        reason = completed.stderr.strip() or f"終了コード {completed.returncode}"
+        raise UnitStartError(reason)
+
+
+def _unit_unavailable(unit: str, reason: str) -> str:
+    """unit を起動できないことと、状態の確認方法を通知する文を作る。"""
+    return (
+        f"dev-docs の unit {unit} を起動できませんでした（{reason}）。"
+        f"systemctl --user status {unit} で状態を確認してください。"
+    )
+
+
 def _unavailable(reason: str) -> str:
     """起動できないことと、端末の設定の作り方を通知する文を作る。"""
     return (
@@ -108,7 +181,17 @@ def _context(event: dict[str, Any]) -> str | None:
     # 待ち受けているサーバーには何も依頼しない
     if is_listening(port):
         return None
-    # 落ちているサーバーは、端末の設定のクローンで起動する
+    # 落ちているサーバーは、unit があれば unit で起動する
+    unit = unit_name(os.environ)
+    if unit is not None:
+        try:
+            if unit_exists(unit):
+                start_unit(unit)
+                return RECONNECT_GUIDE
+        except UnitStartError as error:
+            # unit の外にプロセスを残さないため、切り離した起動へは切り替えない
+            return _unit_unavailable(unit, str(error))
+    # unit を使用しないか unit が無い端末は、端末の設定のクローンで切り離して起動する
     config = config_path(os.environ)
     return _start_context(read_clone(config), config)
 

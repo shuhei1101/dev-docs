@@ -19,7 +19,10 @@ export const useSaveSources = () => {
   });
   return {
     ...mutation,
-    mutateAsync: (sources: SourceEntry[]) =>
-      mutation.mutateAsync({ data: { sources } }),
+    /** `expectedVersion` は端末の設定の取得の `version`（無ければ本文に入れない） */
+    mutateAsync: (sources: SourceEntry[], expectedVersion?: string | null) =>
+      mutation.mutateAsync({
+        data: expectedVersion ? { sources, expectedVersion } : { sources },
+      }),
   };
 };

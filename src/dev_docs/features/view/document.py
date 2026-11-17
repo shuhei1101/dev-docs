@@ -13,7 +13,6 @@ from dev_docs.features.convert.decisions import DECISION_PAGE_PREFIX, decision_p
 from dev_docs.features.convert.embed import embed_paths
 from dev_docs.features.convert.types import ConvertFailure
 from dev_docs.features.documents.aliases import collect_aliases
-from dev_docs.features.documents.fields import with_row_metadata
 from dev_docs.features.view.nav import build_nav, first_page, mark_nav_changes
 from dev_docs.features.view.paths import find_page, page_path
 from dev_docs.features.view.types import (
@@ -27,14 +26,15 @@ from dev_docs.features.view.types import (
 )
 from dev_docs.integrations.project_index.types import (
     DecisionIndex,
-    DocumentList,
     IndexedDocument,
     IndexFailure,
     SourceView,
+    parse_document_list,
 )
 from dev_docs.shared.errors import (
     DevDocsError,
     DocumentNotFoundError,
+    ProjectIndexUnreachableError,
     RefNotFoundError,
     SourceNotServedError,
     UnknownSourceError,
@@ -44,6 +44,9 @@ if TYPE_CHECKING:
     from dev_docs.main import Handlers
 
 logger = logging.getLogger(__name__)
+
+# 文書の取得全体を打ち切る秒数（非機能要件の document_fetch_timeout）
+DOCUMENT_FETCH_TIMEOUT_SEC: float = 70
 
 
 def _aliases(view: SourceView, documents: Sequence[IndexedDocument]) -> list[AliasItem]:
@@ -111,11 +114,8 @@ async def _diff(
     diff_ref: str,
 ) -> tuple[DocumentDiff, list[NavTab]]:
     """`diff_ref` と比べた差分の結果と、サイドバーの変化を付けたタブを作る。"""
-    listed_base = await handlers.project_index.list_documents(
+    base = await handlers.project_index.list_documents(
         view.id, ref=diff_ref, record_kinds=view.record_kinds()
-    )
-    base = DocumentList(
-        ref=listed_base.ref, documents=with_row_metadata(view, listed_base.documents)
     )
     before = next((d for d in base.documents if d.id == document.id), None)
     change: Literal["added", "modified"] | None
@@ -176,10 +176,36 @@ async def get_document(
     diff_ref: str | None,
 ) -> DocumentResponse:
     """配信元の文書を変換した Markdown と、タブ・差分の項目・列の設定を返却する。"""
+    # 文書の取得全体の制限時間。途中の問い合わせも取り消すため、問い合わせごとの制限時間は残り時間を超えない
+    limit = DOCUMENT_FETCH_TIMEOUT_SEC
+    try:
+        async with asyncio.timeout(limit):
+            return await _get_document(
+                source_id, path, handlers=handlers, ref=ref, diff_ref=diff_ref
+            )
+    except TimeoutError as error:
+        raise ProjectIndexUnreachableError(
+            address=handlers.project_index.address,
+            reason=f"{limit:g} 秒以内に応答がありませんでした",
+            kind="timeout",
+        ) from error
+
+
+async def _get_document(
+    source_id: str,
+    path: str | None,
+    *,
+    handlers: Handlers,
+    ref: str | None,
+    diff_ref: str | None,
+) -> DocumentResponse:
+    """文書の取得の本体（制限時間の外側は `get_document` が持つ）。"""
     client = handlers.project_index
-    view = await client.source_view(source_id)
-    listed = await client.list_documents(source_id, ref=ref, record_kinds=view.record_kinds())
-    listed = DocumentList(ref=listed.ref, documents=with_row_metadata(view, listed.documents))
+    # 配信元の設定・リビジョン（source_view の中）と文書の一覧を同時に問い合わせる
+    view, listed_value = await asyncio.gather(
+        client.source_view(source_id), client.fetch_document_list(source_id, ref=ref)
+    )
+    listed = parse_document_list(source_id, listed_value, record_kinds=view.record_kinds())
     tabs = build_nav(view, listed.documents)
     columns = await asyncio.to_thread(handlers.columns.get, view.id)
     github = (

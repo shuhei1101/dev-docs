@@ -89,7 +89,7 @@ constants:
     title: 幅を広く取る列のキー
     container: features/convert/markdown.py
     usecase: 文書の取得
-    summary: 表の `wide=` に記載する説明の列のキー
+    summary: 表のマーカーの `columns.{列名}.width.mode` を `nowrap` にする説明の列のキー
     value: '`description`・`summary`・`notes`'
   - name: LABEL_KEYS
     title: 図の元データの先頭の列のキー
@@ -101,7 +101,7 @@ constants:
     title: 図の元データで隠す列のキー
     container: features/convert/markdown.py
     usecase: 文書の取得
-    summary: 図の元データの表の `+columns hide=` に記載する列のキー（先頭の列にしたものは除く）
+    summary: 図の元データの表のマーカーの `columns.{列名}.hidden` を `true` にする列のキー（先頭の列にしたものは除く）
     value: '`id`'
   - name: TEST_FILE_KEYS
     title: 対応テストファイルのキー
@@ -159,8 +159,8 @@ functions:
       2. スキーマの `properties` の順に値を組み立てる（値が空のキーと、スキーマに `x-hidden: true` を持つキーは飛ばす）
          - `x-heading` を持つ値は、深さ 2 から始まる見出し（`x-heading` の文字列、要素なら `x-key` の値）を置く。深さは `MAX_HEADING_LEVEL` で止める
          - 見出しも `x-shape` も持たないスカラーが `ATTRIBUTE_MIN` 以上続く間は、まとめて属性の表の組み立てにかける
-         - `x-shape` で本文を組み立てる（`Shape`）。`table` は表の組み立て、`diagram` は図の組み立て（見出しの `title` は項目の `title`、`scope` は文書の見出し、`updated` は文書の `updated` の日付。`x-diagram: er` は文書の `tables` の値を `tables` に渡す）と、値の中のオブジェクトのリストごとの図の元データの表、`sections` は子を 1 つ深い見出しで再帰、`attributes` は属性の表の組み立て
-         - `TEST_FILE_KEYS` の値は、項目の `title` を列名にした 1 列の閉じた表（`<!-- table: plain closed -->`）にし、セルは引き先にあればリンク、無ければ行内のコードにする
+         - `x-shape` で本文を組み立てる（`Shape`）。`table` は表の組み立て、`diagram` は図の組み立て（見出しの `title` は項目の `title`、`scope` は文書の見出し、`updated` は文書の `updated` の日付。`x-diagram: er` は文書の `tables` の値を `tables` に渡す。`link` は、描画の文脈を渡したリンク先の引き方）と、値の中のオブジェクトのリストごとの図の元データの表、`sections` は子を 1 つ深い見出しで再帰、`attributes` は属性の表の組み立て
+         - `TEST_FILE_KEYS` の値は、項目の `title` を列名にした 1 列の閉じた表（`<!-- table: {"kind": "plain", "collapse": {"open": false}} -->`）にし、セルは引き先にあればリンク、無ければ行内のコードにする
          - キーが `EXAMPLE_SUFFIX` で終わる値が続く間は、`<!-- tabs -->` の範囲に、値ごとに今の深さの見出し（項目の `title`）と本文の書き換えにかけた値を置く
          - `x-shape` が無いスカラーは、参照のリンクに当たればそのリンクを、当たらなければ本文の書き換えにかけた値を使う。改行を含むか ``` で始まる値は `**{title}**` の行の次のブロックに、それ以外は `**{title}**: {値}` の段落にする
          - 文字列のリストは、要素ごとに参照のリンクか本文の書き換えにかけた箇条書き、オブジェクトは子を順に組み立てる
@@ -215,13 +215,13 @@ functions:
         summary: 図と元データの表
         condition: '`x-shape: diagram`・`x-diagram: flowchart` の `nodes`（`id`・`label`・`kind`）と `edges`'
         mock: なし
-        expected: '`<!-- flow -->` の範囲、先頭の列が `label` の `title` で `+columns hide=` に `id` の `title` だけを持つ閉じたノードの表（`kind` の列は隠さない）、`hide=` の無い閉じた辺の表'
+        expected: 'map の範囲、先頭の列が `label` の `title` で、マーカーの `columns` の `hidden` が `true` の列が `id` の `title` だけの閉じたノードの表（`kind` の列は隠さない）、`hidden` の列を持たない閉じた辺の表'
       - name: test_schema_to_markdown_when_test_files
         case: 正常
         summary: 対応テストファイル
         condition: '`test_file` が引き先にあるパスの文書'
         mock: なし
-        expected: '`<!-- table: plain closed -->` の 1 列の表で、セルがその文書へのリンク'
+        expected: '`<!-- table: {"kind": "plain", "collapse": {"open": false}} -->` の 1 列の表で、セルがその文書へのリンク'
       - name: test_schema_to_markdown_when_examples
         case: 正常
         summary: リクエスト例とレスポンス例
@@ -233,7 +233,7 @@ functions:
         summary: ER 図にテーブルの列を渡す
         condition: '`x-shape: diagram`・`x-diagram: er` の `er`（`columns` を持たない実体 `顧客`）と、`title: 顧客` のテーブルを持つ `tables`'
         mock: なし
-        expected: '`<!-- er -->` の範囲の JSON の `顧客` の `columns` が `tables` のテーブルの列'
+        expected: 'map の範囲の `erDiagram` の `顧客` の列が `tables` のテーブルの列（`bigint id`）'
       - name: test_schema_to_markdown_when_decisions
         case: 正常
         summary: 箇条書きの検討事項のリンク
@@ -335,7 +335,7 @@ functions:
         required: false
         default: 'False'
         passing: keyword
-        description: '`True` なら表のマーカーに `closed` を付ける'
+        description: '`True` なら表のマーカーに `"collapse": {"open": false}` を付ける'
       - name: first
         title: 先頭の列
         type: str | None
@@ -349,14 +349,14 @@ functions:
         required: false
         default: ()
         passing: keyword
-        description: '`+columns hide=` に記載する列のキー。表に無いキーと先頭の列は除く'
+        description: 表のマーカーの `columns.{列名}.hidden` を `true` にする列のキー。表に無いキーと先頭の列は除く
     returns:
       type: str
-      description: '表のキーのマーカーと、`<!-- table: data … -->` で囲んだ表'
+      description: '表のキーのマーカーと、`<!-- table: {"kind": "data", …} -->` で囲んだ表'
     process: |-
       1. 列をスキーマの `properties` の順に決める（要素のどれも値を持たない列と、スキーマに `x-hidden: true` を持つ列は除く）。`first` が列にあれば先頭へ移す
       2. セルは、真偽の値は `CHECK_MARK` か空、参照のリンクに当たる文字列はリンク、それ以外のスカラーはそのまま（`|` はエスケープ、改行は `<br>`）、文字列のリストは `・` で繋ぐ（列のキーが `DECISIONS_KEY` のリストは、先に検討事項のリンクにかける）。`table` を持つオブジェクト（外部キー）は、`table` の値を最後の `.` でテーブルとカラムに分け、テーブルが `{分類}/{テーブル}` なら同じフォルダの `{分類}.yaml` の文書へのリンク、そうでなければ、テーブル名を `table_titles` で論理名にし（当たらなければテーブル名のまま）、`anchors` でその論理名から引いた見出しのアンカー（見出しのアンカー）へのリンク（どちらも引けなければ値の文字のまま）、それ以外のオブジェクトは `{キー}: {値}` を `、` で繋ぎ、オブジェクトのリストは要素ごとのセルを `<br>` で繋ぐ
-      3. 表のマーカーの引数は、`data` に、`closed` なら `closed`、隠す列があれば `+columns hide={列名,…}`、`WIDE_KEYS` の列があれば `wide={列名,…}` を続ける（空白を含む列名は記載しない）
+      3. 表のマーカーの引数は、`{"kind": "data"}` に、`closed` なら `"collapse": {"open": false}`、隠す列と `WIDE_KEYS` の列があれば `"columns"` に列名ごとの `{"hidden": true}`・`{"width": {"mode": "nowrap"}}`（同じ列は 1 つのオブジェクトにまとめる）を加えた JSON を、`json.dumps(..., ensure_ascii=False)` の 1 行で記載する
       4. `<!-- dev-docs-table: {table_key} -->`・表のマーカー・見出しの行・区切りの行・データの行・`<!-- /table -->` の順に置いて返す
     unit_tests:
       - name: test_schema_to_markdown_when_foreign_key
@@ -394,13 +394,13 @@ functions:
         summary: 閉じた表と隠す列
         condition: '`closed=True`・`first="label"`・`hidden=["id", "shape"]` で、`id`・`label`・`shape`・`kind` の列の行'
         mock: なし
-        expected: '先頭の列が `label` の列で、マーカーが `<!-- table: data closed +columns hide={id の列名},{shape の列名} -->`（`kind` の列は隠さない）'
+        expected: '先頭の列が `label` の列で、マーカーが `<!-- table: {"kind": "data", "collapse": {"open": false}, "columns": {"{id の列名}": {"hidden": true}, "{shape の列名}": {"hidden": true}}} -->`（`kind` の列は隠さない）'
       - name: test_render_table_when_wide
         case: 正常
         summary: 説明の列
         condition: '`name`・`description` の列の行'
         mock: なし
-        expected: 'マーカーに `wide={description の列名}` がある'
+        expected: 'マーカーの `columns` の `{description の列名}` が `{"width": {"mode": "nowrap"}}`'
       - name: test_render_table_when_decisions
         case: 正常
         summary: 表のセルの検討事項のリンク
@@ -437,7 +437,7 @@ functions:
         description: 行の詳細の値を本文の書き換えにかけるときの見出し
     returns:
       type: str
-      description: '`<!-- table: plain -->` で囲んだ表と、長い値の行の詳細'
+      description: '`<!-- table: {"kind": "plain"} -->` で囲んだ表と、長い値の行の詳細'
     process: |-
       1. 列名を `項目`・`値` にし、組ごとに 1 行を置く。真偽の値は `CHECK_MARK` か空、参照のリンクに当たる値はリンクにする
       2. `LONG_VALUE_CHARS` を超える値と改行を含む値は、セルに最初の行の先頭 `LONG_VALUE_CHARS` 文字と `…` を置き、表の後ろの `<!-- row-detail: {行の位置} -->` 〜 `<!-- /row-detail -->` に本文の書き換えにかけた値を置く

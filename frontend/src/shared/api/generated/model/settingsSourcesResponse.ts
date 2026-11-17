@@ -11,4 +11,5 @@ import type { SettingsSourceStatus } from './settingsSourceStatus';
  */
 export interface SettingsSourcesResponse {
   sources: SettingsSourceStatus[];
+  version?: string | null;
 }

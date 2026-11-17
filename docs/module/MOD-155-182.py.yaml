@@ -41,6 +41,12 @@ constants:
     usecase: 起動
     summary: ファイル名にハッシュを持つ assets の `Cache-Control`
     value: '"public, max-age=31536000, immutable"'
+  - name: MDMARK_VERSION_META
+    title: mdmark のバージョンの meta の名前
+    container: server/screen.py
+    usecase: 起動
+    summary: '`index.html` の `<head>` に入れる、画面が読み込む mdmark のバージョンの `<meta>` の `name`'
+    value: '"mdmark-version"'
 functions:
   - name: build_screen_router
     title: 画面の配信
@@ -57,6 +63,12 @@ functions:
         required: true
         passing: positional
         description: Vite の出力先（`index.html` と `assets/`）
+      - name: mdmark_version
+        title: mdmark のバージョン
+        type: str
+        required: true
+        passing: keyword
+        description: '`index.html` の `MDMARK_VERSION_META` の `<meta>` に入れる値（端末の設定の `mdmark_version`）'
     returns:
       type: fastapi.APIRouter
       description: GET `/{path:path}` と、`NON_GET_METHODS` の `/{path:path}` を持つルーター（どちらも `include_in_schema=False`）
@@ -65,7 +77,7 @@ functions:
 
       1. パスの最初の区切りが `EXCLUDED_PREFIXES` のどれかなら、`HTTPException(404)` を送る（API・MCP の誤ったパスに画面を返さない）
       2. パスが `assets/` で始まるときは、`dist_dir` の下のファイルを `FileResponse` で返し、`Cache-Control` を `IMMUTABLE_CACHE` にする。ファイルが無い・解決したパスが `dist_dir` の外のときは `HTTPException(404)` を送る
-      3. それ以外のパスは、`dist_dir / "index.html"` を `Cache-Control: no-cache` で返す（どの URL も SPA が描く）
+      3. それ以外のパスは、`dist_dir / "index.html"` を読み、最初の `<head>` の直後に `<meta name="{MDMARK_VERSION_META}" content="{mdmark_version}">`（`content` は `html.escape` する）を入れて、`HTMLResponse` で `Cache-Control: no-cache` で返す（どの URL も SPA が描く）。ファイルの `index.html` は書き換えない
       4. `index.html` が無いときは `ScreenBuildMissingError` を送る
 
       `NON_GET_METHODS` の要求:
@@ -87,9 +99,15 @@ functions:
       - name: test_build_screen_router
         case: 正常
         summary: 文書の URL に index.html を返す
-        condition: '`index.html` を置いた一時フォルダで GET `/default/設計書/a.md`'
+        condition: '`<head>` を持つ `index.html` を置いた一時フォルダで、`mdmark_version` に `develop` を渡して GET `/default/設計書/a.md`'
         mock: なし（一時フォルダ）
-        expected: 200、本文が `index.html` の中身、`Cache-Control` が `no-cache`
+        expected: 200、本文が `index.html` の中身に `<meta name="mdmark-version" content="develop">` を入れたもの、`Cache-Control` が `no-cache`
+      - name: test_build_screen_router_when_mdmark_version
+        case: 正常
+        summary: 指定した mdmark のバージョンを meta に入れる
+        condition: '`<head>` を持つ `index.html` を置いた一時フォルダで、`mdmark_version` に `v0.13.0` を渡して GET `/`'
+        mock: なし（一時フォルダ）
+        expected: 本文の `<head>` の直後に `<meta name="mdmark-version" content="v0.13.0">` が 1 つだけあり、一時フォルダの `index.html` は変わっていない
       - name: test_build_screen_router_when_asset
         case: 正常
         summary: assets のファイルを長く持たせて返す

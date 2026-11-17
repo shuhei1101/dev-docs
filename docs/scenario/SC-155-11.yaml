@@ -60,6 +60,40 @@ scenarios:
       - 一覧の extra が無効になる
       - extra の文書の画面を開くと見つからない画面になり、sample の文書の画面は開ける
     test: test_normal_when_source_disabled
+  - name: 異常シナリオ（ほかのプロセスが端末の設定を書き換えた後に削除する）
+    setup:
+      - name: Mock
+        description: なし（実環境で実行。ブラウザで画面を開く）
+      - name: 端末の設定
+        description: project-index の `PROJECT_INDEX_CONFIG` が指す一時フォルダの `settings.yaml`
+        notes: '`sources` に sample と extra の 2 行'
+      - name: ほかのプロセスの書き換え
+        description: 設定画面を開いた後に、project-index の 1 行の変更（PATCH `/settings/sources/sample`）で sample の行の `enabled` を `false` にする
+        notes: MindStella などのほかのプロセスの代わり
+      - name: dev-docs
+        description: その project-index につないで起動した dev-docs
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        actor U as 利用者
+        participant UI as dev-docs の画面
+        participant API as 画面の API
+        participant PI as project-index
+
+        U->>UI: 設定画面を開く
+        Note over PI: ほかのプロセスが sample の行を書き換える
+        U->>UI: extra を削除し、確認のダイアログで削除する
+        UI->>API: 端末の設定の保存（開いたときの内容のバージョンを添える）
+        API->>PI: 端末の設定の配信元の保存（内容のバージョンを添える）
+        PI-->>API: 409（今の内容のバージョン）
+        API-->>UI: 409
+        UI->>API: 端末の設定の取得
+        UI-->>U: ほかの書き換えが入ったことと、取得し直した一覧
+      ```
+    expected:
+      - ほかの書き換えが入って削除しなかったことが出て、一覧に extra が残り、sample が無効で出る
+      - '`settings.yaml` に extra の行が残り、sample の行の `enabled` は `false` のまま'
+    test: test_error_when_settings_changed_by_another_process
 lead: 利用者が設定画面で配信元の配信を止めるか、project-index の端末の設定から削除し、dev-docs と project-index を再起動せずに配信から外す。
 issue: 17
 primary_actor: 利用者
@@ -70,7 +104,7 @@ trigger: 利用者が設定画面で配信元を編集して配信するを外�
 preconditions:
   - dev-docs が起動して project-index につながり、project-index の端末の設定に配信元が並んでいる
 success_guarantee: 外した配信元だけが `settings.yaml` で無効になるか行ごと消え、読み直した後は配信されない。
-minimal_guarantee: 配信元のフォルダのファイルは変えない。他の配信元の配信は止まらない。
+minimal_guarantee: 配信元のフォルダのファイルは変えない。他の配信元の配信は止まらない。設定画面を開いた後にほかのプロセスが端末の設定を書き換えていたときは、端末の設定を書き換えない。
 frequency: 配信元を使わなくなったとき
 priority: 低
 refs:

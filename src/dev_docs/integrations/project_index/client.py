@@ -5,7 +5,7 @@ from __future__ import annotations
 import asyncio
 from collections.abc import Collection, Mapping
 from datetime import datetime
-from typing import Any
+from typing import Any, Literal
 from urllib.parse import quote
 
 import httpx
@@ -27,7 +27,7 @@ from dev_docs.integrations.project_index.types import (
     SourceState,
     SourceView,
     parse_datetime,
-    parse_document,
+    parse_document_list,
 )
 from dev_docs.shared.errors import (
     DocumentNotFoundError,
@@ -36,6 +36,7 @@ from dev_docs.shared.errors import (
     ProjectIndexResponseError,
     ProjectIndexUnreachableError,
     RefNotFoundError,
+    SettingsVersionConflictError,
     SourceNotServedError,
     UnknownSourceError,
     Violation,
@@ -127,8 +128,10 @@ class ProjectIndexClient:
         """HTTP のクライアントを閉じる。"""
         await self._client.aclose()
 
-    def _unreachable(self, reason: str) -> ProjectIndexUnreachableError:
-        return ProjectIndexUnreachableError(address=self.address, reason=reason)
+    def _unreachable(
+        self, reason: str, *, kind: Literal["unreachable", "timeout"] = "unreachable"
+    ) -> ProjectIndexUnreachableError:
+        return ProjectIndexUnreachableError(address=self.address, reason=reason, kind=kind)
 
     async def request(
         self,
@@ -148,7 +151,7 @@ class ProjectIndexClient:
         except httpx.ConnectError as error:
             raise self._unreachable(REFUSED_REASON) from error
         except (TimeoutError, httpx.TimeoutException) as error:
-            raise self._unreachable(timed_out) from error
+            raise self._unreachable(timed_out, kind="timeout") from error
         except httpx.TransportError as error:
             raise self._unreachable(str(error)) from error
         status = response.status_code
@@ -198,6 +201,8 @@ class ProjectIndexClient:
             message=f"project-index が {status} を返却しました: {summary}",
             status_code=status,
             summary=summary,
+            address=self.address,
+            reason=detail or summary,
         )
 
     async def list_sources(self) -> list[SourceState]:
@@ -233,7 +238,6 @@ class ProjectIndexClient:
                     search=bool(row.get("search", True)),
                     converter=row.get("converter"),
                     alias_type=row.get("alias_type"),
-                    metadata={str(k): str(v) for k, v in (row.get("metadata") or {}).items()},
                 )
                 for row in value.get("documents") or []
             ],
@@ -242,6 +246,18 @@ class ProjectIndexClient:
             github_repository=github.get("repository"),
             github_issue_labels=list(github.get("issueLabels") or []),
         )
+
+    async def fetch_document_list(
+        self, source: str, *, ref: str | None = None, values: bool = True
+    ) -> Mapping[str, Any]:
+        """リビジョンの全ての文書の応答の本文を、行の文書の種類を知る前に返却する。"""
+        response = await self.request(
+            "GET",
+            f"/sources/{_seg(source)}/docs",
+            params={"ref": ref, "values": "true" if values else None, "common_keys": "true"},
+        )
+        value = response.json()
+        return value if isinstance(value, Mapping) else {}
 
     async def list_documents(
         self,
@@ -252,22 +268,8 @@ class ProjectIndexClient:
         values: bool = True,
     ) -> DocumentList:
         """リビジョンの全ての文書を返却する。"""
-        response = await self.request(
-            "GET",
-            f"/sources/{_seg(source)}/docs",
-            params={"ref": ref, "values": "true" if values else None},
-        )
-        value = response.json()
-        positions: dict[str, int] = {}
-        documents: list[IndexedDocument] = []
-        for item in value.get("documents") or []:
-            record_index: int | None = None
-            if item.get("kind") in record_kinds:
-                path = str(item.get("path", ""))
-                record_index = positions.get(path, 0)
-                positions[path] = record_index + 1
-            documents.append(parse_document(source, item, record_index=record_index))
-        return DocumentList(ref=value.get("ref") or None, documents=documents)
+        value = await self.fetch_document_list(source, ref=ref, values=values)
+        return parse_document_list(source, value, record_kinds=record_kinds)
 
     async def document(
         self,
@@ -288,13 +290,17 @@ class ProjectIndexClient:
         metadata = value.get("metadata") or {}
         document: IndexedDocument | None = None
         if value.get("value") is not None:
+            listed = {key: metadata.get(key) for key in LISTED_METADATA_KEYS}
+            common_keys = metadata.get("commonKeys")
+            if isinstance(common_keys, Mapping):
+                listed.update(common_keys)
             document = IndexedDocument(
                 id=str(metadata.get("id", "")),
                 kind=str(metadata.get("kind", "")),
                 source_id=source,
                 path=str(value.get("path", path)),
                 data=dict(value["value"]),
-                metadata={key: metadata.get(key) for key in LISTED_METADATA_KEYS},
+                metadata=listed,
                 version="",
                 body=str(value.get("body") or ""),
                 body_path=value.get("bodyPath"),
@@ -383,9 +389,21 @@ class ProjectIndexClient:
         response = await self.request("GET", "/settings/sources")
         return self._settings(response.json())
 
-    async def put_settings_sources(self, rows: list[dict[str, Any]]) -> SettingsSourcesView:
-        """`sources[]` の全行の保存と読み直しを依頼し、保存した後の行と状態を返却する。"""
-        await self.request("PUT", "/settings/sources", body={"sources": rows})
+    async def put_settings_sources(
+        self, rows: list[dict[str, Any]], *, expected_version: str | None = None
+    ) -> SettingsSourcesView:
+        """`sources[]` の全行の保存と読み直しを依頼し、保存した後の行・状態・内容のバージョンを返却する。"""
+        body: dict[str, Any] = {"sources": rows}
+        if expected_version is not None:
+            body["expectedVersion"] = expected_version
+        response = await self.request("PUT", "/settings/sources", body=body)
+        # 取得した後に端末の設定が変わった: 今の内容のバージョンを添えて例外にする
+        if response.status_code == HTTP_CONFLICT:
+            raise SettingsVersionConflictError(
+                message="端末の設定は他の書き換えで変わっています",
+                current=str(response.json().get("current", "")),
+            )
+        # PUT の応答は行（`config`・`scope`）を持たないため、取得し直す
         return await self.settings_sources()
 
     async def save_settings_sources(

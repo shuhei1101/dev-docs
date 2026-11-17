@@ -12,7 +12,12 @@ from fastapi.responses import JSONResponse, PlainTextResponse, Response
 from pydantic.alias_generators import to_camel
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
-from dev_docs.shared.errors import DevDocsError, InvalidArgumentError, ProjectIndexUnreachableError
+from dev_docs.shared.errors import (
+    DevDocsError,
+    InvalidArgumentError,
+    ProjectIndexResponseError,
+    ProjectIndexUnreachableError,
+)
 from dev_docs.shared.schema_check import format_path
 
 logger = logging.getLogger(__name__)
@@ -54,10 +59,33 @@ def _problem(
 def problem_of(error: DevDocsError, fields: dict[str, Any] | None = None) -> JSONResponse:
     """`DevDocsError` を problem+json の応答にする（`fields` は本文に追加する値）。"""
     details = error.details()
+    detail = error.message
     if isinstance(error, ProjectIndexUnreachableError):
         # つながらなかった接続先と理由は 1 階層目に配置せず `projectIndex` にまとめる
-        details = {"project_index": {"address": error.address, "reason": error.reason}}
-        logger.error("project-index につながらない（%s・%s）", error.address, error.reason)
+        details = {
+            "project_index": {
+                "address": error.address,
+                "reason": error.reason,
+                "kind": error.kind,
+            }
+        }
+        logger.error(
+            "project-index につながらない（%s・%s・%s）", error.address, error.reason, error.kind
+        )
+    elif isinstance(error, ProjectIndexResponseError) and error.address:
+        # project-index が処理に失敗したときも、接続先と理由を `projectIndex` にまとめる
+        details = {
+            "status_code": error.status_code,
+            "summary": error.summary,
+            "project_index": {"address": error.address, "reason": error.reason, "kind": "failed"},
+        }
+        detail = f"project-index（{error.address}）が要求を処理できませんでした。{error.reason}"
+        logger.error(
+            "project-index が処理に失敗した（%s・%s・%s）", error.address, error.reason, "failed"
+        )
+    elif isinstance(error, ProjectIndexResponseError):
+        # 接続先を持たない想定しない応答は、今までどおり状態コードと本文の先頭だけを返す
+        details = {"status_code": error.status_code, "summary": error.summary}
     extra: dict[str, Any] = {
         "nextSteps": error.next_steps,
         **{to_camel(key): _camelize(value) for key, value in details.items()},
@@ -68,7 +96,7 @@ def problem_of(error: DevDocsError, fields: dict[str, Any] | None = None) -> JSO
             {"path": item.path, "reason": item.rule, **({"fix": item.fix} if item.fix else {})}
             for item in violations
         ]
-    return _problem(error.name, error.status, error.message, {**extra, **(fields or {})})
+    return _problem(error.name, error.status, detail, {**extra, **(fields or {})})
 
 
 def register_error_handlers(app: FastAPI) -> None:

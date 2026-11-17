@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import io
 import json
+import os
 import socket
 import time
 from collections.abc import Callable, Iterator
@@ -32,6 +33,17 @@ def _listening() -> Iterator[int]:
 def _stdin(monkeypatch: pytest.MonkeyPatch, text: str) -> None:
     """標準入力を、指定した文字列に差し替える。"""
     monkeypatch.setattr("sys.stdin", io.StringIO(text))
+
+
+def _systemctl(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, body: str) -> Path:
+    """`PATH` の先頭に、本文を実行する偽物の `systemctl` を配置し、置いたフォルダを返却する。"""
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    script = bin_dir / "systemctl"
+    script.write_text(f"#!/bin/sh\n{body}\n", encoding="utf-8")
+    script.chmod(0o755)
+    monkeypatch.setenv("PATH", f"{bin_dir}:{os.environ.get('PATH', '')}")
+    return bin_dir
 
 
 def test_main_when_listening(
@@ -92,6 +104,7 @@ def test_main_when_down(
     monkeypatch.setattr(hook, "is_listening", lambda port: False)
     monkeypatch.setattr(hook, "start_server", started.append)
     monkeypatch.setenv("DEV_DOCS_CONFIG", str(config))
+    monkeypatch.setenv("DEV_DOCS_UNIT", "")
     _stdin(
         monkeypatch,
         json.dumps({"session_id": "s1", "cwd": "/repo", "source": "startup"}),
@@ -263,3 +276,176 @@ def test_start_server_when_no_venv(load_hook: Callable[[str], ModuleType], tmp_p
     # 実行・検証
     with pytest.raises(FileNotFoundError):
         hook.start_server(tmp_path)
+
+
+def _down_unit_hook(
+    load_hook: Callable[[str], ModuleType], monkeypatch: pytest.MonkeyPatch
+) -> tuple[ModuleType, list[Path]]:
+    """ポートにつながらず、`DEV_DOCS_UNIT` が `x.service` のフックと、サーバーの起動の記録を返却する。"""
+    hook = load_hook("session_start")
+    started: list[Path] = []
+    monkeypatch.setattr(hook, "is_listening", lambda port: False)
+    monkeypatch.setattr(hook, "start_server", started.append)
+    monkeypatch.setenv("DEV_DOCS_UNIT", "x.service")
+    _stdin(monkeypatch, json.dumps({"session_id": "s1", "cwd": "/repo", "source": "startup"}))
+    return hook, started
+
+
+def test_main_when_unit_exists(
+    load_hook: Callable[[str], ModuleType],
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """unit があれば unit を起動する（正常系）。"""
+    # 準備
+    hook, started = _down_unit_hook(load_hook, monkeypatch)
+    units: list[str] = []
+    monkeypatch.setattr(hook, "unit_exists", lambda unit: True)
+    monkeypatch.setattr(hook, "start_unit", units.append)
+    # 実行
+    code = hook.main()
+    # 検証
+    output = json.loads(capsys.readouterr().out)
+    assert code == 0
+    assert units == ["x.service"]
+    assert output["hookSpecificOutput"]["additionalContext"] == hook.RECONNECT_GUIDE
+    assert started == []
+
+
+def test_main_when_unit_start_fails(
+    load_hook: Callable[[str], ModuleType],
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """unit を起動できなければ理由を案内し、切り離しては起動しない（異常系）。"""
+    # 準備
+    hook, started = _down_unit_hook(load_hook, monkeypatch)
+
+    def fail(unit: str) -> None:
+        raise hook.UnitStartError("Failed to start")
+
+    monkeypatch.setattr(hook, "unit_exists", lambda unit: True)
+    monkeypatch.setattr(hook, "start_unit", fail)
+    # 実行
+    code = hook.main()
+    # 検証
+    context = json.loads(capsys.readouterr().out)["hookSpecificOutput"]["additionalContext"]
+    assert code == 0
+    assert "x.service" in context
+    assert "Failed to start" in context
+    assert started == []
+
+
+def test_main_when_unit_check_times_out(
+    load_hook: Callable[[str], ModuleType],
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """unit の有無が打ち切られたら理由を案内し、どちらの起動もしない（異常系）。"""
+    # 準備
+    hook, started = _down_unit_hook(load_hook, monkeypatch)
+    units: list[str] = []
+
+    def timeout(unit: str) -> bool:
+        raise hook.UnitStartError("systemctl --user cat が 0.1 秒で終わらなかった")
+
+    monkeypatch.setattr(hook, "unit_exists", timeout)
+    monkeypatch.setattr(hook, "start_unit", units.append)
+    # 実行
+    code = hook.main()
+    # 検証
+    context = json.loads(capsys.readouterr().out)["hookSpecificOutput"]["additionalContext"]
+    assert code == 0
+    assert "x.service" in context
+    assert units == []
+    assert started == []
+
+
+def test_unit_name(load_hook: Callable[[str], ModuleType]) -> None:
+    """既定と指定（正常系）。"""
+    # 準備
+    hook = load_hook("session_start")
+    # 実行
+    default = hook.unit_name({})
+    given = hook.unit_name({"DEV_DOCS_UNIT": "x.service"})
+    # 検証
+    assert default == "dev-docs.service"
+    assert given == "x.service"
+
+
+def test_unit_name_when_empty(load_hook: Callable[[str], ModuleType]) -> None:
+    """空の文字列は unit を使用しない（正常系）。"""
+    # 準備
+    hook = load_hook("session_start")
+    # 実行
+    result = hook.unit_name({"DEV_DOCS_UNIT": ""})
+    # 検証
+    assert result is None
+
+
+def test_unit_exists(
+    load_hook: Callable[[str], ModuleType], monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """終了コードで unit の有無を分ける（正常系）。"""
+    # 準備
+    hook = load_hook("session_start")
+    _systemctl(tmp_path, monkeypatch, '[ "$3" = "ok.service" ] && exit 0\nexit 1')
+    # 実行
+    found = hook.unit_exists("ok.service")
+    missing = hook.unit_exists("ng.service")
+    # 検証
+    assert found is True
+    assert missing is False
+
+
+def test_unit_exists_when_no_systemctl(
+    load_hook: Callable[[str], ModuleType], monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """systemctl が無い（正常系）。"""
+    # 準備
+    hook = load_hook("session_start")
+    empty = tmp_path / "empty"
+    empty.mkdir()
+    monkeypatch.setenv("PATH", str(empty))
+    # 実行
+    result = hook.unit_exists("dev-docs.service")
+    # 検証
+    assert result is False
+
+
+def test_unit_exists_when_timeout(
+    load_hook: Callable[[str], ModuleType], monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """systemctl が打ち切られる（異常系）。"""
+    # 準備
+    hook = load_hook("session_start")
+    _systemctl(tmp_path, monkeypatch, "sleep 1")
+    # 実行・検証
+    with pytest.raises(hook.UnitStartError, match="systemctl --user cat"):
+        hook.unit_exists("dev-docs.service")
+
+
+def test_start_unit(
+    load_hook: Callable[[str], ModuleType], monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """unit の起動を依頼する（正常系）。"""
+    # 準備
+    hook = load_hook("session_start")
+    record = tmp_path / "args.txt"
+    _systemctl(tmp_path, monkeypatch, f'echo "$@" > "{record}"')
+    # 実行
+    hook.start_unit("x.service")
+    # 検証
+    assert record.read_text(encoding="utf-8").strip() == "--user start --no-block x.service"
+
+
+def test_start_unit_when_failed(
+    load_hook: Callable[[str], ModuleType], monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """unit の起動に失敗する（異常系）。"""
+    # 準備
+    hook = load_hook("session_start")
+    _systemctl(tmp_path, monkeypatch, 'echo "Failed to start x.service" >&2\nexit 1')
+    # 実行・検証
+    with pytest.raises(hook.UnitStartError, match="Failed to start"):
+        hook.start_unit("x.service")

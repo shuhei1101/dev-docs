@@ -3,10 +3,13 @@ from __future__ import annotations
 import json
 import re
 import subprocess
+import threading
 import time
 from collections.abc import Callable
 from datetime import UTC, datetime
+from pathlib import Path
 from typing import Any
+from urllib.parse import urlsplit
 
 import pytest
 
@@ -110,15 +113,10 @@ command: |-
 items:
   - {name: 項目 1, description: 説明 1}
 """
-UNREADABLE_SEQUENCE = "sequenceDiagram\n  A->>B: 読む\n  これは Mermaid の構文でない行"
-UNREADABLE_DOC = (
+UNMAPPABLE_CLASS = "classDiagram\n  class 文書\n  文書 : +id"
+UNMAPPABLE_DOC = (
     "id: doc-7\ntitle: 図の文書 7\nsequence: |-\n  ```mermaid\n"
-    + "".join(f"  {line}\n" for line in UNREADABLE_SEQUENCE.splitlines())
-    + "  ```\n"
-)
-UNREADABLE_DOC = (
-    "id: doc-7\ntitle: 図の文書 7\nsequence: |-\n  ```mermaid\n"
-    + "".join(f"  {line}\n" for line in UNREADABLE_SEQUENCE.splitlines())
+    + "".join(f"  {line}\n" for line in UNMAPPABLE_CLASS.splitlines())
     + "  ```\n"
 )
 ER_SCHEMA = """\
@@ -236,6 +234,27 @@ LINKED_DOC = (
     "  [文書 2](id:doc-2) と [項目](id:doc-6#flow) と [無い項目](id:doc-6#no-such-item)\n"
     "  と [無い文書](id:no-such-doc) と `[コード](id:doc-2)`\n"
 )
+CLICKED_DOC = DRAWN_DOC.replace(
+    "  frame: {label: 判定, nodes: [q, r]}\n",
+    "  frame: {label: 判定, nodes: [q, r]}\n"
+    "  clicks:\n"
+    "    - {id: q, href: 'id:doc-2'}\n"
+    "    - {id: r, href: 'id:no-such-doc'}\n"
+    "    - {id: z, href: 'id:doc-2'}\n",
+)
+CLICKED_CHART = (
+    "flowchart TD\n"
+    "  A[受付] --> B[保存]\n"
+    "  B --> C[通知]\n"
+    '  click A "id:doc-6#flow"\n'
+    '  click B href "id:doc-2"\n'
+    '  click C "id:no-such-doc"'
+)
+CLICKED_LINKED_DOC = (
+    "id: doc-1\nname: 文書 1\ndescription: |-\n  ```mermaid\n"
+    + "".join(f"  {line}\n" for line in CLICKED_CHART.splitlines())
+    + "  ```\n"
+)
 CROSSING_DOC = """\
 id: doc-9
 title: 図の文書 9
@@ -269,20 +288,34 @@ chart: |-
     c --> a
   ```
 """
-# 文書の取得の結合テストで図を検査する、`package.json` の `devDependencies` でバージョンを固定した mdmark の CLI
-MDMARK_CLI = REPO_ROOT / "node_modules" / ".bin" / "mdmark"
-# mdmark の定義の検査が出すフロー図のずれの種類
-FLOW_CHECK_KINDS = {
-    "diagram_invalid",
-    "diagram_node_overlap",
-    "diagram_node_overflow",
-    "diagram_wire_crosses_node",
-    "diagram_label_too_long",
-}
+# 文書の取得の結合テストで図を点検する mdmark の CLI の参照（既定は develop の最新。固定するときはタグか commit の SHA に書き換える）
+MDMARK_REF = "develop"
+# 画面が `mount` に指定する map の設定（`map.kinds`・`map.lines`）
+MDMARK_MAP = (
+    REPO_ROOT / "frontend" / "src" / "features" / "docs" / "doc-view" / "hooks" / "mdmark-map.json"
+)
 # `mdmark check --text -` の標準出力の、ずれ 1 つの行（`-:{行}: {種類}: {内容}`）の種類
 CHECK_LINE_KIND = re.compile(r"^-:\d+: (\S+?):", re.M)
-FLOW_BLOCK = re.compile(r"<!-- flow -->\n\n```json\n(.*?)\n```\n\n<!-- /flow -->", re.S)
-ER_BLOCK = re.compile(r"<!-- er -->\n\n```json\n(.*?)\n```\n\n<!-- /er -->", re.S)
+# 表のマーカー（`<!-- table: {JSON} -->`）の JSON の引数
+TABLE_MARKER = re.compile(r"^<!-- table: (\{.*\}) -->$", re.M)
+# 表のマーカーと、直後の表の見出しの行
+MARKED_TABLE = re.compile(r"^<!-- table: (\{.*\}) -->\n(\|.*\|)$", re.M)
+# map の範囲の Mermaid のコードブロックと、続く補足
+MAP_BLOCK = re.compile(
+    r"<!-- map: \{.*?\} -->\n\n```mermaid\n(.*?)\n```(?:\n\n<!-- map-data: (\{.*?\}) -->)?\n\n<!-- /map -->",
+    re.S,
+)
+
+
+def _maps(markdown: str) -> list[tuple[list[str], dict[str, Any]]]:
+    """map の範囲ごとの Mermaid の行（前後の空白を除く）と補足（無ければ空）。"""
+    return [
+        (
+            [line.strip() for line in code.splitlines() if line.strip()],
+            json.loads(data) if data else {},
+        )
+        for code, data in MAP_BLOCK.findall(markdown)
+    ]
 
 
 def _sample(*extra: dict[str, Any], doc_1: dict[str, Any] | None = None) -> list[dict[str, Any]]:
@@ -730,7 +763,7 @@ def _drawn_source() -> IndexSource:
     ]
     drawn = [
         doc(doc_id, f"drawn/{doc_id}.yaml", kind="drawn", data=load_yaml(text))
-        for doc_id, text in [("doc-6", DRAWN_DOC), ("doc-7", UNREADABLE_DOC)]
+        for doc_id, text in [("doc-6", DRAWN_DOC), ("doc-7", UNMAPPABLE_DOC)]
     ]
     return IndexSource(documents=rows, docs={None: _sample(*drawn)})
 
@@ -738,7 +771,7 @@ def _drawn_source() -> IndexSource:
 def test_normal_when_schema_document_drawn(
     real_index: RealIndex, make_server: Callable[..., ServerEnv]
 ) -> None:
-    """図を mdmark の部品に、スカラーの並びを「項目 / 値」の表にした Markdown を返却する（正常系）。"""
+    """図を mdmark の map の範囲の Mermaid に、スカラーの並びを「項目 / 値」の表にした Markdown を返却する（正常系）。"""
     # 準備
     real_index.serve("sample", _drawn_source())
     env = make_server(real_index)
@@ -746,38 +779,68 @@ def test_normal_when_schema_document_drawn(
     response = env.client.get("/_api/sources/sample/docs/drawn/doc-6")
     # 検証
     markdown = response.json()["markdown"]
+    maps = _maps(markdown)
     assert response.status_code == 200
-    assert markdown.count("<!-- flow -->") == 3
-    assert markdown.count("<!-- sequence -->") == 1
-    assert "```mermaid" not in markdown
-    flows = [json.loads(block) for block in FLOW_BLOCK.findall(markdown)]
-    flowchart, states = flows[0], flows[1]
-    nodes = {node["id"]: node for node in flowchart["nodes"]}
-    assert (nodes["q"]["kind"], nodes["q"]["hint"], nodes["r"]["kind"]) == (
-        "question",
-        "保存の判定",
-        "result",
-    )
-    wire = flowchart["wires"][0]
-    assert (wire["label"], wire["line"], wire["tip"]) == ("YES", "read", "保存の判定の詳細")
-    assert flowchart["frame"]["title"] == "判定"
-    kinds = {node["name"]: node["kind"] for node in states["nodes"]}
-    assert (kinds["開始"], kinds["下書き"], kinds["公開"], kinds["終了"]) == (
-        "start",
-        "action",
-        "action",
-        "result",
-    )
+    assert markdown.count("<!-- map: ") == 4
+    assert len(maps) == 4
+    assert "<!-- flow -->" not in markdown
+    assert "<!-- sequence -->" not in markdown
+    (flow, data), (states, _) = maps[0], maps[1]
+    assert flow[0] == "flowchart TD"
+    assert 'q["保存するか"]:::question' in flow
+    assert 'r["保存する"]:::result' in flow
+    start = flow.index('subgraph frame ["判定"]')
+    assert flow[start + 1 : flow.index("end", start)] == [
+        'q["保存するか"]:::question',
+        'r["保存する"]:::result',
+    ]
+    assert data["notes"]["q"]["text"] == "保存の判定"
+    assert data["notes"]["q->r"]["text"] == "保存の判定の詳細"
+    assert data["layout"]["q->r"]["line"] == "read"
+    assert states[0] == "stateDiagram-v2"
+    names = {
+        line.split(" as ")[1]: line.split('"')[1] for line in states if line.startswith("state ")
+    }
+    ids = {name: state_id for state_id, name in names.items()}
+    assert f"[*] --> {ids['下書き']}" in states
+    assert f"{ids['下書き']} --> {ids['公開']} : 公開する" in states
+    assert f"{ids['公開']} --> [*]" in states
     assert "| 種類 | 定期 |" in markdown
     assert "**全件実行**\n\n```bash\nuv run pytest\n```" in markdown
     assert markdown.startswith("# 図の文書 6\n\n図と表で読む文書\n")
     assert "内部メモの値" not in markdown
+    # 表のマーカーは JSON の記載: 図の元データの表は閉じ、ノードの表は ID の列を隠す
+    markers = _table_markers(markdown)
+    closed = [marker for marker in markers if marker.get("collapse") == {"open": False}]
+    hidden = [
+        name
+        for marker in closed
+        for name, setting in marker.get("columns", {}).items()
+        if setting.get("hidden") is True
+    ]
+    assert closed
+    assert hidden == ["ID"] * len(hidden)
+    assert hidden
+    assert all(" table: data" not in line for line in markdown.splitlines())
+    tables = _marked_tables(markdown)
+    # 辺の表（`元`・`先` の列を持つ表）のマーカーは `hidden` の列を持たない
+    edges = [marker for marker, head in tables if {"元", "先"} <= set(head)]
+    assert edges
+    assert all(
+        "hidden" not in setting
+        for marker in edges
+        for setting in marker.get("columns", {}).values()
+    )
+    # 説明の列を持つ表のマーカーは、説明の列を折り返さない
+    described = [marker for marker, head in tables if "説明" in head]
+    assert described
+    assert all(marker["columns"]["説明"] == {"width": {"mode": "nowrap"}} for marker in described)
 
 
-def test_normal_when_mermaid_unreadable(
+def test_normal_when_mermaid_not_mappable(
     real_index: RealIndex, make_server: Callable[..., ServerEnv]
 ) -> None:
-    """読み取れない行を含む Mermaid を、図ごと Mermaid のコードブロックのまま返却する（正常系）。"""
+    """map で描けない種類の Mermaid を、Mermaid のコードブロックのまま返却する（正常系）。"""
     # 準備
     real_index.serve("sample", _drawn_source())
     env = make_server(real_index)
@@ -786,24 +849,34 @@ def test_normal_when_mermaid_unreadable(
     # 検証
     body = response.json()
     assert response.status_code == 200
-    assert "<!-- sequence -->" not in body["markdown"]
-    assert f"```mermaid\n{UNREADABLE_SEQUENCE}\n```" in body["markdown"]
+    assert "<!-- map" not in body["markdown"]
+    assert f"```mermaid\n{UNMAPPABLE_CLASS}\n```" in body["markdown"]
     assert body["conversionError"] is None
 
 
-def _er_columns(definition: dict[str, Any], table_id: str) -> list[tuple[str, bool, bool, bool]]:
-    """ER 図の定義の `table_id` のテーブルの列の名前と `pk`・`fk`・`nn` の組。"""
-    table = next(t for t in definition["tables"] if t["id"] == table_id)
+def _table_markers(markdown: str) -> list[dict[str, Any]]:
+    """本文の表のマーカーの JSON の引数を、出る順に返却する。"""
+    return [json.loads(args) for args in TABLE_MARKER.findall(markdown)]
+
+
+def _marked_tables(markdown: str) -> list[tuple[dict[str, Any], list[str]]]:
+    """本文の表のマーカーの JSON の引数と、直後の表の列名を、出る順に返却する。"""
     return [
-        (c["name"], bool(c.get("pk")), bool(c.get("fk")), bool(c.get("nn")))
-        for c in table["columns"]
+        (json.loads(args), [cell.strip() for cell in head.strip("|").split("|")])
+        for args, head in MARKED_TABLE.findall(markdown)
     ]
+
+
+def _er_entity(lines: list[str], name: str) -> list[str]:
+    """`erDiagram` の `name` の実体の列の行。"""
+    start = lines.index(f"{name} {{")
+    return lines[start + 1 : lines.index("}", start)]
 
 
 def test_normal_when_er_diagram_drawn(
     real_index: RealIndex, make_server: Callable[..., ServerEnv]
 ) -> None:
-    """`x-diagram: er` の項目を、テーブルの列で補った mdmark の ER 図の部品にする（正常系）。"""
+    """`x-diagram: er` の項目を、テーブルの列で補った `erDiagram` の map の範囲にする（正常系）。"""
     # 準備
     rows = [row("sample", ["docs/*.yaml"]), row("er", ["er/*.yaml"], load_yaml(ER_SCHEMA))]
     er = doc("doc-8", "er/販売.yaml", kind="er", data=load_yaml(ER_DOC))
@@ -813,34 +886,34 @@ def test_normal_when_er_diagram_drawn(
     response = env.client.get("/_api/sources/sample/docs/er/販売")
     # 検証
     markdown = response.json()["markdown"]
-    match = ER_BLOCK.search(markdown)
+    maps = _maps(markdown)
     assert response.status_code == 200
-    assert match is not None
-    assert markdown.count("<!-- er -->") == 1
-    assert "erDiagram" not in markdown
-    definition = json.loads(match.group(1))
-    assert [t["id"] for t in definition["tables"]] == ["顧客", "注文", "商品", "支払い"]
-    assert _er_columns(definition, "顧客") == [
-        ("id", True, False, True),
-        ("email", False, False, False),
-    ]
-    assert _er_columns(definition, "注文") == [
-        ("id", True, False, False),
-        ("customer_id", False, True, False),
-    ]
-    assert _er_columns(definition, "商品") == []
-    assert _er_columns(definition, "支払い") == [
-        ("id", True, False, False),
-        ("customer_id", False, True, False),
-    ]
+    assert len(maps) == 1
+    assert "<!-- er -->" not in markdown
+    lines = maps[0][0]
+    assert lines[0] == "erDiagram"
+    assert _er_entity(lines, "顧客") == ["bigint id PK", "text email"]
+    assert _er_entity(lines, "注文") == ["bigint id PK", 'bigint customer_id FK "参照: 顧客.id"']
+    assert _er_entity(lines, "商品") == []
+    assert _er_entity(lines, "支払い") == ["bigint id PK", 'bigint customer_id FK "参照: 顧客.id"']
+    relations = [line for line in lines if "--" in line]
+    assert relations == ['顧客 ||--o{ 注文 : "注文する"', '顧客 ||--o{ 支払い : ""']
+    assert "product_id" in markdown.split("<!-- /map -->")[1]
+    # 図の元データの表は、`collapse.open` が `false` の JSON の表のマーカーで閉じる
+    assert any(marker.get("collapse") == {"open": False} for marker in _table_markers(markdown))
 
 
-def test_normal_when_flow_layout_checked(
-    real_index: RealIndex, make_server: Callable[..., ServerEnv]
+def test_normal_when_diagrams_checked(
+    real_index: RealIndex, make_server: Callable[..., ServerEnv], tmp_path: Path
 ) -> None:
-    """線がノードを横切りやすい構造のフロー図を、mdmark の定義の検査で配置のずれが出ない部品にする（正常系）。"""
+    """線がノードを横切りやすい構造の図を、mdmark の点検で書き方の警告が出ない map の範囲にする（正常系）。"""
     # 準備
-    assert MDMARK_CLI.exists(), "mdmark の CLI が無い。リポジトリの直下で `npm ci` を実行する"
+    config = tmp_path / "mdmark.config.yaml"
+    # JSON は YAML として読める
+    config.write_text(
+        json.dumps({"map": json.loads(MDMARK_MAP.read_text(encoding="utf-8"))}, ensure_ascii=False),
+        encoding="utf-8",
+    )
     rows = [row("sample", ["docs/*.yaml"]), row("drawn", ["drawn/*.yaml"], load_yaml(DRAWN_SCHEMA))]
     crossing = doc("doc-9", "drawn/doc-9.yaml", kind="drawn", data=load_yaml(CROSSING_DOC))
     real_index.serve("sample", IndexSource(documents=rows, docs={None: _sample(crossing)}))
@@ -849,7 +922,16 @@ def test_normal_when_flow_layout_checked(
     response = env.client.get("/_api/sources/sample/docs/drawn/doc-9")
     markdown = response.json()["markdown"]
     checked = subprocess.run(
-        [str(MDMARK_CLI), "check", "--text", "-"],
+        [
+            "npx",
+            "-y",
+            f"github:shuhei1101/mdmark#{MDMARK_REF}",
+            "check",
+            "--text",
+            "-",
+            "--config",
+            str(config),
+        ],
         input=markdown,
         capture_output=True,
         text=True,
@@ -858,10 +940,11 @@ def test_normal_when_flow_layout_checked(
     )
     # 検証
     assert response.status_code == 200
-    assert markdown.count("<!-- flow -->") == 3
+    assert markdown.count("<!-- map: ") == 3
     # 点検を終えた: 最後に `ずれ {件数} 件` の行がある
     assert "ずれ" in checked.stdout, checked.stderr
-    assert not set(CHECK_LINE_KIND.findall(checked.stdout)) & FLOW_CHECK_KINDS, checked.stdout
+    # ずれが 0 件（表のマーカーの前の記載方法の `legacy_mark` も無い）
+    assert CHECK_LINE_KIND.findall(checked.stdout) == [], checked.stdout
 
 
 def test_normal_when_id_link_resolved(
@@ -885,6 +968,41 @@ def test_normal_when_id_link_resolved(
     assert "[無い文書](id:no-such-doc)" in body["markdown"]
     assert "`[コード](id:doc-2)`" in body["markdown"]
     assert body["conversionError"] is None
+
+
+def test_normal_when_diagram_node_id_link_resolved(
+    real_index: RealIndex, make_server: Callable[..., ServerEnv]
+) -> None:
+    """フロー図の `clicks` と手で記載したフローチャートの `click` の `id:` を、ノードのリンクにする（正常系）。"""
+    # 準備
+    source = _drawn_source()
+    clicked = doc("doc-6", "drawn/doc-6.yaml", kind="drawn", data=load_yaml(CLICKED_DOC))
+    linked = doc("doc-1", "docs/doc-1.yaml", data=load_yaml(CLICKED_LINKED_DOC))
+    source.docs[None] = [
+        linked,
+        *(clicked if item["id"] == "doc-6" else item for item in source.docs[None][1:]),
+    ]
+    real_index.serve("sample", source)
+    env = make_server(real_index)
+    # 実行
+    drawn = env.client.get("/_api/sources/sample/docs/drawn/doc-6")
+    charted = env.client.get("/_api/sources/sample/docs/docs/doc-1")
+    # 検証
+    assert drawn.status_code == 200
+    assert charted.status_code == 200
+    flow = next(lines for lines, _ in _maps(drawn.json()["markdown"]) if lines[0] == "flowchart TD")
+    assert 'click q "../docs/doc-2.yaml"' in flow
+    assert not any(line.startswith(("click r", "click z", "z[")) for line in flow)
+    chart = _maps(charted.json()["markdown"])[0][0]
+    assert 'click A "../drawn/doc-6.yaml#処理の流れ"' in chart
+    assert 'click B href "doc-2.yaml"' in chart
+    assert not any(line.startswith("click C") for line in chart)
+    assert [line for line in chart if not line.startswith("click")] == [
+        line.strip() for line in CLICKED_CHART.splitlines() if not line.strip().startswith("click")
+    ]
+    for response in (drawn, charted):
+        assert not re.search(r'click \S+ (?:href )?"id:', response.json()["markdown"])
+        assert response.json()["conversionError"] is None
 
 
 def _decided_source() -> IndexSource:
@@ -976,9 +1094,10 @@ def test_error_when_project_index_timed_out(
     make_server: Callable[..., ServerEnv],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """project-index が制限時間を過ぎても応答しなければ打ち切って 503 を返却する（異常系）。"""
-    # 準備
-    monkeypatch.setattr("dev_docs.main.PROJECT_INDEX_TIMEOUT_SEC", 1)
+    """project-index が文書の取得の制限時間を過ぎても応答しなければ打ち切って 503 を返却する（異常系）。"""
+    # 準備（問い合わせごとの制限時間は、文書の取得の制限時間より長くする）
+    monkeypatch.setattr("dev_docs.main.PROJECT_INDEX_TIMEOUT_SEC", 10)
+    monkeypatch.setattr("dev_docs.features.view.document.DOCUMENT_FETCH_TIMEOUT_SEC", 1)
     mock_index.serve("sample", IndexSource(docs={None: _sample()}))
     env = make_server(mock_index)
     mock_index.delay_sec = 3
@@ -988,6 +1107,74 @@ def test_error_when_project_index_timed_out(
     # 検証
     elapsed = time.monotonic() - started
     assert response.status_code == 503
-    assert response.json()["projectIndex"]["address"] == mock_index.address
-    assert "1 秒以内に応答がありませんでした" in response.json()["projectIndex"]["reason"]
+    assert response.headers["content-type"].startswith("application/problem+json")
+    problem = response.json()["projectIndex"]
+    assert problem["kind"] == "timeout"
+    assert problem["address"] == mock_index.address
+    assert "1 秒以内に応答がありませんでした" in problem["reason"]
     assert elapsed < 2.5
+
+
+def _wait_for_requests(mock: MockIndex, count: int) -> None:
+    """偽物が `count` 件の要求を受け付けるまで待つ（5 秒で打ち切る）。"""
+    deadline = time.monotonic() + 5
+    while len(mock.received) < count and time.monotonic() < deadline:
+        time.sleep(0.05)
+
+
+def test_normal_when_requests_sent_concurrently(
+    mock_index: MockIndex, make_server: Callable[..., ServerEnv]
+) -> None:
+    """配信元の設定・リビジョン・文書の一覧を同時に問い合わせ、文書だけをその後に問い合わせる（正常系）。"""
+    # 準備
+    mock_index.serve("sample", IndexSource(docs={None: _sample()}))
+    env = make_server(mock_index)
+    mock_index.received.clear()
+    mock_index.hold.clear()
+    held: dict[str, Any] = {}
+    fetch = threading.Thread(
+        target=lambda: held.update(response=env.client.get("/_api/sources/sample/docs"))
+    )
+    # 実行（偽物が応答を止めている間に受け付けた問い合わせを数える）
+    fetch.start()
+    _wait_for_requests(mock_index, 3)
+    received_while_held = {urlsplit(raw).path for _, raw, _ in mock_index.received}
+    mock_index.hold.set()
+    fetch.join(timeout=10)
+    # 実行（問い合わせごとに 1 秒待つ偽物で、応答までの時間を測る）
+    mock_index.delay_sec = 1
+    started = time.monotonic()
+    response = env.client.get("/_api/sources/sample/docs")
+    elapsed = time.monotonic() - started
+    # 検証
+    assert received_while_held == {
+        "/sources/sample/config",
+        "/sources/sample/refs",
+        "/sources/sample/docs",
+    }
+    assert held["response"].status_code == 200
+    assert response.status_code == 200
+    assert response.json()["path"] == "docs/doc-1"
+    assert 2 <= elapsed < 3
+
+
+def test_error_when_project_index_failed(
+    mock_index: MockIndex, make_server: Callable[..., ServerEnv]
+) -> None:
+    """project-index が 5xx を返却したら 502 と project-index の detail を返却する（異常系）。"""
+    # 準備
+    detail = "git archive --format=tar abc123: 20 秒を超えたため止めました"
+    mock_index.serve("sample", IndexSource(docs={None: _sample()}))
+    env = make_server(mock_index)
+    mock_index.queued[("GET", "/sources/sample/config")] = [(500, {"detail": detail})]
+    # 実行
+    failed = env.client.get("/_api/sources/sample/docs")
+    recovered = env.client.get("/_api/sources/sample/docs")
+    # 検証
+    assert failed.status_code == 502
+    assert failed.headers["content-type"].startswith("application/problem+json")
+    problem = failed.json()["projectIndex"]
+    assert problem["kind"] == "failed"
+    assert problem["address"] == mock_index.address
+    assert problem["reason"] == detail
+    assert recovered.status_code == 200

@@ -55,7 +55,9 @@ def build_settings_router(handlers: Handlers) -> APIRouter:
             )
             for index, raw in enumerate(view.rows)
         ]
-        return SettingsSourcesView(settings_path=view.settings_path, sources=rows)
+        return SettingsSourcesView(
+            settings_path=view.settings_path, sources=rows, version=view.version
+        )
 
     @router.put(
         "/_api/settings/sources",
@@ -63,7 +65,9 @@ def build_settings_router(handlers: Handlers) -> APIRouter:
         dependencies=[Depends(require_same_origin)],
     )
     async def put_sources(body: SettingsSourcesRequest) -> SettingsSourcesResponse:
-        states = await save_sources(handlers.project_index, body.sources)
-        return SettingsSourcesResponse.from_states(states)
+        view = await save_sources(
+            handlers.project_index, body.sources, expected_version=body.expected_version
+        )
+        return SettingsSourcesResponse.from_view(view)
 
     return router

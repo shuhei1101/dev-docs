@@ -2,11 +2,12 @@
 
 from __future__ import annotations
 
+import html
 from collections.abc import Sequence
 from pathlib import Path
 
 from fastapi import APIRouter, HTTPException, Request
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, HTMLResponse, Response
 from starlette.routing import BaseRoute, Match
 from starlette.types import Scope
 
@@ -18,14 +19,15 @@ NON_GET_METHODS = ("POST", "PUT", "PATCH", "DELETE")
 IMMUTABLE_CACHE = "public, max-age=31536000, immutable"
 NO_CACHE = "no-cache"
 ASSETS_PREFIX = "assets/"
+MDMARK_VERSION_META = "mdmark-version"
 
 
-def build_screen_router(dist_dir: Path) -> APIRouter:
+def build_screen_router(dist_dir: Path, *, mdmark_version: str) -> APIRouter:
     """画面のビルド（`index.html` と `assets/`）を返却するルーターを作る。"""
     router = APIRouter()
 
     @router.get("/{path:path}", include_in_schema=False)
-    def screen(path: str) -> FileResponse:
+    def screen(path: str) -> Response:
         # API・MCP の誤ったパスには画面を返却しない
         if path.split("/", 1)[0] in EXCLUDED_PREFIXES:
             raise HTTPException(status_code=404)
@@ -43,7 +45,10 @@ def build_screen_router(dist_dir: Path) -> APIRouter:
                     "frontend/ で画面をビルドする（vite build。出力先は src/dev_docs/screen/）"
                 ],
             )
-        return FileResponse(index, media_type="text/html", headers={"Cache-Control": NO_CACHE})
+        return HTMLResponse(
+            _with_mdmark_version(index.read_text(encoding="utf-8"), mdmark_version),
+            headers={"Cache-Control": NO_CACHE},
+        )
 
     @router.api_route("/{path:path}", methods=list(NON_GET_METHODS), include_in_schema=False)
     def reject(path: str, request: Request) -> None:
@@ -75,3 +80,9 @@ def _allowed_methods(routes: Sequence[BaseRoute], scope: Scope, own: APIRouter) 
         if match == Match.PARTIAL:
             allowed.extend(sorted(getattr(route, "methods", None) or ()))
     return list(dict.fromkeys(allowed))
+
+
+def _with_mdmark_version(index_html: str, mdmark_version: str) -> str:
+    """`index.html` の最初の `<head>` の直後に、mdmark のバージョンの meta を入れる。"""
+    meta = f'<meta name="{MDMARK_VERSION_META}" content="{html.escape(mdmark_version)}">'
+    return index_html.replace("<head>", f"<head>{meta}", 1)

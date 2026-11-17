@@ -4,7 +4,7 @@
 
 ## 目次
 
-<!-- table: data -->
+<!-- table: {"kind": "data"} -->
 
 | ページ | 概要 |
 | --- | --- |
@@ -37,6 +37,7 @@
 | [画面 / 共通 / shortcut-dialog.tsx](./MOD-155-58.tsx.yaml) | `?` で開くショートカットの一覧 |
 | [画面 / 共通 / shortcuts.ts](./MOD-155-64.ts.yaml) | キーボードのショートカットの定義 |
 | [画面 / 共通 / skip-link.tsx](./MOD-155-59.tsx.yaml) | 本文の領域へフォーカスを移すリンク |
+| [画面 / 共通 / project-index-unreachable.tsx](./MOD-230-1.tsx.yaml) | project-index から受け取れなかった理由の種類ごとの警告 |
 | [画面 / 共通 / topbar.tsx](./MOD-155-60.tsx.yaml) | 3 画面に共通のトップバー |
 | [画面 / 共通 / use-delayed-flag.ts](./MOD-155-66.ts.yaml) | 待ちが続いたときだけ true にするフック |
 | [画面 / 共通 / use-media-query.ts](./MOD-155-67.ts.yaml) | メディアクエリに今当たっているかを返すフック |
@@ -109,14 +110,12 @@
 | [開発ドキュメントサーバー / 再起動と更新 / update.py](./MOD-155-118.py.yaml) | `git pull --ff-only`・`uv sync` によるクローンの更新 |
 | [開発ドキュメントサーバー / 変換](./MOD-155-195.yaml) | スキーマ駆動の変換と、project-index の `converters[]` の結果の Markdown |
 | [開発ドキュメントサーバー / 変換 / decisions.py](./MOD-155-92.py.yaml) | 設計書の `decisions` の検討事項の ID と、検討事項の文書のパスの読み取り |
-| [開発ドキュメントサーバー / 変換 / diagrams.py](./MOD-155-93.py.yaml) | `x-diagram` の値と手で書く Mermaid の、mdmark の図の部品か Mermaid への描画 |
+| [開発ドキュメントサーバー / 変換 / diagrams.py](./MOD-155-93.py.yaml) | `x-diagram` の値と手で書く Mermaid の、mdmark の map の範囲か Mermaid への描画 |
 | [開発ドキュメントサーバー / 変換 / embed.py](./MOD-155-94.py.yaml) | 埋め込みのマーカーのパスの取り出しと、表への展開 |
-| [開発ドキュメントサーバー / 変換 / flow_layout.py](./MOD-155-95.py.yaml) | フロー図の中間データの、mdmark のフロー図の部品の定義への配置 |
 | [開発ドキュメントサーバー / 変換 / inline.py](./MOD-155-96.py.yaml) | 文字列の値の中の、図・ファイルツリー・手順・参照・Issue 番号・値の選択肢の書き換え |
 | [開発ドキュメントサーバー / 変換 / markdown.py](./MOD-155-97.py.yaml) | スキーマ駆動の文書の Markdown への変換と表の描画 |
-| [開発ドキュメントサーバー / 変換 / mermaid.py](./MOD-155-98.py.yaml) | 手で書く Mermaid の `flowchart`・`sequenceDiagram` の読み取り |
 | [開発ドキュメントサーバー / 変換 / service.py](./MOD-155-99.py.yaml) | 変換の選択と、表のキーの取り出し |
-| [開発ドキュメントサーバー / 変換 / types.py](./MOD-155-100.py.yaml) | 変換の結果・失敗・表し方・図の種類・図の中間データ・描画の文脈の型 |
+| [開発ドキュメントサーバー / 変換 / types.py](./MOD-155-100.py.yaml) | 変換の結果・失敗・表し方・図の種類・図の見出し・描画の文脈の型 |
 | [開発ドキュメントサーバー / 変更](./MOD-155-196.yaml) | 文書の取得の差分が使う変わったキーの比べ方 |
 | [開発ドキュメントサーバー / 変更 / compare.py](./MOD-155-88.py.yaml) | 変わったキーの比べ方 |
 | [開発ドキュメントサーバー / 文書](./MOD-155-199.yaml) | project-index が返した文書の項目の値とエイリアス |

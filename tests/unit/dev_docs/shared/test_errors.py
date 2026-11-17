@@ -58,5 +58,6 @@ def test_project_index_unreachable_error() -> None:
     assert details == {
         "address": "http://127.0.0.1:8786",
         "reason": "接続を拒否されました（Connection refused）",
+        "kind": "unreachable",
     }
     assert error.status == 503

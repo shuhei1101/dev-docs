@@ -8,7 +8,7 @@ from typing import Any
 
 from dev_docs.features.settings.types import SourceEntry
 from dev_docs.integrations.project_index.client import ProjectIndexClient
-from dev_docs.integrations.project_index.types import SourceState
+from dev_docs.integrations.project_index.types import SettingsSourcesView
 
 logger = logging.getLogger(__name__)
 
@@ -34,9 +34,14 @@ def _to_row(entry: SourceEntry) -> dict[str, Any]:
 
 
 async def save_sources(
-    client: ProjectIndexClient, sources: Sequence[SourceEntry]
-) -> list[SourceState]:
-    """送信された `sources[]` を project-index の端末の設定の API へ送信し、再読み込みした後の状態を返却する。"""
-    view = await client.put_settings_sources([_to_row(entry) for entry in sources])
+    client: ProjectIndexClient,
+    sources: Sequence[SourceEntry],
+    *,
+    expected_version: str | None = None,
+) -> SettingsSourcesView:
+    """送信された `sources[]` を内容のバージョンとともに project-index へ送信し、読み直した後の行・状態・内容のバージョンを返却する。"""
+    view = await client.put_settings_sources(
+        [_to_row(entry) for entry in sources], expected_version=expected_version
+    )
     logger.info("端末の設定の sources の保存を依頼した（%s 行）", len(sources))
-    return view.states
+    return view
