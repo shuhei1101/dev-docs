@@ -1,0 +1,198 @@
+$ TMPDIR=/tmp/planner-266-pytest uv run pytest tests/unit/
+# TMPDIR: 端末の /tmp/pytest-of-shuhei2441 が root の所有で pytest の tmp_path を作れないため、一時フォルダの場所だけを変えた
+# Red: test_restart_resident.py の 6 件は scripts/dev-docs-restart-resident.sh が無いこと（bash の終了コード 127 / No such file or directory）による fail
+============================= test session starts ==============================
+platform linux -- Python 3.14.3, pytest-9.1.1, pluggy-1.7.0
+rootdir: /home/shuhei2441/repo/dev-docs/.claude/worktrees/chore-scripts-restart-resident
+configfile: pyproject.toml
+plugins: anyio-4.15.1
+collected 509 items
+
+tests/unit/dev_docs/features/admin/test_render.py ......                 [  1%]
+tests/unit/dev_docs/features/admin/test_service.py ........              [  2%]
+tests/unit/dev_docs/features/changes/test_compare.py .                   [  2%]
+tests/unit/dev_docs/features/convert/test_decisions.py ....              [  3%]
+tests/unit/dev_docs/features/convert/test_diagrams.py .................. [  7%]
+.....................                                                    [ 11%]
+tests/unit/dev_docs/features/convert/test_embed.py ....                  [ 12%]
+tests/unit/dev_docs/features/convert/test_inline.py .................    [ 15%]
+tests/unit/dev_docs/features/convert/test_markdown.py .................. [ 19%]
+.......                                                                  [ 20%]
+tests/unit/dev_docs/features/convert/test_service.py .........           [ 22%]
+tests/unit/dev_docs/features/documents/test_aliases.py .......           [ 23%]
+tests/unit/dev_docs/features/documents/test_fields.py .............      [ 26%]
+tests/unit/dev_docs/features/filter/test_fields.py ...                   [ 26%]
+tests/unit/dev_docs/features/filter/test_filters.py ............         [ 29%]
+tests/unit/dev_docs/features/lifecycle/test_control.py ...               [ 29%]
+tests/unit/dev_docs/features/lifecycle/test_update.py ..........         [ 31%]
+tests/unit/dev_docs/features/migrate/test_service.py ................... [ 35%]
+....                                                                     [ 36%]
+tests/unit/dev_docs/features/migrate/test_steps.py ...........           [ 38%]
+tests/unit/dev_docs/features/prompt_doc/test_render.py ................  [ 41%]
+tests/unit/dev_docs/features/prompt_doc/test_runtime.py .............    [ 44%]
+tests/unit/dev_docs/features/settings/test_query.py .................... [ 47%]
+.....                                                                    [ 48%]
+tests/unit/dev_docs/features/settings/test_route.py .......              [ 50%]
+tests/unit/dev_docs/features/settings/test_service.py ......             [ 51%]
+tests/unit/dev_docs/features/view/test_columns.py .                      [ 51%]
+tests/unit/dev_docs/features/view/test_document.py ...............       [ 54%]
+tests/unit/dev_docs/features/view/test_nav.py .............              [ 57%]
+tests/unit/dev_docs/features/view/test_paths.py ....                     [ 57%]
+tests/unit/dev_docs/features/view/test_route.py ........                 [ 59%]
+tests/unit/dev_docs/features/view/test_search.py ..                      [ 59%]
+tests/unit/dev_docs/integrations/project_index/test_client.py .......... [ 61%]
+...................                                                      [ 65%]
+tests/unit/dev_docs/integrations/project_index/test_types.py .....       [ 66%]
+tests/unit/dev_docs/server/mcp/test_admin.py ....                        [ 67%]
+tests/unit/dev_docs/server/mcp/test_result.py ......                     [ 68%]
+tests/unit/dev_docs/server/test_app.py ...........                       [ 70%]
+tests/unit/dev_docs/server/test_error_handlers.py ........               [ 72%]
+tests/unit/dev_docs/server/test_lifespan.py .                            [ 72%]
+tests/unit/dev_docs/server/test_origin.py ....                           [ 73%]
+tests/unit/dev_docs/server/test_screen.py .............                  [ 75%]
+tests/unit/dev_docs/shared/test_errors.py ...                            [ 76%]
+tests/unit/dev_docs/shared/test_files.py ...                             [ 77%]
+tests/unit/dev_docs/shared/test_hashing.py ..                            [ 77%]
+tests/unit/dev_docs/shared/test_paths.py .                               [ 77%]
+tests/unit/dev_docs/shared/test_schema_check.py .............            [ 80%]
+tests/unit/dev_docs/shared/test_yaml_io.py .......                       [ 81%]
+tests/unit/dev_docs/test_main.py ..........                              [ 83%]
+tests/unit/dev_docs/test_serve.py ............................           [ 88%]
+tests/unit/plugins/dev_docs/hooks/test_session_start.py ................ [ 92%]
+..........                                                               [ 94%]
+tests/unit/scripts/test_build_pages.py ........................          [ 98%]
+tests/unit/scripts/test_restart_resident.py FFFFFF                       [100%]
+
+=================================== FAILURES ===================================
+___________________________ test_main_when_no_record ___________________________
+
+resident_repo = ResidentRepo(root=PosixPath('/tmp/planner-266-pytest/pytest-of-shuhei2441/pytest-2/test_main_when_no_record0/repo'), s...d0/bin'), state_dir=PosixPath('/tmp/planner-266-pytest/pytest-of-shuhei2441/pytest-2/test_main_when_no_record0/state'))
+
+    def test_main_when_no_record(resident_repo: ResidentRepo) -> None:
+        """記録が無いときは依存をそろえて起動し直し、記録を HEAD にする（正常系）。"""
+        # 準備
+        head = resident_repo.commit({"src/app.py": "a = 1\n"})
+    
+        # 実行
+        result = resident_repo.run()
+    
+        # 検証
+>       assert result.returncode == 0
+E       AssertionError: assert 127 == 0
+E        +  where 127 = CompletedProcess(args=['bash', '/tmp/planner-266-pytest/pytest-of-shuhei2441/pytest-2/test_main_when_no_record0/repo/s...-shuhei2441/pytest-2/test_main_when_no_record0/repo/scripts/dev-docs-restart-resident.sh: No such file or directory\n').returncode
+
+tests/unit/scripts/test_restart_resident.py:116: AssertionError
+________________________ test_main_when_runtime_changed ________________________
+
+resident_repo = ResidentRepo(root=PosixPath('/tmp/planner-266-pytest/pytest-of-shuhei2441/pytest-2/test_main_when_runtime_changed0/rep...'), state_dir=PosixPath('/tmp/planner-266-pytest/pytest-of-shuhei2441/pytest-2/test_main_when_runtime_changed0/state'))
+
+    def test_main_when_runtime_changed(resident_repo: ResidentRepo) -> None:
+        """実行時に参照するファイルが変わったときは依存をそろえて起動し直す（正常系）。"""
+        # 準備
+        previous = resident_repo.commit({"src/app.py": "a = 1\n"})
+        head = resident_repo.commit({"src/app.py": "a = 2\n"})
+        resident_repo.write_record(previous)
+    
+        # 実行
+        result = resident_repo.run()
+    
+        # 検証
+>       assert result.returncode == 0
+E       AssertionError: assert 127 == 0
+E        +  where 127 = CompletedProcess(args=['bash', '/tmp/planner-266-pytest/pytest-of-shuhei2441/pytest-2/test_main_when_runtime_changed0/...i2441/pytest-2/test_main_when_runtime_changed0/repo/scripts/dev-docs-restart-resident.sh: No such file or directory\n').returncode
+
+tests/unit/scripts/test_restart_resident.py:135: AssertionError
+_______________________ test_main_when_runtime_unchanged _______________________
+
+resident_repo = ResidentRepo(root=PosixPath('/tmp/planner-266-pytest/pytest-of-shuhei2441/pytest-2/test_main_when_runtime_unchang0/rep...'), state_dir=PosixPath('/tmp/planner-266-pytest/pytest-of-shuhei2441/pytest-2/test_main_when_runtime_unchang0/state'))
+
+    def test_main_when_runtime_unchanged(resident_repo: ResidentRepo) -> None:
+        """実行時に参照するファイルが変わっていないときは起動し直さずに記録だけ進める（正常系）。"""
+        # 準備
+        previous = resident_repo.commit({"src/app.py": "a = 1\n"})
+        head = resident_repo.commit({"docs/guide.md": "# guide\n"})
+        resident_repo.write_record(previous)
+    
+        # 実行
+        result = resident_repo.run()
+    
+        # 検証
+>       assert result.returncode == 0
+E       AssertionError: assert 127 == 0
+E        +  where 127 = CompletedProcess(args=['bash', '/tmp/planner-266-pytest/pytest-of-shuhei2441/pytest-2/test_main_when_runtime_unchang0/...i2441/pytest-2/test_main_when_runtime_unchang0/repo/scripts/dev-docs-restart-resident.sh: No such file or directory\n').returncode
+
+tests/unit/scripts/test_restart_resident.py:154: AssertionError
+________________________ test_main_when_record_unknown _________________________
+
+resident_repo = ResidentRepo(root=PosixPath('/tmp/planner-266-pytest/pytest-of-shuhei2441/pytest-2/test_main_when_record_unknown0/repo...n'), state_dir=PosixPath('/tmp/planner-266-pytest/pytest-of-shuhei2441/pytest-2/test_main_when_record_unknown0/state'))
+
+    def test_main_when_record_unknown(resident_repo: ResidentRepo) -> None:
+        """記録の commit が見つからないときは依存をそろえて起動し直す（異常系）。"""
+        # 準備
+        head = resident_repo.commit({"src/app.py": "a = 1\n"})
+        resident_repo.write_record("0123456789abcdef0123456789abcdef01234567")
+    
+        # 実行
+        result = resident_repo.run()
+    
+        # 検証
+>       assert result.returncode == 0
+E       AssertionError: assert 127 == 0
+E        +  where 127 = CompletedProcess(args=['bash', '/tmp/planner-266-pytest/pytest-of-shuhei2441/pytest-2/test_main_when_record_unknown0/r...ei2441/pytest-2/test_main_when_record_unknown0/repo/scripts/dev-docs-restart-resident.sh: No such file or directory\n').returncode
+
+tests/unit/scripts/test_restart_resident.py:169: AssertionError
+__________________________ test_main_when_sync_failed __________________________
+
+resident_repo = ResidentRepo(root=PosixPath('/tmp/planner-266-pytest/pytest-of-shuhei2441/pytest-2/test_main_when_sync_failed0/repo'),.../bin'), state_dir=PosixPath('/tmp/planner-266-pytest/pytest-of-shuhei2441/pytest-2/test_main_when_sync_failed0/state'))
+
+    def test_main_when_sync_failed(resident_repo: ResidentRepo) -> None:
+        """依存の入れ直しが失敗したときは起動し直さず、記録を作らない（異常系）。"""
+        # 準備
+        resident_repo.commit({"src/app.py": "a = 1\n"})
+    
+        # 実行
+        result = resident_repo.run(uv_exit=1)
+    
+        # 検証
+        assert result.returncode != 0
+>       assert resident_repo.calls() == ["uv sync --frozen"]
+E       AssertionError: assert [] == ['uv sync --frozen']
+E         
+E         Right contains one more item: 'uv sync --frozen'
+E         Use -v to get more diff
+
+tests/unit/scripts/test_restart_resident.py:187: AssertionError
+________________________ test_main_when_restart_failed _________________________
+
+resident_repo = ResidentRepo(root=PosixPath('/tmp/planner-266-pytest/pytest-of-shuhei2441/pytest-2/test_main_when_restart_failed0/repo...n'), state_dir=PosixPath('/tmp/planner-266-pytest/pytest-of-shuhei2441/pytest-2/test_main_when_restart_failed0/state'))
+
+    def test_main_when_restart_failed(resident_repo: ResidentRepo) -> None:
+        """起動し直しが失敗したときは記録を前の commit のまま残す（異常系）。"""
+        # 準備
+        previous = resident_repo.commit({"uv.lock": "version = 1\n"})
+        resident_repo.commit({"uv.lock": "version = 2\n"})
+        resident_repo.write_record(previous)
+    
+        # 実行
+        result = resident_repo.run(systemctl_exit=1)
+    
+        # 検証
+        assert result.returncode != 0
+>       assert resident_repo.calls() == [
+            "uv sync --frozen",
+            "systemctl --user restart dev-docs.service",
+        ]
+E       AssertionError: assert [] == ['uv sync --f...docs.service']
+E         
+E         Right contains 2 more items, first extra item: 'uv sync --frozen'
+E         Use -v to get more diff
+
+tests/unit/scripts/test_restart_resident.py:203: AssertionError
+=========================== short test summary info ============================
+FAILED tests/unit/scripts/test_restart_resident.py::test_main_when_no_record
+FAILED tests/unit/scripts/test_restart_resident.py::test_main_when_runtime_changed
+FAILED tests/unit/scripts/test_restart_resident.py::test_main_when_runtime_unchanged
+FAILED tests/unit/scripts/test_restart_resident.py::test_main_when_record_unknown
+FAILED tests/unit/scripts/test_restart_resident.py::test_main_when_sync_failed
+FAILED tests/unit/scripts/test_restart_resident.py::test_main_when_restart_failed
+======================== 6 failed, 503 passed in 5.51s =========================

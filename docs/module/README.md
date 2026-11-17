@@ -9,6 +9,7 @@
 | ページ | 概要 |
 | --- | --- |
 | [画面 / index.css](./MOD-155-50.css.yaml) | 画面全体の CSS と mdmark の本文への上書き |
+| [画面 / preflight-outside-mdmark.css](./MOD-232-1.css.yaml) | Tailwind の Preflight を mdmark の本文の外だけに適用する CSS |
 | [画面 / アプリとルート](./MOD-155-75.yaml) | エントリーポイント・プロバイダ・ルーター・ルートの構成 |
 | [画面 / アプリとルート / $source/$.tsx](./MOD-155-52.tsx.yaml) | `/{配信元の ID}/{文書のパス}` のルート |
 | [画面 / アプリとルート / $source/index.tsx](./MOD-155-53.tsx.yaml) | `/{配信元の ID}` のルート |
@@ -155,5 +156,6 @@
 | [開発ドキュメントサーバー / 起動 / main.py](./MOD-155-174.py.yaml) | `dev-docs serve`・`dev-docs migrate` の部品の配線と、起動のときの配信元の通知 |
 | [開発ドキュメントサーバー / 起動 / screen.py](./MOD-155-182.py.yaml) | 画面のビルドの配信 |
 | [開発用のスクリプト / 公開ページのビルド / build_pages.py](./MOD-192-1.py.yaml) | 公開の文書と判定フローチャートを mdmark の build で Pages の 1 枚の HTML にまとめる |
+| [開発用のスクリプト / 常駐サーバーの起動し直し / dev-docs-restart-resident.sh](./MOD-266-1.yaml) | 実行時に参照するファイルが変わっていれば依存をそろえて dev-docs.service を起動し直す |
 
 <!-- /table -->
