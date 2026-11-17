@@ -1,0 +1,14 @@
+scope_out:
+  - item: 項目のパスの `[{値}#{順番}]`（同じ値の要素の順番）と、辞書の項目の `[{キー}]` の見出しの解決
+    reason: 要望は対応の取れた `[` `]` を値に含める書き方への追随で、順番と辞書のキーの書き方は含まない
+    plan: none
+  - item: '`src/dev_docs/features/documents/fields.py` の `parse_field_path`（`[]`・`[{キー}]` を要素の選び方として読む項目のパス）'
+    reason: 参照の型の項目のパスではなく絞り込み・取得の項目のパスで、shuhei1101/project-index#169 も `search_docs`・`list_changes` の項目のパスの読み方を変えていない
+    plan: none
+docs: []
+use_cases:
+  - kind: single
+    scenario: docs/scenario/SC-155-7.yaml
+    impact: none
+    detail: 本文の文書の参照のリンクが、値に [ ] を含む要素の見出しへ飛ぶようになる。参照の流れは変わらない
+    depends_on: []
