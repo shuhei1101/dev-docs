@@ -27,7 +27,6 @@ def test_field_values(make_document: Callable[..., Document]) -> None:
     assert missing == []
 
 
-
 def test_field_values_when_columns(make_document: Callable[..., Document]) -> None:
     """行の metadata で対応付けた列の値（正常系）。"""
     # 準備
@@ -36,6 +35,7 @@ def test_field_values_when_columns(make_document: Callable[..., Document]) -> No
     result = field_values(document, "category", columns={"category": "section"})
     # 検証
     assert result == ["使い方"]
+
 
 def test_heading_lines() -> None:
     """階層とコードブロック（正常系）。"""

@@ -111,7 +111,6 @@ def test_build_nav_when_no_nav(
     assert [_shape(item) for item in tabs[1].items] == ["notes/c"]
 
 
-
 GUIDE_SCHEMA = {
     "properties": {"path": {"type": "string"}, "name": {"type": "string"}},
 }
@@ -211,6 +210,7 @@ def test_build_nav_when_metadata_column_renamed(
     assert [(item.kind, item.path) for item in tabs[0].items] == [
         ("page", "guide/files/guide/a.md")
     ]
+
 
 def test_build_nav_when_group_by_folder(
     make_view: Callable[..., SourceView],
