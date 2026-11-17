@@ -344,6 +344,7 @@ def test_item_heading_when_order(item: str, expected: str) -> None:
         pytest.param("functions[main#4]", id="over"),
         pytest.param("functions[main#0]", id="zero"),
         pytest.param("functions[none#1]", id="no_element"),
+        pytest.param("functions[main#²]", id="superscript"),
     ],
 )
 def test_item_heading_when_order_out_of_range(item: str) -> None:
