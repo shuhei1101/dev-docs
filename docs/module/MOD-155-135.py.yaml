@@ -175,12 +175,19 @@ functions:
         required: true
         passing: keyword
         description: 日付の相対の値の基準
+      - name: columns
+        title: 共通のキーの列
+        type: Mapping[str, str]
+        required: false
+        passing: keyword
+        default: '{}'
+        description: 文書の行の `metadata`（共通のキー → 列名）。項目の値に渡す
     returns:
       type: bool
       description: 該当するか
     process: |-
       1. `Group` は `all_of` なら全て、`any_of` ならどれかが該当するとき、`not_` なら中が該当しないとき `True`
-      2. `Condition` は項目の値を取得し、`values` の各値と比べる（`match` が `any` ならどれか、`all` なら全て）
+      2. `Condition` は項目の値（`columns` を渡す）を取得し、`values` の各値と比べる（`match` が `any` ならどれか、`all` なら全て）
          - `exists`・`not_exists` は値の並びが空でないか
          - `eq`・`ne`・`prefix`・`suffix`・`contains`・`not_contains` は、値の並びのどれかとの文字列の比較（`case_sensitive` が `False` なら両方を NFKC と `casefold`）。`ne`・`not_contains` は値の並びのどれとも該当しないとき `True`
          - `regex` は正規表現の組み立ての `search`。`case_sensitive` が `False` なら文書の値を NFKC にして比べる（パターンには正規化をかけない）

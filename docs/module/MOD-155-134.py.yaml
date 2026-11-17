@@ -58,6 +58,13 @@ functions:
         required: true
         passing: positional
         description: 項目
+      - name: columns
+        title: 共通のキーの列
+        type: Mapping[str, str]
+        required: false
+        passing: keyword
+        default: '{}'
+        description: 文書の行の `metadata`（共通のキー → 列名）
     returns:
       type: list[Any]
       description: 値の並び。配列の項目は要素、値が無ければ空
@@ -65,6 +72,7 @@ functions:
       1. 項目で取得方法を決める
          - `id`・`kind` の場合、文書の属性
          - メタデータのキー（`METADATA_KEYS`）の場合、`document.metadata`
+         - `columns` のキーで `METADATA_KEYS` に無い場合、`data` の対応付けた列（`columns[項目]`）を項目の取得で取得する
          - `body` の場合、本文（文書の一覧の文書は本文を持たず空）
          - `*` の場合、`data` の全ての文字列の葉と本文
          - `@chars` は本文の文字数、`@path` は `document.path`（`records` の行は `{path}#{record_index}`）、`@sections` は Markdownの本文かが `True` の文書なら本文の見出しの文字列、それ以外は `data` の最上位のキーの並び
@@ -78,6 +86,12 @@ functions:
         condition: '`tags: [a, b]`・`data.owner.name: x`・本文 `# 見出し`'
         mock: なし
         expected: '`tags` が `[a, b]`、`owner.name` が `[x]`、`@chars` が本文の文字数、`missing` が `[]`'
+      - name: test_field_values_when_columns
+        case: 正常
+        summary: 行の metadata で対応付けた列の値
+        condition: '`data.section: 使い方`、`columns: {category: section}`、項目 `category`'
+        mock: なし
+        expected: '`[使い方]`'
   - name: known_fields
     title: 使用できる項目
     kind: 関数

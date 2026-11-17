@@ -53,6 +53,7 @@ def _select(
     *,
     fields: Mapping[str, str],
     today: date,
+    rows: Mapping[str, DocumentRow],
 ) -> list[IndexedDocument]:
     """`auto` の `document` と `filter` に該当する文書を、文書のページのパスの昇順で返却する。"""
     kind = spec.get("document")
@@ -66,7 +67,17 @@ def _select(
     # 使用できない項目・値の条件はタブを空にする（検査は project-index が警告する）
     if check_filter(node, fields):
         return []
-    return [d for d in found if match_filter(node, d, fields=fields, today=today)]
+    return [
+        d
+        for d in found
+        if match_filter(node, d, fields=fields, today=today, columns=_columns(rows, d.kind))
+    ]
+
+
+def _columns(rows: Mapping[str, DocumentRow], kind: str) -> Mapping[str, str]:
+    """文書の行の `metadata`（共通のキー → 列名）。行が無ければ空。"""
+    row = rows.get(kind)
+    return row.metadata if row is not None else {}
 
 
 def _auto(
@@ -84,7 +95,7 @@ def _auto(
     """
     found = [
         document
-        for document in _select(documents, spec, fields=fields, today=today)
+        for document in _select(documents, spec, fields=fields, today=today, rows=rows)
         if page_path(document) not in excluded
     ]
     group_by = spec.get("group_by")
@@ -244,8 +255,19 @@ def _tab_title(row: DocumentRow) -> str:
 
 
 def _source_fields(view: SourceView) -> dict[str, str]:
-    """配信元の行のスキーマ（`records` を持つ行は 1 要素のスキーマ）から使用できる項目を作る。"""
-    return known_fields(row.schema for row in view.documents)
+    """配信元の行のスキーマ（`records` を持つ行は 1 要素のスキーマ）から使用できる項目を作る。
+
+    行の `metadata` で対応付けたキーは、対応付けた列の型（列がスキーマに無ければ `string`）で加える。
+    """
+    fields = known_fields(row.schema for row in view.documents)
+    for row in view.documents:
+        row_fields = known_fields([row.schema])
+        for key, column in row.metadata.items():
+            # 既に使用できる項目（共通のキー・スキーマの項目）はそのまま
+            if key in fields:
+                continue
+            fields[key] = row_fields.get(column, "string")
+    return fields
 
 
 def build_nav(view: SourceView, documents: Sequence[IndexedDocument]) -> list[NavTab]:
