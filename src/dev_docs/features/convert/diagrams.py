@@ -70,11 +70,11 @@ MERMAID_RESERVED_IDS = frozenset(
         "frame",
     }
 )
-# `clicks` の `href` と手で書くフローチャートの `click` の行の、`{文書の ID}#{項目のパス}` を指すリンク先の接頭辞
+# `clicks` の `href` と手で書く Mermaid の `click` の行の、`{文書の ID}#{項目のパス}` を指すリンク先の接頭辞
 ID_LINK_PREFIX = "id:"
 # 手で書く Mermaid のうち、`click` の行のリンク先を書き換える 1 行目の最初の単語
 FLOWCHART_MERMAID_KINDS = ("flowchart", "graph")
-# 手で書くフローチャートの `click {ノード} "id:…"`・`click {ノード} href "id:…"` の行
+# 手で書く Mermaid の `click {ノード} "id:…"`・`click {ノード} href "id:…"` の行
 MERMAID_ID_CLICK = re.compile(
     r'^(?P<head>[ \t]*click[ \t]+\S+[ \t]+(?:href[ \t]+)?)"id:(?P<target>[^"]*)"(?P<tail>[^\n]*)$',
     re.M,
@@ -423,7 +423,7 @@ def render_diagram(
 
 
 def _link_clicks(code: str, link: Callable[[str], str | None]) -> str:
-    """フローチャートの `click` の行の `id:` のリンク先を引いた値にし、引けない行を消す。"""
+    """`click` の行の `id:` のリンク先を引いた値にし、引けない行を消す。"""
     lines: list[str] = []
     for line in code.splitlines():
         match = MERMAID_ID_CLICK.match(line)
@@ -438,11 +438,12 @@ def _link_clicks(code: str, link: Callable[[str], str | None]) -> str:
 
 
 def render_mermaid(code: str, head: DiagramHead, link: Callable[[str], str | None]) -> str:
-    """手で記載する Mermaid のコードを、map で描ける種類なら map の範囲に、それ以外は Mermaid のまま組み立てる。"""
+    """手で記載する Mermaid のコードを、map で描ける種類なら map の範囲に、それ以外は click の行を書き換えた Mermaid に組み立てる。"""
     first = next((line.split()[0] for line in code.splitlines() if line.strip()), "")
     # map で描ける種類: フローチャートは click の id のリンク先を書き換えて、map の範囲で囲む
     if first in MAP_MERMAID_KINDS:
         if first in FLOWCHART_MERMAID_KINDS:
             code = _link_clicks(code, link)
         return _map_block(code, head)
-    return f"```mermaid\n{code}\n```"
+    # map で描かない種類: click の id のリンク先を書き換えて、Mermaid のまま返す
+    return f"```mermaid\n{_link_clicks(code, link)}\n```"
