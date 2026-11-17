@@ -90,10 +90,16 @@ components:
     unit_tests:
       - name: test_storage_field
         case: 正常
-        summary: 選択肢の出し分け
-        condition: '`stored` が null のときと `disk` のときに選択肢を開く'
+        summary: 保存済みの値を持つ行の選択肢
+        condition: '`storage.type: disk` の行を編集で開き、選択肢を開く'
         mock: なし
-        expected: null では `自動`・`Git`・`ディスク`、`disk` では `Git`・`ディスク` だけで、補足の文がそれぞれ画面設計の文言
+        expected: '`ディスク` が選ばれ、選択肢が `Git`・`ディスク` だけ（`自動` が無い）で、補足の文が保存済みの行の文言'
+      - name: test_storage_field_when_not_stored
+        case: 正常
+        summary: 保存済みの値が無い行の選択肢
+        condition: 追加で開き、選択肢を開く
+        mock: なし
+        expected: 選択肢が `自動`・`Git`・`ディスク` で、補足の文が `自動` の説明の文言
 tags:
   - name: topic:設定画面
     main: true
