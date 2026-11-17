@@ -1,0 +1,11 @@
+use_cases:
+  - kind: single
+    scenario: docs/scenario/SC-155-7.yaml
+    impact: none
+    detail: 本文の文書の参照のリンクが、同じ値の要素の 2 つ目以降と辞書の項目の見出しへ飛ぶようになる。参照の流れは変わらない
+    depends_on: []
+scope_out:
+  - item: '`[{値}#{順番}]` のリンクのアンカー（同じ見出しが並ぶとき、2 つ目以降の見出しのアンカーへ飛ばす）'
+    reason: '要望は item_heading が見出しを返却することで、見出しの文字列からアンカーを作る inline.py の heading_anchor は同じ見出しを区別しない。描画側が同じ見出しのアンカーに連番を付けるかで直し方が変わり、スコープに含めるか判断が分かれるため、レビューで確定する（今の判断: 今回の変更を前提にした後続として切り出す）'
+    plan: to_file
+docs: []
