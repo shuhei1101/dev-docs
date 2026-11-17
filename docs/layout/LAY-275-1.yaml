@@ -786,7 +786,7 @@ entries:
         contents: 全てのテストの共通の準備
   - type: folder
     name: tmp
-    contents: レビューのスクリーンショットと、Storybook・公開ページのビルドの出力
+    contents: レビューのスクリーンショットと、Storybook・公開ページのビルドの出力。中身が `*` だけの `.gitignore` を配置し、フォルダの中を全て Git の管理から除外する
   - type: file
     name: .gitignore
     contents: Git で管理しないもの
@@ -839,8 +839,6 @@ entries:
     name: version.ini
     contents: dev-docs のバージョン
 gitignore:
-  - pattern: docs/generated/
-    reason: 以前の YAML の設計書から生成した Markdown の出力先（今は生成するコマンドが無い）
   - pattern: .venv/
     reason: uv が作る仮想環境
   - pattern: __pycache__/
@@ -855,10 +853,6 @@ gitignore:
     reason: ruff のキャッシュ
   - pattern: node_modules/
     reason: npm の依存
-  - pattern: tmp/storybook-static/
-    reason: Storybook のビルドの出力
-  - pattern: tmp/pages/
-    reason: 公開ページのビルドの出力
   - pattern: test-results/
     reason: Playwright のテストの出力
   - pattern: playwright-report/
