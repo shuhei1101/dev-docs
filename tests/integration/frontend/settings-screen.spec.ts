@@ -588,7 +588,7 @@ test.describe("書き込みの範囲の入力欄", () => {
     await open(page);
     await openAdd(page);
     await expect(page.getByLabel("書き込みの範囲")).toHaveValue("");
-    await expect(dialog(page).getByText("任意")).toBeVisible();
+    await expect(dialog(page).locator("label", { hasText: "書き込みの範囲" }).getByText("任意")).toBeVisible();
     await expect(
       dialog(page).getByText("glob を 1 行に 1 つ。当たる作業場所から、この配信元の文書へ書き込めます。"),
     ).toBeVisible();
