@@ -199,3 +199,59 @@ export const SaveAfterSourceRemoved: Story = {
     ).toBeInTheDocument();
   },
 };
+
+const sourcesWithStorage = [
+  { ...sources[0] },
+  {
+    id: "local",
+    config: ["/home/u/repo/local/project-index.local.yaml"],
+    enabled: true,
+    scope: { read: ["/home/u/repo/local/**"], write: null },
+    status: "serving",
+    storage: { type: "disk" },
+  },
+];
+
+const storageListed = () =>
+  http.get(SETTINGS, () =>
+    HttpResponse.json({
+      settingsPath: "/home/u/.config/project-index/settings.yaml",
+      sources: sourcesWithStorage,
+    }),
+  );
+
+export const AddWithStorage: Story = {
+  parameters: { msw: [storageListed()] },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(
+      await canvas.findByRole("button", { name: "配信元を追加" }),
+    );
+    const body = within(canvasElement.ownerDocument.body);
+    await userEvent.click(
+      await body.findByRole("combobox", { name: /読み書きの方法/ }),
+    );
+    await expect(
+      await body.findByRole("option", { name: "自動" }),
+    ).toBeInTheDocument();
+  },
+};
+
+export const EditDiskStorage: Story = {
+  parameters: { msw: [storageListed()] },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(
+      await canvas.findByRole("button", { name: "local を編集" }),
+    );
+    const body = within(canvasElement.ownerDocument.body);
+    const storage = await body.findByRole("combobox", {
+      name: /読み書きの方法/,
+    });
+    await expect(storage).toHaveTextContent("ディスク");
+    await userEvent.click(storage);
+    await expect(
+      body.queryByRole("option", { name: "自動" }),
+    ).not.toBeInTheDocument();
+  },
+};
