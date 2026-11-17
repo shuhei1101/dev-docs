@@ -6,7 +6,7 @@ import { InitialLoading } from "@/app/initial-loading";
 import { AppProviders } from "@/app/providers";
 import { createQueryClient } from "@/app/query-client";
 import { createAppRouter } from "@/app/router";
-import "@/index.css";
+import "@/shared/styles/index.css";
 
 const queryClient = createQueryClient();
 const router = createAppRouter({ queryClient });

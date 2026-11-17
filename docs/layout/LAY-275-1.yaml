@@ -94,12 +94,6 @@ entries:
         convention: react-core-folder-structure
         children:
           - type: file
-            name: preflight-outside-mdmark.css
-            contents: Tailwind の preflight を mdmark の本文の外だけに当てるコピー
-            generated_from:
-              source: npm:tailwindcss@4.3.3
-              tracked: 画面のビルドが読み込む
-          - type: file
             name: route-tree.gen.ts
             contents: '@tanstack/router-plugin の生成物'
             generated_from:
@@ -121,6 +115,16 @@ entries:
                       path: frontend/openapi.json
                       command: CMD-155-1#categories[ビルド・生成]
                       tracked: 型検査とテストが生成済みのクライアントを import する
+              - type: folder
+                name: styles
+                contents: トークン・要素の既定・Tailwind の読み込み
+                children:
+                  - type: file
+                    name: preflight-outside-mdmark.css
+                    contents: Tailwind の preflight を mdmark の本文の外だけに当てるコピー
+                    generated_from:
+                      source: npm:tailwindcss@4.3.3
+                      tracked: 画面のビルドが読み込む
       - type: file
         name: openapi.json
         contents: orval の入力にする画面の API の OpenAPI

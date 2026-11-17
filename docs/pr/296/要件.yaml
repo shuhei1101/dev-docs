@@ -1,0 +1,31 @@
+use_cases:
+  - kind: composite
+    scenario: docs/scenario/SC-155-13.yaml
+    impact: none
+    detail: 利用者が文書を参照する流れは変わらない
+    depends_on: []
+  - kind: single
+    scenario: docs/scenario/SC-155-7.yaml
+    impact: run_only
+    detail: 画面の全体の見た目を受け持つスタイルの置き場所が変わり、読み込み漏れがあると文書の画面の見た目が崩れるため、見た目が変わらないことを確かめる
+    depends_on: []
+docs:
+  - page: docs/layout/LAY-275-1.yaml
+    new: false
+    change: frontend/src/ の直下の preflight-outside-mdmark.css のエントリを、shared/ の下に置く styles/ のフォルダの下へ移す
+    status: done
+    updated_by: planner
+    updated_at: '2026-11-17T18:02:30.052442+00:00'
+  - page: docs/library/LIB-155-19.yaml
+    new: false
+    change: 使用する箇所の frontend/src/index.css を frontend/src/shared/styles/index.css にする
+    status: done
+    updated_by: planner
+    updated_at: '2026-11-17T18:02:30.052442+00:00'
+  - page: docs/library/LIB-155-21.yaml
+    new: false
+    change: 使用する箇所の frontend/src/index.css を frontend/src/shared/styles/index.css にする
+    status: done
+    updated_by: planner
+    updated_at: '2026-11-17T18:02:30.052442+00:00'
+scope_out: []

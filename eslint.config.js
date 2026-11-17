@@ -37,7 +37,7 @@ export default tseslint.config(
       "better-tailwindcss": betterTailwindcss,
     },
     settings: {
-      "better-tailwindcss": { entryPoint: `${SRC}/index.css` },
+      "better-tailwindcss": { entryPoint: `${SRC}/shared/styles/index.css` },
       "boundaries/elements": [
         { type: "app", pattern: `${SRC}/app/**` },
         { type: "routes", pattern: `${SRC}/routes/**` },
