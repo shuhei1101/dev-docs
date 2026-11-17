@@ -13,7 +13,9 @@ docs:
   - page: docs/guide/設定.md
     new: false
     change: '#249: nav の auto.filter に共通のキー（行の metadata で対応付けたキーを含む）を指定できることを記載する'
-    status: todo
+    status: done
+    updated_by: planner
+    updated_at: '2026-11-17T10:24:28.991766+00:00'
   - page: docs/nonfunctional/NFR-155-1.yaml
     new: false
     change: '#225: project-index#85 の後の 1 回目の表示の計測値から、最初の文書を表示し終えるまでの決定値を見直す'
@@ -31,4 +33,7 @@ scope_out:
     plan: '#250'
   - item: mdmark 側の Mermaid の click の描画の修正
     reason: '#255 の調査で mdmark#630 による mdmark#570 の退行と確かめた場合は mdmark へ起票して依存に置き、この作業 PR では直さない。退行かは調査で確定する'
+    plan: to_file
+  - item: project-index の配信元の検査（nav_warnings の check_nav_filters）が、行の metadata で対応付けたキー（category）を知らない項目として警告すること
+    reason: project-index の develop で knowledge-files のスキーマと category の条件を当てると「知らない項目です（category）」を返した。別のリポジトリの修正で、この作業 PR がマージされなくても同じ内容で成り立つ
     plan: to_file
