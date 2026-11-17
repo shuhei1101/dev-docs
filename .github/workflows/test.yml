@@ -101,7 +101,7 @@ jobs:
             frontend-integration) cmd="npx playwright test --config tests/integration/frontend/playwright.config.ts $PATHS" ;;
           esac
           # テストを裏で起動し、出力を test.log と step の標準出力の両方に出す
-          setsid bash -c "set -o pipefail; $cmd 2>&1 | tee -a test.log" &
+          setsid -w bash -c "set -o pipefail; $cmd 2>&1 | tee -a test.log" &
           pid=$!
           last=-1
           idle=0
