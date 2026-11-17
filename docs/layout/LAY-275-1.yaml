@@ -786,7 +786,11 @@ entries:
         contents: 全てのテストの共通の準備
   - type: folder
     name: tmp
-    contents: レビューのスクリーンショットと、Storybook・公開ページのビルドの出力。中身が `*` だけの `.gitignore` を配置し、フォルダの中を全て Git の管理から除外する
+    contents: レビューのスクリーンショットと、Storybook・公開ページのビルドの出力
+    children:
+      - type: file
+        name: .gitignore
+        contents: '`tmp/` の中身を全て Git の管理から除外する `*` だけのパターン'
   - type: file
     name: .gitignore
     contents: Git で管理しないもの
