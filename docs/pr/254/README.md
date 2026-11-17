@@ -1,0 +1,1 @@
+# 文書の画面の結合テスト body_without_preflight の閉じた凡例の前提を、mdmark の develop の最新に合わせる
