@@ -82,14 +82,14 @@ requirements:
     category: 保守性
     external_constraint: 'jsDelivr はタグを 1 年キャッシュし（`cache-control: public, max-age=31536000, s-maxage=31536000, immutable`）、ブランチを CDN で 12 時間、ブラウザで 7 日キャッシュする。mdmark は 0.x の間 master を更新せず、スプリントの区切りで develop にタグを打つ'
     source_kind: ユーザー要望
-    source: https://github.com/shuhei1101/dev-docs/issues/127
-    value: jsDelivr の mdmark の develop に打ったタグ（`@v0.13.0` の `dist/index.js`・`dist/index.css`）を参照し、integrity を付けない
-    rationale: ビルドが要る mdmark の `dist/` は、develop に打ったタグで配られる。タグで固定し、develop の壊れた変更をすぐには受け取らない。上げるときは `MDMARK_URL`・`MDMARK_CSS_URL` のタグを書き換える。`mount` は動的 `import()` で読み込み、integrity を指定できないため付けない
-    measurement: 文書の画面を開き、`@v0.13.0` の `dist/index.js`・`dist/index.css` が 200 で読まれることを確かめる
-    overflow: 新しいタグの機能は、読み込み先のタグを書き換えるまで届かない
+    source: https://github.com/shuhei1101/dev-docs/issues/236
+    value: jsDelivr の mdmark の端末の設定の `mdmark_version`（既定 `develop`）の `dist/index.js`・`dist/index.css` を参照し、integrity を付けない
+    rationale: タグを打つのを待たずに、mdmark の develop へ入った機能を使う。develop の壊れた変更への備えは、作業 PR のテストでの描画の確認と、端末の設定の `mdmark_version` での固定で持つ。`mount` は動的 `import()` で読み込み、integrity を指定できないため付けない
+    measurement: 文書の画面を開き、`mdmark_version` の値の `dist/index.js`・`dist/index.css` が 200 で読まれることを確かめる
+    overflow: mdmark の develop の変更で画面が壊れてから気づくまでの間は、利用者が `mdmark_version` にタグか commit の SHA を記載して固定し、再起動して回避する。dev-docs の文書は map の ER 図・状態遷移図と JSON の記載のマーカーを使うため、固定できる下限は v0.13.0
     refs:
       - LIB-155-9#
-      - MOD-155-25#constants[MDMARK_URL]
+      - MOD-155-25#functions[mdmarkUrls]
     status: planned
   - id: NFR-13
     name: 起動から接続を受け付けるまでの時間

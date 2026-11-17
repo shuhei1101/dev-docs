@@ -48,7 +48,9 @@ def route_operation_id(route: APIRoute) -> str:
     return f"{route.tags[0]}-{route.name}" if route.tags else route.name
 
 
-def build_app(handlers: Handlers, *, screen_dir: Path = SCREEN_DIST_DIR) -> FastAPI:
+def build_app(
+    handlers: Handlers, *, screen_dir: Path = SCREEN_DIST_DIR, mdmark_version: str = "develop"
+) -> FastAPI:
     """画面の API・管理の MCP・画面の配信を 1 つの FastAPI のアプリにまとめる。"""
     admin_mcp = build_admin_mcp(handlers)
     app = FastAPI(
@@ -70,5 +72,5 @@ def build_app(handlers: Handlers, *, screen_dir: Path = SCREEN_DIST_DIR) -> Fast
     app.include_router(build_settings_router(handlers))
     app.include_router(build_view_router(handlers))
     # 全てのパスに該当するため、最後に登録する
-    app.include_router(build_screen_router(screen_dir))
+    app.include_router(build_screen_router(screen_dir, mdmark_version=mdmark_version))
     return app

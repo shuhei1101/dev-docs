@@ -29,7 +29,30 @@ flows:
       - '`/` と `/sample/docs/doc-1` が 200 で、本文がビルドの `index.html`、`Content-Type` が `text/html`、`Cache-Control` が `no-cache`'
       - '`/assets/{JS のファイル}` が 200 で、本文がそのファイル、`Content-Type` が JavaScript、`Cache-Control` が `immutable` を含む'
       - '`/_api/sources/sample/docs` は画面ではなく文書の取得の JSON を返す'
+      - '`index.html` の `<head>` に `<meta name="mdmark-version" content="develop">` がある（端末の設定に `mdmark_version` が無いときの既定）'
     test: test_normal
+  - name: 正常系（mdmark のバージョンを固定する）
+    summary: 端末の設定の `mdmark_version` の値を、`index.html` の `mdmark-version` の `<meta>` に入れて返す
+    setup:
+      - name: Mock
+        description: なし
+      - name: 画面のビルド
+        description: 正常系と同じビルドのフォルダ
+      - name: 端末の設定
+        description: '`mdmark_version: v0.13.0`'
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        participant C as クライアント
+        participant E as GET /{path}
+
+        C->>E: GET /sample/docs/doc-1
+        E-->>C: 200 index.html
+      ```
+    expected:
+      - '`index.html` の `<head>` に `<meta name="mdmark-version" content="v0.13.0">` が 1 つだけある'
+      - '`<meta>` のほかの `index.html` の中身は、ビルドの `index.html` と同じ'
+    test: test_normal_when_mdmark_version_pinned
   - name: 異常系（無い静的ファイル・無い API・404）
     summary: '`assets/` の無いファイルと `/_api/` の無いパスは `index.html` を返さず 404 を返す'
     setup:
@@ -143,4 +166,7 @@ constraints:
     decided_by: NFR-155-1#requirements[待ち受けのアドレス]
   - item: OpenAPI
     constraint: APIのスキーマに載せない
+  - item: mdmark のバージョン
+    constraint: 画面のパスに返す `index.html` の `<head>` に、端末の設定の `mdmark_version`（無ければ `develop`）を `<meta name="mdmark-version" content="{値}">` で 1 つ入れる。画面はこの値で mdmark の読み込み先を組み立てる。ビルドの `index.html` のファイルは書き換えない
+    decided_by: CFG-155-2#settings[mdmark_version]
 test_file: tests/integration/server/test_serve_screen.py

@@ -1,0 +1,10 @@
+（develop（#238）の取り込みと画面のビルドの作り直しの後に再実行）
+$ uv run pytest tests/integration/server/test_get_document.py::test_normal_when_diagrams_checked
+tests/integration/server/test_get_document.py .                          [100%]
+
+============================== 1 passed in 6.48s ===============================
+
+$ npx playwright test --config tests/integration/frontend/playwright.config.ts tests/integration/frontend/doc-view-screen.spec.ts
+  ✓  116 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1752:3 › project-index から文書を受け取れないときの表示 › project_index_failed_alert (598ms)
+
+  116 passed (5.1m)

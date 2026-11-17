@@ -98,7 +98,9 @@ def load_terminal_config(path: Path, *, env: Mapping[str, str] | None = None) ->
     state_dir = state_dir_path(value.get("state_dir"), os.environ if env is None else env)
     log_dir = normalize_path(value["log_dir"]) if "log_dir" in value else state_dir / "logs"
     values: dict[str, Any] = {
-        key: value[key] for key in ("port", "bind", "project_index") if key in value
+        key: value[key]
+        for key in ("port", "bind", "project_index", "mdmark_version")
+        if key in value
     }
     return TerminalConfig(
         file=path,

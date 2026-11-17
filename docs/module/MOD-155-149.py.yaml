@@ -133,6 +133,12 @@ data_models:
         access: 公開
         default: '{state_dir}/logs'
         description: project-index につながらないことと警告のログを書くフォルダ
+      - name: mdmark_version
+        title: mdmark のバージョン
+        type: str
+        access: 公開
+        default: '"develop"'
+        description: 画面が jsDelivr から読み込む mdmark のバージョン（`develop`・タグ・commit の SHA。値の検証は端末の設定のスキーマ）
   - name: SettingsSourcesRequest
     title: 配信元の保存の要求
     container: features/settings/types.py

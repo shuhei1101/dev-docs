@@ -74,11 +74,12 @@ def test_normal(
 ) -> None:
     """project-index が配信している 2 つの配信元を画面で配信し始める（正常系）。"""
     # 準備
-    settings = write_settings(_two_sources(mock_index).address)
+    settings = write_settings(_two_sources(mock_index).address, extra="mdmark_version: v0.13.0\n")
     port = free_port()
     process = start_serve(settings, port)
     wait_until_serving(process, port)
     # 実行
+    screen = httpx.get(f"http://127.0.0.1:{port}/", timeout=10)
     sample = httpx.get(f"http://127.0.0.1:{port}/_api/sources/sample/docs", timeout=10)
     notes = httpx.get(f"http://127.0.0.1:{port}/_api/sources/notes/docs", timeout=10)
     docs_mcp = _mcp(port, "/mcp/", INITIALIZE)
@@ -90,6 +91,8 @@ def test_normal(
     output = process.stdout.read() if process.stdout else ""
     # 検証
     assert addresses == {LOOPBACK_V4}
+    assert screen.status_code == 200
+    assert '<meta name="mdmark-version" content="v0.13.0">' in screen.text
     assert sample.status_code == 200
     assert notes.status_code == 200
     assert docs_mcp.status_code == 404

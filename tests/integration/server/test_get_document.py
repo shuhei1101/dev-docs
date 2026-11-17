@@ -288,8 +288,8 @@ chart: |-
     c --> a
   ```
 """
-# 文書の取得の結合テストで図を点検する、`package.json` の `devDependencies` でバージョンを固定した mdmark の CLI
-MDMARK_CLI = REPO_ROOT / "node_modules" / ".bin" / "mdmark"
+# 文書の取得の結合テストで図を点検する mdmark の CLI の参照（既定は develop の最新。固定するときはタグか commit の SHA に書き換える）
+MDMARK_REF = "develop"
 # 画面が `mount` に指定する map の設定（`map.kinds`・`map.lines`）
 MDMARK_MAP = (
     REPO_ROOT / "frontend" / "src" / "features" / "docs" / "doc-view" / "hooks" / "mdmark-map.json"
@@ -908,7 +908,6 @@ def test_normal_when_diagrams_checked(
 ) -> None:
     """線がノードを横切りやすい構造の図を、mdmark の点検で書き方の警告が出ない map の範囲にする（正常系）。"""
     # 準備
-    assert MDMARK_CLI.exists(), "mdmark の CLI が無い。リポジトリの直下で `npm ci` を実行する"
     config = tmp_path / "mdmark.config.yaml"
     # JSON は YAML として読める
     config.write_text(
@@ -923,7 +922,16 @@ def test_normal_when_diagrams_checked(
     response = env.client.get("/_api/sources/sample/docs/drawn/doc-9")
     markdown = response.json()["markdown"]
     checked = subprocess.run(
-        [str(MDMARK_CLI), "check", "--text", "-", "--config", str(config)],
+        [
+            "npx",
+            "-y",
+            f"github:shuhei1101/mdmark#{MDMARK_REF}",
+            "check",
+            "--text",
+            "-",
+            "--config",
+            str(config),
+        ],
         input=markdown,
         capture_output=True,
         text=True,

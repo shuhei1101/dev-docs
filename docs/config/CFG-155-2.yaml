@@ -62,6 +62,15 @@ settings:
     default: '`{state_dir}/logs`'
     description: project-index につながらないことと警告のログを書くフォルダ
     reload: restart
+  - key: mdmark_version
+    title: mdmark のバージョン
+    file: settings.yaml
+    type: str
+    default: develop
+    description: 画面が jsDelivr から読み込む mdmark のバージョン。既定は mdmark の develop の最新で、mdmark の develop の変更で画面が壊れたときは、タグか commit を記載して固定する
+    missing: 既定の `develop` を使う
+    reload: restart
+    allowed: '`develop`・タグ（`v{x}.{y}.{z}`）・commit の SHA（7〜40 桁の 16 進数）'
   - key: sources
     title: 前のバージョンから残った配信元
     file: settings.yaml

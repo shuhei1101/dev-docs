@@ -146,6 +146,13 @@ functions:
         default: SCREEN_DIST_DIR
         passing: keyword
         description: 画面の配信が返すビルドのフォルダ。テストで差し替える
+      - name: mdmark_version
+        title: mdmark のバージョン
+        type: str
+        required: false
+        default: '"develop"'
+        passing: keyword
+        description: 画面の配信が `index.html` の meta に入れる値（端末の設定の `mdmark_version`）
     returns:
       type: fastapi.FastAPI
       description: 組み立てたアプリ
@@ -156,7 +163,7 @@ functions:
       4. `ADMIN_MCP_PATH` に管理の MCP の `streamable_http_app(streamable_http_path="/", stateless_http=True, json_response=True)` をマウントする。文書の MCP（`/mcp`）と `POST /_admin/session-start` は持たない
       5. `app.add_middleware(SlashlessMcpPathMiddleware, paths=(ADMIN_MCP_PATH,))` で、スラッシュ無しの MCP のパスをルーティングの前に補う（MCP のパスの補い）
       6. 端末の設定の入口・画面の入口のルーターを登録する
-      7. 画面の配信のルーター（画面の配信、`screen_dir` を渡す）を最後に登録する（全てのパスに当たるため）
+      7. 画面の配信のルーター（画面の配信、`screen_dir` と `mdmark_version` を渡す）を最後に登録する（全てのパスに当たるため）
       8. アプリを返す
     unit_tests:
       - name: test_build_app

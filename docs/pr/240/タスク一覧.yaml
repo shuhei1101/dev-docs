@@ -1,0 +1,83 @@
+tasks:
+  - process: 初期構築
+    status: skipped
+    reason: 既存リポジトリのため対象外
+    updated_by: planner
+    updated_at: '2026-11-16T12:36:54.125126+00:00'
+  - process: リバースエンジニアリング
+    status: skipped
+    reason: 設計書が既にあるため対象外
+    updated_by: planner
+    updated_at: '2026-11-16T12:36:54.125126+00:00'
+  - process: 方針決め
+    status: skipped
+    reason: 方針決めを依頼する Issue ではないため対象外
+    updated_by: planner
+    updated_at: '2026-11-16T12:36:54.125126+00:00'
+  - process: PoC 検証
+    status: skipped
+    reason: mdmark の develop の最新を jsDelivr・npx で参照できるかは shuhei1101/mdmark#620 が確かめるため、この PR では検証しない
+    updated_by: planner
+    updated_at: '2026-11-16T12:36:54.125126+00:00'
+  - process: 複合ユースケース設計
+    status: skipped
+    reason: 複合ユースケースの流れは変わらない
+    updated_by: planner
+    updated_at: '2026-11-16T12:36:54.125126+00:00'
+  - process: デザインスタイル選定
+    status: skipped
+    reason: 'モック要否: 利用者に見える画面の見た目が変わらない（読み込む mdmark の参照先だけが変わる）'
+    updated_by: planner
+    updated_at: '2026-11-16T12:36:54.125126+00:00'
+  - process: 画面一覧・画面遷移
+    status: skipped
+    reason: 'モック要否: 利用者に見える画面の見た目が変わらない'
+    updated_by: planner
+    updated_at: '2026-11-16T12:36:54.125126+00:00'
+  - process: 単一ユースケース設計
+    status: done
+    note: SC-155-7 の mdmark のバージョンの記述（v0.13.0）を参照先の設定に合わせる
+    updated_by: planner
+    updated_at: '2026-11-16T12:52:26.274267+00:00'
+  - process: モック作成
+    status: skipped
+    reason: 'モック要否: 利用者に見える画面の見た目が変わらない'
+    updated_by: planner
+    updated_at: '2026-11-16T12:36:54.125126+00:00'
+  - process: インターフェース定義設計
+    status: done
+    note: IF-155-10 の mdmark の CLI の固定の記述と、画面へ参照先の設定を渡す経路（渡す場合）
+    updated_by: planner
+    updated_at: '2026-11-16T15:36:43.697484+00:00'
+  - process: 部品設計
+    status: skipped
+    reason: 部品の引数・状態は変わらない
+    updated_by: planner
+    updated_at: '2026-11-16T12:36:54.125126+00:00'
+  - process: 画面設計
+    status: skipped
+    updated_by: planner
+    updated_at: '2026-11-16T15:59:18.321164+00:00'
+    note: '画面設計要否 ※3: mdmark のスクリプトの参照の付け替えは、mdmark が足す UI 項目（テーブル設定・コメント・右側の目次）の変化として扱う。SCR の mdmark の版の記述の有無を確かめる'
+    reason: SCR-155-1 の本文の要素は「画面が読み込むバージョンの mdmark」と書き、版を固定していない。要素・表示・操作は変わらず、読み込み先の組み立てはモジュール構成（MOD-155-25）で持つ
+  - process: モジュール構成設計
+    status: done
+    note: MOD-155-25 の MDMARK_URL・MDMARK_CSS_URL、MOD-192-1 の MDMARK_TAG を設定から組み立てる形にする
+    updated_by: planner
+    updated_at: '2026-11-16T16:01:00.395906+00:00'
+  - process: ドキュメント修正
+    status: done
+    updated_by: planner
+    updated_at: '2026-11-16T16:27:10.230359+00:00'
+  - process: 単体テスト作成
+    status: done
+    updated_by: planner
+    updated_at: '2026-11-16T16:36:18.030028+00:00'
+  - process: 実装
+    status: done
+    updated_by: planner
+    updated_at: '2026-11-16T16:40:02.769233+00:00'
+  - process: 結合テスト作成
+    status: done
+    updated_by: planner
+    updated_at: '2026-11-16T17:08:52.714439+00:00'
