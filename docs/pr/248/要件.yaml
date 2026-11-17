@@ -171,8 +171,8 @@ scope_out:
     reason: 'develop の rules.yaml は `rules: []` で、除外する行が無い'
     plan: none
   - item: 管理用の YAML のコード・テストの行への設計書への `related`（`implements`・`tests`）
-    reason: 未確定。今の project-index.yaml はコード・テストの行を持たず（files の行は _root・guide・mock だけ）、関連を張るには配信元の設定へコードの行を新設する別の作業が要る。この PR は既存の文書の書き方の移行に絞る判断で、レビューで確定する
-    plan: to_file
+    reason: 配信元の設定へコード・テストの行を新設する別の作業で、文書の書き方の移行とは目的が違う（レビューで案 A に決定）
+    plan: '#252'
   - item: リポジトリの直下の README.md・CLAUDE.md
     reason: Issue の範囲は docs/ の文書で、直下の 2 つは配信元の文書ではない
     plan: none
@@ -181,16 +181,16 @@ scope_out:
     plan: none
   - item: シナリオ・項目・テスト（`test_cases[].name`）の名前と、画面の文言（`label`）に残る対応表の単語（`利用者がコメントを渡す`・`差分を見る`・`配信元を外す` など）
     reason: 名前は E2E のテストのファイル名・テストのコメント・他の文書の参照のキー（`#scenarios[…]`）と対になり、画面の文言は画面の実装・テストと対になる。この PR はコードとテストを変えない
-    plan: to_file
+    plan: '#253'
   - item: ガイドのファイル名・タイトル（`画面で読む.md`・`dev-docsを入れる.md`）の対応表の単語
     reason: 改名すると files.yml・目次・リンク・公開ページのパスが変わる。文書の書き方の移行とは別の作業
-    plan: to_file
+    plan: '#253'
   - item: 版の新旧の比較の「新しい」「古い」、定着した語の「読み書き」「読み上げ」「見た目」
     reason: 対応表の置き換え先（新規・要更新）では比較の意味にならず、定着した語は言い換えると意味が変わる
     plan: none
   - item: コードのコメントが指す設計書の項目名（`ポートの確かめ`・`当たるフォルダの数`）の改名
     reason: src/ のコメントが同じ名前で指しており、改名するとコードとずれる。この PR はコードを変えない
-    plan: to_file
+    plan: '#253'
   - item: ガイド（files.yml）のタグの `main` と `action:` のタグ
     reason: files.yml のスキーマは `tags` を文字列の配列で持ち、`topic`・`tool` だけを入れると定めている。今のタグはその定めに沿っている
     plan: none
