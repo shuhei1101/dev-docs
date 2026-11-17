@@ -1,0 +1,412 @@
+$ run_url=$(gh workflow run test.yml --ref "$(git branch --show-current)" -f layer=backend-unit | grep -o 'https://[^ ]*/actions/runs/[0-9]*') && run_id=${run_url##*/} && ... gh run view "$run_id" --log
+
+# Red（テストコードの commit ab5d12f。fail は未実装の heading_anchors・ItemHeading・RenderContext.item_anchor の import と引数によるものだけ）
+
+test	Set up job	﻿2026-11-17T18:41:27.3888076Z Current runner version: '2.338.2'
+test	Set up job	2026-11-17T18:41:27.3905380Z ##[group]Runner Image Provisioner
+test	Set up job	2026-11-17T18:41:27.3906467Z Hosted Compute Agent
+test	Set up job	2026-11-17T18:41:27.3906927Z Version: 20261103.629
+test	Set up job	2026-11-17T18:41:27.3907405Z Commit: 15dbd9ccb5dbf34fae002b6ed1a2670f52df37bc
+test	Set up job	2026-11-17T18:41:27.3907954Z Build Date: 2026-11-03T17:26:59Z
+test	Set up job	2026-11-17T18:41:27.3908461Z Worker ID: {288052f0-4743-4752-9d66-fbcb2fff8735}
+test	Set up job	2026-11-17T18:41:27.3909055Z Region: us-west-2
+test	Set up job	2026-11-17T18:41:27.3909460Z Cloud: AWS
+test	Set up job	2026-11-17T18:41:27.3909835Z ##[endgroup]
+test	Set up job	2026-11-17T18:41:27.3910845Z ##[group]Operating System
+test	Set up job	2026-11-17T18:41:27.3911292Z Ubuntu
+test	Set up job	2026-11-17T18:41:27.3911725Z 26.04.1
+test	Set up job	2026-11-17T18:41:27.3912093Z LTS
+test	Set up job	2026-11-17T18:41:27.3912455Z ##[endgroup]
+test	Set up job	2026-11-17T18:41:27.3912864Z ##[group]Runner Image
+test	Set up job	2026-11-17T18:41:27.3913288Z Image: ubuntu-26.04
+test	Set up job	2026-11-17T18:41:27.3913687Z Version: 20261111.82.6
+test	Set up job	2026-11-17T18:41:27.3914460Z Included Software: https://github.com/actions/runner-images/blob/ubuntu26/20261111.82/images/ubuntu/Ubuntu2604-Readme.md
+test	Set up job	2026-11-17T18:41:27.3915726Z Image Release: https://github.com/actions/runner-images/releases/tag/ubuntu26%2F20261111.82
+test	Set up job	2026-11-17T18:41:27.3916610Z ##[endgroup]
+test	Set up job	2026-11-17T18:41:27.3917463Z ##[group]GITHUB_TOKEN Permissions
+test	Set up job	2026-11-17T18:41:27.3919003Z Contents: read
+test	Set up job	2026-11-17T18:41:27.3919682Z Metadata: read
+test	Set up job	2026-11-17T18:41:27.3920095Z ##[endgroup]
+test	Set up job	2026-11-17T18:41:27.3921566Z Secret source: Actions
+test	Set up job	2026-11-17T18:41:27.3922453Z Cache mode: write
+test	Set up job	2026-11-17T18:41:27.3922970Z Prepare workflow directory
+test	Set up job	2026-11-17T18:41:27.4148885Z Prepare all required actions
+test	Set up job	2026-11-17T18:41:27.4184519Z Getting action download info
+test	Set up job	2026-11-17T18:41:27.7981843Z Download action repository 'actions/checkout@v7' (SHA:3d3c42e5aac5ba805825da76410c181273ba90b1)
+test	Set up job	2026-11-17T18:41:30.1989794Z Download action repository 'actions/setup-node@v7' (SHA:949feb2413d6458794dcd2491c4babbbce0c15c1)
+test	Set up job	2026-11-17T18:41:30.4210234Z Download action repository 'astral-sh/setup-uv@v10.3.3' (SHA:68559e99cc807c1eb7e9238fd43a15bba460eec2)
+test	Set up job	2026-11-17T18:41:30.8301904Z Download action repository 'actions/upload-artifact@v7' (SHA:cf430e030ddbb5b0abf93d22962f4752f3646cd9)
+test	Set up job	2026-11-17T18:41:31.1207302Z Complete job name: test
+test	ブランチを取得する	﻿2026-11-17T18:41:31.1787894Z ##[group]Run actions/checkout@v7
+test	ブランチを取得する	2026-11-17T18:41:31.1788404Z with:
+test	ブランチを取得する	2026-11-17T18:41:31.1788682Z   repository: shuhei1101/dev-docs
+test	ブランチを取得する	2026-11-17T18:41:31.1790633Z   token: ***
+test	ブランチを取得する	2026-11-17T18:41:31.1790913Z   ssh-strict: true
+test	ブランチを取得する	2026-11-17T18:41:31.1791198Z   ssh-user: git
+test	ブランチを取得する	2026-11-17T18:41:31.1791476Z   persist-credentials: true
+test	ブランチを取得する	2026-11-17T18:41:31.1791760Z   clean: true
+test	ブランチを取得する	2026-11-17T18:41:31.1792039Z   sparse-checkout-cone-mode: true
+test	ブランチを取得する	2026-11-17T18:41:31.1792363Z   fetch-depth: 1
+test	ブランチを取得する	2026-11-17T18:41:31.1792615Z   fetch-tags: false
+test	ブランチを取得する	2026-11-17T18:41:31.1792916Z   show-progress: true
+test	ブランチを取得する	2026-11-17T18:41:31.1793177Z   lfs: false
+test	ブランチを取得する	2026-11-17T18:41:31.1793424Z   submodules: false
+test	ブランチを取得する	2026-11-17T18:41:31.1793711Z   set-safe-directory: true
+test	ブランチを取得する	2026-11-17T18:41:31.1794078Z   allow-unsafe-pr-checkout: false
+test	ブランチを取得する	2026-11-17T18:41:31.1794503Z ##[endgroup]
+test	ブランチを取得する	2026-11-17T18:41:34.0561252Z Syncing repository: shuhei1101/dev-docs
+test	ブランチを取得する	2026-11-17T18:41:34.0562888Z ##[group]Getting Git version info
+test	ブランチを取得する	2026-11-17T18:41:34.0563289Z Working directory is '/home/runner/work/dev-docs/dev-docs'
+test	ブランチを取得する	2026-11-17T18:41:34.0563991Z [command]/usr/bin/git version
+test	ブランチを取得する	2026-11-17T18:41:34.0564272Z git version 2.56.1
+test	ブランチを取得する	2026-11-17T18:41:34.0565957Z ##[endgroup]
+test	ブランチを取得する	2026-11-17T18:41:34.0572395Z Temporarily overriding HOME='/home/runner/work/_temp/6e504824-a5f6-4dfb-9619-32f57e0719da' before making global git config changes
+test	ブランチを取得する	2026-11-17T18:41:34.0573339Z Adding repository directory to the temporary git global config as a safe directory
+test	ブランチを取得する	2026-11-17T18:41:34.0575455Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/dev-docs/dev-docs
+test	ブランチを取得する	2026-11-17T18:41:34.1019174Z Deleting the contents of '/home/runner/work/dev-docs/dev-docs'
+test	ブランチを取得する	2026-11-17T18:41:34.1021085Z ##[group]Determining repository object format
+test	ブランチを取得する	2026-11-17T18:41:34.1021936Z ##[endgroup]
+test	ブランチを取得する	2026-11-17T18:41:34.1022703Z ##[group]Initializing the repository
+test	ブランチを取得する	2026-11-17T18:41:34.1024977Z [command]/usr/bin/git init /home/runner/work/dev-docs/dev-docs
+test	ブランチを取得する	2026-11-17T18:41:34.1424455Z hint: Using 'master' as the name for the initial branch. This default branch name
+test	ブランチを取得する	2026-11-17T18:41:34.1425294Z hint: will change to "main" in Git 3.0. To configure the initial branch name
+test	ブランチを取得する	2026-11-17T18:41:34.1425878Z hint: to use in all of your new repositories, which will suppress this warning,
+test	ブランチを取得する	2026-11-17T18:41:34.1426495Z hint: call:
+test	ブランチを取得する	2026-11-17T18:41:34.1426819Z hint:
+test	ブランチを取得する	2026-11-17T18:41:34.1427193Z hint: 	git config --global init.defaultBranch <name>
+test	ブランチを取得する	2026-11-17T18:41:34.1427530Z hint:
+test	ブランチを取得する	2026-11-17T18:41:34.1427821Z hint: Names commonly chosen instead of 'master' are 'main', 'trunk' and
+test	ブランチを取得する	2026-11-17T18:41:34.1428288Z hint: 'development'. The just-created branch can be renamed via this command:
+test	ブランチを取得する	2026-11-17T18:41:34.1428622Z hint:
+test	ブランチを取得する	2026-11-17T18:41:34.1428841Z hint: 	git branch -m <name>
+test	ブランチを取得する	2026-11-17T18:41:34.1429131Z hint:
+test	ブランチを取得する	2026-11-17T18:41:34.1429445Z hint: Disable this message with "git config set advice.defaultBranchName false"
+test	ブランチを取得する	2026-11-17T18:41:34.1456405Z Initialized empty Git repository in /home/runner/work/dev-docs/dev-docs/.git/
+test	ブランチを取得する	2026-11-17T18:41:34.1463859Z [command]/usr/bin/git remote add origin https://github.com/shuhei1101/dev-docs
+test	ブランチを取得する	2026-11-17T18:41:34.1519104Z ##[endgroup]
+test	ブランチを取得する	2026-11-17T18:41:34.1519871Z ##[group]Disabling automatic garbage collection
+test	ブランチを取得する	2026-11-17T18:41:34.1521499Z [command]/usr/bin/git config --local gc.auto 0
+test	ブランチを取得する	2026-11-17T18:41:34.1542535Z ##[endgroup]
+test	ブランチを取得する	2026-11-17T18:41:34.1543277Z ##[group]Setting up auth
+test	ブランチを取得する	2026-11-17T18:41:34.1543664Z Removing SSH command configuration
+test	ブランチを取得する	2026-11-17T18:41:34.1546044Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+test	ブランチを取得する	2026-11-17T18:41:34.1567530Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+test	ブランチを取得する	2026-11-17T18:41:34.5308970Z Removing HTTP extra header
+test	ブランチを取得する	2026-11-17T18:41:34.5328088Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+test	ブランチを取得する	2026-11-17T18:41:34.5338952Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+test	ブランチを取得する	2026-11-17T18:41:34.5519619Z Removing includeIf entries pointing to credentials config files
+test	ブランチを取得する	2026-11-17T18:41:34.5523368Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+test	ブランチを取得する	2026-11-17T18:41:34.5547748Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+test	ブランチを取得する	2026-11-17T18:41:34.5720714Z [command]/usr/bin/git config --file /home/runner/work/_temp/git-credentials-dafa58f1-2be2-45b7-a45a-59d36ab08772.config http.https://github.com/.extraheader AUTHORIZATION: basic ***
+test	ブランチを取得する	2026-11-17T18:41:34.5747970Z [command]/usr/bin/git config --local includeIf.gitdir:/home/runner/work/dev-docs/dev-docs/.git.path /home/runner/work/_temp/git-credentials-dafa58f1-2be2-45b7-a45a-59d36ab08772.config
+test	ブランチを取得する	2026-11-17T18:41:34.5766709Z [command]/usr/bin/git config --local includeIf.gitdir:/home/runner/work/dev-docs/dev-docs/.git/worktrees/*.path /home/runner/work/_temp/git-credentials-dafa58f1-2be2-45b7-a45a-59d36ab08772.config
+test	ブランチを取得する	2026-11-17T18:41:34.5790708Z [command]/usr/bin/git config --local includeIf.gitdir:/github/workspace/.git.path /github/runner_temp/git-credentials-dafa58f1-2be2-45b7-a45a-59d36ab08772.config
+test	ブランチを取得する	2026-11-17T18:41:34.5817766Z [command]/usr/bin/git config --local includeIf.gitdir:/github/workspace/.git/worktrees/*.path /github/runner_temp/git-credentials-dafa58f1-2be2-45b7-a45a-59d36ab08772.config
+test	ブランチを取得する	2026-11-17T18:41:34.5831752Z ##[endgroup]
+test	ブランチを取得する	2026-11-17T18:41:34.5832305Z ##[group]Fetching the repository
+test	ブランチを取得する	2026-11-17T18:41:34.5833482Z [command]/usr/bin/git -c protocol.version=2 fetch --no-tags --prune --no-recurse-submodules --depth=1 origin +ab5d12fe2d80f9b62899bc66b63d62ad30cec3bc:refs/remotes/origin/fix/convert/item-heading-duplicate-anchor-and-hidden
+test	ブランチを取得する	2026-11-17T18:41:36.3720538Z From https://github.com/shuhei1101/dev-docs
+test	ブランチを取得する	2026-11-17T18:41:36.3721314Z  * [new ref]         ab5d12fe2d80f9b62899bc66b63d62ad30cec3bc -> origin/fix/convert/item-heading-duplicate-anchor-and-hidden
+test	ブランチを取得する	2026-11-17T18:41:36.3728903Z [command]/usr/bin/git branch --list --remote origin/fix/convert/item-heading-duplicate-anchor-and-hidden
+test	ブランチを取得する	2026-11-17T18:41:36.3749945Z   origin/fix/convert/item-heading-duplicate-anchor-and-hidden
+test	ブランチを取得する	2026-11-17T18:41:36.3784036Z [command]/usr/bin/git rev-parse refs/remotes/origin/fix/convert/item-heading-duplicate-anchor-and-hidden
+test	ブランチを取得する	2026-11-17T18:41:36.3784723Z ab5d12fe2d80f9b62899bc66b63d62ad30cec3bc
+test	ブランチを取得する	2026-11-17T18:41:36.3785943Z ##[endgroup]
+test	ブランチを取得する	2026-11-17T18:41:36.3786681Z ##[group]Determining the checkout info
+test	ブランチを取得する	2026-11-17T18:41:36.3787224Z ##[endgroup]
+test	ブランチを取得する	2026-11-17T18:41:36.3787567Z [command]/usr/bin/git sparse-checkout disable
+test	ブランチを取得する	2026-11-17T18:41:36.3830054Z [command]/usr/bin/git config --local --unset-all extensions.worktreeConfig
+test	ブランチを取得する	2026-11-17T18:41:36.3850232Z ##[group]Checking out the ref
+test	ブランチを取得する	2026-11-17T18:41:36.3852881Z [command]/usr/bin/git checkout --progress --force -B fix/convert/item-heading-duplicate-anchor-and-hidden refs/remotes/origin/fix/convert/item-heading-duplicate-anchor-and-hidden
+test	ブランチを取得する	2026-11-17T18:41:36.7039323Z Switched to a new branch 'fix/convert/item-heading-duplicate-anchor-and-hidden'
+test	ブランチを取得する	2026-11-17T18:41:36.7048822Z branch 'fix/convert/item-heading-duplicate-anchor-and-hidden' set up to track 'origin/fix/convert/item-heading-duplicate-anchor-and-hidden'.
+test	ブランチを取得する	2026-11-17T18:41:36.7062139Z ##[endgroup]
+test	ブランチを取得する	2026-11-17T18:41:36.7107437Z [command]/usr/bin/git log -1 --format=%H
+test	ブランチを取得する	2026-11-17T18:41:36.7126972Z ab5d12fe2d80f9b62899bc66b63d62ad30cec3bc
+test	Node.js を入れる	﻿2026-11-17T18:41:36.7352033Z ##[group]Run actions/setup-node@v7
+test	Node.js を入れる	2026-11-17T18:41:36.7352303Z with:
+test	Node.js を入れる	2026-11-17T18:41:36.7352501Z   node-version: 24
+test	Node.js を入れる	2026-11-17T18:41:36.7352740Z   check-latest: false
+test	Node.js を入れる	2026-11-17T18:41:36.7354547Z   token: ***
+test	Node.js を入れる	2026-11-17T18:41:36.7354797Z   package-manager-cache: true
+test	Node.js を入れる	2026-11-17T18:41:36.7355042Z ##[endgroup]
+test	Node.js を入れる	2026-11-17T18:41:37.0031581Z Found in cache @ /opt/hostedtoolcache/node/24.22.2/x64
+test	Node.js を入れる	2026-11-17T18:41:38.7683687Z ##[group]Environment details
+test	Node.js を入れる	2026-11-17T18:41:42.0643444Z node: v24.22.2
+test	Node.js を入れる	2026-11-17T18:41:42.0643863Z npm: 11.19.1
+test	Node.js を入れる	2026-11-17T18:41:42.0644095Z yarn: 1.22.22
+test	Node.js を入れる	2026-11-17T18:41:42.0644950Z ##[endgroup]
+test	uv を入れる	﻿2026-11-17T18:41:42.0803676Z ##[group]Run astral-sh/setup-uv@v10.3.3
+test	uv を入れる	2026-11-17T18:41:42.0804043Z with:
+test	uv を入れる	2026-11-17T18:41:42.0804294Z   activate-environment: false
+test	uv を入れる	2026-11-17T18:41:42.0804566Z   no-project: false
+test	uv を入れる	2026-11-17T18:41:42.0804845Z   working-directory: /home/runner/work/dev-docs/dev-docs
+test	uv を入れる	2026-11-17T18:41:42.0807027Z   github-token: ***
+test	uv を入れる	2026-11-17T18:41:42.0807319Z   enable-cache: auto
+test	uv を入れる	2026-11-17T18:41:42.0807806Z   cache-dependency-glob: **/*requirements*.txt
+test	uv を入れる	**/*requirements*.in
+test	uv を入れる	**/*constraints*.txt
+test	uv を入れる	**/*constraints*.in
+test	uv を入れる	**/pyproject.toml
+test	uv を入れる	**/uv.lock
+test	uv を入れる	**/*.py.lock
+test	uv を入れる	
+test	uv を入れる	2026-11-17T18:41:42.0808343Z   restore-cache: true
+test	uv を入れる	2026-11-17T18:41:42.0808575Z   save-cache: auto
+test	uv を入れる	2026-11-17T18:41:42.0808853Z   prune-cache: false
+test	uv を入れる	2026-11-17T18:41:42.0809105Z   cache-python: false
+test	uv を入れる	2026-11-17T18:41:42.0809337Z   ignore-nothing-to-cache: false
+test	uv を入れる	2026-11-17T18:41:42.0809603Z   ignore-empty-workdir: false
+test	uv を入れる	2026-11-17T18:41:42.0809875Z   download-from-astral-mirror: true
+test	uv を入れる	2026-11-17T18:41:42.0810148Z   add-problem-matchers: true
+test	uv を入れる	2026-11-17T18:41:42.0810682Z   quiet: false
+test	uv を入れる	2026-11-17T18:41:42.0810983Z   resolution-strategy: highest
+test	uv を入れる	2026-11-17T18:41:42.0811237Z ##[endgroup]
+test	uv を入れる	2026-11-17T18:41:42.2550156Z Trying to find version for uv in: /home/runner/work/dev-docs/dev-docs/uv.toml
+test	uv を入れる	2026-11-17T18:41:42.2550923Z Could not find file: /home/runner/work/dev-docs/dev-docs/uv.toml
+test	uv を入れる	2026-11-17T18:41:42.2551441Z Trying to find version for uv in: /home/runner/work/dev-docs/dev-docs/pyproject.toml
+test	uv を入れる	2026-11-17T18:41:42.2552023Z Could not determine uv version from uv.toml or pyproject.toml. Falling back to latest.
+test	uv を入れる	2026-11-17T18:41:42.2553322Z Fetching manifest data from https://releases.astral.sh/github/versions/main/v1/uv.ndjson ...
+test	uv を入れる	2026-11-17T18:41:42.3265673Z Downloading uv from "https://releases.astral.sh/github/uv/releases/download/0.13.9/uv-x86_64-unknown-linux-gnu.tar.gz" ...
+test	uv を入れる	2026-11-17T18:41:42.4702804Z [command]/usr/bin/tar xz --warning=no-unknown-keyword --overwrite -C /home/runner/work/_temp/6786a4b7-0059-456b-98f5-c2f64b6308b2 -f /home/runner/work/_temp/29734148-11a9-4592-97af-71f8a2fbae75
+test	uv を入れる	2026-11-17T18:41:42.6727809Z Added /home/runner/.local/bin to the path
+test	uv を入れる	2026-11-17T18:41:42.6728745Z Added /opt/hostedtoolcache/uv/0.13.9/x86_64 to the path
+test	uv を入れる	2026-11-17T18:41:42.6729517Z Set UV_PYTHON_INSTALL_DIR to /home/runner/work/_temp/uv-python-dir
+test	uv を入れる	2026-11-17T18:41:42.6730268Z Added /home/runner/work/_temp/uv-python-dir to the path
+test	uv を入れる	2026-11-17T18:41:42.6736965Z Set UV_CACHE_DIR to /home/runner/work/_temp/setup-uv-cache
+test	uv を入れる	2026-11-17T18:41:42.6737844Z Successfully installed uv version 0.13.9
+test	uv を入れる	2026-11-17T18:41:42.7213292Z Searching files using cache dependency glob: /home/runner/work/dev-docs/dev-docs/**/*requirements*.txt,/home/runner/work/dev-docs/dev-docs/**/*requirements*.in,/home/runner/work/dev-docs/dev-docs/**/*constraints*.txt,/home/runner/work/dev-docs/dev-docs/**/*constraints*.in,/home/runner/work/dev-docs/dev-docs/**/pyproject.toml,/home/runner/work/dev-docs/dev-docs/**/uv.lock,/home/runner/work/dev-docs/dev-docs/**/*.py.lock
+test	uv を入れる	2026-11-17T18:41:43.1117350Z /home/runner/work/dev-docs/dev-docs/pyproject.toml
+test	uv を入れる	2026-11-17T18:41:43.1373160Z /home/runner/work/dev-docs/dev-docs/uv.lock
+test	uv を入れる	2026-11-17T18:41:43.1427703Z Found 2 files to hash.
+test	uv を入れる	2026-11-17T18:41:43.1509610Z Trying to restore cache from GitHub Actions cache with key: setup-uv-2-x86_64-unknown-linux-gnu-ubuntu-26.04-3.14.4-ce349dac54e2590b54cb97b36c71fa2d886c7b907fa2b17680e07c0a03421fb9
+test	uv を入れる	2026-11-17T18:41:43.3931970Z No GitHub Actions cache found for key: setup-uv-2-x86_64-unknown-linux-gnu-ubuntu-26.04-3.14.4-ce349dac54e2590b54cb97b36c71fa2d886c7b907fa2b17680e07c0a03421fb9
+test	Python の依存を入れる	﻿2026-11-17T18:41:43.5049966Z ##[group]Run uv sync --frozen
+test	Python の依存を入れる	2026-11-17T18:41:43.5050401Z ^[[36;1muv sync --frozen^[[0m
+test	Python の依存を入れる	2026-11-17T18:41:43.5793787Z shell: /usr/bin/bash -e {0}
+test	Python の依存を入れる	2026-11-17T18:41:43.5794198Z env:
+test	Python の依存を入れる	2026-11-17T18:41:43.5794577Z   UV_PYTHON_INSTALL_DIR: /home/runner/work/_temp/uv-python-dir
+test	Python の依存を入れる	2026-11-17T18:41:43.5794948Z   UV_CACHE_DIR: /home/runner/work/_temp/setup-uv-cache
+test	Python の依存を入れる	2026-11-17T18:41:43.5795271Z ##[endgroup]
+test	Python の依存を入れる	2026-11-17T18:41:43.5929532Z Using CPython 3.14.4 interpreter at: /usr/bin/python3.14
+test	Python の依存を入れる	2026-11-17T18:41:43.5930070Z Creating virtual environment at: .venv
+test	Python の依存を入れる	2026-11-17T18:41:43.5999786Z    Building dev-docs @ file:///home/runner/work/dev-docs/dev-docs
+test	Python の依存を入れる	2026-11-17T18:41:43.7074327Z Downloading ast-serialize (1.3MiB)
+test	Python の依存を入れる	2026-11-17T18:41:43.7075637Z Downloading pygments (1.2MiB)
+test	Python の依存を入れる	2026-11-17T18:41:43.7084554Z Downloading pydantic-core (2.1MiB)
+test	Python の依存を入れる	2026-11-17T18:41:43.7095751Z Downloading cryptography (4.5MiB)
+test	Python の依存を入れる	2026-11-17T18:41:43.7103123Z Downloading ruff (10.0MiB)
+test	Python の依存を入れる	2026-11-17T18:41:43.7103698Z Downloading mypy (14.7MiB)
+test	Python の依存を入れる	2026-11-17T18:41:43.9217895Z  Downloaded pygments
+test	Python の依存を入れる	2026-11-17T18:41:43.9261709Z  Downloaded ast-serialize
+test	Python の依存を入れる	2026-11-17T18:41:43.9495081Z  Downloaded pydantic-core
+test	Python の依存を入れる	2026-11-17T18:41:43.9931648Z  Downloaded cryptography
+test	Python の依存を入れる	2026-11-17T18:41:44.0365920Z  Downloaded ruff
+test	Python の依存を入れる	2026-11-17T18:41:44.1041026Z  Downloaded mypy
+test	Python の依存を入れる	2026-11-17T18:41:44.1686404Z       Built dev-docs @ file:///home/runner/work/dev-docs/dev-docs
+test	Python の依存を入れる	2026-11-17T18:41:44.1692934Z Prepared 49 packages in 575ms
+test	Python の依存を入れる	2026-11-17T18:41:44.2219478Z Installed 49 packages in 52ms
+test	Python の依存を入れる	2026-11-17T18:41:44.2220081Z  + annotated-doc==0.0.5
+test	Python の依存を入れる	2026-11-17T18:41:44.2220397Z  + annotated-types==0.8.0
+test	Python の依存を入れる	2026-11-17T18:41:44.2220798Z  + anyio==4.15.1
+test	Python の依存を入れる	2026-11-17T18:41:44.2221093Z  + ast-serialize==0.13.1
+test	Python の依存を入れる	2026-11-17T18:41:44.2221398Z  + attrs==26.1.0
+test	Python の依存を入れる	2026-11-17T18:41:44.2221704Z  + certifi==2026.10.23
+test	Python の依存を入れる	2026-11-17T18:41:44.2221983Z  + cffi==2.1.1
+test	Python の依存を入れる	2026-11-17T18:41:44.2222296Z  + click==8.5.0
+test	Python の依存を入れる	2026-11-17T18:41:44.2222596Z  + cryptography==50.0.2
+test	Python の依存を入れる	2026-11-17T18:41:44.2223016Z  + dev-docs==0.0.0 (from file:///home/runner/work/dev-docs/dev-docs)
+test	Python の依存を入れる	2026-11-17T18:41:44.2223755Z  + fastapi==0.162.0
+test	Python の依存を入れる	2026-11-17T18:41:44.2224043Z  + h11==0.16.0
+test	Python の依存を入れる	2026-11-17T18:41:44.2224326Z  + httpcore==1.0.9
+test	Python の依存を入れる	2026-11-17T18:41:44.2224681Z  + httpcore2==2.16.0
+test	Python の依存を入れる	2026-11-17T18:41:44.2224958Z  + httpx==0.28.1
+test	Python の依存を入れる	2026-11-17T18:41:44.2225268Z  + httpx2==2.16.0
+test	Python の依存を入れる	2026-11-17T18:41:44.2225545Z  + idna==3.20
+test	Python の依存を入れる	2026-11-17T18:41:44.2225828Z  + iniconfig==2.3.1
+test	Python の依存を入れる	2026-11-17T18:41:44.2226142Z  + jinja2==3.1.6
+test	Python の依存を入れる	2026-11-17T18:41:44.2226642Z  + jsonschema==4.26.0
+test	Python の依存を入れる	2026-11-17T18:41:44.2227016Z  + jsonschema-specifications==2025.9.1
+test	Python の依存を入れる	2026-11-17T18:41:44.2227360Z  + librt==0.16.0
+test	Python の依存を入れる	2026-11-17T18:41:44.2227779Z  + markupsafe==3.0.4
+test	Python の依存を入れる	2026-11-17T18:41:44.2240704Z  + mcp==2.3.0
+test	Python の依存を入れる	2026-11-17T18:41:44.2241081Z  + mcp-types==2.3.0
+test	Python の依存を入れる	2026-11-17T18:41:44.2241372Z  + mypy==2.4.0
+test	Python の依存を入れる	2026-11-17T18:41:44.2241686Z  + mypy-extensions==1.1.0
+test	Python の依存を入れる	2026-11-17T18:41:44.2242274Z  + opentelemetry-api==1.45.1
+test	Python の依存を入れる	2026-11-17T18:41:44.2242753Z  + packaging==26.3
+test	Python の依存を入れる	2026-11-17T18:41:44.2243062Z  + pathspec==1.1.1
+test	Python の依存を入れる	2026-11-17T18:41:44.2243463Z  + pluggy==1.7.0
+test	Python の依存を入れる	2026-11-17T18:41:44.2243757Z  + pycparser==3.12
+test	Python の依存を入れる	2026-11-17T18:41:44.2244062Z  + pydantic==2.14.1
+test	Python の依存を入れる	2026-11-17T18:41:44.2244423Z  + pydantic-core==2.50.1
+test	Python の依存を入れる	2026-11-17T18:41:44.2244759Z  + pygments==2.21.0
+test	Python の依存を入れる	2026-11-17T18:41:44.2245065Z  + pyjwt==2.15.1
+test	Python の依存を入れる	2026-11-17T18:41:44.2245343Z  + pytest==9.1.1
+test	Python の依存を入れる	2026-11-17T18:41:44.2245679Z  + python-multipart==0.0.32
+test	Python の依存を入れる	2026-11-17T18:41:44.2246008Z  + referencing==0.37.0
+test	Python の依存を入れる	2026-11-17T18:41:44.2246561Z  + rpds-py==2026.9.1
+test	Python の依存を入れる	2026-11-17T18:41:44.2246887Z  + ruamel-yaml==0.19.1
+test	Python の依存を入れる	2026-11-17T18:41:44.2247188Z  + ruff==0.17.2
+test	Python の依存を入れる	2026-11-17T18:41:44.2247525Z  + sse-starlette==3.6.0
+test	Python の依存を入れる	2026-11-17T18:41:44.2247826Z  + starlette==1.10.0
+test	Python の依存を入れる	2026-11-17T18:41:44.2248147Z  + truststore==0.10.5
+test	Python の依存を入れる	2026-11-17T18:41:44.2248507Z  + types-jsonschema==4.26.0.20261006
+test	Python の依存を入れる	2026-11-17T18:41:44.2248868Z  + typing-extensions==4.16.0
+test	Python の依存を入れる	2026-11-17T18:41:44.2249245Z  + typing-inspection==0.4.4
+test	Python の依存を入れる	2026-11-17T18:41:44.2249564Z  + uvicorn==0.54.0
+test	層の全件を回す	﻿2026-11-17T18:41:44.2349762Z ##[group]Run : > test.log
+test	層の全件を回す	2026-11-17T18:41:44.2350116Z ^[[36;1m: > test.log^[[0m
+test	層の全件を回す	2026-11-17T18:41:44.2350397Z ^[[36;1m# 結果の行を test.log と step の標準出力の両方に出す^[[0m
+test	層の全件を回す	2026-11-17T18:41:44.2350716Z ^[[36;1msay() { echo "$1" | tee -a test.log; }^[[0m
+test	層の全件を回す	2026-11-17T18:41:44.2351003Z ^[[36;1mcase "$LAYER" in^[[0m
+test	層の全件を回す	2026-11-17T18:41:44.2351261Z ^[[36;1m  backend-unit) limit=7 ;;^[[0m
+test	層の全件を回す	2026-11-17T18:41:44.2351580Z ^[[36;1m  backend-integration) limit=62; dir=tests/integration/ ;;^[[0m
+test	層の全件を回す	2026-11-17T18:41:44.2351950Z ^[[36;1m  frontend-unit) limit=19 ;;^[[0m
+test	層の全件を回す	2026-11-17T18:41:44.2352301Z ^[[36;1m  frontend-integration) limit=75; dir=tests/integration/frontend/ ;;^[[0m
+test	層の全件を回す	2026-11-17T18:41:44.2352690Z ^[[36;1mesac^[[0m
+test	層の全件を回す	2026-11-17T18:41:44.2352938Z ^[[36;1m# paths は結合テストの層の、層の結合テストのフォルダの下のパスだけを受け付ける^[[0m
+test	層の全件を回す	2026-11-17T18:41:44.2353222Z ^[[36;1mif [ -n "$PATHS" ]; then^[[0m
+test	層の全件を回す	2026-11-17T18:41:44.2353479Z ^[[36;1m  if [ -z "${dir:-}" ]; then^[[0m
+test	層の全件を回す	2026-11-17T18:41:44.2353777Z ^[[36;1m    say "paths は結合テストの層でだけ指定できる: layer=$LAYER"^[[0m
+test	層の全件を回す	2026-11-17T18:41:44.2354054Z ^[[36;1m    exit 1^[[0m
+test	層の全件を回す	2026-11-17T18:41:44.2354484Z ^[[36;1m  fi^[[0m
+test	層の全件を回す	2026-11-17T18:41:44.2354804Z ^[[36;1m  if ! printf '%s' "$PATHS" | grep -Eq '^[A-Za-z0-9_./ -]+$'; then^[[0m
+test	層の全件を回す	2026-11-17T18:41:44.2355229Z ^[[36;1m    say "paths に許可しない文字がある（英数字・_・.・/・-・空白だけを許可する）: $PATHS"^[[0m
+test	層の全件を回す	2026-11-17T18:41:44.2355521Z ^[[36;1m    exit 1^[[0m
+test	層の全件を回す	2026-11-17T18:41:44.2355726Z ^[[36;1m  fi^[[0m
+test	層の全件を回す	2026-11-17T18:41:44.2355962Z ^[[36;1m  for p in $PATHS; do^[[0m
+test	層の全件を回す	2026-11-17T18:41:44.2356425Z ^[[36;1m    case "$p" in^[[0m
+test	層の全件を回す	2026-11-17T18:41:44.2356750Z ^[[36;1m      *..*) say "paths の値が .. を含む: $p"; exit 1 ;;^[[0m
+test	層の全件を回す	2026-11-17T18:41:44.2357028Z ^[[36;1m    esac^[[0m
+test	層の全件を回す	2026-11-17T18:41:44.2357235Z ^[[36;1m    case "$p" in^[[0m
+test	層の全件を回す	2026-11-17T18:41:44.2357493Z ^[[36;1m      "$dir"*) ;;^[[0m
+test	層の全件を回す	2026-11-17T18:41:44.2357792Z ^[[36;1m      *) say "paths の値が層の結合テストのフォルダ（$dir）の外: $p"; exit 1 ;;^[[0m
+test	層の全件を回す	2026-11-17T18:41:44.2358087Z ^[[36;1m    esac^[[0m
+test	層の全件を回す	2026-11-17T18:41:44.2358345Z ^[[36;1m    if [ "$LAYER" = backend-integration ]; then^[[0m
+test	層の全件を回す	2026-11-17T18:41:44.2358631Z ^[[36;1m      case "$p" in^[[0m
+test	層の全件を回す	2026-11-17T18:41:44.2359133Z ^[[36;1m        tests/integration/frontend/*) say "paths の値が層の結合テストのフォルダの外（tests/integration/frontend/ は frontend-integration の層）: $p"; exit 1 ;;^[[0m
+test	層の全件を回す	2026-11-17T18:41:44.2359749Z ^[[36;1m      esac^[[0m
+test	層の全件を回す	2026-11-17T18:41:44.2359968Z ^[[36;1m    fi^[[0m
+test	層の全件を回す	2026-11-17T18:41:44.2360183Z ^[[36;1m  done^[[0m
+test	層の全件を回す	2026-11-17T18:41:44.2360391Z ^[[36;1mfi^[[0m
+test	層の全件を回す	2026-11-17T18:41:44.2360610Z ^[[36;1mcase "$LAYER" in^[[0m
+test	層の全件を回す	2026-11-17T18:41:44.2360915Z ^[[36;1m  backend-unit) cmd="uv run pytest tests/unit/ -v" ;;^[[0m
+test	層の全件を回す	2026-11-17T18:41:44.2361289Z ^[[36;1m  backend-integration) cmd="uv run pytest ${PATHS:-$dir} -v" ;;^[[0m
+test	層の全件を回す	2026-11-17T18:41:44.2361785Z ^[[36;1m  frontend-unit) cmd="npx vitest run --config frontend/vitest.config.ts --reporter=verbose" ;;^[[0m
+test	層の全件を回す	2026-11-17T18:41:44.2362574Z ^[[36;1m  frontend-integration) cmd="npx playwright test --config tests/integration/frontend/playwright.config.ts $PATHS" ;;^[[0m
+test	層の全件を回す	2026-11-17T18:41:44.2363128Z ^[[36;1mesac^[[0m
+test	層の全件を回す	2026-11-17T18:41:44.2363390Z ^[[36;1m# テストを裏で起動し、出力を test.log と step の標準出力の両方に出す^[[0m
+test	層の全件を回す	2026-11-17T18:41:44.2363757Z ^[[36;1msetsid -w bash -c "set -o pipefail; $cmd 2>&1 | tee -a test.log" &^[[0m
+test	層の全件を回す	2026-11-17T18:41:44.2364112Z ^[[36;1mpid=$!^[[0m
+test	層の全件を回す	2026-11-17T18:41:44.2364326Z ^[[36;1mlast=-1^[[0m
+test	層の全件を回す	2026-11-17T18:41:44.2364542Z ^[[36;1midle=0^[[0m
+test	層の全件を回す	2026-11-17T18:41:44.2364845Z ^[[36;1m# test.log の大きさを 1 秒ごとに確認し、無出力の時間が上限を超えたらテストを止める^[[0m
+test	層の全件を回す	2026-11-17T18:41:44.2365151Z ^[[36;1mwhile kill -0 "$pid" 2> /dev/null; do^[[0m
+test	層の全件を回す	2026-11-17T18:41:44.2365450Z ^[[36;1m  sleep 1^[[0m
+test	層の全件を回す	2026-11-17T18:41:44.2365680Z ^[[36;1m  size=$(stat -c %s test.log)^[[0m
+test	層の全件を回す	2026-11-17T18:41:44.2365945Z ^[[36;1m  if [ "$size" = "$last" ]; then^[[0m
+test	層の全件を回す	2026-11-17T18:41:44.2366412Z ^[[36;1m    idle=$((idle + 1))^[[0m
+test	層の全件を回す	2026-11-17T18:41:44.2366661Z ^[[36;1m  else^[[0m
+test	層の全件を回す	2026-11-17T18:41:44.2366888Z ^[[36;1m    idle=0^[[0m
+test	層の全件を回す	2026-11-17T18:41:44.2367103Z ^[[36;1m    last=$size^[[0m
+test	層の全件を回す	2026-11-17T18:41:44.2367347Z ^[[36;1m  fi^[[0m
+test	層の全件を回す	2026-11-17T18:41:44.2367595Z ^[[36;1m  if [ "$idle" -gt "$limit" ]; then^[[0m
+test	層の全件を回す	2026-11-17T18:41:44.2367865Z ^[[36;1m    kill -- "-$pid"^[[0m
+test	層の全件を回す	2026-11-17T18:41:44.2368241Z ^[[36;1m    say "出力が ${limit} 秒変わらなかったため、テストを止めた"^[[0m
+test	層の全件を回す	2026-11-17T18:41:44.2368510Z ^[[36;1m    exit 1^[[0m
+test	層の全件を回す	2026-11-17T18:41:44.2368711Z ^[[36;1m  fi^[[0m
+test	層の全件を回す	2026-11-17T18:41:44.2368952Z ^[[36;1mdone^[[0m
+test	層の全件を回す	2026-11-17T18:41:44.2369157Z ^[[36;1mwait "$pid"^[[0m
+test	層の全件を回す	2026-11-17T18:41:44.2388025Z shell: /usr/bin/bash -e {0}
+test	層の全件を回す	2026-11-17T18:41:44.2388342Z env:
+test	層の全件を回す	2026-11-17T18:41:44.2388633Z   UV_PYTHON_INSTALL_DIR: /home/runner/work/_temp/uv-python-dir
+test	層の全件を回す	2026-11-17T18:41:44.2388991Z   UV_CACHE_DIR: /home/runner/work/_temp/setup-uv-cache
+test	層の全件を回す	2026-11-17T18:41:44.2389294Z   LAYER: backend-unit
+test	層の全件を回す	2026-11-17T18:41:44.2389518Z   PATHS: 
+test	層の全件を回す	2026-11-17T18:41:44.2389744Z   PYTHONUNBUFFERED: 1
+test	層の全件を回す	2026-11-17T18:41:44.2389994Z ##[endgroup]
+test	層の全件を回す	2026-11-17T18:41:44.9016899Z ============================= test session starts ==============================
+test	層の全件を回す	2026-11-17T18:41:44.9071829Z platform linux -- Python 3.14.4, pytest-9.1.1, pluggy-1.7.0 -- /home/runner/work/dev-docs/dev-docs/.venv/bin/python
+test	層の全件を回す	2026-11-17T18:41:44.9074195Z cachedir: .pytest_cache
+test	層の全件を回す	2026-11-17T18:41:44.9074983Z rootdir: /home/runner/work/dev-docs/dev-docs
+test	層の全件を回す	2026-11-17T18:41:44.9075419Z configfile: pyproject.toml
+test	層の全件を回す	2026-11-17T18:41:44.9075836Z plugins: anyio-4.15.1
+test	層の全件を回す	2026-11-17T18:41:46.5862734Z collecting ... collected 475 items / 2 errors
+test	層の全件を回す	2026-11-17T18:41:46.6313575Z 
+test	層の全件を回す	2026-11-17T18:41:46.6314843Z ==================================== ERRORS ====================================
+test	層の全件を回す	2026-11-17T18:41:46.6315446Z _____ ERROR collecting tests/unit/dev_docs/features/convert/test_inline.py _____
+test	層の全件を回す	2026-11-17T18:41:46.6315942Z tests/unit/dev_docs/features/convert/test_inline.py:35: in <module>
+test	層の全件を回す	2026-11-17T18:41:46.6316618Z     ID_CONTEXT = RenderContext(
+test	層の全件を回す	2026-11-17T18:41:46.6317068Z E   TypeError: RenderContext.__init__() got an unexpected keyword argument 'item_anchor'
+test	層の全件を回す	2026-11-17T18:41:46.6317625Z ____ ERROR collecting tests/unit/dev_docs/features/convert/test_markdown.py ____
+test	層の全件を回す	2026-11-17T18:41:46.6318321Z ImportError while importing test module '/home/runner/work/dev-docs/dev-docs/tests/unit/dev_docs/features/convert/test_markdown.py'.
+test	層の全件を回す	2026-11-17T18:41:46.6319144Z Hint: make sure your test modules/packages have valid Python names.
+test	層の全件を回す	2026-11-17T18:41:46.6319506Z Traceback:
+test	層の全件を回す	2026-11-17T18:41:46.6319893Z tests/unit/dev_docs/features/convert/test_markdown.py:11: in <module>
+test	層の全件を回す	2026-11-17T18:41:46.6320293Z     from dev_docs.features.convert.markdown import (
+test	層の全件を回す	2026-11-17T18:41:46.6321057Z E   ImportError: cannot import name 'heading_anchors' from 'dev_docs.features.convert.markdown' (/home/runner/work/dev-docs/dev-docs/src/dev_docs/features/convert/markdown.py)
+test	層の全件を回す	2026-11-17T18:41:46.6321803Z =========================== short test summary info ============================
+test	層の全件を回す	2026-11-17T18:41:46.6322603Z ERROR tests/unit/dev_docs/features/convert/test_inline.py - TypeError: RenderContext.__init__() got an unexpected keyword argument 'item_anchor'
+test	層の全件を回す	2026-11-17T18:41:46.6323286Z ERROR tests/unit/dev_docs/features/convert/test_markdown.py
+test	層の全件を回す	2026-11-17T18:41:46.6336964Z !!!!!!!!!!!!!!!!!!! Interrupted: 2 errors during collection !!!!!!!!!!!!!!!!!!!!
+test	層の全件を回す	2026-11-17T18:41:46.6337446Z ============================== 2 errors in 1.73s ===============================
+test	層の全件を回す	2026-11-17T18:41:47.2609154Z ##[error]Process completed with exit code 2.
+test	ログを成果物に上げる	﻿2026-11-17T18:41:47.2667304Z ##[group]Run actions/upload-artifact@v7
+test	ログを成果物に上げる	2026-11-17T18:41:47.2667608Z with:
+test	ログを成果物に上げる	2026-11-17T18:41:47.2667815Z   name: test-log
+test	ログを成果物に上げる	2026-11-17T18:41:47.2668045Z   path: test.log
+test	ログを成果物に上げる	2026-11-17T18:41:47.2668290Z   if-no-files-found: ignore
+test	ログを成果物に上げる	2026-11-17T18:41:47.2668547Z   compression-level: 6
+test	ログを成果物に上げる	2026-11-17T18:41:47.2668774Z   overwrite: false
+test	ログを成果物に上げる	2026-11-17T18:41:47.2669026Z   include-hidden-files: false
+test	ログを成果物に上げる	2026-11-17T18:41:47.2669274Z   archive: true
+test	ログを成果物に上げる	2026-11-17T18:41:47.2669496Z env:
+test	ログを成果物に上げる	2026-11-17T18:41:47.2669766Z   UV_PYTHON_INSTALL_DIR: /home/runner/work/_temp/uv-python-dir
+test	ログを成果物に上げる	2026-11-17T18:41:47.2670106Z   UV_CACHE_DIR: /home/runner/work/_temp/setup-uv-cache
+test	ログを成果物に上げる	2026-11-17T18:41:47.2670380Z ##[endgroup]
+test	ログを成果物に上げる	2026-11-17T18:41:47.3765143Z With the provided path, there will be 1 file uploaded
+test	ログを成果物に上げる	2026-11-17T18:41:47.3768497Z Artifact name is valid!
+test	ログを成果物に上げる	2026-11-17T18:41:47.3769025Z Root directory input is valid!
+test	ログを成果物に上げる	2026-11-17T18:41:47.7646695Z Uploading artifact: test-log.zip
+test	ログを成果物に上げる	2026-11-17T18:41:47.7673521Z Beginning upload of artifact content to blob storage
+test	ログを成果物に上げる	2026-11-17T18:41:48.1731464Z Uploaded bytes 716
+test	ログを成果物に上げる	2026-11-17T18:41:48.2602471Z Finished uploading artifact content to blob storage!
+test	ログを成果物に上げる	2026-11-17T18:41:48.2607879Z SHA256 digest of uploaded artifact is 1707fdc22884ec21df44a339d01ee4746d3977bc303c84c98c94a849f9888496
+test	ログを成果物に上げる	2026-11-17T18:41:48.2608620Z Finalizing artifact upload
+test	ログを成果物に上げる	2026-11-17T18:41:48.8120484Z Artifact test-log successfully finalized. Artifact ID 14358866310
+test	ログを成果物に上げる	2026-11-17T18:41:48.8121243Z Artifact test-log has been successfully uploaded! Final size is 716 bytes. Artifact ID is 14358866310
+test	ログを成果物に上げる	2026-11-17T18:41:48.8123662Z Artifact download URL: https://github.com/shuhei1101/dev-docs/actions/runs/44150546201/artifacts/14358866310
+test	Post ブランチを取得する	﻿2026-11-17T18:41:48.8269345Z Post job cleanup.
+test	Post ブランチを取得する	2026-11-17T18:41:48.8933863Z [command]/usr/bin/git version
+test	Post ブランチを取得する	2026-11-17T18:41:48.8962915Z git version 2.56.1
+test	Post ブランチを取得する	2026-11-17T18:41:48.8984958Z Temporarily overriding HOME='/home/runner/work/_temp/57de110d-b387-460f-8bce-6e34b0c69265' before making global git config changes
+test	Post ブランチを取得する	2026-11-17T18:41:48.8985683Z Adding repository directory to the temporary git global config as a safe directory
+test	Post ブランチを取得する	2026-11-17T18:41:48.8989374Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/dev-docs/dev-docs
+test	Post ブランチを取得する	2026-11-17T18:41:48.9012458Z Removing SSH command configuration
+test	Post ブランチを取得する	2026-11-17T18:41:48.9017342Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+test	Post ブランチを取得する	2026-11-17T18:41:48.9041392Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+test	Post ブランチを取得する	2026-11-17T18:41:48.9229204Z Removing HTTP extra header
+test	Post ブランチを取得する	2026-11-17T18:41:48.9232240Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+test	Post ブランチを取得する	2026-11-17T18:41:48.9255320Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+test	Post ブランチを取得する	2026-11-17T18:41:48.9436055Z Removing includeIf entries pointing to credentials config files
+test	Post ブランチを取得する	2026-11-17T18:41:48.9440108Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+test	Post ブランチを取得する	2026-11-17T18:41:48.9457757Z includeif.gitdir:/home/runner/work/dev-docs/dev-docs/.git.path
+test	Post ブランチを取得する	2026-11-17T18:41:48.9458311Z includeif.gitdir:/home/runner/work/dev-docs/dev-docs/.git/worktrees/*.path
+test	Post ブランチを取得する	2026-11-17T18:41:48.9458838Z includeif.gitdir:/github/workspace/.git.path
+test	Post ブランチを取得する	2026-11-17T18:41:48.9459275Z includeif.gitdir:/github/workspace/.git/worktrees/*.path
+test	Post ブランチを取得する	2026-11-17T18:41:48.9462605Z [command]/usr/bin/git config --local --get-all includeif.gitdir:/home/runner/work/dev-docs/dev-docs/.git.path
+test	Post ブランチを取得する	2026-11-17T18:41:48.9478010Z /home/runner/work/_temp/git-credentials-dafa58f1-2be2-45b7-a45a-59d36ab08772.config
+test	Post ブランチを取得する	2026-11-17T18:41:48.9484035Z [command]/usr/bin/git config --local --unset includeif.gitdir:/home/runner/work/dev-docs/dev-docs/.git.path \/home\/runner\/work\/_temp\/git\-credentials\-dafa58f1\-2be2\-45b7\-a45a\-59d36ab08772\.config
+test	Post ブランチを取得する	2026-11-17T18:41:48.9506518Z [command]/usr/bin/git config --local --get-all includeif.gitdir:/home/runner/work/dev-docs/dev-docs/.git/worktrees/*.path
+test	Post ブランチを取得する	2026-11-17T18:41:48.9524778Z /home/runner/work/_temp/git-credentials-dafa58f1-2be2-45b7-a45a-59d36ab08772.config
+test	Post ブランチを取得する	2026-11-17T18:41:48.9531222Z [command]/usr/bin/git config --local --unset includeif.gitdir:/home/runner/work/dev-docs/dev-docs/.git/worktrees/*.path \/home\/runner\/work\/_temp\/git\-credentials\-dafa58f1\-2be2\-45b7\-a45a\-59d36ab08772\.config
+test	Post ブランチを取得する	2026-11-17T18:41:48.9553352Z [command]/usr/bin/git config --local --get-all includeif.gitdir:/github/workspace/.git.path
+test	Post ブランチを取得する	2026-11-17T18:41:48.9569040Z /github/runner_temp/git-credentials-dafa58f1-2be2-45b7-a45a-59d36ab08772.config
+test	Post ブランチを取得する	2026-11-17T18:41:48.9573289Z [command]/usr/bin/git config --local --unset includeif.gitdir:/github/workspace/.git.path \/github\/runner_temp\/git\-credentials\-dafa58f1\-2be2\-45b7\-a45a\-59d36ab08772\.config
+test	Post ブランチを取得する	2026-11-17T18:41:48.9594636Z [command]/usr/bin/git config --local --get-all includeif.gitdir:/github/workspace/.git/worktrees/*.path
+test	Post ブランチを取得する	2026-11-17T18:41:48.9610041Z /github/runner_temp/git-credentials-dafa58f1-2be2-45b7-a45a-59d36ab08772.config
+test	Post ブランチを取得する	2026-11-17T18:41:48.9615357Z [command]/usr/bin/git config --local --unset includeif.gitdir:/github/workspace/.git/worktrees/*.path \/github\/runner_temp\/git\-credentials\-dafa58f1\-2be2\-45b7\-a45a\-59d36ab08772\.config
+test	Post ブランチを取得する	2026-11-17T18:41:48.9637970Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+test	Post ブランチを取得する	2026-11-17T18:41:48.9812209Z Removing credentials config '/home/runner/work/_temp/git-credentials-dafa58f1-2be2-45b7-a45a-59d36ab08772.config'
+test	Complete job	﻿2026-11-17T18:41:48.9928493Z Cleaning up orphan processes
