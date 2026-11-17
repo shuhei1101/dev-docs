@@ -1,0 +1,38 @@
+use_cases:
+  - kind: single
+    scenario: docs/scenario/SC-155-7.yaml
+    impact: run_only
+    detail: 配信元 dev-docs のタブとサイドバーの並びが変わる。タブ・サイドバーで文書を開く流れ自体は変わらない
+    depends_on: []
+  - kind: composite
+    scenario: docs/scenario/SC-155-13.yaml
+    impact: none
+    detail: 配信元の文書を読む全体の流れは変わらない
+    depends_on: []
+docs:
+  - page: project-index.yaml
+    new: false
+    change: nav.tabs[] を規約『開発ドキュメントのナビゲーション』の並びで定義し、目次を除く。documents[] を setup の推奨の範囲に合わせて行を追加・見直す
+    status: todo
+  - page: docs/_root/files.yml
+    new: false
+    change: setup の結果に合わせて行とメタデータを見直す（直下・docs/ 直下のファイルの置き場所は setup に従う）
+    status: todo
+  - page: docs/guide/files.yml
+    new: false
+    change: setup の今の付け方でメタデータを見直す
+    status: todo
+  - page: docs/mock/files.yml
+    new: false
+    change: setup の今の付け方でメタデータを見直す
+    status: todo
+scope_out:
+  - item: docs/pr/ を検索の対象に入れる
+    reason: 作業 PR ごとの資料で、読む人が参照する文書ではない（shuhei1101/project-index#132 と同じ判断）
+    plan: none
+  - item: モジュール構成をタグ（main_tags）でサイドバーのグループに分ける
+    reason: auto.group_by で共通のメタデータを指定する機能が入るまで書けない。要件.md の未確定の案 B
+    plan: '#251'
+  - item: documents[].schema の参照を design-schemas の v9 系へ上げる
+    reason: 同じ documents の行の別のキーで、目的が別
+    plan: '#263'
