@@ -1,7 +1,7 @@
 """公開の文書と判定フローチャートを、mdmark の build で GitHub Pages の 1 枚の HTML にまとめる。
 
 docs/guide/files.yml の visibility: public の Markdown と、docs/flowchart/ の visibility: public の
-YAML を Markdown にしたものを、分類（はじめに・使い方・リファレンス）の順に並べてまとめる。
+YAML を Markdown にしたものを、分類（はじめに・使用方法・リファレンス）の順に並べてまとめる。
 GitHub Actions の Pages のワークフローと、手元の確認から、リポジトリの直下で起動する。
 
 Usage:
@@ -41,8 +41,8 @@ GUIDE_FILES = "files.yml"
 FLOWCHART_DIR = "docs/flowchart"
 
 # 公開ページの文書の一覧に並べる分類の順と、判定フローチャートを並べる分類
-CATEGORIES = ("はじめに", "使い方", "リファレンス")
-FLOWCHART_CATEGORY = "使い方"
+CATEGORIES = ("はじめに", "使用方法", "リファレンス")
+FLOWCHART_CATEGORY = "使用方法"
 
 # 文書の原本でないため ID を集めない docs/ 直下のフォルダと、目次・管理用の YAML のファイル名
 SKIPPED_DIRS = ("pr", "mock")
@@ -152,7 +152,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         with tempfile.TemporaryDirectory() as temp:
             workdir = Path(temp)
             names: list[str] = []
-            # 分類の順に、公開ドキュメントの文書と（使い方なら）判定フローチャートを並べる
+            # 分類の順に、公開ドキュメントの文書と（使用方法なら）判定フローチャートを並べる
             for category in CATEGORIES:
                 for page in guides:
                     if page.category == category:
