@@ -1,6 +1,6 @@
 id: MOD-155-51
 title: 画面 / アプリとルート / main.tsx
-lead: SPA のエントリーポイント。ルーターと Provider を組んで `#root` に描く。
+lead: SPA のエントリーポイントを受け持ち、アプリとルートの main.tsx を修正するときに参照する。
 functions:
   - name: main
     title: 画面の起動
@@ -18,3 +18,5 @@ functions:
       1. `createQueryClient()` で QueryClient を作る（QueryClient の作成）
       2. `createAppRouter({queryClient})` でルーターを作る（ルーターの作成）
       3. `createRoot(document.getElementById("root")!)` に `<StrictMode><AppProviders queryClient><RouterProvider router /></AppProviders></StrictMode>` を描く
+notes:
+  補足: ルーターと Provider を組んで `#root` に描く。

@@ -1,8 +1,7 @@
 id: MOD-155-198
 title: 開発ドキュメントサーバー / 管理のMCP
 lead: |-
-  管理の MCP（`/_admin/mcp`）の組み立て。
-  各ツールの引数を要求のモデルで受け、サービスを呼んで `format` の形式で返却し、`DevDocsError` を `isError` の結果にする。文書の MCP（`/mcp`）は project-index が持つ。
+  管理の MCP（`/_admin/mcp`）の組み立てを受け持つ管理のMCPの分類のファイルの並びと決まりを定め、この分類のファイルを追加・移動するときに参照する。
 directory: |-
   ```text
   src/dev_docs/server/mcp/
@@ -53,3 +52,5 @@ diagrams:
         click ツールの結果 href "./MOD-155-180.py.yaml#ツールの結果"
         click ツールのエラーの変換 href "./MOD-155-180.py.yaml#ツールのエラーの変換"
         click ツールのプロンプトの ID href "./MOD-155-180.py.yaml#ツールのプロンプトの ID"
+notes:
+  補足: 各ツールの引数を要求のモデルで受け、サービスを呼んで `format` の形式で返却し、`DevDocsError` を `isError` の結果にする。文書の MCP（`/mcp`）は project-index が持つ。

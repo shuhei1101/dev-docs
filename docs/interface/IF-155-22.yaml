@@ -306,7 +306,7 @@ flows:
       - 終了コード 0 で、dev-docs の端末の設定の `sources` が空になり、`project_index` が `--project-index` のアドレス、`version` が新しいバージョンになる
       - project-index の端末の設定の取得の行に sample・notes が並び、notes の `outsideRead` が `false`、sample の `outsideRead` が `true` になる
     test: test_normal_when_sources_moved_to_real_project_index
-lead: 端末の設定の `version` を dev-docs が参照できるバージョンと比べ、移し替えの手順を古い順に適用する。前のバージョンの `sources` は project-index の端末の設定へ移す。
+lead: 端末の設定の `version` を比べて移し替えの手順を古い順に適用する `dev-docs migrate` の入出力を定め、設定の移し替えを修正するときに参照する。
 identifier: migrate
 permissions: 対象の設定ファイルを書き換えられる利用者
 idempotent: true
@@ -391,3 +391,5 @@ constraints:
     constraint: 'project-index の端末の設定を取得し、dev-docs の端末の設定の `sources` の行を、取得した行の `id` と配信元の ID で照らす。配信元の ID は `id`、省いた行は `config` の配信元の設定を重ねた `name` にする（project-index と同じ求め方）。`name` を求められない行は送信せずに `sources` に残し、`config` を stdout に出す。同じ ID の行があれば、内容も同じなら移した行として扱い、内容が違えば送信せずに `sources` に残して ID を stdout に出す。残りの行を project-index の今の行の後ろに加え、取得で返却された内容のバージョンを添えて 1 回で保存する（加える行が無ければ保存しない）。送信する行は、今の行も加える行も `id`・`config`・`enabled`・`scope`・`outside_read` のキーだけにする（取得で返却される `status`・`errors`・`configVersion` を付けると 400 で断られる。取得の応答の外部の読み取りは `outsideRead` だが、保存は `outside_read` だけを受け付け、`outsideRead` を付けると 400 で断られる）。移した行を `sources` から除き、`project_index` を追記する。破壊的な手順ではない'
     notes: 取得・保存は project-index の端末の設定の API（shuhei1101/project-index の IF-30・IF-31）。project-index は保存した直後に書き込み、配信元の再読み込みが終わるまで端末の設定の排他ロックを持ち続け、取得はそのロックを待たない。保存を 1 回にするので、project-index が受け付けないときは何も書き込まれず、取り除く行が生じない
 test_file: tests/integration/server/test_migrate.py
+notes:
+  補足: 前のバージョンの `sources` は project-index の端末の設定へ移す。

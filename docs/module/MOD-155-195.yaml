@@ -1,8 +1,7 @@
 id: MOD-155-195
 title: 開発ドキュメントサーバー / 変換
 lead: |-
-  文書を文書の取得で返却する Markdown にする。既定はスキーマ駆動（`x-heading`・`x-shape`・`x-key`・`x-diagram`・列の `title`）で、`converters[]` を指す種類は project-index がスクリプトで変換した結果を使用する。
-  Markdown の中の埋め込みのマーカーは、返却する前に YAML の表へ置き換える。
+  文書を文書の取得で返却する Markdown にする処理を受け持つ変換の分類のファイルの並びと決まりを定め、この分類のファイルを追加・移動するときに参照する。
 directory: |-
   ```text
   src/dev_docs/features/convert/
@@ -60,3 +59,5 @@ diagrams:
         click 図の組み立て href "./MOD-155-93.py.yaml#図の組み立て"
         click 変換の結果 href "./MOD-155-100.py.yaml#変換の結果"
         click 変換の失敗 href "./MOD-155-100.py.yaml#変換の失敗"
+notes:
+  補足: 既定はスキーマ駆動（`x-heading`・`x-shape`・`x-key`・`x-diagram`・列の `title`）で、`converters[]` を指す種類は project-index がスクリプトで変換した結果を使用する。Markdown の中の埋め込みのマーカーは、返却する前に YAML の表へ置き換える。

@@ -1,6 +1,6 @@
 id: MOD-155-85
 title: 開発ドキュメントサーバー / 管理 / render.py
-lead: '管理の MCP の `status` の `format: markdown` の応答の文を組み立てる。値は service.py の結果をそのまま使用し、計算しない。'
+lead: '管理の MCP の `status` の `format: markdown` の応答の文を組み立てる処理を受け持ち、管理の render.py を修正するときに参照する。'
 test_files:
   - tests/unit/dev_docs/features/admin/test_render.py
 functions:
@@ -107,3 +107,5 @@ functions:
     callers:
       - '#functions[render_status]'
       - '#functions[render_reload]'
+notes:
+  補足: 値は service.py の結果をそのまま使用し、計算しない。

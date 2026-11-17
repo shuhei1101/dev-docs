@@ -124,7 +124,7 @@ flows:
       - '`/sample/docs/doc-1` が 503 で、`nextSteps` に画面をビルドすることがある'
       - '`/_api/sources/sample/docs` は 200 を返却する'
     test: test_error_when_build_missing
-lead: '#17 の画面を開くときにブラウザが参照する。ビルドした画面の `index.html` と静的ファイルを返却する。画面のパスは全て `index.html` を返却し、どの画面を出すかは画面が決める。'
+lead: 'ビルドした画面の `index.html` と静的ファイルを返却する画面の配信の入出力を定め、画面の配信を修正するときに参照する。'
 identifier: serve_screen
 permissions: なし（`127.0.0.1` でだけ待ち受ける）
 idempotent: true
@@ -170,3 +170,5 @@ constraints:
     constraint: 画面のパスに返却する `index.html` の `<head>` に、端末の設定の `mdmark_version`（無ければ `develop`）を `<meta name="mdmark-version" content="{値}">` で 1 つ入れる。画面はこの値で mdmark の読み込み先を組み立てる。ビルドの `index.html` のファイルは書き換えない
     decided_by: CFG-155-2#settings[mdmark_version]
 test_file: tests/integration/server/test_serve_screen.py
+notes:
+  補足: 画面のパスは全て `index.html` を返却し、どの画面を出すかは画面が決める。

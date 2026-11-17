@@ -414,7 +414,7 @@ elements:
     status: planned
 screen: frontend/src/features/docs/doc-view/doc-view-screen.tsx
 mock: docs/mock/pages/doc-view/36/default/
-lead: '`/{配信元の ID}/{文書のパス}?rev={リビジョン}&base={比較元}` で、1 文書の本文を種類のタブ・サイドバー・パンくず・目次と一緒に参照する画面。本文の文字列にコメントを溜め、まとめてコピー・起票できる。'
+lead: '1 文書の本文を種類のタブ・サイドバー・パンくず・目次と一緒に参照する文書の画面の要素と振る舞いを定め、文書の画面を修正するときに参照する。'
 input_checks:
   - element: コメントの修正欄
     violation: 空白だけか空
@@ -425,6 +425,7 @@ notes:
   URL: '`/{配信元の ID}/{文書のパス}`。文書のパスを省いた `/{配信元の ID}` は配信元のトップ（一番左のタブの一番上の文書）。search パラメータは `rev`（開くリビジョン。省くと `defaultRef`）・`base`（比較元。省くと差分を出さない）・`tab`（選んだタブの番号。省くか、開いている文書がそのタブに無いときは `active` のタブ）で、TanStack Router の `validateSearch` と Zod で検査する。`/` は配信中の配信元の先頭のトップへ移り、配信中の配信元が無ければ設定画面へ移る'
   コメントの配置先: ブラウザのタブの `sessionStorage` に、配信元の ID・リビジョン・文書のパス・見出しの並び・`quote`・`prefix`・`suffix`・本文・選択を溜める。再読み込みしても残り、タブを閉じると消える。サーバーへは送信しない
   404 のとき: 文書の取得が 404 を返却したら、URL を変えずに見つからない画面を出す（`docs/screen/見つからない画面`）
+  補足: 本文の文字列にコメントを溜め、まとめてコピー・起票できる。
 refs:
   - SC-155-7#
 test_file: tests/integration/frontend/doc-view-screen.spec.ts

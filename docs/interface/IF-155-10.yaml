@@ -657,7 +657,7 @@ flows:
       - '`click C href "id:no-such-doc#"` の行が出ず、`click D href "https://example.com/"` は書き換わらない'
       - '`conversionError` が `null`'
     test: test_normal_when_mermaid_click_id_resolved
-lead: '#17 の画面が文書を開くときに呼ぶ。配信元の文書を変換した Markdown と、タブ・サイドバー・差分の項目・画面の状態を JSON で返却する。`path` を省くと一番左のタブのサイドバーの一番上の文書を返却する。'
+lead: '配信元の文書を変換した Markdown とタブ・サイドバー・差分の項目・画面の状態を返却する文書の取得の入出力を定め、文書の取得を修正するときに参照する。'
 identifier: get_document
 permissions: なし（`127.0.0.1` でだけ待ち受ける）
 idempotent: true
@@ -851,6 +851,8 @@ test_file: tests/integration/server/test_get_document.py
 error_format: RFC 9457 の `application/problem+json`（`type`・`title`・`status`・`detail`）。拡張メンバーは camelCase（`nextSteps`・`missing`・`errors[]` の `{path, reason}`）
 callers:
   - SC-155-7#scenarios[正常シナリオ（スキーマ駆動の文書を図と表で読む）]
-  - SC-155-7#scenarios[正常シナリオ（ER 図を参照する）]
+  - SC-155-7#scenarios[正常シナリオ（ER 図を読む）]
   - SC-155-7#scenarios[正常シナリオ（本文の id のリンクを開く）]
   - SC-155-7#scenarios[正常シナリオ（設計書の検討事項のリンクを開く）]
+notes:
+  補足: '`path` を省くと一番左のタブのサイドバーの一番上の文書を返却する。'

@@ -1,8 +1,7 @@
 id: MOD-192-1
 title: 開発用のスクリプト / 公開ページのビルド / build_pages.py
 lead: |-
-  `docs/guide/` の公開の Markdown と、`docs/flowchart/` の公開の YAML を Markdown にしたものを、mdmark の `build` で 1 枚の HTML にまとめる。
-  GitHub Actions の Pages のワークフローが呼び、出力のフォルダを Pages へ配信する。
+  公開の Markdown と判定フローチャートを mdmark の `build` で 1 枚の HTML にまとめる処理を受け持ち、公開ページのビルドの build_pages.py を修正するときに参照する。
 test_files:
   - tests/unit/scripts/test_build_pages.py
 directory: |-
@@ -616,3 +615,5 @@ refs:
   - ARCH-155-1#
   - CMD-155-1#
   - LIB-155-9#
+notes:
+  補足: GitHub Actions の Pages のワークフローが呼び、出力のフォルダを Pages へ配信する。

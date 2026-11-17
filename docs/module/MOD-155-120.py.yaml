@@ -1,6 +1,6 @@
 id: MOD-155-120
 title: 開発ドキュメントサーバー / 設定の移し替え / steps.py
-lead: パッケージに入れた移し替えの手順を参照し、メモリの上の YAML に 1 つずつ適用する。ファイルには書き込まない。
+lead: パッケージに入れた移し替えの手順を参照し、メモリの上の YAML に 1 つずつ適用する処理を受け持ち、設定の移し替えの steps.py を修正するときに参照する。
 test_files:
   - tests/unit/dev_docs/features/migrate/test_steps.py
 directory: |-
@@ -169,3 +169,5 @@ functions:
         exception: 改名先がある
     callers:
       - MOD-155-119#functions[apply_migration]
+notes:
+  補足: ファイルには書き込まない。

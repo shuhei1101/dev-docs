@@ -209,7 +209,7 @@ flows:
       - モックが受けた本文の `expectedVersion` が `v1`
       - '`expectedVersion` を `v2` にして再送信すると 200 で、応答の `version` が `v3`'
     test: test_error_when_version_conflict
-lead: '#17 の設定画面が配信元の追加・編集・削除の後の `sources[]` を丸ごと送信する。スキーマに通ったときだけ project-index の端末の設定の API へ保存を依頼し、再読み込みした後の配信元の状態を返却する。'
+lead: '設定画面が送信した `sources[]` をスキーマで検証し、project-index へ保存を依頼する端末の設定の保存の入出力を定め、端末の設定の保存を修正するときに参照する。'
 identifier: put_settings_sources
 permissions: 画面と同じオリジンからの要求だけ
 idempotent: true
@@ -342,3 +342,5 @@ constraints:
     constraint: '`expectedVersion` を受けたときだけ project-index の PUT `/settings/sources` に指定し、照合は project-index が行う。dev-docs は内容のバージョンを記録しない。project-index の 409 は 409 と `current` で返却する'
     notes: '`expectedVersion` を指定しない保存は照合せずに保存する'
 test_file: tests/integration/server/test_put_settings_sources.py
+notes:
+  補足: スキーマに通ったときだけ project-index の端末の設定の API へ保存を依頼し、再読み込みした後の配信元の状態を返却する。

@@ -1,8 +1,7 @@
 id: MOD-155-80
 title: 管理用プラグイン / セッション開始のフック / session_start.py
 lead: |-
-  SessionStart のフック。ポートにつながらなければ、systemd --user の unit を起動し、unit が無ければ `dev-docs serve` を切り離して起動する。つながれば文脈を入れずに戻る。返却し済みの記録の削除の依頼は project-index のフックへ移した。
-  Python 3.14 の標準ライブラリだけで記載し、どの失敗でも終了コード 0 で戻る。
+  SessionStart のフックを受け持ち、セッション開始のフックの session_start.py を修正するときに参照する。
 test_files:
   - tests/unit/plugins/dev_docs/hooks/test_session_start.py
 directory: |-
@@ -427,3 +426,5 @@ classes:
     summary: unit があるか分からないか、unit の起動に失敗したことを表す。本文が理由
     kind: クラス
     inherits: Exception
+notes:
+  補足: ポートにつながらなければ、systemd --user の unit を起動し、unit が無ければ `dev-docs serve` を切り離して起動する。つながれば文脈を入れずに戻る。返却済みの記録の削除の依頼は project-index のフックへ移した。Python 3.14 の標準ライブラリだけで記載し、どの失敗でも終了コード 0 で戻る。

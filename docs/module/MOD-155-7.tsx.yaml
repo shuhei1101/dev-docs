@@ -1,6 +1,6 @@
 id: MOD-155-7
 title: 画面 / アプリとルート / router.tsx
-lead: TanStack Router のルーター。ルートの木は `route-tree.gen.ts`（`@tanstack/router-plugin` が生成）から取る。
+lead: TanStack Router のルーターを受け持ち、アプリとルートの router.tsx を修正するときに参照する。
 test_files:
   - tests/unit/frontend/src/app/router.test.tsx
 data_models:
@@ -94,3 +94,5 @@ functions:
         condition: '`{rev: "8852552", base: undefined}` と `{}`'
         mock: なし
         expected: '`?rev=8852552` と空文字列'
+notes:
+  補足: ルートの木は `route-tree.gen.ts`（`@tanstack/router-plugin` が生成）から取る。

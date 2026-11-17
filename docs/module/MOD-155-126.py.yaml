@@ -1,6 +1,6 @@
 id: MOD-155-126
 title: 開発ドキュメントサーバー / プロンプト / types.py
-lead: 'サーバーが起動のときに参照するプロンプトの YAML のモデルと、描画の結果・プロンプトの違反の型。モデルは描画に使用するキーだけを持ち、他のキーは参照し捨てる。'
+lead: 'サーバーが起動のときに参照するプロンプトの YAML のモデルと、描画の結果・プロンプトの違反の型を受け持ち、プロンプトの types.py を修正するときに参照する。'
 data_models:
   - name: PromptVar
     title: 変数の定義
@@ -256,3 +256,5 @@ classes:
     description: '`problems: list[PromptProblem]` を持つ。`dev-docs serve` は違反ごとに `{file}: {path}: {reason}` を標準エラーに出し、終了コード 4 で終える。'
     inherits: Exception
     kind: クラス
+notes:
+  補足: モデルは描画に使用するキーだけを持ち、他のキーは参照し捨てる。

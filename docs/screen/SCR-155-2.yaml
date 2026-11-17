@@ -114,8 +114,10 @@ elements:
     visible_when: '`?` を押したとき'
 screen: frontend/src/features/docs/not-found/not-found-screen.tsx
 mock: docs/mock/pages/not-found/36/default/
-lead: 文書の取得が 404 を返却した URL で、見つからなかったもの（文書・リビジョン・配信元）と理由を出し、配信元のトップと設定画面へ案内する画面。URL は開こうとした URL のままにする。
+lead: 見つからなかったものと理由を出し、配信元のトップと設定画面へ案内する見つからない画面の要素と振る舞いを定め、見つからない画面を修正するときに参照する。
 refs:
   - IF-155-10#
   - SC-155-7#
 test_file: tests/integration/frontend/not-found-screen.spec.ts
+notes:
+  補足: URL は開こうとした URL のままにする。

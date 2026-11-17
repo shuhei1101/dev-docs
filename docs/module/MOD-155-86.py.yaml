@@ -1,6 +1,6 @@
 id: MOD-155-86
 title: 開発ドキュメントサーバー / 管理 / service.py
-lead: 管理の MCP の `status` の中身。端末の設定を読み込み、配信元の状態は project-index から取る。
+lead: 管理の MCP の `status` の中身を受け持ち、管理の service.py を修正するときに参照する。
 test_files:
   - tests/unit/dev_docs/features/admin/test_service.py
 functions:
@@ -119,3 +119,5 @@ functions:
         exception: 整数にできない
     callers:
       - '#functions[get_status]'
+notes:
+  補足: 端末の設定を読み込み、配信元の状態は project-index から取る。

@@ -390,7 +390,7 @@ elements:
       読み上げ: '`role="alert"` で、出たときに読み上げる'
 screen: frontend/src/features/settings/settings/settings-screen.tsx
 mock: frontend/src/features/settings/settings/settings-screen.stories.tsx
-lead: '`/_settings` で、端末の設定の `sources[]` を配信元ごとの状態とともに並べ、追加・編集・削除をダイアログで行う画面。保存は `sources[]` を丸ごと送信し、スキーマに通ったときだけ書き換わる。'
+lead: '端末の設定の配信元を状態とともに並べ、追加・編集・削除する設定画面の要素と振る舞いを定め、設定画面を修正するときに参照する。'
 input_checks:
   - element: 配信元の ID の入力欄
     violation: 空
@@ -430,6 +430,7 @@ input_checks:
 notes:
   URL: '`/_settings`。配信元の ID は `^[a-z0-9-]+$` で `_` を含まないため、配信元のトップの URL と重ならない'
   422 の受け方: 入力チェックを通した後も、サーバーの検証（ファイルが無い・設定のスキーマに合わない等）で 422 になる。`errors[]` の `reason` をそのまま項目のエラーの文言にする
+  補足: 保存は `sources[]` を丸ごと送信し、スキーマに通ったときだけ書き換わる。
 refs:
   - IF-155-20#
 test_file: tests/integration/frontend/settings-screen.spec.ts

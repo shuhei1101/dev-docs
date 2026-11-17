@@ -1,6 +1,6 @@
 id: MOD-155-63
 title: 画面 / 共通 / schema.ts
-lead: 画面の中で共通に使用する zod のスキーマ。API の型は orval が生成し、ここには生成しないものだけを配置する。
+lead: 画面の中で共通に使用する zod のスキーマを受け持ち、共通の schema.ts を修正するときに参照する。
 constants:
   - name: ProblemSchema
     title: 問題の詳細のスキーマ
@@ -20,3 +20,5 @@ constants:
     usecase: 共通
     summary: 画面の API の 503・502 の problem+json の `projectIndex`（`address`・`reason`・`kind`。`kind` は `unreachable`・`timeout`・`failed` で、無いときは `unreachable`）
     value: 'z.object({projectIndex: z.object({address: z.string(), reason: z.string(), kind: z.enum(["unreachable", "timeout", "failed"]).default("unreachable")})})'
+notes:
+  補足: API の型は orval が生成し、ここには生成しないものだけを配置する。

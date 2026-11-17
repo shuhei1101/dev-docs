@@ -185,7 +185,7 @@ flows:
       - '`systemctl` が `start` を受けていない'
       - '`{clone}/.venv/bin/python` が呼ばれていない'
     test: test_normal_when_unit_check_times_out
-lead: ポートにつながらなければ、systemd --user の unit を起動し、unit が無ければ `dev-docs serve` を切り離して起動して、再接続の案内か起動できない理由を文脈に入れる。つながったときは何も依頼せず、文脈を入れずに戻る。入力は stdin の JSON と環境変数。
+lead: 落ちている画面のサーバーを systemd --user の unit か切り離した `dev-docs serve` で起動するセッション開始のフックの入出力を定め、セッション開始のフックを修正するときに参照する。
 identifier: hooks/session_start.py
 permissions: 利用者の権限で動く
 idempotent: true
@@ -196,7 +196,7 @@ callers:
   - SC-155-10#scenarios[異常シナリオ（SessionStart で起動できない）]
   - SC-155-10#scenarios[正常シナリオ（SessionStart で XDG_CONFIG_HOME の下の端末の設定から起動する）]
   - SC-155-10#scenarios[正常シナリオ（SessionStart で unit を起動する）]
-  - SC-155-10#scenarios[正常シナリオ（unit を再起動する）]
+  - SC-155-10#scenarios[正常シナリオ（unit を起動し直す）]
 exclusivity: 同時に開いた複数のセッションがどれも起動してもよい。unit があるときは systemd が unit のプロセスを 1 つに保つ（再起動の途中の `start` もプロセスを増やさない）。unit が無いときは、後から起動した `dev-docs serve` がポートの使用中（終了コード 3）で止まり、待ち受けるのは 1 つだけ
 request:
   - name: session_id
@@ -293,3 +293,5 @@ constraints:
     constraint: '`systemctl --user` の呼び出しをそれぞれ 0.1 秒で打ち切る'
     notes: '`cat` と `start --no-block` を 5 回ずつ測って 0.01〜0.04 秒（2026-11-16）。最大の 0.04 秒に 50% を乗せて切り上げた値（規約『資源の値の決め方』の下流を待つタイムアウト）。unit がある経路の待ちの上限の合計は、接続の確認 0.5 秒 + `cat` 0.1 秒 + `start` 0.1 秒 = 0.7 秒。待ち以外の処理（落ちているときのフック全体の実測の最大 0.70 秒。拒否される接続はすぐ終わる）を加えて 1.4 秒で、`timeout` の 2 秒に 0.6 秒の余裕で収まる'
 test_file: tests/integration/plugin/test_session_start.py
+notes:
+  補足: つながったときは何も依頼せず、文脈を入れずに戻る。入力は stdin の JSON と環境変数。

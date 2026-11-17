@@ -1,6 +1,6 @@
 id: MOD-155-57
 title: 画面 / 共通 / api-client.ts
-lead: orval が生成した API の関数が通る fetch の mutator。失敗を AppError にするのはここだけ。
+lead: orval が生成した API の関数が通る fetch の mutator を受け持ち、共通の api-client.ts を修正するときに参照する。
 test_files:
   - tests/unit/frontend/src/shared/adapters/api-client.test.ts
 functions:
@@ -56,3 +56,5 @@ functions:
         mock: MSW のハンドラ
         expected: '`status` 0 の AppError が送信される'
         exception: AppError
+notes:
+  補足: 失敗を AppError にするのはここだけ。

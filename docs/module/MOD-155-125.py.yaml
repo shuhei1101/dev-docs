@@ -1,6 +1,6 @@
 id: MOD-155-125
 title: 開発ドキュメントサーバー / プロンプト / runtime.py
-lead: サーバーが起動のときに `content/prompts/` のプロンプトの YAML を読み込んで検査し、MCP の instructions・ツールの description を描画する。画面用のマーカーは付けない。
+lead: 起動のときのプロンプトの YAML の読み込み・検査と、MCP の instructions・ツールの description の描画を受け持ち、プロンプトの runtime.py を修正するときに参照する。
 test_files:
   - tests/unit/dev_docs/features/prompt_doc/test_runtime.py
 data_models:
@@ -253,3 +253,5 @@ functions:
         condition: '`DEFAULT_PROMPTS_DIR`、`required` は `mcp_prompt_ids()`'
         mock: なし
         expected: 送信せず、どの部品の本文にも `MUST`・`必ず`・`禁止` が無く、`mcp/docs/instructions` を描画した文が 4,096 字以内
+notes:
+  補足: 画面用のマーカーは付けない。
