@@ -769,6 +769,59 @@ def test_normal_when_nav_grouped_by_folder(
     ]
 
 
+def test_normal_when_nav_grouped_by_common_keys(
+    real_index: RealIndex, make_server: Callable[..., ServerEnv]
+) -> None:
+    """group_by に共通のキーと行の metadata で対応付けたキーを指定した auto が、値ごとの group を作る（正常系）。"""
+    # 準備
+    schema = {
+        "type": "object",
+        "title": "サンプル",
+        "properties": {
+            "id": {"type": "string", "title": "ID"},
+            "name": {"type": "string", "title": "名前"},
+            "main_tags": {"type": "array", "title": "主題", "items": {"type": "string"}},
+            "分類": {"type": "string", "title": "分類"},
+        },
+    }
+    nav = {
+        "tabs": [
+            {"title": "主題", "items": [{"auto": {"document": "sample", "group_by": "main_tags"}}]},
+            {"title": "分類", "items": [{"auto": {"document": "sample", "group_by": "category"}}]},
+        ]
+    }
+    rows = [row("sample", ["docs/*.yaml"], schema, metadata={"category": "分類"})]
+    documents = [
+        doc(
+            "doc-1",
+            "docs/doc-1.yaml",
+            data={"id": "doc-1", "name": "文書 1", "main_tags": ["topic:a"], "分類": "x"},
+        ),
+        doc(
+            "doc-2",
+            "docs/doc-2.yaml",
+            data={"id": "doc-2", "name": "文書 2", "main_tags": ["topic:b"], "分類": "x"},
+        ),
+        doc("doc-3", "docs/doc-3.yaml", data={"id": "doc-3", "name": "文書 3"}),
+    ]
+    real_index.serve("sample", IndexSource(documents=rows, docs={None: documents}, nav=nav))
+    env = make_server(real_index)
+    # 実行
+    response = env.client.get("/_api/sources/sample/docs")
+    # 検証
+    tabs = {tab["title"]: tab for tab in response.json()["tabs"]}
+    assert response.status_code == 200
+    assert _outline(tabs["主題"]["items"]) == [
+        ("topic:a", ["docs/doc-1"]),
+        ("topic:b", ["docs/doc-2"]),
+        ("その他", ["docs/doc-3"]),
+    ]
+    assert _outline(tabs["分類"]["items"]) == [
+        ("x", ["docs/doc-1", "docs/doc-2"]),
+        ("その他", ["docs/doc-3"]),
+    ]
+
+
 def _drawn_source() -> IndexSource:
     """図の文書の種類と文書 6・7 を持つ配信元を作る。"""
     rows = [

@@ -10,13 +10,14 @@ from typing import Any
 
 from pydantic import TypeAdapter, ValidationError
 
-from dev_docs.features.documents.fields import get_field
+from dev_docs.features.documents.fields import METADATA_KEYS, get_field
 from dev_docs.features.filter.fields import known_fields
 from dev_docs.features.filter.filters import check_filter, match_filter
 from dev_docs.features.filter.types import Condition, Group
 from dev_docs.features.view.paths import page_path
 from dev_docs.features.view.types import NavItem, NavTab
 from dev_docs.integrations.project_index.types import DocumentRow, IndexedDocument, SourceView
+from dev_docs.shared.errors import InvalidArgumentError
 
 OTHER_GROUP = "その他"
 FOLDER_GROUP_BY = "@folder"
@@ -80,6 +81,20 @@ def _columns(rows: Mapping[str, DocumentRow], kind: str) -> Mapping[str, str]:
     return row.metadata if row is not None else {}
 
 
+def _group_value(document: IndexedDocument, key: str, columns: Mapping[str, str]) -> Any:
+    """`group_by` の値を、共通のキー・対応付けた列・文書の YAML の項目のパスの順で取得する。"""
+    # 共通のキー: project-index が組み立てた文書のメタデータから取得する
+    if key in METADATA_KEYS:
+        return document.metadata.get(key)
+    # 行の metadata で対応付けたキー: 対応付けた列から取得する
+    path = columns.get(key, key)
+    try:
+        return get_field(document.data, path)
+    except InvalidArgumentError:
+        # 項目のパスが誤っている: 値なしとして「その他」に入れる
+        return None
+
+
 def _auto(
     documents: Sequence[IndexedDocument],
     spec: Mapping[str, Any],
@@ -105,7 +120,7 @@ def _auto(
         return _folder_items(found, rows=rows)
     buckets: dict[str, list[NavItem]] = {}
     for document in found:
-        value = get_field(document.data, str(group_by))
+        value = _group_value(document, str(group_by), _columns(rows, document.kind))
         names = (
             [str(item) for item in value]
             if isinstance(value, list)

@@ -248,6 +248,92 @@ def test_build_nav_when_group_by_folder(
     ]
 
 
+def test_build_nav_when_group_by_common_keys(
+    make_view: Callable[..., SourceView], make_document: Callable[..., Document]
+) -> None:
+    """共通のキーと行の metadata で対応付けたキーでまとめる auto（正常系）。"""
+    # 準備
+    row = DocumentRow(
+        id="guide",
+        paths=["guide/files.yml"],
+        schema=GUIDE_SCHEMA,
+        records="files",
+        metadata={"category": "section"},
+    )
+    nav = {
+        "tabs": [
+            {"title": "主題", "items": [{"auto": {"document": "guide", "group_by": "main_tags"}}]},
+            {"title": "分類", "items": [{"auto": {"document": "guide", "group_by": "category"}}]},
+        ]
+    }
+    view = make_view(documents=[row], nav=nav)
+    documents = [
+        make_document(
+            id="guide/a.md",
+            kind="guide",
+            path="guide/files.yml",
+            record_index=0,
+            data={"path": "a.md", "section": "使い方"},
+            metadata={"id": "guide/a.md", "main_tags": ["topic:a"]},
+        ),
+        make_document(
+            id="guide/b.md",
+            kind="guide",
+            path="guide/files.yml",
+            record_index=1,
+            data={"path": "b.md", "section": "使い方"},
+            metadata={"id": "guide/b.md", "main_tags": ["topic:b"]},
+        ),
+        make_document(
+            id="guide/c.md",
+            kind="guide",
+            path="guide/files.yml",
+            record_index=2,
+            data={"path": "c.md"},
+            metadata={"id": "guide/c.md"},
+        ),
+    ]
+    # 実行
+    tabs = build_nav(view, documents)
+    # 検証
+    assert [_shape(item) for item in tabs[0].items] == [
+        ("topic:a", ["guide/files/guide/a.md"]),
+        ("topic:b", ["guide/files/guide/b.md"]),
+        ("その他", ["guide/files/guide/c.md"]),
+    ]
+    assert [_shape(item) for item in tabs[1].items] == [
+        ("使い方", ["guide/files/guide/a.md", "guide/files/guide/b.md"]),
+        ("その他", ["guide/files/guide/c.md"]),
+    ]
+
+
+def test_build_nav_when_group_by_yaml_kind(
+    make_view: Callable[..., SourceView], make_document: Callable[..., Document]
+) -> None:
+    """共通のキーでない kind は文書の YAML の値でまとめる auto（正常系）。"""
+    # 準備
+    row = DocumentRow(id="libs", paths=["docs/library/*.yaml"], schema={})
+    nav = {
+        "tabs": [
+            {"title": "ライブラリ", "items": [{"auto": {"document": "libs", "group_by": "kind"}}]}
+        ]
+    }
+    view = make_view(documents=[row], nav=nav)
+    documents = [
+        make_document(id="cli", kind="libs", path="docs/library/cli.yaml", data={"kind": "CLI"}),
+        make_document(
+            id="lib", kind="libs", path="docs/library/lib.yaml", data={"kind": "ライブラリ"}
+        ),
+    ]
+    # 実行
+    tabs = build_nav(view, documents)
+    # 検証
+    assert [_shape(item) for item in tabs[0].items] == [
+        ("CLI", ["docs/library/cli"]),
+        ("ライブラリ", ["docs/library/lib"]),
+    ]
+
+
 def _shape(item: NavItem) -> Any:
     """項目を、page はパス、group は（名前・子の並び）にして返却する。"""
     if item.kind == "page":

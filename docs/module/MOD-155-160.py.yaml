@@ -55,7 +55,7 @@ functions:
       2. `nav.tabs[]` ごとに、先にタブの `items[]` を `group` の入れ子までたどって `page` が指す文書を集め、そのタブの `auto` の結果から除く。その上で `items[]` を上から次のように参照する
          - `group` は `kind` が `group` の項目を作り、子の `items[]` を同じ読み方で入れ子にする
          - `page` は、文書の行が 1 ファイルだけならその文書、`{行の id}/{文書の ID}` ならその文書の `kind` が `page` の項目にする。無い文書は飛ばす（`nav` の検査は project-index が行う）
-         - `auto` は、`document` があればその行の文書、無ければ全ての文書のうち、`filter` があれば条件の照合（検索。`fields` は `view.documents` の行の `schema`（project-index が `$ref` を解き、`records` を持つ行は 1 要素にしたもの）の使用できる項目に、行の `metadata`（共通のキー → 列名）のキーを、対応付けた列の型（列がスキーマに無ければ `string`）で加えたもの、`columns` は行の ID → その行の `metadata`、`today` は今日）で該当する文書を、文書のページのパスの昇順で `page` の項目にする。`group_by` が `'@folder'` ならフォルダでまとめる（フォルダのグループ化）。それ以外の `group_by` があれば、その項目のパスの値（配列は要素ごと、無ければ `その他`）ごとの `group` の項目にする
+         - `auto` は、`document` があればその行の文書、無ければ全ての文書のうち、`filter` があれば条件の照合（検索。`fields` は `view.documents` の行の `schema`（project-index が `$ref` を解き、`records` を持つ行は 1 要素にしたもの）の使用できる項目に、行の `metadata`（共通のキー → 列名）のキーを、対応付けた列の型（列がスキーマに無ければ `string`）で加えたもの、`columns` は行の ID → その行の `metadata`、`today` は今日）で該当する文書を、文書のページのパスの昇順で `page` の項目にする。`group_by` が `'@folder'` ならフォルダでまとめる（フォルダのグループ化）。それ以外の `group_by` があれば、値（`METADATA_KEYS` のキーなら文書の `metadata`、文書の行の `metadata` で対応付けたキーなら `data` の対応付けた列、それ以外は `data` のその項目のパスの値。項目のパスが誤っていれば値なし）（配列は要素ごと、無ければ `その他`）ごとの `group` の項目にする
          - `title` があれば行の名前を上書きする
       3. `active` を全て `False` にしたタブの並びを返却する
     unit_tests:
@@ -101,6 +101,18 @@ functions:
         condition: "行 `rules`（`paths: [rules/**/*.yaml]`）に `rules/common.yaml`・`rules/lang/index.yaml`・`rules/lang/ts.yaml`・`rules/lang/py/style.yaml`。タブの `items` に `group: 共通`（中に `page: rules/{rules/common.yaml の文書の ID}`）と `auto: {document: rules, group_by: '@folder'}` をこの順で配置する"
         mock: なし
         expected: タブの並びが group `共通`（`rules/common` の page）・group `lang` の順。`rules/common` は `auto` に出ない。group `lang` の中が `rules/lang/index`・`rules/lang/ts`・group `py`（中に `rules/lang/py/style`）の順
+      - name: test_build_nav_when_group_by_common_keys
+        case: 正常
+        summary: 共通のキーと行の metadata で対応付けたキーでまとめる auto
+        condition: '行 `guide`（`records: files`、`metadata: {category: section}`）に要素 `{path: a.md, section: 使い方}`（文書の `metadata` の `main_tags` は `[topic:a]`）・`{path: b.md, section: 使い方}`（`main_tags` は `[topic:b]`）・`{path: c.md}`（`main_tags` なし）。タブ 2 つに `auto: {document: guide, group_by: main_tags}` と `auto: {document: guide, group_by: category}`'
+        mock: なし
+        expected: 1 つ目のタブが group `topic:a`（`a.md`）・group `topic:b`（`b.md`）・group `その他`（`c.md`）、2 つ目のタブが group `使い方`（`a.md`・`b.md`）・group `その他`（`c.md`）
+      - name: test_build_nav_when_group_by_yaml_kind
+        case: 正常
+        summary: 共通のキーでない kind は文書の YAML の値でまとめる auto
+        condition: '行 `libs` に YAML の `kind` が `CLI` の文書と `ライブラリ` の文書。`auto: {document: libs, group_by: kind}`'
+        mock: なし
+        expected: タブが group `CLI`・group `ライブラリ` に分かれ、行の ID `libs` の group は作らない
   - name: first_page
     title: タブの最初の文書
     kind: 関数
