@@ -17,8 +17,8 @@ constraints:
   - item: ランナー
     constraint: '`ubuntu-latest`'
   - item: 配信できるブランチ
-    constraint: '`deploy` の job が使用する環境 `github-pages` の配信ブランチの規則で、`develop`・`gh-pages`・`master` だけ。それ以外のブランチで起動した実行は `deploy` の job を拒否されて失敗で終わる'
-    notes: リポジトリの設定（Settings の Environments）が持つ。workflow のファイルには記載しない
+    constraint: '`deploy` の job は、起動したブランチが `develop` のときだけ実行する（job の `if: github.ref == ''refs/heads/develop''`）。それ以外のブランチで起動した実行は `build` の job だけを実行し、`deploy` の job を飛ばす'
+    notes: 環境 `github-pages` の配信ブランチの規則（`develop`・`gh-pages`・`master`。Settings の Environments）も、それ以外のブランチの配信を拒否する
   - item: まとめる文書
     constraint: 公開範囲が `public` の公開ドキュメントと判定フローチャートを、`scripts/build_pages.py` で 1 枚の HTML にまとめる
     notes: まとめ方はモジュール構成『公開ページのビルド』が定める
@@ -44,10 +44,10 @@ overall_flow: |-
     subgraph deploy
       d[GitHub Pages へ配信する]
     end
-    p -->|"成功・起動したブランチが配信できるブランチ"| d
-    d -- 成功 --> ok([成功])
+    p -->|"成功・起動したブランチが develop（if）"| d
+    p -->|"成功・起動したブランチが develop でない"| ok([成功])
+    d -- 成功 --> ok
     a & n & u & c & h & y & p & d -->|失敗| ng([失敗])
-    p -->|"成功・起動したブランチが配信できるブランチでない"| ng
   ```
 
   <!-- /map -->
@@ -66,7 +66,7 @@ flows:
       ```mermaid
       flowchart TD
         s([develop への push で起動]) --> a[ブランチを取得する] --> n[Node.js を入れる] --> u[uv を入れる] --> c[Pages の設定を読み込む] --> h[公開の文書を 1 枚の HTML にまとめる] --> y[成果物に YAML が無いことを確認する] --> p[成果物を Pages 用に上げる]
-        p -- 配信できるブランチ --> d[GitHub Pages へ配信する] --> e([成功])
+        p -- develop（if） --> d[GitHub Pages へ配信する] --> e([成功])
       ```
 
       <!-- /map -->
@@ -74,8 +74,8 @@ flows:
       - 実行の結論が `success`
       - job `build`・`deploy` の全ての step の結論が `success`
     test: test_normal
-  - name: 異常系（配信できないブランチ・failure）
-    summary: 配信できないブランチで起動し、まとめて上げるまでは成功し、配信を拒否されて失敗で終わる
+  - name: 正常系（develop 以外のブランチ）
+    summary: develop 以外のブランチで起動し、まとめて上げるまでを実行して配信を飛ばし、成功で終わる
     setup:
       - name: Mock
         description: なし（本物の GitHub Actions で回す）
@@ -88,16 +88,16 @@ flows:
       ```mermaid
       flowchart TD
         s([検証用のブランチで workflow_dispatch で起動]) --> a[ブランチを取得する] --> n[Node.js を入れる] --> u[uv を入れる] --> c[Pages の設定を読み込む] --> h[公開の文書を 1 枚の HTML にまとめる] --> y[成果物に YAML が無いことを確認する] --> p[成果物を Pages 用に上げる]
-        p -- 配信できるブランチでない --> e([失敗])
+        p -- develop でない（if） --> e([成功])
       ```
 
       <!-- /map -->
     expected:
-      - 実行の結論が `failure`
+      - 実行の結論が `success`
       - job `build` の全ての step の結論が `success`
-      - job `deploy` の結論が `failure` で、step「GitHub Pages へ配信する」を実行していない
+      - job `deploy` の結論が `skipped`
       - 成果物 `github-pages` の `artifact.tar` の中に `index.html` がある
-    test: test_error_when_branch_not_allowed
+    test: test_normal_when_not_develop
   - name: 異常系（公開の文書をまとめられない・failure）
     summary: 公開の文書をまとめる処理が失敗し、上げずに失敗で終わる
     setup:
@@ -157,7 +157,7 @@ notes:
     | `build` | 成果物を Pages 用に上げる | `actions/upload-pages-artifact` で `_site` を tar にまとめた `artifact.tar` を成果物 `github-pages` に上げる |
     | `deploy` | GitHub Pages へ配信する | 環境 `github-pages` で `actions/deploy-pages` により成果物 `github-pages` を配信し、公開ページの URL を環境の `url` に出す |
   正常系のテストの起動: |-
-    正常系のフローは配信できるブランチでしか通らず、テストから起動すると公開ページを再配信する。
+    正常系のフローは develop でしか通らず、テストから起動すると公開ページを再配信する。
     そのため、テストからは起動せず、develop への push で起動した直近の完了した実行（`gh run list --workflow pages.yml --branch develop --event push`）の結論と step を確認する。
 refs:
   - to: MOD-192-1
