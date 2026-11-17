@@ -9,12 +9,13 @@ from urllib.parse import quote
 import pytest
 
 from dev_docs.features.convert.markdown import (
+    heading_anchors,
     item_heading,
     render_attributes,
     render_table,
     schema_to_markdown,
 )
-from dev_docs.features.convert.types import DiagramHead, DocumentLink, RenderContext
+from dev_docs.features.convert.types import DiagramHead, DocumentLink, ItemHeading, RenderContext
 from dev_docs.integrations.project_index.types import IndexedDocument as Document
 
 CONTEXT = RenderContext(links={}, issue_url=None, path="rules/doc-1.yaml")
@@ -261,7 +262,7 @@ def test_item_heading() -> None:
     # 実行
     result = item_heading(SCENARIO_DATA, SCENARIO_SCHEMA, "flow")
     # 検証
-    assert result == "処理の流れ"
+    assert result == ItemHeading(text="処理の流れ", path="flow")
 
 
 def test_item_heading_when_section() -> None:
@@ -269,7 +270,7 @@ def test_item_heading_when_section() -> None:
     # 実行
     result = item_heading(SCENARIO_DATA, SCENARIO_SCHEMA, "scenarios[正常シナリオ]")
     # 検証
-    assert result == "正常シナリオ"
+    assert result == ItemHeading(text="正常シナリオ", path="scenarios[0]")
 
 
 def test_item_heading_when_not_heading() -> None:
@@ -290,7 +291,7 @@ def test_item_heading_when_nested_brackets() -> None:
     # 実行
     result = item_heading(data, schema, "request[operations[].fields]")
     # 検証
-    assert result == "operations[].fields"
+    assert result == ItemHeading(text="operations[].fields", path="request[1]")
 
 
 @pytest.mark.parametrize(
@@ -326,11 +327,17 @@ ORDER_DATA = {
 @pytest.mark.parametrize(
     ("item", "expected"),
     [
-        pytest.param("functions[main#3]", "main", id="order"),
-        pytest.param("functions[main#2]", "main#2", id="same_value_first"),
+        pytest.param(
+            "functions[main#3]", ItemHeading(text="main", path="functions[4]"), id="order"
+        ),
+        pytest.param(
+            "functions[main#2]",
+            ItemHeading(text="main#2", path="functions[3]"),
+            id="same_value_first",
+        ),
     ],
 )
-def test_item_heading_when_order(item: str, expected: str) -> None:
+def test_item_heading_when_order(item: str, expected: ItemHeading) -> None:
     """同じ値の要素の順番（正常系）。"""
     # 実行
     result = item_heading(ORDER_DATA, ORDER_SCHEMA, item)
@@ -358,12 +365,18 @@ def test_item_heading_when_order_out_of_range(item: str) -> None:
 @pytest.mark.parametrize(
     ("item", "expected"),
     [
-        pytest.param("notes[main.py の補足]", "main.py の補足", id="key"),
-        pytest.param("notes[steps]", "手順の補足", id="title"),
+        pytest.param(
+            "notes[main.py の補足]",
+            ItemHeading(text="main.py の補足", path="notes.main.py の補足"),
+            id="key",
+        ),
+        pytest.param(
+            "notes[steps]", ItemHeading(text="手順の補足", path="notes.steps"), id="title"
+        ),
         pytest.param("notes[無い]", None, id="missing"),
     ],
 )
-def test_item_heading_when_dict_key(item: str, expected: str | None) -> None:
+def test_item_heading_when_dict_key(item: str, expected: ItemHeading | None) -> None:
     """辞書の sections のキー（正常系）。"""
     # 準備
     schema = {
@@ -393,7 +406,177 @@ def test_item_heading_when_consecutive_brackets() -> None:
     # 実行
     result = item_heading(data, schema, "notes[手順][準備]")
     # 検証
-    assert result == "準備"
+    assert result == ItemHeading(text="準備", path="notes.手順[0]")
+
+
+@pytest.mark.parametrize(
+    "item",
+    [
+        pytest.param("flow", id="name"),
+        pytest.param("notes[steps]", id="dict_key"),
+        pytest.param("scenarios[正常シナリオ]", id="inside_empty"),
+    ],
+)
+def test_item_heading_when_empty(item: str) -> None:
+    """値が空の子（正常系）。"""
+    # 準備
+    schema = {
+        "properties": {
+            "flow": {"x-heading": "処理の流れ"},
+            "notes": {"x-shape": "sections", "properties": {"steps": {"title": "手順の補足"}}},
+            "scenarios": {"x-shape": "sections", "x-key": "name"},
+        }
+    }
+    data = {"flow": "", "notes": {"steps": []}, "scenarios": {}}
+    # 実行
+    result = item_heading(data, schema, item)
+    # 検証
+    assert result is None
+
+
+@pytest.mark.parametrize(
+    "item",
+    [
+        pytest.param("flow", id="name"),
+        pytest.param("notes[steps]", id="dict_key"),
+        pytest.param("internal.items[a]", id="inside_hidden"),
+    ],
+)
+def test_item_heading_when_hidden(item: str) -> None:
+    """x-hidden の子（正常系）。"""
+    # 準備
+    schema = {
+        "properties": {
+            "flow": {"x-heading": "処理の流れ", "x-hidden": True},
+            "notes": {
+                "x-shape": "sections",
+                "properties": {"steps": {"title": "手順の補足", "x-hidden": True}},
+            },
+            "internal": {
+                "x-hidden": True,
+                "properties": {"items": {"x-shape": "sections", "x-key": "name"}},
+            },
+        }
+    }
+    data = {"flow": "a", "notes": {"steps": "b"}, "internal": {"items": [{"name": "a"}]}}
+    # 実行
+    result = item_heading(data, schema, item)
+    # 検証
+    assert result is None
+
+
+# 本文の値 `body` の後ろに、`x-key` が `name` の `sections` の `functions` を持つ種類のスキーマ
+ANCHOR_SCHEMA: dict[str, Any] = {
+    "properties": {
+        "name": {"type": "string"},
+        "secret": {"type": "string", "x-heading": "main", "x-hidden": True},
+        "flow": {"type": "string", "x-heading": "main"},
+        "body": {"type": "string", "title": "本文"},
+        "functions": {"type": "array", "x-shape": "sections", "x-key": "name"},
+    }
+}
+
+
+def test_heading_anchors(make_document: Callable[..., Document]) -> None:
+    """同じ見出しの 2 つ目以降（正常系）。"""
+    # 準備
+    document = make_document(
+        data={"name": "N", "functions": [{"name": "main"}, {"name": "sub"}, {"name": "main"}]}
+    )
+    # 実行
+    result = heading_anchors(document, ANCHOR_SCHEMA)
+    # 検証
+    assert result == {"functions[0]": "main", "functions[1]": "sub", "functions[2]": "main-1"}
+
+
+def test_heading_anchors_when_other_item(make_document: Callable[..., Document]) -> None:
+    """別の項目の同じ文字の見出し（正常系）。"""
+    # 準備
+    document = make_document(data={"name": "N", "flow": "流れ", "functions": [{"name": "main"}]})
+    # 実行
+    result = heading_anchors(document, ANCHOR_SCHEMA)
+    # 検証
+    assert result == {"flow": "main", "functions[0]": "main-1"}
+
+
+def test_heading_anchors_when_text_heading(make_document: Callable[..., Document]) -> None:
+    """本文の値の中の見出し（正常系）。"""
+    # 準備
+    document = make_document(
+        data={"name": "N", "body": "## main\n\n本文", "functions": [{"name": "main"}]}
+    )
+    # 実行
+    result = heading_anchors(document, ANCHOR_SCHEMA)
+    # 検証
+    assert result == {"functions[0]": "main-1"}
+
+
+def test_heading_anchors_when_code_block(make_document: Callable[..., Document]) -> None:
+    """コードブロックの中の # の行（正常系）。"""
+    # 準備
+    document = make_document(
+        data={"name": "N", "body": "```\n# main\n```", "functions": [{"name": "main"}]}
+    )
+    # 実行
+    result = heading_anchors(document, ANCHOR_SCHEMA)
+    # 検証
+    assert result == {"functions[0]": "main"}
+
+
+def test_heading_anchors_when_hidden(make_document: Callable[..., Document]) -> None:
+    """見出しを出さない項目（正常系）。"""
+    # 準備
+    document = make_document(
+        data={"name": "N", "secret": "秘密", "flow": "", "functions": [{"name": "main"}]}
+    )
+    # 実行
+    result = heading_anchors(document, ANCHOR_SCHEMA)
+    # 検証
+    assert result == {"functions[0]": "main"}
+
+
+def test_heading_anchors_when_not_atx(make_document: Callable[..., Document]) -> None:
+    """ATX の見出しにならない # の行（正常系）。"""
+    # 準備
+    document = make_document(
+        data={
+            "name": "N",
+            "body": "#main\n\n####### main\n\n    # main",
+            "functions": [{"name": "main"}],
+        }
+    )
+    # 実行
+    result = heading_anchors(document, ANCHOR_SCHEMA)
+    # 検証
+    assert result == {"functions[0]": "main"}
+
+
+def test_heading_anchors_when_closing_hashes(make_document: Callable[..., Document]) -> None:
+    """閉じの # を持つ見出し（正常系）。"""
+    # 準備
+    document = make_document(
+        data={"name": "N", "body": "## main ##", "functions": [{"name": "main"}]}
+    )
+    # 実行
+    result = heading_anchors(document, ANCHOR_SCHEMA)
+    # 検証
+    assert result == {"functions[0]": "main-1"}
+
+
+def test_heading_anchors_when_tilde_fence(make_document: Callable[..., Document]) -> None:
+    """~~~ と長さの違う囲み（正常系）。"""
+    # 準備
+    document = make_document(
+        data={
+            "name": "N",
+            "body": "~~~\n# main\n~~~\n\n````\n```\n# main\n````",
+            "functions": [{"name": "main"}],
+        }
+    )
+    # 実行
+    result = heading_anchors(document, ANCHOR_SCHEMA)
+    # 検証
+    assert result == {"functions[0]": "main"}
 
 
 def test_schema_to_markdown_when_test_files(make_document: Callable[..., Document]) -> None:

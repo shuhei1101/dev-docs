@@ -172,6 +172,42 @@ def test_convert_service_render_when_id_link(
     assert "[B](b.yaml#処理の流れ) を読む" in result
 
 
+def test_convert_service_render_when_id_link_duplicate(
+    make_view: Callable[..., SourceView], make_document: Callable[..., IndexedDocument]
+) -> None:
+    """同じ見出しの 2 つ目への id のリンク（正常系）。"""
+    # 準備
+    schema = {
+        "properties": {
+            "name": {"type": "string"},
+            "body": {"type": "string", "title": "本文"},
+            "functions": {"type": "array", "x-shape": "sections", "x-key": "name"},
+        }
+    }
+    document_a = make_document(
+        id="a",
+        path="rules/a.yaml",
+        data={"name": "A", "body": "[B](id:b#functions[main#2]) と [B1](id:b#functions[main])"},
+        metadata={"id": "a", "name": "A"},
+    )
+    document_b = make_document(
+        id="b",
+        path="rules/b.yaml",
+        data={"name": "B", "functions": [{"name": "main"}, {"name": "main"}]},
+        metadata={"id": "b", "name": "B"},
+    )
+    # 実行
+    result = ConvertService().render(
+        _view(make_view, schema),
+        DocumentDetail(document=document_a),
+        [document_a, document_b],
+        linkable=[],
+    )
+    # 検証
+    assert isinstance(result, str)
+    assert "[B](b.yaml#main-1) と [B1](b.yaml#main)" in result
+
+
 def test_convert_service_finish() -> None:
     """表のキーを取り出す（正常系）。"""
     # 準備

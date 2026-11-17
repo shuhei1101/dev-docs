@@ -22,18 +22,18 @@ ID_LINKS = {
 }
 
 
-def _flow_heading(document_id: str, item: str) -> str | None:
-    """文書 `b` の項目 `flow` だけが見出し `処理の流れ` を持つ、項目の見出しの引き方。"""
+def _flow_anchor(document_id: str, item: str) -> str | None:
+    """文書 `b` の項目 `flow` だけがアンカー `処理の流れ` を持つ、項目のアンカーの引き方。"""
     return "処理の流れ" if (document_id, item) == ("b", "flow") else None
 
 
-def _section_heading(document_id: str, item: str) -> str | None:
-    """文書 `dev/a` の項目 `flows[正常系]` だけが見出し `正常系` を持つ、項目の見出しの引き方。"""
+def _section_anchor(document_id: str, item: str) -> str | None:
+    """文書 `dev/a` の項目 `flows[正常系]` だけがアンカー `正常系` を持つ、項目のアンカーの引き方。"""
     return "正常系" if (document_id, item) == ("dev/a", "flows[正常系]") else None
 
 
 ID_CONTEXT = RenderContext(
-    links=ID_LINKS, issue_url=None, path="dev/c.yaml", item_heading=_flow_heading
+    links=ID_LINKS, issue_url=None, path="dev/c.yaml", item_anchor=_flow_anchor
 )
 
 
@@ -155,7 +155,7 @@ def test_link_reference_when_heading() -> None:
     """見出しになる項目（正常系）。"""
     # 準備
     context = RenderContext(
-        links=CONTEXT.links, issue_url=None, path="dev/b.yaml", item_heading=_section_heading
+        links=CONTEXT.links, issue_url=None, path="dev/b.yaml", item_anchor=_section_anchor
     )
     # 実行
     result = link_reference("dev/a#flows[正常系]", context)
