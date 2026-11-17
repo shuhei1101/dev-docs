@@ -33,7 +33,7 @@ components:
         required: true
         description: '`locating` のコメントへ移ったとき'
     description: |-
-      - 列の初期の非表示は、`columns` のその表のキーの列を `+columns` の表の `hide=` に入れた Markdown を渡す（`applyHiddenColumns`。表のキーは `findTables` で本文の表と対にする）
+      - 列の初期の非表示は、`columns` のその表のキーの列を列の表示・非表示の機能を持つ表のマーカーへ書き込んだ Markdown を渡す（`applyHiddenColumns`。表のキーは `findTables` で本文の表と対にする）
       - 比較元は、本文と同じく最初の見出し 1 を除き、比較元の `tableKeys` で `columns` の隠す列を書き込んでから `baseMarkdown` に渡す
       - 列の出し入れは `useColumnPersistence` が返す関数を `onColumnsChange` に渡して保存する
       - コメントの置き場所のこの文書のコメント（`id`・`body` の並び）が変わったら、描き終えた本文で `reloadComments()` を呼んでマーカーを描き直す（パネルの修正・削除と、mdmark の追加・修正・削除のどれも同じ経路）

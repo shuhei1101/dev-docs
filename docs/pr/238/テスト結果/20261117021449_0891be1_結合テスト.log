@@ -1,0 +1,25 @@
+$ uv run pytest tests/integration/server/test_get_document.py::test_normal_when_schema_document_drawn tests/integration/server/test_get_document.py::test_normal_when_er_diagram_drawn tests/integration/server/test_get_document.py::test_normal_when_diagrams_checked
+============================= test session starts ==============================
+platform linux -- Python 3.14.3, pytest-9.1.1, pluggy-1.7.0
+rootdir: /home/shuhei2441/repo/dev-docs/.claude/worktrees/refactor-convert-mdmark-json-table-marker
+configfile: pyproject.toml
+plugins: anyio-4.15.1
+collected 3 items
+
+tests/integration/server/test_get_document.py ...                        [100%]
+
+============================== 3 passed in 4.03s ===============================
+exit=0
+$ npx playwright test --config tests/integration/frontend/playwright.config.ts tests/integration/frontend/doc-view-screen.spec.ts:834
+
+Running 6 tests using 4 workers
+
+  ✓  2 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:836:3 › 列の表示のメニュー › columns_menu_visible (1.2s)
+  ✓  1 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:842:3 › 列の表示のメニュー › columns_menu_hidden_columns (1.3s)
+  ✓  3 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:853:3 › 列の表示のメニュー › columns_menu_save (1.4s)
+  ✓  4 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:869:3 › 列の表示のメニュー › columns_menu_save_failure (1.4s)
+  ✓  5 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:913:3 › 列の表示のメニュー › columns_menu_json_marker (860ms)
+  ✓  6 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:883:3 › 列の表示のメニュー › columns_menu_save_when_tables_mixed (866ms)
+
+  6 passed (7.7s)
+exit=0

@@ -908,6 +908,37 @@ test.describe("列の表示のメニュー", () => {
       hidden: ["備考"],
     });
   });
+
+  // JSON のマーカーの表: 保存した隠す列でマーカーの隠す列を置き換え、複数行のマーカーの表も表の番号に数える（正常系）
+  test("columns_menu_json_marker", async ({ page }) => {
+    // 準備（1 つ目は備考を最初から隠す JSON のマーカー、2 つ目は列の表示の機能を持つ複数行の JSON のマーカー）
+    const table = (marker: string, head: string) =>
+      [marker, "", `| ${head} | 名称 | 備考 |`, "| --- | --- | --- |", "| k1 | 名称 1 | 備考 1 |", "", "<!-- /table -->", ""].join("\n");
+    const markdown = [
+      "# 文書 1",
+      "",
+      "## 概要",
+      "",
+      table('<!-- table: {"kind": "data", "columns": {"備考": {"hidden": true}}} -->', "表 A"),
+      table('<!-- table: {\n  "kind": "data",\n  "features": {"columns": {}}\n} -->', "表 B"),
+    ].join("\n");
+    const api = await openRendered(page, "/sample/docs/doc-1", {
+      document: ({ path }) => ({
+        body: documentResponse({ path, markdown, tableKeys: ["sample:a", "sample:b"], columns: { "sample:a": [] } }),
+      }),
+    });
+    // 検証（保存した隠す列が空の表 A は、マーカーで隠した備考も表示する）
+    await expect(page.locator("th:visible")).toHaveText(["表 A", "名称", "備考", "表 B", "名称", "備考"]);
+    // 実行（2 つ目の表の `テーブル設定` で備考を隠す）
+    await page.getByRole("button", { name: "テーブル設定" }).nth(1).click();
+    await page.getByRole("dialog", { name: "テーブル設定" }).getByRole("button", { name: "「備考」を隠す" }).click();
+    // 検証
+    await expect.poll(() => api.callsOf("putColumns").length).toBe(1);
+    expect(api.callsOf("putColumns")[0]?.request.body).toEqual({
+      table: "sample:b",
+      hidden: ["備考"],
+    });
+  });
 });
 
 test.describe("目次", () => {
