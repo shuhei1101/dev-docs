@@ -1,0 +1,1 @@
+# 設計書のスキーマの参照を design-schemas の v9 系へ上げ、設計書の refs を related へ書き換える
