@@ -79,7 +79,7 @@ flows:
       - notes と sample がそれぞれ自分の `id` で `serving`
     test: test_normal_when_pending_reload
   - name: 正常系（読み書きの方法を持つ行がある）
-    summary: '`storage` を持つ行だけに `storage.type` を返却する'
+    summary: '`storage` を持つ行に `storage.type` を、持たない行に `null` を返却する'
     setup:
       - name: Mock
         description: なし
@@ -98,7 +98,7 @@ flows:
       ```
     expected:
       - 200 で、local の行の `storage.type` が `disk`
-      - sample の行は `storage` を持たない
+      - sample の行の `storage` が `null`
     test: test_normal_when_storage_given
 lead: '端末の設定の配信元の一覧と配信元ごとの状態を返却する端末の設定の取得の入出力を定め、端末の設定の取得を修正するときに参照する。'
 identifier: get_settings_sources
@@ -142,10 +142,10 @@ response:
     type: str
     description: project-index の端末の設定の内容のバージョン（ファイル全体の内容のハッシュ。設定の `version` キーとは別）
     notes: 端末の設定の保存の `expectedVersion` に指定する
-  - name: sources[].storage.type
-    type: Literal['git', 'disk'] | None
+  - name: sources[].storage
+    type: "{type: Literal['git', 'disk']} | None"
     description: 端末の設定の行の読み書きの方法（project-index の GET `/settings/sources` の `storage.type`）
-    notes: 記載していない行は `storage` を返却しない
+    notes: 記載していない行は `null`
 status_codes:
   - code: '200'
     condition: 返却した（配信元が 0 件でも 200）

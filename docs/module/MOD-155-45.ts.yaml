@@ -20,7 +20,7 @@ functions:
         description: 編集中の行を除いた行の ID（重なりの検査に使用する）
     returns:
       type: z.ZodType<SourceFormValues>
-      description: '`{id: string; config: string; enabled: boolean; read: string; write: string}`（textarea の値は改行区切りの文字列のまま）'
+      description: '`{id: string; config: string; enabled: boolean; read: string; write: string; outsideRead: boolean; storage?: ''auto'' | ''git'' | ''disk''}`（textarea の値は改行区切りの文字列のまま。`storage` は `z.enum([''auto'', ''git'', ''disk'']).optional()`）'
     process: |-
       1. `id` は空・`^[a-z0-9-]+$`・`otherIds` との重なりを検査する
       2. `config`・`read` は空の行を除いて 1 つ以上、`read`・`write` は空の行を含まないことを検査する
@@ -111,7 +111,9 @@ functions:
     returns:
       type: SourceInput[]
       description: 全行。改行で区切り、前後の空白と空の行を除く。`write` が空なら `scope.write` を省く
-    process: 1. 各行を `toSourceInput` で送信する形式にし、`index` の行を入力で置き換えるか末尾に加える
+    process: |-
+      1. 各行を `toSourceInput` で送信する形式にし、`index` の行を入力で置き換えるか末尾に加える
+      2. 入力の行の `storage` は、入力の `storage` が `auto` か無いときは行に含めず、`git` / `disk` のときは `{type}` にする
     unit_tests:
       - name: test_apply_source
         case: 正常
