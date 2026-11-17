@@ -1,0 +1,110 @@
+docs:
+  - page: docs/layout/LAY-275-1.yaml
+    new: true
+    change: dev-docs のフォルダ構成の設計書を、knowledge の layout のスキーマで作成する。アーキテクチャ図とモジュール構成の notes の「フォルダ構成」のツリーをエントリへ移す
+    status: todo
+  - page: docs/layout/index.yaml
+    new: true
+    change: docs/layout/ の目次を作成し、README.md を生成する
+    status: todo
+  - page: docs/index.yaml
+    new: false
+    change: layout/ の行を追加し、README.md を生成し直す
+    status: todo
+  - page: project-index.yaml
+    new: false
+    change: documents[] に layout の行を追加し、nav の「設計書」の「全体」のグループに layout を追加する
+    status: todo
+  - page: docs/architecture/ARCH-155-1.yaml
+    new: false
+    change: notes の「フォルダ構成」を除く
+    status: todo
+  - page: docs/module/MOD-155-120.py.yaml
+    new: false
+    change: notes の「フォルダ構成」を除く
+    status: todo
+  - page: docs/module/MOD-155-193.yaml
+    new: false
+    change: notes の「フォルダ構成」を除く
+    status: todo
+  - page: docs/module/MOD-155-194.yaml
+    new: false
+    change: notes の「フォルダ構成」を除く
+    status: todo
+  - page: docs/module/MOD-155-195.yaml
+    new: false
+    change: notes の「フォルダ構成」を除く
+    status: todo
+  - page: docs/module/MOD-155-196.yaml
+    new: false
+    change: notes の「フォルダ構成」を除く
+    status: todo
+  - page: docs/module/MOD-155-198.yaml
+    new: false
+    change: notes の「フォルダ構成」を除く
+    status: todo
+  - page: docs/module/MOD-155-199.yaml
+    new: false
+    change: notes の「フォルダ構成」を除く
+    status: todo
+  - page: docs/module/MOD-155-202.yaml
+    new: false
+    change: notes の「フォルダ構成」を除く
+    status: todo
+  - page: docs/module/MOD-155-204.yaml
+    new: false
+    change: notes の「フォルダ構成」を除く
+    status: todo
+  - page: docs/module/MOD-155-205.yaml
+    new: false
+    change: notes の「フォルダ構成」を除く
+    status: todo
+  - page: docs/module/MOD-155-207.yaml
+    new: false
+    change: notes の「フォルダ構成」を除く
+    status: todo
+  - page: docs/module/MOD-155-213.yaml
+    new: false
+    change: notes の「フォルダ構成」を除く
+    status: todo
+  - page: docs/module/MOD-155-75.yaml
+    new: false
+    change: notes の「フォルダ構成」を除く
+    status: todo
+  - page: docs/module/MOD-155-76.yaml
+    new: false
+    change: notes の「フォルダ構成」を除く
+    status: todo
+  - page: docs/module/MOD-155-77.yaml
+    new: false
+    change: notes の「フォルダ構成」を除く
+    status: todo
+  - page: docs/module/MOD-155-78.yaml
+    new: false
+    change: notes の「フォルダ構成」を除く
+    status: todo
+  - page: docs/module/MOD-155-80.py.yaml
+    new: false
+    change: notes の「フォルダ構成」を除く
+    status: todo
+  - page: docs/module/MOD-192-1.py.yaml
+    new: false
+    change: notes の「フォルダ構成」を除く
+    status: todo
+  - page: docs/module/MOD-266-1.yaml
+    new: false
+    change: notes の「フォルダ構成」を除く
+    status: todo
+scope_out:
+  - item: フォルダ構成の設計書の refs の related への書き換えと、スキーマの参照の design-schemas v9 系への版上げ
+    reason: 要望は他の設計書の行と同じ ref で作ることで、v9 系への版上げは全ての設計書を書き換える別の作業のため
+    plan: '#263'
+  - item: モジュール構成の notes の「フォルダ構成」以外のセクション（MOD-155-75 の「生成物」など）の移動
+    reason: 要望は「フォルダ構成」のセクションだけを移すことで、他のセクションはモジュールの補足として残るため
+    plan: none
+use_cases:
+  - kind: single
+    scenario: docs/scenario/SC-155-7.yaml
+    impact: run_only
+    detail: 設計書のタブの「全体」のグループにフォルダ構成の設計書が加わり、そのページを開いて参照できること。シナリオの記述は変わらない
+    depends_on: []
