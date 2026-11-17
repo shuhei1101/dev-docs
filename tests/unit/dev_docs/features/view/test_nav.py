@@ -111,6 +111,107 @@ def test_build_nav_when_no_nav(
     assert [_shape(item) for item in tabs[1].items] == ["notes/c"]
 
 
+
+GUIDE_SCHEMA = {
+    "properties": {"path": {"type": "string"}, "name": {"type": "string"}},
+}
+
+
+def _guide_nav() -> dict[str, Any]:
+    return {
+        "tabs": [
+            {
+                "title": "使い方",
+                "items": [
+                    {
+                        "auto": {
+                            "document": "guide",
+                            "filter": {"field": "category", "op": "eq", "values": ["使い方"]},
+                        }
+                    }
+                ],
+            }
+        ]
+    }
+
+
+def test_build_nav_when_metadata_filter(
+    make_view: Callable[..., SourceView], make_document: Callable[..., Document]
+) -> None:
+    """行の metadata で対応付けた共通のキーで絞る auto（正常系）。"""
+    # 準備
+    row = DocumentRow(
+        id="guide",
+        paths=["guide/files.yml"],
+        schema=GUIDE_SCHEMA,
+        records="files",
+        metadata={"category": "category"},
+    )
+    view = make_view(documents=[row], nav=_guide_nav())
+    documents = [
+        make_document(
+            id="guide/a.md",
+            kind="guide",
+            path="guide/files.yml",
+            record_index=0,
+            data={"path": "a.md", "category": "使い方"},
+            metadata={"id": "guide/a.md"},
+        ),
+        make_document(
+            id="guide/b.md",
+            kind="guide",
+            path="guide/files.yml",
+            record_index=1,
+            data={"path": "b.md", "category": "はじめに"},
+            metadata={"id": "guide/b.md"},
+        ),
+    ]
+    # 実行
+    tabs = build_nav(view, documents)
+    # 検証
+    assert [(item.kind, item.path) for item in tabs[0].items] == [
+        ("page", "guide/files/guide/a.md")
+    ]
+
+
+def test_build_nav_when_metadata_column_renamed(
+    make_view: Callable[..., SourceView], make_document: Callable[..., Document]
+) -> None:
+    """共通のキーと列名が違う対応付けで絞る auto（正常系）。"""
+    # 準備
+    row = DocumentRow(
+        id="guide",
+        paths=["guide/files.yml"],
+        schema=GUIDE_SCHEMA,
+        records="files",
+        metadata={"category": "section"},
+    )
+    view = make_view(documents=[row], nav=_guide_nav())
+    documents = [
+        make_document(
+            id="guide/a.md",
+            kind="guide",
+            path="guide/files.yml",
+            record_index=0,
+            data={"path": "a.md", "section": "使い方"},
+            metadata={"id": "guide/a.md"},
+        ),
+        make_document(
+            id="guide/b.md",
+            kind="guide",
+            path="guide/files.yml",
+            record_index=1,
+            data={"path": "b.md", "section": "はじめに"},
+            metadata={"id": "guide/b.md"},
+        ),
+    ]
+    # 実行
+    tabs = build_nav(view, documents)
+    # 検証
+    assert [(item.kind, item.path) for item in tabs[0].items] == [
+        ("page", "guide/files/guide/a.md")
+    ]
+
 def test_build_nav_when_group_by_folder(
     make_view: Callable[..., SourceView],
     make_document: Callable[..., Document],
