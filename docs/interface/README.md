@@ -22,5 +22,6 @@
 | [表の列の設定の保存](./IF-155-21.yaml) | PUT /_api/sources/{source}/columns |
 | [設定の移し替え](./IF-155-22.yaml) | dev-docs migrate |
 | [起動](./IF-155-25.yaml) | dev-docs serve |
+| [テストの全件実行](./IF-155-26.yaml) | .github/workflows/test.yml |
 
 <!-- /table -->
