@@ -21,7 +21,10 @@ styles:
         target: mdmark の CSS 変数 `--mdmark-sticky-top`
         value: '`calc(var(--spacing) * 24)`'
     refs:
-      - SCR-155-1#elements[目次]
+      - to: SCR-155-1
+        item: elements[目次]
+        type: requires
+        when: 目次の固定の位置を変えるときに、文書の画面の目次の振る舞いと突き合わせる。
   - name: tailwind-imports
     title: Tailwind の読み込み
     container: index.css
@@ -42,8 +45,13 @@ styles:
         target: Tailwind のユーティリティ
         value: '`@import "tailwindcss/utilities.css" layer(utilities);`'
     refs:
-      - SCR-155-1#elements[本文]
-      - MOD-232-1#
+      - to: SCR-155-1
+        item: elements[本文]
+        type: requires
+        when: Tailwind の読み込みを変えるときに、文書の画面の本文の見た目と突き合わせる。
+      - to: MOD-232-1
+        type: references
+        when: Preflight を本文の外だけに適用する CSS を確認するとき。
   - name: base-outside-mdmark
     title: 本文の外の枠線と輪郭線の色
     container: index.css
@@ -54,7 +62,10 @@ styles:
         target: 本文の外の全ての要素
         value: '`@apply border-border outline-ring/50`'
     refs:
-      - SCR-155-1#elements[本文]
+      - to: SCR-155-1
+        item: elements[本文]
+        type: requires
+        when: 本文の外の既定のスタイルを変えるときに、文書の画面の本文の見た目と突き合わせる。
   - name: mdmark-padding
     title: 本文の内側の余白
     container: index.css
@@ -66,7 +77,10 @@ styles:
         target: mdmark の CSS 変数 `--mdmark-padding`
         value: '`0 0 1.5rem`'
     refs:
-      - SCR-155-1#elements[本文]
+      - to: SCR-155-1
+        item: elements[本文]
+        type: requires
+        when: 本文の余白を変えるときに、文書の画面の本文の見た目と突き合わせる。
   - name: doc-title-tokens
     title: 文書のタイトルのトークン
     container: index.css
@@ -84,7 +98,10 @@ styles:
         target: 文書のタイトルの太さ
         value: '`var(--mdmark-heading-weight, 700)`'
     refs:
-      - SCR-155-1#elements[文書のタイトル]
+      - to: SCR-155-1
+        item: elements[文書のタイトル]
+        type: requires
+        when: 文書のタイトルの見た目を変えるときに、文書の画面の文書のタイトルと突き合わせる。
 notes:
   補足: Tailwind の読み込みと色のトークンに加え、mdmark が描く本文への上書きを持つ。
 tags:

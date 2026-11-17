@@ -100,8 +100,12 @@ functions:
         mock: project-indexの呼び出しを偽物に差し替える
         expected: local の `storage.type` が `disk`、sample の `storage` が `null`
 refs:
-  - IF-155-20#
-  - IF-155-19#
+  - to: IF-155-20
+    type: requires
+    when: '`GET /_api/settings/sources` の応答を変えるときに、端末の設定の取得の入出力と突き合わせる。'
+  - to: IF-155-19
+    type: requires
+    when: '`PUT /_api/settings/sources` の要求と応答を変えるときに、端末の設定の保存の入出力と突き合わせる。'
 tags:
   - name: topic:端末の設定
     main: true

@@ -116,8 +116,12 @@ screen: frontend/src/features/docs/not-found/not-found-screen.tsx
 mock: docs/mock/pages/not-found/36/default/
 lead: 見つからなかったものと理由を出し、配信元のトップと設定画面へ案内する見つからない画面の要素と振る舞いを定め、見つからない画面を修正するときに参照する。
 refs:
-  - IF-155-10#
-  - SC-155-7#
+  - to: IF-155-10
+    type: references
+    when: 見つからない理由の出し方を変えるときに、文書の取得の画面の状態を確認する。
+  - to: SC-155-7
+    type: references
+    when: 見つからない画面からの案内を変えるときに、利用者が画面で参照する流れを確認する。
 test_file: tests/integration/frontend/not-found-screen.spec.ts
 notes:
   補足: URL は開こうとした URL のままにする。

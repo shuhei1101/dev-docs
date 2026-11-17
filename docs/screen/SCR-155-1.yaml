@@ -355,7 +355,10 @@ elements:
     source: 文書の取得.github
     action: クリックで選んだコメントの全文をクリップボードへコピーしてから、`github` のリポジトリの Issue の作成画面を、起票のラベルとコメントを含めた `body` で別のタブに開く。URL が上限を超えるときは、上限に収まるまで `body` の末尾を切り詰め、末尾に空行を挟んで `…（長さの上限を超えたため、本文の末尾を切り詰めました。全文はクリップボードにコピーしています）` を追記する
     refs:
-      - NFR-155-1#requirements[Issue の作成画面の URL の長さ].value
+      - to: NFR-155-1
+        item: requirements[Issue の作成画面の URL の長さ].value
+        type: requires
+        when: Issue を作成で開く URL の扱いを変えるときに、URL の長さの上限を確認する。
   - name: コメントが無いことの表示
     kind: label
     position: コメントのパネル
@@ -427,7 +430,9 @@ notes:
   404 のとき: 文書の取得が 404 を返却したら、URL を変えずに見つからない画面を出す（`docs/screen/見つからない画面`）
   補足: 本文の文字列にコメントを溜め、まとめてコピー・起票できる。
 refs:
-  - SC-155-7#
+  - to: SC-155-7
+    type: references
+    when: 文書の画面の振る舞いを変えるときに、利用者が画面で参照する流れを確認する。
 test_file: tests/integration/frontend/doc-view-screen.spec.ts
 tags:
   - name: topic:文書

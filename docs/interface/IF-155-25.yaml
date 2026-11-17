@@ -362,7 +362,10 @@ constraints:
     constraint: '`/proc/net/tcp`（IPv6 のアドレスは `/proc/net/tcp6`）から待ち受けのアドレスとポートの LISTEN の行の inode を取得し、`/proc/*/fd` でその inode を持つプロセスを探す。`/proc` が無い・参照できない・見つからないときは、pid を取れなかったことを出して終了コード 3 で終わる'
     notes: 別の利用者のプロセスの `fd` は読めず、取れない扱いになる
 refs:
-  - SC-155-10#scenarios[正常シナリオ]
+  - to: SC-155-10
+    item: scenarios[正常シナリオ]
+    type: references
+    when: 起動の入出力やフローを変えるときに、起動のシナリオの正常系と突き合わせる。
 test_file: tests/integration/server/test_serve.py
 tags:
   - name: topic:起動
