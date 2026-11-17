@@ -67,8 +67,6 @@ functions:
         condition: 端末の設定の `leftover_sources` が `[sample]`
         mock: project-indexの呼び出し（状態を返却するか例外を送信する偽物）
         expected: '`leftover_sources` が `[sample]`'
-    callers:
-      - MOD-155-178#functions[build_admin_mcp]
     callees:
       - '#functions[version_state]'
       - MOD-155-215#classes[ProjectIndexClient]
@@ -117,7 +115,5 @@ functions:
         mock: なし
         expected: '`ValueError`'
         exception: 整数にできない
-    callers:
-      - '#functions[get_status]'
 notes:
   補足: 端末の設定を読み込み、配信元の状態は project-index から取る。

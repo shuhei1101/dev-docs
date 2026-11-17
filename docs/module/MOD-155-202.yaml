@@ -2,14 +2,6 @@ id: MOD-155-202
 title: 開発ドキュメントサーバー / 絞り込み
 lead: |-
   `nav` の `auto` の `filter` の条件の木の確認と文書への照合を受け持つ絞り込みの分類のファイルの並びと決まりを定め、この分類のファイルを追加・移動するときに参照する。
-directory: |-
-  ```text
-  src/dev_docs/features/filter/
-  ├─ __init__.py   # 公開する型と関数の再エクスポート
-  ├─ types.py      # Condition / Group / Heading
-  ├─ fields.py     # field_values / known_fields / heading_lines（項目の値・計算項目・使用できる項目・見出しの行）
-  └─ filters.py    # check_filter / match_filter / compile_regex / normalize / parse_compare_value
-  ```
 diagrams:
   - name: 全体
     diagram: |-
@@ -41,3 +33,11 @@ diagrams:
         click 項目の値 href "./MOD-155-134.py.yaml#項目の値"
 notes:
   補足: 検索そのもの（`search_docs`・画面の検索の単語の照合と抜粋）は project-index が持つ。
+  フォルダ構成: |-
+    ```text
+    src/dev_docs/features/filter/
+    ├─ __init__.py   # 公開する型と関数の再エクスポート
+    ├─ types.py      # Condition / Group / Heading
+    ├─ fields.py     # field_values / known_fields / heading_lines（項目の値・計算項目・使用できる項目・見出しの行）
+    └─ filters.py    # check_filter / match_filter / compile_regex / normalize / parse_compare_value
+    ```

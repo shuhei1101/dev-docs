@@ -1,21 +1,6 @@
 id: MOD-155-194
 title: 開発ドキュメントサーバー / 共通
 lead: どの分類からも使用する例外の階層・YAML の読み書き・内容のハッシュ・パスの正規化と、画面の書き込みの要求のオリジンの確認を受け持つ共通の分類のファイルの並びと決まりを定め、この分類のファイルを追加・移動するときに参照する。
-directory: |-
-  ```text
-  src/dev_docs/
-  ├─ shared/
-  │  ├─ errors.py    # DevDocsError と MCP・画面が返すエラーの階層
-  │  ├─ api_model.py # ApiModel（画面の API の DTO の基底。キーは camelCase）
-  │  ├─ yaml_io.py   # YAML の読み込み・往復編集の読み書き・YamlLoadError
-  │  ├─ hashing.py   # 内容のハッシュ（文書のバージョン）
-  │  ├─ paths.py     # パスの正規化
-  │  ├─ files.py     # 一時ファイルからのファイルの置き換え
-  │  ├─ schema_check.py # JSON Schema の違反を項目のパスつきの Violation にする
-  │  └─ version.py   # 動いているプロセスが起動した時点の dev-docs のバージョン
-  └─ server/
-     └─ origin.py    # 画面と同じオリジンからの要求かの確認
-  ```
 diagrams:
   - name: 全体
     diagram: |-
@@ -44,3 +29,18 @@ diagrams:
         click 往復編集の読み込み href "./MOD-155-190.py.yaml#往復編集の読み込み"
 notes:
   例外の配置先: どの分類の関数も、呼び出し側へ返却する失敗は `shared/errors.py` の子クラスで送信する。YAML を読み込めないことは YAML の読み書きの例外で送信し、呼び出し側が `Violation` に変える。
+  フォルダ構成: |-
+    ```text
+    src/dev_docs/
+    ├─ shared/
+    │  ├─ errors.py    # DevDocsError と MCP・画面が返すエラーの階層
+    │  ├─ api_model.py # ApiModel（画面の API の DTO の基底。キーは camelCase）
+    │  ├─ yaml_io.py   # YAML の読み込み・往復編集の読み書き・YamlLoadError
+    │  ├─ hashing.py   # 内容のハッシュ（文書のバージョン）
+    │  ├─ paths.py     # パスの正規化
+    │  ├─ files.py     # 一時ファイルからのファイルの置き換え
+    │  ├─ schema_check.py # JSON Schema の違反を項目のパスつきの Violation にする
+    │  └─ version.py   # 動いているプロセスが起動した時点の dev-docs のバージョン
+    └─ server/
+       └─ origin.py    # 画面と同じオリジンからの要求かの確認
+    ```

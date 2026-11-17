@@ -65,8 +65,6 @@ functions:
         condition: '`leftover_sources` が `[sample, notes]`'
         mock: なし
         expected: '最後の行が `端末の設定に残った sources: sample・notes（project-index の端末の設定へ追加してください）`'
-    callers:
-      - MOD-155-178#functions[build_admin_mcp]
     callees:
       - '#functions[_source_row]'
   - name: _source_row
@@ -104,8 +102,5 @@ functions:
         condition: '`not_served`、`errors` 2 件'
         mock: なし
         expected: 状態の列が `not_served（{1 件目}、{2 件目}）`
-    callers:
-      - '#functions[render_status]'
-      - '#functions[render_reload]'
 notes:
   補足: 値は service.py の結果をそのまま使用し、計算しない。

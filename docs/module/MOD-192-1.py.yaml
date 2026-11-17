@@ -4,14 +4,6 @@ lead: |-
   公開の Markdown と判定フローチャートを mdmark の `build` で 1 枚の HTML にまとめる処理を受け持ち、公開ページのビルドの build_pages.py を修正するときに参照する。
 test_files:
   - tests/unit/scripts/test_build_pages.py
-directory: |-
-  ```text
-  scripts/
-  └─ build_pages.py    # main / list_public_guides / load_public_flowcharts / index_document_paths / render_page / item_anchors / rewrite_references / write_bundle_config / run_mdmark
-  .github/
-  └─ workflows/
-     └─ pages.yml      # develop への push で build_pages.py を実行し、出力を Pages へ配信
-  ```
 data_models:
   - name: GuidePage
     title: 公開ドキュメントの文書
@@ -617,3 +609,11 @@ refs:
   - LIB-155-9#
 notes:
   補足: GitHub Actions の Pages のワークフローが呼び、出力のフォルダを Pages へ配信する。
+  フォルダ構成: |-
+    ```text
+    scripts/
+    └─ build_pages.py    # main / list_public_guides / load_public_flowcharts / index_document_paths / render_page / item_anchors / rewrite_references / write_bundle_config / run_mdmark
+    .github/
+    └─ workflows/
+       └─ pages.yml      # develop への push で build_pages.py を実行し、出力を Pages へ配信
+    ```

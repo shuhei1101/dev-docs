@@ -73,44 +73,25 @@ repository:
   style: モノレポ
   repositories:
     - name: shuhei1101/dev-docs
-  layout: |-
-    ```tree
-    dev-docs/
-    ├── frontend/                # 画面（React の SPA）
-    ├── src/dev_docs/            # 開発ドキュメントサーバー
-    │   └── migrations/          # 端末の設定の移し替えの手順（settings/{バージョン}/steps.yaml）
-    ├── schemas/                 # 端末の設定のスキーマ
-    ├── plugins/dev-docs/        # 管理用プラグイン
-    ├── scripts/                 # 反映作業のスクリプトが呼ぶ共通のスクリプトと、Pages の公開ページの生成のスクリプト
-    ├── .github/workflows/       # GitHub Pages への配信のワークフロー
-    ├── .claude-plugin/marketplace.json
-    ├── docs/                    # 文書（種類ごとのフォルダ・guide/・pr/・mock/）
-    └── tests/
-    ```
 subsystems:
   - name: 開発ドキュメントサーバー
     scope: server
     role: project-index が配信している配信元の文書を project-index の読み取り API で取得して Markdown に変換し、画面のビルドと画面の API で出す。管理の MCP で自分の状態・再起動・更新を受ける
     runtime: Python 3.14
     runs_on: 利用者の端末（`127.0.0.1`）
-    implementation: src/dev_docs/__main__.py
     status: implemented
   - name: 管理用プラグイン
     scope: plugin
     role: SessionStart のフックで落ちている画面のサーバーを起動し、管理の MCP の接続先を Claude Code に指定する
     runtime: Claude Code のプラグイン（フックは Python 3.14）
     runs_on: 利用者の端末の Claude Code（ユーザースコープ）
-    implementation: plugins/dev-docs/.claude-plugin/plugin.json
     status: planned
   - name: 画面
     scope: frontend
     role: 文書の画面・設定画面・見つからない画面を 1 つの SPA で描き、画面の API を呼ぶ。ビルドは開発ドキュメントサーバーが配る
     runtime: TypeScript 7（ブラウザ）
     runs_on: 利用者のブラウザ
-    implementation: frontend/
     status: planned
-    introduced:
-      pr: 36
 lead: dev-docs のサブシステムと、境界を越えて通信する外部システムを定め、機能をどのサブシステムに配置するかを決めるときに参照する。
 external_systems:
   - name: Claude Code
@@ -143,3 +124,18 @@ external_systems:
     status: planned
     refs:
       - MOD-155-25#functions[mdmarkUrls]
+notes:
+  フォルダ構成: |-
+    ```tree
+    dev-docs/
+    ├── frontend/                # 画面（React の SPA）
+    ├── src/dev_docs/            # 開発ドキュメントサーバー
+    │   ├── migrations/          # 端末の設定の移し替えの手順（settings/{バージョン}/steps.yaml）
+    │   └── schemas/             # 端末の設定・エイリアスの元の行のスキーマ
+    ├── plugins/dev-docs/        # 管理用プラグイン
+    ├── scripts/                 # 反映作業のスクリプトが呼ぶ共通のスクリプトと、Pages の公開ページの生成のスクリプト
+    ├── .github/workflows/       # GitHub Pages への配信のワークフロー
+    ├── .claude-plugin/marketplace.json
+    ├── docs/                    # 文書（種類ごとのフォルダ・guide/・pr/・mock/）
+    └── tests/
+    ```

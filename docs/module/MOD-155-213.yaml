@@ -2,13 +2,6 @@ id: MOD-155-213
 title: 開発ドキュメントサーバー / project-indexの呼び出し
 lead: |-
   project-index の API を制限時間つきの HTTP で呼ぶ処理を受け持つ project-indexの呼び出しの分類のファイルの並びと決まりを定め、この分類のファイルを追加・移動するときに参照する。
-directory: |-
-  ```text
-  src/dev_docs/integrations/project_index/
-  ├─ __init__.py   # 公開する型と ProjectIndexClient の再エクスポート
-  ├─ types.py      # IndexedDocument / DocumentRow / SourceView / DocumentList / DocumentDetail / IndexFailure / SourceState / DecisionIndex / SearchHits / RefList / SettingsSourcesView
-  └─ client.py     # ProjectIndexClient（要求ごとに問い合わせ、dev-docs の中に控えない）
-  ```
 diagrams:
   - name: 全体
     diagram: |-
@@ -52,3 +45,10 @@ notes:
   依存の向き: '`features/` の画面の API・端末の設定・状態・移し替えがこの分類を呼び、この分類は `shared/` だけに依存する。project-index は dev-docs を呼ばない'
   契約: 入出力の原本は [読み取り API と端末の設定の API を提供する](https://github.com/shuhei1101/project-index/issues/14)。この分類の型は外部 API『project-index の読み取り API』の仮の入出力から作り、契約が決まったら [project-index の付け替え口を本物の API へつなぐ](https://github.com/shuhei1101/dev-docs/issues/164) で合わせる
   補足: 応答を型にして返却し、つながらない・打ち切った・断られたことを dev-docs の例外に変える。
+  フォルダ構成: |-
+    ```text
+    src/dev_docs/integrations/project_index/
+    ├─ __init__.py   # 公開する型と ProjectIndexClient の再エクスポート
+    ├─ types.py      # IndexedDocument / DocumentRow / SourceView / DocumentList / DocumentDetail / IndexFailure / SourceState / DecisionIndex / SearchHits / RefList / SettingsSourcesView
+    └─ client.py     # ProjectIndexClient（要求ごとに問い合わせ、dev-docs の中に控えない）
+    ```

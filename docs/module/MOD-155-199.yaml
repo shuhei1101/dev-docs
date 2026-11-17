@@ -2,17 +2,6 @@ id: MOD-155-199
 title: 開発ドキュメントサーバー / 文書
 lead: |-
   project-index が返却した文書の項目のパスの値と、`alias_type` を持つ行の文書のエイリアスを受け持つ文書の分類のファイルの並びと決まりを定め、この分類のファイルを追加・移動するときに参照する。
-directory: |-
-  ```text
-  src/dev_docs/features/documents/
-  ├─ __init__.py   # 公開する型と関数の再エクスポート
-  ├─ types.py      # AliasType / AliasEntry / AliasCollection
-  ├─ fields.py     # ArraySelector / parse_field_path / get_field / is_markdown_body
-  └─ aliases.py    # alias_schema / check_alias_document / collect_aliases（エイリアスのキーの検証と集め）
-  src/dev_docs/schemas/
-  ├─ aliases.schema.yaml   # alias-inject の `schemas/aliases.schema.yaml`（エイリアスの元の行）の複製
-  └─ aliases.source.yaml   # 取り込み元のリポジトリ・タグ・パス
-  ```
 diagrams:
   - name: 全体
     diagram: |-
@@ -47,3 +36,14 @@ diagrams:
         click 項目の取得 href "./MOD-155-107.py.yaml#項目の取得"
 notes:
   補足: 文書を集めて参照する・キャッシュする処理は project-index が持つ。
+  フォルダ構成: |-
+    ```text
+    src/dev_docs/features/documents/
+    ├─ __init__.py   # 公開する型と関数の再エクスポート
+    ├─ types.py      # AliasType / AliasEntry / AliasCollection
+    ├─ fields.py     # ArraySelector / parse_field_path / get_field / is_markdown_body
+    └─ aliases.py    # alias_schema / check_alias_document / collect_aliases（エイリアスのキーの検証と集め）
+    src/dev_docs/schemas/
+    ├─ aliases.schema.yaml   # alias-inject の `schemas/aliases.schema.yaml`（エイリアスの元の行）の複製
+    └─ aliases.source.yaml   # 取り込み元のリポジトリ・タグ・パス
+    ```

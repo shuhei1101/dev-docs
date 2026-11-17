@@ -92,8 +92,6 @@ functions:
         condition: 1 回目は `git pull --ff-only` が終了コード 1、2 回目は HEAD が同じ
         mock: '`subprocess.run`（呼ぶごとに応答を変える）'
         expected: 1 回目が `UpdateFailedError`、2 回目は `RestartInProgressError` にならず `updated` が `False`
-    callers:
-      - MOD-155-178#functions[build_admin_mcp]
     callees:
       - '#functions[_run]'
   - name: _run
@@ -168,5 +166,3 @@ functions:
         mock: '`subprocess.run`'
         expected: '`UpdateFailedError`'
         exception: コマンドが見つからない
-    callers:
-      - '#functions[update_clone]'
