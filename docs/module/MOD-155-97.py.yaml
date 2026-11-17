@@ -279,7 +279,7 @@ functions:
       2. 最上位からスキーマと値を 1 ステップずつたどり、ステップごとに見出しを決める
          - 名前のステップ: 値が辞書のとき、スキーマの `properties` のキーと値のキーへ進む。見出しはキーのスキーマの `x-heading`（無ければ見出し無し）。キーのスキーマが無ければ `None`
          - `[{値}]` のステップ: スキーマが `x-shape: sections` のときだけ進む（それ以外は `None`）
-           - 値が配列: スキーマの `x-key` の値を文字列にしたものが `[{値}]` の値に一致する最初の要素へ進む。一致する要素が無く、値の末尾が `#{整数}` のときは、`#{整数}` を除いた値に一致する要素の整数番目（1 始まり）へ進む。見出しは進んだ要素の `x-key` の値。どちらでも要素を選べなければ `None`
+           - 値が配列: スキーマの `x-key` の値を文字列にしたものが `[{値}]` の値に一致する最初の要素へ進む。一致する要素が無く、値の末尾が `#{整数}`（10 進数字だけ）のときは、`#{整数}` を除いた値に一致する要素の整数番目（1 始まり）へ進む。見出しは進んだ要素の `x-key` の値を文字列にしたもの。どちらでも要素を選べなければ `None`
            - 値が辞書: `[{値}]` の値をキーにして子へ進む。子のスキーマは `properties` のキーのスキーマ（無ければ空）。見出しは子のスキーマの `x-heading`、無ければ `title`、無ければキー（変換が辞書の `sections` の子に付ける見出しと同じ）。キーが無ければ `None`
       3. 最後のステップの見出しを返却する（見出し無しなら `None`）
     unit_tests:
@@ -322,7 +322,7 @@ functions:
       - name: test_item_heading_when_order_out_of_range
         case: 異常
         summary: 要素の数を超える順番
-        condition: '`test_item_heading_when_order` と同じ文書で、項目のパス `functions[main#4]`・`functions[main#0]`・`functions[none#1]`'
+        condition: '`test_item_heading_when_order` と同じ文書で、項目のパス `functions[main#4]`・`functions[main#0]`・`functions[none#1]`・`functions[main#²]`（上付き数字）'
         mock: なし
         expected: どれも `None`
       - name: test_item_heading_when_dict_key
