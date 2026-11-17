@@ -80,7 +80,7 @@ classes:
           1. `detail.failure` があれば、同じフィールドの `ConvertFailure` を返却する
           2. `detail.markdown` があれば（`converters[]` を指す行の文書）、それを返却する
           3. 文書の行（`view.row(document.kind)`）を取得し、Markdownの本文かが `True` なら `document.body` を返却する
-          4. それ以外は、スキーマ駆動の変換（スキーマは行の `schema`）の結果を返却する。描画の文脈は、`links` を `documents` の文書ごとに ID・`path`・`body_path` から `DocumentLink`（タイトルはメタデータの `name`、パスは `path`）を取得する辞書、`issue_url` を `view.github_repository` から作った URL（無ければ `None`）、`path` を文書の `path`、`item_heading` を「ID の文書を `documents` から引き、その値と行の `schema` で項目の見出しを返す関数（ID の文書が無ければ `None`）」、`decisions` を `linkable` にする
+          4. それ以外は、スキーマ駆動の変換（スキーマは行の `schema`）の結果を返却する。描画の文脈は、`links` を `documents` の文書ごとに ID・`path`・`body_path` から `DocumentLink`（タイトルはメタデータの `name`、パスは `path`）を取得する辞書、`issue_url` を `view.github_repository` から作った URL（無ければ `None`）、`path` を文書の `path`、`item_anchor` を「ID の文書を `documents` から引き、その値と行の `schema` で項目の見出しを取得し、見出しのアンカーの一覧のその `path` のアンカーを返却する関数（ID の文書・見出しが無ければ `None`。見出しのアンカーの一覧は、描画する 1 件の中で文書ごとに 1 回だけ作る）」、`decisions` を `linkable` にする
         unit_tests:
           - name: test_convert_service_render
             case: 正常
@@ -118,6 +118,12 @@ classes:
             condition: '本文に `[B](id:b#flow)` を持つ文書 a と、スキーマで `flow` が `x-heading: 処理の流れ` の文書 b'
             mock: なし
             expected: 文書 a の Markdown に、文書 b の相対パスに `#処理の流れ` を付けたリンクがある
+          - name: test_convert_service_render_when_id_link_duplicate
+            case: 正常
+            summary: 同じ見出しの 2 つ目への id のリンク
+            condition: '本文に `[B](id:b#functions[main#2])` と `[B1](id:b#functions[main])` を持つ文書 a と、`functions` が `x-shape: sections`・`x-key: name` で `name: main` の要素を 2 つ持つ文書 b'
+            mock: なし
+            expected: 文書 a の Markdown に、文書 b の相対パスに `#main-1` を付けたリンクと `#main` を付けたリンクがある
       - name: finish
         title: 仕上げる
         kind: メソッド

@@ -9,7 +9,9 @@ diagrams:
       classDiagram
         direction TD
         変換 ..> スキーマ駆動の変換 : converter が無い
-        変換 ..> 項目の見出し : 描画の文脈の見出しの引き方
+        変換 ..> 項目の見出し : 描画の文脈のアンカーの引き方
+        変換 ..> 見出しのアンカーの一覧 : 描画の文脈のアンカーの引き方
+        見出しのアンカーの一覧 ..> 見出しのアンカー
         スキーマ駆動の変換 ..> 表の組み立て
         スキーマ駆動の変換 ..> 属性の表の組み立て
         スキーマ駆動の変換 ..> 図の組み立て
@@ -45,6 +47,12 @@ diagrams:
         class 項目の見出し {
           <<function>>
         }
+        class 見出しのアンカーの一覧 {
+          <<function>>
+        }
+        class 見出しのアンカー {
+          <<function>>
+        }
         class テーブルの論理名の引き方 {
           <<function>>
         }
@@ -54,6 +62,7 @@ diagrams:
         click 本文の書き換え href "./MOD-155-96.py.yaml#本文の書き換え"
         click 参照のリンク href "./MOD-155-96.py.yaml#参照のリンク"
         click 埋め込みの展開 href "./MOD-155-94.py.yaml#埋め込みの展開"
+        click 見出しのアンカー href "id:MOD-155-96#functions[heading_anchor]"
 constants:
   - name: MAX_HEADING_LEVEL
     title: 見出しの深さの上限
@@ -246,7 +255,7 @@ functions:
     container: features/convert/markdown.py
     usecase: 文書の取得
     role: 変換
-    summary: 文書の項目のパスが、スキーマ駆動の変換で見出しになる項目を指すとき、その見出しの文字列を返却する
+    summary: 文書の項目のパスが、スキーマ駆動の変換で見出しになる項目を指すとき、その見出しの文字列と、見出しを配置する組み立てのパスを返却する
     scope: public
     thread_safe: true
     args:
@@ -269,26 +278,26 @@ functions:
         passing: positional
         description: '`{キー}` を `.` で、`[{値}]` を続けて繋いだ項目のパス（型 `ref` の `#` 以降と同じ記載方法。`[{値}]` は配列の `x-key` の値・`{値}#{順番}`・辞書のキーのどれかで、対応の取れた `[` `]` を含んでよい）'
     returns:
-      type: str | None
-      description: 見出しの文字列。見出しにならない項目・無い項目は `None`
+      type: ItemHeading | None
+      description: 見出しの文字列と組み立てのパス。見出しにならない項目・変換が見出しを出さない項目・無い項目は `None`
     process: |-
       1. 項目のパスを先頭から 1 文字ずつ調べて、名前のステップと `[{値}]` のステップに分ける
          - `[` と `]` の対応を数え、最も外側の `[` から対応する `]` までを 1 つの `[{値}]` にする。値は内側の対応の取れた `[` `]` を含む（`request[operations[].fields]` の値は `operations[].fields`）。`[]` の外の `.` で名前を区切る
          - `[{値}]` の直後に `[` が続くときは、続けて `[{値}]` のステップにする（`notes[手順][準備]`）
          - `[` を閉じない・対応する `[` の無い `]` を含む・`[{値}]` の直後が `.`・`[`・末尾のどれでもない・空の名前を持つパスは `None` を返却する
-      2. 最上位からスキーマと値を 1 ステップずつたどり、ステップごとに見出しを決める
-         - 名前のステップ: 値が辞書のとき、スキーマの `properties` のキーと値のキーへ進む。見出しはキーのスキーマの `x-heading`（無ければ見出し無し）。キーのスキーマが無ければ `None`
+      2. 最上位からスキーマと値を 1 ステップずつたどり、ステップごとに見出しと組み立てのパスを決める
+         - 名前のステップ: 値が辞書のとき、スキーマの `properties` のキーと値のキーへ進む。見出しはキーのスキーマの `x-heading`（無ければ見出し無し）、パスに `.{キー}`（最初のステップは `{キー}`）を続ける。キーのスキーマが無い、進んだ値が空（`_is_empty`）、またはキーのスキーマが `x-hidden: true` なら `None`（変換が飛ばす項目で、中の見出しも出ない）
          - `[{値}]` のステップ: スキーマが `x-shape: sections` のときだけ進む（それ以外は `None`）
-           - 値が配列: スキーマの `x-key` の値を文字列にしたものが `[{値}]` の値に一致する最初の要素へ進む。一致する要素が無く、値の末尾が `#{整数}`（10 進数字だけ）のときは、`#{整数}` を除いた値に一致する要素の整数番目（1 始まり）へ進む。見出しは進んだ要素の `x-key` の値を文字列にしたもの。どちらでも要素を選べなければ `None`
-           - 値が辞書: `[{値}]` の値をキーにして子へ進む。子のスキーマは `properties` のキーのスキーマ（無ければ空）。見出しは子のスキーマの `x-heading`、無ければ `title`、無ければキー（変換が辞書の `sections` の子に付ける見出しと同じ）。キーが無ければ `None`
-      3. 最後のステップの見出しを返却する（見出し無しなら `None`）
+           - 値が配列: スキーマの `x-key` の値を文字列にしたものが `[{値}]` の値に一致する最初の要素へ進む。一致する要素が無く、値の末尾が `#{整数}`（10 進数字だけ）のときは、`#{整数}` を除いた値に一致する要素の整数番目（1 始まり）へ進む。見出しは進んだ要素の `x-key` の値を文字列にしたもの、パスには `[{要素の位置}]`（0 始まり）を続ける。どちらでも要素を選べなければ `None`
+           - 値が辞書: `[{値}]` の値をキーにして子へ進む。子のスキーマは `properties` のキーのスキーマ（無ければ空）。見出しは子のスキーマの `x-heading`、無ければ `title`、無ければキー（変換が辞書の `sections` の子に付ける見出しと同じ）、パスには `.{キー}` を続ける。キーが無い、進んだ値が空、または子のスキーマが `x-hidden: true` なら `None`
+      3. 最後のステップの見出しと、たどった組み立てのパスを `ItemHeading` で返却する（見出し無しなら `None`）
     unit_tests:
       - name: test_item_heading
         case: 正常
         summary: x-heading を持つ項目
         condition: '`flow` のスキーマが `x-heading: 処理の流れ`、項目のパス `flow`'
         mock: なし
-        expected: '`処理の流れ`'
+        expected: '`text` が `処理の流れ`、`path` が `flow`（他の `test_item_heading` 系の見出しは `text`）'
       - name: test_item_heading_when_section
         case: 正常
         summary: sections の要素
@@ -318,7 +327,7 @@ functions:
         summary: 同じ値の要素の順番
         condition: '`functions` が `x-shape: sections`・`x-key: name` で、`name` が `main`・`sub`・`main`・`main#2`・`main` の要素を持つ。項目のパス `functions[main#3]`・`functions[main#2]`'
         mock: なし
-        expected: '`functions[main#3]` は `main`、`functions[main#2]` は値が一致する要素の `main#2`'
+        expected: '`functions[main#3]` は `main`（`path` が `functions[4]`）、`functions[main#2]` は値が一致する要素の `main#2`'
       - name: test_item_heading_when_order_out_of_range
         case: 異常
         summary: 要素の数を超える順番
@@ -330,13 +339,25 @@ functions:
         summary: 辞書の sections のキー
         condition: '`notes` が `x-shape: sections` の辞書で、`properties` に `title: 手順の補足` の `steps` を持ち、値が `main.py の補足`・`steps` のキーを持つ。項目のパス `notes[main.py の補足]`・`notes[steps]`・`notes[無い]`'
         mock: なし
-        expected: '`main.py の補足`・`手順の補足`・`None`'
+        expected: '`main.py の補足`（`path` が `notes.main.py の補足`）・`手順の補足`・`None`'
       - name: test_item_heading_when_consecutive_brackets
         case: 正常
         summary: 続けて記載した [ ]
         condition: '`notes` が `x-shape: sections` の辞書で、`properties` の `手順` が `x-shape: sections`・`x-key: name` の配列のスキーマ、値の `手順` が `name: 準備` の要素を持つ。項目のパス `notes[手順][準備]`'
         mock: なし
         expected: '`準備`'
+      - name: test_item_heading_when_empty
+        case: 正常
+        summary: 値が空の子
+        condition: '`flow` のスキーマが `x-heading: 処理の流れ` で値が空の文字列、`notes` が `x-shape: sections` の辞書で `steps` の値が空の配列、`scenarios` の値が空の辞書。項目のパス `flow`・`notes[steps]`・`scenarios[正常シナリオ]`'
+        mock: なし
+        expected: どれも `None`
+      - name: test_item_heading_when_hidden
+        case: 正常
+        summary: x-hidden の子
+        condition: '`flow` のスキーマが `x-heading: 処理の流れ`・`x-hidden: true`、`notes` が `x-shape: sections` の辞書で `properties` の `steps` が `x-hidden: true`、`internal` が `x-hidden: true` で中に `x-shape: sections`・`x-key: name` の `items` を持つ。項目のパス `flow`・`notes[steps]`・`internal.items[a]`'
+        mock: なし
+        expected: どれも `None`
   - name: render_table
     title: 表の組み立て
     kind: 関数
@@ -497,6 +518,67 @@ functions:
         condition: 120 文字の値と、改行を含む値
         mock: なし
         expected: '2 つのセルが `…` で終わり、表の後ろに `<!-- row-detail: 1 -->` と `<!-- row-detail: 2 -->` の範囲に全文がある'
+  - name: heading_anchors
+    title: 見出しのアンカーの一覧
+    kind: 関数
+    container: features/convert/markdown.py
+    usecase: 文書の取得
+    role: 変換
+    summary: 文書をスキーマ駆動の変換にかけたときに見出しを配置する組み立てのパスごとに、mdmark がその見出しに付ける ID を返却する
+    description: mdmark は文書の全ての見出しに見出しの文字から作った ID を付け、同じ ID が 2 つ目以降に出たら `-1`・`-2` を付ける。項目の見出しと組み合わせて、同じ見出しの 2 つ目以降を指すリンクのアンカーにする。
+    scope: public
+    thread_safe: true
+    args:
+      - name: document
+        title: 文書
+        type: IndexedDocument
+        required: true
+        passing: positional
+        description: リンク先の文書
+      - name: schema
+        title: スキーマ
+        type: Mapping[str, Any]
+        required: true
+        passing: positional
+        description: リンク先の文書の種類のスキーマ
+    returns:
+      type: dict[str, str]
+      description: 組み立てのパス（項目の見出しの `path` と同じ記載方法）から、その見出しのアンカー（`#` を除く）
+    process: |-
+      1. スキーマ駆動の変換と同じ組み立て（描画の文脈はリンクの参照先を持たず、`path` を文書のパスにしたもの）で塊の並びを作り、`x-heading` の見出しと `sections` の要素・子の見出しを配置した塊の位置を、その値の組み立てのパスごとに記録する
+      2. 塊を前から順にたどり、コードブロックの外の `#` で始まる見出しの行ごとに、見出しの文字を見出しのアンカーにかけた ID（空なら `heading`）を作る。同じ ID が前に `n` 回出ていれば `{ID}-{n}` にする
+      3. 記録した位置の塊の見出しの ID を、その組み立てのパスの値にして返却する
+    unit_tests:
+      - name: test_heading_anchors
+        case: 正常
+        summary: 同じ見出しの 2 つ目以降
+        condition: '`functions` が `x-shape: sections`・`x-key: name` で、`name` が `main`・`sub`・`main` の要素を持つ文書'
+        mock: なし
+        expected: '`functions[0]` が `main`、`functions[1]` が `sub`、`functions[2]` が `main-1`'
+      - name: test_heading_anchors_when_other_item
+        case: 正常
+        summary: 別の項目の同じ文字の見出し
+        condition: '`functions` より前に `x-heading: main` の `flow` を持ち、`functions` に `name: main` の要素を持つ文書'
+        mock: なし
+        expected: '`flow` が `main`、`functions[0]` が `main-1`'
+      - name: test_heading_anchors_when_text_heading
+        case: 正常
+        summary: 本文の値の中の見出し
+        condition: '`functions` より前に `## main` の行を持つ文字列の値と、`functions` に `name: main` の要素を持つ文書'
+        mock: なし
+        expected: '`functions[0]` が `main-1`'
+      - name: test_heading_anchors_when_code_block
+        case: 正常
+        summary: 'コードブロックの中の # の行'
+        condition: '`functions` より前に、中に `# main` の行を持つコードブロックの文字列の値と、`functions` に `name: main` の要素を持つ文書'
+        mock: なし
+        expected: '`functions[0]` が `main`'
+      - name: test_heading_anchors_when_hidden
+        case: 正常
+        summary: 見出しを出さない項目
+        condition: '`functions` より前に `x-heading: main`・`x-hidden: true` の `secret` と、`x-heading: main` で値が空の `flow` を持ち、`functions` に `name: main` の要素を持つ文書'
+        mock: なし
+        expected: '`secret`・`flow` のキーが無く、`functions[0]` が `main`'
 tags:
   - name: action:変換
     main: true
