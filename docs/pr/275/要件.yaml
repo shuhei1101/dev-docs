@@ -152,19 +152,19 @@ scope_out:
     plan: none
   - item: MOD-155-75 の notes「生成物」は route-tree.gen.ts と shared/api/generated/ を commit しないとしているが、実際には Git で管理されている食い違い
     reason: 要望は「フォルダ構成」のセクションの移動だけで、生成物を Git で管理するかの決定を含まない。フォルダ構成の設計書は今の実態（Git で管理する）を generated_from.tracked に記載した
-    plan: to_file
+    plan: '#276'
   - item: MOD-155-120 のツリーにあった migrations/dev-docs/{バージョン}/steps.yaml（2・3）がリポジトリに無く、migrations/dev-docs/ のフォルダ自体も無い食い違い
     reason: ツリーはフォルダ構成の設計書へそのまま移した。実体の有無の整合はこの要望に含まない
-    plan: to_file
+    plan: '#277'
   - item: フォルダ構成の設計書の src/dev_docs/・frontend/src/ をスキーマの x-rules（言語の規約が定めるフォルダは convention で指し、children は生成物だけ）に合わせるか
     reason: 要望はモジュール構成のツリーをエントリへ移すことで、x-rules に合わせると移したファイルごとの説明を記載する場所が無くなるため、要望に合わせて意図して外した
-    plan: to_file
+    plan: '#278'
   - item: .gitignore の docs/generated/ の行（今は生成するコマンドが無い）の整理
     reason: 要望は設計書のツリーの移動で、.gitignore の変更を含まない。フォルダ構成の設計書は今の .gitignore どおりに行を残し、理由を実態に合わせた
-    plan: to_file
+    plan: '#279'
   - item: tmp/screenshots/review-56/ のレビューのスクリーンショット 6 枚が Git で管理されている
     reason: reviewer のフェーズ『レビュー』の撮影の手順と規約『作業ディレクトリ』の一時ファイルの配置（commit しない）から外れている。今回の要望に含まれない（reviewer の対象外の逸脱の報告）
-    plan: to_file
+    plan: '#271'
 use_cases:
   - kind: single
     scenario: docs/scenario/SC-155-7.yaml
