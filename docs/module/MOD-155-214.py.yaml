@@ -345,9 +345,9 @@ data_models:
         description: '`pending_reload` で `id` を省いた行は `None`'
       - name: status
         title: 状態
-        type: Literal['serving', 'not_served', 'disabled', 'pending_reload']
+        type: Literal['serving', 'not_served', 'disabled', 'pending_reload', 'loading']
         access: 公開
-        description: '`pending_reload` は端末の設定の API だけが返却する'
+        description: '`pending_reload` は端末の設定の API だけ、`loading` は GET `/sources?include_loading=true` だけが返却する'
       - name: errors
         title: 除外した理由
         type: list[Violation]

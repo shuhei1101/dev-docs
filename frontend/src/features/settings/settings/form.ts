@@ -3,7 +3,19 @@ import { z } from "zod";
 import type {
   SettingsSourceRow as SettingsSource,
   SourceEntry,
+  SourceStorageType,
 } from "@/shared/api/generated/model";
+
+/** 端末の設定の行の読み書きの方法（`storage.type`） */
+export type StorageType = SourceStorageType;
+
+/** 読み書きの方法の選択肢。`auto` は行に `storage` を含めない（省略） */
+export type StorageChoice = StorageType | "auto";
+
+/** 行が保存済みの読み書きの方法を持つか（持つ行は省略に戻せない） */
+export const storedStorage = (
+  source: SettingsSource | null,
+): StorageType | null => source?.storage?.type ?? null;
 
 export type SourceFormValues = {
   id: string;
@@ -12,6 +24,8 @@ export type SourceFormValues = {
   read: string;
   write: string;
   outsideRead: boolean;
+  /** 省いたときは自動（`auto`）として扱う */
+  storage?: StorageChoice;
 };
 
 const ID_PATTERN = /^[a-z0-9-]+$/;
@@ -58,6 +72,7 @@ export const sourceFormSchema = (otherIds: string[]) =>
       message: "書き込みの範囲に空の行があります。空の行を削除してください。",
     }),
     outsideRead: z.boolean(),
+    storage: z.enum(["auto", "git", "disk"]).optional(),
   });
 
 /** 先頭と末尾の改行を除いた中に空の行があるか */
@@ -78,6 +93,7 @@ export const toFormValues = (
         read: "",
         write: "",
         outsideRead: true,
+        storage: "auto",
       }
     : {
         id: source.id ?? "",
@@ -86,6 +102,7 @@ export const toFormValues = (
         read: (source.scope.read ?? []).join("\n"),
         write: (source.scope.write ?? []).join("\n"),
         outsideRead: source.outsideRead ?? true,
+        storage: storedStorage(source) ?? "auto",
       };
 
 /** 行を指す値。ID を持たない行（読み直していない行）は設定ファイルで指す */
@@ -97,16 +114,20 @@ export const findSource = (sources: SettingsSource[], key: string): number =>
   sources.findIndex((source) => sourceKey(source) === key);
 
 /** 取得の行から状態の項目を除き、保存の行にする */
-const toSourceInput = (source: SettingsSource): SourceEntry => ({
-  ...(source.id ? { id: source.id } : {}),
-  config: source.config,
-  enabled: source.enabled,
-  scope: {
-    read: source.scope.read ?? [],
-    ...(source.scope.write ? { write: source.scope.write } : {}),
-  },
-  ...(source.outsideRead === false ? { outside_read: false } : {}),
-});
+const toSourceInput = (source: SettingsSource): SourceEntry => {
+  const storage = storedStorage(source);
+  return {
+    ...(source.id ? { id: source.id } : {}),
+    config: source.config,
+    enabled: source.enabled,
+    scope: {
+      read: source.scope.read ?? [],
+      ...(source.scope.write ? { write: source.scope.write } : {}),
+    },
+    ...(source.outsideRead === false ? { outside_read: false } : {}),
+    ...(storage ? { storage: { type: storage } } : {}),
+  };
+};
 
 const fromValues = (values: SourceFormValues): SourceEntry => {
   const write = filled(values.write);
@@ -119,6 +140,9 @@ const fromValues = (values: SourceFormValues): SourceEntry => {
       ...(write.length > 0 ? { write } : {}),
     },
     ...(values.outsideRead ? {} : { outside_read: false }),
+    ...(values.storage === undefined || values.storage === "auto"
+      ? {}
+      : { storage: { type: values.storage } }),
   };
 };
 

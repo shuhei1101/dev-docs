@@ -388,6 +388,21 @@ elements:
     source: 端末の設定の取得.sources[]
     notes:
       読み上げ: '`role="alert"` で、出たときに読み上げる'
+  - name: 読み書きの方法のセレクト
+    kind: select
+    position: 配信元のダイアログ > 範囲の外からの参照の下（書き込みの範囲の上）
+    description: 配信元の読み書きの方法（端末の設定の `storage.type`）
+    label: '`読み書きの方法`'
+    io: 入力
+    type: 列挙
+    visible_when: 配信元のダイアログを開いたとき
+    required: false
+    required_label: '`任意`'
+    options: '`storage` を持たない行（追加・保存済みの値が無い行）は `自動`・`Git`・`ディスク`。`storage` を持つ行は `Git`・`ディスク`（project-index が送信しなかった `storage` を今の値で埋めるため、自動に戻せない）'
+    hint: '`storage` を持たない行は `自動は、フォルダが Git の作業ツリーの中なら Git、外ならディスクで読み書きします。コミットしないフォルダはディスクを選択します。`、`storage` を持つ行は `Git はコミットから読み、ディスクはフォルダのファイルをそのまま読みます。保存済みの読み書きの方法は自動に戻せません。`'
+    initial_value: 追加は `自動`、編集はその行の `storage.type`（無ければ `自動`）
+    source: 端末の設定の取得.sources[].storage.type
+    target: 端末の設定の保存.sources[].storage.type（`自動` のときは `storage` を送信しない）
 screen: frontend/src/features/settings/settings/settings-screen.tsx
 mock: frontend/src/features/settings/settings/settings-screen.stories.tsx
 lead: '端末の設定の配信元を状態とともに並べ、追加・編集・削除する設定画面の要素と振る舞いを定め、設定画面を修正するときに参照する。'

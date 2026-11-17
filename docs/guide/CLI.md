@@ -28,6 +28,7 @@ DEV_DOCS_CONFIG=/tmp/x/settings.yaml DEV_DOCS_PORT=8781 dev-docs serve
 ```
 
 標準出力に、待ち受けたアドレスと、project-index が配信している配信元の ID を出します。
+project-index が読み込み中の配信元は、読み込みを待たずに `{ID}（読み込み中）` で出します。
 project-index につながらないときも待ち受けを続け、つながらなかったアドレスと、project-index を起動する案内を標準エラーとエラーログに出します。その間、画面の API は 503 を返却します。
 端末の設定に前のバージョンの `sources` が残っていると、行の ID を警告のログに出します。
 

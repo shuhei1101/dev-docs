@@ -229,6 +229,31 @@ flows:
       - 片方が待ち受けを続け、もう片方が終了コード 3 で終わる
       - 終わった方の標準エラーに、ポートの番号と、待ち受けている方の子プロセスの pid が出る
     test: test_error_when_started_twice
+  - name: 正常系（読み込み中の配信元がある）
+    summary: project-index が読み込みを終えていない配信元を、読み込みを待たずに読み込み中として標準出力に出す
+    setup:
+      - name: Mock
+        description: project-index の読み取り API のモック。GET `/sources?include_loading=true` に sample を `serving`、slow を `loading` で返却し、`include_loading` の無い GET `/sources` には応答しない。`dev-docs serve` を子プロセスで起動し、空きポートを `DEV_DOCS_PORT` に入れる
+      - name: 端末の設定
+        description: '`DEV_DOCS_CONFIG` が指す一時フォルダの `settings.yaml`。`project_index` にモックのアドレス'
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        participant U as クライアント
+        participant T as dev-docs serve
+        participant PI as project-index（モック）
+
+        U->>T: dev-docs serve
+        T->>T: 127.0.0.1 で待ち受ける
+        T-->>U: 待ち受けたアドレスを標準出力に出す
+        T->>PI: 配信元の一覧と状態を、読み込みを待たずに問い合わせる
+        T-->>U: 配信中の sample と、読み込み中の slow を標準出力に出す
+      ```
+    expected:
+      - 標準出力に待ち受けたアドレスと sample が出る
+      - 標準出力に slow が、読み込み中であることを添えて出る
+      - モックが受けた要求のクエリに `include_loading=true` がある
+    test: test_normal_when_source_loading
 lead: 端末の設定を読み込み、配信元を 1 プロセス・1 ポートで画面の API と管理の MCP に配信する `dev-docs serve` の入出力を定め、起動を修正するときに参照する。
 identifier: serve
 permissions: なし
@@ -283,7 +308,7 @@ request_example: |-
 response:
   - name: 標準出力
     type: str
-    description: 待ち受けたアドレスと、project-index が配信している配信元の ID
+    description: 待ち受けたアドレスと、project-index が配信している配信元の ID。読み込み中の配信元は、ID に読み込み中であることを添えて出す
   - name: エラーログ
     type: str
     description: project-index につながらなかったときの、つながらなかったアドレスと理由
@@ -317,7 +342,7 @@ constraints:
     constraint: 画面の API `/_api/`（そのスキーマ `/_api/openapi.json`）と、管理の MCP `/_admin/mcp`（ツール 3 つ、instructions を持たない）。`/_admin/mcp` はスラッシュの有無によらず同じ MCP が応え、リダイレクトを挟まない。文書の MCP `/mcp` と `POST /_admin/session-start` は持たない（project-index が持つ）
     notes: プラグインの `.mcp.json` の接続先はスラッシュ無し。画面の配信のルート（`GET /{path}`）より先に MCP へ届け、POST が 405 にならないようにする
   - item: project-index の接続先
-    constraint: 端末の設定の `project_index`（既定 `http://127.0.0.1:8786`）。配信元の一覧・状態・文書は要求ごとに問い合わせ、dev-docs の中に記録しない
+    constraint: 端末の設定の `project_index`（既定 `http://127.0.0.1:8786`）。配信元の一覧・状態・文書は要求ごとに問い合わせ、dev-docs の中に記録しない。起動の後の配信元の一覧は GET `/sources?include_loading=true` で、全ての配信元の読み込みを待たずに取得する
     notes: project-index が再読み込みした配信元は、dev-docs を再起動せずに次の要求から返る
   - item: 前のバージョンから残った sources
     constraint: 端末の設定に残った `sources` の行は配信に使用せず、スキーマの違反にもしない。起動のたびに行の ID を警告のログに出す

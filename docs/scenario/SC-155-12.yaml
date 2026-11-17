@@ -238,6 +238,47 @@ scenarios:
       - 1 回目の保存の後も、入れた extra の値が入力欄に残る
       - もう一度保存すると、`settings.yaml` に extra の行が追加され、sample の行の `enabled` は `false` のまま
     test: test_error_when_settings_changed_by_another_process
+  - name: 正常シナリオ（読み書きの方法を disk にして追加する）
+    setup:
+      - name: Mock
+        description: なし（実環境で実行。ブラウザで画面を開く）
+      - name: disk の配信元
+        description: 文書の種類を 1 つと `project-index.yaml` を持ち、コミットせずに運用する Git の作業ツリーの中のフォルダ。端末の設定に読み書きの方法 `disk` で登録済み
+        notes: id `local`
+      - name: 追加する配信元
+        description: 文書の種類を 1 つと `project-index.yaml` を持つ Git の作業ツリーの中のフォルダ。端末の設定にはまだ無い
+        notes: id `scratch`
+      - name: 端末の設定
+        description: project-index の `PROJECT_INDEX_CONFIG` が指す一時フォルダの `settings.yaml`
+        notes: '`sources` に sample（`storage` なし）と local（`storage.type: disk`）の 2 行'
+      - name: dev-docs
+        description: その project-index につないで起動した dev-docs
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        actor U as 利用者
+        participant UI as dev-docs の画面
+        participant API as 画面の API
+        participant PI as project-index
+
+        U->>UI: 設定画面を開く
+        UI-->>U: settings（sample と local の一覧）
+        U->>UI: 配信元を追加し、scratch の id・config・scope.read を入れ、読み書きの方法に disk を選んで保存する
+        UI->>API: 端末の設定の保存（sample・local・scratch の sources。local と scratch の storage が disk）
+        API->>PI: 端末の設定の配信元の保存
+        PI->>PI: settings.yaml を書き換え、配信元を読み直す
+        PI-->>API: 保存した sources と配信元ごとの状態
+        API-->>UI: 保存した sources と配信元ごとの状態
+        UI-->>U: settings（scratch を加えた一覧）
+        U->>UI: scratch の文書の画面を開く
+        UI-->>U: リビジョンの切り替えの無い文書の画面
+      ```
+    expected:
+      - 一覧に sample・local・scratch が配信中で並ぶ
+      - '`settings.yaml` の scratch の行の `storage.type` が `disk` になり、local の行の `storage.type` は `disk` のまま、sample の行には `storage` が無いまま'
+      - local と scratch を編集するダイアログを開くと、読み書きの方法に disk が選ばれ、sample を開くと省略が選ばれている
+      - scratch の文書の画面にリビジョンの切り替えが出ず、文書を参照できる
+    test: test_normal_when_added_with_disk_storage
 lead: 利用者が設定画面で配信元を追加し、画面で参照できるようにするシナリオを定め、配信元の追加の流れを変えるときに参照する。
 primary_actor: 利用者
 stakeholders:

@@ -221,12 +221,14 @@ def _own_id(row: Mapping[str, Any]) -> str | None:
 
 
 def _content(row: Mapping[str, Any]) -> dict[str, Any]:
-    """行の内容を、既定値と同じキーを除いた `config`・`enabled`・`scope`・`outside_read` にする。"""
+    """行の内容を、既定値と同じキーを除いた `config`・`enabled`・`scope`・`outside_read`・`storage` にする。"""
     content: dict[str, Any] = {"config": [str(item) for item in row.get("config") or []]}
     if row.get("enabled", True) is not True:
         content["enabled"] = row.get("enabled")
     if row.get("outside_read", True) is not True:
         content["outside_read"] = row.get("outside_read")
+    if row.get("storage"):
+        content["storage"] = row.get("storage")
     scope = row.get("scope") or {}
     if isinstance(scope, Mapping):
         if scope.get("read"):
@@ -239,13 +241,13 @@ def _content(row: Mapping[str, Any]) -> dict[str, Any]:
 
 
 def _sent_row(row: Mapping[str, Any]) -> dict[str, Any]:
-    """行を、保存で送信する `id`・`config`・`enabled`・`scope`・`outside_read` のキーだけにする。"""
+    """行を、保存で送信する `id`・`config`・`enabled`・`scope`・`outside_read`・`storage` のキーだけにする。"""
     sent: dict[str, Any] = {}
     own_id = _own_id(row)
     if own_id is not None:
         sent["id"] = own_id
     sent["config"] = list(row.get("config") or [])
-    for key in ("enabled", "scope", "outside_read"):
+    for key in ("enabled", "scope", "outside_read", "storage"):
         if key in row:
             sent[key] = row[key]
     return sent

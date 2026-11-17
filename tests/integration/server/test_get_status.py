@@ -66,3 +66,24 @@ def test_normal_when_leftover_sources(
     assert "端末の設定に残った sources: extra（project-index の端末の設定へ追加してください）" in (
         markdown.text
     )
+
+
+def test_normal_when_source_loading(
+    mock_index: MockIndex, make_server: Callable[..., ServerEnv]
+) -> None:
+    """project-index が読み込みを終えていない配信元を loading で返却する（正常系）。"""
+    # 準備
+    mock_index.serve("sample", IndexSource(docs={None: sample_docs()}))
+    mock_index.serve("slow", IndexSource(docs={None: sample_docs()}))
+    mock_index.loading = {"slow"}
+    env = make_server(mock_index)
+    # 実行
+    result = env.call_admin("status", format="json")
+    markdown = env.call_admin("status")
+    # 検証
+    sources = {item["id"]: item["status"] for item in result.data["sources"]}
+    queries = [path for method, path, _ in mock_index.received if path.startswith("/sources?")]
+    assert sources == {"sample": "serving", "slow": "loading"}
+    assert queries
+    assert all("include_loading=true" in path for path in queries)
+    assert "| slow | loading |" in markdown.text

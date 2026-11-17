@@ -91,3 +91,57 @@ test("test_source_edit_dialog_when_conflict", async () => {
   expect(onOpenChange).not.toHaveBeenCalledWith(false);
   expect(screen.getByLabelText(/設定ファイル/)).toHaveValue("/home/me/a/dev-docs.yaml");
 });
+
+test("test_source_edit_dialog_when_storage", async () => {
+  let body: { sources: Record<string, unknown>[] } | null = null;
+  server.use(
+    http.put("/_api/settings/sources", async ({ request }) => {
+      body = (await request.json()) as typeof body;
+      return HttpResponse.json({ sources: [{ id: "a", status: "serving", errors: [] }] });
+    }),
+  );
+  renderDialog(0);
+  const storage = screen.getByRole("combobox", { name: /読み書きの方法/ });
+
+  expect(storage).toHaveTextContent("自動");
+  await userEvent.click(storage);
+  await userEvent.click(await screen.findByRole("option", { name: "ディスク" }));
+  await userEvent.click(screen.getByRole("button", { name: "保存" }));
+
+  await waitFor(() => expect(body?.sources[0]).toMatchObject({ id: "a", storage: { type: "disk" } }));
+});
+
+test("test_storage_field", async () => {
+  const stored = [{ ...settingsSource("local"), storage: { type: "disk" } }];
+  render(
+    <QueryClientProvider client={createTestQueryClient()}>
+      <SourceEditDialog open onOpenChange={vi.fn()} sources={stored as never} index={0} />
+    </QueryClientProvider>,
+  );
+  const storage = screen.getByRole("combobox", { name: /読み書きの方法/ });
+
+  expect(storage).toHaveTextContent("ディスク");
+  expect(
+    screen.getByText(
+      "Git はコミットから読み、ディスクはフォルダのファイルをそのまま読みます。保存済みの読み書きの方法は自動に戻せません。",
+    ),
+  ).toBeInTheDocument();
+  await userEvent.click(storage);
+  expect(await screen.findByRole("option", { name: "Git" })).toBeInTheDocument();
+  expect(screen.queryByRole("option", { name: "自動" })).toBeNull();
+});
+
+test("test_storage_field_when_not_stored", async () => {
+  renderDialog(null);
+  const storage = screen.getByRole("combobox", { name: /読み書きの方法/ });
+
+  expect(
+    screen.getByText(
+      "自動は、フォルダが Git の作業ツリーの中なら Git、外ならディスクで読み書きします。コミットしないフォルダはディスクを選択します。",
+    ),
+  ).toBeInTheDocument();
+  await userEvent.click(storage);
+  expect(await screen.findByRole("option", { name: "自動" })).toBeInTheDocument();
+  expect(screen.getByRole("option", { name: "Git" })).toBeInTheDocument();
+  expect(screen.getByRole("option", { name: "ディスク" })).toBeInTheDocument();
+});

@@ -209,6 +209,31 @@ flows:
       - モックが受けた本文の `expectedVersion` が `v1`
       - '`expectedVersion` を `v2` にして再送信すると 200 で、応答の `version` が `v3`'
     test: test_error_when_version_conflict
+  - name: 正常系（読み書きの方法を送信する）
+    summary: 行の `storage` を project-index へそのまま送信し、送信しなかった行の `storage` も残る
+    setup:
+      - name: Mock
+        description: なし（テストの中で起動した project-index）
+      - name: 端末の設定
+        description: 'project-index の端末の設定の `sources` に sample（`storage` なし）と local（`storage.type: disk`）の 2 行'
+      - name: 入力
+        description: 'sample（`storage` なし）・local（`storage.type: disk`）・scratch（`storage.type: disk`）の 3 行と、取得した `version` の `expectedVersion`'
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        participant C as クライアント
+        participant E as PUT /_api/settings/sources
+        participant PI as project-index
+
+        C->>E: sources: sample, local, scratch、expectedVersion
+        E->>PI: 端末の設定の配信元の保存（local と scratch に storage）
+        PI-->>E: 200（配信元ごとの状態）
+        E-->>C: 200
+      ```
+    expected:
+      - 200 で、sample・local・scratch が `serving`
+      - project-index の端末の設定の local と scratch の行の `storage.type` が `disk`、sample の行は `storage` を持たない
+    test: test_normal_when_storage_sent
 lead: '設定画面が送信した `sources[]` をスキーマで検証し、project-index へ保存を依頼する端末の設定の保存の入出力を定め、端末の設定の保存を修正するときに参照する。'
 identifier: put_settings_sources
 permissions: 画面と同じオリジンからの要求だけ
@@ -271,6 +296,14 @@ request:
     default: なし（照合せずに保存する）
     location: body
     description: 画面が端末の設定の取得か前の保存で受け取った内容のバージョン。project-index の PUT `/settings/sources` の `expectedVersion` に指定する
+  - name: sources[].storage.type
+    type: Literal['git', 'disk']
+    required: false
+    default: なし（`storage` を含めずに送信する。project-index がファイルの同じ配信元の行の今の値で埋め、同じ配信元の行が無ければ記載しない）
+    location: body
+    description: 配信元の読み書きの方法。`git` は `default_ref` から参照し、`disk` は Git を参照せずにフォルダのファイルを参照する
+    constraints: '`git`・`disk` 以外は 400'
+    notes: 送信しなかった行の `storage` は project-index が残すため、保存済みの値を省略に戻す手段は無い
 request_example: |-
   ```json
   {"sources": [
@@ -341,6 +374,8 @@ constraints:
   - item: 内容のバージョンの照合
     constraint: '`expectedVersion` を受けたときだけ project-index の PUT `/settings/sources` に指定し、照合は project-index が行う。dev-docs は内容のバージョンを記録しない。project-index の 409 は 409 と `current` で返却する'
     notes: '`expectedVersion` を指定しない保存は照合せずに保存する'
+  - item: 持ち回すキー
+    constraint: 送信された行の `id`・`config`・`enabled`・`scope`・`outside_read`・`storage` を、値を変えずに project-index へ送信する。行に無いキーは送信しない
 test_file: tests/integration/server/test_put_settings_sources.py
 notes:
   補足: スキーマに通ったときだけ project-index の端末の設定の API へ保存を依頼し、再読み込みした後の配信元の状態を返却する。

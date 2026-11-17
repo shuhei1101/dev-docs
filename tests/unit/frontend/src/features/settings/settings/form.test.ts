@@ -6,6 +6,7 @@ import {
   removeSource,
   sourceFormSchema,
   sourceKey,
+  storedStorage,
   toFormValues,
 } from "@/features/settings/settings/form";
 
@@ -112,4 +113,29 @@ test("test_find_source", () => {
 
   expect(findSource(sources, "b")).toBe(2);
   expect(findSource(sources, "z")).toBe(-1);
+});
+
+test("test_stored_storage", () => {
+  expect(storedStorage(row("local", { storage: { type: "disk" } }) as never)).toBe("disk");
+  expect(storedStorage(row("sample") as never)).toBeNull();
+  expect(storedStorage(null)).toBeNull();
+});
+
+test("test_to_form_values_when_storage", () => {
+  expect(toFormValues(row("local", { storage: { type: "disk" } }) as never).storage).toBe("disk");
+  expect(toFormValues(row("sample") as never).storage).toBe("auto");
+  expect(toFormValues(null).storage).toBe("auto");
+});
+
+test("test_apply_source_when_storage", () => {
+  const sources = [row("local", { storage: { type: "disk" } }), row("sample")] as never;
+
+  const added = applySource(sources, values({ storage: "disk" }), null);
+  const edited = applySource(sources, values({ id: "sample", storage: "auto" }), 1);
+
+  expect(added[0]).toMatchObject({ id: "local", storage: { type: "disk" } });
+  expect(added[1]).not.toHaveProperty("storage");
+  expect(added[2]).toMatchObject({ id: "extra", storage: { type: "disk" } });
+  expect(edited[0]).toMatchObject({ id: "local", storage: { type: "disk" } });
+  expect(edited[1]).not.toHaveProperty("storage");
 });

@@ -556,3 +556,22 @@ def test_save_settings_sources_when_invalid(
         asyncio.run(make_client().save_settings_sources([{"id": "a"}], expected_version="v1"))
     # 検証
     assert caught.value.violations[0].path == "sources[1].enabled"
+
+
+def test_list_sources_when_loading(
+    fake_index: FakeIndex, make_client: Callable[..., ProjectIndexClient]
+) -> None:
+    """読み込み中の配信元（正常系）。"""
+    # 準備
+    fake_index.sources = [
+        {"id": "sample", "status": "serving"},
+        {"id": "slow", "status": "loading"},
+    ]
+    # 実行
+    states = asyncio.run(make_client().list_sources())
+    # 検証
+    assert fake_index.requests[-1].url.params.get("include_loading") == "true"
+    assert [(state.id, state.status) for state in states] == [
+        ("sample", "serving"),
+        ("slow", "loading"),
+    ]

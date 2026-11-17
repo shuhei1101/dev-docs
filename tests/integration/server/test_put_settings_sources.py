@@ -254,3 +254,40 @@ def test_error_when_version_conflict(
     assert retried.status_code == 200
     assert retried.json()["version"] == "v3"
     assert puts[1]["expectedVersion"] == "v2"
+
+
+def test_normal_when_storage_sent(
+    storage_index: RealIndex, make_server: Callable[..., ServerEnv]
+) -> None:
+    """行の storage を project-index へそのまま送信し、送信しなかった行の storage も残る（正常系）。"""
+    # 準備
+    storage_index.serve("sample", IndexSource(docs={None: sample_docs()}))
+    storage_index.serve("local", IndexSource(docs={None: sample_docs()}), storage={"type": "disk"})
+    scratch = materialize(
+        storage_index.root / "sources", "scratch", IndexSource(docs={None: sample_docs()})
+    )
+    sample_row, local_row = (dict(row) for row in storage_index.rows)
+    scratch_row = {
+        "id": "scratch",
+        "config": [str(scratch)],
+        "scope": sample_row["scope"],
+        "storage": {"type": "disk"},
+    }
+    env = make_server(storage_index)
+    # 実行
+    response = env.client.put(
+        "/_api/settings/sources",
+        json={"expectedVersion": _version(env), "sources": [sample_row, local_row, scratch_row]},
+        headers=ORIGIN,
+    )
+    # 検証
+    saved = {item["id"]: item for item in storage_index.file_rows()}
+    assert response.status_code == 200
+    assert [(item["id"], item["status"]) for item in response.json()["sources"]] == [
+        ("sample", "serving"),
+        ("local", "serving"),
+        ("scratch", "serving"),
+    ]
+    assert saved["local"]["storage"] == {"type": "disk"}
+    assert saved["scratch"]["storage"] == {"type": "disk"}
+    assert "storage" not in saved["sample"]

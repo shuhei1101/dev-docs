@@ -5,10 +5,10 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export type SettingsSourceStatusStatus = typeof SettingsSourceStatusStatus[keyof typeof SettingsSourceStatusStatus];
+export type SettingsStatusKind = typeof SettingsStatusKind[keyof typeof SettingsStatusKind];
 
 
-export const SettingsSourceStatusStatus = {
+export const SettingsStatusKind = {
   serving: 'serving',
   not_served: 'not_served',
   disabled: 'disabled',

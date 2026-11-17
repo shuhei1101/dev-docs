@@ -74,6 +74,12 @@ data_models:
         access: 公開
         default: 'True'
         description: '`False` で、`scope` に該当しない作業場所から `outside_scope: true` で参照するのを断る'
+      - name: storage
+        title: 読み書きの方法
+        type: SourceStorage | None
+        access: 公開
+        default: None
+        description: '`None` は送信しない（project-index がファイルの同じ配信元の行の今の値で埋める）'
   - name: TerminalConfig
     title: 端末の設定
     container: features/settings/types.py
@@ -164,7 +170,7 @@ data_models:
     usecase: 端末の設定
     role: DTO
     summary: 再読み込みした後の配信元ごとの状態
-    description: '共通の『画面の API のモデル』（`ApiModel`。JSON のキーは camelCase）を継承する。`from_states(states)` で project-index の配信元の状態（`SourceState`）の並びから作る。`from_view(view)` で project-indexの呼び出しの `SettingsSourcesView` の `states` と `version` から作る'
+    description: '共通の『画面の API のモデル』（`ApiModel`。JSON のキーは camelCase）を継承する。`from_states(states)` で project-index の配信元の状態（`SourceState`）の並びから作る（状態は `settings_status` で画面の状態にする）。`from_view(view)` で project-indexの呼び出しの `SettingsSourcesView` の `states` と `version` から作る'
     properties:
       - name: sources
         title: 配信元
@@ -207,9 +213,9 @@ data_models:
         description: project-index の行の `scope`
       - name: status
         title: 状態
-        type: Literal['serving', 'not_served', 'disabled', 'pending_reload']
+        type: SettingsStatusKind
         access: 公開
-        description: project-index が返却した状態
+        description: project-index が返却した状態を `settings_status` で画面の状態にしたもの（`Literal['serving', 'not_served', 'disabled', 'pending_reload']`。`loading` は `pending_reload`）
       - name: errors
         title: 除外した理由
         type: list[dict[str, str]]
@@ -228,6 +234,12 @@ data_models:
         access: 公開
         default: 'True'
         description: project-index の行の `outside_read`
+      - name: storage
+        title: 読み書きの方法
+        type: SourceStorage | None
+        access: 公開
+        default: None
+        description: project-index の行の `storage`。記載していない行は `None`（JSON に `null` で出す）
   - name: SettingsSourcesView
     title: 端末の設定の取得の応答
     container: features/settings/types.py
@@ -252,6 +264,19 @@ data_models:
         access: 公開
         default: None
         description: project-index の端末の設定の内容のバージョン（ファイル全体の内容のハッシュ）
+  - name: SourceStorage
+    title: 読み書きの方法
+    container: features/settings/types.py
+    usecase: 端末の設定
+    role: DTO
+    summary: '`sources[].storage` の `type`'
+    description: '`pydantic.BaseModel`（`extra="forbid"`）。端末の設定の保存の要求と取得の応答で共有する'
+    properties:
+      - name: type
+        title: 読み書きの方法
+        type: Literal['git', 'disk']
+        access: 公開
+        description: '`git` は `default_ref` から参照し、`disk` は Git を参照せずにフォルダのファイルを参照する。他の値は要求の検証で 400'
 classes:
   - name: TerminalConfigInvalidError
     title: 端末の設定の違反
@@ -281,3 +306,23 @@ tags:
   - name: topic:端末
   - name: topic:型ヒント
   - name: topic:型
+functions:
+  - name: settings_status
+    title: 画面の状態への読み替え
+    kind: 関数
+    container: features/settings/types.py
+    usecase: 端末の設定
+    role: 変換
+    summary: project-index の配信元の状態を、端末の設定の画面の状態（`SettingsStatusKind`）にする
+    scope: public
+    args:
+      - name: kind
+        title: 配信元の状態
+        type: SourceStateKind
+        required: true
+        passing: positional
+        description: project-index が返却した状態
+    returns:
+      type: SettingsStatusKind
+      description: '`loading` は `pending_reload`、他はそのまま'
+    process: 1. `loading` なら `pending_reload` を、それ以外は受けた状態を返却する（端末の設定の API は `loading` を返却しないが、状態の型を共有するため画面の型を広げない）

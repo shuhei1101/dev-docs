@@ -53,7 +53,7 @@
 | `project_index.address` | str | 端末の設定の `project_index` |
 | `project_index.reachable` | bool | project-index の読み取り API が応答したか |
 | `project_index.error` | str / null | つながらなかった理由。`reachable` が `false` のとき |
-| `sources[].status` | `serving` / `not_served` / `disabled` | project-index が返却した状態。配信中・検証で除外した・`enabled: false` |
+| `sources[].status` | `serving` / `not_served` / `disabled` / `loading` | project-index が返却した状態。配信中・検証で除外した・`enabled: false`・読み込み中 |
 | `sources[].errors[]` | list[str] | project-index が返却した配信しない理由（`{キーのパス}: {理由}`）。`not_served` のとき |
 | `leftover_sources` | list[str] | 端末の設定に前のバージョンから残った `sources` の行の ID |
 
@@ -71,6 +71,7 @@ project-index: http://127.0.0.1:8786（つながっている）
 
 配信元が 0 件のときは、空の一覧を返却します。
 配信元の状態は呼ばれるたびに project-index から取得し、dev-docs の中に記録しません。
+project-index の起動の直後でも全ての配信元の読み込みを待たず、読み込みが終わっていない配信元を `loading` で返却します。
 project-index につながらないときもエラーにせず、`reachable` を `false`、`sources[]` を空にして返却します。
 
 ## restart

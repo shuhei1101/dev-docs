@@ -16,7 +16,7 @@ if TYPE_CHECKING:
     from dev_docs.integrations.project_index.types import (
         SettingsSourcesView as ProjectIndexSettingsView,
     )
-    from dev_docs.integrations.project_index.types import SourceState
+    from dev_docs.integrations.project_index.types import SourceState, SourceStateKind
 
 
 class SourceScope(BaseModel):
@@ -26,6 +26,22 @@ class SourceScope(BaseModel):
 
     read: list[str] = Field(default_factory=list)
     write: list[str] | None = None
+
+
+class SourceStorage(BaseModel):
+    """`sources[].storage`（読み書きの方法）。"""
+
+    model_config = ConfigDict(extra="forbid")
+
+    type: Literal["git", "disk"]
+
+
+type SettingsStatusKind = Literal["serving", "not_served", "disabled", "pending_reload"]
+
+
+def settings_status(kind: SourceStateKind) -> SettingsStatusKind:
+    """端末の設定の API の状態を画面の状態にする。`loading` は再読み込み待ちとして扱う。"""
+    return "pending_reload" if kind == "loading" else kind
 
 
 class SourceEntry(BaseModel):
@@ -38,6 +54,8 @@ class SourceEntry(BaseModel):
     enabled: bool = True
     scope: SourceScope = SourceScope()
     outside_read: bool = True
+    # `None` は送信しない（project-index がファイルの同じ配信元の行の今の値で埋める）
+    storage: SourceStorage | None = None
 
     @field_validator("config", mode="before")
     @classmethod
@@ -91,7 +109,7 @@ class SettingsSourceStatus(ApiModel):
     """再読み込みした後の配信元 1 つの状態。"""
 
     id: str | None
-    status: Literal["serving", "not_served", "disabled", "pending_reload"]
+    status: SettingsStatusKind
     errors: list[SourceViolation] = Field(default_factory=list)
     config_version: SourceConfigVersion | None = None
 
@@ -110,7 +128,7 @@ class SettingsSourcesResponse(ApiModel):
         for status in states:
             item = SettingsSourceStatus(
                 id=status.id,
-                status=status.status,
+                status=settings_status(status.status),
                 errors=(
                     [SourceViolation(path=v.path, reason=v.rule) for v in status.errors]
                     if status.status == "not_served"
@@ -136,10 +154,11 @@ class SettingsSourceRow(ApiModel):
     config: list[str]
     enabled: bool
     scope: SourceScope
-    status: Literal["serving", "not_served", "disabled", "pending_reload"]
+    status: SettingsStatusKind
     errors: list[SourceViolation] = Field(default_factory=list)
     config_version: SourceConfigVersion | None = None
     outside_read: bool = True
+    storage: SourceStorage | None = None
 
 
 class SettingsSourcesView(ApiModel):

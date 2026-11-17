@@ -5,6 +5,7 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { SourceScope } from './sourceScope';
+import type { SourceStorage } from './sourceStorage';
 
 /**
  * 設定画面が送信する `sources[]` の 1 行（project-index の端末の設定の行の構造）。
@@ -15,4 +16,5 @@ export interface SourceEntry {
   enabled?: boolean;
   scope?: SourceScope;
   outside_read?: boolean;
+  storage?: SourceStorage | null;
 }

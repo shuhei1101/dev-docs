@@ -4,9 +4,10 @@
  * FastAPI
  * OpenAPI spec version: 0.1.0
  */
-import type { SettingsSourceRowStatus } from './settingsSourceRowStatus';
+import type { SettingsStatusKind } from './settingsStatusKind';
 import type { SourceConfigVersion } from './sourceConfigVersion';
 import type { SourceScope } from './sourceScope';
+import type { SourceStorage } from './sourceStorage';
 import type { SourceViolation } from './sourceViolation';
 
 /**
@@ -17,8 +18,9 @@ export interface SettingsSourceRow {
   config: string[];
   enabled: boolean;
   scope: SourceScope;
-  status: SettingsSourceRowStatus;
+  status: SettingsStatusKind;
   errors?: SourceViolation[];
   configVersion?: SourceConfigVersion | null;
   outsideRead?: boolean;
+  storage?: SourceStorage | null;
 }

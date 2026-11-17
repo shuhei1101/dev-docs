@@ -16,7 +16,7 @@ class SourceState:
     """`status` が返却する配信元 1 つの状態（project-index の状態のコピー）。"""
 
     id: str | None
-    status: Literal["serving", "not_served", "disabled", "pending_reload"]
+    status: Literal["serving", "not_served", "disabled", "pending_reload", "loading"]
     errors: list[str]
 
 

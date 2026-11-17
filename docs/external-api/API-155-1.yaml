@@ -6,8 +6,8 @@ used_in:
   - src/dev_docs/integrations/project_index/
 verification:
   state: 済
-  detail: '提供する側の shuhei1101/project-index の develop の `f36ba69`（[読み取り API と端末の設定の API の提供](https://github.com/shuhei1101/project-index/pull/15)・[読み取り API の文書の一覧への値とバージョンの追加](https://github.com/shuhei1101/project-index/pull/49)）の IF-22〜IF-32 と照合した。パス・状態コード・`application/problem+json` の `missing` は一致する。応答のキーは camelCase で、検討事項の一覧が `decisions[].folders`、検討事項の文書が `body`、端末の設定の行が `row` に包まれず `outsideRead` を持ち、保存の応答が状態だけ、行の追加の本文が `{source}` で応答が `result`（`added`・`exists`）になる。`f36ba69` に固定した本物の project-index を相手に、結合テストの文書の取得・画面の検索・リビジョンの一覧・端末の設定の取得と保存が pass した（`docs/pr/183/テスト結果/20261113204913_e168fba_結合テスト.log`）。develop の `7177d39` の IF-30・IF-31 とコードで、`PUT /settings/sources` の `expectedVersion`・400・409、排他ロックを持ったままの再読み込み、`GET` がロックを待たないことを照合した。develop の `42632c5` の IF-24・IF-25 で、文書の一覧の `common_keys`・`documents[].commonKeys` と文書の取得の `metadata.commonKeys` を照合し、127.0.0.1:8786 の project-index が `common_keys=true` に `commonKeys` を返却することを確認した。`PUT /settings/sources` の行の外部の読み取りのキーは `outside_read` で、`GET` の応答の `outsideRead` と違う。稼働中の project-index（`7177d39`）へ古い `expectedVersion` を付けた PUT で、行のキーが `outside_read` なら 409、`outsideRead` なら 400（`sources[{n}].outsideRead: Extra inputs are not permitted`）を返却することを確認した（#203）'
-  date: '2026-11-14'
+  detail: '提供する側の shuhei1101/project-index の develop の `f36ba69`（[読み取り API と端末の設定の API の提供](https://github.com/shuhei1101/project-index/pull/15)・[読み取り API の文書の一覧への値とバージョンの追加](https://github.com/shuhei1101/project-index/pull/49)）の IF-22〜IF-32 と照合した。パス・状態コード・`application/problem+json` の `missing` は一致する。応答のキーは camelCase で、検討事項の一覧が `decisions[].folders`、検討事項の文書が `body`、端末の設定の行が `row` に包まれず `outsideRead` を持ち、保存の応答が状態だけ、行の追加の本文が `{source}` で応答が `result`（`added`・`exists`）になる。`f36ba69` に固定した本物の project-index を相手に、結合テストの文書の取得・画面の検索・リビジョンの一覧・端末の設定の取得と保存が pass した（`docs/pr/183/テスト結果/20261113204913_e168fba_結合テスト.log`）。develop の `7177d39` の IF-30・IF-31 とコードで、`PUT /settings/sources` の `expectedVersion`・400・409、排他ロックを持ったままの再読み込み、`GET` がロックを待たないことを照合した。develop の `42632c5` の IF-24・IF-25 で、文書の一覧の `common_keys`・`documents[].commonKeys` と文書の取得の `metadata.commonKeys` を照合し、127.0.0.1:8786 の project-index が `common_keys=true` に `commonKeys` を返却することを確認した。`PUT /settings/sources` の行の外部の読み取りのキーは `outside_read` で、`GET` の応答の `outsideRead` と違う。稼働中の project-index（`7177d39`）へ古い `expectedVersion` を付けた PUT で、行のキーが `outside_read` なら 409、`outsideRead` なら 400（`sources[{n}].outsideRead: Extra inputs are not permitted`）を返却することを確認した（#203）。稼働中の project-index（127.0.0.1:8786）への GET `/sources?include_loading=true` が 200 で `sources[]` を返却することを確認した（確認した時点で全ての配信元の読み込みを終えていたため `loading` は観測していない）。`storage` を持つ行はこの端末の設定に無く、GET `/settings/sources` では観測していない。`loading`・`storage` の応答は、結合テストで本物の project-index を相手に確かめる（#265）'
+  date: '2026-11-17'
 version:
   api_version: shuhei1101/project-index の develop の `7177d39`
   checked_on: '2026-11-14'
@@ -23,7 +23,7 @@ endpoints:
   - name: GET /sources
     method: GET
     path: /sources
-    summary: 配信元ごとの ID・状態（`serving`・`not_served`・`disabled`）と、配信していない理由（`errors[]` の `{path, reason}`）を返却する（IF-22）
+    summary: 配信元ごとの ID・状態（`serving`・`not_served`・`disabled`）と、配信していない理由（`errors[]` の `{path, reason}`）を返却する（IF-22）。`?include_loading=true` を付けると全ての配信元の読み込みを待たずに返却し、読み込みが終わっていない配信元を `loading` で端末の設定の順に並べる（`id` を持たない行は `sources[{n}]` の ID）。付けないと全ての行の読み込みを待ち、`loading` を返却しない
     status_codes:
       - code: '200'
         condition: 返却した（配信元が 0 件でも 200）
@@ -95,14 +95,14 @@ endpoints:
   - name: GET /settings/sources
     method: GET
     path: /settings/sources
-    summary: 端末の設定のパス（`settingsPath`）と、`sources[]` の行ごとの `id`・`config`・`enabled`・`scope`・`outsideRead` と状態（`status`・`errors`・`configVersion`）、端末の設定の内容のバージョン（`version`。ファイル全体の内容のハッシュ）を返却する（IF-30）
+    summary: 端末の設定のパス（`settingsPath`）と、`sources[]` の行ごとの `id`・`config`・`enabled`・`scope`・`outsideRead`・`storage`（`storage.type` が `git`・`disk`。記載していない行は返却しない）と状態（`status`・`errors`・`configVersion`）、端末の設定の内容のバージョン（`version`。ファイル全体の内容のハッシュ）を返却する（IF-30）
     status_codes:
       - code: '200'
         condition: 返却した
   - name: PUT /settings/sources
     method: PUT
     path: /settings/sources
-    summary: '`sources[]` を丸ごと保存して全ての配信元を再読み込み、配信元ごとの状態（`id`・`status`・`errors`）と保存した後の内容のバージョン（`version`）を返却する（IF-31）。送信しなかったキーはファイルの同じ配信元の行の今の値で残る。行のキーは `id`・`config`・`enabled`・`scope`・`outside_read` で、外部の読み取りは `GET /settings/sources` の応答の `outsideRead` ではなく `outside_read` で送信する（`outsideRead` は知らないキーとして 400）。本文の `expectedVersion` を指定すると、今の内容のバージョンと照合してから保存する。保存した直後にファイルへ書き込み、再読み込みが終わるまで端末の設定の排他ロックを持ち続ける（`GET /settings/sources` はそのロックを待たず、再読み込みの途中の行を `pending_reload` で返却する）'
+    summary: '`sources[]` を丸ごと保存して全ての配信元を再読み込み、配信元ごとの状態（`id`・`status`・`errors`）と保存した後の内容のバージョン（`version`）を返却する（IF-31）。送信しなかったキーはファイルの同じ配信元の行の今の値で残る。行のキーは `id`・`config`・`enabled`・`scope`・`outside_read`・`storage` で（送信しなかった `storage` もファイルの今の値で残る）、外部の読み取りは `GET /settings/sources` の応答の `outsideRead` ではなく `outside_read` で送信する（`outsideRead` は知らないキーとして 400）。本文の `expectedVersion` を指定すると、今の内容のバージョンと照合してから保存する。保存した直後にファイルへ書き込み、再読み込みが終わるまで端末の設定の排他ロックを持ち続ける（`GET /settings/sources` はそのロックを待たず、再読み込みの途中の行を `pending_reload` で返却する）'
     status_codes:
       - code: '200'
         condition: 保存した

@@ -1,0 +1,937 @@
+# 結合テスト（フロント・TL-3）
+# 1. d64b073 をランナーで回し、既存の write_input_when_add が 1 件 fail（追加した読み書きの方法のセレクトの「任意」にも当たり、strict mode の違反）
+# 2. テストを be0641e で直し、ランナーで回し直したが、npm の依存を入れる step のネットワークのエラー（ECONNRESET）でテストの step まで進まなかった
+# 3. ポート 5199・6199 が空いていることを確かめ、be0641e を手元の個別実行で回して 89 件 pass
+
+## 1. ランナー（d64b073）
+$ run_url=$(gh workflow run test.yml --ref "$(git branch --show-current)" -f layer=frontend-integration -f paths="tests/integration/frontend/settings-screen.spec.ts" | grep -o 'https://[^ ]*/actions/runs/[0-9]*') && run_id=${run_url##*/} && (n=0; until gh api "repos/shuhei1101/dev-docs/actions/runs/$run_id?exclude_pull_requests=true" > /dev/null 2>&1; do n=$((n+1)); if [ $n -ge 10 ]; then echo "実行 $run_id を 10 秒参照できません" >&2; exit 1; fi; sleep 1; done) && (rc=0; gh run watch "$run_id" --exit-status > /dev/null || rc=1; gh run view "$run_id" --log; exit $rc)
+
+test	Set up job	﻿2026-11-17T14:02:30.9897231Z Current runner version: '2.338.2'
+test	Set up job	2026-11-17T14:02:30.9918940Z ##[group]Runner Image Provisioner
+test	Set up job	2026-11-17T14:02:30.9919867Z Hosted Compute Agent
+test	Set up job	2026-11-17T14:02:30.9920506Z Version: 20261103.629
+test	Set up job	2026-11-17T14:02:30.9921133Z Commit: 15dbd9ccb5dbf34fae002b6ed1a2670f52df37bc
+test	Set up job	2026-11-17T14:02:30.9921808Z Build Date: 2026-11-03T17:26:59Z
+test	Set up job	2026-11-17T14:02:30.9922500Z Worker ID: {f3ae6e43-bd6f-4aa8-9def-8ccf7c91b340}
+test	Set up job	2026-11-17T14:02:30.9923173Z Region: westus3
+test	Set up job	2026-11-17T14:02:30.9924061Z Cloud: Azure
+test	Set up job	2026-11-17T14:02:30.9924642Z ##[endgroup]
+test	Set up job	2026-11-17T14:02:30.9925978Z ##[group]Operating System
+test	Set up job	2026-11-17T14:02:30.9926597Z Ubuntu
+test	Set up job	2026-11-17T14:02:30.9927104Z 26.04.1
+test	Set up job	2026-11-17T14:02:30.9927643Z LTS
+test	Set up job	2026-11-17T14:02:30.9928193Z ##[endgroup]
+test	Set up job	2026-11-17T14:02:30.9928723Z ##[group]Runner Image
+test	Set up job	2026-11-17T14:02:30.9929313Z Image: ubuntu-26.04
+test	Set up job	2026-11-17T14:02:30.9929850Z Version: 20261111.196.1
+test	Set up job	2026-11-17T14:02:30.9930842Z Included Software: https://github.com/actions/runner-images/blob/ubuntu26/20261111.196/images/ubuntu/Ubuntu2604-Readme.md
+test	Set up job	2026-11-17T14:02:30.9932567Z Image Release: https://github.com/actions/runner-images/releases/tag/ubuntu26%2F20261111.196
+test	Set up job	2026-11-17T14:02:30.9933701Z ##[endgroup]
+test	Set up job	2026-11-17T14:02:30.9934883Z ##[group]GITHUB_TOKEN Permissions
+test	Set up job	2026-11-17T14:02:30.9936845Z Contents: read
+test	Set up job	2026-11-17T14:02:30.9937377Z Metadata: read
+test	Set up job	2026-11-17T14:02:30.9938305Z ##[endgroup]
+test	Set up job	2026-11-17T14:02:30.9940245Z Secret source: Actions
+test	Set up job	2026-11-17T14:02:30.9941153Z Cache mode: write
+test	Set up job	2026-11-17T14:02:30.9941908Z Prepare workflow directory
+test	Set up job	2026-11-17T14:02:31.0242963Z Prepare all required actions
+test	Set up job	2026-11-17T14:02:31.0289170Z Getting action download info
+test	Set up job	2026-11-17T14:02:31.3473928Z Download action repository 'actions/checkout@v7' (SHA:3d3c42e5aac5ba805825da76410c181273ba90b1)
+test	Set up job	2026-11-17T14:02:31.4662682Z Download action repository 'actions/setup-node@v7' (SHA:949feb2413d6458794dcd2491c4babbbce0c15c1)
+test	Set up job	2026-11-17T14:02:31.5184556Z Download action repository 'astral-sh/setup-uv@v10.3.3' (SHA:68559e99cc807c1eb7e9238fd43a15bba460eec2)
+test	Set up job	2026-11-17T14:02:32.2325757Z Download action repository 'actions/upload-artifact@v7' (SHA:cf430e030ddbb5b0abf93d22962f4752f3646cd9)
+test	Set up job	2026-11-17T14:02:32.4458883Z Complete job name: test
+test	ブランチを取得する	﻿2026-11-17T14:02:32.5253942Z ##[group]Run actions/checkout@v7
+test	ブランチを取得する	2026-11-17T14:02:32.5254937Z with:
+test	ブランチを取得する	2026-11-17T14:02:32.5255531Z   repository: shuhei1101/dev-docs
+test	ブランチを取得する	2026-11-17T14:02:32.5259831Z   token: ***
+test	ブランチを取得する	2026-11-17T14:02:32.5260377Z   ssh-strict: true
+test	ブランチを取得する	2026-11-17T14:02:32.5260970Z   ssh-user: git
+test	ブランチを取得する	2026-11-17T14:02:32.5261532Z   persist-credentials: true
+test	ブランチを取得する	2026-11-17T14:02:32.5262136Z   clean: true
+test	ブランチを取得する	2026-11-17T14:02:32.5262772Z   sparse-checkout-cone-mode: true
+test	ブランチを取得する	2026-11-17T14:02:32.5263801Z   fetch-depth: 1
+test	ブランチを取得する	2026-11-17T14:02:32.5264618Z   fetch-tags: false
+test	ブランチを取得する	2026-11-17T14:02:32.5265418Z   show-progress: true
+test	ブランチを取得する	2026-11-17T14:02:32.5266000Z   lfs: false
+test	ブランチを取得する	2026-11-17T14:02:32.5266556Z   submodules: false
+test	ブランチを取得する	2026-11-17T14:02:32.5267136Z   set-safe-directory: true
+test	ブランチを取得する	2026-11-17T14:02:32.5267774Z   allow-unsafe-pr-checkout: false
+test	ブランチを取得する	2026-11-17T14:02:32.5268792Z ##[endgroup]
+test	ブランチを取得する	2026-11-17T14:02:32.7907870Z Syncing repository: shuhei1101/dev-docs
+test	ブランチを取得する	2026-11-17T14:02:32.7910026Z ##[group]Getting Git version info
+test	ブランチを取得する	2026-11-17T14:02:32.7910948Z Working directory is '/home/runner/work/dev-docs/dev-docs'
+test	ブランチを取得する	2026-11-17T14:02:32.7912442Z [command]/usr/bin/git version
+test	ブランチを取得する	2026-11-17T14:02:32.7913144Z git version 2.56.1
+test	ブランチを取得する	2026-11-17T14:02:32.7925401Z ##[endgroup]
+test	ブランチを取得する	2026-11-17T14:02:32.7934646Z Temporarily overriding HOME='/home/runner/work/_temp/fad6326a-65e8-40c0-a000-13fa134d7e61' before making global git config changes
+test	ブランチを取得する	2026-11-17T14:02:32.7936343Z Adding repository directory to the temporary git global config as a safe directory
+test	ブランチを取得する	2026-11-17T14:02:32.7938987Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/dev-docs/dev-docs
+test	ブランチを取得する	2026-11-17T14:02:32.7995438Z Deleting the contents of '/home/runner/work/dev-docs/dev-docs'
+test	ブランチを取得する	2026-11-17T14:02:32.7997841Z ##[group]Determining repository object format
+test	ブランチを取得する	2026-11-17T14:02:32.7999350Z ##[endgroup]
+test	ブランチを取得する	2026-11-17T14:02:32.8000606Z ##[group]Initializing the repository
+test	ブランチを取得する	2026-11-17T14:02:32.8003123Z [command]/usr/bin/git init /home/runner/work/dev-docs/dev-docs
+test	ブランチを取得する	2026-11-17T14:02:32.8094270Z hint: Using 'master' as the name for the initial branch. This default branch name
+test	ブランチを取得する	2026-11-17T14:02:32.8095980Z hint: will change to "main" in Git 3.0. To configure the initial branch name
+test	ブランチを取得する	2026-11-17T14:02:32.8097110Z hint: to use in all of your new repositories, which will suppress this warning,
+test	ブランチを取得する	2026-11-17T14:02:32.8097994Z hint: call:
+test	ブランチを取得する	2026-11-17T14:02:32.8098646Z hint:
+test	ブランチを取得する	2026-11-17T14:02:32.8099321Z hint: 	git config --global init.defaultBranch <name>
+test	ブランチを取得する	2026-11-17T14:02:32.8100081Z hint:
+test	ブランチを取得する	2026-11-17T14:02:32.8100799Z hint: Names commonly chosen instead of 'master' are 'main', 'trunk' and
+test	ブランチを取得する	2026-11-17T14:02:32.8101876Z hint: 'development'. The just-created branch can be renamed via this command:
+test	ブランチを取得する	2026-11-17T14:02:32.8102837Z hint:
+test	ブランチを取得する	2026-11-17T14:02:32.8103538Z hint: 	git branch -m <name>
+test	ブランチを取得する	2026-11-17T14:02:32.8104246Z hint:
+test	ブランチを取得する	2026-11-17T14:02:32.8105053Z hint: Disable this message with "git config set advice.defaultBranchName false"
+test	ブランチを取得する	2026-11-17T14:02:32.8109050Z Initialized empty Git repository in /home/runner/work/dev-docs/dev-docs/.git/
+test	ブランチを取得する	2026-11-17T14:02:32.8116894Z [command]/usr/bin/git remote add origin https://github.com/shuhei1101/dev-docs
+test	ブランチを取得する	2026-11-17T14:02:32.8166385Z ##[endgroup]
+test	ブランチを取得する	2026-11-17T14:02:32.8167437Z ##[group]Disabling automatic garbage collection
+test	ブランチを取得する	2026-11-17T14:02:32.8168500Z [command]/usr/bin/git config --local gc.auto 0
+test	ブランチを取得する	2026-11-17T14:02:32.8196413Z ##[endgroup]
+test	ブランチを取得する	2026-11-17T14:02:32.8197414Z ##[group]Setting up auth
+test	ブランチを取得する	2026-11-17T14:02:32.8200221Z Removing SSH command configuration
+test	ブランチを取得する	2026-11-17T14:02:32.8206664Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+test	ブランチを取得する	2026-11-17T14:02:32.8229822Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+test	ブランチを取得する	2026-11-17T14:02:32.8584464Z Removing HTTP extra header
+test	ブランチを取得する	2026-11-17T14:02:32.8590345Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+test	ブランチを取得する	2026-11-17T14:02:32.8616532Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+test	ブランチを取得する	2026-11-17T14:02:32.8828018Z Removing includeIf entries pointing to credentials config files
+test	ブランチを取得する	2026-11-17T14:02:32.8833603Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+test	ブランチを取得する	2026-11-17T14:02:32.8859683Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+test	ブランチを取得する	2026-11-17T14:02:32.9077341Z [command]/usr/bin/git config --file /home/runner/work/_temp/git-credentials-e21cf3ac-0627-46e6-b4b6-aba8d86e5259.config http.https://github.com/.extraheader AUTHORIZATION: basic ***
+test	ブランチを取得する	2026-11-17T14:02:32.9106998Z [command]/usr/bin/git config --local includeIf.gitdir:/home/runner/work/dev-docs/dev-docs/.git.path /home/runner/work/_temp/git-credentials-e21cf3ac-0627-46e6-b4b6-aba8d86e5259.config
+test	ブランチを取得する	2026-11-17T14:02:32.9139485Z [command]/usr/bin/git config --local includeIf.gitdir:/home/runner/work/dev-docs/dev-docs/.git/worktrees/*.path /home/runner/work/_temp/git-credentials-e21cf3ac-0627-46e6-b4b6-aba8d86e5259.config
+test	ブランチを取得する	2026-11-17T14:02:32.9169118Z [command]/usr/bin/git config --local includeIf.gitdir:/github/workspace/.git.path /github/runner_temp/git-credentials-e21cf3ac-0627-46e6-b4b6-aba8d86e5259.config
+test	ブランチを取得する	2026-11-17T14:02:32.9194893Z [command]/usr/bin/git config --local includeIf.gitdir:/github/workspace/.git/worktrees/*.path /github/runner_temp/git-credentials-e21cf3ac-0627-46e6-b4b6-aba8d86e5259.config
+test	ブランチを取得する	2026-11-17T14:02:32.9219327Z ##[endgroup]
+test	ブランチを取得する	2026-11-17T14:02:32.9220269Z ##[group]Fetching the repository
+test	ブランチを取得する	2026-11-17T14:02:32.9225240Z [command]/usr/bin/git -c protocol.version=2 fetch --no-tags --prune --no-recurse-submodules --depth=1 origin +d64b07385c8e83661561e17b43d2d74c2ee91467:refs/remotes/origin/feat/sources/storage-and-loading-state
+test	ブランチを取得する	2026-11-17T14:02:35.0224589Z From https://github.com/shuhei1101/dev-docs
+test	ブランチを取得する	2026-11-17T14:02:35.0228779Z  * [new ref]         d64b07385c8e83661561e17b43d2d74c2ee91467 -> origin/feat/sources/storage-and-loading-state
+test	ブランチを取得する	2026-11-17T14:02:35.0234904Z [command]/usr/bin/git branch --list --remote origin/feat/sources/storage-and-loading-state
+test	ブランチを取得する	2026-11-17T14:02:35.0255428Z   origin/feat/sources/storage-and-loading-state
+test	ブランチを取得する	2026-11-17T14:02:35.0263014Z [command]/usr/bin/git rev-parse refs/remotes/origin/feat/sources/storage-and-loading-state
+test	ブランチを取得する	2026-11-17T14:02:35.0282336Z d64b07385c8e83661561e17b43d2d74c2ee91467
+test	ブランチを取得する	2026-11-17T14:02:35.0286740Z ##[endgroup]
+test	ブランチを取得する	2026-11-17T14:02:35.0288965Z ##[group]Determining the checkout info
+test	ブランチを取得する	2026-11-17T14:02:35.0291507Z ##[endgroup]
+test	ブランチを取得する	2026-11-17T14:02:35.0293794Z [command]/usr/bin/git sparse-checkout disable
+test	ブランチを取得する	2026-11-17T14:02:35.0337952Z [command]/usr/bin/git config --local --unset-all extensions.worktreeConfig
+test	ブランチを取得する	2026-11-17T14:02:35.0365086Z ##[group]Checking out the ref
+test	ブランチを取得する	2026-11-17T14:02:35.0369140Z [command]/usr/bin/git checkout --progress --force -B feat/sources/storage-and-loading-state refs/remotes/origin/feat/sources/storage-and-loading-state
+test	ブランチを取得する	2026-11-17T14:02:35.4330045Z Switched to a new branch 'feat/sources/storage-and-loading-state'
+test	ブランチを取得する	2026-11-17T14:02:35.4333198Z branch 'feat/sources/storage-and-loading-state' set up to track 'origin/feat/sources/storage-and-loading-state'.
+test	ブランチを取得する	2026-11-17T14:02:35.4348469Z ##[endgroup]
+test	ブランチを取得する	2026-11-17T14:02:35.4406939Z [command]/usr/bin/git log -1 --format=%H
+test	ブランチを取得する	2026-11-17T14:02:35.4431668Z d64b07385c8e83661561e17b43d2d74c2ee91467
+test	Node.js を入れる	﻿2026-11-17T14:02:35.4717251Z ##[group]Run actions/setup-node@v7
+test	Node.js を入れる	2026-11-17T14:02:35.4717658Z with:
+test	Node.js を入れる	2026-11-17T14:02:35.4717968Z   node-version: 24
+test	Node.js を入れる	2026-11-17T14:02:35.4718282Z   check-latest: false
+test	Node.js を入れる	2026-11-17T14:02:35.4720834Z   token: ***
+test	Node.js を入れる	2026-11-17T14:02:35.4721164Z   package-manager-cache: true
+test	Node.js を入れる	2026-11-17T14:02:35.4721509Z ##[endgroup]
+test	Node.js を入れる	2026-11-17T14:02:35.5969358Z Found in cache @ /opt/hostedtoolcache/node/24.22.2/x64
+test	Node.js を入れる	2026-11-17T14:02:35.6604181Z ##[group]Environment details
+test	Node.js を入れる	2026-11-17T14:02:36.0003335Z node: v24.22.2
+test	Node.js を入れる	2026-11-17T14:02:36.0004063Z npm: 11.19.1
+test	Node.js を入れる	2026-11-17T14:02:36.0004569Z yarn: 1.22.22
+test	Node.js を入れる	2026-11-17T14:02:36.0005467Z ##[endgroup]
+test	npm の依存を入れる	﻿2026-11-17T14:02:36.0148807Z ##[group]Run npm ci
+test	npm の依存を入れる	2026-11-17T14:02:36.0149247Z ^[[36;1mnpm ci^[[0m
+test	npm の依存を入れる	2026-11-17T14:02:36.0196556Z shell: /usr/bin/bash -e {0}
+test	npm の依存を入れる	2026-11-17T14:02:36.0196968Z ##[endgroup]
+test	npm の依存を入れる	2026-11-17T14:03:32.7632502Z 
+test	npm の依存を入れる	2026-11-17T14:03:32.7639620Z > prepare
+test	npm の依存を入れる	2026-11-17T14:03:32.7640494Z > lefthook install
+test	npm の依存を入れる	2026-11-17T14:03:32.7640750Z 
+test	npm の依存を入れる	2026-11-17T14:03:32.8079474Z sync hooks: ✔️(pre-commit)
+test	npm の依存を入れる	2026-11-17T14:03:32.8523546Z 
+test	npm の依存を入れる	2026-11-17T14:03:32.8525237Z added 651 packages, and audited 652 packages in 57s
+test	npm の依存を入れる	2026-11-17T14:03:32.8525781Z 
+test	npm の依存を入れる	2026-11-17T14:03:32.8526136Z 236 packages are looking for funding
+test	npm の依存を入れる	2026-11-17T14:03:32.8526840Z   run `npm fund` for details
+test	npm の依存を入れる	2026-11-17T14:03:33.0337563Z 
+test	npm の依存を入れる	2026-11-17T14:03:33.0338599Z 12 moderate severity vulnerabilities
+test	npm の依存を入れる	2026-11-17T14:03:33.0339112Z 
+test	npm の依存を入れる	2026-11-17T14:03:33.0339481Z To address issues that do not require attention, run:
+test	npm の依存を入れる	2026-11-17T14:03:33.0340395Z   npm audit fix
+test	npm の依存を入れる	2026-11-17T14:03:33.0340631Z 
+test	npm の依存を入れる	2026-11-17T14:03:33.0341065Z To address all issues (including breaking changes), run:
+test	npm の依存を入れる	2026-11-17T14:03:33.0342035Z   npm audit fix --force
+test	npm の依存を入れる	2026-11-17T14:03:33.0342317Z 
+test	npm の依存を入れる	2026-11-17T14:03:33.0342628Z Run `npm audit` for details.
+test	npm の依存を入れる	2026-11-17T14:03:33.0350087Z npm warn install-scripts 3 packages have install scripts not yet covered by allowScripts:
+test	npm の依存を入れる	2026-11-17T14:03:33.0351354Z npm warn install-scripts   esbuild@0.28.2 (postinstall: node install.js)
+test	npm の依存を入れる	2026-11-17T14:03:33.0352482Z npm warn install-scripts   lefthook@2.2.2 (postinstall: node postinstall.js)
+test	npm の依存を入れる	2026-11-17T14:03:33.0353726Z npm warn install-scripts   unrs-resolver@1.12.2 (postinstall: node postinstall.js)
+test	npm の依存を入れる	2026-11-17T14:03:33.0354563Z npm warn install-scripts
+test	npm の依存を入れる	2026-11-17T14:03:33.0355682Z npm warn install-scripts Run `npm install-scripts ls` to review, or `npm install-scripts approve <pkg>` to allow.
+test	Chromium を入れる	﻿2026-11-17T14:03:33.0914550Z ##[group]Run npx playwright install --with-deps chromium
+test	Chromium を入れる	2026-11-17T14:03:33.0915132Z ^[[36;1mnpx playwright install --with-deps chromium^[[0m
+test	Chromium を入れる	2026-11-17T14:03:33.0946725Z shell: /usr/bin/bash -e {0}
+test	Chromium を入れる	2026-11-17T14:03:33.0947099Z ##[endgroup]
+test	Chromium を入れる	2026-11-17T14:03:33.8396213Z Installing dependencies...
+test	Chromium を入れる	2026-11-17T14:03:33.8474211Z Switching to root user to install dependencies...
+test	Chromium を入れる	2026-11-17T14:03:33.9275269Z Get:1 file:/etc/apt/apt-mirrors.txt Mirrorlist [144 B]
+test	Chromium を入れる	2026-11-17T14:03:33.9730422Z Hit:2 http://azure.archive.ubuntu.com/ubuntu resolute InRelease
+test	Chromium を入れる	2026-11-17T14:03:33.9766924Z Get:6 https://packages.microsoft.com/ubuntu/26.04/prod resolute InRelease [3964 B]
+test	Chromium を入れる	2026-11-17T14:03:33.9814295Z Get:3 http://azure.archive.ubuntu.com/ubuntu resolute-updates InRelease [137 kB]
+test	Chromium を入れる	2026-11-17T14:03:33.9848759Z Get:4 http://azure.archive.ubuntu.com/ubuntu resolute-backports InRelease [137 kB]
+test	Chromium を入れる	2026-11-17T14:03:33.9881323Z Get:5 http://azure.archive.ubuntu.com/ubuntu resolute-security InRelease [137 kB]
+test	Chromium を入れる	2026-11-17T14:03:34.0075009Z Get:7 https://packages.microsoft.com/ubuntu/26.04/prod resolute/main amd64 Packages [162 kB]
+test	Chromium を入れる	2026-11-17T14:03:34.0326807Z Get:8 http://azure.archive.ubuntu.com/ubuntu resolute-updates/main amd64v3 Packages [873 kB]
+test	Chromium を入れる	2026-11-17T14:03:34.0365383Z Get:12 https://packages.microsoft.com/ubuntu/26.04/prod resolute/main arm64 Packages [148 kB]
+test	Chromium を入れる	2026-11-17T14:03:34.0434784Z Get:9 http://azure.archive.ubuntu.com/ubuntu resolute-updates/main Translation-en [195 kB]
+test	Chromium を入れる	2026-11-17T14:03:34.0465104Z Get:10 http://azure.archive.ubuntu.com/ubuntu resolute-updates/universe amd64v3 Packages [386 kB]
+test	Chromium を入れる	2026-11-17T14:03:34.0474470Z Get:11 http://azure.archive.ubuntu.com/ubuntu resolute-updates/universe Translation-en [122 kB]
+test	Chromium を入れる	2026-11-17T14:03:34.0476117Z Get:13 http://azure.archive.ubuntu.com/ubuntu resolute-security/main amd64v3 Packages [719 kB]
+test	Chromium を入れる	2026-11-17T14:03:34.0494820Z Get:14 http://azure.archive.ubuntu.com/ubuntu resolute-security/main Translation-en [157 kB]
+test	Chromium を入れる	2026-11-17T14:03:34.0496346Z Get:15 http://azure.archive.ubuntu.com/ubuntu resolute-security/universe amd64v3 Packages [221 kB]
+test	Chromium を入れる	2026-11-17T14:03:34.0517694Z Get:16 http://azure.archive.ubuntu.com/ubuntu resolute-security/universe Translation-en [72.6 kB]
+test	Chromium を入れる	2026-11-17T14:03:34.0554530Z Get:17 http://azure.archive.ubuntu.com/ubuntu resolute-security/restricted amd64v3 Packages [590 kB]
+test	Chromium を入れる	2026-11-17T14:03:34.0566531Z Get:18 http://azure.archive.ubuntu.com/ubuntu resolute-security/restricted Translation-en [122 kB]
+test	Chromium を入れる	2026-11-17T14:03:36.5956552Z Fetched 4182 kB in 0s (10.2 MB/s)
+test	Chromium を入れる	2026-11-17T14:03:37.2491081Z Reading package lists...
+test	Chromium を入れる	2026-11-17T14:03:37.2696788Z Reading package lists...
+test	Chromium を入れる	2026-11-17T14:03:37.3736118Z Building dependency tree...
+test	Chromium を入れる	2026-11-17T14:03:37.3740643Z Reading state information...
+test	Chromium を入れる	2026-11-17T14:03:37.4074180Z libasound2t64 is already the newest version (1.2.15.3-1ubuntu1.1).
+test	Chromium を入れる	2026-11-17T14:03:37.4074955Z libasound2t64 set to manually installed.
+test	Chromium を入れる	2026-11-17T14:03:37.4075551Z libatk-bridge2.0-0t64 is already the newest version (2.60.4-0ubuntu0.1).
+test	Chromium を入れる	2026-11-17T14:03:37.4076246Z libatk-bridge2.0-0t64 set to manually installed.
+test	Chromium を入れる	2026-11-17T14:03:37.4076831Z libatk1.0-0t64 is already the newest version (2.60.4-0ubuntu0.1).
+test	Chromium を入れる	2026-11-17T14:03:37.4077410Z libatk1.0-0t64 set to manually installed.
+test	Chromium を入れる	2026-11-17T14:03:37.4078039Z libatspi2.0-0t64 is already the newest version (2.60.4-0ubuntu0.1).
+test	Chromium を入れる	2026-11-17T14:03:37.4078653Z libatspi2.0-0t64 set to manually installed.
+test	Chromium を入れる	2026-11-17T14:03:37.4079209Z libcairo2 is already the newest version (1.18.4-3).
+test	Chromium を入れる	2026-11-17T14:03:37.4079706Z libcairo2 set to manually installed.
+test	Chromium を入れる	2026-11-17T14:03:37.4080100Z libcups2t64 is already the newest version (2.4.16-1ubuntu1.3).
+test	Chromium を入れる	2026-11-17T14:03:37.4080485Z libcups2t64 set to manually installed.
+test	Chromium を入れる	2026-11-17T14:03:37.4080866Z libdbus-1-3 is already the newest version (1.16.2-2ubuntu4).
+test	Chromium を入れる	2026-11-17T14:03:37.4081451Z libdbus-1-3 set to manually installed.
+test	Chromium を入れる	2026-11-17T14:03:37.4081961Z libdrm2 is already the newest version (2.4.131-1).
+test	Chromium を入れる	2026-11-17T14:03:37.4083012Z libdrm2 set to manually installed.
+test	Chromium を入れる	2026-11-17T14:03:37.4084096Z libgbm1 is already the newest version (26.0.8-1ubuntu0.3).
+test	Chromium を入れる	2026-11-17T14:03:37.4084721Z libgbm1 set to manually installed.
+test	Chromium を入れる	2026-11-17T14:03:37.4085400Z libglib2.0-0t64 is already the newest version (2.88.0-1ubuntu0.1).
+test	Chromium を入れる	2026-11-17T14:03:37.4086091Z libglib2.0-0t64 set to manually installed.
+test	Chromium を入れる	2026-11-17T14:03:37.4086813Z libnspr4 is already the newest version (2:4.38.2-1ubuntu1).
+test	Chromium を入れる	2026-11-17T14:03:37.4087495Z libnspr4 set to manually installed.
+test	Chromium を入れる	2026-11-17T14:03:37.4088174Z libnss3 is already the newest version (2:3.120-1ubuntu2.2).
+test	Chromium を入れる	2026-11-17T14:03:37.4088797Z libnss3 set to manually installed.
+test	Chromium を入れる	2026-11-17T14:03:37.4089516Z libpango-1.0-0 is already the newest version (1.57.0-1).
+test	Chromium を入れる	2026-11-17T14:03:37.4090196Z libpango-1.0-0 set to manually installed.
+test	Chromium を入れる	2026-11-17T14:03:37.4090871Z libx11-6 is already the newest version (2:1.8.13-1ubuntu0.1).
+test	Chromium を入れる	2026-11-17T14:03:37.4091473Z libx11-6 set to manually installed.
+test	Chromium を入れる	2026-11-17T14:03:37.4092023Z libxcb1 is already the newest version (1.17.0-2ubuntu1).
+test	Chromium を入れる	2026-11-17T14:03:37.4092615Z libxcb1 set to manually installed.
+test	Chromium を入れる	2026-11-17T14:03:37.4093286Z libxcomposite1 is already the newest version (1:0.4.6-1build1).
+test	Chromium を入れる	2026-11-17T14:03:37.4094176Z libxcomposite1 set to manually installed.
+test	Chromium を入れる	2026-11-17T14:03:37.4094801Z libxdamage1 is already the newest version (1:1.1.7-1).
+test	Chromium を入れる	2026-11-17T14:03:37.4095372Z libxdamage1 set to manually installed.
+test	Chromium を入れる	2026-11-17T14:03:37.4095980Z libxext6 is already the newest version (2:1.3.4-1build3).
+test	Chromium を入れる	2026-11-17T14:03:37.4096630Z libxext6 set to manually installed.
+test	Chromium を入れる	2026-11-17T14:03:37.4097392Z libxfixes3 is already the newest version (1:6.0.0-2build2).
+test	Chromium を入れる	2026-11-17T14:03:37.4098057Z libxfixes3 set to manually installed.
+test	Chromium を入れる	2026-11-17T14:03:37.4098770Z libxkbcommon0 is already the newest version (1.13.1-1).
+test	Chromium を入れる	2026-11-17T14:03:37.4099453Z libxkbcommon0 set to manually installed.
+test	Chromium を入れる	2026-11-17T14:03:37.4100127Z libxrandr2 is already the newest version (2:1.5.4-1build1).
+test	Chromium を入れる	2026-11-17T14:03:37.4100859Z libxrandr2 set to manually installed.
+test	Chromium を入れる	2026-11-17T14:03:37.4101449Z xvfb is already the newest version (2:21.1.22-1ubuntu1.3).
+test	Chromium を入れる	2026-11-17T14:03:37.4102163Z fonts-noto-color-emoji is already the newest version (2.051-1build1).
+test	Chromium を入れる	2026-11-17T14:03:37.4102934Z libfontconfig1 is already the newest version (2.17.1-3ubuntu1).
+test	Chromium を入れる	2026-11-17T14:03:37.4103760Z libfontconfig1 set to manually installed.
+test	Chromium を入れる	2026-11-17T14:03:37.4104570Z libfreetype6 is already the newest version (2.14.2+dfsg-1ubuntu0.2).
+test	Chromium を入れる	2026-11-17T14:03:37.4105294Z libfreetype6 set to manually installed.
+test	Chromium を入れる	2026-11-17T14:03:37.4106033Z fonts-liberation is already the newest version (1:2.1.5-3build1).
+test	Chromium を入れる	2026-11-17T14:03:37.4106764Z fonts-liberation set to manually installed.
+test	Chromium を入れる	2026-11-17T14:03:37.4508679Z Solving dependencies...
+test	Chromium を入れる	2026-11-17T14:03:37.5416456Z The following additional packages will be installed:
+test	Chromium を入れる	2026-11-17T14:03:37.5416975Z   xfonts-encodings xfonts-utils
+test	Chromium を入れる	2026-11-17T14:03:37.5421154Z Recommended packages:
+test	Chromium を入れる	2026-11-17T14:03:37.5421590Z   fonts-ipafont-mincho fonts-tlwg-loma
+test	Chromium を入れる	2026-11-17T14:03:37.5627228Z The following NEW packages will be installed:
+test	Chromium を入れる	2026-11-17T14:03:37.5628043Z   fonts-freefont-ttf fonts-ipafont-gothic fonts-tlwg-loma-otf fonts-unifont
+test	Chromium を入れる	2026-11-17T14:03:37.5633333Z   fonts-wqy-zenhei xfonts-cyrillic xfonts-encodings xfonts-scalable
+test	Chromium を入れる	2026-11-17T14:03:37.5633977Z   xfonts-utils
+test	Chromium を入れる	2026-11-17T14:03:37.5813201Z 0 upgraded, 9 newly installed, 0 to remove and 26 not upgraded.
+test	Chromium を入れる	2026-11-17T14:03:37.5813976Z Need to get 21.9 MB of archives.
+test	Chromium を入れる	2026-11-17T14:03:37.5814805Z After this operation, 80.2 MB of additional disk space will be used.
+test	Chromium を入れる	2026-11-17T14:03:37.5815513Z Get:1 file:/etc/apt/apt-mirrors.txt Mirrorlist [144 B]
+test	Chromium を入れる	2026-11-17T14:03:37.6939663Z Get:2 http://azure.archive.ubuntu.com/ubuntu resolute/universe amd64v3 fonts-ipafont-gothic all 00303-23ubuntu1 [3703 kB]
+test	Chromium を入れる	2026-11-17T14:03:38.1904137Z Get:3 http://azure.archive.ubuntu.com/ubuntu resolute/main amd64v3 fonts-freefont-ttf all 20211204+svn4273-4build1 [5656 kB]
+test	Chromium を入れる	2026-11-17T14:03:38.3814080Z Get:4 http://azure.archive.ubuntu.com/ubuntu resolute/universe amd64v3 fonts-tlwg-loma-otf all 1:0.7.3-1build1 [106 kB]
+test	Chromium を入れる	2026-11-17T14:03:38.4275254Z Get:5 http://azure.archive.ubuntu.com/ubuntu resolute/universe amd64v3 fonts-unifont all 1:16.0.04-1build1 [3169 kB]
+test	Chromium を入れる	2026-11-17T14:03:38.5639652Z Get:6 http://azure.archive.ubuntu.com/ubuntu resolute/universe amd64v3 fonts-wqy-zenhei all 0.9.45-8build1 [7863 kB]
+test	Chromium を入れる	2026-11-17T14:03:38.8078574Z Get:7 http://azure.archive.ubuntu.com/ubuntu resolute/main amd64v3 xfonts-encodings all 1:1.0.5-0ubuntu3 [576 kB]
+test	Chromium を入れる	2026-11-17T14:03:38.8940540Z Get:8 http://azure.archive.ubuntu.com/ubuntu resolute/main amd64v3 xfonts-utils amd64 1:7.7+7build1 [97.3 kB]
+test	Chromium を入れる	2026-11-17T14:03:38.9441089Z Get:9 http://azure.archive.ubuntu.com/ubuntu resolute/universe amd64v3 xfonts-cyrillic all 1:1.0.5+nmu1build1 [384 kB]
+test	Chromium を入れる	2026-11-17T14:03:39.0114851Z Get:10 http://azure.archive.ubuntu.com/ubuntu resolute/universe amd64v3 xfonts-scalable all 1:1.0.3-1.3build1 [304 kB]
+test	Chromium を入れる	2026-11-17T14:03:39.6937290Z Fetched 21.9 MB in 1s (15.0 MB/s)
+test	Chromium を入れる	2026-11-17T14:03:39.7390668Z Selecting previously unselected package fonts-ipafont-gothic.
+test	Chromium を入れる	2026-11-17T14:03:39.7758674Z (Reading database ... 
+test	Chromium を入れる	2026-11-17T14:03:39.7759231Z (Reading database ... 5%
+test	Chromium を入れる	2026-11-17T14:03:39.7759972Z (Reading database ... 10%
+test	Chromium を入れる	2026-11-17T14:03:39.7760467Z (Reading database ... 15%
+test	Chromium を入れる	2026-11-17T14:03:39.7760878Z (Reading database ... 20%
+test	Chromium を入れる	2026-11-17T14:03:39.7761183Z (Reading database ... 25%
+test	Chromium を入れる	2026-11-17T14:03:39.7761428Z (Reading database ... 30%
+test	Chromium を入れる	2026-11-17T14:03:39.7761673Z (Reading database ... 35%
+test	Chromium を入れる	2026-11-17T14:03:39.7761910Z (Reading database ... 40%
+test	Chromium を入れる	2026-11-17T14:03:39.7762149Z (Reading database ... 45%
+test	Chromium を入れる	2026-11-17T14:03:39.7762396Z (Reading database ... 50%
+test	Chromium を入れる	2026-11-17T14:03:40.0047729Z (Reading database ... 55%
+test	Chromium を入れる	2026-11-17T14:03:40.2398639Z (Reading database ... 60%
+test	Chromium を入れる	2026-11-17T14:03:40.4499641Z (Reading database ... 65%
+test	Chromium を入れる	2026-11-17T14:03:40.7207154Z (Reading database ... 70%
+test	Chromium を入れる	2026-11-17T14:03:40.9288119Z (Reading database ... 75%
+test	Chromium を入れる	2026-11-17T14:03:41.2021004Z (Reading database ... 80%
+test	Chromium を入れる	2026-11-17T14:03:41.5631151Z (Reading database ... 85%
+test	Chromium を入れる	2026-11-17T14:03:42.4370042Z (Reading database ... 90%
+test	Chromium を入れる	2026-11-17T14:03:42.8622189Z (Reading database ... 95%
+test	Chromium を入れる	2026-11-17T14:03:42.8622792Z (Reading database ... 100%
+test	Chromium を入れる	2026-11-17T14:03:42.8623688Z (Reading database ... 213946 files and directories currently installed.)
+test	Chromium を入れる	2026-11-17T14:03:42.8668151Z Preparing to unpack .../0-fonts-ipafont-gothic_00303-23ubuntu1_all.deb ...
+test	Chromium を入れる	2026-11-17T14:03:42.8746952Z Unpacking fonts-ipafont-gothic (00303-23ubuntu1) ...
+test	Chromium を入れる	2026-11-17T14:03:42.9817863Z Selecting previously unselected package fonts-freefont-ttf.
+test	Chromium を入れる	2026-11-17T14:03:42.9945482Z Preparing to unpack .../1-fonts-freefont-ttf_20211204+svn4273-4build1_all.deb ...
+test	Chromium を入れる	2026-11-17T14:03:42.9954907Z Unpacking fonts-freefont-ttf (20211204+svn4273-4build1) ...
+test	Chromium を入れる	2026-11-17T14:03:43.0861176Z Selecting previously unselected package fonts-tlwg-loma-otf.
+test	Chromium を入れる	2026-11-17T14:03:43.0985423Z Preparing to unpack .../2-fonts-tlwg-loma-otf_1%3a0.7.3-1build1_all.deb ...
+test	Chromium を入れる	2026-11-17T14:03:43.0994523Z Unpacking fonts-tlwg-loma-otf (1:0.7.3-1build1) ...
+test	Chromium を入れる	2026-11-17T14:03:43.1165897Z Selecting previously unselected package fonts-unifont.
+test	Chromium を入れる	2026-11-17T14:03:43.1292840Z Preparing to unpack .../3-fonts-unifont_1%3a16.0.04-1build1_all.deb ...
+test	Chromium を入れる	2026-11-17T14:03:43.1301426Z Unpacking fonts-unifont (1:16.0.04-1build1) ...
+test	Chromium を入れる	2026-11-17T14:03:43.3188405Z Selecting previously unselected package fonts-wqy-zenhei.
+test	Chromium を入れる	2026-11-17T14:03:43.3316947Z Preparing to unpack .../4-fonts-wqy-zenhei_0.9.45-8build1_all.deb ...
+test	Chromium を入れる	2026-11-17T14:03:43.3432964Z Unpacking fonts-wqy-zenhei (0.9.45-8build1) ...
+test	Chromium を入れる	2026-11-17T14:03:43.4968679Z Selecting previously unselected package xfonts-encodings.
+test	Chromium を入れる	2026-11-17T14:03:43.5093834Z Preparing to unpack .../5-xfonts-encodings_1%3a1.0.5-0ubuntu3_all.deb ...
+test	Chromium を入れる	2026-11-17T14:03:43.5105169Z Unpacking xfonts-encodings (1:1.0.5-0ubuntu3) ...
+test	Chromium を入れる	2026-11-17T14:03:43.5355387Z Selecting previously unselected package xfonts-utils.
+test	Chromium を入れる	2026-11-17T14:03:43.5485188Z Preparing to unpack .../6-xfonts-utils_1%3a7.7+7build1_amd64v3.deb ...
+test	Chromium を入れる	2026-11-17T14:03:43.5494937Z Unpacking xfonts-utils (1:7.7+7build1) ...
+test	Chromium を入れる	2026-11-17T14:03:43.5757148Z Selecting previously unselected package xfonts-cyrillic.
+test	Chromium を入れる	2026-11-17T14:03:43.5883000Z Preparing to unpack .../7-xfonts-cyrillic_1%3a1.0.5+nmu1build1_all.deb ...
+test	Chromium を入れる	2026-11-17T14:03:43.5894672Z Unpacking xfonts-cyrillic (1:1.0.5+nmu1build1) ...
+test	Chromium を入れる	2026-11-17T14:03:43.6126943Z Selecting previously unselected package xfonts-scalable.
+test	Chromium を入れる	2026-11-17T14:03:43.6254200Z Preparing to unpack .../8-xfonts-scalable_1%3a1.0.3-1.3build1_all.deb ...
+test	Chromium を入れる	2026-11-17T14:03:43.6260414Z Unpacking xfonts-scalable (1:1.0.3-1.3build1) ...
+test	Chromium を入れる	2026-11-17T14:03:43.6619833Z Setting up fonts-wqy-zenhei (0.9.45-8build1) ...
+test	Chromium を入れる	2026-11-17T14:03:43.6751334Z Setting up fonts-freefont-ttf (20211204+svn4273-4build1) ...
+test	Chromium を入れる	2026-11-17T14:03:43.6771521Z Setting up fonts-tlwg-loma-otf (1:0.7.3-1build1) ...
+test	Chromium を入れる	2026-11-17T14:03:43.6790262Z Setting up xfonts-encodings (1:1.0.5-0ubuntu3) ...
+test	Chromium を入れる	2026-11-17T14:03:43.6809161Z Setting up fonts-ipafont-gothic (00303-23ubuntu1) ...
+test	Chromium を入れる	2026-11-17T14:03:43.6862256Z update-alternatives: using /usr/share/fonts/opentype/ipafont-gothic/ipag.ttf to provide /usr/share/fonts/truetype/fonts-japanese-gothic.ttf (fonts-japanese-gothic.ttf) in auto mode
+test	Chromium を入れる	2026-11-17T14:03:43.6876573Z Setting up fonts-unifont (1:16.0.04-1build1) ...
+test	Chromium を入れる	2026-11-17T14:03:43.6895142Z Setting up xfonts-utils (1:7.7+7build1) ...
+test	Chromium を入れる	2026-11-17T14:03:43.6943665Z Setting up xfonts-cyrillic (1:1.0.5+nmu1build1) ...
+test	Chromium を入れる	2026-11-17T14:03:43.7705508Z Setting up xfonts-scalable (1:1.0.3-1.3build1) ...
+test	Chromium を入れる	2026-11-17T14:03:43.8025605Z Processing triggers for man-db (2.13.1-1build1) ...
+test	Chromium を入れる	2026-11-17T14:03:43.8086532Z Not building database; man-db/auto-update is not 'true'.
+test	Chromium を入れる	2026-11-17T14:03:43.8100537Z Processing triggers for fontconfig (2.17.1-3ubuntu1) ...
+test	Chromium を入れる	2026-11-17T14:03:44.8164333Z 
+test	Chromium を入れる	2026-11-17T14:03:44.8165310Z Running kernel seems to be up-to-date.
+test	Chromium を入れる	2026-11-17T14:03:44.8165736Z 
+test	Chromium を入れる	2026-11-17T14:03:44.8165852Z Restarting services...
+test	Chromium を入れる	2026-11-17T14:03:44.8235252Z 
+test	Chromium を入れる	2026-11-17T14:03:44.8235944Z Service restarts being deferred:
+test	Chromium を入れる	2026-11-17T14:03:44.8238108Z  systemctl restart hosted-compute-agent.service
+test	Chromium を入れる	2026-11-17T14:03:44.8238487Z 
+test	Chromium を入れる	2026-11-17T14:03:44.8238883Z No containers need to be restarted.
+test	Chromium を入れる	2026-11-17T14:03:44.8239153Z 
+test	Chromium を入れる	2026-11-17T14:03:44.8239400Z No user sessions are running outdated binaries.
+test	Chromium を入れる	2026-11-17T14:03:44.8239690Z 
+test	Chromium を入れる	2026-11-17T14:03:44.8240104Z No VM guests are running outdated hypervisor (qemu) binaries on this host.
+test	Chromium を入れる	2026-11-17T14:03:45.5971991Z Downloading Chrome for Testing 156.0.8078.4 (playwright chromium v1248) from https://cdn.playwright.dev/builds/cft/156.0.8078.4/linux64/chrome-linux64.zip
+test	Chromium を入れる	2026-11-17T14:03:46.0116605Z |                                                                                |   0% of 191.1 MiB
+test	Chromium を入れる	2026-11-17T14:03:46.1182549Z |■■■■■■■■                                                                        |  10% of 191.1 MiB
+test	Chromium を入れる	2026-11-17T14:03:46.1723904Z |■■■■■■■■■■■■■■■■                                                                |  20% of 191.1 MiB
+test	Chromium を入れる	2026-11-17T14:03:46.2419787Z |■■■■■■■■■■■■■■■■■■■■■■■■                                                        |  30% of 191.1 MiB
+test	Chromium を入れる	2026-11-17T14:03:46.2836454Z |■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■                                                |  40% of 191.1 MiB
+test	Chromium を入れる	2026-11-17T14:03:46.3442341Z |■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■                                        |  50% of 191.1 MiB
+test	Chromium を入れる	2026-11-17T14:03:46.4008678Z |■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■                                |  60% of 191.1 MiB
+test	Chromium を入れる	2026-11-17T14:03:46.4428084Z |■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■                        |  70% of 191.1 MiB
+test	Chromium を入れる	2026-11-17T14:03:46.5133972Z |■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■                |  80% of 191.1 MiB
+test	Chromium を入れる	2026-11-17T14:03:46.5510264Z |■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■        |  90% of 191.1 MiB
+test	Chromium を入れる	2026-11-17T14:03:46.6134845Z |■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■| 100% of 191.1 MiB
+test	Chromium を入れる	2026-11-17T14:03:49.8501492Z Chrome for Testing 156.0.8078.4 (playwright chromium v1248) downloaded to /home/runner/.cache/ms-playwright/chromium-1248
+test	Chromium を入れる	2026-11-17T14:03:49.8505394Z Downloading FFmpeg (playwright ffmpeg v1013) from https://cdn.playwright.dev/dbazure/download/playwright/builds/ffmpeg/1013/ffmpeg-linux.zip
+test	Chromium を入れる	2026-11-17T14:03:50.2327264Z |                                                                                |   0% of 2.2 MiB
+test	Chromium を入れる	2026-11-17T14:03:50.2520468Z |■■■■■■■■                                                                        |  10% of 2.2 MiB
+test	Chromium を入れる	2026-11-17T14:03:50.2598698Z |■■■■■■■■■■■■■■■■                                                                |  20% of 2.2 MiB
+test	Chromium を入れる	2026-11-17T14:03:50.2640170Z |■■■■■■■■■■■■■■■■■■■■■■■■                                                        |  30% of 2.2 MiB
+test	Chromium を入れる	2026-11-17T14:03:50.2677043Z |■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■                                                |  40% of 2.2 MiB
+test	Chromium を入れる	2026-11-17T14:03:50.2691744Z |■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■                                        |  50% of 2.2 MiB
+test	Chromium を入れる	2026-11-17T14:03:50.2713097Z |■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■                                |  60% of 2.2 MiB
+test	Chromium を入れる	2026-11-17T14:03:50.2733272Z |■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■                        |  70% of 2.2 MiB
+test	Chromium を入れる	2026-11-17T14:03:50.2757510Z |■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■                |  80% of 2.2 MiB
+test	Chromium を入れる	2026-11-17T14:03:50.2770150Z |■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■        |  90% of 2.2 MiB
+test	Chromium を入れる	2026-11-17T14:03:50.2781400Z |■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■| 100% of 2.2 MiB
+test	Chromium を入れる	2026-11-17T14:03:50.3331618Z FFmpeg (playwright ffmpeg v1013) downloaded to /home/runner/.cache/ms-playwright/ffmpeg-1013
+test	Chromium を入れる	2026-11-17T14:03:50.3335143Z Downloading Chrome Headless Shell 156.0.8078.4 (playwright chromium-headless-shell v1248) from https://cdn.playwright.dev/builds/cft/156.0.8078.4/linux64/chrome-headless-shell-linux64.zip
+test	Chromium を入れる	2026-11-17T14:03:50.7119493Z |                                                                                |   0% of 120 MiB
+test	Chromium を入れる	2026-11-17T14:03:50.8047281Z |■■■■■■■■                                                                        |  10% of 120 MiB
+test	Chromium を入れる	2026-11-17T14:03:50.8694043Z |■■■■■■■■■■■■■■■■                                                                |  20% of 120 MiB
+test	Chromium を入れる	2026-11-17T14:03:50.9169868Z |■■■■■■■■■■■■■■■■■■■■■■■■                                                        |  30% of 120 MiB
+test	Chromium を入れる	2026-11-17T14:03:50.9792357Z |■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■                                                |  40% of 120 MiB
+test	Chromium を入れる	2026-11-17T14:03:51.0093813Z |■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■                                        |  50% of 120 MiB
+test	Chromium を入れる	2026-11-17T14:03:51.0366873Z |■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■                                |  60% of 120 MiB
+test	Chromium を入れる	2026-11-17T14:03:51.0847568Z |■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■                        |  70% of 120 MiB
+test	Chromium を入れる	2026-11-17T14:03:51.1078330Z |■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■                |  80% of 120 MiB
+test	Chromium を入れる	2026-11-17T14:03:51.1389817Z |■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■        |  90% of 120 MiB
+test	Chromium を入れる	2026-11-17T14:03:51.1801831Z |■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■| 100% of 120 MiB
+test	Chromium を入れる	2026-11-17T14:03:53.4876836Z Chrome Headless Shell 156.0.8078.4 (playwright chromium-headless-shell v1248) downloaded to /home/runner/.cache/ms-playwright/chromium_headless_shell-1248
+test	層の全件を回す	﻿2026-11-17T14:03:53.5176603Z ##[group]Run : > test.log
+test	層の全件を回す	2026-11-17T14:03:53.5177021Z ^[[36;1m: > test.log^[[0m
+test	層の全件を回す	2026-11-17T14:03:53.5177442Z ^[[36;1m# 結果の行を test.log と step の標準出力の両方に出す^[[0m
+test	層の全件を回す	2026-11-17T14:03:53.5177853Z ^[[36;1msay() { echo "$1" | tee -a test.log; }^[[0m
+test	層の全件を回す	2026-11-17T14:03:53.5178226Z ^[[36;1mcase "$LAYER" in^[[0m
+test	層の全件を回す	2026-11-17T14:03:53.5178614Z ^[[36;1m  backend-unit) limit=7 ;;^[[0m
+test	層の全件を回す	2026-11-17T14:03:53.5179041Z ^[[36;1m  backend-integration) limit=62; dir=tests/integration/ ;;^[[0m
+test	層の全件を回す	2026-11-17T14:03:53.5179494Z ^[[36;1m  frontend-unit) limit=19 ;;^[[0m
+test	層の全件を回す	2026-11-17T14:03:53.5179978Z ^[[36;1m  frontend-integration) limit=75; dir=tests/integration/frontend/ ;;^[[0m
+test	層の全件を回す	2026-11-17T14:03:53.5180487Z ^[[36;1mesac^[[0m
+test	層の全件を回す	2026-11-17T14:03:53.5180831Z ^[[36;1m# paths は結合テストの層の、層の結合テストのフォルダの下のパスだけを受け付ける^[[0m
+test	層の全件を回す	2026-11-17T14:03:53.5181200Z ^[[36;1mif [ -n "$PATHS" ]; then^[[0m
+test	層の全件を回す	2026-11-17T14:03:53.5181524Z ^[[36;1m  if [ -z "${dir:-}" ]; then^[[0m
+test	層の全件を回す	2026-11-17T14:03:53.5181922Z ^[[36;1m    say "paths は結合テストの層でだけ指定できる: layer=$LAYER"^[[0m
+test	層の全件を回す	2026-11-17T14:03:53.5182294Z ^[[36;1m    exit 1^[[0m
+test	層の全件を回す	2026-11-17T14:03:53.5182733Z ^[[36;1m  fi^[[0m
+test	層の全件を回す	2026-11-17T14:03:53.5183107Z ^[[36;1m  if ! printf '%s' "$PATHS" | grep -Eq '^[A-Za-z0-9_./ -]+$'; then^[[0m
+test	層の全件を回す	2026-11-17T14:03:53.5183963Z ^[[36;1m    say "paths に許可しない文字がある（英数字・_・.・/・-・空白だけを許可する）: $PATHS"^[[0m
+test	層の全件を回す	2026-11-17T14:03:53.5184381Z ^[[36;1m    exit 1^[[0m
+test	層の全件を回す	2026-11-17T14:03:53.5184700Z ^[[36;1m  fi^[[0m
+test	層の全件を回す	2026-11-17T14:03:53.5185044Z ^[[36;1m  for p in $PATHS; do^[[0m
+test	層の全件を回す	2026-11-17T14:03:53.5185390Z ^[[36;1m    case "$p" in^[[0m
+test	層の全件を回す	2026-11-17T14:03:53.5185808Z ^[[36;1m      *..*) say "paths の値が .. を含む: $p"; exit 1 ;;^[[0m
+test	層の全件を回す	2026-11-17T14:03:53.5186384Z ^[[36;1m    esac^[[0m
+test	層の全件を回す	2026-11-17T14:03:53.5186702Z ^[[36;1m    case "$p" in^[[0m
+test	層の全件を回す	2026-11-17T14:03:53.5187026Z ^[[36;1m      "$dir"*) ;;^[[0m
+test	層の全件を回す	2026-11-17T14:03:53.5187398Z ^[[36;1m      *) say "paths の値が層の結合テストのフォルダ（$dir）の外: $p"; exit 1 ;;^[[0m
+test	層の全件を回す	2026-11-17T14:03:53.5187776Z ^[[36;1m    esac^[[0m
+test	層の全件を回す	2026-11-17T14:03:53.5188166Z ^[[36;1m    if [ "$LAYER" = backend-integration ]; then^[[0m
+test	層の全件を回す	2026-11-17T14:03:53.5188572Z ^[[36;1m      case "$p" in^[[0m
+test	層の全件を回す	2026-11-17T14:03:53.5189200Z ^[[36;1m        tests/integration/frontend/*) say "paths の値が層の結合テストのフォルダの外（tests/integration/frontend/ は frontend-integration の層）: $p"; exit 1 ;;^[[0m
+test	層の全件を回す	2026-11-17T14:03:53.5189867Z ^[[36;1m      esac^[[0m
+test	層の全件を回す	2026-11-17T14:03:53.5190149Z ^[[36;1m    fi^[[0m
+test	層の全件を回す	2026-11-17T14:03:53.5190464Z ^[[36;1m  done^[[0m
+test	層の全件を回す	2026-11-17T14:03:53.5190961Z ^[[36;1mfi^[[0m
+test	層の全件を回す	2026-11-17T14:03:53.5191294Z ^[[36;1mcase "$LAYER" in^[[0m
+test	層の全件を回す	2026-11-17T14:03:53.5192173Z ^[[36;1m  backend-unit) cmd="uv run pytest tests/unit/ -v" ;;^[[0m
+test	層の全件を回す	2026-11-17T14:03:53.5192888Z ^[[36;1m  backend-integration) cmd="uv run pytest ${PATHS:-$dir} -v" ;;^[[0m
+test	層の全件を回す	2026-11-17T14:03:53.5194214Z ^[[36;1m  frontend-unit) cmd="npx vitest run --config frontend/vitest.config.ts --reporter=verbose" ;;^[[0m
+test	層の全件を回す	2026-11-17T14:03:53.5195787Z ^[[36;1m  frontend-integration) cmd="npx playwright test --config tests/integration/frontend/playwright.config.ts $PATHS" ;;^[[0m
+test	層の全件を回す	2026-11-17T14:03:53.5196396Z ^[[36;1mesac^[[0m
+test	層の全件を回す	2026-11-17T14:03:53.5196731Z ^[[36;1m# テストを裏で起動し、出力を test.log と step の標準出力の両方に出す^[[0m
+test	層の全件を回す	2026-11-17T14:03:53.5197220Z ^[[36;1msetsid -w bash -c "set -o pipefail; $cmd 2>&1 | tee -a test.log" &^[[0m
+test	層の全件を回す	2026-11-17T14:03:53.5197729Z ^[[36;1mpid=$!^[[0m
+test	層の全件を回す	2026-11-17T14:03:53.5198016Z ^[[36;1mlast=-1^[[0m
+test	層の全件を回す	2026-11-17T14:03:53.5198306Z ^[[36;1midle=0^[[0m
+test	層の全件を回す	2026-11-17T14:03:53.5198648Z ^[[36;1m# test.log の大きさを 1 秒ごとに確認し、無出力の時間が上限を超えたらテストを止める^[[0m
+test	層の全件を回す	2026-11-17T14:03:53.5199050Z ^[[36;1mwhile kill -0 "$pid" 2> /dev/null; do^[[0m
+test	層の全件を回す	2026-11-17T14:03:53.5199463Z ^[[36;1m  sleep 1^[[0m
+test	層の全件を回す	2026-11-17T14:03:53.5199779Z ^[[36;1m  size=$(stat -c %s test.log)^[[0m
+test	層の全件を回す	2026-11-17T14:03:53.5200125Z ^[[36;1m  if [ "$size" = "$last" ]; then^[[0m
+test	層の全件を回す	2026-11-17T14:03:53.5200509Z ^[[36;1m    idle=$((idle + 1))^[[0m
+test	層の全件を回す	2026-11-17T14:03:53.5200860Z ^[[36;1m  else^[[0m
+test	層の全件を回す	2026-11-17T14:03:53.5201185Z ^[[36;1m    idle=0^[[0m
+test	層の全件を回す	2026-11-17T14:03:53.5201476Z ^[[36;1m    last=$size^[[0m
+test	層の全件を回す	2026-11-17T14:03:53.5201763Z ^[[36;1m  fi^[[0m
+test	層の全件を回す	2026-11-17T14:03:53.5202096Z ^[[36;1m  if [ "$idle" -gt "$limit" ]; then^[[0m
+test	層の全件を回す	2026-11-17T14:03:53.5202454Z ^[[36;1m    kill -- "-$pid"^[[0m
+test	層の全件を回す	2026-11-17T14:03:53.5202971Z ^[[36;1m    say "出力が ${limit} 秒変わらなかったため、テストを止めた"^[[0m
+test	層の全件を回す	2026-11-17T14:03:53.5203454Z ^[[36;1m    exit 1^[[0m
+test	層の全件を回す	2026-11-17T14:03:53.5204044Z ^[[36;1m  fi^[[0m
+test	層の全件を回す	2026-11-17T14:03:53.5204279Z ^[[36;1mdone^[[0m
+test	層の全件を回す	2026-11-17T14:03:53.5204489Z ^[[36;1mwait "$pid"^[[0m
+test	層の全件を回す	2026-11-17T14:03:53.5234748Z shell: /usr/bin/bash -e {0}
+test	層の全件を回す	2026-11-17T14:03:53.5235020Z env:
+test	層の全件を回す	2026-11-17T14:03:53.5235231Z   LAYER: frontend-integration
+test	層の全件を回す	2026-11-17T14:03:53.5235569Z   PATHS: tests/integration/frontend/settings-screen.spec.ts
+test	層の全件を回す	2026-11-17T14:03:53.5235897Z   PYTHONUNBUFFERED: 1
+test	層の全件を回す	2026-11-17T14:03:53.5236117Z ##[endgroup]
+test	層の全件を回す	2026-11-17T14:03:59.8564202Z 
+test	層の全件を回す	2026-11-17T14:03:59.8594702Z Running 89 tests using 2 workers
+test	層の全件を回す	2026-11-17T14:03:59.8595407Z 
+test	層の全件を回す	2026-11-17T14:04:02.2022113Z   ✓   1 [chromium] › tests/integration/frontend/settings-screen.spec.ts:61:3 › ページのタイトル › page_title (1.1s)
+test	層の全件を回す	2026-11-17T14:04:02.2246980Z   ✓   2 [chromium] › tests/integration/frontend/settings-screen.spec.ts:69:3 › 本文へスキップ › skip_link (1.1s)
+test	層の全件を回す	2026-11-17T14:04:03.2721608Z   ✓   4 [chromium] › tests/integration/frontend/settings-screen.spec.ts:92:3 › トップバー › topbar_color_scheme_toggle (1.0s)
+test	層の全件を回す	2026-11-17T14:04:03.2903609Z   ✓   3 [chromium] › tests/integration/frontend/settings-screen.spec.ts:85:3 › トップバー › topbar_home_link (1.1s)
+test	層の全件を回す	2026-11-17T14:04:04.2769885Z   ✓   5 [chromium] › tests/integration/frontend/settings-screen.spec.ts:107:3 › トップバー › topbar_only_title_and_color_scheme (988ms)
+test	層の全件を回す	2026-11-17T14:04:04.5940400Z   ✓   6 [chromium] › tests/integration/frontend/settings-screen.spec.ts:117:3 › 文書の画面に戻る › back_link_to_previous_doc (1.3s)
+test	層の全件を回す	2026-11-17T14:04:05.3907832Z   ✓   7 [chromium] › tests/integration/frontend/settings-screen.spec.ts:132:3 › 文書の画面に戻る › back_link_without_previous_doc (1.1s)
+test	層の全件を回す	2026-11-17T14:04:05.5841241Z   ✓   8 [chromium] › tests/integration/frontend/settings-screen.spec.ts:139:3 › 文書の画面に戻る › back_link_when_none_serving (964ms)
+test	層の全件を回す	2026-11-17T14:04:06.3698524Z   ✓   9 [chromium] › tests/integration/frontend/settings-screen.spec.ts:147:3 › 見出し › heading (964ms)
+test	層の全件を回す	2026-11-17T14:04:06.5781253Z   ✓  10 [chromium] › tests/integration/frontend/settings-screen.spec.ts:153:3 › 見出し › sources_heading (970ms)
+test	層の全件を回す	2026-11-17T14:04:07.3737046Z   ✓  11 [chromium] › tests/integration/frontend/settings-screen.spec.ts:159:3 › 見出し › keyboard_heading (985ms)
+test	層の全件を回す	2026-11-17T14:04:08.0249285Z   ✓  13 [chromium] › tests/integration/frontend/settings-screen.spec.ts:186:3 › 配信元が無いことの表示 › empty_message (640ms)
+test	層の全件を回す	2026-11-17T14:04:08.6770590Z   ✓  14 [chromium] › tests/integration/frontend/settings-screen.spec.ts:195:3 › 配信元の一覧 › table_columns_and_order (642ms)
+test	層の全件を回す	2026-11-17T14:04:09.3820207Z   ✓  15 [chromium] › tests/integration/frontend/settings-screen.spec.ts:211:3 › 配信元の ID › id_link_when_serving (695ms)
+test	層の全件を回す	2026-11-17T14:04:10.0069250Z   ✓  16 [chromium] › tests/integration/frontend/settings-screen.spec.ts:221:3 › 配信元の ID › id_not_link_when_not_serving (614ms)
+test	層の全件を回す	2026-11-17T14:04:10.3565795Z   ✓  12 [chromium] › tests/integration/frontend/settings-screen.spec.ts:167:3 › 配信元の読み込み中の表示 › loading_skeleton (3.8s)
+test	層の全件を回す	2026-11-17T14:04:10.8392982Z   ✓  17 [chromium] › tests/integration/frontend/settings-screen.spec.ts:232:3 › 設定ファイル › config_paths (816ms)
+test	層の全件を回す	2026-11-17T14:04:11.3055693Z   ✓  18 [chromium] › tests/integration/frontend/settings-screen.spec.ts:249:3 › 状態 › status_serving (921ms)
+test	層の全件を回す	2026-11-17T14:04:11.7539584Z   ✓  19 [chromium] › tests/integration/frontend/settings-screen.spec.ts:255:3 › 状態 › status_not_served (894ms)
+test	層の全件を回す	2026-11-17T14:04:12.1687326Z   ✓  20 [chromium] › tests/integration/frontend/settings-screen.spec.ts:263:3 › 状態 › status_disabled (838ms)
+test	層の全件を回す	2026-11-17T14:04:12.6971664Z   ✓  21 [chromium] › tests/integration/frontend/settings-screen.spec.ts:271:3 › 状態 › status_pending_reload (929ms)
+test	層の全件を回す	2026-11-17T14:04:13.5974142Z   ✓  22 [chromium] › tests/integration/frontend/settings-screen.spec.ts:280:5 › 状態 › status_not_served_contrast_light (1.4s)
+test	層の全件を回す	2026-11-17T14:04:14.0818275Z   ✓  23 [chromium] › tests/integration/frontend/settings-screen.spec.ts:280:5 › 状態 › status_not_served_contrast_dark (1.4s)
+test	層の全件を回す	2026-11-17T14:04:14.5357589Z   ✓  24 [chromium] › tests/integration/frontend/settings-screen.spec.ts:296:3 › 状態 › no_layout_transition (921ms)
+test	層の全件を回す	2026-11-17T14:04:14.9803691Z   ✓  25 [chromium] › tests/integration/frontend/settings-screen.spec.ts:319:3 › 状態の補足 › status_note_when_not_served (876ms)
+test	層の全件を回す	2026-11-17T14:04:15.4395629Z   ✓  26 [chromium] › tests/integration/frontend/settings-screen.spec.ts:333:3 › 状態の補足 › status_note_when_config_version_old (887ms)
+test	層の全件を回す	2026-11-17T14:04:15.9026158Z   ✓  27 [chromium] › tests/integration/frontend/settings-screen.spec.ts:343:3 › 状態の補足 › status_note_when_disabled (905ms)
+test	層の全件を回す	2026-11-17T14:04:16.3146108Z   ✓  28 [chromium] › tests/integration/frontend/settings-screen.spec.ts:351:3 › 状態の補足 › status_note_when_pending_reload (859ms)
+test	層の全件を回す	2026-11-17T14:04:16.7965494Z   ✓  29 [chromium] › tests/integration/frontend/settings-screen.spec.ts:359:3 › 状態の補足 › status_note_when_serving (876ms)
+test	層の全件を回す	2026-11-17T14:04:17.3926467Z   ✓  30 [chromium] › tests/integration/frontend/settings-screen.spec.ts:368:3 › 配信元を追加 › add_button (1.1s)
+test	層の全件を回す	2026-11-17T14:04:17.9109772Z   ✓  31 [chromium] › tests/integration/frontend/settings-screen.spec.ts:377:3 › 編集ボタン › edit_button (1.1s)
+test	層の全件を回す	2026-11-17T14:04:18.4386513Z   ✓  32 [chromium] › tests/integration/frontend/settings-screen.spec.ts:398:3 › 削除ボタン › delete_button (1.0s)
+test	層の全件を回す	2026-11-17T14:04:18.8265853Z   ✓  33 [chromium] › tests/integration/frontend/settings-screen.spec.ts:407:3 › 1 文字のショートカットのスイッチ › single_key_switch_initial (897ms)
+test	層の全件を回す	2026-11-17T14:04:19.4197701Z   ✓  34 [chromium] › tests/integration/frontend/settings-screen.spec.ts:416:3 › 1 文字のショートカットのスイッチ › single_key_switch_toggle (971ms)
+test	層の全件を回す	2026-11-17T14:04:19.8241335Z   ✓  35 [chromium] › tests/integration/frontend/settings-screen.spec.ts:436:3 › ショートカットの一覧 › shortcut_open_button (968ms)
+test	層の全件を回す	2026-11-17T14:04:20.3805254Z   ✓  36 [chromium] › tests/integration/frontend/settings-screen.spec.ts:443:3 › ショートカットの一覧 › shortcut_key (945ms)
+test	層の全件を回す	2026-11-17T14:04:20.9301251Z   ✓  37 [chromium] › tests/integration/frontend/settings-screen.spec.ts:452:3 › 配信元のダイアログのタイトル › dialog_title_when_add (1.1s)
+test	層の全件を回す	2026-11-17T14:04:21.4680744Z   ✓  38 [chromium] › tests/integration/frontend/settings-screen.spec.ts:459:3 › 配信元のダイアログのタイトル › dialog_title_when_edit (1.1s)
+test	層の全件を回す	2026-11-17T14:04:22.0585875Z   ✓  39 [chromium] › tests/integration/frontend/settings-screen.spec.ts:469:3 › 配信元の ID の入力欄 › id_input_when_add (1.1s)
+test	層の全件を回す	2026-11-17T14:04:22.5474114Z   ✓  40 [chromium] › tests/integration/frontend/settings-screen.spec.ts:485:3 › 配信元の ID の入力欄 › id_input_when_edit (1.1s)
+test	層の全件を回す	2026-11-17T14:04:23.1976176Z   ✓  41 [chromium] › tests/integration/frontend/settings-screen.spec.ts:492:3 › 配信元の ID の入力欄 › id_input_keeps_value (1.1s)
+test	層の全件を回す	2026-11-17T14:04:23.6415345Z   ✓  42 [chromium] › tests/integration/frontend/settings-screen.spec.ts:502:3 › 設定ファイルの入力欄 › config_input_when_add (1.1s)
+test	層の全件を回す	2026-11-17T14:04:24.3927706Z   ✓  43 [chromium] › tests/integration/frontend/settings-screen.spec.ts:514:3 › 設定ファイルの入力欄 › config_input_when_edit (1.2s)
+test	層の全件を回す	2026-11-17T14:04:24.7951757Z   ✓  44 [chromium] › tests/integration/frontend/settings-screen.spec.ts:532:3 › 配信のスイッチ › enabled_switch_heading (1.1s)
+test	層の全件を回す	2026-11-17T14:04:25.5585722Z   ✓  45 [chromium] › tests/integration/frontend/settings-screen.spec.ts:541:3 › 配信のスイッチ › enabled_switch_when_add (1.2s)
+test	層の全件を回す	2026-11-17T14:04:25.9654119Z   ✓  46 [chromium] › tests/integration/frontend/settings-screen.spec.ts:551:3 › 配信のスイッチ › enabled_switch_when_edit (1.1s)
+test	層の全件を回す	2026-11-17T14:04:26.6283075Z   ✓  47 [chromium] › tests/integration/frontend/settings-screen.spec.ts:562:3 › 読み取りの範囲の入力欄 › read_input_when_add (1.1s)
+test	層の全件を回す	2026-11-17T14:04:27.0876151Z   ✓  48 [chromium] › tests/integration/frontend/settings-screen.spec.ts:574:3 › 読み取りの範囲の入力欄 › read_input_when_edit (1.1s)
+test	層の全件を回す	2026-11-17T14:04:27.7912164Z   ✘  49 [chromium] › tests/integration/frontend/settings-screen.spec.ts:587:3 › 書き込みの範囲の入力欄 › write_input_when_add (1.1s)
+test	層の全件を回す	2026-11-17T14:04:28.3112093Z   ✓  50 [chromium] › tests/integration/frontend/settings-screen.spec.ts:598:3 › 書き込みの範囲の入力欄 › write_input_when_edit (1.2s)
+test	層の全件を回す	2026-11-17T14:04:29.4270357Z   ✓  51 [chromium] › tests/integration/frontend/settings-screen.spec.ts:636:3 › 配信元のダイアログのキャンセル › cancel_by_escape (1.1s)
+test	層の全件を回す	2026-11-17T14:04:30.0670489Z   ✓  52 [chromium] › tests/integration/frontend/settings-screen.spec.ts:621:3 › 配信元のダイアログのキャンセル › cancel_button (1.5s)
+test	層の全件を回す	2026-11-17T14:04:30.8211704Z   ✓  53 [chromium] › tests/integration/frontend/settings-screen.spec.ts:647:3 › 追加・保存ボタン › submit_label (1.4s)
+test	層の全件を回す	2026-11-17T14:04:31.5377820Z   ✓  54 [chromium] › tests/integration/frontend/settings-screen.spec.ts:657:3 › 追加・保存ボタン › submit_add_success (1.5s)
+test	層の全件を回す	2026-11-17T14:04:32.7384605Z   ✓  56 [chromium] › tests/integration/frontend/settings-screen.spec.ts:704:3 › 追加・保存ボタン › submit_failure_422 (1.2s)
+test	層の全件を回す	2026-11-17T14:04:33.6632466Z   ✓  57 [chromium] › tests/integration/frontend/settings-screen.spec.ts:725:3 › 保存の失敗のまとめ › failure_summary_when_invalid (910ms)
+test	層の全件を回す	2026-11-17T14:04:33.8842369Z   ✓  55 [chromium] › tests/integration/frontend/settings-screen.spec.ts:688:3 › 追加・保存ボタン › submit_disabled_while_saving (3.0s)
+test	層の全件を回す	2026-11-17T14:04:34.9622470Z   ✓  58 [chromium] › tests/integration/frontend/settings-screen.spec.ts:736:3 › 保存の失敗のまとめ › failure_summary_when_422 (1.3s)
+test	層の全件を回す	2026-11-17T14:04:35.3836110Z   ✓  59 [chromium] › tests/integration/frontend/settings-screen.spec.ts:760:3 › 保存の失敗のまとめ › failure_summary_row_click (1.5s)
+test	層の全件を回す	2026-11-17T14:04:36.5725559Z   ✓  60 [chromium] › tests/integration/frontend/settings-screen.spec.ts:781:5 › 削除の確認 › delete_confirm_contrast_light (1.6s)
+test	層の全件を回す	2026-11-17T14:04:37.0953860Z   ✓  61 [chromium] › tests/integration/frontend/settings-screen.spec.ts:781:5 › 削除の確認 › delete_confirm_contrast_dark (1.7s)
+test	層の全件を回す	2026-11-17T14:04:37.6623094Z   ✓  62 [chromium] › tests/integration/frontend/settings-screen.spec.ts:796:3 › 削除の確認 › delete_title (1.1s)
+test	層の全件を回す	2026-11-17T14:04:38.1340288Z   ✓  63 [chromium] › tests/integration/frontend/settings-screen.spec.ts:803:3 › 削除の確認 › delete_description (1.0s)
+test	層の全件を回す	2026-11-17T14:04:38.6626412Z   ✓  64 [chromium] › tests/integration/frontend/settings-screen.spec.ts:814:3 › 削除の確認 › delete_cancel (977ms)
+test	層の全件を回す	2026-11-17T14:04:39.4270419Z   ✓  65 [chromium] › tests/integration/frontend/settings-screen.spec.ts:829:3 › 削除の確認 › delete_confirm_success (1.3s)
+test	層の全件を回す	2026-11-17T14:04:39.9808251Z   ✓  66 [chromium] › tests/integration/frontend/settings-screen.spec.ts:857:3 › 削除の確認 › delete_confirm_failure (1.3s)
+test	層の全件を回す	2026-11-17T14:04:40.6916928Z   ✓  67 [chromium] › tests/integration/frontend/settings-screen.spec.ts:870:3 › 削除の確認 › delete_confirm_disabled_while_saving (1.3s)
+test	層の全件を回す	2026-11-17T14:04:41.2555459Z   ✓  68 [chromium] › tests/integration/frontend/settings-screen.spec.ts:890:3 › 入力チェック › id_input_check_when_empty (1.3s)
+test	層の全件を回す	2026-11-17T14:04:41.9291533Z   ✓  69 [chromium] › tests/integration/frontend/settings-screen.spec.ts:897:3 › 入力チェック › id_input_check_when_invalid_char (1.2s)
+test	層の全件を回す	2026-11-17T14:04:42.5235025Z   ✓  70 [chromium] › tests/integration/frontend/settings-screen.spec.ts:907:3 › 入力チェック › id_input_check_when_duplicated (1.3s)
+test	層の全件を回す	2026-11-17T14:04:43.2840918Z   ✓  71 [chromium] › tests/integration/frontend/settings-screen.spec.ts:917:3 › 入力チェック › id_input_check_revalidates_on_input (1.3s)
+test	層の全件を回す	2026-11-17T14:04:43.8205931Z   ✓  72 [chromium] › tests/integration/frontend/settings-screen.spec.ts:927:3 › 入力チェック › config_input_check_when_blank (1.3s)
+test	層の全件を回す	2026-11-17T14:04:44.5716899Z   ✓  73 [chromium] › tests/integration/frontend/settings-screen.spec.ts:935:3 › 入力チェック › read_input_check_when_blank (1.3s)
+test	層の全件を回す	2026-11-17T14:04:45.0740570Z   ✓  74 [chromium] › tests/integration/frontend/settings-screen.spec.ts:942:3 › 入力チェック › read_input_check_when_contains_blank (1.2s)
+test	層の全件を回す	2026-11-17T14:04:45.8048603Z   ✓  75 [chromium] › tests/integration/frontend/settings-screen.spec.ts:952:3 › 入力チェック › write_input_check_when_contains_blank (1.2s)
+test	層の全件を回す	2026-11-17T14:04:46.0209467Z   ✓  76 [chromium] › tests/integration/frontend/settings-screen.spec.ts:972:3 › project-index から受け取れないときの表示 › project_index_unreachable_alert (929ms)
+test	層の全件を回す	2026-11-17T14:04:46.7302014Z   ✓  77 [chromium] › tests/integration/frontend/settings-screen.spec.ts:997:5 › project-index から受け取れないときの表示 › project_index_failed_alert (916ms)
+test	層の全件を回す	2026-11-17T14:04:46.9560085Z   ✓  78 [chromium] › tests/integration/frontend/settings-screen.spec.ts:997:5 › project-index から受け取れないときの表示 › project_index_timeout_alert (914ms)
+test	層の全件を回す	2026-11-17T14:04:47.8597189Z   ✓  80 [chromium] › tests/integration/frontend/settings-screen.spec.ts:1035:3 › 範囲の外からの参照の補足 › outside_read_note (891ms)
+test	層の全件を回す	2026-11-17T14:04:48.0650492Z   ✓  79 [chromium] › tests/integration/frontend/settings-screen.spec.ts:1019:3 › 保存の失敗の通知 › save_failure_toast_when_unreachable (1.3s)
+test	層の全件を回す	2026-11-17T14:04:48.9925879Z   ✓  81 [chromium] › tests/integration/frontend/settings-screen.spec.ts:1052:3 › 範囲の外からの参照のスイッチ › outside_read_switch_when_add (1.1s)
+test	層の全件を回す	2026-11-17T14:04:49.6030741Z   ✓  82 [chromium] › tests/integration/frontend/settings-screen.spec.ts:1063:3 › 範囲の外からの参照のスイッチ › outside_read_switch_when_edit (1.5s)
+test	層の全件を回す	2026-11-17T14:04:50.4176558Z   ✓  83 [chromium] › tests/integration/frontend/settings-screen.spec.ts:1090:3 › 他の変更の表示 › save_conflict (1.4s)
+test	層の全件を回す	2026-11-17T14:04:50.9439384Z   ✓  84 [chromium] › tests/integration/frontend/settings-screen.spec.ts:1124:3 › 配信元が削除されたときの表示 › save_after_source_removed (1.3s)
+test	層の全件を回す	2026-11-17T14:04:51.7489332Z   ✓  85 [chromium] › tests/integration/frontend/settings-screen.spec.ts:1152:3 › 削除の他の変更の表示 › delete_conflict (1.3s)
+test	層の全件を回す	2026-11-17T14:04:52.0874964Z   ✓  86 [chromium] › tests/integration/frontend/settings-screen.spec.ts:1167:3 › 削除する配信元が削除されたときの表示 › delete_after_source_removed (1.1s)
+test	層の全件を回す	2026-11-17T14:04:53.0815783Z   ✓  87 [chromium] › tests/integration/frontend/settings-screen.spec.ts:1194:3 › 読み書きの方法のセレクト › storage_select_when_add (1.3s)
+test	層の全件を回す	2026-11-17T14:04:53.3490452Z   ✓  88 [chromium] › tests/integration/frontend/settings-screen.spec.ts:1209:3 › 読み書きの方法のセレクト › storage_select_when_stored (1.2s)
+test	層の全件を回す	2026-11-17T14:04:54.3726774Z   ✓  89 [chromium] › tests/integration/frontend/settings-screen.spec.ts:1226:3 › 読み書きの方法のセレクト › storage_select_when_saved (1.3s)
+test	層の全件を回す	2026-11-17T14:04:54.4840297Z 
+test	層の全件を回す	2026-11-17T14:04:54.4843009Z 
+test	層の全件を回す	2026-11-17T14:04:54.4853130Z   1) [chromium] › tests/integration/frontend/settings-screen.spec.ts:587:3 › 書き込みの範囲の入力欄 › write_input_when_add 
+test	層の全件を回す	2026-11-17T14:04:54.4854486Z 
+test	層の全件を回す	2026-11-17T14:04:54.4854733Z     Error: expect(locator).toBeVisible() failed
+test	層の全件を回す	2026-11-17T14:04:54.4855006Z 
+test	層の全件を回す	2026-11-17T14:04:54.4855334Z     Locator: getByRole('dialog').getByText('任意')
+test	層の全件を回す	2026-11-17T14:04:54.4855729Z     Expected: visible
+test	層の全件を回す	2026-11-17T14:04:54.4856402Z     Error: strict mode violation: getByRole('dialog').getByText('任意') resolved to 2 elements:
+test	層の全件を回す	2026-11-17T14:04:54.4857463Z         1) <span class="text-xs font-normal text-muted-foreground">任意</span> aka getByText('任意').first()
+test	層の全件を回す	2026-11-17T14:04:54.4858498Z         2) <span class="text-xs font-normal text-muted-foreground">任意</span> aka getByText('任意').nth(1)
+test	層の全件を回す	2026-11-17T14:04:54.4858956Z 
+test	層の全件を回す	2026-11-17T14:04:54.4859054Z     Call log:
+test	層の全件を回す	2026-11-17T14:04:54.4859661Z       - Expect "toBeVisible" getByRole('dialog').getByText('任意') with timeout 15000ms
+test	層の全件を回す	2026-11-17T14:04:54.4860429Z       - waiting for getByRole('dialog').getByText('任意')
+test	層の全件を回す	2026-11-17T14:04:54.4860758Z 
+test	層の全件を回す	2026-11-17T14:04:54.4860798Z 
+test	層の全件を回す	2026-11-17T14:04:54.4860973Z       589 |     await openAdd(page);
+test	層の全件を回す	2026-11-17T14:04:54.4861633Z       590 |     await expect(page.getByLabel("書き込みの範囲")).toHaveValue("");
+test	層の全件を回す	2026-11-17T14:04:54.4862344Z     > 591 |     await expect(dialog(page).getByText("任意")).toBeVisible();
+test	層の全件を回す	2026-11-17T14:04:54.4862902Z           |                                                ^
+test	層の全件を回す	2026-11-17T14:04:54.4863831Z       592 |     await expect(
+test	層の全件を回す	2026-11-17T14:04:54.4864573Z       593 |       dialog(page).getByText("glob を 1 行に 1 つ。当たる作業場所から、この配信元の文書へ書き込めます。"),
+test	層の全件を回す	2026-11-17T14:04:54.4865171Z       594 |     ).toBeVisible();
+test	層の全件を回す	2026-11-17T14:04:54.4865910Z         at /home/runner/work/dev-docs/dev-docs/tests/integration/frontend/settings-screen.spec.ts:591:48
+test	層の全件を回す	2026-11-17T14:04:54.4866464Z 
+test	層の全件を回す	2026-11-17T14:04:54.4867362Z     Error Context: test-results/settings-screen-書き込みの範囲の入力欄-write-input-when-add-chromium/error-context.md
+test	層の全件を回す	2026-11-17T14:04:54.4867949Z 
+test	層の全件を回す	2026-11-17T14:04:54.4868072Z   1 failed
+test	層の全件を回す	2026-11-17T14:04:54.4868881Z     [chromium] › tests/integration/frontend/settings-screen.spec.ts:587:3 › 書き込みの範囲の入力欄 › write_input_when_add 
+test	層の全件を回す	2026-11-17T14:04:54.4869574Z   88 passed (1.0m)
+test	層の全件を回す	2026-11-17T14:04:55.3280505Z ##[error]Process completed with exit code 1.
+test	ログを成果物に上げる	﻿2026-11-17T14:04:55.3357702Z ##[group]Run actions/upload-artifact@v7
+test	ログを成果物に上げる	2026-11-17T14:04:55.3358066Z with:
+test	ログを成果物に上げる	2026-11-17T14:04:55.3358276Z   name: test-log
+test	ログを成果物に上げる	2026-11-17T14:04:55.3358517Z   path: test.log
+test	ログを成果物に上げる	2026-11-17T14:04:55.3358750Z   if-no-files-found: ignore
+test	ログを成果物に上げる	2026-11-17T14:04:55.3359004Z   compression-level: 6
+test	ログを成果物に上げる	2026-11-17T14:04:55.3359234Z   overwrite: false
+test	ログを成果物に上げる	2026-11-17T14:04:55.3359461Z   include-hidden-files: false
+test	ログを成果物に上げる	2026-11-17T14:04:55.3359709Z   archive: true
+test	ログを成果物に上げる	2026-11-17T14:04:55.3359918Z ##[endgroup]
+test	ログを成果物に上げる	2026-11-17T14:04:55.4729881Z With the provided path, there will be 1 file uploaded
+test	ログを成果物に上げる	2026-11-17T14:04:55.4734255Z Artifact name is valid!
+test	ログを成果物に上げる	2026-11-17T14:04:55.4734681Z Root directory input is valid!
+test	ログを成果物に上げる	2026-11-17T14:04:55.8352437Z Uploading artifact: test-log.zip
+test	ログを成果物に上げる	2026-11-17T14:04:55.8387109Z Beginning upload of artifact content to blob storage
+test	ログを成果物に上げる	2026-11-17T14:04:56.1086677Z Uploaded bytes 2904
+test	ログを成果物に上げる	2026-11-17T14:04:56.1734454Z Finished uploading artifact content to blob storage!
+test	ログを成果物に上げる	2026-11-17T14:04:56.1739660Z SHA256 digest of uploaded artifact is a3792c635d8b4a5afcfef343be53aa7d9585b9919b0b13427f00ec4328fa71dc
+test	ログを成果物に上げる	2026-11-17T14:04:56.1740516Z Finalizing artifact upload
+test	ログを成果物に上げる	2026-11-17T14:04:56.7251398Z Artifact test-log successfully finalized. Artifact ID 14334458802
+test	ログを成果物に上げる	2026-11-17T14:04:56.7252589Z Artifact test-log has been successfully uploaded! Final size is 2904 bytes. Artifact ID is 14334458802
+test	ログを成果物に上げる	2026-11-17T14:04:56.7255015Z Artifact download URL: https://github.com/shuhei1101/dev-docs/actions/runs/44098795984/artifacts/14334458802
+test	Post ブランチを取得する	﻿2026-11-17T14:04:56.7446674Z Post job cleanup.
+test	Post ブランチを取得する	2026-11-17T14:04:56.8265218Z [command]/usr/bin/git version
+test	Post ブランチを取得する	2026-11-17T14:04:56.8308353Z git version 2.56.1
+test	Post ブランチを取得する	2026-11-17T14:04:56.8340072Z Temporarily overriding HOME='/home/runner/work/_temp/36478ced-df61-4777-a38e-abaa9e7140ea' before making global git config changes
+test	Post ブランチを取得する	2026-11-17T14:04:56.8341440Z Adding repository directory to the temporary git global config as a safe directory
+test	Post ブランチを取得する	2026-11-17T14:04:56.8345481Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/dev-docs/dev-docs
+test	Post ブランチを取得する	2026-11-17T14:04:56.8373233Z Removing SSH command configuration
+test	Post ブランチを取得する	2026-11-17T14:04:56.8378939Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+test	Post ブランチを取得する	2026-11-17T14:04:56.8408380Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+test	Post ブランチを取得する	2026-11-17T14:04:56.8634488Z Removing HTTP extra header
+test	Post ブランチを取得する	2026-11-17T14:04:56.8638356Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+test	Post ブランチを取得する	2026-11-17T14:04:56.8666399Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+test	Post ブランチを取得する	2026-11-17T14:04:56.8876345Z Removing includeIf entries pointing to credentials config files
+test	Post ブランチを取得する	2026-11-17T14:04:56.8881432Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+test	Post ブランチを取得する	2026-11-17T14:04:56.8902166Z includeif.gitdir:/home/runner/work/dev-docs/dev-docs/.git.path
+test	Post ブランチを取得する	2026-11-17T14:04:56.8903099Z includeif.gitdir:/home/runner/work/dev-docs/dev-docs/.git/worktrees/*.path
+test	Post ブランチを取得する	2026-11-17T14:04:56.8904377Z includeif.gitdir:/github/workspace/.git.path
+test	Post ブランチを取得する	2026-11-17T14:04:56.8904834Z includeif.gitdir:/github/workspace/.git/worktrees/*.path
+test	Post ブランチを取得する	2026-11-17T14:04:56.8912511Z [command]/usr/bin/git config --local --get-all includeif.gitdir:/home/runner/work/dev-docs/dev-docs/.git.path
+test	Post ブランチを取得する	2026-11-17T14:04:56.8932587Z /home/runner/work/_temp/git-credentials-e21cf3ac-0627-46e6-b4b6-aba8d86e5259.config
+test	Post ブランチを取得する	2026-11-17T14:04:56.8940091Z [command]/usr/bin/git config --local --unset includeif.gitdir:/home/runner/work/dev-docs/dev-docs/.git.path \/home\/runner\/work\/_temp\/git\-credentials\-e21cf3ac\-0627\-46e6\-b4b6\-aba8d86e5259\.config
+test	Post ブランチを取得する	2026-11-17T14:04:56.8969770Z [command]/usr/bin/git config --local --get-all includeif.gitdir:/home/runner/work/dev-docs/dev-docs/.git/worktrees/*.path
+test	Post ブランチを取得する	2026-11-17T14:04:56.8987836Z /home/runner/work/_temp/git-credentials-e21cf3ac-0627-46e6-b4b6-aba8d86e5259.config
+test	Post ブランチを取得する	2026-11-17T14:04:56.9001013Z [command]/usr/bin/git config --local --unset includeif.gitdir:/home/runner/work/dev-docs/dev-docs/.git/worktrees/*.path \/home\/runner\/work\/_temp\/git\-credentials\-e21cf3ac\-0627\-46e6\-b4b6\-aba8d86e5259\.config
+test	Post ブランチを取得する	2026-11-17T14:04:56.9046422Z [command]/usr/bin/git config --local --get-all includeif.gitdir:/github/workspace/.git.path
+test	Post ブランチを取得する	2026-11-17T14:04:56.9064866Z /github/runner_temp/git-credentials-e21cf3ac-0627-46e6-b4b6-aba8d86e5259.config
+test	Post ブランチを取得する	2026-11-17T14:04:56.9072271Z [command]/usr/bin/git config --local --unset includeif.gitdir:/github/workspace/.git.path \/github\/runner_temp\/git\-credentials\-e21cf3ac\-0627\-46e6\-b4b6\-aba8d86e5259\.config
+test	Post ブランチを取得する	2026-11-17T14:04:56.9099474Z [command]/usr/bin/git config --local --get-all includeif.gitdir:/github/workspace/.git/worktrees/*.path
+test	Post ブランチを取得する	2026-11-17T14:04:56.9117995Z /github/runner_temp/git-credentials-e21cf3ac-0627-46e6-b4b6-aba8d86e5259.config
+test	Post ブランチを取得する	2026-11-17T14:04:56.9123793Z [command]/usr/bin/git config --local --unset includeif.gitdir:/github/workspace/.git/worktrees/*.path \/github\/runner_temp\/git\-credentials\-e21cf3ac\-0627\-46e6\-b4b6\-aba8d86e5259\.config
+test	Post ブランチを取得する	2026-11-17T14:04:56.9151844Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+test	Post ブランチを取得する	2026-11-17T14:04:56.9355213Z Removing credentials config '/home/runner/work/_temp/git-credentials-e21cf3ac-0627-46e6-b4b6-aba8d86e5259.config'
+test	Complete job	﻿2026-11-17T14:04:56.9512228Z Cleaning up orphan processes
+
+## 2. ランナー（be0641e）
+$ run_url=$(gh workflow run test.yml --ref "$(git branch --show-current)" -f layer=frontend-integration -f paths="tests/integration/frontend/settings-screen.spec.ts" | grep -o 'https://[^ ]*/actions/runs/[0-9]*') && run_id=${run_url##*/} && (n=0; until gh api "repos/shuhei1101/dev-docs/actions/runs/$run_id?exclude_pull_requests=true" > /dev/null 2>&1; do n=$((n+1)); if [ $n -ge 10 ]; then echo "実行 $run_id を 10 秒参照できません" >&2; exit 1; fi; sleep 1; done) && (rc=0; gh run watch "$run_id" --exit-status > /dev/null || rc=1; gh run view "$run_id" --log; exit $rc)
+
+test	Set up job	﻿2026-11-17T14:05:51.3282160Z Current runner version: '2.338.2'
+test	Set up job	2026-11-17T14:05:51.3300753Z ##[group]Runner Image Provisioner
+test	Set up job	2026-11-17T14:05:51.3301559Z Hosted Compute Agent
+test	Set up job	2026-11-17T14:05:51.3302028Z Version: 20261103.629
+test	Set up job	2026-11-17T14:05:51.3302625Z Commit: 15dbd9ccb5dbf34fae002b6ed1a2670f52df37bc
+test	Set up job	2026-11-17T14:05:51.3303255Z Build Date: 2026-11-03T17:26:59Z
+test	Set up job	2026-11-17T14:05:51.3303943Z Worker ID: {c92d669b-a026-4af0-8f08-c0f5ae82ca1b}
+test	Set up job	2026-11-17T14:05:51.3304565Z Region: centralus
+test	Set up job	2026-11-17T14:05:51.3305200Z Cloud: Azure
+test	Set up job	2026-11-17T14:05:51.3305698Z ##[endgroup]
+test	Set up job	2026-11-17T14:05:51.3306884Z ##[group]Operating System
+test	Set up job	2026-11-17T14:05:51.3307393Z Ubuntu
+test	Set up job	2026-11-17T14:05:51.3307759Z 26.04.1
+test	Set up job	2026-11-17T14:05:51.3308119Z LTS
+test	Set up job	2026-11-17T14:05:51.3308495Z ##[endgroup]
+test	Set up job	2026-11-17T14:05:51.3308875Z ##[group]Runner Image
+test	Set up job	2026-11-17T14:05:51.3309368Z Image: ubuntu-26.04
+test	Set up job	2026-11-17T14:05:51.3309763Z Version: 20261111.196.1
+test	Set up job	2026-11-17T14:05:51.3310489Z Included Software: https://github.com/actions/runner-images/blob/ubuntu26/20261111.196/images/ubuntu/Ubuntu2604-Readme.md
+test	Set up job	2026-11-17T14:05:51.3311752Z Image Release: https://github.com/actions/runner-images/releases/tag/ubuntu26%2F20261111.196
+test	Set up job	2026-11-17T14:05:51.3312447Z ##[endgroup]
+test	Set up job	2026-11-17T14:05:51.3313275Z ##[group]GITHUB_TOKEN Permissions
+test	Set up job	2026-11-17T14:05:51.3315363Z Contents: read
+test	Set up job	2026-11-17T14:05:51.3315802Z Metadata: read
+test	Set up job	2026-11-17T14:05:51.3316422Z ##[endgroup]
+test	Set up job	2026-11-17T14:05:51.3318127Z Secret source: Actions
+test	Set up job	2026-11-17T14:05:51.3318840Z Cache mode: write
+test	Set up job	2026-11-17T14:05:51.3319676Z Prepare workflow directory
+test	Set up job	2026-11-17T14:05:51.3557609Z Prepare all required actions
+test	Set up job	2026-11-17T14:05:51.3593866Z Getting action download info
+test	Set up job	2026-11-17T14:05:51.6364558Z Download action repository 'actions/checkout@v7' (SHA:3d3c42e5aac5ba805825da76410c181273ba90b1)
+test	Set up job	2026-11-17T14:05:51.7711695Z Download action repository 'actions/setup-node@v7' (SHA:949feb2413d6458794dcd2491c4babbbce0c15c1)
+test	Set up job	2026-11-17T14:05:51.8399666Z Download action repository 'astral-sh/setup-uv@v10.3.3' (SHA:68559e99cc807c1eb7e9238fd43a15bba460eec2)
+test	Set up job	2026-11-17T14:05:52.2706488Z Download action repository 'actions/upload-artifact@v7' (SHA:cf430e030ddbb5b0abf93d22962f4752f3646cd9)
+test	Set up job	2026-11-17T14:05:52.4316870Z Complete job name: test
+test	ブランチを取得する	﻿2026-11-17T14:05:52.4932444Z ##[group]Run actions/checkout@v7
+test	ブランチを取得する	2026-11-17T14:05:52.4933214Z with:
+test	ブランチを取得する	2026-11-17T14:05:52.4933639Z   repository: shuhei1101/dev-docs
+test	ブランチを取得する	2026-11-17T14:05:52.4937122Z   token: ***
+test	ブランチを取得する	2026-11-17T14:05:52.4937560Z   ssh-strict: true
+test	ブランチを取得する	2026-11-17T14:05:52.4937955Z   ssh-user: git
+test	ブランチを取得する	2026-11-17T14:05:52.4938399Z   persist-credentials: true
+test	ブランチを取得する	2026-11-17T14:05:52.4938854Z   clean: true
+test	ブランチを取得する	2026-11-17T14:05:52.4939267Z   sparse-checkout-cone-mode: true
+test	ブランチを取得する	2026-11-17T14:05:52.4939745Z   fetch-depth: 1
+test	ブランチを取得する	2026-11-17T14:05:52.4940217Z   fetch-tags: false
+test	ブランチを取得する	2026-11-17T14:05:52.4940645Z   show-progress: true
+test	ブランチを取得する	2026-11-17T14:05:52.4941094Z   lfs: false
+test	ブランチを取得する	2026-11-17T14:05:52.4941498Z   submodules: false
+test	ブランチを取得する	2026-11-17T14:05:52.4941945Z   set-safe-directory: true
+test	ブランチを取得する	2026-11-17T14:05:52.4942413Z   allow-unsafe-pr-checkout: false
+test	ブランチを取得する	2026-11-17T14:05:52.4943089Z ##[endgroup]
+test	ブランチを取得する	2026-11-17T14:05:52.7270011Z Syncing repository: shuhei1101/dev-docs
+test	ブランチを取得する	2026-11-17T14:05:52.7271767Z ##[group]Getting Git version info
+test	ブランチを取得する	2026-11-17T14:05:52.7272377Z Working directory is '/home/runner/work/dev-docs/dev-docs'
+test	ブランチを取得する	2026-11-17T14:05:52.7273690Z [command]/usr/bin/git version
+test	ブランチを取得する	2026-11-17T14:05:52.7274234Z git version 2.56.1
+test	ブランチを取得する	2026-11-17T14:05:52.7280525Z ##[endgroup]
+test	ブランチを取得する	2026-11-17T14:05:52.7288927Z Temporarily overriding HOME='/home/runner/work/_temp/a2e81b4d-39bc-412b-b419-8deb04af8837' before making global git config changes
+test	ブランチを取得する	2026-11-17T14:05:52.7290608Z Adding repository directory to the temporary git global config as a safe directory
+test	ブランチを取得する	2026-11-17T14:05:52.7292255Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/dev-docs/dev-docs
+test	ブランチを取得する	2026-11-17T14:05:52.7343040Z Deleting the contents of '/home/runner/work/dev-docs/dev-docs'
+test	ブランチを取得する	2026-11-17T14:05:52.7346116Z ##[group]Determining repository object format
+test	ブランチを取得する	2026-11-17T14:05:52.7347701Z ##[endgroup]
+test	ブランチを取得する	2026-11-17T14:05:52.7349491Z ##[group]Initializing the repository
+test	ブランチを取得する	2026-11-17T14:05:52.7350732Z [command]/usr/bin/git init /home/runner/work/dev-docs/dev-docs
+test	ブランチを取得する	2026-11-17T14:05:52.7439619Z hint: Using 'master' as the name for the initial branch. This default branch name
+test	ブランチを取得する	2026-11-17T14:05:52.7440910Z hint: will change to "main" in Git 3.0. To configure the initial branch name
+test	ブランチを取得する	2026-11-17T14:05:52.7441730Z hint: to use in all of your new repositories, which will suppress this warning,
+test	ブランチを取得する	2026-11-17T14:05:52.7442426Z hint: call:
+test	ブランチを取得する	2026-11-17T14:05:52.7442826Z hint:
+test	ブランチを取得する	2026-11-17T14:05:52.7443471Z hint: 	git config --global init.defaultBranch <name>
+test	ブランチを取得する	2026-11-17T14:05:52.7444058Z hint:
+test	ブランチを取得する	2026-11-17T14:05:52.7444585Z hint: Names commonly chosen instead of 'master' are 'main', 'trunk' and
+test	ブランチを取得する	2026-11-17T14:05:52.7445741Z hint: 'development'. The just-created branch can be renamed via this command:
+test	ブランチを取得する	2026-11-17T14:05:52.7446459Z hint:
+test	ブランチを取得する	2026-11-17T14:05:52.7446884Z hint: 	git branch -m <name>
+test	ブランチを取得する	2026-11-17T14:05:52.7447458Z hint:
+test	ブランチを取得する	2026-11-17T14:05:52.7448265Z hint: Disable this message with "git config set advice.defaultBranchName false"
+test	ブランチを取得する	2026-11-17T14:05:52.7449658Z Initialized empty Git repository in /home/runner/work/dev-docs/dev-docs/.git/
+test	ブランチを取得する	2026-11-17T14:05:52.7456596Z [command]/usr/bin/git remote add origin https://github.com/shuhei1101/dev-docs
+test	ブランチを取得する	2026-11-17T14:05:52.7498932Z ##[endgroup]
+test	ブランチを取得する	2026-11-17T14:05:52.7499965Z ##[group]Disabling automatic garbage collection
+test	ブランチを取得する	2026-11-17T14:05:52.7501009Z [command]/usr/bin/git config --local gc.auto 0
+test	ブランチを取得する	2026-11-17T14:05:52.7525202Z ##[endgroup]
+test	ブランチを取得する	2026-11-17T14:05:52.7526265Z ##[group]Setting up auth
+test	ブランチを取得する	2026-11-17T14:05:52.7526837Z Removing SSH command configuration
+test	ブランチを取得する	2026-11-17T14:05:52.7528042Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+test	ブランチを取得する	2026-11-17T14:05:52.7550500Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+test	ブランチを取得する	2026-11-17T14:05:52.7858030Z Removing HTTP extra header
+test	ブランチを取得する	2026-11-17T14:05:52.7861610Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+test	ブランチを取得する	2026-11-17T14:05:52.7881756Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+test	ブランチを取得する	2026-11-17T14:05:52.8050086Z Removing includeIf entries pointing to credentials config files
+test	ブランチを取得する	2026-11-17T14:05:52.8053282Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+test	ブランチを取得する	2026-11-17T14:05:52.8077160Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+test	ブランチを取得する	2026-11-17T14:05:52.8249553Z [command]/usr/bin/git config --file /home/runner/work/_temp/git-credentials-8e16cf1b-d40d-4918-b935-54cb81454c4d.config http.https://github.com/.extraheader AUTHORIZATION: basic ***
+test	ブランチを取得する	2026-11-17T14:05:52.8275389Z [command]/usr/bin/git config --local includeIf.gitdir:/home/runner/work/dev-docs/dev-docs/.git.path /home/runner/work/_temp/git-credentials-8e16cf1b-d40d-4918-b935-54cb81454c4d.config
+test	ブランチを取得する	2026-11-17T14:05:52.8298432Z [command]/usr/bin/git config --local includeIf.gitdir:/home/runner/work/dev-docs/dev-docs/.git/worktrees/*.path /home/runner/work/_temp/git-credentials-8e16cf1b-d40d-4918-b935-54cb81454c4d.config
+test	ブランチを取得する	2026-11-17T14:05:52.8324024Z [command]/usr/bin/git config --local includeIf.gitdir:/github/workspace/.git.path /github/runner_temp/git-credentials-8e16cf1b-d40d-4918-b935-54cb81454c4d.config
+test	ブランチを取得する	2026-11-17T14:05:52.8347178Z [command]/usr/bin/git config --local includeIf.gitdir:/github/workspace/.git/worktrees/*.path /github/runner_temp/git-credentials-8e16cf1b-d40d-4918-b935-54cb81454c4d.config
+test	ブランチを取得する	2026-11-17T14:05:52.8369469Z ##[endgroup]
+test	ブランチを取得する	2026-11-17T14:05:52.8370510Z ##[group]Fetching the repository
+test	ブランチを取得する	2026-11-17T14:05:52.8374557Z [command]/usr/bin/git -c protocol.version=2 fetch --no-tags --prune --no-recurse-submodules --depth=1 origin +be0641e2eab995cf5c1575d8afafd0bdf9ea1f5e:refs/remotes/origin/feat/sources/storage-and-loading-state
+test	ブランチを取得する	2026-11-17T14:05:54.3993764Z From https://github.com/shuhei1101/dev-docs
+test	ブランチを取得する	2026-11-17T14:05:54.3995073Z  * [new ref]         be0641e2eab995cf5c1575d8afafd0bdf9ea1f5e -> origin/feat/sources/storage-and-loading-state
+test	ブランチを取得する	2026-11-17T14:05:54.4003165Z [command]/usr/bin/git branch --list --remote origin/feat/sources/storage-and-loading-state
+test	ブランチを取得する	2026-11-17T14:05:54.4026939Z   origin/feat/sources/storage-and-loading-state
+test	ブランチを取得する	2026-11-17T14:05:54.4033893Z [command]/usr/bin/git rev-parse refs/remotes/origin/feat/sources/storage-and-loading-state
+test	ブランチを取得する	2026-11-17T14:05:54.4053592Z be0641e2eab995cf5c1575d8afafd0bdf9ea1f5e
+test	ブランチを取得する	2026-11-17T14:05:54.4056129Z ##[endgroup]
+test	ブランチを取得する	2026-11-17T14:05:54.4057377Z ##[group]Determining the checkout info
+test	ブランチを取得する	2026-11-17T14:05:54.4058138Z ##[endgroup]
+test	ブランチを取得する	2026-11-17T14:05:54.4060633Z [command]/usr/bin/git sparse-checkout disable
+test	ブランチを取得する	2026-11-17T14:05:54.4108102Z [command]/usr/bin/git config --local --unset-all extensions.worktreeConfig
+test	ブランチを取得する	2026-11-17T14:05:54.4133506Z ##[group]Checking out the ref
+test	ブランチを取得する	2026-11-17T14:05:54.4137079Z [command]/usr/bin/git checkout --progress --force -B feat/sources/storage-and-loading-state refs/remotes/origin/feat/sources/storage-and-loading-state
+test	ブランチを取得する	2026-11-17T14:05:54.7568757Z Switched to a new branch 'feat/sources/storage-and-loading-state'
+test	ブランチを取得する	2026-11-17T14:05:54.7570127Z branch 'feat/sources/storage-and-loading-state' set up to track 'origin/feat/sources/storage-and-loading-state'.
+test	ブランチを取得する	2026-11-17T14:05:54.7597354Z ##[endgroup]
+test	ブランチを取得する	2026-11-17T14:05:54.7623053Z [command]/usr/bin/git log -1 --format=%H
+test	ブランチを取得する	2026-11-17T14:05:54.7643831Z be0641e2eab995cf5c1575d8afafd0bdf9ea1f5e
+test	Node.js を入れる	﻿2026-11-17T14:05:54.7886938Z ##[group]Run actions/setup-node@v7
+test	Node.js を入れる	2026-11-17T14:05:54.7887276Z with:
+test	Node.js を入れる	2026-11-17T14:05:54.7887538Z   node-version: 24
+test	Node.js を入れる	2026-11-17T14:05:54.7887793Z   check-latest: false
+test	Node.js を入れる	2026-11-17T14:05:54.7889747Z   token: ***
+test	Node.js を入れる	2026-11-17T14:05:54.7889995Z   package-manager-cache: true
+test	Node.js を入れる	2026-11-17T14:05:54.7890283Z ##[endgroup]
+test	Node.js を入れる	2026-11-17T14:05:54.8934345Z Found in cache @ /opt/hostedtoolcache/node/24.22.2/x64
+test	Node.js を入れる	2026-11-17T14:05:54.9559862Z ##[group]Environment details
+test	Node.js を入れる	2026-11-17T14:05:55.2265901Z node: v24.22.2
+test	Node.js を入れる	2026-11-17T14:05:55.2266423Z npm: 11.19.1
+test	Node.js を入れる	2026-11-17T14:05:55.2266742Z yarn: 1.22.22
+test	Node.js を入れる	2026-11-17T14:05:55.2267483Z ##[endgroup]
+test	npm の依存を入れる	﻿2026-11-17T14:05:55.2383138Z ##[group]Run npm ci
+test	npm の依存を入れる	2026-11-17T14:05:55.2383497Z ^[[36;1mnpm ci^[[0m
+test	npm の依存を入れる	2026-11-17T14:05:55.2422304Z shell: /usr/bin/bash -e {0}
+test	npm の依存を入れる	2026-11-17T14:05:55.2422714Z ##[endgroup]
+test	npm の依存を入れる	2026-11-17T14:07:05.9254413Z npm error code ECONNRESET
+test	npm の依存を入れる	2026-11-17T14:07:05.9255195Z npm error syscall read
+test	npm の依存を入れる	2026-11-17T14:07:05.9255571Z npm error errno -104
+test	npm の依存を入れる	2026-11-17T14:07:05.9255958Z npm error network read ECONNRESET
+test	npm の依存を入れる	2026-11-17T14:07:05.9256450Z npm error network This is a problem related to network connectivity.
+test	npm の依存を入れる	2026-11-17T14:07:05.9257081Z npm error network In most cases you are behind a proxy or have bad network settings.
+test	npm の依存を入れる	2026-11-17T14:07:05.9257469Z npm error network
+test	npm の依存を入れる	2026-11-17T14:07:05.9258089Z npm error network If you are behind a proxy, please make sure that the 'proxy' config is set properly.  See: 'npm help config'
+test	npm の依存を入れる	2026-11-17T14:07:05.9269311Z npm error A complete log of this run can be found in: /home/runner/.npm/_logs/2026-11-17T14_05_55_286Z-debug-0.log
+test	npm の依存を入れる	2026-11-17T14:07:05.9770852Z ##[error]Process completed with exit code 152.
+test	ログを成果物に上げる	﻿2026-11-17T14:07:05.9859858Z ##[group]Run actions/upload-artifact@v7
+test	ログを成果物に上げる	2026-11-17T14:07:05.9860168Z with:
+test	ログを成果物に上げる	2026-11-17T14:07:05.9860382Z   name: test-log
+test	ログを成果物に上げる	2026-11-17T14:07:05.9860648Z   path: test.log
+test	ログを成果物に上げる	2026-11-17T14:07:05.9860902Z   if-no-files-found: ignore
+test	ログを成果物に上げる	2026-11-17T14:07:05.9861163Z   compression-level: 6
+test	ログを成果物に上げる	2026-11-17T14:07:05.9861414Z   overwrite: false
+test	ログを成果物に上げる	2026-11-17T14:07:05.9861656Z   include-hidden-files: false
+test	ログを成果物に上げる	2026-11-17T14:07:05.9861954Z   archive: true
+test	ログを成果物に上げる	2026-11-17T14:07:05.9862200Z ##[endgroup]
+test	ログを成果物に上げる	2026-11-17T14:07:06.0946904Z No files were found with the provided path: test.log. No artifacts will be uploaded.
+test	Post ブランチを取得する	﻿2026-11-17T14:07:06.1100777Z Post job cleanup.
+test	Post ブランチを取得する	2026-11-17T14:07:06.1744712Z [command]/usr/bin/git version
+test	Post ブランチを取得する	2026-11-17T14:07:06.2282387Z git version 2.56.1
+test	Post ブランチを取得する	2026-11-17T14:07:06.2290875Z Temporarily overriding HOME='/home/runner/work/_temp/4d2ff44f-f7dd-46a9-b4af-903ac825df3f' before making global git config changes
+test	Post ブランチを取得する	2026-11-17T14:07:06.2292270Z Adding repository directory to the temporary git global config as a safe directory
+test	Post ブランチを取得する	2026-11-17T14:07:06.2296213Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/dev-docs/dev-docs
+test	Post ブランチを取得する	2026-11-17T14:07:06.2327309Z Removing SSH command configuration
+test	Post ブランチを取得する	2026-11-17T14:07:06.2332898Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+test	Post ブランチを取得する	2026-11-17T14:07:06.2363613Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+test	Post ブランチを取得する	2026-11-17T14:07:06.2569310Z Removing HTTP extra header
+test	Post ブランチを取得する	2026-11-17T14:07:06.2572528Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+test	Post ブランチを取得する	2026-11-17T14:07:06.2596410Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+test	Post ブランチを取得する	2026-11-17T14:07:06.2775422Z Removing includeIf entries pointing to credentials config files
+test	Post ブランチを取得する	2026-11-17T14:07:06.2779398Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+test	Post ブランチを取得する	2026-11-17T14:07:06.2796753Z includeif.gitdir:/home/runner/work/dev-docs/dev-docs/.git.path
+test	Post ブランチを取得する	2026-11-17T14:07:06.2797532Z includeif.gitdir:/home/runner/work/dev-docs/dev-docs/.git/worktrees/*.path
+test	Post ブランチを取得する	2026-11-17T14:07:06.2798204Z includeif.gitdir:/github/workspace/.git.path
+test	Post ブランチを取得する	2026-11-17T14:07:06.2798687Z includeif.gitdir:/github/workspace/.git/worktrees/*.path
+test	Post ブランチを取得する	2026-11-17T14:07:06.2801626Z [command]/usr/bin/git config --local --get-all includeif.gitdir:/home/runner/work/dev-docs/dev-docs/.git.path
+test	Post ブランチを取得する	2026-11-17T14:07:06.2817107Z /home/runner/work/_temp/git-credentials-8e16cf1b-d40d-4918-b935-54cb81454c4d.config
+test	Post ブランチを取得する	2026-11-17T14:07:06.2823148Z [command]/usr/bin/git config --local --unset includeif.gitdir:/home/runner/work/dev-docs/dev-docs/.git.path \/home\/runner\/work\/_temp\/git\-credentials\-8e16cf1b\-d40d\-4918\-b935\-54cb81454c4d\.config
+test	Post ブランチを取得する	2026-11-17T14:07:06.2849836Z [command]/usr/bin/git config --local --get-all includeif.gitdir:/home/runner/work/dev-docs/dev-docs/.git/worktrees/*.path
+test	Post ブランチを取得する	2026-11-17T14:07:06.2868395Z /home/runner/work/_temp/git-credentials-8e16cf1b-d40d-4918-b935-54cb81454c4d.config
+test	Post ブランチを取得する	2026-11-17T14:07:06.2874342Z [command]/usr/bin/git config --local --unset includeif.gitdir:/home/runner/work/dev-docs/dev-docs/.git/worktrees/*.path \/home\/runner\/work\/_temp\/git\-credentials\-8e16cf1b\-d40d\-4918\-b935\-54cb81454c4d\.config
+test	Post ブランチを取得する	2026-11-17T14:07:06.2899762Z [command]/usr/bin/git config --local --get-all includeif.gitdir:/github/workspace/.git.path
+test	Post ブランチを取得する	2026-11-17T14:07:06.2915621Z /github/runner_temp/git-credentials-8e16cf1b-d40d-4918-b935-54cb81454c4d.config
+test	Post ブランチを取得する	2026-11-17T14:07:06.2921017Z [command]/usr/bin/git config --local --unset includeif.gitdir:/github/workspace/.git.path \/github\/runner_temp\/git\-credentials\-8e16cf1b\-d40d\-4918\-b935\-54cb81454c4d\.config
+test	Post ブランチを取得する	2026-11-17T14:07:06.2945866Z [command]/usr/bin/git config --local --get-all includeif.gitdir:/github/workspace/.git/worktrees/*.path
+test	Post ブランチを取得する	2026-11-17T14:07:06.2962609Z /github/runner_temp/git-credentials-8e16cf1b-d40d-4918-b935-54cb81454c4d.config
+test	Post ブランチを取得する	2026-11-17T14:07:06.2967262Z [command]/usr/bin/git config --local --unset includeif.gitdir:/github/workspace/.git/worktrees/*.path \/github\/runner_temp\/git\-credentials\-8e16cf1b\-d40d\-4918\-b935\-54cb81454c4d\.config
+test	Post ブランチを取得する	2026-11-17T14:07:06.2991690Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+test	Post ブランチを取得する	2026-11-17T14:07:06.3161025Z Removing credentials config '/home/runner/work/_temp/git-credentials-8e16cf1b-d40d-4918-b935-54cb81454c4d.config'
+test	Complete job	﻿2026-11-17T14:07:06.3283363Z Cleaning up orphan processes
+
+## 3. 手元（be0641e）
+$ npx playwright test --config tests/integration/frontend/playwright.config.ts tests/integration/frontend/settings-screen.spec.ts
+
+
+Running 89 tests using 4 workers
+
+  ✓   3 [chromium] › tests/integration/frontend/settings-screen.spec.ts:61:3 › ページのタイトル › page_title (1.7s)
+  ✓   1 [chromium] › tests/integration/frontend/settings-screen.spec.ts:85:3 › トップバー › topbar_home_link (2.1s)
+  ✓   2 [chromium] › tests/integration/frontend/settings-screen.spec.ts:69:3 › 本文へスキップ › skip_link (2.1s)
+  ✓   4 [chromium] › tests/integration/frontend/settings-screen.spec.ts:92:3 › トップバー › topbar_color_scheme_toggle (2.0s)
+  ✓   5 [chromium] › tests/integration/frontend/settings-screen.spec.ts:107:3 › トップバー › topbar_only_title_and_color_scheme (994ms)
+  ✓   7 [chromium] › tests/integration/frontend/settings-screen.spec.ts:132:3 › 文書の画面に戻る › back_link_without_previous_doc (1.1s)
+  ✓   8 [chromium] › tests/integration/frontend/settings-screen.spec.ts:139:3 › 文書の画面に戻る › back_link_when_none_serving (1.1s)
+  ✓   6 [chromium] › tests/integration/frontend/settings-screen.spec.ts:117:3 › 文書の画面に戻る › back_link_to_previous_doc (1.3s)
+  ✓   9 [chromium] › tests/integration/frontend/settings-screen.spec.ts:147:3 › 見出し › heading (870ms)
+  ✓  10 [chromium] › tests/integration/frontend/settings-screen.spec.ts:153:3 › 見出し › sources_heading (1.1s)
+  ✓  11 [chromium] › tests/integration/frontend/settings-screen.spec.ts:159:3 › 見出し › keyboard_heading (1.1s)
+  ✓  13 [chromium] › tests/integration/frontend/settings-screen.spec.ts:186:3 › 配信元が無いことの表示 › empty_message (783ms)
+  ✓  14 [chromium] › tests/integration/frontend/settings-screen.spec.ts:195:3 › 配信元の一覧 › table_columns_and_order (873ms)
+  ✓  16 [chromium] › tests/integration/frontend/settings-screen.spec.ts:221:3 › 配信元の ID › id_not_link_when_not_serving (1.0s)
+  ✓  15 [chromium] › tests/integration/frontend/settings-screen.spec.ts:211:3 › 配信元の ID › id_link_when_serving (1.2s)
+  ✓  17 [chromium] › tests/integration/frontend/settings-screen.spec.ts:232:3 › 設定ファイル › config_paths (851ms)
+  ✓  18 [chromium] › tests/integration/frontend/settings-screen.spec.ts:249:3 › 状態 › status_serving (759ms)
+  ✓  19 [chromium] › tests/integration/frontend/settings-screen.spec.ts:255:3 › 状態 › status_not_served (762ms)
+  ✓  20 [chromium] › tests/integration/frontend/settings-screen.spec.ts:263:3 › 状態 › status_disabled (613ms)
+  ✓  21 [chromium] › tests/integration/frontend/settings-screen.spec.ts:271:3 › 状態 › status_pending_reload (709ms)
+  ✓  12 [chromium] › tests/integration/frontend/settings-screen.spec.ts:167:3 › 配信元の読み込み中の表示 › loading_skeleton (3.8s)
+  ✓  22 [chromium] › tests/integration/frontend/settings-screen.spec.ts:280:5 › 状態 › status_not_served_contrast_light (1.2s)
+  ✓  23 [chromium] › tests/integration/frontend/settings-screen.spec.ts:280:5 › 状態 › status_not_served_contrast_dark (1.0s)
+  ✓  24 [chromium] › tests/integration/frontend/settings-screen.spec.ts:296:3 › 状態 › no_layout_transition (781ms)
+  ✓  25 [chromium] › tests/integration/frontend/settings-screen.spec.ts:319:3 › 状態の補足 › status_note_when_not_served (843ms)
+  ✓  26 [chromium] › tests/integration/frontend/settings-screen.spec.ts:333:3 › 状態の補足 › status_note_when_config_version_old (903ms)
+  ✓  28 [chromium] › tests/integration/frontend/settings-screen.spec.ts:351:3 › 状態の補足 › status_note_when_pending_reload (875ms)
+  ✓  27 [chromium] › tests/integration/frontend/settings-screen.spec.ts:343:3 › 状態の補足 › status_note_when_disabled (1.2s)
+  ✓  29 [chromium] › tests/integration/frontend/settings-screen.spec.ts:359:3 › 状態の補足 › status_note_when_serving (1.0s)
+  ✓  30 [chromium] › tests/integration/frontend/settings-screen.spec.ts:368:3 › 配信元を追加 › add_button (1.2s)
+  ✓  31 [chromium] › tests/integration/frontend/settings-screen.spec.ts:377:3 › 編集ボタン › edit_button (978ms)
+  ✓  32 [chromium] › tests/integration/frontend/settings-screen.spec.ts:398:3 › 削除ボタン › delete_button (918ms)
+  ✓  33 [chromium] › tests/integration/frontend/settings-screen.spec.ts:407:3 › 1 文字のショートカットのスイッチ › single_key_switch_initial (832ms)
+  ✓  34 [chromium] › tests/integration/frontend/settings-screen.spec.ts:416:3 › 1 文字のショートカットのスイッチ › single_key_switch_toggle (947ms)
+  ✓  35 [chromium] › tests/integration/frontend/settings-screen.spec.ts:436:3 › ショートカットの一覧 › shortcut_open_button (889ms)
+  ✓  36 [chromium] › tests/integration/frontend/settings-screen.spec.ts:443:3 › ショートカットの一覧 › shortcut_key (987ms)
+  ✓  37 [chromium] › tests/integration/frontend/settings-screen.spec.ts:452:3 › 配信元のダイアログのタイトル › dialog_title_when_add (1.0s)
+  ✓  38 [chromium] › tests/integration/frontend/settings-screen.spec.ts:459:3 › 配信元のダイアログのタイトル › dialog_title_when_edit (999ms)
+  ✓  39 [chromium] › tests/integration/frontend/settings-screen.spec.ts:469:3 › 配信元の ID の入力欄 › id_input_when_add (1.0s)
+  ✓  40 [chromium] › tests/integration/frontend/settings-screen.spec.ts:485:3 › 配信元の ID の入力欄 › id_input_when_edit (926ms)
+  ✓  41 [chromium] › tests/integration/frontend/settings-screen.spec.ts:492:3 › 配信元の ID の入力欄 › id_input_keeps_value (973ms)
+  ✓  42 [chromium] › tests/integration/frontend/settings-screen.spec.ts:502:3 › 設定ファイルの入力欄 › config_input_when_add (1.1s)
+  ✓  43 [chromium] › tests/integration/frontend/settings-screen.spec.ts:514:3 › 設定ファイルの入力欄 › config_input_when_edit (1.1s)
+  ✓  44 [chromium] › tests/integration/frontend/settings-screen.spec.ts:532:3 › 配信のスイッチ › enabled_switch_heading (1.1s)
+  ✓  45 [chromium] › tests/integration/frontend/settings-screen.spec.ts:541:3 › 配信のスイッチ › enabled_switch_when_add (1.1s)
+  ✓  46 [chromium] › tests/integration/frontend/settings-screen.spec.ts:551:3 › 配信のスイッチ › enabled_switch_when_edit (895ms)
+  ✓  47 [chromium] › tests/integration/frontend/settings-screen.spec.ts:562:3 › 読み取りの範囲の入力欄 › read_input_when_add (916ms)
+  ✓  48 [chromium] › tests/integration/frontend/settings-screen.spec.ts:574:3 › 読み取りの範囲の入力欄 › read_input_when_edit (876ms)
+  ✓  49 [chromium] › tests/integration/frontend/settings-screen.spec.ts:587:3 › 書き込みの範囲の入力欄 › write_input_when_add (908ms)
+  ✓  52 [chromium] › tests/integration/frontend/settings-screen.spec.ts:636:3 › 配信元のダイアログのキャンセル › cancel_by_escape (933ms)
+  ✓  50 [chromium] › tests/integration/frontend/settings-screen.spec.ts:598:3 › 書き込みの範囲の入力欄 › write_input_when_edit (1.2s)
+  ✓  51 [chromium] › tests/integration/frontend/settings-screen.spec.ts:621:3 › 配信元のダイアログのキャンセル › cancel_button (1.3s)
+  ✓  53 [chromium] › tests/integration/frontend/settings-screen.spec.ts:647:3 › 追加・保存ボタン › submit_label (1.3s)
+  ✓  54 [chromium] › tests/integration/frontend/settings-screen.spec.ts:657:3 › 追加・保存ボタン › submit_add_success (1.2s)
+  ✓  56 [chromium] › tests/integration/frontend/settings-screen.spec.ts:704:3 › 追加・保存ボタン › submit_failure_422 (1.1s)
+  ✓  57 [chromium] › tests/integration/frontend/settings-screen.spec.ts:725:3 › 保存の失敗のまとめ › failure_summary_when_invalid (1.0s)
+  ✓  58 [chromium] › tests/integration/frontend/settings-screen.spec.ts:736:3 › 保存の失敗のまとめ › failure_summary_when_422 (818ms)
+  ✓  59 [chromium] › tests/integration/frontend/settings-screen.spec.ts:760:3 › 保存の失敗のまとめ › failure_summary_row_click (910ms)
+  ✓  60 [chromium] › tests/integration/frontend/settings-screen.spec.ts:781:5 › 削除の確認 › delete_confirm_contrast_light (922ms)
+  ✓  62 [chromium] › tests/integration/frontend/settings-screen.spec.ts:796:3 › 削除の確認 › delete_title (569ms)
+  ✓  61 [chromium] › tests/integration/frontend/settings-screen.spec.ts:781:5 › 削除の確認 › delete_confirm_contrast_dark (985ms)
+  ✓  55 [chromium] › tests/integration/frontend/settings-screen.spec.ts:688:3 › 追加・保存ボタン › submit_disabled_while_saving (2.9s)
+  ✓  63 [chromium] › tests/integration/frontend/settings-screen.spec.ts:803:3 › 削除の確認 › delete_description (610ms)
+  ✓  64 [chromium] › tests/integration/frontend/settings-screen.spec.ts:814:3 › 削除の確認 › delete_cancel (785ms)
+  ✓  65 [chromium] › tests/integration/frontend/settings-screen.spec.ts:829:3 › 削除の確認 › delete_confirm_success (1.0s)
+[WebServer] 11:07:49 PM [vite] (client) [console.error] {"ts":"2026-11-17T14:07:49.136Z","level":"error","event":"app_error","status":500,"type":"urn:dev-docs:error:Error","error":{"name":"AppError","message":"端末の設定を書き込めませんでした","stack":"AppError: 端末の設定を書き込めませんでした\n    at AppError.fromResponse (http://127.0.0.1:5199/src/shared/core/app-error.ts:28:20)\n    at async apiClient (http://127.0.0.1:5199/src/shared/adapters/api-client.ts:19:26)"}}
+  ✓  66 [chromium] › tests/integration/frontend/settings-screen.spec.ts:857:3 › 削除の確認 › delete_confirm_failure (1.1s)
+  ✓  67 [chromium] › tests/integration/frontend/settings-screen.spec.ts:870:3 › 削除の確認 › delete_confirm_disabled_while_saving (975ms)
+  ✓  68 [chromium] › tests/integration/frontend/settings-screen.spec.ts:890:3 › 入力チェック › id_input_check_when_empty (1.2s)
+  ✓  69 [chromium] › tests/integration/frontend/settings-screen.spec.ts:897:3 › 入力チェック › id_input_check_when_invalid_char (1.2s)
+  ✓  70 [chromium] › tests/integration/frontend/settings-screen.spec.ts:907:3 › 入力チェック › id_input_check_when_duplicated (1.1s)
+  ✓  71 [chromium] › tests/integration/frontend/settings-screen.spec.ts:917:3 › 入力チェック › id_input_check_revalidates_on_input (1.2s)
+  ✓  72 [chromium] › tests/integration/frontend/settings-screen.spec.ts:927:3 › 入力チェック › config_input_check_when_blank (1.1s)
+  ✓  73 [chromium] › tests/integration/frontend/settings-screen.spec.ts:935:3 › 入力チェック › read_input_check_when_blank (1.1s)
+  ✓  74 [chromium] › tests/integration/frontend/settings-screen.spec.ts:942:3 › 入力チェック › read_input_check_when_contains_blank (1.1s)
+  ✓  75 [chromium] › tests/integration/frontend/settings-screen.spec.ts:952:3 › 入力チェック › write_input_check_when_contains_blank (1.1s)
+[WebServer] 11:07:51 PM [vite] (client) [console.error] {"ts":"2026-11-17T14:07:51.786Z","level":"error","event":"app_error","status":503,"type":"urn:dev-docs:error:Error","error":{"name":"AppError","message":"project-index（http://127.0.0.1:8786）に接続できませんでした。接続を拒否されました（Connection refused）","stack":"AppError: project-index（http://127.0.0.1:8786）に接続できませんでした。接続を拒否されました（Connection refused）\n    at AppError.fromResponse (http://127.0.0.1:5199/src/shared/core/app-error.ts:28:20)\n    at async apiClient (http://127.0.0.1:5199/src/shared/adapters/api-client.ts:19:26)"}}
+[WebServer] 11:07:51 PM [vite] (client) [console.error] {"ts":"2026-11-17T14:07:51.907Z","level":"error","event":"app_error","status":503,"type":"urn:dev-docs:error:Error","error":{"name":"AppError","message":"project-index（http://127.0.0.1:8786）に接続できませんでした。接続を拒否されました（Connection refused）","stack":"AppError: project-index（http://127.0.0.1:8786）に接続できませんでした。接続を拒否されました（Connection refused）\n    at AppError.fromResponse (http://127.0.0.1:5199/src/shared/core/app-error.ts:28:20)\n    at async apiClient (http://127.0.0.1:5199/src/shared/adapters/api-client.ts:19:26)"}}
+  ✓  76 [chromium] › tests/integration/frontend/settings-screen.spec.ts:972:3 › project-index から受け取れないときの表示 › project_index_unreachable_alert (954ms)
+[WebServer] 11:07:52 PM [vite] (client) [console.error] {"ts":"2026-11-17T14:07:52.159Z","level":"error","event":"app_error","status":502,"type":"urn:dev-docs:error:Error","error":{"name":"AppError","message":"project-index が要求を処理できませんでした","stack":"AppError: project-index が要求を処理できませんでした\n    at AppError.fromResponse (http://127.0.0.1:5199/src/shared/core/app-error.ts:28:20)\n    at async apiClient (http://127.0.0.1:5199/src/shared/adapters/api-client.ts:19:26)"}}
+[WebServer] 11:07:52 PM [vite] (client) [console.error] {"ts":"2026-11-17T14:07:52.233Z","level":"error","event":"app_error","status":503,"type":"urn:dev-docs:error:Error","error":{"name":"AppError","message":"project-index から応答がありませんでした","stack":"AppError: project-index から応答がありませんでした\n    at AppError.fromResponse (http://127.0.0.1:5199/src/shared/core/app-error.ts:28:20)\n    at async apiClient (http://127.0.0.1:5199/src/shared/adapters/api-client.ts:19:26)"}}
+  ✓  77 [chromium] › tests/integration/frontend/settings-screen.spec.ts:997:5 › project-index から受け取れないときの表示 › project_index_failed_alert (813ms)
+  ✓  78 [chromium] › tests/integration/frontend/settings-screen.spec.ts:997:5 › project-index から受け取れないときの表示 › project_index_timeout_alert (813ms)
+  ✓  80 [chromium] › tests/integration/frontend/settings-screen.spec.ts:1035:3 › 範囲の外からの参照の補足 › outside_read_note (576ms)
+[WebServer] 11:07:52 PM [vite] (client) [console.error] {"ts":"2026-11-17T14:07:52.713Z","level":"error","event":"app_error","status":503,"type":"urn:dev-docs:error:Error","error":{"name":"AppError","message":"project-index（http://127.0.0.1:8786）に接続できませんでした。接続を拒否されました（Connection refused）","stack":"AppError: project-index（http://127.0.0.1:8786）に接続できませんでした。接続を拒否されました（Connection refused）\n    at AppError.fromResponse (http://127.0.0.1:5199/src/shared/core/app-error.ts:28:20)\n    at async apiClient (http://127.0.0.1:5199/src/shared/adapters/api-client.ts:19:26)"}}
+  ✓  79 [chromium] › tests/integration/frontend/settings-screen.spec.ts:1019:3 › 保存の失敗の通知 › save_failure_toast_when_unreachable (1.1s)
+  ✓  81 [chromium] › tests/integration/frontend/settings-screen.spec.ts:1052:3 › 範囲の外からの参照のスイッチ › outside_read_switch_when_add (891ms)
+  ✓  82 [chromium] › tests/integration/frontend/settings-screen.spec.ts:1063:3 › 範囲の外からの参照のスイッチ › outside_read_switch_when_edit (959ms)
+  ✓  83 [chromium] › tests/integration/frontend/settings-screen.spec.ts:1090:3 › 他の変更の表示 › save_conflict (1.0s)
+  ✓  84 [chromium] › tests/integration/frontend/settings-screen.spec.ts:1124:3 › 配信元が削除されたときの表示 › save_after_source_removed (930ms)
+  ✓  85 [chromium] › tests/integration/frontend/settings-screen.spec.ts:1152:3 › 削除の他の変更の表示 › delete_conflict (948ms)
+  ✓  86 [chromium] › tests/integration/frontend/settings-screen.spec.ts:1167:3 › 削除する配信元が削除されたときの表示 › delete_after_source_removed (952ms)
+  ✓  87 [chromium] › tests/integration/frontend/settings-screen.spec.ts:1194:3 › 読み書きの方法のセレクト › storage_select_when_add (962ms)
+  ✓  88 [chromium] › tests/integration/frontend/settings-screen.spec.ts:1209:3 › 読み書きの方法のセレクト › storage_select_when_stored (1.0s)
+  ✓  89 [chromium] › tests/integration/frontend/settings-screen.spec.ts:1226:3 › 読み書きの方法のセレクト › storage_select_when_saved (976ms)
+
+  89 passed (28.7s)
+exit: 0

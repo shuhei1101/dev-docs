@@ -32,7 +32,7 @@ components:
         type: string | undefined
         required: false
         description: 端末の設定の取得の `version`。`useSourceForm` へ指定する
-    description: 追加のときだけ配信元の ID の入力欄を出し、初期フォーカスを配置する。範囲の外からの参照のスイッチを読み取りの範囲の下に配置する。`useSourceForm` の `gone` なら『配信元が削除されたときの表示』、`conflict` なら『他の変更の表示』をタイトルの下に出す。見出しの配信元の名前は開いたときの値を持つ。保存の応答を待つ間と `gone` の間は追加・保存ボタンを無効にする
+    description: 追加のときだけ配信元の ID の入力欄を出し、初期フォーカスを配置する。範囲の外からの参照のスイッチを読み取りの範囲の下に配置し、その下（書き込みの範囲の上）に `StorageField` を配置する。`StorageField` に渡す保存済みの読み書きの方法は、開いたときの行の `storedStorage` を持つ。`useSourceForm` の `gone` なら『配信元が削除されたときの表示』、`conflict` なら『他の変更の表示』をタイトルの下に出す。見出しの配信元の名前は開いたときの値を持つ。保存の応答を待つ間と `gone` の間は追加・保存ボタンを無効にする
     unit_tests:
       - name: test_source_edit_dialog
         case: 正常
@@ -64,6 +64,42 @@ components:
         condition: PUT が 409 を返却する
         mock: MSW
         expected: 「他の変更があったため保存できませんでした」が出て、ダイアログが開いたままで入力が残る
+      - name: test_source_edit_dialog_when_storage
+        case: 正常
+        summary: 読み書きの方法を選んで保存する
+        condition: '`storage` の無い行を編集し、読み書きの方法を `ディスク` にして保存する'
+        mock: MSW（PUT の本文を記録する）
+        expected: '初期値が `自動` で、送信した行に `storage: {type: disk}` がある'
+  - name: StorageField
+    title: 読み書きの方法のセレクト
+    kind: コンポーネント
+    container: features/settings/settings/components/source-edit-dialog.tsx
+    usecase: 配信元を設定する
+    role: 部品
+    summary: shadcn/ui の `Select` を React Hook Form の `Controller` で入力の `storage` につなぐ
+    props:
+      - name: control
+        type: Control<SourceFormValues>
+        required: true
+        description: ダイアログのフォームの `control`
+      - name: stored
+        type: "'git' | 'disk' | null"
+        required: true
+        description: 開いた行の保存済みの読み書きの方法（追加・保存済みの値が無い行は null）
+    description: 画面設計の「読み書きの方法のセレクト」を出す。`stored` が null なら選択肢を `自動`・`Git`・`ディスク`、それ以外は `Git`・`ディスク` にし、補足の文も `stored` で出し分ける。入力の `storage` が無いときは `auto` を選んだ状態で出す
+    unit_tests:
+      - name: test_storage_field
+        case: 正常
+        summary: 保存済みの値を持つ行の選択肢
+        condition: '`storage.type: disk` の行を編集で開き、選択肢を開く'
+        mock: なし
+        expected: '`ディスク` が選ばれ、選択肢が `Git`・`ディスク` だけ（`自動` が無い）で、補足の文が保存済みの行の文言'
+      - name: test_storage_field_when_not_stored
+        case: 正常
+        summary: 保存済みの値が無い行の選択肢
+        condition: 追加で開き、選択肢を開く
+        mock: なし
+        expected: 選択肢が `自動`・`Git`・`ディスク` で、補足の文が `自動` の説明の文言
 tags:
   - name: topic:設定画面
     main: true

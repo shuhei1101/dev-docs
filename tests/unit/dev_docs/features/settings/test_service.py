@@ -143,3 +143,19 @@ def test_save_sources_when_version_conflict(
         SettingsVersionConflictError, match="端末の設定は他の書き換えで変わっています"
     ):
         asyncio.run(save_sources(make_client(), [entry], expected_version="v1"))
+
+
+def test_save_sources_when_storage(
+    fake_index: FakeIndex, make_client: Callable[..., ProjectIndexClient]
+) -> None:
+    """読み書きの方法を送信する（正常系）。"""
+    # 準備
+    sample = SourceEntry.model_validate({"id": "sample", "config": ["/s"]})
+    local = SourceEntry.model_validate(
+        {"id": "local", "config": ["/l"], "storage": {"type": "disk"}}
+    )
+    # 実行
+    _, body = _save(fake_index, make_client, [sample, local])
+    # 検証
+    assert "storage" not in body["sources"][0]
+    assert body["sources"][1]["storage"] == {"type": "disk"}

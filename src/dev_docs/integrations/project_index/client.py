@@ -45,7 +45,7 @@ from dev_docs.shared.errors import (
 PROJECT_INDEX_DEFAULT = "http://127.0.0.1:8786"
 PROJECT_INDEX_TIMEOUT_SEC = 45
 SUMMARY_CHARS = 200
-ROW_KEYS = ("id", "config", "enabled", "scope")
+ROW_KEYS = ("id", "config", "enabled", "scope", "storage")
 REFUSED_REASON = "接続を拒否されました（Connection refused）"
 HTTP_CONFLICT = 409
 HTTP_BAD_REQUEST = 400
@@ -207,7 +207,8 @@ class ProjectIndexClient:
 
     async def list_sources(self) -> list[SourceState]:
         """配信元の一覧と配信元ごとの状態を返却する。"""
-        response = await self.request("GET", "/sources")
+        # 全ての配信元の読み込みを待たず、読み込み中の配信元は `loading` で受ける
+        response = await self.request("GET", "/sources", params={"include_loading": "true"})
         return [_state(item) for item in response.json().get("sources", [])]
 
     async def source_view(self, source: str) -> SourceView:

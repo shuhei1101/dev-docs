@@ -167,7 +167,7 @@ flows:
         M-->>C: 当てた手順と、移さなかった行の id（終了コード 0）
       ```
     expected:
-      - モックが端末の設定の取得を 1 回と保存を 1 回受け、保存の `sources` がモックの持っていた extra の行と sample・notes の 3 行で、各行のキーが `id`・`config`・`enabled`・`scope`・`outside_read` のうちにあり、`expectedVersion` が取得で返却した内容のバージョンになる。extra は同じ id で内容が違うため、dev-docs の行を送信しない
+      - モックが端末の設定の取得を 1 回と保存を 1 回受け、保存の `sources` がモックの持っていた extra の行と sample・notes の 3 行で、各行のキーが `id`・`config`・`enabled`・`scope`・`outside_read`・`storage` のうちにあり、`expectedVersion` が取得で返却した内容のバージョンになる。extra は同じ id で内容が違うため、dev-docs の行を送信しない
       - 端末の設定の `sources` が extra の 1 行だけになり、`project_index` が `--project-index` のアドレス、`version` が新しいバージョンになる
       - stdout に、extra を移さずに残したことと、project-index で行を修正する案内がある
       - '`--project-index` を省くと `PROJECT_INDEX_PORT`（無ければ 8786）から組んだ `http://127.0.0.1:{ポート}` へ保存する'
@@ -388,7 +388,7 @@ constraints:
   - item: project-index が保存を受け付けないとき
     constraint: 取得・保存の応答が 200 以外（保存の 400・409・422 を含む）のとき、端末の設定を書き換えず、project-index の応答のステータスと要約を stderr に出して終了コード 4（MigrationFailed）で止める。保存の 400・422 の `errors[].path` が `sources[{n}]` で始まる違反は、送信した n 番目の行の配信元の ID と `reason` を並べて出す。409 は取得の後に project-index の端末の設定が変わったことを示し、再実行する案内を添える
   - item: sources を移す手順
-    constraint: 'project-index の端末の設定を取得し、dev-docs の端末の設定の `sources` の行を、取得した行の `id` と配信元の ID で照らす。配信元の ID は `id`、省いた行は `config` の配信元の設定を重ねた `name` にする（project-index と同じ求め方）。`name` を求められない行は送信せずに `sources` に残し、`config` を stdout に出す。同じ ID の行があれば、内容も同じなら移した行として扱い、内容が違えば送信せずに `sources` に残して ID を stdout に出す。残りの行を project-index の今の行の後ろに加え、取得で返却された内容のバージョンを添えて 1 回で保存する（加える行が無ければ保存しない）。送信する行は、今の行も加える行も `id`・`config`・`enabled`・`scope`・`outside_read` のキーだけにする（取得で返却される `status`・`errors`・`configVersion` を付けると 400 で断られる。取得の応答の外部の読み取りは `outsideRead` だが、保存は `outside_read` だけを受け付け、`outsideRead` を付けると 400 で断られる）。移した行を `sources` から除き、`project_index` を追記する。破壊的な手順ではない'
+    constraint: 'project-index の端末の設定を取得し、dev-docs の端末の設定の `sources` の行を、取得した行の `id` と配信元の ID で照らす。配信元の ID は `id`、省いた行は `config` の配信元の設定を重ねた `name` にする（project-index と同じ求め方）。`name` を求められない行は送信せずに `sources` に残し、`config` を stdout に出す。同じ ID の行があれば、内容も同じなら移した行として扱い、内容が違えば送信せずに `sources` に残して ID を stdout に出す。残りの行を project-index の今の行の後ろに加え、取得で返却された内容のバージョンを添えて 1 回で保存する（加える行が無ければ保存しない）。送信する行は、今の行も加える行も `id`・`config`・`enabled`・`scope`・`outside_read`・`storage` のキーだけにする（取得の応答の `storage` は値を変えずに送信する）（取得で返却される `status`・`errors`・`configVersion` を付けると 400 で断られる。取得の応答の外部の読み取りは `outsideRead` だが、保存は `outside_read` だけを受け付け、`outsideRead` を付けると 400 で断られる）。移した行を `sources` から除き、`project_index` を追記する。破壊的な手順ではない'
     notes: 取得・保存は project-index の端末の設定の API（shuhei1101/project-index の IF-30・IF-31）。project-index は保存した直後に書き込み、配信元の再読み込みが終わるまで端末の設定の排他ロックを持ち続け、取得はそのロックを待たない。保存を 1 回にするので、project-index が受け付けないときは何も書き込まれず、取り除く行が生じない
 test_file: tests/integration/server/test_migrate.py
 notes:

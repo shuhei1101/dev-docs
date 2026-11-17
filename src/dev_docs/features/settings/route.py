@@ -13,6 +13,8 @@ from dev_docs.features.settings.types import (
     SettingsSourcesResponse,
     SettingsSourcesView,
     SourceScope,
+    SourceStorage,
+    settings_status,
 )
 from dev_docs.integrations.project_index.types import SourceState
 from dev_docs.server.origin import require_same_origin
@@ -32,10 +34,11 @@ def _row(raw: dict[str, Any], state: SourceState | None, item: Any) -> SettingsS
         config=[config] if isinstance(config, str) else list(config),
         enabled=bool(raw.get("enabled", True)),
         scope=SourceScope(read=list(scope.get("read") or []), write=scope.get("write")),
-        status=state.status if state is not None else "pending_reload",
+        status=settings_status(state.status) if state is not None else "pending_reload",
         errors=item.errors if item is not None else [],
         config_version=item.config_version if item is not None else None,
         outside_read=bool(raw.get("outside_read", True)),
+        storage=SourceStorage.model_validate(raw["storage"]) if raw.get("storage") else None,
     )
 
 

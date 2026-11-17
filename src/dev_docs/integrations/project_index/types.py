@@ -9,7 +9,7 @@ from typing import Any, Literal
 
 from dev_docs.shared.errors import ProjectIndexResponseError, Violation
 
-type SourceStateKind = Literal["serving", "not_served", "disabled", "pending_reload"]
+type SourceStateKind = Literal["serving", "not_served", "disabled", "pending_reload", "loading"]
 type FailureReason = Literal["timeout", "exit", "not_runnable", "invalid_yaml"]
 
 REQUIRED_DOCUMENT_KEYS = ("id", "kind", "path", "version")

@@ -1,0 +1,948 @@
+# 単体テスト（全 pass）
+# 実装の commit: b78da2e（設計書の反映 05f3c9f を含む HEAD で回した）
+
+## 単体テスト（バック） TL-1 の run_runner（layer=backend-unit）
+$ run_url=$(gh workflow run test.yml --ref "$(git branch --show-current)" -f layer=backend-unit | ...) && gh run watch ... && gh run view "$run_id" --log
+﻿2026-11-17T13:46:50.6420082Z ##[group]Run : > test.log
+2026-11-17T13:46:50.6420436Z ^[[36;1m: > test.log^[[0m
+2026-11-17T13:46:50.6420691Z ^[[36;1m# 結果の行を test.log と step の標準出力の両方に出す^[[0m
+2026-11-17T13:46:50.6421041Z ^[[36;1msay() { echo "$1" | tee -a test.log; }^[[0m
+2026-11-17T13:46:50.6421337Z ^[[36;1mcase "$LAYER" in^[[0m
+2026-11-17T13:46:50.6421583Z ^[[36;1m  backend-unit) limit=7 ;;^[[0m
+2026-11-17T13:46:50.6421933Z ^[[36;1m  backend-integration) limit=62; dir=tests/integration/ ;;^[[0m
+2026-11-17T13:46:50.6422298Z ^[[36;1m  frontend-unit) limit=19 ;;^[[0m
+2026-11-17T13:46:50.6422679Z ^[[36;1m  frontend-integration) limit=75; dir=tests/integration/frontend/ ;;^[[0m
+2026-11-17T13:46:50.6423409Z ^[[36;1mesac^[[0m
+2026-11-17T13:46:50.6423653Z ^[[36;1m# paths は結合テストの層の、層の結合テストのフォルダの下のパスだけを受け付ける^[[0m
+2026-11-17T13:46:50.6424047Z ^[[36;1mif [ -n "$PATHS" ]; then^[[0m
+2026-11-17T13:46:50.6424329Z ^[[36;1m  if [ -z "${dir:-}" ]; then^[[0m
+2026-11-17T13:46:50.6424623Z ^[[36;1m    say "paths は結合テストの層でだけ指定できる: layer=$LAYER"^[[0m
+2026-11-17T13:46:50.6424912Z ^[[36;1m    exit 1^[[0m
+2026-11-17T13:46:50.6425159Z ^[[36;1m  fi^[[0m
+2026-11-17T13:46:50.6425444Z ^[[36;1m  if ! printf '%s' "$PATHS" | grep -Eq '^[A-Za-z0-9_./ -]+$'; then^[[0m
+2026-11-17T13:46:50.6425939Z ^[[36;1m    say "paths に許可しない文字がある（英数字・_・.・/・-・空白だけを許可する）: $PATHS"^[[0m
+2026-11-17T13:46:50.6426286Z ^[[36;1m    exit 1^[[0m
+2026-11-17T13:46:50.6426487Z ^[[36;1m  fi^[[0m
+2026-11-17T13:46:50.6426691Z ^[[36;1m  for p in $PATHS; do^[[0m
+2026-11-17T13:46:50.6426939Z ^[[36;1m    case "$p" in^[[0m
+2026-11-17T13:46:50.6427213Z ^[[36;1m      *..*) say "paths の値が .. を含む: $p"; exit 1 ;;^[[0m
+2026-11-17T13:46:50.6427514Z ^[[36;1m    esac^[[0m
+2026-11-17T13:46:50.6427713Z ^[[36;1m    case "$p" in^[[0m
+2026-11-17T13:46:50.6427940Z ^[[36;1m      "$dir"*) ;;^[[0m
+2026-11-17T13:46:50.6428240Z ^[[36;1m      *) say "paths の値が層の結合テストのフォルダ（$dir）の外: $p"; exit 1 ;;^[[0m
+2026-11-17T13:46:50.6428572Z ^[[36;1m    esac^[[0m
+2026-11-17T13:46:50.6428833Z ^[[36;1m    if [ "$LAYER" = backend-integration ]; then^[[0m
+2026-11-17T13:46:50.6429160Z ^[[36;1m      case "$p" in^[[0m
+2026-11-17T13:46:50.6429736Z ^[[36;1m        tests/integration/frontend/*) say "paths の値が層の結合テストのフォルダの外（tests/integration/frontend/ は frontend-integration の層）: $p"; exit 1 ;;^[[0m
+2026-11-17T13:46:50.6430543Z ^[[36;1m      esac^[[0m
+2026-11-17T13:46:50.6430743Z ^[[36;1m    fi^[[0m
+2026-11-17T13:46:50.6430937Z ^[[36;1m  done^[[0m
+2026-11-17T13:46:50.6431122Z ^[[36;1mfi^[[0m
+2026-11-17T13:46:50.6431318Z ^[[36;1mcase "$LAYER" in^[[0m
+2026-11-17T13:46:50.6431620Z ^[[36;1m  backend-unit) cmd="uv run pytest tests/unit/ -v" ;;^[[0m
+2026-11-17T13:46:50.6432062Z ^[[36;1m  backend-integration) cmd="uv run pytest ${PATHS:-$dir} -v" ;;^[[0m
+2026-11-17T13:46:50.6432644Z ^[[36;1m  frontend-unit) cmd="npx vitest run --config frontend/vitest.config.ts --reporter=verbose" ;;^[[0m
+2026-11-17T13:46:50.6433599Z ^[[36;1m  frontend-integration) cmd="npx playwright test --config tests/integration/frontend/playwright.config.ts $PATHS" ;;^[[0m
+2026-11-17T13:46:50.6434178Z ^[[36;1mesac^[[0m
+2026-11-17T13:46:50.6434408Z ^[[36;1m# テストを裏で起動し、出力を test.log と step の標準出力の両方に出す^[[0m
+2026-11-17T13:46:50.6434847Z ^[[36;1msetsid -w bash -c "set -o pipefail; $cmd 2>&1 | tee -a test.log" &^[[0m
+2026-11-17T13:46:50.6435213Z ^[[36;1mpid=$!^[[0m
+2026-11-17T13:46:50.6435417Z ^[[36;1mlast=-1^[[0m
+2026-11-17T13:46:50.6435608Z ^[[36;1midle=0^[[0m
+2026-11-17T13:46:50.6435844Z ^[[36;1m# test.log の大きさを 1 秒ごとに確認し、無出力の時間が上限を超えたらテストを止める^[[0m
+2026-11-17T13:46:50.6436171Z ^[[36;1mwhile kill -0 "$pid" 2> /dev/null; do^[[0m
+2026-11-17T13:46:50.6436450Z ^[[36;1m  sleep 1^[[0m
+2026-11-17T13:46:50.6436677Z ^[[36;1m  size=$(stat -c %s test.log)^[[0m
+2026-11-17T13:46:50.6436944Z ^[[36;1m  if [ "$size" = "$last" ]; then^[[0m
+2026-11-17T13:46:50.6437208Z ^[[36;1m    idle=$((idle + 1))^[[0m
+2026-11-17T13:46:50.6437442Z ^[[36;1m  else^[[0m
+2026-11-17T13:46:50.6437639Z ^[[36;1m    idle=0^[[0m
+2026-11-17T13:46:50.6437846Z ^[[36;1m    last=$size^[[0m
+2026-11-17T13:46:50.6438056Z ^[[36;1m  fi^[[0m
+2026-11-17T13:46:50.6438276Z ^[[36;1m  if [ "$idle" -gt "$limit" ]; then^[[0m
+2026-11-17T13:46:50.6438555Z ^[[36;1m    kill -- "-$pid"^[[0m
+2026-11-17T13:46:50.6438996Z ^[[36;1m    say "出力が ${limit} 秒変わらなかったため、テストを止めた"^[[0m
+2026-11-17T13:46:50.6439280Z ^[[36;1m    exit 1^[[0m
+2026-11-17T13:46:50.6439487Z ^[[36;1m  fi^[[0m
+2026-11-17T13:46:50.6439667Z ^[[36;1mdone^[[0m
+2026-11-17T13:46:50.6439854Z ^[[36;1mwait "$pid"^[[0m
+2026-11-17T13:46:50.6487835Z shell: /usr/bin/bash -e {0}
+2026-11-17T13:46:50.6488100Z env:
+2026-11-17T13:46:50.6488381Z   UV_PYTHON_INSTALL_DIR: /home/runner/work/_temp/uv-python-dir
+2026-11-17T13:46:50.6488799Z   UV_CACHE_DIR: /home/runner/work/_temp/setup-uv-cache
+2026-11-17T13:46:50.6489117Z   LAYER: backend-unit
+2026-11-17T13:46:50.6489328Z   PATHS: 
+2026-11-17T13:46:50.6489521Z   PYTHONUNBUFFERED: 1
+2026-11-17T13:46:50.6489732Z ##[endgroup]
+2026-11-17T13:46:51.3561065Z ============================= test session starts ==============================
+2026-11-17T13:46:51.3635758Z platform linux -- Python 3.14.4, pytest-9.1.1, pluggy-1.7.0 -- /home/runner/work/dev-docs/dev-docs/.venv/bin/python
+2026-11-17T13:46:51.3640832Z cachedir: .pytest_cache
+2026-11-17T13:46:51.3641524Z rootdir: /home/runner/work/dev-docs/dev-docs
+2026-11-17T13:46:51.3642148Z configfile: pyproject.toml
+2026-11-17T13:46:51.3642655Z plugins: anyio-4.15.1
+2026-11-17T13:46:53.6435926Z collecting ... collected 516 items
+2026-11-17T13:46:53.6449370Z 
+2026-11-17T13:46:53.6459911Z tests/unit/dev_docs/features/admin/test_render.py::test_render_status PASSED [  0%]
+2026-11-17T13:46:53.6467606Z tests/unit/dev_docs/features/admin/test_render.py::test_render_status_when_no_sources PASSED [  0%]
+2026-11-17T13:46:53.6475011Z tests/unit/dev_docs/features/admin/test_render.py::test_render_status_when_unreachable PASSED [  0%]
+2026-11-17T13:46:53.6481643Z tests/unit/dev_docs/features/admin/test_render.py::test_render_status_when_leftover_sources PASSED [  0%]
+2026-11-17T13:46:53.6488463Z tests/unit/dev_docs/features/admin/test_render.py::test_source_row PASSED [  0%]
+2026-11-17T13:46:53.6495971Z tests/unit/dev_docs/features/admin/test_render.py::test_source_row_when_not_served PASSED [  1%]
+2026-11-17T13:46:53.6538087Z tests/unit/dev_docs/features/admin/test_service.py::test_get_status PASSED [  1%]
+2026-11-17T13:46:53.6558593Z tests/unit/dev_docs/features/admin/test_service.py::test_get_status_when_port_env PASSED [  1%]
+2026-11-17T13:46:53.6576758Z tests/unit/dev_docs/features/admin/test_service.py::test_get_status_when_unreachable PASSED [  1%]
+2026-11-17T13:46:53.6595700Z tests/unit/dev_docs/features/admin/test_service.py::test_get_status_when_leftover_sources PASSED [  1%]
+2026-11-17T13:46:53.6605159Z tests/unit/dev_docs/features/admin/test_service.py::test_version_state[same] PASSED [  2%]
+2026-11-17T13:46:53.6614575Z tests/unit/dev_docs/features/admin/test_service.py::test_version_state[older] PASSED [  2%]
+2026-11-17T13:46:53.6623566Z tests/unit/dev_docs/features/admin/test_service.py::test_version_state[newer] PASSED [  2%]
+2026-11-17T13:46:53.6631929Z tests/unit/dev_docs/features/admin/test_service.py::test_version_state_when_not_integer PASSED [  2%]
+2026-11-17T13:46:53.6641094Z tests/unit/dev_docs/features/changes/test_compare.py::test_changed_keys PASSED [  2%]
+2026-11-17T13:46:53.6648208Z tests/unit/dev_docs/features/convert/test_decisions.py::test_decision_page_id PASSED [  3%]
+2026-11-17T13:46:53.6656219Z tests/unit/dev_docs/features/convert/test_decisions.py::test_decision_page_id_when_other[other] PASSED [  3%]
+2026-11-17T13:46:53.6663621Z tests/unit/dev_docs/features/convert/test_decisions.py::test_decision_page_id_when_other[outside] PASSED [  3%]
+2026-11-17T13:46:53.6671790Z tests/unit/dev_docs/features/convert/test_decisions.py::test_decision_page_id_when_other[lowercase] PASSED [  3%]
+2026-11-17T13:46:53.6679472Z tests/unit/dev_docs/features/convert/test_diagrams.py::test_render_diagram PASSED [  3%]
+2026-11-17T13:46:53.6688706Z tests/unit/dev_docs/features/convert/test_diagrams.py::test_render_diagram_when_node_kinds[actor] PASSED [  4%]
+2026-11-17T13:46:53.6697582Z tests/unit/dev_docs/features/convert/test_diagrams.py::test_render_diagram_when_node_kinds[external] PASSED [  4%]
+2026-11-17T13:46:53.6706935Z tests/unit/dev_docs/features/convert/test_diagrams.py::test_render_diagram_when_node_kinds[process] PASSED [  4%]
+2026-11-17T13:46:53.6716373Z tests/unit/dev_docs/features/convert/test_diagrams.py::test_render_diagram_when_node_kinds[system] PASSED [  4%]
+2026-11-17T13:46:53.6725788Z tests/unit/dev_docs/features/convert/test_diagrams.py::test_render_diagram_when_node_kinds[store] PASSED [  4%]
+2026-11-17T13:46:53.6734935Z tests/unit/dev_docs/features/convert/test_diagrams.py::test_render_diagram_when_node_kinds[start] PASSED [  5%]
+2026-11-17T13:46:53.6745133Z tests/unit/dev_docs/features/convert/test_diagrams.py::test_render_diagram_when_node_kinds[question] PASSED [  5%]
+2026-11-17T13:46:53.6754263Z tests/unit/dev_docs/features/convert/test_diagrams.py::test_render_diagram_when_node_kinds[action] PASSED [  5%]
+2026-11-17T13:46:53.6763485Z tests/unit/dev_docs/features/convert/test_diagrams.py::test_render_diagram_when_node_kinds[result] PASSED [  5%]
+2026-11-17T13:46:53.6783220Z tests/unit/dev_docs/features/convert/test_diagrams.py::test_render_diagram_when_node_kinds[none] PASSED [  5%]
+2026-11-17T13:46:53.6784812Z tests/unit/dev_docs/features/convert/test_diagrams.py::test_render_diagram_when_hint_and_tip PASSED [  6%]
+2026-11-17T13:46:53.6791128Z tests/unit/dev_docs/features/convert/test_diagrams.py::test_render_diagram_when_unknown_line PASSED [  6%]
+2026-11-17T13:46:53.6803134Z tests/unit/dev_docs/features/convert/test_diagrams.py::test_render_diagram_when_direction[flowchart] PASSED [  6%]
+2026-11-17T13:46:53.6813212Z tests/unit/dev_docs/features/convert/test_diagrams.py::test_render_diagram_when_direction[dataflow] PASSED [  6%]
+2026-11-17T13:46:53.6822992Z tests/unit/dev_docs/features/convert/test_diagrams.py::test_render_diagram_when_direction[architecture] PASSED [  6%]
+2026-11-17T13:46:53.6834856Z tests/unit/dev_docs/features/convert/test_diagrams.py::test_render_diagram_when_direction[dataflow-td] PASSED [  6%]
+2026-11-17T13:46:53.6842600Z tests/unit/dev_docs/features/convert/test_diagrams.py::test_render_diagram_when_frame PASSED [  7%]
+2026-11-17T13:46:53.6851871Z tests/unit/dev_docs/features/convert/test_diagrams.py::test_render_diagram_when_unsafe_id PASSED [  7%]
+2026-11-17T13:46:53.6859720Z tests/unit/dev_docs/features/convert/test_diagrams.py::test_render_diagram_when_state PASSED [  7%]
+2026-11-17T13:46:53.6867312Z tests/unit/dev_docs/features/convert/test_diagrams.py::test_render_diagram_when_state_representative PASSED [  7%]
+2026-11-17T13:46:53.6874783Z tests/unit/dev_docs/features/convert/test_diagrams.py::test_render_diagram_when_state_without_representative PASSED [  7%]
+2026-11-17T13:46:53.6882576Z tests/unit/dev_docs/features/convert/test_diagrams.py::test_render_diagram_when_er PASSED [  8%]
+2026-11-17T13:46:53.6890345Z tests/unit/dev_docs/features/convert/test_diagrams.py::test_render_diagram_when_er_relation_dropped PASSED [  8%]
+2026-11-17T13:46:53.6899020Z tests/unit/dev_docs/features/convert/test_diagrams.py::test_render_diagram_when_marker_text PASSED [  8%]
+2026-11-17T13:46:53.6907256Z tests/unit/dev_docs/features/convert/test_diagrams.py::test_render_diagram_when_unknown_kind PASSED [  8%]
+2026-11-17T13:46:53.6914449Z tests/unit/dev_docs/features/convert/test_diagrams.py::test_er_table_titles PASSED [  8%]
+2026-11-17T13:46:53.6921689Z tests/unit/dev_docs/features/convert/test_diagrams.py::test_er_table_titles_when_duplicated_or_untitled PASSED [  9%]
+2026-11-17T13:46:53.6928744Z tests/unit/dev_docs/features/convert/test_diagrams.py::test_render_mermaid PASSED [  9%]
+2026-11-17T13:46:53.6937871Z tests/unit/dev_docs/features/convert/test_diagrams.py::test_render_mermaid_when_kinds[flowchart] PASSED [  9%]
+2026-11-17T13:46:53.6946740Z tests/unit/dev_docs/features/convert/test_diagrams.py::test_render_mermaid_when_kinds[graph] PASSED [  9%]
+2026-11-17T13:46:53.6955294Z tests/unit/dev_docs/features/convert/test_diagrams.py::test_render_mermaid_when_kinds[er] PASSED [  9%]
+2026-11-17T13:46:53.6963430Z tests/unit/dev_docs/features/convert/test_diagrams.py::test_render_mermaid_when_kinds[state-v2] PASSED [ 10%]
+2026-11-17T13:46:53.6971409Z tests/unit/dev_docs/features/convert/test_diagrams.py::test_render_mermaid_when_kinds[state] PASSED [ 10%]
+2026-11-17T13:46:53.6978662Z tests/unit/dev_docs/features/convert/test_diagrams.py::test_render_mermaid_when_not_mappable PASSED [ 10%]
+2026-11-17T13:46:53.6986813Z tests/unit/dev_docs/features/convert/test_diagrams.py::test_render_diagram_when_clicks PASSED [ 10%]
+2026-11-17T13:46:53.6994673Z tests/unit/dev_docs/features/convert/test_diagrams.py::test_render_diagram_when_clicks_unsafe_id PASSED [ 10%]
+2026-11-17T13:46:53.7002126Z tests/unit/dev_docs/features/convert/test_diagrams.py::test_render_mermaid_when_id_click PASSED [ 11%]
+2026-11-17T13:46:53.7010153Z tests/unit/dev_docs/features/convert/test_diagrams.py::test_render_mermaid_when_id_click_not_flowchart PASSED [ 11%]
+2026-11-17T13:46:53.7019350Z tests/unit/dev_docs/features/convert/test_embed.py::test_embed_paths PASSED [ 11%]
+2026-11-17T13:46:53.7027340Z tests/unit/dev_docs/features/convert/test_embed.py::test_expand_embeds PASSED [ 11%]
+2026-11-17T13:46:53.7034625Z tests/unit/dev_docs/features/convert/test_embed.py::test_expand_embeds_when_in_code_block PASSED [ 11%]
+2026-11-17T13:46:53.7041731Z tests/unit/dev_docs/features/convert/test_embed.py::test_expand_embeds_when_missing PASSED [ 12%]
+2026-11-17T13:46:53.7049831Z tests/unit/dev_docs/features/convert/test_inline.py::test_rewrite_text_when_mermaid PASSED [ 12%]
+2026-11-17T13:46:53.7056985Z tests/unit/dev_docs/features/convert/test_inline.py::test_rewrite_text_when_tree PASSED [ 12%]
+2026-11-17T13:46:53.7063909Z tests/unit/dev_docs/features/convert/test_inline.py::test_rewrite_text_when_steps PASSED [ 12%]
+2026-11-17T13:46:53.7070679Z tests/unit/dev_docs/features/convert/test_inline.py::test_rewrite_text_when_issue PASSED [ 12%]
+2026-11-17T13:46:53.7077861Z tests/unit/dev_docs/features/convert/test_inline.py::test_rewrite_text_when_heading_link PASSED [ 12%]
+2026-11-17T13:46:53.7084992Z tests/unit/dev_docs/features/convert/test_inline.py::test_rewrite_text_when_no_issue_url PASSED [ 13%]
+2026-11-17T13:46:53.7091397Z tests/unit/dev_docs/features/convert/test_inline.py::test_rewrite_text_when_choices PASSED [ 13%]
+2026-11-17T13:46:53.7099155Z tests/unit/dev_docs/features/convert/test_inline.py::test_rewrite_text_when_id_link PASSED [ 13%]
+2026-11-17T13:46:53.7106447Z tests/unit/dev_docs/features/convert/test_inline.py::test_rewrite_text_when_id_link_no_heading PASSED [ 13%]
+2026-11-17T13:46:53.7113898Z tests/unit/dev_docs/features/convert/test_inline.py::test_rewrite_text_when_mermaid_click PASSED [ 13%]
+2026-11-17T13:46:53.7120459Z tests/unit/dev_docs/features/convert/test_inline.py::test_link_reference PASSED [ 14%]
+2026-11-17T13:46:53.7127690Z tests/unit/dev_docs/features/convert/test_inline.py::test_link_reference_when_heading PASSED [ 14%]
+2026-11-17T13:46:53.7134403Z tests/unit/dev_docs/features/convert/test_inline.py::test_link_reference_when_unknown PASSED [ 14%]
+2026-11-17T13:46:53.7141023Z tests/unit/dev_docs/features/convert/test_inline.py::test_link_decisions PASSED [ 14%]
+2026-11-17T13:46:53.7147812Z tests/unit/dev_docs/features/convert/test_inline.py::test_heading_anchor PASSED [ 14%]
+2026-11-17T13:46:53.7155795Z tests/unit/dev_docs/features/convert/test_inline.py::test_link_target PASSED [ 15%]
+2026-11-17T13:46:53.7163095Z tests/unit/dev_docs/features/convert/test_inline.py::test_link_target_when_unknown PASSED [ 15%]
+2026-11-17T13:46:53.7172285Z tests/unit/dev_docs/features/convert/test_markdown.py::test_schema_to_markdown PASSED [ 15%]
+2026-11-17T13:46:53.7180928Z tests/unit/dev_docs/features/convert/test_markdown.py::test_schema_to_markdown_when_sections PASSED [ 15%]
+2026-11-17T13:46:53.7189767Z tests/unit/dev_docs/features/convert/test_markdown.py::test_schema_to_markdown_when_no_schema PASSED [ 15%]
+2026-11-17T13:46:53.7197954Z tests/unit/dev_docs/features/convert/test_markdown.py::test_schema_to_markdown_when_title_and_lead PASSED [ 16%]
+2026-11-17T13:46:53.7207274Z tests/unit/dev_docs/features/convert/test_markdown.py::test_schema_to_markdown_when_hidden PASSED [ 16%]
+2026-11-17T13:46:53.7216303Z tests/unit/dev_docs/features/convert/test_markdown.py::test_schema_to_markdown_when_attributes PASSED [ 16%]
+2026-11-17T13:46:53.7224356Z tests/unit/dev_docs/features/convert/test_markdown.py::test_schema_to_markdown_when_multiline PASSED [ 16%]
+2026-11-17T13:46:53.7233634Z tests/unit/dev_docs/features/convert/test_markdown.py::test_schema_to_markdown_when_diagram PASSED [ 16%]
+2026-11-17T13:46:53.7244073Z tests/unit/dev_docs/features/convert/test_markdown.py::test_schema_to_markdown_when_er PASSED [ 17%]
+2026-11-17T13:46:53.7250843Z tests/unit/dev_docs/features/convert/test_markdown.py::test_item_heading PASSED [ 17%]
+2026-11-17T13:46:53.7258080Z tests/unit/dev_docs/features/convert/test_markdown.py::test_item_heading_when_section PASSED [ 17%]
+2026-11-17T13:46:53.7265265Z tests/unit/dev_docs/features/convert/test_markdown.py::test_item_heading_when_not_heading PASSED [ 17%]
+2026-11-17T13:46:53.7273430Z tests/unit/dev_docs/features/convert/test_markdown.py::test_schema_to_markdown_when_test_files PASSED [ 17%]
+2026-11-17T13:46:53.7281464Z tests/unit/dev_docs/features/convert/test_markdown.py::test_schema_to_markdown_when_examples PASSED [ 18%]
+2026-11-17T13:46:53.7290712Z tests/unit/dev_docs/features/convert/test_markdown.py::test_schema_to_markdown_when_foreign_key PASSED [ 18%]
+2026-11-17T13:46:53.7300192Z tests/unit/dev_docs/features/convert/test_markdown.py::test_schema_to_markdown_when_foreign_key_physical_name PASSED [ 18%]
+2026-11-17T13:46:53.7307349Z tests/unit/dev_docs/features/convert/test_markdown.py::test_render_table PASSED [ 18%]
+2026-11-17T13:46:53.7315753Z tests/unit/dev_docs/features/convert/test_markdown.py::test_render_table_when_objects PASSED [ 18%]
+2026-11-17T13:46:53.7322644Z tests/unit/dev_docs/features/convert/test_markdown.py::test_render_table_when_physical_name PASSED [ 18%]
+2026-11-17T13:46:53.7330074Z tests/unit/dev_docs/features/convert/test_markdown.py::test_render_table_when_closed_and_hidden PASSED [ 19%]
+2026-11-17T13:46:53.7338829Z tests/unit/dev_docs/features/convert/test_markdown.py::test_schema_to_markdown_when_decisions PASSED [ 19%]
+2026-11-17T13:46:53.7346172Z tests/unit/dev_docs/features/convert/test_markdown.py::test_render_table_when_wide PASSED [ 19%]
+2026-11-17T13:46:53.7353640Z tests/unit/dev_docs/features/convert/test_markdown.py::test_render_table_when_decisions PASSED [ 19%]
+2026-11-17T13:46:53.7360535Z tests/unit/dev_docs/features/convert/test_markdown.py::test_render_attributes PASSED [ 19%]
+2026-11-17T13:46:53.7368608Z tests/unit/dev_docs/features/convert/test_markdown.py::test_render_attributes_when_long PASSED [ 20%]
+2026-11-17T13:46:53.7377924Z tests/unit/dev_docs/features/convert/test_service.py::test_convert_service_render PASSED [ 20%]
+2026-11-17T13:46:53.7386348Z tests/unit/dev_docs/features/convert/test_service.py::test_convert_service_render_when_converter PASSED [ 20%]
+2026-11-17T13:46:53.7394385Z tests/unit/dev_docs/features/convert/test_service.py::test_convert_service_render_when_failure PASSED [ 20%]
+2026-11-17T13:46:53.7403242Z tests/unit/dev_docs/features/convert/test_service.py::test_convert_service_render_when_markdown PASSED [ 20%]
+2026-11-17T13:46:53.7412178Z tests/unit/dev_docs/features/convert/test_service.py::test_convert_service_render_when_records PASSED [ 21%]
+2026-11-17T13:46:53.7421540Z tests/unit/dev_docs/features/convert/test_service.py::test_convert_service_render_when_id_link PASSED [ 21%]
+2026-11-17T13:46:53.7430413Z tests/unit/dev_docs/features/convert/test_service.py::test_convert_service_finish PASSED [ 21%]
+2026-11-17T13:46:53.7437786Z tests/unit/dev_docs/features/convert/test_service.py::test_convert_service_finish_when_table_marker PASSED [ 21%]
+2026-11-17T13:46:53.7446054Z tests/unit/dev_docs/features/convert/test_service.py::test_convert_service_finish_when_embed PASSED [ 21%]
+2026-11-17T13:46:53.7633949Z tests/unit/dev_docs/features/documents/test_aliases.py::test_alias_schema PASSED [ 22%]
+2026-11-17T13:46:53.7641899Z tests/unit/dev_docs/features/documents/test_aliases.py::test_check_alias_document PASSED [ 22%]
+2026-11-17T13:46:53.7650086Z tests/unit/dev_docs/features/documents/test_aliases.py::test_check_alias_document_when_aliases_number PASSED [ 22%]
+2026-11-17T13:46:53.7658114Z tests/unit/dev_docs/features/documents/test_aliases.py::test_check_alias_document_when_required_missing PASSED [ 22%]
+2026-11-17T13:46:53.7666289Z tests/unit/dev_docs/features/documents/test_aliases.py::test_check_alias_document_when_aliases_string PASSED [ 22%]
+2026-11-17T13:46:53.7675016Z tests/unit/dev_docs/features/documents/test_aliases.py::test_collect_aliases PASSED [ 23%]
+2026-11-17T13:46:53.7686062Z tests/unit/dev_docs/features/documents/test_aliases.py::test_collect_aliases_when_no_alias_rows PASSED [ 23%]
+2026-11-17T13:46:53.7692886Z tests/unit/dev_docs/features/documents/test_fields.py::test_parse_field_path PASSED [ 23%]
+2026-11-17T13:46:53.7701602Z tests/unit/dev_docs/features/documents/test_fields.py::test_parse_field_path_when_invalid[empty-key] PASSED [ 23%]
+2026-11-17T13:46:53.7709896Z tests/unit/dev_docs/features/documents/test_fields.py::test_parse_field_path_when_invalid[bad-index] PASSED [ 23%]
+2026-11-17T13:46:53.7716848Z tests/unit/dev_docs/features/documents/test_fields.py::test_parse_field_path_when_selector PASSED [ 24%]
+2026-11-17T13:46:53.7723343Z tests/unit/dev_docs/features/documents/test_fields.py::test_get_field PASSED [ 24%]
+2026-11-17T13:46:53.7731251Z tests/unit/dev_docs/features/documents/test_fields.py::test_get_field_when_missing[a.x] PASSED [ 24%]
+2026-11-17T13:46:53.7739417Z tests/unit/dev_docs/features/documents/test_fields.py::test_get_field_when_missing[a.b[3].c] PASSED [ 24%]
+2026-11-17T13:46:53.7747234Z tests/unit/dev_docs/features/documents/test_fields.py::test_get_field_when_missing[a.b.c] PASSED [ 24%]
+2026-11-17T13:46:53.7754014Z tests/unit/dev_docs/features/documents/test_fields.py::test_get_field_when_selector PASSED [ 25%]
+2026-11-17T13:46:53.7762995Z tests/unit/dev_docs/features/documents/test_fields.py::test_is_markdown_body[markdown] PASSED [ 25%]
+2026-11-17T13:46:53.7771861Z tests/unit/dev_docs/features/documents/test_fields.py::test_is_markdown_body[upper-case] PASSED [ 25%]
+2026-11-17T13:46:53.7780893Z tests/unit/dev_docs/features/documents/test_fields.py::test_is_markdown_body[source-code] PASSED [ 25%]
+2026-11-17T13:46:53.7790412Z tests/unit/dev_docs/features/documents/test_fields.py::test_is_markdown_body[no-body-file] PASSED [ 25%]
+2026-11-17T13:46:53.7797888Z tests/unit/dev_docs/features/filter/test_fields.py::test_field_values PASSED [ 25%]
+2026-11-17T13:46:53.7805428Z tests/unit/dev_docs/features/filter/test_fields.py::test_field_values_when_columns PASSED [ 26%]
+2026-11-17T13:46:53.7812657Z tests/unit/dev_docs/features/filter/test_fields.py::test_heading_lines PASSED [ 26%]
+2026-11-17T13:46:53.7819986Z tests/unit/dev_docs/features/filter/test_filters.py::test_parse_compare_value PASSED [ 26%]
+2026-11-17T13:46:53.7827794Z tests/unit/dev_docs/features/filter/test_filters.py::test_parse_compare_value_when_invalid PASSED [ 26%]
+2026-11-17T13:46:53.7836627Z tests/unit/dev_docs/features/filter/test_filters.py::test_match_filter PASSED [ 26%]
+2026-11-17T13:46:53.7844520Z tests/unit/dev_docs/features/filter/test_filters.py::test_match_filter_when_match_all PASSED [ 27%]
+2026-11-17T13:46:53.7851758Z tests/unit/dev_docs/features/filter/test_filters.py::test_match_filter_when_case_sensitive PASSED [ 27%]
+2026-11-17T13:46:53.7860590Z tests/unit/dev_docs/features/filter/test_filters.py::test_match_filter_when_regex_lines PASSED [ 27%]
+2026-11-17T13:46:53.7868965Z tests/unit/dev_docs/features/filter/test_filters.py::test_match_filter_when_not PASSED [ 27%]
+2026-11-17T13:46:53.7879591Z tests/unit/dev_docs/features/filter/test_filters.py::test_match_filter_when_glob PASSED [ 27%]
+2026-11-17T13:46:53.7886817Z tests/unit/dev_docs/features/filter/test_filters.py::test_check_filter_when_group_keys PASSED [ 28%]
+2026-11-17T13:46:53.7894860Z tests/unit/dev_docs/features/filter/test_filters.py::test_check_filter_when_not_child PASSED [ 28%]
+2026-11-17T13:46:53.7901489Z tests/unit/dev_docs/features/filter/test_filters.py::test_check_filter_when_matches PASSED [ 28%]
+2026-11-17T13:46:53.7909530Z tests/unit/dev_docs/features/filter/test_filters.py::test_compile_regex PASSED [ 28%]
+2026-11-17T13:46:53.7916728Z tests/unit/dev_docs/features/lifecycle/test_control.py::test_attach PASSED [ 28%]
+2026-11-17T13:46:53.7923436Z tests/unit/dev_docs/features/lifecycle/test_control.py::test_request PASSED [ 29%]
+2026-11-17T13:46:53.7931108Z tests/unit/dev_docs/features/lifecycle/test_control.py::test_request_when_in_progress PASSED [ 29%]
+2026-11-17T13:46:53.7947830Z tests/unit/dev_docs/features/lifecycle/test_update.py::test_update_clone PASSED [ 29%]
+2026-11-17T13:46:53.7961753Z tests/unit/dev_docs/features/lifecycle/test_update.py::test_update_clone_when_up_to_date PASSED [ 29%]
+2026-11-17T13:46:53.7977776Z tests/unit/dev_docs/features/lifecycle/test_update.py::test_update_clone_when_migration_needed PASSED [ 29%]
+2026-11-17T13:46:53.7991733Z tests/unit/dev_docs/features/lifecycle/test_update.py::test_update_clone_when_in_progress PASSED [ 30%]
+2026-11-17T13:46:53.8006139Z tests/unit/dev_docs/features/lifecycle/test_update.py::test_update_clone_when_up_to_date_then_again PASSED [ 30%]
+2026-11-17T13:46:53.8020949Z tests/unit/dev_docs/features/lifecycle/test_update.py::test_update_clone_when_failed_then_again PASSED [ 30%]
+2026-11-17T13:46:53.8031822Z tests/unit/dev_docs/features/lifecycle/test_update.py::test_run PASSED   [ 30%]
+2026-11-17T13:46:53.8043922Z tests/unit/dev_docs/features/lifecycle/test_update.py::test_run_when_failed PASSED [ 30%]
+2026-11-17T13:46:53.8055306Z tests/unit/dev_docs/features/lifecycle/test_update.py::test_run_when_timeout PASSED [ 31%]
+2026-11-17T13:46:53.8067297Z tests/unit/dev_docs/features/lifecycle/test_update.py::test_run_when_not_found PASSED [ 31%]
+2026-11-17T13:46:53.8074614Z tests/unit/dev_docs/features/migrate/test_service.py::test_resolve_target PASSED [ 31%]
+2026-11-17T13:46:53.8117260Z tests/unit/dev_docs/features/migrate/test_service.py::test_plan_migration PASSED [ 31%]
+2026-11-17T13:46:53.8141574Z tests/unit/dev_docs/features/migrate/test_service.py::test_plan_migration_when_current PASSED [ 31%]
+2026-11-17T13:46:53.8159156Z tests/unit/dev_docs/features/migrate/test_service.py::test_plan_migration_when_newer PASSED [ 31%]
+2026-11-17T13:46:53.8175693Z tests/unit/dev_docs/features/migrate/test_service.py::test_plan_migration_when_no_version PASSED [ 32%]
+2026-11-17T13:46:53.8360286Z tests/unit/dev_docs/features/migrate/test_service.py::test_apply_migration PASSED [ 32%]
+2026-11-17T13:46:53.8477410Z tests/unit/dev_docs/features/migrate/test_service.py::test_apply_migration_when_record PASSED [ 32%]
+2026-11-17T13:46:53.8499480Z tests/unit/dev_docs/features/migrate/test_service.py::test_apply_migration_when_destructive PASSED [ 32%]
+2026-11-17T13:46:53.8589111Z tests/unit/dev_docs/features/migrate/test_service.py::test_apply_migration_when_invalid_result PASSED [ 32%]
+2026-11-17T13:46:53.8626426Z tests/unit/dev_docs/features/migrate/test_service.py::test_apply_migration_when_changed PASSED [ 33%]
+2026-11-17T13:46:53.8752941Z tests/unit/dev_docs/features/migrate/test_service.py::test_apply_migration_when_export_sources PASSED [ 33%]
+2026-11-17T13:46:53.8814894Z tests/unit/dev_docs/features/migrate/test_service.py::test_apply_migration_when_export_unreachable PASSED [ 33%]
+2026-11-17T13:46:53.8898769Z tests/unit/dev_docs/features/migrate/test_service.py::test_apply_migration_when_export_unexpected_status PASSED [ 33%]
+2026-11-17T13:46:53.8942659Z tests/unit/dev_docs/features/migrate/test_service.py::test_export_sources PASSED [ 33%]
+2026-11-17T13:46:53.8974727Z tests/unit/dev_docs/features/migrate/test_service.py::test_export_sources_when_id_omitted PASSED [ 34%]
+2026-11-17T13:46:53.9001279Z tests/unit/dev_docs/features/migrate/test_service.py::test_export_sources_when_name_unresolved PASSED [ 34%]
+2026-11-17T13:46:53.9024877Z tests/unit/dev_docs/features/migrate/test_service.py::test_export_sources_when_save_timeout PASSED [ 34%]
+2026-11-17T13:46:53.9058688Z tests/unit/dev_docs/features/migrate/test_service.py::test_export_sources_when_save_timeout_with_id_omitted PASSED [ 34%]
+2026-11-17T13:46:53.9082021Z tests/unit/dev_docs/features/migrate/test_service.py::test_export_sources_when_save_unconfirmed PASSED [ 34%]
+2026-11-17T13:46:53.9097931Z tests/unit/dev_docs/features/migrate/test_service.py::test_export_sources_when_fetch_unreachable PASSED [ 35%]
+2026-11-17T13:46:53.9134115Z tests/unit/dev_docs/features/migrate/test_service.py::test_export_sources_when_rejected PASSED [ 35%]
+2026-11-17T13:46:53.9158083Z tests/unit/dev_docs/features/migrate/test_service.py::test_export_sources_when_conflict PASSED [ 35%]
+2026-11-17T13:46:53.9205233Z tests/unit/dev_docs/features/migrate/test_service.py::test_export_sources_when_disabled_id_omitted PASSED [ 35%]
+2026-11-17T13:46:53.9229101Z tests/unit/dev_docs/features/migrate/test_service.py::test_export_sources_when_storage PASSED [ 35%]
+2026-11-17T13:46:53.9261183Z tests/unit/dev_docs/features/migrate/test_steps.py::test_load_steps PASSED [ 36%]
+2026-11-17T13:46:53.9277478Z tests/unit/dev_docs/features/migrate/test_steps.py::test_load_steps_when_none PASSED [ 36%]
+2026-11-17T13:46:53.9300445Z tests/unit/dev_docs/features/migrate/test_steps.py::test_load_steps_when_invalid_op PASSED [ 36%]
+2026-11-17T13:46:53.9325421Z tests/unit/dev_docs/features/migrate/test_steps.py::test_apply_step_when_rename PASSED [ 36%]
+2026-11-17T13:46:53.9341225Z tests/unit/dev_docs/features/migrate/test_steps.py::test_apply_step_when_add PASSED [ 36%]
+2026-11-17T13:46:53.9353720Z tests/unit/dev_docs/features/migrate/test_steps.py::test_apply_step_when_delete PASSED [ 37%]
+2026-11-17T13:46:53.9366021Z tests/unit/dev_docs/features/migrate/test_steps.py::test_apply_step_when_rename_conflict PASSED [ 37%]
+2026-11-17T13:46:53.9382397Z tests/unit/dev_docs/features/migrate/test_steps.py::test_apply_step_when_delete_value PASSED [ 37%]
+2026-11-17T13:46:53.9407887Z tests/unit/dev_docs/features/migrate/test_steps.py::test_apply_step_when_lift PASSED [ 37%]
+2026-11-17T13:46:53.9429975Z tests/unit/dev_docs/features/migrate/test_steps.py::test_apply_step_when_unwrap PASSED [ 37%]
+2026-11-17T13:46:53.9448129Z tests/unit/dev_docs/features/migrate/test_steps.py::test_apply_step_when_lift_conflict PASSED [ 37%]
+2026-11-17T13:46:53.9455827Z tests/unit/dev_docs/features/prompt_doc/test_render.py::test_flatten_vars PASSED [ 38%]
+2026-11-17T13:46:53.9499503Z tests/unit/dev_docs/features/prompt_doc/test_render.py::test_build_environment PASSED [ 38%]
+2026-11-17T13:46:53.9512073Z tests/unit/dev_docs/features/prompt_doc/test_render.py::test_build_environment_when_traced PASSED [ 38%]
+2026-11-17T13:46:53.9519929Z tests/unit/dev_docs/features/prompt_doc/test_render.py::test_build_values PASSED [ 38%]
+2026-11-17T13:46:53.9531126Z tests/unit/dev_docs/features/prompt_doc/test_render.py::test_build_values_when_type_mismatch PASSED [ 38%]
+2026-11-17T13:46:53.9547308Z tests/unit/dev_docs/features/prompt_doc/test_render.py::test_compile_parts PASSED [ 39%]
+2026-11-17T13:46:53.9556938Z tests/unit/dev_docs/features/prompt_doc/test_render.py::test_compile_parts_when_syntax_error PASSED [ 39%]
+2026-11-17T13:46:53.9575474Z tests/unit/dev_docs/features/prompt_doc/test_render.py::test_compile_parts_when_condition_braced PASSED [ 39%]
+2026-11-17T13:46:53.9596712Z tests/unit/dev_docs/features/prompt_doc/test_render.py::test_render_example PASSED [ 39%]
+2026-11-17T13:46:53.9618149Z tests/unit/dev_docs/features/prompt_doc/test_render.py::test_render_example_when_condition_false PASSED [ 39%]
+2026-11-17T13:46:53.9630949Z tests/unit/dev_docs/features/prompt_doc/test_render.py::test_render_example_when_hook PASSED [ 40%]
+2026-11-17T13:46:53.9643725Z tests/unit/dev_docs/features/prompt_doc/test_render.py::test_render_example_when_agent PASSED [ 40%]
+2026-11-17T13:46:53.9658376Z tests/unit/dev_docs/features/prompt_doc/test_render.py::test_render_example_when_lang_missing PASSED [ 40%]
+2026-11-17T13:46:53.9671490Z tests/unit/dev_docs/features/prompt_doc/test_render.py::test_render_example_when_undefined PASSED [ 40%]
+2026-11-17T13:46:53.9693204Z tests/unit/dev_docs/features/prompt_doc/test_render.py::test_render_example_when_syntax_error PASSED [ 40%]
+2026-11-17T13:46:53.9707008Z tests/unit/dev_docs/features/prompt_doc/test_render.py::test_render_example_when_runtime_error PASSED [ 41%]
+2026-11-17T13:46:54.0259021Z tests/unit/dev_docs/features/prompt_doc/test_runtime.py::test_prompt_set_render PASSED [ 41%]
+2026-11-17T13:46:54.0728661Z tests/unit/dev_docs/features/prompt_doc/test_runtime.py::test_prompt_set_render_when_lang_missing PASSED [ 41%]
+2026-11-17T13:46:54.0735287Z tests/unit/dev_docs/features/prompt_doc/test_runtime.py::test_prompts_dir PASSED [ 41%]
+2026-11-17T13:46:54.0748180Z tests/unit/dev_docs/features/prompt_doc/test_runtime.py::test_prompts_dir_when_env PASSED [ 41%]
+2026-11-17T13:46:54.1244683Z tests/unit/dev_docs/features/prompt_doc/test_runtime.py::test_load_prompts PASSED [ 42%]
+2026-11-17T13:46:54.1706588Z tests/unit/dev_docs/features/prompt_doc/test_runtime.py::test_load_prompts_when_agent PASSED [ 42%]
+2026-11-17T13:46:54.2214559Z tests/unit/dev_docs/features/prompt_doc/test_runtime.py::test_load_prompts_when_schema_violation PASSED [ 42%]
+2026-11-17T13:46:54.2671034Z tests/unit/dev_docs/features/prompt_doc/test_runtime.py::test_load_prompts_when_many_violations PASSED [ 42%]
+2026-11-17T13:46:54.3126149Z tests/unit/dev_docs/features/prompt_doc/test_runtime.py::test_load_prompts_when_id_mismatch PASSED [ 42%]
+2026-11-17T13:46:54.3589680Z tests/unit/dev_docs/features/prompt_doc/test_runtime.py::test_load_prompts_when_syntax_error PASSED [ 43%]
+2026-11-17T13:46:54.4050466Z tests/unit/dev_docs/features/prompt_doc/test_runtime.py::test_load_prompts_when_undefined_variable PASSED [ 43%]
+2026-11-17T13:46:54.4488285Z tests/unit/dev_docs/features/prompt_doc/test_runtime.py::test_load_prompts_when_required_missing PASSED [ 43%]
+2026-11-17T13:46:54.4996716Z tests/unit/dev_docs/features/prompt_doc/test_runtime.py::test_load_prompts_when_bundled PASSED [ 43%]
+2026-11-17T13:46:54.5004369Z tests/unit/dev_docs/features/settings/test_query.py::test_config_path PASSED [ 43%]
+2026-11-17T13:46:54.5013076Z tests/unit/dev_docs/features/settings/test_query.py::test_config_path_when_unset PASSED [ 43%]
+2026-11-17T13:46:54.5020242Z tests/unit/dev_docs/features/settings/test_query.py::test_config_path_when_xdg_config_home_set PASSED [ 44%]
+2026-11-17T13:46:54.5027260Z tests/unit/dev_docs/features/settings/test_query.py::test_xdg_base_dir PASSED [ 44%]
+2026-11-17T13:46:54.5036741Z tests/unit/dev_docs/features/settings/test_query.py::test_xdg_base_dir_when_unset_or_relative[env0] PASSED [ 44%]
+2026-11-17T13:46:54.5045691Z tests/unit/dev_docs/features/settings/test_query.py::test_xdg_base_dir_when_unset_or_relative[env1] PASSED [ 44%]
+2026-11-17T13:46:54.5054125Z tests/unit/dev_docs/features/settings/test_query.py::test_xdg_base_dir_when_unset_or_relative[env2] PASSED [ 44%]
+2026-11-17T13:46:54.5060552Z tests/unit/dev_docs/features/settings/test_query.py::test_state_dir_path PASSED [ 45%]
+2026-11-17T13:46:54.5067452Z tests/unit/dev_docs/features/settings/test_query.py::test_state_dir_path_when_config_value PASSED [ 45%]
+2026-11-17T13:46:54.5074460Z tests/unit/dev_docs/features/settings/test_query.py::test_state_dir_path_when_xdg_state_home_set PASSED [ 45%]
+2026-11-17T13:46:54.5082082Z tests/unit/dev_docs/features/settings/test_query.py::test_state_dir_path_when_unset PASSED [ 45%]
+2026-11-17T13:46:54.5145464Z tests/unit/dev_docs/features/settings/test_query.py::test_load_terminal_config PASSED [ 45%]
+2026-11-17T13:46:54.5210144Z tests/unit/dev_docs/features/settings/test_query.py::test_load_terminal_config_when_mdmark_version PASSED [ 46%]
+2026-11-17T13:46:54.5275886Z tests/unit/dev_docs/features/settings/test_query.py::test_load_terminal_config_when_state_dir_env_set PASSED [ 46%]
+2026-11-17T13:46:54.5290133Z tests/unit/dev_docs/features/settings/test_query.py::test_load_terminal_config_when_missing PASSED [ 46%]
+2026-11-17T13:46:54.5308387Z tests/unit/dev_docs/features/settings/test_query.py::test_load_terminal_config_when_yaml_broken PASSED [ 46%]
+2026-11-17T13:46:54.5377538Z tests/unit/dev_docs/features/settings/test_query.py::test_load_terminal_config_when_schema_invalid PASSED [ 46%]
+2026-11-17T13:46:54.5445142Z tests/unit/dev_docs/features/settings/test_query.py::test_load_terminal_config_when_leftover_sources PASSED [ 47%]
+2026-11-17T13:46:54.5497488Z tests/unit/dev_docs/features/settings/test_query.py::test_validate_terminal_config PASSED [ 47%]
+2026-11-17T13:46:54.5548656Z tests/unit/dev_docs/features/settings/test_query.py::test_validate_terminal_config_when_newer_version PASSED [ 47%]
+2026-11-17T13:46:54.5600108Z tests/unit/dev_docs/features/settings/test_query.py::test_validate_terminal_config_when_project_index_invalid PASSED [ 47%]
+2026-11-17T13:46:54.5651410Z tests/unit/dev_docs/features/settings/test_query.py::test_validate_terminal_config_when_leftover_sources PASSED [ 47%]
+2026-11-17T13:46:54.5666250Z tests/unit/dev_docs/features/settings/test_query.py::test_listen_port PASSED [ 48%]
+2026-11-17T13:46:54.5679615Z tests/unit/dev_docs/features/settings/test_query.py::test_listen_port_when_unset PASSED [ 48%]
+2026-11-17T13:46:54.5693873Z tests/unit/dev_docs/features/settings/test_query.py::test_listen_port_when_invalid PASSED [ 48%]
+2026-11-17T13:46:54.6614775Z tests/unit/dev_docs/features/settings/test_route.py::test_build_settings_router_when_get PASSED [ 48%]
+2026-11-17T13:46:54.6708536Z tests/unit/dev_docs/features/settings/test_route.py::test_build_settings_router_when_put PASSED [ 48%]
+2026-11-17T13:46:54.6779786Z tests/unit/dev_docs/features/settings/test_route.py::test_build_settings_router_when_pending_reload PASSED [ 49%]
+2026-11-17T13:46:54.6866226Z tests/unit/dev_docs/features/settings/test_route.py::test_build_settings_router_when_rejected PASSED [ 49%]
+2026-11-17T13:46:54.6947410Z tests/unit/dev_docs/features/settings/test_route.py::test_build_settings_router_when_unexpected_status PASSED [ 49%]
+2026-11-17T13:46:54.7049817Z tests/unit/dev_docs/features/settings/test_route.py::test_build_settings_router_when_unreachable PASSED [ 49%]
+2026-11-17T13:46:54.7125861Z tests/unit/dev_docs/features/settings/test_route.py::test_build_settings_router_when_version_conflict PASSED [ 49%]
+2026-11-17T13:46:54.7196005Z tests/unit/dev_docs/features/settings/test_route.py::test_build_settings_router_when_storage PASSED [ 50%]
+2026-11-17T13:46:54.7213841Z tests/unit/dev_docs/features/settings/test_service.py::test_save_sources PASSED [ 50%]
+2026-11-17T13:46:54.7230375Z tests/unit/dev_docs/features/settings/test_service.py::test_save_sources_when_defaults PASSED [ 50%]
+2026-11-17T13:46:54.7247127Z tests/unit/dev_docs/features/settings/test_service.py::test_save_sources_when_outside_read_false PASSED [ 50%]
+2026-11-17T13:46:54.7261062Z tests/unit/dev_docs/features/settings/test_service.py::test_save_sources_when_rejected PASSED [ 50%]
+2026-11-17T13:46:54.7277526Z tests/unit/dev_docs/features/settings/test_service.py::test_save_sources_when_expected_version PASSED [ 50%]
+2026-11-17T13:46:54.7292006Z tests/unit/dev_docs/features/settings/test_service.py::test_save_sources_when_version_conflict PASSED [ 51%]
+2026-11-17T13:46:54.7309618Z tests/unit/dev_docs/features/settings/test_service.py::test_save_sources_when_storage PASSED [ 51%]
+2026-11-17T13:46:54.7361884Z tests/unit/dev_docs/features/view/test_columns.py::test_save PASSED      [ 51%]
+2026-11-17T13:46:54.7415835Z tests/unit/dev_docs/features/view/test_document.py::test_get_document PASSED [ 51%]
+2026-11-17T13:46:54.7468343Z tests/unit/dev_docs/features/view/test_document.py::test_get_document_when_diff PASSED [ 51%]
+2026-11-17T13:46:54.7508854Z tests/unit/dev_docs/features/view/test_document.py::test_get_document_when_convert_failed PASSED [ 52%]
+2026-11-17T13:46:54.7547496Z tests/unit/dev_docs/features/view/test_document.py::test_get_document_when_yaml_unreadable PASSED [ 52%]
+2026-11-17T13:46:54.7585618Z tests/unit/dev_docs/features/view/test_document.py::test_get_document_when_missing PASSED [ 52%]
+2026-11-17T13:46:54.7626596Z tests/unit/dev_docs/features/view/test_document.py::test_get_document_when_not_git PASSED [ 52%]
+2026-11-17T13:46:54.7672221Z tests/unit/dev_docs/features/view/test_document.py::test_get_document_when_aliases PASSED [ 52%]
+2026-11-17T13:46:54.7713228Z tests/unit/dev_docs/features/view/test_document.py::test_get_document_when_decision PASSED [ 53%]
+2026-11-17T13:46:54.7750859Z tests/unit/dev_docs/features/view/test_document.py::test_get_document_when_decision_ambiguous PASSED [ 53%]
+2026-11-17T13:46:54.7843257Z tests/unit/dev_docs/features/view/test_document.py::test_get_document_when_body_path PASSED [ 53%]
+2026-11-17T13:46:54.7889765Z tests/unit/dev_docs/features/view/test_document.py::test_get_document_when_embed PASSED [ 53%]
+2026-11-17T13:46:54.7915287Z tests/unit/dev_docs/features/view/test_document.py::test_get_document_when_unreachable PASSED [ 53%]
+2026-11-17T13:46:54.7922572Z tests/unit/dev_docs/features/view/test_document.py::test_not_found_fields PASSED [ 54%]
+2026-11-17T13:46:54.7967242Z tests/unit/dev_docs/features/view/test_document.py::test_get_document_when_requests_concurrent PASSED [ 54%]
+2026-11-17T13:46:55.0004199Z tests/unit/dev_docs/features/view/test_document.py::test_get_document_when_total_timeout PASSED [ 54%]
+2026-11-17T13:46:55.0016476Z tests/unit/dev_docs/features/view/test_nav.py::test_build_nav PASSED     [ 54%]
+2026-11-17T13:46:55.0029628Z tests/unit/dev_docs/features/view/test_nav.py::test_build_nav_when_no_nav PASSED [ 54%]
+2026-11-17T13:46:55.0043066Z tests/unit/dev_docs/features/view/test_nav.py::test_build_nav_when_metadata_filter PASSED [ 55%]
+2026-11-17T13:46:55.0055054Z tests/unit/dev_docs/features/view/test_nav.py::test_build_nav_when_metadata_column_renamed PASSED [ 55%]
+2026-11-17T13:46:55.0068505Z tests/unit/dev_docs/features/view/test_nav.py::test_build_nav_when_group_by_folder PASSED [ 55%]
+2026-11-17T13:46:55.0079815Z tests/unit/dev_docs/features/view/test_nav.py::test_build_nav_when_group_by_common_keys PASSED [ 55%]
+2026-11-17T13:46:55.0089710Z tests/unit/dev_docs/features/view/test_nav.py::test_build_nav_when_group_by_yaml_kind PASSED [ 55%]
+2026-11-17T13:46:55.0100575Z tests/unit/dev_docs/features/view/test_nav.py::test_folder_items PASSED  [ 56%]
+2026-11-17T13:46:55.0110916Z tests/unit/dev_docs/features/view/test_nav.py::test_folder_items_when_multiple_globs PASSED [ 56%]
+2026-11-17T13:46:55.0119760Z tests/unit/dev_docs/features/view/test_nav.py::test_folder_items_when_records PASSED [ 56%]
+2026-11-17T13:46:55.0127581Z tests/unit/dev_docs/features/view/test_nav.py::test_mark_nav_changes PASSED [ 56%]
+2026-11-17T13:46:55.0135807Z tests/unit/dev_docs/features/view/test_nav.py::test_mark_nav_changes_when_deleted PASSED [ 56%]
+2026-11-17T13:46:55.0143601Z tests/unit/dev_docs/features/view/test_nav.py::test_mark_nav_changes_when_group_missing PASSED [ 56%]
+2026-11-17T13:46:55.0158560Z tests/unit/dev_docs/features/view/test_nav.py::test_build_nav_when_filter PASSED [ 57%]
+2026-11-17T13:46:55.0170842Z tests/unit/dev_docs/features/view/test_nav.py::test_build_nav_when_records_filter PASSED [ 57%]
+2026-11-17T13:46:55.0179140Z tests/unit/dev_docs/features/view/test_paths.py::test_page_path PASSED   [ 57%]
+2026-11-17T13:46:55.0187141Z tests/unit/dev_docs/features/view/test_paths.py::test_find_page PASSED   [ 57%]
+2026-11-17T13:46:55.0195503Z tests/unit/dev_docs/features/view/test_paths.py::test_find_page_when_body_path PASSED [ 57%]
+2026-11-17T13:46:55.0204274Z tests/unit/dev_docs/features/view/test_paths.py::test_find_page_when_missing PASSED [ 58%]
+2026-11-17T13:46:55.0409309Z tests/unit/dev_docs/features/view/test_route.py::test_build_view_router_when_document PASSED [ 58%]
+2026-11-17T13:46:55.0601669Z tests/unit/dev_docs/features/view/test_route.py::test_build_view_router_when_document_missing PASSED [ 58%]
+2026-11-17T13:46:55.0779087Z tests/unit/dev_docs/features/view/test_route.py::test_build_view_router_when_search PASSED [ 58%]
+2026-11-17T13:46:55.0942091Z tests/unit/dev_docs/features/view/test_route.py::test_build_view_router_when_query_too_long PASSED [ 58%]
+2026-11-17T13:46:55.1115157Z tests/unit/dev_docs/features/view/test_route.py::test_build_view_router_when_refs PASSED [ 59%]
+2026-11-17T13:46:55.1358540Z tests/unit/dev_docs/features/view/test_route.py::test_build_view_router_when_columns PASSED [ 59%]
+2026-11-17T13:46:55.1531970Z tests/unit/dev_docs/features/view/test_route.py::test_build_view_router_when_cross_origin PASSED [ 59%]
+2026-11-17T13:46:55.1989796Z tests/unit/dev_docs/features/view/test_route.py::test_build_view_router_when_project_index_unreachable PASSED [ 59%]
+2026-11-17T13:46:55.2016142Z tests/unit/dev_docs/features/view/test_search.py::test_screen_search PASSED [ 59%]
+2026-11-17T13:46:55.2034309Z tests/unit/dev_docs/features/view/test_search.py::test_screen_search_when_unreachable PASSED [ 60%]
+2026-11-17T13:46:55.2046455Z tests/unit/dev_docs/integrations/project_index/test_client.py::test_request_when_refused PASSED [ 60%]
+2026-11-17T13:46:55.2057968Z tests/unit/dev_docs/integrations/project_index/test_client.py::test_request_when_timeout PASSED [ 60%]
+2026-11-17T13:46:55.4084293Z tests/unit/dev_docs/integrations/project_index/test_client.py::test_request_when_total_timeout PASSED [ 60%]
+2026-11-17T13:46:55.4101147Z tests/unit/dev_docs/integrations/project_index/test_client.py::test_request_when_not_found[source] PASSED [ 60%]
+2026-11-17T13:46:55.4117090Z tests/unit/dev_docs/integrations/project_index/test_client.py::test_request_when_not_found[not_served] PASSED [ 61%]
+2026-11-17T13:46:55.4131999Z tests/unit/dev_docs/integrations/project_index/test_client.py::test_request_when_not_found[ref] PASSED [ 61%]
+2026-11-17T13:46:55.4147285Z tests/unit/dev_docs/integrations/project_index/test_client.py::test_request_when_not_found[doc] PASSED [ 61%]
+2026-11-17T13:46:55.4159866Z tests/unit/dev_docs/integrations/project_index/test_client.py::test_request_when_unexpected_status PASSED [ 61%]
+2026-11-17T13:46:55.4173541Z tests/unit/dev_docs/integrations/project_index/test_client.py::test_list_sources PASSED [ 61%]
+2026-11-17T13:46:55.4190782Z tests/unit/dev_docs/integrations/project_index/test_client.py::test_source_view PASSED [ 62%]
+2026-11-17T13:46:55.4207432Z tests/unit/dev_docs/integrations/project_index/test_client.py::test_source_view_when_not_git PASSED [ 62%]
+2026-11-17T13:46:55.4221256Z tests/unit/dev_docs/integrations/project_index/test_client.py::test_list_documents PASSED [ 62%]
+2026-11-17T13:46:55.4235448Z tests/unit/dev_docs/integrations/project_index/test_client.py::test_fetch_document_list PASSED [ 62%]
+2026-11-17T13:46:55.4249596Z tests/unit/dev_docs/integrations/project_index/test_client.py::test_list_documents_when_records PASSED [ 62%]
+2026-11-17T13:46:55.4263345Z tests/unit/dev_docs/integrations/project_index/test_client.py::test_document_when_failure PASSED [ 62%]
+2026-11-17T13:46:55.4277365Z tests/unit/dev_docs/integrations/project_index/test_client.py::test_document_when_record PASSED [ 63%]
+2026-11-17T13:46:55.4290937Z tests/unit/dev_docs/integrations/project_index/test_client.py::test_document_when_yaml_unreadable PASSED [ 63%]
+2026-11-17T13:46:55.4304516Z tests/unit/dev_docs/integrations/project_index/test_client.py::test_decisions PASSED [ 63%]
+2026-11-17T13:46:55.4317845Z tests/unit/dev_docs/integrations/project_index/test_client.py::test_decision_when_ambiguous PASSED [ 63%]
+2026-11-17T13:46:55.4332129Z tests/unit/dev_docs/integrations/project_index/test_client.py::test_search PASSED [ 63%]
+2026-11-17T13:46:55.4346093Z tests/unit/dev_docs/integrations/project_index/test_client.py::test_refs_when_not_git PASSED [ 64%]
+2026-11-17T13:46:55.4359428Z tests/unit/dev_docs/integrations/project_index/test_client.py::test_settings_sources PASSED [ 64%]
+2026-11-17T13:46:55.4376753Z tests/unit/dev_docs/integrations/project_index/test_client.py::test_put_settings_sources PASSED [ 64%]
+2026-11-17T13:46:55.4390686Z tests/unit/dev_docs/integrations/project_index/test_client.py::test_put_settings_sources_when_rejected PASSED [ 64%]
+2026-11-17T13:46:55.4407100Z tests/unit/dev_docs/integrations/project_index/test_client.py::test_put_settings_sources_when_expected_version PASSED [ 64%]
+2026-11-17T13:46:55.4421109Z tests/unit/dev_docs/integrations/project_index/test_client.py::test_put_settings_sources_when_conflict PASSED [ 65%]
+2026-11-17T13:46:55.4435304Z tests/unit/dev_docs/integrations/project_index/test_client.py::test_save_settings_sources PASSED [ 65%]
+2026-11-17T13:46:55.4449194Z tests/unit/dev_docs/integrations/project_index/test_client.py::test_save_settings_sources_when_conflict PASSED [ 65%]
+2026-11-17T13:46:55.4463147Z tests/unit/dev_docs/integrations/project_index/test_client.py::test_save_settings_sources_when_invalid PASSED [ 65%]
+2026-11-17T13:46:55.4477540Z tests/unit/dev_docs/integrations/project_index/test_client.py::test_list_sources_when_loading PASSED [ 65%]
+2026-11-17T13:46:55.4485246Z tests/unit/dev_docs/integrations/project_index/test_types.py::test_parse_document PASSED [ 66%]
+2026-11-17T13:46:55.4492554Z tests/unit/dev_docs/integrations/project_index/test_types.py::test_parse_document_when_value_null PASSED [ 66%]
+2026-11-17T13:46:55.4499931Z tests/unit/dev_docs/integrations/project_index/test_types.py::test_parse_document_when_common_keys_null PASSED [ 66%]
+2026-11-17T13:46:55.4508239Z tests/unit/dev_docs/integrations/project_index/test_types.py::test_parse_document_when_key_missing PASSED [ 66%]
+2026-11-17T13:46:55.4516504Z tests/unit/dev_docs/integrations/project_index/test_types.py::test_parse_document_list_when_records PASSED [ 66%]
+2026-11-17T13:46:55.5075587Z tests/unit/dev_docs/server/mcp/test_admin.py::test_build_admin_mcp PASSED [ 67%]
+2026-11-17T13:46:55.5617243Z tests/unit/dev_docs/server/mcp/test_admin.py::test_build_admin_mcp_when_status PASSED [ 67%]
+2026-11-17T13:46:55.6167320Z tests/unit/dev_docs/server/mcp/test_admin.py::test_build_admin_mcp_when_restart_in_progress PASSED [ 67%]
+2026-11-17T13:46:55.6728646Z tests/unit/dev_docs/server/mcp/test_admin.py::test_build_admin_mcp_when_descriptions PASSED [ 67%]
+2026-11-17T13:46:55.6736748Z tests/unit/dev_docs/server/mcp/test_result.py::test_to_tool_result PASSED [ 67%]
+2026-11-17T13:46:55.6744858Z tests/unit/dev_docs/server/mcp/test_result.py::test_to_tool_result_when_json PASSED [ 68%]
+2026-11-17T13:46:55.6759188Z tests/unit/dev_docs/server/mcp/test_result.py::test_tool_error PASSED    [ 68%]
+2026-11-17T13:46:55.6767272Z tests/unit/dev_docs/server/mcp/test_result.py::test_tool_error_when_validation PASSED [ 68%]
+2026-11-17T13:46:55.6774681Z tests/unit/dev_docs/server/mcp/test_result.py::test_tool_prompt_id PASSED [ 68%]
+2026-11-17T13:46:55.6782052Z tests/unit/dev_docs/server/mcp/test_result.py::test_mcp_prompt_ids PASSED [ 68%]
+2026-11-17T13:46:55.8047147Z tests/unit/dev_docs/server/test_app.py::test_build_app PASSED            [ 68%]
+2026-11-17T13:46:55.9398336Z tests/unit/dev_docs/server/test_app.py::test_build_app_when_openapi PASSED [ 69%]
+2026-11-17T13:46:56.0170314Z tests/unit/dev_docs/server/test_app.py::test_build_app_when_screen PASSED [ 69%]
+2026-11-17T13:46:56.0981750Z tests/unit/dev_docs/server/test_app.py::test_build_app_when_mcp_without_slash PASSED [ 69%]
+2026-11-17T13:46:56.0990641Z tests/unit/dev_docs/server/test_app.py::test_slashless_mcp_path_middleware PASSED [ 69%]
+2026-11-17T13:46:56.1004311Z tests/unit/dev_docs/server/test_app.py::test_slashless_mcp_path_middleware_when_other_path[with_slash] PASSED [ 69%]
+2026-11-17T13:46:56.1011619Z tests/unit/dev_docs/server/test_app.py::test_slashless_mcp_path_middleware_when_other_path[prefix] PASSED [ 70%]
+2026-11-17T13:46:56.1021427Z tests/unit/dev_docs/server/test_app.py::test_slashless_mcp_path_middleware_when_other_path[removed] PASSED [ 70%]
+2026-11-17T13:46:56.1031888Z tests/unit/dev_docs/server/test_app.py::test_slashless_mcp_path_middleware_when_other_path[lifespan] PASSED [ 70%]
+2026-11-17T13:46:56.1041946Z tests/unit/dev_docs/server/test_app.py::test_route_operation_id PASSED   [ 70%]
+2026-11-17T13:46:56.1069834Z tests/unit/dev_docs/server/test_app.py::test_route_operation_id_when_no_tag PASSED [ 70%]
+2026-11-17T13:46:56.1099482Z tests/unit/dev_docs/server/test_error_handlers.py::test_register_error_handlers PASSED [ 71%]
+2026-11-17T13:46:56.1143206Z tests/unit/dev_docs/server/test_error_handlers.py::test_register_error_handlers_when_request_invalid PASSED [ 71%]
+2026-11-17T13:46:56.1173042Z tests/unit/dev_docs/server/test_error_handlers.py::test_register_error_handlers_when_http_error PASSED [ 71%]
+2026-11-17T13:46:56.1208816Z tests/unit/dev_docs/server/test_error_handlers.py::test_register_error_handlers_when_http_error_headers PASSED [ 71%]
+2026-11-17T13:46:56.1245944Z tests/unit/dev_docs/server/test_error_handlers.py::test_register_error_handlers_when_details_snake PASSED [ 71%]
+2026-11-17T13:46:56.1285477Z tests/unit/dev_docs/server/test_error_handlers.py::test_register_error_handlers_when_project_index_unreachable PASSED [ 72%]
+2026-11-17T13:46:56.1325259Z tests/unit/dev_docs/server/test_error_handlers.py::test_register_error_handlers_when_project_index_failed PASSED [ 72%]
+2026-11-17T13:46:56.1422959Z tests/unit/dev_docs/server/test_error_handlers.py::test_register_error_handlers_when_project_index_timed_out PASSED [ 72%]
+2026-11-17T13:46:56.1436403Z tests/unit/dev_docs/server/test_lifespan.py::test_build_lifespan PASSED  [ 72%]
+2026-11-17T13:46:56.1446839Z tests/unit/dev_docs/server/test_origin.py::test_require_same_origin PASSED [ 72%]
+2026-11-17T13:46:56.1455123Z tests/unit/dev_docs/server/test_origin.py::test_require_same_origin_when_fetch_site PASSED [ 73%]
+2026-11-17T13:46:56.1462421Z tests/unit/dev_docs/server/test_origin.py::test_require_same_origin_when_cross_origin PASSED [ 73%]
+2026-11-17T13:46:56.1470186Z tests/unit/dev_docs/server/test_origin.py::test_require_same_origin_when_unknown PASSED [ 73%]
+2026-11-17T13:46:56.1538470Z tests/unit/dev_docs/server/test_screen.py::test_build_screen_router PASSED [ 73%]
+2026-11-17T13:46:56.1605357Z tests/unit/dev_docs/server/test_screen.py::test_build_screen_router_when_mdmark_version PASSED [ 73%]
+2026-11-17T13:46:56.1910676Z tests/unit/dev_docs/server/test_screen.py::test_build_screen_router_when_asset PASSED [ 74%]
+2026-11-17T13:46:56.2025382Z tests/unit/dev_docs/server/test_screen.py::test_build_screen_router_when_asset_missing PASSED [ 74%]
+2026-11-17T13:46:56.2115382Z tests/unit/dev_docs/server/test_screen.py::test_build_screen_router_when_excluded[/_api/none] PASSED [ 74%]
+2026-11-17T13:46:56.2193557Z tests/unit/dev_docs/server/test_screen.py::test_build_screen_router_when_excluded[/mcp/none] PASSED [ 74%]
+2026-11-17T13:46:56.2263790Z tests/unit/dev_docs/server/test_screen.py::test_build_screen_router_when_excluded[/_admin/none] PASSED [ 74%]
+2026-11-17T13:46:56.2335427Z tests/unit/dev_docs/server/test_screen.py::test_build_screen_router_when_excluded_not_get[post-admin] PASSED [ 75%]
+2026-11-17T13:46:56.2402579Z tests/unit/dev_docs/server/test_screen.py::test_build_screen_router_when_excluded_not_get[put-api] PASSED [ 75%]
+2026-11-17T13:46:56.2479950Z tests/unit/dev_docs/server/test_screen.py::test_build_screen_router_when_excluded_not_get[delete-admin] PASSED [ 75%]
+2026-11-17T13:46:56.2549468Z tests/unit/dev_docs/server/test_screen.py::test_build_screen_router_when_excluded_wrong_method PASSED [ 75%]
+2026-11-17T13:46:56.2613917Z tests/unit/dev_docs/server/test_screen.py::test_build_screen_router_when_not_get PASSED [ 75%]
+2026-11-17T13:46:56.2682487Z tests/unit/dev_docs/server/test_screen.py::test_build_screen_router_when_build_missing PASSED [ 75%]
+2026-11-17T13:46:56.2689557Z tests/unit/dev_docs/shared/test_errors.py::test_dev_docs_error_details PASSED [ 76%]
+2026-11-17T13:46:56.2696673Z tests/unit/dev_docs/shared/test_errors.py::test_dev_docs_error_details_when_no_extra PASSED [ 76%]
+2026-11-17T13:46:56.2704276Z tests/unit/dev_docs/shared/test_errors.py::test_project_index_unreachable_error PASSED [ 76%]
+2026-11-17T13:46:56.2732088Z tests/unit/dev_docs/shared/test_files.py::test_replace_file PASSED       [ 76%]
+2026-11-17T13:46:56.2755218Z tests/unit/dev_docs/shared/test_files.py::test_replace_file_when_new_folder PASSED [ 76%]
+2026-11-17T13:46:56.2779337Z tests/unit/dev_docs/shared/test_files.py::test_replace_file_when_replace_fails PASSED [ 77%]
+2026-11-17T13:46:56.2787105Z tests/unit/dev_docs/shared/test_hashing.py::test_content_hash PASSED     [ 77%]
+2026-11-17T13:46:56.2794944Z tests/unit/dev_docs/shared/test_hashing.py::test_value_hash PASSED       [ 77%]
+2026-11-17T13:46:56.2802505Z tests/unit/dev_docs/shared/test_paths.py::test_normalize_path PASSED     [ 77%]
+2026-11-17T13:46:56.2809620Z tests/unit/dev_docs/shared/test_schema_check.py::test_format_path PASSED [ 77%]
+2026-11-17T13:46:56.2816735Z tests/unit/dev_docs/shared/test_schema_check.py::test_format_path_when_index_first PASSED [ 78%]
+2026-11-17T13:46:56.2823271Z tests/unit/dev_docs/shared/test_schema_check.py::test_format_path_when_empty PASSED [ 78%]
+2026-11-17T13:46:56.2830009Z tests/unit/dev_docs/shared/test_schema_check.py::test_as_list PASSED     [ 78%]
+2026-11-17T13:46:56.2836854Z tests/unit/dev_docs/shared/test_schema_check.py::test_as_list_when_not_list PASSED [ 78%]
+2026-11-17T13:46:56.2844938Z tests/unit/dev_docs/shared/test_schema_check.py::test_from_error_when_required PASSED [ 78%]
+2026-11-17T13:46:56.2852351Z tests/unit/dev_docs/shared/test_schema_check.py::test_from_error_when_additional_properties PASSED [ 79%]
+2026-11-17T13:46:56.2859794Z tests/unit/dev_docs/shared/test_schema_check.py::test_from_error_when_type PASSED [ 79%]
+2026-11-17T13:46:56.2867080Z tests/unit/dev_docs/shared/test_schema_check.py::test_from_error_when_enum PASSED [ 79%]
+2026-11-17T13:46:56.2874876Z tests/unit/dev_docs/shared/test_schema_check.py::test_from_error_when_other PASSED [ 79%]
+2026-11-17T13:46:56.2881556Z tests/unit/dev_docs/shared/test_schema_check.py::test_schema_violations PASSED [ 79%]
+2026-11-17T13:46:56.2889322Z tests/unit/dev_docs/shared/test_schema_check.py::test_schema_violations_when_many PASSED [ 80%]
+2026-11-17T13:46:56.2898357Z tests/unit/dev_docs/shared/test_schema_check.py::test_schema_violations_when_registry PASSED [ 80%]
+2026-11-17T13:46:56.2911338Z tests/unit/dev_docs/shared/test_yaml_io.py::test_load_yaml PASSED        [ 80%]
+2026-11-17T13:46:56.2922638Z tests/unit/dev_docs/shared/test_yaml_io.py::test_load_yaml_when_syntax_error PASSED [ 80%]
+2026-11-17T13:46:56.2934774Z tests/unit/dev_docs/shared/test_yaml_io.py::test_load_yaml_when_duplicate_key PASSED [ 80%]
+2026-11-17T13:46:56.2951089Z tests/unit/dev_docs/shared/test_yaml_io.py::test_load_roundtrip PASSED   [ 81%]
+2026-11-17T13:46:56.2972394Z tests/unit/dev_docs/shared/test_yaml_io.py::test_load_roundtrip_when_quotes PASSED [ 81%]
+2026-11-17T13:46:56.2985003Z tests/unit/dev_docs/shared/test_yaml_io.py::test_load_roundtrip_when_not_mapping PASSED [ 81%]
+2026-11-17T13:46:56.2997519Z tests/unit/dev_docs/shared/test_yaml_io.py::test_dump_roundtrip PASSED   [ 81%]
+2026-11-17T13:46:56.3016090Z tests/unit/dev_docs/test_main.py::test_build_parser PASSED               [ 81%]
+2026-11-17T13:46:56.3033071Z tests/unit/dev_docs/test_main.py::test_build_parser_when_serve PASSED    [ 81%]
+2026-11-17T13:46:56.3060570Z tests/unit/dev_docs/test_main.py::test_build_parser_when_migrate PASSED  [ 82%]
+2026-11-17T13:46:56.3078954Z tests/unit/dev_docs/test_main.py::test_build_parser_when_plan_and_record PASSED [ 82%]
+2026-11-17T13:46:56.3097977Z tests/unit/dev_docs/test_main.py::test_build_parser_when_removed_command[files] PASSED [ 82%]
+2026-11-17T13:46:56.3116424Z tests/unit/dev_docs/test_main.py::test_build_parser_when_removed_command[prompt-doc] PASSED [ 82%]
+2026-11-17T13:46:56.3134908Z tests/unit/dev_docs/test_main.py::test_build_parser_when_removed_command[migrate-source] PASSED [ 82%]
+2026-11-17T13:46:56.3157544Z tests/unit/dev_docs/test_main.py::test_main_when_version PASSED          [ 83%]
+2026-11-17T13:46:56.3178847Z tests/unit/dev_docs/test_main.py::test_main_when_help PASSED             [ 83%]
+2026-11-17T13:46:56.3198295Z tests/unit/dev_docs/test_main.py::test_main_when_no_command PASSED       [ 83%]
+2026-11-17T13:46:57.0029659Z tests/unit/dev_docs/test_serve.py::test_run_serve PASSED                 [ 83%]
+2026-11-17T13:46:57.0103122Z tests/unit/dev_docs/test_serve.py::test_run_serve_when_config_invalid PASSED [ 83%]
+2026-11-17T13:46:57.0238681Z tests/unit/dev_docs/test_serve.py::test_run_serve_when_port_in_use PASSED [ 84%]
+2026-11-17T13:46:57.0963072Z tests/unit/dev_docs/test_serve.py::test_run_serve_when_startup_fails PASSED [ 84%]
+2026-11-17T13:46:57.1575615Z tests/unit/dev_docs/test_serve.py::test_run_serve_when_prompt_invalid PASSED [ 84%]
+2026-11-17T13:46:57.2303582Z tests/unit/dev_docs/test_serve.py::test_run_serve_when_restart PASSED    [ 84%]
+2026-11-17T13:46:57.3149401Z tests/unit/dev_docs/test_serve.py::test_run_serve_when_leftover_sources PASSED [ 84%]
+2026-11-17T13:46:57.3157466Z tests/unit/dev_docs/test_serve.py::test_check_port PASSED                [ 85%]
+2026-11-17T13:46:57.3167119Z tests/unit/dev_docs/test_serve.py::test_check_port_when_time_wait PASSED [ 85%]
+2026-11-17T13:46:57.3175510Z tests/unit/dev_docs/test_serve.py::test_check_port_when_in_use PASSED    [ 85%]
+2026-11-17T13:46:57.3232562Z tests/unit/dev_docs/test_serve.py::test_find_port_owner PASSED           [ 85%]
+2026-11-17T13:46:57.3284162Z tests/unit/dev_docs/test_serve.py::test_find_port_owner_when_bind_is_hostname PASSED [ 85%]
+2026-11-17T13:46:57.3295116Z tests/unit/dev_docs/test_serve.py::test_find_port_owner_when_not_listening PASSED [ 86%]
+2026-11-17T13:46:57.3309545Z tests/unit/dev_docs/test_serve.py::test_find_port_owner_when_proc_missing PASSED [ 86%]
+2026-11-17T13:46:57.3876119Z tests/unit/dev_docs/test_serve.py::test_build_handlers PASSED            [ 86%]
+2026-11-17T13:46:57.4326438Z tests/unit/dev_docs/test_serve.py::test_build_handlers_when_prompt_invalid PASSED [ 86%]
+2026-11-17T13:46:57.9437213Z tests/unit/dev_docs/test_serve.py::test_announce_sources PASSED          [ 86%]
+2026-11-17T13:46:57.9542339Z tests/unit/dev_docs/test_serve.py::test_announce_sources_when_unreachable PASSED [ 87%]
+2026-11-17T13:46:57.9581697Z tests/unit/dev_docs/test_serve.py::test_run_migrate_when_plan PASSED     [ 87%]
+2026-11-17T13:46:57.9709740Z tests/unit/dev_docs/test_serve.py::test_run_migrate PASSED               [ 87%]
+2026-11-17T13:46:57.9732635Z tests/unit/dev_docs/test_serve.py::test_run_migrate_when_current PASSED  [ 87%]
+2026-11-17T13:46:57.9860973Z tests/unit/dev_docs/test_serve.py::test_run_migrate_when_record PASSED   [ 87%]
+2026-11-17T13:46:57.9896973Z tests/unit/dev_docs/test_serve.py::test_run_migrate_when_destructive PASSED [ 87%]
+2026-11-17T13:46:57.9919384Z tests/unit/dev_docs/test_serve.py::test_run_migrate_when_newer PASSED    [ 88%]
+2026-11-17T13:46:57.9935532Z tests/unit/dev_docs/test_serve.py::test_run_migrate_when_config_invalid PASSED [ 88%]
+2026-11-17T13:46:58.5214339Z tests/unit/dev_docs/test_serve.py::test_run_migrate_when_sources_moved PASSED [ 88%]
+2026-11-17T13:46:58.5353989Z tests/unit/dev_docs/test_serve.py::test_run_migrate_when_project_index_unreachable PASSED [ 88%]
+2026-11-17T13:46:58.5484891Z tests/unit/dev_docs/test_serve.py::test_run_migrate_when_no_export PASSED [ 88%]
+2026-11-17T13:46:59.0589487Z tests/unit/dev_docs/test_serve.py::test_announce_sources_when_loading PASSED [ 89%]
+2026-11-17T13:46:59.0622307Z tests/unit/plugins/dev_docs/hooks/test_session_start.py::test_main_when_listening PASSED [ 89%]
+2026-11-17T13:46:59.0635579Z tests/unit/plugins/dev_docs/hooks/test_session_start.py::test_main_when_cleared PASSED [ 89%]
+2026-11-17T13:46:59.0657628Z tests/unit/plugins/dev_docs/hooks/test_session_start.py::test_main_when_down PASSED [ 89%]
+2026-11-17T13:46:59.0676226Z tests/unit/plugins/dev_docs/hooks/test_session_start.py::test_main_when_config_missing PASSED [ 89%]
+2026-11-17T13:46:59.0688726Z tests/unit/plugins/dev_docs/hooks/test_session_start.py::test_main_when_input_unparsable PASSED [ 90%]
+2026-11-17T13:46:59.0701252Z tests/unit/plugins/dev_docs/hooks/test_session_start.py::test_is_listening PASSED [ 90%]
+2026-11-17T13:46:59.0713250Z tests/unit/plugins/dev_docs/hooks/test_session_start.py::test_is_listening_when_closed PASSED [ 90%]
+2026-11-17T13:46:59.0723405Z tests/unit/plugins/dev_docs/hooks/test_session_start.py::test_config_path PASSED [ 90%]
+2026-11-17T13:46:59.0734376Z tests/unit/plugins/dev_docs/hooks/test_session_start.py::test_config_path_when_xdg_config_home_set PASSED [ 90%]
+2026-11-17T13:46:59.0747232Z tests/unit/plugins/dev_docs/hooks/test_session_start.py::test_config_path_when_unset_or_relative[env0] PASSED [ 91%]
+2026-11-17T13:46:59.0758723Z tests/unit/plugins/dev_docs/hooks/test_session_start.py::test_config_path_when_unset_or_relative[env1] PASSED [ 91%]
+2026-11-17T13:46:59.0770382Z tests/unit/plugins/dev_docs/hooks/test_session_start.py::test_config_path_when_unset_or_relative[env2] PASSED [ 91%]
+2026-11-17T13:46:59.0788100Z tests/unit/plugins/dev_docs/hooks/test_session_start.py::test_read_clone PASSED [ 91%]
+2026-11-17T13:46:59.0806880Z tests/unit/plugins/dev_docs/hooks/test_session_start.py::test_read_clone_when_missing PASSED [ 91%]
+2026-11-17T13:46:59.1337466Z tests/unit/plugins/dev_docs/hooks/test_session_start.py::test_start_server PASSED [ 92%]
+2026-11-17T13:46:59.1357277Z tests/unit/plugins/dev_docs/hooks/test_session_start.py::test_start_server_when_no_venv PASSED [ 92%]
+2026-11-17T13:46:59.1371349Z tests/unit/plugins/dev_docs/hooks/test_session_start.py::test_main_when_unit_exists PASSED [ 92%]
+2026-11-17T13:46:59.1385247Z tests/unit/plugins/dev_docs/hooks/test_session_start.py::test_main_when_unit_start_fails PASSED [ 92%]
+2026-11-17T13:46:59.1398751Z tests/unit/plugins/dev_docs/hooks/test_session_start.py::test_main_when_unit_check_times_out PASSED [ 92%]
+2026-11-17T13:46:59.1409628Z tests/unit/plugins/dev_docs/hooks/test_session_start.py::test_unit_name PASSED [ 93%]
+2026-11-17T13:46:59.1420522Z tests/unit/plugins/dev_docs/hooks/test_session_start.py::test_unit_name_when_empty PASSED [ 93%]
+2026-11-17T13:46:59.1469315Z tests/unit/plugins/dev_docs/hooks/test_session_start.py::test_unit_exists PASSED [ 93%]
+2026-11-17T13:46:59.1489859Z tests/unit/plugins/dev_docs/hooks/test_session_start.py::test_unit_exists_when_no_systemctl PASSED [ 93%]
+2026-11-17T13:46:59.2522434Z tests/unit/plugins/dev_docs/hooks/test_session_start.py::test_unit_exists_when_timeout PASSED [ 93%]
+2026-11-17T13:46:59.2554599Z tests/unit/plugins/dev_docs/hooks/test_session_start.py::test_start_unit PASSED [ 93%]
+2026-11-17T13:46:59.2584626Z tests/unit/plugins/dev_docs/hooks/test_session_start.py::test_start_unit_when_failed PASSED [ 94%]
+2026-11-17T13:46:59.2690552Z tests/unit/scripts/test_build_pages.py::test_main PASSED                 [ 94%]
+2026-11-17T13:46:59.2733507Z tests/unit/scripts/test_build_pages.py::test_main_when_no_public PASSED  [ 94%]
+2026-11-17T13:46:59.2774676Z tests/unit/scripts/test_build_pages.py::test_main_when_build_failed PASSED [ 94%]
+2026-11-17T13:46:59.2809952Z tests/unit/scripts/test_build_pages.py::test_list_public_guides PASSED   [ 94%]
+2026-11-17T13:46:59.2831490Z tests/unit/scripts/test_build_pages.py::test_list_public_guides_when_no_file PASSED [ 95%]
+2026-11-17T13:46:59.2862678Z tests/unit/scripts/test_build_pages.py::test_list_public_guides_when_invalid_row[no_category] PASSED [ 95%]
+2026-11-17T13:46:59.2893767Z tests/unit/scripts/test_build_pages.py::test_list_public_guides_when_invalid_row[no_file] PASSED [ 95%]
+2026-11-17T13:46:59.2940048Z tests/unit/scripts/test_build_pages.py::test_load_public_flowcharts PASSED [ 95%]
+2026-11-17T13:46:59.2961500Z tests/unit/scripts/test_build_pages.py::test_load_public_flowcharts_when_no_folder PASSED [ 95%]
+2026-11-17T13:46:59.2988003Z tests/unit/scripts/test_build_pages.py::test_load_public_flowcharts_when_invalid PASSED [ 96%]
+2026-11-17T13:46:59.3022303Z tests/unit/scripts/test_build_pages.py::test_index_document_paths PASSED [ 96%]
+2026-11-17T13:46:59.3037955Z tests/unit/scripts/test_build_pages.py::test_render_page PASSED          [ 96%]
+2026-11-17T13:46:59.3053342Z tests/unit/scripts/test_build_pages.py::test_render_page_when_nested_group PASSED [ 96%]
+2026-11-17T13:46:59.3068462Z tests/unit/scripts/test_build_pages.py::test_item_anchors PASSED         [ 96%]
+2026-11-17T13:46:59.3084804Z tests/unit/scripts/test_build_pages.py::test_item_anchors_when_in_code_block PASSED [ 97%]
+2026-11-17T13:46:59.3100723Z tests/unit/scripts/test_build_pages.py::test_rewrite_references PASSED   [ 97%]
+2026-11-17T13:46:59.3116208Z tests/unit/scripts/test_build_pages.py::test_rewrite_references_when_guide_path PASSED [ 97%]
+2026-11-17T13:46:59.3131051Z tests/unit/scripts/test_build_pages.py::test_rewrite_references_when_internal_document PASSED [ 97%]
+2026-11-17T13:46:59.3146095Z tests/unit/scripts/test_build_pages.py::test_rewrite_references_when_in_code_block PASSED [ 97%]
+2026-11-17T13:46:59.3161647Z tests/unit/scripts/test_build_pages.py::test_rewrite_references_when_unresolved PASSED [ 98%]
+2026-11-17T13:46:59.3184734Z tests/unit/scripts/test_build_pages.py::test_write_bundle_config PASSED  [ 98%]
+2026-11-17T13:46:59.3206434Z tests/unit/scripts/test_build_pages.py::test_run_mdmark PASSED           [ 98%]
+2026-11-17T13:46:59.3228924Z tests/unit/scripts/test_build_pages.py::test_run_mdmark_when_failed PASSED [ 98%]
+2026-11-17T13:46:59.3251254Z tests/unit/scripts/test_build_pages.py::test_run_mdmark_when_npx_missing PASSED [ 98%]
+2026-11-17T13:46:59.3667340Z tests/unit/scripts/test_restart_resident.py::test_main_when_no_record PASSED [ 99%]
+2026-11-17T13:46:59.4201785Z tests/unit/scripts/test_restart_resident.py::test_main_when_runtime_changed PASSED [ 99%]
+2026-11-17T13:46:59.4599759Z tests/unit/scripts/test_restart_resident.py::test_main_when_runtime_unchanged PASSED [ 99%]
+2026-11-17T13:46:59.5018940Z tests/unit/scripts/test_restart_resident.py::test_main_when_record_unknown PASSED [ 99%]
+2026-11-17T13:46:59.5296190Z tests/unit/scripts/test_restart_resident.py::test_main_when_sync_failed PASSED [ 99%]
+2026-11-17T13:46:59.5817806Z tests/unit/scripts/test_restart_resident.py::test_main_when_restart_failed PASSED [100%]
+2026-11-17T13:46:59.5819555Z 
+2026-11-17T13:46:59.5819932Z ============================= 516 passed in 8.23s ==============================
+
+## 単体テスト（フロント） TL-8 の run_runner（layer=frontend-unit）
+$ run_url=$(gh workflow run test.yml --ref "$(git branch --show-current)" -f layer=frontend-unit | ...) && gh run watch ... && gh run view "$run_id" --log
+﻿2026-11-17T13:47:36.1973708Z ##[group]Run : > test.log
+2026-11-17T13:47:36.1973953Z ^[[36;1m: > test.log^[[0m
+2026-11-17T13:47:36.1974118Z ^[[36;1m# 結果の行を test.log と step の標準出力の両方に出す^[[0m
+2026-11-17T13:47:36.1974326Z ^[[36;1msay() { echo "$1" | tee -a test.log; }^[[0m
+2026-11-17T13:47:36.1974504Z ^[[36;1mcase "$LAYER" in^[[0m
+2026-11-17T13:47:36.1974652Z ^[[36;1m  backend-unit) limit=7 ;;^[[0m
+2026-11-17T13:47:36.1974854Z ^[[36;1m  backend-integration) limit=62; dir=tests/integration/ ;;^[[0m
+2026-11-17T13:47:36.1975072Z ^[[36;1m  frontend-unit) limit=19 ;;^[[0m
+2026-11-17T13:47:36.1975289Z ^[[36;1m  frontend-integration) limit=75; dir=tests/integration/frontend/ ;;^[[0m
+2026-11-17T13:47:36.1975505Z ^[[36;1mesac^[[0m
+2026-11-17T13:47:36.1975647Z ^[[36;1m# paths は結合テストの層の、層の結合テストのフォルダの下のパスだけを受け付ける^[[0m
+2026-11-17T13:47:36.1975827Z ^[[36;1mif [ -n "$PATHS" ]; then^[[0m
+2026-11-17T13:47:36.1976187Z ^[[36;1m  if [ -z "${dir:-}" ]; then^[[0m
+2026-11-17T13:47:36.1976363Z ^[[36;1m    say "paths は結合テストの層でだけ指定できる: layer=$LAYER"^[[0m
+2026-11-17T13:47:36.1976558Z ^[[36;1m    exit 1^[[0m
+2026-11-17T13:47:36.1976721Z ^[[36;1m  fi^[[0m
+2026-11-17T13:47:36.1976893Z ^[[36;1m  if ! printf '%s' "$PATHS" | grep -Eq '^[A-Za-z0-9_./ -]+$'; then^[[0m
+2026-11-17T13:47:36.1977160Z ^[[36;1m    say "paths に許可しない文字がある（英数字・_・.・/・-・空白だけを許可する）: $PATHS"^[[0m
+2026-11-17T13:47:36.1977349Z ^[[36;1m    exit 1^[[0m
+2026-11-17T13:47:36.1977467Z ^[[36;1m  fi^[[0m
+2026-11-17T13:47:36.1977591Z ^[[36;1m  for p in $PATHS; do^[[0m
+2026-11-17T13:47:36.1977738Z ^[[36;1m    case "$p" in^[[0m
+2026-11-17T13:47:36.1977899Z ^[[36;1m      *..*) say "paths の値が .. を含む: $p"; exit 1 ;;^[[0m
+2026-11-17T13:47:36.1978068Z ^[[36;1m    esac^[[0m
+2026-11-17T13:47:36.1978189Z ^[[36;1m    case "$p" in^[[0m
+2026-11-17T13:47:36.1978323Z ^[[36;1m      "$dir"*) ;;^[[0m
+2026-11-17T13:47:36.1978495Z ^[[36;1m      *) say "paths の値が層の結合テストのフォルダ（$dir）の外: $p"; exit 1 ;;^[[0m
+2026-11-17T13:47:36.1978681Z ^[[36;1m    esac^[[0m
+2026-11-17T13:47:36.1978832Z ^[[36;1m    if [ "$LAYER" = backend-integration ]; then^[[0m
+2026-11-17T13:47:36.1979020Z ^[[36;1m      case "$p" in^[[0m
+2026-11-17T13:47:36.1979338Z ^[[36;1m        tests/integration/frontend/*) say "paths の値が層の結合テストのフォルダの外（tests/integration/frontend/ は frontend-integration の層）: $p"; exit 1 ;;^[[0m
+2026-11-17T13:47:36.1979652Z ^[[36;1m      esac^[[0m
+2026-11-17T13:47:36.1979771Z ^[[36;1m    fi^[[0m
+2026-11-17T13:47:36.1979885Z ^[[36;1m  done^[[0m
+2026-11-17T13:47:36.1979994Z ^[[36;1mfi^[[0m
+2026-11-17T13:47:36.1980107Z ^[[36;1mcase "$LAYER" in^[[0m
+2026-11-17T13:47:36.1980282Z ^[[36;1m  backend-unit) cmd="uv run pytest tests/unit/ -v" ;;^[[0m
+2026-11-17T13:47:36.1980528Z ^[[36;1m  backend-integration) cmd="uv run pytest ${PATHS:-$dir} -v" ;;^[[0m
+2026-11-17T13:47:36.1980847Z ^[[36;1m  frontend-unit) cmd="npx vitest run --config frontend/vitest.config.ts --reporter=verbose" ;;^[[0m
+2026-11-17T13:47:36.1981268Z ^[[36;1m  frontend-integration) cmd="npx playwright test --config tests/integration/frontend/playwright.config.ts $PATHS" ;;^[[0m
+2026-11-17T13:47:36.1981581Z ^[[36;1mesac^[[0m
+2026-11-17T13:47:36.1981725Z ^[[36;1m# テストを裏で起動し、出力を test.log と step の標準出力の両方に出す^[[0m
+2026-11-17T13:47:36.1981954Z ^[[36;1msetsid -w bash -c "set -o pipefail; $cmd 2>&1 | tee -a test.log" &^[[0m
+2026-11-17T13:47:36.1982158Z ^[[36;1mpid=$!^[[0m
+2026-11-17T13:47:36.1982275Z ^[[36;1mlast=-1^[[0m
+2026-11-17T13:47:36.1982390Z ^[[36;1midle=0^[[0m
+2026-11-17T13:47:36.1982532Z ^[[36;1m# test.log の大きさを 1 秒ごとに確認し、無出力の時間が上限を超えたらテストを止める^[[0m
+2026-11-17T13:47:36.1982721Z ^[[36;1mwhile kill -0 "$pid" 2> /dev/null; do^[[0m
+2026-11-17T13:47:36.1982888Z ^[[36;1m  sleep 1^[[0m
+2026-11-17T13:47:36.1983018Z ^[[36;1m  size=$(stat -c %s test.log)^[[0m
+2026-11-17T13:47:36.1983176Z ^[[36;1m  if [ "$size" = "$last" ]; then^[[0m
+2026-11-17T13:47:36.1983332Z ^[[36;1m    idle=$((idle + 1))^[[0m
+2026-11-17T13:47:36.1983470Z ^[[36;1m  else^[[0m
+2026-11-17T13:47:36.1983601Z ^[[36;1m    idle=0^[[0m
+2026-11-17T13:47:36.1983745Z ^[[36;1m    last=$size^[[0m
+2026-11-17T13:47:36.1983876Z ^[[36;1m  fi^[[0m
+2026-11-17T13:47:36.1984006Z ^[[36;1m  if [ "$idle" -gt "$limit" ]; then^[[0m
+2026-11-17T13:47:36.1984310Z ^[[36;1m    kill -- "-$pid"^[[0m
+2026-11-17T13:47:36.1984590Z ^[[36;1m    say "出力が ${limit} 秒変わらなかったため、テストを止めた"^[[0m
+2026-11-17T13:47:36.1984754Z ^[[36;1m    exit 1^[[0m
+2026-11-17T13:47:36.1984873Z ^[[36;1m  fi^[[0m
+2026-11-17T13:47:36.1984986Z ^[[36;1mdone^[[0m
+2026-11-17T13:47:36.1985101Z ^[[36;1mwait "$pid"^[[0m
+2026-11-17T13:47:36.2028302Z shell: /usr/bin/bash -e {0}
+2026-11-17T13:47:36.2028456Z env:
+2026-11-17T13:47:36.2028581Z   LAYER: frontend-unit
+2026-11-17T13:47:36.2028711Z   PATHS: 
+2026-11-17T13:47:36.2028832Z   PYTHONUNBUFFERED: 1
+2026-11-17T13:47:36.2028973Z ##[endgroup]
+2026-11-17T13:47:36.5975528Z 
+2026-11-17T13:47:36.5977803Z ^[[1m^[[30m^[[46m RUN ^[[49m^[[39m^[[22m ^[[36mv5.0.5 ^[[39m^[[90m/home/runner/work/dev-docs/dev-docs^[[39m
+2026-11-17T13:47:36.5978205Z 
+2026-11-17T13:47:37.5649425Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/docs/doc-view/hooks/use-mdmark.test.ts^[[2m > ^[[22mtest_use_mdmark^[[32m 110^[[2mms^[[22m^[[39m
+2026-11-17T13:47:37.6797971Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/docs/doc-view/hooks/use-mdmark.test.ts^[[2m > ^[[22mtest_use_mdmark_when_doc_changes^[[32m 123^[[2mms^[[22m^[[39m
+2026-11-17T13:47:37.7111672Z Not implemented: Window's scrollTo() method
+2026-11-17T13:47:37.7649252Z ^[[90mstderr^[[2m | tests/unit/frontend/src/features/docs/doc-view/components/doc-body.test.tsx^[[2m > ^[[22m^[[2mtest_doc_body_when_internal_link
+2026-11-17T13:47:37.7671027Z ^[[22m^[[39mThe current testing environment is not configured to support act(...)
+2026-11-17T13:47:37.7672070Z The current testing environment is not configured to support act(...)
+2026-11-17T13:47:37.7679272Z 
+2026-11-17T13:47:37.7696558Z Not implemented: Window's scrollTo() method
+2026-11-17T13:47:37.8009444Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/docs/doc-view/hooks/use-mdmark.test.ts^[[2m > ^[[22mtest_use_mdmark_when_doc_changes_ready^[[32m 122^[[2mms^[[22m^[[39m
+2026-11-17T13:47:37.8028087Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/docs/doc-view/hooks/use-mdmark.test.ts^[[2m > ^[[22mtest_use_mdmark_when_load_failed^[[32m 60^[[2mms^[[22m^[[39m
+2026-11-17T13:47:37.8075587Z ^[[90mstderr^[[2m | tests/unit/frontend/src/features/docs/doc-view/components/doc-body.test.tsx^[[2m > ^[[22m^[[2mtest_doc_body_when_internal_link
+2026-11-17T13:47:37.8076768Z ^[[22m^[[39mThe current testing environment is not configured to support act(...)
+2026-11-17T13:47:37.8077104Z 
+2026-11-17T13:47:37.8077679Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/docs/doc-view/components/doc-body.test.tsx^[[2m > ^[[22mtest_doc_body^[[32m 70^[[2mms^[[22m^[[39m
+2026-11-17T13:47:37.8255250Z ^[[90mstderr^[[2m | tests/unit/frontend/src/features/docs/doc-view/components/doc-body.test.tsx^[[2m > ^[[22m^[[2mtest_doc_body_when_internal_link
+2026-11-17T13:47:37.8262247Z ^[[22m^[[39mThe current testing environment is not configured to support act(...)
+2026-11-17T13:47:37.8262835Z The current testing environment is not configured to support act(...)
+2026-11-17T13:47:37.8263346Z The current testing environment is not configured to support act(...)
+2026-11-17T13:47:37.8263633Z 
+2026-11-17T13:47:37.8263819Z Not implemented: Window's scrollTo() method
+2026-11-17T13:47:37.8354817Z ^[[90mstderr^[[2m | tests/unit/frontend/src/features/docs/doc-view/components/doc-body.test.tsx^[[2m > ^[[22m^[[2mtest_doc_body_when_body_path
+2026-11-17T13:47:37.8356549Z ^[[22m^[[39mThe current testing environment is not configured to support act(...)
+2026-11-17T13:47:37.8357332Z The current testing environment is not configured to support act(...)
+2026-11-17T13:47:37.8357982Z 
+2026-11-17T13:47:37.8362643Z Not implemented: Window's scrollTo() method
+2026-11-17T13:47:37.8443569Z ^[[90mstderr^[[2m | tests/unit/frontend/src/features/docs/doc-view/components/doc-body.test.tsx^[[2m > ^[[22m^[[2mtest_doc_body_when_body_path
+2026-11-17T13:47:37.8444985Z ^[[22m^[[39mThe current testing environment is not configured to support act(...)
+2026-11-17T13:47:37.8445335Z 
+2026-11-17T13:47:37.8541546Z ^[[90mstderr^[[2m | tests/unit/frontend/src/features/docs/doc-view/components/doc-body.test.tsx^[[2m > ^[[22m^[[2mtest_doc_body_when_body_path
+2026-11-17T13:47:37.8544779Z ^[[22m^[[39mThe current testing environment is not configured to support act(...)
+2026-11-17T13:47:37.8546133Z The current testing environment is not configured to support act(...)
+2026-11-17T13:47:37.8546878Z The current testing environment is not configured to support act(...)
+2026-11-17T13:47:37.8547319Z 
+2026-11-17T13:47:37.8547644Z Not implemented: Window's scrollTo() method
+2026-11-17T13:47:37.8613231Z Not implemented: Window's scrollTo() method
+2026-11-17T13:47:37.9117483Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/docs/doc-view/components/doc-body.test.tsx^[[2m > ^[[22mtest_doc_body_when_internal_link^[[32m 76^[[2mms^[[22m^[[39m
+2026-11-17T13:47:37.9120361Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/docs/doc-view/components/doc-body.test.tsx^[[2m > ^[[22mtest_doc_body_when_body_path^[[32m 27^[[2mms^[[22m^[[39m
+2026-11-17T13:47:37.9160028Z Not implemented: Window's scrollTo() method
+2026-11-17T13:47:37.9190414Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/docs/doc-view/hooks/use-mdmark.test.ts^[[2m > ^[[22mtest_use_mdmark_when_aliases^[[32m 59^[[2mms^[[22m^[[39m
+2026-11-17T13:47:37.9191588Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/docs/doc-view/hooks/use-mdmark.test.ts^[[2m > ^[[22mtest_use_mdmark_when_base_changes^[[32m 67^[[2mms^[[22m^[[39m
+2026-11-17T13:47:37.9731508Z Not implemented: Window's scrollTo() method
+2026-11-17T13:47:38.0139577Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/docs/doc-view/components/doc-body.test.tsx^[[2m > ^[[22mtest_doc_body_when_base^[[32m 55^[[2mms^[[22m^[[39m
+2026-11-17T13:47:38.0140828Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/docs/doc-view/components/doc-body.test.tsx^[[2m > ^[[22mtest_doc_body_when_comments_changed^[[32m 57^[[2mms^[[22m^[[39m
+2026-11-17T13:47:38.0198747Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/docs/doc-view/hooks/use-mdmark.test.ts^[[2m > ^[[22mtest_use_mdmark_when_callbacks_change^[[32m 61^[[2mms^[[22m^[[39m
+2026-11-17T13:47:38.0201225Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/docs/doc-view/hooks/use-mdmark.test.ts^[[2m > ^[[22mtest_to_mdmark_index^[[32m 3^[[2mms^[[22m^[[39m
+2026-11-17T13:47:38.0205223Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/docs/doc-view/hooks/use-mdmark.test.ts^[[2m > ^[[22mtest_use_mdmark_when_map_config^[[32m 56^[[2mms^[[22m^[[39m
+2026-11-17T13:47:38.0206582Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/docs/doc-view/hooks/use-mdmark.test.ts^[[2m > ^[[22mtest_mdmark_urls^[[32m 7^[[2mms^[[22m^[[39m
+2026-11-17T13:47:38.0207743Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/docs/doc-view/hooks/use-mdmark.test.ts^[[2m > ^[[22mtest_mdmark_urls_when_meta_missing^[[32m 4^[[2mms^[[22m^[[39m
+2026-11-17T13:47:38.0332282Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/docs/doc-view/components/doc-body.test.tsx^[[2m > ^[[22mtest_doc_body_when_locating^[[32m 57^[[2mms^[[22m^[[39m
+2026-11-17T13:47:38.4642839Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/settings/settings/components/source-edit-dialog.test.tsx^[[2m > ^[[22mtest_source_edit_dialog^[[33m 414^[[2mms^[[22m^[[39m
+2026-11-17T13:47:38.4651406Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/settings/settings/components/source-edit-dialog.test.tsx^[[2m > ^[[22mtest_source_edit_dialog_when_edit^[[32m 52^[[2mms^[[22m^[[39m
+2026-11-17T13:47:38.6094061Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/settings/settings/components/source-edit-dialog.test.tsx^[[2m > ^[[22mtest_source_edit_dialog_when_invalid^[[32m 112^[[2mms^[[22m^[[39m
+2026-11-17T13:47:38.7158118Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/settings/settings/components/source-edit-dialog.test.tsx^[[2m > ^[[22mtest_source_edit_dialog_when_outside_read^[[32m 88^[[2mms^[[22m^[[39m
+2026-11-17T13:47:38.7182962Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/settings/settings/components/source-edit-dialog.test.tsx^[[2m > ^[[22mtest_source_edit_dialog_when_conflict^[[32m 73^[[2mms^[[22m^[[39m
+2026-11-17T13:47:38.8530773Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/settings/settings/form.test.ts^[[2m > ^[[22mtest_source_form_schema^[[32m 11^[[2mms^[[22m^[[39m
+2026-11-17T13:47:38.8539690Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/settings/settings/form.test.ts^[[2m > ^[[22mtest_source_form_schema_when_duplicate_id^[[32m 2^[[2mms^[[22m^[[39m
+2026-11-17T13:47:38.8967685Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/settings/settings/form.test.ts^[[2m > ^[[22mtest_source_form_schema_when_blank_line^[[32m 1^[[2mms^[[22m^[[39m
+2026-11-17T13:47:38.8968597Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/settings/settings/form.test.ts^[[2m > ^[[22mtest_to_form_values^[[32m 0^[[2mms^[[22m^[[39m
+2026-11-17T13:47:38.8969548Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/settings/settings/form.test.ts^[[2m > ^[[22mtest_apply_source^[[32m 3^[[2mms^[[22m^[[39m
+2026-11-17T13:47:38.8970389Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/settings/settings/form.test.ts^[[2m > ^[[22mtest_apply_source_when_edit^[[32m 0^[[2mms^[[22m^[[39m
+2026-11-17T13:47:38.8971255Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/settings/settings/form.test.ts^[[2m > ^[[22mtest_remove_source^[[32m 0^[[2mms^[[22m^[[39m
+2026-11-17T13:47:38.8972162Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/settings/settings/form.test.ts^[[2m > ^[[22mtest_to_form_values_when_outside_read^[[32m 0^[[2mms^[[22m^[[39m
+2026-11-17T13:47:38.8973135Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/settings/settings/form.test.ts^[[2m > ^[[22mtest_apply_source_when_outside_read^[[32m 0^[[2mms^[[22m^[[39m
+2026-11-17T13:47:38.8974038Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/settings/settings/form.test.ts^[[2m > ^[[22mtest_source_key^[[32m 2^[[2mms^[[22m^[[39m
+2026-11-17T13:47:38.8974938Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/settings/settings/form.test.ts^[[2m > ^[[22mtest_find_source^[[32m 0^[[2mms^[[22m^[[39m
+2026-11-17T13:47:38.8975747Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/settings/settings/form.test.ts^[[2m > ^[[22mtest_stored_storage^[[32m 0^[[2mms^[[22m^[[39m
+2026-11-17T13:47:38.8976709Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/settings/settings/form.test.ts^[[2m > ^[[22mtest_to_form_values_when_storage^[[32m 0^[[2mms^[[22m^[[39m
+2026-11-17T13:47:38.8977577Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/settings/settings/form.test.ts^[[2m > ^[[22mtest_apply_source_when_storage^[[32m 0^[[2mms^[[22m^[[39m
+2026-11-17T13:47:39.0143377Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/settings/settings/components/source-edit-dialog.test.tsx^[[2m > ^[[22mtest_source_edit_dialog_when_storage^[[32m 209^[[2mms^[[22m^[[39m
+2026-11-17T13:47:39.1288331Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/settings/settings/components/source-edit-dialog.test.tsx^[[2m > ^[[22mtest_storage_field^[[32m 128^[[2mms^[[22m^[[39m
+2026-11-17T13:47:39.1340597Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/settings/settings/components/source-edit-dialog.test.tsx^[[2m > ^[[22mtest_storage_field_when_not_stored^[[32m 109^[[2mms^[[22m^[[39m
+2026-11-17T13:47:39.2359358Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/settings/settings/hooks/use-source-form.test.tsx^[[2m > ^[[22mtest_use_source_form^[[32m 78^[[2mms^[[22m^[[39m
+2026-11-17T13:47:39.2866302Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/settings/settings/hooks/use-source-form.test.tsx^[[2m > ^[[22mtest_use_source_form_when_422^[[32m 35^[[2mms^[[22m^[[39m
+2026-11-17T13:47:39.2883554Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/settings/settings/hooks/use-source-form.test.tsx^[[2m > ^[[22mtest_use_source_form_when_conflict^[[32m 20^[[2mms^[[22m^[[39m
+2026-11-17T13:47:39.2885004Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/settings/settings/hooks/use-source-form.test.tsx^[[2m > ^[[22mtest_use_source_form_when_row_moved^[[32m 16^[[2mms^[[22m^[[39m
+2026-11-17T13:47:39.2918154Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/settings/settings/hooks/use-source-form.test.tsx^[[2m > ^[[22mtest_use_source_form_when_gone^[[32m 6^[[2mms^[[22m^[[39m
+2026-11-17T13:47:39.8231886Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/docs/doc-view/tables.test.ts^[[2m > ^[[22mtest_find_tables^[[32m 2^[[2mms^[[22m^[[39m
+2026-11-17T13:47:39.8239617Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/docs/doc-view/tables.test.ts^[[2m > ^[[22mtest_apply_hidden_columns^[[32m 1^[[2mms^[[22m^[[39m
+2026-11-17T13:47:39.8240836Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/docs/doc-view/tables.test.ts^[[2m > ^[[22mtest_column_table_keys^[[32m 0^[[2mms^[[22m^[[39m
+2026-11-17T13:47:39.8249998Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/docs/doc-view/tables.test.ts^[[2m > ^[[22mtest_find_tables_when_json_marker^[[32m 0^[[2mms^[[22m^[[39m
+2026-11-17T13:47:39.8251468Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/docs/doc-view/tables.test.ts^[[2m > ^[[22mtest_apply_hidden_columns_when_json_marker^[[32m 1^[[2mms^[[22m^[[39m
+2026-11-17T13:47:40.1675642Z Not implemented: Window's scrollTo() method
+2026-11-17T13:47:40.1707134Z Not implemented: Window's scrollTo() method
+2026-11-17T13:47:40.1767376Z Not implemented: Window's scrollTo() method
+2026-11-17T13:47:40.1796427Z Not implemented: Window's scrollTo() method
+2026-11-17T13:47:40.1832612Z Not implemented: Window's scrollTo() method
+2026-11-17T13:47:40.1855741Z Not implemented: Window's scrollTo() method
+2026-11-17T13:47:40.1909027Z Not implemented: Window's scrollTo() method
+2026-11-17T13:47:40.1933034Z Not implemented: Window's scrollTo() method
+2026-11-17T13:47:40.2015657Z Not implemented: Window's scrollTo() method
+2026-11-17T13:47:40.2068489Z Not implemented: Window's scrollTo() method
+2026-11-17T13:47:40.2084398Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/docs/doc-view/hooks/use-doc-navigation.test.tsx^[[2m > ^[[22mtest_compare_base^[[32m 1^[[2mms^[[22m^[[39m
+2026-11-17T13:47:40.2107735Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/docs/doc-view/hooks/use-doc-navigation.test.tsx^[[2m > ^[[22mtest_compare_base_when_other_rev^[[32m 0^[[2mms^[[22m^[[39m
+2026-11-17T13:47:40.2109280Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/docs/doc-view/hooks/use-doc-navigation.test.tsx^[[2m > ^[[22mtest_compare_base_when_no_commits^[[32m 0^[[2mms^[[22m^[[39m
+2026-11-17T13:47:40.2110785Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/docs/doc-view/hooks/use-doc-navigation.test.tsx^[[2m > ^[[22mtest_use_doc_navigation^[[32m 61^[[2mms^[[22m^[[39m
+2026-11-17T13:47:40.2112256Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/docs/doc-view/hooks/use-doc-navigation.test.tsx^[[2m > ^[[22mtest_use_doc_navigation_when_select_ref^[[32m 7^[[2mms^[[22m^[[39m
+2026-11-17T13:47:40.2113767Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/docs/doc-view/hooks/use-doc-navigation.test.tsx^[[2m > ^[[22mtest_use_doc_navigation_when_start_compare^[[32m 8^[[2mms^[[22m^[[39m
+2026-11-17T13:47:40.2115290Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/docs/doc-view/hooks/use-doc-navigation.test.tsx^[[2m > ^[[22mtest_use_doc_navigation_when_clear_diff^[[32m 6^[[2mms^[[22m^[[39m
+2026-11-17T13:47:40.2117037Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/docs/doc-view/hooks/use-doc-navigation.test.tsx^[[2m > ^[[22mtest_use_doc_navigation_when_locate^[[32m 13^[[2mms^[[22m^[[39m
+2026-11-17T13:47:40.2455786Z ^[[90mstderr^[[2m | tests/unit/frontend/src/features/settings/settings/components/source-delete-dialog.test.tsx^[[2m > ^[[22m^[[2mtest_source_delete_dialog_when_failed
+2026-11-17T13:47:40.2479915Z ^[[22m^[[39m{"ts":"2026-11-17T13:47:40.244Z","level":"error","event":"app_error","status":500,"type":"urn:dev-docs:error:Error","error":{"name":"AppError","message":"x","stack":"AppError: x\n    at AppError.fromResponse (/home/runner/work/dev-docs/dev-docs/frontend/src/shared/core/app-error.ts:44:16)\n    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)\n    at apiClient (/home/runner/work/dev-docs/dev-docs/frontend/src/shared/adapters/api-client.ts:25:27)"}}
+2026-11-17T13:47:40.2496322Z 
+2026-11-17T13:47:40.3015795Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/settings/settings/components/source-delete-dialog.test.tsx^[[2m > ^[[22mtest_source_delete_dialog^[[32m 284^[[2mms^[[22m^[[39m
+2026-11-17T13:47:40.3017712Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/settings/settings/components/source-delete-dialog.test.tsx^[[2m > ^[[22mtest_source_delete_dialog_when_failed^[[32m 62^[[2mms^[[22m^[[39m
+2026-11-17T13:47:40.3263399Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/settings/settings/components/source-delete-dialog.test.tsx^[[2m > ^[[22mtest_source_delete_dialog_when_conflict^[[32m 44^[[2mms^[[22m^[[39m
+2026-11-17T13:47:40.3275247Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/settings/settings/components/source-delete-dialog.test.tsx^[[2m > ^[[22mtest_source_delete_dialog_when_gone^[[32m 18^[[2mms^[[22m^[[39m
+2026-11-17T13:47:40.8442406Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/docs/doc-view/queries.test.ts^[[2m > ^[[22mtest_document_query_options^[[32m 50^[[2mms^[[22m^[[39m
+2026-11-17T13:47:40.8450882Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/docs/doc-view/queries.test.ts^[[2m > ^[[22mtest_base_markdown_query_options^[[32m 8^[[2mms^[[22m^[[39m
+2026-11-17T13:47:40.8452316Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/docs/doc-view/queries.test.ts^[[2m > ^[[22mtest_base_markdown_query_options_when_added^[[32m 14^[[2mms^[[22m^[[39m
+2026-11-17T13:47:40.8453698Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/docs/doc-view/queries.test.ts^[[2m > ^[[22mtest_load_document_when_not_found^[[32m 14^[[2mms^[[22m^[[39m
+2026-11-17T13:47:41.2687862Z ^[[90mstderr^[[2m | tests/unit/frontend/src/features/settings/settings/queries.test.tsx^[[2m > ^[[22m^[[2mtest_use_save_sources_when_expected_version
+2026-11-17T13:47:41.2700198Z ^[[22m^[[39mAn update to TestComponent inside a test was not wrapped in act(...).
+2026-11-17T13:47:41.2732058Z 
+2026-11-17T13:47:41.2756964Z When testing, code that causes React state updates should be wrapped into act(...):
+2026-11-17T13:47:41.2796414Z 
+2026-11-17T13:47:41.2817129Z act(() => {
+2026-11-17T13:47:41.2837092Z   /* fire events that update state */
+2026-11-17T13:47:41.2860064Z });
+2026-11-17T13:47:41.2866929Z /* assert on the output */
+2026-11-17T13:47:41.2867257Z 
+2026-11-17T13:47:41.2867994Z This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+2026-11-17T13:47:41.2868621Z 
+2026-11-17T13:47:41.2869742Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/settings/settings/queries.test.tsx^[[2m > ^[[22mtest_use_save_sources^[[32m 87^[[2mms^[[22m^[[39m
+2026-11-17T13:47:41.2870936Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/settings/settings/queries.test.tsx^[[2m > ^[[22mtest_use_save_sources_when_expected_version^[[32m 24^[[2mms^[[22m^[[39m
+2026-11-17T13:47:42.3524780Z Not implemented: Window's scrollTo() method
+2026-11-17T13:47:42.4763724Z Not implemented: Window's scrollTo() method
+2026-11-17T13:47:42.4835639Z Not implemented: Window's scrollTo() method
+2026-11-17T13:47:42.4909889Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/settings/settings/settings-screen.test.tsx^[[2m > ^[[22mtest_settings_screen^[[32m 238^[[2mms^[[22m^[[39m
+2026-11-17T13:47:42.5132797Z Not implemented: Window's scrollTo() method
+2026-11-17T13:47:42.6080513Z Not implemented: Window's scrollTo() method
+2026-11-17T13:47:42.6175360Z ^[[90mstderr^[[2m | tests/unit/frontend/src/features/settings/settings/settings-screen.test.tsx^[[2m > ^[[22m^[[2mtest_settings_screen_when_project_index_failed
+2026-11-17T13:47:42.6209633Z ^[[22m^[[39m{"ts":"2026-11-17T13:47:42.616Z","level":"error","event":"app_error","status":502,"type":"about:blank","error":{"name":"AppError","message":"project-index が要求を処理できませんでした","stack":"AppError: project-index が要求を処理できませんでした\n    at AppError.fromResponse (/home/runner/work/dev-docs/dev-docs/frontend/src/shared/core/app-error.ts:44:16)\n    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)\n    at apiClient (/home/runner/work/dev-docs/dev-docs/frontend/src/shared/adapters/api-client.ts:25:27)"}}
+2026-11-17T13:47:42.6241490Z 
+2026-11-17T13:47:42.6270049Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/settings/settings/settings-screen.test.tsx^[[2m > ^[[22mtest_settings_screen_when_empty^[[32m 38^[[2mms^[[22m^[[39m
+2026-11-17T13:47:42.6271386Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/settings/settings/settings-screen.test.tsx^[[2m > ^[[22mtest_settings_screen_when_single_key_off^[[32m 87^[[2mms^[[22m^[[39m
+2026-11-17T13:47:42.6718144Z Not implemented: Window's scrollTo() method
+2026-11-17T13:47:42.6758212Z ^[[90mstderr^[[2m | tests/unit/frontend/src/features/settings/settings/settings-screen.test.tsx^[[2m > ^[[22m^[[2mtest_settings_screen_when_project_index_failed
+2026-11-17T13:47:42.6771247Z ^[[22m^[[39m{"ts":"2026-11-17T13:47:42.674Z","level":"error","event":"app_error","status":503,"type":"about:blank","error":{"name":"AppError","message":"project-index から応答がありませんでした","stack":"AppError: project-index から応答がありませんでした\n    at AppError.fromResponse (/home/runner/work/dev-docs/dev-docs/frontend/src/shared/core/app-error.ts:44:16)\n    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)\n    at apiClient (/home/runner/work/dev-docs/dev-docs/frontend/src/shared/adapters/api-client.ts:25:27)"}}
+2026-11-17T13:47:42.6805836Z 
+2026-11-17T13:47:42.6899309Z Not implemented: Window's scrollTo() method
+2026-11-17T13:47:42.7138175Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/settings/settings/settings-screen.test.tsx^[[2m > ^[[22mtest_settings_screen_when_project_index_failed^[[32m 128^[[2mms^[[22m^[[39m
+2026-11-17T13:47:42.7389462Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/docs/doc-view/doc-view-screen.test.tsx^[[2m > ^[[22mtest_doc_view_screen^[[33m 372^[[2mms^[[22m^[[39m
+2026-11-17T13:47:42.7608299Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/docs/shared/comments/comment-panel.test.tsx^[[2m > ^[[22mtest_comment_panel^[[33m 345^[[2mms^[[22m^[[39m
+2026-11-17T13:47:42.8070882Z Not implemented: Window's scrollTo() method
+2026-11-17T13:47:42.8128962Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/docs/shared/comments/comment-panel.test.tsx^[[2m > ^[[22mtest_comment_panel_when_indeterminate^[[32m 97^[[2mms^[[22m^[[39m
+2026-11-17T13:47:42.8170263Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/docs/shared/comments/comment-panel.test.tsx^[[2m > ^[[22mtest_comment_panel_when_clipboard_failed^[[32m 49^[[2mms^[[22m^[[39m
+2026-11-17T13:47:42.8301245Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/docs/doc-view/doc-view-screen.test.tsx^[[2m > ^[[22mtest_doc_view_screen_when_empty_tab^[[32m 161^[[2mms^[[22m^[[39m
+2026-11-17T13:47:42.8357702Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/docs/doc-view/doc-view-screen.test.tsx^[[2m > ^[[22mtest_doc_view_screen_when_conversion_error^[[32m 38^[[2mms^[[22m^[[39m
+2026-11-17T13:47:43.8589890Z Not implemented: Window's scrollTo() method
+2026-11-17T13:47:43.8881898Z  ^[[32m✓^[[39m tests/unit/frontend/src/shared/components/project-index-unreachable.test.tsx^[[2m > ^[[22mtest_to_project_index_unreachable^[[32m 4^[[2mms^[[22m^[[39m
+2026-11-17T13:47:43.8883338Z  ^[[32m✓^[[39m tests/unit/frontend/src/shared/components/project-index-unreachable.test.tsx^[[2m > ^[[22mtest_to_project_index_unreachable_when_kind_missing^[[32m 1^[[2mms^[[22m^[[39m
+2026-11-17T13:47:43.8937796Z  ^[[32m✓^[[39m tests/unit/frontend/src/shared/components/project-index-unreachable.test.tsx^[[2m > ^[[22mtest_to_project_index_unreachable_when_other^[[32m 0^[[2mms^[[22m^[[39m
+2026-11-17T13:47:43.8947512Z  ^[[32m✓^[[39m tests/unit/frontend/src/shared/components/project-index-unreachable.test.tsx^[[2m > ^[[22mtest_project_index_unreachable_alert unreachable^[[32m 48^[[2mms^[[22m^[[39m
+2026-11-17T13:47:43.8997598Z  ^[[32m✓^[[39m tests/unit/frontend/src/shared/components/project-index-unreachable.test.tsx^[[2m > ^[[22mtest_project_index_unreachable_alert timeout^[[32m 8^[[2mms^[[22m^[[39m
+2026-11-17T13:47:43.9017806Z  ^[[32m✓^[[39m tests/unit/frontend/src/shared/components/project-index-unreachable.test.tsx^[[2m > ^[[22mtest_project_index_unreachable_alert failed^[[32m 6^[[2mms^[[22m^[[39m
+2026-11-17T13:47:43.9228058Z  ^[[32m✓^[[39m tests/unit/frontend/src/shared/components/project-index-unreachable.test.tsx^[[2m > ^[[22mtest_project_index_unreachable_alert_when_reload^[[32m 119^[[2mms^[[22m^[[39m
+2026-11-17T13:47:43.9767927Z Not implemented: Window's scrollTo() method
+2026-11-17T13:47:44.0378225Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/docs/not-found/hooks/use-missing-view.test.tsx^[[2m > ^[[22mtest_use_missing_view^[[32m 161^[[2mms^[[22m^[[39m
+2026-11-17T13:47:44.0436668Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/docs/not-found/hooks/use-missing-view.test.tsx^[[2m > ^[[22mtest_use_missing_view_when_source_missing^[[32m 83^[[2mms^[[22m^[[39m
+2026-11-17T13:47:44.1700083Z Not implemented: Window's scrollTo() method
+2026-11-17T13:47:44.2091329Z Not implemented: Window's scrollTo() method
+2026-11-17T13:47:44.2337468Z Not implemented: Window's scrollTo() method
+2026-11-17T13:47:44.2826434Z Not implemented: Window's scrollTo() method
+2026-11-17T13:47:44.2846197Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/docs/doc-view/components/doc-main.test.tsx^[[2m > ^[[22mtest_doc_main^[[32m 181^[[2mms^[[22m^[[39m
+2026-11-17T13:47:44.2848132Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/docs/doc-view/components/doc-main.test.tsx^[[2m > ^[[22mtest_doc_main_when_empty_tab^[[32m 29^[[2mms^[[22m^[[39m
+2026-11-17T13:47:44.2849628Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/docs/doc-view/components/doc-main.test.tsx^[[2m > ^[[22mtest_doc_main_when_conversion_error^[[32m 22^[[2mms^[[22m^[[39m
+2026-11-17T13:47:44.2877996Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/docs/doc-view/components/doc-main.test.tsx^[[2m > ^[[22mtest_doc_main_when_diff^[[32m 48^[[2mms^[[22m^[[39m
+2026-11-17T13:47:44.8863163Z  ^[[32m✓^[[39m tests/unit/frontend/src/shared/core/app-error.test.ts^[[2m > ^[[22mtest_from_response^[[32m 6^[[2mms^[[22m^[[39m
+2026-11-17T13:47:44.8864975Z  ^[[32m✓^[[39m tests/unit/frontend/src/shared/core/app-error.test.ts^[[2m > ^[[22mtest_from_response_when_not_found^[[32m 1^[[2mms^[[22m^[[39m
+2026-11-17T13:47:44.8887349Z  ^[[32m✓^[[39m tests/unit/frontend/src/shared/core/app-error.test.ts^[[2m > ^[[22mtest_from_response_when_not_problem^[[32m 1^[[2mms^[[22m^[[39m
+2026-11-17T13:47:44.9918869Z  ^[[32m✓^[[39m tests/unit/frontend/src/app/error-fallback.test.tsx^[[2m > ^[[22mtest_error_fallback^[[32m 136^[[2mms^[[22m^[[39m
+2026-11-17T13:47:44.9920342Z  ^[[32m✓^[[39m tests/unit/frontend/src/app/error-fallback.test.tsx^[[2m > ^[[22mtest_error_fallback_when_project_index_failed^[[32m 16^[[2mms^[[22m^[[39m
+2026-11-17T13:47:45.7094127Z Not implemented: Window's scrollTo() method
+2026-11-17T13:47:45.7949028Z Not implemented: Window's scrollTo() method
+2026-11-17T13:47:45.8407799Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/docs/not-found/not-found-screen.test.tsx^[[2m > ^[[22mtest_not_found_screen^[[32m 234^[[2mms^[[22m^[[39m
+2026-11-17T13:47:45.8460970Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/docs/not-found/not-found-screen.test.tsx^[[2m > ^[[22mtest_not_found_screen_when_source_missing^[[32m 57^[[2mms^[[22m^[[39m
+2026-11-17T13:47:46.0291855Z Not implemented: Window's scrollTo() method
+2026-11-17T13:47:46.0587138Z Not implemented: Window's scrollTo() method
+2026-11-17T13:47:46.1212638Z Not implemented: Window's scrollTo() method
+2026-11-17T13:47:46.1234607Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/docs/not-found/components/missing-links.test.tsx^[[2m > ^[[22mtest_missing_links^[[32m 137^[[2mms^[[22m^[[39m
+2026-11-17T13:47:46.1248967Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/docs/not-found/components/missing-links.test.tsx^[[2m > ^[[22mtest_missing_links_when_source_missing^[[32m 49^[[2mms^[[22m^[[39m
+2026-11-17T13:47:46.1250785Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/docs/not-found/components/missing-links.test.tsx^[[2m > ^[[22mtest_missing_links_when_no_serving^[[32m 32^[[2mms^[[22m^[[39m
+2026-11-17T13:47:46.6978990Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/docs/shared/search-dialog/search-dialog.test.tsx^[[2m > ^[[22mtest_search_dialog^[[33m 541^[[2mms^[[22m^[[39m
+2026-11-17T13:47:46.9136555Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/docs/doc-view/hooks/use-column-persistence.test.ts^[[2m > ^[[22mtest_use_column_persistence^[[32m 12^[[2mms^[[22m^[[39m
+2026-11-17T13:47:46.9138255Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/docs/doc-view/hooks/use-column-persistence.test.ts^[[2m > ^[[22mtest_use_column_persistence_when_failed^[[32m 54^[[2mms^[[22m^[[39m
+2026-11-17T13:47:46.9318146Z Not implemented: Window's scrollTo() method
+2026-11-17T13:47:46.9607317Z Not implemented: Window's scrollTo() method
+2026-11-17T13:47:46.9921104Z Not implemented: Window's scrollTo() method
+2026-11-17T13:47:46.9945806Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/settings/settings/components/source-table.test.tsx^[[2m > ^[[22mtest_source_table^[[32m 135^[[2mms^[[22m^[[39m
+2026-11-17T13:47:46.9947213Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/settings/settings/components/source-table.test.tsx^[[2m > ^[[22mtest_source_table_when_edit^[[32m 38^[[2mms^[[22m^[[39m
+2026-11-17T13:47:46.9948417Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/settings/settings/components/source-table.test.tsx^[[2m > ^[[22mtest_source_table_when_outside_read_disabled^[[32m 15^[[2mms^[[22m^[[39m
+2026-11-17T13:47:47.0248192Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/docs/shared/search-dialog/search-dialog.test.tsx^[[2m > ^[[22mtest_search_dialog_when_empty_query^[[33m 417^[[2mms^[[22m^[[39m
+2026-11-17T13:47:47.6598021Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/docs/doc-view/hooks/use-locating.test.ts^[[2m > ^[[22mtest_use_locating^[[32m 15^[[2mms^[[22m^[[39m
+2026-11-17T13:47:47.6627659Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/docs/doc-view/hooks/use-locating.test.ts^[[2m > ^[[22mtest_use_locating_when_same_doc^[[32m 2^[[2mms^[[22m^[[39m
+2026-11-17T13:47:47.6628820Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/docs/doc-view/hooks/use-locating.test.ts^[[2m > ^[[22mtest_use_locating_when_doc_left^[[32m 3^[[2mms^[[22m^[[39m
+2026-11-17T13:47:47.6632117Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/docs/doc-view/hooks/use-locating.test.ts^[[2m > ^[[22mtest_use_locating_when_located^[[32m 1^[[2mms^[[22m^[[39m
+2026-11-17T13:47:47.7643389Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/docs/shared/comments/comment-format.test.ts^[[2m > ^[[22mtest_format_comments^[[32m 2^[[2mms^[[22m^[[39m
+2026-11-17T13:47:47.7713059Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/docs/shared/comments/comment-format.test.ts^[[2m > ^[[22mtest_build_issue_url^[[32m 1^[[2mms^[[22m^[[39m
+2026-11-17T13:47:47.7747416Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/docs/shared/comments/comment-format.test.ts^[[2m > ^[[22mtest_build_issue_url_when_too_long^[[32m 21^[[2mms^[[22m^[[39m
+2026-11-17T13:47:47.8055258Z  ^[[32m✓^[[39m tests/unit/frontend/src/shared/core/handle-app-error.test.ts^[[2m > ^[[22mtest_handle_app_error^[[32m 7^[[2mms^[[22m^[[39m
+2026-11-17T13:47:47.8056991Z  ^[[32m✓^[[39m tests/unit/frontend/src/shared/core/handle-app-error.test.ts^[[2m > ^[[22mtest_handle_app_error_when_message^[[32m 1^[[2mms^[[22m^[[39m
+2026-11-17T13:47:47.8098244Z  ^[[32m✓^[[39m tests/unit/frontend/src/shared/core/handle-app-error.test.ts^[[2m > ^[[22mtest_handle_app_error_when_unknown^[[32m 0^[[2mms^[[22m^[[39m
+2026-11-17T13:47:48.4189861Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/docs/doc-view/nav.test.ts^[[2m > ^[[22mtest_find_active_page^[[32m 2^[[2mms^[[22m^[[39m
+2026-11-17T13:47:48.4217690Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/docs/doc-view/nav.test.ts^[[2m > ^[[22mtest_find_active_page_when_empty_tab^[[32m 0^[[2mms^[[22m^[[39m
+2026-11-17T13:47:48.4236335Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/docs/doc-view/nav.test.ts^[[2m > ^[[22mtest_first_page_path^[[32m 0^[[2mms^[[22m^[[39m
+2026-11-17T13:47:48.4237755Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/docs/doc-view/nav.test.ts^[[2m > ^[[22mtest_first_page_path_when_empty^[[32m 0^[[2mms^[[22m^[[39m
+2026-11-17T13:47:48.4248021Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/docs/doc-view/nav.test.ts^[[2m > ^[[22mtest_page_title^[[32m 0^[[2mms^[[22m^[[39m
+2026-11-17T13:47:48.5354736Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/docs/doc-view/components/conversion-error-alert.test.tsx^[[2m > ^[[22mtest_conversion_error_alert^[[32m 106^[[2mms^[[22m^[[39m
+2026-11-17T13:47:48.5359999Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/docs/doc-view/components/conversion-error-alert.test.tsx^[[2m > ^[[22mtest_conversion_error_alert_when_yaml^[[32m 6^[[2mms^[[22m^[[39m
+2026-11-17T13:47:48.7838373Z  ^[[32m✓^[[39m tests/unit/frontend/src/routes/index.test.ts^[[2m > ^[[22mtest_redirect_to_first_source^[[32m 45^[[2mms^[[22m^[[39m
+2026-11-17T13:47:48.7901122Z  ^[[32m✓^[[39m tests/unit/frontend/src/routes/index.test.ts^[[2m > ^[[22mtest_redirect_to_first_source_when_none^[[32m 7^[[2mms^[[22m^[[39m
+2026-11-17T13:47:49.3968375Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/docs/not-found/missing.test.ts^[[2m > ^[[22mtest_describe_missing^[[32m 3^[[2mms^[[22m^[[39m
+2026-11-17T13:47:49.3972253Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/docs/not-found/missing.test.ts^[[2m > ^[[22mtest_describe_missing_when_not_served^[[32m 1^[[2mms^[[22m^[[39m
+2026-11-17T13:47:49.3982668Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/docs/not-found/missing.test.ts^[[2m > ^[[22mtest_describe_missing_when_route^[[32m 0^[[2mms^[[22m^[[39m
+2026-11-17T13:47:49.3986511Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/docs/not-found/missing.test.ts^[[2m > ^[[22mtest_describe_missing_when_ref^[[32m 0^[[2mms^[[22m^[[39m
+2026-11-17T13:47:49.4847292Z Not implemented: Window's scrollTo() method
+2026-11-17T13:47:49.5929374Z Not implemented: Window's scrollTo() method
+2026-11-17T13:47:49.5986446Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/docs/doc-view/components/doc-sidebar.test.tsx^[[2m > ^[[22mtest_doc_sidebar^[[32m 145^[[2mms^[[22m^[[39m
+2026-11-17T13:47:49.6009060Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/docs/doc-view/components/doc-sidebar.test.tsx^[[2m > ^[[22mtest_doc_sidebar_when_deleted^[[32m 21^[[2mms^[[22m^[[39m
+2026-11-17T13:47:50.0637107Z  ^[[32m✓^[[39m tests/unit/frontend/src/app/confirm-dialog.test.tsx^[[2m > ^[[22mtest_use_confirm_dialog^[[32m 239^[[2mms^[[22m^[[39m
+2026-11-17T13:47:50.0646815Z  ^[[32m✓^[[39m tests/unit/frontend/src/app/confirm-dialog.test.tsx^[[2m > ^[[22mtest_use_confirm_dialog_when_cancel^[[32m 44^[[2mms^[[22m^[[39m
+2026-11-17T13:47:50.3588196Z  ^[[32m✓^[[39m tests/unit/frontend/src/shared/hooks/use-shortcut.test.tsx^[[2m > ^[[22mtest_use_shortcut^[[32m 42^[[2mms^[[22m^[[39m
+2026-11-17T13:47:50.4049868Z  ^[[32m✓^[[39m tests/unit/frontend/src/shared/hooks/use-media-query.test.tsx^[[2m > ^[[22mtest_use_media_query^[[32m 14^[[2mms^[[22m^[[39m
+2026-11-17T13:47:50.4069159Z  ^[[32m✓^[[39m tests/unit/frontend/src/shared/hooks/use-media-query.test.tsx^[[2m > ^[[22mtest_use_media_query_when_changed^[[32m 3^[[2mms^[[22m^[[39m
+2026-11-17T13:47:50.4176737Z  ^[[32m✓^[[39m tests/unit/frontend/src/shared/hooks/use-shortcut.test.tsx^[[2m > ^[[22mtest_use_shortcut_when_input_focused^[[32m 127^[[2mms^[[22m^[[39m
+2026-11-17T13:47:50.4178702Z  ^[[32m✓^[[39m tests/unit/frontend/src/shared/hooks/use-shortcut.test.tsx^[[2m > ^[[22mtest_use_shortcut_when_single_key_off^[[32m 13^[[2mms^[[22m^[[39m
+2026-11-17T13:47:51.0611606Z Not implemented: Window's scrollTo() method
+2026-11-17T13:47:51.0744491Z Not implemented: Window's scrollTo() method
+2026-11-17T13:47:51.1019634Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/docs/doc-view/components/doc-tabs.test.tsx^[[2m > ^[[22mtest_doc_tabs^[[32m 142^[[2mms^[[22m^[[39m
+2026-11-17T13:47:51.1021440Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/docs/doc-view/components/doc-tabs.test.tsx^[[2m > ^[[22mtest_doc_tabs_when_empty^[[32m 34^[[2mms^[[22m^[[39m
+2026-11-17T13:47:51.3048128Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/settings/settings/components/status-badge.test.tsx^[[2m > ^[[22mtest_status_badge^[[32m 41^[[2mms^[[22m^[[39m
+2026-11-17T13:47:51.3049432Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/settings/settings/components/status-badge.test.tsx^[[2m > ^[[22mtest_status_badge_when_old_config_version^[[32m 5^[[2mms^[[22m^[[39m
+2026-11-17T13:47:51.3519416Z  ^[[32m✓^[[39m tests/unit/frontend/src/shared/adapters/api-client.test.ts^[[2m > ^[[22mtest_api_client^[[32m 47^[[2mms^[[22m^[[39m
+2026-11-17T13:47:51.3563304Z  ^[[32m✓^[[39m tests/unit/frontend/src/shared/adapters/api-client.test.ts^[[2m > ^[[22mtest_api_client_when_problem^[[32m 25^[[2mms^[[22m^[[39m
+2026-11-17T13:47:51.3564645Z  ^[[32m✓^[[39m tests/unit/frontend/src/shared/adapters/api-client.test.ts^[[2m > ^[[22mtest_api_client_when_network_error^[[32m 5^[[2mms^[[22m^[[39m
+2026-11-17T13:47:52.1597350Z  ^[[32m✓^[[39m tests/unit/frontend/src/shared/hooks/use-delayed-flag.test.tsx^[[2m > ^[[22mtest_use_delayed_flag^[[32m 15^[[2mms^[[22m^[[39m
+2026-11-17T13:47:52.1598342Z  ^[[32m✓^[[39m tests/unit/frontend/src/shared/hooks/use-delayed-flag.test.tsx^[[2m > ^[[22mtest_use_delayed_flag_when_finished^[[32m 2^[[2mms^[[22m^[[39m
+2026-11-17T13:47:52.5421473Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/docs/doc-view/components/diff-banner.test.tsx^[[2m > ^[[22mtest_diff_banner^[[33m 335^[[2mms^[[22m^[[39m
+2026-11-17T13:47:52.5447289Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/docs/doc-view/components/diff-banner.test.tsx^[[2m > ^[[22mtest_diff_banner_when_clear^[[32m 39^[[2mms^[[22m^[[39m
+2026-11-17T13:47:52.7915549Z  ^[[32m✓^[[39m tests/unit/frontend/src/app/router.test.tsx^[[2m > ^[[22mtest_create_app_router^[[32m 5^[[2mms^[[22m^[[39m
+2026-11-17T13:47:52.7920524Z  ^[[32m✓^[[39m tests/unit/frontend/src/app/router.test.tsx^[[2m > ^[[22mtest_parse_search_when_numeric_rev^[[32m 1^[[2mms^[[22m^[[39m
+2026-11-17T13:47:52.7922247Z  ^[[32m✓^[[39m tests/unit/frontend/src/app/router.test.tsx^[[2m > ^[[22mtest_stringify_search_when_numeric_rev^[[32m 0^[[2mms^[[22m^[[39m
+2026-11-17T13:47:52.8908865Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/docs/shared/serving-sources.test.ts^[[2m > ^[[22mtest_serving_sources^[[32m 2^[[2mms^[[22m^[[39m
+2026-11-17T13:47:52.8910288Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/docs/shared/serving-sources.test.ts^[[2m > ^[[22mtest_serving_sources_when_write_scope^[[32m 1^[[2mms^[[22m^[[39m
+2026-11-17T13:47:52.8911450Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/docs/shared/serving-sources.test.ts^[[2m > ^[[22mtest_serving_sources_when_undefined^[[32m 0^[[2mms^[[22m^[[39m
+2026-11-17T13:47:53.2933516Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/docs/shared/comments/comment-store.test.ts^[[2m > ^[[22mtest_comments_of^[[32m 3^[[2mms^[[22m^[[39m
+2026-11-17T13:47:53.4988347Z  ^[[32m✓^[[39m tests/unit/frontend/src/app/query-client.test.ts^[[2m > ^[[22mtest_create_query_client^[[32m 2^[[2mms^[[22m^[[39m
+2026-11-17T13:47:53.4993413Z  ^[[32m✓^[[39m tests/unit/frontend/src/app/query-client.test.ts^[[2m > ^[[22mtest_create_query_client_when_meta_off^[[32m 2^[[2mms^[[22m^[[39m
+2026-11-17T13:47:53.5971156Z  ^[[32m✓^[[39m tests/unit/frontend/src/shared/core/shortcuts.test.ts^[[2m > ^[[22mtest_shortcuts_for^[[32m 2^[[2mms^[[22m^[[39m
+2026-11-17T13:47:53.5973251Z  ^[[32m✓^[[39m tests/unit/frontend/src/shared/core/shortcuts.test.ts^[[2m > ^[[22mtest_shortcuts_for_when_single_key_off^[[32m 1^[[2mms^[[22m^[[39m
+2026-11-17T13:47:53.5974438Z  ^[[32m✓^[[39m tests/unit/frontend/src/shared/core/shortcuts.test.ts^[[2m > ^[[22mtest_shortcuts_for_when_settings^[[32m 0^[[2mms^[[22m^[[39m
+2026-11-17T13:47:53.9956907Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/docs/shared/search-dialog/highlight.test.ts^[[2m > ^[[22mtest_split_highlight^[[32m 2^[[2mms^[[22m^[[39m
+2026-11-17T13:47:53.9997886Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/docs/shared/search-dialog/highlight.test.ts^[[2m > ^[[22mtest_split_highlight_when_symbol^[[32m 1^[[2mms^[[22m^[[39m
+2026-11-17T13:47:54.2762475Z  ^[[32m✓^[[39m tests/unit/frontend/src/shared/lib/logger.test.ts^[[2m > ^[[22mtest_create_logger^[[32m 4^[[2mms^[[22m^[[39m
+2026-11-17T13:47:54.3514762Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/docs/doc-view/components/doc-header.test.tsx^[[2m > ^[[22mtest_doc_header^[[32m 121^[[2mms^[[22m^[[39m
+2026-11-17T13:47:54.7322525Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/settings/settings/problem-errors.test.ts^[[2m > ^[[22mtest_to_field_errors^[[32m 2^[[2mms^[[22m^[[39m
+2026-11-17T13:47:55.1258106Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/docs/doc-view/components/empty-tab.test.tsx^[[2m > ^[[22mtest_empty_tab_when_not_git^[[32m 20^[[2mms^[[22m^[[39m
+2026-11-17T13:47:55.3461328Z  ^[[32m✓^[[39m tests/unit/frontend/src/shared/components/shortcut-dialog/shortcut-dialog.test.tsx^[[2m > ^[[22mtest_shortcut_dialog^[[32m 145^[[2mms^[[22m^[[39m
+2026-11-17T13:47:55.6124758Z  ^[[32m✓^[[39m tests/unit/frontend/src/shared/components/skip-link.test.tsx^[[2m > ^[[22mtest_skip_link^[[32m 105^[[2mms^[[22m^[[39m
+2026-11-17T13:47:55.7375294Z  ^[[32m✓^[[39m tests/unit/frontend/src/shared/lib/format.test.ts^[[2m > ^[[22mtest_format_jst^[[32m 1^[[2mms^[[22m^[[39m
+2026-11-17T13:47:55.7444314Z  ^[[32m✓^[[39m tests/unit/frontend/src/shared/lib/format.test.ts^[[2m > ^[[22mtest_format_jst_when_date_changes^[[32m 0^[[2mms^[[22m^[[39m
+2026-11-17T13:47:55.7444860Z 
+2026-11-17T13:47:55.7457710Z ^[[2m Test Files ^[[22m ^[[1m^[[32m52 passed^[[39m^[[22m^[[90m (52)^[[39m
+2026-11-17T13:47:55.7458335Z ^[[2m      Tests ^[[22m ^[[1m^[[32m172 passed^[[39m^[[22m^[[90m (172)^[[39m
+2026-11-17T13:47:55.7458766Z ^[[2m   Start at ^[[22m 13:47:36
+2026-11-17T13:47:55.7459408Z ^[[2m   Duration ^[[22m 19.14s^[[2m (environment 52%, tests 19%, import 15%, setup 10%, transform 3%, worker 1%)^[[22m
+2026-11-17T13:47:55.7459798Z 
+2026-11-17T13:47:55.7460255Z ^[[2mEnvironment ^[[22m ^[[33mjsdom was created 52 times^[[39m^[[2m · 26.48s total, 52% of tracked time^[[22m
+2026-11-17T13:47:55.7461266Z ^[[2m            ^[[22m ^[[2mcreate it once per worker with ^[[22m^[[33mpool: 'vmThreads'^[[39m^[[2m (keeps per-file isolation) or ^[[22m^[[33misolate: false^[[39m^[[2m (shares it across files)^[[22m
+2026-11-17T13:47:55.7462777Z ^[[2m            ^[[22m ^[[2mlearn more: https://vitest.dev/guide/improving-performance#test-environments^[[22m
+2026-11-17T13:47:55.7463112Z 

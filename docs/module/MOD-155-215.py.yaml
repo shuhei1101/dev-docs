@@ -163,7 +163,7 @@ classes:
           type: list[SourceState]
           description: project-index の配信元の並び
         process: |-
-          1. 呼び出しの共通の手順で `GET /sources` を呼ぶ
+          1. 呼び出しの共通の手順で `GET /sources` をクエリ `include_loading=true` で呼ぶ（全ての配信元の読み込みを待たず、読み込み中の配信元は `loading` で返る）
           2. 応答の `sources[]` を `SourceState` にして返却する
         unit_tests:
           - name: test_list_sources
@@ -172,6 +172,12 @@ classes:
             condition: '`sources[]` に `serving` の sample と、`not_served`・`errors[]` 1 件の broken'
             mock: '`httpx.MockTransport` で project-index の応答を返却する'
             expected: 2 件で、broken の `errors` が `Violation` 1 件
+          - name: test_list_sources_when_loading
+            case: 正常
+            summary: 読み込み中の配信元
+            condition: '`sources[]` に `serving` の sample と `loading` の slow'
+            mock: '`httpx.MockTransport` で要求を記録し、project-index の応答を返却する'
+            expected: 要求のクエリに `include_loading=true` があり、slow の `status` が `loading`
       - name: source_view
         title: 配信元の表示の設定の取得
         kind: メソッド
@@ -445,7 +451,7 @@ classes:
           description: 行と状態
         process: |-
           1. 呼び出しの共通の手順で `GET /settings/sources` を呼ぶ
-          2. `sources[]` の行ごとに、`id`・`config`・`enabled`・`scope` と `outsideRead` を `outside_read` にした辞書を `rows`、`id`・`status`・`errors`・`config`・`configVersion` を `SourceState` にしたものを `states` にし、`settingsPath`・`version` とともに `SettingsSourcesView` にして返却する
+          2. `sources[]` の行ごとに、`id`・`config`・`enabled`・`scope`・`storage` と `outsideRead` を `outside_read` にした辞書を `rows`、`id`・`status`・`errors`・`config`・`configVersion` を `SourceState` にしたものを `states` にし、`settingsPath`・`version` とともに `SettingsSourcesView` にして返却する
         unit_tests:
           - name: test_settings_sources
             case: 正常

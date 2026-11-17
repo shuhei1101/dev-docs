@@ -1,9 +1,14 @@
 import { useEffect, useRef, useState } from "react";
-import { Controller } from "react-hook-form";
+import { type Control, Controller } from "react-hook-form";
 
 import { useSourceForm } from "@/features/settings/settings/hooks/use-source-form";
 import { fieldOf } from "@/features/settings/settings/problem-errors";
-import type { SourceFormValues } from "@/features/settings/settings/form";
+import {
+  type SourceFormValues,
+  type StorageChoice,
+  type StorageType,
+  storedStorage,
+} from "@/features/settings/settings/form";
 import type { SettingsSourceRow } from "@/shared/api/generated/model";
 import {
   Alert,
@@ -21,6 +26,13 @@ import {
 } from "@/shared/components/ui/dialog";
 import { Input } from "@/shared/components/ui/input";
 import { Label } from "@/shared/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/shared/components/ui/select";
 import { Switch } from "@/shared/components/ui/switch";
 import { Textarea } from "@/shared/components/ui/textarea";
 
@@ -119,6 +131,60 @@ const FailureSummary = ({
   );
 };
 
+const STORAGE_OPTIONS: { value: StorageChoice; label: string }[] = [
+  { value: "auto", label: "自動" },
+  { value: "git", label: "Git" },
+  { value: "disk", label: "ディスク" },
+];
+
+type StorageFieldProps = {
+  control: Control<SourceFormValues>;
+  /** 開いた行の保存済みの読み書きの方法（追加・保存済みの値が無い行は null） */
+  stored: StorageType | null;
+};
+
+/** 読み書きの方法のセレクト。保存済みの値を持つ行は自動を選べない */
+const StorageField = ({ control, stored }: StorageFieldProps) => {
+  const options = STORAGE_OPTIONS.filter(
+    (option) => stored === null || option.value !== "auto",
+  );
+  return (
+    <Field
+      id="source-storage"
+      label="読み書きの方法"
+      required={false}
+      hint={
+        stored === null
+          ? "自動は、フォルダが Git の作業ツリーの中なら Git、外ならディスクで読み書きします。コミットしないフォルダはディスクを選択します。"
+          : "Git はコミットから読み、ディスクはフォルダのファイルをそのまま読みます。保存済みの読み書きの方法は自動に戻せません。"
+      }
+    >
+      <Controller
+        control={control}
+        name="storage"
+        render={({ field }) => (
+          <Select
+            items={options}
+            value={field.value ?? "auto"}
+            onValueChange={(next) => next !== null && field.onChange(next)}
+          >
+            <SelectTrigger id="source-storage" className="w-full">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {options.map((option) => (
+                <SelectItem key={option.value} value={option.value}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
+      />
+    </Field>
+  );
+};
+
 /** 配信元の追加・編集のダイアログ */
 export const SourceEditDialog = ({
   open,
@@ -144,6 +210,10 @@ export const SourceEditDialog = ({
   const idField = form.register("id");
   const configField = form.register("config");
   const invalidCount = Object.keys(errors).length;
+  // 保存済みの読み書きの方法は、project-index が今の値で埋め直すため自動に戻せない
+  const [stored] = useState(() =>
+    index === null ? null : storedStorage(sources[index]),
+  );
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -290,6 +360,7 @@ export const SourceEditDialog = ({
               オフにすると、読み取りの範囲に当たらない作業場所からは参照できません。
             </p>
           </div>
+          <StorageField control={form.control} stored={stored} />
           <Field
             id="source-write"
             label="書き込みの範囲"
