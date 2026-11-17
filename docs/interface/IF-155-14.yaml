@@ -66,6 +66,27 @@ flows:
       - '`leftover_sources` が `["extra"]`'
       - markdown に、extra を project-index で追加する案内が出る
     test: test_normal_when_leftover_sources
+  - name: 正常系（読み込み中の配信元がある）
+    summary: project-index が読み込みを終えていない配信元を `loading` で返却する
+    setup:
+      - name: Mock
+        description: project-index の読み取り API のモック。GET `/sources?include_loading=true` に sample を `serving`、slow を `loading` で返却し、`include_loading` の無い GET `/sources` には応答しない
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        participant C as クライアント
+        participant T as status
+        participant PI as project-index（モック）
+
+        C->>T: format: json
+        T->>PI: 配信元の一覧と状態を、読み込みを待たずに取得する
+        T-->>C: sample は serving、slow は loading
+      ```
+    expected:
+      - sample が `serving`、slow が `loading`
+      - モックが受けた要求のクエリに `include_loading=true` がある
+      - markdown の表で slow の状態が `loading` で出る
+    test: test_normal_when_source_loading
 lead: 待ち受けのアドレス・バージョン・端末の設定・配信元ごとの状態を返却する管理の MCP の `status` の入出力を定め、`status` を修正するときに参照する。
 identifier: status
 permissions: なし（`127.0.0.1` でだけ待ち受ける）
@@ -115,8 +136,8 @@ response:
     type: str
     description: 配信元の ID
   - name: sources[].status
-    type: Literal['serving', 'not_served', 'disabled']
-    description: project-index が返却した配信元の状態
+    type: Literal['serving', 'not_served', 'disabled', 'loading']
+    description: project-index が返却した配信元の状態。`loading` は project-index が読み込みを終えていない配信元
   - name: sources[].errors[]
     type: str
     description: 'project-index が返却した配信しない理由（`{キーのパス}: {理由}`）'
@@ -142,7 +163,7 @@ constraints:
   - item: 注釈
     constraint: '`readOnlyHint: true`'
   - item: 配信元の状態の取得
-    constraint: 呼ばれるたびに project-index の読み取り API から取得し、dev-docs の中に記録しない
+    constraint: 呼ばれるたびに project-index の読み取り API の GET `/sources?include_loading=true` から取得し、dev-docs の中に記録しない。全ての配信元の読み込みを待たず、読み込みが終わっていない配信元を `loading` で返却する
   - item: 権限
     constraint: 作業場所で絞らず、全ての配信元を返却する
   - item: タイムアウト

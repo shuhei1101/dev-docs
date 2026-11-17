@@ -23,7 +23,7 @@ endpoints:
   - name: GET /sources
     method: GET
     path: /sources
-    summary: 配信元ごとの ID・状態（`serving`・`not_served`・`disabled`）と、配信していない理由（`errors[]` の `{path, reason}`）を返却する（IF-22）
+    summary: 配信元ごとの ID・状態（`serving`・`not_served`・`disabled`）と、配信していない理由（`errors[]` の `{path, reason}`）を返却する（IF-22）。`?include_loading=true` を付けると全ての配信元の読み込みを待たずに返却し、読み込みが終わっていない配信元を `loading` で端末の設定の順に並べる（`id` を持たない行は `sources[{n}]` の ID）。付けないと全ての行の読み込みを待ち、`loading` を返却しない
     status_codes:
       - code: '200'
         condition: 返却した（配信元が 0 件でも 200）
@@ -95,14 +95,14 @@ endpoints:
   - name: GET /settings/sources
     method: GET
     path: /settings/sources
-    summary: 端末の設定のパス（`settingsPath`）と、`sources[]` の行ごとの `id`・`config`・`enabled`・`scope`・`outsideRead` と状態（`status`・`errors`・`configVersion`）、端末の設定の内容のバージョン（`version`。ファイル全体の内容のハッシュ）を返却する（IF-30）
+    summary: 端末の設定のパス（`settingsPath`）と、`sources[]` の行ごとの `id`・`config`・`enabled`・`scope`・`outsideRead`・`storage`（`storage.type` が `git`・`disk`。記載していない行は返却しない）と状態（`status`・`errors`・`configVersion`）、端末の設定の内容のバージョン（`version`。ファイル全体の内容のハッシュ）を返却する（IF-30）
     status_codes:
       - code: '200'
         condition: 返却した
   - name: PUT /settings/sources
     method: PUT
     path: /settings/sources
-    summary: '`sources[]` を丸ごと保存して全ての配信元を再読み込み、配信元ごとの状態（`id`・`status`・`errors`）と保存した後の内容のバージョン（`version`）を返却する（IF-31）。送信しなかったキーはファイルの同じ配信元の行の今の値で残る。行のキーは `id`・`config`・`enabled`・`scope`・`outside_read` で、外部の読み取りは `GET /settings/sources` の応答の `outsideRead` ではなく `outside_read` で送信する（`outsideRead` は知らないキーとして 400）。本文の `expectedVersion` を指定すると、今の内容のバージョンと照合してから保存する。保存した直後にファイルへ書き込み、再読み込みが終わるまで端末の設定の排他ロックを持ち続ける（`GET /settings/sources` はそのロックを待たず、再読み込みの途中の行を `pending_reload` で返却する）'
+    summary: '`sources[]` を丸ごと保存して全ての配信元を再読み込み、配信元ごとの状態（`id`・`status`・`errors`）と保存した後の内容のバージョン（`version`）を返却する（IF-31）。送信しなかったキーはファイルの同じ配信元の行の今の値で残る。行のキーは `id`・`config`・`enabled`・`scope`・`outside_read`・`storage` で（送信しなかった `storage` もファイルの今の値で残る）、外部の読み取りは `GET /settings/sources` の応答の `outsideRead` ではなく `outside_read` で送信する（`outsideRead` は知らないキーとして 400）。本文の `expectedVersion` を指定すると、今の内容のバージョンと照合してから保存する。保存した直後にファイルへ書き込み、再読み込みが終わるまで端末の設定の排他ロックを持ち続ける（`GET /settings/sources` はそのロックを待たず、再読み込みの途中の行を `pending_reload` で返却する）'
     status_codes:
       - code: '200'
         condition: 保存した
