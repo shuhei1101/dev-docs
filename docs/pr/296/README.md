@@ -1,0 +1,1 @@
+# 画面の全体のスタイル（index.css・preflight-outside-mdmark.css）を frontend/src/shared/styles/ へ移す
