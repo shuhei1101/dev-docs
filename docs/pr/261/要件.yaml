@@ -13,7 +13,7 @@ docs:
     updated_at: '2026-11-17T10:32:00.606357+00:00'
   - page: docs/test-procedure/TP-155-1.yaml
     new: false
-    change: '層ごとに判定フローチャート『テストの実行場所』で location を記載し、runner の層に run_runner を追加する。run_all・run_one は手元のコマンドのまま残す。lint の層に actionlint と uses: の実在の検査を追加する'
+    change: '層ごとに判定フローチャート『テストの実行場所』で location を記載し、runner の層に run_runner を追加する。run_all・run_one は手元のコマンドのまま残す。lint の層に actionlint と uses: の実在の検査を追加する。E2E テストの層（TL-6）に tests/e2e/ の run_all・run_one と location: local を記載する'
     status: todo
   - page: docs/interface/IF-155-26.yaml
     new: true
@@ -49,8 +49,8 @@ scope_out:
     reason: 受付判断の時点にあった schemas/ のスキーマのコピーは、#256 で knowledge の design-schemas の参照へ移って無くなり、この作業 PR はスキーマを AI Monitor の配布物から取らない。版上げは追従 Issue が行う
     plan: '#243'
   - item: 既存の GitHub Pages の workflow（.github/workflows/pages.yml）のインターフェース定義の作成
-    reason: 要望に含まれない。workflow の追加と同じ作業 PR で作るかは、インターフェース定義と workflow のファイルの突き合わせの検査が pages.yml にも及ぶかで決まるため、インターフェース定義設計のレビューで確定する
+    reason: 要望に含まれない。dev-docs の検査には workflow のファイルとインターフェース定義を突き合わせる検査が無く、この作業 PR の workflow の追加とは独立に作れる
     plan: to_file
-  - item: 外部疎通テスト・非機能要件テスト・E2E テストの層の実行場所
-    reason: 3 つの層は run_all が未確定でテストが無く、判定の対象が無い。テストを作る作業で決める
+  - item: 外部疎通テスト・非機能要件テストの層の実行場所
+    reason: 2 つの層は run_all が未確定でテストが無く、判定の対象が無い。テストを作る作業で決める
     plan: none
