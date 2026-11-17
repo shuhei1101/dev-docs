@@ -500,7 +500,7 @@ flows:
         participant PI as project-index
 
         C->>E: GET /_api/sources/sample/docs/{文書 6 のパス}
-        E->>PI: 検討事項の ID と、ID ごとに当たるフォルダの数を取得する
+        E->>PI: 検討事項の ID と、ID ごとに該当するフォルダの数を取得する
         E->>E: 1 つのフォルダにだけある ID を、検討事項の文書のパスへのリンクにする
         E-->>C: 200（文書 6）
       ```
@@ -876,8 +876,8 @@ refs:
 test_file: tests/integration/server/test_get_document.py
 error_format: RFC 9457 の `application/problem+json`（`type`・`title`・`status`・`detail`）。拡張メンバーは camelCase（`nextSteps`・`missing`・`errors[]` の `{path, reason}`）
 callers:
-  - SC-155-7#scenarios[正常シナリオ（スキーマ駆動の文書を図と表で読む）]
-  - SC-155-7#scenarios[正常シナリオ（ER 図を読む）]
+  - SC-155-7#scenarios[正常シナリオ（スキーマ駆動の文書を図と表で参照する）]
+  - SC-155-7#scenarios[正常シナリオ（ER 図を参照する）]
   - SC-155-7#scenarios[正常シナリオ（本文の id のリンクを開く）]
   - SC-155-7#scenarios[正常シナリオ（設計書の検討事項のリンクを開く）]
 notes:

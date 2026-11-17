@@ -8,12 +8,12 @@ dev-docs 自身の `docs/` の文書は、直下の `project-index.yaml` で配�
 ## 導入
 
 Claude Code にプラグイン `dev-docs` をユーザースコープで入れ、`/dev-docs:global-setup` で端末の設定と起動を用意します。
-手順は [dev-docsを入れる](docs/guide/dev-docsを入れる.md) にあります。
+手順は [dev-docsを導入する](docs/guide/dev-docsを導入する.md) にあります。
 
 ## 画面
 
 サーバーを起動したら、ブラウザで `http://127.0.0.1:{port}/` を開きます（既定は `http://127.0.0.1:8781/`）。
-使い方は [画面で読む](docs/guide/画面で読む.md) にあります。
+使い方は [画面で参照する](docs/guide/画面で参照する.md) にあります。
 
 ## 画面の開発
 

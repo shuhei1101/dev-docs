@@ -1,0 +1,94 @@
+use_cases:
+  - kind: composite
+    scenario: docs/scenario/SC-155-13.yaml
+    impact: changed
+    detail: 複合シナリオの名前と、構成する単一シナリオの名前・項目名の参照を改名する。流れは変えない
+    depends_on: []
+  - kind: single
+    scenario: docs/scenario/SC-155-2.yaml
+    impact: changed
+    detail: シナリオの名前を改名する。流れは変えない
+    depends_on: []
+  - kind: single
+    scenario: docs/scenario/SC-155-6.yaml
+    impact: changed
+    detail: シナリオの名前を改名する。流れは変えない
+    depends_on: []
+  - kind: single
+    scenario: docs/scenario/SC-155-7.yaml
+    impact: changed
+    detail: シナリオの名前と、差分を確認するシナリオの名前を改名する。流れは変えない
+    depends_on: []
+  - kind: single
+    scenario: docs/scenario/SC-155-11.yaml
+    impact: changed
+    detail: シナリオの名前を改名する。流れは変えない
+    depends_on: []
+docs:
+  - page: docs/guide/画面で参照する.md
+    new: false
+    change: ファイル名とタイトルを「画面で参照する」に改名し、本文の見出し「差分を見る」を「差分を確認する」にする
+    status: done
+    updated_by: planner
+    updated_at: '2026-11-17T15:15:49.894631+00:00'
+  - page: docs/guide/dev-docsを導入する.md
+    new: false
+    change: ファイル名とタイトルを「dev-docsを導入する」に改名する
+    status: done
+    updated_by: planner
+    updated_at: '2026-11-17T15:15:49.894631+00:00'
+  - page: docs/guide/files.yml
+    new: false
+    change: 改名した 2 ファイルの path・name を新しい名前にする
+    status: done
+    updated_by: planner
+    updated_at: '2026-11-17T15:15:49.894631+00:00'
+  - page: docs/guide/index.yaml
+    new: false
+    change: 改名した 2 ファイルの行の page を新しい名前にし、README.md を再生成する
+    status: done
+    updated_by: planner
+    updated_at: '2026-11-17T15:15:49.894631+00:00'
+  - page: docs/guide/配信元を配信する.md
+    new: false
+    change: 画面で読む.md へのリンクを新しい名前にする
+    status: done
+    updated_by: planner
+    updated_at: '2026-11-17T15:15:49.894631+00:00'
+  - page: docs/guide/コアコンセプト-管理用プラグイン.md
+    new: false
+    change: dev-docsを入れる.md へのリンクを新しい名前にする
+    status: done
+    updated_by: planner
+    updated_at: '2026-11-17T15:15:49.894631+00:00'
+  - page: docs/scenario/index.yaml
+    new: false
+    change: 改名したシナリオの名前は title から引くため index.yaml は変えず、README.md の行だけを新しい名前にする
+    status: done
+    updated_by: planner
+    updated_at: '2026-11-17T15:15:49.894631+00:00'
+  - page: docs/module/MOD-192-1.py.yaml
+    new: false
+    change: 例の値 dev-docsを入れる.md を新しいファイル名にする
+    status: done
+    updated_by: planner
+    updated_at: '2026-11-17T15:15:49.894631+00:00'
+  - page: README.md
+    new: false
+    change: ガイド 2 ファイルへのリンクを新しい名前にする
+    status: done
+    updated_by: planner
+    updated_at: '2026-11-17T15:15:49.894631+00:00'
+  - page: project-index.yaml
+    new: false
+    change: 公開ページの行の page を新しいファイル名にする
+    status: done
+    updated_by: planner
+    updated_at: '2026-11-17T15:15:49.894631+00:00'
+scope_out:
+  - item: docs/mock/pages/doc-view/36/・docs/mock/pages/not-found/36/ のサンプルの文字列にある旧名（利用者がコメントを渡す・配信元を外す・利用者が画面で読む）
+    reason: モックは合意した時点の画面の記録で、画面に出す例の文字列であり、設計書への参照ではない
+    plan: none
+  - item: 改名したシナリオの test_file の E2E の実体の作成
+    reason: '要望は改名で、E2E の作成を含まない。E2E は開発の間は作らない決定（D-307。[Issue #164](https://github.com/shuhei1101/dev-docs/issues/164) の本文）があるため起票しない'
+    plan: none

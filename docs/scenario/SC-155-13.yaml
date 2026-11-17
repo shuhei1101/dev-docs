@@ -1,5 +1,5 @@
 id: SC-155-13
-title: "dev-docsで配信元の文書を画面で読む"
+title: "dev-docsで配信元の文書を画面で参照する"
 scenarios:
   - name: 正常シナリオ
     setup:
@@ -27,20 +27,20 @@ scenarios:
       ```mermaid
       flowchart TD
         subgraph P1["導入"]
-          S0["dev-docsを入れる:正常シナリオ"]
+          S0["dev-docsを導入する:正常シナリオ"]
         end
         subgraph P2["起動"]
           S1["起動する:正常シナリオ"]
         end
-        subgraph P3["読む"]
-          S2["利用者が画面で読む:正常シナリオ"]
-          S3["利用者が画面で読む:正常シナリオ（差分を見る）"]
-          S4["利用者が画面で読む:正常シナリオ（検索する）"]
-          S5["利用者がコメントを渡す:正常シナリオ"]
+        subgraph P3["参照"]
+          S2["利用者が画面で参照する:正常シナリオ"]
+          S3["利用者が画面で参照する:正常シナリオ（差分を確認する）"]
+          S4["利用者が画面で参照する:正常シナリオ（検索する）"]
+          S5["利用者がコメントを送信する:正常シナリオ"]
         end
         subgraph P4["配信元の管理"]
           S6["配信元を追加する:正常シナリオ（設定画面で追加する）"]
-          S7["配信元を外す:正常シナリオ"]
+          S7["配信元を除外する:正常シナリオ"]
         end
         subgraph P5["保守"]
           S8["dev-docsを更新する:正常シナリオ"]
@@ -49,7 +49,7 @@ scenarios:
         click S0 "id:SC-155-2#scenarios[正常シナリオ]"
         click S1 "id:SC-155-10#scenarios[正常シナリオ]"
         click S2 "id:SC-155-7#scenarios[正常シナリオ]"
-        click S3 "id:SC-155-7#scenarios[正常シナリオ（差分を見る）]"
+        click S3 "id:SC-155-7#scenarios[正常シナリオ（差分を確認する）]"
         click S4 "id:SC-155-7#scenarios[正常シナリオ（検索する）]"
         click S5 "id:SC-155-6#scenarios[正常シナリオ]"
         click S6 "id:SC-155-12#scenarios[正常シナリオ（設定画面で追加する）]"
@@ -72,7 +72,7 @@ scenarios:
       - SC-155-2#scenarios[正常シナリオ]
       - SC-155-10#scenarios[正常シナリオ]
       - SC-155-7#scenarios[正常シナリオ]
-      - SC-155-7#scenarios[正常シナリオ（差分を見る）]
+      - SC-155-7#scenarios[正常シナリオ（差分を確認する）]
       - SC-155-7#scenarios[正常シナリオ（検索する）]
       - SC-155-6#scenarios[正常シナリオ]
       - SC-155-12#scenarios[正常シナリオ（設定画面で追加する）]
@@ -100,9 +100,9 @@ scenarios:
         subgraph P1["起動"]
           S1["起動する:正常シナリオ"]
         end
-        subgraph P2["読む"]
-          S2["利用者が画面で読む:異常シナリオ（配信していない配信元を開く）"]
-          S3["利用者が画面で読む:正常シナリオ"]
+        subgraph P2["参照"]
+          S2["利用者が画面で参照する:異常シナリオ（配信していない配信元を開く）"]
+          S3["利用者が画面で参照する:正常シナリオ"]
         end
         S1 --> S2 --> S3
         click S1 "id:SC-155-10#scenarios[正常シナリオ]"
@@ -141,7 +141,7 @@ frequency: 導入は端末ごとに 1 回。起動はセッションごと。参
 priority: 高
 notes:
   E2E テスト: 'テストのファイルは、dev-docs の画面のサーバーを本物の project-index へつなぐ [project-index の付け替え口を本物の API へつなぐ](https://github.com/shuhei1101/dev-docs/issues/164) でそろってから作り、その時点で `test_file` を付ける。'
-test_file: tests/e2e/複合ユースケース/test_dev-docsで配信元の文書を画面で読む.py
+test_file: tests/e2e/複合ユースケース/test_dev-docsで配信元の文書を画面で参照する.py
 tags:
   - name: topic:文書
     main: true
