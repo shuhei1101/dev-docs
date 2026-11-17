@@ -8,19 +8,19 @@ constants:
     title: 取り込んだエイリアスのスキーマ
     container: features/documents/aliases.py
     usecase: 共通
-    summary: 配布に同梱する alias-inject の「エイリアスの元の行」のスキーマのパス（`importlib.resources` で引く）。alias-inject の `schemas/aliases.schema.yaml` を書き換えずに置く
+    summary: 配布に同梱する alias-inject の「エイリアスの元の行」のスキーマのパス（`importlib.resources` で取得する）。alias-inject の `schemas/aliases.schema.yaml` を書き換えずに配置する
     value: '"schemas/aliases.schema.yaml"'
   - name: ALIAS_REQUIRED_KEYS
     title: 引用の種類ごとの必須のキー
     container: features/documents/aliases.py
     usecase: 共通
-    summary: 取り込んだスキーマの `metadata` の各キーの説明に書かれた必須を、引用の種類ごとに並べたもの。`env` の `("url", "port")` は 1 つ以上が必須
+    summary: 取り込んだスキーマの `metadata` の各キーの説明に記載された必須を、引用の種類ごとに並べたもの。`env` の `("url", "port")` は 1 つ以上が必須
     value: '{"term": ("id", "name", "description"), "doc": ("id", "name", "description"), "command": ("id", "name", "command"), "url": ("id", "name", "url"), "skill": ("id", "name", "skill"), "tool": ("id", "name", "tool"), "path": ("id", "name", "path"), "env": ("id", "name", ("url", "port")), "avoid": ("id", "name", "replacement")}'
   - name: ALIAS_LIST_KEYS
     title: 文字列か文字列の並びのキー
     container: features/documents/aliases.py
     usecase: 共通
-    summary: 値に文字列か文字列の並びを許すエイリアスのキー。返すときは文字列 1 つを要素 1 つの並びにする
+    summary: 値に文字列か文字列の並びを許すエイリアスのキー。返却するときは文字列 1 つを要素 1 つの並びにする
     value: ("aliases", "avoid")
 functions:
   - name: alias_schema
@@ -29,15 +29,15 @@ functions:
     container: features/documents/aliases.py
     usecase: 共通
     role: 読み込み
-    summary: 同梱した `ALIAS_SCHEMA_PATH` を YAML として読んで返す
+    summary: 同梱した `ALIAS_SCHEMA_PATH` を YAML として読み込んで返却する
     scope: public
     thread_safe: true
     returns:
       type: dict[str, Any]
-      description: スキーマ（`functools.cache` で 1 回だけ読む）
+      description: スキーマ（`functools.cache` で 1 回だけ参照する）
     process: |-
-      1. `importlib.resources.files("dev_docs") / ALIAS_SCHEMA_PATH` を YAML として読む（YAMLの読み込み）
-      2. 返す
+      1. `importlib.resources.files("dev_docs") / ALIAS_SCHEMA_PATH` を YAML として読み込む（YAMLの読み込み）
+      2. 返却する
     unit_tests:
       - name: test_alias_schema
         case: 正常
@@ -67,12 +67,12 @@ functions:
     process: |-
       1. 取り込んだエイリアスのスキーマの `$defs.alias.properties.metadata.properties` のキーをエイリアスのキーにする
       2. `ALIAS_REQUIRED_KEYS` の `metadata["alias_type"]` のキーごとに、値が無いか空文字なら `必須のキーが無い` の違反を加える。組（`("url", "port")`）は全て無いときに、組の先頭のキーのパスで `{キー} のどれか 1 つが要ります` の違反を加える
-      3. 値を持つエイリアスのキーごとに型を確かめる
+      3. 値を持つエイリアスのキーごとに型を確認する
          - `ALIAS_LIST_KEYS` は文字列か、空でない文字列の並びでなければ `文字列か文字列の並びではありません`
          - `related` は並びで、要素が文字列か `to` を文字列で持つ辞書でなければ `related の要素は文書の ID か to を持つ辞書です`
          - `port` は整数か文字列でなければ `整数か文字列ではありません`
          - それ以外のキーは文字列でなければ `文字列ではありません`
-      4. 違反を返す
+      4. 違反を返却する
     unit_tests:
       - name: test_check_alias_document
         case: 正常
@@ -104,7 +104,7 @@ functions:
     container: features/documents/aliases.py
     usecase: 文書の取得
     role: 変換
-    summary: 文書のうち `alias_type` を持つ行の文書を検証し、通った文書のエイリアスと違反を返す
+    summary: 文書のうち `alias_type` を持つ行の文書を検証し、通った文書のエイリアスと違反を返却する
     scope: public
     thread_safe: true
     args:
@@ -113,13 +113,13 @@ functions:
         type: SourceView
         required: true
         passing: positional
-        description: documents の行の `alias_type` を読む
+        description: documents の行の `alias_type` を参照する
       - name: documents
         title: 文書
         type: Sequence[IndexedDocument]
         required: true
         passing: positional
-        description: project-index が返した文書
+        description: project-index が返却した文書
     returns:
       type: AliasCollection
       description: エイリアスと違反
@@ -128,7 +128,7 @@ functions:
       2. `metadata` に `alias_type` を持つ文書ごとにエイリアスのキーの検証をする
          - 違反があれば `violations` に加え、エイリアスにしない
          - 違反が無ければ `ALIAS_LIST_KEYS` の文字列を要素 1 つの並びにし、`AliasEntry` にして `entries` に加える（`extra` は取り込んだスキーマの `metadata` のキーのうち `AliasEntry` の項目以外で値を持つもの）
-      3. `AliasCollection` を返す
+      3. `AliasCollection` を返却する
     unit_tests:
       - name: test_collect_aliases
         case: 正常

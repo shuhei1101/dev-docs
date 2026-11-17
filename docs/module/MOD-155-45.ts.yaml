@@ -17,7 +17,7 @@ functions:
         type: string[]
         required: true
         passing: positional
-        description: 編集中の行を除いた行の ID（重なりの検査に使う）
+        description: 編集中の行を除いた行の ID（重なりの検査に使用する）
     returns:
       type: z.ZodType<SourceFormValues>
       description: '`{id: string; config: string; enabled: boolean; read: string; write: string}`（textarea の値は改行区切りの文字列のまま）'
@@ -83,7 +83,7 @@ functions:
     container: features/settings/settings/form.ts
     usecase: 配信元を設定する
     role: 変換
-    summary: 入力を反映した、端末の設定の保存へ送る `sources[]` を作る
+    summary: 入力を反映した、端末の設定の保存へ送信する `sources[]` を作る
     scope: public
     args:
       - name: sources
@@ -104,7 +104,7 @@ functions:
     returns:
       type: SourceInput[]
       description: 全行。改行で区切り、前後の空白と空の行を除く。`write` が空なら `scope.write` を省く
-    process: 1. 各行を `toSourceInput` で送る形にし、`index` の行を入力で置き換えるか末尾に加える
+    process: 1. 各行を `toSourceInput` で送信する形式にし、`index` の行を入力で置き換えるか末尾に加える
     unit_tests:
       - name: test_apply_source
         case: 正常
@@ -130,7 +130,7 @@ functions:
     container: features/settings/settings/form.ts
     usecase: 配信元を設定する
     role: 変換
-    summary: '`index` の行を除いた、端末の設定の保存へ送る `sources[]` を作る'
+    summary: '`index` の行を除いた、端末の設定の保存へ送信する `sources[]` を作る'
     scope: public
     args:
       - name: sources
@@ -146,7 +146,7 @@ functions:
     returns:
       type: SourceInput[]
       description: 残りの行
-    process: 1. `index` の行を除き、残りを `toSourceInput` で送る形にする
+    process: 1. `index` の行を除き、残りを `toSourceInput` で送信する形式にする
     unit_tests:
       - name: test_remove_source
         case: 正常
@@ -155,7 +155,7 @@ functions:
         mock: なし
         expected: 2 行目だけ
   - name: toSourceInput
-    title: 行を送る形にする
+    title: 行を送る形式にする
     kind: 関数
     container: features/settings/settings/form.ts
     usecase: 配信元を設定する
@@ -178,7 +178,7 @@ functions:
     container: features/settings/settings/form.ts
     usecase: 配信元を設定する
     role: 変換
-    summary: 一覧を取得し直しても同じ配信元を指す値を作る
+    summary: 一覧を再取得しても同じ配信元を指す値を作る
     scope: public
     args:
       - name: source
@@ -188,8 +188,8 @@ functions:
         description: 端末の設定の取得の `sources[]` の行
     returns:
       type: string
-      description: '`id`。ID を持たない行（読み直していない行）は `config` を改行でつないだ値'
-    process: 1. `id` があれば `id`、無ければ `config` を改行でつないだ値を返す
+      description: '`id`。ID を持たない行（再読み込みしていない行）は `config` を改行でつないだ値'
+    process: 1. `id` があれば `id`、無ければ `config` を改行でつないだ値を返却する
     unit_tests:
       - name: test_source_key
         case: 正常
@@ -203,7 +203,7 @@ functions:
     container: features/settings/settings/form.ts
     usecase: 配信元を設定する
     role: 変換
-    summary: '`sourceKey` の値で、取得し直した一覧の行の位置を引く'
+    summary: '`sourceKey` の値で、再取得した一覧の行の位置を取得する'
     scope: public
     args:
       - name: sources
@@ -219,11 +219,11 @@ functions:
     returns:
       type: number
       description: 行の位置。無ければ -1
-    process: 1. `sourceKey` が `key` と同じ最初の行の位置を返す
+    process: 1. `sourceKey` が `key` と同じ最初の行の位置を返却する
     unit_tests:
       - name: test_find_source
         case: 正常
-        summary: 行の位置がずれても同じ配信元を引く
-        condition: '`a`・`b` の行の前に `c` を足した一覧で `b` を引く。無い `z` を引く'
+        summary: 行の位置がずれても同じ配信元を取得する
+        condition: '`a`・`b` の行の前に `c` を追加した一覧で `b` を取得する。無い `z` を取得する'
         mock: なし
         expected: '`b` が 2、`z` が -1'

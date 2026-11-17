@@ -19,7 +19,7 @@ data_models:
         title: 選んだタブ
         type: bool
         access: 公開
-        description: 返した文書を含むタブか
+        description: 返却した文書を含むタブか
       - name: items
         title: サイドバーの項目
         type: list[NavItem]
@@ -37,7 +37,7 @@ data_models:
         title: 文書のページのパス
         type: str
         access: 公開
-        description: '文書の取得の `path` に渡す形'
+        description: '文書の取得の `path` に指定する形'
       - name: name
         title: 名前
         type: str
@@ -72,7 +72,7 @@ data_models:
     usecase: 表の列の設定の保存
     role: DTO
     summary: PUT `/_api/sources/{source}/columns` の本文と応答
-    description: '共通の『画面の API のモデル』（`ApiModel`。JSON のキーは camelCase）を継承し、`extra="forbid"` を足す。応答も同じ形。'
+    description: '共通の『画面の API のモデル』（`ApiModel`。JSON のキーは camelCase）を継承し、`extra="forbid"` を追加する。応答も同じ形。'
     properties:
       - name: table
         title: 表のキー
@@ -132,7 +132,7 @@ data_models:
         title: 理由
         type: Literal['timeout', 'exit', 'not_runnable', 'invalid_yaml']
         access: 公開
-        description: 制限時間を超えた・0 以外で終わった・実行できない・YAML を読めない
+        description: 制限時間を超えた・0 以外で終わった・実行できない・YAML を読み込めない
       - name: kind
         title: 種類
         type: str
@@ -143,30 +143,30 @@ data_models:
         type: str | None
         access: 公開
         default: None
-        description: '`converters[].run` を空白で繋いだもの。YAML を読めないときは `None`'
+        description: '`converters[].run` を空白で繋いだもの。YAML を読み込めないときは `None`'
       - name: detail
         title: 詳細
         type: str
         access: 公開
-        description: 制限時間の秒数・終了コードと標準エラーの末尾・読めなかった理由
+        description: 制限時間の秒数・終了コードと標準エラーの末尾・参照できなかった理由
       - name: file
         title: ファイル
         type: str | None
         access: 公開
         default: None
-        description: YAML を読めないときのファイルのパス（配信元の直下から）
+        description: YAML を読み込めないときのファイルのパス（配信元の直下から）
       - name: line
         title: 行
         type: int | None
         access: 公開
         default: None
-        description: YAML を読めないときの行（1 始まり）
+        description: YAML を読み込めないときの行（1 始まり）
       - name: column
         title: 列
         type: int | None
         access: 公開
         default: None
-        description: YAML を読めないときの列（1 始まり）
+        description: YAML を読み込めないときの列（1 始まり）
   - name: GitHubTarget
     title: 起票先
     container: features/view/types.py
@@ -207,7 +207,7 @@ data_models:
         title: 文書のページのパス
         type: str
         access: 公開
-        description: 返した文書のページのパス
+        description: 返却した文書のページのパス
       - name: body_path
         title: 本文のファイルのパス
         type: str | None
@@ -237,7 +237,7 @@ data_models:
         title: 隠す列
         type: dict[str, list[str]]
         access: 公開
-        description: 表のキー → 隠す列（表の列の設定.列の設定を読む）
+        description: 表のキー → 隠す列（表の列の設定.列の設定を読み込む）
       - name: table_keys
         title: 表のキー
         type: list[str]
@@ -257,7 +257,7 @@ data_models:
         title: 更新日時
         type: datetime
         access: 公開
-        description: 返した文書の更新日時。文書の `updated`（Git の配信元は開いているリビジョンでファイルを最後に変えた commit の日時）、`None` ならファイルの更新日時
+        description: 返却した文書の更新日時。文書の `updated`（Git の配信元は開いているリビジョンでファイルを最後に変えた commit の日時）、`None` ならファイルの更新日時
   - name: DocumentDiff
     title: 差分の結果
     container: features/view/types.py
@@ -288,7 +288,7 @@ data_models:
     usecase: 文書の取得
     role: DTO
     summary: 文書の取得の `aliases` の 1 件
-    description: 共通の『画面の API のモデル』（`ApiModel`。JSON のキーは camelCase）を継承し、`extra="allow"` にする。`AliasEntry` の `extra` のキーは同じ階層に配置し、値を持たないキーは載せない（`model_dump(exclude_none=True)`）。
+    description: 共通の『画面の API のモデル』（`ApiModel`。JSON のキーは camelCase）を継承し、`extra="allow"` にする。`AliasEntry` の `extra` のキーは同じ階層に配置し、値を持たないキーは記載しない（`model_dump(exclude_none=True)`）。
     properties:
       - name: id
         title: 文書の ID
@@ -304,7 +304,7 @@ data_models:
         title: 別名
         type: list[str]
         access: 公開
-        description: 本文で用語に当てる語
+        description: 本文で用語に適用する単語
       - name: description
         title: 説明
         type: str | None

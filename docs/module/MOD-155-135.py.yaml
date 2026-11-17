@@ -1,6 +1,6 @@
 id: MOD-155-135
 title: 開発ドキュメントサーバー / 絞り込み / filters.py
-lead: 条件の木の確かめと照合・正規表現・比べる値の解釈（`nav` の `auto` の `filter`）。
+lead: 条件の木の確認と照合・正規表現・比べる値の解釈（`nav` の `auto` の `filter`）。
 test_files:
   - tests/unit/dev_docs/features/filter/test_filters.py
 diagrams:
@@ -8,23 +8,23 @@ diagrams:
     diagram: |-
       classDiagram
         direction TD
-        タブとサイドバーの組み立て ..> 条件の確かめ
+        タブとサイドバーの組み立て ..> 条件の確認
         タブとサイドバーの組み立て ..> 条件の照合
-        条件の確かめ ..> 使える項目
+        条件の確認 ..> 使用できる項目
         条件の照合 ..> 項目の値
         条件の照合 ..> 比べる値の解釈
         条件の照合 ..> 正規表現の組み立て
-        条件の確かめ ..> 正規表現の組み立て
+        条件の確認 ..> 正規表現の組み立て
         class タブとサイドバーの組み立て {
           <<function>>
         }
-        class 条件の確かめ {
+        class 条件の確認 {
           <<function>>
         }
         class 条件の照合 {
           <<function>>
         }
-        class 使える項目 {
+        class 使用できる項目 {
           <<function>>
         }
         class 項目の値 {
@@ -37,16 +37,16 @@ diagrams:
           <<function>>
         }
         click タブとサイドバーの組み立て href "./MOD-155-160.py.yaml#タブとサイドバーの組み立て"
-        click 使える項目 href "./MOD-155-134.py.yaml#使える項目"
+        click 使用できる項目 href "./MOD-155-134.py.yaml#使用できる項目"
         click 項目の値 href "./MOD-155-134.py.yaml#項目の値"
 functions:
   - name: check_filter
-    title: 条件の確かめ
+    title: 条件の確認
     kind: 関数
     container: features/filter/filters.py
     usecase: 文書の取得
     role: 検証
-    summary: 条件の木の項目と値が使えるかを確かめる
+    summary: 条件の木の項目と値が使用できるかを確認する
     scope: public
     thread_safe: true
     args:
@@ -57,11 +57,11 @@ functions:
         passing: positional
         description: '`nav` の `auto` の `filter`'
       - name: fields
-        title: 使える項目
+        title: 使用できる項目
         type: Mapping[str, str]
         required: true
         passing: positional
-        description: 使える項目の結果
+        description: 使用できる項目の結果
     returns:
       type: list[Violation]
       description: 違反。項目のパスは `filter` から始まる（`filter.and[1].field`・`filter.not.field`）
@@ -84,7 +84,7 @@ functions:
         expected: 違反の `path` が `filter.not.field`
       - name: test_check_filter_when_matches
         case: 異常
-        summary: '`@matches` を条件に使う'
+        summary: '`@matches` を条件に使用する'
         condition: '`{field: "@matches", op: gt, values: ["1"]}`'
         mock: なし
         expected: 違反の `path` が `filter.field`
@@ -109,7 +109,7 @@ functions:
         type: str
         required: true
         passing: positional
-        description: 使える項目の型
+        description: 使用できる項目の型
       - name: today
         title: 今日
         type: date
@@ -122,7 +122,7 @@ functions:
     process: |-
       1. `date` の場合、`today` は今日の 0 時、`-{n}d`・`+{n}d` は今日から `n` 日、それ以外は `datetime.fromisoformat`（タイムゾーンが無ければ UTC）
       2. `number` の場合、`float`
-      3. 解釈できない場合、`ValueError` を送る
+      3. 解釈できない場合、`ValueError` を送信する
     exceptions:
       - name: ValueError
         condition: 型に合わない値
@@ -136,7 +136,7 @@ functions:
         expected: 10-28・10-21・10-01 の 0 時（UTC）
       - name: test_parse_compare_value_when_invalid
         case: 異常
-        summary: 読めない値
+        summary: 参照できない値
         condition: '`("x", "number")`'
         mock: なし
         expected: '`ValueError`'
@@ -147,7 +147,7 @@ functions:
     container: features/filter/filters.py
     usecase: 文書の取得
     role: 判定
-    summary: 文書が条件の木に当たるかを判定する
+    summary: 文書が条件の木に該当するかを判定する
     scope: public
     thread_safe: true
     args:
@@ -156,7 +156,7 @@ functions:
         type: Condition | Group | None
         required: true
         passing: positional
-        description: '`None` は全てに当たる'
+        description: '`None` は全てに該当する'
       - name: document
         title: 文書
         type: IndexedDocument
@@ -164,7 +164,7 @@ functions:
         passing: positional
         description: 判定する文書
       - name: fields
-        title: 使える項目
+        title: 使用できる項目
         type: Mapping[str, str]
         required: true
         passing: keyword
@@ -177,15 +177,15 @@ functions:
         description: 日付の相対の値の基準
     returns:
       type: bool
-      description: 当たるか
+      description: 該当するか
     process: |-
-      1. `Group` は `all_of` なら全て、`any_of` ならどれかが当たるとき、`not_` なら中が当たらないとき `True`
-      2. `Condition` は項目の値を引き、`values` の各値と比べる（`match` が `any` ならどれか、`all` なら全て）
+      1. `Group` は `all_of` なら全て、`any_of` ならどれかが該当するとき、`not_` なら中が該当しないとき `True`
+      2. `Condition` は項目の値を取得し、`values` の各値と比べる（`match` が `any` ならどれか、`all` なら全て）
          - `exists`・`not_exists` は値の並びが空でないか
-         - `eq`・`ne`・`prefix`・`suffix`・`contains`・`not_contains` は、値の並びのどれかとの文字列の比較（`case_sensitive` が `False` なら両方を NFKC と `casefold`）。`ne`・`not_contains` は値の並びのどれとも当たらないとき `True`
+         - `eq`・`ne`・`prefix`・`suffix`・`contains`・`not_contains` は、値の並びのどれかとの文字列の比較（`case_sensitive` が `False` なら両方を NFKC と `casefold`）。`ne`・`not_contains` は値の並びのどれとも該当しないとき `True`
          - `regex` は正規表現の組み立ての `search`。`case_sensitive` が `False` なら文書の値を NFKC にして比べる（パターンには正規化をかけない）
-         - `glob` は値の並びのどれかに `PurePosixPath(値).full_match(パターン)` を当てる（`**` は `/` をまたぎ、`*`・`?` はまたがない）。`case_sensitive` が `False` なら値とパターンの両方を NFKC と `casefold` にしてから当てる
-         - `gt`・`gte`・`lt`・`lte` は比べる値の解釈で型をそろえて比べ、解釈できない文書の値は当たらない
+         - `glob` は値の並びのどれかに `PurePosixPath(値).full_match(パターン)` を適用する（`**` は `/` をまたぎ、`*`・`?` はまたがない）。`case_sensitive` が `False` なら値とパターンの両方を NFKC と `casefold` にしてから適用する
+         - `gt`・`gte`・`lt`・`lte` は比べる値の解釈で型をそろえて比べ、解釈できない文書の値は該当しない
     unit_tests:
       - name: test_match_filter
         case: 正常
@@ -207,7 +207,7 @@ functions:
         expected: '`name: doc` が `False`'
       - name: test_match_filter_when_regex_lines
         case: 正常
-        summary: 正規表現は各行に当たる
+        summary: 正規表現は各行に該当する
         condition: '`{field: body, op: regex, values: ["^## "]}` と `{field: body, op: regex, values: ["\\A## "]}`'
         mock: なし
         expected: 本文 `# x\n## y` の文書が 1 つ目で `True`、2 つ目で `False`
@@ -229,7 +229,7 @@ functions:
     container: features/filter/filters.py
     usecase: 文書の取得
     role: 変換
-    summary: '`regex` の値を、各行に当たる正規表現にする'
+    summary: '`regex` の値を、各行に該当する正規表現にする'
     scope: public
     thread_safe: true
     args:
@@ -248,7 +248,7 @@ functions:
     returns:
       type: re.Pattern[str]
       description: コンパイルした正規表現
-    process: 1. フラグを `re.MULTILINE` にし、`case_sensitive` が `False` なら `re.IGNORECASE` を加えて `re.compile(value, flags)` を返す（`re.error` はそのまま送る）
+    process: 1. フラグを `re.MULTILINE` にし、`case_sensitive` が `False` なら `re.IGNORECASE` を加えて `re.compile(value, flags)` を返却する（`re.error` はそのまま送信する）
     exceptions:
       - name: re.error
         condition: 正規表現にならない値
@@ -259,4 +259,4 @@ functions:
         summary: 各行と大文字小文字
         condition: '`compile_regex("^b", case_sensitive=False)` と `compile_regex("^B", case_sensitive=True)` を `a\nb` に `search`'
         mock: なし
-        expected: 1 つ目が当たり、2 つ目は当たらない
+        expected: 1 つ目が該当し、2 つ目は該当しない

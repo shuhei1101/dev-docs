@@ -65,13 +65,13 @@ constants:
     title: 見出しにするキー
     container: features/convert/markdown.py
     usecase: 文書の取得
-    summary: 先頭の `#` の見出しにするキー。最初に値を持つキーを使う
+    summary: 先頭の `#` の見出しにするキー。最初に値を持つキーを使用する
     value: '`title`・`name`'
   - name: LEAD_KEYS
     title: リードにするキー
     container: features/convert/markdown.py
     usecase: 文書の取得
-    summary: 見出しの下の段落にするキー。最初に値を持つキーを使う
+    summary: 見出しの下の段落にするキー。最初に値を持つキーを使用する
     value: '`lead`・`description`'
   - name: ATTRIBUTE_MIN
     title: 属性の表にする数
@@ -95,7 +95,7 @@ constants:
     title: 図の元データの先頭の列のキー
     container: features/convert/markdown.py
     usecase: 文書の取得
-    summary: 図の元データの表で先頭へ移す、読み手向けの列のキー。最初に表にあるキーを使う
+    summary: 図の元データの表で先頭へ移す、読み手向けの列のキー。最初に表にあるキーを使用する
     value: '`label`・`name`'
   - name: DIAGRAM_HIDDEN_KEYS
     title: 図の元データで隠す列のキー
@@ -116,7 +116,7 @@ constants:
     summary: 同じオブジェクトの中で続くこの末尾のキーの値を、1 つのタブの部品にまとめる
     value: '`_example`'
   - name: CHECK_MARK
-    title: 真の値の印
+    title: 真の値のマーカー
     container: features/convert/markdown.py
     usecase: 文書の取得
     summary: 真偽の値の `True` に出す文字。`False` は空にする
@@ -150,23 +150,23 @@ functions:
         type: RenderContext
         required: true
         passing: positional
-        description: 参照のリンクの引き先と Issue の URL
+        description: 参照のリンクの取得し先と Issue の URL
     returns:
       type: str
       description: Markdown
     process: |-
-      1. 先頭に `# {見出し}`（`HEADING_KEYS` のうち最初に値を持つキー。無ければ文書のメタデータの `name`）を置き、`LEAD_KEYS` のうち最初に値を持つキーの値を本文の書き換えにかけて段落にする。使った 2 つのキーは本文の組み立てから除く。`x-key` を持つ `sections` の要素の `title` と見出しの組を文脈の `anchors` に集める。文書の `tables` の値をテーブルの論理名の引き方にかけ、文脈の `table_titles` にする
+      1. 先頭に `# {見出し}`（`HEADING_KEYS` のうち最初に値を持つキー。無ければ文書のメタデータの `name`）を配置し、`LEAD_KEYS` のうち最初に値を持つキーの値を本文の書き換えにかけて段落にする。使用した 2 つのキーは本文の組み立てから除く。`x-key` を持つ `sections` の要素の `title` と見出しの組を文脈の `anchors` に集める。文書の `tables` の値をテーブルの論理名の取得方法にかけ、文脈の `table_titles` にする
       2. スキーマの `properties` の順に値を組み立てる（値が空のキーと、スキーマに `x-hidden: true` を持つキーは飛ばす）
-         - `x-heading` を持つ値は、深さ 2 から始まる見出し（`x-heading` の文字列、要素なら `x-key` の値）を置く。深さは `MAX_HEADING_LEVEL` で止める
+         - `x-heading` を持つ値は、深さ 2 から始まる見出し（`x-heading` の文字列、要素なら `x-key` の値）を配置する。深さは `MAX_HEADING_LEVEL` で止める
          - 見出しも `x-shape` も持たないスカラーが `ATTRIBUTE_MIN` 以上続く間は、まとめて属性の表の組み立てにかける
-         - `x-shape` で本文を組み立てる（`Shape`）。`table` は表の組み立て、`diagram` は図の組み立て（見出しの `title` は項目の `title`、`scope` は文書の見出し、`updated` は文書の `updated` の日付。`x-diagram: er` は文書の `tables` の値を `tables` に渡す。`link` は、描画の文脈を渡したリンク先の引き方）と、値の中のオブジェクトのリストごとの図の元データの表、`sections` は子を 1 つ深い見出しで再帰、`attributes` は属性の表の組み立て
-         - `TEST_FILE_KEYS` の値は、項目の `title` を列名にした 1 列の閉じた表（`<!-- table: {"kind": "plain", "collapse": {"open": false}} -->`）にし、セルは引き先にあればリンク、無ければ行内のコードにする
-         - キーが `EXAMPLE_SUFFIX` で終わる値が続く間は、`<!-- tabs -->` の範囲に、値ごとに今の深さの見出し（項目の `title`）と本文の書き換えにかけた値を置く
-         - `x-shape` が無いスカラーは、参照のリンクに当たればそのリンクを、当たらなければ本文の書き換えにかけた値を使う。改行を含むか ``` で始まる値は `**{title}**` の行の次のブロックに、それ以外は `**{title}**: {値}` の段落にする
+         - `x-shape` で本文を組み立てる（`Shape`）。`table` は表の組み立て、`diagram` は図の組み立て（見出しの `title` は項目の `title`、`scope` は文書の見出し、`updated` は文書の `updated` の日付。`x-diagram: er` は文書の `tables` の値を `tables` に指定する。`link` は、描画の文脈を指定したリンク先の取得方法）と、値の中のオブジェクトのリストごとの図の元データの表、`sections` は子を 1 つ深い見出しで再帰、`attributes` は属性の表の組み立て
+         - `TEST_FILE_KEYS` の値は、項目の `title` を列名にした 1 列の閉じた表（`<!-- table: {"kind": "plain", "collapse": {"open": false}} -->`）にし、セルは取得し先にあればリンク、無ければ行内のコードにする
+         - キーが `EXAMPLE_SUFFIX` で終わる値が続く間は、`<!-- tabs -->` の範囲に、値ごとに今の深さの見出し（項目の `title`）と本文の書き換えにかけた値を配置する
+         - `x-shape` が無いスカラーは、参照のリンクに該当すればそのリンクを、該当しなければ本文の書き換えにかけた値を使用する。改行を含むか ``` で始まる値は `**{title}**` の行の次のブロックに、それ以外は `**{title}**: {値}` の段落にする
          - 文字列のリストは、要素ごとに参照のリンクか本文の書き換えにかけた箇条書き、オブジェクトは子を順に組み立てる
          - キーが `DECISIONS_KEY` のリストは、先に検討事項のリンクにかけてから組み立てる
       3. 図の元データの表は、閉じた表（`closed=True`）にし、`LABEL_KEYS` の列を先頭へ移し、`DIAGRAM_HIDDEN_KEYS` のうちその表にある列を `hidden` にする
-      4. 行を空行で繋いで返す
+      4. 行を空行で繋いで返却する
     unit_tests:
       - name: test_schema_to_markdown
         case: 正常
@@ -176,7 +176,7 @@ functions:
         expected: '`# {name}`、`## 一覧`、列名が `ID`・`名前` の表がこの順にある'
       - name: test_schema_to_markdown_when_sections
         case: 正常
-        summary: 節の見出しの深さ
+        summary: セクションの見出しの深さ
         condition: '`x-shape: sections`・`x-key: name` のリストの中に、さらに `x-heading` を持つ項目'
         mock: なし
         expected: 要素の見出しが `###`、その中の見出しが `####`
@@ -219,7 +219,7 @@ functions:
       - name: test_schema_to_markdown_when_test_files
         case: 正常
         summary: 対応テストファイル
-        condition: '`test_file` が引き先にあるパスの文書'
+        condition: '`test_file` が取得し先にあるパスの文書'
         mock: なし
         expected: '`<!-- table: {"kind": "plain", "collapse": {"open": false}} -->` の 1 列の表で、セルがその文書へのリンク'
       - name: test_schema_to_markdown_when_examples
@@ -230,7 +230,7 @@ functions:
         expected: '`<!-- tabs -->` の範囲に `リクエスト例`・`レスポンス例` の見出しが 1 つずつある'
       - name: test_schema_to_markdown_when_er
         case: 正常
-        summary: ER 図にテーブルの列を渡す
+        summary: ER 図にテーブルの列を指定する
         condition: '`x-shape: diagram`・`x-diagram: er` の `er`（`columns` を持たない実体 `顧客`）と、`title: 顧客` のテーブルを持つ `tables`'
         mock: なし
         expected: 'map の範囲の `erDiagram` の `顧客` の列が `tables` のテーブルの列（`bigint id`）'
@@ -246,7 +246,7 @@ functions:
     container: features/convert/markdown.py
     usecase: 文書の取得
     role: 変換
-    summary: 文書の項目のパスが、スキーマ駆動の変換で見出しになる項目を指すとき、その見出しの文字列を返す
+    summary: 文書の項目のパスが、スキーマ駆動の変換で見出しになる項目を指すとき、その見出しの文字列を返却する
     scope: public
     thread_safe: true
     args:
@@ -267,14 +267,14 @@ functions:
         type: str
         required: true
         passing: positional
-        description: '`{キー}`・`{キー}[{x-key の値}]` を `.` で繋いだ項目のパス（型 `ref` の `#` 以降と同じ書き方）'
+        description: '`{キー}`・`{キー}[{x-key の値}]` を `.` で繋いだ項目のパス（型 `ref` の `#` 以降と同じ記載方法）'
     returns:
       type: str | None
       description: 見出しの文字列。見出しにならない項目・無い項目は `None`
     process: |-
       1. 項目のパスを `.` で区切り（`[` と `]` の中の `.` では区切らない）、最上位からスキーマの `properties` と値を 1 段ずつたどる
-         - `{キー}[{値}]` は、キーのスキーマが `x-shape: sections`・`x-key` を持つ配列のとき、`x-key` が値に当たる要素へ進む（当たらなければ `None`）
-      2. 最後の段が `{キー}[{値}]` なら、その要素の見出し（`x-key` の値）を返す。`{キー}` なら、キーのスキーマの `x-heading` を返す（無ければ `None`）
+         - `{キー}[{値}]` は、キーのスキーマが `x-shape: sections`・`x-key` を持つ配列のとき、`x-key` が値に該当する要素へ進む（該当しなければ `None`）
+      2. 最後の段が `{キー}[{値}]` なら、その要素の見出し（`x-key` の値）を返却する。`{キー}` なら、キーのスキーマの `x-heading` を返却する（無ければ `None`）
     unit_tests:
       - name: test_item_heading
         case: 正常
@@ -328,7 +328,7 @@ functions:
         required: false
         default: None
         passing: keyword
-        description: 参照のリンクの引き先。`None`（埋め込みの展開）なら参照のリンクを張らない
+        description: 参照のリンクの取得し先。`None`（埋め込みの展開）なら参照のリンクを張らない
       - name: closed
         title: 閉じる
         type: bool
@@ -355,9 +355,9 @@ functions:
       description: '表のキーのマーカーと、`<!-- table: {"kind": "data", …} -->` で囲んだ表'
     process: |-
       1. 列をスキーマの `properties` の順に決める（要素のどれも値を持たない列と、スキーマに `x-hidden: true` を持つ列は除く）。`first` が列にあれば先頭へ移す
-      2. セルは、真偽の値は `CHECK_MARK` か空、参照のリンクに当たる文字列はリンク、それ以外のスカラーはそのまま（`|` はエスケープ、改行は `<br>`）、文字列のリストは `・` で繋ぐ（列のキーが `DECISIONS_KEY` のリストは、先に検討事項のリンクにかける）。`table` を持つオブジェクト（外部キー）は、`table` の値を最後の `.` でテーブルとカラムに分け、テーブルが `{分類}/{テーブル}` なら同じフォルダの `{分類}.yaml` の文書へのリンク、そうでなければ、テーブル名を `table_titles` で論理名にし（当たらなければテーブル名のまま）、`anchors` でその論理名から引いた見出しのアンカー（見出しのアンカー）へのリンク（どちらも引けなければ値の文字のまま）、それ以外のオブジェクトは `{キー}: {値}` を `、` で繋ぎ、オブジェクトのリストは要素ごとのセルを `<br>` で繋ぐ
+      2. セルは、真偽の値は `CHECK_MARK` か空、参照のリンクに該当する文字列はリンク、それ以外のスカラーはそのまま（`|` はエスケープ、改行は `<br>`）、文字列のリストは `・` で繋ぐ（列のキーが `DECISIONS_KEY` のリストは、先に検討事項のリンクにかける）。`table` を持つオブジェクト（外部キー）は、`table` の値を最後の `.` でテーブルとカラムに分け、テーブルが `{分類}/{テーブル}` なら同じフォルダの `{分類}.yaml` の文書へのリンク、そうでなければ、テーブル名を `table_titles` で論理名にし（該当しなければテーブル名のまま）、`anchors` でその論理名から取得した見出しのアンカー（見出しのアンカー）へのリンク（どちらも取得できなければ値の文字のまま）、それ以外のオブジェクトは `{キー}: {値}` を `、` で繋ぎ、オブジェクトのリストは要素ごとのセルを `<br>` で繋ぐ
       3. 表のマーカーの引数は、`{"kind": "data"}` に、`closed` なら `"collapse": {"open": false}`、隠す列と `WIDE_KEYS` の列があれば `"columns"` に列名ごとの `{"hidden": true}`・`{"width": {"mode": "nowrap"}}`（同じ列は 1 つのオブジェクトにまとめる）を加えた JSON を、`json.dumps(..., ensure_ascii=False)` の 1 行で記載する
-      4. `<!-- dev-docs-table: {table_key} -->`・表のマーカー・見出しの行・区切りの行・データの行・`<!-- /table -->` の順に置いて返す
+      4. `<!-- dev-docs-table: {table_key} -->`・表のマーカー・見出しの行・区切りの行・データの行・`<!-- /table -->` の順に配置して返却する
     unit_tests:
       - name: test_schema_to_markdown_when_foreign_key
         case: 正常
@@ -367,13 +367,13 @@ functions:
         expected: カラムの表に `[タスク.ID](#tasks)` のセルがある
       - name: test_schema_to_markdown_when_foreign_key_physical_name
         case: 正常
-        summary: 物理名で書いた同じ文書のテーブルへの外部キー
+        summary: 物理名で記載した同じ文書のテーブルへの外部キー
         condition: '`test_schema_to_markdown_when_foreign_key` と同じ文書で、`foreign_key` が `{table: tasks.id}`'
         mock: なし
         expected: カラムの表に `[tasks.id](#tasks)` のセルがある
       - name: test_render_table
         case: 正常
-        summary: セルの書き方
+        summary: セルの記載方法
         condition: '`|` と改行を含む文字列・文字列のリスト・真偽の値の `True` と `False` を持つ 2 行'
         mock: なし
         expected: '`\|`・`<br>`・`a・b`・`✓`・空のセルと、表の前の `<!-- dev-docs-table: {表のキー} -->`'
@@ -385,7 +385,7 @@ functions:
         expected: '`[タスク.ID](#tasks)`・`[ユーザー/ユーザー.ID](ユーザー.yaml)`・`不明.ID` と `a: 1、b: 2` のセルで、`件` のセルが無い'
       - name: test_render_table_when_physical_name
         case: 正常
-        summary: 物理名で書いた同じ文書のテーブルへの外部キー
+        summary: 物理名で記載した同じ文書のテーブルへの外部キー
         condition: '`anchors` が `{タスク: tasks}`、`table_titles` が `{tasks: タスク, タスク: タスク}` の文脈で、`foreign_key` が `{table: tasks.id}` の行'
         mock: なし
         expected: '`[tasks.id](#tasks)` のセル'
@@ -428,7 +428,7 @@ functions:
         type: RenderContext
         required: true
         passing: positional
-        description: 参照のリンクの引き先と Issue の URL
+        description: 参照のリンクの取得し先と Issue の URL
       - name: head
         title: 図の見出し
         type: DiagramHead
@@ -439,8 +439,8 @@ functions:
       type: str
       description: '`<!-- table: {"kind": "plain"} -->` で囲んだ表と、長い値の行の詳細'
     process: |-
-      1. 列名を `項目`・`値` にし、組ごとに 1 行を置く。真偽の値は `CHECK_MARK` か空、参照のリンクに当たる値はリンクにする
-      2. `LONG_VALUE_CHARS` を超える値と改行を含む値は、セルに最初の行の先頭 `LONG_VALUE_CHARS` 文字と `…` を置き、表の後ろの `<!-- row-detail: {行の位置} -->` 〜 `<!-- /row-detail -->` に本文の書き換えにかけた値を置く
+      1. 列名を `項目`・`値` にし、組ごとに 1 行を配置する。真偽の値は `CHECK_MARK` か空、参照のリンクに該当する値はリンクにする
+      2. `LONG_VALUE_CHARS` を超える値と改行を含む値は、セルに最初の行の先頭 `LONG_VALUE_CHARS` 文字と `…` を配置し、表の後ろの `<!-- row-detail: {行の位置} -->` 〜 `<!-- /row-detail -->` に本文の書き換えにかけた値を配置する
     unit_tests:
       - name: test_render_attributes
         case: 正常

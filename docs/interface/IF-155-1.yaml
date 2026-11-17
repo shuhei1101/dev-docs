@@ -9,9 +9,9 @@ flows:
     setup:
       - name: Mock
         description: 受けた要求を記録する HTTP サーバーを一時のポートで立てる
-        notes: '`DEV_DOCS_PORT` にそのポートを渡す'
+        notes: '`DEV_DOCS_PORT` にそのポートを指定する'
       - name: 入力
-        description: '`source: startup` と `session_id`・`cwd` の JSON を stdin に渡す'
+        description: '`source: startup` と `session_id`・`cwd` の JSON を stdin に指定する'
         notes: '`resume`・`fork` も同じ'
     flow: |-
       ```mermaid
@@ -33,11 +33,11 @@ flows:
     summary: つながらなければ `dev-docs serve` を切り離して起動し、再接続を案内する
     setup:
       - name: Mock
-        description: '`{clone}/.venv/bin/python` を、受けた引数をファイルに書いて終わるスクリプトに差し替える'
+        description: '`{clone}/.venv/bin/python` を、受けた引数をファイルに書き込んで終わるスクリプトに差し替える'
       - name: 端末の設定
         description: '`clone:` にその一時フォルダを持つ `settings.yaml` を `DEV_DOCS_CONFIG` で指す'
       - name: ポート
-        description: 空いているポートを `DEV_DOCS_PORT` に渡す。`DEV_DOCS_UNIT` は空の文字列
+        description: 空いているポートを `DEV_DOCS_PORT` に指定する。`DEV_DOCS_UNIT` は空の文字列
     flow: |-
       ```mermaid
       sequenceDiagram
@@ -60,12 +60,12 @@ flows:
     summary: '`DEV_DOCS_CONFIG` が無ければ `XDG_CONFIG_HOME` の下の端末の設定の `clone` で起動する'
     setup:
       - name: Mock
-        description: '`{clone}/.venv/bin/python` を、受けた引数をファイルに書いて終わるスクリプトに差し替える'
+        description: '`{clone}/.venv/bin/python` を、受けた引数をファイルに書き込んで終わるスクリプトに差し替える'
       - name: 端末の設定
-        description: '`clone:` にその一時フォルダを持つ `settings.yaml` を `$XDG_CONFIG_HOME/dev-docs/` に置き、`DEV_DOCS_CONFIG` を外す'
-        notes: 2 回目は `XDG_CONFIG_HOME` に相対パスを入れ、`HOME` の下の `.config/dev-docs/settings.yaml` に別の `clone:` を置く
+        description: '`clone:` にその一時フォルダを持つ `settings.yaml` を `$XDG_CONFIG_HOME/dev-docs/` に配置し、`DEV_DOCS_CONFIG` を除外する'
+        notes: 2 回目は `XDG_CONFIG_HOME` に相対パスを入れ、`HOME` の下の `.config/dev-docs/settings.yaml` に別の `clone:` を配置する
       - name: ポート
-        description: 空いているポートを `DEV_DOCS_PORT` に渡す。`DEV_DOCS_UNIT` は空の文字列
+        description: 空いているポートを `DEV_DOCS_PORT` に指定する。`DEV_DOCS_UNIT` は空の文字列
     flow: |-
       ```mermaid
       sequenceDiagram
@@ -112,11 +112,11 @@ flows:
     summary: つながらなければ unit を起動し、切り離しては起動しない
     setup:
       - name: Mock
-        description: '`PATH` の先頭に、受けた引数をファイルに追記して終了コード 0 で終わる `systemctl` を置く。`{clone}/.venv/bin/python` は、受けた引数を別のファイルに書いて終わるスクリプト'
+        description: '`PATH` の先頭に、受けた引数をファイルに追記して終了コード 0 で終わる `systemctl` を配置する。`{clone}/.venv/bin/python` は、受けた引数を別のファイルに書き込んで終わるスクリプト'
       - name: 端末の設定
         description: '`clone:` にその一時フォルダを持つ `settings.yaml` を `DEV_DOCS_CONFIG` で指す'
       - name: ポート
-        description: 空いているポートを `DEV_DOCS_PORT` に渡す
+        description: 空いているポートを `DEV_DOCS_PORT` に指定する
         notes: '`DEV_DOCS_UNIT` に `dev-docs-test.service`'
     flow: |-
       ```mermaid
@@ -140,7 +140,7 @@ flows:
     summary: unit の起動が失敗したら、理由を文脈に入れ、切り離しては起動しない
     setup:
       - name: Mock
-        description: '`PATH` の先頭に、`cat` では終了コード 0、`start` では標準エラーに `Failed to start` を出して終了コード 1 で終わる `systemctl` を置く。`{clone}/.venv/bin/python` は正常系（unit がある）と同じ'
+        description: '`PATH` の先頭に、`cat` では終了コード 0、`start` では標準エラーに `Failed to start` を出して終了コード 1 で終わる `systemctl` を配置する。`{clone}/.venv/bin/python` は正常系（unit がある）と同じ'
       - name: 端末の設定・ポート
         description: 正常系（unit がある）と同じ
     flow: |-
@@ -160,11 +160,11 @@ flows:
       - '`additionalContext` に unit の名前と `Failed to start` があり、終了コード 0'
       - '`{clone}/.venv/bin/python` が呼ばれていない'
     test: test_normal_when_unit_start_fails
-  - name: 正常系（unit の有無の確かめが打ち切られる）
+  - name: 正常系（unit の有無の確認が打ち切られる）
     summary: '`systemctl --user cat` が打ち切られたら、理由を文脈に入れ、切り離しては起動しない'
     setup:
       - name: Mock
-        description: '`PATH` の先頭に、`cat` では 1 秒待ってから終わる `systemctl` を置く。`{clone}/.venv/bin/python` は正常系（unit がある）と同じ'
+        description: '`PATH` の先頭に、`cat` では 1 秒待ってから終わる `systemctl` を配置する。`{clone}/.venv/bin/python` は正常系（unit がある）と同じ'
         notes: 1 秒は打ち切りの 0.1 秒を超える値
       - name: 端末の設定・ポート
         description: 正常系（unit がある）と同じ
@@ -196,8 +196,8 @@ callers:
   - SC-155-10#scenarios[異常シナリオ（SessionStart で起動できない）]
   - SC-155-10#scenarios[正常シナリオ（SessionStart で XDG_CONFIG_HOME の下の端末の設定から起動する）]
   - SC-155-10#scenarios[正常シナリオ（SessionStart で unit を起動する）]
-  - SC-155-10#scenarios[正常シナリオ（unit を起動し直す）]
-exclusivity: 同時に開いた複数のセッションがどれも起動してもよい。unit があるときは systemd が unit のプロセスを 1 つに保つ（起動し直しの途中の `start` もプロセスを増やさない）。unit が無いときは、後から起動した `dev-docs serve` がポートの使用中（終了コード 3）で止まり、待ち受けるのは 1 つだけ
+  - SC-155-10#scenarios[正常シナリオ（unit を再起動する）]
+exclusivity: 同時に開いた複数のセッションがどれも起動してもよい。unit があるときは systemd が unit のプロセスを 1 つに保つ（再起動の途中の `start` もプロセスを増やさない）。unit が無いときは、後から起動した `dev-docs serve` がポートの使用中（終了コード 3）で止まり、待ち受けるのは 1 つだけ
 request:
   - name: session_id
     type: str
@@ -271,13 +271,13 @@ exceptions:
 constraints:
   - item: 言語
     constraint: Python 3.14 の標準ライブラリだけ。`uv` を前提にしない
-  - item: 接続の確かめ
+  - item: 接続の確認
     constraint: '`127.0.0.1:${DEV_DOCS_PORT}` への TCP 接続を 0.5 秒で打ち切る'
   - item: 端末の設定のパス
     constraint: '`DEV_DOCS_CONFIG`、無ければ `${XDG_CONFIG_HOME:-~/.config}/dev-docs/settings.yaml`。`XDG_CONFIG_HOME` が空の文字列か相対パスなら未設定として扱う'
-    notes: docs/interface/開発ドキュメントサーバー/起動 の `端末の設定と状態の置き場` と同じ規則。フックはサーバーのパッケージを import しないため、同じ規則を持つ
+    notes: docs/interface/開発ドキュメントサーバー/起動 の `端末の設定と状態の配置先` と同じ規則。フックはサーバーのパッケージを import しないため、同じ規則を持つ
   - item: 端末の設定の読み方
-    constraint: トップレベルの `clone:` の行だけを読む（`~` を展開し、引用符を外す）
+    constraint: トップレベルの `clone:` の行だけを参照する（`~` を展開し、引用符を除外する）
     notes: 標準ライブラリに YAML のパーサーが無いため
   - item: 起動
     constraint: 'unit があるときは `systemctl --user start --no-block {unit}` を呼ぶ。unit が無いときは `{clone}/.venv/bin/python -m dev_docs serve` を `start_new_session=True`・入出力を `DEVNULL` で起動し、待たずに戻る'
@@ -291,5 +291,5 @@ constraints:
     constraint: '`DEV_DOCS_UNIT`（既定 `dev-docs.service`）が空でなく、`systemctl --user cat {unit}` が終了コード 0 なら unit がある。`DEV_DOCS_UNIT` が空・`systemctl` が無い・`cat` が 0 以外で終わったときは unit が無い。`cat` が打ち切られたときは、unit を起動できないときと同じく扱う'
   - item: systemctl の打ち切り
     constraint: '`systemctl --user` の呼び出しをそれぞれ 0.1 秒で打ち切る'
-    notes: '`cat` と `start --no-block` を 5 回ずつ測って 0.01〜0.04 秒（2026-11-16）。最大の 0.04 秒に 50% を乗せて切り上げた値（規約『資源の値の決め方』の下流を待つタイムアウト）。unit がある経路の待ちの上限の合計は、接続の確かめ 0.5 秒 + `cat` 0.1 秒 + `start` 0.1 秒 = 0.7 秒。待ち以外の処理（落ちているときのフック全体の実測の最大 0.70 秒。拒否される接続はすぐ終わる）を加えて 1.4 秒で、`timeout` の 2 秒に 0.6 秒の余裕で収まる'
+    notes: '`cat` と `start --no-block` を 5 回ずつ測って 0.01〜0.04 秒（2026-11-16）。最大の 0.04 秒に 50% を乗せて切り上げた値（規約『資源の値の決め方』の下流を待つタイムアウト）。unit がある経路の待ちの上限の合計は、接続の確認 0.5 秒 + `cat` 0.1 秒 + `start` 0.1 秒 = 0.7 秒。待ち以外の処理（落ちているときのフック全体の実測の最大 0.70 秒。拒否される接続はすぐ終わる）を加えて 1.4 秒で、`timeout` の 2 秒に 0.6 秒の余裕で収まる'
 test_file: tests/integration/plugin/test_session_start.py

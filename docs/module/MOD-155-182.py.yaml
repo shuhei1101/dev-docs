@@ -18,7 +18,7 @@ diagrams:
         click アプリの組み立て href "./MOD-155-175.py.yaml#アプリの組み立て"
 constants:
   - name: SCREEN_DIST_DIR
-    title: 画面のビルドの置き場所
+    title: 画面のビルドの配置先
     container: server/screen.py
     usecase: 起動
     summary: 画面のビルド（Vite の出力先）のフォルダ。パッケージの中の `screen/`
@@ -27,7 +27,7 @@ constants:
     title: 画面を返さないパスの頭
     container: server/screen.py
     usecase: 起動
-    summary: 画面の配信が 404 にするパスの最初の区切り。GET 以外の要求も、他のルートに当たらなければ 404 にする
+    summary: 画面の配信が 404 にするパスの最初の区切り。GET 以外の要求も、他のルートに該当しなければ 404 にする
     value: ("_api", "mcp", "_admin")
   - name: NON_GET_METHODS
     title: 画面の配信が断るメソッド
@@ -53,12 +53,12 @@ functions:
     kind: 関数
     container: server/screen.py
     usecase: 起動
-    role: 入口
-    summary: 画面（React の SPA）のビルドを返すルーターを作る
+    role: エントリーポイント
+    summary: 画面（React の SPA）のビルドを返却するルーターを作る
     scope: public
     args:
       - name: dist_dir
-        title: 画面のビルドの置き場所
+        title: 画面のビルドの配置先
         type: Path
         required: true
         passing: positional
@@ -75,20 +75,20 @@ functions:
     process: |-
       GET の要求:
 
-      1. パスの最初の区切りが `EXCLUDED_PREFIXES` のどれかなら、`HTTPException(404)` を送る（API・MCP の誤ったパスに画面を返さない）
-      2. パスが `assets/` で始まるときは、`dist_dir` の下のファイルを `FileResponse` で返し、`Cache-Control` を `IMMUTABLE_CACHE` にする。ファイルが無い・解決したパスが `dist_dir` の外のときは `HTTPException(404)` を送る
-      3. それ以外のパスは、`dist_dir / "index.html"` を読み、最初の `<head>` の直後に `<meta name="{MDMARK_VERSION_META}" content="{mdmark_version}">`（`content` は `html.escape` する）を入れて、`HTMLResponse` で `Cache-Control: no-cache` で返す（どの URL も SPA が描く）。ファイルの `index.html` は書き換えない
-      4. `index.html` が無いときは `ScreenBuildMissingError` を送る
+      1. パスの最初の区切りが `EXCLUDED_PREFIXES` のどれかなら、`HTTPException(404)` を送信する（API・MCP の誤ったパスに画面を返却しない）
+      2. パスが `assets/` で始まるときは、`dist_dir` の下のファイルを `FileResponse` で返却し、`Cache-Control` を `IMMUTABLE_CACHE` にする。ファイルが無い・解決したパスが `dist_dir` の外のときは `HTTPException(404)` を送信する
+      3. それ以外のパスは、`dist_dir / "index.html"` を参照し、最初の `<head>` の直後に `<meta name="{MDMARK_VERSION_META}" content="{mdmark_version}">`（`content` は `html.escape` する）を入れて、`HTMLResponse` で `Cache-Control: no-cache` で返却する（どの URL も SPA が描く）。ファイルの `index.html` は書き換えない
+      4. `index.html` が無いときは `ScreenBuildMissingError` を送信する
 
       `NON_GET_METHODS` の要求:
 
       1. パスの最初の区切りが `EXCLUDED_PREFIXES` のどれかのとき
-         - アプリのルート（`request.app.router.routes`）から画面の配信のルーター（このルーター自身と、その GET・`NON_GET_METHODS` のルート）を除いたうち、パスに当たりメソッドが合わないルート（Starlette の `Match.PARTIAL`）があれば、`HTTPException(405)` を送る。`Allow` はそのルートのメソッド
-         - 無ければ `HTTPException(404)` を送る（エンドポイントが無いことを、メソッドによらず 404 で表す）
-      2. それ以外のパスは `HTTPException(405)` を送る。`Allow` は `GET`
+         - アプリのルート（`request.app.router.routes`）から画面の配信のルーター（このルーター自身と、その GET・`NON_GET_METHODS` のルート）を除いたうち、パスに該当しメソッドが合わないルート（Starlette の `Match.PARTIAL`）があれば、`HTTPException(405)` を送信する。`Allow` はそのルートのメソッド
+         - 無ければ `HTTPException(404)` を送信する（エンドポイントが無いことを、メソッドによらず 404 で表す）
+      2. それ以外のパスは `HTTPException(405)` を送信する。`Allow` は `GET`
     exceptions:
       - name: HTTPException(404)
-        condition: '`EXCLUDED_PREFIXES` の頭のパス・無い `assets/` のファイル・`EXCLUDED_PREFIXES` の頭の、他のルートに当たらないパスへの `NON_GET_METHODS` の要求'
+        condition: '`EXCLUDED_PREFIXES` の頭のパス・無い `assets/` のファイル・`EXCLUDED_PREFIXES` の頭の、他のルートに該当しないパスへの `NON_GET_METHODS` の要求'
       - name: HTTPException(405)
         condition: '`NON_GET_METHODS` の要求で、`EXCLUDED_PREFIXES` の頭の他のルートにメソッドが合わない、または `EXCLUDED_PREFIXES` の外のパス'
       - name: ScreenBuildMissingError
@@ -98,20 +98,20 @@ functions:
     unit_tests:
       - name: test_build_screen_router
         case: 正常
-        summary: 文書の URL に index.html を返す
-        condition: '`<head>` を持つ `index.html` を置いた一時フォルダで、`mdmark_version` に `develop` を渡して GET `/default/設計書/a.md`'
+        summary: 文書の URL に index.html を返却する
+        condition: '`<head>` を持つ `index.html` を配置した一時フォルダで、`mdmark_version` に `develop` を指定して GET `/default/設計書/a.md`'
         mock: なし（一時フォルダ）
         expected: 200、本文が `index.html` の中身に `<meta name="mdmark-version" content="develop">` を入れたもの、`Cache-Control` が `no-cache`
       - name: test_build_screen_router_when_mdmark_version
         case: 正常
         summary: 指定した mdmark のバージョンを meta に入れる
-        condition: '`<head>` を持つ `index.html` を置いた一時フォルダで、`mdmark_version` に `v0.13.0` を渡して GET `/`'
+        condition: '`<head>` を持つ `index.html` を配置した一時フォルダで、`mdmark_version` に `v0.13.0` を指定して GET `/`'
         mock: なし（一時フォルダ）
         expected: 本文の `<head>` の直後に `<meta name="mdmark-version" content="v0.13.0">` が 1 つだけあり、一時フォルダの `index.html` は変わっていない
       - name: test_build_screen_router_when_asset
         case: 正常
-        summary: assets のファイルを長く持たせて返す
-        condition: '`assets/index-abc.js` を置いて GET `/assets/index-abc.js`'
+        summary: assets のファイルを長く持たせて返却する
+        condition: '`assets/index-abc.js` を配置して GET `/assets/index-abc.js`'
         mock: なし（一時フォルダ）
         expected: 200、`Cache-Control` が `IMMUTABLE_CACHE`
       - name: test_build_screen_router_when_asset_missing
@@ -123,7 +123,7 @@ functions:
         exception: HTTPException(404)
       - name: test_build_screen_router_when_excluded
         case: 異常
-        summary: API・MCP の頭のパスに画面を返さない
+        summary: API・MCP の頭のパスに画面を返却しない
         condition: GET `/_api/none`・`/mcp/none`・`/_admin/none`
         mock: なし（一時フォルダ）
         expected: 全て 404
@@ -154,5 +154,5 @@ functions:
         summary: ビルドが無いと 503
         condition: 空の一時フォルダで GET `/`
         mock: なし（一時フォルダ）
-        expected: '`ScreenBuildMissingError` が送られ、`next_steps` に `vite build` がある'
+        expected: '`ScreenBuildMissingError` が送信され、`next_steps` に `vite build` がある'
         exception: ScreenBuildMissingError

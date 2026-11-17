@@ -5,10 +5,10 @@ entry:
   value: GET `/_api/settings/sources`
 flows:
   - name: 正常系
-    summary: 配信元の一覧を配信中で返す
+    summary: 配信元の一覧を配信中で返却する
     setup:
       - name: Mock
-        description: 'テストの中で起動した project-index（shuhei1101/project-index の develop の `42632c5`（shuhei1101/project-index#54 をマージした commit）。一時フォルダの端末の設定を `PROJECT_INDEX_CONFIG` で指し、空きポートで子プロセスとして起動する）が、端末の設定の行と配信元の状態を返し、保存を受ける。dev-docs のアプリを HTTP のテストのクライアントで呼ぶ'
+        description: 'テストの中で起動した project-index（shuhei1101/project-index の develop の `42632c5`（shuhei1101/project-index#54 をマージした commit）。一時フォルダの端末の設定を `PROJECT_INDEX_CONFIG` で指し、空きポートで子プロセスとして起動する）が、端末の設定の行と配信元の状態を返却し、保存を受ける。dev-docs のアプリを HTTP のテストのクライアントで呼ぶ'
       - name: 端末の設定
         description: project-index の端末の設定の `sources` に sample の 1 行
     flow: |-
@@ -26,10 +26,10 @@ flows:
       - 200 で、`sources` に sample が `serving` で並ぶ
       - '`settingsPath` に端末の設定のパス、sample の行に `config`・`scope` がある'
       - 配信元が 0 件の端末の設定でも 200 で、`sources` が空
-      - '`version` に project-index の GET `/settings/sources` が返した内容のバージョンがある'
+      - '`version` に project-index の GET `/settings/sources` が返却した内容のバージョンがある'
     test: test_normal
   - name: 正常系（配信していない配信元がある）
-    summary: 配信していない・無効・設定が古い配信元を状態と理由つきで返す
+    summary: 配信していない・無効・設定が古い配信元を状態と理由つきで返却する
     setup:
       - name: Mock
         description: なし
@@ -38,7 +38,7 @@ flows:
         description: '`documents[0]` に必須のキー `paths` が無い配信元'
         notes: id `broken`
       - name: 設定のバージョンが古い配信元
-        description: '`version` がサーバーが読めるバージョンより古い配信元'
+        description: '`version` がサーバーが参照できるバージョンより古い配信元'
         notes: id `legacy`
       - name: 無効の配信元
         description: '端末の設定で `enabled: false` の配信元'
@@ -55,16 +55,16 @@ flows:
     expected:
       - sample と legacy が `serving`
       - broken が `not_served` で、`errors` に `documents[0].paths` と必須のキーが無いことがある
-      - legacy の `configVersion` に設定のバージョンとサーバーが読めるバージョンがある
+      - legacy の `configVersion` に設定のバージョンとサーバーが読み込めるバージョンがある
       - archive が `disabled`
     test: test_normal_when_source_not_served
   - name: 正常系（読み直していない行がある）
-    summary: 手で直して読み直していない行を `pending_reload` で返し、他の行は自分の状態で返す
+    summary: 手で修正して再読み込みしていない行を `pending_reload` で返却し、他の行は自分の状態で返却する
     setup:
       - name: Mock
         description: なし
       - name: 端末の設定
-        description: project-index の起動の後に、project-index の端末の設定のファイルへ fresh の行を直接書き足し、fresh・notes・sample の順の行にする（読み直さない）
+        description: project-index の起動の後に、project-index の端末の設定のファイルへ fresh の行を直接追記し、fresh・notes・sample の順の行にする（再読み込みしない）
         notes: fresh は `id` を省いた新しい行
     flow: |-
       sequenceDiagram
@@ -78,7 +78,7 @@ flows:
       - fresh が `pending_reload` で、`id` が `null`
       - notes と sample がそれぞれ自分の `id` で `serving`
     test: test_normal_when_pending_reload
-lead: '#17 の設定画面が呼ぶ。端末の設定の配信元の一覧と、配信元ごとの状態（配信中・配信していない・無効）を JSON で返す。'
+lead: '#17 の設定画面が呼ぶ。端末の設定の配信元の一覧と、配信元ごとの状態（配信中・配信していない・無効）を JSON で返却する。'
 identifier: get_settings_sources
 permissions: なし（`127.0.0.1` でだけ待ち受ける）
 idempotent: true
@@ -87,7 +87,7 @@ exclusivity: 排他しない
 response:
   - name: settingsPath
     type: str
-    description: project-index が返した、project-index の端末の設定のパス
+    description: project-index が返却した、project-index の端末の設定のパス
   - name: sources[].id
     type: str | None
     description: 配信元の ID。`pending_reload` で `id` を省いた行は `null`
@@ -99,11 +99,11 @@ response:
     description: 配信するか
   - name: sources[].scope
     type: '{read: list[str], write: list[str] | None}'
-    description: 読める・書ける作業場所の glob
-    notes: '`write` を省いた行は `null`（既定値の配信元のフォルダだけから書ける）'
+    description: 参照できる・記載できる作業場所の glob
+    notes: '`write` を省いた行は `null`（既定値の配信元のフォルダだけから書き込める）'
   - name: sources[].status
     type: Literal['serving', 'not_served', 'disabled', 'pending_reload']
-    description: '配信中・起動時か読み直しの検証で外した・`enabled: false`・ファイルにあるが読み直していない行。行は `config`（`id` を書いた行は `id` も）が同じ配信元の状態と突き合わせる'
+    description: '配信中・起動時か再読み込みの検証で除外した・`enabled: false`・ファイルにあるが再読み込みしていない行。行は `config`（`id` を記載した行は `id` も）が同じ配信元の状態と突き合わせる'
   - name: sources[].errors
     type: 'list[{path: str, reason: str}]'
     description: 検証で除外した理由
@@ -114,15 +114,15 @@ response:
     notes: 設定のバージョンが古いときだけ
   - name: sources[].outsideRead
     type: bool
-    description: '`scope` に当たらない作業場所からも `outside_scope: true` で作業範囲の外（参考）として読めるか（端末の設定の `outside_read`）'
-    notes: 書いていない行は `true`
+    description: '`scope` に該当しない作業場所からも `outside_scope: true` で作業範囲の外（参考）として読み込めるか（端末の設定の `outside_read`）'
+    notes: 記載していない行は `true`
   - name: version
     type: str
     description: project-index の端末の設定の内容のバージョン（ファイル全体の内容のハッシュ。設定の `version` キーとは別）
     notes: 端末の設定の保存の `expectedVersion` に指定する
 status_codes:
   - code: '200'
-    condition: 返した（配信元が 0 件でも 200）
+    condition: 返却した（配信元が 0 件でも 200）
   - code: '503'
     condition: project-index につながらない
     notes: 'つながらなかった project-index のアドレスと理由（`projectIndex.address`・`projectIndex.reason`）。`detail` は `project-index（{address}）に接続できませんでした。{reason}`'
@@ -130,14 +130,14 @@ constraints:
   - item: 認可
     constraint: 制限なし（`127.0.0.1` でだけ待ち受ける）
   - item: 取得の依頼先
-    constraint: 行と状態は要求ごとに project-index の端末の設定の API から取得し、dev-docs の中に控えない
+    constraint: 行と状態は要求ごとに project-index の端末の設定の API から取得し、dev-docs の中に記録しない
   - item: project-index につながらないとき
-    constraint: 503 と、つながらなかった project-index のアドレス・理由を返す
+    constraint: 503 と、つながらなかった project-index のアドレス・理由を返却する
   - item: タイムアウト
-    constraint: project-index への問い合わせを制限時間で打ち切り、打ち切ったら project-index につながらないときと同じ 503 と理由を返す
+    constraint: project-index への問い合わせを制限時間で打ち切り、打ち切ったら project-index につながらないときと同じ 503 と理由を返却する
     decided_by: NFR-155-1#requirements[project-index への問い合わせの制限時間]
-  - item: 返すキー
-    constraint: '`sources[]` だけ。`port`・`bind`・`state_dir` など再起動が要るキーは返さない'
+  - item: 返却するキー
+    constraint: '`sources[]` だけ。`port`・`bind`・`state_dir` など再起動が要るキーは返却しない'
   - item: JSON のキー
     constraint: レスポンスのキーは camelCase
   - item: operationId

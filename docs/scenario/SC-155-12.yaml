@@ -38,7 +38,7 @@ scenarios:
     expected:
       - 一覧に sample と extra が配信中で並ぶ
       - '`settings.yaml` の `sources` に extra の行が追加され、sample の行は変わらない'
-      - '`settings.yaml` の extra の行の `config` が、要素 1 つの配列で書かれる'
+      - '`settings.yaml` の extra の行の `config` が、要素 1 つの配列で記載される'
       - dev-docs と project-index を再起動せずに、extra の文書の画面が開ける
     test: test_normal_when_added_from_settings
   - name: 正常シナリオ（設定画面に配信していない配信元がある）
@@ -49,7 +49,7 @@ scenarios:
         description: '`project-index.yaml` の `documents[0]` に必須のキー `paths` が無い配信元'
         notes: id `broken`
       - name: 設定のバージョンが古い配信元
-        description: '`project-index.yaml` の `version` が、サーバーが読めるバージョンより古い配信元'
+        description: '`project-index.yaml` の `version` が、サーバーが参照できるバージョンより古い配信元'
         notes: id `legacy`
       - name: 無効の配信元
         description: '端末の設定で `enabled: false` の配信元'
@@ -69,8 +69,8 @@ scenarios:
       ```
     expected:
       - sample と legacy が配信中で並ぶ
-      - broken が配信していない状態で、project-index が起動時の検証で外した理由（`documents[0]` に必須のキー `paths` が無い）が出る
-      - legacy に、設定のバージョンと project-index が読めるバージョンが出る
+      - broken が配信していない状態で、project-index が起動時の検証で除外した理由（`documents[0]` に必須のキー `paths` が無い）が出る
+      - legacy に、設定のバージョンと project-index が参照できるバージョンが出る
       - archive が無効で、`enabled` が `false` であることが出る
     test: test_normal_when_source_not_served
   - name: 正常シナリオ（設定画面で追加した配信元が検証に通らない）
@@ -102,7 +102,7 @@ scenarios:
       ```
     expected:
       - '`settings.yaml` の `sources` に broken の行が追加される'
-      - 一覧の broken が配信していない状態で、検証で外した理由（`documents[0]` に必須のキー `paths` が無い）が出る
+      - 一覧の broken が配信していない状態で、検証で除外した理由（`documents[0]` に必須のキー `paths` が無い）が出る
       - broken の文書の画面を開くと見つからない画面になり、sample の文書の画面は開ける
     test: test_normal_when_added_source_invalid
   - name: 異常シナリオ（設定画面の保存がスキーマに通らない）
@@ -131,7 +131,7 @@ scenarios:
       - '`settings.yaml` が変わらず、sample の文書の画面は開ける'
     test: test_error_when_schema_invalid
     notes:
-      422 の受け方: 画面の入力チェックが先に止めるため、サーバーの 422 を画面に出す経路は結合テスト `settings-screen.spec.ts` が確かめる
+      422 の受け方: 画面の入力チェックが先に止めるため、サーバーの 422 を画面に出す経路は結合テスト `settings-screen.spec.ts` が確認する
   - name: 異常シナリオ（別のオリジンから書き込む）
     setup:
       - name: Mock
@@ -142,7 +142,7 @@ scenarios:
         notes: '`sources` に sample の 1 行'
       - name: 別のオリジンの送信
         description: '`Origin` を dev-docs と別のポートにした HTTP の端末の設定の保存'
-        notes: 送信する内容はスキーマに通る端末の設定。ブラウザは別のオリジンの 403 の応答を読めないため HTTP で送る
+        notes: 送信する内容はスキーマに通る端末の設定。ブラウザは別のオリジンの 403 の応答を参照できないため HTTP で送信する
       - name: dev-docs
         description: その project-index につないで起動した dev-docs
         notes: '-'
@@ -238,19 +238,19 @@ scenarios:
       - 1 回目の保存の後も、入れた extra の値が入力欄に残る
       - もう一度保存すると、`settings.yaml` に extra の行が追加され、sample の行の `enabled` は `false` のまま
     test: test_error_when_settings_changed_by_another_process
-lead: 利用者が dev-docs の設定画面で配信元を追加し、project-index の端末の設定に並べて画面で読めるようにする。
+lead: 利用者が dev-docs の設定画面で配信元を追加し、project-index の端末の設定に並べて画面で参照できるようにする。
 issue: 4
 primary_actor: 利用者
 stakeholders:
   - name: 利用者
-    interest: 設定画面で配信元を追加し、配信できなかった配信元とその理由を一覧で確かめられる
+    interest: 設定画面で配信元を追加し、配信できなかった配信元とその理由を一覧で確認される
   - name: project-index
-    interest: 設定画面の保存を、端末の設定の配信元の API で受け、ほかのキーと行を壊さずに読み直せる
+    interest: 設定画面の保存を、端末の設定の配信元の API で受け、ほかのキーと行を壊さずに再読み込みできる
 trigger: 利用者が設定画面で配信元を追加する
 preconditions:
   - dev-docs が起動し、project-index につながっている
   - 追加するフォルダが YAML の文書とそのスキーマと `project-index.yaml` を持つ（git リポジトリか Git 管理外のフォルダ）
-success_guarantee: project-index の端末の設定の `sources` に配信元の行があり、dev-docs と project-index を再起動せずにその配信元の文書を画面で読める。
+success_guarantee: project-index の端末の設定の `sources` に配信元の行があり、dev-docs と project-index を再起動せずにその配信元の文書を画面で参照できる。
 minimal_guarantee: 設定画面の保存がスキーマに通らないとき、画面と別のオリジンから書き込んだとき、設定画面を開いた後にほかのプロセスが端末の設定を書き換えていたときは、端末の設定を書き換えない。既にある配信元の配信は止まらない。
 frequency: 配信元ごとに 1 回
 priority: 高

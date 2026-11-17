@@ -1,6 +1,6 @@
 id: MOD-155-70
 title: 画面 / 共通 / logger.ts
-lead: ブラウザのコンソールへ JSON Lines で書くロガー。
+lead: ブラウザのコンソールへ JSON Lines で記載するロガー。
 test_files:
   - tests/unit/frontend/src/shared/lib/logger.test.ts
 constants:
@@ -8,7 +8,7 @@ constants:
     title: ロガー
     container: shared/lib/logger.ts
     usecase: 共通
-    summary: '`debug`・`info`・`warn`・`error` を持ち、1 行の JSON（`{ts, level, event, ...fields}`）を `console` の同じレベルへ書く'
+    summary: '`debug`・`info`・`warn`・`error` を持ち、1 行の JSON（`{ts, level, event, ...fields}`）を `console` の同じレベルへ記載する'
     value: createLogger()
 functions:
   - name: createLogger
@@ -31,13 +31,13 @@ functions:
       type: Logger
       description: '`(event: string, fields?: Record<string, unknown>) => void` をレベルごとに持つ'
     process: |-
-      1. 各レベルの関数は `JSON.stringify({ts: new Date().toISOString(), level, event, ...fields})` を `sink[level]` へ渡す
-      2. `fields` の `Error` は `{name, message, stack}` にして渡す
-      3. `import.meta.env.PROD` のとき `debug` は書かない
+      1. 各レベルの関数は `JSON.stringify({ts: new Date().toISOString(), level, event, ...fields})` を `sink[level]` へ指定する
+      2. `fields` の `Error` は `{name, message, stack}` にして指定する
+      3. `import.meta.env.PROD` のとき `debug` は記載しない
     unit_tests:
       - name: test_create_logger
         case: 正常
-        summary: 1 行の JSON を書く
+        summary: 1 行の JSON を書き込む
         condition: '`error("api_failed", {status: 500, error: new Error("x")})`'
         mock: 書き出し先（`vi.fn` を持つ偽物）
         expected: '`sink.error` に 1 回、`JSON.parse` でき `level` が `error`、`event` が `api_failed`、`error.message` が `x`'

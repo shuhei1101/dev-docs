@@ -5,7 +5,7 @@ functions:
   - name: useDocScreenEffects
     title: 文書の画面の副作用
     container: features/docs/doc-view/hooks/use-doc-screen-effects.ts
-    usecase: 文書を読む
+    usecase: 文書を参照する
     role: フック
     summary: ブラウザのタブのタイトルを合わせ、開いている文書の URL を `useLastDocStore` に覚える
     kind: フック
@@ -23,7 +23,7 @@ functions:
         description: 配信元の ID
     returns:
       type: void
-      description: 何も返さない
+      description: 何も返却しない
     process: |-
       1. `title` が変わったら `document.title` に入れる
       2. ルーターの `location.href` が `/{source}` か `/{source}/` で始まるときだけ `setHref` で覚える（他の画面へ移る途中の URL は覚えない）

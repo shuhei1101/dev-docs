@@ -10,7 +10,7 @@ functions:
     container: shared/hooks/use-delayed-flag.ts
     usecase: 共通
     role: フック
-    summary: '`active` が `delayMs` 続いたときだけ true を返す'
+    summary: '`active` が `delayMs` 続いたときだけ true を返却する'
     scope: public
     args:
       - name: active
@@ -27,9 +27,9 @@ functions:
       type: boolean
       description: '`active` で、かつ `delayMs` が過ぎたか'
     process: |-
-      1. `active` の間だけ `delayMs` のタイマーを置き、過ぎたら経過の状態を true にする
-      2. `active`・`delayMs` が変わるか外れるときに、タイマーを止めて経過の状態を false に戻す
-      3. `active` と経過の状態の両方が true のときだけ true を返す
+      1. `active` の間だけ `delayMs` のタイマーを配置し、過ぎたら経過の状態を true にする
+      2. `active`・`delayMs` が変わるか解除されるときに、タイマーを止めて経過の状態を false に戻す
+      3. `active` と経過の状態の両方が true のときだけ true を返却する
     unit_tests:
       - name: test_use_delayed_flag
         case: 正常

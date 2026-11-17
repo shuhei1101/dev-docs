@@ -10,7 +10,7 @@ constants:
     usecase: 共通
     summary: 文書のバージョン（内容のハッシュ）の 16 進の桁数
     value: '6'
-    reason: 文書のバージョンは同じ文書の前後を比べるだけに使い、6 桁で取り違えが起きない。インターフェース定義の例（`9d0e11`）と揃える
+    reason: 文書のバージョンは同じ文書の前後を比べるだけに使用し、6 桁で取り違えが起きない。インターフェース定義の例（`9d0e11`）と統一する
 functions:
   - name: content_hash
     title: 内容のハッシュ
@@ -31,7 +31,7 @@ functions:
     returns:
       type: str
       description: 16 進の小文字 `VERSION_LENGTH` 桁
-    process: 1. 文字列なら UTF-8 のバイト列にし、SHA-256 の 16 進の先頭 `VERSION_LENGTH` 桁を返す
+    process: 1. 文字列なら UTF-8 のバイト列にし、SHA-256 の 16 進の先頭 `VERSION_LENGTH` 桁を返却する
     unit_tests:
       - name: test_content_hash
         case: 正常
@@ -60,7 +60,7 @@ functions:
       description: 『内容のハッシュ』と同じ桁の 16 進
     process: |-
       1. キーを並べ替え、`ensure_ascii=False`・区切りに空白を入れない JSON にする
-      2. その文字列の『内容のハッシュ』を返す（内容のハッシュ）
+      2. その文字列の『内容のハッシュ』を返却する（内容のハッシュ）
     unit_tests:
       - name: test_value_hash
         case: 正常

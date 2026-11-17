@@ -8,7 +8,7 @@ components:
     title: 差分の案内
     kind: コンポーネント
     container: features/docs/doc-view/components/diff-banner.tsx
-    usecase: 文書を読む
+    usecase: 文書を参照する
     role: 部品
     summary: 比較元・比較先の選択（shadcn/ui の `Select`）と「差分の強調を解除」を並べる
     props:
@@ -27,7 +27,7 @@ components:
       - name: onChange
         type: '(next: {base: string; rev: string}) => void'
         required: true
-        description: 選び直したとき
+        description: 再選択したとき
       - name: onClear
         type: () => void
         required: true
@@ -35,7 +35,7 @@ components:
     unit_tests:
       - name: test_diff_banner
         case: 正常
-        summary: 一覧に無い比較元を先頭に足す
+        summary: 一覧に無い比較元を先頭に追加する
         condition: '`base` がリビジョンの一覧に無い commit'
         mock: なし
         expected: 比較元の選択肢の先頭がその commit

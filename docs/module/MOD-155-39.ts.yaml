@@ -16,7 +16,7 @@ data_models:
         description: 配信元の ID
       - name: writable
         type: boolean
-        description: コメントを書ける範囲を持つか（`scope.write` が null か 1 件以上）
+        description: コメントを記載できる範囲を持つか（`scope.write` が null か 1 件以上）
 functions:
   - name: servingSources
     title: 配信中の配信元の取り出し
@@ -36,7 +36,7 @@ functions:
       type: ServingSource[]
       description: 配信中の配信元の並び（`sources[]` の順）。`view` が undefined なら空
     process: |-
-      1. `view.sources` を順に見て、`status` が `serving` で `id` を持つ行だけを残す
+      1. `view.sources` を順に確認して、`status` が `serving` で `id` を持つ行だけを残す
       2. 残した行を `{id, writable}` にする。`writable` は `scope.write` が null（範囲を限らない）か、1 件以上のときに true
     unit_tests:
       - name: test_serving_sources
@@ -47,7 +47,7 @@ functions:
         expected: '`serving` の行の 1 件'
       - name: test_serving_sources_when_write_scope
         case: 正常
-        summary: 書ける範囲
+        summary: 記載できる範囲
         condition: '`scope.write` が null・`[]`・`["docs/"]` の 3 行（全て `serving`）'
         mock: なし
         expected: '`writable` が順に true・false・true'

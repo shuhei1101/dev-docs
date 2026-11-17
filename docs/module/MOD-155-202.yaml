@@ -1,14 +1,14 @@
 id: MOD-155-202
 title: 開発ドキュメントサーバー / 絞り込み
 lead: |-
-  `nav` の `auto` の `filter`（`search_docs` の `filter` と同じ書式）の条件の木を確かめ、文書に照合する。
-  検索そのもの（`search_docs`・画面の検索の語の照合と抜粋）は project-index が持つ。
+  `nav` の `auto` の `filter`（`search_docs` の `filter` と同じ書式）の条件の木を確認し、文書に照合する。
+  検索そのもの（`search_docs`・画面の検索の単語の照合と抜粋）は project-index が持つ。
 directory: |-
   ```text
   src/dev_docs/features/filter/
   ├─ __init__.py   # 公開する型と関数の再エクスポート
   ├─ types.py      # Condition / Group / Heading
-  ├─ fields.py     # field_values / known_fields / heading_lines（項目の値・計算項目・使える項目・見出しの行）
+  ├─ fields.py     # field_values / known_fields / heading_lines（項目の値・計算項目・使用できる項目・見出しの行）
   └─ filters.py    # check_filter / match_filter / compile_regex / normalize / parse_compare_value
   ```
 diagrams:
@@ -16,27 +16,27 @@ diagrams:
     diagram: |-
       classDiagram
         direction TD
-        タブとサイドバーの組み立て ..> 条件の確かめ
+        タブとサイドバーの組み立て ..> 条件の確認
         タブとサイドバーの組み立て ..> 条件の照合
-        条件の確かめ ..> 使える項目
+        条件の確認 ..> 使用できる項目
         条件の照合 ..> 項目の値
         class タブとサイドバーの組み立て {
           <<function>>
         }
-        class 条件の確かめ {
+        class 条件の確認 {
           <<function>>
         }
         class 条件の照合 {
           <<function>>
         }
-        class 使える項目 {
+        class 使用できる項目 {
           <<function>>
         }
         class 項目の値 {
           <<function>>
         }
         click タブとサイドバーの組み立て href "./MOD-155-160.py.yaml#タブとサイドバーの組み立て"
-        click 条件の確かめ href "./MOD-155-135.py.yaml#条件の確かめ"
+        click 条件の確認 href "./MOD-155-135.py.yaml#条件の確認"
         click 条件の照合 href "./MOD-155-135.py.yaml#条件の照合"
-        click 使える項目 href "./MOD-155-134.py.yaml#使える項目"
+        click 使用できる項目 href "./MOD-155-134.py.yaml#使用できる項目"
         click 項目の値 href "./MOD-155-134.py.yaml#項目の値"

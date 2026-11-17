@@ -58,7 +58,7 @@ constants:
     title: 管理の MCP の名前
     container: server/mcp/admin.py
     usecase: 共通
-    summary: '`initialize` で返すサーバーの名前'
+    summary: '`initialize` で返却するサーバーの名前'
     value: '"dev-docs-admin"'
 functions:
   - name: build_admin_mcp
@@ -66,7 +66,7 @@ functions:
     kind: 関数
     container: server/mcp/admin.py
     usecase: 共通
-    role: 入口
+    role: エントリーポイント
     summary: '3 つのツールを持つ管理の MCP を作る'
     scope: public
     args:
@@ -86,8 +86,8 @@ functions:
          - `status`: 状態の取得（`await`。`env` は `os.environ`）。`render` は状態の文
          - `restart`: 再起動の制御の再起動の要求（`handlers.restart.request()`）。`render` は `None`
          - `update`: クローンの更新（`asyncio.to_thread`。クローンは端末の設定の `clone`、`control` は `handlers.restart`）。`render` は `None`
-         - `DevDocsError` と `pydantic.ValidationError` はツールのエラーの変換の結果を返す。それ以外の例外は `[error]` ツールの処理に失敗した（ツール名・例外）を書いて MCP の既定に任せる
-      4. 作った MCP を返す
+         - `DevDocsError` と `pydantic.ValidationError` はツールのエラーの変換の結果を返却する。それ以外の例外は `[error]` ツールの処理に失敗した（ツール名・例外）を記載して MCP の既定に任せる
+      4. 作った MCP を返却する
     unit_tests:
       - name: test_build_admin_mcp
         case: 正常
@@ -99,7 +99,7 @@ functions:
         case: 正常
         summary: 状態の取得への受け渡し
         condition: '`status(format="json")` を呼ぶ'
-        mock: 状態の取得（結果を返す偽物）
+        mock: 状態の取得（結果を返却する偽物）
         expected: '`structuredContent` に `project_index` と `sources` がある'
       - name: test_build_admin_mcp_when_restart_in_progress
         case: 正常
@@ -111,5 +111,5 @@ functions:
         case: 正常
         summary: ツールの説明をプロンプトの YAML から描画する
         condition: '`list_tools` と `initialize` を呼ぶ'
-        mock: 配線済みの関数（偽物。`prompts` は同梱した YAML を読んだ一式）
+        mock: 配線済みの関数（偽物。`prompts` は同梱した YAML を読み込んだ一式）
         expected: 3 つのツールの説明がそれぞれ `prompts.render(tool_prompt_id("admin", 名前))` と同じで、`instructions` が無い

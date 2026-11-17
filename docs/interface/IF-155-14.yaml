@@ -5,10 +5,10 @@ entry:
   value: status
 flows:
   - name: 正常系
-    summary: project-index から取得した配信元ごとの状態を返す
+    summary: project-index から取得した配信元ごとの状態を返却する
     setup:
       - name: Mock
-        description: project-index の読み取り API のモック（shuhei1101/project-index の develop の `42632c5` の入出力で、sample を配信中、broken を配信していない配信元として返す）。dev-docs のアプリをテストのクライアントで呼ぶ
+        description: project-index の読み取り API のモック（shuhei1101/project-index の develop の `42632c5` の入出力で、sample を配信中、broken を配信していない配信元として返却する）。dev-docs のアプリをテストのクライアントで呼ぶ
     flow: |-
       ```mermaid
       sequenceDiagram
@@ -23,11 +23,11 @@ flows:
     expected:
       - '`version` が配布のメタデータのバージョンと同じ'
       - '`project_index.reachable` が `true` で、`project_index.address` がモックのアドレス'
-      - sample が `serving`、broken が `not_served` で、`errors` にモックが返した理由がある
+      - sample が `serving`、broken が `not_served` で、`errors` にモックが返却した理由がある
       - '`format: json` では同じ中身を structuredContent と text に入れる'
     test: test_normal
   - name: 正常系（project-index につながらない）
-    summary: project-index につながらなくても答え、つながらなかった理由を返す
+    summary: project-index につながらなくても回答、つながらなかった理由を返却する
     setup:
       - name: Mock
         description: 接続を断る project-index の読み取り API のモック
@@ -47,7 +47,7 @@ flows:
       - '`sources` が空で、markdown に project-index につながらないため配信元を取得できないことが出る'
     test: test_normal_when_project_index_unreachable
   - name: 正常系（前のバージョンから残った sources がある）
-    summary: 端末の設定に残った `sources` の行の ID を返す
+    summary: 端末の設定に残った `sources` の行の ID を返却する
     setup:
       - name: Mock
         description: 正常系と同じ project-index のモック
@@ -66,7 +66,7 @@ flows:
       - '`leftover_sources` が `["extra"]`'
       - markdown に、extra を project-index で追加する案内が出る
     test: test_normal_when_leftover_sources
-lead: 待ち受けのアドレス・dev-docs のバージョン・端末の設定・project-index への接続と、project-index から取得した配信元ごとの状態を返す。
+lead: 待ち受けのアドレス・dev-docs のバージョン・端末の設定・project-index への接続と、project-index から取得した配信元ごとの状態を返却する。
 identifier: status
 permissions: なし（`127.0.0.1` でだけ待ち受ける）
 idempotent: true
@@ -97,10 +97,10 @@ response:
     description: サーバーのプロセス ID
   - name: terminal.file
     type: str
-    description: 読んだ端末の設定のパス
+    description: 参照した端末の設定のパス
   - name: terminal.version_state
     type: Literal['current', 'old', 'newer']
-    description: 端末の設定の `version` と dev-docs が読めるバージョンの比較
+    description: 端末の設定の `version` と dev-docs が参照できるバージョンの比較
   - name: project_index.address
     type: str
     description: 端末の設定の `project_index`
@@ -116,10 +116,10 @@ response:
     description: 配信元の ID
   - name: sources[].status
     type: Literal['serving', 'not_served', 'disabled']
-    description: project-index が返した配信元の状態
+    description: project-index が返却した配信元の状態
   - name: sources[].errors[]
     type: str
-    description: 'project-index が返した配信しない理由（`{キーのパス}: {理由}`）'
+    description: 'project-index が返却した配信しない理由（`{キーのパス}: {理由}`）'
     notes: '`not_served` のとき'
   - name: leftover_sources
     type: list[str]
@@ -137,15 +137,15 @@ response_example: |-
   ```
 exceptions:
   - name: なし（正常終了）
-    condition: 返せた（project-index につながらないときも返す）
+    condition: 返せた（project-index につながらないときも返却する）
 constraints:
   - item: 注釈
     constraint: '`readOnlyHint: true`'
   - item: 配信元の状態の取得
-    constraint: 呼ばれるたびに project-index の読み取り API から取得し、dev-docs の中に控えない
+    constraint: 呼ばれるたびに project-index の読み取り API から取得し、dev-docs の中に記録しない
   - item: 権限
-    constraint: 作業場所で絞らず、全ての配信元を返す
+    constraint: 作業場所で絞らず、全ての配信元を返却する
   - item: タイムアウト
-    constraint: project-index への問い合わせを制限時間で打ち切り、打ち切ったら `reachable` を `false` にして返す
+    constraint: project-index への問い合わせを制限時間で打ち切り、打ち切ったら `reachable` を `false` にして返却する
     decided_by: NFR-155-1#requirements[project-index への問い合わせの制限時間]
 test_file: tests/integration/server/test_get_status.py

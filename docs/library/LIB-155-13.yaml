@@ -22,11 +22,11 @@ catalogs:
         purpose: 画面の API の DTO の既定値・範囲を付ける
       - name: field_validator
         kind: 関数
-        purpose: 文字列 1 つで書かれた値を配列にするなどの前処理
+        purpose: 文字列 1 つで記載された値を配列にするなどの前処理
       - name: ValidationError
         kind: クラス
         purpose: 要求のモデルの検証の誤り。管理の MCP のツールのエラーの変換が `isError` の結果にする
-lead: 型ヒントから値の検証と変換を行う Python のデータ検証ライブラリ。
+lead: 型ヒントから値の検証と変換をする Python のデータ検証ライブラリ。
 purl: pkg:pypi/pydantic
 dependency_scope: 必須
 adoption: 採用
@@ -40,13 +40,13 @@ used_in:
 verification:
   state: 済
   date: '2026-10-28'
-  detail: 'pydantic 2.14.1・mcp 2.3.0・Python 3.14 で、`ConfigDict(extra="forbid")` のモデルが余計なキーを `extra_forbidden` で弾くこと、`MCPServer` のツールの引数を `Annotated[str | None, Field(validation_alias="from")]` にすると入力のスキーマに `from` が出て関数には `from_` で渡ること、`Literal` の引数が `enum` になり外れた値が検証の誤りになることを確かめた'
+  detail: 'pydantic 2.14.1・mcp 2.3.0・Python 3.14 で、`ConfigDict(extra="forbid")` のモデルが余計なキーを `extra_forbidden` で弾くこと、`MCPServer` のツールの引数を `Annotated[str | None, Field(validation_alias="from")]` にすると入力のスキーマに `from` が出て関数には `from_` で渡ること、`Literal` の引数が `enum` になり外れた値が検証の誤りになることを確認した'
 install: |-
   ```bash
   uv add 'pydantic>=2.14.1'
   ```
 limitations:
   - item: ツールの引数の `alias`
-    content: mcp 2.3.0 は引数を `alias` の名前で関数へ渡すため、`Field(alias="from")` は関数の呼び出しで `TypeError` になる。`validation_alias` を使う
+    content: mcp 2.3.0 は引数を `alias` の名前で関数へ指定するため、`Field(alias="from")` は関数の呼び出しで `TypeError` になる。`validation_alias` を使用する
   - item: ツールの余計な引数
     content: 'mcp 2.3.0 が関数の引数から作るモデルは `additionalProperties: false` を持たず、知らないキーを黙って捨てる'

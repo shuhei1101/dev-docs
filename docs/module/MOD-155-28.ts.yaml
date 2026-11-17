@@ -5,7 +5,7 @@ data_models:
   - name: DocViewSearch
     title: 文書の画面のクエリ
     container: features/docs/doc-view/search.ts
-    usecase: 文書を読む
+    usecase: 文書を参照する
     role: DTO
     summary: '`z.infer<typeof DocViewSearchSchema>`'
     properties:
@@ -22,6 +22,6 @@ constants:
   - name: DocViewSearchSchema
     title: 文書の画面のクエリのスキーマ
     container: features/docs/doc-view/search.ts
-    usecase: 文書を読む
-    summary: '`z.object({rev: z.string().min(1).optional().catch(undefined), base: z.string().min(1).optional().catch(undefined), tab: z.coerce.number().int().min(0).optional().catch(undefined)})`。読めない値は捨てる'
+    usecase: 文書を参照する
+    summary: '`z.object({rev: z.string().min(1).optional().catch(undefined), base: z.string().min(1).optional().catch(undefined), tab: z.coerce.number().int().min(0).optional().catch(undefined)})`。参照できない値は捨てる'
     value: z.object({rev, base, tab})

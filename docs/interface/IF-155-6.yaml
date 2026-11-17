@@ -5,7 +5,7 @@ entry:
   value: GET `/_api/sources/{source}/refs`
 flows:
   - name: 正常系
-    summary: ブランチ・タグ・最近の commit を返す
+    summary: ブランチ・タグ・最近の commit を返却する
     setup:
       - name: Mock
         description: 'テストの中で起動した project-index（shuhei1101/project-index の develop の `42632c5`（shuhei1101/project-index#54 をマージした commit）。一時フォルダの端末の設定を `PROJECT_INDEX_CONFIG` で指し、空きポートで子プロセスとして起動する）が、setup の配信元を配信する。dev-docs のアプリを HTTP のテストのクライアントで呼ぶ'
@@ -28,7 +28,7 @@ flows:
       - '`commits` が新しい順に 2 つ並ぶ'
     test: test_normal
   - name: 正常系（Git 管理外の配信元）
-    summary: 'Git 管理外の配信元は `git: false` を返す'
+    summary: 'Git 管理外の配信元は `git: false` を返却する'
     setup:
       - name: Mock
         description: なし
@@ -66,7 +66,7 @@ flows:
     expected:
       - 404 で、`detail` に無いのが配信元 `unknown` であることがある
     test: test_error_when_source_not_found
-lead: トップバーのリビジョンの切り替えが呼ぶ。配信元のブランチ・タグ・最近の commit を返す。
+lead: トップバーのリビジョンの切り替えが呼ぶ。配信元のブランチ・タグ・最近の commit を返却する。
 identifier: list_refs
 permissions: なし（`127.0.0.1` でだけ待ち受ける）
 idempotent: true
@@ -83,7 +83,7 @@ request:
     required: false
     default: '`20`'
     location: query
-    description: 返す最近の commit の数
+    description: 返却する最近の commit の数
     constraints: 0〜100
 request_example: |-
   ```text
@@ -131,7 +131,7 @@ status_codes:
     condition: project-index につながらない
     notes: 'つながらなかった project-index のアドレスと理由（`projectIndex.address`・`projectIndex.reason`）。`detail` は `project-index（{address}）に接続できませんでした。{reason}`'
   - code: '200'
-    condition: '返した（Git 管理外の配信元は `git: false` で 200）'
+    condition: '返却した（Git 管理外の配信元は `git: false` で 200）'
   - code: '404'
     condition: 配信元が無い・配信していない
 error_format: RFC 9457 の `application/problem+json`。拡張メンバーは camelCase（`nextSteps`・`errors[]`）
@@ -141,7 +141,7 @@ constraints:
   - item: 認可
     constraint: 制限なし（`127.0.0.1` でだけ待ち受ける）
   - item: タイムアウト
-    constraint: project-index への問い合わせを制限時間で打ち切り、打ち切ったら project-index につながらないときと同じ 503 と理由を返す
+    constraint: project-index への問い合わせを制限時間で打ち切り、打ち切ったら project-index につながらないときと同じ 503 と理由を返却する
     decided_by: NFR-155-1#requirements[project-index への問い合わせの制限時間]
   - item: JSON のキー
     constraint: レスポンスのキーは camelCase。パス・クエリのパラメータ名は変えない

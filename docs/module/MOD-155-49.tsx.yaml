@@ -10,7 +10,7 @@ components:
     container: features/settings/settings/settings-screen.tsx
     usecase: 配信元を設定する
     role: 画面
-    summary: 端末の設定の取得を `useSuspenseQuery` で読み、配信元の一覧・キーボードのセクション・ダイアログを並べる
+    summary: 端末の設定の取得を `useSuspenseQuery` で参照し、配信元の一覧・キーボードのセクション・ダイアログを並べる
     state:
       - name: dialog
         type: '{kind: "edit"; index: number | null} | {kind: "remove"; index: number} | null'
@@ -22,7 +22,7 @@ components:
         initial: 'false'
         description: ショートカットの一覧
         notes: '`useState`'
-    description: 読み込み中の表示は、取得の待ちが 1 秒を超えたときだけ配信元の一覧の位置に配信元の一覧の読み込み中の表示を出す（遅らせた読み込み中の判定）。画面の先頭に本文へのスキップを置く。1 文字のショートカットのスイッチは `usePreferencesStore` の `singleKey`。文書の画面に戻るは `useLastDocStore` の直前の文書の URL（無ければ配信中の先頭の配信元のトップ）。端末の設定の取得の `version` を配信元のダイアログと削除の確認のダイアログへ渡す
+    description: 読み込み中の表示は、取得の待ちが 1 秒を超えたときだけ配信元の一覧の位置に配信元の一覧の読み込み中の表示を出す（遅らせた読み込み中の判定）。画面の先頭に本文へのスキップを配置する。1 文字のショートカットのスイッチは `usePreferencesStore` の `singleKey`。文書の画面に戻るは `useLastDocStore` の直前の文書の URL（無ければ配信中の先頭の配信元のトップ）。端末の設定の取得の `version` を配信元のダイアログと削除の確認のダイアログへ指定する
     unit_tests:
       - name: test_settings_screen
         case: 正常
@@ -39,13 +39,13 @@ components:
       - name: test_settings_screen_when_single_key_off
         case: 正常
         summary: 1 文字のショートカットを止める
-        condition: スイッチを外して `?` を押す
+        condition: スイッチを除外して `?` を押す
         mock: MSW のハンドラ
         expected: ショートカットの一覧が開かない
       - name: test_settings_screen_when_project_index_failed
         case: 正常
         summary: project-index から受け取れなかった理由の種類を出す
-        condition: 端末の設定の取得が、`projectIndex.kind` が `failed` の 502 と、`timeout` の 503 を返す
+        condition: 端末の設定の取得が、`projectIndex.kind` が `failed` の 502 と、`timeout` の 503 を返却する
         mock: MSW のハンドラ
         expected: 見出しがそれぞれ `project-index が要求を処理できませんでした`・`project-index から応答がありませんでした` で、`project-index を起動してから` の案内を出さない
 refs:

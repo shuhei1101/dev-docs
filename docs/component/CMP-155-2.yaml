@@ -15,7 +15,7 @@ states:
       - name: commentCount
         value: '2'
   - name: DocViewNarrow
-    description: 文書の画面を置いた場所の幅が 48rem 未満。サイドバーを開くボタンを出し、リビジョンと画面名をアイコンだけにする
+    description: 文書の画面を配置した場所の幅が 48rem 未満。サイドバーを開くボタンを出し、リビジョンと画面名をアイコンだけにする
     args:
       - name: screen
         value: doc-view
@@ -24,7 +24,7 @@ states:
       - name: commentCount
         value: '2'
     notes:
-      幅: ストーリーのデコレーターで幅 390px の枠に置く
+      幅: ストーリーのデコレーターで幅 390px の枠に配置する
   - name: DocViewNoComments
     description: コメントが 0 件で、件数を出さない
     args:
@@ -56,7 +56,7 @@ states:
       - name: currentSource
         value: sample
   - name: NotFoundNarrow
-    description: 見つからない画面を幅 48rem 未満の場所に置く
+    description: 見つからない画面を幅 48rem 未満の場所に配置する
     args:
       - name: screen
         value: not-found
@@ -82,7 +82,7 @@ args:
     type: 列挙
     required: true
     choices: '`doc-view` / `settings` / `not-found`'
-    description: 置く画面。`settings` は配信元・リビジョンの切り替え・検索・コメント・設定を出さない。`not-found` はコメントを出さない。`doc-view` だけが狭い幅でサイドバーを開くボタンを出す
+    description: 配置する画面。`settings` は配信元・リビジョンの切り替え・検索・コメント・設定を出さない。`not-found` はコメントを出さない。`doc-view` だけが狭い幅でサイドバーを開くボタンを出す
   - name: sources
     type: オブジェクトの配列
     required: false
@@ -125,7 +125,7 @@ events:
   - name: refSelect
     when: リビジョンのメニューの項目を選んだ
     value: ブランチ名・タグ名・commit
-    description: 同じ文書をそのリビジョンで開き直す
+    description: 同じ文書をそのリビジョンで再度開く
   - name: compareStart
     when: リビジョンのメニューの「別のリビジョンと比較」を選んだ
     description: 文書の画面の差分の比較元・比較先の選択を出す
@@ -144,7 +144,7 @@ events:
     description: 明暗を切り替えて保つ
 accessibility:
   - アイコンだけのボタンは `aria-label` を持つ（文書の一覧を開く・設定・明暗を固定する・`コメント {件数} 件`）
-  - 配信元・リビジョンのボタンの読み上げ名に今の値を含める（`配信元を切り替える。今は {ID}`・`リビジョンを切り替える。今は {ref}`）。見える値に全角の括弧を隣接させると axe の `label-content-name-mismatch` に当たる。メニューの今の項目は `aria-current`
+  - 配信元・リビジョンのボタンの読み上げ名に今の値を含める（`配信元を切り替える。今は {ID}`・`リビジョンを切り替える。今は {ref}`）。見える値に全角の括弧を隣接させると axe の `label-content-name-mismatch` に該当する。メニューの今の項目は `aria-current`
   - 検索のボタンは `aria-keyshortcuts="Control+K /"` を持ち、キーを表示する（読み上げ名は `検索 Ctrl K`）
   - 明暗のボタンは `aria-pressed` で固定しているかを示す
   - メニューはキーボードだけで開閉・選択でき、Esc で閉じてボタンへフォーカスを戻す

@@ -1,6 +1,6 @@
 id: MOD-155-184
 title: 開発ドキュメントサーバー / 共通 / errors.py
-lead: '`DevDocsError` と、MCP・画面が返すエラーの階層。'
+lead: '`DevDocsError` と、MCP・画面が返却するエラーの階層。'
 test_files:
   - tests/unit/dev_docs/shared/test_errors.py
 diagrams:
@@ -27,14 +27,14 @@ data_models:
     container: shared/errors.py
     usecase: 共通
     role: DTO
-    summary: 違反 1 件の項目のパス・決まり・直し方
-    description: '`@dataclass(frozen=True, slots=True, kw_only=True)`。検査・設定の検証・書き込みの失敗が返す違反の 1 件。'
+    summary: 違反 1 件の項目のパス・決まり・修正方法
+    description: '`@dataclass(frozen=True, slots=True, kw_only=True)`。検査・設定の検証・書き込みの失敗が返却する違反の 1 件。'
     properties:
       - name: path
         title: 項目のパス
         type: str
         access: 公開
-        description: 違反した項目のパス（`documents[0].paths`・`operations[1].set.name` の形）
+        description: 違反した項目のパス（`documents[0].paths`・`operations[1].set.name` の形式）
         example: documents[0].paths
       - name: rule
         title: 決まり
@@ -47,7 +47,7 @@ data_models:
         type: str
         access: 公開
         default: '""'
-        description: 直し方の案内。分からないときは空
+        description: 修正方法の案内。分からないときは空
       - name: index
         title: 操作の添字
         type: int | None
@@ -71,7 +71,7 @@ classes:
     inherits: Exception
     description: |-
       管理の MCP はこの例外を `isError: true` の本文に、画面の API は RFC 9457 の problem+json に変換する（管理の MCP の『ツールのエラーの変換』・起動の『例外の変換の登録』）。
-      下の表の子クラスはどれもこの基底を継承し、プロパティを足さない限り `name` と `message` だけを持つ。
+      下の表の子クラスはどれもこの基底を継承し、プロパティを追加しない限り `name` と `message` だけを持つ。
 
       | 子クラス | 論理名 | 追加のプロパティ | HTTP |
       | --- | --- | --- | --- |
@@ -87,11 +87,11 @@ classes:
       | `ScreenBuildMissingError` | 画面のビルドが無い | - | 503 |
       | `ProjectIndexUnreachableError` | project-index につながらない | `address: str`・`reason: str`・`kind: Literal["unreachable", "timeout"]`（既定は `unreachable`） | 503 |
       | `ProjectIndexRejectedError` | project-index が受け付けない | `violations: list[Violation]` | 422 |
-      | `ProjectIndexResponseError` | project-index の想定しない応答 | `status_code: int`・`summary: str`・`address: str`・`reason: str`（project-index の `detail`。読めなければ `summary`） | 502 |
+      | `ProjectIndexResponseError` | project-index の想定しない応答 | `status_code: int`・`summary: str`・`address: str`・`reason: str`（project-index の `detail`。参照できなければ `summary`） | 502 |
 
       `ProjectIndexUnreachableError` の `message` は `kind` が `unreachable` のとき `project-index（{address}）に接続できませんでした。{reason}`、`timeout` のとき `project-index（{address}）から応答がありませんでした。{reason}`。`next_steps` は `unreachable` のとき `project-index を起動してから、再読み込みしてください。`、`timeout` のとき `しばらく待ってから、再読み込みしてください。`。
       `ProjectIndexResponseError` の画面の API の `detail` は `project-index（{address}）が要求を処理できませんでした。{reason}`（起動の『例外の変換の登録』）。
-      読み書きの権限・書き込み・検査・配信元の設定の読み込みのエラーは、それを送る処理ごと project-index へ移した。
+      読み書きの権限・書き込み・検査・配信元の設定の読み込みのエラーは、それを送信する処理ごと project-index へ移した。
     properties:
       - name: name
         title: エラーの名前
@@ -102,7 +102,7 @@ classes:
         title: 本文
         type: str
         access: 公開
-        description: 原因を 1〜2 文で書いた本文
+        description: 原因を 1〜2 文で記載した本文
       - name: next_steps
         title: 次の手
         type: list[str]
@@ -113,18 +113,18 @@ classes:
         title: HTTP のステータス
         type: int
         access: 公開
-        description: 画面の API で返すステータス（説明の表の HTTP の列）。クラスの属性で持つ
+        description: 画面の API で返却するステータス（説明の表の HTTP の列）。クラスの属性で持つ
     methods:
       - name: details
         title: 詳細
         kind: メソッド
-        summary: 子クラスが持つ追加のプロパティを辞書で返す
+        summary: 子クラスが持つ追加のプロパティを辞書で返却する
         scope: public
         returns:
           type: dict[str, Any]
           description: 追加のプロパティ名 → 値。`Violation` は辞書にする
         process: |-
-          1. `dataclasses.fields` で子クラスの追加のプロパティを並べ、名前 → 値の辞書にして返す
+          1. `dataclasses.fields` で子クラスの追加のプロパティを並べ、名前 → 値の辞書にして返却する
           2. 値が `Violation` のときは `dataclasses.asdict` で辞書にする
         unit_tests:
           - name: test_dev_docs_error_details

@@ -13,7 +13,7 @@ catalogs:
     entries:
       - name: mount
         kind: 関数
-        purpose: 要素へ Markdown を描き、後片付けの関数を返す
+        purpose: 要素へ Markdown を描き、後片付けの関数を返却する
       - name: commentStore.load / save
         kind: コールバック
         purpose: コメントの読み込みと追加
@@ -27,16 +27,16 @@ catalogs:
         description: '[mdmark#222](https://github.com/shuhei1101/mdmark/issues/222) で入り、v0.10.0 の master にある。変わったブロックは `.mdmark-diff-block[data-kind="add"]`（変更後の内容）、比較元にだけあるブロックは `[data-kind="del"]` で描く'
       - name: onColumnsChange
         kind: コールバック
-        purpose: 表の列の出し入れを知らせる
+        purpose: 表の列の出し入れを通知する
         description: '[mdmark#222](https://github.com/shuhei1101/mdmark/issues/222) で入り、v0.10.0 の master にある。引数は `{tableIndex, hidden}` で、`tableIndex` は列の表示・非表示の機能を持つ表（JSON のマーカーは `features.columns` か `columns.{列名}.hidden` で付き、`features.columns.enabled` が `false` なら付かない。前の記載方法は `+columns`）だけの出る順の番号。列の出し入れは `テーブル設定` のボタンで開くダイアログの `「{列名}」を隠す`・`「{列名}」を表示` のボタンで行い、隠した列があるときはボタンの読み上げ名が `テーブル設定（{件数} 列を非表示）` になる'
       - name: reloadComments / focusComment
         kind: メソッド
-        purpose: コメントのマーカーの描き直しとスクロール
+        purpose: コメントのマーカーの再描画とスクロール
         description: '[mdmark#222](https://github.com/shuhei1101/mdmark/issues/222) で入り、v0.10.0 の master にある'
       - name: opts.index
         kind: 引数
-        purpose: 索引の `terms`（用語）と `docs`（文書の別名）で本文の語にツールチップを付ける
-        description: '`mount` の `opts.index`。形は mdmark の `docs/リファレンス/索引.md`（`terms[]` は `id`・`term`・`meaning` が必須で `aliases`・`avoid` を持てる。`docs[]` は `id`・`path`・`title` が必須で `description`・`aliases` を持てる）。Schema に合わない項目は mdmark が除いて使う。文書の取得の `aliases` を `toMdmarkIndex` で読み替えて渡す'
+        purpose: 索引の `terms`（用語）と `docs`（文書の別名）で本文の単語にツールチップを付ける
+        description: '`mount` の `opts.index`。形は mdmark の `docs/リファレンス/索引.md`（`terms[]` は `id`・`term`・`meaning` が必須で `aliases`・`avoid` を持てる。`docs[]` は `id`・`path`・`title` が必須で `description`・`aliases` を持てる）。Schema に合わない項目は mdmark が除いて使用する。文書の取得の `aliases` を `toMdmarkIndex` で読み替えて指定する'
         status: planned
       - name: '<!-- map -->'
         kind: 記法
@@ -47,23 +47,23 @@ catalogs:
     entries:
       - name: mdmark check --text
         kind: コマンド
-        purpose: Markdown の文字列を、描画時の書き方の警告・知らない印・図の配置のずれで点検する
-        description: '[mdmark#328](https://github.com/shuhei1101/mdmark/pull/328) で入り、v0.10.0 から使用できる。npm のレジストリに公開されず、Node 24 以降で動く。設定ファイルを渡さないときは、起動したフォルダから上へ `mdmark.config.yaml` を探し、無ければ既定の設定で点検する'
+        purpose: Markdown の文字列を、描画時の記載方法の警告・知らないマーカー・図の配置のずれで点検する
+        description: '[mdmark#328](https://github.com/shuhei1101/mdmark/pull/328) で入り、v0.10.0 から使用できる。npm のレジストリに公開されず、Node 24 以降で動く。設定ファイルを指定しないときは、起動したフォルダから上へ `mdmark.config.yaml` を探し、無ければ既定の設定で点検する'
         params:
           - name: --text
             type: str
             required: true
-            description: 点検する Markdown。`-` を渡すと標準入力から読む
+            description: 点検する Markdown。`-` を指定すると標準入力から読み込む
           - name: --config
             type: str
             required: false
             default: なし（起動したフォルダから上へ `mdmark.config.yaml` を探す）
-            description: 使う設定ファイルのパス
+            description: 使用する設定ファイルのパス
         returns:
           - name: 標準出力
             type: str
             description: 'ずれ 1 つを `-:{行}: {種類}: {内容}` の 1 行で並べ、最後に `ずれ {件数} 件` の行を出す'
-            notes: 内容は、何が合わないかと直し方の日本語の 1 文。`diagram_invalid`・`syntax_warning` は描画時の書き方の警告と同じ文
+            notes: 内容は、何が合わないかと修正方法の日本語の 1 文。`diagram_invalid`・`syntax_warning` は描画時の記載方法の警告と同じ文
           - name: 終了コード
             type: int
             description: '`0` はずれが 0 件。`1` はずれが 1 件以上'
@@ -101,5 +101,5 @@ upstream: shuhei1101/mdmark
 verification:
   state: 済
   date: '2026-11-17'
-  detail: '2026-11-17 に、jsDelivr の `@73ca260`（7 桁の短い SHA）・`@73ca260319a1445b6cceb6840fd4b555f007a75d`（40 桁の SHA）・`@v0.13.0`・`@develop` の `dist/index.js`・`dist/index.css` が、どれも 200 を返すことを `curl` で確かめた。v0.13.0 のタグの jsDelivr の `dist/index.js`・`dist/index.css` が 200 を返し、`docs/guide/API.md` の `mount` の `opts.config`・`opts.index`・`opts.commentStore`・`opts.baseMarkdown`・`opts.onColumnsChange` と、戻り値の `update`・`destroy`・`reloadComments`・`focusComment` が v0.10.0 と同じ引数であることを確かめた。`<!-- flow -->`・`<!-- sequence -->` は v0.13.0 で廃止され、描かずに記載の警告になる。スキーマ駆動の変換が出す map の範囲（`flowchart` のクラス `script`・`data`・`external`・`start`・`question`・`action`・`result`、補足の `notes` と `layout` の `line` の `read`・`write`・`reply`・`loop`、`subgraph`、`stateDiagram-v2` の `state "…" as s{n}`・`[*]`、`erDiagram` の列のキー・`参照:` のコメント・関連）と、手で記載する `sequenceDiagram`・`graph` の map の範囲を、`devDependencies` の v0.13.0 の CLI の `check --text -` に `mdmark-map.json` を `map` にした設定を `--config` で渡して点検し、ずれが 0 件だった（設定を渡さないと `map_unknown_class` が出る）。以下は v0.10.0 で確認した内容。v0.10.0 の master を jsDelivr から読み、画面の結合テストの環境の Chromium で、`テーブル設定` のボタン・ダイアログの `「{列名}」を隠す`・`「{列名}」を表示` のボタンと、隠した列があるときの読み上げ名 `テーブル設定（1 列を非表示）` を確認した。`mount` は `commentStore.load({docId})`・`save({docId, comment})` を受け、`update` は Markdown の文字列を受ける。`comments` の機能は既定でオフのため、`config.features.comments` を `true` にして渡す'
+  detail: '2026-11-17 に、jsDelivr の `@73ca260`（7 桁の短い SHA）・`@73ca260319a1445b6cceb6840fd4b555f007a75d`（40 桁の SHA）・`@v0.13.0`・`@develop` の `dist/index.js`・`dist/index.css` が、どれも 200 を返却することを `curl` で確認した。v0.13.0 のタグの jsDelivr の `dist/index.js`・`dist/index.css` が 200 を返却し、`docs/guide/API.md` の `mount` の `opts.config`・`opts.index`・`opts.commentStore`・`opts.baseMarkdown`・`opts.onColumnsChange` と、戻り値の `update`・`destroy`・`reloadComments`・`focusComment` が v0.10.0 と同じ引数であることを確認した。`<!-- flow -->`・`<!-- sequence -->` は v0.13.0 で廃止され、描かずに記載の警告になる。スキーマ駆動の変換が出す map の範囲（`flowchart` のクラス `script`・`data`・`external`・`start`・`question`・`action`・`result`、補足の `notes` と `layout` の `line` の `read`・`write`・`reply`・`loop`、`subgraph`、`stateDiagram-v2` の `state "…" as s{n}`・`[*]`、`erDiagram` の列のキー・`参照:` のコメント・関連）と、手で記載する `sequenceDiagram`・`graph` の map の範囲を、`devDependencies` の v0.13.0 の CLI の `check --text -` に `mdmark-map.json` を `map` にした設定を `--config` で指定して点検し、ずれが 0 件だった（設定を指定しないと `map_unknown_class` が出る）。以下は v0.10.0 で確認した内容。v0.10.0 の master を jsDelivr から読み込み、画面の結合テストの環境の Chromium で、`テーブル設定` のボタン・ダイアログの `「{列名}」を隠す`・`「{列名}」を表示` のボタンと、隠した列があるときの読み上げ名 `テーブル設定（1 列を非表示）` を確認した。`mount` は `commentStore.load({docId})`・`save({docId, comment})` を受け、`update` は Markdown の文字列を受ける。`comments` の機能は既定でオフのため、`config.features.comments` を `true` にして指定する'
 official_url: https://github.com/shuhei1101/mdmark

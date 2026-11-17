@@ -1,5 +1,5 @@
 id: MOD-155-82
-title: 開発ドキュメントサーバー / 入口 / __main__.py
+title: 開発ドキュメントサーバー / エントリーポイント / __main__.py
 lead: '`dev-docs` コマンドの引数の組み立てと main。'
 test_files:
   - tests/unit/dev_docs/test_main.py
@@ -8,7 +8,7 @@ constants:
     title: コマンド名
     container: __main__.py
     usecase: 共通
-    summary: ヘルプとバージョンの表示に使うコマンド名
+    summary: ヘルプとバージョンの表示に使用するコマンド名
     value: '"dev-docs"'
 functions:
   - name: build_parser
@@ -16,7 +16,7 @@ functions:
     kind: 関数
     container: __main__.py
     usecase: 共通
-    role: 入口
+    role: エントリーポイント
     scope: public
     summary: '`--version` とサブコマンドの登録先を持つ引数の解析器を作る'
     returns:
@@ -24,12 +24,12 @@ functions:
       description: '`prog` が `PROG` の解析器'
     process: |-
       1. `prog` を `PROG` にして解析器を作る
-      2. `--version` を足す。表示は `{PROG} {バージョン}` で、バージョンは `DIST_NAME` の配布のメタデータから引く（`importlib.metadata.version`。`uv sync` で配布を入れた環境で動かす前提で、入っていないときの `PackageNotFoundError` はそのまま伝える）
-      3. サブコマンドの登録先を `dest="cmd"`・`required=True` で作る。各サブコマンドは `handler`（`argparse.Namespace` を受けて終了コードを返す関数）を既定値に持つ
-         - `serve` を登録する。引数は持たず（設定は環境変数で渡す）、`handler` は起動の『待ち受けの開始』（`main.run_serve`）
+      2. `--version` を追加する。表示は `{PROG} {バージョン}` で、バージョンは `DIST_NAME` の配布のメタデータから取得する（`importlib.metadata.version`。`uv sync` で配布を入れた環境で動かす前提で、入っていないときの `PackageNotFoundError` はそのまま伝える）
+      3. サブコマンドの登録先を `dest="cmd"`・`required=True` で作る。各サブコマンドは `handler`（`argparse.Namespace` を受けて終了コードを返却する関数）を既定値に持つ
+         - `serve` を登録する。引数は持たず（設定は環境変数で指定する）、`handler` は起動の『待ち受けの開始』（`main.run_serve`）
          - `migrate` を登録する。`--plan` と `--record` は排他のグループ（`store_true`）、`--project-index`（`sources` を移す先の project-index のアドレス、既定 `None`）、`--allow-destructive`（`store_true`）を持ち、`handler` は起動の『設定の移し替えの実行』（`main.run_migrate`）
          - 配信元の設定の移し替え（`--source`）・`files`・`prompt-doc` は project-index へ移したため持たない
-      4. 解析器を返す
+      4. 解析器を返却する
     unit_tests:
       - name: test_build_parser
         case: 正常
@@ -39,19 +39,19 @@ functions:
         expected: 戻り値の `prog` が `"dev-docs"`
       - name: test_build_parser_when_serve
         case: 正常
-        summary: serve の処理を引く
+        summary: serve の処理を取得する
         condition: '`["serve"]` を解析する'
         mock: なし
         expected: '`cmd` が `"serve"`、`handler` が `dev_docs.main.run_serve`'
       - name: test_build_parser_when_migrate
         case: 正常
-        summary: migrate の引数と処理を引く
+        summary: migrate の引数と処理を取得する
         condition: '`["migrate", "--plan", "--project-index", "http://127.0.0.1:8786"]` を解析する'
         mock: なし
         expected: '`cmd` が `"migrate"`、`plan` が `True`、`record`・`allow_destructive` が `False`、`project_index` が `http://127.0.0.1:8786`、`handler` が `dev_docs.main.run_migrate`'
       - name: test_build_parser_when_plan_and_record
         case: 異常
-        summary: --plan と --record は同時に渡せない
+        summary: --plan と --record は同時に指定できない
         condition: '`["migrate", "--plan", "--record"]` を解析する'
         mock: なし
         expected: '`SystemExit` のコードが 2'
@@ -62,13 +62,13 @@ functions:
         mock: なし
         expected: どれも `SystemExit` のコードが 2
   - name: main
-    title: 入口
+    title: エントリーポイント
     kind: 関数
     container: __main__.py
     usecase: 共通
-    role: 入口
+    role: エントリーポイント
     scope: public
-    summary: 引数を解析し、選ばれたサブコマンドの処理を呼んで終了コードを返す
+    summary: 引数を解析し、選ばれたサブコマンドの処理を呼んで終了コードを返却する
     args:
       - name: argv
         title: 引数の並び
@@ -83,13 +83,13 @@ functions:
       ```
     returns:
       type: int
-      description: サブコマンドの処理が返した終了コード
+      description: サブコマンドの処理が返却した終了コード
     process: |-
       1. 引数を解析する（引数の組み立て）
          - `--version` の場合、`dev-docs {バージョン}` を標準出力へ出して `SystemExit(0)` で終わる
-         - `--help` の場合、使い方とサブコマンドの一覧を標準出力へ出して `SystemExit(0)` で終わる
-         - サブコマンドが無い・知らない場合、使い方と誤りを標準エラーへ出して `SystemExit(2)` で終わる
-      2. 解析結果の `handler` を呼び、その終了コードを返す
+         - `--help` の場合、使用方法とサブコマンドの一覧を標準出力へ出して `SystemExit(0)` で終わる
+         - サブコマンドが無い・知らない場合、使用方法と誤りを標準エラーへ出して `SystemExit(2)` で終わる
+      2. 解析結果の `handler` を呼び、その終了コードを返却する
     callees:
       - MOD-155-82#functions[build_parser]
     unit_tests:
@@ -97,11 +97,11 @@ functions:
         case: 正常
         summary: バージョンを出す
         condition: '`["--version"]`'
-        mock: なし（`uv sync` で入れた dev-docs の配布のメタデータを読む）
+        mock: なし（`uv sync` で入れた dev-docs の配布のメタデータを参照する）
         expected: '`SystemExit` のコードが 0、標準出力が `dev-docs {pyproject.toml の version}`'
       - name: test_main_when_help
         case: 正常
-        summary: 使い方を出す
+        summary: 使用方法を出す
         condition: '`["--help"]`'
         mock: なし
         expected: '`SystemExit` のコードが 0、標準出力が `usage: dev-docs` で始まる'

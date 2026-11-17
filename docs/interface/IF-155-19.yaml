@@ -8,7 +8,7 @@ flows:
     summary: 配信元を追加して保存し、再起動せずに配信する
     setup:
       - name: Mock
-        description: 'テストの中で起動した project-index（shuhei1101/project-index の develop の `42632c5`（shuhei1101/project-index#54 をマージした commit）。一時フォルダの端末の設定を `PROJECT_INDEX_CONFIG` で指し、空きポートで子プロセスとして起動する）が、端末の設定の行と配信元の状態を返し、保存を受ける。dev-docs のアプリを HTTP のテストのクライアントで呼ぶ'
+        description: 'テストの中で起動した project-index（shuhei1101/project-index の develop の `42632c5`（shuhei1101/project-index#54 をマージした commit）。一時フォルダの端末の設定を `PROJECT_INDEX_CONFIG` で指し、空きポートで子プロセスとして起動する）が、端末の設定の行と配信元の状態を返却し、保存を受ける。dev-docs のアプリを HTTP のテストのクライアントで呼ぶ'
       - name: 端末の設定
         description: project-index の端末の設定の `sources` に sample の 1 行
       - name: 追加する配信元
@@ -32,8 +32,8 @@ flows:
     expected:
       - 200 で、sample と extra が `serving`
       - project-index の端末の設定のファイルの `sources` が sample と extra の 2 行で、sample の行の値は送信したとおり
-      - 文字列で送った extra の `config` が、project-index の端末の設定のファイルでは要素 1 つの配列になる
-      - 再起動せずに `/_api/sources/extra/docs` が 200 を返す
+      - 文字列で送信した extra の `config` が、project-index の端末の設定のファイルでは要素 1 つの配列になる
+      - 再起動せずに `/_api/sources/extra/docs` が 200 を返却する
       - 200 の `version` が、保存した後の端末の設定の取得の `version` と同じ
     test: test_normal
   - name: 正常系（配信を止める）
@@ -60,7 +60,7 @@ flows:
     expected:
       - extra が `disabled`
       - project-index の端末の設定のファイルの extra の行の `enabled` が `false`
-      - '`/_api/sources/extra/docs` が 404、`/_api/sources/sample/docs` が 200 を返す'
+      - '`/_api/sources/extra/docs` が 404、`/_api/sources/sample/docs` が 200 を返却する'
     test: test_normal_when_source_disabled
   - name: 正常系（配信元を削除する）
     summary: 行を除いて保存し、配信元のフォルダは残す
@@ -86,10 +86,10 @@ flows:
     expected:
       - project-index の端末の設定のファイルの `sources` が sample だけで、sample の行の値は変わらない
       - extra のフォルダのファイルは変わらない
-      - '`/_api/sources/extra/docs` が 404 を返す'
+      - '`/_api/sources/extra/docs` が 404 を返却する'
     test: test_normal_when_source_deleted
   - name: 正常系（追加した配信元が検証に通らない）
-    summary: 端末の設定は保存し、読み直しの検証で配信元を外す
+    summary: 端末の設定は保存し、再読み込みの検証で配信元を除外する
     setup:
       - name: Mock
         description: なし
@@ -113,7 +113,7 @@ flows:
     expected:
       - 200 で、broken が `not_served`、`errors` に `documents[0].paths` がある
       - project-index の端末の設定のファイルの `sources` に broken の行がある
-      - '`/_api/sources/broken/docs` が 404、`/_api/sources/sample/docs` が 200 を返す'
+      - '`/_api/sources/broken/docs` が 404、`/_api/sources/sample/docs` が 200 を返却する'
     test: test_normal_when_added_source_invalid
   - name: 異常系（別のオリジン・403）
     summary: 画面と別のオリジンからの保存を断る
@@ -132,12 +132,12 @@ flows:
         E-->>C: 403
       ```
     expected:
-      - 403 を返す
-      - project-index の端末の設定のファイルが変わらず、`/_api/sources/sample/docs` は 200 を返す
+      - 403 を返却する
+      - project-index の端末の設定のファイルが変わらず、`/_api/sources/sample/docs` は 200 を返却する
       - '`Origin` が無く `Sec-Fetch-Site: cross-site` の要求も 403'
     test: test_error_when_cross_origin
   - name: 異常系（本文の型の誤り・400）
-    summary: 型の合わない本文を project-index へ送らずに断り、違反を全て返す
+    summary: 型の合わない本文を project-index へ送信せずに断り、違反を全て返却する
     setup:
       - name: Mock
         description: なし
@@ -155,13 +155,13 @@ flows:
       ```
     expected:
       - 400 で、`errors` に `sources[1].config` と `sources[1].enabled` がそれぞれの理由つきである
-      - project-index の端末の設定のファイルが変わらず、`/_api/sources/sample/docs` は 200 を返す
+      - project-index の端末の設定のファイルが変わらず、`/_api/sources/sample/docs` は 200 を返却する
     test: test_error_when_body_invalid
   - name: 異常系（project-index が保存を断る・422・502）
-    summary: project-index が 422 を返したら違反をそのまま 422 で返し、それ以外の失敗は 502 で返す
+    summary: project-index が 422 を返却したら違反をそのまま 422 で返却し、それ以外の失敗は 502 で返却する
     setup:
       - name: Mock
-        description: 1 回目は `errors[]` つきの 422、2 回目は 500 を返す project-index の端末の設定の API のモック
+        description: 1 回目は `errors[]` つきの 422、2 回目は 500 を返却する project-index の端末の設定の API のモック
       - name: 入力
         description: 画面と同じ `Origin` で、dev-docs のスキーマに通る sample と extra の 2 行
     flow: |-
@@ -181,14 +181,14 @@ flows:
         E-->>C: 502（project-index の応答の要約）
       ```
     expected:
-      - 1 回目が 422 で、`errors` がモックの返した `errors[]` と同じ
+      - 1 回目が 422 で、`errors` がモックの返却した `errors[]` と同じ
       - 2 回目が 502 で、モックの応答のステータス 500 と要約がある
     test: test_error_when_project_index_rejects
   - name: 異常系（他の書き換えが入っている・409）
-    summary: 取得した後に他のプロセスが端末の設定を書き換えていたら、保存せずに 409 を返す
+    summary: 取得した後に他のプロセスが端末の設定を書き換えていたら、保存せずに 409 を返却する
     setup:
       - name: Mock
-        description: '`expectedVersion` が `v1` の保存に 409（`current`: `v2`）を、`v2` の保存に 200（`version`: `v3`）を返す project-index の端末の設定の API のモック。受けた本文を記録する'
+        description: '`expectedVersion` が `v1` の保存に 409（`current`: `v2`）を、`v2` の保存に 200（`version`: `v3`）を返却する project-index の端末の設定の API のモック。受けた本文を記録する'
         notes: 他のプロセスの書き換えの代わり
       - name: 入力
         description: '画面と同じ `Origin` で、sample と extra の 2 行と `expectedVersion`: `v1`'
@@ -207,14 +207,14 @@ flows:
     expected:
       - 409 で、`current` が `v2`
       - モックが受けた本文の `expectedVersion` が `v1`
-      - '`expectedVersion` を `v2` にして送信し直すと 200 で、応答の `version` が `v3`'
+      - '`expectedVersion` を `v2` にして再送信すると 200 で、応答の `version` が `v3`'
     test: test_error_when_version_conflict
-lead: '#17 の設定画面が配信元の追加・編集・削除の後の `sources[]` を丸ごと送信する。スキーマに通ったときだけ project-index の端末の設定の API へ保存を依頼し、読み直した後の配信元の状態を返す。'
+lead: '#17 の設定画面が配信元の追加・編集・削除の後の `sources[]` を丸ごと送信する。スキーマに通ったときだけ project-index の端末の設定の API へ保存を依頼し、再読み込みした後の配信元の状態を返却する。'
 identifier: put_settings_sources
 permissions: 画面と同じオリジンからの要求だけ
 idempotent: true
 side_effects: project-index に端末の設定の `sources` の保存を依頼する。dev-docs は端末の設定と配信元のフォルダのファイルを書き換えない
-exclusivity: dev-docs は排他しない。保存と読み直しの排他は project-index が持つ
+exclusivity: dev-docs は排他しない。保存と再読み込みの排他は project-index が持つ
 request:
   - name: sources
     type: list[Source]
@@ -232,7 +232,7 @@ request:
     type: str | list[str]
     required: true
     location: body
-    description: 配信元の設定の YAML の絶対パス。文字列でも、project-index へは要素の数によらず配列で送る
+    description: 配信元の設定の YAML の絶対パス。文字列でも、project-index へは要素の数によらず配列で送信する
   - name: sources[].enabled
     type: bool
     required: false
@@ -244,7 +244,7 @@ request:
     required: false
     default: '`[]`'
     location: body
-    description: この配信元を読める作業場所の glob
+    description: この配信元を参照できる作業場所の glob
     constraints: 空の文字列を含めない
   - name: sources[].scope.write
     type: list[str]
@@ -263,7 +263,7 @@ request:
     required: false
     default: '`true`'
     location: body
-    description: '`scope` に当たらない作業場所からも `outside_scope: true` で作業範囲の外（参考）として読めるか'
+    description: '`scope` に該当しない作業場所からも `outside_scope: true` で作業範囲の外（参考）として読み込めるか'
     notes: '`false` の配信元は `scope` の外から一切読めない'
   - name: expectedVersion
     type: str
@@ -300,45 +300,45 @@ response_example: |-
     {"id": "extra", "status": "serving"}
   ]}
   ```
-response_notes: 配信元の設定が検証に通らない配信元も、端末の設定がスキーマに通れば保存し、`not_served` として返す。
+response_notes: 配信元の設定が検証に通らない配信元も、端末の設定がスキーマに通れば保存し、`not_served` として返却する。
 status_codes:
   - code: '503'
     condition: project-index につながらない
     notes: 'つながらなかった project-index のアドレスと理由（`projectIndex.address`・`projectIndex.reason`）。`detail` は `project-index（{address}）に接続できませんでした。{reason}`'
   - code: '200'
-    condition: 保存して配信元を読み直した（読み直しで外した配信元があっても 200）
+    condition: 保存して配信元を再読み込みした（再読み込みで除外した配信元があっても 200）
   - code: '403'
     condition: 画面と別のオリジンからの要求
   - code: '400'
     condition: 要求の本文の型が合わない
     notes: '`errors[]` に違反したキーのパスと理由を全て並べる'
   - code: '422'
-    condition: project-index が 422 を返した（`id` の形・`scope` の空の文字列など、行の値の検証は project-index が行う）
-    notes: project-index の `errors[]` をそのまま返す
+    condition: project-index が 422 を返却した（`id` の形・`scope` の空の文字列など、行の値の検証は project-index が行う）
+    notes: project-index の `errors[]` をそのまま返却する
   - code: '502'
-    condition: project-index が 200・422 以外を返した
+    condition: project-index が 200・422 以外を返却した
     notes: project-index の応答のステータスと要約
   - code: '409'
-    condition: '`expectedVersion` が project-index の今の端末の設定の内容のバージョンと違う（project-index が 409 を返した）'
-    notes: project-index の今の内容のバージョンを `current` で返す。端末の設定は変わらない
-error_format: RFC 9457 の `application/problem+json`。拡張メンバーは camelCase（`nextSteps`・`errors[]`）。検証の違反は `errors[]` に `{path, reason}` で並べる（`path` は `sources[1].id` の形）
+    condition: '`expectedVersion` が project-index の今の端末の設定の内容のバージョンと違う（project-index が 409 を返却した）'
+    notes: project-index の今の内容のバージョンを `current` で返却する。端末の設定は変わらない
+error_format: RFC 9457 の `application/problem+json`。拡張メンバーは camelCase（`nextSteps`・`errors[]`）。検証の違反は `errors[]` に `{path, reason}` で並べる（`path` は `sources[1].id` の形式）
 constraints:
   - item: オリジンの確認
     constraint: '`Origin` が画面のオリジンと同じか、`Origin` が無く `Sec-Fetch-Site` が `same-origin` のときだけ受ける'
   - item: 保存の依頼先
-    constraint: 保存と読み直しは project-index の端末の設定の API が行う。dev-docs は送信された行を project-index へ送り、200 のときは返った配信元の状態をそのまま返す。422 は project-index の `errors[]` を 422 で、それ以外の 200 以外は 502 で返す
+    constraint: 保存と再読み込みは project-index の端末の設定の API が行う。dev-docs は送信された行を project-index へ送信し、200 のときは返った配信元の状態をそのまま返却する。422 は project-index の `errors[]` を 422 で、それ以外の 200 以外は 502 で返却する
   - item: project-index につながらないとき
-    constraint: 503 と、つながらなかった project-index のアドレス・理由を返す。端末の設定は変わらない
+    constraint: 503 と、つながらなかった project-index のアドレス・理由を返却する。端末の設定は変わらない
   - item: 認可
     constraint: 制限なし（`127.0.0.1` でだけ待ち受ける）
   - item: タイムアウト
-    constraint: project-index への問い合わせを制限時間で打ち切り、打ち切ったら project-index につながらないときと同じ 503 と理由を返す
+    constraint: project-index への問い合わせを制限時間で打ち切り、打ち切ったら project-index につながらないときと同じ 503 と理由を返却する
     decided_by: NFR-155-1#requirements[project-index への問い合わせの制限時間]
   - item: JSON のキー
     constraint: リクエストの本文とレスポンスのキーは camelCase
   - item: operationId
     constraint: '`{tag}-{関数名}` の `settings-put_settings_sources`'
   - item: 内容のバージョンの照合
-    constraint: '`expectedVersion` を受けたときだけ project-index の PUT `/settings/sources` に指定し、照合は project-index が行う。dev-docs は内容のバージョンを記録しない。project-index の 409 は 409 と `current` で返す'
+    constraint: '`expectedVersion` を受けたときだけ project-index の PUT `/settings/sources` に指定し、照合は project-index が行う。dev-docs は内容のバージョンを記録しない。project-index の 409 は 409 と `current` で返却する'
     notes: '`expectedVersion` を指定しない保存は照合せずに保存する'
 test_file: tests/integration/server/test_put_settings_sources.py

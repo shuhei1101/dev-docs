@@ -10,7 +10,7 @@ categories:
     verification:
       state: 済
       date: '2026-10-30'
-      detail: worktree で `npm ci` を実行し、終了コード 0 で `package-lock.json` どおりに依存が入り、lefthook のフックが入ることを確かめた。`uv sync --frozen` は『取り込み後の追従（pull 後）』で確かめている。
+      detail: worktree で `npm ci` を実行し、終了コード 0 で `package-lock.json` どおりに依存が入り、lefthook のフックが入ることを確認した。`uv sync --frozen` は『取り込み後の追従（pull 後）』で確認している。
   - name: 取り込み後の追従（pull 後）
     commands: |-
       ```bash
@@ -20,7 +20,7 @@ categories:
     verification:
       state: 済
       date: '2026-10-25'
-      detail: worktree で実行し、終了コード 0 で依存が `uv.lock` どおりにそろうことを確かめた。
+      detail: worktree で実行し、終了コード 0 で依存が `uv.lock` どおりにそろうことを確認した。
   - name: 依存の追加・更新・削除
     commands: |-
       1. 本番依存を追加する
@@ -38,11 +38,11 @@ categories:
     verification:
       state: 済
       date: '2026-10-25'
-      detail: 作業ツリーの外の一時コピーで追加・開発用の追加・削除を実行し、終了コード 0 で `pyproject.toml` と `uv.lock` が更新されることを確かめた。
+      detail: 作業ツリーの外の一時コピーで追加・開発用の追加・削除を実行し、終了コード 0 で `pyproject.toml` と `uv.lock` が更新されることを確認した。
   - name: 起動・停止
     prerequisites:
-      - 取り込み後の追従（pull 後）を流してある
-      - 端末の設定（既定 `${XDG_CONFIG_HOME:-~/.config}/dev-docs/settings.yaml`。別の場所は環境変数 `DEV_DOCS_CONFIG` で渡す）がある
+      - 取り込み後の追従（pull 後）を実行してある
+      - 端末の設定（既定 `${XDG_CONFIG_HOME:-~/.config}/dev-docs/settings.yaml`。別の場所は環境変数 `DEV_DOCS_CONFIG` で指定する）がある
       - 文書の画面・設定画面を開くときは、project-index が端末の設定の `project_index`（既定 `http://127.0.0.1:8786`）で待ち受けている
     commands: |-
       1. 開発ドキュメントサーバーを起動する
@@ -51,13 +51,13 @@ categories:
       uv run dev-docs serve
       ```
 
-      2. 画面を書き換えながら見るときは、Vite の開発サーバーを起動する（`/_api` を `http://127.0.0.1:8781` へ転送する。転送先は `DEV_DOCS_PORT` を見ずに 8781 で固定なので、先に 1 を既定のポートで起動しておく）
+      2. 画面を書き換えながら確認するときは、Vite の開発サーバーを起動する（`/_api` を `http://127.0.0.1:8781` へ転送する。転送先は `DEV_DOCS_PORT` を確認せずに 8781 で固定なので、先に 1 を既定のポートで起動しておく）
 
       ```bash
       npm run dev
       ```
 
-      3. 部品のストーリーを見るときは、Storybook を起動する（`http://localhost:6006`。設定は `frontend/.storybook/`）
+      3. 部品のストーリーを確認するときは、Storybook を起動する（`http://localhost:6006`。設定は `frontend/.storybook/`）
 
       ```bash
       npm run storybook
@@ -66,7 +66,7 @@ categories:
     verification:
       state: 済
       date: '2026-11-12'
-      detail: '`DEV_DOCS_CONFIG` に `project_index` が待ち受けていないアドレスを指す端末の設定を入れて `uv run dev-docs serve` を走らせ、127.0.0.1 の `DEV_DOCS_PORT` で待ち受けて標準出力に URL を出し、標準エラーに project-index の接続先・理由と起動の案内を出すことを確かめた。画面の API が 503 の problem+json、`/_admin/mcp` の `status` が project-index につながらない旨を返し、`/mcp` が 404 で、SIGTERM で止まった（2026-11-12）。ポートの使用中（終了コード 3）と設定の違反（終了コード 2）は単体テストで確かめた。`npm run dev` を走らせ、`/` が 200 を返し、`/_api/settings/sources` が 8781 で動いているサーバーへ転送されて 200 を返すことを確かめた（2026-10-31）。`storybook dev -c frontend/.storybook`（`npm run storybook` と同じ設定）を走らせ、`index.json` にストーリー 19 件が載り、各ストーリーが描かれることを確かめた（2026-10-30）'
+      detail: '`DEV_DOCS_CONFIG` に `project_index` が待ち受けていないアドレスを指す端末の設定を入れて `uv run dev-docs serve` を走らせ、127.0.0.1 の `DEV_DOCS_PORT` で待ち受けて標準出力に URL を出し、標準エラーに project-index の接続先・理由と起動の案内を出すことを確認した。画面の API が 503 の problem+json、`/_admin/mcp` の `status` が project-index につながらない旨を返却し、`/mcp` が 404 で、SIGTERM で止まった（2026-11-12）。ポートの使用中（終了コード 3）と設定の違反（終了コード 2）は単体テストで確認した。`npm run dev` を走らせ、`/` が 200 を返却し、`/_api/settings/sources` が 8781 で動いているサーバーへ転送されて 200 を返却することを確認した（2026-10-31）。`storybook dev -c frontend/.storybook`（`npm run storybook` と同じ設定）を走らせ、`index.json` にストーリー 19 件が載り、各ストーリーが描かれることを確認した（2026-10-30）'
   - name: テスト
     refs:
       - TP-155-1#
@@ -94,10 +94,10 @@ categories:
     verification:
       state: 済
       date: '2026-11-13'
-      detail: worktree で `npm run build`・`npm run api:generate`・`npm run build-storybook` を実行し、終了コード 0 で成果物ができることを確かめた（2026-10-30）。Storybook は、ビルドだけを確かめ、ブラウザで開いて描画することは確かめていない。`uv run --frozen python scripts/build_pages.py --out tmp/pages` を Node 24 の環境で実行し、終了コード 0 で `tmp/pages/index.html` に文書 14 件（公開ドキュメント 12 件と判定フローチャート 2 件）がまとまることを確かめた（2026-11-13）
+      detail: worktree で `npm run build`・`npm run api:generate`・`npm run build-storybook` を実行し、終了コード 0 で成果物ができることを確認した（2026-10-30）。Storybook は、ビルドだけを確認し、ブラウザで開いて描画することは確認していない。`uv run --frozen python scripts/build_pages.py --out tmp/pages` を Node 24 の環境で実行し、終了コード 0 で `tmp/pages/index.html` に文書 14 件（公開ドキュメント 12 件と判定フローチャート 2 件）がまとまることを確認した（2026-11-13）
   - name: 取り込み前の検査
     commands: |-
-      `frontend/` を変えた commit では、lefthook の pre-commit が画面をビルドし直して `src/dev_docs/screen/` をステージへ戻す。
+      `frontend/` を変えた commit では、lefthook の pre-commit が画面を再ビルドして `src/dev_docs/screen/` をステージへ戻す。
     verification:
       state: 済
       date: '2026-11-08'
@@ -108,13 +108,13 @@ categories:
     commands: |-
       dev-docs のサーバーの再起動の反映作業のスクリプトは、再起動の後の待ちに次を呼ぶ（作業ディレクトリはリポジトリの直下）。
 
-      1. 実行スクリプトで、`restart` を要求する前に取った UNIX 時刻を渡し、その時刻以後に起動したサーバーが待ち受けるまで待つ
+      1. 実行スクリプトで、`restart` を要求する前に取った UNIX 時刻を指定し、その時刻以後に起動したサーバーが待ち受けるまで待つ
 
       ```bash
       sh scripts/dev-docs-server-wait.sh listening "$requested"
       ```
 
-      2. 修正したファイルの更新より後にサーバーが起動し直したかを判定するときは、サーバーが最後に起動した時刻（UNIX 時刻）を取得する。再起動は `os.execv` で同じプロセスを置き換え、PID と `ps` の起動時刻が変わらないため、ログの uvicorn が待ち受けを始めた行の時刻を出す
+      2. 修正したファイルの更新より後にサーバーが再起動したかを判定するときは、サーバーが最後に起動した時刻（UNIX 時刻）を取得する。再起動は `os.execv` で同じプロセスを置き換え、PID と `ps` の起動時刻が変わらないため、ログの uvicorn が待ち受けを始めた行の時刻を出す
 
       ```bash
       started=$(sh scripts/dev-docs-server-wait.sh started)
@@ -124,4 +124,4 @@ categories:
       state: 済
       detail: '`started`・`listening` は PR #138 で稼働中のサーバーへ走らせて確認した'
       date: '2026-11-09'
-lead: dev-docs の開発で使うコマンド。
+lead: dev-docs の開発で使用するコマンド。

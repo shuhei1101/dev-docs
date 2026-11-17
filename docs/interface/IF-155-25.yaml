@@ -8,7 +8,7 @@ flows:
     summary: project-index につながり、project-index が配信している 2 つの配信元を画面で配信し始める
     setup:
       - name: Mock
-        description: project-index の読み取り API のモック（shuhei1101/project-index の develop の `42632c5` の入出力で、sample と notes を配信中として返す）。`dev-docs serve` を子プロセスで起動し、空きポートを `DEV_DOCS_PORT` に入れる
+        description: project-index の読み取り API のモック（shuhei1101/project-index の develop の `42632c5` の入出力で、sample と notes を配信中として返却する）。`dev-docs serve` を子プロセスで起動し、空きポートを `DEV_DOCS_PORT` に入れる
       - name: 端末の設定
         description: '`DEV_DOCS_CONFIG` が指す一時フォルダの `settings.yaml`。`project_index` にモックのアドレス'
     flow: |-
@@ -28,8 +28,8 @@ flows:
       ```
     expected:
       - '`127.0.0.1` で待ち受け、`0.0.0.0` では待ち受けない'
-      - '`/_api/sources/sample/docs` と `/_api/sources/notes/docs` が 200 を返す'
-      - '`/mcp` が 404 を返す'
+      - '`/_api/sources/sample/docs` と `/_api/sources/notes/docs` が 200 を返却する'
+      - '`/mcp` が 404 を返却する'
       - '`/_admin/mcp` に MCP のセッションを張れ、ツールが `status`・`restart`・`update` の 3 つ'
       - 標準出力に待ち受けたアドレスと sample・notes が出る
     test: test_normal
@@ -55,7 +55,7 @@ flows:
     expected:
       - プロセスが終わらず、`127.0.0.1` で待ち受ける
       - 標準エラーとエラーログに、つながらなかった project-index のアドレスと、project-index を起動する案内が出る
-      - '`/_api/sources/sample/docs` が 503 を返し、`/_admin/mcp` の `status` は応答する'
+      - '`/_api/sources/sample/docs` が 503 を返却し、`/_admin/mcp` の `status` は応答する'
     test: test_normal_when_project_index_unreachable
   - name: 異常系（端末の設定が違反する・TerminalConfigInvalidError）
     summary: 端末の設定がスキーマに違反すると待ち受けずに終わる
@@ -100,7 +100,7 @@ flows:
       - 終了コードが 3
       - 標準エラーに使用中のポートの番号と、ポートを持っているプロセスの pid（テストのプロセスの pid）と、`DEV_DOCS_PORT` で変えられることが出る
     test: test_error_when_port_in_use
-  - name: 正常系（MCP の入口をスラッシュ無しで呼ぶ）
+  - name: 正常系（MCP のエントリーポイントをスラッシュ無しで呼ぶ）
     summary: プラグインの接続先と同じスラッシュ無しの `/_admin/mcp` への POST に、リダイレクトを挟まずに MCP が応える
     setup:
       - name: Mock
@@ -122,21 +122,21 @@ flows:
         A-->>U: 200
       ```
     expected:
-      - '`/_admin/mcp` への initialize が 307 を挟まずに 200 を返し、`serverInfo` を持つ'
-      - スラッシュ付きの `/_admin/mcp/` への initialize も 200 を返す
+      - '`/_admin/mcp` への initialize が 307 を挟まずに 200 を返却し、`serverInfo` を持つ'
+      - スラッシュ付きの `/_admin/mcp/` への initialize も 200 を返却する
     test: test_normal_when_mcp_path_without_slash
-  - name: 正常系（XDG の環境変数で置き場を決める）
-    summary: '`DEV_DOCS_CONFIG` が無ければ `XDG_CONFIG_HOME` の下の端末の設定を読み、状態とログを `DEV_DOCS_STATE_DIR`・`XDG_STATE_HOME` から決めた置き場に書く'
+  - name: 正常系（XDG の環境変数で配置先を決める）
+    summary: '`DEV_DOCS_CONFIG` が無ければ `XDG_CONFIG_HOME` の下の端末の設定を読み込み、状態とログを `DEV_DOCS_STATE_DIR`・`XDG_STATE_HOME` から決めた配置先に記載する'
     setup:
       - name: Mock
         description: なし（`dev-docs serve` を子プロセスで起動し、空きポートを `DEV_DOCS_PORT` に入れる）
       - name: 環境変数
-        description: '`DEV_DOCS_CONFIG` を外し、`XDG_CONFIG_HOME`・`XDG_STATE_HOME`・`HOME` にテスト用の一時フォルダを入れる'
+        description: '`DEV_DOCS_CONFIG` を除外し、`XDG_CONFIG_HOME`・`XDG_STATE_HOME`・`HOME` にテスト用の一時フォルダを入れる'
       - name: 端末の設定
         description: '`$XDG_CONFIG_HOME/dev-docs/settings.yaml`。`project_index` に sample を配信している project-index の読み取り API のモックのアドレス'
         notes: 1 回目は `state_dir`・`log_dir` を持たない
       - name: 上書き
-        description: 2 回目は端末の設定に `state_dir` を書き、`DEV_DOCS_STATE_DIR` に別の一時フォルダを入れる。3 回目は `state_dir` と `DEV_DOCS_STATE_DIR` を外し、`XDG_STATE_HOME` に相対パス `rel` を入れる
+        description: 2 回目は端末の設定に `state_dir` を記載し、`DEV_DOCS_STATE_DIR` に別の一時フォルダを入れる。3 回目は `state_dir` と `DEV_DOCS_STATE_DIR` を除外し、`XDG_STATE_HOME` に相対パス `rel` を入れる
     flow: |-
       ```mermaid
       sequenceDiagram
@@ -153,12 +153,12 @@ flows:
         S->>FS: ログを $HOME/.local/state/dev-docs/logs に書く
       ```
     expected:
-      - 1 回目の起動で `/_api/sources/sample/docs` が 200 を返し、ログが `$XDG_STATE_HOME/dev-docs/logs` にできる
-      - 2 回目の起動のログが `$DEV_DOCS_STATE_DIR/logs` にでき、端末の設定の `state_dir` には書かない
-      - 3 回目の起動のログが `$HOME/.local/state/dev-docs/logs` にでき、作業場所からの相対の `rel` には書かない
+      - 1 回目の起動で `/_api/sources/sample/docs` が 200 を返却し、ログが `$XDG_STATE_HOME/dev-docs/logs` にできる
+      - 2 回目の起動のログが `$DEV_DOCS_STATE_DIR/logs` にでき、端末の設定の `state_dir` には記載しない
+      - 3 回目の起動のログが `$HOME/.local/state/dev-docs/logs` にでき、作業場所からの相対の `rel` には記載しない
     test: test_normal_when_xdg_dirs_set
   - name: 正常系（MCP の文をプロンプトの YAML から読む）
-    summary: 管理の MCP のツールの description をプロンプトの YAML から描画して返す
+    summary: 管理の MCP のツールの description をプロンプトの YAML から描画して返却する
     setup:
       - name: Mock
         description: なし（`dev-docs serve` を子プロセスで起動し、空きポートを `DEV_DOCS_PORT` に入れる）
@@ -179,7 +179,7 @@ flows:
       ```
     expected:
       - 管理の MCP の 3 つのツールの description が、それぞれの YAML を描画した文と同じ
-      - どの文にも `MUST`・`必ず`・`禁止` の語が無い
+      - どの文にも `MUST`・`必ず`・`禁止` の単語が無い
       - ツールの名前と引数のスキーマは変わらない
     test: test_normal_when_mcp_text_from_prompts
   - name: 異常系（プロンプトの YAML が違反する・PromptInvalidError）
@@ -188,7 +188,7 @@ flows:
       - name: Mock
         description: なし（`dev-docs serve` を子プロセスで起動する）
       - name: 違反する YAML
-        description: プロンプトの YAML の置き場所をテストの一時フォルダへ向け、`status` のツールの YAML から必須のキー `kind` を削除する
+        description: プロンプトの YAML の配置先をテストの一時フォルダへ向け、`status` のツールの YAML から必須のキー `kind` を削除する
         notes: '`DEV_DOCS_PROMPTS_DIR` に一時フォルダを入れる'
     flow: |-
       ```mermaid
@@ -229,14 +229,14 @@ flows:
       - 片方が待ち受けを続け、もう片方が終了コード 3 で終わる
       - 終わった方の標準エラーに、ポートの番号と、待ち受けている方の子プロセスの pid が出る
     test: test_error_when_started_twice
-lead: 端末の設定を読み、project-index が配信している配信元を、1 プロセス・1 ポートで画面の API と `/_admin/mcp` に配信し始める。
+lead: 端末の設定を読み込み、project-index が配信している配信元を、1 プロセス・1 ポートで画面の API と `/_admin/mcp` に配信し始める。
 identifier: serve
 permissions: なし
 idempotent: false
-side_effects: '`bind`:`port` で待ち受ける。`log_dir` に project-index につながらないことのログを書く'
+side_effects: '`bind`:`port` で待ち受ける。`log_dir` に project-index につながらないことのログを書き込む'
 callers:
   - SC-155-10#scenarios[正常シナリオ]
-  - SC-155-10#scenarios[正常シナリオ（XDG の環境変数で置き場を決める）]
+  - SC-155-10#scenarios[正常シナリオ（XDG の環境変数で配置先を決める）]
   - SC-155-10#scenarios[異常シナリオ（project-index につながらない）]
 exclusivity: 同じポートで待ち受けるプロセスは 1 つだけ（後からの起動はポート使用中で終わる）
 request:
@@ -245,37 +245,37 @@ request:
     required: false
     default: '`${XDG_CONFIG_HOME:-~/.config}/dev-docs/settings.yaml`'
     description: 端末の設定のパス
-    notes: 環境変数で渡す
+    notes: 環境変数で指定する
   - name: XDG_CONFIG_HOME
     type: str
     required: false
     default: '`~/.config`'
     description: '`DEV_DOCS_CONFIG` が無いときに端末の設定を探すフォルダの親'
-    notes: 環境変数で渡す。空の文字列か相対パスは未設定として扱う
+    notes: 環境変数で指定する。空の文字列か相対パスは未設定として扱う
   - name: DEV_DOCS_STATE_DIR
     type: str
     required: false
     default: 端末の設定の `state_dir`、無ければ `${XDG_STATE_HOME:-~/.local/state}/dev-docs`
-    description: 状態の置き場。端末の設定の `state_dir` より優先
-    notes: 環境変数で渡す
+    description: 状態の配置先。端末の設定の `state_dir` より優先
+    notes: 環境変数で指定する
   - name: XDG_STATE_HOME
     type: str
     required: false
     default: '`~/.local/state`'
-    description: '`DEV_DOCS_STATE_DIR` と `state_dir` が無いときの状態の置き場の親'
-    notes: 環境変数で渡す。空の文字列か相対パスは未設定として扱う
+    description: '`DEV_DOCS_STATE_DIR` と `state_dir` が無いときの状態の配置先の親'
+    notes: 環境変数で指定する。空の文字列か相対パスは未設定として扱う
   - name: DEV_DOCS_PORT
     type: int
     required: false
     default: 端末の設定の `port`（既定 8781）
     description: 待ち受けのポート。設定の `port` より優先
-    notes: 環境変数で渡す
+    notes: 環境変数で指定する
   - name: DEV_DOCS_PROMPTS_DIR
     type: str
     required: false
     default: クローンの直下の `content/prompts/`
-    description: プロンプトの YAML を読むフォルダ
-    notes: 環境変数で渡す
+    description: プロンプトの YAML を読み込むフォルダ
+    notes: 環境変数で指定する
 request_example: |-
   ```bash
   DEV_DOCS_CONFIG=/tmp/x/settings.yaml DEV_DOCS_PORT=8781 dev-docs serve
@@ -304,7 +304,7 @@ exceptions:
     condition: ポートで待ち受けられない
     notes: 標準エラーにポートの番号と、ポートを持っているプロセスの pid（取れなければ取れなかったこと）と `DEV_DOCS_PORT` で変えられることを出し、終了コード 3 で終わる
   - name: PromptInvalidError
-    condition: プロンプトの YAML（管理の MCP のツールの description）が無い・読めない・`templates/prompt.schema.yaml` に違反する・Jinja2 として解釈できない
+    condition: プロンプトの YAML（管理の MCP のツールの description）が無い・参照できない・`templates/prompt.schema.yaml` に違反する・Jinja2 として解釈できない
     notes: '標準エラーに `{ファイル}: {キーのパス}: {理由}` を全て出し、待ち受けずに終了コード 4 で終わる。代わりの文は持たない'
 constraints:
   - item: 待ち受けのアドレス
@@ -313,28 +313,28 @@ constraints:
   - item: 待ち受けのポート
     constraint: 既定 8781
     decided_by: NFR-155-1#requirements[待ち受けのポート]
-  - item: 配信する入口
+  - item: 配信するエンドポイント
     constraint: 画面の API `/_api/`（そのスキーマ `/_api/openapi.json`）と、管理の MCP `/_admin/mcp`（ツール 3 つ、instructions を持たない）。`/_admin/mcp` はスラッシュの有無によらず同じ MCP が応え、リダイレクトを挟まない。文書の MCP `/mcp` と `POST /_admin/session-start` は持たない（project-index が持つ）
     notes: プラグインの `.mcp.json` の接続先はスラッシュ無し。画面の配信のルート（`GET /{path}`）より先に MCP へ届け、POST が 405 にならないようにする
   - item: project-index の接続先
-    constraint: 端末の設定の `project_index`（既定 `http://127.0.0.1:8786`）。配信元の一覧・状態・文書は要求ごとに問い合わせ、dev-docs の中に控えない
-    notes: project-index が読み直した配信元は、dev-docs を再起動せずに次の要求から返る
+    constraint: 端末の設定の `project_index`（既定 `http://127.0.0.1:8786`）。配信元の一覧・状態・文書は要求ごとに問い合わせ、dev-docs の中に記録しない
+    notes: project-index が再読み込みした配信元は、dev-docs を再起動せずに次の要求から返る
   - item: 前のバージョンから残った sources
-    constraint: 端末の設定に残った `sources` の行は配信に使わず、スキーマの違反にもしない。起動のたびに行の ID を警告のログに出す
+    constraint: 端末の設定に残った `sources` の行は配信に使用せず、スキーマの違反にもしない。起動のたびに行の ID を警告のログに出す
     notes: '`dev-docs migrate` が project-index に同じ ID の行があって移さなかった行が残る（単一ユースケース『dev-docsを更新する』）'
   - item: タイムアウト
     constraint: 制限なし
-  - item: 端末の設定と状態の置き場
-    constraint: 端末の設定は `DEV_DOCS_CONFIG`、無ければ `${XDG_CONFIG_HOME:-~/.config}/dev-docs/settings.yaml`。状態の置き場は `DEV_DOCS_STATE_DIR` → 端末の設定の `state_dir` → `${XDG_STATE_HOME:-~/.local/state}/dev-docs` の順。ログの置き場は端末の設定の `log_dir`、無ければ決めた状態の置き場の `logs`。`XDG_CONFIG_HOME`・`XDG_STATE_HOME` が空の文字列か相対パスなら未設定として扱う
+  - item: 端末の設定と状態の配置先
+    constraint: 端末の設定は `DEV_DOCS_CONFIG`、無ければ `${XDG_CONFIG_HOME:-~/.config}/dev-docs/settings.yaml`。状態の配置先は `DEV_DOCS_STATE_DIR` → 端末の設定の `state_dir` → `${XDG_STATE_HOME:-~/.local/state}/dev-docs` の順。ログの配置先は端末の設定の `log_dir`、無ければ決めた状態の配置先の `logs`。`XDG_CONFIG_HOME`・`XDG_STATE_HOME` が空の文字列か相対パスなら未設定として扱う
     notes: 環境変数が端末の設定より先に有効になる並びは `DEV_DOCS_CONFIG`・`DEV_DOCS_PORT` と同じ。相対パスの扱いは XDG Base Directory Specification に従う。セッション開始のフックも同じ規則で端末の設定のパスを決める
   - item: MCP の文の出どころ
-    constraint: '管理の MCP のツールごとの description（`kind: tool`）を、起動のときにプロンプトの YAML から読んで描画する。コードは文を持たない'
+    constraint: '管理の MCP のツールごとの description（`kind: tool`）を、起動のときにプロンプトの YAML から読み込んで描画する。コードは文を持たない'
     notes: ツールの名前・引数・返り値は変えない。YAML を書き換えたときは再起動で効かせる
   - item: 待ち受けまでの順番
-    constraint: 端末の設定・ポート・プロンプトの YAML を確かめたら待ち受けを始め、project-index への問い合わせは待ち受けの後に行う
+    constraint: 端末の設定・ポート・プロンプトの YAML を確認したら待ち受けを始め、project-index への問い合わせは待ち受けの後に行う
     decided_by: NFR-155-1#requirements[起動から接続を受け付けるまでの時間]
   - item: ポートを持っているプロセスの pid
-    constraint: '`/proc/net/tcp`（IPv6 のアドレスは `/proc/net/tcp6`）から待ち受けのアドレスとポートの LISTEN の行の inode を引き、`/proc/*/fd` でその inode を持つプロセスを探す。`/proc` が無い・読めない・見つからないときは、pid を取れなかったことを出して終了コード 3 で終わる'
+    constraint: '`/proc/net/tcp`（IPv6 のアドレスは `/proc/net/tcp6`）から待ち受けのアドレスとポートの LISTEN の行の inode を取得し、`/proc/*/fd` でその inode を持つプロセスを探す。`/proc` が無い・参照できない・見つからないときは、pid を取れなかったことを出して終了コード 3 で終わる'
     notes: 別の利用者のプロセスの `fd` は読めず、取れない扱いになる
 refs:
   - SC-155-10#scenarios[正常シナリオ]

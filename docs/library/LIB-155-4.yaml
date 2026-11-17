@@ -25,7 +25,7 @@ catalogs:
         purpose: 未定義の変数を `UndefinedError` にし、描画できない組として注意書きにする
       - name: meta.find_undeclared_variables
         kind: 関数
-        purpose: 部品の本文が使う最上位の変数名を引く
+        purpose: 部品の本文が使用する最上位の変数名を取得する
 lead: Python のテンプレートエンジン。`{{ 変数 }}`・`{% if %}`・`{% for %}` の構文で文字列を組み立てる。
 purl: pkg:pypi/jinja2
 dependency_scope: 必須
@@ -39,7 +39,7 @@ used_in:
 verification:
   state: 済
   date: '2026-10-31'
-  detail: pyproject.toml・uv.lock に 3.1.6 を追加し、`StrictUndefined`・`trim_blocks`・`lstrip_blocks`・`keep_trailing_newline`・`autoescape=False`・`finalize` の Environment で、`{% for %}` の描画が `- a\n` になること、未定義の変数が `UndefinedError` になること、`compile_expression` の式が真偽を返すこと、`meta.find_undeclared_variables` が最上位の変数名を返すことを確かめた
+  detail: pyproject.toml・uv.lock に 3.1.6 を追加し、`StrictUndefined`・`trim_blocks`・`lstrip_blocks`・`keep_trailing_newline`・`autoescape=False`・`finalize` の Environment で、`{% for %}` の描画が `- a\n` になること、未定義の変数が `UndefinedError` になること、`compile_expression` の式が真偽を返却すること、`meta.find_undeclared_variables` が最上位の変数名を返却することを確認した
 selection:
   candidates: 比べていない。
-  decision: プロンプトの部品の本文が Jinja2 の構文で書かれ（knowledge の `schemas/prompt.schema.yaml`）、プロンプトを実際に描画する側と同じエンジンで描かないと字数と描画結果がずれるため。
+  decision: プロンプトの部品の本文が Jinja2 の構文で記載され（knowledge の `schemas/prompt.schema.yaml`）、プロンプトを実際に描画する側と同じエンジンで描かないと字数と描画結果がずれるため。

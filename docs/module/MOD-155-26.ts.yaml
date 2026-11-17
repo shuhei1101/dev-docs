@@ -1,13 +1,13 @@
 id: MOD-155-26
 title: 画面 / 文書の画面 / nav.ts
-lead: 文書の取得の `tabs` から、開いているページ・パンくず・ページのタイトルを引く純粋な関数。
+lead: 文書の取得の `tabs` から、開いているページ・パンくず・ページのタイトルを取得する純粋な関数。
 test_files:
   - tests/unit/frontend/src/features/docs/doc-view/nav.test.ts
 data_models:
   - name: ActivePage
     title: 開いているページ
     container: features/docs/doc-view/nav.ts
-    usecase: 文書を読む
+    usecase: 文書を参照する
     role: DTO
     summary: 開いているタブとページ
     properties:
@@ -25,7 +25,7 @@ functions:
     title: 開いているページの特定
     kind: 関数
     container: features/docs/doc-view/nav.ts
-    usecase: 文書を読む
+    usecase: 文書を参照する
     role: 変換
     summary: '`active` のタブから `path` の page とその group を探す'
     scope: public
@@ -45,7 +45,7 @@ functions:
       description: '`active` のタブが無いときは先頭のタブ'
     process: |-
       1. `active` のタブ（無ければ先頭）を取る
-      2. タブの `items` を深さ優先でたどり、`path` が一致する page と直前の group を返す
+      2. タブの `items` を深さ優先でたどり、`path` が一致する page と直前の group を返却する
     unit_tests:
       - name: test_find_active_page
         case: 正常
@@ -63,9 +63,9 @@ functions:
     title: タブの最初の文書
     kind: 関数
     container: features/docs/doc-view/nav.ts
-    usecase: 文書を読む
+    usecase: 文書を参照する
     role: 変換
-    summary: タブのサイドバーの一番上の page のパスを返す
+    summary: タブのサイドバーの一番上の page のパスを返却する
     scope: public
     args:
       - name: tab
@@ -76,7 +76,7 @@ functions:
     returns:
       type: string | null
       description: page が無ければ null
-    process: 1. `items` を深さ優先でたどり、最初の page の `path` を返す
+    process: 1. `items` を深さ優先でたどり、最初の page の `path` を返却する
     unit_tests:
       - name: test_first_page_path
         case: 正常
@@ -94,7 +94,7 @@ functions:
     title: ページのタイトル
     kind: 関数
     container: features/docs/doc-view/nav.ts
-    usecase: 文書を読む
+    usecase: 文書を参照する
     role: 変換
     summary: ブラウザのタブに出すタイトルを作る
     scope: public
@@ -112,11 +112,11 @@ functions:
     returns:
       type: string
       description: '`{文書の名前} | {配信元の ID} | dev-docs`（文書の無いタブはタブ名）'
-    process: 1. page があればその `title`、無ければタブの `title` を頭に置く
+    process: 1. page があればその `title`、無ければタブの `title` を頭に配置する
     unit_tests:
       - name: test_page_title
         case: 正常
-        summary: 文書の名前を頭に置く
+        summary: 文書の名前を頭に配置する
         condition: page の `title` が `A`、配信元 `s`
         mock: なし
         expected: '`A | s | dev-docs`'

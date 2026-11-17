@@ -1,6 +1,6 @@
 id: MOD-155-163
 title: 開発ドキュメントサーバー / 画面のAPI / search.py
-lead: 画面の検索（project-index の検索の結果を画面の形にする）。
+lead: 画面の検索（project-index の検索の結果を画面の形式にする）。
 test_files:
   - tests/unit/dev_docs/features/view/test_search.py
 diagrams:
@@ -8,10 +8,10 @@ diagrams:
     diagram: |-
       classDiagram
         direction TD
-        画面の入口 ..> 画面の検索
+        画面のエントリーポイント ..> 画面の検索
         画面の検索 ..> project-indexの呼び出し
         画面の検索 ..> 文書のページのパス
-        class 画面の入口 {
+        class 画面のエントリーポイント {
           <<function>>
         }
         class 画面の検索 {
@@ -23,12 +23,12 @@ diagrams:
         class 文書のページのパス {
           <<function>>
         }
-        click 画面の入口 href "./MOD-155-162.py.yaml#画面の入口"
+        click 画面のエントリーポイント href "./MOD-155-162.py.yaml#画面のエントリーポイント"
         click project-indexの呼び出し href "./MOD-155-215.py.yaml#project-indexの呼び出し"
         click 文書のページのパス href "./MOD-155-161.py.yaml#文書のページのパス"
 constants:
   - name: SEARCH_QUERY_MAX
-    title: 検索の語の文字数の上限
+    title: 検索の単語の文字数の上限
     container: features/view/search.py
     usecase: 画面の検索
     summary: '`q` の文字数の上限'
@@ -69,11 +69,11 @@ functions:
         passing: positional
         description: 検索する配信元
       - name: q
-        title: 検索する語
+        title: 検索する単語
         type: str
         required: true
         passing: positional
-        description: 1〜`SEARCH_QUERY_MAX` 文字（入口が確かめる）
+        description: 1〜`SEARCH_QUERY_MAX` 文字（エントリーポイントが確認する）
       - name: ref
         title: リビジョン
         type: str | None
@@ -90,21 +90,21 @@ functions:
       type: ScreenSearchResult
       description: project-index の並びのまま
     process: |-
-      1. project-indexの呼び出し.検索（`q`・`ref`・`limit`）を呼ぶ。語の照合・`search: false` の行の除外・一致した箇所の抜き出しは project-index が行う
+      1. project-indexの呼び出し.検索（`q`・`ref`・`limit`）を呼ぶ。単語の照合・`search: false` の行の除外・一致した箇所の抜き出しは project-index が行う
       2. project-indexの呼び出し.配信元の表示の設定の取得と文書の一覧の取得（`ref`。`record_kinds` は `records` を持つ行の ID、`values` は `False`）で、結果ごとに `path` と `id` が同じ文書を引き当てる。引き当てられない結果は `path` から拡張子を落としたパスにする
-      3. `items` を `ScreenSearchItem(path=文書のページのパス(引き当てた文書), name, snippets)` にし、`total_count` とともに返す
+      3. `items` を `ScreenSearchItem(path=文書のページのパス(引き当てた文書), name, snippets)` にし、`total_count` とともに返却する
     unit_tests:
       - name: test_screen_search
         case: 正常
         summary: 画面のパスにする
-        condition: '検索の結果が `docs/a.yaml`（`id: a`）と `notes/files.yaml`（`id: n-1`）を返し、文書の一覧が `notes/files.yaml` の `n-1` を `record_index: 0` で返す'
-        mock: project-indexの呼び出し（検索の結果を返す偽物）
+        condition: '検索の結果が `docs/a.yaml`（`id: a`）と `notes/files.yaml`（`id: n-1`）を返却し、文書の一覧が `notes/files.yaml` の `n-1` を `record_index: 0` で返却する'
+        mock: project-indexの呼び出し（検索の結果を返却する偽物）
         expected: '`items[].path` が `docs/a` と `notes/files/n-1`、`total_count` が偽物の値'
       - name: test_screen_search_when_unreachable
         case: 異常
         summary: project-index につながらない
-        condition: 偽物が `ProjectIndexUnreachableError` を送る
-        mock: project-indexの呼び出し（例外を送る偽物）
+        condition: 偽物が `ProjectIndexUnreachableError` を送信する
+        mock: project-indexの呼び出し（例外を送信する偽物）
         expected: '`ProjectIndexUnreachableError` がそのまま伝わる'
         exception: project-index につながらない・制限時間を超えた
     is_async: true

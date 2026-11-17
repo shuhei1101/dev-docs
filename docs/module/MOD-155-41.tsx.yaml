@@ -31,15 +31,15 @@ components:
       - name: version
         type: string | undefined
         required: false
-        description: 端末の設定の取得の `version`。`useSourceForm` へ渡す
-    description: 追加のときだけ配信元の ID の入力欄を出し、初期フォーカスを置く。範囲の外からの参照のスイッチを読み取りの範囲の下に置く。`useSourceForm` の `gone` なら『配信元が削除されたときの表示』、`conflict` なら『他の変更の表示』をタイトルの下に出す。見出しの配信元の名前は開いたときの値を持つ。保存の応答を待つ間と `gone` の間は追加・保存ボタンを無効にする
+        description: 端末の設定の取得の `version`。`useSourceForm` へ指定する
+    description: 追加のときだけ配信元の ID の入力欄を出し、初期フォーカスを配置する。範囲の外からの参照のスイッチを読み取りの範囲の下に配置する。`useSourceForm` の `gone` なら『配信元が削除されたときの表示』、`conflict` なら『他の変更の表示』をタイトルの下に出す。見出しの配信元の名前は開いたときの値を持つ。保存の応答を待つ間と `gone` の間は追加・保存ボタンを無効にする
     unit_tests:
       - name: test_source_edit_dialog
         case: 正常
         summary: 追加
         condition: '`index` が null で入力して `追加`'
         mock: MSW の端末の設定の保存のハンドラ（200）
-        expected: 送った本文の末尾に入力の行、ダイアログが閉じる
+        expected: 送信した本文の末尾に入力の行、ダイアログが閉じる
       - name: test_source_edit_dialog_when_edit
         case: 正常
         summary: 編集では ID を入力できない
@@ -57,10 +57,10 @@ components:
         summary: 範囲の外からの参照を止めて保存する
         condition: '`outsideRead` を持たない行を編集し、スイッチをオフにして保存する'
         mock: MSW（PUT の本文を記録する）
-        expected: 'スイッチの初期値がオンで、送った行に `outside_read: false` がある'
+        expected: 'スイッチの初期値がオンで、送信した行に `outside_read: false` がある'
       - name: test_source_edit_dialog_when_conflict
         case: 異常
         summary: 他の書き換えが入っている
-        condition: PUT が 409 を返す
+        condition: PUT が 409 を返却する
         mock: MSW
         expected: 「他の変更があったため保存できませんでした」が出て、ダイアログが開いたままで入力が残る

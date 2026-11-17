@@ -26,8 +26,8 @@ scenarios:
         AD-->>U: 新しいバージョンと、project-index が配信している配信元
       ```
     expected:
-      - '`update` が新しいバージョンを返す'
-      - 再起動の後の `status` が新しいバージョンを返し、`sample` と `notes` の文書を画面で読める
+      - '`update` が新しいバージョンを返却する'
+      - 再起動の後の `status` が新しいバージョンを返却し、`sample` と `notes` の文書を画面で参照できる
       - '`127.0.0.1:8781` を待ち受ける dev-docs のプロセスが 1 つだけある'
     test: test_normal
   - name: 正常シナリオ（端末の設定が古くなる）
@@ -48,18 +48,18 @@ scenarios:
         U->>AD: update
         AD-->>U: 新しいバージョンと、移し替えが要ること（再起動しない）
         U->>MG: dev-docs migrate --plan
-        MG-->>U: 当てる手順の一覧
+        MG-->>U: 適用する手順の一覧
         U->>MG: dev-docs migrate
         MG->>CF: バックアップを取り、手順を古い順に当て、version を書き換える
         MG-->>U: 当てた手順
         U->>AD: restart
       ```
     expected:
-      - '`update` が移し替えが要ることを返し、dev-docs は再起動しない'
-      - '`migrate --plan` は端末の設定を変えず、当てる手順を返す'
+      - '`update` が移し替えが要ることを返却し、dev-docs は再起動しない'
+      - '`migrate --plan` は端末の設定を変えず、適用する手順を返却する'
       - '`migrate` の後、端末の設定の `version` が新しいバージョンになり、改名したキーが新しい名前で元の値を持つ'
-      - 当てる前の端末の設定のバックアップがある
-      - '`restart` の後、`status` が新しいバージョンを返し、`sample` と `notes` の文書を画面で読める'
+      - 適用する前の端末の設定のバックアップがある
+      - '`restart` の後、`status` が新しいバージョンを返却し、`sample` と `notes` の文書を画面で参照できる'
     test: test_normal_when_terminal_config_old
   - name: 正常シナリオ（端末の設定の sources を project-index へ移す）
     setup:
@@ -72,7 +72,7 @@ scenarios:
         description: '`sources` に sample と notes の 2 行を持ち、`project_index` を持たない前のバージョンの `settings.yaml`'
       - name: project-index
         description: テスト用の一時フォルダで、空きポートで起動した project-index。端末の設定の `sources` に extra の 1 行がある
-        notes: '`migrate` の引数 `--project-index` にそのアドレスを渡す'
+        notes: '`migrate` の引数 `--project-index` にそのアドレスを指定する'
     flow: |-
       ```mermaid
       sequenceDiagram
@@ -85,7 +85,7 @@ scenarios:
         U->>AD: update
         AD-->>U: 新しいバージョンと、移し替えが要ること（再起動しない）
         U->>MG: dev-docs migrate --plan
-        MG-->>U: 当てる手順の一覧（sources を project-index へ写して除く・project_index を書き足す）
+        MG-->>U: 適用する手順の一覧（sources を project-index へ写して除く・project_index を書き足す）
         U->>MG: dev-docs migrate --project-index {アドレス}
         MG->>CF: バックアップを取る
         MG->>PI: 端末の設定の sources の保存（既にある行は変えず、sample と notes を加える）
@@ -95,9 +95,9 @@ scenarios:
       ```
     expected:
       - project-index の端末の設定の `sources` に、extra の行が変わらずに残り、sample と notes の行が前の値のまま加わる
-      - dev-docs の端末の設定が `sources` を持たず、`project_index` に `--project-index` で渡したアドレス、`version` に新しいバージョンを持つ
-      - 当てる前の dev-docs の端末の設定のバックアップがある
-      - '`restart` の後、`sample` と `notes` の文書を画面で読める'
+      - dev-docs の端末の設定が `sources` を持たず、`project_index` に `--project-index` で指定したアドレス、`version` に新しいバージョンを持つ
+      - 適用する前の dev-docs の端末の設定のバックアップがある
+      - '`restart` の後、`sample` と `notes` の文書を画面で参照できる'
     test: test_normal_when_sources_moved_to_project_index
     notes:
       project-index のアドレス: '`--project-index` を省くと、`PROJECT_INDEX_PORT`（無ければ既定の 8786）から `http://127.0.0.1:{ポート}` を組む'
@@ -111,7 +111,7 @@ scenarios:
         description: 正常シナリオ（端末の設定の sources を project-index へ移す）と同じ前のバージョンの `settings.yaml`
       - name: project-index
         description: 起動していない
-        notes: '`--project-index` に、何も待ち受けていない空きポートのアドレスを渡す'
+        notes: '`--project-index` に、何も待ち受けていない空きポートのアドレスを指定する'
     flow: |-
       ```mermaid
       sequenceDiagram
@@ -128,7 +128,7 @@ scenarios:
       ```
     expected:
       - dev-docs の端末の設定が `migrate` の前と同じ中身になる
-      - 0 以外の終了コードで終わり、標準エラーにつながらなかった project-index のアドレスと、起動してからやり直す案内が出る
+      - 0 以外の終了コードで終わり、標準エラーにつながらなかった project-index のアドレスと、起動してから再実行する案内が出る
     test: test_error_when_project_index_unreachable_on_migrate
   - name: 異常シナリオ（移し替えの手順が失敗する）
     setup:
@@ -172,8 +172,8 @@ scenarios:
         AD-->>U: git のエラー
       ```
     expected:
-      - '`update` が git のエラーを返す'
-      - dev-docs は再起動せず、`status` が前のバージョンを返す
+      - '`update` が git のエラーを返却する'
+      - dev-docs は再起動せず、`status` が前のバージョンを返却する
     test: test_error_when_pull_fails
   - name: 異常シナリオ（sources を移す途中で project-index が行を受け付けない）
     setup:
@@ -207,13 +207,13 @@ issue: 4
 primary_actor: 利用者
 stakeholders:
   - name: 利用者
-    interest: 1 つの操作で dev-docs を更新でき、端末の設定の移し替えは中身を確かめてから当てられる。失敗しても元に戻る。更新の後も同じ配信元を画面で読める
+    interest: 1 つの操作で dev-docs を更新でき、端末の設定の移し替えは中身を確認してから適用される。失敗しても元に戻る。更新の後も同じ配信元を画面で参照できる
 trigger: 利用者が管理の MCP の `update` を呼ぶ
 preconditions:
   - dev-docs が待ち受けている
   - クローンの上流に新しいバージョンの commit がある
-success_guarantee: dev-docs が新しいバージョンで待ち受け、端末の設定の `version` がそのバージョンになり、project-index が配信している配信元を画面で読める。
-minimal_guarantee: '`git pull` に失敗したときは、前のバージョンのまま配信を続ける。移し替えの手順が失敗したときは、端末の設定をバックアップから戻す。`sources` を移すとき project-index が保存を受け付けなかったら、project-index の端末の設定も書き換えない。保存を確認できずに止まったときは、やり直せば保存済みの行を移した行として扱う。'
+success_guarantee: dev-docs が新しいバージョンで待ち受け、端末の設定の `version` がそのバージョンになり、project-index が配信している配信元を画面で参照できる。
+minimal_guarantee: '`git pull` に失敗したときは、前のバージョンのまま配信を続ける。移し替えの手順が失敗したときは、端末の設定をバックアップから戻す。`sources` を移すとき project-index が保存を受け付けなかったら、project-index の端末の設定も書き換えない。保存を確認できずに止まったときは、再実行すれば保存済みの行を移した行として扱う。'
 frequency: dev-docs の新しいバージョンが出るたび
 priority: 中
 refs:

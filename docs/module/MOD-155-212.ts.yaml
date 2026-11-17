@@ -6,9 +6,9 @@ functions:
     title: 本文の表と表のキーの対
     kind: 関数
     container: features/docs/doc-view/tables.ts
-    usecase: 文書を読む
+    usecase: 文書を参照する
     role: 変換
-    summary: Markdown の表を出る順に表のキーと対にし、直前の表のマーカーと、列の表示・非表示の機能を持つかを返す
+    summary: Markdown の表を出る順に表のキーと対にし、直前の表のマーカーと、列の表示・非表示の機能を持つかを返却する
     scope: public
     args:
       - name: params
@@ -20,11 +20,11 @@ functions:
       type: '{key: string; marker: {start: number; end: number; text: string} | null; columns: boolean}[]'
       description: 表ごとの表のキー・直前の表のマーカーの範囲（開始と終了の行。無ければ null）とその文字列・列の表示・非表示の機能を持つ表か
     process: |-
-      1. 行を先頭から見て、コードブロック（```・~~~）の中は飛ばす
+      1. 行を先頭から確認して、コードブロック（```・~~~）の中は飛ばす
       2. `|` で始まる行で表の中でなく、次の行が区切りの行（`---` の並び）なら表の始まりにし、`tableKeys` の同じ番号のキーと対にする（サーバーの表のキーの数え方と同じ）
       3. 表の始まりより前の、空行でない最後のまとまりが表のマーカー（`<!-- table:` から次の `-->` まで。複数行を含む）なら、その範囲をマーカーにする
-      4. `columns` は、マーカーの名前の後ろが `{` で始まるときは JSON として読み、`features.columns.enabled` が `false` でなく、かつ `features.columns` があるか、どれかの列の `hidden` が `true` なら真にする（JSON として読めなければ偽）。それ以外の記載方法は、マーカーが `+columns` を持てば真にする
-      5. `tableKeys` より表が多いときは、余った表を返さない
+      4. `columns` は、マーカーの名前の後ろが `{` で始まるときは JSON として読み込み、`features.columns.enabled` が `false` でなく、かつ `features.columns` があるか、どれかの列の `hidden` が `true` なら真にする（JSON として読み込めなければ偽）。それ以外の記載方法は、マーカーが `+columns` を持てば真にする
+      5. `tableKeys` より表が多いときは、余った表を返却しない
     unit_tests:
       - name: test_find_tables
         case: 正常
@@ -42,7 +42,7 @@ functions:
     title: 隠す列の書き込み
     kind: 関数
     container: features/docs/doc-view/tables.ts
-    usecase: 文書を読む
+    usecase: 文書を参照する
     role: 変換
     summary: 保存した隠す列を、列の表示・非表示の機能を持つ表のマーカーへ書き込む
     scope: public
@@ -56,7 +56,7 @@ functions:
       type: string
       description: 隠す列を書き込んだ Markdown
     process: |-
-      1. `findTables` で表を引く
+      1. `findTables` で表を取得する
       2. `columns` が真で、`columns` にその表のキーがある表のマーカーを書き換える
          - JSON のマーカーは、全ての列の `hidden` を `columns[key]` と一致させ（`columns[key]` に無い列の `hidden` は削除し、`columns` に設定の無くなった列は削除し、列が無くなった `columns` は削除する）、`hidden` が `true` の列が無くなるときは `features.columns` の `{}` を追加する。マーカーの範囲を 1 行の JSON に置き換える
          - 前の記載方法のマーカーは、`columns[key]` が空でないときだけ、行の末尾（`-->` の前）に ` hide={列名をカンマでつないだもの}` を入れる
@@ -77,7 +77,7 @@ functions:
     title: 列の表示・非表示の機能を持つ表のキー
     kind: 関数
     container: features/docs/doc-view/tables.ts
-    usecase: 文書を読む
+    usecase: 文書を参照する
     role: 変換
     summary: 列の表示・非表示の機能を持つ表のキーだけを出る順に並べる（mdmark の `tableIndex` の番号に対応する）
     scope: public
@@ -91,11 +91,11 @@ functions:
       type: string[]
       description: 列の表示・非表示の機能を持つ表のキーの並び
     process: |-
-      1. `findTables` の結果のうち `columns` が真の表の `key` を出る順に返す
+      1. `findTables` の結果のうち `columns` が真の表の `key` を出る順に返却する
     unit_tests:
       - name: test_column_table_keys
         case: 正常
-        summary: 列の表示・非表示の機能を持つ表だけを返す
+        summary: 列の表示・非表示の機能を持つ表だけを返却する
         condition: '`test_find_tables` と同じ本文'
         mock: なし
         expected: '`[t2]`'

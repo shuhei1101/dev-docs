@@ -11,7 +11,7 @@ constants:
     summary: 非機能要件の `Issue の作成画面の URL の長さ` の決定値
     value: '7200'
   - name: TRUNCATED_NOTE
-    title: 切り詰めの書き添え
+    title: 切り詰めの追記
     container: features/docs/shared/comments/comment-format.ts
     usecase: コメントを溜める
     summary: 切り詰めた `body` の末尾に空行を挟んで付ける文
@@ -69,8 +69,8 @@ functions:
       type: '{url: string; truncated: boolean}'
       description: '`https://github.com/{owner}/{repo}/issues/new?labels={ラベル}&body={body}`'
     process: |-
-      1. `URLSearchParams` で URL を組み、長さが `ISSUE_URL_MAX` 以下ならそのまま返す
-      2. 超えるときは、`body` の末尾を削って `\n\n` + `TRUNCATED_NOTE` を付けた URL が上限に収まる最大の長さを二分探索で求め、`truncated: true` で返す（サロゲートペアの途中で切らない）
+      1. `URLSearchParams` で URL を組み、長さが `ISSUE_URL_MAX` 以下ならそのまま返却する
+      2. 超えるときは、`body` の末尾を削って `\n\n` + `TRUNCATED_NOTE` を付けた URL が上限に収まる最大の長さを二分探索で求め、`truncated: true` で返却する（サロゲートペアの途中で切らない）
     unit_tests:
       - name: test_build_issue_url
         case: 正常

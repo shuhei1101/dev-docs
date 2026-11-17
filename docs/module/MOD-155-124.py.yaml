@@ -30,9 +30,9 @@ data_models:
         type: PromptPart
         description: 元の部品
       - name: when
-        title: 使う条件
+        title: 使用する条件
         type: jinja2.environment.TemplateExpression | None
-        description: '`part.when`（`{{ }}` で囲んだ場合は外した式）を `env.compile_expression` したもの。`when` が無ければ `None`'
+        description: '`part.when`（`{{ }}` で囲んだ場合は除外した式）を `env.compile_expression` したもの。`when` が無ければ `None`'
       - name: texts
         title: 本文
         type: dict[str, jinja2.Template]
@@ -54,7 +54,7 @@ constants:
     title: 値の区切り
     container: features/prompt_doc/render.py
     usecase: プロンプトの描画
-    summary: 描画結果の変数の値を囲む区切り（私用領域の文字 `` パス `` 値 ``）に当てる正規表現
+    summary: 描画結果の変数の値を囲む区切り（私用領域の文字 `` パス `` 値 ``）に適用する正規表現
     value: re.compile("(?P<path>[^]*)(?P<value>[^]*)")
   - name: LLM_PART_SEPARATOR
     title: 役割の本文の区切り
@@ -66,7 +66,7 @@ constants:
     title: フロー形式で引用符が要る文字
     container: features/prompt_doc/render.py
     usecase: プロンプトの描画
-    summary: フローの区切り・コメント・キーの区切り・前後の空白・改行に当てる正規表現
+    summary: フローの区切り・コメント・キーの区切り・前後の空白・改行に適用する正規表現
     value: 're.compile(r"[,\[\]{}#\n]|: |:$|^\s|\s$")'
 functions:
   - name: flatten_vars
@@ -92,7 +92,7 @@ functions:
         required: false
         default: '""'
         passing: keyword
-        description: 親のパス（再帰で渡す）
+        description: 親のパス（再帰で指定する）
     returns:
       type: list[tuple[str, PromptVar]]
       description: 定義の順のパスと定義
@@ -122,7 +122,7 @@ functions:
       description: 描画の環境
     process: |-
       1. `undefined=StrictUndefined`・`trim_blocks=True`・`lstrip_blocks=True`・`keep_trailing_newline=True`・`autoescape=False` で作る
-      2. `finalize` に、値が `path` を持つとき `{path}{値}` を、持たないとき値をそのまま返す関数を渡す
+      2. `finalize` に、値が `path` を持つとき `{path}{値}` を、持たないとき値をそのまま返却する関数を指定する
     unit_tests:
       - name: test_build_environment
         case: 正常
@@ -142,7 +142,7 @@ functions:
     container: features/prompt_doc/render.py
     usecase: プロンプトの描画
     role: 変換
-    summary: 例の組の値を `example` で埋め、型を確かめてパス付きの値にする
+    summary: 例の組の値を `example` で埋め、型を確認してパス付きの値にする
     scope: public
     is_async: false
     thread_safe: true
@@ -207,8 +207,8 @@ functions:
       type: tuple[dict[str, CompiledPart], list[PartSyntaxError]]
       description: 部品の `id` ごとのテンプレートと、構文の誤り
     process: |-
-      1. 部品ごとに `when` を `env.compile_expression` で（前後の空白を除いて `{{` で始まり `}}` で終わる場合は、それを外した式を）、各言語の本文を `env.from_string` でテンプレートにする
-         - `jinja2.TemplateSyntaxError` の場合、その部品を結果から外し、`PartSyntaxError`（部品の `id`・場所・`lineno`・`message`）を加える
+      1. 部品ごとに `when` を `env.compile_expression` で（前後の空白を除いて `{{` で始まり `}}` で終わる場合は、それを除外した式を）、各言語の本文を `env.from_string` でテンプレートにする
+         - `jinja2.TemplateSyntaxError` の場合、その部品を結果から除外し、`PartSyntaxError`（部品の `id`・場所・`lineno`・`message`）を加える
     unit_tests:
       - name: test_compile_parts
         case: 正常
@@ -227,14 +227,14 @@ functions:
         summary: '`{{ }}` で囲んだ when'
         condition: 部品 `logs` の `when` が `"{{ logs | length > 0 }}"`
         mock: なし
-        expected: '`logs` の `when` が `logs=["a"]` で真・`logs=[]` で偽を返し、誤りが空'
+        expected: '`logs` の `when` が `logs=["a"]` で真・`logs=[]` で偽を返却し、誤りが空'
   - name: render_example
     title: 例の組の描画
     kind: 関数
     container: features/prompt_doc/render.py
     usecase: プロンプトの描画
     role: 変換
-    summary: 例の組を 1 言語で描画し、メッセージ・使用しなかった部品・字数を返す
+    summary: 例の組を 1 言語で描画し、メッセージ・使用しなかった部品・字数を返却する
     scope: public
     is_async: false
     thread_safe: true
@@ -273,16 +273,16 @@ functions:
       type: RenderedExample
       description: 描画の結果
     process: |-
-      1. 構文の誤りがある場合、「部品 `{id}` の {場所}（{行} 行目）: {理由}」を `problems` にして返す
+      1. 構文の誤りがある場合、「部品 `{id}` の {場所}（{行} 行目）: {理由}」を `problems` にして返却する
       2. 例の組の値（`build_values`）を作る
-         - 型の合わない値がある場合、その理由を `problems` にして返す
+         - 型の合わない値がある場合、その理由を `problems` にして返却する
       3. 部品を並び順に辿る
          - `when` が偽の場合、`id` を `unused` に加える
          - `lang` の本文が無い場合、`{id}（{lang} の本文なし）` を `unused` に加える
          - それ以外は本文を描画する
-         - `jinja2.UndefinedError` の場合、「未定義の変数: {message}」を `problems` にして返す
-         - それ以外の例外（`jinja2.TemplateError`・`Exception`）の場合、「部品 `{id}` を描画できません: {例外の型}: {message}」を `problems` にして返す
-      4. `kind` が `llm` の場合、描画した本文を `role` ごとに `LLM_PART_SEPARATOR` でつなぎ、`ROLES` の順に空でないものをメッセージにする（`role` の無い部品は `ROLES` の後に役割なしのメッセージとして置く）。それ以外はつないで 1 件にする
+         - `jinja2.UndefinedError` の場合、「未定義の変数: {message}」を `problems` にして返却する
+         - それ以外の例外（`jinja2.TemplateError`・`Exception`）の場合、「部品 `{id}` を描画できません: {例外の型}: {message}」を `problems` にして返却する
+      4. `kind` が `llm` の場合、描画した本文を `role` ごとに `LLM_PART_SEPARATOR` でつなぎ、`ROLES` の順に空でないものをメッセージにする（`role` の無い部品は `ROLES` の後に役割なしのメッセージとして配置する）。それ以外はつないで 1 件にする
       5. メッセージの `marked` は描画したまま、`text` は `VALUE_MARK_PATTERN` を値だけに戻したものにし、`char_count` を `text` の字数の合計にする
     unit_tests:
       - name: test_render_example
@@ -293,7 +293,7 @@ functions:
         expected: メッセージが `system`・`user` の 2 件で、`user` の `text` にログがあり、`marked` のログが区切りで囲まれ、`unused` が空、`char_count` が `text` の字数の合計
       - name: test_render_example_when_condition_false
         case: 正常
-        summary: when が偽の部品を使わない
+        summary: when が偽の部品を使用しない
         condition: '同じプロンプトで `values={"logs": []}`'
         mock: なし
         expected: '`unused` が `["logs"]`'
@@ -340,7 +340,7 @@ functions:
     usecase: プロンプトの描画
     role: 変換
     summary: 値を YAML のフロー形式の 1 行にする
-    description: 'ruamel.yaml のフロー形式は配列の中のキーが 1 つの辞書を `[name: 好奇心]` と書くため、自前で組み立てる。'
+    description: 'ruamel.yaml のフロー形式は配列の中のキーが 1 つの辞書を `[name: 好奇心]` と記載するため、自前で組み立てる。'
     scope: public
     is_async: false
     thread_safe: true
@@ -357,6 +357,6 @@ functions:
     process: |-
       1. 辞書は `{キー: 値, ...}`、配列は `[値, ...]` にして中を再帰で組み立てる
       2. スカラーは、`null`・真偽値・数は JSON の表記にする
-         - 文字列は、`FLOW_QUOTE_PATTERN` に当たらず YAML として読み戻して同じ文字列になる場合はそのまま、それ以外は JSON の文字列（`ensure_ascii=False`）にする
+         - 文字列は、`FLOW_QUOTE_PATTERN` に該当せず YAML として読み込み戻して同じ文字列になる場合はそのまま、それ以外は JSON の文字列（`ensure_ascii=False`）にする
     notes:
-      単体テスト: '`test_var_table`（配列の中の辞書）と `test_build_values_when_type_mismatch` で確かめる'
+      単体テスト: '`test_var_table`（配列の中の辞書）と `test_build_values_when_type_mismatch` で確認する'

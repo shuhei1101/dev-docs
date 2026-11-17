@@ -1,12 +1,12 @@
 # 管理のMCP
 
-管理の MCP の 3 つのツールの引数・返す内容・エラーの一覧
+管理の MCP の 3 つのツールの引数・返却する内容・エラーの一覧
 
 ## 共通
 
 接続先は `http://127.0.0.1:${DEV_DOCS_PORT:-8781}/_admin/mcp` で、トランスポートは HTTP（Streamable HTTP）です。
 `127.0.0.1` だけで待ち受け、作業場所（`cwd`）での絞り込みは持たず、全ての配信元を扱います。
-配信元の読み直し・検査・試しの変換・`nav` の書き込みは、[project-index](https://github.com/shuhei1101/project-index) の管理の MCP のツールです。
+配信元の再読み込み・検査・試しの変換・`nav` の書き込みは、[project-index](https://github.com/shuhei1101/project-index) の管理の MCP のツールです。
 
 <!-- table: {"kind": "data"} -->
 
@@ -28,33 +28,33 @@
 
 | 値 | 意味 |
 | --- | --- |
-| `current` | 設定の `version` が dev-docs が読めるバージョンと同じ |
+| `current` | 設定の `version` が dev-docs が参照できるバージョンと同じ |
 | `old` | 古い。`dev-docs migrate` で移し替える |
 | `newer` | 新しい。dev-docs を更新する |
 
 ## status
 
-待ち受けのアドレス・dev-docs のバージョン・端末の設定・project-index への接続と、project-index から取得した配信元ごとの状態を返します。
+待ち受けのアドレス・dev-docs のバージョン・端末の設定・project-index への接続と、project-index から取得した配信元ごとの状態を返却します。
 
 | 引数 | 型 | 既定 | 説明 |
 | --- | --- | --- | --- |
-| `format` | `markdown` / `json` | `markdown` | 返す形式 |
+| `format` | `markdown` / `json` | `markdown` | 返却する形式 |
 
 <!-- table: {"kind": "data"} -->
 
-| 返すフィールド | 型 | 説明 |
+| 返却するフィールド | 型 | 説明 |
 | --- | --- | --- |
 | `address` | str | 待ち受けている URL |
 | `version` | str | 動いている dev-docs のバージョン |
 | `pid` | int | サーバーのプロセス ID |
-| `terminal.file` | str | 読んだ端末の設定のパス |
+| `terminal.file` | str | 参照した端末の設定のパス |
 | `terminal.version_state` | `current` / `old` / `newer` | 端末の設定の `version` の比較 |
 | `sources[].id` | str | 配信元の ID |
 | `project_index.address` | str | 端末の設定の `project_index` |
 | `project_index.reachable` | bool | project-index の読み取り API が応答したか |
 | `project_index.error` | str / null | つながらなかった理由。`reachable` が `false` のとき |
-| `sources[].status` | `serving` / `not_served` / `disabled` | project-index が返した状態。配信中・検証で外した・`enabled: false` |
-| `sources[].errors[]` | list[str] | project-index が返した配信しない理由（`{キーのパス}: {理由}`）。`not_served` のとき |
+| `sources[].status` | `serving` / `not_served` / `disabled` | project-index が返却した状態。配信中・検証で除外した・`enabled: false` |
+| `sources[].errors[]` | list[str] | project-index が返却した配信しない理由（`{キーのパス}: {理由}`）。`not_served` のとき |
 | `leftover_sources` | list[str] | 端末の設定に前のバージョンから残った `sources` の行の ID |
 
 <!-- /table -->
@@ -69,27 +69,27 @@ project-index: http://127.0.0.1:8786（つながっている）
 | broken | not_served（documents[0].paths: 必須のキーが無い） |
 ```
 
-配信元が 0 件のときは、空の一覧を返します。
-配信元の状態は呼ばれるたびに project-index から取得し、dev-docs の中に控えません。
-project-index につながらないときもエラーにせず、`reachable` を `false`、`sources[]` を空にして返します。
+配信元が 0 件のときは、空の一覧を返却します。
+配信元の状態は呼ばれるたびに project-index から取得し、dev-docs の中に記録しません。
+project-index につながらないときもエラーにせず、`reachable` を `false`、`sources[]` を空にして返却します。
 
 ## restart
 
-応答を返してからサーバーを止め、同じプロセス ID・同じ環境変数で `dev-docs serve` を起動し直します。
-`/_admin/mcp` の接続は切れるので、つなぎ直します。
-起動し直したプロセスは、project-index に問い合わせる前に待ち受けを始めます。
-再起動の結果は、つなぎ直した後の `status` で確かめます。
+応答を返却してからサーバーを止め、同じプロセス ID・同じ環境変数で `dev-docs serve` を再起動します。
+`/_admin/mcp` の接続は切れるので、再接続します。
+再起動したプロセスは、project-index に問い合わせる前に待ち受けを始めます。
+再起動の結果は、再接続した後の `status` で確認します。
 
 処理中の要求は、project-index への問い合わせの制限時間（45 秒）の 1.5 倍を上限に待ちます。
 過ぎたら残りの要求を切って止めます。
-起動に失敗したときは、`dev-docs serve` の終了コードで止まり、次のセッションの SessionStart のフックが起動し直します（unit があるときは unit を起動する）。
-unit で動いているときも `restart` は同じプロセス ID のまま起動し直すので、unit の `MainPID` は変わりません。
+起動に失敗したときは、`dev-docs serve` の終了コードで止まり、次のセッションの SessionStart のフックが再起動します（unit があるときは unit を起動する）。
+unit で動いているときも `restart` は同じプロセス ID のまま再起動するので、unit の `MainPID` は変わりません。
 
 引数はありません。
 
-| 返すフィールド | 型 | 説明 |
+| 返却するフィールド | 型 | 説明 |
 | --- | --- | --- |
-| `pid` | int | 起動し直した後も変わらないプロセス ID |
+| `pid` | int | 再起動した後も変わらないプロセス ID |
 | `restarting` | bool | 常に `true` |
 
 | エラー | 発生条件 |
@@ -98,26 +98,26 @@ unit で動いているときも `restart` は同じプロセス ID のまま起
 
 ## update
 
-端末の設定の `clone` で `git pull --ff-only` と `uv sync` を実行し、端末の設定の移し替えが要らなければ起動し直します。
-新しいバージョンのコードで `{clone}/.venv/bin/python -m dev_docs migrate --plan` を実行し、当てる手順があれば移し替えが要るとします。
+端末の設定の `clone` で `git pull --ff-only` と `uv sync` を実行し、端末の設定の移し替えが要らなければ再起動します。
+新しいバージョンのコードで `{clone}/.venv/bin/python -m dev_docs migrate --plan` を実行し、適用する手順があれば移し替えが要るとします。
 `git pull`・`uv sync`・`migrate --plan` は、それぞれ 300 秒で打ち切ります。
 
 引数はありません。
 
-| 返すフィールド | 型 | 説明 |
+| 返却するフィールド | 型 | 説明 |
 | --- | --- | --- |
 | `previous_version` | str | 更新する前の dev-docs のバージョン |
 | `version` | str | 更新した後のクローンのバージョン。`updated: false` のときは `previous_version` と同じ |
 | `updated` | bool | 新しい commit を取り込んだか |
 | `migration_needed` | bool | 端末の設定の移し替えが要るか。`true` のときは再起動しない |
-| `restarting` | bool | 応答の後に起動し直すか |
+| `restarting` | bool | 応答の後に再起動するか |
 
 `migration_needed: true` のときは、`dev-docs migrate` を実行してから `restart` を呼びます。
-project-index への接続と配信元の状態は、起動し直した後の `status` で確かめます。
+project-index への接続と配信元の状態は、再起動した後の `status` で確認します。
 
 | エラー | 発生条件 |
 | --- | --- |
-| `UpdateFailedError` | `git pull --ff-only`・`uv sync`・`migrate --plan` が 0 以外で終わった、または打ち切った。失敗したコマンドと標準エラーを返し、再起動しない。クローンに commit していない変更があるときも、変更に触らずこのエラーを返す |
+| `UpdateFailedError` | `git pull --ff-only`・`uv sync`・`migrate --plan` が 0 以外で終わった、または打ち切った。失敗したコマンドと標準エラーを返却し、再起動しない。クローンに commit していない変更があるときも、変更に触らずこのエラーを返却する |
 | `RestartInProgressError` | 再起動か更新がまだ終わっていない |
 
 手順は [dev-docsを更新する](./dev-docsを更新する.md) にあります。

@@ -27,7 +27,7 @@ constants:
     title: 埋め込みのマーカー
     container: features/convert/embed.py
     usecase: 文書の取得
-    summary: '埋め込みのマーカーに当てる正規表現（mdmark の `<!-- 名前: 引数 -->` の書式で、名前は mdmark の予約名と重ならない `embed`）'
+    summary: '埋め込みのマーカーに適用する正規表現（mdmark の `<!-- 名前: 引数 -->` の書式で、名前は mdmark の予約名と重ならない `embed`）'
     value: '`r"<!--\s*embed:\s*(?P<path>[^#\s]+)(?:#(?P<item>\S+))?\s*-->"`'
 functions:
   - name: embed_paths
@@ -36,7 +36,7 @@ functions:
     container: features/convert/embed.py
     usecase: 文書の取得
     role: 変換
-    summary: Markdown のコードブロックの外にある埋め込みのマーカーのパスを返す
+    summary: Markdown のコードブロックの外にある埋め込みのマーカーのパスを返却する
     scope: public
     thread_safe: true
     args:
@@ -78,15 +78,15 @@ functions:
         type: Mapping[str, Any | None]
         required: true
         passing: positional
-        description: マーカーのパス → project-index が返した文書の値。取れなかったパスは `None`
+        description: マーカーのパス → project-index が返却した文書の値。取れなかったパスは `None`
     returns:
       type: str
       description: マーカーを置き換えた Markdown
     process: |-
-      1. コードブロックの外の `EMBED_PATTERN` に当たる行ごとに置き換える
-      2. `embedded` の `path` の値が `None` か無い場合は、`> [!WARNING]` の囲みに `埋め込めません: {path}` を置く
+      1. コードブロックの外の `EMBED_PATTERN` に該当する行ごとに置き換える
+      2. `embedded` の `path` の値が `None` か無い場合は、`> [!WARNING]` の囲みに `埋め込めません: {path}` を配置する
       3. `item` があれば項目の取得で値を取り出す（無ければ同じ囲みで `{path}#{item} がありません`）
-      4. 値がオブジェクトのリストなら表の組み立て（表のキーは `embed:{path}#{item}`）、オブジェクトならキーと値の 2 列の表、スカラーならその値を置く
+      4. 値がオブジェクトのリストなら表の組み立て（表のキーは `embed:{path}#{item}`）、オブジェクトならキーと値の 2 列の表、スカラーならその値を配置する
       5. 埋め込んだ値の中のマーカーは展開しない
     unit_tests:
       - name: test_expand_embeds

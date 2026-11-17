@@ -29,7 +29,7 @@ data_models:
       - name: category
         type: str
         description: 分類（`CATEGORIES` のどれか）
-        example: 使い方
+        example: 使用方法
 classes:
   - name: BuildError
     title: ビルドの失敗
@@ -74,7 +74,7 @@ constants:
       - key: '0'
         value: '"はじめに"'
       - key: '1'
-        value: '"使い方"'
+        value: '"使用方法"'
       - key: '2'
         value: '"リファレンス"'
   - name: FLOWCHART_CATEGORY
@@ -82,7 +82,7 @@ constants:
     container: scripts/build_pages.py
     usecase: 公開ページのビルド
     summary: 公開の判定フローチャートを並べる分類
-    value: '"使い方"'
+    value: '"使用方法"'
   - name: SKIPPED_DIRS
     title: ID を集めないフォルダ
     container: scripts/build_pages.py
@@ -213,9 +213,9 @@ functions:
       - name: test_main
         case: 正常
         summary: 公開の文書を並べて mdmark に指定する
-        condition: 一時フォルダに、`files.yml` で public の文書 2 つ（はじめに・使い方）と internal の文書 1 つ、public の判定フローチャート 1 つ
+        condition: 一時フォルダに、`files.yml` で public の文書 2 つ（はじめに・使用方法）と internal の文書 1 つ、public の判定フローチャート 1 つ
         mock: mdmark の build の実行（指定された設定を記録し、`OUTPUT_HTML` を記載する）
-        expected: 0 を返却し、`--out` に `OUTPUT_HTML` ができる。設定の `include` が はじめにの文書・使い方の文書・`{ID}.md` の順で、internal の文書を含まない
+        expected: 0 を返却し、`--out` に `OUTPUT_HTML` ができる。設定の `include` が はじめにの文書・使用方法の文書・`{ID}.md` の順で、internal の文書を含まない
       - name: test_main_when_no_public
         case: 異常
         summary: 公開の文書が無い
@@ -261,9 +261,9 @@ functions:
       - name: test_list_public_guides
         case: 正常
         summary: public の行だけを行の順に返却する
-        condition: public（使い方）・internal・public（はじめに）の 3 行と、3 つのファイル
+        condition: public（使用方法）・internal・public（はじめに）の 3 行と、3 つのファイル
         mock: なし（一時ディレクトリ）
-        expected: 使い方・はじめにの順の 2 件
+        expected: 使用方法・はじめにの順の 2 件
       - name: test_list_public_guides_when_no_file
         case: 正常
         summary: 管理用の YAML が無い

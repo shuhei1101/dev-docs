@@ -10,8 +10,8 @@ diagrams:
         direction TD
         待ち受けの開始 ..> アプリの組み立て
         アプリの組み立て ..> 管理の MCP の組み立て
-        アプリの組み立て ..> 端末の設定の入口
-        アプリの組み立て ..> 画面の入口
+        アプリの組み立て ..> 端末の設定のエントリーポイント
+        アプリの組み立て ..> 画面のエントリーポイント
         アプリの組み立て ..> 例外の変換の登録
         アプリの組み立て ..> 画面の配信
         アプリの組み立て ..> 操作の識別子
@@ -29,10 +29,10 @@ diagrams:
         class 管理の MCP の組み立て {
           <<function>>
         }
-        class 端末の設定の入口 {
+        class 端末の設定のエントリーポイント {
           <<function>>
         }
-        class 画面の入口 {
+        class 画面のエントリーポイント {
           <<function>>
         }
         class 例外の変換の登録 {
@@ -49,8 +49,8 @@ diagrams:
         }
         click 待ち受けの開始 href "./MOD-155-174.py.yaml#待ち受けの開始"
         click 管理の MCP の組み立て href "./MOD-155-178.py.yaml#管理の MCP の組み立て"
-        click 端末の設定の入口 href "./MOD-155-147.py.yaml#端末の設定の入口"
-        click 画面の入口 href "./MOD-155-162.py.yaml#画面の入口"
+        click 端末の設定のエントリーポイント href "./MOD-155-147.py.yaml#端末の設定のエントリーポイント"
+        click 画面のエントリーポイント href "./MOD-155-162.py.yaml#画面のエントリーポイント"
         click 例外の変換の登録 href "./MOD-155-176.py.yaml#例外の変換の登録"
         click 画面の配信 href "./MOD-155-182.py.yaml#画面の配信"
         click アプリの寿命 href "./MOD-155-177.py.yaml#アプリの寿命"
@@ -61,14 +61,14 @@ classes:
     usecase: 起動
     role: ASGI のミドルウェア
     summary: スラッシュ無しの MCP のパスへの要求を、ルーティングの前に末尾にスラッシュを付けたパスへ書き換え、マウントした MCP へ届ける
-    description: Starlette のマウントは `/_admin/mcp/...` にだけ当たり、`/_admin/mcp` は画面の配信のルート（GET だけ）に当たって POST が 405 になる。画面の配信が無くても末尾のスラッシュへの 307 になるため、ルーティングの前でパスを補う
+    description: Starlette のマウントは `/_admin/mcp/...` にだけ該当し、`/_admin/mcp` は画面の配信のルート（GET だけ）に該当して POST が 405 になる。画面の配信が無くても末尾のスラッシュへの 307 になるため、ルーティングの前でパスを補う
     kind: クラス
     properties:
       - name: app
         title: 次の ASGI アプリ
         type: ASGIApp
         access: 内部 (_)
-        description: 書き換えた要求を渡す先
+        description: 書き換えた要求を指定する先
       - name: paths
         title: 補うパス
         type: frozenset[str]
@@ -78,7 +78,7 @@ classes:
       - name: __call__
         title: 要求の受け渡し
         kind: メソッド
-        summary: パスが `paths` のどれかと一致する HTTP の要求だけ、末尾にスラッシュを付けて次のアプリへ渡す
+        summary: パスが `paths` のどれかと一致する HTTP の要求だけ、末尾にスラッシュを付けて次のアプリへ指定する
         scope: public
         is_async: true
         args:
@@ -102,20 +102,20 @@ classes:
           description: なし
         process: |-
           1. `scope["type"]` が `http` で、`scope["path"]` が `paths` のどれかと一致するとき、`path` の末尾に `/`、`raw_path` の末尾に `b"/"` を付けた scope のコピーを作る（受け取った scope は書き換えない）
-          2. scope（書き換えたときはそのコピー）と `receive`・`send` を次のアプリへ渡す
+          2. scope（書き換えたときはそのコピー）と `receive`・`send` を次のアプリへ指定する
         unit_tests:
           - name: test_slashless_mcp_path_middleware
             case: 正常
             summary: スラッシュ無しの MCP のパスにスラッシュを補う
-            condition: '`paths=("/_admin/mcp",)` で、`type: http` の `path` が `/_admin/mcp` の scope を渡す'
-            mock: 次のアプリ（受け取った scope を控える偽物）
-            expected: '次のアプリが受け取った `path` が `/_admin/mcp/`、`raw_path` が `b"/_admin/mcp/"`。渡した元の scope の `path` は変わらない'
+            condition: '`paths=("/_admin/mcp",)` で、`type: http` の `path` が `/_admin/mcp` の scope を指定する'
+            mock: 次のアプリ（受け取った scope を記録する偽物）
+            expected: '次のアプリが受け取った `path` が `/_admin/mcp/`、`raw_path` が `b"/_admin/mcp/"`。指定した元の scope の `path` は変わらない'
           - name: test_slashless_mcp_path_middleware_when_other_path
             case: 正常
-            summary: 他のパスと HTTP でない要求はそのまま渡す
-            condition: '`path` が `/_admin/mcp/`・`/_admin/mcpx`・`/mcp` の HTTP の scope と、`type: lifespan` の scope を渡す'
-            mock: 次のアプリ（受け取った scope を控える偽物）
-            expected: 次のアプリが受け取った scope が渡した scope そのもの
+            summary: 他のパスと HTTP でない要求はそのまま指定する
+            condition: '`path` が `/_admin/mcp/`・`/_admin/mcpx`・`/mcp` の HTTP の scope と、`type: lifespan` の scope を指定する'
+            mock: 次のアプリ（受け取った scope を記録する偽物）
+            expected: 次のアプリが受け取った scope が指定した scope そのもの
 constants:
   - name: ADMIN_MCP_PATH
     title: 管理の MCP のパス
@@ -140,12 +140,12 @@ functions:
         passing: positional
         description: 部品の配線の結果
       - name: screen_dir
-        title: 画面のビルドの置き場所
+        title: 画面のビルドの配置先
         type: Path
         required: false
         default: SCREEN_DIST_DIR
         passing: keyword
-        description: 画面の配信が返すビルドのフォルダ。テストで差し替える
+        description: 画面の配信が返却するビルドのフォルダ。テストで差し替える
       - name: mdmark_version
         title: mdmark のバージョン
         type: str
@@ -158,36 +158,36 @@ functions:
       description: 組み立てたアプリ
     process: |-
       1. 管理の MCP を組み立てる（管理の MCP の組み立て）
-      2. 管理の MCP と project-indexの呼び出しを渡して寿命を作り（アプリの寿命）、`FastAPI(lifespan=..., docs_url=None, redoc_url=None, openapi_url="/_api/openapi.json", generate_unique_id_function=route_operation_id)` を作る（操作の識別子）
+      2. 管理の MCP と project-indexの呼び出しを指定して寿命を作り（アプリの寿命）、`FastAPI(lifespan=..., docs_url=None, redoc_url=None, openapi_url="/_api/openapi.json", generate_unique_id_function=route_operation_id)` を作る（操作の識別子）
       3. 例外の変換を登録する（例外の変換の登録）
       4. `ADMIN_MCP_PATH` に管理の MCP の `streamable_http_app(streamable_http_path="/", stateless_http=True, json_response=True)` をマウントする。文書の MCP（`/mcp`）と `POST /_admin/session-start` は持たない
       5. `app.add_middleware(SlashlessMcpPathMiddleware, paths=(ADMIN_MCP_PATH,))` で、スラッシュ無しの MCP のパスをルーティングの前に補う（MCP のパスの補い）
-      6. 端末の設定の入口・画面の入口のルーターを登録する
-      7. 画面の配信のルーター（画面の配信、`screen_dir` と `mdmark_version` を渡す）を最後に登録する（全てのパスに当たるため）
-      8. アプリを返す
+      6. 端末の設定のエントリーポイント・画面のエントリーポイントのルーターを登録する
+      7. 画面の配信のルーター（画面の配信、`screen_dir` と `mdmark_version` を指定する）を最後に登録する（全てのパスに該当するため）
+      8. アプリを返却する
     unit_tests:
       - name: test_build_app
         case: 正常
-        summary: 入口を全て持つ
-        condition: 配線済みの関数を渡して `TestClient` で GET `/_api/openapi.json`
+        summary: エンドポイントを全て持つ
+        condition: 配線済みの関数を指定して `TestClient` で GET `/_api/openapi.json`
         mock: 配線済みの関数（project-indexの呼び出しは `httpx.MockTransport` の偽物）
         expected: 200 で `paths` に `/_api/sources/{source}/docs`・`/_api/settings/sources` があり、アプリのルートに `/_admin/mcp` のマウントがあり、`/mcp` のマウントと `POST /_admin/session-start` が無い
       - name: test_build_app_when_openapi
         case: 正常
         summary: OpenAPI の画面を出さない
-        condition: '`index.html` を置いた一時フォルダを `screen_dir` に渡し、GET `/docs` と `/_api/openapi.json`'
+        condition: '`index.html` を配置した一時フォルダを `screen_dir` に指定し、GET `/docs` と `/_api/openapi.json`'
         mock: 配線済みの関数（偽物）
-        expected: '`/docs` は Swagger UI でなく画面の配信が応える（`screen_dir` に置いた `index.html` の中身）、`/_api/openapi.json` の `paths` が全て `/_api/` で始まり、各入口の `operationId` が `{タグ}-{name}`（`view-get_document_default`・`view-get_document`・`view-search_page`・`view-list_refs`・`view-put_columns`・`settings-get_settings_sources`・`settings-put_settings_sources`）で重複が無く、画面の配信のパスを含まない'
+        expected: '`/docs` は Swagger UI でなく画面の配信が応える（`screen_dir` に配置した `index.html` の中身）、`/_api/openapi.json` の `paths` が全て `/_api/` で始まり、各エンドポイントの `operationId` が `{タグ}-{name}`（`view-get_document_default`・`view-get_document`・`view-search_page`・`view-list_refs`・`view-put_columns`・`settings-get_settings_sources`・`settings-put_settings_sources`）で重複が無く、画面の配信のパスを含まない'
       - name: test_build_app_when_screen
         case: 正常
-        summary: API と MCP を画面の配信より先に当てる
-        condition: '`index.html` を置いた一時フォルダを `screen_dir` に渡し、GET `/default/a.md` と GET `/_api/sources/none/docs`'
-        mock: '配線済みの関数（project-indexの呼び出しは、無い配信元に 404 の `missing: source` を返す偽物）'
+        summary: API と MCP を画面の配信より先に適用する
+        condition: '`index.html` を配置した一時フォルダを `screen_dir` に指定し、GET `/default/a.md` と GET `/_api/sources/none/docs`'
+        mock: '配線済みの関数（project-indexの呼び出しは、無い配信元に 404 の `missing: source` を返却する偽物）'
         expected: '`/default/a.md` は 200 で `index.html` の中身、`/_api/sources/none/docs` は 404 の problem+json'
       - name: test_build_app_when_mcp_without_slash
         case: 正常
         summary: スラッシュ無しの MCP のパスへの POST を画面の配信でなく MCP が受ける
-        condition: '`index.html` を置いた一時フォルダを `screen_dir` に渡し、MCP が受け付けるホストを `base_url` にしてリダイレクトを追従しない `TestClient` で、`/_admin/mcp` へ MCP の initialize を POST し、POST `/mcp` と GET `/_admin/mcpx` を呼ぶ'
+        condition: '`index.html` を配置した一時フォルダを `screen_dir` に指定し、MCP が受け付けるホストを `base_url` にしてリダイレクトを追従しない `TestClient` で、`/_admin/mcp` へ MCP の initialize を POST し、POST `/mcp` と GET `/_admin/mcpx` を呼ぶ'
         mock: 配線済みの関数（配信元が空の偽物）
         expected: '`/_admin/mcp` が 200 で本文の `result.serverInfo` を持ち、405・307 にならない。POST `/mcp` は 404 の problem+json。`/_admin/mcpx` は 404'
   - name: route_operation_id
@@ -195,7 +195,7 @@ functions:
     kind: 関数
     container: server/app.py
     usecase: 起動
-    role: 入口
+    role: エントリーポイント
     summary: OpenAPI の operationId をルートのタグと名前から作る
     scope: public
     args:
@@ -208,7 +208,7 @@ functions:
     returns:
       type: str
       description: '`{route.tags[0]}-{route.name}`（タグが無いときは `route.name`）'
-    process: 1. ルートの最初のタグと `name` を `-` で結んで返す。タグが無いときは `name` だけを返す
+    process: 1. ルートの最初のタグと `name` を `-` で結んで返却する。タグが無いときは `name` だけを返却する
     unit_tests:
       - name: test_route_operation_id
         case: 正常

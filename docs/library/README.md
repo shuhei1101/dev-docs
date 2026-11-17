@@ -8,13 +8,13 @@
 
 | ページ | 概要 |
 | --- | --- |
-| [alias-inject](./LIB-155-1.yaml) | エイリアスの元の行のスキーマの正本を持つプラグイン |
+| [alias-inject](./LIB-155-1.yaml) | エイリアスの元の行のスキーマの原本を持つプラグイン |
 | [eslint](./LIB-155-2.yaml) | 画面の静的検査とプラグイン |
 | [fastapi](./LIB-155-3.yaml) | 画面・設定の API・MCP をまとめる ASGI の Web フレームワーク |
 | [httpx](./LIB-155-32.yaml) | project-index を呼ぶ非同期の HTTP クライアント |
 | [jinja2](./LIB-155-4.yaml) | プロンプトの部品の本文を描くテンプレートエンジン |
 | [jsonschema](./LIB-155-5.yaml) | 文書と設定を検証する JSON Schema のライブラリ |
-| [lefthook](./LIB-155-6.yaml) | Git のフックを流すツール |
+| [lefthook](./LIB-155-6.yaml) | Git のフックを実行するツール |
 | [lucide-react](./LIB-155-7.yaml) | SVG のアイコンのコンポーネント |
 | [mcp](./LIB-155-8.yaml) | 管理の MCP の Python SDK |
 | [mdmark](./LIB-155-9.yaml) | Markdown を描いてコメントを付けるブラウザの JS |

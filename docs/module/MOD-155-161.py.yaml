@@ -43,7 +43,7 @@ functions:
         description: 文書（`path`・`record_index`・`id` を参照する）
     returns:
       type: str
-      description: '`path` から拡張子を落とした形。`records` の文書は `{拡張子を落とした path}/{id}`'
+      description: '`path` から拡張子を落とした形式。`records` の文書は `{拡張子を落とした path}/{id}`'
     process: 1. `PurePosixPath(path).with_suffix("")` にし、`record_index` があれば `/{id}` を続ける
     unit_tests:
       - name: test_page_path
@@ -58,7 +58,7 @@ functions:
     container: features/view/paths.py
     usecase: 文書の取得
     role: 判定
-    summary: 文書のページのパスに当たる文書を探す
+    summary: 文書のページのパスに該当する文書を探す
     scope: public
     thread_safe: true
     args:
@@ -78,25 +78,25 @@ functions:
       type: IndexedDocument | None
       description: 無ければ `None`
     process: |-
-      1. 文書のページのパスが `page` と同じ文書を返す
-      2. 無ければ、`path` か `body_path` が `page` と同じ最初の文書を返す
-      3. どちらにも無ければ `None` を返す
+      1. 文書のページのパスが `page` と同じ文書を返却する
+      2. 無ければ、`path` か `body_path` が `page` と同じ最初の文書を返却する
+      3. どちらにも無ければ `None` を返却する
     unit_tests:
       - name: test_find_page
         case: 正常
-        summary: 文書のページのパスで当たる
+        summary: 文書のページのパスで該当する
         condition: 文書のページのパスが `rules/a` の文書と `page` が `rules/a`
         mock: なし
         expected: その文書
       - name: test_find_page_when_body_path
         case: 正常
-        summary: 本文のファイルのパスで当たる
+        summary: 本文のファイルのパスで該当する
         condition: '`path` が `notes/files.yaml`・`body_path` が `notes/b.md` の管理用の YAML の行の文書と `page` が `notes/b.md`'
         mock: なし
         expected: その文書
       - name: test_find_page_when_missing
         case: 正常
-        summary: どれにも当たらない
+        summary: どれにも該当しない
         condition: '`page` が `no/such`'
         mock: なし
         expected: '`None`'

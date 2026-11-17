@@ -1,6 +1,6 @@
 id: MOD-155-86
 title: 開発ドキュメントサーバー / 管理 / service.py
-lead: 管理の MCP の `status` の中身。端末の設定を読み、配信元の状態は project-index から取る。
+lead: 管理の MCP の `status` の中身。端末の設定を読み込み、配信元の状態は project-index から取る。
 test_files:
   - tests/unit/dev_docs/features/admin/test_service.py
 functions:
@@ -10,7 +10,7 @@ functions:
     container: features/admin/service.py
     usecase: 状態の取得
     role: サービス
-    summary: 待ち受けのアドレス・バージョン・project-index への接続と、project-index が返した配信元ごとの状態を返す
+    summary: 待ち受けのアドレス・バージョン・project-index への接続と、project-index が返却した配信元ごとの状態を返却する
     scope: public
     is_async: true
     thread_safe: true
@@ -26,17 +26,17 @@ functions:
         type: Mapping[str, str]
         required: true
         passing: keyword
-        description: '`DEV_DOCS_PORT` を引く環境変数（入口は `os.environ`）'
+        description: '`DEV_DOCS_PORT` を取得する環境変数（エントリーポイントは `os.environ`）'
     returns:
       type: ServerStatus
       description: サーバーの状態
     process: |-
       1. アドレスを `http://{terminal.bind}:{ポート}/` にする（待ち受けのポートの決定）
-      2. バージョンを 起動時に読んだ値（動いているバージョン。更新で配布のメタデータが入れ替わっても変わらない）、プロセス ID を `os.getpid()` で得る
+      2. バージョンを 起動時に参照した値（動いているバージョン。更新で配布のメタデータが入れ替わっても変わらない）、プロセス ID を `os.getpid()` で得る
       3. 端末の設定の `version` を `SETTINGS_VERSION` と比べる（バージョンの新旧）
       4. project-indexの呼び出し.配信元の状態の一覧 を呼ぶ
          - 応答したら `project_index.reachable` を `True`、`sources` を状態ごとの `SourceState`（`errors` は `{path}: {rule}`）にする
-         - `ProjectIndexUnreachableError` なら `reachable` を `False`、`error` を `reason`、`sources` を空にする。`ProjectIndexResponseError` も同じく `error` を要約にする（例外を送らずに返す）
+         - `ProjectIndexUnreachableError` なら `reachable` を `False`、`error` を `reason`、`sources` を空にする。`ProjectIndexResponseError` も同じく `error` を要約にする（例外を送信せずに返却する）
       5. `leftover_sources` を端末の設定の `leftover_sources` にする
     exceptions:
       - name: TerminalConfigInvalidError
@@ -45,27 +45,27 @@ functions:
     unit_tests:
       - name: test_get_status
         case: 正常
-        summary: project-index が返した配信元を並べる
-        condition: project-index が `serving`・`not_served`（`errors[]` 1 件）・`disabled` の 3 つを返す、`env` は空
-        mock: project-indexの呼び出し（状態を返すか例外を送る偽物）
+        summary: project-index が返却した配信元を並べる
+        condition: project-index が `serving`・`not_served`（`errors[]` 1 件）・`disabled` の 3 つを返却する、`env` は空
+        mock: project-indexの呼び出し（状態を返却するか例外を送信する偽物）
         expected: '`address` が `http://127.0.0.1:{port}/`、`project_index.reachable` が `True`、`sources` が 3 件で `not_served` の `errors` が `{path}: {rule}` の 1 件'
       - name: test_get_status_when_port_env
         case: 正常
-        summary: '`DEV_DOCS_PORT` のポートをアドレスに使う'
+        summary: '`DEV_DOCS_PORT` のポートをアドレスに使用する'
         condition: '`env` が `{"DEV_DOCS_PORT": "8799"}`'
-        mock: project-indexの呼び出し（状態を返すか例外を送る偽物）
+        mock: project-indexの呼び出し（状態を返却するか例外を送信する偽物）
         expected: '`address` が `http://127.0.0.1:8799/`'
       - name: test_get_status_when_unreachable
         case: 正常
-        summary: project-index につながらなくても返す
-        condition: 偽物が `ProjectIndexUnreachableError(reason="接続を拒否されました（Connection refused）")` を送る
-        mock: project-indexの呼び出し（状態を返すか例外を送る偽物）
-        expected: 例外を送らず、`project_index.reachable` が `False`、`error` が理由、`sources` が空
+        summary: project-index につながらなくても返却する
+        condition: 偽物が `ProjectIndexUnreachableError(reason="接続を拒否されました（Connection refused）")` を送信する
+        mock: project-indexの呼び出し（状態を返却するか例外を送信する偽物）
+        expected: 例外を送信せず、`project_index.reachable` が `False`、`error` が理由、`sources` が空
       - name: test_get_status_when_leftover_sources
         case: 正常
         summary: 残った配信元
         condition: 端末の設定の `leftover_sources` が `[sample]`
-        mock: project-indexの呼び出し（状態を返すか例外を送る偽物）
+        mock: project-indexの呼び出し（状態を返却するか例外を送信する偽物）
         expected: '`leftover_sources` が `[sample]`'
     callers:
       - MOD-155-178#functions[build_admin_mcp]
@@ -78,7 +78,7 @@ functions:
     container: features/admin/service.py
     usecase: 共通
     role: 変換
-    summary: 設定のバージョンを dev-docs が読めるバージョンと比べる
+    summary: 設定のバージョンを dev-docs が参照できるバージョンと比べる
     scope: public
     is_async: false
     thread_safe: true

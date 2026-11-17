@@ -1,15 +1,15 @@
 id: MOD-155-24
 title: 画面 / 文書の画面 / use-locating.ts
-lead: コメントのパネルで場所を選ばれたコメントを持ち、文書を開くか本文の印へスクロールするかを決めるフック。
+lead: コメントのパネルで場所を選ばれたコメントを持ち、文書を開くか本文のマーカーへスクロールするかを決めるフック。
 test_files:
   - tests/unit/frontend/src/features/docs/doc-view/hooks/use-locating.test.ts
 functions:
   - name: useLocating
     title: 場所を選ばれたコメントの保持
     container: features/docs/doc-view/hooks/use-locating.ts
-    usecase: 文書を読む
+    usecase: 文書を参照する
     role: フック
-    summary: 場所を選ばれたコメントを持ち、開いている文書のコメントは移動せず、他の文書のコメントは開いてから本文の印へスクロールさせる
+    summary: 場所を選ばれたコメントを持ち、開いている文書のコメントは移動せず、他の文書のコメントは開いてから本文のマーカーへスクロールさせる
     kind: フック
     scope: public
     args:
@@ -29,7 +29,7 @@ functions:
     process: |-
       1. `locate(comment)` は `locating` にコメントを入れ、コメントの `docId` が今開いている `docId` と違うときだけ `openDoc(comment)` を呼ぶ（開いている文書は移動しない）
       2. `onLocated()` は `locating` を null に戻す（本文がそのコメントへ移ったとき）
-      3. 開いている `docId` が変わったとき、変わった先が `locating` の文書と違うなら `locating` を null に戻す（印が見つからないまま残った `locating` を、後で同じ文書を開き直したときに使わない）
+      3. 開いている `docId` が変わったとき、変わった先が `locating` の文書と違うなら `locating` を null に戻す（マーカーが見つからないまま残った `locating` を、後で同じ文書を再度開いたときに使用しない）
     unit_tests:
       - name: test_use_locating
         case: 正常
@@ -51,7 +51,7 @@ functions:
         expected: '`b` に変わったときは `locating` が残り、`c` に変わったとき null になる'
       - name: test_use_locating_when_located
         case: 正常
-        summary: 印までスクロールしたら戻す
+        summary: マーカーまでスクロールしたら戻す
         condition: '`locate` した後、`onLocated` を呼ぶ'
         mock: '`openDoc`（`vi.fn`）'
         expected: '`locating` が null になる'

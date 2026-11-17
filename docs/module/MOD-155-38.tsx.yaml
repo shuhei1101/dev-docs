@@ -1,6 +1,6 @@
 id: MOD-155-38
 title: 画面 / 文書の画面 / search-dialog.tsx
-lead: 開いている配信元・リビジョンの文書を語で探すダイアログ。引数・イベント・状態は部品設計『検索のダイアログ』が持つ。
+lead: 開いている配信元・リビジョンの文書を単語で探すダイアログ。引数・イベント・状態は部品設計『検索のダイアログ』が持つ。
 test_files:
   - tests/unit/frontend/src/features/docs/shared/search-dialog/search-dialog.test.tsx
 components:
@@ -36,18 +36,18 @@ components:
       - name: query
         type: string
         initial: '""'
-        description: 入力した語
+        description: 入力した単語
         notes: '`useState`。送信は `useDeferredValue` でなく 200 ミリ秒の待ち'
     unit_tests:
       - name: test_search_dialog
         case: 正常
         summary: 結果を選ぶ
         condition: '`foo` を入力して 1 件目を Enter'
-        mock: MSW のハンドラ（画面の検索が 2 件を返す）
+        mock: MSW のハンドラ（画面の検索が 2 件を返却する）
         expected: '`onResultSelect` が 1 件目の `path` で 1 回'
       - name: test_search_dialog_when_empty_query
         case: 正常
-        summary: 空の語では呼ばない
+        summary: 空の単語では呼ばない
         condition: 開いただけ
         mock: MSW のハンドラ
         expected: 画面の検索が呼ばれない

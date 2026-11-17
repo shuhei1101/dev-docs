@@ -32,14 +32,14 @@ components:
         type: string | undefined
         required: false
         description: 端末の設定の取得の `version`。保存の `expectedVersion` にする
-    description: '初期フォーカスはキャンセル。開いたときの行を `sourceKey` で指す値・名前・フォルダを持ち、削除のたびに今の `sources` から `findSource` で位置を引いて `removeSource` し、`version` を添えて保存する。位置が無ければ画面設計の『削除する配信元が削除されたときの表示』を出して削除ボタンを無効にする。409 は『削除の他の変更の表示』を出して全ての問い合わせを読み直す。それ以外の保存の失敗は `handleAppError(error, {message: "端末の設定を保存できませんでした。"})` で、ダイアログは開いたまま'
+    description: '初期フォーカスはキャンセル。開いたときの行を `sourceKey` で指す値・名前・フォルダを持ち、削除のたびに今の `sources` から `findSource` で位置を取得して `removeSource` し、`version` を添えて保存する。位置が無ければ画面設計の『削除する配信元が削除されたときの表示』を出して削除ボタンを無効にする。409 は『削除の他の変更の表示』を出して全ての問い合わせを再読み込みする。それ以外の保存の失敗は `handleAppError(error, {message: "端末の設定を保存できませんでした。"})` で、ダイアログは開いたまま'
     unit_tests:
       - name: test_source_delete_dialog
         case: 正常
         summary: 削除
         condition: 2 行の 1 行目で `削除`
         mock: MSW の端末の設定の保存のハンドラ（200）
-        expected: 送った本文が 2 行目だけ、ダイアログが閉じる
+        expected: 送信した本文が 2 行目だけ、ダイアログが閉じる
       - name: test_source_delete_dialog_when_failed
         case: 異常
         summary: 保存の失敗
@@ -49,7 +49,7 @@ components:
       - name: test_source_delete_dialog_when_conflict
         case: 異常
         summary: 他の書き換えが入っている
-        condition: PUT が 409 を返す
+        condition: PUT が 409 を返却する
         mock: MSW
         expected: 「他の変更があったため削除できませんでした」が出て、ダイアログが開いたまま
       - name: test_source_delete_dialog_when_gone

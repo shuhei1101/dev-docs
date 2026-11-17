@@ -8,7 +8,7 @@ components:
     title: 文書のヘッダー
     kind: コンポーネント
     container: features/docs/doc-view/components/doc-header.tsx
-    usecase: 文書を読む
+    usecase: 文書を参照する
     role: 部品
     summary: 見出し 1（`text-doc-title`・`font-doc-title`・下に `border-border` の区切り線と `pb-2` の余白）に文書の名前、その下に種類のバッジ・等幅のパス・`更新 {formatJst(updatedAt)}`（`time` 要素）を出す
     props:
@@ -34,6 +34,6 @@ components:
         summary: 情報を出す
         condition: '`updatedAt` が `2026-10-26T14:40:00Z`'
         mock: なし
-        expected: '`更新 10/26 23:40 JST` と `time` の `datetime` が渡した値'
+        expected: '`更新 10/26 23:40 JST` と `time` の `datetime` が指定した値'
 refs:
   - SCR-155-1#elements[文書のタイトル]

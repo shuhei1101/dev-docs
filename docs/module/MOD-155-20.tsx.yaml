@@ -8,10 +8,10 @@ components:
     title: 文書の画面
     kind: 画面
     container: features/docs/doc-view/doc-view-screen.tsx
-    usecase: 文書を読む
+    usecase: 文書を参照する
     role: 画面
-    summary: ルートの引数で文書を読み、トップバー・種類のタブ・サイドバー・本文・コメントのパネルを並べる
-    description: 文書は `useSuspenseQuery(documentQueryOptions(...))`、配信元とリビジョンの一覧は orval が生成した問い合わせで読む。URL の変更は `search` を書き換える（`rev`・`base` を保つ。文書の画面の移動）。トップバーへは配信中の配信元を渡す（配信中の配信元の取り出し）。文書は本文の領域に出し（目次は mdmark が本文に描き、画面は目次の列を配置しない）、画面の先頭に本文へのスキップを置く。`document.title` は `pageTitle` で書き換える。幅の切り替え（48rem）は Tailwind の `md:` で行い、JavaScript では幅を読まない
+    summary: ルートの引数で文書を参照し、トップバー・種類のタブ・サイドバー・本文・コメントのパネルを並べる
+    description: 文書は `useSuspenseQuery(documentQueryOptions(...))`、配信元とリビジョンの一覧は orval が生成した問い合わせで参照する。URL の変更は `search` を書き換える（`rev`・`base` を保つ。文書の画面の移動）。トップバーへは配信中の配信元を指定する（配信中の配信元の取り出し）。文書は本文の領域に出し（目次は mdmark が本文に描き、画面は目次の列を配置しない）、画面の先頭に本文へのスキップを配置する。`document.title` は `pageTitle` で書き換える。幅の切り替え（48rem）は Tailwind の `md:` で行い、JavaScript では幅を参照しない
     state:
       - name: searchOpen
         type: boolean
@@ -41,13 +41,13 @@ components:
       - name: locating
         type: DocComment | null
         initial: 'null'
-        description: コメントのパネルで場所を選ばれたコメント。`DocBody` の `locating` へ渡す
+        description: コメントのパネルで場所を選ばれたコメント。`DocBody` の `locating` へ指定する
         notes: '`useLocating`。場所を選ばれたら入れ、開いている文書（`docId` が同じ）なら移動せず、他の文書なら文書の画面の移動の `locate` で開く。`onLocated` か、開いている文書が `locating` と違う文書に変わったときに null'
     unit_tests:
       - name: test_doc_view_screen
         case: 正常
         summary: 文書を描く
-        condition: MSW が文書の取得・端末の設定の取得・リビジョンの一覧を返す。メモリの履歴のルーターで `/s/a.md` を開く
+        condition: MSW が文書の取得・端末の設定の取得・リビジョンの一覧を返却する。メモリの履歴のルーターで `/s/a.md` を開く
         mock: MSW のハンドラ・mdmark（`vi.mock`、`mount` を記録する偽物）
         expected: 文書のタイトル・パンくず・サイドバーの現在地が出て、`document.title` が `A | s | dev-docs`、mdmark の `mount` に最初の見出し 1 を除いた本文が渡る
       - name: test_doc_view_screen_when_empty_tab
@@ -59,7 +59,7 @@ components:
       - name: test_doc_view_screen_when_conversion_error
         case: 正常
         summary: 変換の失敗
-        condition: MSW が `conversionError` を持つ文書を返す
+        condition: MSW が `conversionError` を持つ文書を返却する
         mock: MSW のハンドラ・mdmark（偽物）
         expected: 変換の失敗が出て `mount` が呼ばれない
 refs:

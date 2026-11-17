@@ -1,6 +1,6 @@
 id: MOD-155-85
 title: 開発ドキュメントサーバー / 管理 / render.py
-lead: '管理の MCP の `status` の `format: markdown` の応答の文を組み立てる。値は service.py の結果をそのまま使い、計算しない。'
+lead: '管理の MCP の `status` の `format: markdown` の応答の文を組み立てる。値は service.py の結果をそのまま使用し、計算しない。'
 test_files:
   - tests/unit/dev_docs/features/admin/test_render.py
 functions:
@@ -35,11 +35,11 @@ functions:
       | broken | not_served（documents[0].paths: 必須のキーが無い） |
       ```
     process: |-
-      1. 1 行目に `{address} dev-docs {version}（pid {pid}）`、2 行目に `端末の設定: {file}（{version_state}）`、3 行目に `project-index: {address}（つながっている）`（つながらないときは `（つながらない: {error}）`）を置く
+      1. 1 行目に `{address} dev-docs {version}（pid {pid}）`、2 行目に `端末の設定: {file}（{version_state}）`、3 行目に `project-index: {address}（つながっている）`（つながらないときは `（つながらない: {error}）`）を配置する
       2. 配信元ごとに表の行を作る（配信元の行）
-         - つながらない場合、表の代わりに `配信元: project-index につながらないため取得できません` を置く
-         - 配信元が 0 件の場合、表の代わりに `配信元: なし` を置く
-      3. `leftover_sources` があれば、最後に `端末の設定に残った sources: {ID を ・ でつないだもの}（project-index の端末の設定へ追加してください）` を置く
+         - つながらない場合、表の代わりに `配信元: project-index につながらないため取得できません` を配置する
+         - 配信元が 0 件の場合、表の代わりに `配信元: なし` を配置する
+      3. `leftover_sources` があれば、最後に `端末の設定に残った sources: {ID を ・ でつないだもの}（project-index の端末の設定へ追加してください）` を配置する
     unit_tests:
       - name: test_render_status
         case: 正常
@@ -90,7 +90,7 @@ functions:
       type: str
       description: '`| {id} | {状態} |` の表の行'
     process: |-
-      1. `| {id} | {status} |` を返す。`not_served` は `errors` を `、` でつないで括弧で添える
+      1. `| {id} | {status} |` を返却する。`not_served` は `errors` を `、` でつないで括弧で添える
     unit_tests:
       - name: test_source_row
         case: 正常

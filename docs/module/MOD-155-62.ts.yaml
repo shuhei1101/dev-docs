@@ -1,6 +1,6 @@
 id: MOD-155-62
 title: 画面 / 共通 / handle-app-error.ts
-lead: 画面で拾った例外を通知とログに振り分ける。
+lead: 画面で取得した例外を通知とログに振り分ける。
 test_files:
   - tests/unit/frontend/src/shared/core/handle-app-error.test.ts
 functions:
@@ -10,15 +10,15 @@ functions:
     container: shared/core/handle-app-error.ts
     usecase: 共通
     role: 例外の扱い
-    summary: 例外の種類に合う通知を出し、ログを書く
+    summary: 例外の種類に合う通知を出し、ログを書き込む
     scope: public
-    side_effects: 通知（sonner の `toast.error`）を出し、ロガーへ書く
+    side_effects: 通知（sonner の `toast.error`）を出し、ロガーへ記載する
     args:
       - name: error
         type: unknown
         required: true
         passing: positional
-        description: 拾った例外
+        description: 取得した例外
       - name: options
         type: '{message?: string}'
         required: false
@@ -26,11 +26,11 @@ functions:
         description: 通知の文言を画面側で決めるとき（列の表示の保存の失敗 等）
     returns:
       type: void
-      description: 何も返さない
+      description: 何も返却しない
     process: |-
       1. `options.message` があればその文言で通知する
       2. 無ければ `AppError` は `problem.detail`（無ければ `通信に失敗しました。`）、それ以外は `予期しないエラーが起きました。` で通知する
-      3. `[error]` `app_error`（`status`・`type`・例外）をロガーへ書く
+      3. `[error]` `app_error`（`status`・`type`・例外）をロガーへ記載する
     unit_tests:
       - name: test_handle_app_error
         case: 正常
@@ -40,10 +40,10 @@ functions:
         expected: '`toast.error("x")` が 1 回、ロガーの `error` が `app_error` で 1 回'
       - name: test_handle_app_error_when_message
         case: 正常
-        summary: 渡した文言を優先する
+        summary: 指定した文言を優先する
         condition: '`message` に `列の表示を保存できませんでした。`'
         mock: sonner の `toast`・ロガー（`vi.mock`）
-        expected: '`toast.error` が渡した文言で呼ばれる'
+        expected: '`toast.error` が指定した文言で呼ばれる'
       - name: test_handle_app_error_when_unknown
         case: 正常
         summary: AppError でない例外

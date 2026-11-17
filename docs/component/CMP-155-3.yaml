@@ -4,7 +4,7 @@ implementation: "frontend/src/features/docs/shared/search-dialog/search-dialog.t
 story: "Docs/SearchDialog"
 states:
   - name: Empty
-    description: 開いた直後。語が無く、結果の場所に何も出さない
+    description: 開いた直後。単語が無く、結果の場所に何も出さない
     args:
       - name: open
         value: 'true'
@@ -13,7 +13,7 @@ states:
       - name: ref
         value: develop
   - name: Results
-    description: 2 件に一致し、1 件目を選んだ状態。一致した語を強調する
+    description: 2 件に一致し、1 件目を選んだ状態。一致した単語を強調する
     args:
       - name: open
         value: 'true'
@@ -38,7 +38,7 @@ states:
       - name: source
         value: sample
   - name: Failed
-    description: 画面の検索がエラーを返し、Problem Details の `detail` を結果の場所に出す
+    description: 画面の検索がエラーを返却し、Problem Details の `detail` を結果の場所に出す
     args:
       - name: open
         value: 'true'
@@ -51,7 +51,7 @@ states:
         value: 'true'
       - name: source
         value: notes
-lead: 配信元の文書を語で探すモーダル。入力のたびに画面の検索を呼び、件数と、一致した文書のパンくず・パス・一致した箇所を並べる。
+lead: 配信元の文書を単語で探すモーダル。入力のたびに画面の検索を呼び、件数と、一致した文書のパンくず・パス・一致した箇所を並べる。
 status: planned
 introduced:
   pr: 36
@@ -63,11 +63,11 @@ args:
   - name: source
     type: 文字列
     required: true
-    description: 検索する配信元の ID。画面の検索の `source` に渡す
+    description: 検索する配信元の ID。画面の検索の `source` に指定する
   - name: ref
     type: 文字列
     default: なし（配信元の `defaultRef` を検索する。件数の文言にリビジョンを出さない）
-    description: 検索するリビジョン。画面の検索の `ref` に渡し、件数の文言にも出す
+    description: 検索するリビジョン。画面の検索の `ref` に指定し、件数の文言にも出す
 events:
   - name: openChange
     when: Esc・ダイアログの外のクリック・結果の選択でダイアログが閉じる
@@ -81,7 +81,7 @@ accessibility:
   - 検索欄は `role="combobox"` で、`aria-controls` に結果の一覧、`aria-activedescendant` に選んでいる結果を持つ
   - ↑・↓ で結果を選び、Enter で開き、Esc 1 回で閉じる
   - 件数の文言は `role="status"` で、変わるたびに読み上げる
-  - 一致した語の強調は色だけにせず `mark` 要素で表す
+  - 一致した単語の強調は色だけにせず `mark` 要素で表す
 refs:
   - IF-155-16#
 notes:

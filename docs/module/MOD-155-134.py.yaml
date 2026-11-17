@@ -1,6 +1,6 @@
 id: MOD-155-134
 title: 開発ドキュメントサーバー / 絞り込み / fields.py
-lead: 項目の値・計算項目・使える項目・見出しの行。
+lead: 項目の値・計算項目・使用できる項目・見出しの行。
 test_files:
   - tests/unit/dev_docs/features/filter/test_fields.py
 diagrams:
@@ -8,16 +8,16 @@ diagrams:
     diagram: |-
       classDiagram
         direction TD
-        条件の確かめ ..> 使える項目
+        条件の確認 ..> 使用できる項目
         条件の照合 ..> 項目の値
         項目の値 ..> 見出しの行
-        class 条件の確かめ {
+        class 条件の確認 {
           <<function>>
         }
         class 条件の照合 {
           <<function>>
         }
-        class 使える項目 {
+        class 使用できる項目 {
           <<function>>
         }
         class 項目の値 {
@@ -26,7 +26,7 @@ diagrams:
         class 見出しの行 {
           <<function>>
         }
-        click 条件の確かめ href "./MOD-155-135.py.yaml#条件の確かめ"
+        click 条件の確認 href "./MOD-155-135.py.yaml#条件の確認"
         click 条件の照合 href "./MOD-155-135.py.yaml#条件の照合"
 constants:
   - name: COMPUTED_FIELDS
@@ -42,7 +42,7 @@ functions:
     container: features/filter/fields.py
     usecase: 文書の取得
     role: 読み取り
-    summary: 文書から項目の値を引き、比べられる値の並びにする
+    summary: 文書から項目の値を取得し、比べられる値の並びにする
     scope: public
     thread_safe: true
     args:
@@ -51,7 +51,7 @@ functions:
         type: IndexedDocument
         required: true
         passing: positional
-        description: 引く文書
+        description: 取得する文書
       - name: field
         title: 項目
         type: str
@@ -62,15 +62,15 @@ functions:
       type: list[Any]
       description: 値の並び。配列の項目は要素、値が無ければ空
     process: |-
-      1. 項目で引き方を決める
+      1. 項目で取得方法を決める
          - `id`・`kind` の場合、文書の属性
          - メタデータのキー（`METADATA_KEYS`）の場合、`document.metadata`
          - `body` の場合、本文（文書の一覧の文書は本文を持たず空）
          - `*` の場合、`data` の全ての文字列の葉と本文
          - `@chars` は本文の文字数、`@path` は `document.path`（`records` の行は `{path}#{record_index}`）、`@sections` は Markdownの本文かが `True` の文書なら本文の見出しの文字列、それ以外は `data` の最上位のキーの並び
-         - `@matches` は値を持たない（条件の確かめが条件に使うことを断る）
-         - それ以外は `data` を項目の取得で引く
-      2. 値が配列なら要素を、`None` なら空、それ以外は 1 要素の並びを返す
+         - `@matches` は値を持たない（条件の確認が条件に使用することを断る）
+         - それ以外は `data` を項目の取得で取得する
+      2. 値が配列なら要素を、`None` なら空、それ以外は 1 要素の並びを返却する
     unit_tests:
       - name: test_field_values
         case: 正常
@@ -79,12 +79,12 @@ functions:
         mock: なし
         expected: '`tags` が `[a, b]`、`owner.name` が `[x]`、`@chars` が本文の文字数、`missing` が `[]`'
   - name: known_fields
-    title: 使える項目
+    title: 使用できる項目
     kind: 関数
     container: features/filter/fields.py
     usecase: 文書の取得
     role: 読み取り
-    summary: 文書の行のスキーマから、`nav` の `auto` の `filter` に使える項目の一覧を作る
+    summary: 文書の行のスキーマから、`nav` の `auto` の `filter` に使用できる項目の一覧を作る
     scope: public
     thread_safe: true
     args:
@@ -93,13 +93,13 @@ functions:
         type: Iterable[Mapping[str, Any]]
         required: true
         passing: positional
-        description: 読む文書に当てるスキーマ（`records` の行は 1 行のスキーマ）
+        description: 参照する文書に適用するスキーマ（`records` の行は 1 行のスキーマ）
     returns:
       type: dict[str, str]
       description: 項目のパス → 型（`string`・`number`・`boolean`・`array`・`object`・`date`）
     process: |-
       1. `id`・`kind`・`METADATA_KEYS`・`body`・`*`・`COMPUTED_FIELDS` を入れる
-      2. スキーマの `properties` を再帰でたどり、`a.b` のパスと `type`（`format: date`・`date-time` は `date`）を足す。配列の要素の `properties` は `a.b` の形で足す
+      2. スキーマの `properties` を再帰でたどり、`a.b` のパスと `type`（`format: date`・`date-time` は `date`）を追加する。配列の要素の `properties` は `a.b` の形式で追加する
       3. 型の食い違う同じパスは `string` にする
   - name: heading_lines
     title: 見出しの行
@@ -122,8 +122,8 @@ functions:
       type: list[Heading]
       description: 本文の先頭からの見出し
     process: |-
-      1. 行を先頭からたどり、`FENCE` に当たる行でコードブロックの内外を切り替える
-      2. コードブロックの外で `HEADING` に当たる行を、行番号（1 始まり）・`#` の数・見出しの文字列の `Heading` にする
+      1. 行を先頭からたどり、`FENCE` に該当する行でコードブロックの内外を切り替える
+      2. コードブロックの外で `HEADING` に該当する行を、行番号（1 始まり）・`#` の数・見出しの文字列の `Heading` にする
     unit_tests:
       - name: test_heading_lines
         case: 正常

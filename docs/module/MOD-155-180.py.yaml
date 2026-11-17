@@ -75,13 +75,13 @@ functions:
       type: mcp.types.CallToolResult
       description: ツールの結果
     process: |-
-      1. `fmt` が `markdown` で `render` がある場合、`content` に `render(result)` の text を 1 つ入れ、`structuredContent` を持たない結果を返す
+      1. `fmt` が `markdown` で `render` がある場合、`content` に `render(result)` の text を 1 つ入れ、`structuredContent` を持たない結果を返却する
       2. それ以外は、結果を JSON にできる辞書にし（`dataclasses.asdict`、`None` のキーは落とす）、`structuredContent` にその辞書を、`content` に同じ JSON の text を入れる
     unit_tests:
       - name: test_to_tool_result
         case: 正常
         summary: markdown
-        condition: '`fmt="markdown"`、`render` が `"# x"` を返す'
+        condition: '`fmt="markdown"`、`render` が `"# x"` を返却する'
         mock: なし
         expected: '`content[0].text` が `"# x"`、`structuredContent` が無い'
       - name: test_to_tool_result_when_json
@@ -105,14 +105,14 @@ functions:
         type: DevDocsError | pydantic.ValidationError
         required: true
         passing: positional
-        description: サービスか要求のモデルが送った例外
+        description: サービスか要求のモデルが送信した例外
     returns:
       type: mcp.types.CallToolResult
       description: '`isError: true` の結果'
     process: |-
       1. `DevDocsError` の場合、text の 1 行目を `{name}: {message}`、次に `details()` を YAML で、最後に `next_steps` を `- ` の行で並べる
       2. `pydantic.ValidationError` の場合、`InvalidArgumentError` として、誤りごとに `{loc を . で繋いだパス}: {msg}` の行を並べる
-      3. どちらも `isError=True` で返す（`ToolError` は送らない。内容を text に残すため）
+      3. どちらも `isError=True` で返却する（`ToolError` は送信しない。内容を text に残すため）
     unit_tests:
       - name: test_tool_error
         case: 正常
@@ -166,7 +166,7 @@ functions:
     container: server/mcp/result.py
     usecase: 共通
     role: 変換
-    summary: 管理の MCP が描画するプロンプトの ID を並べる（起動の `required` に渡す）
+    summary: 管理の MCP が描画するプロンプトの ID を並べる（起動の `required` に指定する）
     scope: public
     is_async: false
     thread_safe: true
