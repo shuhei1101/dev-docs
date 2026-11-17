@@ -1,0 +1,22 @@
+use_cases:
+  - kind: composite
+    scenario: docs/scenario/SC-155-13.yaml
+    impact: none
+    detail: 公開ページを配信する workflow に設計書とテストを作成するだけで、利用者が画面で文書を読む流れは変わらない
+    depends_on: []
+docs:
+  - page: docs/interface/index.yaml
+    new: false
+    change: 公開ページの配信の workflow のインターフェース定義の行を追加する
+    status: todo
+  - page: docs/interface/IF-155-27.yaml
+    new: true
+    change: 公開ページの配信の workflow（pages.yml）のインターフェース定義を新規作成する。ID は作成時に採番された値へ書き換える
+    status: todo
+scope_out:
+  - item: 設計書の refs を related へ書き換える（design-schemas の v9 系への版上げ）
+    reason: 要望に含まれない。新しいインターフェース定義は develop の今のスキーマの書式で作成し、書き換えは並列不可の作業で全ての設計書をまとめて行う
+    plan: '#263'
+  - item: workflow のファイルとインターフェース定義を突き合わせる dev-docs の検査
+    reason: 要望に含まれない。設計書とテストの作成は検査が無くても成り立つ
+    plan: none

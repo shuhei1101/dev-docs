@@ -1,0 +1,78 @@
+tasks:
+  - process: 初期構築
+    status: skipped
+    reason: 既存リポジトリのため対象外
+    updated_by: planner
+    updated_at: '2026-11-17T16:12:00.178529+00:00'
+  - process: リバースエンジニアリング
+    status: skipped
+    reason: 設計書が揃っているため対象外
+    updated_by: planner
+    updated_at: '2026-11-17T16:12:00.178529+00:00'
+  - process: 方針決め
+    status: skipped
+    reason: 方針決めを依頼する Issue ではない
+    updated_by: planner
+    updated_at: '2026-11-17T16:12:00.178529+00:00'
+  - process: PoC 検証
+    status: skipped
+    reason: workflow は既に動いていて、E2E テストの起動のしかたは IF-155-26 の先例の conftest で確立している
+    updated_by: planner
+    updated_at: '2026-11-17T16:12:00.178529+00:00'
+  - process: 複合ユースケース設計
+    status: skipped
+    reason: 利用者の業務フローは変わらない
+    updated_by: planner
+    updated_at: '2026-11-17T16:12:00.178529+00:00'
+  - process: デザインスタイル選定
+    status: skipped
+    reason: 画面を変えない
+    updated_by: planner
+    updated_at: '2026-11-17T16:12:00.178529+00:00'
+  - process: 画面一覧・画面遷移
+    status: skipped
+    reason: 画面を変えない
+    updated_by: planner
+    updated_at: '2026-11-17T16:12:00.178529+00:00'
+  - process: 単一ユースケース設計
+    status: skipped
+    reason: 既存の workflow に設計書とテストを作成するだけで、利用者の操作は変わらない
+    updated_by: planner
+    updated_at: '2026-11-17T16:12:00.178529+00:00'
+  - process: モック作成
+    status: skipped
+    reason: 画面を変えない
+    updated_by: planner
+    updated_at: '2026-11-17T16:12:00.178529+00:00'
+  - process: インターフェース定義設計
+    status: todo
+    note: pages.yml（develop への push と workflow_dispatch で公開ページを配信する）のインターフェース定義を新規作成し、docs/interface/index.yaml に行を追加する
+  - process: 部品設計
+    status: skipped
+    reason: 画面の部品を変えない
+    updated_by: planner
+    updated_at: '2026-11-17T16:12:00.178529+00:00'
+  - process: 画面設計
+    status: skipped
+    reason: 画面を変えない
+    updated_by: planner
+    updated_at: '2026-11-17T16:12:00.178529+00:00'
+  - process: モジュール構成設計
+    status: skipped
+    reason: スクリプトを作らない。workflow のファイルはインターフェース定義が設計し、build_pages.py のモジュール構成は変わらない
+    updated_by: planner
+    updated_at: '2026-11-17T16:12:00.178529+00:00'
+  - process: ドキュメント修正
+    status: todo
+    note: 設計の工程で docs/interface/index.yaml を更新し終えたら done にする
+  - process: 単体テスト作成
+    status: skipped
+    reason: スクリプト・関数を作らず、単体テストの対象が無い
+    updated_by: planner
+    updated_at: '2026-11-17T16:12:00.178529+00:00'
+  - process: 実装
+    status: todo
+    note: pages.yml の name を持たない step に、インターフェース定義の図の step の名前を付ける。振る舞いは変えない
+  - process: 結合テスト作成
+    status: todo
+    note: インターフェース定義の flows[] ごとに gh で workflow を起動して確認するテスト（tests/e2e/workflow/test_pages_yml.py）。手元の E2E テストの層で回す
