@@ -193,15 +193,15 @@ classes:
         process: |-
           1. 呼び出しの共通の手順で `GET /sources/{source}/config?schemas=true` と `GET /sources/{source}/refs?commits=0` を `asyncio.gather` で同時に呼ぶ
           2. `id` を引数の `source`、`git`・`default_ref` を refs の応答の `git`・`defaultRef`（`git` が `false` なら `None`）にする
-          3. `documents[]` の行ごとに、配信元の設定のままのキー `id`・`title`・`paths`・`records`・`search`・`converter`・`alias_type` と、`schemas[id]`（無ければ空）を `schema` にした `DocumentRow` を作る
+          3. `documents[]` の行ごとに、配信元の設定のままのキー `id`・`title`・`paths`・`records`・`search`・`converter`・`alias_type`・`metadata`（無ければ空）と、`schemas[id]`（無ければ空）を `schema` にした `DocumentRow` を作る
           4. `decisions.folders` を `decision_folders`、`diff.ignore_keys` を `diff_ignore_keys`、`github.repository`・`github.issueLabels` を `github_repository`・`github_issue_labels` にして返却する
         unit_tests:
           - name: test_source_view
             case: 正常
             summary: 画面の構成と文書の行
-            condition: 'config が `nav`・`documents[]` 2 行（1 行は `records: files`）・`schemas` 2 件・`diff.ignore_keys: [updated, rev]`・`github.issueLabels: [docs]`、refs が `git: true`・`defaultRef: main` を返却する'
+            condition: 'config が `nav`・`documents[]` 2 行（1 行は `records: files`・`metadata: {category: category}`）・`schemas` 2 件・`diff.ignore_keys: [updated, rev]`・`github.issueLabels: [docs]`、refs が `git: true`・`defaultRef: main` を返却する'
             mock: '`httpx.MockTransport` で project-index の応答を返却する'
-            expected: config の要求のクエリに `schemas=true`、refs の要求のクエリに `commits=0` がある。`documents` が 2 件で各行の `schema` が `schemas` の値、`diff_ignore_keys` が `[updated, rev]`、`github_issue_labels` が `[docs]`、`git` が `True`、`default_ref` が `main`
+            expected: 'config の要求のクエリに `schemas=true`、refs の要求のクエリに `commits=0` がある。`documents` が 2 件で各行の `schema` が `schemas` の値、`records: files` の行の `metadata` が `{category: category}`、もう 1 行の `metadata` が `{}`、`diff_ignore_keys` が `[updated, rev]`、`github_issue_labels` が `[docs]`、`git` が `True`、`default_ref` が `main`'
           - name: test_source_view_when_not_git
             case: 正常
             summary: Git 管理外の配信元
