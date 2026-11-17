@@ -1,5 +1,5 @@
 id: SC-155-7
-title: "利用者が画面で読む"
+title: "利用者が画面で参照する"
 scenarios:
   - name: 正常シナリオ
     setup:
@@ -96,7 +96,7 @@ scenarios:
       - URL に古い commit が入り、その URL を再度開いても古い commit の文書 1 が出る
       - サイドバー・本文の中のリンクで開いた文書も古い commit で出る
     test: test_normal_when_ref_switched
-  - name: 正常シナリオ（差分を見る）
+  - name: 正常シナリオ（差分を確認する）
     setup:
       - name: Mock
         description: なし（実環境で実行）
@@ -326,7 +326,7 @@ scenarios:
       - 見つからない画面に、`broken` を配信していないことと、project-index が起動時の検証で除外した理由（`documents[0]` に必須のキー `paths` が無い）が出る
       - トップバーの配信元の切り替えに sample が出て、設定画面へのリンクがある
     test: test_error_when_source_not_served
-  - name: 正常シナリオ（プロンプトを読む）
+  - name: 正常シナリオ（プロンプトを参照する）
     setup:
       - name: Mock
         description: なし（実環境で実行）
@@ -539,7 +539,7 @@ scenarios:
       - group `lang` の中に group `py` があり、`rules/lang/py/style.yaml` の文書が入る
       - group `lang` の `rules/lang/index.yaml` の文書を押すと、その文書の本文が開く
     test: test_normal_when_nav_grouped_by_folder
-  - name: 正常シナリオ（スキーマ駆動の文書を図と表で読む）
+  - name: 正常シナリオ（スキーマ駆動の文書を図と表で参照する）
     setup:
       - name: Mock
         description: なし（実環境で実行。ブラウザは Playwright で操作する）
@@ -580,7 +580,7 @@ scenarios:
       - 改行を含む値は、ラベルの次の行からブロックで出る
       - '`title`・`lead` の値が見出しとリードの後に重ねて出ず、`x-hidden: true` の項目が本文に出ない'
     test: test_normal_when_schema_document_drawn
-  - name: 正常シナリオ（ER 図を読む）
+  - name: 正常シナリオ（ER 図を参照する）
     setup:
       - name: Mock
         description: なし（実環境で実行。ブラウザは Playwright で操作する）
@@ -846,7 +846,7 @@ priority: 高
 refs:
   - SC-155-13#scenarios[正常シナリオ]
   - SC-155-13#scenarios[異常シナリオ（配信できない配信元がある）]
-test_file: tests/e2e/単一ユースケース/test_利用者が画面で読む.py
+test_file: tests/e2e/単一ユースケース/test_利用者が画面で参照する.py
 tags:
   - name: topic:画面
     main: true
