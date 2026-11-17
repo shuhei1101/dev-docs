@@ -310,7 +310,7 @@ lead: 端末の設定の `version` を比べて移し替えの手順を古い順
 identifier: migrate
 permissions: 対象の設定ファイルを書き換えられる利用者
 idempotent: true
-side_effects: 適用では端末の設定を書き換え、同じフォルダに `{ファイル名}.bak-{時刻}` を残す。`sources` を移す手順では、project-index の端末の設定の `sources` を 1 回の保存で書き換え、移す行を加える。この保存で project-index は全ての配信元を再読み込みしてキャッシュを破棄し、`sources` の既存の行も送信したキーで記載し直す（行に付いたコメントは消え、文字列の `config` は配列になる）。`--plan` は書き換えない
+side_effects: 適用では端末の設定を書き換え、同じフォルダに `{ファイル名}.bak-{時刻}` を残す。`sources` を移す手順では、project-index の端末の設定の `sources` を 1 回の保存で書き換え、移す行を加える。この保存で project-index は全ての配信元を再読み込みしてキャッシュを破棄し、`sources` の既存の行も送信したキーで書き換える（行に付いたコメントは消え、文字列の `config` は配列になる）。`--plan` は書き換えない
 callers:
   - SC-155-3#scenarios[正常シナリオ（端末の設定が古くなる）]
   - SC-155-3#scenarios[正常シナリオ（端末の設定の sources を project-index へ移す）]

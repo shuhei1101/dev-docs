@@ -46,7 +46,7 @@ functions:
     process: |-
       1. `DevDocsError` は、`application/problem+json` で `{type: PROBLEM_TYPE_BASE + name, title: name, status, detail: message, nextSteps: next_steps, ...details()}` を返却する。`details()` の 1 段目のキーと入れ子のモデルのフィールド名を `pydantic.alias_generators.to_camel` で camelCase にする。`dict[str, ...]` の値のキー（`candidates` の文書の ID など）は変えない。`violations` を持つときは `errors[]`（`{path, reason}`、`reason` は `rule`）にも並べる。`ProjectIndexUnreachableError` は `address`・`reason`・`kind` を `projectIndex.address`・`projectIndex.reason`・`projectIndex.kind` に入れ、1 段目には配置しない。`ProjectIndexResponseError` は `address`・`reason` と `kind` `failed` を同じ `projectIndex` に入れ、`status_code`・`summary` は 1 段目に配置し、`detail` を `project-index（{address}）が要求を処理できませんでした。{reason}` にする。どちらかを返却するたびに `[error]` project-index につながらない・project-index が処理に失敗した（アドレス・理由・種類・メソッド・パス）を記載する
       2. `RequestValidationError` は、400 で `type` が `InvalidArgumentError` の problem+json を返却する。`errors[]` は誤りごとに `loc` の `body` を除いたパス（`sources[1].id` の形式。項目のパスへの変換）と `msg`
-      3. `starlette.exceptions.HTTPException`（ルートの無いパス・画面の配信の 404 を含む）は、その `status_code` で `type` が `PROBLEM_TYPE_BASE + "HttpError"`、`detail` が例外の `detail` の problem+json を返却する。例外が `headers`（405 の `Allow` など）を持てば、応答のヘッダーに記載する
+      3. `starlette.exceptions.HTTPException`（ルートの無いパス・画面の配信の 404 を含む）は、その `status_code` で `type` が `PROBLEM_TYPE_BASE + "HttpError"`、`detail` が例外の `detail` の problem+json を返却する。例外が `headers`（405 の `Allow` など）を持てば、応答のヘッダーに含める
       4. これら以外の例外は FastAPI の既定の 500 に任せ、`[error]` 要求の処理に失敗した（メソッド・パス・例外）を記載する
     unit_tests:
       - name: test_register_error_handlers
@@ -69,7 +69,7 @@ functions:
         expected: 404、`Content-Type` が `application/problem+json`、`type` が `urn:dev-docs:error:HttpError`
       - name: test_register_error_handlers_when_http_error_headers
         case: 正常
-        summary: HTTPException のヘッダーを応答に記載する
+        summary: HTTPException のヘッダーを応答に含める
         condition: '`HTTPException(405, headers={"Allow": "GET"})` を送信するルートを POST'
         mock: なし（テスト用のルート）
         expected: 405、`Content-Type` が `application/problem+json`、`Allow` が `GET`

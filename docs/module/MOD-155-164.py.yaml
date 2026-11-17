@@ -288,7 +288,7 @@ data_models:
     usecase: 文書の取得
     role: DTO
     summary: 文書の取得の `aliases` の 1 件
-    description: 共通の『画面の API のモデル』（`ApiModel`。JSON のキーは camelCase）を継承し、`extra="allow"` にする。`AliasEntry` の `extra` のキーは同じ階層に配置し、値を持たないキーは記載しない（`model_dump(exclude_none=True)`）。
+    description: 共通の『画面の API のモデル』（`ApiModel`。JSON のキーは camelCase）を継承し、`extra="allow"` にする。`AliasEntry` の `extra` のキーは同じ階層に配置し、値を持たないキーは含めない（`model_dump(exclude_none=True)`）。
     properties:
       - name: id
         title: 文書の ID

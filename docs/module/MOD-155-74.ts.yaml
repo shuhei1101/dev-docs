@@ -1,9 +1,10 @@
 id: MOD-155-74
 title: "画面 / 共通 / setup-tests.ts"
-lead: 単体テストの共通の準備。`frontend/vitest.config.ts` の `setupFiles` が参照する。
+lead: 単体テストの共通の準備を受け持ち、共通の setup-tests.ts を修正するときに参照する。
 notes:
   準備すること: |-
     - `@testing-library/jest-dom` の照合を Vitest に加える
     - `fetch` の相対 URL（`/` で始まる文字列）を画面のオリジンの URL に修正して呼ぶ（jsdom は相対 URL の `fetch` を解けない）
     - jsdom に無い `matchMedia`（常に該当しない）・`ResizeObserver`・`IntersectionObserver`・`Element.scrollIntoView` を、無いときだけ何もしない実装で補う
     - 各テストの後に描画を片付け、`localStorage`・`sessionStorage` を空にする
+  補足: '`frontend/vitest.config.ts` の `setupFiles` が読み込む。'

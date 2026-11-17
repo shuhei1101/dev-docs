@@ -77,7 +77,7 @@ functions:
     process: |-
       1. stdin を JSON として読み込む。ポートは `DEV_DOCS_PORT`（無ければ `DEFAULT_PORT`）
          - JSON として読み込めない場合、何も出さず 0 を返却する
-      2. ポートにつながるか確認する（待ち受けの確認し）。つながる場合、`source` によらず文を作らない
+      2. ポートにつながるか確認する（待ち受けの確認）。つながる場合、`source` によらず文を作らない
       3. つながらない場合、unit の名前を決め（unit の名前）、名前があり unit があれば（unit の有無）unit を起動し（unit の起動）、`RECONNECT_GUIDE` を `additionalContext` にする
          - `UnitStartError` の場合、`dev-docs の unit {unit} を起動できませんでした（{理由}）。systemctl --user status {unit} で状態を確認してください。` を `additionalContext` にし、切り離して起動しない
       4. unit の名前が無いか unit が無い場合、端末の設定（端末の設定のパス）からクローンを読み込み（クローンの読み取り）、サーバーを起動し（サーバーの起動）、`RECONNECT_GUIDE` を `additionalContext` にする

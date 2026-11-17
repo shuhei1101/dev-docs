@@ -178,13 +178,13 @@ functions:
       1. 端末の設定のパスを決め（端末の設定のパス）、端末の設定を読み込み（端末の設定の読み込み）、待ち受けのポートを決める（待ち受けのポート）
          - `TerminalConfigInvalidError` の場合、違反ごとに `{ファイル}: {パス}: {理由}`（違反が無ければ例外の本文）を標準エラーに出し、`EXIT_CONFIG_INVALID` を返却する
       2. `log_dir` を作り、`logging` を設定する。ログは標準エラーと `{log_dir}/dev-docs.log`（`RotatingFileHandler`）に記載する
-      3. ポートで待ち受けられるか確認する（ポートの確認し）
+      3. ポートで待ち受けられるか確認する（ポートの確かめ）
          - `PortInUseError` の場合、ポートを持っているプロセスを探し（ポートを持っているプロセス）、`{bind}:{port} は使用中です（pid {pid}）。DEV_DOCS_PORT で別のポートを指定できます`（pid を取れなければ `（pid {pid}）` の代わりに `（pid を取れませんでした）`）を標準エラーに出し、`EXIT_PORT_IN_USE` を返却する
       4. 部品を配線し（部品の配線）、アプリを組み立てる（アプリの組み立て。`mdmark_version` に端末の設定の `mdmark_version` を指定する）
          - `PromptInvalidError` の場合、違反ごとに `{file}: {path}: {reason}` を標準エラーに出し、`EXIT_PROMPT_INVALID` を返却する
       5. 標準出力に `http://{bind}:{port}/` を出し、端末の設定の `leftover_sources` があれば `[warning]` 端末の設定に前のバージョンの sources が残っている（行の ID と、project-index で追加する案内）を記載する。配信元の通知を裏で始める
       6. `uvicorn.Server(uvicorn.Config(app, host=bind, port=port, log_config=None, timeout_graceful_shutdown=PROJECT_INDEX_TIMEOUT_SEC * SHUTDOWN_WAIT_FACTOR))` を作り、再起動の制御に取り付けて（サーバーの取り付け）`run()` する
-         - 確認した後に他のプロセスがポートを取り、uvicorn が待ち受けに失敗して止まった場合（`server.started` が `False`。uvicorn は `sys.exit` で抜けるので `SystemExit` を捕まえ、ポートを再確認して（ポートの確認し）使用中のときだけこの分岐へ進む。使用中でない（lifespan の起動の失敗など）ときは `SystemExit` をそのまま送出する）、手順 3 と同じ本文を出して `EXIT_PORT_IN_USE` を返却する
+         - 確認した後に他のプロセスがポートを取り、uvicorn が待ち受けに失敗して止まった場合（`server.started` が `False`。uvicorn は `sys.exit` で抜けるので `SystemExit` を捕まえ、ポートを再確認して（ポートの確かめ）使用中のときだけこの分岐へ進む。使用中でない（lifespan の起動の失敗など）ときは `SystemExit` をそのまま送出する）、手順 3 と同じ本文を出して `EXIT_PORT_IN_USE` を返却する
       7. 止まった後、再起動を要求済み（`handlers.restart.requested`）かで分ける
          - 要求済みの場合、ログのハンドラーを閉じ、`os.execv(sys.executable, [sys.executable, *SERVE_ARGV])` で同じプロセスを置き換える
          - 要求が無い場合、0 を返却する
@@ -401,7 +401,7 @@ functions:
       3. `record` の場合、手順を空にして適用し（移し替えの適用）、`{ファイル} の version を {current} にしました（バックアップ: {パス}）` を標準出力に出して 0 を返却する
       4. それ以外で手順が空の場合、`移し替えは要りません（version {current}）` を標準出力に出して 0 を返却する
       5. 手順を当て（移し替えの適用。`allow_destructive` は解析結果、`project_index` は解析結果か `http://127.0.0.1:{PROJECT_INDEX_PORT}`（無ければ 8786）、`now` は現在時刻）
-         - 手順に `export_sources` がある場合、`sources_port` は、`fetch`・`save` をそれぞれ「1 回の `asyncio.run` の中で `project_index` のアドレスと `PROJECT_INDEX_TIMEOUT_SEC` で project-indexの呼び出しを作り、端末の設定の配信元の行の取得か照合つきの保存を呼んで、`aclose` してから結果を返す関数」にした `SourcesPort` にする（呼ぶごとにイベントループと HTTP のクライアントを作って閉じ、ループをまたいで使用し回さない）
+         - 手順に `export_sources` がある場合、`sources_port` は、`fetch`・`save` をそれぞれ「1 回の `asyncio.run` の中で `project_index` のアドレスと `PROJECT_INDEX_TIMEOUT_SEC` で project-indexの呼び出しを作り、端末の設定の配信元の行の取得か照合つきの保存を呼んで、`aclose` してから結果を返す関数」にした `SourcesPort` にする（呼ぶごとにイベントループと HTTP のクライアントを作って閉じ、ループをまたいで再利用しない）
          - `--record` の場合と、手順に `export_sources` が無い場合は `sources_port` を `None` にする。適用の後、`{ファイル} を version {current} に移し替えました（バックアップ: {パス}）` を標準出力に出して 0 を返却する。project-index に同じ id で内容の違う行があって移さなかった行は、`{id}: project-index に同じ id の別の行があるため移しませんでした` を 1 行ずつ出す。ID を求められなかった行は、`{config}: 配信元の ID を求められないため移しませんでした` を 1 行ずつ出す
          - 手順 1〜5 で `MigrationError` の場合、本文を標準エラーに出し、例外の `exit_code` を返却する
     exceptions:

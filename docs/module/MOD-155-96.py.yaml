@@ -171,10 +171,10 @@ functions:
         type: RenderContext
         required: true
         passing: positional
-        description: リンクの取得し先と、相対パスの起点
+        description: リンクの参照先と、相対パスの起点
     returns:
       type: str | None
-      description: '`{相対パス}` か `{相対パス}#{アンカー}`。取得し先に無ければ `None`'
+      description: '`{相対パス}` か `{相対パス}#{アンカー}`。参照先に無ければ `None`'
     process: |-
       1. 値を最初の `#` で文書の ID と項目のパスに分け、`links` を ID で取得する（無ければ `None`）
       2. 相対パスは、文書のパスのフォルダからリンクの先の `path` への相対パス（`/` 区切り・URL エンコード）にする
@@ -188,7 +188,7 @@ functions:
         expected: '`b.yaml#処理の流れ` と `a.yaml`'
       - name: test_link_target_when_unknown
         case: 正常
-        summary: 取得し先に無い
+        summary: 参照先に無い
         condition: '`links` に無い ID'
         mock: なし
         expected: '`None`'
@@ -213,10 +213,10 @@ functions:
         type: RenderContext
         required: true
         passing: positional
-        description: リンクの取得し先と、相対パスの起点
+        description: リンクの参照先と、相対パスの起点
     returns:
       type: str | None
-      description: '`[{タイトル}]({相対パス})` か、`[{タイトル} / {項目のパス}]({相対パス}#{アンカー})`。取得し先に無ければ `None`'
+      description: '`[{タイトル}]({相対パス})` か、`[{タイトル} / {項目のパス}]({相対パス}#{アンカー})`。参照先に無ければ `None`'
     process: |-
       1. 値をリンク先の取得方法で取得し、`None` なら `None` を返却する
       2. 文書の ID の `links` のタイトルと、項目のパスがあれば ` / {項目のパス}` を続けた文字列（`[`・`]` はエスケープする）を、リンクの文字にする
@@ -235,7 +235,7 @@ functions:
         expected: '`[A / flows\[正常系\]](a.yaml#正常系)`'
       - name: test_link_reference_when_unknown
         case: 正常
-        summary: 取得し先に無い
+        summary: 参照先に無い
         condition: '`links` に無い ID'
         mock: なし
         expected: '`None`'

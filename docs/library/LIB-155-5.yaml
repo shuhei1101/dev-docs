@@ -34,10 +34,10 @@ docs_url: https://python-jsonschema.readthedocs.io/en/stable/api/
 verification:
   state: 済
   date: '2026-10-27'
-  detail: Python 3.14 で `$id` を持つ 2 つのスキーマを `referencing.Registry` に記載し、`Draft202012Validator` の `iter_errors` で、ファイルをまたぐ `$ref` の違反と必須のキーの欠けを `json_path`（`$.sources[0].port` など）と `message` の組で取れることを確認した
+  detail: Python 3.14 で `$id` を持つ 2 つのスキーマを `referencing.Registry` に登録し、`Draft202012Validator` の `iter_errors` で、ファイルをまたぐ `$ref` の違反と必須のキーの欠けを `json_path`（`$.sources[0].port` など）と `message` の組で取れることを確認した
 selection:
   candidates: jsonschema 4.26.0・jsonschema-rs 0.60.3 を比べた（[案のレビュー](https://github.com/shuhei1101/dev-docs/pull/12#discussion_r4389749135)）。
-  decision: mcp の依存として既に入り、ai-monitor と統一されるため。jsonschema-rs の利点は速度だけで、設定と文書の検証では効きにくい。
+  decision: mcp の依存として既に入り、ai-monitor と統一できるため。jsonschema-rs の利点は速度だけで、設定と文書の検証では効きにくい。
   consequences: 型は開発の依存の `types-jsonschema` で補う。
 install: |-
   ```bash

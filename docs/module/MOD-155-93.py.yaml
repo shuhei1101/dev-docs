@@ -196,7 +196,7 @@ functions:
         type: Callable[[str], str | None]
         required: true
         passing: keyword
-        description: '`{文書の ID}#{項目のパス}` から、同じ配信元の文書の相対パスとアンカーを返却する（取得し先に無ければ `None`）。flow 系の `clicks` に使用する'
+        description: '`{文書の ID}#{項目のパス}` から、同じ配信元の文書の相対パスとアンカーを返却する（参照先に無ければ `None`）。flow 系の `clicks` に使用する'
     returns:
       type: str
       description: '`<!-- map: {"title": …} -->`・```mermaid の Mermaid・`<!-- map-data: {…} -->`（補足が空なら置かない）・`<!-- /map -->` を空行で区切って並べた文字列'
@@ -384,7 +384,7 @@ functions:
         type: Callable[[str], str | None]
         required: true
         passing: positional
-        description: '`{文書の ID}#{項目のパス}` から、同じ配信元の文書の相対パスとアンカーを返却する（取得し先に無ければ `None`）'
+        description: '`{文書の ID}#{項目のパス}` から、同じ配信元の文書の相対パスとアンカーを返却する（参照先に無ければ `None`）'
     returns:
       type: str
       description: 'map の範囲か、元の ```mermaid のコードブロック'

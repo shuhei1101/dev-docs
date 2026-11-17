@@ -332,10 +332,10 @@ elements:
   - name: 修正の保存
     kind: button
     position: コメントのパネル > 修正中のコメント
-    description: 修正した本文を配置先へ記載し戻す
+    description: 修正した本文を配置先へ書き戻す
     label: '`保存`（プライマリ）'
     visible_when: 修正中
-    action: クリックで本文を記載し戻し、一覧と本文のマーカー（mdmark の `reloadComments`）を再描画する
+    action: クリックで本文を書き戻し、一覧と本文のマーカー（mdmark の `reloadComments`）を再描画する
   - name: 選択をコピー
     kind: button
     position: コメントのパネル > フッター
@@ -347,13 +347,13 @@ elements:
   - name: Issue を作成
     kind: button
     position: コメントのパネル > フッター
-    description: 選んだコメントを記載した GitHub の Issue の作成画面を開く
+    description: 選んだコメントを含めた GitHub の Issue の作成画面を開く
     label: '`Issue を作成`'
     visible_when: 溜めたコメントがあり、`github` が `null` でないとき
     enabled_when: 選んだコメントが 1 件以上のとき
     constraints: URL の長さは非機能要件の `Issue の作成画面の URL の長さ` の決定値以下
     source: 文書の取得.github
-    action: クリックで選んだコメントの全文をクリップボードへコピーしてから、`github` のリポジトリの Issue の作成画面を、起票のラベルとコメントを記載した `body` で別のタブに開く。URL が上限を超えるときは、上限に収まるまで `body` の末尾を切り詰め、末尾に空行を挟んで `…（長さの上限を超えたため、本文の末尾を切り詰めました。全文はクリップボードにコピーしています）` を記載し添える
+    action: クリックで選んだコメントの全文をクリップボードへコピーしてから、`github` のリポジトリの Issue の作成画面を、起票のラベルとコメントを含めた `body` で別のタブに開く。URL が上限を超えるときは、上限に収まるまで `body` の末尾を切り詰め、末尾に空行を挟んで `…（長さの上限を超えたため、本文の末尾を切り詰めました。全文はクリップボードにコピーしています）` を追記する
     refs:
       - NFR-155-1#requirements[Issue の作成画面の URL の長さ].value
   - name: コメントが無いことの表示
@@ -409,7 +409,7 @@ elements:
     position: 本文 > 用語の単語
     description: 本文の単語が配信元のエイリアスの `name` か `aliases` に該当するとき、mdmark が単語に付けるツールチップ。画面は `aliases[]` を `alias_type` で分け、`term` を用語（`avoid` を含む）、`doc` を文書の別名として mdmark の `mount` に指定する。見た目は mdmark が持つ
     label: 用語の名前と `description`（文書の別名は「関連文書」）
-    visible_when: '`文書の取得.aliases` が空でなく、本文に該当する単語があり、その単語にポインタを記載したかフォーカスしたとき'
+    visible_when: '`文書の取得.aliases` が空でなく、本文に該当する単語があり、その単語にポインタを合わせたかフォーカスしたとき'
     source: 文書の取得.aliases
     status: planned
 screen: frontend/src/features/docs/doc-view/doc-view-screen.tsx

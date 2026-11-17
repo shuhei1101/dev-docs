@@ -71,8 +71,8 @@ requirements:
     value: '7200'
     unit: 文字（パーセントエンコード後の URL 全体）
     rationale: 応答があった最長の 8000 文字から 1 割の余裕を取った（[確認ログ](https://github.com/shuhei1101/dev-docs/pull/36#discussion_r4422112042)）。断られるのはリクエストの 1 行目の長さで、クッキーは別のヘッダーの行のため、ログインした状態でも上限は下がらないとして扱う。ログインした状態では測っていない
-    overflow: '`body` の末尾を切り詰め、切り詰めたことを記載し添える。全文は先にクリップボードへコピーする'
-    measurement: 単体テストで、作った URL の長さが決定値以下であることを確認する。ログインした PC の Chrome で `https://github.com/shuhei1101/dev-docs/issues/new?labels=docs&body=` に続ける `body` の長さを変えて開き、作成画面が出る最長の長さを測れば、この扱いを確認される
+    overflow: '`body` の末尾を切り詰め、切り詰めたことを追記する。全文は先にクリップボードへコピーする'
+    measurement: 単体テストで、作った URL の長さが決定値以下であることを確認する。ログインした PC の Chrome で `https://github.com/shuhei1101/dev-docs/issues/new?labels=docs&body=` に続ける `body` の長さを変えて開き、作成画面が出る最長の長さを測れば、この扱いを確認できる
     status: planned
     refs:
       - SCR-155-1#elements[Issue を作成]
@@ -100,7 +100,7 @@ requirements:
     source: https://github.com/shuhei1101/dev-docs/issues/65
     value: '20'
     unit: 秒
-    rationale: 待ち受けの前に残るのは import と端末の設定・プロンプトの YAML の読み込みだけで、負荷のある端末の計測で約 8 秒。project-index への配信元の状態の問い合わせ（配信元の通知し）は待ち受けの後に回すため含めない。60 秒に対して計測値の 2 倍強を決定値にする
+    rationale: 待ち受けの前に残るのは import と端末の設定・プロンプトの YAML の読み込みだけで、負荷のある端末の計測で約 8 秒。project-index への配信元の状態の問い合わせ（配信元の通知）は待ち受けの後に回すため含めない。60 秒に対して計測値の 2 倍強を決定値にする
     measurement: '`dev-docs serve` を子プロセスで起動してから、待ち受けのポートへの TCP の接続が通るまでの時間'
     test_file: tests/nfr/test_listen_start_time.py
     overflow: 超えても起動は止めない。再起動のスクリプトが 60 秒で打ち切る
@@ -108,7 +108,7 @@ requirements:
       - part: import とプロンプトの YAML の読み込み
         value: 約 8 秒
         notes: 他のプロセスが動いている端末での計測
-      - part: project-index への配信元の状態の問い合わせ（配信元の通知し）
+      - part: project-index への配信元の状態の問い合わせ（配信元の通知）
         value: 0 秒
         notes: 待ち受けの後に回す
     tests:

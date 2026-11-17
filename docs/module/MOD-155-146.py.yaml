@@ -259,7 +259,7 @@ functions:
       2. YAML として読み込む（YAMLの読み込み）
          - 参照できない場合、行と列を `Violation` にして `TerminalConfigInvalidError` を送信する
       3. 端末の設定の値を検証する（端末の設定の検証）
-         - 違反が 1 つでもある場合、全ての違反を記載した `TerminalConfigInvalidError` を送信する
+         - 違反が 1 つでもある場合、全ての違反を含めた `TerminalConfigInvalidError` を送信する
       4. `TerminalConfig` を作る。`project_index` が無ければ `PROJECT_INDEX_DEFAULT`、`sources` の行は ID（無ければ `config` の先頭）だけを `leftover_sources` にする。`state_dir` は端末の設定の `state_dir` と `env` から決め（状態の配置先）、`log_dir` は『パスの正規化』にかけ、無ければ `{state_dir}/logs` にする。`mdmark_version` は端末の設定の値（無ければ `"develop"`）にする
     exceptions:
       - name: TerminalConfigInvalidError

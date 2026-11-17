@@ -5,7 +5,7 @@ entry:
   value: GET `/_api/openapi.json`
 flows:
   - name: 正常系
-    summary: 画面の API だけを記載したスキーマを返却する
+    summary: 画面の API だけを含めたスキーマを返却する
     setup:
       - name: Mock
         description: なし（dev-docs のアプリを HTTP のテストのクライアントで呼ぶ）
@@ -27,7 +27,7 @@ flows:
       - 各エンドポイントの `operationId` が `{tag}-{識別子}`（`view-get_document`、`path` を省く文書の取得は `view-get_document_default`、端末の設定は `settings-get_settings_sources` の形式）で、重複が無い
       - スキーマのプロパティ名が camelCase（文書の取得の `conversionError`・`tableKeys` 等）
     test: test_normal
-lead: '画面の API だけを記載した OpenAPI のスキーマを返却する API のスキーマの入出力を定め、API クライアントを生成するときと API のスキーマを修正するときに参照する。'
+lead: '画面の API だけを含めた OpenAPI のスキーマを返却する API のスキーマの入出力を定め、API クライアントを生成するときと API のスキーマを修正するときに参照する。'
 identifier: get_openapi
 permissions: なし（`127.0.0.1` でだけ待ち受ける）
 idempotent: true
@@ -37,7 +37,7 @@ response:
   - name: 本文
     type: application/json
     description: OpenAPI のスキーマ。`paths` は `/_api/` で始まるエンドポイントだけ
-    notes: '`/mcp`・`/_admin/mcp` は記載しない'
+    notes: '`/mcp`・`/_admin/mcp` は含めない'
 status_codes:
   - code: '200'
     condition: スキーマを返却した（配信元が 0 件でも 200）
@@ -45,8 +45,8 @@ constraints:
   - item: 認可
     constraint: 制限なし（`127.0.0.1` でだけ待ち受ける）
     decided_by: NFR-155-1#requirements[待ち受けのアドレス]
-  - item: 記載するエンドポイント
-    constraint: '`/_api/` で始まるエンドポイントだけ。`/mcp`・`/_admin/mcp`・このエンドポイント自身は記載しない'
+  - item: マウントするエンドポイント
+    constraint: '`/_api/` で始まるエンドポイントだけ。`/mcp`・`/_admin/mcp`・このエンドポイント自身は含めない'
   - item: operationId
     constraint: '`{tag}-{関数名}`。tag は画面の API が `view`、端末の設定が `settings`。関数名はインターフェース定義の識別子'
 test_file: tests/integration/server/test_api_schema.py

@@ -159,9 +159,9 @@ functions:
       type: '{docs: MdmarkIndexDoc[]; terms: MdmarkIndexTerm[]}'
       description: mdmark の索引（mdmark の `docs/リファレンス/索引.md` の形式）
     process: |-
-      1. `aliasType` が `term` のものを `terms` の `{id, term: name, aliases, meaning: description, avoid}` にする（`avoid` が無ければ省く。`description` が無いものは mdmark が除くので記載しない）
+      1. `aliasType` が `term` のものを `terms` の `{id, term: name, aliases, meaning: description, avoid}` にする（`avoid` が無ければ省く。`description` が無いものは mdmark が除くので含めない）
       2. `aliasType` が `doc` のものを `docs` の `{id, path: id, title: name, description, aliases}` にする
-      3. それ以外の引用の種類は記載しない
+      3. それ以外の引用の種類は含めない
     unit_tests:
       - name: test_to_mdmark_index
         case: 正常

@@ -759,7 +759,7 @@ response:
   - name: aliases
     type: list[AliasItem]
     description: 配信元の `alias_type` を持つ行の文書のエイリアス。要素は取り込んだエイリアスのスキーマ（alias-inject の「エイリアスの元の行」）の共通の形式で、画面が mdmark の `mount`・`render` の引数へ読み替えて指定する
-    notes: '`alias_type` を持つ行が無い配信元・変換に失敗したときは空。エイリアスのキーに違反する文書は記載しない'
+    notes: '`alias_type` を持つ行が無い配信元・変換に失敗したときは空。エイリアスのキーに違反する文書は含めない'
   - name: aliases[].id
     type: str
     description: 用語の文書の ID
@@ -780,7 +780,7 @@ response:
   - name: aliases[].avoid
     type: list[str] | None
     description: 用語のやめた言い方（エイリアスのキー `avoid`）
-    notes: 持たない文書は `null`。`related`・`command`・`cwd`・`url`・`skill` など他のエイリアスのキーも、取り込んだスキーマの `metadata` のキー名で同じ階層に持ち、値を持たないキーは記載しない
+    notes: 持たない文書は `null`。`related`・`command`・`cwd`・`url`・`skill` など他のエイリアスのキーも、取り込んだスキーマの `metadata` のキー名で同じ階層に持ち、値を持たないキーは含めない
   - name: bodyPath
     type: str | None
     description: 本文のファイルのパス（配信元の直下から、拡張子つき）。管理用の YAML の行の文書は `body_file` が指すファイル
