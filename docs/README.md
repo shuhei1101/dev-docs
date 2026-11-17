@@ -16,6 +16,7 @@ dev-docs のドキュメント全体の目次
 | [er](./er/) | データストアの構造 |
 | [config](./config/) | 設定値と環境変数の一覧 |
 | [architecture](./architecture/) | システム全体構成（サーバーと管理用プラグイン） |
+| [layout](./layout/) | リポジトリのフォルダとファイルの配置 |
 | [nonfunctional](./nonfunctional/) | 外部の制約から逆算したアプリ側の決定値（非機能要件テストの元） |
 | [external-api](./external-api/) | 採用済みの外部 API のリファレンス |
 | [library](./library/) | 採用済みの外部ライブラリのリファレンス |

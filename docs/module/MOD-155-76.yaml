@@ -26,37 +26,6 @@ diagrams:
       ```
 notes:
   依存の向き: '`shared/` は `features/`・`app/`・`routes/` を import しない（eslint-plugin-boundaries で検査する）'
-  フォルダ構成: |-
-    ```
-    frontend/src/
-    ├── shared/
-    │   ├── lib/
-    │   │   ├── format.ts         # 日時の表示（JST）
-    │   │   ├── logger.ts         # コンソールのロガー
-    │   │   └── utils.ts          # shadcn/ui が置く cn（設計しない）
-    │   ├── core/
-    │   │   ├── schema.ts         # 生成しない zod のスキーマ（problem・missing）
-    │   │   ├── app-error.ts      # AppError とその派生
-    │   │   ├── handle-app-error.ts # 失敗の通知とログ
-    │   │   └── shortcuts.ts      # ショートカットの定義
-    │   ├── adapters/
-    │   │   └── api-client.ts     # orval の fetch の mutator
-    │   ├── hooks/
-    │   │   ├── use-shortcut.ts   # ショートカットの登録
-    │   │   ├── use-delayed-flag.ts # 遅らせた読み込み中の判定
-    │   │   └── use-media-query.ts # メディアクエリの判定
-    │   ├── stores/
-    │   │   └── preferences.ts    # ブラウザに保存する好み
-    │   └── components/
-    │       ├── topbar/topbar.tsx # トップバー
-    │       ├── shortcut-dialog/shortcut-dialog.tsx # ショートカットの一覧
-    │       ├── skip-link.tsx     # 本文へのスキップ
-    │       ├── ui/               # shadcn/ui が置く部品（設計しない）
-    │       └── **/*.stories.tsx  # Storybook のストーリー（部品設計の story が持つ。設計しない）
-    └── testing/
-        ├── msw/handlers.ts       # テストの既定のハンドラ
-        └── setup-tests.ts        # 単体テストの共通の準備
-    ```
 tags:
   - name: topic:ユーティリティ
     main: true

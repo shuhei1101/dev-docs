@@ -44,17 +44,6 @@ diagrams:
         click 端末の設定 href "./MOD-155-149.py.yaml#端末の設定"
 notes:
   補足: 設定画面の `sources[]` の取得・保存は、project-index の端末の設定の API へ依頼するエンドポイントを持つ。
-  フォルダ構成: |-
-    ```text
-    src/dev_docs/features/settings/
-    ├─ __init__.py   # 公開する型と関数の再エクスポート
-    ├─ types.py      # TerminalConfig / SourceEntry / SourceScope / SettingsSourceRow / SettingsSourcesView / SettingsSourcesRequest / SettingsSourcesResponse
-    ├─ query.py      # config_path / load_terminal_config / listen_port
-    ├─ service.py    # save_sources（project-index へ保存を依頼する）
-    └─ route.py      # build_settings_router（GET・PUT /_api/settings/sources）
-    src/dev_docs/schemas/
-    └─ settings.schema.yaml   # 端末の設定のスキーマ（JSON Schema 2020-12。version 2）
-    ```
 tags:
   - name: topic:端末の設定
     main: true

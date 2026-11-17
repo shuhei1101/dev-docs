@@ -609,14 +609,6 @@ refs:
   - LIB-155-9#
 notes:
   補足: GitHub Actions の Pages のワークフローが呼び、出力のフォルダを Pages へ配信する。
-  フォルダ構成: |-
-    ```text
-    scripts/
-    └─ build_pages.py    # main / list_public_guides / load_public_flowcharts / index_document_paths / render_page / item_anchors / rewrite_references / write_bundle_config / run_mdmark
-    .github/
-    └─ workflows/
-       └─ pages.yml      # develop への push で build_pages.py を実行し、出力を Pages へ配信
-    ```
 tags:
   - name: topic:ビルド
     main: true

@@ -105,11 +105,6 @@ refs:
   - CMD-155-1#
 notes:
   補足: AI Monitor が設定 `projects[].resident_servers` の `restart_command` で、稼働しているブランチ（develop）の作業ツリーを作業ディレクトリにして呼ぶ。実行時に参照するファイルが変わっていないときは起動し直さない（文書だけの変更でサーバーを止めない）。画面のビルドの成果物 `src/dev_docs/screen/` は commit されるため、`npm ci`・`npm run build` は実行しない。
-  フォルダ構成: |-
-    ```text
-    scripts/
-    └─ dev-docs-restart-resident.sh    # main
-    ```
 tags:
   - name: topic:再起動
     main: true
