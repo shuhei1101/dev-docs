@@ -150,6 +150,12 @@ scope_out:
   - item: モジュール構成の notes の「フォルダ構成」以外のセクション（MOD-155-75 の「生成物」など）の移動
     reason: 要望は「フォルダ構成」のセクションだけを移すことで、他のセクションはモジュールの補足として残るため
     plan: none
+  - item: MOD-155-75 の notes「生成物」は route-tree.gen.ts と shared/api/generated/ を commit しないとしているが、実際には Git で管理されている食い違い
+    reason: 要望は「フォルダ構成」のセクションの移動だけで、生成物を Git で管理するかの決定を含まない。フォルダ構成の設計書は今の実態（Git で管理する）を generated_from.tracked に記載した
+    plan: to_file
+  - item: MOD-155-120 のツリーにあった migrations/dev-docs/{バージョン}/steps.yaml（2・3）がリポジトリに無い食い違い
+    reason: ツリーはフォルダ構成の設計書へそのまま移した。実体の有無の整合はこの要望に含まない
+    plan: to_file
 use_cases:
   - kind: single
     scenario: docs/scenario/SC-155-7.yaml
