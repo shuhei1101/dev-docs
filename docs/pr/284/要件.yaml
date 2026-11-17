@@ -1,0 +1,13 @@
+docs:
+  - page: docs/layout/LAY-275-1.yaml
+    new: false
+    change: gitignore の docs/generated/ の行を削除し、tmp/ の除外に合わせて gitignore の行と tmp のフォルダの contents を修正する
+    status: todo
+  - page: docs/module/MOD-192-1.py.yaml
+    new: false
+    change: SKIPPED_DIRS の entries の "generated" を削除し、summary を合わせる
+    status: todo
+scope_out:
+  - item: MOD-155-75 の notes「生成物」の「commit しない」と、生成物を Git で管理している実態の食い違い
+    reason: .gitignore に触れうるが、生成物の管理方針を決める別の要望で、#271・#279 の終わりの条件に含まれない
+    plan: '#276'
