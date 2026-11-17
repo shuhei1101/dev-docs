@@ -36,6 +36,9 @@ VITEST_SUMMARY = re.compile(r"^\s*Tests\s+.*\d+ passed.*$", re.MULTILINE)
 # Playwright の集計（成功したテストの件数の行）
 PLAYWRIGHT_SUMMARY = re.compile(r"^\s*\d+ passed \(.+\)$", re.MULTILINE)
 
+# 端末の色の制御文字（vitest・Playwright が集計の行に付ける）
+ANSI_ESCAPE = re.compile(r"\x1b\[[0-9;]*m")
+
 # 検証用のブランチを push する前に、worktree へ適用する変更
 type Mutation = Callable[[Path], None]
 
@@ -47,6 +50,11 @@ type WorkflowRunner = Callable[[str, str, Mapping[str, str]], tuple[str, str, di
 
 # 成果物の中のファイルの本文を返却する関数（artifact_reader の fixture）
 type ArtifactReader = Callable[[str, str, str], str]
+
+
+def _read_log(artifact_reader: ArtifactReader, run_id: str) -> str:
+    """成果物のログを取得し、色の制御文字を除いた本文を返却する。"""
+    return ANSI_ESCAPE.sub("", artifact_reader(run_id, ARTIFACT, LOG_FILE))
 
 
 def _assert_steps(steps: Mapping[str, str], expected: Mapping[str, str]) -> None:
@@ -106,7 +114,7 @@ def test_normal(
             "ログを成果物に上げる": "success",
         },
     )
-    log = artifact_reader(run_id, ARTIFACT, LOG_FILE)
+    log = _read_log(artifact_reader, run_id)
     summary = PYTEST_SUMMARY.search(log)
     assert summary is not None
     # 手元の全件実行の skip は 0 件（2026-11-17 の計測）
@@ -136,7 +144,7 @@ def test_normal_when_backend_integration(
             "ログを成果物に上げる": "success",
         },
     )
-    log = artifact_reader(run_id, ARTIFACT, LOG_FILE)
+    log = _read_log(artifact_reader, run_id)
     summary = PYTEST_SUMMARY.search(log)
     assert summary is not None
     # 手元の全件実行の skip は 0 件（2026-11-17 の計測）
@@ -165,7 +173,7 @@ def test_normal_when_frontend_unit(
             "ログを成果物に上げる": "success",
         },
     )
-    log = artifact_reader(run_id, ARTIFACT, LOG_FILE)
+    log = _read_log(artifact_reader, run_id)
     summary = VITEST_SUMMARY.search(log)
     assert summary is not None
     # 手元の全件実行の skip は 0 件（2026-11-17 の計測）
@@ -195,7 +203,7 @@ def test_normal_when_frontend_integration(
             "ログを成果物に上げる": "success",
         },
     )
-    log = artifact_reader(run_id, ARTIFACT, LOG_FILE)
+    log = _read_log(artifact_reader, run_id)
     assert PLAYWRIGHT_SUMMARY.search(log) is not None
     # 手元の全件実行の skip は 0 件（2026-11-17 の計測）
     assert re.search(r"^\s*\d+ skipped$", log, re.MULTILINE) is None
@@ -226,7 +234,7 @@ def test_normal_when_paths_given(
             "ログを成果物に上げる": "success",
         },
     )
-    log = artifact_reader(run_id, ARTIFACT, LOG_FILE)
+    log = _read_log(artifact_reader, run_id)
     assert "tests/integration/plugin/" in log
     assert "tests/integration/server/" not in log
 
@@ -254,7 +262,7 @@ def test_error_when_tests_fail(
             "ログを成果物に上げる": "success",
         },
     )
-    log = artifact_reader(run_id, ARTIFACT, LOG_FILE)
+    log = _read_log(artifact_reader, run_id)
     assert "test_always_fail" in log
     summary = PYTEST_SUMMARY.search(log)
     assert summary is not None
@@ -284,7 +292,7 @@ def test_error_when_output_stalls(
             "ログを成果物に上げる": "success",
         },
     )
-    log = artifact_reader(run_id, ARTIFACT, LOG_FILE)
+    log = _read_log(artifact_reader, run_id)
     assert "出力が 7 秒変わらなかったため、テストを止めた" in log
 
 
@@ -370,7 +378,7 @@ def test_error_when_paths_outside_layer(
             "ログを成果物に上げる": "success",
         },
     )
-    log = artifact_reader(run_id, ARTIFACT, LOG_FILE)
+    log = _read_log(artifact_reader, run_id)
     assert reason in log
     assert PYTEST_SUMMARY.search(log) is None
     assert PLAYWRIGHT_SUMMARY.search(log) is None
