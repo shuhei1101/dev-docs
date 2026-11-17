@@ -253,7 +253,7 @@ flows:
         description: なし（本物の GitHub Actions で回す）
       - name: ブランチ
         description: develop と同じ中身のブランチ
-        notes: '`layer: backend-integration`・`paths: tests/integration/frontend/`。同じ結論になる例として、`layer: backend-unit`・`paths: tests/integration/`（結合テストでない層に `paths` を指定）と、`layer: frontend-integration`・`paths: tests/integration/frontend/../server/`（`..` で外へ出る）も起動する'
+        notes: '`layer: backend-integration`・`paths: tests/integration/frontend/`。同じ結論になる例として、`layer: backend-unit`・`paths: tests/integration/`（結合テストでない層に `paths` を指定）と、`layer: frontend-integration`・`paths: tests/integration/frontend/../server/`（`..` で外へ出る）と、`layer: backend-integration`・`paths: tests/integration/plugin/;ls`（許可しない文字を含む）も起動する'
     flow: |-
       <!-- map -->
 
