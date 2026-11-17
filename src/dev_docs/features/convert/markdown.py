@@ -475,7 +475,7 @@ class _Builder:
                 continue
             child_sub = properties.get(key, {})
             child_sub = child_sub if isinstance(child_sub, Mapping) else {}
-            self.heading(str(child_sub.get("x-heading") or child_sub.get("title") or key), level)
+            self.heading(_child_heading(child_sub, key), level)
             self.value(key, child, {**child_sub, "x-heading": None}, f"{path}.{key}", level + 1)
 
     def plain(
@@ -533,12 +533,12 @@ def _anchors(data: Any, schema: Any, found: dict[str, str]) -> dict[str, str]:
     return found
 
 
-def _item_steps(item: str) -> list[tuple[str, str | None]] | None:
-    """項目のパスを、`[` と `]` の対応を数えて（名前, `[...]` の値）の並びに分ける。
+def _item_steps(item: str) -> list[tuple[str, bool]] | None:
+    """項目のパスを、`[` と `]` の対応を数えて（名前か `[...]` の値, `[...]` か）の並びに分ける。
 
-    記載方法の誤ったパス（閉じない `[`・対応する `[` の無い `]`・`[{値}]` の直後が `.` か末尾でない・空の名前）は `None` を返却する。
+    記載方法の誤ったパス（閉じない `[`・対応する `[` の無い `]`・`[{値}]` の直後が `.`・`[`・末尾のどれでもない・空の名前）は `None` を返却する。
     """
-    steps: list[tuple[str, str | None]] = []
+    steps: list[tuple[str, bool]] = []
     position = 0
     while True:
         # 名前: 次の `.`・`[`・`]` の手前まで
@@ -548,19 +548,18 @@ def _item_steps(item: str) -> list[tuple[str, str | None]] | None:
         name = item[position:end]
         if not name:
             return None
-        label: str | None = None
-        # `[` が続く: 対応する `]` までを値にする
-        if end < len(item) and item[end] == "[":
+        steps.append((name, False))
+        # `[` が続く間: 対応する `]` までを 1 つの値にする
+        while end < len(item) and item[end] == "[":
             close = _closing_bracket(item, end)
             if close is None:
                 return None
-            label = item[end + 1 : close]
+            steps.append((item[end + 1 : close], True))
             end = close + 1
-        steps.append((name, label))
         # 末尾: 分け終えた
         if end == len(item):
             return steps
-        # `.` 以外（`]`・`[`・文字）が続く: 記載方法の誤り
+        # `.` 以外（`]`・文字）が続く: 記載方法の誤り
         if item[end] != ".":
             return None
         position = end + 1
@@ -580,6 +579,26 @@ def _closing_bracket(item: str, start: int) -> int | None:
     return None
 
 
+def _child_heading(child_sub: Mapping[str, Any], key: str) -> str:
+    """辞書の `sections` の子の見出し（子のスキーマの `x-heading`、無ければ `title`、無ければキー）を返却する。"""
+    return str(child_sub.get("x-heading") or child_sub.get("title") or key)
+
+
+def _select_element(elements: list[Any], x_key: str, label: str) -> Mapping[str, Any] | None:
+    """`x-key` が `label` の最初の要素、無ければ `{値}#{順番}` の順番目の要素を返却する。"""
+    matches = [e for e in elements if isinstance(e, Mapping) and str(e.get(x_key)) == label]
+    # 値がそのまま一致する要素がある: その最初の要素
+    if matches:
+        return matches[0]
+    # 末尾が `#{整数}`: `#{整数}` を除いた値の要素の、整数番目（1 始まり）
+    value, sep, order = label.rpartition("#")
+    if not sep or not order.isdigit():
+        return None
+    same = [e for e in elements if isinstance(e, Mapping) and str(e.get(x_key)) == value]
+    index = int(order)
+    return same[index - 1] if 1 <= index <= len(same) else None
+
+
 def item_heading(data: Mapping[str, Any], schema: Mapping[str, Any], item: str) -> str | None:
     """文書の項目のパスが、スキーマ駆動の変換で見出しになる項目を指すとき、その見出しを返却する。"""
     steps = _item_steps(item)
@@ -589,29 +608,42 @@ def item_heading(data: Mapping[str, Any], schema: Mapping[str, Any], item: str) 
     value: Any = data
     sub: Any = schema
     heading: Any = None
-    for key, label in steps:
-        if not isinstance(sub, Mapping) or not isinstance(value, Mapping):
-            return None
-        properties: Mapping[str, Any] = sub.get("properties") or {}
-        sub = properties.get(key)
-        value = value.get(key)
+    for step, bracketed in steps:
         if not isinstance(sub, Mapping):
             return None
-        # `{キー}`: キーの `x-heading` がこの階層の見出し
-        if label is None:
+        # `{キー}`: 辞書のキーへ進み、キーの `x-heading` がこのステップの見出し
+        if not bracketed:
+            if not isinstance(value, Mapping):
+                return None
+            properties: Mapping[str, Any] = sub.get("properties") or {}
+            sub = properties.get(step)
+            value = value.get(step)
+            if not isinstance(sub, Mapping):
+                return None
             heading = sub.get("x-heading")
             continue
-        # `{キー}[{値}]`: `sections` の要素のうち `x-key` が値に該当する要素へ進み、その値が見出し
+        # `[{値}]`: `sections` の値だけが見出しを持つ
+        if sub.get("x-shape") != "sections":
+            return None
         x_key = sub.get("x-key")
-        if sub.get("x-shape") != "sections" or not x_key or not isinstance(value, list):
+        # 配列: `x-key` が値の要素（無ければ `{値}#{順番}` の順番目）へ進み、その `x-key` の値が見出し
+        if isinstance(value, list) and x_key:
+            value = _select_element(value, str(x_key), step)
+            if value is None:
+                return None
+            heading = value.get(x_key)
+            sub = sub.get("items")
+        # 辞書: 値をキーにした子へ進み、変換が子に付ける見出しがこのステップの見出し
+        elif isinstance(value, Mapping):
+            if step not in value:
+                return None
+            properties = sub.get("properties") or {}
+            child_sub = properties.get(step)
+            sub = child_sub if isinstance(child_sub, Mapping) else {}
+            value = value[step]
+            heading = _child_heading(sub, step)
+        else:
             return None
-        value = next(
-            (e for e in value if isinstance(e, Mapping) and str(e.get(x_key)) == label), None
-        )
-        if value is None:
-            return None
-        sub = sub.get("items")
-        heading = label
     return str(heading) if heading else None
 
 
