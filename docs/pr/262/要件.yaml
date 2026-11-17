@@ -18,8 +18,10 @@ docs:
     updated_at: '2026-11-17T10:24:28.991766+00:00'
   - page: docs/nonfunctional/NFR-155-1.yaml
     new: false
-    change: '#225: project-index#85 の後の 1 回目の表示の計測値から、最初の文書を表示し終えるまでの決定値を見直す'
-    status: todo
+    change: '#225: project-index#85 の後の計測で、開けた 1 回目の最大は 32.6 秒（NFR-15 の 70 秒以内）、2 回目の最大は 6.1 秒（NFR-16 の 18 秒以内）だったため、決定値は変えない'
+    status: done
+    updated_by: planner
+    updated_at: '2026-11-17T11:06:49.041340+00:00'
   - page: docs/library/LIB-155-9.yaml
     new: false
     change: '#255: mdmark の develop の map のクラス図が click のクラスを <a> にしないのは mdmark の退行（shuhei1101/mdmark#650）なので、利用方法の記述は変えない'
@@ -38,4 +40,7 @@ scope_out:
     plan: shuhei1101/mdmark#650
   - item: project-index の配信元の検査（nav_warnings の check_nav_filters）が、行の metadata で対応付けたキー（category）を知らない項目として警告すること
     reason: project-index の develop で knowledge-files のスキーマと category の条件を当てると「知らない項目です（category）」を返した。別のリポジトリの修正で、この作業 PR がマージされなくても同じ内容で成り立つ
-    plan: to_file
+    plan: shuhei1101/project-index#146
+  - item: 起動の直後に配信元の文書の一覧が、全ての配信元のリビジョンの書き出しを待つこと（#225 の 1 回目の表示）
+    reason: 計測で、project-index の起動から約 90 秒、リビジョンの書き出しが続く間に文書の一覧が 30〜45 秒以上待たされた。project-index の中の修正で、dev-docs の側に原因は無い
+    plan: shuhei1101/project-index#145
