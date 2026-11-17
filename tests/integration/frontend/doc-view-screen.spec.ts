@@ -722,6 +722,8 @@ test.describe("本文", () => {
     await openRendered(page, "/sample/docs/doc-1", {
       document: ({ path }) => ({ body: documentResponse({ path, markdown }) }),
     });
+    // map の図は見出しより後に描き終わるため、閉じた凡例が描かれるまで待つ
+    await expect(page.locator(".mdmark .mdmark-diagram-legend[hidden]")).toBeAttached();
     // 実行
     const styles = await page.locator(".mdmark").evaluate((body) => {
       const style = (selector: string, pseudo: string | null = null) => {
