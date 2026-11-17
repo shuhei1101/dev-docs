@@ -4,7 +4,7 @@ lead: 画面全体の CSS を受け持ち、index.css を修正するときに�
 styles:
   - name: mdmark-html
     title: HTML ブロックの上書き
-    container: index.css
+    container: shared/styles/index.css
     summary: 本文の `<!-- html -->` ブロックの `<pre>` を画面幅で折り返す
     description: プロンプトの文書のテンプレートと描画の結果は `<mark>`・`<span data-hint>` を含むため HTML の `<pre>` で出す。長い行で横スクロールさせない。
     values:
@@ -13,7 +13,7 @@ styles:
         value: '`white-space: pre-wrap; overflow-wrap: anywhere`'
   - name: mdmark-sticky-top
     title: mdmark の固定の位置
-    container: index.css
+    container: shared/styles/index.css
     summary: mdmark が右側の目次・見出しの移り先・表の見出し行を留める位置を、トップバーと種類のタブの下にする
     description: 画面設計『文書の画面』の要素『目次』の `固定の位置`。値は文書の画面のサイドバーの固定の位置（`top-24`）と同じ式にし、トップバー（`h-12`）と種類のタブ（`sticky top-12`）の下端に合わせる。mdmark は既定値を層 `mdmark` の `:root` に持つため、層に属さない `:root` で上書きする
     values:
@@ -27,7 +27,7 @@ styles:
         when: 目次の固定の位置を変えるときに、文書の画面の目次の振る舞いと突き合わせる。
   - name: tailwind-imports
     title: Tailwind の読み込み
-    container: index.css
+    container: shared/styles/index.css
     usecase: 共通
     summary: Tailwind を `theme.css`・`utilities.css` に分けて読み込み、Preflight の代わりに本文の外だけに適用する Preflight を読み込む
     description: '`@import "tailwindcss"` は Preflight を本文にも適用するため使用しない。`@import` は `@scope` の中に配置できないため、本文の外だけに適用する Preflight は別のファイルにする。層の順の宣言は、`tailwindcss/index.css` の先頭と同じものを最初に配置し、`utilities` が `base` より後ろの順を保つ'
@@ -54,7 +54,7 @@ styles:
         when: Preflight を本文の外だけに適用する CSS を確認するとき。
   - name: base-outside-mdmark
     title: 本文の外の枠線と輪郭線の色
-    container: index.css
+    container: shared/styles/index.css
     usecase: 共通
     summary: 層 `base` の全ての要素の枠線と輪郭線の色を、本文の外だけに適用する
     values:
@@ -68,7 +68,7 @@ styles:
         when: 本文の外の既定のスタイルを変えるときに、文書の画面の本文の見た目と突き合わせる。
   - name: mdmark-padding
     title: 本文の内側の余白
-    container: index.css
+    container: shared/styles/index.css
     usecase: 文書を参照する
     summary: 本文の内側の余白を下だけにし、本文の左端をパンくず・文書のタイトルと同じ位置にする
     description: mdmark は既定値を層 `mdmark` の `:root` に持つため、層に属さない `.mdmark` で上書きする
@@ -83,7 +83,7 @@ styles:
         when: 本文の余白を変えるときに、文書の画面の本文の見た目と突き合わせる。
   - name: doc-title-tokens
     title: 文書のタイトルのトークン
-    container: index.css
+    container: shared/styles/index.css
     usecase: 文書を参照する
     summary: 文書のタイトルの大きさ・行の高さ・太さを mdmark の見出し 1 と同じにするトークンを `@theme inline` に割り当てる
     description: ユーティリティ `text-doc-title`・`font-doc-title` になる。mdmark の CSS を読み込むまでは、mdmark の既定値と同じ値を代わりに使用する
