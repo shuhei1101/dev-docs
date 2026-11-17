@@ -1,6 +1,12 @@
 use_cases: []
 scope_out:
   - item: 設定画面のダイアログ以外のストーリーで検出される layout-transition
-    reason: 要望は設定画面のダイアログを開いたストーリーの検出に限る。出典の部品が他の画面でも同じ検出を出すと分かった場合は、実装でこの行を見直す
+    reason: 出典は sonner が差し込むスタイルで、sonner を読み込む他の画面でも同じ検出が出る。高さの遷移の上書きは全ての画面へ当たり、検出を除外する理由は sonner の設計書に 1 か所で記載したため、画面ごとの対応は要らない
     plan: none
-docs: []
+docs:
+  - page: docs/library/LIB-155-19.yaml
+    new: false
+    change: 制限事項に、読み込み時に差し込むスタイルが高さの遷移を持つことと、上書きの仕方・layout-transition の検出を対象から除外する理由を記載。使用箇所に frontend/src/index.css を追加
+    status: done
+    updated_by: planner
+    updated_at: '2026-11-17T16:26:26.292005+00:00'
