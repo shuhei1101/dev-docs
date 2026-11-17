@@ -191,6 +191,8 @@ def announce_sources(terminal: TerminalConfig) -> threading.Thread:
             for state in await client.list_sources():
                 if state.status == "serving":
                     print(state.id, flush=True)
+                elif state.status == "loading":
+                    print(f"{state.id}（読み込み中）", flush=True)
         finally:
             await client.aclose()
 

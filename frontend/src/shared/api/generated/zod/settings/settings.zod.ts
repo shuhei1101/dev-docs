@@ -31,7 +31,10 @@ export const SettingsGetSettingsSourcesResponse = zod.object({
   "config": zod.string(),
   "server": zod.string()
 }).describe('設定のバージョンとサーバーが読み込めるバージョン。'),zod.null()]).optional(),
-  "outsideRead": zod.boolean().default(settingsGetSettingsSourcesResponseSourcesItemOutsideReadDefault)
+  "outsideRead": zod.boolean().default(settingsGetSettingsSourcesResponseSourcesItemOutsideReadDefault),
+  "storage": zod.union([zod.object({
+  "type": zod.enum(['git', 'disk'])
+}).describe('`sources[].storage`（読み書きの方法）。'),zod.null()]).optional()
 }).describe('端末の設定の取得の `sources[]` の 1 行（行の値に配信元の状態を重ねたもの）。')),
   "version": zod.union([zod.string(),zod.null()]).optional()
 }).describe('GET `/_api/settings/sources` の応答。')
@@ -52,7 +55,10 @@ export const SettingsPutSettingsSourcesBody = zod.object({
   "read": zod.array(zod.string()).optional(),
   "write": zod.union([zod.array(zod.string()),zod.null()]).optional()
 }).default(settingsPutSettingsSourcesBodySourcesItemScopeDefault).describe('`sources[].scope` の `read`・`write`。'),
-  "outside_read": zod.boolean().default(settingsPutSettingsSourcesBodySourcesItemOutsideReadDefault)
+  "outside_read": zod.boolean().default(settingsPutSettingsSourcesBodySourcesItemOutsideReadDefault),
+  "storage": zod.union([zod.object({
+  "type": zod.enum(['git', 'disk'])
+}).describe('`sources[].storage`（読み書きの方法）。'),zod.null()]).optional()
 }).describe('設定画面が送信する `sources[]` の 1 行（project-index の端末の設定の行の構造）。')),
   "expectedVersion": zod.union([zod.string(),zod.null()]).optional()
 }).describe('PUT `/_api/settings/sources` の本文。')

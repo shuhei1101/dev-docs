@@ -4,7 +4,7 @@
  * FastAPI
  * OpenAPI spec version: 0.1.0
  */
-import type { SettingsSourceStatusStatus } from './settingsSourceStatusStatus';
+import type { SettingsStatusKind } from './settingsStatusKind';
 import type { SourceConfigVersion } from './sourceConfigVersion';
 import type { SourceViolation } from './sourceViolation';
 
@@ -13,7 +13,7 @@ import type { SourceViolation } from './sourceViolation';
  */
 export interface SettingsSourceStatus {
   id: string | null;
-  status: SettingsSourceStatusStatus;
+  status: SettingsStatusKind;
   errors?: SourceViolation[];
   configVersion?: SourceConfigVersion | null;
 }

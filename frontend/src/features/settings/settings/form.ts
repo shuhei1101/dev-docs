@@ -3,27 +3,19 @@ import { z } from "zod";
 import type {
   SettingsSourceRow as SettingsSource,
   SourceEntry,
+  SourceStorageType,
 } from "@/shared/api/generated/model";
 
 /** 端末の設定の行の読み書きの方法（`storage.type`） */
-export type StorageType = "git" | "disk";
+export type StorageType = SourceStorageType;
 
 /** 読み書きの方法の選択肢。`auto` は行に `storage` を含めない（省略） */
 export type StorageChoice = StorageType | "auto";
 
-// TODO(#265 モック): API の生成した型に `storage` が入るまでの仮の型
-type SettingsSourceWithStorage = SettingsSource & {
-  storage?: { type: StorageType } | null;
-};
-type SourceEntryWithStorage = SourceEntry & {
-  storage?: { type: StorageType };
-};
-
 /** 行が保存済みの読み書きの方法を持つか（持つ行は省略に戻せない） */
 export const storedStorage = (
   source: SettingsSource | null,
-): StorageType | null =>
-  (source as SettingsSourceWithStorage | null)?.storage?.type ?? null;
+): StorageType | null => source?.storage?.type ?? null;
 
 export type SourceFormValues = {
   id: string;
@@ -122,7 +114,7 @@ export const findSource = (sources: SettingsSource[], key: string): number =>
   sources.findIndex((source) => sourceKey(source) === key);
 
 /** 取得の行から状態の項目を除き、保存の行にする */
-const toSourceInput = (source: SettingsSource): SourceEntryWithStorage => {
+const toSourceInput = (source: SettingsSource): SourceEntry => {
   const storage = storedStorage(source);
   return {
     ...(source.id ? { id: source.id } : {}),
@@ -137,7 +129,7 @@ const toSourceInput = (source: SettingsSource): SourceEntryWithStorage => {
   };
 };
 
-const fromValues = (values: SourceFormValues): SourceEntryWithStorage => {
+const fromValues = (values: SourceFormValues): SourceEntry => {
   const write = filled(values.write);
   return {
     id: values.id,

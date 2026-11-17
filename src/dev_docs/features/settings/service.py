@@ -23,6 +23,8 @@ def _to_row(entry: SourceEntry) -> dict[str, Any]:
         row["enabled"] = False
     if not entry.outside_read:
         row["outside_read"] = False
+    if entry.storage is not None:
+        row["storage"] = {"type": entry.storage.type}
     scope: dict[str, Any] = {}
     if entry.scope.read:
         scope["read"] = list(entry.scope.read)
