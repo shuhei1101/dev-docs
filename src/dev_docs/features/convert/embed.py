@@ -7,13 +7,12 @@ from collections.abc import Mapping
 from pathlib import PurePosixPath
 from typing import Any
 
-from dev_docs.features.convert.markdown import render_table
+from dev_docs.features.convert.markdown import FENCE, render_table
 from dev_docs.features.documents.fields import get_field
 from dev_docs.shared.errors import InvalidArgumentError
 
 EMBED_PATTERN = r"<!--\s*embed:\s*(?P<path>[^#\s]+)(?:#(?P<item>\S+))?\s*-->"
 
-FENCE = re.compile(r"^\s{0,3}(?P<mark>`{3,}|~{3,})")
 MISSING = object()
 
 

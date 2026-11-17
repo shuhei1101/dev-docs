@@ -135,19 +135,19 @@ functions:
       - name: test_rewrite_text_when_id_link
         case: 正常
         summary: id のリンク
-        condition: '`[A](id:a)`・`[B](id:b#flow)`・`[C](id:zzz)`・行内のコード `` `[D](id:a)` ``、`links` に `a`（パス `dev/a.yaml`）と `b`（パス `dev/b.yaml`）、文書のパスが `dev/c.yaml`、項目の見出しの取得方法が `b`・`flow` に `処理の流れ` を返却する'
+        condition: '`[A](id:a)`・`[B](id:b#flow)`・`[C](id:zzz)`・行内のコード `` `[D](id:a)` ``、`links` に `a`（パス `dev/a.yaml`）と `b`（パス `dev/b.yaml`）、文書のパスが `dev/c.yaml`、項目のアンカーの取得方法が `b`・`flow` に `処理の流れ` を返却する'
         mock: なし
         expected: '`[A](a.yaml)`・`[B](b.yaml#処理の流れ)`・`[C](id:zzz)`・`` `[D](id:a)` ``'
       - name: test_rewrite_text_when_id_link_no_heading
         case: 正常
         summary: 見出しにならない項目
-        condition: '`[B](id:b#no-such)`、項目の見出しの取得方法が `None` を返却する'
+        condition: '`[B](id:b#no-such)`、項目のアンカーの取得方法が `None` を返却する'
         mock: なし
         expected: '`[B](b.yaml)`'
       - name: test_rewrite_text_when_mermaid_click
         case: 正常
         summary: Mermaid のまま返却する図の click の id の参照
-        condition: '```mermaid の `classDiagram` に `click A href "id:a"`・`click B "id:b#flow"`・`click C href "id:zzz"`・`click D href "https://e.example/"`、`links` に `a`（パス `dev/a.yaml`）と `b`（パス `dev/b.yaml`）、文書のパスが `dev/c.yaml`、項目の見出しの取得方法が `b`・`flow` に `処理の流れ` を返却する'
+        condition: '```mermaid の `classDiagram` に `click A href "id:a"`・`click B "id:b#flow"`・`click C href "id:zzz"`・`click D href "https://e.example/"`、`links` に `a`（パス `dev/a.yaml`）と `b`（パス `dev/b.yaml`）、文書のパスが `dev/c.yaml`、項目のアンカーの取得方法が `b`・`flow` に `処理の流れ` を返却する'
         mock: なし
         expected: '```mermaid のコードブロックのままで、`click A href "a.yaml"`・`click B "b.yaml#処理の流れ"`・`click D href "https://e.example/"` の行を持ち、`click C` の行を持たない'
   - name: link_target
@@ -178,12 +178,12 @@ functions:
     process: |-
       1. 値を最初の `#` で文書の ID と項目のパスに分け、`links` を ID で取得する（無ければ `None`）
       2. 相対パスは、文書のパスのフォルダからリンクの先の `path` への相対パス（`/` 区切り・URL エンコード）にする
-      3. 項目のパスがあれば、文脈の項目の見出しの取得方法（`item_heading`）で見出しを取得し、見出しがあれば見出しのアンカーを `#` で付ける（無ければ付けない）
+      3. 項目のパスがあれば、文脈の項目のアンカーの取得方法（`item_anchor`）でアンカーを取得し、アンカーがあれば `#` で付ける（無ければ付けない）
     unit_tests:
       - name: test_link_target
         case: 正常
         summary: 文書と項目
-        condition: '`b#flow` と `a`、`links` に `a`（パス `dev/a.yaml`）と `b`（パス `dev/b.yaml`）、文書のパスが `dev/c.yaml`、項目の見出しの取得方法が `b`・`flow` に `処理の流れ` を返却する'
+        condition: '`b#flow` と `a`、`links` に `a`（パス `dev/a.yaml`）と `b`（パス `dev/b.yaml`）、文書のパスが `dev/c.yaml`、項目のアンカーの取得方法が `b`・`flow` に `処理の流れ` を返却する'
         mock: なし
         expected: '`b.yaml#処理の流れ` と `a.yaml`'
       - name: test_link_target_when_unknown
@@ -230,7 +230,7 @@ functions:
       - name: test_link_reference_when_heading
         case: 正常
         summary: 見出しになる項目
-        condition: '`dev/a#flows[正常系]`、項目の見出しの取得方法が `正常系` を返却する'
+        condition: '`dev/a#flows[正常系]`、項目のアンカーの取得方法が `正常系` を返却する'
         mock: なし
         expected: '`[A / flows\[正常系\]](a.yaml#正常系)`'
       - name: test_link_reference_when_unknown

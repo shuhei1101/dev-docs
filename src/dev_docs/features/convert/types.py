@@ -42,6 +42,15 @@ class DiagramHead:
 
 
 @dataclass(frozen=True)
+class ItemHeading:
+    """文書の項目のパスが指す、スキーマ駆動の変換が出す見出しと、その見出しを配置する組み立てのパス。"""
+
+    text: str
+    # 名前は `.` で、配列の要素は `[{位置}]`（0 始まり）で繋いだ値のパス。見出しのアンカーの一覧のキー
+    path: str
+
+
+@dataclass(frozen=True)
 class DocumentLink:
     """本文の参照から張る、同じ配信元の文書へのリンク。"""
 
@@ -60,7 +69,7 @@ class RenderContext:
     anchors: Mapping[str, str] = field(default_factory=dict)
     # 同じ文書のテーブルの物理名か論理名から論理名。外部キーのリンクで `anchors` を検索する前に論理名にする
     table_titles: Mapping[str, str] = field(default_factory=dict)
-    # 文書の ID と項目のパスから、リンク先の文書でその項目が出す見出し。参照と本文の id のリンクのアンカーに使用する
-    item_heading: Callable[[str, str], str | None] = field(default=lambda document_id, item: None)
+    # 文書の ID と項目のパスから、リンク先の文書でその項目が出す見出しのアンカー。参照と本文の id のリンクに使用する
+    item_anchor: Callable[[str, str], str | None] = field(default=lambda document_id, item: None)
     # 検討事項の文書を探した結果の ID。`decisions` の値のうち、この ID だけを検討事項の文書へのリンクにする
     decisions: frozenset[str] = field(default_factory=frozenset)

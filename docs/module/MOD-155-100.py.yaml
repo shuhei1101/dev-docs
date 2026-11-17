@@ -166,18 +166,36 @@ data_models:
         type: Mapping[str, str]
         access: 公開
         description: 同じ文書の `tables[]` のテーブルの物理名か論理名から、そのテーブルの論理名（テーブルの論理名の取得方法の結果）。外部キーのリンクで `anchors` を取得する前にテーブル名を論理名にする。既定は空
-      - name: item_heading
-        title: 項目の見出しの引き方
+      - name: item_anchor
+        title: 項目のアンカーの引き方
         type: Callable[[str, str], str | None]
         access: 公開
         default: 常に `None` を返却する関数
-        description: 文書の ID と項目のパスから、リンク先の文書でその項目が出す見出し（無ければ `None`）を取得する。参照のリンクと本文の id のリンクのアンカーに使用する
+        description: 文書の ID と項目のパスから、リンク先の文書でその項目が出す見出しのアンカー（`#` を除く。無ければ `None`）を取得する。参照のリンクと本文の id のリンクのアンカーに使用する
       - name: decisions
         title: リンクにする検討事項
         type: frozenset[str]
         access: 公開
         default: 空
         description: project-index の検討事項の一覧の `linkable`（ちょうど 1 つのフォルダに文書がある ID）。`decisions` の値のうち、この ID だけを検討事項の文書へのリンクにする
+  - name: ItemHeading
+    title: 項目の見出し
+    container: features/convert/types.py
+    usecase: 文書の取得
+    role: DTO
+    summary: 文書の項目のパスが指す、スキーマ駆動の変換が出す見出しと、その見出しを配置する組み立てのパス
+    description: '`dataclass(frozen=True)`。'
+    properties:
+      - name: text
+        title: 見出しの文字列
+        type: str
+        access: 公開
+        description: 変換が配置する見出しの文字列
+      - name: path
+        title: 組み立てのパス
+        type: str
+        access: 公開
+        description: スキーマ駆動の変換が見出しを配置するときの値のパス。名前は `.` で繋ぎ（最上位は名前だけ）、配列の要素は `[{位置}]`（0 始まり）、辞書の `sections` の子は `.{キー}` にする（`functions[2]`・`notes.main.py の補足`）
 enums:
   - name: Shape
     title: セクションの形式

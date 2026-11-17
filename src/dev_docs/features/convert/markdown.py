@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import posixpath
+import re
 from collections.abc import Mapping, Sequence
 from dataclasses import replace
 from datetime import date, datetime
@@ -19,7 +20,7 @@ from dev_docs.features.convert.inline import (
     link_target,
     rewrite_text,
 )
-from dev_docs.features.convert.types import DiagramHead, DiagramKind, RenderContext
+from dev_docs.features.convert.types import DiagramHead, DiagramKind, ItemHeading, RenderContext
 from dev_docs.integrations.project_index.types import IndexedDocument
 
 MAX_HEADING_LEVEL = 6
@@ -39,6 +40,14 @@ OBJECT_JOINER = "、"
 NO_DATE = "-"
 # ER 図の実体の列を補うテーブルを持つ、文書のキー
 ER_TABLES_KEY = "tables"
+# 見出しのアンカーの一覧が数える ATX の見出しの行（字下げ 0〜3・`#` が 1〜6 個・後ろが空白か行末）
+ATX_HEADING = re.compile(r"^ {0,3}#{1,6}(?:[ \t]+(?P<text>.*?))?[ \t]*$")
+# ATX の見出しの末尾の閉じの `#` の並び（前が空白か、見出しの文字が `#` だけ）
+ATX_CLOSING = re.compile(r"(?:^|[ \t]+)#+$")
+# 囲みのコードブロックの開きと閉じの行（見出しのアンカーの一覧と埋め込みの展開が使用する）
+FENCE = re.compile(r"^\s{0,3}(?P<mark>`{3,}|~{3,})")
+# 見出しの文字から ID を作れないときの ID（mdmark と同じ）
+EMPTY_HEADING_ID = "heading"
 
 
 def _is_empty(value: Any) -> bool:
@@ -246,13 +255,17 @@ class _Builder:
         self.scope = scope
         self.updated = _date(document.updated) or NO_DATE
         self.blocks: list[str] = []
+        # 組み立てのパスから、そのパスの値の見出しを配置した塊の位置
+        self.heading_blocks: dict[str, int] = {}
 
     def head(self, title: str) -> DiagramHead:
         """図の部品の定義に入れる題名・範囲・更新日を作る。"""
         return DiagramHead(title=title, scope=self.scope, updated=self.updated)
 
-    def heading(self, text: str, level: int) -> None:
-        """見出しを配置する（深さは `MAX_HEADING_LEVEL` で止める）。"""
+    def heading(self, text: str, level: int, path: str | None = None) -> None:
+        """見出しを配置する（深さは `MAX_HEADING_LEVEL` で止める）。`path` があれば塊の位置を記録する。"""
+        if path is not None:
+            self.heading_blocks[path] = len(self.blocks)
         self.blocks.append(f"{'#' * min(level, MAX_HEADING_LEVEL)} {text}")
 
     def text(self, value: Any, title: str) -> str:
@@ -352,7 +365,7 @@ class _Builder:
             value = link_decisions(value, self.context)
         content_level = level
         if heading:
-            self.heading(str(heading), level)
+            self.heading(str(heading), level, path)
             content_level = level + 1
         if key in TEST_FILE_KEYS:
             self.test_files(title, value)
@@ -456,8 +469,8 @@ class _Builder:
             x_key = sub.get("x-key")
             for index, element in enumerate(value):
                 label = element.get(x_key) if isinstance(element, Mapping) and x_key else None
-                self.heading(str(label if label is not None else index + 1), level)
                 child_path = f"{path}[{index}]"
+                self.heading(str(label if label is not None else index + 1), level, child_path)
                 if isinstance(element, Mapping):
                     self.object(
                         element,
@@ -475,7 +488,7 @@ class _Builder:
                 continue
             child_sub = properties.get(key, {})
             child_sub = child_sub if isinstance(child_sub, Mapping) else {}
-            self.heading(_child_heading(child_sub, key), level)
+            self.heading(_child_heading(child_sub, key), level, f"{path}.{key}")
             self.value(key, child, {**child_sub, "x-heading": None}, f"{path}.{key}", level + 1)
 
     def plain(
@@ -599,8 +612,15 @@ def _select_element(elements: list[Any], x_key: str, label: str) -> Mapping[str,
     return same[index - 1] if 1 <= index <= len(same) else None
 
 
-def item_heading(data: Mapping[str, Any], schema: Mapping[str, Any], item: str) -> str | None:
-    """文書の項目のパスが、スキーマ駆動の変換で見出しになる項目を指すとき、その見出しを返却する。"""
+def _position(elements: list[Any], element: Any) -> int:
+    """配列の中の `element` そのもの（同じオブジェクト）の位置（0 始まり）を返却する。"""
+    return next(index for index, candidate in enumerate(elements) if candidate is element)
+
+
+def item_heading(
+    data: Mapping[str, Any], schema: Mapping[str, Any], item: str
+) -> ItemHeading | None:
+    """文書の項目のパスが、スキーマ駆動の変換で見出しになる項目を指すとき、その見出しと組み立てのパスを返却する。"""
     steps = _item_steps(item)
     # 記載方法の誤った項目のパスは見出しにならない
     if steps is None:
@@ -608,6 +628,7 @@ def item_heading(data: Mapping[str, Any], schema: Mapping[str, Any], item: str) 
     value: Any = data
     sub: Any = schema
     heading: Any = None
+    path = ""
     for step, bracketed in steps:
         if not isinstance(sub, Mapping):
             return None
@@ -618,9 +639,11 @@ def item_heading(data: Mapping[str, Any], schema: Mapping[str, Any], item: str) 
             properties: Mapping[str, Any] = sub.get("properties") or {}
             sub = properties.get(step)
             value = value.get(step)
-            if not isinstance(sub, Mapping):
+            # スキーマの無いキー・変換が飛ばす値（空・`x-hidden`）は見出しにならない
+            if not isinstance(sub, Mapping) or _is_empty(value) or _is_hidden(sub):
                 return None
             heading = sub.get("x-heading")
+            path = f"{path}.{step}" if path else step
             continue
         # `[{値}]`: `sections` の値だけが見出しを持つ
         if sub.get("x-shape") != "sections":
@@ -628,9 +651,11 @@ def item_heading(data: Mapping[str, Any], schema: Mapping[str, Any], item: str) 
         x_key = sub.get("x-key")
         # 配列: `x-key` が値の要素（無ければ `{値}#{順番}` の順番目）へ進み、その `x-key` の値が見出し
         if isinstance(value, list) and x_key:
-            value = _select_element(value, str(x_key), step)
-            if value is None:
+            element = _select_element(value, str(x_key), step)
+            if element is None:
                 return None
+            path = f"{path}[{_position(value, element)}]"
+            value = element
             heading = str(value.get(x_key))
             sub = sub.get("items")
         # 辞書: 値をキーにした子へ進み、変換が子に付ける見出しがこのステップの見出し
@@ -639,12 +664,16 @@ def item_heading(data: Mapping[str, Any], schema: Mapping[str, Any], item: str) 
                 return None
             properties = sub.get("properties") or {}
             child_sub = properties.get(step)
+            # 変換が飛ばす子（空・`x-hidden`）は見出しにならない
+            if _is_empty(value[step]) or _is_hidden(child_sub):
+                return None
             sub = child_sub if isinstance(child_sub, Mapping) else {}
             value = value[step]
             heading = _child_heading(sub, step)
+            path = f"{path}.{step}"
         else:
             return None
-    return str(heading) if heading else None
+    return ItemHeading(text=str(heading), path=path) if heading else None
 
 
 def _first(data: Mapping[str, Any], keys: Sequence[str]) -> str | None:
@@ -652,10 +681,10 @@ def _first(data: Mapping[str, Any], keys: Sequence[str]) -> str | None:
     return next((key for key in keys if not _is_empty(data.get(key))), None)
 
 
-def schema_to_markdown(
+def _build(
     document: IndexedDocument, schema: Mapping[str, Any], context: RenderContext
-) -> str:
-    """YAML の文書をスキーマの `x-heading`・`x-shape`・`x-key`・`x-diagram`・`x-hidden`・`title` に沿って Markdown にする。"""
+) -> _Builder:
+    """文書をスキーマ駆動の変換の組み立てにかけ、塊を並べた組み立てを返却する。"""
     data = document.data
     tables = data.get(ER_TABLES_KEY) if isinstance(data, Mapping) else None
     context = replace(
@@ -672,4 +701,55 @@ def schema_to_markdown(
         builder.blocks.append(builder.text(data[lead_key], name))
     used = [key for key in (heading_key, lead_key) if key]
     builder.object(data, schema, "", FIRST_HEADING_LEVEL, skip=used)
+    return builder
+
+
+def schema_to_markdown(
+    document: IndexedDocument, schema: Mapping[str, Any], context: RenderContext
+) -> str:
+    """YAML の文書をスキーマの `x-heading`・`x-shape`・`x-key`・`x-diagram`・`x-hidden`・`title` に沿って Markdown にする。"""
+    builder = _build(document, schema, context)
     return "\n\n".join(block for block in builder.blocks if block) + "\n"
+
+
+def _heading_ids(block: str, used: dict[str, int]) -> list[str]:
+    """塊の中の、囲みのコードブロックの外の ATX の見出しに、mdmark と同じ規則で ID を付けて並べる。"""
+    ids: list[str] = []
+    fence: str | None = None
+    for line in block.splitlines():
+        opened = FENCE.match(line)
+        # 囲みの外で開きの行: 囲みに入る
+        if fence is None and opened:
+            fence = opened.group("mark")
+            continue
+        # 囲みの中: 同じ記号が同じ長さ以上続く行で閉じ、それ以外は数えない
+        if fence is not None:
+            mark = opened.group("mark") if opened else ""
+            if mark[:1] == fence[0] and len(mark) >= len(fence):
+                fence = None
+            continue
+        matched = ATX_HEADING.match(line)
+        if matched is None:
+            continue
+        text = ATX_CLOSING.sub("", (matched.group("text") or "").strip()).strip()
+        base = heading_anchor(text) or EMPTY_HEADING_ID
+        # 使用済みの ID: 出た回数を `-{n}` で付ける
+        count = used.get(base)
+        used[base] = 0 if count is None else count + 1
+        ids.append(base if count is None else f"{base}-{count + 1}")
+    return ids
+
+
+def heading_anchors(document: IndexedDocument, schema: Mapping[str, Any]) -> dict[str, str]:
+    """文書をスキーマ駆動の変換にかけたときに見出しを配置する組み立てのパスごとに、mdmark が付ける ID を返却する。"""
+    context = RenderContext(links={}, issue_url=None, path=document.path)
+    builder = _build(document, schema, context)
+    paths = {position: path for path, position in builder.heading_blocks.items()}
+    used: dict[str, int] = {}
+    anchors: dict[str, str] = {}
+    for position, block in enumerate(builder.blocks):
+        ids = _heading_ids(block, used)
+        # 組み立てのパスの見出しの塊: その塊の見出しの ID がパスのアンカー
+        if position in paths and ids:
+            anchors[paths[position]] = ids[0]
+    return anchors

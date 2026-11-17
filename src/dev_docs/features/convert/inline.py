@@ -81,9 +81,9 @@ def _target(document_id: str, item: str, context: RenderContext) -> str | None:
         return None
     folder = posixpath.dirname(context.path) or "."
     relative = quote(posixpath.relpath(link.path, folder), safe="/")
-    heading = context.item_heading(document_id, item) if item else None
+    anchor = context.item_anchor(document_id, item) if item else None
     # 項目が見出しになる: その見出しのアンカーを付ける
-    return f"{relative}#{heading_anchor(heading)}" if heading else relative
+    return f"{relative}#{anchor}" if anchor else relative
 
 
 def link_target(value: str, context: RenderContext) -> str | None:
