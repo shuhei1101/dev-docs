@@ -815,6 +815,32 @@ test.describe("本文", () => {
     expect((await popup).url()).toBe("https://example.com/");
   });
 
+  // mdmark が Mermaid の図の click のノードをリンクにしたものも、本文のリンクと同じく rev を保って開く（正常系）
+  test("body_mermaid_click_link", async ({ page }) => {
+    // 準備
+    const markdown = [
+      "# 文書 1",
+      "",
+      "## 構成",
+      "",
+      "```mermaid",
+      "classDiagram",
+      "  class 受付",
+      '  click 受付 href "doc-2.yaml"',
+      "```",
+      "",
+    ].join("\n");
+    await openRendered(page, "/sample/docs/doc-1?rev=develop", {
+      document: ({ path }) => ({ body: documentResponse({ path, markdown }) }),
+    });
+    const node = page.locator('.mdmark a[href="doc-2.yaml"]');
+    await expect(node).toHaveCount(1);
+    // 実行
+    await node.click();
+    // 検証
+    await expect(page).toHaveURL(/\/sample\/docs\/doc-2\?rev=develop$/);
+  });
+
   // 本文の中の存在しない文書へのリンクは見つからない画面を出す（異常系）
   test("body_internal_link_when_missing", async ({ page }) => {
     // 準備
@@ -958,6 +984,14 @@ test.describe("目次", () => {
     await expect(page.getByRole("navigation", { name: "目次", exact: true, includeHidden: true })).toHaveCount(0);
     await openSideToc(page);
     await expect(sideToc(page).getByRole("link")).toHaveText(["概要", "項目", "項目の表", "関連"]);
+  });
+
+  // 比較中は、比較元から変わったセクションの項目にだけ変更のマーカーを出す（正常系）
+  test("toc_change_marker", async ({ page }) => {
+    await openRendered(page, "/sample/docs/doc-1?base=7c0aa11", { document: withDiff });
+    await openSideToc(page);
+    await expect(sideToc(page).getByRole("link", { name: "概要（変更）" })).toHaveCount(1);
+    await expect(sideToc(page).getByRole("link", { name: "関連", exact: true })).toHaveCount(1);
   });
 
   // 画面の中で別の文書へ移ると、移った先の文書の見出しで目次を再描画する（正常系）

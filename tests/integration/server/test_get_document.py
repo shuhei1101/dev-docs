@@ -255,6 +255,20 @@ CLICKED_LINKED_DOC = (
     + "".join(f"  {line}\n" for line in CLICKED_CHART.splitlines())
     + "  ```\n"
 )
+CLASS_CHART = (
+    "classDiagram\n"
+    "  class A\n"
+    "  class B\n"
+    '  click A href "id:doc-6#flow"\n'
+    '  click B "id:doc-6#flow"\n'
+    '  click C href "id:no-such-doc#"\n'
+    '  click D href "https://example.com/"'
+)
+CLASS_LINKED_DOC = (
+    "id: doc-1\nname: 文書 1\ndescription: |-\n  ```mermaid\n"
+    + "".join(f"  {line}\n" for line in CLASS_CHART.splitlines())
+    + "  ```\n"
+)
 CROSSING_DOC = """\
 id: doc-9
 title: 図の文書 9
@@ -1003,6 +1017,33 @@ def test_normal_when_diagram_node_id_link_resolved(
     for response in (drawn, charted):
         assert not re.search(r'click \S+ (?:href )?"id:', response.json()["markdown"])
         assert response.json()["conversionError"] is None
+
+
+def test_normal_when_mermaid_click_id_resolved(
+    real_index: RealIndex, make_server: Callable[..., ServerEnv]
+) -> None:
+    """Mermaid のまま返す図の `click` の `id:` を、文書の相対パスと見出しのアンカーにする（正常系）。"""
+    # 準備
+    source = _drawn_source()
+    linked = doc("doc-1", "docs/doc-1.yaml", data=load_yaml(CLASS_LINKED_DOC))
+    source.docs[None] = [linked, *source.docs[None][1:]]
+    real_index.serve("sample", source)
+    env = make_server(real_index)
+    # 実行
+    response = env.client.get("/_api/sources/sample/docs/docs/doc-1")
+    # 検証
+    body = response.json()
+    assert response.status_code == 200
+    block = re.search(r"```mermaid\n(.*?)\n```", body["markdown"], re.S)
+    assert block is not None, body["markdown"]
+    lines = [line.strip() for line in block.group(1).splitlines()]
+    assert lines[0] == "classDiagram"
+    assert 'click A href "../drawn/doc-6.yaml#処理の流れ"' in lines
+    assert 'click B "../drawn/doc-6.yaml#処理の流れ"' in lines
+    assert not any(line.startswith("click C") for line in lines)
+    assert 'click D href "https://example.com/"' in lines
+    assert "<!-- map" not in body["markdown"]
+    assert body["conversionError"] is None
 
 
 def _decided_source() -> IndexSource:
