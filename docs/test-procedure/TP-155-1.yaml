@@ -17,6 +17,11 @@ layers:
         uv run pytest {単体テストファイルパス}
         ```
     parallel: true
+    location: runner
+    run_runner: |-
+      ```bash
+      run_url=$(gh workflow run test.yml --ref "$(git branch --show-current)" -f layer=backend-unit | grep -o 'https://[^ ]*/actions/runs/[0-9]*') && run_id=${run_url##*/} && (n=0; until gh api "repos/shuhei1101/dev-docs/actions/runs/$run_id?exclude_pull_requests=true" > /dev/null 2>&1; do n=$((n+1)); if [ $n -ge 10 ]; then echo "実行 $run_id を 10 秒参照できません" >&2; exit 1; fi; sleep 1; done) && (rc=0; gh run watch "$run_id" --exit-status > /dev/null || rc=1; gh run view "$run_id" --log; exit $rc)
+      ```
   - id: TL-2
     name: 結合テスト（バック）
     run_all: |-
@@ -36,6 +41,11 @@ layers:
         ```bash
         uv run pytest {結合テストファイルパス}
         ```
+    location: runner
+    run_runner: |-
+      ```bash
+      run_url=$(gh workflow run test.yml --ref "$(git branch --show-current)" -f layer=backend-integration -f paths="{結合テストのパス}" | grep -o 'https://[^ ]*/actions/runs/[0-9]*') && run_id=${run_url##*/} && (n=0; until gh api "repos/shuhei1101/dev-docs/actions/runs/$run_id?exclude_pull_requests=true" > /dev/null 2>&1; do n=$((n+1)); if [ $n -ge 10 ]; then echo "実行 $run_id を 10 秒参照できません" >&2; exit 1; fi; sleep 1; done) && (rc=0; gh run watch "$run_id" --exit-status > /dev/null || rc=1; gh run view "$run_id" --log; exit $rc)
+      ```
   - id: TL-3
     name: 結合テスト（フロント）
     description: Playwright で実行する。画面は Vite の開発サーバー、部品は Storybook を立て、画面の API（`/_api/`）は `page.route` で差し替えて、画面と部品を Chromium で動かして確認する。
@@ -56,6 +66,11 @@ layers:
         ```
     parallel: true
     external_cost: 本文を描く mdmark を jsDelivr から読み込む。料金は発生しない
+    location: runner
+    run_runner: |-
+      ```bash
+      run_url=$(gh workflow run test.yml --ref "$(git branch --show-current)" -f layer=frontend-integration -f paths="{結合テストのパス}" | grep -o 'https://[^ ]*/actions/runs/[0-9]*') && run_id=${run_url##*/} && (n=0; until gh api "repos/shuhei1101/dev-docs/actions/runs/$run_id?exclude_pull_requests=true" > /dev/null 2>&1; do n=$((n+1)); if [ $n -ge 10 ]; then echo "実行 $run_id を 10 秒参照できません" >&2; exit 1; fi; sleep 1; done) && (rc=0; gh run watch "$run_id" --exit-status > /dev/null || rc=1; gh run view "$run_id" --log; exit $rc)
+      ```
   - id: TL-4
     name: 外部疎通テスト
     run_all: 未確定
@@ -64,17 +79,36 @@ layers:
     run_all: 未確定
   - id: TL-6
     name: E2E テスト
-    run_all: 未確定
+    run_all: |-
+      ```bash
+      uv run pytest tests/e2e/ -v
+      ```
+    description: pytest で実行する。GitHub Actions の workflow のインターフェース定義のフローごとに、検証用のブランチを本物のリポジトリへ push し、`gh workflow run` で workflow を起動して、実行の結論と step ごとの結論・成果物を確認する。
+    prerequisites:
+      - '`gh` が `shuhei1101/dev-docs` へ push と workflow の起動ができる権限で認証してある'
+      - 起動する workflow が `develop` にある（`workflow_dispatch` は既定のブランチにある workflow だけを起動できる）
+      - 検証用のブランチを push し、テストの後で削除する（副作用）
+    run_one:
+      label: ファイル
+      command: |-
+        ```bash
+        uv run pytest {E2E テストファイルパス} -v
+        ```
+    location: local
+    external_cost: GitHub Actions のランナーを使用する。public のリポジトリの標準ランナーのため料金は発生しない
   - id: TL-7
     name: lint
-    description: ruff で linter と formatter の check を、mypy で型検査を、`claude plugin validate` でマーケットプレイスとプラグインの定義の構造を検査する。画面（`frontend/`）は ESLint（任意値の禁止・import の向き・react-hooks・jsx-a11y・複雑さ）と tsc の型検査を実行する。型検査はプロジェクト全体に回す。
+    description: ruff で linter と formatter の check を、mypy で型検査を、`claude plugin validate` でマーケットプレイスとプラグインの定義の構造を検査する。画面（`frontend/`）は ESLint（任意値の禁止・import の向き・react-hooks・jsx-a11y・複雑さ）と tsc の型検査を実行する。`.github/workflows/` の workflow のファイルに actionlint を適用し、`uses:` の action のバージョンが GitHub に実在するかを `gh api` で確認する。型検査はプロジェクト全体に回す。
     prerequisites:
       - 検査の設定は `pyproject.toml` が持つ
       - '`claude` コマンドが使用できること'
+      - actionlint と、actionlint が `run:` のスクリプトの検査に使用する shellcheck は、`uvx` が PyPI の `actionlint-py`・`shellcheck-py` から追加する
+      - '`gh` が認証してある（`uses:` のバージョンの確認で GitHub の API を呼ぶ）'
     run_all: |-
       ```bash
-      (rc=0; uv run ruff check . || rc=1; uv run ruff format --check . || rc=1; uv run mypy . || rc=1; claude plugin validate . || rc=1; npm run lint || rc=1; npm run typecheck || rc=1; exit $rc)
+      (rc=0; uv run ruff check . || rc=1; uv run ruff format --check . || rc=1; uv run mypy . || rc=1; claude plugin validate . || rc=1; npm run lint || rc=1; npm run typecheck || rc=1; uvx --from actionlint-py==1.7.12.25 --with shellcheck-py==0.11.0.1 actionlint || rc=1; for u in $(grep -hoE '^[[:space:]-]*uses:[[:space:]]*[^./][^[:space:]#]*@[^[:space:]#]+' .github/workflows/*.y*ml | sed -E 's/.*uses:[[:space:]]*//' | grep -v '^docker://' | sort -u); do gh api "repos/$(echo "${u%@*}" | cut -d/ -f1-2)/commits/${u##*@}" --silent || { echo "uses のバージョンがありません: $u"; rc=1; }; done; exit $rc)
       ```
+    location: local
   - id: TL-8
     name: 単体テスト（フロント）
     description: vitest で実行する。jsdom で部品を描き、API は MSW で差し替える。外部サービスに依存しない。
@@ -92,6 +126,11 @@ layers:
         npx vitest run --config frontend/vitest.config.ts {単体テストファイルパス}
         ```
     parallel: true
+    location: runner
+    run_runner: |-
+      ```bash
+      run_url=$(gh workflow run test.yml --ref "$(git branch --show-current)" -f layer=frontend-unit | grep -o 'https://[^ ]*/actions/runs/[0-9]*') && run_id=${run_url##*/} && (n=0; until gh api "repos/shuhei1101/dev-docs/actions/runs/$run_id?exclude_pull_requests=true" > /dev/null 2>&1; do n=$((n+1)); if [ $n -ge 10 ]; then echo "実行 $run_id を 10 秒参照できません" >&2; exit 1; fi; sleep 1; done) && (rc=0; gh run watch "$run_id" --exit-status > /dev/null || rc=1; gh run view "$run_id" --log; exit $rc)
+      ```
 lead: dev-docs のテスト種別ごとの実行コマンドと前提を定め、テストや lint を実行するときに参照する。
 prerequisites:
   - Python 3.14 と uv
