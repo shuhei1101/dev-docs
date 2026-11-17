@@ -267,16 +267,21 @@ functions:
         type: str
         required: true
         passing: positional
-        description: '`{キー}`・`{キー}[{x-key の値}]` を `.` で繋いだ項目のパス（型 `ref` の `#` 以降と同じ記載方法。値は対応の取れた `[` `]` を含んでよい）'
+        description: '`{キー}` を `.` で、`[{値}]` を続けて繋いだ項目のパス（型 `ref` の `#` 以降と同じ記載方法。`[{値}]` は配列の `x-key` の値・`{値}#{順番}`・辞書のキーのどれかで、対応の取れた `[` `]` を含んでよい）'
     returns:
       type: str | None
       description: 見出しの文字列。見出しにならない項目・無い項目は `None`
     process: |-
-      1. 項目のパスを先頭から 1 文字ずつ調べて段に分け、最上位からスキーマの `properties` と値を 1 段ずつたどる
+      1. 項目のパスを先頭から 1 文字ずつ調べて、名前のステップと `[{値}]` のステップに分ける
          - `[` と `]` の対応を数え、最も外側の `[` から対応する `]` までを 1 つの `[{値}]` にする。値は内側の対応の取れた `[` `]` を含む（`request[operations[].fields]` の値は `operations[].fields`）。`[]` の外の `.` で名前を区切る
-         - `[` を閉じない・対応する `[` の無い `]` を含む・`[{値}]` の直後が `.` か末尾でない・空の名前を持つパスは `None` を返却する
-         - `{キー}[{値}]` は、キーのスキーマが `x-shape: sections`・`x-key` を持つ配列のとき、`x-key` が値に該当する要素へ進む（該当しなければ `None`）
-      2. 最後の段が `{キー}[{値}]` なら、その要素の見出し（`x-key` の値）を返却する。`{キー}` なら、キーのスキーマの `x-heading` を返却する（無ければ `None`）
+         - `[{値}]` の直後に `[` が続くときは、続けて `[{値}]` のステップにする（`notes[手順][準備]`）
+         - `[` を閉じない・対応する `[` の無い `]` を含む・`[{値}]` の直後が `.`・`[`・末尾のどれでもない・空の名前を持つパスは `None` を返却する
+      2. 最上位からスキーマと値を 1 ステップずつたどり、ステップごとに見出しを決める
+         - 名前のステップ: 値が辞書のとき、スキーマの `properties` のキーと値のキーへ進む。見出しはキーのスキーマの `x-heading`（無ければ見出し無し）。キーのスキーマが無ければ `None`
+         - `[{値}]` のステップ: スキーマが `x-shape: sections` のときだけ進む（それ以外は `None`）
+           - 値が配列: スキーマの `x-key` の値を文字列にしたものが `[{値}]` の値に一致する最初の要素へ進む。一致する要素が無く、値の末尾が `#{整数}`（10 進数字だけ）のときは、`#{整数}` を除いた値に一致する要素の整数番目（1 始まり）へ進む。見出しは進んだ要素の `x-key` の値を文字列にしたもの。どちらでも要素を選べなければ `None`
+           - 値が辞書: `[{値}]` の値をキーにして子へ進む。子のスキーマは `properties` のキーのスキーマ（無ければ空）。見出しは子のスキーマの `x-heading`、無ければ `title`、無ければキー（変換が辞書の `sections` の子に付ける見出しと同じ）。キーが無ければ `None`
+      3. 最後のステップの見出しを返却する（見出し無しなら `None`）
     unit_tests:
       - name: test_item_heading
         case: 正常
@@ -308,6 +313,30 @@ functions:
         condition: '`scenarios[正常シナリオ`・`scenarios[正常シナリオ]]`・`scenarios]正常シナリオ[`・`scenarios[正常シナリオ]x`・`.scenarios`'
         mock: なし
         expected: どれも `None`
+      - name: test_item_heading_when_order
+        case: 正常
+        summary: 同じ値の要素の順番
+        condition: '`functions` が `x-shape: sections`・`x-key: name` で、`name` が `main`・`sub`・`main`・`main#2`・`main` の要素を持つ。項目のパス `functions[main#3]`・`functions[main#2]`'
+        mock: なし
+        expected: '`functions[main#3]` は `main`、`functions[main#2]` は値が一致する要素の `main#2`'
+      - name: test_item_heading_when_order_out_of_range
+        case: 異常
+        summary: 要素の数を超える順番
+        condition: '`test_item_heading_when_order` と同じ文書で、項目のパス `functions[main#4]`・`functions[main#0]`・`functions[none#1]`・`functions[main#²]`（上付き数字）'
+        mock: なし
+        expected: どれも `None`
+      - name: test_item_heading_when_dict_key
+        case: 正常
+        summary: 辞書の sections のキー
+        condition: '`notes` が `x-shape: sections` の辞書で、`properties` に `title: 手順の補足` の `steps` を持ち、値が `main.py の補足`・`steps` のキーを持つ。項目のパス `notes[main.py の補足]`・`notes[steps]`・`notes[無い]`'
+        mock: なし
+        expected: '`main.py の補足`・`手順の補足`・`None`'
+      - name: test_item_heading_when_consecutive_brackets
+        case: 正常
+        summary: 続けて記載した [ ]
+        condition: '`notes` が `x-shape: sections` の辞書で、`properties` の `手順` が `x-shape: sections`・`x-key: name` の配列のスキーマ、値の `手順` が `name: 準備` の要素を持つ。項目のパス `notes[手順][準備]`'
+        mock: なし
+        expected: '`準備`'
   - name: render_table
     title: 表の組み立て
     kind: 関数
