@@ -6,6 +6,8 @@ from datetime import UTC, datetime
 from typing import Any
 from urllib.parse import quote
 
+import pytest
+
 from dev_docs.features.convert.markdown import (
     item_heading,
     render_attributes,
@@ -278,6 +280,35 @@ def test_item_heading_when_not_heading() -> None:
     # 検証
     assert plain is None
     assert missing is None
+
+
+def test_item_heading_when_nested_brackets() -> None:
+    """値に [ ] を含む sections の要素（正常系）。"""
+    # 準備
+    schema = {"properties": {"request": {"x-shape": "sections", "x-key": "name"}}}
+    data = {"request": [{"name": "operations"}, {"name": "operations[].fields"}]}
+    # 実行
+    result = item_heading(data, schema, "request[operations[].fields]")
+    # 検証
+    assert result == "operations[].fields"
+
+
+@pytest.mark.parametrize(
+    "item",
+    [
+        pytest.param("scenarios[正常シナリオ", id="unclosed"),
+        pytest.param("scenarios[正常シナリオ]]", id="extra_close"),
+        pytest.param("scenarios]正常シナリオ[", id="reversed"),
+        pytest.param("scenarios[正常シナリオ]x", id="name_after_close"),
+        pytest.param(".scenarios", id="empty_name"),
+    ],
+)
+def test_item_heading_when_unbalanced_brackets(item: str) -> None:
+    """記載方法の誤った項目のパス（異常系）。"""
+    # 実行
+    result = item_heading(SCENARIO_DATA, SCENARIO_SCHEMA, item)
+    # 検証
+    assert result is None
 
 
 def test_schema_to_markdown_when_test_files(make_document: Callable[..., Document]) -> None:
