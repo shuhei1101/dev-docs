@@ -451,7 +451,7 @@ classes:
           description: 行と状態
         process: |-
           1. 呼び出しの共通の手順で `GET /settings/sources` を呼ぶ
-          2. `sources[]` の行ごとに、`id`・`config`・`enabled`・`scope` と `outsideRead` を `outside_read` にした辞書を `rows`、`id`・`status`・`errors`・`config`・`configVersion` を `SourceState` にしたものを `states` にし、`settingsPath`・`version` とともに `SettingsSourcesView` にして返却する
+          2. `sources[]` の行ごとに、`id`・`config`・`enabled`・`scope`・`storage` と `outsideRead` を `outside_read` にした辞書を `rows`、`id`・`status`・`errors`・`config`・`configVersion` を `SourceState` にしたものを `states` にし、`settingsPath`・`version` とともに `SettingsSourcesView` にして返却する
         unit_tests:
           - name: test_settings_sources
             case: 正常
