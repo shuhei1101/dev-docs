@@ -11,8 +11,8 @@ idempotent: true
 read_only: false
 destructive: true
 permissions: '`contents: read`・`pages: write`・`id-token: write`'
-side_effects: '`build` の job が、1 枚の HTML を入れた成果物 `github-pages` を上げる。`deploy` の job が、その成果物で GitHub Pages の公開ページを上書きする。リポジトリへは書き込まない'
-exclusivity: '配信は 1 つずつ実行し、後から起動した実行は先の実行の終了を待つ（`concurrency` の `group: pages`・`cancel-in-progress: false`）'
+side_effects: '`build` の job が、`_site` を tar にまとめた `artifact.tar` を成果物 `github-pages` として上げる。`deploy` の job が、その成果物で GitHub Pages の公開ページを上書きする。リポジトリへは書き込まない'
+exclusivity: '実行中の配信があるとき、後から起動した実行は終了を待つ。待機できるのは 1 件で、待機中の実行があれば取り消して入れ替わる（`concurrency` の `group: pages`・`cancel-in-progress: false`。`queue` は既定の `single`）'
 constraints:
   - item: ランナー
     constraint: '`ubuntu-latest`'
@@ -96,7 +96,7 @@ flows:
       - 実行の結論が `failure`
       - job `build` の全ての step の結論が `success`
       - job `deploy` の結論が `failure` で、step「GitHub Pages へ配信する」を実行していない
-      - 成果物 `github-pages` があり、中に `index.html` がある
+      - 成果物 `github-pages` の `artifact.tar` の中に `index.html` がある
     test: test_error_when_branch_not_allowed
   - name: 異常系（公開の文書をまとめられない・failure）
     summary: 公開の文書をまとめる処理が失敗し、上げずに失敗で終わる
@@ -154,7 +154,7 @@ notes:
     | `build` | Pages の設定を読み込む | `actions/configure-pages` で GitHub Pages の設定を読み込む |
     | `build` | 公開の文書を 1 枚の HTML にまとめる | `uv run --frozen python scripts/build_pages.py --out _site` で、`uv.lock` の Python と依存を入れて 1 枚の HTML を `_site` に出力する |
     | `build` | 成果物に YAML が無いことを確認する | `_site` の下の `.yaml`・`.yml` のファイルを探し、あればそのパスを出して失敗で終える |
-    | `build` | 成果物を Pages 用に上げる | `actions/upload-pages-artifact` で `_site` を成果物 `github-pages` に上げる |
+    | `build` | 成果物を Pages 用に上げる | `actions/upload-pages-artifact` で `_site` を tar にまとめた `artifact.tar` を成果物 `github-pages` に上げる |
     | `deploy` | GitHub Pages へ配信する | 環境 `github-pages` で `actions/deploy-pages` により成果物 `github-pages` を配信し、公開ページの URL を環境の `url` に出す |
   正常系のテストの起動: |-
     正常系のフローは配信できるブランチでしか通らず、テストから起動すると公開ページを再配信する。
