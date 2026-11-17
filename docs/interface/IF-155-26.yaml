@@ -36,11 +36,11 @@ constraints:
     constraint: Node.js 24 は全ての層で入れる。uv と Python の依存は `backend-` の層、npm の依存は `frontend-` の層、Chromium は `frontend-integration` だけで入れる
     notes: 結合テスト（バック）は mdmark の CLI を `npx` で取るため Node.js が要る
   - item: 回す範囲
-    constraint: '`paths` を指定したときは `paths` の結合テストだけを回し、省いたときは層の全件を回す。結合テストでない層に `paths` を指定したとき、`paths` の値が層の結合テストのフォルダの外にあるとき、`..` か空白以外の区切りを含むときは、テストを回さずに失敗で終える'
+    constraint: '`paths` を指定したときは `paths` の結合テストだけを回し、省いたときは層の全件を回す。結合テストでない層に `paths` を指定したとき、`paths` の値が層の結合テストのフォルダの外にあるとき、`..` を含むとき、許可する文字（英数字と `_`・`.`・`/`・`-`・空白。`^[A-Za-z0-9_./ -]+$`）以外を含むときは、テストを回さずに失敗で終える'
     notes: 作業 PR では判定フローチャート『結合テストの実行範囲』で決めた範囲だけを回す
   - item: 無出力の時間
     constraint: step「層の全件を回す」で、`test.log` の大きさが変わらない時間が上限を超えたら、テストを止めて失敗で終える。上限は `backend-unit` 7 秒、`backend-integration` 62 秒、`frontend-unit` 19 秒、`frontend-integration` 75 秒
-    notes: 手元で測った出力の間隔の最長（`backend-unit` 0.64 秒・`backend-integration` 6.14 秒・`frontend-unit` 1.84 秒・`frontend-integration` 7.48 秒）の 10 倍を秒に切り上げた値。大きさは 10 秒ごとに確認する
+    notes: 手元で測った出力の間隔の最長（`backend-unit` 0.64 秒・`backend-integration` 6.14 秒・`frontend-unit` 1.84 秒・`frontend-integration` 7.48 秒）の 10 倍を秒に切り上げた値。大きさは 1 秒ごとに確認する
   - item: タイムアウト
     constraint: step「層の全件を回す」の `timeout-minutes` を、`backend-unit` 1 分、`backend-integration` 17 分、`frontend-unit` 3 分、`frontend-integration` 18 分にする。ジョブの `timeout-minutes` は指定せず、GitHub Actions の 1 ジョブの上限で止める
     notes: step の値は無出力の時間の外側の止め役で、手元の全件実行の実測（`backend-unit` 5.4 秒・`backend-integration` 100.5 秒・`frontend-unit` 14.4 秒・`frontend-integration` 105.5 秒）の 10 倍を分に切り上げた値。道具の導入の step は実測が無いため、外側の作業の上限（ジョブの上限）で止める
@@ -90,6 +90,7 @@ flows:
       - 実行の結論が `success`
       - step「npm の依存を入れる」「Chromium を入れる」の結論が `skipped`
       - 成果物 `test-log` があり、pytest の集計の行を持ち、skip の件数が手元の全件実行と同じ
+    test: test_normal
   - name: 正常系（結合テスト（バック）の層）
     summary: 結合テスト（バック）の層の全件が pass して成功で終わる
     setup:
@@ -111,6 +112,7 @@ flows:
     expected:
       - 実行の結論が `success`
       - 成果物 `test-log` があり、pytest の集計の行を持ち、skip の件数が手元の全件実行と同じ
+    test: test_normal_when_backend_integration
   - name: 正常系（単体テスト（フロント）の層）
     summary: 単体テスト（フロント）の層の全件が pass して成功で終わる
     setup:
@@ -133,6 +135,7 @@ flows:
       - 実行の結論が `success`
       - step「uv を入れる」「Python の依存を入れる」「Chromium を入れる」の結論が `skipped`
       - 成果物 `test-log` があり、vitest の集計の行を持ち、skip の件数が手元の全件実行と同じ
+    test: test_normal_when_frontend_unit
   - name: 正常系（結合テスト（フロント）の層）
     summary: 結合テスト（フロント）の層の全件が pass して成功で終わる
     setup:
@@ -154,6 +157,7 @@ flows:
     expected:
       - 実行の結論が `success`
       - 成果物 `test-log` があり、Playwright の集計の行を持ち、skip の件数が手元の全件実行と同じ
+    test: test_normal_when_frontend_integration
   - name: 正常系（結合テストのパスを指定）
     summary: 指定した結合テストだけを回し、成功で終わる
     setup:
@@ -175,6 +179,7 @@ flows:
     expected:
       - 実行の結論が `success`
       - 成果物 `test-log` に `tests/integration/plugin/` のテストを回した出力があり、`tests/integration/server/` のテストが回されていない
+    test: test_normal_when_paths_given
   - name: 異常系（テストの fail・failure）
     summary: 層の全件に fail があり、ログを上げて失敗で終わる
     setup:
@@ -196,6 +201,7 @@ flows:
     expected:
       - 実行の結論が `failure`
       - 成果物 `test-log` があり、fail したテストと pytest の集計の行を持つ
+    test: test_error_when_tests_fail
   - name: 異常系（無出力の時間の超過・failure）
     summary: 出力が上限の時間を超えて変わらず、テストを止めてログを上げ、失敗で終わる
     setup:
@@ -217,6 +223,7 @@ flows:
     expected:
       - 実行の結論が `failure`
       - 成果物 `test-log` に、出力が上限の時間変わらなかったためテストを止めた旨がある
+    test: test_error_when_output_stalls
   - name: 異常系（道具の導入に失敗・failure）
     summary: 依存の導入に失敗し、層の全件を回さずにログを上げて失敗で終わる
     setup:
@@ -238,6 +245,7 @@ flows:
     expected:
       - 実行の結論が `failure`
       - step「層の全件を回す」の結論が `skipped`
+    test: test_error_when_setup_fails
   - name: 異常系（結合テストのパスが層のフォルダの外・failure）
     summary: '`paths` に層の結合テストのフォルダの外のパスを指定し、テストを回さずに失敗で終わる'
     setup:
@@ -259,6 +267,7 @@ flows:
     expected:
       - 実行の結論が `failure`
       - 成果物 `test-log` に `paths` を弾いた理由があり、テストの集計の行が無い
+    test: test_error_when_paths_outside_layer
 notes:
   step ごとの中身: |-
     | step | 中身 |
@@ -269,7 +278,7 @@ notes:
     | Python の依存を入れる | `uv sync --frozen` で、`.python-version` の Python と依存を入れる |
     | npm の依存を入れる | `npm ci` で直下の依存を入れる |
     | Chromium を入れる | `npx playwright install --with-deps chromium` で Chromium と OS の依存を入れる |
-    | 層の全件を回す | 層のコマンドを裏で起動して出力を `test.log` に記録し、`test.log` の大きさを 10 秒ごとに確認し、無出力の時間の上限を超えたらテストを止め、止めた旨を `test.log` に記録して失敗で終える。止めなかったときはコマンドの終了コードを step の成否にする |
+    | 層の全件を回す | `layer`・`paths` を `env:` の環境変数で受け取り（`run:` に `${{ inputs.* }}` を直接埋め込まない）、層のコマンドを裏で起動して出力を `test.log` に記録し、`test.log` の大きさを 1 秒ごとに確認し、無出力の時間の上限を超えたらテストを止め、止めた旨を `test.log` に記録して失敗で終える。止めなかったときはコマンドの終了コードを step の成否にする |
     | ログを成果物に上げる | `if: always()` で `actions/upload-artifact` により `test.log` を成果物 `test-log` に上げる |
   タイムアウトの決め方: |-
     判定フローチャート『タイムアウトの決め方』では、自分の処理の完了を待つだけで、進み具合の出力（pytest の `-v`・vitest の `verbose`・Playwright の `list` のテスト 1 件ごとの行）があるため、無出力の時間で止まったことを検知する（制約の「無出力の時間」）。
@@ -283,10 +292,6 @@ notes:
     | `frontend-integration` | 105.5 秒 | 7.48 秒 | 258 件 |
 
     手元の WSL（8 コア）で、各層の全件実行に出力の詳細のオプションを付けて回し、行ごとの時刻から測った（2026-11-17）。
-  対応テストファイルを持たない理由: |-
-    workflow を起動して結論と成果物を確認するテストは、検証用のブランチを push するため、テスト実行方法の E2E テストの層で回す。
-    E2E テストの層の実行コマンドが未確定のため、対応テストファイルを持たない。
-    フローは、マージの前に作業ブランチへの `push` を一時的に追加して起動し、手で確認する。
 refs:
   - TP-155-1#
 tags:
@@ -298,3 +303,4 @@ tags:
   - name: tool:vitest
   - name: tool:playwright
   - name: action:実行
+test_file: tests/e2e/workflow/test_test_yml.py
