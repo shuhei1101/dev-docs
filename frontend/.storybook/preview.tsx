@@ -10,7 +10,7 @@ import {
 } from "@tanstack/react-router";
 import { mswLoader } from "msw-storybook-addon/csf3";
 
-import "../src/index.css";
+import "../src/shared/styles/index.css";
 
 /** Link を使用できるよう、メモリの履歴のルーターに story を配置する */
 const withRouter: Decorator = (Story) => {
