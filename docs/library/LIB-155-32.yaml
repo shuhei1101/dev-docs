@@ -38,3 +38,9 @@ verification:
 selection:
   candidates: 標準ライブラリの `urllib.request` と比べた。
   decision: 開発の依存として既に使用していて追加の取り込みが無く、`AsyncClient` で FastAPI のイベントループを止めずに待て、`MockTransport` で単体テストの応答を差し替えられるため。`urllib.request` は同期だけで、待つ間 `asyncio.to_thread` が要る。
+tags:
+  - name: tool:httpx
+    main: true
+  - name: topic:ライブラリ
+  - name: topic:http
+  - name: tool:project-index

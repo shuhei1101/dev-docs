@@ -51,3 +51,9 @@ functions:
         condition: 管理の MCP を指定して寿命に入り、出る
         mock: MCP（`session_manager.run()` が入った・出たを記録する偽物）・project-indexの呼び出し（`aclose` を数える偽物）
         expected: 入ると run が入り、出ると run が出て `aclose` が 1 回呼ばれる
+tags:
+  - name: topic:起動
+    main: true
+  - name: topic:サーバー
+  - name: tool:project-index
+  - name: tool:mcp
