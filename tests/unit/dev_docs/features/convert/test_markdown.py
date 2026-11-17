@@ -555,7 +555,7 @@ def test_heading_anchors_when_closing_hashes(make_document: Callable[..., Docume
     """閉じの # を持つ見出し（正常系）。"""
     # 準備
     document = make_document(
-        data={"name": "N", "body": "## main ##", "functions": [{"name": "main"}]}
+        data={"name": "N", "body": "## main ##\n\n本文", "functions": [{"name": "main"}]}
     )
     # 実行
     result = heading_anchors(document, ANCHOR_SCHEMA)
