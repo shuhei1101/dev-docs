@@ -39,7 +39,9 @@ docs:
   - page: docs/external-api/API-155-1.yaml
     new: false
     change: GET /sources の include_loading=true と状態 loading、GET・PUT /settings/sources の行の storage を追加する
-    status: todo
+    status: done
+    updated_by: planner
+    updated_at: '2026-11-17T13:20:22.903130+00:00'
 scope_out:
   - item: 設定画面の配信元の一覧で、状態 loading（読み込み中）を表示すること（#250 のタイトル・「やりたいこと」の「画面で表示する」）
     reason: 画面の配信元の一覧は /_api/settings/sources → project-index の GET /settings/sources で、loading を返さず読み込みの済んでいない行は pending_reload になる。受付の判断で対象を起動の通知と管理の MCP の status に絞った
