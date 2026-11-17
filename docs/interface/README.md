@@ -23,5 +23,6 @@
 | [設定の移し替え](./IF-155-22.yaml) | dev-docs migrate |
 | [起動](./IF-155-25.yaml) | dev-docs serve |
 | [テストの全件実行](./IF-155-26.yaml) | .github/workflows/test.yml |
+| [公開ページの配信](./IF-155-27.yaml) | .github/workflows/pages.yml |
 
 <!-- /table -->
