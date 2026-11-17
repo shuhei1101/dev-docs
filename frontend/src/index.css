@@ -154,3 +154,8 @@
 .mdmark {
   --mdmark-padding: 0 0 1.5rem;
 }
+
+/* sonner が差し込むトーストのスタイルから、高さの遷移を除外する */
+[data-sonner-toaster] [data-sonner-toast] {
+  transition: transform 400ms, opacity 400ms, box-shadow 200ms;
+}

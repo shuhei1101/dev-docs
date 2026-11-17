@@ -23,6 +23,7 @@ adoption: 採用
 used_in:
   - frontend/src/app/providers.tsx
   - frontend/src/shared/core/handle-app-error.ts
+  - frontend/src/index.css
 upstream: emilkowalski/sonner
 verification:
   state: 済
@@ -36,3 +37,7 @@ tags:
     main: true
   - name: topic:ライブラリ
   - name: topic:通知
+limitations:
+  - item: 差し込むスタイル
+    content: 読み込んだ時点でトーストのスタイルを `<style>` として `<head>` へ差し込み、止める設定は無い。差し込む `[data-sonner-toast]` の `transition` は `height`（0.4s）を含む
+    notes: '高さの遷移は、詳細度の高いセレクタ（`[data-sonner-toaster] [data-sonner-toast]`）で `transition` を `transform 400ms, opacity 400ms, box-shadow 200ms` に上書きして除外する。差し込まれた記述は残るため、Impeccable の `layout-transition`（`transition: height`、要素の指定なし）は sonner を読み込んだ画面で上書きの後も出る。この検出は対象から除外する'
