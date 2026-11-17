@@ -360,3 +360,9 @@ functions:
         condition: '`sources` に、`config` のファイルの `name` が notes で `id` を省いた行と sample の 2 行。偽物の取得が、同じ `config` で `enabled: false` の行を `id: sources[0]`・`status: disabled` で返却する'
         mock: 移す先の端末の設定の API（取得の応答を返却し、保存を記録するか例外を送出する偽物）・一時フォルダの配信元の設定
         expected: 保存が 1 回で、行の 1 つ目が `id` を持たず、2 つ目が sample。`kept` が `[notes]` で、`data` の `sources` が notes の行だけ
+tags:
+  - name: topic:移行
+    main: true
+  - name: topic:端末の設定
+  - name: tool:project-index
+  - name: topic:バックアップ
