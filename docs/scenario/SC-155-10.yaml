@@ -367,12 +367,16 @@ scenarios:
   - name: 正常シナリオ（project-index が配信元を読み込み中）
     setup:
       - name: Mock
-        description: なし（実環境で実行。`dev-docs serve` を子プロセスで起動する）
+        description: PATH の先頭に包みの git を配置する。作業場所が slow のリポジトリのときだけ、一時ファイルが配置されるまで待ってから本物の git を呼ぶ
+        notes: slow 以外の作業場所と、一時ファイルを配置した後は本物の git をそのまま呼ぶ。`dev-docs serve` は子プロセスで起動する
       - name: project-index
-        description: テスト用の一時フォルダで起動した直後の project-index。sample の読み込みを終え、slow を読み込んでいる
-        notes: 待ち受けのアドレスを dev-docs の端末の設定の `project_index` に記載する
-      - name: 読み込みに時間のかかる配信元
-        description: 文書の種類を 1 つと `project-index.yaml` を持ち、project-index の読み込みが終わらないうちに dev-docs を起動できるだけの文書を持つ git リポジトリ
+        description: 包みの git を PATH に入れて、テスト用の一時フォルダで起動した project-index。sample と slow を配信する
+        notes: 待ち受けのアドレスを dev-docs の端末の設定の `project_index` に記載する。`GET /sources?include_loading=true` で sample が `serving` になってから dev-docs を起動する
+      - name: サンプルの配信元
+        description: 正常シナリオと同じ配信元
+        notes: id `sample`
+      - name: 読み込みを止める配信元
+        description: 文書の種類を 1 つと `project-index.yaml` を持つ git リポジトリ。包みの git が、一時ファイルが配置されるまで読み込みを止める
         notes: id `slow`
       - name: 端末の設定
         description: '`DEV_DOCS_CONFIG` が指す `settings.yaml`'
@@ -383,18 +387,25 @@ scenarios:
         actor U as 利用者
         participant DD as dev-docs
         participant PI as project-index
+        participant SRC as slow
 
+        PI->>SRC: 裏で slow を読み込み始める（包みの git が待たせる）
         U->>DD: dev-docs serve
         DD->>PI: 配信元の一覧と状態を、読み込みを待たずに問い合わせる
         PI-->>DD: sample は配信中、slow は読み込み中
         DD->>DD: 127.0.0.1:8781 で待ち受ける
         DD-->>U: 待ち受けたアドレスと、配信中の sample と読み込み中の slow を標準出力に出す
+        U->>DD: 管理の MCP の status を呼ぶ
+        DD-->>U: slow は loading
+        SRC->>SRC: テストが一時ファイルを配置し、包みの git が本物の git を呼ぶ
+        U->>DD: slow が配信中になるまで、管理の MCP の status を繰り返し呼ぶ
+        DD-->>U: slow は serving
       ```
     expected:
-      - slow の読み込みが終わる前に、標準出力に待ち受けたアドレスと配信元の id が出る
+      - 一時ファイルを配置する前に、標準出力に待ち受けたアドレスと配信元の id が出る
       - 標準出力の sample は配信中、slow は読み込み中として出る
-      - slow の読み込みが終わる前に呼んだ管理の MCP の `status` が、slow の状態を `loading` で返却する
-      - slow の読み込みが終わった後に呼んだ管理の MCP の `status` が、slow の状態を `serving` で返却する
+      - 一時ファイルを配置する前に呼んだ管理の MCP の `status` が、slow の状態を `loading`、sample の状態を `serving` で返却する
+      - 一時ファイルを配置した後、管理の MCP の `status` が slow の状態を `serving` で返却する
     test: test_normal_when_source_loading
 lead: 利用者が `dev-docs serve` で配信元の文書を画面で配信し始めるシナリオを定め、起動の流れを変えるときに参照する。
 primary_actor: 利用者
