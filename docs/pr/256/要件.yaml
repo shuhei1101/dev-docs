@@ -1,0 +1,46 @@
+use_cases:
+  - kind: composite
+    scenario: docs/scenario/SC-155-13.yaml
+    impact: none
+    detail: 配信元の設定が指すスキーマの配置先と設計書の図の辺のキーだけを変え、文書を画面で参照する流れを変えない
+    depends_on: []
+docs:
+  - page: ai-monitor-version.ini
+    new: false
+    change: 先頭行を v0.3.0 から v0.4.0 にする
+    status: todo
+  - page: project-index.yaml
+    new: false
+    change: 設計書の種別の行と管理用の YAML の行の schema を、knowledge のスキーマの参照（source・path・ref）へ書き換える
+    status: todo
+  - page: schemas/architecture.schema.yaml
+    new: false
+    change: AI Monitor から配られたスキーマのコピーを、schemas/ の他のコピー（設計書の種別のスキーマ・common.schema.yaml・files.schema.yaml・phase.schema.yaml）と conversions/ とまとめて削除する
+    status: todo
+  - page: pyproject.toml
+    new: false
+    change: ruff・pyright の除外から schemas/conversions を指す値を削除する
+    status: todo
+  - page: docs/architecture/ARCH-155-1.yaml
+    new: false
+    change: 'overview のデータの図の 2 つの辺から line: reply を削除する'
+    status: todo
+scope_out:
+  - item: AI Monitor の設計書の変換（design_docs convert --from v0.3.0 --to v0.4.0）の実行
+    reason: 'dev-docs での変換の対象は ARCH-155-1.yaml の line: reply の 2 行だけで手で削除する。変換は docs/module/ の ID 名の設計書を改名する不具合を持つ'
+    plan: none
+  - item: 反映作業のスクリプトが配信元の設定を dev-docs.yaml に決め打ちする不具合の修正
+    reason: 配布元の AI Monitor の不具合で、この PR では同じ書き換えを project-index.yaml へ当てる
+    plan: shuhei1101/ai-monitor#3472
+  - item: AI Monitor v0.5.0 の配布物への追従（knowledge のスキーマの ref を design-schemas/v8.1.0 より後へ上げることを含む）
+    reason: v0.4.0 の追従の範囲の外
+    plan: '#243'
+  - item: 配信設定（docs/_config.yml のキーの追加）とサイトのレイアウトの取り込み
+    reason: 'dev-docs に docs/_config.yml が無く、テーマの取り込みは #194 で扱った'
+    plan: none
+  - item: プラグイン（update_plugins）・設定スキーマ（settings.yaml のキーの追加）・MCP ツール（agents[].mcp_tools の見直し）
+    reason: モニターのプラグインと settings.yaml は全プロジェクトで共有し、dev-docs の作業 PR で変える対象ではない
+    plan: none
+  - item: rules.yaml へのルール索引の行の追加
+    reason: 'dev-docs の rules.yaml は rules: [] で、配布元のルール索引を写していない'
+    plan: none
