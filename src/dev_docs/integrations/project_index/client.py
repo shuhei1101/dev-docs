@@ -317,7 +317,7 @@ class ProjectIndexClient:
         )
 
     async def decisions(self, source: str) -> DecisionIndex:
-        """検討事項の ID ごとの当たるフォルダの数を返却する。"""
+        """検討事項の ID ごとの該当するフォルダの数を返却する。"""
         response = await self.request("GET", f"/sources/{_seg(source)}/decisions")
         return DecisionIndex(
             counts={

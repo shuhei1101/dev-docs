@@ -27,7 +27,7 @@ flows:
       ```
     expected:
       - 応答の `pid` が子プロセスの PID と同じ
-      - '`/_admin/mcp` の接続を張ったまま `restart` を呼んでも、再起動した子プロセスがポートの確かめで止まらず待ち受ける'
+      - '`/_admin/mcp` の接続を張ったまま `restart` を呼んでも、再起動した子プロセスがポートの確認で止まらず待ち受ける'
       - 再起動した後の `status` の `pid` が同じで、sample が `serving`
       - 再起動した後に `/_admin/mcp` を再接続すると呼べる
     test: test_normal

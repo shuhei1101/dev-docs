@@ -1,4 +1,4 @@
-# dev-docsを入れる
+# dev-docsを導入する
 
 プラグインを入れ、global-setup で端末の設定と起動を用意して、/mcp につなぐ手順
 
