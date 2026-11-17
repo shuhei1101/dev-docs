@@ -1,0 +1,15 @@
+# commit: 移す前 151404b / 移した後 a83dbc9
+$ npx vite build --config frontend/vite.config.ts --outDir ../tmp/build-296-before --emptyOutDir   # 151404b
+$ npx vite build --config frontend/vite.config.ts --outDir ../tmp/build-296-after --emptyOutDir    # a83dbc9
+$ ls tmp/build-296-before/assets tmp/build-296-after/assets
+tmp/build-296-after/assets:
+index-B0CsCfIX.js
+index-tmPKEbPA.css
+
+tmp/build-296-before/assets:
+index-B0CsCfIX.js
+index-tmPKEbPA.css
+$ diff -r tmp/build-296-before tmp/build-296-after && echo IDENTICAL
+IDENTICAL
+$ git diff --stat origin/develop...HEAD -- src/dev_docs/screen
+(差分なし)
