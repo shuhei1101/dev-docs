@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import json
 import re
 import subprocess
@@ -9,10 +10,12 @@ from collections.abc import Callable
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
-from urllib.parse import urlsplit
+from urllib.parse import parse_qs, urlsplit
 
+import httpx
 import pytest
 
+from dev_docs.features.view.document_lists import DOCUMENT_LIST_CACHE_SIZE
 from dev_docs.shared.yaml_io import load_yaml
 
 from .conftest import REPO_ROOT, IndexSource, MockIndex, RealIndex, ServerEnv, doc, row
@@ -1216,40 +1219,292 @@ def _wait_for_requests(mock: MockIndex, count: int) -> None:
         time.sleep(0.05)
 
 
+def _times(mock: MockIndex, event: str, path: str) -> list[float]:
+    """偽物が `path` の要求を受け付けた・応答した時刻を並べる。"""
+    return [at for kind, found, at in mock.timeline if kind == event and found == path]
+
+
 def test_normal_when_requests_sent_concurrently(
     mock_index: MockIndex, make_server: Callable[..., ServerEnv]
 ) -> None:
-    """配信元の設定・リビジョン・文書の一覧を同時に問い合わせ、文書だけをその後に問い合わせる（正常系）。"""
-    # 準備
+    """配信元の設定とリビジョンの一覧を同時に問い合わせ、文書の一覧をリビジョンの一覧の応答の後に問い合わせる（正常系）。"""
+    # 準備（問い合わせごとに 1 秒、配信元の設定だけ 2 秒待つ偽物）
     mock_index.serve("sample", IndexSource(docs={None: _sample()}))
     env = make_server(mock_index)
-    mock_index.received.clear()
-    mock_index.hold.clear()
-    held: dict[str, Any] = {}
-    fetch = threading.Thread(
-        target=lambda: held.update(response=env.client.get("/_api/sources/sample/docs"))
-    )
-    # 実行（偽物が応答を止めている間に受け付けた問い合わせを数える）
-    fetch.start()
-    _wait_for_requests(mock_index, 3)
-    received_while_held = {urlsplit(raw).path for _, raw, _ in mock_index.received}
-    mock_index.hold.set()
-    fetch.join(timeout=10)
-    # 実行（問い合わせごとに 1 秒待つ偽物で、応答までの時間を測る）
+    mock_index.timeline.clear()
     mock_index.delay_sec = 1
+    mock_index.path_delays["/sources/sample/config"] = 2
     started = time.monotonic()
+    # 実行
     response = env.client.get("/_api/sources/sample/docs")
     elapsed = time.monotonic() - started
     # 検証
-    assert received_while_held == {
-        "/sources/sample/config",
-        "/sources/sample/refs",
-        "/sources/sample/docs",
-    }
-    assert held["response"].status_code == 200
+    config_received = _times(mock_index, "received", "/sources/sample/config")[0]
+    refs_received = _times(mock_index, "received", "/sources/sample/refs")[0]
+    docs_received = _times(mock_index, "received", "/sources/sample/docs")[0]
+    first_answered = min(at for kind, _, at in mock_index.timeline if kind == "answered")
+    config_answered = _times(mock_index, "answered", "/sources/sample/config")[0]
     assert response.status_code == 200
     assert response.json()["path"] == "docs/doc-1"
-    assert 2 <= elapsed < 3
+    assert 3 <= elapsed < 4
+    assert max(config_received, refs_received) < first_answered
+    assert docs_received < config_answered
+
+
+C0 = "0000000"
+C1 = "1111111"
+C2 = "2222222"
+
+
+def _main_refs(commit: str) -> dict[str, Any]:
+    """main が `commit` を指すリビジョンの一覧の応答（IF-29）を作る。"""
+    return {
+        "git": True,
+        "defaultRef": "main",
+        "branches": [{"name": "main", "commit": commit}],
+        "tags": [],
+        "commits": [],
+    }
+
+
+def _named(name: str) -> list[dict[str, Any]]:
+    """文書 1 の `name` を `name` にした sample の文書の並び。"""
+    return _sample(
+        doc_1=doc("doc-1", "docs/doc-1.yaml", data={"id": "doc-1", "name": name}, version=name)
+    )
+
+
+def _cached_source() -> IndexSource:
+    """main が変更の commit（C1）を指し、親の commit（C0）を持つ配信元 sample。"""
+    current = _named("文書 1 の変更後")
+    return IndexSource(
+        docs={None: current, "main": current, C1: current, C0: _named("文書 1")},
+        refs=_main_refs(C1),
+    )
+
+
+def _list_refs(mock: MockIndex, source_id: str = "sample") -> list[str | None]:
+    """偽物が受け付けた文書の一覧の要求の `ref` を、受け付けた順に並べる。"""
+    found: list[str | None] = []
+    for _, raw, _ in mock.received:
+        url = urlsplit(raw)
+        if url.path == f"/sources/{source_id}/docs":
+            found.append(parse_qs(url.query).get("ref", [None])[0])
+    return found
+
+
+def _view(response: Any) -> dict[str, Any]:
+    """応答のうち保持の有無で変わってはいけない項目を取り出す。"""
+    body = response.json()
+    return {key: body[key] for key in ("path", "markdown", "tabs", "diff", "ref")}
+
+
+def test_normal_when_document_list_reused(
+    mock_index: MockIndex, make_server: Callable[..., ServerEnv]
+) -> None:
+    """同じ配信元の同じ commit の文書の一覧を保持し、2 回目以降の取得では問い合わせない（正常系）。"""
+    # 準備
+    mock_index.serve("sample", _cached_source())
+    env = make_server(mock_index)
+    fresh = make_server(mock_index)
+    paths = [
+        "/_api/sources/sample/docs/docs/doc-1",
+        "/_api/sources/sample/docs/docs/doc-2",
+        f"/_api/sources/sample/docs/docs/doc-1?diff={C0}",
+        f"/_api/sources/sample/docs/docs/doc-2?diff={C0}",
+    ]
+    mock_index.received.clear()
+    # 実行
+    responses = [env.client.get(path) for path in paths]
+    listed = _list_refs(mock_index)
+    expected = [_view(fresh.client.get(path)) for path in paths[1:]]
+    # 検証
+    assert [response.status_code for response in responses] == [200, 200, 200, 200]
+    assert sorted(str(ref) for ref in listed) == [C0, C1]
+    assert [_view(response) for response in responses[1:]] == expected
+    assert responses[0].json()["ref"] == "main"
+
+
+def _send_together(env: ServerEnv, paths: list[str]) -> list[Any]:
+    """`paths` の取得を別々のスレッドで同時に送信し、応答を並べる。"""
+    responses: dict[int, Any] = {}
+    threads = [
+        threading.Thread(target=lambda n=n, p=p: responses.update({n: env.client.get(p)}))
+        for n, p in enumerate(paths)
+    ]
+    for thread in threads:
+        thread.start()
+    for thread in threads:
+        thread.join(timeout=30)
+    return [responses[n] for n in range(len(paths))]
+
+
+def test_normal_when_document_list_shared(
+    mock_index: MockIndex,
+    make_server: Callable[..., ServerEnv],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """同じ組の文書の一覧を取得している間に届いた取得は、その問い合わせの結果を共有する（正常系）。"""
+    # 準備（文書の一覧の問い合わせだけ 1 秒待つ偽物）
+    monkeypatch.setattr("dev_docs.main.PROJECT_INDEX_TIMEOUT_SEC", 10)
+    mock_index.serve("sample", _cached_source())
+    mock_index.path_delays["/sources/sample/docs"] = 1
+    paths = [
+        f"/_api/sources/sample/docs/docs/doc-1?ref=main&diff={C0}",
+        f"/_api/sources/sample/docs/docs/doc-1?ref={C0}",
+    ]
+    shared_env = make_server(mock_index)
+    mock_index.received.clear()
+    # 実行（同時に送信する）
+    shared = _send_together(shared_env, paths)
+    shared_refs = _list_refs(mock_index)
+    # 実行（文書の一覧の問い合わせに 500 を返却させて同時に送信し、戻してもう一度送信する）
+    failing_env = make_server(mock_index)
+    mock_index.failing.add("/sources/sample/docs")
+    mock_index.received.clear()
+    failed = _send_together(failing_env, paths)
+    mock_index.failing.clear()
+    retried = failing_env.client.get(paths[1])
+    retried_refs = _list_refs(mock_index)
+    # 実行（先に届いた取得をクライアントの側で取り消す）
+    cancel_env = make_server(mock_index)
+    mock_index.received.clear()
+    held = threading.Event()
+    mock_index.path_holds["/sources/sample/docs"] = held
+    cancelled, survivor = asyncio.run(_cancel_first(cancel_env, paths[1], mock_index))
+    held.set()
+    cancel_refs = _list_refs(mock_index)
+    # 検証
+    assert [response.status_code for response in shared] == [200, 200]
+    assert shared_refs.count(C0) == 1
+    assert [response.status_code for response in failed] == [502, 502]
+    assert retried.status_code == 200
+    assert retried_refs.count(C0) == 2
+    assert cancelled
+    assert survivor.status_code == 200
+    assert survivor.json()["markdown"] == shared[1].json()["markdown"]
+    assert cancel_refs.count(C0) == 1
+
+
+def _wait_for_list(mock: MockIndex) -> None:
+    """偽物が文書の一覧の要求を受け付けるまで待つ（5 秒で打ち切る）。"""
+    deadline = time.monotonic() + 5
+    while not _list_refs(mock) and time.monotonic() < deadline:
+        time.sleep(0.05)
+
+
+async def _cancel_first(env: ServerEnv, path: str, mock: MockIndex) -> tuple[bool, Any]:
+    """同じ取得を 2 つ送信し、先に送信した取得を文書の一覧の問い合わせが届いた後に取り消す。"""
+    transport = httpx.ASGITransport(app=env.client.app)
+    async with httpx.AsyncClient(transport=transport, base_url="http://testserver") as client:
+        first = asyncio.create_task(client.get(path))
+        # 先の取得の文書の一覧の問い合わせが偽物に届くまで待つ
+        await asyncio.to_thread(_wait_for_list, mock)
+        second = asyncio.create_task(client.get(path))
+        await asyncio.sleep(0.2)
+        first.cancel()
+        try:
+            await first
+        except asyncio.CancelledError:
+            cancelled = True
+        else:
+            cancelled = False
+        hold = mock.path_holds.pop("/sources/sample/docs")
+        hold.set()
+        return cancelled, await second
+
+
+def test_normal_when_revision_or_config_changed(
+    mock_index: MockIndex, make_server: Callable[..., ServerEnv]
+) -> None:
+    """ブランチが別の commit を指したときと、配信元の設定の応答が変わったときは文書の一覧を取り直す（正常系）。"""
+    # 準備
+    source = mock_index.serve("sample", _cached_source())
+    env = make_server(mock_index)
+    path = "/_api/sources/sample/docs/docs/doc-1"
+    advanced = _named("文書 1 を進めた後")
+    mock_index.received.clear()
+    # 実行
+    before = env.client.get(path)
+    source.refs = _main_refs(C2)
+    source.docs[C2] = advanced
+    source.docs[None] = advanced
+    moved = env.client.get(path)
+    moved_refs = _list_refs(mock_index)
+    source.nav = {"tabs": [{"title": "新しいタブ", "items": [{"auto": {"document": "sample"}}]}]}
+    reconfigured = env.client.get(path)
+    reconfigured_refs = _list_refs(mock_index)
+    pinned = env.client.get(f"{path}?ref={C2}")
+    pinned_refs = _list_refs(mock_index)
+    # 検証
+    assert before.status_code == 200
+    assert moved_refs == [C1, C2]
+    assert "文書 1 を進めた後" in moved.json()["markdown"]
+    assert reconfigured.status_code == 200
+    assert reconfigured_refs == [C1, C2, C2]
+    assert [tab["title"] for tab in reconfigured.json()["tabs"]] == ["新しいタブ"]
+    assert pinned.status_code == 200
+    assert pinned_refs == reconfigured_refs
+
+
+def test_normal_when_cache_limit_exceeded(
+    mock_index: MockIndex, make_server: Callable[..., ServerEnv]
+) -> None:
+    """保持する組が上限を超えたら、最も前に使用した組を捨てる（正常系）。"""
+    # 準備（保持する文書の一覧の数より 1 つ多い commit）
+    commits = [f"{n}{n}{n}{n}{n}{n}a" for n in range(DOCUMENT_LIST_CACHE_SIZE + 1)]
+    source = IndexSource(docs={None: _sample()}, refs=_main_refs(commits[-1]))
+    for commit in commits:
+        source.docs[commit] = _sample()
+    mock_index.serve("sample", source)
+    env = make_server(mock_index)
+    path = "/_api/sources/sample/docs/docs/doc-1"
+    for commit in commits:
+        env.client.get(f"{path}?ref={commit}")
+    mock_index.received.clear()
+    # 実行
+    first = env.client.get(f"{path}?ref={commits[0]}")
+    first_refs = _list_refs(mock_index)
+    last = env.client.get(f"{path}?ref={commits[-1]}")
+    last_refs = _list_refs(mock_index)
+    # 検証
+    assert first.status_code == 200
+    assert first_refs == [commits[0]]
+    assert last.status_code == 200
+    assert last_refs == [commits[0]]
+
+
+def test_normal_when_document_list_not_cacheable(
+    mock_index: MockIndex, make_server: Callable[..., ServerEnv]
+) -> None:
+    """Git 管理外の配信元は文書の一覧を保持せず、取得のたびに問い合わせる（正常系）。"""
+    # 準備
+    mock_index.serve("notes", IndexSource(docs={None: _sample()}, git=False))
+    env = make_server(mock_index)
+    mock_index.received.clear()
+    # 実行
+    responses = [env.client.get("/_api/sources/notes/docs") for _ in range(2)]
+    # 検証
+    assert [response.status_code for response in responses] == [200, 200]
+    assert _list_refs(mock_index, "notes") == [None, None]
+
+
+def test_normal_when_gzip_accepted(
+    mock_index: MockIndex, make_server: Callable[..., ServerEnv]
+) -> None:
+    """`Accept-Encoding` に gzip を含む要求に、応答を gzip で返却する（正常系）。"""
+    # 準備
+    mock_index.serve("sample", IndexSource(docs={None: _sample()}))
+    env = make_server(mock_index)
+    path = "/_api/sources/sample/docs/docs/doc-1"
+    # 実行
+    gzipped = env.client.get(path, headers={"Accept-Encoding": "gzip"})
+    identity = env.client.get(path, headers={"Accept-Encoding": "identity"})
+    # 検証
+    assert gzipped.status_code == 200
+    assert gzipped.headers["content-encoding"] == "gzip"
+    assert "content-encoding" not in identity.headers
+    assert gzipped.json() == identity.json()
 
 
 def test_error_when_project_index_failed(
