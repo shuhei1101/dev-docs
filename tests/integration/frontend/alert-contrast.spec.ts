@@ -5,13 +5,26 @@ import { openStory } from "./support/storybook";
 
 const ALERT = '[data-slot="alert"]';
 
-/** エラーのアラートの中の文字と背景が満たさない axe の color-contrast の違反の id */
-const contrastViolations = async (page: Page) => {
-  const result = await new AxeBuilder({ page })
-    .include(ALERT)
-    .withRules(["color-contrast"])
-    .analyze();
-  return result.violations.map((violation) => violation.id);
+const AXE_RETRY_LIMIT = 10;
+const AXE_RETRY_WAIT_MS = 500;
+
+/** エラーのアラートの中の文字と背景が満たさない axe の color-contrast の違反の id。Storybook の a11y アドオンが走っている間は待って再取得する */
+const contrastViolations = async (page: Page): Promise<string[]> => {
+  for (let attempt = 1; ; attempt += 1) {
+    try {
+      const result = await new AxeBuilder({ page })
+        .include(ALERT)
+        .withRules(["color-contrast"])
+        .analyze();
+      return result.violations.map((violation) => violation.id);
+    } catch (error) {
+      const running =
+        error instanceof Error &&
+        error.message.includes("Axe is already running");
+      if (!running || attempt >= AXE_RETRY_LIMIT) throw error;
+      await page.waitForTimeout(AXE_RETRY_WAIT_MS);
+    }
+  }
 };
 
 /** ダークのテーマで開くストーリーの id */
