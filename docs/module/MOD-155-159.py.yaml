@@ -252,10 +252,10 @@ functions:
         exception: project-index につながらない・制限時間を超えた
       - name: test_get_document_when_requests_concurrent
         case: 正常
-        summary: 配信元の設定・リビジョン・文書の一覧を同時に問い合わせる
-        condition: '`path=None`。偽物は、配信元の設定・リビジョン・文書の一覧の 3 つの要求が揃うまでどれにも応答しない'
-        mock: project-indexの呼び出し（`httpx.MockTransport` で 3 つの要求を `asyncio.Event` で待ち合わせる偽物）
-        expected: 一番左のタブの一番上の文書を返却する（3 つを順に送信すると待ち合わせが揃わず制限時間で失敗する）
+        summary: 配信元の設定とリビジョンの一覧を同時に問い合わせ、文書の一覧を配信元の設定の応答より前に問い合わせる
+        condition: '`path=None`。偽物は、配信元の設定への応答を、リビジョンの一覧と文書の一覧の要求が届くまで返却しない。リビジョンの一覧と文書の一覧にはすぐに応答する'
+        mock: project-indexの呼び出し（`httpx.MockTransport` で 配信元の設定への応答を `asyncio.Event` で待たせる偽物）
+        expected: 一番左のタブの一番上の文書を返却する（配信元の設定とリビジョンの一覧を順に送信するか、文書の一覧を配信元の設定の応答の後に送信すると、待ち合わせが揃わず制限時間で失敗する）
       - name: test_get_document_when_total_timeout
         case: 異常
         summary: 文書の取得の制限時間
