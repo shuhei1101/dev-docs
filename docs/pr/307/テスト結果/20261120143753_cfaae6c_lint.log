@@ -1,0 +1,33 @@
+$ (rc=0; uv run ruff check . || rc=1; uv run ruff format --check . || rc=1; uv run mypy . || rc=1; claude plugin validate . || rc=1; npm run lint || rc=1; npm run typecheck || rc=1; uvx --from actionlint-py==1.7.12.25 --with shellcheck-py==0.11.0.1 actionlint || rc=1; for u in $(grep -hoE '^[[:space:]-]*uses:[[:space:]]*[^./][^[:space:]#]*@[^[:space:]#]+' .github/workflows/*.y*ml | sed -E 's/.*uses:[[:space:]]*//' | grep -v '^docker://' | sort -u); do gh api "repos/$(echo "${u%@*}" | cut -d/ -f1-2)/commits/${u##*@}" --silent || { echo "uses のバージョンがありません: $u"; rc=1; }; done; exit $rc)
+
+Using CPython 3.14.3
+Creating virtual environment at: .venv
+   Building dev-docs @ file:///home/shuhei2441/repo/dev-docs/.claude/worktrees/fix-view-destructive-alert-contrast
+      Built dev-docs @ file:///home/shuhei2441/repo/dev-docs/.claude/worktrees/fix-view-destructive-alert-contrast
+Installed 49 packages in 95ms
+All checks passed!
+153 files already formatted
+Success: no issues found in 150 source files
+Validating marketplace manifest: /home/shuhei2441/repo/dev-docs/.claude/worktrees/fix-view-destructive-alert-contrast/.claude-plugin/marketplace.json
+
+⚠ Found 3 warnings:
+
+  ❯ description: No marketplace description provided. Adding a description helps users understand what this marketplace offers
+  ❯ plugins[0] plugin.json → version: No version specified. Consider adding a version following semver (e.g., "1.0.0")
+  ❯ plugins[0] plugin.json → author: No author information provided. Consider adding author details for plugin attribution
+
+ℹ Advice (does not change the verdict):
+
+  ❯ /home/shuhei2441/repo/dev-docs/.claude/worktrees/fix-view-destructive-alert-contrast/README.md: This README has no line that installs "dev-docs" from a marketplace. Add the install line, which works in one step on Claude Code 2.1.275 or later. In it, replace <owner>/<repo> with the repository that holds the marketplace.
+      /plugin install dev-docs --marketplace <owner>/<repo>
+
+✔ Validation passed with warnings
+
+> lint
+> eslint frontend tests/unit/frontend tests/integration/frontend eslint.config.js
+
+
+> typecheck
+> node node_modules/typescript-native/bin/tsc --noEmit -p frontend/tsconfig.json
+
+exit=0
