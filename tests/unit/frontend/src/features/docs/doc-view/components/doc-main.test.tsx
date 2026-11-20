@@ -1,4 +1,4 @@
-import { screen } from "@testing-library/react";
+import { screen, within } from "@testing-library/react";
 import { expect, test, vi } from "vitest";
 
 import { DocMain } from "@/features/docs/doc-view/components/doc-main";
@@ -44,6 +44,10 @@ test("test_doc_main_when_empty_tab", async () => {
   expect(await screen.findByRole("heading", { level: 1, name: "規約" })).toBeInTheDocument();
   expect(screen.getByText("規約の文書はありません")).toBeInTheDocument();
   expect(screen.queryByTestId("doc-body")).toBeNull();
+  const crumbs = within(screen.getByRole("navigation", { name: "パンくず" }))
+    .getAllByRole("listitem")
+    .map((item) => item.textContent);
+  expect(crumbs).toEqual(["s", "規約"]);
 });
 
 test("test_doc_main_when_conversion_error", async () => {

@@ -390,6 +390,18 @@ test.describe("パンくず", () => {
     await page.getByRole("navigation", { name: "パンくず" }).getByRole("link", { name: "規約" }).click();
     await expect(page).toHaveURL(/\/sample\/docs\/doc-1/);
   });
+
+  // 文書の無いタブでは `{配信元の ID}` / `{タブ名}` だけを出し、タブ名をリンクにしない（正常系）
+  test("breadcrumb_when_empty_tab", async ({ page }) => {
+    await openDoc(page, "/sample/docs/doc-1", {
+      document: ({ path }) => ({ body: documentResponse({ path, tabs: TABS_WITH_DOCS }) }),
+    });
+    await page.getByRole("button", { name: "空" }).click();
+    const crumb = page.getByRole("navigation", { name: "パンくず" });
+    await expect(crumb.getByRole("listitem")).toHaveText(["sample", "空"]);
+    await expect(crumb.getByRole("link")).toHaveText(["sample"]);
+    await expect(crumb.getByText("空")).toHaveAttribute("aria-current", "page");
+  });
 });
 
 test.describe("文書のタイトル", () => {
@@ -688,6 +700,22 @@ test.describe("本文", () => {
     await openRendered(page);
     await expect(page.getByRole("main").getByRole("heading", { level: 1 })).toHaveCount(1);
   });
+
+  // 本文の幅は画面の幅から左右の余白・サイドバー・間隔を除いた幅で、広い画面でも上限を持たない（正常系）
+  for (const width of [1920, 2880]) {
+    test(`body_width_without_upper_limit_${width}`, async ({ page }) => {
+      // 準備
+      await page.setViewportSize({ width, height: 1080 });
+      await openRendered(page);
+
+      // 実行
+      const box = await boxOf(page.getByRole("main"));
+      const clientWidth = await page.evaluate(() => document.documentElement.clientWidth);
+
+      // 検証（左右の余白 16px ずつ・サイドバー 240px・間隔 24px）
+      expect(box.width).toBeCloseTo(clientWidth - 296, 0);
+    });
+  }
 
   // 本文には画面の基本のスタイル（Tailwind の Preflight）を当てず、単独の mdmark と同じ見た目で描く（正常系）
   test("body_without_preflight", async ({ page }) => {

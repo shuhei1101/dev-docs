@@ -3,6 +3,7 @@ import { Fragment } from "react";
 
 import { firstPagePath, type ActivePage } from "@/features/docs/doc-view/nav";
 import type { DocViewSearch } from "@/features/docs/doc-view/search";
+import type { NavTab } from "@/shared/api/generated/model";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -13,16 +14,22 @@ import {
 type Props = {
   source: string;
   active: ActivePage;
+  emptyTab: NavTab | null;
   search: DocViewSearch;
 };
 
-/** `{配信元の ID}` / `{タブ名}` / `{group}` / `{文書の名前}`。配信元とタブだけをリンクにする */
-export const DocBreadcrumb = ({ source, active, search }: Props) => {
+/**
+ * `{配信元の ID}` / `{タブ名}` / `{group}` / `{文書の名前}`。配信元とタブだけをリンクにする。
+ * 文書の無いタブを選んでいれば `{配信元の ID}` / `{そのタブ名}` だけを並べ、タブ名を末尾の項目にする
+ */
+export const DocBreadcrumb = ({ source, active, emptyTab, search }: Props) => {
   const tabPath = firstPagePath(active.tab);
   const query = { rev: search.rev, base: search.base };
-  const trail: string[] = [active.group, active.page?.title ?? null].filter(
-    (item): item is string => item !== null,
-  );
+  const trail: string[] = emptyTab
+    ? []
+    : [active.group, active.page?.title ?? null].filter(
+        (item): item is string => item !== null,
+      );
   return (
     <Breadcrumb aria-label="パンくず">
       <BreadcrumbList>
@@ -38,7 +45,11 @@ export const DocBreadcrumb = ({ source, active, search }: Props) => {
         </BreadcrumbItem>
         <BreadcrumbSeparator />
         <BreadcrumbItem>
-          {tabPath === null ? (
+          {emptyTab ? (
+            <span aria-current="page" className="font-normal text-foreground">
+              {emptyTab.title}
+            </span>
+          ) : tabPath === null ? (
             <span>{active.tab.title}</span>
           ) : (
             <Link

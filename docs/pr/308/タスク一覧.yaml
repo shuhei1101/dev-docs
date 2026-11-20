@@ -1,0 +1,89 @@
+tasks:
+  - process: 初期構築
+    status: skipped
+    reason: 既存のリポジトリのため対象外
+    updated_by: planner
+    updated_at: '2026-11-20T04:39:10.815095+00:00'
+  - process: リバースエンジニアリング
+    status: skipped
+    reason: 文書の画面の設計書（SCR-155-1・MOD-155-11・MOD-155-13）があるため対象外
+    updated_by: planner
+    updated_at: '2026-11-20T04:39:10.815095+00:00'
+  - process: 方針決め
+    status: skipped
+    reason: 方針決めを依頼する Issue ではないため対象外
+    updated_by: planner
+    updated_at: '2026-11-20T04:39:10.815095+00:00'
+  - process: PoC 検証
+    status: skipped
+    reason: パンくずの部品の引数の修正で、未検証の技術機構に依存しないため対象外
+    updated_by: planner
+    updated_at: '2026-11-20T04:39:10.815095+00:00'
+  - process: 複合ユースケース設計
+    status: skipped
+    reason: 利用者の操作の連鎖は変わらないため対象外
+    updated_by: planner
+    updated_at: '2026-11-20T04:39:10.815095+00:00'
+  - process: デザインスタイル選定
+    status: skipped
+    reason: デザイン方針（docs/design-policy.md）があり、Issue は見た目の方向を変えないため対象外（モック要否）
+    updated_by: planner
+    updated_at: '2026-11-20T04:39:10.815095+00:00'
+  - process: 画面一覧・画面遷移
+    status: skipped
+    reason: 画面の追加・削除と画面遷移の変更が無いため対象外（モック要否）
+    updated_by: planner
+    updated_at: '2026-11-20T04:39:10.815095+00:00'
+  - process: 単一ユースケース設計
+    status: skipped
+    reason: 文書の画面で参照する流れ（SC-155-7）の手順は変わらないため対象外
+    updated_by: planner
+    updated_at: '2026-11-20T04:39:10.815095+00:00'
+  - process: モック作成
+    status: skipped
+    reason: 表示の結果（`{配信元の ID}` / `{タブ名}`）が画面設計 SCR-155-1 の `パンくず` の `visible_when` に書かれており、作り手が決める余地が無いため対象外（モック要否）
+    updated_by: planner
+    updated_at: '2026-11-20T04:39:10.815095+00:00'
+  - process: データ設計
+    status: skipped
+    reason: データの構造は変わらないため対象外
+    updated_by: planner
+    updated_at: '2026-11-20T04:39:10.815095+00:00'
+  - process: インターフェース定義設計
+    status: skipped
+    reason: 画面の API と画面操作の入出力は変わらないため対象外
+    updated_by: planner
+    updated_at: '2026-11-20T04:39:10.815095+00:00'
+  - process: 部品設計
+    status: skipped
+    reason: 部品（CMP-155-*）の引数・状態は変わらないため対象外
+    updated_by: planner
+    updated_at: '2026-11-20T04:39:10.815095+00:00'
+  - process: 画面設計
+    status: skipped
+    reason: SCR-155-1 の `パンくず` の `visible_when` が既に文書の無いタブの表示を定めており、実装をそれに合わせる修正のため対象外
+    updated_by: planner
+    updated_at: '2026-11-20T04:39:10.815095+00:00'
+  - process: モジュール構成設計
+    status: done
+    note: MOD-155-11 の DocBreadcrumb の引数に文書の無いタブを足し、MOD-155-13 の DocMain から渡す。単体テストのケースを足す
+    updated_by: planner
+    updated_at: '2026-11-20T04:42:45.334771+00:00'
+  - process: ドキュメント修正
+    status: skipped
+    reason: ガイド『画面で参照する』のパンくずの記述（配信元の ID かタブ名を押す）は変わらず、設計書のほかに更新が要るページが無いため対象外
+    updated_by: planner
+    updated_at: '2026-11-20T04:39:10.815095+00:00'
+  - process: 単体テスト作成
+    status: done
+    updated_by: planner
+    updated_at: '2026-11-20T04:58:08.030299+00:00'
+  - process: 実装
+    status: done
+    updated_by: planner
+    updated_at: '2026-11-20T04:58:08.030299+00:00'
+  - process: 結合テスト作成
+    status: done
+    note: 'tests/integration/frontend/doc-view-screen.spec.ts の `パンくず` に、文書の無いタブを選んだときのケースを足す（画面設計要否: パンくずの UI 項目の表示が変わる）'
+    updated_by: planner
+    updated_at: '2026-11-20T05:10:17.033688+00:00'
