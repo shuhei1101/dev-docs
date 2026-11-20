@@ -1,0 +1,299 @@
+id: MOD-155-216
+title: 開発ドキュメントサーバー / 画面のAPI / document_lists.py
+lead: 配信元と commit の組ごとの文書の一覧の保持と、リビジョンの commit への解決を受け持ち、画面のAPIの document_lists.py を修正するときに参照する。
+test_files:
+  - tests/unit/dev_docs/features/view/test_document_lists.py
+diagrams:
+  - name: 全体
+    diagram: |-
+      classDiagram
+        direction TD
+        文書の取得 ..> 文書の一覧の保持
+        文書の取得 ..> リビジョンの解決
+        部品の配線 ..> 文書の一覧の保持 : 作る
+        文書の一覧の保持 *-- 保持した文書の一覧
+        class 文書の取得 {
+          <<function>>
+        }
+        class 部品の配線 {
+          <<function>>
+        }
+        class 文書の一覧の保持 {
+          +取り出す()
+          +保持する()
+          +捨てる()
+          +共有して取得する()
+        }
+        class 保持した文書の一覧 {
+          +配信元の設定のハッシュ: str
+          +文書の一覧: DocumentList
+        }
+        class リビジョンの解決 {
+          <<function>>
+        }
+        click 文書の取得 href "id:MOD-155-159#functions[get_document]"
+        click 部品の配線 href "id:MOD-155-174#functions[build_handlers]"
+data_models:
+  - name: CachedDocumentList
+    title: 保持した文書の一覧
+    container: features/view/document_lists.py
+    usecase: 文書の取得
+    role: DTO
+    summary: 配信元と commit の組で保持する、種類の行で型にした文書の一覧と、取得したときの配信元の設定のハッシュ
+    description: '`@dataclass(frozen=True, slots=True, kw_only=True)`。'
+    properties:
+      - name: config_hash
+        title: 配信元の設定のハッシュ
+        type: str
+        access: 公開
+        description: 文書の一覧を型にしたときの配信元の設定の `config_hash`（配信元の設定の取得）
+      - name: documents
+        title: 文書の一覧
+        type: DocumentList
+        access: 公開
+        description: 文書の一覧の読み取りの結果
+classes:
+  - name: DocumentListCache
+    title: 文書の一覧の保持
+    container: features/view/document_lists.py
+    usecase: 文書の取得
+    role: リポジトリ
+    summary: 配信元と commit の組ごとに文書の一覧をプロセスのメモリーに最後に使用した順で持ち、取得中の問い合わせを共有する
+    description: 部品の配線が `DOCUMENT_LIST_CACHE_SIZE` で 1 つ作る。待ち受けのイベントループの中だけで呼ぶため排他しない。再起動で消える。
+    kind: クラス
+    properties:
+      - name: max_entries
+        title: 保持する組の上限
+        type: int
+        access: 公開
+        description: 非機能要件の保持する文書の一覧の数（`DOCUMENT_LIST_CACHE_SIZE`）
+      - name: _entries
+        title: 保持した組
+        type: OrderedDict[tuple[str, str], CachedDocumentList]
+        access: 内部 (_)
+        description: （配信元の ID・commit）→ 保持した文書の一覧。末尾が最後に使用した組
+      - name: _inflight
+        title: 取得中の問い合わせ
+        type: dict[tuple[str, str], asyncio.Task[Mapping[str, Any]]]
+        access: 内部 (_)
+        description: （配信元の ID・commit）→ 文書の一覧の応答の本文を取得しているタスク
+    methods:
+      - name: get
+        title: 取り出す
+        kind: メソッド
+        summary: 保持した組を返却し、最後に使用した組にする
+        scope: public
+        args:
+          - name: source_id
+            title: 配信元の ID
+            type: str
+            required: true
+            passing: positional
+            description: 配信元
+          - name: commit
+            title: commit
+            type: str
+            required: true
+            passing: positional
+            description: リビジョンの解決の結果
+        returns:
+          type: CachedDocumentList | None
+          description: 保持に無いときは `None`
+        process: 1. `_entries` に組があれば末尾へ移して返却する。無ければ `None` を返却する
+        unit_tests:
+          - name: test_get_when_used
+            case: 正常
+            summary: 取り出した組を最後に使用した組にする
+            condition: '`max_entries=2` で a・b を保持し、a を取り出してから c を保持する'
+            mock: なし
+            expected: a と c が残り、b を取り出すと `None`
+      - name: put
+        title: 保持する
+        kind: メソッド
+        summary: 組を保持し、上限を超えたら最も前に使用した組を捨てる
+        scope: public
+        side_effects: '`_entries` を書き換える'
+        args:
+          - name: source_id
+            title: 配信元の ID
+            type: str
+            required: true
+            passing: positional
+            description: 配信元
+          - name: commit
+            title: commit
+            type: str
+            required: true
+            passing: positional
+            description: リビジョンの解決の結果
+          - name: entry
+            title: 保持した文書の一覧
+            type: CachedDocumentList
+            required: true
+            passing: positional
+            description: 保持する値
+        returns:
+          type: None
+          description: '-'
+        process: |-
+          1. `_entries` に組を配置し、末尾へ移す
+          2. `_entries` が `max_entries` を超える間、先頭の組を捨てる
+        unit_tests:
+          - name: test_put_when_limit_exceeded
+            case: 正常
+            summary: 上限を超えると最も前に使用した組を捨てる
+            condition: '`max_entries=4` で 5 つの commit を順に保持する'
+            mock: なし
+            expected: 最初の commit を取り出すと `None`、残り 4 つは取り出せる
+      - name: discard
+        title: 捨てる
+        kind: メソッド
+        summary: 組を保持から捨てる
+        scope: public
+        side_effects: '`_entries` を書き換える'
+        args:
+          - name: source_id
+            title: 配信元の ID
+            type: str
+            required: true
+            passing: positional
+            description: 配信元
+          - name: commit
+            title: commit
+            type: str
+            required: true
+            passing: positional
+            description: リビジョンの解決の結果
+        returns:
+          type: None
+          description: '-'
+        process: 1. `_entries` から組を取り除く（無ければ何もしない）
+      - name: fetch
+        title: 共有して取得する
+        kind: メソッド
+        summary: 同じ組の文書の一覧を取得している間はその問い合わせを待ち、無ければ問い合わせを始める
+        scope: public
+        is_async: true
+        args:
+          - name: source_id
+            title: 配信元の ID
+            type: str
+            required: true
+            passing: positional
+            description: 配信元
+          - name: commit
+            title: commit
+            type: str
+            required: true
+            passing: positional
+            description: リビジョンの解決の結果
+          - name: request
+            title: 問い合わせ
+            type: Callable[[], Awaitable[Mapping[str, Any]]]
+            required: true
+            passing: positional
+            description: 文書の一覧の応答の本文を返却する問い合わせ（project-indexの呼び出し.文書の一覧の応答の取得を `ref` を commit にして呼ぶ）
+        returns:
+          type: Mapping[str, Any]
+          description: 文書の一覧の応答の本文
+        process: |-
+          1. `_inflight` に組のタスクが無ければ、`asyncio.create_task(request())` で問い合わせを始め、`_inflight` に配置し、終わったら `_inflight` から取り除くコールバックを付ける。タスクは呼び出した取得の制限時間の外で動き、問い合わせごとの制限時間（project-indexの呼び出しの `timeout`）で打ち切る
+          2. `asyncio.shield(タスク)` を await して結果を返却する。待っている取得が取り消されても、タスクは取り消さない。タスクの例外はそのまま伝わる（保持しない）
+        exceptions:
+          - name: ProjectIndexUnreachableError
+            condition: 問い合わせがつながらない・制限時間を超えた
+            message: project-indexの呼び出しの例外のまま
+          - name: ProjectIndexResponseError
+            condition: 問い合わせに project-index が想定しない応答を返却した
+            message: project-indexの呼び出しの例外のまま
+        unit_tests:
+          - name: test_fetch_when_shared
+            case: 正常
+            summary: 同時の取得で問い合わせを 1 回にまとめる
+            condition: 同じ組で `fetch` を 2 つ同時に呼ぶ。`request` はイベントを待ってから本文を返却する
+            mock: '`request`（呼ばれた数を数える偽物）'
+            expected: '`request` が 1 回だけ呼ばれ、2 つの `fetch` が同じ本文を返却し、終わった後の `_inflight` が空'
+          - name: test_fetch_when_failed
+            case: 異常
+            summary: 失敗を待っていた取得にも返却し、次はもう一度問い合わせる
+            condition: '`request` が `ProjectIndexResponseError` を送出する。同じ組で 2 つ同時に呼び、終わった後にもう一度呼ぶ'
+            mock: '`request`（呼ばれた数を数える偽物）'
+            expected: 2 つとも `ProjectIndexResponseError`、もう一度呼ぶと `request` が 2 回目に呼ばれる
+            exception: 問い合わせに project-index が想定しない応答を返却した
+          - name: test_fetch_when_waiter_cancelled
+            case: 正常
+            summary: 先に問い合わせた取得を取り消しても共有した問い合わせは続く
+            condition: 同じ組で `fetch` を 2 つ同時に呼び、先に呼んだ方のタスクを `cancel` してから `request` のイベントを `set` する
+            mock: '`request`（呼ばれた数を数える偽物）'
+            expected: 先の方は `CancelledError`、後の方は本文を返却し、`request` は 1 回だけ呼ばれる
+functions:
+  - name: resolve_commit
+    title: リビジョンの解決
+    kind: 関数
+    container: features/view/document_lists.py
+    usecase: 文書の取得
+    role: ドメインロジック
+    summary: リビジョンを、文書の一覧の保持のキーにする commit にする
+    scope: public
+    args:
+      - name: refs
+        title: リビジョンの一覧
+        type: RefList
+        required: true
+        passing: positional
+        description: project-indexの呼び出し.リビジョンの一覧（`commits=0`）の結果
+      - name: ref
+        title: リビジョン
+        type: str | None
+        required: true
+        passing: positional
+        description: 文書の取得の `ref` か `diff`。`None` は `refs.default_ref`
+    returns:
+      type: str | None
+      description: commit。保持を使用しないときは `None`
+    process: |-
+      1. `refs.git` が `False` なら `None` を返却する
+      2. `ref` が `None` なら `refs.default_ref` を使用する
+      3. `refs.branches` に `name` が一致する `NamedRef` があればその `commit`、次に `refs.tags` にあればその `commit` を返却する
+      4. `COMMIT_PATTERN` に該当すれば小文字にした値を返却する。それ以外は `None` を返却する
+    unit_tests:
+      - name: test_resolve_commit
+        case: 正常
+        summary: ブランチ・タグ・省略・commit
+        condition: '`branches` が `main`（`8b1d4e0`）・`abcdef1`（`1111111`）、`tags` が `v1`（`3f2a9c1`）、`default_ref` が `main`。`ref` が `main`・`v1`・`None`・`abcdef1`・`7EF1589`'
+        mock: なし
+        expected: 順に `8b1d4e0`・`3f2a9c1`・`8b1d4e0`・`1111111`（ブランチを先に参照する）・`7ef1589`
+      - name: test_resolve_commit_when_unresolvable
+        case: 正常
+        summary: 保持を使用しないリビジョン
+        condition: '`ref` が `HEAD~1`・`feature/x`（ブランチに無い）と、`git` が `False` の `refs` で `ref` が `None`'
+        mock: なし
+        expected: 全て `None`
+constants:
+  - name: DOCUMENT_LIST_CACHE_SIZE
+    title: 保持する文書の一覧の数
+    container: features/view/document_lists.py
+    usecase: 文書の取得
+    summary: 文書の一覧の保持が持つ組の上限（非機能要件の `document_list_cache_size`）
+    value: '4'
+  - name: COMMIT_PATTERN
+    title: commit の形式
+    container: features/view/document_lists.py
+    usecase: 文書の取得
+    summary: ブランチとタグに無いリビジョンを commit として扱う形式
+    value: re.compile(r"^[0-9a-fA-F]{7,40}$")
+refs:
+  - to: NFR-155-1
+    item: requirements[保持する文書の一覧の数]
+    type: references
+    when: '`DOCUMENT_LIST_CACHE_SIZE` を変えるときに、非機能要件の決定値と根拠を確認する。'
+  - to: IF-155-10
+    item: constraints[文書の一覧の保持]
+    type: requires
+    when: 保持・共有・解決の振る舞いを変えるときに、文書の取得の制約と突き合わせる。
+tags:
+  - name: topic:api
+  - name: topic:文書
+  - name: topic:リビジョン
+  - name: topic:一覧
+  - name: action:保持

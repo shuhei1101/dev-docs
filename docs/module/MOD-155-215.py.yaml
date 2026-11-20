@@ -197,10 +197,8 @@ classes:
           type: SourceView
           description: 配信元の表示の設定
         process: |-
-          1. 呼び出しの共通の手順で `GET /sources/{source}/config?schemas=true` と `GET /sources/{source}/refs?commits=0` を `asyncio.gather` で同時に呼ぶ
-          2. `id` を引数の `source`、`git`・`default_ref` を refs の応答の `git`・`defaultRef`（`git` が `false` なら `None`）にする
-          3. `documents[]` の行ごとに、配信元の設定のままのキー `id`・`title`・`paths`・`records`・`search`・`converter`・`alias_type`・`metadata`（無ければ空）と、`schemas[id]`（無ければ空）を `schema` にした `DocumentRow` を作る
-          4. `decisions.folders` を `decision_folders`、`diff.ignore_keys` を `diff_ignore_keys`、`github.repository`・`github.issueLabels` を `github_repository`・`github_issue_labels` にして返却する
+          1. `asyncio.TaskGroup` で、配信元の設定の取得（`source`）とリビジョンの一覧（`source`、`commits=0`）を同時に呼ぶ
+          2. 配信元の表示の設定の組み立て（`source`・配信元の設定・リビジョンの一覧）の結果を返却する
         unit_tests:
           - name: test_source_view
             case: 正常
@@ -623,6 +621,33 @@ classes:
             condition: '`ref="main"`'
             mock: '`httpx.MockTransport`（`GET /sources/sample/docs` に文書 2 件を返却する）'
             expected: クエリが `ref=main`・`values=true`・`common_keys=true` で、戻り値が応答の本文
+      - name: source_config
+        title: 配信元の設定の取得
+        kind: メソッド
+        summary: 配信元の設定の応答の本文と、その内容のハッシュを返却する
+        scope: public
+        is_async: true
+        thread_safe: true
+        args:
+          - name: source
+            title: 配信元の ID
+            type: str
+            required: true
+            passing: positional
+            description: 問い合わせる配信元
+        returns:
+          type: SourceConfig
+          description: 配信元の設定
+        process: |-
+          1. 呼び出しの共通の手順で `GET /sources/{source}/config?schemas=true` を呼ぶ
+          2. 応答の JSON を `value`、応答の本文のバイト列の SHA-256 の 16 進数を `config_hash` にして返却する
+        unit_tests:
+          - name: test_source_config
+            case: 正常
+            summary: 応答の本文と内容のハッシュ
+            condition: config が同じ本文を 2 回返却し、続けて `nav` を変えた本文を返却する
+            mock: '`httpx.MockTransport` で project-index の応答を返却する'
+            expected: 要求のクエリに `schemas=true` がある。同じ本文の 2 回は `config_hash` が同じで、`nav` を変えた本文は `config_hash` が違う。`value` が応答の JSON
 constants:
   - name: PROJECT_INDEX_DEFAULT
     title: project-index の既定の接続先
@@ -640,3 +665,45 @@ tags:
   - name: tool:project-index
     main: true
   - name: topic:api
+functions:
+  - name: build_source_view
+    title: 配信元の表示の設定の組み立て
+    kind: 関数
+    container: integrations/project_index/client.py
+    usecase: project-index の呼び出し
+    role: マッパー
+    summary: 配信元の設定とリビジョンの一覧から、画面が使用する配信元の表示の設定を作る
+    scope: public
+    args:
+      - name: source
+        title: 配信元の ID
+        type: str
+        required: true
+        passing: positional
+        description: 問い合わせた配信元
+      - name: config
+        title: 配信元の設定
+        type: SourceConfig
+        required: true
+        passing: positional
+        description: 配信元の設定の取得の結果
+      - name: refs
+        title: リビジョンの一覧
+        type: RefList
+        required: true
+        passing: positional
+        description: リビジョンの一覧（`commits=0`）の結果
+    returns:
+      type: SourceView
+      description: 配信元の表示の設定
+    process: |-
+      1. `id` を `source`、`git`・`default_ref` を `refs.git`・`refs.default_ref`（`git` が `False` なら `None`）、`config_hash` を `config.config_hash` にする
+      2. `config.value` の `documents[]` の行ごとに、配信元の設定のままのキー `id`・`title`・`paths`・`records`・`search`・`converter`・`alias_type`・`metadata`（無ければ空）と、`schemas[id]`（無ければ空）を `schema` にした `DocumentRow` を作る
+      3. `decisions.folders` を `decision_folders`、`diff.ignore_keys` を `diff_ignore_keys`、`github.repository`・`github.issueLabels` を `github_repository`・`github_issue_labels` にして返却する
+    unit_tests:
+      - name: test_build_source_view_when_not_git
+        case: 正常
+        summary: Git 管理外の配信元と内容のハッシュ
+        condition: '`git` が `False`・`default_ref` が `main` のリビジョンの一覧と、`config_hash` が `abc` の配信元の設定'
+        mock: なし
+        expected: '`git` が `False`、`default_ref` が `None`、`config_hash` が `abc`'

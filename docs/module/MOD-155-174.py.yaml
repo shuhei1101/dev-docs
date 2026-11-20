@@ -115,6 +115,11 @@ data_models:
         type: PromptSet
         access: 公開
         description: 起動のときに参照したプロンプトの YAML（管理の MCP が描画する。書き換えは再起動で効かせる）
+      - name: document_lists
+        title: 文書の一覧の保持
+        type: DocumentListCache
+        access: 公開
+        description: 配信元と commit の組ごとの文書の一覧（画面のAPI。プロセスのメモリーに持ち、再起動で消える）
 classes:
   - name: PortInUseError
     title: ポートが使用中
@@ -318,7 +323,7 @@ functions:
     process: |-
       1. プロンプトの一式を参照する（`load_prompts(prompts_dir(os.environ), required=mcp_prompt_ids())`）。`PromptInvalidError` はそのまま送信する
       2. `state_dir` を作る
-      3. project-indexの呼び出し（`address` は端末の設定の `project_index`、`timeout` は `PROJECT_INDEX_TIMEOUT_SEC`）・変換・表の列の設定（`{state_dir}/columns`）・再起動の制御を作る
+      3. project-indexの呼び出し（`address` は端末の設定の `project_index`、`timeout` は `PROJECT_INDEX_TIMEOUT_SEC`）・変換・表の列の設定（`{state_dir}/columns`）・文書の一覧の保持（`max_entries` は `DOCUMENT_LIST_CACHE_SIZE`）・再起動の制御を作る
       4. プロンプトの一式とこれらの部品を持つ `Handlers` を返却する
     exceptions:
       - name: PromptInvalidError
@@ -330,7 +335,7 @@ functions:
         summary: 部品を作り project-index に問い合わせない
         condition: '`state_dir` が無い一時フォルダの下、`project_index` が何も待ち受けていないアドレスの端末の設定'
         mock: なし
-        expected: '`state_dir` ができ、`project_index.address` が端末の設定の値、`prompts` が `mcp/admin/tools/status` を持ち `mcp/docs/instructions` を持たない。例外を送信しない'
+        expected: '`state_dir` ができ、`project_index.address` が端末の設定の値、`document_lists.max_entries` が `DOCUMENT_LIST_CACHE_SIZE`、`prompts` が `mcp/admin/tools/status` を持ち `mcp/docs/instructions` を持たない。例外を送信しない'
       - name: test_build_handlers_when_prompt_invalid
         case: 異常
         summary: プロンプトの YAML が違反すると部品を作らない
