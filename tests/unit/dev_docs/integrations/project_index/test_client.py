@@ -199,6 +199,15 @@ def test_source_view_when_not_git(
     assert (view.git, view.default_ref) == (False, None)
 
 
+def test_source_view_when_source_unknown(
+    fake_index: FakeIndex, make_client: Callable[..., ProjectIndexClient]
+) -> None:
+    """タスクのグループの例外をそのまま送出する（異常系）。"""
+    # 実行・検証
+    with pytest.raises(UnknownSourceError):
+        asyncio.run(make_client().source_view("unknown"))
+
+
 def test_source_config(
     fake_index: FakeIndex, make_client: Callable[..., ProjectIndexClient]
 ) -> None:
