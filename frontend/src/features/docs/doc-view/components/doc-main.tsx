@@ -77,6 +77,7 @@ export const DocMain = ({ emptyTab, busy, ...content }: Props) => (
     <DocBreadcrumb
       source={content.doc.source}
       active={content.active}
+      emptyTab={emptyTab}
       search={content.search}
     />
     {emptyTab ? (
