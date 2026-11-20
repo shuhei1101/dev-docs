@@ -390,6 +390,18 @@ test.describe("パンくず", () => {
     await page.getByRole("navigation", { name: "パンくず" }).getByRole("link", { name: "規約" }).click();
     await expect(page).toHaveURL(/\/sample\/docs\/doc-1/);
   });
+
+  // 文書の無いタブでは `{配信元の ID}` / `{タブ名}` だけを出し、タブ名をリンクにしない（正常系）
+  test("breadcrumb_when_empty_tab", async ({ page }) => {
+    await openDoc(page, "/sample/docs/doc-1", {
+      document: ({ path }) => ({ body: documentResponse({ path, tabs: TABS_WITH_DOCS }) }),
+    });
+    await page.getByRole("button", { name: "空" }).click();
+    const crumb = page.getByRole("navigation", { name: "パンくず" });
+    await expect(crumb.getByRole("listitem")).toHaveText(["sample", "空"]);
+    await expect(crumb.getByRole("link")).toHaveText(["sample"]);
+    await expect(crumb.getByText("空")).toHaveAttribute("aria-current", "page");
+  });
 });
 
 test.describe("文書のタイトル", () => {
