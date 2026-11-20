@@ -215,9 +215,13 @@ class ProjectIndexClient:
 
     async def source_view(self, source: str) -> SourceView:
         """配信元の設定のうち画面が使用するキーと、Git の配信元か・既定のリビジョンを返却する。"""
-        async with asyncio.TaskGroup() as group:
-            config_task = group.create_task(self.source_config(source))
-            refs_task = group.create_task(self.refs(source, commits=0))
+        try:
+            async with asyncio.TaskGroup() as group:
+                config_task = group.create_task(self.source_config(source))
+                refs_task = group.create_task(self.refs(source, commits=0))
+        except ExceptionGroup as group_error:
+            # 呼び出し元へは最初の例外（UnknownSourceError など）をそのまま伝える
+            raise group_error.exceptions[0] from None
         return build_source_view(source, config_task.result(), refs_task.result())
 
     async def source_config(self, source: str) -> SourceConfig:
