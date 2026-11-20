@@ -197,7 +197,7 @@ classes:
           type: SourceView
           description: 配信元の表示の設定
         process: |-
-          1. `asyncio.TaskGroup` で、配信元の設定の取得（`source`）とリビジョンの一覧（`source`、`commits=0`）を同時に呼ぶ
+          1. `asyncio.TaskGroup` で、配信元の設定の取得（`source`）とリビジョンの一覧（`source`、`commits=0`）を同時に呼ぶ。グループが送出した `ExceptionGroup` は、中の最初の例外を取り出して送出する
           2. 配信元の表示の設定の組み立て（`source`・配信元の設定・リビジョンの一覧）の結果を返却する
         unit_tests:
           - name: test_source_view
@@ -212,6 +212,13 @@ classes:
             condition: 'refs が `git: false` を返却する'
             mock: '`httpx.MockTransport` で project-index の応答を返却する'
             expected: '`git` が `False`、`default_ref` が `None`'
+          - name: test_source_view_when_source_unknown
+            case: 異常
+            summary: タスクのグループの例外をそのまま送出する
+            condition: 'config と refs が 404（`missing: source`）を返却する'
+            mock: '`httpx.MockTransport` で project-index の応答を返却する'
+            expected: '`ExceptionGroup` でなく `UnknownSourceError`'
+            exception: 404 で `missing` が `source`
       - name: list_documents
         title: 文書の一覧の取得
         kind: メソッド
