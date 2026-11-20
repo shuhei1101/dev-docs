@@ -8,7 +8,7 @@ components:
     container: features/docs/doc-view/components/doc-breadcrumb.tsx
     usecase: 文書を参照する
     role: 部品
-    summary: '`{配信元の ID}` / `{タブ名}` / `{group}` / `{文書の名前}` を shadcn/ui の `Breadcrumb` で並べる。配信元とタブだけをリンクにする'
+    summary: '`{配信元の ID}` / `{タブ名}` / `{group}` / `{文書の名前}` を shadcn/ui の `Breadcrumb` で並べる。配信元とタブだけをリンクにする。文書の無いタブを選んでいれば `{配信元の ID}` / `{そのタブ名}` だけを並べ、タブ名をリンクにしない末尾の項目（`aria-current="page"`）にする'
     props:
       - name: source
         type: string
@@ -18,12 +18,31 @@ components:
         type: ActivePage
         required: true
         description: 開いているページ
+      - name: emptyTab
+        type: NavTab | null
+        required: true
+        description: 文書の無いタブを選んだときのタブ
       - name: search
         type: DocViewSearch
         required: true
         description: 保つ `rev`・`base`・`tab`（`tab` はタブ名のリンクだけ）
+    unit_tests:
+      - name: test_doc_breadcrumb
+        case: 正常
+        summary: 文書の階層
+        condition: '`emptyTab` が null、`active` がタブ `設計`・group `設計`・page `A`'
+        mock: なし
+        expected: '`s` / `設計` / `設計` / `A` が並び、`s` とタブ名がリンク、`A` が `aria-current="page"`'
+      - name: test_doc_breadcrumb_when_empty_tab
+        case: 正常
+        summary: 文書の無いタブ
+        condition: '`emptyTab` に `items` が空のタブ `規約`、`active` は文書を開いていたタブ `設計` の page `A`'
+        mock: なし
+        expected: '`s` / `規約` だけが並び、`規約` はリンクでなく `aria-current="page"`。`設計` と `A` は出ない'
 tags:
   - name: topic:文書
     main: true
   - name: topic:画面
   - name: topic:パンくず
+test_files:
+  - tests/unit/frontend/src/features/docs/doc-view/components/doc-breadcrumb.test.tsx
