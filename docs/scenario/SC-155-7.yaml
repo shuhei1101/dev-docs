@@ -701,7 +701,7 @@ scenarios:
   - name: 正常シナリオ（配信元を再度開く）
     setup:
       - name: Mock
-        description: project-index の代わりに、sample と plain を配信する project-index の応答を、配信元の設定・文書の一覧・文書・リビジョンの一覧の問い合わせごとに一定の時間だけ待ってから返却する HTTP サーバー
+        description: project-index の代わりに、sample と plain を配信する project-index の応答を、配信元の設定・文書の一覧・文書・リビジョンの一覧の問い合わせごとに一定の時間だけ待ってから返却し、問い合わせの種類（リビジョンの解決・配信元の設定・文書の一覧・文書）ごとに届いた回数を数える HTTP サーバー
         notes: 待つ時間は、計測した 2 回目の応答の時間。問い合わせを順に待つと合計が非機能要件の最初の文書の表示の時間を超える値にする。dev-docs の端末の設定の `project_index` がこのサーバーを指す
       - name: dev-docs
         description: 偽の project-index につないで起動した dev-docs
@@ -715,7 +715,7 @@ scenarios:
 
         U->>UI: sample の文書の画面を開く
         UI->>API: 文書の取得（文書のパスを省く）
-        API->>PI: 配信元の設定・文書の一覧・文書を問い合わせる
+        API->>PI: リビジョンを commit に解決し、配信元の設定・文書の一覧・文書を問い合わせる
         API-->>UI: 文書 1 の Markdown・タブ・サイドバー
         UI-->>U: doc-view（文書 1）
         U->>UI: plain の文書の画面を開く
@@ -833,7 +833,7 @@ scenarios:
   - name: 正常シナリオ（差分つきの文書を続けて開く）
     setup:
       - name: Mock
-        description: project-index の代わりに、sample の 2 つの commit を配信し、問い合わせの種類（リビジョンの解決・文書の一覧・文書）ごとに届いた回数を数える HTTP サーバー
+        description: project-index の代わりに、sample の 3 つの commit（比較元・比較先のブランチが指す commit・進めた後の commit）を配信し、比較先のブランチの指す commit を途中で切り替えられ、問い合わせの種類（リビジョンの解決・文書の一覧・文書）ごとに届いた回数を数える HTTP サーバー
         notes: dev-docs の端末の設定の `project_index` がこのサーバーを指す
       - name: 比較元の commit
         description: sample の文書 1・文書 2 がある commit
@@ -852,26 +852,33 @@ scenarios:
 
         U->>UI: 文書 1 を開き、比較先に比較先のブランチ、比較元に比較元の commit を選ぶ
         UI->>API: 文書の取得（文書 1・比較先・比較元）
-        API->>PI: リビジョンを commit に解決し、2 つの commit の文書の一覧と文書 1 を問い合わせる
+        UI->>API: 文書の取得（文書 1・比較元）
+        API->>PI: リビジョンを commit に解決し、2 つの commit の文書の一覧と、比較先と比較元の文書 1 を問い合わせる（並行に届いた 2 つの取得の比較元の文書の一覧の問い合わせは 1 回にまとめる）
         API-->>UI: 比較先の文書 1 と変わった項目
-        UI-->>U: doc-view（差分の案内・変更のマーカー）
+        API-->>UI: 比較元の文書 1
+        UI-->>U: doc-view（差分の案内・変更のマーカー・本文の強調）
         U->>UI: サイドバーで文書 2 を選ぶ
         UI->>API: 文書の取得（文書 2・比較先・比較元）
-        API->>PI: リビジョンを commit に解決し、文書 2 を問い合わせる（2 つの文書の一覧は保持から使用する）
+        UI->>API: 文書の取得（文書 2・比較元）
+        API->>PI: リビジョンを commit に解決し、比較先と比較元の文書 2 を問い合わせる（2 つの文書の一覧は保持から使用する）
         API-->>UI: 比較先の文書 2
+        API-->>UI: 比較元の文書 2
         UI-->>U: doc-view（文書 2・変更のマーカー）
         Note over PI: 比較先のブランチが次の commit へ進む
         U->>UI: サイドバーで文書 1 を選ぶ
         UI->>API: 文書の取得（文書 1・比較先・比較元）
-        API->>PI: リビジョンを commit に解決し、進んだ commit の文書の一覧と文書 1 を問い合わせる（比較元の文書の一覧は保持から使用する）
+        UI->>API: 文書の取得（文書 1・比較元）
+        API->>PI: リビジョンを commit に解決し、進んだ commit の文書の一覧と、比較先と比較元の文書 1 を問い合わせる（比較元の文書の一覧は保持から使用する）
         API-->>UI: 進んだ commit の文書 1 と変わった項目
+        API-->>UI: 比較元の文書 1
         UI-->>U: doc-view（進んだ commit の文書 1）
       ```
     expected:
+      - 最初に文書 1 を開いたとき、比較先と比較元の commit の文書の一覧の問い合わせが 1 回ずつ届く
       - 文書 2 を開いたとき、偽の project-index に文書の一覧の問い合わせが届かない
       - 文書 2 を開いたときのサイドバーの変更のマーカーが、文書 1 を開いたときと同じ
       - ブランチが進んだ後に文書 1 を開くと、比較先の文書の一覧の問い合わせが 1 回だけ届き、本文と変わった項目が進んだ commit の内容になる
-      - 比較元の commit の文書の一覧の問い合わせは、最初に文書 1 を開いたときの 1 回だけ届く
+      - 比較元の commit の文書の一覧の問い合わせは、シナリオ全体で 1 回だけ届く
     test: test_normal_when_diff_reopened
 lead: 利用者が文書の画面をタブ・サイドバー・検索・リビジョンの切り替え・差分で参照するシナリオを定め、文書の画面の流れを変えるときに参照する。
 primary_actor: 利用者
