@@ -1,0 +1,13 @@
+use_cases:
+  - kind: single
+    scenario: docs/scenario/SC-155-7.yaml
+    impact: run_only
+    detail: 文書の画面で参照する手順は変わらないが、広い画面での本文・表・サイドバーの並び方が変わる
+    depends_on: []
+scope_out:
+  - item: 設定画面・見つからない画面の幅の上限（`max-w-2xl` など）
+    reason: 要望は文書の画面の本文と表で、ほかの画面は含まれない
+    plan: none
+  - item: デザインスタイルの候補と過去の作業 PR のモック（`docs/mock/styles/`・`docs/mock/refs/36/`）の幅
+    reason: 採用前の候補と過去の作業の記録で、今の画面の見た目を表さない
+    plan: none
