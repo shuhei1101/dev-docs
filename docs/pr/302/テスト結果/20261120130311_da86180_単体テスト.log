@@ -1,0 +1,960 @@
+test	Set up job	﻿2026-11-20T04:02:22.6579806Z Current runner version: '2.338.2'
+test	Set up job	2026-11-20T04:02:22.6610852Z ##[group]Runner Image Provisioner
+test	Set up job	2026-11-20T04:02:22.6611948Z Hosted Compute Agent
+test	Set up job	2026-11-20T04:02:22.6612702Z Version: 20261103.629
+test	Set up job	2026-11-20T04:02:22.6613444Z Commit: 15dbd9ccb5dbf34fae002b6ed1a2670f52df37bc
+test	Set up job	2026-11-20T04:02:22.6614465Z Build Date: 2026-11-03T17:26:59Z
+test	Set up job	2026-11-20T04:02:22.6615466Z Worker ID: {6e1f0d3d-8681-4f5f-9d70-0a6e53bad314}
+test	Set up job	2026-11-20T04:02:22.6616420Z Region: eastus2
+test	Set up job	2026-11-20T04:02:22.6617169Z Cloud: Azure
+test	Set up job	2026-11-20T04:02:22.6617825Z ##[endgroup]
+test	Set up job	2026-11-20T04:02:22.6619778Z ##[group]Operating System
+test	Set up job	2026-11-20T04:02:22.6620560Z Ubuntu
+test	Set up job	2026-11-20T04:02:22.6621330Z 26.04.1
+test	Set up job	2026-11-20T04:02:22.6622026Z LTS
+test	Set up job	2026-11-20T04:02:22.6622684Z ##[endgroup]
+test	Set up job	2026-11-20T04:02:22.6623491Z ##[group]Runner Image
+test	Set up job	2026-11-20T04:02:22.6624246Z Image: ubuntu-26.04
+test	Set up job	2026-11-20T04:02:22.6624929Z Version: 20261111.196.1
+test	Set up job	2026-11-20T04:02:22.6626664Z Included Software: https://github.com/actions/runner-images/blob/ubuntu26/20261111.196/images/ubuntu/Ubuntu2604-Readme.md
+test	Set up job	2026-11-20T04:02:22.6628959Z Image Release: https://github.com/actions/runner-images/releases/tag/ubuntu26%2F20261111.196
+test	Set up job	2026-11-20T04:02:22.6630241Z ##[endgroup]
+test	Set up job	2026-11-20T04:02:22.6631740Z ##[group]GITHUB_TOKEN Permissions
+test	Set up job	2026-11-20T04:02:22.6633935Z Contents: read
+test	Set up job	2026-11-20T04:02:22.6634978Z Metadata: read
+test	Set up job	2026-11-20T04:02:22.6635797Z ##[endgroup]
+test	Set up job	2026-11-20T04:02:22.6638281Z Secret source: Actions
+test	Set up job	2026-11-20T04:02:22.6639507Z Cache mode: write
+test	Set up job	2026-11-20T04:02:22.6640590Z Prepare workflow directory
+test	Set up job	2026-11-20T04:02:22.7012373Z Prepare all required actions
+test	Set up job	2026-11-20T04:02:22.7068561Z Getting action download info
+test	Set up job	2026-11-20T04:02:22.9077515Z Download action repository 'actions/checkout@v7' (SHA:3d3c42e5aac5ba805825da76410c181273ba90b1)
+test	Set up job	2026-11-20T04:02:23.0778013Z Download action repository 'actions/setup-node@v7' (SHA:949feb2413d6458794dcd2491c4babbbce0c15c1)
+test	Set up job	2026-11-20T04:02:23.2696297Z Download action repository 'astral-sh/setup-uv@v10.3.3' (SHA:68559e99cc807c1eb7e9238fd43a15bba460eec2)
+test	Set up job	2026-11-20T04:02:23.4905820Z Download action repository 'actions/upload-artifact@v7' (SHA:cf430e030ddbb5b0abf93d22962f4752f3646cd9)
+test	Set up job	2026-11-20T04:02:23.6721071Z Complete job name: test
+test	ブランチを取得する	﻿2026-11-20T04:02:23.7414331Z ##[group]Run actions/checkout@v7
+test	ブランチを取得する	2026-11-20T04:02:23.7415028Z with:
+test	ブランチを取得する	2026-11-20T04:02:23.7415561Z   repository: shuhei1101/dev-docs
+test	ブランチを取得する	2026-11-20T04:02:23.7418775Z   token: ***
+test	ブランチを取得する	2026-11-20T04:02:23.7419126Z   ssh-strict: true
+test	ブランチを取得する	2026-11-20T04:02:23.7419484Z   ssh-user: git
+test	ブランチを取得する	2026-11-20T04:02:23.7419843Z   persist-credentials: true
+test	ブランチを取得する	2026-11-20T04:02:23.7420230Z   clean: true
+test	ブランチを取得する	2026-11-20T04:02:23.7420582Z   sparse-checkout-cone-mode: true
+test	ブランチを取得する	2026-11-20T04:02:23.7421005Z   fetch-depth: 1
+test	ブランチを取得する	2026-11-20T04:02:23.7421361Z   fetch-tags: false
+test	ブランチを取得する	2026-11-20T04:02:23.7421720Z   show-progress: true
+test	ブランチを取得する	2026-11-20T04:02:23.7422076Z   lfs: false
+test	ブランチを取得する	2026-11-20T04:02:23.7422402Z   submodules: false
+test	ブランチを取得する	2026-11-20T04:02:23.7422758Z   set-safe-directory: true
+test	ブランチを取得する	2026-11-20T04:02:23.7423160Z   allow-unsafe-pr-checkout: false
+test	ブランチを取得する	2026-11-20T04:02:23.7423760Z ##[endgroup]
+test	ブランチを取得する	2026-11-20T04:02:24.2146050Z Syncing repository: shuhei1101/dev-docs
+test	ブランチを取得する	2026-11-20T04:02:24.2148938Z ##[group]Getting Git version info
+test	ブランチを取得する	2026-11-20T04:02:24.2150129Z Working directory is '/home/runner/work/dev-docs/dev-docs'
+test	ブランチを取得する	2026-11-20T04:02:24.2152017Z [command]/usr/bin/git version
+test	ブランチを取得する	2026-11-20T04:02:24.2152872Z git version 2.56.1
+test	ブランチを取得する	2026-11-20T04:02:24.2166435Z ##[endgroup]
+test	ブランチを取得する	2026-11-20T04:02:24.2176762Z Temporarily overriding HOME='/home/runner/work/_temp/b410c1ce-ec7f-426d-9f99-05853c6f2823' before making global git config changes
+test	ブランチを取得する	2026-11-20T04:02:24.2178874Z Adding repository directory to the temporary git global config as a safe directory
+test	ブランチを取得する	2026-11-20T04:02:24.2181377Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/dev-docs/dev-docs
+test	ブランチを取得する	2026-11-20T04:02:24.2236411Z Deleting the contents of '/home/runner/work/dev-docs/dev-docs'
+test	ブランチを取得する	2026-11-20T04:02:24.2238984Z ##[group]Determining repository object format
+test	ブランチを取得する	2026-11-20T04:02:24.2240583Z ##[endgroup]
+test	ブランチを取得する	2026-11-20T04:02:24.2242182Z ##[group]Initializing the repository
+test	ブランチを取得する	2026-11-20T04:02:24.2244601Z [command]/usr/bin/git init /home/runner/work/dev-docs/dev-docs
+test	ブランチを取得する	2026-11-20T04:02:24.2322030Z hint: Using 'master' as the name for the initial branch. This default branch name
+test	ブランチを取得する	2026-11-20T04:02:24.2323218Z hint: will change to "main" in Git 3.0. To configure the initial branch name
+test	ブランチを取得する	2026-11-20T04:02:24.2324024Z hint: to use in all of your new repositories, which will suppress this warning,
+test	ブランチを取得する	2026-11-20T04:02:24.2324659Z hint: call:
+test	ブランチを取得する	2026-11-20T04:02:24.2325045Z hint:
+test	ブランチを取得する	2026-11-20T04:02:24.2325701Z hint: 	git config --global init.defaultBranch <name>
+test	ブランチを取得する	2026-11-20T04:02:24.2326244Z hint:
+test	ブランチを取得する	2026-11-20T04:02:24.2326742Z hint: Names commonly chosen instead of 'master' are 'main', 'trunk' and
+test	ブランチを取得する	2026-11-20T04:02:24.2327525Z hint: 'development'. The just-created branch can be renamed via this command:
+test	ブランチを取得する	2026-11-20T04:02:24.2328141Z hint:
+test	ブランチを取得する	2026-11-20T04:02:24.2328519Z hint: 	git branch -m <name>
+test	ブランチを取得する	2026-11-20T04:02:24.2328937Z hint:
+test	ブランチを取得する	2026-11-20T04:02:24.2329639Z hint: Disable this message with "git config set advice.defaultBranchName false"
+test	ブランチを取得する	2026-11-20T04:02:24.2331031Z Initialized empty Git repository in /home/runner/work/dev-docs/dev-docs/.git/
+test	ブランチを取得する	2026-11-20T04:02:24.2340974Z [command]/usr/bin/git remote add origin https://github.com/shuhei1101/dev-docs
+test	ブランチを取得する	2026-11-20T04:02:24.2394178Z ##[endgroup]
+test	ブランチを取得する	2026-11-20T04:02:24.2395518Z ##[group]Disabling automatic garbage collection
+test	ブランチを取得する	2026-11-20T04:02:24.2396454Z [command]/usr/bin/git config --local gc.auto 0
+test	ブランチを取得する	2026-11-20T04:02:24.2424409Z ##[endgroup]
+test	ブランチを取得する	2026-11-20T04:02:24.2425536Z ##[group]Setting up auth
+test	ブランチを取得する	2026-11-20T04:02:24.2426270Z Removing SSH command configuration
+test	ブランチを取得する	2026-11-20T04:02:24.2430386Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+test	ブランチを取得する	2026-11-20T04:02:24.2461488Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+test	ブランチを取得する	2026-11-20T04:02:24.2853662Z Removing HTTP extra header
+test	ブランチを取得する	2026-11-20T04:02:24.2858894Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+test	ブランチを取得する	2026-11-20T04:02:24.2887226Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+test	ブランチを取得する	2026-11-20T04:02:24.3123321Z Removing includeIf entries pointing to credentials config files
+test	ブランチを取得する	2026-11-20T04:02:24.3124368Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+test	ブランチを取得する	2026-11-20T04:02:24.3153954Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+test	ブランチを取得する	2026-11-20T04:02:24.3391624Z [command]/usr/bin/git config --file /home/runner/work/_temp/git-credentials-37e582a2-f332-4003-8dd8-df9d00a5e176.config http.https://github.com/.extraheader AUTHORIZATION: basic ***
+test	ブランチを取得する	2026-11-20T04:02:24.3425939Z [command]/usr/bin/git config --local includeIf.gitdir:/home/runner/work/dev-docs/dev-docs/.git.path /home/runner/work/_temp/git-credentials-37e582a2-f332-4003-8dd8-df9d00a5e176.config
+test	ブランチを取得する	2026-11-20T04:02:24.3455057Z [command]/usr/bin/git config --local includeIf.gitdir:/home/runner/work/dev-docs/dev-docs/.git/worktrees/*.path /home/runner/work/_temp/git-credentials-37e582a2-f332-4003-8dd8-df9d00a5e176.config
+test	ブランチを取得する	2026-11-20T04:02:24.3486491Z [command]/usr/bin/git config --local includeIf.gitdir:/github/workspace/.git.path /github/runner_temp/git-credentials-37e582a2-f332-4003-8dd8-df9d00a5e176.config
+test	ブランチを取得する	2026-11-20T04:02:24.3513848Z [command]/usr/bin/git config --local includeIf.gitdir:/github/workspace/.git/worktrees/*.path /github/runner_temp/git-credentials-37e582a2-f332-4003-8dd8-df9d00a5e176.config
+test	ブランチを取得する	2026-11-20T04:02:24.3539668Z ##[endgroup]
+test	ブランチを取得する	2026-11-20T04:02:24.3540354Z ##[group]Fetching the repository
+test	ブランチを取得する	2026-11-20T04:02:24.3545114Z [command]/usr/bin/git -c protocol.version=2 fetch --no-tags --prune --no-recurse-submodules --depth=1 origin +da861809447b2e4237947ffe010179a68620e985:refs/remotes/origin/fix/view/document-list-reuse
+test	ブランチを取得する	2026-11-20T04:02:25.9031913Z From https://github.com/shuhei1101/dev-docs
+test	ブランチを取得する	2026-11-20T04:02:25.9033712Z  * [new ref]         da861809447b2e4237947ffe010179a68620e985 -> origin/fix/view/document-list-reuse
+test	ブランチを取得する	2026-11-20T04:02:25.9109228Z [command]/usr/bin/git branch --list --remote origin/fix/view/document-list-reuse
+test	ブランチを取得する	2026-11-20T04:02:25.9110273Z   origin/fix/view/document-list-reuse
+test	ブランチを取得する	2026-11-20T04:02:25.9111422Z [command]/usr/bin/git rev-parse refs/remotes/origin/fix/view/document-list-reuse
+test	ブランチを取得する	2026-11-20T04:02:25.9111830Z da861809447b2e4237947ffe010179a68620e985
+test	ブランチを取得する	2026-11-20T04:02:25.9112546Z ##[endgroup]
+test	ブランチを取得する	2026-11-20T04:02:25.9112974Z ##[group]Determining the checkout info
+test	ブランチを取得する	2026-11-20T04:02:25.9113375Z ##[endgroup]
+test	ブランチを取得する	2026-11-20T04:02:25.9113624Z [command]/usr/bin/git sparse-checkout disable
+test	ブランチを取得する	2026-11-20T04:02:25.9150554Z [command]/usr/bin/git config --local --unset-all extensions.worktreeConfig
+test	ブランチを取得する	2026-11-20T04:02:25.9178381Z ##[group]Checking out the ref
+test	ブランチを取得する	2026-11-20T04:02:25.9182092Z [command]/usr/bin/git checkout --progress --force -B fix/view/document-list-reuse refs/remotes/origin/fix/view/document-list-reuse
+test	ブランチを取得する	2026-11-20T04:02:26.2366289Z Switched to a new branch 'fix/view/document-list-reuse'
+test	ブランチを取得する	2026-11-20T04:02:26.2368988Z branch 'fix/view/document-list-reuse' set up to track 'origin/fix/view/document-list-reuse'.
+test	ブランチを取得する	2026-11-20T04:02:26.2384621Z ##[endgroup]
+test	ブランチを取得する	2026-11-20T04:02:26.2429548Z [command]/usr/bin/git log -1 --format=%H
+test	ブランチを取得する	2026-11-20T04:02:26.2455681Z da861809447b2e4237947ffe010179a68620e985
+test	Node.js を入れる	﻿2026-11-20T04:02:26.2701331Z ##[group]Run actions/setup-node@v7
+test	Node.js を入れる	2026-11-20T04:02:26.2701595Z with:
+test	Node.js を入れる	2026-11-20T04:02:26.2701765Z   node-version: 24
+test	Node.js を入れる	2026-11-20T04:02:26.2701943Z   check-latest: false
+test	Node.js を入れる	2026-11-20T04:02:26.2704042Z   token: ***
+test	Node.js を入れる	2026-11-20T04:02:26.2704230Z   package-manager-cache: true
+test	Node.js を入れる	2026-11-20T04:02:26.2704439Z ##[endgroup]
+test	Node.js を入れる	2026-11-20T04:02:26.4594774Z Found in cache @ /opt/hostedtoolcache/node/24.22.2/x64
+test	Node.js を入れる	2026-11-20T04:02:27.5302832Z ##[group]Environment details
+test	Node.js を入れる	2026-11-20T04:02:29.8318194Z node: v24.22.2
+test	Node.js を入れる	2026-11-20T04:02:29.8318553Z npm: 11.19.1
+test	Node.js を入れる	2026-11-20T04:02:29.8318908Z yarn: 1.22.22
+test	Node.js を入れる	2026-11-20T04:02:29.8320220Z ##[endgroup]
+test	uv を入れる	﻿2026-11-20T04:02:29.8506292Z ##[group]Run astral-sh/setup-uv@v10.3.3
+test	uv を入れる	2026-11-20T04:02:29.8506567Z with:
+test	uv を入れる	2026-11-20T04:02:29.8506756Z   activate-environment: false
+test	uv を入れる	2026-11-20T04:02:29.8506989Z   no-project: false
+test	uv を入れる	2026-11-20T04:02:29.8507233Z   working-directory: /home/runner/work/dev-docs/dev-docs
+test	uv を入れる	2026-11-20T04:02:29.8509429Z   github-token: ***
+test	uv を入れる	2026-11-20T04:02:29.8509625Z   enable-cache: auto
+test	uv を入れる	2026-11-20T04:02:29.8510076Z   cache-dependency-glob: **/*requirements*.txt
+test	uv を入れる	**/*requirements*.in
+test	uv を入れる	**/*constraints*.txt
+test	uv を入れる	**/*constraints*.in
+test	uv を入れる	**/pyproject.toml
+test	uv を入れる	**/uv.lock
+test	uv を入れる	**/*.py.lock
+test	uv を入れる	
+test	uv を入れる	2026-11-20T04:02:29.8510551Z   restore-cache: true
+test	uv を入れる	2026-11-20T04:02:29.8510736Z   save-cache: auto
+test	uv を入れる	2026-11-20T04:02:29.8510915Z   prune-cache: false
+test	uv を入れる	2026-11-20T04:02:29.8511095Z   cache-python: false
+test	uv を入れる	2026-11-20T04:02:29.8511284Z   ignore-nothing-to-cache: false
+test	uv を入れる	2026-11-20T04:02:29.8511527Z   ignore-empty-workdir: false
+test	uv を入れる	2026-11-20T04:02:29.8511748Z   download-from-astral-mirror: true
+test	uv を入れる	2026-11-20T04:02:29.8511983Z   add-problem-matchers: true
+test	uv を入れる	2026-11-20T04:02:29.8512181Z   quiet: false
+test	uv を入れる	2026-11-20T04:02:29.8512417Z   resolution-strategy: highest
+test	uv を入れる	2026-11-20T04:02:29.8512622Z ##[endgroup]
+test	uv を入れる	2026-11-20T04:02:30.0014891Z Trying to find version for uv in: /home/runner/work/dev-docs/dev-docs/uv.toml
+test	uv を入れる	2026-11-20T04:02:30.0016007Z Could not find file: /home/runner/work/dev-docs/dev-docs/uv.toml
+test	uv を入れる	2026-11-20T04:02:30.0016687Z Trying to find version for uv in: /home/runner/work/dev-docs/dev-docs/pyproject.toml
+test	uv を入れる	2026-11-20T04:02:30.0017208Z Could not determine uv version from uv.toml or pyproject.toml. Falling back to latest.
+test	uv を入れる	2026-11-20T04:02:30.0020522Z Fetching manifest data from https://releases.astral.sh/github/versions/main/v1/uv.ndjson ...
+test	uv を入れる	2026-11-20T04:02:30.0653179Z Downloading uv from "https://releases.astral.sh/github/uv/releases/download/0.13.9/uv-x86_64-unknown-linux-gnu.tar.gz" ...
+test	uv を入れる	2026-11-20T04:02:30.2306362Z [command]/usr/bin/tar xz --warning=no-unknown-keyword --overwrite -C /home/runner/work/_temp/490348a5-de8b-441f-aa9b-ef38fb95a13f -f /home/runner/work/_temp/ac3717d7-1d97-434f-ad1f-e4409b52e4ae
+test	uv を入れる	2026-11-20T04:02:30.6087785Z Added /home/runner/.local/bin to the path
+test	uv を入れる	2026-11-20T04:02:30.6090584Z Added /opt/hostedtoolcache/uv/0.13.9/x86_64 to the path
+test	uv を入れる	2026-11-20T04:02:30.6091555Z Set UV_PYTHON_INSTALL_DIR to /home/runner/work/_temp/uv-python-dir
+test	uv を入れる	2026-11-20T04:02:30.6092332Z Added /home/runner/work/_temp/uv-python-dir to the path
+test	uv を入れる	2026-11-20T04:02:30.6098170Z Set UV_CACHE_DIR to /home/runner/work/_temp/setup-uv-cache
+test	uv を入れる	2026-11-20T04:02:30.6098969Z Successfully installed uv version 0.13.9
+test	uv を入れる	2026-11-20T04:02:30.6804928Z Searching files using cache dependency glob: /home/runner/work/dev-docs/dev-docs/**/*requirements*.txt,/home/runner/work/dev-docs/dev-docs/**/*requirements*.in,/home/runner/work/dev-docs/dev-docs/**/*constraints*.txt,/home/runner/work/dev-docs/dev-docs/**/*constraints*.in,/home/runner/work/dev-docs/dev-docs/**/pyproject.toml,/home/runner/work/dev-docs/dev-docs/**/uv.lock,/home/runner/work/dev-docs/dev-docs/**/*.py.lock
+test	uv を入れる	2026-11-20T04:02:30.8876951Z /home/runner/work/dev-docs/dev-docs/pyproject.toml
+test	uv を入れる	2026-11-20T04:02:30.9137744Z /home/runner/work/dev-docs/dev-docs/uv.lock
+test	uv を入れる	2026-11-20T04:02:30.9148465Z Found 2 files to hash.
+test	uv を入れる	2026-11-20T04:02:30.9216452Z Trying to restore cache from GitHub Actions cache with key: setup-uv-2-x86_64-unknown-linux-gnu-ubuntu-26.04-3.14.4-ce349dac54e2590b54cb97b36c71fa2d886c7b907fa2b17680e07c0a03421fb9
+test	uv を入れる	2026-11-20T04:02:30.9846502Z Cache hit for: setup-uv-2-x86_64-unknown-linux-gnu-ubuntu-26.04-3.14.4-ce349dac54e2590b54cb97b36c71fa2d886c7b907fa2b17680e07c0a03421fb9
+test	uv を入れる	2026-11-20T04:02:31.4353080Z Received 37283677 of 37283677 (100.0%), 83.5 MBs/sec
+test	uv を入れる	2026-11-20T04:02:31.4353696Z Cache Size: ~36 MB (37283677 B)
+test	uv を入れる	2026-11-20T04:02:31.4373060Z [command]/usr/bin/tar -xf /home/runner/work/_temp/52471688-71ce-4e40-8312-a6b33cd8c4b9/cache.tzst -P -C /home/runner/work/dev-docs/dev-docs --use-compress-program unzstd
+test	uv を入れる	2026-11-20T04:02:31.6833952Z Cache restored successfully
+test	uv を入れる	2026-11-20T04:02:31.6852337Z cache restored from GitHub Actions cache with key: setup-uv-2-x86_64-unknown-linux-gnu-ubuntu-26.04-3.14.4-ce349dac54e2590b54cb97b36c71fa2d886c7b907fa2b17680e07c0a03421fb9
+test	Python の依存を入れる	﻿2026-11-20T04:02:31.8031085Z ##[group]Run uv sync --frozen
+test	Python の依存を入れる	2026-11-20T04:02:31.8031394Z ^[[36;1muv sync --frozen^[[0m
+test	Python の依存を入れる	2026-11-20T04:02:31.8147179Z shell: /usr/bin/bash -e {0}
+test	Python の依存を入れる	2026-11-20T04:02:31.8147445Z env:
+test	Python の依存を入れる	2026-11-20T04:02:31.8147703Z   UV_PYTHON_INSTALL_DIR: /home/runner/work/_temp/uv-python-dir
+test	Python の依存を入れる	2026-11-20T04:02:31.8148048Z   UV_CACHE_DIR: /home/runner/work/_temp/setup-uv-cache
+test	Python の依存を入れる	2026-11-20T04:02:31.8148301Z ##[endgroup]
+test	Python の依存を入れる	2026-11-20T04:02:31.8313498Z Using CPython 3.14.4 interpreter at: /usr/bin/python3.14
+test	Python の依存を入れる	2026-11-20T04:02:31.8314008Z Creating virtual environment at: .venv
+test	Python の依存を入れる	2026-11-20T04:02:31.8345869Z    Building dev-docs @ file:///home/runner/work/dev-docs/dev-docs
+test	Python の依存を入れる	2026-11-20T04:02:32.0676263Z       Built dev-docs @ file:///home/runner/work/dev-docs/dev-docs
+test	Python の依存を入れる	2026-11-20T04:02:32.0689091Z Prepared 1 package in 234ms
+test	Python の依存を入れる	2026-11-20T04:02:32.1087493Z Installed 49 packages in 39ms
+test	Python の依存を入れる	2026-11-20T04:02:32.1087960Z  + annotated-doc==0.0.5
+test	Python の依存を入れる	2026-11-20T04:02:32.1088275Z  + annotated-types==0.8.0
+test	Python の依存を入れる	2026-11-20T04:02:32.1088563Z  + anyio==4.15.1
+test	Python の依存を入れる	2026-11-20T04:02:32.1088947Z  + ast-serialize==0.13.1
+test	Python の依存を入れる	2026-11-20T04:02:32.1089229Z  + attrs==26.1.0
+test	Python の依存を入れる	2026-11-20T04:02:32.1089490Z  + certifi==2026.10.23
+test	Python の依存を入れる	2026-11-20T04:02:32.1089951Z  + cffi==2.1.1
+test	Python の依存を入れる	2026-11-20T04:02:32.1090196Z  + click==8.5.0
+test	Python の依存を入れる	2026-11-20T04:02:32.1090462Z  + cryptography==50.0.2
+test	Python の依存を入れる	2026-11-20T04:02:32.1090920Z  + dev-docs==0.0.0 (from file:///home/runner/work/dev-docs/dev-docs)
+test	Python の依存を入れる	2026-11-20T04:02:32.1091369Z  + fastapi==0.162.0
+test	Python の依存を入れる	2026-11-20T04:02:32.1091627Z  + h11==0.16.0
+test	Python の依存を入れる	2026-11-20T04:02:32.1091874Z  + httpcore==1.0.9
+test	Python の依存を入れる	2026-11-20T04:02:32.1092143Z  + httpcore2==2.16.0
+test	Python の依存を入れる	2026-11-20T04:02:32.1092419Z  + httpx==0.28.1
+test	Python の依存を入れる	2026-11-20T04:02:32.1092667Z  + httpx2==2.16.0
+test	Python の依存を入れる	2026-11-20T04:02:32.1093164Z  + idna==3.20
+test	Python の依存を入れる	2026-11-20T04:02:32.1093409Z  + iniconfig==2.3.1
+test	Python の依存を入れる	2026-11-20T04:02:32.1093672Z  + jinja2==3.1.6
+test	Python の依存を入れる	2026-11-20T04:02:32.1093929Z  + jsonschema==4.26.0
+test	Python の依存を入れる	2026-11-20T04:02:32.1094262Z  + jsonschema-specifications==2025.9.1
+test	Python の依存を入れる	2026-11-20T04:02:32.1094651Z  + librt==0.16.0
+test	Python の依存を入れる	2026-11-20T04:02:32.1094909Z  + markupsafe==3.0.4
+test	Python の依存を入れる	2026-11-20T04:02:32.1095179Z  + mcp==2.3.0
+test	Python の依存を入れる	2026-11-20T04:02:32.1095581Z  + mcp-types==2.3.0
+test	Python の依存を入れる	2026-11-20T04:02:32.1095833Z  + mypy==2.4.0
+test	Python の依存を入れる	2026-11-20T04:02:32.1096095Z  + mypy-extensions==1.1.0
+test	Python の依存を入れる	2026-11-20T04:02:32.1096418Z  + opentelemetry-api==1.45.1
+test	Python の依存を入れる	2026-11-20T04:02:32.1096732Z  + packaging==26.3
+test	Python の依存を入れる	2026-11-20T04:02:32.1096991Z  + pathspec==1.1.1
+test	Python の依存を入れる	2026-11-20T04:02:32.1097250Z  + pluggy==1.7.0
+test	Python の依存を入れる	2026-11-20T04:02:32.1097510Z  + pycparser==3.12
+test	Python の依存を入れる	2026-11-20T04:02:32.1097779Z  + pydantic==2.14.1
+test	Python の依存を入れる	2026-11-20T04:02:32.1098046Z  + pydantic-core==2.50.1
+test	Python の依存を入れる	2026-11-20T04:02:32.1098342Z  + pygments==2.21.0
+test	Python の依存を入れる	2026-11-20T04:02:32.1098596Z  + pyjwt==2.15.1
+test	Python の依存を入れる	2026-11-20T04:02:32.1098844Z  + pytest==9.1.1
+test	Python の依存を入れる	2026-11-20T04:02:32.1099124Z  + python-multipart==0.0.32
+test	Python の依存を入れる	2026-11-20T04:02:32.1099422Z  + referencing==0.37.0
+test	Python の依存を入れる	2026-11-20T04:02:32.1099693Z  + rpds-py==2026.9.1
+test	Python の依存を入れる	2026-11-20T04:02:32.1099967Z  + ruamel-yaml==0.19.1
+test	Python の依存を入れる	2026-11-20T04:02:32.1100232Z  + ruff==0.17.2
+test	Python の依存を入れる	2026-11-20T04:02:32.1100487Z  + sse-starlette==3.6.0
+test	Python の依存を入れる	2026-11-20T04:02:32.1100771Z  + starlette==1.10.0
+test	Python の依存を入れる	2026-11-20T04:02:32.1101043Z  + truststore==0.10.5
+test	Python の依存を入れる	2026-11-20T04:02:32.1101363Z  + types-jsonschema==4.26.0.20261006
+test	Python の依存を入れる	2026-11-20T04:02:32.1101728Z  + typing-extensions==4.16.0
+test	Python の依存を入れる	2026-11-20T04:02:32.1102053Z  + typing-inspection==0.4.4
+test	Python の依存を入れる	2026-11-20T04:02:32.1102353Z  + uvicorn==0.54.0
+test	層の全件を回す	﻿2026-11-20T04:02:32.1266043Z ##[group]Run : > test.log
+test	層の全件を回す	2026-11-20T04:02:32.1266375Z ^[[36;1m: > test.log^[[0m
+test	層の全件を回す	2026-11-20T04:02:32.1266602Z ^[[36;1m# 結果の行を test.log と step の標準出力の両方に出す^[[0m
+test	層の全件を回す	2026-11-20T04:02:32.1266875Z ^[[36;1msay() { echo "$1" | tee -a test.log; }^[[0m
+test	層の全件を回す	2026-11-20T04:02:32.1267131Z ^[[36;1mcase "$LAYER" in^[[0m
+test	層の全件を回す	2026-11-20T04:02:32.1267341Z ^[[36;1m  backend-unit) limit=7 ;;^[[0m
+test	層の全件を回す	2026-11-20T04:02:32.1267651Z ^[[36;1m  backend-integration) limit=62; dir=tests/integration/ ;;^[[0m
+test	層の全件を回す	2026-11-20T04:02:32.1267955Z ^[[36;1m  frontend-unit) limit=19 ;;^[[0m
+test	層の全件を回す	2026-11-20T04:02:32.1268272Z ^[[36;1m  frontend-integration) limit=75; dir=tests/integration/frontend/ ;;^[[0m
+test	層の全件を回す	2026-11-20T04:02:32.1268570Z ^[[36;1mesac^[[0m
+test	層の全件を回す	2026-11-20T04:02:32.1268770Z ^[[36;1m# paths は結合テストの層の、層の結合テストのフォルダの下のパスだけを受け付ける^[[0m
+test	層の全件を回す	2026-11-20T04:02:32.1269021Z ^[[36;1mif [ -n "$PATHS" ]; then^[[0m
+test	層の全件を回す	2026-11-20T04:02:32.1269242Z ^[[36;1m  if [ -z "${dir:-}" ]; then^[[0m
+test	層の全件を回す	2026-11-20T04:02:32.1269508Z ^[[36;1m    say "paths は結合テストの層でだけ指定できる: layer=$LAYER"^[[0m
+test	層の全件を回す	2026-11-20T04:02:32.1269784Z ^[[36;1m    exit 1^[[0m
+test	層の全件を回す	2026-11-20T04:02:32.1270001Z ^[[36;1m  fi^[[0m
+test	層の全件を回す	2026-11-20T04:02:32.1270237Z ^[[36;1m  if ! printf '%s' "$PATHS" | grep -Eq '^[A-Za-z0-9_./ -]+$'; then^[[0m
+test	層の全件を回す	2026-11-20T04:02:32.1270600Z ^[[36;1m    say "paths に許可しない文字がある（英数字・_・.・/・-・空白だけを許可する）: $PATHS"^[[0m
+test	層の全件を回す	2026-11-20T04:02:32.1270881Z ^[[36;1m    exit 1^[[0m
+test	層の全件を回す	2026-11-20T04:02:32.1271055Z ^[[36;1m  fi^[[0m
+test	層の全件を回す	2026-11-20T04:02:32.1271238Z ^[[36;1m  for p in $PATHS; do^[[0m
+test	層の全件を回す	2026-11-20T04:02:32.1271447Z ^[[36;1m    case "$p" in^[[0m
+test	層の全件を回す	2026-11-20T04:02:32.1271681Z ^[[36;1m      *..*) say "paths の値が .. を含む: $p"; exit 1 ;;^[[0m
+test	層の全件を回す	2026-11-20T04:02:32.1271920Z ^[[36;1m    esac^[[0m
+test	層の全件を回す	2026-11-20T04:02:32.1272087Z ^[[36;1m    case "$p" in^[[0m
+test	層の全件を回す	2026-11-20T04:02:32.1272268Z ^[[36;1m      "$dir"*) ;;^[[0m
+test	層の全件を回す	2026-11-20T04:02:32.1272512Z ^[[36;1m      *) say "paths の値が層の結合テストのフォルダ（$dir）の外: $p"; exit 1 ;;^[[0m
+test	層の全件を回す	2026-11-20T04:02:32.1272769Z ^[[36;1m    esac^[[0m
+test	層の全件を回す	2026-11-20T04:02:32.1272979Z ^[[36;1m    if [ "$LAYER" = backend-integration ]; then^[[0m
+test	層の全件を回す	2026-11-20T04:02:32.1273319Z ^[[36;1m      case "$p" in^[[0m
+test	層の全件を回す	2026-11-20T04:02:32.1273772Z ^[[36;1m        tests/integration/frontend/*) say "paths の値が層の結合テストのフォルダの外（tests/integration/frontend/ は frontend-integration の層）: $p"; exit 1 ;;^[[0m
+test	層の全件を回す	2026-11-20T04:02:32.1274221Z ^[[36;1m      esac^[[0m
+test	層の全件を回す	2026-11-20T04:02:32.1274393Z ^[[36;1m    fi^[[0m
+test	層の全件を回す	2026-11-20T04:02:32.1274557Z ^[[36;1m  done^[[0m
+test	層の全件を回す	2026-11-20T04:02:32.1274721Z ^[[36;1mfi^[[0m
+test	層の全件を回す	2026-11-20T04:02:32.1275071Z ^[[36;1mcase "$LAYER" in^[[0m
+test	層の全件を回す	2026-11-20T04:02:32.1275519Z ^[[36;1m  backend-unit) cmd="uv run pytest tests/unit/ -v" ;;^[[0m
+test	層の全件を回す	2026-11-20T04:02:32.1275889Z ^[[36;1m  backend-integration) cmd="uv run pytest ${PATHS:-$dir} -v" ;;^[[0m
+test	層の全件を回す	2026-11-20T04:02:32.1276350Z ^[[36;1m  frontend-unit) cmd="npx vitest run --config frontend/vitest.config.ts --reporter=verbose" ;;^[[0m
+test	層の全件を回す	2026-11-20T04:02:32.1276951Z ^[[36;1m  frontend-integration) cmd="npx playwright test --config tests/integration/frontend/playwright.config.ts $PATHS" ;;^[[0m
+test	層の全件を回す	2026-11-20T04:02:32.1277376Z ^[[36;1mesac^[[0m
+test	層の全件を回す	2026-11-20T04:02:32.1277585Z ^[[36;1m# テストを裏で起動し、出力を test.log と step の標準出力の両方に出す^[[0m
+test	層の全件を回す	2026-11-20T04:02:32.1277923Z ^[[36;1msetsid -w bash -c "set -o pipefail; $cmd 2>&1 | tee -a test.log" &^[[0m
+test	層の全件を回す	2026-11-20T04:02:32.1278214Z ^[[36;1mpid=$!^[[0m
+test	層の全件を回す	2026-11-20T04:02:32.1278386Z ^[[36;1mlast=-1^[[0m
+test	層の全件を回す	2026-11-20T04:02:32.1278563Z ^[[36;1midle=0^[[0m
+test	層の全件を回す	2026-11-20T04:02:32.1278765Z ^[[36;1m# test.log の大きさを 1 秒ごとに確認し、無出力の時間が上限を超えたらテストを止める^[[0m
+test	層の全件を回す	2026-11-20T04:02:32.1279042Z ^[[36;1mwhile kill -0 "$pid" 2> /dev/null; do^[[0m
+test	層の全件を回す	2026-11-20T04:02:32.1279272Z ^[[36;1m  sleep 1^[[0m
+test	層の全件を回す	2026-11-20T04:02:32.1279468Z ^[[36;1m  size=$(stat -c %s test.log)^[[0m
+test	層の全件を回す	2026-11-20T04:02:32.1279688Z ^[[36;1m  if [ "$size" = "$last" ]; then^[[0m
+test	層の全件を回す	2026-11-20T04:02:32.1279914Z ^[[36;1m    idle=$((idle + 1))^[[0m
+test	層の全件を回す	2026-11-20T04:02:32.1280116Z ^[[36;1m  else^[[0m
+test	層の全件を回す	2026-11-20T04:02:32.1280286Z ^[[36;1m    idle=0^[[0m
+test	層の全件を回す	2026-11-20T04:02:32.1280461Z ^[[36;1m    last=$size^[[0m
+test	層の全件を回す	2026-11-20T04:02:32.1280642Z ^[[36;1m  fi^[[0m
+test	層の全件を回す	2026-11-20T04:02:32.1280827Z ^[[36;1m  if [ "$idle" -gt "$limit" ]; then^[[0m
+test	層の全件を回す	2026-11-20T04:02:32.1281058Z ^[[36;1m    kill -- "-$pid"^[[0m
+test	層の全件を回す	2026-11-20T04:02:32.1281444Z ^[[36;1m    say "出力が ${limit} 秒変わらなかったため、テストを止めた"^[[0m
+test	層の全件を回す	2026-11-20T04:02:32.1281672Z ^[[36;1m    exit 1^[[0m
+test	層の全件を回す	2026-11-20T04:02:32.1281842Z ^[[36;1m  fi^[[0m
+test	層の全件を回す	2026-11-20T04:02:32.1282004Z ^[[36;1mdone^[[0m
+test	層の全件を回す	2026-11-20T04:02:32.1282207Z ^[[36;1mwait "$pid"^[[0m
+test	層の全件を回す	2026-11-20T04:02:32.1327538Z shell: /usr/bin/bash -e {0}
+test	層の全件を回す	2026-11-20T04:02:32.1327782Z env:
+test	層の全件を回す	2026-11-20T04:02:32.1328040Z   UV_PYTHON_INSTALL_DIR: /home/runner/work/_temp/uv-python-dir
+test	層の全件を回す	2026-11-20T04:02:32.1328378Z   UV_CACHE_DIR: /home/runner/work/_temp/setup-uv-cache
+test	層の全件を回す	2026-11-20T04:02:32.1328643Z   LAYER: backend-unit
+test	層の全件を回す	2026-11-20T04:02:32.1328827Z   PATHS: 
+test	層の全件を回す	2026-11-20T04:02:32.1328998Z   PYTHONUNBUFFERED: 1
+test	層の全件を回す	2026-11-20T04:02:32.1329181Z ##[endgroup]
+test	層の全件を回す	2026-11-20T04:02:32.6721681Z ============================= test session starts ==============================
+test	層の全件を回す	2026-11-20T04:02:32.6784372Z platform linux -- Python 3.14.4, pytest-9.1.1, pluggy-1.7.0 -- /home/runner/work/dev-docs/dev-docs/.venv/bin/python
+test	層の全件を回す	2026-11-20T04:02:32.6788301Z cachedir: .pytest_cache
+test	層の全件を回す	2026-11-20T04:02:32.6788789Z rootdir: /home/runner/work/dev-docs/dev-docs
+test	層の全件を回す	2026-11-20T04:02:32.6789229Z configfile: pyproject.toml
+test	層の全件を回す	2026-11-20T04:02:32.6789573Z plugins: anyio-4.15.1
+test	層の全件を回す	2026-11-20T04:02:34.5083884Z collecting ... collected 570 items
+test	層の全件を回す	2026-11-20T04:02:34.5094963Z 
+test	層の全件を回す	2026-11-20T04:02:34.5103731Z tests/unit/dev_docs/features/admin/test_render.py::test_render_status PASSED [  0%]
+test	層の全件を回す	2026-11-20T04:02:34.5109849Z tests/unit/dev_docs/features/admin/test_render.py::test_render_status_when_no_sources PASSED [  0%]
+test	層の全件を回す	2026-11-20T04:02:34.5114991Z tests/unit/dev_docs/features/admin/test_render.py::test_render_status_when_unreachable PASSED [  0%]
+test	層の全件を回す	2026-11-20T04:02:34.5120300Z tests/unit/dev_docs/features/admin/test_render.py::test_render_status_when_leftover_sources PASSED [  0%]
+test	層の全件を回す	2026-11-20T04:02:34.5124968Z tests/unit/dev_docs/features/admin/test_render.py::test_source_row PASSED [  0%]
+test	層の全件を回す	2026-11-20T04:02:34.5130467Z tests/unit/dev_docs/features/admin/test_render.py::test_source_row_when_not_served PASSED [  1%]
+test	層の全件を回す	2026-11-20T04:02:34.5166204Z tests/unit/dev_docs/features/admin/test_service.py::test_get_status PASSED [  1%]
+test	層の全件を回す	2026-11-20T04:02:34.5182461Z tests/unit/dev_docs/features/admin/test_service.py::test_get_status_when_port_env PASSED [  1%]
+test	層の全件を回す	2026-11-20T04:02:34.5196281Z tests/unit/dev_docs/features/admin/test_service.py::test_get_status_when_unreachable PASSED [  1%]
+test	層の全件を回す	2026-11-20T04:02:34.5210860Z tests/unit/dev_docs/features/admin/test_service.py::test_get_status_when_leftover_sources PASSED [  1%]
+test	層の全件を回す	2026-11-20T04:02:34.5217846Z tests/unit/dev_docs/features/admin/test_service.py::test_version_state[same] PASSED [  1%]
+test	層の全件を回す	2026-11-20T04:02:34.5224412Z tests/unit/dev_docs/features/admin/test_service.py::test_version_state[older] PASSED [  2%]
+test	層の全件を回す	2026-11-20T04:02:34.5230923Z tests/unit/dev_docs/features/admin/test_service.py::test_version_state[newer] PASSED [  2%]
+test	層の全件を回す	2026-11-20T04:02:34.5237670Z tests/unit/dev_docs/features/admin/test_service.py::test_version_state_when_not_integer PASSED [  2%]
+test	層の全件を回す	2026-11-20T04:02:34.5244491Z tests/unit/dev_docs/features/changes/test_compare.py::test_changed_keys PASSED [  2%]
+test	層の全件を回す	2026-11-20T04:02:34.5249960Z tests/unit/dev_docs/features/convert/test_decisions.py::test_decision_page_id PASSED [  2%]
+test	層の全件を回す	2026-11-20T04:02:34.5255770Z tests/unit/dev_docs/features/convert/test_decisions.py::test_decision_page_id_when_other[other] PASSED [  2%]
+test	層の全件を回す	2026-11-20T04:02:34.5261586Z tests/unit/dev_docs/features/convert/test_decisions.py::test_decision_page_id_when_other[outside] PASSED [  3%]
+test	層の全件を回す	2026-11-20T04:02:34.5267796Z tests/unit/dev_docs/features/convert/test_decisions.py::test_decision_page_id_when_other[lowercase] PASSED [  3%]
+test	層の全件を回す	2026-11-20T04:02:34.5273658Z tests/unit/dev_docs/features/convert/test_diagrams.py::test_render_diagram PASSED [  3%]
+test	層の全件を回す	2026-11-20T04:02:34.5280551Z tests/unit/dev_docs/features/convert/test_diagrams.py::test_render_diagram_when_node_kinds[actor] PASSED [  3%]
+test	層の全件を回す	2026-11-20T04:02:34.5287032Z tests/unit/dev_docs/features/convert/test_diagrams.py::test_render_diagram_when_node_kinds[external] PASSED [  3%]
+test	層の全件を回す	2026-11-20T04:02:34.5293487Z tests/unit/dev_docs/features/convert/test_diagrams.py::test_render_diagram_when_node_kinds[process] PASSED [  4%]
+test	層の全件を回す	2026-11-20T04:02:34.5300082Z tests/unit/dev_docs/features/convert/test_diagrams.py::test_render_diagram_when_node_kinds[system] PASSED [  4%]
+test	層の全件を回す	2026-11-20T04:02:34.5306115Z tests/unit/dev_docs/features/convert/test_diagrams.py::test_render_diagram_when_node_kinds[store] PASSED [  4%]
+test	層の全件を回す	2026-11-20T04:02:34.5312653Z tests/unit/dev_docs/features/convert/test_diagrams.py::test_render_diagram_when_node_kinds[start] PASSED [  4%]
+test	層の全件を回す	2026-11-20T04:02:34.5319820Z tests/unit/dev_docs/features/convert/test_diagrams.py::test_render_diagram_when_node_kinds[question] PASSED [  4%]
+test	層の全件を回す	2026-11-20T04:02:34.5326154Z tests/unit/dev_docs/features/convert/test_diagrams.py::test_render_diagram_when_node_kinds[action] PASSED [  4%]
+test	層の全件を回す	2026-11-20T04:02:34.5332337Z tests/unit/dev_docs/features/convert/test_diagrams.py::test_render_diagram_when_node_kinds[result] PASSED [  5%]
+test	層の全件を回す	2026-11-20T04:02:34.5338708Z tests/unit/dev_docs/features/convert/test_diagrams.py::test_render_diagram_when_node_kinds[none] PASSED [  5%]
+test	層の全件を回す	2026-11-20T04:02:34.5345005Z tests/unit/dev_docs/features/convert/test_diagrams.py::test_render_diagram_when_hint_and_tip PASSED [  5%]
+test	層の全件を回す	2026-11-20T04:02:34.5356588Z tests/unit/dev_docs/features/convert/test_diagrams.py::test_render_diagram_when_unknown_line PASSED [  5%]
+test	層の全件を回す	2026-11-20T04:02:34.5357843Z tests/unit/dev_docs/features/convert/test_diagrams.py::test_render_diagram_when_direction[flowchart] PASSED [  5%]
+test	層の全件を回す	2026-11-20T04:02:34.5364368Z tests/unit/dev_docs/features/convert/test_diagrams.py::test_render_diagram_when_direction[dataflow] PASSED [  5%]
+test	層の全件を回す	2026-11-20T04:02:34.5371005Z tests/unit/dev_docs/features/convert/test_diagrams.py::test_render_diagram_when_direction[architecture] PASSED [  6%]
+test	層の全件を回す	2026-11-20T04:02:34.5377618Z tests/unit/dev_docs/features/convert/test_diagrams.py::test_render_diagram_when_direction[dataflow-td] PASSED [  6%]
+test	層の全件を回す	2026-11-20T04:02:34.5382525Z tests/unit/dev_docs/features/convert/test_diagrams.py::test_render_diagram_when_frame PASSED [  6%]
+test	層の全件を回す	2026-11-20T04:02:34.5388134Z tests/unit/dev_docs/features/convert/test_diagrams.py::test_render_diagram_when_unsafe_id PASSED [  6%]
+test	層の全件を回す	2026-11-20T04:02:34.5392984Z tests/unit/dev_docs/features/convert/test_diagrams.py::test_render_diagram_when_state PASSED [  6%]
+test	層の全件を回す	2026-11-20T04:02:34.5398173Z tests/unit/dev_docs/features/convert/test_diagrams.py::test_render_diagram_when_state_representative PASSED [  7%]
+test	層の全件を回す	2026-11-20T04:02:34.5402857Z tests/unit/dev_docs/features/convert/test_diagrams.py::test_render_diagram_when_state_without_representative PASSED [  7%]
+test	層の全件を回す	2026-11-20T04:02:34.5408096Z tests/unit/dev_docs/features/convert/test_diagrams.py::test_render_diagram_when_er PASSED [  7%]
+test	層の全件を回す	2026-11-20T04:02:34.5412970Z tests/unit/dev_docs/features/convert/test_diagrams.py::test_render_diagram_when_er_relation_dropped PASSED [  7%]
+test	層の全件を回す	2026-11-20T04:02:34.5418950Z tests/unit/dev_docs/features/convert/test_diagrams.py::test_render_diagram_when_marker_text PASSED [  7%]
+test	層の全件を回す	2026-11-20T04:02:34.5424246Z tests/unit/dev_docs/features/convert/test_diagrams.py::test_render_diagram_when_unknown_kind PASSED [  7%]
+test	層の全件を回す	2026-11-20T04:02:34.5429076Z tests/unit/dev_docs/features/convert/test_diagrams.py::test_er_table_titles PASSED [  8%]
+test	層の全件を回す	2026-11-20T04:02:34.5433736Z tests/unit/dev_docs/features/convert/test_diagrams.py::test_er_table_titles_when_duplicated_or_untitled PASSED [  8%]
+test	層の全件を回す	2026-11-20T04:02:34.5438412Z tests/unit/dev_docs/features/convert/test_diagrams.py::test_render_mermaid PASSED [  8%]
+test	層の全件を回す	2026-11-20T04:02:34.5444296Z tests/unit/dev_docs/features/convert/test_diagrams.py::test_render_mermaid_when_kinds[flowchart] PASSED [  8%]
+test	層の全件を回す	2026-11-20T04:02:34.5450005Z tests/unit/dev_docs/features/convert/test_diagrams.py::test_render_mermaid_when_kinds[graph] PASSED [  8%]
+test	層の全件を回す	2026-11-20T04:02:34.5455199Z tests/unit/dev_docs/features/convert/test_diagrams.py::test_render_mermaid_when_kinds[er] PASSED [  8%]
+test	層の全件を回す	2026-11-20T04:02:34.5460880Z tests/unit/dev_docs/features/convert/test_diagrams.py::test_render_mermaid_when_kinds[state-v2] PASSED [  9%]
+test	層の全件を回す	2026-11-20T04:02:34.5466354Z tests/unit/dev_docs/features/convert/test_diagrams.py::test_render_mermaid_when_kinds[state] PASSED [  9%]
+test	層の全件を回す	2026-11-20T04:02:34.5470951Z tests/unit/dev_docs/features/convert/test_diagrams.py::test_render_mermaid_when_not_mappable PASSED [  9%]
+test	層の全件を回す	2026-11-20T04:02:34.5476028Z tests/unit/dev_docs/features/convert/test_diagrams.py::test_render_diagram_when_clicks PASSED [  9%]
+test	層の全件を回す	2026-11-20T04:02:34.5481147Z tests/unit/dev_docs/features/convert/test_diagrams.py::test_render_diagram_when_clicks_unsafe_id PASSED [  9%]
+test	層の全件を回す	2026-11-20T04:02:34.5486014Z tests/unit/dev_docs/features/convert/test_diagrams.py::test_render_mermaid_when_id_click PASSED [ 10%]
+test	層の全件を回す	2026-11-20T04:02:34.5491372Z tests/unit/dev_docs/features/convert/test_diagrams.py::test_render_mermaid_when_id_click_not_flowchart PASSED [ 10%]
+test	層の全件を回す	2026-11-20T04:02:34.5497998Z tests/unit/dev_docs/features/convert/test_embed.py::test_embed_paths PASSED [ 10%]
+test	層の全件を回す	2026-11-20T04:02:34.5504979Z tests/unit/dev_docs/features/convert/test_embed.py::test_expand_embeds PASSED [ 10%]
+test	層の全件を回す	2026-11-20T04:02:34.5511522Z tests/unit/dev_docs/features/convert/test_embed.py::test_expand_embeds_when_in_code_block PASSED [ 10%]
+test	層の全件を回す	2026-11-20T04:02:34.5517258Z tests/unit/dev_docs/features/convert/test_embed.py::test_expand_embeds_when_missing PASSED [ 10%]
+test	層の全件を回す	2026-11-20T04:02:34.5523224Z tests/unit/dev_docs/features/convert/test_inline.py::test_rewrite_text_when_mermaid PASSED [ 11%]
+test	層の全件を回す	2026-11-20T04:02:34.5528651Z tests/unit/dev_docs/features/convert/test_inline.py::test_rewrite_text_when_tree PASSED [ 11%]
+test	層の全件を回す	2026-11-20T04:02:34.5533555Z tests/unit/dev_docs/features/convert/test_inline.py::test_rewrite_text_when_steps PASSED [ 11%]
+test	層の全件を回す	2026-11-20T04:02:34.5538825Z tests/unit/dev_docs/features/convert/test_inline.py::test_rewrite_text_when_issue PASSED [ 11%]
+test	層の全件を回す	2026-11-20T04:02:34.5543599Z tests/unit/dev_docs/features/convert/test_inline.py::test_rewrite_text_when_heading_link PASSED [ 11%]
+test	層の全件を回す	2026-11-20T04:02:34.5548706Z tests/unit/dev_docs/features/convert/test_inline.py::test_rewrite_text_when_no_issue_url PASSED [ 11%]
+test	層の全件を回す	2026-11-20T04:02:34.5553398Z tests/unit/dev_docs/features/convert/test_inline.py::test_rewrite_text_when_choices PASSED [ 12%]
+test	層の全件を回す	2026-11-20T04:02:34.5559120Z tests/unit/dev_docs/features/convert/test_inline.py::test_rewrite_text_when_id_link PASSED [ 12%]
+test	層の全件を回す	2026-11-20T04:02:34.5564060Z tests/unit/dev_docs/features/convert/test_inline.py::test_rewrite_text_when_id_link_no_heading PASSED [ 12%]
+test	層の全件を回す	2026-11-20T04:02:34.5569710Z tests/unit/dev_docs/features/convert/test_inline.py::test_rewrite_text_when_mermaid_click PASSED [ 12%]
+test	層の全件を回す	2026-11-20T04:02:34.5574634Z tests/unit/dev_docs/features/convert/test_inline.py::test_link_reference PASSED [ 12%]
+test	層の全件を回す	2026-11-20T04:02:34.5579777Z tests/unit/dev_docs/features/convert/test_inline.py::test_link_reference_when_heading PASSED [ 12%]
+test	層の全件を回す	2026-11-20T04:02:34.5584323Z tests/unit/dev_docs/features/convert/test_inline.py::test_link_reference_when_unknown PASSED [ 13%]
+test	層の全件を回す	2026-11-20T04:02:34.5589490Z tests/unit/dev_docs/features/convert/test_inline.py::test_link_decisions PASSED [ 13%]
+test	層の全件を回す	2026-11-20T04:02:34.5594116Z tests/unit/dev_docs/features/convert/test_inline.py::test_heading_anchor PASSED [ 13%]
+test	層の全件を回す	2026-11-20T04:02:34.5599317Z tests/unit/dev_docs/features/convert/test_inline.py::test_link_target PASSED [ 13%]
+test	層の全件を回す	2026-11-20T04:02:34.5604378Z tests/unit/dev_docs/features/convert/test_inline.py::test_link_target_when_unknown PASSED [ 13%]
+test	層の全件を回す	2026-11-20T04:02:34.5611647Z tests/unit/dev_docs/features/convert/test_markdown.py::test_schema_to_markdown PASSED [ 14%]
+test	層の全件を回す	2026-11-20T04:02:34.5618113Z tests/unit/dev_docs/features/convert/test_markdown.py::test_schema_to_markdown_when_sections PASSED [ 14%]
+test	層の全件を回す	2026-11-20T04:02:34.5624106Z tests/unit/dev_docs/features/convert/test_markdown.py::test_schema_to_markdown_when_no_schema PASSED [ 14%]
+test	層の全件を回す	2026-11-20T04:02:34.5629989Z tests/unit/dev_docs/features/convert/test_markdown.py::test_schema_to_markdown_when_title_and_lead PASSED [ 14%]
+test	層の全件を回す	2026-11-20T04:02:34.5635741Z tests/unit/dev_docs/features/convert/test_markdown.py::test_schema_to_markdown_when_hidden PASSED [ 14%]
+test	層の全件を回す	2026-11-20T04:02:34.5641960Z tests/unit/dev_docs/features/convert/test_markdown.py::test_schema_to_markdown_when_attributes PASSED [ 14%]
+test	層の全件を回す	2026-11-20T04:02:34.5647747Z tests/unit/dev_docs/features/convert/test_markdown.py::test_schema_to_markdown_when_multiline PASSED [ 15%]
+test	層の全件を回す	2026-11-20T04:02:34.5654583Z tests/unit/dev_docs/features/convert/test_markdown.py::test_schema_to_markdown_when_diagram PASSED [ 15%]
+test	層の全件を回す	2026-11-20T04:02:34.5664066Z tests/unit/dev_docs/features/convert/test_markdown.py::test_schema_to_markdown_when_er PASSED [ 15%]
+test	層の全件を回す	2026-11-20T04:02:34.5669476Z tests/unit/dev_docs/features/convert/test_markdown.py::test_item_heading PASSED [ 15%]
+test	層の全件を回す	2026-11-20T04:02:34.5674542Z tests/unit/dev_docs/features/convert/test_markdown.py::test_item_heading_when_section PASSED [ 15%]
+test	層の全件を回す	2026-11-20T04:02:34.5679760Z tests/unit/dev_docs/features/convert/test_markdown.py::test_item_heading_when_not_heading PASSED [ 15%]
+test	層の全件を回す	2026-11-20T04:02:34.5684653Z tests/unit/dev_docs/features/convert/test_markdown.py::test_item_heading_when_nested_brackets PASSED [ 16%]
+test	層の全件を回す	2026-11-20T04:02:34.5690722Z tests/unit/dev_docs/features/convert/test_markdown.py::test_item_heading_when_unbalanced_brackets[unclosed] PASSED [ 16%]
+test	層の全件を回す	2026-11-20T04:02:34.5696352Z tests/unit/dev_docs/features/convert/test_markdown.py::test_item_heading_when_unbalanced_brackets[extra_close] PASSED [ 16%]
+test	層の全件を回す	2026-11-20T04:02:34.5701719Z tests/unit/dev_docs/features/convert/test_markdown.py::test_item_heading_when_unbalanced_brackets[reversed] PASSED [ 16%]
+test	層の全件を回す	2026-11-20T04:02:34.5707340Z tests/unit/dev_docs/features/convert/test_markdown.py::test_item_heading_when_unbalanced_brackets[name_after_close] PASSED [ 16%]
+test	層の全件を回す	2026-11-20T04:02:34.5712602Z tests/unit/dev_docs/features/convert/test_markdown.py::test_item_heading_when_unbalanced_brackets[empty_name] PASSED [ 17%]
+test	層の全件を回す	2026-11-20T04:02:34.5718808Z tests/unit/dev_docs/features/convert/test_markdown.py::test_item_heading_when_order[order] PASSED [ 17%]
+test	層の全件を回す	2026-11-20T04:02:34.5724707Z tests/unit/dev_docs/features/convert/test_markdown.py::test_item_heading_when_order[same_value_first] PASSED [ 17%]
+test	層の全件を回す	2026-11-20T04:02:34.5730501Z tests/unit/dev_docs/features/convert/test_markdown.py::test_item_heading_when_order_out_of_range[over] PASSED [ 17%]
+test	層の全件を回す	2026-11-20T04:02:34.5736092Z tests/unit/dev_docs/features/convert/test_markdown.py::test_item_heading_when_order_out_of_range[zero] PASSED [ 17%]
+test	層の全件を回す	2026-11-20T04:02:34.5741739Z tests/unit/dev_docs/features/convert/test_markdown.py::test_item_heading_when_order_out_of_range[no_element] PASSED [ 17%]
+test	層の全件を回す	2026-11-20T04:02:34.5747565Z tests/unit/dev_docs/features/convert/test_markdown.py::test_item_heading_when_order_out_of_range[superscript] PASSED [ 18%]
+test	層の全件を回す	2026-11-20T04:02:34.5753402Z tests/unit/dev_docs/features/convert/test_markdown.py::test_item_heading_when_dict_key[key] PASSED [ 18%]
+test	層の全件を回す	2026-11-20T04:02:34.5759676Z tests/unit/dev_docs/features/convert/test_markdown.py::test_item_heading_when_dict_key[title] PASSED [ 18%]
+test	層の全件を回す	2026-11-20T04:02:34.5765618Z tests/unit/dev_docs/features/convert/test_markdown.py::test_item_heading_when_dict_key[missing] PASSED [ 18%]
+test	層の全件を回す	2026-11-20T04:02:34.5770483Z tests/unit/dev_docs/features/convert/test_markdown.py::test_item_heading_when_consecutive_brackets PASSED [ 18%]
+test	層の全件を回す	2026-11-20T04:02:34.5776235Z tests/unit/dev_docs/features/convert/test_markdown.py::test_item_heading_when_empty[name] PASSED [ 18%]
+test	層の全件を回す	2026-11-20T04:02:34.5781883Z tests/unit/dev_docs/features/convert/test_markdown.py::test_item_heading_when_empty[dict_key] PASSED [ 19%]
+test	層の全件を回す	2026-11-20T04:02:34.5787573Z tests/unit/dev_docs/features/convert/test_markdown.py::test_item_heading_when_empty[inside_empty] PASSED [ 19%]
+test	層の全件を回す	2026-11-20T04:02:34.5792931Z tests/unit/dev_docs/features/convert/test_markdown.py::test_item_heading_when_hidden[name] PASSED [ 19%]
+test	層の全件を回す	2026-11-20T04:02:34.5798617Z tests/unit/dev_docs/features/convert/test_markdown.py::test_item_heading_when_hidden[dict_key] PASSED [ 19%]
+test	層の全件を回す	2026-11-20T04:02:34.5804002Z tests/unit/dev_docs/features/convert/test_markdown.py::test_item_heading_when_hidden[inside_hidden] PASSED [ 19%]
+test	層の全件を回す	2026-11-20T04:02:34.5810465Z tests/unit/dev_docs/features/convert/test_markdown.py::test_heading_anchors PASSED [ 20%]
+test	層の全件を回す	2026-11-20T04:02:34.5816813Z tests/unit/dev_docs/features/convert/test_markdown.py::test_heading_anchors_when_other_item PASSED [ 20%]
+test	層の全件を回す	2026-11-20T04:02:34.5822801Z tests/unit/dev_docs/features/convert/test_markdown.py::test_heading_anchors_when_text_heading PASSED [ 20%]
+test	層の全件を回す	2026-11-20T04:02:34.5829122Z tests/unit/dev_docs/features/convert/test_markdown.py::test_heading_anchors_when_code_block PASSED [ 20%]
+test	層の全件を回す	2026-11-20T04:02:34.5835601Z tests/unit/dev_docs/features/convert/test_markdown.py::test_heading_anchors_when_hidden PASSED [ 20%]
+test	層の全件を回す	2026-11-20T04:02:34.5841616Z tests/unit/dev_docs/features/convert/test_markdown.py::test_heading_anchors_when_not_atx PASSED [ 20%]
+test	層の全件を回す	2026-11-20T04:02:34.5847875Z tests/unit/dev_docs/features/convert/test_markdown.py::test_heading_anchors_when_closing_hashes PASSED [ 21%]
+test	層の全件を回す	2026-11-20T04:02:34.5853893Z tests/unit/dev_docs/features/convert/test_markdown.py::test_heading_anchors_when_tilde_fence PASSED [ 21%]
+test	層の全件を回す	2026-11-20T04:02:34.5860423Z tests/unit/dev_docs/features/convert/test_markdown.py::test_schema_to_markdown_when_test_files PASSED [ 21%]
+test	層の全件を回す	2026-11-20T04:02:34.5866500Z tests/unit/dev_docs/features/convert/test_markdown.py::test_schema_to_markdown_when_examples PASSED [ 21%]
+test	層の全件を回す	2026-11-20T04:02:34.5874554Z tests/unit/dev_docs/features/convert/test_markdown.py::test_schema_to_markdown_when_foreign_key PASSED [ 21%]
+test	層の全件を回す	2026-11-20T04:02:34.5882717Z tests/unit/dev_docs/features/convert/test_markdown.py::test_schema_to_markdown_when_foreign_key_physical_name PASSED [ 21%]
+test	層の全件を回す	2026-11-20T04:02:34.5890958Z tests/unit/dev_docs/features/convert/test_markdown.py::test_schema_to_markdown_when_foreign_key_duplicate_heading PASSED [ 22%]
+test	層の全件を回す	2026-11-20T04:02:34.5897697Z tests/unit/dev_docs/features/convert/test_markdown.py::test_render_table PASSED [ 22%]
+test	層の全件を回す	2026-11-20T04:02:34.5903742Z tests/unit/dev_docs/features/convert/test_markdown.py::test_render_table_when_objects PASSED [ 22%]
+test	層の全件を回す	2026-11-20T04:02:34.5909292Z tests/unit/dev_docs/features/convert/test_markdown.py::test_render_table_when_physical_name PASSED [ 22%]
+test	層の全件を回す	2026-11-20T04:02:34.5914480Z tests/unit/dev_docs/features/convert/test_markdown.py::test_render_table_when_closed_and_hidden PASSED [ 22%]
+test	層の全件を回す	2026-11-20T04:02:34.5921104Z tests/unit/dev_docs/features/convert/test_markdown.py::test_schema_to_markdown_when_decisions PASSED [ 22%]
+test	層の全件を回す	2026-11-20T04:02:34.5926440Z tests/unit/dev_docs/features/convert/test_markdown.py::test_render_table_when_wide PASSED [ 23%]
+test	層の全件を回す	2026-11-20T04:02:34.5931737Z tests/unit/dev_docs/features/convert/test_markdown.py::test_render_table_when_decisions PASSED [ 23%]
+test	層の全件を回す	2026-11-20T04:02:34.5936902Z tests/unit/dev_docs/features/convert/test_markdown.py::test_render_attributes PASSED [ 23%]
+test	層の全件を回す	2026-11-20T04:02:34.5942761Z tests/unit/dev_docs/features/convert/test_markdown.py::test_render_attributes_when_long PASSED [ 23%]
+test	層の全件を回す	2026-11-20T04:02:34.5949716Z tests/unit/dev_docs/features/convert/test_service.py::test_convert_service_render PASSED [ 23%]
+test	層の全件を回す	2026-11-20T04:02:34.5955423Z tests/unit/dev_docs/features/convert/test_service.py::test_convert_service_render_when_converter PASSED [ 24%]
+test	層の全件を回す	2026-11-20T04:02:34.5961141Z tests/unit/dev_docs/features/convert/test_service.py::test_convert_service_render_when_failure PASSED [ 24%]
+test	層の全件を回す	2026-11-20T04:02:34.5967740Z tests/unit/dev_docs/features/convert/test_service.py::test_convert_service_render_when_markdown PASSED [ 24%]
+test	層の全件を回す	2026-11-20T04:02:34.5973770Z tests/unit/dev_docs/features/convert/test_service.py::test_convert_service_render_when_records PASSED [ 24%]
+test	層の全件を回す	2026-11-20T04:02:34.5981021Z tests/unit/dev_docs/features/convert/test_service.py::test_convert_service_render_when_id_link PASSED [ 24%]
+test	層の全件を回す	2026-11-20T04:02:34.5988306Z tests/unit/dev_docs/features/convert/test_service.py::test_convert_service_render_when_id_link_duplicate PASSED [ 24%]
+test	層の全件を回す	2026-11-20T04:02:34.5994874Z tests/unit/dev_docs/features/convert/test_service.py::test_convert_service_finish PASSED [ 25%]
+test	層の全件を回す	2026-11-20T04:02:34.6000840Z tests/unit/dev_docs/features/convert/test_service.py::test_convert_service_finish_when_table_marker PASSED [ 25%]
+test	層の全件を回す	2026-11-20T04:02:34.6007117Z tests/unit/dev_docs/features/convert/test_service.py::test_convert_service_finish_when_embed PASSED [ 25%]
+test	層の全件を回す	2026-11-20T04:02:34.6133965Z tests/unit/dev_docs/features/documents/test_aliases.py::test_alias_schema PASSED [ 25%]
+test	層の全件を回す	2026-11-20T04:02:34.6140731Z tests/unit/dev_docs/features/documents/test_aliases.py::test_check_alias_document PASSED [ 25%]
+test	層の全件を回す	2026-11-20T04:02:34.6146645Z tests/unit/dev_docs/features/documents/test_aliases.py::test_check_alias_document_when_aliases_number PASSED [ 25%]
+test	層の全件を回す	2026-11-20T04:02:34.6152224Z tests/unit/dev_docs/features/documents/test_aliases.py::test_check_alias_document_when_required_missing PASSED [ 26%]
+test	層の全件を回す	2026-11-20T04:02:34.6157882Z tests/unit/dev_docs/features/documents/test_aliases.py::test_check_alias_document_when_aliases_string PASSED [ 26%]
+test	層の全件を回す	2026-11-20T04:02:34.6164083Z tests/unit/dev_docs/features/documents/test_aliases.py::test_collect_aliases PASSED [ 26%]
+test	層の全件を回す	2026-11-20T04:02:34.6170726Z tests/unit/dev_docs/features/documents/test_aliases.py::test_collect_aliases_when_no_alias_rows PASSED [ 26%]
+test	層の全件を回す	2026-11-20T04:02:34.6175844Z tests/unit/dev_docs/features/documents/test_fields.py::test_parse_field_path PASSED [ 26%]
+test	層の全件を回す	2026-11-20T04:02:34.6182167Z tests/unit/dev_docs/features/documents/test_fields.py::test_parse_field_path_when_invalid[empty-key] PASSED [ 27%]
+test	層の全件を回す	2026-11-20T04:02:34.6188044Z tests/unit/dev_docs/features/documents/test_fields.py::test_parse_field_path_when_invalid[bad-index] PASSED [ 27%]
+test	層の全件を回す	2026-11-20T04:02:34.6192892Z tests/unit/dev_docs/features/documents/test_fields.py::test_parse_field_path_when_selector PASSED [ 27%]
+test	層の全件を回す	2026-11-20T04:02:34.6197871Z tests/unit/dev_docs/features/documents/test_fields.py::test_get_field PASSED [ 27%]
+test	層の全件を回す	2026-11-20T04:02:34.6203472Z tests/unit/dev_docs/features/documents/test_fields.py::test_get_field_when_missing[a.x] PASSED [ 27%]
+test	層の全件を回す	2026-11-20T04:02:34.6209329Z tests/unit/dev_docs/features/documents/test_fields.py::test_get_field_when_missing[a.b[3].c] PASSED [ 27%]
+test	層の全件を回す	2026-11-20T04:02:34.6214694Z tests/unit/dev_docs/features/documents/test_fields.py::test_get_field_when_missing[a.b.c] PASSED [ 28%]
+test	層の全件を回す	2026-11-20T04:02:34.6219914Z tests/unit/dev_docs/features/documents/test_fields.py::test_get_field_when_selector PASSED [ 28%]
+test	層の全件を回す	2026-11-20T04:02:34.6226607Z tests/unit/dev_docs/features/documents/test_fields.py::test_is_markdown_body[markdown] PASSED [ 28%]
+test	層の全件を回す	2026-11-20T04:02:34.6232601Z tests/unit/dev_docs/features/documents/test_fields.py::test_is_markdown_body[upper-case] PASSED [ 28%]
+test	層の全件を回す	2026-11-20T04:02:34.6239015Z tests/unit/dev_docs/features/documents/test_fields.py::test_is_markdown_body[source-code] PASSED [ 28%]
+test	層の全件を回す	2026-11-20T04:02:34.6245600Z tests/unit/dev_docs/features/documents/test_fields.py::test_is_markdown_body[no-body-file] PASSED [ 28%]
+test	層の全件を回す	2026-11-20T04:02:34.6251066Z tests/unit/dev_docs/features/filter/test_fields.py::test_field_values PASSED [ 29%]
+test	層の全件を回す	2026-11-20T04:02:34.6256490Z tests/unit/dev_docs/features/filter/test_fields.py::test_field_values_when_columns PASSED [ 29%]
+test	層の全件を回す	2026-11-20T04:02:34.6262493Z tests/unit/dev_docs/features/filter/test_fields.py::test_heading_lines PASSED [ 29%]
+test	層の全件を回す	2026-11-20T04:02:34.6267878Z tests/unit/dev_docs/features/filter/test_filters.py::test_parse_compare_value PASSED [ 29%]
+test	層の全件を回す	2026-11-20T04:02:34.6273658Z tests/unit/dev_docs/features/filter/test_filters.py::test_parse_compare_value_when_invalid PASSED [ 29%]
+test	層の全件を回す	2026-11-20T04:02:34.6280713Z tests/unit/dev_docs/features/filter/test_filters.py::test_match_filter PASSED [ 30%]
+test	層の全件を回す	2026-11-20T04:02:34.6286505Z tests/unit/dev_docs/features/filter/test_filters.py::test_match_filter_when_match_all PASSED [ 30%]
+test	層の全件を回す	2026-11-20T04:02:34.6291917Z tests/unit/dev_docs/features/filter/test_filters.py::test_match_filter_when_case_sensitive PASSED [ 30%]
+test	層の全件を回す	2026-11-20T04:02:34.6298566Z tests/unit/dev_docs/features/filter/test_filters.py::test_match_filter_when_regex_lines PASSED [ 30%]
+test	層の全件を回す	2026-11-20T04:02:34.6304442Z tests/unit/dev_docs/features/filter/test_filters.py::test_match_filter_when_not PASSED [ 30%]
+test	層の全件を回す	2026-11-20T04:02:34.6312399Z tests/unit/dev_docs/features/filter/test_filters.py::test_match_filter_when_glob PASSED [ 30%]
+test	層の全件を回す	2026-11-20T04:02:34.6317959Z tests/unit/dev_docs/features/filter/test_filters.py::test_check_filter_when_group_keys PASSED [ 31%]
+test	層の全件を回す	2026-11-20T04:02:34.6323765Z tests/unit/dev_docs/features/filter/test_filters.py::test_check_filter_when_not_child PASSED [ 31%]
+test	層の全件を回す	2026-11-20T04:02:34.6328979Z tests/unit/dev_docs/features/filter/test_filters.py::test_check_filter_when_matches PASSED [ 31%]
+test	層の全件を回す	2026-11-20T04:02:34.6334681Z tests/unit/dev_docs/features/filter/test_filters.py::test_compile_regex PASSED [ 31%]
+test	層の全件を回す	2026-11-20T04:02:34.6339930Z tests/unit/dev_docs/features/lifecycle/test_control.py::test_attach PASSED [ 31%]
+test	層の全件を回す	2026-11-20T04:02:34.6344674Z tests/unit/dev_docs/features/lifecycle/test_control.py::test_request PASSED [ 31%]
+test	層の全件を回す	2026-11-20T04:02:34.6350392Z tests/unit/dev_docs/features/lifecycle/test_control.py::test_request_when_in_progress PASSED [ 32%]
+test	層の全件を回す	2026-11-20T04:02:34.6363679Z tests/unit/dev_docs/features/lifecycle/test_update.py::test_update_clone PASSED [ 32%]
+test	層の全件を回す	2026-11-20T04:02:34.6374044Z tests/unit/dev_docs/features/lifecycle/test_update.py::test_update_clone_when_up_to_date PASSED [ 32%]
+test	層の全件を回す	2026-11-20T04:02:34.6386421Z tests/unit/dev_docs/features/lifecycle/test_update.py::test_update_clone_when_migration_needed PASSED [ 32%]
+test	層の全件を回す	2026-11-20T04:02:34.6396471Z tests/unit/dev_docs/features/lifecycle/test_update.py::test_update_clone_when_in_progress PASSED [ 32%]
+test	層の全件を回す	2026-11-20T04:02:34.6407723Z tests/unit/dev_docs/features/lifecycle/test_update.py::test_update_clone_when_up_to_date_then_again PASSED [ 32%]
+test	層の全件を回す	2026-11-20T04:02:34.6419851Z tests/unit/dev_docs/features/lifecycle/test_update.py::test_update_clone_when_failed_then_again PASSED [ 33%]
+test	層の全件を回す	2026-11-20T04:02:34.6427916Z tests/unit/dev_docs/features/lifecycle/test_update.py::test_run PASSED   [ 33%]
+test	層の全件を回す	2026-11-20T04:02:34.6436748Z tests/unit/dev_docs/features/lifecycle/test_update.py::test_run_when_failed PASSED [ 33%]
+test	層の全件を回す	2026-11-20T04:02:34.6445042Z tests/unit/dev_docs/features/lifecycle/test_update.py::test_run_when_timeout PASSED [ 33%]
+test	層の全件を回す	2026-11-20T04:02:34.6453964Z tests/unit/dev_docs/features/lifecycle/test_update.py::test_run_when_not_found PASSED [ 33%]
+test	層の全件を回す	2026-11-20T04:02:34.6459643Z tests/unit/dev_docs/features/migrate/test_service.py::test_resolve_target PASSED [ 34%]
+test	層の全件を回す	2026-11-20T04:02:34.6493136Z tests/unit/dev_docs/features/migrate/test_service.py::test_plan_migration PASSED [ 34%]
+test	層の全件を回す	2026-11-20T04:02:34.6511167Z tests/unit/dev_docs/features/migrate/test_service.py::test_plan_migration_when_current PASSED [ 34%]
+test	層の全件を回す	2026-11-20T04:02:34.6524438Z tests/unit/dev_docs/features/migrate/test_service.py::test_plan_migration_when_newer PASSED [ 34%]
+test	層の全件を回す	2026-11-20T04:02:34.6536978Z tests/unit/dev_docs/features/migrate/test_service.py::test_plan_migration_when_no_version PASSED [ 34%]
+test	層の全件を回す	2026-11-20T04:02:34.7079310Z tests/unit/dev_docs/features/migrate/test_service.py::test_apply_migration PASSED [ 34%]
+test	層の全件を回す	2026-11-20T04:02:34.7154750Z tests/unit/dev_docs/features/migrate/test_service.py::test_apply_migration_when_record PASSED [ 35%]
+test	層の全件を回す	2026-11-20T04:02:34.7171902Z tests/unit/dev_docs/features/migrate/test_service.py::test_apply_migration_when_destructive PASSED [ 35%]
+test	層の全件を回す	2026-11-20T04:02:34.7230418Z tests/unit/dev_docs/features/migrate/test_service.py::test_apply_migration_when_invalid_result PASSED [ 35%]
+test	層の全件を回す	2026-11-20T04:02:34.7257305Z tests/unit/dev_docs/features/migrate/test_service.py::test_apply_migration_when_changed PASSED [ 35%]
+test	層の全件を回す	2026-11-20T04:02:34.7345958Z tests/unit/dev_docs/features/migrate/test_service.py::test_apply_migration_when_export_sources PASSED [ 35%]
+test	層の全件を回す	2026-11-20T04:02:34.7390640Z tests/unit/dev_docs/features/migrate/test_service.py::test_apply_migration_when_export_unreachable PASSED [ 35%]
+test	層の全件を回す	2026-11-20T04:02:34.7450494Z tests/unit/dev_docs/features/migrate/test_service.py::test_apply_migration_when_export_unexpected_status PASSED [ 36%]
+test	層の全件を回す	2026-11-20T04:02:34.7481844Z tests/unit/dev_docs/features/migrate/test_service.py::test_export_sources PASSED [ 36%]
+test	層の全件を回す	2026-11-20T04:02:34.7506727Z tests/unit/dev_docs/features/migrate/test_service.py::test_export_sources_when_id_omitted PASSED [ 36%]
+test	層の全件を回す	2026-11-20T04:02:34.7527201Z tests/unit/dev_docs/features/migrate/test_service.py::test_export_sources_when_name_unresolved PASSED [ 36%]
+test	層の全件を回す	2026-11-20T04:02:34.7544994Z tests/unit/dev_docs/features/migrate/test_service.py::test_export_sources_when_save_timeout PASSED [ 36%]
+test	層の全件を回す	2026-11-20T04:02:34.7571684Z tests/unit/dev_docs/features/migrate/test_service.py::test_export_sources_when_save_timeout_with_id_omitted PASSED [ 37%]
+test	層の全件を回す	2026-11-20T04:02:34.7589311Z tests/unit/dev_docs/features/migrate/test_service.py::test_export_sources_when_save_unconfirmed PASSED [ 37%]
+test	層の全件を回す	2026-11-20T04:02:34.7600888Z tests/unit/dev_docs/features/migrate/test_service.py::test_export_sources_when_fetch_unreachable PASSED [ 37%]
+test	層の全件を回す	2026-11-20T04:02:34.7627468Z tests/unit/dev_docs/features/migrate/test_service.py::test_export_sources_when_rejected PASSED [ 37%]
+test	層の全件を回す	2026-11-20T04:02:34.7645549Z tests/unit/dev_docs/features/migrate/test_service.py::test_export_sources_when_conflict PASSED [ 37%]
+test	層の全件を回す	2026-11-20T04:02:34.7680478Z tests/unit/dev_docs/features/migrate/test_service.py::test_export_sources_when_disabled_id_omitted PASSED [ 37%]
+test	層の全件を回す	2026-11-20T04:02:34.7698074Z tests/unit/dev_docs/features/migrate/test_service.py::test_export_sources_when_storage PASSED [ 38%]
+test	層の全件を回す	2026-11-20T04:02:34.7721911Z tests/unit/dev_docs/features/migrate/test_steps.py::test_load_steps PASSED [ 38%]
+test	層の全件を回す	2026-11-20T04:02:34.7734121Z tests/unit/dev_docs/features/migrate/test_steps.py::test_load_steps_when_none PASSED [ 38%]
+test	層の全件を回す	2026-11-20T04:02:34.7751256Z tests/unit/dev_docs/features/migrate/test_steps.py::test_load_steps_when_invalid_op PASSED [ 38%]
+test	層の全件を回す	2026-11-20T04:02:34.7770153Z tests/unit/dev_docs/features/migrate/test_steps.py::test_apply_step_when_rename PASSED [ 38%]
+test	層の全件を回す	2026-11-20T04:02:34.7781794Z tests/unit/dev_docs/features/migrate/test_steps.py::test_apply_step_when_add PASSED [ 38%]
+test	層の全件を回す	2026-11-20T04:02:34.7790800Z tests/unit/dev_docs/features/migrate/test_steps.py::test_apply_step_when_delete PASSED [ 39%]
+test	層の全件を回す	2026-11-20T04:02:34.7799512Z tests/unit/dev_docs/features/migrate/test_steps.py::test_apply_step_when_rename_conflict PASSED [ 39%]
+test	層の全件を回す	2026-11-20T04:02:34.7811054Z tests/unit/dev_docs/features/migrate/test_steps.py::test_apply_step_when_delete_value PASSED [ 39%]
+test	層の全件を回す	2026-11-20T04:02:34.7828490Z tests/unit/dev_docs/features/migrate/test_steps.py::test_apply_step_when_lift PASSED [ 39%]
+test	層の全件を回す	2026-11-20T04:02:34.7843594Z tests/unit/dev_docs/features/migrate/test_steps.py::test_apply_step_when_unwrap PASSED [ 39%]
+test	層の全件を回す	2026-11-20T04:02:34.7856583Z tests/unit/dev_docs/features/migrate/test_steps.py::test_apply_step_when_lift_conflict PASSED [ 40%]
+test	層の全件を回す	2026-11-20T04:02:34.7861807Z tests/unit/dev_docs/features/prompt_doc/test_render.py::test_flatten_vars PASSED [ 40%]
+test	層の全件を回す	2026-11-20T04:02:34.7896516Z tests/unit/dev_docs/features/prompt_doc/test_render.py::test_build_environment PASSED [ 40%]
+test	層の全件を回す	2026-11-20T04:02:34.7906482Z tests/unit/dev_docs/features/prompt_doc/test_render.py::test_build_environment_when_traced PASSED [ 40%]
+test	層の全件を回す	2026-11-20T04:02:34.7911970Z tests/unit/dev_docs/features/prompt_doc/test_render.py::test_build_values PASSED [ 40%]
+test	層の全件を回す	2026-11-20T04:02:34.7920448Z tests/unit/dev_docs/features/prompt_doc/test_render.py::test_build_values_when_type_mismatch PASSED [ 40%]
+test	層の全件を回す	2026-11-20T04:02:34.7933201Z tests/unit/dev_docs/features/prompt_doc/test_render.py::test_compile_parts PASSED [ 41%]
+test	層の全件を回す	2026-11-20T04:02:34.7940823Z tests/unit/dev_docs/features/prompt_doc/test_render.py::test_compile_parts_when_syntax_error PASSED [ 41%]
+test	層の全件を回す	2026-11-20T04:02:34.7954112Z tests/unit/dev_docs/features/prompt_doc/test_render.py::test_compile_parts_when_condition_braced PASSED [ 41%]
+test	層の全件を回す	2026-11-20T04:02:34.7971027Z tests/unit/dev_docs/features/prompt_doc/test_render.py::test_render_example PASSED [ 41%]
+test	層の全件を回す	2026-11-20T04:02:34.7987744Z tests/unit/dev_docs/features/prompt_doc/test_render.py::test_render_example_when_condition_false PASSED [ 41%]
+test	層の全件を回す	2026-11-20T04:02:34.7997536Z tests/unit/dev_docs/features/prompt_doc/test_render.py::test_render_example_when_hook PASSED [ 41%]
+test	層の全件を回す	2026-11-20T04:02:34.8007166Z tests/unit/dev_docs/features/prompt_doc/test_render.py::test_render_example_when_agent PASSED [ 42%]
+test	層の全件を回す	2026-11-20T04:02:34.8018241Z tests/unit/dev_docs/features/prompt_doc/test_render.py::test_render_example_when_lang_missing PASSED [ 42%]
+test	層の全件を回す	2026-11-20T04:02:34.8027347Z tests/unit/dev_docs/features/prompt_doc/test_render.py::test_render_example_when_undefined PASSED [ 42%]
+test	層の全件を回す	2026-11-20T04:02:34.8043522Z tests/unit/dev_docs/features/prompt_doc/test_render.py::test_render_example_when_syntax_error PASSED [ 42%]
+test	層の全件を回す	2026-11-20T04:02:34.8054081Z tests/unit/dev_docs/features/prompt_doc/test_render.py::test_render_example_when_runtime_error PASSED [ 42%]
+test	層の全件を回す	2026-11-20T04:02:34.8362132Z tests/unit/dev_docs/features/prompt_doc/test_runtime.py::test_prompt_set_render PASSED [ 42%]
+test	層の全件を回す	2026-11-20T04:02:34.8654252Z tests/unit/dev_docs/features/prompt_doc/test_runtime.py::test_prompt_set_render_when_lang_missing PASSED [ 43%]
+test	層の全件を回す	2026-11-20T04:02:34.8658465Z tests/unit/dev_docs/features/prompt_doc/test_runtime.py::test_prompts_dir PASSED [ 43%]
+test	層の全件を回す	2026-11-20T04:02:34.8668500Z tests/unit/dev_docs/features/prompt_doc/test_runtime.py::test_prompts_dir_when_env PASSED [ 43%]
+test	層の全件を回す	2026-11-20T04:02:34.8966222Z tests/unit/dev_docs/features/prompt_doc/test_runtime.py::test_load_prompts PASSED [ 43%]
+test	層の全件を回す	2026-11-20T04:02:34.9249997Z tests/unit/dev_docs/features/prompt_doc/test_runtime.py::test_load_prompts_when_agent PASSED [ 43%]
+test	層の全件を回す	2026-11-20T04:02:34.9539290Z tests/unit/dev_docs/features/prompt_doc/test_runtime.py::test_load_prompts_when_schema_violation PASSED [ 44%]
+test	層の全件を回す	2026-11-20T04:02:34.9928630Z tests/unit/dev_docs/features/prompt_doc/test_runtime.py::test_load_prompts_when_many_violations PASSED [ 44%]
+test	層の全件を回す	2026-11-20T04:02:35.0201854Z tests/unit/dev_docs/features/prompt_doc/test_runtime.py::test_load_prompts_when_id_mismatch PASSED [ 44%]
+test	層の全件を回す	2026-11-20T04:02:35.0482180Z tests/unit/dev_docs/features/prompt_doc/test_runtime.py::test_load_prompts_when_syntax_error PASSED [ 44%]
+test	層の全件を回す	2026-11-20T04:02:35.0761657Z tests/unit/dev_docs/features/prompt_doc/test_runtime.py::test_load_prompts_when_undefined_variable PASSED [ 44%]
+test	層の全件を回す	2026-11-20T04:02:35.1027817Z tests/unit/dev_docs/features/prompt_doc/test_runtime.py::test_load_prompts_when_required_missing PASSED [ 44%]
+test	層の全件を回す	2026-11-20T04:02:35.1338795Z tests/unit/dev_docs/features/prompt_doc/test_runtime.py::test_load_prompts_when_bundled PASSED [ 45%]
+test	層の全件を回す	2026-11-20T04:02:35.1343219Z tests/unit/dev_docs/features/settings/test_query.py::test_config_path PASSED [ 45%]
+test	層の全件を回す	2026-11-20T04:02:35.1349902Z tests/unit/dev_docs/features/settings/test_query.py::test_config_path_when_unset PASSED [ 45%]
+test	層の全件を回す	2026-11-20T04:02:35.1354958Z tests/unit/dev_docs/features/settings/test_query.py::test_config_path_when_xdg_config_home_set PASSED [ 45%]
+test	層の全件を回す	2026-11-20T04:02:35.1360019Z tests/unit/dev_docs/features/settings/test_query.py::test_xdg_base_dir PASSED [ 45%]
+test	層の全件を回す	2026-11-20T04:02:35.1366965Z tests/unit/dev_docs/features/settings/test_query.py::test_xdg_base_dir_when_unset_or_relative[env0] PASSED [ 45%]
+test	層の全件を回す	2026-11-20T04:02:35.1373083Z tests/unit/dev_docs/features/settings/test_query.py::test_xdg_base_dir_when_unset_or_relative[env1] PASSED [ 46%]
+test	層の全件を回す	2026-11-20T04:02:35.1379429Z tests/unit/dev_docs/features/settings/test_query.py::test_xdg_base_dir_when_unset_or_relative[env2] PASSED [ 46%]
+test	層の全件を回す	2026-11-20T04:02:35.1384240Z tests/unit/dev_docs/features/settings/test_query.py::test_state_dir_path PASSED [ 46%]
+test	層の全件を回す	2026-11-20T04:02:35.1389477Z tests/unit/dev_docs/features/settings/test_query.py::test_state_dir_path_when_config_value PASSED [ 46%]
+test	層の全件を回す	2026-11-20T04:02:35.1394314Z tests/unit/dev_docs/features/settings/test_query.py::test_state_dir_path_when_xdg_state_home_set PASSED [ 46%]
+test	層の全件を回す	2026-11-20T04:02:35.1400057Z tests/unit/dev_docs/features/settings/test_query.py::test_state_dir_path_when_unset PASSED [ 47%]
+test	層の全件を回す	2026-11-20T04:02:35.1444430Z tests/unit/dev_docs/features/settings/test_query.py::test_load_terminal_config PASSED [ 47%]
+test	層の全件を回す	2026-11-20T04:02:35.1486776Z tests/unit/dev_docs/features/settings/test_query.py::test_load_terminal_config_when_mdmark_version PASSED [ 47%]
+test	層の全件を回す	2026-11-20T04:02:35.1527087Z tests/unit/dev_docs/features/settings/test_query.py::test_load_terminal_config_when_state_dir_env_set PASSED [ 47%]
+test	層の全件を回す	2026-11-20T04:02:35.1536600Z tests/unit/dev_docs/features/settings/test_query.py::test_load_terminal_config_when_missing PASSED [ 47%]
+test	層の全件を回す	2026-11-20T04:02:35.1549176Z tests/unit/dev_docs/features/settings/test_query.py::test_load_terminal_config_when_yaml_broken PASSED [ 47%]
+test	層の全件を回す	2026-11-20T04:02:35.1594844Z tests/unit/dev_docs/features/settings/test_query.py::test_load_terminal_config_when_schema_invalid PASSED [ 48%]
+test	層の全件を回す	2026-11-20T04:02:35.1639256Z tests/unit/dev_docs/features/settings/test_query.py::test_load_terminal_config_when_leftover_sources PASSED [ 48%]
+test	層の全件を回す	2026-11-20T04:02:35.1671839Z tests/unit/dev_docs/features/settings/test_query.py::test_validate_terminal_config PASSED [ 48%]
+test	層の全件を回す	2026-11-20T04:02:35.1703808Z tests/unit/dev_docs/features/settings/test_query.py::test_validate_terminal_config_when_newer_version PASSED [ 48%]
+test	層の全件を回す	2026-11-20T04:02:35.1736496Z tests/unit/dev_docs/features/settings/test_query.py::test_validate_terminal_config_when_project_index_invalid PASSED [ 48%]
+test	層の全件を回す	2026-11-20T04:02:35.1769066Z tests/unit/dev_docs/features/settings/test_query.py::test_validate_terminal_config_when_leftover_sources PASSED [ 48%]
+test	層の全件を回す	2026-11-20T04:02:35.1780290Z tests/unit/dev_docs/features/settings/test_query.py::test_listen_port PASSED [ 49%]
+test	層の全件を回す	2026-11-20T04:02:35.1789470Z tests/unit/dev_docs/features/settings/test_query.py::test_listen_port_when_unset PASSED [ 49%]
+test	層の全件を回す	2026-11-20T04:02:35.1799245Z tests/unit/dev_docs/features/settings/test_query.py::test_listen_port_when_invalid PASSED [ 49%]
+test	層の全件を回す	2026-11-20T04:02:35.2562872Z tests/unit/dev_docs/features/settings/test_route.py::test_build_settings_router_when_get PASSED [ 49%]
+test	層の全件を回す	2026-11-20T04:02:35.2630618Z tests/unit/dev_docs/features/settings/test_route.py::test_build_settings_router_when_put PASSED [ 49%]
+test	層の全件を回す	2026-11-20T04:02:35.2686537Z tests/unit/dev_docs/features/settings/test_route.py::test_build_settings_router_when_pending_reload PASSED [ 50%]
+test	層の全件を回す	2026-11-20T04:02:35.2754397Z tests/unit/dev_docs/features/settings/test_route.py::test_build_settings_router_when_rejected PASSED [ 50%]
+test	層の全件を回す	2026-11-20T04:02:35.2813467Z tests/unit/dev_docs/features/settings/test_route.py::test_build_settings_router_when_unexpected_status PASSED [ 50%]
+test	層の全件を回す	2026-11-20T04:02:35.2897293Z tests/unit/dev_docs/features/settings/test_route.py::test_build_settings_router_when_unreachable PASSED [ 50%]
+test	層の全件を回す	2026-11-20T04:02:35.2958607Z tests/unit/dev_docs/features/settings/test_route.py::test_build_settings_router_when_version_conflict PASSED [ 50%]
+test	層の全件を回す	2026-11-20T04:02:35.3011127Z tests/unit/dev_docs/features/settings/test_route.py::test_build_settings_router_when_storage PASSED [ 50%]
+test	層の全件を回す	2026-11-20T04:02:35.3024711Z tests/unit/dev_docs/features/settings/test_service.py::test_save_sources PASSED [ 51%]
+test	層の全件を回す	2026-11-20T04:02:35.3037490Z tests/unit/dev_docs/features/settings/test_service.py::test_save_sources_when_defaults PASSED [ 51%]
+test	層の全件を回す	2026-11-20T04:02:35.3049787Z tests/unit/dev_docs/features/settings/test_service.py::test_save_sources_when_outside_read_false PASSED [ 51%]
+test	層の全件を回す	2026-11-20T04:02:35.3060416Z tests/unit/dev_docs/features/settings/test_service.py::test_save_sources_when_rejected PASSED [ 51%]
+test	層の全件を回す	2026-11-20T04:02:35.3072719Z tests/unit/dev_docs/features/settings/test_service.py::test_save_sources_when_expected_version PASSED [ 51%]
+test	層の全件を回す	2026-11-20T04:02:35.3083685Z tests/unit/dev_docs/features/settings/test_service.py::test_save_sources_when_version_conflict PASSED [ 51%]
+test	層の全件を回す	2026-11-20T04:02:35.3103131Z tests/unit/dev_docs/features/settings/test_service.py::test_save_sources_when_storage PASSED [ 52%]
+test	層の全件を回す	2026-11-20T04:02:35.3158771Z tests/unit/dev_docs/features/view/test_columns.py::test_save PASSED      [ 52%]
+test	層の全件を回す	2026-11-20T04:02:35.3201355Z tests/unit/dev_docs/features/view/test_document.py::test_get_document PASSED [ 52%]
+test	層の全件を回す	2026-11-20T04:02:35.3245222Z tests/unit/dev_docs/features/view/test_document.py::test_get_document_when_diff PASSED [ 52%]
+test	層の全件を回す	2026-11-20T04:02:35.3277347Z tests/unit/dev_docs/features/view/test_document.py::test_get_document_when_convert_failed PASSED [ 52%]
+test	層の全件を回す	2026-11-20T04:02:35.3306775Z tests/unit/dev_docs/features/view/test_document.py::test_get_document_when_yaml_unreadable PASSED [ 52%]
+test	層の全件を回す	2026-11-20T04:02:35.3336042Z tests/unit/dev_docs/features/view/test_document.py::test_get_document_when_missing PASSED [ 53%]
+test	層の全件を回す	2026-11-20T04:02:35.3368191Z tests/unit/dev_docs/features/view/test_document.py::test_get_document_when_not_git PASSED [ 53%]
+test	層の全件を回す	2026-11-20T04:02:35.3405828Z tests/unit/dev_docs/features/view/test_document.py::test_get_document_when_aliases PASSED [ 53%]
+test	層の全件を回す	2026-11-20T04:02:35.3435863Z tests/unit/dev_docs/features/view/test_document.py::test_get_document_when_decision PASSED [ 53%]
+test	層の全件を回す	2026-11-20T04:02:35.3465852Z tests/unit/dev_docs/features/view/test_document.py::test_get_document_when_decision_ambiguous PASSED [ 53%]
+test	層の全件を回す	2026-11-20T04:02:35.3545595Z tests/unit/dev_docs/features/view/test_document.py::test_get_document_when_body_path PASSED [ 54%]
+test	層の全件を回す	2026-11-20T04:02:35.3579880Z tests/unit/dev_docs/features/view/test_document.py::test_get_document_when_embed PASSED [ 54%]
+test	層の全件を回す	2026-11-20T04:02:35.3597244Z tests/unit/dev_docs/features/view/test_document.py::test_get_document_when_unreachable PASSED [ 54%]
+test	層の全件を回す	2026-11-20T04:02:35.3602087Z tests/unit/dev_docs/features/view/test_document.py::test_not_found_fields PASSED [ 54%]
+test	層の全件を回す	2026-11-20T04:02:35.3634808Z tests/unit/dev_docs/features/view/test_document.py::test_get_document_when_requests_concurrent PASSED [ 54%]
+test	層の全件を回す	2026-11-20T04:02:35.5660490Z tests/unit/dev_docs/features/view/test_document.py::test_get_document_when_total_timeout PASSED [ 54%]
+test	層の全件を回す	2026-11-20T04:02:35.5716385Z tests/unit/dev_docs/features/view/test_document.py::test_get_document_when_list_reused PASSED [ 55%]
+test	層の全件を回す	2026-11-20T04:02:35.5789704Z tests/unit/dev_docs/features/view/test_document.py::test_get_document_when_diff_list_reused PASSED [ 55%]
+test	層の全件を回す	2026-11-20T04:02:35.5840812Z tests/unit/dev_docs/features/view/test_document.py::test_get_document_when_config_changed PASSED [ 55%]
+test	層の全件を回す	2026-11-20T04:02:35.5890494Z tests/unit/dev_docs/features/view/test_document.py::test_get_document_when_list_not_cacheable PASSED [ 55%]
+test	層の全件を回す	2026-11-20T04:02:35.5909276Z tests/unit/dev_docs/features/view/test_document.py::test_get_document_when_source_unknown PASSED [ 55%]
+test	層の全件を回す	2026-11-20T04:02:35.5914659Z tests/unit/dev_docs/features/view/test_document_lists.py::test_get_when_used PASSED [ 55%]
+test	層の全件を回す	2026-11-20T04:02:35.5920188Z tests/unit/dev_docs/features/view/test_document_lists.py::test_put_when_limit_exceeded PASSED [ 56%]
+test	層の全件を回す	2026-11-20T04:02:35.5937633Z tests/unit/dev_docs/features/view/test_document_lists.py::test_fetch_when_shared PASSED [ 56%]
+test	層の全件を回す	2026-11-20T04:02:35.5945146Z tests/unit/dev_docs/features/view/test_document_lists.py::test_fetch_when_failed PASSED [ 56%]
+test	層の全件を回す	2026-11-20T04:02:35.5952184Z tests/unit/dev_docs/features/view/test_document_lists.py::test_fetch_when_waiter_cancelled PASSED [ 56%]
+test	層の全件を回す	2026-11-20T04:02:35.5957621Z tests/unit/dev_docs/features/view/test_document_lists.py::test_resolve_commit PASSED [ 56%]
+test	層の全件を回す	2026-11-20T04:02:35.5964303Z tests/unit/dev_docs/features/view/test_document_lists.py::test_resolve_commit_when_unresolvable[expression] PASSED [ 57%]
+test	層の全件を回す	2026-11-20T04:02:35.5970711Z tests/unit/dev_docs/features/view/test_document_lists.py::test_resolve_commit_when_unresolvable[unknown-branch] PASSED [ 57%]
+test	層の全件を回す	2026-11-20T04:02:35.5977506Z tests/unit/dev_docs/features/view/test_document_lists.py::test_resolve_commit_when_unresolvable[not-git] PASSED [ 57%]
+test	層の全件を回す	2026-11-20T04:02:35.5985805Z tests/unit/dev_docs/features/view/test_nav.py::test_build_nav PASSED     [ 57%]
+test	層の全件を回す	2026-11-20T04:02:35.5994803Z tests/unit/dev_docs/features/view/test_nav.py::test_build_nav_when_no_nav PASSED [ 57%]
+test	層の全件を回す	2026-11-20T04:02:35.6004588Z tests/unit/dev_docs/features/view/test_nav.py::test_build_nav_when_metadata_filter PASSED [ 57%]
+test	層の全件を回す	2026-11-20T04:02:35.6013052Z tests/unit/dev_docs/features/view/test_nav.py::test_build_nav_when_metadata_column_renamed PASSED [ 58%]
+test	層の全件を回す	2026-11-20T04:02:35.6022725Z tests/unit/dev_docs/features/view/test_nav.py::test_build_nav_when_group_by_folder PASSED [ 58%]
+test	層の全件を回す	2026-11-20T04:02:35.6030773Z tests/unit/dev_docs/features/view/test_nav.py::test_build_nav_when_group_by_common_keys PASSED [ 58%]
+test	層の全件を回す	2026-11-20T04:02:35.6037730Z tests/unit/dev_docs/features/view/test_nav.py::test_build_nav_when_group_by_yaml_kind PASSED [ 58%]
+test	層の全件を回す	2026-11-20T04:02:35.6045086Z tests/unit/dev_docs/features/view/test_nav.py::test_folder_items PASSED  [ 58%]
+test	層の全件を回す	2026-11-20T04:02:35.6052443Z tests/unit/dev_docs/features/view/test_nav.py::test_folder_items_when_multiple_globs PASSED [ 58%]
+test	層の全件を回す	2026-11-20T04:02:35.6058721Z tests/unit/dev_docs/features/view/test_nav.py::test_folder_items_when_records PASSED [ 59%]
+test	層の全件を回す	2026-11-20T04:02:35.6064144Z tests/unit/dev_docs/features/view/test_nav.py::test_mark_nav_changes PASSED [ 59%]
+test	層の全件を回す	2026-11-20T04:02:35.6070037Z tests/unit/dev_docs/features/view/test_nav.py::test_mark_nav_changes_when_deleted PASSED [ 59%]
+test	層の全件を回す	2026-11-20T04:02:35.6075516Z tests/unit/dev_docs/features/view/test_nav.py::test_mark_nav_changes_when_group_missing PASSED [ 59%]
+test	層の全件を回す	2026-11-20T04:02:35.6085469Z tests/unit/dev_docs/features/view/test_nav.py::test_build_nav_when_filter PASSED [ 59%]
+test	層の全件を回す	2026-11-20T04:02:35.6094300Z tests/unit/dev_docs/features/view/test_nav.py::test_build_nav_when_records_filter PASSED [ 60%]
+test	層の全件を回す	2026-11-20T04:02:35.6099972Z tests/unit/dev_docs/features/view/test_paths.py::test_page_path PASSED   [ 60%]
+test	層の全件を回す	2026-11-20T04:02:35.6105645Z tests/unit/dev_docs/features/view/test_paths.py::test_find_page PASSED   [ 60%]
+test	層の全件を回す	2026-11-20T04:02:35.6111097Z tests/unit/dev_docs/features/view/test_paths.py::test_find_page_when_body_path PASSED [ 60%]
+test	層の全件を回す	2026-11-20T04:02:35.6117231Z tests/unit/dev_docs/features/view/test_paths.py::test_find_page_when_missing PASSED [ 60%]
+test	層の全件を回す	2026-11-20T04:02:35.6294340Z tests/unit/dev_docs/features/view/test_route.py::test_build_view_router_when_document PASSED [ 60%]
+test	層の全件を回す	2026-11-20T04:02:35.6689219Z tests/unit/dev_docs/features/view/test_route.py::test_build_view_router_when_document_missing PASSED [ 61%]
+test	層の全件を回す	2026-11-20T04:02:35.6823443Z tests/unit/dev_docs/features/view/test_route.py::test_build_view_router_when_search PASSED [ 61%]
+test	層の全件を回す	2026-11-20T04:02:35.6942860Z tests/unit/dev_docs/features/view/test_route.py::test_build_view_router_when_query_too_long PASSED [ 61%]
+test	層の全件を回す	2026-11-20T04:02:35.7065904Z tests/unit/dev_docs/features/view/test_route.py::test_build_view_router_when_refs PASSED [ 61%]
+test	層の全件を回す	2026-11-20T04:02:35.7245515Z tests/unit/dev_docs/features/view/test_route.py::test_build_view_router_when_columns PASSED [ 61%]
+test	層の全件を回す	2026-11-20T04:02:35.7371188Z tests/unit/dev_docs/features/view/test_route.py::test_build_view_router_when_cross_origin PASSED [ 61%]
+test	層の全件を回す	2026-11-20T04:02:35.7532735Z tests/unit/dev_docs/features/view/test_route.py::test_build_view_router_when_project_index_unreachable PASSED [ 62%]
+test	層の全件を回す	2026-11-20T04:02:35.7551828Z tests/unit/dev_docs/features/view/test_search.py::test_screen_search PASSED [ 62%]
+test	層の全件を回す	2026-11-20T04:02:35.7565937Z tests/unit/dev_docs/features/view/test_search.py::test_screen_search_when_unreachable PASSED [ 62%]
+test	層の全件を回す	2026-11-20T04:02:35.7575047Z tests/unit/dev_docs/integrations/project_index/test_client.py::test_request_when_refused PASSED [ 62%]
+test	層の全件を回す	2026-11-20T04:02:35.7583767Z tests/unit/dev_docs/integrations/project_index/test_client.py::test_request_when_timeout PASSED [ 62%]
+test	層の全件を回す	2026-11-20T04:02:35.9607849Z tests/unit/dev_docs/integrations/project_index/test_client.py::test_request_when_total_timeout PASSED [ 62%]
+test	層の全件を回す	2026-11-20T04:02:35.9622412Z tests/unit/dev_docs/integrations/project_index/test_client.py::test_request_when_not_found[source] PASSED [ 63%]
+test	層の全件を回す	2026-11-20T04:02:35.9634218Z tests/unit/dev_docs/integrations/project_index/test_client.py::test_request_when_not_found[not_served] PASSED [ 63%]
+test	層の全件を回す	2026-11-20T04:02:35.9645805Z tests/unit/dev_docs/integrations/project_index/test_client.py::test_request_when_not_found[ref] PASSED [ 63%]
+test	層の全件を回す	2026-11-20T04:02:35.9657411Z tests/unit/dev_docs/integrations/project_index/test_client.py::test_request_when_not_found[doc] PASSED [ 63%]
+test	層の全件を回す	2026-11-20T04:02:35.9667915Z tests/unit/dev_docs/integrations/project_index/test_client.py::test_request_when_unexpected_status PASSED [ 63%]
+test	層の全件を回す	2026-11-20T04:02:35.9678791Z tests/unit/dev_docs/integrations/project_index/test_client.py::test_list_sources PASSED [ 64%]
+test	層の全件を回す	2026-11-20T04:02:35.9692751Z tests/unit/dev_docs/integrations/project_index/test_client.py::test_source_view PASSED [ 64%]
+test	層の全件を回す	2026-11-20T04:02:35.9705860Z tests/unit/dev_docs/integrations/project_index/test_client.py::test_source_view_when_not_git PASSED [ 64%]
+test	層の全件を回す	2026-11-20T04:02:35.9718635Z tests/unit/dev_docs/integrations/project_index/test_client.py::test_source_view_when_source_unknown PASSED [ 64%]
+test	層の全件を回す	2026-11-20T04:02:35.9736051Z tests/unit/dev_docs/integrations/project_index/test_client.py::test_source_config PASSED [ 64%]
+test	層の全件を回す	2026-11-20T04:02:35.9741315Z tests/unit/dev_docs/integrations/project_index/test_client.py::test_build_source_view_when_not_git PASSED [ 64%]
+test	層の全件を回す	2026-11-20T04:02:35.9752382Z tests/unit/dev_docs/integrations/project_index/test_client.py::test_list_documents PASSED [ 65%]
+test	層の全件を回す	2026-11-20T04:02:35.9763493Z tests/unit/dev_docs/integrations/project_index/test_client.py::test_fetch_document_list PASSED [ 65%]
+test	層の全件を回す	2026-11-20T04:02:35.9774462Z tests/unit/dev_docs/integrations/project_index/test_client.py::test_list_documents_when_records PASSED [ 65%]
+test	層の全件を回す	2026-11-20T04:02:35.9785054Z tests/unit/dev_docs/integrations/project_index/test_client.py::test_document_when_failure PASSED [ 65%]
+test	層の全件を回す	2026-11-20T04:02:35.9796183Z tests/unit/dev_docs/integrations/project_index/test_client.py::test_document_when_record PASSED [ 65%]
+test	層の全件を回す	2026-11-20T04:02:35.9806474Z tests/unit/dev_docs/integrations/project_index/test_client.py::test_document_when_yaml_unreadable PASSED [ 65%]
+test	層の全件を回す	2026-11-20T04:02:35.9816408Z tests/unit/dev_docs/integrations/project_index/test_client.py::test_decisions PASSED [ 66%]
+test	層の全件を回す	2026-11-20T04:02:35.9826724Z tests/unit/dev_docs/integrations/project_index/test_client.py::test_decision_when_ambiguous PASSED [ 66%]
+test	層の全件を回す	2026-11-20T04:02:35.9837651Z tests/unit/dev_docs/integrations/project_index/test_client.py::test_search PASSED [ 66%]
+test	層の全件を回す	2026-11-20T04:02:35.9847859Z tests/unit/dev_docs/integrations/project_index/test_client.py::test_refs_when_not_git PASSED [ 66%]
+test	層の全件を回す	2026-11-20T04:02:35.9858000Z tests/unit/dev_docs/integrations/project_index/test_client.py::test_settings_sources PASSED [ 66%]
+test	層の全件を回す	2026-11-20T04:02:35.9869916Z tests/unit/dev_docs/integrations/project_index/test_client.py::test_put_settings_sources PASSED [ 67%]
+test	層の全件を回す	2026-11-20T04:02:35.9880355Z tests/unit/dev_docs/integrations/project_index/test_client.py::test_put_settings_sources_when_rejected PASSED [ 67%]
+test	層の全件を回す	2026-11-20T04:02:35.9892700Z tests/unit/dev_docs/integrations/project_index/test_client.py::test_put_settings_sources_when_expected_version PASSED [ 67%]
+test	層の全件を回す	2026-11-20T04:02:35.9902880Z tests/unit/dev_docs/integrations/project_index/test_client.py::test_put_settings_sources_when_conflict PASSED [ 67%]
+test	層の全件を回す	2026-11-20T04:02:35.9913115Z tests/unit/dev_docs/integrations/project_index/test_client.py::test_save_settings_sources PASSED [ 67%]
+test	層の全件を回す	2026-11-20T04:02:35.9923618Z tests/unit/dev_docs/integrations/project_index/test_client.py::test_save_settings_sources_when_conflict PASSED [ 67%]
+test	層の全件を回す	2026-11-20T04:02:35.9934014Z tests/unit/dev_docs/integrations/project_index/test_client.py::test_save_settings_sources_when_invalid PASSED [ 68%]
+test	層の全件を回す	2026-11-20T04:02:35.9945140Z tests/unit/dev_docs/integrations/project_index/test_client.py::test_list_sources_when_loading PASSED [ 68%]
+test	層の全件を回す	2026-11-20T04:02:35.9950697Z tests/unit/dev_docs/integrations/project_index/test_types.py::test_parse_document PASSED [ 68%]
+test	層の全件を回す	2026-11-20T04:02:35.9955808Z tests/unit/dev_docs/integrations/project_index/test_types.py::test_parse_document_when_value_null PASSED [ 68%]
+test	層の全件を回す	2026-11-20T04:02:35.9960970Z tests/unit/dev_docs/integrations/project_index/test_types.py::test_parse_document_when_common_keys_null PASSED [ 68%]
+test	層の全件を回す	2026-11-20T04:02:35.9966975Z tests/unit/dev_docs/integrations/project_index/test_types.py::test_parse_document_when_key_missing PASSED [ 68%]
+test	層の全件を回す	2026-11-20T04:02:35.9972599Z tests/unit/dev_docs/integrations/project_index/test_types.py::test_parse_document_list_when_records PASSED [ 69%]
+test	層の全件を回す	2026-11-20T04:02:36.0338811Z tests/unit/dev_docs/server/mcp/test_admin.py::test_build_admin_mcp PASSED [ 69%]
+test	層の全件を回す	2026-11-20T04:02:36.0680525Z tests/unit/dev_docs/server/mcp/test_admin.py::test_build_admin_mcp_when_status PASSED [ 69%]
+test	層の全件を回す	2026-11-20T04:02:36.1032399Z tests/unit/dev_docs/server/mcp/test_admin.py::test_build_admin_mcp_when_restart_in_progress PASSED [ 69%]
+test	層の全件を回す	2026-11-20T04:02:36.1383796Z tests/unit/dev_docs/server/mcp/test_admin.py::test_build_admin_mcp_when_descriptions PASSED [ 69%]
+test	層の全件を回す	2026-11-20T04:02:36.1389280Z tests/unit/dev_docs/server/mcp/test_result.py::test_to_tool_result PASSED [ 70%]
+test	層の全件を回す	2026-11-20T04:02:36.1394884Z tests/unit/dev_docs/server/mcp/test_result.py::test_to_tool_result_when_json PASSED [ 70%]
+test	層の全件を回す	2026-11-20T04:02:36.1405558Z tests/unit/dev_docs/server/mcp/test_result.py::test_tool_error PASSED    [ 70%]
+test	層の全件を回す	2026-11-20T04:02:36.1411376Z tests/unit/dev_docs/server/mcp/test_result.py::test_tool_error_when_validation PASSED [ 70%]
+test	層の全件を回す	2026-11-20T04:02:36.1416506Z tests/unit/dev_docs/server/mcp/test_result.py::test_tool_prompt_id PASSED [ 70%]
+test	層の全件を回す	2026-11-20T04:02:36.1421747Z tests/unit/dev_docs/server/mcp/test_result.py::test_mcp_prompt_ids PASSED [ 70%]
+test	層の全件を回す	2026-11-20T04:02:36.2256623Z tests/unit/dev_docs/server/test_app.py::test_build_app PASSED            [ 71%]
+test	層の全件を回す	2026-11-20T04:02:36.3100209Z tests/unit/dev_docs/server/test_app.py::test_build_app_when_openapi PASSED [ 71%]
+test	層の全件を回す	2026-11-20T04:02:36.3589669Z tests/unit/dev_docs/server/test_app.py::test_build_app_when_screen PASSED [ 71%]
+test	層の全件を回す	2026-11-20T04:02:36.4195778Z tests/unit/dev_docs/server/test_app.py::test_build_app_when_mcp_without_slash PASSED [ 71%]
+test	層の全件を回す	2026-11-20T04:02:36.4203077Z tests/unit/dev_docs/server/test_app.py::test_slashless_mcp_path_middleware PASSED [ 71%]
+test	層の全件を回す	2026-11-20T04:02:36.4211549Z tests/unit/dev_docs/server/test_app.py::test_slashless_mcp_path_middleware_when_other_path[with_slash] PASSED [ 71%]
+test	層の全件を回す	2026-11-20T04:02:36.4218628Z tests/unit/dev_docs/server/test_app.py::test_slashless_mcp_path_middleware_when_other_path[prefix] PASSED [ 72%]
+test	層の全件を回す	2026-11-20T04:02:36.4225017Z tests/unit/dev_docs/server/test_app.py::test_slashless_mcp_path_middleware_when_other_path[removed] PASSED [ 72%]
+test	層の全件を回す	2026-11-20T04:02:36.4231542Z tests/unit/dev_docs/server/test_app.py::test_slashless_mcp_path_middleware_when_other_path[lifespan] PASSED [ 72%]
+test	層の全件を回す	2026-11-20T04:02:36.4270255Z tests/unit/dev_docs/server/test_app.py::test_api_gzip_middleware PASSED  [ 72%]
+test	層の全件を回す	2026-11-20T04:02:36.4290895Z tests/unit/dev_docs/server/test_app.py::test_api_gzip_middleware_when_other_path[/_admin/mcp/] PASSED [ 72%]
+test	層の全件を回す	2026-11-20T04:02:36.4310810Z tests/unit/dev_docs/server/test_app.py::test_api_gzip_middleware_when_other_path[/] PASSED [ 72%]
+test	層の全件を回す	2026-11-20T04:02:36.4330880Z tests/unit/dev_docs/server/test_app.py::test_api_gzip_middleware_when_other_path[/_apix] PASSED [ 73%]
+test	層の全件を回す	2026-11-20T04:02:36.5179708Z tests/unit/dev_docs/server/test_app.py::test_build_app_when_gzip PASSED  [ 73%]
+test	層の全件を回す	2026-11-20T04:02:36.5186661Z tests/unit/dev_docs/server/test_app.py::test_route_operation_id PASSED   [ 73%]
+test	層の全件を回す	2026-11-20T04:02:36.5192968Z tests/unit/dev_docs/server/test_app.py::test_route_operation_id_when_no_tag PASSED [ 73%]
+test	層の全件を回す	2026-11-20T04:02:36.5223666Z tests/unit/dev_docs/server/test_error_handlers.py::test_register_error_handlers PASSED [ 73%]
+test	層の全件を回す	2026-11-20T04:02:36.5251957Z tests/unit/dev_docs/server/test_error_handlers.py::test_register_error_handlers_when_request_invalid PASSED [ 74%]
+test	層の全件を回す	2026-11-20T04:02:36.5273000Z tests/unit/dev_docs/server/test_error_handlers.py::test_register_error_handlers_when_http_error PASSED [ 74%]
+test	層の全件を回す	2026-11-20T04:02:36.5299076Z tests/unit/dev_docs/server/test_error_handlers.py::test_register_error_handlers_when_http_error_headers PASSED [ 74%]
+test	層の全件を回す	2026-11-20T04:02:36.5324839Z tests/unit/dev_docs/server/test_error_handlers.py::test_register_error_handlers_when_details_snake PASSED [ 74%]
+test	層の全件を回す	2026-11-20T04:02:36.5354852Z tests/unit/dev_docs/server/test_error_handlers.py::test_register_error_handlers_when_project_index_unreachable PASSED [ 74%]
+test	層の全件を回す	2026-11-20T04:02:36.5383695Z tests/unit/dev_docs/server/test_error_handlers.py::test_register_error_handlers_when_project_index_failed PASSED [ 74%]
+test	層の全件を回す	2026-11-20T04:02:36.5411161Z tests/unit/dev_docs/server/test_error_handlers.py::test_register_error_handlers_when_project_index_timed_out PASSED [ 75%]
+test	層の全件を回す	2026-11-20T04:02:36.5419335Z tests/unit/dev_docs/server/test_lifespan.py::test_build_lifespan PASSED  [ 75%]
+test	層の全件を回す	2026-11-20T04:02:36.5425148Z tests/unit/dev_docs/server/test_origin.py::test_require_same_origin PASSED [ 75%]
+test	層の全件を回す	2026-11-20T04:02:36.5430417Z tests/unit/dev_docs/server/test_origin.py::test_require_same_origin_when_fetch_site PASSED [ 75%]
+test	層の全件を回す	2026-11-20T04:02:36.5435976Z tests/unit/dev_docs/server/test_origin.py::test_require_same_origin_when_cross_origin PASSED [ 75%]
+test	層の全件を回す	2026-11-20T04:02:36.5441540Z tests/unit/dev_docs/server/test_origin.py::test_require_same_origin_when_unknown PASSED [ 75%]
+test	層の全件を回す	2026-11-20T04:02:36.5492916Z tests/unit/dev_docs/server/test_screen.py::test_build_screen_router PASSED [ 76%]
+test	層の全件を回す	2026-11-20T04:02:36.5539489Z tests/unit/dev_docs/server/test_screen.py::test_build_screen_router_when_mdmark_version PASSED [ 76%]
+test	層の全件を回す	2026-11-20T04:02:36.5744122Z tests/unit/dev_docs/server/test_screen.py::test_build_screen_router_when_asset PASSED [ 76%]
+test	層の全件を回す	2026-11-20T04:02:36.5825396Z tests/unit/dev_docs/server/test_screen.py::test_build_screen_router_when_asset_missing PASSED [ 76%]
+test	層の全件を回す	2026-11-20T04:02:36.5875051Z tests/unit/dev_docs/server/test_screen.py::test_build_screen_router_when_excluded[/_api/none] PASSED [ 76%]
+test	層の全件を回す	2026-11-20T04:02:36.5924115Z tests/unit/dev_docs/server/test_screen.py::test_build_screen_router_when_excluded[/mcp/none] PASSED [ 77%]
+test	層の全件を回す	2026-11-20T04:02:36.5972126Z tests/unit/dev_docs/server/test_screen.py::test_build_screen_router_when_excluded[/_admin/none] PASSED [ 77%]
+test	層の全件を回す	2026-11-20T04:02:36.6022931Z tests/unit/dev_docs/server/test_screen.py::test_build_screen_router_when_excluded_not_get[post-admin] PASSED [ 77%]
+test	層の全件を回す	2026-11-20T04:02:36.6074056Z tests/unit/dev_docs/server/test_screen.py::test_build_screen_router_when_excluded_not_get[put-api] PASSED [ 77%]
+test	層の全件を回す	2026-11-20T04:02:36.6124249Z tests/unit/dev_docs/server/test_screen.py::test_build_screen_router_when_excluded_not_get[delete-admin] PASSED [ 77%]
+test	層の全件を回す	2026-11-20T04:02:36.6173021Z tests/unit/dev_docs/server/test_screen.py::test_build_screen_router_when_excluded_wrong_method PASSED [ 77%]
+test	層の全件を回す	2026-11-20T04:02:36.6219844Z tests/unit/dev_docs/server/test_screen.py::test_build_screen_router_when_not_get PASSED [ 78%]
+test	層の全件を回す	2026-11-20T04:02:36.6273709Z tests/unit/dev_docs/server/test_screen.py::test_build_screen_router_when_build_missing PASSED [ 78%]
+test	層の全件を回す	2026-11-20T04:02:36.6277753Z tests/unit/dev_docs/shared/test_errors.py::test_dev_docs_error_details PASSED [ 78%]
+test	層の全件を回す	2026-11-20T04:02:36.6282827Z tests/unit/dev_docs/shared/test_errors.py::test_dev_docs_error_details_when_no_extra PASSED [ 78%]
+test	層の全件を回す	2026-11-20T04:02:36.6288658Z tests/unit/dev_docs/shared/test_errors.py::test_project_index_unreachable_error PASSED [ 78%]
+test	層の全件を回す	2026-11-20T04:02:36.6311253Z tests/unit/dev_docs/shared/test_files.py::test_replace_file PASSED       [ 78%]
+test	層の全件を回す	2026-11-20T04:02:36.6326765Z tests/unit/dev_docs/shared/test_files.py::test_replace_file_when_new_folder PASSED [ 79%]
+test	層の全件を回す	2026-11-20T04:02:36.6345132Z tests/unit/dev_docs/shared/test_files.py::test_replace_file_when_replace_fails PASSED [ 79%]
+test	層の全件を回す	2026-11-20T04:02:36.6350505Z tests/unit/dev_docs/shared/test_hashing.py::test_content_hash PASSED     [ 79%]
+test	層の全件を回す	2026-11-20T04:02:36.6355891Z tests/unit/dev_docs/shared/test_hashing.py::test_value_hash PASSED       [ 79%]
+test	層の全件を回す	2026-11-20T04:02:36.6361322Z tests/unit/dev_docs/shared/test_paths.py::test_normalize_path PASSED     [ 79%]
+test	層の全件を回す	2026-11-20T04:02:36.6366004Z tests/unit/dev_docs/shared/test_schema_check.py::test_format_path PASSED [ 80%]
+test	層の全件を回す	2026-11-20T04:02:36.6370770Z tests/unit/dev_docs/shared/test_schema_check.py::test_format_path_when_index_first PASSED [ 80%]
+test	層の全件を回す	2026-11-20T04:02:36.6375065Z tests/unit/dev_docs/shared/test_schema_check.py::test_format_path_when_empty PASSED [ 80%]
+test	層の全件を回す	2026-11-20T04:02:36.6379728Z tests/unit/dev_docs/shared/test_schema_check.py::test_as_list PASSED     [ 80%]
+test	層の全件を回す	2026-11-20T04:02:36.6384058Z tests/unit/dev_docs/shared/test_schema_check.py::test_as_list_when_not_list PASSED [ 80%]
+test	層の全件を回す	2026-11-20T04:02:36.6390698Z tests/unit/dev_docs/shared/test_schema_check.py::test_from_error_when_required PASSED [ 80%]
+test	層の全件を回す	2026-11-20T04:02:36.6397555Z tests/unit/dev_docs/shared/test_schema_check.py::test_from_error_when_additional_properties PASSED [ 81%]
+test	層の全件を回す	2026-11-20T04:02:36.6403583Z tests/unit/dev_docs/shared/test_schema_check.py::test_from_error_when_type PASSED [ 81%]
+test	層の全件を回す	2026-11-20T04:02:36.6409648Z tests/unit/dev_docs/shared/test_schema_check.py::test_from_error_when_enum PASSED [ 81%]
+test	層の全件を回す	2026-11-20T04:02:36.6415723Z tests/unit/dev_docs/shared/test_schema_check.py::test_from_error_when_other PASSED [ 81%]
+test	層の全件を回す	2026-11-20T04:02:36.6421529Z tests/unit/dev_docs/shared/test_schema_check.py::test_schema_violations PASSED [ 81%]
+test	層の全件を回す	2026-11-20T04:02:36.6427988Z tests/unit/dev_docs/shared/test_schema_check.py::test_schema_violations_when_many PASSED [ 81%]
+test	層の全件を回す	2026-11-20T04:02:36.6435566Z tests/unit/dev_docs/shared/test_schema_check.py::test_schema_violations_when_registry PASSED [ 82%]
+test	層の全件を回す	2026-11-20T04:02:36.6449409Z tests/unit/dev_docs/shared/test_yaml_io.py::test_load_yaml PASSED        [ 82%]
+test	層の全件を回す	2026-11-20T04:02:36.6457825Z tests/unit/dev_docs/shared/test_yaml_io.py::test_load_yaml_when_syntax_error PASSED [ 82%]
+test	層の全件を回す	2026-11-20T04:02:36.6467996Z tests/unit/dev_docs/shared/test_yaml_io.py::test_load_yaml_when_duplicate_key PASSED [ 82%]
+test	層の全件を回す	2026-11-20T04:02:36.6482905Z tests/unit/dev_docs/shared/test_yaml_io.py::test_load_roundtrip PASSED   [ 82%]
+test	層の全件を回す	2026-11-20T04:02:36.6499441Z tests/unit/dev_docs/shared/test_yaml_io.py::test_load_roundtrip_when_quotes PASSED [ 82%]
+test	層の全件を回す	2026-11-20T04:02:36.6506845Z tests/unit/dev_docs/shared/test_yaml_io.py::test_load_roundtrip_when_not_mapping PASSED [ 83%]
+test	層の全件を回す	2026-11-20T04:02:36.6515040Z tests/unit/dev_docs/shared/test_yaml_io.py::test_dump_roundtrip PASSED   [ 83%]
+test	層の全件を回す	2026-11-20T04:02:36.6529293Z tests/unit/dev_docs/test_main.py::test_build_parser PASSED               [ 83%]
+test	層の全件を回す	2026-11-20T04:02:36.6541852Z tests/unit/dev_docs/test_main.py::test_build_parser_when_serve PASSED    [ 83%]
+test	層の全件を回す	2026-11-20T04:02:36.6554007Z tests/unit/dev_docs/test_main.py::test_build_parser_when_migrate PASSED  [ 83%]
+test	層の全件を回す	2026-11-20T04:02:36.6567590Z tests/unit/dev_docs/test_main.py::test_build_parser_when_plan_and_record PASSED [ 84%]
+test	層の全件を回す	2026-11-20T04:02:36.6581613Z tests/unit/dev_docs/test_main.py::test_build_parser_when_removed_command[files] PASSED [ 84%]
+test	層の全件を回す	2026-11-20T04:02:36.6595075Z tests/unit/dev_docs/test_main.py::test_build_parser_when_removed_command[prompt-doc] PASSED [ 84%]
+test	層の全件を回す	2026-11-20T04:02:36.6608536Z tests/unit/dev_docs/test_main.py::test_build_parser_when_removed_command[migrate-source] PASSED [ 84%]
+test	層の全件を回す	2026-11-20T04:02:36.6625513Z tests/unit/dev_docs/test_main.py::test_main_when_version PASSED          [ 84%]
+test	層の全件を回す	2026-11-20T04:02:36.6640349Z tests/unit/dev_docs/test_main.py::test_main_when_help PASSED             [ 84%]
+test	層の全件を回す	2026-11-20T04:02:36.6654399Z tests/unit/dev_docs/test_main.py::test_main_when_no_command PASSED       [ 85%]
+test	層の全件を回す	2026-11-20T04:02:37.2766290Z tests/unit/dev_docs/test_serve.py::test_run_serve PASSED                 [ 85%]
+test	層の全件を回す	2026-11-20T04:02:37.2814807Z tests/unit/dev_docs/test_serve.py::test_run_serve_when_config_invalid PASSED [ 85%]
+test	層の全件を回す	2026-11-20T04:02:37.2912401Z tests/unit/dev_docs/test_serve.py::test_run_serve_when_port_in_use PASSED [ 85%]
+test	層の全件を回す	2026-11-20T04:02:37.3378714Z tests/unit/dev_docs/test_serve.py::test_run_serve_when_startup_fails PASSED [ 85%]
+test	層の全件を回す	2026-11-20T04:02:37.3748509Z tests/unit/dev_docs/test_serve.py::test_run_serve_when_prompt_invalid PASSED [ 85%]
+test	層の全件を回す	2026-11-20T04:02:37.4214485Z tests/unit/dev_docs/test_serve.py::test_run_serve_when_restart PASSED    [ 86%]
+test	層の全件を回す	2026-11-20T04:02:37.4760359Z tests/unit/dev_docs/test_serve.py::test_run_serve_when_leftover_sources PASSED [ 86%]
+test	層の全件を回す	2026-11-20T04:02:37.4765773Z tests/unit/dev_docs/test_serve.py::test_check_port PASSED                [ 86%]
+test	層の全件を回す	2026-11-20T04:02:37.4772772Z tests/unit/dev_docs/test_serve.py::test_check_port_when_time_wait PASSED [ 86%]
+test	層の全件を回す	2026-11-20T04:02:37.4779120Z tests/unit/dev_docs/test_serve.py::test_check_port_when_in_use PASSED    [ 86%]
+test	層の全件を回す	2026-11-20T04:02:37.4827687Z tests/unit/dev_docs/test_serve.py::test_find_port_owner PASSED           [ 87%]
+test	層の全件を回す	2026-11-20T04:02:37.4870948Z tests/unit/dev_docs/test_serve.py::test_find_port_owner_when_bind_is_hostname PASSED [ 87%]
+test	層の全件を回す	2026-11-20T04:02:37.4879645Z tests/unit/dev_docs/test_serve.py::test_find_port_owner_when_not_listening PASSED [ 87%]
+test	層の全件を回す	2026-11-20T04:02:37.4891097Z tests/unit/dev_docs/test_serve.py::test_find_port_owner_when_proc_missing PASSED [ 87%]
+test	層の全件を回す	2026-11-20T04:02:37.5250598Z tests/unit/dev_docs/test_serve.py::test_build_handlers PASSED            [ 87%]
+test	層の全件を回す	2026-11-20T04:02:37.5514010Z tests/unit/dev_docs/test_serve.py::test_build_handlers_when_prompt_invalid PASSED [ 87%]
+test	層の全件を回す	2026-11-20T04:02:38.0602214Z tests/unit/dev_docs/test_serve.py::test_announce_sources PASSED          [ 88%]
+test	層の全件を回す	2026-11-20T04:02:38.0678097Z tests/unit/dev_docs/test_serve.py::test_announce_sources_when_unreachable PASSED [ 88%]
+test	層の全件を回す	2026-11-20T04:02:38.0706232Z tests/unit/dev_docs/test_serve.py::test_run_migrate_when_plan PASSED     [ 88%]
+test	層の全件を回す	2026-11-20T04:02:38.0804051Z tests/unit/dev_docs/test_serve.py::test_run_migrate PASSED               [ 88%]
+test	層の全件を回す	2026-11-20T04:02:38.0820971Z tests/unit/dev_docs/test_serve.py::test_run_migrate_when_current PASSED  [ 88%]
+test	層の全件を回す	2026-11-20T04:02:38.0900607Z tests/unit/dev_docs/test_serve.py::test_run_migrate_when_record PASSED   [ 88%]
+test	層の全件を回す	2026-11-20T04:02:38.0924756Z tests/unit/dev_docs/test_serve.py::test_run_migrate_when_destructive PASSED [ 89%]
+test	層の全件を回す	2026-11-20T04:02:38.0941075Z tests/unit/dev_docs/test_serve.py::test_run_migrate_when_newer PASSED    [ 89%]
+test	層の全件を回す	2026-11-20T04:02:38.0952807Z tests/unit/dev_docs/test_serve.py::test_run_migrate_when_config_invalid PASSED [ 89%]
+test	層の全件を回す	2026-11-20T04:02:38.6163273Z tests/unit/dev_docs/test_serve.py::test_run_migrate_when_sources_moved PASSED [ 89%]
+test	層の全件を回す	2026-11-20T04:02:38.6276705Z tests/unit/dev_docs/test_serve.py::test_run_migrate_when_project_index_unreachable PASSED [ 89%]
+test	層の全件を回す	2026-11-20T04:02:38.6470660Z tests/unit/dev_docs/test_serve.py::test_run_migrate_when_no_export PASSED [ 90%]
+test	層の全件を回す	2026-11-20T04:02:39.1557705Z tests/unit/dev_docs/test_serve.py::test_announce_sources_when_loading PASSED [ 90%]
+test	層の全件を回す	2026-11-20T04:02:39.1584795Z tests/unit/plugins/dev_docs/hooks/test_session_start.py::test_main_when_listening PASSED [ 90%]
+test	層の全件を回す	2026-11-20T04:02:39.1595054Z tests/unit/plugins/dev_docs/hooks/test_session_start.py::test_main_when_cleared PASSED [ 90%]
+test	層の全件を回す	2026-11-20T04:02:39.1612137Z tests/unit/plugins/dev_docs/hooks/test_session_start.py::test_main_when_down PASSED [ 90%]
+test	層の全件を回す	2026-11-20T04:02:39.1626171Z tests/unit/plugins/dev_docs/hooks/test_session_start.py::test_main_when_config_missing PASSED [ 90%]
+test	層の全件を回す	2026-11-20T04:02:39.1635562Z tests/unit/plugins/dev_docs/hooks/test_session_start.py::test_main_when_input_unparsable PASSED [ 91%]
+test	層の全件を回す	2026-11-20T04:02:39.1645412Z tests/unit/plugins/dev_docs/hooks/test_session_start.py::test_is_listening PASSED [ 91%]
+test	層の全件を回す	2026-11-20T04:02:39.1654312Z tests/unit/plugins/dev_docs/hooks/test_session_start.py::test_is_listening_when_closed PASSED [ 91%]
+test	層の全件を回す	2026-11-20T04:02:39.1662392Z tests/unit/plugins/dev_docs/hooks/test_session_start.py::test_config_path PASSED [ 91%]
+test	層の全件を回す	2026-11-20T04:02:39.1670719Z tests/unit/plugins/dev_docs/hooks/test_session_start.py::test_config_path_when_xdg_config_home_set PASSED [ 91%]
+test	層の全件を回す	2026-11-20T04:02:39.1679455Z tests/unit/plugins/dev_docs/hooks/test_session_start.py::test_config_path_when_unset_or_relative[env0] PASSED [ 91%]
+test	層の全件を回す	2026-11-20T04:02:39.1688114Z tests/unit/plugins/dev_docs/hooks/test_session_start.py::test_config_path_when_unset_or_relative[env1] PASSED [ 92%]
+test	層の全件を回す	2026-11-20T04:02:39.1696182Z tests/unit/plugins/dev_docs/hooks/test_session_start.py::test_config_path_when_unset_or_relative[env2] PASSED [ 92%]
+test	層の全件を回す	2026-11-20T04:02:39.1709276Z tests/unit/plugins/dev_docs/hooks/test_session_start.py::test_read_clone PASSED [ 92%]
+test	層の全件を回す	2026-11-20T04:02:39.1723685Z tests/unit/plugins/dev_docs/hooks/test_session_start.py::test_read_clone_when_missing PASSED [ 92%]
+test	層の全件を回す	2026-11-20T04:02:39.2247070Z tests/unit/plugins/dev_docs/hooks/test_session_start.py::test_start_server PASSED [ 92%]
+test	層の全件を回す	2026-11-20T04:02:39.2261160Z tests/unit/plugins/dev_docs/hooks/test_session_start.py::test_start_server_when_no_venv PASSED [ 92%]
+test	層の全件を回す	2026-11-20T04:02:39.2272079Z tests/unit/plugins/dev_docs/hooks/test_session_start.py::test_main_when_unit_exists PASSED [ 93%]
+test	層の全件を回す	2026-11-20T04:02:39.2282181Z tests/unit/plugins/dev_docs/hooks/test_session_start.py::test_main_when_unit_start_fails PASSED [ 93%]
+test	層の全件を回す	2026-11-20T04:02:39.2292382Z tests/unit/plugins/dev_docs/hooks/test_session_start.py::test_main_when_unit_check_times_out PASSED [ 93%]
+test	層の全件を回す	2026-11-20T04:02:39.2300378Z tests/unit/plugins/dev_docs/hooks/test_session_start.py::test_unit_name PASSED [ 93%]
+test	層の全件を回す	2026-11-20T04:02:39.2308545Z tests/unit/plugins/dev_docs/hooks/test_session_start.py::test_unit_name_when_empty PASSED [ 93%]
+test	層の全件を回す	2026-11-20T04:02:39.2350061Z tests/unit/plugins/dev_docs/hooks/test_session_start.py::test_unit_exists PASSED [ 94%]
+test	層の全件を回す	2026-11-20T04:02:39.2365188Z tests/unit/plugins/dev_docs/hooks/test_session_start.py::test_unit_exists_when_no_systemctl PASSED [ 94%]
+test	層の全件を回す	2026-11-20T04:02:39.3390740Z tests/unit/plugins/dev_docs/hooks/test_session_start.py::test_unit_exists_when_timeout PASSED [ 94%]
+test	層の全件を回す	2026-11-20T04:02:39.3417553Z tests/unit/plugins/dev_docs/hooks/test_session_start.py::test_start_unit PASSED [ 94%]
+test	層の全件を回す	2026-11-20T04:02:39.3440619Z tests/unit/plugins/dev_docs/hooks/test_session_start.py::test_start_unit_when_failed PASSED [ 94%]
+test	層の全件を回す	2026-11-20T04:02:39.3521509Z tests/unit/scripts/test_build_pages.py::test_main PASSED                 [ 94%]
+test	層の全件を回す	2026-11-20T04:02:39.3552391Z tests/unit/scripts/test_build_pages.py::test_main_when_no_public PASSED  [ 95%]
+test	層の全件を回す	2026-11-20T04:02:39.3582562Z tests/unit/scripts/test_build_pages.py::test_main_when_build_failed PASSED [ 95%]
+test	層の全件を回す	2026-11-20T04:02:39.3608658Z tests/unit/scripts/test_build_pages.py::test_list_public_guides PASSED   [ 95%]
+test	層の全件を回す	2026-11-20T04:02:39.3624398Z tests/unit/scripts/test_build_pages.py::test_list_public_guides_when_no_file PASSED [ 95%]
+test	層の全件を回す	2026-11-20T04:02:39.3648006Z tests/unit/scripts/test_build_pages.py::test_list_public_guides_when_invalid_row[no_category] PASSED [ 95%]
+test	層の全件を回す	2026-11-20T04:02:39.3670995Z tests/unit/scripts/test_build_pages.py::test_list_public_guides_when_invalid_row[no_file] PASSED [ 95%]
+test	層の全件を回す	2026-11-20T04:02:39.3704134Z tests/unit/scripts/test_build_pages.py::test_load_public_flowcharts PASSED [ 96%]
+test	層の全件を回す	2026-11-20T04:02:39.3720849Z tests/unit/scripts/test_build_pages.py::test_load_public_flowcharts_when_no_folder PASSED [ 96%]
+test	層の全件を回す	2026-11-20T04:02:39.3741698Z tests/unit/scripts/test_build_pages.py::test_load_public_flowcharts_when_invalid PASSED [ 96%]
+test	層の全件を回す	2026-11-20T04:02:39.3767770Z tests/unit/scripts/test_build_pages.py::test_index_document_paths PASSED [ 96%]
+test	層の全件を回す	2026-11-20T04:02:39.3779834Z tests/unit/scripts/test_build_pages.py::test_render_page PASSED          [ 96%]
+test	層の全件を回す	2026-11-20T04:02:39.3791561Z tests/unit/scripts/test_build_pages.py::test_render_page_when_nested_group PASSED [ 97%]
+test	層の全件を回す	2026-11-20T04:02:39.3803264Z tests/unit/scripts/test_build_pages.py::test_item_anchors PASSED         [ 97%]
+test	層の全件を回す	2026-11-20T04:02:39.3814762Z tests/unit/scripts/test_build_pages.py::test_item_anchors_when_in_code_block PASSED [ 97%]
+test	層の全件を回す	2026-11-20T04:02:39.3826515Z tests/unit/scripts/test_build_pages.py::test_rewrite_references PASSED   [ 97%]
+test	層の全件を回す	2026-11-20T04:02:39.3838152Z tests/unit/scripts/test_build_pages.py::test_rewrite_references_when_guide_path PASSED [ 97%]
+test	層の全件を回す	2026-11-20T04:02:39.3849939Z tests/unit/scripts/test_build_pages.py::test_rewrite_references_when_internal_document PASSED [ 97%]
+test	層の全件を回す	2026-11-20T04:02:39.3861436Z tests/unit/scripts/test_build_pages.py::test_rewrite_references_when_in_code_block PASSED [ 98%]
+test	層の全件を回す	2026-11-20T04:02:39.3873744Z tests/unit/scripts/test_build_pages.py::test_rewrite_references_when_unresolved PASSED [ 98%]
+test	層の全件を回す	2026-11-20T04:02:39.3891155Z tests/unit/scripts/test_build_pages.py::test_write_bundle_config PASSED  [ 98%]
+test	層の全件を回す	2026-11-20T04:02:39.3907678Z tests/unit/scripts/test_build_pages.py::test_run_mdmark PASSED           [ 98%]
+test	層の全件を回す	2026-11-20T04:02:39.3925391Z tests/unit/scripts/test_build_pages.py::test_run_mdmark_when_failed PASSED [ 98%]
+test	層の全件を回す	2026-11-20T04:02:39.3942666Z tests/unit/scripts/test_build_pages.py::test_run_mdmark_when_npx_missing PASSED [ 98%]
+test	層の全件を回す	2026-11-20T04:02:39.4257722Z tests/unit/scripts/test_restart_resident.py::test_main_when_no_record PASSED [ 99%]
+test	層の全件を回す	2026-11-20T04:02:39.4683418Z tests/unit/scripts/test_restart_resident.py::test_main_when_runtime_changed PASSED [ 99%]
+test	層の全件を回す	2026-11-20T04:02:39.5003545Z tests/unit/scripts/test_restart_resident.py::test_main_when_runtime_unchanged PASSED [ 99%]
+test	層の全件を回す	2026-11-20T04:02:39.5342022Z tests/unit/scripts/test_restart_resident.py::test_main_when_record_unknown PASSED [ 99%]
+test	層の全件を回す	2026-11-20T04:02:39.5565073Z tests/unit/scripts/test_restart_resident.py::test_main_when_sync_failed PASSED [ 99%]
+test	層の全件を回す	2026-11-20T04:02:39.6137272Z tests/unit/scripts/test_restart_resident.py::test_main_when_restart_failed PASSED [100%]
+test	層の全件を回す	2026-11-20T04:02:39.6138739Z 
+test	層の全件を回す	2026-11-20T04:02:39.6139013Z ============================= 570 passed in 6.94s ==============================
+test	ログを成果物に上げる	﻿2026-11-20T04:02:41.2063566Z ##[group]Run actions/upload-artifact@v7
+test	ログを成果物に上げる	2026-11-20T04:02:41.2063831Z with:
+test	ログを成果物に上げる	2026-11-20T04:02:41.2064006Z   name: test-log
+test	ログを成果物に上げる	2026-11-20T04:02:41.2064186Z   path: test.log
+test	ログを成果物に上げる	2026-11-20T04:02:41.2064372Z   if-no-files-found: ignore
+test	ログを成果物に上げる	2026-11-20T04:02:41.2064578Z   compression-level: 6
+test	ログを成果物に上げる	2026-11-20T04:02:41.2064766Z   overwrite: false
+test	ログを成果物に上げる	2026-11-20T04:02:41.2064971Z   include-hidden-files: false
+test	ログを成果物に上げる	2026-11-20T04:02:41.2065174Z   archive: true
+test	ログを成果物に上げる	2026-11-20T04:02:41.2065558Z env:
+test	ログを成果物に上げる	2026-11-20T04:02:41.2065785Z   UV_PYTHON_INSTALL_DIR: /home/runner/work/_temp/uv-python-dir
+test	ログを成果物に上げる	2026-11-20T04:02:41.2066094Z   UV_CACHE_DIR: /home/runner/work/_temp/setup-uv-cache
+test	ログを成果物に上げる	2026-11-20T04:02:41.2066344Z ##[endgroup]
+test	ログを成果物に上げる	2026-11-20T04:02:41.3306130Z With the provided path, there will be 1 file uploaded
+test	ログを成果物に上げる	2026-11-20T04:02:41.3309458Z Artifact name is valid!
+test	ログを成果物に上げる	2026-11-20T04:02:41.3310068Z Root directory input is valid!
+test	ログを成果物に上げる	2026-11-20T04:02:41.5443725Z Uploading artifact: test-log.zip
+test	ログを成果物に上げる	2026-11-20T04:02:41.5472245Z Beginning upload of artifact content to blob storage
+test	ログを成果物に上げる	2026-11-20T04:02:41.6282819Z Uploaded bytes 5573
+test	ログを成果物に上げる	2026-11-20T04:02:41.6466116Z Finished uploading artifact content to blob storage!
+test	ログを成果物に上げる	2026-11-20T04:02:41.6466911Z SHA256 digest of uploaded artifact is ee4dd9f46a316aac2b2e433f1145d5fd87edf43ef745f9341a6305bd7111cf98
+test	ログを成果物に上げる	2026-11-20T04:02:41.6467406Z Finalizing artifact upload
+test	ログを成果物に上げる	2026-11-20T04:02:42.0084744Z Artifact test-log successfully finalized. Artifact ID 14600771317
+test	ログを成果物に上げる	2026-11-20T04:02:42.0085922Z Artifact test-log has been successfully uploaded! Final size is 5573 bytes. Artifact ID is 14600771317
+test	ログを成果物に上げる	2026-11-20T04:02:42.0088914Z Artifact download URL: https://github.com/shuhei1101/dev-docs/actions/runs/44671691922/artifacts/14600771317
+test	Post uv を入れる	﻿2026-11-20T04:02:42.0264869Z Post job cleanup.
+test	Post uv を入れる	2026-11-20T04:02:42.1209658Z UV_CACHE_DIR is already set to /home/runner/work/_temp/setup-uv-cache
+test	Post uv を入れる	2026-11-20T04:02:42.1213461Z UV_PYTHON_INSTALL_DIR is already set to /home/runner/work/_temp/uv-python-dir
+test	Post uv を入れる	2026-11-20T04:02:42.1215431Z Cache hit occurred on key setup-uv-2-x86_64-unknown-linux-gnu-ubuntu-26.04-3.14.4-ce349dac54e2590b54cb97b36c71fa2d886c7b907fa2b17680e07c0a03421fb9, not saving cache.
+test	Post Node.js を入れる	﻿2026-11-20T04:02:42.2331578Z Post job cleanup.
+test	Post ブランチを取得する	﻿2026-11-20T04:02:42.3443665Z Post job cleanup.
+test	Post ブランチを取得する	2026-11-20T04:02:42.4170871Z [command]/usr/bin/git version
+test	Post ブランチを取得する	2026-11-20T04:02:42.4209166Z git version 2.56.1
+test	Post ブランチを取得する	2026-11-20T04:02:42.4237609Z Temporarily overriding HOME='/home/runner/work/_temp/a879ec67-9528-4741-9e6c-9d21bb032403' before making global git config changes
+test	Post ブランチを取得する	2026-11-20T04:02:42.4238776Z Adding repository directory to the temporary git global config as a safe directory
+test	Post ブランチを取得する	2026-11-20T04:02:42.4242166Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/dev-docs/dev-docs
+test	Post ブランチを取得する	2026-11-20T04:02:42.4272827Z Removing SSH command configuration
+test	Post ブランチを取得する	2026-11-20T04:02:42.4277566Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+test	Post ブランチを取得する	2026-11-20T04:02:42.4310344Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+test	Post ブランチを取得する	2026-11-20T04:02:42.4558705Z Removing HTTP extra header
+test	Post ブランチを取得する	2026-11-20T04:02:42.4563302Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+test	Post ブランチを取得する	2026-11-20T04:02:42.4602959Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+test	Post ブランチを取得する	2026-11-20T04:02:42.4841407Z Removing includeIf entries pointing to credentials config files
+test	Post ブランチを取得する	2026-11-20T04:02:42.4846929Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+test	Post ブランチを取得する	2026-11-20T04:02:42.4870133Z includeif.gitdir:/home/runner/work/dev-docs/dev-docs/.git.path
+test	Post ブランチを取得する	2026-11-20T04:02:42.4870876Z includeif.gitdir:/home/runner/work/dev-docs/dev-docs/.git/worktrees/*.path
+test	Post ブランチを取得する	2026-11-20T04:02:42.4871681Z includeif.gitdir:/github/workspace/.git.path
+test	Post ブランチを取得する	2026-11-20T04:02:42.4872279Z includeif.gitdir:/github/workspace/.git/worktrees/*.path
+test	Post ブランチを取得する	2026-11-20T04:02:42.4878371Z [command]/usr/bin/git config --local --get-all includeif.gitdir:/home/runner/work/dev-docs/dev-docs/.git.path
+test	Post ブランチを取得する	2026-11-20T04:02:42.4898189Z /home/runner/work/_temp/git-credentials-37e582a2-f332-4003-8dd8-df9d00a5e176.config
+test	Post ブランチを取得する	2026-11-20T04:02:42.4906262Z [command]/usr/bin/git config --local --unset includeif.gitdir:/home/runner/work/dev-docs/dev-docs/.git.path \/home\/runner\/work\/_temp\/git\-credentials\-37e582a2\-f332\-4003\-8dd8\-df9d00a5e176\.config
+test	Post ブランチを取得する	2026-11-20T04:02:42.4945605Z [command]/usr/bin/git config --local --get-all includeif.gitdir:/home/runner/work/dev-docs/dev-docs/.git/worktrees/*.path
+test	Post ブランチを取得する	2026-11-20T04:02:42.4967813Z /home/runner/work/_temp/git-credentials-37e582a2-f332-4003-8dd8-df9d00a5e176.config
+test	Post ブランチを取得する	2026-11-20T04:02:42.4975494Z [command]/usr/bin/git config --local --unset includeif.gitdir:/home/runner/work/dev-docs/dev-docs/.git/worktrees/*.path \/home\/runner\/work\/_temp\/git\-credentials\-37e582a2\-f332\-4003\-8dd8\-df9d00a5e176\.config
+test	Post ブランチを取得する	2026-11-20T04:02:42.5003357Z [command]/usr/bin/git config --local --get-all includeif.gitdir:/github/workspace/.git.path
+test	Post ブランチを取得する	2026-11-20T04:02:42.5023176Z /github/runner_temp/git-credentials-37e582a2-f332-4003-8dd8-df9d00a5e176.config
+test	Post ブランチを取得する	2026-11-20T04:02:42.5029249Z [command]/usr/bin/git config --local --unset includeif.gitdir:/github/workspace/.git.path \/github\/runner_temp\/git\-credentials\-37e582a2\-f332\-4003\-8dd8\-df9d00a5e176\.config
+test	Post ブランチを取得する	2026-11-20T04:02:42.5057136Z [command]/usr/bin/git config --local --get-all includeif.gitdir:/github/workspace/.git/worktrees/*.path
+test	Post ブランチを取得する	2026-11-20T04:02:42.5075986Z /github/runner_temp/git-credentials-37e582a2-f332-4003-8dd8-df9d00a5e176.config
+test	Post ブランチを取得する	2026-11-20T04:02:42.5081786Z [command]/usr/bin/git config --local --unset includeif.gitdir:/github/workspace/.git/worktrees/*.path \/github\/runner_temp\/git\-credentials\-37e582a2\-f332\-4003\-8dd8\-df9d00a5e176\.config
+test	Post ブランチを取得する	2026-11-20T04:02:42.5110597Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+test	Post ブランチを取得する	2026-11-20T04:02:42.5349269Z Removing credentials config '/home/runner/work/_temp/git-credentials-37e582a2-f332-4003-8dd8-df9d00a5e176.config'
+test	Complete job	﻿2026-11-20T04:02:42.5493349Z Cleaning up orphan processes

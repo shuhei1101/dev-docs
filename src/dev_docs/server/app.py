@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING
 
 from fastapi import FastAPI
 from fastapi.routing import APIRoute
+from starlette.middleware.gzip import GZipMiddleware
 
 from dev_docs.features.settings.route import build_settings_router
 from dev_docs.features.view.route import build_view_router
@@ -23,6 +24,10 @@ if TYPE_CHECKING:
 
 ADMIN_MCP_PATH = "/_admin/mcp"
 OPENAPI_PATH = "/_api/openapi.json"
+# 画面のAPIの応答の圧縮が適用するパスの頭
+API_PATH_PREFIX = "/_api/"
+# 応答を圧縮する本文の最小のバイト数（これより小さい本文は gzip のヘッダーの分だけ縮まらないことがある）
+GZIP_MINIMUM_SIZE = 500
 
 
 class SlashlessMcpPathMiddleware:
@@ -41,6 +46,21 @@ class SlashlessMcpPathMiddleware:
                 "raw_path": scope["raw_path"] + b"/",
             }
         await self._app(scope, receive, send)
+
+
+class ApiGZipMiddleware:
+    """画面の API への要求だけ、`Accept-Encoding` に gzip を含むときに応答を gzip で返却する。"""
+
+    def __init__(self, app: ASGIApp) -> None:
+        self._app = app
+        self._gzip = GZipMiddleware(app, minimum_size=GZIP_MINIMUM_SIZE)
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        # 画面の API の HTTP の要求: 圧縮する。管理の MCP・画面の配信・lifespan はそのまま渡す
+        if scope["type"] == "http" and scope["path"].startswith(API_PATH_PREFIX):
+            await self._gzip(scope, receive, send)
+        else:
+            await self._app(scope, receive, send)
 
 
 def route_operation_id(route: APIRoute) -> str:
@@ -69,6 +89,7 @@ def build_app(
         ),
     )
     app.add_middleware(SlashlessMcpPathMiddleware, paths=(ADMIN_MCP_PATH,))
+    app.add_middleware(ApiGZipMiddleware)
     app.include_router(build_settings_router(handlers))
     app.include_router(build_view_router(handlers))
     # 全てのパスに該当するため、最後に登録する

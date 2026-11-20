@@ -582,11 +582,11 @@ flows:
       - 問い合わせごとの制限時間を文書の取得の制限時間より長くしても、503 が返るまでの時間は文書の取得の制限時間より大きく遅れない
     test: test_error_when_project_index_timed_out
   - name: 正常系（問い合わせを同時に送信する）
-    summary: 配信元の設定・リビジョン・文書の一覧を同時に問い合わせ、文書だけをその後に問い合わせる
+    summary: 配信元の設定とリビジョンの一覧を同時に問い合わせ、文書の一覧をリビジョンの一覧の応答の後に、文書をその後に問い合わせる
     setup:
       - name: Mock
         description: sample を配信する project-index の読み取り API のモック。配信元の設定・リビジョン・文書の一覧・文書の問い合わせごとに一定の時間だけ待ってから返却する
-        notes: 待つ時間はどの問い合わせも同じ値（テストでは短くする）
+        notes: 配信元の設定だけ待つ時間を他の問い合わせの 2 倍にする（テストでは短くする）
     flow: |-
       ```mermaid
       sequenceDiagram
@@ -598,17 +598,18 @@ flows:
         par 同時に問い合わせる
           E->>PI: 配信元の設定
         and
-          E->>PI: リビジョン
-        and
-          E->>PI: 文書の一覧
+          E->>PI: リビジョンの一覧
+          E->>E: リビジョンを commit に解決する
+          E->>PI: 解決した commit の文書の一覧
         end
         E->>PI: 一番左のタブの一番上の文書
         E-->>C: 200（文書 1）
       ```
     expected:
       - '`/_api/sources/sample/docs` が 200 で、`path` が文書 1'
-      - 応答までの時間が、モックの待つ時間の 2 回分に収まり、3 回分に届かない
-      - 配信元の設定・リビジョン・文書の一覧の問い合わせを、モックがどれかの応答を返却する前に受け付けている
+      - 応答までの時間が、モックの待つ時間の 3 回分に収まり、4 回分に届かない
+      - 配信元の設定とリビジョンの一覧の問い合わせを、モックがどちらかの応答を返却する前に受け付けている
+      - 文書の一覧の問い合わせを、配信元の設定の応答を返却する前に受け付けている
     test: test_normal_when_requests_sent_concurrently
   - name: 異常系（project-index が処理に失敗する・502）
     summary: project-index が 5xx を返却したとき、502 と project-index の detail を返却する
@@ -683,6 +684,178 @@ flows:
       - タブ `主題` の `items` が group `topic:a`（文書 1）・group `topic:b`（文書 2）・group `その他`（文書 3）
       - タブ `分類` の `items` が group `x`（文書 1・文書 2）・group `その他`（文書 3）
     test: test_normal_when_nav_grouped_by_common_keys
+  - name: 正常系（文書の一覧を保持から使用する）
+    summary: 同じ配信元の同じ commit の文書の一覧を保持し、2 回目以降の取得では文書の一覧を問い合わせない
+    setup:
+      - name: Mock
+        description: sample を配信する project-index の読み取り API のモック。問い合わせの種類（配信元の設定・リビジョンの一覧・文書の一覧・文書）ごとに届いた回数と、文書の一覧の問い合わせの `ref` を記録する
+        notes: リビジョンの一覧の `branches[]` は main の 1 つで、`commit` が変更の commit
+      - name: 変更の commit
+        description: sample の文書 1 を変えた commit（main の先頭）とその親の commit
+        notes: '-'
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        participant C as クライアント
+        participant E as GET /_api/sources/{source}/docs/{path}
+        participant PI as project-index
+
+        C->>E: GET /_api/sources/sample/docs/{文書 1 のパス}
+        E->>PI: 配信元の設定とリビジョンの一覧
+        E->>E: ref（省略時は default_ref）を branches[].commit で commit に解決する
+        E->>PI: 解決した commit の文書の一覧（保持に無い）
+        E->>PI: 文書 1
+        E-->>C: 200（文書 1）
+        C->>E: GET /_api/sources/sample/docs/{文書 2 のパス}
+        E->>PI: 配信元の設定とリビジョンの一覧
+        E->>E: 同じ組の文書の一覧を保持から取り出す
+        E->>PI: 文書 2
+        E-->>C: 200（文書 2）
+        C->>E: GET /_api/sources/sample/docs/{文書 1 のパス}?diff={親の commit}
+        E->>PI: 親の commit の文書の一覧（保持に無い）
+        E-->>C: 200（diff つき）
+        C->>E: GET /_api/sources/sample/docs/{文書 2 のパス}?diff={親の commit}
+        E-->>C: 200（diff つき。文書の一覧は 2 つとも保持から取り出す）
+      ```
+    expected:
+      - 4 回の取得で、文書の一覧の問い合わせが変更の commit に 1 回、親の commit に 1 回だけ届く
+      - 文書の一覧の問い合わせの `ref` が、ブランチ名ではなく解決した commit
+      - 2 回目以降の応答の `path`・`markdown`・`tabs`・`diff` が、保持を使用しないで取得したときと同じ
+      - '`ref` を省いた取得の応答の `ref` が `default_ref` の名前'
+    test: test_normal_when_document_list_reused
+  - name: 正常系（取得中の文書の一覧を共有する）
+    summary: 同じ組の文書の一覧を取得している間に届いた取得は、その問い合わせの結果を共有する
+    setup:
+      - name: Mock
+        description: sample を配信する project-index の読み取り API のモック。文書の一覧の問い合わせだけ一定の時間だけ待ってから返却し、届いた回数を数える
+        notes: 途中から、文書の一覧の問い合わせに 500 を返却するように切り替えられる
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        participant C as クライアント
+        participant E as GET /_api/sources/{source}/docs/{path}
+        participant PI as project-index
+
+        par 同時に送信する
+          C->>E: GET /_api/sources/sample/docs/{文書 1 のパス}?ref=main&diff={親の commit}
+        and
+          C->>E: GET /_api/sources/sample/docs/{文書 1 のパス}?ref={親の commit}
+        end
+        E->>PI: 親の commit の文書の一覧（1 回だけ）
+        PI-->>E: 文書の一覧
+        E-->>C: 200（diff つき）
+        E-->>C: 200（親の commit の文書 1）
+      ```
+    expected:
+      - 親の commit の文書の一覧の問い合わせが 1 回だけ届き、2 つの取得がどちらも 200
+      - 文書の一覧の問い合わせに 500 を返却させて同じ 2 つの取得を同時に送信すると、2 つとも 502 になり、次の取得で文書の一覧の問い合わせがもう一度届く
+      - 同時に送信した 2 つの取得のうち先に届いた取得だけをクライアントの側で取り消しても、もう 1 つの取得は 200 になり、親の commit の文書の一覧の問い合わせは 1 回だけ届く
+    test: test_normal_when_document_list_shared
+  - name: 正常系（リビジョンか配信元の設定が変わる）
+    summary: ブランチが別の commit を指したときと、配信元の設定の応答が変わったときは、文書の一覧を取り直す
+    setup:
+      - name: Mock
+        description: sample を配信する project-index の読み取り API のモック。main が指す commit と、配信元の設定の応答を途中で切り替えられ、文書の一覧の問い合わせの回数と `ref` を記録する
+        notes: '-'
+      - name: 進めた commit
+        description: 変更の commit から文書 1 をもう一度変えた commit
+        notes: '-'
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        participant C as クライアント
+        participant E as GET /_api/sources/{source}/docs/{path}
+        participant PI as project-index
+
+        C->>E: GET /_api/sources/sample/docs/{文書 1 のパス}
+        E->>PI: 変更の commit の文書の一覧
+        E-->>C: 200（変更の commit の文書 1）
+        Note over PI: main が進めた commit を指す
+        C->>E: GET /_api/sources/sample/docs/{文書 1 のパス}
+        E->>PI: 進めた commit の文書の一覧
+        E-->>C: 200（進めた commit の文書 1）
+        Note over PI: 配信元の設定の応答が変わる
+        C->>E: GET /_api/sources/sample/docs/{文書 1 のパス}
+        E->>PI: 進めた commit の文書の一覧
+        E-->>C: 200
+        C->>E: GET /_api/sources/sample/docs/{文書 1 のパス}?ref={進めた commit}
+        E-->>C: 200（文書の一覧は保持から取り出す）
+      ```
+    expected:
+      - main が進んだ後の取得で、進めた commit の文書の一覧の問い合わせが 1 回届き、`markdown` が進めた commit の文書 1
+      - 配信元の設定の応答が変わった後の取得で、同じ commit の文書の一覧の問い合わせがもう一度届く
+      - '`ref` に進めた commit を指した取得では、文書の一覧の問い合わせが届かない'
+    test: test_normal_when_revision_or_config_changed
+  - name: 正常系（保持の上限を超える）
+    summary: 保持する組が非機能要件の上限を超えたら、最も前に使用した組を捨てる
+    setup:
+      - name: Mock
+        description: sample を配信する project-index の読み取り API のモック。文書の一覧の問い合わせの回数と `ref` を記録する
+        notes: '-'
+      - name: commit の並び
+        description: sample の、非機能要件の保持する文書の一覧の数より 1 つ多い数の commit
+        notes: '-'
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        participant C as クライアント
+        participant E as GET /_api/sources/{source}/docs/{path}
+        participant PI as project-index
+
+        C->>E: commit を 1 つずつ ref に指して文書 1 を取得する
+        E->>PI: commit ごとの文書の一覧
+        C->>E: GET /_api/sources/sample/docs/{文書 1 のパス}?ref={最初の commit}
+        E->>PI: 最初の commit の文書の一覧
+        E-->>C: 200
+      ```
+    expected:
+      - 全ての commit を開いた後に最初の commit を開くと、最初の commit の文書の一覧の問い合わせがもう一度届く
+      - 最後に開いた commit をもう一度開くと、文書の一覧の問い合わせが届かない
+    test: test_normal_when_cache_limit_exceeded
+  - name: 正常系（commit に解決できない配信元）
+    summary: Git 管理外・読み書きの方法が `disk` の配信元は文書の一覧を保持せず、取得のたびに問い合わせる
+    setup:
+      - name: Mock
+        description: 'Git 管理外の配信元 `notes` を配信する project-index の読み取り API のモック。リビジョンの一覧は `git: false` を返却し、文書の一覧の問い合わせの回数を数える'
+        notes: '-'
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        participant C as クライアント
+        participant E as GET /_api/sources/{source}/docs/{path}
+        participant PI as project-index
+
+        C->>E: GET /_api/sources/notes/docs
+        E->>PI: 文書の一覧
+        E-->>C: 200
+        C->>E: GET /_api/sources/notes/docs
+        E->>PI: 文書の一覧
+        E-->>C: 200
+      ```
+    expected:
+      - 2 回の取得で、文書の一覧の問い合わせが 2 回届く
+    test: test_normal_when_document_list_not_cacheable
+  - name: 正常系（応答を圧縮する）
+    summary: '`Accept-Encoding` に gzip を含む要求に、応答を gzip で返却する'
+    setup:
+      - name: Mock
+        description: なし
+        notes: '-'
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        participant C as クライアント
+        participant E as GET /_api/sources/{source}/docs/{path}
+
+        C->>E: GET /_api/sources/sample/docs/{文書 1 のパス}（Accept-Encoding: gzip）
+        E-->>C: 200（Content-Encoding: gzip）
+        C->>E: GET /_api/sources/sample/docs/{文書 1 のパス}（Accept-Encoding: identity）
+        E-->>C: 200（圧縮しない）
+      ```
+    expected:
+      - '`Accept-Encoding: gzip` の応答の `Content-Encoding` が `gzip` で、展開した本文が `Accept-Encoding: identity` の応答の本文と同じ'
+      - '`Accept-Encoding: identity` の応答は `Content-Encoding` を持たない'
+    test: test_normal_when_gzip_accepted
 lead: '配信元の文書を変換した Markdown とタブ・サイドバー・差分の項目・画面の状態を返却する文書の取得の入出力を定め、文書の取得を修正するときに参照する。'
 identifier: get_document
 permissions: なし（`127.0.0.1` でだけ待ち受ける）
@@ -871,6 +1044,18 @@ constraints:
   - item: 検討事項の文書
     constraint: '`path` が `_decisions/{ID}`（`{ID}` は `^[A-Z]+-[0-9]+$`）のとき、`decisions.folders` のうちちょうど 1 つのフォルダにある `.mindstella/docs/{ID}.md` の本文を、変換せずに `markdown` で返却する。`ref` は解決するが、検討事項の文書は Git の管理外のためリビジョンによらず今のファイルを読み込む'
     notes: '該当するフォルダが 0 個か 2 個以上なら 404（`missing`: `doc`）。`diff` は求めず `null` を返却する。フォルダの外を指す `{ID}` は形式で弾く'
+  - item: 文書の一覧の保持
+    constraint: 値つきの文書の一覧を、配信元の ID とリビジョンを解決した commit の組をキーにし、取得したときの配信元の設定の応答の内容のハッシュを添えて、種類の行で型にしてプロセスのメモリーに保持する。保持にあるときは配信元の設定の応答を待ってハッシュを比べ、違えばその組を捨てて文書の一覧をもう一度問い合わせる。表示側と `diff` の両方の文書の一覧をこの保持から取り出す。最後に使用した順に非機能要件の保持する文書の一覧の数まで持ち、超えたら最も前に使用した組を捨てる
+    notes: 再起動で消える。保持に無いときは、配信元の設定の応答を待たず、リビジョンの一覧の応答の後すぐに、解決した commit を `ref` に指して文書の一覧を問い合わせる
+  - item: リビジョンの解決
+    constraint: 'リビジョンの一覧（`commits=0`）の `branches[].name`、次に `tags[].name` に `ref`（省略時は `defaultRef`）があればその `commit`、無く `ref` が 7〜40 桁の 16 進数なら小文字にしたその値を commit とする。どちらにも該当しないリビジョンと `git: false` の配信元は保持を使用せず、取得のたびに `ref` のまま文書の一覧を問い合わせる'
+    notes: リビジョンの一覧は配信元の設定と同時に問い合わせ、文書の一覧はリビジョンの一覧の応答の後に問い合わせる。応答の `ref` は今までどおり指したリビジョン（省略時は `default_ref` の名前）
+  - item: 取得中の文書の一覧の共有
+    constraint: 同じキーの文書の一覧を取得している間に届いた取得は、改めて問い合わせず、その問い合わせの結果を待つ。共有している問い合わせは、どの取得が打ち切られても、待っている取得が残る間は続ける。問い合わせが失敗したら保持せず、待っていた取得にも同じ失敗を返却する
+    notes: 待っていた取得も、それぞれ文書の取得の制限時間で打ち切る
+  - item: 応答の圧縮
+    constraint: '`Accept-Encoding` に gzip を含む要求に、応答を gzip で返却する。圧縮する最小の大きさは、モジュール構成設計で決める'
+    notes: 管理の MCP（`/_admin/mcp`）の応答は圧縮しない
 refs:
   - to: SC-155-10
     item: scenarios[異常シナリオ（project-index につながらない）]
@@ -883,6 +1068,8 @@ callers:
   - SC-155-7#scenarios[正常シナリオ（ER 図を参照する）]
   - SC-155-7#scenarios[正常シナリオ（本文の id のリンクを開く）]
   - SC-155-7#scenarios[正常シナリオ（設計書の検討事項のリンクを開く）]
+  - SC-155-7#scenarios[正常シナリオ（配信元を再度開く）]
+  - SC-155-7#scenarios[正常シナリオ（差分つきの文書を続けて開く）]
 notes:
   補足: '`path` を省くと一番左のタブのサイドバーの一番上の文書を返却する。'
 tags:

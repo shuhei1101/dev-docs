@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from collections.abc import Sequence
+from collections.abc import Awaitable, Sequence
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any, Literal
 
@@ -13,6 +13,7 @@ from dev_docs.features.convert.decisions import DECISION_PAGE_PREFIX, decision_p
 from dev_docs.features.convert.embed import embed_paths
 from dev_docs.features.convert.types import ConvertFailure
 from dev_docs.features.documents.aliases import collect_aliases
+from dev_docs.features.view.document_lists import CachedDocumentList, resolve_commit
 from dev_docs.features.view.nav import build_nav, first_page, mark_nav_changes
 from dev_docs.features.view.paths import find_page, page_path
 from dev_docs.features.view.types import (
@@ -24,10 +25,13 @@ from dev_docs.features.view.types import (
     NavItem,
     NavTab,
 )
+from dev_docs.integrations.project_index.client import build_source_view
 from dev_docs.integrations.project_index.types import (
     DecisionIndex,
+    DocumentList,
     IndexedDocument,
     IndexFailure,
+    RefList,
     SourceView,
     parse_document_list,
 )
@@ -105,6 +109,47 @@ def _updated_at(view: SourceView, document: IndexedDocument) -> datetime:
     return datetime.now(tz=UTC)
 
 
+async def _document_list(
+    handlers: Handlers,
+    source_id: str,
+    ref: str | None,
+    refs: Awaitable[RefList],
+    view: Awaitable[SourceView],
+) -> DocumentList:
+    """リビジョンの文書の一覧を、文書の一覧の保持か project-index から取り出す。"""
+    client = handlers.project_index
+    cache = handlers.document_lists
+    commit = resolve_commit(await refs, ref)
+    # commit に解決できない（Git 管理外・HEAD~1 など）: 保持せずに毎回問い合わせる
+    if commit is None:
+        value = await client.fetch_document_list(source_id, ref=ref)
+        resolved = await view
+        return await asyncio.to_thread(
+            parse_document_list, source_id, value, record_kinds=resolved.record_kinds()
+        )
+    cached = cache.get(source_id, commit)
+    # 保持がある: 配信元の設定が同じなら保持を使用し、違えば捨てて取得し直す
+    if cached is not None:
+        resolved = await view
+        if resolved.config_hash == cached.config_hash:
+            return cached.documents
+        cache.discard(source_id, commit)
+    # 同じ組を取得中ならその問い合わせを共有し、配信元の設定の応答を待たずに問い合わせる
+    value = await cache.fetch(
+        source_id, commit, lambda: client.fetch_document_list(source_id, ref=commit)
+    )
+    resolved = await view
+    documents = await asyncio.to_thread(
+        parse_document_list, source_id, value, record_kinds=resolved.record_kinds()
+    )
+    cache.put(
+        source_id,
+        commit,
+        CachedDocumentList(config_hash=resolved.config_hash, documents=documents),
+    )
+    return documents
+
+
 async def _diff(
     handlers: Handlers,
     view: SourceView,
@@ -112,11 +157,11 @@ async def _diff(
     tabs: list[NavTab],
     documents: Sequence[IndexedDocument],
     diff_ref: str,
+    refs: Awaitable[RefList],
+    view_task: Awaitable[SourceView],
 ) -> tuple[DocumentDiff, list[NavTab]]:
     """`diff_ref` と比べた差分の結果と、サイドバーの変化を付けたタブを作る。"""
-    base = await handlers.project_index.list_documents(
-        view.id, ref=diff_ref, record_kinds=view.record_kinds()
-    )
+    base = await _document_list(handlers, view.id, diff_ref, refs, view_task)
     before = next((d for d in base.documents if d.id == document.id), None)
     change: Literal["added", "modified"] | None
     if before is None:
@@ -201,11 +246,25 @@ async def _get_document(
 ) -> DocumentResponse:
     """文書の取得の本体（制限時間の外側は `get_document` が持つ）。"""
     client = handlers.project_index
-    # 配信元の設定・リビジョン（source_view の中）と文書の一覧を同時に問い合わせる
-    view, listed_value = await asyncio.gather(
-        client.source_view(source_id), client.fetch_document_list(source_id, ref=ref)
-    )
-    listed = parse_document_list(source_id, listed_value, record_kinds=view.record_kinds())
+
+    async def _view() -> SourceView:
+        return build_source_view(source_id, await config_task, await refs_task)
+
+    # 配信元の設定とリビジョンを同時に問い合わせ、文書の一覧はリビジョンの応答の後すぐに問い合わせる
+    try:
+        async with asyncio.TaskGroup() as group:
+            refs_task = group.create_task(client.refs(source_id, commits=0))
+            config_task = group.create_task(client.source_config(source_id))
+            view_task = group.create_task(_view())
+            listed_task = group.create_task(
+                _document_list(handlers, source_id, ref, refs_task, view_task)
+            )
+    except ExceptionGroup as group_error:
+        # 呼び出し元へは最初の例外（UnknownSourceError など）をそのまま伝える
+        raise group_error.exceptions[0] from None
+    view = view_task.result()
+    listed = listed_task.result()
+    response_ref = (ref if ref is not None else view.default_ref) if view.git else None
     tabs = build_nav(view, listed.documents)
     columns = await asyncio.to_thread(handlers.columns.get, view.id)
     github = (
@@ -220,7 +279,7 @@ async def _get_document(
         decision_markdown = await client.decision(view.id, decision)
         return DocumentResponse(
             source=view.id,
-            ref=listed.ref,
+            ref=response_ref,
             path=f"{DECISION_PAGE_PREFIX}{decision}",
             body_path=None,
             markdown=decision_markdown,
@@ -250,7 +309,7 @@ async def _get_document(
         # YAML を読み込めない: 変換せずに読み込めなかった位置を返却する
         return DocumentResponse(
             source=view.id,
-            ref=listed.ref,
+            ref=response_ref,
             path=path,
             body_path=None,
             markdown=None,
@@ -295,10 +354,12 @@ async def _get_document(
     # diff が指定された Git の配信元は、差分の結果とサイドバーの変化を求める
     diff: DocumentDiff | None = None
     if diff_ref is not None and view.git:
-        diff, tabs = await _diff(handlers, view, document, tabs, listed.documents, diff_ref)
+        diff, tabs = await _diff(
+            handlers, view, document, tabs, listed.documents, diff_ref, refs_task, view_task
+        )
     return DocumentResponse(
         source=view.id,
-        ref=listed.ref,
+        ref=response_ref,
         path=page_path(document),
         body_path=document.body_path,
         markdown=markdown,

@@ -1,0 +1,1029 @@
+......EEEE.............................................................. [ 14%]
+........................................................................ [ 29%]
+........................................................................ [ 44%]
+..................................................................EEEEEE [ 59%]
+EE........EEEEEEEEEEEE.EEEEEEE...................EEEEEEEE.......EEEE.... [ 74%]
+........................................................................ [ 89%]
+...................................................                      [100%]
+==================================== ERRORS ====================================
+__ ERROR collecting tests/unit/dev_docs/features/view/test_document_lists.py ___
+ImportError while importing test module '/home/shuhei2441/repo/dev-docs/.claude/worktrees/fix-view-document-list-reuse/tests/unit/dev_docs/features/view/test_document_lists.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+tests/unit/dev_docs/features/view/test_document_lists.py:9: in <module>
+    from dev_docs.features.view.document_lists import (
+E   ModuleNotFoundError: No module named 'dev_docs.features.view.document_lists'
+_ ERROR collecting tests/unit/dev_docs/integrations/project_index/test_client.py _
+ImportError while importing test module '/home/shuhei2441/repo/dev-docs/.claude/worktrees/fix-view-document-list-reuse/tests/unit/dev_docs/integrations/project_index/test_client.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+tests/unit/dev_docs/integrations/project_index/test_client.py:12: in <module>
+    from dev_docs.integrations.project_index.client import ProjectIndexClient, build_source_view
+E   ImportError: cannot import name 'build_source_view' from 'dev_docs.integrations.project_index.client' (/home/shuhei2441/repo/dev-docs/.claude/worktrees/fix-view-document-list-reuse/src/dev_docs/integrations/project_index/client.py)
+___________ ERROR collecting tests/unit/dev_docs/server/test_app.py ____________
+tests/unit/dev_docs/server/test_app.py:185: in <module>
+    LARGE_BODY = "x" * (app_module.GZIP_MINIMUM_SIZE + 100)
+                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   AttributeError: module 'dev_docs.server.app' has no attribute 'GZIP_MINIMUM_SIZE'
+______________ ERROR collecting tests/unit/dev_docs/test_serve.py ______________
+ImportError while importing test module '/home/shuhei2441/repo/dev-docs/.claude/worktrees/fix-view-document-list-reuse/tests/unit/dev_docs/test_serve.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+tests/unit/dev_docs/test_serve.py:23: in <module>
+    from dev_docs.features.view.document_lists import DOCUMENT_LIST_CACHE_SIZE
+E   ModuleNotFoundError: No module named 'dev_docs.features.view.document_lists'
+______________________ ERROR at setup of test_get_status _______________________
+
+tmp_path = PosixPath('/tmp/claude-1000/pytest-pr302/test_get_status0')
+make_terminal_config = <function make_terminal_config.<locals>._make at 0x76a8165a9590>
+make_client = <function make_client.<locals>._make at 0x76a8165a90c0>
+
+    @pytest.fixture
+    def make_handlers(
+        tmp_path: Path,
+        make_terminal_config: Callable[..., TerminalConfig],
+        make_client: Callable[..., ProjectIndexClient],
+    ) -> Callable[..., Any]:
+        """偽物の project-index を呼ぶ配線済みの関数を作る関数を返却する（指定した部品だけ差し替える）。"""
+        import dataclasses
+    
+        from dev_docs.features.convert.service import ConvertService
+        from dev_docs.features.lifecycle.control import RestartControl
+        from dev_docs.features.view.columns import ColumnSettings
+>       from dev_docs.features.view.document_lists import DOCUMENT_LIST_CACHE_SIZE, DocumentListCache
+E       ModuleNotFoundError: No module named 'dev_docs.features.view.document_lists'
+
+tests/unit/dev_docs/conftest.py:367: ModuleNotFoundError
+_______________ ERROR at setup of test_get_status_when_port_env ________________
+
+tmp_path = PosixPath('/tmp/claude-1000/pytest-pr302/test_get_status_when_port_env0')
+make_terminal_config = <function make_terminal_config.<locals>._make at 0x76a8165a8ca0>
+make_client = <function make_client.<locals>._make at 0x76a8165a8670>
+
+    @pytest.fixture
+    def make_handlers(
+        tmp_path: Path,
+        make_terminal_config: Callable[..., TerminalConfig],
+        make_client: Callable[..., ProjectIndexClient],
+    ) -> Callable[..., Any]:
+        """偽物の project-index を呼ぶ配線済みの関数を作る関数を返却する（指定した部品だけ差し替える）。"""
+        import dataclasses
+    
+        from dev_docs.features.convert.service import ConvertService
+        from dev_docs.features.lifecycle.control import RestartControl
+        from dev_docs.features.view.columns import ColumnSettings
+>       from dev_docs.features.view.document_lists import DOCUMENT_LIST_CACHE_SIZE, DocumentListCache
+E       ModuleNotFoundError: No module named 'dev_docs.features.view.document_lists'
+
+tests/unit/dev_docs/conftest.py:367: ModuleNotFoundError
+______________ ERROR at setup of test_get_status_when_unreachable ______________
+
+tmp_path = PosixPath('/tmp/claude-1000/pytest-pr302/test_get_status_when_unreachab0')
+make_terminal_config = <function make_terminal_config.<locals>._make at 0x76a8165a8460>
+make_client = <function make_client.<locals>._make at 0x76a816557d70>
+
+    @pytest.fixture
+    def make_handlers(
+        tmp_path: Path,
+        make_terminal_config: Callable[..., TerminalConfig],
+        make_client: Callable[..., ProjectIndexClient],
+    ) -> Callable[..., Any]:
+        """偽物の project-index を呼ぶ配線済みの関数を作る関数を返却する（指定した部品だけ差し替える）。"""
+        import dataclasses
+    
+        from dev_docs.features.convert.service import ConvertService
+        from dev_docs.features.lifecycle.control import RestartControl
+        from dev_docs.features.view.columns import ColumnSettings
+>       from dev_docs.features.view.document_lists import DOCUMENT_LIST_CACHE_SIZE, DocumentListCache
+E       ModuleNotFoundError: No module named 'dev_docs.features.view.document_lists'
+
+tests/unit/dev_docs/conftest.py:367: ModuleNotFoundError
+___________ ERROR at setup of test_get_status_when_leftover_sources ____________
+
+tmp_path = PosixPath('/tmp/claude-1000/pytest-pr302/test_get_status_when_leftover_0')
+make_terminal_config = <function make_terminal_config.<locals>._make at 0x76a816557740>
+make_client = <function make_client.<locals>._make at 0x76a816557950>
+
+    @pytest.fixture
+    def make_handlers(
+        tmp_path: Path,
+        make_terminal_config: Callable[..., TerminalConfig],
+        make_client: Callable[..., ProjectIndexClient],
+    ) -> Callable[..., Any]:
+        """偽物の project-index を呼ぶ配線済みの関数を作る関数を返却する（指定した部品だけ差し替える）。"""
+        import dataclasses
+    
+        from dev_docs.features.convert.service import ConvertService
+        from dev_docs.features.lifecycle.control import RestartControl
+        from dev_docs.features.view.columns import ColumnSettings
+>       from dev_docs.features.view.document_lists import DOCUMENT_LIST_CACHE_SIZE, DocumentListCache
+E       ModuleNotFoundError: No module named 'dev_docs.features.view.document_lists'
+
+tests/unit/dev_docs/conftest.py:367: ModuleNotFoundError
+____________ ERROR at setup of test_build_settings_router_when_get _____________
+
+tmp_path = PosixPath('/tmp/claude-1000/pytest-pr302/test_build_settings_router_whe0')
+make_terminal_config = <function make_terminal_config.<locals>._make at 0x76a8161477f0>
+make_client = <function make_client.<locals>._make at 0x76a816147a00>
+
+    @pytest.fixture
+    def make_handlers(
+        tmp_path: Path,
+        make_terminal_config: Callable[..., TerminalConfig],
+        make_client: Callable[..., ProjectIndexClient],
+    ) -> Callable[..., Any]:
+        """偽物の project-index を呼ぶ配線済みの関数を作る関数を返却する（指定した部品だけ差し替える）。"""
+        import dataclasses
+    
+        from dev_docs.features.convert.service import ConvertService
+        from dev_docs.features.lifecycle.control import RestartControl
+        from dev_docs.features.view.columns import ColumnSettings
+>       from dev_docs.features.view.document_lists import DOCUMENT_LIST_CACHE_SIZE, DocumentListCache
+E       ModuleNotFoundError: No module named 'dev_docs.features.view.document_lists'
+
+tests/unit/dev_docs/conftest.py:367: ModuleNotFoundError
+____________ ERROR at setup of test_build_settings_router_when_put _____________
+
+tmp_path = PosixPath('/tmp/claude-1000/pytest-pr302/test_build_settings_router_whe1')
+make_terminal_config = <function make_terminal_config.<locals>._make at 0x76a8161b40f0>
+make_client = <function make_client.<locals>._make at 0x76a8161b4300>
+
+    @pytest.fixture
+    def make_handlers(
+        tmp_path: Path,
+        make_terminal_config: Callable[..., TerminalConfig],
+        make_client: Callable[..., ProjectIndexClient],
+    ) -> Callable[..., Any]:
+        """偽物の project-index を呼ぶ配線済みの関数を作る関数を返却する（指定した部品だけ差し替える）。"""
+        import dataclasses
+    
+        from dev_docs.features.convert.service import ConvertService
+        from dev_docs.features.lifecycle.control import RestartControl
+        from dev_docs.features.view.columns import ColumnSettings
+>       from dev_docs.features.view.document_lists import DOCUMENT_LIST_CACHE_SIZE, DocumentListCache
+E       ModuleNotFoundError: No module named 'dev_docs.features.view.document_lists'
+
+tests/unit/dev_docs/conftest.py:367: ModuleNotFoundError
+_______ ERROR at setup of test_build_settings_router_when_pending_reload _______
+
+tmp_path = PosixPath('/tmp/claude-1000/pytest-pr302/test_build_settings_router_whe2')
+make_terminal_config = <function make_terminal_config.<locals>._make at 0x76a8161b4930>
+make_client = <function make_client.<locals>._make at 0x76a8161b4b40>
+
+    @pytest.fixture
+    def make_handlers(
+        tmp_path: Path,
+        make_terminal_config: Callable[..., TerminalConfig],
+        make_client: Callable[..., ProjectIndexClient],
+    ) -> Callable[..., Any]:
+        """偽物の project-index を呼ぶ配線済みの関数を作る関数を返却する（指定した部品だけ差し替える）。"""
+        import dataclasses
+    
+        from dev_docs.features.convert.service import ConvertService
+        from dev_docs.features.lifecycle.control import RestartControl
+        from dev_docs.features.view.columns import ColumnSettings
+>       from dev_docs.features.view.document_lists import DOCUMENT_LIST_CACHE_SIZE, DocumentListCache
+E       ModuleNotFoundError: No module named 'dev_docs.features.view.document_lists'
+
+tests/unit/dev_docs/conftest.py:367: ModuleNotFoundError
+__________ ERROR at setup of test_build_settings_router_when_rejected __________
+
+tmp_path = PosixPath('/tmp/claude-1000/pytest-pr302/test_build_settings_router_whe3')
+make_terminal_config = <function make_terminal_config.<locals>._make at 0x76a8161b4d50>
+make_client = <function make_client.<locals>._make at 0x76a8161b52d0>
+
+    @pytest.fixture
+    def make_handlers(
+        tmp_path: Path,
+        make_terminal_config: Callable[..., TerminalConfig],
+        make_client: Callable[..., ProjectIndexClient],
+    ) -> Callable[..., Any]:
+        """偽物の project-index を呼ぶ配線済みの関数を作る関数を返却する（指定した部品だけ差し替える）。"""
+        import dataclasses
+    
+        from dev_docs.features.convert.service import ConvertService
+        from dev_docs.features.lifecycle.control import RestartControl
+        from dev_docs.features.view.columns import ColumnSettings
+>       from dev_docs.features.view.document_lists import DOCUMENT_LIST_CACHE_SIZE, DocumentListCache
+E       ModuleNotFoundError: No module named 'dev_docs.features.view.document_lists'
+
+tests/unit/dev_docs/conftest.py:367: ModuleNotFoundError
+_____ ERROR at setup of test_build_settings_router_when_unexpected_status ______
+
+tmp_path = PosixPath('/tmp/claude-1000/pytest-pr302/test_build_settings_router_whe4')
+make_terminal_config = <function make_terminal_config.<locals>._make at 0x76a8161b54e0>
+make_client = <function make_client.<locals>._make at 0x76a8161b5a60>
+
+    @pytest.fixture
+    def make_handlers(
+        tmp_path: Path,
+        make_terminal_config: Callable[..., TerminalConfig],
+        make_client: Callable[..., ProjectIndexClient],
+    ) -> Callable[..., Any]:
+        """偽物の project-index を呼ぶ配線済みの関数を作る関数を返却する（指定した部品だけ差し替える）。"""
+        import dataclasses
+    
+        from dev_docs.features.convert.service import ConvertService
+        from dev_docs.features.lifecycle.control import RestartControl
+        from dev_docs.features.view.columns import ColumnSettings
+>       from dev_docs.features.view.document_lists import DOCUMENT_LIST_CACHE_SIZE, DocumentListCache
+E       ModuleNotFoundError: No module named 'dev_docs.features.view.document_lists'
+
+tests/unit/dev_docs/conftest.py:367: ModuleNotFoundError
+________ ERROR at setup of test_build_settings_router_when_unreachable _________
+
+tmp_path = PosixPath('/tmp/claude-1000/pytest-pr302/test_build_settings_router_whe5')
+make_terminal_config = <function make_terminal_config.<locals>._make at 0x76a8161b5c70>
+make_client = <function make_client.<locals>._make at 0x76a8161b61f0>
+
+    @pytest.fixture
+    def make_handlers(
+        tmp_path: Path,
+        make_terminal_config: Callable[..., TerminalConfig],
+        make_client: Callable[..., ProjectIndexClient],
+    ) -> Callable[..., Any]:
+        """偽物の project-index を呼ぶ配線済みの関数を作る関数を返却する（指定した部品だけ差し替える）。"""
+        import dataclasses
+    
+        from dev_docs.features.convert.service import ConvertService
+        from dev_docs.features.lifecycle.control import RestartControl
+        from dev_docs.features.view.columns import ColumnSettings
+>       from dev_docs.features.view.document_lists import DOCUMENT_LIST_CACHE_SIZE, DocumentListCache
+E       ModuleNotFoundError: No module named 'dev_docs.features.view.document_lists'
+
+tests/unit/dev_docs/conftest.py:367: ModuleNotFoundError
+______ ERROR at setup of test_build_settings_router_when_version_conflict ______
+
+tmp_path = PosixPath('/tmp/claude-1000/pytest-pr302/test_build_settings_router_whe6')
+make_terminal_config = <function make_terminal_config.<locals>._make at 0x76a8161b6400>
+make_client = <function make_client.<locals>._make at 0x76a8161b6980>
+
+    @pytest.fixture
+    def make_handlers(
+        tmp_path: Path,
+        make_terminal_config: Callable[..., TerminalConfig],
+        make_client: Callable[..., ProjectIndexClient],
+    ) -> Callable[..., Any]:
+        """偽物の project-index を呼ぶ配線済みの関数を作る関数を返却する（指定した部品だけ差し替える）。"""
+        import dataclasses
+    
+        from dev_docs.features.convert.service import ConvertService
+        from dev_docs.features.lifecycle.control import RestartControl
+        from dev_docs.features.view.columns import ColumnSettings
+>       from dev_docs.features.view.document_lists import DOCUMENT_LIST_CACHE_SIZE, DocumentListCache
+E       ModuleNotFoundError: No module named 'dev_docs.features.view.document_lists'
+
+tests/unit/dev_docs/conftest.py:367: ModuleNotFoundError
+__________ ERROR at setup of test_build_settings_router_when_storage ___________
+
+tmp_path = PosixPath('/tmp/claude-1000/pytest-pr302/test_build_settings_router_whe7')
+make_terminal_config = <function make_terminal_config.<locals>._make at 0x76a8161b6b90>
+make_client = <function make_client.<locals>._make at 0x76a8161b7110>
+
+    @pytest.fixture
+    def make_handlers(
+        tmp_path: Path,
+        make_terminal_config: Callable[..., TerminalConfig],
+        make_client: Callable[..., ProjectIndexClient],
+    ) -> Callable[..., Any]:
+        """偽物の project-index を呼ぶ配線済みの関数を作る関数を返却する（指定した部品だけ差し替える）。"""
+        import dataclasses
+    
+        from dev_docs.features.convert.service import ConvertService
+        from dev_docs.features.lifecycle.control import RestartControl
+        from dev_docs.features.view.columns import ColumnSettings
+>       from dev_docs.features.view.document_lists import DOCUMENT_LIST_CACHE_SIZE, DocumentListCache
+E       ModuleNotFoundError: No module named 'dev_docs.features.view.document_lists'
+
+tests/unit/dev_docs/conftest.py:367: ModuleNotFoundError
+_____________________ ERROR at setup of test_get_document ______________________
+
+tmp_path = PosixPath('/tmp/claude-1000/pytest-pr302/test_get_document0')
+make_terminal_config = <function make_terminal_config.<locals>._make at 0x76a816191590>
+make_client = <function make_client.<locals>._make at 0x76a8161917a0>
+
+    @pytest.fixture
+    def make_handlers(
+        tmp_path: Path,
+        make_terminal_config: Callable[..., TerminalConfig],
+        make_client: Callable[..., ProjectIndexClient],
+    ) -> Callable[..., Any]:
+        """偽物の project-index を呼ぶ配線済みの関数を作る関数を返却する（指定した部品だけ差し替える）。"""
+        import dataclasses
+    
+        from dev_docs.features.convert.service import ConvertService
+        from dev_docs.features.lifecycle.control import RestartControl
+        from dev_docs.features.view.columns import ColumnSettings
+>       from dev_docs.features.view.document_lists import DOCUMENT_LIST_CACHE_SIZE, DocumentListCache
+E       ModuleNotFoundError: No module named 'dev_docs.features.view.document_lists'
+
+tests/unit/dev_docs/conftest.py:367: ModuleNotFoundError
+________________ ERROR at setup of test_get_document_when_diff _________________
+
+tmp_path = PosixPath('/tmp/claude-1000/pytest-pr302/test_get_document_when_diff0')
+make_terminal_config = <function make_terminal_config.<locals>._make at 0x76a8161919b0>
+make_client = <function make_client.<locals>._make at 0x76a816191f30>
+
+    @pytest.fixture
+    def make_handlers(
+        tmp_path: Path,
+        make_terminal_config: Callable[..., TerminalConfig],
+        make_client: Callable[..., ProjectIndexClient],
+    ) -> Callable[..., Any]:
+        """偽物の project-index を呼ぶ配線済みの関数を作る関数を返却する（指定した部品だけ差し替える）。"""
+        import dataclasses
+    
+        from dev_docs.features.convert.service import ConvertService
+        from dev_docs.features.lifecycle.control import RestartControl
+        from dev_docs.features.view.columns import ColumnSettings
+>       from dev_docs.features.view.document_lists import DOCUMENT_LIST_CACHE_SIZE, DocumentListCache
+E       ModuleNotFoundError: No module named 'dev_docs.features.view.document_lists'
+
+tests/unit/dev_docs/conftest.py:367: ModuleNotFoundError
+___________ ERROR at setup of test_get_document_when_convert_failed ____________
+
+tmp_path = PosixPath('/tmp/claude-1000/pytest-pr302/test_get_document_when_convert0')
+make_terminal_config = <function make_terminal_config.<locals>._make at 0x76a8161926c0>
+make_client = <function make_client.<locals>._make at 0x76a8161928d0>
+
+    @pytest.fixture
+    def make_handlers(
+        tmp_path: Path,
+        make_terminal_config: Callable[..., TerminalConfig],
+        make_client: Callable[..., ProjectIndexClient],
+    ) -> Callable[..., Any]:
+        """偽物の project-index を呼ぶ配線済みの関数を作る関数を返却する（指定した部品だけ差し替える）。"""
+        import dataclasses
+    
+        from dev_docs.features.convert.service import ConvertService
+        from dev_docs.features.lifecycle.control import RestartControl
+        from dev_docs.features.view.columns import ColumnSettings
+>       from dev_docs.features.view.document_lists import DOCUMENT_LIST_CACHE_SIZE, DocumentListCache
+E       ModuleNotFoundError: No module named 'dev_docs.features.view.document_lists'
+
+tests/unit/dev_docs/conftest.py:367: ModuleNotFoundError
+___________ ERROR at setup of test_get_document_when_yaml_unreadable ___________
+
+tmp_path = PosixPath('/tmp/claude-1000/pytest-pr302/test_get_document_when_yaml_un0')
+make_terminal_config = <function make_terminal_config.<locals>._make at 0x76a816193060>
+make_client = <function make_client.<locals>._make at 0x76a816193270>
+
+    @pytest.fixture
+    def make_handlers(
+        tmp_path: Path,
+        make_terminal_config: Callable[..., TerminalConfig],
+        make_client: Callable[..., ProjectIndexClient],
+    ) -> Callable[..., Any]:
+        """偽物の project-index を呼ぶ配線済みの関数を作る関数を返却する（指定した部品だけ差し替える）。"""
+        import dataclasses
+    
+        from dev_docs.features.convert.service import ConvertService
+        from dev_docs.features.lifecycle.control import RestartControl
+        from dev_docs.features.view.columns import ColumnSettings
+>       from dev_docs.features.view.document_lists import DOCUMENT_LIST_CACHE_SIZE, DocumentListCache
+E       ModuleNotFoundError: No module named 'dev_docs.features.view.document_lists'
+
+tests/unit/dev_docs/conftest.py:367: ModuleNotFoundError
+_______________ ERROR at setup of test_get_document_when_missing _______________
+
+tmp_path = PosixPath('/tmp/claude-1000/pytest-pr302/test_get_document_when_missing0')
+make_terminal_config = <function make_terminal_config.<locals>._make at 0x76a816193480>
+make_client = <function make_client.<locals>._make at 0x76a816193a00>
+
+    @pytest.fixture
+    def make_handlers(
+        tmp_path: Path,
+        make_terminal_config: Callable[..., TerminalConfig],
+        make_client: Callable[..., ProjectIndexClient],
+    ) -> Callable[..., Any]:
+        """偽物の project-index を呼ぶ配線済みの関数を作る関数を返却する（指定した部品だけ差し替える）。"""
+        import dataclasses
+    
+        from dev_docs.features.convert.service import ConvertService
+        from dev_docs.features.lifecycle.control import RestartControl
+        from dev_docs.features.view.columns import ColumnSettings
+>       from dev_docs.features.view.document_lists import DOCUMENT_LIST_CACHE_SIZE, DocumentListCache
+E       ModuleNotFoundError: No module named 'dev_docs.features.view.document_lists'
+
+tests/unit/dev_docs/conftest.py:367: ModuleNotFoundError
+_______________ ERROR at setup of test_get_document_when_not_git _______________
+
+tmp_path = PosixPath('/tmp/claude-1000/pytest-pr302/test_get_document_when_not_git0')
+make_terminal_config = <function make_terminal_config.<locals>._make at 0x76a816180040>
+make_client = <function make_client.<locals>._make at 0x76a816180250>
+
+    @pytest.fixture
+    def make_handlers(
+        tmp_path: Path,
+        make_terminal_config: Callable[..., TerminalConfig],
+        make_client: Callable[..., ProjectIndexClient],
+    ) -> Callable[..., Any]:
+        """偽物の project-index を呼ぶ配線済みの関数を作る関数を返却する（指定した部品だけ差し替える）。"""
+        import dataclasses
+    
+        from dev_docs.features.convert.service import ConvertService
+        from dev_docs.features.lifecycle.control import RestartControl
+        from dev_docs.features.view.columns import ColumnSettings
+>       from dev_docs.features.view.document_lists import DOCUMENT_LIST_CACHE_SIZE, DocumentListCache
+E       ModuleNotFoundError: No module named 'dev_docs.features.view.document_lists'
+
+tests/unit/dev_docs/conftest.py:367: ModuleNotFoundError
+_______________ ERROR at setup of test_get_document_when_aliases _______________
+
+tmp_path = PosixPath('/tmp/claude-1000/pytest-pr302/test_get_document_when_aliases0')
+make_terminal_config = <function make_terminal_config.<locals>._make at 0x76a816180880>
+make_client = <function make_client.<locals>._make at 0x76a816180a90>
+
+    @pytest.fixture
+    def make_handlers(
+        tmp_path: Path,
+        make_terminal_config: Callable[..., TerminalConfig],
+        make_client: Callable[..., ProjectIndexClient],
+    ) -> Callable[..., Any]:
+        """偽物の project-index を呼ぶ配線済みの関数を作る関数を返却する（指定した部品だけ差し替える）。"""
+        import dataclasses
+    
+        from dev_docs.features.convert.service import ConvertService
+        from dev_docs.features.lifecycle.control import RestartControl
+        from dev_docs.features.view.columns import ColumnSettings
+>       from dev_docs.features.view.document_lists import DOCUMENT_LIST_CACHE_SIZE, DocumentListCache
+E       ModuleNotFoundError: No module named 'dev_docs.features.view.document_lists'
+
+tests/unit/dev_docs/conftest.py:367: ModuleNotFoundError
+______________ ERROR at setup of test_get_document_when_decision _______________
+
+tmp_path = PosixPath('/tmp/claude-1000/pytest-pr302/test_get_document_when_decisio0')
+make_terminal_config = <function make_terminal_config.<locals>._make at 0x76a8161810c0>
+make_client = <function make_client.<locals>._make at 0x76a8161812d0>
+
+    @pytest.fixture
+    def make_handlers(
+        tmp_path: Path,
+        make_terminal_config: Callable[..., TerminalConfig],
+        make_client: Callable[..., ProjectIndexClient],
+    ) -> Callable[..., Any]:
+        """偽物の project-index を呼ぶ配線済みの関数を作る関数を返却する（指定した部品だけ差し替える）。"""
+        import dataclasses
+    
+        from dev_docs.features.convert.service import ConvertService
+        from dev_docs.features.lifecycle.control import RestartControl
+        from dev_docs.features.view.columns import ColumnSettings
+>       from dev_docs.features.view.document_lists import DOCUMENT_LIST_CACHE_SIZE, DocumentListCache
+E       ModuleNotFoundError: No module named 'dev_docs.features.view.document_lists'
+
+tests/unit/dev_docs/conftest.py:367: ModuleNotFoundError
+_________ ERROR at setup of test_get_document_when_decision_ambiguous __________
+
+tmp_path = PosixPath('/tmp/claude-1000/pytest-pr302/test_get_document_when_decisio1')
+make_terminal_config = <function make_terminal_config.<locals>._make at 0x76a8161814e0>
+make_client = <function make_client.<locals>._make at 0x76a816181a60>
+
+    @pytest.fixture
+    def make_handlers(
+        tmp_path: Path,
+        make_terminal_config: Callable[..., TerminalConfig],
+        make_client: Callable[..., ProjectIndexClient],
+    ) -> Callable[..., Any]:
+        """偽物の project-index を呼ぶ配線済みの関数を作る関数を返却する（指定した部品だけ差し替える）。"""
+        import dataclasses
+    
+        from dev_docs.features.convert.service import ConvertService
+        from dev_docs.features.lifecycle.control import RestartControl
+        from dev_docs.features.view.columns import ColumnSettings
+>       from dev_docs.features.view.document_lists import DOCUMENT_LIST_CACHE_SIZE, DocumentListCache
+E       ModuleNotFoundError: No module named 'dev_docs.features.view.document_lists'
+
+tests/unit/dev_docs/conftest.py:367: ModuleNotFoundError
+______________ ERROR at setup of test_get_document_when_body_path ______________
+
+tmp_path = PosixPath('/tmp/claude-1000/pytest-pr302/test_get_document_when_body_pa0')
+make_terminal_config = <function make_terminal_config.<locals>._make at 0x76a816181c70>
+make_client = <function make_client.<locals>._make at 0x76a8161821f0>
+
+    @pytest.fixture
+    def make_handlers(
+        tmp_path: Path,
+        make_terminal_config: Callable[..., TerminalConfig],
+        make_client: Callable[..., ProjectIndexClient],
+    ) -> Callable[..., Any]:
+        """偽物の project-index を呼ぶ配線済みの関数を作る関数を返却する（指定した部品だけ差し替える）。"""
+        import dataclasses
+    
+        from dev_docs.features.convert.service import ConvertService
+        from dev_docs.features.lifecycle.control import RestartControl
+        from dev_docs.features.view.columns import ColumnSettings
+>       from dev_docs.features.view.document_lists import DOCUMENT_LIST_CACHE_SIZE, DocumentListCache
+E       ModuleNotFoundError: No module named 'dev_docs.features.view.document_lists'
+
+tests/unit/dev_docs/conftest.py:367: ModuleNotFoundError
+________________ ERROR at setup of test_get_document_when_embed ________________
+
+tmp_path = PosixPath('/tmp/claude-1000/pytest-pr302/test_get_document_when_embed0')
+make_terminal_config = <function make_terminal_config.<locals>._make at 0x76a816182400>
+make_client = <function make_client.<locals>._make at 0x76a816182980>
+
+    @pytest.fixture
+    def make_handlers(
+        tmp_path: Path,
+        make_terminal_config: Callable[..., TerminalConfig],
+        make_client: Callable[..., ProjectIndexClient],
+    ) -> Callable[..., Any]:
+        """偽物の project-index を呼ぶ配線済みの関数を作る関数を返却する（指定した部品だけ差し替える）。"""
+        import dataclasses
+    
+        from dev_docs.features.convert.service import ConvertService
+        from dev_docs.features.lifecycle.control import RestartControl
+        from dev_docs.features.view.columns import ColumnSettings
+>       from dev_docs.features.view.document_lists import DOCUMENT_LIST_CACHE_SIZE, DocumentListCache
+E       ModuleNotFoundError: No module named 'dev_docs.features.view.document_lists'
+
+tests/unit/dev_docs/conftest.py:367: ModuleNotFoundError
+_____________ ERROR at setup of test_get_document_when_unreachable _____________
+
+tmp_path = PosixPath('/tmp/claude-1000/pytest-pr302/test_get_document_when_unreach0')
+make_terminal_config = <function make_terminal_config.<locals>._make at 0x76a816182b90>
+make_client = <function make_client.<locals>._make at 0x76a816183110>
+
+    @pytest.fixture
+    def make_handlers(
+        tmp_path: Path,
+        make_terminal_config: Callable[..., TerminalConfig],
+        make_client: Callable[..., ProjectIndexClient],
+    ) -> Callable[..., Any]:
+        """偽物の project-index を呼ぶ配線済みの関数を作る関数を返却する（指定した部品だけ差し替える）。"""
+        import dataclasses
+    
+        from dev_docs.features.convert.service import ConvertService
+        from dev_docs.features.lifecycle.control import RestartControl
+        from dev_docs.features.view.columns import ColumnSettings
+>       from dev_docs.features.view.document_lists import DOCUMENT_LIST_CACHE_SIZE, DocumentListCache
+E       ModuleNotFoundError: No module named 'dev_docs.features.view.document_lists'
+
+tests/unit/dev_docs/conftest.py:367: ModuleNotFoundError
+_________ ERROR at setup of test_get_document_when_requests_concurrent _________
+
+tmp_path = PosixPath('/tmp/claude-1000/pytest-pr302/test_get_document_when_request0')
+make_terminal_config = <function make_terminal_config.<locals>._make at 0x76a8161838a0>
+make_client = <function make_client.<locals>._make at 0x76a816183ab0>
+
+    @pytest.fixture
+    def make_handlers(
+        tmp_path: Path,
+        make_terminal_config: Callable[..., TerminalConfig],
+        make_client: Callable[..., ProjectIndexClient],
+    ) -> Callable[..., Any]:
+        """偽物の project-index を呼ぶ配線済みの関数を作る関数を返却する（指定した部品だけ差し替える）。"""
+        import dataclasses
+    
+        from dev_docs.features.convert.service import ConvertService
+        from dev_docs.features.lifecycle.control import RestartControl
+        from dev_docs.features.view.columns import ColumnSettings
+>       from dev_docs.features.view.document_lists import DOCUMENT_LIST_CACHE_SIZE, DocumentListCache
+E       ModuleNotFoundError: No module named 'dev_docs.features.view.document_lists'
+
+tests/unit/dev_docs/conftest.py:367: ModuleNotFoundError
+____________ ERROR at setup of test_get_document_when_total_timeout ____________
+
+tmp_path = PosixPath('/tmp/claude-1000/pytest-pr302/test_get_document_when_total_t0')
+make_terminal_config = <function make_terminal_config.<locals>._make at 0x76a8161c80f0>
+make_client = <function make_client.<locals>._make at 0x76a8161c8300>
+
+    @pytest.fixture
+    def make_handlers(
+        tmp_path: Path,
+        make_terminal_config: Callable[..., TerminalConfig],
+        make_client: Callable[..., ProjectIndexClient],
+    ) -> Callable[..., Any]:
+        """偽物の project-index を呼ぶ配線済みの関数を作る関数を返却する（指定した部品だけ差し替える）。"""
+        import dataclasses
+    
+        from dev_docs.features.convert.service import ConvertService
+        from dev_docs.features.lifecycle.control import RestartControl
+        from dev_docs.features.view.columns import ColumnSettings
+>       from dev_docs.features.view.document_lists import DOCUMENT_LIST_CACHE_SIZE, DocumentListCache
+E       ModuleNotFoundError: No module named 'dev_docs.features.view.document_lists'
+
+tests/unit/dev_docs/conftest.py:367: ModuleNotFoundError
+_____________ ERROR at setup of test_get_document_when_list_reused _____________
+
+tmp_path = PosixPath('/tmp/claude-1000/pytest-pr302/test_get_document_when_list_re0')
+make_terminal_config = <function make_terminal_config.<locals>._make at 0x76a8161c8510>
+make_client = <function make_client.<locals>._make at 0x76a8161c8a90>
+
+    @pytest.fixture
+    def make_handlers(
+        tmp_path: Path,
+        make_terminal_config: Callable[..., TerminalConfig],
+        make_client: Callable[..., ProjectIndexClient],
+    ) -> Callable[..., Any]:
+        """偽物の project-index を呼ぶ配線済みの関数を作る関数を返却する（指定した部品だけ差し替える）。"""
+        import dataclasses
+    
+        from dev_docs.features.convert.service import ConvertService
+        from dev_docs.features.lifecycle.control import RestartControl
+        from dev_docs.features.view.columns import ColumnSettings
+>       from dev_docs.features.view.document_lists import DOCUMENT_LIST_CACHE_SIZE, DocumentListCache
+E       ModuleNotFoundError: No module named 'dev_docs.features.view.document_lists'
+
+tests/unit/dev_docs/conftest.py:367: ModuleNotFoundError
+__________ ERROR at setup of test_get_document_when_diff_list_reused ___________
+
+tmp_path = PosixPath('/tmp/claude-1000/pytest-pr302/test_get_document_when_diff_li0')
+make_terminal_config = <function make_terminal_config.<locals>._make at 0x76a8161c8ca0>
+make_client = <function make_client.<locals>._make at 0x76a8161c9220>
+
+    @pytest.fixture
+    def make_handlers(
+        tmp_path: Path,
+        make_terminal_config: Callable[..., TerminalConfig],
+        make_client: Callable[..., ProjectIndexClient],
+    ) -> Callable[..., Any]:
+        """偽物の project-index を呼ぶ配線済みの関数を作る関数を返却する（指定した部品だけ差し替える）。"""
+        import dataclasses
+    
+        from dev_docs.features.convert.service import ConvertService
+        from dev_docs.features.lifecycle.control import RestartControl
+        from dev_docs.features.view.columns import ColumnSettings
+>       from dev_docs.features.view.document_lists import DOCUMENT_LIST_CACHE_SIZE, DocumentListCache
+E       ModuleNotFoundError: No module named 'dev_docs.features.view.document_lists'
+
+tests/unit/dev_docs/conftest.py:367: ModuleNotFoundError
+___________ ERROR at setup of test_get_document_when_config_changed ____________
+
+tmp_path = PosixPath('/tmp/claude-1000/pytest-pr302/test_get_document_when_config_0')
+make_terminal_config = <function make_terminal_config.<locals>._make at 0x76a8161c9430>
+make_client = <function make_client.<locals>._make at 0x76a8161c99b0>
+
+    @pytest.fixture
+    def make_handlers(
+        tmp_path: Path,
+        make_terminal_config: Callable[..., TerminalConfig],
+        make_client: Callable[..., ProjectIndexClient],
+    ) -> Callable[..., Any]:
+        """偽物の project-index を呼ぶ配線済みの関数を作る関数を返却する（指定した部品だけ差し替える）。"""
+        import dataclasses
+    
+        from dev_docs.features.convert.service import ConvertService
+        from dev_docs.features.lifecycle.control import RestartControl
+        from dev_docs.features.view.columns import ColumnSettings
+>       from dev_docs.features.view.document_lists import DOCUMENT_LIST_CACHE_SIZE, DocumentListCache
+E       ModuleNotFoundError: No module named 'dev_docs.features.view.document_lists'
+
+tests/unit/dev_docs/conftest.py:367: ModuleNotFoundError
+_________ ERROR at setup of test_get_document_when_list_not_cacheable __________
+
+tmp_path = PosixPath('/tmp/claude-1000/pytest-pr302/test_get_document_when_list_no0')
+make_terminal_config = <function make_terminal_config.<locals>._make at 0x76a8161c9bc0>
+make_client = <function make_client.<locals>._make at 0x76a8161ca140>
+
+    @pytest.fixture
+    def make_handlers(
+        tmp_path: Path,
+        make_terminal_config: Callable[..., TerminalConfig],
+        make_client: Callable[..., ProjectIndexClient],
+    ) -> Callable[..., Any]:
+        """偽物の project-index を呼ぶ配線済みの関数を作る関数を返却する（指定した部品だけ差し替える）。"""
+        import dataclasses
+    
+        from dev_docs.features.convert.service import ConvertService
+        from dev_docs.features.lifecycle.control import RestartControl
+        from dev_docs.features.view.columns import ColumnSettings
+>       from dev_docs.features.view.document_lists import DOCUMENT_LIST_CACHE_SIZE, DocumentListCache
+E       ModuleNotFoundError: No module named 'dev_docs.features.view.document_lists'
+
+tests/unit/dev_docs/conftest.py:367: ModuleNotFoundError
+___________ ERROR at setup of test_get_document_when_source_unknown ____________
+
+tmp_path = PosixPath('/tmp/claude-1000/pytest-pr302/test_get_document_when_source_0')
+make_terminal_config = <function make_terminal_config.<locals>._make at 0x76a8161ca560>
+make_client = <function make_client.<locals>._make at 0x76a8161ca8d0>
+
+    @pytest.fixture
+    def make_handlers(
+        tmp_path: Path,
+        make_terminal_config: Callable[..., TerminalConfig],
+        make_client: Callable[..., ProjectIndexClient],
+    ) -> Callable[..., Any]:
+        """偽物の project-index を呼ぶ配線済みの関数を作る関数を返却する（指定した部品だけ差し替える）。"""
+        import dataclasses
+    
+        from dev_docs.features.convert.service import ConvertService
+        from dev_docs.features.lifecycle.control import RestartControl
+        from dev_docs.features.view.columns import ColumnSettings
+>       from dev_docs.features.view.document_lists import DOCUMENT_LIST_CACHE_SIZE, DocumentListCache
+E       ModuleNotFoundError: No module named 'dev_docs.features.view.document_lists'
+
+tests/unit/dev_docs/conftest.py:367: ModuleNotFoundError
+____________ ERROR at setup of test_build_view_router_when_document ____________
+
+tmp_path = PosixPath('/tmp/claude-1000/pytest-pr302/test_build_view_router_when_do0')
+make_terminal_config = <function make_terminal_config.<locals>._make at 0x76a81606db10>
+make_client = <function make_client.<locals>._make at 0x76a81606dd20>
+
+    @pytest.fixture
+    def make_handlers(
+        tmp_path: Path,
+        make_terminal_config: Callable[..., TerminalConfig],
+        make_client: Callable[..., ProjectIndexClient],
+    ) -> Callable[..., Any]:
+        """偽物の project-index を呼ぶ配線済みの関数を作る関数を返却する（指定した部品だけ差し替える）。"""
+        import dataclasses
+    
+        from dev_docs.features.convert.service import ConvertService
+        from dev_docs.features.lifecycle.control import RestartControl
+        from dev_docs.features.view.columns import ColumnSettings
+>       from dev_docs.features.view.document_lists import DOCUMENT_LIST_CACHE_SIZE, DocumentListCache
+E       ModuleNotFoundError: No module named 'dev_docs.features.view.document_lists'
+
+tests/unit/dev_docs/conftest.py:367: ModuleNotFoundError
+________ ERROR at setup of test_build_view_router_when_document_missing ________
+
+tmp_path = PosixPath('/tmp/claude-1000/pytest-pr302/test_build_view_router_when_do1')
+make_terminal_config = <function make_terminal_config.<locals>._make at 0x76a81606df30>
+make_client = <function make_client.<locals>._make at 0x76a81606e4b0>
+
+    @pytest.fixture
+    def make_handlers(
+        tmp_path: Path,
+        make_terminal_config: Callable[..., TerminalConfig],
+        make_client: Callable[..., ProjectIndexClient],
+    ) -> Callable[..., Any]:
+        """偽物の project-index を呼ぶ配線済みの関数を作る関数を返却する（指定した部品だけ差し替える）。"""
+        import dataclasses
+    
+        from dev_docs.features.convert.service import ConvertService
+        from dev_docs.features.lifecycle.control import RestartControl
+        from dev_docs.features.view.columns import ColumnSettings
+>       from dev_docs.features.view.document_lists import DOCUMENT_LIST_CACHE_SIZE, DocumentListCache
+E       ModuleNotFoundError: No module named 'dev_docs.features.view.document_lists'
+
+tests/unit/dev_docs/conftest.py:367: ModuleNotFoundError
+_____________ ERROR at setup of test_build_view_router_when_search _____________
+
+tmp_path = PosixPath('/tmp/claude-1000/pytest-pr302/test_build_view_router_when_se0')
+make_terminal_config = <function make_terminal_config.<locals>._make at 0x76a81606e6c0>
+make_client = <function make_client.<locals>._make at 0x76a81606ec40>
+
+    @pytest.fixture
+    def make_handlers(
+        tmp_path: Path,
+        make_terminal_config: Callable[..., TerminalConfig],
+        make_client: Callable[..., ProjectIndexClient],
+    ) -> Callable[..., Any]:
+        """偽物の project-index を呼ぶ配線済みの関数を作る関数を返却する（指定した部品だけ差し替える）。"""
+        import dataclasses
+    
+        from dev_docs.features.convert.service import ConvertService
+        from dev_docs.features.lifecycle.control import RestartControl
+        from dev_docs.features.view.columns import ColumnSettings
+>       from dev_docs.features.view.document_lists import DOCUMENT_LIST_CACHE_SIZE, DocumentListCache
+E       ModuleNotFoundError: No module named 'dev_docs.features.view.document_lists'
+
+tests/unit/dev_docs/conftest.py:367: ModuleNotFoundError
+_________ ERROR at setup of test_build_view_router_when_query_too_long _________
+
+tmp_path = PosixPath('/tmp/claude-1000/pytest-pr302/test_build_view_router_when_qu0')
+make_terminal_config = <function make_terminal_config.<locals>._make at 0x76a81606ee50>
+make_client = <function make_client.<locals>._make at 0x76a81606f3d0>
+
+    @pytest.fixture
+    def make_handlers(
+        tmp_path: Path,
+        make_terminal_config: Callable[..., TerminalConfig],
+        make_client: Callable[..., ProjectIndexClient],
+    ) -> Callable[..., Any]:
+        """偽物の project-index を呼ぶ配線済みの関数を作る関数を返却する（指定した部品だけ差し替える）。"""
+        import dataclasses
+    
+        from dev_docs.features.convert.service import ConvertService
+        from dev_docs.features.lifecycle.control import RestartControl
+        from dev_docs.features.view.columns import ColumnSettings
+>       from dev_docs.features.view.document_lists import DOCUMENT_LIST_CACHE_SIZE, DocumentListCache
+E       ModuleNotFoundError: No module named 'dev_docs.features.view.document_lists'
+
+tests/unit/dev_docs/conftest.py:367: ModuleNotFoundError
+______________ ERROR at setup of test_build_view_router_when_refs ______________
+
+tmp_path = PosixPath('/tmp/claude-1000/pytest-pr302/test_build_view_router_when_re0')
+make_terminal_config = <function make_terminal_config.<locals>._make at 0x76a8161ca140>
+make_client = <function make_client.<locals>._make at 0x76a8161c9f30>
+
+    @pytest.fixture
+    def make_handlers(
+        tmp_path: Path,
+        make_terminal_config: Callable[..., TerminalConfig],
+        make_client: Callable[..., ProjectIndexClient],
+    ) -> Callable[..., Any]:
+        """偽物の project-index を呼ぶ配線済みの関数を作る関数を返却する（指定した部品だけ差し替える）。"""
+        import dataclasses
+    
+        from dev_docs.features.convert.service import ConvertService
+        from dev_docs.features.lifecycle.control import RestartControl
+        from dev_docs.features.view.columns import ColumnSettings
+>       from dev_docs.features.view.document_lists import DOCUMENT_LIST_CACHE_SIZE, DocumentListCache
+E       ModuleNotFoundError: No module named 'dev_docs.features.view.document_lists'
+
+tests/unit/dev_docs/conftest.py:367: ModuleNotFoundError
+____________ ERROR at setup of test_build_view_router_when_columns _____________
+
+tmp_path = PosixPath('/tmp/claude-1000/pytest-pr302/test_build_view_router_when_co0')
+make_terminal_config = <function make_terminal_config.<locals>._make at 0x76a8161c9a60>
+make_client = <function make_client.<locals>._make at 0x76a8161c9380>
+
+    @pytest.fixture
+    def make_handlers(
+        tmp_path: Path,
+        make_terminal_config: Callable[..., TerminalConfig],
+        make_client: Callable[..., ProjectIndexClient],
+    ) -> Callable[..., Any]:
+        """偽物の project-index を呼ぶ配線済みの関数を作る関数を返却する（指定した部品だけ差し替える）。"""
+        import dataclasses
+    
+        from dev_docs.features.convert.service import ConvertService
+        from dev_docs.features.lifecycle.control import RestartControl
+        from dev_docs.features.view.columns import ColumnSettings
+>       from dev_docs.features.view.document_lists import DOCUMENT_LIST_CACHE_SIZE, DocumentListCache
+E       ModuleNotFoundError: No module named 'dev_docs.features.view.document_lists'
+
+tests/unit/dev_docs/conftest.py:367: ModuleNotFoundError
+__________ ERROR at setup of test_build_view_router_when_cross_origin __________
+
+tmp_path = PosixPath('/tmp/claude-1000/pytest-pr302/test_build_view_router_when_cr0')
+make_terminal_config = <function make_terminal_config.<locals>._make at 0x76a8161c9220>
+make_client = <function make_client.<locals>._make at 0x76a8161c8a90>
+
+    @pytest.fixture
+    def make_handlers(
+        tmp_path: Path,
+        make_terminal_config: Callable[..., TerminalConfig],
+        make_client: Callable[..., ProjectIndexClient],
+    ) -> Callable[..., Any]:
+        """偽物の project-index を呼ぶ配線済みの関数を作る関数を返却する（指定した部品だけ差し替える）。"""
+        import dataclasses
+    
+        from dev_docs.features.convert.service import ConvertService
+        from dev_docs.features.lifecycle.control import RestartControl
+        from dev_docs.features.view.columns import ColumnSettings
+>       from dev_docs.features.view.document_lists import DOCUMENT_LIST_CACHE_SIZE, DocumentListCache
+E       ModuleNotFoundError: No module named 'dev_docs.features.view.document_lists'
+
+tests/unit/dev_docs/conftest.py:367: ModuleNotFoundError
+___ ERROR at setup of test_build_view_router_when_project_index_unreachable ____
+
+tmp_path = PosixPath('/tmp/claude-1000/pytest-pr302/test_build_view_router_when_pr0')
+make_terminal_config = <function make_terminal_config.<locals>._make at 0x76a8161c83b0>
+make_client = <function make_client.<locals>._make at 0x76a8161c8250>
+
+    @pytest.fixture
+    def make_handlers(
+        tmp_path: Path,
+        make_terminal_config: Callable[..., TerminalConfig],
+        make_client: Callable[..., ProjectIndexClient],
+    ) -> Callable[..., Any]:
+        """偽物の project-index を呼ぶ配線済みの関数を作る関数を返却する（指定した部品だけ差し替える）。"""
+        import dataclasses
+    
+        from dev_docs.features.convert.service import ConvertService
+        from dev_docs.features.lifecycle.control import RestartControl
+        from dev_docs.features.view.columns import ColumnSettings
+>       from dev_docs.features.view.document_lists import DOCUMENT_LIST_CACHE_SIZE, DocumentListCache
+E       ModuleNotFoundError: No module named 'dev_docs.features.view.document_lists'
+
+tests/unit/dev_docs/conftest.py:367: ModuleNotFoundError
+____________________ ERROR at setup of test_build_admin_mcp ____________________
+
+tmp_path = PosixPath('/tmp/claude-1000/pytest-pr302/test_build_admin_mcp0')
+make_terminal_config = <function make_terminal_config.<locals>._make at 0x76a816182140>
+make_client = <function make_client.<locals>._make at 0x76a816181b10>
+
+    @pytest.fixture
+    def make_handlers(
+        tmp_path: Path,
+        make_terminal_config: Callable[..., TerminalConfig],
+        make_client: Callable[..., ProjectIndexClient],
+    ) -> Callable[..., Any]:
+        """偽物の project-index を呼ぶ配線済みの関数を作る関数を返却する（指定した部品だけ差し替える）。"""
+        import dataclasses
+    
+        from dev_docs.features.convert.service import ConvertService
+        from dev_docs.features.lifecycle.control import RestartControl
+        from dev_docs.features.view.columns import ColumnSettings
+>       from dev_docs.features.view.document_lists import DOCUMENT_LIST_CACHE_SIZE, DocumentListCache
+E       ModuleNotFoundError: No module named 'dev_docs.features.view.document_lists'
+
+tests/unit/dev_docs/conftest.py:367: ModuleNotFoundError
+______________ ERROR at setup of test_build_admin_mcp_when_status ______________
+
+tmp_path = PosixPath('/tmp/claude-1000/pytest-pr302/test_build_admin_mcp_when_stat0')
+make_terminal_config = <function make_terminal_config.<locals>._make at 0x76a8161c9220>
+make_client = <function make_client.<locals>._make at 0x76a8161c87d0>
+
+    @pytest.fixture
+    def make_handlers(
+        tmp_path: Path,
+        make_terminal_config: Callable[..., TerminalConfig],
+        make_client: Callable[..., ProjectIndexClient],
+    ) -> Callable[..., Any]:
+        """偽物の project-index を呼ぶ配線済みの関数を作る関数を返却する（指定した部品だけ差し替える）。"""
+        import dataclasses
+    
+        from dev_docs.features.convert.service import ConvertService
+        from dev_docs.features.lifecycle.control import RestartControl
+        from dev_docs.features.view.columns import ColumnSettings
+>       from dev_docs.features.view.document_lists import DOCUMENT_LIST_CACHE_SIZE, DocumentListCache
+E       ModuleNotFoundError: No module named 'dev_docs.features.view.document_lists'
+
+tests/unit/dev_docs/conftest.py:367: ModuleNotFoundError
+_______ ERROR at setup of test_build_admin_mcp_when_restart_in_progress ________
+
+tmp_path = PosixPath('/tmp/claude-1000/pytest-pr302/test_build_admin_mcp_when_rest0')
+make_terminal_config = <function make_terminal_config.<locals>._make at 0x76a8161c8040>
+make_client = <function make_client.<locals>._make at 0x76a8161c9a60>
+
+    @pytest.fixture
+    def make_handlers(
+        tmp_path: Path,
+        make_terminal_config: Callable[..., TerminalConfig],
+        make_client: Callable[..., ProjectIndexClient],
+    ) -> Callable[..., Any]:
+        """偽物の project-index を呼ぶ配線済みの関数を作る関数を返却する（指定した部品だけ差し替える）。"""
+        import dataclasses
+    
+        from dev_docs.features.convert.service import ConvertService
+        from dev_docs.features.lifecycle.control import RestartControl
+        from dev_docs.features.view.columns import ColumnSettings
+>       from dev_docs.features.view.document_lists import DOCUMENT_LIST_CACHE_SIZE, DocumentListCache
+E       ModuleNotFoundError: No module named 'dev_docs.features.view.document_lists'
+
+tests/unit/dev_docs/conftest.py:367: ModuleNotFoundError
+___________ ERROR at setup of test_build_admin_mcp_when_descriptions ___________
+
+tmp_path = PosixPath('/tmp/claude-1000/pytest-pr302/test_build_admin_mcp_when_desc0')
+make_terminal_config = <function make_terminal_config.<locals>._make at 0x76a8161c92d0>
+make_client = <function make_client.<locals>._make at 0x76a8161c9dd0>
+
+    @pytest.fixture
+    def make_handlers(
+        tmp_path: Path,
+        make_terminal_config: Callable[..., TerminalConfig],
+        make_client: Callable[..., ProjectIndexClient],
+    ) -> Callable[..., Any]:
+        """偽物の project-index を呼ぶ配線済みの関数を作る関数を返却する（指定した部品だけ差し替える）。"""
+        import dataclasses
+    
+        from dev_docs.features.convert.service import ConvertService
+        from dev_docs.features.lifecycle.control import RestartControl
+        from dev_docs.features.view.columns import ColumnSettings
+>       from dev_docs.features.view.document_lists import DOCUMENT_LIST_CACHE_SIZE, DocumentListCache
+E       ModuleNotFoundError: No module named 'dev_docs.features.view.document_lists'
+
+tests/unit/dev_docs/conftest.py:367: ModuleNotFoundError
+=========================== short test summary info ============================
+ERROR tests/unit/dev_docs/features/view/test_document_lists.py
+ERROR tests/unit/dev_docs/integrations/project_index/test_client.py
+ERROR tests/unit/dev_docs/server/test_app.py - AttributeError: module 'dev_do...
+ERROR tests/unit/dev_docs/test_serve.py
+ERROR tests/unit/dev_docs/features/admin/test_service.py::test_get_status - M...
+ERROR tests/unit/dev_docs/features/admin/test_service.py::test_get_status_when_port_env
+ERROR tests/unit/dev_docs/features/admin/test_service.py::test_get_status_when_unreachable
+ERROR tests/unit/dev_docs/features/admin/test_service.py::test_get_status_when_leftover_sources
+ERROR tests/unit/dev_docs/features/settings/test_route.py::test_build_settings_router_when_get
+ERROR tests/unit/dev_docs/features/settings/test_route.py::test_build_settings_router_when_put
+ERROR tests/unit/dev_docs/features/settings/test_route.py::test_build_settings_router_when_pending_reload
+ERROR tests/unit/dev_docs/features/settings/test_route.py::test_build_settings_router_when_rejected
+ERROR tests/unit/dev_docs/features/settings/test_route.py::test_build_settings_router_when_unexpected_status
+ERROR tests/unit/dev_docs/features/settings/test_route.py::test_build_settings_router_when_unreachable
+ERROR tests/unit/dev_docs/features/settings/test_route.py::test_build_settings_router_when_version_conflict
+ERROR tests/unit/dev_docs/features/settings/test_route.py::test_build_settings_router_when_storage
+ERROR tests/unit/dev_docs/features/view/test_document.py::test_get_document
+ERROR tests/unit/dev_docs/features/view/test_document.py::test_get_document_when_diff
+ERROR tests/unit/dev_docs/features/view/test_document.py::test_get_document_when_convert_failed
+ERROR tests/unit/dev_docs/features/view/test_document.py::test_get_document_when_yaml_unreadable
+ERROR tests/unit/dev_docs/features/view/test_document.py::test_get_document_when_missing
+ERROR tests/unit/dev_docs/features/view/test_document.py::test_get_document_when_not_git
+ERROR tests/unit/dev_docs/features/view/test_document.py::test_get_document_when_aliases
+ERROR tests/unit/dev_docs/features/view/test_document.py::test_get_document_when_decision
+ERROR tests/unit/dev_docs/features/view/test_document.py::test_get_document_when_decision_ambiguous
+ERROR tests/unit/dev_docs/features/view/test_document.py::test_get_document_when_body_path
+ERROR tests/unit/dev_docs/features/view/test_document.py::test_get_document_when_embed
+ERROR tests/unit/dev_docs/features/view/test_document.py::test_get_document_when_unreachable
+ERROR tests/unit/dev_docs/features/view/test_document.py::test_get_document_when_requests_concurrent
+ERROR tests/unit/dev_docs/features/view/test_document.py::test_get_document_when_total_timeout
+ERROR tests/unit/dev_docs/features/view/test_document.py::test_get_document_when_list_reused
+ERROR tests/unit/dev_docs/features/view/test_document.py::test_get_document_when_diff_list_reused
+ERROR tests/unit/dev_docs/features/view/test_document.py::test_get_document_when_config_changed
+ERROR tests/unit/dev_docs/features/view/test_document.py::test_get_document_when_list_not_cacheable
+ERROR tests/unit/dev_docs/features/view/test_document.py::test_get_document_when_source_unknown
+ERROR tests/unit/dev_docs/features/view/test_route.py::test_build_view_router_when_document
+ERROR tests/unit/dev_docs/features/view/test_route.py::test_build_view_router_when_document_missing
+ERROR tests/unit/dev_docs/features/view/test_route.py::test_build_view_router_when_search
+ERROR tests/unit/dev_docs/features/view/test_route.py::test_build_view_router_when_query_too_long
+ERROR tests/unit/dev_docs/features/view/test_route.py::test_build_view_router_when_refs
+ERROR tests/unit/dev_docs/features/view/test_route.py::test_build_view_router_when_columns
+ERROR tests/unit/dev_docs/features/view/test_route.py::test_build_view_router_when_cross_origin
+ERROR tests/unit/dev_docs/features/view/test_route.py::test_build_view_router_when_project_index_unreachable
+ERROR tests/unit/dev_docs/server/mcp/test_admin.py::test_build_admin_mcp - Mo...
+ERROR tests/unit/dev_docs/server/mcp/test_admin.py::test_build_admin_mcp_when_status
+ERROR tests/unit/dev_docs/server/mcp/test_admin.py::test_build_admin_mcp_when_restart_in_progress
+ERROR tests/unit/dev_docs/server/mcp/test_admin.py::test_build_admin_mcp_when_descriptions
+440 passed, 47 errors in 2.29s

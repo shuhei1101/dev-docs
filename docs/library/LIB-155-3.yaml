@@ -29,6 +29,9 @@ catalogs:
       - name: FastAPI.exception_handler / StarletteHTTPException
         kind: 関数 / クラス
         purpose: 該当しないパス・メソッドの 404・405 を含め、例外を problem+json にする
+      - name: starlette.middleware.gzip.GZipMiddleware
+        kind: クラス
+        purpose: 画面の API の応答を、`Accept-Encoding` に gzip を含み本文が `minimum_size` 以上のときに gzip で返却する（画面のAPIの応答の圧縮が `/_api/` のパスだけに適用する）
 lead: 画面の API と管理の MCP を 1 つのアプリにまとめる fastapi の利用方法を定め、HTTP のルートや例外の変換を修正するときに参照する。
 purl: pkg:pypi/fastapi
 dependency_scope: 必須
@@ -39,8 +42,8 @@ official_url: https://fastapi.tiangolo.com/
 docs_url: https://fastapi.tiangolo.com/reference/
 verification:
   state: 済
-  date: '2026-10-27'
-  detail: Python 3.14 で fastapi 0.162.0・mcp 2.3.0・uvicorn 0.54.0 を入れ、`FastAPI(lifespan=...)` の lifespan で 2 つの `session_manager.run()` に入り、`app.mount` で `/mcp` と `/_admin/mcp` に MCP をマウントし、`HTMLResponse` で Jinja2 のマクロの断片を返却するルートと同じポートで動くことを確認した
+  date: '2026-11-20'
+  detail: 'Python 3.14 で fastapi 0.162.0・mcp 2.3.0・uvicorn 0.54.0 を入れ、`FastAPI(lifespan=...)` の lifespan で 2 つの `session_manager.run()` に入り、`app.mount` で `/mcp` と `/_admin/mcp` に MCP をマウントし、`HTMLResponse` で Jinja2 のマクロの断片を返却するルートと同じポートで動くことを確認した。2026-11-20 に fastapi 0.162.0・starlette 1.10.0 で `GZipMiddleware(app, minimum_size=500)` を取り付け、2000 バイトの JSON の応答が `Accept-Encoding: gzip` のとき `Content-Encoding: gzip`・`Vary: Accept-Encoding` になり、500 バイト未満の応答と `Accept-Encoding: identity` の応答は圧縮しないことを確認した'
 selection:
   candidates: fastapi 0.162.0・Starlette 1.10.0・Litestar 2.25.0 を比べた（[案のレビュー](https://github.com/shuhei1101/dev-docs/pull/12#discussion_r4389749135)）。
   decision: ai-monitor の開発ドキュメントサーバーの画面のコードを書き換えずに移せ、設定画面の保存の JSON を Pydantic で受けられるため。starlette・pydantic・anyio・opentelemetry-api は mcp の依存として既に入り、増えるのは fastapi と annotated-doc の 2 件。

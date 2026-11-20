@@ -8,6 +8,9 @@ from typing import Any
 import pytest
 from fastapi.routing import APIRoute
 from fastapi.testclient import TestClient
+from starlette.applications import Starlette
+from starlette.responses import PlainTextResponse
+from starlette.routing import Route
 from starlette.types import Message, Receive, Scope, Send
 
 from dev_docs.server import app as app_module
@@ -177,6 +180,60 @@ def test_slashless_mcp_path_middleware_when_other_path(scope: dict[str, Any]) ->
     received = _pass_through(scope)
     # 検証
     assert received[0] is scope
+
+
+LARGE_BODY = "x" * (app_module.GZIP_MINIMUM_SIZE + 100)
+
+
+def _gzip_client() -> TestClient:
+    """固定の本文を返却するアプリに画面のAPIの応答の圧縮を取り付けたクライアントを作る。"""
+
+    async def endpoint(request: Any) -> PlainTextResponse:
+        return PlainTextResponse(LARGE_BODY)
+
+    paths = ["/_api/x", "/_admin/mcp/", "/", "/_apix"]
+    inner = Starlette(routes=[Route(path, endpoint) for path in paths])
+    return TestClient(app_module.ApiGZipMiddleware(inner))
+
+
+def test_api_gzip_middleware() -> None:
+    """画面の API の応答を圧縮する（正常系）。"""
+    # 準備
+    client = _gzip_client()
+    # 実行
+    gzipped = client.get("/_api/x", headers={"Accept-Encoding": "gzip"})
+    identity = client.get("/_api/x", headers={"Accept-Encoding": "identity"})
+    # 検証
+    assert gzipped.headers["content-encoding"] == "gzip"
+    assert gzipped.text == LARGE_BODY
+    assert "content-encoding" not in identity.headers
+    assert identity.text == LARGE_BODY
+
+
+@pytest.mark.parametrize("path", ["/_admin/mcp/", "/", "/_apix"])
+def test_api_gzip_middleware_when_other_path(path: str) -> None:
+    """画面の API でない応答は圧縮しない（正常系）。"""
+    # 準備
+    client = _gzip_client()
+    # 実行
+    response = client.get(path, headers={"Accept-Encoding": "gzip"})
+    # 検証
+    assert "content-encoding" not in response.headers
+
+
+def test_build_app_when_gzip(make_mcp_handlers: Callable[..., Any]) -> None:
+    """画面の API の応答を圧縮し、管理の MCP は圧縮しない（正常系）。"""
+    # 準備
+    app = build_app(make_mcp_handlers())
+    headers = {**MCP_HEADERS, "Accept-Encoding": "gzip"}
+    # 実行
+    with TestClient(app, base_url=LOCAL_BASE_URL, follow_redirects=False) as client:
+        api = client.get("/_api/openapi.json", headers={"Accept-Encoding": "gzip"})
+        admin = client.post("/_admin/mcp", headers=headers, json=INITIALIZE)
+    # 検証
+    assert api.headers["content-encoding"] == "gzip"
+    assert admin.status_code == 200
+    assert "content-encoding" not in admin.headers
 
 
 def test_route_operation_id() -> None:

@@ -20,6 +20,10 @@ diagrams:
         文書の取得 ..> エイリアスの集め
         文書の取得 ..> 表の列の設定
         文書の取得 ..> サイドバーの変化
+        文書の取得 ..> 文書の一覧の取り出し
+        文書の一覧の取り出し ..> 文書の一覧の保持
+        文書の一覧の取り出し ..> リビジョンの解決
+        文書の取得 ..> 配信元の表示の設定の組み立て
         class 画面のエントリーポイント {
           <<function>>
         }
@@ -59,6 +63,18 @@ diagrams:
         class エイリアスの集め {
           <<function>>
         }
+        class 文書の一覧の取り出し {
+          <<function>>
+        }
+        class 文書の一覧の保持 {
+          <<class>>
+        }
+        class リビジョンの解決 {
+          <<function>>
+        }
+        class 配信元の表示の設定の組み立て {
+          <<function>>
+        }
         click 画面のエントリーポイント href "./MOD-155-162.py.yaml#画面のエントリーポイント"
         click project-indexの呼び出し href "./MOD-155-215.py.yaml#project-indexの呼び出し"
         click 表の列の設定 href "./MOD-155-158.py.yaml#表の列の設定"
@@ -70,6 +86,9 @@ diagrams:
         click 埋め込みのパスの取り出し href "./MOD-155-94.py.yaml#埋め込みのパスの取り出し"
         click 変わったキー href "./MOD-155-88.py.yaml#変わったキー"
         click エイリアスの集め href "./MOD-155-106.py.yaml#エイリアスの集め"
+        click 文書の一覧の保持 href "id:MOD-155-216#classes[DocumentListCache]"
+        click リビジョンの解決 href "id:MOD-155-216#functions[resolve_commit]"
+        click 配信元の表示の設定の組み立て href "id:MOD-155-215#functions[build_source_view]"
 functions:
   - name: get_document
     title: 文書の取得
@@ -115,7 +134,11 @@ functions:
       description: 文書の取得の応答
     process: |-
       0. 手順 1〜11 を `asyncio.timeout(DOCUMENT_FETCH_TIMEOUT_SEC)` の中で行う。超えたら `ProjectIndexUnreachableError`（`address` は project-indexの呼び出しの `address`、`reason` は `{DOCUMENT_FETCH_TIMEOUT_SEC} 秒以内に応答がありませんでした`、`kind` は `timeout`）を送信する。制限時間は途中の問い合わせを取り消すため、問い合わせごとの制限時間は残り時間を超えない
-      1. project-indexの呼び出し.配信元の表示の設定の取得（中で配信元の設定とリビジョンを同時に問い合わせる）と project-indexの呼び出し.文書の一覧の応答の取得（`ref`）を `asyncio.gather` で同時に呼び（project-index へは 3 つの要求が同時に届く）、`view` と応答の本文を取る。続けて文書の一覧の読み取り（応答の本文。`record_kinds` は `view.documents` のうち `records` を持つ行の ID）で `listed` にする
+      1. `asyncio.TaskGroup` の中で、次の 4 つのタスクを作る。グループが送出した `ExceptionGroup` は、中の最初の例外を取り出して送出する
+         - `refs_task`: project-indexの呼び出し.リビジョンの一覧（`commits=0`）
+         - `config_task`: project-indexの呼び出し.配信元の設定の取得
+         - `view_task`: `refs_task` と `config_task` を待ち、配信元の表示の設定の組み立てで `view` にする
+         - `listed_task`: 文書の一覧の取り出し（`ref`・`refs_task`・`view_task`）で `listed` にする。保持に無いときは、配信元の設定の応答を待たずに、リビジョンの一覧の応答の後すぐに文書の一覧を問い合わせる
       2. `path` が検討事項の文書のパスの読み取りで ID になれば、project-indexの呼び出し.検討事項の文書の取得 の本文を `markdown` にし、`path` を `path`、`body_path`・`diff`・`conversion_error` を `None`、`tabs` をタブとサイドバーの組み立ての結果でどのタブも `active` にしない値、`updated_at` を今の日時、`table_keys`・`aliases` を空にして返却する（以降の手順は実行しない）。該当するフォルダが 0 個か 2 個以上なら project-index の 404 の `DocumentNotFoundError` がそのまま伝わる
       3. タブとサイドバーの組み立て（`view`・`listed.documents`）をする
       4. 返却する文書を決める
@@ -124,13 +147,13 @@ functions:
       5. project-indexの呼び出し.文書の詳細の取得（文書の `path`・`ref`。管理用の YAML の行の文書は `document_id` に文書の ID を指定する）と、`view.decision_folders` があれば project-indexの呼び出し.検討事項の一覧の取得 を同時に呼ぶ
       6. 変換.描画する を `asyncio.to_thread` で呼ぶ（`documents` は `listed.documents`、`linkable` は検討事項の一覧の `linkable`、無ければ空）。`ConvertFailure` なら `markdown` を `None`、`conversion_error` を同じフィールドの `ConversionError` にして 8 へ進む
       7. 埋め込みのパスの取り出しのパスごとに project-indexの呼び出し.文書の詳細の取得（`ref`）を同時に呼び、値（文書が無い・`DocumentNotFoundError` のときは `None`）を集めて、変換.仕上げる で `markdown` と `table_keys` を作る
-      8. `diff_ref` があり `view.git` なら、project-indexの呼び出し.文書の一覧の取得（`diff_ref`）で比較元の文書を取り、`diff` を `DocumentDiff(base=diff_ref, ...)` にする。Git 管理外は `diff` を `None` にする
+      8. `diff_ref` があり `view.git` なら、文書の一覧の取り出し（`diff_ref`・手順 1 の `refs_task`・`view_task`）で比較元の文書を取り、`diff` を `DocumentDiff(base=diff_ref, ...)` にする。Git 管理外は `diff` を `None` にする
          - `change` は、比較元に同じ ID の文書が無ければ `added`、`version` が違えば `modified`、同じなら `None`
          - `changed_items` は、`change` が `modified` のとき比較元の同じ ID の文書の `data` と比べた変わったキー（`ignore` は `view.diff_ignore_keys`）のパス。他は空
          - 比較元の文書でタブとサイドバーを組み立て、文書のページのパス → `version` を両方で作って、タブにサイドバーの変化を付ける
       9. 返却した文書を含むタブの `active` を `True` にする
       10. `updated_at` は文書の詳細の文書の `updated`（project-index が Git の配信元は commit の日時、Git 管理外はファイルの更新日時を入れる）。`None` なら今の日時にして `[warning]` 更新日時が無い（配信元・パス）を記載する
-      11. `body_path` は返却した文書の `body_path`、`ref` は `listed.ref`、`github` は `view.github_repository` があれば `github_repository`・`github_issue_labels`、`columns` は表の列の設定.列の設定を読み込む の結果、`aliases` はエイリアスの集め（`view`・`listed.documents`）の `entries` を `AliasItem` にしたもの（手順 6 で変換に失敗したときは空）にして返却する
+      11. `body_path` は返却した文書の `body_path`、`ref` は引数の `ref`（省いたときは `view.default_ref`。Git 管理外は `None`）、`github` は `view.github_repository` があれば `github_repository`・`github_issue_labels`、`columns` は表の列の設定.列の設定を読み込む の結果、`aliases` はエイリアスの集め（`view`・`listed.documents`）の `entries` を `AliasItem` にしたもの（手順 6 で変換に失敗したときは空）にして返却する
     exceptions:
       - name: UnknownSourceError
         condition: 無い配信元
@@ -229,10 +252,10 @@ functions:
         exception: project-index につながらない・制限時間を超えた
       - name: test_get_document_when_requests_concurrent
         case: 正常
-        summary: 配信元の設定・リビジョン・文書の一覧を同時に問い合わせる
-        condition: '`path=None`。偽物は、配信元の設定・リビジョン・文書の一覧の 3 つの要求が揃うまでどれにも応答しない'
-        mock: project-indexの呼び出し（`httpx.MockTransport` で 3 つの要求を `asyncio.Event` で待ち合わせる偽物）
-        expected: 一番左のタブの一番上の文書を返却する（3 つを順に送信すると待ち合わせが揃わず制限時間で失敗する）
+        summary: 配信元の設定とリビジョンの一覧を同時に問い合わせ、文書の一覧を配信元の設定の応答より前に問い合わせる
+        condition: '`path=None`。偽物は、配信元の設定への応答を、リビジョンの一覧と文書の一覧の要求が届くまで返却しない。リビジョンの一覧と文書の一覧にはすぐに応答する'
+        mock: project-indexの呼び出し（`httpx.MockTransport` で 配信元の設定への応答を `asyncio.Event` で待たせる偽物）
+        expected: 一番左のタブの一番上の文書を返却する（配信元の設定とリビジョンの一覧を順に送信するか、文書の一覧を配信元の設定の応答の後に送信すると、待ち合わせが揃わず制限時間で失敗する）
       - name: test_get_document_when_total_timeout
         case: 異常
         summary: 文書の取得の制限時間
@@ -240,6 +263,37 @@ functions:
         mock: project-indexの呼び出し（`httpx.MockTransport`）
         expected: '`ProjectIndexUnreachableError` で、`kind` が `timeout`、`reason` が `0.2 秒以内に応答がありませんでした`'
         exception: project-index につながらない・問い合わせか文書の取得の制限時間を超えた（`kind` が `timeout`）
+      - name: test_get_document_when_list_reused
+        case: 正常
+        summary: 同じ commit の文書の一覧を保持から使用する
+        condition: リビジョンの一覧の `branches` が `main`（`8b1d4e0`）で、`ref=None` で `docs/a` を取得した後に `docs/b` を取得する
+        mock: project-indexの呼び出し（`httpx.MockTransport` で要求を記録し、project-index の入出力を返却する偽物）・文書の一覧の保持（`max_entries=4`）
+        expected: '`GET /sources/{source}/docs` が 1 回だけでクエリの `ref` が `8b1d4e0`。2 回とも応答の `ref` が `main`'
+      - name: test_get_document_when_diff_list_reused
+        case: 正常
+        summary: 差分の比較元の文書の一覧も保持から使用する
+        condition: '`diff_ref` に親の commit を指して `docs/a` と `docs/b` を順に取得し、続けて `ref` に親の commit を指して `docs/a` を取得する'
+        mock: project-indexの呼び出し（`httpx.MockTransport` で要求を記録する偽物）・文書の一覧の保持（`max_entries=4`）
+        expected: 文書の一覧の要求が表示側の commit に 1 回・親の commit に 1 回だけで、`docs/b` の `tabs` の変化が保持を使用しないときと同じ
+      - name: test_get_document_when_config_changed
+        case: 正常
+        summary: 配信元の設定が変わったら文書の一覧を取得し直す
+        condition: '`docs/a` を取得した後に、配信元の設定の応答の `nav` を変えてもう一度取得する'
+        mock: project-indexの呼び出し（`httpx.MockTransport` で要求を記録する偽物）・文書の一覧の保持（`max_entries=4`）
+        expected: 文書の一覧の要求が同じ commit に 2 回届き、2 回目の `tabs` が変えた `nav` のタブ
+      - name: test_get_document_when_list_not_cacheable
+        case: 正常
+        summary: commit に解決できないと文書の一覧を保持しない
+        condition: '`git: false` の配信元の `docs/a` を 2 回取得する'
+        mock: project-indexの呼び出し（`httpx.MockTransport` で要求を記録する偽物）・文書の一覧の保持（`max_entries=4`）
+        expected: 文書の一覧の要求が 2 回で、クエリに `ref` が無い
+      - name: test_get_document_when_source_unknown
+        case: 異常
+        summary: タスクのグループの例外をそのまま送出する
+        condition: 'リビジョンの一覧と配信元の設定が 404（`missing: source`）を返却する'
+        mock: project-indexの呼び出し（`httpx.MockTransport` の偽物）
+        expected: '`ExceptionGroup` でなく `UnknownSourceError`'
+        exception: 無い配信元
     is_async: true
   - name: not_found_fields
     title: 見つからなかったもの
@@ -283,6 +337,56 @@ functions:
         condition: '`RefNotFoundError(argument="ref", value="no-such-branch")` と、`DocumentNotFoundError` を `path="no-such-doc"` で'
         mock: なし
         expected: '`{missing: ref, value: no-such-branch}` と `{missing: doc, value: no-such-doc}`'
+  - name: _document_list
+    title: 文書の一覧の取り出し
+    kind: 関数
+    container: features/view/document.py
+    usecase: 文書の取得
+    role: サービス
+    summary: リビジョンの文書の一覧を、文書の一覧の保持か project-index から取り出す
+    scope: internal
+    is_async: true
+    args:
+      - name: handlers
+        title: 配線済みの関数
+        type: Handlers
+        required: true
+        passing: injected
+        description: project-indexの呼び出し・文書の一覧の保持
+      - name: source_id
+        title: 配信元の ID
+        type: str
+        required: true
+        passing: positional
+        description: 開く配信元
+      - name: ref
+        title: リビジョン
+        type: str | None
+        required: true
+        passing: positional
+        description: '`ref` か `diff` の値'
+      - name: refs
+        title: リビジョンの一覧
+        type: Awaitable[RefList]
+        required: true
+        passing: positional
+        description: 文書の取得の `refs_task`
+      - name: view
+        title: 配信元の表示の設定
+        type: Awaitable[SourceView]
+        required: true
+        passing: positional
+        description: 文書の取得の `view_task`
+    returns:
+      type: DocumentList
+      description: リビジョンの文書の一覧
+    process: |-
+      1. `refs` を待ち、リビジョンの解決（`refs`・`ref`）で commit にする
+      2. commit が `None` なら、project-indexの呼び出し.文書の一覧の応答の取得（`ref`）で本文を取り、手順 5 で型にして返却する（保持しない）
+      3. 文書の一覧の保持.取り出す（`source_id`・commit）で保持があれば、`view` を待ち、`view.config_hash` が保持の `config_hash` と同じなら保持の `documents` を返却する。違えば文書の一覧の保持.捨てる
+      4. 文書の一覧の保持.共有して取得する（`source_id`・commit・project-indexの呼び出し.文書の一覧の応答の取得を `ref` に commit を指して呼ぶ問い合わせ）で本文を取る
+      5. `view` を待ち、文書の一覧の読み取り（本文。`record_kinds` は `view.documents` のうち `records` を持つ行の ID）を `asyncio.to_thread` で呼ぶ
+      6. 手順 4 を通ったときは、文書の一覧の保持.保持する（`source_id`・commit・`CachedDocumentList(config_hash=view.config_hash, documents=...)`）を呼ぶ。型にした文書の一覧を返却する
 constants:
   - name: DOCUMENT_FETCH_TIMEOUT_SEC
     title: 文書の取得の制限時間
