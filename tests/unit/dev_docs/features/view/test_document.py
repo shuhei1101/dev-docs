@@ -480,7 +480,7 @@ def test_get_document_when_diff_list_reused(
     _get(handlers, "docs/a", ref="bbbbbbb")
     # 検証
     changes = {item.path: item.change for tab in response.tabs for item in _pages(tab.items)}
-    assert sorted(_list_refs(fake_index)) == ["aaaaaaa", "bbbbbbb"]
+    assert sorted(str(ref) for ref in _list_refs(fake_index)) == ["aaaaaaa", "bbbbbbb"]
     assert changes == {"docs/a": "modified", "docs/b": None, "docs/c": "deleted"}
 
 
