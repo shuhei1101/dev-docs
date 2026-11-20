@@ -1,0 +1,11 @@
+use_cases:
+  - kind: single
+    scenario: docs/scenario/SC-155-7.yaml
+    impact: run_only
+    detail: 文書の無いタブを選んだときのパンくずの表示が、画面設計のとおり配信元とタブ名だけになる。参照する流れの手順は変わらない
+    depends_on: []
+docs: []
+scope_out:
+  - item: '`findActivePage` が、選んだタブに開いている文書が無いとき `active` のタブを返す振る舞いの変更'
+    reason: '`active` のタブは文書のヘッダーの種類など他の表示も使っており、パンくずは文書の無いタブを受け取って切り替えれば画面設計のとおりになるため変えない'
+    plan: none
