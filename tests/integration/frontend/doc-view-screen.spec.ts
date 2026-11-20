@@ -689,6 +689,22 @@ test.describe("本文", () => {
     await expect(page.getByRole("main").getByRole("heading", { level: 1 })).toHaveCount(1);
   });
 
+  // 本文の幅は画面の幅から左右の余白・サイドバー・間隔を除いた幅で、広い画面でも上限を持たない（正常系）
+  for (const width of [1920, 2880]) {
+    test(`body_width_without_upper_limit_${width}`, async ({ page }) => {
+      // 準備
+      await page.setViewportSize({ width, height: 1080 });
+      await openRendered(page);
+
+      // 実行
+      const box = await boxOf(page.getByRole("main"));
+      const clientWidth = await page.evaluate(() => document.documentElement.clientWidth);
+
+      // 検証（左右の余白 16px ずつ・サイドバー 240px・間隔 24px）
+      expect(box.width).toBeCloseTo(clientWidth - 296, 0);
+    });
+  }
+
   // 本文には画面の基本のスタイル（Tailwind の Preflight）を当てず、単独の mdmark と同じ見た目で描く（正常系）
   test("body_without_preflight", async ({ page }) => {
     // 準備

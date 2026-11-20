@@ -133,7 +133,7 @@ export const DocViewScreen = () => {
           onEmptyTab={(tab) => setEmpty({ tab, path: doc.path })}
         />
       </div>
-      <div className="mx-auto flex max-w-screen-2xl gap-6 px-4">
+      <div className="flex gap-6 px-4">
         <div className="sticky top-24 hidden max-h-screen w-60 shrink-0 self-start overflow-y-auto py-4 md:block">
           {sidebar()}
         </div>

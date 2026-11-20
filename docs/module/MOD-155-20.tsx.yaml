@@ -11,7 +11,7 @@ components:
     usecase: 文書を参照する
     role: 画面
     summary: ルートの引数で文書を参照し、トップバー・種類のタブ・サイドバー・本文・コメントのパネルを並べる
-    description: 文書は `useSuspenseQuery(documentQueryOptions(...))`、配信元とリビジョンの一覧は orval が生成した問い合わせで参照する。URL の変更は `search` を書き換える（`rev`・`base` を保つ。文書の画面の移動）。トップバーへは配信中の配信元を指定する（配信中の配信元の取り出し）。文書は本文の領域に出し（目次は mdmark が本文に描き、画面は目次の列を配置しない）、画面の先頭に本文へのスキップを配置する。`document.title` は `pageTitle` で書き換える。幅の切り替え（48rem）は Tailwind の `md:` で行い、JavaScript では幅を参照しない
+    description: 文書は `useSuspenseQuery(documentQueryOptions(...))`、配信元とリビジョンの一覧は orval が生成した問い合わせで参照する。URL の変更は `search` を書き換える（`rev`・`base` を保つ。文書の画面の移動）。トップバーへは配信中の配信元を指定する（配信中の配信元の取り出し）。文書は本文の領域に出し（目次は mdmark が本文に描き、画面は目次の列を配置しない）、画面の先頭に本文へのスキップを配置する。`document.title` は `pageTitle` で書き換える。サイドバーと本文を並べるコンテナは幅の上限を持たず、本文は画面の幅から左右の余白・サイドバー・間隔を除いた幅になる（画面設計の `本文` の `width`）。幅の切り替え（48rem）は Tailwind の `md:` で行い、JavaScript では幅を参照しない
     state:
       - name: searchOpen
         type: boolean
