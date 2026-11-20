@@ -68,10 +68,10 @@ export const ProjectIndexUnreachableAlert = ({
     <CircleAlert aria-hidden="true" />
     <AlertTitle id={titleId}>{MESSAGES[kind].title}</AlertTitle>
     <AlertDescription className="space-y-3">
-      <p className="text-pretty text-foreground">
+      <p className="text-pretty">
         {MESSAGES[kind].description}
       </p>
-      <dl className="space-y-1 text-sm text-foreground">
+      <dl className="space-y-1 text-sm">
         <div className="flex gap-4">
           <dt className="w-16 shrink-0 font-medium">接続先</dt>
           <dd className="min-w-0 font-mono text-xs break-all">{address}</dd>
@@ -81,7 +81,7 @@ export const ProjectIndexUnreachableAlert = ({
           <dd className="min-w-0 text-xs wrap-anywhere">{reason}</dd>
         </div>
       </dl>
-      <Button variant="outline" className="text-foreground" onClick={onReload}>
+      <Button variant="outline" onClick={onReload}>
         再読み込み
       </Button>
     </AlertDescription>
