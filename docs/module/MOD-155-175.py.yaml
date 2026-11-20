@@ -17,6 +17,7 @@ diagrams:
         アプリの組み立て ..> 操作の識別子
         アプリの組み立て ..> アプリの寿命
         アプリの組み立て ..> MCPのパスの補い : 取り付ける
+        アプリの組み立て ..> 画面のAPIの応答の圧縮 : 取り付ける
         class 待ち受けの開始 {
           <<function>>
         }
@@ -24,6 +25,9 @@ diagrams:
           <<function>>
         }
         class MCPのパスの補い {
+          +__call__(scope, receive, send) None
+        }
+        class 画面のAPIの応答の圧縮 {
           +__call__(scope, receive, send) None
         }
         class 管理の MCP の組み立て {
@@ -116,6 +120,67 @@ classes:
             condition: '`path` が `/_admin/mcp/`・`/_admin/mcpx`・`/mcp` の HTTP の scope と、`type: lifespan` の scope を指定する'
             mock: 次のアプリ（受け取った scope を記録する偽物）
             expected: 次のアプリが受け取った scope が指定した scope そのもの
+  - name: ApiGZipMiddleware
+    title: 画面のAPIの応答の圧縮
+    container: server/app.py
+    usecase: 文書の取得
+    role: ASGI のミドルウェア
+    summary: 画面の API（`API_PATH_PREFIX` で始まるパス）への要求だけ、`Accept-Encoding` に gzip を含むときに応答を gzip で返却する
+    description: Starlette の `GZipMiddleware` を画面の API のパスだけに適用する。管理の MCP（`ADMIN_MCP_PATH`）と画面の配信の応答は圧縮しない。
+    kind: クラス
+    properties:
+      - name: app
+        title: 次の ASGI アプリ
+        type: ASGIApp
+        access: 内部 (_)
+        description: 画面の API でない要求を指定する先
+      - name: gzip
+        title: 圧縮する ASGI アプリ
+        type: GZipMiddleware
+        access: 内部 (_)
+        description: '`GZipMiddleware(app, minimum_size=GZIP_MINIMUM_SIZE)`'
+    methods:
+      - name: __call__
+        title: 要求の受け渡し
+        kind: メソッド
+        summary: パスが `API_PATH_PREFIX` で始まる HTTP の要求を圧縮する ASGI アプリへ、それ以外を次のアプリへ指定する
+        scope: public
+        is_async: true
+        args:
+          - name: scope
+            type: Scope
+            required: true
+            passing: positional
+            description: ASGI の scope
+          - name: receive
+            type: Receive
+            required: true
+            passing: positional
+            description: ASGI の receive
+          - name: send
+            type: Send
+            required: true
+            passing: positional
+            description: ASGI の send
+        returns:
+          type: None
+          description: なし
+        process: |-
+          1. `scope["type"]` が `http` で `scope["path"]` が `API_PATH_PREFIX` で始まるとき、圧縮する ASGI アプリへ指定する
+          2. それ以外は次のアプリへそのまま指定する
+        unit_tests:
+          - name: test_api_gzip_middleware
+            case: 正常
+            summary: 画面の API の応答を圧縮する
+            condition: '`GZIP_MINIMUM_SIZE` より大きい本文を返却する次のアプリで、`/_api/x` へ `Accept-Encoding: gzip` と `Accept-Encoding: identity` で要求する'
+            mock: 次のアプリ（固定の本文を返却する偽物）
+            expected: gzip の応答の `Content-Encoding` が `gzip` で展開すると本文と同じ、identity の応答は `Content-Encoding` を持たない
+          - name: test_api_gzip_middleware_when_other_path
+            case: 正常
+            summary: 画面の API でない応答は圧縮しない
+            condition: '同じ次のアプリで、`/_admin/mcp/`・`/`・`/_apix` へ `Accept-Encoding: gzip` で要求する'
+            mock: 次のアプリ（固定の本文を返却する偽物）
+            expected: どの応答も `Content-Encoding` を持たない
 constants:
   - name: ADMIN_MCP_PATH
     title: 管理の MCP のパス
@@ -123,6 +188,18 @@ constants:
     usecase: 起動
     summary: 管理の MCP をマウントするパス
     value: '"/_admin/mcp"'
+  - name: API_PATH_PREFIX
+    title: 画面の API のパスの頭
+    container: server/app.py
+    usecase: 文書の取得
+    summary: 画面のAPIの応答の圧縮が適用するパスの頭
+    value: '"/_api/"'
+  - name: GZIP_MINIMUM_SIZE
+    title: 圧縮する最小の大きさ
+    container: server/app.py
+    usecase: 文書の取得
+    summary: 応答を圧縮する本文の最小のバイト数（Starlette の `GZipMiddleware` の既定値。これより小さい本文は gzip のヘッダーの分だけ縮まらないことがある）
+    value: '500'
 functions:
   - name: build_app
     title: アプリの組み立て
@@ -161,7 +238,7 @@ functions:
       2. 管理の MCP と project-indexの呼び出しを指定して寿命を作り（アプリの寿命）、`FastAPI(lifespan=..., docs_url=None, redoc_url=None, openapi_url="/_api/openapi.json", generate_unique_id_function=route_operation_id)` を作る（操作の識別子）
       3. 例外の変換を登録する（例外の変換の登録）
       4. `ADMIN_MCP_PATH` に管理の MCP の `streamable_http_app(streamable_http_path="/", stateless_http=True, json_response=True)` をマウントする。文書の MCP（`/mcp`）と `POST /_admin/session-start` は持たない
-      5. `app.add_middleware(SlashlessMcpPathMiddleware, paths=(ADMIN_MCP_PATH,))` で、スラッシュ無しの MCP のパスをルーティングの前に補う（MCP のパスの補い）
+      5. `app.add_middleware(SlashlessMcpPathMiddleware, paths=(ADMIN_MCP_PATH,))` で、スラッシュ無しの MCP のパスをルーティングの前に補う（MCP のパスの補い）。続けて `app.add_middleware(ApiGZipMiddleware)` で、画面の API の応答を圧縮する（画面のAPIの応答の圧縮）
       6. 端末の設定のエントリーポイント・画面のエントリーポイントのルーターを登録する
       7. 画面の配信のルーター（画面の配信、`screen_dir` と `mdmark_version` を指定する）を最後に登録する（全てのパスに該当するため）
       8. アプリを返却する
@@ -190,6 +267,12 @@ functions:
         condition: '`index.html` を配置した一時フォルダを `screen_dir` に指定し、MCP が受け付けるホストを `base_url` にしてリダイレクトを追従しない `TestClient` で、`/_admin/mcp` へ MCP の initialize を POST し、POST `/mcp` と GET `/_admin/mcpx` を呼ぶ'
         mock: 配線済みの関数（配信元が空の偽物）
         expected: '`/_admin/mcp` が 200 で本文の `result.serverInfo` を持ち、405・307 にならない。POST `/mcp` は 404 の problem+json。`/_admin/mcpx` は 404'
+      - name: test_build_app_when_gzip
+        case: 正常
+        summary: 画面の API の応答を圧縮し、管理の MCP は圧縮しない
+        condition: '`Accept-Encoding: gzip` で GET `/_api/openapi.json` と、`/_admin/mcp` へ MCP の initialize を POST する'
+        mock: 配線済みの関数（配信元が空の偽物）
+        expected: '`/_api/openapi.json` の `Content-Encoding` が `gzip`、`/_admin/mcp` の応答は `Content-Encoding` を持たない'
   - name: route_operation_id
     title: 操作の識別子
     kind: 関数

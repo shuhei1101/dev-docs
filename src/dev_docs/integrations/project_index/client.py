@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import hashlib
 from collections.abc import Collection, Mapping
 from datetime import datetime
 from typing import Any, Literal
@@ -24,6 +25,7 @@ from dev_docs.integrations.project_index.types import (
     SearchHit,
     SearchHits,
     SettingsSourcesView,
+    SourceConfig,
     SourceState,
     SourceView,
     parse_datetime,
@@ -213,42 +215,22 @@ class ProjectIndexClient:
 
     async def source_view(self, source: str) -> SourceView:
         """配信元の設定のうち画面が使用するキーと、Git の配信元か・既定のリビジョンを返却する。"""
-        config_response, refs_response = await asyncio.gather(
-            self.request("GET", f"/sources/{_seg(source)}/config", params={"schemas": "true"}),
-            self.request("GET", f"/sources/{_seg(source)}/refs", params={"commits": 0}),
+        try:
+            async with asyncio.TaskGroup() as group:
+                config_task = group.create_task(self.source_config(source))
+                refs_task = group.create_task(self.refs(source, commits=0))
+        except ExceptionGroup as group_error:
+            # 呼び出し元へは最初の例外（UnknownSourceError など）をそのまま伝える
+            raise group_error.exceptions[0] from None
+        return build_source_view(source, config_task.result(), refs_task.result())
+
+    async def source_config(self, source: str) -> SourceConfig:
+        """配信元の設定の応答の本文と、その内容のハッシュを返却する。"""
+        response = await self.request(
+            "GET", f"/sources/{_seg(source)}/config", params={"schemas": "true"}
         )
-        value = config_response.json()
-        refs = refs_response.json()
-        git = bool(refs.get("git", False))
-        schemas = value.get("schemas") or {}
-        decisions = value.get("decisions") or {}
-        github = value.get("github") or {}
-        diff = value.get("diff") or {}
-        return SourceView(
-            id=source,
-            git=git,
-            default_ref=str(refs.get("defaultRef")) if git else None,
-            nav=value.get("nav"),
-            documents=[
-                DocumentRow(
-                    id=str(row["id"]),
-                    paths=list(row.get("paths") or []),
-                    schema=dict(schemas.get(str(row["id"])) or {}),
-                    title=row.get("title"),
-                    records=row.get("records"),
-                    search=bool(row.get("search", True)),
-                    converter=row.get("converter"),
-                    alias_type=row.get("alias_type"),
-                    metadata={
-                        str(key): str(column) for key, column in (row.get("metadata") or {}).items()
-                    },
-                )
-                for row in value.get("documents") or []
-            ],
-            decision_folders=list(decisions.get("folders") or []),
-            diff_ignore_keys=list(diff.get("ignore_keys") or ["updated"]),
-            github_repository=github.get("repository"),
-            github_issue_labels=list(github.get("issueLabels") or []),
+        return SourceConfig(
+            value=response.json(), config_hash=hashlib.sha256(response.content).hexdigest()
         )
 
     async def fetch_document_list(
@@ -427,3 +409,39 @@ class ProjectIndexClient:
                 status_code=HTTP_CONFLICT,
                 summary=summary,
             )
+
+
+def build_source_view(source: str, config: SourceConfig, refs: RefList) -> SourceView:
+    """配信元の設定とリビジョンの一覧から、画面が使用する配信元の表示の設定を作る。"""
+    value = config.value
+    schemas = value.get("schemas") or {}
+    decisions = value.get("decisions") or {}
+    github = value.get("github") or {}
+    diff = value.get("diff") or {}
+    return SourceView(
+        id=source,
+        git=refs.git,
+        default_ref=refs.default_ref if refs.git else None,
+        nav=value.get("nav"),
+        documents=[
+            DocumentRow(
+                id=str(row["id"]),
+                paths=list(row.get("paths") or []),
+                schema=dict(schemas.get(str(row["id"])) or {}),
+                title=row.get("title"),
+                records=row.get("records"),
+                search=bool(row.get("search", True)),
+                converter=row.get("converter"),
+                alias_type=row.get("alias_type"),
+                metadata={
+                    str(key): str(column) for key, column in (row.get("metadata") or {}).items()
+                },
+            )
+            for row in value.get("documents") or []
+        ],
+        decision_folders=list(decisions.get("folders") or []),
+        diff_ignore_keys=list(diff.get("ignore_keys") or ["updated"]),
+        github_repository=github.get("repository"),
+        github_issue_labels=list(github.get("issueLabels") or []),
+        config_hash=config.config_hash,
+    )

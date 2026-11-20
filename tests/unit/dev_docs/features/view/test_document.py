@@ -16,6 +16,7 @@ from dev_docs.shared.errors import (
     DocumentNotFoundError,
     ProjectIndexUnreachableError,
     RefNotFoundError,
+    UnknownSourceError,
 )
 
 from ...conftest import RULE_SCHEMA, FakeIndex, config_json, doc_json
@@ -360,11 +361,11 @@ def test_get_document_when_requests_concurrent(
     make_handlers: Callable[..., Any],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """配信元の設定・リビジョン・文書の一覧を同時に問い合わせる（正常系）。"""
+    """配信元の設定とリビジョンの一覧を同時に問い合わせ、文書の一覧を配信元の設定の応答より前に問い合わせる（正常系）。"""
     # 準備
     _rules_source(fake_index)
     monkeypatch.setattr(document_module, "DOCUMENT_FETCH_TIMEOUT_SEC", 2.0)
-    waiting = {"config", "refs", "docs"}
+    waiting = {"refs", "docs"}
     arrived: set[str] = set()
     gate = asyncio.Event()
 
@@ -374,6 +375,7 @@ def test_get_document_when_requests_concurrent(
             arrived.add(tail)
             if arrived == waiting:
                 gate.set()
+        if tail == "config":
             await gate.wait()
         return fake_index.handle(request)
 
@@ -384,7 +386,7 @@ def test_get_document_when_requests_concurrent(
     response = _get(make_handlers(project_index=client), None)
     # 検証
     assert response.path == "docs/a"
-    assert arrived == waiting
+    assert arrived == {"refs", "docs"}
 
 
 def test_get_document_when_total_timeout(
@@ -412,3 +414,115 @@ def test_get_document_when_total_timeout(
     # 検証
     assert caught.value.kind == "timeout"
     assert caught.value.reason == "0.2 秒以内に応答がありませんでした"
+
+
+def _refs(default_ref: str, branches: dict[str, str]) -> dict[str, Any]:
+    """リビジョンの一覧の応答（IF-29）を作る。"""
+    return {
+        "git": True,
+        "defaultRef": default_ref,
+        "branches": [{"name": name, "commit": commit} for name, commit in branches.items()],
+        "tags": [],
+        "commits": [],
+    }
+
+
+def _list_refs(fake_index: FakeIndex) -> list[str | None]:
+    """偽物に届いた文書の一覧の要求の `ref` を、届いた順に並べる。"""
+    return [
+        request.url.params.get("ref")
+        for request in fake_index.requests
+        if request.url.path == "/sources/sample/docs"
+    ]
+
+
+def test_get_document_when_list_reused(
+    fake_index: FakeIndex, make_handlers: Callable[..., Any]
+) -> None:
+    """同じ commit の文書の一覧を保持から使用する（正常系）。"""
+    # 準備
+    documents = [doc_json("a", "docs/a.yaml", name="A"), doc_json("b", "docs/b.yaml", name="B")]
+    fake_index.configs["sample"] = config_json("sample")
+    fake_index.docs["sample"] = {None: documents, "8b1d4e0": documents}
+    fake_index.refs_results = _refs("main", {"main": "8b1d4e0"})
+    handlers = make_handlers()
+    # 実行
+    first = _get(handlers, "docs/a")
+    second = _get(handlers, "docs/b")
+    # 検証
+    assert _list_refs(fake_index) == ["8b1d4e0"]
+    assert first.ref == "main"
+    assert second.ref == "main"
+    assert second.path == "docs/b"
+
+
+def test_get_document_when_diff_list_reused(
+    fake_index: FakeIndex, make_handlers: Callable[..., Any]
+) -> None:
+    """差分の比較元の文書の一覧も保持から使用する（正常系）。"""
+    # 準備
+    current = [
+        doc_json("a", "docs/a.yaml", name="A2", version="v-a2"),
+        doc_json("b", "docs/b.yaml", name="B"),
+    ]
+    previous = [
+        doc_json("a", "docs/a.yaml", name="A", version="v-a1"),
+        doc_json("b", "docs/b.yaml", name="B"),
+        doc_json("c", "docs/c.yaml", name="C"),
+    ]
+    fake_index.configs["sample"] = config_json("sample")
+    fake_index.docs["sample"] = {None: current, "aaaaaaa": current, "bbbbbbb": previous}
+    fake_index.refs_results = _refs("main", {"main": "aaaaaaa"})
+    handlers = make_handlers()
+    # 実行
+    _get(handlers, "docs/a", diff_ref="bbbbbbb")
+    response = _get(handlers, "docs/b", diff_ref="bbbbbbb")
+    _get(handlers, "docs/a", ref="bbbbbbb")
+    # 検証
+    changes = {item.path: item.change for tab in response.tabs for item in _pages(tab.items)}
+    assert sorted(str(ref) for ref in _list_refs(fake_index)) == ["aaaaaaa", "bbbbbbb"]
+    assert changes == {"docs/a": "modified", "docs/b": None, "docs/c": "deleted"}
+
+
+def test_get_document_when_config_changed(
+    fake_index: FakeIndex, make_handlers: Callable[..., Any]
+) -> None:
+    """配信元の設定が変わったら文書の一覧を取得し直す（正常系）。"""
+    # 準備
+    documents = [doc_json("a", "docs/a.yaml", name="A")]
+    fake_index.configs["sample"] = config_json("sample")
+    fake_index.docs["sample"] = {None: documents, "8b1d4e0": documents}
+    fake_index.refs_results = _refs("main", {"main": "8b1d4e0"})
+    handlers = make_handlers()
+    _get(handlers, "docs/a")
+    fake_index.configs["sample"]["nav"] = {
+        "tabs": [{"title": "新しいタブ", "items": [{"auto": {"document": "rules"}}]}]
+    }
+    # 実行
+    response = _get(handlers, "docs/a")
+    # 検証
+    assert _list_refs(fake_index) == ["8b1d4e0", "8b1d4e0"]
+    assert [tab.title for tab in response.tabs] == ["新しいタブ"]
+
+
+def test_get_document_when_list_not_cacheable(
+    fake_index: FakeIndex, make_handlers: Callable[..., Any]
+) -> None:
+    """commit に解決できないと文書の一覧を保持しない（正常系）。"""
+    # 準備
+    _serve(fake_index, [doc_json("a", "docs/a.yaml")], git=False)
+    handlers = make_handlers()
+    # 実行
+    _get(handlers, "docs/a")
+    _get(handlers, "docs/a")
+    # 検証
+    assert _list_refs(fake_index) == [None, None]
+
+
+def test_get_document_when_source_unknown(make_handlers: Callable[..., Any]) -> None:
+    """タスクのグループの例外をそのまま送出する（異常系）。"""
+    # 準備
+    handlers = make_handlers()
+    # 実行・検証
+    with pytest.raises(UnknownSourceError):
+        asyncio.run(get_document("unknown", None, handlers=handlers, ref=None, diff_ref=None))

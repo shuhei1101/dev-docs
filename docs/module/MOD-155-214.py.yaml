@@ -220,6 +220,11 @@ data_models:
         access: 公開
         default: '[]'
         description: '`github.issue_labels`'
+      - name: config_hash
+        title: 配信元の設定のハッシュ
+        type: str
+        access: 公開
+        description: 配信元の設定の `config_hash`。文書の一覧の保持が、保持した一覧を作ったときの配信元の設定と同じかを比べる
     methods:
       - name: row
         title: 文書の行の引き当て
@@ -538,6 +543,24 @@ data_models:
         access: 公開
         default: None
         description: 端末の設定の内容のバージョン（応答の `version`）。照合つきの保存の `expected_version` に指定する
+  - name: SourceConfig
+    title: 配信元の設定
+    container: integrations/project_index/types.py
+    usecase: 文書の取得
+    role: DTO
+    summary: project-index の配信元の設定の応答の本文と、その内容のハッシュ
+    description: '`@dataclass(frozen=True, slots=True, kw_only=True)`。配信元の表示の設定の組み立てが、リビジョンの一覧と合わせて配信元の表示の設定にする。'
+    properties:
+      - name: value
+        title: 応答の本文
+        type: Mapping[str, Any]
+        access: 公開
+        description: '`GET /sources/{source}/config?schemas=true` の応答の JSON'
+      - name: config_hash
+        title: 内容のハッシュ
+        type: str
+        access: 公開
+        description: 応答の本文のバイト列の SHA-256 の 16 進数
 functions:
   - name: parse_document
     title: 索引の文書の読み取り

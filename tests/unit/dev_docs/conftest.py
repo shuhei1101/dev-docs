@@ -364,6 +364,7 @@ def make_handlers(
     from dev_docs.features.convert.service import ConvertService
     from dev_docs.features.lifecycle.control import RestartControl
     from dev_docs.features.view.columns import ColumnSettings
+    from dev_docs.features.view.document_lists import DOCUMENT_LIST_CACHE_SIZE, DocumentListCache
     from dev_docs.main import Handlers
 
     def _make(**overrides: Any) -> Handlers:
@@ -374,6 +375,7 @@ def make_handlers(
                 "project_index": make_client(),
                 "converter": ConvertService(),
                 "columns": ColumnSettings(tmp_path / "columns"),
+                "document_lists": DocumentListCache(max_entries=DOCUMENT_LIST_CACHE_SIZE),
                 "restart": RestartControl(),
             }
         )

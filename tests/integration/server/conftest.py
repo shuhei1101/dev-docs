@@ -192,6 +192,12 @@ class MockIndex:
         self.put_delay_sec = 0.0
         self.hold = threading.Event()
         self.hold.set()
+        # パスごとの応答を止めるイベント・待つ秒数（`delay_sec` より優先）・500 を返却するパス
+        self.path_holds: dict[str, threading.Event] = {}
+        self.path_delays: dict[str, float] = {}
+        self.failing: set[str] = set()
+        # （`received` か `answered`・パス・時刻）を受け付けた順と応答した順に並べる
+        self.timeline: list[tuple[str, str, float]] = []
         self.port = 0
         self._server: ThreadingHTTPServer | None = None
         self._thread: threading.Thread | None = None
@@ -307,10 +313,26 @@ class MockIndex:
 
     def answer(self, method: str, raw_path: str, body: Any) -> tuple[int, Any]:
         """要求 1 つに応答する。"""
+        path = unquote(urlsplit(raw_path).path)
         self.received.append((method, raw_path, body))
+        self.timeline.append(("received", path, time.monotonic()))
         self.hold.wait(HOLD_WAIT_SEC)
-        if self.delay_sec:
-            time.sleep(self.delay_sec)
+        path_hold = self.path_holds.get(path)
+        if path_hold is not None:
+            path_hold.wait(HOLD_WAIT_SEC)
+        delay = self.path_delays.get(path, self.delay_sec)
+        if delay:
+            time.sleep(delay)
+        result = (
+            (500, {"detail": "テストの偽物が失敗を返却する"})
+            if path in self.failing
+            else self._respond(method, raw_path, body)
+        )
+        self.timeline.append(("answered", path, time.monotonic()))
+        return result
+
+    def _respond(self, method: str, raw_path: str, body: Any) -> tuple[int, Any]:
+        """要求 1 つの応答を作る。"""
         url = urlsplit(raw_path)
         path = unquote(url.path)
         query = {key: values[0] for key, values in parse_qs(url.query).items()}

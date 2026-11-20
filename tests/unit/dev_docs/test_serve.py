@@ -20,6 +20,7 @@ import uvicorn
 
 from dev_docs import main as main_module
 from dev_docs.features.settings.types import TerminalConfig
+from dev_docs.features.view.document_lists import DOCUMENT_LIST_CACHE_SIZE
 from dev_docs.integrations.project_index.client import PROJECT_INDEX_TIMEOUT_SEC
 from dev_docs.main import (
     PortInUseError,
@@ -418,6 +419,7 @@ def test_build_handlers(
     assert handlers.project_index.address == address
     assert "mcp/admin/tools/status" in handlers.prompts.prompts
     assert "mcp/docs/instructions" not in handlers.prompts.prompts
+    assert handlers.document_lists.max_entries == DOCUMENT_LIST_CACHE_SIZE
 
 
 def test_build_handlers_when_prompt_invalid(

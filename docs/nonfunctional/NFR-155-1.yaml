@@ -165,7 +165,7 @@ requirements:
     source: https://github.com/shuhei1101/dev-docs/pull/230
     value: '18'
     unit: 秒
-    rationale: 稼働中の project-index へ、配信元の設定・リビジョン・文書の一覧を同時に送信し、続けて文書を送信する計測を 14 件の配信元で 3 回ずつ行った（[配信元を選んだときの最初の表示を短い時間で終わらせる](https://github.com/shuhei1101/dev-docs/pull/230) の計画書）。同時に送信した 3 つは最も長いものとほぼ同じ時間で終わり、project-index は並行して処理した。合計の最大は 11.74 秒（voice-input の 1 回目）で、規約『資源の値の決め方』の 50% の余裕を乗せて切り上げた。1 回目の alias-inject（23.14 秒）と observability（8.78 秒）は、project-index のログでその問い合わせの間に自分の既定のブランチの進んだ後の commit のリビジョンを書き出していたため、external_constraint の前提に回して決定値に使用しない。実測は 40 回で、測る作業を残す
+    rationale: 稼働中の project-index へ、配信元の設定・リビジョン・文書の一覧を同時に送信し、続けて文書を送信する計測を 14 件の配信元で 3 回ずつ行った（[配信元を選んだときの最初の表示を短い時間で終わらせる](https://github.com/shuhei1101/dev-docs/pull/230) の計画書）。同時に送信した 3 つは最も長いものとほぼ同じ時間で終わり、project-index は並行して処理した。合計の最大は 11.74 秒（voice-input の 1 回目）で、規約『資源の値の決め方』の 50% の余裕を乗せて切り上げた。1 回目の alias-inject（23.14 秒）と observability（8.78 秒）は、project-index のログでその問い合わせの間に自分の既定のブランチの進んだ後の commit のリビジョンを書き出していたため、external_constraint の前提に回して決定値に使用しない。文書の一覧を保持するようにした後、保持に無いときの文書の一覧はリビジョンの一覧の応答の後に問い合わせるため、リビジョンの一覧の応答の時間（ai-monitor で 0.17〜0.37 秒、2026-11-20・ロードアベレージ 12）だけ伸びうる。保持から使用するときは文書の一覧を問い合わせない。実測は 40 回で、測る作業を残す
     overflow: 超えても文書の取得の制限時間（NFR-15）までは待つ
     measurement: '[配信元を選んでも表示に時間がかかる](https://github.com/shuhei1101/dev-docs/issues/225) の `dd2.cjs` で 14 件の配信元を 2 回ずつ開き、project-index のログでリビジョンを書き出していない間の 2 回目の文書の取得の時間を測る。結合テストでは、問い合わせごとに一定の時間だけ待ってから返却する偽の project-index で、問い合わせを同時に送信していることを確認する'
     status: planned
@@ -174,6 +174,23 @@ requirements:
         item: scenarios[正常シナリオ（配信元を再度開く）]
         type: references
         when: 値を変えるときに、配信元を再度開くシナリオの流れを確認する。
+  - id: NFR-17
+    name: 保持する文書の一覧の数
+    english_name: document_list_cache_size
+    category: 性能
+    external_constraint: 利用者の端末のメモリー。計測した端末（2026-11-20）は 32GB で、空きは 14.6GB、稼働中の dev-docs の常駐の量は 276MB。値つきの文書の一覧は、最も大きい配信元 ai-monitor（5187 件・応答 20.6MB）で、読み込んだ後のメモリーが 47.6MB だった
+    source_kind: PC 性能
+    value: '4'
+    unit: 組（配信元と commit の組）
+    rationale: 利用者が同時に行き来する範囲を、差分の 2 リビジョン × 2 つの配信元とした。全ての組が ai-monitor の大きさでも、文書の一覧の分は 4 × 47.6MB で約 190MB に収まり、計測した端末の空きの 2% に満たない。読み込んだ後の量は種類の行で型にする前の値で、型にした後の量は測る作業を残す
+    measurement: ai-monitor の値つきの文書の一覧を、異なる 4 つの commit で文書の取得で保持させ、dev-docs のプロセスの常駐の量の増分を測る
+    overflow: 上限を超えたら、最も前に使用した組を捨てる。捨てた組をもう一度開くと、文書の一覧をもう一度問い合わせる
+    status: planned
+    refs:
+      - to: IF-155-10
+        item: constraints[文書の一覧の保持]
+        type: references
+        when: 上限を変えるときに、文書の一覧の保持の捨て方を確認する。
 lead: 外部の制約から逆算した dev-docs の決定値を定め、時間・上限などの値を決める・変えるときに参照する。
 tags:
   - name: topic:非機能要件
