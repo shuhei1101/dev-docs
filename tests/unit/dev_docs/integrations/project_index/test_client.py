@@ -9,7 +9,8 @@ from typing import Any
 import httpx
 import pytest
 
-from dev_docs.integrations.project_index.client import ProjectIndexClient
+from dev_docs.integrations.project_index.client import ProjectIndexClient, build_source_view
+from dev_docs.integrations.project_index.types import RefList, SourceConfig
 from dev_docs.shared.errors import (
     DocumentNotFoundError,
     InvalidArgumentError,
@@ -196,6 +197,37 @@ def test_source_view_when_not_git(
     view = asyncio.run(make_client().source_view("notes"))
     # 検証
     assert (view.git, view.default_ref) == (False, None)
+
+
+def test_source_config(
+    fake_index: FakeIndex, make_client: Callable[..., ProjectIndexClient]
+) -> None:
+    """応答の本文と内容のハッシュ（正常系）。"""
+    # 準備
+    fake_index.configs["sample"] = config_json()
+    client = make_client()
+    first = asyncio.run(client.source_config("sample"))
+    second = asyncio.run(client.source_config("sample"))
+    fake_index.configs["sample"]["nav"] = {"tabs": [{"title": "新しいタブ", "items": []}]}
+    # 実行
+    changed = asyncio.run(client.source_config("sample"))
+    # 検証
+    params = [request.url.params for request in fake_index.requests]
+    assert [item["schemas"] for item in params] == ["true", "true", "true"]
+    assert first.config_hash == second.config_hash
+    assert changed.config_hash != first.config_hash
+    assert changed.value["nav"] == {"tabs": [{"title": "新しいタブ", "items": []}]}
+
+
+def test_build_source_view_when_not_git() -> None:
+    """Git 管理外の配信元と内容のハッシュ（正常系）。"""
+    # 準備
+    config = SourceConfig(value={"documents": []}, config_hash="abc")
+    refs = RefList(git=False, default_ref="main")
+    # 実行
+    view = build_source_view("notes", config, refs)
+    # 検証
+    assert (view.git, view.default_ref, view.config_hash) == (False, None, "abc")
 
 
 def test_list_documents(
