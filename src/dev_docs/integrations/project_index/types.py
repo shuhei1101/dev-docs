@@ -62,6 +62,7 @@ class SourceView:
     diff_ignore_keys: list[str] = field(default_factory=lambda: ["updated"])
     github_repository: str | None = None
     github_issue_labels: list[str] = field(default_factory=list)
+    config_hash: str = ""
 
     def row(self, kind: str) -> DocumentRow | None:
         """行の ID から `DocumentRow` を返却する（無ければ `None`）。"""
@@ -70,6 +71,14 @@ class SourceView:
     def record_kinds(self) -> set[str]:
         """`records` を持つ文書の行の ID を返却する。"""
         return {row.id for row in self.documents if row.records is not None}
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
+class SourceConfig:
+    """`GET /sources/{source}/config?schemas=true` の応答の本文と、その内容のハッシュ。"""
+
+    value: Mapping[str, Any]
+    config_hash: str
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)

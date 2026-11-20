@@ -26,6 +26,7 @@ from dev_docs.features.prompt_doc.types import PromptInvalidError
 from dev_docs.features.settings.query import config_path, listen_port, load_terminal_config
 from dev_docs.features.settings.types import TerminalConfig, TerminalConfigInvalidError
 from dev_docs.features.view.columns import COLUMNS_DIR, ColumnSettings
+from dev_docs.features.view.document_lists import DOCUMENT_LIST_CACHE_SIZE, DocumentListCache
 from dev_docs.integrations.project_index.client import (
     PROJECT_INDEX_TIMEOUT_SEC,
     ProjectIndexClient,
@@ -71,6 +72,8 @@ class Handlers:
     columns: ColumnSettings
     restart: RestartControl
     prompts: PromptSet
+    # 配信元と commit の組ごとの文書の一覧（プロセスのメモリーに持ち、再起動で消える）
+    document_lists: DocumentListCache
 
 
 def _setup_logging(log_dir: Path) -> list[logging.Handler]:
@@ -311,6 +314,7 @@ def build_handlers(terminal: TerminalConfig) -> Handlers:
         columns=ColumnSettings(state_dir / COLUMNS_DIR),
         restart=RestartControl(),
         prompts=prompts,
+        document_lists=DocumentListCache(max_entries=DOCUMENT_LIST_CACHE_SIZE),
     )
 
 
