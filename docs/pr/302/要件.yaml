@@ -1,0 +1,28 @@
+use_cases:
+  - kind: composite
+    scenario: docs/scenario/SC-155-13.yaml
+    impact: following
+    detail: 画面で参照する単一シナリオで、同じリビジョンの文書の一覧を取り直さなくなることに追随する（流れは変わらない）
+    depends_on:
+      - docs/scenario/SC-155-7.yaml
+  - kind: single
+    scenario: docs/scenario/SC-155-7.yaml
+    impact: changed
+    detail: 配信元を再度開く・別の文書へ移る・差分を開く流れで、同じ配信元の同じ commit の文書の一覧を一度だけ取得し、以降は保持から使用する
+    depends_on: []
+docs:
+  - page: docs/nonfunctional/NFR-155-1.yaml
+    new: false
+    change: 保持する文書の一覧の数の上限（要件の未確定の案 A のとき）を追加し、再度開いた配信元の文書の取得の時間（NFR-16）に文書の一覧を保持から使用する前提を反映する
+    status: todo
+  - page: docs/external-api/API-155-1.yaml
+    new: false
+    change: リビジョンを commit に解決するために dev-docs が前提にする応答（リビジョンの一覧か文書の一覧の commit）を、インターフェース定義設計で照合した結果で追記する
+    status: todo
+scope_out:
+  - item: project-index の文書 1 件の取得・文書の一覧の作成そのものの速さ（本文の内訳の文書 1 件 約 7.8 秒）
+    reason: project-index 側の処理で、dev-docs の変更では縮まらない
+    plan: shuhei1101/project-index#197
+  - item: 文書の一覧の保持をプロセスの外（ディスク）へ書き出し、再起動の後も使用すること
+    reason: 要望は開くたびの取り直しをなくすことで、再起動の後の 1 回目の取得はプロセスのメモリーへの保持で足りる
+    plan: none
