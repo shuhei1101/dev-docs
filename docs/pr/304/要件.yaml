@@ -1,0 +1,19 @@
+use_cases:
+  - kind: single
+    scenario: docs/scenario/SC-155-7.yaml
+    impact: run_only
+    detail: 文書の画面で参照する手順は変わらないが、広い画面での本文・表・サイドバーの並び方が変わる
+    depends_on: []
+scope_out:
+  - item: 設定画面・見つからない画面の幅の上限（`max-w-2xl` など）
+    reason: 要望は文書の画面の本文と表で、ほかの画面は含まれない
+    plan: none
+  - item: デザインスタイルの候補と過去の作業 PR のモック（`docs/mock/styles/`・`docs/mock/refs/36/`）の幅
+    reason: 採用前の候補と過去の作業の記録で、今の画面の見た目を表さない
+    plan: none
+  - item: 変換の失敗のアラート（`ConversionErrorAlert`）の文字色のコントラスト
+    reason: axe の `color-contrast`（背景とのコントラストの基準）を満たさない。今回の要望（本文と表の幅）に含まれない
+    plan: '#305'
+  - item: 文書の無いタブでのパンくず（`DocBreadcrumb`）の階層
+    reason: 画面設計『文書の画面』の `パンくず` の `visible_when`（文書の無いタブでは `{配信元の ID}` / `{タブ名}`）と違い、前の文書の階層を出したままになる。今回の要望に含まれない
+    plan: '#306'
