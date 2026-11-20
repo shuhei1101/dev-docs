@@ -11,3 +11,9 @@ scope_out:
   - item: デザインスタイルの候補と過去の作業 PR のモック（`docs/mock/styles/`・`docs/mock/refs/36/`）の幅
     reason: 採用前の候補と過去の作業の記録で、今の画面の見た目を表さない
     plan: none
+  - item: 変換の失敗のアラート（`ConversionErrorAlert`）の文字色のコントラスト
+    reason: axe の `color-contrast`（背景とのコントラストの基準）を満たさない。今回の要望（本文と表の幅）に含まれない
+    plan: '#305'
+  - item: 文書の無いタブでのパンくず（`DocBreadcrumb`）の階層
+    reason: 画面設計『文書の画面』の `パンくず` の `visible_when`（文書の無いタブでは `{配信元の ID}` / `{タブ名}`）と違い、前の文書の階層を出したままになる。今回の要望に含まれない
+    plan: '#306'
