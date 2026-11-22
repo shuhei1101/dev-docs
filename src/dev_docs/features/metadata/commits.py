@@ -12,7 +12,7 @@ from pydantic import Field, model_validator
 from dev_docs.features.metadata.metadata import key_mapping
 from dev_docs.integrations.project_index.client import ProjectIndexClient
 from dev_docs.shared.api_model import ApiModel
-from dev_docs.shared.errors import DevDocsError, ProjectIndexTimeoutError
+from dev_docs.shared.errors import DevDocsError, DocumentNotFoundError, ProjectIndexTimeoutError
 
 __all__ = [
     "EDITABLE_COLUMNS",
@@ -45,6 +45,7 @@ HTTP_UNPROCESSABLE = 422
 HTTP_BAD_GATEWAY = 502
 HTTP_GATEWAY_TIMEOUT = 504
 NEXT_STEP_WRITE_API_KINDS = "project-index の端末の設定の sources[].direct_commit.write_api_kinds に種類を追加してください。"
+DRY_RUN_MESSAGE = "差分確認"
 NEXT_STEP_RELOAD = "メタデータを再読み込みし、変更が反映されたかを確認してください。"
 
 EditKind = Literal["terms", "aliases", "tags", "rules", "files"]
@@ -60,6 +61,8 @@ class Edit(ApiModel):
     doc_id: str
     # 列と文書のキーの対応を参照する種類と、403 の `kinds` を変更へ戻すのに使用する
     doc_kind: str
+    # `{キー}[].{項目}` の列を変える `update` で必須（文書の取得で今の配列を取得する）
+    doc_path: str | None = None
     # `update`・`delete` で必須（取得した文書のバージョン）
     expected_version: str | None = None
     values: dict[str, str | list[str]] = Field(default_factory=dict)
@@ -252,40 +255,36 @@ async def _current_values(
     edits: list[Edit],
     mappings: Mapping[str, Mapping[str, str]],
 ) -> dict[str, Mapping[str, object]]:
-    """配列の項目を変える文書の今の値を取得し、バージョンが違えば 409 にする。"""
-    targets = [edit for edit in edits if _needs_current(edit, mappings.get(edit.doc_kind))]
-    if not targets:
-        return {}
-    documents = {
-        (document.kind, document.id): document
-        for document in (await client.list_documents(source_id, values=True)).documents
-    }
+    """配列の項目を変える文書だけを文書の取得で取得し、今の値を返却する。
+
+    取得した後に文書が変わっていれば、`update` の `expected_version` の照合で project-index が 409 を返却する。
+    """
     result: dict[str, Mapping[str, object]] = {}
-    conflicts: list[EditError] = []
-    for edit in targets:
-        document = documents.get((edit.doc_kind, edit.doc_id))
-        if document is None:
+    for edit in edits:
+        if not _needs_current(edit, mappings.get(edit.doc_kind)):
+            continue
+        # 今の配列を取得する文書のパスが無い
+        if not edit.doc_path:
+            raise EditsRejectedError(
+                message="配列の項目を修正する変更に docPath がありません",
+                status_code=HTTP_BAD_REQUEST,
+                errors=[EditError(key=edit.key, path="docPath", reason="docPath がありません")],
+            )
+        try:
+            detail = await client.document(source_id, edit.doc_path, document_id=edit.doc_id)
+        except DocumentNotFoundError as error:
             raise EditsRejectedError(
                 message="修正する文書がありません",
                 status_code=HTTP_NOT_FOUND,
                 errors=[EditError(key=edit.key, reason="文書がありません")],
+            ) from error
+        if detail.document is None:
+            raise EditsRejectedError(
+                message="修正する文書を読み込めません",
+                status_code=HTTP_NOT_FOUND,
+                errors=[EditError(key=edit.key, reason="文書を読み込めません")],
             )
-        if document.version != edit.expected_version:
-            conflicts.append(
-                EditError(
-                    key=edit.key,
-                    reason="参照した後に文書が変わっています",
-                    current=document.version,
-                )
-            )
-        result[edit.doc_id] = document.data
-    if conflicts:
-        raise EditsRejectedError(
-            message="参照した後に変わった文書があります",
-            status_code=HTTP_CONFLICT,
-            errors=conflicts,
-            next_steps=[NEXT_STEP_RELOAD],
-        )
+        result[edit.doc_id] = detail.document.data
     return result
 
 
@@ -368,9 +367,13 @@ async def commit_edits(
     current = await _current_values(client, source_id, request.edits, mappings)
     # 3. 書き込みと削除にして送信する
     writes, deletes, indexes = to_operations(request.edits, mappings, current)
-    body: dict[str, Any] = {"writes": writes, "deletes": deletes, "dryRun": request.dry_run}
-    if request.message:
-        body["message"] = request.message
+    # project-index の書き込みの API は説明を必須にしているため、差分確認は固定の説明を送信する
+    body: dict[str, Any] = {
+        "writes": writes,
+        "deletes": deletes,
+        "message": DRY_RUN_MESSAGE if request.dry_run else request.message,
+        "dryRun": request.dry_run,
+    }
     try:
         status, response = await client.commit_documents(source_id, body)
     except ProjectIndexTimeoutError as error:
