@@ -63,12 +63,12 @@ request:
     description: 取得した文書のバージョン（メタデータの取得の `rows[].version`）
     notes: '`update`・`delete` のときは必須'
   - name: edits[].values
-    type: dict[str, str]
+    type: dict[str, str | list[str]]
     required: false
     location: body
     default: '`{}`'
-    description: 修正後の値。キーはメタデータの取得の `columns[].key` で、`, ` で区切った文字列は配列のキーでは配列にする
-    constraints: 制約「修正できるキー」の列だけ
+    description: 修正後の値。キーはメタデータの取得の `columns[].key` で、`columns[].type` が `list` の列は文字列の配列にする
+    constraints: '制約「修正できるキー」の列のうち、メタデータの取得で `editable: true` の列だけ'
   - name: message
     type: str
     required: false
@@ -90,7 +90,7 @@ request:
     description: 要求元のオリジン
 request_example: |-
   ```json
-  {"edits": [{"key": "tags:n1:update", "kind": "tags", "op": "update", "docId": "n1", "expectedVersion": "c3d4e5", "values": {"tags": "topic:a, topic:b"}}, {"key": "terms:kind:add", "kind": "terms", "op": "add", "docId": "kind", "docKind": "terms", "values": {"name": "種類", "description": "文書の行の ID"}}, {"key": "terms:old-name:delete", "kind": "terms", "op": "delete", "docId": "old-name", "expectedVersion": "b2c3d4"}], "message": "用語とタグを追加する"}
+  {"edits": [{"key": "tags:n1:update", "kind": "tags", "op": "update", "docId": "n1", "expectedVersion": "c3d4e5", "values": {"tags": ["topic:a", "topic:b"]}}, {"key": "terms:kind:add", "kind": "terms", "op": "add", "docId": "kind", "docKind": "terms", "values": {"name": "種類", "description": "文書の行の ID"}}, {"key": "terms:old-name:delete", "kind": "terms", "op": "delete", "docId": "old-name", "expectedVersion": "b2c3d4"}], "message": "用語とタグを追加する"}
   ```
 response:
   - name: applied
@@ -123,7 +123,7 @@ status_codes:
   - code: '200'
     condition: 'コミット・プッシュした、または `dryRun: true` で検査に合格した'
   - code: '400'
-    condition: '本文の型の検証に通らない（`edits` が空・`key` の重複・`op` と `kind` の組み合わせ・必須の欠け・修正できないキー・`dryRun: false` で `message` が空）'
+    condition: '本文の型の検証に通らない（`edits` が空・`key` の重複・`op` と `kind` の組み合わせ・必須の欠け・修正できないキー・元のキーへ戻せない列・`dryRun: false` で `message` が空）'
     notes: project-index へ送信しない。`errors[]` に `{key, path, reason}`（`key` は該当する変更、本文全体の違反は `null`）
   - code: '403'
     condition: 別のオリジンの要求、または project-index が直コミットを許可していない種類があると返却した（`DirectCommitNotPermittedError`）
@@ -132,7 +132,7 @@ status_codes:
     condition: 配信元が無い・配信していない、修正・削除する文書が無い（project-index の 404）
     notes: 文書が無いときは該当する変更の `errors[]` に入れる
   - code: '409'
-    condition: project-index が文書のバージョンが合わない・ワークツリーに未コミットの変更がある・プッシュが断られたなどと返却した
+    condition: 変換のために取得した文書のバージョンが `expectedVersion` と合わない、または project-index が文書のバージョンが合わない・ワークツリーに未コミットの変更がある・プッシュが断られたなどと返却した
     notes: '`VersionMismatchError` は該当する変更ごとに `errors[]` に `{key, reason, current}`（`current` は今のバージョン）。それ以外は `errors[]` を持たず、`detail` に project-index の理由'
   - code: '422'
     condition: project-index の検査に合格しない（`ValidationFailedError`）
@@ -151,10 +151,10 @@ constraints:
   - item: オリジンの確認
     constraint: 端末の設定の保存と同じく、画面と別のオリジンの要求を 403 で断る
   - item: 修正できるキー
-    constraint: '`terms`: `name`・`aliases`・`description`。`aliases`: `name`・`aliases`。`tags`: `tags`。`rules`: `rule`・`paths`・`tools`・`args`。`files`: `description`。ほかのキーは 400 で断り、project-index へ送信しない'
+    constraint: '`terms`: `name`・`aliases`・`description`。`aliases`: `name`・`aliases`。`tags`: `tags`。`rules`: `rule`・`paths`・`tools`（`args` はオブジェクトのため修正できない）。`files`: `description`。ほかのキーは 400 で断り、project-index へ送信しない'
     notes: 規約の本文・テンプレート・スキーマは画面から書き換えない（要件の直コミットの対象）
   - item: 書き込みと削除への変換
-    constraint: '`update` は `write_docs` の `update` 操作（`id`・`expected_version`・`set`）、`add` は `create` 操作（`id`・`kind`・`data`）、`delete` は `deletes[]`（`id`・`expectedVersion`）にし、`edits` の並び順で `writes`・`deletes` に入れる。配列のキー（`aliases`・`tags`・`paths`・`tools`）は `, ` で区切って配列にする'
+    constraint: '列のキーを、配信元の設定の行の `metadata` の対応（IF-155-28 の制約「列と文書のキーの対応」）で文書の実際のキーへ戻して組み立てる。`{キー}` の列はそのキーの値にする。`{キー}[].{項目}` の列は、文書の取得（IF-25）で取得した今の配列のうち、送信された値に残る要素はオブジェクトのまま（`main` などほかの項目を保つ）並び順を維持し、追加された値は `{項目: 値}` の要素を末尾に追加した配列にする（取得したバージョンが `expectedVersion` と違えば、送信せずに 409）。`update` は `write_docs` の `update` 操作（`id`・`expected_version`・`set` に組み立てた最上位のキー）、`add` は `create` 操作（`id`・`kind`・`data`）、`delete` は `deletes[]`（`id`・`expectedVersion`）にし、`edits` の並び順で `writes`・`deletes` に入れる'
   - item: project-index への送信
     constraint: '`POST /sources/{source}/commits` を `Origin` を付けずに 1 回だけ呼ぶ。`writes`・`deletes`・`message`・`dryRun` を送信し、`branch`・`onReferenced` は送信しない（既定のブランチ・`fail`）'
   - item: 書き込みの API の待ち
@@ -166,6 +166,8 @@ constraints:
     constraint: 要求と応答のキーは camelCase。`values` の中のキーはメタデータの取得の `columns[].key` のまま
   - item: operationId
     constraint: '`{tag}-{関数名}` の `metadata-post_commits`'
+  - item: ログ
+    constraint: 送信ごとに、配信元の ID・`dryRun`・変更の件数・project-index の状態コード・コミットの SHA（待ちの上限で打ち切ったときはその旨）を 1 行のログに出力する。値の中身とコミットの説明は出力しない
 flows:
   - name: 正常系
     summary: 変更を 1 つのコミットにしてプッシュし、変更ごとの結果とコミットを返却する
@@ -419,6 +421,40 @@ flows:
       - 504 で、`detail` にコミットされたかが分からないこと、`nextSteps` にメタデータの再読み込みがある
       - 要求から 2 秒以内に応答する
     test: test_error_when_write_timed_out
+  - name: 正常系（対応づけたキーのタグ）
+    summary: '`metadata` で `tags[].name` へ対応づけた種類のタグを変え、要素のほかの項目を保つ'
+    setup:
+      - name: Mock
+        description: なし（テストの中で起動した project-index）
+      - name: 配信元
+        description: '種類 `rule` の行が `metadata: {tags: tags[].name, main_tags: tags[main].name}` を持ち、`direct_commit.kinds`・端末の設定の `write_api_kinds` に `rule` がある git の配信元'
+        notes: '文書 r1 の `tags` が `[{name: topic:a, main: true}, {name: topic:c}]`'
+      - name: 入力
+        description: r1 の `tags` の `update` で、`values.tags` が `[topic:a, topic:b]`
+    flow: |-
+      <!-- map -->
+
+      ```mermaid
+      sequenceDiagram
+        participant C as クライアント
+        participant E as POST /_api/sources/{source}/commits
+        participant PI as project-index
+
+        C->>E: edits（r1 の tags: topic:a, topic:b）, message
+        E->>PI: 配信元の設定と r1 を取得
+        PI-->>E: metadata（tags[].name）と r1 の今の tags
+        E->>E: topic:a の要素を保ち、topic:c を除き、topic:b を追加した tags にする
+        E->>PI: POST /sources/sample/commits（set: tags）
+        PI-->>E: 200 applied, results, commit
+        E-->>C: 200
+      ```
+
+      <!-- /map -->
+    expected:
+      - 200 で `applied` が `true`
+      - 'r1 の `tags` が `[{name: topic:a, main: true}, {name: topic:b}]` で、`main` が保たれている'
+      - r1 に最上位のキー `tags` 以外のキーが増えていない
+    test: test_normal_when_tags_mapped
 refs:
   - to: API-155-1
     type: requires
