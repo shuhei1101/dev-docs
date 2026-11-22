@@ -1,0 +1,22 @@
+use_cases:
+  - kind: single
+    scenario: docs/scenario/SC-155-7.yaml
+    impact: run_only
+    detail: iPad で文書を読むとき、表の見出し行が上端に隠れる時にだけ留まる。参照の流れの記述は変わらない
+    depends_on: []
+  - kind: composite
+    scenario: docs/scenario/SC-155-13.yaml
+    impact: none
+    detail: 全体の流れは変わらない
+    depends_on: []
+scope_out:
+  - item: mdmark の `script` の方式が `--mdmark-sticky-top` の px 以外の長さを 0 として扱う不具合の修正
+    reason: dev-docs のリポジトリでは修正できない。dev-docs は `@property` の登録で回避する
+    plan: shuhei1101/mdmark#789
+  - item: MindStella のプレビューの見出し行の固定
+    reason: 要望に含まれない（shuhei1101/mindstella#614 が扱う）
+    plan: none
+  - item: iPad（iPadOS 27 の Safari、`timeline` の方式）で表の見出し行が留める位置より手前で下にずれる事象、iPhone の画面幅で見出し行が留まらない事象、狭い幅の右側の目次の固定の見せ方の見直し
+    reason: mdmark の `timeline` の方式と目次の部品の振る舞いで、dev-docs のリポジトリでは修正できない。利用者の指示で mdmark へ起票した
+    plan: shuhei1101/mdmark#790
+docs: []

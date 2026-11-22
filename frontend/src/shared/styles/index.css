@@ -146,6 +146,13 @@
 }
 
 /* mdmark の右側の目次・見出しの移り先・表の見出し行を、サイドバーと同じくトップバーと種類のタブの下に留める */
+/* mdmark はスクロール連動のアニメーションを持たないブラウザで計算値を px の数として読み込むため、長さとして登録して計算値を px にする */
+@property --mdmark-sticky-top {
+  syntax: "<length>";
+  inherits: true;
+  initial-value: 0px;
+}
+
 :root {
   --mdmark-sticky-top: calc(var(--spacing) * 24);
 }

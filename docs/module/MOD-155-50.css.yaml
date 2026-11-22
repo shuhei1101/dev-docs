@@ -15,11 +15,14 @@ styles:
     title: mdmark の固定の位置
     container: shared/styles/index.css
     summary: mdmark が右側の目次・見出しの移り先・表の見出し行を留める位置を、トップバーと種類のタブの下にする
-    description: 画面設計『文書の画面』の要素『目次』の `固定の位置`。値は文書の画面のサイドバーの固定の位置（`top-24`）と同じ式にし、トップバー（`h-12`）と種類のタブ（`sticky top-12`）の下端に合わせる。mdmark は既定値を層 `mdmark` の `:root` に持つため、層に属さない `:root` で上書きする
+    description: 画面設計『文書の画面』の要素『目次』の `固定の位置`。値は文書の画面のサイドバーの固定の位置（`top-24`）と同じ式にし、トップバー（`h-12`）と種類のタブ（`sticky top-12`）の下端に合わせる。mdmark は既定値を層 `mdmark` の `:root` に持つため、層に属さない `:root` で上書きする。mdmark はスクロール連動のアニメーションを持たないブラウザで、この変数の計算値を px の数として読み込むため、`@property` で `<length>` として登録し、計算値を px にする
     values:
       - class_name: :root
         target: mdmark の CSS 変数 `--mdmark-sticky-top`
         value: '`calc(var(--spacing) * 24)`'
+      - class_name: '@property --mdmark-sticky-top'
+        target: mdmark の CSS 変数 `--mdmark-sticky-top` の型
+        value: '`syntax: "<length>"; inherits: true; initial-value: 0px`'
     refs:
       - to: SCR-155-1
         item: elements[目次]
