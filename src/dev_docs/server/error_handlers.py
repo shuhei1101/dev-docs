@@ -96,7 +96,7 @@ def problem_of(error: DevDocsError, fields: dict[str, Any] | None = None) -> JSO
             {"path": item.path, "reason": item.rule, **({"fix": item.fix} if item.fix else {})}
             for item in violations
         ]
-    return _problem(error.name, error.status, detail, {**extra, **(fields or {})})
+    return _problem(error.name, error.http_status(), detail, {**extra, **(fields or {})})
 
 
 def register_error_handlers(app: FastAPI) -> None:

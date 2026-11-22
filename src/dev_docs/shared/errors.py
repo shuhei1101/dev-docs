@@ -35,6 +35,10 @@ class DevDocsError(Exception):
         """クラスの名前（MCP の本文の先頭と problem+json の type の末尾に出す）。"""
         return type(self).__name__
 
+    def http_status(self) -> int:
+        """problem+json の状態コード（既定はクラスの `status`）。"""
+        return self.status
+
     def details(self) -> dict[str, Any]:
         """子クラスが持つ追加のプロパティを辞書で返却する。"""
         base = {item.name for item in dataclasses.fields(DevDocsError)}
@@ -167,6 +171,15 @@ class ProjectIndexUnreachableError(DevDocsError):
                 if self.kind == "timeout"
                 else "project-index を起動してから、再読み込みしてください。"
             ]
+
+
+@dataclass(kw_only=True)
+class ProjectIndexTimeoutError(DevDocsError):
+    """project-index の書き込みの API が待ちの上限までに応答しない（コミットされたかが分からない）。"""
+
+    status: ClassVar[int] = 504
+    address: str = ""
+    reason: str = ""
 
 
 @dataclass(kw_only=True)

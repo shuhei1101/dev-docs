@@ -641,6 +641,37 @@ files:
   related:
   - to: MOD-155-190
     type: implements
+- path: dev_docs/features/metadata/metadata.py
+  name: '配信元のメタデータの組み立て'
+  description: 配信元のメタデータを project-index の読み取り API から種類ごとの行と列に組み立てる処理を受け持ち、メタデータの metadata.py を修正するときに参照する。
+  tags:
+  - topic:メタデータ
+  - action:取得
+  - tool:project-index
+  related:
+  - to: MOD-155-217
+    type: implements
+- path: dev_docs/features/metadata/commits.py
+  name: '編集中の変更の直コミット'
+  description: 画面の編集中の変更を文書の書き込みと削除に変えて project-index の書き込みの API へ送信し、結果と理由を変更ごとに戻す処理を受け持ち、メタデータの commits.py を修正するときに参照する。
+  tags:
+  - topic:直コミット
+  - topic:メタデータ
+  - action:送信
+  - tool:project-index
+  related:
+  - to: MOD-155-218
+    type: implements
+- path: dev_docs/features/metadata/route.py
+  name: 'メタデータのルーター（`GET /_api/sources/{source}/metadata`・`POST /_api/sources/{source}/commits`）'
+  description: メタデータの取得と編集中の変更の直コミットのルートを受け持ち、メタデータの route.py を修正するときに参照する。
+  tags:
+  - topic:メタデータ
+  - topic:api
+  - topic:ルート
+  related:
+  - to: MOD-155-219
+    type: implements
 checkpoint:
   commit: 05915628138ff51e7b1be495775c9f556a2a0825
   reviewed: []
