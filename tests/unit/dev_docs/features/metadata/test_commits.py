@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import json
 import logging
 from collections.abc import Callable
 from typing import Any
@@ -17,7 +18,7 @@ from dev_docs.features.metadata.commits import (
 from dev_docs.integrations.project_index.client import ProjectIndexClient
 from dev_docs.shared.errors import ProjectIndexTimeoutError
 
-from ...conftest import FakeIndex, config_json
+from ...conftest import FakeIndex, config_json, doc_json
 
 COMMITS_PATH = ("POST", "/sources/sample/commits")
 CONFIG_ROWS = [
@@ -283,3 +284,70 @@ def test_commit_edits_when_timed_out(
     # 検証
     assert caught.value.status_code == 504
     assert "コミットされたか" in caught.value.message
+
+
+def test_commit_edits_when_dry_run(
+    fake_index: FakeIndex, make_client: Callable[..., ProjectIndexClient]
+) -> None:
+    """差分確認でも説明を送信する（正常系）。"""
+    # 準備
+    _prepare(fake_index, 200, {"applied": False, "results": [], "commit": None})
+    request = CommitRequest(edits=_edits(), dry_run=True)
+    # 実行
+    asyncio.run(commit_edits(make_client(), "sample", request))
+    # 検証
+    sent = next(item for item in fake_index.requests if item.method == "POST")
+    body = json.loads(sent.content)
+    assert body["message"] == "差分確認"
+    assert body["dryRun"] is True
+
+
+def test_commit_edits_when_mapped_tags(
+    fake_index: FakeIndex, make_client: Callable[..., ProjectIndexClient]
+) -> None:
+    """対象の文書だけを取得する（正常系）。"""
+    # 準備
+    note_row = {
+        "id": "note",
+        "paths": ["notes/*.yaml"],
+        "alias_type": "doc",
+        "metadata": {"tags": "tags[].name"},
+    }
+    fake_index.configs["sample"] = config_json(documents=[note_row])
+    fake_index.docs["sample"] = {
+        None: [
+            doc_json(
+                "n1",
+                "notes/n1.yaml",
+                kind="note",
+                data={"id": "n1", "tags": [{"name": "topic:a", "main": True}]},
+                version="c3d4e5",
+            )
+        ]
+    }
+    fake_index.responses[COMMITS_PATH] = (
+        200,
+        {"applied": False, "results": [], "commit": None},
+    )
+    edit = Edit(
+        key="tags:n1:update",
+        kind="tags",
+        op="update",
+        doc_id="n1",
+        doc_kind="note",
+        doc_path="notes/n1.yaml",
+        expected_version="c3d4e5",
+        values={"tags": ["topic:a", "topic:b"]},
+    )
+    # 実行
+    asyncio.run(commit_edits(make_client(), "sample", CommitRequest(edits=[edit], dry_run=True)))
+    # 検証
+    paths = [
+        (item.method, item.url.path, item.url.params.get("id")) for item in fake_index.requests
+    ]
+    assert ("GET", "/sources/sample/docs/notes/n1.yaml", "n1") in paths
+    assert ("GET", "/sources/sample/docs", None) not in paths
+    sent = json.loads(next(item for item in fake_index.requests if item.method == "POST").content)
+    assert sent["writes"][0]["set"] == {
+        "tags": [{"name": "topic:a", "main": True}, {"name": "topic:b"}]
+    }
