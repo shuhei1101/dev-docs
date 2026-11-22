@@ -49,6 +49,6 @@ scope_out:
   - item: テンプレートとスキーマの画面からの修正
     reason: D-845 A で、テンプレートとスキーマは今のまま Issue と作業 PR を経る
     plan: none
-  - item: rule-inject の索引を project-index から読む・書くための rule-inject・配信元の側の修正（索引を文書の種類として配信する行の追加、write_index_entry を経ない書き込みの後の読み直し）
-    reason: 要望の rule-inject の索引の一覧と修正に要るかは、設計の最初（複合ユースケース設計）で確かめる。要る場合は rule-inject へ切り出し、索引だけを後に回して他のメタデータを先に進める（受付判断のとおり）。判断はレビューで確定する
+  - item: rule-inject の索引を project-index から読む・書くための rule-inject・配信元の側の修正（rule-inject の索引の検査の CLI とスキーマを配信元から呼べる形で出す修正、索引を持つ配信元の project-index.yaml への索引を配信する行の追加）
+    reason: 要る。今の書き込みの API は行の schema・validators[] だけを検査し、rule-inject の write_index_entry と同じ索引の検査を通す手段が無い。rule-inject と索引を持つ配信元のリポジトリの修正で、この作業 PR の外で行う。索引だけを後に回し、ほかのメタデータを先に進める
     plan: to_file
