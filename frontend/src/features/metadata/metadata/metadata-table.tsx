@@ -1,6 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import { Info, Plus, Trash2, Undo2 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import {
   type PendingEdit,
@@ -44,10 +44,13 @@ const fromText = (column: MetadataColumn, text: string): CellValue =>
 
 const normalize = (text: string): string => text.normalize("NFKC").toLowerCase();
 
-/** 行の名前（最初の修正できる列か、無ければ最初の列の値。空なら ID） */
+/** 行の名前に使用する列（種類が持つ最初の列） */
+const NAME_COLUMNS = ["name", "rule", "path"] as const;
+
+/** 行の名前（`NAME_COLUMNS` のうち種類が持つ最初の列の値。空なら ID） */
 export const rowLabel = (kind: MetadataKind, row: MetadataRow): string => {
-  const column = kind.columns.find((item) => item.editable) ?? kind.columns[0];
-  const text = toText(column === undefined ? undefined : row.values[column.key]);
+  const key = NAME_COLUMNS.find((name) => kind.columns.some((column) => column.key === name));
+  const text = toText(key === undefined ? undefined : row.values[key]);
   return text === "" ? row.id : text;
 };
 
@@ -110,7 +113,10 @@ const NewRow = ({ kind, takenIds, onAdd, onCancel }: NewRowProps) => {
   const [id, setId] = useState("");
   const [texts, setTexts] = useState<Record<string, string>>({});
   const [error, setError] = useState<string | null>(null);
+  const idInput = useRef<HTMLInputElement>(null);
   const editable = kind.columns.filter((column) => column.editable);
+  // 出したときに ID の入力欄へフォーカスを移す
+  useEffect(() => idInput.current?.focus(), []);
   const errorId = `new-row-error-${kind.id}`;
   const submit = () => {
     const trimmed = id.trim();
@@ -130,6 +136,7 @@ const NewRow = ({ kind, takenIds, onAdd, onCancel }: NewRowProps) => {
         <div className="flex flex-wrap items-start gap-2">
           <div className="flex flex-col gap-1">
             <Input
+              ref={idInput}
               aria-label="ID"
               aria-invalid={error !== null}
               aria-describedby={error === null ? undefined : errorId}
