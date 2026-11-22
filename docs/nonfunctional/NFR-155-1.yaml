@@ -191,6 +191,24 @@ requirements:
         item: constraints[文書の一覧の保持]
         type: references
         when: 上限を変えるときに、文書の一覧の保持の捨て方を確認する。
+  - id: NFR-18
+    name: project-index の書き込みの API の待ち
+    english_name: project_index_write_timeout
+    category: 耐障害
+    external_constraint: project-index は書き込みの API の検査と置き換えの開始を書き込みの期限（project-index の NFR-11、32 秒）までに収め、生成・プッシュを含めた応答を文書の MCP の応答の上限（project-index の NFR-10、48 秒）以内に返却する
+    source_kind: 外部 API の制限
+    source: https://github.com/shuhei1101/project-index/blob/552c341/docs/nonfunctional/NFR-1.yaml
+    value: '72'
+    unit: 秒
+    rationale: 下流の応答の上限 48 秒に、規約『資源の値の決め方』の入れ子の待ちの 50% の余裕を乗せた。project-index への問い合わせの制限時間（NFR-14、45 秒）は読み取りの値で、書き込みの応答の上限 48 秒より短いため使用しない。project-index の応答の上限を変えたら合わせて再決定する
+    overflow: 打ち切った直コミットは、コミットされたかが分からないことを持つ 504 を返却する。画面はメタデータを再読み込みして、変更が反映されたかを確かめる
+    measurement: 要求を受けたまま応答しない偽の project-index の書き込みの API につなぎ、直コミットを送信してから 504 が返るまでの時間を測る
+    status: planned
+    refs:
+      - to: NFR-155-1
+        item: requirements[project-index への問い合わせの制限時間]
+        type: references
+        when: 読み取りの制限時間を変えるときに、書き込みの待ちと取り違えていないかを確認する。
 lead: 外部の制約から逆算した dev-docs の決定値を定め、時間・上限などの値を決める・変えるときに参照する。
 tags:
   - name: topic:非機能要件

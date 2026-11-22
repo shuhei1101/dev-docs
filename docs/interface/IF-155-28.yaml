@@ -1,0 +1,239 @@
+id: IF-155-28
+title: メタデータの取得
+lead: 配信元のメタデータ（用語集・エイリアス・タグ・rule-inject の索引・配信元の設定・管理用の YAML）を種類ごとの表の行と、行ごとに直コミットできるかを返却するメタデータの取得の入出力を定め、メタデータの取得を修正するときに参照する。
+entry:
+  kind: endpoint
+  value: GET `/_api/sources/{source}/metadata`
+identifier: get_metadata
+permissions: 制限なし（`127.0.0.1` でだけ待ち受ける）
+read_only: true
+idempotent: true
+side_effects: なし。dev-docs は配信元のフォルダのファイルを直接読まず、project-index の読み取り API だけを呼ぶ
+exclusivity: 排他しない
+callers:
+  - SC-155-14#scenarios[正常シナリオ]
+  - SC-155-14#scenarios[異常シナリオ（種類を配信していない）]
+  - SC-155-15#scenarios[正常シナリオ]
+request:
+  - name: source
+    type: str
+    required: true
+    location: path
+    description: 配信元の ID
+response:
+  - name: source
+    type: str
+    description: 配信元の ID
+  - name: branch
+    type: str | None
+    description: 表示する既定のブランチ（project-index のリビジョンの一覧の `defaultRef`）。Git 管理外の配信元は `null`
+    notes: 送信の確認に出す表示用の値。コミットしたブランチは直コミットの応答の `commit.branch` で返る
+  - name: kinds[].id
+    type: Literal['terms', 'aliases', 'tags', 'rules', 'config', 'files']
+    description: メタデータの種類。並びは用語集・エイリアス・タグ・rule-inject の索引・配信元の設定・管理用の YAML の順で固定
+  - name: kinds[].title
+    type: str
+    description: タブに出す名前（用語集・エイリアス・タグ・rule-inject の索引・配信元の設定・管理用の YAML）
+  - name: kinds[].served
+    type: bool
+    description: 配信元がその種類を配信しているか。`false` は `rules` で、配信元の設定に `documents[].id` が `rule_index` の行が無いときだけ
+  - name: kinds[].hint
+    type: str | None
+    description: '`served: false` のときに `project-index.yaml` に加える行の YAML。それ以外は `null`'
+  - name: kinds[].columns[].key
+    type: str
+    description: 列のキー。制約「種類ごとの行と列」の列
+  - name: kinds[].columns[].label
+    type: str
+    description: 列の見出し
+  - name: kinds[].columns[].editable
+    type: bool
+    description: 行の中で値を修正できる列か
+  - name: kinds[].canAdd
+    type: bool
+    description: 行を追加できる種類か（`terms`・`rules` で、`createKind` の種類が直コミットできるとき）
+  - name: kinds[].canDelete
+    type: bool
+    description: 行を削除できる種類か（`terms`・`rules`）
+  - name: kinds[].createKind
+    type: str | None
+    description: 追加した行を作る文書の種類（`documents[].id`）。追加できない種類は `null`
+  - name: kinds[].rows[].id
+    type: str
+    description: 行の ID（文書の ID。`config` は `documents[].id`）
+  - name: kinds[].rows[].docKind
+    type: str | None
+    description: 行の文書の種類（`documents[].id`）。`config` は `null`
+  - name: kinds[].rows[].docPath
+    type: str | None
+    description: 行が指す文書を文書の画面で開くパス（文書のファイルか本文のファイルのパス）。`config` は `null`
+  - name: kinds[].rows[].version
+    type: str | None
+    description: 行の文書のバージョン。直コミットの `expectedVersion` に渡す。`config` は `null`
+  - name: kinds[].rows[].editable
+    type: bool
+    description: 行の文書の種類が、project-index の端末の設定の `sources[].direct_commit.write_api_kinds` にあるか。`config` は常に `false`
+  - name: kinds[].rows[].values
+    type: dict[str, str]
+    description: 列のキーごとの表示の値。配列の値は `, ` でつないだ文字列
+response_example: |-
+  ```json
+  {"source": "sample", "branch": "develop", "kinds": [{"id": "terms", "title": "用語集", "served": true, "hint": null, "columns": [{"key": "name", "label": "用語", "editable": true}, {"key": "aliases", "label": "別名", "editable": true}, {"key": "description", "label": "説明", "editable": true}], "canAdd": true, "canDelete": true, "createKind": "terms", "rows": [{"id": "source", "docKind": "terms", "docPath": "glossary.yaml", "version": "a1b2c3", "editable": true, "values": {"name": "配信元", "aliases": "source", "description": "project-index.yaml を持つフォルダ 1 つ"}}]}]}
+  ```
+status_codes:
+  - code: '200'
+    condition: 返却した（行が 0 件の種類も、種類を配信していないときも 200）
+  - code: '404'
+    condition: 配信元が無い・配信していない（project-index の 404）
+    notes: project-index の `missing` を `detail` に入れる
+  - code: '503'
+    condition: project-index につながらない・制限時間で打ち切った
+    notes: つながらなかった project-index のアドレスと理由（`projectIndex.address`・`projectIndex.reason`）。`detail` は `project-index（{address}）に接続できませんでした。{reason}`
+error_format: RFC 9457 の `application/problem+json`（`type`・`title`・`status`・`detail`）。拡張メンバーは camelCase（`nextSteps`・`projectIndex`）
+constraints:
+  - item: project-index への問い合わせ
+    constraint: 配信元の設定（`GET /sources/{source}/config`）・文書の一覧（`GET /sources/{source}/docs?values=true&common_keys=true`）・リビジョンの一覧（`GET /sources/{source}/refs`）・端末の設定（`GET /settings/sources`）を同時に問い合わせる。文書の一覧のリビジョンは省き、既定のリビジョンを読む
+  - item: 種類ごとの行と列
+    constraint: '`terms`: `commonKeys.alias_type` が `term` の文書。列は用語（`name`）・別名（`aliases`）・説明（`description`）。`aliases`: `commonKeys.alias_type` が `term` 以外の文書。列は名前（`name`）・別名（`aliases`）・文書（`path`。修正できない）。`tags`: 全ての文書。列は文書（`path`。修正できない）・タグ（`tags`）。`rules`: 種類 `rule_index` の文書。列は規約（`rule`）・適用するパス（`paths`）・ツール（`tools`）・引数（`args`）。`config`: 配信元の設定の `documents[]` の行。列は種類（`id`）・パス（`paths`）・行（`records`）・エイリアスの種類（`alias_type`）・直コミット（端末の設定の `write_api_kinds` にあれば ✓）で、修正できない。`files`: 配信元の設定の行が `records` と `body_file` を持つ種類の文書。列は行（`records`。種類の ID）・ファイル（`path`。修正できない）・概要（`description`）'
+    notes: 修正できる列を種類ごとのキーに絞り、規約の本文やテンプレートを画面から書き換えない（要件の直コミットの対象）
+  - item: 直コミットできるか
+    constraint: '行の文書の種類が端末の設定の `sources[].directCommit.writeApiKinds` にあれば `editable: true`。配信元の設定の `direct_commit.kinds[]` は読み取り API が返却しないため判定に使用せず、無い種類の修正は直コミットの 422 で行ごとに返る'
+  - item: タイムアウト
+    constraint: project-index への問い合わせを制限時間で打ち切り、打ち切ったら project-index につながらないときと同じ 503 と理由を返却する
+    decided_by: NFR-155-1#requirements[project-index への問い合わせの制限時間]
+  - item: 認可
+    constraint: 制限なし（`127.0.0.1` でだけ待ち受ける）
+  - item: JSON のキー
+    constraint: レスポンスのキーは camelCase。`values` の中の列のキーは制約「種類ごとの行と列」のキーのまま
+  - item: operationId
+    constraint: '`{tag}-{関数名}` の `metadata-get_metadata`'
+flows:
+  - name: 正常系
+    summary: 種類ごとの行と、行ごとに直コミットできるかを返却する
+    setup:
+      - name: Mock
+        description: テストの中で起動した project-index（一時フォルダの端末の設定を `PROJECT_INDEX_CONFIG` で指し、空きポートで子プロセスとして起動する）。dev-docs のアプリを HTTP のテストのクライアントで呼ぶ
+      - name: 配信元
+        description: '用語集の種類 `terms`（`alias_type: term` の `records`）・文書の種類 `note`（`alias_type: doc`）・索引の種類 `rule_index`（`records`）・管理用の YAML の種類 `files`（`records: files`・`body_file: path`）を持つ git の配信元'
+        notes: id `sample`。用語 2 件・`note` の文書 1 件（タグ `topic:a`）・索引のエントリ 2 件・管理用の YAML の行 1 件
+      - name: 端末の設定
+        description: sample の行の `direct_commit.write_api_kinds` が `[note, terms]`
+    flow: |-
+      <!-- map -->
+
+      ```mermaid
+      sequenceDiagram
+        participant C as クライアント
+        participant E as GET /_api/sources/{source}/metadata
+        participant PI as project-index
+
+        C->>E: source: sample
+        E->>PI: 配信元の設定・文書の一覧（値・共通のキー）・リビジョンの一覧・端末の設定
+        PI-->>E: 配信元の設定・文書の一覧・defaultRef・writeApiKinds
+        E-->>C: 200 種類ごとの行と列
+      ```
+
+      <!-- /map -->
+    expected:
+      - 200 で、`kinds[].id` が `terms`・`aliases`・`tags`・`rules`・`config`・`files` の順に並ぶ
+      - '`terms` の行が 2 件で、`editable` が `true`、`canAdd`・`canDelete` が `true`、`createKind` が `terms`'
+      - '`tags` の行に `note` の文書の行があり、`values.tags` が `topic:a`'
+      - '`rules` の行が 2 件で、`editable` が `false`、`values.rule` と `values.paths` がエントリの値'
+      - '`config` の `note` と `terms` の行の直コミットが ✓、`rule_index` の行は空'
+      - '`files` の行が 1 件で、`values.path` が本文のファイルのパス'
+      - '`branch` が `develop`'
+      - sample のフォルダのファイルが変わっていない
+    test: test_normal
+  - name: 正常系（索引を配信していない）
+    summary: 種類 `rule_index` が無い配信元は、`rules` を配信していないことと加える行を返却する
+    setup:
+      - name: Mock
+        description: なし（テストの中で起動した project-index）
+      - name: 配信元
+        description: 種類 `rule_index` の行を持たない配信元
+        notes: id `notes`
+    flow: |-
+      <!-- map -->
+
+      ```mermaid
+      sequenceDiagram
+        participant C as クライアント
+        participant E as GET /_api/sources/{source}/metadata
+        participant PI as project-index
+
+        C->>E: source: notes
+        E->>PI: 配信元の設定・文書の一覧・リビジョンの一覧・端末の設定
+        PI-->>E: rule_index の行の無い配信元の設定
+        E-->>C: 200（rules は served: false と hint）
+      ```
+
+      <!-- /map -->
+    expected:
+      - '200 で、`rules` の `served` が `false`、`rows` が空、`hint` に `id: rule_index` の行の YAML がある'
+      - ほかの種類の `served` が `true`
+    test: test_normal_when_rule_index_not_served
+  - name: 異常系（配信元が無い・404）
+    summary: 無い配信元は project-index の 404 を返却する
+    setup:
+      - name: Mock
+        description: なし（テストの中で起動した project-index）
+      - name: 入力
+        description: 端末の設定に無い配信元の ID
+        notes: '`missing`'
+    flow: |-
+      <!-- map -->
+
+      ```mermaid
+      sequenceDiagram
+        participant C as クライアント
+        participant E as GET /_api/sources/{source}/metadata
+        participant PI as project-index
+
+        C->>E: source: missing
+        E->>PI: 配信元の設定
+        PI-->>E: 404（missing: source）
+        E-->>C: 404 problem+json
+      ```
+
+      <!-- /map -->
+    expected:
+      - 404 で、`detail` に配信元が無いことがある
+    test: test_error_when_source_missing
+  - name: 異常系（project-index につながらない・503）
+    summary: project-index につながらないときは、アドレスと理由を返却する
+    setup:
+      - name: Mock
+        description: project-index のアドレスを、待ち受けていないポートに向ける
+    flow: |-
+      <!-- map -->
+
+      ```mermaid
+      sequenceDiagram
+        participant C as クライアント
+        participant E as GET /_api/sources/{source}/metadata
+        participant PI as project-index
+
+        C->>E: source: sample
+        E->>PI: 配信元の設定
+        PI-->>E: 接続を拒否
+        E-->>C: 503 problem+json（projectIndex）
+      ```
+
+      <!-- /map -->
+    expected:
+      - 503 で、`projectIndex.address` が向けたアドレス、`projectIndex.reason` に接続できなかった理由がある
+    test: test_error_when_project_index_unreachable
+refs:
+  - to: API-155-1
+    type: requires
+    when: project-index の読み取り API の応答を変えるときに、組み立てる種類と列を確認する。
+  - to: SC-155-14
+    item: scenarios[正常シナリオ]
+    type: references
+    when: 返却する種類と列を変えるときに、画面で参照する流れを確認する。
+test_file: tests/integration/server/test_get_metadata.py
+tags:
+  - name: topic:メタデータ
+  - name: action:取得
+  - name: topic:api
+  - name: tool:project-index
