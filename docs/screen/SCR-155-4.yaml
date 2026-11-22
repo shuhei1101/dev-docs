@@ -85,7 +85,7 @@ elements:
     position: 本文 > 種類の表の上
     description: その種類を直コミットできないこと
     label: '`この種類は直コミットを許可していないため、参照のみです。`'
-    visible_when: 選んでいる種類の全ての行の `editable` が `false` のとき
+    visible_when: 選んでいる種類が `config` 以外で、全ての行の `editable` が `false` のとき（端末の設定の `write_api_kinds` に種類が無い）
   - name: 種類の表
     kind: table
     position: 本文
@@ -312,6 +312,30 @@ elements:
     action_ref: IF-155-29#
     notes:
       応答を待つ間: 非活性にし、ボタンの文言の左に回る表示を出す（ボタンの幅は変えない）
+  - name: 修正できない種類の表示
+    kind: label
+    position: 本文 > 種類の表の上
+    description: 配信元の設定はこの画面では修正できないこと（許可の設定とは関係しない）
+    label: '`配信元の設定はこの画面では参照のみです。修正するときは project-index.yaml を編集してください。`'
+    visible_when: 選んでいる種類が `config` のとき
+  - name: 見つからない画面
+    kind: screen
+    position: 本文（画面全体の代わり）
+    description: 配信元が無い・配信していないときの表示
+    visible_when: メタデータの取得が 404 を返却したとき
+    source: メタデータの取得（404 の `detail`）
+    action: 文書の画面と同じく、URL を変えずに見つからない画面を出す（無い配信元の理由と、配信中の配信元・設定画面へのリンク）。編集中の変更は削除しない
+    action_ref: SCR-155-2#
+  - name: 取得の失敗の表示
+    kind: alert
+    position: 本文（タブと表の代わり）
+    description: メタデータの取得が 404・503 以外の失敗を返却したときの見出しと理由
+    label: 見出し `メタデータを取得できませんでした`、Problem Details の `detail`（無ければ状態コード）と、ボタン `再読み込み`
+    visible_when: メタデータの取得が 404・503 以外の失敗（500 など）を返却したときか、応答が無かったとき
+    action: '`再読み込み` のクリックでメタデータの取得を再度呼び出す'
+    action_ref: IF-155-28#
+    notes:
+      読み上げ: '`role="alert"` で、出たときに読み上げる'
 input_checks:
   - element: 追加の行の ID の入力欄
     violation: 空
@@ -344,6 +368,9 @@ refs:
     item: scenarios[正常シナリオ]
     type: references
     when: 編集中のパネルの操作を変えるときに、画面での直コミットの流れを確認する。
+  - to: SCR-155-2
+    type: references
+    when: 配信元が無いときの表示を変えるときに、見つからない画面の理由とリンクを確認する。
 tags:
   - name: topic:メタデータ
   - name: topic:画面
