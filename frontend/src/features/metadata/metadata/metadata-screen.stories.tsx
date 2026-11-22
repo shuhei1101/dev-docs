@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { HttpResponse, http } from "msw";
+import { HttpResponse, delay, http } from "msw";
 
 import {
   MetadataScreen,
@@ -336,6 +336,62 @@ export const RemoteUnreachable: Story = {
       problem(502, {
         title: "リモートに接続できませんでした",
         detail: "git fetch に失敗しました。リモートの URL を確認してください",
+      }),
+    ],
+  },
+};
+
+export const EditingCell: Story = {
+  args: { initialEditing: "tags:n1:tags" },
+  parameters: { msw: [listed(metadata)] },
+};
+
+export const Loading: Story = {
+  parameters: {
+    msw: [
+      http.get(METADATA, async () => {
+        await delay("infinite");
+        return HttpResponse.json(metadata);
+      }),
+    ],
+  },
+};
+
+export const ProjectIndexUnreachable: Story = {
+  parameters: {
+    msw: [
+      http.get(METADATA, () =>
+        HttpResponse.json(
+          {
+            type: "about:blank",
+            title: "Service Unavailable",
+            status: 503,
+            detail: "project-index に接続できませんでした",
+            nextSteps: [],
+            projectIndex: {
+              address: "http://127.0.0.1:8786",
+              reason: "接続を拒否されました（Connection refused）",
+              kind: "unreachable",
+            },
+          },
+          {
+            status: 503,
+            headers: { "Content-Type": "application/problem+json" },
+          },
+        ),
+      ),
+    ],
+  },
+};
+
+export const EmptyKind: Story = {
+  parameters: {
+    msw: [
+      listed({
+        ...metadata,
+        kinds: metadata.kinds.map((kind) =>
+          kind.id === "terms" ? { ...kind, rows: [] } : kind,
+        ),
       }),
     ],
   },

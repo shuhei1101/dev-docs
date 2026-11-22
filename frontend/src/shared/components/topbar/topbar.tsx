@@ -233,6 +233,7 @@ const MetadataButtons = ({
         onClick={onPendingPanelToggle}
       >
         <FilePen />
+        <span className="hidden md:inline">溜めた修正</span>
         {pendingEditCount > 0 && (
           <span className="text-xs">{pendingEditCount}</span>
         )}

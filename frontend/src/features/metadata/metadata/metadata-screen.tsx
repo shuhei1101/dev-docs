@@ -1,8 +1,16 @@
-import { useMutation, useQuery } from "@tanstack/react-query";
+import {
+  type UseQueryResult,
+  useMutation,
+  useQuery,
+} from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { ExternalLink, Info, Plus, Trash2, Undo2 } from "lucide-react";
 import { useState } from "react";
 
+import {
+  ProjectIndexUnreachableAlert,
+  toProjectIndexUnreachable,
+} from "@/shared/components/project-index-unreachable";
 import { SkipLink } from "@/shared/components/skip-link";
 import { Topbar } from "@/shared/components/topbar/topbar";
 import {
@@ -21,6 +29,7 @@ import {
   DialogTitle,
 } from "@/shared/components/ui/dialog";
 import { Input } from "@/shared/components/ui/input";
+import { Skeleton } from "@/shared/components/ui/skeleton";
 import { Label } from "@/shared/components/ui/label";
 import {
   Sheet,
@@ -44,7 +53,20 @@ import {
   TabsTrigger,
 } from "@/shared/components/ui/tabs";
 import { Textarea } from "@/shared/components/ui/textarea";
+import { AppError } from "@/shared/core/app-error";
 import { useMediaQuery } from "@/shared/hooks/use-media-query";
+
+/** メタデータの取得を待つ間の読み込み中の表示 */
+const MetadataSkeleton = () => (
+  <div
+    aria-busy="true"
+    aria-label="メタデータを読み込んでいます"
+    className="space-y-3"
+  >
+    <Skeleton className="h-8 w-2/3" />
+    <Skeleton className="h-48 w-full" />
+  </div>
+);
 
 export type MetadataColumn = { key: string; label: string };
 
@@ -77,6 +99,8 @@ export type PendingEdit = {
   key: string;
   kind: string;
   rowId: string;
+  /** 修正した列のキー（行の値の修正だけが持つ） */
+  column?: string;
   op: "update" | "add" | "delete";
   label: string;
   before?: string;
@@ -100,7 +124,7 @@ type ProblemBody = {
 
 const fetchMetadata = async (source: string): Promise<MetadataResponse> => {
   const response = await fetch(`/_api/sources/${source}/metadata`);
-  if (!response.ok) throw new Error(`metadata: ${response.status}`);
+  if (!response.ok) throw await AppError.fromResponse(response);
   return (await response.json()) as MetadataResponse;
 };
 
@@ -153,28 +177,123 @@ type KindTableProps = {
   query: string;
   edits: PendingEdit[];
   source: string;
+  /** 開いたときに入力欄にしているセル（`{行の id}:{列のキー}`） */
+  initialEditing?: string;
   onEdit: (edit: PendingEdit) => void;
 };
 
-/** 1 つの種類の表。直コミットを許可した種類だけ行の修正・追加・削除を出す */
-const KindTable = ({ kind, query, edits, source, onEdit }: KindTableProps) => {
-  if (!kind.served) {
+const rowLabel = (kind: MetadataKind, row: MetadataRow): string =>
+  row.values[kind.columns[0]?.key ?? ""] ?? row.id;
+
+/** 表の行の要素の id。溜めた修正のパネルから行へ移るときに使う */
+export const rowElementId = (kind: string, rowId: string): string =>
+  `metadata-row-${kind}-${rowId}`;
+
+type EditableCellProps = {
+  label: string;
+  value: string;
+  editing: boolean;
+  onStart: () => void;
+  onCommit: (value: string) => void;
+  onCancel: () => void;
+};
+
+/** 押すと行の中で入力欄になり、Enter か外へ移ると確定するセル */
+const EditableCell = (props: EditableCellProps) => {
+  if (!props.editing) {
     return (
-      <Alert>
-        <Info />
-        <AlertTitle>{kind.title}を配信していません</AlertTitle>
-        <AlertDescription>
-          <p>
-            配信元の設定（<code>project-index.yaml</code>
-            ）に、次の行を加えると一覧に出ます。
-          </p>
-          <pre className="mt-2 overflow-x-auto rounded bg-muted p-2 font-mono text-xs">
-            {kind.hint}
-          </pre>
-        </AlertDescription>
-      </Alert>
+      <button
+        type="button"
+        className="w-full rounded px-1 text-left hover:bg-muted"
+        aria-label={`${props.label} を修正`}
+        onClick={props.onStart}
+      >
+        {props.value === "" ? (
+          <span className="text-muted-foreground">-</span>
+        ) : (
+          props.value
+        )}
+      </button>
     );
   }
+  return (
+    <Input
+      ref={(element) => element?.focus()}
+      aria-label={props.label}
+      defaultValue={props.value}
+      className="h-7 font-mono text-xs"
+      onKeyDown={(event) => {
+        if (event.key === "Enter") props.onCommit(event.currentTarget.value);
+        if (event.key === "Escape") props.onCancel();
+      }}
+      onBlur={(event) => props.onCommit(event.currentTarget.value)}
+    />
+  );
+};
+
+type NewRowProps = {
+  kind: MetadataKind;
+  onAdd: (values: Record<string, string>) => void;
+  onCancel: () => void;
+};
+
+/** 「行追加」で表の末尾に出す入力用の行 */
+const NewRow = ({ kind, onAdd, onCancel }: NewRowProps) => {
+  const [values, setValues] = useState<Record<string, string>>({});
+  return (
+    <TableRow>
+      {kind.columns.map((column) => (
+        <TableCell key={column.key}>
+          <Input
+            aria-label={`追加する行の${column.label}`}
+            className="h-7 font-mono text-xs"
+            value={values[column.key] ?? ""}
+            onChange={(event) =>
+              setValues((current) => ({
+                ...current,
+                [column.key]: event.target.value,
+              }))
+            }
+          />
+        </TableCell>
+      ))}
+      <TableCell className="flex items-center gap-1">
+        <Button size="sm" onClick={() => onAdd(values)}>
+          溜める
+        </Button>
+        <Button variant="ghost" size="sm" onClick={onCancel}>
+          取り消す
+        </Button>
+      </TableCell>
+    </TableRow>
+  );
+};
+
+/** 配信していない種類の案内 */
+const KindNotServed = ({ kind }: { kind: MetadataKind }) => (
+  <Alert>
+    <Info />
+    <AlertTitle>{kind.title}を配信していません</AlertTitle>
+    <AlertDescription>
+      <p>
+        配信元の設定（<code>project-index.yaml</code>
+        ）に、次の行を加えると一覧に出ます。
+      </p>
+      <pre className="mt-2 overflow-x-auto rounded bg-muted p-2 font-mono text-xs">
+        {kind.hint}
+      </pre>
+    </AlertDescription>
+  </Alert>
+);
+
+/** 1 つの種類の表。直コミットを許可した種類だけ行の修正・追加・削除を出す */
+const KindTable = (props: KindTableProps) => {
+  const { kind, query, edits, source, onEdit } = props;
+  const [editing, setEditing] = useState<string | null>(
+    props.initialEditing ?? null,
+  );
+  const [adding, setAdding] = useState(false);
+  if (!kind.served) return <KindNotServed kind={kind} />;
   const words = query.trim().toLowerCase();
   const rows = kind.rows.filter(
     (row) =>
@@ -183,11 +302,35 @@ const KindTable = ({ kind, query, edits, source, onEdit }: KindTableProps) => {
         value.toLowerCase().includes(words),
       ),
   );
+  const pending = new Map(
+    edits
+      .filter((edit) => edit.kind === kind.id)
+      .map((edit) => [`${edit.rowId}:${edit.column ?? ""}`, edit]),
+  );
   const deleted = new Set(
     edits
       .filter((edit) => edit.kind === kind.id && edit.op === "delete")
       .map((edit) => edit.rowId),
   );
+  const commitCell = (
+    row: MetadataRow,
+    column: MetadataColumn,
+    value: string,
+  ) => {
+    setEditing(null);
+    const before = row.values[column.key] ?? "";
+    if (value === before) return;
+    onEdit({
+      key: `${kind.id}:${row.id}:${column.key}:update`,
+      kind: kind.id,
+      rowId: row.id,
+      column: column.key,
+      op: "update",
+      label: `${kind.title}: ${rowLabel(kind, row)} の${column.label}`,
+      before,
+      after: value,
+    });
+  };
   return (
     <div className="flex min-w-0 flex-col gap-2">
       {!kind.editable && (
@@ -195,72 +338,127 @@ const KindTable = ({ kind, query, edits, source, onEdit }: KindTableProps) => {
           この種類は直コミットを許可していないため、参照だけです。
         </p>
       )}
-      <div className="w-full overflow-x-auto rounded-md border">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              {kind.columns.map((column) => (
-                <TableHead key={column.key}>{column.label}</TableHead>
-              ))}
-              <TableHead className="w-24">
-                <span className="sr-only">操作</span>
-              </TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {rows.map((row) => (
-              <TableRow
-                key={row.id}
-                className={deleted.has(row.id) ? "line-through opacity-60" : ""}
-              >
+      {kind.rows.length === 0 && !adding ? (
+        <p className="rounded-md border p-4 text-sm text-muted-foreground">
+          {kind.title}はまだありません。
+          {kind.editable && "「行追加」で追加できます。"}
+        </p>
+      ) : (
+        <div className="w-full overflow-x-auto rounded-md border">
+          <Table>
+            <TableHeader>
+              <TableRow>
                 {kind.columns.map((column) => (
-                  <TableCell key={column.key} className="font-mono text-xs">
-                    {row.values[column.key]}
-                  </TableCell>
+                  <TableHead key={column.key}>{column.label}</TableHead>
                 ))}
-                <TableCell className="flex items-center gap-1">
-                  {row.docPath !== undefined && (
-                    <Button
-                      variant="ghost"
-                      size="icon-sm"
-                      aria-label={`${row.values[kind.columns[0]?.key ?? ""] ?? row.id} の文書を開く`}
-                      render={
-                        <Link
-                          to="/$source/$"
-                          params={{ source, _splat: row.docPath }}
-                        />
-                      }
-                      nativeButton={false}
-                    >
-                      <ExternalLink />
-                    </Button>
-                  )}
-                  {kind.editable && !deleted.has(row.id) && (
-                    <Button
-                      variant="ghost"
-                      size="icon-sm"
-                      aria-label={`${row.values[kind.columns[0]?.key ?? ""] ?? row.id} を削除`}
-                      onClick={() =>
-                        onEdit({
-                          key: `${kind.id}:${row.id}:delete`,
-                          kind: kind.id,
-                          rowId: row.id,
-                          op: "delete",
-                          label: `${kind.title}: ${row.values[kind.columns[0]?.key ?? ""] ?? row.id}`,
-                        })
-                      }
-                    >
-                      <Trash2 />
-                    </Button>
-                  )}
-                </TableCell>
+                <TableHead className="w-24">
+                  <span className="sr-only">操作</span>
+                </TableHead>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </div>
-      {kind.editable && (
-        <Button variant="outline" size="sm" className="self-start">
+            </TableHeader>
+            <TableBody>
+              {rows.map((row) => (
+                <TableRow
+                  key={row.id}
+                  id={rowElementId(kind.id, row.id)}
+                  className={
+                    deleted.has(row.id) ? "line-through opacity-60" : ""
+                  }
+                >
+                  {kind.columns.map((column) => {
+                    const cell = `${row.id}:${column.key}`;
+                    const value =
+                      pending.get(cell)?.after ?? row.values[column.key] ?? "";
+                    return (
+                      <TableCell
+                        key={column.key}
+                        className={
+                          pending.has(cell)
+                            ? "bg-primary/10 font-mono text-xs"
+                            : "font-mono text-xs"
+                        }
+                      >
+                        {kind.editable && !deleted.has(row.id) ? (
+                          <EditableCell
+                            label={`${rowLabel(kind, row)} の${column.label}`}
+                            value={value}
+                            editing={editing === cell}
+                            onStart={() => setEditing(cell)}
+                            onCommit={(next) => commitCell(row, column, next)}
+                            onCancel={() => setEditing(null)}
+                          />
+                        ) : (
+                          value
+                        )}
+                      </TableCell>
+                    );
+                  })}
+                  <TableCell className="flex items-center gap-1">
+                    {row.docPath !== undefined && (
+                      <Button
+                        variant="ghost"
+                        size="icon-sm"
+                        aria-label={`${rowLabel(kind, row)} の文書を開く`}
+                        render={
+                          <Link
+                            to="/$source/$"
+                            params={{ source, _splat: row.docPath }}
+                          />
+                        }
+                        nativeButton={false}
+                      >
+                        <ExternalLink />
+                      </Button>
+                    )}
+                    {kind.editable && !deleted.has(row.id) && (
+                      <Button
+                        variant="ghost"
+                        size="icon-sm"
+                        aria-label={`${rowLabel(kind, row)} を削除`}
+                        onClick={() =>
+                          onEdit({
+                            key: `${kind.id}:${row.id}:delete`,
+                            kind: kind.id,
+                            rowId: row.id,
+                            op: "delete",
+                            label: `${kind.title}: ${rowLabel(kind, row)}`,
+                          })
+                        }
+                      >
+                        <Trash2 />
+                      </Button>
+                    )}
+                  </TableCell>
+                </TableRow>
+              ))}
+              {adding && (
+                <NewRow
+                  kind={kind}
+                  onCancel={() => setAdding(false)}
+                  onAdd={(values) => {
+                    setAdding(false);
+                    const rowId = `new-${Date.now()}`;
+                    onEdit({
+                      key: `${kind.id}:${rowId}:add`,
+                      kind: kind.id,
+                      rowId,
+                      op: "add",
+                      label: `${kind.title}: ${values[kind.columns[0]?.key ?? ""] ?? ""}`,
+                    });
+                  }}
+                />
+              )}
+            </TableBody>
+          </Table>
+        </div>
+      )}
+      {kind.editable && !adding && (
+        <Button
+          variant="outline"
+          size="sm"
+          className="self-start"
+          onClick={() => setAdding(true)}
+        >
           <Plus />
           行追加
         </Button>
@@ -278,6 +476,7 @@ type PendingPanelProps = {
   busy: boolean;
   onOpenChange: (open: boolean) => void;
   onDiscard: (key: string) => void;
+  onLocate: (edit: PendingEdit) => void;
   onDryRun: () => void;
   onSendStart: () => void;
 };
@@ -295,13 +494,19 @@ const PendingPanel = (props: PendingPanelProps) => {
       ? new Map(result.diffs.map((d) => [d.key, d.diff]))
       : new Map<string, string>();
   return (
-    <Sheet open={props.open} onOpenChange={props.onOpenChange}>
+    <Sheet
+      modal={false}
+      disablePointerDismissal
+      open={props.open}
+      onOpenChange={props.onOpenChange}
+    >
       <SheetContent
         side={narrow ? "bottom" : "right"}
+        overlay={false}
         className={
           narrow
             ? "max-h-2/3 w-full overflow-y-auto"
-            : "w-full overflow-y-auto sm:max-w-md"
+            : "top-12! bottom-0! h-auto! w-96 max-w-full overflow-y-auto"
         }
       >
         <SheetHeader>
@@ -348,7 +553,14 @@ const PendingPanel = (props: PendingPanelProps) => {
               <li key={edit.key} className="rounded-md border p-2">
                 <div className="flex items-start gap-2">
                   <Badge variant="outline">{OP_LABEL[edit.op]}</Badge>
-                  <span className="flex-1 text-sm">{edit.label}</span>
+                  <button
+                    type="button"
+                    className="flex-1 text-left text-sm underline-offset-2 hover:underline"
+                    aria-label={`${edit.label} の行へ移る`}
+                    onClick={() => props.onLocate(edit)}
+                  >
+                    {edit.label}
+                  </button>
                   <Button
                     variant="ghost"
                     size="icon-sm"
@@ -443,12 +655,90 @@ const SendDialog = (props: SendDialogProps) => {
   );
 };
 
+type MetadataBodyProps = {
+  metadata: UseQueryResult<MetadataResponse>;
+  tab: string | null;
+  query: string;
+  edits: PendingEdit[];
+  source: string;
+  initialEditing?: string;
+  onTabChange: (tab: string) => void;
+  onEdit: (edit: PendingEdit) => void;
+};
+
+/** 読み込み中・取得できない・種類ごとのタブと表 */
+const MetadataBody = ({
+  metadata,
+  tab,
+  query,
+  edits,
+  source,
+  initialEditing,
+  onTabChange,
+  onEdit,
+}: MetadataBodyProps) => {
+  const unreachable = toProjectIndexUnreachable(metadata.error);
+  return (
+    <>
+      {metadata.isPending && <MetadataSkeleton />}
+      {metadata.isError && (
+        <ProjectIndexUnreachableAlert
+          kind={unreachable?.kind ?? "failed"}
+          address={unreachable?.address ?? ""}
+          reason={unreachable?.reason ?? String(metadata.error)}
+          onReload={() => window.location.reload()}
+        />
+      )}
+      {metadata.data !== undefined && (
+        <Tabs
+          value={tab ?? metadata.data.kinds[0]?.id}
+          onValueChange={(value) => onTabChange(String(value))}
+          className="min-w-0 flex-col"
+        >
+          <TabsList className="h-auto w-full flex-wrap justify-start">
+            {metadata.data.kinds.map((kind) => (
+              <TabsTrigger
+                key={kind.id}
+                value={kind.id}
+                className="h-7 flex-none"
+              >
+                {kind.title}
+                <span className="ml-1 text-xs text-muted-foreground">
+                  {kind.served ? kind.rows.length : "-"}
+                </span>
+              </TabsTrigger>
+            ))}
+          </TabsList>
+          {metadata.data.kinds.map((kind) => (
+            <TabsContent key={kind.id} value={kind.id} className="min-w-0">
+              <KindTable
+                kind={kind}
+                initialEditing={
+                  initialEditing?.startsWith(`${kind.id}:`)
+                    ? initialEditing.slice(kind.id.length + 1)
+                    : undefined
+                }
+                query={query}
+                edits={edits}
+                source={source}
+                onEdit={onEdit}
+              />
+            </TabsContent>
+          ))}
+        </Tabs>
+      )}
+    </>
+  );
+};
+
 type Props = {
   source: string;
   /** 開いたときに溜めてある修正（画面を開き直しても残る修正） */
   initialEdits?: PendingEdit[];
   initialPanelOpen?: boolean;
   initialConfirmOpen?: boolean;
+  /** 開いたときに入力欄にしているセル（`{種類}:{行の id}:{列のキー}`） */
+  initialEditing?: string;
 };
 
 /** 1 つの配信元のメタデータを、種類ごとの表で参照・修正する画面 */
@@ -457,12 +747,16 @@ export const MetadataScreen = ({
   initialEdits = [],
   initialPanelOpen = false,
   initialConfirmOpen = false,
+  initialEditing,
 }: Props) => {
   const metadata = useQuery({
     queryKey: ["metadata", source],
     queryFn: () => fetchMetadata(source),
   });
   const [query, setQuery] = useState("");
+  const [tab, setTab] = useState<string | null>(
+    initialEditing?.split(":")[0] ?? null,
+  );
   const [edits, setEdits] = useState<PendingEdit[]>(initialEdits);
   const [panelOpen, setPanelOpen] = useState(initialPanelOpen);
   const [confirmOpen, setConfirmOpen] = useState(initialConfirmOpen);
@@ -476,6 +770,15 @@ export const MetadataScreen = ({
     },
   });
   const branch = metadata.data?.branch ?? "";
+  const locate = (edit: PendingEdit) => {
+    setTab(edit.kind);
+    setQuery("");
+    requestAnimationFrame(() =>
+      document
+        .getElementById(rowElementId(edit.kind, edit.rowId))
+        ?.scrollIntoView({ block: "center" }),
+    );
+  };
   const addEdit = (edit: PendingEdit) =>
     setEdits((current) => [
       ...current.filter((item) => item.key !== edit.key),
@@ -508,38 +811,16 @@ export const MetadataScreen = ({
             onChange={(event) => setQuery(event.target.value)}
           />
         </div>
-        {metadata.data !== undefined && (
-          <Tabs
-            defaultValue={metadata.data.kinds[0]?.id}
-            className="min-w-0 flex-col"
-          >
-            <TabsList className="h-auto w-full flex-wrap justify-start">
-              {metadata.data.kinds.map((kind) => (
-                <TabsTrigger
-                  key={kind.id}
-                  value={kind.id}
-                  className="h-7 flex-none"
-                >
-                  {kind.title}
-                  <span className="ml-1 text-xs text-muted-foreground">
-                    {kind.served ? kind.rows.length : "-"}
-                  </span>
-                </TabsTrigger>
-              ))}
-            </TabsList>
-            {metadata.data.kinds.map((kind) => (
-              <TabsContent key={kind.id} value={kind.id} className="min-w-0">
-                <KindTable
-                  kind={kind}
-                  query={query}
-                  edits={edits}
-                  source={source}
-                  onEdit={addEdit}
-                />
-              </TabsContent>
-            ))}
-          </Tabs>
-        )}
+        <MetadataBody
+          metadata={metadata}
+          tab={tab}
+          query={query}
+          edits={edits}
+          source={source}
+          initialEditing={initialEditing}
+          onTabChange={setTab}
+          onEdit={addEdit}
+        />
       </main>
       <PendingPanel
         open={panelOpen}
@@ -549,6 +830,7 @@ export const MetadataScreen = ({
         result={result}
         busy={send.isPending}
         onOpenChange={setPanelOpen}
+        onLocate={locate}
         onDiscard={(key) =>
           setEdits((current) => current.filter((edit) => edit.key !== key))
         }
