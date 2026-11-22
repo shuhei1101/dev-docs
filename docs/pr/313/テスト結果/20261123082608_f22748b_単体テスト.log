@@ -1,0 +1,21 @@
+# 単体テスト（Red）: レビューの指摘の修正のテストコードの末尾の commit f22748b
+
+実装の前（f22748b）の状態を回すため、f22748b を指す一時のブランチ tmp/pr313-red-f22748b を push して run_runner を実行した（実行の後に削除）。
+
+## TL-1 単体テスト（バック）: run_runner（layer=backend-unit）
+
+======================== 2 failed, 587 passed in 6.83s =========================
+FAILED tests/unit/dev_docs/features/metadata/test_commits.py::test_commit_edits_when_dry_run - KeyError: 'message'
+FAILED tests/unit/dev_docs/features/metadata/test_commits.py::test_commit_edits_when_mapped_tags - AssertionError: assert ('GET', '/sources/sample/docs/notes/n1.yaml', 'n1') in [('GET', '/sources/sample/config', None), ('GET', '/sources/sample/docs', None), ('POST', '/sources/sample/commits', None)]
+
+fail の理由: test_commit_edits_when_dry_run は送信の本文に message が無い（差分確認で説明を送信しない前の実装）。test_commit_edits_when_mapped_tags は文書の取得を呼ばず文書の一覧を取得している（前の実装）。どちらも指摘の不具合による fail で、ほかは pass。
+
+## TL-8 単体テスト（フロント）: run_runner（layer=frontend-unit）
+
+      Tests  1 failed | 188 passed (189)
+ FAIL  tests/unit/frontend/src/features/metadata/shared/pending-edits-store.test.ts > test_to_commit_edits
+ Test Files  1 failed | 57 passed (58)
+AssertionError: expected [ …(3) ] to deeply equal [ …(3) ]
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+fail の理由: test_to_commit_edits は、update の変更の docPath を直コミットの要求に入れない前の実装による fail。docPath を追加した queries・metadata-table・pending-panel・metadata-screen のテストは、型に docPath: null を足しただけで振る舞いの期待値は変えていないため pass。
