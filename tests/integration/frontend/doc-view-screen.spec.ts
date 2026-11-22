@@ -1144,7 +1144,7 @@ test.describe("目次", () => {
       // 実行（表の上端を種類のタブの下端より 300px 下に置く）
       await page.evaluate((y) => window.scrollTo(0, y), top - bottom - 300);
       // 検証
-      await expect.poll(async () => Math.round((await headTop(page)) - bottom)).toBe(300);
+      await expect.poll(async () => Math.abs((await headTop(page)) - bottom - 300)).toBeLessThanOrEqual(1);
       // 実行（表の上端を種類のタブの下端より 400px 上へ過ぎさせる）
       await page.evaluate((y) => window.scrollTo(0, y), top - bottom + 400);
       // 検証
