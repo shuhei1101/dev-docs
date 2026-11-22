@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import re
 from collections.abc import Mapping
 from dataclasses import dataclass, field
 from typing import Any, ClassVar, Literal
@@ -50,6 +51,8 @@ NEXT_STEP_RELOAD = "メタデータを再読み込みし、変更が反映され
 
 EditKind = Literal["terms", "aliases", "tags", "rules", "files"]
 OperationKind = Literal["write", "delete"]
+# 違反の `path` の先頭の、書き込み・削除の 1 件を指す部分
+_OPERATION_PATH = re.compile(r"^(writes|deletes)\[(\d+)\]\.?(.*)$")
 
 
 class Edit(ApiModel):
@@ -291,9 +294,26 @@ async def _current_values(
 def _key_of(
     indexes: list[tuple[OperationKind, int, str]], kind: object, index: object
 ) -> str | None:
-    """project-index の `writes`・`deletes` の別と添字を、変更の `key` に戻す。"""
-    target: OperationKind = "delete" if kind == "deletes" else "write"
+    """project-index の `results[].kind`（`write`・`delete`）と添字を、変更の `key` に戻す。"""
+    target: OperationKind = "delete" if kind == "delete" else "write"
     return next((key for op, position, key in indexes if op == target and position == index), None)
+
+
+def _violation(
+    item: Mapping[str, Any], indexes: list[tuple[OperationKind, int, str]], detail: str
+) -> EditError:
+    """`errors[]` の 1 件の `path` の先頭（`writes[{添字}]`・`deletes[{添字}]`）を変更の `key` に戻す。"""
+    path = str(item.get("path") or "")
+    matched = _OPERATION_PATH.match(path)
+    # 書き込み・削除の 1 件を指す違反: 変更の `key` と、その中のパス
+    if matched:
+        kind = "delete" if matched.group(1) == "deletes" else "write"
+        key = _key_of(indexes, kind, int(matched.group(2)))
+        rest = matched.group(3) or None
+    # 本文全体の違反
+    else:
+        key, rest = None, path or None
+    return EditError(key=key, path=rest, reason=str(item.get("reason") or detail))
 
 
 def _rejected(
@@ -323,15 +343,22 @@ def _rejected(
     # 文書が無い・バージョンが合わない・検査に合格しない: 違反を変更へ戻す
     if status in (HTTP_NOT_FOUND, HTTP_CONFLICT, HTTP_UNPROCESSABLE):
         errors = [
-            EditError(
-                key=_key_of(indexes, item.get("kind"), item.get("index")),
-                path=None if item.get("path") is None else str(item.get("path")),
-                reason=str(item.get("reason") or detail),
-                current=None if item.get("current") is None else str(item.get("current")),
-            )
+            _violation(item, indexes, detail)
             for item in body.get("errors") or []
             if isinstance(item, Mapping)
         ]
+        # 文書のバージョンが合わない（VersionMismatchError）: `docId` の文書を変える変更ごとに今のバージョン
+        doc_id = body.get("docId")
+        if doc_id is not None:
+            errors.extend(
+                EditError(
+                    key=edit.key,
+                    reason=detail,
+                    current=None if body.get("current") is None else str(body.get("current")),
+                )
+                for edit in edits
+                if edit.doc_id == doc_id
+            )
         return EditsRejectedError(
             message=detail, status_code=status, errors=errors, next_steps=next_steps
         )
