@@ -5,6 +5,8 @@ from collections.abc import Callable
 from .conftest import MockIndex, ServerEnv
 
 EXPECTED_OPERATION_IDS = [
+    "metadata-get_metadata",
+    "metadata-post_commits",
     "settings-get_settings_sources",
     "settings-put_settings_sources",
     "view-get_document",
