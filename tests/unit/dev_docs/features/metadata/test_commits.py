@@ -167,7 +167,7 @@ def test_commit_edits(
             "applied": True,
             "results": [
                 {
-                    "kind": "writes",
+                    "kind": "write",
                     "index": 0,
                     "id": "n1",
                     "status": "updated",
@@ -175,7 +175,7 @@ def test_commit_edits(
                     "diff": "d0",
                 },
                 {
-                    "kind": "writes",
+                    "kind": "write",
                     "index": 1,
                     "id": "kind",
                     "status": "created",
@@ -183,7 +183,7 @@ def test_commit_edits(
                     "diff": "d1",
                 },
                 {
-                    "kind": "deletes",
+                    "kind": "delete",
                     "index": 0,
                     "id": "old-name",
                     "status": "deleted",
@@ -222,9 +222,7 @@ def test_commit_edits_when_validation_failed(
             "title": "ValidationFailedError",
             "status": 422,
             "detail": "検査に合格しませんでした",
-            "errors": [
-                {"kind": "writes", "index": 1, "path": "name", "reason": "必須のキーが無い"}
-            ],
+            "errors": [{"path": "writes[1].name", "reason": "必須のキーが無い"}],
         },
     )
     request = CommitRequest(edits=_edits(), message="用語とタグを追加する")
@@ -234,6 +232,7 @@ def test_commit_edits_when_validation_failed(
     # 検証
     assert caught.value.status_code == 422
     assert caught.value.errors[0].key == "terms:kind:add"
+    assert caught.value.errors[0].path == "name"
     assert caught.value.errors[0].reason == "必須のキーが無い"
 
 
@@ -351,3 +350,30 @@ def test_commit_edits_when_mapped_tags(
     assert sent["writes"][0]["set"] == {
         "tags": [{"name": "topic:a", "main": True}, {"name": "topic:b"}]
     }
+
+
+def test_commit_edits_when_version_mismatch(
+    fake_index: FakeIndex, make_client: Callable[..., ProjectIndexClient]
+) -> None:
+    """409 の文書を変更へ戻す（異常系）。"""
+    # 準備
+    _prepare(
+        fake_index,
+        409,
+        {
+            "title": "VersionMismatchError",
+            "status": 409,
+            "detail": "文書のバージョンが合いません",
+            "docId": "n1",
+            "current": "f0e1d2",
+        },
+    )
+    request = CommitRequest(edits=_edits(), message="用語とタグを追加する")
+    # 実行
+    with pytest.raises(EditsRejectedError) as caught:
+        asyncio.run(commit_edits(make_client(), "sample", request))
+    # 検証
+    assert caught.value.status_code == 409
+    assert [(error.key, error.current) for error in caught.value.errors] == [
+        ("tags:n1:update", "f0e1d2")
+    ]
