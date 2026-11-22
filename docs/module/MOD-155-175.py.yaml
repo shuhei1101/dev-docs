@@ -239,7 +239,7 @@ functions:
       3. 例外の変換を登録する（例外の変換の登録）
       4. `ADMIN_MCP_PATH` に管理の MCP の `streamable_http_app(streamable_http_path="/", stateless_http=True, json_response=True)` をマウントする。文書の MCP（`/mcp`）と `POST /_admin/session-start` は持たない
       5. `app.add_middleware(SlashlessMcpPathMiddleware, paths=(ADMIN_MCP_PATH,))` で、スラッシュ無しの MCP のパスをルーティングの前に補う（MCP のパスの補い）。続けて `app.add_middleware(ApiGZipMiddleware)` で、画面の API の応答を圧縮する（画面のAPIの応答の圧縮）
-      6. 端末の設定のエントリーポイント・画面のエントリーポイントのルーターを登録する
+      6. 端末の設定のエントリーポイント・画面のエントリーポイント・メタデータのエントリーポイントのルーターを登録する
       7. 画面の配信のルーター（画面の配信、`screen_dir` と `mdmark_version` を指定する）を最後に登録する（全てのパスに該当するため）
       8. アプリを返却する
     unit_tests:
@@ -254,7 +254,7 @@ functions:
         summary: OpenAPI の画面を出さない
         condition: '`index.html` を配置した一時フォルダを `screen_dir` に指定し、GET `/docs` と `/_api/openapi.json`'
         mock: 配線済みの関数（偽物）
-        expected: '`/docs` は Swagger UI でなく画面の配信が応える（`screen_dir` に配置した `index.html` の中身）、`/_api/openapi.json` の `paths` が全て `/_api/` で始まり、各エンドポイントの `operationId` が `{タグ}-{name}`（`view-get_document_default`・`view-get_document`・`view-search_page`・`view-list_refs`・`view-put_columns`・`settings-get_settings_sources`・`settings-put_settings_sources`）で重複が無く、画面の配信のパスを含まない'
+        expected: '`/docs` は Swagger UI でなく画面の配信が応える（`screen_dir` に配置した `index.html` の中身）、`/_api/openapi.json` の `paths` が全て `/_api/` で始まり、各エンドポイントの `operationId` が `{タグ}-{name}`（`view-get_document_default`・`view-get_document`・`view-search_page`・`view-list_refs`・`view-put_columns`・`settings-get_settings_sources`・`settings-put_settings_sources`・`metadata-get_metadata`・`metadata-post_commits`）で重複が無く、画面の配信のパスを含まない'
       - name: test_build_app_when_screen
         case: 正常
         summary: API と MCP を画面の配信より先に適用する
