@@ -70,3 +70,59 @@ export const problem = (status: number, extra: Record<string, unknown> = {}) => 
 });
 
 export const PROBLEM_HEADERS = { "Content-Type": "application/problem+json" };
+
+export const metadataColumn = (key: string, label: string, overrides: Record<string, unknown> = {}) => ({
+  key,
+  label,
+  type: "text",
+  editable: true,
+  ...overrides,
+});
+
+export const metadataRow = (id: string, values: Record<string, string | string[]>, overrides: Record<string, unknown> = {}) => ({
+  id,
+  docKind: "note",
+  docPath: `notes/${id}.yaml`,
+  version: `v-${id}`,
+  editable: true,
+  values,
+  ...overrides,
+});
+
+export const metadataKind = (id: string, title: string, overrides: Record<string, unknown> = {}) => ({
+  id,
+  title,
+  served: true,
+  hint: null,
+  columns: [],
+  canAdd: false,
+  canDelete: false,
+  createKind: null,
+  rows: [],
+  ...overrides,
+});
+
+/** 6 種類のメタデータ（用語 1 件・タグ 1 件） */
+export const metadataResponse = () => ({
+  source: "sample",
+  branch: "develop",
+  kinds: [
+    metadataKind("terms", "用語集", {
+      columns: [metadataColumn("name", "用語"), metadataColumn("aliases", "別名", { type: "list" }), metadataColumn("description", "説明")],
+      canAdd: true,
+      canDelete: true,
+      createKind: "terms",
+      rows: [metadataRow("source", { name: "配信元", aliases: ["source"], description: "フォルダ" }, { docKind: "terms", docPath: "glossary.yaml" })],
+    }),
+    metadataKind("aliases", "エイリアス", {
+      columns: [metadataColumn("name", "名前"), metadataColumn("aliases", "別名", { type: "list" }), metadataColumn("path", "文書", { editable: false })],
+    }),
+    metadataKind("tags", "タグ", {
+      columns: [metadataColumn("path", "文書", { editable: false }), metadataColumn("tags", "タグ", { type: "list" })],
+      rows: [metadataRow("n1", { path: "notes/n1.yaml", tags: ["topic:a"] })],
+    }),
+    metadataKind("rules", "rule-inject の索引"),
+    metadataKind("config", "配信元の設定"),
+    metadataKind("files", "管理用の YAML"),
+  ],
+});

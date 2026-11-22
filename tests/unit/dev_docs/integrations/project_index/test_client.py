@@ -616,3 +616,55 @@ def test_list_sources_when_loading(
         ("sample", "serving"),
         ("slow", "loading"),
     ]
+
+
+def test_commit_documents() -> None:
+    """状態コードと本文を返却する（正常系）。"""
+    # 準備
+    requests: list[httpx.Request] = []
+    replies = iter(
+        [
+            httpx.Response(200, json={"applied": True, "results": [], "commit": None}),
+            httpx.Response(
+                422,
+                json={"title": "ValidationFailedError", "errors": [{"kind": "writes"}]},
+                headers={"Content-Type": "application/problem+json"},
+            ),
+        ]
+    )
+
+    def record(request: httpx.Request) -> httpx.Response:
+        requests.append(request)
+        return next(replies)
+
+    client = _client(record)
+    body = {"writes": [], "deletes": [], "message": "m", "dryRun": False}
+    # 実行
+    first = asyncio.run(client.commit_documents("sample", body))
+    second = asyncio.run(client.commit_documents("sample", body))
+    # 検証
+    assert first == (200, {"applied": True, "results": [], "commit": None})
+    assert second[0] == 422
+    assert second[1]["errors"] == [{"kind": "writes"}]
+    assert requests[0].method == "POST"
+    assert requests[0].url.path == "/sources/sample/commits"
+    assert json.loads(requests[0].content) == body
+    assert "origin" not in requests[0].headers
+
+
+def test_commit_documents_when_timed_out(monkeypatch: pytest.MonkeyPatch) -> None:
+    """待ちの上限（異常系）。"""
+    # 準備
+    from dev_docs.shared.errors import ProjectIndexTimeoutError
+
+    monkeypatch.setattr(
+        "dev_docs.integrations.project_index.client.PROJECT_INDEX_WRITE_TIMEOUT_SEC", 0.1
+    )
+
+    def slow(request: httpx.Request) -> httpx.Response:
+        raise httpx.ReadTimeout("timeout", request=request)
+
+    client = _client(slow)
+    # 実行
+    with pytest.raises(ProjectIndexTimeoutError):
+        asyncio.run(client.commit_documents("sample", {"writes": [], "deletes": []}))
