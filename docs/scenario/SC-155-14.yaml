@@ -1,0 +1,118 @@
+id: SC-155-14
+title: 利用者がメタデータを画面で参照する
+lead: 利用者が配信元のメタデータ（用語集・エイリアス・タグ・rule-inject の索引・配信元の設定・管理用の YAML）を種類ごとの表で参照し、単語で絞り込むシナリオを定め、メタデータの画面の参照の流れを変えるときに参照する。
+primary_actor: 利用者
+stakeholders:
+  - name: 利用者
+    interest: 用語が登録済みか・規約がどのパスに適用されるかを、ファイルを開かずに一覧で確認できる
+  - name: project-index
+    interest: dev-docs の画面のサーバーが読み取り API だけでメタデータを取得し、配信元のファイルを直接読まない
+trigger: 利用者がトップバーのメタデータのボタンを押す
+preconditions:
+  - dev-docs が起動し、project-index が配信元を配信している
+  - 利用者が文書の画面で配信元を開いている
+success_guarantee: 開いている配信元のメタデータが、種類ごとの表に並び、単語で絞り込める。rule-inject の索引の行には、規約と適用するパス・ツール・引数が出る。
+minimal_guarantee: メタデータの種類を配信していない配信元でも、ほかの種類の表と文書の画面は止まらない。配信元のファイルは変わらない。
+frequency: 作業のたび
+priority: 中
+test_file: tests/e2e/単一ユースケース/test_利用者がメタデータを画面で参照する.py
+scenarios:
+  - name: 正常シナリオ
+    setup:
+      - name: Mock
+        description: なし（実環境で実行。ブラウザで画面を開く）
+      - name: メタデータを持つ配信元
+        description: '用語集（`alias_type: term` の行）・`alias_type: doc` の文書・タグを持つ文書・rule-inject の索引・管理用の YAML を持ち、`project-index.yaml` が用語集と rule-inject の索引を文書の種類として配信する行を持つ git リポジトリ'
+        notes: id `sample`。用語 `配信元`・`種類` の 2 件、索引のエントリ 2 件（`docs/rule/a.yaml` を `**/*.py` に、`docs/rule/b.yaml` を `docs/**` に適用する）
+      - name: dev-docs
+        description: sample を配信している dev-docs と project-index
+    flow: |-
+      <!-- map -->
+
+      ```mermaid
+      sequenceDiagram
+        actor U as 利用者
+        participant UI as dev-docs の画面
+        participant SRV as 開発ドキュメントサーバー
+        participant PI as project-index
+
+        U->>UI: 文書の画面のトップバーのメタデータのボタンを押す
+        UI->>SRV: sample のメタデータを取得
+        SRV->>PI: 配信元の設定と文書の一覧（値・共通のキー）を取得
+        PI-->>SRV: 配信元の設定と文書の一覧
+        SRV-->>UI: 種類ごとのメタデータ
+        UI-->>U: 用語集のタブの表
+        U->>UI: rule-inject の索引のタブを選ぶ
+        UI-->>U: 索引のエントリの表（規約・パス・ツール・引数）
+        U->>UI: 表を `py` で絞り込む
+        UI-->>U: `**/*.py` に適用する行だけの表
+      ```
+
+      <!-- /map -->
+    expected:
+      - メタデータの画面の URL が `/sample/_metadata` で、種類のタブに用語集・エイリアス・タグ・rule-inject の索引・配信元の設定・管理用の YAML が並び、各タブに件数が出る
+      - 用語集のタブの表に `配信元`・`種類` の 2 行がある
+      - rule-inject の索引のタブの表に 2 行があり、各行に規約のパスと適用するパスが出る
+      - '`py` で絞り込むと、`docs/rule/a.yaml` の行だけが残る'
+      - sample のフォルダのファイルが変わっていない
+    test: test_normal
+  - name: 正常シナリオ（行が指す文書を開く）
+    setup:
+      - name: Mock
+        description: なし（実環境で実行）
+      - name: メタデータを持つ配信元
+        description: 正常シナリオと同じ sample
+      - name: dev-docs
+        description: sample を配信している dev-docs と project-index
+    flow: |-
+      <!-- map -->
+
+      ```mermaid
+      sequenceDiagram
+        actor U as 利用者
+        participant UI as dev-docs の画面
+
+        U->>UI: メタデータの画面のタグのタブで、タグを持つ文書の行の文書のリンクを押す
+        UI-->>U: その文書の文書の画面
+      ```
+
+      <!-- /map -->
+    expected:
+      - その行の文書の文書の画面が開き、パンくずの配信元の ID が `sample`
+      - トップバーのメタデータのボタンでメタデータの画面に戻ると、直前に選んでいたタブが選ばれている
+    test: test_normal_when_doc_opened
+  - name: 異常シナリオ（種類を配信していない）
+    setup:
+      - name: Mock
+        description: なし（実環境で実行）
+      - name: 索引を配信していない配信元
+        description: rule-inject の索引のファイルを持つが、`project-index.yaml` に索引を文書の種類として配信する行を持たない配信元
+        notes: id `notes`
+      - name: dev-docs
+        description: notes を配信している dev-docs と project-index
+    flow: |-
+      <!-- map -->
+
+      ```mermaid
+      sequenceDiagram
+        actor U as 利用者
+        participant UI as dev-docs の画面
+
+        U->>UI: notes のメタデータの画面で rule-inject の索引のタブを選ぶ
+        UI-->>U: 索引を配信していないことと、配信元の設定に加える行の案内
+      ```
+
+      <!-- /map -->
+    expected:
+      - rule-inject の索引のタブは押せる状態のまま、表の代わりに、索引を配信していないことと `project-index.yaml` に加える行の案内が出る
+      - ほかのタブの表は出る
+    test: test_error_when_kind_not_served
+refs:
+  - to: SC-155-13
+    item: scenarios[正常シナリオ]
+    type: part_of
+    when: この流れを変えるときに、複合ユースケースの正常シナリオの中の位置づけを確認する。
+tags:
+  - name: topic:メタデータ
+  - name: topic:画面
+  - name: action:参照
