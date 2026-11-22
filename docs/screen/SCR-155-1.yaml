@@ -34,10 +34,12 @@ elements:
         value: 溜めたコメントの件数
       - name: colorScheme
         value: ブラウザに保存した明暗（無ければ `system`）
+      - name: pendingEditCount
+        value: 開いている配信元の編集中の変更の件数
     position: 画面の上
     description: 配信元・リビジョンの切り替え、検索、コメント、設定、明暗の切り替え。スクロールしても画面に残す
     visible_when: 常時
-    action: '`sourceSelect` でその配信元のトップ（`/{配信元の ID}`）を開く。`refSelect` で `rev` を書き換えて同じ文書を再度開く。`compareStart` で `base` に、開いているリビジョンが `defaultRef` 以外なら `defaultRef`、`defaultRef` なら最近の commit の 2 件目を入れて再度開く。`searchOpen` で検索のダイアログ、`commentPanelToggle` でコメントのパネル、`sidebarOpen` で文書の一覧のドロワーを開く。`colorSchemeToggle` で明暗を切り替え、ブラウザに保存する'
+    action: '`sourceSelect` でその配信元のトップ（`/{配信元の ID}`）を開く。`refSelect` で `rev` を書き換えて同じ文書を再度開く。`compareStart` で `base` に、開いているリビジョンが `defaultRef` 以外なら `defaultRef`、`defaultRef` なら最近の commit の 2 件目を入れて再度開く。`searchOpen` で検索のダイアログ、`commentPanelToggle` でコメントのパネル、`sidebarOpen` で文書の一覧のドロワーを開く。`colorSchemeToggle` で明暗を切り替え、ブラウザに保存する。メタデータのボタンでその配信元のメタデータの画面を開き、`pendingPanelToggle` でメタデータの画面を開いて編集中のパネルを開く'
     action_ref: IF-155-6#
   - name: 種類のタブ
     kind: tab
