@@ -1,0 +1,19 @@
+use_cases:
+  - kind: single
+    scenario: docs/scenario/SC-155-7.yaml
+    impact: run_only
+    detail: iPad で文書を読むとき、表の見出し行が上端に隠れる時にだけ留まる。参照の流れの記述は変わらない
+    depends_on: []
+  - kind: composite
+    scenario: docs/scenario/SC-155-13.yaml
+    impact: none
+    detail: 全体の流れは変わらない
+    depends_on: []
+scope_out:
+  - item: mdmark の側の見出し行を留める処理の修正
+    reason: dev-docs のリポジトリでは直せない。切り分けで原因が mdmark の側にあると分かったときは、Issue 本文のとおり mdmark へ起票し直す
+    plan: to_file
+  - item: MindStella のプレビューの見出し行の固定
+    reason: 要望に含まれない（shuhei1101/mindstella#614 が扱う）
+    plan: none
+docs: []

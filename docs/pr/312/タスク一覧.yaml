@@ -1,0 +1,97 @@
+tasks:
+  - process: 初期構築
+    status: skipped
+    reason: 既存リポジトリのため対象外
+    updated_by: planner
+    updated_at: '2026-11-22T03:23:35.283517+00:00'
+  - process: リバースエンジニアリング
+    status: skipped
+    reason: 対象の設計書（SCR-155-1・MOD-155-50）が既にある
+    updated_by: planner
+    updated_at: '2026-11-22T03:23:35.283517+00:00'
+  - process: 方針決め
+    status: skipped
+    reason: 方針決めを依頼する Issue ではない
+    updated_by: planner
+    updated_at: '2026-11-22T03:23:35.283517+00:00'
+  - process: PoC 検証
+    status: skipped
+    reason: 未検証の技術機構に依存しない（既存の mdmark の見出し行の固定の位置の指定の修正）
+    updated_by: planner
+    updated_at: '2026-11-22T03:23:35.283517+00:00'
+  - process: 複合ユースケース設計
+    status: skipped
+    reason: 利用者の操作の流れは変わらない
+    updated_by: planner
+    updated_at: '2026-11-22T03:23:35.283517+00:00'
+  - process: デザインスタイル選定
+    status: skipped
+    reason: 新しい画面・見た目の変更が無い（判定フローチャート『モック要否』）
+    updated_by: planner
+    updated_at: '2026-11-22T03:23:35.283517+00:00'
+  - process: 画面一覧・画面遷移
+    status: skipped
+    reason: 画面と遷移は増減しない
+    updated_by: planner
+    updated_at: '2026-11-22T03:23:35.283517+00:00'
+  - process: 単一ユースケース設計
+    status: skipped
+    reason: 利用者の操作の流れは変わらない
+    updated_by: planner
+    updated_at: '2026-11-22T03:23:35.283517+00:00'
+  - process: モック作成
+    status: skipped
+    reason: 既存の画面の固定の位置の不具合の修正で、見た目の案を選ばない
+    updated_by: planner
+    updated_at: '2026-11-22T03:23:35.283517+00:00'
+  - process: データ設計
+    status: skipped
+    reason: データの構造は変わらない
+    updated_by: planner
+    updated_at: '2026-11-22T03:23:35.283517+00:00'
+  - process: インターフェース定義設計
+    status: skipped
+    reason: API・関数の入出力は変わらない
+    updated_by: planner
+    updated_at: '2026-11-22T03:23:35.283517+00:00'
+  - process: エージェント・MCP サーバー設計
+    status: skipped
+    reason: エージェント・MCP サーバーに触れない
+    updated_by: planner
+    updated_at: '2026-11-22T03:23:35.283517+00:00'
+  - process: エージェントフロー・LLM 呼び出し設計
+    status: skipped
+    reason: LLM の呼び出しに触れない
+    updated_by: planner
+    updated_at: '2026-11-22T03:23:35.283517+00:00'
+  - process: 精度評価設計
+    status: skipped
+    reason: LLM の呼び出しに触れない
+    updated_by: planner
+    updated_at: '2026-11-22T03:23:35.283517+00:00'
+  - process: 部品設計
+    status: skipped
+    reason: 共通の部品の引数・状態は変わらない
+    updated_by: planner
+    updated_at: '2026-11-22T03:23:35.283517+00:00'
+  - process: 画面設計
+    status: todo
+    note: SCR-155-1 の要素『目次』の `固定の位置`（本文をスクロールする要素・mdmark に指定する上端の位置）を、原因の切り分けの結果に合わせて直す
+  - process: モジュール構成設計
+    status: todo
+    note: MOD-155-50 の `mdmark-sticky-top`（と原因に応じて doc-view-screen.tsx のモジュール構成）を直す
+  - process: ドキュメント修正
+    status: skipped
+    reason: 設計書のほかに更新が要るページが無い
+    updated_by: planner
+    updated_at: '2026-11-22T03:23:35.283517+00:00'
+  - process: 単体テスト作成
+    status: skipped
+    reason: 見出し行が留まる位置はブラウザのレイアウトでしか決まらず、単体テストでは確かめられない。結合テスト（Playwright）で確かめる
+    updated_by: planner
+    updated_at: '2026-11-22T03:23:35.283517+00:00'
+  - process: 実装
+    status: todo
+  - process: 結合テスト作成
+    status: todo
+    note: tests/integration/frontend/doc-view-screen.spec.ts に、iPad（WebKit）の画面で表の見出し行が上端に隠れる時にだけ留まることを確かめるケースを足す
