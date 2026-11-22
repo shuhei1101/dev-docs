@@ -49,12 +49,12 @@ request:
     location: body
     description: 対象の文書の ID。`add` は新しい文書の ID
   - name: edits[].docKind
-    type: str | None
-    required: false
+    type: str
+    required: true
     location: body
     default: なし（`update`・`delete` は使用しない）
-    description: '`add` で作る文書の種類（メタデータの取得の `kinds[].createKind`）'
-    notes: '`add` のときは必須'
+    description: '対象の文書の種類（`documents[].id`）。`update`・`delete` はメタデータの取得の `rows[].docKind`、`add` は `kinds[].createKind`'
+    notes: '列と文書のキーの対応を引く種類と、403 の `kinds` を変更の `key` へ戻すのに使用する。取り違えた種類は project-index の検査と `expected_version` の照合で断られる'
   - name: edits[].expectedVersion
     type: str | None
     required: false
@@ -90,7 +90,7 @@ request:
     description: 要求元のオリジン
 request_example: |-
   ```json
-  {"edits": [{"key": "tags:n1:update", "kind": "tags", "op": "update", "docId": "n1", "expectedVersion": "c3d4e5", "values": {"tags": ["topic:a", "topic:b"]}}, {"key": "terms:kind:add", "kind": "terms", "op": "add", "docId": "kind", "docKind": "terms", "values": {"name": "種類", "description": "文書の行の ID"}}, {"key": "terms:old-name:delete", "kind": "terms", "op": "delete", "docId": "old-name", "expectedVersion": "b2c3d4"}], "message": "用語とタグを追加する"}
+  {"edits": [{"key": "tags:n1:update", "kind": "tags", "op": "update", "docId": "n1", "docKind": "note", "expectedVersion": "c3d4e5", "values": {"tags": ["topic:a", "topic:b"]}}, {"key": "terms:kind:add", "kind": "terms", "op": "add", "docId": "kind", "docKind": "terms", "values": {"name": "種類", "description": "文書の行の ID"}}, {"key": "terms:old-name:delete", "kind": "terms", "op": "delete", "docId": "old-name", "docKind": "terms", "expectedVersion": "b2c3d4"}], "message": "用語とタグを追加する"}
   ```
 response:
   - name: applied

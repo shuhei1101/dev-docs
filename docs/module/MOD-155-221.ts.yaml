@@ -22,8 +22,8 @@ data_models:
         type: string
         description: 文書の ID
       - name: docKind
-        type: string | null
-        description: '`add` の文書の種類'
+        type: string
+        description: '対象の文書の種類（`update`・`delete` は行の `docKind`、`add` は種類の `createKind`）'
       - name: expectedVersion
         type: string | null
         description: 取得したバージョン
@@ -54,14 +54,14 @@ functions:
     returns:
       type: Edit[]
       description: '`before`・`label` を除いた並び'
-    process: 1. 変更ごとに `before`・`label` を除き、`add` 以外は `docKind` を、`add` は `expectedVersion` を除く
+    process: 1. 変更ごとに `before`・`label` を除き、`add` は `expectedVersion` を除く（`docKind` は全ての変更で送信する）
     unit_tests:
       - name: test_to_commit_edits
         case: 正常
         summary: 要求の形にする
         condition: '`update`・`add`・`delete` の 3 件'
         mock: なし
-        expected: '`before`・`label` が無く、`add` だけが `docKind` を持つ'
+        expected: '`before`・`label` が無く、全てが `docKind` を持ち、`add` だけが `expectedVersion` を持たない'
 stores:
   - name: usePendingEditsStore
     title: 編集中の変更のストア

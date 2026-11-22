@@ -29,8 +29,8 @@ data_models:
         type: str
         description: 文書の ID
       - name: doc_kind
-        type: str | None
-        description: '`add` の文書の種類'
+        type: str
+        description: '対象の文書の種類（全ての `op` で必須）'
       - name: expected_version
         type: str | None
         description: 取得したバージョン
@@ -108,7 +108,7 @@ functions:
       type: tuple[list[dict], list[dict], list[tuple[Literal['write', 'delete'], int, str]]]
       description: '`writes`・`deletes` と、それぞれの添字と変更の `key` の対応'
     process: |-
-      1. 変更ごとに、列のキーを列と文書のキーの対応の解決で戻し（戻せない列は `EditsRejectedError`（400））、`{キー}` は値をそのまま、`{キー}[].{項目}` は今の配列のうち送信された値に残る要素をオブジェクトのまま並び順で保ち、追加された値を `{項目: 値}` で末尾に追加した配列にする
+      1. 変更ごとに、`doc_kind` の `metadata`（`mappings[doc_kind]`）で列のキーを列と文書のキーの対応の解決で戻し（戻せない列は `EditsRejectedError`（400））、`{キー}` は値をそのまま、`{キー}[].{項目}` は今の配列のうち送信された値に残る要素をオブジェクトのまま並び順で保ち、追加された値を `{項目: 値}` で末尾に追加した配列にする
       2. `update` は `{op: update, id, expected_version, set}`、`add` は `{op: create, id, kind, data}`、`delete` は `deletes` の `{id, expectedVersion}` にし、変更の並び順で入れる
     unit_tests:
       - name: test_to_operations
@@ -130,6 +130,12 @@ functions:
         mock: なし
         expected: '`EditsRejectedError`（400）で、`errors[]` にその変更の `key`'
         exception: 戻せない列
+      - name: test_to_operations_when_mapped_name
+        case: 正常
+        summary: 対応づけた最上位のキーへ書き戻す
+        condition: '`doc_kind` が `skill`（`metadata: {name: title}`）の `name` の `update`'
+        mock: なし
+        expected: '`set` が `{title: 値}` で、`name` を含まない'
   - name: commit_edits
     title: 編集中の変更の直コミット
     kind: 関数
@@ -165,7 +171,7 @@ functions:
       2. project-indexの呼び出し.配信元の設定の取得で `metadata` を取得し、`{キー}[].{項目}` の列を変える `update` の文書を文書の取得で取得する（バージョンが `expected_version` と違えば `EditsRejectedError`（409、`current`））
       3. 書き込みと削除への変換をし、project-indexの呼び出し.直コミットの書き込みを呼ぶ
       4. 200 は `results[]` の `kind`・`index` を変更の `key` に戻して `CommitResult` を返却する
-      5. 403・404・409・422 は `errors[]` と `kinds`・`current` を変更の `key` へ戻した `EditsRejectedError` を送出する。500・502 は 502、504 と待ちの上限の打ち切りは 504 にする
+      5. 403・404・409・422 は `errors[]` と `kinds`（変更の `doc_kind` と照合する）・`current` を変更の `key` へ戻した `EditsRejectedError` を送出する。500・502 は 502、504 と待ちの上限の打ち切りは 504 にする
       6. 送信ごとに、配信元の ID・`dryRun`・変更の件数・状態コード・コミットの SHA（打ち切ったときはその旨）を 1 行のログに出力する
     unit_tests:
       - name: test_commit_edits
