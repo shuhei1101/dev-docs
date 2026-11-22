@@ -1,6 +1,6 @@
 id: SC-155-15
 title: 利用者が画面で編集中の変更をまとめて直コミットする
-lead: 利用者がメタデータの画面で行の修正を溜め、試しに書いた差分を確認してから、配信元ごとにまとめて 1 つのコミットでプッシュするシナリオを定め、編集中の変更の送信の流れを変えるときに参照する。
+lead: 利用者がメタデータの画面で行を編集し、差分確認で差分を確認してから、配信元ごとにまとめて 1 つのコミットでプッシュするシナリオを定め、編集中の変更の送信の流れを変えるときに参照する。
 primary_actor: 利用者
 stakeholders:
   - name: 利用者
@@ -44,8 +44,8 @@ scenarios:
         U->>UI: タグのタブで n1 の行にタグ `topic:b` を追加する
         U->>UI: 用語集のタブで用語 `種類` の行を追加し、用語 `旧称` の行を削除する
         UI-->>U: トップバーの編集中の変更の件数 3
-        U->>UI: 編集中の変更のパネルを開き、試しに書く
-        UI->>SRV: sample の修正 3 件を試しに書く
+        U->>UI: 編集中の変更のパネルを開き、差分確認を押す
+        UI->>SRV: sample の変更 3 件を dryRun で送信する
         SRV->>PI: POST /sources/sample/commits（dryRun）
         PI-->>SRV: 検査の合格と差分
         SRV-->>UI: 修正ごとの差分
@@ -60,7 +60,7 @@ scenarios:
 
       <!-- /map -->
     expected:
-      - 試しに書くと、パネルに修正ごとの差分が出て、リモートは変わらない
+      - 差分確認を押すと、パネルに修正ごとの差分が出て、リモートは変わらない
       - 送信すると、リモートの `develop` に 1 コミットだけ増え、コミットの説明が入力した説明で、変更は n1 と用語集のファイルだけ
       - パネルにプッシュしたコミットとブランチが出て、編集中の変更が空になり、トップバーの件数が出なくなる
       - タグのタブの n1 の行に `topic:b` が、用語集のタブに `種類` の行が出る
@@ -135,7 +135,7 @@ scenarios:
       - name: 編集中の変更
         description: n1 のタグの追加
       - name: 他の変更
-        description: 修正を溜めた後に、リモートの develop へ n1 の概要を変えるコミットをプッシュする
+        description: 編集中の変更がある状態で、リモートの develop へ n1 の概要を変えるコミットをプッシュする
         notes: 編集中の変更の n1 のバージョンが古くなる
     flow: |-
       <!-- map -->
@@ -169,7 +169,7 @@ scenarios:
       - name: 編集中の変更
         description: n1 のタグの追加
       - name: 許可の取り消し
-        description: 修正を溜めた後に、project-index の端末の設定の API（`PUT /settings/sources`）で、sample の行の `direct_commit.write_api_kinds` から `note` を除く（project-index は端末の設定のファイルを監視しないため、ファイルを書き換えるだけでは反映されない）
+        description: 編集中の変更がある状態で、project-index の端末の設定の API（`PUT /settings/sources`）で、sample の行の `direct_commit.write_api_kinds` から `note` を除く（project-index は端末の設定のファイルを監視しないため、ファイルを書き換えるだけでは反映されない）
     flow: |-
       <!-- map -->
 
@@ -202,7 +202,7 @@ scenarios:
       - name: 編集中の変更
         description: n1 のタグの追加
       - name: リモートの失敗
-        description: 修正を溜めた後に、sample のリモートの URL を存在しないパスへ変える
+        description: 編集中の変更がある状態で、sample のリモートの URL を存在しないパスへ変える
         notes: 取得に失敗し、project-index が 502 を返却する
     flow: |-
       <!-- map -->
@@ -235,7 +235,7 @@ refs:
   - to: SC-155-14
     item: scenarios[正常シナリオ]
     type: requires
-    when: 修正を溜める前に、メタデータの画面を開く流れを確認する。
+    when: 編集を始める前に、メタデータの画面を開く流れを確認する。
 tags:
   - name: topic:直コミット
   - name: topic:メタデータ
