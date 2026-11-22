@@ -173,8 +173,8 @@ functions:
       1. 変更ごとの列が `EDITABLE_COLUMNS` にあるかを確認し、無ければ `EditsRejectedError`（400）を送出する
       2. project-indexの呼び出し.配信元の設定の取得で `metadata` を取得し、`{キー}[].{項目}` の列を変える `update` の文書だけを文書の取得（`doc_path` と `doc_id`）で取得する（`doc_path` が無ければ `EditsRejectedError`（400）、文書が無ければ 404。取得した後の変更は project-index が `expected_version` の照合で 409 にする）
       3. 書き込みと削除への変換をし、project-indexの呼び出し.直コミットの書き込みを呼ぶ（`message` は要求の説明、`dry_run` のときは固定の説明 `差分確認`。project-index の書き込みの API は `message` を必須にしている）
-      4. 200 は `results[]` の `kind`・`index` を変更の `key` に戻して `CommitResult` を返却する
-      5. 403・404・409・422 は `errors[]` と `kinds`（変更の `doc_kind` と照合する）・`current` を変更の `key` へ戻した `EditsRejectedError` を送出する。500・502 は 502、504 と待ちの上限の打ち切りは 504 にする
+      4. 200 は `results[]` の `kind`（`write`・`delete`）・`index` を変更の `key` に戻して `CommitResult` を返却する
+      5. 403・404・409・422 は `errors[]`（`path` の先頭の `writes[{添字}]`・`deletes[{添字}]`）と `kinds`（変更の `doc_kind` と照合する）・`docId` と `current`（`VersionMismatchError`）を変更の `key` へ戻した `EditsRejectedError` を送出する。500・502 は 502、504 と待ちの上限の打ち切りは 504 にする
       6. 送信ごとに、配信元の ID・`dryRun`・変更の件数・状態コード・コミットの SHA（打ち切ったときはその旨）を 1 行のログに出力する
     unit_tests:
       - name: test_commit_edits
@@ -216,6 +216,13 @@ functions:
         condition: '`tags: tags[].name` の種類の文書の `update`（`docPath` あり）'
         mock: project-indexの呼び出し（要求を記録する偽物）
         expected: 文書の取得を `docPath` と `id` で 1 回呼び、文書の一覧を呼ばない
+      - name: test_commit_edits_when_version_mismatch
+        case: 異常
+        summary: 409 の文書を変更へ戻す
+        condition: '偽物が `docId: n1`・`current` を持つ 409（`VersionMismatchError`）を返却する'
+        mock: project-indexの呼び出し（偽物）
+        expected: '`EditsRejectedError`（409）で、`errors[0]` の `key` が n1 の変更、`current` が偽物の値'
+        exception: 他の変更と食い違う
     exceptions:
       - name: EditsRejectedError
         condition: 本文の検証・文書のバージョンの食い違い・project-index の 4xx・5xx・待ちの上限
