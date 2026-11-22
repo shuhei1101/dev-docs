@@ -225,7 +225,7 @@ flows:
 
       <!-- /map -->
     expected:
-      - 200 で `applied` が `false`、`commit` が `null`、`results[].diff` が変更ごとにある
+      - 200 で `applied` が `false`、`commit` が `null`、`results` に 3 件の変更の `key` があり、`update`・`add` の `diff` が空でない（削除の `diff` は project-index が返却しない）
       - リモートとワークツリーが変わらない
     test: test_normal_when_dry_run
   - name: 異常系（別のオリジン・403）
@@ -283,7 +283,7 @@ flows:
       - name: Mock
         description: なし（テストの中で起動した project-index）
       - name: 入力
-        description: n1 のタグの `update`（合格する）と、名前が空の用語の `add`（スキーマに合格しない）
+        description: 用語の `add`（合格する）と、`note` のスキーマが許可しないタグ（`topic:` で始まらない）への n1 のタグの `update`（スキーマに合格しない）
     flow: |-
       <!-- map -->
 
@@ -301,8 +301,8 @@ flows:
 
       <!-- /map -->
     expected:
-      - 422 で、`errors` に用語の `add` の `key`・違反したキーのパス・修正方法がある
-      - n1 のタグの変更の `key` は `errors` に無い
+      - 422 で、`errors` に n1 のタグの変更の `key` と違反したキーのパスがある
+      - 用語の `add` の `key` は `errors` に無い
       - リモートとワークツリーが変わらない
     test: test_error_when_validation_failed
   - name: 異常系（バージョンが合わない・409）
