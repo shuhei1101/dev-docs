@@ -88,13 +88,6 @@ request:
     location: header
     default: なし（`Sec-Fetch-Site` で判定する）
     description: 要求元のオリジン
-  - name: edits[].docPath
-    type: str | None
-    required: false
-    location: body
-    default: なし
-    description: 対象の文書を文書の取得で開くパス（メタデータの取得の `rows[].docPath`）
-    notes: '`{キー}[].{項目}` の列を変える `update` のときは必須。今の配列を文書の取得（IF-25）で取得するのに使用する'
 request_example: |-
   ```json
   {"edits": [{"key": "tags:n1:update", "kind": "tags", "op": "update", "docId": "n1", "docKind": "note", "expectedVersion": "c3d4e5", "values": {"tags": ["topic:a", "topic:b"]}}, {"key": "terms:kind:add", "kind": "terms", "op": "add", "docId": "kind", "docKind": "terms", "values": {"name": "種類", "description": "文書の行の ID"}}, {"key": "terms:old-name:delete", "kind": "terms", "op": "delete", "docId": "old-name", "docKind": "terms", "expectedVersion": "b2c3d4"}], "message": "用語とタグを追加する"}
@@ -161,7 +154,7 @@ constraints:
     constraint: '`terms`: `name`・`aliases`・`description`。`aliases`: `name`・`aliases`。`tags`: `tags`。`rules`: `rule`・`paths`・`tools`（`args` はオブジェクトのため修正できない）。`files`: `description`。ほかのキーは 400 で断り、project-index へ送信しない'
     notes: 規約の本文・テンプレート・スキーマは画面から書き換えない（要件の直コミットの対象）
   - item: 書き込みと削除への変換
-    constraint: '列のキーを、配信元の設定の行の `metadata` の対応（IF-155-28 の制約「列と文書のキーの対応」）で文書の実際のキーへ戻して組み立てる。`{キー}` の列はそのキーの値にする。`{キー}[].{項目}` の列は、文書の取得（IF-25。`edits[].docPath` と `id` に `edits[].docId`）で対象の文書だけを取得した今の配列のうち、送信された値に残る要素はオブジェクトのまま（`main` などほかの項目を保つ）並び順を維持し、追加された値は `{項目: 値}` の要素を末尾に追加した配列にする（取得した後に文書が変わっていれば、`update` の `expected_version` の照合で project-index が 409 を返却する）。`update` は `write_docs` の `update` 操作（`id`・`expected_version`・`set` に組み立てた最上位のキー）、`add` は `create` 操作（`id`・`kind`・`data`）、`delete` は `deletes[]`（`id`・`expectedVersion`）にし、`edits` の並び順で `writes`・`deletes` に入れる'
+    constraint: '列のキーは共通のキー（IF-155-28 の制約「列と文書のキーの対応」）のまま、値も画面が送信したまま書き込みの操作に入れる。project-index の書き込みの API が、配信元の設定の行の `metadata` の対応で文書の実際のキーへ戻す（`{キー}[].{項目}` の列は、名前の配列から、残る要素の `main` などほかの項目を保った配列にする）。dev-docs は元のキーへ戻せる列かだけを確認し、戻せない列（入れ子のパス・絞り込み）は送信せずに 400 にする。`update` は `write_docs` の `update` 操作（`id`・`expected_version`・`set` に組み立てた最上位のキー）、`add` は `create` 操作（`id`・`kind`・`data`）、`delete` は `deletes[]`（`id`・`expectedVersion`）にし、`edits` の並び順で `writes`・`deletes` に入れる'
   - item: project-index への送信
     constraint: '`POST /sources/{source}/commits` を `Origin` を付けずに 1 回だけ呼ぶ。`writes`・`deletes`・`message`・`dryRun` を送信し、`branch`・`onReferenced` は送信しない（既定のブランチ・`fail`）'
   - item: 書き込みの API の待ち
