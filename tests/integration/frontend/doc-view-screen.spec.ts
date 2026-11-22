@@ -1133,26 +1133,27 @@ test.describe("目次", () => {
   /** 表の見出し行の上端（画面の上端からの px） */
   const headTop = async (page: Page) => (await boxOf(page.getByRole("columnheader", { name: "名前" }))).y;
 
+  /** mdmark が見出し行を留める位置（画面の上端からの px）。`--mdmark-sticky-top` の計算値 */
+  const stickyTop = (page: Page) =>
+    page.locator(".mdmark").first().evaluate((body) => Number.parseFloat(getComputedStyle(body).getPropertyValue("--mdmark-sticky-top")));
+
   for (const withoutTimeline of [false, true]) {
     const suffix = withoutTimeline ? "_without_timeline" : "";
-    // 表の上端がトップバーと種類のタブの下端に達するまでは見出し行を表の中に置き、達した後はタブの下に隠さずに留める（正常系）
+    // 表の上端がトップバーと種類のタブの下端に達するまでは見出し行を表の中に置き、達した後はその下端に留める（正常系）
     test(`table_head_below_tabs_when_scrolled${suffix}`, async ({ page }) => {
       // 準備
       await openLongTable(page, { withoutTimeline });
-      const bottom = await tabsBottom(page);
+      const expected = await stickyTop(page);
+      expect(expected).toBeGreaterThanOrEqual(await tabsBottom(page));
       const top = await tableTop(page);
-      // 実行（表の上端を種類のタブの下端より 300px 下に置く）
-      await page.evaluate((y) => window.scrollTo(0, y), top - bottom - 300);
+      // 実行（表の上端を留める位置より 300px 下に置く）
+      await page.evaluate((y) => window.scrollTo(0, y), top - expected - 300);
       // 検証
-      await expect.poll(async () => Math.abs((await headTop(page)) - bottom - 300)).toBeLessThanOrEqual(1);
-      // 実行（表の上端を種類のタブの下端より 400px 上へ過ぎさせる）
-      await page.evaluate((y) => window.scrollTo(0, y), top - bottom + 400);
-      await expect.poll(async () => (await headTop(page)) - bottom).toBeGreaterThanOrEqual(0);
-      const stuck = await headTop(page);
-      // 実行（さらに 300px スクロールする）
-      await page.evaluate((y) => window.scrollTo(0, y), top - bottom + 700);
+      await expect.poll(async () => Math.abs((await headTop(page)) - expected - 300)).toBeLessThanOrEqual(1);
+      // 実行（表の上端を留める位置より 400px 上へ過ぎさせる）
+      await page.evaluate((y) => window.scrollTo(0, y), top - expected + 400);
       // 検証
-      await expect.poll(async () => Math.abs((await headTop(page)) - stuck)).toBeLessThanOrEqual(1);
+      await expect.poll(async () => Math.abs((await headTop(page)) - expected)).toBeLessThanOrEqual(1);
     });
   }
 
