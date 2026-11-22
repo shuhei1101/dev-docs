@@ -27,7 +27,7 @@ scenarios:
         description: '文書の種類 `note` と用語集の種類 `terms` を持つ git の配信元。`project-index.yaml` の `direct_commit` は `branch: develop`・`kinds: [note, terms]`。project-index の端末の設定の行は `direct_commit.write_api_kinds: [note, terms]`'
         notes: id `sample`。`develop` を指すワークツリーがあり、未プッシュのコミットと未コミットの変更が無い
       - name: 文書と用語
-        description: タグ `topic:a` を持つ文書 n1 と、用語 `配信元` を持つ用語集
+        description: タグ `topic:a` を持つ文書 n1 と、用語 `配信元`・`旧称` を持つ用語集
       - name: dev-docs
         description: sample を配信している dev-docs と project-index
     flow: |-
@@ -42,15 +42,15 @@ scenarios:
         participant R as リモート
 
         U->>UI: タグのタブで n1 の行にタグ `topic:b` を追加する
-        U->>UI: 用語集のタブで用語 `種類` の行を追加する
-        UI-->>U: トップバーの溜めた修正の件数 2
+        U->>UI: 用語集のタブで用語 `種類` の行を追加し、用語 `旧称` の行を削除する
+        UI-->>U: トップバーの溜めた修正の件数 3
         U->>UI: 溜めた修正のパネルを開き、試しに書く
-        UI->>SRV: sample の修正 2 件を試しに書く
+        UI->>SRV: sample の修正 3 件を試しに書く
         SRV->>PI: POST /sources/sample/commits（dryRun）
         PI-->>SRV: 検査の合格と差分
         SRV-->>UI: 修正ごとの差分
         U->>UI: まとめて送信し、送信の確認でコミットの説明を入力して送信する
-        UI->>SRV: sample の修正 2 件とコミットの説明を送信
+        UI->>SRV: sample の修正 3 件とコミットの説明を送信
         SRV->>PI: POST /sources/sample/commits
         PI->>R: develop へプッシュ
         PI-->>SRV: コミットとブランチ
@@ -64,6 +64,7 @@ scenarios:
       - 送信すると、リモートの `develop` に 1 コミットだけ増え、コミットの説明が入力した説明で、変更は n1 と用語集のファイルだけ
       - パネルにプッシュしたコミットとブランチが出て、溜めた修正が空になり、トップバーの件数が出なくなる
       - タグのタブの n1 の行に `topic:b` が、用語集のタブに `種類` の行が出る
+      - 用語集のタブに `旧称` の行が無く、リモートの用語集のファイルから `旧称` が消えている
     test: test_normal
   - name: 正常シナリオ（溜めた修正を取り消す）
     setup:
@@ -168,7 +169,7 @@ scenarios:
       - name: 溜めた修正
         description: n1 のタグの追加
       - name: 許可の取り消し
-        description: 修正を溜めた後に、project-index の端末の設定の sample の行の `direct_commit.write_api_kinds` から `note` を除く
+        description: 修正を溜めた後に、project-index の端末の設定の API（`PUT /settings/sources`）で、sample の行の `direct_commit.write_api_kinds` から `note` を除く（project-index は端末の設定のファイルを監視しないため、ファイルを書き換えるだけでは反映されない）
     flow: |-
       <!-- map -->
 
@@ -192,7 +193,7 @@ scenarios:
       - リモートとワークツリーが変わらない
       - n1 の修正に、許可していない種類 `note` と、許可を記載するキー `sources[].direct_commit.write_api_kinds` が出て、溜めた修正が残っている
     test: test_error_when_direct_commit_not_permitted
-  - name: 異常シナリオ（プッシュに失敗する）
+  - name: 異常シナリオ（リモートに接続できない）
     setup:
       - name: Mock
         description: なし（実環境で実行）
@@ -225,7 +226,7 @@ scenarios:
     expected:
       - パネルに送信できなかったことと理由が出て、溜めた修正が残っている
       - sample のワークツリーに未コミットの変更と未プッシュのコミットが無い
-    test: test_error_when_push_failed
+    test: test_error_when_remote_unreachable
 refs:
   - to: SC-155-13
     item: scenarios[正常シナリオ]
