@@ -1104,6 +1104,54 @@ test.describe("目次", () => {
     expect((await boxOf(sideToc(page))).y).toBeGreaterThanOrEqual(bottom);
   });
 
+  /** 画面を下へスクロールできる長さの、本文の行の多い表を持つ本文 */
+  const LONG_TABLE_MARKDOWN = `# 文書 1\n\n## 概要\n\n${"表の前の段落です。".repeat(80)}\n\n| 名前 | 値 |\n| --- | --- |\n${Array.from(
+    { length: 60 },
+    (_, index) => `| 行 ${index + 1} | 値 ${index + 1} |`,
+  ).join("\n")}\n\n${"表の後の段落です。".repeat(200)}\n`;
+
+  /** iPad Pro 11 の縦の画面幅で、本文の行の多い表を持つ文書を開く。`withoutTimeline` のときはスクロール連動のアニメーションを持たないブラウザとして開く */
+  const openLongTable = async (page: Page, { withoutTimeline }: { withoutTimeline: boolean }) => {
+    if (withoutTimeline) {
+      await page.addInitScript(() => {
+        const supports = CSS.supports.bind(CSS);
+        CSS.supports = (...args: Parameters<typeof CSS.supports>) =>
+          String(args[0]).includes("animation-timeline") ? false : supports(...args);
+      });
+    }
+    await page.setViewportSize({ width: 834, height: 1194 });
+    await openDoc(page, "/sample/docs/doc-1", {
+      document: ({ path }) => ({ body: documentResponse({ path, markdown: LONG_TABLE_MARKDOWN }) }),
+    });
+    await expect(page.getByRole("columnheader", { name: "名前" })).toBeVisible();
+  };
+
+  /** 表の上端（文書の上端からの px） */
+  const tableTop = (page: Page) =>
+    page.locator(".mdmark table").first().evaluate((table) => table.getBoundingClientRect().top + window.scrollY);
+
+  /** 表の見出し行の上端（画面の上端からの px） */
+  const headTop = async (page: Page) => (await boxOf(page.getByRole("columnheader", { name: "名前" }))).y;
+
+  for (const withoutTimeline of [false, true]) {
+    const suffix = withoutTimeline ? "_without_timeline" : "";
+    // 表の上端がトップバーと種類のタブの下端に達するまでは見出し行を表の中に置き、達した後はその下端に留める（正常系）
+    test(`table_head_below_tabs_when_scrolled${suffix}`, async ({ page }) => {
+      // 準備
+      await openLongTable(page, { withoutTimeline });
+      const bottom = await tabsBottom(page);
+      const top = await tableTop(page);
+      // 実行（表の上端を種類のタブの下端より 300px 下に置く）
+      await page.evaluate((y) => window.scrollTo(0, y), top - bottom - 300);
+      // 検証
+      await expect.poll(async () => Math.round((await headTop(page)) - bottom)).toBe(300);
+      // 実行（表の上端を種類のタブの下端より 400px 上へ過ぎさせる）
+      await page.evaluate((y) => window.scrollTo(0, y), top - bottom + 400);
+      // 検証
+      await expect.poll(async () => Math.abs((await headTop(page)) - bottom)).toBeLessThanOrEqual(1);
+    });
+  }
+
   // 画面幅が 48rem 未満でも、スクロールした右側の目次をトップバーと種類のタブの下に固定する（正常系）
   test("toc_below_tabs_when_scrolled_narrow", async ({ page }) => {
     // 準備
