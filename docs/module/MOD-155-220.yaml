@@ -1,0 +1,45 @@
+id: MOD-155-220
+title: 開発ドキュメントサーバー / メタデータ
+lead: 配信元のメタデータの取得と編集中の変更の直コミットを受け持つメタデータの分類のファイルの並びと決まりを定め、この分類のファイルを追加・移動するときに参照する。
+diagrams:
+  - name: 全体
+    diagram: |-
+      classDiagram
+        direction TD
+        メタデータのエントリーポイント ..> メタデータの組み立て
+        メタデータのエントリーポイント ..> 編集中の変更の直コミット
+        メタデータの組み立て ..> project-indexの呼び出し
+        メタデータの組み立て ..> 列と文書のキーの対応の解決
+        編集中の変更の直コミット ..> 書き込みと削除への変換
+        編集中の変更の直コミット ..> project-indexの呼び出し
+        書き込みと削除への変換 ..> 列と文書のキーの対応の解決
+        class メタデータのエントリーポイント {
+          <<function>>
+        }
+        class メタデータの組み立て {
+          <<function>>
+        }
+        class 編集中の変更の直コミット {
+          <<function>>
+        }
+        class 書き込みと削除への変換 {
+          <<function>>
+        }
+        class 列と文書のキーの対応の解決 {
+          <<function>>
+        }
+        class project-indexの呼び出し {
+          <<class>>
+        }
+        click メタデータのエントリーポイント href "./MOD-155-219.py.yaml#メタデータのエントリーポイント"
+        click メタデータの組み立て href "./MOD-155-217.py.yaml#メタデータの組み立て"
+        click 編集中の変更の直コミット href "./MOD-155-218.py.yaml#編集中の変更の直コミット"
+        click 書き込みと削除への変換 href "./MOD-155-218.py.yaml#書き込みと削除への変換"
+        click 列と文書のキーの対応の解決 href "./MOD-155-217.py.yaml#列と文書のキーの対応の解決"
+        click project-indexの呼び出し href "./MOD-155-215.py.yaml#project-indexの呼び出し"
+notes:
+  補足: メタデータは project-index の読み取り API から要求ごとに組み立て、保持しない。dev-docs は配信元のファイルを直接読み書きせず、書き込みは project-index の書き込みの API だけを経る。元のフォルダは `src/dev_docs/features/metadata/`
+tags:
+  - name: topic:メタデータ
+  - name: topic:api
+  - name: topic:直コミット

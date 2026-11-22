@@ -1,0 +1,213 @@
+id: MOD-155-218
+title: 開発ドキュメントサーバー / メタデータ / commits.py
+lead: 画面の編集中の変更を文書の書き込みと削除に変えて project-index の書き込みの API へ送信し、結果と理由を変更ごとに戻す処理を受け持ち、メタデータの commits.py を修正するときに参照する。
+constants:
+  - name: EDITABLE_COLUMNS
+    title: 修正できる列
+    container: features/metadata/commits.py
+    usecase: 画面で編集中の変更をまとめて直コミットする
+    summary: 種類ごとに修正できる列のキー
+    value: IF-155-29 の制約「修正できるキー」のとおり
+data_models:
+  - name: Edit
+    title: 編集中の変更
+    container: features/metadata/commits.py
+    usecase: 画面で編集中の変更をまとめて直コミットする
+    role: DTO
+    summary: IF-155-29 の `edits[]` の 1 件（`ApiModel`）
+    properties:
+      - name: key
+        type: str
+        description: 変更の識別子
+      - name: kind
+        type: Literal['terms', 'aliases', 'tags', 'rules', 'files']
+        description: メタデータの種類
+      - name: op
+        type: Literal['update', 'add', 'delete']
+        description: 変更の種類
+      - name: doc_id
+        type: str
+        description: 文書の ID
+      - name: doc_kind
+        type: str | None
+        description: '`add` の文書の種類'
+      - name: expected_version
+        type: str | None
+        description: 取得したバージョン
+      - name: values
+        type: dict[str, str | list[str]]
+        default: '{}'
+        description: 変更後の値
+  - name: CommitRequest
+    title: 直コミットの要求
+    container: features/metadata/commits.py
+    usecase: 画面で編集中の変更をまとめて直コミットする
+    role: DTO
+    summary: IF-155-29 の本文（`ApiModel`。`model_validator` で `key` の重複・`op` と `kind`・必須・`message` を検証する）
+    properties:
+      - name: edits
+        type: list[Edit]
+        description: 1 件以上
+      - name: message
+        type: str | None
+        description: コミットの説明
+      - name: dry_run
+        type: bool
+        default: 'False'
+        description: 差分確認か
+  - name: CommitResult
+    title: 直コミットの結果
+    container: features/metadata/commits.py
+    usecase: 画面で編集中の変更をまとめて直コミットする
+    role: DTO
+    summary: IF-155-29 の 200 の応答（`applied`・`results[]`・`commit`）
+    properties:
+      - name: applied
+        type: bool
+        description: コミットしたか
+      - name: results
+        type: list[EditResult]
+        description: '`key`・`status`・`version`・`diff`'
+      - name: commit
+        type: CommitInfo | None
+        description: '`sha`・`branch`'
+classes:
+  - name: EditsRejectedError
+    title: 変更ごとの理由つきの失敗
+    container: features/metadata/commits.py
+    usecase: 画面で編集中の変更をまとめて直コミットする
+    role: 例外
+    summary: 状態コード・`title`・`detail`・`nextSteps` と、`errors[]`（`key`・`path`・`reason`・`current`）を持ち、例外の変換の登録が problem+json にする
+    inherits: AppError
+functions:
+  - name: to_operations
+    title: 書き込みと削除への変換
+    kind: 関数
+    container: features/metadata/commits.py
+    usecase: 画面で編集中の変更をまとめて直コミットする
+    role: 変換
+    summary: 編集中の変更を、配信元の設定の `metadata` の対応で文書の実際のキーへ戻した `writes`・`deletes` にする
+    scope: public
+    args:
+      - name: edits
+        type: list[Edit]
+        required: true
+        passing: positional
+        description: 編集中の変更
+      - name: mappings
+        type: Mapping[str, Mapping[str, str]]
+        required: true
+        passing: positional
+        description: 文書の種類ごとの `metadata`
+      - name: current_values
+        type: Mapping[str, Mapping[str, object]]
+        required: true
+        passing: positional
+        description: '`{キー}[].{項目}` の列を変える文書の今の値（文書の ID ごと）'
+    returns:
+      type: tuple[list[dict], list[dict], list[tuple[Literal['write', 'delete'], int, str]]]
+      description: '`writes`・`deletes` と、それぞれの添字と変更の `key` の対応'
+    process: |-
+      1. 変更ごとに、列のキーを列と文書のキーの対応の解決で戻し（戻せない列は `EditsRejectedError`（400））、`{キー}` は値をそのまま、`{キー}[].{項目}` は今の配列のうち送信された値に残る要素をオブジェクトのまま並び順で保ち、追加された値を `{項目: 値}` で末尾に追加した配列にする
+      2. `update` は `{op: update, id, expected_version, set}`、`add` は `{op: create, id, kind, data}`、`delete` は `deletes` の `{id, expectedVersion}` にし、変更の並び順で入れる
+    unit_tests:
+      - name: test_to_operations
+        case: 正常
+        summary: update・add・delete を変換する
+        condition: タグの `update`・用語の `add`・用語の `delete`
+        mock: なし
+        expected: '`writes` が 2 件（`update` と `create`）、`deletes` が 1 件で、添字の対応が変更の `key`'
+      - name: test_to_operations_when_mapped_tags
+        case: 正常
+        summary: オブジェクトの配列のほかの項目を保つ
+        condition: '`tags: tags[].name` で今の値が `[{name: topic:a, main: true}, {name: topic:c}]`、送信した値が `[topic:a, topic:b]`'
+        mock: なし
+        expected: '`set.tags` が `[{name: topic:a, main: true}, {name: topic:b}]`'
+      - name: test_to_operations_when_unmappable
+        case: 異常
+        summary: 戻せない列
+        condition: '`skill: skill.path` の列を変える `update`'
+        mock: なし
+        expected: '`EditsRejectedError`（400）で、`errors[]` にその変更の `key`'
+        exception: 戻せない列
+  - name: commit_edits
+    title: 編集中の変更の直コミット
+    kind: 関数
+    container: features/metadata/commits.py
+    usecase: 画面で編集中の変更をまとめて直コミットする
+    role: サービス
+    summary: 変更を検証・変換して書き込みの API へ 1 回送信し、結果か変更ごとの理由を返却する
+    scope: public
+    is_async: true
+    thread_safe: true
+    args:
+      - name: client
+        title: project-indexの呼び出し
+        type: ProjectIndexClient
+        required: true
+        passing: positional
+        description: 問い合わせ・送信する
+      - name: source_id
+        type: str
+        required: true
+        passing: positional
+        description: 配信元の ID
+      - name: request
+        type: CommitRequest
+        required: true
+        passing: positional
+        description: 検証済みの本文
+    returns:
+      type: CommitResult
+      description: IF-155-29 の 200 の応答
+    process: |-
+      1. 変更ごとの列が `EDITABLE_COLUMNS` にあるかを確認し、無ければ `EditsRejectedError`（400）を送出する
+      2. project-indexの呼び出し.配信元の設定の取得で `metadata` を取得し、`{キー}[].{項目}` の列を変える `update` の文書を文書の取得で取得する（バージョンが `expected_version` と違えば `EditsRejectedError`（409、`current`））
+      3. 書き込みと削除への変換をし、project-indexの呼び出し.直コミットの書き込みを呼ぶ
+      4. 200 は `results[]` の `kind`・`index` を変更の `key` に戻して `CommitResult` を返却する
+      5. 403・404・409・422 は `errors[]` と `kinds`・`current` を変更の `key` へ戻した `EditsRejectedError` を送出する。500・502 は 502、504 と待ちの上限の打ち切りは 504 にする
+      6. 送信ごとに、配信元の ID・`dryRun`・変更の件数・状態コード・コミットの SHA（打ち切ったときはその旨）を 1 行のログに出力する
+    unit_tests:
+      - name: test_commit_edits
+        case: 正常
+        summary: 変更ごとの結果に戻す
+        condition: 3 件の変更と、200 を返却する偽物
+        mock: project-indexの呼び出し（偽物）
+        expected: '`results[].key` が変更の `key`、`commit.sha` が偽物の値、ログが 1 行'
+      - name: test_commit_edits_when_validation_failed
+        case: 異常
+        summary: 422 の違反を変更へ戻す
+        condition: 偽物が `writes[1]` の違反を持つ 422 を返却する
+        mock: project-indexの呼び出し（偽物）
+        expected: '`EditsRejectedError`（422）で、`errors[0].key` が 2 件目の変更'
+        exception: 検査に合格しない
+      - name: test_commit_edits_when_not_permitted
+        case: 異常
+        summary: 403 の種類を変更へ戻す
+        condition: '偽物が `kinds: [note]` の 403 を返却する'
+        mock: project-indexの呼び出し（偽物）
+        expected: '`EditsRejectedError`（403）で、`note` の文書の変更の `key` と `nextSteps`'
+        exception: 直コミットを許可していない
+      - name: test_commit_edits_when_timed_out
+        case: 異常
+        summary: 待ちの上限
+        condition: 偽物が `ProjectIndexTimeoutError` を送出する
+        mock: project-indexの呼び出し（偽物）
+        expected: '`EditsRejectedError`（504）で `detail` にコミットされたかが分からないこと'
+        exception: 待ちの上限
+    exceptions:
+      - name: EditsRejectedError
+        condition: 本文の検証・文書のバージョンの食い違い・project-index の 4xx・5xx・待ちの上限
+        message: IF-155-29 の状態コードごとの `title`・`detail`
+      - name: ProjectIndexUnreachableError
+        condition: project-index につながらない
+        message: '`project-index（{address}）に接続できませんでした。{reason}`'
+refs:
+  - to: IF-155-29
+    type: requires
+    when: 変換と状態コードの戻し方を変えるときに、直コミットの入出力と突き合わせる。
+tags:
+  - name: topic:直コミット
+  - name: topic:メタデータ
+  - name: action:送信
+  - name: tool:project-index
