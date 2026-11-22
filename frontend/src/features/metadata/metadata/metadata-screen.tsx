@@ -188,13 +188,13 @@ const KindTable = ({ kind, query, edits, source, onEdit }: KindTableProps) => {
       .map((edit) => edit.rowId),
   );
   return (
-    <div className="flex flex-col gap-2">
+    <div className="flex min-w-0 flex-col gap-2">
       {!kind.editable && (
         <p className="text-xs text-muted-foreground">
           この種類は直コミットを許可していないため、参照だけです。
         </p>
       )}
-      <div className="overflow-x-auto rounded-md border">
+      <div className="w-full overflow-x-auto rounded-md border">
         <Table>
           <TableHeader>
             <TableRow>
@@ -484,7 +484,10 @@ export const MetadataScreen = ({
         onColorSchemeToggle={() => undefined}
         onPendingPanelToggle={() => setPanelOpen((open) => !open)}
       />
-      <main id="main" className="mx-auto flex max-w-6xl flex-col gap-4 p-4">
+      <main
+        id="main"
+        className="mx-auto flex max-w-6xl min-w-0 flex-col gap-4 p-4"
+      >
         <h1 className="text-2xl font-semibold">{source} のメタデータ</h1>
         <div className="flex max-w-sm flex-col gap-1.5">
           <Label htmlFor="metadata-filter">表を絞り込む</Label>
@@ -497,10 +500,17 @@ export const MetadataScreen = ({
           />
         </div>
         {metadata.data !== undefined && (
-          <Tabs defaultValue={metadata.data.kinds[0]?.id}>
-            <TabsList className="flex-wrap">
+          <Tabs
+            defaultValue={metadata.data.kinds[0]?.id}
+            className="min-w-0 flex-col"
+          >
+            <TabsList className="h-auto w-full flex-wrap justify-start">
               {metadata.data.kinds.map((kind) => (
-                <TabsTrigger key={kind.id} value={kind.id}>
+                <TabsTrigger
+                  key={kind.id}
+                  value={kind.id}
+                  className="h-7 flex-none"
+                >
                   {kind.title}
                   <span className="ml-1 text-xs text-muted-foreground">
                     {kind.served ? kind.rows.length : "-"}
@@ -509,7 +519,7 @@ export const MetadataScreen = ({
               ))}
             </TabsList>
             {metadata.data.kinds.map((kind) => (
-              <TabsContent key={kind.id} value={kind.id}>
+              <TabsContent key={kind.id} value={kind.id} className="min-w-0">
                 <KindTable
                   kind={kind}
                   query={query}

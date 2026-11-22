@@ -211,6 +211,7 @@ const MetadataButtons = ({
       <Button
         variant="ghost"
         size="sm"
+        className="px-1.5 md:px-2.5"
         aria-label="メタデータ"
         aria-current={screen === "metadata" ? "page" : undefined}
         render={
@@ -227,6 +228,7 @@ const MetadataButtons = ({
       <Button
         variant="ghost"
         size="sm"
+        className="px-1.5 md:px-2.5"
         aria-label={`溜めた修正 ${pendingEditCount} 件`}
         onClick={onPendingPanelToggle}
       >
