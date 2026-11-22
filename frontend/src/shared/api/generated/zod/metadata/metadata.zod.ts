@@ -59,7 +59,6 @@ export const MetadataPostCommitsBody = zod.object({
   "op": zod.enum(['update', 'add', 'delete']),
   "docId": zod.string(),
   "docKind": zod.string(),
-  "docPath": zod.union([zod.string(),zod.null()]).optional(),
   "expectedVersion": zod.union([zod.string(),zod.null()]).optional(),
   "values": zod.record(zod.string(), zod.union([zod.string(),zod.array(zod.string())])).optional()
 }).describe('編集中の変更 1 件。')).min(1),
