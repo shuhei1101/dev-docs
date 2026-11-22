@@ -13,7 +13,7 @@ from pydantic import Field, model_validator
 from dev_docs.features.metadata.metadata import key_mapping
 from dev_docs.integrations.project_index.client import ProjectIndexClient
 from dev_docs.shared.api_model import ApiModel
-from dev_docs.shared.errors import DevDocsError, DocumentNotFoundError, ProjectIndexTimeoutError
+from dev_docs.shared.errors import DevDocsError, ProjectIndexTimeoutError
 
 __all__ = [
     "EDITABLE_COLUMNS",
@@ -64,8 +64,6 @@ class Edit(ApiModel):
     doc_id: str
     # 列と文書のキーの対応を参照する種類と、403 の `kinds` を変更へ戻すのに使用する
     doc_kind: str
-    # `{キー}[].{項目}` の列を変える `update` で必須（文書の取得で今の配列を取得する）
-    doc_path: str | None = None
     # `update`・`delete` で必須（取得した文書のバージョン）
     expected_version: str | None = None
     values: dict[str, str | list[str]] = Field(default_factory=dict)
@@ -161,44 +159,27 @@ class EditsRejectedError(DevDocsError):
         }
 
 
-def _mapped_values(
-    edit: Edit,
-    metadata: Mapping[str, str] | None,
-    current: Mapping[str, object],
-) -> dict[str, Any]:
-    """変更の値を、文書の実際のキーと値に戻す。"""
-    result: dict[str, Any] = {}
-    for column, value in edit.values.items():
-        mapping = key_mapping(metadata, column)
+def _checked_values(edit: Edit, metadata: Mapping[str, str] | None) -> dict[str, Any]:
+    """元のキーへ戻せる列かを確認し、列のキーと値をそのまま返却する。
+
+    文書の実際のキーへは、project-index の書き込みの API が配信元の設定の行の `metadata` で戻す。
+    """
+    for column in edit.values:
         # 入れ子のパス・絞り込み: 戻せない
-        if mapping is None:
+        if key_mapping(metadata, column) is None:
             raise EditsRejectedError(
                 message="元のキーへ戻せない列を修正しています",
                 status_code=HTTP_BAD_REQUEST,
                 errors=[EditError(key=edit.key, path=column, reason="この列は修正できません")],
             )
-        # 最上位のキー: 値をそのまま
-        if mapping.item is None:
-            result[mapping.key] = value
-            continue
-        # オブジェクトの配列の項目: 残る要素はオブジェクトのまま並び順を保ち、追加した値を末尾に追加する
-        sent = value if isinstance(value, list) else [value]
-        items = current.get(mapping.key)
-        existing = [
-            item for item in (items if isinstance(items, list) else []) if isinstance(item, Mapping)
-        ]
-        kept = [dict(item) for item in existing if item.get(mapping.item) in sent]
-        names = {item.get(mapping.item) for item in kept}
-        result[mapping.key] = kept + [{mapping.item: name} for name in sent if name not in names]
-    return result
+    return dict(edit.values)
 
 
 def to_operations(
     edits: list[Edit],
     mappings: Mapping[str, Mapping[str, str]],
-    current_values: Mapping[str, Mapping[str, object]],
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]], list[tuple[OperationKind, int, str]]]:
-    """編集中の変更を、文書の実際のキーへ戻した `writes`・`deletes` と、添字と変更の `key` の対応にする。"""
+    """編集中の変更を、共通のキーのままの `writes`・`deletes` と、添字と変更の `key` の対応にする。"""
     writes: list[dict[str, Any]] = []
     deletes: list[dict[str, Any]] = []
     indexes: list[tuple[OperationKind, int, str]] = []
@@ -207,9 +188,7 @@ def to_operations(
             indexes.append(("delete", len(deletes), edit.key))
             deletes.append({"id": edit.doc_id, "expectedVersion": edit.expected_version})
             continue
-        values = _mapped_values(
-            edit, mappings.get(edit.doc_kind), current_values.get(edit.doc_id) or {}
-        )
+        values = _checked_values(edit, mappings.get(edit.doc_kind))
         indexes.append(("write", len(writes), edit.key))
         if edit.op == "update":
             writes.append(
@@ -239,56 +218,6 @@ def _check_columns(edits: list[Edit]) -> None:
         raise EditsRejectedError(
             message="修正できない列があります", status_code=HTTP_BAD_REQUEST, errors=errors
         )
-
-
-def _needs_current(edit: Edit, metadata: Mapping[str, str] | None) -> bool:
-    """`{キー}[].{項目}` の列を変える `update` か。"""
-    if edit.op != "update":
-        return False
-    for column in edit.values:
-        mapping = key_mapping(metadata, column)
-        if mapping is not None and mapping.item is not None:
-            return True
-    return False
-
-
-async def _current_values(
-    client: ProjectIndexClient,
-    source_id: str,
-    edits: list[Edit],
-    mappings: Mapping[str, Mapping[str, str]],
-) -> dict[str, Mapping[str, object]]:
-    """配列の項目を変える文書だけを文書の取得で取得し、今の値を返却する。
-
-    取得した後に文書が変わっていれば、`update` の `expected_version` の照合で project-index が 409 を返却する。
-    """
-    result: dict[str, Mapping[str, object]] = {}
-    for edit in edits:
-        if not _needs_current(edit, mappings.get(edit.doc_kind)):
-            continue
-        # 今の配列を取得する文書のパスが無い
-        if not edit.doc_path:
-            raise EditsRejectedError(
-                message="配列の項目を修正する変更に docPath がありません",
-                status_code=HTTP_BAD_REQUEST,
-                errors=[EditError(key=edit.key, path="docPath", reason="docPath がありません")],
-            )
-        try:
-            detail = await client.document(source_id, edit.doc_path, document_id=edit.doc_id)
-        except DocumentNotFoundError as error:
-            raise EditsRejectedError(
-                message="修正する文書がありません",
-                status_code=HTTP_NOT_FOUND,
-                errors=[EditError(key=edit.key, reason="文書がありません")],
-            ) from error
-        if detail.document is None:
-            raise EditsRejectedError(
-                message="修正する文書を読み込めません",
-                status_code=HTTP_NOT_FOUND,
-                errors=[EditError(key=edit.key, reason="文書を読み込めません")],
-            )
-        result[edit.doc_id] = detail.document.data
-    return result
 
 
 def _key_of(
@@ -383,7 +312,7 @@ async def commit_edits(
     """変更を検証・変換して書き込みの API へ 1 回送信し、結果か変更ごとの理由を返却する。"""
     # 1. 種類ごとに修正できる列だけか
     _check_columns(request.edits)
-    # 2. 列と文書のキーの対応と、配列の項目を変える文書の今の値
+    # 2. 列と文書のキーの対応（元のキーへ戻せる列かの確認に使用する）
     config = await client.source_config(source_id)
     mappings = {
         str(row.get("id")): {
@@ -391,9 +320,8 @@ async def commit_edits(
         }
         for row in config.value.get("documents") or []
     }
-    current = await _current_values(client, source_id, request.edits, mappings)
     # 3. 書き込みと削除にして送信する
-    writes, deletes, indexes = to_operations(request.edits, mappings, current)
+    writes, deletes, indexes = to_operations(request.edits, mappings)
     # project-index の書き込みの API は説明を必須にしているため、差分確認は固定の説明を送信する
     body: dict[str, Any] = {
         "writes": writes,

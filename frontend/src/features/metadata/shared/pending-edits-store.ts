@@ -12,8 +12,6 @@ export type PendingEdit = {
   docId: string;
   /** `update`・`delete` は行の `docKind`、`add` は種類の `createKind` */
   docKind: string;
-  /** 行の `docPath`（配列の項目を変える `update` で、直コミットが今の値を取得する） */
-  docPath: string | null;
   expectedVersion: string | null;
   values: Record<string, string | string[]>;
   /** 変更前の値（パネルの `{変更前} → {変更後}`） */
@@ -83,7 +81,7 @@ const EMPTY: PendingEdit[] = [];
 export const usePendingEdits = (source: string): PendingEdit[] =>
   usePendingEditsStore((state) => state.bySource[source] ?? EMPTY);
 
-/** 編集中の変更を直コミットの `edits` にする（`before`・`label` を除き、`docPath` は `update`、`expectedVersion` は `add` 以外だけ） */
+/** 編集中の変更を直コミットの `edits` にする（`before`・`label` と、`add` の `expectedVersion` を除く） */
 export const toCommitEdits = (edits: PendingEdit[]): Edit[] =>
   edits.map((edit) => {
     const base = {
@@ -94,7 +92,5 @@ export const toCommitEdits = (edits: PendingEdit[]): Edit[] =>
       docKind: edit.docKind,
       values: edit.values,
     };
-    if (edit.op === "add") return base;
-    if (edit.op === "delete") return { ...base, expectedVersion: edit.expectedVersion };
-    return { ...base, docPath: edit.docPath, expectedVersion: edit.expectedVersion };
+    return edit.op === "add" ? base : { ...base, expectedVersion: edit.expectedVersion };
   });
