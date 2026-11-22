@@ -69,7 +69,7 @@ def test_to_operations() -> None:
     # 準備
     edits = _edits()
     # 実行
-    writes, deletes, indexes = to_operations(edits, {}, {})
+    writes, deletes, indexes = to_operations(edits, {})
     # 検証
     assert writes == [
         {
@@ -94,7 +94,7 @@ def test_to_operations() -> None:
 
 
 def test_to_operations_when_mapped_tags() -> None:
-    """オブジェクトの配列のほかの項目を保つ（正常系）。"""
+    """対応づけた配列の項目の列は名前の配列のまま入れる（正常系）。"""
     # 準備
     edit = Edit(
         key="tags:n1:update",
@@ -106,11 +106,10 @@ def test_to_operations_when_mapped_tags() -> None:
         values={"tags": ["topic:a", "topic:b"]},
     )
     mappings = {"note": {"tags": "tags[].name"}}
-    current = {"n1": {"tags": [{"name": "topic:a", "main": True}, {"name": "topic:c"}]}}
     # 実行
-    writes, _, _ = to_operations([edit], mappings, current)
+    writes, _, _ = to_operations([edit], mappings)
     # 検証
-    assert writes[0]["set"] == {"tags": [{"name": "topic:a", "main": True}, {"name": "topic:b"}]}
+    assert writes[0]["set"] == {"tags": ["topic:a", "topic:b"]}
 
 
 def test_to_operations_when_unmappable() -> None:
@@ -128,14 +127,14 @@ def test_to_operations_when_unmappable() -> None:
     mappings = {"skill": {"name": "skill.path"}}
     # 実行
     with pytest.raises(EditsRejectedError) as caught:
-        to_operations([edit], mappings, {})
+        to_operations([edit], mappings)
     # 検証
     assert caught.value.status_code == 400
     assert [error.key for error in caught.value.errors] == ["aliases:s1:update"]
 
 
 def test_to_operations_when_mapped_name() -> None:
-    """対応づけた最上位のキーへ戻す（正常系）。"""
+    """対応づけた最上位のキーの列も共通のキーのまま入れる（正常系）。"""
     # 準備
     edit = Edit(
         key="aliases:s1:update",
@@ -148,9 +147,9 @@ def test_to_operations_when_mapped_name() -> None:
     )
     mappings = {"skill": {"name": "title"}}
     # 実行
-    writes, _, _ = to_operations([edit], mappings, {})
+    writes, _, _ = to_operations([edit], mappings)
     # 検証
-    assert writes[0]["set"] == {"title": "スキル"}
+    assert writes[0]["set"] == {"name": "スキル"}
 
 
 def test_commit_edits(
@@ -304,7 +303,7 @@ def test_commit_edits_when_dry_run(
 def test_commit_edits_when_mapped_tags(
     fake_index: FakeIndex, make_client: Callable[..., ProjectIndexClient]
 ) -> None:
-    """対象の文書だけを取得する（正常系）。"""
+    """対応づけた配列の項目の列でも文書を取得しない（正常系）。"""
     # 準備
     note_row = {
         "id": "note",
@@ -334,7 +333,6 @@ def test_commit_edits_when_mapped_tags(
         op="update",
         doc_id="n1",
         doc_kind="note",
-        doc_path="notes/n1.yaml",
         expected_version="c3d4e5",
         values={"tags": ["topic:a", "topic:b"]},
     )
@@ -344,12 +342,10 @@ def test_commit_edits_when_mapped_tags(
     paths = [
         (item.method, item.url.path, item.url.params.get("id")) for item in fake_index.requests
     ]
-    assert ("GET", "/sources/sample/docs/notes/n1.yaml", "n1") in paths
+    assert ("GET", "/sources/sample/docs/notes/n1.yaml", "n1") not in paths
     assert ("GET", "/sources/sample/docs", None) not in paths
     sent = json.loads(next(item for item in fake_index.requests if item.method == "POST").content)
-    assert sent["writes"][0]["set"] == {
-        "tags": [{"name": "topic:a", "main": True}, {"name": "topic:b"}]
-    }
+    assert sent["writes"][0]["set"] == {"tags": ["topic:a", "topic:b"]}
 
 
 def test_commit_edits_when_version_mismatch(

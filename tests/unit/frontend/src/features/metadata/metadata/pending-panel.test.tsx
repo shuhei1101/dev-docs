@@ -16,7 +16,6 @@ const edit = (docId: string): PendingEdit => ({
   op: "update",
   docId,
   docKind: "note",
-  docPath: null,
   expectedVersion: `v-${docId}`,
   values: { tags: ["topic:b"] },
   before: { tags: ["topic:a"] },

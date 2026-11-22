@@ -12,7 +12,6 @@ const edit = (overrides: Partial<PendingEdit> = {}): PendingEdit => ({
   op: "update",
   docId: "n1",
   docKind: "note",
-  docPath: "notes/n1.yaml",
   expectedVersion: "c3d4e5",
   values: { tags: ["topic:a", "topic:b"] },
   before: { tags: ["topic:a"] },
@@ -27,14 +26,14 @@ beforeEach(() => {
 test("test_to_commit_edits", () => {
   const edits = [
     edit(),
-    edit({ key: "terms:kind:add", kind: "terms", op: "add", docId: "kind", docKind: "terms", docPath: null, expectedVersion: null, values: { name: "種類" }, before: {} }),
-    edit({ key: "terms:old:delete", kind: "terms", op: "delete", docId: "old", docKind: "terms", docPath: "glossary.yaml", expectedVersion: "b2", values: {} }),
+    edit({ key: "terms:kind:add", kind: "terms", op: "add", docId: "kind", docKind: "terms", expectedVersion: null, values: { name: "種類" }, before: {} }),
+    edit({ key: "terms:old:delete", kind: "terms", op: "delete", docId: "old", docKind: "terms", expectedVersion: "b2", values: {} }),
   ];
 
   const result = toCommitEdits(edits);
 
   expect(result).toEqual([
-    { key: "tags:n1:update", kind: "tags", op: "update", docId: "n1", docKind: "note", docPath: "notes/n1.yaml", expectedVersion: "c3d4e5", values: { tags: ["topic:a", "topic:b"] } },
+    { key: "tags:n1:update", kind: "tags", op: "update", docId: "n1", docKind: "note", expectedVersion: "c3d4e5", values: { tags: ["topic:a", "topic:b"] } },
     { key: "terms:kind:add", kind: "terms", op: "add", docId: "kind", docKind: "terms", values: { name: "種類" } },
     { key: "terms:old:delete", kind: "terms", op: "delete", docId: "old", docKind: "terms", expectedVersion: "b2", values: {} },
   ]);

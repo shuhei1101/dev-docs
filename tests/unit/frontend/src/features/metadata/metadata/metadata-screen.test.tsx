@@ -50,7 +50,6 @@ test("test_metadata_screen_when_locate", async () => {
           op: "update",
           docId: "n1",
           docKind: "note",
-          docPath: null,
           expectedVersion: "v-n1",
           values: { tags: ["topic:b"] },
           before: { tags: ["topic:a"] },
