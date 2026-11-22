@@ -1,0 +1,54 @@
+id: MOD-155-223
+title: 画面 / メタデータの画面 / metadata-table.tsx
+lead: メタデータの種類 1 つ分の表（行の中の編集・追加・削除）を受け持ち、メタデータの画面の metadata-table.tsx を修正するときに参照する。
+components:
+  - name: MetadataTable
+    title: 種類の表
+    kind: コンポーネント
+    container: features/metadata/metadata/metadata-table.tsx
+    usecase: メタデータを画面で参照する
+    role: 部品
+    summary: 種類の行を、絞り込みと編集中の変更を重ねて表にする
+    props:
+      - name: source
+        type: string
+        required: true
+        description: 配信元の ID
+      - name: kind
+        type: MetadataKind
+        required: true
+        description: メタデータの取得の種類
+      - name: query
+        type: string
+        required: true
+        description: 絞り込みの入力
+    description: 行の値は、行と列の `editable` が両方真のときだけボタンにし、押すとその場の入力欄（`ref` でフォーカス）にする。Enter かフォーカスを外すと編集中の変更のストアに `update` を追加し、Esc で捨てる。`list` の列は行の値も追加の行も `, ` で区切って配列にする。追加の行は ID と列の入力欄を持ち、入力チェック（空・英小文字・数字・ハイフン・重複）を通して `add` を追加する。行の要素の id は `metadata-row-{kind}-{id}`（編集中のパネルから移動する先）。絞り込みは NFKC と小文字化してどれかの列に含む行を残す
+    unit_tests:
+      - name: test_metadata_table_when_edited
+        case: 正常
+        summary: 行の値を編集する
+        condition: タグの列を押して `topic:a, topic:b` を入力し Enter
+        mock: なし
+        expected: ストアに `values.tags` が `[topic:a, topic:b]` の `update` が 1 件
+      - name: test_metadata_table_when_readonly
+        case: 正常
+        summary: 修正できない列
+        condition: 列の `editable` が `false`
+        mock: なし
+        expected: 値がボタンでない
+      - name: test_metadata_table_when_add_duplicate
+        case: 異常
+        summary: 重なる ID
+        condition: 既にある行の ID で追加する
+        mock: なし
+        expected: '`この ID は使用されています。別の ID を入力してください` が出て、ストアに追加されない'
+        exception: 入力チェック
+refs:
+  - to: SCR-155-4
+    type: requires
+    when: 表の要素と振る舞いを変えるときに、メタデータの画面の要素と突き合わせる。
+tags:
+  - name: topic:メタデータ
+  - name: topic:画面
+  - name: topic:表
+  - name: action:編集

@@ -1,0 +1,64 @@
+id: MOD-155-225
+title: 画面 / メタデータの画面 / metadata-screen.tsx
+lead: メタデータの画面を受け持ち、メタデータの画面の metadata-screen.tsx を修正するときに参照する。
+components:
+  - name: MetadataScreen
+    title: メタデータの画面
+    kind: 画面
+    container: features/metadata/metadata/metadata-screen.tsx
+    usecase: メタデータを画面で参照する
+    role: 画面
+    summary: メタデータの取得を `useQuery` で参照し、トップバー・絞り込み・種類のタブ・種類の表・編集中のパネルを並べる
+    props:
+      - name: source
+        type: string
+        required: true
+        description: URL の配信元の ID
+    state:
+      - name: query
+        type: string
+        initial: '""'
+        description: 絞り込み
+        notes: '`useState`'
+      - name: panelOpen
+        type: boolean
+        initial: URL の `panel` が `edits`
+        description: 編集中のパネル
+        notes: URL の検索条件（文書の画面から開いてパネルを開くため）
+    description: 種類のタブは URL の `tab` に保つ。読み込み中の表示は取得の待ちが 1 秒を超えたときだけ出す。取得が 404 なら見つからない画面、503 なら project-index から受け取れないときの表示（文書の画面と同じ部品）、それ以外の失敗は取得の失敗の表示を出す。変更の行へ移動は、タブを切り替え、絞り込みを空にし、描いた後に `metadata-row-{kind}-{id}` へスクロールしてフォーカスする。ページのタイトルは `メタデータ | {source} | dev-docs`
+    unit_tests:
+      - name: test_metadata_screen
+        case: 正常
+        summary: 種類のタブと表
+        condition: 6 種類のメタデータ
+        mock: MSW のメタデータの取得のハンドラ
+        expected: タブが 6 つ、用語集の表が出る
+      - name: test_metadata_screen_when_locate
+        case: 正常
+        summary: 変更の行へ移動する
+        condition: タグの変更を持ち、用語集のタブでパネルの変更の行へ移動を押す
+        mock: MSW のハンドラ
+        expected: タグのタブが選ばれ、その行にフォーカスがある
+      - name: test_metadata_screen_when_not_found
+        case: 異常
+        summary: 配信元が無い
+        condition: メタデータの取得が 404
+        mock: MSW のハンドラ（404）
+        expected: 見つからない画面が出て、URL が変わらない
+        exception: 配信元が無い
+      - name: test_metadata_screen_when_unreachable
+        case: 異常
+        summary: project-index につながらない
+        condition: メタデータの取得が 503
+        mock: MSW のハンドラ（503）
+        expected: 接続先と理由と `再読み込み`
+        exception: project-index につながらない
+refs:
+  - to: SCR-155-4
+    type: requires
+    when: メタデータの画面の構成を変えるときに、画面の要素と振る舞いと突き合わせる。
+notes:
+  補足: 要素と振る舞いは画面設計『メタデータの画面』が持つ。
+tags:
+  - name: topic:メタデータ
+  - name: topic:画面
