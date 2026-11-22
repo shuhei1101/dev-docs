@@ -44,6 +44,7 @@ import {
   TabsTrigger,
 } from "@/shared/components/ui/tabs";
 import { Textarea } from "@/shared/components/ui/textarea";
+import { useMediaQuery } from "@/shared/hooks/use-media-query";
 
 export type MetadataColumn = { key: string; label: string };
 
@@ -284,6 +285,7 @@ type PendingPanelProps = {
 /** 溜めた修正の一覧と、試しに書いた差分・送信の結果 */
 const PendingPanel = (props: PendingPanelProps) => {
   const { edits, result } = props;
+  const narrow = useMediaQuery("(max-width: 47.99rem)");
   const problems =
     result.status === "rejected"
       ? new Map(result.problems.map((p) => [p.key, p.message]))
@@ -294,7 +296,14 @@ const PendingPanel = (props: PendingPanelProps) => {
       : new Map<string, string>();
   return (
     <Sheet open={props.open} onOpenChange={props.onOpenChange}>
-      <SheetContent className="w-full overflow-y-auto sm:max-w-md">
+      <SheetContent
+        side={narrow ? "bottom" : "right"}
+        className={
+          narrow
+            ? "max-h-2/3 w-full overflow-y-auto"
+            : "w-full overflow-y-auto sm:max-w-md"
+        }
+      >
         <SheetHeader>
           <SheetTitle>溜めた修正</SheetTitle>
           <SheetDescription>
