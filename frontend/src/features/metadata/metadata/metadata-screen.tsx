@@ -1,805 +1,158 @@
-import {
-  type UseQueryResult,
-  useMutation,
-  useQuery,
-} from "@tanstack/react-query";
-import { Link } from "@tanstack/react-router";
-import { ExternalLink, Info, Plus, Trash2, Undo2 } from "lucide-react";
-import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { useNavigate, useSearch } from "@tanstack/react-router";
+import { CircleAlert } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 
+import { NotFoundScreen } from "@/features/docs/not-found/not-found-screen";
+import { servingSources } from "@/features/docs/shared/serving-sources";
+import { MetadataTable, rowElementId } from "@/features/metadata/metadata/metadata-table";
+import { PendingPanel } from "@/features/metadata/metadata/pending-panel";
+import { type PendingEdit, usePendingEdits } from "@/features/metadata/shared/pending-edits-store";
+import { getMetadataGetMetadataQueryOptions } from "@/shared/api/generated/metadata/metadata";
+import type { MetadataResponse } from "@/shared/api/generated/model";
+import { useSettingsGetSettingsSources } from "@/shared/api/generated/settings/settings";
 import {
   ProjectIndexUnreachableAlert,
   toProjectIndexUnreachable,
 } from "@/shared/components/project-index-unreachable";
 import { SkipLink } from "@/shared/components/skip-link";
 import { Topbar } from "@/shared/components/topbar/topbar";
-import {
-  Alert,
-  AlertDescription,
-  AlertTitle,
-} from "@/shared/components/ui/alert";
-import { Badge } from "@/shared/components/ui/badge";
+import { Alert, AlertDescription, AlertTitle } from "@/shared/components/ui/alert";
 import { Button } from "@/shared/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/shared/components/ui/dialog";
 import { Input } from "@/shared/components/ui/input";
-import { Skeleton } from "@/shared/components/ui/skeleton";
 import { Label } from "@/shared/components/ui/label";
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from "@/shared/components/ui/sheet";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/shared/components/ui/table";
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@/shared/components/ui/tabs";
-import { Textarea } from "@/shared/components/ui/textarea";
+import { Skeleton } from "@/shared/components/ui/skeleton";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/components/ui/tabs";
 import { AppError } from "@/shared/core/app-error";
-import { useMediaQuery } from "@/shared/hooks/use-media-query";
+import { useDelayedFlag } from "@/shared/hooks/use-delayed-flag";
+import { usePreferencesStore } from "@/shared/stores/preferences";
+
+const LOADING_DELAY_MS = 1000;
+const NOT_FOUND = 404;
+const NEXT_SCHEME = { system: "dark", dark: "light", light: "dark" } as const;
+
+type MetadataSearch = { tab?: string; panel?: "edits" };
 
 /** メタデータの取得を待つ間の読み込み中の表示 */
 const MetadataSkeleton = () => (
-  <div
-    aria-busy="true"
-    aria-label="メタデータを読み込んでいます"
-    className="space-y-3"
-  >
+  <div aria-busy="true" aria-label="メタデータを読み込んでいます" className="space-y-3">
     <Skeleton className="h-8 w-2/3" />
     <Skeleton className="h-48 w-full" />
   </div>
 );
 
-export type MetadataColumn = { key: string; label: string };
-
-export type MetadataRow = {
-  id: string;
-  /** 行が指す文書のパス（文書の画面で開く） */
-  docPath?: string;
-  version: string;
-  values: Record<string, string>;
+/** project-index から受け取れないとき以外の取得の失敗 */
+const FetchFailed = ({ error, onReload }: { error: unknown; onReload: () => void }) => {
+  const detail =
+    error instanceof AppError ? (error.problem?.detail ?? `HTTP ${error.status}`) : String(error);
+  return (
+    <Alert variant="destructive">
+      <CircleAlert aria-hidden="true" />
+      <AlertTitle>メタデータを取得できませんでした</AlertTitle>
+      <AlertDescription className="space-y-3">
+        <p>{detail}</p>
+        <Button variant="outline" size="sm" onClick={onReload}>
+          再読み込み
+        </Button>
+      </AlertDescription>
+    </Alert>
+  );
 };
 
-export type MetadataKind = {
-  id: string;
-  title: string;
-  served: boolean;
-  editable: boolean;
-  /** 配信していないときに案内する、配信元の設定に加える行 */
-  hint?: string;
-  columns: MetadataColumn[];
-  rows: MetadataRow[];
-};
-
-export type MetadataResponse = {
+type KindTabsProps = {
   source: string;
-  branch: string;
-  kinds: MetadataKind[];
-};
-
-export type PendingEdit = {
-  key: string;
-  kind: string;
-  rowId: string;
-  /** 修正した列のキー（行の値の修正だけが持つ） */
-  column?: string;
-  op: "update" | "add" | "delete";
-  label: string;
-  before?: string;
-  after?: string;
-};
-
-export type EditProblem = { key: string; message: string };
-
-type SendResult =
-  | { status: "idle" }
-  | { status: "dry-run"; diffs: { key: string; diff: string }[] }
-  | { status: "committed"; sha: string; branch: string }
-  | { status: "rejected"; title: string; problems: EditProblem[] }
-  | { status: "failed"; title: string; detail: string };
-
-type ProblemBody = {
-  title?: string;
-  detail?: string;
-  errors?: EditProblem[];
-};
-
-const fetchMetadata = async (source: string): Promise<MetadataResponse> => {
-  const response = await fetch(`/_api/sources/${source}/metadata`);
-  if (!response.ok) throw await AppError.fromResponse(response);
-  return (await response.json()) as MetadataResponse;
-};
-
-const postCommits = async (args: {
-  source: string;
-  edits: PendingEdit[];
-  message: string;
-  dryRun: boolean;
-}): Promise<SendResult> => {
-  const response = await fetch(`/_api/sources/${args.source}/commits`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      edits: args.edits,
-      message: args.message,
-      dryRun: args.dryRun,
-    }),
-  });
-  const body = (await response.json()) as ProblemBody & {
-    diffs?: { key: string; diff: string }[];
-    commit?: { sha: string; branch: string };
-  };
-  if (response.ok) {
-    return args.dryRun
-      ? { status: "dry-run", diffs: body.diffs ?? [] }
-      : {
-          status: "committed",
-          sha: body.commit?.sha ?? "",
-          branch: body.commit?.branch ?? "",
-        };
-  }
-  if (body.errors !== undefined) {
-    return {
-      status: "rejected",
-      title: body.title ?? "送信できませんでした",
-      problems: body.errors,
-    };
-  }
-  return {
-    status: "failed",
-    title: body.title ?? "送信できませんでした",
-    detail: body.detail ?? "",
-  };
-};
-
-const OP_LABEL = { update: "変更", add: "追加", delete: "削除" } as const;
-
-type KindTableProps = {
-  kind: MetadataKind;
+  data: MetadataResponse;
+  tab: string;
   query: string;
-  edits: PendingEdit[];
-  source: string;
-  /** 開いたときに入力欄にしているセル（`{行の id}:{列のキー}`） */
-  initialEditing?: string;
-  onEdit: (edit: PendingEdit) => void;
+  onTabChange: (tab: string) => void;
 };
 
-const rowLabel = (kind: MetadataKind, row: MetadataRow): string =>
-  row.values[kind.columns[0]?.key ?? ""] ?? row.id;
-
-/** 表の行の要素の id。編集中のパネルから行へ移動するときに使用する */
-export const rowElementId = (kind: string, rowId: string): string =>
-  `metadata-row-${kind}-${rowId}`;
-
-type EditableCellProps = {
-  label: string;
-  value: string;
-  editing: boolean;
-  onStart: () => void;
-  onCommit: (value: string) => void;
-  onCancel: () => void;
-};
-
-/** 押すと行の中で入力欄になり、Enter か外へ移ると確定するセル */
-const EditableCell = (props: EditableCellProps) => {
-  if (!props.editing) {
-    return (
-      <button
-        type="button"
-        className="w-full rounded px-1 text-left hover:bg-muted"
-        aria-label={`${props.label} を編集`}
-        onClick={props.onStart}
-      >
-        {props.value === "" ? (
-          <span className="text-muted-foreground">-</span>
-        ) : (
-          props.value
-        )}
-      </button>
-    );
-  }
-  return (
-    <Input
-      ref={(element) => element?.focus()}
-      aria-label={props.label}
-      defaultValue={props.value}
-      className="h-7 font-mono text-xs"
-      onKeyDown={(event) => {
-        if (event.key === "Enter") props.onCommit(event.currentTarget.value);
-        if (event.key === "Escape") props.onCancel();
-      }}
-      onBlur={(event) => props.onCommit(event.currentTarget.value)}
-    />
-  );
-};
-
-type NewRowProps = {
-  kind: MetadataKind;
-  onAdd: (values: Record<string, string>) => void;
-  onCancel: () => void;
-};
-
-/** 「行追加」で表の末尾に出す入力用の行 */
-const NewRow = ({ kind, onAdd, onCancel }: NewRowProps) => {
-  const [values, setValues] = useState<Record<string, string>>({});
-  return (
-    <TableRow>
-      {kind.columns.map((column) => (
-        <TableCell key={column.key}>
-          <Input
-            aria-label={`追加する行の${column.label}`}
-            className="h-7 font-mono text-xs"
-            value={values[column.key] ?? ""}
-            onChange={(event) =>
-              setValues((current) => ({
-                ...current,
-                [column.key]: event.target.value,
-              }))
-            }
-          />
-        </TableCell>
+/** 種類のタブと、選んだ種類の表 */
+const KindTabs = ({ source, data, tab, query, onTabChange }: KindTabsProps) => (
+  <Tabs value={tab} onValueChange={(value) => onTabChange(String(value))} className="min-w-0 flex-col">
+    <TabsList className="h-auto w-full flex-wrap justify-start">
+      {data.kinds.map((kind) => (
+        <TabsTrigger key={kind.id} value={kind.id} className="h-7 flex-none">
+          {kind.title}
+          <span className="ml-1 text-xs text-muted-foreground">{kind.served ? kind.rows.length : "-"}</span>
+        </TabsTrigger>
       ))}
-      <TableCell className="flex items-center gap-1">
-        <Button size="sm" onClick={() => onAdd(values)}>
-          追加
-        </Button>
-        <Button variant="ghost" size="sm" onClick={onCancel}>
-          キャンセル
-        </Button>
-      </TableCell>
-    </TableRow>
-  );
-};
-
-/** 配信していない種類の案内 */
-const KindNotServed = ({ kind }: { kind: MetadataKind }) => (
-  <Alert>
-    <Info />
-    <AlertTitle>{kind.title}を配信していません</AlertTitle>
-    <AlertDescription>
-      <p>
-        配信元の設定（<code>project-index.yaml</code>
-        ）に次の行を追加すると、一覧に表示されます。
-      </p>
-      <pre className="mt-2 overflow-x-auto rounded bg-muted p-2 font-mono text-xs">
-        {kind.hint}
-      </pre>
-    </AlertDescription>
-  </Alert>
+    </TabsList>
+    {data.kinds.map((kind) => (
+      <TabsContent key={kind.id} value={kind.id} className="min-w-0">
+        <MetadataTable source={source} kind={kind} query={query} />
+      </TabsContent>
+    ))}
+  </Tabs>
 );
 
-/** 1 つの種類の表。直コミットを許可した種類だけ行の修正・追加・削除を出す */
-const KindTable = (props: KindTableProps) => {
-  const { kind, query, edits, source, onEdit } = props;
-  const [editing, setEditing] = useState<string | null>(
-    props.initialEditing ?? null,
-  );
-  const [adding, setAdding] = useState(false);
-  if (!kind.served) return <KindNotServed kind={kind} />;
-  const words = query.trim().toLowerCase();
-  const rows = kind.rows.filter(
-    (row) =>
-      words === "" ||
-      Object.values(row.values).some((value) =>
-        value.toLowerCase().includes(words),
-      ),
-  );
-  const pending = new Map(
-    edits
-      .filter((edit) => edit.kind === kind.id)
-      .map((edit) => [`${edit.rowId}:${edit.column ?? ""}`, edit]),
-  );
-  const deleted = new Set(
-    edits
-      .filter((edit) => edit.kind === kind.id && edit.op === "delete")
-      .map((edit) => edit.rowId),
-  );
-  const commitCell = (
-    row: MetadataRow,
-    column: MetadataColumn,
-    value: string,
-  ) => {
-    setEditing(null);
-    const before = row.values[column.key] ?? "";
-    if (value === before) return;
-    onEdit({
-      key: `${kind.id}:${row.id}:${column.key}:update`,
-      kind: kind.id,
-      rowId: row.id,
-      column: column.key,
-      op: "update",
-      label: `${kind.title}: ${rowLabel(kind, row)} の${column.label}`,
-      before,
-      after: value,
-    });
-  };
-  return (
-    <div className="flex min-w-0 flex-col gap-2">
-      {!kind.editable && (
-        <p className="text-xs text-muted-foreground">
-          この種類は直コミットを許可していないため、参照のみです。
-        </p>
-      )}
-      {kind.rows.length === 0 && !adding ? (
-        <p className="rounded-md border p-4 text-sm text-muted-foreground">
-          {kind.title}はありません。
-          {kind.editable && "「行追加」で追加できます。"}
-        </p>
-      ) : (
-        <div className="w-full overflow-x-auto rounded-md border">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                {kind.columns.map((column) => (
-                  <TableHead key={column.key}>{column.label}</TableHead>
-                ))}
-                <TableHead className="w-24">
-                  <span className="sr-only">操作</span>
-                </TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {rows.map((row) => (
-                <TableRow
-                  key={row.id}
-                  id={rowElementId(kind.id, row.id)}
-                  className={
-                    deleted.has(row.id) ? "line-through opacity-60" : ""
-                  }
-                >
-                  {kind.columns.map((column) => {
-                    const cell = `${row.id}:${column.key}`;
-                    const value =
-                      pending.get(cell)?.after ?? row.values[column.key] ?? "";
-                    return (
-                      <TableCell
-                        key={column.key}
-                        className={
-                          pending.has(cell)
-                            ? "bg-primary/10 font-mono text-xs"
-                            : "font-mono text-xs"
-                        }
-                      >
-                        {kind.editable && !deleted.has(row.id) ? (
-                          <EditableCell
-                            label={`${rowLabel(kind, row)} の${column.label}`}
-                            value={value}
-                            editing={editing === cell}
-                            onStart={() => setEditing(cell)}
-                            onCommit={(next) => commitCell(row, column, next)}
-                            onCancel={() => setEditing(null)}
-                          />
-                        ) : (
-                          value
-                        )}
-                      </TableCell>
-                    );
-                  })}
-                  <TableCell className="flex items-center gap-1">
-                    {row.docPath !== undefined && (
-                      <Button
-                        variant="ghost"
-                        size="icon-sm"
-                        aria-label={`${rowLabel(kind, row)} の文書を開く`}
-                        render={
-                          <Link
-                            to="/$source/$"
-                            params={{ source, _splat: row.docPath }}
-                          />
-                        }
-                        nativeButton={false}
-                      >
-                        <ExternalLink />
-                      </Button>
-                    )}
-                    {kind.editable && !deleted.has(row.id) && (
-                      <Button
-                        variant="ghost"
-                        size="icon-sm"
-                        aria-label={`${rowLabel(kind, row)} を削除`}
-                        onClick={() =>
-                          onEdit({
-                            key: `${kind.id}:${row.id}:delete`,
-                            kind: kind.id,
-                            rowId: row.id,
-                            op: "delete",
-                            label: `${kind.title}: ${rowLabel(kind, row)}`,
-                          })
-                        }
-                      >
-                        <Trash2 />
-                      </Button>
-                    )}
-                  </TableCell>
-                </TableRow>
-              ))}
-              {adding && (
-                <NewRow
-                  kind={kind}
-                  onCancel={() => setAdding(false)}
-                  onAdd={(values) => {
-                    setAdding(false);
-                    const rowId = `new-${Date.now()}`;
-                    onEdit({
-                      key: `${kind.id}:${rowId}:add`,
-                      kind: kind.id,
-                      rowId,
-                      op: "add",
-                      label: `${kind.title}: ${values[kind.columns[0]?.key ?? ""] ?? ""}`,
-                    });
-                  }}
-                />
-              )}
-            </TableBody>
-          </Table>
-        </div>
-      )}
-      {kind.editable && !adding && (
-        <Button
-          variant="outline"
-          size="sm"
-          className="self-start"
-          onClick={() => setAdding(true)}
-        >
-          <Plus />
-          行追加
-        </Button>
-      )}
-    </div>
-  );
-};
+type Props = { source: string };
 
-type PendingPanelProps = {
-  open: boolean;
-  source: string;
-  branch: string;
-  edits: PendingEdit[];
-  result: SendResult;
-  busy: boolean;
-  onOpenChange: (open: boolean) => void;
-  onDiscard: (key: string) => void;
-  onLocate: (edit: PendingEdit) => void;
-  onDryRun: () => void;
-  onSendStart: () => void;
-};
-
-/** 編集中の変更の一覧と、差分確認・コミットの結果 */
-const PendingPanel = (props: PendingPanelProps) => {
-  const { edits, result } = props;
-  const narrow = useMediaQuery("(max-width: 47.99rem)");
-  const problems =
-    result.status === "rejected"
-      ? new Map(result.problems.map((p) => [p.key, p.message]))
-      : new Map<string, string>();
-  const diffs =
-    result.status === "dry-run"
-      ? new Map(result.diffs.map((d) => [d.key, d.diff]))
-      : new Map<string, string>();
-  return (
-    <Sheet
-      modal={false}
-      disablePointerDismissal
-      open={props.open}
-      onOpenChange={props.onOpenChange}
-    >
-      <SheetContent
-        side={narrow ? "bottom" : "right"}
-        overlay={false}
-        className={
-          narrow
-            ? "max-h-2/3 w-full overflow-y-auto"
-            : "top-12! bottom-0! h-auto! w-96 max-w-full overflow-y-auto"
-        }
-      >
-        <SheetHeader>
-          <SheetTitle>編集中</SheetTitle>
-          <SheetDescription>
-            {props.source} の {props.branch} へ、{edits.length}{" "}
-            件の変更をまとめてコミットします。
-          </SheetDescription>
-        </SheetHeader>
-        <div className="flex flex-col gap-3 px-4">
-          {result.status === "committed" && (
-            <Alert>
-              <AlertTitle>コミットしてプッシュしました</AlertTitle>
-              <AlertDescription>
-                <span className="font-mono">{result.sha}</span>（{result.branch}
-                ）
-              </AlertDescription>
-            </Alert>
-          )}
-          {result.status === "rejected" && (
-            <Alert variant="destructive" role="alert">
-              <AlertTitle>{result.title}</AlertTitle>
-              <AlertDescription>
-                コミットできませんでした。変更ごとの理由を確認してください。
-              </AlertDescription>
-            </Alert>
-          )}
-          {result.status === "failed" && (
-            <Alert variant="destructive" role="alert">
-              <AlertTitle>{result.title}</AlertTitle>
-              <AlertDescription>
-                <p>{result.detail}</p>
-                <p>編集中の変更はそのままです。</p>
-              </AlertDescription>
-            </Alert>
-          )}
-          {edits.length === 0 && result.status !== "committed" && (
-            <p className="text-sm text-muted-foreground">
-              編集中の変更はありません。
-            </p>
-          )}
-          <ul className="flex flex-col gap-2">
-            {edits.map((edit) => (
-              <li key={edit.key} className="rounded-md border p-2">
-                <div className="flex items-start gap-2">
-                  <Badge variant="outline">{OP_LABEL[edit.op]}</Badge>
-                  <button
-                    type="button"
-                    className="flex-1 text-left text-sm underline-offset-2 hover:underline"
-                    aria-label={`${edit.label} の行へ移動`}
-                    onClick={() => props.onLocate(edit)}
-                  >
-                    {edit.label}
-                  </button>
-                  <Button
-                    variant="ghost"
-                    size="icon-sm"
-                    aria-label={`${edit.label} を元に戻す`}
-                    onClick={() => props.onDiscard(edit.key)}
-                  >
-                    <Undo2 />
-                  </Button>
-                </div>
-                {edit.before !== undefined && edit.after !== undefined && (
-                  <p className="mt-1 font-mono text-xs">
-                    {edit.before} → {edit.after}
-                  </p>
-                )}
-                {diffs.has(edit.key) && (
-                  <pre className="mt-1 overflow-x-auto rounded bg-muted p-2 font-mono text-xs">
-                    {diffs.get(edit.key)}
-                  </pre>
-                )}
-                {problems.has(edit.key) && (
-                  <p className="mt-1 text-xs text-destructive">
-                    {problems.get(edit.key)}
-                  </p>
-                )}
-              </li>
-            ))}
-          </ul>
-          {edits.length > 0 && (
-            <div className="flex gap-2 pb-4">
-              <Button
-                variant="outline"
-                disabled={props.busy}
-                onClick={props.onDryRun}
-              >
-                差分確認
-              </Button>
-              <Button disabled={props.busy} onClick={props.onSendStart}>
-                {result.status === "failed" ? "再試行" : "コミット"}
-              </Button>
-            </div>
-          )}
-        </div>
-      </SheetContent>
-    </Sheet>
-  );
-};
-
-type SendDialogProps = {
-  open: boolean;
-  source: string;
-  branch: string;
-  count: number;
-  busy: boolean;
-  onOpenChange: (open: boolean) => void;
-  onSend: (message: string) => void;
-};
-
-/** 既定のブランチへプッシュする前の確認 */
-const SendDialog = (props: SendDialogProps) => {
-  const [message, setMessage] = useState("");
-  return (
-    <Dialog open={props.open} onOpenChange={props.onOpenChange}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>コミットしますか？</DialogTitle>
-          <DialogDescription>
-            {props.source} の {props.branch} へ {props.count} 件の変更を 1
-            つのコミットにしてプッシュします。プッシュした後は取り消せません。
-          </DialogDescription>
-        </DialogHeader>
-        <div className="flex flex-col gap-1.5">
-          <Label htmlFor="commit-message">コミットの説明</Label>
-          <Textarea
-            id="commit-message"
-            value={message}
-            onChange={(event) => setMessage(event.target.value)}
-          />
-        </div>
-        <DialogFooter>
-          <Button variant="outline" onClick={() => props.onOpenChange(false)}>
-            キャンセル
-          </Button>
-          <Button
-            disabled={props.busy || message.trim() === ""}
-            onClick={() => props.onSend(message)}
-          >
-            コミット
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-};
-
-type MetadataBodyProps = {
-  metadata: UseQueryResult<MetadataResponse>;
-  tab: string | null;
-  query: string;
-  edits: PendingEdit[];
-  source: string;
-  initialEditing?: string;
-  onTabChange: (tab: string) => void;
-  onEdit: (edit: PendingEdit) => void;
-};
-
-/** 読み込み中・取得できない・種類ごとのタブと表 */
-const MetadataBody = ({
-  metadata,
-  tab,
-  query,
-  edits,
-  source,
-  initialEditing,
-  onTabChange,
-  onEdit,
-}: MetadataBodyProps) => {
-  const unreachable = toProjectIndexUnreachable(metadata.error);
-  return (
-    <>
-      {metadata.isPending && <MetadataSkeleton />}
-      {metadata.isError && (
-        <ProjectIndexUnreachableAlert
-          kind={unreachable?.kind ?? "failed"}
-          address={unreachable?.address ?? ""}
-          reason={unreachable?.reason ?? String(metadata.error)}
-          onReload={() => window.location.reload()}
-        />
-      )}
-      {metadata.data !== undefined && (
-        <Tabs
-          value={tab ?? metadata.data.kinds[0]?.id}
-          onValueChange={(value) => onTabChange(String(value))}
-          className="min-w-0 flex-col"
-        >
-          <TabsList className="h-auto w-full flex-wrap justify-start">
-            {metadata.data.kinds.map((kind) => (
-              <TabsTrigger
-                key={kind.id}
-                value={kind.id}
-                className="h-7 flex-none"
-              >
-                {kind.title}
-                <span className="ml-1 text-xs text-muted-foreground">
-                  {kind.served ? kind.rows.length : "-"}
-                </span>
-              </TabsTrigger>
-            ))}
-          </TabsList>
-          {metadata.data.kinds.map((kind) => (
-            <TabsContent key={kind.id} value={kind.id} className="min-w-0">
-              <KindTable
-                kind={kind}
-                initialEditing={
-                  initialEditing?.startsWith(`${kind.id}:`)
-                    ? initialEditing.slice(kind.id.length + 1)
-                    : undefined
-                }
-                query={query}
-                edits={edits}
-                source={source}
-                onEdit={onEdit}
-              />
-            </TabsContent>
-          ))}
-        </Tabs>
-      )}
-    </>
-  );
-};
-
-type Props = {
-  source: string;
-  /** 開いたときに編集中の変更（画面を開き直しても維持する変更） */
-  initialEdits?: PendingEdit[];
-  initialPanelOpen?: boolean;
-  initialConfirmOpen?: boolean;
-  /** 開いたときに入力欄にしているセル（`{種類}:{行の id}:{列のキー}`） */
-  initialEditing?: string;
-};
-
-/** 1 つの配信元のメタデータを、種類ごとの表で参照・修正する画面 */
-export const MetadataScreen = ({
-  source,
-  initialEdits = [],
-  initialPanelOpen = false,
-  initialConfirmOpen = false,
-  initialEditing,
-}: Props) => {
-  const metadata = useQuery({
-    queryKey: ["metadata", source],
-    queryFn: () => fetchMetadata(source),
-  });
+/** 1 つの配信元のメタデータを、種類ごとの表で参照・編集する画面 */
+export const MetadataScreen = ({ source }: Props) => {
+  const search: MetadataSearch = useSearch({ strict: false });
+  const navigate = useNavigate();
+  const metadata = useQuery(getMetadataGetMetadataQueryOptions(source));
+  const settings = useSettingsGetSettingsSources().data;
+  const edits = usePendingEdits(source);
+  const { colorScheme, setColorScheme } = usePreferencesStore();
+  const loading = useDelayedFlag(metadata.isPending, LOADING_DELAY_MS);
   const [query, setQuery] = useState("");
-  const [tab, setTab] = useState<string | null>(
-    initialEditing?.split(":")[0] ?? null,
-  );
-  const [edits, setEdits] = useState<PendingEdit[]>(initialEdits);
-  const [panelOpen, setPanelOpen] = useState(initialPanelOpen);
-  const [confirmOpen, setConfirmOpen] = useState(initialConfirmOpen);
-  const [result, setResult] = useState<SendResult>({ status: "idle" });
-  const send = useMutation({
-    mutationFn: postCommits,
-    onSuccess: (next) => {
-      setResult(next);
-      setConfirmOpen(false);
-      if (next.status === "committed") setEdits([]);
-    },
-  });
-  const branch = metadata.data?.branch ?? "";
+  // 移動先の変更（描いた後に行の DOM を探す）と、移動を押した回数
+  const locating = useRef<PendingEdit | null>(null);
+  const [locateCount, setLocateCount] = useState(0);
+
+  const tab = search.tab ?? metadata.data?.kinds[0]?.id ?? "terms";
+  const panelOpen = search.panel === "edits";
+  const setSearch = (next: MetadataSearch) =>
+    void navigate({
+      to: "/$source/_metadata",
+      params: { source },
+      search: { ...search, ...next },
+      replace: true,
+    });
+
+  useEffect(() => {
+    document.title = `メタデータ | ${source} | dev-docs`;
+  }, [source]);
+
+  // 変更の行へ移動: タブを描いた後に、行の DOM へスクロールしてフォーカスする
+  useEffect(() => {
+    const target = locating.current;
+    if (target === null || metadata.data === undefined) return;
+    const element = document.getElementById(rowElementId(target.kind, target.docId));
+    if (element === null) return;
+    element.scrollIntoView?.({ block: "center" });
+    element.focus();
+    locating.current = null;
+  }, [locateCount, metadata.data, tab]);
+
   const locate = (edit: PendingEdit) => {
-    setTab(edit.kind);
+    locating.current = edit;
     setQuery("");
-    requestAnimationFrame(() =>
-      document
-        .getElementById(rowElementId(edit.kind, edit.rowId))
-        ?.scrollIntoView({ block: "center" }),
-    );
+    setSearch({ tab: edit.kind });
+    setLocateCount((count) => count + 1);
   };
-  const addEdit = (edit: PendingEdit) =>
-    setEdits((current) => [
-      ...current.filter((item) => item.key !== edit.key),
-      edit,
-    ]);
+
+  if (metadata.error instanceof AppError && metadata.error.status === NOT_FOUND) {
+    return <NotFoundScreen data={metadata.error.problem} />;
+  }
+  const unreachable = toProjectIndexUnreachable(metadata.error);
+
   return (
     <div className="min-h-screen bg-background">
       <SkipLink />
       <Topbar
         screen="metadata"
         currentSource={source}
-        sources={[{ id: source, writable: true }]}
+        sources={servingSources(settings)}
         pendingEditCount={edits.length}
-        colorScheme="system"
-        onColorSchemeToggle={() => undefined}
-        onPendingPanelToggle={() => setPanelOpen((open) => !open)}
+        colorScheme={colorScheme}
+        onSourceSelect={(id) => void navigate({ to: "/$source/_metadata", params: { source: id } })}
+        onColorSchemeToggle={() => setColorScheme(NEXT_SCHEME[colorScheme])}
+        onPendingPanelToggle={() => setSearch({ panel: panelOpen ? undefined : "edits" })}
       />
-      <main
-        id="main"
-        className="mx-auto flex max-w-6xl min-w-0 flex-col gap-4 p-4"
-      >
+      <main id="main" tabIndex={-1} className="mx-auto flex max-w-6xl min-w-0 flex-col gap-4 p-4">
         <h1 className="text-2xl font-semibold">{source} のメタデータ</h1>
         <div className="flex max-w-sm flex-col gap-1.5">
           <Label htmlFor="metadata-filter">絞り込み</Label>
@@ -811,44 +164,34 @@ export const MetadataScreen = ({
             onChange={(event) => setQuery(event.target.value)}
           />
         </div>
-        <MetadataBody
-          metadata={metadata}
-          tab={tab}
-          query={query}
-          edits={edits}
-          source={source}
-          initialEditing={initialEditing}
-          onTabChange={setTab}
-          onEdit={addEdit}
-        />
+        {loading && <MetadataSkeleton />}
+        {unreachable !== null && (
+          <ProjectIndexUnreachableAlert
+            kind={unreachable.kind}
+            address={unreachable.address}
+            reason={unreachable.reason}
+            onReload={() => void metadata.refetch()}
+          />
+        )}
+        {metadata.isError && unreachable === null && (
+          <FetchFailed error={metadata.error} onReload={() => void metadata.refetch()} />
+        )}
+        {metadata.data !== undefined && (
+          <KindTabs
+            source={source}
+            data={metadata.data}
+            tab={tab}
+            query={query}
+            onTabChange={(next) => setSearch({ tab: next })}
+          />
+        )}
       </main>
       <PendingPanel
+        source={source}
+        branch={metadata.data?.branch ?? null}
         open={panelOpen}
-        source={source}
-        branch={branch}
-        edits={edits}
-        result={result}
-        busy={send.isPending}
-        onOpenChange={setPanelOpen}
+        onOpenChange={(open) => setSearch({ panel: open ? "edits" : undefined })}
         onLocate={locate}
-        onDiscard={(key) =>
-          setEdits((current) => current.filter((edit) => edit.key !== key))
-        }
-        onDryRun={() =>
-          send.mutate({ source, edits, message: "", dryRun: true })
-        }
-        onSendStart={() => setConfirmOpen(true)}
-      />
-      <SendDialog
-        open={confirmOpen}
-        source={source}
-        branch={branch}
-        count={edits.length}
-        busy={send.isPending}
-        onOpenChange={setConfirmOpen}
-        onSend={(message) =>
-          send.mutate({ source, edits, message, dryRun: false })
-        }
       />
     </div>
   );

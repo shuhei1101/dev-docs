@@ -13,6 +13,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as SettingsRouteImport } from './routes/[_]settings'
 import { Route as SourceIndexRouteImport } from './routes/$source/index'
 import { Route as SourceSplatRouteImport } from './routes/$source/$'
+import { Route as SourceMetadataRouteImport } from './routes/$source/[_]metadata'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -34,17 +35,24 @@ const SourceSplatRoute = SourceSplatRouteImport.update({
   path: '/$source/$',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SourceMetadataRoute = SourceMetadataRouteImport.update({
+  id: '/$source/_metadata',
+  path: '/$source/_metadata',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/_settings': typeof SettingsRoute
   '/$source/$': typeof SourceSplatRoute
+  '/$source/_metadata': typeof SourceMetadataRoute
   '/$source/': typeof SourceIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/_settings': typeof SettingsRoute
   '/$source/$': typeof SourceSplatRoute
+  '/$source/_metadata': typeof SourceMetadataRoute
   '/$source': typeof SourceIndexRoute
 }
 export interface FileRoutesById {
@@ -52,20 +60,29 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_settings': typeof SettingsRoute
   '/$source/$': typeof SourceSplatRoute
+  '/$source/_metadata': typeof SourceMetadataRoute
   '/$source/': typeof SourceIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/_settings' | '/$source/$' | '/$source/'
+  fullPaths:
+    '/' | '/_settings' | '/$source/$' | '/$source/_metadata' | '/$source/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/_settings' | '/$source/$' | '/$source'
-  id: '__root__' | '/' | '/_settings' | '/$source/$' | '/$source/'
+  to: '/' | '/_settings' | '/$source/$' | '/$source/_metadata' | '/$source'
+  id:
+    | '__root__'
+    | '/'
+    | '/_settings'
+    | '/$source/$'
+    | '/$source/_metadata'
+    | '/$source/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   SettingsRoute: typeof SettingsRoute
   SourceSplatRoute: typeof SourceSplatRoute
+  SourceMetadataRoute: typeof SourceMetadataRoute
   SourceIndexRoute: typeof SourceIndexRoute
 }
 
@@ -99,6 +116,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SourceSplatRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/$source/_metadata': {
+      id: '/$source/_metadata'
+      path: '/$source/_metadata'
+      fullPath: '/$source/_metadata'
+      preLoaderRoute: typeof SourceMetadataRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -106,6 +130,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   SettingsRoute: SettingsRoute,
   SourceSplatRoute: SourceSplatRoute,
+  SourceMetadataRoute: SourceMetadataRoute,
   SourceIndexRoute: SourceIndexRoute,
 }
 export const routeTree = rootRouteImport

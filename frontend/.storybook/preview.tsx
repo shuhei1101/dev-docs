@@ -12,18 +12,20 @@ import { mswLoader } from "msw-storybook-addon/csf3";
 
 import "../src/shared/styles/index.css";
 
-/** Link を使用できるよう、メモリの履歴のルーターに story を配置する */
-const withRouter: Decorator = (Story) => {
+/** Link を使用できるよう、メモリの履歴のルーターに story を配置する（`parameters.initialPath` で開く URL を選ぶ） */
+const withRouter: Decorator = (Story, context) => {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
   const root = createRootRoute({ component: () => <Story /> });
-  const routes = ["/", "/$source/", "/$source/$", "/_settings"].map((path) =>
+  const routes = ["/", "/$source/", "/$source/_metadata", "/$source/$", "/_settings"].map((path) =>
     createRoute({ getParentRoute: () => root, path }),
   );
   const router = createRouter({
     routeTree: root.addChildren(routes),
-    history: createMemoryHistory({ initialEntries: ["/sample/docs/a"] }),
+    history: createMemoryHistory({
+      initialEntries: [(context.parameters.initialPath as string | undefined) ?? "/sample/docs/a"],
+    }),
   });
   return (
     <QueryClientProvider client={client}>

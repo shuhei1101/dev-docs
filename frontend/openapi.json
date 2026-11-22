@@ -408,6 +408,100 @@
           }
         }
       }
+    },
+    "/_api/sources/{source}/metadata": {
+      "get": {
+        "tags": [
+          "metadata"
+        ],
+        "summary": "Get Metadata",
+        "operationId": "metadata-get_metadata",
+        "parameters": [
+          {
+            "name": "source",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Source"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MetadataResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/_api/sources/{source}/commits": {
+      "post": {
+        "tags": [
+          "metadata"
+        ],
+        "summary": "Post Commits",
+        "operationId": "metadata-post_commits",
+        "parameters": [
+          {
+            "name": "source",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Source"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CommitRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommitResult"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -504,6 +598,25 @@
         "title": "ColumnsRequest",
         "description": "PUT `/_api/sources/{source}/columns` の本文と応答。"
       },
+      "CommitInfo": {
+        "properties": {
+          "sha": {
+            "type": "string",
+            "title": "Sha"
+          },
+          "branch": {
+            "type": "string",
+            "title": "Branch"
+          }
+        },
+        "type": "object",
+        "required": [
+          "sha",
+          "branch"
+        ],
+        "title": "CommitInfo",
+        "description": "プッシュしたコミット。"
+      },
       "CommitItem": {
         "properties": {
           "commit": {
@@ -527,6 +640,73 @@
         ],
         "title": "CommitItem",
         "description": "最近の commit 1 件。"
+      },
+      "CommitRequest": {
+        "properties": {
+          "edits": {
+            "items": {
+              "$ref": "#/components/schemas/Edit"
+            },
+            "type": "array",
+            "minItems": 1,
+            "title": "Edits"
+          },
+          "message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Message"
+          },
+          "dryRun": {
+            "type": "boolean",
+            "title": "Dryrun",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "edits"
+        ],
+        "title": "CommitRequest",
+        "description": "直コミットの要求の本文。"
+      },
+      "CommitResult": {
+        "properties": {
+          "applied": {
+            "type": "boolean",
+            "title": "Applied"
+          },
+          "results": {
+            "items": {
+              "$ref": "#/components/schemas/EditResult"
+            },
+            "type": "array",
+            "title": "Results"
+          },
+          "commit": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CommitInfo"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "applied",
+          "results",
+          "commit"
+        ],
+        "title": "CommitResult",
+        "description": "直コミットの 200 の応答。"
       },
       "ConversionError": {
         "properties": {
@@ -767,6 +947,121 @@
         "title": "DocumentResponse",
         "description": "GET `/_api/sources/{source}/docs[/{path}]` の応答。"
       },
+      "Edit": {
+        "properties": {
+          "key": {
+            "type": "string",
+            "title": "Key"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "terms",
+              "aliases",
+              "tags",
+              "rules",
+              "files"
+            ],
+            "title": "Kind"
+          },
+          "op": {
+            "type": "string",
+            "enum": [
+              "update",
+              "add",
+              "delete"
+            ],
+            "title": "Op"
+          },
+          "docId": {
+            "type": "string",
+            "title": "Docid"
+          },
+          "docKind": {
+            "type": "string",
+            "title": "Dockind"
+          },
+          "expectedVersion": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expectedversion"
+          },
+          "values": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                }
+              ]
+            },
+            "type": "object",
+            "title": "Values"
+          }
+        },
+        "type": "object",
+        "required": [
+          "key",
+          "kind",
+          "op",
+          "docId",
+          "docKind"
+        ],
+        "title": "Edit",
+        "description": "編集中の変更 1 件。"
+      },
+      "EditResult": {
+        "properties": {
+          "key": {
+            "type": "string",
+            "title": "Key"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "created",
+              "updated",
+              "deleted"
+            ],
+            "title": "Status"
+          },
+          "version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Version"
+          },
+          "diff": {
+            "type": "string",
+            "title": "Diff"
+          }
+        },
+        "type": "object",
+        "required": [
+          "key",
+          "status",
+          "version",
+          "diff"
+        ],
+        "title": "EditResult",
+        "description": "変更ごとの結果。"
+      },
       "GitHubTarget": {
         "properties": {
           "repository": {
@@ -801,6 +1096,228 @@
         },
         "type": "object",
         "title": "HTTPValidationError"
+      },
+      "MetadataColumn": {
+        "properties": {
+          "key": {
+            "type": "string",
+            "title": "Key"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "text",
+              "list"
+            ],
+            "title": "Type"
+          },
+          "editable": {
+            "type": "boolean",
+            "title": "Editable"
+          }
+        },
+        "type": "object",
+        "required": [
+          "key",
+          "label",
+          "type",
+          "editable"
+        ],
+        "title": "MetadataColumn",
+        "description": "表の列 1 つ。"
+      },
+      "MetadataKind": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "enum": [
+              "terms",
+              "aliases",
+              "tags",
+              "rules",
+              "config",
+              "files"
+            ],
+            "title": "Id"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "served": {
+            "type": "boolean",
+            "title": "Served"
+          },
+          "hint": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hint"
+          },
+          "columns": {
+            "items": {
+              "$ref": "#/components/schemas/MetadataColumn"
+            },
+            "type": "array",
+            "title": "Columns"
+          },
+          "canAdd": {
+            "type": "boolean",
+            "title": "Canadd"
+          },
+          "canDelete": {
+            "type": "boolean",
+            "title": "Candelete"
+          },
+          "createKind": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Createkind"
+          },
+          "rows": {
+            "items": {
+              "$ref": "#/components/schemas/MetadataRow"
+            },
+            "type": "array",
+            "title": "Rows"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "title",
+          "served",
+          "hint",
+          "columns",
+          "canAdd",
+          "canDelete",
+          "createKind",
+          "rows"
+        ],
+        "title": "MetadataKind",
+        "description": "タブ 1 つ分の列と行。"
+      },
+      "MetadataResponse": {
+        "properties": {
+          "source": {
+            "type": "string",
+            "title": "Source"
+          },
+          "branch": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Branch"
+          },
+          "kinds": {
+            "items": {
+              "$ref": "#/components/schemas/MetadataKind"
+            },
+            "type": "array",
+            "title": "Kinds"
+          }
+        },
+        "type": "object",
+        "required": [
+          "source",
+          "branch",
+          "kinds"
+        ],
+        "title": "MetadataResponse",
+        "description": "メタデータの取得の応答。"
+      },
+      "MetadataRow": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "docKind": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dockind"
+          },
+          "docPath": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Docpath"
+          },
+          "version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Version"
+          },
+          "editable": {
+            "type": "boolean",
+            "title": "Editable"
+          },
+          "values": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                }
+              ]
+            },
+            "type": "object",
+            "title": "Values"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "docKind",
+          "docPath",
+          "version",
+          "editable",
+          "values"
+        ],
+        "title": "MetadataRow",
+        "description": "表の行 1 つ。"
       },
       "NavItem": {
         "properties": {

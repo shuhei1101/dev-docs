@@ -1,5 +1,5 @@
 import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
-import { useParams, useSearch } from "@tanstack/react-router";
+import { useNavigate, useParams, useSearch } from "@tanstack/react-router";
 import { useState } from "react";
 
 import { DocMain } from "@/features/docs/doc-view/components/doc-main";
@@ -22,6 +22,7 @@ import {
 } from "@/features/docs/shared/comments/comment-store";
 import { SearchDialog } from "@/features/docs/shared/search-dialog/search-dialog";
 import { servingSources } from "@/features/docs/shared/serving-sources";
+import { usePendingEdits } from "@/features/metadata/shared/pending-edits-store";
 import type { NavTab } from "@/shared/api/generated/model";
 import { useSettingsGetSettingsSources } from "@/shared/api/generated/settings/settings";
 import { useViewListRefs } from "@/shared/api/generated/view/view";
@@ -73,6 +74,8 @@ export const DocViewScreen = () => {
   const { colorScheme, singleKeyShortcuts, setColorScheme } =
     usePreferencesStore();
   const commentCount = useCommentStore((state) => state.comments.length);
+  const pendingEditCount = usePendingEdits(source).length;
+  const navigate = useNavigate();
 
   const query = useSuspenseQuery(
     documentQueryOptions(source, params._splat ?? "", search),
@@ -115,12 +118,20 @@ export const DocViewScreen = () => {
         refs={refs}
         currentRef={doc.ref ?? undefined}
         commentCount={commentCount}
+        pendingEditCount={pendingEditCount}
         colorScheme={colorScheme}
         onSourceSelect={nav.selectSource}
         onRefSelect={nav.selectRef}
         onCompareStart={nav.startCompare}
         onSearchOpen={() => open("search")}
         onCommentPanelToggle={() => open("comments", !panels.comments)}
+        onPendingPanelToggle={() =>
+          void navigate({
+            to: "/$source/_metadata",
+            params: { source },
+            search: { panel: "edits" },
+          })
+        }
         onSidebarOpen={() => open("drawer")}
         onColorSchemeToggle={() => setColorScheme(NEXT_SCHEME[colorScheme])}
       />

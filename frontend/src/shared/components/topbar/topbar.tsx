@@ -215,10 +215,7 @@ const MetadataButtons = ({
         aria-label="メタデータ"
         aria-current={screen === "metadata" ? "page" : undefined}
         render={
-          <Link
-            to="/$source/$"
-            params={{ source: currentSource, _splat: "_metadata" }}
-          />
+          <Link to="/$source/_metadata" params={{ source: currentSource }} />
         }
         nativeButton={false}
       >

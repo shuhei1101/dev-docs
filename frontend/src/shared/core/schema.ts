@@ -9,7 +9,17 @@ export const ProblemSchema = z
     detail: z.string(),
     nextSteps: z.array(z.string()).default([]),
     errors: z
-      .array(z.object({ path: z.string(), reason: z.string() }))
+      .array(
+        z
+          .object({
+            path: z.string().default(""),
+            reason: z.string(),
+            // 直コミットの変更ごとの理由が持つ、変更の識別子と今のバージョン
+            key: z.string().nullish(),
+            current: z.string().nullish(),
+          })
+          .passthrough(),
+      )
       .optional(),
   })
   .passthrough();
