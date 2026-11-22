@@ -165,9 +165,30 @@ def test_commit_edits(
         {
             "applied": True,
             "results": [
-                {"kind": "writes", "index": 0, "id": "n1", "status": "updated", "version": "v2", "diff": "d0"},
-                {"kind": "writes", "index": 1, "id": "kind", "status": "created", "version": "v3", "diff": "d1"},
-                {"kind": "deletes", "index": 0, "id": "old-name", "status": "deleted", "version": None, "diff": "d2"},
+                {
+                    "kind": "writes",
+                    "index": 0,
+                    "id": "n1",
+                    "status": "updated",
+                    "version": "v2",
+                    "diff": "d0",
+                },
+                {
+                    "kind": "writes",
+                    "index": 1,
+                    "id": "kind",
+                    "status": "created",
+                    "version": "v3",
+                    "diff": "d1",
+                },
+                {
+                    "kind": "deletes",
+                    "index": 0,
+                    "id": "old-name",
+                    "status": "deleted",
+                    "version": None,
+                    "diff": "d2",
+                },
             ],
             "commit": {"sha": "0a1b2c3", "branch": "develop", "retried": False},
         },
@@ -200,7 +221,9 @@ def test_commit_edits_when_validation_failed(
             "title": "ValidationFailedError",
             "status": 422,
             "detail": "検査に合格しませんでした",
-            "errors": [{"kind": "writes", "index": 1, "path": "name", "reason": "必須のキーが無い"}],
+            "errors": [
+                {"kind": "writes", "index": 1, "path": "name", "reason": "必須のキーが無い"}
+            ],
         },
     )
     request = CommitRequest(edits=_edits(), message="用語とタグを追加する")

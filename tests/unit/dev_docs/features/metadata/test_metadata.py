@@ -137,9 +137,7 @@ def test_build_metadata(
 ) -> None:
     """種類ごとの行と列（正常系）。"""
     # 準備
-    fake_index.configs["sample"] = config_json(
-        documents=[TERMS_ROW, NOTE_ROW, RULE_ROW, FILES_ROW]
-    )
+    fake_index.configs["sample"] = config_json(documents=[TERMS_ROW, NOTE_ROW, RULE_ROW, FILES_ROW])
     fake_index.docs["sample"] = {None: _sample_docs()}
     fake_index.settings = _settings(["note", "terms"])
     # 実行
