@@ -1,0 +1,54 @@
+use_cases:
+  - kind: composite
+    scenario: docs/scenario/SC-155-13.yaml
+    impact: changed
+    detail: 画面の参照の流れに、配信元のメタデータを一覧で参照し、画面で溜めた修正をまとめて直コミットする段を加える
+    depends_on: []
+  - kind: single
+    scenario: docs/scenario/SC-155-14.yaml
+    impact: new
+    detail: 利用者が配信元のメタデータ（用語集・エイリアス・タグ・rule-inject の索引・配信元の設定・管理用の YAML）を一覧で参照し、rule-inject の索引では規約が適用されるパスを確かめる
+    depends_on:
+      - docs/scenario/SC-155-13.yaml
+  - kind: single
+    scenario: docs/scenario/SC-155-15.yaml
+    impact: new
+    detail: 利用者が画面でメタデータの修正を溜め、溜めた修正を確かめてからまとめてコミット・プッシュする。直コミットを許可していない種類の修正・検査に合格しない修正・他の変更と食い違う修正は送信せず理由を知る
+    depends_on:
+      - docs/scenario/SC-155-13.yaml
+  - kind: single
+    scenario: docs/scenario/SC-155-7.yaml
+    impact: run_only
+    detail: 文書の画面のタブ・トップバーにメタデータの参照と溜めた修正の入口が加わるため、文書の参照・検索・差分が今のまま動くかを確かめる
+    depends_on: []
+docs:
+  - page: docs/external-api/API-155-1.yaml
+    new: false
+    change: project-index の書き込みの API（POST /sources/{source}/commits、IF-38）のエンドポイント・状態コードと、端末の設定の sources[].direct_commit.write_api_kinds を取り込み、稼働中の project-index と照合した記録を足す
+    status: todo
+  - page: docs/architecture/ARCH-155-1.yaml
+    new: false
+    change: 開発ドキュメントサーバーから project-index への線と external_systems の purpose に、書き込みの API での直コミットを加える
+    status: todo
+  - page: docs/guide/画面で参照する.md
+    new: false
+    change: メタデータを一覧で参照する手順と、画面で溜めた修正をまとめて直コミットする手順を足す
+    status: todo
+  - page: docs/guide/設定.md
+    new: false
+    change: 画面から直コミットするために設定する project-index の端末の設定のキー（sources[].direct_commit.write_api_kinds）と配信元の設定の direct_commit を足す
+    status: todo
+  - page: docs/guide/用語集.md
+    new: false
+    change: 画面で溜めた修正・直コミットなど、この作業で画面に出る用語を足す
+    status: todo
+scope_out:
+  - item: 配信元ごとの、直コミットを許可する種類の追加（knowledge・aituber などの project-index.yaml の direct_commit.kinds[] と端末の設定の write_api_kinds）
+    reason: 起点 Issue の本文の後続。この作業の画面と書き込みの経路ができてから配信元ごとに決める
+    plan: to_file
+  - item: テンプレートとスキーマの画面からの修正
+    reason: D-845 A で、テンプレートとスキーマは今のまま Issue と作業 PR を経る
+    plan: none
+  - item: rule-inject の索引を project-index から読む・書くための rule-inject・配信元の側の修正（索引を文書の種類として配信する行の追加、write_index_entry を経ない書き込みの後の読み直し）
+    reason: 要望の rule-inject の索引の一覧と修正に要るかは、設計の最初（複合ユースケース設計）で確かめる。要る場合は rule-inject へ切り出し、索引だけを後に回して他のメタデータを先に進める（受付判断のとおり）。判断はレビューで確定する
+    plan: to_file
