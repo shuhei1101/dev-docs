@@ -77,7 +77,7 @@ test("test_metadata_screen_when_not_found", async () => {
 
   const { router } = renderApp("/sample/_metadata");
 
-  expect(await screen.findByRole("heading", { name: /見つかりません/ })).toBeInTheDocument();
+  expect(await screen.findByRole("heading", { name: "配信元 sample はありません" })).toBeInTheDocument();
   expect(router.state.location.pathname).toBe("/sample/_metadata");
 });
 

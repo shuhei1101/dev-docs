@@ -1,10 +1,11 @@
-import { render, screen } from "@testing-library/react";
+import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, expect, test } from "vitest";
 
 import { MetadataTable } from "@/features/metadata/metadata/metadata-table";
 import { usePendingEditsStore } from "@/features/metadata/shared/pending-edits-store";
 import { metadataResponse } from "@tests/helpers/fixtures";
+import { renderInRouter } from "@tests/helpers/render";
 
 const kindOf = (id: string) => {
   const kind = metadataResponse().kinds.find((item) => item.id === id);
@@ -17,9 +18,9 @@ beforeEach(() => {
 });
 
 test("test_metadata_table_when_edited", async () => {
-  render(<MetadataTable source="sample" kind={kindOf("tags")} query="" />);
+  renderInRouter(<MetadataTable source="sample" kind={kindOf("tags")} query="" />);
 
-  await userEvent.click(screen.getByRole("button", { name: "タグ topic:a を編集" }));
+  await userEvent.click(await screen.findByRole("button", { name: "タグ topic:a を編集" }));
   const input = screen.getByRole("textbox");
   await userEvent.clear(input);
   await userEvent.type(input, "topic:a, topic:b{Enter}");
@@ -29,17 +30,17 @@ test("test_metadata_table_when_edited", async () => {
   expect(edits[0]).toMatchObject({ op: "update", docId: "n1", values: { tags: ["topic:a", "topic:b"] } });
 });
 
-test("test_metadata_table_when_readonly", () => {
-  render(<MetadataTable source="sample" kind={kindOf("tags")} query="" />);
+test("test_metadata_table_when_readonly", async () => {
+  renderInRouter(<MetadataTable source="sample" kind={kindOf("tags")} query="" />);
 
+  expect((await screen.findAllByText("notes/n1.yaml")).length).toBeGreaterThan(0);
   expect(screen.queryByRole("button", { name: "文書 notes/n1.yaml を編集" })).toBeNull();
-  expect(screen.getAllByText("notes/n1.yaml").length).toBeGreaterThan(0);
 });
 
 test("test_metadata_table_when_add_duplicate", async () => {
-  render(<MetadataTable source="sample" kind={kindOf("terms")} query="" />);
+  renderInRouter(<MetadataTable source="sample" kind={kindOf("terms")} query="" />);
 
-  await userEvent.click(screen.getByRole("button", { name: "行追加" }));
+  await userEvent.click(await screen.findByRole("button", { name: "行追加" }));
   await userEvent.type(screen.getByRole("textbox", { name: "ID" }), "source");
   await userEvent.click(screen.getByRole("button", { name: "追加" }));
 
