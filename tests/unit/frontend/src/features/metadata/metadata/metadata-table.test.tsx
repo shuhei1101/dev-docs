@@ -47,3 +47,21 @@ test("test_metadata_table_when_add_duplicate", async () => {
   expect(screen.getByText("この ID は使用されています。別の ID を入力してください")).toBeInTheDocument();
   expect(usePendingEditsStore.getState().bySource.sample ?? []).toHaveLength(0);
 });
+
+test("test_metadata_table_when_edited_label", async () => {
+  renderInRouter(<MetadataTable source="sample" kind={kindOf("tags")} query="" />);
+
+  await userEvent.click(await screen.findByRole("button", { name: "タグ topic:a を編集" }));
+  await userEvent.type(screen.getByRole("textbox"), ", topic:b{Enter}");
+
+  const edits = usePendingEditsStore.getState().bySource.sample ?? [];
+  expect(edits[0]?.label).toBe("タグ: notes/n1.yaml");
+});
+
+test("test_metadata_table_when_add_focus", async () => {
+  renderInRouter(<MetadataTable source="sample" kind={kindOf("terms")} query="" />);
+
+  await userEvent.click(await screen.findByRole("button", { name: "行追加" }));
+
+  expect(screen.getByRole("textbox", { name: "ID" })).toHaveFocus();
+});
