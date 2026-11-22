@@ -170,7 +170,7 @@ const postCommits = async (args: {
   };
 };
 
-const OP_LABEL = { update: "修正", add: "追加", delete: "削除" } as const;
+const OP_LABEL = { update: "変更", add: "追加", delete: "削除" } as const;
 
 type KindTableProps = {
   kind: MetadataKind;
@@ -185,7 +185,7 @@ type KindTableProps = {
 const rowLabel = (kind: MetadataKind, row: MetadataRow): string =>
   row.values[kind.columns[0]?.key ?? ""] ?? row.id;
 
-/** 表の行の要素の id。溜めた修正のパネルから行へ移るときに使う */
+/** 表の行の要素の id。編集中のパネルから行へ移動するときに使用する */
 export const rowElementId = (kind: string, rowId: string): string =>
   `metadata-row-${kind}-${rowId}`;
 
@@ -205,7 +205,7 @@ const EditableCell = (props: EditableCellProps) => {
       <button
         type="button"
         className="w-full rounded px-1 text-left hover:bg-muted"
-        aria-label={`${props.label} を修正`}
+        aria-label={`${props.label} を編集`}
         onClick={props.onStart}
       >
         {props.value === "" ? (
@@ -259,10 +259,10 @@ const NewRow = ({ kind, onAdd, onCancel }: NewRowProps) => {
       ))}
       <TableCell className="flex items-center gap-1">
         <Button size="sm" onClick={() => onAdd(values)}>
-          溜める
+          追加
         </Button>
         <Button variant="ghost" size="sm" onClick={onCancel}>
-          取り消す
+          キャンセル
         </Button>
       </TableCell>
     </TableRow>
@@ -277,7 +277,7 @@ const KindNotServed = ({ kind }: { kind: MetadataKind }) => (
     <AlertDescription>
       <p>
         配信元の設定（<code>project-index.yaml</code>
-        ）に、次の行を加えると一覧に出ます。
+        ）に次の行を追加すると、一覧に表示されます。
       </p>
       <pre className="mt-2 overflow-x-auto rounded bg-muted p-2 font-mono text-xs">
         {kind.hint}
@@ -335,12 +335,12 @@ const KindTable = (props: KindTableProps) => {
     <div className="flex min-w-0 flex-col gap-2">
       {!kind.editable && (
         <p className="text-xs text-muted-foreground">
-          この種類は直コミットを許可していないため、参照だけです。
+          この種類は直コミットを許可していないため、参照のみです。
         </p>
       )}
       {kind.rows.length === 0 && !adding ? (
         <p className="rounded-md border p-4 text-sm text-muted-foreground">
-          {kind.title}はまだありません。
+          {kind.title}はありません。
           {kind.editable && "「行追加」で追加できます。"}
         </p>
       ) : (
@@ -481,7 +481,7 @@ type PendingPanelProps = {
   onSendStart: () => void;
 };
 
-/** 溜めた修正の一覧と、試しに書いた差分・送信の結果 */
+/** 編集中の変更の一覧と、差分確認・コミットの結果 */
 const PendingPanel = (props: PendingPanelProps) => {
   const { edits, result } = props;
   const narrow = useMediaQuery("(max-width: 47.99rem)");
@@ -510,10 +510,10 @@ const PendingPanel = (props: PendingPanelProps) => {
         }
       >
         <SheetHeader>
-          <SheetTitle>溜めた修正</SheetTitle>
+          <SheetTitle>編集中</SheetTitle>
           <SheetDescription>
             {props.source} の {props.branch} へ、{edits.length}{" "}
-            件をまとめてコミットします。
+            件の変更をまとめてコミットします。
           </SheetDescription>
         </SheetHeader>
         <div className="flex flex-col gap-3 px-4">
@@ -530,7 +530,7 @@ const PendingPanel = (props: PendingPanelProps) => {
             <Alert variant="destructive" role="alert">
               <AlertTitle>{result.title}</AlertTitle>
               <AlertDescription>
-                コミットしていません。修正ごとの理由を確認してください。
+                コミットできませんでした。変更ごとの理由を確認してください。
               </AlertDescription>
             </Alert>
           )}
@@ -539,13 +539,13 @@ const PendingPanel = (props: PendingPanelProps) => {
               <AlertTitle>{result.title}</AlertTitle>
               <AlertDescription>
                 <p>{result.detail}</p>
-                <p>溜めた修正は残っています。</p>
+                <p>編集中の変更はそのままです。</p>
               </AlertDescription>
             </Alert>
           )}
           {edits.length === 0 && result.status !== "committed" && (
             <p className="text-sm text-muted-foreground">
-              溜めた修正はありません。
+              編集中の変更はありません。
             </p>
           )}
           <ul className="flex flex-col gap-2">
@@ -556,7 +556,7 @@ const PendingPanel = (props: PendingPanelProps) => {
                   <button
                     type="button"
                     className="flex-1 text-left text-sm underline-offset-2 hover:underline"
-                    aria-label={`${edit.label} の行へ移る`}
+                    aria-label={`${edit.label} の行へ移動`}
                     onClick={() => props.onLocate(edit)}
                   >
                     {edit.label}
@@ -564,7 +564,7 @@ const PendingPanel = (props: PendingPanelProps) => {
                   <Button
                     variant="ghost"
                     size="icon-sm"
-                    aria-label={`${edit.label} の修正を取り消す`}
+                    aria-label={`${edit.label} を元に戻す`}
                     onClick={() => props.onDiscard(edit.key)}
                   >
                     <Undo2 />
@@ -595,10 +595,10 @@ const PendingPanel = (props: PendingPanelProps) => {
                 disabled={props.busy}
                 onClick={props.onDryRun}
               >
-                試しに書く
+                差分確認
               </Button>
               <Button disabled={props.busy} onClick={props.onSendStart}>
-                {result.status === "failed" ? "もう一度送信" : "まとめて送信"}
+                {result.status === "failed" ? "再試行" : "コミット"}
               </Button>
             </div>
           )}
@@ -625,9 +625,9 @@ const SendDialog = (props: SendDialogProps) => {
     <Dialog open={props.open} onOpenChange={props.onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>まとめて送信しますか？</DialogTitle>
+          <DialogTitle>コミットしますか？</DialogTitle>
           <DialogDescription>
-            {props.source} の {props.branch} へ {props.count} 件の修正を 1
+            {props.source} の {props.branch} へ {props.count} 件の変更を 1
             つのコミットにしてプッシュします。プッシュした後は取り消せません。
           </DialogDescription>
         </DialogHeader>
@@ -641,13 +641,13 @@ const SendDialog = (props: SendDialogProps) => {
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => props.onOpenChange(false)}>
-            取り消す
+            キャンセル
           </Button>
           <Button
             disabled={props.busy || message.trim() === ""}
             onClick={() => props.onSend(message)}
           >
-            送信する
+            コミット
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -733,7 +733,7 @@ const MetadataBody = ({
 
 type Props = {
   source: string;
-  /** 開いたときに溜めてある修正（画面を開き直しても残る修正） */
+  /** 開いたときに編集中の変更（画面を開き直しても維持する変更） */
   initialEdits?: PendingEdit[];
   initialPanelOpen?: boolean;
   initialConfirmOpen?: boolean;
@@ -802,7 +802,7 @@ export const MetadataScreen = ({
       >
         <h1 className="text-2xl font-semibold">{source} のメタデータ</h1>
         <div className="flex max-w-sm flex-col gap-1.5">
-          <Label htmlFor="metadata-filter">表を絞り込む</Label>
+          <Label htmlFor="metadata-filter">絞り込み</Label>
           <Input
             id="metadata-filter"
             type="search"

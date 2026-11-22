@@ -1,6 +1,6 @@
 id: SC-155-15
-title: 利用者が画面で溜めた修正をまとめて直コミットする
-lead: 利用者がメタデータの画面で行の修正を溜め、試しに書いた差分を確認してから、配信元ごとにまとめて 1 つのコミットでプッシュするシナリオを定め、溜めた修正の送信の流れを変えるときに参照する。
+title: 利用者が画面で編集中の変更をまとめて直コミットする
+lead: 利用者がメタデータの画面で行の修正を溜め、試しに書いた差分を確認してから、配信元ごとにまとめて 1 つのコミットでプッシュするシナリオを定め、編集中の変更の送信の流れを変えるときに参照する。
 primary_actor: 利用者
 stakeholders:
   - name: 利用者
@@ -13,11 +13,11 @@ trigger: 利用者がメタデータの画面で行の値を修正する
 preconditions:
   - 利用者が配信元のメタデータの画面を開いている
   - 配信元の設定の `direct_commit.kinds[]` と project-index の端末の設定の `sources[].direct_commit.write_api_kinds` の両方に、修正する種類がある
-success_guarantee: 溜めた修正が、検査に合格して 1 つのコミットで配信元のリモートの既定のブランチへプッシュされ、画面の一覧が修正後の値になる。
-minimal_guarantee: 送信が失敗したときはコミットもプッシュもせず、溜めた修正は修正ごとの理由と一緒に画面に残る。dev-docs は配信元のファイルを自分で書き換えない。
+success_guarantee: 編集中の変更が、検査に合格して 1 つのコミットで配信元のリモートの既定のブランチへプッシュされ、画面の一覧が修正後の値になる。
+minimal_guarantee: 送信が失敗したときはコミットもプッシュもせず、編集中の変更は修正ごとの理由と一緒に画面に残る。dev-docs は配信元のファイルを自分で書き換えない。
 frequency: 作業のたび
 priority: 中
-test_file: tests/e2e/単一ユースケース/test_利用者が画面で溜めた修正をまとめて直コミットする.py
+test_file: tests/e2e/単一ユースケース/test_利用者が画面で編集中の変更をまとめて直コミットする.py
 scenarios:
   - name: 正常シナリオ
     setup:
@@ -43,8 +43,8 @@ scenarios:
 
         U->>UI: タグのタブで n1 の行にタグ `topic:b` を追加する
         U->>UI: 用語集のタブで用語 `種類` の行を追加し、用語 `旧称` の行を削除する
-        UI-->>U: トップバーの溜めた修正の件数 3
-        U->>UI: 溜めた修正のパネルを開き、試しに書く
+        UI-->>U: トップバーの編集中の変更の件数 3
+        U->>UI: 編集中の変更のパネルを開き、試しに書く
         UI->>SRV: sample の修正 3 件を試しに書く
         SRV->>PI: POST /sources/sample/commits（dryRun）
         PI-->>SRV: 検査の合格と差分
@@ -62,17 +62,17 @@ scenarios:
     expected:
       - 試しに書くと、パネルに修正ごとの差分が出て、リモートは変わらない
       - 送信すると、リモートの `develop` に 1 コミットだけ増え、コミットの説明が入力した説明で、変更は n1 と用語集のファイルだけ
-      - パネルにプッシュしたコミットとブランチが出て、溜めた修正が空になり、トップバーの件数が出なくなる
+      - パネルにプッシュしたコミットとブランチが出て、編集中の変更が空になり、トップバーの件数が出なくなる
       - タグのタブの n1 の行に `topic:b` が、用語集のタブに `種類` の行が出る
       - 用語集のタブに `旧称` の行が無く、リモートの用語集のファイルから `旧称` が消えている
     test: test_normal
-  - name: 正常シナリオ（溜めた修正を取り消す）
+  - name: 正常シナリオ（編集中の変更を取り消す）
     setup:
       - name: Mock
         description: なし（実環境で実行）
       - name: 直コミットを許可した配信元
         description: 正常シナリオと同じ sample
-      - name: 溜めた修正
+      - name: 編集中の変更
         description: n1 のタグの追加と用語の追加の 2 件
     flow: |-
       <!-- map -->
@@ -82,15 +82,15 @@ scenarios:
         actor U as 利用者
         participant UI as dev-docs の画面
 
-        U->>UI: 画面を再読み込みし、溜めた修正のパネルを開く
-        UI-->>U: 溜めた修正 2 件
+        U->>UI: 画面を再読み込みし、編集中の変更のパネルを開く
+        UI-->>U: 編集中の変更 2 件
         U->>UI: 用語の追加の修正を取り消す
-        UI-->>U: 溜めた修正 1 件と、元の値の用語集の表
+        UI-->>U: 編集中の変更 1 件と、元の値の用語集の表
       ```
 
       <!-- /map -->
     expected:
-      - 再読み込みしても、溜めた修正 2 件が残っている
+      - 再読み込みしても、編集中の変更 2 件が残っている
       - 取り消した後、パネルとトップバーの件数が 1 になり、用語集の表に `種類` の行が無い
       - リモートは変わらない
     test: test_normal_when_change_discarded
@@ -100,7 +100,7 @@ scenarios:
         description: なし（実環境で実行）
       - name: 直コミットを許可した配信元
         description: 正常シナリオと同じ sample
-      - name: 溜めた修正
+      - name: 編集中の変更
         description: n1 のタグの追加（合格する）と、名前が空の用語の追加（スキーマに合格しない）の 2 件
     flow: |-
       <!-- map -->
@@ -124,7 +124,7 @@ scenarios:
     expected:
       - リモートとワークツリーが変わらない
       - 用語の追加の修正に、違反したキーのパスと修正方法が出る
-      - 溜めた修正 2 件が残っている
+      - 編集中の変更 2 件が残っている
     test: test_error_when_validation_failed
   - name: 異常シナリオ（他の変更と食い違う）
     setup:
@@ -132,11 +132,11 @@ scenarios:
         description: なし（実環境で実行）
       - name: 直コミットを許可した配信元
         description: 正常シナリオと同じ sample
-      - name: 溜めた修正
+      - name: 編集中の変更
         description: n1 のタグの追加
       - name: 他の変更
         description: 修正を溜めた後に、リモートの develop へ n1 の概要を変えるコミットをプッシュする
-        notes: 溜めた修正の n1 のバージョンが古くなる
+        notes: 編集中の変更の n1 のバージョンが古くなる
     flow: |-
       <!-- map -->
 
@@ -158,7 +158,7 @@ scenarios:
       <!-- /map -->
     expected:
       - リモートに、他の変更のコミットより後のコミットが増えない
-      - n1 の修正に、他の変更で変わったことが出て、溜めた修正が残っている
+      - n1 の修正に、他の変更で変わったことが出て、編集中の変更が残っている
     test: test_error_when_version_mismatched
   - name: 異常シナリオ（直コミットを許可していない）
     setup:
@@ -166,7 +166,7 @@ scenarios:
         description: なし（実環境で実行）
       - name: 直コミットを許可した配信元
         description: 正常シナリオと同じ sample
-      - name: 溜めた修正
+      - name: 編集中の変更
         description: n1 のタグの追加
       - name: 許可の取り消し
         description: 修正を溜めた後に、project-index の端末の設定の API（`PUT /settings/sources`）で、sample の行の `direct_commit.write_api_kinds` から `note` を除く（project-index は端末の設定のファイルを監視しないため、ファイルを書き換えるだけでは反映されない）
@@ -191,7 +191,7 @@ scenarios:
       <!-- /map -->
     expected:
       - リモートとワークツリーが変わらない
-      - n1 の修正に、許可していない種類 `note` と、許可を記載するキー `sources[].direct_commit.write_api_kinds` が出て、溜めた修正が残っている
+      - n1 の修正に、許可していない種類 `note` と、許可を記載するキー `sources[].direct_commit.write_api_kinds` が出て、編集中の変更が残っている
     test: test_error_when_direct_commit_not_permitted
   - name: 異常シナリオ（リモートに接続できない）
     setup:
@@ -199,7 +199,7 @@ scenarios:
         description: なし（実環境で実行）
       - name: 直コミットを許可した配信元
         description: 正常シナリオと同じ sample
-      - name: 溜めた修正
+      - name: 編集中の変更
         description: n1 のタグの追加
       - name: リモートの失敗
         description: 修正を溜めた後に、sample のリモートの URL を存在しないパスへ変える
@@ -224,7 +224,7 @@ scenarios:
 
       <!-- /map -->
     expected:
-      - パネルに送信できなかったことと理由が出て、溜めた修正が残っている
+      - パネルに送信できなかったことと理由が出て、編集中の変更が残っている
       - sample のワークツリーに未コミットの変更と未プッシュのコミットが無い
     test: test_error_when_remote_unreachable
 refs:

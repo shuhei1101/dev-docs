@@ -36,7 +36,7 @@ type Props = {
   refs?: RefsResponse;
   currentRef?: string;
   commentCount?: number;
-  /** 開いている配信元の溜めた修正の件数 */
+  /** 開いている配信元の編集中の変更の件数 */
   pendingEditCount?: number;
   colorScheme: ColorScheme;
   onSourceSelect?: (id: string) => void;
@@ -197,7 +197,7 @@ type MetadataButtonsProps = {
   onPendingPanelToggle?: () => void;
 };
 
-/** 文書の画面とメタデータの画面で出す、メタデータの画面を開くボタンと溜めた修正のパネルを開くボタン */
+/** 文書の画面とメタデータの画面で出す、メタデータの画面を開くボタンと編集中のパネルを開くボタン */
 const MetadataButtons = ({
   screen,
   currentSource,
@@ -229,11 +229,11 @@ const MetadataButtons = ({
         variant="ghost"
         size="sm"
         className="px-1.5 md:px-2.5"
-        aria-label={`溜めた修正 ${pendingEditCount} 件`}
+        aria-label={`編集中 ${pendingEditCount} 件`}
         onClick={onPendingPanelToggle}
       >
         <FilePen />
-        <span className="hidden md:inline">溜めた修正</span>
+        <span className="hidden md:inline">編集中</span>
         {pendingEditCount > 0 && (
           <span className="text-xs">{pendingEditCount}</span>
         )}

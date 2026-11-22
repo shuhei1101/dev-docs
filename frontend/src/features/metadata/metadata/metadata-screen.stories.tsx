@@ -277,7 +277,7 @@ export const ValidationFailed: Story = {
     msw: [
       listed(metadata),
       problem(422, {
-        title: "検査に合格しない修正があります",
+        title: "検査に合格しない変更があります",
         errors: [
           {
             key: "terms:new:add",
@@ -296,12 +296,12 @@ export const VersionMismatch: Story = {
     msw: [
       listed(metadata),
       problem(409, {
-        title: "他の変更と食い違う修正があります",
+        title: "他の変更と競合する変更があります",
         errors: [
           {
             key: "tags:n1:update",
             message:
-              "docs/note/n1.yaml は他の変更で変わりました（今のバージョン 9f8e7d）。一覧を読み直してから修正し直してください",
+              "docs/note/n1.yaml は他の変更で変わりました（今のバージョン 9f8e7d）。一覧を再読み込みしてから、再度編集してください",
           },
         ],
       }),
