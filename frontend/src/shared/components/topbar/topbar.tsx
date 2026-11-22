@@ -1,6 +1,8 @@
 import { Link } from "@tanstack/react-router";
 import {
   BookOpen,
+  Database,
+  FilePen,
   ChevronDown,
   GitBranch,
   GitCompare,
@@ -34,12 +36,15 @@ type Props = {
   refs?: RefsResponse;
   currentRef?: string;
   commentCount?: number;
+  /** 開いている配信元の溜めた修正の件数 */
+  pendingEditCount?: number;
   colorScheme: ColorScheme;
   onSourceSelect?: (id: string) => void;
   onRefSelect?: (ref: string) => void;
   onCompareStart?: () => void;
   onSearchOpen?: () => void;
   onCommentPanelToggle?: () => void;
+  onPendingPanelToggle?: () => void;
   onSidebarOpen?: () => void;
   onColorSchemeToggle: () => void;
 };
@@ -185,6 +190,55 @@ const RefMenu = ({
   );
 };
 
+type MetadataButtonsProps = {
+  screen: ScreenId;
+  currentSource?: string;
+  pendingEditCount?: number;
+  onPendingPanelToggle?: () => void;
+};
+
+/** 文書の画面とメタデータの画面で出す、メタデータの画面を開くボタンと溜めた修正のパネルを開くボタン */
+const MetadataButtons = ({
+  screen,
+  currentSource,
+  pendingEditCount = 0,
+  onPendingPanelToggle,
+}: MetadataButtonsProps) => {
+  if (screen !== "doc-view" && screen !== "metadata") return null;
+  if (currentSource === undefined) return null;
+  return (
+    <>
+      <Button
+        variant="ghost"
+        size="sm"
+        aria-label="メタデータ"
+        aria-current={screen === "metadata" ? "page" : undefined}
+        render={
+          <Link
+            to="/$source/$"
+            params={{ source: currentSource, _splat: "_metadata" }}
+          />
+        }
+        nativeButton={false}
+      >
+        <Database />
+        <span className="hidden md:inline">メタデータ</span>
+      </Button>
+      <Button
+        variant="ghost"
+        size="sm"
+        aria-label={`溜めた修正 ${pendingEditCount} 件`}
+        onClick={onPendingPanelToggle}
+      >
+        <FilePen />
+        {pendingEditCount > 0 && (
+          <span className="text-xs">{pendingEditCount}</span>
+        )}
+      </Button>
+    </>
+  );
+};
+
 const HOME_CLASS =
   "flex shrink-0 items-center gap-1.5 font-semibold tracking-tight whitespace-nowrap";
 
@@ -213,6 +267,7 @@ const HomeLink = ({ currentSource }: { currentSource?: string }) =>
 /** 3 画面に共通のトップバー。配信元・リビジョンの切り替え、検索、コメント、設定、明暗の切り替え */
 export const Topbar = (props: Props) => {
   const { screen, currentSource, refs, commentCount = 0, colorScheme } = props;
+
   const settings = screen === "settings";
   const showRefs =
     !settings && currentSource !== undefined && refs?.git === true;
@@ -260,6 +315,12 @@ export const Topbar = (props: Props) => {
             )}
           </Button>
         )}
+        <MetadataButtons
+          screen={screen}
+          currentSource={currentSource}
+          pendingEditCount={props.pendingEditCount}
+          onPendingPanelToggle={props.onPendingPanelToggle}
+        />
         {!settings && (
           <Button
             variant="ghost"

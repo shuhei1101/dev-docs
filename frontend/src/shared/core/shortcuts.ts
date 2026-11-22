@@ -1,5 +1,5 @@
 export type ShortcutId = "search" | "help";
-export type ScreenId = "doc-view" | "settings" | "not-found";
+export type ScreenId = "doc-view" | "settings" | "not-found" | "metadata";
 
 export type ShortcutDef = {
   id: ShortcutId;
@@ -16,14 +16,14 @@ export const SHORTCUTS = [
     hotkeys: ["Mod+K", "/"],
     label: "検索を開く",
     singleKey: ["/"],
-    screens: ["doc-view", "not-found"],
+    screens: ["doc-view", "not-found", "metadata"],
   },
   {
     id: "help",
     hotkeys: ["Shift+/"],
     label: "ショートカットの一覧を開く",
     singleKey: ["Shift+/"],
-    screens: ["doc-view", "settings", "not-found"],
+    screens: ["doc-view", "settings", "not-found", "metadata"],
   },
 ] as const satisfies readonly ShortcutDef[];
 
