@@ -38,6 +38,9 @@ data_models:
         type: dict[str, str | list[str]]
         default: '{}'
         description: 変更後の値
+      - name: doc_path
+        type: str | None
+        description: 文書の取得で開くパス（`{キー}[].{項目}` の列を変える `update` で必須）
   - name: CommitRequest
     title: 直コミットの要求
     container: features/metadata/commits.py
@@ -168,8 +171,8 @@ functions:
       description: IF-155-29 の 200 の応答
     process: |-
       1. 変更ごとの列が `EDITABLE_COLUMNS` にあるかを確認し、無ければ `EditsRejectedError`（400）を送出する
-      2. project-indexの呼び出し.配信元の設定の取得で `metadata` を取得し、`{キー}[].{項目}` の列を変える `update` の文書を文書の取得で取得する（バージョンが `expected_version` と違えば `EditsRejectedError`（409、`current`））
-      3. 書き込みと削除への変換をし、project-indexの呼び出し.直コミットの書き込みを呼ぶ
+      2. project-indexの呼び出し.配信元の設定の取得で `metadata` を取得し、`{キー}[].{項目}` の列を変える `update` の文書だけを文書の取得（`doc_path` と `doc_id`）で取得する（`doc_path` が無ければ `EditsRejectedError`（400）、文書が無ければ 404。取得した後の変更は project-index が `expected_version` の照合で 409 にする）
+      3. 書き込みと削除への変換をし、project-indexの呼び出し.直コミットの書き込みを呼ぶ（`message` は要求の説明、`dry_run` のときは固定の説明 `差分確認`。project-index の書き込みの API は `message` を必須にしている）
       4. 200 は `results[]` の `kind`・`index` を変更の `key` に戻して `CommitResult` を返却する
       5. 403・404・409・422 は `errors[]` と `kinds`（変更の `doc_kind` と照合する）・`current` を変更の `key` へ戻した `EditsRejectedError` を送出する。500・502 は 502、504 と待ちの上限の打ち切りは 504 にする
       6. 送信ごとに、配信元の ID・`dryRun`・変更の件数・状態コード・コミットの SHA（打ち切ったときはその旨）を 1 行のログに出力する
@@ -201,6 +204,18 @@ functions:
         mock: project-indexの呼び出し（偽物）
         expected: '`EditsRejectedError`（504）で `detail` にコミットされたかが分からないこと'
         exception: 待ちの上限
+      - name: test_commit_edits_when_dry_run
+        case: 正常
+        summary: 差分確認でも説明を送信する
+        condition: '`message` の無い `dryRun: true` の要求'
+        mock: project-indexの呼び出し（要求を記録する偽物）
+        expected: 送信した本文の `message` が `差分確認`、`dryRun` が `true`
+      - name: test_commit_edits_when_mapped_tags
+        case: 正常
+        summary: 対象の文書だけを取得する
+        condition: '`tags: tags[].name` の種類の文書の `update`（`docPath` あり）'
+        mock: project-indexの呼び出し（要求を記録する偽物）
+        expected: 文書の取得を `docPath` と `id` で 1 回呼び、文書の一覧を呼ばない
     exceptions:
       - name: EditsRejectedError
         condition: 本文の検証・文書のバージョンの食い違い・project-index の 4xx・5xx・待ちの上限

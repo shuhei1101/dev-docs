@@ -36,6 +36,9 @@ data_models:
       - name: label
         type: string
         description: '`{種類の title}: {行の名前}`'
+      - name: docPath
+        type: string | null
+        description: 行の `docPath`（配列の項目を変える `update` で直コミットが今の値を取得する）
 functions:
   - name: toCommitEdits
     title: 直コミットの要求への変換
@@ -54,7 +57,7 @@ functions:
     returns:
       type: Edit[]
       description: '`before`・`label` を除いた並び'
-    process: 1. 変更ごとに `before`・`label` を除き、`add` は `expectedVersion` を除く（`docKind` は全ての変更で送信する）
+    process: 1. 変更ごとに `before`・`label` を除き、`add` は `expectedVersion` を除く（`docKind` は全ての変更で、`docPath` は `update` で送信する）
     unit_tests:
       - name: test_to_commit_edits
         case: 正常
