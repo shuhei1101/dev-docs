@@ -10,9 +10,9 @@ use_cases:
     detail: 全体の流れは変わらない
     depends_on: []
 scope_out:
-  - item: mdmark の側の見出し行を留める処理の修正
-    reason: dev-docs のリポジトリでは直せない。切り分けで原因が mdmark の側にあると分かったときは、Issue 本文のとおり mdmark へ起票し直す
-    plan: to_file
+  - item: mdmark の `script` の方式が `--mdmark-sticky-top` の px 以外の長さを 0 として扱う不具合の修正
+    reason: dev-docs のリポジトリでは修正できない。dev-docs は `@property` の登録で回避する
+    plan: shuhei1101/mdmark#789
   - item: MindStella のプレビューの見出し行の固定
     reason: 要望に含まれない（shuhei1101/mindstella#614 が扱う）
     plan: none
