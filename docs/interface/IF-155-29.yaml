@@ -221,7 +221,7 @@ constraints:
     notes: 文書の取得が 404 の変更は、project-index へ送信せずに 404 の `errors[]` に入れる
     decided_by: NFR-155-1#requirements[project-index への問い合わせの制限時間]
   - item: 衝突の結果への変換
-    constraint: project-index の応答の `conflict` を、`errors[]` の `writes`・`deletes` の別と添字を変更の `key` に対応させた `reasons[]` と、`script.stdout` から取り出した `prUrl` にして返却する。`conflict.commit` と `script.stdout` は返却しない
+    constraint: project-index の応答の `conflict` を、`errors[]` の `writes`・`deletes` の別と添字（`path` が文書の ID のときはその文書を変える変更）を変更の `key` に対応させた `reasons[]` と、`script.stdout` から取り出した `prUrl` にして返却する。`conflict.commit` と `script.stdout` は返却しない
 flows:
   - name: 正常系
     summary: 変更を 1 つのコミットにしてプッシュし、変更ごとの結果とコミットを返却する

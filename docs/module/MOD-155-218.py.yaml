@@ -384,11 +384,16 @@ functions:
         required: true
         passing: positional
         description: 書き込みと削除への変換の添字と変更の `key` の対応
+      - name: edits
+        type: list[Edit]
+        required: true
+        passing: positional
+        description: 送信した編集中の変更（文書の ID を変更の `key` に戻す）
     returns:
       type: ConflictResult
       description: IF-155-29 の `conflict`
     process: |-
-      1. `errors[]` の `path` の先頭の `writes[{添字}]`・`deletes[{添字}]` を変更の `key` に戻し（戻せないものは `None`）、`reason` と組にして `reasons` にする
+      1. `errors[]` の `path` の先頭の `writes[{添字}]`・`deletes[{添字}]` を変更の `key` に戻し、`path` が文書の ID のもの（文書のバージョンが合わない）はその文書を変える変更ごとに 1 件にし（戻せないものは `None`）、`reason` と組にして `reasons` にする
       2. `script` があれば、`stdout` の空でない最後の行が `https://` で始まるときその行を `pr_url` にし、`exitCode`・`timedOut`・`stderr` と組にする
       3. `branch`・`baseCommit` と合わせて返却する。`commit` と `stdout` は入れない
     unit_tests:
@@ -410,6 +415,12 @@ functions:
         condition: '`script.stdout` が `done`、`exitCode: 1`'
         mock: なし
         expected: '`script.pr_url` が `None`、`exit_code` が 1'
+      - name: test_to_conflict_when_version_mismatch
+        case: 正常
+        summary: 文書の ID の理由をその文書の変更へ戻す
+        condition: '`errors[]` が `path: n1` の 1 件で、n1 のタグの `update` と用語の `add` を送信した'
+        mock: なし
+        expected: '`reasons` が `key: tags:n1:update` の 1 件'
 refs:
   - to: IF-155-29
     type: requires
