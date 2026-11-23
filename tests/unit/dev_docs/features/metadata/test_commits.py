@@ -552,3 +552,22 @@ def test_item_expected_versions_when_key_missing(
     versions = asyncio.run(item_expected_versions(make_client(), "sample", _request(), {}))
     # 検証
     assert versions == {"tags:n1:update": "c3d4e5"}
+
+
+def test_item_expected_versions_when_base_commit_missing(
+    fake_index: FakeIndex, make_client: Callable[..., ProjectIndexClient]
+) -> None:
+    """編集を始めたときのコミットがクローンに無い（異常系）。"""
+    # 準備
+    fake_index.configs["sample"] = config_json(documents=CONFIG_ROWS)
+    fake_index.responses[N1_PATH] = (
+        404,
+        {"missing": "ref", "value": BASE_COMMIT, "argument": "ref", "detail": ""},
+    )
+    # 実行
+    with pytest.raises(EditsRejectedError) as caught:
+        asyncio.run(item_expected_versions(make_client(), "sample", _request(), {}))
+    # 検証
+    assert caught.value.status_code == 409
+    assert caught.value.name == "BaseCommitUnusableError"
+    assert caught.value.errors == []
