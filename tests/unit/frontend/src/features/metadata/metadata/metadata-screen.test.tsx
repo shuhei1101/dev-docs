@@ -51,6 +51,7 @@ test("test_metadata_screen_when_locate", async () => {
           docId: "n1",
           docKind: "note",
           expectedVersion: "v-n1",
+          docPath: "notes/n1.yaml",
           values: { tags: ["topic:b"] },
           before: { tags: ["topic:a"] },
           label: "タグ: n1",

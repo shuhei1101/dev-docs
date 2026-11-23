@@ -130,7 +130,7 @@ test("test_use_restart_from_latest", async () => {
         baseCommit: "ccc3333",
         kinds: latest.kinds.map((kind) =>
           kind.id === "tags"
-            ? { ...kind, rows: [{ ...kind.rows[0], id: "n1", values: { tags: ["topic:a"] } }, { ...kind.rows[0], id: "n2", values: { tags: ["topic:a"] } }] }
+            ? { ...kind, rows: [{ ...(kind.rows[0] as object), id: "n1", values: { tags: ["topic:a"] } }, { ...(kind.rows[0] as object), id: "n2", values: { tags: ["topic:a"] } }] }
             : kind,
         ),
       });

@@ -191,7 +191,7 @@ test("test_pending_panel_when_base_commit_unusable", async () => {
         baseCommit: "ccc3333",
         kinds: latest.kinds.map((kind) =>
           kind.id === "tags"
-            ? { ...kind, rows: [{ ...kind.rows[0], id: "n1", values: { tags: ["topic:a"] } }, { ...kind.rows[0], id: "n2", values: { tags: ["topic:a"] } }] }
+            ? { ...kind, rows: [{ ...(kind.rows[0] as object), id: "n1", values: { tags: ["topic:a"] } }, { ...(kind.rows[0] as object), id: "n2", values: { tags: ["topic:a"] } }] }
             : kind,
         ),
       });
@@ -223,7 +223,7 @@ test("test_pending_panel_when_restart_dropped", async () => {
         baseCommit: "ccc3333",
         kinds: latest.kinds.map((kind) =>
           kind.id === "tags"
-            ? { ...kind, rows: [{ ...kind.rows[0], id: "n1", values: { tags: ["topic:x"] } }, { ...kind.rows[0], id: "n2", values: { tags: ["topic:a"] } }] }
+            ? { ...kind, rows: [{ ...(kind.rows[0] as object), id: "n1", values: { tags: ["topic:x"] } }, { ...(kind.rows[0] as object), id: "n2", values: { tags: ["topic:a"] } }] }
             : kind,
         ),
       });
