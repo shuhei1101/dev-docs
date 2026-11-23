@@ -270,10 +270,10 @@ functions:
         expected: 送信した本文の `message` が `差分確認`、`dryRun` が `true`
       - name: test_commit_edits_when_mapped_tags
         case: 正常
-        summary: 対応づけた配列の項目の列でも文書を取得しない
+        summary: 対応づけた配列の項目の列でも文書の一覧を取得しない
         condition: '`tags: tags[].name` の種類の文書の `update`'
         mock: project-indexの呼び出し（要求を記録する偽物）
-        expected: 文書の取得・文書の一覧を呼ばず、`set.tags` が送信した名前の配列
+        expected: '文書の一覧を呼ばず、文書の取得は項目ごとのバージョンの取得（`ref` が `base_commit`）の 1 回だけで、`set.tags` が送信した名前の配列、`expected_version` が `{tags: そのバージョン}`'
       - name: test_commit_edits_when_base_commit_unusable
         case: 異常
         summary: 編集を始めたときのコミットが使用できない
