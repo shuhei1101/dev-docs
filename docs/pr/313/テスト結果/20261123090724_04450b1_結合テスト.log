@@ -1,0 +1,41 @@
+# 結合テスト（04450b1）
+
+## TL-2 結合テスト（サーバー）: run_runner（layer=backend-integration、https://github.com/shuhei1101/dev-docs/actions/runs/45086219363）
+
+paths: tests/integration/server/test_api_schema.py tests/integration/server/test_get_metadata.py tests/integration/server/test_post_commits.py
+
+tests/integration/server/test_api_schema.py::test_normal PASSED
+tests/integration/server/test_get_metadata.py::test_normal PASSED
+tests/integration/server/test_get_metadata.py::test_normal_when_rule_index_not_served PASSED
+tests/integration/server/test_get_metadata.py::test_error_when_source_missing PASSED
+tests/integration/server/test_get_metadata.py::test_error_when_project_index_unreachable PASSED
+tests/integration/server/test_post_commits.py::test_normal PASSED
+tests/integration/server/test_post_commits.py::test_normal_when_dry_run PASSED
+tests/integration/server/test_post_commits.py::test_error_when_cross_origin PASSED
+tests/integration/server/test_post_commits.py::test_error_when_body_invalid PASSED
+tests/integration/server/test_post_commits.py::test_error_when_validation_failed PASSED
+tests/integration/server/test_post_commits.py::test_error_when_version_mismatched PASSED
+tests/integration/server/test_post_commits.py::test_error_when_direct_commit_not_permitted PASSED
+tests/integration/server/test_post_commits.py::test_error_when_remote_unreachable PASSED
+tests/integration/server/test_post_commits.py::test_error_when_write_timed_out PASSED
+tests/integration/server/test_post_commits.py::test_normal_when_tags_mapped PASSED
+============================= 15 passed in 20.95s ==============================
+
+## TL-3 結合テスト（画面）: run_runner（layer=frontend-integration、全件、https://github.com/shuhei1101/dev-docs/actions/runs/45086327045）
+
+  288 passed (4.1m)
+✓ [chromium] › tests/integration/frontend/metadata-screen.spec.ts:149:3 › ページのタイトルと種類のタブ › page_title (1.2s)
+✓ [chromium] › tests/integration/frontend/metadata-screen.spec.ts:158:3 › ページのタイトルと種類のタブ › tab_in_url (2.0s)
+✓ [chromium] › tests/integration/frontend/metadata-screen.spec.ts:169:3 › 絞り込み › filter_rows (1.2s)
+✓ [chromium] › tests/integration/frontend/metadata-screen.spec.ts:183:3 › 種類を配信していない・参照のみ › kind_not_served (1.3s)
+✓ [chromium] › tests/integration/frontend/metadata-screen.spec.ts:191:3 › 種類を配信していない・参照のみ › read_only_kind (1.3s)
+✓ [chromium] › tests/integration/frontend/metadata-screen.spec.ts:201:3 › 編集・差分確認・コミット › commit_edits (2.2s)
+✓ [chromium] › tests/integration/frontend/metadata-screen.spec.ts:228:3 › 編集・差分確認・コミット › add_and_delete_rows (1.4s)
+✓ [chromium] › tests/integration/frontend/metadata-screen.spec.ts:242:3 › 編集・差分確認・コミット › add_row_invalid_id (1.3s)
+✓ [chromium] › tests/integration/frontend/metadata-screen.spec.ts:251:3 › 編集・差分確認・コミット › keep_edits_on_reload (2.0s)
+✓ [chromium] › tests/integration/frontend/metadata-screen.spec.ts:259:3 › 編集・差分確認・コミット › locate_edit (1.9s)
+✓ [chromium] › tests/integration/frontend/metadata-screen.spec.ts:272:3 › 送信の失敗 › validation_failed (1.8s)
+✓ [chromium] › tests/integration/frontend/metadata-screen.spec.ts:296:3 › 送信の失敗 › version_mismatch (1.9s)
+✓ [chromium] › tests/integration/frontend/metadata-screen.spec.ts:316:3 › project-index から受け取れない › project_index_unreachable (1.2s)
+✓ [chromium] › tests/integration/frontend/metadata-screen.spec.ts:339:3 › 狭い幅とアクセシビリティ › narrow_viewport (1.2s)
+✓ [chromium] › tests/integration/frontend/metadata-screen.spec.ts:347:3 › 狭い幅とアクセシビリティ › axe (2.8s)
