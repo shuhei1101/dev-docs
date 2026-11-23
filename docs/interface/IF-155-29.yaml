@@ -135,10 +135,10 @@ response:
     description: コミットしたブランチ
   - name: conflict
     type: Conflict | None
-    description: '衝突して修正をブランチに残したときの結果。衝突しなかったときと `dryRun: true` のときは `null`'
+    description: '衝突して修正をブランチに残したとき（`dryRun: true` は残すことになるとき）の結果。衝突しなかったときは `null`'
   - name: conflict.branch
-    type: str
-    description: 修正を残したブランチの名前（`project-index/conflict/{YYYYMMDD-HHMMSS}-{コミットの 7 桁}`）
+    type: str | None
+    description: '修正を残したブランチの名前（`project-index/conflict/{YYYYMMDD-HHMMSS}-{コミットの 7 桁}`。`dryRun: true` は `null`）'
   - name: conflict.baseCommit
     type: str
     description: ブランチの起点にした編集を始めたときのコミット（40 桁）
@@ -150,7 +150,7 @@ response:
     description: 今のブランチで断られた理由
   - name: conflict.script
     type: ConflictScript | None
-    description: 衝突したときのスクリプトの結果。端末の設定に `on_conflict` が無いときは `null`
+    description: '衝突したときのスクリプトの結果。端末の設定に `on_conflict` が無いときと `dryRun: true` のときは `null`'
   - name: conflict.script.exitCode
     type: int | None
     description: 終了コード（制限時間で止めたときは `null`）
@@ -598,6 +598,8 @@ flows:
         participant PI as project-index
 
         C->>E: edits（n1 の update）, message, baseCommit
+        E->>PI: 編集を始めたときの n1 を取得（ref: baseCommit）
+        PI-->>E: itemVersions
         E->>PI: POST /sources/sample/commits（baseCommit）
         PI-->>E: 200 conflict（script: null）
         E-->>C: 200 conflict（script: null）
@@ -628,6 +630,8 @@ flows:
         participant PI as project-index
 
         C->>E: edits（n1 の update）, message, baseCommit
+        E->>PI: 編集を始めたときの n1 を取得（ref: baseCommit）
+        PI-->>E: itemVersions
         E->>PI: POST /sources/sample/commits（baseCommit）
         PI-->>E: 200 conflict（script.exitCode: 1）
         E-->>C: 200 conflict（script.exitCode・stderr・prUrl: null）
@@ -638,6 +642,37 @@ flows:
       - 200 で `conflict.script.exitCode` が `1`、`conflict.script.stderr` にスクリプトの理由、`conflict.script.prUrl` が `null`
       - クローンに `project-index/conflict/` で始まるブランチがある
     test: test_normal_when_conflict_script_failed
+  - name: 正常系（差分確認で衝突する）
+    summary: 差分確認でも、コミットすると衝突してブランチに残ることと理由を返却する
+    setup:
+      - name: Mock
+        description: なし（テストの中で起動した project-index）
+      - name: 他の変更
+        description: 正常系（衝突したら修正をブランチに残す）と同じ
+      - name: 入力
+        description: '取得した `baseCommit` と、n1 のタグの `update`、`dryRun: true`'
+    flow: |-
+      <!-- map -->
+
+      ```mermaid
+      sequenceDiagram
+        participant C as クライアント
+        participant E as POST /_api/sources/{source}/commits
+        participant PI as project-index
+
+        C->>E: edits（n1 の update）, dryRun: true, baseCommit
+        E->>PI: 編集を始めたときの n1 を取得（ref: baseCommit）
+        PI-->>E: itemVersions
+        E->>PI: POST /sources/sample/commits（dryRun・baseCommit）
+        PI-->>E: 200 conflict（branch: null・errors）
+        E-->>C: 200 conflict（branch: null・reasons）
+      ```
+
+      <!-- /map -->
+    expected:
+      - 200 で `applied` が `false`、`conflict.branch` と `conflict.script` が `null`、`conflict.reasons` に n1 の変更の `key` がある
+      - リモートとワークツリーが変わらず、クローンに `project-index/conflict/` で始まるブランチが増えない
+    test: test_normal_when_dry_run_conflicted
 refs:
   - to: API-155-1
     type: requires
