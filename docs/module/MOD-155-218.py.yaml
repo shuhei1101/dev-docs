@@ -332,7 +332,8 @@ functions:
     process: |-
       1. `update` の変更ごとに、`asyncio.gather` で project-indexの呼び出し.項目ごとのバージョンの取得（`doc_path`・`ref` は `base_commit`・`document_id` は `doc_id`）を呼ぶ
       2. 変更の `values` の列ごとに、`mappings[doc_kind]` で列と文書のキーの対応の解決をして最上位のキーを求め、そのキーのバージョンだけを辞書にする。そのキーのどれかが `itemVersions` に無い変更は、辞書ではなく `expected_version`（文書の全体のバージョン）にする
-      3. `DocumentNotFoundError` の変更は全て集め、`errors[]` にその変更の `key` を入れた `EditsRejectedError`（404）を送出する
+      3. `RefNotFoundError`（編集を始めたときのコミットがクローンに無い）は、`title` を `BaseCommitUnusableError` にした `EditsRejectedError`（409、`errors[]` なし）を送出する
+      4. `DocumentNotFoundError` の変更は全て集め、`errors[]` にその変更の `key` を入れた `EditsRejectedError`（404）を送出する
     unit_tests:
       - name: test_item_expected_versions
         case: 正常
@@ -353,6 +354,13 @@ functions:
         condition: '`tags` の `update`（`expected_version` が `c3d4e5`）と、`itemVersions` が `{id, name}` だけを返却する偽物'
         mock: project-indexの呼び出し（偽物）
         expected: その変更の値が文字列の `c3d4e5`
+      - name: test_item_expected_versions_when_base_commit_missing
+        case: 異常
+        summary: 編集を始めたときのコミットがクローンに無い
+        condition: '偽物が文書の取得で `missing: ref` の 404 を返却する'
+        mock: project-indexの呼び出し（偽物）
+        expected: '`EditsRejectedError`（409）で、`name` が `BaseCommitUnusableError`、`errors[]` が空'
+        exception: 編集を始めたときのコミットが使用できない
     exceptions:
       - name: EditsRejectedError
         condition: 編集を始めたときの文書が無い
