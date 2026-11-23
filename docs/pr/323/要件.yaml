@@ -1,0 +1,41 @@
+use_cases:
+  - kind: composite
+    scenario: docs/scenario/SC-155-13.yaml
+    impact: none
+    detail: 文書の参照・メタデータの編集の流れは変わらず、単一ユースケースの中の表示だけが変わる
+    depends_on: []
+  - kind: single
+    scenario: docs/scenario/SC-155-15.yaml
+    impact: changed
+    detail: 本文の直コミットを断る種類の文書では、本文の編集を出さないか無効にし、送信すると断られる操作を利用者がしないで済む
+    depends_on: []
+  - kind: single
+    scenario: docs/scenario/SC-155-14.yaml
+    impact: changed
+    detail: メタデータの表で、本文の直コミットを断る種類の文書の本文が編集できないことが分かる
+    depends_on: []
+  - kind: single
+    scenario: docs/scenario/SC-155-7.yaml
+    impact: changed
+    detail: 検索から除外される文書を、サイドバーで薄く表示するか隠し、検索で除外される文書も探せる
+    depends_on: []
+docs:
+  - page: docs/external-api/API-155-1.yaml
+    new: false
+    change: 配信元の設定の取得の `directCommit.metadataOnlyKinds`、文書の一覧の `excluded`、検索の `include_excluded`・`excludedCount`・`excluded` を利用方法に追加する
+    status: todo
+  - page: docs/guide/画面で参照する.md
+    new: false
+    change: 本文の直コミットを断る種類の本文の表示と、検索から除外される文書のサイドバーの表示・検索の操作を説明に追加する
+    status: todo
+  - page: docs/guide/設定.md
+    new: false
+    change: '画面が参照する project-index.yaml のキーに `documents[].search_exclude` と `direct_commit.kinds[]` の `body: false` を追加する'
+    status: todo
+scope_out:
+  - item: 'project-index の `search_exclude`・`direct_commit.kinds[]` の `body: false` の判定と返却の変更'
+    reason: 要望は project-index が返却する項目を画面で使用することで、返却は shuhei1101/project-index#265・#280 で入っている
+    plan: none
+  - item: 画面から配信元の設定の `search_exclude`・`direct_commit.kinds[]` を編集する操作
+    reason: 要望に含まれない（表示だけを求めている）
+    plan: none
