@@ -536,3 +536,19 @@ def test_to_conflict_when_no_pr_url() -> None:
     assert result.script is not None
     assert result.script.pr_url is None
     assert result.script.exit_code == 1
+
+
+def test_item_expected_versions_when_key_missing(
+    fake_index: FakeIndex, make_client: Callable[..., ProjectIndexClient]
+) -> None:
+    """編集を始めたときの文書に修正したキーが無い（正常系）。"""
+    # 準備
+    fake_index.configs["sample"] = config_json(documents=CONFIG_ROWS)
+    fake_index.responses[N1_PATH] = (
+        200,
+        {"path": "notes/n1.yaml", "itemVersions": {"id": "i1", "name": "m1"}},
+    )
+    # 実行
+    versions = asyncio.run(item_expected_versions(make_client(), "sample", _request(), {}))
+    # 検証
+    assert versions == {"tags:n1:update": "c3d4e5"}
