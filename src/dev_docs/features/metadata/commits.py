@@ -14,7 +14,12 @@ from pydantic import Field, model_validator
 from dev_docs.features.metadata.metadata import key_mapping
 from dev_docs.integrations.project_index.client import ProjectIndexClient
 from dev_docs.shared.api_model import ApiModel
-from dev_docs.shared.errors import DevDocsError, DocumentNotFoundError, ProjectIndexTimeoutError
+from dev_docs.shared.errors import (
+    DevDocsError,
+    DocumentNotFoundError,
+    ProjectIndexTimeoutError,
+    RefNotFoundError,
+)
 
 __all__ = [
     "EDITABLE_COLUMNS",
@@ -386,7 +391,15 @@ async def item_expected_versions(
         async with asyncio.TaskGroup() as group:
             tasks = [group.create_task(fetch(edit)) for edit in updates]
     except ExceptionGroup as group_error:
-        raise group_error.exceptions[0] from None
+        first = group_error.exceptions[0]
+        # 編集を始めたときのコミットがクローンに無い: 書き込みの API と同じく起点に使えないとして断る
+        if isinstance(first, RefNotFoundError):
+            raise EditsRejectedError(
+                message=f"編集を始めたときのコミット {request.base_commit} がありません（not_found）",
+                status_code=HTTP_CONFLICT,
+                problem_title=BASE_COMMIT_UNUSABLE,
+            ) from first
+        raise first from None
     result: dict[str, dict[str, str] | str] = {}
     missing: list[EditError] = []
     for edit, task in zip(updates, tasks, strict=True):
