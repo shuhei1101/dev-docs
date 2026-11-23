@@ -55,10 +55,10 @@ docs:
 scope_out:
   - item: 配信元ごとの、直コミットを許可する種類の追加（knowledge・aituber などの project-index.yaml の direct_commit.kinds[] と端末の設定の write_api_kinds）
     reason: 起点 Issue の本文の後続。この作業の画面と書き込みの経路ができてから配信元ごとに決める
-    plan: to_file
+    plan: '#315'
   - item: テンプレートとスキーマの画面からの修正
     reason: D-845 A で、テンプレートとスキーマは今のまま Issue と作業 PR を経る
     plan: none
   - item: rule-inject の索引を project-index から読む・書くための rule-inject・配信元の側の修正（rule-inject の索引の検査の CLI とスキーマを配信元から呼べる形で出す修正、索引を持つ配信元の project-index.yaml への索引を配信する行の追加）
     reason: 要る。今の書き込みの API は行の schema・validators[] だけを検査し、rule-inject の write_index_entry と同じ索引の検査を通す手段が無い。rule-inject と索引を持つ配信元のリポジトリの修正で、この作業 PR の外で行う。索引だけを後に回し、ほかのメタデータを先に進める
-    plan: to_file
+    plan: '#316'
