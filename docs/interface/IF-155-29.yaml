@@ -1,0 +1,475 @@
+id: IF-155-29
+title: 編集中の変更の直コミット
+lead: 画面の編集中の変更を配信元ごとに受け、種類ごとに修正できるキーに絞った書き込みと削除にして project-index の書き込みの API へ 1 回で送信し、変更ごとの差分・結果か理由を返却する直コミットの入出力を定め、直コミットを修正するときに参照する。
+entry:
+  kind: endpoint
+  value: POST `/_api/sources/{source}/commits`
+identifier: post_commits
+permissions: 画面と同じオリジンからの要求だけ
+idempotent: false
+side_effects: 'project-index の書き込みの API へ書き込みと削除を送信する。`dryRun: false` で合格すると、project-index が 1 つのコミットにして配信元のリモートへプッシュする。dev-docs は配信元のファイルを書き換えない'
+exclusivity: dev-docs は排他しない。直コミットどうしの排他は project-index が持つ
+callers:
+  - SC-155-15#scenarios[正常シナリオ]
+  - SC-155-15#scenarios[異常シナリオ（検査に合格しない）]
+  - SC-155-15#scenarios[異常シナリオ（他の変更と食い違う）]
+  - SC-155-15#scenarios[異常シナリオ（直コミットを許可していない）]
+  - SC-155-15#scenarios[異常シナリオ（リモートに接続できない）]
+request:
+  - name: source
+    type: str
+    required: true
+    location: path
+    description: 配信元の ID
+  - name: edits
+    type: list[Edit]
+    required: true
+    location: body
+    description: 編集中の変更の並び
+    constraints: 1 件以上。`key` は重複しない
+  - name: edits[].key
+    type: str
+    required: true
+    location: body
+    description: 画面が振った変更の識別子。応答の `results[].key`・`errors[].key` で同じ値を返却する
+  - name: edits[].kind
+    type: Literal['terms', 'aliases', 'tags', 'rules', 'files']
+    required: true
+    location: body
+    description: メタデータの種類（メタデータの取得の `kinds[].id`。`config` は修正できない）
+  - name: edits[].op
+    type: Literal['update', 'add', 'delete']
+    required: true
+    location: body
+    description: 行の修正・追加・削除
+    constraints: '`add`・`delete` は `kind` が `terms`・`rules` のときだけ'
+  - name: edits[].docId
+    type: str
+    required: true
+    location: body
+    description: 対象の文書の ID。`add` は新しい文書の ID
+  - name: edits[].docKind
+    type: str
+    required: true
+    location: body
+    default: なし（`update`・`delete` は使用しない）
+    description: '対象の文書の種類（`documents[].id`）。`update`・`delete` はメタデータの取得の `rows[].docKind`、`add` は `kinds[].createKind`'
+    notes: '列と文書のキーの対応を引く種類と、403 の `kinds` を変更の `key` へ戻すのに使用する。取り違えた種類は project-index の検査と `expected_version` の照合で断られる'
+  - name: edits[].expectedVersion
+    type: str | None
+    required: false
+    location: body
+    default: なし（`add` は使用しない）
+    description: 取得した文書のバージョン（メタデータの取得の `rows[].version`）
+    notes: '`update`・`delete` のときは必須'
+  - name: edits[].values
+    type: dict[str, str | list[str]]
+    required: false
+    location: body
+    default: '`{}`'
+    description: 修正後の値。キーはメタデータの取得の `columns[].key` で、`columns[].type` が `list` の列は文字列の配列にする
+    constraints: '制約「修正できるキー」の列のうち、メタデータの取得で `editable: true` の列だけ'
+  - name: message
+    type: str
+    required: false
+    location: body
+    default: 'なし（`dryRun: true` のときは使用せず、project-index へは固定の説明 `差分確認` を送信する）'
+    description: コミットの説明
+    notes: '`dryRun: false` のときは必須で、空にできない'
+  - name: dryRun
+    type: bool
+    required: false
+    location: body
+    default: '`false`'
+    description: '`true` のとき、検査と差分だけを返却し、コミット・プッシュしない'
+  - name: Origin
+    type: str
+    required: false
+    location: header
+    default: なし（`Sec-Fetch-Site` で判定する）
+    description: 要求元のオリジン
+request_example: |-
+  ```json
+  {"edits": [{"key": "tags:n1:update", "kind": "tags", "op": "update", "docId": "n1", "docKind": "note", "expectedVersion": "c3d4e5", "values": {"tags": ["topic:a", "topic:b"]}}, {"key": "terms:kind:add", "kind": "terms", "op": "add", "docId": "kind", "docKind": "terms", "values": {"name": "種類", "description": "文書の行の ID"}}, {"key": "terms:old-name:delete", "kind": "terms", "op": "delete", "docId": "old-name", "docKind": "terms", "expectedVersion": "b2c3d4"}], "message": "用語とタグを追加する"}
+  ```
+response:
+  - name: applied
+    type: bool
+    description: 'コミット・プッシュしたか（`dryRun: true` のときは `false`）'
+  - name: results[].key
+    type: str
+    description: 変更の識別子（要求の `edits[].key`）
+  - name: results[].status
+    type: Literal['created', 'updated', 'deleted']
+    description: 変更の結果
+  - name: results[].version
+    type: str | None
+    description: 書き込んだ後の文書のバージョン（削除は `null`）
+  - name: results[].diff
+    type: str
+    description: 変更の差分
+  - name: commit.sha
+    type: str
+    description: プッシュしたコミットの SHA
+    notes: '`dryRun: true` のときは `commit` が `null`'
+  - name: commit.branch
+    type: str
+    description: コミットしたブランチ
+response_example: |-
+  ```json
+  {"applied": true, "results": [{"key": "tags:n1:update", "status": "updated", "version": "d4e5f6", "diff": "-   - topic:a\n+   - topic:a\n+   - topic:b"}], "commit": {"sha": "0a1b2c3", "branch": "develop"}}
+  ```
+status_codes:
+  - code: '200'
+    condition: 'コミット・プッシュした、または `dryRun: true` で検査に合格した'
+  - code: '400'
+    condition: '本文の型の検証に通らない（`edits` が空・`key` の重複・`op` と `kind` の組み合わせ・必須の欠け・修正できないキー・元のキーへ戻せない列・`dryRun: false` で `message` が空）'
+    notes: project-index へ送信しない。`errors[]` に `{key, path, reason}`（`key` は該当する変更、本文全体の違反は `null`）
+  - code: '403'
+    condition: 別のオリジンの要求、または project-index が直コミットを許可していない種類があると返却した（`DirectCommitNotPermittedError`）
+    notes: 許可していない種類の文書を書き換える変更ごとに `errors[]` に `{key, reason}` と、許可を記載するキー `sources[].direct_commit.write_api_kinds` を `nextSteps` に入れる
+  - code: '404'
+    condition: 配信元が無い・配信していない、修正・削除する文書が無い（project-index の 404）
+    notes: 文書が無いときは該当する変更の `errors[]` に入れる
+  - code: '409'
+    condition: project-index が文書のバージョンが合わない・ワークツリーに未コミットの変更がある・プッシュが断られたなどと返却した
+    notes: '`VersionMismatchError` は該当する変更ごとに `errors[]` に `{key, reason, current}`（`current` は今のバージョン）。それ以外は `errors[]` を持たず、`detail` に project-index の理由'
+  - code: '422'
+    condition: project-index の検査に合格しない（`ValidationFailedError`）
+    notes: project-index の `errors[]` の `writes`・`deletes` の別と添字を変更の `key` に対応させ、`errors[]` に `{key, path, reason}` で並べる
+  - code: '502'
+    condition: project-index がリモートからの取得・プッシュに失敗した（502）、生成に失敗した（500）、想定しない応答を返却した
+    notes: project-index のステータスと `detail` を `detail` に入れる
+  - code: '503'
+    condition: project-index につながらない
+    notes: つながらなかった project-index のアドレスと理由（`projectIndex.address`・`projectIndex.reason`）
+  - code: '504'
+    condition: project-index が書き込みの期限を過ぎた（504）、または待ちの上限で打ち切った
+    notes: 打ち切ったときは、コミットされたかが分からないことを `detail` に入れ、メタデータの再読み込みを `nextSteps` に入れる
+error_format: RFC 9457 の `application/problem+json`（`type`・`title`・`status`・`detail`）。拡張メンバーは camelCase（`nextSteps`・`errors[]`・`projectIndex`）。変更ごとの理由は `errors[]` に `{key, path, reason, current}`（`path`・`current` は該当するときだけ）
+constraints:
+  - item: オリジンの確認
+    constraint: 端末の設定の保存と同じく、画面と別のオリジンの要求を 403 で断る
+  - item: 修正できるキー
+    constraint: '`terms`: `name`・`aliases`・`description`。`aliases`: `name`・`aliases`。`tags`: `tags`。`rules`: `rule`・`paths`・`tools`（`args` はオブジェクトのため修正できない）。`files`: `description`。ほかのキーは 400 で断り、project-index へ送信しない'
+    notes: 規約の本文・テンプレート・スキーマは画面から書き換えない（要件の直コミットの対象）
+  - item: 書き込みと削除への変換
+    constraint: '列のキーは共通のキー（IF-155-28 の制約「列と文書のキーの対応」）のまま、値も画面が送信したまま書き込みの操作に入れる。project-index の書き込みの API が、配信元の設定の行の `metadata` の対応で文書の実際のキーへ戻す（`{キー}[].{項目}` の列は、名前の配列から、残る要素の `main` などほかの項目を保った配列にする）。dev-docs は元のキーへ戻せる列かだけを確認し、戻せない列（入れ子のパス・絞り込み）は送信せずに 400 にする。`update` は `write_docs` の `update` 操作（`id`・`expected_version`・`set` に組み立てた最上位のキー）、`add` は `create` 操作（`id`・`kind`・`data`）、`delete` は `deletes[]`（`id`・`expectedVersion`）にし、`edits` の並び順で `writes`・`deletes` に入れる'
+  - item: project-index への送信
+    constraint: '`POST /sources/{source}/commits` を `Origin` を付けずに 1 回だけ呼ぶ。`writes`・`deletes`・`message`・`dryRun` を送信し、`branch`・`onReferenced` は送信しない（既定のブランチ・`fail`）'
+  - item: 書き込みの API の待ち
+    constraint: project-index の書き込みの API の応答を待つ上限で打ち切り、504 を返却する
+    decided_by: NFR-155-1#requirements[project-index の書き込みの API の待ち]
+  - item: 認可
+    constraint: 制限なし（`127.0.0.1` でだけ待ち受ける）。直コミットの許可は project-index が判定する
+  - item: JSON のキー
+    constraint: 要求と応答のキーは camelCase。`values` の中のキーはメタデータの取得の `columns[].key` のまま
+  - item: operationId
+    constraint: '`{tag}-{関数名}` の `metadata-post_commits`'
+  - item: ログ
+    constraint: 送信ごとに、配信元の ID・`dryRun`・変更の件数・project-index の状態コード・コミットの SHA（待ちの上限で打ち切ったときはその旨）を 1 行のログに出力する。値の中身とコミットの説明は出力しない
+flows:
+  - name: 正常系
+    summary: 変更を 1 つのコミットにしてプッシュし、変更ごとの結果とコミットを返却する
+    setup:
+      - name: Mock
+        description: テストの中で起動した project-index（一時フォルダの端末の設定を `PROJECT_INDEX_CONFIG` で指し、空きポートで子プロセスとして起動する）。リモートは一時フォルダのベアリポジトリ。dev-docs のアプリを HTTP のテストのクライアントで呼ぶ
+      - name: 配信元
+        description: '用語集の種類 `terms` と文書の種類 `note` を持つ git の配信元。`direct_commit` は `branch: develop`・`kinds: [note, terms]`、端末の設定の行は `direct_commit.write_api_kinds: [note, terms]`'
+        notes: id `sample`。タグ `topic:a` の文書 n1、用語 `source`・`old-name`
+      - name: 入力
+        description: 画面と同じ `Origin` で、n1 のタグの `update`・用語 `kind` の `add`・用語 `old-name` の `delete` と `message`
+    flow: |-
+      <!-- map -->
+
+      ```mermaid
+      sequenceDiagram
+        participant C as クライアント
+        participant E as POST /_api/sources/{source}/commits
+        participant PI as project-index
+
+        C->>E: edits（update・add・delete）, message
+        E->>E: オリジンと修正できるキーを確認し、writes・deletes にする
+        E->>PI: POST /sources/sample/commits
+        PI-->>E: 200 applied, results, commit
+        E-->>C: 200 変更ごとの結果とコミット
+      ```
+
+      <!-- /map -->
+    expected:
+      - 200 で `applied` が `true`、`results` に 3 件の変更の `key` と `updated`・`created`・`deleted` がある
+      - リモートの `develop` に 1 コミットだけ増え、`commit.sha` と一致し、コミットの説明が `message`
+      - n1 のタグが `topic:a`・`topic:b`、用語集に `kind` があり `old-name` が無い
+    test: test_normal
+  - name: 正常系（差分確認）
+    summary: '`dryRun: true` は差分だけを返却し、コミットしない'
+    setup:
+      - name: Mock
+        description: なし（テストの中で起動した project-index）
+      - name: 入力
+        description: '正常系と同じ `edits` に `dryRun: true`（`message` なし）'
+    flow: |-
+      <!-- map -->
+
+      ```mermaid
+      sequenceDiagram
+        participant C as クライアント
+        participant E as POST /_api/sources/{source}/commits
+        participant PI as project-index
+
+        C->>E: edits, dryRun: true
+        E->>PI: POST /sources/sample/commits（dryRun）
+        PI-->>E: 200 applied: false, results
+        E-->>C: 200 変更ごとの差分
+      ```
+
+      <!-- /map -->
+    expected:
+      - 200 で `applied` が `false`、`commit` が `null`、`results` に 3 件の変更の `key` があり、`update`・`add` の `diff` が空でない（削除の `diff` は project-index が返却しない）
+      - リモートとワークツリーが変わらない
+    test: test_normal_when_dry_run
+  - name: 異常系（別のオリジン・403）
+    summary: 画面と別のオリジンからの要求を断る
+    setup:
+      - name: Mock
+        description: なし（テストの中で起動した project-index）
+      - name: 入力
+        description: '`Origin: http://127.0.0.1:9999` で、正常系と同じ本文'
+    flow: |-
+      <!-- map -->
+
+      ```mermaid
+      sequenceDiagram
+        participant C as クライアント
+        participant E as POST /_api/sources/{source}/commits
+
+        C->>E: Origin: 別のオリジン
+        E-->>C: 403
+      ```
+
+      <!-- /map -->
+    expected:
+      - 403 を返却する
+      - リモートとワークツリーが変わらない
+    test: test_error_when_cross_origin
+  - name: 異常系（修正できないキー・400）
+    summary: 種類ごとに修正できるキーの外を、project-index へ送信せずに断る
+    setup:
+      - name: Mock
+        description: 受けた要求を記録する project-index の書き込みの API のモック
+      - name: 入力
+        description: '`tags` の変更の `values` に `description`、`dryRun: false` で `message` が空'
+    flow: |-
+      <!-- map -->
+
+      ```mermaid
+      sequenceDiagram
+        participant C as クライアント
+        participant E as POST /_api/sources/{source}/commits
+
+        C->>E: edits（tags に description）, message: 空
+        E->>E: 修正できるキーと必須を検証して失敗する
+        E-->>C: 400 problem+json（errors[]）
+      ```
+
+      <!-- /map -->
+    expected:
+      - 400 で、`errors` に変更の `key` と `values.description` の違反、`key` が `null` の `message` の違反がある
+      - モックが要求を受けていない
+    test: test_error_when_body_invalid
+  - name: 異常系（検査に合格しない・422）
+    summary: project-index の検査の違反を変更ごとに返却する
+    setup:
+      - name: Mock
+        description: なし（テストの中で起動した project-index）
+      - name: 入力
+        description: 用語の `add`（合格する）と、`note` のスキーマが許可しないタグ（`topic:` で始まらない）への n1 のタグの `update`（スキーマに合格しない）
+    flow: |-
+      <!-- map -->
+
+      ```mermaid
+      sequenceDiagram
+        participant C as クライアント
+        participant E as POST /_api/sources/{source}/commits
+        participant PI as project-index
+
+        C->>E: edits（update・add）, message
+        E->>PI: POST /sources/sample/commits
+        PI-->>E: 422（writes[1] の違反）
+        E-->>C: 422（add の key と違反）
+      ```
+
+      <!-- /map -->
+    expected:
+      - 422 で、`errors` に n1 のタグの変更の `key` と違反したキーのパスがある
+      - 用語の `add` の `key` は `errors` に無い
+      - リモートとワークツリーが変わらない
+    test: test_error_when_validation_failed
+  - name: 異常系（バージョンが合わない・409）
+    summary: 取得した後に他の変更で変わった文書の変更に、今のバージョンを返却する
+    setup:
+      - name: Mock
+        description: なし（テストの中で起動した project-index）
+      - name: 他の変更
+        description: メタデータを取得した後に、リモートの `develop` へ n1 の概要を変えるコミットをプッシュする
+        notes: '`expectedVersion` が古くなる'
+      - name: 入力
+        description: 取得したバージョンを `expectedVersion` にした n1 のタグの `update`
+    flow: |-
+      <!-- map -->
+
+      ```mermaid
+      sequenceDiagram
+        participant C as クライアント
+        participant E as POST /_api/sources/{source}/commits
+        participant PI as project-index
+
+        C->>E: edits（n1 の update）, message
+        E->>PI: POST /sources/sample/commits
+        PI-->>E: 409 VersionMismatchError（n1 の今のバージョン）
+        E-->>C: 409（key と current）
+      ```
+
+      <!-- /map -->
+    expected:
+      - 409 で、`errors` に n1 の変更の `key` と `current`（他の変更の後のバージョン）がある
+      - リモートに他の変更の後のコミットが増えない
+    test: test_error_when_version_mismatched
+  - name: 異常系（直コミットを許可していない・403）
+    summary: project-index が許可していない種類を返却したら、該当する変更と許可の記載先を返却する
+    setup:
+      - name: Mock
+        description: なし（テストの中で起動した project-index）
+      - name: 端末の設定
+        description: sample の行の `direct_commit.write_api_kinds` が `[terms]`（`note` が無い）
+      - name: 入力
+        description: n1（種類 `note`）のタグの `update`
+    flow: |-
+      <!-- map -->
+
+      ```mermaid
+      sequenceDiagram
+        participant C as クライアント
+        participant E as POST /_api/sources/{source}/commits
+        participant PI as project-index
+
+        C->>E: edits（n1 の update）, message
+        E->>PI: POST /sources/sample/commits
+        PI-->>E: 403 DirectCommitNotPermittedError（kinds: note）
+        E-->>C: 403（key と nextSteps）
+      ```
+
+      <!-- /map -->
+    expected:
+      - 403 で、`errors` に n1 の変更の `key` と許可していない種類 `note` がある
+      - '`nextSteps` に `sources[].direct_commit.write_api_kinds` がある'
+      - リモートとワークツリーが変わらない
+    test: test_error_when_direct_commit_not_permitted
+  - name: 異常系（リモートに接続できない・502）
+    summary: project-index がリモートからの取得に失敗したら 502 を返却する
+    setup:
+      - name: Mock
+        description: なし（テストの中で起動した project-index）
+      - name: リモートの失敗
+        description: sample のリモートの URL を存在しないパスへ変える
+      - name: 入力
+        description: n1 のタグの `update` と `message`
+    flow: |-
+      <!-- map -->
+
+      ```mermaid
+      sequenceDiagram
+        participant C as クライアント
+        participant E as POST /_api/sources/{source}/commits
+        participant PI as project-index
+
+        C->>E: edits, message
+        E->>PI: POST /sources/sample/commits
+        PI-->>E: 502 FetchFailedError
+        E-->>C: 502（project-index の理由）
+      ```
+
+      <!-- /map -->
+    expected:
+      - 502 で、`detail` に project-index のステータスと取得に失敗した理由がある
+      - sample のワークツリーに未コミットの変更と未プッシュのコミットが無い
+    test: test_error_when_remote_unreachable
+  - name: 異常系（書き込みの API が応答しない・504）
+    summary: 待ちの上限で打ち切り、コミットされたかが分からないことを返却する
+    setup:
+      - name: Mock
+        description: 要求を受けたまま応答しない project-index の書き込みの API のモック。待ちの上限を 1 秒にする
+      - name: 入力
+        description: n1 のタグの `update` と `message`
+    flow: |-
+      <!-- map -->
+
+      ```mermaid
+      sequenceDiagram
+        participant C as クライアント
+        participant E as POST /_api/sources/{source}/commits
+        participant PI as project-index（モック）
+
+        C->>E: edits, message
+        E->>PI: POST /sources/sample/commits
+        E->>E: 待ちの上限で打ち切る
+        E-->>C: 504（コミットされたかが分からない）
+      ```
+
+      <!-- /map -->
+    expected:
+      - 504 で、`detail` にコミットされたかが分からないこと、`nextSteps` にメタデータの再読み込みがある
+      - 要求から 2 秒以内に応答する
+    test: test_error_when_write_timed_out
+  - name: 正常系（対応づけたキーのタグ）
+    summary: '`metadata` で `tags[].name` へ対応づけた種類のタグを変え、要素のほかの項目を保つ'
+    setup:
+      - name: Mock
+        description: なし（テストの中で起動した project-index）
+      - name: 配信元
+        description: '種類 `rule` の行が `metadata: {tags: tags[].name, main_tags: tags[main].name}` を持ち、`direct_commit.kinds`・端末の設定の `write_api_kinds` に `rule` がある git の配信元'
+        notes: '文書 r1 の `tags` が `[{name: topic:a, main: true}, {name: topic:c}]`'
+      - name: 入力
+        description: r1 の `tags` の `update` で、`values.tags` が `[topic:a, topic:b]`
+    flow: |-
+      <!-- map -->
+
+      ```mermaid
+      sequenceDiagram
+        participant C as クライアント
+        participant E as POST /_api/sources/{source}/commits
+        participant PI as project-index
+
+        C->>E: edits（r1 の tags: topic:a, topic:b）, message
+        E->>PI: 配信元の設定と r1 を取得
+        PI-->>E: metadata（tags[].name）と r1 の今の tags
+        E->>E: topic:a の要素を保ち、topic:c を除き、topic:b を追加した tags にする
+        E->>PI: POST /sources/sample/commits（set: tags）
+        PI-->>E: 200 applied, results, commit
+        E-->>C: 200
+      ```
+
+      <!-- /map -->
+    expected:
+      - 200 で `applied` が `true`
+      - 'r1 の `tags` が `[{name: topic:a, main: true}, {name: topic:b}]` で、`main` が保たれている'
+      - r1 に最上位のキー `tags` 以外のキーが増えていない
+    test: test_normal_when_tags_mapped
+refs:
+  - to: API-155-1
+    type: requires
+    when: project-index の書き込みの API の入出力を変えるときに、変換と状態コードの対応を確認する。
+  - to: IF-155-28
+    type: requires
+    when: メタデータの取得の種類・列・行の ID を変えるときに、要求の `kind`・`values`・`docKind` を合わせる。
+  - to: SC-155-15
+    item: scenarios[正常シナリオ]
+    type: references
+    when: 変更の送信の流れを変えるときに、画面での直コミットの流れを確認する。
+test_file: tests/integration/server/test_post_commits.py
+tags:
+  - name: topic:直コミット
+  - name: topic:メタデータ
+  - name: action:送信
+  - name: topic:api
+  - name: tool:project-index

@@ -1,0 +1,14 @@
+# 単体テスト（Red）: メタデータの表の行の名前と追加の行のフォーカスのテストコード（88efdb2）
+
+メタデータの画面の結合テストで、タグの種類の変更の名前が編集前のタグの値になり、行追加で ID の入力欄へフォーカスが移らないことが分かったため、その修正のテスト。
+
+## TL-8 単体テスト（フロント）: run_runner（layer=frontend-unit、https://github.com/shuhei1101/dev-docs/actions/runs/45085510535）
+
+      Tests  2 failed | 189 passed (191)
+ FAIL  tests/unit/frontend/src/features/metadata/metadata/metadata-table.test.tsx > test_metadata_table_when_add_focus
+ FAIL  tests/unit/frontend/src/features/metadata/metadata/metadata-table.test.tsx > test_metadata_table_when_edited_label
+ Test Files  1 failed | 57 passed (58)
+AssertionError: expected 'タグ: topic:a' to be 'タグ: notes/n1.yaml' // Object.is equality
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+fail は追加した test_metadata_table_when_edited_label・test_metadata_table_when_add_focus の 2 件だけで、ほかは pass。

@@ -1,0 +1,18 @@
+# lint: 結合テストのレビューの指摘の修正の後（cc1402c、手元）
+
+$ uv run ruff check .
+All checks passed!
+$ uv run ruff format --check .
+162 files already formatted
+$ uv run mypy .
+Success: no issues found in 159 source files
+$ claude plugin validate plugins/dev-docs
+✔ Validation passed with warnings
+$ npm run lint
+> eslint frontend tests/unit/frontend tests/integration/frontend eslint.config.js
+
+$ npm run typecheck
+> node node_modules/typescript-native/bin/tsc --noEmit -p frontend/tsconfig.json
+
+$ actionlint
+exit 0

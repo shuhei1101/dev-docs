@@ -29,6 +29,10 @@ MCP_HEADERS = {
     "Content-Type": "application/json",
 }
 SAME_ORIGIN = {"Sec-Fetch-Site": "same-origin"}
+# 書き込みの API（`POST /sources/{source}/commits`、IF-38）と端末の設定の
+# `direct_commit.write_api_kinds` を持つ commit（develop の 552c341）。直コミットを確かめるテストだけがこの
+# commit の project-index を相手にする
+PROJECT_INDEX_WRITE_COMMIT = "552c341b73806678200ae6c27538b0faa2aa9dd8"
 # 起動の待ち受けを待つ上限。2026-11-12 の実測で、負荷の低いときは 1 回 18 秒、
 # ロードアベレージ 20 では 30 秒を超えたため、30 秒 + 50% の余裕を持たせて 60 秒にする
 SERVE_WAIT_SEC = 60
@@ -1181,3 +1185,229 @@ def storage_index(
     index.root.mkdir()
     yield index
     index.stop()
+
+
+@dataclass
+class DirectSource:
+    """直コミットを許可した git の配信元（クローン本体・リモートのベアリポジトリ・develop のワークツリー）。"""
+
+    repo: Path
+    bare: Path
+    develop: Path
+
+
+def direct_source(
+    index: RealIndex,
+    source_id: str,
+    *,
+    files: dict[str, str],
+    config: dict[str, Any],
+    write_api_kinds: list[str],
+) -> DirectSource:
+    """直コミットを許可した配信元を作り、端末の設定の行に並べる（起動の後は再読み込みさせる）。
+
+    クローン本体は master、`develop` をリモートへプッシュし、`.claude/worktrees/develop` に develop の
+    ワークツリーを作る。端末の設定の行は `direct_commit.write_api_kinds` を持つ。
+    """
+    repo = index.root / "sources" / source_id
+    repo.mkdir(parents=True)
+    _git(repo, "init", "-q", "-b", "master")
+    _write(repo, "project-index.yaml", json.dumps(config, ensure_ascii=False))
+    for path, text in files.items():
+        _write(repo, path, text)
+    _git(repo, "add", "-A")
+    _git(repo, "commit", "-q", "-m", "配信元", date="2026-10-01T00:00:00+09:00")
+    bare = index.root / f"{source_id}.git"
+    _git(index.root, "init", "-q", "--bare", "-b", "master", str(bare))
+    _git(repo, "remote", "add", "origin", str(bare))
+    _git(repo, "branch", "develop")
+    _git(repo, "push", "-q", "origin", "master", "develop")
+    develop = repo / ".claude" / "worktrees" / "develop"
+    _git(repo, "worktree", "add", "-q", str(develop), "develop")
+    _git(develop, "branch", "--set-upstream-to=origin/develop")
+    local = index.root / "local"
+    local.mkdir(exist_ok=True)
+    index.rows.append(
+        {
+            "id": source_id,
+            "config": [str(repo / "project-index.yaml")],
+            "scope": {"read": [f"{index.root}/**"]},
+            "direct_commit": {"scope": [str(local)], "write_api_kinds": write_api_kinds},
+        }
+    )
+    if index._process is not None:
+        index.put_rows(index.rows)
+    return DirectSource(repo=repo, bare=bare, develop=develop)
+
+
+@pytest.fixture(scope="session")
+def write_index_clone() -> Path:
+    """書き込みの API を持つ commit の project-index のクローンを返却する（テストの実行ごとに 1 回用意する）。"""
+    return project_index_clone(PROJECT_INDEX_WRITE_COMMIT)
+
+
+@pytest.fixture
+def write_index(
+    tmp_path: Path,
+    write_index_clone: Path,
+    free_port: Callable[[], int],
+    monkeypatch: pytest.MonkeyPatch,
+) -> Iterator[RealIndex]:
+    """書き込みの API を持つ本物の project-index を返却する（終了時に止める）。
+
+    project-index が打つコミットの作成者を固定し、端末の git の設定を読ませない。
+    """
+    for name, value in {
+        "GIT_AUTHOR_NAME": "test",
+        "GIT_AUTHOR_EMAIL": "test@example.com",
+        "GIT_COMMITTER_NAME": "test",
+        "GIT_COMMITTER_EMAIL": "test@example.com",
+        "GIT_CONFIG_GLOBAL": "/dev/null",
+        "GIT_CONFIG_SYSTEM": "/dev/null",
+    }.items():
+        monkeypatch.setenv(name, value)
+    index = RealIndex(tmp_path / "write-index", write_index_clone, free_port())
+    index.root.mkdir()
+    yield index
+    index.stop()
+
+
+def _schema(required: list[str], **properties: Any) -> str:
+    """文書の種類のスキーマ（JSON は YAML として読み込める）。"""
+    return json.dumps(
+        {"type": "object", "required": required, "properties": properties}, ensure_ascii=False
+    )
+
+
+def metadata_source(
+    index: RealIndex,
+    *,
+    source_id: str = "sample",
+    write_api_kinds: list[str] | None = None,
+    rule_index: bool = True,
+    rule_tags: list[dict[str, Any]] | None = None,
+) -> DirectSource:
+    """用語集 `terms`・文書 `note`・索引 `rule_index`・管理用の YAML `files` を持つ直コミットの配信元を作る。
+
+    文書 n1（タグ `topic:a`）・用語 `source`・`old-name`・索引のエントリ r1・r2・管理用の YAML の行 1 件。
+    `rule_tags` を指定すると、`metadata: {tags: tags[].name}` の種類 `rule` と文書 rules/r1.yaml を足し、
+    `direct_commit.kinds` に `rule` を加える。
+    """
+    text = {"type": "string"}
+    strings = {"type": "array", "items": {"type": "string"}}
+    documents: list[dict[str, Any]] = [
+        {
+            "id": "terms",
+            "paths": ["glossary.yaml"],
+            "records": "terms",
+            "alias_type": "term",
+            "schema": "schemas/terms.schema.yaml",
+        },
+        {
+            "id": "note",
+            "paths": ["notes/*.yaml"],
+            "alias_type": "doc",
+            "schema": "schemas/note.schema.yaml",
+        },
+        {
+            "id": "files",
+            "paths": ["files.yaml"],
+            "records": "files",
+            "body_file": "path",
+            "schema": "schemas/files.schema.yaml",
+        },
+    ]
+    files = {
+        "schemas/terms.schema.yaml": _schema(
+            ["id", "name"],
+            id=text,
+            name={"type": "string", "minLength": 1},
+            aliases=strings,
+            description=text,
+        ),
+        "schemas/note.schema.yaml": _schema(
+            ["id", "name"],
+            id=text,
+            name=text,
+            tags={"type": "array", "items": {"type": "string", "pattern": "^topic:"}},
+            description=text,
+        ),
+        "schemas/files.schema.yaml": _schema(["path"], path=text, description=text),
+        "glossary.yaml": json.dumps(
+            {
+                "terms": [
+                    {
+                        "id": "source",
+                        "name": "配信元",
+                        "aliases": ["source"],
+                        "description": "project-index.yaml を持つフォルダ",
+                    },
+                    {"id": "old-name", "name": "旧称", "description": "使用しない呼び名"},
+                ]
+            },
+            ensure_ascii=False,
+        ),
+        "notes/n1.yaml": json.dumps(
+            {"id": "n1", "name": "メモ", "tags": ["topic:a"]}, ensure_ascii=False
+        ),
+        "files.yaml": json.dumps(
+            {"files": [{"path": "src/a.py", "description": "アプリ"}]}, ensure_ascii=False
+        ),
+        "src/a.py": "print('a')\n",
+    }
+    kinds = ["note", "terms"]
+    if rule_index:
+        documents.append(
+            {
+                "id": "rule_index",
+                "paths": ["rules.yaml"],
+                "records": "rules",
+                "schema": "schemas/rule_index.schema.yaml",
+            }
+        )
+        files["schemas/rule_index.schema.yaml"] = _schema(
+            ["id", "rule"], id=text, rule=text, paths=strings, tools=strings
+        )
+        files["rules.yaml"] = json.dumps(
+            {
+                "rules": [
+                    {"id": "r1", "rule": "docs/rule/a.yaml", "paths": ["src/**/*.py"]},
+                    {
+                        "id": "r2",
+                        "rule": "docs/rule/b.yaml",
+                        "paths": ["docs/**"],
+                        "tools": ["Edit"],
+                    },
+                ]
+            },
+            ensure_ascii=False,
+        )
+    if rule_tags is not None:
+        documents.append(
+            {
+                "id": "rule",
+                "paths": ["docs/rule/*.yaml"],
+                "schema": "schemas/rule.schema.yaml",
+                "metadata": {"tags": "tags[].name", "main_tags": "tags[main].name"},
+            }
+        )
+        files["schemas/rule.schema.yaml"] = _schema(
+            ["id", "name"], id=text, name=text, tags={"type": "array"}
+        )
+        files["docs/rule/r1.yaml"] = json.dumps(
+            {"id": "r1-rule", "name": "規約 1", "tags": rule_tags}, ensure_ascii=False
+        )
+        kinds.append("rule")
+    config = {
+        "name": source_id,
+        "default_ref": "develop",
+        "documents": documents,
+        "direct_commit": {"branch": "develop", "kinds": kinds},
+    }
+    return direct_source(
+        index,
+        source_id,
+        files=files,
+        config=config,
+        write_api_kinds=["note", "terms"] if write_api_kinds is None else write_api_kinds,
+    )

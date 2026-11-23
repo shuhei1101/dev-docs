@@ -1,0 +1,21 @@
+# 単体テスト（Red）: 共通のキーのまま送信する直コミットのテストコード（b4f1303）
+
+結合テスト作成で、project-index の書き込みの API（552c341）が set の共通のキー tags を名前の配列で受け、metadata の対応で main を保った配列に戻すこと（オブジェクトの配列は 400）が分かったため、dev-docs で戻す処理と文書の取得をやめる修正のテスト。
+
+## TL-1 単体テスト（バック）: run_runner（layer=backend-unit）
+
+======================== 5 failed, 585 passed in 8.57s =========================
+FAILED tests/unit/dev_docs/features/metadata/test_commits.py::test_commit_edits_when_mapped_tags - dev_docs.features.metadata.commits.EditsRejectedError: 配列の項目を修正する変更に docPath がありません
+FAILED tests/unit/dev_docs/features/metadata/test_commits.py::test_to_operations - TypeError: to_operations() missing 1 required positional argument: 'current_values'
+FAILED tests/unit/dev_docs/features/metadata/test_commits.py::test_to_operations_when_mapped_name - TypeError: to_operations() missing 1 required positional argument: 'current_values'
+FAILED tests/unit/dev_docs/features/metadata/test_commits.py::test_to_operations_when_mapped_tags - TypeError: to_operations() missing 1 required positional argument: 'current_values'
+FAILED tests/unit/dev_docs/features/metadata/test_commits.py::test_to_operations_when_unmappable - TypeError: to_operations() missing 1 required positional argument: 'current_values'
+
+fail の理由: 前の実装は to_operations が current_values を受け、配列の項目の列で docPath と文書の取得を求めるため。どちらも修正の対象による fail で、ほかは pass。
+
+## TL-8 単体テスト（フロント）: run_runner（layer=frontend-unit）
+
+      Tests  189 passed (189)
+ Test Files  58 passed (58)
+
+画面の修正は編集中の変更から docPath を除くだけで、前の実装が update に足す docPath は値が undefined になり、toEqual は undefined のキーを区別しないため fail にならない（振る舞いの変化は無い）。

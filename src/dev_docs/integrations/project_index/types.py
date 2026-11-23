@@ -189,6 +189,8 @@ class SettingsSourcesView:
     states: list[SourceState]
     # 照合つきの保存の `expected_version` に指定する内容のバージョン
     version: str | None = None
+    # 配信元の ID ごとの、書き込みの API から直コミットできる種類（`directCommit.writeApiKinds`）
+    write_api_kinds: dict[str, list[str]] = field(default_factory=dict)
 
 
 def parse_datetime(value: Any) -> datetime | None:

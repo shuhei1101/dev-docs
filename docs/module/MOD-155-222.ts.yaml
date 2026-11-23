@@ -1,0 +1,54 @@
+id: MOD-155-222
+title: 画面 / メタデータの画面 / queries.ts
+lead: メタデータの取得の問い合わせと直コミットの mutation を受け持ち、メタデータの画面の queries.ts を修正するときに参照する。
+functions:
+  - name: useCommitEdits
+    title: 編集中の変更の直コミット
+    kind: フック
+    container: features/metadata/metadata/queries.ts
+    usecase: 画面で編集中の変更をまとめて直コミットする
+    role: アダプター
+    summary: orval が生成した `metadata-post_commits` の mutation に、コミットした後の編集中の変更の削除とメタデータの再取得を加える
+    scope: public
+    args:
+      - name: source
+        type: string
+        required: true
+        passing: positional
+        description: 配信元の ID
+    returns:
+      type: 'UseMutationResult<CommitResult, AppError, {dryRun: boolean; message?: string}>'
+      description: 編集中の変更をストアから取って送信する
+    process: |-
+      1. 直コミットの要求への変換で `edits` にし、`dryRun`・`message` を添えて送信する
+      2. `dryRun: false` で成功したら、配信元の編集中の変更を空にし、メタデータの取得と文書の取得の問い合わせを再読み込みする
+      3. 失敗は呼び出し元へ返却する（パネルが Problem Details の `errors[]` を変更ごとに出す）
+    unit_tests:
+      - name: test_use_commit_edits
+        case: 正常
+        summary: コミットした後に編集中の変更を空にする
+        condition: '変更 2 件で `dryRun: false`'
+        mock: MSW の直コミットのハンドラ（200）
+        expected: 編集中の変更が 0 件で、メタデータの取得がもう一度呼ばれる
+      - name: test_use_commit_edits_when_dry_run
+        case: 正常
+        summary: 差分確認は変更を残す
+        condition: '変更 2 件で `dryRun: true`'
+        mock: 'MSW のハンドラ（200、`applied: false`）'
+        expected: 編集中の変更が 2 件のまま
+      - name: test_use_commit_edits_when_rejected
+        case: 異常
+        summary: 失敗でも変更を残す
+        condition: MSW が 422 を返却する
+        mock: MSW のハンドラ（422）
+        expected: '`error` が `AppError` で、編集中の変更が残る'
+        exception: 検査に合格しない
+notes:
+  補足: 取得は orval が生成した問い合わせ（`getMetadataGetMetadataQueryOptions`）をそのまま使用する。
+tags:
+  - name: topic:メタデータ
+  - name: topic:画面
+  - name: tool:tanstack-query
+  - name: topic:直コミット
+test_files:
+  - tests/unit/frontend/src/features/metadata/metadata/queries.test.tsx

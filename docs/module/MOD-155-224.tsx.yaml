@@ -1,0 +1,76 @@
+id: MOD-155-224
+title: 画面 / メタデータの画面 / pending-panel.tsx
+lead: 編集中のパネルとコミットの確認のダイアログを受け持ち、メタデータの画面の pending-panel.tsx を修正するときに参照する。
+components:
+  - name: PendingPanel
+    title: 編集中のパネル
+    kind: コンポーネント
+    container: features/metadata/metadata/pending-panel.tsx
+    usecase: 画面で編集中の変更をまとめて直コミットする
+    role: 部品
+    summary: 配信元の編集中の変更、差分確認・コミットの結果と失敗を並べる
+    props:
+      - name: source
+        type: string
+        required: true
+        description: 配信元の ID
+      - name: branch
+        type: string | null
+        required: true
+        description: メタデータの取得の `branch`
+      - name: open
+        type: boolean
+        required: true
+        description: 開いているか
+      - name: onOpenChange
+        type: '(open: boolean) => void'
+        required: true
+        description: 開閉
+      - name: onLocate
+        type: '(edit: PendingEdit) => void'
+        required: true
+        description: 変更の行へ移動
+    state:
+      - name: outcome
+        type: '{kind: "diff"; result: CommitResult} | {kind: "committed"; result: CommitResult} | {kind: "failed"; problem: ProblemDetails} | null'
+        initial: 'null'
+        description: 直前の差分確認・コミットの結果
+        notes: '`useState`'
+      - name: confirmOpen
+        type: boolean
+        initial: 'false'
+        description: コミットの確認のダイアログ
+        notes: '`useState`'
+    description: shadcn/ui の `Sheet` を `modal={false}` で開き、狭い幅は `side="bottom"`、広い幅は右にする。差分確認・コミットは編集中の変更の直コミットを呼ぶ。失敗の Problem Details の `errors[].key` で変更ごとに理由を出し、コミットのボタンを `再試行` にする。コミットの確認は shadcn/ui の `Dialog` で、コミットの説明（必須・200 文字）を入力する
+    unit_tests:
+      - name: test_pending_panel_when_dry_run
+        case: 正常
+        summary: 差分を変更ごとに出す
+        condition: 変更 2 件で `差分確認` を押す
+        mock: MSW の直コミットのハンドラ（`dryRun` の 200）
+        expected: 変更ごとに差分が出て、変更が 2 件残る
+      - name: test_pending_panel_when_rejected
+        case: 異常
+        summary: 変更ごとの理由と再試行
+        condition: コミットで 422（`errors[0].key` が 2 件目）
+        mock: MSW のハンドラ（422）
+        expected: 2 件目の変更の下に理由、ボタンが `再試行`、`編集中の変更はそのままです。`
+        exception: 検査に合格しない
+      - name: test_pending_panel_when_message_empty
+        case: 異常
+        summary: コミットの説明が空
+        condition: 確認のダイアログを開き、説明を空のままにする
+        mock: MSW（要求を記録する）
+        expected: 確定ボタンが押せず、要求が送信されない
+        exception: 入力チェック
+refs:
+  - to: SCR-155-4
+    type: requires
+    when: 編集中のパネルとコミットの確認の要素を変えるときに突き合わせる。
+tags:
+  - name: topic:メタデータ
+  - name: topic:画面
+  - name: topic:直コミット
+  - name: topic:パネル
+test_files:
+  - tests/unit/frontend/src/features/metadata/metadata/pending-panel.test.tsx

@@ -36,6 +36,7 @@ from dev_docs.shared.errors import (
     InvalidArgumentError,
     ProjectIndexRejectedError,
     ProjectIndexResponseError,
+    ProjectIndexTimeoutError,
     ProjectIndexUnreachableError,
     RefNotFoundError,
     SettingsVersionConflictError,
@@ -46,6 +47,8 @@ from dev_docs.shared.errors import (
 
 PROJECT_INDEX_DEFAULT = "http://127.0.0.1:8786"
 PROJECT_INDEX_TIMEOUT_SEC = 45
+# 直コミットの書き込みの応答を待つ上限（秒）
+PROJECT_INDEX_WRITE_TIMEOUT_SEC = 72.0
 SUMMARY_CHARS = 200
 ROW_KEYS = ("id", "config", "enabled", "scope", "storage")
 REFUSED_REASON = "接続を拒否されました（Connection refused）"
@@ -368,6 +371,14 @@ class ProjectIndexClient:
             rows=[_row(item) for item in sources],
             states=[_state(item) for item in sources],
             version=str(value["version"]) if value.get("version") is not None else None,
+            write_api_kinds={
+                str(item["id"]): [
+                    str(kind)
+                    for kind in ((item.get("directCommit") or {}).get("writeApiKinds") or [])
+                ]
+                for item in sources
+                if item.get("id") is not None
+            },
         )
 
     async def settings_sources(self) -> SettingsSourcesView:
@@ -409,6 +420,35 @@ class ProjectIndexClient:
                 status_code=HTTP_CONFLICT,
                 summary=summary,
             )
+
+    async def commit_documents(
+        self, source_id: str, body: Mapping[str, object]
+    ) -> tuple[int, dict[str, Any]]:
+        """書き込みの API へ 1 回送信し、状態コードと本文（200 の応答か problem+json）を返却する。"""
+        # 書き込みは検査・コミット・プッシュまで待つため、読み取りの制限時間ではなく書き込みの上限で打ち切る
+        limit = PROJECT_INDEX_WRITE_TIMEOUT_SEC
+        try:
+            async with asyncio.timeout(limit):
+                response = await self._client.post(
+                    f"/sources/{_seg(source_id)}/commits", json=dict(body), timeout=limit
+                )
+                await response.aread()
+        except httpx.ConnectError as error:
+            raise self._unreachable(REFUSED_REASON) from error
+        except (TimeoutError, httpx.TimeoutException) as error:
+            raise ProjectIndexTimeoutError(
+                message=f"project-index（{self.address}）が {limit:g} 秒以内に応答しませんでした",
+                address=self.address,
+                reason=f"{limit:g} 秒以内に応答がありませんでした",
+            ) from error
+        except httpx.TransportError as error:
+            raise self._unreachable(str(error)) from error
+        # 4xx・5xx も例外にせず、変更ごとの理由への戻しは呼び出し元に任せる
+        try:
+            parsed = response.json()
+        except ValueError:
+            parsed = {"detail": response.text[:SUMMARY_CHARS]}
+        return response.status_code, parsed if isinstance(parsed, dict) else {}
 
 
 def build_source_view(source: str, config: SourceConfig, refs: RefList) -> SourceView:

@@ -1,0 +1,43 @@
+# 単体テスト（Red）: テストコードの末尾の commit b14d6f2
+
+## TL-1 単体テスト（バック）: run_runner（layer=backend-unit）
+
+!!!!!!!!!!!!!!!!!!! Interrupted: 3 errors during collection !!!!!!!!!!!!!!!!!!!!
+============================== 3 errors in 2.32s ===============================
+E   ModuleNotFoundError: No module named 'dev_docs.features.metadata'
+ERROR tests/unit/dev_docs/features/metadata/test_commits.py
+ERROR tests/unit/dev_docs/features/metadata/test_metadata.py
+ERROR tests/unit/dev_docs/features/metadata/test_route.py
+^[[36;1m  backend-integration) cmd="uv run pytest ${PATHS:-$dir} -v" ;;^[[0m
+^[[36;1m  backend-unit) cmd="uv run pytest tests/unit/ -v" ;;^[[0m
+
+収集の段で 3 ファイルが dev_docs.features.metadata の無いことで止まり、ほかのテストが回らないため、変更した既存のテストのファイルを手元の個別実行で回した。
+
+$ uv run pytest tests/unit/dev_docs/integrations/project_index/test_client.py tests/unit/dev_docs/server/test_app.py -q --basetemp=/tmp/pr313/pytest
+E         Use -v to get more diff
+
+tests/unit/dev_docs/server/test_app.py:103: AssertionError
+=========================== short test summary info ============================
+FAILED tests/unit/dev_docs/integrations/project_index/test_client.py::test_commit_documents
+FAILED tests/unit/dev_docs/integrations/project_index/test_client.py::test_commit_documents_when_timed_out
+FAILED tests/unit/dev_docs/server/test_app.py::test_build_app_when_openapi - ...
+3 failed, 48 passed in 1.50s
+
+fail の理由: test_commit_documents*（commit_documents と ProjectIndexTimeoutError が無い）、test_build_app_when_openapi（metadata-get_metadata・metadata-post_commits のルートが無い）。--basetemp は手元の /tmp/pytest-of-{user} の所有者の違いを避けるために付けた。
+
+## TL-8 単体テスト（フロント）: run_runner（layer=frontend-unit）
+
+^[[2m      Tests ^[[22m ^[[1m^[[32m174 passed^[[39m^[[22m^[[90m (174)^[[39m
+^[[2m Test Files ^[[22m ^[[1m^[[31m5 failed^[[39m^[[22m^[[2m | ^[[22m^[[1m^[[32m53 passed^[[39m^[[22m^[[90m (58)^[[39m
+^[[31m^[[1mError^[[22m: Failed to resolve import "@/features/metadata/metadata/metadata-table" from "tests/unit/frontend/src/features/metadata/metadata/metadata-table.test.tsx". Does the file exist?^[[39m
+^[[31m^[[1mError^[[22m: Failed to resolve import "@/features/metadata/metadata/pending-panel" from "tests/unit/frontend/src/features/metadata/metadata/pending-panel.test.tsx". Does the file exist?^[[39m
+^[[31m^[[1mError^[[22m: Failed to resolve import "@/features/metadata/metadata/queries" from "tests/unit/frontend/src/features/metadata/metadata/queries.test.tsx". Does the file exist?^[[39m
+^[[31m^[[1mError^[[22m: Failed to resolve import "@/features/metadata/shared/pending-edits-store" from "tests/unit/frontend/src/features/metadata/metadata/metadata-screen.test.tsx". Does the file exist?^[[39m
+^[[31m^[[1mError^[[22m: Failed to resolve import "@/features/metadata/shared/pending-edits-store" from "tests/unit/frontend/src/features/metadata/shared/pending-edits-store.test.ts". Does the file exist?^[[39m
+^[[41m^[[1m FAIL ^[[22m^[[49m tests/unit/frontend/src/features/metadata/metadata/metadata-screen.test.tsx^[[2m [ tests/unit/frontend/src/features/metadata/metadata/metadata-screen.test.tsx ]^[[22m
+^[[41m^[[1m FAIL ^[[22m^[[49m tests/unit/frontend/src/features/metadata/metadata/metadata-table.test.tsx^[[2m [ tests/unit/frontend/src/features/metadata/metadata/metadata-table.test.tsx ]^[[22m
+^[[41m^[[1m FAIL ^[[22m^[[49m tests/unit/frontend/src/features/metadata/metadata/pending-panel.test.tsx^[[2m [ tests/unit/frontend/src/features/metadata/metadata/pending-panel.test.tsx ]^[[22m
+^[[41m^[[1m FAIL ^[[22m^[[49m tests/unit/frontend/src/features/metadata/metadata/queries.test.tsx^[[2m [ tests/unit/frontend/src/features/metadata/metadata/queries.test.tsx ]^[[22m
+^[[41m^[[1m FAIL ^[[22m^[[49m tests/unit/frontend/src/features/metadata/shared/pending-edits-store.test.ts^[[2m [ tests/unit/frontend/src/features/metadata/shared/pending-edits-store.test.ts ]^[[22m
+
+fail は全て、実装のファイル（features/metadata/shared/pending-edits-store・metadata/queries・metadata-table・pending-panel）が無いことによる import の解決の失敗。実装の前から pass したテストは無い。

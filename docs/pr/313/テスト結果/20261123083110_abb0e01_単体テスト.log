@@ -1,0 +1,10 @@
+# 単体テスト（Red）: 結合テスト作成で見つけた直コミットの結果と違反の戻し方の不具合のテストコード（abb0e01）
+
+## TL-1 単体テスト（バック）: run_runner（layer=backend-unit）
+
+======================== 3 failed, 587 passed in 8.64s =========================
+FAILED tests/unit/dev_docs/features/metadata/test_commits.py::test_commit_edits - AssertionError: assert [('tags:n1:up...', 'deleted')] == [('tags:n1:up...', 'deleted')]
+FAILED tests/unit/dev_docs/features/metadata/test_commits.py::test_commit_edits_when_validation_failed - AssertionError: assert None == 'terms:kind:add'
+FAILED tests/unit/dev_docs/features/metadata/test_commits.py::test_commit_edits_when_version_mismatch - AssertionError: assert [] == [('tags:n1:update', 'f0e1d2')]
+
+fail の理由: project-index の書き込みの API（develop の 552c341 の CommitDocumentsItem・ValidationFailedError・VersionMismatchError）は results[].kind を write・delete、422 の errors[] の位置を path の先頭の writes[{添字}]・deletes[{添字}]、409 の文書を docId で返却するが、前の実装は kind を writes・deletes、errors[] の kind・index で戻していたため。どちらも不具合による fail で、ほかは pass。TL-8 はこの修正で変わらない。

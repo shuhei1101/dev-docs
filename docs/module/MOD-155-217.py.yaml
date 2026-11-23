@@ -1,0 +1,233 @@
+id: MOD-155-217
+title: 開発ドキュメントサーバー / メタデータ / metadata.py
+lead: 配信元のメタデータを project-index の読み取り API から種類ごとの行と列に組み立てる処理を受け持ち、メタデータの metadata.py を修正するときに参照する。
+constants:
+  - name: RULE_INDEX_KIND
+    title: 索引の種類
+    container: features/metadata/metadata.py
+    usecase: メタデータを画面で参照する
+    summary: rule-inject の索引を配信する行の `documents[].id`
+    value: '"rule_index"'
+  - name: KIND_SPECS
+    title: 種類ごとの列
+    container: features/metadata/metadata.py
+    usecase: メタデータを画面で参照する
+    summary: '`terms`・`aliases`・`tags`・`rules`・`config`・`files` の順に、タブの名前・列（キー・見出し・`text` か `list`・修正できる列か）・追加と削除を受けるかを持つ並び'
+    value: IF-155-28 の制約「種類ごとの行と列」のとおり
+data_models:
+  - name: MetadataColumn
+    title: メタデータの列
+    container: features/metadata/metadata.py
+    usecase: メタデータを画面で参照する
+    role: DTO
+    summary: 表の列 1 つ（`ApiModel`）
+    properties:
+      - name: key
+        type: str
+        description: 列のキー（共通のキー）
+      - name: label
+        type: str
+        description: 列の見出し
+      - name: type
+        type: Literal['text', 'list']
+        description: 値の形
+      - name: editable
+        type: bool
+        description: 元のキーへ戻せて修正できる列か
+  - name: MetadataRow
+    title: メタデータの行
+    container: features/metadata/metadata.py
+    usecase: メタデータを画面で参照する
+    role: DTO
+    summary: 表の行 1 つ（`ApiModel`）
+    properties:
+      - name: id
+        type: str
+        description: 文書の ID（`config` は `documents[].id`）
+      - name: doc_kind
+        type: str | None
+        description: 文書の種類
+      - name: doc_path
+        type: str | None
+        description: 文書の画面で開くパス
+      - name: version
+        type: str | None
+        description: 文書のバージョン
+      - name: editable
+        type: bool
+        description: 文書の種類が `writeApiKinds` にあるか
+      - name: values
+        type: dict[str, str | list[str]]
+        description: 列のキーごとの値
+  - name: MetadataKind
+    title: メタデータの種類
+    container: features/metadata/metadata.py
+    usecase: メタデータを画面で参照する
+    role: DTO
+    summary: タブ 1 つ分の列と行（`ApiModel`）
+    properties:
+      - name: id
+        type: Literal['terms', 'aliases', 'tags', 'rules', 'config', 'files']
+        description: 種類
+      - name: title
+        type: str
+        description: タブの名前
+      - name: served
+        type: bool
+        description: 配信しているか
+      - name: hint
+        type: str | None
+        description: 配信していないときの追加する行の YAML
+      - name: columns
+        type: list[MetadataColumn]
+        description: 列
+      - name: can_add
+        type: bool
+        description: 行を追加できるか
+      - name: can_delete
+        type: bool
+        description: 行を削除できるか
+      - name: create_kind
+        type: str | None
+        description: 追加した行を作る文書の種類
+      - name: rows
+        type: list[MetadataRow]
+        description: 行
+  - name: MetadataResponse
+    title: メタデータの応答
+    container: features/metadata/metadata.py
+    usecase: メタデータを画面で参照する
+    role: DTO
+    summary: IF-155-28 の応答（`ApiModel`。キーは camelCase）
+    properties:
+      - name: source
+        type: str
+        description: 配信元の ID
+      - name: branch
+        type: str | None
+        description: 既定のブランチ
+      - name: kinds
+        type: list[MetadataKind]
+        description: '`KIND_SPECS` の順'
+  - name: KeyMapping
+    title: 列と文書のキーの対応
+    container: features/metadata/metadata.py
+    usecase: 共通
+    role: 値オブジェクト
+    summary: 共通のキーを文書の実際のキーへ戻す対応（frozen dataclass）
+    properties:
+      - name: key
+        type: str
+        description: 文書の最上位のキー
+      - name: item
+        type: str | None
+        description: '`{キー}[].{項目}` の項目。最上位のキーそのものは `None`'
+functions:
+  - name: key_mapping
+    title: 列と文書のキーの対応の解決
+    kind: 関数
+    container: features/metadata/metadata.py
+    usecase: 共通
+    role: 変換
+    summary: 配信元の設定の行の `metadata` から、列のキーを戻す先を求める
+    scope: public
+    args:
+      - name: metadata
+        type: Mapping[str, str] | None
+        required: true
+        passing: positional
+        description: 配信元の設定の行の `metadata`
+      - name: column
+        type: str
+        required: true
+        passing: positional
+        description: 列のキー
+    returns:
+      type: KeyMapping | None
+      description: 戻せない形は `None`
+    process: |-
+      1. 対応が無ければ `KeyMapping(column, None)` を返却する
+      2. 対応が `^[A-Za-z_][A-Za-z0-9_]*$` なら `KeyMapping(対応, None)`、`^(\w+)\[\]\.(\w+)$` なら `KeyMapping(キー, 項目)` を返却する
+      3. それ以外（`skill.path`・`tags[main].name` など）は `None` を返却する
+    unit_tests:
+      - name: test_key_mapping
+        case: 正常
+        summary: 対応の形ごとに解決する
+        condition: '対応なし・`name: title`・`tags: tags[].name`・`skill: skill.path`・`main_tags: tags[main].name`'
+        mock: なし
+        expected: '`(name, None)`・`(title, None)`・`(tags, name)`・`None`・`None`'
+  - name: build_metadata
+    title: メタデータの組み立て
+    kind: 関数
+    container: features/metadata/metadata.py
+    usecase: メタデータを画面で参照する
+    role: サービス
+    summary: project-index の配信元の設定・文書の一覧・リビジョンの一覧・端末の設定を同時に取得し、種類ごとの行と列にする
+    scope: public
+    is_async: true
+    thread_safe: true
+    args:
+      - name: client
+        title: project-indexの呼び出し
+        type: ProjectIndexClient
+        required: true
+        passing: positional
+        description: 問い合わせる
+      - name: source_id
+        type: str
+        required: true
+        passing: positional
+        description: 配信元の ID
+    returns:
+      type: MetadataResponse
+      description: IF-155-28 の応答
+    process: |-
+      1. `asyncio.gather` で project-indexの呼び出し.配信元の設定の取得・文書の一覧の取得（`values`・`common_keys` を真）・リビジョンの一覧の取得・端末の設定の配信元の行の取得を呼ぶ
+      2. 端末の設定の `source_id` の行の `directCommit.writeApiKinds` を直コミットできる種類にする（行が無ければ空）
+      3. 文書の一覧を IF-155-28 の制約「種類ごとの行と列」で振り分け、列ごとに列と文書のキーの対応の解決で `editable` を決める（種類で対応が分かれる列は、行ごとに戻せないものが 1 つでもあれば `false`）
+      4. `rules` は `RULE_INDEX_KIND` の行が無ければ `served: false` と追加する行の YAML にする
+      5. `config` は配信元の設定の `documents[]` から作り、全て `editable: false` にする
+      6. `branch` はリビジョンの一覧の `defaultRef`（Git でなければ `None`）にして返却する
+    unit_tests:
+      - name: test_build_metadata
+        case: 正常
+        summary: 種類ごとの行と列
+        condition: '用語 2 件・`note` の文書 1 件・索引 2 件・管理用の YAML 1 件と、`writeApiKinds: [note, terms]`'
+        mock: project-indexの呼び出し（応答を返却する偽物）
+        expected: '`kinds` が決めた順で、`terms` の行が `editable: true`、`rules` の行が `editable: false`、`config` の `note` の直コミットが ✓'
+      - name: test_build_metadata_when_mapped
+        case: 正常
+        summary: 対応づけたキーの列
+        condition: '`metadata: {tags: tags[].name, skill: skill.path}` の種類の文書'
+        mock: project-indexの呼び出し（偽物）
+        expected: '`tags` の列は `editable: true` で値が文字列の配列'
+      - name: test_build_metadata_when_rule_index_missing
+        case: 正常
+        summary: 索引を配信していない
+        condition: '`rule_index` の行が無い配信元の設定'
+        mock: project-indexの呼び出し（偽物）
+        expected: '`rules` が `served: false` で `hint` に `id: rule_index`'
+      - name: test_build_metadata_when_unreachable
+        case: 異常
+        summary: project-index につながらない
+        condition: 偽物が `ProjectIndexUnreachableError` を送出する
+        mock: project-indexの呼び出し（例外を送出する偽物）
+        expected: 例外がそのまま伝わる
+        exception: project-index につながらない
+    exceptions:
+      - name: ProjectIndexUnreachableError
+        condition: project-index につながらない・制限時間を超えた
+        message: '`project-index（{address}）に接続できませんでした。{reason}`'
+      - name: ProjectIndexNotFoundError
+        condition: 配信元が無い・配信していない
+        message: project-index の `missing` を含む理由
+refs:
+  - to: IF-155-28
+    type: requires
+    when: 組み立てる種類・列・行を変えるときに、メタデータの取得の入出力と突き合わせる。
+tags:
+  - name: topic:メタデータ
+  - name: action:取得
+  - name: tool:project-index
+test_files:
+  - tests/unit/dev_docs/features/metadata/test_metadata.py

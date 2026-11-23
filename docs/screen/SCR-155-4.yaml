@@ -1,0 +1,378 @@
+id: SCR-155-4
+title: メタデータの画面
+lead: 1 つの配信元のメタデータを種類ごとの表で参照・編集し、編集中の変更を差分確認してからまとめて直コミットするメタデータの画面の要素と振る舞いを定め、メタデータの画面を修正するときに参照する。
+screen: frontend/src/features/metadata/metadata/metadata-screen.tsx
+mock: frontend/src/features/metadata/metadata/metadata-screen.stories.tsx
+test_file: tests/integration/frontend/metadata-screen.spec.ts
+elements:
+  - name: ページのタイトル
+    kind: label
+    position: head > title
+    description: ブラウザのタブに出すタイトル
+    label: '`メタデータ | {配信元の ID} | dev-docs`'
+    visible_when: 常時
+  - name: トップバー
+    kind: header
+    component: CMP-155-2#
+    args:
+      - name: screen
+        value: '`metadata`'
+      - name: sources
+        value: 文書の画面と同じ（端末の設定の取得.sources[]）
+      - name: currentSource
+        value: URL の配信元の ID
+      - name: pendingEditCount
+        value: 開いている配信元の編集中の変更の件数
+      - name: colorScheme
+        value: ブラウザに保存した明暗（無ければ `system`）
+    position: 画面の上
+    description: 配信元の切り替え・検索・設定・明暗の切り替えと、メタデータ・編集中のボタン
+    visible_when: 常時
+    action: '`sourceSelect` でその配信元のメタデータの画面を開く。`pendingPanelToggle` で編集中のパネルを開閉する。画面名のクリックで、その配信元の文書の画面のトップを開く'
+    action_ref: SCR-155-1#
+  - name: 見出し
+    kind: label
+    position: 本文
+    description: 画面の見出し
+    label: '`{配信元の ID} のメタデータ`'
+    visible_when: 常時
+  - name: 絞り込みの入力欄
+    kind: input
+    position: 本文 > 見出しの下
+    description: 選んでいる種類の表の行を、値に単語を含む行だけにする
+    label: '`絞り込み`'
+    placeholder: '`用語・パス・タグ`'
+    io: 入力
+    type: 文字列
+    visible_when: メタデータを取得できたとき
+    initial_value: 空
+    action: 入力のたびに、選んでいる種類の表を、どれかの列の値に入力を含む行（大文字・小文字と全角・半角を区別しない）だけにする。種類を切り替えても入力を残す
+  - name: 種類のタブ
+    kind: tabs
+    position: 本文 > 絞り込みの入力欄の下
+    description: メタデータの種類を切り替える
+    label: '`{title}` と行の件数（用語集・エイリアス・タグ・rule-inject の索引・配信元の設定・管理用の YAML）'
+    visible_when: メタデータを取得できたとき
+    source: メタデータの取得.kinds[].title・kinds[].rows の件数
+    initial_value: URL の `tab` の種類（無ければ `terms`）
+    action: クリックでその種類の表に切り替え、URL の `tab` に保つ。狭い幅ではタブを折り返す
+    action_ref: IF-155-28#
+  - name: 読み込み中の表示
+    kind: skeleton
+    position: 本文
+    description: メタデータの取得を待つ間に、タブと表の行の形状の枠線を出す
+    visible_when: メタデータの取得を待っているとき（待ちが 1 秒を超えたときだけ出す）
+    notes:
+      読み上げ名: '`メタデータを読み込んでいます`'
+  - name: project-index から受け取れないときの表示
+    kind: alert
+    position: 本文（タブと表の代わり）
+    description: メタデータの取得が 503 を返却したときの見出しと理由
+    label: 文書の画面の『project-index から文書を受け取れないときの表示』と同じ見出しと説明、`接続先`・`理由` の一覧と、ボタン `再読み込み`
+    visible_when: メタデータの取得が 503 を返却したとき
+    source: メタデータの取得（503 の `projectIndex.address`・`projectIndex.reason`）
+    action: '`再読み込み` のクリックでメタデータの取得を再度呼び出す'
+    action_ref: IF-155-28#
+  - name: 種類を配信していないことの表示
+    kind: alert
+    position: 本文 > 種類の表の代わり
+    description: 配信元がその種類を配信していないことと、配信元の設定に追加する行
+    label: '`{title}を配信していません` と `配信元の設定（project-index.yaml）に次の行を追加すると、一覧に表示されます。` と、追加する行の YAML（等幅）'
+    visible_when: 選んでいる種類の `served` が `false` のとき
+    source: メタデータの取得.kinds[].hint
+  - name: 参照のみの表示
+    kind: label
+    position: 本文 > 種類の表の上
+    description: その種類を直コミットできないこと
+    label: '`この種類は直コミットを許可していないため、参照のみです。`'
+    visible_when: 選んでいる種類が `config` 以外で、全ての行の `editable` が `false` のとき（端末の設定の `write_api_kinds` に種類が無い）
+  - name: 種類の表
+    kind: table
+    position: 本文
+    description: 選んでいる種類の行と列
+    label: 列はメタデータの取得の `columns[].label`。削除の操作を持つ種類は末尾に操作の列
+    visible_when: 選んでいる種類の `served` が `true` で、行が 1 件以上のとき（追加した行だけのときも出す）
+    sorting: 並べ替えはしない。メタデータの取得の並び順。絞り込みの入力欄で絞る
+    source: メタデータの取得.kinds[].rows[]
+    notes:
+      狭い幅: 表を横にスクロールする領域に入れ、画面は横にスクロールさせない
+      編集中の行: 変更した値の列は背景の色を変え、削除した行は取り消し線で出す
+  - name: 行の値
+    kind: button
+    position: 種類の表 > 各列
+    description: 行の値。修正できる列は押すと入力欄にする
+    label: '`text` の列は文字列、`list` の列は `, ` でつないだ値。編集中の変更があれば変更後の値'
+    visible_when: 常時
+    enabled_when: 行の `editable` と列の `editable` が両方 `true` のとき（それ以外はボタンにせず文字で出す）
+    source: メタデータの取得.kinds[].rows[].values
+    action: クリックでその場に入力欄を出し、フォーカスを移す。Enter かフォーカスを外すと、元の値と違えば編集中の変更（`update`）に追加し、同じなら変更を作らない。Esc で入力を捨てて戻す。`list` の列は `, ` で区切って配列にする
+    notes:
+      読み上げ名: '`{列の見出し} {値} を編集`'
+  - name: 行が指す文書のリンク
+    kind: link
+    position: 種類の表 > 文書・ファイルの列
+    description: 行が指す文書を文書の画面で開く
+    label: '`docPath`（等幅）'
+    visible_when: 行の `docPath` があるとき
+    source: メタデータの取得.kinds[].rows[].docPath
+    action: クリックでその文書の文書の画面を開く。メタデータの画面へ戻ると、直前に選んでいた種類のタブが選ばれている
+    action_ref: SCR-155-1#
+  - name: 行の削除ボタン
+    kind: button
+    position: 種類の表 > 操作
+    description: 行を削除する変更を編集中の変更に追加する
+    label: ごみ箱のアイコン
+    visible_when: 種類の `canDelete` が `true` で、行の `editable` が `true` のとき
+    action: クリックで編集中の変更（`delete`）に追加し、行を取り消し線にする。削除の変更がある行では `元に戻す` のアイコンにし、クリックで変更を除く
+    notes:
+      読み上げ名: '`{行の名前} を削除`（削除の変更がある行は `{行の名前} を元に戻す`）'
+  - name: 行追加ボタン
+    kind: button
+    position: 本文 > 種類の表の下
+    description: 表の末尾に追加の行の入力欄を出す
+    label: プラスのアイコンと `行追加`
+    visible_when: 種類の `canAdd` が `true` のとき
+    action: クリックで表の末尾に追加の行を出し、ID の入力欄へフォーカスを移す
+  - name: 追加の行の ID の入力欄
+    kind: input
+    position: 種類の表 > 追加の行
+    description: 追加する文書の ID
+    label: '`ID`'
+    io: 入力
+    type: 文字列
+    visible_when: 行追加ボタンを押した後
+    required: true
+    pattern: ^[a-z0-9][a-z0-9-]*$
+    charset: 英小文字・数字・ハイフン。変換はしない
+    initial_value: 空
+    target: 編集中の変更の直コミット.edits[].docId
+  - name: 追加の行の値の入力欄
+    kind: input
+    position: 種類の表 > 追加の行 > 各列
+    description: 追加する行の列ごとの値
+    label: 列の見出し
+    io: 入力
+    type: 文字列
+    visible_when: 行追加ボタンを押した後、列の `editable` が `true` の列
+    initial_value: 空
+    target: 編集中の変更の直コミット.edits[].values
+  - name: 追加の行の追加ボタン
+    kind: button
+    position: 種類の表 > 追加の行 > 操作
+    description: 入力を編集中の変更（`add`）に追加する
+    label: '`追加`'
+    visible_when: 行追加ボタンを押した後
+    action: クリックで入力チェックを通し、通ったら編集中の変更（`add`、`docKind` は種類の `createKind`）に追加して、表の末尾に追加の変更の行を出す
+  - name: 追加の行のキャンセル
+    kind: button
+    position: 種類の表 > 追加の行 > 操作
+    description: 追加の行を閉じる
+    label: '`キャンセル`'
+    visible_when: 行追加ボタンを押した後
+    action: クリックか Esc で入力を捨てて追加の行を閉じ、行追加ボタンへフォーカスを戻す
+  - name: 行が無いことの表示
+    kind: label
+    position: 本文 > 種類の表の代わり
+    description: 選んでいる種類に行が無いこと
+    label: '`{title}はありません。`（行を追加できる種類は `「行追加」で追加できます。` を続ける）'
+    visible_when: 選んでいる種類の `served` が `true` で、行も追加の変更も無いとき
+  - name: 絞り込みで行が無いことの表示
+    kind: label
+    position: 本文 > 種類の表の代わり
+    description: 絞り込みに当たる行が無いこと
+    label: '`「{入力}」に一致する行はありません。`'
+    visible_when: 絞り込みの入力欄が空でなく、当たる行が無いとき
+  - name: 編集中のパネル
+    kind: sheet
+    position: 画面の右（狭い幅では画面の下から出す面）
+    description: 開いている配信元の編集中の変更の一覧と、差分確認・コミットの結果。表を操作しながら開いたままにする
+    label: 見出し `編集中` と `{配信元の ID} の {branch} へ、{件数} 件の変更をまとめてコミットします。`
+    visible_when: トップバーの編集中のボタンを押したとき
+    source: メタデータの取得.branch
+    notes:
+      モーダル: モーダルにせず、背景を暗くしない。外を押しても閉じない
+      保存先: 編集中の変更は配信元ごとにブラウザのタブ（`sessionStorage`）に保ち、画面を再読み込みしても残す。コメントの保存先と同じ
+  - name: 編集中の変更が無いことの表示
+    kind: label
+    position: 編集中のパネル
+    description: 変更が無いこと
+    label: '`編集中の変更はありません。`'
+    visible_when: 編集中の変更が 0 件のとき
+  - name: 変更の種類のバッジ
+    kind: badge
+    position: 編集中のパネル > 変更の行
+    description: 変更の種類
+    label: '`変更`（`update`）/ `追加`（`add`）/ `削除`（`delete`）'
+    visible_when: 変更が 1 件以上のとき
+  - name: 変更の行へ移動
+    kind: button
+    position: 編集中のパネル > 変更の行
+    description: 変更の対象の行を表で出す
+    label: '`{種類の title}: {行の名前}`（`update` は下に `{変更前} → {変更後}`）'
+    visible_when: 変更が 1 件以上のとき
+    action: クリックでその種類のタブに切り替え、絞り込みを空にし、その行へスクロールして行にフォーカスを移す
+    notes:
+      読み上げ名: '`{種類の title}: {行の名前} の行へ移動`'
+  - name: 変更を元に戻す
+    kind: button
+    position: 編集中のパネル > 変更の行
+    description: その変更を編集中の変更から除く
+    label: 元に戻すのアイコン
+    visible_when: 変更が 1 件以上のとき
+    enabled_when: 差分確認・コミットの応答を待っていないとき
+    action: クリックで変更を除き、表の値を元に戻す
+    notes:
+      読み上げ名: '`{種類の title}: {行の名前} を元に戻す`'
+  - name: 変更の差分・理由
+    kind: label
+    position: 編集中のパネル > 変更の行の下
+    description: 差分確認の差分か、送信できなかった理由
+    label: '差分は等幅で行頭の `-`・`+` を色分けする。理由は危険の色で `{path}: {reason}`（`current` があれば `今のバージョン {current}` を続ける）'
+    visible_when: 差分確認の応答か、送信の失敗の `errors[]` にその変更の `key` があるとき
+    source: 編集中の変更の直コミット.results[].diff・errors[]
+  - name: 送信の失敗のまとめ
+    kind: alert
+    position: 編集中のパネル > 説明の下
+    description: 差分確認・コミットが失敗したときの見出しと説明
+    label: 見出しは Problem Details の `title`。説明は、変更ごとの理由があれば `コミットできませんでした。変更ごとの理由を確認してください。`、無ければ `detail`。`nextSteps` を続け、続けて `編集中の変更はそのままです。`
+    visible_when: 差分確認かコミットが 200 以外を返却したとき
+    source: 編集中の変更の直コミット（400・403・404・409・422・502・503・504 の Problem Details）
+    notes:
+      読み上げ: '`role="alert"` で、出たときに読み上げる'
+  - name: コミットの結果
+    kind: alert
+    position: 編集中のパネル > 説明の下
+    description: コミットしたことと、コミットとブランチ
+    label: '`{branch} にコミットしました（{sha の先頭 7 文字}）`'
+    visible_when: コミットが 200 を返却した直後
+    source: 編集中の変更の直コミット.commit
+    action: 表示と同時に編集中の変更を空にし、メタデータを再取得する
+    action_ref: IF-155-28#
+  - name: 差分確認ボタン
+    kind: button
+    position: 編集中のパネル > フッター
+    description: コミットせずに変更ごとの差分を確認する
+    label: '`差分確認`'
+    visible_when: 変更が 1 件以上のとき
+    enabled_when: 差分確認・コミットの応答を待っていないとき
+    action: 'クリックで編集中の変更を `dryRun: true` で送信し、200 なら変更ごとに差分を出す'
+    action_ref: IF-155-29#
+    notes:
+      応答を待つ間: 非活性にし、ボタンの文言の左に回る表示を出す（ボタンの幅は変えない）
+  - name: コミットボタン
+    kind: button
+    position: 編集中のパネル > フッター
+    description: コミットの確認のダイアログを開く
+    label: '`コミット`（プライマリ）。直前の送信が失敗していれば `再試行`'
+    visible_when: 変更が 1 件以上のとき
+    enabled_when: 差分確認・コミットの応答を待っていないとき
+    action: クリックでコミットの確認のダイアログを開く
+  - name: コミットの確認のタイトル
+    kind: label
+    position: コミットの確認のダイアログ
+    description: 確認の見出し
+    label: '`コミットしますか？`'
+    visible_when: コミットの確認のダイアログを開いたとき
+  - name: コミットの確認の説明
+    kind: label
+    position: コミットの確認のダイアログ
+    description: コミット先と件数
+    label: '`{配信元の ID} の {branch} へ、{件数} 件の変更を 1 つのコミットにしてプッシュします。プッシュした後は取り消せません。`'
+    visible_when: コミットの確認のダイアログを開いたとき
+    source: メタデータの取得.branch
+  - name: コミットの説明の入力欄
+    kind: input
+    position: コミットの確認のダイアログ
+    description: コミットの説明
+    label: '`コミットの説明`'
+    io: 入力
+    type: 文字列
+    visible_when: コミットの確認のダイアログを開いたとき
+    required: true
+    required_label: '`必須`'
+    max_length: 200
+    initial_value: 空
+    autofocus: true
+    target: 編集中の変更の直コミット.message
+  - name: コミットの確認のキャンセル
+    kind: button
+    position: コミットの確認のダイアログ > フッター
+    description: コミットせずに閉じる
+    label: '`キャンセル`'
+    visible_when: コミットの確認のダイアログを開いたとき
+    action: クリックか Esc で閉じ、コミットボタンへフォーカスを戻す
+  - name: コミットの確定ボタン
+    kind: button
+    position: コミットの確認のダイアログ > フッター
+    description: 編集中の変更を直コミットする
+    label: '`コミット`（プライマリ）'
+    visible_when: コミットの確認のダイアログを開いたとき
+    enabled_when: コミットの説明が空でなく、応答を待っていないとき
+    action: 'クリックで編集中の変更とコミットの説明を `dryRun: false` で送信し、ダイアログを閉じる。結果は編集中のパネルに出す'
+    action_ref: IF-155-29#
+    notes:
+      応答を待つ間: 非活性にし、ボタンの文言の左に回る表示を出す（ボタンの幅は変えない）
+  - name: 修正できない種類の表示
+    kind: label
+    position: 本文 > 種類の表の上
+    description: 配信元の設定はこの画面では修正できないこと（許可の設定とは関係しない）
+    label: '`配信元の設定はこの画面では参照のみです。修正するときは project-index.yaml を編集してください。`'
+    visible_when: 選んでいる種類が `config` のとき
+  - name: 見つからない画面
+    kind: screen
+    position: 本文（画面全体の代わり）
+    description: 配信元が無い・配信していないときの表示
+    visible_when: メタデータの取得が 404 を返却したとき
+    source: メタデータの取得（404 の `detail`）
+    action: 文書の画面と同じく、URL を変えずに見つからない画面を出す（無い配信元の理由と、配信中の配信元・設定画面へのリンク）。編集中の変更は削除しない
+    action_ref: SCR-155-2#
+  - name: 取得の失敗の表示
+    kind: alert
+    position: 本文（タブと表の代わり）
+    description: メタデータの取得が 404・503 以外の失敗を返却したときの見出しと理由
+    label: 見出し `メタデータを取得できませんでした`、Problem Details の `detail`（無ければ状態コード）と、ボタン `再読み込み`
+    visible_when: メタデータの取得が 404・503 以外の失敗（500 など）を返却したときか、応答が無かったとき
+    action: '`再読み込み` のクリックでメタデータの取得を再度呼び出す'
+    action_ref: IF-155-28#
+    notes:
+      読み上げ: '`role="alert"` で、出たときに読み上げる'
+input_checks:
+  - element: 追加の行の ID の入力欄
+    violation: 空
+    trigger: 追加の行の追加ボタンのクリック
+    message: ID を入力してください
+    position: 追加の行の ID の入力欄の下
+  - element: 追加の行の ID の入力欄
+    violation: 英小文字・数字・ハイフン以外を含む
+    trigger: 追加の行の追加ボタンのクリック
+    message: ID は英小文字・数字・ハイフンで入力してください
+    position: 追加の行の ID の入力欄の下
+  - element: 追加の行の ID の入力欄
+    violation: 同じ種類の行か、編集中の追加の変更と ID が重なる
+    trigger: 追加の行の追加ボタンのクリック
+    message: この ID は使用されています。別の ID を入力してください
+    position: 追加の行の ID の入力欄の下
+  - element: コミットの説明の入力欄
+    violation: 201 文字以上
+    trigger: 入力のたび
+    message: 200 文字以内で入力してください
+    position: コミットの説明の入力欄の下
+refs:
+  - to: IF-155-28
+    type: references
+    when: 表の種類・列・行の出し方を変えるときに、メタデータの取得の応答を確認する。
+  - to: IF-155-29
+    type: references
+    when: 差分確認・コミットと失敗の出し方を変えるときに、直コミットの要求と応答を確認する。
+  - to: SC-155-15
+    item: scenarios[正常シナリオ]
+    type: references
+    when: 編集中のパネルの操作を変えるときに、画面での直コミットの流れを確認する。
+  - to: SCR-155-2
+    type: references
+    when: 配信元が無いときの表示を変えるときに、見つからない画面の理由とリンクを確認する。
+tags:
+  - name: topic:メタデータ
+  - name: topic:画面
+  - name: topic:直コミット
+  - name: action:編集

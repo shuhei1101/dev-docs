@@ -10,6 +10,7 @@ from fastapi import FastAPI
 from fastapi.routing import APIRoute
 from starlette.middleware.gzip import GZipMiddleware
 
+from dev_docs.features.metadata.route import build_metadata_router
 from dev_docs.features.settings.route import build_settings_router
 from dev_docs.features.view.route import build_view_router
 from dev_docs.server.error_handlers import register_error_handlers
@@ -92,6 +93,7 @@ def build_app(
     app.add_middleware(ApiGZipMiddleware)
     app.include_router(build_settings_router(handlers))
     app.include_router(build_view_router(handlers))
+    app.include_router(build_metadata_router(handlers))
     # 全てのパスに該当するため、最後に登録する
     app.include_router(build_screen_router(screen_dir, mdmark_version=mdmark_version))
     return app

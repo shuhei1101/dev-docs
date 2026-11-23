@@ -1,0 +1,152 @@
+id: MOD-155-221
+title: 画面 / メタデータの画面 / pending-edits-store.ts
+lead: 配信元ごとの編集中の変更をブラウザのタブに保つストアを受け持ち、メタデータの画面の pending-edits-store.ts を修正するときに参照する。
+data_models:
+  - name: PendingEdit
+    title: 編集中の変更
+    container: features/metadata/shared/pending-edits-store.ts
+    usecase: 画面で編集中の変更をまとめて直コミットする
+    role: DTO
+    summary: 1 件の変更。IF-155-29 の `edits[]` と、パネルに出す値を持つ
+    properties:
+      - name: key
+        type: string
+        description: '`{kind}:{docId}:{op}`'
+      - name: kind
+        type: '"terms" | "aliases" | "tags" | "rules" | "files"'
+        description: メタデータの種類
+      - name: op
+        type: '"update" | "add" | "delete"'
+        description: 変更の種類
+      - name: docId
+        type: string
+        description: 文書の ID
+      - name: docKind
+        type: string
+        description: '対象の文書の種類（`update`・`delete` は行の `docKind`、`add` は種類の `createKind`）'
+      - name: expectedVersion
+        type: string | null
+        description: 取得したバージョン
+      - name: values
+        type: Record<string, string | string[]>
+        description: 変更後の値
+      - name: before
+        type: Record<string, string | string[]>
+        description: 変更前の値（パネルの `{変更前} → {変更後}`）
+      - name: label
+        type: string
+        description: '`{種類の title}: {行の名前}`'
+functions:
+  - name: toCommitEdits
+    title: 直コミットの要求への変換
+    kind: 関数
+    container: features/metadata/shared/pending-edits-store.ts
+    usecase: 画面で編集中の変更をまとめて直コミットする
+    role: 変換
+    summary: 編集中の変更を IF-155-29 の `edits` にする
+    scope: public
+    args:
+      - name: edits
+        type: PendingEdit[]
+        required: true
+        passing: positional
+        description: 配信元の編集中の変更
+    returns:
+      type: Edit[]
+      description: '`before`・`label` を除いた並び'
+    process: 1. 変更ごとに `before`・`label` を除き、`add` は `expectedVersion` を除く（`docKind` は全ての変更で送信する）
+    unit_tests:
+      - name: test_to_commit_edits
+        case: 正常
+        summary: 要求の形にする
+        condition: '`update`・`add`・`delete` の 3 件'
+        mock: なし
+        expected: '`before`・`label` が無く、全てが `docKind` を持ち、`add` だけが `expectedVersion` を持たない'
+stores:
+  - name: usePendingEditsStore
+    title: 編集中の変更のストア
+    container: features/metadata/shared/pending-edits-store.ts
+    usecase: 画面で編集中の変更をまとめて直コミットする
+    role: ストア
+    summary: Zustand の `persist`（`sessionStorage`、キー `dev-docs:pending-edits`、`version` 1）で保存する、配信元の ID ごとの編集中の変更
+    state:
+      - name: bySource
+        type: Record<string, PendingEdit[]>
+        initial: '{}'
+        description: 配信元の ID ごとの変更（追加した順）
+    actions:
+      - name: upsert
+        title: 変更の追加
+        kind: 関数
+        summary: 同じ `key` があれば置き換え、無ければ末尾に追加する。`update` で値が全て `before` と同じになったら変更を除く
+        scope: public
+        args:
+          - name: source
+            type: string
+            required: true
+            passing: positional
+            description: 配信元の ID
+          - name: edit
+            type: PendingEdit
+            required: true
+            passing: positional
+            description: 変更
+        returns:
+          type: void
+          description: 何も返却しない
+        process: |-
+          1. 同じ `key` の変更を探し、あれば置き換える
+          2. `update` で値が `before` と同じなら除く
+        unit_tests:
+          - name: test_upsert
+            case: 正常
+            summary: 同じ変更を置き換え、元の値に戻したら除く
+            condition: 同じ `key` を 2 回追加し、最後に `before` と同じ値で追加する
+            mock: なし
+            expected: 2 回目の後は 1 件、最後は 0 件
+      - name: remove
+        title: 変更を元に戻す
+        kind: 関数
+        summary: 変更を除く
+        scope: public
+        args:
+          - name: source
+            type: string
+            required: true
+            passing: positional
+            description: 配信元の ID
+          - name: key
+            type: string
+            required: true
+            passing: positional
+            description: 変更の `key`
+        returns:
+          type: void
+          description: 何も返却しない
+        process: 1. `key` の変更を除く
+      - name: clear
+        title: 配信元の変更の削除
+        kind: 関数
+        summary: コミットした後に配信元の変更を空にする
+        scope: public
+        args:
+          - name: source
+            type: string
+            required: true
+            passing: positional
+            description: 配信元の ID
+        returns:
+          type: void
+          description: 何も返却しない
+        process: 1. `bySource[source]` を除く
+refs:
+  - to: SCR-155-4
+    type: requires
+    when: 編集中の変更の持ち方を変えるときに、編集中のパネルの保存先と突き合わせる。
+tags:
+  - name: topic:メタデータ
+  - name: topic:画面
+  - name: topic:ストア
+  - name: topic:直コミット
+test_files:
+  - tests/unit/frontend/src/features/metadata/shared/pending-edits-store.test.ts

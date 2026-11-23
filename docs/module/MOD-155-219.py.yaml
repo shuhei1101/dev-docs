@@ -1,0 +1,52 @@
+id: MOD-155-219
+title: 開発ドキュメントサーバー / メタデータ / route.py
+lead: メタデータの取得と編集中の変更の直コミットのルートを受け持ち、メタデータの route.py を修正するときに参照する。
+functions:
+  - name: build_metadata_router
+    title: メタデータのエントリーポイント
+    kind: 関数
+    container: features/metadata/route.py
+    usecase: 共通
+    role: エントリーポイント
+    summary: メタデータの 2 つのルートを持つ `APIRouter` を作る
+    scope: public
+    args:
+      - name: handlers
+        title: 配線済みの関数
+        type: Handlers
+        required: true
+        passing: positional
+        description: 起動の『配線済みの関数』
+    returns:
+      type: fastapi.APIRouter
+      description: '`APIRouter(tags=["metadata"])`'
+    process: |-
+      1. GET `/_api/sources/{source}/metadata`（`name` は `get_metadata`）は、メタデータの組み立てを `MetadataResponse` で返却する。配信元が無いときは 404、project-index につながらないときは例外の変換の登録に任せて 503 にする
+      2. POST `/_api/sources/{source}/commits`（`name` は `post_commits`）は、同じオリジンの確認を依存に持ち、本文を `CommitRequest` で受けて編集中の変更の直コミットを返却する。`EditsRejectedError` は例外の変換の登録が problem+json にする
+    unit_tests:
+      - name: test_build_metadata_router_when_metadata
+        case: 正常
+        summary: メタデータの取得
+        condition: GET `/_api/sources/sample/metadata`
+        mock: project-indexの呼び出し（`httpx.MockTransport`）
+        expected: 200 で `kinds`（キーが camelCase）
+      - name: test_build_metadata_router_when_cross_origin
+        case: 異常
+        summary: 別のオリジン
+        condition: '`Origin: http://127.0.0.1:9999` の POST `/_api/sources/sample/commits`'
+        mock: project-indexの呼び出し（要求を記録する偽物）
+        expected: 403 で、偽物が要求を受けていない
+        exception: 別のオリジン
+refs:
+  - to: IF-155-28
+    type: requires
+    when: メタデータの取得のルートを変えるときに突き合わせる。
+  - to: IF-155-29
+    type: requires
+    when: 直コミットのルートを変えるときに突き合わせる。
+tags:
+  - name: topic:メタデータ
+  - name: topic:api
+  - name: topic:ルート
+test_files:
+  - tests/unit/dev_docs/features/metadata/test_route.py

@@ -1,0 +1,94 @@
+tasks:
+  - process: 初期構築
+    status: skipped
+    reason: 既存リポジトリのため対象外
+    updated_by: planner
+    updated_at: '2026-11-22T12:15:35.399288+00:00'
+  - process: リバースエンジニアリング
+    status: skipped
+    reason: 既存の設計書がそろっており、棚卸しの対象が無い
+    updated_by: planner
+    updated_at: '2026-11-22T12:15:35.399288+00:00'
+  - process: 方針決め
+    status: skipped
+    reason: 方針決めを依頼する Issue ではない
+    updated_by: planner
+    updated_at: '2026-11-22T12:15:35.399288+00:00'
+  - process: PoC 検証
+    status: skipped
+    reason: 書き込みの経路は project-index の POST /sources/{source}/commits（IF-38）として実装・テスト済みで、稼働中の project-index も応答する。未検証の技術機構に依存しない
+    updated_by: planner
+    updated_at: '2026-11-22T12:15:35.399288+00:00'
+  - process: 複合ユースケース設計
+    status: done
+    updated_by: planner
+    updated_at: '2026-11-22T12:44:56.559083+00:00'
+  - process: デザインスタイル選定
+    status: skipped
+    reason: docs/design-policy.md があり、Issue は見た目の方向を変えない
+    updated_by: planner
+    updated_at: '2026-11-22T12:15:35.399288+00:00'
+  - process: 画面一覧・画面遷移
+    status: done
+    updated_by: planner
+    updated_at: '2026-11-22T13:04:36.991659+00:00'
+  - process: 単一ユースケース設計
+    status: done
+    updated_by: planner
+    updated_at: '2026-11-22T13:13:24.377637+00:00'
+  - process: モック作成
+    status: done
+    updated_by: planner
+    updated_at: '2026-11-22T17:57:17.163423+00:00'
+  - process: データ設計
+    status: skipped
+    reason: 永続化するのはブラウザの編集中の変更だけで、コメントと同じく画面のモジュール構成（store）で持つ。直コミットの許可・配信元のメタデータは project-index が持ち、dev-docs の端末の設定にキーを足さない
+    updated_by: planner
+    updated_at: '2026-11-22T17:57:51.681686+00:00'
+  - process: インターフェース定義設計
+    status: done
+    updated_by: planner
+    updated_at: '2026-11-22T18:15:20.491191+00:00'
+  - process: エージェント・MCP サーバー設計
+    status: skipped
+    reason: 利用者が画面から呼ぶ機能で、判定フローチャート『機能を呼ぶインターフェースの選び方』では API になる。MCP のツールとエージェントを追加しない
+    updated_by: planner
+    updated_at: '2026-11-22T12:15:35.399288+00:00'
+  - process: エージェントフロー・LLM 呼び出し設計
+    status: skipped
+    reason: エージェントへの手順と LLM の呼び出しを持たない
+    updated_by: planner
+    updated_at: '2026-11-22T12:15:35.399288+00:00'
+  - process: 精度評価設計
+    status: skipped
+    reason: LLM・意思決定モデルを使用するノードが無い（判定フローチャート『精度評価をするか』）
+    updated_by: planner
+    updated_at: '2026-11-22T12:15:35.399288+00:00'
+  - process: 部品設計
+    status: done
+    updated_by: planner
+    updated_at: '2026-11-22T18:43:07.915341+00:00'
+  - process: 画面設計
+    status: done
+    updated_by: planner
+    updated_at: '2026-11-22T18:49:55.372393+00:00'
+  - process: モジュール構成設計
+    status: done
+    updated_by: planner
+    updated_at: '2026-11-22T19:03:30.444924+00:00'
+  - process: ドキュメント修正
+    status: done
+    updated_by: planner
+    updated_at: '2026-11-22T19:09:01.022705+00:00'
+  - process: 単体テスト作成
+    status: done
+    updated_by: planner
+    updated_at: '2026-11-22T22:52:13.529657+00:00'
+  - process: 実装
+    status: done
+    updated_by: planner
+    updated_at: '2026-11-22T23:09:39.149094+00:00'
+  - process: 結合テスト作成
+    status: done
+    updated_by: planner
+    updated_at: '2026-11-23T00:13:35.572046+00:00'

@@ -109,6 +109,8 @@ def test_build_app_when_openapi(make_mcp_handlers: Callable[..., Any], tmp_path:
             "view-put_columns",
             "settings-get_settings_sources",
             "settings-put_settings_sources",
+            "metadata-get_metadata",
+            "metadata-post_commits",
         ]
     )
     assert len(operation_ids) == len(set(operation_ids))

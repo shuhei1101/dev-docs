@@ -22,7 +22,7 @@ flows:
         E-->>C: 200 OpenAPI のスキーマ
       ```
     expected:
-      - 200 で、`paths` に文書の取得・画面の検索・リビジョンの一覧・表の列の設定の保存・端末の設定の取得・端末の設定の保存のエンドポイントが全てある
+      - 200 で、`paths` に文書の取得・画面の検索・リビジョンの一覧・表の列の設定の保存・端末の設定の取得・端末の設定の保存・メタデータの取得・編集中の変更の直コミットのエンドポイントが全てある
       - '`paths` に `/mcp`・`/_admin/mcp`・`/_api/openapi.json`・画面の配信が無い'
       - 各エンドポイントの `operationId` が `{tag}-{識別子}`（`view-get_document`、`path` を省く文書の取得は `view-get_document_default`、端末の設定は `settings-get_settings_sources` の形式）で、重複が無い
       - スキーマのプロパティ名が camelCase（文書の取得の `conversionError`・`tableKeys` 等）
@@ -48,7 +48,7 @@ constraints:
   - item: マウントするエンドポイント
     constraint: '`/_api/` で始まるエンドポイントだけ。`/mcp`・`/_admin/mcp`・このエンドポイント自身は含めない'
   - item: operationId
-    constraint: '`{tag}-{関数名}`。tag は画面の API が `view`、端末の設定が `settings`。関数名はインターフェース定義の識別子'
+    constraint: '`{tag}-{関数名}`。tag は画面の API が `view`、端末の設定が `settings`、メタデータの取得と直コミットが `metadata`。関数名はインターフェース定義の識別子'
 test_file: tests/integration/server/test_api_schema.py
 tags:
   - name: topic:api

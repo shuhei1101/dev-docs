@@ -37,6 +37,16 @@ files:
   related:
   - to: SCR-155-1
     type: see_also
+- path: integration/frontend/metadata-screen.spec.ts
+  name: メタデータの画面の結合テスト
+  description: メタデータの画面の結合テストを受け持ち、メタデータの画面の表示・編集・直コミットのテストを修正するときに参照する。
+  tags:
+  - topic:メタデータ
+  - topic:画面
+  - topic:直コミット
+  related:
+  - to: SCR-155-4
+    type: see_also
 - path: integration/frontend/not-found-screen.spec.ts
   name: 見つからない画面の結合テスト
   description: 見つからない画面の結合テストを受け持ち、見つからない画面の振る舞いのテストを修正するときに参照する。
@@ -187,6 +197,16 @@ files:
   related:
   - to: IF-155-10
     type: see_also
+- path: integration/server/test_get_metadata.py
+  name: メタデータの取得の結合テスト
+  description: メタデータの取得の結合テストを受け持ち、実際の project-index から種類ごとの表を作る振る舞いのテストを修正するときに参照する。
+  tags:
+  - topic:メタデータ
+  - topic:api
+  - tool:project-index
+  related:
+  - to: IF-155-28
+    type: see_also
 - path: integration/server/test_get_settings_sources.py
   name: 端末の設定の取得の結合テスト
   description: 端末の設定の取得の結合テストを受け持ち、端末の設定の取得の振る舞いのテストを修正するときに参照する。
@@ -228,6 +248,16 @@ files:
   - topic:バージョン
   related:
   - to: IF-155-22
+    type: see_also
+- path: integration/server/test_post_commits.py
+  name: 直コミットの結合テスト
+  description: 直コミットの結合テストを受け持ち、実際の project-index の書き込みの API へ編集中の変更を送信する振る舞いのテストを修正するときに参照する。
+  tags:
+  - topic:直コミット
+  - topic:api
+  - tool:project-index
+  related:
+  - to: IF-155-29
     type: see_also
 - path: integration/server/test_put_columns.py
   name: 表の列の設定の保存の結合テスト
@@ -1408,6 +1438,91 @@ files:
   - tool:systemd
   related:
   - to: scripts/dev-docs-restart-resident.sh
+    type: tests
+- path: unit/dev_docs/features/metadata/test_metadata.py
+  name: 配信元のメタデータを種類ごとの行と列に組み立てる処理の単体テスト
+  description: 配信元のメタデータを種類ごとの行と列に組み立てる処理の単体テストを受け持ち、metadata.py の振る舞いのテストを修正するときに参照する。
+  tags:
+  - topic:メタデータ
+  - tool:project-index
+  - topic:単体テスト
+  related:
+  - to: src/dev_docs/features/metadata/metadata.py
+    type: tests
+- path: unit/dev_docs/features/metadata/test_commits.py
+  name: 編集中の変更を書き込みと削除に変えて直コミットする処理の単体テスト
+  description: 編集中の変更を書き込みと削除に変えて project-index の書き込みの API へ送信する処理の単体テストを受け持ち、commits.py の振る舞いのテストを修正するときに参照する。
+  tags:
+  - topic:直コミット
+  - topic:メタデータ
+  - tool:project-index
+  - topic:単体テスト
+  related:
+  - to: src/dev_docs/features/metadata/commits.py
+    type: tests
+- path: unit/dev_docs/features/metadata/test_route.py
+  name: メタデータのルーター（`GET /_api/sources/{source}/metadata`・`POST /_api/sources/{source}/commits`）の単体テスト
+  description: メタデータのルーターの単体テストを受け持ち、route.py の振る舞いのテストを修正するときに参照する。
+  tags:
+  - topic:メタデータ
+  - topic:ルート
+  - topic:単体テスト
+  related:
+  - to: src/dev_docs/features/metadata/route.py
+    type: tests
+- path: unit/frontend/src/features/metadata/shared/pending-edits-store.test.ts
+  name: 編集中の変更のストアの単体テスト
+  description: 編集中の変更のストアと直コミットの要求への変換の単体テストを受け持ち、pending-edits-store.ts の振る舞いのテストを修正するときに参照する。
+  tags:
+  - topic:メタデータ
+  - topic:ストア
+  - topic:直コミット
+  - topic:単体テスト
+  related:
+  - to: frontend/src/features/metadata/shared/pending-edits-store.ts
+    type: tests
+- path: unit/frontend/src/features/metadata/metadata/queries.test.tsx
+  name: 編集中の変更の直コミットの mutation の単体テスト
+  description: 編集中の変更の直コミットの mutation の単体テストを受け持ち、queries.ts の振る舞いのテストを修正するときに参照する。
+  tags:
+  - topic:メタデータ
+  - tool:tanstack-query
+  - topic:直コミット
+  - topic:単体テスト
+  related:
+  - to: frontend/src/features/metadata/metadata/queries.ts
+    type: tests
+- path: unit/frontend/src/features/metadata/metadata/metadata-table.test.tsx
+  name: メタデータの種類の表の単体テスト
+  description: メタデータの種類の表（行の中の編集・追加）の単体テストを受け持ち、metadata-table.tsx の振る舞いのテストを修正するときに参照する。
+  tags:
+  - topic:メタデータ
+  - topic:表
+  - action:編集
+  - topic:単体テスト
+  related:
+  - to: frontend/src/features/metadata/metadata/metadata-table.tsx
+    type: tests
+- path: unit/frontend/src/features/metadata/metadata/pending-panel.test.tsx
+  name: 編集中のパネルの単体テスト
+  description: 編集中のパネルとコミットの確認のダイアログの単体テストを受け持ち、pending-panel.tsx の振る舞いのテストを修正するときに参照する。
+  tags:
+  - topic:メタデータ
+  - topic:直コミット
+  - topic:パネル
+  - topic:単体テスト
+  related:
+  - to: frontend/src/features/metadata/metadata/pending-panel.tsx
+    type: tests
+- path: unit/frontend/src/features/metadata/metadata/metadata-screen.test.tsx
+  name: メタデータの画面の単体テスト
+  description: メタデータの画面（種類のタブ・変更の行へ移動・取得の失敗の表示）の単体テストを受け持ち、metadata-screen.tsx の振る舞いのテストを修正するときに参照する。
+  tags:
+  - topic:メタデータ
+  - topic:画面
+  - topic:単体テスト
+  related:
+  - to: frontend/src/features/metadata/metadata/metadata-screen.tsx
     type: tests
 checkpoint:
   commit: 05915628138ff51e7b1be495775c9f556a2a0825

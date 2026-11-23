@@ -1,0 +1,243 @@
+id: SC-155-15
+title: 利用者が画面で編集中の変更をまとめて直コミットする
+lead: 利用者がメタデータの画面で行を編集し、差分確認で差分を確認してから、配信元ごとにまとめて 1 つのコミットでプッシュするシナリオを定め、編集中の変更の送信の流れを変えるときに参照する。
+primary_actor: 利用者
+stakeholders:
+  - name: 利用者
+    interest: 気づいたメタデータをその場で修正し、Issue と作業 PR を経ずにまとめてコミットできる。送信できなかった修正と理由が分かる
+  - name: project-index
+    interest: 書き込みの API が、許可と検査に合格した修正だけを 1 つのコミットにする
+  - name: 配信元を使用するプロジェクト
+    interest: 検査に合格しないメタデータが既定のブランチに入らない
+trigger: 利用者がメタデータの画面で行の値を修正する
+preconditions:
+  - 利用者が配信元のメタデータの画面を開いている
+  - 配信元の設定の `direct_commit.kinds[]` と project-index の端末の設定の `sources[].direct_commit.write_api_kinds` の両方に、修正する種類がある
+success_guarantee: 編集中の変更が、検査に合格して 1 つのコミットで配信元のリモートの既定のブランチへプッシュされ、画面の一覧が修正後の値になる。
+minimal_guarantee: 送信が失敗したときはコミットもプッシュもせず、編集中の変更は修正ごとの理由と一緒に画面に残る。dev-docs は配信元のファイルを自分で書き換えない。
+frequency: 作業のたび
+priority: 中
+test_file: tests/e2e/単一ユースケース/test_利用者が画面で編集中の変更をまとめて直コミットする.py
+scenarios:
+  - name: 正常シナリオ
+    setup:
+      - name: Mock
+        description: なし（実環境で実行。リモートはテスト用の一時フォルダのベアリポジトリ）
+      - name: 直コミットを許可した配信元
+        description: '文書の種類 `note` と用語集の種類 `terms` を持つ git の配信元。`project-index.yaml` の `direct_commit` は `branch: develop`・`kinds: [note, terms]`。project-index の端末の設定の行は `direct_commit.write_api_kinds: [note, terms]`'
+        notes: id `sample`。`develop` を指すワークツリーがあり、未プッシュのコミットと未コミットの変更が無い
+      - name: 文書と用語
+        description: タグ `topic:a` を持つ文書 n1 と、用語 `配信元`・`旧称` を持つ用語集
+      - name: dev-docs
+        description: sample を配信している dev-docs と project-index
+    flow: |-
+      <!-- map -->
+
+      ```mermaid
+      sequenceDiagram
+        actor U as 利用者
+        participant UI as dev-docs の画面
+        participant SRV as 開発ドキュメントサーバー
+        participant PI as project-index
+        participant R as リモート
+
+        U->>UI: タグのタブで n1 の行にタグ `topic:b` を追加する
+        U->>UI: 用語集のタブで用語 `種類` の行を追加し、用語 `旧称` の行を削除する
+        UI-->>U: トップバーの編集中の変更の件数 3
+        U->>UI: 編集中の変更のパネルを開き、差分確認を押す
+        UI->>SRV: sample の変更 3 件を dryRun で送信する
+        SRV->>PI: POST /sources/sample/commits（dryRun）
+        PI-->>SRV: 検査の合格と差分
+        SRV-->>UI: 修正ごとの差分
+        U->>UI: まとめて送信し、送信の確認でコミットの説明を入力して送信する
+        UI->>SRV: sample の修正 3 件とコミットの説明を送信
+        SRV->>PI: POST /sources/sample/commits
+        PI->>R: develop へプッシュ
+        PI-->>SRV: コミットとブランチ
+        SRV-->>UI: 送信の結果
+        UI-->>U: コミットとブランチの表示と、修正後の値の一覧
+      ```
+
+      <!-- /map -->
+    expected:
+      - 差分確認を押すと、パネルに修正ごとの差分が出て、リモートは変わらない
+      - 送信すると、リモートの `develop` に 1 コミットだけ増え、コミットの説明が入力した説明で、変更は n1 と用語集のファイルだけ
+      - パネルにプッシュしたコミットとブランチが出て、編集中の変更が空になり、トップバーの件数が出なくなる
+      - タグのタブの n1 の行に `topic:b` が、用語集のタブに `種類` の行が出る
+      - 用語集のタブに `旧称` の行が無く、リモートの用語集のファイルから `旧称` が消えている
+    test: test_normal
+  - name: 正常シナリオ（編集中の変更を取り消す）
+    setup:
+      - name: Mock
+        description: なし（実環境で実行）
+      - name: 直コミットを許可した配信元
+        description: 正常シナリオと同じ sample
+      - name: 編集中の変更
+        description: n1 のタグの追加と用語の追加の 2 件
+    flow: |-
+      <!-- map -->
+
+      ```mermaid
+      sequenceDiagram
+        actor U as 利用者
+        participant UI as dev-docs の画面
+
+        U->>UI: 画面を再読み込みし、編集中の変更のパネルを開く
+        UI-->>U: 編集中の変更 2 件
+        U->>UI: 用語の追加の修正を取り消す
+        UI-->>U: 編集中の変更 1 件と、元の値の用語集の表
+      ```
+
+      <!-- /map -->
+    expected:
+      - 再読み込みしても、編集中の変更 2 件が残っている
+      - 取り消した後、パネルとトップバーの件数が 1 になり、用語集の表に `種類` の行が無い
+      - リモートは変わらない
+    test: test_normal_when_change_discarded
+  - name: 異常シナリオ（検査に合格しない）
+    setup:
+      - name: Mock
+        description: なし（実環境で実行）
+      - name: 直コミットを許可した配信元
+        description: 正常シナリオと同じ sample
+      - name: 編集中の変更
+        description: n1 のタグの追加（合格する）と、名前が空の用語の追加（スキーマに合格しない）の 2 件
+    flow: |-
+      <!-- map -->
+
+      ```mermaid
+      sequenceDiagram
+        actor U as 利用者
+        participant UI as dev-docs の画面
+        participant SRV as 開発ドキュメントサーバー
+        participant PI as project-index
+
+        U->>UI: まとめて送信する
+        UI->>SRV: sample の修正 2 件を送信
+        SRV->>PI: POST /sources/sample/commits
+        PI-->>SRV: 422（用語の追加の違反）
+        SRV-->>UI: 修正ごとの違反
+        UI-->>U: 用語の追加の修正に、違反したキーと修正方法
+      ```
+
+      <!-- /map -->
+    expected:
+      - リモートとワークツリーが変わらない
+      - 用語の追加の修正に、違反したキーのパスと修正方法が出る
+      - 編集中の変更 2 件が残っている
+    test: test_error_when_validation_failed
+  - name: 異常シナリオ（他の変更と食い違う）
+    setup:
+      - name: Mock
+        description: なし（実環境で実行）
+      - name: 直コミットを許可した配信元
+        description: 正常シナリオと同じ sample
+      - name: 編集中の変更
+        description: n1 のタグの追加
+      - name: 他の変更
+        description: 編集中の変更がある状態で、リモートの develop へ n1 の概要を変えるコミットをプッシュする
+        notes: 編集中の変更の n1 のバージョンが古くなる
+    flow: |-
+      <!-- map -->
+
+      ```mermaid
+      sequenceDiagram
+        actor U as 利用者
+        participant UI as dev-docs の画面
+        participant SRV as 開発ドキュメントサーバー
+        participant PI as project-index
+
+        U->>UI: まとめて送信する
+        UI->>SRV: sample の修正を送信
+        SRV->>PI: POST /sources/sample/commits
+        PI-->>SRV: 409（バージョンが合わない）
+        SRV-->>UI: 食い違った文書と今のバージョン
+        UI-->>U: n1 の修正に、他の変更で変わったこと
+      ```
+
+      <!-- /map -->
+    expected:
+      - リモートに、他の変更のコミットより後のコミットが増えない
+      - n1 の修正に、他の変更で変わったことが出て、編集中の変更が残っている
+    test: test_error_when_version_mismatched
+  - name: 異常シナリオ（直コミットを許可していない）
+    setup:
+      - name: Mock
+        description: なし（実環境で実行）
+      - name: 直コミットを許可した配信元
+        description: 正常シナリオと同じ sample
+      - name: 編集中の変更
+        description: n1 のタグの追加
+      - name: 許可の取り消し
+        description: 編集中の変更がある状態で、project-index の端末の設定の API（`PUT /settings/sources`）で、sample の行の `direct_commit.write_api_kinds` から `note` を除く（project-index は端末の設定のファイルを監視しないため、ファイルを書き換えるだけでは反映されない）
+    flow: |-
+      <!-- map -->
+
+      ```mermaid
+      sequenceDiagram
+        actor U as 利用者
+        participant UI as dev-docs の画面
+        participant SRV as 開発ドキュメントサーバー
+        participant PI as project-index
+
+        U->>UI: まとめて送信する
+        UI->>SRV: sample の修正を送信
+        SRV->>PI: POST /sources/sample/commits
+        PI-->>SRV: 403（許可していない種類）
+        SRV-->>UI: 許可していない種類と、許可を記載する端末の設定のキー
+        UI-->>U: n1 の修正に、許可していない種類と許可の記載先
+      ```
+
+      <!-- /map -->
+    expected:
+      - リモートとワークツリーが変わらない
+      - n1 の修正に、許可していない種類 `note` と、許可を記載するキー `sources[].direct_commit.write_api_kinds` が出て、編集中の変更が残っている
+    test: test_error_when_direct_commit_not_permitted
+  - name: 異常シナリオ（リモートに接続できない）
+    setup:
+      - name: Mock
+        description: なし（実環境で実行）
+      - name: 直コミットを許可した配信元
+        description: 正常シナリオと同じ sample
+      - name: 編集中の変更
+        description: n1 のタグの追加
+      - name: リモートの失敗
+        description: 編集中の変更がある状態で、sample のリモートの URL を存在しないパスへ変える
+        notes: 取得に失敗し、project-index が 502 を返却する
+    flow: |-
+      <!-- map -->
+
+      ```mermaid
+      sequenceDiagram
+        actor U as 利用者
+        participant UI as dev-docs の画面
+        participant SRV as 開発ドキュメントサーバー
+        participant PI as project-index
+
+        U->>UI: まとめて送信する
+        UI->>SRV: sample の修正を送信
+        SRV->>PI: POST /sources/sample/commits
+        PI-->>SRV: 502（リモートからの取得に失敗）
+        SRV-->>UI: 送信の失敗と理由
+        UI-->>U: 送信できなかったことと理由、もう一度送信するボタン
+      ```
+
+      <!-- /map -->
+    expected:
+      - パネルに送信できなかったことと理由が出て、編集中の変更が残っている
+      - sample のワークツリーに未コミットの変更と未プッシュのコミットが無い
+    test: test_error_when_remote_unreachable
+refs:
+  - to: SC-155-13
+    item: scenarios[正常シナリオ]
+    type: part_of
+    when: この流れを変えるときに、複合ユースケースの正常シナリオの中の位置づけを確認する。
+  - to: SC-155-14
+    item: scenarios[正常シナリオ]
+    type: requires
+    when: 編集を始める前に、メタデータの画面を開く流れを確認する。
+tags:
+  - name: topic:直コミット
+  - name: topic:メタデータ
+  - name: action:送信
+  - name: action:修正

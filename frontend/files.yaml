@@ -1184,6 +1184,76 @@ files:
     type: see_also
   - to: TP-155-1
     type: see_also
+- path: src/features/metadata/metadata/metadata-screen.tsx
+  name: メタデータの画面
+  description: 配信元のメタデータを種類ごとの表で参照・修正し、溜めた修正をまとめて送信する画面を受け持ち、メタデータの画面の metadata-screen.tsx を修正するときに参照する。
+  tags:
+  - topic:メタデータ
+  - topic:画面
+  - topic:直コミット
+  related:
+  - to: MOD-155-225
+    type: implements
+- path: src/features/metadata/metadata/metadata-screen.stories.tsx
+  name: メタデータの画面のストーリー
+  description: メタデータの画面の状態ごとのストーリーを受け持ち、metadata-screen.tsx のストーリーを追加・修正するときに参照する。
+  tags:
+  - tool:storybook
+  - topic:メタデータ
+  - topic:画面
+  related:
+  - to: frontend/src/features/metadata/metadata/metadata-screen.tsx
+    type: see_also
+- path: src/features/metadata/shared/pending-edits-store.ts
+  name: '編集中の変更のストア'
+  description: '配信元ごとの編集中の変更をブラウザのタブに保つストアを受け持ち、メタデータの画面の pending-edits-store.ts を修正するときに参照する。'
+  tags:
+  - topic:メタデータ
+  - topic:ストア
+  - topic:直コミット
+  related:
+  - to: MOD-155-221
+    type: implements
+- path: src/features/metadata/metadata/queries.ts
+  name: '編集中の変更の直コミットの mutation'
+  description: 'メタデータの取得の問い合わせと直コミットの mutation を受け持ち、メタデータの画面の queries.ts を修正するときに参照する。'
+  tags:
+  - topic:メタデータ
+  - tool:tanstack-query
+  - topic:直コミット
+  related:
+  - to: MOD-155-222
+    type: implements
+- path: src/features/metadata/metadata/metadata-table.tsx
+  name: 'メタデータの種類の表'
+  description: 'メタデータの種類 1 つ分の表（行の中の編集・追加・削除）を受け持ち、メタデータの画面の metadata-table.tsx を修正するときに参照する。'
+  tags:
+  - topic:メタデータ
+  - topic:表
+  - action:編集
+  related:
+  - to: MOD-155-223
+    type: implements
+- path: src/features/metadata/metadata/pending-panel.tsx
+  name: '編集中のパネル'
+  description: '編集中のパネルとコミットの確認のダイアログを受け持ち、メタデータの画面の pending-panel.tsx を修正するときに参照する。'
+  tags:
+  - topic:メタデータ
+  - topic:直コミット
+  - topic:パネル
+  related:
+  - to: MOD-155-224
+    type: implements
+- path: src/routes/$source/[_]metadata.tsx
+  name: '`/{配信元の ID}/_metadata` のルート'
+  description: '`/{配信元の ID}/_metadata` のルートを受け持ち、アプリとルートの $source/[_]metadata.tsx を修正するときに参照する。'
+  tags:
+  - topic:ルート
+  - topic:メタデータ
+  - tool:react
+  related:
+  - to: MOD-155-226
+    type: implements
 checkpoint:
   commit: 05915628138ff51e7b1be495775c9f556a2a0825
   reviewed: []

@@ -6,7 +6,7 @@ used_in:
   - src/dev_docs/integrations/project_index/
 verification:
   state: 済
-  detail: '提供する側の shuhei1101/project-index の develop の `f36ba69`（[読み取り API と端末の設定の API の提供](https://github.com/shuhei1101/project-index/pull/15)・[読み取り API の文書の一覧への値とバージョンの追加](https://github.com/shuhei1101/project-index/pull/49)）の IF-22〜IF-32 と照合した。パス・状態コード・`application/problem+json` の `missing` は一致する。応答のキーは camelCase で、検討事項の一覧が `decisions[].folders`、検討事項の文書が `body`、端末の設定の行が `row` に包まれず `outsideRead` を持ち、保存の応答が状態だけ、行の追加の本文が `{source}` で応答が `result`（`added`・`exists`）になる。`f36ba69` に固定した本物の project-index を相手に、結合テストの文書の取得・画面の検索・リビジョンの一覧・端末の設定の取得と保存が pass した（`docs/pr/183/テスト結果/20261113204913_e168fba_結合テスト.log`）。develop の `7177d39` の IF-30・IF-31 とコードで、`PUT /settings/sources` の `expectedVersion`・400・409、排他ロックを持ったままの再読み込み、`GET` がロックを待たないことを照合した。develop の `42632c5` の IF-24・IF-25 で、文書の一覧の `common_keys`・`documents[].commonKeys` と文書の取得の `metadata.commonKeys` を照合し、127.0.0.1:8786 の project-index が `common_keys=true` に `commonKeys` を返却することを確認した。`PUT /settings/sources` の行の外部の読み取りのキーは `outside_read` で、`GET` の応答の `outsideRead` と違う。稼働中の project-index（`7177d39`）へ古い `expectedVersion` を付けた PUT で、行のキーが `outside_read` なら 409、`outsideRead` なら 400（`sources[{n}].outsideRead: Extra inputs are not permitted`）を返却することを確認した（#203）。稼働中の project-index（127.0.0.1:8786）への GET `/sources?include_loading=true` が 200 で `sources[]` を返却することを確認した（確認した時点で全ての配信元の読み込みを終えていたため `loading` は観測していない）。`storage` を持つ行はこの端末の設定に無く、GET `/settings/sources` では観測していない。`loading`・`storage` の応答は、結合テストで本物の project-index を相手に確かめる（#265）'
+  detail: '提供する側の shuhei1101/project-index の develop の `f36ba69`（[読み取り API と端末の設定の API の提供](https://github.com/shuhei1101/project-index/pull/15)・[読み取り API の文書の一覧への値とバージョンの追加](https://github.com/shuhei1101/project-index/pull/49)）の IF-22〜IF-32 と照合した。パス・状態コード・`application/problem+json` の `missing` は一致する。応答のキーは camelCase で、検討事項の一覧が `decisions[].folders`、検討事項の文書が `body`、端末の設定の行が `row` に包まれず `outsideRead` を持ち、保存の応答が状態だけ、行の追加の本文が `{source}` で応答が `result`（`added`・`exists`）になる。`f36ba69` に固定した本物の project-index を相手に、結合テストの文書の取得・画面の検索・リビジョンの一覧・端末の設定の取得と保存が pass した（`docs/pr/183/テスト結果/20261113204913_e168fba_結合テスト.log`）。develop の `7177d39` の IF-30・IF-31 とコードで、`PUT /settings/sources` の `expectedVersion`・400・409、排他ロックを持ったままの再読み込み、`GET` がロックを待たないことを照合した。develop の `42632c5` の IF-24・IF-25 で、文書の一覧の `common_keys`・`documents[].commonKeys` と文書の取得の `metadata.commonKeys` を照合し、127.0.0.1:8786 の project-index が `common_keys=true` に `commonKeys` を返却することを確認した。`PUT /settings/sources` の行の外部の読み取りのキーは `outside_read` で、`GET` の応答の `outsideRead` と違う。稼働中の project-index（`7177d39`）へ古い `expectedVersion` を付けた PUT で、行のキーが `outside_read` なら 409、`outsideRead` なら 400（`sources[{n}].outsideRead: Extra inputs are not permitted`）を返却することを確認した（#203）。稼働中の project-index（127.0.0.1:8786）への GET `/sources?include_loading=true` が 200 で `sources[]` を返却することを確認した（確認した時点で全ての配信元の読み込みを終えていたため `loading` は観測していない）。`storage` を持つ行はこの端末の設定に無く、GET `/settings/sources` では観測していない。`loading`・`storage` の応答は、結合テストで本物の project-index を相手に確かめる（#265）。書き込みの API（`POST /sources/{source}/commits`）は、develop の `552c341` の IF-38 と照合した。稼働中の project-index（127.0.0.1:8786、`552c341`）へ 2026-11-23 に送信し、`writeApiKinds` が空の knowledge への `dryRun: true` の書き込みが 403（`DirectCommitNotPermittedError`、`kinds` に配信元の設定の `direct_commit.kinds[]`、`nextSteps` に `sources[].direct_commit.write_api_kinds`）、`writes`・`deletes` が空の要求が 400（`errors[]`）を返却することを確認した。この端末には `writeApiKinds` を持つ配信元が無く、200（`dryRun: true` の `results[].diff`）・409・422・502 は観測していないため、直コミットの結合テスト（IF-155-29）で一時フォルダの配信元と本物の project-index を相手に確認する。develop の `552c341` の project-index を相手にした直コミットの結合テスト（`tests/integration/server/test_post_commits.py`）で、`results[].kind` が `write`・`delete`、422 の `errors[].path` が `writes[{添字}]`・`deletes[{添字}]` で始まり、409 が `docId`・`current` を持つこと、`set` の共通のキー `tags` は名前の配列で受け、`metadata: {tags: tags[].name}` の文書では `main` を保った配列に戻すこと（オブジェクトの配列を送信すると 400）、`message` が必須で、差分確認の削除の `diff` は空であることを確認した。配信元の設定の取得（IF-23）が `documents[].metadata`（例: knowledge の `tags: tags[].name`・`main_tags: tags[main].name`）を返却することも同じ端末で確認した'
   date: '2026-11-17'
 version:
   api_version: shuhei1101/project-index の develop の `7177d39`
@@ -127,6 +127,29 @@ endpoints:
         condition: 同じ id の行がある
       - code: '422'
         condition: スキーマに通らない
+  - name: POST /sources/{source}/commits
+    method: POST
+    path: /sources/{source}/commits
+    summary: '`writes`（`write_docs` の操作）・`deletes`（`{id, expectedVersion}`）・`message`・`dryRun` を 1 回で受け、`write_docs`・`delete_docs` と同じ検査に合格させてから 1 つのコミットにしてプッシュし、`applied`・`results[]`（`kind`・`index`・`id`・`status`・`version`・`diff`）・`commit`（`sha`・`branch`・`retried`。`dryRun: true` は `null`）を返却する（IF-38）。書き換わる種類は、端末の設定の `sources[].direct_commit.write_api_kinds`（GET `/settings/sources` の `directCommit.writeApiKinds`）と配信元の設定の `direct_commit.kinds[]` の両方に要る'
+    status_codes:
+      - code: '200'
+        condition: 'コミット・プッシュした、または `dryRun: true` で検査に合格した'
+      - code: '400'
+        condition: 要求の型の検証に失敗した
+      - code: '403'
+        condition: 別のオリジンの要求、許可していない種類（`DirectCommitNotPermittedError`。`kinds` と `nextSteps`）・上書きできないブランチ・読み取り専用の種類
+      - code: '404'
+        condition: 配信元が無い・配信していない、更新や削除する文書が無い
+      - code: '409'
+        condition: 文書のバージョンが合わない（`VersionMismatchError`）・直コミットを使用できない・ワークツリーが無い・未プッシュのコミットか未コミットの変更がある・参照されている文書の削除・プッシュが 2 回断られた
+      - code: '422'
+        condition: 検査に合格しない（`errors[]` に `writes`・`deletes` の別と添字・項目のパス・決まり・直し方）
+      - code: '500'
+        condition: '`generators[]` が失敗した'
+      - code: '502'
+        condition: リモートからの取得・プッシュに失敗した
+      - code: '504'
+        condition: 書き込みの期限を過ぎた
 notes:
   契約: 原本は提供する側の shuhei1101/project-index のインターフェース定義 IF-22〜IF-32。付け替え口のモックはこのバージョンの入出力で記載し、バージョンを記録する
   dev-docs が前提にする応答: 文書の一覧の値とバージョン（`nav` の `auto` の `filter`・`group_by` と差分の変わったキー・変わった文書のマーカーのため）、`records` の行の文書の `?id=` での指定、検索の結果の `id`・`filePath`、配信元の設定の `diff.ignore_keys` と `schemas`（絞り込みのフィールドの一覧のため）。[読み取り API への値とバージョンの追加](https://github.com/shuhei1101/project-index/issues/46) で追加された。文書の一覧の `commonKeys` と文書の取得の `metadata.commonKeys`（文書の共通のキーを dev-docs で組み立てないため）。[共通のキーを返却する読み取り API](https://github.com/shuhei1101/project-index/pull/54)（`42632c5`）で追加された。リビジョンの一覧の `branches[].commit`・`tags[].commit` と、文書の一覧の `ref` に短縮の commit を指せること（文書の一覧を commit ごとに保持するため。文書の一覧の応答の `ref` は指した値のままで commit を返却しない。2026-11-20 に 127.0.0.1:8786 の project-index で確認した）

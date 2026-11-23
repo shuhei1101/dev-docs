@@ -1,0 +1,22 @@
+# 単体テスト（実装の後）: d14fefd
+
+## TL-1 単体テスト（バック）: run_runner（layer=backend-unit）
+
+^[[36;1m  backend-unit) cmd="uv run pytest tests/unit/ -v" ;;^[[0m
+^[[36;1m  backend-integration) cmd="uv run pytest ${PATHS:-$dir} -v" ;;^[[0m
+============================= 587 passed in 7.16s ==============================
+
+## TL-8 単体テスト（フロント）
+
+run_runner（layer=frontend-unit）は、テストの step に進む前に次の出力で止まり、集計の行が無かった:
+failed to get jobs: HTTP 404: Not Found (https://api.github.com/repos/shuhei1101/dev-docs/actions/runs/45081545061/jobs?per_page=100)
+run 45081545061 is still in progress; logs will be available when it is complete
+exit 1
+
+そのため手元の全件実行（npm run test:unit）で回した（前提の Node 24・npm ci 済みを確認）。
+
+$ npm run test:unit
+ Test Files  58 passed (58)
+      Tests  189 passed (189)
+   Duration  12.56s (environment 49%, tests 21%, import 17%, setup 10%, transform 3%, worker 1%)
+exit 0
