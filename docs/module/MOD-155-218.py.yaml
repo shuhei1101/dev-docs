@@ -160,10 +160,10 @@ functions:
         passing: positional
         description: 文書の種類ごとの `metadata`
       - name: expected_versions
-        type: Mapping[str, Mapping[str, str]]
+        type: Mapping[str, Mapping[str, str] | str]
         required: true
         passing: positional
-        description: '`update` の変更の `key` ごとの項目ごとのバージョンの辞書'
+        description: '`update` の変更の `key` ごとの項目ごとのバージョンの辞書か文書の全体のバージョン'
     returns:
       type: tuple[list[dict], list[dict], list[tuple[Literal['write', 'delete'], int, str]]]
       description: '`writes`・`deletes` と、それぞれの添字と変更の `key` の対応'
@@ -327,11 +327,11 @@ functions:
         passing: positional
         description: 文書の種類ごとの `metadata`
     returns:
-      type: dict[str, dict[str, str]]
-      description: '変更の `key` ごとの `{最上位のキー: バージョン}`'
+      type: dict[str, dict[str, str] | str]
+      description: '変更の `key` ごとの `{最上位のキー: バージョン}` か文書の全体のバージョン'
     process: |-
       1. `update` の変更ごとに、`asyncio.gather` で project-indexの呼び出し.項目ごとのバージョンの取得（`doc_path`・`ref` は `base_commit`・`document_id` は `doc_id`）を呼ぶ
-      2. 変更の `values` の列ごとに、`mappings[doc_kind]` で列と文書のキーの対応の解決をして最上位のキーを求め、そのキーのバージョンだけを辞書にする
+      2. 変更の `values` の列ごとに、`mappings[doc_kind]` で列と文書のキーの対応の解決をして最上位のキーを求め、そのキーのバージョンだけを辞書にする。そのキーのどれかが `itemVersions` に無い変更は、辞書ではなく `expected_version`（文書の全体のバージョン）にする
       3. `DocumentNotFoundError` の変更は全て集め、`errors[]` にその変更の `key` を入れた `EditsRejectedError`（404）を送出する
     unit_tests:
       - name: test_item_expected_versions
@@ -347,6 +347,12 @@ functions:
         mock: project-indexの呼び出し（偽物）
         expected: '`EditsRejectedError`（404）で、`errors[0].key` が 2 件目の変更'
         exception: 編集を始めたときの文書が無い
+      - name: test_item_expected_versions_when_key_missing
+        case: 正常
+        summary: 編集を始めたときの文書に修正したキーが無い
+        condition: '`tags` の `update`（`expected_version` が `c3d4e5`）と、`itemVersions` が `{id, name}` だけを返却する偽物'
+        mock: project-indexの呼び出し（偽物）
+        expected: その変更の値が文字列の `c3d4e5`
     exceptions:
       - name: EditsRejectedError
         condition: 編集を始めたときの文書が無い

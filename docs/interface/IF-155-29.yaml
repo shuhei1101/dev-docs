@@ -217,7 +217,7 @@ constraints:
   - item: ログ
     constraint: 送信ごとに、配信元の ID・`dryRun`・変更の件数・project-index の状態コード・コミットの SHA（待ちの上限で打ち切ったときはその旨）を 1 行のログに出力する。値の中身とコミットの説明は出力しない
   - item: 項目ごとのバージョン
-    constraint: '`update` の変更ごとに、project-index の文書の取得（`GET /sources/{source}/docs/{docPath}?ref={baseCommit}&id={docId}`）で編集を始めたときの `itemVersions` を取得し、`set` に組み立てた列が戻る文書の最上位のキー（制約「書き込みと削除への変換」の対応で戻したキー）だけのバージョンの辞書を `expected_version` にする。`delete` は `expectedVersion`（文書の全体のバージョン）のまま、`add` は使用しない'
+    constraint: '`update` の変更ごとに、project-index の文書の取得（`GET /sources/{source}/docs/{docPath}?ref={baseCommit}&id={docId}`）で編集を始めたときの `itemVersions` を取得し、`set` に組み立てた列が戻る文書の最上位のキー（制約「書き込みと削除への変換」の対応で戻したキー）だけのバージョンの辞書を `expected_version` にする。そのキーのどれかが `itemVersions` に無い変更（編集を始めたときの文書に無い項目を加える）は、辞書ではなく要求の `expectedVersion`（文書の全体のバージョン）を送信する（空の辞書は project-index の照合で常に一致し、ほかの変更が同じ項目を加えていても衝突にならないため）。`delete` は `expectedVersion`（文書の全体のバージョン）のまま、`add` は使用しない'
     notes: 文書の取得が 404 の変更は、project-index へ送信せずに 404 の `errors[]` に入れる
     decided_by: NFR-155-1#requirements[project-index への問い合わせの制限時間]
   - item: 衝突の結果への変換
