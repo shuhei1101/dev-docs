@@ -32,7 +32,7 @@ components:
         description: 変更の行へ移動
     state:
       - name: outcome
-        type: '{kind: "diff"; result: CommitResult} | {kind: "committed"; result: CommitResult} | {kind: "failed"; problem: ProblemDetails} | null'
+        type: '{kind: "diff"; result: CommitResult} | {kind: "committed"; result: CommitResult} | {kind: "conflict"; result: CommitResult; edits: PendingEdit[]} | {kind: "failed"; problem: ProblemDetails} | null'
         initial: 'null'
         description: 直前の差分確認・コミットの結果
         notes: '`useState`'
@@ -41,7 +41,7 @@ components:
         initial: 'false'
         description: コミットの確認のダイアログ
         notes: '`useState`'
-    description: shadcn/ui の `Sheet` を `modal={false}` で開き、狭い幅は `side="bottom"`、広い幅は右にする。差分確認・コミットは編集中の変更の直コミットを呼ぶ。失敗の Problem Details の `errors[].key` で変更ごとに理由を出し、コミットのボタンを `再試行` にする。コミットの確認は shadcn/ui の `Dialog` で、コミットの説明（必須・200 文字）を入力する
+    description: shadcn/ui の `Sheet` を `modal={false}` で開き、狭い幅は `side="bottom"`、広い幅は右にする。差分確認・コミットは編集中の変更の直コミットを呼ぶ。失敗の Problem Details の `errors[].key` で変更ごとに理由を出し、コミットのボタンを `再試行` にする。`title` が `BaseCommitUnusableError` のときはボタンを `最新の内容で続ける` にし、押すと最新の内容で続けるを呼んで `outcome` を `null` にする。コミットが `conflict` を持つ 200 を返却したときは、送信した変更を `edits` に記録して衝突の結果（`role="status"`）を出し、差分確認が `conflict` を返却したときは差分確認の衝突の注意と `reasons[].key` の変更の下の理由を出す。説明の文は変更が 1 件以上のときだけ出す。コミットの確認は shadcn/ui の `Dialog` で、コミットの説明（必須・200 文字）を入力する
     unit_tests:
       - name: test_pending_panel_when_dry_run
         case: 正常
@@ -63,6 +63,38 @@ components:
         mock: MSW（要求を記録する）
         expected: 確定ボタンが押せず、要求が送信されない
         exception: 入力チェック
+      - name: test_pending_panel_when_conflict
+        case: 正常
+        summary: 衝突してブランチに残した結果を出す
+        condition: 変更 2 件でコミットし、`conflict`（`branch`・`reasons` 1 件・`script.prUrl`）を持つ 200
+        mock: MSW の直コミットのハンドラ（`conflict` を持つ 200）
+        expected: ブランチの名前・`PR を開く` のリンク・残した変更 2 件・衝突した理由が出て、編集中の変更が 0 件
+      - name: test_pending_panel_when_conflict_script_failed
+        case: 異常
+        summary: 衝突したときのスクリプトの失敗
+        condition: '`conflict.script` が `exitCode: 1`・`stderr: authentication required`・`prUrl: null`'
+        mock: MSW のハンドラ（`conflict` を持つ 200）
+        expected: '`衝突したときのスクリプトが失敗しました（終了コード 1）。` と標準エラー出力が出て、`PR を開く` が無い'
+        exception: 衝突したときのスクリプトが失敗する
+      - name: test_pending_panel_when_conflict_script_not_configured
+        case: 正常
+        summary: 衝突したときのスクリプトの指定が無い
+        condition: '`conflict.script` が `null`'
+        mock: MSW のハンドラ（`conflict` を持つ 200）
+        expected: '`衝突したときのスクリプトが登録されていないため、PR は作成していません。` が出る'
+      - name: test_pending_panel_when_dry_run_conflict
+        case: 正常
+        summary: 差分確認で衝突する
+        condition: '差分確認で `conflict`（`branch: null`・`reasons[0].key` が 1 件目）を持つ 200'
+        mock: MSW のハンドラ（`dryRun` の 200）
+        expected: 差分確認の衝突の注意と 1 件目の変更の下に理由が出て、変更が 2 件残る
+      - name: test_pending_panel_when_base_commit_unusable
+        case: 異常
+        summary: 編集を始めたときのコミットが使用できない
+        condition: 'コミットで 409（`title: BaseCommitUnusableError`）を受け、`最新の内容で続ける` を押す'
+        mock: 'MSW の直コミット（409）とメタデータの取得（`baseCommit: ccc3333`）のハンドラ'
+        expected: 押す前はボタンが `最新の内容で続ける`、押した後は失敗のまとめが消え、変更が残り `baseCommitBySource` が `ccc3333`
+        exception: 編集を始めたときのコミットが使用できない
 refs:
   - to: SCR-155-4
     type: requires

@@ -8,7 +8,7 @@ components:
     container: features/metadata/metadata/metadata-screen.tsx
     usecase: メタデータを画面で参照する
     role: 画面
-    summary: メタデータの取得を `useQuery` で参照し、トップバー・絞り込み・種類のタブ・種類の表・編集中のパネルを並べる
+    summary: メタデータの取得を `useQuery` で参照し（編集中の変更があれば `ref` に記録した編集を始めたときのコミットを指定する）、トップバー・絞り込み・種類のタブ・種類の表・編集中のパネルを並べる
     props:
       - name: source
         type: string
@@ -25,7 +25,7 @@ components:
         initial: URL の `panel` が `edits`
         description: 編集中のパネル
         notes: URL の検索条件（文書の画面から開いてパネルを開くため）
-    description: 種類のタブは URL の `tab` に保つ。読み込み中の表示は取得の待ちが 1 秒を超えたときだけ出す。取得が 404 なら見つからない画面、503 なら project-index から受け取れないときの表示（文書の画面と同じ部品）、それ以外の失敗は取得の失敗の表示を出す。変更の行へ移動は、タブを切り替え、絞り込みを空にし、描いた後に `metadata-row-{kind}-{id}` へスクロールしてフォーカスする。ページのタイトルは `メタデータ | {source} | dev-docs`
+    description: 種類のタブは URL の `tab` に保つ。読み込み中の表示は取得の待ちが 1 秒を超えたときだけ出す。種類の表には取得の `baseCommit` を指定する。取得が 404 なら見つからない画面、503 なら project-index から受け取れないときの表示（文書の画面と同じ部品）、それ以外の失敗は取得の失敗の表示を出す。変更の行へ移動は、タブを切り替え、絞り込みを空にし、描いた後に `metadata-row-{kind}-{id}` へスクロールしてフォーカスする。ページのタイトルは `メタデータ | {source} | dev-docs`
     unit_tests:
       - name: test_metadata_screen
         case: 正常
@@ -53,6 +53,12 @@ components:
         mock: MSW のハンドラ（503）
         expected: 接続先と理由と `再読み込み`
         exception: project-index につながらない
+      - name: test_metadata_screen_when_pending
+        case: 正常
+        summary: 編集中の変更があるときは記録したコミットで取得する
+        condition: '`aaa1111` で記録した変更を 1 件持ち、画面を開く'
+        mock: MSW のメタデータの取得のハンドラ（要求を記録する）
+        expected: 要求の `ref` が `aaa1111`。変更が無いときは `ref` が無い
 refs:
   - to: SCR-155-4
     type: requires

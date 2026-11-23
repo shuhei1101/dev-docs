@@ -38,6 +38,9 @@ data_models:
         type: dict[str, str | list[str]]
         default: '{}'
         description: 変更後の値
+      - name: doc_path
+        type: str | None
+        description: 文書のパス（`update` のときは必須）
   - name: CommitRequest
     title: 直コミットの要求
     container: features/metadata/commits.py
@@ -55,6 +58,9 @@ data_models:
         type: bool
         default: 'False'
         description: 差分確認か
+      - name: base_commit
+        type: str
+        description: 編集を始めたときのコミット（7〜40 桁の 16 進数）
   - name: CommitResult
     title: 直コミットの結果
     container: features/metadata/commits.py
@@ -71,13 +77,67 @@ data_models:
       - name: commit
         type: CommitInfo | None
         description: '`sha`・`branch`'
+      - name: conflict
+        type: ConflictResult | None
+        description: 衝突して修正をブランチに残したときの結果
+  - name: ConflictReason
+    title: 衝突した理由
+    container: features/metadata/commits.py
+    usecase: 画面で編集中の変更をまとめて直コミットする
+    role: DTO
+    summary: IF-155-29 の `conflict.reasons[]` の 1 件（`ApiModel`）
+    properties:
+      - name: key
+        type: str | None
+        description: 断られた変更の `key`。本文全体の理由は `None`
+      - name: reason
+        type: str
+        description: 今のブランチで断られた理由
+  - name: ConflictScript
+    title: 衝突したときのスクリプトの結果
+    container: features/metadata/commits.py
+    usecase: 画面で編集中の変更をまとめて直コミットする
+    role: DTO
+    summary: IF-155-29 の `conflict.script`（`ApiModel`）
+    properties:
+      - name: exit_code
+        type: int | None
+        description: 終了コード（制限時間で止めたときは `None`）
+      - name: timed_out
+        type: bool
+        description: 制限時間で止めたか
+      - name: pr_url
+        type: str | None
+        description: 標準出力の空でない最後の行が `https://` で始まるときのその行
+      - name: stderr
+        type: str
+        description: 標準エラー出力の末尾
+  - name: ConflictResult
+    title: 衝突の結果
+    container: features/metadata/commits.py
+    usecase: 画面で編集中の変更をまとめて直コミットする
+    role: DTO
+    summary: IF-155-29 の `conflict`（`ApiModel`）
+    properties:
+      - name: branch
+        type: str | None
+        description: 修正を残したブランチ（差分確認は `None`）
+      - name: base_commit
+        type: str
+        description: ブランチの起点にしたコミット（40 桁）
+      - name: reasons
+        type: list[ConflictReason]
+        description: 変更ごとの断られた理由
+      - name: script
+        type: ConflictScript | None
+        description: スクリプトの結果（指定が無い・差分確認は `None`）
 classes:
   - name: EditsRejectedError
     title: 変更ごとの理由つきの失敗
     container: features/metadata/commits.py
     usecase: 画面で編集中の変更をまとめて直コミットする
     role: 例外
-    summary: 状態コード・`title`・`detail`・`nextSteps` と、`errors[]`（`key`・`path`・`reason`・`current`）を持ち、例外の変換の登録が problem+json にする
+    summary: 状態コード・`title`・`detail`・`nextSteps` と、`errors[]`（`key`・`path`・`reason`）を持ち、例外の変換の登録が problem+json にする
     inherits: AppError
 functions:
   - name: to_operations
@@ -99,12 +159,17 @@ functions:
         required: true
         passing: positional
         description: 文書の種類ごとの `metadata`
+      - name: expected_versions
+        type: Mapping[str, Mapping[str, str]]
+        required: true
+        passing: positional
+        description: '`update` の変更の `key` ごとの項目ごとのバージョンの辞書'
     returns:
       type: tuple[list[dict], list[dict], list[tuple[Literal['write', 'delete'], int, str]]]
       description: '`writes`・`deletes` と、それぞれの添字と変更の `key` の対応'
     process: |-
       1. 変更ごとに、`doc_kind` の `metadata`（`mappings[doc_kind]`）で列のキーを列と文書のキーの対応の解決にかけ、戻せない列は `EditsRejectedError`（400）を送出する。列のキーと値はそのまま入れ、文書の実際のキーへは project-index の書き込みの API が戻す
-      2. `update` は `{op: update, id, expected_version, set}`、`add` は `{op: create, id, kind, data}`、`delete` は `deletes` の `{id, expectedVersion}` にし、変更の並び順で入れる
+      2. `update` は `{op: update, id, expected_version, set}`（`expected_version` は `expected_versions[変更の key]` の辞書）、`add` は `{op: create, id, kind, data}`、`delete` は `deletes` の `{id, expectedVersion}` にし、変更の並び順で入れる
     unit_tests:
       - name: test_to_operations
         case: 正常
@@ -137,7 +202,7 @@ functions:
     container: features/metadata/commits.py
     usecase: 画面で編集中の変更をまとめて直コミットする
     role: サービス
-    summary: 変更を検証・変換して書き込みの API へ 1 回送信し、結果か変更ごとの理由を返却する
+    summary: 変更を検証・変換して書き込みの API へ 1 回送信し、結果・衝突の結果か変更ごとの理由を返却する
     scope: public
     is_async: true
     thread_safe: true
@@ -164,10 +229,11 @@ functions:
     process: |-
       1. 変更ごとの列が `EDITABLE_COLUMNS` にあるかを確認し、無ければ `EditsRejectedError`（400）を送出する
       2. project-indexの呼び出し.配信元の設定の取得で `metadata` を取得する
-      3. 書き込みと削除への変換をし、project-indexの呼び出し.直コミットの書き込みを呼ぶ（`message` は要求の説明、`dry_run` のときは固定の説明 `差分確認`。project-index の書き込みの API は `message` を必須にしている）
-      4. 200 は `results[]` の `kind`（`write`・`delete`）・`index` を変更の `key` に戻して `CommitResult` を返却する
-      5. 403・404・409・422 は `errors[]`（`path` の先頭の `writes[{添字}]`・`deletes[{添字}]`）と `kinds`（変更の `doc_kind` と照合する）・`docId` と `current`（`VersionMismatchError`）を変更の `key` へ戻した `EditsRejectedError` を送出する。500・502 は 502、504 と待ちの上限の打ち切りは 504 にする
-      6. 送信ごとに、配信元の ID・`dryRun`・変更の件数・状態コード・コミットの SHA（打ち切ったときはその旨）を 1 行のログに出力する
+      3. 編集を始めたときの項目ごとのバージョンで、`update` の変更ごとの `expected_version` の辞書を求める
+      4. 書き込みと削除への変換をし、project-indexの呼び出し.直コミットの書き込みを呼ぶ（`message` は要求の説明、`dry_run` のときは固定の説明 `差分確認`。project-index の書き込みの API は `message` を必須にしている。`baseCommit` は要求の `base_commit`）
+      5. 200 は `results[]` の `kind`（`write`・`delete`）・`index` を変更の `key` に戻し、`conflict` があれば衝突の結果への変換をして `CommitResult` を返却する
+      6. 409 の `BaseCommitUnusableError` は `title` を `BaseCommitUnusableError`、`detail` を project-index の理由にした `EditsRejectedError`（409、`errors[]` なし）を送出する。403・404・409・422 は `errors[]`（`path` の先頭の `writes[{添字}]`・`deletes[{添字}]`）と `kinds`（変更の `doc_kind` と照合する）・`docId` を変更の `key` へ戻した `EditsRejectedError` を送出する。500・502 は 502、504 と待ちの上限の打ち切りは 504 にする
+      7. 送信ごとに、配信元の ID・`dryRun`・変更の件数・状態コード・コミットの SHA（衝突したときは残したブランチ、打ち切ったときはその旨）を 1 行のログに出力する
     unit_tests:
       - name: test_commit_edits
         case: 正常
@@ -208,20 +274,128 @@ functions:
         condition: '`tags: tags[].name` の種類の文書の `update`'
         mock: project-indexの呼び出し（要求を記録する偽物）
         expected: 文書の取得・文書の一覧を呼ばず、`set.tags` が送信した名前の配列
-      - name: test_commit_edits_when_version_mismatch
+      - name: test_commit_edits_when_base_commit_unusable
         case: 異常
-        summary: 409 の文書を変更へ戻す
-        condition: '偽物が `docId: n1`・`current` を持つ 409（`VersionMismatchError`）を返却する'
+        summary: 編集を始めたときのコミットが使用できない
+        condition: '偽物が `BaseCommitUnusableError`（`reason: not_ancestor`）の 409 を返却する'
         mock: project-indexの呼び出し（偽物）
-        expected: '`EditsRejectedError`（409）で、`errors[0]` の `key` が n1 の変更、`current` が偽物の値'
-        exception: 他の変更と食い違う
+        expected: '`EditsRejectedError`（409）で、`title` が `BaseCommitUnusableError`、`detail` に `not_ancestor`、`errors[]` が空'
+        exception: 編集を始めたときのコミットが使用できない
+      - name: test_commit_edits_when_conflict
+        case: 正常
+        summary: 衝突してブランチに残した
+        condition: 偽物が `conflict`（`branch`・`errors[]` の `writes[0]`・`script.stdout` に PR の URL）を持つ 200 を返却する
+        mock: project-indexの呼び出し（要求を記録する偽物）
+        expected: '`conflict.branch` が偽物の値、`conflict.reasons[0].key` が 1 件目の変更、`conflict.script.pr_url` が URL。送信した本文の `baseCommit` が要求の値、`update` の `expected_version` が辞書'
     exceptions:
       - name: EditsRejectedError
-        condition: 本文の検証・文書のバージョンの食い違い・project-index の 4xx・5xx・待ちの上限
+        condition: 本文の検証・編集を始めたときの文書が無い・編集を始めたときのコミットが使用できない・project-index の 4xx・5xx・待ちの上限
         message: IF-155-29 の状態コードごとの `title`・`detail`
       - name: ProjectIndexUnreachableError
         condition: project-index につながらない
         message: '`project-index（{address}）に接続できませんでした。{reason}`'
+  - name: item_expected_versions
+    title: 編集を始めたときの項目ごとのバージョン
+    kind: 関数
+    container: features/metadata/commits.py
+    usecase: 画面で編集中の変更をまとめて直コミットする
+    role: サービス
+    summary: '`update` の変更ごとに、編集を始めたときの文書の `itemVersions` から修正した最上位のキーのバージョンだけの辞書を求める'
+    scope: public
+    is_async: true
+    thread_safe: true
+    args:
+      - name: client
+        title: project-indexの呼び出し
+        type: ProjectIndexClient
+        required: true
+        passing: positional
+        description: 問い合わせる
+      - name: source_id
+        type: str
+        required: true
+        passing: positional
+        description: 配信元の ID
+      - name: request
+        type: CommitRequest
+        required: true
+        passing: positional
+        description: 検証済みの本文
+      - name: mappings
+        type: Mapping[str, Mapping[str, str]]
+        required: true
+        passing: positional
+        description: 文書の種類ごとの `metadata`
+    returns:
+      type: dict[str, dict[str, str]]
+      description: '変更の `key` ごとの `{最上位のキー: バージョン}`'
+    process: |-
+      1. `update` の変更ごとに、`asyncio.gather` で project-indexの呼び出し.項目ごとのバージョンの取得（`doc_path`・`ref` は `base_commit`・`document_id` は `doc_id`）を呼ぶ
+      2. 変更の `values` の列ごとに、`mappings[doc_kind]` で列と文書のキーの対応の解決をして最上位のキーを求め、そのキーのバージョンだけを辞書にする
+      3. `DocumentNotFoundError` の変更は全て集め、`errors[]` にその変更の `key` を入れた `EditsRejectedError`（404）を送出する
+    unit_tests:
+      - name: test_item_expected_versions
+        case: 正常
+        summary: 修正した最上位のキーだけにする
+        condition: '`tags: tags[].name` の種類の文書のタグの `update` と、`itemVersions` が `{name, description, tags}` を返却する偽物'
+        mock: project-indexの呼び出し（要求を記録する偽物）
+        expected: '`{tags: 偽物の tags のバージョン}` だけで、要求の `ref` が `base_commit`、`document_id` が `doc_id`'
+      - name: test_item_expected_versions_when_not_found
+        case: 異常
+        summary: 編集を始めたときの文書が無い
+        condition: 偽物が 2 件目の変更の文書で `DocumentNotFoundError` を送出する
+        mock: project-indexの呼び出し（偽物）
+        expected: '`EditsRejectedError`（404）で、`errors[0].key` が 2 件目の変更'
+        exception: 編集を始めたときの文書が無い
+    exceptions:
+      - name: EditsRejectedError
+        condition: 編集を始めたときの文書が無い
+        message: IF-155-29 の 404 の `title`・`detail`
+  - name: to_conflict
+    title: 衝突の結果への変換
+    kind: 関数
+    container: features/metadata/commits.py
+    usecase: 画面で編集中の変更をまとめて直コミットする
+    role: 変換
+    summary: project-index の応答の `conflict` を、変更の `key` に戻した理由と PR の URL にする
+    scope: public
+    args:
+      - name: conflict
+        type: Mapping[str, Any]
+        required: true
+        passing: positional
+        description: project-index の応答の `conflict`
+      - name: index_keys
+        type: list[tuple[Literal['write', 'delete'], int, str]]
+        required: true
+        passing: positional
+        description: 書き込みと削除への変換の添字と変更の `key` の対応
+    returns:
+      type: ConflictResult
+      description: IF-155-29 の `conflict`
+    process: |-
+      1. `errors[]` の `path` の先頭の `writes[{添字}]`・`deletes[{添字}]` を変更の `key` に戻し（戻せないものは `None`）、`reason` と組にして `reasons` にする
+      2. `script` があれば、`stdout` の空でない最後の行が `https://` で始まるときその行を `pr_url` にし、`exitCode`・`timedOut`・`stderr` と組にする
+      3. `branch`・`baseCommit` と合わせて返却する。`commit` と `stdout` は入れない
+    unit_tests:
+      - name: test_to_conflict
+        case: 正常
+        summary: 理由を変更へ戻し、PR の URL を取り出す
+        condition: '`errors[]` が `writes[1]` の 1 件と本文全体の 1 件、`script.stdout` が `pushed\nhttps://github.com/o/r/pull/9\n`'
+        mock: なし
+        expected: '`reasons[0].key` が 2 件目の変更、`reasons[1].key` が `None`、`script.pr_url` が `https://github.com/o/r/pull/9`'
+      - name: test_to_conflict_when_script_missing
+        case: 正常
+        summary: スクリプトの指定が無い・差分確認
+        condition: '`script: null`、`branch: null`'
+        mock: なし
+        expected: '`script` が `None`、`branch` が `None`'
+      - name: test_to_conflict_when_no_pr_url
+        case: 正常
+        summary: 最後の行が URL でない
+        condition: '`script.stdout` が `done`、`exitCode: 1`'
+        mock: なし
+        expected: '`script.pr_url` が `None`、`exit_code` が 1'
 refs:
   - to: IF-155-29
     type: requires

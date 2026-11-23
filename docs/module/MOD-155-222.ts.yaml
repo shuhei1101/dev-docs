@@ -20,8 +20,8 @@ functions:
       type: 'UseMutationResult<CommitResult, AppError, {dryRun: boolean; message?: string}>'
       description: 編集中の変更をストアから取って送信する
     process: |-
-      1. 直コミットの要求への変換で `edits` にし、`dryRun`・`message` を添えて送信する
-      2. `dryRun: false` で成功したら、配信元の編集中の変更を空にし、メタデータの取得と文書の取得の問い合わせを再読み込みする
+      1. 直コミットの要求への変換で `edits` にし、`dryRun`・`message` とストアの `baseCommitBySource[source]` を `baseCommit` に添えて送信する
+      2. `dryRun: false` で成功したら（`conflict` を持つときも）、配信元の編集中の変更を空にし、メタデータの取得と文書の取得の問い合わせを再読み込みする
       3. 失敗は呼び出し元へ返却する（パネルが Problem Details の `errors[]` を変更ごとに出す）
     unit_tests:
       - name: test_use_commit_edits
@@ -43,6 +43,39 @@ functions:
         mock: MSW のハンドラ（422）
         expected: '`error` が `AppError` で、編集中の変更が残る'
         exception: 検査に合格しない
+      - name: test_use_commit_edits_when_conflict
+        case: 正常
+        summary: 衝突してブランチに残したら編集中の変更を空にする
+        condition: '`aaa1111` で追加した変更 2 件で `dryRun: false`'
+        mock: MSW の直コミットのハンドラ（`conflict` を持つ 200、要求を記録する）
+        expected: 要求の `baseCommit` が `aaa1111`、編集中の変更が 0 件で、戻り値の `conflict` がハンドラの値
+  - name: useRestartFromLatest
+    title: 最新の内容で続ける
+    kind: フック
+    container: features/metadata/metadata/queries.ts
+    usecase: 画面で編集中の変更をまとめて直コミットする
+    role: アダプター
+    summary: 既定のブランチの先頭でメタデータを再取得し、編集中の変更を残したまま編集を始めたときのコミットを置き換える
+    scope: public
+    args:
+      - name: source
+        type: string
+        required: true
+        passing: positional
+        description: 配信元の ID
+    returns:
+      type: UseMutationResult<MetadataResponse, AppError, void>
+      description: 実行すると取得したメタデータを返却する
+    process: |-
+      1. `ref` を省いてメタデータの取得を呼ぶ
+      2. 応答の `baseCommit` で編集を始めたときのコミットの記録の更新を呼び、メタデータの問い合わせの値を応答で置き換える
+    unit_tests:
+      - name: test_use_restart_from_latest
+        case: 正常
+        summary: 変更を残して編集を始めたときのコミットを置き換える
+        condition: '`aaa1111` で追加した変更 2 件で実行する'
+        mock: 'MSW のメタデータの取得のハンドラ（`baseCommit: ccc3333`、要求を記録する）'
+        expected: 要求に `ref` が無く、編集中の変更が 2 件のままで `baseCommitBySource` が `ccc3333`
 notes:
   補足: 取得は orval が生成した問い合わせ（`getMetadataGetMetadataQueryOptions`）をそのまま使用する。
 tags:

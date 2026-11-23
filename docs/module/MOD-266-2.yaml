@@ -1,0 +1,67 @@
+id: MOD-266-2
+title: 開発用のスクリプト / 衝突したときの PR の作成 / project-index-on-conflict.sh
+lead: project-index の書き込みの API が衝突して修正を残したブランチをリモートへプッシュし、PR を作成して PR の URL を出力する処理を受け持ち、衝突したときの PR の作成の project-index-on-conflict.sh を修正するときに参照する。
+test_files:
+  - tests/unit/scripts/test_on_conflict_script.py
+functions:
+  - name: main
+    title: スクリプトの起点
+    container: scripts/project-index-on-conflict.sh
+    usecase: 画面で編集中の変更をまとめて直コミットする
+    role: 起点
+    summary: 環境変数のブランチを `origin` へプッシュし、コミットするブランチへの PR を `gh pr create` で作成して、PR の URL を標準出力の最後の行に出す
+    kind: 関数
+    scope: public
+    is_async: false
+    side_effects: ブランチをリモートへプッシュする。PR を 1 件作成する（ラベルは付けない）。標準出力・標準エラーに出力する
+    args_example: |-
+      ```bash
+      PROJECT_INDEX_CONFLICT_BRANCH=project-index/conflict/20261123-103000-0a1b2c3 PROJECT_INDEX_TARGET_BRANCH=develop PROJECT_INDEX_COMMIT_MESSAGE='タグを修正する' PROJECT_INDEX_SOURCE=dev-docs PROJECT_INDEX_BASE_COMMIT=0a1b2c3 bash scripts/project-index-on-conflict.sh
+      ```
+    returns:
+      type: int
+      description: プッシュと PR の作成が成功したら 0。必須の環境変数が無いときは 2。`git push`・`gh pr create` の失敗は、そのコマンドの終了コード
+    process: |-
+      1. `set -euo pipefail` を有効にする。作業ディレクトリは project-index が指定したクローン本体のまま移らない
+      2. `PROJECT_INDEX_CONFLICT_BRANCH`・`PROJECT_INDEX_TARGET_BRANCH`・`PROJECT_INDEX_COMMIT_MESSAGE`・`PROJECT_INDEX_SOURCE`・`PROJECT_INDEX_BASE_COMMIT` のどれかが空なら、標準エラーに名前を出して 2 で終わる
+      3. `git push origin {CONFLICT_BRANCH}` を実行する
+         - 失敗した場合、標準エラーに出してその終了コードで終わる
+      4. `gh pr create --base {TARGET_BRANCH} --head {CONFLICT_BRANCH} --title {COMMIT_MESSAGE} --body {本文}` を実行し、標準出力を受け取る。本文は、メタデータの画面の直コミットがほかの変更と衝突したことと、配信元の ID・編集を始めたときのコミットを記載する。`--label` は付けない
+         - 失敗した場合、`gh` の標準エラーをそのまま出してその終了コードで終わる
+      5. `gh` の標準出力の空でない最後の行（PR の URL）を標準出力の最後の行に出して 0 で終わる
+    unit_tests:
+      - name: test_main
+        case: 正常
+        summary: プッシュして PR を作成する
+        condition: '`develop` と修正を 1 コミット持つ衝突したときのブランチの一時リポジトリ、リモートは一時のベアリポジトリ、必須の環境変数が全てある'
+        mock: '`gh`（`PATH` の先頭のスタブ。引数を記録して `https://github.com/o/r/pull/9` を出力して 0 で終わる）'
+        expected: 0 で終わり、標準出力の最後の行が `https://github.com/o/r/pull/9`、リモートにブランチがあり、`gh pr create` の引数が `--base develop`・`--head` にブランチ・`--title` に説明で `--label` が無い
+      - name: test_main_when_env_missing
+        case: 異常
+        summary: 必須の環境変数が無い
+        condition: '`PROJECT_INDEX_CONFLICT_BRANCH` が無い'
+        mock: '`gh`（呼ばれないことを確認する）'
+        expected: 2 で終わり、標準エラーに `PROJECT_INDEX_CONFLICT_BRANCH`、`gh` が呼ばれない
+      - name: test_main_when_push_failed
+        case: 異常
+        summary: プッシュの失敗
+        condition: リモートが無いクローン
+        mock: '`gh`（呼ばれないことを確認する）'
+        expected: 0 以外で終わり、`gh` が呼ばれず、標準出力に `https://` で始まる行が無い
+      - name: test_main_when_pr_create_failed
+        case: 異常
+        summary: PR の作成の失敗
+        condition: test_main と同じリポジトリ
+        mock: '`gh`（標準エラーに `authentication required` を出して 1 で終わる）'
+        expected: 1 で終わり、標準エラーに `authentication required`、標準出力に `https://` で始まる行が無い
+refs:
+  - to: IF-155-30
+    type: requires
+    when: スクリプトの入出力を変えるときに、衝突したときの PR の作成と突き合わせる。
+tags:
+  - name: topic:直コミット
+  - name: topic:ブランチ
+  - name: topic:pr
+  - name: action:作成
+  - name: tool:git
+  - name: tool:github

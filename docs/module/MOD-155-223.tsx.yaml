@@ -22,14 +22,18 @@ components:
         type: string
         required: true
         description: 絞り込みの入力
-    description: 行の値は、行と列の `editable` が両方真のときだけボタンにし、押すとその場の入力欄（`ref` でフォーカス）にする。Enter かフォーカスを外すと編集中の変更のストアに `update` を追加し、Esc で捨てる。`list` の列は行の値も追加の行も `, ` で区切って配列にする。追加の行は ID と列の入力欄を持ち、出すと ID の入力欄へフォーカスを移し、入力チェック（空・英小文字・数字・ハイフン・重複）を通して `add` を追加する。追加の行は `キャンセル` か行の中の Esc で入力を捨てて閉じ、`行追加` へフォーカスを戻す。行の要素の id は `metadata-row-{kind}-{id}`（編集中のパネルから移動する先）。行の名前（編集中の変更の `label`・削除の読み上げ名）は、`name`・`rule`・`path` の列のうち種類が持つ最初の列の値（値が空なら行の ID）で、編集しても変わらない。絞り込みは NFKC と小文字化してどれかの列に含む行を残す
+      - name: baseCommit
+        type: string
+        required: true
+        description: メタデータの取得の `baseCommit`（変更の追加に指定する）
+    description: 行の値は、行と列の `editable` が両方真のときだけボタンにし、押すとその場の入力欄（`ref` でフォーカス）にする。Enter かフォーカスを外すと編集中の変更のストアに `update`（`docPath` は行の `docPath`）を追加し（変更の追加には `baseCommit` を指定する）、Esc で捨てる。`list` の列は行の値も追加の行も `, ` で区切って配列にする。追加の行は ID と列の入力欄を持ち、出すと ID の入力欄へフォーカスを移し、入力チェック（空・英小文字・数字・ハイフン・重複）を通して `add` を追加する。追加の行は `キャンセル` か行の中の Esc で入力を捨てて閉じ、`行追加` へフォーカスを戻す。行の要素の id は `metadata-row-{kind}-{id}`（編集中のパネルから移動する先）。行の名前（編集中の変更の `label`・削除の読み上げ名）は、`name`・`rule`・`path` の列のうち種類が持つ最初の列の値（値が空なら行の ID）で、編集しても変わらない。絞り込みは NFKC と小文字化してどれかの列に含む行を残す
     unit_tests:
       - name: test_metadata_table_when_edited
         case: 正常
         summary: 行の値を編集する
         condition: タグの列を押して `topic:a, topic:b` を入力し Enter
         mock: なし
-        expected: ストアに `values.tags` が `[topic:a, topic:b]` の `update` が 1 件
+        expected: ストアに `values.tags` が `[topic:a, topic:b]`、`docPath` が行の値の `update` が 1 件で、`baseCommitBySource` が `baseCommit` の値
       - name: test_metadata_table_when_readonly
         case: 正常
         summary: 修正できない列
