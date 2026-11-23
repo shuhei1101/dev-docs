@@ -1,0 +1,80 @@
+tasks:
+  - process: 初期構築
+    status: skipped
+    reason: 既存リポジトリのため対象外
+    updated_by: planner
+    updated_at: '2026-11-23T00:50:17.221665+00:00'
+  - process: リバースエンジニアリング
+    status: skipped
+    reason: '既存の設計書（SC-155-15・IF-155-29・SCR-155-4 など #313 で作成した設計書）がそろっており、棚卸しの対象が無い'
+    updated_by: planner
+    updated_at: '2026-11-23T00:50:17.221665+00:00'
+  - process: 方針決め
+    status: skipped
+    reason: 方針決めを依頼する Issue ではない
+    updated_by: planner
+    updated_at: '2026-11-23T00:50:17.221665+00:00'
+  - process: PoC 検証
+    status: skipped
+    reason: 衝突したときのブランチ・衝突したときのスクリプト・項目ごとのバージョンは project-index の POST /sources/{source}/commits（IF-38）と文書の取得（IF-25）に実装・テスト済みで（shuhei1101/project-index#264）、稼働中の project-index（develop）にも入っている。未検証の技術機構に依存しない
+    updated_by: planner
+    updated_at: '2026-11-23T00:50:17.221665+00:00'
+  - process: 複合ユースケース設計
+    status: skipped
+    reason: SC-155-13 の工程（メタデータをまとめて直コミットする）の並びは変わらず、衝突の扱いは単一ユースケース SC-155-15 の中で変わる
+    updated_by: planner
+    updated_at: '2026-11-23T00:50:17.221665+00:00'
+  - process: デザインスタイル選定
+    status: skipped
+    reason: docs/design-policy.md があり、Issue は見た目の方向を変えない（判定フローチャート『モック要否』）
+    updated_by: planner
+    updated_at: '2026-11-23T00:50:17.221665+00:00'
+  - process: 画面一覧・画面遷移
+    status: skipped
+    reason: 画面の追加・削除と画面遷移の変更が無い。変わるのはメタデータの画面の編集中の変更のパネルの表示だけ（判定フローチャート『モック要否』）
+    updated_by: planner
+    updated_at: '2026-11-23T00:50:17.221665+00:00'
+  - process: 単一ユースケース設計
+    status: todo
+  - process: モック作成
+    status: todo
+    note: 衝突してブランチに残したときの編集中の変更のパネルの表示（ブランチの名前・スクリプトが返却した PR の URL）だけを作る。Issue に表示の文言・位置が書かれておらず、作り手が決める余地がある
+  - process: データ設計
+    status: skipped
+    reason: 永続化するのはブラウザの編集中の変更（編集を始めたときのコミットを足す）だけで、#313 と同じく画面のモジュール構成（pending-edits-store）で持つ。dev-docs のデータの設計書・端末の設定のキーは足さない
+    updated_by: planner
+    updated_at: '2026-11-23T00:50:17.221665+00:00'
+  - process: インターフェース定義設計
+    status: todo
+  - process: エージェント・MCP サーバー設計
+    status: skipped
+    reason: 利用者が画面から呼ぶ機能で、判定フローチャート『機能を呼ぶインターフェースの選び方』では API になる。MCP のツールとエージェントを追加しない
+    updated_by: planner
+    updated_at: '2026-11-23T00:50:17.221665+00:00'
+  - process: エージェントフロー・LLM 呼び出し設計
+    status: skipped
+    reason: エージェントへの手順と LLM の呼び出しを持たない
+    updated_by: planner
+    updated_at: '2026-11-23T00:50:17.221665+00:00'
+  - process: 精度評価設計
+    status: skipped
+    reason: LLM・意思決定モデルを使用するノードが無い（判定フローチャート『精度評価をするか』）
+    updated_by: planner
+    updated_at: '2026-11-23T00:50:17.221665+00:00'
+  - process: 部品設計
+    status: skipped
+    reason: 変わるのはメタデータの画面の編集中の変更のパネル（画面のモジュール）で、docs/component の部品の引数・状態は変わらない
+    updated_by: planner
+    updated_at: '2026-11-23T00:50:17.221665+00:00'
+  - process: 画面設計
+    status: todo
+  - process: モジュール構成設計
+    status: todo
+  - process: ドキュメント修正
+    status: todo
+  - process: 単体テスト作成
+    status: todo
+  - process: 実装
+    status: todo
+  - process: 結合テスト作成
+    status: todo

@@ -1,0 +1,14 @@
+端末の設定の直コミットの許可と衝突したときのスクリプトの登録:
+  説明: project-index の端末の設定（~/.config/project-index/settings.yaml）の配信元の行に、書き込みの API から直コミットできる種類（sources[].direct_commit.write_api_kinds）と、衝突したときのスクリプト（sources[].direct_commit.on_conflict.command）を、端末の設定の API（PATCH /settings/sources/{id}）で追加する。対象は dev-docs と、配信元の設定で直コミットを許可している knowledge・knowledge-memes・aituber-assets の行。実行の前に端末の設定のファイルを同じフォルダへ settings.yaml.bak-{日時} でバックアップする
+  タグ: [端末の設定, 直コミット]
+  実行者: planner
+  時期: マージの後
+  回数: 1 回限り
+  可逆: true
+  疎通確認: null
+  実行: null
+  確認: null
+  切り戻し: null
+  失敗時: 既定の対処を 1 回、2 回連続で失敗したら依頼元へ返す
+  確認方法: 端末の設定の API（GET /settings/sources）の対象の配信元の行の directCommit が、追加した writeApiKinds と onConflict.command を持つ
+  状態: skipped
