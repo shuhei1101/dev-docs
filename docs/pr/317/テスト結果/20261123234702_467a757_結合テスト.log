@@ -1,0 +1,50 @@
+## TL-2: uv run pytest tests/integration/server/test_get_metadata.py tests/integration/server/test_post_commits.py tests/integration/server/test_on_conflict_script.py
+============================= test session starts ==============================
+platform linux -- Python 3.14.3, pytest-9.1.1, pluggy-1.7.0
+rootdir: /home/shuhei2441/repo/dev-docs/.claude/worktrees/feat-docs-view-metadata-commit-conflict-branch
+configfile: pyproject.toml
+plugins: anyio-4.15.1
+collected 21 items
+
+tests/integration/server/test_get_metadata.py ....                       [ 19%]
+tests/integration/server/test_post_commits.py ...............            [ 90%]
+tests/integration/server/test_on_conflict_script.py ..                   [100%]
+
+============================= 21 passed in 23.45s ==============================
+exit: 0
+
+## TL-3: npm run test:integration -- metadata-screen.spec.ts
+
+> test:integration
+> playwright test --config tests/integration/frontend/playwright.config.ts metadata-screen.spec.ts --workers=2
+
+
+Running 24 tests using 2 workers
+
+  ✓   2 [chromium] › tests/integration/frontend/metadata-screen.spec.ts:165:3 › ページのタイトルと種類のタブ › page_title (1.3s)
+  ✓   1 [chromium] › tests/integration/frontend/metadata-screen.spec.ts:174:3 › ページのタイトルと種類のタブ › tab_in_url (2.3s)
+  ✓   3 [chromium] › tests/integration/frontend/metadata-screen.spec.ts:185:3 › 絞り込み › filter_rows (1.1s)
+  ✓   4 [chromium] › tests/integration/frontend/metadata-screen.spec.ts:199:3 › 種類を配信していない・参照のみ › kind_not_served (1.3s)
+  ✓   5 [chromium] › tests/integration/frontend/metadata-screen.spec.ts:207:3 › 種類を配信していない・参照のみ › read_only_kind (1.4s)
+  ✓   7 [chromium] › tests/integration/frontend/metadata-screen.spec.ts:255:3 › 編集・差分確認・コミット › add_and_delete_rows (1.7s)
+  ✓   6 [chromium] › tests/integration/frontend/metadata-screen.spec.ts:217:3 › 編集・差分確認・コミット › commit_edits (2.4s)
+  ✓   8 [chromium] › tests/integration/frontend/metadata-screen.spec.ts:269:3 › 編集・差分確認・コミット › add_row_invalid_id (943ms)
+  ✓   9 [chromium] › tests/integration/frontend/metadata-screen.spec.ts:278:3 › 編集・差分確認・コミット › keep_edits_on_reload (1.5s)
+  ✓  10 [chromium] › tests/integration/frontend/metadata-screen.spec.ts:286:3 › 編集・差分確認・コミット › locate_edit (1.4s)
+  ✓  11 [chromium] › tests/integration/frontend/metadata-screen.spec.ts:299:3 › 送信の失敗 › validation_failed (1.4s)
+  ✓  12 [chromium] › tests/integration/frontend/metadata-screen.spec.ts:323:3 › 送信の失敗 › base_commit_unusable (1.5s)
+  ✓  13 [chromium] › tests/integration/frontend/metadata-screen.spec.ts:350:3 › 送信の失敗 › conflict_kept_on_branch (1.4s)
+  ✓  14 [chromium] › tests/integration/frontend/metadata-screen.spec.ts:392:3 › 送信の失敗 › dry_run_conflicted (1.2s)
+  ✓  15 [chromium] › tests/integration/frontend/metadata-screen.spec.ts:432:3 › 行が指す文書のリンク › open_row_document (803ms)
+  ✓  16 [chromium] › tests/integration/frontend/metadata-screen.spec.ts:443:3 › 取得の失敗 › source_not_found (611ms)
+  ✓  17 [chromium] › tests/integration/frontend/metadata-screen.spec.ts:450:3 › 取得の失敗 › fetch_failed (763ms)
+  ✓  18 [chromium] › tests/integration/frontend/metadata-screen.spec.ts:460:5 › キャンセル › cancel_new_row_button (945ms)
+  ✓  19 [chromium] › tests/integration/frontend/metadata-screen.spec.ts:460:5 › キャンセル › cancel_new_row_escape (835ms)
+  ✓  20 [chromium] › tests/integration/frontend/metadata-screen.spec.ts:474:5 › キャンセル › cancel_commit_button (1.6s)
+  ✓  21 [chromium] › tests/integration/frontend/metadata-screen.spec.ts:474:5 › キャンセル › cancel_commit_escape (1.4s)
+  ✓  22 [chromium] › tests/integration/frontend/metadata-screen.spec.ts:493:3 › project-index から受け取れない › project_index_unreachable (719ms)
+  ✓  23 [chromium] › tests/integration/frontend/metadata-screen.spec.ts:516:3 › 狭い幅とアクセシビリティ › narrow_viewport (684ms)
+  ✓  24 [chromium] › tests/integration/frontend/metadata-screen.spec.ts:524:3 › 狭い幅とアクセシビリティ › axe (1.4s)
+
+  24 passed (20.7s)
+exit: 0
