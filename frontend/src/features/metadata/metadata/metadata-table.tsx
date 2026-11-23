@@ -131,7 +131,11 @@ const NewRow = ({ kind, takenIds, onAdd, onCancel }: NewRowProps) => {
     onAdd(trimmed, values);
   };
   return (
-    <TableRow>
+    <TableRow
+      onKeyDown={(event) => {
+        if (event.key === "Escape") onCancel();
+      }}
+    >
       <TableCell colSpan={kind.columns.length + 1}>
         <div className="flex flex-wrap items-start gap-2">
           <div className="flex flex-col gap-1">
@@ -231,6 +235,11 @@ export const MetadataTable = ({ source, kind, query }: Props) => {
   const remove = usePendingEditsStore((state) => state.remove);
   const [editing, setEditing] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
+  const addButton = useRef<HTMLButtonElement>(null);
+  const cancelAdding = () => {
+    setAdding(false);
+    addButton.current?.focus();
+  };
   if (!kind.served) return <KindNotServed kind={kind} />;
 
   const kindId = kind.id as EditKind;
@@ -381,14 +390,14 @@ export const MetadataTable = ({ source, kind, query }: Props) => {
                 </TableRow>
               )}
               {adding && (
-                <NewRow kind={kind} takenIds={takenIds} onCancel={() => setAdding(false)} onAdd={add} />
+                <NewRow kind={kind} takenIds={takenIds} onCancel={cancelAdding} onAdd={add} />
               )}
             </TableBody>
           </Table>
         </div>
       )}
-      {kind.canAdd && !adding && (
-        <Button variant="outline" size="sm" className="self-start" onClick={() => setAdding(true)}>
+      {kind.canAdd && (
+        <Button ref={addButton} variant="outline" size="sm" className="self-start" onClick={() => setAdding(true)}>
           <Plus />
           行追加
         </Button>
