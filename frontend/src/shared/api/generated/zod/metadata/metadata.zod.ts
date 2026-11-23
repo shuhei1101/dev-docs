@@ -14,9 +14,14 @@ export const MetadataGetMetadataParams = zod.object({
   "source": zod.string()
 })
 
+export const MetadataGetMetadataQueryParams = zod.object({
+  "ref": zod.union([zod.string(),zod.null()]).optional()
+})
+
 export const MetadataGetMetadataResponse = zod.object({
   "source": zod.string(),
   "branch": zod.union([zod.string(),zod.null()]),
+  "baseCommit": zod.union([zod.string(),zod.null()]).optional(),
   "kinds": zod.array(zod.object({
   "id": zod.enum(['terms', 'aliases', 'tags', 'rules', 'config', 'files']),
   "title": zod.string(),
@@ -51,6 +56,8 @@ export const MetadataPostCommitsParams = zod.object({
 
 
 export const metadataPostCommitsBodyDryRunDefault = false;
+export const metadataPostCommitsBodyBaseCommitRegExp = new RegExp('^[0-9a-f]{7,40}$');
+
 
 export const MetadataPostCommitsBody = zod.object({
   "edits": zod.array(zod.object({
@@ -60,10 +67,12 @@ export const MetadataPostCommitsBody = zod.object({
   "docId": zod.string(),
   "docKind": zod.string(),
   "expectedVersion": zod.union([zod.string(),zod.null()]).optional(),
+  "docPath": zod.union([zod.string(),zod.null()]).optional(),
   "values": zod.record(zod.string(), zod.union([zod.string(),zod.array(zod.string())])).optional()
 }).describe('編集中の変更 1 件。')).min(1),
   "message": zod.union([zod.string(),zod.null()]).optional(),
-  "dryRun": zod.boolean().default(metadataPostCommitsBodyDryRunDefault)
+  "dryRun": zod.boolean().default(metadataPostCommitsBodyDryRunDefault),
+  "baseCommit": zod.string().regex(metadataPostCommitsBodyBaseCommitRegExp)
 }).describe('直コミットの要求の本文。')
 
 export const MetadataPostCommitsResponse = zod.object({
@@ -77,6 +86,20 @@ export const MetadataPostCommitsResponse = zod.object({
   "commit": zod.union([zod.object({
   "sha": zod.string(),
   "branch": zod.string()
-}).describe('プッシュしたコミット。'),zod.null()])
+}).describe('プッシュしたコミット。'),zod.null()]),
+  "conflict": zod.union([zod.object({
+  "branch": zod.union([zod.string(),zod.null()]),
+  "baseCommit": zod.string(),
+  "reasons": zod.array(zod.object({
+  "key": zod.union([zod.string(),zod.null()]),
+  "reason": zod.string()
+}).describe('今のブランチで断られた理由 1 件（`key` が `None` は本文全体）。')),
+  "script": zod.union([zod.object({
+  "exitCode": zod.union([zod.int(),zod.null()]),
+  "timedOut": zod.boolean(),
+  "prUrl": zod.union([zod.string(),zod.null()]),
+  "stderr": zod.string()
+}).describe('衝突したときのスクリプトの結果。'),zod.null()])
+}).describe('衝突して修正をブランチに残したとき（差分確認は残すことになるとき）の結果。'),zod.null()]).optional()
 }).describe('直コミットの 200 の応答。')
 

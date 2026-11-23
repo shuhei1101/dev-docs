@@ -34,6 +34,7 @@ const kind = (overrides: Partial<MetadataKind> & Pick<MetadataKind, "id" | "titl
 const metadata: MetadataResponse = {
   source: "sample",
   branch: "develop",
+  baseCommit: "00b7c00",
   kinds: [
     kind({
       id: "terms",
@@ -169,6 +170,7 @@ const edits: PendingEdit[] = [
     docId: "n1",
     docKind: "note",
     expectedVersion: "c3d4e5",
+    docPath: "notes/n1.yaml",
     values: { tags: ["topic:a", "topic:b"] },
     before: { tags: ["topic:a"] },
     label: "タグ: n1",
@@ -180,6 +182,7 @@ const edits: PendingEdit[] = [
     docId: "kind",
     docKind: "terms",
     expectedVersion: null,
+    docPath: null,
     values: { name: "種類" },
     before: {},
     label: "用語集: 種類",
@@ -191,6 +194,7 @@ const edits: PendingEdit[] = [
     docId: "old-name",
     docKind: "terms",
     expectedVersion: "b2c3d4",
+    docPath: "glossary.yaml",
     values: {},
     before: {},
     label: "用語集: 旧称",
@@ -288,23 +292,6 @@ export const ValidationFailed: Story = {
         title: "EditsRejectedError",
         detail: "検査に合格しませんでした",
         errors: [{ key: "terms:kind:add", path: "description", reason: "空にできません" }],
-      }),
-    ],
-  },
-  play: commitFromPanel,
-};
-
-export const VersionMismatch: Story = {
-  loaders: [withEdits(edits.slice(0, 1))],
-  parameters: {
-    initialPath: PANEL_PATH,
-    msw: [
-      ...listed(metadata),
-      problem(409, {
-        title: "EditsRejectedError",
-        detail: "参照した後に変わった文書があります",
-        nextSteps: ["メタデータを再読み込みし、変更が反映されたかを確認してください。"],
-        errors: [{ key: "tags:n1:update", reason: "参照した後に文書が変わっています", current: "9f8e7d" }],
       }),
     ],
   },

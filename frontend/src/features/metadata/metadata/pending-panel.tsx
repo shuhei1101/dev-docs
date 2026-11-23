@@ -1,15 +1,13 @@
-import { useQueryClient } from "@tanstack/react-query";
 import { Undo2 } from "lucide-react";
 import { useState } from "react";
 
-import { useCommitEdits } from "@/features/metadata/metadata/queries";
-import { getMetadataGetMetadataQueryKey } from "@/shared/api/generated/metadata/metadata";
+import { useCommitEdits, useRestartFromLatest } from "@/features/metadata/metadata/queries";
 import {
   type PendingEdit,
   usePendingEdits,
   usePendingEditsStore,
 } from "@/features/metadata/shared/pending-edits-store";
-import type { CommitResult } from "@/shared/api/generated/model";
+import type { CommitResult, ConflictResult, ConflictScript } from "@/shared/api/generated/model";
 import { Alert, AlertDescription, AlertTitle } from "@/shared/components/ui/alert";
 import { Badge } from "@/shared/components/ui/badge";
 import { Button } from "@/shared/components/ui/button";
@@ -40,31 +38,12 @@ const NARROW_QUERY = "(max-width: 47.99rem)";
 /** 編集を始めたときのコミットが起点に使用できないときの problem の `title` */
 const BASE_COMMIT_UNUSABLE = "BaseCommitUnusableError";
 
-/** 衝突したときのスクリプトの結果（`null` はスクリプトの指定が無い） */
-export type ConflictScript = {
-  exitCode: number | null;
-  timedOut: boolean;
-  /** スクリプトが標準出力の最後の行に出した PR の URL */
-  prUrl: string | null;
-  stderr: string;
-};
-
-/** 衝突して修正をブランチに残した結果 */
-export type ConflictInfo = {
-  branch: string;
-  baseCommit: string;
-  /** 今のブランチで断った理由 */
-  reasons: { key: string | null; reason: string }[];
-  script: ConflictScript | null;
-};
-
-type CommitOutcome = CommitResult & { conflict?: ConflictInfo | null };
-
 type Outcome =
-  | { kind: "diff"; result: CommitOutcome }
-  | { kind: "committed"; result: CommitOutcome }
-  | { kind: "conflict"; conflict: ConflictInfo; labels: string[] }
+  | { kind: "diff"; result: CommitResult }
+  | { kind: "committed"; result: CommitResult }
+  | { kind: "conflict"; conflict: ConflictResult; labels: string[] }
   | { kind: "failed"; problem: Problem | null; message: string }
+  | { kind: "dropped"; labels: string[] }
   | null;
 
 const toText = (value: string | string[] | undefined): string =>
@@ -75,12 +54,7 @@ const reasonsOf = (problem: Problem | null): Map<string, string[]> => {
   const reasons = new Map<string, string[]>();
   for (const item of problem?.errors ?? []) {
     if (item.key === undefined || item.key === null) continue;
-    const text = [
-      item.path === "" ? item.reason : `${item.path}: ${item.reason}`,
-      item.current ? `今のバージョン ${item.current}` : "",
-    ]
-      .filter((part) => part !== "")
-      .join(" ");
+    const text = item.path ? `${item.path}: ${item.reason}` : item.reason;
     reasons.set(item.key, [...(reasons.get(item.key) ?? []), text]);
   }
   return reasons;
@@ -289,18 +263,55 @@ const ConflictSummary = ({ outcome }: { outcome: Extract<Outcome, { kind: "confl
   </Alert>
 );
 
+/** 差分確認が衝突を返却したときの、変更の `key` ごとの理由 */
+const conflictReasonsOf = (conflict: ConflictResult | null | undefined): Map<string, string[]> => {
+  const reasons = new Map<string, string[]>();
+  for (const item of conflict?.reasons ?? []) {
+    if (item.key === null) continue;
+    reasons.set(item.key, [...(reasons.get(item.key) ?? []), item.reason]);
+  }
+  return reasons;
+};
+
 /** 直前の結果を、変更の `key` ごとの差分と理由にする */
 const outcomeByEdit = (outcome: Outcome) => ({
   diffs: new Map(
     outcome?.kind === "diff" ? outcome.result.results.map((item) => [item.key, item.diff]) : [],
   ),
-  reasons: reasonsOf(outcome?.kind === "failed" ? outcome.problem : null),
+  reasons:
+    outcome?.kind === "diff"
+      ? conflictReasonsOf(outcome.result.conflict)
+      : reasonsOf(outcome?.kind === "failed" ? outcome.problem : null),
 });
+
+/** 差分確認で衝突する（このままコミットすると修正がブランチに残る）ことの注意 */
+const DryRunConflictNotice = () => (
+  <Alert variant="destructive" role="alert">
+    <AlertTitle>コミットすると、ほかの変更と衝突して修正がブランチに残ります</AlertTitle>
+  </Alert>
+);
+
+/** 「最新の内容で続ける」で、最新の値と食い違うため取り消した変更 */
+const DroppedSummary = ({ labels }: { labels: string[] }) => (
+  <Alert role="status">
+    <AlertTitle>最新の内容と食い違うため、次の変更を取り消しました</AlertTitle>
+    <AlertDescription>
+      <ul className="list-disc pl-4">
+        {labels.map((label) => (
+          <li key={label}>{label}</li>
+        ))}
+      </ul>
+      <p className="mt-2">最新の値を確認して、もう一度編集してください。</p>
+    </AlertDescription>
+  </Alert>
+);
 
 /** コミットの結果か送信の失敗のまとめ */
 const OutcomeSummary = ({ outcome }: { outcome: Outcome }) => {
   if (outcome?.kind === "failed") return <FailureSummary outcome={outcome} />;
   if (outcome?.kind === "conflict") return <ConflictSummary outcome={outcome} />;
+  if (outcome?.kind === "dropped") return <DroppedSummary labels={outcome.labels} />;
+  if (outcome?.kind === "diff" && outcome.result.conflict) return <DryRunConflictNotice />;
   if (outcome?.kind !== "committed" || !outcome.result.commit) return null;
   return (
     <Alert role="status">
@@ -323,8 +334,8 @@ type Props = {
 export const PendingPanel = ({ source, branch, open, onOpenChange, onLocate }: Props) => {
   const edits = usePendingEdits(source);
   const remove = usePendingEditsStore((state) => state.remove);
-  const queryClient = useQueryClient();
   const commit = useCommitEdits(source);
+  const restart = useRestartFromLatest(source);
   const narrow = useMediaQuery(NARROW_QUERY);
   const [outcome, setOutcome] = useState<Outcome>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -334,7 +345,7 @@ export const PendingPanel = ({ source, branch, open, onOpenChange, onLocate }: P
     setConfirmOpen(false);
     const labels = edits.map((edit) => edit.label);
     try {
-      const result: CommitOutcome = await commit.mutateAsync({ dryRun, message });
+      const result = await commit.mutateAsync({ dryRun, message });
       if (!dryRun && result.conflict) {
         setOutcome({ kind: "conflict", conflict: result.conflict, labels });
         return;
@@ -349,15 +360,23 @@ export const PendingPanel = ({ source, branch, open, onOpenChange, onLocate }: P
     }
   };
 
-  /** 編集中の変更を残したまま、メタデータを最新の内容で再取得する */
+  /** 編集中の変更を残したまま、メタデータを最新の内容で再取得し、最新の値と食い違う変更を取り消す */
   const restartFromLatest = async () => {
-    setOutcome(null);
-    await queryClient.invalidateQueries({ queryKey: getMetadataGetMetadataQueryKey(source) });
+    try {
+      const { dropped } = await restart.mutateAsync();
+      setOutcome(dropped.length > 0 ? { kind: "dropped", labels: dropped.map((edit) => edit.label) } : null);
+    } catch (error) {
+      setOutcome({
+        kind: "failed",
+        problem: error instanceof AppError ? error.problem : null,
+        message: error instanceof Error ? error.message : String(error),
+      });
+    }
   };
 
   const { diffs, reasons } = outcomeByEdit(outcome);
   const unusable = outcome?.kind === "failed" && outcome.problem?.title === BASE_COMMIT_UNUSABLE;
-  const busy = commit.isPending;
+  const busy = commit.isPending || restart.isPending;
 
   return (
     <>

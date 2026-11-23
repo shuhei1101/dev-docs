@@ -14,4 +14,6 @@ export interface CommitRequest {
   edits: Edit[];
   message?: string | null;
   dryRun?: boolean;
+  /** @pattern ^[0-9a-f]{7,40}$ */
+  baseCommit: string;
 }

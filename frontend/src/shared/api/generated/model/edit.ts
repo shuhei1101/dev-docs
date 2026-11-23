@@ -18,5 +18,6 @@ export interface Edit {
   docId: string;
   docKind: string;
   expectedVersion?: string | null;
+  docPath?: string | null;
   values?: EditValues;
 }

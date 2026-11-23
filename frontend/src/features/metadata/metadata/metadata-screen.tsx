@@ -7,7 +7,7 @@ import { NotFoundScreen } from "@/features/docs/not-found/not-found-screen";
 import { servingSources } from "@/features/docs/shared/serving-sources";
 import { MetadataTable, rowElementId } from "@/features/metadata/metadata/metadata-table";
 import { PendingPanel } from "@/features/metadata/metadata/pending-panel";
-import { type PendingEdit, usePendingEdits } from "@/features/metadata/shared/pending-edits-store";
+import { type PendingEdit, useBaseCommit, usePendingEdits } from "@/features/metadata/shared/pending-edits-store";
 import { getMetadataGetMetadataQueryOptions } from "@/shared/api/generated/metadata/metadata";
 import type { MetadataResponse } from "@/shared/api/generated/model";
 import { useSettingsGetSettingsSources } from "@/shared/api/generated/settings/settings";
@@ -80,7 +80,7 @@ const KindTabs = ({ source, data, tab, query, onTabChange }: KindTabsProps) => (
     </TabsList>
     {data.kinds.map((kind) => (
       <TabsContent key={kind.id} value={kind.id} className="min-w-0">
-        <MetadataTable source={source} kind={kind} query={query} />
+        <MetadataTable source={source} kind={kind} query={query} baseCommit={data.baseCommit ?? ""} />
       </TabsContent>
     ))}
   </Tabs>
@@ -92,7 +92,11 @@ type Props = { source: string };
 export const MetadataScreen = ({ source }: Props) => {
   const search: MetadataSearch = useSearch({ strict: false });
   const navigate = useNavigate();
-  const metadata = useQuery(getMetadataGetMetadataQueryOptions(source));
+  // 編集中の変更があるときは、記録した編集を始めたときのコミットの内容を参照する
+  const baseCommit = useBaseCommit(source);
+  const metadata = useQuery(
+    getMetadataGetMetadataQueryOptions(source, baseCommit === undefined ? undefined : { ref: baseCommit }),
+  );
   const settings = useSettingsGetSettingsSources().data;
   const edits = usePendingEdits(source);
   const { colorScheme, setColorScheme } = usePreferencesStore();

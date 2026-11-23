@@ -425,6 +425,22 @@
               "type": "string",
               "title": "Source"
             }
+          },
+          {
+            "name": "ref",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Ref"
+            }
           }
         ],
         "responses": {
@@ -666,11 +682,17 @@
             "type": "boolean",
             "title": "Dryrun",
             "default": false
+          },
+          "baseCommit": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{7,40}$",
+            "title": "Basecommit"
           }
         },
         "type": "object",
         "required": [
-          "edits"
+          "edits",
+          "baseCommit"
         ],
         "title": "CommitRequest",
         "description": "直コミットの要求の本文。"
@@ -697,6 +719,16 @@
                 "type": "null"
               }
             ]
+          },
+          "conflict": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ConflictResult"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "type": "object",
@@ -707,6 +739,120 @@
         ],
         "title": "CommitResult",
         "description": "直コミットの 200 の応答。"
+      },
+      "ConflictReason": {
+        "properties": {
+          "key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Key"
+          },
+          "reason": {
+            "type": "string",
+            "title": "Reason"
+          }
+        },
+        "type": "object",
+        "required": [
+          "key",
+          "reason"
+        ],
+        "title": "ConflictReason",
+        "description": "今のブランチで断られた理由 1 件（`key` が `None` は本文全体）。"
+      },
+      "ConflictResult": {
+        "properties": {
+          "branch": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Branch"
+          },
+          "baseCommit": {
+            "type": "string",
+            "title": "Basecommit"
+          },
+          "reasons": {
+            "items": {
+              "$ref": "#/components/schemas/ConflictReason"
+            },
+            "type": "array",
+            "title": "Reasons"
+          },
+          "script": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ConflictScript"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "branch",
+          "baseCommit",
+          "reasons",
+          "script"
+        ],
+        "title": "ConflictResult",
+        "description": "衝突して修正をブランチに残したとき（差分確認は残すことになるとき）の結果。"
+      },
+      "ConflictScript": {
+        "properties": {
+          "exitCode": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Exitcode"
+          },
+          "timedOut": {
+            "type": "boolean",
+            "title": "Timedout"
+          },
+          "prUrl": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Prurl"
+          },
+          "stderr": {
+            "type": "string",
+            "title": "Stderr"
+          }
+        },
+        "type": "object",
+        "required": [
+          "exitCode",
+          "timedOut",
+          "prUrl",
+          "stderr"
+        ],
+        "title": "ConflictScript",
+        "description": "衝突したときのスクリプトの結果。"
       },
       "ConversionError": {
         "properties": {
@@ -992,6 +1138,17 @@
             ],
             "title": "Expectedversion"
           },
+          "docPath": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Docpath"
+          },
           "values": {
             "additionalProperties": {
               "anyOf": [
@@ -1228,6 +1385,17 @@
               }
             ],
             "title": "Branch"
+          },
+          "baseCommit": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Basecommit"
           },
           "kinds": {
             "items": {
