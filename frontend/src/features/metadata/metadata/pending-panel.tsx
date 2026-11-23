@@ -1,7 +1,9 @@
+import { useQueryClient } from "@tanstack/react-query";
 import { Undo2 } from "lucide-react";
 import { useState } from "react";
 
 import { useCommitEdits } from "@/features/metadata/metadata/queries";
+import { getMetadataGetMetadataQueryKey } from "@/shared/api/generated/metadata/metadata";
 import {
   type PendingEdit,
   usePendingEdits,
@@ -35,6 +37,8 @@ const OP_LABEL = { update: "変更", add: "追加", delete: "削除" } as const;
 const MESSAGE_MAX = 200;
 const SHA_CHARS = 7;
 const NARROW_QUERY = "(max-width: 47.99rem)";
+/** 編集を始めたときのコミットが起点に使用できないときの problem の `title` */
+const BASE_COMMIT_UNUSABLE = "BaseCommitUnusableError";
 
 /** 衝突したときのスクリプトの結果（`null` はスクリプトの指定が無い） */
 export type ConflictScript = {
@@ -203,6 +207,7 @@ const CommitConfirm = ({ open, source, branch, count, busy, onOpenChange, onComm
 /** 送信の失敗のまとめ */
 const FailureSummary = ({ outcome }: { outcome: Extract<Outcome, { kind: "failed" }> }) => {
   const hasReasons = (outcome.problem?.errors ?? []).some((item) => item.key);
+  const unusable = outcome.problem?.title === BASE_COMMIT_UNUSABLE;
   return (
     <Alert variant="destructive" role="alert">
       <AlertTitle>{outcome.problem?.title ?? "コミットできませんでした"}</AlertTitle>
@@ -215,7 +220,11 @@ const FailureSummary = ({ outcome }: { outcome: Extract<Outcome, { kind: "failed
         {(outcome.problem?.nextSteps ?? []).map((step) => (
           <p key={step}>{step}</p>
         ))}
-        <p>編集中の変更はそのままです。</p>
+        <p>
+          {unusable
+            ? "編集中の変更はそのままです。「最新の内容で続ける」を押すと、最新の内容を再取得し、変更を残したまま送信できます。"
+            : "編集中の変更はそのままです。"}
+        </p>
       </AlertDescription>
     </Alert>
   );
@@ -263,17 +272,19 @@ const ConflictSummary = ({ outcome }: { outcome: Extract<Outcome, { kind: "confl
         <code className="font-mono">{outcome.conflict.baseCommit.slice(0, SHA_CHARS)}</code> から）
       </p>
       <ScriptResult script={outcome.conflict.script} />
+      <p className="mt-2 font-medium">ブランチに残した変更</p>
       <ul className="list-disc pl-4">
         {outcome.labels.map((label) => (
           <li key={label}>{label}</li>
         ))}
       </ul>
-      {outcome.conflict.reasons.map((item) => (
-        <p key={`${item.key ?? ""}:${item.reason}`} className="text-xs">
-          {item.reason}
-        </p>
-      ))}
-      <p>ブランチに残した変更は、編集中の変更から除きました。</p>
+      <p className="mt-2 font-medium">衝突した理由</p>
+      <ul className="list-disc pl-4">
+        {outcome.conflict.reasons.map((item) => (
+          <li key={`${item.key ?? ""}:${item.reason}`}>{item.reason}</li>
+        ))}
+      </ul>
+      <p className="mt-2">ブランチに残した変更は、編集中の変更から除きました。</p>
     </AlertDescription>
   </Alert>
 );
@@ -312,6 +323,7 @@ type Props = {
 export const PendingPanel = ({ source, branch, open, onOpenChange, onLocate }: Props) => {
   const edits = usePendingEdits(source);
   const remove = usePendingEditsStore((state) => state.remove);
+  const queryClient = useQueryClient();
   const commit = useCommitEdits(source);
   const narrow = useMediaQuery(NARROW_QUERY);
   const [outcome, setOutcome] = useState<Outcome>(null);
@@ -337,7 +349,14 @@ export const PendingPanel = ({ source, branch, open, onOpenChange, onLocate }: P
     }
   };
 
+  /** 編集中の変更を残したまま、メタデータを最新の内容で再取得する */
+  const restartFromLatest = async () => {
+    setOutcome(null);
+    await queryClient.invalidateQueries({ queryKey: getMetadataGetMetadataQueryKey(source) });
+  };
+
   const { diffs, reasons } = outcomeByEdit(outcome);
+  const unusable = outcome?.kind === "failed" && outcome.problem?.title === BASE_COMMIT_UNUSABLE;
   const busy = commit.isPending;
 
   return (
@@ -352,9 +371,11 @@ export const PendingPanel = ({ source, branch, open, onOpenChange, onLocate }: P
         >
           <SheetHeader>
             <SheetTitle>編集中</SheetTitle>
-            <SheetDescription>
-              {source} の {branchLabel} へ、{edits.length} 件の変更をまとめてコミットします。
-            </SheetDescription>
+            {edits.length > 0 && (
+              <SheetDescription>
+                {source} の {branchLabel} へ、{edits.length} 件の変更をまとめてコミットします。
+              </SheetDescription>
+            )}
           </SheetHeader>
           <div className="flex flex-col gap-3 px-4">
             <OutcomeSummary outcome={outcome} />
@@ -377,9 +398,15 @@ export const PendingPanel = ({ source, branch, open, onOpenChange, onLocate }: P
                 <Button variant="outline" disabled={busy} onClick={() => void send(true)}>
                   差分確認
                 </Button>
-                <Button disabled={busy} onClick={() => setConfirmOpen(true)}>
-                  {outcome?.kind === "failed" ? "再試行" : "コミット"}
-                </Button>
+                {unusable ? (
+                  <Button disabled={busy} onClick={() => void restartFromLatest()}>
+                    最新の内容で続ける
+                  </Button>
+                ) : (
+                  <Button disabled={busy} onClick={() => setConfirmOpen(true)}>
+                    {outcome?.kind === "failed" ? "再試行" : "コミット"}
+                  </Button>
+                )}
               </div>
             )}
           </div>

@@ -384,9 +384,9 @@ export const BaseCommitUnusable: Story = {
     msw: [
       ...listed(metadata),
       problem(409, {
-        title: "EditsRejectedError",
+        title: "BaseCommitUnusableError",
         detail: "編集を始めたときのコミット 00b7c00 が develop の履歴にありません",
-        nextSteps: ["メタデータを再読み込みし、今の内容でもう一度修正してください。"],
+        nextSteps: [],
       }),
     ],
   },
