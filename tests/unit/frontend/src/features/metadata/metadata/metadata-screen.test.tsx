@@ -25,7 +25,7 @@ const useMetadata = (response: () => Response) =>
   );
 
 beforeEach(() => {
-  usePendingEditsStore.setState({ bySource: {} });
+  usePendingEditsStore.setState({ bySource: {}, baseCommitBySource: {} });
 });
 
 test("test_metadata_screen", async () => {
@@ -97,4 +97,55 @@ test("test_metadata_screen_when_unreachable", async () => {
   expect(await screen.findByText(ADDRESS)).toBeInTheDocument();
   expect(screen.getByText("接続を拒否されました")).toBeInTheDocument();
   expect(screen.getByRole("button", { name: "再読み込み" })).toBeInTheDocument();
+});
+
+test("test_metadata_screen_when_pending", async () => {
+  const refs: (string | null)[] = [];
+  useMetadata(() => HttpResponse.json(metadataResponse()));
+  server.use(
+    http.get("/_api/sources/sample/metadata", ({ request }) => {
+      refs.push(new URL(request.url).searchParams.get("ref"));
+      return HttpResponse.json(metadataResponse());
+    }),
+  );
+  usePendingEditsStore.setState({
+    bySource: {
+      sample: [
+        {
+          key: "tags:n1:update",
+          kind: "tags",
+          op: "update",
+          docId: "n1",
+          docKind: "note",
+          expectedVersion: "v-n1",
+          docPath: "notes/n1.yaml",
+          values: { tags: ["topic:b"] },
+          before: { tags: ["topic:a"] },
+          label: "タグ: n1",
+        },
+      ],
+    },
+    baseCommitBySource: { sample: "aaa1111" },
+  });
+
+  renderApp("/sample/_metadata");
+
+  await screen.findByRole("tablist");
+  expect(refs[0]).toBe("aaa1111");
+});
+
+test("test_metadata_screen_when_not_pending", async () => {
+  const refs: (string | null)[] = [];
+  useMetadata(() => HttpResponse.json(metadataResponse()));
+  server.use(
+    http.get("/_api/sources/sample/metadata", ({ request }) => {
+      refs.push(new URL(request.url).searchParams.get("ref"));
+      return HttpResponse.json(metadataResponse());
+    }),
+  );
+
+  renderApp("/sample/_metadata");
+
+  await screen.findByRole("tablist");
+  expect(refs[0]).toBeNull();
 });

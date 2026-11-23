@@ -8,7 +8,7 @@ import pytest
 
 from dev_docs.features.metadata.metadata import KeyMapping, build_metadata, key_mapping
 from dev_docs.integrations.project_index.client import ProjectIndexClient
-from dev_docs.shared.errors import ProjectIndexUnreachableError
+from dev_docs.shared.errors import ProjectIndexUnreachableError, RefNotFoundError
 
 from ...conftest import FakeIndex, config_json, doc_json
 
@@ -100,6 +100,21 @@ def _sample_docs() -> list[dict[str, Any]]:
     ]
 
 
+HEAD = "0a1b2c3"
+
+
+def _with_head(fake_index: FakeIndex, documents: list[dict[str, Any]], commit: str = HEAD) -> None:
+    """既定のブランチの先頭を `commit` にし、そのコミットの文書の一覧を偽物に配置する。"""
+    fake_index.refs_results = {
+        "git": True,
+        "defaultRef": "develop",
+        "branches": [{"name": "develop", "commit": commit}],
+        "tags": [],
+        "commits": [],
+    }
+    fake_index.docs["sample"] = {commit: documents}
+
+
 def _kind(response: Any, kind_id: str) -> Any:
     """応答から種類 1 つを取り出す。"""
     return next(kind for kind in response.kinds if kind.id == kind_id)
@@ -138,7 +153,7 @@ def test_build_metadata(
     """種類ごとの行と列（正常系）。"""
     # 準備
     fake_index.configs["sample"] = config_json(documents=[TERMS_ROW, NOTE_ROW, RULE_ROW, FILES_ROW])
-    fake_index.docs["sample"] = {None: _sample_docs()}
+    _with_head(fake_index, _sample_docs())
     fake_index.settings = _settings(["note", "terms"])
     # 実行
     response = asyncio.run(build_metadata(make_client(), "sample"))
@@ -192,8 +207,9 @@ def test_build_metadata_when_mapped(
         "metadata": {"tags": "tags[].name", "skill": "skill.path"},
     }
     fake_index.configs["sample"] = config_json(documents=[skill_row, RULE_ROW])
-    fake_index.docs["sample"] = {
-        None: [
+    _with_head(
+        fake_index,
+        [
             doc_json(
                 "s1",
                 "skills/s1.yaml",
@@ -201,8 +217,8 @@ def test_build_metadata_when_mapped(
                 data={"id": "s1", "tags": [{"name": "topic:x", "main": True}]},
                 metadata={"id": "s1", "name": "スキル", "tags": ["topic:x"]},
             )
-        ]
-    }
+        ],
+    )
     fake_index.settings = _settings(["skill"])
     # 実行
     response = asyncio.run(build_metadata(make_client(), "sample"))
@@ -219,7 +235,7 @@ def test_build_metadata_when_rule_index_missing(
     """索引を配信していない（正常系）。"""
     # 準備
     fake_index.configs["sample"] = config_json(documents=[TERMS_ROW, NOTE_ROW])
-    fake_index.docs["sample"] = {None: []}
+    _with_head(fake_index, [])
     fake_index.settings = _settings([])
     # 実行
     response = asyncio.run(build_metadata(make_client(), "sample"))
@@ -241,3 +257,54 @@ def test_build_metadata_when_unreachable(
     # 実行・検証
     with pytest.raises(ProjectIndexUnreachableError, match="接続できませんでした"):
         asyncio.run(build_metadata(make_client(), "sample"))
+
+
+def test_build_metadata_when_ref_omitted(
+    fake_index: FakeIndex, make_client: Callable[..., ProjectIndexClient]
+) -> None:
+    """既定のブランチの先頭のコミットで取得する（正常系）。"""
+    # 準備
+    fake_index.configs["sample"] = config_json(documents=[TERMS_ROW, NOTE_ROW])
+    _with_head(fake_index, _sample_docs())
+    fake_index.settings = _settings([])
+    # 実行
+    response = asyncio.run(build_metadata(make_client(), "sample"))
+    # 検証
+    paths = [item.url.path for item in fake_index.requests]
+    refs_at = paths.index("/sources/sample/refs")
+    docs_at = paths.index("/sources/sample/docs")
+    assert refs_at < docs_at
+    assert fake_index.requests[docs_at].url.params.get("ref") == HEAD
+    assert response.base_commit == HEAD
+
+
+def test_build_metadata_when_ref(
+    fake_index: FakeIndex, make_client: Callable[..., ProjectIndexClient]
+) -> None:
+    """記録したコミットで取得する（正常系）。"""
+    # 準備
+    fake_index.configs["sample"] = config_json(documents=[TERMS_ROW, NOTE_ROW])
+    _with_head(fake_index, [])
+    fake_index.docs["sample"]["9f8e7d6"] = _sample_docs()
+    fake_index.settings = _settings([])
+    # 実行
+    response = asyncio.run(build_metadata(make_client(), "sample", ref="9f8e7d6"))
+    # 検証
+    docs_request = next(
+        item for item in fake_index.requests if item.url.path == "/sources/sample/docs"
+    )
+    assert docs_request.url.params.get("ref") == "9f8e7d6"
+    assert response.base_commit == "9f8e7d6"
+
+
+def test_build_metadata_when_ref_not_found(
+    fake_index: FakeIndex, make_client: Callable[..., ProjectIndexClient]
+) -> None:
+    """記録したコミットが無い（異常系）。"""
+    # 準備
+    fake_index.configs["sample"] = config_json(documents=[TERMS_ROW, NOTE_ROW])
+    _with_head(fake_index, [])
+    fake_index.settings = _settings([])
+    # 実行・検証
+    with pytest.raises(RefNotFoundError):
+        asyncio.run(build_metadata(make_client(), "sample", ref="deadbee"))
