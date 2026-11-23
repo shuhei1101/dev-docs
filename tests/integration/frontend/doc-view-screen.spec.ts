@@ -1892,3 +1892,20 @@ test.describe("project-index から文書を受け取れないときの表示", 
     ).toBe(true);
   });
 });
+
+test.describe("編集中のボタン", () => {
+  // トップバーの編集中のボタンで、メタデータの画面を編集中のパネルを開いた状態で開く（正常系）
+  test("open_pending_panel", async ({ page }) => {
+    await openDoc(page);
+    await page.route("**/_api/sources/sample/metadata", (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ source: "sample", branch: "develop", kinds: [] }),
+      }),
+    );
+    await page.getByRole("button", { name: /^編集中 \d+ 件$/ }).click();
+    await expect(page).toHaveURL(/\/sample\/_metadata\?panel=edits$/);
+    await expect(page.getByRole("dialog", { name: "編集中" })).toBeVisible();
+  });
+});

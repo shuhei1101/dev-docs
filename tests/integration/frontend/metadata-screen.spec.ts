@@ -311,6 +311,76 @@ test.describe("送信の失敗", () => {
   });
 });
 
+/** メタデータの取得を失敗の応答に差し替えて画面を開く */
+const openFailed = async (page: Page, status: number, extra: Record<string, unknown>) => {
+  await mockApi(page);
+  await page.route(`**${METADATA_PATH}`, (route) =>
+    route.fulfill({ status, contentType: "application/problem+json", body: JSON.stringify(problem(status, extra).body) }),
+  );
+  await page.goto(`/${SOURCE}/_metadata`);
+};
+
+test.describe("行が指す文書のリンク", () => {
+  // 押すとその文書の文書の画面を開き、戻ると直前の種類のタブを選ぶ（正常系）
+  test("open_row_document", async ({ page }) => {
+    await open(page, { url: `/${SOURCE}/_metadata?tab=tags` });
+    await page.getByRole("link", { name: "docs/note/n1.yaml" }).click();
+    await expect(page).toHaveURL(new RegExp(`/${SOURCE}/docs/note/n1\\.yaml`));
+    await page.goBack();
+    await expect(page.getByRole("tab", { name: /タグ/, selected: true })).toBeVisible();
+  });
+});
+
+test.describe("取得の失敗", () => {
+  // メタデータの取得が 404 のとき、URL を変えずに見つからない画面を出す（異常系）
+  test("source_not_found", async ({ page }) => {
+    await openFailed(page, 404, { title: "UnknownSourceError", missing: "source", value: SOURCE });
+    await expect(page.getByRole("heading", { name: `配信元 ${SOURCE} はありません` })).toBeVisible();
+    await expect(page).toHaveURL(new RegExp(`/${SOURCE}/_metadata$`));
+  });
+
+  // 404・503 以外の失敗で、取得できなかったことと再読み込みを出す（異常系）
+  test("fetch_failed", async ({ page }) => {
+    await openFailed(page, 500, { title: "InternalError" });
+    await expect(page.getByText("メタデータを取得できませんでした")).toBeVisible();
+    await expect(page.getByRole("button", { name: "再読み込み" })).toBeVisible();
+  });
+});
+
+test.describe("キャンセル", () => {
+  // 追加の行はキャンセルか Esc で閉じ、変更を作らずに行追加ボタンへフォーカスを戻す（正常系）
+  for (const how of ["button", "escape"] as const) {
+    test(`cancel_new_row_${how}`, async ({ page }) => {
+      await open(page);
+      await page.getByRole("button", { name: "行追加" }).click();
+      await page.getByRole("textbox", { name: "ID" }).fill("kind");
+      if (how === "button") await page.getByRole("button", { name: "キャンセル" }).click();
+      else await page.keyboard.press("Escape");
+      await expect(page.getByRole("textbox", { name: "ID" })).toHaveCount(0);
+      await expect(page.getByRole("button", { name: "行追加" })).toBeFocused();
+      await expect(page.getByRole("button", { name: "編集中 0 件" })).toBeVisible();
+    });
+  }
+
+  // コミットの確認はキャンセルか Esc で閉じ、送信せずにコミットボタンへフォーカスを戻す（正常系）
+  for (const how of ["button", "escape"] as const) {
+    test(`cancel_commit_${how}`, async ({ page }) => {
+      const api = await open(page);
+      await editTag(page, "topic:b");
+      await page.getByRole("button", { name: "編集中 1 件" }).click();
+      await panel(page).getByRole("button", { name: "コミット" }).click();
+      const dialog = page.getByRole("dialog", { name: "コミットしますか？" });
+      await expect(dialog).toBeVisible();
+      if (how === "button") await dialog.getByRole("button", { name: "キャンセル" }).click();
+      else await page.keyboard.press("Escape");
+      await expect(dialog).toHaveCount(0);
+      await expect(panel(page).getByRole("button", { name: "コミット" })).toBeFocused();
+      await expect(page.getByRole("button", { name: "編集中 1 件" })).toBeVisible();
+      expect(api.commits).toHaveLength(0);
+    });
+  }
+});
+
 test.describe("project-index から受け取れない", () => {
   // メタデータの取得の 503 で接続先と理由と再読み込みを出す（異常系）
   test("project_index_unreachable", async ({ page }) => {

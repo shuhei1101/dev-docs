@@ -65,3 +65,14 @@ test("test_metadata_table_when_add_focus", async () => {
 
   expect(screen.getByRole("textbox", { name: "ID" })).toHaveFocus();
 });
+
+test("test_metadata_table_when_add_cancel", async () => {
+  renderInRouter(<MetadataTable source="sample" kind={kindOf("terms")} query="" />);
+
+  await userEvent.click(await screen.findByRole("button", { name: "行追加" }));
+  await userEvent.type(screen.getByRole("textbox", { name: "ID" }), "kind{Escape}");
+
+  expect(screen.queryByRole("textbox", { name: "ID" })).toBeNull();
+  expect(screen.getByRole("button", { name: "行追加" })).toHaveFocus();
+  expect(usePendingEditsStore.getState().bySource.sample ?? []).toHaveLength(0);
+});
