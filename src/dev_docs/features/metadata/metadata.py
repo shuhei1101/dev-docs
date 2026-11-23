@@ -292,7 +292,14 @@ def _head_commit(refs: RefList) -> str | None:
     """既定のブランチの先頭のコミットを返却する。Git でない・ブランチが無いときは None。"""
     if not refs.git:
         return None
-    return next((branch.commit for branch in refs.branches if branch.name == refs.default_ref), None)
+    return next(
+        (branch.commit for branch in refs.branches if branch.name == refs.default_ref), None
+    )
+
+
+async def _known(refs: RefList) -> RefList:
+    """取得済みのリビジョンの一覧を、ほかの問い合わせと同じ形で待てるようにする。"""
+    return refs
 
 
 async def build_metadata(
@@ -300,13 +307,14 @@ async def build_metadata(
 ) -> MetadataResponse:
     """配信元の設定・編集を始めたときのコミットの文書の一覧・リビジョンの一覧・端末の設定を取得し、種類ごとの行と列にする。"""
     # ref を省いた: 先にリビジョンの一覧で既定のブランチの先頭を求め、文書の一覧と返却する baseCommit をそのコミットにそろえる
-    head_refs: RefList | None = None
     if ref is None:
         head_refs = await client.refs(source_id, commits=0)
         base_commit = _head_commit(head_refs)
-    # ref を指定した: 記録したコミットで文書の一覧を取得する
+        refs_call = _known(head_refs)
+    # ref を指定した: 記録したコミットで文書の一覧を取得し、リビジョンの一覧は同時に取得する
     else:
         base_commit = ref
+        refs_call = client.refs(source_id, commits=0)
     # 残りの問い合わせを同時に投げ、最初の例外（配信元・リビジョンが無い・つながらない）をそのまま伝える
     try:
         async with asyncio.TaskGroup() as group:
@@ -315,12 +323,10 @@ async def build_metadata(
                 client.list_documents(source_id, ref=base_commit, values=True)
             )
             settings_task = group.create_task(client.settings_sources())
-            refs_task = (
-                None if head_refs is not None else group.create_task(client.refs(source_id, commits=0))
-            )
+            refs_task = group.create_task(refs_call)
     except ExceptionGroup as group_error:
         raise group_error.exceptions[0] from None
-    refs = head_refs if refs_task is None else refs_task.result()
+    refs = refs_task.result()
     view = build_source_view(source_id, config_task.result(), refs)
     documents = docs_task.result().documents
     write_kinds = set(settings_task.result().write_api_kinds.get(source_id, []))
