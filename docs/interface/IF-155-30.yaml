@@ -1,0 +1,131 @@
+id: IF-155-30
+title: 衝突したときの PR の作成
+lead: project-index の書き込みの API が衝突して修正を残したブランチをリモートへプッシュし、PR を作成して PR の URL を出力する、衝突したときのスクリプトの入出力を定め、衝突したときのスクリプトを修正するときに参照する。
+entry:
+  kind: trigger
+  value: '`scripts/project-index-on-conflict.sh`（project-index が衝突して修正をブランチに残した後に、端末の設定の `sources[].direct_commit.on_conflict.command` から実行する）'
+test_file: tests/integration/server/test_on_conflict_script.py
+impl_files:
+  - scripts/project-index-on-conflict.sh
+identifier: project-index-on-conflict
+permissions: 端末の `git` がリモートへプッシュでき、`gh` が配信元のリポジトリへ PR を作成できる認証を持つこと
+idempotent: false
+side_effects: 残したブランチをリモートへプッシュし、コミットするブランチへの PR を 1 件作成する。ラベルは付けない
+exclusivity: project-index が衝突ごとに 1 回だけ実行する。ブランチの名前に時刻とコミットを含むため、同じブランチを 2 回プッシュしない
+callers:
+  - SC-155-15#scenarios[正常シナリオ（衝突したら修正をブランチに残す）]
+  - SC-155-15#scenarios[異常シナリオ（衝突してスクリプトが失敗する）]
+request:
+  - name: PROJECT_INDEX_CONFLICT_BRANCH
+    type: str
+    required: true
+    location: argument
+    description: 修正を残したブランチの名前（環境変数）
+  - name: PROJECT_INDEX_TARGET_BRANCH
+    type: str
+    required: true
+    location: argument
+    description: コミットするブランチ（PR の base。環境変数）
+  - name: PROJECT_INDEX_COMMIT_MESSAGE
+    type: str
+    required: true
+    location: argument
+    description: 利用者が入力したコミットの説明（PR のタイトル。環境変数）
+  - name: PROJECT_INDEX_SOURCE
+    type: str
+    required: true
+    location: argument
+    description: 配信元の ID（PR の本文に記載する。環境変数）
+  - name: PROJECT_INDEX_BASE_COMMIT
+    type: str
+    required: true
+    location: argument
+    description: ブランチの起点の編集を始めたときのコミット（PR の本文に記載する。環境変数）
+response:
+  - name: stdout の最後の行
+    type: str
+    description: 作成した PR の URL（`https://` で始まる）。直コミットの応答の `conflict.script.prUrl` になる
+  - name: 終了コード
+    type: int
+    description: プッシュと PR の作成が成功したら 0、どちらかが失敗したら 0 以外
+  - name: stderr
+    type: str
+    description: 失敗したときの `git`・`gh` の出力。直コミットの応答の `conflict.script.stderr` になる
+constraints:
+  - item: 作業ディレクトリ
+    constraint: project-index がクローン本体を作業ディレクトリにして実行する。スクリプトはクローン本体の `origin` へプッシュし、`gh` は作業ディレクトリのリポジトリへ PR を作成する
+  - item: ラベル
+    constraint: PR にラベルを付けない（エージェントに処理させるときは利用者が手で付ける）
+  - item: 制限時間
+    constraint: 制限時間は project-index が決める（書き込みの API の応答の上限までの残りと端末の設定の `script_timeout_sec` の短い方）。スクリプトの中では待ちを設けない
+  - item: 出力
+    constraint: PR の URL は標準出力の最後の行に 1 行だけ出す。それより前の行に何を出してもよい
+flows:
+  - name: 正常系
+    summary: ブランチをプッシュして PR を作成し、PR の URL を出力する
+    setup:
+      - name: Mock
+        description: '`gh` を、受けた引数を記録して PR の URL を出力するテスト用の実行ファイルに差し替える（`PATH` の先頭に配置する）。リモートは一時フォルダのベアリポジトリ'
+      - name: クローン
+        description: '`develop` と、修正を 1 コミット持つ `project-index/conflict/20261123-103000-0a1b2c3` を持つ git のクローン'
+      - name: 環境変数
+        description: '`PROJECT_INDEX_CONFLICT_BRANCH`・`PROJECT_INDEX_TARGET_BRANCH`（`develop`）・`PROJECT_INDEX_COMMIT_MESSAGE`・`PROJECT_INDEX_SOURCE`・`PROJECT_INDEX_BASE_COMMIT`'
+    flow: |-
+      <!-- map -->
+
+      ```mermaid
+      sequenceDiagram
+        participant C as project-index
+        participant S as project-index-on-conflict.sh
+        participant R as リモート
+        participant G as GitHub
+
+        C->>S: 環境変数（ブランチ・コミットするブランチ・説明）
+        S->>R: ブランチをプッシュ
+        S->>G: PR を作成（base: develop）
+        G-->>S: PR の URL
+        S-->>C: 標準出力の最後の行に PR の URL、終了コード 0
+      ```
+
+      <!-- /map -->
+    expected:
+      - 終了コードが 0 で、標準出力の最後の行が `gh` の出した PR の URL
+      - リモートに `project-index/conflict/20261123-103000-0a1b2c3` がある
+      - '`gh pr create` が `--base develop`・`--head` にブランチの名前・`--title` にコミットの説明で呼ばれ、`--label` が無い'
+    test: test_normal
+  - name: 異常系（PR の作成に失敗・終了コード 1）
+    summary: '`gh` が失敗したら、標準エラー出力に理由を出して 0 以外で終わる'
+    setup:
+      - name: Mock
+        description: '`gh` を、標準エラー出力に `authentication required` を出して 1 で終わるテスト用の実行ファイルに差し替える'
+      - name: クローン
+        description: 正常系と同じ
+    flow: |-
+      <!-- map -->
+
+      ```mermaid
+      sequenceDiagram
+        participant C as project-index
+        participant S as project-index-on-conflict.sh
+        participant R as リモート
+        participant G as GitHub
+
+        C->>S: 環境変数
+        S->>R: ブランチをプッシュ
+        S->>G: PR を作成
+        G-->>S: 失敗（authentication required）
+        S-->>C: 標準エラー出力に理由、終了コード 1
+      ```
+
+      <!-- /map -->
+    expected:
+      - 終了コードが 0 以外で、標準エラー出力に `authentication required` がある
+      - 標準出力に `https://` で始まる行が無い
+    test: test_error_when_pr_create_failed
+tags:
+  - name: topic:直コミット
+  - name: topic:ブランチ
+  - name: topic:pr
+  - name: action:作成
+  - name: tool:project-index
+  - name: tool:github

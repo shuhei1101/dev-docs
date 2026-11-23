@@ -48,7 +48,7 @@ endpoints:
   - name: GET /sources/{source}/docs/{path}
     method: GET
     path: /sources/{source}/docs/{path}
-    summary: 指定のリビジョンの文書の値・`$ref` を解いた種類のスキーマ・メタデータ（共通のキー `metadata.commonKeys` を常に含む。文書の一覧の `commonKeys` と同じ値）・本文と本文のファイルのパス（管理用の YAML の行の文書）・`converters[]` の Markdown か変換の失敗（`conversionError`）・更新日時を返却する（IF-25）。パスは文書のファイルか本文のファイルのパスで取得し、`records` の行の文書は `?id=` に文書の ID を指して 1 つに選ぶ
+    summary: 指定のリビジョンの文書の値・`$ref` を解いた種類のスキーマ・メタデータ（共通のキー `metadata.commonKeys` を常に含む。文書の一覧の `commonKeys` と同じ値）・本文と本文のファイルのパス（管理用の YAML の行の文書）・`converters[]` の Markdown か変換の失敗（`conversionError`）・更新日時と、文書の値の最上位のキーごとのバージョン（`itemVersions`。直コミットの `expected_version` の辞書に使用する）を返却する（IF-25）。リビジョンは `?ref=` にブランチ・コミットを指す。パスは文書のファイルか本文のファイルのパスで取得し、`records` の行の文書は `?id=` に文書の ID を指して 1 つに選ぶ
     status_codes:
       - code: '200'
         condition: 返却した（変換に失敗したとき・YAML を読み込めないときも `conversionError` を入れて 200）
@@ -130,10 +130,10 @@ endpoints:
   - name: POST /sources/{source}/commits
     method: POST
     path: /sources/{source}/commits
-    summary: '`writes`（`write_docs` の操作）・`deletes`（`{id, expectedVersion}`）・`message`・`dryRun` を 1 回で受け、`write_docs`・`delete_docs` と同じ検査に合格させてから 1 つのコミットにしてプッシュし、`applied`・`results[]`（`kind`・`index`・`id`・`status`・`version`・`diff`）・`commit`（`sha`・`branch`・`retried`。`dryRun: true` は `null`）を返却する（IF-38）。書き換わる種類は、端末の設定の `sources[].direct_commit.write_api_kinds`（GET `/settings/sources` の `directCommit.writeApiKinds`）と配信元の設定の `direct_commit.kinds[]` の両方に要る'
+    summary: '`writes`（`write_docs` の操作）・`deletes`（`{id, expectedVersion}`）・`message`・`dryRun`・`baseCommit`（編集を始めたときのコミット）を 1 回で受け、`write_docs`・`delete_docs` と同じ検査に合格させてから 1 つのコミットにしてプッシュし、`applied`・`results[]`（`kind`・`index`・`id`・`status`・`version`・`diff`）・`commit`（`sha`・`branch`・`retried`。`dryRun: true` は `null`）を返却する（IF-38）。今のブランチでバージョンが合わない・文書が無い・検査に合格しないときは、`baseCommit` からのブランチ（`project-index/conflict/…`。クローンにだけ作る）に修正を残し、端末の設定の `sources[].direct_commit.on_conflict.command` を実行して、`conflict`（`branch`・`commit`・`baseCommit`・`errors[]`・`script` の `exitCode`・`timedOut`・`stdout`・`stderr`）を 200 で返却する。書き換わる種類は、端末の設定の `sources[].direct_commit.write_api_kinds`（GET `/settings/sources` の `directCommit.writeApiKinds`）と配信元の設定の `direct_commit.kinds[]` の両方に要る'
     status_codes:
       - code: '200'
-        condition: 'コミット・プッシュした、または `dryRun: true` で検査に合格した'
+        condition: 'コミット・プッシュした、衝突して修正をブランチに残した（`conflict`）、または `dryRun: true` で検査に合格した'
       - code: '400'
         condition: 要求の型の検証に失敗した
       - code: '403'
