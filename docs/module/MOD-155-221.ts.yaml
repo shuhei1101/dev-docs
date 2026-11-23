@@ -36,6 +36,9 @@ data_models:
       - name: label
         type: string
         description: '`{種類の title}: {行の名前}`'
+      - name: docPath
+        type: string | null
+        description: 文書のパス（行の `docPath`。`add` は `null`）
 functions:
   - name: toCommitEdits
     title: 直コミットの要求への変換
@@ -54,31 +57,35 @@ functions:
     returns:
       type: Edit[]
       description: '`before`・`label` を除いた並び'
-    process: 1. 変更ごとに `before`・`label` を除き、`add` は `expectedVersion` を除く（`docKind` は全ての変更で送信する）
+    process: 1. 変更ごとに `before`・`label` を除き、`add` は `expectedVersion` を除き、`update` 以外は `docPath` を除く（`docKind` は全ての変更で送信する）
     unit_tests:
       - name: test_to_commit_edits
         case: 正常
         summary: 要求の形にする
         condition: '`update`・`add`・`delete` の 3 件'
         mock: なし
-        expected: '`before`・`label` が無く、全てが `docKind` を持ち、`add` だけが `expectedVersion` を持たない'
+        expected: '`before`・`label` が無く、全てが `docKind` を持ち、`add` だけが `expectedVersion` を持たず、`update` だけが `docPath` を持つ'
 stores:
   - name: usePendingEditsStore
     title: 編集中の変更のストア
     container: features/metadata/shared/pending-edits-store.ts
     usecase: 画面で編集中の変更をまとめて直コミットする
     role: ストア
-    summary: Zustand の `persist`（`sessionStorage`、キー `dev-docs:pending-edits`、`version` 1）で保存する、配信元の ID ごとの編集中の変更
+    summary: Zustand の `persist`（`sessionStorage`、キー `dev-docs:pending-edits`、`version` 2。`version` 1 からの移行は編集中の変更を捨てる）で保存する、配信元の ID ごとの編集中の変更と編集を始めたときのコミット
     state:
       - name: bySource
         type: Record<string, PendingEdit[]>
         initial: '{}'
         description: 配信元の ID ごとの変更（追加した順）
+      - name: baseCommitBySource
+        type: Record<string, string>
+        initial: '{}'
+        description: 配信元の ID ごとの編集を始めたときのコミット（メタデータの取得の `baseCommit`）
     actions:
       - name: upsert
         title: 変更の追加
         kind: 関数
-        summary: 同じ `key` があれば置き換え、無ければ末尾に追加する。`update` で値が全て `before` と同じになったら変更を除く
+        summary: 同じ `key` があれば置き換え、無ければ末尾に追加する。配信元の最初の 1 件のときは編集を始めたときのコミットを記録する。`update` で値が全て `before` と同じになったら変更を除く
         scope: public
         args:
           - name: source
@@ -91,12 +98,18 @@ stores:
             required: true
             passing: positional
             description: 変更
+          - name: baseCommit
+            type: string
+            required: true
+            passing: positional
+            description: 変更を追加したときのメタデータの取得の `baseCommit`
         returns:
           type: void
           description: 何も返却しない
         process: |-
           1. 同じ `key` の変更を探し、あれば置き換える
           2. `update` で値が `before` と同じなら除く
+          3. 配信元の変更が 1 件以上で `baseCommitBySource[source]` が無ければ `baseCommit` を記録し、0 件になったら除く
         unit_tests:
           - name: test_upsert
             case: 正常
@@ -104,6 +117,12 @@ stores:
             condition: 同じ `key` を 2 回追加し、最後に `before` と同じ値で追加する
             mock: なし
             expected: 2 回目の後は 1 件、最後は 0 件
+          - name: test_upsert_when_base_commit
+            case: 正常
+            summary: 最初の 1 件のコミットだけを記録する
+            condition: '`aaa1111` で 1 件目、`bbb2222` で 2 件目を追加し、両方を除く'
+            mock: なし
+            expected: 2 件目の後も `baseCommitBySource` が `aaa1111`、両方を除いた後は無い
       - name: remove
         title: 変更を元に戻す
         kind: 関数
@@ -123,11 +142,11 @@ stores:
         returns:
           type: void
           description: 何も返却しない
-        process: 1. `key` の変更を除く
+        process: 1. `key` の変更を除き、配信元の変更が 0 件になったら `baseCommitBySource[source]` も除く
       - name: clear
         title: 配信元の変更の削除
         kind: 関数
-        summary: コミットした後に配信元の変更を空にする
+        summary: コミットした後と衝突してブランチに残した後に、配信元の変更と編集を始めたときのコミットを空にする
         scope: public
         args:
           - name: source
@@ -138,7 +157,48 @@ stores:
         returns:
           type: void
           description: 何も返却しない
-        process: 1. `bySource[source]` を除く
+        process: 1. `bySource[source]` と `baseCommitBySource[source]` を除く
+      - name: rebase
+        title: 編集を始めたときのコミットの記録の更新
+        kind: 関数
+        summary: 「最新の内容で続ける」で、編集を始めたときのコミットを置き換え、最新の値が変更前の値と違う `update` を取り消す
+        scope: public
+        args:
+          - name: source
+            type: string
+            required: true
+            passing: positional
+            description: 配信元の ID
+          - name: baseCommit
+            type: string
+            required: true
+            passing: positional
+            description: 既定のブランチの先頭で取得した `baseCommit`
+          - name: latest
+            type: Record<string, Record<string, Record<string, string | string[]>>>
+            required: true
+            passing: positional
+            description: 再取得したメタデータの種類・行の ID ごとの `values`
+        returns:
+          type: PendingEdit[]
+          description: 取り消した変更
+        process: |-
+          1. `update` の変更ごとに、`latest[変更の kind][変更の docId]` の列の値を `before` と比べ、どれかが違う（行が無いものも含む）変更を `bySource[source]` から除く
+          2. 変更が残っていれば `baseCommitBySource[source]` を `baseCommit` にし、0 件になったら除く
+          3. 除いた変更を返却する
+        unit_tests:
+          - name: test_rebase
+            case: 正常
+            summary: 変更を残してコミットを置き換える
+            condition: '`aaa1111` で 2 件を追加し、`ccc3333` で更新する'
+            mock: なし
+            expected: 変更が 2 件のままで、`baseCommitBySource` が `ccc3333`
+          - name: test_rebase_when_latest_changed
+            case: 正常
+            summary: 最新の値が変わった変更を取り消す
+            condition: '`aaa1111` でタグの `update`（`before` が `[topic:a]`）と用語の `add` を追加し、`latest` のその行のタグが `[topic:x]` で `ccc3333` で更新する'
+            mock: なし
+            expected: 戻り値がタグの変更 1 件で、残る変更が `add` 1 件、`baseCommitBySource` が `ccc3333`
 refs:
   - to: SCR-155-4
     type: requires

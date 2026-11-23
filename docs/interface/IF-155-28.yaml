@@ -14,12 +14,20 @@ callers:
   - SC-155-14#scenarios[正常シナリオ]
   - SC-155-14#scenarios[異常シナリオ（種類を配信していない）]
   - SC-155-15#scenarios[正常シナリオ]
+  - SC-155-15#scenarios[正常シナリオ（衝突したら修正をブランチに残す）]
 request:
   - name: source
     type: str
     required: true
     location: path
     description: 配信元の ID
+  - name: ref
+    type: str | None
+    required: false
+    location: query
+    default: なし（既定のブランチ）
+    description: 読むリビジョン。画面は編集中の変更があるとき、記録した `baseCommit` を指定する
+    constraints: 7〜40 桁の 16 進数
 response:
   - name: source
     type: str
@@ -79,6 +87,10 @@ response:
   - name: kinds[].columns[].type
     type: Literal['text', 'list']
     description: 列の値の形。`list` は配列のキー（別名・タグ・適用するパス・ツール）
+  - name: baseCommit
+    type: str | None
+    description: 読んだ内容のコミット。`ref` を省いたときは既定のブランチの先頭のコミット（project-index のリビジョンの一覧の `branches[]` の `defaultRef` の行の `commit`）、指定したときは `ref`。Git 管理外の配信元は `null`
+    notes: 画面は、編集中の変更の最初の 1 件を追加したときにこの値を記録し、直コミットの `baseCommit` に送信する
 response_example: |-
   ```json
   {"source": "sample", "branch": "develop", "kinds": [{"id": "terms", "title": "用語集", "served": true, "hint": null, "columns": [{"key": "name", "label": "用語", "editable": true}, {"key": "aliases", "label": "別名", "editable": true}, {"key": "description", "label": "説明", "editable": true}], "canAdd": true, "canDelete": true, "createKind": "terms", "rows": [{"id": "source", "docKind": "terms", "docPath": "glossary.yaml", "version": "a1b2c3", "editable": true, "values": {"name": "配信元", "aliases": "source", "description": "project-index.yaml を持つフォルダ 1 つ"}}]}]}
@@ -95,7 +107,7 @@ status_codes:
 error_format: RFC 9457 の `application/problem+json`（`type`・`title`・`status`・`detail`）。拡張メンバーは camelCase（`nextSteps`・`projectIndex`）
 constraints:
   - item: project-index への問い合わせ
-    constraint: 配信元の設定（`GET /sources/{source}/config`）・文書の一覧（`GET /sources/{source}/docs?values=true&common_keys=true`）・リビジョンの一覧（`GET /sources/{source}/refs`）・端末の設定（`GET /settings/sources`）を同時に問い合わせる。文書の一覧のリビジョンは省き、既定のリビジョンを読む
+    constraint: 配信元の設定（`GET /sources/{source}/config`）・文書の一覧（`GET /sources/{source}/docs?values=true&common_keys=true`）・リビジョンの一覧（`GET /sources/{source}/refs`）・端末の設定（`GET /settings/sources`）を問い合わせる。`ref` を省いたときは、先にリビジョンの一覧で既定のブランチの先頭のコミットを取得し、文書の一覧はそのコミットをリビジョンにして問い合わせる（`baseCommit` と返却する内容を同じコミットにする）。`ref` を指定したときはそのコミットをリビジョンにして、リビジョンの一覧と同時に問い合わせる。配信元の設定と端末の設定は、どちらのときもそれらと同時に問い合わせる
   - item: 種類ごとの行と列
     constraint: '`terms`: `commonKeys.alias_type` が `term` の文書。列は用語（`name`）・別名（`aliases`）・説明（`description`）。`aliases`: `commonKeys.alias_type` が `term` 以外の文書。列は名前（`name`）・別名（`aliases`）・文書（`path`。修正できない）。`tags`: 全ての文書。列は文書（`path`。修正できない）・タグ（`tags`）。`rules`: 種類 `rule_index` の文書。列は規約（`rule`）・適用するパス（`paths`）・ツール（`tools`）・引数（`args`。オブジェクトのため修正できない）。`config`: 配信元の設定の `documents[]` の行。列は種類（`id`）・パス（`paths`）・行（`records`）・エイリアスの種類（`alias_type`）・直コミット（端末の設定の `write_api_kinds` にあれば ✓）で、修正できない。`files`: 配信元の設定の行が `records` と `body_file` を持つ種類の文書。列は行（`records`。種類の ID）・ファイル（`path`。修正できない）・概要（`description`）'
     notes: 修正できる列を種類ごとのキーに絞り、規約の本文やテンプレートを画面から書き換えない（要件の直コミットの対象）

@@ -40,6 +40,22 @@ def _state(source: DirectSource) -> tuple[str, str, str]:
     )
 
 
+def _base(env: ServerEnv) -> str:
+    """メタデータの取得の `baseCommit`（編集を始めたときのコミット）。"""
+    return str(env.client.get(METADATA_URL).json()["baseCommit"])
+
+
+def _push_other(source: DirectSource, workdir: Path, path: str, value: dict[str, Any]) -> str:
+    """ほかの変更として、リモートの develop の文書を書き換えるコミットをプッシュし、そのコミットを返却する。"""
+    other = workdir / "other"
+    if not other.exists():
+        _git(workdir, "clone", "-q", "-b", "develop", str(source.bare), str(other))
+    (other / path).write_text(json.dumps(value, ensure_ascii=False), encoding="utf-8")
+    _git(other, "commit", "-qam", "other")
+    _git(other, "push", "-q", "origin", "develop")
+    return _git(source.bare, "rev-parse", "develop")
+
+
 def _row(env: ServerEnv, kind_id: str, row_id: str) -> dict[str, Any]:
     """メタデータの取得から、種類の行 1 つを取り出す。"""
     body = env.client.get(METADATA_URL).json()
@@ -57,6 +73,7 @@ def _tag_edit(env: ServerEnv, tags: list[str]) -> dict[str, Any]:
         "docId": "n1",
         "docKind": row["docKind"],
         "expectedVersion": row["version"],
+        "docPath": row["docPath"],
         "values": {"tags": tags},
     }
 
@@ -98,7 +115,7 @@ def test_normal(write_index: RealIndex, make_server: Callable[..., ServerEnv]) -
     source = metadata_source(write_index)
     env = make_server(write_index)
     before = _git(source.bare, "rev-parse", "develop")
-    body = {"edits": _edits(env), "message": MESSAGE}
+    body = {"edits": _edits(env), "message": MESSAGE, "baseCommit": _base(env)}
     # 実行
     response = env.client.post(URL, json=body, headers=SAME_ORIGIN)
     # 検証
@@ -112,6 +129,7 @@ def test_normal(write_index: RealIndex, make_server: Callable[..., ServerEnv]) -
         ("terms:old-name:delete", "deleted"),
     ]
     assert data["commit"]["sha"] == after
+    assert data["conflict"] is None
     assert _git(source.bare, "rev-parse", f"{after}~1") == before
     assert _git(source.bare, "log", "-1", "--format=%s", "develop") == MESSAGE
     assert _remote_file(source, "notes/n1.yaml")["tags"] == ["topic:a", "topic:b"]
@@ -125,7 +143,7 @@ def test_normal_when_dry_run(write_index: RealIndex, make_server: Callable[..., 
     # 準備
     source = metadata_source(write_index)
     env = make_server(write_index)
-    body = {"edits": _edits(env), "dryRun": True}
+    body = {"edits": _edits(env), "dryRun": True, "baseCommit": _base(env)}
     before = _state(source)
     # 実行
     response = env.client.post(URL, json=body, headers=SAME_ORIGIN)
@@ -148,7 +166,7 @@ def test_error_when_cross_origin(
     # 準備
     source = metadata_source(write_index)
     env = make_server(write_index)
-    body = {"edits": _edits(env), "message": MESSAGE}
+    body = {"edits": _edits(env), "message": MESSAGE, "baseCommit": _base(env)}
     before = _state(source)
     # 実行
     response = env.client.post(URL, json=body, headers={"Origin": "http://127.0.0.1:9999"})
@@ -171,15 +189,22 @@ def test_error_when_body_invalid(
         "docId": "n1",
         "docKind": "note",
         "expectedVersion": "v1",
+        "docPath": "notes/n1.yaml",
         "values": {"description": "説明"},
     }
     # 実行
     invalid_key = env.client.post(
-        URL, json={"edits": [edit], "message": MESSAGE}, headers=SAME_ORIGIN
+        URL,
+        json={"edits": [edit], "message": MESSAGE, "baseCommit": "0a1b2c3"},
+        headers=SAME_ORIGIN,
     )
     empty_message = env.client.post(
         URL,
-        json={"edits": [{**edit, "values": {"tags": ["topic:a"]}}], "message": ""},
+        json={
+            "edits": [{**edit, "values": {"tags": ["topic:a"]}}],
+            "message": "",
+            "baseCommit": "0a1b2c3",
+        },
         headers=SAME_ORIGIN,
     )
     # 検証
@@ -212,7 +237,11 @@ def test_error_when_validation_failed(
     ]
     before = _state(source)
     # 実行
-    response = env.client.post(URL, json={"edits": edits, "message": MESSAGE}, headers=SAME_ORIGIN)
+    response = env.client.post(
+        URL,
+        json={"edits": edits, "message": MESSAGE, "baseCommit": _base(env)},
+        headers=SAME_ORIGIN,
+    )
     # 検証
     data = response.json()
     assert response.status_code == 422, data
@@ -223,34 +252,27 @@ def test_error_when_validation_failed(
     assert _state(source) == before
 
 
-def test_error_when_version_mismatched(
-    write_index: RealIndex,
-    make_server: Callable[..., ServerEnv],
-    tmp_path: Path,
+def test_error_when_base_commit_unusable(
+    write_index: RealIndex, make_server: Callable[..., ServerEnv]
 ) -> None:
-    """取得した後に他の変更があった文書は 409 で、今のバージョンを返却する（異常系）。"""
+    """編集を始めたときのコミットがクローンに無いときは 409 で断り、何もコミットしない（異常系）。"""
     # 準備
     source = metadata_source(write_index)
     env = make_server(write_index)
     edit = _tag_edit(env, ["topic:a", "topic:b"])
-    other = tmp_path / "other"
-    _git(tmp_path, "clone", "-q", "-b", "develop", str(source.bare), str(other))
-    (other / "notes" / "n1.yaml").write_text(
-        json.dumps({"id": "n1", "name": "メモ", "tags": ["topic:a"], "description": "他の変更"}),
-        encoding="utf-8",
-    )
-    _git(other, "commit", "-qam", "other")
-    _git(other, "push", "-q", "origin", "develop")
-    pushed = _git(source.bare, "rev-parse", "develop")
+    before = _state(source)
     # 実行
-    response = env.client.post(URL, json={"edits": [edit], "message": MESSAGE}, headers=SAME_ORIGIN)
+    response = env.client.post(
+        URL,
+        json={"edits": [edit], "message": MESSAGE, "baseCommit": "deadbeefdeadbeef"},
+        headers=SAME_ORIGIN,
+    )
     # 検証
     data = response.json()
     assert response.status_code == 409, data
-    [error] = [item for item in data["errors"] if item.get("key") == "tags:n1:update"]
-    assert error["current"]
-    assert error["current"] != edit["expectedVersion"]
-    assert _git(source.bare, "rev-parse", "develop") == pushed
+    assert data["title"] == "BaseCommitUnusableError"
+    assert data["errors"] == []
+    assert _state(source) == before
 
 
 def test_error_when_direct_commit_not_permitted(
@@ -263,7 +285,11 @@ def test_error_when_direct_commit_not_permitted(
     edit = _tag_edit(env, ["topic:a", "topic:b"])
     before = _state(source)
     # 実行
-    response = env.client.post(URL, json={"edits": [edit], "message": MESSAGE}, headers=SAME_ORIGIN)
+    response = env.client.post(
+        URL,
+        json={"edits": [edit], "message": MESSAGE, "baseCommit": _base(env)},
+        headers=SAME_ORIGIN,
+    )
     # 検証
     data = response.json()
     assert response.status_code == 403, data
@@ -283,7 +309,11 @@ def test_error_when_remote_unreachable(
     edit = _tag_edit(env, ["topic:a", "topic:b"])
     _git(source.repo, "remote", "set-url", "origin", str(tmp_path / "missing.git"))
     # 実行
-    response = env.client.post(URL, json={"edits": [edit], "message": MESSAGE}, headers=SAME_ORIGIN)
+    response = env.client.post(
+        URL,
+        json={"edits": [edit], "message": MESSAGE, "baseCommit": _base(env)},
+        headers=SAME_ORIGIN,
+    )
     # 検証
     data = response.json()
     assert response.status_code == 502, data
@@ -312,11 +342,19 @@ def test_error_when_write_timed_out(
         "docId": "n1",
         "docKind": "note",
         "expectedVersion": "v1",
+        "docPath": "notes/n1.yaml",
         "values": {"tags": ["topic:a"]},
     }
+    mock_index.queued[("GET", "/sources/sample/docs/notes/n1.yaml")] = [
+        (200, {"path": "notes/n1.yaml", "itemVersions": {"tags": "t1"}})
+    ]
     started = time.monotonic()
     # 実行
-    response = env.client.post(URL, json={"edits": [edit], "message": MESSAGE}, headers=SAME_ORIGIN)
+    response = env.client.post(
+        URL,
+        json={"edits": [edit], "message": MESSAGE, "baseCommit": "0a1b2c3"},
+        headers=SAME_ORIGIN,
+    )
     # 検証
     elapsed = time.monotonic() - started
     data = response.json()
@@ -345,10 +383,15 @@ def test_normal_when_tags_mapped(
         "docId": "r1-rule",
         "docKind": row["docKind"],
         "expectedVersion": row["version"],
+        "docPath": row["docPath"],
         "values": {"tags": ["topic:a", "topic:b"]},
     }
     # 実行
-    response = env.client.post(URL, json={"edits": [edit], "message": MESSAGE}, headers=SAME_ORIGIN)
+    response = env.client.post(
+        URL,
+        json={"edits": [edit], "message": MESSAGE, "baseCommit": _base(env)},
+        headers=SAME_ORIGIN,
+    )
     # 検証
     data = response.json()
     written = _remote_file(source, "docs/rule/r1.yaml")
@@ -356,3 +399,162 @@ def test_normal_when_tags_mapped(
     assert data["applied"] is True
     assert written["tags"] == [{"name": "topic:a", "main": True}, {"name": "topic:b"}]
     assert sorted(written) == ["id", "name", "tags"]
+
+
+# 衝突したときのスクリプトの偽物: 受けた環境変数を記録し、標準出力の最後の行に PR の URL を出す
+CONFLICT_SCRIPT = """#!/bin/sh
+env | grep '^PROJECT_INDEX_' | sort > "$(dirname "$0")/received.env"
+echo "pushed"
+echo "https://github.com/o/r/pull/9"
+"""
+# 失敗する衝突したときのスクリプトの偽物
+FAILING_SCRIPT = """#!/bin/sh
+echo "gh: authentication required" >&2
+exit 1
+"""
+
+
+def _script(workdir: Path, text: str) -> list[str]:
+    """衝突したときのスクリプトの偽物を書き込み、`on_conflict.command` を返却する。"""
+    path = workdir / "on-conflict.sh"
+    path.write_text(text, encoding="utf-8")
+    path.chmod(0o755)
+    return ["/bin/sh", str(path)]
+
+
+def _n1(**values: Any) -> dict[str, Any]:
+    """文書 n1 の値。"""
+    return {"id": "n1", "name": "メモ", "tags": ["topic:a"], **values}
+
+
+def test_normal_when_other_item_changed(
+    write_index: RealIndex, make_server: Callable[..., ServerEnv], tmp_path: Path
+) -> None:
+    """同じ文書の別の項目が変わっていても、修正した項目が重ならなければコミットする（正常系）。"""
+    # 準備
+    source = metadata_source(write_index)
+    env = make_server(write_index)
+    base = _base(env)
+    edit = _tag_edit(env, ["topic:a", "topic:b"])
+    pushed = _push_other(source, tmp_path, "notes/n1.yaml", _n1(description="ほかの変更"))
+    # 実行
+    response = env.client.post(
+        URL, json={"edits": [edit], "message": MESSAGE, "baseCommit": base}, headers=SAME_ORIGIN
+    )
+    # 検証
+    data = response.json()
+    assert response.status_code == 200, data
+    assert data["applied"] is True
+    assert data["conflict"] is None
+    assert _git(source.bare, "rev-parse", "develop~1") == pushed
+    written = _remote_file(source, "notes/n1.yaml")
+    assert written["description"] == "ほかの変更"
+    assert written["tags"] == ["topic:a", "topic:b"]
+
+
+def test_normal_when_conflict_kept_on_branch(
+    tmp_path: Path, write_index: RealIndex, make_server: Callable[..., ServerEnv]
+) -> None:
+    """同じ項目が変わっていたら、修正をブランチに残してスクリプトの PR の URL を返却する（正常系）。"""
+    # 準備
+    source = metadata_source(write_index, on_conflict=_script(tmp_path, CONFLICT_SCRIPT))
+    env = make_server(write_index)
+    base = _base(env)
+    edit = _tag_edit(env, ["topic:a", "topic:b"])
+    pushed = _push_other(source, tmp_path, "notes/n1.yaml", _n1(tags=["topic:x"]))
+    # 実行
+    response = env.client.post(
+        URL, json={"edits": [edit], "message": MESSAGE, "baseCommit": base}, headers=SAME_ORIGIN
+    )
+    # 検証
+    data = response.json()
+    assert response.status_code == 200, data
+    assert data["applied"] is False
+    conflict = data["conflict"]
+    assert conflict["branch"].startswith("project-index/conflict/")
+    assert conflict["baseCommit"].startswith(base)
+    assert [reason["key"] for reason in conflict["reasons"]] == ["tags:n1:update"]
+    assert conflict["script"]["exitCode"] == 0
+    assert conflict["script"]["prUrl"] == "https://github.com/o/r/pull/9"
+    assert _git(source.bare, "rev-parse", "develop") == pushed
+    assert _git(source.repo, "rev-parse", f"{conflict['branch']}~1").startswith(base)
+    received = (tmp_path / "received.env").read_text(encoding="utf-8")
+    assert f"PROJECT_INDEX_CONFLICT_BRANCH={conflict['branch']}" in received
+    assert f"PROJECT_INDEX_COMMIT_MESSAGE={MESSAGE}" in received
+
+
+def test_normal_when_conflict_script_not_configured(
+    tmp_path: Path, write_index: RealIndex, make_server: Callable[..., ServerEnv]
+) -> None:
+    """衝突したときのスクリプトの指定が無いときは、ブランチだけを残して script を null にする（正常系）。"""
+    # 準備
+    source = metadata_source(write_index)
+    env = make_server(write_index)
+    base = _base(env)
+    edit = _tag_edit(env, ["topic:a", "topic:b"])
+    pushed = _push_other(source, tmp_path, "notes/n1.yaml", _n1(tags=["topic:x"]))
+    # 実行
+    response = env.client.post(
+        URL, json={"edits": [edit], "message": MESSAGE, "baseCommit": base}, headers=SAME_ORIGIN
+    )
+    # 検証
+    data = response.json()
+    assert response.status_code == 200, data
+    assert data["conflict"]["branch"].startswith("project-index/conflict/")
+    assert data["conflict"]["script"] is None
+    assert _git(source.bare, "rev-parse", "develop") == pushed
+
+
+def test_normal_when_conflict_script_failed(
+    tmp_path: Path, write_index: RealIndex, make_server: Callable[..., ServerEnv]
+) -> None:
+    """衝突したときのスクリプトが失敗しても、ブランチを残して終了コードと標準エラー出力を返却する（正常系）。"""
+    # 準備
+    source = metadata_source(write_index, on_conflict=_script(tmp_path, FAILING_SCRIPT))
+    env = make_server(write_index)
+    base = _base(env)
+    edit = _tag_edit(env, ["topic:a", "topic:b"])
+    _push_other(source, tmp_path, "notes/n1.yaml", _n1(tags=["topic:x"]))
+    # 実行
+    response = env.client.post(
+        URL, json={"edits": [edit], "message": MESSAGE, "baseCommit": base}, headers=SAME_ORIGIN
+    )
+    # 検証
+    data = response.json()
+    script = data["conflict"]["script"]
+    assert response.status_code == 200, data
+    assert data["conflict"]["branch"].startswith("project-index/conflict/")
+    assert script["exitCode"] == 1
+    assert script["prUrl"] is None
+    assert "authentication required" in script["stderr"]
+
+
+def test_normal_when_dry_run_conflicted(
+    tmp_path: Path, write_index: RealIndex, make_server: Callable[..., ServerEnv]
+) -> None:
+    """差分確認で衝突するときは、ブランチを作らずに断る理由を返却する（正常系）。"""
+    # 準備
+    source = metadata_source(write_index, on_conflict=_script(tmp_path, CONFLICT_SCRIPT))
+    env = make_server(write_index)
+    base = _base(env)
+    edit = _tag_edit(env, ["topic:a", "topic:b"])
+    # 差分確認はリモートを取得しないため、ほかの変更は project-index のクローンに入れる
+    other = env.client.post(
+        URL,
+        json={"edits": [_tag_edit(env, ["topic:x"])], "message": MESSAGE, "baseCommit": base},
+        headers=SAME_ORIGIN,
+    )
+    assert other.status_code == 200, other.json()
+    branches = _git(source.repo, "branch", "--list", "project-index/conflict/*")
+    # 実行
+    response = env.client.post(
+        URL, json={"edits": [edit], "dryRun": True, "baseCommit": base}, headers=SAME_ORIGIN
+    )
+    # 検証
+    data = response.json()
+    assert response.status_code == 200, data
+    assert data["conflict"]["branch"] is None
+    assert data["conflict"]["script"] is None
+    assert [reason["key"] for reason in data["conflict"]["reasons"]] == ["tags:n1:update"]
+    assert _git(source.repo, "branch", "--list", "project-index/conflict/*") == branches
+    assert not (tmp_path / "received.env").exists()

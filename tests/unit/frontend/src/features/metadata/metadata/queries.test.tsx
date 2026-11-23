@@ -4,7 +4,7 @@ import { HttpResponse, http } from "msw";
 import { beforeEach, expect, test, vi } from "vitest";
 import type { ReactNode } from "react";
 
-import { useCommitEdits } from "@/features/metadata/metadata/queries";
+import { useCommitEdits, useRestartFromLatest } from "@/features/metadata/metadata/queries";
 import { type PendingEdit, usePendingEditsStore } from "@/features/metadata/shared/pending-edits-store";
 import { AppError } from "@/shared/core/app-error";
 import { PROBLEM_HEADERS, metadataResponse, problem } from "@tests/helpers/fixtures";
@@ -18,6 +18,7 @@ const edit = (docId: string): PendingEdit => ({
   docId,
   docKind: "note",
   expectedVersion: `v-${docId}`,
+  docPath: `notes/${docId}.yaml`,
   values: { tags: ["topic:b"] },
   before: { tags: ["topic:a"] },
   label: `タグ: ${docId}`,
@@ -41,7 +42,10 @@ const renderCommit = () => {
 };
 
 beforeEach(() => {
-  usePendingEditsStore.setState({ bySource: { sample: [edit("n1"), edit("n2")] } });
+  usePendingEditsStore.setState({
+    bySource: { sample: [edit("n1"), edit("n2")] },
+    baseCommitBySource: { sample: "aaa1111" },
+  });
 });
 
 test("test_use_commit_edits", async () => {
@@ -90,4 +94,57 @@ test("test_use_commit_edits_when_rejected", async () => {
 
   await waitFor(() => expect(result.current.error).toBeInstanceOf(AppError));
   expect(usePendingEditsStore.getState().bySource.sample).toHaveLength(2);
+});
+
+test("test_use_commit_edits_when_conflict", async () => {
+  const conflict = {
+    branch: "project-index/conflict/20261123-103000-aaa1111",
+    baseCommit: "aaa1111",
+    reasons: [{ key: "tags:n1:update", reason: "tags が変わっています" }],
+    script: { exitCode: 0, timedOut: false, prUrl: "https://github.com/o/r/pull/9", stderr: "" },
+  };
+  const sent: unknown[] = [];
+  server.use(
+    http.post("/_api/sources/sample/commits", async ({ request }) => {
+      sent.push(await request.json());
+      return HttpResponse.json({ applied: false, results: [], commit: null, conflict });
+    }),
+  );
+  const { result } = renderCommit();
+
+  const response = await result.current.mutateAsync({ dryRun: false, message: "m" });
+
+  expect(sent[0]).toMatchObject({ baseCommit: "aaa1111" });
+  expect(usePendingEditsStore.getState().bySource.sample ?? []).toHaveLength(0);
+  expect(response.conflict).toEqual(conflict);
+});
+
+test("test_use_restart_from_latest", async () => {
+  const urls: string[] = [];
+  server.use(
+    http.get("/_api/sources/sample/metadata", ({ request }) => {
+      urls.push(request.url);
+      const latest = metadataResponse();
+      return HttpResponse.json({
+        ...latest,
+        baseCommit: "ccc3333",
+        kinds: latest.kinds.map((kind) =>
+          kind.id === "tags"
+            ? { ...kind, rows: [{ ...(kind.rows[0] as object), id: "n1", values: { tags: ["topic:a"] } }, { ...(kind.rows[0] as object), id: "n2", values: { tags: ["topic:a"] } }] }
+            : kind,
+        ),
+      });
+    }),
+  );
+  const queryClient = createTestQueryClient();
+  const wrapper = ({ children }: { children: ReactNode }) => (
+    <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+  );
+  const { result } = renderHook(() => useRestartFromLatest("sample"), { wrapper });
+
+  await result.current.mutateAsync();
+
+  expect(new URL(urls[0] ?? "", "http://localhost").searchParams.has("ref")).toBe(false);
+  expect(usePendingEditsStore.getState().bySource.sample).toHaveLength(2);
+  expect(usePendingEditsStore.getState().baseCommitBySource.sample).toBe("ccc3333");
 });

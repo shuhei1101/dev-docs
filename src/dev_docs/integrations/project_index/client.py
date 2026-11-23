@@ -260,6 +260,19 @@ class ProjectIndexClient:
         value = await self.fetch_document_list(source, ref=ref, values=values)
         return parse_document_list(source, value, record_kinds=record_kinds)
 
+    async def item_versions(
+        self, source: str, path: str, *, ref: str, document_id: str
+    ) -> dict[str, str]:
+        """指定のリビジョンの文書の、最上位のキーごとのバージョンを返却する。"""
+        encoded = "/".join(_seg(part) for part in path.split("/"))
+        response = await self.request(
+            "GET",
+            f"/sources/{_seg(source)}/docs/{encoded}",
+            params={"ref": ref, "id": document_id},
+        )
+        versions = response.json().get("itemVersions") or {}
+        return {str(key): str(value) for key, value in versions.items()}
+
     async def document(
         self,
         source: str,

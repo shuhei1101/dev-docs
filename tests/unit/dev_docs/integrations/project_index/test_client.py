@@ -668,3 +668,65 @@ def test_commit_documents_when_timed_out(monkeypatch: pytest.MonkeyPatch) -> Non
     # 実行
     with pytest.raises(ProjectIndexTimeoutError):
         asyncio.run(client.commit_documents("sample", {"writes": [], "deletes": []}))
+
+
+def test_commit_documents_when_conflict() -> None:
+    """衝突の応答をそのまま返却する（正常系）。"""
+    # 準備
+    requests: list[httpx.Request] = []
+    conflict = {
+        "branch": "project-index/conflict/20261123-103000-0a1b2c3",
+        "commit": "1b2c3d4",
+        "baseCommit": "0a1b2c3" * 5 + "0a1b2",
+        "errors": [{"path": "writes[0]", "reason": "tags が変わっています"}],
+        "script": None,
+    }
+    reply = {"applied": False, "results": [], "commit": None, "conflict": conflict}
+
+    def record(request: httpx.Request) -> httpx.Response:
+        requests.append(request)
+        return httpx.Response(200, json=reply)
+
+    client = _client(record)
+    body = {"writes": [], "deletes": [], "message": "m", "dryRun": False, "baseCommit": "0a1b2c3"}
+    # 実行
+    result = asyncio.run(client.commit_documents("sample", body))
+    # 検証
+    assert json.loads(requests[0].content)["baseCommit"] == "0a1b2c3"
+    assert result == (200, reply)
+
+
+def test_item_versions(
+    fake_index: FakeIndex, make_client: Callable[..., ProjectIndexClient]
+) -> None:
+    """項目ごとのバージョンを返却する（正常系）。"""
+    # 準備
+    fake_index.responses[("GET", "/sources/sample/docs/notes/n1.yaml")] = (
+        200,
+        {"path": "notes/n1.yaml", "itemVersions": {"tags": "a1", "description": "b2"}},
+    )
+    # 実行
+    versions = asyncio.run(
+        make_client().item_versions("sample", "notes/n1.yaml", ref="0a1b2c3", document_id="n1")
+    )
+    # 検証
+    params = fake_index.requests[-1].url.params
+    assert (params.get("ref"), params.get("id")) == ("0a1b2c3", "n1")
+    assert versions == {"tags": "a1", "description": "b2"}
+
+
+def test_item_versions_when_missing(
+    fake_index: FakeIndex, make_client: Callable[..., ProjectIndexClient]
+) -> None:
+    """`itemVersions` が無い応答（正常系）。"""
+    # 準備
+    fake_index.responses[("GET", "/sources/sample/docs/notes/n1.yaml")] = (
+        200,
+        {"path": "notes/n1.yaml"},
+    )
+    # 実行
+    versions = asyncio.run(
+        make_client().item_versions("sample", "notes/n1.yaml", ref="0a1b2c3", document_id="n1")
+    )
+    # 検証
+    assert versions == {}

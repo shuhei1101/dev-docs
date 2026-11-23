@@ -12,9 +12,13 @@ exclusivity: dev-docs は排他しない。直コミットどうしの排他は 
 callers:
   - SC-155-15#scenarios[正常シナリオ]
   - SC-155-15#scenarios[異常シナリオ（検査に合格しない）]
-  - SC-155-15#scenarios[異常シナリオ（他の変更と食い違う）]
   - SC-155-15#scenarios[異常シナリオ（直コミットを許可していない）]
   - SC-155-15#scenarios[異常シナリオ（リモートに接続できない）]
+  - SC-155-15#scenarios[正常シナリオ（同じ文書の別の項目が変わっている）]
+  - SC-155-15#scenarios[正常シナリオ（衝突したら修正をブランチに残す）]
+  - SC-155-15#scenarios[正常シナリオ（衝突してスクリプトの指定が無い）]
+  - SC-155-15#scenarios[異常シナリオ（衝突してスクリプトが失敗する）]
+  - SC-155-15#scenarios[異常シナリオ（編集を始めたときのコミットが使用できない）]
 request:
   - name: source
     type: str
@@ -88,6 +92,20 @@ request:
     location: header
     default: なし（`Sec-Fetch-Site` で判定する）
     description: 要求元のオリジン
+  - name: baseCommit
+    type: str
+    required: true
+    location: body
+    description: 編集を始めたときの既定のブランチのコミット（メタデータの取得の `baseCommit`）
+    constraints: 7〜40 桁の 16 進数
+    notes: 画面は配信元ごとに、編集中の変更の最初の 1 件を追加したときの値を 1 つ記録して送信する
+  - name: edits[].docPath
+    type: str | None
+    required: false
+    location: body
+    default: なし（`add`・`delete` は使用しない）
+    description: 対象の文書のパス（メタデータの取得の `rows[].docPath`）
+    notes: '`update` のときは必須。編集を始めたときの項目ごとのバージョンを取得する文書の取得に使用する'
 request_example: |-
   ```json
   {"edits": [{"key": "tags:n1:update", "kind": "tags", "op": "update", "docId": "n1", "docKind": "note", "expectedVersion": "c3d4e5", "values": {"tags": ["topic:a", "topic:b"]}}, {"key": "terms:kind:add", "kind": "terms", "op": "add", "docId": "kind", "docKind": "terms", "values": {"name": "種類", "description": "文書の行の ID"}}, {"key": "terms:old-name:delete", "kind": "terms", "op": "delete", "docId": "old-name", "docKind": "terms", "expectedVersion": "b2c3d4"}], "message": "用語とタグを追加する"}
@@ -115,13 +133,43 @@ response:
   - name: commit.branch
     type: str
     description: コミットしたブランチ
+  - name: conflict
+    type: Conflict | None
+    description: '衝突して修正をブランチに残したとき（`dryRun: true` は残すことになるとき）の結果。衝突しなかったときは `null`'
+  - name: conflict.branch
+    type: str | None
+    description: '修正を残したブランチの名前（`project-index/conflict/{YYYYMMDD-HHMMSS}-{コミットの 7 桁}`。`dryRun: true` は `null`）'
+  - name: conflict.baseCommit
+    type: str
+    description: ブランチの起点にした編集を始めたときのコミット（40 桁）
+  - name: conflict.reasons[].key
+    type: str | None
+    description: 今のブランチで断られた変更の識別子（要求の `edits[].key`）。本文全体の理由は `null`
+  - name: conflict.reasons[].reason
+    type: str
+    description: 今のブランチで断られた理由
+  - name: conflict.script
+    type: ConflictScript | None
+    description: '衝突したときのスクリプトの結果。端末の設定に `on_conflict` が無いときと `dryRun: true` のときは `null`'
+  - name: conflict.script.exitCode
+    type: int | None
+    description: 終了コード（制限時間で止めたときは `null`）
+  - name: conflict.script.timedOut
+    type: bool
+    description: 制限時間で止めたか
+  - name: conflict.script.prUrl
+    type: str | None
+    description: 標準出力の空でない最後の行が `https://` で始まるときのその行（PR の URL）。無ければ `null`
+  - name: conflict.script.stderr
+    type: str
+    description: 標準エラー出力の末尾（project-index が返却したまま）
 response_example: |-
   ```json
   {"applied": true, "results": [{"key": "tags:n1:update", "status": "updated", "version": "d4e5f6", "diff": "-   - topic:a\n+   - topic:a\n+   - topic:b"}], "commit": {"sha": "0a1b2c3", "branch": "develop"}}
   ```
 status_codes:
   - code: '200'
-    condition: 'コミット・プッシュした、または `dryRun: true` で検査に合格した'
+    condition: 'コミット・プッシュした、衝突して修正をブランチに残した（`conflict` を入れる）、または `dryRun: true` で検査に合格した'
   - code: '400'
     condition: '本文の型の検証に通らない（`edits` が空・`key` の重複・`op` と `kind` の組み合わせ・必須の欠け・修正できないキー・元のキーへ戻せない列・`dryRun: false` で `message` が空）'
     notes: project-index へ送信しない。`errors[]` に `{key, path, reason}`（`key` は該当する変更、本文全体の違反は `null`）
@@ -132,8 +180,8 @@ status_codes:
     condition: 配信元が無い・配信していない、修正・削除する文書が無い（project-index の 404）
     notes: 文書が無いときは該当する変更の `errors[]` に入れる
   - code: '409'
-    condition: project-index が文書のバージョンが合わない・ワークツリーに未コミットの変更がある・プッシュが断られたなどと返却した
-    notes: '`VersionMismatchError` は該当する変更ごとに `errors[]` に `{key, reason, current}`（`current` は今のバージョン）。それ以外は `errors[]` を持たず、`detail` に project-index の理由'
+    condition: project-index が編集を始めたときのコミットが起点に使用できない（`BaseCommitUnusableError`）・ワークツリーに未コミットの変更がある・プッシュが断られたなどと返却した
+    notes: '`BaseCommitUnusableError` は `title` を `BaseCommitUnusableError` にし、`detail` に project-index の理由（`not_found`・`not_ancestor`）を入れる。どれも `errors[]` を持たない。`baseCommit` を送信するため、文書のバージョンが合わないときは衝突として 200 で返る'
   - code: '422'
     condition: project-index の検査に合格しない（`ValidationFailedError`）
     notes: project-index の `errors[]` の `writes`・`deletes` の別と添字を変更の `key` に対応させ、`errors[]` に `{key, path, reason}` で並べる
@@ -156,7 +204,7 @@ constraints:
   - item: 書き込みと削除への変換
     constraint: '列のキーは共通のキー（IF-155-28 の制約「列と文書のキーの対応」）のまま、値も画面が送信したまま書き込みの操作に入れる。project-index の書き込みの API が、配信元の設定の行の `metadata` の対応で文書の実際のキーへ戻す（`{キー}[].{項目}` の列は、名前の配列から、残る要素の `main` などほかの項目を保った配列にする）。dev-docs は元のキーへ戻せる列かだけを確認し、戻せない列（入れ子のパス・絞り込み）は送信せずに 400 にする。`update` は `write_docs` の `update` 操作（`id`・`expected_version`・`set` に組み立てた最上位のキー）、`add` は `create` 操作（`id`・`kind`・`data`）、`delete` は `deletes[]`（`id`・`expectedVersion`）にし、`edits` の並び順で `writes`・`deletes` に入れる'
   - item: project-index への送信
-    constraint: '`POST /sources/{source}/commits` を `Origin` を付けずに 1 回だけ呼ぶ。`writes`・`deletes`・`message`・`dryRun` を送信し、`branch`・`onReferenced` は送信しない（既定のブランチ・`fail`）'
+    constraint: '`POST /sources/{source}/commits` を `Origin` を付けずに 1 回だけ呼ぶ。`writes`・`deletes`・`message`・`dryRun`・`baseCommit` を送信し、`branch`・`onReferenced` は送信しない（既定のブランチ・`fail`）'
   - item: 書き込みの API の待ち
     constraint: project-index の書き込みの API の応答を待つ上限で打ち切り、504 を返却する
     decided_by: NFR-155-1#requirements[project-index の書き込みの API の待ち]
@@ -168,6 +216,12 @@ constraints:
     constraint: '`{tag}-{関数名}` の `metadata-post_commits`'
   - item: ログ
     constraint: 送信ごとに、配信元の ID・`dryRun`・変更の件数・project-index の状態コード・コミットの SHA（待ちの上限で打ち切ったときはその旨）を 1 行のログに出力する。値の中身とコミットの説明は出力しない
+  - item: 項目ごとのバージョン
+    constraint: '`update` の変更ごとに、project-index の文書の取得（`GET /sources/{source}/docs/{docPath}?ref={baseCommit}&id={docId}`）で編集を始めたときの `itemVersions` を取得し、`set` に組み立てた列が戻る文書の最上位のキー（制約「書き込みと削除への変換」の対応で戻したキー）だけのバージョンの辞書を `expected_version` にする。そのキーのどれかが `itemVersions` に無い変更（編集を始めたときの文書に無い項目を加える）は、辞書ではなく要求の `expectedVersion`（文書の全体のバージョン）を送信する（空の辞書は project-index の照合で常に一致し、ほかの変更が同じ項目を加えていても衝突にならないため）。`delete` は `expectedVersion`（文書の全体のバージョン）のまま、`add` は使用しない'
+    notes: 文書の取得が 404 の変更は、project-index へ送信せずに 404 の `errors[]` に入れる
+    decided_by: NFR-155-1#requirements[project-index への問い合わせの制限時間]
+  - item: 衝突の結果への変換
+    constraint: project-index の応答の `conflict` を、`errors[]` の `writes`・`deletes` の別と添字（`path` が文書の ID のときはその文書を変える変更）を変更の `key` に対応させた `reasons[]` と、`script.stdout` から取り出した `prUrl` にして返却する。`conflict.commit` と `script.stdout` は返却しない
 flows:
   - name: 正常系
     summary: 変更を 1 つのコミットにしてプッシュし、変更ごとの結果とコミットを返却する
@@ -305,16 +359,16 @@ flows:
       - 用語の `add` の `key` は `errors` に無い
       - リモートとワークツリーが変わらない
     test: test_error_when_validation_failed
-  - name: 異常系（バージョンが合わない・409）
-    summary: 取得した後に他の変更で変わった文書の変更に、今のバージョンを返却する
+  - name: 異常系（編集を始めたときのコミットが使用できない・409）
+    summary: 編集を始めたときのコミットが既定のブランチの祖先でないときは、project-index の 409 を理由と一緒に返却する
     setup:
       - name: Mock
         description: なし（テストの中で起動した project-index）
-      - name: 他の変更
-        description: メタデータを取得した後に、リモートの `develop` へ n1 の概要を変えるコミットをプッシュする
-        notes: '`expectedVersion` が古くなる'
+      - name: 履歴の書き換え
+        description: メタデータを取得した後に、リモートの `develop` を、取得した `baseCommit` を含まない履歴へ強制プッシュで書き換える
+        notes: '`baseCommit` が `develop` の祖先でなくなる'
       - name: 入力
-        description: 取得したバージョンを `expectedVersion` にした n1 のタグの `update`
+        description: 取得した `baseCommit` と、n1 のタグの `update`
     flow: |-
       <!-- map -->
 
@@ -324,17 +378,19 @@ flows:
         participant E as POST /_api/sources/{source}/commits
         participant PI as project-index
 
-        C->>E: edits（n1 の update）, message
-        E->>PI: POST /sources/sample/commits
-        PI-->>E: 409 VersionMismatchError（n1 の今のバージョン）
-        E-->>C: 409（key と current）
+        C->>E: edits（n1 の update）, message, baseCommit
+        E->>PI: 編集を始めたときの n1 を取得（ref: baseCommit）
+        PI-->>E: itemVersions
+        E->>PI: POST /sources/sample/commits（baseCommit）
+        PI-->>E: 409 BaseCommitUnusableError（not_ancestor）
+        E-->>C: 409（title: BaseCommitUnusableError）
       ```
 
       <!-- /map -->
     expected:
-      - 409 で、`errors` に n1 の変更の `key` と `current`（他の変更の後のバージョン）がある
-      - リモートに他の変更の後のコミットが増えない
-    test: test_error_when_version_mismatched
+      - 409 で、`title` が `BaseCommitUnusableError`、`detail` に祖先でないことがある
+      - リモートに履歴の書き換えの後のコミットが増えず、クローンに `project-index/conflict/` で始まるブランチが増えない
+    test: test_error_when_base_commit_unusable
   - name: 異常系（直コミットを許可していない・403）
     summary: project-index が許可していない種類を返却したら、該当する変更と許可の記載先を返却する
     setup:
@@ -455,6 +511,168 @@ flows:
       - 'r1 の `tags` が `[{name: topic:a, main: true}, {name: topic:b}]` で、`main` が保たれている'
       - r1 に最上位のキー `tags` 以外のキーが増えていない
     test: test_normal_when_tags_mapped
+  - name: 正常系（同じ文書の別の項目が変わっている）
+    summary: 編集を始めた後に同じ文書の別の項目が変わっていても、修正した項目のバージョンで照合してコミットする
+    setup:
+      - name: Mock
+        description: なし（テストの中で起動した project-index）
+      - name: 他の変更
+        description: メタデータを取得した後に、リモートの `develop` へ n1 の概要を変えるコミットをプッシュする
+        notes: n1 の全体のバージョンは変わるが、タグの項目は変わらない
+      - name: 入力
+        description: 取得した `baseCommit` と、n1 のタグの `update` と `message`
+    flow: |-
+      <!-- map -->
+
+      ```mermaid
+      sequenceDiagram
+        participant C as クライアント
+        participant E as POST /_api/sources/{source}/commits
+        participant PI as project-index
+
+        C->>E: edits（n1 の update）, message, baseCommit
+        E->>PI: 編集を始めたときの n1 を取得（ref: baseCommit）
+        PI-->>E: itemVersions
+        E->>PI: POST /sources/sample/commits（tags の項目のバージョン・baseCommit）
+        PI-->>E: 200 applied, results, commit
+        E-->>C: 200 変更ごとの結果とコミット
+      ```
+
+      <!-- /map -->
+    expected:
+      - 200 で `applied` が `true`、`conflict` が `null`
+      - リモートの `develop` に、他の変更のコミットの後に 1 コミットだけ増える
+      - n1 の概要が他の変更の値、タグが `topic:a`・`topic:b`
+    test: test_normal_when_other_item_changed
+  - name: 正常系（衝突したら修正をブランチに残す）
+    summary: 修正した項目が他の変更で変わっていたら、ブランチに残した結果とスクリプトの PR の URL を返却する
+    setup:
+      - name: Mock
+        description: なし（テストの中で起動した project-index）
+      - name: 衝突したときのスクリプト
+        description: 端末の設定の sample の行の `direct_commit.on_conflict.command` に、受け取ったブランチの名前から作った URL を標準出力の最後の行に出して 0 で終わるテスト用のスクリプト
+      - name: 他の変更
+        description: メタデータを取得した後に、リモートの `develop` へ n1 のタグを変えるコミットをプッシュする
+      - name: 入力
+        description: 取得した `baseCommit` と、n1 のタグの `update`・用語 `kind` の `add` と `message`
+    flow: |-
+      <!-- map -->
+
+      ```mermaid
+      sequenceDiagram
+        participant C as クライアント
+        participant E as POST /_api/sources/{source}/commits
+        participant PI as project-index
+
+        C->>E: edits（update・add）, message, baseCommit
+        E->>PI: 編集を始めたときの n1 を取得（ref: baseCommit）
+        PI-->>E: itemVersions
+        E->>PI: POST /sources/sample/commits（baseCommit）
+        PI-->>E: 200 conflict（branch・errors・script）
+        E-->>C: 200 conflict（branch・reasons・script.prUrl）
+      ```
+
+      <!-- /map -->
+    expected:
+      - 200 で `applied` が `false`、`commit` が `null`、`conflict.branch` が `project-index/conflict/` で始まる
+      - '`conflict.reasons` に n1 の変更の `key` があり、`conflict.script.prUrl` がスクリプトの出した URL'
+      - リモートの `develop` に他の変更の後のコミットが増えず、クローンのブランチの先頭のコミットが 2 件の変更を持つ
+    test: test_normal_when_conflict_kept_on_branch
+  - name: 正常系（衝突してスクリプトの指定が無い）
+    summary: 衝突したときのスクリプトが無い配信元は、`conflict.script` を `null` にして返却する
+    setup:
+      - name: Mock
+        description: なし（テストの中で起動した project-index）
+      - name: 他の変更
+        description: 正常系（衝突したら修正をブランチに残す）と同じ
+        notes: 端末の設定の sample の行に `direct_commit.on_conflict` を配置しない
+      - name: 入力
+        description: 取得した `baseCommit` と、n1 のタグの `update` と `message`
+    flow: |-
+      <!-- map -->
+
+      ```mermaid
+      sequenceDiagram
+        participant C as クライアント
+        participant E as POST /_api/sources/{source}/commits
+        participant PI as project-index
+
+        C->>E: edits（n1 の update）, message, baseCommit
+        E->>PI: 編集を始めたときの n1 を取得（ref: baseCommit）
+        PI-->>E: itemVersions
+        E->>PI: POST /sources/sample/commits（baseCommit）
+        PI-->>E: 200 conflict（script: null）
+        E-->>C: 200 conflict（script: null）
+      ```
+
+      <!-- /map -->
+    expected:
+      - 200 で `conflict.branch` があり、`conflict.script` が `null`
+    test: test_normal_when_conflict_script_not_configured
+  - name: 正常系（衝突してスクリプトが失敗する）
+    summary: 衝突したときのスクリプトが失敗しても、ブランチに残した結果と終了コード・標準エラー出力を返却する
+    setup:
+      - name: Mock
+        description: なし（テストの中で起動した project-index）
+      - name: 衝突したときのスクリプト
+        description: 標準エラー出力に理由を出して 1 で終わるテスト用のスクリプト
+      - name: 他の変更
+        description: 正常系（衝突したら修正をブランチに残す）と同じ
+      - name: 入力
+        description: 取得した `baseCommit` と、n1 のタグの `update` と `message`
+    flow: |-
+      <!-- map -->
+
+      ```mermaid
+      sequenceDiagram
+        participant C as クライアント
+        participant E as POST /_api/sources/{source}/commits
+        participant PI as project-index
+
+        C->>E: edits（n1 の update）, message, baseCommit
+        E->>PI: 編集を始めたときの n1 を取得（ref: baseCommit）
+        PI-->>E: itemVersions
+        E->>PI: POST /sources/sample/commits（baseCommit）
+        PI-->>E: 200 conflict（script.exitCode: 1）
+        E-->>C: 200 conflict（script.exitCode・stderr・prUrl: null）
+      ```
+
+      <!-- /map -->
+    expected:
+      - 200 で `conflict.script.exitCode` が `1`、`conflict.script.stderr` にスクリプトの理由、`conflict.script.prUrl` が `null`
+      - クローンに `project-index/conflict/` で始まるブランチがある
+    test: test_normal_when_conflict_script_failed
+  - name: 正常系（差分確認で衝突する）
+    summary: 差分確認でも、コミットすると衝突してブランチに残ることと理由を返却する
+    setup:
+      - name: Mock
+        description: なし（テストの中で起動した project-index）
+      - name: 他の変更
+        description: 取得した後に、project-index の書き込みの API で n1 のタグを別の値にしてコミットした（差分確認はリモートを取得しないため、project-index のクローンに入った変更にする）
+      - name: 入力
+        description: '取得した `baseCommit` と、n1 のタグの `update`、`dryRun: true`'
+    flow: |-
+      <!-- map -->
+
+      ```mermaid
+      sequenceDiagram
+        participant C as クライアント
+        participant E as POST /_api/sources/{source}/commits
+        participant PI as project-index
+
+        C->>E: edits（n1 の update）, dryRun: true, baseCommit
+        E->>PI: 編集を始めたときの n1 を取得（ref: baseCommit）
+        PI-->>E: itemVersions
+        E->>PI: POST /sources/sample/commits（dryRun・baseCommit）
+        PI-->>E: 200 conflict（branch: null・errors）
+        E-->>C: 200 conflict（branch: null・reasons）
+      ```
+
+      <!-- /map -->
+    expected:
+      - 200 で `applied` が `false`、`conflict.branch` と `conflict.script` が `null`、`conflict.reasons` に n1 の変更の `key` がある
+      - リモートとワークツリーが変わらず、クローンに `project-index/conflict/` で始まるブランチが増えない
+    test: test_normal_when_dry_run_conflicted
 refs:
   - to: API-155-1
     type: requires

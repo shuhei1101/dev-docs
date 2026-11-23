@@ -21,7 +21,7 @@ functions:
       type: fastapi.APIRouter
       description: '`APIRouter(tags=["metadata"])`'
     process: |-
-      1. GET `/_api/sources/{source}/metadata`（`name` は `get_metadata`）は、メタデータの組み立てを `MetadataResponse` で返却する。配信元が無いときは 404、project-index につながらないときは例外の変換の登録に任せて 503 にする
+      1. GET `/_api/sources/{source}/metadata`（`name` は `get_metadata`）は、クエリの `ref`（省略可）を指定したメタデータの組み立てを `MetadataResponse` で返却する。配信元・`ref` が無いときは 404、project-index につながらないときは例外の変換の登録に任せて 503 にする
       2. POST `/_api/sources/{source}/commits`（`name` は `post_commits`）は、同じオリジンの確認を依存に持ち、本文を `CommitRequest` で受けて編集中の変更の直コミットを返却する。`EditsRejectedError` は例外の変換の登録が problem+json にする
     unit_tests:
       - name: test_build_metadata_router_when_metadata
@@ -37,6 +37,12 @@ functions:
         mock: project-indexの呼び出し（要求を記録する偽物）
         expected: 403 で、偽物が要求を受けていない
         exception: 別のオリジン
+      - name: test_build_metadata_router_when_ref
+        case: 正常
+        summary: リビジョンを指定した取得
+        condition: GET `/_api/sources/sample/metadata?ref=0a1b2c3`
+        mock: project-indexの呼び出し（`httpx.MockTransport`、要求を記録する）
+        expected: 200 で `baseCommit` が `0a1b2c3`、文書の一覧の要求の `ref` が `0a1b2c3`
 refs:
   - to: IF-155-28
     type: requires

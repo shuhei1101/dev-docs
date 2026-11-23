@@ -34,6 +34,7 @@ const kind = (overrides: Partial<MetadataKind> & Pick<MetadataKind, "id" | "titl
 const metadata: MetadataResponse = {
   source: "sample",
   branch: "develop",
+  baseCommit: "00b7c00",
   kinds: [
     kind({
       id: "terms",
@@ -169,6 +170,7 @@ const edits: PendingEdit[] = [
     docId: "n1",
     docKind: "note",
     expectedVersion: "c3d4e5",
+    docPath: "notes/n1.yaml",
     values: { tags: ["topic:a", "topic:b"] },
     before: { tags: ["topic:a"] },
     label: "タグ: n1",
@@ -180,6 +182,7 @@ const edits: PendingEdit[] = [
     docId: "kind",
     docKind: "terms",
     expectedVersion: null,
+    docPath: null,
     values: { name: "種類" },
     before: {},
     label: "用語集: 種類",
@@ -191,6 +194,7 @@ const edits: PendingEdit[] = [
     docId: "old-name",
     docKind: "terms",
     expectedVersion: "b2c3d4",
+    docPath: "glossary.yaml",
     values: {},
     before: {},
     label: "用語集: 旧称",
@@ -294,17 +298,82 @@ export const ValidationFailed: Story = {
   play: commitFromPanel,
 };
 
-export const VersionMismatch: Story = {
+const CONFLICT_BRANCH = "project-index/conflict/20261123-103000-0a1b2c3";
+
+/** 衝突して修正をブランチに残した 200 の応答 */
+const conflicted = (script: Record<string, unknown> | null) =>
+  http.post(COMMITS, () =>
+    HttpResponse.json({
+      applied: false,
+      results: [],
+      commit: null,
+      conflict: {
+        branch: CONFLICT_BRANCH,
+        baseCommit: "00b7c00a9a63ce55977e39adde09ecf434f02a36",
+        reasons: [{ key: "tags:n1:update", reason: "n1 のタグが、編集を始めた後のほかの変更で書き換わっています" }],
+        script,
+      },
+    }),
+  );
+
+export const OtherItemChanged: Story = {
+  loaders: [withEdits(edits.slice(0, 1))],
+  parameters: {
+    initialPath: PANEL_PATH,
+    msw: [
+      ...listed(metadata),
+      http.post(COMMITS, () =>
+        HttpResponse.json({
+          applied: true,
+          results: [{ key: "tags:n1:update", status: "updated", version: "e5f6a7", diff: "+   - topic:b" }],
+          commit: { sha: "1b2c3d4e5f", branch: "develop" },
+        }),
+      ),
+    ],
+  },
+  play: commitFromPanel,
+};
+
+export const ConflictKeptOnBranch: Story = {
+  loaders: [withEdits(edits.slice(0, 2))],
+  parameters: {
+    initialPath: PANEL_PATH,
+    msw: [
+      ...listed(metadata),
+      conflicted({ exitCode: 0, timedOut: false, prUrl: "https://github.com/shuhei1101/sample/pull/42", stderr: "" }),
+    ],
+  },
+  play: commitFromPanel,
+};
+
+export const ConflictScriptFailed: Story = {
+  loaders: [withEdits(edits.slice(0, 1))],
+  parameters: {
+    initialPath: PANEL_PATH,
+    msw: [
+      ...listed(metadata),
+      conflicted({ exitCode: 1, timedOut: false, prUrl: null, stderr: "gh: authentication required" }),
+    ],
+  },
+  play: commitFromPanel,
+};
+
+export const ConflictScriptNotConfigured: Story = {
+  loaders: [withEdits(edits.slice(0, 1))],
+  parameters: { initialPath: PANEL_PATH, msw: [...listed(metadata), conflicted(null)] },
+  play: commitFromPanel,
+};
+
+export const BaseCommitUnusable: Story = {
   loaders: [withEdits(edits.slice(0, 1))],
   parameters: {
     initialPath: PANEL_PATH,
     msw: [
       ...listed(metadata),
       problem(409, {
-        title: "EditsRejectedError",
-        detail: "参照した後に変わった文書があります",
-        nextSteps: ["メタデータを再読み込みし、変更が反映されたかを確認してください。"],
-        errors: [{ key: "tags:n1:update", reason: "参照した後に文書が変わっています", current: "9f8e7d" }],
+        title: "BaseCommitUnusableError",
+        detail: "編集を始めたときのコミット 00b7c00 が develop の履歴にありません",
+        nextSteps: [],
       }),
     ],
   },

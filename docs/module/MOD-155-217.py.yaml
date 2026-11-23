@@ -109,6 +109,9 @@ data_models:
       - name: kinds
         type: list[MetadataKind]
         description: '`KIND_SPECS` の順'
+      - name: base_commit
+        type: str | None
+        description: 返却した内容のコミット（編集を始めたときのコミット。Git でなければ `None`）
   - name: KeyMapping
     title: 列と文書のキーの対応
     container: features/metadata/metadata.py
@@ -162,7 +165,7 @@ functions:
     container: features/metadata/metadata.py
     usecase: メタデータを画面で参照する
     role: サービス
-    summary: project-index の配信元の設定・文書の一覧・リビジョンの一覧・端末の設定を同時に取得し、種類ごとの行と列にする
+    summary: project-index の配信元の設定・編集を始めたときのコミットの文書の一覧・リビジョンの一覧・端末の設定を取得し、種類ごとの行と列にする
     scope: public
     is_async: true
     thread_safe: true
@@ -178,16 +181,24 @@ functions:
         required: true
         passing: positional
         description: 配信元の ID
+      - name: ref
+        title: リビジョン
+        type: str | None
+        required: false
+        default: None
+        passing: keyword
+        description: 記録した編集を始めたときのコミット。`None` は既定のブランチの先頭
     returns:
       type: MetadataResponse
       description: IF-155-28 の応答
     process: |-
-      1. `asyncio.gather` で project-indexの呼び出し.配信元の設定の取得・文書の一覧の取得（`values`・`common_keys` を真）・リビジョンの一覧の取得・端末の設定の配信元の行の取得を呼ぶ
-      2. 端末の設定の `source_id` の行の `directCommit.writeApiKinds` を直コミットできる種類にする（行が無ければ空）
-      3. 文書の一覧を IF-155-28 の制約「種類ごとの行と列」で振り分け、列ごとに列と文書のキーの対応の解決で `editable` を決める（種類で対応が分かれる列は、行ごとに戻せないものが 1 つでもあれば `false`）
-      4. `rules` は `RULE_INDEX_KIND` の行が無ければ `served: false` と追加する行の YAML にする
-      5. `config` は配信元の設定の `documents[]` から作り、全て `editable: false` にする
-      6. `branch` はリビジョンの一覧の `defaultRef`（Git でなければ `None`）にして返却する
+      1. `ref` を省いたときは、先に project-indexの呼び出し.リビジョンの一覧の取得（`commits=0`）を呼び、`defaultRef` のブランチの `commit` を編集を始めたときのコミットにする。続けて `asyncio.gather` で配信元の設定の取得・文書の一覧の取得（`ref` はそのコミット、`values`・`common_keys` を真）・端末の設定の配信元の行の取得を呼ぶ
+      2. `ref` を指定したときは、`asyncio.gather` で配信元の設定の取得・文書の一覧の取得（`ref` は指定の値）・リビジョンの一覧の取得・端末の設定の配信元の行の取得を呼び、編集を始めたときのコミットを指定の値にする
+      3. 端末の設定の `source_id` の行の `directCommit.writeApiKinds` を直コミットできる種類にする（行が無ければ空）
+      4. 文書の一覧を IF-155-28 の制約「種類ごとの行と列」で振り分け、列ごとに列と文書のキーの対応の解決で `editable` を決める（種類で対応が分かれる列は、行ごとに戻せないものが 1 つでもあれば `false`）
+      5. `rules` は `RULE_INDEX_KIND` の行が無ければ `served: false` と追加する行の YAML にする
+      6. `config` は配信元の設定の `documents[]` から作り、全て `editable: false` にする
+      7. `branch` はリビジョンの一覧の `defaultRef`（Git でなければ `None`）、`base_commit` は編集を始めたときのコミット（Git でなければ `None`）にして返却する
     unit_tests:
       - name: test_build_metadata
         case: 正常
@@ -214,6 +225,25 @@ functions:
         mock: project-indexの呼び出し（例外を送出する偽物）
         expected: 例外がそのまま伝わる
         exception: project-index につながらない
+      - name: test_build_metadata_when_ref_omitted
+        case: 正常
+        summary: 既定のブランチの先頭のコミットで取得する
+        condition: '`ref` なしで、リビジョンの一覧が `defaultRef: develop` と `develop` の `commit: 0a1b2c3` を返却する'
+        mock: project-indexの呼び出し（要求を順に記録する偽物）
+        expected: リビジョンの一覧が文書の一覧より先に呼ばれ、文書の一覧の `ref` が `0a1b2c3`、`base_commit` が `0a1b2c3`
+      - name: test_build_metadata_when_ref
+        case: 正常
+        summary: 記録したコミットで取得する
+        condition: '`ref="9f8e7d6"`'
+        mock: project-indexの呼び出し（要求を記録する偽物）
+        expected: 文書の一覧の `ref` が `9f8e7d6`、`base_commit` が `9f8e7d6`
+      - name: test_build_metadata_when_ref_not_found
+        case: 異常
+        summary: 記録したコミットが無い
+        condition: 偽物が文書の一覧で `RefNotFoundError` を送出する
+        mock: project-indexの呼び出し（例外を送出する偽物）
+        expected: 例外がそのまま伝わる
+        exception: 記録したコミットが無い
     exceptions:
       - name: ProjectIndexUnreachableError
         condition: project-index につながらない・制限時間を超えた
@@ -221,6 +251,9 @@ functions:
       - name: ProjectIndexNotFoundError
         condition: 配信元が無い・配信していない
         message: project-index の `missing` を含む理由
+      - name: RefNotFoundError
+        condition: 記録したコミットが無い
+        message: '`ref を解決できません: {value}`'
 refs:
   - to: IF-155-28
     type: requires

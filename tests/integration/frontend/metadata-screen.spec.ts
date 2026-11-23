@@ -7,6 +7,8 @@ const SOURCE = "sample";
 const METADATA_PATH = `/_api/sources/${SOURCE}/metadata`;
 const COMMITS_PATH = `/_api/sources/${SOURCE}/commits`;
 const SHA = "0a1b2c3d4e5f";
+const BASE_COMMIT = "5765b2e1f0a9";
+const LATEST_COMMIT = "7f9a8781b2c3";
 
 type Row = {
   id: string;
@@ -50,9 +52,10 @@ const row = (id: string, values: Row["values"], overrides: Partial<Row> = {}): R
   ...overrides,
 });
 
-const metadataResponse = (overrides: { rulesServed?: boolean } = {}) => ({
+const metadataResponse = (overrides: { rulesServed?: boolean; baseCommit?: string; tags?: string[] } = {}) => ({
   source: SOURCE,
   branch: "develop",
+  baseCommit: overrides.baseCommit ?? BASE_COMMIT,
   kinds: [
     kind("terms", "用語集", {
       columns: [column("name", "用語"), column("aliases", "別名", { type: "list" }), column("description", "説明")],
@@ -70,7 +73,7 @@ const metadataResponse = (overrides: { rulesServed?: boolean } = {}) => ({
     }),
     kind("tags", "タグ", {
       columns: [column("path", "文書", { editable: false }), column("tags", "タグ", { type: "list" })],
-      rows: [row("n1", { path: "docs/note/n1.yaml", tags: ["topic:a"] })],
+      rows: [row("n1", { path: "docs/note/n1.yaml", tags: overrides.tags ?? ["topic:a"] })],
     }),
     overrides.rulesServed === false
       ? kind("rules", "rule-inject の索引", { served: false, hint: "documents:\n  - id: rule_index\n    paths: [rules.yaml]\n    records: rules" })
@@ -92,15 +95,28 @@ const metadataResponse = (overrides: { rulesServed?: boolean } = {}) => ({
 /** メタデータの取得と直コミットを差し替えて画面を開く。直コミットの要求の本文を返却する */
 const open = async (
   page: Page,
-  options: { metadata?: ReturnType<typeof metadataResponse>; commit?: (dryRun: boolean) => CommitReply; url?: string } = {},
+  options: {
+    metadata?: ReturnType<typeof metadataResponse>;
+    // 直コミットを送信した後の、`ref` を省いた（既定のブランチの先頭の）取得への応答
+    latest?: ReturnType<typeof metadataResponse>;
+    commit?: (dryRun: boolean) => CommitReply;
+    url?: string;
+  } = {},
 ) => {
   await mockApi(page);
   const commits: Record<string, unknown>[] = [];
+  const metadataRefs: (string | null)[] = [];
   let metadataCalls = 0;
-  await page.route(`**${METADATA_PATH}`, async (route: Route) => {
-    metadataCalls += 1;
-    await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(options.metadata ?? metadataResponse()) });
-  });
+  await page.route(
+    (url) => url.pathname === METADATA_PATH,
+    async (route: Route) => {
+      metadataCalls += 1;
+      const ref = new URL(route.request().url()).searchParams.get("ref");
+      metadataRefs.push(ref);
+      const body = ref === null && commits.length > 0 && options.latest ? options.latest : (options.metadata ?? metadataResponse());
+      await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(body) });
+    },
+  );
   await page.route(`**${COMMITS_PATH}`, async (route: Route) => {
     const body = route.request().postDataJSON() as Record<string, unknown>;
     commits.push(body);
@@ -113,7 +129,7 @@ const open = async (
   });
   await page.goto(options.url ?? `/${SOURCE}/_metadata`);
   await expect(page.getByRole("heading", { level: 1 })).toHaveText(`${SOURCE} のメタデータ`);
-  return { commits, metadataCalls: () => metadataCalls };
+  return { commits, metadataRefs, metadataCalls: () => metadataCalls };
 };
 
 const committed = (dryRun: boolean): CommitReply => ({
@@ -217,9 +233,20 @@ test.describe("編集・差分確認・コミット", () => {
     expect(api.commits[1]).toMatchObject({
       dryRun: false,
       message: "タグを追加する",
-      edits: [{ key: "tags:n1:update", kind: "tags", op: "update", docId: "n1", docKind: "note", expectedVersion: "v-n1", values: { tags: ["topic:a", "topic:b"] } }],
+      baseCommit: BASE_COMMIT,
+      edits: [
+        {
+          key: "tags:n1:update",
+          kind: "tags",
+          op: "update",
+          docId: "n1",
+          docKind: "note",
+          expectedVersion: "v-n1",
+          docPath: "docs/note/n1.yaml",
+          values: { tags: ["topic:a", "topic:b"] },
+        },
+      ],
     });
-    expect(api.commits[1]?.edits).toEqual([expect.not.objectContaining({ docPath: expect.anything() })]);
     await expect(page.getByRole("button", { name: "編集中 0 件" })).toBeVisible();
     await expect.poll(api.metadataCalls).toBeGreaterThan(before);
   });
@@ -292,22 +319,102 @@ test.describe("送信の失敗", () => {
     await expect(page.getByRole("button", { name: "編集中 1 件" })).toBeVisible();
   });
 
-  // 409 の今のバージョンを変更の行に出す（異常系）
-  test("version_mismatch", async ({ page }) => {
-    await open(page, {
+  // 編集を始めたときのコミットを使えない 409 で「最新の内容で続ける」を出し、押すと最新の内容で再取得して食い違う変更を取り消す（異常系）
+  test("base_commit_unusable", async ({ page }) => {
+    // 準備
+    const api = await open(page, {
+      latest: metadataResponse({ baseCommit: LATEST_COMMIT, tags: ["topic:x"] }),
       commit: () =>
         problem(409, {
-          title: "EditsRejectedError",
-          detail: "参照した後に変わった文書があります",
-          nextSteps: ["メタデータを再読み込みし、変更が反映されたかを確認してください。"],
-          errors: [{ key: "tags:n1:update", path: "", reason: "参照した後に文書が変わっています", current: "9f8e7d" }],
+          title: "BaseCommitUnusableError",
+          detail: "編集を始めたときのコミットがありません",
+          errors: [],
         }) as CommitReply,
     });
     await editTag(page, "topic:b");
     await page.getByRole("button", { name: "編集中 1 件" }).click();
     await commitFromPanel(page, "タグを修正する");
-    await expect(panel(page)).toContainText("今のバージョン 9f8e7d");
-    await expect(panel(page).getByRole("alert")).toContainText("メタデータを再読み込みし");
+    await expect(panel(page).getByRole("alert")).toContainText("「最新の内容で続ける」を押すと");
+    // 実行
+    await panel(page).getByRole("button", { name: "最新の内容で続ける" }).click();
+    // 検証
+    const dropped = panel(page).getByRole("status");
+    await expect(dropped).toContainText("最新の内容と食い違うため、次の変更を取り消しました");
+    await expect(dropped).toContainText("タグ: docs/note/n1.yaml");
+    await expect(dropped).toContainText("最新の値を確認して、もう一度編集してください。");
+    expect(api.metadataRefs).toContain(null);
+    expect(api.commits[0]?.baseCommit).toBe(BASE_COMMIT);
+  });
+
+  // 衝突してブランチに残した結果を出し、編集中の変更を空にしてメタデータを再取得する（正常系）
+  test("conflict_kept_on_branch", async ({ page }) => {
+    // 準備
+    const api = await open(page, {
+      commit: (dryRun) =>
+        dryRun
+          ? committed(true)
+          : {
+              status: 200,
+              body: {
+                applied: false,
+                results: [],
+                commit: null,
+                conflict: {
+                  branch: "project-index/conflict/20261123-142916-5765b2e",
+                  baseCommit: BASE_COMMIT,
+                  reasons: [{ key: "tags:n1:update", reason: "n1 は参照した後に変わっています" }],
+                  script: { exitCode: 0, timedOut: false, prUrl: "https://github.com/o/r/pull/9", stderr: "" },
+                },
+              },
+            },
+    });
+    await editTag(page, "topic:b");
+    await page.getByRole("button", { name: "編集中 1 件" }).click();
+    const before = api.metadataCalls();
+    // 実行
+    await commitFromPanel(page, "タグを修正する");
+    // 検証
+    const result = panel(page).getByRole("status");
+    await expect(result).toContainText("ほかの変更と衝突したため、修正をブランチに残しました");
+    await expect(result).toContainText("project-index/conflict/20261123-142916-5765b2e");
+    await expect(result).toContainText("5765b2e");
+    await expect(result.getByRole("link", { name: "PR を開く" })).toHaveAttribute("href", "https://github.com/o/r/pull/9");
+    await expect(result).toContainText("タグ: docs/note/n1.yaml");
+    await expect(result).toContainText("n1 は参照した後に変わっています");
+    await expect(result).toContainText("ブランチに残した変更は、編集中の変更から除きました。");
+    await expect(page.getByRole("button", { name: "編集中 0 件" })).toBeVisible();
+    await expect.poll(() => api.metadataCalls()).toBeGreaterThan(before);
+    expect(api.commits[0]).toMatchObject({ baseCommit: BASE_COMMIT });
+    expect(api.commits[0]?.edits).toEqual([expect.objectContaining({ docPath: "docs/note/n1.yaml" })]);
+  });
+
+  // 差分確認が衝突を返却したら、コミットすると衝突することと変更ごとの理由を出す（正常系）
+  test("dry_run_conflicted", async ({ page }) => {
+    // 準備
+    await open(page, {
+      commit: () => ({
+        status: 200,
+        body: {
+          applied: false,
+          results: [],
+          commit: null,
+          conflict: {
+            branch: null,
+            baseCommit: BASE_COMMIT,
+            reasons: [{ key: "tags:n1:update", reason: "n1 は参照した後に変わっています" }],
+            script: null,
+          },
+        },
+      }),
+    });
+    await editTag(page, "topic:b");
+    await page.getByRole("button", { name: "編集中 1 件" }).click();
+    // 実行
+    await panel(page).getByRole("button", { name: "差分確認" }).click();
+    // 検証
+    await expect(panel(page).getByRole("alert")).toContainText("コミットすると、ほかの変更と衝突して修正がブランチに残ります");
+    await expect(panel(page)).toContainText("n1 は参照した後に変わっています");
+    await expect(page.getByRole("button", { name: "編集中 1 件" })).toBeVisible();
   });
 });
 

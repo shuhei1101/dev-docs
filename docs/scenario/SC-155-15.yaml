@@ -4,17 +4,17 @@ lead: 利用者がメタデータの画面で行を編集し、差分確認で�
 primary_actor: 利用者
 stakeholders:
   - name: 利用者
-    interest: 気づいたメタデータをその場で修正し、Issue と作業 PR を経ずにまとめてコミットできる。送信できなかった修正と理由が分かる
+    interest: 気づいたメタデータをその場で修正し、Issue と作業 PR を経ずにまとめてコミットできる。送信できなかった修正と理由が分かる。ほかの変更と衝突しても修正を失わず、手で解消しなくてよい
   - name: project-index
-    interest: 書き込みの API が、許可と検査に合格した修正だけを 1 つのコミットにする
+    interest: 書き込みの API が、許可と検査に合格した修正だけを 1 つのコミットにする。衝突したときは修正をブランチに残し、衝突したときのスクリプトに後の処理を任せる
   - name: 配信元を使用するプロジェクト
-    interest: 検査に合格しないメタデータが既定のブランチに入らない
+    interest: 検査に合格しないメタデータが既定のブランチに入らない。ほかの変更で書き換わった同じ項目が、利用者の修正で黙って上書きされない
 trigger: 利用者がメタデータの画面で行の値を修正する
 preconditions:
   - 利用者が配信元のメタデータの画面を開いている
   - 配信元の設定の `direct_commit.kinds[]` と project-index の端末の設定の `sources[].direct_commit.write_api_kinds` の両方に、修正する種類がある
-success_guarantee: 編集中の変更が、検査に合格して 1 つのコミットで配信元のリモートの既定のブランチへプッシュされ、画面の一覧が修正後の値になる。
-minimal_guarantee: 送信が失敗したときはコミットもプッシュもせず、編集中の変更は修正ごとの理由と一緒に画面に残る。dev-docs は配信元のファイルを自分で書き換えない。
+success_guarantee: 編集中の変更が、検査に合格して 1 つのコミットで配信元のリモートの既定のブランチへプッシュされ、画面の一覧が修正後の値になる。ほかの変更と衝突したときは、既定のブランチへはコミットせず、編集を始めたときのコミットからのブランチに修正が 1 つのコミットで残り、画面に残したブランチの名前が出て、その修正が編集中の変更から除かれる。
+minimal_guarantee: 修正をどのブランチにも残せなかったときは、コミットもプッシュもせず、編集中の変更は修正ごとの理由と一緒に画面に残る。衝突したときのスクリプトが失敗しても、ブランチに残した修正は編集中の変更から除き、残したブランチとスクリプトの結果を画面に出す。dev-docs は配信元のファイルを自分で書き換えない。
 frequency: 作業のたび
 priority: 中
 test_file: tests/e2e/単一ユースケース/test_利用者が画面で編集中の変更をまとめて直コミットする.py
@@ -94,6 +94,82 @@ scenarios:
       - 取り消した後、パネルとトップバーの件数が 1 になり、用語集の表に `種類` の行が無い
       - リモートは変わらない
     test: test_normal_when_change_discarded
+  - name: 正常シナリオ（同じ文書の別の項目が変わっている）
+    setup:
+      - name: Mock
+        description: なし（実環境で実行）
+      - name: 直コミットを許可した配信元
+        description: 正常シナリオと同じ sample
+      - name: 編集中の変更
+        description: n1 のタグの追加
+      - name: 他の変更
+        description: 編集中の変更がある状態で、リモートの develop へ n1 の概要を変えるコミットをプッシュする
+        notes: n1 の文書の全体のバージョンは変わるが、タグの項目は変わらない
+    flow: |-
+      <!-- map -->
+
+      ```mermaid
+      sequenceDiagram
+        actor U as 利用者
+        participant UI as dev-docs の画面
+        participant SRV as 開発ドキュメントサーバー
+        participant PI as project-index
+        participant R as リモート
+
+        U->>UI: まとめて送信する
+        UI->>SRV: sample の修正と、編集を始めたときのコミット
+        SRV->>PI: POST /sources/sample/commits（修正したタグの項目のバージョン）
+        PI->>R: develop へプッシュ
+        PI-->>SRV: コミットとブランチ
+        SRV-->>UI: 送信の結果
+        UI-->>U: コミットとブランチの表示と、修正後の値の一覧
+      ```
+
+      <!-- /map -->
+    expected:
+      - リモートの `develop` に、他の変更のコミットの後に 1 コミットだけ増える
+      - リモートの n1 の概要が他の変更の値、タグが `topic:a`・`topic:b` になっている
+      - パネルにプッシュしたコミットとブランチが出て、編集中の変更が空になる
+    test: test_normal_when_other_item_changed
+  - name: 正常シナリオ（衝突したら修正をブランチに残す）
+    setup:
+      - name: Mock
+        description: なし（実環境で実行）
+      - name: 直コミットを許可した配信元
+        description: 正常シナリオと同じ sample。project-index の端末の設定の sample の行に、衝突したときのスクリプト（テスト用。受け取ったブランチの名前から作った PR の URL を出力して 0 で終わる）を登録する
+      - name: 編集中の変更
+        description: n1 のタグの追加と用語の追加の 2 件
+      - name: 他の変更
+        description: 編集中の変更がある状態で、リモートの develop へ n1 のタグを変えるコミットをプッシュする
+        notes: 利用者が修正したタグの項目が変わり、衝突する。ほかの変更で n1 が削除されていたときも、同じ結末になる
+    flow: |-
+      <!-- map -->
+
+      ```mermaid
+      sequenceDiagram
+        actor U as 利用者
+        participant UI as dev-docs の画面
+        participant SRV as 開発ドキュメントサーバー
+        participant PI as project-index
+
+        U->>UI: まとめて送信する
+        UI->>SRV: sample の修正 2 件と、編集を始めたときのコミット
+        SRV->>PI: POST /sources/sample/commits（baseCommit）
+        PI->>PI: 今のブランチでは n1 のタグの項目のバージョンが合わない
+        PI->>PI: 編集を始めたときのコミットからのブランチに修正を残す
+        PI->>PI: 衝突したときのスクリプトを実行する
+        PI-->>SRV: 残したブランチとスクリプトの結果
+        SRV-->>UI: 残したブランチ・PR の URL・衝突した理由
+        UI-->>U: 残したブランチの名前と PR の URL
+      ```
+
+      <!-- /map -->
+    expected:
+      - リモートの `develop` に、他の変更のコミットより後のコミットが増えない
+      - クローンに `project-index/conflict/` で始まるブランチがあり、その先頭のコミットが n1 のタグの追加と用語の追加を持ち、説明が入力したコミットの説明
+      - パネルに残したブランチの名前と、スクリプトが出力した PR の URL のリンクが出る
+      - 編集中の変更から sample の 2 件が除かれ、トップバーの件数が出なくなる
+    test: test_normal_when_conflict_kept_on_branch
   - name: 異常シナリオ（検査に合格しない）
     setup:
       - name: Mock
@@ -126,17 +202,16 @@ scenarios:
       - 用語の追加の修正に、違反したキーのパスと修正方法が出る
       - 編集中の変更 2 件が残っている
     test: test_error_when_validation_failed
-  - name: 異常シナリオ（他の変更と食い違う）
+  - name: 異常シナリオ（衝突してスクリプトが失敗する）
     setup:
       - name: Mock
         description: なし（実環境で実行）
       - name: 直コミットを許可した配信元
-        description: 正常シナリオと同じ sample
+        description: 正常シナリオと同じ sample。project-index の端末の設定の sample の行に、衝突したときのスクリプト（テスト用。標準エラー出力に理由を出して 1 で終わる）を登録する
       - name: 編集中の変更
         description: n1 のタグの追加
       - name: 他の変更
-        description: 編集中の変更がある状態で、リモートの develop へ n1 の概要を変えるコミットをプッシュする
-        notes: 編集中の変更の n1 のバージョンが古くなる
+        description: 正常シナリオ（衝突したら修正をブランチに残す）と同じく、リモートの develop へ n1 のタグを変えるコミットをプッシュする
     flow: |-
       <!-- map -->
 
@@ -148,18 +223,55 @@ scenarios:
         participant PI as project-index
 
         U->>UI: まとめて送信する
-        UI->>SRV: sample の修正を送信
-        SRV->>PI: POST /sources/sample/commits
-        PI-->>SRV: 409（バージョンが合わない）
-        SRV-->>UI: 食い違った文書と今のバージョン
-        UI-->>U: n1 の修正に、他の変更で変わったこと
+        UI->>SRV: sample の修正と、編集を始めたときのコミット
+        SRV->>PI: POST /sources/sample/commits（baseCommit）
+        PI->>PI: 修正をブランチに残し、衝突したときのスクリプトを実行する
+        PI-->>SRV: 残したブランチと、スクリプトの終了コード 1・標準エラー出力
+        SRV-->>UI: 残したブランチとスクリプトの失敗
+        UI-->>U: 残したブランチの名前と、スクリプトが失敗したことと理由
       ```
 
       <!-- /map -->
     expected:
-      - リモートに、他の変更のコミットより後のコミットが増えない
-      - n1 の修正に、他の変更で変わったことが出て、編集中の変更が残っている
-    test: test_error_when_version_mismatched
+      - リモートの `develop` に、他の変更のコミットより後のコミットが増えない
+      - クローンに修正を持つ `project-index/conflict/` で始まるブランチがある
+      - パネルに残したブランチの名前と、スクリプトが失敗したことと標準エラー出力の理由が出る
+      - 編集中の変更から n1 の修正が除かれる
+    test: test_error_when_conflict_script_failed
+  - name: 異常シナリオ（編集を始めたときのコミットが使用できない）
+    setup:
+      - name: Mock
+        description: なし（実環境で実行）
+      - name: 直コミットを許可した配信元
+        description: 正常シナリオと同じ sample
+      - name: 編集中の変更
+        description: n1 のタグの追加
+      - name: 履歴の書き換え
+        description: 編集中の変更がある状態で、リモートの develop を、編集を始めたときのコミットを含まない履歴へ強制プッシュで書き換える
+        notes: 編集を始めたときのコミットが develop の祖先でなくなる
+    flow: |-
+      <!-- map -->
+
+      ```mermaid
+      sequenceDiagram
+        actor U as 利用者
+        participant UI as dev-docs の画面
+        participant SRV as 開発ドキュメントサーバー
+        participant PI as project-index
+
+        U->>UI: まとめて送信する
+        UI->>SRV: sample の修正と、編集を始めたときのコミット
+        SRV->>PI: POST /sources/sample/commits（baseCommit）
+        PI-->>SRV: 409（編集を始めたときのコミットが起点に使用できない）
+        SRV-->>UI: 送信の失敗と理由
+        UI-->>U: 送信できなかったことと理由
+      ```
+
+      <!-- /map -->
+    expected:
+      - リモートに、履歴の書き換えより後のコミットが増えず、クローンに `project-index/conflict/` で始まるブランチが増えない
+      - パネルに、編集を始めたときのコミットが使用できないことと理由が出て、編集中の変更が残っている
+    test: test_error_when_base_commit_unusable
   - name: 異常シナリオ（直コミットを許可していない）
     setup:
       - name: Mock
@@ -227,6 +339,43 @@ scenarios:
       - パネルに送信できなかったことと理由が出て、編集中の変更が残っている
       - sample のワークツリーに未コミットの変更と未プッシュのコミットが無い
     test: test_error_when_remote_unreachable
+  - name: 正常シナリオ（衝突してスクリプトの指定が無い）
+    setup:
+      - name: Mock
+        description: なし（実環境で実行）
+      - name: 直コミットを許可した配信元
+        description: 正常シナリオと同じ sample
+        notes: project-index の端末の設定の sample の行に `direct_commit.on_conflict` を配置しない
+      - name: 編集中の変更
+        description: n1 のタグの追加
+      - name: 他の変更
+        description: 正常シナリオ（衝突したら修正をブランチに残す）と同じく、リモートの develop へ n1 のタグを変えるコミットをプッシュする
+    flow: |-
+      <!-- map -->
+
+      ```mermaid
+      sequenceDiagram
+        actor U as 利用者
+        participant UI as dev-docs の画面
+        participant SRV as 開発ドキュメントサーバー
+        participant PI as project-index
+
+        U->>UI: まとめて送信する
+        UI->>SRV: sample の修正と、編集を始めたときのコミット
+        SRV->>PI: POST /sources/sample/commits（baseCommit）
+        PI->>PI: 修正をブランチに残す（衝突したときのスクリプトは指定が無く実行しない）
+        PI-->>SRV: 残したブランチと、スクリプトの結果なし
+        SRV-->>UI: 残したブランチと、スクリプトの指定が無いこと
+        UI-->>U: 残したブランチの名前と、スクリプトの指定が無いこと
+      ```
+
+      <!-- /map -->
+    expected:
+      - リモートの `develop` に、他の変更のコミットより後のコミットが増えない
+      - クローンに修正を持つ `project-index/conflict/` で始まるブランチがある
+      - パネルに残したブランチの名前と、衝突したときのスクリプトの指定が無いことが出て、PR の URL は出ない
+      - 編集中の変更から n1 の修正が除かれる
+    test: test_normal_when_conflict_script_not_configured
 refs:
   - to: SC-155-13
     item: scenarios[正常シナリオ]
@@ -241,3 +390,6 @@ tags:
   - name: topic:メタデータ
   - name: action:送信
   - name: action:修正
+  - name: topic:ブランチ
+decisions:
+  - D-873

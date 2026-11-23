@@ -14,11 +14,11 @@ const kindOf = (id: string) => {
 };
 
 beforeEach(() => {
-  usePendingEditsStore.setState({ bySource: {} });
+  usePendingEditsStore.setState({ bySource: {}, baseCommitBySource: {} });
 });
 
 test("test_metadata_table_when_edited", async () => {
-  renderInRouter(<MetadataTable source="sample" kind={kindOf("tags")} query="" />);
+  renderInRouter(<MetadataTable source="sample" kind={kindOf("tags")} query="" baseCommit="aaa1111" />);
 
   await userEvent.click(await screen.findByRole("button", { name: "タグ topic:a を編集" }));
   const input = screen.getByRole("textbox");
@@ -27,18 +27,24 @@ test("test_metadata_table_when_edited", async () => {
 
   const edits = usePendingEditsStore.getState().bySource.sample ?? [];
   expect(edits).toHaveLength(1);
-  expect(edits[0]).toMatchObject({ op: "update", docId: "n1", values: { tags: ["topic:a", "topic:b"] } });
+  expect(edits[0]).toMatchObject({
+    op: "update",
+    docId: "n1",
+    docPath: "notes/n1.yaml",
+    values: { tags: ["topic:a", "topic:b"] },
+  });
+  expect(usePendingEditsStore.getState().baseCommitBySource.sample).toBe("aaa1111");
 });
 
 test("test_metadata_table_when_readonly", async () => {
-  renderInRouter(<MetadataTable source="sample" kind={kindOf("tags")} query="" />);
+  renderInRouter(<MetadataTable source="sample" kind={kindOf("tags")} query="" baseCommit="aaa1111" />);
 
   expect((await screen.findAllByText("notes/n1.yaml")).length).toBeGreaterThan(0);
   expect(screen.queryByRole("button", { name: "文書 notes/n1.yaml を編集" })).toBeNull();
 });
 
 test("test_metadata_table_when_add_duplicate", async () => {
-  renderInRouter(<MetadataTable source="sample" kind={kindOf("terms")} query="" />);
+  renderInRouter(<MetadataTable source="sample" kind={kindOf("terms")} query="" baseCommit="aaa1111" />);
 
   await userEvent.click(await screen.findByRole("button", { name: "行追加" }));
   await userEvent.type(screen.getByRole("textbox", { name: "ID" }), "source");
@@ -49,7 +55,7 @@ test("test_metadata_table_when_add_duplicate", async () => {
 });
 
 test("test_metadata_table_when_edited_label", async () => {
-  renderInRouter(<MetadataTable source="sample" kind={kindOf("tags")} query="" />);
+  renderInRouter(<MetadataTable source="sample" kind={kindOf("tags")} query="" baseCommit="aaa1111" />);
 
   await userEvent.click(await screen.findByRole("button", { name: "タグ topic:a を編集" }));
   await userEvent.type(screen.getByRole("textbox"), ", topic:b{Enter}");
@@ -59,7 +65,7 @@ test("test_metadata_table_when_edited_label", async () => {
 });
 
 test("test_metadata_table_when_add_focus", async () => {
-  renderInRouter(<MetadataTable source="sample" kind={kindOf("terms")} query="" />);
+  renderInRouter(<MetadataTable source="sample" kind={kindOf("terms")} query="" baseCommit="aaa1111" />);
 
   await userEvent.click(await screen.findByRole("button", { name: "行追加" }));
 
@@ -67,7 +73,7 @@ test("test_metadata_table_when_add_focus", async () => {
 });
 
 test("test_metadata_table_when_add_cancel", async () => {
-  renderInRouter(<MetadataTable source="sample" kind={kindOf("terms")} query="" />);
+  renderInRouter(<MetadataTable source="sample" kind={kindOf("terms")} query="" baseCommit="aaa1111" />);
 
   await userEvent.click(await screen.findByRole("button", { name: "行追加" }));
   await userEvent.type(screen.getByRole("textbox", { name: "ID" }), "kind{Escape}");

@@ -20,10 +20,19 @@ COMMIT_BODY = {
             "docId": "n1",
             "docKind": "note",
             "expectedVersion": "c3d4e5",
+            "docPath": "notes/n1.yaml",
             "values": {"tags": ["topic:a"]},
         }
     ],
     "message": "タグを修正する",
+    "baseCommit": "0a1b2c3",
+}
+REFS = {
+    "git": True,
+    "defaultRef": "develop",
+    "branches": [{"name": "develop", "commit": "0a1b2c3"}],
+    "tags": [],
+    "commits": [],
 }
 
 
@@ -43,7 +52,8 @@ def test_build_metadata_router_when_metadata(
     fake_index.configs["sample"] = config_json(
         documents=[{"id": "note", "paths": ["notes/*.yaml"], "alias_type": "doc"}]
     )
-    fake_index.docs["sample"] = {None: []}
+    fake_index.refs_results = REFS
+    fake_index.docs["sample"] = {"0a1b2c3": []}
     # 実行
     response = _client(make_handlers).get("/_api/sources/sample/metadata")
     # 検証
@@ -75,3 +85,24 @@ def test_build_metadata_router_when_cross_origin(
     # 検証
     assert response.status_code == 403
     assert fake_index.requests == []
+
+
+def test_build_metadata_router_when_ref(
+    fake_index: FakeIndex, make_handlers: Callable[..., Any]
+) -> None:
+    """リビジョンを指定した取得（正常系）。"""
+    # 準備
+    fake_index.configs["sample"] = config_json(
+        documents=[{"id": "note", "paths": ["notes/*.yaml"], "alias_type": "doc"}]
+    )
+    fake_index.refs_results = REFS
+    fake_index.docs["sample"] = {"0a1b2c3": []}
+    # 実行
+    response = _client(make_handlers).get("/_api/sources/sample/metadata?ref=0a1b2c3")
+    # 検証
+    assert response.status_code == 200
+    assert response.json()["baseCommit"] == "0a1b2c3"
+    docs_request = next(
+        item for item in fake_index.requests if item.url.path == "/sources/sample/docs"
+    )
+    assert docs_request.url.params.get("ref") == "0a1b2c3"

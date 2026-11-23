@@ -29,10 +29,10 @@ MCP_HEADERS = {
     "Content-Type": "application/json",
 }
 SAME_ORIGIN = {"Sec-Fetch-Site": "same-origin"}
-# 書き込みの API（`POST /sources/{source}/commits`、IF-38）と端末の設定の
-# `direct_commit.write_api_kinds` を持つ commit（develop の 552c341）。直コミットを確かめるテストだけがこの
-# commit の project-index を相手にする
-PROJECT_INDEX_WRITE_COMMIT = "552c341b73806678200ae6c27538b0faa2aa9dd8"
+# 書き込みの API（`POST /sources/{source}/commits`、IF-38）の `baseCommit`・衝突したときのブランチ・
+# 衝突したときのスクリプトと、文書の取得の `itemVersions` を持つ commit（develop の 7153469）。
+# 直コミットを確かめるテストだけがこの commit の project-index を相手にする
+PROJECT_INDEX_WRITE_COMMIT = "7153469bf6e3ac45a26848e32d2ddda91bade001"
 # 起動の待ち受けを待つ上限。2026-11-12 の実測で、負荷の低いときは 1 回 18 秒、
 # ロードアベレージ 20 では 30 秒を超えたため、30 秒 + 50% の余裕を持たせて 60 秒にする
 SERVE_WAIT_SEC = 60
@@ -1203,11 +1203,14 @@ def direct_source(
     files: dict[str, str],
     config: dict[str, Any],
     write_api_kinds: list[str],
+    on_conflict: list[str] | None = None,
 ) -> DirectSource:
     """直コミットを許可した配信元を作り、端末の設定の行に並べる（起動の後は再読み込みさせる）。
 
     クローン本体は master、`develop` をリモートへプッシュし、`.claude/worktrees/develop` に develop の
     ワークツリーを作る。端末の設定の行は `direct_commit.write_api_kinds` を持つ。
+    `on_conflict` を指定すると、行の `direct_commit.on_conflict.command` にする（端末の設定の API は受け付けないため、
+    起動の前にだけ指定できる）。
     """
     repo = index.root / "sources" / source_id
     repo.mkdir(parents=True)
@@ -1227,12 +1230,15 @@ def direct_source(
     _git(develop, "branch", "--set-upstream-to=origin/develop")
     local = index.root / "local"
     local.mkdir(exist_ok=True)
+    direct: dict[str, Any] = {"scope": [str(local)], "write_api_kinds": write_api_kinds}
+    if on_conflict is not None:
+        direct["on_conflict"] = {"command": on_conflict}
     index.rows.append(
         {
             "id": source_id,
             "config": [str(repo / "project-index.yaml")],
             "scope": {"read": [f"{index.root}/**"]},
-            "direct_commit": {"scope": [str(local)], "write_api_kinds": write_api_kinds},
+            "direct_commit": direct,
         }
     )
     if index._process is not None:
@@ -1286,6 +1292,7 @@ def metadata_source(
     write_api_kinds: list[str] | None = None,
     rule_index: bool = True,
     rule_tags: list[dict[str, Any]] | None = None,
+    on_conflict: list[str] | None = None,
 ) -> DirectSource:
     """用語集 `terms`・文書 `note`・索引 `rule_index`・管理用の YAML `files` を持つ直コミットの配信元を作る。
 
@@ -1410,4 +1417,5 @@ def metadata_source(
         files=files,
         config=config,
         write_api_kinds=["note", "terms"] if write_api_kinds is None else write_api_kinds,
+        on_conflict=on_conflict,
     )

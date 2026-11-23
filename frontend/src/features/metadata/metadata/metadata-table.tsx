@@ -226,10 +226,12 @@ type Props = {
   source: string;
   kind: MetadataKind;
   query: string;
+  /** メタデータの取得の `baseCommit`（変更の追加に指定する） */
+  baseCommit: string;
 };
 
 /** 1 つの種類の表。行と列が修正できるときだけ行の中の編集・追加・削除を出す */
-export const MetadataTable = ({ source, kind, query }: Props) => {
+export const MetadataTable = ({ source, kind, query, baseCommit }: Props) => {
   const edits = usePendingEdits(source);
   const upsert = usePendingEditsStore((state) => state.upsert);
   const remove = usePendingEditsStore((state) => state.remove);
@@ -268,10 +270,11 @@ export const MetadataTable = ({ source, kind, query }: Props) => {
       docId: row.id,
       docKind: row.docKind ?? "",
       expectedVersion: row.version ?? null,
+      docPath: row.docPath ?? null,
       values: { ...current?.values, [column.key]: fromText(column, text) },
       before: { ...current?.before, [column.key]: current?.before[column.key] ?? row.values[column.key] ?? "" },
       label: `${kind.title}: ${rowLabel(kind, row)}`,
-    });
+    }, baseCommit);
   };
 
   const toggleDelete = (row: MetadataRow, label: string) => {
@@ -284,10 +287,11 @@ export const MetadataTable = ({ source, kind, query }: Props) => {
       docId: row.id,
       docKind: row.docKind ?? "",
       expectedVersion: row.version ?? null,
+      docPath: row.docPath ?? null,
       values: {},
       before: {},
       label: `${kind.title}: ${label}`,
-    });
+    }, baseCommit);
   };
 
   const add = (id: string, values: Record<string, CellValue>) => {
@@ -299,10 +303,11 @@ export const MetadataTable = ({ source, kind, query }: Props) => {
       docId: id,
       docKind: kind.createKind ?? "",
       expectedVersion: null,
+      docPath: null,
       values,
       before: {},
       label: `${kind.title}: ${toText(Object.values(values)[0]) || id}`,
-    });
+    }, baseCommit);
   };
 
   return (

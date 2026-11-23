@@ -106,6 +106,7 @@ export const metadataKind = (id: string, title: string, overrides: Record<string
 export const metadataResponse = () => ({
   source: "sample",
   branch: "develop",
+  baseCommit: "aaa1111",
   kinds: [
     metadataKind("terms", "用語集", {
       columns: [metadataColumn("name", "用語"), metadataColumn("aliases", "別名", { type: "list" }), metadataColumn("description", "説明")],

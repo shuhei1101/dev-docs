@@ -4,7 +4,7 @@ import asyncio
 import json
 import logging
 from collections.abc import Callable
-from typing import Any
+from typing import Any, Literal
 
 import pytest
 
@@ -13,14 +13,19 @@ from dev_docs.features.metadata.commits import (
     Edit,
     EditsRejectedError,
     commit_edits,
+    item_expected_versions,
+    to_conflict,
     to_operations,
 )
 from dev_docs.integrations.project_index.client import ProjectIndexClient
 from dev_docs.shared.errors import ProjectIndexTimeoutError
 
-from ...conftest import FakeIndex, config_json, doc_json
+from ...conftest import FakeIndex, config_json
 
 COMMITS_PATH = ("POST", "/sources/sample/commits")
+N1_PATH = ("GET", "/sources/sample/docs/notes/n1.yaml")
+BASE_COMMIT = "0a1b2c3"
+N1_VERSIONS = {"id": "i1", "name": "m1", "tags": "t1"}
 CONFIG_ROWS = [
     {"id": "terms", "paths": ["glossary.yaml"], "records": "terms", "alias_type": "term"},
     {"id": "note", "paths": ["notes/*.yaml"], "alias_type": "doc"},
@@ -37,6 +42,7 @@ def _edits() -> list[Edit]:
             doc_id="n1",
             doc_kind="note",
             expected_version="c3d4e5",
+            doc_path="notes/n1.yaml",
             values={"tags": ["topic:a", "topic:b"]},
         ),
         Edit(
@@ -61,7 +67,18 @@ def _edits() -> list[Edit]:
 def _prepare(fake_index: FakeIndex, status: int, body: dict[str, Any]) -> None:
     """配信元の設定と、書き込みの API の応答を偽物に配置する。"""
     fake_index.configs["sample"] = config_json(documents=CONFIG_ROWS)
+    fake_index.responses[N1_PATH] = (200, {"path": "notes/n1.yaml", "itemVersions": N1_VERSIONS})
     fake_index.responses[COMMITS_PATH] = (status, body)
+
+
+def _request(**overrides: Any) -> CommitRequest:
+    """3 件の変更と編集を始めたときのコミットを持つ要求を作る。"""
+    values: dict[str, Any] = {
+        "edits": _edits(),
+        "message": "用語とタグを追加する",
+        "base_commit": BASE_COMMIT,
+    }
+    return CommitRequest(**{**values, **overrides})
 
 
 def test_to_operations() -> None:
@@ -69,13 +86,13 @@ def test_to_operations() -> None:
     # 準備
     edits = _edits()
     # 実行
-    writes, deletes, indexes = to_operations(edits, {})
+    writes, deletes, indexes = to_operations(edits, {}, {"tags:n1:update": {"tags": "t1"}})
     # 検証
     assert writes == [
         {
             "op": "update",
             "id": "n1",
-            "expected_version": "c3d4e5",
+            "expected_version": {"tags": "t1"},
             "set": {"tags": ["topic:a", "topic:b"]},
         },
         {
@@ -107,7 +124,7 @@ def test_to_operations_when_mapped_tags() -> None:
     )
     mappings = {"note": {"tags": "tags[].name"}}
     # 実行
-    writes, _, _ = to_operations([edit], mappings)
+    writes, _, _ = to_operations([edit], mappings, {})
     # 検証
     assert writes[0]["set"] == {"tags": ["topic:a", "topic:b"]}
 
@@ -127,7 +144,7 @@ def test_to_operations_when_unmappable() -> None:
     mappings = {"skill": {"name": "skill.path"}}
     # 実行
     with pytest.raises(EditsRejectedError) as caught:
-        to_operations([edit], mappings)
+        to_operations([edit], mappings, {})
     # 検証
     assert caught.value.status_code == 400
     assert [error.key for error in caught.value.errors] == ["aliases:s1:update"]
@@ -147,7 +164,7 @@ def test_to_operations_when_mapped_name() -> None:
     )
     mappings = {"skill": {"name": "title"}}
     # 実行
-    writes, _, _ = to_operations([edit], mappings)
+    writes, _, _ = to_operations([edit], mappings, {})
     # 検証
     assert writes[0]["set"] == {"name": "スキル"}
 
@@ -193,7 +210,7 @@ def test_commit_edits(
             "commit": {"sha": "0a1b2c3", "branch": "develop", "retried": False},
         },
     )
-    request = CommitRequest(edits=_edits(), message="用語とタグを追加する")
+    request = _request()
     caplog.set_level(logging.INFO, logger="dev_docs.features.metadata.commits")
     # 実行
     result = asyncio.run(commit_edits(make_client(), "sample", request))
@@ -224,7 +241,7 @@ def test_commit_edits_when_validation_failed(
             "errors": [{"path": "writes[1].name", "reason": "必須のキーが無い"}],
         },
     )
-    request = CommitRequest(edits=_edits(), message="用語とタグを追加する")
+    request = _request()
     # 実行
     with pytest.raises(EditsRejectedError) as caught:
         asyncio.run(commit_edits(make_client(), "sample", request))
@@ -251,7 +268,7 @@ def test_commit_edits_when_not_permitted(
             "nextSteps": ["sources[].direct_commit.write_api_kinds に種類を追加してください"],
         },
     )
-    request = CommitRequest(edits=_edits(), message="用語とタグを追加する")
+    request = _request()
     # 実行
     with pytest.raises(EditsRejectedError) as caught:
         asyncio.run(commit_edits(make_client(), "sample", request))
@@ -273,9 +290,10 @@ def test_commit_edits_when_timed_out(
         raise ProjectIndexTimeoutError(address="http://127.0.0.1:8786", reason="72 秒")
 
     fake_index.configs["sample"] = config_json(documents=CONFIG_ROWS)
+    fake_index.responses[N1_PATH] = (200, {"path": "notes/n1.yaml", "itemVersions": N1_VERSIONS})
     client = make_client()
     monkeypatch.setattr(client, "commit_documents", timed_out)
-    request = CommitRequest(edits=_edits(), message="用語とタグを追加する")
+    request = _request()
     # 実行
     with pytest.raises(EditsRejectedError) as caught:
         asyncio.run(commit_edits(client, "sample", request))
@@ -290,7 +308,7 @@ def test_commit_edits_when_dry_run(
     """差分確認でも説明を送信する（正常系）。"""
     # 準備
     _prepare(fake_index, 200, {"applied": False, "results": [], "commit": None})
-    request = CommitRequest(edits=_edits(), dry_run=True)
+    request = _request(message=None, dry_run=True)
     # 実行
     asyncio.run(commit_edits(make_client(), "sample", request))
     # 検証
@@ -312,17 +330,7 @@ def test_commit_edits_when_mapped_tags(
         "metadata": {"tags": "tags[].name"},
     }
     fake_index.configs["sample"] = config_json(documents=[note_row])
-    fake_index.docs["sample"] = {
-        None: [
-            doc_json(
-                "n1",
-                "notes/n1.yaml",
-                kind="note",
-                data={"id": "n1", "tags": [{"name": "topic:a", "main": True}]},
-                version="c3d4e5",
-            )
-        ]
-    }
+    fake_index.responses[N1_PATH] = (200, {"path": "notes/n1.yaml", "itemVersions": N1_VERSIONS})
     fake_index.responses[COMMITS_PATH] = (
         200,
         {"applied": False, "results": [], "commit": None},
@@ -334,42 +342,255 @@ def test_commit_edits_when_mapped_tags(
         doc_id="n1",
         doc_kind="note",
         expected_version="c3d4e5",
+        doc_path="notes/n1.yaml",
         values={"tags": ["topic:a", "topic:b"]},
     )
+    request = CommitRequest(edits=[edit], dry_run=True, base_commit=BASE_COMMIT)
     # 実行
-    asyncio.run(commit_edits(make_client(), "sample", CommitRequest(edits=[edit], dry_run=True)))
+    asyncio.run(commit_edits(make_client(), "sample", request))
     # 検証
-    paths = [
-        (item.method, item.url.path, item.url.params.get("id")) for item in fake_index.requests
+    gets = [
+        (item.url.path, item.url.params.get("ref"), item.url.params.get("id"))
+        for item in fake_index.requests
+        if item.method == "GET" and item.url.path.startswith("/sources/sample/docs")
     ]
-    assert ("GET", "/sources/sample/docs/notes/n1.yaml", "n1") not in paths
-    assert ("GET", "/sources/sample/docs", None) not in paths
+    assert gets == [("/sources/sample/docs/notes/n1.yaml", BASE_COMMIT, "n1")]
     sent = json.loads(next(item for item in fake_index.requests if item.method == "POST").content)
     assert sent["writes"][0]["set"] == {"tags": ["topic:a", "topic:b"]}
+    assert sent["writes"][0]["expected_version"] == {"tags": "t1"}
 
 
-def test_commit_edits_when_version_mismatch(
+def test_commit_edits_when_base_commit_unusable(
     fake_index: FakeIndex, make_client: Callable[..., ProjectIndexClient]
 ) -> None:
-    """409 の文書を変更へ戻す（異常系）。"""
+    """編集を始めたときのコミットが使用できない（異常系）。"""
     # 準備
     _prepare(
         fake_index,
         409,
         {
-            "title": "VersionMismatchError",
+            "title": "BaseCommitUnusableError",
             "status": 409,
-            "detail": "文書のバージョンが合いません",
-            "docId": "n1",
-            "current": "f0e1d2",
+            "detail": "編集を始めたときのコミットが既定のブランチの祖先ではありません",
+            "reason": "not_ancestor",
         },
     )
-    request = CommitRequest(edits=_edits(), message="用語とタグを追加する")
     # 実行
     with pytest.raises(EditsRejectedError) as caught:
-        asyncio.run(commit_edits(make_client(), "sample", request))
+        asyncio.run(commit_edits(make_client(), "sample", _request()))
     # 検証
     assert caught.value.status_code == 409
-    assert [(error.key, error.current) for error in caught.value.errors] == [
-        ("tags:n1:update", "f0e1d2")
+    assert caught.value.name == "BaseCommitUnusableError"
+    assert "not_ancestor" in caught.value.message
+    assert caught.value.errors == []
+
+
+def test_commit_edits_when_conflict(
+    fake_index: FakeIndex, make_client: Callable[..., ProjectIndexClient]
+) -> None:
+    """衝突してブランチに残した（正常系）。"""
+    # 準備
+    _prepare(
+        fake_index,
+        200,
+        {
+            "applied": False,
+            "results": [],
+            "commit": None,
+            "conflict": {
+                "branch": "project-index/conflict/20261123-103000-0a1b2c3",
+                "commit": "1b2c3d4",
+                "baseCommit": BASE_COMMIT,
+                "errors": [{"path": "writes[0].tags", "reason": "tags が変わっています"}],
+                "script": {
+                    "exitCode": 0,
+                    "timedOut": False,
+                    "stdout": "pushed\nhttps://github.com/o/r/pull/9\n",
+                    "stderr": "",
+                },
+            },
+        },
+    )
+    # 実行
+    result = asyncio.run(commit_edits(make_client(), "sample", _request()))
+    # 検証
+    assert result.conflict is not None
+    assert result.conflict.branch == "project-index/conflict/20261123-103000-0a1b2c3"
+    assert result.conflict.reasons[0].key == "tags:n1:update"
+    assert result.conflict.script is not None
+    assert result.conflict.script.pr_url == "https://github.com/o/r/pull/9"
+    sent = json.loads(next(item for item in fake_index.requests if item.method == "POST").content)
+    assert sent["baseCommit"] == BASE_COMMIT
+    assert sent["writes"][0]["expected_version"] == {"tags": "t1"}
+
+
+def test_item_expected_versions(
+    fake_index: FakeIndex, make_client: Callable[..., ProjectIndexClient]
+) -> None:
+    """修正した最上位のキーだけにする（正常系）。"""
+    # 準備
+    fake_index.configs["sample"] = config_json(documents=CONFIG_ROWS)
+    fake_index.responses[N1_PATH] = (
+        200,
+        {
+            "path": "notes/n1.yaml",
+            "itemVersions": {"name": "m1", "description": "d1", "tags": "t1"},
+        },
+    )
+    mappings = {"note": {"tags": "tags[].name"}}
+    # 実行
+    versions = asyncio.run(item_expected_versions(make_client(), "sample", _request(), mappings))
+    # 検証
+    assert versions == {"tags:n1:update": {"tags": "t1"}}
+    detail = next(item for item in fake_index.requests if item.url.path.endswith("n1.yaml"))
+    assert (detail.url.params.get("ref"), detail.url.params.get("id")) == (BASE_COMMIT, "n1")
+
+
+def test_item_expected_versions_when_not_found(
+    fake_index: FakeIndex, make_client: Callable[..., ProjectIndexClient]
+) -> None:
+    """編集を始めたときの文書が無い（異常系）。"""
+    # 準備
+    fake_index.configs["sample"] = config_json(documents=CONFIG_ROWS)
+    fake_index.responses[N1_PATH] = (200, {"path": "notes/n1.yaml", "itemVersions": N1_VERSIONS})
+    second = Edit(
+        key="tags:n2:update",
+        kind="tags",
+        op="update",
+        doc_id="n2",
+        doc_kind="note",
+        expected_version="d4",
+        doc_path="notes/n2.yaml",
+        values={"tags": ["topic:c"]},
+    )
+    request = _request(edits=[_edits()[0], second])
+    # 実行
+    with pytest.raises(EditsRejectedError) as caught:
+        asyncio.run(item_expected_versions(make_client(), "sample", request, {}))
+    # 検証
+    assert caught.value.status_code == 404
+    assert [error.key for error in caught.value.errors] == ["tags:n2:update"]
+
+
+def test_to_conflict() -> None:
+    """理由を変更へ戻し、PR の URL を取り出す（正常系）。"""
+    # 準備
+    conflict = {
+        "branch": "project-index/conflict/20261123-103000-0a1b2c3",
+        "commit": "1b2c3d4",
+        "baseCommit": BASE_COMMIT,
+        "errors": [
+            {"path": "writes[1].name", "reason": "name が変わっています"},
+            {"path": "", "reason": "既定のブランチが進んでいます"},
+        ],
+        "script": {
+            "exitCode": 0,
+            "timedOut": False,
+            "stdout": "pushed\nhttps://github.com/o/r/pull/9\n",
+            "stderr": "",
+        },
+    }
+    indexes: list[tuple[Literal["write", "delete"], int, str]] = [
+        ("write", 0, "tags:n1:update"),
+        ("write", 1, "terms:kind:add"),
     ]
+    # 実行
+    result = to_conflict(conflict, indexes, _edits())
+    # 検証
+    assert [reason.key for reason in result.reasons] == ["terms:kind:add", None]
+    assert result.script is not None
+    assert result.script.pr_url == "https://github.com/o/r/pull/9"
+    assert result.base_commit == BASE_COMMIT
+
+
+def test_to_conflict_when_version_mismatch() -> None:
+    """文書の ID の理由をその文書の変更へ戻す（正常系）。"""
+    # 準備
+    conflict: dict[str, Any] = {
+        "branch": "project-index/conflict/20261123-103000-0a1b2c3",
+        "commit": "1b2c3d4",
+        "baseCommit": BASE_COMMIT,
+        "errors": [{"path": "n1", "reason": "n1 は参照した後に変わっています"}],
+        "script": None,
+    }
+    edits = _edits()[:2]
+    indexes: list[tuple[Literal["write", "delete"], int, str]] = [
+        ("write", 0, "tags:n1:update"),
+        ("write", 1, "terms:kind:add"),
+    ]
+    # 実行
+    result = to_conflict(conflict, indexes, edits)
+    # 検証
+    assert [(reason.key, reason.reason) for reason in result.reasons] == [
+        ("tags:n1:update", "n1 は参照した後に変わっています")
+    ]
+
+
+def test_to_conflict_when_script_missing() -> None:
+    """スクリプトの指定が無い・差分確認（正常系）。"""
+    # 準備
+    conflict: dict[str, Any] = {
+        "branch": None,
+        "commit": None,
+        "baseCommit": BASE_COMMIT,
+        "errors": [],
+        "script": None,
+    }
+    # 実行
+    result = to_conflict(conflict, [], [])
+    # 検証
+    assert result.script is None
+    assert result.branch is None
+
+
+def test_to_conflict_when_no_pr_url() -> None:
+    """最後の行が URL でない（正常系）。"""
+    # 準備
+    conflict = {
+        "branch": "project-index/conflict/20261123-103000-0a1b2c3",
+        "commit": "1b2c3d4",
+        "baseCommit": BASE_COMMIT,
+        "errors": [],
+        "script": {"exitCode": 1, "timedOut": False, "stdout": "done", "stderr": "boom"},
+    }
+    # 実行
+    result = to_conflict(conflict, [], [])
+    # 検証
+    assert result.script is not None
+    assert result.script.pr_url is None
+    assert result.script.exit_code == 1
+
+
+def test_item_expected_versions_when_key_missing(
+    fake_index: FakeIndex, make_client: Callable[..., ProjectIndexClient]
+) -> None:
+    """編集を始めたときの文書に修正したキーが無い（正常系）。"""
+    # 準備
+    fake_index.configs["sample"] = config_json(documents=CONFIG_ROWS)
+    fake_index.responses[N1_PATH] = (
+        200,
+        {"path": "notes/n1.yaml", "itemVersions": {"id": "i1", "name": "m1"}},
+    )
+    # 実行
+    versions = asyncio.run(item_expected_versions(make_client(), "sample", _request(), {}))
+    # 検証
+    assert versions == {"tags:n1:update": "c3d4e5"}
+
+
+def test_item_expected_versions_when_base_commit_missing(
+    fake_index: FakeIndex, make_client: Callable[..., ProjectIndexClient]
+) -> None:
+    """編集を始めたときのコミットがクローンに無い（異常系）。"""
+    # 準備
+    fake_index.configs["sample"] = config_json(documents=CONFIG_ROWS)
+    fake_index.responses[N1_PATH] = (
+        404,
+        {"missing": "ref", "value": BASE_COMMIT, "argument": "ref", "detail": ""},
+    )
+    # 実行
+    with pytest.raises(EditsRejectedError) as caught:
+        asyncio.run(item_expected_versions(make_client(), "sample", _request(), {}))
+    # 検証
+    assert caught.value.status_code == 409
+    assert caught.value.name == "BaseCommitUnusableError"
+    assert caught.value.errors == []

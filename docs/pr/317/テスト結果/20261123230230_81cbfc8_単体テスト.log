@@ -1,0 +1,53 @@
+# 単体テスト（Red） 81cbfc8
+
+$ TMPDIR=~/.cache/dev-docs-pytest-tmp uv run pytest -q -p no:cacheprovider tests/unit/dev_docs/features/metadata tests/unit/dev_docs/integrations/project_index/test_client.py tests/unit/scripts/test_on_conflict_script.py
+
+==================================== ERRORS ====================================
+____ ERROR collecting tests/unit/dev_docs/features/metadata/test_commits.py ____
+ImportError while importing test module '/home/shuhei2441/repo/dev-docs/.claude/worktrees/feat-docs-view-metadata-commit-conflict-branch/tests/unit/dev_docs/features/metadata/test_commits.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+tests/unit/dev_docs/features/metadata/test_commits.py:11: in <module>
+    from dev_docs.features.metadata.commits import (
+E   ImportError: cannot import name 'item_expected_versions' from 'dev_docs.features.metadata.commits' (/home/shuhei2441/repo/dev-docs/.claude/worktrees/feat-docs-view-metadata-commit-conflict-branch/src/dev_docs/features/metadata/commits.py)
+=========================== short test summary info ============================
+ERROR tests/unit/dev_docs/features/metadata/test_commits.py
+!!!!!!!!!!!!!!!!!!!! Interrupted: 1 error during collection !!!!!!!!!!!!!!!!!!!!
+1 error in 0.24s
+
+(test_commits.py は item_expected_versions・to_conflict が未実装のため import で収集エラー。残りのファイルを個別に実行)
+$ TMPDIR=~/.cache/dev-docs-pytest-tmp uv run pytest -q -p no:cacheprovider tests/unit/dev_docs/features/metadata/test_metadata.py tests/unit/dev_docs/features/metadata/test_route.py tests/unit/dev_docs/integrations/project_index/test_client.py tests/unit/scripts/test_on_conflict_script.py
+FAILED tests/unit/dev_docs/features/metadata/test_metadata.py::test_build_metadata
+FAILED tests/unit/dev_docs/features/metadata/test_metadata.py::test_build_metadata_when_mapped
+FAILED tests/unit/dev_docs/features/metadata/test_metadata.py::test_build_metadata_when_ref_omitted
+FAILED tests/unit/dev_docs/features/metadata/test_metadata.py::test_build_metadata_when_ref
+FAILED tests/unit/dev_docs/features/metadata/test_metadata.py::test_build_metadata_when_ref_not_found
+FAILED tests/unit/dev_docs/features/metadata/test_route.py::test_build_metadata_router_when_ref
+FAILED tests/unit/dev_docs/integrations/project_index/test_client.py::test_item_versions
+FAILED tests/unit/dev_docs/integrations/project_index/test_client.py::test_item_versions_when_missing
+FAILED tests/unit/scripts/test_on_conflict_script.py::test_main - AssertionEr...
+FAILED tests/unit/scripts/test_on_conflict_script.py::test_main_when_env_missing
+FAILED tests/unit/scripts/test_on_conflict_script.py::test_main_when_pr_create_failed
+11 failed, 42 passed in 1.04s
+
+$ npx vitest run --config frontend/vitest.config.ts tests/unit/frontend/src/features/metadata
+   × test_to_commit_edits 11ms
+   × test_upsert_when_base_commit 2ms
+   × test_rebase 1ms
+   × test_rebase_when_latest_changed 1ms
+   × test_use_commit_edits_when_conflict 27ms
+   × test_use_restart_from_latest 7ms
+   × test_metadata_table_when_edited 376ms
+   × test_metadata_screen_when_pending 62ms
+   × test_pending_panel_when_dry_run_conflict 1032ms
+   × test_pending_panel_when_base_commit_unusable 1122ms
+   × test_pending_panel_when_restart_dropped 1120ms
+⎯⎯⎯⎯⎯⎯ Failed Tests 11 ⎯⎯⎯⎯⎯⎯⎯
+ Test Files  5 failed (5)
+      Tests  11 failed | 20 passed (31)
+
+## 実装の前から pass したテスト
+- pending-panel の test_pending_panel_when_conflict・_when_conflict_script_failed・_when_conflict_script_not_configured: モック作成の工程で入れた pending-panel.tsx の衝突の結果の表示（8a275cb・4388dad・bf74178）
+- test_client.py の test_commit_documents_when_conflict: commit_documents が本文をそのまま送信し、応答をそのまま返却する既存の振る舞い（src/dev_docs/integrations/project_index/client.py の commit_documents）
+- test_on_conflict_script.py の test_main_when_push_failed: スクリプトが無いため 0 以外で終わる（実装の後に、プッシュの失敗で 0 以外になることを確認する）
+- test_metadata.py の test_build_metadata_when_rule_index_missing・test_route.py の test_build_metadata_router_when_metadata: 行が 0 件の配信元で、既存の組み立てのまま期待値を満たす

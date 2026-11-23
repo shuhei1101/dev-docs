@@ -5,6 +5,7 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { CommitInfo } from './commitInfo';
+import type { ConflictResult } from './conflictResult';
 import type { EditResult } from './editResult';
 
 /**
@@ -14,4 +15,5 @@ export interface CommitResult {
   applied: boolean;
   results: EditResult[];
   commit: CommitInfo | null;
+  conflict?: ConflictResult | null;
 }

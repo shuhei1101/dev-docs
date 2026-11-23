@@ -12,5 +12,6 @@ import type { MetadataKind } from './metadataKind';
 export interface MetadataResponse {
   source: string;
   branch: string | null;
+  baseCommit?: string | null;
   kinds: MetadataKind[];
 }

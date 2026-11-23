@@ -658,7 +658,7 @@ classes:
       - name: commit_documents
         title: 直コミットの書き込み
         kind: メソッド
-        summary: project-index の書き込みの API へ `writes`・`deletes`・`message`・`dryRun` を 1 回送信し、状態コードと本文を返却する
+        summary: project-index の書き込みの API へ `writes`・`deletes`・`message`・`dryRun`・`baseCommit` を 1 回送信し、状態コードと本文を返却する
         scope: public
         is_async: true
         thread_safe: true
@@ -672,10 +672,10 @@ classes:
             type: Mapping[str, object]
             required: true
             passing: positional
-            description: '`writes`・`deletes`・`message`・`dryRun`'
+            description: '`writes`・`deletes`・`message`・`dryRun`・`baseCommit`'
         returns:
           type: tuple[int, dict]
-          description: 状態コードと本文（200 の応答か problem+json）
+          description: 状態コードと本文（200 の応答（衝突したときは `conflict` を持つ）か problem+json）
         process: |-
           1. `Origin` を付けずに POST `/sources/{source}/commits` を呼ぶ。待ちの上限は読み取りの `timeout` ではなく `PROJECT_INDEX_WRITE_TIMEOUT_SEC` にする
           2. 4xx・5xx も例外にせず、状態コードと本文を返却する（変更ごとの理由への戻しは呼び出し元が行う）
@@ -694,6 +694,70 @@ classes:
             mock: '`httpx.MockTransport`（`httpx.ReadTimeout` を送出する）'
             expected: '`ProjectIndexTimeoutError`'
             exception: 待ちの上限
+          - name: test_commit_documents_when_conflict
+            case: 正常
+            summary: 衝突の応答をそのまま返却する
+            condition: 本文に `baseCommit` を持ち、project-index が `conflict` を持つ 200 を返却する
+            mock: '`httpx.MockTransport`（要求を記録する）'
+            expected: 要求の本文に `baseCommit` があり、戻り値が `(200, conflict を持つ本文)`
+      - name: item_versions
+        title: 項目ごとのバージョンの取得
+        kind: メソッド
+        summary: 指定のリビジョンの文書の最上位のキーごとのバージョンを返却する
+        scope: public
+        is_async: true
+        thread_safe: true
+        args:
+          - name: source
+            title: 配信元の ID
+            type: str
+            required: true
+            passing: positional
+            description: 問い合わせる配信元
+          - name: path
+            title: 文書のパス
+            type: str
+            required: true
+            passing: positional
+            description: 文書のファイルのパス（拡張子つき）
+          - name: ref
+            title: リビジョン
+            type: str
+            required: true
+            passing: keyword
+            description: 編集を始めたときのコミット
+          - name: document_id
+            title: 文書の ID
+            type: str
+            required: true
+            passing: keyword
+            description: 文書の ID（管理用の YAML の行の要素を選ぶ）
+        returns:
+          type: dict[str, str]
+          description: 応答の `itemVersions`（無ければ空）
+        process: |-
+          1. 呼び出しの共通の手順で `GET /sources/{source}/docs/{path}` をクエリ `ref`・`id` で呼ぶ
+          2. 応答の `itemVersions` を返却する（変換の結果は使用しない）
+        exceptions:
+          - name: DocumentNotFoundError
+            condition: 404 で `missing` が `doc`
+            message: '`文書がありません: {path}`'
+          - name: RefNotFoundError
+            condition: 404 で `missing` が `ref`
+            message: '`ref を解決できません: {value}`'
+        unit_tests:
+          - name: test_item_versions
+            case: 正常
+            summary: 項目ごとのバージョンを返却する
+            condition: '`ref="0a1b2c3"`・`document_id="n1"`、応答が `itemVersions: {tags: a1, description: b2}`'
+            mock: '`httpx.MockTransport` で project-index の応答を返却する'
+            expected: '要求のクエリが `ref=0a1b2c3`・`id=n1` で、戻り値が `{tags: a1, description: b2}`'
+          - name: test_item_versions_when_missing
+            case: 正常
+            summary: '`itemVersions` が無い応答'
+            condition: 応答が `itemVersions` を持たない
+            mock: '`httpx.MockTransport` で project-index の応答を返却する'
+            expected: 戻り値が空の辞書
 constants:
   - name: PROJECT_INDEX_DEFAULT
     title: project-index の既定の接続先

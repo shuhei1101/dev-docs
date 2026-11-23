@@ -27,6 +27,7 @@ import type {
   CommitRequest,
   CommitResult,
   HTTPValidationError,
+  MetadataGetMetadataParams,
   MetadataResponse
 } from '../model';
 
@@ -52,20 +53,29 @@ const withQueryKey = <T extends object, K>(query: T, queryKey: K): T & { queryKe
   return result;
 };
 
-export const getMetadataGetMetadataUrl = (source: string,) => {
+export const getMetadataGetMetadataUrl = (source: string,
+    params?: MetadataGetMetadataParams,) => {
+  const normalizedParams = new URLSearchParams();
 
+  Object.entries(params || {}).forEach(([key, value]) => {
 
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
 
+  const stringifiedParams = normalizedParams.toString();
 
-  return `/_api/sources/${source}/metadata`
+  return stringifiedParams.length > 0 ? `/_api/sources/${source}/metadata?${stringifiedParams}` : `/_api/sources/${source}/metadata`
 }
 
 /**
  * @summary Get Metadata
  */
-export const metadataGetMetadata = async (source: string, options?: Parameters<typeof apiClient>[1]): Promise<MetadataResponse> => {
+export const metadataGetMetadata = async (source: string,
+    params?: MetadataGetMetadataParams, options?: Parameters<typeof apiClient>[1]): Promise<MetadataResponse> => {
 
-  return apiClient<MetadataResponse>(getMetadataGetMetadataUrl(source),
+  return apiClient<MetadataResponse>(getMetadataGetMetadataUrl(source,params),
   {
     ...options,
     method: 'GET'
@@ -78,23 +88,25 @@ export const metadataGetMetadata = async (source: string, options?: Parameters<t
 
 
 
-export const getMetadataGetMetadataQueryKey = (source: string,) => {
+export const getMetadataGetMetadataQueryKey = (source: string,
+    params?: MetadataGetMetadataParams,) => {
     return [
-    `/_api/sources/${source}/metadata`
+    `/_api/sources/${source}/metadata`, ...(params ? [params] : [])
     ] as const;
     }
 
 
-export const getMetadataGetMetadataQueryOptions = <TData = Awaited<ReturnType<typeof metadataGetMetadata>>, TError = HTTPValidationError>(source: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof metadataGetMetadata>>, TError, TData>>, request?: SecondParameter<typeof apiClient>}
+export const getMetadataGetMetadataQueryOptions = <TData = Awaited<ReturnType<typeof metadataGetMetadata>>, TError = HTTPValidationError>(source: string,
+    params?: MetadataGetMetadataParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof metadataGetMetadata>>, TError, TData>>, request?: SecondParameter<typeof apiClient>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
 
-  const queryKey =  queryOptions?.queryKey ?? getMetadataGetMetadataQueryKey(source);
+  const queryKey =  queryOptions?.queryKey ?? getMetadataGetMetadataQueryKey(source,params);
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof metadataGetMetadata>>> = ({ signal }) => metadataGetMetadata(source, { signal, ...requestOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof metadataGetMetadata>>> = ({ signal }) => metadataGetMetadata(source,params, { signal, ...requestOptions });
 
 
 
@@ -108,7 +120,8 @@ export type MetadataGetMetadataQueryError = HTTPValidationError
 
 
 export function useMetadataGetMetadata<TData = Awaited<ReturnType<typeof metadataGetMetadata>>, TError = HTTPValidationError>(
- source: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof metadataGetMetadata>>, TError, TData>> & Pick<
+ source: string,
+    params: undefined |  MetadataGetMetadataParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof metadataGetMetadata>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof metadataGetMetadata>>,
           TError,
@@ -118,7 +131,8 @@ export function useMetadataGetMetadata<TData = Awaited<ReturnType<typeof metadat
  , queryClient?: QueryClient
   ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 export function useMetadataGetMetadata<TData = Awaited<ReturnType<typeof metadataGetMetadata>>, TError = HTTPValidationError>(
- source: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof metadataGetMetadata>>, TError, TData>> & Pick<
+ source: string,
+    params?: MetadataGetMetadataParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof metadataGetMetadata>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof metadataGetMetadata>>,
           TError,
@@ -128,7 +142,8 @@ export function useMetadataGetMetadata<TData = Awaited<ReturnType<typeof metadat
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 export function useMetadataGetMetadata<TData = Awaited<ReturnType<typeof metadataGetMetadata>>, TError = HTTPValidationError>(
- source: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof metadataGetMetadata>>, TError, TData>>, request?: SecondParameter<typeof apiClient>}
+ source: string,
+    params?: MetadataGetMetadataParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof metadataGetMetadata>>, TError, TData>>, request?: SecondParameter<typeof apiClient>}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 /**
@@ -136,11 +151,12 @@ export function useMetadataGetMetadata<TData = Awaited<ReturnType<typeof metadat
  */
 
 export function useMetadataGetMetadata<TData = Awaited<ReturnType<typeof metadataGetMetadata>>, TError = HTTPValidationError>(
- source: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof metadataGetMetadata>>, TError, TData>>, request?: SecondParameter<typeof apiClient>}
+ source: string,
+    params?: MetadataGetMetadataParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof metadataGetMetadata>>, TError, TData>>, request?: SecondParameter<typeof apiClient>}
  , queryClient?: QueryClient
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
-  const queryOptions = getMetadataGetMetadataQueryOptions(source,options)
+  const queryOptions = getMetadataGetMetadataQueryOptions(source,params,options)
 
   const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 
