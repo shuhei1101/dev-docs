@@ -4,7 +4,7 @@ import asyncio
 import json
 import logging
 from collections.abc import Callable
-from typing import Any
+from typing import Any, Literal
 
 import pytest
 
@@ -432,13 +432,14 @@ def test_item_expected_versions(
     fake_index.configs["sample"] = config_json(documents=CONFIG_ROWS)
     fake_index.responses[N1_PATH] = (
         200,
-        {"path": "notes/n1.yaml", "itemVersions": {"name": "m1", "description": "d1", "tags": "t1"}},
+        {
+            "path": "notes/n1.yaml",
+            "itemVersions": {"name": "m1", "description": "d1", "tags": "t1"},
+        },
     )
     mappings = {"note": {"tags": "tags[].name"}}
     # 実行
-    versions = asyncio.run(
-        item_expected_versions(make_client(), "sample", _request(), mappings)
-    )
+    versions = asyncio.run(item_expected_versions(make_client(), "sample", _request(), mappings))
     # 検証
     assert versions == {"tags:n1:update": {"tags": "t1"}}
     detail = next(item for item in fake_index.requests if item.url.path.endswith("n1.yaml"))
@@ -489,7 +490,10 @@ def test_to_conflict() -> None:
             "stderr": "",
         },
     }
-    indexes = [("write", 0, "tags:n1:update"), ("write", 1, "terms:kind:add")]
+    indexes: list[tuple[Literal["write", "delete"], int, str]] = [
+        ("write", 0, "tags:n1:update"),
+        ("write", 1, "terms:kind:add"),
+    ]
     # 実行
     result = to_conflict(conflict, indexes)
     # 検証
@@ -502,7 +506,13 @@ def test_to_conflict() -> None:
 def test_to_conflict_when_script_missing() -> None:
     """スクリプトの指定が無い・差分確認（正常系）。"""
     # 準備
-    conflict = {"branch": None, "commit": None, "baseCommit": BASE_COMMIT, "errors": [], "script": None}
+    conflict: dict[str, Any] = {
+        "branch": None,
+        "commit": None,
+        "baseCommit": BASE_COMMIT,
+        "errors": [],
+        "script": None,
+    }
     # 実行
     result = to_conflict(conflict, [])
     # 検証
