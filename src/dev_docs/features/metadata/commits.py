@@ -226,7 +226,7 @@ def _checked_values(edit: Edit, metadata: Mapping[str, str] | None) -> dict[str,
 def to_operations(
     edits: list[Edit],
     mappings: Mapping[str, Mapping[str, str]],
-    expected_versions: Mapping[str, Mapping[str, str]],
+    expected_versions: Mapping[str, Mapping[str, str] | str],
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]], list[tuple[OperationKind, int, str]]]:
     """編集中の変更を、共通のキーのままの `writes`・`deletes` と、添字と変更の `key` の対応にする。"""
     writes: list[dict[str, Any]] = []
@@ -244,8 +244,8 @@ def to_operations(
                 {
                     "op": "update",
                     "id": edit.doc_id,
-                    # 修正した最上位のキーだけの項目ごとのバージョン（同じ文書の別の項目の変更とは衝突しない）
-                    "expected_version": dict(expected_versions.get(edit.key) or {}),
+                    # 修正した最上位のキーだけの項目ごとのバージョン（同じ文書の別の項目の変更とは衝突しない）か文書の全体のバージョン
+                    "expected_version": _expected_version(expected_versions.get(edit.key)),
                     "set": values,
                 }
             )
@@ -254,6 +254,13 @@ def to_operations(
                 {"op": "create", "id": edit.doc_id, "kind": edit.doc_kind, "data": values}
             )
     return writes, deletes, indexes
+
+
+def _expected_version(value: Mapping[str, str] | str | None) -> dict[str, str] | str:
+    """書き込みの操作の `expected_version`（辞書は複製し、文書の全体のバージョンはそのまま）。"""
+    if isinstance(value, str):
+        return value
+    return dict(value or {})
 
 
 def _check_columns(edits: list[Edit]) -> None:
@@ -358,8 +365,12 @@ async def item_expected_versions(
     source_id: str,
     request: CommitRequest,
     mappings: Mapping[str, Mapping[str, str]],
-) -> dict[str, dict[str, str]]:
-    """`update` の変更ごとに、編集を始めたときの文書の修正した最上位のキーだけのバージョンを求める。"""
+) -> dict[str, dict[str, str] | str]:
+    """`update` の変更ごとに、編集を始めたときの文書の修正した最上位のキーだけのバージョンを求める。
+
+    修正したキーのどれかが編集を始めたときの文書に無い変更は、文書の全体のバージョンにする
+    （空の辞書は project-index の照合で常に一致し、ほかの変更が同じ項目を加えても衝突にならないため）。
+    """
     updates = [edit for edit in request.edits if edit.op == "update"]
 
     async def fetch(edit: Edit) -> dict[str, str] | None:
@@ -376,7 +387,7 @@ async def item_expected_versions(
             tasks = [group.create_task(fetch(edit)) for edit in updates]
     except ExceptionGroup as group_error:
         raise group_error.exceptions[0] from None
-    result: dict[str, dict[str, str]] = {}
+    result: dict[str, dict[str, str] | str] = {}
     missing: list[EditError] = []
     for edit, task in zip(updates, tasks, strict=True):
         versions = task.result()
@@ -390,7 +401,11 @@ async def item_expected_versions(
             for column in edit.values
             if (mapping := key_mapping(metadata, column)) is not None
         }
-        result[edit.key] = {key: versions[key] for key in keys if key in versions}
+        # 編集を始めたときの文書に無い項目を加える: 文書の全体のバージョンで照合する
+        if not keys <= versions.keys():
+            result[edit.key] = str(edit.expected_version)
+            continue
+        result[edit.key] = {key: versions[key] for key in keys}
     if missing:
         raise EditsRejectedError(
             message="編集を始めたときの文書が見つかりません",
