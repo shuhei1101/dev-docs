@@ -21,9 +21,9 @@ def build_metadata_router(handlers: Handlers) -> APIRouter:
     router = APIRouter(tags=["metadata"])
 
     @router.get("/_api/sources/{source}/metadata", name="get_metadata")
-    async def get_metadata(source: str) -> MetadataResponse:
-        # 配信元が無い（404）・つながらない（503）は例外の変換の登録に任せる
-        return await build_metadata(handlers.project_index, source)
+    async def get_metadata(source: str, ref: str | None = None) -> MetadataResponse:
+        # 配信元・リビジョンが無い（404）・つながらない（503）は例外の変換の登録に任せる
+        return await build_metadata(handlers.project_index, source, ref=ref)
 
     @router.post(
         "/_api/sources/{source}/commits",
