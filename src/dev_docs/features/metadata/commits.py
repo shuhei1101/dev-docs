@@ -436,17 +436,30 @@ def _pr_url(stdout: str) -> str | None:
     return None
 
 
+def _conflict_reasons(
+    item: Mapping[str, Any], index_keys: list[tuple[OperationKind, int, str]], edits: list[Edit]
+) -> list[ConflictReason]:
+    """`errors[]` の 1 件を変更の `key` と理由の組にする。"""
+    violation = _violation(item, index_keys, "")
+    # 文書のバージョンが合わない: `path` が文書の ID なので、その文書を変える変更ごとに 1 件にする
+    if violation.key is None and violation.path is not None:
+        keys = [edit.key for edit in edits if edit.doc_id == violation.path]
+        if keys:
+            return [ConflictReason(key=key, reason=violation.reason) for key in keys]
+    return [ConflictReason(key=violation.key, reason=violation.reason)]
+
+
 def to_conflict(
-    conflict: Mapping[str, Any], index_keys: list[tuple[OperationKind, int, str]]
+    conflict: Mapping[str, Any],
+    index_keys: list[tuple[OperationKind, int, str]],
+    edits: list[Edit],
 ) -> ConflictResult:
     """project-index の応答の `conflict` を、変更の `key` に戻した理由と PR の URL にする。"""
     reasons = [
-        ConflictReason(key=violation.key, reason=violation.reason)
-        for violation in (
-            _violation(item, index_keys, "")
-            for item in conflict.get("errors") or []
-            if isinstance(item, Mapping)
-        )
+        reason
+        for item in conflict.get("errors") or []
+        if isinstance(item, Mapping)
+        for reason in _conflict_reasons(item, index_keys, edits)
     ]
     script = conflict.get("script")
     # スクリプトの指定が無い・差分確認: スクリプトの結果は無い
@@ -542,5 +555,7 @@ async def commit_edits(
         commit=CommitInfo(sha=str(commit["sha"]), branch=str(commit["branch"]))
         if isinstance(commit, Mapping)
         else None,
-        conflict=to_conflict(raw_conflict, indexes) if isinstance(raw_conflict, Mapping) else None,
+        conflict=to_conflict(raw_conflict, indexes, request.edits)
+        if isinstance(raw_conflict, Mapping)
+        else None,
     )
