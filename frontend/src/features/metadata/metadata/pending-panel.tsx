@@ -36,9 +36,30 @@ const MESSAGE_MAX = 200;
 const SHA_CHARS = 7;
 const NARROW_QUERY = "(max-width: 47.99rem)";
 
+/** 衝突したときのスクリプトの結果（`null` はスクリプトの指定が無い） */
+export type ConflictScript = {
+  exitCode: number | null;
+  timedOut: boolean;
+  /** スクリプトが標準出力の最後の行に出した PR の URL */
+  prUrl: string | null;
+  stderr: string;
+};
+
+/** 衝突して修正をブランチに残した結果 */
+export type ConflictInfo = {
+  branch: string;
+  baseCommit: string;
+  /** 今のブランチで断った理由 */
+  reasons: { key: string | null; reason: string }[];
+  script: ConflictScript | null;
+};
+
+type CommitOutcome = CommitResult & { conflict?: ConflictInfo | null };
+
 type Outcome =
-  | { kind: "diff"; result: CommitResult }
-  | { kind: "committed"; result: CommitResult }
+  | { kind: "diff"; result: CommitOutcome }
+  | { kind: "committed"; result: CommitOutcome }
+  | { kind: "conflict"; conflict: ConflictInfo; labels: string[] }
   | { kind: "failed"; problem: Problem | null; message: string }
   | null;
 
@@ -200,6 +221,61 @@ const FailureSummary = ({ outcome }: { outcome: Extract<Outcome, { kind: "failed
   );
 };
 
+/** 衝突したときのスクリプトの結果の文 */
+const ScriptResult = ({ script }: { script: ConflictScript | null }) => {
+  if (script === null) {
+    return <p>衝突したときのスクリプトが登録されていないため、PR は作成していません。ブランチはこの端末のクローンにだけあります。</p>;
+  }
+  if (script.exitCode === 0 && !script.timedOut) {
+    return script.prUrl ? (
+      <p>
+        <a className="underline underline-offset-2" href={script.prUrl} target="_blank" rel="noreferrer">
+          PR を開く
+        </a>
+      </p>
+    ) : (
+      <p>衝突したときのスクリプトを実行しました。</p>
+    );
+  }
+  return (
+    <div className="text-destructive">
+      <p>
+        {script.timedOut
+          ? "衝突したときのスクリプトが制限時間を過ぎたため止めました。"
+          : `衝突したときのスクリプトが失敗しました（終了コード ${script.exitCode}）。`}
+      </p>
+      {script.stderr !== "" && (
+        <pre className="mt-1 overflow-x-auto rounded bg-muted p-2 font-mono text-xs whitespace-pre-wrap">{script.stderr}</pre>
+      )}
+    </div>
+  );
+};
+
+/** 衝突して修正をブランチに残した結果のまとめ */
+const ConflictSummary = ({ outcome }: { outcome: Extract<Outcome, { kind: "conflict" }> }) => (
+  <Alert role="status">
+    <AlertTitle>ほかの変更と衝突したため、修正をブランチに残しました</AlertTitle>
+    <AlertDescription>
+      <p>
+        ブランチ <code className="font-mono">{outcome.conflict.branch}</code>（編集を始めたときの{" "}
+        <code className="font-mono">{outcome.conflict.baseCommit.slice(0, SHA_CHARS)}</code> から）
+      </p>
+      <ScriptResult script={outcome.conflict.script} />
+      <ul className="list-disc pl-4">
+        {outcome.labels.map((label) => (
+          <li key={label}>{label}</li>
+        ))}
+      </ul>
+      {outcome.conflict.reasons.map((item) => (
+        <p key={`${item.key ?? ""}:${item.reason}`} className="text-xs">
+          {item.reason}
+        </p>
+      ))}
+      <p>ブランチに残した変更は、編集中の変更から除きました。</p>
+    </AlertDescription>
+  </Alert>
+);
+
 /** 直前の結果を、変更の `key` ごとの差分と理由にする */
 const outcomeByEdit = (outcome: Outcome) => ({
   diffs: new Map(
@@ -211,6 +287,7 @@ const outcomeByEdit = (outcome: Outcome) => ({
 /** コミットの結果か送信の失敗のまとめ */
 const OutcomeSummary = ({ outcome }: { outcome: Outcome }) => {
   if (outcome?.kind === "failed") return <FailureSummary outcome={outcome} />;
+  if (outcome?.kind === "conflict") return <ConflictSummary outcome={outcome} />;
   if (outcome?.kind !== "committed" || !outcome.result.commit) return null;
   return (
     <Alert role="status">
@@ -241,8 +318,13 @@ export const PendingPanel = ({ source, branch, open, onOpenChange, onLocate }: P
 
   const send = async (dryRun: boolean, message?: string) => {
     setConfirmOpen(false);
+    const labels = edits.map((edit) => edit.label);
     try {
-      const result = await commit.mutateAsync({ dryRun, message });
+      const result: CommitOutcome = await commit.mutateAsync({ dryRun, message });
+      if (!dryRun && result.conflict) {
+        setOutcome({ kind: "conflict", conflict: result.conflict, labels });
+        return;
+      }
       setOutcome({ kind: dryRun ? "diff" : "committed", result });
     } catch (error) {
       setOutcome({
