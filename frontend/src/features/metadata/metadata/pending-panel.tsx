@@ -238,14 +238,16 @@ const ScriptResult = ({ script }: { script: ConflictScript | null }) => {
     );
   }
   return (
-    <div className="text-destructive">
-      <p>
+    <div>
+      <p className="text-destructive">
         {script.timedOut
           ? "衝突したときのスクリプトが制限時間を過ぎたため止めました。"
           : `衝突したときのスクリプトが失敗しました（終了コード ${script.exitCode}）。`}
       </p>
       {script.stderr !== "" && (
-        <pre className="mt-1 overflow-x-auto rounded bg-muted p-2 font-mono text-xs whitespace-pre-wrap">{script.stderr}</pre>
+        <pre className="mt-1 overflow-x-auto rounded bg-muted p-2 font-mono text-xs whitespace-pre-wrap text-foreground">
+          {script.stderr}
+        </pre>
       )}
     </div>
   );
