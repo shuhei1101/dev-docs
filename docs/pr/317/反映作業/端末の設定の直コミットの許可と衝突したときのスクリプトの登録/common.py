@@ -40,10 +40,15 @@ def load_yaml_text(text: str) -> object:
 
 
 def request(method: str, path: str, body: object | None = None) -> tuple[int, object]:
-    """端末の設定の API を呼び、状態コードと JSON の本文を返却する。"""
+    """端末の設定の API を呼び、状態コードと JSON の本文を返却する。
+
+    再試行するのは読み取り（GET）だけにする。書き換え（PATCH）は、適用された後に応答だけが
+    失われると再試行が 409 になり適用済みかを判定できないため、1 回だけ送信する。
+    """
     data = None if body is None else json.dumps(body).encode()
     last: Exception | None = None
-    for _ in range(RETRIES):
+    attempts = RETRIES if method == "GET" else 1
+    for _ in range(attempts):
         req = urllib.request.Request(
             API + path, data=data, method=method, headers={"Content-Type": "application/json"}
         )
