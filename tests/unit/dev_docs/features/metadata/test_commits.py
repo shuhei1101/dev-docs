@@ -495,12 +495,35 @@ def test_to_conflict() -> None:
         ("write", 1, "terms:kind:add"),
     ]
     # 実行
-    result = to_conflict(conflict, indexes)
+    result = to_conflict(conflict, indexes, _edits())
     # 検証
     assert [reason.key for reason in result.reasons] == ["terms:kind:add", None]
     assert result.script is not None
     assert result.script.pr_url == "https://github.com/o/r/pull/9"
     assert result.base_commit == BASE_COMMIT
+
+
+def test_to_conflict_when_version_mismatch() -> None:
+    """文書の ID の理由をその文書の変更へ戻す（正常系）。"""
+    # 準備
+    conflict: dict[str, Any] = {
+        "branch": "project-index/conflict/20261123-103000-0a1b2c3",
+        "commit": "1b2c3d4",
+        "baseCommit": BASE_COMMIT,
+        "errors": [{"path": "n1", "reason": "n1 は参照した後に変わっています"}],
+        "script": None,
+    }
+    edits = _edits()[:2]
+    indexes: list[tuple[Literal["write", "delete"], int, str]] = [
+        ("write", 0, "tags:n1:update"),
+        ("write", 1, "terms:kind:add"),
+    ]
+    # 実行
+    result = to_conflict(conflict, indexes, edits)
+    # 検証
+    assert [(reason.key, reason.reason) for reason in result.reasons] == [
+        ("tags:n1:update", "n1 は参照した後に変わっています")
+    ]
 
 
 def test_to_conflict_when_script_missing() -> None:
@@ -514,7 +537,7 @@ def test_to_conflict_when_script_missing() -> None:
         "script": None,
     }
     # 実行
-    result = to_conflict(conflict, [])
+    result = to_conflict(conflict, [], [])
     # 検証
     assert result.script is None
     assert result.branch is None
@@ -531,7 +554,7 @@ def test_to_conflict_when_no_pr_url() -> None:
         "script": {"exitCode": 1, "timedOut": False, "stdout": "done", "stderr": "boom"},
     }
     # 実行
-    result = to_conflict(conflict, [])
+    result = to_conflict(conflict, [], [])
     # 検証
     assert result.script is not None
     assert result.script.pr_url is None
