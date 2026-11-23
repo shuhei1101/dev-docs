@@ -161,7 +161,7 @@ stores:
       - name: rebase
         title: 編集を始めたときのコミットの記録の更新
         kind: 関数
-        summary: 「最新の内容で続ける」で、編集中の変更を残したまま編集を始めたときのコミットを置き換える
+        summary: 「最新の内容で続ける」で、編集を始めたときのコミットを置き換え、最新の値が変更前の値と違う `update` を取り消す
         scope: public
         args:
           - name: source
@@ -174,10 +174,18 @@ stores:
             required: true
             passing: positional
             description: 既定のブランチの先頭で取得した `baseCommit`
+          - name: latest
+            type: Record<string, Record<string, Record<string, string | string[]>>>
+            required: true
+            passing: positional
+            description: 再取得したメタデータの種類・行の ID ごとの `values`
         returns:
-          type: void
-          description: 何も返却しない
-        process: 1. `baseCommitBySource[source]` を `baseCommit` にする（`bySource[source]` は変えない）
+          type: PendingEdit[]
+          description: 取り消した変更
+        process: |-
+          1. `update` の変更ごとに、`latest[変更の kind][変更の docId]` の列の値を `before` と比べ、どれかが違う（行が無いものも含む）変更を `bySource[source]` から除く
+          2. 変更が残っていれば `baseCommitBySource[source]` を `baseCommit` にし、0 件になったら除く
+          3. 除いた変更を返却する
         unit_tests:
           - name: test_rebase
             case: 正常
@@ -185,6 +193,12 @@ stores:
             condition: '`aaa1111` で 2 件を追加し、`ccc3333` で更新する'
             mock: なし
             expected: 変更が 2 件のままで、`baseCommitBySource` が `ccc3333`
+          - name: test_rebase_when_latest_changed
+            case: 正常
+            summary: 最新の値が変わった変更を取り消す
+            condition: '`aaa1111` でタグの `update`（`before` が `[topic:a]`）と用語の `add` を追加し、`latest` のその行のタグが `[topic:x]` で `ccc3333` で更新する'
+            mock: なし
+            expected: 戻り値がタグの変更 1 件で、残る変更が `add` 1 件、`baseCommitBySource` が `ccc3333`
 refs:
   - to: SCR-155-4
     type: requires

@@ -55,7 +55,7 @@ functions:
     container: features/metadata/metadata/queries.ts
     usecase: 画面で編集中の変更をまとめて直コミットする
     role: アダプター
-    summary: 既定のブランチの先頭でメタデータを再取得し、編集中の変更を残したまま編集を始めたときのコミットを置き換える
+    summary: 既定のブランチの先頭でメタデータを再取得し、編集を始めたときのコミットを置き換え、最新の値と食い違う変更を取り消す
     scope: public
     args:
       - name: source
@@ -64,11 +64,11 @@ functions:
         passing: positional
         description: 配信元の ID
     returns:
-      type: UseMutationResult<MetadataResponse, AppError, void>
-      description: 実行すると取得したメタデータを返却する
+      type: 'UseMutationResult<{metadata: MetadataResponse; dropped: PendingEdit[]}, AppError, void>'
+      description: 実行すると取得したメタデータと取り消した変更を返却する
     process: |-
       1. `ref` を省いてメタデータの取得を呼ぶ
-      2. 応答の `baseCommit` で編集を始めたときのコミットの記録の更新を呼び、メタデータの問い合わせの値を応答で置き換える
+      2. 応答の `baseCommit` と、応答の `kinds[].rows[]` から作った種類・行の ID ごとの `values` で編集を始めたときのコミットの記録の更新を呼び（取り消した変更を戻り値に含める）、メタデータの問い合わせの値を応答で置き換える
     unit_tests:
       - name: test_use_restart_from_latest
         case: 正常

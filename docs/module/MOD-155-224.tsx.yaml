@@ -32,7 +32,7 @@ components:
         description: 変更の行へ移動
     state:
       - name: outcome
-        type: '{kind: "diff"; result: CommitResult} | {kind: "committed"; result: CommitResult} | {kind: "conflict"; result: CommitResult; edits: PendingEdit[]} | {kind: "failed"; problem: ProblemDetails} | null'
+        type: '{kind: "diff"; result: CommitResult} | {kind: "committed"; result: CommitResult} | {kind: "conflict"; result: CommitResult; edits: PendingEdit[]} | {kind: "failed"; problem: ProblemDetails} | {kind: "dropped"; edits: PendingEdit[]} | null'
         initial: 'null'
         description: 直前の差分確認・コミットの結果
         notes: '`useState`'
@@ -41,7 +41,7 @@ components:
         initial: 'false'
         description: コミットの確認のダイアログ
         notes: '`useState`'
-    description: shadcn/ui の `Sheet` を `modal={false}` で開き、狭い幅は `side="bottom"`、広い幅は右にする。差分確認・コミットは編集中の変更の直コミットを呼ぶ。失敗の Problem Details の `errors[].key` で変更ごとに理由を出し、コミットのボタンを `再試行` にする。`title` が `BaseCommitUnusableError` のときはボタンを `最新の内容で続ける` にし、押すと最新の内容で続けるを呼んで `outcome` を `null` にする。コミットが `conflict` を持つ 200 を返却したときは、送信した変更を `edits` に記録して衝突の結果（`role="status"`）を出し、差分確認が `conflict` を返却したときは差分確認の衝突の注意と `reasons[].key` の変更の下の理由を出す。説明の文は変更が 1 件以上のときだけ出す。コミットの確認は shadcn/ui の `Dialog` で、コミットの説明（必須・200 文字）を入力する
+    description: shadcn/ui の `Sheet` を `modal={false}` で開き、狭い幅は `side="bottom"`、広い幅は右にする。差分確認・コミットは編集中の変更の直コミットを呼ぶ。失敗の Problem Details の `errors[].key` で変更ごとに理由を出し、コミットのボタンを `再試行` にする。`title` が `BaseCommitUnusableError` のときはボタンを `最新の内容で続ける` にし、押すと最新の内容で続けるを呼び、取り消した変更があれば `outcome` を取り消した変更の一覧に、無ければ `null` にする。コミットが `conflict` を持つ 200 を返却したときは、送信した変更を `edits` に記録して衝突の結果（`role="status"`）を出し、差分確認が `conflict` を返却したときは差分確認の衝突の注意と `reasons[].key` の変更の下の理由を出す。説明の文は変更が 1 件以上のときだけ出す。コミットの確認は shadcn/ui の `Dialog` で、コミットの説明（必須・200 文字）を入力する
     unit_tests:
       - name: test_pending_panel_when_dry_run
         case: 正常
@@ -95,6 +95,12 @@ components:
         mock: 'MSW の直コミット（409）とメタデータの取得（`baseCommit: ccc3333`）のハンドラ'
         expected: 押す前はボタンが `最新の内容で続ける`、押した後は失敗のまとめが消え、変更が残り `baseCommitBySource` が `ccc3333`
         exception: 編集を始めたときのコミットが使用できない
+      - name: test_pending_panel_when_restart_dropped
+        case: 正常
+        summary: 最新の内容と食い違う変更を取り消して一覧を出す
+        condition: 409（`BaseCommitUnusableError`）の後に `最新の内容で続ける` を押し、再取得した行のタグが変更前の値と違う
+        mock: MSW の直コミット（409）とメタデータの取得（タグを変えた行）のハンドラ
+        expected: '`最新の内容と食い違うため、次の変更を取り消しました` とその変更の行の名前が出て、タグの変更が編集中の変更に無い'
 refs:
   - to: SCR-155-4
     type: requires
