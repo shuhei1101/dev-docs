@@ -880,6 +880,40 @@ scenarios:
       - ブランチが進んだ後に文書 1 の URL を開き直すと、比較先の文書の一覧の問い合わせが 1 回だけ届き、本文と変わった項目が進んだ commit の内容になる
       - 比較元の commit の文書の一覧の問い合わせは、シナリオ全体で 1 回だけ届く
     test: test_normal_when_diff_reopened
+  - name: 正常シナリオ（検索から除外される文書）
+    setup:
+      - name: Mock
+        description: なし（実環境で実行）
+      - name: 検索から除外する文書を持つ配信元
+        description: 正常シナリオと同じ sample の `project-index.yaml` の `documents[]` の行に、文書 2 に該当する `search_exclude` を記載する
+        notes: 文書 1 と文書 2 の本文がどちらも含む単語を検索する
+      - name: dev-docs
+        description: sample を配信している dev-docs
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        actor U as 利用者
+        participant UI as dev-docs の画面
+        participant API as 画面の API
+
+        U->>UI: sample の文書 1 を開く
+        UI->>API: 文書の取得
+        API-->>UI: サイドバー（文書 2 は検索から除外される）
+        UI-->>U: サイドバーの文書 2 が、検索から除外される文書と分かる表示
+        U->>UI: Ctrl+K を押して単語を入力する
+        UI->>API: 画面の検索
+        API-->>UI: 文書 1 の結果と、除外した件数 1
+        UI-->>U: 文書 1 の結果と、除外した件数
+        U->>UI: 除外した文書も含めて検索する
+        UI->>API: 画面の検索（除外した文書を含める）
+        API-->>UI: 文書 1 と文書 2 の結果
+        UI-->>U: 文書 1 と文書 2 の結果（文書 2 は除外される文書と分かる表示）
+      ```
+    expected:
+      - サイドバーに文書 2 が残り、検索から除外される文書と分かる表示で、選ぶと文書 2 が開く
+      - 検索の結果に文書 1 だけが並び、除外した件数 1 が出る
+      - 除外した文書も含めて検索すると、文書 1 と文書 2 が並び、文書 2 は検索から除外される文書と分かる表示になる
+    test: test_normal_when_search_excluded
 lead: 利用者が文書の画面をタブ・サイドバー・検索・リビジョンの切り替え・差分で参照するシナリオを定め、文書の画面の流れを変えるときに参照する。
 primary_actor: 利用者
 stakeholders:

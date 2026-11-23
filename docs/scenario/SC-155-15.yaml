@@ -376,6 +376,45 @@ scenarios:
       - パネルに残したブランチの名前と、衝突したときのスクリプトの指定が無いことが出て、PR の URL は出ない
       - 編集中の変更から n1 の修正が除かれる
     test: test_normal_when_conflict_script_not_configured
+  - name: 正常シナリオ（本文の直コミットを断る種類の文書）
+    setup:
+      - name: Mock
+        description: なし（実環境で実行）
+      - name: 本文の直コミットを断る種類を持つ配信元
+        description: '正常シナリオと同じ sample の `project-index.yaml` の `direct_commit.kinds[]` の `note` を `{id: note, body: false}` にする'
+        notes: '`note` の文書はメタデータだけを直コミットでき、本文の直コミットは断られる'
+      - name: dev-docs
+        description: sample を配信している dev-docs と project-index
+    flow: |-
+      <!-- map -->
+
+      ```mermaid
+      sequenceDiagram
+        actor U as 利用者
+        participant UI as dev-docs の画面
+        participant SRV as 開発ドキュメントサーバー
+        participant PI as project-index
+
+        U->>UI: sample のメタデータの画面を開く
+        UI->>SRV: sample のメタデータを取得
+        SRV->>PI: 配信元の設定・文書の一覧・端末の設定
+        PI-->>SRV: 本文の直コミットを断る種類 note
+        SRV-->>UI: n1 の行の本文は直コミットできない
+        UI-->>U: n1 の行の本文は編集できず、理由が出る
+        U->>UI: n1 の行にタグ `topic:b` を追加し、まとめて送信する
+        UI->>SRV: sample の修正 1 件を送信
+        SRV->>PI: POST /sources/sample/commits
+        PI-->>SRV: コミットとブランチ
+        SRV-->>UI: 送信の結果
+        UI-->>U: コミットとブランチの表示と、修正後の値の一覧
+      ```
+
+      <!-- /map -->
+    expected:
+      - n1 の行の本文は編集を始められず、本文の直コミットを断る種類であることが出る
+      - n1 の行のタグは編集でき、送信するとリモートの `develop` に 1 コミットだけ増え、変更は n1 のメタデータだけ
+      - 編集中の変更に n1 の本文の修正が入らない
+    test: test_normal_when_body_commit_refused
 refs:
   - to: SC-155-13
     item: scenarios[正常シナリオ]
