@@ -106,8 +106,8 @@ export const IncludeExcluded: Story = {
                 ...items,
                 {
                   path: "docs/design/old-paging",
-                  name: "旧いページング",
-                  snippets: ["…ページングの旧い扱いは…"],
+                  name: "旧ページング",
+                  snippets: ["…ページングの以前の扱いは…"],
                   excluded: true,
                 },
               ],

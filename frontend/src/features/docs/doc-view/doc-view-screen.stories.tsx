@@ -165,7 +165,7 @@ export const ExcludedDocs: Story = {
                 ...tabs[0].items[0],
                 items: [
                   page("文書の画面", "docs/a"),
-                  { ...page("旧い設定画面", "docs/b"), excluded: true },
+                  { ...page("旧設定画面", "docs/b"), excluded: true },
                   page("見つからない画面", "docs/c"),
                 ],
               },
