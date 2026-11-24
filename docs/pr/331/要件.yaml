@@ -1,0 +1,22 @@
+use_cases:
+  - kind: composite
+    scenario: docs/scenario/SC-155-13.yaml
+    impact: none
+    detail: 画面で参照する流れは変わらない
+    depends_on: []
+  - kind: single
+    scenario: docs/scenario/SC-155-7.yaml
+    impact: run_only
+    detail: リビジョンを切り替える手順は変わらないが、リビジョンの一覧の見え方が変わるため、切り替えの流れが壊れていないことを確かめる
+    depends_on: []
+docs:
+  - page: docs/component/CMP-155-2.yaml
+    new: false
+    change: 配信元・リビジョンのメニューを、開いたボタンの幅ではなく項目が折り返さない幅（画面の幅を超えない）で開くことと、長い配信元の ID・ブランチ名・commit の題名を持つ状態を追加する
+    status: done
+    updated_by: planner
+    updated_at: '2026-11-24T16:20:05.727527+00:00'
+scope_out:
+  - item: トップバーのボタン（配信元の ID を `max-w-16`・`max-w-24` で切り詰める表示）の幅
+    reason: 要望はメニューの一覧の幅で、ボタンの幅は要望に含まれない
+    plan: none

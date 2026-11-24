@@ -105,6 +105,34 @@ states:
         value: '3'
     notes:
       幅: ストーリーのデコレーターで幅 390px の枠に配置する
+  - name: LongItems
+    description: 長い配信元の ID・ブランチ名・commit の題名を持つ。メニューを開くと、ボタンの幅以上の中身の幅で開き、項目を 1 行で出す
+    args:
+      - name: screen
+        value: doc-view
+      - name: currentSource
+        value: mindstella-nandemo-kaiwa-74ba1a
+      - name: sources
+        value: '[{"id": "mindstella-nandemo-kaiwa-74ba1a", "writable": true}, {"id": "aituber-material-templates", "writable": false}, {"id": "sample", "writable": true}]'
+      - name: refs
+        value: '{"git": true, "defaultRef": "develop", "branches": [{"name": "feat/screen/metadata-only-kinds-and-excluded-docs"}], "tags": [{"name": "v1.12.0"}], "commits": [{"commit": "5b3f8e2", "subject": "docs: PR ドキュメント #331 の要件と計画書を記入"}]}'
+      - name: currentRef
+        value: feat/screen/metadata-only-kinds-and-excluded-docs
+  - name: LongItemsNarrow
+    description: LongItems を幅 48rem 未満の場所に配置する。メニューは画面の幅を超えず、超える項目は末尾を省略して 1 行に収める
+    args:
+      - name: screen
+        value: doc-view
+      - name: currentSource
+        value: mindstella-nandemo-kaiwa-74ba1a
+      - name: sources
+        value: '[{"id": "mindstella-nandemo-kaiwa-74ba1a", "writable": true}, {"id": "aituber-material-templates", "writable": false}, {"id": "sample", "writable": true}]'
+      - name: refs
+        value: '{"git": true, "defaultRef": "develop", "branches": [{"name": "feat/screen/metadata-only-kinds-and-excluded-docs"}], "tags": [{"name": "v1.12.0"}], "commits": [{"commit": "5b3f8e2", "subject": "docs: PR ドキュメント #331 の要件と計画書を記入"}]}'
+      - name: currentRef
+        value: feat/screen/metadata-only-kinds-and-excluded-docs
+    notes:
+      幅: ストーリーのデコレーターで幅 390px の枠に配置する
 lead: 3 画面に共通の画面上部のバー（配信元・リビジョンの切り替え・検索・コメント・設定・明暗）の引数と状態を定め、トップバーを修正するときに参照する。
 args:
   - name: screen
@@ -189,6 +217,9 @@ accessibility:
   - メタデータのボタンはメタデータの画面へのリンク（読み上げ名 `メタデータ`。メタデータの画面では `aria-current="page"`）。編集中のボタンの読み上げ名は `編集中 {件数} 件`（0 件のときは `編集中`）
 notes:
   モック: '[docs/mock/components/topbar/index.html](../mock/components/topbar/index.html)'
+  メニューの幅: |-
+    配信元・リビジョンのメニューは、開いたボタンの幅に合わせず、項目の中身の幅で開く。項目は折り返さず 1 行で出し、幅の下限は開いたボタンの幅、上限はメニューを開いた位置から使用できる画面の幅にする。上限を超える項目は末尾を省略し、全文を `title` に持たせる。
+    幅の指定はトップバーの 2 つのメニューで `DropdownMenuContent` に指定し、shadcn から追加したドロップダウンメニューの部品の既定は変えない
 status: planned
 test_file: tests/integration/frontend/topbar.spec.ts
 tags:

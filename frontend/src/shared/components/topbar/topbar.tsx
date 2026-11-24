@@ -49,6 +49,13 @@ type Props = {
   onColorSchemeToggle: () => void;
 };
 
+/** 配信元・リビジョンのメニューを、ボタンの幅を下限・画面の使用できる幅を上限にした中身の幅で開く */
+const MENU_CONTENT_WIDTH =
+  "w-auto min-w-(--anchor-width) max-w-(--available-width)";
+
+/** メニューの項目を折り返さず 1 行で出す */
+const MENU_ITEM_NOWRAP = "text-nowrap";
+
 type SourceMenuProps = Pick<
   Props,
   "sources" | "currentSource" | "onSourceSelect"
@@ -75,17 +82,20 @@ const SourceMenu = ({
       </span>
       <ChevronDown className="hidden md:block" />
     </DropdownMenuTrigger>
-    <DropdownMenuContent>
+    <DropdownMenuContent className={MENU_CONTENT_WIDTH}>
       <DropdownMenuGroup>
         <DropdownMenuLabel>配信元</DropdownMenuLabel>
         {sources.map((source) => (
           <DropdownMenuItem
             key={source.id}
+            className={MENU_ITEM_NOWRAP}
             aria-current={source.id === currentSource ? "true" : undefined}
             onClick={() => onSourceSelect?.(source.id)}
           >
-            <span className="font-mono text-xs">{source.id}</span>
-            <span className="ml-auto text-xs text-muted-foreground">
+            <span className="truncate font-mono text-xs" title={source.id}>
+              {source.id}
+            </span>
+            <span className="ml-auto shrink-0 text-xs text-muted-foreground">
               {source.writable ? "読み書き" : "読み取りだけ"}
             </span>
           </DropdownMenuItem>
@@ -130,16 +140,21 @@ const RefMenu = ({
         </span>
         <ChevronDown className="hidden md:block" />
       </DropdownMenuTrigger>
-      <DropdownMenuContent className="max-h-96 overflow-y-auto">
+      <DropdownMenuContent
+        className={`${MENU_CONTENT_WIDTH} max-h-96 overflow-y-auto`}
+      >
         <DropdownMenuGroup>
           <DropdownMenuLabel>ブランチ</DropdownMenuLabel>
           {branches.map((name) => (
             <DropdownMenuItem
               key={`b:${name}`}
+              className={MENU_ITEM_NOWRAP}
               aria-current={name === current ? "true" : undefined}
               onClick={() => onRefSelect?.(name)}
             >
-              <span className="font-mono text-xs">{name}</span>
+              <span className="truncate font-mono text-xs" title={name}>
+                {name}
+              </span>
             </DropdownMenuItem>
           ))}
         </DropdownMenuGroup>
@@ -150,10 +165,13 @@ const RefMenu = ({
             {tags.map((tag) => (
               <DropdownMenuItem
                 key={`t:${tag.name}`}
+                className={MENU_ITEM_NOWRAP}
                 aria-current={tag.name === current ? "true" : undefined}
                 onClick={() => onRefSelect?.(tag.name)}
               >
-                <span className="font-mono text-xs">{tag.name}</span>
+                <span className="truncate font-mono text-xs" title={tag.name}>
+                  {tag.name}
+                </span>
               </DropdownMenuItem>
             ))}
           </DropdownMenuGroup>
@@ -165,11 +183,17 @@ const RefMenu = ({
             {commits.map((commit) => (
               <DropdownMenuItem
                 key={`c:${commit.commit}`}
+                className={MENU_ITEM_NOWRAP}
                 aria-current={commit.commit === current ? "true" : undefined}
                 onClick={() => onRefSelect?.(commit.commit)}
               >
-                <span className="font-mono text-xs">{commit.commit}</span>
-                <span className="ml-2 truncate text-xs text-muted-foreground">
+                <span className="shrink-0 font-mono text-xs">
+                  {commit.commit}
+                </span>
+                <span
+                  className="ml-2 truncate text-xs text-muted-foreground"
+                  title={commit.subject}
+                >
                   {commit.subject}
                 </span>
               </DropdownMenuItem>
@@ -179,7 +203,10 @@ const RefMenu = ({
         {screen === "doc-view" && (
           <DropdownMenuGroup>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={onCompareStart}>
+            <DropdownMenuItem
+              className={MENU_ITEM_NOWRAP}
+              onClick={onCompareStart}
+            >
               <GitCompare />
               別のリビジョンと比較
             </DropdownMenuItem>
