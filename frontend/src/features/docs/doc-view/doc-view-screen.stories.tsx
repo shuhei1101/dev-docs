@@ -307,3 +307,47 @@ export const ChangedInOtherGroup: Story = {
     ).toHaveAttribute("aria-expanded", "false");
   },
 };
+
+/** nav の group を 4 段まで入れ子にした配信元。入れ子の段の数は配信元の設定（`nav`）で決まり、画面は段の数を制限しない */
+export const DeepNestedGroups: Story = {
+  beforeEach: withSidebar({}),
+  parameters: {
+    msw: handlers(
+      documentResponse({
+        path: "docs/d",
+        tabs: [
+          {
+            ...groupedTabs[0],
+            items: [
+              group("画面", [page("文書の画面", "docs/a")]),
+              {
+                ...group("設計書", []),
+                items: [
+                  {
+                    ...group("サーバー", []),
+                    items: [
+                      {
+                        ...group("画面の API", [
+                          page("文書の取得", "docs/d"),
+                          page("メタデータの取得", "docs/e"),
+                        ]),
+                      },
+                      page("起動", "docs/f"),
+                    ],
+                  },
+                ],
+              },
+            ],
+          },
+          tabs[1],
+        ],
+      }),
+    ),
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(
+      await canvas.findByRole("button", { name: "画面の API" }),
+    ).toHaveAttribute("aria-expanded", "true");
+  },
+};
