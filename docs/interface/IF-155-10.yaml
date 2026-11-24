@@ -856,6 +856,29 @@ flows:
       - '`Accept-Encoding: gzip` の応答の `Content-Encoding` が `gzip` で、展開した本文が `Accept-Encoding: identity` の応答の本文と同じ'
       - '`Accept-Encoding: identity` の応答は `Content-Encoding` を持たない'
     test: test_normal_when_gzip_accepted
+  - name: 正常系（検索から除外される文書）
+    summary: '検索から除外される文書もサイドバーに並べ、page に `excluded: true` を付ける'
+    setup:
+      - name: Mock
+        description: 正常系と同じテストの中で起動した project-index。`search_exclude` を扱うバージョン（[shuhei1101/project-index#265](https://github.com/shuhei1101/project-index/pull/265) をマージした commit 以降）にする
+        notes: '-'
+      - name: 検索から除外する文書を持つ配信元
+        description: sample の `project-index.yaml` の文書の行に、文書 2 に該当する `search_exclude` を記載する
+        notes: '-'
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        participant C as クライアント
+        participant E as GET /_api/sources/{source}/docs/{path}
+        participant PI as project-index
+
+        C->>E: GET /_api/sources/sample/docs
+        E->>PI: 文書の一覧（excluded つき）を取得する
+        E-->>C: 200（tabs）
+      ```
+    expected:
+      - '`tabs[].items[]` に文書 1 と文書 2 の page が並び、文書 2 の `excluded` が `true`、文書 1 が `false`'
+    test: test_normal_when_search_excluded
 lead: '配信元の文書を変換した Markdown とタブ・サイドバー・差分の項目・画面の状態を返却する文書の取得の入出力を定め、文書の取得を修正するときに参照する。'
 identifier: get_document
 permissions: なし（`127.0.0.1` でだけ待ち受ける）
@@ -984,6 +1007,10 @@ response:
     type: str | None
     description: 本文のファイルのパス（配信元の直下から、拡張子つき）。管理用の YAML の行の文書は `body_file` が指すファイル
     notes: 本文のファイルを持たない文書（ファイル 1 つが 1 文書）は `null`。画面は本文の相対リンクを、これがあればこのパス、無ければ `path` を基準に解決する
+  - name: tabs[].items[].excluded
+    type: bool
+    description: page の文書が検索から除外される文書（配信元の設定の `documents[].search_exclude` に該当する文書）か
+    notes: 'group と、削除した文書（`change: deleted`）の page は `false`'
 response_notes: '本文の描画（mdmark）・リンクの組み立て・コメント・本文の差分の強調は画面が持つ。差分の強調は、`ref` を `diff.base` にして取った `markdown` を mdmark の `baseMarkdown` に指定して付ける。'
 status_codes:
   - code: '200'
@@ -1056,6 +1083,8 @@ constraints:
   - item: 応答の圧縮
     constraint: '`Accept-Encoding` に gzip を含む要求に、応答を gzip で返却する。圧縮する最小の大きさは、モジュール構成設計で決める'
     notes: 管理の MCP（`/_admin/mcp`）の応答は圧縮しない
+  - item: 検索から除外される文書
+    constraint: サイドバーの page の `excluded` は、返却するリビジョンの project-index の文書の一覧の `documents[].excluded` の値にする。除外される文書もサイドバーから除かない
 refs:
   - to: SC-155-10
     item: scenarios[異常シナリオ（project-index につながらない）]
