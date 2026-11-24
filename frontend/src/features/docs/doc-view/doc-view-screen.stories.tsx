@@ -3,6 +3,7 @@ import { HttpResponse, http } from "msw";
 import { expect, userEvent, within } from "storybook/test";
 
 import { DocViewScreen } from "@/features/docs/doc-view/doc-view-screen";
+import { SIDEBAR_WIDTH, usePreferencesStore } from "@/shared/stores/preferences";
 
 const DOCUMENT = "*/_api/sources/:source/docs/*";
 const REFS = "*/_api/sources/:source/refs";
@@ -181,5 +182,90 @@ export const ExcludedDocs: Story = {
     await expect(
       await canvas.findByRole("img", { name: "検索から除外" }),
     ).toBeInTheDocument();
+  },
+};
+
+const group = (title: string, items: ReturnType<typeof page>[]) => ({
+  kind: "group" as const,
+  title,
+  path: null,
+  items,
+  change: null,
+});
+
+/** group が 3 つある配信元（開いている文書は 1 つ目の group にある） */
+const groupedTabs = [
+  {
+    title: "設計書",
+    active: true,
+    items: [
+      group("画面", [
+        page("文書の画面", "docs/a"),
+        page("設定画面", "docs/b"),
+        page("見つからない画面", "docs/c"),
+      ]),
+      group("インターフェース定義", [
+        page("文書の取得", "docs/d"),
+        page("メタデータの取得", "docs/e"),
+      ]),
+      group("モジュール構成", [
+        page("doc-sidebar.tsx", "docs/f"),
+        page("doc-view-screen.tsx", "docs/g"),
+      ]),
+    ],
+  },
+  tabs[1],
+];
+
+/** サイドバーの開閉と幅を story の間で持ち越さないように、描く前に指定して描いた後に戻す */
+const withSidebar =
+  (state: { sidebarOpen?: boolean; sidebarWidth?: number }) => () => {
+    usePreferencesStore.setState(state);
+    return () =>
+      usePreferencesStore.setState({
+        sidebarOpen: true,
+        sidebarWidth: SIDEBAR_WIDTH.initial,
+      });
+  };
+
+/** group を見出しで折りたたむ。開いている文書を含む group だけ開いて始まる */
+export const NavGroups: Story = {
+  beforeEach: withSidebar({}),
+  parameters: { msw: handlers(documentResponse({ tabs: groupedTabs })) },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const opened = await canvas.findByRole("button", { name: "画面" });
+    await expect(opened).toHaveAttribute("aria-expanded", "true");
+    const closed = canvas.getByRole("button", { name: "インターフェース定義" });
+    await expect(closed).toHaveAttribute("aria-expanded", "false");
+    await userEvent.click(closed);
+    await expect(await canvas.findByText("文書の取得")).toBeInTheDocument();
+  },
+};
+
+/** サイドバーを閉じたとき。本文がサイドバーの幅だけ広がり、左上に開くボタンが出る */
+export const SidebarClosed: Story = {
+  beforeEach: withSidebar({ sidebarOpen: false }),
+  parameters: { msw: handlers(documentResponse({ tabs: groupedTabs })) },
+};
+
+/** サイドバーの幅を最大まで広げたとき */
+export const SidebarWide: Story = {
+  beforeEach: withSidebar({ sidebarWidth: SIDEBAR_WIDTH.max }),
+  parameters: { msw: handlers(documentResponse({ tabs: groupedTabs })) },
+};
+
+/** 画面幅 48rem 未満の文書の一覧のドロワー。group の折りたたみはドロワーの中でも同じ */
+export const NarrowDrawer: Story = {
+  beforeEach: withSidebar({}),
+  parameters: {
+    msw: handlers(documentResponse({ tabs: groupedTabs })),
+    viewport: { defaultViewport: "mobile1" },
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(
+      await canvas.findByRole("button", { name: "文書の一覧を開く" }),
+    );
   },
 };

@@ -6,6 +6,8 @@ import { DocMain } from "@/features/docs/doc-view/components/doc-main";
 import { DocSidebar } from "@/features/docs/doc-view/components/doc-sidebar";
 import { DocTabs } from "@/features/docs/doc-view/components/doc-tabs";
 import { SidebarDrawer } from "@/features/docs/doc-view/components/sidebar-drawer";
+import { SidebarResizer } from "@/features/docs/doc-view/components/sidebar-resizer";
+import { SidebarToggle } from "@/features/docs/doc-view/components/sidebar-toggle";
 import { useDocNavigation } from "@/features/docs/doc-view/hooks/use-doc-navigation";
 import { useLocating } from "@/features/docs/doc-view/hooks/use-locating";
 import { useDocScreenEffects } from "@/features/docs/doc-view/hooks/use-doc-screen-effects";
@@ -71,8 +73,15 @@ export const DocViewScreen = () => {
     null,
   );
 
-  const { colorScheme, singleKeyShortcuts, setColorScheme } =
-    usePreferencesStore();
+  const {
+    colorScheme,
+    singleKeyShortcuts,
+    setColorScheme,
+    sidebarOpen,
+    sidebarWidth,
+    setSidebarOpen,
+    setSidebarWidth,
+  } = usePreferencesStore();
   const commentCount = useCommentStore((state) => state.comments.length);
   const pendingEditCount = usePendingEdits(source).length;
   const navigate = useNavigate();
@@ -144,10 +153,31 @@ export const DocViewScreen = () => {
           onEmptyTab={(tab) => setEmpty({ tab, path: doc.path })}
         />
       </div>
-      <div className="flex gap-6 px-4">
-        <div className="sticky top-24 hidden max-h-screen w-60 shrink-0 self-start overflow-y-auto py-4 md:block">
-          {sidebar()}
-        </div>
+      <div className="flex px-4">
+        {sidebarOpen ? (
+          <>
+            <div
+              id="doc-sidebar"
+              style={{ width: sidebarWidth }}
+              className="sticky top-24 hidden max-h-screen shrink-0 self-start overflow-y-auto py-2 md:block"
+            >
+              <div className="flex justify-end">
+                <SidebarToggle open onOpenChange={setSidebarOpen} />
+              </div>
+              {sidebar()}
+            </div>
+            <div className="mr-3 hidden md:flex">
+              <SidebarResizer
+                width={sidebarWidth}
+                onWidthChange={setSidebarWidth}
+              />
+            </div>
+          </>
+        ) : (
+          <div className="sticky top-24 mr-3 hidden shrink-0 self-start py-2 md:block">
+            <SidebarToggle open={false} onOpenChange={setSidebarOpen} />
+          </div>
+        )}
         <DocMain
           doc={doc}
           active={active}

@@ -63,16 +63,36 @@ type EditableCellProps = {
   onCancel: () => void;
 };
 
-/** 押すと行の中で入力欄になり、Enter かフォーカスが移ると確定し、Esc で捨てるセル */
+/** 押した座標にある文字の位置（`element` の中の文字列の先頭からの文字数）。求められなければ `null` */
+const caretOffsetAt = (element: HTMLElement, x: number, y: number): number | null => {
+  const position = document.caretPositionFromPoint?.(x, y);
+  const node = position?.offsetNode;
+  if (!position || !node || !element.contains(node)) return null;
+  const range = document.createRange();
+  range.setStart(element, 0);
+  range.setEnd(node, position.offset);
+  return range.toString().length;
+};
+
+/** 押すと行の中で入力欄になり、押した位置に入力位置を配置する。Enter かフォーカスが移ると確定し、Esc で捨てるセル */
 const EditableCell = ({ label, value, editing, onStart, onCommit, onCancel }: EditableCellProps) => {
   const text = toText(value);
+  // 押した位置の文字数（キーボードで始めたときと、求められないときは末尾）
+  const caret = useRef<number>(text.length);
   if (!editing) {
     return (
       <button
         type="button"
         className="w-full rounded px-1 text-left hover:bg-muted"
         aria-label={`${label} ${text === "" ? "-" : text} を編集`}
-        onClick={onStart}
+        onClick={(event) => {
+          const offset =
+            event.detail === 0 || text === ""
+              ? null
+              : caretOffsetAt(event.currentTarget, event.clientX, event.clientY);
+          caret.current = Math.min(offset ?? text.length, text.length);
+          onStart();
+        }}
       >
         {text === "" ? <span className="text-muted-foreground">-</span> : text}
       </button>
@@ -80,7 +100,11 @@ const EditableCell = ({ label, value, editing, onStart, onCommit, onCancel }: Ed
   }
   return (
     <Input
-      ref={(element) => element?.focus()}
+      ref={(element) => {
+        if (element === null || element === document.activeElement) return;
+        element.focus();
+        element.setSelectionRange(caret.current, caret.current);
+      }}
       aria-label={label}
       defaultValue={text}
       className="h-7 font-mono text-xs"
