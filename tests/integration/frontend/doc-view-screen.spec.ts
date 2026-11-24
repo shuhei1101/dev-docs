@@ -915,7 +915,8 @@ test.describe("本文", () => {
     await expect
       .poll(() => table.evaluate((element) => element.scrollWidth > (element.parentElement?.clientWidth ?? 0)))
       .toBe(true);
-    // 検証（どの列も留めていない）
+    // 検証（ピン止めの機能を持つ表で、どの列も留めていない）
+    await expect(page.locator(".mdmark .mdmark-pin")).not.toHaveCount(0);
     await expect(page.locator(".mdmark .is-pinned-col")).toHaveCount(0);
     await expect(page.locator('.mdmark .mdmark-pin[aria-pressed="true"]')).toHaveCount(0);
   });
