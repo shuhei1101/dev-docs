@@ -68,7 +68,7 @@ export const SidebarResizer = ({ width, onWidthChange }: Props) => {
       onPointerCancel={onPointerEnd}
       onDoubleClick={() => onWidthChange(SIDEBAR_WIDTH.initial)}
       onKeyDown={onKeyDown}
-      className="group sticky top-24 flex h-screen w-3 shrink-0 cursor-col-resize touch-none justify-center self-start outline-none"
+      className="group flex w-3 shrink-0 cursor-col-resize touch-none justify-center self-stretch outline-none"
     >
       <span className="h-full w-px bg-border transition-colors group-hover:bg-primary group-focus-visible:w-0.5 group-focus-visible:bg-ring group-active:bg-primary motion-reduce:transition-none" />
     </div>
