@@ -3,8 +3,8 @@ import type { KeyboardEvent, PointerEvent } from "react";
 
 import { SIDEBAR_WIDTH, clampSidebarWidth } from "@/shared/stores/preferences";
 
-/** 矢印キー・幅のボタン 1 回で変える幅（CSS px） */
-export const SIDEBAR_WIDTH_STEP = 16;
+/** 矢印キー 1 回で変える幅（CSS px） */
+const SIDEBAR_WIDTH_STEP = 16;
 
 type Props = {
   width: number;

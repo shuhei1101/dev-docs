@@ -7,10 +7,7 @@ import { DocSidebar } from "@/features/docs/doc-view/components/doc-sidebar";
 import { DocTabs } from "@/features/docs/doc-view/components/doc-tabs";
 import { SidebarDrawer } from "@/features/docs/doc-view/components/sidebar-drawer";
 import { SidebarResizer } from "@/features/docs/doc-view/components/sidebar-resizer";
-import {
-  SidebarToggle,
-  SidebarWidthButtons,
-} from "@/features/docs/doc-view/components/sidebar-toggle";
+import { SidebarToggle } from "@/features/docs/doc-view/components/sidebar-toggle";
 import { useDocNavigation } from "@/features/docs/doc-view/hooks/use-doc-navigation";
 import { useLocating } from "@/features/docs/doc-view/hooks/use-locating";
 import { useDocScreenEffects } from "@/features/docs/doc-view/hooks/use-doc-screen-effects";
@@ -164,11 +161,7 @@ export const DocViewScreen = () => {
               style={{ width: sidebarWidth }}
               className="sticky top-24 hidden max-h-screen shrink-0 self-start overflow-y-auto py-2 md:block"
             >
-              <div className="flex justify-end gap-1">
-                <SidebarWidthButtons
-                  width={sidebarWidth}
-                  onWidthChange={setSidebarWidth}
-                />
+              <div className="flex justify-end">
                 <SidebarToggle open onOpenChange={setSidebarOpen} />
               </div>
               {sidebar()}
