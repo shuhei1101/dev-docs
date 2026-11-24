@@ -103,6 +103,12 @@ data_models:
         access: 公開
         default: None
         description: project-index の文書の取得の `updatedAt`（Git の配信元は開いているリビジョンでファイルを最後に変えた commit の日時、Git 管理外はファイルの更新日時）。文書の一覧では `None`
+      - name: excluded
+        title: 検索から除外される文書か
+        type: bool
+        access: 公開
+        default: 'False'
+        description: project-index の文書の一覧の `excluded`（配信元の設定の `documents[].search_exclude` に該当するか）。文書の詳細では `False`
   - name: DocumentRow
     title: 文書の行
     container: integrations/project_index/types.py
@@ -412,6 +418,12 @@ data_models:
         type: list[SearchHit]
         access: 公開
         description: '`SearchHit` の並び'
+      - name: excluded_count
+        title: 除いた件数
+        type: int
+        access: 公開
+        default: '0'
+        description: project-index の検索の `excludedCount`。応答が持たないときは `0`
   - name: SearchHit
     title: 検索に一致した文書
     container: integrations/project_index/types.py
@@ -440,6 +452,12 @@ data_models:
         type: list[str]
         access: 公開
         description: 一致した行と前後の文字（文書ごとに 3 件まで）
+      - name: excluded
+        title: 検索から除外される文書か
+        type: bool
+        access: 公開
+        default: 'False'
+        description: project-index の検索の結果の `excluded`。応答が持たないときは `False`
   - name: NamedRef
     title: 名前のあるリビジョン
     container: integrations/project_index/types.py
@@ -598,6 +616,7 @@ functions:
       1. `id`・`kind`・`path`・`version` を取り出し、無ければ `ProjectIndexResponseError`（`summary` に無いキー）を送信する
       2. `value` を `data`（`null` なら空）、`id`・`kind`・`name`・`description`・`tags`・`visibility` に `commonKeys`（辞書のときだけ）を重ねたものを `metadata`、`bodyPath` を `body_path` にする
       3. `record_index` は引数の `record_index`、`body` は空、`updated` は `None` にする
+      4. `excluded` は応答の `excluded` が `true` のときだけ `True`（無いときは `False`）にする
     exceptions:
       - name: ProjectIndexResponseError
         condition: 必須のキーが無い
@@ -628,6 +647,12 @@ functions:
         condition: '`commonKeys: null` の JSON'
         mock: なし
         expected: '`metadata` が `id`・`kind`・`name`・`description`・`tags`・`visibility` だけ'
+      - name: test_parse_document_when_excluded
+        case: 正常
+        summary: 検索から除外される文書
+        condition: '`excluded: true` の JSON と、`excluded` を持たない JSON'
+        mock: なし
+        expected: 前者の `excluded` が `True`、後者が `False`
   - name: parse_document_list
     title: 文書の一覧の読み取り
     kind: 関数

@@ -48,6 +48,12 @@ data_models:
         type: list[str]
         access: 公開
         description: '`SNIPPETS_PER_DOC` 件まで'
+      - name: excluded
+        title: 検索から除外される文書か
+        type: bool
+        access: 公開
+        default: 'False'
+        description: project-index の検索の結果の `excluded`
   - name: ScreenSearchResult
     title: 画面の検索の結果
     container: features/view/types.py
@@ -66,6 +72,12 @@ data_models:
         type: list[ScreenSearchItem]
         access: 公開
         description: '`limit` 件まで'
+      - name: excluded_count
+        title: 除いた件数
+        type: int
+        access: 公開
+        default: '0'
+        description: 検索から除外される文書で結果から除いた件数。除外した文書も含めたときと、除いた文書が無いときは `0`
   - name: ColumnsRequest
     title: 表の列の設定の保存の要求
     container: features/view/types.py
@@ -120,6 +132,12 @@ data_models:
         access: 公開
         default: None
         description: '`page` の文書の、文書の取得の `diff` のリビジョンからの変化（サイドバーの変化が入れる）。`diff` を省いたとき・変わっていない `page`・`group` は `None`'
+      - name: excluded
+        title: 検索から除外される文書か
+        type: bool
+        access: 公開
+        default: 'False'
+        description: '`page` の文書の、文書の一覧の `excluded`。`group` と削除した文書（`change: deleted`）の `page` は `False`'
   - name: ConversionError
     title: 変換の失敗の応答
     container: features/view/types.py
