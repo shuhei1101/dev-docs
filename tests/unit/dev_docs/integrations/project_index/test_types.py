@@ -113,3 +113,17 @@ def test_parse_document_list_when_records() -> None:
         ("d", None),
         ("n-1", 1),
     ]
+
+
+def test_parse_document_when_excluded() -> None:
+    """検索から除外される文書（正常系）。"""
+    # 準備
+    excluded = list_entry(doc_json("a", "docs/a.yaml") | {"excluded": True}, values=True)
+    plain = list_entry(doc_json("b", "docs/b.yaml"), values=True)
+    # 実行
+    excluded_document = parse_document("sample", excluded)
+    plain_document = parse_document("sample", plain)
+    # 検証
+    assert "excluded" not in plain
+    assert excluded_document.excluded is True
+    assert plain_document.excluded is False

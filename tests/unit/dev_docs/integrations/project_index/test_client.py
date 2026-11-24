@@ -730,3 +730,27 @@ def test_item_versions_when_missing(
     )
     # 検証
     assert versions == {}
+
+
+def test_search_when_excluded(
+    fake_index: FakeIndex, make_client: Callable[..., ProjectIndexClient]
+) -> None:
+    """検索から除外される文書（正常系）。"""
+    # 準備
+    fake_index.configs["sample"] = config_json()
+    item = {"path": "docs/a", "id": "a", "filePath": "docs/a.yaml", "name": "A", "snippets": []}
+    client = make_client()
+    # 実行
+    fake_index.search_results = {"totalCount": 1, "items": [item], "excludedCount": 1}
+    default_hits = asyncio.run(client.search("sample", "a", limit=5))
+    default_params = fake_index.requests[-1].url.params
+    fake_index.search_results = {"totalCount": 1, "items": [item | {"excluded": True}]}
+    included_hits = asyncio.run(client.search("sample", "a", limit=5, include_excluded=True))
+    included_params = fake_index.requests[-1].url.params
+    # 検証
+    assert "include_excluded" not in default_params
+    assert default_hits.excluded_count == 1
+    assert default_hits.items[0].excluded is False
+    assert included_params["include_excluded"] == "true"
+    assert included_hits.excluded_count == 0
+    assert included_hits.items[0].excluded is True
