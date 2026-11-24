@@ -18,6 +18,10 @@ const expectMenuFitsOnOneLine = async (page: Page, buttonName: RegExp) => {
   await button.click();
   const menu = page.getByRole("menu");
   await expect(menu).toBeVisible();
+  // 開くときの拡大の動きが終わってから寸法を測る
+  await menu.evaluate((element) =>
+    Promise.all(element.getAnimations().map((animation) => animation.finished)),
+  );
   const menuBox = await boxOf(menu);
   // 幅は整数の px に丸めて描かれるため、端数の 1px は許容する
   expect(menuBox.width).toBeGreaterThanOrEqual((await boxOf(button)).width - 1);
