@@ -418,6 +418,15 @@ elements:
     visible_when: '`文書の取得.aliases` が空でなく、本文に該当する単語があり、その単語にポインタを合わせたかフォーカスしたとき'
     source: 文書の取得.aliases
     status: planned
+  - name: 検索から除外のマーカー
+    kind: icon
+    position: サイドバー > 文書の一覧 > page の右（文書の変化のマーカーの左）
+    description: 検索から除外される文書（配信元の設定の `documents[].search_exclude` に該当する文書）の page を見分ける。除外される文書もサイドバーから除かず、ほかの page と同じくクリックで開く
+    label: 検索から除外のアイコン。page の文書の名前を薄い文字にする
+    visible_when: '`excluded` が `true` の page'
+    source: 文書の取得.tabs[].items[].excluded
+    notes:
+      読み上げ名: アイコンに `検索から除外` を持たせ、色だけで示さない
 screen: frontend/src/features/docs/doc-view/doc-view-screen.tsx
 mock: docs/mock/pages/doc-view/36/default/
 lead: '1 文書の本文を種類のタブ・サイドバー・パンくず・目次と一緒に参照する文書の画面の要素と振る舞いを定め、文書の画面を修正するときに参照する。'
