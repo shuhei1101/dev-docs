@@ -1,5 +1,6 @@
 import { type Page, expect, test } from "@playwright/test";
 
+import { boxOf, viewportOf } from "./support/geometry";
 import { axeViolations, openStory } from "./support/storybook";
 
 const bar = (page: Page) => page.getByRole("banner");
@@ -8,6 +9,30 @@ const noHorizontalScroll = (page: Page) =>
   page.evaluate(
     () => document.documentElement.scrollWidth <= document.documentElement.clientWidth,
   );
+
+const LONG_BRANCH = "feat/screen/metadata-only-kinds-and-excluded-docs";
+
+/** メニューを開いたボタンより広く、画面の中に収まり、項目を全て 1 行で出すことを確かめる */
+const expectMenuFitsOnOneLine = async (page: Page, buttonName: RegExp) => {
+  const button = bar(page).getByRole("button", { name: buttonName });
+  await button.click();
+  const menu = page.getByRole("menu");
+  await expect(menu).toBeVisible();
+  const menuBox = await boxOf(menu);
+  expect(menuBox.width).toBeGreaterThan((await boxOf(button)).width);
+  expect(menuBox.x).toBeGreaterThanOrEqual(0);
+  expect(menuBox.x + menuBox.width).toBeLessThanOrEqual(viewportOf(page).width);
+  const heights = await page
+    .getByRole("menuitem")
+    .evaluateAll((items) =>
+      items
+        .filter((item) => item.querySelector("svg") === null)
+        .map((item) => Math.round(item.getBoundingClientRect().height)),
+    );
+  expect(new Set(heights).size).toBe(1);
+  await page.keyboard.press("Escape");
+  await expect(menu).toHaveCount(0);
+};
 
 test.describe("DocView", () => {
   // 文書の画面。配信元 3 件・リビジョン・コメント 2 件を出す（正常系）
@@ -153,6 +178,32 @@ test.describe("DarkScheme", () => {
   test("dark_scheme", async ({ page }) => {
     await openStory(page, "layout-topbar--dark-scheme");
     await expect(bar(page).getByRole("button", { name: "明暗を固定する" })).toHaveAttribute("aria-pressed", "true");
+    expect(await axeViolations(page)).toEqual([]);
+  });
+});
+
+test.describe("LongItems", () => {
+  // 長い配信元の ID・ブランチ名・commit の題名を、ボタンより広い中身の幅のメニューに 1 行で出す（正常系）
+  test("long_items", async ({ page }) => {
+    await openStory(page, "layout-topbar--long-items");
+    await expectMenuFitsOnOneLine(page, /配信元を切り替える/);
+    await expectMenuFitsOnOneLine(page, /リビジョンを切り替える/);
+    await bar(page).getByRole("button", { name: /リビジョンを切り替える/ }).click();
+    await expect(page.getByRole("menuitem", { name: LONG_BRANCH }).getByTitle(LONG_BRANCH)).toBeVisible();
+    expect(await noHorizontalScroll(page)).toBe(true);
+    expect(await axeViolations(page)).toEqual([]);
+  });
+});
+
+test.describe("LongItemsNarrow", () => {
+  test.use({ viewport: { width: 390, height: 844 } });
+
+  // 幅 48rem 未満の場所でも、メニューを画面の幅に収めて項目を 1 行で出す（正常系）
+  test("long_items_narrow", async ({ page }) => {
+    await openStory(page, "layout-topbar--long-items-narrow");
+    await expectMenuFitsOnOneLine(page, /配信元を切り替える/);
+    await expectMenuFitsOnOneLine(page, /リビジョンを切り替える/);
+    expect(await noHorizontalScroll(page)).toBe(true);
     expect(await axeViolations(page)).toEqual([]);
   });
 });
