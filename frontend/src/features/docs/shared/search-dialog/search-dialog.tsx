@@ -59,11 +59,14 @@ const SearchStatus = ({
     if (error instanceof AppError)
       text = error.problem?.detail ?? error.message;
     else if (pending && total === undefined) text = "検索しています";
+    else if (total === 0 && excludedCount)
+      text = `該当する文書はありません。検索から除外した文書を含めると ${excludedCount} 件あります。`;
     else if (total === 0)
       text = "該当する文書はありません。別の条件を試してください。";
-    else if (total !== undefined)
+    else if (total !== undefined) {
       text = `${total} 件${revision ? `（リビジョン ${revision}）` : ""}`;
-    if (!error && excludedCount) text += `・検索から除外 ${excludedCount} 件`;
+      if (excludedCount) text += `・検索から除外 ${excludedCount} 件`;
+    }
   }
   return (
     <p

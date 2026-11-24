@@ -74,6 +74,26 @@ export const ExcludedCount: Story = {
   },
 };
 
+/** 一致した文書が全て検索から除外される文書だったとき */
+export const OnlyExcludedMatched: Story = {
+  parameters: {
+    msw: [
+      http.get(SEARCH, () =>
+        HttpResponse.json({ totalCount: 0, items: [], excludedCount: 1 }),
+      ),
+    ],
+  },
+  play: async (context) => {
+    await typeQuery(context);
+    const body = within(context.canvasElement.ownerDocument.body);
+    await expect(
+      await body.findByText(
+        "該当する文書はありません。検索から除外した文書を含めると 1 件あります。",
+      ),
+    ).toBeInTheDocument();
+  },
+};
+
 /** 検索から除外した文書も含めて検索したとき */
 export const IncludeExcluded: Story = {
   parameters: {
