@@ -55,14 +55,17 @@ elements:
     kind: nav
     position: サイドバー
     description: 選んでいるタブの group と page を入れ子で並べる。スクロールしても画面に残す
-    label: group は見出し、page は文書の名前のリンク
-    visible_when: 画面幅が 48rem 以上のとき（狭い幅では文書の一覧のドロワー）
-    initial_value: 開いている文書を現在地（`aria-current="page"`）にする
+    label: group は開閉のボタンの見出し（group の開閉ボタン）、page は文書の名前のリンク。入れ子の階層ごとに字下げする
+    visible_when: 画面幅が 48rem 以上で、サイドバーを開いているとき（狭い幅では文書の一覧のドロワー）
+    initial_value: 開いている文書を現在地（`aria-current="page"`）にする。開いている文書か、文書の変化のマーカーを持つ page を配下（入れ子の group を含む）に持つ group を開き、ほかの group を閉じる
     source: 文書の取得.tabs[].items
     action: page のクリックで、`rev`・`base`・`tab` を保ったその文書を開く。`change` が `deleted` の page は、`rev` を `base` にして `base` を除外したその文書を開く
     action_ref: IF-155-10#
     notes:
       読み上げ名: '`文書の一覧`'
+      入れ子: group の入れ子の階層の数は配信元の設定の `nav` で決まり、画面は階層の数を制限しない
+      開閉の状態: 利用者が開閉した状態は保存しない。開いている文書が変わったときと、変化のマーカーの有無が変わったときは、その page を配下に持つ group を開く（利用者が閉じた group も開く）
+    width: サイドバーの幅（既定 15rem、最小 12rem・最大 30rem。サイドバーの境目で変える）
   - name: 文書の変化のマーカー
     kind: icon
     position: サイドバー > 文書の一覧 > page の右
@@ -75,7 +78,7 @@ elements:
   - name: 文書の一覧のドロワー
     kind: drawer
     position: 画面の左
-    description: 狭い幅で文書の一覧を重ねて出す
+    description: 狭い幅で文書の一覧を重ねて出す。中の文書の一覧はサイドバーと同じ（group の開閉ボタンを持つ）。幅は固定で、サイドバーの境目・開閉のボタンは持たない
     visible_when: 画面幅が 48rem 未満で、トップバーの `sidebarOpen` を受けたとき
     action: 文書を開くか、Esc・ドロワーの外のクリックで閉じ、開いたボタンへフォーカスを戻す
   - name: パンくず
@@ -427,8 +430,52 @@ elements:
     source: 文書の取得.tabs[].items[].excluded
     notes:
       読み上げ名: アイコンに `検索から除外` を持たせ、色だけで示さない
+  - name: group の開閉ボタン
+    kind: button
+    position: サイドバー > 文書の一覧 > group の見出し
+    description: group の配下の page と入れ子の group を折りたたむ・開く
+    label: 右向きの山形のアイコン（開いているときは下向き）と group の名前
+    visible_when: 文書の一覧に group があるとき
+    initial_value: 文書の一覧の `initial_value` の開閉
+    source: 文書の取得.tabs[].items[]（`kind` が `group`）
+    action: クリックか Enter・Space で配下を折りたたむ・開く。URL は変えない
+    notes:
+      読み上げ: '`aria-expanded` で開閉の状態を伝える。山形のアイコンは読み上げから除外する'
+  - name: サイドバーを閉じるボタン
+    kind: button
+    position: サイドバー > 上端の右
+    description: サイドバーを閉じ、本文をサイドバーの幅だけ広げる
+    label: パネルを閉じるアイコン（アイコンだけ。ホバーとフォーカスでツールチップ `サイドバーを閉じる`）
+    visible_when: 画面幅が 48rem 以上で、サイドバーを開いているとき
+    action: クリックでサイドバーとサイドバーの境目を非表示にし、サイドバーを開くボタンを出す。閉じた状態をブラウザに保存する
+    notes:
+      読み上げ名: '`サイドバーを閉じる`（`aria-expanded="true"`・`aria-controls` でサイドバーを指す）'
+  - name: サイドバーを開くボタン
+    kind: button
+    position: 本文の左上（サイドバーの位置）
+    description: 閉じたサイドバーを、閉じる前の幅で開く
+    label: パネルを開くアイコン（アイコンだけ。ホバーとフォーカスでツールチップ `サイドバーを開く`）
+    visible_when: 画面幅が 48rem 以上で、サイドバーを閉じているとき
+    action: クリックでサイドバーを保存した幅で出し、開いた状態をブラウザに保存する
+    notes:
+      読み上げ名: '`サイドバーを開く`（`aria-expanded="false"`）'
+  - name: サイドバーの境目
+    kind: separator
+    position: サイドバーと本文の間
+    description: サイドバーの幅を変える。縦の線で、ホバー・ドラッグ中は強い色、フォーカス中はフォーカスの色で太くする
+    visible_when: 画面幅が 48rem 以上で、サイドバーを開いているとき
+    io: 入出力
+    type: 数値（CSS px）
+    range:
+      min: '192'
+      max: '480'
+      step: 16（キーボード）
+    initial_value: ブラウザに保存した幅（無ければ 240）
+    action: ドラッグで幅を変え、本文の左端をその分だけ動かす。←→ で 16px、Home で最小、End で最大にし、ダブルクリックで既定の幅（240）に戻す。最小・最大を超えない。変えた幅をブラウザに保存する
+    notes:
+      読み上げ名: '`サイドバーの幅`（`role="separator"`・`aria-valuenow`・`aria-valuemin`・`aria-valuemax`）'
 screen: frontend/src/features/docs/doc-view/doc-view-screen.tsx
-mock: docs/mock/pages/doc-view/36/default/
+mock: frontend/src/features/docs/doc-view/doc-view-screen.stories.tsx
 lead: '1 文書の本文を種類のタブ・サイドバー・パンくず・目次と一緒に参照する文書の画面の要素と振る舞いを定め、文書の画面を修正するときに参照する。'
 input_checks:
   - element: コメントの修正欄
@@ -441,6 +488,8 @@ notes:
   コメントの配置先: ブラウザのタブの `sessionStorage` に、配信元の ID・リビジョン・文書のパス・見出しの並び・`quote`・`prefix`・`suffix`・本文・選択を溜める。再読み込みしても残り、タブを閉じると消える。サーバーへは送信しない
   404 のとき: 文書の取得が 404 を返却したら、URL を変えずに見つからない画面を出す（`docs/screen/見つからない画面`）
   補足: 本文の文字列にコメントを溜め、まとめてコピー・起票できる。
+  サイドバーの開閉と幅の保存: サイドバーを開いているかと幅は、明暗と同じブラウザの設定（`localStorage` の `dev-docs:preferences`）に保存し、画面を開き直しても前の状態で始める。既定は開いた状態・15rem
+  ドラッグの代わりの手段: サイドバーの幅は境目のドラッグとキーボードだけで変え、クリックだけで任意の幅にする手段を持たない。knowledge の規約『操作とアクセシビリティ』の WCAG 2.2 の 2.5.7 に合わないが、利用者の判断でこの構成にした
 refs:
   - to: SC-155-7
     type: references
