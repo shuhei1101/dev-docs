@@ -269,3 +269,41 @@ export const NarrowDrawer: Story = {
     );
   },
 };
+
+/** 差分を確認しているとき。開いている文書を含まない group も、変化のマーカーを持つ page があれば開いて始まる */
+export const ChangedInOtherGroup: Story = {
+  beforeEach: withSidebar({}),
+  parameters: {
+    msw: handlers(
+      documentResponse({
+        tabs: [
+          {
+            ...groupedTabs[0],
+            items: groupedTabs[0].items.map((item) =>
+              item.title === "インターフェース定義"
+                ? {
+                    ...item,
+                    items: [
+                      { ...page("文書の取得", "docs/d"), change: "modified" },
+                      page("メタデータの取得", "docs/e"),
+                    ],
+                  }
+                : item,
+            ),
+          },
+          tabs[1],
+        ],
+        diff: { base: "8b1d4e0", change: null, changedItems: [] },
+      }),
+    ),
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(
+      await canvas.findByRole("button", { name: "インターフェース定義" }),
+    ).toHaveAttribute("aria-expanded", "true");
+    await expect(
+      canvas.getByRole("button", { name: "モジュール構成" }),
+    ).toHaveAttribute("aria-expanded", "false");
+  },
+};

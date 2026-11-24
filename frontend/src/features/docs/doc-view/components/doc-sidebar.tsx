@@ -48,14 +48,32 @@ const containsPath = (items: NavItem[], path: string | null): boolean =>
       : item.path === path,
   );
 
+/** group の配下（入れ子の group を含む）に、比較元からの変化（追加・変更・削除）を持つ page があるか */
+const containsChange = (items: NavItem[]): boolean =>
+  items.some((item) =>
+    item.kind === "group"
+      ? containsChange(item.items ?? [])
+      : item.change != null,
+  );
+
 type GroupProps = Omit<ItemsProps, "items"> & { group: NavItem };
 
-/** 見出しを押すと配下の page を折りたたむ・開く group。開いている文書を含む group は開いて始める */
+/**
+ * 見出しを押すと配下の page を折りたたむ・開く group。
+ * 開いている文書か変化のマーカーを持つ page を含む group は、開いて始め、開いている文書が変わったときにも開く
+ */
 const Group = ({ group, ...rest }: GroupProps) => {
   const children = group.items ?? [];
-  const [open, setOpen] = useState(() =>
-    containsPath(children, rest.currentPath),
-  );
+  const mustOpen =
+    containsPath(children, rest.currentPath) || containsChange(children);
+  const trigger = `${rest.currentPath ?? ""}|${String(mustOpen)}`;
+  const [open, setOpen] = useState(mustOpen);
+  // 開いている文書・変化の有無が変わったら、その描画の中で開閉の状態を合わせる
+  const [seen, setSeen] = useState(trigger);
+  if (seen !== trigger) {
+    setSeen(trigger);
+    if (mustOpen) setOpen(true);
+  }
   return (
     <li>
       <button
