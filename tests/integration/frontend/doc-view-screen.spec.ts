@@ -885,6 +885,41 @@ test.describe("本文", () => {
     // 検証
     await expect(page.getByRole("heading", { level: 1 })).toHaveText("文書が見つかりません");
   });
+
+  // `table.pin_default` を指定せず、横にはみ出す表も描いた直後はどの列も留めない（正常系）
+  test("body_table_no_pinned_column_initially", async ({ page }) => {
+    // 準備
+    const columns = Array.from({ length: 12 }, (_, i) => `列 ${i + 1}`);
+    const markdown = [
+      "# 文書 1",
+      "",
+      "## 概要",
+      "",
+      '<!-- table: {"kind": "data"} -->',
+      "",
+      `| ${columns.join(" | ")} |`,
+      `| ${columns.map(() => "---").join(" | ")} |`,
+      ...Array.from({ length: 3 }, (_, row) => `| ${columns.map((name) => `${name} の ${row + 1} 行目の長い値です`).join(" | ")} |`),
+      "",
+      "<!-- /table -->",
+      "",
+    ].join("\n");
+    await page.setViewportSize({ width: 1280, height: 800 });
+    // 実行
+    await openRendered(page, "/sample/docs/doc-1", {
+      document: ({ path }) => ({ body: documentResponse({ path, markdown }) }),
+    });
+    await expect(page.getByRole("columnheader", { name: /^列 1 / })).toBeVisible();
+    // 検証（表が横にはみ出している）
+    const table = page.locator(".mdmark table").first();
+    await expect
+      .poll(() => table.evaluate((element) => element.scrollWidth > (element.parentElement?.clientWidth ?? 0)))
+      .toBe(true);
+    // 検証（ピン止めの機能を持つ表で、どの列も留めていない）
+    await expect(page.locator(".mdmark .mdmark-pin")).not.toHaveCount(0);
+    await expect(page.locator(".mdmark .is-pinned-col")).toHaveCount(0);
+    await expect(page.locator('.mdmark .mdmark-pin[aria-pressed="true"]')).toHaveCount(0);
+  });
 });
 
 test.describe("列の表示のメニュー", () => {
