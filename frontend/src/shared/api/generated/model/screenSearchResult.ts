@@ -12,4 +12,5 @@ import type { ScreenSearchItem } from './screenSearchItem';
 export interface ScreenSearchResult {
   totalCount: number;
   items: ScreenSearchItem[];
+  excludedCount?: number;
 }

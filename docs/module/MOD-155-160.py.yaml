@@ -57,6 +57,7 @@ functions:
          - `page` は、文書の行が 1 ファイルだけならその文書、`{行の id}/{文書の ID}` ならその文書の `kind` が `page` の項目にする。無い文書は飛ばす（`nav` の検査は project-index が行う）
          - `auto` は、`document` があればその行の文書、無ければ全ての文書のうち、`filter` があれば条件の照合（検索。`fields` は `view.documents` の行の `schema`（project-index が `$ref` を解き、`records` を持つ行は 1 要素にしたもの）の使用できる項目に、行の `metadata`（共通のキー → 列名）のキーを、対応付けた列の型（列がスキーマに無ければ `string`）で加えたもの、`columns` は行の ID → その行の `metadata`、`today` は今日）で該当する文書を、文書のページのパスの昇順で `page` の項目にする。`group_by` が `'@folder'` ならフォルダでまとめる（フォルダのグループ化）。それ以外の `group_by` があれば、値（`METADATA_KEYS` のキーなら文書の `metadata`、文書の行の `metadata` で対応付けたキーなら `data` の対応付けた列、それ以外は `data` のその項目のパスの値。項目のパスが誤っていれば値なし）（配列は要素ごと、無ければ `その他`）ごとの `group` の項目にする
          - `title` があれば行の名前を上書きする
+         - `page` の項目の `excluded` は、その文書の `excluded`（検索から除外される文書か）にする。除外される文書も並びから除かない
       3. `active` を全て `False` にしたタブの並びを返却する
     unit_tests:
       - name: test_build_nav
@@ -113,6 +114,12 @@ functions:
         condition: '行 `libs` に YAML の `kind` が `CLI` の文書と `ライブラリ` の文書。`auto: {document: libs, group_by: kind}`'
         mock: なし
         expected: タブが group `CLI`・group `ライブラリ` に分かれ、行の ID `libs` の group は作らない
+      - name: test_build_nav_when_excluded
+        case: 正常
+        summary: 検索から除外される文書
+        condition: '`docs/a` と `docs/b` の文書のうち `docs/b` だけが `excluded=True`、`nav` に `auto` と手で記載した `page` で両方を並べる'
+        mock: なし
+        expected: '`docs/b` の `page` の項目が `excluded=True` で並び、`docs/a` が `excluded=False`'
   - name: first_page
     title: タブの最初の文書
     kind: 関数
@@ -172,7 +179,7 @@ functions:
       description: 変化を付けたタブの並び。引数のタブは書き換えない
     process: |-
       1. `tabs` を複製し、`page` の項目の `change` を、`base_versions` に無ければ `added`、バージョンが違えば `modified`、同じなら `None` にする
-      2. `base_tabs` を同じ `title` のタブと突き合わせ、`base_versions` にあって `versions` に無い `page` を `change` が `deleted` の項目にして、比較元での直前の兄弟（`path` か `title` が同じ項目）の後ろへ差し込む
+      2. `base_tabs` を同じ `title` のタブと突き合わせ、`base_versions` にあって `versions` に無い `page` を `change` が `deleted`、`excluded` が `False` の項目にして、比較元での直前の兄弟（`path` か `title` が同じ項目）の後ろへ差し込む
          - 直前の兄弟が無い場合、同じ `title` の `group` の先頭に配置する
          - 同じ `title` の `group` もタブも無い場合、そのタブの末尾（タブが無ければ一番左のタブの末尾）に配置する
       3. 変化を付けたタブの並びを返却する

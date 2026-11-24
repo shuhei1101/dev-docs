@@ -1909,3 +1909,33 @@ test.describe("編集中のボタン", () => {
     await expect(page.getByRole("dialog", { name: "編集中" })).toBeVisible();
   });
 });
+
+test.describe("検索から除外のマーカー", () => {
+  const withExcluded: Handler = ({ path }) => ({
+    body: documentResponse({
+      path,
+      tabs: [
+        {
+          title: "規約",
+          active: true,
+          items: [
+            { kind: "page", title: "文書 1", path: "docs/doc-1", items: [], change: null, excluded: false },
+            { kind: "page", title: "文書 2", path: "docs/doc-2", items: [], change: null, excluded: true },
+          ],
+        },
+      ],
+    }),
+  });
+
+  // 検索から除外される page をサイドバーに残し、`検索から除外` のアイコンを付け、選ぶとその文書を開く（正常系）
+  test("sidebar_excluded_marker", async ({ page }) => {
+    await openDoc(page, "/sample/docs/doc-1", { document: withExcluded });
+    const list = page.getByRole("navigation", { name: "文書の一覧" });
+    const excluded = list.getByRole("link", { name: /文書 2/ });
+    await expect(list.getByRole("img", { name: "検索から除外" })).toHaveCount(1);
+    await expect(excluded.getByRole("img", { name: "検索から除外" })).toBeVisible();
+    await expect(list.getByRole("link", { name: "文書 1" }).getByRole("img")).toHaveCount(0);
+    await excluded.click();
+    await expect(page).toHaveURL(/\/sample\/docs\/doc-2$/);
+  });
+});

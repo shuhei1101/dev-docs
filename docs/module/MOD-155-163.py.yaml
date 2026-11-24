@@ -86,13 +86,20 @@ functions:
         required: true
         passing: keyword
         description: 1〜`SEARCH_LIMIT_MAX`
+      - name: include_excluded
+        title: 除外される文書も含めるか
+        type: bool
+        required: false
+        passing: keyword
+        default: 'False'
+        description: '`include_excluded` の値'
     returns:
       type: ScreenSearchResult
       description: project-index の並びのまま
     process: |-
-      1. project-indexの呼び出し.検索（`q`・`ref`・`limit`）を呼ぶ。単語の照合・`search: false` の行の除外・一致した箇所の抜き出しは project-index が行う
+      1. project-indexの呼び出し.検索（`q`・`ref`・`limit`・`include_excluded`）を呼ぶ。検索から除外される文書を除くかの判定も project-index が行う。単語の照合・`search: false` の行の除外・一致した箇所の抜き出しは project-index が行う
       2. project-indexの呼び出し.配信元の表示の設定の取得と文書の一覧の取得（`ref`。`record_kinds` は `records` を持つ行の ID、`values` は `False`）で、結果ごとに `path` と `id` が同じ文書を引き当てる。引き当てられない結果は `path` から拡張子を落としたパスにする
-      3. `items` を `ScreenSearchItem(path=文書のページのパス(引き当てた文書), name, snippets)` にし、`total_count` とともに返却する
+      3. `items` を `ScreenSearchItem(path=文書のページのパス(引き当てた文書), name, snippets, excluded)` にし、`total_count`・`excluded_count` とともに返却する
     unit_tests:
       - name: test_screen_search
         case: 正常
@@ -107,6 +114,12 @@ functions:
         mock: project-indexの呼び出し（例外を送信する偽物）
         expected: '`ProjectIndexUnreachableError` がそのまま伝わる'
         exception: project-index につながらない・制限時間を超えた
+      - name: test_screen_search_when_excluded
+        case: 正常
+        summary: 検索から除外される文書
+        condition: '`include_excluded=True` で呼び、検索の結果が `excluded_count` 0 と `excluded=True` の 1 件を返却する。`include_excluded` を省き、`excluded_count` 1 を返却する'
+        mock: project-indexの呼び出し（検索の結果を返却し、受けた `include_excluded` を記録する偽物）
+        expected: 偽物が受けた `include_excluded` がそれぞれ `True`・`False`。前者の `items` の 1 件が `excluded=True`、後者の `excluded_count` が 1
     is_async: true
     exceptions:
       - name: ProjectIndexUnreachableError

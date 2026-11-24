@@ -39,7 +39,7 @@ endpoints:
   - name: GET /sources/{source}/docs
     method: GET
     path: /sources/{source}/docs
-    summary: 指定のリビジョンの文書の ID・パス・種類・名前・概要・タグ・公開範囲・本文のファイルのパス・バージョン（`version`）を返却する（IF-24）。`?values=true` で文書ごとの値（`value`）も入れる。`?common_keys=true` で、配信元の設定の行の `metadata`・`alias_type` で解決した共通のキー（`commonKeys`。中のキーは project-index の `METADATA_KEYS` の名前のままで、値の無いキーを持たない。指定しないと `null`）も入れる。YAML として読み込めなかったファイルは一覧に入らず、文書の取得の `conversionError` で返る
+    summary: 指定のリビジョンの文書の ID・パス・種類・名前・概要・タグ・公開範囲・本文のファイルのパス・バージョン（`version`）を返却する（IF-24）。`?values=true` で文書ごとの値（`value`）も入れる。`?common_keys=true` で、配信元の設定の行の `metadata`・`alias_type` で解決した共通のキー（`commonKeys`。中のキーは project-index の `METADATA_KEYS` の名前のままで、値の無いキーを持たない。指定しないと `null`）も入れる。YAML として読み込めなかったファイルは一覧に入らず、文書の取得の `conversionError` で返る。配信元の設定の `documents[].search_exclude` に該当する文書も一覧から除かず、文書ごとの `excluded`（bool）で返却する
     status_codes:
       - code: '200'
         condition: 返却した（文書が 0 件でも 200）
@@ -75,7 +75,7 @@ endpoints:
   - name: GET /sources/{source}/search
     method: GET
     path: /sources/{source}/search
-    summary: 単語を含む文書の ID（`id`）・文書のファイルのパス（`filePath`）・名前と一致した箇所、一致した総件数を返却する（IF-28）
+    summary: '単語を含む文書の ID（`id`）・文書のファイルのパス（`filePath`）・名前と一致した箇所、一致した総件数を返却する（IF-28）。`documents[].search_exclude` に該当する文書は既定の結果から除き、除いた件数を `excludedCount`（1 件以上除いたときだけ持つ）で返却する。`?include_excluded=true` で除かずに返却し、該当する文書に `excluded: true` を付ける'
     status_codes:
       - code: '200'
         condition: 返却した（一致が 0 件のときも 200）

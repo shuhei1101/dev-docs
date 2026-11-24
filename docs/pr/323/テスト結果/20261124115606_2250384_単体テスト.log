@@ -1,0 +1,39 @@
+# 単体テスト（全 pass）: ランナーでの全件実行
+
+$ gh workflow run test.yml --ref feat/screen/metadata-only-kinds-and-excluded-docs -f layer=backend-unit（TP-155-1 の TL-1 の run_runner。実行 45315680777）
+[command]/usr/bin/git -c protocol.version=2 fetch --no-tags --prune --no-recurse-submodules --depth=1 origin +3811f1f765ad359cbde51c95ccc3c01fdbb3b5d5:refs/remotes/origin/feat/screen/metadata-only-kinds-and-excluded-docs
+ * [new ref]         3811f1f765ad359cbde51c95ccc3c01fdbb3b5d5 -> origin/feat/screen/metadata-only-kinds-and-excluded-docs
+[command]/usr/bin/git branch --list --remote origin/feat/screen/metadata-only-kinds-and-excluded-docs
+  origin/feat/screen/metadata-only-kinds-and-excluded-docs
+[command]/usr/bin/git rev-parse refs/remotes/origin/feat/screen/metadata-only-kinds-and-excluded-docs
+[command]/usr/bin/git checkout --progress --force -B feat/screen/metadata-only-kinds-and-excluded-docs refs/remotes/origin/feat/screen/metadata-only-kinds-and-excluded-docs
+Switched to a new branch 'feat/screen/metadata-only-kinds-and-excluded-docs'
+branch 'feat/screen/metadata-only-kinds-and-excluded-docs' set up to track 'origin/feat/screen/metadata-only-kinds-and-excluded-docs'.
+tests/unit/dev_docs/features/view/test_nav.py::test_build_nav_when_excluded PASSED [ 60%]
+tests/unit/dev_docs/features/view/test_search.py::test_screen_search_when_excluded PASSED [ 63%]
+tests/unit/dev_docs/integrations/project_index/test_client.py::test_search_when_excluded PASSED [ 69%]
+tests/unit/dev_docs/integrations/project_index/test_types.py::test_parse_document_when_excluded PASSED [ 70%]
+tests/unit/dev_docs/server/test_screen.py::test_build_screen_router_when_excluded[/_api/none] PASSED [ 77%]
+tests/unit/dev_docs/server/test_screen.py::test_build_screen_router_when_excluded[/mcp/none] PASSED [ 78%]
+tests/unit/dev_docs/server/test_screen.py::test_build_screen_router_when_excluded[/_admin/none] PASSED [ 78%]
+tests/unit/dev_docs/server/test_screen.py::test_build_screen_router_when_excluded_not_get[post-admin] PASSED [ 78%]
+tests/unit/dev_docs/server/test_screen.py::test_build_screen_router_when_excluded_not_get[put-api] PASSED [ 78%]
+tests/unit/dev_docs/server/test_screen.py::test_build_screen_router_when_excluded_not_get[delete-admin] PASSED [ 78%]
+tests/unit/dev_docs/server/test_screen.py::test_build_screen_router_when_excluded_wrong_method PASSED [ 78%]
+============================= 614 passed in 8.75s ==============================
+
+$ gh workflow run test.yml --ref feat/screen/metadata-only-kinds-and-excluded-docs -f layer=frontend-unit（TP-155-1 の TL-8 の run_runner）
+[command]/usr/bin/git -c protocol.version=2 fetch --no-tags --prune --no-recurse-submodules --depth=1 origin +00006823e71d16ecdbe0292e59517e8b721415be:refs/remotes/origin/feat/screen/metadata-only-kinds-and-excluded-docs
+ * [new ref]         00006823e71d16ecdbe0292e59517e8b721415be -> origin/feat/screen/metadata-only-kinds-and-excluded-docs
+[command]/usr/bin/git branch --list --remote origin/feat/screen/metadata-only-kinds-and-excluded-docs
+  origin/feat/screen/metadata-only-kinds-and-excluded-docs
+[command]/usr/bin/git rev-parse refs/remotes/origin/feat/screen/metadata-only-kinds-and-excluded-docs
+[command]/usr/bin/git checkout --progress --force -B feat/screen/metadata-only-kinds-and-excluded-docs refs/remotes/origin/feat/screen/metadata-only-kinds-and-excluded-docs
+Switched to a new branch 'feat/screen/metadata-only-kinds-and-excluded-docs'
+branch 'feat/screen/metadata-only-kinds-and-excluded-docs' set up to track 'origin/feat/screen/metadata-only-kinds-and-excluded-docs'.
+ ✓ tests/unit/frontend/src/features/docs/shared/search-dialog/search-dialog.test.tsx > test_search_dialog_when_excluded_count 321ms
+ ✓ tests/unit/frontend/src/features/docs/shared/search-dialog/search-dialog.test.tsx > test_search_dialog_when_only_excluded 291ms
+ ✓ tests/unit/frontend/src/features/docs/shared/search-dialog/search-dialog.test.tsx > test_search_dialog_when_include_excluded 333ms
+ ✓ tests/unit/frontend/src/features/docs/doc-view/components/doc-sidebar.test.tsx > test_doc_sidebar_when_excluded 18ms
+ Test Files  58 passed (58)
+      Tests  209 passed (209)

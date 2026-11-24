@@ -151,3 +151,35 @@ export const ConversionError: Story = {
     ),
   },
 };
+
+/** 検索から除外される文書（`search_exclude` に該当）がサイドバーにあるとき */
+export const ExcludedDocs: Story = {
+  parameters: {
+    msw: handlers(
+      documentResponse({
+        tabs: [
+          {
+            ...tabs[0],
+            items: [
+              {
+                ...tabs[0].items[0],
+                items: [
+                  page("文書の画面", "docs/a"),
+                  { ...page("旧設定画面", "docs/b"), excluded: true },
+                  page("見つからない画面", "docs/c"),
+                ],
+              },
+            ],
+          },
+          tabs[1],
+        ],
+      }),
+    ),
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(
+      await canvas.findByRole("img", { name: "検索から除外" }),
+    ).toBeInTheDocument();
+  },
+};

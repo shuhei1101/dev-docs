@@ -16,11 +16,18 @@ SEARCH_LIMIT_MAX = 100
 
 
 async def screen_search(
-    client: ProjectIndexClient, source_id: str, q: str, *, ref: str | None, limit: int
+    client: ProjectIndexClient,
+    source_id: str,
+    q: str,
+    *,
+    ref: str | None,
+    limit: int,
+    include_excluded: bool = False,
 ) -> ScreenSearchResult:
     """project-index の検索の結果を、文書のページのパスの画面の検索の結果にする。"""
     hits, view = await asyncio.gather(
-        client.search(source_id, q, ref=ref, limit=limit), client.source_view(source_id)
+        client.search(source_id, q, ref=ref, limit=limit, include_excluded=include_excluded),
+        client.source_view(source_id),
     )
     listed = await client.list_documents(
         source_id, ref=ref, record_kinds=view.record_kinds(), values=False
@@ -34,7 +41,11 @@ async def screen_search(
         return PurePosixPath(hit.path).with_suffix("").as_posix()
 
     items = [
-        ScreenSearchItem(path=_page(hit), name=hit.name, snippets=list(hit.snippets))
+        ScreenSearchItem(
+            path=_page(hit), name=hit.name, snippets=list(hit.snippets), excluded=hit.excluded
+        )
         for hit in hits.items
     ]
-    return ScreenSearchResult(total_count=hits.total_count, items=items)
+    return ScreenSearchResult(
+        total_count=hits.total_count, items=items, excluded_count=hits.excluded_count
+    )

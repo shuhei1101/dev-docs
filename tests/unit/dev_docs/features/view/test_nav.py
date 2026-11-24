@@ -625,3 +625,38 @@ def test_build_nav_when_records_filter(
     assert [(item.kind, item.path) for item in tabs[0].items] == [
         ("page", "notes/files/notes/a.md")
     ]
+
+
+def test_build_nav_when_excluded(
+    make_view: Callable[..., SourceView],
+    make_document: Callable[..., Document],
+) -> None:
+    """検索から除外される文書（正常系）。"""
+    # 準備
+    nav = {
+        "tabs": [
+            {"title": "規約", "items": [{"auto": {"document": "rules"}}]},
+            {"title": "設計書", "items": [{"page": "architecture"}]},
+        ]
+    }
+    view = make_view(documents=_tables(), nav=nav)
+    documents = [
+        make_document(id="a", kind="rules", path="docs/rule/a.yaml"),
+        make_document(id="b", kind="rules", path="docs/rule/b.yaml", excluded=True),
+        make_document(
+            id="architecture",
+            kind="architecture",
+            path="docs/design/architecture.yaml",
+            excluded=True,
+        ),
+    ]
+    # 実行
+    tabs = build_nav(view, documents)
+    # 検証
+    assert [(item.path, item.excluded) for item in tabs[0].items] == [
+        ("docs/rule/a", False),
+        ("docs/rule/b", True),
+    ]
+    assert [(item.path, item.excluded) for item in tabs[1].items] == [
+        ("docs/design/architecture", True)
+    ]

@@ -66,6 +66,32 @@ flows:
       - '`unknown` が 404 で、`detail` に無いのが配信元であることがある'
       - '`no-such-branch` が 404 で、`detail` に解決できなかったリビジョンがある'
     test: test_error_when_not_found
+  - name: 正常系（検索から除外される文書）
+    summary: 検索から除外される文書を既定の結果から除き、除いた件数を返却する。`include_excluded=true` のときは含めて返却する
+    setup:
+      - name: Mock
+        description: 正常系と同じテストの中で起動した project-index。`search_exclude` を扱うバージョン（[shuhei1101/project-index#265](https://github.com/shuhei1101/project-index/pull/265) をマージした commit 以降）にする
+      - name: 検索から除外する文書を持つ配信元
+        description: sample の `project-index.yaml` の文書の行に、文書 2 に該当する `search_exclude` を記載する
+        notes: 文書 1 と文書 2 の本文がどちらも含む単語で検索する
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        participant C as クライアント
+        participant E as GET /_api/sources/{source}/search
+        participant PI as project-index
+
+        C->>E: q: 文書 1 と文書 2 が含む単語
+        E->>PI: 語での検索
+        E-->>C: 200 文書 1・excludedCount 1
+        C->>E: q: 同じ単語, include_excluded: true
+        E->>PI: 語での検索（include_excluded: true）
+        E-->>C: 200 文書 1・文書 2（excluded）
+      ```
+    expected:
+      - '1 回目が `totalCount: 1` で `items` が文書 1 だけ、`excludedCount` が 1、文書 1 の `excluded` が `false`'
+      - '2 回目が `totalCount: 2` で `items` が文書 1 と文書 2、文書 2 だけが `excluded: true`、`excludedCount` が 0'
+    test: test_normal_when_search_excluded
 lead: トップバーの検索が呼び、単語を含む文書と一致した箇所を返却する画面の検索の入出力を定め、画面の検索を修正するときに参照する。
 identifier: search_page
 permissions: なし（`127.0.0.1` でだけ待ち受ける）
@@ -98,6 +124,13 @@ request:
     location: query
     description: 返却する件数
     constraints: 1〜100
+  - name: include_excluded
+    type: bool
+    required: false
+    default: '`false`'
+    location: query
+    description: 検索から除外される文書（配信元の設定の `documents[].search_exclude` に該当する文書）も結果に含めるか
+    notes: project-index の語での検索の `include_excluded` にそのまま指定する
 request_example: |-
   ```text
   GET /_api/sources/sample/search?q=%E3%83%9A%E3%83%BC%E3%82%B8%E3%83%B3%E3%82%B0
@@ -116,6 +149,14 @@ response:
     type: list[str]
     description: 一致した行と前後の文字
     constraints: 文書ごとに 3 件まで
+  - name: excludedCount
+    type: int
+    description: 単語を含む文書のうち、検索から除外される文書で、結果から除いた件数
+    notes: '`include_excluded` が `true` のときと、除いた文書が無いときは `0`'
+  - name: items[].excluded
+    type: bool
+    description: 検索から除外される文書か
+    notes: '`include_excluded` が `true` で該当する文書だけ `true`、それ以外は `false`'
 response_example: |-
   ```json
   {"totalCount": 1, "items": [
@@ -145,6 +186,8 @@ constraints:
     constraint: レスポンスのキーは camelCase。パス・クエリのパラメータ名は変えない
   - item: operationId
     constraint: '`{tag}-{関数名}` の `view-search_page`'
+  - item: 検索から除外される文書
+    constraint: project-index の語での検索が返却する `excludedCount`（無いときは `0`）と `items[].excluded`（無いときは `false`）をそのまま返却する。除外するかの判定は project-index に任せる
 test_file: tests/integration/server/test_search_page.py
 tags:
   - name: action:検索

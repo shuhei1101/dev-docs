@@ -19,6 +19,7 @@ class NavItem(ApiModel):
     path: str | None = None
     items: list[NavItem] = Field(default_factory=list)
     change: Literal["added", "modified", "deleted"] | None = None
+    excluded: bool = False
 
 
 class NavTab(ApiModel):
@@ -105,6 +106,7 @@ class ScreenSearchItem(ApiModel):
     path: str
     name: str
     snippets: list[str]
+    excluded: bool = False
 
 
 class ScreenSearchResult(ApiModel):
@@ -112,6 +114,7 @@ class ScreenSearchResult(ApiModel):
 
     total_count: int
     items: list[ScreenSearchItem]
+    excluded_count: int = 0
 
 
 class ColumnsRequest(ApiModel):

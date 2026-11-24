@@ -83,3 +83,55 @@ test.describe("NonGitSource", () => {
     expect(await axeViolations(page)).toEqual([]);
   });
 });
+
+test.describe("ExcludedCount", () => {
+  // 一致した文書のうち検索から除外される文書を結果から除き、件数の後ろに除外した件数を出す（正常系）
+  test("excluded_count", async ({ page }) => {
+    await openStory(page, "docs-searchdialog--excluded-count");
+    await expect(dialog(page).getByRole("status")).toHaveText(
+      "2 件（リビジョン develop）・検索から除外 1 件",
+    );
+    await expect(dialog(page).getByRole("option")).toHaveCount(2);
+    await expect(
+      dialog(page).getByRole("switch", { name: "検索から除外した文書も含める" }),
+    ).toHaveAttribute("aria-checked", "false");
+    expect(await axeViolations(page)).toEqual([]);
+  });
+});
+
+test.describe("IncludeExcluded", () => {
+  // スイッチを入れると検索から除外される文書も並び、その結果だけに `検索から除外` のバッジを付ける（正常系）
+  test("include_excluded", async ({ page }) => {
+    await openStory(page, "docs-searchdialog--include-excluded");
+    const options = dialog(page).getByRole("option");
+    await expect(
+      dialog(page).getByRole("switch", { name: "検索から除外した文書も含める" }),
+    ).toHaveAttribute("aria-checked", "true");
+    await expect(options).toHaveCount(3);
+    await expect(dialog(page).getByRole("status")).toHaveText("3 件（リビジョン develop）");
+    await expect(options.filter({ hasText: "検索から除外" })).toHaveCount(1);
+    await expect(options.filter({ hasText: "検索から除外" })).toContainText("旧ページング");
+    expect(await axeViolations(page)).toEqual([]);
+  });
+
+  // スイッチは Tab で移り、Space で切り替える（正常系）
+  test("include_excluded_keyboard", async ({ page }) => {
+    await openStory(page, "docs-searchdialog--excluded-count");
+    const toggle = dialog(page).getByRole("switch", { name: "検索から除外した文書も含める" });
+    await toggle.focus();
+    await page.keyboard.press("Space");
+    await expect(toggle).toHaveAttribute("aria-checked", "true");
+  });
+});
+
+test.describe("OnlyExcludedMatched", () => {
+  // 一致した文書が全て検索から除外される文書のとき、含めた場合の件数を案内する（正常系）
+  test("only_excluded_matched", async ({ page }) => {
+    await openStory(page, "docs-searchdialog--only-excluded-matched");
+    await expect(dialog(page).getByRole("status")).toHaveText(
+      "該当する文書はありません。検索から除外した文書を含めると 1 件あります。",
+    );
+    await expect(dialog(page).getByRole("option")).toHaveCount(0);
+    expect(await axeViolations(page)).toEqual([]);
+  });
+});

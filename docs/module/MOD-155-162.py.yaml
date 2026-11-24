@@ -70,7 +70,7 @@ functions:
       description: 5 つのルートを持つルーター
     process: |-
       1. GET `/_api/sources/{source}/docs` と `/_api/sources/{source}/docs/{path:path}` は、`ref`・`diff` を受け、文書の取得を `DocumentResponse` で返却する。文書の取得の例外は、例外の変換の登録と同じ problem+json に見つからなかったものを加えて 404 で返却する（`SourceNotServedError` の `errors[]` もそのまま）。`ProjectIndexUnreachableError` は例外の変換の登録に任せて 503 にする
-      2. GET `/_api/sources/{source}/search` は、`q`（1〜`SEARCH_QUERY_MAX` 文字）・`ref`・`limit`（1〜`SEARCH_LIMIT_MAX`）を受け、画面の検索を返却する
+      2. GET `/_api/sources/{source}/search` は、`q`（1〜`SEARCH_QUERY_MAX` 文字）・`ref`・`limit`（1〜`SEARCH_LIMIT_MAX`）・`include_excluded`（既定 `False`）を受け、画面の検索を返却する
       3. GET `/_api/sources/{source}/refs` は、`commits`（0〜`REFS_COMMITS_MAX`）を受け、project-indexの呼び出し.リビジョンの一覧の取得 の結果を `RefsResponse` にして返却する（無い配信元は 404）
       4. PUT `/_api/sources/{source}/columns` は、同じオリジンの確認を依存に持ち、project-indexの呼び出し.配信元の表示の設定の取得 で配信元があることを確認してから、本文を `ColumnsRequest` で受けて表の列の設定.列の設定を記載する を呼び、同じ値を返却する
       5. ルーターは `APIRouter(tags=["view"])` にする。各ルートの `name`（`operation_id` は指定せず、アプリの組み立てが operationId を `view-{name}` にする）は、`/docs` が `get_document_default`、`/docs/{path:path}` が `get_document`、search が `search_page`、refs が `list_refs`、columns が `put_columns`

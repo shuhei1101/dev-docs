@@ -32,7 +32,7 @@ components:
         type: () => void
         required: false
         description: リンクを押したとき（ドロワーを閉じる）
-    description: 'page のリンクは TanStack Router の `Link`（`to="/$source/$"`、`search` を保つ）。`change` が `deleted` の page は `search` を `{rev: base, tab}` にし、文書の名前に取り消し線を引く。マーカーは lucide-react の `Plus`・`Circle`（塗り）・`Minus` に `aria-label`（`追加`・`変更`・`削除`）を付ける'
+    description: 'page のリンクは TanStack Router の `Link`（`to="/$source/$"`、`search` を保つ）。`change` が `deleted` の page は `search` を `{rev: base, tab}` にし、文書の名前に取り消し線を引く。マーカーは lucide-react の `Plus`・`Circle`（塗り）・`Minus` に `aria-label`（`追加`・`変更`・`削除`）を付ける。`excluded` が `true` の page は、文書の名前を `text-muted-foreground` にし、変化のマーカーの左に lucide-react の `SearchX` を `role="img"`・`aria-label`（`検索から除外`）と SVG の中の `<title>` 要素つきで付ける'
     unit_tests:
       - name: test_doc_sidebar
         case: 正常
@@ -46,6 +46,12 @@ components:
         condition: '`base` が `v1`、`change` が `deleted` の `c.md`'
         mock: なし（メモリの履歴のルーター）
         expected: リンク先が `/s/c.md?rev=v1` で `base` を持たず、`削除` のマーカーがある
+      - name: test_doc_sidebar_when_excluded
+        case: 正常
+        summary: 検索から除外される文書
+        condition: group の中に `a.md` と `excluded` が `true` の `b.md`
+        mock: なし（メモリの履歴のルーター）
+        expected: '`b.md` のリンクにだけ `検索から除外` のマーカーがあり、`b.md` のリンクもその文書を開く'
 tags:
   - name: topic:文書
     main: true

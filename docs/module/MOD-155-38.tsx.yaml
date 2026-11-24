@@ -38,6 +38,11 @@ components:
         initial: '""'
         description: 入力した単語
         notes: '`useState`。送信は `useDeferredValue` でなく 200 ミリ秒の待ち'
+      - name: includeExcluded
+        type: boolean
+        initial: 'false'
+        description: 「検索から除外した文書も含める」のスイッチ
+        notes: '`useState`。`true` のときだけ画面の検索に `include_excluded: true` を指定する'
     unit_tests:
       - name: test_search_dialog
         case: 正常
@@ -51,6 +56,24 @@ components:
         condition: 開いただけ
         mock: MSW のハンドラ
         expected: 画面の検索が呼ばれない
+      - name: test_search_dialog_when_excluded_count
+        case: 正常
+        summary: 除いた件数
+        condition: '画面の検索が `totalCount: 2`・`excludedCount: 1` を返却する'
+        mock: MSW のハンドラ
+        expected: 件数の文言が `2 件（リビジョン develop）・検索から除外 1 件`
+      - name: test_search_dialog_when_only_excluded
+        case: 正常
+        summary: 一致が全て除外される文書
+        condition: '画面の検索が `totalCount: 0`・`excludedCount: 1` を返却する'
+        mock: MSW のハンドラ
+        expected: 件数の文言が `該当する文書はありません。検索から除外した文書を含めると 1 件あります。`
+      - name: test_search_dialog_when_include_excluded
+        case: 正常
+        summary: 除外した文書も含める
+        condition: '単語を入力し、スイッチを入れる。画面の検索は `include_excluded=true` のとき `excluded: true` の 1 件を含めて返却する'
+        mock: MSW のハンドラ（要求のクエリを記録する）
+        expected: 2 回目の要求のクエリに `include_excluded=true` があり、`検索から除外` のバッジが 1 件出る
 refs:
   - to: CMP-155-3
     type: requires

@@ -12,6 +12,9 @@ import {
   CommandItem,
   CommandList,
 } from "@/shared/components/ui/command";
+import { Badge } from "@/shared/components/ui/badge";
+import { Label } from "@/shared/components/ui/label";
+import { Switch } from "@/shared/components/ui/switch";
 
 const DEBOUNCE_MS = 200;
 
@@ -31,6 +34,7 @@ type StatusProps = {
   pending: boolean;
   error: unknown;
   total: number | undefined;
+  excludedCount: number | undefined;
   revision: string | undefined;
 };
 
@@ -40,6 +44,7 @@ const SearchStatus = ({
   pending,
   error,
   total,
+  excludedCount,
   revision,
 }: StatusProps) => {
   let text = "";
@@ -47,10 +52,14 @@ const SearchStatus = ({
     if (error instanceof AppError)
       text = error.problem?.detail ?? error.message;
     else if (pending && total === undefined) text = "検索しています";
+    else if (total === 0 && excludedCount)
+      text = `該当する文書はありません。検索から除外した文書を含めると ${excludedCount} 件あります。`;
     else if (total === 0)
       text = "該当する文書はありません。別の条件を試してください。";
-    else if (total !== undefined)
+    else if (total !== undefined) {
       text = `${total} 件${revision ? `（リビジョン ${revision}）` : ""}`;
+      if (excludedCount) text += `・検索から除外 ${excludedCount} 件`;
+    }
   }
   return (
     <p
@@ -72,6 +81,7 @@ export const SearchDialog = ({
 }: Props) => {
   const [query, setQuery] = useState("");
   const [sent, setSent] = useState("");
+  const [includeExcluded, setIncludeExcluded] = useState(false);
 
   // 入力の 200 ミリ秒の待ちの後に問い合わせる
   useEffect(() => {
@@ -81,7 +91,11 @@ export const SearchDialog = ({
 
   const search = useQuery({
     // eslint-disable-next-line react-hooks/refs -- `ref` は React の ref でなくリビジョンを指す props
-    ...getViewSearchPageQueryOptions(source, { q: sent, ref: revision }),
+    ...getViewSearchPageQueryOptions(source, {
+      q: sent,
+      ref: revision,
+      include_excluded: includeExcluded || undefined,
+    }),
     enabled: open && sent !== "",
   });
   const result = sent === "" ? undefined : search.data;
@@ -120,11 +134,26 @@ export const SearchDialog = ({
           onValueChange={setQuery}
           placeholder="文書を検索"
         />
+        <div className="flex items-center gap-2 border-b px-3 py-2">
+          <Switch
+            id="search-include-excluded"
+            size="sm"
+            checked={includeExcluded}
+            onCheckedChange={setIncludeExcluded}
+          />
+          <Label
+            htmlFor="search-include-excluded"
+            className="text-xs font-normal text-muted-foreground"
+          >
+            検索から除外した文書も含める
+          </Label>
+        </div>
         <SearchStatus
           sent={sent}
           pending={search.isFetching}
           error={search.error}
           total={result?.totalCount}
+          excludedCount={includeExcluded ? undefined : result?.excludedCount}
           revision={revision}
         />
         <CommandList>
@@ -140,7 +169,12 @@ export const SearchDialog = ({
                   }}
                   className="flex-col items-start gap-1"
                 >
-                  <span className="font-medium">{item.name}</span>
+                  <span className="flex items-center gap-2">
+                    <span className="font-medium">{item.name}</span>
+                    {item.excluded && (
+                      <Badge variant="outline">検索から除外</Badge>
+                    )}
+                  </span>
                   <code className="font-mono text-xs text-muted-foreground">
                     {item.path}
                   </code>

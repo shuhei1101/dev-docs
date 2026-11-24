@@ -12,4 +12,5 @@ export interface ScreenSearchItem {
   path: string;
   name: string;
   snippets: string[];
+  excluded?: boolean;
 }

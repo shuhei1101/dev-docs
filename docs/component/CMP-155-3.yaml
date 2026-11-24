@@ -51,6 +51,33 @@ states:
         value: 'true'
       - name: source
         value: notes
+  - name: ExcludedCount
+    description: 一致した文書のうち 1 件が検索から除外される文書で、結果から除いた。件数の後ろに `・検索から除外 1 件` を出す
+    args:
+      - name: open
+        value: 'true'
+      - name: source
+        value: sample
+      - name: ref
+        value: develop
+  - name: IncludeExcluded
+    description: 「検索から除外した文書も含める」のスイッチを入れた。検索から除外される文書も結果に並び、その結果に `検索から除外` のバッジを付ける
+    args:
+      - name: open
+        value: 'true'
+      - name: source
+        value: sample
+      - name: ref
+        value: develop
+  - name: OnlyExcludedMatched
+    description: 一致した文書が全て検索から除外される文書で 0 件。`該当する文書はありません。検索から除外した文書を含めると 1 件あります。` を出す
+    args:
+      - name: open
+        value: 'true'
+      - name: source
+        value: sample
+      - name: ref
+        value: develop
 lead: 配信元の文書を単語で探し、件数と一致した箇所を並べるモーダルの引数と状態を定め、検索のダイアログを修正するときに参照する。
 status: planned
 args:
@@ -80,13 +107,15 @@ accessibility:
   - ↑・↓ で結果を選び、Enter で開き、Esc 1 回で閉じる
   - 件数の文言は `role="status"` で、変わるたびに読み上げる
   - 一致した単語の強調は色だけにせず `mark` 要素で表す
+  - 「検索から除外した文書も含める」は `role="switch"` で、ラベルを `for` と `id` で関連付ける。Tab で移り、Space で切り替える
+  - 検索から除外される文書は、色ではなく `検索から除外` のバッジの文字で示す
 refs:
   - to: IF-155-16
     type: requires
     when: 検索のダイアログに出す件数と一致した箇所を変えるときに、画面の検索の応答と突き合わせる。
 notes:
   モック: '`docs/mock/pages/doc-view/36/default/index.html` の `検索`・`結果` の状態'
-  補足: 入力のたびに画面の検索を呼び、件数と、一致した文書のパンくず・パス・一致した箇所を並べる。
+  補足: 入力のたびに画面の検索を呼び、件数と、一致した文書のパンくず・パス・一致した箇所を並べる。スイッチを入れると、画面の検索に `include_excluded=true` を指定してもう一度呼ぶ。
 test_file: tests/integration/frontend/search-dialog.spec.ts
 tags:
   - name: action:検索

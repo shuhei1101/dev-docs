@@ -56,6 +56,76 @@ export const Results: Story = {
   },
 };
 
+/** 検索から除外される文書があり、既定の結果から除いたとき */
+export const ExcludedCount: Story = {
+  parameters: {
+    msw: [
+      http.get(SEARCH, () =>
+        HttpResponse.json({ totalCount: 2, items, excludedCount: 1 }),
+      ),
+    ],
+  },
+  play: async (context) => {
+    await typeQuery(context);
+    const body = within(context.canvasElement.ownerDocument.body);
+    await expect(
+      await body.findByText("2 件（リビジョン develop）・検索から除外 1 件"),
+    ).toBeInTheDocument();
+  },
+};
+
+/** 一致した文書が全て検索から除外される文書だったとき */
+export const OnlyExcludedMatched: Story = {
+  parameters: {
+    msw: [
+      http.get(SEARCH, () =>
+        HttpResponse.json({ totalCount: 0, items: [], excludedCount: 1 }),
+      ),
+    ],
+  },
+  play: async (context) => {
+    await typeQuery(context);
+    const body = within(context.canvasElement.ownerDocument.body);
+    await expect(
+      await body.findByText(
+        "該当する文書はありません。検索から除外した文書を含めると 1 件あります。",
+      ),
+    ).toBeInTheDocument();
+  },
+};
+
+/** 検索から除外した文書も含めて検索したとき */
+export const IncludeExcluded: Story = {
+  parameters: {
+    msw: [
+      http.get(SEARCH, ({ request }) =>
+        new URL(request.url).searchParams.get("include_excluded") === "true"
+          ? HttpResponse.json({
+              totalCount: 3,
+              items: [
+                ...items,
+                {
+                  path: "docs/design/old-paging",
+                  name: "旧ページング",
+                  snippets: ["…ページングの以前の扱いは…"],
+                  excluded: true,
+                },
+              ],
+            })
+          : HttpResponse.json({ totalCount: 2, items, excludedCount: 1 }),
+      ),
+    ],
+  },
+  play: async (context) => {
+    await typeQuery(context);
+    const body = within(context.canvasElement.ownerDocument.body);
+    await userEvent.click(
+      body.getByRole("switch", { name: "検索から除外した文書も含める" }),
+    );
+    await expect(await body.findByText("検索から除外")).toBeInTheDocument();
+  },
+};
+
 export const NoResults: Story = {
   parameters: {
     msw: [

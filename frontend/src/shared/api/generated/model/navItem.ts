@@ -16,4 +16,5 @@ export interface NavItem {
   path?: string | null;
   items?: NavItem[];
   change?: NavItemChange;
+  excluded?: boolean;
 }

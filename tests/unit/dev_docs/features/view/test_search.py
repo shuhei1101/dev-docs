@@ -67,3 +67,39 @@ def test_screen_search_when_unreachable(
     # 実行・検証
     with pytest.raises(ProjectIndexUnreachableError):
         asyncio.run(screen_search(make_client(), "sample", "foo", ref=None, limit=20))
+
+
+def test_screen_search_when_excluded(
+    fake_index: FakeIndex, make_client: Callable[..., ProjectIndexClient]
+) -> None:
+    """検索から除外される文書（正常系）。"""
+    # 準備
+    fake_index.configs["sample"] = config_json(
+        "sample", documents=[{"id": "rules", "paths": ["docs/*.yaml"], "schema": {}}]
+    )
+    fake_index.docs["sample"] = {None: [doc_json("a", "docs/a.yaml")]}
+    item = {"path": "docs/a", "id": "a", "filePath": "docs/a.yaml", "name": "A", "snippets": []}
+    client = make_client()
+    # 実行
+    fake_index.search_results = {"totalCount": 1, "items": [item | {"excluded": True}]}
+    included = asyncio.run(
+        screen_search(client, "sample", "a", ref=None, limit=20, include_excluded=True)
+    )
+    included_params = [
+        request.url.params
+        for request in fake_index.requests
+        if request.url.path.endswith("/search")
+    ][-1]
+    fake_index.search_results = {"totalCount": 0, "items": [], "excludedCount": 1}
+    default = asyncio.run(screen_search(client, "sample", "a", ref=None, limit=20))
+    default_params = [
+        request.url.params
+        for request in fake_index.requests
+        if request.url.path.endswith("/search")
+    ][-1]
+    # 検証
+    assert included_params["include_excluded"] == "true"
+    assert "include_excluded" not in default_params
+    assert included.items[0].excluded is True
+    assert included.excluded_count == 0
+    assert default.excluded_count == 1

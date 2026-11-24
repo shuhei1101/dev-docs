@@ -848,11 +848,11 @@ def wait_for_restart(started_count: Callable[[Path], int]) -> Callable[..., None
     return _wait
 
 
-# 結合テストの相手にする本物の project-index（shuhei1101/project-index の develop の 9ce7027。
-# 保存の `expectedVersion` と文書の一覧の `commonKeys` を持つ commit）。パッケージとして入れるとクローンの
+# 結合テストの相手にする本物の project-index（shuhei1101/project-index の develop の 978cc5d。
+# 保存の `expectedVersion`・文書の一覧の `commonKeys`・`search_exclude`（project-index #265）を持つ commit）。パッケージとして入れるとクローンの
 # `templates/`・`content/` が見つからないため、クローンを用意してそこから起動する
 PROJECT_INDEX_REPOSITORY = "https://github.com/shuhei1101/project-index"
-PROJECT_INDEX_COMMIT = "9ce7027ab4620b167986375e6370d04bcd9f66a2"
+PROJECT_INDEX_COMMIT = "978cc5d0483024b6775125f452e39dd7f7ab9fc0"
 # 読み書きの方法（`storage`）と `GET /sources?include_loading=true` を持つ commit（develop の 0bbe47b。
 # project-index #90・#103 を含む）。その 2 つを確かめるテストだけがこの commit の project-index を相手にする
 PROJECT_INDEX_STORAGE_COMMIT = "0bbe47b59e03501657a5c619c032ccb724cadb0b"

@@ -402,12 +402,19 @@ classes:
             required: true
             passing: keyword
             description: 返却する件数
+          - name: include_excluded
+            title: 除外される文書も含めるか
+            type: bool
+            required: false
+            passing: keyword
+            default: 'False'
+            description: '`True` のときだけクエリに `include_excluded=true` を付ける'
         returns:
           type: SearchHits
           description: 検索の結果
         process: |-
           1. 呼び出しの共通の手順で `GET /sources/{source}/search` を呼ぶ
-          2. `items[]` の `id`・`filePath`・`name`・`snippets` を `SearchHit` の `id`・`path`・`name`・`snippets` にし、`totalCount` とともに `SearchHits` にして返却する
+          2. `items[]` の `id`・`filePath`・`name`・`snippets`・`excluded`（無いときは `False`）を `SearchHit` の `id`・`path`・`name`・`snippets`・`excluded` にし、`totalCount` と `excludedCount`（無いときは `0`）とともに `SearchHits` にして返却する
         unit_tests:
           - name: test_search
             case: 正常
@@ -415,6 +422,12 @@ classes:
             condition: '`q="ページング"`・`limit=5`、応答の `items[]` が `path`・`id`・`filePath` を持つ'
             mock: '`httpx.MockTransport` で project-index の応答を返却する'
             expected: 要求のクエリに `q`・`limit` があり、`total_count` と、`path` が `filePath` の値の `items` を返却する
+          - name: test_search_when_excluded
+            case: 正常
+            summary: 検索から除外される文書
+            condition: '1 回目は `include_excluded` を省き、応答が `excludedCount: 1`。2 回目は `include_excluded=True` で、応答の `items[]` の 1 件が `excluded: true`'
+            mock: '`httpx.MockTransport` で project-index の応答を返却する'
+            expected: 1 回目の要求のクエリに `include_excluded` が無く `excluded_count` が 1。2 回目の要求のクエリに `include_excluded=true` があり、`excluded_count` が 0 でその 1 件の `excluded` が `True`
       - name: refs
         title: リビジョンの一覧の取得
         kind: メソッド

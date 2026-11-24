@@ -78,8 +78,16 @@ def build_view_router(handlers: Handlers) -> APIRouter:
         q: Annotated[str, Query(min_length=1, max_length=SEARCH_QUERY_MAX)],
         ref: str | None = None,
         limit: Annotated[int, Query(ge=1, le=SEARCH_LIMIT_MAX)] = SEARCH_LIMIT_DEFAULT,
+        include_excluded: bool = False,
     ) -> ScreenSearchResult:
-        return await screen_search(handlers.project_index, source, q, ref=ref, limit=limit)
+        return await screen_search(
+            handlers.project_index,
+            source,
+            q,
+            ref=ref,
+            limit=limit,
+            include_excluded=include_excluded,
+        )
 
     @router.get("/_api/sources/{source}/refs", name="list_refs")
     async def refs(
