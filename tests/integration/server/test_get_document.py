@@ -1527,3 +1527,25 @@ def test_error_when_project_index_failed(
     assert problem["address"] == mock_index.address
     assert problem["reason"] == detail
     assert recovered.status_code == 200
+
+
+def test_normal_when_search_excluded(
+    real_index: RealIndex, make_server: Callable[..., ServerEnv]
+) -> None:
+    """検索から除外される文書もサイドバーに並べ、page に `excluded: true` を付ける（正常系）。"""
+    # 準備
+    documents = [doc("doc-1", "docs/doc-1.yaml"), doc("doc-2", "docs/doc-2.yaml")]
+    excluded = {"field": "id", "op": "eq", "values": ["doc-2"]}
+    rows = [row("sample", ["docs/*.yaml"], search_exclude=excluded)]
+    real_index.serve("sample", IndexSource(documents=rows, docs={None: documents}))
+    env = make_server(real_index)
+    # 実行
+    response = env.client.get("/_api/sources/sample/docs")
+    # 検証
+    pages = {
+        item["path"]: item["excluded"]
+        for item in response.json()["tabs"][0]["items"]
+        if item["kind"] == "page"
+    }
+    assert response.status_code == 200
+    assert pages == {"docs/doc-1": False, "docs/doc-2": True}
