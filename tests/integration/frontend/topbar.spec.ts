@@ -188,7 +188,7 @@ test.describe("DarkScheme", () => {
 });
 
 test.describe("LongItems", () => {
-  // 長い配信元の ID・ブランチ名・commit の題名を、ボタンより広い中身の幅のメニューに 1 行で出す（正常系）
+  // 長い配信元の ID・ブランチ名・commit の題名を、ボタンの幅以上の中身の幅のメニューに 1 行で出す（正常系）
   test("long_items", async ({ page }) => {
     await openStory(page, "layout-topbar--long-items");
     await expectMenuFitsOnOneLine(page, /配信元を切り替える/);
