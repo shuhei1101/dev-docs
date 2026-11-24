@@ -93,3 +93,39 @@ export const NotFoundWithoutSource: Story = {
 };
 
 export const DarkScheme: Story = { args: { ...docView, colorScheme: "dark" } };
+
+const longItems = {
+  screen: "doc-view",
+  sources: [
+    { id: "mindstella-nandemo-kaiwa-74ba1a", writable: true },
+    { id: "aituber-material-templates", writable: false },
+    { id: "sample", writable: true },
+  ],
+  currentSource: "mindstella-nandemo-kaiwa-74ba1a",
+  refs: {
+    git: true,
+    defaultRef: "develop",
+    branches: [
+      {
+        name: "feat/screen/metadata-only-kinds-and-excluded-docs",
+        commit: "5b3f8e2",
+      },
+    ],
+    tags: [{ name: "v1.12.0", commit: "5b3f8e2" }],
+    commits: [
+      {
+        commit: "5b3f8e2",
+        date: "2026-11-25T01:16:00+09:00",
+        subject: "docs: PR ドキュメント #331 の要件と計画書を記入",
+      },
+    ],
+  },
+  currentRef: "feat/screen/metadata-only-kinds-and-excluded-docs",
+} as const;
+
+export const LongItems: Story = { args: longItems };
+
+export const LongItemsNarrow: Story = {
+  args: longItems,
+  parameters: { viewport: { defaultViewport: "mobile1" } },
+};
