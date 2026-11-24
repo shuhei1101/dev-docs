@@ -51,15 +51,11 @@ test("test_doc_sidebar_when_deleted", async () => {
 });
 
 test("test_doc_sidebar_when_excluded", async () => {
+  const excludedPage = { ...page("B", "b.md"), excluded: true };
   const tab = {
     title: "設計書",
     active: true,
-    items: [
-      group("設計", [
-        page("A", "a.md"),
-        { ...page("B", "b.md"), excluded: true },
-      ]),
-    ],
+    items: [group("設計", [page("A", "a.md"), excludedPage])],
   };
 
   renderInRouter(
