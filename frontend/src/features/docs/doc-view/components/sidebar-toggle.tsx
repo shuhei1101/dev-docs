@@ -30,7 +30,7 @@ const IconButton = ({
           size="icon"
           aria-label={label}
           aria-expanded={expanded}
-          aria-controls={expanded === undefined ? undefined : "doc-sidebar"}
+          aria-controls={expanded === true ? "doc-sidebar" : undefined}
           onClick={onClick}
         />
       }

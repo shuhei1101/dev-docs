@@ -60,19 +60,24 @@ type GroupProps = Omit<ItemsProps, "items"> & { group: NavItem };
 
 /**
  * 見出しを押すと配下の page を折りたたむ・開く group。
- * 開いている文書か変化のマーカーを持つ page を含む group は、開いて始め、開いている文書が変わったときにも開く
+ * 開いている文書か変化のマーカーを持つ page を含む group は開いて始める。
+ * 開いている文書が変わったらその文書を含む group を、変化が配下に現れたらその group を開き、それ以外は利用者が閉じたままにする
  */
 const Group = ({ group, ...rest }: GroupProps) => {
   const children = group.items ?? [];
-  const mustOpen =
-    containsPath(children, rest.currentPath) || containsChange(children);
-  const trigger = `${rest.currentPath ?? ""}|${String(mustOpen)}`;
-  const [open, setOpen] = useState(mustOpen);
-  // 開いている文書・変化の有無が変わったら、その描画の中で開閉の状態を合わせる
-  const [seen, setSeen] = useState(trigger);
-  if (seen !== trigger) {
-    setSeen(trigger);
-    if (mustOpen) setOpen(true);
+  const hasCurrent = containsPath(children, rest.currentPath);
+  const hasChange = containsChange(children);
+  const [open, setOpen] = useState(hasCurrent || hasChange);
+  // 前の描画の値と比べ、その描画の中で開閉の状態を合わせる
+  const [seenPath, setSeenPath] = useState(rest.currentPath);
+  const [seenChange, setSeenChange] = useState(hasChange);
+  if (seenPath !== rest.currentPath) {
+    setSeenPath(rest.currentPath);
+    if (hasCurrent) setOpen(true);
+  }
+  if (seenChange !== hasChange) {
+    setSeenChange(hasChange);
+    if (hasChange) setOpen(true);
   }
   return (
     <li>
