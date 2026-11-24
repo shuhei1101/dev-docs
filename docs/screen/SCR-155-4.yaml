@@ -36,7 +36,6 @@ elements:
     description: 画面の見出し
     label: '`{配信元の ID} のメタデータ`'
     visible_when: 常時
-    width: 本文（見出し・絞り込みの入力欄・種類のタブ・種類の表）は画面の横幅から左右の余白を除いた幅（上限なし）。絞り込みの入力欄は 24rem まで
   - name: 絞り込みの入力欄
     kind: input
     position: 本文 > 見出しの下
@@ -48,6 +47,7 @@ elements:
     visible_when: メタデータを取得できたとき
     initial_value: 空
     action: 入力のたびに、選んでいる種類の表を、どれかの列の値に入力を含む行（大文字・小文字と全角・半角を区別しない）だけにする。種類を切り替えても入力を残す
+    width: 24rem まで
   - name: 種類のタブ
     kind: tabs
     position: 本文 > 絞り込みの入力欄の下

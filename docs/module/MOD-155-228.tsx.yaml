@@ -1,0 +1,44 @@
+id: MOD-155-228
+title: 画面 / 文書の画面 / sidebar-toggle.tsx
+lead: 画面幅 48rem 以上で文書の一覧のサイドバーを閉じる・開くボタンを受け持ち、文書の画面の sidebar-toggle.tsx を修正するときに参照する。
+components:
+  - name: SidebarToggle
+    title: サイドバーを閉じる・開くボタン
+    kind: コンポーネント
+    container: features/docs/doc-view/components/sidebar-toggle.tsx
+    usecase: 文書を参照する
+    role: 部品
+    summary: 開いていれば閉じるボタン、閉じていれば開くボタンを、アイコンだけのボタンとツールチップで出す
+    props:
+      - name: open
+        type: boolean
+        required: true
+        description: サイドバーを開いているか
+      - name: onOpenChange
+        type: '(open: boolean) => void'
+        required: true
+        description: 押したときに反対の値で呼ぶ
+    description: shadcn/ui の `Button`（`variant="ghost"`・`size="icon"`）を `Tooltip` の `TooltipTrigger` の `render` に渡し、lucide-react の `PanelLeftClose`（開いている）・`PanelLeftOpen`（閉じている）を描く。`aria-label`・ツールチップは `サイドバーを閉じる` / `サイドバーを開く`、`aria-expanded` は `open`。開いているときだけ `aria-controls="doc-sidebar"` を付ける（閉じているときはサイドバーを描かない）
+    unit_tests:
+      - name: test_sidebar_toggle
+        case: 正常
+        summary: 閉じるボタン
+        condition: '`open` が `true` で押す'
+        mock: '`onOpenChange`（`vi.fn`）'
+        expected: 名前 `サイドバーを閉じる`・`aria-expanded="true"`・`aria-controls="doc-sidebar"` のボタンで、`onOpenChange` が `false` で呼ばれる
+      - name: test_sidebar_toggle_when_closed
+        case: 正常
+        summary: 開くボタン
+        condition: '`open` が `false` で押す'
+        mock: '`onOpenChange`（`vi.fn`）'
+        expected: 名前 `サイドバーを開く`・`aria-expanded="false"` で `aria-controls` が無いボタンで、`onOpenChange` が `true` で呼ばれる
+refs:
+  - to: SCR-155-1
+    item: elements[サイドバーを閉じるボタン]
+    type: requires
+    when: 閉じる・開くボタンの振る舞いを変えるときに、画面設計の要素と突き合わせる。
+tags:
+  - name: topic:サイドバー
+    main: true
+  - name: topic:文書
+  - name: topic:画面
