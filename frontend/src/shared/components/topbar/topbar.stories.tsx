@@ -95,7 +95,7 @@ export const NotFoundWithoutSource: Story = {
 export const DarkScheme: Story = { args: { ...docView, colorScheme: "dark" } };
 
 const longItems = {
-  screen: "doc-view",
+  screen: "doc-view" as const,
   sources: [
     { id: "mindstella-nandemo-kaiwa-74ba1a", writable: true },
     { id: "aituber-material-templates", writable: false },
@@ -121,7 +121,7 @@ const longItems = {
     ],
   },
   currentRef: "feat/screen/metadata-only-kinds-and-excluded-docs",
-} as const;
+};
 
 export const LongItems: Story = { args: longItems };
 
