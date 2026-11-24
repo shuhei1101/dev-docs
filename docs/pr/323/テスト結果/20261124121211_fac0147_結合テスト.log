@@ -1,0 +1,380 @@
+$ gh workflow run test.yml --ref feat/screen/metadata-only-kinds-and-excluded-docs -f layer=backend-integration -f paths="tests/integration/server/test_get_metadata.py tests/integration/server/test_get_document.py tests/integration/server/test_list_refs.py tests/integration/server/test_get_settings_sources.py tests/integration/server/test_post_commits.py tests/integration/server/test_put_settings_sources.py tests/integration/server/test_migrate.py tests/integration/server/test_search_page.py tests/integration/server/test_api_schema.py"（run_runner、実行 45317355768）
+
+test	層の全件を回す	﻿2026-11-24T03:08:19.1510049Z ##[group]Run : > test.log
+test	層の全件を回す	2026-11-24T03:08:19.1510274Z ^[[36;1m: > test.log^[[0m
+test	層の全件を回す	2026-11-24T03:08:19.1510418Z ^[[36;1m# 結果の行を test.log と step の標準出力の両方に出す^[[0m
+test	層の全件を回す	2026-11-24T03:08:19.1510621Z ^[[36;1msay() { echo "$1" | tee -a test.log; }^[[0m
+test	層の全件を回す	2026-11-24T03:08:19.1510783Z ^[[36;1mcase "$LAYER" in^[[0m
+test	層の全件を回す	2026-11-24T03:08:19.1510922Z ^[[36;1m  backend-unit) limit=7 ;;^[[0m
+test	層の全件を回す	2026-11-24T03:08:19.1511115Z ^[[36;1m  backend-integration) limit=62; dir=tests/integration/ ;;^[[0m
+test	層の全件を回す	2026-11-24T03:08:19.1511318Z ^[[36;1m  frontend-unit) limit=19 ;;^[[0m
+test	層の全件を回す	2026-11-24T03:08:19.1511528Z ^[[36;1m  frontend-integration) limit=75; dir=tests/integration/frontend/ ;;^[[0m
+test	層の全件を回す	2026-11-24T03:08:19.1511732Z ^[[36;1mesac^[[0m
+test	層の全件を回す	2026-11-24T03:08:19.1511866Z ^[[36;1m# paths は結合テストの層の、層の結合テストのフォルダの下のパスだけを受け付ける^[[0m
+test	層の全件を回す	2026-11-24T03:08:19.1512041Z ^[[36;1mif [ -n "$PATHS" ]; then^[[0m
+test	層の全件を回す	2026-11-24T03:08:19.1512186Z ^[[36;1m  if [ -z "${dir:-}" ]; then^[[0m
+test	層の全件を回す	2026-11-24T03:08:19.1512347Z ^[[36;1m    say "paths は結合テストの層でだけ指定できる: layer=$LAYER"^[[0m
+test	層の全件を回す	2026-11-24T03:08:19.1512507Z ^[[36;1m    exit 1^[[0m
+test	層の全件を回す	2026-11-24T03:08:19.1512669Z ^[[36;1m  fi^[[0m
+test	層の全件を回す	2026-11-24T03:08:19.1512831Z ^[[36;1m  if ! printf '%s' "$PATHS" | grep -Eq '^[A-Za-z0-9_./ -]+$'; then^[[0m
+test	層の全件を回す	2026-11-24T03:08:19.1513102Z ^[[36;1m    say "paths に許可しない文字がある（英数字・_・.・/・-・空白だけを許可する）: $PATHS"^[[0m
+test	層の全件を回す	2026-11-24T03:08:19.1513289Z ^[[36;1m    exit 1^[[0m
+test	層の全件を回す	2026-11-24T03:08:19.1513401Z ^[[36;1m  fi^[[0m
+test	層の全件を回す	2026-11-24T03:08:19.1513518Z ^[[36;1m  for p in $PATHS; do^[[0m
+test	層の全件を回す	2026-11-24T03:08:19.1513657Z ^[[36;1m    case "$p" in^[[0m
+test	層の全件を回す	2026-11-24T03:08:19.1513816Z ^[[36;1m      *..*) say "paths の値が .. を含む: $p"; exit 1 ;;^[[0m
+test	層の全件を回す	2026-11-24T03:08:19.1513979Z ^[[36;1m    esac^[[0m
+test	層の全件を回す	2026-11-24T03:08:19.1514093Z ^[[36;1m    case "$p" in^[[0m
+test	層の全件を回す	2026-11-24T03:08:19.1514222Z ^[[36;1m      "$dir"*) ;;^[[0m
+test	層の全件を回す	2026-11-24T03:08:19.1514395Z ^[[36;1m      *) say "paths の値が層の結合テストのフォルダ（$dir）の外: $p"; exit 1 ;;^[[0m
+test	層の全件を回す	2026-11-24T03:08:19.1514577Z ^[[36;1m    esac^[[0m
+test	層の全件を回す	2026-11-24T03:08:19.1514721Z ^[[36;1m    if [ "$LAYER" = backend-integration ]; then^[[0m
+test	層の全件を回す	2026-11-24T03:08:19.1515316Z ^[[36;1m      case "$p" in^[[0m
+test	層の全件を回す	2026-11-24T03:08:19.1515634Z ^[[36;1m        tests/integration/frontend/*) say "paths の値が層の結合テストのフォルダの外（tests/integration/frontend/ は frontend-integration の層）: $p"; exit 1 ;;^[[0m
+test	層の全件を回す	2026-11-24T03:08:19.1516074Z ^[[36;1m      esac^[[0m
+test	層の全件を回す	2026-11-24T03:08:19.1516186Z ^[[36;1m    fi^[[0m
+test	層の全件を回す	2026-11-24T03:08:19.1516297Z ^[[36;1m  done^[[0m
+test	層の全件を回す	2026-11-24T03:08:19.1516406Z ^[[36;1mfi^[[0m
+test	層の全件を回す	2026-11-24T03:08:19.1516515Z ^[[36;1mcase "$LAYER" in^[[0m
+test	層の全件を回す	2026-11-24T03:08:19.1516684Z ^[[36;1m  backend-unit) cmd="uv run pytest tests/unit/ -v" ;;^[[0m
+test	層の全件を回す	2026-11-24T03:08:19.1516921Z ^[[36;1m  backend-integration) cmd="uv run pytest ${PATHS:-$dir} -v" ;;^[[0m
+test	層の全件を回す	2026-11-24T03:08:19.1517232Z ^[[36;1m  frontend-unit) cmd="npx vitest run --config frontend/vitest.config.ts --reporter=verbose" ;;^[[0m
+test	層の全件を回す	2026-11-24T03:08:19.1517630Z ^[[36;1m  frontend-integration) cmd="npx playwright test --config tests/integration/frontend/playwright.config.ts $PATHS" ;;^[[0m
+test	層の全件を回す	2026-11-24T03:08:19.1517915Z ^[[36;1mesac^[[0m
+test	層の全件を回す	2026-11-24T03:08:19.1518049Z ^[[36;1m# テストを裏で起動し、出力を test.log と step の標準出力の両方に出す^[[0m
+test	層の全件を回す	2026-11-24T03:08:19.1518275Z ^[[36;1msetsid -w bash -c "set -o pipefail; $cmd 2>&1 | tee -a test.log" &^[[0m
+test	層の全件を回す	2026-11-24T03:08:19.1518476Z ^[[36;1mpid=$!^[[0m
+test	層の全件を回す	2026-11-24T03:08:19.1518586Z ^[[36;1mlast=-1^[[0m
+test	層の全件を回す	2026-11-24T03:08:19.1518703Z ^[[36;1midle=0^[[0m
+test	層の全件を回す	2026-11-24T03:08:19.1518837Z ^[[36;1m# test.log の大きさを 1 秒ごとに確認し、無出力の時間が上限を超えたらテストを止める^[[0m
+test	層の全件を回す	2026-11-24T03:08:19.1519017Z ^[[36;1mwhile kill -0 "$pid" 2> /dev/null; do^[[0m
+test	層の全件を回す	2026-11-24T03:08:19.1519171Z ^[[36;1m  sleep 1^[[0m
+test	層の全件を回す	2026-11-24T03:08:19.1519301Z ^[[36;1m  size=$(stat -c %s test.log)^[[0m
+test	層の全件を回す	2026-11-24T03:08:19.1519453Z ^[[36;1m  if [ "$size" = "$last" ]; then^[[0m
+test	層の全件を回す	2026-11-24T03:08:19.1519605Z ^[[36;1m    idle=$((idle + 1))^[[0m
+test	層の全件を回す	2026-11-24T03:08:19.1519740Z ^[[36;1m  else^[[0m
+test	層の全件を回す	2026-11-24T03:08:19.1519854Z ^[[36;1m    idle=0^[[0m
+test	層の全件を回す	2026-11-24T03:08:19.1519972Z ^[[36;1m    last=$size^[[0m
+test	層の全件を回す	2026-11-24T03:08:19.1520091Z ^[[36;1m  fi^[[0m
+test	層の全件を回す	2026-11-24T03:08:19.1520210Z ^[[36;1m  if [ "$idle" -gt "$limit" ]; then^[[0m
+test	層の全件を回す	2026-11-24T03:08:19.1520369Z ^[[36;1m    kill -- "-$pid"^[[0m
+test	層の全件を回す	2026-11-24T03:08:19.1520657Z ^[[36;1m    say "出力が ${limit} 秒変わらなかったため、テストを止めた"^[[0m
+test	層の全件を回す	2026-11-24T03:08:19.1520812Z ^[[36;1m    exit 1^[[0m
+test	層の全件を回す	2026-11-24T03:08:19.1520934Z ^[[36;1m  fi^[[0m
+test	層の全件を回す	2026-11-24T03:08:19.1521039Z ^[[36;1mdone^[[0m
+test	層の全件を回す	2026-11-24T03:08:19.1521153Z ^[[36;1mwait "$pid"^[[0m
+test	層の全件を回す	2026-11-24T03:08:19.1548716Z shell: /usr/bin/bash -e {0}
+test	層の全件を回す	2026-11-24T03:08:19.1548862Z env:
+test	層の全件を回す	2026-11-24T03:08:19.1549053Z   UV_PYTHON_INSTALL_DIR: /home/runner/work/_temp/uv-python-dir
+test	層の全件を回す	2026-11-24T03:08:19.1549320Z   UV_CACHE_DIR: /home/runner/work/_temp/setup-uv-cache
+test	層の全件を回す	2026-11-24T03:08:19.1549497Z   LAYER: backend-integration
+test	層の全件を回す	2026-11-24T03:08:19.1550300Z   PATHS: tests/integration/server/test_get_metadata.py tests/integration/server/test_get_document.py tests/integration/server/test_list_refs.py tests/integration/server/test_get_settings_sources.py tests/integration/server/test_post_commits.py tests/integration/server/test_put_settings_sources.py tests/integration/server/test_migrate.py tests/integration/server/test_search_page.py tests/integration/server/test_api_schema.py
+test	層の全件を回す	2026-11-24T03:08:19.1551114Z   PYTHONUNBUFFERED: 1
+test	層の全件を回す	2026-11-24T03:08:19.1551239Z ##[endgroup]
+test	層の全件を回す	2026-11-24T03:08:20.7355746Z ============================= test session starts ==============================
+test	層の全件を回す	2026-11-24T03:08:20.7358789Z platform linux -- Python 3.14.4, pytest-9.1.1, pluggy-1.7.0 -- /home/runner/work/dev-docs/dev-docs/.venv/bin/python
+test	層の全件を回す	2026-11-24T03:08:20.7361355Z cachedir: .pytest_cache
+test	層の全件を回す	2026-11-24T03:08:20.7361640Z rootdir: /home/runner/work/dev-docs/dev-docs
+test	層の全件を回す	2026-11-24T03:08:20.7361925Z configfile: pyproject.toml
+test	層の全件を回す	2026-11-24T03:08:20.7362112Z plugins: anyio-4.15.1
+test	層の全件を回す	2026-11-24T03:08:20.8681817Z collecting ... collected 84 items
+test	層の全件を回す	2026-11-24T03:08:20.8685026Z 
+test	層の全件を回す	2026-11-24T03:08:25.2450731Z tests/integration/server/test_get_metadata.py::test_normal PASSED        [  1%]
+test	層の全件を回す	2026-11-24T03:08:26.3784602Z tests/integration/server/test_get_metadata.py::test_normal_when_rule_index_not_served PASSED [  2%]
+test	層の全件を回す	2026-11-24T03:08:27.4902858Z tests/integration/server/test_get_metadata.py::test_error_when_source_missing PASSED [  3%]
+test	層の全件を回す	2026-11-24T03:08:27.5471027Z tests/integration/server/test_get_metadata.py::test_error_when_project_index_unreachable PASSED [  4%]
+test	層の全件を回す	2026-11-24T03:08:31.4253409Z tests/integration/server/test_get_document.py::test_normal PASSED        [  5%]
+test	層の全件を回す	2026-11-24T03:08:32.5477020Z tests/integration/server/test_get_document.py::test_normal_when_nav_missing PASSED [  7%]
+test	層の全件を回す	2026-11-24T03:08:33.6448115Z tests/integration/server/test_get_document.py::test_normal_when_ref_given PASSED [  8%]
+test	層の全件を回す	2026-11-24T03:08:34.7914300Z tests/integration/server/test_get_document.py::test_normal_when_diff_given PASSED [  9%]
+test	層の全件を回す	2026-11-24T03:08:35.8978247Z tests/integration/server/test_get_document.py::test_normal_when_custom_converter PASSED [ 10%]
+test	層の全件を回す	2026-11-24T03:08:37.0200906Z tests/integration/server/test_get_document.py::test_normal_when_conversion_failed PASSED [ 11%]
+test	層の全件を回す	2026-11-24T03:08:38.2406284Z tests/integration/server/test_get_document.py::test_error_when_not_found PASSED [ 13%]
+test	層の全件を回す	2026-11-24T03:08:39.3484149Z tests/integration/server/test_get_document.py::test_normal_when_nav_filtered_by_tags PASSED [ 14%]
+test	層の全件を回す	2026-11-24T03:08:40.4600159Z tests/integration/server/test_get_document.py::test_normal_when_aliases_returned PASSED [ 15%]
+test	層の全件を回す	2026-11-24T03:08:41.7434082Z tests/integration/server/test_get_document.py::test_normal_when_body_path_given PASSED [ 16%]
+test	層の全件を回す	2026-11-24T03:08:42.8035079Z tests/integration/server/test_get_document.py::test_normal_when_nav_grouped_by_folder PASSED [ 17%]
+test	層の全件を回す	2026-11-24T03:08:43.9071551Z tests/integration/server/test_get_document.py::test_normal_when_nav_grouped_by_common_keys PASSED [ 19%]
+test	層の全件を回す	2026-11-24T03:08:44.9750936Z tests/integration/server/test_get_document.py::test_normal_when_schema_document_drawn PASSED [ 20%]
+test	層の全件を回す	2026-11-24T03:08:46.0928231Z tests/integration/server/test_get_document.py::test_normal_when_mermaid_not_mappable PASSED [ 21%]
+test	層の全件を回す	2026-11-24T03:08:47.2092533Z tests/integration/server/test_get_document.py::test_normal_when_er_diagram_drawn PASSED [ 22%]
+test	層の全件を回す	2026-11-24T03:09:13.4507370Z tests/integration/server/test_get_document.py::test_normal_when_diagrams_checked PASSED [ 23%]
+test	層の全件を回す	2026-11-24T03:09:14.7695132Z tests/integration/server/test_get_document.py::test_normal_when_id_link_resolved PASSED [ 25%]
+test	層の全件を回す	2026-11-24T03:09:15.9125593Z tests/integration/server/test_get_document.py::test_normal_when_diagram_node_id_link_resolved PASSED [ 26%]
+test	層の全件を回す	2026-11-24T03:09:16.9743555Z tests/integration/server/test_get_document.py::test_normal_when_mermaid_click_id_resolved PASSED [ 27%]
+test	層の全件を回す	2026-11-24T03:09:18.0896789Z tests/integration/server/test_get_document.py::test_normal_when_decision_linked PASSED [ 28%]
+test	層の全件を回す	2026-11-24T03:09:19.1727694Z tests/integration/server/test_get_document.py::test_normal_when_decision_document_returned PASSED [ 29%]
+test	層の全件を回す	2026-11-24T03:09:20.1891633Z tests/integration/server/test_get_document.py::test_error_when_project_index_unreachable PASSED [ 30%]
+test	層の全件を回す	2026-11-24T03:09:21.7369620Z tests/integration/server/test_get_document.py::test_error_when_project_index_timed_out PASSED [ 32%]
+test	層の全件を回す	2026-11-24T03:09:25.2903586Z tests/integration/server/test_get_document.py::test_normal_when_requests_sent_concurrently PASSED [ 33%]
+test	層の全件を回す	2026-11-24T03:09:25.9226337Z tests/integration/server/test_get_document.py::test_normal_when_document_list_reused PASSED [ 34%]
+test	層の全件を回す	2026-11-24T03:09:30.8400025Z tests/integration/server/test_get_document.py::test_normal_when_document_list_shared PASSED [ 35%]
+test	層の全件を回す	2026-11-24T03:09:31.4107835Z tests/integration/server/test_get_document.py::test_normal_when_revision_or_config_changed PASSED [ 36%]
+test	層の全件を回す	2026-11-24T03:09:32.0050806Z tests/integration/server/test_get_document.py::test_normal_when_cache_limit_exceeded PASSED [ 38%]
+test	層の全件を回す	2026-11-24T03:09:32.6083464Z tests/integration/server/test_get_document.py::test_normal_when_document_list_not_cacheable PASSED [ 39%]
+test	層の全件を回す	2026-11-24T03:09:33.1659580Z tests/integration/server/test_get_document.py::test_normal_when_gzip_accepted PASSED [ 40%]
+test	層の全件を回す	2026-11-24T03:09:33.7218335Z tests/integration/server/test_get_document.py::test_error_when_project_index_failed PASSED [ 41%]
+test	層の全件を回す	2026-11-24T03:09:34.7742534Z tests/integration/server/test_get_document.py::test_normal_when_search_excluded PASSED [ 42%]
+test	層の全件を回す	2026-11-24T03:09:35.6295112Z tests/integration/server/test_list_refs.py::test_normal PASSED           [ 44%]
+test	層の全件を回す	2026-11-24T03:09:36.6991487Z tests/integration/server/test_list_refs.py::test_normal_when_non_git_source PASSED [ 45%]
+test	層の全件を回す	2026-11-24T03:09:37.5467610Z tests/integration/server/test_list_refs.py::test_error_when_source_not_found PASSED [ 46%]
+test	層の全件を回す	2026-11-24T03:09:38.6156237Z tests/integration/server/test_get_settings_sources.py::test_normal PASSED [ 47%]
+test	層の全件を回す	2026-11-24T03:09:39.7515263Z tests/integration/server/test_get_settings_sources.py::test_normal_when_source_not_served PASSED [ 48%]
+test	層の全件を回す	2026-11-24T03:09:40.9446265Z tests/integration/server/test_get_settings_sources.py::test_normal_when_pending_reload PASSED [ 50%]
+test	層の全件を回す	2026-11-24T03:09:44.7436614Z tests/integration/server/test_get_settings_sources.py::test_normal_when_storage_given PASSED [ 51%]
+test	層の全件を回す	2026-11-24T03:09:45.9443706Z tests/integration/server/test_post_commits.py::test_normal PASSED        [ 52%]
+test	層の全件を回す	2026-11-24T03:09:47.1574573Z tests/integration/server/test_post_commits.py::test_normal_when_dry_run PASSED [ 53%]
+test	層の全件を回す	2026-11-24T03:09:48.3285091Z tests/integration/server/test_post_commits.py::test_error_when_cross_origin PASSED [ 54%]
+test	層の全件を回す	2026-11-24T03:09:48.8303244Z tests/integration/server/test_post_commits.py::test_error_when_body_invalid PASSED [ 55%]
+test	層の全件を回す	2026-11-24T03:09:50.0078273Z tests/integration/server/test_post_commits.py::test_error_when_validation_failed PASSED [ 57%]
+test	層の全件を回す	2026-11-24T03:09:50.9797387Z tests/integration/server/test_post_commits.py::test_error_when_base_commit_unusable PASSED [ 58%]
+test	層の全件を回す	2026-11-24T03:09:51.9594251Z tests/integration/server/test_post_commits.py::test_error_when_direct_commit_not_permitted PASSED [ 59%]
+test	層の全件を回す	2026-11-24T03:09:53.0284123Z tests/integration/server/test_post_commits.py::test_error_when_remote_unreachable PASSED [ 60%]
+test	層の全件を回す	2026-11-24T03:09:54.6022895Z tests/integration/server/test_post_commits.py::test_error_when_write_timed_out PASSED [ 61%]
+test	層の全件を回す	2026-11-24T03:09:55.7716809Z tests/integration/server/test_post_commits.py::test_normal_when_tags_mapped PASSED [ 63%]
+test	層の全件を回す	2026-11-24T03:09:56.8626446Z tests/integration/server/test_post_commits.py::test_normal_when_other_item_changed PASSED [ 64%]
+test	層の全件を回す	2026-11-24T03:09:57.9553058Z tests/integration/server/test_post_commits.py::test_normal_when_conflict_kept_on_branch PASSED [ 65%]
+test	層の全件を回す	2026-11-24T03:09:59.1115172Z tests/integration/server/test_post_commits.py::test_normal_when_conflict_script_not_configured PASSED [ 66%]
+test	層の全件を回す	2026-11-24T03:10:00.2714098Z tests/integration/server/test_post_commits.py::test_normal_when_conflict_script_failed PASSED [ 67%]
+test	層の全件を回す	2026-11-24T03:10:01.3244063Z tests/integration/server/test_post_commits.py::test_normal_when_dry_run_conflicted PASSED [ 69%]
+test	層の全件を回す	2026-11-24T03:10:02.5217991Z tests/integration/server/test_put_settings_sources.py::test_normal PASSED [ 70%]
+test	層の全件を回す	2026-11-24T03:10:03.6479695Z tests/integration/server/test_put_settings_sources.py::test_normal_when_source_disabled PASSED [ 71%]
+test	層の全件を回す	2026-11-24T03:10:04.7553673Z tests/integration/server/test_put_settings_sources.py::test_normal_when_source_deleted PASSED [ 72%]
+test	層の全件を回す	2026-11-24T03:10:05.9510375Z tests/integration/server/test_put_settings_sources.py::test_normal_when_added_source_invalid PASSED [ 73%]
+test	層の全件を回す	2026-11-24T03:10:07.0233079Z tests/integration/server/test_put_settings_sources.py::test_error_when_cross_origin PASSED [ 75%]
+test	層の全件を回す	2026-11-24T03:10:08.0963726Z tests/integration/server/test_put_settings_sources.py::test_error_when_body_invalid PASSED [ 76%]
+test	層の全件を回す	2026-11-24T03:10:08.6469411Z tests/integration/server/test_put_settings_sources.py::test_error_when_project_index_rejects PASSED [ 77%]
+test	層の全件を回す	2026-11-24T03:10:09.2103839Z tests/integration/server/test_put_settings_sources.py::test_error_when_version_conflict PASSED [ 78%]
+test	層の全件を回す	2026-11-24T03:10:10.4531227Z tests/integration/server/test_put_settings_sources.py::test_normal_when_storage_sent PASSED [ 79%]
+test	層の全件を回す	2026-11-24T03:10:10.4720633Z tests/integration/server/test_migrate.py::test_normal PASSED             [ 80%]
+test	層の全件を回す	2026-11-24T03:10:10.4789115Z tests/integration/server/test_migrate.py::test_normal_when_record_only PASSED [ 82%]
+test	層の全件を回す	2026-11-24T03:10:10.4806303Z tests/integration/server/test_migrate.py::test_error_when_config_invalid PASSED [ 83%]
+test	層の全件を回す	2026-11-24T03:10:10.4864100Z tests/integration/server/test_migrate.py::test_error_when_step_fails PASSED [ 84%]
+test	層の全件を回す	2026-11-24T03:10:10.4945977Z tests/integration/server/test_migrate.py::test_error_when_destructive_step_blocked PASSED [ 85%]
+test	層の全件を回す	2026-11-24T03:10:10.4963399Z tests/integration/server/test_migrate.py::test_error_when_config_newer PASSED [ 86%]
+test	層の全件を回す	2026-11-24T03:10:11.0333272Z tests/integration/server/test_migrate.py::test_normal_when_sources_moved_to_project_index PASSED [ 88%]
+test	層の全件を回す	2026-11-24T03:10:12.5582294Z tests/integration/server/test_migrate.py::test_normal_when_save_response_exceeds_timeout PASSED [ 89%]
+test	層の全件を回す	2026-11-24T03:10:13.0758786Z tests/integration/server/test_migrate.py::test_error_when_project_index_rejects_save PASSED [ 90%]
+test	層の全件を回す	2026-11-24T03:10:14.5990804Z tests/integration/server/test_migrate.py::test_error_when_save_unconfirmed_after_timeout PASSED [ 91%]
+test	層の全件を回す	2026-11-24T03:10:14.6094995Z tests/integration/server/test_migrate.py::test_error_when_project_index_unreachable PASSED [ 92%]
+test	層の全件を回す	2026-11-24T03:10:15.6906619Z tests/integration/server/test_migrate.py::test_normal_when_sources_moved_to_real_project_index PASSED [ 94%]
+test	層の全件を回す	2026-11-24T03:10:16.8057629Z tests/integration/server/test_search_page.py::test_normal PASSED         [ 95%]
+test	層の全件を回す	2026-11-24T03:10:17.8919987Z tests/integration/server/test_search_page.py::test_error_when_query_invalid PASSED [ 96%]
+test	層の全件を回す	2026-11-24T03:10:18.9896129Z tests/integration/server/test_search_page.py::test_error_when_not_found PASSED [ 97%]
+test	層の全件を回す	2026-11-24T03:10:20.0543149Z tests/integration/server/test_search_page.py::test_normal_when_search_excluded PASSED [ 98%]
+test	層の全件を回す	2026-11-24T03:10:20.5592037Z tests/integration/server/test_api_schema.py::test_normal PASSED          [100%]
+test	層の全件を回す	2026-11-24T03:10:20.5592470Z 
+test	層の全件を回す	2026-11-24T03:10:20.5592860Z ======================== 84 passed in 119.82s (0:01:59) ========================
+
+$ gh workflow run test.yml --ref feat/screen/metadata-only-kinds-and-excluded-docs -f layer=frontend-integration -f paths="tests/integration/frontend/doc-view-screen.spec.ts tests/integration/frontend/search-dialog.spec.ts"（run_runner、実行 45317362479）
+
+test	層の全件を回す	﻿2026-11-24T03:09:40.9316428Z ##[group]Run : > test.log
+test	層の全件を回す	2026-11-24T03:09:40.9316830Z ^[[36;1m: > test.log^[[0m
+test	層の全件を回す	2026-11-24T03:09:40.9317092Z ^[[36;1m# 結果の行を test.log と step の標準出力の両方に出す^[[0m
+test	層の全件を回す	2026-11-24T03:09:40.9317446Z ^[[36;1msay() { echo "$1" | tee -a test.log; }^[[0m
+test	層の全件を回す	2026-11-24T03:09:40.9317755Z ^[[36;1mcase "$LAYER" in^[[0m
+test	層の全件を回す	2026-11-24T03:09:40.9318007Z ^[[36;1m  backend-unit) limit=7 ;;^[[0m
+test	層の全件を回す	2026-11-24T03:09:40.9318373Z ^[[36;1m  backend-integration) limit=62; dir=tests/integration/ ;;^[[0m
+test	層の全件を回す	2026-11-24T03:09:40.9318755Z ^[[36;1m  frontend-unit) limit=19 ;;^[[0m
+test	層の全件を回す	2026-11-24T03:09:40.9319154Z ^[[36;1m  frontend-integration) limit=75; dir=tests/integration/frontend/ ;;^[[0m
+test	層の全件を回す	2026-11-24T03:09:40.9319535Z ^[[36;1mesac^[[0m
+test	層の全件を回す	2026-11-24T03:09:40.9319784Z ^[[36;1m# paths は結合テストの層の、層の結合テストのフォルダの下のパスだけを受け付ける^[[0m
+test	層の全件を回す	2026-11-24T03:09:40.9320102Z ^[[36;1mif [ -n "$PATHS" ]; then^[[0m
+test	層の全件を回す	2026-11-24T03:09:40.9320365Z ^[[36;1m  if [ -z "${dir:-}" ]; then^[[0m
+test	層の全件を回す	2026-11-24T03:09:40.9320670Z ^[[36;1m    say "paths は結合テストの層でだけ指定できる: layer=$LAYER"^[[0m
+test	層の全件を回す	2026-11-24T03:09:40.9320966Z ^[[36;1m    exit 1^[[0m
+test	層の全件を回す	2026-11-24T03:09:40.9321233Z ^[[36;1m  fi^[[0m
+test	層の全件を回す	2026-11-24T03:09:40.9321538Z ^[[36;1m  if ! printf '%s' "$PATHS" | grep -Eq '^[A-Za-z0-9_./ -]+$'; then^[[0m
+test	層の全件を回す	2026-11-24T03:09:40.9322024Z ^[[36;1m    say "paths に許可しない文字がある（英数字・_・.・/・-・空白だけを許可する）: $PATHS"^[[0m
+test	層の全件を回す	2026-11-24T03:09:40.9322372Z ^[[36;1m    exit 1^[[0m
+test	層の全件を回す	2026-11-24T03:09:40.9322581Z ^[[36;1m  fi^[[0m
+test	層の全件を回す	2026-11-24T03:09:40.9323077Z ^[[36;1m  for p in $PATHS; do^[[0m
+test	層の全件を回す	2026-11-24T03:09:40.9323343Z ^[[36;1m    case "$p" in^[[0m
+test	層の全件を回す	2026-11-24T03:09:40.9323625Z ^[[36;1m      *..*) say "paths の値が .. を含む: $p"; exit 1 ;;^[[0m
+test	層の全件を回す	2026-11-24T03:09:40.9323944Z ^[[36;1m    esac^[[0m
+test	層の全件を回す	2026-11-24T03:09:40.9324170Z ^[[36;1m    case "$p" in^[[0m
+test	層の全件を回す	2026-11-24T03:09:40.9324405Z ^[[36;1m      "$dir"*) ;;^[[0m
+test	層の全件を回す	2026-11-24T03:09:40.9324708Z ^[[36;1m      *) say "paths の値が層の結合テストのフォルダ（$dir）の外: $p"; exit 1 ;;^[[0m
+test	層の全件を回す	2026-11-24T03:09:40.9325036Z ^[[36;1m    esac^[[0m
+test	層の全件を回す	2026-11-24T03:09:40.9325283Z ^[[36;1m    if [ "$LAYER" = backend-integration ]; then^[[0m
+test	層の全件を回す	2026-11-24T03:09:40.9325593Z ^[[36;1m      case "$p" in^[[0m
+test	層の全件を回す	2026-11-24T03:09:40.9326408Z ^[[36;1m        tests/integration/frontend/*) say "paths の値が層の結合テストのフォルダの外（tests/integration/frontend/ は frontend-integration の層）: $p"; exit 1 ;;^[[0m
+test	層の全件を回す	2026-11-24T03:09:40.9326991Z ^[[36;1m      esac^[[0m
+test	層の全件を回す	2026-11-24T03:09:40.9327200Z ^[[36;1m    fi^[[0m
+test	層の全件を回す	2026-11-24T03:09:40.9327399Z ^[[36;1m  done^[[0m
+test	層の全件を回す	2026-11-24T03:09:40.9327592Z ^[[36;1mfi^[[0m
+test	層の全件を回す	2026-11-24T03:09:40.9327787Z ^[[36;1mcase "$LAYER" in^[[0m
+test	層の全件を回す	2026-11-24T03:09:40.9328096Z ^[[36;1m  backend-unit) cmd="uv run pytest tests/unit/ -v" ;;^[[0m
+test	層の全件を回す	2026-11-24T03:09:40.9328539Z ^[[36;1m  backend-integration) cmd="uv run pytest ${PATHS:-$dir} -v" ;;^[[0m
+test	層の全件を回す	2026-11-24T03:09:40.9329106Z ^[[36;1m  frontend-unit) cmd="npx vitest run --config frontend/vitest.config.ts --reporter=verbose" ;;^[[0m
+test	層の全件を回す	2026-11-24T03:09:40.9329857Z ^[[36;1m  frontend-integration) cmd="npx playwright test --config tests/integration/frontend/playwright.config.ts $PATHS" ;;^[[0m
+test	層の全件を回す	2026-11-24T03:09:40.9330399Z ^[[36;1mesac^[[0m
+test	層の全件を回す	2026-11-24T03:09:40.9330637Z ^[[36;1m# テストを裏で起動し、出力を test.log と step の標準出力の両方に出す^[[0m
+test	層の全件を回す	2026-11-24T03:09:40.9331055Z ^[[36;1msetsid -w bash -c "set -o pipefail; $cmd 2>&1 | tee -a test.log" &^[[0m
+test	層の全件を回す	2026-11-24T03:09:40.9331442Z ^[[36;1mpid=$!^[[0m
+test	層の全件を回す	2026-11-24T03:09:40.9331648Z ^[[36;1mlast=-1^[[0m
+test	層の全件を回す	2026-11-24T03:09:40.9331849Z ^[[36;1midle=0^[[0m
+test	層の全件を回す	2026-11-24T03:09:40.9332090Z ^[[36;1m# test.log の大きさを 1 秒ごとに確認し、無出力の時間が上限を超えたらテストを止める^[[0m
+test	層の全件を回す	2026-11-24T03:09:40.9332421Z ^[[36;1mwhile kill -0 "$pid" 2> /dev/null; do^[[0m
+test	層の全件を回す	2026-11-24T03:09:40.9332912Z ^[[36;1m  sleep 1^[[0m
+test	層の全件を回す	2026-11-24T03:09:40.9333190Z ^[[36;1m  size=$(stat -c %s test.log)^[[0m
+test	層の全件を回す	2026-11-24T03:09:40.9333475Z ^[[36;1m  if [ "$size" = "$last" ]; then^[[0m
+test	層の全件を回す	2026-11-24T03:09:40.9333750Z ^[[36;1m    idle=$((idle + 1))^[[0m
+test	層の全件を回す	2026-11-24T03:09:40.9333990Z ^[[36;1m  else^[[0m
+test	層の全件を回す	2026-11-24T03:09:40.9334187Z ^[[36;1m    idle=0^[[0m
+test	層の全件を回す	2026-11-24T03:09:40.9334399Z ^[[36;1m    last=$size^[[0m
+test	層の全件を回す	2026-11-24T03:09:40.9334612Z ^[[36;1m  fi^[[0m
+test	層の全件を回す	2026-11-24T03:09:40.9334844Z ^[[36;1m  if [ "$idle" -gt "$limit" ]; then^[[0m
+test	層の全件を回す	2026-11-24T03:09:40.9335142Z ^[[36;1m    kill -- "-$pid"^[[0m
+test	層の全件を回す	2026-11-24T03:09:40.9335640Z ^[[36;1m    say "出力が ${limit} 秒変わらなかったため、テストを止めた"^[[0m
+test	層の全件を回す	2026-11-24T03:09:40.9335943Z ^[[36;1m    exit 1^[[0m
+test	層の全件を回す	2026-11-24T03:09:40.9336152Z ^[[36;1m  fi^[[0m
+test	層の全件を回す	2026-11-24T03:09:40.9336353Z ^[[36;1mdone^[[0m
+test	層の全件を回す	2026-11-24T03:09:40.9336549Z ^[[36;1mwait "$pid"^[[0m
+test	層の全件を回す	2026-11-24T03:09:40.9372310Z shell: /usr/bin/bash -e {0}
+test	層の全件を回す	2026-11-24T03:09:40.9372607Z env:
+test	層の全件を回す	2026-11-24T03:09:40.9373117Z   LAYER: frontend-integration
+test	層の全件を回す	2026-11-24T03:09:40.9373648Z   PATHS: tests/integration/frontend/doc-view-screen.spec.ts tests/integration/frontend/search-dialog.spec.ts
+test	層の全件を回す	2026-11-24T03:09:40.9374189Z   PYTHONUNBUFFERED: 1
+test	層の全件を回す	2026-11-24T03:09:40.9374420Z ##[endgroup]
+test	層の全件を回す	2026-11-24T03:09:48.5774133Z 
+test	層の全件を回す	2026-11-24T03:09:48.5775095Z Running 136 tests using 2 workers
+test	層の全件を回す	2026-11-24T03:09:48.5775926Z 
+test	層の全件を回す	2026-11-24T03:09:50.8021153Z   ✓    1 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:137:3 › ページのタイトル › page_title (1.3s)
+test	層の全件を回す	2026-11-24T03:09:50.8774154Z   ✓    2 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:143:3 › ページのタイトル › page_title_when_empty_tab (1.4s)
+test	層の全件を回す	2026-11-24T03:09:52.2246224Z   ✓    3 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:154:3 › 本文へスキップ › skip_link (1.4s)
+test	層の全件を回す	2026-11-24T03:09:52.6726287Z   ✓    4 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:170:3 › トップバー › topbar_source_select (1.8s)
+test	層の全件を回す	2026-11-24T03:09:53.8255631Z   ✓    5 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:178:3 › トップバー › topbar_ref_select (1.6s)
+test	層の全件を回す	2026-11-24T03:09:54.3298705Z   ✓    6 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:186:3 › トップバー › topbar_compare_start_when_default_ref (1.6s)
+test	層の全件を回す	2026-11-24T03:09:55.4512066Z   ✓    7 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:194:3 › トップバー › topbar_compare_start_when_other_ref (1.6s)
+test	層の全件を回す	2026-11-24T03:09:55.6730206Z   ✓    8 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:202:3 › トップバー › topbar_search_open (1.3s)
+test	層の全件を回す	2026-11-24T03:09:56.9577004Z   ✓    9 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:209:3 › トップバー › topbar_comment_panel_toggle (1.5s)
+test	層の全件を回す	2026-11-24T03:09:57.1575114Z   ✓   10 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:219:3 › トップバー › topbar_sidebar_open (1.4s)
+test	層の全件を回す	2026-11-24T03:09:58.3365866Z   ✓   11 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:227:3 › トップバー › topbar_color_scheme_toggle (1.4s)
+test	層の全件を回す	2026-11-24T03:09:58.6277633Z   ✓   12 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:237:3 › トップバー › topbar_sources_from_settings (1.4s)
+test	層の全件を回す	2026-11-24T03:09:59.4868485Z   ✓   13 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:259:3 › 種類のタブ › tabs_order_and_current (1.1s)
+test	層の全件を回す	2026-11-24T03:10:00.1219635Z   ✓   14 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:267:3 › 種類のタブ › tabs_click (1.5s)
+test	層の全件を回す	2026-11-24T03:10:00.8634796Z   ✓   15 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:274:3 › 種類のタブ › tabs_click_when_doc_in_two_tabs (1.4s)
+test	層の全件を回す	2026-11-24T03:10:01.5310798Z   ✓   16 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:289:3 › 種類のタブ › tabs_click_when_empty (1.4s)
+test	層の全件を回す	2026-11-24T03:10:02.1777977Z   ✓   17 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:299:3 › 文書の一覧 › sidebar_groups_and_pages (1.3s)
+test	層の全件を回す	2026-11-24T03:10:02.9637127Z   ✓   18 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:308:3 › 文書の一覧 › sidebar_click_keeps_rev_and_base (1.4s)
+test	層の全件を回す	2026-11-24T03:10:03.6121410Z   ✓   19 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:315:3 › 文書の一覧 › sidebar_click_when_deleted (1.4s)
+test	層の全件を回す	2026-11-24T03:10:04.0825310Z   ✓   20 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:322:3 › 文書の一覧 › sidebar_hidden_when_narrow (1.1s)
+test	層の全件を回す	2026-11-24T03:10:04.9057790Z   ✓   21 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:331:3 › 文書の変化のマーカー › change_markers (1.3s)
+test	層の全件を回す	2026-11-24T03:10:05.1740915Z   ✓   22 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:341:3 › 文書の変化のマーカー › change_markers_without_base (1.1s)
+test	層の全件を回す	2026-11-24T03:10:06.4383659Z   ✓   24 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:360:3 › 文書の一覧のドロワー › drawer_closes_on_escape (1.3s)
+test	層の全件を回す	2026-11-24T03:10:06.9159258Z   ✓   23 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:351:3 › 文書の一覧のドロワー › drawer_closes_on_navigate (2.0s)
+test	層の全件を回す	2026-11-24T03:10:07.7938351Z   ✓   25 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:372:3 › パンくず › breadcrumb (1.3s)
+test	層の全件を回す	2026-11-24T03:10:08.3319009Z   ✓   26 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:381:3 › パンくず › breadcrumb_source_link (1.4s)
+test	層の全件を回す	2026-11-24T03:10:09.1805264Z   ✓   27 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:388:3 › パンくず › breadcrumb_tab_link (1.4s)
+test	層の全件を回す	2026-11-24T03:10:09.6624845Z   ✓   28 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:395:3 › パンくず › breadcrumb_when_empty_tab (1.3s)
+test	層の全件を回す	2026-11-24T03:10:10.3489147Z   ✓   29 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:409:3 › 文書のタイトル › doc_title (1.2s)
+test	層の全件を回す	2026-11-24T03:10:11.0995509Z   ✓   30 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:415:3 › 文書のタイトル › doc_title_matches_mdmark_h1 (1.4s)
+test	層の全件を回す	2026-11-24T03:10:11.6405079Z   ✓   31 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:440:3 › 文書の情報 › doc_info (1.3s)
+test	層の全件を回す	2026-11-24T03:10:14.8433697Z   ✓   32 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:454:3 › 読み込み中の表示 › loading_skeleton (3.7s)
+test	層の全件を回す	2026-11-24T03:10:14.9744967Z   ✓   33 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:469:3 › 読み込み中の表示 › loading_keeps_previous_doc (3.3s)
+test	層の全件を回す	2026-11-24T03:10:16.1187103Z   ✓   35 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:498:3 › 差分の案内 › diff_banner_hidden_without_base (1.1s)
+test	層の全件を回す	2026-11-24T03:10:16.1835535Z   ✓   34 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:489:3 › 差分の案内 › diff_banner_visible (1.3s)
+test	層の全件を回す	2026-11-24T03:10:17.3550653Z   ✓   36 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:504:3 › 差分の案内 › diff_banner_hidden_when_non_git (1.2s)
+test	層の全件を回す	2026-11-24T03:10:17.8956336Z   ✓   37 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:517:3 › 比較元の選択 › base_select (1.7s)
+test	層の全件を回す	2026-11-24T03:10:18.8955188Z   ✓   38 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:539:3 › 比較先の選択 › head_select (1.5s)
+test	層の全件を回す	2026-11-24T03:10:19.2154951Z   ✓   39 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:551:3 › 差分の強調を解除 › diff_clear (1.3s)
+test	層の全件を回す	2026-11-24T03:10:20.2879765Z   ✓   40 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:560:3 › 差分の強調を解除 › diff_clear_body (1.4s)
+test	層の全件を回す	2026-11-24T03:10:20.5856953Z   ✓   41 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:575:3 › 文書の本文の差分 › body_diff_highlight (1.3s)
+test	層の全件を回す	2026-11-24T03:10:21.6018131Z   ✓   42 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:582:3 › 文書の本文の差分 › body_diff_highlight_when_block_deleted (1.3s)
+test	層の全件を回す	2026-11-24T03:10:21.7914969Z   ✓   43 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:601:3 › 文書の本文の差分 › body_diff_highlight_without_base (1.2s)
+test	層の全件を回す	2026-11-24T03:10:22.8088922Z   ✓   44 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:616:3 › 変換の失敗 › conversion_error_when_timeout (1.2s)
+test	層の全件を回す	2026-11-24T03:10:22.9641590Z   ✓   45 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:632:3 › 変換の失敗 › conversion_error_when_invalid_yaml (1.2s)
+test	層の全件を回す	2026-11-24T03:10:24.0369238Z   ✓   46 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:649:3 › 再読み込み › reload_button (1.2s)
+test	層の全件を回す	2026-11-24T03:10:24.4000149Z   ✓   47 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:674:3 › 文書が無いことの表示 › empty_tab_message (1.4s)
+test	層の全件を回す	2026-11-24T03:10:25.4034632Z   ✓   48 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:684:3 › 文書が無いことの表示 › empty_tab_message_when_non_git (1.4s)
+test	層の全件を回す	2026-11-24T03:10:25.7261176Z   ✓   49 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:699:3 › 本文 › body_without_first_h1 (1.3s)
+test	層の全件を回す	2026-11-24T03:10:26.7460890Z   ✓   50 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:706:5 › 本文 › body_width_without_upper_limit_1920 (1.3s)
+test	層の全件を回す	2026-11-24T03:10:27.0637929Z   ✓   51 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:706:5 › 本文 › body_width_without_upper_limit_2880 (1.3s)
+test	層の全件を回す	2026-11-24T03:10:28.2458866Z   ✓   53 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:783:3 › 本文 › frame_keeps_preflight (1.2s)
+test	層の全件を回す	2026-11-24T03:10:29.1500844Z   ✓   54 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:805:3 › 本文 › body_left_aligned_with_title (895ms)
+test	層の全件を回す	2026-11-24T03:10:30.1231137Z   ✓   55 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:821:3 › 本文 › body_internal_link (963ms)
+test	層の全件を回す	2026-11-24T03:10:30.4095121Z   ✓   52 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:721:3 › 本文 › body_without_preflight (3.6s)
+test	層の全件を回す	2026-11-24T03:10:31.4214889Z   ✓   56 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:835:3 › 本文 › body_external_link (1.3s)
+test	層の全件を回す	2026-11-24T03:10:31.8446062Z   ✓   57 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:849:3 › 本文 › body_mermaid_click_link (1.4s)
+test	層の全件を回す	2026-11-24T03:10:32.8235455Z   ✓   58 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:875:3 › 本文 › body_internal_link_when_missing (1.4s)
+test	層の全件を回す	2026-11-24T03:10:33.1345564Z   ✓   59 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:892:3 › 列の表示のメニュー › columns_menu_visible (1.3s)
+test	層の全件を回す	2026-11-24T03:10:34.2329981Z   ✓   60 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:898:3 › 列の表示のメニュー › columns_menu_hidden_columns (1.4s)
+test	層の全件を回す	2026-11-24T03:10:34.7204295Z   ✓   61 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:909:3 › 列の表示のメニュー › columns_menu_save (1.6s)
+test	層の全件を回す	2026-11-24T03:10:35.6714133Z   ✓   62 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:925:3 › 列の表示のメニュー › columns_menu_save_failure (1.4s)
+test	層の全件を回す	2026-11-24T03:10:36.1695846Z   ✓   63 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:939:3 › 列の表示のメニュー › columns_menu_save_when_tables_mixed (1.4s)
+test	層の全件を回す	2026-11-24T03:10:37.0392290Z   ✓   64 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:969:3 › 列の表示のメニュー › columns_menu_json_marker (1.4s)
+test	層の全件を回す	2026-11-24T03:10:37.5715748Z   ✓   65 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1011:3 › 目次 › toc_items (1.4s)
+test	層の全件を回す	2026-11-24T03:10:38.3336759Z   ✓   66 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1020:3 › 目次 › toc_change_marker (1.3s)
+test	層の全件を回す	2026-11-24T03:10:38.8500647Z   ✓   67 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1028:3 › 目次 › toc_after_doc_changed (1.3s)
+test	層の全件を回す	2026-11-24T03:10:39.5278730Z   ✓   68 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1053:3 › 目次 › toc_hidden_without_headings (1.2s)
+test	層の全件を回す	2026-11-24T03:10:40.3214801Z   ✓   69 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1064:3 › 目次 › toc_click (1.4s)
+test	層の全件を回す	2026-11-24T03:10:41.0584053Z   ✓   70 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1094:3 › 目次 › toc_below_tabs_when_scrolled (1.5s)
+test	層の全件を回す	2026-11-24T03:10:41.8800135Z   ✓   71 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1143:5 › 目次 › table_head_below_tabs_when_scrolled (1.5s)
+test	層の全件を回す	2026-11-24T03:10:42.4271585Z   ✓   72 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1143:5 › 目次 › table_head_below_tabs_when_scrolled_without_timeline (1.3s)
+test	層の全件を回す	2026-11-24T03:10:43.3255896Z   ✓   73 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1161:3 › 目次 › toc_below_tabs_when_scrolled_narrow (1.4s)
+test	層の全件を回す	2026-11-24T03:10:43.9195835Z   ✓   74 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1174:3 › コメントの追加 › comment_add (1.5s)
+test	層の全件を回す	2026-11-24T03:10:44.6511700Z   ✓   75 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1188:3 › コメントのパネル › panel_heading (1.3s)
+test	層の全件を回す	2026-11-24T03:10:45.3097927Z   ✓   76 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1197:3 › コメントのパネル › panel_lists_other_docs (1.4s)
+test	層の全件を回す	2026-11-24T03:10:46.0197717Z   ✓   77 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1207:3 › コメントのパネルの位置 › panel_position_on_the_right (1.4s)
+test	層の全件を回す	2026-11-24T03:10:46.7188896Z   ✓   78 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1216:3 › コメントのパネルの位置 › panel_position_when_narrow (1.4s)
+test	層の全件を回す	2026-11-24T03:10:47.8199429Z   ✓   80 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1239:3 › コメントのパネルを閉じる › panel_close_by_escape (1.1s)
+test	層の全件を回す	2026-11-24T03:10:47.9827219Z   ✓   79 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1229:3 › コメントのパネルを閉じる › panel_close_button (1.9s)
+test	層の全件を回す	2026-11-24T03:10:49.4615673Z   ✓   81 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1257:3 › すべて選択 › select_all_state (1.6s)
+test	層の全件を回す	2026-11-24T03:10:49.6715287Z   ✓   82 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1266:3 › すべて選択 › select_all_toggle (1.7s)
+test	層の全件を回す	2026-11-24T03:10:50.7478153Z   ✓   83 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1277:3 › すべて選択 › select_all_hidden_when_empty (1.3s)
+test	層の全件を回す	2026-11-24T03:10:51.7815002Z   ✓   85 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1303:3 › コメントの場所 › place_text (1.0s)
+test	層の全件を回す	2026-11-24T03:10:52.1676607Z   ✓   84 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1285:3 › コメントの選択 › comment_select (2.5s)
+test	層の全件を回す	2026-11-24T03:10:53.1415175Z   ✓   86 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1310:3 › コメントの場所 › place_click_other_doc (1.3s)
+test	層の全件を回す	2026-11-24T03:10:53.6535268Z   ✓   87 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1330:3 › コメントの場所への移動 › place_scroll_same_doc (1.5s)
+test	層の全件を回す	2026-11-24T03:10:55.1420888Z   ✓   89 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1383:3 › コメントの場所への移動 › place_scroll_other_doc (1.5s)
+test	層の全件を回す	2026-11-24T03:10:55.7147719Z   ✓   88 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1346:3 › コメントの場所への移動 › place_scroll_cleared_when_doc_left (2.6s)
+test	層の全件を回す	2026-11-24T03:10:56.3992850Z   ✓   90 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1401:3 › コメントの引用 › quote_text (1.2s)
+test	層の全件を回す	2026-11-24T03:10:57.1093435Z   ✓   91 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1413:3 › コメントの本文 › comment_body (1.4s)
+test	層の全件を回す	2026-11-24T03:10:57.9875932Z   ✓   92 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1429:3 › コメントの修正 › edit_button (1.6s)
+test	層の全件を回す	2026-11-24T03:10:58.6215245Z   ✓   93 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1437:3 › コメントの修正 › edit_field_focus (1.5s)
+test	層の全件を回す	2026-11-24T03:10:59.6374175Z   ✓   94 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1444:3 › コメントの修正 › edit_save (1.6s)
+test	層の全件を回す	2026-11-24T03:11:00.2445574Z   ✓   95 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1454:3 › コメントの修正 › edit_save_redraws_mark (1.6s)
+test	層の全件を回す	2026-11-24T03:11:01.2687642Z   ✓   96 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1468:3 › コメントの修正 › edit_cancel (1.6s)
+test	層の全件を回す	2026-11-24T03:11:01.7417821Z   ✓   97 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1477:3 › コメントの修正 › edit_cancel_by_escape (1.5s)
+test	層の全件を回す	2026-11-24T03:11:02.9110708Z   ✓   98 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1486:3 › コメントの修正 › edit_save_when_blank (1.6s)
+test	層の全件を回す	2026-11-24T03:11:03.1974981Z   ✓   99 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1498:3 › コメントの削除 › delete_button (1.4s)
+test	層の全件を回す	2026-11-24T03:11:04.3608193Z   ✓  100 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1508:3 › コメントの削除 › delete_button_redraws_mark (1.4s)
+test	層の全件を回す	2026-11-24T03:11:04.7504855Z   ✓  101 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1527:3 › 選択をコピー › copy_button (1.5s)
+test	層の全件を回す	2026-11-24T03:11:05.7949791Z   ✓  102 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1543:3 › 選択をコピー › copy_button_disabled_when_none_selected (1.4s)
+test	層の全件を回す	2026-11-24T03:11:06.3625389Z   ✓  103 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1550:3 › 選択をコピー › copy_button_when_clipboard_denied (1.6s)
+test	層の全件を回す	2026-11-24T03:11:07.3917950Z   ✓  104 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1570:3 › Issue を作成 › issue_button (1.6s)
+test	層の全件を回す	2026-11-24T03:11:07.5423145Z   ✓  105 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1590:3 › Issue を作成 › issue_button_hidden_without_github (1.2s)
+test	層の全件を回す	2026-11-24T03:11:08.9755770Z   ✓  107 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1607:3 › Issue を作成 › issue_button_when_url_too_long (1.4s)
+test	層の全件を回す	2026-11-24T03:11:09.0258390Z   ✓  106 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1600:3 › Issue を作成 › issue_button_disabled_when_none_selected (1.6s)
+test	層の全件を回す	2026-11-24T03:11:10.2828845Z   ✓  108 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1634:3 › コメントが無いことの表示 › comment_empty_message (1.3s)
+test	層の全件を回す	2026-11-24T03:11:10.7487587Z   ✓  109 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1643:3 › 通知 › toast_position (1.7s)
+test	層の全件を回す	2026-11-24T03:11:12.0165069Z   ✓  111 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1674:3 › ショートカットの一覧 › shortcut_dialog (1.3s)
+test	層の全件を回す	2026-11-24T03:11:12.0598057Z   ✓  110 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1659:3 › 検索のダイアログ › search_dialog_result_select (1.8s)
+test	層の全件を回す	2026-11-24T03:11:13.1910321Z   ✓  112 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1685:3 › キーボードのショートカット › shortcut_ctrl_k (1.2s)
+test	層の全件を回す	2026-11-24T03:11:13.3355704Z   ✓  113 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1692:3 › キーボードのショートカット › shortcut_slash (1.3s)
+test	層の全件を回す	2026-11-24T03:11:14.6831440Z   ✓  115 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1713:3 › キーボードのショートカット › shortcut_ignored_in_dialog (1.3s)
+test	層の全件を回す	2026-11-24T03:11:14.8885901Z   ✓  114 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1699:3 › キーボードのショートカット › shortcut_ignored_in_input (1.7s)
+test	層の全件を回す	2026-11-24T03:11:15.9208838Z   ✓  116 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1721:3 › キーボードのショートカット › shortcut_single_key_off (1.2s)
+test	層の全件を回す	2026-11-24T03:11:16.9068388Z   ✓  117 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1742:3 › ランドマーク › landmarks_unique (2.0s)
+test	層の全件を回す	2026-11-24T03:11:17.0415508Z   ✓  118 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1775:3 › 本文の用語のツールチップ › term_tooltip (1.1s)
+test	層の全件を回す	2026-11-24T03:11:18.2757168Z   ✓  119 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1789:3 › 本文の用語のツールチップ › term_tooltip_when_doc_alias (1.4s)
+test	層の全件を回す	2026-11-24T03:11:18.3458693Z   ✓  120 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1802:3 › 本文の用語のツールチップ › term_tooltip_when_no_aliases (1.3s)
+test	層の全件を回す	2026-11-24T03:11:19.4046343Z   ✓  122 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1842:3 › project-index から文書を受け取れないときの表示 › project_index_timeout_alert (1.0s)
+test	層の全件を回す	2026-11-24T03:11:20.2355582Z   ✓  121 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1814:3 › project-index から文書を受け取れないときの表示 › project_index_unreachable_alert (1.9s)
+test	層の全件を回す	2026-11-24T03:11:20.5738060Z   ✓  123 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1869:3 › project-index から文書を受け取れないときの表示 › project_index_failed_alert (1.2s)
+test	層の全件を回す	2026-11-24T03:11:21.6049820Z   ✓  124 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1898:3 › 編集中のボタン › open_pending_panel (1.4s)
+test	層の全件を回す	2026-11-24T03:11:21.9070209Z   ✓  125 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1931:3 › 検索から除外のマーカー › sidebar_excluded_marker (1.3s)
+test	層の全件を回す	2026-11-24T03:11:29.0755554Z   ✓  126 [chromium] › tests/integration/frontend/search-dialog.spec.ts:10:3 › Empty › empty (7.4s)
+test	層の全件を回す	2026-11-24T03:11:29.8676425Z   ✓  127 [chromium] › tests/integration/frontend/search-dialog.spec.ts:23:3 › Results › results (7.9s)
+test	層の全件を回す	2026-11-24T03:11:30.9895353Z   ✓  128 [chromium] › tests/integration/frontend/search-dialog.spec.ts:35:3 › Results › results_keyboard (1.9s)
+test	層の全件を回す	2026-11-24T03:11:32.9789875Z   ✓  129 [chromium] › tests/integration/frontend/search-dialog.spec.ts:50:3 › NoResults › no_results (3.1s)
+test	層の全件を回す	2026-11-24T03:11:33.8990165Z   ✓  130 [chromium] › tests/integration/frontend/search-dialog.spec.ts:61:3 › Loading › loading (2.9s)
+test	層の全件を回す	2026-11-24T03:11:35.8619263Z   ✓  131 [chromium] › tests/integration/frontend/search-dialog.spec.ts:71:3 › Failed › failed (2.9s)
+test	層の全件を回す	2026-11-24T03:11:36.8663599Z   ✓  132 [chromium] › tests/integration/frontend/search-dialog.spec.ts:80:3 › NonGitSource › non_git_source (3.0s)
+test	層の全件を回す	2026-11-24T03:11:38.6599054Z   ✓  133 [chromium] › tests/integration/frontend/search-dialog.spec.ts:89:3 › ExcludedCount › excluded_count (2.8s)
+test	層の全件を回す	2026-11-24T03:11:39.7305101Z   ✓  134 [chromium] › tests/integration/frontend/search-dialog.spec.ts:104:3 › IncludeExcluded › include_excluded (2.9s)
+test	層の全件を回す	2026-11-24T03:11:40.4606273Z   ✓  135 [chromium] › tests/integration/frontend/search-dialog.spec.ts:118:3 › IncludeExcluded › include_excluded_keyboard (1.8s)
+test	層の全件を回す	2026-11-24T03:11:42.2481113Z   ✓  136 [chromium] › tests/integration/frontend/search-dialog.spec.ts:129:3 › OnlyExcludedMatched › only_excluded_matched (2.5s)
+test	層の全件を回す	2026-11-24T03:11:42.4934906Z 
+test	層の全件を回す	2026-11-24T03:11:42.4940566Z   136 passed (2.0m)
