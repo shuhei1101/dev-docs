@@ -1,0 +1,59 @@
+# 単体テスト（Red）: ランナーでの全件実行
+
+## 実装の前から pass したテスト
+
+- tests/unit/frontend/src/features/docs/doc-view/components/doc-sidebar.test.tsx::test_doc_sidebar_when_excluded: 振る舞いは frontend/src/features/docs/doc-view/components/doc-sidebar.tsx（SearchX のマーカー）にあり、モックの commit e8e3f4a で入れた
+- tests/unit/frontend/src/features/docs/shared/search-dialog/search-dialog.test.tsx::test_search_dialog_when_excluded_count・test_search_dialog_when_include_excluded: 振る舞いは frontend/src/features/docs/shared/search-dialog/search-dialog.tsx（件数・スイッチ・バッジ）にあり、e8e3f4a で入れた
+- 同 test_search_dialog_when_only_excluded: 振る舞いは同じファイルの 0 件の案内にあり、e268b6f で入れた
+
+## 単体テスト（バック）
+
+$ gh workflow run test.yml --ref feat/screen/metadata-only-kinds-and-excluded-docs -f layer=backend-unit（TP-155-1 の TL-1 の run_runner）
+tests/unit/dev_docs/features/lifecycle/test_update.py::test_update_clone_when_failed_then_again PASSED [ 30%]
+tests/unit/dev_docs/features/lifecycle/test_update.py::test_run_when_failed PASSED [ 31%]
+tests/unit/dev_docs/features/metadata/test_commits.py::test_commit_edits_when_validation_failed PASSED [ 32%]
+tests/unit/dev_docs/features/view/test_document.py::test_get_document_when_convert_failed PASSED [ 54%]
+tests/unit/dev_docs/features/view/test_document_lists.py::test_fetch_when_failed PASSED [ 57%]
+tests/unit/dev_docs/features/view/test_nav.py::test_build_nav_when_excluded FAILED [ 60%]
+tests/unit/dev_docs/features/view/test_search.py::test_screen_search_when_excluded FAILED [ 63%]
+tests/unit/dev_docs/integrations/project_index/test_client.py::test_search_when_excluded FAILED [ 69%]
+tests/unit/dev_docs/integrations/project_index/test_types.py::test_parse_document_when_excluded FAILED [ 70%]
+tests/unit/dev_docs/server/test_error_handlers.py::test_register_error_handlers_when_project_index_failed PASSED [ 76%]
+tests/unit/plugins/dev_docs/hooks/test_session_start.py::test_start_unit_when_failed PASSED [ 94%]
+tests/unit/scripts/test_build_pages.py::test_main_when_build_failed PASSED [ 94%]
+tests/unit/scripts/test_build_pages.py::test_run_mdmark_when_failed PASSED [ 98%]
+tests/unit/scripts/test_on_conflict_script.py::test_main_when_push_failed PASSED [ 98%]
+tests/unit/scripts/test_on_conflict_script.py::test_main_when_pr_create_failed PASSED [ 99%]
+tests/unit/scripts/test_restart_resident.py::test_main_when_sync_failed PASSED [ 99%]
+tests/unit/scripts/test_restart_resident.py::test_main_when_restart_failed PASSED [100%]
+E       TypeError: IndexedDocument.__init__() got an unexpected keyword argument 'excluded'
+tests/unit/dev_docs/conftest.py:428: TypeError
+E       TypeError: screen_search() got an unexpected keyword argument 'include_excluded'
+tests/unit/dev_docs/features/view/test_search.py:86: TypeError
+E       TypeError: ProjectIndexClient.search() got an unexpected keyword argument 'include_excluded'
+tests/unit/dev_docs/integrations/project_index/test_client.py:748: TypeError
+E       AttributeError: 'IndexedDocument' object has no attribute 'excluded'
+tests/unit/dev_docs/integrations/project_index/test_types.py:128: AttributeError
+FAILED tests/unit/dev_docs/features/view/test_nav.py::test_build_nav_when_excluded - TypeError: IndexedDocument.__init__() got an unexpected keyword argument 'excluded'
+FAILED tests/unit/dev_docs/features/view/test_search.py::test_screen_search_when_excluded - TypeError: screen_search() got an unexpected keyword argument 'include_excluded'
+FAILED tests/unit/dev_docs/integrations/project_index/test_client.py::test_search_when_excluded - TypeError: ProjectIndexClient.search() got an unexpected keyword argument 'include_excluded'
+FAILED tests/unit/dev_docs/integrations/project_index/test_types.py::test_parse_document_when_excluded - AttributeError: 'IndexedDocument' object has no attribute 'excluded'
+======================== 4 failed, 610 passed in 7.98s =========================
+
+## 単体テスト（フロント）
+
+$ gh workflow run test.yml --ref feat/screen/metadata-only-kinds-and-excluded-docs -f layer=frontend-unit（TP-155-1 の TL-8 の run_runner）
+[command]/usr/bin/git -c protocol.version=2 fetch --no-tags --prune --no-recurse-submodules --depth=1 origin +d16c168b95ebe5470250b3d448d8a67936d5442c:refs/remotes/origin/feat/screen/metadata-only-kinds-and-excluded-docs
+ * [new ref]         d16c168b95ebe5470250b3d448d8a67936d5442c -> origin/feat/screen/metadata-only-kinds-and-excluded-docs
+[command]/usr/bin/git branch --list --remote origin/feat/screen/metadata-only-kinds-and-excluded-docs
+  origin/feat/screen/metadata-only-kinds-and-excluded-docs
+[command]/usr/bin/git rev-parse refs/remotes/origin/feat/screen/metadata-only-kinds-and-excluded-docs
+[command]/usr/bin/git checkout --progress --force -B feat/screen/metadata-only-kinds-and-excluded-docs refs/remotes/origin/feat/screen/metadata-only-kinds-and-excluded-docs
+Switched to a new branch 'feat/screen/metadata-only-kinds-and-excluded-docs'
+branch 'feat/screen/metadata-only-kinds-and-excluded-docs' set up to track 'origin/feat/screen/metadata-only-kinds-and-excluded-docs'.
+ ✓ tests/unit/frontend/src/features/docs/shared/search-dialog/search-dialog.test.tsx > test_search_dialog_when_excluded_count 298ms
+ ✓ tests/unit/frontend/src/features/docs/shared/search-dialog/search-dialog.test.tsx > test_search_dialog_when_only_excluded 284ms
+ ✓ tests/unit/frontend/src/features/docs/shared/search-dialog/search-dialog.test.tsx > test_search_dialog_when_include_excluded 327ms
+ ✓ tests/unit/frontend/src/features/docs/doc-view/components/doc-sidebar.test.tsx > test_doc_sidebar_when_excluded 21ms
+ Test Files  58 passed (58)
+      Tests  209 passed (209)
