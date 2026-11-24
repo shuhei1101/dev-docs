@@ -1,4 +1,6 @@
 import { screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { useState } from "react";
 import { expect, test } from "vitest";
 
 import { DocSidebar } from "@/features/docs/doc-view/components/doc-sidebar";
@@ -68,4 +70,85 @@ test("test_doc_sidebar_when_excluded", async () => {
   expect(screen.getByRole("link", { name: "A" })).not.toContainElement(
     screen.getByRole("img", { name: "検索から除外" }),
   );
+});
+
+const twoGroups = (bPages: ReturnType<typeof page>[]) => ({
+  title: "設計書",
+  active: true,
+  items: [group("A", [page("A1", "a.md"), page("A2", "a2.md")]), group("B", bPages)],
+});
+
+/** `移動` を押すと currentPath を `to` に変えて描き直す */
+const Moving = ({ tab, from, to }: { tab: unknown; from: string; to: string }) => {
+  const [path, setPath] = useState(from);
+  return (
+    <>
+      <button type="button" onClick={() => setPath(to)}>
+        移動
+      </button>
+      <DocSidebar tab={tab as never} source="s" currentPath={path} search={{}} />
+    </>
+  );
+};
+
+test("test_doc_sidebar_when_group_toggled", async () => {
+  renderInRouter(
+    <DocSidebar tab={twoGroups([page("B1", "b.md")]) as never} source="s" currentPath="a.md" search={{}} />,
+  );
+
+  expect(await screen.findByRole("button", { name: "A" })).toHaveAttribute("aria-expanded", "true");
+  const b = screen.getByRole("button", { name: "B" });
+  expect(b).toHaveAttribute("aria-expanded", "false");
+  expect(screen.queryByRole("link", { name: "B1" })).not.toBeInTheDocument();
+
+  await userEvent.click(b);
+
+  expect(b).toHaveAttribute("aria-expanded", "true");
+  expect(screen.getByRole("link", { name: "B1" })).toBeInTheDocument();
+});
+
+test("test_doc_sidebar_when_current_changed", async () => {
+  renderInRouter(<Moving tab={twoGroups([page("C", "c.md")])} from="a.md" to="c.md" />);
+  const b = await screen.findByRole("button", { name: "B" });
+  expect(b).toHaveAttribute("aria-expanded", "false");
+
+  await userEvent.click(screen.getByRole("button", { name: "移動" }));
+
+  expect(b).toHaveAttribute("aria-expanded", "true");
+  expect(screen.getByRole("link", { name: "C" })).toHaveAttribute("aria-current", "page");
+});
+
+test("test_doc_sidebar_when_changed_in_group", async () => {
+  renderInRouter(
+    <DocSidebar tab={twoGroups([page("C", "c.md", "modified")]) as never} source="s" currentPath="a.md" search={{}} />,
+  );
+
+  expect(await screen.findByRole("button", { name: "B" })).toHaveAttribute("aria-expanded", "true");
+  expect(screen.getByLabelText("変更")).toBeInTheDocument();
+});
+
+test("test_doc_sidebar_when_nested", async () => {
+  const nested = (titles: string[]): unknown =>
+    titles.length === 0
+      ? page("Deep", "deep.md")
+      : { ...group(titles[0], []), items: [nested(titles.slice(1))] };
+  const tab = { title: "設計書", active: true, items: [nested(["L1", "L2", "L3", "L4"])] };
+
+  renderInRouter(<DocSidebar tab={tab as never} source="s" currentPath="deep.md" search={{}} />);
+
+  for (const title of ["L1", "L2", "L3", "L4"]) {
+    expect(await screen.findByRole("button", { name: title })).toHaveAttribute("aria-expanded", "true");
+  }
+  expect(screen.getByRole("link", { name: "Deep" })).toHaveAttribute("aria-current", "page");
+});
+
+test("test_doc_sidebar_when_moved_keeps_closed", async () => {
+  renderInRouter(<Moving tab={twoGroups([page("C", "c.md", "modified")])} from="a.md" to="a2.md" />);
+  const b = await screen.findByRole("button", { name: "B" });
+  await userEvent.click(b);
+  expect(b).toHaveAttribute("aria-expanded", "false");
+
+  await userEvent.click(screen.getByRole("button", { name: "移動" }));
+
+  expect(b).toHaveAttribute("aria-expanded", "false");
 });

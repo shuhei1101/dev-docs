@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { HttpResponse, http } from "msw";
 import { beforeEach, expect, test, vi } from "vitest";
 
+import { usePreferencesStore } from "@/shared/stores/preferences";
 import { documentResponse, group, page, refsResponse, settingsSource, settingsView } from "@tests/helpers/fixtures";
 import { server } from "@tests/helpers/msw-server";
 import { renderApp } from "@tests/helpers/render-app";
@@ -22,6 +23,7 @@ const useHandlers = (document: Record<string, unknown>) =>
   );
 
 beforeEach(() => {
+  usePreferencesStore.setState({ sidebarOpen: true, sidebarWidth: 240 });
   mount.mockReset();
   mount.mockReturnValue({ update: vi.fn(), destroy: vi.fn() });
 });
@@ -63,4 +65,21 @@ test("test_doc_view_screen_when_conversion_error", async () => {
 
   expect(await screen.findByText("本文を変換できませんでした")).toBeInTheDocument();
   expect(mount).not.toHaveBeenCalled();
+});
+
+test("test_doc_view_screen_when_sidebar_closed", async () => {
+  useHandlers(documentResponse());
+  renderApp("/s/a.md");
+  await screen.findByRole("heading", { level: 1, name: "A" });
+
+  await userEvent.click(screen.getByRole("button", { name: "サイドバーを閉じる" }));
+
+  expect(screen.queryByRole("navigation", { name: "文書の一覧" })).not.toBeInTheDocument();
+  expect(screen.queryByRole("separator", { name: "サイドバーの幅" })).not.toBeInTheDocument();
+  expect(usePreferencesStore.getState().sidebarOpen).toBe(false);
+
+  await userEvent.click(screen.getByRole("button", { name: "サイドバーを開く" }));
+
+  expect(screen.getByRole("navigation", { name: "文書の一覧" })).toBeInTheDocument();
+  expect(document.getElementById("doc-sidebar")).toHaveStyle({ width: "240px" });
 });
