@@ -202,7 +202,7 @@ elements:
     action: 本文の中の同じ配信元の文書へのリンクは、画面を再読み込みせず `rev` を保って開く（無い文書は見つからない画面）。外の URL は別のタブで開く。Mermaid の図の `click` のノードを mdmark がリンクにしたものも、本文のリンクと同じく開く
     action_ref: IF-155-10#
     notes:
-      mdmark に指定する値: '`docId` は `{配信元の ID}:{文書のパス}`、`commentStore` はコメントの配置先の読み書き。`diffSource` は指定せず、mdmark の「変更を見る」を出さない'
+      mdmark に指定する値: '`docId` は `{配信元の ID}:{文書のパス}`、`commentStore` はコメントの配置先の読み書き。`diffSource` は指定せず、mdmark の「変更を見る」を出さない。`config` に `table.pin_default` は指定せず、表は mdmark の既定（描いた直後はどの列も留めない）で描く'
       差分: '`base` があるときは、`ref` を `diff.base` にして取った `markdown` を mdmark の `baseMarkdown` に指定し、変わったブロックと削除したブロックの位置を本文の中で強調する。`base` を除外したら `baseMarkdown` を `null` にして強調を解除する'
       見た目: 単独の mdmark（画面が読み込むバージョンの `mdmark export` で書き出した HTML）と同じ見た目で描く。画面の基本のスタイル（Tailwind の Preflight と、全ての要素の枠線の色）は本文の範囲に適用せず、mdmark が値を持たない性質はブラウザの既定の値にする。本文の内側の余白は下だけにし、本文の左端の位置をパンくず・文書のタイトルと同じにする
     width: 画面の幅から左右の余白・サイドバー・間隔を除いた幅（上限なし）
