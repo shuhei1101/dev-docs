@@ -909,7 +909,7 @@ test.describe("本文", () => {
     await openRendered(page, "/sample/docs/doc-1", {
       document: ({ path }) => ({ body: documentResponse({ path, markdown }) }),
     });
-    await expect(page.getByRole("columnheader", { name: "列 1", exact: true })).toBeVisible();
+    await expect(page.getByRole("columnheader", { name: /^列 1 / })).toBeVisible();
     // 検証（表が横にはみ出している）
     const table = page.locator(".mdmark table").first();
     await expect
