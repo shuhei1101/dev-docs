@@ -31,6 +31,8 @@ class IndexedDocument:
     body: str = ""
     body_path: str | None = None
     updated: datetime | None = None
+    # 配信元の設定の `documents[].search_exclude` に該当するか（文書の一覧の `excluded`）
+    excluded: bool = False
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -142,6 +144,7 @@ class SearchHit:
     path: str
     name: str
     snippets: list[str]
+    excluded: bool = False
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -150,6 +153,8 @@ class SearchHits:
 
     total_count: int
     items: list[SearchHit]
+    # 検索から除外される文書で、結果から除いた件数
+    excluded_count: int = 0
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -227,6 +232,7 @@ def parse_document(
         version=str(value["version"]),
         record_index=record_index,
         body_path=value.get("bodyPath"),
+        excluded=value.get("excluded") is True,
     )
 
 

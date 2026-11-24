@@ -277,6 +277,16 @@
               "default": 20,
               "title": "Limit"
             }
+          },
+          {
+            "name": "include_excluded",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false,
+              "title": "Include Excluded"
+            }
           }
         ],
         "responses": {
@@ -1534,6 +1544,11 @@
               }
             ],
             "title": "Change"
+          },
+          "excluded": {
+            "type": "boolean",
+            "title": "Excluded",
+            "default": false
           }
         },
         "type": "object",
@@ -1646,6 +1661,11 @@
             },
             "type": "array",
             "title": "Snippets"
+          },
+          "excluded": {
+            "type": "boolean",
+            "title": "Excluded",
+            "default": false
           }
         },
         "type": "object",
@@ -1669,6 +1689,11 @@
             },
             "type": "array",
             "title": "Items"
+          },
+          "excludedCount": {
+            "type": "integer",
+            "title": "Excludedcount",
+            "default": 0
           }
         },
         "type": "object",

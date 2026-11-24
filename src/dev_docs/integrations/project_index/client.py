@@ -332,14 +332,19 @@ class ProjectIndexClient:
         return str(response.json().get("body", ""))
 
     async def search(
-        self, source: str, q: str, *, ref: str | None = None, limit: int
+        self,
+        source: str,
+        q: str,
+        *,
+        ref: str | None = None,
+        limit: int,
+        include_excluded: bool = False,
     ) -> SearchHits:
         """単語を含む文書と一致した箇所を返却する。"""
-        response = await self.request(
-            "GET",
-            f"/sources/{_seg(source)}/search",
-            params={"q": q, "ref": ref, "limit": limit},
-        )
+        params: dict[str, Any] = {"q": q, "ref": ref, "limit": limit}
+        if include_excluded:
+            params["include_excluded"] = "true"
+        response = await self.request("GET", f"/sources/{_seg(source)}/search", params=params)
         value = response.json()
         return SearchHits(
             total_count=int(value.get("totalCount", 0)),
@@ -349,9 +354,11 @@ class ProjectIndexClient:
                     path=str(item.get("filePath", "")),
                     name=str(item.get("name", "")),
                     snippets=list(item.get("snippets") or []),
+                    excluded=item.get("excluded") is True,
                 )
                 for item in value.get("items") or []
             ],
+            excluded_count=int(value.get("excludedCount") or 0),
         )
 
     async def refs(self, source: str, *, commits: int) -> RefList:

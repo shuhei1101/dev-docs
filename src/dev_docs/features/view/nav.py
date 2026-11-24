@@ -31,6 +31,7 @@ def _link(document: IndexedDocument, title: str | None = None) -> NavItem:
         kind="page",
         title=title or str(document.metadata.get("name") or document.id),
         path=page_path(document),
+        excluded=document.excluded,
     )
 
 
@@ -261,7 +262,7 @@ def _items(
 
 def _link_titled(entry: NavItem, title: str) -> NavItem:
     """`page` の項目の名前を上書きする。"""
-    return NavItem(kind="page", title=title, path=entry.path)
+    return NavItem(kind="page", title=title, path=entry.path, excluded=entry.excluded)
 
 
 def _tab_title(row: DocumentRow) -> str:
@@ -414,7 +415,7 @@ def mark_nav_changes(
         for tab in tabs
     ]
     deleted = {
-        item.path: item.model_copy(update={"change": "deleted"})
+        item.path: item.model_copy(update={"change": "deleted", "excluded": False})
         for base_tab in base_tabs
         for item in _page_items(base_tab.items)
         if item.path is not None and item.path not in versions

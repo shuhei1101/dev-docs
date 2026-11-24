@@ -36,10 +36,7 @@ const Marker = ({ change }: { change: NonNullable<NavItem["change"]> }) => {
   );
 };
 
-/** 検索から除外される文書（`search_exclude` に該当）は `excluded` を持つ */
-type SidebarItem = NavItem & { excluded?: boolean; items?: SidebarItem[] };
-
-type ItemsProps = Omit<Props, "tab"> & { items: SidebarItem[] };
+type ItemsProps = Omit<Props, "tab"> & { items: NavItem[] };
 
 const Items = ({
   items,

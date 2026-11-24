@@ -3,7 +3,6 @@ import { useEffect, useRef, useState } from "react";
 
 import { splitHighlight } from "@/features/docs/shared/search-dialog/highlight";
 import { AppError } from "@/shared/core/app-error";
-import type { ScreenSearchResult } from "@/shared/api/generated/model";
 import { getViewSearchPageQueryOptions } from "@/shared/api/generated/view/view";
 import {
   Command,
@@ -28,12 +27,6 @@ type Props = {
   source: string;
   ref?: string;
   onResultSelect: (path: string) => void;
-};
-
-/** 検索から除外される文書（`search_exclude` に該当）の件数と、結果の `excluded` */
-type SearchResult = Omit<ScreenSearchResult, "items"> & {
-  excludedCount?: number;
-  items: (ScreenSearchResult["items"][number] & { excluded?: boolean })[];
 };
 
 type StatusProps = {
@@ -101,12 +94,11 @@ export const SearchDialog = ({
     ...getViewSearchPageQueryOptions(source, {
       q: sent,
       ref: revision,
-      ...(includeExcluded ? { include_excluded: true } : {}),
+      include_excluded: includeExcluded || undefined,
     }),
     enabled: open && sent !== "",
   });
-  const result = (sent === "" ? undefined : search.data) as
-    SearchResult | undefined;
+  const result = sent === "" ? undefined : search.data;
 
   // cmdk は最初に選んだ結果を `aria-activedescendant` に反映しないため、結果が出たら選んでいる結果を指す
   const inputRef = useRef<HTMLInputElement>(null);

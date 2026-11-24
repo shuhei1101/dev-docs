@@ -19,6 +19,8 @@ export const ViewGetDocumentDefaultQueryParams = zod.object({
   "diff": zod.union([zod.string(),zod.null()]).optional()
 })
 
+export const viewGetDocumentDefaultResponseTabsItemItemsItemExcludedDefault = false;
+
 export const ViewGetDocumentDefaultResponse = zod.object({
   "source": zod.string(),
   "ref": zod.union([zod.string(),zod.null()]),
@@ -42,7 +44,8 @@ export const ViewGetDocumentDefaultResponse = zod.object({
   "title": zod.string(),
   "path": zod.union([zod.string(),zod.null()]).optional(),
   "items": zod.array(zod.unknown()).optional(),
-  "change": zod.union([zod.enum(['added', 'modified', 'deleted']),zod.null()]).optional()
+  "change": zod.union([zod.enum(['added', 'modified', 'deleted']),zod.null()]).optional(),
+  "excluded": zod.boolean().default(viewGetDocumentDefaultResponseTabsItemItemsItemExcludedDefault)
 }).describe('サイドバーの見出しか文書の 1 行。'))
 }).describe('上のタブ 1 つとそのサイドバー。')),
   "github": zod.union([zod.object({
@@ -80,6 +83,8 @@ export const ViewGetDocumentQueryParams = zod.object({
   "diff": zod.union([zod.string(),zod.null()]).optional()
 })
 
+export const viewGetDocumentResponseTabsItemItemsItemExcludedDefault = false;
+
 export const ViewGetDocumentResponse = zod.object({
   "source": zod.string(),
   "ref": zod.union([zod.string(),zod.null()]),
@@ -103,7 +108,8 @@ export const ViewGetDocumentResponse = zod.object({
   "title": zod.string(),
   "path": zod.union([zod.string(),zod.null()]).optional(),
   "items": zod.array(zod.unknown()).optional(),
-  "change": zod.union([zod.enum(['added', 'modified', 'deleted']),zod.null()]).optional()
+  "change": zod.union([zod.enum(['added', 'modified', 'deleted']),zod.null()]).optional(),
+  "excluded": zod.boolean().default(viewGetDocumentResponseTabsItemItemsItemExcludedDefault)
 }).describe('サイドバーの見出しか文書の 1 行。'))
 }).describe('上のタブ 1 つとそのサイドバー。')),
   "github": zod.union([zod.object({
@@ -140,21 +146,27 @@ export const viewSearchPageQueryQMax = 200;
 export const viewSearchPageQueryLimitDefault = 20;
 export const viewSearchPageQueryLimitMax = 100;
 
-
+export const viewSearchPageQueryIncludeExcludedDefault = false;
 
 export const ViewSearchPageQueryParams = zod.object({
   "q": zod.string().min(1).max(viewSearchPageQueryQMax),
   "ref": zod.union([zod.string(),zod.null()]).optional(),
-  "limit": zod.int().min(1).max(viewSearchPageQueryLimitMax).default(viewSearchPageQueryLimitDefault)
+  "limit": zod.int().min(1).max(viewSearchPageQueryLimitMax).default(viewSearchPageQueryLimitDefault),
+  "include_excluded": zod.boolean().default(viewSearchPageQueryIncludeExcludedDefault)
 })
+
+export const viewSearchPageResponseItemsItemExcludedDefault = false;
+export const viewSearchPageResponseExcludedCountDefault = 0;
 
 export const ViewSearchPageResponse = zod.object({
   "totalCount": zod.int(),
   "items": zod.array(zod.object({
   "path": zod.string(),
   "name": zod.string(),
-  "snippets": zod.array(zod.string())
-}).describe('画面の検索の結果の文書。'))
+  "snippets": zod.array(zod.string()),
+  "excluded": zod.boolean().default(viewSearchPageResponseItemsItemExcludedDefault)
+}).describe('画面の検索の結果の文書。')),
+  "excludedCount": zod.int().default(viewSearchPageResponseExcludedCountDefault)
 }).describe('GET `/_api/sources/{source}/search` の応答。')
 
 /**
