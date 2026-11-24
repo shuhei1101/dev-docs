@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { Circle, Minus, Plus } from "lucide-react";
+import { Circle, Minus, Plus, SearchX } from "lucide-react";
 
 import type { NavItem, NavTab } from "@/shared/api/generated/model";
 import type { DocViewSearch } from "@/features/docs/doc-view/search";
@@ -36,7 +36,10 @@ const Marker = ({ change }: { change: NonNullable<NavItem["change"]> }) => {
   );
 };
 
-type ItemsProps = Omit<Props, "tab"> & { items: NavItem[] };
+/** 検索から除外される文書（`search_exclude` に該当）は `excluded` を持つ */
+type SidebarItem = NavItem & { excluded?: boolean; items?: SidebarItem[] };
+
+type ItemsProps = Omit<Props, "tab"> & { items: SidebarItem[] };
 
 const Items = ({
   items,
@@ -75,12 +78,24 @@ const Items = ({
             className={cn(
               "flex items-center justify-between gap-2 rounded-md px-2 py-1 text-sm hover:bg-accent",
               item.path === currentPath && "bg-accent font-medium",
+              item.excluded && "text-muted-foreground",
             )}
           >
             <span className={cn(item.change === "deleted" && "line-through")}>
               {item.title}
             </span>
-            {item.change != null && <Marker change={item.change} />}
+            <span className="flex shrink-0 items-center gap-1">
+              {item.excluded && (
+                <SearchX
+                  aria-label="検索から除外"
+                  role="img"
+                  className="size-3 shrink-0"
+                >
+                  <title>検索から除外</title>
+                </SearchX>
+              )}
+              {item.change != null && <Marker change={item.change} />}
+            </span>
           </Link>
         </li>
       ),

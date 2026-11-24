@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 
 import { splitHighlight } from "@/features/docs/shared/search-dialog/highlight";
 import { AppError } from "@/shared/core/app-error";
+import type { ScreenSearchResult } from "@/shared/api/generated/model";
 import { getViewSearchPageQueryOptions } from "@/shared/api/generated/view/view";
 import {
   Command,
@@ -12,6 +13,9 @@ import {
   CommandItem,
   CommandList,
 } from "@/shared/components/ui/command";
+import { Badge } from "@/shared/components/ui/badge";
+import { Label } from "@/shared/components/ui/label";
+import { Switch } from "@/shared/components/ui/switch";
 
 const DEBOUNCE_MS = 200;
 
@@ -26,11 +30,18 @@ type Props = {
   onResultSelect: (path: string) => void;
 };
 
+/** 検索から除外される文書（`search_exclude` に該当）の件数と、結果の `excluded` */
+type SearchResult = Omit<ScreenSearchResult, "items"> & {
+  excludedCount?: number;
+  items: (ScreenSearchResult["items"][number] & { excluded?: boolean })[];
+};
+
 type StatusProps = {
   sent: string;
   pending: boolean;
   error: unknown;
   total: number | undefined;
+  excludedCount: number | undefined;
   revision: string | undefined;
 };
 
@@ -40,6 +51,7 @@ const SearchStatus = ({
   pending,
   error,
   total,
+  excludedCount,
   revision,
 }: StatusProps) => {
   let text = "";
@@ -51,6 +63,7 @@ const SearchStatus = ({
       text = "該当する文書はありません。別の条件を試してください。";
     else if (total !== undefined)
       text = `${total} 件${revision ? `（リビジョン ${revision}）` : ""}`;
+    if (!error && excludedCount) text += `・検索から除外 ${excludedCount} 件`;
   }
   return (
     <p
@@ -72,6 +85,7 @@ export const SearchDialog = ({
 }: Props) => {
   const [query, setQuery] = useState("");
   const [sent, setSent] = useState("");
+  const [includeExcluded, setIncludeExcluded] = useState(false);
 
   // 入力の 200 ミリ秒の待ちの後に問い合わせる
   useEffect(() => {
@@ -81,10 +95,15 @@ export const SearchDialog = ({
 
   const search = useQuery({
     // eslint-disable-next-line react-hooks/refs -- `ref` は React の ref でなくリビジョンを指す props
-    ...getViewSearchPageQueryOptions(source, { q: sent, ref: revision }),
+    ...getViewSearchPageQueryOptions(source, {
+      q: sent,
+      ref: revision,
+      ...(includeExcluded ? { include_excluded: true } : {}),
+    }),
     enabled: open && sent !== "",
   });
-  const result = sent === "" ? undefined : search.data;
+  const result = (sent === "" ? undefined : search.data) as
+    SearchResult | undefined;
 
   // cmdk は最初に選んだ結果を `aria-activedescendant` に反映しないため、結果が出たら選んでいる結果を指す
   const inputRef = useRef<HTMLInputElement>(null);
@@ -120,11 +139,26 @@ export const SearchDialog = ({
           onValueChange={setQuery}
           placeholder="文書を検索"
         />
+        <div className="flex items-center gap-2 border-b px-3 py-2">
+          <Switch
+            id="search-include-excluded"
+            size="sm"
+            checked={includeExcluded}
+            onCheckedChange={setIncludeExcluded}
+          />
+          <Label
+            htmlFor="search-include-excluded"
+            className="text-xs font-normal text-muted-foreground"
+          >
+            検索から除外した文書も含める
+          </Label>
+        </div>
         <SearchStatus
           sent={sent}
           pending={search.isFetching}
           error={search.error}
           total={result?.totalCount}
+          excludedCount={includeExcluded ? undefined : result?.excludedCount}
           revision={revision}
         />
         <CommandList>
@@ -140,7 +174,12 @@ export const SearchDialog = ({
                   }}
                   className="flex-col items-start gap-1"
                 >
-                  <span className="font-medium">{item.name}</span>
+                  <span className="flex items-center gap-2">
+                    <span className="font-medium">{item.name}</span>
+                    {item.excluded && (
+                      <Badge variant="outline">検索から除外</Badge>
+                    )}
+                  </span>
                   <code className="font-mono text-xs text-muted-foreground">
                     {item.path}
                   </code>
