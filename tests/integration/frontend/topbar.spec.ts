@@ -12,14 +12,15 @@ const noHorizontalScroll = (page: Page) =>
 
 const LONG_BRANCH = "feat/screen/metadata-only-kinds-and-excluded-docs";
 
-/** メニューを開いたボタンより広く、画面の中に収まり、項目を全て 1 行で出すことを確かめる */
+/** メニューを開いたボタンの幅以上で、画面の中に収まり、項目を全て 1 行で出すことを確認する */
 const expectMenuFitsOnOneLine = async (page: Page, buttonName: RegExp) => {
   const button = bar(page).getByRole("button", { name: buttonName });
   await button.click();
   const menu = page.getByRole("menu");
   await expect(menu).toBeVisible();
   const menuBox = await boxOf(menu);
-  expect(menuBox.width).toBeGreaterThan((await boxOf(button)).width);
+  // 幅は整数の px に丸めて描かれるため、端数の 1px は許容する
+  expect(menuBox.width).toBeGreaterThanOrEqual((await boxOf(button)).width - 1);
   expect(menuBox.x).toBeGreaterThanOrEqual(0);
   expect(menuBox.x + menuBox.width).toBeLessThanOrEqual(viewportOf(page).width);
   const heights = await page
