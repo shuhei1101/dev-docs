@@ -69,7 +69,7 @@ components:
         case: 正常
         summary: 押した位置の入力位置
         condition: '`document.caretPositionFromPoint` が値 `project-index` のテキストノードの 7 文字目を返却するようにして、その列を押す'
-        mock: '`document.caretPositionFromPoint`（`vi.spyOn`）'
+        mock: '`document.caretPositionFromPoint`。jsdom には無い（`typeof` が `undefined` であることを確認済み）ため、`Object.defineProperty(document, "caretPositionFromPoint", { value: vi.fn(() => ({ offsetNode: テキストノード, offset: 7 })), configurable: true })` で配置し、テストの後に `delete` で戻す'
         expected: 入力欄にフォーカスがあり、`selectionStart`・`selectionEnd` が 7
       - name: test_metadata_table_when_caret_keyboard
         case: 正常

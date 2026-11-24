@@ -32,7 +32,7 @@ components:
         type: () => void
         required: false
         description: リンクを押したとき（ドロワーを閉じる）
-    description: 'page のリンクは TanStack Router の `Link`（`to="/$source/$"`、`search` を保つ）。`change` が `deleted` の page は `search` を `{rev: base, tab}` にし、文書の名前に取り消し線を引く。マーカーは lucide-react の `Plus`・`Circle`（塗り）・`Minus` に `aria-label`（`追加`・`変更`・`削除`）を付ける。`excluded` が `true` の page は、文書の名前を `text-muted-foreground` にし、変化のマーカーの左に lucide-react の `SearchX` を `role="img"`・`aria-label`（`検索から除外`）と SVG の中の `<title>` 要素つきで付ける。group は内部の部品 `Group` で描き、見出しを `<button aria-expanded>`（lucide-react の `ChevronRight` を `aria-hidden`、開いているときは 90 度回す）にして、開いているときだけ配下を 1 階層ぶん字下げして描く。入れ子の階層の数は制限しない。開閉は `Group` の `useState` で持ち、配下に開いている文書（`currentPath`）か `change` が null でない page を持つ group は開いて始める。開いている文書と変化の有無の組が変わったら、描画の中で前の組と比べ、配下に持つなら開く（`useEffect` を使用しない）'
+    description: 'page のリンクは TanStack Router の `Link`（`to="/$source/$"`、`search` を保つ）。`change` が `deleted` の page は `search` を `{rev: base, tab}` にし、文書の名前に取り消し線を引く。マーカーは lucide-react の `Plus`・`Circle`（塗り）・`Minus` に `aria-label`（`追加`・`変更`・`削除`）を付ける。`excluded` が `true` の page は、文書の名前を `text-muted-foreground` にし、変化のマーカーの左に lucide-react の `SearchX` を `role="img"`・`aria-label`（`検索から除外`）と SVG の中の `<title>` 要素つきで付ける。group は内部の部品 `Group` で描き、見出しを `<button aria-expanded>`（lucide-react の `ChevronRight` を `aria-hidden`、開いているときは 90 度回す）にして、開いているときだけ配下を 1 階層ぶん字下げして描く。入れ子の階層の数は制限しない。開閉は `Group` の `useState` で持ち、配下に開いている文書（`currentPath`）か `change` が null でない page を持つ group は開いて始める。描画の中で前の値と比べ（`useEffect` を使用しない）、開いている文書が変わったらその文書を配下に持つ group だけを開き、変化を持つ page が配下に無かった group に変化が現れたらその group を開く。どちらにも当たらない group は、利用者が閉じたままにする'
     unit_tests:
       - name: test_doc_sidebar
         case: 正常
@@ -76,6 +76,12 @@ components:
         condition: group を 4 階層入れ子にし、一番内側に開いている文書
         mock: なし（メモリの履歴のルーター）
         expected: 4 つの group が全て開き、一番内側の文書のリンクが `aria-current="page"`
+      - name: test_doc_sidebar_when_moved_keeps_closed
+        case: 正常
+        summary: 差分の表示中に閉じた group
+        condition: 変化を持つ group `B` を閉じ、`currentPath` を `B` の外の文書に変えて描き直す
+        mock: なし（メモリの履歴のルーター）
+        expected: '`B` は `aria-expanded="false"` のまま'
 tags:
   - name: topic:文書
     main: true
