@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useDeferredValue } from "react";
 
 import { MarkdownPreview } from "@/features/docs/doc-view/components/markdown-preview";
 import { type DocEdit, type EditBlock, upsertBodyEdit, usePendingBodyValue } from "@/features/docs/doc-view/edit";
 import type { DocumentResponse } from "@/shared/api/generated/model";
+import { Badge } from "@/shared/components/ui/badge";
 import { Button } from "@/shared/components/ui/button";
 import { Label } from "@/shared/components/ui/label";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/shared/components/ui/sheet";
@@ -15,39 +16,40 @@ type FormProps = {
   doc: DocumentResponse;
   edit: DocEdit;
   block: EditBlock;
-  onClose: () => void;
 };
 
-/** Markdown の文字列の項目の、エディタとプレビュー */
-const MarkdownFieldForm = ({ doc, edit, block, onClose }: FormProps) => {
+/** Markdown の文字列の項目の、エディタとプレビュー。書き換えはその場で編集中の変更に入れる */
+const MarkdownFieldForm = ({ doc, edit, block }: FormProps) => {
   const before = typeof block.value === "string" ? block.value : "";
   const pending = usePendingBodyValue(doc, block.path);
-  const [draft, setDraft] = useState(pending ?? before);
-  const apply = () => {
-    upsertBodyEdit({ doc, edit, path: block.path, label: block.label, before, value: draft });
-    onClose();
-  };
+  const draft = pending ?? before;
+  const deferred = useDeferredValue(draft);
+  const set = (value: string) => upsertBodyEdit({ doc, edit, path: block.path, label: block.label, before, value });
   return (
     <div className="flex flex-col gap-3 px-4 pb-4">
       <div className="flex flex-col gap-1.5">
-        <Label htmlFor="markdown-field">本文</Label>
+        <div className="flex min-h-6 items-center gap-2">
+          <Label htmlFor="markdown-field">本文</Label>
+          {pending !== undefined && (
+            <>
+              <Badge variant="outline">変更あり</Badge>
+              <Button variant="ghost" size="sm" className="ml-auto" onClick={() => set(before)}>
+                元に戻す
+              </Button>
+            </>
+          )}
+        </div>
         <Textarea
           id="markdown-field"
           value={draft}
           rows={12}
           className="font-mono text-base md:text-sm"
-          onChange={(event) => setDraft(event.target.value)}
+          onChange={(event) => set(event.target.value)}
         />
       </div>
       <section aria-label="プレビュー" className="rounded-md border p-3">
-        <MarkdownPreview markdown={draft} docId={`${doc.path}#${block.path}`} />
+        <MarkdownPreview markdown={deferred} docId={`${doc.path}#${block.path}`} />
       </section>
-      <div className="flex gap-2">
-        <Button onClick={apply}>適用</Button>
-        <Button variant="outline" onClick={onClose}>
-          キャンセル
-        </Button>
-      </div>
     </div>
   );
 };
@@ -73,12 +75,12 @@ export const MarkdownFieldPanel = ({ doc, edit, block, onClose }: Props) => {
         }
       >
         <SheetHeader>
-          <SheetTitle>{block?.label ?? ""} の編集</SheetTitle>
+          <SheetTitle className="wrap-anywhere">{block?.label ?? ""} の編集</SheetTitle>
           <SheetDescription>
-            <code className="font-mono">{block?.path ?? ""}</code>
+            <code className="font-mono wrap-anywhere">{block?.path ?? ""}</code>
           </SheetDescription>
         </SheetHeader>
-        {block !== null && <MarkdownFieldForm key={block.path} doc={doc} edit={edit} block={block} onClose={onClose} />}
+        {block !== null && <MarkdownFieldForm key={block.path} doc={doc} edit={edit} block={block} />}
       </SheetContent>
     </Sheet>
   );

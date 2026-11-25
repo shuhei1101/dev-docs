@@ -1,5 +1,8 @@
+import { keepPreviousData, queryOptions } from "@tanstack/react-query";
+
 import { docIdOf } from "@/features/docs/shared/comments/comment-store";
 import { type PendingEdit, usePendingEdits, usePendingEditsStore } from "@/features/metadata/shared/pending-edits-store";
+import { apiClient } from "@/shared/adapters/api-client";
 import type { DocumentResponse } from "@/shared/api/generated/model";
 
 /** 本文の項目の値の型から選ぶ編集の部品 */
@@ -10,6 +13,8 @@ export type EditBlock = {
   path: string;
   label: string;
   type: EditBlockType;
+  /** 本文に描いたこの項目のブロック（変換が項目のパスの目印を付けた範囲の Markdown） */
+  markdown: string;
   /** `table` は行ごとの列の値、それ以外は文字列 */
   value: string | Array<Record<string, string>>;
   options?: string[];
@@ -62,3 +67,16 @@ export const usePendingBodyValue = (doc: DocumentResponse, path: string): string
   const value = edits.find((item) => item.key === keyOf(doc, path))?.values[path];
   return typeof value === "string" ? value : undefined;
 };
+
+/** 書き換えた YAML を種類のスキーマで変換したプレビューの Markdown */
+export const previewQueryOptions = (doc: DocumentResponse, content: string) =>
+  queryOptions({
+    queryKey: ["view", "preview", doc.source, doc.path, content],
+    queryFn: ({ signal }) =>
+      apiClient<{ markdown: string }>(`/_api/sources/${encodeURIComponent(doc.source)}/preview`, {
+        method: "POST",
+        body: JSON.stringify({ path: doc.path, content }),
+        signal,
+      }),
+    placeholderData: keepPreviousData,
+  });
