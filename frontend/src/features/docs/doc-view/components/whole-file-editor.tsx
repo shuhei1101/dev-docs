@@ -48,7 +48,7 @@ export const WholeFileEditor = ({ doc, edit }: Props) => {
   const set = (value: string) =>
     upsertBodyEdit({ doc, edit, path: WHOLE_FILE, label: "ファイル全体", before: edit.source, value });
   return (
-    <div className="space-y-3">
+    <div className="@container space-y-3">
       {errorLine !== null && (
         <Alert variant="destructive" role="alert">
           <CircleAlert aria-hidden="true" />
@@ -58,7 +58,7 @@ export const WholeFileEditor = ({ doc, edit }: Props) => {
           </AlertDescription>
         </Alert>
       )}
-      <div className="grid gap-4 md:grid-cols-2">
+      <div className="grid gap-4 @3xl:grid-cols-2">
         <div className="flex min-w-0 flex-col gap-1.5">
           <div className="flex min-h-6 items-center gap-2">
             <Label htmlFor="whole-file" className="min-w-0 wrap-anywhere">
