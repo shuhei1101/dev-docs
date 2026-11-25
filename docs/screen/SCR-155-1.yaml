@@ -486,12 +486,13 @@ elements:
     kind: toggle
     position: 本文の上 > 文書のタイトルの右
     description: YAML の文書の編集の方式を切り替える
-    label: '`表示した場所で修正`・`ファイル全体` の 2 つのボタン'
+    label: '`表示した場所で修正`・`ファイル全体` の 2 つのボタン。無効のときはボタンの下に `{もう一方の方式の名前}の変更をコミットするか元に戻すと切り替えられます。` を出す'
     visible_when: 編集していて、`edit.language` が `yaml` のとき
     initial_value: '`edit` の方式のボタンを押した状態'
-    action: 押したボタンの方式に `edit` を書き換える（編集中の変更は残す）
+    action: 押したボタンの方式に `edit` を書き換える（同じ文書の `@file` の変更と項目のパスの変更は並べられないため、もう一方の方式の編集中の変更がある間は切り替えられない）
     notes:
       読み上げ: 押した状態を `aria-pressed` で伝える
+    enabled_when: もう一方の方式のその文書の編集中の変更（「表示した場所で修正」は項目のパスの変更、「ファイル全体」は `@file` の変更）が無いとき
   - name: 編集を終了
     kind: button
     position: 本文の上 > 文書のタイトルの右
@@ -529,7 +530,7 @@ elements:
     autofocus: true
     source: 文書の取得.edit.blocks[].value
     target: 編集中の変更の直コミット.edits[].values（`kind` が `body`、キーは項目のパス）
-    action: 入力のたびに編集中の変更に入れ、元の値に戻すと編集中の変更から除く。Enter・Esc・フォーカスが離れると入力欄を閉じる（入力した値は残す。変換中の Enter は受けない）
+    action: 入力のたびに編集中の変更（変更前の値に編集を始めたときの値を持つ。`@file` は `edit.source`）に入れ、元の値に戻すと編集中の変更から除く。Enter・Esc・フォーカスが離れると入力欄を閉じる（入力した値は残す。変換中の Enter は受けない）
     notes:
       読み上げ名: 項目の名前
   - name: 表のセルの入力欄
@@ -542,7 +543,7 @@ elements:
     initial_value: 編集中の行（無ければ `edit.blocks[].value`）のその列の値
     source: 文書の取得.edit.blocks[].value
     target: 編集中の変更の直コミット.edits[].values（キーは項目のパス、値は行の配列）
-    action: 入力のたびに行の配列を編集中の変更に入れる。行の追加・削除・並べ替えは持たない（ファイル全体の編集で修正する）
+    action: 入力のたびに行の配列を編集中の変更（変更前の値に編集を始めたときの値を持つ）に入れる。行の追加・削除・並べ替えは持たない（ファイル全体の編集で修正する）
     notes:
       読み上げ名: '`{項目の名前} の {行の番号} 行目の {列名}`'
   - name: 変更ありのバッジ
@@ -571,7 +572,7 @@ elements:
     initial_value: 編集中の値（無ければ `edit.blocks[].value`）
     source: 文書の取得.edit.blocks[].value
     target: 編集中の変更の直コミット.edits[].values（キーは項目のパス）
-    action: 入力のたびに編集中の変更に入れ、元の値に戻すと編集中の変更から除く
+    action: 入力のたびに編集中の変更（変更前の値に編集を始めたときの値を持つ。`@file` は `edit.source`）に入れ、元の値に戻すと編集中の変更から除く
   - name: Markdown の項目のプレビュー
     kind: section
     position: Markdown の項目のパネル > エディタの下
@@ -597,7 +598,7 @@ elements:
     initial_value: 編集中の値（無ければ `edit.source`）
     source: 文書の取得.edit.source
     target: 編集中の変更の直コミット.edits[].values（キーは `@file`）
-    action: 入力のたびに編集中の変更に入れ、元の内容に戻すと編集中の変更から除く
+    action: 入力のたびに編集中の変更（変更前の値に編集を始めたときの値を持つ。`@file` は `edit.source`）に入れ、元の内容に戻すと編集中の変更から除く
     notes:
       配置: 本文の区画の幅が 48rem 以上のときはファイル全体のプレビューと左右に、未満のときは上下に並べる（画面幅ではなく区画の幅で切り替える）
       文字: 等幅で、スマホの幅でも 16px 以上
