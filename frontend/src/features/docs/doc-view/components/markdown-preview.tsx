@@ -15,6 +15,12 @@ type Props = { markdown: string; docId: string };
 /** 編集中の Markdown を mdmark で描いたプレビュー */
 export const MarkdownPreview = ({ markdown, docId }: Props) => {
   const ref = useRef<HTMLDivElement>(null);
-  useMdmark(ref, { markdown, docId: `preview:${docId}`, commentStore: NO_COMMENTS });
+  // プレビューと本文のブロックは文書の一部なので、右側の目次と先頭へ戻るボタンを出さない
+  useMdmark(ref, {
+    markdown,
+    docId: `preview:${docId}`,
+    commentStore: NO_COMMENTS,
+    config: { features: { "side-toc": false, "back-to-top": false } },
+  });
   return <div ref={ref} className="min-w-0" />;
 };
