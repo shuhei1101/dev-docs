@@ -1,6 +1,6 @@
 id: MOD-155-72
 title: 画面 / 共通 / preferences.ts
-lead: ブラウザに保存する画面の設定（明暗・1 文字のショートカット）を受け持ち、共通の preferences.ts を修正するときに参照する。
+lead: ブラウザに保存する画面の設定（明暗・1 文字のショートカット・文書の画面のサイドバーの開閉と幅）を受け持ち、共通の preferences.ts を修正するときに参照する。
 stores:
   - name: usePreferencesStore
     title: 設定のストア
@@ -19,6 +19,16 @@ stores:
         type: boolean
         initial: 'true'
         description: 設定画面のスイッチ
+      - name: sidebarOpen
+        title: サイドバーを開いているか
+        type: boolean
+        initial: 'true'
+        description: 文書の画面のサイドバーを閉じる・開くボタン
+      - name: sidebarWidth
+        title: サイドバーの幅
+        type: number
+        initial: SIDEBAR_WIDTH.initial（240）
+        description: 文書の画面のサイドバーの境目で変える幅（CSS px）
     actions:
       - name: setColorScheme
         title: 明暗の設定
@@ -50,9 +60,74 @@ stores:
           type: void
           description: 何も返却しない
         process: 1. `singleKeyShortcuts` を書き換える
+      - name: setSidebarOpen
+        title: サイドバーの開閉の設定
+        kind: 関数
+        summary: サイドバーを開いているかを書き換える
+        scope: public
+        args:
+          - name: value
+            type: boolean
+            required: true
+            passing: positional
+            description: 開いているか
+        returns:
+          type: void
+          description: 何も返却しない
+        process: 1. `sidebarOpen` を書き換える
+      - name: setSidebarWidth
+        title: サイドバーの幅の設定
+        kind: 関数
+        summary: サイドバーの幅を最小・最大の間に収めて書き換える
+        scope: public
+        args:
+          - name: value
+            type: number
+            required: true
+            passing: positional
+            description: 新しい幅（CSS px）
+        returns:
+          type: void
+          description: 何も返却しない
+        process: 1. `clampSidebarWidth` で収めた値を `sidebarWidth` に書き込む
 tags:
   - name: topic:ユーティリティ
     main: true
   - name: topic:ショートカット
   - name: action:保存
   - name: topic:テーマ
+constants:
+  - name: SIDEBAR_WIDTH
+    title: サイドバーの幅の範囲
+    container: shared/stores/preferences.ts
+    usecase: 文書を参照する
+    summary: 文書の画面のサイドバーの幅の最小・最大・既定（CSS px。画面設計の `サイドバーの境目` の `range`）
+    value: '{ min: 192, max: 480, initial: 240 } as const'
+functions:
+  - name: clampSidebarWidth
+    title: サイドバーの幅の丸め
+    kind: 関数
+    container: shared/stores/preferences.ts
+    usecase: 文書を参照する
+    role: 変換
+    summary: 幅を整数に丸め、最小・最大の間に収める
+    scope: public
+    args:
+      - name: width
+        type: number
+        required: true
+        passing: positional
+        description: 収める前の幅（CSS px）
+    returns:
+      type: number
+      description: '`SIDEBAR_WIDTH.min` 以上 `SIDEBAR_WIDTH.max` 以下の整数'
+    process: 1. 四捨五入し、最小より小さければ最小、最大より大きければ最大を返却する
+    unit_tests:
+      - name: test_clamp_sidebar_width
+        case: 正常
+        summary: 範囲の外の幅
+        condition: 100・300.4・999
+        mock: なし
+        expected: 192・300・480
+test_files:
+  - tests/unit/frontend/src/shared/stores/preferences.test.ts

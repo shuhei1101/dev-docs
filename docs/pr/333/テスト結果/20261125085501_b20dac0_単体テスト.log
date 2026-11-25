@@ -1,0 +1,725 @@
+# 単体テスト（フロント）の Red（テストコードの末尾 b20dac0 をランナーで実行）
+
+## fail（実装が無いことによるもの）
+
+- test_doc_sidebar_when_moved_keeps_closed: doc-sidebar.tsx の Group が、開いている文書と変化の有無の組が変わると変化を持つ group を開くため、閉じた group が開く（設計書の新しい条件「開いている文書が変わったらその文書を含む group だけ」の実装が無い）
+- test_sidebar_toggle_when_closed: sidebar-toggle.tsx が閉じているときも aria-controls を付けている（開いているときだけ付ける実装が無い）
+
+## 実装の前から pass したテスト（振る舞いが作業ブランチに既にある）
+
+モック作成の工程でストーリーを動かすために実装した振る舞いで pass した。
+
+| テスト | 振る舞いを持つコードの箇所 | commit |
+| --- | --- | --- |
+| test_doc_sidebar_when_group_toggled・test_doc_sidebar_when_current_changed・test_doc_sidebar_when_changed_in_group・test_doc_sidebar_when_nested | frontend/src/features/docs/doc-view/components/doc-sidebar.tsx の Group | cd3e6a3・00ab1b3 |
+| test_sidebar_toggle | frontend/src/features/docs/doc-view/components/sidebar-toggle.tsx の IconButton・SidebarToggle | cd3e6a3・0574d16 |
+| test_sidebar_resizer_when_dragged・test_sidebar_resizer_when_dragged_over_max・test_sidebar_resizer_when_key・test_sidebar_resizer_when_double_clicked | frontend/src/features/docs/doc-view/components/sidebar-resizer.tsx の SidebarResizer | cd3e6a3・923335f・0574d16 |
+| test_clamp_sidebar_width | frontend/src/shared/stores/preferences.ts の clampSidebarWidth | cd3e6a3 |
+| test_metadata_table_when_caret_at_clicked・test_metadata_table_when_caret_keyboard | frontend/src/features/metadata/metadata/metadata-table.tsx の caretOffsetAt・EditableCell | cd3e6a3 |
+| test_doc_view_screen_when_sidebar_closed | frontend/src/features/docs/doc-view/doc-view-screen.tsx のサイドバーの出し分け | cd3e6a3・00ab1b3・0574d16 |
+
+## コマンド
+
+```bash
+gh workflow run test.yml --ref feat/screen/doc-sidebar-and-metadata-table -f layer=frontend-unit（run_runner。実行 45513664437）
+```
+
+run_runner の `gh run watch` が実行の作成直後に jobs の 404 で先に終わったため、同じ実行 45513664437 の完了を待って `gh run view --log` で出力を取得した（実行は起動し直していない）。
+
+## 出力
+
+failure
+test	Set up job	﻿2026-11-24T23:53:14.0041877Z Current runner version: '2.338.2'
+test	Set up job	2026-11-24T23:53:14.0059918Z ##[group]Runner Image Provisioner
+test	Set up job	2026-11-24T23:53:14.0060578Z Hosted Compute Agent
+test	Set up job	2026-11-24T23:53:14.0060998Z Version: 20261111.635
+test	Set up job	2026-11-24T23:53:14.0061764Z Commit: b8a594ea514ff44cadb5342986c68b1eac6e22ed
+test	Set up job	2026-11-24T23:53:14.0062313Z Build Date: 2026-11-11T01:49:01Z
+test	Set up job	2026-11-24T23:53:14.0062827Z Worker ID: {982f0e60-a7b4-43fe-9a37-e36c30df2924}
+test	Set up job	2026-11-24T23:53:14.0063407Z Region: us-east-1
+test	Set up job	2026-11-24T23:53:14.0063815Z Cloud: AWS
+test	Set up job	2026-11-24T23:53:14.0064217Z ##[endgroup]
+test	Set up job	2026-11-24T23:53:14.0065232Z ##[group]Operating System
+test	Set up job	2026-11-24T23:53:14.0065690Z Ubuntu
+test	Set up job	2026-11-24T23:53:14.0066051Z 26.04.1
+test	Set up job	2026-11-24T23:53:14.0066450Z LTS
+test	Set up job	2026-11-24T23:53:14.0066842Z ##[endgroup]
+test	Set up job	2026-11-24T23:53:14.0067224Z ##[group]Runner Image
+test	Set up job	2026-11-24T23:53:14.0067651Z Image: ubuntu-26.04
+test	Set up job	2026-11-24T23:53:14.0068184Z Version: 20261116.88.1
+test	Set up job	2026-11-24T23:53:14.0069009Z Included Software: https://github.com/actions/runner-images/blob/ubuntu26/20261116.88/images/ubuntu/Ubuntu2604-Readme.md
+test	Set up job	2026-11-24T23:53:14.0070539Z Image Release: https://github.com/actions/runner-images/releases/tag/ubuntu26%2F20261116.88
+test	Set up job	2026-11-24T23:53:14.0071239Z ##[endgroup]
+test	Set up job	2026-11-24T23:53:14.0072219Z ##[group]GITHUB_TOKEN Permissions
+test	Set up job	2026-11-24T23:53:14.0073977Z Contents: read
+test	Set up job	2026-11-24T23:53:14.0074405Z Metadata: read
+test	Set up job	2026-11-24T23:53:14.0074841Z ##[endgroup]
+test	Set up job	2026-11-24T23:53:14.0076409Z Secret source: Actions
+test	Set up job	2026-11-24T23:53:14.0077115Z Cache mode: write
+test	Set up job	2026-11-24T23:53:14.0077704Z Prepare workflow directory
+test	Set up job	2026-11-24T23:53:14.0307671Z Prepare all required actions
+test	Set up job	2026-11-24T23:53:14.0344608Z Getting action download info
+test	Set up job	2026-11-24T23:53:14.1912249Z Download action repository 'actions/checkout@v7' (SHA:3d3c42e5aac5ba805825da76410c181273ba90b1)
+test	Set up job	2026-11-24T23:53:15.3859394Z Download action repository 'actions/setup-node@v7' (SHA:949feb2413d6458794dcd2491c4babbbce0c15c1)
+test	Set up job	2026-11-24T23:53:15.5027737Z Download action repository 'astral-sh/setup-uv@v10.3.3' (SHA:68559e99cc807c1eb7e9238fd43a15bba460eec2)
+test	Set up job	2026-11-24T23:53:15.6563007Z Download action repository 'actions/upload-artifact@v7' (SHA:cf430e030ddbb5b0abf93d22962f4752f3646cd9)
+test	Set up job	2026-11-24T23:53:15.8940085Z Complete job name: test
+test	ブランチを取得する	﻿2026-11-24T23:53:15.9610108Z ##[group]Run actions/checkout@v7
+test	ブランチを取得する	2026-11-24T23:53:15.9611048Z with:
+test	ブランチを取得する	2026-11-24T23:53:15.9612013Z   repository: shuhei1101/dev-docs
+test	ブランチを取得する	2026-11-24T23:53:15.9615502Z   token: ***
+test	ブランチを取得する	2026-11-24T23:53:15.9616070Z   ssh-strict: true
+test	ブランチを取得する	2026-11-24T23:53:15.9616658Z   ssh-user: git
+test	ブランチを取得する	2026-11-24T23:53:15.9617253Z   persist-credentials: true
+test	ブランチを取得する	2026-11-24T23:53:15.9617900Z   clean: true
+test	ブランチを取得する	2026-11-24T23:53:15.9618479Z   sparse-checkout-cone-mode: true
+test	ブランチを取得する	2026-11-24T23:53:15.9619129Z   fetch-depth: 1
+test	ブランチを取得する	2026-11-24T23:53:15.9619719Z   fetch-tags: false
+test	ブランチを取得する	2026-11-24T23:53:15.9620305Z   show-progress: true
+test	ブランチを取得する	2026-11-24T23:53:15.9620877Z   lfs: false
+test	ブランチを取得する	2026-11-24T23:53:15.9621624Z   submodules: false
+test	ブランチを取得する	2026-11-24T23:53:15.9622273Z   set-safe-directory: true
+test	ブランチを取得する	2026-11-24T23:53:15.9622918Z   allow-unsafe-pr-checkout: false
+test	ブランチを取得する	2026-11-24T23:53:15.9623786Z ##[endgroup]
+test	ブランチを取得する	2026-11-24T23:53:18.8744924Z Syncing repository: shuhei1101/dev-docs
+test	ブランチを取得する	2026-11-24T23:53:18.8747403Z ##[group]Getting Git version info
+test	ブランチを取得する	2026-11-24T23:53:18.8748462Z Working directory is '/home/runner/work/dev-docs/dev-docs'
+test	ブランチを取得する	2026-11-24T23:53:18.8749910Z [command]/usr/bin/git version
+test	ブランチを取得する	2026-11-24T23:53:18.8750513Z git version 2.56.1
+test	ブランチを取得する	2026-11-24T23:53:18.8753110Z ##[endgroup]
+test	ブランチを取得する	2026-11-24T23:53:18.8757931Z Temporarily overriding HOME='/home/runner/work/_temp/2b2d8d13-f1ad-4a84-b686-3aaf79ec56fe' before making global git config changes
+test	ブランチを取得する	2026-11-24T23:53:18.8759808Z Adding repository directory to the temporary git global config as a safe directory
+test	ブランチを取得する	2026-11-24T23:53:18.8761646Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/dev-docs/dev-docs
+test	ブランチを取得する	2026-11-24T23:53:18.9070999Z Deleting the contents of '/home/runner/work/dev-docs/dev-docs'
+test	ブランチを取得する	2026-11-24T23:53:18.9073165Z ##[group]Determining repository object format
+test	ブランチを取得する	2026-11-24T23:53:18.9074496Z ##[endgroup]
+test	ブランチを取得する	2026-11-24T23:53:18.9075783Z ##[group]Initializing the repository
+test	ブランチを取得する	2026-11-24T23:53:18.9076803Z [command]/usr/bin/git init /home/runner/work/dev-docs/dev-docs
+test	ブランチを取得する	2026-11-24T23:53:18.9477209Z hint: Using 'master' as the name for the initial branch. This default branch name
+test	ブランチを取得する	2026-11-24T23:53:18.9478963Z hint: will change to "main" in Git 3.0. To configure the initial branch name
+test	ブランチを取得する	2026-11-24T23:53:18.9480336Z hint: to use in all of your new repositories, which will suppress this warning,
+test	ブランチを取得する	2026-11-24T23:53:18.9481513Z hint: call:
+test	ブランチを取得する	2026-11-24T23:53:18.9482136Z hint:
+test	ブランチを取得する	2026-11-24T23:53:18.9482813Z hint: 	git config --global init.defaultBranch <name>
+test	ブランチを取得する	2026-11-24T23:53:18.9483628Z hint:
+test	ブランチを取得する	2026-11-24T23:53:18.9484455Z hint: Names commonly chosen instead of 'master' are 'main', 'trunk' and
+test	ブランチを取得する	2026-11-24T23:53:18.9485977Z hint: 'development'. The just-created branch can be renamed via this command:
+test	ブランチを取得する	2026-11-24T23:53:18.9487231Z hint:
+test	ブランチを取得する	2026-11-24T23:53:18.9487859Z hint: 	git branch -m <name>
+test	ブランチを取得する	2026-11-24T23:53:18.9488642Z hint:
+test	ブランチを取得する	2026-11-24T23:53:18.9489850Z hint: Disable this message with "git config set advice.defaultBranchName false"
+test	ブランチを取得する	2026-11-24T23:53:18.9492130Z Initialized empty Git repository in /home/runner/work/dev-docs/dev-docs/.git/
+test	ブランチを取得する	2026-11-24T23:53:18.9498724Z [command]/usr/bin/git remote add origin https://github.com/shuhei1101/dev-docs
+test	ブランチを取得する	2026-11-24T23:53:18.9550901Z ##[endgroup]
+test	ブランチを取得する	2026-11-24T23:53:18.9552604Z ##[group]Disabling automatic garbage collection
+test	ブランチを取得する	2026-11-24T23:53:18.9553968Z [command]/usr/bin/git config --local gc.auto 0
+test	ブランチを取得する	2026-11-24T23:53:18.9575137Z ##[endgroup]
+test	ブランチを取得する	2026-11-24T23:53:18.9576293Z ##[group]Setting up auth
+test	ブランチを取得する	2026-11-24T23:53:18.9577050Z Removing SSH command configuration
+test	ブランチを取得する	2026-11-24T23:53:18.9578319Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+test	ブランチを取得する	2026-11-24T23:53:18.9600606Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+test	ブランチを取得する	2026-11-24T23:53:19.1217077Z Removing HTTP extra header
+test	ブランチを取得する	2026-11-24T23:53:19.1222062Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+test	ブランチを取得する	2026-11-24T23:53:19.1247837Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+test	ブランチを取得する	2026-11-24T23:53:19.1416845Z Removing includeIf entries pointing to credentials config files
+test	ブランチを取得する	2026-11-24T23:53:19.1421050Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+test	ブランチを取得する	2026-11-24T23:53:19.1448223Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+test	ブランチを取得する	2026-11-24T23:53:19.1621092Z [command]/usr/bin/git config --file /home/runner/work/_temp/git-credentials-86e121f6-46d6-41ad-a43f-a39c8c2f70d6.config http.https://github.com/.extraheader AUTHORIZATION: basic ***
+test	ブランチを取得する	2026-11-24T23:53:19.1653232Z [command]/usr/bin/git config --local includeIf.gitdir:/home/runner/work/dev-docs/dev-docs/.git.path /home/runner/work/_temp/git-credentials-86e121f6-46d6-41ad-a43f-a39c8c2f70d6.config
+test	ブランチを取得する	2026-11-24T23:53:19.1668843Z [command]/usr/bin/git config --local includeIf.gitdir:/home/runner/work/dev-docs/dev-docs/.git/worktrees/*.path /home/runner/work/_temp/git-credentials-86e121f6-46d6-41ad-a43f-a39c8c2f70d6.config
+test	ブランチを取得する	2026-11-24T23:53:19.1693518Z [command]/usr/bin/git config --local includeIf.gitdir:/github/workspace/.git.path /github/runner_temp/git-credentials-86e121f6-46d6-41ad-a43f-a39c8c2f70d6.config
+test	ブランチを取得する	2026-11-24T23:53:19.1715153Z [command]/usr/bin/git config --local includeIf.gitdir:/github/workspace/.git/worktrees/*.path /github/runner_temp/git-credentials-86e121f6-46d6-41ad-a43f-a39c8c2f70d6.config
+test	ブランチを取得する	2026-11-24T23:53:19.1733638Z ##[endgroup]
+test	ブランチを取得する	2026-11-24T23:53:19.1734426Z ##[group]Fetching the repository
+test	ブランチを取得する	2026-11-24T23:53:19.1740304Z [command]/usr/bin/git -c protocol.version=2 fetch --no-tags --prune --no-recurse-submodules --depth=1 origin +b20dac0c3a1d1e77cdeaed59cfb46d54cf54ba8d:refs/remotes/origin/feat/screen/doc-sidebar-and-metadata-table
+test	ブランチを取得する	2026-11-24T23:53:20.3492853Z From https://github.com/shuhei1101/dev-docs
+test	ブランチを取得する	2026-11-24T23:53:20.3493732Z  * [new ref]         b20dac0c3a1d1e77cdeaed59cfb46d54cf54ba8d -> origin/feat/screen/doc-sidebar-and-metadata-table
+test	ブランチを取得する	2026-11-24T23:53:20.3500954Z [command]/usr/bin/git branch --list --remote origin/feat/screen/doc-sidebar-and-metadata-table
+test	ブランチを取得する	2026-11-24T23:53:20.3519787Z   origin/feat/screen/doc-sidebar-and-metadata-table
+test	ブランチを取得する	2026-11-24T23:53:20.3525923Z [command]/usr/bin/git rev-parse refs/remotes/origin/feat/screen/doc-sidebar-and-metadata-table
+test	ブランチを取得する	2026-11-24T23:53:20.3543091Z b20dac0c3a1d1e77cdeaed59cfb46d54cf54ba8d
+test	ブランチを取得する	2026-11-24T23:53:20.3544843Z ##[endgroup]
+test	ブランチを取得する	2026-11-24T23:53:20.3545202Z ##[group]Determining the checkout info
+test	ブランチを取得する	2026-11-24T23:53:20.3545738Z ##[endgroup]
+test	ブランチを取得する	2026-11-24T23:53:20.3548493Z [command]/usr/bin/git sparse-checkout disable
+test	ブランチを取得する	2026-11-24T23:53:20.3588455Z [command]/usr/bin/git config --local --unset-all extensions.worktreeConfig
+test	ブランチを取得する	2026-11-24T23:53:20.3607522Z ##[group]Checking out the ref
+test	ブランチを取得する	2026-11-24T23:53:20.3609946Z [command]/usr/bin/git checkout --progress --force -B feat/screen/doc-sidebar-and-metadata-table refs/remotes/origin/feat/screen/doc-sidebar-and-metadata-table
+test	ブランチを取得する	2026-11-24T23:53:20.6910682Z Switched to a new branch 'feat/screen/doc-sidebar-and-metadata-table'
+test	ブランチを取得する	2026-11-24T23:53:20.6915544Z branch 'feat/screen/doc-sidebar-and-metadata-table' set up to track 'origin/feat/screen/doc-sidebar-and-metadata-table'.
+test	ブランチを取得する	2026-11-24T23:53:20.6928173Z ##[endgroup]
+test	ブランチを取得する	2026-11-24T23:53:20.6983104Z [command]/usr/bin/git log -1 --format=%H
+test	ブランチを取得する	2026-11-24T23:53:20.6987509Z b20dac0c3a1d1e77cdeaed59cfb46d54cf54ba8d
+test	Node.js を入れる	﻿2026-11-24T23:53:20.7215493Z ##[group]Run actions/setup-node@v7
+test	Node.js を入れる	2026-11-24T23:53:20.7215772Z with:
+test	Node.js を入れる	2026-11-24T23:53:20.7216011Z   node-version: 24
+test	Node.js を入れる	2026-11-24T23:53:20.7216230Z   check-latest: false
+test	Node.js を入れる	2026-11-24T23:53:20.7218272Z   token: ***
+test	Node.js を入れる	2026-11-24T23:53:20.7218498Z   package-manager-cache: true
+test	Node.js を入れる	2026-11-24T23:53:20.7218777Z ##[endgroup]
+test	Node.js を入れる	2026-11-24T23:53:20.8849382Z Found in cache @ /opt/hostedtoolcache/node/24.22.3/x64
+test	Node.js を入れる	2026-11-24T23:53:22.1329141Z ##[group]Environment details
+test	Node.js を入れる	2026-11-24T23:53:24.4845111Z node: v24.22.3
+test	Node.js を入れる	2026-11-24T23:53:24.4845589Z npm: 11.19.1
+test	Node.js を入れる	2026-11-24T23:53:24.4846587Z yarn: 1.22.22
+test	Node.js を入れる	2026-11-24T23:53:24.4847276Z ##[endgroup]
+test	npm の依存を入れる	﻿2026-11-24T23:53:24.4958837Z ##[group]Run npm ci
+test	npm の依存を入れる	2026-11-24T23:53:24.4959172Z ^[[36;1mnpm ci^[[0m
+test	npm の依存を入れる	2026-11-24T23:53:24.4989339Z shell: /usr/bin/bash -e {0}
+test	npm の依存を入れる	2026-11-24T23:53:24.4989704Z ##[endgroup]
+test	npm の依存を入れる	2026-11-24T23:54:06.1485077Z 
+test	npm の依存を入れる	2026-11-24T23:54:06.1493926Z > prepare
+test	npm の依存を入れる	2026-11-24T23:54:06.1494477Z > lefthook install
+test	npm の依存を入れる	2026-11-24T23:54:06.1494741Z 
+test	npm の依存を入れる	2026-11-24T23:54:06.1815707Z sync hooks: ✔️(pre-commit)
+test	npm の依存を入れる	2026-11-24T23:54:06.2139406Z 
+test	npm の依存を入れる	2026-11-24T23:54:06.2140399Z added 651 packages, and audited 652 packages in 42s
+test	npm の依存を入れる	2026-11-24T23:54:06.2140687Z 
+test	npm の依存を入れる	2026-11-24T23:54:06.2140830Z 236 packages are looking for funding
+test	npm の依存を入れる	2026-11-24T23:54:06.2141127Z   run `npm fund` for details
+test	npm の依存を入れる	2026-11-24T23:54:06.3448368Z 
+test	npm の依存を入れる	2026-11-24T23:54:06.3449486Z 12 moderate severity vulnerabilities
+test	npm の依存を入れる	2026-11-24T23:54:06.3449862Z 
+test	npm の依存を入れる	2026-11-24T23:54:06.3450144Z To address issues that do not require attention, run:
+test	npm の依存を入れる	2026-11-24T23:54:06.3450787Z   npm audit fix
+test	npm の依存を入れる	2026-11-24T23:54:06.3450984Z 
+test	npm の依存を入れる	2026-11-24T23:54:06.3451241Z To address all issues (including breaking changes), run:
+test	npm の依存を入れる	2026-11-24T23:54:06.3452186Z   npm audit fix --force
+test	npm の依存を入れる	2026-11-24T23:54:06.3452380Z 
+test	npm の依存を入れる	2026-11-24T23:54:06.3452511Z Run `npm audit` for details.
+test	npm の依存を入れる	2026-11-24T23:54:06.3457588Z npm warn install-scripts 3 packages have install scripts not yet covered by allowScripts:
+test	npm の依存を入れる	2026-11-24T23:54:06.3458204Z npm warn install-scripts   esbuild@0.28.2 (postinstall: node install.js)
+test	npm の依存を入れる	2026-11-24T23:54:06.3458687Z npm warn install-scripts   lefthook@2.2.2 (postinstall: node postinstall.js)
+test	npm の依存を入れる	2026-11-24T23:54:06.3459183Z npm warn install-scripts   unrs-resolver@1.12.2 (postinstall: node postinstall.js)
+test	npm の依存を入れる	2026-11-24T23:54:06.3459572Z npm warn install-scripts
+test	npm の依存を入れる	2026-11-24T23:54:06.3460699Z npm warn install-scripts Run `npm install-scripts ls` to review, or `npm install-scripts approve <pkg>` to allow.
+test	層の全件を回す	﻿2026-11-24T23:54:06.3951085Z ##[group]Run : > test.log
+test	層の全件を回す	2026-11-24T23:54:06.3951720Z ^[[36;1m: > test.log^[[0m
+test	層の全件を回す	2026-11-24T23:54:06.3951990Z ^[[36;1m# 結果の行を test.log と step の標準出力の両方に出す^[[0m
+test	層の全件を回す	2026-11-24T23:54:06.3952270Z ^[[36;1msay() { echo "$1" | tee -a test.log; }^[[0m
+test	層の全件を回す	2026-11-24T23:54:06.3952556Z ^[[36;1mcase "$LAYER" in^[[0m
+test	層の全件を回す	2026-11-24T23:54:06.3952797Z ^[[36;1m  backend-unit) limit=7 ;;^[[0m
+test	層の全件を回す	2026-11-24T23:54:06.3953102Z ^[[36;1m  backend-integration) limit=62; dir=tests/integration/ ;;^[[0m
+test	層の全件を回す	2026-11-24T23:54:06.3953427Z ^[[36;1m  frontend-unit) limit=19 ;;^[[0m
+test	層の全件を回す	2026-11-24T23:54:06.3953791Z ^[[36;1m  frontend-integration) limit=75; dir=tests/integration/frontend/ ;;^[[0m
+test	層の全件を回す	2026-11-24T23:54:06.3954136Z ^[[36;1mesac^[[0m
+test	層の全件を回す	2026-11-24T23:54:06.3954370Z ^[[36;1m# paths は結合テストの層の、層の結合テストのフォルダの下のパスだけを受け付ける^[[0m
+test	層の全件を回す	2026-11-24T23:54:06.3954647Z ^[[36;1mif [ -n "$PATHS" ]; then^[[0m
+test	層の全件を回す	2026-11-24T23:54:06.3954918Z ^[[36;1m  if [ -z "${dir:-}" ]; then^[[0m
+test	層の全件を回す	2026-11-24T23:54:06.3955201Z ^[[36;1m    say "paths は結合テストの層でだけ指定できる: layer=$LAYER"^[[0m
+test	層の全件を回す	2026-11-24T23:54:06.3955487Z ^[[36;1m    exit 1^[[0m
+test	層の全件を回す	2026-11-24T23:54:06.3955786Z ^[[36;1m  fi^[[0m
+test	層の全件を回す	2026-11-24T23:54:06.3956064Z ^[[36;1m  if ! printf '%s' "$PATHS" | grep -Eq '^[A-Za-z0-9_./ -]+$'; then^[[0m
+test	層の全件を回す	2026-11-24T23:54:06.3956465Z ^[[36;1m    say "paths に許可しない文字がある（英数字・_・.・/・-・空白だけを許可する）: $PATHS"^[[0m
+test	層の全件を回す	2026-11-24T23:54:06.3956777Z ^[[36;1m    exit 1^[[0m
+test	層の全件を回す	2026-11-24T23:54:06.3956994Z ^[[36;1m  fi^[[0m
+test	層の全件を回す	2026-11-24T23:54:06.3957208Z ^[[36;1m  for p in $PATHS; do^[[0m
+test	層の全件を回す	2026-11-24T23:54:06.3957465Z ^[[36;1m    case "$p" in^[[0m
+test	層の全件を回す	2026-11-24T23:54:06.3957735Z ^[[36;1m      *..*) say "paths の値が .. を含む: $p"; exit 1 ;;^[[0m
+test	層の全件を回す	2026-11-24T23:54:06.3958003Z ^[[36;1m    esac^[[0m
+test	層の全件を回す	2026-11-24T23:54:06.3958239Z ^[[36;1m    case "$p" in^[[0m
+test	層の全件を回す	2026-11-24T23:54:06.3958465Z ^[[36;1m      "$dir"*) ;;^[[0m
+test	層の全件を回す	2026-11-24T23:54:06.3958744Z ^[[36;1m      *) say "paths の値が層の結合テストのフォルダ（$dir）の外: $p"; exit 1 ;;^[[0m
+test	層の全件を回す	2026-11-24T23:54:06.3959081Z ^[[36;1m    esac^[[0m
+test	層の全件を回す	2026-11-24T23:54:06.3959305Z ^[[36;1m    if [ "$LAYER" = backend-integration ]; then^[[0m
+test	層の全件を回す	2026-11-24T23:54:06.3959616Z ^[[36;1m      case "$p" in^[[0m
+test	層の全件を回す	2026-11-24T23:54:06.3960073Z ^[[36;1m        tests/integration/frontend/*) say "paths の値が層の結合テストのフォルダの外（tests/integration/frontend/ は frontend-integration の層）: $p"; exit 1 ;;^[[0m
+test	層の全件を回す	2026-11-24T23:54:06.3960525Z ^[[36;1m      esac^[[0m
+test	層の全件を回す	2026-11-24T23:54:06.3960753Z ^[[36;1m    fi^[[0m
+test	層の全件を回す	2026-11-24T23:54:06.3960952Z ^[[36;1m  done^[[0m
+test	層の全件を回す	2026-11-24T23:54:06.3961156Z ^[[36;1mfi^[[0m
+test	層の全件を回す	2026-11-24T23:54:06.3967708Z ^[[36;1mcase "$LAYER" in^[[0m
+test	層の全件を回す	2026-11-24T23:54:06.3968017Z ^[[36;1m  backend-unit) cmd="uv run pytest tests/unit/ -v" ;;^[[0m
+test	層の全件を回す	2026-11-24T23:54:06.3968425Z ^[[36;1m  backend-integration) cmd="uv run pytest ${PATHS:-$dir} -v" ;;^[[0m
+test	層の全件を回す	2026-11-24T23:54:06.3968884Z ^[[36;1m  frontend-unit) cmd="npx vitest run --config frontend/vitest.config.ts --reporter=verbose" ;;^[[0m
+test	層の全件を回す	2026-11-24T23:54:06.3969478Z ^[[36;1m  frontend-integration) cmd="npx playwright test --config tests/integration/frontend/playwright.config.ts $PATHS" ;;^[[0m
+test	層の全件を回す	2026-11-24T23:54:06.3969935Z ^[[36;1mesac^[[0m
+test	層の全件を回す	2026-11-24T23:54:06.3970190Z ^[[36;1m# テストを裏で起動し、出力を test.log と step の標準出力の両方に出す^[[0m
+test	層の全件を回す	2026-11-24T23:54:06.3970566Z ^[[36;1msetsid -w bash -c "set -o pipefail; $cmd 2>&1 | tee -a test.log" &^[[0m
+test	層の全件を回す	2026-11-24T23:54:06.3970883Z ^[[36;1mpid=$!^[[0m
+test	層の全件を回す	2026-11-24T23:54:06.3971103Z ^[[36;1mlast=-1^[[0m
+test	層の全件を回す	2026-11-24T23:54:06.3971484Z ^[[36;1midle=0^[[0m
+test	層の全件を回す	2026-11-24T23:54:06.3971723Z ^[[36;1m# test.log の大きさを 1 秒ごとに確認し、無出力の時間が上限を超えたらテストを止める^[[0m
+test	層の全件を回す	2026-11-24T23:54:06.3972062Z ^[[36;1mwhile kill -0 "$pid" 2> /dev/null; do^[[0m
+test	層の全件を回す	2026-11-24T23:54:06.3972325Z ^[[36;1m  sleep 1^[[0m
+test	層の全件を回す	2026-11-24T23:54:06.3972557Z ^[[36;1m  size=$(stat -c %s test.log)^[[0m
+test	層の全件を回す	2026-11-24T23:54:06.3972859Z ^[[36;1m  if [ "$size" = "$last" ]; then^[[0m
+test	層の全件を回す	2026-11-24T23:54:06.3973103Z ^[[36;1m    idle=$((idle + 1))^[[0m
+test	層の全件を回す	2026-11-24T23:54:06.3973367Z ^[[36;1m  else^[[0m
+test	層の全件を回す	2026-11-24T23:54:06.3973670Z ^[[36;1m    idle=0^[[0m
+test	層の全件を回す	2026-11-24T23:54:06.3973914Z ^[[36;1m    last=$size^[[0m
+test	層の全件を回す	2026-11-24T23:54:06.3974142Z ^[[36;1m  fi^[[0m
+test	層の全件を回す	2026-11-24T23:54:06.3974532Z ^[[36;1m  if [ "$idle" -gt "$limit" ]; then^[[0m
+test	層の全件を回す	2026-11-24T23:54:06.3974828Z ^[[36;1m    kill -- "-$pid"^[[0m
+test	層の全件を回す	2026-11-24T23:54:06.3975166Z ^[[36;1m    say "出力が ${limit} 秒変わらなかったため、テストを止めた"^[[0m
+test	層の全件を回す	2026-11-24T23:54:06.3975430Z ^[[36;1m    exit 1^[[0m
+test	層の全件を回す	2026-11-24T23:54:06.3975648Z ^[[36;1m  fi^[[0m
+test	層の全件を回す	2026-11-24T23:54:06.3975861Z ^[[36;1mdone^[[0m
+test	層の全件を回す	2026-11-24T23:54:06.3976077Z ^[[36;1mwait "$pid"^[[0m
+test	層の全件を回す	2026-11-24T23:54:06.3993525Z shell: /usr/bin/bash -e {0}
+test	層の全件を回す	2026-11-24T23:54:06.3993810Z env:
+test	層の全件を回す	2026-11-24T23:54:06.3994028Z   LAYER: frontend-unit
+test	層の全件を回す	2026-11-24T23:54:06.3994283Z   PATHS: 
+test	層の全件を回す	2026-11-24T23:54:06.3994485Z   PYTHONUNBUFFERED: 1
+test	層の全件を回す	2026-11-24T23:54:06.3994709Z ##[endgroup]
+test	層の全件を回す	2026-11-24T23:54:06.7779419Z 
+test	層の全件を回す	2026-11-24T23:54:06.7781897Z ^[[1m^[[30m^[[46m RUN ^[[49m^[[39m^[[22m ^[[36mv5.0.5 ^[[39m^[[90m/home/runner/work/dev-docs/dev-docs^[[39m
+test	層の全件を回す	2026-11-24T23:54:06.7782507Z 
+test	層の全件を回す	2026-11-24T23:54:07.7339939Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/docs/doc-view/hooks/use-mdmark.test.ts^[[2m > ^[[22mtest_use_mdmark^[[32m 102^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:07.8425448Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/docs/doc-view/hooks/use-mdmark.test.ts^[[2m > ^[[22mtest_use_mdmark_when_doc_changes^[[32m 112^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:07.9599300Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/docs/doc-view/hooks/use-mdmark.test.ts^[[2m > ^[[22mtest_use_mdmark_when_doc_changes_ready^[[32m 118^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:07.9602652Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/docs/doc-view/hooks/use-mdmark.test.ts^[[2m > ^[[22mtest_use_mdmark_when_load_failed^[[32m 72^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:08.0912287Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/docs/doc-view/hooks/use-mdmark.test.ts^[[2m > ^[[22mtest_use_mdmark_when_aliases^[[32m 60^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:08.0914123Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/docs/doc-view/hooks/use-mdmark.test.ts^[[2m > ^[[22mtest_use_mdmark_when_base_changes^[[32m 65^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:08.1927480Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/docs/doc-view/hooks/use-mdmark.test.ts^[[2m > ^[[22mtest_use_mdmark_when_callbacks_change^[[32m 62^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:08.1937768Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/docs/doc-view/hooks/use-mdmark.test.ts^[[2m > ^[[22mtest_to_mdmark_index^[[32m 2^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:08.1939437Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/docs/doc-view/hooks/use-mdmark.test.ts^[[2m > ^[[22mtest_use_mdmark_when_map_config^[[32m 55^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:08.1942371Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/docs/doc-view/hooks/use-mdmark.test.ts^[[2m > ^[[22mtest_mdmark_urls^[[32m 12^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:08.1963263Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/docs/doc-view/hooks/use-mdmark.test.ts^[[2m > ^[[22mtest_mdmark_urls_when_meta_missing^[[32m 5^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:08.3403908Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/metadata/metadata/pending-panel.test.tsx^[[2m > ^[[22mtest_pending_panel_when_dry_run^[[32m 236^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:08.5993516Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/metadata/metadata/pending-panel.test.tsx^[[2m > ^[[22mtest_pending_panel_when_rejected^[[32m 241^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:08.6003104Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/metadata/metadata/pending-panel.test.tsx^[[2m > ^[[22mtest_pending_panel_when_message_empty^[[32m 98^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:08.6323202Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/settings/settings/components/source-edit-dialog.test.tsx^[[2m > ^[[22mtest_source_edit_dialog^[[33m 391^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:08.6383088Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/settings/settings/components/source-edit-dialog.test.tsx^[[2m > ^[[22mtest_source_edit_dialog_when_edit^[[32m 36^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:08.7344452Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/settings/settings/components/source-edit-dialog.test.tsx^[[2m > ^[[22mtest_source_edit_dialog_when_invalid^[[32m 76^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:08.7373289Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/settings/settings/components/source-edit-dialog.test.tsx^[[2m > ^[[22mtest_source_edit_dialog_when_outside_read^[[32m 76^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:08.8415637Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/metadata/metadata/pending-panel.test.tsx^[[2m > ^[[22mtest_pending_panel_when_conflict^[[32m 178^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:08.9004794Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/settings/settings/components/source-edit-dialog.test.tsx^[[2m > ^[[22mtest_source_edit_dialog_when_conflict^[[32m 58^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:09.0022781Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/metadata/metadata/pending-panel.test.tsx^[[2m > ^[[22mtest_pending_panel_when_conflict_script_failed^[[32m 136^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:09.0933669Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/settings/settings/components/source-edit-dialog.test.tsx^[[2m > ^[[22mtest_source_edit_dialog_when_storage^[[32m 215^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:09.1138057Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/metadata/metadata/pending-panel.test.tsx^[[2m > ^[[22mtest_pending_panel_when_conflict_script_not_configured^[[32m 131^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:09.1140286Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/metadata/metadata/pending-panel.test.tsx^[[2m > ^[[22mtest_pending_panel_when_dry_run_conflict^[[32m 51^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:09.2133613Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/settings/settings/components/source-edit-dialog.test.tsx^[[2m > ^[[22mtest_storage_field^[[32m 113^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:09.2193335Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/settings/settings/components/source-edit-dialog.test.tsx^[[2m > ^[[22mtest_storage_field_when_not_stored^[[32m 119^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:09.2978389Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/metadata/metadata/pending-panel.test.tsx^[[2m > ^[[22mtest_pending_panel_when_base_commit_unusable^[[32m 141^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:09.3762157Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/metadata/metadata/pending-panel.test.tsx^[[2m > ^[[22mtest_pending_panel_when_restart_dropped^[[32m 173^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:09.4043220Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/metadata/metadata/queries.test.tsx^[[2m > ^[[22mtest_use_commit_edits^[[32m 88^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:09.4977021Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/metadata/metadata/queries.test.tsx^[[2m > ^[[22mtest_use_commit_edits_when_dry_run^[[32m 11^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:09.5009305Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/metadata/metadata/queries.test.tsx^[[2m > ^[[22mtest_use_commit_edits_when_rejected^[[32m 75^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:09.5010904Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/metadata/metadata/queries.test.tsx^[[2m > ^[[22mtest_use_commit_edits_when_conflict^[[32m 10^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:09.5012576Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/metadata/metadata/queries.test.tsx^[[2m > ^[[22mtest_use_restart_from_latest^[[32m 9^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:10.4030617Z Not implemented: Window's scrollTo() method
+test	層の全件を回す	2026-11-24T23:54:10.4203914Z Not implemented: Window's scrollTo() method
+test	層の全件を回す	2026-11-24T23:54:10.5389998Z Not implemented: Window's scrollTo() method
+test	層の全件を回す	2026-11-24T23:54:10.5800970Z Not implemented: Window's scrollTo() method
+test	層の全件を回す	2026-11-24T23:54:10.5890343Z Not implemented: Window's scrollTo() method
+test	層の全件を回す	2026-11-24T23:54:10.6253230Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/metadata/metadata/metadata-table.test.tsx^[[2m > ^[[22mtest_metadata_table_when_edited^[[32m 260^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:10.6286446Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/metadata/metadata/metadata-table.test.tsx^[[2m > ^[[22mtest_metadata_table_when_readonly^[[32m 23^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:10.6402491Z Not implemented: Window's scrollTo() method
+test	層の全件を回す	2026-11-24T23:54:10.6590655Z Not implemented: Window's scrollTo() method
+test	層の全件を回す	2026-11-24T23:54:10.6678847Z Not implemented: Window's scrollTo() method
+test	層の全件を回す	2026-11-24T23:54:10.6692805Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/docs/doc-view/components/doc-sidebar.test.tsx^[[2m > ^[[22mtest_doc_sidebar^[[32m 222^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:10.6693987Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/docs/doc-view/components/doc-sidebar.test.tsx^[[2m > ^[[22mtest_doc_sidebar_when_deleted^[[32m 26^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:10.6694925Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/docs/doc-view/components/doc-sidebar.test.tsx^[[2m > ^[[22mtest_doc_sidebar_when_excluded^[[32m 54^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:10.6995099Z Not implemented: Window's scrollTo() method
+test	層の全件を回す	2026-11-24T23:54:10.7023774Z Not implemented: Window's scrollTo() method
+test	層の全件を回す	2026-11-24T23:54:10.7264873Z ^[[90mstderr^[[2m | tests/unit/frontend/src/features/docs/doc-view/components/doc-body.test.tsx^[[2m > ^[[22m^[[2mtest_doc_body_when_internal_link
+test	層の全件を回す	2026-11-24T23:54:10.7266058Z ^[[22m^[[39mThe current testing environment is not configured to support act(...)
+test	層の全件を回す	2026-11-24T23:54:10.7266814Z The current testing environment is not configured to support act(...)
+test	層の全件を回す	2026-11-24T23:54:10.7268000Z 
+test	層の全件を回す	2026-11-24T23:54:10.7272905Z Not implemented: Window's scrollTo() method
+test	層の全件を回す	2026-11-24T23:54:10.7320091Z Not implemented: Window's scrollTo() method
+test	層の全件を回す	2026-11-24T23:54:10.7451705Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/metadata/metadata/metadata-table.test.tsx^[[2m > ^[[22mtest_metadata_table_when_add_duplicate^[[32m 144^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:10.7472816Z Not implemented: Window's scrollTo() method
+test	層の全件を回す	2026-11-24T23:54:10.7575812Z Not implemented: Window's scrollTo() method
+test	層の全件を回す	2026-11-24T23:54:10.7801147Z Not implemented: Window's scrollTo() method
+test	層の全件を回す	2026-11-24T23:54:10.8012736Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/docs/doc-view/components/doc-sidebar.test.tsx^[[2m > ^[[22mtest_doc_sidebar_when_group_toggled^[[32m 44^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:10.8014208Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/docs/doc-view/components/doc-sidebar.test.tsx^[[2m > ^[[22mtest_doc_sidebar_when_current_changed^[[32m 30^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:10.8056400Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/docs/doc-view/components/doc-sidebar.test.tsx^[[2m > ^[[22mtest_doc_sidebar_when_changed_in_group^[[32m 11^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:10.8072878Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/docs/doc-view/components/doc-sidebar.test.tsx^[[2m > ^[[22mtest_doc_sidebar_when_nested^[[32m 32^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:10.8074103Z Not implemented: Window's scrollTo() method
+test	層の全件を回す	2026-11-24T23:54:10.8075230Z ^[[90mstderr^[[2m | tests/unit/frontend/src/features/docs/doc-view/components/doc-body.test.tsx^[[2m > ^[[22m^[[2mtest_doc_body_when_internal_link
+test	層の全件を回す	2026-11-24T23:54:10.8078071Z ^[[22m^[[39mThe current testing environment is not configured to support act(...)
+test	層の全件を回す	2026-11-24T23:54:10.8078574Z 
+test	層の全件を回す	2026-11-24T23:54:10.8079456Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/docs/doc-view/components/doc-body.test.tsx^[[2m > ^[[22mtest_doc_body^[[32m 81^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:10.8244815Z  ^[[31m×^[[39m tests/unit/frontend/src/features/docs/doc-view/components/doc-sidebar.test.tsx^[[2m > ^[[22mtest_doc_sidebar_when_moved_keeps_closed^[[32m 49^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:10.8263042Z ^[[31m   → ^[[2mexpect(^[[22m^[[31melement^[[31m^[[2m).toHaveAttribute(^[[22m^[[32m^[[32m"aria-expanded"^[[32m^[[31m^[[2m, ^[[22m^[[32m^[[32m"false"^[[32m^[[31m^[[2m) // element.getAttribute("aria-expanded") === "false"^[[22m
+test	層の全件を回す	2026-11-24T23:54:10.8263927Z 
+test	層の全件を回す	2026-11-24T23:54:10.8264239Z Expected the element to have attribute:
+test	層の全件を回す	2026-11-24T23:54:10.8264746Z ^[[32m  aria-expanded="false"^[[31m
+test	層の全件を回す	2026-11-24T23:54:10.8265127Z Received:
+test	層の全件を回す	2026-11-24T23:54:10.8265509Z ^[[31m  aria-expanded="true"^[[31m^[[39m
+test	層の全件を回す	2026-11-24T23:54:10.8321847Z ^[[90mstderr^[[2m | tests/unit/frontend/src/features/docs/doc-view/components/doc-body.test.tsx^[[2m > ^[[22m^[[2mtest_doc_body_when_internal_link
+test	層の全件を回す	2026-11-24T23:54:10.8322708Z ^[[22m^[[39mThe current testing environment is not configured to support act(...)
+test	層の全件を回す	2026-11-24T23:54:10.8323219Z The current testing environment is not configured to support act(...)
+test	層の全件を回す	2026-11-24T23:54:10.8323689Z The current testing environment is not configured to support act(...)
+test	層の全件を回す	2026-11-24T23:54:10.8324009Z 
+test	層の全件を回す	2026-11-24T23:54:10.8324211Z Not implemented: Window's scrollTo() method
+test	層の全件を回す	2026-11-24T23:54:10.8416676Z ^[[90mstderr^[[2m | tests/unit/frontend/src/features/docs/doc-view/components/doc-body.test.tsx^[[2m > ^[[22m^[[2mtest_doc_body_when_body_path
+test	層の全件を回す	2026-11-24T23:54:10.8453915Z ^[[22m^[[39mThe current testing environment is not configured to support act(...)
+test	層の全件を回す	2026-11-24T23:54:10.8454834Z The current testing environment is not configured to support act(...)
+test	層の全件を回す	2026-11-24T23:54:10.8455258Z 
+test	層の全件を回す	2026-11-24T23:54:10.8456024Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/metadata/metadata/metadata-table.test.tsx^[[2m > ^[[22mtest_metadata_table_when_edited_label^[[32m 51^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:10.8457362Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/metadata/metadata/metadata-table.test.tsx^[[2m > ^[[22mtest_metadata_table_when_add_focus^[[32m 48^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:10.8459185Z Not implemented: Window's scrollTo() method
+test	層の全件を回す	2026-11-24T23:54:10.8495859Z ^[[90mstderr^[[2m | tests/unit/frontend/src/features/docs/doc-view/components/doc-body.test.tsx^[[2m > ^[[22m^[[2mtest_doc_body_when_body_path
+test	層の全件を回す	2026-11-24T23:54:10.8496889Z ^[[22m^[[39mThe current testing environment is not configured to support act(...)
+test	層の全件を回す	2026-11-24T23:54:10.8510908Z 
+test	層の全件を回す	2026-11-24T23:54:10.8593867Z ^[[90mstderr^[[2m | tests/unit/frontend/src/features/docs/doc-view/components/doc-body.test.tsx^[[2m > ^[[22m^[[2mtest_doc_body_when_body_path
+test	層の全件を回す	2026-11-24T23:54:10.8594648Z ^[[22m^[[39mThe current testing environment is not configured to support act(...)
+test	層の全件を回す	2026-11-24T23:54:10.8595155Z The current testing environment is not configured to support act(...)
+test	層の全件を回す	2026-11-24T23:54:10.8595601Z The current testing environment is not configured to support act(...)
+test	層の全件を回す	2026-11-24T23:54:10.8595864Z 
+test	層の全件を回す	2026-11-24T23:54:10.8596073Z Not implemented: Window's scrollTo() method
+test	層の全件を回す	2026-11-24T23:54:10.8673554Z Not implemented: Window's scrollTo() method
+test	層の全件を回す	2026-11-24T23:54:10.8697067Z Not implemented: Window's scrollTo() method
+test	層の全件を回す	2026-11-24T23:54:10.8905645Z Not implemented: Window's scrollTo() method
+test	層の全件を回す	2026-11-24T23:54:10.9028643Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/metadata/metadata/metadata-table.test.tsx^[[2m > ^[[22mtest_metadata_table_when_add_cancel^[[32m 73^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:10.9030220Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/metadata/metadata/metadata-table.test.tsx^[[2m > ^[[22m押した位置^[[2m > ^[[22mtest_metadata_table_when_caret_at_clicked^[[32m 21^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:10.9031707Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/metadata/metadata/metadata-table.test.tsx^[[2m > ^[[22mtest_metadata_table_when_caret_keyboard^[[32m 17^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:10.9226344Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/docs/doc-view/components/doc-body.test.tsx^[[2m > ^[[22mtest_doc_body_when_internal_link^[[32m 127^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:10.9231189Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/docs/doc-view/components/doc-body.test.tsx^[[2m > ^[[22mtest_doc_body_when_body_path^[[32m 27^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:10.9235506Z Not implemented: Window's scrollTo() method
+test	層の全件を回す	2026-11-24T23:54:10.9793504Z Not implemented: Window's scrollTo() method
+test	層の全件を回す	2026-11-24T23:54:11.0333189Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/docs/doc-view/components/doc-body.test.tsx^[[2m > ^[[22mtest_doc_body_when_base^[[32m 56^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:11.0334889Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/docs/doc-view/components/doc-body.test.tsx^[[2m > ^[[22mtest_doc_body_when_comments_changed^[[32m 57^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:11.0337833Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/docs/doc-view/components/doc-body.test.tsx^[[2m > ^[[22mtest_doc_body_when_locating^[[32m 55^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:11.5907881Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/settings/settings/form.test.ts^[[2m > ^[[22mtest_source_form_schema^[[32m 5^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:11.5910313Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/settings/settings/form.test.ts^[[2m > ^[[22mtest_source_form_schema_when_duplicate_id^[[32m 2^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:11.5912036Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/settings/settings/form.test.ts^[[2m > ^[[22mtest_source_form_schema_when_blank_line^[[32m 1^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:11.5913639Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/settings/settings/form.test.ts^[[2m > ^[[22mtest_to_form_values^[[32m 0^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:11.5914890Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/settings/settings/form.test.ts^[[2m > ^[[22mtest_apply_source^[[32m 2^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:11.5916054Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/settings/settings/form.test.ts^[[2m > ^[[22mtest_apply_source_when_edit^[[32m 0^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:11.5917226Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/settings/settings/form.test.ts^[[2m > ^[[22mtest_remove_source^[[32m 0^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:11.5918397Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/settings/settings/form.test.ts^[[2m > ^[[22mtest_to_form_values_when_outside_read^[[32m 0^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:11.5919478Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/settings/settings/form.test.ts^[[2m > ^[[22mtest_apply_source_when_outside_read^[[32m 0^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:11.5920585Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/settings/settings/form.test.ts^[[2m > ^[[22mtest_source_key^[[32m 0^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:11.5921811Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/settings/settings/form.test.ts^[[2m > ^[[22mtest_find_source^[[32m 0^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:11.5922963Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/settings/settings/form.test.ts^[[2m > ^[[22mtest_stored_storage^[[32m 0^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:11.5924672Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/settings/settings/form.test.ts^[[2m > ^[[22mtest_to_form_values_when_storage^[[32m 0^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:11.5925610Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/settings/settings/form.test.ts^[[2m > ^[[22mtest_apply_source_when_storage^[[32m 0^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:12.0713409Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/settings/settings/hooks/use-source-form.test.tsx^[[2m > ^[[22mtest_use_source_form^[[32m 63^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:12.0763085Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/settings/settings/hooks/use-source-form.test.tsx^[[2m > ^[[22mtest_use_source_form_when_422^[[32m 30^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:12.0927140Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/settings/settings/hooks/use-source-form.test.tsx^[[2m > ^[[22mtest_use_source_form_when_conflict^[[32m 16^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:12.0934612Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/settings/settings/hooks/use-source-form.test.tsx^[[2m > ^[[22mtest_use_source_form_when_row_moved^[[32m 11^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:12.0947620Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/settings/settings/hooks/use-source-form.test.tsx^[[2m > ^[[22mtest_use_source_form_when_gone^[[32m 6^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:12.3653590Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/metadata/shared/pending-edits-store.test.ts^[[2m > ^[[22mtest_to_commit_edits^[[32m 2^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:12.3654933Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/metadata/shared/pending-edits-store.test.ts^[[2m > ^[[22mtest_upsert^[[32m 1^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:12.3656238Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/metadata/shared/pending-edits-store.test.ts^[[2m > ^[[22mtest_upsert_when_base_commit^[[32m 0^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:12.3657491Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/metadata/shared/pending-edits-store.test.ts^[[2m > ^[[22mtest_rebase^[[32m 0^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:12.3658747Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/metadata/shared/pending-edits-store.test.ts^[[2m > ^[[22mtest_rebase_when_latest_changed^[[32m 0^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:12.9882740Z Not implemented: Window's scrollTo() method
+test	層の全件を回す	2026-11-24T23:54:13.1762541Z Not implemented: Window's scrollTo() method
+test	層の全件を回す	2026-11-24T23:54:13.2354131Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/metadata/metadata/metadata-screen.test.tsx^[[2m > ^[[22mtest_metadata_screen^[[32m 276^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:13.2903069Z Not implemented: Window's scrollTo() method
+test	層の全件を回す	2026-11-24T23:54:13.3212376Z Not implemented: Window's scrollTo() method
+test	層の全件を回す	2026-11-24T23:54:13.3275572Z ^[[90mstderr^[[2m | tests/unit/frontend/src/features/metadata/metadata/metadata-screen.test.tsx^[[2m > ^[[22m^[[2mtest_metadata_screen_when_not_found
+test	層の全件を回す	2026-11-24T23:54:13.3280763Z ^[[22m^[[39m{"ts":"2026-11-24T23:54:13.326Z","level":"error","event":"app_error","status":404,"type":"urn:dev-docs:error:Error","error":{"name":"NotFoundError","message":"失敗しました","stack":"NotFoundError: 失敗しました\n    at AppError.fromResponse (/home/runner/work/dev-docs/dev-docs/frontend/src/shared/core/app-error.ts:38:16)\n    at processTicksAndRejections (node:internal/process/task_queues:104:5)\n    at runNextTicks (node:internal/process/task_queues:69:3)\n    at process.processImmediate (node:internal/timers:541:9)\n    at apiClient (/home/runner/work/dev-docs/dev-docs/frontend/src/shared/adapters/api-client.ts:25:27)"}}
+test	層の全件を回す	2026-11-24T23:54:13.3285360Z 
+test	層の全件を回す	2026-11-24T23:54:13.3523633Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/metadata/metadata/metadata-screen.test.tsx^[[2m > ^[[22mtest_metadata_screen_when_locate^[[32m 192^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:13.3723715Z Not implemented: Window's scrollTo() method
+test	層の全件を回す	2026-11-24T23:54:13.3756004Z ^[[90mstderr^[[2m | tests/unit/frontend/src/features/metadata/metadata/metadata-screen.test.tsx^[[2m > ^[[22m^[[2mtest_metadata_screen_when_unreachable
+test	層の全件を回す	2026-11-24T23:54:13.3760904Z ^[[22m^[[39m{"ts":"2026-11-24T23:54:13.374Z","level":"error","event":"app_error","status":503,"type":"urn:dev-docs:error:Error","error":{"name":"AppError","message":"失敗しました","stack":"AppError: 失敗しました\n    at AppError.fromResponse (/home/runner/work/dev-docs/dev-docs/frontend/src/shared/core/app-error.ts:44:16)\n    at processTicksAndRejections (node:internal/process/task_queues:104:5)\n    at runNextTicks (node:internal/process/task_queues:69:3)\n    at process.processImmediate (node:internal/timers:541:9)\n    at apiClient (/home/runner/work/dev-docs/dev-docs/frontend/src/shared/adapters/api-client.ts:25:27)"}}
+test	層の全件を回す	2026-11-24T23:54:13.3763950Z 
+test	層の全件を回す	2026-11-24T23:54:13.4149297Z Not implemented: Window's scrollTo() method
+test	層の全件を回す	2026-11-24T23:54:13.4552845Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/metadata/metadata/metadata-screen.test.tsx^[[2m > ^[[22mtest_metadata_screen_when_not_found^[[32m 52^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:13.4557290Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/metadata/metadata/metadata-screen.test.tsx^[[2m > ^[[22mtest_metadata_screen_when_unreachable^[[32m 46^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:13.4765262Z Not implemented: Window's scrollTo() method
+test	層の全件を回す	2026-11-24T23:54:13.5104112Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/metadata/metadata/metadata-screen.test.tsx^[[2m > ^[[22mtest_metadata_screen_when_pending^[[32m 57^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:13.5107532Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/metadata/metadata/metadata-screen.test.tsx^[[2m > ^[[22mtest_metadata_screen_when_not_pending^[[32m 50^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:13.7443807Z ^[[90mstderr^[[2m | tests/unit/frontend/src/features/settings/settings/components/source-delete-dialog.test.tsx^[[2m > ^[[22m^[[2mtest_source_delete_dialog_when_failed
+test	層の全件を回す	2026-11-24T23:54:13.7449170Z ^[[22m^[[39m{"ts":"2026-11-24T23:54:13.743Z","level":"error","event":"app_error","status":500,"type":"urn:dev-docs:error:Error","error":{"name":"AppError","message":"x","stack":"AppError: x\n    at AppError.fromResponse (/home/runner/work/dev-docs/dev-docs/frontend/src/shared/core/app-error.ts:44:16)\n    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)\n    at apiClient (/home/runner/work/dev-docs/dev-docs/frontend/src/shared/adapters/api-client.ts:25:27)"}}
+test	層の全件を回す	2026-11-24T23:54:13.7451557Z 
+test	層の全件を回す	2026-11-24T23:54:13.8090285Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/settings/settings/components/source-delete-dialog.test.tsx^[[2m > ^[[22mtest_source_delete_dialog^[[33m 308^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:13.8093735Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/settings/settings/components/source-delete-dialog.test.tsx^[[2m > ^[[22mtest_source_delete_dialog_when_failed^[[32m 45^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:13.8095164Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/settings/settings/components/source-delete-dialog.test.tsx^[[2m > ^[[22mtest_source_delete_dialog_when_conflict^[[32m 36^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:13.8097089Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/settings/settings/components/source-delete-dialog.test.tsx^[[2m > ^[[22mtest_source_delete_dialog_when_gone^[[32m 14^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:14.0140504Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/docs/shared/search-dialog/search-dialog.test.tsx^[[2m > ^[[22mtest_search_dialog^[[33m 582^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:14.2176978Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/docs/doc-view/tables.test.ts^[[2m > ^[[22mtest_find_tables^[[32m 2^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:14.2178280Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/docs/doc-view/tables.test.ts^[[2m > ^[[22mtest_apply_hidden_columns^[[32m 1^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:14.2179365Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/docs/doc-view/tables.test.ts^[[2m > ^[[22mtest_column_table_keys^[[32m 0^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:14.2180534Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/docs/doc-view/tables.test.ts^[[2m > ^[[22mtest_find_tables_when_json_marker^[[32m 1^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:14.2181974Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/docs/doc-view/tables.test.ts^[[2m > ^[[22mtest_apply_hidden_columns_when_json_marker^[[32m 1^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:14.4393723Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/docs/shared/search-dialog/search-dialog.test.tsx^[[2m > ^[[22mtest_search_dialog_when_empty_query^[[33m 422^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:14.7344150Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/docs/shared/search-dialog/search-dialog.test.tsx^[[2m > ^[[22mtest_search_dialog_when_excluded_count^[[32m 298^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:14.9881732Z Not implemented: Window's scrollTo() method
+test	層の全件を回す	2026-11-24T23:54:14.9907263Z Not implemented: Window's scrollTo() method
+test	層の全件を回す	2026-11-24T23:54:14.9960018Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/docs/shared/search-dialog/search-dialog.test.tsx^[[2m > ^[[22mtest_search_dialog_when_only_excluded^[[32m 262^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:14.9967001Z Not implemented: Window's scrollTo() method
+test	層の全件を回す	2026-11-24T23:54:14.9989978Z Not implemented: Window's scrollTo() method
+test	層の全件を回す	2026-11-24T23:54:15.0037450Z Not implemented: Window's scrollTo() method
+test	層の全件を回す	2026-11-24T23:54:15.0060060Z Not implemented: Window's scrollTo() method
+test	層の全件を回す	2026-11-24T23:54:15.0103908Z Not implemented: Window's scrollTo() method
+test	層の全件を回す	2026-11-24T23:54:15.0125856Z Not implemented: Window's scrollTo() method
+test	層の全件を回す	2026-11-24T23:54:15.0164902Z Not implemented: Window's scrollTo() method
+test	層の全件を回す	2026-11-24T23:54:15.0192373Z Not implemented: Window's scrollTo() method
+test	層の全件を回す	2026-11-24T23:54:15.0223520Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/docs/doc-view/hooks/use-doc-navigation.test.tsx^[[2m > ^[[22mtest_compare_base^[[32m 2^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:15.0224986Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/docs/doc-view/hooks/use-doc-navigation.test.tsx^[[2m > ^[[22mtest_compare_base_when_other_rev^[[32m 1^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:15.0226396Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/docs/doc-view/hooks/use-doc-navigation.test.tsx^[[2m > ^[[22mtest_compare_base_when_no_commits^[[32m 1^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:15.0227663Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/docs/doc-view/hooks/use-doc-navigation.test.tsx^[[2m > ^[[22mtest_use_doc_navigation^[[32m 36^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:15.0229152Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/docs/doc-view/hooks/use-doc-navigation.test.tsx^[[2m > ^[[22mtest_use_doc_navigation_when_select_ref^[[32m 8^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:15.0230526Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/docs/doc-view/hooks/use-doc-navigation.test.tsx^[[2m > ^[[22mtest_use_doc_navigation_when_start_compare^[[32m 7^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:15.0232130Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/docs/doc-view/hooks/use-doc-navigation.test.tsx^[[2m > ^[[22mtest_use_doc_navigation_when_clear_diff^[[32m 5^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:15.0233337Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/docs/doc-view/hooks/use-doc-navigation.test.tsx^[[2m > ^[[22mtest_use_doc_navigation_when_locate^[[32m 7^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:15.2414253Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/docs/shared/search-dialog/search-dialog.test.tsx^[[2m > ^[[22mtest_search_dialog_when_include_excluded^[[33m 341^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:15.4014800Z Not implemented: Window's scrollTo() method
+test	層の全件を回す	2026-11-24T23:54:15.5252872Z Not implemented: Window's scrollTo() method
+test	層の全件を回す	2026-11-24T23:54:15.6026155Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/docs/doc-view/doc-view-screen.test.tsx^[[2m > ^[[22mtest_doc_view_screen^[[33m 323^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:15.6407684Z Not implemented: Window's scrollTo() method
+test	層の全件を回す	2026-11-24T23:54:15.6802425Z Not implemented: Window's scrollTo() method
+test	層の全件を回す	2026-11-24T23:54:15.7501108Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/docs/doc-view/doc-view-screen.test.tsx^[[2m > ^[[22mtest_doc_view_screen_when_empty_tab^[[32m 129^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:15.7513030Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/docs/doc-view/doc-view-screen.test.tsx^[[2m > ^[[22mtest_doc_view_screen_when_conversion_error^[[32m 36^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:15.8394339Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/docs/doc-view/doc-view-screen.test.tsx^[[2m > ^[[22mtest_doc_view_screen_when_sidebar_closed^[[32m 188^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:16.0828703Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/docs/doc-view/queries.test.ts^[[2m > ^[[22mtest_document_query_options^[[32m 58^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:16.0864689Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/docs/doc-view/queries.test.ts^[[2m > ^[[22mtest_base_markdown_query_options^[[32m 5^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:16.0866148Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/docs/doc-view/queries.test.ts^[[2m > ^[[22mtest_base_markdown_query_options_when_added^[[32m 6^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:16.0867456Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/docs/doc-view/queries.test.ts^[[2m > ^[[22mtest_load_document_when_not_found^[[32m 6^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:16.8400059Z ^[[90mstderr^[[2m | tests/unit/frontend/src/features/settings/settings/queries.test.tsx^[[2m > ^[[22m^[[2mtest_use_save_sources_when_expected_version
+test	層の全件を回す	2026-11-24T23:54:16.8432336Z ^[[22m^[[39mAn update to TestComponent inside a test was not wrapped in act(...).
+test	層の全件を回す	2026-11-24T23:54:16.8461651Z 
+test	層の全件を回す	2026-11-24T23:54:16.8492085Z When testing, code that causes React state updates should be wrapped into act(...):
+test	層の全件を回す	2026-11-24T23:54:16.8511707Z 
+test	層の全件を回す	2026-11-24T23:54:16.8512143Z act(() => {
+test	層の全件を回す	2026-11-24T23:54:16.8512554Z   /* fire events that update state */
+test	層の全件を回す	2026-11-24T23:54:16.8512874Z });
+test	層の全件を回す	2026-11-24T23:54:16.8513166Z /* assert on the output */
+test	層の全件を回す	2026-11-24T23:54:16.8513361Z 
+test	層の全件を回す	2026-11-24T23:54:16.8513946Z This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+test	層の全件を回す	2026-11-24T23:54:16.8514516Z 
+test	層の全件を回す	2026-11-24T23:54:16.8515254Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/settings/settings/queries.test.tsx^[[2m > ^[[22mtest_use_save_sources^[[32m 83^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:16.8516416Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/settings/settings/queries.test.tsx^[[2m > ^[[22mtest_use_save_sources_when_expected_version^[[32m 11^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:17.0102140Z Not implemented: Window's scrollTo() method
+test	層の全件を回す	2026-11-24T23:54:17.1124281Z Not implemented: Window's scrollTo() method
+test	層の全件を回す	2026-11-24T23:54:17.1462523Z Not implemented: Window's scrollTo() method
+test	層の全件を回す	2026-11-24T23:54:17.1924490Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/settings/settings/settings-screen.test.tsx^[[2m > ^[[22mtest_settings_screen^[[32m 231^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:17.1926911Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/settings/settings/settings-screen.test.tsx^[[2m > ^[[22mtest_settings_screen_when_empty^[[32m 31^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:17.2375753Z Not implemented: Window's scrollTo() method
+test	層の全件を回す	2026-11-24T23:54:17.2483157Z ^[[90mstderr^[[2m | tests/unit/frontend/src/features/settings/settings/settings-screen.test.tsx^[[2m > ^[[22m^[[2mtest_settings_screen_when_project_index_failed
+test	層の全件を回す	2026-11-24T23:54:17.2514838Z ^[[22m^[[39m{"ts":"2026-11-24T23:54:17.243Z","level":"error","event":"app_error","status":502,"type":"about:blank","error":{"name":"AppError","message":"project-index が要求を処理できませんでした","stack":"AppError: project-index が要求を処理できませんでした\n    at AppError.fromResponse (/home/runner/work/dev-docs/dev-docs/frontend/src/shared/core/app-error.ts:44:16)\n    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)\n    at apiClient (/home/runner/work/dev-docs/dev-docs/frontend/src/shared/adapters/api-client.ts:25:27)"}}
+test	層の全件を回す	2026-11-24T23:54:17.2541581Z 
+test	層の全件を回す	2026-11-24T23:54:17.2839795Z Not implemented: Window's scrollTo() method
+test	層の全件を回す	2026-11-24T23:54:17.2905976Z ^[[90mstderr^[[2m | tests/unit/frontend/src/features/settings/settings/settings-screen.test.tsx^[[2m > ^[[22m^[[2mtest_settings_screen_when_project_index_failed
+test	層の全件を回す	2026-11-24T23:54:17.2944616Z ^[[22m^[[39m{"ts":"2026-11-24T23:54:17.289Z","level":"error","event":"app_error","status":503,"type":"about:blank","error":{"name":"AppError","message":"project-index から応答がありませんでした","stack":"AppError: project-index から応答がありませんでした\n    at AppError.fromResponse (/home/runner/work/dev-docs/dev-docs/frontend/src/shared/core/app-error.ts:44:16)\n    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)\n    at apiClient (/home/runner/work/dev-docs/dev-docs/frontend/src/shared/adapters/api-client.ts:25:27)"}}
+test	層の全件を回す	2026-11-24T23:54:17.2946881Z 
+test	層の全件を回す	2026-11-24T23:54:17.3212858Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/settings/settings/settings-screen.test.tsx^[[2m > ^[[22mtest_settings_screen_when_single_key_off^[[32m 96^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:17.3267941Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/settings/settings/settings-screen.test.tsx^[[2m > ^[[22mtest_settings_screen_when_project_index_failed^[[32m 99^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:17.5150587Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/docs/shared/comments/comment-panel.test.tsx^[[2m > ^[[22mtest_comment_panel^[[33m 303^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:17.5953149Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/docs/shared/comments/comment-panel.test.tsx^[[2m > ^[[22mtest_comment_panel_when_indeterminate^[[32m 92^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:17.5957090Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/docs/shared/comments/comment-panel.test.tsx^[[2m > ^[[22mtest_comment_panel_when_clipboard_failed^[[32m 75^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:18.1494591Z Not implemented: Window's scrollTo() method
+test	層の全件を回す	2026-11-24T23:54:18.1751933Z Not implemented: Window's scrollTo() method
+test	層の全件を回す	2026-11-24T23:54:18.1984294Z Not implemented: Window's scrollTo() method
+test	層の全件を回す	2026-11-24T23:54:18.2331618Z Not implemented: Window's scrollTo() method
+test	層の全件を回す	2026-11-24T23:54:18.2381868Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/docs/doc-view/components/doc-main.test.tsx^[[2m > ^[[22mtest_doc_main^[[32m 151^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:18.2387025Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/docs/doc-view/components/doc-main.test.tsx^[[2m > ^[[22mtest_doc_main_when_empty_tab^[[32m 25^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:18.2388771Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/docs/doc-view/components/doc-main.test.tsx^[[2m > ^[[22mtest_doc_main_when_conversion_error^[[32m 16^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:18.2409701Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/docs/doc-view/components/doc-main.test.tsx^[[2m > ^[[22mtest_doc_main_when_diff^[[32m 35^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:18.4781703Z  ^[[32m✓^[[39m tests/unit/frontend/src/shared/components/project-index-unreachable.test.tsx^[[2m > ^[[22mtest_to_project_index_unreachable^[[32m 4^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:18.4814991Z  ^[[32m✓^[[39m tests/unit/frontend/src/shared/components/project-index-unreachable.test.tsx^[[2m > ^[[22mtest_to_project_index_unreachable_when_kind_missing^[[32m 1^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:18.4816638Z  ^[[32m✓^[[39m tests/unit/frontend/src/shared/components/project-index-unreachable.test.tsx^[[2m > ^[[22mtest_to_project_index_unreachable_when_other^[[32m 0^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:18.4848557Z  ^[[32m✓^[[39m tests/unit/frontend/src/shared/components/project-index-unreachable.test.tsx^[[2m > ^[[22mtest_project_index_unreachable_alert unreachable^[[32m 45^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:18.4874178Z  ^[[32m✓^[[39m tests/unit/frontend/src/shared/components/project-index-unreachable.test.tsx^[[2m > ^[[22mtest_project_index_unreachable_alert timeout^[[32m 6^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:18.4924635Z  ^[[32m✓^[[39m tests/unit/frontend/src/shared/components/project-index-unreachable.test.tsx^[[2m > ^[[22mtest_project_index_unreachable_alert failed^[[32m 5^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:18.5062850Z  ^[[32m✓^[[39m tests/unit/frontend/src/shared/components/project-index-unreachable.test.tsx^[[2m > ^[[22mtest_project_index_unreachable_alert_when_reload^[[32m 108^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:18.6212380Z Not implemented: Window's scrollTo() method
+test	層の全件を回す	2026-11-24T23:54:18.7174891Z Not implemented: Window's scrollTo() method
+test	層の全件を回す	2026-11-24T23:54:18.7729328Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/docs/not-found/hooks/use-missing-view.test.tsx^[[2m > ^[[22mtest_use_missing_view^[[32m 156^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:18.7777683Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/docs/not-found/hooks/use-missing-view.test.tsx^[[2m > ^[[22mtest_use_missing_view_when_source_missing^[[32m 63^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:19.3236701Z  ^[[32m✓^[[39m tests/unit/frontend/src/app/error-fallback.test.tsx^[[2m > ^[[22mtest_error_fallback^[[32m 122^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:19.3262840Z  ^[[32m✓^[[39m tests/unit/frontend/src/app/error-fallback.test.tsx^[[2m > ^[[22mtest_error_fallback_when_project_index_failed^[[32m 13^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:19.4563611Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/docs/doc-view/components/sidebar-resizer.test.tsx^[[2m > ^[[22mtest_sidebar_resizer_when_dragged^[[32m 114^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:19.4565515Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/docs/doc-view/components/sidebar-resizer.test.tsx^[[2m > ^[[22mtest_sidebar_resizer_when_dragged_over_max^[[32m 17^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:19.4593063Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/docs/doc-view/components/sidebar-resizer.test.tsx^[[2m > ^[[22mtest_sidebar_resizer_when_key^[[32m 14^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:19.4621168Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/docs/doc-view/components/sidebar-resizer.test.tsx^[[2m > ^[[22mtest_sidebar_resizer_when_double_clicked^[[32m 19^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:19.5416747Z  ^[[32m✓^[[39m tests/unit/frontend/src/shared/core/app-error.test.ts^[[2m > ^[[22mtest_from_response^[[32m 11^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:19.5417613Z  ^[[32m✓^[[39m tests/unit/frontend/src/shared/core/app-error.test.ts^[[2m > ^[[22mtest_from_response_when_not_found^[[32m 1^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:19.5418286Z  ^[[32m✓^[[39m tests/unit/frontend/src/shared/core/app-error.test.ts^[[2m > ^[[22mtest_from_response_when_not_problem^[[32m 1^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:20.4837947Z Not implemented: Window's scrollTo() method
+test	層の全件を回す	2026-11-24T23:54:20.5163210Z Not implemented: Window's scrollTo() method
+test	層の全件を回す	2026-11-24T23:54:20.5293313Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/docs/doc-view/components/doc-breadcrumb.test.tsx^[[2m > ^[[22mtest_doc_breadcrumb^[[32m 149^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:20.5295085Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/docs/doc-view/components/doc-breadcrumb.test.tsx^[[2m > ^[[22mtest_doc_breadcrumb_when_empty_tab^[[32m 21^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:20.5452504Z Not implemented: Window's scrollTo() method
+test	層の全件を回す	2026-11-24T23:54:20.5670372Z Not implemented: Window's scrollTo() method
+test	層の全件を回す	2026-11-24T23:54:20.5823595Z Not implemented: Window's scrollTo() method
+test	層の全件を回す	2026-11-24T23:54:20.5872720Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/docs/not-found/components/missing-links.test.tsx^[[2m > ^[[22mtest_missing_links^[[32m 157^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:20.5903201Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/docs/not-found/components/missing-links.test.tsx^[[2m > ^[[22mtest_missing_links_when_source_missing^[[32m 22^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:20.5904942Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/docs/not-found/components/missing-links.test.tsx^[[2m > ^[[22mtest_missing_links_when_no_serving^[[32m 9^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:20.9095931Z Not implemented: Window's scrollTo() method
+test	層の全件を回す	2026-11-24T23:54:20.9965326Z Not implemented: Window's scrollTo() method
+test	層の全件を回す	2026-11-24T23:54:21.0190065Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/docs/not-found/not-found-screen.test.tsx^[[2m > ^[[22mtest_not_found_screen^[[32m 256^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:21.0201738Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/docs/not-found/not-found-screen.test.tsx^[[2m > ^[[22mtest_not_found_screen_when_source_missing^[[32m 39^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:21.4093763Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/docs/doc-view/hooks/use-locating.test.ts^[[2m > ^[[22mtest_use_locating^[[32m 12^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:21.4162966Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/docs/doc-view/hooks/use-locating.test.ts^[[2m > ^[[22mtest_use_locating_when_same_doc^[[32m 2^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:21.4164083Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/docs/doc-view/hooks/use-locating.test.ts^[[2m > ^[[22mtest_use_locating_when_doc_left^[[32m 2^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:21.4164909Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/docs/doc-view/hooks/use-locating.test.ts^[[2m > ^[[22mtest_use_locating_when_located^[[32m 2^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:21.4165733Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/docs/doc-view/hooks/use-column-persistence.test.ts^[[2m > ^[[22mtest_use_column_persistence^[[32m 17^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:21.4166586Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/docs/doc-view/hooks/use-column-persistence.test.ts^[[2m > ^[[22mtest_use_column_persistence_when_failed^[[32m 54^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:21.7126699Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/docs/shared/comments/comment-format.test.ts^[[2m > ^[[22mtest_format_comments^[[32m 2^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:21.7128374Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/docs/shared/comments/comment-format.test.ts^[[2m > ^[[22mtest_build_issue_url^[[32m 1^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:21.7179868Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/docs/shared/comments/comment-format.test.ts^[[2m > ^[[22mtest_build_issue_url_when_too_long^[[32m 9^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:22.3913893Z  ^[[32m✓^[[39m tests/unit/frontend/src/shared/core/handle-app-error.test.ts^[[2m > ^[[22mtest_handle_app_error^[[32m 26^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:22.3945900Z  ^[[32m✓^[[39m tests/unit/frontend/src/shared/core/handle-app-error.test.ts^[[2m > ^[[22mtest_handle_app_error_when_message^[[32m 1^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:22.3947085Z  ^[[32m✓^[[39m tests/unit/frontend/src/shared/core/handle-app-error.test.ts^[[2m > ^[[22mtest_handle_app_error_when_unknown^[[32m 0^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:22.5212900Z Not implemented: Window's scrollTo() method
+test	層の全件を回す	2026-11-24T23:54:22.5523790Z Not implemented: Window's scrollTo() method
+test	層の全件を回す	2026-11-24T23:54:22.5967391Z Not implemented: Window's scrollTo() method
+test	層の全件を回す	2026-11-24T23:54:22.6023082Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/settings/settings/components/source-table.test.tsx^[[2m > ^[[22mtest_source_table^[[32m 159^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:22.6052935Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/settings/settings/components/source-table.test.tsx^[[2m > ^[[22mtest_source_table_when_edit^[[32m 47^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:22.6054374Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/settings/settings/components/source-table.test.tsx^[[2m > ^[[22mtest_source_table_when_outside_read_disabled^[[32m 22^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:22.7153735Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/docs/doc-view/components/conversion-error-alert.test.tsx^[[2m > ^[[22mtest_conversion_error_alert^[[32m 141^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:22.7233310Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/docs/doc-view/components/conversion-error-alert.test.tsx^[[2m > ^[[22mtest_conversion_error_alert_when_yaml^[[32m 6^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:23.1822943Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/docs/doc-view/nav.test.ts^[[2m > ^[[22mtest_find_active_page^[[32m 2^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:23.1827681Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/docs/doc-view/nav.test.ts^[[2m > ^[[22mtest_find_active_page_when_empty_tab^[[32m 0^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:23.1831256Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/docs/doc-view/nav.test.ts^[[2m > ^[[22mtest_first_page_path^[[32m 0^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:23.1832708Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/docs/doc-view/nav.test.ts^[[2m > ^[[22mtest_first_page_path_when_empty^[[32m 0^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:23.1833802Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/docs/doc-view/nav.test.ts^[[2m > ^[[22mtest_page_title^[[32m 0^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:23.5401564Z  ^[[32m✓^[[39m tests/unit/frontend/src/routes/index.test.ts^[[2m > ^[[22mtest_redirect_to_first_source^[[32m 47^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:23.5432958Z  ^[[32m✓^[[39m tests/unit/frontend/src/routes/index.test.ts^[[2m > ^[[22mtest_redirect_to_first_source_when_none^[[32m 7^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:23.5728975Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/docs/not-found/missing.test.ts^[[2m > ^[[22mtest_describe_missing^[[32m 3^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:23.5730022Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/docs/not-found/missing.test.ts^[[2m > ^[[22mtest_describe_missing_when_not_served^[[32m 1^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:23.5730844Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/docs/not-found/missing.test.ts^[[2m > ^[[22mtest_describe_missing_when_route^[[32m 0^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:23.5731839Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/docs/not-found/missing.test.ts^[[2m > ^[[22mtest_describe_missing_when_ref^[[32m 0^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:24.3343480Z  ^[[32m✓^[[39m tests/unit/frontend/src/app/confirm-dialog.test.tsx^[[2m > ^[[22mtest_use_confirm_dialog^[[32m 202^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:24.3402727Z  ^[[32m✓^[[39m tests/unit/frontend/src/app/confirm-dialog.test.tsx^[[2m > ^[[22mtest_use_confirm_dialog_when_cancel^[[32m 68^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:24.3935913Z  ^[[32m✓^[[39m tests/unit/frontend/src/shared/hooks/use-media-query.test.tsx^[[2m > ^[[22mtest_use_media_query^[[32m 16^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:24.3936869Z  ^[[32m✓^[[39m tests/unit/frontend/src/shared/hooks/use-media-query.test.tsx^[[2m > ^[[22mtest_use_media_query_when_changed^[[32m 3^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:24.5038515Z  ^[[32m✓^[[39m tests/unit/frontend/src/shared/hooks/use-shortcut.test.tsx^[[2m > ^[[22mtest_use_shortcut^[[32m 32^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:24.5521529Z  ^[[32m✓^[[39m tests/unit/frontend/src/shared/hooks/use-shortcut.test.tsx^[[2m > ^[[22mtest_use_shortcut_when_input_focused^[[32m 141^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:24.5529766Z  ^[[32m✓^[[39m tests/unit/frontend/src/shared/hooks/use-shortcut.test.tsx^[[2m > ^[[22mtest_use_shortcut_when_single_key_off^[[32m 9^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:25.3342729Z Not implemented: Window's scrollTo() method
+test	層の全件を回す	2026-11-24T23:54:25.3431806Z Not implemented: Window's scrollTo() method
+test	層の全件を回す	2026-11-24T23:54:25.3795023Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/docs/doc-view/components/doc-tabs.test.tsx^[[2m > ^[[22mtest_doc_tabs^[[32m 132^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:25.3796616Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/docs/doc-view/components/doc-tabs.test.tsx^[[2m > ^[[22mtest_doc_tabs_when_empty^[[32m 42^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:25.4655956Z  ^[[32m✓^[[39m tests/unit/frontend/src/shared/adapters/api-client.test.ts^[[2m > ^[[22mtest_api_client^[[32m 33^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:25.4683802Z  ^[[32m✓^[[39m tests/unit/frontend/src/shared/adapters/api-client.test.ts^[[2m > ^[[22mtest_api_client_when_problem^[[32m 10^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:25.4712871Z  ^[[32m✓^[[39m tests/unit/frontend/src/shared/adapters/api-client.test.ts^[[2m > ^[[22mtest_api_client_when_network_error^[[32m 6^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:25.6255033Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/docs/doc-view/components/sidebar-toggle.test.tsx^[[2m > ^[[22mtest_sidebar_toggle^[[32m 228^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:25.6362473Z  ^[[31m×^[[39m tests/unit/frontend/src/features/docs/doc-view/components/sidebar-toggle.test.tsx^[[2m > ^[[22mtest_sidebar_toggle_when_closed^[[32m 16^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:25.6371192Z ^[[31m   → ^[[2mexpect(^[[22m^[[31melement^[[31m^[[2m).not.toHaveAttribute(^[[22m^[[32m^[[32m"aria-controls"^[[32m^[[31m^[[2m) // element.hasAttribute("aria-controls")^[[22m
+test	層の全件を回す	2026-11-24T23:54:25.6372449Z 
+test	層の全件を回す	2026-11-24T23:54:25.6372807Z Expected the element not to have attribute:
+test	層の全件を回す	2026-11-24T23:54:25.6373312Z ^[[32m  aria-controls^[[31m
+test	層の全件を回す	2026-11-24T23:54:25.6373645Z Received:
+test	層の全件を回す	2026-11-24T23:54:25.6374091Z ^[[31m  aria-controls="doc-sidebar"^[[31m^[[39m
+test	層の全件を回す	2026-11-24T23:54:26.4608956Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/settings/settings/components/status-badge.test.tsx^[[2m > ^[[22mtest_status_badge^[[32m 44^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:26.4611491Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/settings/settings/components/status-badge.test.tsx^[[2m > ^[[22mtest_status_badge_when_old_config_version^[[32m 18^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:26.4773784Z  ^[[32m✓^[[39m tests/unit/frontend/src/shared/hooks/use-delayed-flag.test.tsx^[[2m > ^[[22mtest_use_delayed_flag^[[32m 23^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:26.4802906Z  ^[[32m✓^[[39m tests/unit/frontend/src/shared/hooks/use-delayed-flag.test.tsx^[[2m > ^[[22mtest_use_delayed_flag_when_finished^[[32m 3^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:26.7884368Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/docs/doc-view/components/diff-banner.test.tsx^[[2m > ^[[22mtest_diff_banner^[[33m 326^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:26.7887675Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/docs/doc-view/components/diff-banner.test.tsx^[[2m > ^[[22mtest_diff_banner_when_clear^[[32m 27^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:27.2194788Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/docs/shared/serving-sources.test.ts^[[2m > ^[[22mtest_serving_sources^[[32m 2^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:27.2195741Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/docs/shared/serving-sources.test.ts^[[2m > ^[[22mtest_serving_sources_when_write_scope^[[32m 0^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:27.2196546Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/docs/shared/serving-sources.test.ts^[[2m > ^[[22mtest_serving_sources_when_undefined^[[32m 0^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:27.5733891Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/docs/shared/comments/comment-store.test.ts^[[2m > ^[[22mtest_comments_of^[[32m 3^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:28.0182517Z  ^[[32m✓^[[39m tests/unit/frontend/src/app/query-client.test.ts^[[2m > ^[[22mtest_create_query_client^[[32m 2^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:28.0184104Z  ^[[32m✓^[[39m tests/unit/frontend/src/app/query-client.test.ts^[[2m > ^[[22mtest_create_query_client_when_meta_off^[[32m 2^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:28.0972305Z  ^[[32m✓^[[39m tests/unit/frontend/src/app/router.test.tsx^[[2m > ^[[22mtest_create_app_router^[[32m 6^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:28.0993226Z  ^[[32m✓^[[39m tests/unit/frontend/src/app/router.test.tsx^[[2m > ^[[22mtest_parse_search_when_numeric_rev^[[32m 1^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:28.0994540Z  ^[[32m✓^[[39m tests/unit/frontend/src/app/router.test.tsx^[[2m > ^[[22mtest_stringify_search_when_numeric_rev^[[32m 0^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:28.4150881Z  ^[[32m✓^[[39m tests/unit/frontend/src/shared/core/shortcuts.test.ts^[[2m > ^[[22mtest_shortcuts_for^[[32m 2^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:28.4153651Z  ^[[32m✓^[[39m tests/unit/frontend/src/shared/core/shortcuts.test.ts^[[2m > ^[[22mtest_shortcuts_for_when_single_key_off^[[32m 1^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:28.4154914Z  ^[[32m✓^[[39m tests/unit/frontend/src/shared/core/shortcuts.test.ts^[[2m > ^[[22mtest_shortcuts_for_when_settings^[[32m 0^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:28.7756474Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/docs/shared/search-dialog/highlight.test.ts^[[2m > ^[[22mtest_split_highlight^[[32m 2^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:28.7758872Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/docs/shared/search-dialog/highlight.test.ts^[[2m > ^[[22mtest_split_highlight_when_symbol^[[32m 1^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:29.0715356Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/docs/doc-view/components/doc-header.test.tsx^[[2m > ^[[22mtest_doc_header^[[32m 125^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:29.1412056Z  ^[[32m✓^[[39m tests/unit/frontend/src/shared/lib/logger.test.ts^[[2m > ^[[22mtest_create_logger^[[32m 5^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:29.5122683Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/settings/settings/problem-errors.test.ts^[[2m > ^[[22mtest_to_field_errors^[[32m 2^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:29.9499698Z  ^[[32m✓^[[39m tests/unit/frontend/src/features/docs/doc-view/components/empty-tab.test.tsx^[[2m > ^[[22mtest_empty_tab_when_not_git^[[32m 30^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:30.1893601Z  ^[[32m✓^[[39m tests/unit/frontend/src/shared/components/shortcut-dialog/shortcut-dialog.test.tsx^[[2m > ^[[22mtest_shortcut_dialog^[[32m 141^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:30.4592431Z  ^[[32m✓^[[39m tests/unit/frontend/src/shared/components/skip-link.test.tsx^[[2m > ^[[22mtest_skip_link^[[32m 142^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:30.6755891Z  ^[[32m✓^[[39m tests/unit/frontend/src/shared/lib/format.test.ts^[[2m > ^[[22mtest_format_jst^[[32m 2^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:30.6757089Z  ^[[32m✓^[[39m tests/unit/frontend/src/shared/lib/format.test.ts^[[2m > ^[[22mtest_format_jst_when_date_changes^[[32m 0^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:30.8319830Z  ^[[32m✓^[[39m tests/unit/frontend/src/shared/stores/preferences.test.ts^[[2m > ^[[22mtest_clamp_sidebar_width^[[32m 1^[[2mms^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:30.8381997Z 
+test	層の全件を回す	2026-11-24T23:54:30.8382761Z ^[[31m⎯⎯⎯⎯⎯⎯⎯^[[39m^[[1m^[[41m Failed Tests 2 ^[[49m^[[22m^[[31m⎯⎯⎯⎯⎯⎯⎯^[[39m
+test	層の全件を回す	2026-11-24T23:54:30.8383022Z 
+test	層の全件を回す	2026-11-24T23:54:30.8384582Z ^[[41m^[[1m FAIL ^[[22m^[[49m tests/unit/frontend/src/features/docs/doc-view/components/doc-sidebar.test.tsx^[[2m > ^[[22mtest_doc_sidebar_when_moved_keeps_closed
+test	層の全件を回す	2026-11-24T23:54:30.8388495Z ^[[31m^[[1mError^[[22m: ^[[2mexpect(^[[22m^[[31melement^[[31m^[[2m).toHaveAttribute(^[[22m^[[32m^[[32m"aria-expanded"^[[32m^[[31m^[[2m, ^[[22m^[[32m^[[32m"false"^[[32m^[[31m^[[2m) // element.getAttribute("aria-expanded") === "false"^[[22m
+test	層の全件を回す	2026-11-24T23:54:30.8389201Z 
+test	層の全件を回す	2026-11-24T23:54:30.8389367Z Expected the element to have attribute:
+test	層の全件を回す	2026-11-24T23:54:30.8389735Z ^[[32m  aria-expanded="false"^[[31m
+test	層の全件を回す	2026-11-24T23:54:30.8390008Z Received:
+test	層の全件を回す	2026-11-24T23:54:30.8390331Z ^[[31m  aria-expanded="true"^[[31m^[[39m
+test	層の全件を回す	2026-11-24T23:54:30.8391025Z ^[[36m ^[[2m❯^[[22m tests/unit/frontend/src/features/docs/doc-view/components/doc-sidebar.test.tsx:^[[2m153:13^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:30.8439438Z     ^[[90m151|^[[39m   await userEvent.click(screen.getByRole("button", { name: "移動" }));
+test	層の全件を回す	2026-11-24T23:54:30.8440284Z     ^[[90m152|^[[39m
+test	層の全件を回す	2026-11-24T23:54:30.8441498Z     ^[[90m153|^[[39m   expect(b).toHaveAttribute("aria-expanded", "false");
+test	層の全件を回す	2026-11-24T23:54:30.8442062Z     ^[[90m   |^[[39m             ^[[31m^^[[39m
+test	層の全件を回す	2026-11-24T23:54:30.8442389Z     ^[[90m154|^[[39m });
+test	層の全件を回す	2026-11-24T23:54:30.8442707Z     ^[[90m155|^[[39m
+test	層の全件を回す	2026-11-24T23:54:30.8442862Z 
+test	層の全件を回す	2026-11-24T23:54:30.8443144Z ^[[31m^[[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:30.8443362Z 
+test	層の全件を回す	2026-11-24T23:54:30.8444131Z ^[[41m^[[1m FAIL ^[[22m^[[49m tests/unit/frontend/src/features/docs/doc-view/components/sidebar-toggle.test.tsx^[[2m > ^[[22mtest_sidebar_toggle_when_closed
+test	層の全件を回す	2026-11-24T23:54:30.8445371Z ^[[31m^[[1mError^[[22m: ^[[2mexpect(^[[22m^[[31melement^[[31m^[[2m).not.toHaveAttribute(^[[22m^[[32m^[[32m"aria-controls"^[[32m^[[31m^[[2m) // element.hasAttribute("aria-controls")^[[22m
+test	層の全件を回す	2026-11-24T23:54:30.8446360Z 
+test	層の全件を回す	2026-11-24T23:54:30.8446541Z Expected the element not to have attribute:
+test	層の全件を回す	2026-11-24T23:54:30.8446896Z ^[[32m  aria-controls^[[31m
+test	層の全件を回す	2026-11-24T23:54:30.8447153Z Received:
+test	層の全件を回す	2026-11-24T23:54:30.8447455Z ^[[31m  aria-controls="doc-sidebar"^[[31m^[[39m
+test	層の全件を回す	2026-11-24T23:54:30.8448253Z ^[[36m ^[[2m❯^[[22m tests/unit/frontend/src/features/docs/doc-view/components/sidebar-toggle.test.tsx:^[[2m25:22^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:30.8448935Z     ^[[90m 23|^[[39m   const button = screen.getByRole("button", { name: "サイドバーを開く" });
+test	層の全件を回す	2026-11-24T23:54:30.8449517Z     ^[[90m 24|^[[39m   expect(button).toHaveAttribute("aria-expanded", "false");
+test	層の全件を回す	2026-11-24T23:54:30.8450087Z     ^[[90m 25|^[[39m   expect(button).not.toHaveAttribute("aria-controls");
+test	層の全件を回す	2026-11-24T23:54:30.8450555Z     ^[[90m   |^[[39m                      ^[[31m^^[[39m
+test	層の全件を回す	2026-11-24T23:54:30.8450965Z     ^[[90m 26|^[[39m   await userEvent.click(button);
+test	層の全件を回す	2026-11-24T23:54:30.8451547Z     ^[[90m 27|^[[39m
+test	層の全件を回す	2026-11-24T23:54:30.8451695Z 
+test	層の全件を回す	2026-11-24T23:54:30.8451975Z ^[[31m^[[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯^[[22m^[[39m
+test	層の全件を回す	2026-11-24T23:54:30.8452163Z 
+test	層の全件を回す	2026-11-24T23:54:30.8452170Z 
+test	層の全件を回す	2026-11-24T23:54:30.8452548Z ^[[2m Test Files ^[[22m ^[[1m^[[31m2 failed^[[39m^[[22m^[[2m | ^[[22m^[[1m^[[32m59 passed^[[39m^[[22m^[[90m (61)^[[39m
+test	層の全件を回す	2026-11-24T23:54:30.8453117Z ^[[2m      Tests ^[[22m ^[[1m^[[31m2 failed^[[39m^[[22m^[[2m | ^[[22m^[[1m^[[32m222 passed^[[39m^[[22m^[[90m (224)^[[39m
+test	層の全件を回す	2026-11-24T23:54:30.8453471Z ^[[2m   Start at ^[[22m 23:54:06
+test	層の全件を回す	2026-11-24T23:54:30.8453928Z ^[[2m   Duration ^[[22m 24.05s^[[2m (environment 49%, tests 22%, import 16%, setup 10%, transform 3%, worker 1%)^[[22m
+test	層の全件を回す	2026-11-24T23:54:30.8454201Z 
+test	層の全件を回す	2026-11-24T23:54:30.8454527Z ^[[2mEnvironment ^[[22m ^[[33mjsdom was created 61 times^[[39m^[[2m · 31.67s total, 49% of tracked time^[[22m
+test	層の全件を回す	2026-11-24T23:54:30.8455318Z ^[[2m            ^[[22m ^[[2mcreate it once per worker with ^[[22m^[[33mpool: 'vmThreads'^[[39m^[[2m (keeps per-file isolation) or ^[[22m^[[33misolate: false^[[39m^[[2m (shares it across files)^[[22m
+test	層の全件を回す	2026-11-24T23:54:30.8456044Z ^[[2m            ^[[22m ^[[2mlearn more: https://vitest.dev/guide/improving-performance#test-environments^[[22m
+test	層の全件を回す	2026-11-24T23:54:30.8456307Z 
+test	層の全件を回す	2026-11-24T23:54:31.6473184Z ##[error]Process completed with exit code 1.
+test	ログを成果物に上げる	﻿2026-11-24T23:54:31.6534295Z ##[group]Run actions/upload-artifact@v7
+test	ログを成果物に上げる	2026-11-24T23:54:31.6534521Z with:
+test	ログを成果物に上げる	2026-11-24T23:54:31.6534669Z   name: test-log
+test	ログを成果物に上げる	2026-11-24T23:54:31.6534823Z   path: test.log
+test	ログを成果物に上げる	2026-11-24T23:54:31.6534981Z   if-no-files-found: ignore
+test	ログを成果物に上げる	2026-11-24T23:54:31.6535159Z   compression-level: 6
+test	ログを成果物に上げる	2026-11-24T23:54:31.6535321Z   overwrite: false
+test	ログを成果物に上げる	2026-11-24T23:54:31.6535484Z   include-hidden-files: false
+test	ログを成果物に上げる	2026-11-24T23:54:31.6535658Z   archive: true
+test	ログを成果物に上げる	2026-11-24T23:54:31.6535813Z ##[endgroup]
+test	ログを成果物に上げる	2026-11-24T23:54:31.7610665Z With the provided path, there will be 1 file uploaded
+test	ログを成果物に上げる	2026-11-24T23:54:31.7613787Z Artifact name is valid!
+test	ログを成果物に上げる	2026-11-24T23:54:31.7614057Z Root directory input is valid!
+test	ログを成果物に上げる	2026-11-24T23:54:31.9832372Z Uploading artifact: test-log.zip
+test	ログを成果物に上げる	2026-11-24T23:54:31.9858393Z Beginning upload of artifact content to blob storage
+test	ログを成果物に上げる	2026-11-24T23:54:32.2632284Z Uploaded bytes 5335
+test	ログを成果物に上げる	2026-11-24T23:54:32.2868335Z Finished uploading artifact content to blob storage!
+test	ログを成果物に上げる	2026-11-24T23:54:32.2869121Z SHA256 digest of uploaded artifact is 3b81f7ed9ad9525fcad87484000c330093f14269041a9987d8b04fa7e56006b2
+test	ログを成果物に上げる	2026-11-24T23:54:32.2869758Z Finalizing artifact upload
+test	ログを成果物に上げる	2026-11-24T23:54:32.6103522Z Artifact test-log successfully finalized. Artifact ID 14976837365
+test	ログを成果物に上げる	2026-11-24T23:54:32.6104199Z Artifact test-log has been successfully uploaded! Final size is 5335 bytes. Artifact ID is 14976837365
+test	ログを成果物に上げる	2026-11-24T23:54:32.6108960Z Artifact download URL: https://github.com/shuhei1101/dev-docs/actions/runs/45513664437/artifacts/14976837365
+test	Post ブランチを取得する	﻿2026-11-24T23:54:32.6259798Z Post job cleanup.
+test	Post ブランチを取得する	2026-11-24T23:54:32.6871852Z [command]/usr/bin/git version
+test	Post ブランチを取得する	2026-11-24T23:54:32.6901984Z git version 2.56.1
+test	Post ブランチを取得する	2026-11-24T23:54:32.6924328Z Temporarily overriding HOME='/home/runner/work/_temp/43b91eee-3ac3-4328-abbe-e2ddfb3998f4' before making global git config changes
+test	Post ブランチを取得する	2026-11-24T23:54:32.6925217Z Adding repository directory to the temporary git global config as a safe directory
+test	Post ブランチを取得する	2026-11-24T23:54:32.6927338Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/dev-docs/dev-docs
+test	Post ブランチを取得する	2026-11-24T23:54:32.6951703Z Removing SSH command configuration
+test	Post ブランチを取得する	2026-11-24T23:54:32.6956111Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+test	Post ブランチを取得する	2026-11-24T23:54:32.6980340Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+test	Post ブランチを取得する	2026-11-24T23:54:32.7168041Z Removing HTTP extra header
+test	Post ブランチを取得する	2026-11-24T23:54:32.7171929Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+test	Post ブランチを取得する	2026-11-24T23:54:32.7196016Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+test	Post ブランチを取得する	2026-11-24T23:54:32.7369797Z Removing includeIf entries pointing to credentials config files
+test	Post ブランチを取得する	2026-11-24T23:54:32.7373732Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+test	Post ブランチを取得する	2026-11-24T23:54:32.7392123Z includeif.gitdir:/home/runner/work/dev-docs/dev-docs/.git.path
+test	Post ブランチを取得する	2026-11-24T23:54:32.7392590Z includeif.gitdir:/home/runner/work/dev-docs/dev-docs/.git/worktrees/*.path
+test	Post ブランチを取得する	2026-11-24T23:54:32.7392938Z includeif.gitdir:/github/workspace/.git.path
+test	Post ブランチを取得する	2026-11-24T23:54:32.7393294Z includeif.gitdir:/github/workspace/.git/worktrees/*.path
+test	Post ブランチを取得する	2026-11-24T23:54:32.7397539Z [command]/usr/bin/git config --local --get-all includeif.gitdir:/home/runner/work/dev-docs/dev-docs/.git.path
+test	Post ブランチを取得する	2026-11-24T23:54:32.7414088Z /home/runner/work/_temp/git-credentials-86e121f6-46d6-41ad-a43f-a39c8c2f70d6.config
+test	Post ブランチを取得する	2026-11-24T23:54:32.7420469Z [command]/usr/bin/git config --local --unset includeif.gitdir:/home/runner/work/dev-docs/dev-docs/.git.path \/home\/runner\/work\/_temp\/git\-credentials\-86e121f6\-46d6\-41ad\-a43f\-a39c8c2f70d6\.config
+test	Post ブランチを取得する	2026-11-24T23:54:32.7444519Z [command]/usr/bin/git config --local --get-all includeif.gitdir:/home/runner/work/dev-docs/dev-docs/.git/worktrees/*.path
+test	Post ブランチを取得する	2026-11-24T23:54:32.7463079Z /home/runner/work/_temp/git-credentials-86e121f6-46d6-41ad-a43f-a39c8c2f70d6.config
+test	Post ブランチを取得する	2026-11-24T23:54:32.7469220Z [command]/usr/bin/git config --local --unset includeif.gitdir:/home/runner/work/dev-docs/dev-docs/.git/worktrees/*.path \/home\/runner\/work\/_temp\/git\-credentials\-86e121f6\-46d6\-41ad\-a43f\-a39c8c2f70d6\.config
+test	Post ブランチを取得する	2026-11-24T23:54:32.7491733Z [command]/usr/bin/git config --local --get-all includeif.gitdir:/github/workspace/.git.path
+test	Post ブランチを取得する	2026-11-24T23:54:32.7508577Z /github/runner_temp/git-credentials-86e121f6-46d6-41ad-a43f-a39c8c2f70d6.config
+test	Post ブランチを取得する	2026-11-24T23:54:32.7513608Z [command]/usr/bin/git config --local --unset includeif.gitdir:/github/workspace/.git.path \/github\/runner_temp\/git\-credentials\-86e121f6\-46d6\-41ad\-a43f\-a39c8c2f70d6\.config
+test	Post ブランチを取得する	2026-11-24T23:54:32.7535154Z [command]/usr/bin/git config --local --get-all includeif.gitdir:/github/workspace/.git/worktrees/*.path
+test	Post ブランチを取得する	2026-11-24T23:54:32.7550465Z /github/runner_temp/git-credentials-86e121f6-46d6-41ad-a43f-a39c8c2f70d6.config
+test	Post ブランチを取得する	2026-11-24T23:54:32.7555823Z [command]/usr/bin/git config --local --unset includeif.gitdir:/github/workspace/.git/worktrees/*.path \/github\/runner_temp\/git\-credentials\-86e121f6\-46d6\-41ad\-a43f\-a39c8c2f70d6\.config
+test	Post ブランチを取得する	2026-11-24T23:54:32.7577891Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+test	Post ブランチを取得する	2026-11-24T23:54:32.7748021Z Removing credentials config '/home/runner/work/_temp/git-credentials-86e121f6-46d6-41ad-a43f-a39c8c2f70d6.config'
+test	Complete job	﻿2026-11-24T23:54:32.7856925Z Cleaning up orphan processes

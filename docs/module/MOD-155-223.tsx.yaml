@@ -26,7 +26,7 @@ components:
         type: string
         required: true
         description: メタデータの取得の `baseCommit`（変更の追加に指定する）
-    description: 行の値は、行と列の `editable` が両方真のときだけボタンにし、押すとその場の入力欄（`ref` でフォーカス）にする。Enter かフォーカスを外すと編集中の変更のストアに `update`（`docPath` は行の `docPath`）を追加し（変更の追加には `baseCommit` を指定する）、Esc で捨てる。`list` の列は行の値も追加の行も `, ` で区切って配列にする。追加の行は ID と列の入力欄を持ち、出すと ID の入力欄へフォーカスを移し、入力チェック（空・英小文字・数字・ハイフン・重複）を通して `add` を追加する。追加の行は `キャンセル` か行の中の Esc で入力を捨てて閉じ、`行追加` へフォーカスを戻す。行の要素の id は `metadata-row-{kind}-{id}`（編集中のパネルから移動する先）。行の名前（編集中の変更の `label`・削除の読み上げ名）は、`name`・`rule`・`path` の列のうち種類が持つ最初の列の値（値が空なら行の ID）で、編集しても変わらない。絞り込みは NFKC と小文字化してどれかの列に含む行を残す
+    description: 行の値は、行と列の `editable` が両方真のときだけボタンにし、押すとその場の入力欄（`ref` でフォーカス）にする。押した座標から `document.caretPositionFromPoint` で値の中の文字の位置を求め（ボタンの先頭からその位置までの `Range` の文字数）、フォーカスした後に `setSelectionRange` で入力位置を配置する。位置を求められないとき（ボタンの外のノード・値が空・キーボードで始めた `detail` が 0 のクリック）は末尾にする。入力欄にすでにフォーカスがあるときは入力位置を動かさない。Enter かフォーカスを外すと編集中の変更のストアに `update`（`docPath` は行の `docPath`）を追加し（変更の追加には `baseCommit` を指定する）、Esc で捨てる。`list` の列は行の値も追加の行も `, ` で区切って配列にする。追加の行は ID と列の入力欄を持ち、出すと ID の入力欄へフォーカスを移し、入力チェック（空・英小文字・数字・ハイフン・重複）を通して `add` を追加する。追加の行は `キャンセル` か行の中の Esc で入力を捨てて閉じ、`行追加` へフォーカスを戻す。行の要素の id は `metadata-row-{kind}-{id}`（編集中のパネルから移動する先）。行の名前（編集中の変更の `label`・削除の読み上げ名）は、`name`・`rule`・`path` の列のうち種類が持つ最初の列の値（値が空なら行の ID）で、編集しても変わらない。絞り込みは NFKC と小文字化してどれかの列に含む行を残す
     unit_tests:
       - name: test_metadata_table_when_edited
         case: 正常
@@ -65,6 +65,18 @@ components:
         condition: '`行追加` を押し、ID を入力して Esc'
         mock: なし
         expected: 追加の行が閉じ、`行追加` にフォーカスがあり、ストアに追加されない
+      - name: test_metadata_table_when_caret_at_clicked
+        case: 正常
+        summary: 押した位置の入力位置
+        condition: '`document.caretPositionFromPoint` が値 `project-index` のテキストノードの 7 文字目を返却するようにして、その列を押す'
+        mock: '`document.caretPositionFromPoint`。jsdom には無い（`typeof` が `undefined` であることを確認済み）ため、`Object.defineProperty(document, "caretPositionFromPoint", { value: vi.fn(() => ({ offsetNode: テキストノード, offset: 7 })), configurable: true })` で配置し、テストの後に `delete` で戻す'
+        expected: 入力欄にフォーカスがあり、`selectionStart`・`selectionEnd` が 7
+      - name: test_metadata_table_when_caret_keyboard
+        case: 正常
+        summary: キーボードで始めた入力位置
+        condition: 列のボタンにフォーカスして Enter
+        mock: なし
+        expected: 入力欄の `selectionStart` が値の文字数（末尾）
 refs:
   - to: SCR-155-4
     type: requires

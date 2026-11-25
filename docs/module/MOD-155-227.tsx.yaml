@@ -1,0 +1,58 @@
+id: MOD-155-227
+title: 画面 / 文書の画面 / sidebar-resizer.tsx
+lead: サイドバーと本文の境目（ドラッグ・矢印キーでサイドバーの幅を変える）を受け持ち、文書の画面の sidebar-resizer.tsx を修正するときに参照する。
+components:
+  - name: SidebarResizer
+    title: サイドバーの境目
+    kind: コンポーネント
+    container: features/docs/doc-view/components/sidebar-resizer.tsx
+    usecase: 文書を参照する
+    role: 部品
+    summary: 縦の線の `role="separator"`。ドラッグ・←→・Home / End で幅を変え、ダブルクリックで既定の幅に戻す
+    props:
+      - name: width
+        type: number
+        required: true
+        description: 今のサイドバーの幅（CSS px。`aria-valuenow`）
+      - name: onWidthChange
+        type: '(width: number) => void'
+        required: true
+        description: 最小・最大の間に収めた新しい幅
+    description: '`pointerdown`（主ボタンだけ）で `preventDefault`（サイドバーの文字の選択を始めない）して `setPointerCapture` し、押したときの `clientX` と幅を `useRef` に持って、`pointermove` で `clampSidebarWidth(幅 + 移動量)` を渡す。`pointerup`・`pointercancel` で終える。`keydown` は ←→ を 16px、Home を最小、End を最大にして `preventDefault` する。`aria-label` は `サイドバーの幅`、`aria-valuemin`・`aria-valuemax` は `SIDEBAR_WIDTH`、`tabIndex` は 0。線はホバー・ドラッグ中は `bg-primary`、フォーカス中は `bg-ring` で太くする。行の高さいっぱいに伸ばす（`self-stretch`）'
+    unit_tests:
+      - name: test_sidebar_resizer_when_dragged
+        case: 正常
+        summary: ドラッグ
+        condition: 幅 240 で `clientX` 100 で押し、150 へ動かす
+        mock: '`onWidthChange`（`vi.fn`）'
+        expected: '`onWidthChange` が 290 で呼ばれる'
+      - name: test_sidebar_resizer_when_dragged_over_max
+        case: 正常
+        summary: 最大を超えるドラッグ
+        condition: 幅 400 で 200px 右へ動かす
+        mock: '`onWidthChange`（`vi.fn`）'
+        expected: '`onWidthChange` が 480 で呼ばれる'
+      - name: test_sidebar_resizer_when_key
+        case: 正常
+        summary: キーボード
+        condition: 幅 240 で →・Home・End を押す
+        mock: '`onWidthChange`（`vi.fn`）'
+        expected: '`onWidthChange` が 256・192・480 で呼ばれる'
+      - name: test_sidebar_resizer_when_double_clicked
+        case: 正常
+        summary: 既定の幅に戻す
+        condition: 幅 400 でダブルクリック
+        mock: '`onWidthChange`（`vi.fn`）'
+        expected: '`onWidthChange` が 240 で呼ばれる'
+refs:
+  - to: SCR-155-1
+    item: elements[サイドバーの境目]
+    type: requires
+    when: 境目の振る舞いを変えるときに、画面設計の要素と突き合わせる。
+tags:
+  - name: topic:サイドバー
+    main: true
+  - name: topic:文書
+  - name: topic:画面
+test_files:
+  - tests/unit/frontend/src/features/docs/doc-view/components/sidebar-resizer.test.tsx

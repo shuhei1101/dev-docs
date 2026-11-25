@@ -452,3 +452,14 @@ export const EmptyKind: Story = {
     }),
   },
 };
+
+/** 行の値を押して編集を始めたとき。入力欄の入力位置が押した文字の位置に来る */
+export const EditingCell: Story = {
+  parameters: { msw: listed(metadata) },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(
+      await canvas.findByRole("button", { name: "説明 project-index.yaml を持つフォルダ 1 つ を編集" }),
+    );
+  },
+};

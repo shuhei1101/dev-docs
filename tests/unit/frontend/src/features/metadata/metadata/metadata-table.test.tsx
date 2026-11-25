@@ -1,10 +1,10 @@
 import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { beforeEach, expect, test } from "vitest";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 import { MetadataTable } from "@/features/metadata/metadata/metadata-table";
 import { usePendingEditsStore } from "@/features/metadata/shared/pending-edits-store";
-import { metadataResponse } from "@tests/helpers/fixtures";
+import { metadataResponse, metadataRow } from "@tests/helpers/fixtures";
 import { renderInRouter } from "@tests/helpers/render";
 
 const kindOf = (id: string) => {
@@ -81,4 +81,49 @@ test("test_metadata_table_when_add_cancel", async () => {
   expect(screen.queryByRole("textbox", { name: "ID" })).toBeNull();
   expect(screen.getByRole("button", { name: "行追加" })).toHaveFocus();
   expect(usePendingEditsStore.getState().bySource.sample ?? []).toHaveLength(0);
+});
+
+const tagsWithValue = (value: string) =>
+  ({
+    ...metadataResponse().kinds.find((item) => item.id === "tags"),
+    rows: [metadataRow("n1", { path: "notes/n1.yaml", tags: [value] })],
+  }) as never;
+
+const textNodeOf = (element: HTMLElement, text: string): Text => {
+  const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
+  for (let node = walker.nextNode(); node !== null; node = walker.nextNode()) {
+    if (node.textContent === text) return node as Text;
+  }
+  throw new Error(text);
+};
+
+describe("押した位置", () => {
+  afterEach(() => {
+    delete (document as { caretPositionFromPoint?: unknown }).caretPositionFromPoint;
+  });
+
+  test("test_metadata_table_when_caret_at_clicked", async () => {
+    renderInRouter(<MetadataTable source="sample" kind={tagsWithValue("project-index")} query="" baseCommit="aaa1111" />);
+    const button = await screen.findByRole("button", { name: "タグ project-index を編集" });
+    const offsetNode = textNodeOf(button, "project-index");
+    Object.defineProperty(document, "caretPositionFromPoint", {
+      value: vi.fn(() => ({ offsetNode, offset: 7 })),
+      configurable: true,
+    });
+
+    await userEvent.click(button);
+
+    const input = screen.getByRole<HTMLInputElement>("textbox");
+    expect(input).toHaveFocus();
+    expect([input.selectionStart, input.selectionEnd]).toEqual([7, 7]);
+  });
+});
+
+test("test_metadata_table_when_caret_keyboard", async () => {
+  renderInRouter(<MetadataTable source="sample" kind={tagsWithValue("project-index")} query="" baseCommit="aaa1111" />);
+  (await screen.findByRole("button", { name: "タグ project-index を編集" })).focus();
+
+  await userEvent.keyboard("{Enter}");
+
+  expect(screen.getByRole<HTMLInputElement>("textbox").selectionStart).toBe("project-index".length);
 });

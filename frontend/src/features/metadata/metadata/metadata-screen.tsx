@@ -156,7 +156,7 @@ export const MetadataScreen = ({ source }: Props) => {
         onColorSchemeToggle={() => setColorScheme(NEXT_SCHEME[colorScheme])}
         onPendingPanelToggle={() => setSearch({ panel: panelOpen ? undefined : "edits" })}
       />
-      <main id="main" tabIndex={-1} className="mx-auto flex max-w-6xl min-w-0 flex-col gap-4 p-4">
+      <main id="main" tabIndex={-1} className="flex min-w-0 flex-col gap-4 p-4">
         <h1 className="text-2xl font-semibold">{source} のメタデータ</h1>
         <div className="flex max-w-sm flex-col gap-1.5">
           <Label htmlFor="metadata-filter">絞り込み</Label>

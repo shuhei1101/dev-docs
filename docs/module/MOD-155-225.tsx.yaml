@@ -25,7 +25,7 @@ components:
         initial: URL の `panel` が `edits`
         description: 編集中のパネル
         notes: URL の検索条件（文書の画面から開いてパネルを開くため）
-    description: 種類のタブは URL の `tab` に保つ。読み込み中の表示は取得の待ちが 1 秒を超えたときだけ出す。種類の表には取得の `baseCommit` を指定する。取得が 404 なら見つからない画面、503 なら project-index から受け取れないときの表示（文書の画面と同じ部品）、それ以外の失敗は取得の失敗の表示を出す。変更の行へ移動は、タブを切り替え、絞り込みを空にし、描いた後に `metadata-row-{kind}-{id}` へスクロールしてフォーカスする。ページのタイトルは `メタデータ | {source} | dev-docs`
+    description: 種類のタブは URL の `tab` に保つ。読み込み中の表示は取得の待ちが 1 秒を超えたときだけ出す。種類の表には取得の `baseCommit` を指定する。取得が 404 なら見つからない画面、503 なら project-index から受け取れないときの表示（文書の画面と同じ部品）、それ以外の失敗は取得の失敗の表示を出す。変更の行へ移動は、タブを切り替え、絞り込みを空にし、描いた後に `metadata-row-{kind}-{id}` へスクロールしてフォーカスする。ページのタイトルは `メタデータ | {source} | dev-docs`。本文（`<main>`）は幅の上限を持たず、画面の横幅から左右の余白を除いた幅にする（絞り込みの入力欄だけ `max-w-sm`）
     unit_tests:
       - name: test_metadata_screen
         case: 正常
