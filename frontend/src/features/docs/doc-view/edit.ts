@@ -1,6 +1,5 @@
 import { keepPreviousData, queryOptions } from "@tanstack/react-query";
 
-import { docIdOf } from "@/features/docs/shared/comments/comment-store";
 import { type PendingEdit, usePendingEdits, usePendingEditsStore } from "@/features/metadata/shared/pending-edits-store";
 import { apiClient } from "@/shared/adapters/api-client";
 import type { DocumentResponse } from "@/shared/api/generated/model";
@@ -40,7 +39,8 @@ export const WHOLE_FILE = "@file";
 export const docEditOf = (doc: DocumentResponse): DocEdit | null =>
   (doc as DocumentResponse & { edit?: DocEdit }).edit ?? null;
 
-const keyOf = (doc: DocumentResponse, path: string) => `body:${docIdOf(doc)}:${path}`;
+/** 本文の変更の key（リビジョンによらず、文書のパスと項目のパスで 1 つ） */
+const keyOf = (doc: DocumentResponse, path: string) => `body:${doc.path}:${path}`;
 
 type BodyEditArgs = { doc: DocumentResponse; edit: DocEdit; path: string; label: string; before: string; value: string };
 
@@ -50,7 +50,7 @@ export const upsertBodyEdit = ({ doc, edit, path, label, before, value }: BodyEd
     key: keyOf(doc, path),
     kind: "body",
     op: "update",
-    docId: docIdOf(doc),
+    docId: doc.path,
     docKind: edit.kind,
     expectedVersion: edit.version,
     docPath: doc.path,

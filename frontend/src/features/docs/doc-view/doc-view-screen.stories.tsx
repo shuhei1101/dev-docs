@@ -480,10 +480,10 @@ const withEdits = (items: PendingEdit[]) => () => {
 };
 
 const bodyEdit = (path: string, label: string, before: string, value: string, docPath = "docs/a"): PendingEdit => ({
-  key: `body:sample:${docPath}:${path}`,
+  key: `body:${docPath}:${path}`,
   kind: "body",
   op: "update",
-  docId: `sample:${docPath}`,
+  docId: docPath,
   docKind: "rule",
   expectedVersion: "a1b2c3",
   docPath,
@@ -656,7 +656,7 @@ export const BodyEditInvalid: Story = {
             title: "EditsRejectedError",
             detail: "検査に合格しませんでした",
             nextSteps: [],
-            errors: [{ key: "body:sample:docs/a:description", path: "description", reason: "空にできません" }],
+            errors: [{ key: "body:docs/a:description", path: "description", reason: "空にできません" }],
           },
           { status: 422, headers: { "Content-Type": "application/problem+json" } },
         ),
