@@ -7,7 +7,8 @@ import type { Edit } from "@/shared/api/generated/model";
 export type PendingEdit = {
   /** `{kind}:{docId}:{op}` */
   key: string;
-  kind: "terms" | "aliases" | "tags" | "rules" | "files";
+  /** `body` は文書の画面で編集した本文の変更 */
+  kind: "terms" | "aliases" | "tags" | "rules" | "files" | "body";
   op: "update" | "add" | "delete";
   docId: string;
   /** `update`・`delete` は行の `docKind`、`add` は種類の `createKind` */
@@ -144,7 +145,8 @@ export const toCommitEdits = (edits: PendingEdit[]): Edit[] =>
   edits.map((edit) => {
     const base = {
       key: edit.key,
-      kind: edit.kind,
+      // 本文の変更の種類は直コミットの API へまだ加えていない
+      kind: edit.kind as Edit["kind"],
       op: edit.op,
       docId: edit.docId,
       docKind: edit.docKind,

@@ -3,11 +3,14 @@ import { HttpResponse, http } from "msw";
 import { expect, userEvent, within } from "storybook/test";
 
 import { DocViewScreen } from "@/features/docs/doc-view/doc-view-screen";
+import type { DocEdit } from "@/features/docs/doc-view/edit";
+import { type PendingEdit, usePendingEditsStore } from "@/features/metadata/shared/pending-edits-store";
 import { SIDEBAR_WIDTH, usePreferencesStore } from "@/shared/stores/preferences";
 
 const DOCUMENT = "*/_api/sources/:source/docs/*";
 const REFS = "*/_api/sources/:source/refs";
 const SETTINGS = "*/_api/settings/sources";
+const COMMITS = "*/_api/sources/:source/commits";
 
 const page = (title: string, path: string) => ({
   kind: "page" as const,
@@ -349,5 +352,221 @@ export const DeepNestedGroups: Story = {
     await expect(
       await canvas.findByRole("button", { name: "画面の API" }),
     ).toHaveAttribute("aria-expanded", "true");
+  },
+};
+
+/** 規約の文書（YAML）の本文。表示した場所で修正できる項目を持つ */
+const ruleEdit: DocEdit = {
+  editable: true,
+  language: "yaml",
+  kind: "rule",
+  version: "a1b2c3",
+  source: [
+    "id: rule-sample",
+    "kind: rule",
+    "name: 文書の編集",
+    "description: 文書の画面から本文を編集する決まりを定め、本文を編集するときに参照する。",
+    "status: current",
+    "items:",
+    "  - id: overview",
+    "    name: 概要",
+    "    body: |-",
+    "      文書の画面から、どの種類の文書の本文も編集できる。",
+    "      編集した内容は編集中のパネルからまとめてコミットする。",
+    "rows:",
+    "  - word: 直す",
+    "    replacement: 修正",
+    "  - word: 消す",
+    "    replacement: 削除",
+    "",
+  ].join("\n"),
+  blocks: [
+    { path: "name", label: "名前", type: "string", value: "文書の編集" },
+    {
+      path: "description",
+      label: "説明",
+      type: "string",
+      value: "文書の画面から本文を編集する決まりを定め、本文を編集するときに参照する。",
+    },
+    { path: "status", label: "状態", type: "enum", value: "current", options: ["current", "draft", "deprecated"] },
+    {
+      path: "items[overview].body",
+      label: "概要",
+      type: "markdown",
+      value: "文書の画面から、どの種類の文書の本文も編集できる。\n編集した内容は編集中のパネルからまとめてコミットする。",
+    },
+    {
+      path: "rows",
+      label: "単語の対応表",
+      type: "table",
+      columns: ["word", "replacement"],
+      value: [
+        { word: "直す", replacement: "修正" },
+        { word: "消す", replacement: "削除" },
+      ],
+    },
+  ],
+};
+
+const ruleMarkdown = ["# 文書の編集", "", "## 概要", "", "文書の画面から、どの種類の文書の本文も編集できる。", ""].join("\n");
+
+const ruleDoc = (edit: DocEdit = ruleEdit) => documentResponse({ path: "docs/a", markdown: ruleMarkdown, edit });
+
+/** ガイドの文書（Markdown）。ファイル全体の編集だけを持つ */
+const guideDoc = documentResponse({
+  path: "docs/a",
+  markdown: "# 画面で参照する\n\n## 手順\n\n1. 文書を開く\n2. 編集を押す\n",
+  edit: {
+    editable: true,
+    language: "markdown",
+    kind: "guide",
+    version: "d4e5f6",
+    source: "# 画面で参照する\n\n## 手順\n\n1. 文書を開く\n2. 編集を押す\n",
+    blocks: [],
+  } satisfies DocEdit,
+});
+
+/** 編集中の変更をストアに入れてから描く */
+const withEdits = (items: PendingEdit[]) => () => {
+  usePendingEditsStore.setState({ bySource: { sample: items }, baseCommitBySource: { sample: "8b1d4e0" } });
+  return () => usePendingEditsStore.setState({ bySource: {}, baseCommitBySource: {} });
+};
+
+const bodyEdits: PendingEdit[] = [
+  {
+    key: "body:sample:docs/a:name",
+    kind: "body",
+    op: "update",
+    docId: "sample:docs/a",
+    docKind: "rule",
+    expectedVersion: "a1b2c3",
+    docPath: "docs/a",
+    values: { name: "文書の本文の編集" },
+    before: { name: "文書の編集" },
+    label: "名前（docs/a）",
+  },
+  {
+    key: "body:sample:docs/b:@file",
+    kind: "body",
+    op: "update",
+    docId: "sample:docs/b",
+    docKind: "guide",
+    expectedVersion: "d4e5f6",
+    docPath: "docs/b",
+    values: { "@file": "# 画面で参照する（変更後）" },
+    before: { "@file": "# 画面で参照する" },
+    label: "ファイル全体（docs/b）",
+  },
+];
+
+/** 編集できる文書には、タイトルの横に編集のボタンが出る */
+export const EditButton: Story = {
+  parameters: { msw: handlers(ruleDoc()) },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(await canvas.findByRole("button", { name: "編集" })).toBeInTheDocument();
+  },
+};
+
+/** 書き込みの API が書き込めない種類（`write_api_kinds` に無い・`body: false`・SQLite の行）は、編集のボタンを出さない */
+export const NotEditable: Story = {
+  parameters: { msw: handlers(ruleDoc({ ...ruleEdit, editable: false })) },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await canvas.findByRole("heading", { level: 1 });
+    await expect(canvas.queryByRole("button", { name: "編集" })).toBeNull();
+  },
+};
+
+/** YAML の文書の表示した場所での修正。項目ごとにスキーマの型から選んだ部品で修正する */
+export const EditFields: Story = {
+  beforeEach: withEdits([]),
+  parameters: { initialPath: "/sample/docs/a?edit=fields", msw: handlers(ruleDoc()) },
+};
+
+/** 短い文字列の項目をその場で修正しているとき */
+export const EditFieldsInline: Story = {
+  beforeEach: withEdits([]),
+  parameters: { initialPath: "/sample/docs/a?edit=fields", msw: handlers(ruleDoc()) },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(await canvas.findByRole("button", { name: "名前 を編集" }));
+    await expect(canvas.getByRole("textbox", { name: "名前" })).toHaveValue("文書の編集");
+  },
+};
+
+/** Markdown の文字列の項目を、画面の横のパネルでエディタとプレビューを並べて編集する */
+export const EditMarkdownField: Story = {
+  beforeEach: withEdits([]),
+  parameters: { initialPath: "/sample/docs/a?edit=fields", msw: handlers(ruleDoc()) },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(await canvas.findByRole("button", { name: "概要 を編集" }));
+    const body = within(canvasElement.ownerDocument.body);
+    await expect(await body.findByRole("dialog", { name: "概要 の編集" })).toBeInTheDocument();
+  },
+};
+
+/** YAML の文書のファイル全体の編集。エディタとプレビューを左右に並べる */
+export const EditWholeFileYaml: Story = {
+  beforeEach: withEdits([]),
+  parameters: { initialPath: "/sample/docs/a?edit=file", msw: handlers(ruleDoc()) },
+};
+
+/** ファイル全体の編集で YAML として解析できない書き換えをしたとき。エディタの上に理由を出し、適用できない */
+export const EditWholeFileInvalid: Story = {
+  beforeEach: withEdits([]),
+  parameters: {
+    initialPath: "/sample/docs/a?edit=file",
+    msw: handlers(ruleDoc({ ...ruleEdit, source: ruleEdit.source.replace("  - word: 消す", "\t- word: 消す") })),
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(await canvas.findByRole("alert")).toHaveTextContent("YAML として解析できません");
+  },
+};
+
+/** Markdown の文書はファイル全体の編集だけを持つ */
+export const EditMarkdownDoc: Story = {
+  beforeEach: withEdits([]),
+  parameters: { initialPath: "/sample/docs/a?edit=file", msw: handlers(guideDoc) },
+};
+
+/** 文書の画面で編集中のパネルを開いたとき。本文の変更をメタデータの変更と同じパネルに並べる */
+export const PendingPanelOnDocView: Story = {
+  beforeEach: withEdits(bodyEdits),
+  parameters: { msw: handlers(ruleDoc()) },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(await canvas.findByRole("button", { name: "編集中 2 件" }));
+  },
+};
+
+/** 本文の変更が検査に合格しないとき。差分確認で、違反した項目のパスと理由を変更に出す */
+export const BodyEditInvalid: Story = {
+  beforeEach: withEdits(bodyEdits),
+  parameters: {
+    msw: [
+      ...handlers(ruleDoc()),
+      http.post(COMMITS, () =>
+        HttpResponse.json(
+          {
+            type: "about:blank",
+            status: 422,
+            title: "EditsRejectedError",
+            detail: "検査に合格しませんでした",
+            nextSteps: [],
+            errors: [{ key: "body:sample:docs/a:name", path: "name", reason: "空にできません" }],
+          },
+          { status: 422, headers: { "Content-Type": "application/problem+json" } },
+        ),
+      ),
+    ],
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(await canvas.findByRole("button", { name: "編集中 2 件" }));
+    const body = within(canvasElement.ownerDocument.body);
+    await userEvent.click(await body.findByRole("button", { name: "差分確認" }));
   },
 };
