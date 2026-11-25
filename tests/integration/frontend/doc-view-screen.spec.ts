@@ -391,8 +391,8 @@ const withGroups: Handler = ({ path, query }) => ({
   }),
 });
 
-const groupButton = (page: Page, name: string) =>
-  page.getByRole("navigation", { name: "文書の一覧" }).getByRole("button", { name, exact: true });
+const navList = (page: Page) => page.getByRole("navigation", { name: "文書の一覧" });
+const groupButton = (page: Page, name: string) => navList(page).getByRole("button", { name, exact: true });
 
 test.describe("group の開閉ボタン", () => {
   // 開いている文書を含む group を開き、ほかの group を閉じて始める。山形のアイコンは読み上げから除外する（正常系）
@@ -400,7 +400,7 @@ test.describe("group の開閉ボタン", () => {
     await openDoc(page, "/sample/docs/doc-1", { document: withGroups });
     await expect(groupButton(page, "A")).toHaveAttribute("aria-expanded", "true");
     await expect(groupButton(page, "B")).toHaveAttribute("aria-expanded", "false");
-    await expect(page.getByRole("link", { name: "文書 5" })).toHaveCount(0);
+    await expect(navList(page).getByRole("link", { name: "文書 5" })).toHaveCount(0);
     await expect(groupButton(page, "A").locator("svg")).toHaveAttribute("aria-hidden", "true");
   });
 
@@ -412,10 +412,10 @@ test.describe("group の開閉ボタン", () => {
     await groupButton(page, "B").click();
 
     await expect(groupButton(page, "B")).toHaveAttribute("aria-expanded", "true");
-    await expect(page.getByRole("link", { name: "文書 5" })).toBeVisible();
+    await expect(navList(page).getByRole("link", { name: "文書 5" })).toBeVisible();
     await groupButton(page, "A").click();
     await expect(groupButton(page, "A")).toHaveAttribute("aria-expanded", "false");
-    await expect(page.getByRole("link", { name: "文書 1" })).toHaveCount(0);
+    await expect(navList(page).getByRole("link", { name: "文書 1" })).toHaveCount(0);
     expect(page.url()).toBe(url);
   });
 
@@ -434,7 +434,7 @@ test.describe("group の開閉ボタン", () => {
   test("group_opens_when_current_changed", async ({ page }) => {
     await openDoc(page, "/sample/docs/doc-1", { document: withGroups });
     await groupButton(page, "B").click();
-    await page.getByRole("link", { name: "文書 5" }).click();
+    await navList(page).getByRole("link", { name: "文書 5" }).click();
     await expect(page).toHaveURL(/\/sample\/docs\/doc-5/);
     await groupButton(page, "A").click();
     await expect(groupButton(page, "A")).toHaveAttribute("aria-expanded", "false");
@@ -443,7 +443,7 @@ test.describe("group の開閉ボタン", () => {
 
     await expect(page).toHaveURL(/\/sample\/docs\/doc-1/);
     await expect(groupButton(page, "A")).toHaveAttribute("aria-expanded", "true");
-    await expect(page.getByRole("link", { name: "文書 1" })).toHaveAttribute("aria-current", "page");
+    await expect(navList(page).getByRole("link", { name: "文書 1" })).toHaveAttribute("aria-current", "page");
   });
 
   // 差分の表示を始めて変化のマーカーが配下に現れたら、その group を開く（正常系）
@@ -465,7 +465,7 @@ test.describe("group の開閉ボタン", () => {
     await expect(groupButton(page, "B")).toHaveAttribute("aria-expanded", "true");
     await groupButton(page, "B").click();
 
-    await page.getByRole("link", { name: "文書 2" }).click();
+    await navList(page).getByRole("link", { name: "文書 2" }).click();
 
     await expect(page).toHaveURL(/\/sample\/docs\/doc-2/);
     await expect(groupButton(page, "B")).toHaveAttribute("aria-expanded", "false");
@@ -477,7 +477,7 @@ test.describe("group の開閉ボタン", () => {
     for (const name of ["L1", "L2", "L3", "L4"]) {
       await expect(groupButton(page, name)).toHaveAttribute("aria-expanded", "true");
     }
-    const deep = page.getByRole("link", { name: "深い文書" });
+    const deep = navList(page).getByRole("link", { name: "深い文書" });
     await expect(deep).toHaveAttribute("aria-current", "page");
     const l1 = await boxOf(groupButton(page, "L1"));
     const l4 = await boxOf(groupButton(page, "L4"));
