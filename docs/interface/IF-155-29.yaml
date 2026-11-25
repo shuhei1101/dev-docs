@@ -75,7 +75,7 @@ request:
     location: body
     default: '`{}`'
     description: 修正後の値。キーはメタデータの取得の `columns[].key` で、`columns[].type` が `list` の列は文字列の配列にする。`body` はキーが項目のパス（文書の取得の `edit.blocks[].path`・`edit.titleBlock.path`）か、ファイル全体の `@file` で、`table` の項目は行の配列にする
-    constraints: '制約「修正できるキー」のキーだけ。`@file` はほかのキーと並べない'
+    constraints: '制約「修正できるキー」のキーだけ。`@file` はほかのキーと並べず、同じ `docId` のほかの `body` の変更とも同じ要求に並べない'
   - name: message
     type: str
     required: false
@@ -174,7 +174,7 @@ status_codes:
   - code: '200'
     condition: 'コミット・プッシュした、衝突して修正をブランチに残した（`conflict` を入れる）、または `dryRun: true` で検査に合格した'
   - code: '400'
-    condition: '本文の型の検証に通らない（`edits` が空・`key` の重複・`op` と `kind` の組み合わせ・必須の欠け・修正できないキー・元のキーへ戻せない列・YAML として読み込めない `@file`・`dryRun: false` で `message` が空）'
+    condition: '本文の型の検証に通らない（`edits` が空・`key` の重複・`op` と `kind` の組み合わせ・必須の欠け・修正できないキー・元のキーへ戻せない列・YAML として読み込めない `@file`・同じ文書の `@file` とほかの `body` の変更が並ぶ要求・`dryRun: false` で `message` が空）'
     notes: project-index へ送信しない。`errors[]` に `{key, path, reason}`（`key` は該当する変更、本文全体の違反は `null`）
   - code: '403'
     condition: 別のオリジンの要求、または project-index が直コミットを許可していない種類があると返却した（`DirectCommitNotPermittedError`）
@@ -219,7 +219,7 @@ constraints:
   - item: ログ
     constraint: 送信ごとに、配信元の ID・`dryRun`・変更の件数・project-index の状態コード・コミットの SHA（待ちの上限で打ち切ったときはその旨）を 1 行のログに出力する。値の中身とコミットの説明は出力しない
   - item: 項目ごとのバージョン
-    constraint: '`update` の変更ごとに、project-index の文書の取得（`GET /sources/{source}/docs/{docPath}?ref={baseCommit}&id={docId}`）で編集を始めたときの `itemVersions` を取得し、`set` に組み立てた列が戻る文書の最上位のキー（制約「書き込みと削除への変換」の対応で戻したキー）だけのバージョンの辞書を `expected_version` にする。そのキーのどれかが `itemVersions` に無い変更（編集を始めたときの文書に無い項目を加える）は、辞書ではなく要求の `expectedVersion`（文書の全体のバージョン）を送信する（空の辞書は project-index の照合で常に一致し、ほかの変更が同じ項目を加えていても衝突にならないため）。`body` の項目のパスの変更は、項目のパスの最上位のキー（`items[0].body` は `items`）のバージョンの辞書にし、`@file` は要求の `expectedVersion`（文書の全体のバージョン）を送信する。`delete` は `expectedVersion`（文書の全体のバージョン）のまま、`add` は使用しない'
+    constraint: '`update` の変更ごとに、project-index の文書の取得（`GET /sources/{source}/docs/{docPath}?ref={baseCommit}&id={docId}`）で編集を始めたときの `itemVersions` を取得し、`set` に組み立てた列が戻る文書の最上位のキー（制約「書き込みと削除への変換」の対応で戻したキー）だけのバージョンの辞書を `expected_version` にする。そのキーのどれかが `itemVersions` に無い変更（編集を始めたときの文書に無い項目を加える）は、辞書ではなく要求の `expectedVersion`（文書の全体のバージョン）を送信する（空の辞書は project-index の照合で常に一致し、ほかの変更が同じ項目を加えていても衝突にならないため）。`body` の項目のパスの変更は、項目のパスの最上位のキー（`#items[i1].body` は `items`）のバージョンの辞書にし、`@file` は要求の `expectedVersion`（文書の全体のバージョン）を送信する。`delete` は `expectedVersion`（文書の全体のバージョン）のまま、`add` は使用しない'
     notes: 文書の取得が 404 の変更は、project-index へ送信せずに 404 の `errors[]` に入れる
     decided_by: NFR-155-1#requirements[project-index への問い合わせの制限時間]
   - item: 衝突の結果への変換
@@ -684,7 +684,7 @@ flows:
         description: 正常系の sample に、文書の取得の正常系（本文の編集の情報を返す）と同じ `note` のスキーマと Markdown の種類 `guide` を加え、`direct_commit.kinds` と端末の設定の `write_api_kinds` を `[note, terms, guide]` にしたもの
         notes: '`note` の文書 n1・n2 と `guide.md`'
       - name: 入力
-        description: n1 の `summary`・`rows`（2 行目の `replacement` を変えた行の配列）・`items[0].body` の `body` の変更 3 件、n2 の `@file`（`summary` を書き換えた YAML）、`guide.md` の `@file`（1 行書き換えた本文）と `message`
+        description: n1 の `summary`・`rows`（2 行目の `replacement` を変えた行の配列）・`#items[i1].body` の `body` の変更 3 件、n2 の `@file`（`summary` を書き換えた YAML）、`guide.md` の `@file`（1 行書き換えた本文）と `message`
     flow: |-
       <!-- map -->
 
@@ -707,7 +707,7 @@ flows:
     expected:
       - 200 で `applied` が `true`、`results` に 5 件の変更の `key` と `updated` がある
       - リモートの `develop` に 1 コミットだけ増え、変わったファイルが n1・n2 の YAML と `guide.md` だけ
-      - n1 の `summary`・`rows`・`items[0].body` が送信した値で、修正していない項目の値が変わらない
+      - n1 の `summary`・`rows`・`#items[i1].body` が送信した値で、修正していない項目の値が変わらない
       - n2 の `summary` が書き換えた値、`guide.md` の内容が送信した本文
     test: test_normal_when_document_body_edited
   - name: 正常系（ファイル全体の変更の後に同じ文書の別の項目が変わっている）
@@ -799,6 +799,31 @@ flows:
       - '`guide.md` の変更の `key` は `errors` に無い'
       - リモートとワークツリーが変わらない
     test: test_error_when_document_body_invalid
+  - name: 異常系（同じ文書のファイル全体と項目の変更が並ぶ・400）
+    summary: 同じ文書の `@file` と項目のパスの変更が並ぶ要求を、project-index へ送信せずに断る
+    setup:
+      - name: Mock
+        description: 受けた要求を記録する project-index の書き込みの API のモック
+      - name: 入力
+        description: n1 の `@file` の変更と、n1 の `summary` の変更と `message`
+    flow: |-
+      <!-- map -->
+
+      ```mermaid
+      sequenceDiagram
+        participant C as クライアント
+        participant E as POST /_api/sources/{source}/commits
+
+        C->>E: edits（n1 の @file・n1 の summary）, message
+        E->>E: 同じ文書の @file と項目の変更が並ぶ
+        E-->>C: 400 problem+json（errors[]）
+      ```
+
+      <!-- /map -->
+    expected:
+      - 400 で、`errors` に n1 の `@file` の変更の `key` と `summary` の変更の `key` がある
+      - モックが要求を受けていない
+    test: test_error_when_whole_file_and_item_edits_mixed
 refs:
   - to: API-155-1
     type: requires

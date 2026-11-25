@@ -888,7 +888,7 @@ flows:
         description: '`note`（YAML）と、管理用の YAML `files.yml` を `records: files`・`body_file: path` で指す `guide`（Markdown）を持ち、`direct_commit.kinds` と端末の設定の `write_api_kinds` が `[note, guide]` の sample'
         notes: '`note` のスキーマは、名前の項目 `title`、`enum` を持つ `status`、文字列の `summary`、`items[]`（`id` を `x-key` にし、Markdown の文字列の `body` を持つ）、`rows[]`（`word`・`replacement`）を持つ'
       - name: 文書
-        description: '`note` の文書 n1 と、本文が 3 行の `guide.md`'
+        description: '`note` の文書 n1（`items` は `id` が `i1` の要素 1 件）と、本文が 3 行の `guide.md`'
     flow: |-
       <!-- map -->
 
@@ -911,7 +911,7 @@ flows:
     expected:
       - n1 の `edit.language` が `yaml`、`edit.source` を YAML として読み込んだ値が n1 の値と同じ
       - n1 の `edit.baseCommit` がリビジョンの一覧の `defaultRef` の行の `commit`、`edit.version` が文書の一覧の n1 の `version`、`edit.kind` が `note`
-      - n1 の `edit.blocks[].path` が `markdown` の中の順に `status`・`summary`・`items[0].body`・`rows` で、`type` がそれぞれ `enum`・`string`・`markdown`・`table`
+      - n1 の `edit.blocks[].path` が `markdown` の中の順に `status`・`summary`・`#items[i1].body`・`rows` で、`type` がそれぞれ `enum`・`string`・`markdown`・`table`
       - '`status` の `options` がスキーマの `enum` の並び、`rows` の `columns` が `word`・`replacement` で `value` が行の配列'
       - 各 `blocks[].markdown` が `markdown` に含まれ、`edit.titleBlock.path` が `title` で `blocks` に `title` が無い
       - '`guide.md` の `edit.language` が `markdown`、`edit.source` が本文の 3 行、`edit.blocks` が空、`edit.titleBlock` が `null`'
@@ -1112,7 +1112,7 @@ response:
     description: ファイル全体の編集の元の内容（制約「編集の元の内容」）
   - name: edit.blocks[].path
     type: str
-    description: 表示した場所で修正できる項目のパス（`summary`・`items[0].body`・`rows`）
+    description: 表示した場所で修正できる項目のパス（`summary`・`#items[i1].body`・`rows`）
     notes: 直コミットの `edits[].values` のキーに指定する。Markdown の文書と `converters[]` を指す種類は `blocks` が空
   - name: edit.blocks[].label
     type: str
@@ -1219,7 +1219,7 @@ constraints:
     constraint: YAML の文書は、文書の値をキーの順のままブロック形式の YAML に書き出した文字列。Markdown の文書は、project-index の文書の取得の `body`
     notes: YAML の文書のコメントと元の書き方は保たない（直コミットの `replace` が値で置き換えるため）
   - item: 表示した場所で修正できる項目
-    constraint: 'スキーマ駆動で変換する YAML の文書の、`markdown` に描いた項目を、`markdown` の中の順に並べる。`enum` を持つ文字列は `enum`、`contentMediaType` が `text/markdown` の文字列は `markdown`、それ以外の文字列は `string`、要素がスカラーの項目だけを持つオブジェクトの配列は `table`。オブジェクトの配列の要素の中の項目も、同じ規則で `{配列のキー}[{添字}].{キー}` の 1 項目にする。`x-hidden: true` の項目・図（`x-shape: diagram`）・入れ子のオブジェクト・数と真偽値の項目は含めない（ファイル全体の編集で修正する）。`label` はスキーマの `title`、配列の要素の中の項目は `{要素の x-key の値} の {title}`'
+    constraint: 'スキーマ駆動で変換する YAML の文書の、`markdown` に描いた項目を、`markdown` の中の順に並べる。`enum` を持つ文字列は `enum`、`contentMediaType` が `text/markdown` の文字列は `markdown`、それ以外の文字列は `string`、要素が文字列（`enum` を含む）の項目だけを持つオブジェクトの配列は `table` で、要素の中の項目を別の項目にしない。`table` にしないオブジェクトの配列のうちスキーマが `x-key` を持つ配列は、要素の中の項目も同じ規則で `#{配列のキー}[{要素の x-key の値}].{キー}`（project-index の書き込みの参照の型の項目のパス）の 1 項目にし、`x-key` を持たない配列の要素の中の項目は含めない。`x-hidden: true` の項目・図（`x-shape: diagram`）・入れ子のオブジェクト・数と真偽値の項目と、数・真偽値の列を持つ配列は含めない（ファイル全体の編集で修正する）。`label` はスキーマの `title`、配列の要素の中の項目は `{要素の x-key の値} の {title}`'
   - item: 編集の情報の問い合わせ
     constraint: '`edit` を返却する要求では、端末の設定（`GET /settings/sources`）を、配信元の設定・リビジョン・文書の一覧と同時に問い合わせる。`edit.baseCommit` はリビジョンの一覧の `defaultRef` の行の `commit`、`edit.version` は文書の一覧の同じ文書の `version` にし、文書はそのコミットをリビジョンにして取得する'
     notes: '`edit.source`・`blocks[].value` と `edit.baseCommit` を同じコミットの内容にする'
