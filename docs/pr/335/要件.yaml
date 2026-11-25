@@ -6,20 +6,20 @@ use_cases:
     depends_on: []
   - kind: single
     scenario: docs/scenario/SC-155-7.yaml
-    impact: changed
-    detail: 文書の画面から本文の編集を始める操作を加える
+    impact: run_only
+    detail: 参照の流れは変わらない。文書の画面に編集のボタンと編集の表示を加えるため、参照を壊していないかを確認する。編集のボタンを出す条件は、画面で編集中の変更をまとめて直コミットするシナリオが持つ
     depends_on:
       - docs/scenario/SC-155-13.yaml
   - kind: single
     scenario: docs/scenario/SC-155-15.yaml
     impact: changed
-    detail: メタデータの行の変更に加えて文書の本文の変更も編集中の変更に溜め、同じ差分確認とコミットの確認で送信する
+    detail: 文書の画面で本文を編集して、メタデータの変更と同じ編集中の変更・差分確認・コミットの確認で送信する。編集できない文書には編集のボタンを出さず、検査に合格しない本文の変更は項目のパスと理由を出す
     depends_on:
       - docs/scenario/SC-155-13.yaml
   - kind: single
     scenario: docs/scenario/SC-155-14.yaml
-    impact: following
-    detail: メタデータの表の修正できる列の絞り込みを外すことに追随する
+    impact: run_only
+    detail: シナリオの記述は変わらない。メタデータの表の修正できる列の絞り込みを外す変更が、メタデータの参照を壊していないかを確認する
     depends_on:
       - docs/scenario/SC-155-15.yaml
 docs:
