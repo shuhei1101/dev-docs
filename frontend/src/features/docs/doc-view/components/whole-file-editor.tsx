@@ -59,14 +59,16 @@ export const WholeFileEditor = ({ doc, edit }: Props) => {
           )}
         </section>
       </div>
-      <div className="flex gap-2">
-        <Button disabled={!changed || errorLine !== null} onClick={apply}>
-          適用
-        </Button>
-        <Button variant="outline" disabled={!changed} onClick={() => setDraft(pending ?? edit.source)}>
-          元に戻す
-        </Button>
-      </div>
+      {changed && (
+        <div className="flex gap-2">
+          <Button disabled={errorLine !== null} onClick={apply}>
+            適用
+          </Button>
+          <Button variant="outline" onClick={() => setDraft(pending ?? edit.source)}>
+            元に戻す
+          </Button>
+        </div>
+      )}
     </div>
   );
 };
