@@ -125,18 +125,21 @@ const EditableBlock = ({ doc, edit, block, onMarkdownOpen }: BlockViewProps) => 
   const [editing, setEditing] = useState(false);
   const inline = editing && block.type !== "markdown";
   return (
-    <div data-edit-path={block.path} className="group relative rounded-md p-1 hover:bg-muted/40 focus-within:bg-muted/40">
+    <div data-edit-path={block.path} className="doc-edit-block rounded-md p-2 hover:bg-muted/40 focus-within:bg-muted/40">
       <div className="flex items-start gap-2">
         <div className="min-w-0 flex-1 wrap-anywhere">
           {inline && block.type === "table" && (
-            <RowsTable block={block} rows={JSON.parse(value.current) as Rows} onChange={(rows) => value.set(JSON.stringify(rows))} />
+            <div className="space-y-2">
+              <MarkdownPreview markdown={block.markdown.split("\n")[0] ?? ""} docId={`${doc.path}#${block.path}:heading`} />
+              <RowsTable block={block} rows={JSON.parse(value.current) as Rows} onChange={(rows) => value.set(JSON.stringify(rows))} />
+            </div>
           )}
           {inline && block.type !== "table" && (
             <ValueInput block={block} value={value.current} onChange={value.set} onDone={() => setEditing(false)} />
           )}
           {!inline && <MarkdownPreview markdown={blockMarkdown(block, value.current)} docId={`${doc.path}#${block.path}`} />}
         </div>
-        <div className="flex shrink-0 items-center gap-1 pt-1">
+        <div className="flex shrink-0 items-center gap-1">
           {value.changed && <Badge variant="outline">変更あり</Badge>}
           {inline ? (
             <Button variant="ghost" size="icon-sm" aria-label={`${block.label} の編集を終了`} onClick={() => setEditing(false)}>
@@ -166,9 +169,36 @@ type Props = {
 
 /** YAML の文書の描いた本文を、変換が目印を付けたブロックごとに編集のボタンを付けて並べる */
 export const DocFieldEditor = ({ doc, edit, onMarkdownOpen }: Props) => (
-  <div className="space-y-2">
+  <div className="space-y-4">
     {edit.blocks.map((block) => (
       <EditableBlock key={block.path} doc={doc} edit={edit} block={block} onMarkdownOpen={onMarkdownOpen} />
     ))}
   </div>
 );
+
+type TitleProps = { doc: DocumentResponse; edit: DocEdit; block: EditBlock };
+
+/** 表示した場所で修正するときの文書のタイトル。横の編集のボタンで、タイトルをその場の入力欄にする */
+export const EditableTitle = ({ doc, edit, block }: TitleProps) => {
+  const value = useBlockValue({ doc, edit, block });
+  const [editing, setEditing] = useState(false);
+  return (
+    <div data-edit-path={block.path} className="flex min-w-0 flex-1 items-center gap-2">
+      {editing ? (
+        <ValueInput block={block} value={value.current} onChange={value.set} onDone={() => setEditing(false)} />
+      ) : (
+        <h1 className="min-w-0 text-doc-title font-doc-title wrap-anywhere">{value.current}</h1>
+      )}
+      {value.changed && <Badge variant="outline">変更あり</Badge>}
+      {editing ? (
+        <Button variant="ghost" size="icon-sm" aria-label={`${block.label} の編集を終了`} onClick={() => setEditing(false)}>
+          <Check />
+        </Button>
+      ) : (
+        <Button variant="ghost" size="icon-sm" aria-label={`${block.label} を編集`} onClick={() => setEditing(true)}>
+          <Pencil />
+        </Button>
+      )}
+    </div>
+  );
+};

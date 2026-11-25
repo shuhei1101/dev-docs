@@ -357,6 +357,8 @@ export const DeepNestedGroups: Story = {
 
 const PREVIEW = "*/_api/sources/:source/preview";
 
+const LONG_TITLE = "文書の画面から Markdown と YAML の文書の本文を編集して編集中のパネルからまとめて直コミットする決まり";
+
 /** 規約の文書（YAML）の本文の項目。変換が目印を付けたブロックごとに描く */
 const ruleBlocks = (long = false): DocEdit["blocks"] => {
   const description = long
@@ -424,11 +426,10 @@ const ruleEditOf = (long = false): DocEdit => ({
   version: "a1b2c3",
   source: ruleSource,
   blocks: ruleBlocks(long),
+  titleBlock: { path: "name", label: "名前", type: "string", value: long ? LONG_TITLE : "文書の編集", markdown: "" },
 });
 
 const ruleEdit = ruleEditOf();
-
-const LONG_TITLE = "文書の画面から Markdown と YAML の文書の本文を編集して編集中のパネルからまとめて直コミットする決まり";
 
 const ruleDoc = (edit: DocEdit = ruleEdit, title = "文書の編集") =>
   documentResponse({
@@ -534,7 +535,18 @@ export const EditFieldsInline: Story = {
   },
 };
 
-/** 表のブロックを押して、セルを直接修正しているとき */
+/** タイトルの横の編集のボタンを押して、タイトルをその場で修正しているとき */
+export const EditFieldsTitle: Story = {
+  beforeEach: withEdits([]),
+  parameters: { initialPath: "/sample/docs/a?edit=fields", msw: editHandlers(ruleDoc()) },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(await canvas.findByRole("button", { name: "名前 を編集" }));
+    await expect(canvas.getByRole("textbox", { name: "名前" })).toHaveValue("文書の編集");
+  },
+};
+
+/** 表のブロックを押して、セルを直接修正しているとき（見出しは描いたまま） */
 export const EditFieldsTable: Story = {
   beforeEach: withEdits([]),
   parameters: { initialPath: "/sample/docs/a?edit=fields", msw: editHandlers(ruleDoc()) },

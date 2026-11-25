@@ -3,7 +3,7 @@ import { DiffBanner } from "@/features/docs/doc-view/components/diff-banner";
 import { DocBody } from "@/features/docs/doc-view/components/doc-body";
 import { DocBreadcrumb } from "@/features/docs/doc-view/components/doc-breadcrumb";
 import { DocEditBar } from "@/features/docs/doc-view/components/doc-edit-bar";
-import { DocFieldEditor } from "@/features/docs/doc-view/components/doc-field-editor";
+import { DocFieldEditor, EditableTitle } from "@/features/docs/doc-view/components/doc-field-editor";
 import { DocHeader } from "@/features/docs/doc-view/components/doc-header";
 import { EmptyTab } from "@/features/docs/doc-view/components/empty-tab";
 import { WholeFileEditor } from "@/features/docs/doc-view/components/whole-file-editor";
@@ -56,9 +56,17 @@ const DocBodyOrEditor = ({ doc, editMode, ...handlers }: ContentProps) => {
   );
 };
 
+/** 表示した場所で修正するときだけ、タイトルを編集のボタンを持つタイトルにする */
+const titleNodeOf = (doc: ContentProps["doc"], editMode: DocEditMode | undefined) => {
+  const edit = docEditOf(doc);
+  if (!edit?.editable || editMode !== "fields" || edit.titleBlock === undefined) return undefined;
+  return <EditableTitle doc={doc} edit={edit} block={edit.titleBlock} />;
+};
+
 const DocContent = ({ doc, active, refs, ...handlers }: ContentProps) => (
   <>
     <DocHeader
+      titleNode={titleNodeOf(doc, handlers.editMode)}
       title={active.page?.title ?? doc.path}
       kind={active.tab.title}
       path={doc.path}

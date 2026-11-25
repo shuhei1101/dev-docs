@@ -30,6 +30,8 @@ export type DocEdit = {
   kind: string;
   /** 表示した場所で修正できる項目（Markdown の文書は持たない） */
   blocks: EditBlock[];
+  /** 文書のタイトルに描く項目（タイトルの横の編集のボタンで修正する） */
+  titleBlock?: EditBlock;
 };
 
 /** ファイル全体の編集の変更の項目のパス */
