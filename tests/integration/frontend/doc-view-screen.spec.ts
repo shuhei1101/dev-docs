@@ -367,6 +367,280 @@ test.describe("文書の一覧のドロワー", () => {
   });
 });
 
+type NavPage = { kind: "page"; title: string; path: string; items: never[]; change: "added" | "modified" | "deleted" | null };
+type NavGroup = { kind: "group"; title: string; path: null; change: null; items: (NavPage | NavGroup)[] };
+
+const navPage = (title: string, path: string, change: NavPage["change"] = null): NavPage => ({ kind: "page", title, path, items: [], change });
+const navGroup = (title: string, items: NavGroup["items"]): NavGroup => ({ kind: "group", title, path: null, change: null, items });
+
+/** group A（文書 1）・B（文書 5。base があれば変更）と 4 階層の入れ子（深い文書）を持つ文書の取得 */
+const withGroups: Handler = ({ path, query }) => ({
+  body: documentResponse({
+    path,
+    tabs: [
+      {
+        title: "規約",
+        active: true,
+        items: [
+          navGroup("A", [navPage("文書 1", "docs/doc-1"), navPage("文書 2", "docs/doc-2")]),
+          navGroup("B", [navPage("文書 5", "docs/doc-5", query.get("diff") === null ? null : "modified")]),
+          navGroup("L1", [navGroup("L2", [navGroup("L3", [navGroup("L4", [navPage("深い文書", "docs/deep")])])])]),
+        ],
+      },
+    ],
+  }),
+});
+
+const groupButton = (page: Page, name: string) =>
+  page.getByRole("navigation", { name: "文書の一覧" }).getByRole("button", { name, exact: true });
+
+test.describe("group の開閉ボタン", () => {
+  // 開いている文書を含む group を開き、ほかの group を閉じて始める。山形のアイコンは読み上げから除外する（正常系）
+  test("group_toggle_initial", async ({ page }) => {
+    await openDoc(page, "/sample/docs/doc-1", { document: withGroups });
+    await expect(groupButton(page, "A")).toHaveAttribute("aria-expanded", "true");
+    await expect(groupButton(page, "B")).toHaveAttribute("aria-expanded", "false");
+    await expect(page.getByRole("link", { name: "文書 5" })).toHaveCount(0);
+    await expect(groupButton(page, "A").locator("svg")).toHaveAttribute("aria-hidden", "true");
+  });
+
+  // クリックで配下を折りたたむ・開き、URL は変えない（正常系）
+  test("group_toggle_click", async ({ page }) => {
+    await openDoc(page, "/sample/docs/doc-1", { document: withGroups });
+    const url = page.url();
+
+    await groupButton(page, "B").click();
+
+    await expect(groupButton(page, "B")).toHaveAttribute("aria-expanded", "true");
+    await expect(page.getByRole("link", { name: "文書 5" })).toBeVisible();
+    await groupButton(page, "A").click();
+    await expect(groupButton(page, "A")).toHaveAttribute("aria-expanded", "false");
+    await expect(page.getByRole("link", { name: "文書 1" })).toHaveCount(0);
+    expect(page.url()).toBe(url);
+  });
+
+  // Enter・Space で配下を折りたたむ・開く（正常系）
+  test("group_toggle_keyboard", async ({ page }) => {
+    await openDoc(page, "/sample/docs/doc-1", { document: withGroups });
+    await groupButton(page, "B").focus();
+
+    await page.keyboard.press("Enter");
+    await expect(groupButton(page, "B")).toHaveAttribute("aria-expanded", "true");
+    await page.keyboard.press("Space");
+    await expect(groupButton(page, "B")).toHaveAttribute("aria-expanded", "false");
+  });
+
+  // 開いている文書が変わったら、利用者が閉じた group でもその文書を含む group を開く（正常系）
+  test("group_opens_when_current_changed", async ({ page }) => {
+    await openDoc(page, "/sample/docs/doc-1", { document: withGroups });
+    await groupButton(page, "B").click();
+    await page.getByRole("link", { name: "文書 5" }).click();
+    await expect(page).toHaveURL(/\/sample\/docs\/doc-5/);
+    await groupButton(page, "A").click();
+    await expect(groupButton(page, "A")).toHaveAttribute("aria-expanded", "false");
+
+    await page.goBack();
+
+    await expect(page).toHaveURL(/\/sample\/docs\/doc-1/);
+    await expect(groupButton(page, "A")).toHaveAttribute("aria-expanded", "true");
+    await expect(page.getByRole("link", { name: "文書 1" })).toHaveAttribute("aria-current", "page");
+  });
+
+  // 差分の表示を始めて変化のマーカーが配下に現れたら、その group を開く（正常系）
+  test("group_opens_when_change_appeared", async ({ page }) => {
+    await openDoc(page, "/sample/docs/doc-1", { document: withGroups });
+    await expect(groupButton(page, "B")).toHaveAttribute("aria-expanded", "false");
+
+    await page.getByRole("button", { name: /リビジョンを切り替える/ }).click();
+    await page.getByRole("menuitem", { name: "別のリビジョンと比較" }).click();
+
+    await expect(page).toHaveURL(/base=7c0aa11/);
+    await expect(groupButton(page, "B")).toHaveAttribute("aria-expanded", "true");
+    await expect(page.getByRole("navigation", { name: "文書の一覧" }).getByRole("img", { name: "変更" })).toBeVisible();
+  });
+
+  // それ以外では、利用者が閉じた group を閉じたままにする（正常系）
+  test("group_keeps_closed", async ({ page }) => {
+    await openDoc(page, "/sample/docs/doc-1?base=7c0aa11", { document: withGroups });
+    await expect(groupButton(page, "B")).toHaveAttribute("aria-expanded", "true");
+    await groupButton(page, "B").click();
+
+    await page.getByRole("link", { name: "文書 2" }).click();
+
+    await expect(page).toHaveURL(/\/sample\/docs\/doc-2/);
+    await expect(groupButton(page, "B")).toHaveAttribute("aria-expanded", "false");
+  });
+
+  // 入れ子の階層の数を制限せず、階層ごとに字下げする（正常系）
+  test("group_nested", async ({ page }) => {
+    await openDoc(page, "/sample/docs/deep", { document: withGroups });
+    for (const name of ["L1", "L2", "L3", "L4"]) {
+      await expect(groupButton(page, name)).toHaveAttribute("aria-expanded", "true");
+    }
+    const deep = page.getByRole("link", { name: "深い文書" });
+    await expect(deep).toHaveAttribute("aria-current", "page");
+    const l1 = await boxOf(groupButton(page, "L1"));
+    const l4 = await boxOf(groupButton(page, "L4"));
+    expect(l4.x).toBeGreaterThan(l1.x);
+    expect((await boxOf(deep)).x).toBeGreaterThan(l4.x);
+  });
+
+  // 画面幅が 48rem 未満のドロワーの文書の一覧でも、group を折りたたむ・開く。ドロワーは境目と閉じるボタンを持たない（正常系）
+  test("group_toggle_in_drawer", async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await openDoc(page, "/sample/docs/doc-1", { document: withGroups });
+    await page.getByRole("button", { name: "文書の一覧を開く" }).click();
+    const drawer = page.getByRole("dialog", { name: "文書の一覧" });
+    const b = drawer.getByRole("button", { name: "B", exact: true });
+    await expect(b).toHaveAttribute("aria-expanded", "false");
+
+    await b.click();
+
+    await expect(b).toHaveAttribute("aria-expanded", "true");
+    await expect(drawer.getByRole("link", { name: "文書 5" })).toBeVisible();
+    await expect(drawer.getByRole("separator", { name: "サイドバーの幅" })).toHaveCount(0);
+    await expect(drawer.getByRole("button", { name: "サイドバーを閉じる" })).toHaveCount(0);
+  });
+});
+
+const sidebar = (page: Page) => page.locator("#doc-sidebar");
+const separator = (page: Page) => page.getByRole("separator", { name: "サイドバーの幅" });
+const titleX = async (page: Page) => (await boxOf(page.getByRole("main").getByRole("heading", { level: 1 }))).x;
+
+test.describe("サイドバーを閉じるボタン", () => {
+  // サイドバーを開いているとき、読み上げ名とツールチップ `サイドバーを閉じる` のボタンを出す（正常系）
+  test("sidebar_close_button", async ({ page }) => {
+    await openDoc(page);
+    const button = page.getByRole("button", { name: "サイドバーを閉じる" });
+    await expect(button).toHaveAttribute("aria-expanded", "true");
+    await expect(button).toHaveAttribute("aria-controls", "doc-sidebar");
+
+    await button.hover();
+
+    await expect(page.getByText("サイドバーを閉じる", { exact: true })).toBeVisible();
+  });
+
+  // クリックでサイドバーと境目を非表示にして本文を広げ、閉じた状態をブラウザに保存する（正常系）
+  test("sidebar_close", async ({ page }) => {
+    await openDoc(page);
+    const before = await titleX(page);
+
+    await page.getByRole("button", { name: "サイドバーを閉じる" }).click();
+
+    await expect(page.getByRole("navigation", { name: "文書の一覧" })).toBeHidden();
+    await expect(separator(page)).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "サイドバーを開く" })).toBeVisible();
+    expect(await titleX(page)).toBeLessThan(before);
+    await page.reload();
+    await expect(page.getByRole("button", { name: "サイドバーを開く" })).toBeVisible();
+    await expect(page.getByRole("navigation", { name: "文書の一覧" })).toBeHidden();
+  });
+
+  // 画面幅が 48rem 未満のときは出さない（正常系）
+  test("sidebar_close_hidden_when_narrow", async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await openDoc(page);
+    await expect(page.getByRole("button", { name: "サイドバーを閉じる" })).toBeHidden();
+    await expect(separator(page)).toBeHidden();
+  });
+});
+
+test.describe("サイドバーを開くボタン", () => {
+  // 閉じているとき、読み上げ名 `サイドバーを開く`・`aria-expanded="false"` のボタンを出し、クリックで閉じる前の幅で開いて保存する（正常系）
+  test("sidebar_open_restores_width", async ({ page }) => {
+    await openDoc(page);
+    await separator(page).focus();
+    await page.keyboard.press("End");
+    await expect(separator(page)).toHaveAttribute("aria-valuenow", "480");
+    await page.getByRole("button", { name: "サイドバーを閉じる" }).click();
+    const button = page.getByRole("button", { name: "サイドバーを開く" });
+    await expect(button).toHaveAttribute("aria-expanded", "false");
+
+    await button.click();
+
+    await expect(page.getByRole("navigation", { name: "文書の一覧" })).toBeVisible();
+    expect((await boxOf(sidebar(page))).width).toBe(480);
+    await page.reload();
+    await expect(page.getByRole("navigation", { name: "文書の一覧" })).toBeVisible();
+    expect((await boxOf(sidebar(page))).width).toBe(480);
+  });
+});
+
+test.describe("サイドバーの境目", () => {
+  // 既定の幅 240 で始め、読み上げ名と値の範囲を持つ（正常系）
+  test("separator_initial", async ({ page }) => {
+    await openDoc(page);
+    await expect(separator(page)).toHaveAttribute("aria-valuenow", "240");
+    await expect(separator(page)).toHaveAttribute("aria-valuemin", "192");
+    await expect(separator(page)).toHaveAttribute("aria-valuemax", "480");
+    expect((await boxOf(sidebar(page))).width).toBe(240);
+  });
+
+  // ドラッグで幅を変え、本文の左端をその分だけ動かし、変えた幅をブラウザに保存する（正常系）
+  test("separator_drag", async ({ page }) => {
+    await openDoc(page);
+    const before = await titleX(page);
+    const box = await boxOf(separator(page));
+    const y = box.y + 40;
+
+    await page.mouse.move(box.x + box.width / 2, y);
+    await page.mouse.down();
+    await page.mouse.move(box.x + box.width / 2 + 80, y, { steps: 5 });
+    await page.mouse.up();
+
+    await expect(separator(page)).toHaveAttribute("aria-valuenow", "320");
+    expect((await boxOf(sidebar(page))).width).toBe(320);
+    expect(await titleX(page)).toBeCloseTo(before + 80, 0);
+    await page.reload();
+    await expect(separator(page)).toHaveAttribute("aria-valuenow", "320");
+  });
+
+  // ドラッグで最小・最大を超えない（正常系）
+  test("separator_drag_range", async ({ page }) => {
+    await openDoc(page);
+    const box = await boxOf(separator(page));
+    const x = box.x + box.width / 2;
+    const y = box.y + 40;
+
+    await page.mouse.move(x, y);
+    await page.mouse.down();
+    // 画面の中で、最小（192）より 48px 以上狭くなる位置へ動かす
+    await page.mouse.move(x - 100, y, { steps: 5 });
+    await expect(separator(page)).toHaveAttribute("aria-valuenow", "192");
+    await page.mouse.move(x + 600, y, { steps: 5 });
+    await page.mouse.up();
+
+    await expect(separator(page)).toHaveAttribute("aria-valuenow", "480");
+  });
+
+  // ←→ で 16px、Home で最小、End で最大にする（正常系）
+  test("separator_keyboard", async ({ page }) => {
+    await openDoc(page);
+    await separator(page).focus();
+
+    await page.keyboard.press("ArrowRight");
+    await expect(separator(page)).toHaveAttribute("aria-valuenow", "256");
+    await page.keyboard.press("ArrowLeft");
+    await page.keyboard.press("ArrowLeft");
+    await expect(separator(page)).toHaveAttribute("aria-valuenow", "224");
+    await page.keyboard.press("Home");
+    await expect(separator(page)).toHaveAttribute("aria-valuenow", "192");
+    await page.keyboard.press("End");
+    await expect(separator(page)).toHaveAttribute("aria-valuenow", "480");
+  });
+
+  // ダブルクリックで既定の幅（240）に戻す（正常系）
+  test("separator_double_click", async ({ page }) => {
+    await openDoc(page);
+    await separator(page).focus();
+    await page.keyboard.press("End");
+
+    await separator(page).dblclick();
+
+    await expect(separator(page)).toHaveAttribute("aria-valuenow", "240");
+  });
+});
+
 test.describe("パンくず", () => {
   // `{配信元の ID}` / `{タブ名}` / `{group}` / `{文書の名前}` を出し、配信元とタブだけをリンクにする（正常系）
   test("breadcrumb", async ({ page }) => {

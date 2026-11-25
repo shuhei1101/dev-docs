@@ -511,6 +511,88 @@ test.describe("project-index から受け取れない", () => {
   });
 });
 
+/** タグの n1 の値のボタンで、`index` 文字目の直前の点（文字の間）の座標 */
+const pointBefore = async (page: Page, index: number) =>
+  page.getByRole("button", { name: "タグ topic:a を編集" }).evaluate((button, at) => {
+    const walker = document.createTreeWalker(button, NodeFilter.SHOW_TEXT);
+    const node = walker.nextNode();
+    if (node === null) throw new Error("値の文字がありません");
+    const range = document.createRange();
+    range.setStart(node, at);
+    range.setEnd(node, at + 1);
+    const rect = range.getBoundingClientRect();
+    return { x: rect.left + 1, y: rect.top + rect.height / 2 };
+  }, index);
+
+test.describe("行の値の入力位置", () => {
+  // 値の文字の間を押すと、その間に入力位置を配置する（正常系）
+  test("row_value_caret_at_click", async ({ page }) => {
+    await open(page, { url: `/${SOURCE}/_metadata?tab=tags` });
+    const { x, y } = await pointBefore(page, 5);
+
+    await page.mouse.click(x, y);
+
+    const input = page.getByRole("textbox", { name: "タグ" });
+    await expect(input).toBeFocused();
+    expect(await input.evaluate((element: HTMLInputElement) => [element.selectionStart, element.selectionEnd])).toEqual([5, 5]);
+  });
+
+  // 値の右の余白を押すと末尾に入力位置を配置する（正常系）
+  test("row_value_caret_at_right_space", async ({ page }) => {
+    await open(page, { url: `/${SOURCE}/_metadata?tab=tags` });
+    const button = page.getByRole("button", { name: "タグ topic:a を編集" });
+    const box = await button.boundingBox();
+    if (box === null) throw new Error("値のボタンが画面に出ていません");
+
+    await page.mouse.click(box.x + box.width - 2, box.y + box.height / 2);
+
+    const input = page.getByRole("textbox", { name: "タグ" });
+    await expect(input).toBeFocused();
+    expect(await input.evaluate((element: HTMLInputElement) => element.selectionStart)).toBe("topic:a".length);
+  });
+
+  // Enter・Space で始めると末尾に入力位置を配置する（正常系）
+  for (const key of ["Enter", "Space"]) {
+    test(`row_value_caret_on_${key.toLowerCase()}`, async ({ page }) => {
+      await open(page, { url: `/${SOURCE}/_metadata?tab=tags` });
+      await page.getByRole("button", { name: "タグ topic:a を編集" }).focus();
+
+      await page.keyboard.press(key);
+
+      const input = page.getByRole("textbox", { name: "タグ" });
+      await expect(input).toBeFocused();
+      expect(await input.evaluate((element: HTMLInputElement) => element.selectionStart)).toBe("topic:a".length);
+    });
+  }
+});
+
+test.describe("本文の幅", () => {
+  test.use({ viewport: { width: 1920, height: 1080 } });
+
+  // 種類の表を、画面の横幅から左右の余白を除いた幅（上限なし）で出す（正常系）
+  test("table_width_without_cap", async ({ page }) => {
+    await open(page);
+    const main = await page.getByRole("main").boundingBox();
+    const table = await page.getByRole("table", { name: "用語集の表" }).boundingBox();
+    if (main === null || table === null) throw new Error("本文か表が画面に出ていません");
+
+    // 本文は画面の横幅いっぱいで、表は左右 1rem ずつの余白と表の枠線を除いた幅。72rem（1152px）の上限を超えて広がる
+    expect(main.width).toBe(1920);
+    expect(table.width).toBeGreaterThan(1152);
+    expect(table.width).toBeGreaterThanOrEqual(1920 - 32 - 4);
+    expect(table.width).toBeLessThanOrEqual(1920 - 32);
+  });
+
+  // 絞り込みの入力欄は 24rem までの幅にする（正常系）
+  test("filter_width", async ({ page }) => {
+    await open(page);
+    const filter = await page.getByRole("searchbox", { name: "絞り込み" }).or(page.getByRole("textbox", { name: "絞り込み" })).boundingBox();
+    if (filter === null) throw new Error("絞り込みの入力欄が画面に出ていません");
+
+    expect(filter.width).toBeLessThanOrEqual(384);
+  });
+});
+
 test.describe("狭い幅とアクセシビリティ", () => {
   // 狭い幅で画面を横にスクロールさせず、表の領域だけを横にスクロールする（正常系）
   test("narrow_viewport", async ({ page }) => {
