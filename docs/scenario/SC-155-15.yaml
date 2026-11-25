@@ -8,12 +8,12 @@ stakeholders:
   - name: project-index
     interest: 書き込みの API が、許可と検査に合格した修正だけを 1 つのコミットにする。衝突したときは修正をブランチに残し、衝突したときのスクリプトに後の処理を任せる
   - name: 配信元を使用するプロジェクト
-    interest: 検査に合格しないメタデータが既定のブランチに入らない。ほかの変更で書き換わった同じ項目が、利用者の修正で黙って上書きされない
+    interest: 検査に合格しないメタデータと文書の本文が既定のブランチに入らない。ほかの変更で書き換わった同じ項目が、利用者の修正で黙って上書きされない
 trigger: 利用者がメタデータの画面で行の値を修正するか、文書の画面で文書の本文を編集する
 preconditions:
   - 利用者が配信元のメタデータの画面か文書の画面を開いている
   - 配信元の設定の `direct_commit.kinds[]` と project-index の端末の設定の `sources[].direct_commit.write_api_kinds` の両方に、修正する種類がある
-success_guarantee: 編集中の変更が、検査に合格して 1 つのコミットで配信元のリモートの既定のブランチへプッシュされ、画面の一覧が修正後の値になる。ほかの変更と衝突したときは、既定のブランチへはコミットせず、編集を始めたときのコミットからのブランチに修正が 1 つのコミットで残り、画面に残したブランチの名前が出て、その修正が編集中の変更から除かれる。
+success_guarantee: 編集中の変更が、検査に合格して 1 つのコミットで配信元のリモートの既定のブランチへプッシュされ、画面の一覧が修正後の値になり、文書の画面に修正後の本文が出る。ほかの変更と衝突したときは、既定のブランチへはコミットせず、編集を始めたときのコミットからのブランチに修正が 1 つのコミットで残り、画面に残したブランチの名前が出て、その修正が編集中の変更から除かれる。
 minimal_guarantee: 修正をどのブランチにも残せなかったときは、コミットもプッシュもせず、編集中の変更は修正ごとの理由と一緒に画面に残る。衝突したときのスクリプトが失敗しても、ブランチに残した修正は編集中の変更から除き、残したブランチとスクリプトの結果を画面に出す。dev-docs は配信元のファイルを自分で書き換えない。
 frequency: 作業のたび
 priority: 中
@@ -384,7 +384,7 @@ scenarios:
         description: '正常シナリオの sample に、Markdown の文書の種類 `guide`（管理用の YAML `files.yml` を `records: files`・`body_file: path` で指す）を加えたもの。`direct_commit.kinds` と project-index の端末の設定の `write_api_kinds` は `[note, terms, guide]`'
         notes: '`note` のスキーマは、文字列の項目 `summary`、Markdown の文字列の項目 `items[].body`、平らなオブジェクトの配列 `rows[]`（`word`・`replacement`）を持つ'
       - name: 文書
-        description: '`summary` が `修正前の概要`、`items[0].body` が 2 行の Markdown、`rows` が 2 行の文書 n1 と、本文が 3 行の Markdown の文書 `guide.md`'
+        description: '`summary` が `修正前の概要`、`items[0].body` が 2 行の Markdown、`rows` が 2 行の文書 n1 と、`summary` が `n2 の概要` の文書 n2 と、本文が 3 行の Markdown の文書 `guide.md`'
       - name: dev-docs
         description: sample を配信している dev-docs と project-index
     flow: |-
@@ -402,15 +402,16 @@ scenarios:
         UI-->>U: 本文の項目ごとの編集のボタン
         U->>UI: 概要を `修正後の概要` に修正し、表の 2 行目の置き換え先を修正する
         U->>UI: items[0].body にエディタとプレビューで 1 行追加する
+        U->>UI: n2 の文書の画面を開き、ファイル全体を編集して summary の値を書き換える
         U->>UI: guide.md の文書の画面を開き、ファイル全体を編集して 1 行書き換える
-        UI-->>U: トップバーの編集中の変更の件数 4
+        UI-->>U: トップバーの編集中の変更の件数 5
         U->>UI: 文書の画面で編集中のパネルを開き、差分確認を押す
-        UI->>SRV: sample の変更 4 件を dryRun で送信する
-        SRV->>PI: POST /sources/sample/commits（dryRun。n1 は項目のパスへの set、guide.md は @body）
+        UI->>SRV: sample の変更 5 件を dryRun で送信する
+        SRV->>PI: POST /sources/sample/commits（dryRun。n1 は項目のパスへの set、n2 は replace、guide.md は @body）
         PI-->>SRV: 検査の合格と差分
         SRV-->>UI: 変更ごとの差分
         U->>UI: コミットの確認でコミットの説明を入力してコミットする
-        UI->>SRV: sample の変更 4 件とコミットの説明
+        UI->>SRV: sample の変更 5 件とコミットの説明
         SRV->>PI: POST /sources/sample/commits
         PI->>R: develop へプッシュ
         PI-->>SRV: コミットとブランチ
@@ -422,17 +423,17 @@ scenarios:
     expected:
       - 編集を押すと、`summary`・`items[0].body`・`rows` の各行に編集のボタンが出て、文書の画面の URL とサイドバーはそのまま残る
       - 差分確認を押すと、編集中のパネルに変更ごとの差分が出て、リモートは変わらない
-      - コミットすると、リモートの `develop` に 1 コミットだけ増え、変更は n1 の YAML と `guide.md` だけで、n1 の修正していない項目は一字も変わらない
+      - コミットすると、リモートの `develop` に 1 コミットだけ増え、変更は n1・n2 の YAML と `guide.md` だけで、n1 の修正していない項目は一字も変わらない
       - パネルにプッシュしたコミットとブランチが出て、編集中の変更が空になり、トップバーの件数が出なくなる
-      - n1 と `guide.md` の文書の画面に修正後の本文が出る
+      - n1・n2 と `guide.md` の文書の画面に修正後の本文が出る
     test: test_normal_when_document_body_edited
   - name: 正常シナリオ（編集できない文書には編集のボタンを出さない）
     setup:
       - name: Mock
         description: なし（実環境で実行）
       - name: 直コミットを許可した配信元
-        description: '正常シナリオ（文書の画面で本文を編集する）と同じ sample の `direct_commit.kinds` の `guide` を `{id: guide, body: false}` にし、`write_api_kinds` に無い種類 `memo` を加えたもの'
-        notes: '`guide` は本文の直コミットを断り、`memo` は書き込みの API から直コミットできない'
+        description: '正常シナリオ（文書の画面で本文を編集する）と同じ sample の `direct_commit.kinds` の `guide` を `{id: guide, body: false}` にし、`write_api_kinds` に無い種類 `memo` と、SQLite の表の行の種類 `log`（`documents[].sqlite`）を加えたもの'
+        notes: '`guide` は本文の直コミットを断り、`memo` は書き込みの API から直コミットできず、`log` は読み取り専用'
       - name: dev-docs
         description: sample を配信している dev-docs と project-index
     flow: |-
@@ -449,12 +450,14 @@ scenarios:
         UI-->>U: 編集のボタンを出さない
         U->>UI: memo の文書の画面を開く
         UI-->>U: 編集のボタンを出さない
+        U->>UI: log の行の文書の画面を開く
+        UI-->>U: 編集のボタンを出さない
       ```
 
       <!-- /map -->
     expected:
       - n1 の文書の画面には編集のボタンが出る
-      - '`guide.md` と `memo` の文書の画面には編集のボタンが出ず、本文の項目にも編集のボタンが出ない'
+      - '`guide.md`・`memo`・`log` の行の文書の画面には編集のボタンが出ず、本文の項目にも編集のボタンが出ない'
       - リモートは変わらない
     test: test_normal_when_document_not_editable
   - name: 異常シナリオ（本文の変更が検査に合格しない）
@@ -489,6 +492,45 @@ scenarios:
       - リモートとワークツリーが変わらない
       - 編集中の変更 2 件が残っている
     test: test_error_when_document_body_invalid
+  - name: 正常シナリオ（ファイル全体の編集の後に同じ文書の別の項目が変わっている）
+    setup:
+      - name: Mock
+        description: なし（実環境で実行）
+      - name: 直コミットを許可した配信元
+        description: 正常シナリオ（文書の画面で本文を編集する）と同じ sample。project-index の端末の設定の sample の行に、正常シナリオ（衝突したら修正をブランチに残す）と同じ衝突したときのスクリプトを登録する
+      - name: 編集中の変更
+        description: n1 のファイル全体の編集で `summary` を書き換えた変更
+      - name: 他の変更
+        description: 編集中の変更がある状態で、リモートの develop へ n1 の `rows` を変えるコミットをプッシュする
+        notes: 利用者が書き換えていない項目だけが変わるが、ファイル全体の編集は文書のバージョンで照合するため衝突する
+    flow: |-
+      <!-- map -->
+
+      ```mermaid
+      sequenceDiagram
+        actor U as 利用者
+        participant UI as dev-docs の画面
+        participant SRV as 開発ドキュメントサーバー
+        participant PI as project-index
+
+        U->>UI: 編集中のパネルからコミットする
+        UI->>SRV: sample の変更と、編集を始めたときのコミット
+        SRV->>PI: POST /sources/sample/commits（n1 は replace と文書のバージョン、baseCommit）
+        PI->>PI: 今のブランチでは n1 の文書のバージョンが合わない
+        PI->>PI: 編集を始めたときのコミットからのブランチに修正を残す
+        PI->>PI: 衝突したときのスクリプトを実行する
+        PI-->>SRV: 残したブランチとスクリプトの結果
+        SRV-->>UI: 残したブランチ・PR の URL・衝突した理由
+        UI-->>U: 残したブランチの名前と PR の URL
+      ```
+
+      <!-- /map -->
+    expected:
+      - リモートの `develop` に、他の変更のコミットより後のコミットが増えない
+      - クローンに `project-index/conflict/` で始まるブランチがあり、その先頭のコミットが n1 の `summary` の書き換えを持つ
+      - パネルに残したブランチの名前と、スクリプトが出力した PR の URL のリンクが出る
+      - 編集中の変更から n1 の変更が除かれる
+    test: test_normal_when_whole_file_edit_conflicted
 refs:
   - to: SC-155-13
     item: scenarios[正常シナリオ]
