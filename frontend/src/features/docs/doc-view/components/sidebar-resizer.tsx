@@ -32,6 +32,8 @@ export const SidebarResizer = ({ width, onWidthChange }: Props) => {
 
   const onPointerDown = (event: PointerEvent<HTMLDivElement>) => {
     if (event.button !== 0) return;
+    // 押したまま動かしたときに、サイドバーの文字の選択を始めない
+    event.preventDefault();
     event.currentTarget.setPointerCapture(event.pointerId);
     drag.current = { x: event.clientX, width };
   };

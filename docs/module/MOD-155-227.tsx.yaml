@@ -18,7 +18,7 @@ components:
         type: '(width: number) => void'
         required: true
         description: 最小・最大の間に収めた新しい幅
-    description: '`pointerdown`（主ボタンだけ）で `setPointerCapture` し、押したときの `clientX` と幅を `useRef` に持って、`pointermove` で `clampSidebarWidth(幅 + 移動量)` を渡す。`pointerup`・`pointercancel` で終える。`keydown` は ←→ を 16px、Home を最小、End を最大にして `preventDefault` する。`aria-label` は `サイドバーの幅`、`aria-valuemin`・`aria-valuemax` は `SIDEBAR_WIDTH`、`tabIndex` は 0。線はホバー・ドラッグ中は `bg-primary`、フォーカス中は `bg-ring` で太くする。行の高さいっぱいに伸ばす（`self-stretch`）'
+    description: '`pointerdown`（主ボタンだけ）で `preventDefault`（サイドバーの文字の選択を始めない）して `setPointerCapture` し、押したときの `clientX` と幅を `useRef` に持って、`pointermove` で `clampSidebarWidth(幅 + 移動量)` を渡す。`pointerup`・`pointercancel` で終える。`keydown` は ←→ を 16px、Home を最小、End を最大にして `preventDefault` する。`aria-label` は `サイドバーの幅`、`aria-valuemin`・`aria-valuemax` は `SIDEBAR_WIDTH`、`tabIndex` は 0。線はホバー・ドラッグ中は `bg-primary`、フォーカス中は `bg-ring` で太くする。行の高さいっぱいに伸ばす（`self-stretch`）'
     unit_tests:
       - name: test_sidebar_resizer_when_dragged
         case: 正常
