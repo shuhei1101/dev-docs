@@ -82,6 +82,12 @@ components:
         condition: 変化を持つ group `B` を閉じ、`currentPath` を `B` の外の文書に変えて描き直す
         mock: なし（メモリの履歴のルーター）
         expected: '`B` は `aria-expanded="false"` のまま'
+      - name: test_doc_sidebar_when_change_appeared
+        case: 正常
+        summary: 差分の表示を始めたときの閉じた group
+        condition: 開いている文書を含まない group `B` を閉じ、`B` の中の page の `change` を null から `modified` に変えて描き直す
+        mock: なし（メモリの履歴のルーター）
+        expected: '`B` が `aria-expanded="true"` になり、`変更` のマーカーが出る'
 tags:
   - name: topic:文書
     main: true

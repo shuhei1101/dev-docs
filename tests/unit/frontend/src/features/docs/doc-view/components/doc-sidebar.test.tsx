@@ -152,3 +152,27 @@ test("test_doc_sidebar_when_moved_keeps_closed", async () => {
 
   expect(b).toHaveAttribute("aria-expanded", "false");
 });
+
+/** `差分を表示` を押すと `B` の中の page の change を modified に変えて描き直す */
+const ChangeAppearing = () => {
+  const [change, setChange] = useState<string | null>(null);
+  return (
+    <>
+      <button type="button" onClick={() => setChange("modified")}>
+        差分を表示
+      </button>
+      <DocSidebar tab={twoGroups([page("C", "c.md", change)]) as never} source="s" currentPath="a.md" search={{}} />
+    </>
+  );
+};
+
+test("test_doc_sidebar_when_change_appeared", async () => {
+  renderInRouter(<ChangeAppearing />);
+  const b = await screen.findByRole("button", { name: "B" });
+  expect(b).toHaveAttribute("aria-expanded", "false");
+
+  await userEvent.click(screen.getByRole("button", { name: "差分を表示" }));
+
+  expect(b).toHaveAttribute("aria-expanded", "true");
+  expect(screen.getByLabelText("変更")).toBeInTheDocument();
+});
