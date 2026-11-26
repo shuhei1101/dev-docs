@@ -39,7 +39,7 @@ const meta = {
     onOpenChange: fn(),
     source: "sample",
     ref: "develop",
-    sources: ["sample", "notes", "broken"],
+    sources: ["sample", "notes"],
     onResultSelect: fn(),
   },
 } satisfies Meta<typeof SearchDialog>;
@@ -283,34 +283,19 @@ export const AllSources: Story = {
   },
 };
 
-/** 全ての配信元の検索で、検索できない配信元があったとき */
+/** 全ての配信元の検索で、配信していない配信元があったとき（問い合わせずに理由を並べる） */
 export const AllSourcesPartialFailure: Story = {
-  parameters: {
-    msw: [
-      http.get(SEARCH, ({ params }) =>
-        params.source === "broken"
-          ? HttpResponse.json(
-              {
-                type: "urn:dev-docs:error:NotFoundError",
-                title: "NotFoundError",
-                status: 404,
-                detail:
-                  "配信元 broken を配信していません。project-index が起動時の検証で除外しました（documents[0] に必須のキー paths が無い）",
-                nextSteps: [],
-              },
-              {
-                status: 404,
-                headers: { "Content-Type": "application/problem+json" },
-              },
-            )
-          : HttpResponse.json(
-              params.source === "notes"
-                ? { totalCount: 1, items: notesItems }
-                : { totalCount: 2, items },
-            ),
-      ),
+  args: {
+    sources: ["sample", "notes"],
+    unavailable: [
+      {
+        source: "broken",
+        reason:
+          "project-index が起動時の検証で除外しました。 documents[0] paths は必須です",
+      },
     ],
   },
+  parameters: AllSources.parameters,
   play: async (context) => {
     await typeQuery(context);
     const body = within(context.canvasElement.ownerDocument.body);

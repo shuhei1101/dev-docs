@@ -35,6 +35,8 @@ type Props = {
   ref?: string;
   /** 全ての配信元の検索で問い合わせる配信中の配信元の ID */
   sources?: string[];
+  /** 全ての配信元の検索で、問い合わせずに検索できなかった配信元に並べる配信していない配信元と理由 */
+  unavailable?: Failure[];
   onResultSelect: (path: string, source: string) => void;
 };
 
@@ -80,7 +82,7 @@ const SearchStatus = ({
       text = "該当する文書はありません。別の条件を試してください。";
     else if (total !== undefined) {
       text = `${total} 件${revision ? `（リビジョン ${revision}）` : ""}`;
-      if (shown < total) text += `。一致した行の数の多い ${shown} 件を表示`;
+      if (shown < total) text += `のうち ${shown} 件を表示`;
       if (excludedCount) text += `・検索から除外 ${excludedCount} 件`;
     }
   }
@@ -141,6 +143,74 @@ const Segment = <T extends string>({
   </fieldset>
 );
 
+type SearchState = {
+  data?: { totalCount: number; items: SearchItem[]; excludedCount?: number };
+  error: unknown;
+};
+
+type SummarizeInput = {
+  searches: SearchState[];
+  targets: string[];
+  sent: string;
+  scope: Scope;
+  order: Order;
+  includeExcluded: boolean;
+  unavailable: Failure[];
+};
+
+const compareRows = (order: Order) => (a: Row, b: Row) =>
+  order === "name"
+    ? a.name.localeCompare(b.name, "ja")
+    : b.matches - a.matches || a.name.localeCompare(b.name, "ja");
+
+/** 配信元ごとの検索の結果を、並べた行・件数・検索できなかった配信元にまとめる */
+const summarize = ({
+  searches,
+  targets,
+  sent,
+  scope,
+  order,
+  includeExcluded,
+  unavailable,
+}: SummarizeInput) => {
+  const settled = searches.flatMap((search) =>
+    search.data ? [search.data] : [],
+  );
+  const failures: Failure[] = [
+    ...(scope === "all" ? unavailable : []),
+    ...searches.flatMap((search, index) =>
+      search.error
+        ? [{ source: targets[index] ?? "", reason: reasonOf(search.error) }]
+        : [],
+    ),
+  ];
+  const rows: Row[] =
+    sent === ""
+      ? []
+      : searches
+          .flatMap((search, index) =>
+            (search.data?.items ?? []).map((item) => ({
+              ...item,
+              source: targets[index] ?? "",
+              matches: item.matchCount ?? item.snippets.length,
+            })),
+          )
+          .sort(compareRows(order));
+  const sum = (pick: (data: (typeof settled)[number]) => number) =>
+    settled.reduce((total, data) => total + pick(data), 0);
+  return {
+    failures,
+    rows,
+    total:
+      sent === "" || settled.length === 0
+        ? undefined
+        : sum((data) => data.totalCount),
+    excludedCount: includeExcluded
+      ? undefined
+      : sum((data) => data.excludedCount ?? 0),
+  };
+};
+
 /** 配信元の文書を単語で検索するダイアログ（開いている配信元か、全ての配信元） */
 export const SearchDialog = ({
   open,
@@ -148,6 +218,7 @@ export const SearchDialog = ({
   source,
   ref: revision,
   sources = [],
+  unavailable = [],
   onResultSelect,
 }: Props) => {
   const [query, setQuery] = useState("");
@@ -179,40 +250,15 @@ export const SearchDialog = ({
   });
   /* eslint-enable react-hooks/refs */
 
-  const settled = searches.filter((search) => search.data !== undefined);
-  const failures: Failure[] = searches.flatMap((search, index) =>
-    search.error
-      ? [{ source: targets[index] ?? "", reason: reasonOf(search.error) }]
-      : [],
-  );
-  const rows: Row[] =
-    sent === ""
-      ? []
-      : searches.flatMap((search, index) =>
-          (search.data?.items ?? []).map((item: SearchItem) => ({
-            ...item,
-            source: targets[index] ?? source,
-            matches: item.matchCount ?? item.snippets.length,
-          })),
-        );
-  rows.sort((a, b) =>
-    order === "name"
-      ? a.name.localeCompare(b.name, "ja")
-      : b.matches - a.matches || a.name.localeCompare(b.name, "ja"),
-  );
-  const total =
-    sent === "" || settled.length === 0
-      ? undefined
-      : settled.reduce(
-          (sum, search) => sum + (search.data?.totalCount ?? 0),
-          0,
-        );
-  const excludedCount = includeExcluded
-    ? undefined
-    : settled.reduce(
-        (sum, search) => sum + (search.data?.excludedCount ?? 0),
-        0,
-      );
+  const { failures, rows, total, excludedCount } = summarize({
+    searches,
+    targets,
+    sent,
+    scope,
+    order,
+    includeExcluded,
+    unavailable,
+  });
   // 開いている配信元の検索の失敗は件数の場所の文言にし、全ての配信元の検索の失敗は配信元ごとに並べる
   const error =
     scope === "current" && failures[0] ? failures[0].reason : undefined;
@@ -244,15 +290,19 @@ export const SearchDialog = ({
       onOpenChange={onOpenChange}
       title="文書を検索"
       description="単語を入力して文書を探します"
+      showCloseButton
       className="top-12 flex max-h-5/6 w-full max-w-3xl flex-col sm:max-w-3xl max-md:inset-0 max-md:top-0 max-md:h-full max-md:max-h-none max-md:max-w-none max-md:translate-x-0 max-md:rounded-none!"
     >
       <Command shouldFilter={false} className="min-h-0 flex-1">
-        <CommandInput
-          ref={inputRef}
-          value={query}
-          onValueChange={setQuery}
-          placeholder="文書を検索"
-        />
+        {/* 右上の閉じるボタンと重ならないように、入力欄の右を空ける */}
+        <div className="pr-9">
+          <CommandInput
+            ref={inputRef}
+            value={query}
+            onValueChange={setQuery}
+            placeholder="文書を検索"
+          />
+        </div>
         <div className="flex flex-wrap items-center gap-x-4 gap-y-2 border-b px-3 py-2">
           <Segment
             name="search-scope"

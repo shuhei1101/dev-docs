@@ -25,7 +25,10 @@ import {
   useCommentStore,
 } from "@/features/docs/shared/comments/comment-store";
 import { SearchDialog } from "@/features/docs/shared/search-dialog/search-dialog";
-import { servingSources } from "@/features/docs/shared/serving-sources";
+import {
+  servingSources,
+  unservedSources,
+} from "@/features/docs/shared/serving-sources";
 import { PendingPanel } from "@/shared/components/pending-panel/pending-panel";
 import { type PendingEdit, usePendingEdits } from "@/shared/stores/pending-edits-store";
 import type { EditBlock, NavTab } from "@/shared/api/generated/model";
@@ -226,6 +229,7 @@ export const DocViewScreen = () => {
         source={source}
         ref={doc.ref ?? undefined}
         sources={servingSources(settings).map((item) => item.id)}
+        unavailable={unservedSources(settings)}
         onResultSelect={nav.openSearchResult}
       />
       <ShortcutDialog
