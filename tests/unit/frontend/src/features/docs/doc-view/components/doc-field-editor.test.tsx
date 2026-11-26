@@ -183,6 +183,17 @@ test("test_doc_field_editor_when_value_repeated", async () => {
   await waitFor(() => expect(lastMarkdown()).toBe("修正後"));
 });
 
+test("test_doc_field_editor_when_value_has_dollar", async () => {
+  renderEditor();
+
+  await userEvent.click(screen.getByRole("button", { name: "概要 を編集" }));
+  const input = screen.getByRole("textbox", { name: "概要" });
+  await userEvent.clear(input);
+  await userEvent.type(input, "$& と $$ と $'{Enter}");
+
+  await waitFor(() => expect(lastMarkdown()).toContain("$& と $$ と $'"));
+});
+
 test("test_editable_title", async () => {
   render(
     <EditableTitle

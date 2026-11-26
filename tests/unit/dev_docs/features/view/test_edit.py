@@ -332,6 +332,40 @@ def test_collect_blocks_when_keyed_array() -> None:
     assert blocks[1].label == "i1 の 本文"
 
 
+def test_collect_blocks_when_sections() -> None:
+    """セクションで描く x-key の配列（正常系）。"""
+    # 準備
+    schema = {
+        "type": "object",
+        "properties": {
+            "items": {
+                "type": "array",
+                "title": "項目",
+                "x-key": "id",
+                "x-shape": "sections",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "id": {"type": "string", "title": "ID"},
+                        "body": {"type": "string", "title": "本文"},
+                    },
+                },
+            }
+        },
+    }
+    value = {"items": [{"id": "i1", "body": "1"}, {"id": "i2", "body": "2"}]}
+    # 実行
+    blocks, _ = collect_blocks(value, schema, None)
+    # 検証
+    assert all(block.type != "table" for block in blocks)
+    assert [block.path for block in blocks] == [
+        "#items[i1].id",
+        "#items[i1].body",
+        "#items[i2].id",
+        "#items[i2].body",
+    ]
+
+
 def test_collect_blocks_when_hidden() -> None:
     """除く項目（正常系）。"""
     # 準備
