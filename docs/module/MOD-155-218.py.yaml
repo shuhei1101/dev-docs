@@ -472,7 +472,7 @@ functions:
       type: None
       description: 確認に合格した
     process: |-
-      1. メタデータの変更の `values` のキーが、種類ごとの列（metadata.py の `KIND_SPECS` の `kind` の行）で修正できる列かを確認し、無い列は `errors[]` に `{key, path: 列, reason: この列は修正できません}` を入れる
+      1. メタデータの変更の `values` のキーが、種類ごとの列（metadata.py の `KIND_SPECS` の `kind` の行）のうち `editable` が真の列かを確認し、無い列は `errors[]` に `{key, path: 列, reason: この列は修正できません}` を入れる
       2. 同じ `doc_id` に `@file` の `body` の変更とほかの `body` の変更があれば、その文書の全ての `body` の変更を `errors[]` に `{key, path: キー, reason: 同じ文書のファイル全体の変更と並べられません}` で入れる
       3. YAML の文書（`doc_path` が `.md` で終わらない）の `@file` を共通の YAML の読み込み（`load_yaml`、`file` は `doc_path`）で読み込み、`YamlLoadError` は `errors[]` に `{key, path: @file, reason: YamlLoadError の文字列}` を入れる
       4. `errors[]` があれば `EditsRejectedError`（400）を送出する
@@ -486,9 +486,9 @@ functions:
       - name: test_check_edits_when_column_not_editable
         case: 異常
         summary: 種類に無い列
-        condition: '`tags` の変更の `values` が `{description: 説明}`'
+        condition: '`tags` の変更の `values` が `{description: 説明}`（種類の列に無い）と `{path: notes/n1.yaml}`（`editable` が偽の列）（それぞれ 1 件で確認する）'
         mock: なし
-        expected: '`EditsRejectedError`（400）で、`errors[0]` がその変更の `key`・`path` が `description`'
+        expected: '`EditsRejectedError`（400）で、`errors[0]` がその変更の `key`・`path` が `description`・`path`'
         exception: 修正できない列
       - name: test_check_edits_when_whole_file_mixed
         case: 異常
