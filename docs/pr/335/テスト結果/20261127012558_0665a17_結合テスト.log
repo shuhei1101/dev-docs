@@ -1,0 +1,430 @@
+# 結合テスト（ランナーで実行範囲の表のファイル・全 pass）
+
+## バックエンド（TL-2）
+$ run_url=$(gh workflow run test.yml --ref "$(git branch --show-current)" -f layer=backend-integration -f paths="tests/integration/server/test_get_document.py tests/integration/server/test_post_preview.py tests/integration/server/test_post_commits.py tests/integration/server/test_get_metadata.py tests/integration/server/test_api_schema.py" | grep -o 'https://[^ ]*/actions/runs/[0-9]*') && ...（テスト実行方法の run_runner のとおり）
+﻿2026-11-26T16:22:04.2240207Z ##[group]Run : > test.log
+2026-11-26T16:22:04.2240549Z ^[[36;1m: > test.log^[[0m
+2026-11-26T16:22:04.2240816Z ^[[36;1m# 結果の行を test.log と step の標準出力の両方に出す^[[0m
+2026-11-26T16:22:04.2241136Z ^[[36;1msay() { echo "$1" | tee -a test.log; }^[[0m
+2026-11-26T16:22:04.2241446Z ^[[36;1mcase "$LAYER" in^[[0m
+2026-11-26T16:22:04.2241701Z ^[[36;1m  backend-unit) limit=7 ;;^[[0m
+2026-11-26T16:22:04.2242051Z ^[[36;1m  backend-integration) limit=62; dir=tests/integration/ ;;^[[0m
+2026-11-26T16:22:04.2242400Z ^[[36;1m  frontend-unit) limit=19 ;;^[[0m
+2026-11-26T16:22:04.2242771Z ^[[36;1m  frontend-integration) limit=75; dir=tests/integration/frontend/ ;;^[[0m
+2026-11-26T16:22:04.2243133Z ^[[36;1mesac^[[0m
+2026-11-26T16:22:04.2243374Z ^[[36;1m# paths は結合テストの層の、層の結合テストのフォルダの下のパスだけを受け付ける^[[0m
+2026-11-26T16:22:04.2243679Z ^[[36;1mif [ -n "$PATHS" ]; then^[[0m
+2026-11-26T16:22:04.2243933Z ^[[36;1m  if [ -z "${dir:-}" ]; then^[[0m
+2026-11-26T16:22:04.2244237Z ^[[36;1m    say "paths は結合テストの層でだけ指定できる: layer=$LAYER"^[[0m
+2026-11-26T16:22:04.2244557Z ^[[36;1m    exit 1^[[0m
+2026-11-26T16:22:04.2244806Z ^[[36;1m  fi^[[0m
+2026-11-26T16:22:04.2245096Z ^[[36;1m  if ! printf '%s' "$PATHS" | grep -Eq '^[A-Za-z0-9_./ -]+$'; then^[[0m
+2026-11-26T16:22:04.2245524Z ^[[36;1m    say "paths に許可しない文字がある（英数字・_・.・/・-・空白だけを許可する）: $PATHS"^[[0m
+2026-11-26T16:22:04.2245849Z ^[[36;1m    exit 1^[[0m
+2026-11-26T16:22:04.2246058Z ^[[36;1m  fi^[[0m
+2026-11-26T16:22:04.2246263Z ^[[36;1m  for p in $PATHS; do^[[0m
+2026-11-26T16:22:04.2246503Z ^[[36;1m    case "$p" in^[[0m
+2026-11-26T16:22:04.2246775Z ^[[36;1m      *..*) say "paths の値が .. を含む: $p"; exit 1 ;;^[[0m
+2026-11-26T16:22:04.2247053Z ^[[36;1m    esac^[[0m
+2026-11-26T16:22:04.2247255Z ^[[36;1m    case "$p" in^[[0m
+2026-11-26T16:22:04.2247480Z ^[[36;1m      "$dir"*) ;;^[[0m
+2026-11-26T16:22:04.2247777Z ^[[36;1m      *) say "paths の値が層の結合テストのフォルダ（$dir）の外: $p"; exit 1 ;;^[[0m
+2026-11-26T16:22:04.2248083Z ^[[36;1m    esac^[[0m
+2026-11-26T16:22:04.2248328Z ^[[36;1m    if [ "$LAYER" = backend-integration ]; then^[[0m
+2026-11-26T16:22:04.2248624Z ^[[36;1m      case "$p" in^[[0m
+2026-11-26T16:22:04.2249158Z ^[[36;1m        tests/integration/frontend/*) say "paths の値が層の結合テストのフォルダの外（tests/integration/frontend/ は frontend-integration の層）: $p"; exit 1 ;;^[[0m
+2026-11-26T16:22:04.2249697Z ^[[36;1m      esac^[[0m
+2026-11-26T16:22:04.2250036Z ^[[36;1m    fi^[[0m
+2026-11-26T16:22:04.2250340Z ^[[36;1m  done^[[0m
+2026-11-26T16:22:04.2250544Z ^[[36;1mfi^[[0m
+2026-11-26T16:22:04.2250743Z ^[[36;1mcase "$LAYER" in^[[0m
+2026-11-26T16:22:04.2251044Z ^[[36;1m  backend-unit) cmd="uv run pytest tests/unit/ -v" ;;^[[0m
+2026-11-26T16:22:04.2251464Z ^[[36;1m  backend-integration) cmd="uv run pytest ${PATHS:-$dir} -v" ;;^[[0m
+2026-11-26T16:22:04.2252018Z ^[[36;1m  frontend-unit) cmd="npx vitest run --config frontend/vitest.config.ts --reporter=verbose" ;;^[[0m
+2026-11-26T16:22:04.2252728Z ^[[36;1m  frontend-integration) cmd="npx playwright test --config tests/integration/frontend/playwright.config.ts $PATHS" ;;^[[0m
+2026-11-26T16:22:04.2253249Z ^[[36;1mesac^[[0m
+2026-11-26T16:22:04.2253492Z ^[[36;1m# テストを裏で起動し、出力を test.log と step の標準出力の両方に出す^[[0m
+2026-11-26T16:22:04.2253894Z ^[[36;1msetsid -w bash -c "set -o pipefail; $cmd 2>&1 | tee -a test.log" &^[[0m
+2026-11-26T16:22:04.2254243Z ^[[36;1mpid=$!^[[0m
+2026-11-26T16:22:04.2254448Z ^[[36;1mlast=-1^[[0m
+2026-11-26T16:22:04.2254658Z ^[[36;1midle=0^[[0m
+2026-11-26T16:22:04.2254898Z ^[[36;1m# test.log の大きさを 1 秒ごとに確認し、無出力の時間が上限を超えたらテストを止める^[[0m
+2026-11-26T16:22:04.2255216Z ^[[36;1mwhile kill -0 "$pid" 2> /dev/null; do^[[0m
+2026-11-26T16:22:04.2255489Z ^[[36;1m  sleep 1^[[0m
+2026-11-26T16:22:04.2255721Z ^[[36;1m  size=$(stat -c %s test.log)^[[0m
+2026-11-26T16:22:04.2255995Z ^[[36;1m  if [ "$size" = "$last" ]; then^[[0m
+2026-11-26T16:22:04.2256267Z ^[[36;1m    idle=$((idle + 1))^[[0m
+2026-11-26T16:22:04.2256500Z ^[[36;1m  else^[[0m
+2026-11-26T16:22:04.2256694Z ^[[36;1m    idle=0^[[0m
+2026-11-26T16:22:04.2256907Z ^[[36;1m    last=$size^[[0m
+2026-11-26T16:22:04.2257121Z ^[[36;1m  fi^[[0m
+2026-11-26T16:22:04.2257335Z ^[[36;1m  if [ "$idle" -gt "$limit" ]; then^[[0m
+2026-11-26T16:22:04.2257609Z ^[[36;1m    kill -- "-$pid"^[[0m
+2026-11-26T16:22:04.2257987Z ^[[36;1m    say "出力が ${limit} 秒変わらなかったため、テストを止めた"^[[0m
+2026-11-26T16:22:04.2258261Z ^[[36;1m    exit 1^[[0m
+2026-11-26T16:22:04.2258463Z ^[[36;1m  fi^[[0m
+2026-11-26T16:22:04.2258651Z ^[[36;1mdone^[[0m
+2026-11-26T16:22:04.2258868Z ^[[36;1mwait "$pid"^[[0m
+2026-11-26T16:22:04.2279302Z shell: /usr/bin/bash -e {0}
+2026-11-26T16:22:04.2279573Z env:
+2026-11-26T16:22:04.2279855Z   UV_PYTHON_INSTALL_DIR: /home/runner/work/_temp/uv-python-dir
+2026-11-26T16:22:04.2280326Z   UV_CACHE_DIR: /home/runner/work/_temp/setup-uv-cache
+2026-11-26T16:22:04.2280865Z   LAYER: backend-integration
+2026-11-26T16:22:04.2281810Z   PATHS: tests/integration/server/test_get_document.py tests/integration/server/test_post_preview.py tests/integration/server/test_post_commits.py tests/integration/server/test_get_metadata.py tests/integration/server/test_api_schema.py
+2026-11-26T16:22:04.2282696Z   PYTHONUNBUFFERED: 1
+2026-11-26T16:22:04.2282913Z ##[endgroup]
+2026-11-26T16:22:06.4886021Z ============================= test session starts ==============================
+2026-11-26T16:22:06.4889403Z platform linux -- Python 3.14.4, pytest-9.1.1, pluggy-1.7.0 -- /home/runner/work/dev-docs/dev-docs/.venv/bin/python
+2026-11-26T16:22:06.4895179Z cachedir: .pytest_cache
+2026-11-26T16:22:06.4895890Z rootdir: /home/runner/work/dev-docs/dev-docs
+2026-11-26T16:22:06.4896500Z configfile: pyproject.toml
+2026-11-26T16:22:06.4896973Z plugins: anyio-4.15.1
+2026-11-26T16:22:06.6501947Z collecting ... collected 63 items
+2026-11-26T16:22:06.6505961Z 
+2026-11-26T16:22:11.4831453Z tests/integration/server/test_get_document.py::test_normal PASSED        [  1%]
+2026-11-26T16:22:12.7898115Z tests/integration/server/test_get_document.py::test_normal_when_nav_missing PASSED [  3%]
+2026-11-26T16:22:14.1330777Z tests/integration/server/test_get_document.py::test_normal_when_ref_given PASSED [  4%]
+2026-11-26T16:22:15.4649700Z tests/integration/server/test_get_document.py::test_normal_when_diff_given PASSED [  6%]
+2026-11-26T16:22:16.8800789Z tests/integration/server/test_get_document.py::test_normal_when_custom_converter PASSED [  7%]
+2026-11-26T16:22:18.3051571Z tests/integration/server/test_get_document.py::test_normal_when_conversion_failed PASSED [  9%]
+2026-11-26T16:22:19.6502419Z tests/integration/server/test_get_document.py::test_error_when_not_found PASSED [ 11%]
+2026-11-26T16:22:20.9541760Z tests/integration/server/test_get_document.py::test_normal_when_nav_filtered_by_tags PASSED [ 12%]
+2026-11-26T16:22:22.3174633Z tests/integration/server/test_get_document.py::test_normal_when_aliases_returned PASSED [ 14%]
+2026-11-26T16:22:23.7291790Z tests/integration/server/test_get_document.py::test_normal_when_body_path_given PASSED [ 15%]
+2026-11-26T16:22:25.0423666Z tests/integration/server/test_get_document.py::test_normal_when_nav_grouped_by_folder PASSED [ 17%]
+2026-11-26T16:22:26.3495950Z tests/integration/server/test_get_document.py::test_normal_when_nav_grouped_by_common_keys PASSED [ 19%]
+2026-11-26T16:22:27.6737669Z tests/integration/server/test_get_document.py::test_normal_when_schema_document_drawn PASSED [ 20%]
+2026-11-26T16:22:29.0226404Z tests/integration/server/test_get_document.py::test_normal_when_mermaid_not_mappable PASSED [ 22%]
+2026-11-26T16:22:30.3476741Z tests/integration/server/test_get_document.py::test_normal_when_er_diagram_drawn PASSED [ 23%]
+2026-11-26T16:23:08.1700022Z tests/integration/server/test_get_document.py::test_normal_when_diagrams_checked PASSED [ 25%]
+2026-11-26T16:23:09.7409350Z tests/integration/server/test_get_document.py::test_normal_when_id_link_resolved PASSED [ 26%]
+2026-11-26T16:23:11.0836068Z tests/integration/server/test_get_document.py::test_normal_when_diagram_node_id_link_resolved PASSED [ 28%]
+2026-11-26T16:23:12.4029743Z tests/integration/server/test_get_document.py::test_normal_when_mermaid_click_id_resolved PASSED [ 30%]
+2026-11-26T16:23:13.7182697Z tests/integration/server/test_get_document.py::test_normal_when_decision_linked PASSED [ 31%]
+2026-11-26T16:23:15.0691112Z tests/integration/server/test_get_document.py::test_normal_when_decision_document_returned PASSED [ 33%]
+2026-11-26T16:23:16.0998519Z tests/integration/server/test_get_document.py::test_error_when_project_index_unreachable PASSED [ 34%]
+2026-11-26T16:23:17.6847660Z tests/integration/server/test_get_document.py::test_error_when_project_index_timed_out PASSED [ 36%]
+2026-11-26T16:23:21.2786900Z tests/integration/server/test_get_document.py::test_normal_when_requests_sent_concurrently PASSED [ 38%]
+2026-11-26T16:23:22.0265908Z tests/integration/server/test_get_document.py::test_normal_when_document_list_reused PASSED [ 39%]
+2026-11-26T16:23:27.0779897Z tests/integration/server/test_get_document.py::test_normal_when_document_list_shared PASSED [ 41%]
+2026-11-26T16:23:27.7101942Z tests/integration/server/test_get_document.py::test_normal_when_revision_or_config_changed PASSED [ 42%]
+2026-11-26T16:23:28.3692344Z tests/integration/server/test_get_document.py::test_normal_when_cache_limit_exceeded PASSED [ 44%]
+2026-11-26T16:23:28.9766866Z tests/integration/server/test_get_document.py::test_normal_when_document_list_not_cacheable PASSED [ 46%]
+2026-11-26T16:23:29.5820401Z tests/integration/server/test_get_document.py::test_normal_when_gzip_accepted PASSED [ 47%]
+2026-11-26T16:23:30.1797983Z tests/integration/server/test_get_document.py::test_error_when_project_index_failed PASSED [ 49%]
+2026-11-26T16:23:31.4843439Z tests/integration/server/test_get_document.py::test_normal_when_search_excluded PASSED [ 50%]
+2026-11-26T16:23:36.1655864Z tests/integration/server/test_get_document.py::test_normal_when_edit_returned PASSED [ 52%]
+2026-11-26T16:23:37.6467504Z tests/integration/server/test_get_document.py::test_normal_when_not_editable PASSED [ 53%]
+2026-11-26T16:23:39.1055599Z tests/integration/server/test_post_preview.py::test_normal PASSED        [ 55%]
+2026-11-26T16:23:40.4818857Z tests/integration/server/test_post_preview.py::test_normal_when_yaml_invalid PASSED [ 57%]
+2026-11-26T16:23:41.8000520Z tests/integration/server/test_post_preview.py::test_normal_when_custom_converter PASSED [ 58%]
+2026-11-26T16:23:43.1084481Z tests/integration/server/test_post_preview.py::test_error_when_not_found PASSED [ 60%]
+2026-11-26T16:23:47.7551804Z tests/integration/server/test_post_commits.py::test_normal PASSED        [ 61%]
+2026-11-26T16:23:49.1864308Z tests/integration/server/test_post_commits.py::test_normal_when_dry_run PASSED [ 63%]
+2026-11-26T16:23:50.6154050Z tests/integration/server/test_post_commits.py::test_error_when_cross_origin PASSED [ 65%]
+2026-11-26T16:23:51.1174231Z tests/integration/server/test_post_commits.py::test_error_when_body_invalid PASSED [ 66%]
+2026-11-26T16:23:52.5708531Z tests/integration/server/test_post_commits.py::test_error_when_validation_failed PASSED [ 68%]
+2026-11-26T16:23:53.9155020Z tests/integration/server/test_post_commits.py::test_error_when_base_commit_unusable PASSED [ 69%]
+2026-11-26T16:23:55.3600513Z tests/integration/server/test_post_commits.py::test_error_when_direct_commit_not_permitted PASSED [ 71%]
+2026-11-26T16:23:56.7821911Z tests/integration/server/test_post_commits.py::test_error_when_remote_unreachable PASSED [ 73%]
+2026-11-26T16:23:58.3708371Z tests/integration/server/test_post_commits.py::test_error_when_write_timed_out PASSED [ 74%]
+2026-11-26T16:23:59.8053760Z tests/integration/server/test_post_commits.py::test_normal_when_tags_mapped PASSED [ 76%]
+2026-11-26T16:24:01.3262331Z tests/integration/server/test_post_commits.py::test_normal_when_other_item_changed PASSED [ 77%]
+2026-11-26T16:24:02.8577279Z tests/integration/server/test_post_commits.py::test_normal_when_conflict_kept_on_branch PASSED [ 79%]
+2026-11-26T16:24:04.3844519Z tests/integration/server/test_post_commits.py::test_normal_when_conflict_script_not_configured PASSED [ 80%]
+2026-11-26T16:24:05.9314694Z tests/integration/server/test_post_commits.py::test_normal_when_conflict_script_failed PASSED [ 82%]
+2026-11-26T16:24:07.5465388Z tests/integration/server/test_post_commits.py::test_normal_when_dry_run_conflicted PASSED [ 84%]
+2026-11-26T16:24:09.1829226Z tests/integration/server/test_post_commits.py::test_normal_when_document_body_edited PASSED [ 85%]
+2026-11-26T16:24:10.7130033Z tests/integration/server/test_post_commits.py::test_normal_when_whole_file_edit_conflicted PASSED [ 87%]
+2026-11-26T16:24:11.2149260Z tests/integration/server/test_post_commits.py::test_error_when_whole_file_unparsable PASSED [ 88%]
+2026-11-26T16:24:12.6934292Z tests/integration/server/test_post_commits.py::test_error_when_document_body_invalid PASSED [ 90%]
+2026-11-26T16:24:13.1953951Z tests/integration/server/test_post_commits.py::test_error_when_whole_file_and_item_edits_mixed PASSED [ 92%]
+2026-11-26T16:24:14.5268577Z tests/integration/server/test_get_metadata.py::test_normal PASSED        [ 93%]
+2026-11-26T16:24:15.8538175Z tests/integration/server/test_get_metadata.py::test_normal_when_rule_index_not_served PASSED [ 95%]
+2026-11-26T16:24:17.2023377Z tests/integration/server/test_get_metadata.py::test_error_when_source_missing PASSED [ 96%]
+2026-11-26T16:24:17.2855414Z tests/integration/server/test_get_metadata.py::test_error_when_project_index_unreachable PASSED [ 98%]
+2026-11-26T16:24:17.7905252Z tests/integration/server/test_api_schema.py::test_normal PASSED          [100%]
+2026-11-26T16:24:17.7906384Z 
+2026-11-26T16:24:17.7906872Z ======================== 63 passed in 131.30s (0:02:11) ========================
+exit=0 run=https://github.com/shuhei1101/dev-docs/actions/runs/45858058502
+
+## フロントエンド（TL-3）
+$ run_url=$(gh workflow run test.yml --ref "$(git branch --show-current)" -f layer=frontend-integration -f paths="tests/integration/frontend/doc-view-screen.spec.ts tests/integration/frontend/metadata-screen.spec.ts tests/integration/frontend/pending-panel.spec.ts" | grep -o 'https://[^ ]*/actions/runs/[0-9]*') && ...（テスト実行方法の run_runner のとおり）
+2026-11-26T16:23:07.8786886Z ##[group]Run : > test.log
+2026-11-26T16:23:07.8787184Z ^[[36;1m: > test.log^[[0m
+2026-11-26T16:23:07.8787391Z ^[[36;1m# 結果の行を test.log と step の標準出力の両方に出す^[[0m
+2026-11-26T16:23:07.8787654Z ^[[36;1msay() { echo "$1" | tee -a test.log; }^[[0m
+2026-11-26T16:23:07.8787918Z ^[[36;1mcase "$LAYER" in^[[0m
+2026-11-26T16:23:07.8788118Z ^[[36;1m  backend-unit) limit=7 ;;^[[0m
+2026-11-26T16:23:07.8788403Z ^[[36;1m  backend-integration) limit=62; dir=tests/integration/ ;;^[[0m
+2026-11-26T16:23:07.8788690Z ^[[36;1m  frontend-unit) limit=19 ;;^[[0m
+2026-11-26T16:23:07.8788990Z ^[[36;1m  frontend-integration) limit=75; dir=tests/integration/frontend/ ;;^[[0m
+2026-11-26T16:23:07.8789295Z ^[[36;1mesac^[[0m
+2026-11-26T16:23:07.8789490Z ^[[36;1m# paths は結合テストの層の、層の結合テストのフォルダの下のパスだけを受け付ける^[[0m
+2026-11-26T16:23:07.8789738Z ^[[36;1mif [ -n "$PATHS" ]; then^[[0m
+2026-11-26T16:23:07.8789948Z ^[[36;1m  if [ -z "${dir:-}" ]; then^[[0m
+2026-11-26T16:23:07.8790199Z ^[[36;1m    say "paths は結合テストの層でだけ指定できる: layer=$LAYER"^[[0m
+2026-11-26T16:23:07.8790430Z ^[[36;1m    exit 1^[[0m
+2026-11-26T16:23:07.8790635Z ^[[36;1m  fi^[[0m
+2026-11-26T16:23:07.8790863Z ^[[36;1m  if ! printf '%s' "$PATHS" | grep -Eq '^[A-Za-z0-9_./ -]+$'; then^[[0m
+2026-11-26T16:23:07.8791225Z ^[[36;1m    say "paths に許可しない文字がある（英数字・_・.・/・-・空白だけを許可する）: $PATHS"^[[0m
+2026-11-26T16:23:07.8791650Z ^[[36;1m    exit 1^[[0m
+2026-11-26T16:23:07.8791817Z ^[[36;1m  fi^[[0m
+2026-11-26T16:23:07.8791987Z ^[[36;1m  for p in $PATHS; do^[[0m
+2026-11-26T16:23:07.8792187Z ^[[36;1m    case "$p" in^[[0m
+2026-11-26T16:23:07.8792423Z ^[[36;1m      *..*) say "paths の値が .. を含む: $p"; exit 1 ;;^[[0m
+2026-11-26T16:23:07.8792660Z ^[[36;1m    esac^[[0m
+2026-11-26T16:23:07.8792827Z ^[[36;1m    case "$p" in^[[0m
+2026-11-26T16:23:07.8793008Z ^[[36;1m      "$dir"*) ;;^[[0m
+2026-11-26T16:23:07.8793247Z ^[[36;1m      *) say "paths の値が層の結合テストのフォルダ（$dir）の外: $p"; exit 1 ;;^[[0m
+2026-11-26T16:23:07.8793496Z ^[[36;1m    esac^[[0m
+2026-11-26T16:23:07.8793695Z ^[[36;1m    if [ "$LAYER" = backend-integration ]; then^[[0m
+2026-11-26T16:23:07.8794156Z ^[[36;1m      case "$p" in^[[0m
+2026-11-26T16:23:07.8794605Z ^[[36;1m        tests/integration/frontend/*) say "paths の値が層の結合テストのフォルダの外（tests/integration/frontend/ は frontend-integration の層）: $p"; exit 1 ;;^[[0m
+2026-11-26T16:23:07.8795062Z ^[[36;1m      esac^[[0m
+2026-11-26T16:23:07.8795238Z ^[[36;1m    fi^[[0m
+2026-11-26T16:23:07.8795393Z ^[[36;1m  done^[[0m
+2026-11-26T16:23:07.8795547Z ^[[36;1mfi^[[0m
+2026-11-26T16:23:07.8795707Z ^[[36;1mcase "$LAYER" in^[[0m
+2026-11-26T16:23:07.8795947Z ^[[36;1m  backend-unit) cmd="uv run pytest tests/unit/ -v" ;;^[[0m
+2026-11-26T16:23:07.8796283Z ^[[36;1m  backend-integration) cmd="uv run pytest ${PATHS:-$dir} -v" ;;^[[0m
+2026-11-26T16:23:07.8796722Z ^[[36;1m  frontend-unit) cmd="npx vitest run --config frontend/vitest.config.ts --reporter=verbose" ;;^[[0m
+2026-11-26T16:23:07.8797307Z ^[[36;1m  frontend-integration) cmd="npx playwright test --config tests/integration/frontend/playwright.config.ts $PATHS" ;;^[[0m
+2026-11-26T16:23:07.8797725Z ^[[36;1mesac^[[0m
+2026-11-26T16:23:07.8797914Z ^[[36;1m# テストを裏で起動し、出力を test.log と step の標準出力の両方に出す^[[0m
+2026-11-26T16:23:07.8798227Z ^[[36;1msetsid -w bash -c "set -o pipefail; $cmd 2>&1 | tee -a test.log" &^[[0m
+2026-11-26T16:23:07.8798505Z ^[[36;1mpid=$!^[[0m
+2026-11-26T16:23:07.8798700Z ^[[36;1mlast=-1^[[0m
+2026-11-26T16:23:07.8798872Z ^[[36;1midle=0^[[0m
+2026-11-26T16:23:07.8799067Z ^[[36;1m# test.log の大きさを 1 秒ごとに確認し、無出力の時間が上限を超えたらテストを止める^[[0m
+2026-11-26T16:23:07.8799322Z ^[[36;1mwhile kill -0 "$pid" 2> /dev/null; do^[[0m
+2026-11-26T16:23:07.8799554Z ^[[36;1m  sleep 1^[[0m
+2026-11-26T16:23:07.8799737Z ^[[36;1m  size=$(stat -c %s test.log)^[[0m
+2026-11-26T16:23:07.8799955Z ^[[36;1m  if [ "$size" = "$last" ]; then^[[0m
+2026-11-26T16:23:07.8800172Z ^[[36;1m    idle=$((idle + 1))^[[0m
+2026-11-26T16:23:07.8800361Z ^[[36;1m  else^[[0m
+2026-11-26T16:23:07.8800515Z ^[[36;1m    idle=0^[[0m
+2026-11-26T16:23:07.8800681Z ^[[36;1m    last=$size^[[0m
+2026-11-26T16:23:07.8800852Z ^[[36;1m  fi^[[0m
+2026-11-26T16:23:07.8801029Z ^[[36;1m  if [ "$idle" -gt "$limit" ]; then^[[0m
+2026-11-26T16:23:07.8801253Z ^[[36;1m    kill -- "-$pid"^[[0m
+2026-11-26T16:23:07.8801625Z ^[[36;1m    say "出力が ${limit} 秒変わらなかったため、テストを止めた"^[[0m
+2026-11-26T16:23:07.8801844Z ^[[36;1m    exit 1^[[0m
+2026-11-26T16:23:07.8802002Z ^[[36;1m  fi^[[0m
+2026-11-26T16:23:07.8802147Z ^[[36;1mdone^[[0m
+2026-11-26T16:23:07.8802412Z ^[[36;1mwait "$pid"^[[0m
+2026-11-26T16:23:07.8832235Z shell: /usr/bin/bash -e {0}
+2026-11-26T16:23:07.8832469Z env:
+2026-11-26T16:23:07.8832678Z   LAYER: frontend-integration
+2026-11-26T16:23:07.8833221Z   PATHS: tests/integration/frontend/doc-view-screen.spec.ts tests/integration/frontend/metadata-screen.spec.ts tests/integration/frontend/pending-panel.spec.ts
+2026-11-26T16:23:07.8833754Z   PYTHONUNBUFFERED: 1
+2026-11-26T16:23:07.8834049Z ##[endgroup]
+2026-11-26T16:23:13.5654979Z 
+2026-11-26T16:23:13.5655946Z Running 203 tests using 2 workers
+2026-11-26T16:23:13.5656261Z 
+2026-11-26T16:23:15.4513498Z   ✓    2 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:137:3 › ページのタイトル › page_title (1.0s)
+2026-11-26T16:23:15.6285983Z   ✓    1 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:143:3 › ページのタイトル › page_title_when_empty_tab (1.1s)
+2026-11-26T16:23:16.5921221Z   ✓    3 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:154:3 › 本文へスキップ › skip_link (1.1s)
+2026-11-26T16:23:17.0465832Z   ✓    4 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:170:3 › トップバー › topbar_source_select (1.4s)
+2026-11-26T16:23:17.9296493Z   ✓    5 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:178:3 › トップバー › topbar_ref_select (1.3s)
+2026-11-26T16:23:18.2770738Z   ✓    6 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:186:3 › トップバー › topbar_compare_start_when_default_ref (1.2s)
+2026-11-26T16:23:19.2352236Z   ✓    7 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:194:3 › トップバー › topbar_compare_start_when_other_ref (1.3s)
+2026-11-26T16:23:19.3846623Z   ✓    8 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:202:3 › トップバー › topbar_search_open (1.1s)
+2026-11-26T16:23:20.4822366Z   ✓    9 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:209:3 › トップバー › topbar_comment_panel_toggle (1.2s)
+2026-11-26T16:23:20.5385815Z   ✓   10 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:219:3 › トップバー › topbar_sidebar_open (1.1s)
+2026-11-26T16:23:21.6795160Z   ✓   11 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:227:3 › トップバー › topbar_color_scheme_toggle (1.2s)
+2026-11-26T16:23:21.7486102Z   ✓   12 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:237:3 › トップバー › topbar_sources_from_settings (1.2s)
+2026-11-26T16:23:22.7026320Z   ✓   13 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:259:3 › 種類のタブ › tabs_order_and_current (1.0s)
+2026-11-26T16:23:23.0165742Z   ✓   14 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:267:3 › 種類のタブ › tabs_click (1.2s)
+2026-11-26T16:23:23.8501389Z   ✓   15 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:274:3 › 種類のタブ › tabs_click_when_doc_in_two_tabs (1.1s)
+2026-11-26T16:23:24.1089427Z   ✓   16 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:289:3 › 種類のタブ › tabs_click_when_empty (1.1s)
+2026-11-26T16:23:24.9943271Z   ✓   17 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:299:3 › 文書の一覧 › sidebar_groups_and_pages (1.1s)
+2026-11-26T16:23:25.2035955Z   ✓   18 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:308:3 › 文書の一覧 › sidebar_click_keeps_rev_and_base (1.1s)
+2026-11-26T16:23:26.1126384Z   ✓   20 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:322:3 › 文書の一覧 › sidebar_hidden_when_narrow (892ms)
+2026-11-26T16:23:26.1145191Z   ✓   19 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:315:3 › 文書の一覧 › sidebar_click_when_deleted (1.1s)
+2026-11-26T16:23:27.0552717Z   ✓   22 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:341:3 › 文書の変化のマーカー › change_markers_without_base (917ms)
+2026-11-26T16:23:27.2208270Z   ✓   21 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:331:3 › 文書の変化のマーカー › change_markers (1.1s)
+2026-11-26T16:23:28.3396346Z   ✓   24 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:360:3 › 文書の一覧のドロワー › drawer_closes_on_escape (1.1s)
+2026-11-26T16:23:28.7896778Z   ✓   23 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:351:3 › 文書の一覧のドロワー › drawer_closes_on_navigate (1.7s)
+2026-11-26T16:23:29.3626796Z   ✓   25 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:399:3 › group の開閉ボタン › group_toggle_initial (1.0s)
+2026-11-26T16:23:29.9200781Z   ✓   26 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:408:3 › group の開閉ボタン › group_toggle_click (1.1s)
+2026-11-26T16:23:30.4133657Z   ✓   27 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:423:3 › group の開閉ボタン › group_toggle_keyboard (1.0s)
+2026-11-26T16:23:31.1560530Z   ✓   28 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:434:3 › group の開閉ボタン › group_opens_when_current_changed (1.2s)
+2026-11-26T16:23:31.7171103Z   ✓   29 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:450:3 › group の開閉ボタン › group_opens_when_change_appeared (1.3s)
+2026-11-26T16:23:32.2967272Z   ✓   30 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:463:3 › group の開閉ボタン › group_keeps_closed (1.1s)
+2026-11-26T16:23:32.8482764Z   ✓   31 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:475:3 › group の開閉ボタン › group_nested (1.1s)
+2026-11-26T16:23:33.7325568Z   ✓   32 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:489:3 › group の開閉ボタン › group_toggle_in_drawer (1.4s)
+2026-11-26T16:23:33.8814644Z   ✓   33 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:512:3 › サイドバーを閉じるボタン › sidebar_close_button (1.0s)
+2026-11-26T16:23:34.8099909Z   ✓   35 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:540:3 › サイドバーを閉じるボタン › sidebar_close_hidden_when_narrow (910ms)
+2026-11-26T16:23:35.6596827Z   ✓   34 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:524:3 › サイドバーを閉じるボタン › sidebar_close (1.9s)
+2026-11-26T16:23:36.7773752Z   ✓   37 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:571:3 › サイドバーの境目 › separator_initial (1.1s)
+2026-11-26T16:23:36.9191993Z   ✓   36 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:550:3 › サイドバーを開くボタン › sidebar_open_restores_width (2.1s)
+2026-11-26T16:23:38.3700867Z   ✓   39 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:599:3 › サイドバーの境目 › separator_drag_range (1.4s)
+2026-11-26T16:23:39.1838753Z   ✓   38 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:580:3 › サイドバーの境目 › separator_drag (2.4s)
+2026-11-26T16:23:39.9715688Z   ✓   40 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:617:3 › サイドバーの境目 › separator_keyboard (1.6s)
+2026-11-26T16:23:40.6269881Z   ✓   41 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:633:3 › サイドバーの境目 › separator_double_click (1.4s)
+2026-11-26T16:23:41.3820346Z   ✓   42 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:646:3 › パンくず › breadcrumb (1.4s)
+2026-11-26T16:23:41.9189030Z   ✓   43 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:655:3 › パンくず › breadcrumb_source_link (1.3s)
+2026-11-26T16:23:42.7365963Z   ✓   44 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:662:3 › パンくず › breadcrumb_tab_link (1.3s)
+2026-11-26T16:23:43.1636870Z   ✓   45 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:669:3 › パンくず › breadcrumb_when_empty_tab (1.2s)
+2026-11-26T16:23:43.8661922Z   ✓   46 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:683:3 › 文書のタイトル › doc_title (1.1s)
+2026-11-26T16:23:44.5538700Z   ✓   47 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:689:3 › 文書のタイトル › doc_title_matches_mdmark_h1 (1.4s)
+2026-11-26T16:23:45.1276465Z   ✓   48 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:716:3 › 文書の情報 › doc_info (1.3s)
+2026-11-26T16:23:48.1123212Z   ✓   49 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:730:3 › 読み込み中の表示 › loading_skeleton (3.5s)
+2026-11-26T16:23:48.1205981Z   ✓   50 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:745:3 › 読み込み中の表示 › loading_keeps_previous_doc (3.0s)
+2026-11-26T16:23:49.0708699Z   ✓   52 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:774:3 › 差分の案内 › diff_banner_hidden_without_base (939ms)
+2026-11-26T16:23:49.1662254Z   ✓   51 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:765:3 › 差分の案内 › diff_banner_visible (1.0s)
+2026-11-26T16:23:49.9650108Z   ✓   53 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:780:3 › 差分の案内 › diff_banner_hidden_when_non_git (877ms)
+2026-11-26T16:23:50.5699016Z   ✓   54 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:793:3 › 比較元の選択 › base_select (1.4s)
+2026-11-26T16:23:51.1804174Z   ✓   55 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:815:3 › 比較先の選択 › head_select (1.2s)
+2026-11-26T16:23:51.7336206Z   ✓   56 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:827:3 › 差分の強調を解除 › diff_clear (1.2s)
+2026-11-26T16:23:52.3134628Z   ✓   57 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:836:3 › 差分の強調を解除 › diff_clear_body (1.1s)
+2026-11-26T16:23:52.8672874Z   ✓   58 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:851:3 › 文書の本文の差分 › body_diff_highlight (1.1s)
+2026-11-26T16:23:53.3657101Z   ✓   59 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:858:3 › 文書の本文の差分 › body_diff_highlight_when_block_deleted (1.0s)
+2026-11-26T16:23:53.9020190Z   ✓   60 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:877:3 › 文書の本文の差分 › body_diff_highlight_without_base (1.0s)
+2026-11-26T16:23:54.2333602Z   ✓   61 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:892:3 › 変換の失敗 › conversion_error_when_timeout (852ms)
+2026-11-26T16:23:54.8566606Z   ✓   62 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:908:3 › 変換の失敗 › conversion_error_when_invalid_yaml (946ms)
+2026-11-26T16:23:55.2998161Z   ✓   63 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:925:3 › 再読み込み › reload_button (1.0s)
+2026-11-26T16:23:55.9256261Z   ✓   64 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:950:3 › 文書が無いことの表示 › empty_tab_message (1.1s)
+2026-11-26T16:23:56.4449499Z   ✓   65 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:960:3 › 文書が無いことの表示 › empty_tab_message_when_non_git (1.1s)
+2026-11-26T16:23:56.9878200Z   ✓   66 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:975:3 › 本文 › body_without_first_h1 (1.1s)
+2026-11-26T16:23:57.5186282Z   ✓   67 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:982:5 › 本文 › body_width_without_upper_limit_1920 (1.1s)
+2026-11-26T16:23:58.0822044Z   ✓   68 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:982:5 › 本文 › body_width_without_upper_limit_2880 (1.1s)
+2026-11-26T16:23:58.8725886Z   ✓   69 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:997:3 › 本文 › body_without_preflight (1.3s)
+2026-11-26T16:23:59.0154274Z   ✓   70 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1059:3 › 本文 › frame_keeps_preflight (922ms)
+2026-11-26T16:23:59.9671499Z   ✓   71 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1081:3 › 本文 › body_left_aligned_with_title (1.1s)
+2026-11-26T16:24:00.1659108Z   ✓   72 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1097:3 › 本文 › body_internal_link (1.1s)
+2026-11-26T16:24:01.1711055Z   ✓   73 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1111:3 › 本文 › body_external_link (1.2s)
+2026-11-26T16:24:01.4135549Z   ✓   74 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1125:3 › 本文 › body_mermaid_click_link (1.2s)
+2026-11-26T16:24:02.2983891Z   ✓   75 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1151:3 › 本文 › body_internal_link_when_missing (1.1s)
+2026-11-26T16:24:02.5820653Z   ✓   76 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1166:3 › 本文 › body_table_no_pinned_column_initially (1.2s)
+2026-11-26T16:24:03.3897471Z   ✓   77 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1203:3 › 列の表示のメニュー › columns_menu_visible (1.1s)
+2026-11-26T16:24:03.5874520Z   ✓   78 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1209:3 › 列の表示のメニュー › columns_menu_hidden_columns (988ms)
+2026-11-26T16:24:04.5996071Z   ✓   79 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1220:3 › 列の表示のメニュー › columns_menu_save (1.2s)
+2026-11-26T16:24:04.7620215Z   ✓   80 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1236:3 › 列の表示のメニュー › columns_menu_save_failure (1.2s)
+2026-11-26T16:24:05.7925077Z   ✓   81 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1250:3 › 列の表示のメニュー › columns_menu_save_when_tables_mixed (1.2s)
+2026-11-26T16:24:05.9627384Z   ✓   82 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1280:3 › 列の表示のメニュー › columns_menu_json_marker (1.2s)
+2026-11-26T16:24:06.8972723Z   ✓   83 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1322:3 › 目次 › toc_items (1.1s)
+2026-11-26T16:24:07.0733531Z   ✓   84 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1331:3 › 目次 › toc_change_marker (1.1s)
+2026-11-26T16:24:08.0519496Z   ✓   86 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1364:3 › 目次 › toc_hidden_without_headings (969ms)
+2026-11-26T16:24:08.0605560Z   ✓   85 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1339:3 › 目次 › toc_after_doc_changed (1.1s)
+2026-11-26T16:24:09.3011611Z   ✓   87 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1375:3 › 目次 › toc_click (1.2s)
+2026-11-26T16:24:09.3928323Z   ✓   88 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1405:3 › 目次 › toc_below_tabs_when_scrolled (1.3s)
+2026-11-26T16:24:10.4637341Z   ✓   89 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1454:5 › 目次 › table_head_below_tabs_when_scrolled (1.2s)
+2026-11-26T16:24:10.7428529Z   ✓   90 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1454:5 › 目次 › table_head_below_tabs_when_scrolled_without_timeline (1.3s)
+2026-11-26T16:24:11.6835841Z   ✓   91 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1472:3 › 目次 › toc_below_tabs_when_scrolled_narrow (1.2s)
+2026-11-26T16:24:12.0650994Z   ✓   92 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1485:3 › コメントの追加 › comment_add (1.3s)
+2026-11-26T16:24:12.7875441Z   ✓   93 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1499:3 › コメントのパネル › panel_heading (1.1s)
+2026-11-26T16:24:13.2041539Z   ✓   94 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1508:3 › コメントのパネル › panel_lists_other_docs (1.1s)
+2026-11-26T16:24:13.9218460Z   ✓   95 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1518:3 › コメントのパネルの位置 › panel_position_on_the_right (1.1s)
+2026-11-26T16:24:14.3080927Z   ✓   96 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1527:3 › コメントのパネルの位置 › panel_position_when_narrow (1.1s)
+2026-11-26T16:24:15.0471590Z   ✓   97 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1540:3 › コメントのパネルを閉じる › panel_close_button (1.1s)
+2026-11-26T16:24:15.4641665Z   ✓   98 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1550:3 › コメントのパネルを閉じる › panel_close_by_escape (1.1s)
+2026-11-26T16:24:16.2113214Z   ✓   99 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1568:3 › すべて選択 › select_all_state (1.2s)
+2026-11-26T16:24:16.8707172Z   ✓  100 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1577:3 › すべて選択 › select_all_toggle (1.4s)
+2026-11-26T16:24:17.1448008Z   ✓  101 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1588:3 › すべて選択 › select_all_hidden_when_empty (918ms)
+2026-11-26T16:24:18.1874788Z   ✓  103 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1614:3 › コメントの場所 › place_text (1.0s)
+2026-11-26T16:24:18.4611714Z   ✓  102 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1596:3 › コメントの選択 › comment_select (1.6s)
+2026-11-26T16:24:19.3309336Z   ✓  104 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1621:3 › コメントの場所 › place_click_other_doc (1.1s)
+2026-11-26T16:24:19.9256563Z   ✓  105 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1641:3 › コメントの場所への移動 › place_scroll_same_doc (1.4s)
+2026-11-26T16:24:21.1375374Z   ✓  107 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1694:3 › コメントの場所への移動 › place_scroll_other_doc (1.2s)
+2026-11-26T16:24:21.5434638Z   ✓  106 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1657:3 › コメントの場所への移動 › place_scroll_cleared_when_doc_left (2.2s)
+2026-11-26T16:24:22.2266034Z   ✓  108 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1712:3 › コメントの引用 › quote_text (1.1s)
+2026-11-26T16:24:22.7721753Z   ✓  109 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1724:3 › コメントの本文 › comment_body (1.2s)
+2026-11-26T16:24:23.5850863Z   ✓  110 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1740:3 › コメントの修正 › edit_button (1.4s)
+2026-11-26T16:24:24.0257552Z   ✓  111 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1748:3 › コメントの修正 › edit_field_focus (1.2s)
+2026-11-26T16:24:24.9645888Z   ✓  112 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1755:3 › コメントの修正 › edit_save (1.4s)
+2026-11-26T16:24:25.4112021Z   ✓  113 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1765:3 › コメントの修正 › edit_save_redraws_mark (1.4s)
+2026-11-26T16:24:26.3743029Z   ✓  114 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1779:3 › コメントの修正 › edit_cancel (1.4s)
+2026-11-26T16:24:26.6450892Z   ✓  115 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1788:3 › コメントの修正 › edit_cancel_by_escape (1.2s)
+2026-11-26T16:24:27.7522829Z   ✓  116 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1797:3 › コメントの修正 › edit_save_when_blank (1.4s)
+2026-11-26T16:24:27.9275868Z   ✓  117 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1809:3 › コメントの削除 › delete_button (1.3s)
+2026-11-26T16:24:29.1613134Z   ✓  118 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1819:3 › コメントの削除 › delete_button_redraws_mark (1.4s)
+2026-11-26T16:24:29.2716990Z   ✓  119 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1838:3 › 選択をコピー › copy_button (1.3s)
+2026-11-26T16:24:30.5237118Z   ✓  120 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1854:3 › 選択をコピー › copy_button_disabled_when_none_selected (1.4s)
+2026-11-26T16:24:30.6791837Z   ✓  121 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1861:3 › 選択をコピー › copy_button_when_clipboard_denied (1.4s)
+2026-11-26T16:24:31.7126258Z   ✓  123 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1901:3 › Issue を作成 › issue_button_hidden_without_github (1.0s)
+2026-11-26T16:24:31.9650438Z   ✓  122 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1881:3 › Issue を作成 › issue_button (1.4s)
+2026-11-26T16:24:33.0754278Z   ✓  124 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1911:3 › Issue を作成 › issue_button_disabled_when_none_selected (1.4s)
+2026-11-26T16:24:33.3516150Z   ✓  125 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1918:3 › Issue を作成 › issue_button_when_url_too_long (1.4s)
+2026-11-26T16:24:34.1553083Z   ✓  126 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1945:3 › コメントが無いことの表示 › comment_empty_message (1.1s)
+2026-11-26T16:24:34.8172439Z   ✓  127 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1954:3 › 通知 › toast_position (1.5s)
+2026-11-26T16:24:35.6180951Z   ✓  128 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1970:3 › 検索のダイアログ › search_dialog_result_select (1.4s)
+2026-11-26T16:24:35.8796520Z   ✓  129 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1985:3 › ショートカットの一覧 › shortcut_dialog (1.0s)
+2026-11-26T16:24:36.7117405Z   ✓  130 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1996:3 › キーボードのショートカット › shortcut_ctrl_k (1.1s)
+2026-11-26T16:24:36.8766934Z   ✓  131 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:2003:3 › キーボードのショートカット › shortcut_slash (967ms)
+2026-11-26T16:24:37.8331464Z   ✓  133 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:2024:3 › キーボードのショートカット › shortcut_ignored_in_dialog (939ms)
+2026-11-26T16:24:38.2400919Z   ✓  132 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:2010:3 › キーボードのショートカット › shortcut_ignored_in_input (1.5s)
+2026-11-26T16:24:38.8515053Z   ✓  134 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:2032:3 › キーボードのショートカット › shortcut_single_key_off (1.0s)
+2026-11-26T16:24:39.7430083Z   ✓  135 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:2053:3 › ランドマーク › landmarks_unique (1.5s)
+2026-11-26T16:24:39.7693410Z   ✓  136 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:2086:3 › 本文の用語のツールチップ › term_tooltip (908ms)
+2026-11-26T16:24:40.9117013Z   ✓  137 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:2100:3 › 本文の用語のツールチップ › term_tooltip_when_doc_alias (1.2s)
+2026-11-26T16:24:40.9469551Z   ✓  138 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:2113:3 › 本文の用語のツールチップ › term_tooltip_when_no_aliases (1.2s)
+2026-11-26T16:24:41.8157136Z   ✓  140 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:2153:3 › project-index から文書を受け取れないときの表示 › project_index_timeout_alert (858ms)
+2026-11-26T16:24:42.6284023Z   ✓  141 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:2180:3 › project-index から文書を受け取れないときの表示 › project_index_failed_alert (803ms)
+2026-11-26T16:24:42.6846279Z   ✓  139 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:2125:3 › project-index から文書を受け取れないときの表示 › project_index_unreachable_alert (1.8s)
+2026-11-26T16:24:43.7604112Z   ✓  142 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:2209:3 › 編集中のボタン › open_pending_panel (1.1s)
+2026-11-26T16:24:43.8099451Z   ✓  143 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:2239:3 › 検索から除外のマーカー › sidebar_excluded_marker (1.1s)
+2026-11-26T16:24:44.8596878Z   ✓  145 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:2386:3 › 編集のボタン › edit_button_markdown (1.0s)
+2026-11-26T16:24:44.8788467Z   ✓  144 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:2378:3 › 編集のボタン › edit_button_yaml (1.1s)
+2026-11-26T16:24:45.8417134Z   ✓  146 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:2394:3 › 編集のボタン › edit_button_hidden (966ms)
+2026-11-26T16:24:46.0080053Z   ✓  147 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:2403:3 › 編集の方式の切り替え › edit_mode_toggle (1.1s)
+2026-11-26T16:24:46.9060339Z   ✓  149 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:2423:3 › 編集の方式の切り替え › edit_mode_toggle_markdown (884ms)
+2026-11-26T16:24:47.0086873Z   ✓  148 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:2414:3 › 編集の方式の切り替え › edit_mode_toggle_disabled (1.2s)
+2026-11-26T16:24:48.1058911Z   ✓  150 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:2431:3 › 編集を終了 › edit_finish (1.2s)
+2026-11-26T16:24:48.1668877Z   ✓  151 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:2443:3 › 項目のブロックとその場の入力欄 › inline_string (1.1s)
+2026-11-26T16:24:49.2759751Z   ✓  152 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:2460:3 › 項目のブロックとその場の入力欄 › inline_revert (1.2s)
+2026-11-26T16:24:49.4338104Z   ✓  153 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:2469:3 › 項目のブロックとその場の入力欄 › inline_enum (1.2s)
+2026-11-26T16:24:50.3091452Z   ✓  154 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:2478:3 › 項目のブロックとその場の入力欄 › inline_title (1.0s)
+2026-11-26T16:24:50.9480555Z   ✓  155 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:2488:3 › 表のセルの入力欄 › table_cells (1.5s)
+2026-11-26T16:24:51.7842316Z   ✓  156 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:2506:3 › Markdown の項目のパネル › markdown_field_panel (1.5s)
+2026-11-26T16:24:52.6231905Z   ✓  157 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:2529:3 › ファイル全体のエディタとプレビュー › whole_file_yaml (1.7s)
+2026-11-26T16:24:53.2915850Z   ✓  158 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:2545:3 › ファイル全体のエディタとプレビュー › whole_file_invalid (1.5s)
+2026-11-26T16:24:54.0683207Z   ✓  160 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:2569:3 › ファイル全体のエディタとプレビュー › whole_file_markdown (768ms)
+2026-11-26T16:24:54.1916247Z   ✓  159 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:2560:3 › ファイル全体のエディタとプレビュー › whole_file_fallback (1.6s)
+2026-11-26T16:24:55.5138359Z   ✓  161 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:2580:3 › 編集中のパネル（文書の画面） › pending_panel_on_doc_view (1.4s)
+2026-11-26T16:24:55.9566325Z   ✓  162 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:2594:3 › 編集中のパネル（文書の画面） › refetch_after_commit (1.7s)
+2026-11-26T16:24:56.6357376Z   ✓  163 [chromium] › tests/integration/frontend/metadata-screen.spec.ts:165:3 › ページのタイトルと種類のタブ › page_title (1.1s)
+2026-11-26T16:24:57.6315815Z   ✓  165 [chromium] › tests/integration/frontend/metadata-screen.spec.ts:185:3 › 絞り込み › filter_rows (984ms)
+2026-11-26T16:24:57.7038656Z   ✓  164 [chromium] › tests/integration/frontend/metadata-screen.spec.ts:174:3 › ページのタイトルと種類のタブ › tab_in_url (1.7s)
+2026-11-26T16:24:58.7144570Z   ✓  166 [chromium] › tests/integration/frontend/metadata-screen.spec.ts:199:3 › 種類を配信していない・参照のみ › kind_not_served (1.1s)
+2026-11-26T16:24:58.7575808Z   ✓  167 [chromium] › tests/integration/frontend/metadata-screen.spec.ts:207:3 › 種類を配信していない・参照のみ › read_only_kind (1.0s)
+2026-11-26T16:24:59.9799650Z   ✓  169 [chromium] › tests/integration/frontend/metadata-screen.spec.ts:255:3 › 編集・差分確認・コミット › add_and_delete_rows (1.2s)
+2026-11-26T16:25:00.6925652Z   ✓  168 [chromium] › tests/integration/frontend/metadata-screen.spec.ts:217:3 › 編集・差分確認・コミット › commit_edits (2.0s)
+2026-11-26T16:25:00.8814058Z   ✓  170 [chromium] › tests/integration/frontend/metadata-screen.spec.ts:269:3 › 編集・差分確認・コミット › add_row_invalid_id (890ms)
+2026-11-26T16:25:02.3688500Z   ✓  172 [chromium] › tests/integration/frontend/metadata-screen.spec.ts:286:3 › 編集・差分確認・コミット › locate_edit (1.5s)
+2026-11-26T16:25:02.3887074Z   ✓  171 [chromium] › tests/integration/frontend/metadata-screen.spec.ts:278:3 › 編集・差分確認・コミット › keep_edits_on_reload (1.7s)
+2026-11-26T16:25:04.0810785Z   ✓  173 [chromium] › tests/integration/frontend/metadata-screen.spec.ts:299:3 › 送信の失敗 › validation_failed (1.7s)
+2026-11-26T16:25:04.3725987Z   ✓  174 [chromium] › tests/integration/frontend/metadata-screen.spec.ts:323:3 › 送信の失敗 › base_commit_unusable (2.0s)
+2026-11-26T16:25:05.5710235Z   ✓  176 [chromium] › tests/integration/frontend/metadata-screen.spec.ts:392:3 › 送信の失敗 › dry_run_conflicted (1.2s)
+2026-11-26T16:25:05.6620307Z   ✓  175 [chromium] › tests/integration/frontend/metadata-screen.spec.ts:350:3 › 送信の失敗 › conflict_kept_on_branch (1.6s)
+2026-11-26T16:25:06.5901042Z   ✓  178 [chromium] › tests/integration/frontend/metadata-screen.spec.ts:443:3 › 取得の失敗 › source_not_found (920ms)
+2026-11-26T16:25:06.7659287Z   ✓  177 [chromium] › tests/integration/frontend/metadata-screen.spec.ts:432:3 › 行が指す文書のリンク › open_row_document (1.2s)
+2026-11-26T16:25:07.5129306Z   ✓  179 [chromium] › tests/integration/frontend/metadata-screen.spec.ts:450:3 › 取得の失敗 › fetch_failed (912ms)
+2026-11-26T16:25:07.9227909Z   ✓  180 [chromium] › tests/integration/frontend/metadata-screen.spec.ts:460:5 › キャンセル › cancel_new_row_button (1.1s)
+2026-11-26T16:25:08.5032804Z   ✓  181 [chromium] › tests/integration/frontend/metadata-screen.spec.ts:460:5 › キャンセル › cancel_new_row_escape (979ms)
+2026-11-26T16:25:09.7004911Z   ✓  182 [chromium] › tests/integration/frontend/metadata-screen.spec.ts:474:5 › キャンセル › cancel_commit_button (1.8s)
+2026-11-26T16:25:10.0055143Z   ✓  183 [chromium] › tests/integration/frontend/metadata-screen.spec.ts:474:5 › キャンセル › cancel_commit_escape (1.5s)
+2026-11-26T16:25:10.6950874Z   ✓  184 [chromium] › tests/integration/frontend/metadata-screen.spec.ts:493:3 › project-index から受け取れない › project_index_unreachable (986ms)
+2026-11-26T16:25:11.0305958Z   ✓  185 [chromium] › tests/integration/frontend/metadata-screen.spec.ts:529:3 › 行の値の入力位置 › row_value_caret_at_click (1.0s)
+2026-11-26T16:25:11.6833112Z   ✓  186 [chromium] › tests/integration/frontend/metadata-screen.spec.ts:541:3 › 行の値の入力位置 › row_value_caret_at_right_space (980ms)
+2026-11-26T16:25:12.0412487Z   ✓  187 [chromium] › tests/integration/frontend/metadata-screen.spec.ts:556:5 › 行の値の入力位置 › row_value_caret_on_enter (1.0s)
+2026-11-26T16:25:12.6794722Z   ✓  188 [chromium] › tests/integration/frontend/metadata-screen.spec.ts:556:5 › 行の値の入力位置 › row_value_caret_on_space (986ms)
+2026-11-26T16:25:13.0253277Z   ✓  189 [chromium] › tests/integration/frontend/metadata-screen.spec.ts:573:3 › 本文の幅 › table_width_without_cap (970ms)
+2026-11-26T16:25:13.6456063Z   ✓  190 [chromium] › tests/integration/frontend/metadata-screen.spec.ts:587:3 › 本文の幅 › filter_width (957ms)
+2026-11-26T16:25:13.9750205Z   ✓  191 [chromium] › tests/integration/frontend/metadata-screen.spec.ts:598:3 › 狭い幅とアクセシビリティ › narrow_viewport (939ms)
+2026-11-26T16:25:15.1707381Z   ✓  193 [chromium] › tests/integration/frontend/metadata-screen.spec.ts:639:3 › 文書の本文の変更 › locate_body_edit (1.2s)
+2026-11-26T16:25:15.8336018Z   ✓  192 [chromium] › tests/integration/frontend/metadata-screen.spec.ts:606:3 › 狭い幅とアクセシビリティ › axe (2.2s)
+2026-11-26T16:25:16.3999615Z   ✓  194 [chromium] › tests/integration/frontend/metadata-screen.spec.ts:651:3 › 文書の本文の変更 › locate_whole_file_edit (1.2s)
+2026-11-26T16:25:17.3541723Z   ✓  195 [chromium] › tests/integration/frontend/metadata-screen.spec.ts:660:3 › 文書の本文の変更 › restart_with_body_edit (1.5s)
+2026-11-26T16:25:22.7825769Z   ✓  196 [chromium] › tests/integration/frontend/pending-panel.spec.ts:14:3 › MetadataEdits › metadata_edits (6.4s)
+2026-11-26T16:25:23.2229029Z   ✓  197 [chromium] › tests/integration/frontend/pending-panel.spec.ts:30:3 › BodyEdits › body_edits (5.8s)
+2026-11-26T16:25:24.7047143Z   ✓  199 [chromium] › tests/integration/frontend/pending-panel.spec.ts:58:3 › BodyEditInvalid › body_edit_invalid (1.5s)
+2026-11-26T16:25:25.0435824Z   ✓  198 [chromium] › tests/integration/frontend/pending-panel.spec.ts:45:3 › DryRunDiff › dry_run_diff (2.3s)
+2026-11-26T16:25:26.2026144Z   ✓  200 [chromium] › tests/integration/frontend/pending-panel.spec.ts:71:3 › Conflict › conflict (1.5s)
+2026-11-26T16:25:26.5992477Z   ✓  201 [chromium] › tests/integration/frontend/pending-panel.spec.ts:88:3 › Empty › empty (1.5s)
+2026-11-26T16:25:27.5010463Z   ✓  202 [chromium] › tests/integration/frontend/pending-panel.spec.ts:100:3 › LongLabels › long_labels (1.3s)
+2026-11-26T16:25:27.6923410Z   ✓  203 [chromium] › tests/integration/frontend/pending-panel.spec.ts:119:3 › Narrow › narrow (1.1s)
+2026-11-26T16:25:27.8924721Z 
+2026-11-26T16:25:27.8928382Z   203 passed (2.3m)
+exit=0 run=https://github.com/shuhei1101/dev-docs/actions/runs/45858058782
