@@ -1,0 +1,74 @@
+use_cases:
+  - kind: single
+    scenario: docs/scenario/SC-155-7.yaml
+    impact: changed
+    detail: 検索で結果を全件スクロールして参照し、開いている配信元か全ての配信元かを選んで探し、結果の並び順の根拠が分かる。差分の案内・サイドバー・画面のスクロールの振る舞いを保つ
+    depends_on: []
+  - kind: composite
+    scenario: docs/scenario/SC-155-13.yaml
+    impact: following
+    detail: 文書の画面の参照の中の検索が、配信元を横断して探せるようになることに追随する
+    depends_on:
+      - docs/scenario/SC-155-7.yaml
+  - kind: single
+    scenario: docs/scenario/SC-155-14.yaml
+    impact: run_only
+    detail: メタデータの画面の骨格の高さを修正する場合に、表の参照とスクロールを壊さないことを確かめる
+    depends_on: []
+  - kind: single
+    scenario: docs/scenario/SC-155-12.yaml
+    impact: run_only
+    detail: 設定画面の骨格の高さを修正する場合に、配信元の追加の流れを壊さないことを確かめる
+    depends_on: []
+docs:
+  - page: docs/screen/SCR-155-1.yaml
+    new: false
+    change: 検索のダイアログの位置・大きさ、差分の案内のラベル、サイドバーの名前の省略と全文の表示、画面全体でスクロールしない骨格を反映する
+    status: todo
+  - page: docs/component/CMP-155-3.yaml
+    new: false
+    change: 結果の一覧の行・全件のスクロール・並び順と根拠・検索の範囲の切り替え・配信元の名前・除外のスイッチの要否と文言を反映する
+    status: todo
+  - page: docs/scenario/SC-155-7.yaml
+    new: false
+    change: 検索のシナリオに全件のスクロールと配信元の横断を加える
+    status: todo
+  - page: docs/interface/IF-155-16.yaml
+    new: false
+    change: 横断の検索と、結果の並び順の根拠（一致した行の数）を加える
+    status: todo
+  - page: docs/external-api/API-155-1.yaml
+    new: false
+    change: 横断の検索で project-index の語での検索を呼ぶ方法を反映する
+    status: todo
+  - page: docs/module/MOD-155-38.tsx.yaml
+    new: false
+    change: 検索のダイアログの状態と単体テストを反映する
+    status: todo
+  - page: docs/module/MOD-155-9.tsx.yaml
+    new: false
+    change: 比較元・比較先のラベルの文字色を反映する
+    status: todo
+  - page: docs/module/MOD-155-14.tsx.yaml
+    new: false
+    change: page の名前と group の見出しの省略と全文の表示を反映する
+    status: todo
+  - page: docs/module/MOD-155-20.tsx.yaml
+    new: false
+    change: 骨格の高さとサイドバーの高さの上限を反映する
+    status: todo
+  - page: docs/module/MOD-155-162.py.yaml
+    new: false
+    change: 横断の検索のエンドポイントを加える場合に反映する
+    status: todo
+  - page: docs/guide/画面で参照する.md
+    new: false
+    change: 検索の範囲の切り替えと並べ替えの操作を加える
+    status: todo
+scope_out:
+  - item: project-index の HTTP の語での検索への、配信元の横断と一致した行の数の追加
+    reason: 取得の方法をインターフェース定義設計で決める（要件.mark.md の未確定）。案 B を採るときだけ project-index の Issue が要る
+    plan: to_file
+  - item: 検索の結果のページング（100 件を超える分の続き）
+    reason: 要望は返却した結果を全件スクロールして参照できること。100 件を超える分の続きの取得は要望に含まれない
+    plan: none
