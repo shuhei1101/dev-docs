@@ -10,9 +10,12 @@ vi.mock(
   () => ({ mount }),
 );
 
+const update = vi.hoisted(() => vi.fn());
+
 beforeEach(() => {
   mount.mockReset();
-  mount.mockReturnValue({ update: vi.fn(), destroy: vi.fn() });
+  update.mockReset();
+  mount.mockReturnValue({ update, destroy: vi.fn() });
 });
 
 test("test_markdown_preview", async () => {
@@ -23,13 +26,9 @@ test("test_markdown_preview", async () => {
 
   rerender(<MarkdownPreview markdown="# B" docId="s@main:a" />);
 
-  await waitFor(() =>
-    expect(
-      (mount.mock.calls.at(-1)?.[1] as { markdown: string }).markdown,
-    ).toBe("# B"),
-  );
-  const options = mount.mock.calls.at(-1)?.[1] as {
-    commentStore: { list: () => Promise<unknown[]> };
+  await waitFor(() => expect(update).toHaveBeenLastCalledWith("# B", expect.anything()));
+  const options = mount.mock.calls[0]?.[1] as {
+    commentStore: { load: () => Promise<unknown[]> };
   };
-  await expect(options.commentStore.list()).resolves.toEqual([]);
+  await expect(options.commentStore.load()).resolves.toEqual([]);
 });

@@ -17,13 +17,17 @@ vi.mock(
   () => ({ mount }),
 );
 
-const lastMarkdown = () =>
-  (mount.mock.calls.at(-1)?.[1] as { markdown: string } | undefined)
-    ?.markdown ?? "";
+/** mdmark が最後に描いた Markdown（最初の `mount` と、その後の `update` の最後） */
+const rendered: string[] = [];
+const lastMarkdown = () => rendered.at(-1) ?? "";
 
 beforeEach(() => {
   mount.mockReset();
-  mount.mockReturnValue({ update: vi.fn(), destroy: vi.fn() });
+  rendered.length = 0;
+  mount.mockImplementation((_element: unknown, options: { markdown: string }) => {
+    rendered.push(options.markdown);
+    return { update: vi.fn((markdown: string) => rendered.push(markdown)), destroy: vi.fn() };
+  });
   usePendingEditsStore.setState({ bySource: {}, baseCommitBySource: {} });
 });
 
