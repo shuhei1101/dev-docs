@@ -614,3 +614,87 @@ test.describe("狭い幅とアクセシビリティ", () => {
     expect(result.violations.map((violation) => violation.id)).toEqual([]);
   });
 });
+
+/** 文書の本文の変更 1 件をブラウザのタブの編集中の変更に入れる */
+const seedBodyEdit = async (page: Page, path: string, before: string, value: string) => {
+  const edit = {
+    key: `body:rule-sample:${path}`,
+    kind: "body",
+    op: "update",
+    docId: "rule-sample",
+    docKind: "rule",
+    expectedVersion: "a1b2c3",
+    docPath: "docs/rule/rule-sample.yaml",
+    values: { [path]: value },
+    before: { [path]: before },
+    label: `${path === "@file" ? "ファイル全体" : "説明"}（docs/rule/rule-sample.yaml）`,
+  };
+  await page.addInitScript((stored) => {
+    window.sessionStorage.setItem("dev-docs:pending-edits", stored);
+  }, JSON.stringify({ state: { bySource: { [SOURCE]: [edit] }, baseCommitBySource: { [SOURCE]: BASE_COMMIT } }, version: 2 }));
+};
+
+test.describe("文書の本文の変更", () => {
+  // 本文の変更の行は `{項目の名前}（{文書のパス}）` を出し、押すとその文書を編集の表示で開いてパネルを開いたままにする（正常系）
+  test("locate_body_edit", async ({ page }) => {
+    await seedBodyEdit(page, "description", "本文を編集する決まり", "修正後の説明");
+    await open(page);
+    await page.getByRole("button", { name: "編集中 1 件" }).click();
+    const row = panel(page).getByRole("button", { name: "説明（docs/rule/rule-sample.yaml） の行へ移動" });
+    await expect(row).toContainText("本文を編集する決まり → 修正後の説明");
+    await row.click();
+    await expect(page).toHaveURL(/\/sample\/docs\/rule\/rule-sample\.yaml\?.*edit=fields/);
+    await expect(panel(page)).toBeVisible();
+  });
+
+  // ファイル全体の変更の行は `edit=file` で開く（正常系）
+  test("locate_whole_file_edit", async ({ page }) => {
+    await seedBodyEdit(page, "@file", "id: rule-sample\n", "id: rule-sample\nname: 修正後\n");
+    await open(page);
+    await page.getByRole("button", { name: "編集中 1 件" }).click();
+    await panel(page).getByRole("button", { name: "ファイル全体（docs/rule/rule-sample.yaml） の行へ移動" }).click();
+    await expect(page).toHaveURL(/\/sample\/docs\/rule\/rule-sample\.yaml\?.*edit=file/);
+  });
+
+  // 「最新の内容で続ける」で、本文の変更は文書を再取得し、変更前の値と食い違えば取り消す（異常系）
+  test("restart_with_body_edit", async ({ page }) => {
+    await seedBodyEdit(page, "description", "本文を編集する決まり", "修正後の説明");
+    const api = await open(page, {
+      commit: () =>
+        problem(409, { title: "BaseCommitUnusableError", detail: "編集を始めたときのコミットがありません", errors: [] }) as CommitReply,
+    });
+    const documents: string[] = [];
+    await page.route("**/_api/sources/sample/docs/**", async (route) => {
+      documents.push(new URL(route.request().url()).pathname);
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          source: SOURCE,
+          ref: "develop",
+          path: "docs/rule/rule-sample",
+          markdown: "# 文書の編集",
+          edit: {
+            docId: "rule-sample",
+            kind: "rule",
+            filePath: "docs/rule/rule-sample.yaml",
+            version: "b2c3d4",
+            baseCommit: LATEST_COMMIT,
+            language: "yaml",
+            source: "id: rule-sample\n",
+            blocks: [{ path: "description", label: "説明", type: "string", value: "ほかの変更の説明", markdown: "ほかの変更の説明", options: null, columns: null }],
+            titleBlock: null,
+          },
+        }),
+      });
+    });
+    await page.getByRole("button", { name: "編集中 1 件" }).click();
+    await commitFromPanel(page, "説明を修正する");
+    await panel(page).getByRole("button", { name: "最新の内容で続ける" }).click();
+    const dropped = panel(page).getByRole("status");
+    await expect(dropped).toContainText("最新の内容と食い違うため、次の変更を取り消しました");
+    await expect(dropped).toContainText("説明（docs/rule/rule-sample.yaml）");
+    expect(documents.some((path) => path.endsWith("/docs/docs/rule/rule-sample.yaml"))).toBe(true);
+    expect(api.commits[0]?.edits).toMatchObject([{ kind: "body", values: { description: "修正後の説明" } }]);
+  });
+});

@@ -13,7 +13,7 @@ import {
   settingsView,
 } from "./support/fixtures";
 import type { SeedComment } from "./support/fixtures";
-import type { AliasItem } from "@/shared/api/generated/model";
+import type { AliasItem, DocumentEdit } from "@/shared/api/generated/model";
 
 type Overrides = Partial<Record<Operation, Handler>>;
 
@@ -693,12 +693,14 @@ test.describe("文書のタイトル", () => {
     const title = await page.getByRole("main").getByRole("heading", { level: 1 }).evaluate((h1) => {
       const body = document.querySelector(".mdmark");
       const s = getComputedStyle(h1);
+      // 区切り線は、タイトルと編集のボタンを並べる行の下に引く
+      const row = h1.parentElement === null ? s : getComputedStyle(h1.parentElement);
       return {
         fontSize: parseFloat(s.fontSize),
         bodyFontSize: body === null ? 0 : parseFloat(getComputedStyle(body).fontSize),
         fontWeight: s.fontWeight,
-        borderBottomWidth: s.borderBottomWidth,
-        borderBottomStyle: s.borderBottomStyle,
+        borderBottomWidth: row.borderBottomWidth,
+        borderBottomStyle: row.borderBottomStyle,
       };
     });
     // 検証
@@ -2203,19 +2205,16 @@ test.describe("project-index から文書を受け取れないときの表示", 
 });
 
 test.describe("編集中のボタン", () => {
-  // トップバーの編集中のボタンで、メタデータの画面を編集中のパネルを開いた状態で開く（正常系）
+  // トップバーの編集中のボタンで、この画面の編集中のパネルを開閉する（正常系）
   test("open_pending_panel", async ({ page }) => {
     await openDoc(page);
-    await page.route("**/_api/sources/sample/metadata", (route) =>
-      route.fulfill({
-        status: 200,
-        contentType: "application/json",
-        body: JSON.stringify({ source: "sample", branch: "develop", kinds: [] }),
-      }),
-    );
-    await page.getByRole("button", { name: /^編集中 \d+ 件$/ }).click();
-    await expect(page).toHaveURL(/\/sample\/_metadata\?panel=edits$/);
-    await expect(page.getByRole("dialog", { name: "編集中" })).toBeVisible();
+    const button = page.getByRole("button", { name: /^編集中 \d+ 件$/ });
+    await button.click();
+    await expect(page).toHaveURL(/\/sample\/docs\/doc-1$/);
+    const panel = page.getByRole("dialog", { name: "編集中" }).or(page.getByRole("complementary", { name: "編集中" }));
+    await expect(panel).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(panel).toHaveCount(0);
   });
 });
 
@@ -2246,5 +2245,366 @@ test.describe("検索から除外のマーカー", () => {
     await expect(list.getByRole("link", { name: "文書 1" }).getByRole("img")).toHaveCount(0);
     await excluded.click();
     await expect(page).toHaveURL(/\/sample\/docs\/doc-2$/);
+  });
+});
+
+const RULE_SOURCE = [
+  "id: rule-sample",
+  "name: 文書の編集",
+  "description: 本文を編集する決まり",
+  "status: current",
+  "items:",
+  "  - id: overview",
+  "    body: 本文の概要",
+  "rows:",
+  "  - word: 直す",
+  "    replacement: 修正",
+  "",
+].join("\n");
+
+const RULE_ROWS = [{ word: "直す", replacement: "修正" }];
+
+/** 規約の文書（YAML）の本文の編集の情報 */
+const ruleEdit = (): DocumentEdit => ({
+  docId: "rule-sample",
+  kind: "rule",
+  filePath: "docs/rule/rule-sample.yaml",
+  version: "a1b2c3",
+  baseCommit: "1111111",
+  language: "yaml",
+  source: RULE_SOURCE,
+  blocks: [
+    { path: "description", label: "説明", type: "string", value: "本文を編集する決まり", markdown: "本文を編集する決まり", options: null, columns: null },
+    { path: "status", label: "状態", type: "enum", value: "current", markdown: "**状態**: current", options: ["current", "draft"], columns: null },
+    { path: "#items[overview].body", label: "overview の 本文", type: "markdown", value: "本文の概要", markdown: "### overview\n\n本文の概要", options: null, columns: null },
+    {
+      path: "rows",
+      label: "単語の対応表",
+      type: "table",
+      value: RULE_ROWS,
+      markdown: "| word | replacement |\n| --- | --- |\n| 直す | 修正 |",
+      options: null,
+      columns: ["word", "replacement"],
+    },
+  ],
+  titleBlock: { path: "name", label: "名前", type: "string", value: "文書の編集", markdown: "# 文書の編集", options: null, columns: null },
+});
+
+/** ガイドの文書（Markdown）の本文の編集の情報 */
+const guideEdit = (): DocumentEdit => ({
+  docId: "guide.md",
+  kind: "guide",
+  filePath: "guide.md",
+  version: "d4e5f6",
+  baseCommit: "1111111",
+  language: "markdown",
+  source: "# 案内\n\n1 行目の説明\n",
+  blocks: [],
+  titleBlock: null,
+});
+
+const RULE_PATH = "docs/rule/rule-sample";
+const RULE_URL = `/sample/${RULE_PATH}`;
+const GUIDE_URL = "/sample/files/guide.md";
+
+type EditEnv = {
+  previews: { path: string; content: string }[];
+  commits: Record<string, unknown>[];
+  documents: () => number;
+};
+
+/** 本文を編集できる文書を返却し、本文のプレビューと直コミットを差し替えて画面を開く */
+const openEditable = async (
+  page: Page,
+  url: string,
+  options: {
+    edit?: DocumentEdit | null;
+    preview?: (content: string) => Record<string, unknown>;
+  } = {},
+): Promise<EditEnv> => {
+  let documents = 0;
+  const document: Handler = ({ path, query }) => {
+    documents += 1;
+    const guide = path.startsWith("files/");
+    const edit = options.edit !== undefined ? options.edit : guide ? guideEdit() : ruleEdit();
+    return {
+      body: documentResponse({
+        path,
+        ref: query.get("ref") ?? "develop",
+        markdown: guide ? "# 案内\n\n1 行目の説明\n" : "# 文書の編集\n\n本文を編集する決まり\n\n**状態**: current\n",
+        edit,
+      }),
+    };
+  };
+  await mockApi(page, { document });
+  const env: EditEnv = { previews: [], commits: [], documents: () => documents };
+  await page.route("**/_api/sources/sample/preview", async (route) => {
+    const body = route.request().postDataJSON() as { path: string; content: string };
+    env.previews.push(body);
+    const reply = options.preview?.(body.content) ?? { markdown: `プレビュー: ${body.content.length}`, conversionError: null, fallback: false };
+    await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(reply) });
+  });
+  await page.route("**/_api/sources/sample/commits", async (route) => {
+    const body = route.request().postDataJSON() as Record<string, unknown>;
+    env.commits.push(body);
+    const edits = (body.edits as { key: string }[]) ?? [];
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        applied: body.dryRun !== true,
+        results: edits.map((item) => ({ key: item.key, status: "updated", version: "v2", diff: `+${item.key}` })),
+        commit: body.dryRun === true ? null : { sha: "0a1b2c3d4e5f", branch: "develop", retried: false },
+      }),
+    });
+  });
+  await page.goto(url);
+  await expect(page.getByRole("main").getByRole("heading", { level: 1 })).toBeVisible();
+  return env;
+};
+
+const pendingButton = (page: Page, count: number) => page.getByRole("button", { name: `編集中 ${count} 件` });
+
+/** 表示した場所で修正の表示で、文字列の項目を修正する */
+const editInline = async (page: Page, label: string, value: string) => {
+  await page.getByRole("button", { name: `${label} を編集` }).click();
+  const input = page.getByRole("textbox", { name: label, exact: true });
+  await input.fill(value);
+  await input.press("Enter");
+};
+
+test.describe("編集のボタン", () => {
+  // edit がある YAML の文書は、編集のボタンで `edit=fields` を開く（正常系）
+  test("edit_button_yaml", async ({ page }) => {
+    await openEditable(page, RULE_URL);
+    await page.getByRole("button", { name: "編集", exact: true }).click();
+    await expect(page).toHaveURL(/edit=fields/);
+    await expect(page.getByRole("button", { name: "説明 を編集" })).toBeVisible();
+  });
+
+  // Markdown の文書は、編集のボタンで `edit=file` を開く（正常系）
+  test("edit_button_markdown", async ({ page }) => {
+    await openEditable(page, GUIDE_URL);
+    await page.getByRole("button", { name: "編集", exact: true }).click();
+    await expect(page).toHaveURL(/edit=file/);
+    await expect(page.getByRole("textbox", { name: "guide.md" })).toBeVisible();
+  });
+
+  // edit が null の文書には、編集のボタンを出さない（正常系）
+  test("edit_button_hidden", async ({ page }) => {
+    await openEditable(page, RULE_URL, { edit: null });
+    await expect(page.getByRole("main").getByRole("heading", { level: 1 })).toBeVisible();
+    await expect(page.getByRole("button", { name: "編集", exact: true })).toHaveCount(0);
+  });
+});
+
+test.describe("編集の方式の切り替え", () => {
+  // YAML の文書は 2 つの方式を出し、今の方式を押した状態にして、押すと方式を切り替える（正常系）
+  test("edit_mode_toggle", async ({ page }) => {
+    await openEditable(page, `${RULE_URL}?edit=fields`);
+    const group = page.getByRole("group", { name: "編集の方式" });
+    await expect(group.getByRole("button", { name: "表示した場所で修正" })).toHaveAttribute("aria-pressed", "true");
+    await expect(group.getByRole("button", { name: "ファイル全体" })).toHaveAttribute("aria-pressed", "false");
+    await group.getByRole("button", { name: "ファイル全体" }).click();
+    await expect(page).toHaveURL(/edit=file/);
+    await expect(page.getByRole("textbox", { name: "docs/rule/rule-sample.yaml" })).toBeVisible();
+  });
+
+  // もう一方の方式の変更がある間は切り替えさせず、理由を出す（正常系）
+  test("edit_mode_toggle_disabled", async ({ page }) => {
+    await openEditable(page, `${RULE_URL}?edit=fields`);
+    await editInline(page, "説明", "修正後の説明");
+    const group = page.getByRole("group", { name: "編集の方式" });
+    await expect(group.getByRole("button", { name: "ファイル全体" })).toBeDisabled();
+    await expect(page.getByText("表示した場所で修正の変更をコミットするか元に戻すと切り替えられます。")).toBeVisible();
+  });
+
+  // Markdown の文書には方式の切り替えを出さない（正常系）
+  test("edit_mode_toggle_markdown", async ({ page }) => {
+    await openEditable(page, `${GUIDE_URL}?edit=file`);
+    await expect(page.getByRole("group", { name: "編集の方式" })).toHaveCount(0);
+  });
+});
+
+test.describe("編集を終了", () => {
+  // 編集を終了で edit を除いた同じ文書を開き、編集中の変更は残す（正常系）
+  test("edit_finish", async ({ page }) => {
+    await openEditable(page, `${RULE_URL}?edit=fields`);
+    await editInline(page, "説明", "修正後の説明");
+    await page.getByRole("button", { name: "編集を終了" }).click();
+    await expect(page).not.toHaveURL(/edit=/);
+    await expect(page.getByRole("button", { name: "編集", exact: true })).toBeVisible();
+    await expect(pendingButton(page, 1)).toBeVisible();
+  });
+});
+
+test.describe("項目のブロックとその場の入力欄", () => {
+  // 修正できる項目ごとに編集のボタンを並べ、文字列の項目はその場の入力欄で修正して変更ありを出す（正常系）
+  test("inline_string", async ({ page }) => {
+    await openEditable(page, `${RULE_URL}?edit=fields`);
+    for (const label of ["説明", "状態", "overview の 本文", "単語の対応表", "名前"]) {
+      await expect(page.getByRole("button", { name: `${label} を編集` })).toBeVisible();
+    }
+    await page.getByRole("button", { name: "説明 を編集" }).click();
+    const input = page.getByRole("textbox", { name: "説明", exact: true });
+    await expect(input).toBeFocused();
+    await expect(input).toHaveValue("本文を編集する決まり");
+    await input.fill("修正後の説明");
+    await input.press("Enter");
+    await expect(input).toHaveCount(0);
+    await expect(page.locator('[data-edit-path="description"]')).toContainText("変更あり");
+    await expect(pendingButton(page, 1)).toBeVisible();
+  });
+
+  // 元の値に戻すと編集中の変更から除く（正常系）
+  test("inline_revert", async ({ page }) => {
+    await openEditable(page, `${RULE_URL}?edit=fields`);
+    await editInline(page, "説明", "修正後の説明");
+    await expect(pendingButton(page, 1)).toBeVisible();
+    await editInline(page, "説明", "本文を編集する決まり");
+    await expect(pendingButton(page, 0)).toBeVisible();
+  });
+
+  // enum の項目は選択肢から選ぶ（正常系）
+  test("inline_enum", async ({ page }) => {
+    await openEditable(page, `${RULE_URL}?edit=fields`);
+    await page.getByRole("button", { name: "状態 を編集" }).click();
+    await page.getByRole("combobox", { name: "状態" }).click();
+    await page.getByRole("option", { name: "draft" }).click();
+    await expect(pendingButton(page, 1)).toBeVisible();
+  });
+
+  // 文書のタイトルもその場の入力欄で修正する（正常系）
+  test("inline_title", async ({ page }) => {
+    await openEditable(page, `${RULE_URL}?edit=fields`);
+    await editInline(page, "名前", "修正後の名前");
+    await expect(page.getByRole("heading", { level: 1, name: "修正後の名前" })).toBeVisible();
+    await expect(pendingButton(page, 1)).toBeVisible();
+  });
+});
+
+test.describe("表のセルの入力欄", () => {
+  // 表の項目は行と列ごとの入力欄で修正し、行の配列を編集中の変更に入れる（正常系）
+  test("table_cells", async ({ page }) => {
+    const env = await openEditable(page, `${RULE_URL}?edit=fields`);
+    await page.getByRole("button", { name: "単語の対応表 を編集" }).click();
+    const cell = page.getByRole("textbox", { name: "単語の対応表 の 1 行目の replacement" });
+    await expect(cell).toHaveValue("修正");
+    await cell.fill("修正する");
+    await expect(pendingButton(page, 1)).toBeVisible();
+    await pendingButton(page, 1).click();
+    await page.getByRole("button", { name: "差分確認" }).click();
+    await expect.poll(() => env.commits.length).toBe(1);
+    expect(env.commits[0]).toMatchObject({
+      edits: [{ kind: "body", docId: "rule-sample", values: { rows: [{ word: "直す", replacement: "修正する" }] } }],
+    });
+  });
+});
+
+test.describe("Markdown の項目のパネル", () => {
+  // Markdown の項目はパネルのエディタで修正し、プレビューを出し、元に戻すで取り消して、Esc で閉じる（正常系）
+  test("markdown_field_panel", async ({ page }) => {
+    await openEditable(page, `${RULE_URL}?edit=fields`);
+    const open = page.getByRole("button", { name: "overview の 本文 を編集" });
+    await open.click();
+    const sheet = page.getByRole("dialog", { name: "overview の 本文 の編集" });
+    await expect(sheet).toContainText("#items[overview].body");
+    const editor = sheet.getByRole("textbox", { name: "本文" });
+    await expect(editor).toHaveValue("本文の概要");
+    await editor.fill("修正後の概要");
+    await expect(sheet.getByRole("region", { name: "プレビュー" })).toContainText("修正後の概要");
+    await expect(sheet.getByText("変更あり")).toBeVisible();
+    await expect(pendingButton(page, 1)).toBeVisible();
+    await sheet.getByRole("button", { name: "元に戻す" }).click();
+    await expect(editor).toHaveValue("本文の概要");
+    await expect(pendingButton(page, 0)).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(sheet).toHaveCount(0);
+    await expect(open).toBeFocused();
+  });
+});
+
+test.describe("ファイル全体のエディタとプレビュー", () => {
+  // YAML の文書は、入力が止まった後に本文のプレビューを呼んで描き、変更ありと元に戻すを出す（正常系）
+  test("whole_file_yaml", async ({ page }) => {
+    const env = await openEditable(page, `${RULE_URL}?edit=file`, {
+      preview: (content) => ({ markdown: content.includes("修正後") ? "修正後の説明を描いた" : "元の説明", conversionError: null, fallback: false }),
+    });
+    const editor = page.getByRole("textbox", { name: "docs/rule/rule-sample.yaml" });
+    await expect(editor).toHaveValue(RULE_SOURCE);
+    await editor.fill(RULE_SOURCE.replace("本文を編集する決まり", "修正後の説明"));
+    await expect(page.getByRole("region", { name: "プレビュー" })).toContainText("修正後の説明を描いた");
+    expect(env.previews.at(-1)).toMatchObject({ path: RULE_PATH });
+    await expect(page.getByText("変更あり")).toBeVisible();
+    await page.getByRole("button", { name: "元に戻す" }).click();
+    await expect(editor).toHaveValue(RULE_SOURCE);
+    await expect(pendingButton(page, 0)).toBeVisible();
+  });
+
+  // 解析できない YAML は、行と列と理由の alert を出し、エディタに aria-invalid を付け、最後に変換できた内容を残す（異常系）
+  test("whole_file_invalid", async ({ page }) => {
+    await openEditable(page, `${RULE_URL}?edit=file`, {
+      preview: (content) =>
+        content.includes("\t")
+          ? { markdown: null, conversionError: { line: 3, column: 1, detail: "タブは使用できません" }, fallback: false }
+          : { markdown: "元の説明", conversionError: null, fallback: false },
+    });
+    const editor = page.getByRole("textbox", { name: "docs/rule/rule-sample.yaml" });
+    await editor.fill(RULE_SOURCE.replace("description:", "\tdescription:"));
+    const alert = page.getByRole("alert").filter({ hasText: "YAML として解析できません" });
+    await expect(alert).toContainText("3 行 1 列: タブは使用できません。このままでは差分確認とコミットでエラーが発生します。");
+    await expect(editor).toHaveAttribute("aria-invalid", "true");
+  });
+
+  // 変換のスクリプトを指す種類は、標準の変換で表示している旨を出す（正常系）
+  test("whole_file_fallback", async ({ page }) => {
+    await openEditable(page, `${RULE_URL}?edit=file`, {
+      preview: () => ({ markdown: "標準の変換", conversionError: null, fallback: true }),
+    });
+    await page.getByRole("textbox", { name: "docs/rule/rule-sample.yaml" }).fill(`${RULE_SOURCE}# 追記\n`);
+    await expect(page.getByText("この種類のプレビューは、配信元の変換を使用できないため標準の変換で表示しています。")).toBeVisible();
+  });
+
+  // Markdown の文書は、本文のプレビューを呼ばずにエディタの値をそのまま描く（正常系）
+  test("whole_file_markdown", async ({ page }) => {
+    const env = await openEditable(page, `${GUIDE_URL}?edit=file`);
+    const editor = page.getByRole("textbox", { name: "guide.md" });
+    await editor.fill("# 案内\n\n修正後の説明\n");
+    await expect(page.getByRole("region", { name: "プレビュー" })).toContainText("修正後の説明");
+    expect(env.previews).toEqual([]);
+  });
+});
+
+test.describe("編集中のパネル（文書の画面）", () => {
+  // トップバーの編集中のボタンでこの画面の編集中のパネルを開閉し、本文の変更の行で文書を編集の表示で開く（正常系）
+  test("pending_panel_on_doc_view", async ({ page }) => {
+    await openEditable(page, `${RULE_URL}?edit=fields`);
+    await editInline(page, "説明", "修正後の説明");
+    await page.getByRole("button", { name: "編集を終了" }).click();
+    await pendingButton(page, 1).click();
+    const panel = page.getByRole("dialog", { name: "編集中" }).or(page.getByRole("complementary", { name: "編集中" }));
+    await expect(panel).toBeVisible();
+    await expect(page).toHaveURL(new RegExp(`${RULE_URL}$`));
+    await panel.getByRole("button", { name: "説明（docs/rule/rule-sample.yaml） の行へ移動" }).click();
+    await expect(page).toHaveURL(/edit=fields/);
+    await expect(panel).toBeVisible();
+  });
+
+  // コミットした後は文書を再取得する（正常系）
+  test("refetch_after_commit", async ({ page }) => {
+    const env = await openEditable(page, `${RULE_URL}?edit=fields`);
+    await editInline(page, "説明", "修正後の説明");
+    await pendingButton(page, 1).click();
+    const before = env.documents();
+    await page.getByRole("button", { name: "コミット" }).click();
+    const dialog = page.getByRole("dialog", { name: "コミットしますか？" });
+    await dialog.getByRole("textbox", { name: "コミットの説明" }).fill("説明を修正する");
+    await dialog.getByRole("button", { name: "コミット" }).click();
+    await expect(page.getByText("develop にコミットしました（0a1b2c3）")).toBeVisible();
+    expect(env.commits.at(-1)).toMatchObject({
+      baseCommit: "1111111",
+      edits: [{ kind: "body", docId: "rule-sample", docKind: "rule", expectedVersion: "a1b2c3", docPath: "docs/rule/rule-sample.yaml", values: { description: "修正後の説明" } }],
+    });
+    await expect.poll(env.documents).toBeGreaterThan(before);
   });
 });
