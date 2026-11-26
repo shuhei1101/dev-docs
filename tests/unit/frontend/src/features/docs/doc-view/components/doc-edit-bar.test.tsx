@@ -67,8 +67,8 @@ test("test_doc_edit_bar_when_markdown", async () => {
 
 test("test_doc_edit_bar_when_other_mode_pending", () => {
   upsertBodyEdit("s", yamlEdit, {
-    path: WHOLE_FILE,
-    label: "ファイル全体",
+    path: "summary",
+    label: "概要",
     before: "x",
     value: "y",
   });
@@ -88,7 +88,7 @@ test("test_doc_edit_bar_when_other_mode_pending", () => {
   expect(screen.getByRole("button", { name: "ファイル全体" })).toBeDisabled();
   expect(
     screen.getByText(
-      "ファイル全体の変更をコミットするか元に戻すと切り替えられます。",
+      "表示した場所で修正の変更をコミットするか元に戻すと切り替えられます。",
     ),
   ).toBeInTheDocument();
 });

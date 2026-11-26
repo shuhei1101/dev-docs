@@ -68,6 +68,41 @@ test("test_metadata_screen_when_locate", async () => {
   await waitFor(() => expect(document.activeElement?.id).toBe("metadata-row-tags-n1"));
 });
 
+test.each([
+  ["summary", "fields"],
+  ["@file", "file"],
+])("test_metadata_screen_when_locate_body(%s)", async (path, mode) => {
+  useMetadata(() => HttpResponse.json(metadataResponse()));
+  server.use(http.get("/_api/sources/sample/docs/*", () => HttpResponse.json({}, { status: 503 })));
+  usePendingEditsStore.setState({
+    bySource: {
+      sample: [
+        {
+          key: `body:a:${path}`,
+          kind: "body",
+          op: "update",
+          docId: "a",
+          docKind: "rule",
+          expectedVersion: "v-a",
+          docPath: "docs/rule/a.yaml",
+          values: { [path]: "修正後" },
+          before: { [path]: "修正前" },
+          label: "概要（docs/rule/a.yaml）",
+        },
+      ],
+    },
+  });
+
+  const { router } = renderApp("/sample/_metadata?panel=edits");
+
+  await userEvent.click(
+    await screen.findByRole("button", { name: "概要（docs/rule/a.yaml） の行へ移動" }),
+  );
+
+  await waitFor(() => expect(router.state.location.pathname).toBe("/sample/docs/rule/a.yaml"));
+  expect(router.state.location.search).toMatchObject({ edit: mode, panel: "edits" });
+});
+
 test("test_metadata_screen_when_not_found", async () => {
   useMetadata(() =>
     HttpResponse.json(problem(404, { title: "UnknownSourceError", missing: "source", value: "sample" }), {
